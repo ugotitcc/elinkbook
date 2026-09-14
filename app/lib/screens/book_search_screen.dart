@@ -11,7 +11,7 @@ import '../reader/reader_prefs_manager.dart';
 import '../search/search_repository.dart';
 import 'library_paging.dart';
 import 'library_screen_dependencies.dart';
-import 'reader_screen.dart';
+import 'reader_screen_route.dart';
 import 'widgets/paging_bar.dart';
 
 /// 單書全文檢索畫面（epic-10-search Issue 7，spec.md §9.3）：從全庫搜尋
@@ -146,38 +146,13 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
     FocusScope.of(context).unfocus();
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ReaderScreen(
-          filePath: widget.book.filePath,
-          bookId: widget.book.id,
+        builder: (_) => buildReaderScreen(
+          book: widget.book,
           prefsManager: widget.prefsManager,
-          bookmarksRepository:
-              widget.readerFeatureRepositories.bookmarksRepository,
-          highlightsRepository:
-              widget.readerFeatureRepositories.highlightsRepository,
-          notesRepository: widget.readerFeatureRepositories.notesRepository,
-          bookTitle: widget.book.title,
-          bookAuthor: widget.book.author,
-          bookProgress: widget.book.progress,
-          isFixedLayout: widget.book.isFixedLayout,
+          features: widget.readerFeatureRepositories,
+          sync: widget.syncDependencies,
           libraryRepository: widget.libraryRepository,
-          customFontsRepository:
-              widget.readerFeatureRepositories.customFontsRepository,
-          layoutPresetRepository:
-              widget.readerFeatureRepositories.layoutPresetRepository,
-          bookReaderPrefsRepository:
-              widget.readerFeatureRepositories.bookReaderPrefsRepository,
-          syncCheckpointTrigger:
-              widget.syncDependencies.syncCheckpointTrigger,
-          ttsProvider: widget.readerFeatureRepositories.ttsProvider,
-          ttsAudioHandler: widget.readerFeatureRepositories.ttsAudioHandler,
-          ttsAudioFocusSource:
-              widget.readerFeatureRepositories.ttsAudioFocusSource,
           isEinkMode: widget.isEinkMode,
-          readerActivityTracker:
-              widget.readerFeatureRepositories.readerActivityTracker,
-          searchRepository: widget.readerFeatureRepositories.searchRepository,
-          isFullTextSearchAvailable:
-              widget.readerFeatureRepositories.isFullTextSearchAvailable,
           initialJumpTarget: jumpTarget,
         ),
       ),
