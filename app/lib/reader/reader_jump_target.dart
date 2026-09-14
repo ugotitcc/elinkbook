@@ -1,6 +1,11 @@
 import 'dart:convert';
 
+import 'package:flutter/widgets.dart';
+
 import '../library/models/library_enums.dart';
+import 'book_format.dart';
+import 'foliate_reader_view.dart';
+import 'pdf_reader_view.dart';
 import 'percent_rect.dart';
 
 /// 全庫搜尋跳轉目標（epic-10-search Issue 5，spec.md §6）：`ReaderScreen`
@@ -70,5 +75,49 @@ class ReaderJumpTarget {
     } catch (_) {
       return null;
     }
+  }
+
+  /// 把本跳轉目標套用到一個活著的閱讀器 View（epic-41-search-architecture-hardening
+  /// Issue 3）：依 [format] 分派到 PDF／Foliate 分支，[shouldNavigate] 為
+  /// `true` 時先呼叫 `jumpToPage`/`jumpToLocator` 導覽過去，再嘗試疊加
+  /// 暫態高亮。**回傳值即「本次是否真的疊加了暫態高亮」**（PDF 端對應
+  /// [pdfPageIndex] 與 [pdfRect] 皆存在；Foliate 端對應 [cfi] 存在），
+  /// 呼叫端據此決定要不要啟動 3 秒自動清除計時器——本方法本身不管理
+  /// 計時器生命週期，那是 [ReaderScreen] 自己的狀態。
+  ///
+  /// 對應欄位缺失時優雅跳出、不拋例外（沿用 [fromContentLocator] 文件
+  /// 註解的既有語意）：PDF 只有 [pdfPageIndex]、[pdfRect] 為 `null` 時，
+  /// [shouldNavigate] 為 `true` 仍會先跳頁，只是不顯示暫態高亮、回傳
+  /// `false`——跳頁與顯示高亮是兩個獨立判斷，不能因為沒有精確座標就連
+  /// 頁面都不跳（`review-plan-issue-8.md` C-1 既有教訓）。[format] 既非
+  /// PDF 也非 Foliate（例如 [BookFormat.unknown]）時直接回傳 `false`，
+  /// 不做任何事。
+  bool applyTo({
+    required BookFormat format,
+    required GlobalKey<State<PdfReaderView>> pdfKey,
+    required GlobalKey<State<FoliateReaderView>> foliateKey,
+    required bool shouldNavigate,
+  }) {
+    if (format == BookFormat.pdf) {
+      final pageIndex = pdfPageIndex;
+      if (pageIndex == null) return false;
+      if (shouldNavigate) {
+        PdfReaderView.jumpToPage(pdfKey, pageIndex);
+      }
+      final rect = pdfRect;
+      if (rect == null) return false;
+      PdfReaderView.showTemporaryHighlight(pdfKey, pageIndex, rect);
+      return true;
+    }
+    if (isFoliateFormat(format)) {
+      final targetCfi = cfi;
+      if (targetCfi == null) return false;
+      if (shouldNavigate) {
+        FoliateReaderView.jumpToLocator(foliateKey, targetCfi);
+      }
+      FoliateReaderView.showSearchHighlight(foliateKey, targetCfi);
+      return true;
+    }
+    return false;
   }
 }
