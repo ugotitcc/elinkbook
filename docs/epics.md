@@ -49,7 +49,7 @@
 | 39 | `epic-37-test-suite-flakiness` 全套測試套件既有不穩定性追蹤 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 40 | `epic-38-reader-chrome-tts-redesign` 閱讀器 Chrome／TTS 重構（`DESIGN.md` §19 階段二） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 41 | `epic-39-layout-settings-redesign` 版面設定三畫面主題化＋E-Ink 步進器（`DESIGN.md` §18.3 補實作） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
-| 42 | `epic-41-search-architecture-hardening` 全文檢索模組架構深化機會（epic-10-search 開發後盤點） | 🟡 開發中 (Active) | Issue 1（PR #240）／Issue 2（PR #241）已完成並合併；Issue 3-5 待實作、Issue 6 `needs-info` 暫緩，皆已 `/grilling` 敲定細節 |
+| 42 | `epic-41-search-architecture-hardening` 全文檢索模組架構深化機會（epic-10-search 開發後盤點） | 🟡 開發中 (Active) | Issue 1（PR #240）／Issue 2（PR #241）／Issue 3（PR #242）已完成並合併；Issue 4-5 待實作、Issue 6 `needs-info` 暫緩，皆已 `/grilling` 敲定細節 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。
