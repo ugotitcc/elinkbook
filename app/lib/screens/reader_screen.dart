@@ -1579,20 +1579,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final jumpTarget = widget.initialJumpTarget;
     if (jumpTarget == null) return;
     _searchJumpHighlightTriggered = true;
-    final format = detectBookFormat(widget.filePath);
-    if (format == BookFormat.pdf) {
-      final pageIndex = jumpTarget.pdfPageIndex;
-      final rect = jumpTarget.pdfRect;
-      if (pageIndex == null || rect == null) return;
-      PdfReaderView.showTemporaryHighlight(_pdfReaderViewKey, pageIndex, rect);
-    } else if (isFoliateFormat(format)) {
-      final cfi = jumpTarget.cfi;
-      if (cfi == null) return;
-      FoliateReaderView.showSearchHighlight(_foliateEpubReaderViewKey, cfi);
-    } else {
-      return;
+    final highlightShown = jumpTarget.applyTo(
+      format: detectBookFormat(widget.filePath),
+      pdfKey: _pdfReaderViewKey,
+      foliateKey: _foliateEpubReaderViewKey,
+      shouldNavigate: false,
+    );
+    if (highlightShown) {
+      _startSearchJumpHighlightAutoClearTimer();
     }
-    _startSearchJumpHighlightAutoClearTimer();
   }
 
   /// 啟動（或重新啟動）搜尋跳轉暫態高亮的 3 秒自動清除計時器（epic-10-search
@@ -1640,23 +1635,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 搜尋結果卻完全沒有任何跳轉反應——只要有 `pageIndex` 就必須跳頁，`rect`
   /// 只決定要不要額外疊加高亮／啟動自動清除計時器。
   void _handleReaderSearchJumpTarget(ReaderJumpTarget jumpTarget) {
-    final format = detectBookFormat(widget.filePath);
-    if (format == BookFormat.pdf) {
-      final pageIndex = jumpTarget.pdfPageIndex;
-      if (pageIndex == null) return;
-      PdfReaderView.jumpToPage(_pdfReaderViewKey, pageIndex);
-      final rect = jumpTarget.pdfRect;
-      if (rect == null) return;
-      PdfReaderView.showTemporaryHighlight(_pdfReaderViewKey, pageIndex, rect);
-    } else if (isFoliateFormat(format)) {
-      final cfi = jumpTarget.cfi;
-      if (cfi == null) return;
-      FoliateReaderView.jumpToLocator(_foliateEpubReaderViewKey, cfi);
-      FoliateReaderView.showSearchHighlight(_foliateEpubReaderViewKey, cfi);
-    } else {
-      return;
+    final highlightShown = jumpTarget.applyTo(
+      format: detectBookFormat(widget.filePath),
+      pdfKey: _pdfReaderViewKey,
+      foliateKey: _foliateEpubReaderViewKey,
+      shouldNavigate: true,
+    );
+    if (highlightShown) {
+      _startSearchJumpHighlightAutoClearTimer();
     }
-    _startSearchJumpHighlightAutoClearTimer();
   }
 
   /// [BookFormat]（`reader/book_format.dart`，依副檔名判斷）→

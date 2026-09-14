@@ -1,6 +1,10 @@
 // app/test/reader/reader_jump_target_test.dart
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/reader/book_format.dart';
+import 'package:elinkbook/reader/foliate_reader_view.dart';
+import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
 import 'package:elinkbook/reader/reader_jump_target.dart';
 
@@ -84,6 +88,171 @@ void main() {
       );
 
       expect(target, isNull);
+    });
+  });
+
+  // applyTo() 底層的 PdfReaderView/FoliateReaderView 靜態 helper 對「key
+  // 尚未掛載任何 State」的情況皆為靜默忽略（見兩者各自文件註解），不拋
+  // 例外——這裡刻意使用未掛載的空白 GlobalKey，讓測試只聚焦驗證 applyTo()
+  // 自己的分派與回傳值邏輯，不需要真正渲染 PdfReaderView/FoliateReaderView
+  // （那部分的副作用是否真的觸發，由 reader_screen_test.dart 既有的全螢幕
+  // 整合測試把關，見本計畫 Global Constraints 的邊界權衡說明）。
+  final pdfKey = GlobalKey<State<PdfReaderView>>();
+  final foliateKey = GlobalKey<State<FoliateReaderView>>();
+
+  group('applyTo：PDF 格式', () {
+    test('pdfPageIndex 為 null 時，不論 shouldNavigate 為何皆回傳 false', () {
+      const target = ReaderJumpTarget(
+        pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+      );
+
+      expect(
+        target.applyTo(
+          format: BookFormat.pdf,
+          pdfKey: pdfKey,
+          foliateKey: foliateKey,
+          shouldNavigate: false,
+        ),
+        isFalse,
+      );
+      expect(
+        target.applyTo(
+          format: BookFormat.pdf,
+          pdfKey: pdfKey,
+          foliateKey: foliateKey,
+          shouldNavigate: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('pdfPageIndex 存在、pdfRect 為 null 時回傳 false（只跳頁不顯示高亮）',
+        () {
+      const target = ReaderJumpTarget(pdfPageIndex: 3);
+
+      expect(
+        target.applyTo(
+          format: BookFormat.pdf,
+          pdfKey: pdfKey,
+          foliateKey: foliateKey,
+          shouldNavigate: false,
+        ),
+        isFalse,
+      );
+      expect(
+        target.applyTo(
+          format: BookFormat.pdf,
+          pdfKey: pdfKey,
+          foliateKey: foliateKey,
+          shouldNavigate: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('pdfPageIndex／pdfRect 皆存在時回傳 true', () {
+      const target = ReaderJumpTarget(
+        pdfPageIndex: 3,
+        pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+      );
+
+      expect(
+        target.applyTo(
+          format: BookFormat.pdf,
+          pdfKey: pdfKey,
+          foliateKey: foliateKey,
+          shouldNavigate: false,
+        ),
+        isTrue,
+      );
+      expect(
+        target.applyTo(
+          format: BookFormat.pdf,
+          pdfKey: pdfKey,
+          foliateKey: foliateKey,
+          shouldNavigate: true,
+        ),
+        isTrue,
+      );
+    });
+  });
+
+  group('applyTo：Foliate 格式', () {
+    test('cfi 為 null 時，不論 shouldNavigate 為何皆回傳 false', () {
+      const target = ReaderJumpTarget();
+
+      expect(
+        target.applyTo(
+          format: BookFormat.epub,
+          pdfKey: pdfKey,
+          foliateKey: foliateKey,
+          shouldNavigate: false,
+        ),
+        isFalse,
+      );
+      expect(
+        target.applyTo(
+          format: BookFormat.epub,
+          pdfKey: pdfKey,
+          foliateKey: foliateKey,
+          shouldNavigate: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('cfi 存在時，所有 Foliate 格式（epub/azw3/cbz/txt/md）皆回傳 true'
+        '（防止實作誤寫成 format == BookFormat.epub 而非 isFoliateFormat(format)）',
+        () {
+      const target = ReaderJumpTarget(cfi: 'epubcfi(/6/4!/4/2)');
+
+      for (final format in [
+        BookFormat.epub,
+        BookFormat.azw3,
+        BookFormat.cbz,
+        BookFormat.txt,
+        BookFormat.md,
+      ]) {
+        expect(
+          target.applyTo(
+            format: format,
+            pdfKey: pdfKey,
+            foliateKey: foliateKey,
+            shouldNavigate: false,
+          ),
+          isTrue,
+          reason: '格式 $format 應被視為 Foliate 格式',
+        );
+      }
+    });
+  });
+
+  group('applyTo：不支援的格式', () {
+    test('BookFormat.unknown 不論 shouldNavigate 為何皆回傳 false', () {
+      const target = ReaderJumpTarget(
+        cfi: 'epubcfi(/6/4!/4/2)',
+        pdfPageIndex: 3,
+        pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+      );
+
+      expect(
+        target.applyTo(
+          format: BookFormat.unknown,
+          pdfKey: pdfKey,
+          foliateKey: foliateKey,
+          shouldNavigate: false,
+        ),
+        isFalse,
+      );
+      expect(
+        target.applyTo(
+          format: BookFormat.unknown,
+          pdfKey: pdfKey,
+          foliateKey: foliateKey,
+          shouldNavigate: true,
+        ),
+        isFalse,
+      );
     });
   });
 }
