@@ -12,6 +12,8 @@
 
 **2026-09-14 `/superpowers:requesting-code-review` 審查 `epic.md`／`issues.md` 文件本身**（`reviews/review-epic-and-issues.md`，0 Critical／3 Important／3 Minor）並已依審查意見修訂 `issues.md`：I-1（Issue 3 `applyTo()` 改為同步、回傳 `bool`、Key 型別改用專案既有 `GlobalKey<State<PdfReaderView>>`/`GlobalKey<State<FoliateReaderView>>`）、I-2（Issue 2 `ContentIndexStatusStore` 移除不存在的 `category` 欄位、拆分 `markIndexing`/`updateProgress`、補齊 `backfillPending`/`clearByCategory` 批次方法）、I-3（Issue 1 函式更名 `buildReaderScreen`、回傳具體型別 `ReaderScreen`）皆已修正；M-1（Issue 4 `HighlightSegment` 補齊 `operator ==`/`hashCode`、函式改為公開頂層）、M-2（Issue 5 明訂可空 `repository` no-op 語意、controller 維持純資料物件）、M-3（本檔案路徑補齊）亦已修正。六個 Issue 的 `Status` 維持不變（Issue 1-5 `ready-for-agent`、Issue 6 `needs-info`）。
 
+**2026-09-14 Issue 1 已完成**：`plans/plan-issue-1.md` 4 個 Task 全數完成，新增 `buildReaderScreen()` 工廠函式，三個呼叫點皆已改用，`flutter analyze`／`flutter test` 全數通過零回歸（`worktree: epic/41-issue-1-reader-screen-route`）。
+
 **依賴順序：**
 
 ```

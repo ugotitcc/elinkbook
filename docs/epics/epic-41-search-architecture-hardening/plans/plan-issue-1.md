@@ -36,7 +36,7 @@
 - Consumes：既有型別 `Book`（`package:elinkbook/library/models/book.dart`）、`ReaderPrefsManager`（`package:elinkbook/reader/reader_prefs_manager.dart`）、`LibraryRepository`（`package:elinkbook/library/library_repository.dart`）、`ReaderJumpTarget`（`package:elinkbook/reader/reader_jump_target.dart`）、`LibraryReaderFeatureRepositories`／`LibrarySyncDependencies`（`package:elinkbook/screens/library_screen_dependencies.dart`）、`ReaderScreen`（`package:elinkbook/screens/reader_screen.dart`，其建構子目前完整簽章見下方 Step 3 程式碼，欄位皆已存在、本 Task 不新增/修改）。
 - Produces：`ReaderScreen buildReaderScreen({required Book book, required ReaderPrefsManager prefsManager, required LibraryReaderFeatureRepositories features, required LibrarySyncDependencies sync, required LibraryRepository libraryRepository, required bool isEinkMode, ReaderJumpTarget? initialJumpTarget})`——供 Task 2/3/4 呼叫。
 
-- [ ] **Step 1: 寫失敗測試（欄位對帳，審查修正 I-1：`features` 12 個欄位全數給非空值並逐一斷言，不留 `null == null` 的虛假綠燈）**
+- [x] **Step 1: 寫失敗測試（欄位對帳，審查修正 I-1：`features` 12 個欄位全數給非空值並逐一斷言，不留 `null == null` 的虛假綠燈）**
 
 建立 `app/test/screens/reader_screen_route_test.dart`：
 
@@ -212,12 +212,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/screens/reader_screen_route_test.dart`
 Expected: FAIL（編譯錯誤，`package:elinkbook/screens/reader_screen_route.dart` 不存在／`buildReaderScreen` 未定義）
 
-- [ ] **Step 3: 寫最小實作**
+- [x] **Step 3: 寫最小實作**
 
 建立 `app/lib/screens/reader_screen_route.dart`：
 
@@ -276,17 +276,17 @@ ReaderScreen buildReaderScreen({
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `cd app && flutter test test/screens/reader_screen_route_test.dart`
 Expected: PASS（3 個測試案例全數通過）
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze lib/screens/reader_screen_route.dart test/screens/reader_screen_route_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen_route.dart app/test/screens/reader_screen_route_test.dart
@@ -310,7 +310,7 @@ EOF
 **Interfaces:**
 - Consumes：Task 1 產出的 `buildReaderScreen()`。
 
-- [ ] **Step 1: 修改 import**
+- [x] **Step 1: 修改 import**
 
 在 `app/lib/screens/library_screen.dart:32`，把：
 
@@ -326,7 +326,7 @@ import 'reader_screen_route.dart';
 
 （已查證 `library_screen.dart` 內沒有任何 `ReaderScreen.xxx` 靜態成員呼叫，只有兩處純文字註解提到「ReaderScreen」，移除此 import 不影響其他程式碼。）
 
-- [ ] **Step 2: 改寫 `_openBook()`**
+- [x] **Step 2: 改寫 `_openBook()`**
 
 在 `app/lib/screens/library_screen.dart:431-469`，原本：
 
@@ -396,17 +396,17 @@ import 'reader_screen_route.dart';
 
 `.then((_) { ... })` 內容（既有的重新載入書籍清單邏輯）維持完全不動，只有 `builder:` 那一段改變。
 
-- [ ] **Step 3: 執行既有回歸測試**
+- [x] **Step 3: 執行既有回歸測試**
 
 Run: `cd app && flutter test test/screens/library_screen_test.dart`
 Expected: PASS（全數通過，含 `:1930` 起「LibraryScreen 點開一本書後，ReaderScreen 收到的 ttsAudioHandler／...」這個逐欄位斷言的關鍵回歸測試）
 
-- [ ] **Step 4: `flutter analyze` 確認乾淨**
+- [x] **Step 4: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze lib/screens/library_screen.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart
@@ -430,7 +430,7 @@ EOF
 **Interfaces:**
 - Consumes：Task 1 產出的 `buildReaderScreen()`。
 
-- [ ] **Step 1: 修改 import**
+- [x] **Step 1: 修改 import**
 
 在 `app/lib/screens/library_search_screen.dart:17`，把：
 
@@ -446,7 +446,7 @@ import 'reader_screen_route.dart';
 
 （已查證 `library_search_screen.dart` 內沒有任何 `ReaderScreen.xxx` 靜態成員呼叫，只有一處純文字註解提到「ReaderScreen」，移除此 import 不影響其他程式碼。）
 
-- [ ] **Step 2: 改寫 `_openBook()`**
+- [x] **Step 2: 改寫 `_openBook()`**
 
 在 `app/lib/screens/library_search_screen.dart:146-192`，原本：
 
@@ -528,17 +528,17 @@ import 'reader_screen_route.dart';
   }
 ```
 
-- [ ] **Step 3: 執行既有回歸測試**
+- [x] **Step 3: 執行既有回歸測試**
 
 Run: `cd app && flutter test test/screens/library_search_screen_test.dart`
 Expected: PASS（全數通過，含 `:365` 「點擊書名/作者匹配結果會開啟 ReaderScreen」、`:385` 「點擊內容匹配片段會開啟 ReaderScreen」、`:558` 「點擊書名/作者匹配結果開書時，不帶 initialJumpTarget」三個關鍵回歸測試）
 
-- [ ] **Step 4: `flutter analyze` 確認乾淨**
+- [x] **Step 4: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze lib/screens/library_search_screen.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/library_search_screen.dart
@@ -562,7 +562,7 @@ EOF
 **Interfaces:**
 - Consumes：Task 1 產出的 `buildReaderScreen()`。
 
-- [ ] **Step 1: 修改 import**
+- [x] **Step 1: 修改 import**
 
 在 `app/lib/screens/book_search_screen.dart:14`，把：
 
@@ -578,7 +578,7 @@ import 'reader_screen_route.dart';
 
 （已查證 `book_search_screen.dart` 內沒有任何 `ReaderScreen.xxx` 靜態成員呼叫，只有兩處純文字註解提到「ReaderScreen」，移除此 import 不影響其他程式碼。）
 
-- [ ] **Step 2: 改寫 `_handleSnippetTap()` 推入 `ReaderScreen` 那段**
+- [x] **Step 2: 改寫 `_handleSnippetTap()` 推入 `ReaderScreen` 那段**
 
 在 `app/lib/screens/book_search_screen.dart:146-185`（`if (widget.fromReader) { ... }` 之後的推入路徑），原本：
 
@@ -649,17 +649,17 @@ import 'reader_screen_route.dart';
   }
 ```
 
-- [ ] **Step 3: 執行既有回歸測試**
+- [x] **Step 3: 執行既有回歸測試**
 
 Run: `cd app && flutter test test/screens/book_search_screen_test.dart`
 Expected: PASS（全數通過，含 `:253` 「fromReader=false 時點擊片段推入 ReaderScreen」）
 
-- [ ] **Step 4: `flutter analyze` 確認乾淨**
+- [x] **Step 4: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze lib/screens/book_search_screen.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 5: 跑完整 `flutter analyze`／`flutter test` 作最終確認**
+- [x] **Step 5: 跑完整 `flutter analyze`／`flutter test` 作最終確認**
 
 本 Issue 三個 Task 皆完成，依專案慣例在最後一個 Task 跑一次全套驗證：
 
@@ -669,7 +669,7 @@ Expected: `No issues found!`
 Run: `cd app && flutter test`
 Expected: 全數通過（比對 `docs/epics/epic-10-search/epic.md` 記錄的既有基準 `+2339 ~1 -2`——2 個 `adaptive_shell_scaffold_test.dart` 既有失敗案例已知與本次改動無關，見 `docs/superpowers/plans/2026-09-13-split-global-reader-prefs.md` 驗證紀錄；新增 3 個 `reader_screen_route_test.dart` 測試案例後，總數應為既有基準 +3，失敗數維持 2 且必須是同樣兩個既有案例，不可出現新的失敗）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/book_search_screen.dart
@@ -687,7 +687,7 @@ EOF
 )"
 ```
 
-- [ ] **Step 7: 更新工單狀態**
+- [x] **Step 7: 更新工單狀態**
 
 在 `docs/epics/epic-41-search-architecture-hardening/issues.md` 的 Issue 1 段落，依專案既有看板慣例（見 `docs/epics/epic-10-search/issues.md` Issue 0：`**Status:** completed（...）`），把 `**Status:** ready-for-agent` 改為：
 
