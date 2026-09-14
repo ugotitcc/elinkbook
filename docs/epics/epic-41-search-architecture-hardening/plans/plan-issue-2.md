@@ -53,7 +53,7 @@
   }
   ```
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 建立 `app/test/search/content_index_status_store_test.dart`：
 
@@ -342,12 +342,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/search/content_index_status_store_test.dart`
 Expected: FAIL（編譯錯誤，`package:elinkbook/search/content_index_status_store.dart` 不存在）
 
-- [ ] **Step 3: 寫最小實作**
+- [x] **Step 3: 寫最小實作**
 
 建立 `app/lib/search/content_index_status_store.dart`：
 
@@ -543,17 +543,17 @@ class ContentIndexStatusStore {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `cd app && flutter test test/search/content_index_status_store_test.dart`
 Expected: PASS（16 個測試案例全數通過）
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze lib/search/content_index_status_store.dart test/search/content_index_status_store_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/search/content_index_status_store.dart app/test/search/content_index_status_store_test.dart
@@ -577,7 +577,7 @@ EOF
 **Interfaces:**
 - Consumes：Task 1 產出的 `ContentIndexStatusStore`。
 
-- [ ] **Step 1: 新增 import 與 `_store` 欄位**
+- [x] **Step 1: 新增 import 與 `_store` 欄位**
 
 在 `app/lib/search/content_indexing_scheduler.dart` 頂部 import 區塊，加入：
 
@@ -635,7 +635,7 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
 
 `_database` 欄位維持保留——`_fetchNextPendingBook()` 仍需要它下 `JOIN books` 的複合查詢，這支方法本身不屬於「純狀態資料存取」，本 Issue 不動它（見 Global Constraints）。
 
-- [ ] **Step 2: `_processOneBook()` 改用 `_store`**
+- [x] **Step 2: `_processOneBook()` 改用 `_store`**
 
 原本（開頭轉態）：
 
@@ -739,7 +739,7 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
     }
 ```
 
-- [ ] **Step 3: 刪除 `_isStillTracked` 私有方法**
+- [x] **Step 3: 刪除 `_isStillTracked` 私有方法**
 
 檔案最下方原本的：
 
@@ -769,17 +769,17 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
 
 （邏輯已完全搬進 `ContentIndexStatusStore.isTracked()`，Step 2 已把兩個呼叫點改指過去。）
 
-- [ ] **Step 4: 執行既有回歸測試**
+- [x] **Step 4: 執行既有回歸測試**
 
 Run: `cd app && flutter test test/search/content_indexing_scheduler_test.dart`
 Expected: PASS（全數通過，零回歸——這些測試直接查詢 `content_index_status`/`book_content_index` 資料列驗證最終狀態，底層 schema 與最終寫入結果不變，只是換了誰去寫）
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze lib/search/content_indexing_scheduler.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/search/content_indexing_scheduler.dart
@@ -803,7 +803,7 @@ EOF
 **Interfaces:**
 - Consumes：Task 1 產出的 `ContentIndexStatusStore`／`ContentIndexCategory`。
 
-- [ ] **Step 1: 搬遷 `ContentIndexCategory`，改用 `export` 重新導出**
+- [x] **Step 1: 搬遷 `ContentIndexCategory`，改用 `export` 重新導出**
 
 在 `app/lib/search/full_text_search_settings_repository.dart` 頂部，原本：
 
@@ -839,7 +839,7 @@ export 'content_index_status_store.dart' show ContentIndexCategory;
 
 （`ContentIndexCategory` enum 本體已搬到 `content_index_status_store.dart`——見 Task 1；這裡改用 `export` 重新導出，本檔案既有的 9 個外部匯入者〔`full_text_search_confirm_dialog.dart`／`library_search_screen.dart`／`settings_scaffold.dart` 等〕`import 'package:elinkbook/search/full_text_search_settings_repository.dart';` 後使用 `ContentIndexCategory` 的既有寫法，重新導出後不需要任何修改。）
 
-- [ ] **Step 2: 移除 `_formatFilterFor`，改用 `_store`／欄位**
+- [x] **Step 2: 移除 `_formatFilterFor`，改用 `_store`／欄位**
 
 原本的類別欄位與建構子：
 
@@ -893,7 +893,7 @@ class SqliteFullTextSearchSettingsRepository
 
 （`_database` 欄位整個移除——移除後這個檔案裡不再有任何地方直接碰 `Database` 執行 SQL，全部委派給 `_store`；`_formatFilterFor` 整段移除，已搬進 `ContentIndexStatusStore`。`import 'package:sqflite/sqflite.dart';` 保留，因為建構子參數 `required Database database` 仍需要這個型別。）
 
-- [ ] **Step 3: `setEnabled`／`rebuildIndex` 改呼叫 `_store`**
+- [x] **Step 3: `setEnabled`／`rebuildIndex` 改呼叫 `_store`**
 
 原本：
 
@@ -941,7 +941,7 @@ class SqliteFullTextSearchSettingsRepository
   }
 ```
 
-- [ ] **Step 4: `markUnsupported`／`handleBookAvailable`／`clearBookIndex` 改呼叫 `_store`，並刪除私有批次方法**
+- [x] **Step 4: `markUnsupported`／`handleBookAvailable`／`clearBookIndex` 改呼叫 `_store`，並刪除私有批次方法**
 
 原本：
 
@@ -1092,24 +1092,24 @@ class SqliteFullTextSearchSettingsRepository
 }
 ```
 
-- [ ] **Step 5: 執行既有回歸測試**
+- [x] **Step 5: 執行既有回歸測試**
 
 Run: `cd app && flutter test test/search/full_text_search_settings_repository_test.dart`
 Expected: PASS（全數通過，零回歸）
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze lib/search/full_text_search_settings_repository.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 7: 確認 9 個既有外部匯入者零回歸**
+- [x] **Step 7: 確認 9 個既有外部匯入者零回歸**
 
 `ContentIndexCategory` 搬遷後的 `export` 是否真的讓既有外部匯入者不需修改，直接跑一次它們的測試檔驗證：
 
 Run: `cd app && flutter test test/screens/full_text_search_confirm_dialog_test.dart test/screens/library_search_screen_test.dart test/screens/settings_scaffold_test.dart test/screens/library_batch_actions_test.dart test/library/book_import_service_test.dart test/screens/adaptive_shell_scaffold_test.dart test/screens/library_screen_test.dart`
 Expected: 全數通過（`adaptive_shell_scaffold_test.dart` 既有 2 個失敗案例除外——與 `epic-10-search`/`epic-41` 皆無關，見 `docs/superpowers/plans/2026-09-13-split-global-reader-prefs.md` 既有驗證紀錄）
 
-- [ ] **Step 8: 跑完整 `flutter analyze`／`flutter test` 作最終確認**
+- [x] **Step 8: 跑完整 `flutter analyze`／`flutter test` 作最終確認**
 
 本 Issue 三個 Task 皆完成，依專案慣例在最後一個 Task 跑一次全套驗證：
 
@@ -1119,7 +1119,7 @@ Expected: `No issues found!`
 Run: `cd app && flutter test`
 Expected: 全數通過（新增 16 個 `content_index_status_store_test.dart` 測試案例後，總數應為 Issue 1 合併後的既有基準 +16，失敗數維持 2 且必須是同樣兩個 `adaptive_shell_scaffold_test.dart` 既有案例，不可出現新的失敗）。
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/lib/search/full_text_search_settings_repository.dart
@@ -1138,7 +1138,7 @@ EOF
 )"
 ```
 
-- [ ] **Step 10: 更新工單狀態**
+- [x] **Step 10: 更新工單狀態**
 
 在 `docs/epics/epic-41-search-architecture-hardening/issues.md` 的 Issue 2 段落，依專案既有看板慣例，把 `**Status:** ready-for-agent` 改為：
 

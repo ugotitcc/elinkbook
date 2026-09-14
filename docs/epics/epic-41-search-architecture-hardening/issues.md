@@ -64,7 +64,7 @@
 
 ## Issue 2：抽出 ContentIndexStatusStore 收斂 content_index_status 狀態轉換
 
-**Status:** ready-for-agent
+**Status:** completed（`plans/plan-issue-2.md` 3 個 Task 全數完成，新增 `ContentIndexStatusStore`，`ContentIndexingScheduler`／`SqliteFullTextSearchSettingsRepository` 皆已改用，`ContentIndexCategory` 搬遷並以 `export` 維持既有匯入者零改動，`flutter analyze`/`flutter test` 全數通過零回歸）
 
 **依賴：** 無
 

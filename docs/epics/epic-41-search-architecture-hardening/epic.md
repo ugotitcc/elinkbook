@@ -14,6 +14,8 @@
 
 **2026-09-14 Issue 1 已完成並合併回 `main`（PR [#240](https://git.jigong.org/huthief/elinkBook/pulls/240)，分支 `epic/41-issue-1-reader-screen-route`，合併後 main 為 `eda628d0`）**：`plans/plan-issue-1.md` 4 個 Task 全數完成，新增 `buildReaderScreen()` 工廠函式，三個呼叫點皆已改用，`flutter analyze`／`flutter test` 全數通過零回歸；獨立程式審查（`reviews/review-issue-1.md`，本機保存、未進版控，見 `.gitignore`）確認 0 Critical／0 Important／1 Minor（純風格瑕疵），結論 Ready to merge: Yes。
 
+**2026-09-14 Issue 2 已完成（`plans/plan-issue-2.md` 3 個 Task 全數完成，分支 `epic/41-issue-2-content-index-status-store`）**：新增 `ContentIndexStatusStore` 收斂 `content_index_status`／`book_content_index` 狀態存取，`ContentIndexCategory` 搬遷並以 `export` 維持既有匯入者零改動，`ContentIndexingScheduler`／`SqliteFullTextSearchSettingsRepository` 皆已改用手寫 SQL 收斂，`flutter analyze`／`flutter test` 全數通過零回歸（僅 `adaptive_shell_scaffold_test.dart` 2 個既有失敗案例）。
+
 **依賴順序：**
 
 ```
