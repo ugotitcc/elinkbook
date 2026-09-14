@@ -19,4 +19,4 @@ PRD 明確記載「簡繁轉換（FR-48）之技術架構：尚無研究報告�
 
 ## 目前狀態
 
-Architecting 完成，`spec.md` 已產出（自此為本 Epic 唯一事實來源），並記錄兩項 ADR：[ADR 0030](../../adr/0030-text-conversion-character-level-for-cfi-safety.md)（1:1 字元轉換定案）、[ADR 0031](../../adr/0031-text-conversion-dual-runtime-dictionary-not-opencc-js.md)（雙端共用原始字元表、不 vendor `opencc-js`）。尚未進入 Scrum Master 階段（`issues.md`）。
+Architecting 完成，`spec.md` 已產出（自此為本 Epic 唯一事實來源），並記錄兩項 ADR：[ADR 0030](../../adr/0030-text-conversion-character-level-for-cfi-safety.md)（1:1 字元轉換定案）、[ADR 0031](../../adr/0031-text-conversion-dual-runtime-dictionary-not-opencc-js.md)（雙端共用原始字元表、不 vendor `opencc-js`）。Scrum Master 階段完成並經一輪審查修訂，已拆分 Issue 0-5（`issues.md`）：Issue 0 優先開始，Issue 1 依賴 Issue 0（`TextConversionMode` enum，審查修正原「彼此獨立」誤判），Issue 2-5 阻塞於 0＋1、彼此獨立可平行。審查另修正 Issue 2 閱讀中即時切換機制（`view.renderer.getContents()` 取代無效的 `view.goTo()`）、Issue 4 補齊跨字形搜尋摘要截斷/高亮連動、Issue 3 補齊 `ReaderScreen` 頁首/導覽列書名轉換、Issue 0 補齊字典來源規範。尚未有 Issue 認領開工。
