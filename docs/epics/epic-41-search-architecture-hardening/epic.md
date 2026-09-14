@@ -18,7 +18,7 @@
 
 **2026-09-14 Issue 3 已完成並合併回 `main`（PR [#242](https://git.jigong.org/huthief/elinkBook/pulls/242)，分支 `epic/41-issue-3-reader-jump-target-applyTo`，合併後 main 為 `1df43876`）**：`plans/plan-issue-3.md` 2 個 Task 全數完成，`ReaderJumpTarget` 新增 `applyTo()` 收斂 `ReaderScreen` 兩處重複的格式分派 if-else，`applyTo()` 為同步方法、回傳 `bool`，計時器生命週期維持留在 `ReaderScreen`；新增測試皆追加於既有 `reader_jump_target_test.dart`（保留原本 6 個 `fromContentLocator` 測試），`flutter analyze`／`flutter test` 全數通過零回歸（僅 `adaptive_shell_scaffold_test.dart` 2 個既有失敗案例）。計畫審查（`reviews/review-plan-issue-3.md`，1 Critical／2 Important／2 Minor，皆已修正——Critical 為「計畫誤將既有測試檔當新檔案、整檔覆蓋」）與獨立實作審查（`reviews/review-issue-3.md`，0 Critical／0 Important／2 Minor，皆為既有技術債非本次引入）確認結論 Ready to merge: Yes。
 
-**2026-09-14 Issue 4 已完成（`plans/plan-issue-4.md` 2 個 Task 全數完成，新增 `splitHighlightSegments()` 純函式，`BookSearchScreen` 已改用，`LibrarySearchScreen` 未變動，`flutter analyze`/`flutter test` 全數通過零回歸，分支 `epic/41-issue-4-highlight-segments`）**：Issue 4 高亮切分演算法已抽為獨立純函式可被 `flutter_test` 直接單元測試覆蓋，`BookSearchScreen._buildHighlightedText()` 僅保留樣式轉換，字級回歸測試驗證渲染行為零回歸。
+**2026-09-14 Issue 4 已完成並合併回 `main`（PR [#243](https://git.jigong.org/huthief/elinkBook/pulls/243)，分支 `epic/41-issue-4-highlight-segments`，合併後 main 為 `73e13ad1`）**：`plans/plan-issue-4.md` 2 個 Task 全數完成，新增 `splitHighlightSegments()` 純函式與 `HighlightSegment` 值相等物件，高亮切分演算法已脫離 `BuildContext`、可被 `flutter_test` 直接單元測試覆蓋，`BookSearchScreen._buildHighlightedText()` 僅保留樣式轉換，字級回歸測試（commit `b6cd0b7f` 修復）驗證渲染行為零回歸；`LibrarySearchScreen` 未變動（`spec.md` §9.2 既有決定）。計畫審查（`reviews/review-plan-issue-4.md`，0 Critical／2 Important／2 Minor，皆已修正——無高亮判斷改用 `any(isMatch)` 而非依賴 segments 長度、補齊值相等性與大小寫保留測試）與獨立實作審查（`reviews/review-issue-4.md`，0 Critical／0 Important／2 Minor，皆為計畫既有設計或合理微調）確認結論 Ready to merge: Yes。
 
 **依賴順序：**
 
@@ -32,4 +32,4 @@ Issue 6（記錄用，暫不動手）
 
 ## 下一步
 
-Issue 1 → Issue 3 這條鏈已全數完成並合併；Issue 2 亦已完成並合併。剩餘 Issue 4、Issue 5 皆獨立、可任意順序處理；Issue 6 暫緩，等待「出現第二個需要同樣按序配對模式的呼叫端」再重新評估是否拆案。
+Issue 1 → Issue 3 這條鏈已全數完成並合併；Issue 2、Issue 4 亦已完成並合併。僅剩 Issue 5 待實作；Issue 6 暫緩，等待「出現第二個需要同樣按序配對模式的呼叫端」再重新評估是否拆案。
