@@ -227,13 +227,14 @@ class _LibraryGroupManagementDialogState
       ),
       actions: [
         TextButton(
+          key: const Key('library_group_close_button'),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('關閉'),
+        ),
+        TextButton(
           key: const Key('library_group_add_button'),
           onPressed: _addGroup,
           child: const Text('新增'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('關閉'),
         ),
       ],
     );

@@ -102,4 +102,44 @@ void main() {
     final errorText = tester.widget<Text>(find.text('分類「B」已存在'));
     expect(errorText.style?.color, theme.colorScheme.error);
   });
+
+  testWidgets('「新增」按鈕須位於「關閉」按鈕右側（最右邊）', (tester) async {
+    final repository = FakeLibraryRepository();
+    await repository.upsertGroup('A');
+    final groups = await repository.listGroups();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => LibraryGroupManagementDialog(
+                    repository: repository,
+                    initialGroups: groups,
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final addButtonX = tester
+        .getTopLeft(find.byKey(const Key('library_group_add_button')))
+        .dx;
+    final closeButtonX = tester
+        .getTopLeft(find.byKey(const Key('library_group_close_button')))
+        .dx;
+
+    expect(addButtonX, greaterThan(closeButtonX),
+        reason: '「新增」應排在「關閉」右側，即畫面最右邊');
+  });
 }
