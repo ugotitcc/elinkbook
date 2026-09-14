@@ -20,7 +20,7 @@
 
 **2026-09-14 Issue 4 已完成並合併回 `main`（PR [#243](https://git.jigong.org/huthief/elinkBook/pulls/243)，分支 `epic/41-issue-4-highlight-segments`，合併後 main 為 `73e13ad1`）**：`plans/plan-issue-4.md` 2 個 Task 全數完成，新增 `splitHighlightSegments()` 純函式與 `HighlightSegment` 值相等物件，高亮切分演算法已脫離 `BuildContext`、可被 `flutter_test` 直接單元測試覆蓋，`BookSearchScreen._buildHighlightedText()` 僅保留樣式轉換，字級回歸測試（commit `b6cd0b7f` 修復）驗證渲染行為零回歸；`LibrarySearchScreen` 未變動（`spec.md` §9.2 既有決定）。計畫審查（`reviews/review-plan-issue-4.md`，0 Critical／2 Important／2 Minor，皆已修正——無高亮判斷改用 `any(isMatch)` 而非依賴 segments 長度、補齊值相等性與大小寫保留測試）與獨立實作審查（`reviews/review-issue-4.md`，0 Critical／0 Important／2 Minor，皆為計畫既有設計或合理微調）確認結論 Ready to merge: Yes。
 
-**2026-09-14 Issue 5 已完成（分支 `epic/41-issue-5-toggles-controller`，待合併回 `main`）**：`plans/plan-issue-5.md` 3 個 Task 全數完成，新增 `FullTextSearchTogglesController` 收斂 `library_search_screen.dart`／`settings_scaffold.dart` 兩處全文檢索開關的「載入兩個開關狀態＋切換前確認、切換後更新」逐行重複邏輯，兩個 Widget 改為持有同一個 controller 實例、只保留各自的 UI 排版與確認 Dialog 呼叫，controller 維持純資料物件、不繼承 `ChangeNotifier`，`_repository == null` 時 `load()`/`toggle()` 安全 no-op；`flutter analyze`／`flutter test` 全數通過零回歸（僅 `adaptive_shell_scaffold_test.dart` 2 個既有失敗案例）。Epic 41 五個 `ready-for-agent`/`needs-info` Issue 中僅剩 Issue 6（`needs-info`，暫緩）。
+**2026-09-14 Issue 5 已完成並合併回 `main`（PR [#244](https://git.jigong.org/huthief/elinkBook/pulls/244)，分支 `epic/41-issue-5-toggles-controller`，合併後 main 為 `89972231`）**：`plans/plan-issue-5.md` 3 個 Task 全數完成，新增 `FullTextSearchTogglesController` 收斂 `library_search_screen.dart`／`settings_scaffold.dart` 兩處全文檢索開關的「載入兩個開關狀態＋切換前確認、切換後更新」逐行重複邏輯，兩個 Widget 改為持有同一個 controller 實例、只保留各自的 UI 排版與確認 Dialog 呼叫，controller 維持純資料物件、不繼承 `ChangeNotifier`，`pdfEnabled`/`foliateEnabled` 封裝為私有欄位＋唯讀 getter，`_repository == null` 時 `load()`/`toggle()` 安全 no-op；`settings_scaffold.dart` 的 `didUpdateWidget()` 補上 repository 實例變更時重建 controller 的保護。`flutter analyze`／`flutter test` 全數通過零回歸（僅 `adaptive_shell_scaffold_test.dart` 2 個既有失敗案例）。計畫審查（`reviews/review-plan-issue-5.md`，0 Critical／2 Important／3 Minor，皆已修正）與獨立實作審查（`reviews/review-issue-5.md`，0 Critical／0 Important／1 Minor，既有範圍決定非缺陷）確認結論 Ready to merge: Yes。Epic 41 五個 `ready-for-agent`/`needs-info` Issue 中僅剩 Issue 6（`needs-info`，暫緩）。
 
 **依賴順序：**
 
@@ -34,4 +34,4 @@ Issue 6（記錄用，暫不動手）
 
 ## 下一步
 
-Issue 1 → Issue 3 這條鏈已全數完成並合併；Issue 2、Issue 4、Issue 5 亦已完成（Issue 5 待合併）。僅剩 Issue 6（`needs-info`，暫緩），等待「出現第二個需要同樣按序配對模式的呼叫端」再重新評估是否拆案。
+Issue 1-5 已全數完成並合併回 `main`。僅剩 Issue 6（`needs-info`，暫緩），等待「出現第二個需要同樣按序配對模式的呼叫端」再重新評估是否拆案；在此之前 Epic 41 已無待實作工單，可考慮由人類決定歸檔時機。
