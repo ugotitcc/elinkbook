@@ -19,4 +19,4 @@ PRD 明確記載「簡繁轉換（FR-48）之技術架構：尚無研究報告�
 
 ## 目前狀態
 
-Discovery 完成並經一輪審查修訂，`design.md` 已更新。尚未進入 Architecting（`spec.md`）／Issue 拆分（`issues.md`）。
+Architecting 完成，`spec.md` 已產出（自此為本 Epic 唯一事實來源），並記錄兩項 ADR：[ADR 0030](../../adr/0030-text-conversion-character-level-for-cfi-safety.md)（1:1 字元轉換定案）、[ADR 0031](../../adr/0031-text-conversion-dual-runtime-dictionary-not-opencc-js.md)（雙端共用原始字元表、不 vendor `opencc-js`）。尚未進入 Scrum Master 階段（`issues.md`）。
