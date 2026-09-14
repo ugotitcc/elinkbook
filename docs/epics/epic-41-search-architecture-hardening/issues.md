@@ -209,7 +209,7 @@
 
 ## Issue 5：抽出 FullTextSearchTogglesController 收斂全文檢索開關重複邏輯
 
-**Status:** ready-for-agent
+**Status:** completed（`plans/plan-issue-5.md` 3 個 Task 全數完成，新增 `FullTextSearchTogglesController`，`library_search_screen.dart`／`settings_scaffold.dart` 兩處開關邏輯皆已改用，`flutter analyze`/`flutter test` 全數通過零回歸）
 
 **依賴：** 無
 

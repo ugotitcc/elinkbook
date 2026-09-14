@@ -9,6 +9,7 @@ import '../library/widgets/book_cover.dart';
 import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../search/full_text_search_settings_repository.dart';
+import '../search/full_text_search_toggles_controller.dart';
 import '../search/search_repository.dart';
 import 'book_search_screen.dart';
 import 'full_text_search_confirm_dialog.dart';
@@ -487,31 +488,22 @@ class _FullTextSearchQuickSettingsPanel extends StatefulWidget {
 
 class _FullTextSearchQuickSettingsPanelState
     extends State<_FullTextSearchQuickSettingsPanel> {
-  bool _pdfEnabled = false;
-  bool _foliateEnabled = false;
+  late final FullTextSearchTogglesController _controller;
 
   @override
   void initState() {
     super.initState();
+    _controller = FullTextSearchTogglesController(widget.repository);
     _load();
   }
 
   Future<void> _load() async {
-    final repository = widget.repository;
-    if (repository == null) return;
-    final pdfEnabled = await repository.isEnabled(ContentIndexCategory.pdf);
-    final foliateEnabled =
-        await repository.isEnabled(ContentIndexCategory.foliate);
+    await _controller.load();
     if (!mounted) return;
-    setState(() {
-      _pdfEnabled = pdfEnabled;
-      _foliateEnabled = foliateEnabled;
-    });
+    setState(() {});
   }
 
   Future<void> _handleToggle(ContentIndexCategory category, bool value) async {
-    final repository = widget.repository;
-    if (repository == null) return;
     if (value) {
       final confirmed = await showFullTextSearchEnableConfirmDialog(
         context,
@@ -520,15 +512,9 @@ class _FullTextSearchQuickSettingsPanelState
       );
       if (!confirmed) return;
     }
-    await repository.setEnabled(category, value);
+    await _controller.toggle(category, value);
     if (!mounted) return;
-    setState(() {
-      if (category == ContentIndexCategory.pdf) {
-        _pdfEnabled = value;
-      } else {
-        _foliateEnabled = value;
-      }
-    });
+    setState(() {});
   }
 
   @override
@@ -556,14 +542,15 @@ class _FullTextSearchQuickSettingsPanelState
                       'library_search_full_text_search_pdf_rebuild_button'),
                   icon: const Icon(Icons.refresh),
                   tooltip: '重建索引',
-                  onPressed: !_pdfEnabled || widget.repository == null
-                      ? null
-                      : () => widget.repository!
-                          .rebuildIndex(ContentIndexCategory.pdf),
+                  onPressed:
+                      !_controller.pdfEnabled || widget.repository == null
+                          ? null
+                          : () => widget.repository!
+                              .rebuildIndex(ContentIndexCategory.pdf),
                 ),
                 Switch(
                   key: const Key('library_search_full_text_search_pdf_switch'),
-                  value: _pdfEnabled,
+                  value: _controller.pdfEnabled,
                   onChanged: widget.repository == null
                       ? null
                       : (value) =>
@@ -583,15 +570,16 @@ class _FullTextSearchQuickSettingsPanelState
                       'library_search_full_text_search_foliate_rebuild_button'),
                   icon: const Icon(Icons.refresh),
                   tooltip: '重建索引',
-                  onPressed: !_foliateEnabled || widget.repository == null
-                      ? null
-                      : () => widget.repository!
-                          .rebuildIndex(ContentIndexCategory.foliate),
+                  onPressed:
+                      !_controller.foliateEnabled || widget.repository == null
+                          ? null
+                          : () => widget.repository!
+                              .rebuildIndex(ContentIndexCategory.foliate),
                 ),
                 Switch(
                   key: const Key(
                       'library_search_full_text_search_foliate_switch'),
-                  value: _foliateEnabled,
+                  value: _controller.foliateEnabled,
                   onChanged: widget.repository == null
                       ? null
                       : (value) =>
