@@ -21,8 +21,8 @@
 | 11 | `epic-8-sync` 雲端同步 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 12 | `epic-14-system-settings` 系統設定 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 13 | `epic-9-stats` 閱讀統計 | ⚪ 未開始 (Backlog) | 開發排期順延至 `epic-14-system-settings` 之後 |
-| 14 | `epic-10-search` 全文檢索 | 🟡 開發中 (Active) | Issue 0-8 全部完成（Issue 8 PR #238 已合併）；全部工單結案，待人類決定歸檔時機 |
-| 15 | `epic-40-bundled-sqlite` 自帶編譯進 FTS5 的 SQLite（取代系統內建版本） | 🟡 開發中 (Active) | Issue 0 程式碼已完成並合併（PR #236）；真機重新驗證（`9491G`／`Hera_Vis_WIFI`）為收尾步驟，待人類執行後歸檔 |
+| 14 | `epic-10-search` 全文檢索 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
+| 15 | `epic-40-bundled-sqlite` 自帶編譯進 FTS5 的 SQLite（取代系統內建版本） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 16 | `epic-11-multi-format-reader` 多格式閱讀擴充（KF8/CBZ/TXT/MD） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 17 | `epic-12-social` 社群分享 | ⚪ 未開始 (Backlog) | P3，最低優先 |
 | 18 | `epic-13-ios` iOS 移植 | ⚪ 未開始 (Backlog) | 待 Android 版本（epic-0/2/3/4/5）穩定後啟動 |

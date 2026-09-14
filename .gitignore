@@ -16,8 +16,8 @@ docs/archive/2026-09-10-epic-36-adaptive-shelf-navigation/reviews/
 docs/archive/2026-09-10-epic-37-test-suite-flakiness/reviews/
 docs/archive/2026-09-10-epic-38-reader-chrome-tts-redesign/reviews/
 docs/archive/2026-09-10-epic-39-layout-settings-redesign/reviews/
-docs/epics/epic-10-search/reviews/
-docs/epics/epic-40-bundled-sqlite/reviews/
+docs/archive/2026-09-14-epic-10-search/reviews/
+docs/archive/2026-09-14-epic-40-bundled-sqlite/reviews/
 docs/epics/epic-41-search-architecture-hardening/reviews/
 # epic-29-cloud-import Issue 7：雲端服務 OAuth 本機真實憑證設定檔（樣板見
 # app/config/cloud_oauth.example.json，此檔含開發者個人真實憑證不進版控）。
