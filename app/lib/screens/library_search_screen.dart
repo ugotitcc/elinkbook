@@ -14,7 +14,7 @@ import 'book_search_screen.dart';
 import 'full_text_search_confirm_dialog.dart';
 import 'library_paging.dart';
 import 'library_screen_dependencies.dart';
-import 'reader_screen.dart';
+import 'reader_screen_route.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_section_header.dart';
 import 'widgets/eb_sheet_shell.dart';
@@ -151,37 +151,13 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
     FocusScope.of(context).unfocus();
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ReaderScreen(
-          filePath: book.filePath,
-          bookId: book.id,
+        builder: (_) => buildReaderScreen(
+          book: book,
           prefsManager: widget.prefsManager,
-          bookmarksRepository:
-              widget.readerFeatureRepositories.bookmarksRepository,
-          highlightsRepository:
-              widget.readerFeatureRepositories.highlightsRepository,
-          notesRepository: widget.readerFeatureRepositories.notesRepository,
-          bookTitle: book.title,
-          bookAuthor: book.author,
-          bookProgress: book.progress,
-          isFixedLayout: book.isFixedLayout,
+          features: widget.readerFeatureRepositories,
+          sync: widget.syncDependencies,
           libraryRepository: widget.libraryRepository,
-          customFontsRepository:
-              widget.readerFeatureRepositories.customFontsRepository,
-          layoutPresetRepository:
-              widget.readerFeatureRepositories.layoutPresetRepository,
-          bookReaderPrefsRepository:
-              widget.readerFeatureRepositories.bookReaderPrefsRepository,
-          syncCheckpointTrigger: widget.syncDependencies.syncCheckpointTrigger,
-          ttsProvider: widget.readerFeatureRepositories.ttsProvider,
-          ttsAudioHandler: widget.readerFeatureRepositories.ttsAudioHandler,
-          ttsAudioFocusSource:
-              widget.readerFeatureRepositories.ttsAudioFocusSource,
           isEinkMode: widget.isEinkMode,
-          readerActivityTracker:
-              widget.readerFeatureRepositories.readerActivityTracker,
-          searchRepository: widget.readerFeatureRepositories.searchRepository,
-          isFullTextSearchAvailable:
-              widget.readerFeatureRepositories.isFullTextSearchAvailable,
           // epic-10-search Issue 5：只有內容匹配片段的點擊會帶入
           // jumpTarget（見下方 _buildContentGroupCard 呼叫端），書名/作者
           // 匹配結果維持一般開書路徑（jumpTarget 預設 null）。
