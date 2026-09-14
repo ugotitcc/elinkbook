@@ -115,7 +115,7 @@
 
 ## Issue 3：ReaderJumpTarget 收下「套用到 View」的行為（`applyTo()`）
 
-**Status:** ready-for-agent
+**Status:** completed（`plans/plan-issue-3.md` 2 個 Task 全數完成，`ReaderJumpTarget` 新增 `applyTo()`，`ReaderScreen` 兩處格式分派皆已改用，`flutter analyze`/`flutter test` 全數通過零回歸）
 
 **依賴：** Issue 1（`ReaderScreen` 開書/跳轉組裝路徑先穩定，避免與本 Issue 的 diff 互相干擾；`applyTo()` 是給 `ReaderScreen` State 內部呼叫，非 Issue 1 新增的工廠函式直接呼叫）
 
