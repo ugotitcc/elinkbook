@@ -1,6 +1,6 @@
 # Epic 41 Issue 5：抽出 FullTextSearchTogglesController Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 新增 `FullTextSearchTogglesController`，收斂 `library_search_screen.dart` 的 `_FullTextSearchQuickSettingsPanelState` 與 `settings_scaffold.dart` 的 `_SettingsScaffoldState` 兩處逐行重複的「載入兩個全文檢索開關狀態」＋「切換前確認、切換後更新」邏輯，兩個 Widget 改為持有同一個 controller 實例，只保留各自的 UI 排版與確認 Dialog 呼叫。
 
@@ -48,7 +48,7 @@
   }
   ```
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 建立 `app/test/search/full_text_search_toggles_controller_test.dart`：
 
@@ -142,12 +142,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/search/full_text_search_toggles_controller_test.dart`
 Expected: FAIL（編譯錯誤，找不到 `package:elinkbook/search/full_text_search_toggles_controller.dart`）
 
-- [ ] **Step 3: 寫最小實作**
+- [x] **Step 3: 寫最小實作**
 
 建立 `app/lib/search/full_text_search_toggles_controller.dart`：
 
@@ -208,17 +208,17 @@ class FullTextSearchTogglesController {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `cd app && flutter test test/search/full_text_search_toggles_controller_test.dart`
 Expected: PASS（6 個測試案例全數通過）
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze lib/search/full_text_search_toggles_controller.dart test/search/full_text_search_toggles_controller_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/search/full_text_search_toggles_controller.dart app/test/search/full_text_search_toggles_controller_test.dart
@@ -242,7 +242,7 @@ EOF
 **Interfaces:**
 - Consumes：Task 1 產出的 `FullTextSearchTogglesController`。
 
-- [ ] **Step 1: 新增 import**
+- [x] **Step 1: 新增 import**
 
 在 `app/lib/screens/library_search_screen.dart` 開頭 import 區塊，原本：
 
@@ -263,7 +263,7 @@ import '../search/full_text_search_toggles_controller.dart';
 import '../search/search_repository.dart';
 ```
 
-- [ ] **Step 2: 改寫 `_FullTextSearchQuickSettingsPanelState`**
+- [x] **Step 2: 改寫 `_FullTextSearchQuickSettingsPanelState`**
 
 在 `app/lib/screens/library_search_screen.dart:488-607`，原本：
 
@@ -502,17 +502,17 @@ class _FullTextSearchQuickSettingsPanelState
 }
 ```
 
-- [ ] **Step 3: 執行既有回歸測試**
+- [x] **Step 3: 執行既有回歸測試**
 
 Run: `cd app && flutter test test/screens/library_search_screen_test.dart`
 Expected: PASS（全數通過，含「設定選單內從關閉切成開啟，先跳出確認對話框，取消則不呼叫 setEnabled」與「確認後呼叫 setEnabled(true)，重建索引按鈕由停用變為可用」兩個關鍵回歸測試——這兩個測試實際 pump 真實 `_FullTextSearchQuickSettingsPanel` 並用 `find.byKey(...)` 驗證 `Switch`/`IconButton` 狀態，是本次重構「開關與重建索引按鈕行為完全不變」的關鍵證據）
 
-- [ ] **Step 4: `flutter analyze` 確認乾淨**
+- [x] **Step 4: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze lib/screens/library_search_screen.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/library_search_screen.dart
@@ -540,7 +540,7 @@ EOF
 **Interfaces:**
 - Consumes：Task 1 產出的 `FullTextSearchTogglesController`。
 
-- [ ] **Step 1: 新增 import**
+- [x] **Step 1: 新增 import**
 
 在 `app/lib/screens/settings_scaffold.dart` 開頭 import 區塊，原本：
 
@@ -559,7 +559,7 @@ import '../search/full_text_search_toggles_controller.dart';
 import '../sync/sync_account_repository.dart';
 ```
 
-- [ ] **Step 2: 改寫欄位宣告**
+- [x] **Step 2: 改寫欄位宣告**
 
 在 `app/lib/screens/settings_scaffold.dart:92-95`，原本：
 
@@ -580,7 +580,7 @@ import '../sync/sync_account_repository.dart';
   late FullTextSearchTogglesController _fullTextSearchTogglesController;
 ```
 
-- [ ] **Step 3: 改寫 `initState()`**
+- [x] **Step 3: 改寫 `initState()`**
 
 在 `app/lib/screens/settings_scaffold.dart:97-102`，原本：
 
@@ -607,7 +607,7 @@ import '../sync/sync_account_repository.dart';
   }
 ```
 
-- [ ] **Step 4: 改寫 `didUpdateWidget()`**
+- [x] **Step 4: 改寫 `didUpdateWidget()`**
 
 在 `app/lib/screens/settings_scaffold.dart:110-114`，原本：
 
@@ -639,7 +639,7 @@ import '../sync/sync_account_repository.dart';
   }
 ```
 
-- [ ] **Step 5: 改寫 `_loadFullTextSearchSettings()`**
+- [x] **Step 5: 改寫 `_loadFullTextSearchSettings()`**
 
 在 `app/lib/screens/settings_scaffold.dart:130-141`，原本：
 
@@ -668,7 +668,7 @@ import '../sync/sync_account_repository.dart';
   }
 ```
 
-- [ ] **Step 6: 改寫 `_handleFullTextSearchToggle()`**
+- [x] **Step 6: 改寫 `_handleFullTextSearchToggle()`**
 
 在 `app/lib/screens/settings_scaffold.dart:143-169`，原本：
 
@@ -726,7 +726,7 @@ import '../sync/sync_account_repository.dart';
   }
 ```
 
-- [ ] **Step 7: 改寫 build() 內兩處開關區塊**
+- [x] **Step 7: 改寫 build() 內兩處開關區塊**
 
 在 `app/lib/screens/settings_scaffold.dart:313-343`，原本（PDF 區塊）：
 
@@ -876,17 +876,17 @@ import '../sync/sync_account_repository.dart';
             ),
 ```
 
-- [ ] **Step 8: 執行既有回歸測試**
+- [x] **Step 8: 執行既有回歸測試**
 
 Run: `cd app && flutter test test/screens/settings_scaffold_test.dart`
 Expected: PASS（全數通過，含「開關初始值反映 repository.isEnabled()」「開啟開關前彈出確認對話框，取消不呼叫 setEnabled」「開啟開關確認後呼叫 setEnabled(true) 並更新畫面狀態」「關閉開關不彈出確認對話框，直接呼叫 setEnabled(false)」以及 `didUpdateWidget` 雙入口同步測試——這些測試實際 pump 真實 `SettingsScaffold` 並用 `find.byKey(...)` 驗證 `Switch`/`IconButton` 狀態，是本次重構「開關行為完全不變」的關鍵證據）
 
-- [ ] **Step 9: `flutter analyze` 確認乾淨**
+- [x] **Step 9: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze lib/screens/settings_scaffold.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 10: 跑完整 `flutter analyze`／`flutter test` 作最終確認**
+- [x] **Step 10: 跑完整 `flutter analyze`／`flutter test` 作最終確認**
 
 本 Issue 三個 Task 皆完成，依專案慣例在最後一個 Task 跑一次全套驗證：
 
@@ -896,7 +896,7 @@ Expected: `No issues found!`
 Run: `cd app && flutter test`
 Expected: 全數通過（新增 6 個 `full_text_search_toggles_controller_test.dart` 測試案例後，全庫測試總數為 Issue 4 合併後的既有基準淨增 +6；失敗數維持 2 且必須是同樣兩個 `adaptive_shell_scaffold_test.dart` 既有案例，不可出現新的失敗）。
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add app/lib/screens/settings_scaffold.dart
@@ -915,7 +915,7 @@ EOF
 )"
 ```
 
-- [ ] **Step 12: 更新工單狀態**
+- [x] **Step 12: 更新工單狀態**
 
 在 `docs/epics/epic-41-search-architecture-hardening/issues.md` 的 Issue 5 段落，依專案既有看板慣例，把 `**Status:** ready-for-agent` 改為：
 
