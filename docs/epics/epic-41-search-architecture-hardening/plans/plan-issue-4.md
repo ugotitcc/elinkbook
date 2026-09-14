@@ -48,7 +48,7 @@
   List<HighlightSegment> splitHighlightSegments(String text, String query);
   ```
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 建立 `app/test/search/highlight_segments_test.dart`：
 
@@ -159,12 +159,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/search/highlight_segments_test.dart`
 Expected: FAIL（編譯錯誤，找不到 `package:elinkbook/search/highlight_segments.dart`）
 
-- [ ] **Step 3: 寫最小實作**
+- [x] **Step 3: 寫最小實作**
 
 建立 `app/lib/search/highlight_segments.dart`：
 
@@ -233,17 +233,17 @@ List<HighlightSegment> splitHighlightSegments(String text, String query) {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `cd app && flutter test test/search/highlight_segments_test.dart`
 Expected: PASS（11 個測試案例全數通過）
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze lib/search/highlight_segments.dart test/search/highlight_segments_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/search/highlight_segments.dart app/test/search/highlight_segments_test.dart
@@ -267,7 +267,7 @@ EOF
 **Interfaces:**
 - Consumes：Task 1 產出的 `HighlightSegment`／`splitHighlightSegments()`。
 
-- [ ] **Step 1: 新增 import**
+- [x] **Step 1: 新增 import**
 
 在 `app/lib/screens/book_search_screen.dart` 開頭 import 區塊，原本：
 
@@ -286,7 +286,7 @@ import '../search/highlight_segments.dart';
 import '../search/search_repository.dart';
 ```
 
-- [ ] **Step 2: 改寫 `_buildHighlightedText()`**
+- [x] **Step 2: 改寫 `_buildHighlightedText()`**
 
 在 `app/lib/screens/book_search_screen.dart:347-394`，原本：
 
@@ -392,17 +392,17 @@ import '../search/search_repository.dart';
   }
 ```
 
-- [ ] **Step 3: 執行既有回歸測試**
+- [x] **Step 3: 執行既有回歸測試**
 
 Run: `cd app && flutter test test/screens/book_search_screen_test.dart`
 Expected: PASS（全數通過，含 `test/screens/book_search_screen_test.dart:402-443` 字級回歸測試——這個測試實際 pump 真實 `BookSearchScreen` 並量測 `find.byKey(const Key('book_search_snippet_0'))` 的實際渲染高度，是本次重構「高亮渲染行為完全不變」的關鍵證據）
 
-- [ ] **Step 4: `flutter analyze` 確認乾淨**
+- [x] **Step 4: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze lib/screens/book_search_screen.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 5: 跑完整 `flutter analyze`／`flutter test` 作最終確認**
+- [x] **Step 5: 跑完整 `flutter analyze`／`flutter test` 作最終確認**
 
 本 Issue 兩個 Task 皆完成，依專案慣例在最後一個 Task 跑一次全套驗證：
 
@@ -412,7 +412,7 @@ Expected: `No issues found!`
 Run: `cd app && flutter test`
 Expected: 全數通過（新增 11 個 `highlight_segments_test.dart` 測試案例後，全庫測試總數為 Issue 3 合併後的既有基準淨增 +11；失敗數維持 2 且必須是同樣兩個 `adaptive_shell_scaffold_test.dart` 既有案例，不可出現新的失敗）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/book_search_screen.dart
@@ -430,7 +430,7 @@ EOF
 )"
 ```
 
-- [ ] **Step 7: 更新工單狀態**
+- [x] **Step 7: 更新工單狀態**
 
 在 `docs/epics/epic-41-search-architecture-hardening/issues.md` 的 Issue 4 段落，依專案既有看板慣例，把 `**Status:** ready-for-agent` 改為：
 
