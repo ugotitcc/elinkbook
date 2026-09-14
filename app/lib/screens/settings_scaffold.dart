@@ -7,6 +7,7 @@ import '../reader/custom_fonts_repository.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/tts_provider.dart';
 import '../search/full_text_search_settings_repository.dart';
+import '../search/full_text_search_toggles_controller.dart';
 import '../sync/sync_account_repository.dart';
 import '../sync/sync_client.dart';
 import '../theme/app_theme.dart';
@@ -89,14 +90,18 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
   /// 阻塞其餘項目的同步顯示。
   bool _consoleLogEnabled = false;
 
-  /// 「啟用全文檢索」兩個分類目前顯示值（epic-10-search Issue 3），比照
-  /// 上方 `_consoleLogEnabled` 同一套模式。
-  bool _fullTextSearchPdfEnabled = false;
-  bool _fullTextSearchFoliateEnabled = false;
+  /// 「啟用全文檢索」兩個分類的讀取/切換邏輯已收斂至
+  /// [FullTextSearchTogglesController]（epic-41-search-architecture-hardening
+  /// Issue 5），本欄位比照上方 `_consoleLogEnabled` 同一套「先顯示預設值、
+  /// initState() 非同步載入完成後才 setState 更新」模式。
+  late FullTextSearchTogglesController _fullTextSearchTogglesController;
 
   @override
   void initState() {
     super.initState();
+    _fullTextSearchTogglesController = FullTextSearchTogglesController(
+      widget.fullTextSearchSettingsRepository,
+    );
     _loadConsoleLogEnabled();
     _loadFullTextSearchSettings();
   }
@@ -110,6 +115,16 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
   @override
   void didUpdateWidget(covariant SettingsScaffold oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.fullTextSearchSettingsRepository !=
+        widget.fullTextSearchSettingsRepository) {
+      // 上層傳入了不同的 repository 實例（review-plan-issue-5.md I-1）：
+      // 重新建構 controller 避免它繼續持有舊實例，與 build() 內
+      // 「重建索引」按鈕直接取用 widget.fullTextSearchSettingsRepository
+      // （永遠讀最新實例）的行為分歧。
+      _fullTextSearchTogglesController = FullTextSearchTogglesController(
+        widget.fullTextSearchSettingsRepository,
+      );
+    }
     _loadFullTextSearchSettings();
   }
 
@@ -128,16 +143,9 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
   }
 
   Future<void> _loadFullTextSearchSettings() async {
-    final repository = widget.fullTextSearchSettingsRepository;
-    if (repository == null) return;
-    final pdfEnabled = await repository.isEnabled(ContentIndexCategory.pdf);
-    final foliateEnabled =
-        await repository.isEnabled(ContentIndexCategory.foliate);
+    await _fullTextSearchTogglesController.load();
     if (!mounted) return;
-    setState(() {
-      _fullTextSearchPdfEnabled = pdfEnabled;
-      _fullTextSearchFoliateEnabled = foliateEnabled;
-    });
+    setState(() {});
   }
 
   /// 關閉開關（[value] 為 `false`）直接呼叫 `setEnabled`，不彈出確認對話框
@@ -147,8 +155,6 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
     ContentIndexCategory category,
     bool value,
   ) async {
-    final repository = widget.fullTextSearchSettingsRepository;
-    if (repository == null) return;
     if (value) {
       final confirmed = await showFullTextSearchEnableConfirmDialog(
         context,
@@ -157,15 +163,9 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
       );
       if (!confirmed) return;
     }
-    await repository.setEnabled(category, value);
+    await _fullTextSearchTogglesController.toggle(category, value);
     if (!mounted) return;
-    setState(() {
-      if (category == ContentIndexCategory.pdf) {
-        _fullTextSearchPdfEnabled = value;
-      } else {
-        _fullTextSearchFoliateEnabled = value;
-      }
-    });
+    setState(() {});
   }
 
   @override
@@ -322,7 +322,8 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                           'settings_full_text_search_pdf_rebuild_button'),
                       icon: const Icon(Icons.refresh),
                       tooltip: '重建索引',
-                      onPressed: !_fullTextSearchPdfEnabled ||
+                      onPressed: !_fullTextSearchTogglesController
+                                  .pdfEnabled ||
                               widget.fullTextSearchSettingsRepository == null
                           ? null
                           : () => widget.fullTextSearchSettingsRepository!
@@ -330,7 +331,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                     ),
                     Switch(
                       key: const Key('settings_full_text_search_pdf_switch'),
-                      value: _fullTextSearchPdfEnabled,
+                      value: _fullTextSearchTogglesController.pdfEnabled,
                       onChanged: widget.fullTextSearchSettingsRepository ==
                               null
                           ? null
@@ -353,7 +354,8 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                           'settings_full_text_search_foliate_rebuild_button'),
                       icon: const Icon(Icons.refresh),
                       tooltip: '重建索引',
-                      onPressed: !_fullTextSearchFoliateEnabled ||
+                      onPressed: !_fullTextSearchTogglesController
+                                  .foliateEnabled ||
                               widget.fullTextSearchSettingsRepository == null
                           ? null
                           : () => widget.fullTextSearchSettingsRepository!
@@ -362,7 +364,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                     Switch(
                       key: const Key(
                           'settings_full_text_search_foliate_switch'),
-                      value: _fullTextSearchFoliateEnabled,
+                      value: _fullTextSearchTogglesController.foliateEnabled,
                       onChanged: widget.fullTextSearchSettingsRepository ==
                               null
                           ? null
