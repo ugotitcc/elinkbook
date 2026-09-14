@@ -14,14 +14,14 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 2. 排除技術上不可行或高風險的解法方向。
 3. 提出若未來問題重現時的候選補強方向，降低下次重新評估的成本。
 
-## Discovery 結論（2026-09-14 `/grill-with-docs`）
+## Discovery 結論（2026-09-14 `/grill-with-docs`；2026-09-14 審查修正）
 
 - **問題現況**：不再重現，無具體裝置/ROM 線索，原因不明（開發過程中未曾針對性修復，純粹是後續測試都沒再撞到）。
-- **影響範圍**：SAF 檔案匯入與資料夾匯入兩條路徑皆可能受影響。
+- **影響範圍**：SAF 檔案匯入與資料夾匯入兩條路徑皆可能受影響；經審查核對程式碼確認，單檔匯入已有 `_copyToLocalStorage` 落地複本退路防禦（`takePersistableUriPermission` 失敗時自動觸發），資料夾匯入的子檔案因共用 Tree URI 授權、刻意跳過此退路，是實際風險較高的路徑。
 - **排除方向**：`MANAGE_EXTERNAL_STORAGE`（Android 11+ 全域儲存權限，All Files Access）——App 已規劃上架 Google Play，此權限對「電子書閱讀器」類別的審核風險高，且仍須維持非商城（側載）安裝路徑正常運作，兩個約束疊加使此方向不可行。詳見 [ADR 0029](../../adr/0029-storage-permission-saf-resilience-over-manage-external-storage.md)。
-- **候選補強方向**：不新增權限，改為強化既有 SAF 路線的容錯——偵測 persistable permission 是否已失效（例如透過 `ContentResolver.getPersistedUriPermissions()`），失效時主動提示使用者重新授權，而非靜默失敗或整批要求重新走一次匯入流程。詳見 [design.md](./design.md)。
+- **候選補強方向**：不新增權限，改為強化既有 SAF 路線的容錯——**開書當下（非定期背景輪詢）**以 `contentResolver.openInputStream()` 按需探測並精確區分 `SecurityException`（權限失效）／`FileNotFoundException`（檔案不存在），失效時導向重新選取，並將新 URI 原地更新回既有書籍記錄（Re-link，保全 `book.id` 與所有劃線/筆記/書籤/進度）。原案曾規劃以 `ContentResolver.getPersistedUriPermissions()` 查表偵測，經 [Epic 與 Design 審查](./reviews/review-epic-and-design.md) 確認此 API 對資料夾匯入書籍的 Document URI 必定誤判、且無法反映檔案真實可讀性，已修正為上述按需探測方案；「定期於背景檢查」亦已排除，因違反 E-Ink 裝置低功耗待機原則。詳見 [design.md](./design.md)。
 - **後續**：本 Epic 目前停留在 Discovery 完成階段。是否排入 Issue 拆分、實際開發，待有具體重現案例或使用者回報後再評估，不強制排期。
 
 ## 目前狀態
 
-Discovery 完成，`design.md` 已產出。尚未進入 Architecting（`spec.md`）／Issue 拆分（`issues.md`）。
+Discovery 完成，`design.md` 已產出並依 [審查報告](./reviews/review-epic-and-design.md) 修訂。尚未進入 Architecting（`spec.md`）／Issue 拆分（`issues.md`）。
