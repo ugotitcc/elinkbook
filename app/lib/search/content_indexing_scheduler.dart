@@ -9,6 +9,7 @@ import '../library/models/book.dart';
 import '../library/models/library_enums.dart';
 import '../reader/reader_activity_tracker.dart';
 import 'cjk_tokenizer.dart';
+import 'content_index_status_store.dart';
 import 'content_indexer.dart';
 
 /// 背景索引排程器（epic-10-search Issue 1，見 spec.md §3.3）：只在「App
@@ -27,6 +28,7 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
     required ContentIndexer pdfIndexer,
     required ContentIndexer foliateIndexer,
   })  : _database = database,
+        _store = ContentIndexStatusStore(database),
         _activityTracker = activityTracker,
         _pdfIndexer = pdfIndexer,
         _foliateIndexer = foliateIndexer {
@@ -34,6 +36,7 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
   }
 
   final Database _database;
+  final ContentIndexStatusStore _store;
   final ReaderActivityTracker _activityTracker;
   final ContentIndexer _pdfIndexer;
   final ContentIndexer _foliateIndexer;
@@ -155,12 +158,7 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
   }
 
   Future<void> _processOneBook(Book book, int? lastChapterIndex) async {
-    await _database.update(
-      'content_index_status',
-      {'status': 'indexing', 'updated_at': DateTime.now().millisecondsSinceEpoch},
-      where: 'book_id = ?',
-      whereArgs: [book.id],
-    );
+    await _store.markIndexing(book.id);
 
     final indexer =
         book.format == BookFileFormat.pdf ? _pdfIndexer : _foliateIndexer;
@@ -181,15 +179,7 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
         await batch.commit(noResult: true);
         pending = [];
       }
-      await _database.update(
-        'content_index_status',
-        {
-          'last_chapter_index': chapterIndex,
-          'updated_at': DateTime.now().millisecondsSinceEpoch,
-        },
-        where: 'book_id = ?',
-        whereArgs: [book.id],
-      );
+      await _store.updateProgress(book.id, chapterIndex);
     }
 
     try {
@@ -205,7 +195,7 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
           // 否則會在使用者已關閉該分類之後，繼續寫入之後查詢得到的孤兒
           // 索引列（spec.md §5：搜尋完全信任索引存在與否，不重新檢查開關
           // 狀態）。
-          if (!await _isStillTracked(book.id)) {
+          if (!await _store.isTracked(book.id)) {
             cancelled = true;
             break;
           }
@@ -228,7 +218,7 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
       }
       if (!paused && !cancelled) {
         if (pendingChapterIndex != null) {
-          if (!await _isStillTracked(book.id)) {
+          if (!await _store.isTracked(book.id)) {
             cancelled = true;
           } else {
             await flushPendingChapter(pendingChapterIndex);
@@ -239,42 +229,13 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
         // 清除競態視窗內已經寫入的殘留列（例如上一個章節邊界已經
         // flush 成功，但下一個邊界才偵測到分類已被關閉）——分類關閉時
         // 這本書的索引資料本來就該完全清空，不留下部分章節的孤兒列。
-        await _database.delete('book_content_index',
-            where: 'book_id = ?', whereArgs: [book.id]);
+        await _store.deleteForBook(book.id);
       } else if (!paused) {
-        await _database.update(
-          'content_index_status',
-          {'status': 'done', 'updated_at': DateTime.now().millisecondsSinceEpoch},
-          where: 'book_id = ?',
-          whereArgs: [book.id],
-        );
+        await _store.markDone(book.id);
       }
     } catch (e) {
-      await _database.update(
-        'content_index_status',
-        {
-          'status': 'error',
-          'error_message': e.toString(),
-          'updated_at': DateTime.now().millisecondsSinceEpoch,
-        },
-        where: 'book_id = ?',
-        whereArgs: [book.id],
-      );
+      await _store.markError(book.id, error: e.toString());
     }
   }
 
-  /// epic-10-search Issue 3（review-plan-issue-3.md C-1）：[bookId] 對應的
-  /// `content_index_status` 列是否仍然存在。用於 `_processOneBook()` 在每個
-  /// 章節邊界檢查該書是否仍被追蹤——一旦消失即代表已被外部關閉並捨棄進度
-  /// （見上方 `_processOneBook` 內的呼叫點說明）。
-  Future<bool> _isStillTracked(String bookId) async {
-    final rows = await _database.query(
-      'content_index_status',
-      columns: ['book_id'],
-      where: 'book_id = ?',
-      whereArgs: [bookId],
-      limit: 1,
-    );
-    return rows.isNotEmpty;
-  }
 }
