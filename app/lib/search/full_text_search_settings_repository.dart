@@ -4,13 +4,9 @@ import 'package:sqflite/sqflite.dart';
 
 import '../library/models/book.dart';
 import '../library/models/library_enums.dart';
+import 'content_index_status_store.dart';
 
-/// 「啟用全文檢索」的兩個獨立分類（epic-10-search Issue 3，見 spec.md
-/// §4）：PDF 走純 Dart/FFI 但可能因掃描件缺乏文字層而索引無效；其餘格式
-/// （Foliate：epub/txt/azw3/md，**不含 cbz**——見下方 `_formatFilterFor`
-/// 說明）走 Headless WebView 資源較重但幾乎必有文字層，兩者關切點互補，
-/// 故拆成兩個獨立開關。
-enum ContentIndexCategory { pdf, foliate }
+export 'content_index_status_store.dart' show ContentIndexCategory;
 
 /// 「啟用全文檢索」設定模型（spec.md §4）：兩個分類各自的持久化開關，
 /// 開啟時批次回填既有書庫（寫入 pending，交給建構子注入的
@@ -62,26 +58,16 @@ class SqliteFullTextSearchSettingsRepository
   SqliteFullTextSearchSettingsRepository({
     required Database database,
     required void Function() requestProcessing,
-  })  : _database = database,
+  })  : _store = ContentIndexStatusStore(database),
         _requestProcessing = requestProcessing;
 
-  final Database _database;
+  final ContentIndexStatusStore _store;
   final void Function() _requestProcessing;
 
   static String _prefsKeyFor(ContentIndexCategory category) =>
       category == ContentIndexCategory.pdf
           ? 'full_text_search_enabled_pdf'
           : 'full_text_search_enabled_foliate';
-
-  /// 回傳的字串片段假設呼叫端已在 SQL 中定位到 `books` 表（或其別名）的
-  /// `format` 欄位。`pdf` → `format = 'pdf'`；`foliate` → 其餘格式扣除
-  /// `cbz`（review-plan-issue-3.md I-2：CBZ 無文字層，spec.md §7 規定必須
-  /// 是 `unsupported`，天生被排程器排除，光憑 `format` 字串本身就能判斷，
-  /// 不像 DRM KF8 需要深入解析檔案內容——那仍是 Issue 2 的範圍）。
-  static String _formatFilterFor(ContentIndexCategory category) =>
-      category == ContentIndexCategory.pdf
-          ? "format = 'pdf'"
-          : "format != 'pdf' AND format != 'cbz'";
 
   @override
   Future<bool> isEnabled(ContentIndexCategory category) async {
@@ -94,32 +80,22 @@ class SqliteFullTextSearchSettingsRepository
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefsKeyFor(category), value);
     if (value) {
-      await _backfillPending(category);
+      await _store.backfillPending(category);
       _requestProcessing();
     } else {
-      await _clearIndexData(category);
+      await _store.clearByCategory(category);
     }
   }
 
   @override
   Future<void> rebuildIndex(ContentIndexCategory category) async {
-    await _clearIndexData(category);
-    await _backfillPending(category);
+    await _store.clearByCategory(category);
+    await _store.backfillPending(category);
     _requestProcessing();
   }
 
   @override
-  Future<void> markUnsupported(String bookId) async {
-    await _database.insert(
-      'content_index_status',
-      {
-        'book_id': bookId,
-        'status': 'unsupported',
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
-      },
-      conflictAlgorithm: ConflictAlgorithm.ignore,
-    );
-  }
+  Future<void> markUnsupported(String bookId) => _store.markUnsupported(bookId);
 
   @override
   Future<void> handleBookAvailable(Book book) async {
@@ -137,15 +113,7 @@ class SqliteFullTextSearchSettingsRepository
         ? ContentIndexCategory.pdf
         : ContentIndexCategory.foliate;
     if (!await isEnabled(category)) return;
-    await _database.insert(
-      'content_index_status',
-      {
-        'book_id': book.id,
-        'status': 'pending',
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
-      },
-      conflictAlgorithm: ConflictAlgorithm.ignore,
-    );
+    await _store.markPending(book.id);
     // 【review-plan-issue-2.md C-1】遺漏這行會讓新書卡死在 pending，直到
     // 使用者恰好切換 App 前後台或開關閱讀畫面才會被動喚醒——比照既有
     // setEnabled(true)/rebuildIndex() 既有慣例，插入 pending 後必須主動
@@ -154,66 +122,5 @@ class SqliteFullTextSearchSettingsRepository
   }
 
   @override
-  Future<void> clearBookIndex(String bookId) async {
-    await _database.transaction((txn) async {
-      await txn.delete('book_content_index',
-          where: 'book_id = ?', whereArgs: [bookId]);
-      await txn.delete('content_index_status',
-          where: 'book_id = ?', whereArgs: [bookId]);
-    });
-  }
-
-  /// 把 `content_index_status` 中尚無資料列、且格式符合 [category]、且已
-  /// 下載的既有書籍批次插入 `pending`（spec.md §4／§7：未下載的雲端書籍
-  /// 不建立列）。已有資料列的書籍一律跳過，不重複插入也不覆蓋既有
-  /// status。**`foliate` 分類額外**把既有尚無資料列、且已下載的 `cbz`
-  /// 書籍批次標記為 `unsupported`（review-plan-issue-3.md I-2，同樣套用
-  /// `is_downloaded = 1` 篩選以維持與 spec.md §7「未下載書籍不建立
-  /// content_index_status 列」規則一致，未下載的 CBZ 留給 Issue 2 下載
-  /// 完成事件處理），不進入 `pending` 佇列。
-  Future<void> _backfillPending(ContentIndexCategory category) async {
-    final formatFilter = _formatFilterFor(category);
-    final now = DateTime.now().millisecondsSinceEpoch;
-    await _database.rawInsert('''
-      INSERT INTO content_index_status (book_id, status, updated_at)
-      SELECT b.id, 'pending', ?
-      FROM books b
-      LEFT JOIN content_index_status cis ON cis.book_id = b.id
-      WHERE cis.book_id IS NULL
-        AND b.is_downloaded = 1
-        AND b.$formatFilter
-    ''', [now]);
-    if (category == ContentIndexCategory.foliate) {
-      await _database.rawInsert('''
-        INSERT INTO content_index_status (book_id, status, updated_at)
-        SELECT b.id, 'unsupported', ?
-        FROM books b
-        LEFT JOIN content_index_status cis ON cis.book_id = b.id
-        WHERE cis.book_id IS NULL
-          AND b.is_downloaded = 1
-          AND b.format = 'cbz'
-      ''', [now]);
-    }
-  }
-
-  /// 刪除 [category] 對應格式書籍的索引資料（`book_content_index`／
-  /// `content_index_status`），trigger 同步清空對應 FTS 列。兩句 `DELETE`
-  /// 包在同一交易內（review-plan-issue-3.md M-2）——若中途斷電/crash，
-  /// 避免兩張表各自只刪一半造成資料不一致（例如 `book_content_index` 已
-  /// 清空但 `content_index_status` 殘留舊 `status`，導致下次 `_backfillPending`
-  /// 的 `LEFT JOIN` 誤判「已有資料列」而永遠不再回填該書）。不影響另一
-  /// 分類已建立的索引。
-  Future<void> _clearIndexData(ContentIndexCategory category) async {
-    final formatFilter = _formatFilterFor(category);
-    await _database.transaction((txn) async {
-      await txn.rawDelete('''
-        DELETE FROM book_content_index
-        WHERE book_id IN (SELECT id FROM books WHERE $formatFilter)
-      ''');
-      await txn.rawDelete('''
-        DELETE FROM content_index_status
-        WHERE book_id IN (SELECT id FROM books WHERE $formatFilter)
-      ''');
-    });
-  }
+  Future<void> clearBookIndex(String bookId) => _store.deleteForBook(bookId);
 }
