@@ -32,6 +32,8 @@ Issue 2／Issue 4／Issue 5（皆獨立，無依賴，可平行進行）
 Issue 6（記錄用，暫不動手）
 ```
 
+**2026-09-14 Issue 6 重新評估檢查（結論：觸發條件未成立，維持 `needs-info` 不動手）**：複查 `JsBridgeGateway` 目前呼叫端（`grep -rl JsBridgeGateway app/lib/`），僅 `foliate_reader_view.dart`（與本 Issue 描述的「連續同 handler、按序配對」模式無關）與 `foliate_content_indexer.dart`（本 Issue 記錄的唯一既有繞過案例）兩處，未出現任何第二個需要「連續對同一 handler 發出請求、按呼叫順序配對回應、丟棄過期回應」模式的新呼叫端——`/grilling` Q8 當初的判斷依據（「一個轉接器只是假設性接縫」）仍然成立，狀態維持 `needs-info`，不擴充 `JsBridgeGateway` 介面、不拆新 Issue。
+
 ## 下一步
 
-Issue 1-5 已全數完成並合併回 `main`。僅剩 Issue 6（`needs-info`，暫緩），等待「出現第二個需要同樣按序配對模式的呼叫端」再重新評估是否拆案；在此之前 Epic 41 已無待實作工單，可考慮由人類決定歸檔時機。
+Issue 1-5 已全數完成並合併回 `main`；Issue 6 已於本次重新檢查確認觸發條件未成立，純記錄狀態維持不動。Epic 41 已無任何待實作或待決策工單，可由人類決定歸檔時機（比照 `epic-10-search`／`epic-40-bundled-sqlite` 的歸檔流程）。
