@@ -8,6 +8,7 @@ import 'pdf_crop_rect.dart';
 import 'pdf_fit_mode.dart';
 import 'pdf_page_turn_animation.dart';
 import 'screen_orientation_setting.dart';
+import 'text_conversion_mode.dart';
 import 'writing_mode.dart';
 
 /// 依名稱從 [values] 尋找對應列舉值，找不到時回傳 `null`（而非拋出
@@ -83,6 +84,10 @@ class BookReaderPrefs {
   /// WindowInsetsControllerCompat，非 Flutter SystemChrome）。
   final bool? fullscreen;
 
+  /// 簡繁顯示轉換覆寫（FR-48，全域/單書雙層解析，見 `resolveTextConversion()`）。
+  /// null=使用全域預設（`ReadingDefaults.textConversion`）。
+  final TextConversionMode? textConversionOverride;
+
   const BookReaderPrefs({
     this.fontFamily,
     this.fontSize,
@@ -115,6 +120,7 @@ class BookReaderPrefs {
     this.columnMode,
     this.columnSize,
     this.fullscreen,
+    this.textConversionOverride,
   });
 
   /// 無任何覆寫，等同資料庫無對應列時的狀態。
@@ -156,6 +162,7 @@ class BookReaderPrefs {
       'column_mode': columnMode?.name,
       'column_size': columnSize,
       'fullscreen': fullscreen == null ? null : (fullscreen! ? 1 : 0),
+      'text_conversion_override': textConversionOverride?.name,
     };
   }
 
@@ -215,6 +222,9 @@ class BookReaderPrefs {
       columnSize: (map['column_size'] as num?)?.toDouble(),
       fullscreen:
           map['fullscreen'] == null ? null : (map['fullscreen'] as int) == 1,
+      textConversionOverride: enumByNameOrNull(
+          TextConversionMode.values,
+          map['text_conversion_override'] as String?),
     );
   }
 
@@ -251,7 +261,8 @@ class BookReaderPrefs {
       other.showFooter == showFooter &&
       other.columnMode == columnMode &&
       other.columnSize == columnSize &&
-      other.fullscreen == fullscreen;
+      other.fullscreen == fullscreen &&
+      other.textConversionOverride == textConversionOverride;
 
   @override
   int get hashCode => Object.hashAll([
@@ -286,6 +297,7 @@ class BookReaderPrefs {
         columnMode,
         columnSize,
         fullscreen,
+        textConversionOverride,
       ]);
 
   /// 只更新明確傳入的欄位，其餘欄位沿用目前值（`newValue ?? this.value`
@@ -325,6 +337,7 @@ class BookReaderPrefs {
     ColumnMode? columnMode,
     double? columnSize,
     bool? fullscreen,
+    TextConversionMode? textConversionOverride,
   }) {
     return BookReaderPrefs(
       fontFamily: fontFamily ?? this.fontFamily,
@@ -359,10 +372,12 @@ class BookReaderPrefs {
       columnMode: columnMode ?? this.columnMode,
       columnSize: columnSize ?? this.columnSize,
       fullscreen: fullscreen ?? this.fullscreen,
+      textConversionOverride:
+          textConversionOverride ?? this.textConversionOverride,
     );
   }
 
-  /// 只保留 [ReaderSettingsSheet]（流式 EPUB 版面設定）實際呈現的 20 個
+  /// 只保留 [ReaderSettingsSheet]（流式 EPUB 版面設定）實際呈現的 21 個
   /// 欄位，其餘 11 個欄位（`pageMargins`、7 個 `pdf*`、3 個 `dualPage*`）
   /// 一律強制設為 `null`，**不論來源物件實際內容為何**——epic-28-reader-
   /// settings-enhancements Issue 3「欄位污染防護」，見 spec.md「資料
@@ -394,6 +409,7 @@ class BookReaderPrefs {
       fullscreen: fullscreen,
       columnMode: columnMode,
       columnSize: columnSize,
+      textConversionOverride: textConversionOverride,
     );
   }
 }

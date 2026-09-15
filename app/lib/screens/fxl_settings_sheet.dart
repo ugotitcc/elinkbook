@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/dual_page_direction.dart';
 import '../reader/dual_page_mode.dart';
+import '../reader/text_conversion_mode.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_option_chip_group.dart';
 
@@ -18,12 +19,14 @@ class FxlSettingsSheet extends StatefulWidget {
   final BookReaderPrefs prefs;
   final ValueChanged<BookReaderPrefs> onChanged;
   final bool isEinkMode;
+  final bool showTextConversion;
 
   const FxlSettingsSheet({
     super.key,
     required this.prefs,
     required this.onChanged,
     required this.isEinkMode,
+    this.showTextConversion = true,
   });
 
   @override
@@ -36,6 +39,7 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
   late bool _fullscreen;
   late bool _showHeader;
   late bool _showFooter;
+  late TextConversionMode? _textConversionOverride;
 
   @override
   void initState() {
@@ -46,16 +50,50 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
     _fullscreen = widget.prefs.fullscreen ?? false;
     _showHeader = widget.prefs.showHeader ?? false;
     _showFooter = widget.prefs.showFooter ?? false;
+    _textConversionOverride = widget.prefs.textConversionOverride;
   }
 
   void _notifyChanged() {
+    // 【重要設計決策】textConversionOverride 是此面板第一個「使用者可選
+    // 『使用全域預設』把欄位清回 null」的欄位，而 `copyWith()` 是
+    // `newValue ?? this.value` 語意、無法明確清空（見 book_reader_prefs.dart
+    // 既有文件註解）——故改為整列字面量建構（比照 ReaderSettingsSheet.
+    // _currentDraft 既有模式），明確列出 widget.prefs 的其餘所有欄位以保留
+    // 原值，並以 state 變數覆寫五個既有欄位與 textConversionOverride。
     widget.onChanged(
-      widget.prefs.copyWith(
+      BookReaderPrefs(
+        fontFamily: widget.prefs.fontFamily,
+        fontSize: widget.prefs.fontSize,
+        fontWeight: widget.prefs.fontWeight,
+        lineHeight: widget.prefs.lineHeight,
+        paragraphSpacing: widget.prefs.paragraphSpacing,
+        letterSpacing: widget.prefs.letterSpacing,
+        pageMargins: widget.prefs.pageMargins,
+        marginTop: widget.prefs.marginTop,
+        marginBottom: widget.prefs.marginBottom,
+        marginLeft: widget.prefs.marginLeft,
+        marginRight: widget.prefs.marginRight,
+        textAlign: widget.prefs.textAlign,
+        publisherStyles: widget.prefs.publisherStyles,
+        writingModeOverride: widget.prefs.writingModeOverride,
+        pageTurnModeOverride: widget.prefs.pageTurnModeOverride,
+        screenOrientationOverride: widget.prefs.screenOrientationOverride,
+        pdfFitMode: widget.prefs.pdfFitMode,
+        pdfContrast: widget.prefs.pdfContrast,
+        pdfBrightness: widget.prefs.pdfBrightness,
+        pdfBoldStrength: widget.prefs.pdfBoldStrength,
+        pdfCropMode: widget.prefs.pdfCropMode,
+        pdfCropRect: widget.prefs.pdfCropRect,
         dualPageMode: _dualPageMode,
+        dualPageCoverAlone: widget.prefs.dualPageCoverAlone,
         dualPageDirection: _dualPageDirection,
-        fullscreen: _fullscreen,
+        pdfPageTurnAnimation: widget.prefs.pdfPageTurnAnimation,
         showHeader: _showHeader,
         showFooter: _showFooter,
+        columnMode: widget.prefs.columnMode,
+        columnSize: widget.prefs.columnSize,
+        fullscreen: _fullscreen,
+        textConversionOverride: _textConversionOverride,
       ),
     );
   }
@@ -148,6 +186,52 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               }),
             ),
             const SizedBox(height: 16),
+            if (widget.showTextConversion) ...[
+              const Text('簡繁轉換覆寫', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              EBOptionChipGroup<TextConversionMode?>(
+                items: const [
+                  (null, 'global', Icons.tune, '使用全域預設', '全域'),
+                  (
+                    TextConversionMode.original,
+                    'original',
+                    Icons.article_outlined,
+                    '原文',
+                    '原文',
+                  ),
+                  (
+                    TextConversionMode.toTraditional,
+                    'traditional',
+                    Icons.translate,
+                    '轉換為繁體',
+                    '繁體',
+                  ),
+                  (
+                    TextConversionMode.toSimplified,
+                    'simplified',
+                    Icons.g_translate,
+                    '轉換為簡體',
+                    '簡體',
+                  ),
+                ].map((option) {
+                  final (mode, keySuffix, icon, tooltip, label) = option;
+                  return EBOptionChipItem<TextConversionMode?>(
+                    itemKey: Key('fxl_settings_text_conversion_$keySuffix'),
+                    value: mode,
+                    icon: icon,
+                    label: label,
+                    tooltip: tooltip,
+                  );
+                }).toList(),
+                groupValue: _textConversionOverride,
+                visualDensity: VisualDensity.compact,
+                onSelected: (v) => setState(() {
+                  _textConversionOverride = v;
+                  _notifyChanged();
+                }),
+              ),
+              const SizedBox(height: 16),
+            ],
             EBFieldCard(
               padding: EdgeInsets.zero,
               child: SwitchListTile(

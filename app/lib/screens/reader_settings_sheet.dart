@@ -10,6 +10,7 @@ import '../reader/epub_text_align.dart';
 import '../reader/layout_preset.dart';
 import '../reader/page_turn_mode.dart';
 import '../reader/screen_orientation_setting.dart';
+import '../reader/text_conversion_mode.dart';
 import '../reader/writing_mode.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_option_chip_group.dart';
@@ -100,6 +101,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late WritingMode? _writingModeOverride;
   late PageTurnMode? _pageTurnModeOverride;
   late ScreenOrientationSetting? _screenOrientationOverride;
+  late TextConversionMode? _textConversionOverride;
   late bool _showHeader;
   late bool _showFooter;
   late bool _fullscreen;
@@ -134,6 +136,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _writingModeOverride = widget.prefs.writingModeOverride;
     _pageTurnModeOverride = widget.prefs.pageTurnModeOverride;
     _screenOrientationOverride = widget.prefs.screenOrientationOverride;
+    _textConversionOverride = widget.prefs.textConversionOverride;
     _showHeader = widget.prefs.showHeader ?? false;
     _showFooter = widget.prefs.showFooter ?? false;
     _fullscreen = widget.prefs.fullscreen ?? false;
@@ -171,6 +174,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _writingModeOverride = widget.prefs.writingModeOverride;
         _pageTurnModeOverride = widget.prefs.pageTurnModeOverride;
         _screenOrientationOverride = widget.prefs.screenOrientationOverride;
+        _textConversionOverride = widget.prefs.textConversionOverride;
         _showHeader = widget.prefs.showHeader ?? false;
         _showFooter = widget.prefs.showFooter ?? false;
         _fullscreen = widget.prefs.fullscreen ?? false;
@@ -214,6 +218,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     writingModeOverride: _writingModeOverride,
     pageTurnModeOverride: _pageTurnModeOverride,
     screenOrientationOverride: _screenOrientationOverride,
+    textConversionOverride: _textConversionOverride,
     showHeader: _showHeader,
     showFooter: _showFooter,
     fullscreen: _fullscreen,
@@ -543,6 +548,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _buildScreenOrientationOverrideRow(),
         const SizedBox(height: 8),
         _buildPageTurnModeOverrideRow(),
+        const SizedBox(height: 8),
+        _buildTextConversionOverrideRow(),
       ],
     );
   }
@@ -945,6 +952,41 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           visualDensity: VisualDensity.compact,
           onSelected: (v) => setState(() {
             _pageTurnModeOverride = v;
+            _notifyChanged();
+          }),
+        ),
+      ],
+    );
+  }
+
+  /// 簡繁轉換覆寫（FR-48，全域/單書雙層解析，見 `resolveTextConversion()`）：
+  /// `null`＝使用全域預設，非 `null`＝單書覆寫。
+  Widget _buildTextConversionOverrideRow() {
+    const options = [
+      (null, 'global', Icons.tune, '使用全域預設', '全域'),
+      (TextConversionMode.original, 'original', Icons.article_outlined, '原文', '原文'),
+      (TextConversionMode.toTraditional, 'traditional', Icons.translate, '轉換為繁體', '繁體'),
+      (TextConversionMode.toSimplified, 'simplified', Icons.g_translate, '轉換為簡體', '簡體'),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('簡繁轉換覆寫', style: TextStyle(fontWeight: FontWeight.bold)),
+        EBOptionChipGroup<TextConversionMode?>(
+          items: options.map((option) {
+            final (mode, keySuffix, icon, tooltip, label) = option;
+            return EBOptionChipItem<TextConversionMode?>(
+              itemKey: Key('reader_settings_text_conversion_$keySuffix'),
+              value: mode,
+              icon: icon,
+              label: label,
+              tooltip: tooltip,
+            );
+          }).toList(),
+          groupValue: _textConversionOverride,
+          visualDensity: VisualDensity.compact,
+          onSelected: (v) => setState(() {
+            _textConversionOverride = v;
             _notifyChanged();
           }),
         ),

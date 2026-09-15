@@ -16,6 +16,7 @@ import 'reading_position.dart';
 import 'reading_position_repository.dart';
 import 'resolved_preferences.dart';
 import 'screen_orientation_setting.dart';
+import 'text_conversion_mode.dart';
 import 'writing_mode.dart';
 import 'zone_action.dart';
 
@@ -45,6 +46,7 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
   static const _consoleLogEnabledKey = 'global_reader_console_log_enabled';
   static const _showHeaderKey = 'global_reader_show_header';
   static const _showFooterKey = 'global_reader_show_footer';
+  static const _textConversionKey = 'global_reader_text_conversion';
   static const _ttsVoiceIdKey = 'global_reader_tts_voice_id';
   static const _defaultTtsSpeedKey = 'global_reader_default_tts_speed';
 
@@ -95,6 +97,8 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
         openLastBookOnLaunch: sp.getBool(_openLastBookOnLaunchKey) ?? true,
         showHeader: sp.getBool(_showHeaderKey) ?? false,
         showFooter: sp.getBool(_showFooterKey) ?? false,
+        textConversion: _readEnum(sp, _textConversionKey, TextConversionMode.values) ??
+            TextConversionMode.original,
       ),
     );
   }
@@ -163,6 +167,7 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
     await sp.setBool(_consoleLogEnabledKey, prefs.consoleLogEnabled);
     await sp.setBool(_showHeaderKey, prefs.reading.showHeader);
     await sp.setBool(_showFooterKey, prefs.reading.showFooter);
+    await sp.setString(_textConversionKey, prefs.reading.textConversion.name);
     // ttsVoiceId 為 nullable——setString 不接受 null，缺席時須明確 remove()
     // 該鍵，否則舊值會殘留，導致「清空語音選擇」的意圖被忽略。
     if (prefs.tts.ttsVoiceId != null) {

@@ -938,6 +938,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         prefs: _prefs,
         onChanged: _handlePrefsChanged,
         isEinkMode: widget.isEinkMode,
+        showTextConversion:
+            detectBookFormat(widget.filePath) != BookFormat.cbz,
       ),
     );
   }

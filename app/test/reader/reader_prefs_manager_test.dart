@@ -13,6 +13,7 @@ import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/nav_zone_mode.dart';
 import 'package:elinkbook/reader/zone_action.dart';
@@ -461,7 +462,11 @@ void main() {
     test('saveGlobalPrefs 寫入 showHeader／showFooter／ttsVoiceId／defaultTtsSpeed 至既有慣例命名的 SharedPreferences key',
         () async {
       const globalPrefs = GlobalReaderPrefs(
-        reading: ReadingDefaults(showHeader: true, showFooter: true),
+        reading: ReadingDefaults(
+          showHeader: true,
+          showFooter: true,
+          textConversion: TextConversionMode.toTraditional,
+        ),
         tts: TtsDefaults(ttsVoiceId: 'voice-42', defaultTtsSpeed: 1.5),
       );
       await manager.saveGlobalPrefs(globalPrefs);
@@ -475,6 +480,11 @@ void main() {
       final loaded = await manager.load('b1');
       expect(loaded.globalPrefs.reading.showHeader, isTrue);
       expect(loaded.globalPrefs.reading.showFooter, isTrue);
+      expect(
+        loaded.globalPrefs.reading.textConversion,
+        TextConversionMode.toTraditional,
+      );
+      expect(sp.getString('global_reader_text_conversion'), 'toTraditional');
       expect(loaded.globalPrefs.tts.ttsVoiceId, 'voice-42');
       expect(loaded.globalPrefs.tts.defaultTtsSpeed, 1.5);
     });
@@ -484,6 +494,7 @@ void main() {
       final loaded = await manager.load('b1');
       expect(loaded.globalPrefs.reading.showHeader, isFalse);
       expect(loaded.globalPrefs.reading.showFooter, isFalse);
+      expect(loaded.globalPrefs.reading.textConversion, TextConversionMode.original);
       expect(loaded.globalPrefs.tts.ttsVoiceId, isNull);
       expect(loaded.globalPrefs.tts.defaultTtsSpeed, 1.0);
     });

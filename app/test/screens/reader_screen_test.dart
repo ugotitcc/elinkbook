@@ -1123,6 +1123,39 @@ void main() {
     expect(foliateView.isComicBookHint, isTrue);
   });
 
+  testWidgets('CBZ 書籍開啟 FxlSettingsSheet 時 showTextConversion 為 false（不顯示簡繁轉換選項）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.cbz',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          isFixedLayout: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('reader_chrome_layout_button')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(FxlSettingsSheet), findsOneWidget);
+    expect(
+      tester.widget<FxlSettingsSheet>(find.byType(FxlSettingsSheet)).showTextConversion,
+      isFalse,
+    );
+  });
+
   testWidgets('非 CBZ 格式建構 FoliateReaderView 時，isComicBookHint 恆為 false'
       '（EPUB／TXT 皆不應誤觸 main.js 的 CBZ 專屬 book.dir 覆寫邏輯，'
       '同一則審查修正的對照組）', (tester) async {
@@ -1466,6 +1499,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(FxlSettingsSheet), findsOneWidget);
+
+    expect(
+      tester.widget<FxlSettingsSheet>(find.byType(FxlSettingsSheet)).showTextConversion,
+      isTrue,
+    );
   });
 
   // epic-20-fxl-foliate-migration Issue 4 Task 3 Step 3：合併按鈕群組後，

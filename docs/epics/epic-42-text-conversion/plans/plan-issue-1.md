@@ -54,7 +54,7 @@
 - Consumes: `app/lib/reader/text_conversion_mode.dart` 的 `TextConversionMode`（Issue 0）。
 - Produces: `BookReaderPrefs.textConversionOverride`（`TextConversionMode?`），供 Task 4 `resolveTextConversion()`、Task 7/8 UI 消費。
 
-- [ ] **Step 1: 修改測試檔，新增/擴充失敗測試**
+^- [x] **Step 1: 修改測試檔，新增/擴充失敗測試**
 
 在 `app/test/reader/book_reader_prefs_test.dart` 頂部 import 區塊新增：
 
@@ -156,12 +156,12 @@ import 'package:elinkbook/reader/text_conversion_mode.dart';
     expect(filtered.textConversionOverride, TextConversionMode.toTraditional);
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+^- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/reader/book_reader_prefs_test.dart`
 Expected: 編譯錯誤（`textConversionOverride`／`text_conversion_override` 不存在於 `BookReaderPrefs`），或執行期斷言失敗。
 
-- [ ] **Step 3: 修改 `book_reader_prefs.dart` 加入新欄位**
+^- [x] **Step 3: 修改 `book_reader_prefs.dart` 加入新欄位**
 
 在 import 區塊（`screen_orientation_setting.dart` 之後、`writing_mode.dart` 之前）新增：
 
@@ -233,12 +233,12 @@ import 'text_conversion_mode.dart';
 
 **審查修正 M-2**：`reflowableEpubFields()` 上方（第 365 行）的 doc comment 「只保留 `ReaderSettingsSheet`（流式 EPUB 版面設定）實際呈現的 20 個欄位」須同步改為「21 個欄位」，維持文件與程式碼欄位計數一致。
 
-- [ ] **Step 4: 執行測試，確認通過**
+^- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/reader/book_reader_prefs_test.dart`
 Expected: PASS，全數通過。
 
-- [ ] **Step 5: Commit**
+^- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/reader/book_reader_prefs.dart app/test/reader/book_reader_prefs_test.dart
@@ -257,7 +257,7 @@ git commit -m "feat(reader): BookReaderPrefs 新增 textConversionOverride 欄�
 - Consumes: Task 1 的 `BookReaderPrefs.toMap()`/`fromMap()`（欄位名稱 `text_conversion_override`）。
 - Produces: `book_reader_prefs` 表的 `text_conversion_override TEXT` 欄位，供 `BookReaderPrefsRepository.save()`/`load()`（既有、無需改動）持久化 Task 1 新欄位。
 
-- [ ] **Step 1: 新增失敗的遷移測試**
+^- [x] **Step 1: 新增失敗的遷移測試**
 
 在 `app/test/library/sqlite_library_repository_test.dart`，找到第 1839-1850 行 `'全新安裝的 book_reader_prefs 表包含 pdf_page_turn_animation 欄位...'` 測試，在其後新增：
 
@@ -462,12 +462,12 @@ git commit -m "feat(reader): BookReaderPrefs 新增 textConversionOverride 欄�
   });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+^- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: FAIL（`text_conversion_override` 欄位不存在，`no such column` 或斷言失敗）。
 
-- [ ] **Step 3: 修改 `sqlite_library_repository.dart` 加入遷移**
+^- [x] **Step 3: 修改 `sqlite_library_repository.dart` 加入遷移**
 
 第 55 行，將：
 
@@ -529,12 +529,12 @@ Expected: FAIL（`text_conversion_override` 欄位不存在，`no such column` �
   }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+^- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: PASS，全數通過。
 
-- [ ] **Step 5: Commit**
+^- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart
@@ -553,7 +553,7 @@ git commit -m "feat(library): book_reader_prefs 表新增 text_conversion_overri
 - Consumes: `app/lib/reader/text_conversion_mode.dart` 的 `TextConversionMode`。
 - Produces: `ReadingDefaults.textConversion`（`TextConversionMode`，預設 `TextConversionMode.original`），供 Task 4 `resolveTextConversion()`、Task 5 `ReaderPrefsManagerImpl`、Task 6 UI 消費。
 
-- [ ] **Step 1: 修改測試檔，新增/擴充失敗測試**
+^- [x] **Step 1: 修改測試檔，新增/擴充失敗測試**
 
 在 `app/test/reader/reading_defaults_test.dart` 頂部 import 區塊新增：
 
@@ -594,12 +594,12 @@ import 'package:elinkbook/reader/text_conversion_mode.dart';
         isFalse);
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+^- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/reader/reading_defaults_test.dart`
 Expected: 編譯錯誤（`textConversion` 不存在於 `ReadingDefaults`）。
 
-- [ ] **Step 3: 修改 `reading_defaults.dart` 加入新欄位**
+^- [x] **Step 3: 修改 `reading_defaults.dart` 加入新欄位**
 
 在 import 區塊新增：
 
@@ -650,12 +650,12 @@ import 'text_conversion_mode.dart';
 
 **審查修正 M-2**：類別最上方（第 4 行）的 doc comment 「對應的 7 個欄位」須同步改為「8 個欄位」，維持文件與程式碼欄位計數一致。
 
-- [ ] **Step 4: 執行測試，確認通過**
+^- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/reader/reading_defaults_test.dart`
 Expected: PASS，全數通過。
 
-- [ ] **Step 5: Commit**
+^- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/reader/reading_defaults.dart app/test/reader/reading_defaults_test.dart
@@ -674,7 +674,7 @@ git commit -m "feat(reader): ReadingDefaults 新增 textConversion 欄位"
 - Consumes: Task 1 的 `BookReaderPrefs.textConversionOverride`；Task 3 的 `ReadingDefaults.textConversion`。
 - Produces: `TextConversionMode resolveTextConversion(BookReaderPrefs book, ReadingDefaults global)`，供 Issue 2-5 所有顯示/轉換呼叫點直接消費（此簽章為固定介面，不得更動參數順序或型別，見 Global Constraints）。
 
-- [ ] **Step 1: 寫失敗測試**
+^- [x] **Step 1: 寫失敗測試**
 
 建立 `app/test/reader/resolve_text_conversion_test.dart`：
 
@@ -709,12 +709,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗（找不到檔案）**
+^- [x] **Step 2: 執行測試，確認失敗（找不到檔案）**
 
 Run: `flutter test test/reader/resolve_text_conversion_test.dart`
 Expected: FAIL，錯誤訊息為找不到 `package:elinkbook/reader/resolve_text_conversion.dart`。
 
-- [ ] **Step 3: 寫最小實作**
+^- [x] **Step 3: 寫最小實作**
 
 建立 `app/lib/reader/resolve_text_conversion.dart`：
 
@@ -740,12 +740,12 @@ TextConversionMode resolveTextConversion(
 }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+^- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/reader/resolve_text_conversion_test.dart`
 Expected: PASS，3/3。
 
-- [ ] **Step 5: Commit**
+^- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/reader/resolve_text_conversion.dart app/test/reader/resolve_text_conversion_test.dart
@@ -764,7 +764,7 @@ git commit -m "feat(reader): 新增 resolveTextConversion() 純函式"
 - Consumes: Task 3 的 `ReadingDefaults.textConversion`。
 - Produces: `loadGlobalPrefs()`／`saveGlobalPrefs()` 正確讀寫 `GlobalReaderPrefs.reading.textConversion` 至 SharedPreferences，供 Task 6 `ReadingDefaultsScreen` 消費。
 
-- [ ] **Step 1: 寫失敗測試**
+^- [x] **Step 1: 寫失敗測試**
 
 在 `app/test/reader/reader_prefs_manager_test.dart`，找到第 461-480 行 `'saveGlobalPrefs 寫入 showHeader／showFooter／ttsVoiceId／defaultTtsSpeed 至既有慣例命名的 SharedPreferences key'` 測試，在其 `reading:` 建構參數的 `showFooter: true,` 後新增：
 
@@ -794,12 +794,12 @@ git commit -m "feat(reader): 新增 resolveTextConversion() 純函式"
 import 'package:elinkbook/reader/text_conversion_mode.dart';
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+^- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/reader/reader_prefs_manager_test.dart`
 Expected: 編譯錯誤（`textConversion` 不存在於 `ReadingDefaults` 建構參數，或 `TextConversionMode` 找不到 import）——若 Task 3 已完成則改為執行期斷言失敗（`textConversion` 未被 `saveGlobalPrefs`/`loadGlobalPrefs` 持久化，讀回硬編碼預設值而非測試寫入值）。
 
-- [ ] **Step 3: 修改 `reader_prefs_manager_impl.dart` 加入讀寫邏輯**
+^- [x] **Step 3: 修改 `reader_prefs_manager_impl.dart` 加入讀寫邏輯**
 
 在 import 區塊（`screen_orientation_setting.dart` 之後、`writing_mode.dart` 之前）新增：
 
@@ -826,12 +826,12 @@ import 'text_conversion_mode.dart';
     await sp.setString(_textConversionKey, prefs.reading.textConversion.name);
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+^- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/reader/reader_prefs_manager_test.dart`
 Expected: PASS，全數通過。
 
-- [ ] **Step 5: Commit**
+^- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/reader/reader_prefs_manager_impl.dart app/test/reader/reader_prefs_manager_test.dart
@@ -850,7 +850,7 @@ git commit -m "feat(reader): ReaderPrefsManagerImpl 讀寫全域 textConversion"
 - Consumes: Task 3 的 `ReadingDefaults.textConversion`；Task 5 的 `saveGlobalPrefs()`/`loadGlobalPrefs()`。
 - Produces: 無（葉節點 UI）。
 
-- [ ] **Step 1: 寫失敗測試**
+^- [x] **Step 1: 寫失敗測試**
 
 在 `app/test/screens/reading_defaults_screen_test.dart` 頂部 import 區塊新增：
 
@@ -916,12 +916,12 @@ import 'package:elinkbook/reader/text_conversion_mode.dart';
     expect(simplifiedTile.checked, isTrue);
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+^- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/reading_defaults_screen_test.dart`
 Expected: FAIL（找不到 `Key('reading_defaults_text_conversion_traditional')` 等元件）。
 
-- [ ] **Step 3: 修改 `reading_defaults_screen.dart` 加入三態選擇器**
+^- [x] **Step 3: 修改 `reading_defaults_screen.dart` 加入三態選擇器**
 
 在 import 區塊新增：
 
@@ -974,17 +974,17 @@ import '../reader/text_conversion_mode.dart';
                   key: const Key('reading_defaults_fullscreen_switch'),
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+^- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/screens/reading_defaults_screen_test.dart`
 Expected: PASS，全數通過。
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+^- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+^- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/reading_defaults_screen.dart app/test/screens/reading_defaults_screen_test.dart
@@ -1003,7 +1003,7 @@ git commit -m "feat(screens): ReadingDefaultsScreen 新增簡繁轉換三態選�
 - Consumes: Task 1 的 `BookReaderPrefs.textConversionOverride`。
 - Produces: 無（葉節點 UI）。
 
-- [ ] **Step 1: 寫失敗測試**
+^- [x] **Step 1: 寫失敗測試**
 
 在 `app/test/screens/reader_settings_sheet_test.dart` 頂部 import 區塊新增：
 
@@ -1057,12 +1057,12 @@ import 'package:elinkbook/reader/text_conversion_mode.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+^- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: FAIL（找不到 `Key('reader_settings_text_conversion_traditional')` 等元件）。
 
-- [ ] **Step 3: 修改 `reader_settings_sheet.dart` 加入四態選擇器**
+^- [x] **Step 3: 修改 `reader_settings_sheet.dart` 加入四態選擇器**
 
 在 import 區塊（`screen_orientation_setting.dart` 之後）新增：
 
@@ -1141,17 +1141,17 @@ import '../reader/text_conversion_mode.dart';
         _buildTextConversionOverrideRow(),
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+^- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: PASS，全數通過。
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+^- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+^- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart
@@ -1174,7 +1174,7 @@ git commit -m "feat(screens): ReaderSettingsSheet 新增簡繁轉換覆寫四態
 
 **重要設計決策**：`FxlSettingsSheet._notifyChanged()` 目前用 `widget.prefs.copyWith(...)`（僅更新 `dualPageMode`/`dualPageDirection`/`fullscreen`/`showHeader`/`showFooter` 五個既有欄位，皆非 nullable-with-explicit-null 語意）。`textConversionOverride` 是本檔案第一個「使用者可選『使用全域預設』把欄位清回 `null`」的欄位，而 `copyWith()` 是 `newValue ?? this.value` 語意、無法明確清空（見 Global Constraints／`book_reader_prefs.dart` 既有文件註解）——若沿用 `copyWith()`，選擇「使用全域預設」時傳入的 `null` 會被 `?? this.value` 吃掉，實際上永遠清不掉舊的覆寫值。因此本 Task 把 `_notifyChanged()` 改為整列字面量建構（比照 `ReaderSettingsSheet._currentDraft` 既有模式），明確列出 `widget.prefs` 的其餘所有欄位以保留原值。
 
-- [ ] **Step 1: 寫失敗測試**
+^- [x] **Step 1: 寫失敗測試**
 
 在 `app/test/screens/fxl_settings_sheet_test.dart` 頂部 import 區塊新增：
 
@@ -1301,12 +1301,12 @@ testWidgets(
 });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+^- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart`
 Expected: 編譯錯誤（`showTextConversion` 不是 `FxlSettingsSheet` 已知的具名參數）。
 
-- [ ] **Step 3: 修改 `fxl_settings_sheet.dart` 加入四態選擇器**
+^- [x] **Step 3: 修改 `fxl_settings_sheet.dart` 加入四態選擇器**
 
 在 import 區塊新增：
 
@@ -1465,12 +1465,12 @@ import '../reader/text_conversion_mode.dart';
 
 **注意**：`EBOptionChipGroup<TextConversionMode?>` 的 `items` 用 `const [...]` record 字面量清單時，record 內的 `IconData`（如 `Icons.tune`）與 enum 值皆為編譯期常數，`const` 合法；若編譯器對此處 `const` 提出疑慮（record 語法在部分 Dart 版本的 const context 限制），改為非 `const` 的一般 `[...]` 字面量即可，不影響行為。
 
-- [ ] **Step 4: 執行測試，確認通過**
+^- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart`
 Expected: PASS，全數通過（含既有測試，證明 `_notifyChanged()` 改為整列字面量建構後，`dualPageMode`/`dualPageDirection`/`fullscreen`/`showHeader`/`showFooter` 既有行為零回歸）。
 
-- [ ] **Step 5: 修改 `reader_screen.dart` 的 `_openFxlSettings()` 呼叫端**
+^- [x] **Step 5: 修改 `reader_screen.dart` 的 `_openFxlSettings()` 呼叫端**
 
 找到 `_openFxlSettings()` 方法：
 
@@ -1550,22 +1550,22 @@ Expected: PASS，全數通過（含既有測試，證明 `_notifyChanged()` 改�
   });
 ```
 
-- [ ] **Step 6: 執行測試，確認通過**
+^- [x] **Step 6: 執行測試，確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS，全數通過。
 
-- [ ] **Step 7: 執行 `flutter analyze` 確認乾淨**
+^- [x] **Step 7: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8: 執行完整 `flutter test`（本計畫最後一個 Task，比照專案慣例跑一次全套）**
+^- [x] **Step 8: 執行完整 `flutter test`（本計畫最後一個 Task，比照專案慣例跑一次全套）**
 
 Run: `flutter test`
 Expected: 全數通過（既有已知不穩定案例除外，例如 `adaptive_shell_scaffold_test.dart` 既有 2 個失敗案例，非本次異動引入）。
 
-- [ ] **Step 9: Commit**
+^- [x] **Step 9: Commit**
 
 ```bash
 git add app/lib/screens/fxl_settings_sheet.dart app/lib/screens/reader_screen.dart app/test/screens/fxl_settings_sheet_test.dart app/test/screens/reader_screen_test.dart

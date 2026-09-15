@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/screens/reading_defaults_screen.dart';
 import '../support/fake_reader_prefs_manager.dart';
 
@@ -16,6 +17,7 @@ void main() {
           pageTurnMode: PageTurnMode.scroll,
           screenOrientation: ScreenOrientationSetting.lock90,
           fullscreen: true,
+          textConversion: TextConversionMode.toSimplified,
         ),
       ),
     );
@@ -40,11 +42,6 @@ void main() {
     );
     expect(volumeSwitch.value, isFalse);
 
-    final fullscreenSwitch = tester.widget<SwitchListTile>(
-      find.byKey(const Key('reading_defaults_fullscreen_switch')),
-    );
-    expect(fullscreenSwitch.value, isTrue);
-
     final scrollTile = tester.widget<RadioListTile<PageTurnMode>>(
       find.byKey(const Key('reading_defaults_page_turn_mode_scroll')),
     );
@@ -54,6 +51,24 @@ void main() {
       find.byKey(const Key('reading_defaults_screen_orientation_lock90')),
       findsOneWidget,
     );
+
+    final simplifiedFinder =
+        find.byKey(const Key('reading_defaults_text_conversion_simplified'));
+    await tester.scrollUntilVisible(simplifiedFinder, 100);
+    // RadioListTile.checked 已在 Flutter 3.32 棄用，改檢查外層 RadioGroup 的 groupValue
+    final simplifiedGroup = tester.widget<RadioGroup<TextConversionMode>>(
+      find.ancestor(
+        of: simplifiedFinder,
+        matching: find.byType(RadioGroup<TextConversionMode>),
+      ),
+    );
+    expect(simplifiedGroup.groupValue, TextConversionMode.toSimplified);
+
+    final fullscreenFinder =
+        find.byKey(const Key('reading_defaults_fullscreen_switch'));
+    await tester.scrollUntilVisible(fullscreenFinder, 100);
+    final fullscreenSwitch = tester.widget<SwitchListTile>(fullscreenFinder);
+    expect(fullscreenSwitch.value, isTrue);
   });
 
   testWidgets('切換音量鍵翻頁開關立即呼叫 saveGlobalPrefs 並反映新值', (tester) async {
@@ -80,7 +95,7 @@ void main() {
 
     // Fullscreen switch is at the bottom of the list, need to ensure visible
     final fullscreenFinder = find.byKey(const Key('reading_defaults_fullscreen_switch'));
-    await tester.ensureVisible(fullscreenFinder);
+    await tester.scrollUntilVisible(fullscreenFinder, 100);
     await tester.pumpAndSettle();
     await tester.tap(fullscreenFinder);
     await tester.pumpAndSettle();
@@ -122,6 +137,45 @@ void main() {
       fakeManager.savedGlobalPrefsCalls.last.reading.screenOrientation,
       ScreenOrientationSetting.lock180,
     );
+  });
+
+  testWidgets('點選簡繁轉換選項立即呼叫 saveGlobalPrefs 更新為對應模式，且重新載入後反映新值',
+      (tester) async {
+    final fakeManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      home: ReadingDefaultsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final traditionalFinder =
+        find.byKey(const Key('reading_defaults_text_conversion_traditional'));
+    await tester.scrollUntilVisible(traditionalFinder, 100);
+    await tester.pumpAndSettle();
+    await tester.tap(traditionalFinder);
+    await tester.pumpAndSettle();
+
+    expect(
+      fakeManager.savedGlobalPrefsCalls.last.reading.textConversion,
+      TextConversionMode.toTraditional,
+    );
+
+    // 重新載入持久化（issues.md:50 規定）：以同一個 fakeManager 重建畫面，
+    // 驗證剛才儲存的值會反映在選中狀態。
+    await tester.pumpWidget(MaterialApp(
+      home: ReadingDefaultsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final reloadedFinder =
+        find.byKey(const Key('reading_defaults_text_conversion_traditional'));
+    await tester.scrollUntilVisible(reloadedFinder, 100);
+    final reloadedGroup = tester.widget<RadioGroup<TextConversionMode>>(
+      find.ancestor(
+        of: reloadedFinder,
+        matching: find.byType(RadioGroup<TextConversionMode>),
+      ),
+    );
+    expect(reloadedGroup.groupValue, TextConversionMode.toTraditional);
   });
 
   testWidgets('畫面上不存在任何「儲存」按鈕', (tester) async {
