@@ -24,6 +24,7 @@ import 'tap_zone_detector.dart';
 import 'toc_entry.dart';
 import 'tts_segment_cfi.dart';
 import 'writing_mode.dart';
+import 'text_conversion_mode.dart';
 import 'zone_action.dart';
 
 /// `window.applyPreferences` 過早呼叫佇列 shim（epic-18-reader-device-qa
@@ -132,6 +133,9 @@ Map<String, Object?> buildFoliatePreferencesMap(FoliateReaderView view) {
     map['backgroundColor'] = colorToCssHex(view.backgroundColor!);
   }
   if (view.dualPageMode != null) map['dualPageMode'] = view.dualPageMode!.name;
+  if (view.textConversion != null) {
+    map['textConversion'] = view.textConversion!.name;
+  }
   map['isLandscape'] = view.isLandscape;
   map['isComicBookHint'] = view.isComicBookHint;
   if (view.dualPageDirection != null) {
@@ -169,6 +173,7 @@ bool foliatePreferencesChanged(
       oldView.textColor != newView.textColor ||
       oldView.backgroundColor != newView.backgroundColor ||
       oldView.dualPageMode != newView.dualPageMode ||
+      oldView.textConversion != newView.textConversion ||
       oldView.isLandscape != newView.isLandscape ||
       oldView.isComicBookHint != newView.isComicBookHint ||
       oldView.dualPageDirection != newView.dualPageDirection;
@@ -237,6 +242,14 @@ class FoliateReaderView extends StatefulWidget {
   final bool? isFixedLayoutHint;
   final DualPageMode? dualPageMode;
 
+  /// 簡繁顯示轉換模式（FR-48，epic-42-text-conversion Issue 2）：呼叫端
+  /// （[ReaderScreen]）傳入 `resolveTextConversion()` 解析後的該書生效值
+  /// （[BookReaderPrefs.textConversionOverride] ?? 全域
+  /// [ReadingDefaults.textConversion]）。`null` 時 main.js 端沿用
+  /// `initialPrefs.textConversion` 的既有預設（`'original'`，見 main.js
+  /// `currentTextConversion` 模組變數宣告）。
+  final TextConversionMode? textConversion;
+
   /// CBZ 專屬提示（epic-11-multi-format-reader Issue 3）：main.js 僅在此為
   /// `true` 時才覆寫 `book.dir`／虛擬頁碼目錄，避免誤觸 EPUB 固定版面既有
   /// 的 page-progression-direction 自動偵測（見該檔案 openBook() 對應段落
@@ -303,6 +316,7 @@ class FoliateReaderView extends StatefulWidget {
     this.showFooter,
     this.isFixedLayoutHint,
     this.dualPageMode,
+    this.textConversion,
     this.isComicBookHint = false,
     this.dualPageDirection,
     this.textColor,

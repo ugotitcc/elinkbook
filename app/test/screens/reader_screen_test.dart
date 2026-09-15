@@ -16,6 +16,7 @@ import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:pdfrx/pdfrx.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import '../support/pump_until_pdf_ready.dart';
@@ -203,6 +204,71 @@ void main() {
       expect(foliateView.initialLocatorJson, 'epubcfi(/jump)');
       // 驗證 FoliateReaderView._buildInitialUri 依賴的 extractCfi 能成功解析純 CFI 字串
       expect(extractCfi(foliateView.initialLocatorJson), 'epubcfi(/jump)');
+    });
+
+    testWidgets('Foliate：FoliateReaderView.textConversion 反映 resolveTextConversion() 解析結果（單書覆寫優先）',
+        (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        bookPrefsByBookId: {
+          'b_text_conversion': const BookReaderPrefs(
+            textConversionOverride: TextConversionMode.toTraditional,
+          ),
+        },
+        globalPrefs: GlobalReaderPrefs.initial().copyWith(
+          reading: const ReadingDefaults(
+            textConversion: TextConversionMode.toSimplified,
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_text_conversion',
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      expect(foliateView.textConversion, TextConversionMode.toTraditional);
+    });
+
+    testWidgets('Foliate：FoliateReaderView.textConversion 未覆寫時回退全域預設值',
+        (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        globalPrefs: GlobalReaderPrefs.initial().copyWith(
+          reading: const ReadingDefaults(
+            textConversion: TextConversionMode.toSimplified,
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_text_conversion_fallback',
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      expect(foliateView.textConversion, TextConversionMode.toSimplified);
     });
 
     testWidgets(

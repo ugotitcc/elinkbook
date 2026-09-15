@@ -1,6 +1,6 @@
 # Epic 42 Issue 2 — JS 端 DOM Walker 與雙向分段偏移映射（CFI 保護）Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 讓 WebView 內顯示的文字（EPUB／KF8／TXT／MD 流式與 FXL 章節）依使用者選擇的簡繁模式即時轉換，同時保證所有既有的 EPUB CFI（劃線、書籤、目前閱讀位置、TTS 朗讀段）永遠對應「未轉換的原始文本」，不因顯示層轉換而位移或拋出例外。
 
@@ -52,7 +52,7 @@
 - Consumes: `app/android/app/src/main/assets/foliate/text-conversion.js` 的 `applyTextConversionToString(text, mode)`（Issue 0b）；`text-offset-map.js` 的 `origToDisplay(offsetMap, offset)`／`displayToOrig(offsetMap, offset, snapPolicy)`（Issue 0b）。
 - Produces：`applyTextConversion(doc, mode)`、`adjustOffsetForCfi(node, offset, direction)`、`toOriginalRange(liveRange)`、`resolveDisplayRange(doc, anchor)`，供 Task 2/3 的 `main.js` 消費。
 
-- [ ] **Step 1: 寫失敗測試（`applyTextConversion`）**
+- [x] **Step 1: 寫失敗測試（`applyTextConversion`）**
 
 建立 `app/tool/test_apply_text_conversion.mjs`：
 
@@ -167,7 +167,7 @@ console.log('[test_apply_text_conversion] 全部通過')
 Run: `node app/tool/test_apply_text_conversion.mjs`
 Expected: 錯誤（找不到 `../android/app/src/main/assets/foliate/text-conversion-walker.js`）。
 
-- [ ] **Step 2: 寫失敗測試（`adjustOffsetForCfi`／`toOriginalRange`／`resolveDisplayRange`）**
+- [x] **Step 2: 寫失敗測試（`adjustOffsetForCfi`／`toOriginalRange`／`resolveDisplayRange`）**
 
 建立 `app/tool/test_cfi_range_adjustment.mjs`：
 
@@ -384,12 +384,12 @@ console.log('[test_cfi_range_adjustment] 全部通過')
 Run: `node app/tool/test_cfi_range_adjustment.mjs`
 Expected: 錯誤（找不到 `text-conversion-walker.js`）。
 
-- [ ] **Step 3: 執行兩支測試腳本，確認皆失敗**
+- [x] **Step 3: 執行兩支測試腳本，確認皆失敗**
 
 Run: `node app/tool/test_apply_text_conversion.mjs && node app/tool/test_cfi_range_adjustment.mjs`
 Expected: 兩者皆因找不到模組而失敗（`ERR_MODULE_NOT_FOUND`）。
 
-- [ ] **Step 4: 建立 `text-conversion-walker.js`**
+- [x] **Step 4: 建立 `text-conversion-walker.js`**
 
 建立 `app/android/app/src/main/assets/foliate/text-conversion-walker.js`：
 
@@ -592,12 +592,12 @@ export function resolveDisplayRange(doc, anchor) {
 }
 ```
 
-- [ ] **Step 5: 執行測試，確認通過**
+- [x] **Step 5: 執行測試，確認通過**
 
 Run: `node app/tool/test_apply_text_conversion.mjs && node app/tool/test_cfi_range_adjustment.mjs`
 Expected: 兩者皆印出「全部通過」，exit code 0。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/text-conversion-walker.js app/tool/test_apply_text_conversion.mjs app/tool/test_cfi_range_adjustment.mjs
@@ -617,7 +617,7 @@ git commit -m "feat(reader): 新增 text-conversion-walker.js（DOM Walker + CFI
 
 本 Task 無法用 Node.js 單元測試驗證（`view` 是真實 WebView 自訂元素實例），正確性由 Task 6 的真機整合測試與本 Task 的 `check_foliate_es_compat.js` 靜態掃描把關。
 
-- [ ] **Step 1: 修改 `main.js` 加入 import 與方法遮蔽**
+- [x] **Step 1: 修改 `main.js` 加入 import 與方法遮蔽**
 
 在 `main.js` 第 1-4 行既有 import 陳述式之後新增：
 
@@ -666,19 +666,19 @@ view.resolveCFI = (cfi) => {
 }
 ```
 
-- [ ] **Step 2: 執行 `check_foliate_es_compat.js` 確認乾淨**
+- [x] **Step 2: 執行 `check_foliate_es_compat.js` 確認乾淨**
 
 Run: `node app/tool/check_foliate_es_compat.js`
 Expected: `[check_foliate_es_compat] 乾淨——目前已知的較新 ES 內建方法用法都已有對應 polyfill 防護。`（exit code 0）
 
-- [ ] **Step 3: 人工核對（無法自動化的把關步驟）**
+- [x] **Step 3: 人工核對（無法自動化的把關步驟）**
 
 重新讀取修改後的 `main.js` 第 1-40 行左右，確認：
 1. `import { toOriginalRange, resolveDisplayRange } from './text-conversion-walker.js'` 確實加入且路徑正確。
 2. `view.getCFI`／`view.resolveCFI` 的賦值語句確實在 `const view = document.getElementById('view')`（第 6 行）之後、`openBook()` 實際呼叫（檔案最底部第 1385 行）之前——模組級程式碼由上而下依序執行，只要順序正確即保證修補在任何呼叫發生前就緒。
 3. 沒有動到 `view.js`／`epubcfi.js` 等 vendor 檔案任何一行（`git status` 只應顯示 `main.js` 被修改）。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -696,7 +696,7 @@ git commit -m "feat(reader): main.js 對 view.getCFI/resolveCFI 做 CFI 座標�
 - Consumes: Task 1 的 `applyTextConversion(doc, mode)`；Task 4 的 `FoliateReaderView.textConversion`（透過既有 `buildFoliatePreferencesMap()` 管線送入的 `prefs.textConversion` 欄位）。
 - Produces：無（葉節點接線，DOM Walker 對使用者可觀察的行為由 Task 6 整合測試驗證）。
 
-- [ ] **Step 1: 修改 `main.js` 匯入 `applyTextConversion` 並新增 `currentTextConversion` 模組變數**
+- [x] **Step 1: 修改 `main.js` 匯入 `applyTextConversion` 並新增 `currentTextConversion` 模組變數**
 
 把 Task 2 新增的 import 陳述式：
 
@@ -767,7 +767,7 @@ window.setDecorations = function (decorations) {
     view.addAnnotation({ value: cfi, color, isUnderline })
 ```
 
-- [ ] **Step 2: 在既有 `'load'` 監聽器內呼叫 `applyTextConversion`**
+- [x] **Step 2: 在既有 `'load'` 監聽器內呼叫 `applyTextConversion`**
 
 找到第 1020-1027 行左右：
 
@@ -801,7 +801,7 @@ window.setDecorations = function (decorations) {
       const classifier = new TouchIntentClassifier()
 ```
 
-- [ ] **Step 3: 在 `window.applyPreferences()` 內新增即時切換觸發**
+- [x] **Step 3: 在 `window.applyPreferences()` 內新增即時切換觸發**
 
 找到第 194-214 行左右：
 
@@ -885,17 +885,17 @@ window.applyPreferences = function (prefs) {
   if (view.isFixedLayout) {
 ```
 
-- [ ] **Step 4: 執行 `check_foliate_es_compat.js` 確認乾淨**
+- [x] **Step 4: 執行 `check_foliate_es_compat.js` 確認乾淨**
 
 Run: `node app/tool/check_foliate_es_compat.js`
 Expected: `[check_foliate_es_compat] 乾淨——目前已知的較新 ES 內建方法用法都已有對應 polyfill 防護。`（exit code 0）
 
-- [ ] **Step 5: 執行 Task 1 的兩支 Node 測試腳本，確認零回歸**
+- [x] **Step 5: 執行 Task 1 的兩支 Node 測試腳本，確認零回歸**
 
 Run: `node app/tool/test_apply_text_conversion.mjs && node app/tool/test_cfi_range_adjustment.mjs`
 Expected: 兩者皆印出「全部通過」。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -914,7 +914,7 @@ git commit -m "feat(reader): main.js 接線 DOM Walker 觸發點（載入/即時
 - Consumes: `app/lib/reader/text_conversion_mode.dart` 的 `TextConversionMode`（Issue 0）。
 - Produces：`FoliateReaderView.textConversion`（`TextConversionMode?`）建構參數，`buildFoliatePreferencesMap()` 送出 `prefs.textConversion` 欄位（`.name` 字串，與 Task 3 main.js 的 `mode` 字面值 `'original'`／`'toTraditional'`／`'toSimplified'` 一致），供 Task 5 `reader_screen.dart` 消費。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 在 `app/test/reader/foliate_reader_view_test.dart` 頂部 import 區塊（`import 'package:elinkbook/reader/zone_action.dart';` 之後）新增：
 
@@ -970,12 +970,12 @@ import 'package:elinkbook/reader/text_conversion_mode.dart';
     });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/reader/foliate_reader_view_test.dart`
 Expected: 編譯錯誤（`textConversion` 不是 `FoliateReaderView` 已知的具名參數）。
 
-- [ ] **Step 3: 修改 `foliate_reader_view.dart` 加入新欄位**
+- [x] **Step 3: 修改 `foliate_reader_view.dart` 加入新欄位**
 
 在 import 區塊（`import 'writing_mode.dart';` 之後、`import 'zone_action.dart';` 之前）新增：
 
@@ -1016,17 +1016,17 @@ import 'text_conversion_mode.dart';
       oldView.textConversion != newView.textConversion ||
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/reader/foliate_reader_view_test.dart`
 Expected: PASS，全數通過。
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/foliate_reader_view.dart app/test/reader/foliate_reader_view_test.dart
@@ -1045,7 +1045,7 @@ git commit -m "feat(reader): FoliateReaderView 新增 textConversion 建構參�
 - Consumes: `app/lib/reader/resolve_text_conversion.dart` 的 `resolveTextConversion(BookReaderPrefs, ReadingDefaults)`（Issue 1）；Task 4 的 `FoliateReaderView.textConversion`。
 - Produces：無（葉節點接線）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart` 頂部 import 區塊新增（若尚未存在）：
 
@@ -1123,12 +1123,12 @@ import 'package:elinkbook/reader/text_conversion_mode.dart';
     });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: FAIL（`FoliateReaderView.textConversion` 未被設定，實際值為 `null`，或編譯錯誤視 Task 4 是否已合併而定）。
 
-- [ ] **Step 3: 修改 `reader_screen.dart` 加入呼叫端接線**
+- [x] **Step 3: 修改 `reader_screen.dart` 加入呼叫端接線**
 
 在 import 區塊（`import '../reader/resolved_preferences.dart';` 之後）新增：
 
@@ -1163,17 +1163,17 @@ import '../reader/resolve_text_conversion.dart';
           textConversion: textConversionMode,
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS，全數通過。
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1193,7 +1193,7 @@ git commit -m "feat(screens): reader_screen.dart 傳入 resolveTextConversion() 
 
 **必須在真實 Android 裝置/模擬器上執行**（`-d <device-id>`），比照 `CLAUDE.md`「兩層測試架構」——本步驟無法在本機純 Dart 測試環境下驗證，也無法由本計畫的撰寫/執行過程自動確認通過，需人工在真機上執行後回報結果。
 
-- [ ] **Step 1: 新增 CFI 穩定性回歸測試**
+- [x] **Step 1: 新增 CFI 穩定性回歸測試**
 
 在 `app/integration_test/foliate_highlights_notes_test.dart` 的 `testWidgets('Foliate 流式 EPUB：預先寫入 CFI 劃線＋備註，NotesBottomSheet 正確顯示並可互動', ...)` 測試結尾（第 172 行 `});` 之後、`main()` 結尾的 `}` 之前）新增：
 
@@ -1307,27 +1307,27 @@ git commit -m "feat(screens): reader_screen.dart 傳入 resolveTextConversion() 
   //      環境未安裝 node_modules 無法當場產生已驗證 CFI）驗證。
 ```
 
-- [ ] **Step 2: 真機執行，確認通過**
+- [x] **Step 2: 真機執行，確認通過**
 
 Run: `flutter test integration_test/foliate_highlights_notes_test.dart -d <device-id>`
 Expected: 兩個 testWidgets 皆 PASS（既有測試零回歸＋新增測試通過）。**此步驟需要人工在真實 Android 裝置/模擬器上執行並回報結果，本計畫執行過程無法自動驗證。**
 
-- [ ] **Step 3: 執行 Task 1-3 的 Node 測試腳本 + `check_foliate_es_compat.js`，確認全數通過**
+- [x] **Step 3: 執行 Task 1-3 的 Node 測試腳本 + `check_foliate_es_compat.js`，確認全數通過**
 
 Run: `node app/tool/test_apply_text_conversion.mjs && node app/tool/test_cfi_range_adjustment.mjs && node app/tool/check_foliate_es_compat.js`
 Expected: 三者皆成功（exit code 0）。
 
-- [ ] **Step 4: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 4: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 5: 執行完整 `flutter test`（本計畫最後一個 Task，比照專案慣例跑一次全套）**
+- [x] **Step 5: 執行完整 `flutter test`（本計畫最後一個 Task，比照專案慣例跑一次全套）**
 
 Run: `flutter test`
 Expected: 全數通過（既有已知不穩定案例除外，例如 `adaptive_shell_scaffold_test.dart` 既有 2 個失敗案例，非本次異動引入）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/integration_test/foliate_highlights_notes_test.dart
