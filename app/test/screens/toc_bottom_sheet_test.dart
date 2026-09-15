@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_toc_item.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/toc_entry.dart';
 import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 
@@ -149,6 +150,47 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(TocBottomSheet), findsNothing);
+  });
+
+  testWidgets(
+      'textConversion: toTraditional 時，目錄標題套用簡繁轉換（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    final tocEntries = [
+      const TocEntry(title: '电脑', locatorJson: 'l1', progression: 0.0),
+    ];
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: TocBottomSheet(
+          entries: tocEntries,
+          initiallyExpandedEntries: const {},
+          currentEntry: null,
+          onEntrySelected: (_) {},
+          textConversion: TextConversionMode.toTraditional,
+        ),
+      ),
+    ));
+
+    expect(find.text('電腦'), findsOneWidget);
+    expect(find.text('电脑'), findsNothing);
+  });
+
+  testWidgets('省略 textConversion 參數時，目錄標題維持原文（向後相容，epic-42-text-conversion Issue 3）',
+      (tester) async {
+    final tocEntries = [
+      const TocEntry(title: '电脑', locatorJson: 'l1', progression: 0.0),
+    ];
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: TocBottomSheet(
+          entries: tocEntries,
+          initiallyExpandedEntries: const {},
+          currentEntry: null,
+          onEntrySelected: (_) {},
+        ),
+      ),
+    ));
+
+    expect(find.text('电脑'), findsOneWidget);
   });
 }
 

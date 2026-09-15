@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../reader/book_format.dart';
 import '../reader/book_toc_item.dart';
 import '../reader/pdf_toc_item.dart';
+import '../reader/text_conversion.dart';
+import '../reader/text_conversion_mode.dart';
 import '../reader/toc_entry.dart';
 
 /// 目錄樹狀清單 Bottom Sheet（epic-24-pdf-engine-rebuild Issue 5，
@@ -53,6 +55,13 @@ class TocBottomSheet extends StatefulWidget {
   /// 原則，見類別 docstring），只負責把它放進分頁籤殼層的第三個分頁。
   final Widget? searchTabContent;
 
+  /// 簡繁顯示轉換模式（FR-48，epic-42-text-conversion Issue 3）：套用在
+  /// [BookTocItem.title] 上，格式無關（EPUB／PDF 目錄項目共用同一套轉換
+  /// 邏輯）。預設 `TextConversionMode.original`（不轉換，向後相容既有
+  /// 呼叫端／測試，比照 `FxlSettingsSheet.showTextConversion` 既有先例，
+  /// 見 plan-issue-1.md Task 8）。
+  final TextConversionMode textConversion;
+
   const TocBottomSheet({
     super.key,
     this.format,
@@ -62,6 +71,7 @@ class TocBottomSheet extends StatefulWidget {
     required this.onEntrySelected,
     this.thumbnailTabContent,
     this.searchTabContent,
+    this.textConversion = TextConversionMode.original,
   });
 
   @override
@@ -203,7 +213,7 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
       child: ListTile(
         key: Key('toc_entry_${node.stableId}'),
         title: Text(
-          node.title,
+          convertText(node.title, widget.textConversion),
           style: isCurrent ? const TextStyle(fontWeight: FontWeight.bold) : null,
         ),
         selected: isCurrent,
