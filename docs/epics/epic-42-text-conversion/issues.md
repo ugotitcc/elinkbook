@@ -2,11 +2,13 @@
 
 依 `spec.md`（唯一事實來源，含 ADR 0032／ADR 0031、offset-mapping-spec.md 與 spec 審查修訂）拆解為 Issue 0-5。**Issue 0 優先開始；Issue 1 依賴 Issue 0（`TextConversionMode` enum 定義）；Issue 2-5 皆阻塞於 Issue 0＋Issue 1，但彼此互相獨立、可平行進行**（2026-09-15 決策確認方案 A：簡轉繁 `s2twp`＋雙向分段偏移映射，繁轉簡 `tw2s` 保留原著文風）。
 
+> **2026-09-15 文件現況更正**：本檔案的 Issue 0 段落已依上述方案 A 改寫「範圍」／「單元測試要求」為目標終態（`s2twp`＋`TWPhrases`＋`TextOffsetMap`），但 PR [#245](https://git.jigong.org/huthief/elinkBook/pulls/245) 實際合併進 `main` 的程式碼，是**改寫之前**、依已被 ADR 0032 取代的 ADR 0030（純字元 1:1、無詞彙、無偏移映射）完成的——`app/tool/opencc_data/` 只有 `STCharacters.txt`／`TSCharacters.txt`，尚無 `TWPhrases.txt`／`TWVariants.txt`；`app/lib/reader/text_conversion.dart`／`text_conversion_dict.dart` 與 JS 端字典皆仍是舊版純字元查找表；全專案（JS＋Dart）尚無 `TextOffsetMap` 類別。**Issue 0 的「Status: completed」僅涵蓋舊方案（ADR 0030）**，方案 A（ADR 0032）新增的台灣常用詞字典與雙向偏移映射範圍另立 **Issue 0b**（見下）補齊，**Issue 2 除依賴 Issue 0／Issue 1 外，另新增依賴 Issue 0b**（`TextOffsetMap`／`s2twp`／`tw2s` 字典為 Issue 2 DOM Walker 的直接前提）。Issue 1（資料模型＋UI）不受此落差影響，僅依賴穩定不變的 `TextConversionMode` enum，可依現有範圍直接開工。
+
 ---
 
 ## Issue 0：前置修復＋雙端字典生成（支援台灣常用詞）
 
-**Status:** completed（`plans/plan-issue-0.md` 5 個 Task 全數完成，`check_foliate_es_compat.js` 常數引用漂移已修復，`TextConversionMode` enum／`convertText()`／`parseCharTable()`／JS-Dart 雙端同源查找表皆已落地，`flutter analyze`/`flutter test`／`node` 腳本測試全數通過。獨立程式審查 `reviews/review-issue-0.md`：0 Critical／0 Important／2 Minor，皆已修訂〔移除 `epubcfi.js:266` 行號耦合、vendor OpenCC LICENSE 全文〕，結論 Ready to merge: Yes）
+**Status:** completed（僅涵蓋舊方案 ADR 0030 範圍，見上方「2026-09-15 文件現況更正」；`plans/plan-issue-0.md` 5 個 Task 全數完成，`check_foliate_es_compat.js` 常數引用漂移已修復，`TextConversionMode` enum／`convertText()`／`parseCharTable()`／JS-Dart 雙端同源查找表〔純字元 1:1，`STCharacters.txt`／`TSCharacters.txt`〕皆已落地，`flutter analyze`/`flutter test`／`node` 腳本測試全數通過。獨立程式審查 `reviews/review-issue-0.md`：0 Critical／0 Important／2 Minor，皆已修訂〔移除 `epubcfi.js:266` 行號耦合、vendor OpenCC LICENSE 全文〕，結論 Ready to merge: Yes。**方案 A（ADR 0032）新增的 `TWPhrases`／`s2twp`／`tw2s` 字典與 `TextOffsetMap` 演算法尚未實作，見 Issue 0b**）
 
 **依賴：** 無（可立即開始）
 
@@ -29,6 +31,33 @@
 - `check_foliate_es_compat.js` 修復後可正常執行完畢、不拋例外。
 
 **驗收標準：** 上述測試通過；雙端字典檔案已 vendor 進版控；`flutter analyze` 乾淨。
+
+---
+
+## Issue 0b：台灣常用詞字典擴充＋`TextOffsetMap` 演算法（補齊 Issue 0 的 ADR 0032 落差）
+
+**Status:** ready-for-agent（2026-09-15 新增——`0d2a1e90`「簡轉繁的部份，改為轉換為台灣常用語」把方案由 ADR 0030 升級為 ADR 0032，但僅改寫本檔案 Issue 0 段落文字與 `spec.md`，未同步更新 Issue 0「Status」、未實際落地程式碼；本 Issue 補齊該落差，見上方「2026-09-15 文件現況更正」）
+
+**依賴：** Issue 0（既有 `TextConversionMode` enum／`convertText()` 介面／`parseCharTable()` 生成腳本框架，本 Issue 在其上擴充，不變更既有函式簽章）
+
+**範圍：**
+- **補齊字典來源檔案**：從 BYVoid/OpenCC 官方倉庫取得 `TWPhrases.txt`（簡轉繁台灣慣用語，817 條）與 `TWVariants.txt`（若 `tw2s` 標準台繁轉簡體字形需要），存放於既有 `app/tool/opencc_data/`，比照既有 `STCharacters.txt`／`TSCharacters.txt` 的 vendoring 慣例（含 LICENSE 來源標註）。
+- **改寫 `generate_conversion_dicts.js`，依方案 A（ADR 0032）輸出非對稱字典組合**：
+  - `toTraditional`（簡轉繁）：`s2twp` = 單字對照（既有 `STCharacters.txt`）＋`TWPhrases` 詞彙前綴樹（Trie，支援最長匹配優先，避免詞彙內部字元被單字表提前置換）。
+  - `toSimplified`（繁轉簡）：`tw2s` = 標準台繁轉簡體字形（既有 `TSCharacters.txt`），**不**套用 `tw2sp` 大陸用語，維持原著文風。
+  - 既有「多候選字取第一個」「單字元 assertion」正規化約束（Issue 0 已落地）延伸適用於詞彙表：詞彙表的鍵/值兩側各自允許多字元（非 Issue 0 單字元限制），但同一鍵不得重複、值不得為空字串。
+- **新增 `TextOffsetMap` 演算法類別**（依 `offset-mapping-spec.md` 第 2 節 `origToDisplay`／`displayToOrig` 演算法規格逐一實作）：
+  - **Dart 端**：`app/lib/reader/text_conversion.dart`（或獨立新檔）新增 `TextOffsetMap` 類別＋`OffsetEntry` 資料結構，供 Issue 2 JS 端邏輯移植對照與 Dart 端未來潛在需求（例如 TTS 單字級高亮，見 `offset-mapping-spec.md` 4.1 節）共用同一份演算法定義／測試向量。
+  - **JS 端**：於 `text_conversion_dict.js` 或獨立新模組實作對應的 `TextOffsetMap`／`origToDisplay`／`displayToOrig` 函式（供 Issue 2 DOM Walker 直接引用，Issue 2 本身不重新實作演算法）。
+  - `convertText()`／JS 端轉換函式擴充為**片語優先、單字元其次**的比對邏輯（Trie 或等效最長匹配），並在替換過程中同步收集 `[origOffset, origLen, dispOffset, dispLen]` 區段，供建構 `TextOffsetMap`。
+
+**單元測試要求：**
+- 字典生成腳本：驗證 `s2twp` 輸出含 `TWPhrases` 詞彙（如「内存」→「記憶體」、「软件」→「軟體」）且長度可不同於原字元數；驗證 `tw2s` 輸出不含大陸用語替換（如「妥瑞氏症」原樣保留）。
+- `convertText()`／JS 端轉換：片語最長匹配優先於單字元替換（例如同時存在「记忆」單字對照與「记忆体」詞彙時，優先套用詞彙）。
+- `TextOffsetMap`（Dart／JS 各自）：依 `offset-mapping-spec.md` 2.2 節演算法逐一覆蓋——`origToDisplay`／`displayToOrig` 於區段內／區段外／區段邊界（Floor/Ceil snap policy）之正確性；長度不變節點（97.6%）`offsetMap` 為 `null` 時直接回傳原 offset（零開銷路徑）。
+- 邊界案例：連續多個非等長替換區段（`accumDelta` 累計正確性）；Unicode 代理對（Astral Plane，UTF-16 佔 2 code units）替換造成的偏移。
+
+**驗收標準：** 上述測試通過；`node --check` 語法驗證雙端字典檔案；`flutter analyze` 乾淨；產出的 `TextOffsetMap` 演算法與 `offset-mapping-spec.md` 逐條數學定義一致（供 Issue 2 直接消費，Issue 2 開工前必須先完成本 Issue）。
 
 ---
 
@@ -63,7 +92,7 @@
 
 **Status:** ready-for-agent
 
-**依賴：** Issue 0（字典檔案／`convertText`）、Issue 1（`resolveTextConversion`／偏好設定管線）
+**依賴：** Issue 0（字典檔案／`convertText`）、Issue 0b（`TWPhrases`／`s2twp`／`tw2s` 字典與 `TextOffsetMap` 演算法，本 Issue 的 DOM Walker 直接消費、不重新實作）、Issue 1（`resolveTextConversion`／偏好設定管線）
 
 **範圍：**
 - 新增 DOM Walker 函式 `applyTextConversion(root, mode)`（於 `main.js` 或獨立模組），走訪目前渲染中 section 的可見文字節點，排除 `<rt>`／`<script>`／`<style>` 標籤。
