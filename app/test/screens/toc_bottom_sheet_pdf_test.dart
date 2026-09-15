@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_format.dart';
 import 'package:elinkbook/reader/pdf_toc_item.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 
 void main() {
@@ -204,5 +205,25 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('此功能將於後續版本提供'), findsOneWidget);
+  });
+
+  testWidgets(
+      'textConversion: toSimplified 時，PDF 目錄標題套用簡繁轉換（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    const node = PdfTocItem(title: '電腦', pageIndex: 0, stableId: 'p_tc');
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: TocBottomSheet(
+          format: BookFormat.pdf,
+          entries: const [node],
+          initiallyExpandedEntries: const {},
+          currentEntry: null,
+          onEntrySelected: (_) {},
+          textConversion: TextConversionMode.toSimplified,
+        ),
+      ),
+    ));
+
+    expect(find.text('电脑'), findsOneWidget);
   });
 }

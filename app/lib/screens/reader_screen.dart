@@ -54,6 +54,8 @@ import '../reader/reader_prefs_manager.dart';
 import '../reader/toc_entry.dart';
 import '../reader/toc_navigator.dart';
 import '../reader/resolve_text_conversion.dart';
+import '../reader/text_conversion.dart';
+import '../reader/text_conversion_mode.dart';
 import '../reader/resolved_preferences.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
@@ -1339,6 +1341,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           Navigator.of(context).pop();
           _jumpToEpubLocator((entry as TocEntry).locatorJson);
         },
+        textConversion: _textConversionMode,
       ),
     );
   }
@@ -1390,6 +1393,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           onNext: () => _goToPdfSearchMatch(1),
           onPrevious: () => _goToPdfSearchMatch(-1),
         ),
+        textConversion: _textConversionMode,
       ),
     );
   }
@@ -1473,6 +1477,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         bookmarksRepository: repository,
         currentPosition: positionContext,
         initialTabIndex: initialTabIndex,
+        textConversion: _textConversionMode,
         // FXL EPUB 傳入 null（見 _handleSelectionChanged 註解——FXL 頁面
         // 是純點陣圖，無文字節點可選取，劃線/備註排除 FXL 是結構性必然，
         // 非可調整的產品決策，epic-20 Issue 4 審查回應已查證確認）。
@@ -1691,8 +1696,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (fileFormat == null) return null;
     return Book(
       id: widget.bookId,
-      title: widget.bookTitle,
-      author: widget.bookAuthor,
+      title: _displayBookTitle,
+      author: _displayBookAuthor,
       format: fileFormat,
       filePath: widget.filePath,
       source: BookSource.local,
@@ -2250,11 +2255,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (format == BookFormat.pdf) {
       final currentPath =
           PdfTocNavigator.findCurrentPath(_pdfTocEntries, _pdfPageInfo?.pageIndex);
-      return currentPath.isEmpty ? widget.bookTitle : currentPath.last.title;
+      return currentPath.isEmpty
+          ? _displayBookTitle
+          : convertText(currentPath.last.title, _textConversionMode);
     }
     final currentPath =
         TocNavigator.findCurrentPath(_tocEntries, _epubPositionInfo?.progression);
-    return currentPath.isEmpty ? widget.bookTitle : currentPath.last.title;
+    return currentPath.isEmpty
+        ? _displayBookTitle
+        : convertText(currentPath.last.title, _textConversionMode);
   }
 
   /// 頁碼列（`ReaderChromeBottomBar` 頂端 34dp 那一列）顯示的「當前頁 /
@@ -2276,6 +2285,32 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final current = ((info?.displayPageIndex ?? 0) + 1).clamp(1, totalPages);
     final percent = (current / totalPages * 100).round();
     return '$current / $totalPages · $percent%';
+  }
+
+  /// 本書「單書情境」下簡繁顯示轉換的目前生效值（FR-48，epic-42-text-
+  /// conversion Issue 3）：`_loaded` 尚未載入完成時（載入中／錯誤等早退
+  /// 分支）安全回退 `original`，比照 `_resolved?.showHeader ?? true`
+  /// 既有「早退分支維持安全預設值」慣例——部分呼叫點（例如
+  /// `_buildSearchableBook()` 供 `ReaderChromeTopBar` 搜尋按鈕使用）在
+  /// `_loaded` 尚未賦值前就可能被觸發，不能沿用 `_buildNativeView()`
+  /// 既有「`_resolved` 非 null 時 `_loaded` 恆非 null」的前提斷言。
+  TextConversionMode get _textConversionMode {
+    final loaded = _loaded;
+    if (loaded == null) return TextConversionMode.original;
+    return resolveTextConversion(_prefs, loaded.globalPrefs.reading);
+  }
+
+  /// 依 [_textConversionMode] 轉換後的書名，供頁首／底部工具列／單書
+  /// 搜尋標題等「單書情境」渲染點統一取用（審查修正 M-1，見
+  /// issues.md Issue 3：避免逐點各自呼叫 convertText() 造成遺漏）。
+  String get _displayBookTitle =>
+      convertText(widget.bookTitle, _textConversionMode);
+
+  /// 同 [_displayBookTitle]，供 `_buildSearchableBook()` 的作者欄位使用；
+  /// [widget.bookAuthor] 為 null 時原樣回傳 null。
+  String? get _displayBookAuthor {
+    final author = widget.bookAuthor;
+    return author == null ? null : convertText(author, _textConversionMode);
   }
 
   // reader_chrome_top_bar.dart/_openPdfToc() 分別接手了 AppBar 瘦身與縮圖
@@ -2374,7 +2409,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     required VoidCallback? onTtsTap,
   }) {
     return ReaderChromeBottomBar(
-      bookTitle: widget.bookTitle,
+      bookTitle: _displayBookTitle,
       pageProgressText: _pageProgressText(format),
       footer: _epubPositionInfo == null
           ? const SizedBox.shrink()
@@ -2755,7 +2790,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 right: 0,
                 bottom: 0,
                 child: ReaderChromeBottomBar(
-                  bookTitle: widget.bookTitle,
+                  bookTitle: _displayBookTitle,
                   pageProgressText: _pageProgressText(format),
                   footer: _pdfPageInfo == null
                       ? const SizedBox.shrink()
@@ -2918,8 +2953,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _tocEntries,
       _epubPositionInfo?.progression,
     );
-    final chapterTitle =
-        currentPath.isEmpty ? widget.bookTitle : currentPath.first.title;
+    final chapterTitle = currentPath.isEmpty
+        ? _displayBookTitle
+        : convertText(currentPath.first.title, _textConversionMode);
     return Container(
       key: const Key('reader_foliate_header_text'),
       child: Text(
@@ -3106,7 +3142,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
     _ttsController = controller;
     controller.addListener(_onTtsStatusChanged);
-    widget.ttsAudioHandler?.attachController(controller, bookTitle: widget.bookTitle);
+    widget.ttsAudioHandler?.attachController(controller, bookTitle: _displayBookTitle);
     final focusSource = widget.ttsAudioFocusSource;
     if (focusSource != null) {
       _ttsAudioFocusCoordinator =

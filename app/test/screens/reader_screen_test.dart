@@ -4855,6 +4855,208 @@ void main() {
     expect(headerText.data, '我的測試書名');
   });
 
+  testWidgets('流式 EPUB：單書覆寫簡繁轉換時，頁首書名依轉換模式呈現（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_foliate_header_text_conversion',
+      const BookReaderPrefs(
+        showHeader: true,
+        textConversionOverride: TextConversionMode.toTraditional,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_header_text_conversion',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+          bookTitle: '国电脑',
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+
+    final headerText = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const Key('reader_foliate_header_text')),
+        matching: find.byType(Text),
+      ),
+    );
+    expect(headerText.data, '國電腦');
+  });
+
+  testWidgets('流式 EPUB：ReaderChromeBottomBar 的 bookTitle 依單書簡繁轉換呈現（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_bottom_bar_text_conversion',
+      const BookReaderPrefs(
+        textConversionOverride: TextConversionMode.toTraditional,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_bottom_bar_text_conversion',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+          bookTitle: '国电脑',
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final bar = tester.widget<ReaderChromeBottomBar>(
+      find.byType(ReaderChromeBottomBar),
+    );
+    expect(bar.bookTitle, '國電腦');
+  });
+
+  testWidgets('PDF：ReaderChromeBottomBar 的 bookTitle 依單書簡繁轉換呈現（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_pdf_bottom_bar_text_conversion',
+      const BookReaderPrefs(
+        textConversionOverride: TextConversionMode.toTraditional,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_pdf_bottom_bar_text_conversion',
+          prefsManager: prefsManager,
+          bookTitle: '国电脑',
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final bar = tester.widget<ReaderChromeBottomBar>(
+      find.byType(ReaderChromeBottomBar),
+    );
+    expect(bar.bookTitle, '國電腦');
+  });
+
+  testWidgets('目錄按鈕開啟的 TocBottomSheet 帶入該書已解析的簡繁轉換模式（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_toc_text_conversion',
+      const BookReaderPrefs(
+        textConversionOverride: TextConversionMode.toTraditional,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_toc_text_conversion',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
+    );
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final sheet = tester.widget<TocBottomSheet>(find.byType(TocBottomSheet));
+    expect(sheet.textConversion, TextConversionMode.toTraditional);
+  });
+
+  testWidgets('筆記按鈕開啟的 NotesBottomSheet 帶入該書已解析的簡繁轉換模式（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_notes_text_conversion',
+      const BookReaderPrefs(
+        showHeader: true,
+        showFooter: true,
+        textConversionOverride: TextConversionMode.toTraditional,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_notes_text_conversion',
+          prefsManager: prefsManager,
+          bookmarksRepository: FakeBookmarksRepository(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
+    );
+    epubView.onPageRendered();
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    epubView.onLocatorChanged?.call(
+      const EpubPositionInfo(
+        locatorJson: '{"href":"/page1.xhtml"}',
+        progression: 0.2,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final sheet =
+        tester.widget<NotesBottomSheet>(find.byType(NotesBottomSheet));
+    expect(sheet.textConversion, TextConversionMode.toTraditional);
+  });
+
   testWidgets('流式 EPUB：showHeader=false 時頁眉不顯示（Issue 7）', (tester) async {
     await prefsManager.saveBookPrefs(
       'b_foliate_header_off',
@@ -9232,6 +9434,54 @@ void main() {
       );
     });
 
+    testWidgets('單書覆寫簡繁轉換時，TtsAudioHandler 綁定的系統通知/鎖定畫面書名依轉換模式呈現（epic-42-text-conversion Issue 3 審查修正 I-1）',
+        (tester) async {
+      await prefsManager.saveBookPrefs(
+        'b_tts_text_conversion',
+        const BookReaderPrefs(
+          textConversionOverride: TextConversionMode.toTraditional,
+        ),
+      );
+      final ttsProvider = FakeTtsProvider();
+      final ttsAudioHandler = TtsAudioHandler();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_text_conversion',
+            bookTitle: '国电脑',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+            ttsAudioHandler: ttsAudioHandler,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_chrome_tts_button')));
+      await tester.pump();
+
+      expect(ttsAudioHandler.mediaItem.value?.title, '國電腦');
+    });
+
     testWidgets('未提供 ttsAudioHandler／ttsAudioFocusSource 時，既有播放/暫停行為零回歸', (
       tester,
     ) async {
@@ -9649,6 +9899,46 @@ void main() {
       expect(pushed.libraryRepository, same(libraryRepository));
       expect(pushed.readerFeatureRepositories.isFullTextSearchAvailable, isTrue,
           reason: 'ReaderScreen.isFullTextSearchAvailable 預設 true，未提供時應維持預設值');
+    });
+
+    testWidgets(
+        '單書覆寫簡繁轉換時，推入的 BookSearchScreen 帶入已轉換的書名／作者（epic-42-text-conversion Issue 3）',
+        (tester) async {
+      final searchRepository = FakeSearchRepository();
+      final libraryRepository = FakeLibraryRepository();
+      final localPrefsManager = FakeReaderPrefsManager(
+        bookPrefsByBookId: {
+          'b_search_text_conversion': const BookReaderPrefs(
+            textConversionOverride: TextConversionMode.toTraditional,
+          ),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_text_conversion',
+            bookTitle: '国电脑',
+            bookAuthor: '电脑作者',
+            prefsManager: localPrefsManager,
+            searchRepository: searchRepository,
+            libraryRepository: libraryRepository,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pumpAndSettle();
+
+      final pushed =
+          tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
+      expect(pushed.book.title, '國電腦');
+      expect(pushed.book.author, '電腦作者');
     });
 
     testWidgets(

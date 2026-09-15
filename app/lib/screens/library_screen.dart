@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,6 +10,8 @@ import '../reader/book_reader_prefs.dart';
 import '../reader/book_reader_prefs_repository.dart';
 import '../reader/page_turn_mode.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../reader/text_conversion.dart';
+import '../reader/text_conversion_mode.dart';
 import '../reader/writing_mode.dart';
 import '../remote/opds_types.dart';
 import '../remote/remote_book_downloader.dart';
@@ -144,6 +148,13 @@ class _LibraryScreenState extends State<LibraryScreen>
   /// 變動時重新計算。
   Book? _mostRecentBook;
 
+  /// 簡繁顯示轉換全域預設值（FR-48，「跨書情境」規則，epic-42-text-
+  /// conversion Issue 3：書架畫面一律採全域預設，不做單書覆寫，見
+  /// resolve_text_conversion.dart 文件註解）。載入完成前維持
+  /// `TextConversionMode.original`（與 `ReadingDefaults` 硬編碼預設值
+  /// 一致），避免短暫顯示原文後才套用轉換的畫面跳動。
+  TextConversionMode _textConversion = TextConversionMode.original;
+
   @override
   void initState() {
     super.initState();
@@ -166,6 +177,7 @@ class _LibraryScreenState extends State<LibraryScreen>
   void _onExternalRefreshRequested() {
     _bookListController.loadBooks();
     _bookListController.loadGroups();
+    unawaited(_reloadTextConversion());
   }
 
   @override
@@ -253,8 +265,23 @@ class _LibraryScreenState extends State<LibraryScreen>
     final viewMode = await _preferences.loadViewMode();
     if (!mounted) return;
     setState(() => _viewMode = viewMode);
+    await _reloadTextConversion();
     await _bookListController.initialLoad();
     await _maybeOpenLastBookOnLaunch();
+  }
+
+  /// 重新載入全域簡繁顯示轉換預設值（epic-42-text-conversion Issue 3）：
+  /// 初次啟動（`_initialize()`，`await` 等待完成後才載入書籍清單，避免
+  /// 啟動畫面文字閃爍，審查修正 I-2）與「設定」分頁切回書架時（見
+  /// `_onExternalRefreshRequested()`，`unawaited`——`AdaptiveShellScaffold`
+  /// 用 `IndexedStack` 讓 `LibraryScreen` 全程保持掛載，使用者在「設定」
+  /// 分頁變更全域預設值後切回書架不會自動重新 build()，需要這個訊號主動
+  /// 重新整理；此處書架已完整渲染過，不存在「初次繪製前」的閃爍疑慮，故
+  /// 沿用既有「來源」分頁匯入新書後的 `unawaited` 既定模式）各觸發一次。
+  Future<void> _reloadTextConversion() async {
+    final globalPrefs = await widget.prefsManager.loadGlobalPrefs();
+    if (!mounted) return;
+    setState(() => _textConversion = globalPrefs.reading.textConversion);
   }
 
   /// 啟動時開啟最後閱讀的那本書（epic-18-reader-device-qa Issue 29）：只在頂層
@@ -634,7 +661,7 @@ class _LibraryScreenState extends State<LibraryScreen>
         widget.readerFeatureRepositories.bookReaderPrefsRepository;
     final result = await EBSheetShell.show<BookAction>(
       context,
-      title: book.title,
+      title: convertText(book.title, _textConversion),
       isEinkMode: widget.themeDependencies.isEinkMode,
       builder: (context) => BookActionSheet(
         book: book,
@@ -667,7 +694,8 @@ class _LibraryScreenState extends State<LibraryScreen>
     if (!mounted) return;
     showDialog<void>(
       context: context,
-      builder: (context) => _BookDetailsDialog(book: book),
+      builder: (context) =>
+          _BookDetailsDialog(book: book, textConversion: _textConversion),
     );
   }
 
@@ -1110,6 +1138,7 @@ class _LibraryScreenState extends State<LibraryScreen>
               onTap: () => _onBookTap(book),
               onLongPress: () => _onBookLongPress(book),
               onMenuTap: () => _openBookActionSheet(book),
+              textConversion: _textConversion,
             )
           : _BookListTile(
               book: book,
@@ -1118,6 +1147,7 @@ class _LibraryScreenState extends State<LibraryScreen>
               onTap: () => _onBookTap(book),
               onLongPress: () => _onBookLongPress(book),
               onMenuTap: () => _openBookActionSheet(book),
+              textConversion: _textConversion,
             );
     }
 
@@ -1134,6 +1164,7 @@ class _LibraryScreenState extends State<LibraryScreen>
             // `_GroupGridTile`／`_GroupListTile` 在 _inSelectionMode 時
             // 一律把 onTap 傳 null 的既有慣例。
             onTap: _inSelectionMode ? null : () => _onBookTap(_mostRecentBook!),
+            textConversion: _textConversion,
           ),
         Expanded(
           child: LayoutBuilder(
@@ -1459,6 +1490,7 @@ class _BookGridTile extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final VoidCallback onMenuTap;
+  final TextConversionMode textConversion;
 
   const _BookGridTile({
     required this.book,
@@ -1467,6 +1499,7 @@ class _BookGridTile extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     required this.onMenuTap,
+    required this.textConversion,
   });
 
   @override
@@ -1484,7 +1517,7 @@ class _BookGridTile extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                BookCover(book: book),
+                BookCover(book: book, textConversion: textConversion),
                 if (selectionMode)
                   Align(
                     alignment: Alignment.topRight,
@@ -1544,7 +1577,7 @@ class _BookGridTile extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  book.title,
+                  convertText(book.title, textConversion),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
@@ -1574,6 +1607,7 @@ class _BookListTile extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final VoidCallback onMenuTap;
+  final TextConversionMode textConversion;
 
   const _BookListTile({
     required this.book,
@@ -1582,6 +1616,7 @@ class _BookListTile extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     required this.onMenuTap,
+    required this.textConversion,
   });
 
   @override
@@ -1608,16 +1643,21 @@ class _BookListTile extends StatelessWidget {
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 onChanged: (_) => onTap(),
               ),
-            SizedBox(width: 48, height: 64, child: BookCover(book: book)),
+            SizedBox(
+              width: 48,
+              height: 64,
+              child: BookCover(book: book, textConversion: textConversion),
+            ),
           ],
         ),
       ),
       // maxLines/overflow（epic-36 Issue 7 追加修正——I-1）：書名/作者過長
       // 換行會撐高這一列，讓 libraryListRowHeight() 假設的固定列高失準，
       // 進而讓依此估算出的 pageSize 偏多、造成本頁部分項目被裁切。
-      title: Text(book.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      title: Text(convertText(book.title, textConversion),
+          maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
-        book.author ?? '',
+        convertText(book.author ?? '', textConversion),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -1654,8 +1694,13 @@ class _BookListTile extends StatelessWidget {
 class _ContinueReadingRow extends StatelessWidget {
   final Book book;
   final VoidCallback? onTap; // null＝多選模式進行中，停用點擊（見呼叫端註解）
+  final TextConversionMode textConversion;
 
-  const _ContinueReadingRow({required this.book, required this.onTap});
+  const _ContinueReadingRow({
+    required this.book,
+    required this.onTap,
+    required this.textConversion,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1666,7 +1711,11 @@ class _ContinueReadingRow extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         child: Row(
           children: [
-            SizedBox(width: 40, height: 56, child: BookCover(book: book)),
+            SizedBox(
+              width: 40,
+              height: 56,
+              child: BookCover(book: book, textConversion: textConversion),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1675,7 +1724,7 @@ class _ContinueReadingRow extends StatelessWidget {
                 children: [
                   const Text('繼續閱讀', style: TextStyle(fontSize: 12)),
                   Text(
-                    book.title,
+                    convertText(book.title, textConversion),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.bold),
@@ -1700,7 +1749,8 @@ class _ContinueReadingRow extends StatelessWidget {
 /// 「未知大小」，不得讓例外未捕捉往外拋（`review-spec.md` I-4）。
 class _BookDetailsDialog extends StatefulWidget {
   final Book book;
-  const _BookDetailsDialog({required this.book});
+  final TextConversionMode textConversion;
+  const _BookDetailsDialog({required this.book, required this.textConversion});
 
   @override
   State<_BookDetailsDialog> createState() => _BookDetailsDialogState();
@@ -1753,7 +1803,7 @@ class _BookDetailsDialogState extends State<_BookDetailsDialog> {
     final book = widget.book;
     return AlertDialog(
       key: const Key('book_details_dialog'),
-      title: Text(book.title),
+      title: Text(convertText(book.title, widget.textConversion)),
       content: FutureBuilder<String>(
         future: _fileSizeFuture,
         builder: (context, snapshot) {
@@ -1768,7 +1818,9 @@ class _BookDetailsDialogState extends State<_BookDetailsDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('作者：${book.author ?? '未知'}'),
+              Text(
+                '作者：${book.author == null ? '未知' : convertText(book.author!, widget.textConversion)}',
+              ),
               Text('格式：${book.format.name}'),
               Text('檔案大小：$fileSizeText'),
               Text('進度：${_progressText(book)}'),

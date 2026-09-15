@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../models/book.dart';
 import '../models/library_enums.dart';
+import '../../reader/text_conversion.dart';
+import '../../reader/text_conversion_mode.dart';
 import '../../theme/elink_tokens.dart';
 
 /// 依書籍格式取得對應佔位圖示。
@@ -29,7 +31,18 @@ IconData bookFormatIcon(BookFileFormat format) {
 class BookCover extends StatelessWidget {
   final Book book;
 
-  const BookCover({super.key, required this.book});
+  /// 簡繁顯示轉換模式（FR-48，epic-42-text-conversion Issue 3）：套用在
+  /// 無封面圖時 `CoverPlaceholder` 繪製的書名縮略文字上，避免與卡片/列
+  /// 標題文字字形不一致。預設 `TextConversionMode.original`（不轉換，
+  /// 向後相容既有呼叫端，例如 `layout_preset_book_picker_screen.dart`、
+  /// `_GroupGridTile`／`_GroupListTile`、`library_search_screen.dart`）。
+  final TextConversionMode textConversion;
+
+  const BookCover({
+    super.key,
+    required this.book,
+    this.textConversion = TextConversionMode.original,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +53,7 @@ class BookCover extends StatelessWidget {
         ? Image.file(File(coverPath), fit: BoxFit.cover)
         : CoverPlaceholder(
             icon: bookFormatIcon(book.format),
-            title: book.title,
+            title: convertText(book.title, textConversion),
           );
     // 視覺還原（Visual Accuracy Mode，docs/research/uiux/VISUAL_ANALYSIS.md）：
     // Reference 截圖不分主題，每張書封都有一圈細邊框；E-Ink 主題的邊框已由

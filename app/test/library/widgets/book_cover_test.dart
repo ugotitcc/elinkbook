@@ -3,13 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/widgets/book_cover.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
-Book _book({required bool isDownloaded}) {
+Book _book({required bool isDownloaded, String title = '測試書'}) {
   return Book(
     id: 'b1',
-    title: '測試書',
+    title: title,
     format: BookFileFormat.epub,
     filePath: '/books/b1.epub',
     source: BookSource.calibreOpds,
@@ -61,5 +62,20 @@ void main() {
     final container = tester.widget<Container>(find.byType(Container));
     final decoration = container.decoration as BoxDecoration;
     expect(decoration.border, isNotNull);
+  });
+
+  testWidgets(
+      'textConversion: toTraditional 時，CoverPlaceholder 書名縮略套用簡繁轉換（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+      home: BookCover(
+        book: _book(isDownloaded: true, title: '国电脑'),
+        textConversion: TextConversionMode.toTraditional,
+      ),
+    ));
+
+    expect(find.text('國電腦'), findsOneWidget);
+    expect(find.text('国电脑'), findsNothing);
   });
 }
