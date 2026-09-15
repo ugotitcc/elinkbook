@@ -10,6 +10,7 @@ import 'package:elinkbook/reader/annotation_list_item.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/reader/note.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/screens/notes_bottom_sheet.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
@@ -33,6 +34,7 @@ Future<void> _pumpSheet(
   ValueChanged<AnnotationListItem>? onAnnotationSelected,
   VoidCallback? onAnnotationsChanged,
   int initialTabIndex = 0,
+  TextConversionMode textConversion = TextConversionMode.original,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -51,6 +53,7 @@ Future<void> _pumpSheet(
           onAnnotationSelected: onAnnotationSelected,
           onAnnotationsChanged: onAnnotationsChanged,
           initialTabIndex: initialTabIndex,
+          textConversion: textConversion,
         ),
       ),
     ),
@@ -121,6 +124,54 @@ void main() {
     );
     final titles = listTiles.map((t) => (t.title as Text).data).toList();
     expect(titles, ['A', 'C']);
+  });
+
+  testWidgets('textConversion: toTraditional 時，書籤清單名稱套用簡繁轉換（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    final repository = FakeBookmarksRepository();
+    await repository.insert(
+      const Bookmark(id: 'bm_tc', bookId: 'b1', name: '电脑 (10%)', progression: 0.1),
+    );
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      textConversion: TextConversionMode.toTraditional,
+    );
+
+    expect(find.text('電腦 (10%)'), findsOneWidget);
+    expect(find.text('电脑 (10%)'), findsNothing);
+  });
+
+  testWidgets('備註文字不受 textConversion 影響，維持使用者輸入原樣（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+    await highlightsRepository.insert(const Highlight(
+      id: 'h_tc',
+      bookId: 'b1',
+      style: HighlightStyle.highlighterYellow,
+      progression: 0.1,
+    ));
+    await notesRepository.insert(const Note(
+      id: 'n_tc',
+      bookId: 'b1',
+      text: '电脑笔记',
+      highlightId: 'h_tc',
+      progression: 0.1,
+    ));
+    await _pumpSheet(
+      tester,
+      repository: bookmarksRepository,
+      highlightsRepository: highlightsRepository,
+      notesRepository: notesRepository,
+      textConversion: TextConversionMode.toTraditional,
+    );
+
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('电脑笔记'), findsOneWidget);
   });
 
   testWidgets('點選書籤項目觸發 onBookmarkSelected', (tester) async {

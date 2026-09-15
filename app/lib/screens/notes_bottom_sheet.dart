@@ -14,6 +14,8 @@ import '../reader/highlight_style.dart';
 import '../reader/highlights_repository.dart';
 import '../reader/note.dart';
 import '../reader/notes_repository.dart';
+import '../reader/text_conversion.dart';
+import '../reader/text_conversion_mode.dart';
 import '../reader/markdown_export.dart';
 import '../theme/elink_tokens.dart';
 import 'note_edit_dialog.dart';
@@ -68,6 +70,17 @@ class NotesBottomSheet extends StatefulWidget {
   /// 傳入 `1`，預設停在劃線分頁；既有呼叫端不傳則維持既有分頁 0。
   final int initialTabIndex;
 
+  /// 簡繁顯示轉換模式（FR-48，epic-42-text-conversion Issue 3）：套用在
+  /// 書籤清單的 [Bookmark.name] 上。**不套用**在備註文字（[Note.text]）
+  /// 上——備註是使用者輸入的自由文字，恆維持原樣。issues.md Issue 3
+  /// 提及的「劃線清單摘要片段」轉換在目前程式碼中無對應渲染點可修改：
+  /// 本專案 `Highlight` model 從未儲存劃線框住的原文片段，劃線清單只
+  /// 顯示樣式標籤（見 `markdown_export.dart` 開頭文件註解的既有設計
+  /// 決策），此為刻意留白、非遺漏（詳見 plan-issue-3.md Global
+  /// Constraints）。預設 `TextConversionMode.original`（向後相容既有
+  /// 呼叫端／測試）。
+  final TextConversionMode textConversion;
+
   const NotesBottomSheet({
     super.key,
     required this.bookId,
@@ -82,6 +95,7 @@ class NotesBottomSheet extends StatefulWidget {
     this.onAnnotationSelected,
     this.onAnnotationsChanged,
     this.initialTabIndex = 0,
+    this.textConversion = TextConversionMode.original,
   });
 
   @override
@@ -362,7 +376,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: ListTile(
         key: Key('notes_sheet_bookmark_${bookmark.id}'),
-        title: Text(bookmark.name),
+        title: Text(convertText(bookmark.name, widget.textConversion)),
         onTap: () => widget.onBookmarkSelected(bookmark),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
