@@ -2,7 +2,8 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const { parseCharTable } = require('./generate_conversion_dicts.js');
+const { parseCharTable, parsePhraseTable, assertMaxPhraseKeyLength } =
+  require('./generate_conversion_dicts.js');
 
 function testBasicOneToOneMapping() {
   const result = parseCharTable('国\t國\n电\t電\n');
@@ -63,6 +64,74 @@ function testSipToBmpPairSkipped() {
   assert.deepEqual(result, { 国: '國' });
 }
 
+function testParsePhraseTableAllowsMultiCharKeyValue() {
+  const result = parsePhraseTable('內存\t記憶體\n');
+  assert.deepEqual(result, { 內存: '記憶體' });
+}
+
+function testParsePhraseTableTakesFirstCandidate() {
+  // 真實 OpenCC TWPhrases.txt 資料：代碼\t程式碼 代碼（多候選字，取首個）。
+  const result = parsePhraseTable('代碼\t程式碼 代碼\n');
+  assert.deepEqual(result, { 代碼: '程式碼' });
+}
+
+function testParsePhraseTableCommentAndEmptyLinesSkipped() {
+  const input = [
+    '# Open Chinese Convert (OpenCC) Dictionary',
+    '# File: TWPhrases.txt',
+    '',
+    '內存\t記憶體',
+    '',
+  ].join('\n');
+  const result = parsePhraseTable(input);
+  assert.deepEqual(result, { 內存: '記憶體' });
+}
+
+function testParsePhraseTableAllowsSingleCharEntry() {
+  // TWPhrases.txt 實際含 12 條單字詞條（如「硅\t矽」）：parsePhraseTable
+  // 不像 parseCharTable 那樣限制長度必須為 1，但也不排斥單字元鍵值——
+  // 片語字典裡的單字詞條照樣要能正確解析。
+  const result = parsePhraseTable('硅\t矽\n');
+  assert.deepEqual(result, { 硅: '矽' });
+}
+
+function testParsePhraseTableAllowsLengthChangingEntry() {
+  // 片語表跟字元表不同，長度本來就可能改變（TextOffsetMap 存在的理由），
+  // parsePhraseTable 不應該對長度做任何檢查或跳過。
+  const result = parsePhraseTable('內存\t記憶體\n方便麵\t泡麵\n');
+  assert.deepEqual(result, { 內存: '記憶體', 方便麵: '泡麵' });
+}
+
+function testAssertMaxPhraseKeyLengthPassesUnderLimit() {
+  assertMaxPhraseKeyLength({ 內存: '記憶體' }, 'TestDict');
+  // 未拋例外即為通過。
+}
+
+function testAssertMaxPhraseKeyLengthThrowsOverLimit() {
+  const longKey = '一'.repeat(17);
+  assert.throws(
+    () => assertMaxPhraseKeyLength({ [longKey]: '二' }, 'TestDict'),
+    /超過 MAX_PHRASE_KEY_LENGTH/,
+  );
+}
+
+function testParsePhraseTableThrowsOnDuplicateKey() {
+  // 審查修正 I-3：issues.md 明訂「同一鍵不得重複」，靜默覆蓋會隱蔽上游
+  // 資料的格式異常或鍵值衝突。
+  assert.throws(
+    () => parsePhraseTable('內存\t記憶體\n內存\t記憶體模組\n'),
+    /片語字典鍵重複/,
+  );
+}
+
+function testParsePhraseTableThrowsOnEmptyValue() {
+  // 審查修正 I-3：issues.md 明訂「值不得為空字串」。
+  assert.throws(
+    () => parsePhraseTable('內存\t\n'),
+    /片語字典值為空字串/,
+  );
+}
+
 testBasicOneToOneMapping();
 testMultiCandidateTakesFirst();
 testCommentAndEmptyLinesSkipped();
@@ -70,5 +139,14 @@ testMultiCharacterCandidateThrows();
 testMultiCharacterKeyThrows();
 testBmpToSipPairSkipped();
 testSipToBmpPairSkipped();
+testParsePhraseTableAllowsMultiCharKeyValue();
+testParsePhraseTableTakesFirstCandidate();
+testParsePhraseTableCommentAndEmptyLinesSkipped();
+testParsePhraseTableAllowsSingleCharEntry();
+testParsePhraseTableAllowsLengthChangingEntry();
+testAssertMaxPhraseKeyLengthPassesUnderLimit();
+testAssertMaxPhraseKeyLengthThrowsOverLimit();
+testParsePhraseTableThrowsOnDuplicateKey();
+testParsePhraseTableThrowsOnEmptyValue();
 
-console.log('[test_generate_conversion_dicts] 7 項情境全數通過。');
+console.log('[test_generate_conversion_dicts] 16 項情境全數通過。');
