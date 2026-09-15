@@ -22,8 +22,8 @@ key=繁體字）直接取自 [BYVoid/OpenCC](https://github.com/BYVoid/OpenCC)
 ## `TWPhrases.txt`／`TSPhrases.txt`（epic-42-text-conversion Issue 0b，2026-09-15）
 
 簡轉繁（`toTraditional`）採 `STCharacters.txt` + `TWPhrases.txt`（台灣在地化片語，
-817 條）；繁轉簡（`toSimplified`）採 `TSCharacters.txt` + `TSPhrases.txt`
-（片語消歧，477 條）。**刻意排除** `STPhrases.txt`（簡轉繁片語消歧，約
+818 條）；繁轉簡（`toSimplified`）採 `TSCharacters.txt` + `TSPhrases.txt`
+（片語消歧，480 條）。**刻意排除** `STPhrases.txt`（簡轉繁片語消歧，約
 49,000 條，處理「幹/乾/干」這類依詞境選字，規模過大且非本 Epic 動機所在）
 與 `TWVariantsRev.txt`／`TWVariantsRevPhrases.txt`（台灣異體字正規化，
 `TWVariantsRev.txt` 甚至不是原始檔案，而是 OpenCC 自己用 `reverse.py` +
