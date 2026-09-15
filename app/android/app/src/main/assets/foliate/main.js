@@ -270,6 +270,14 @@ window.applyPreferences = function (prefs) {
   // extractSegmentsForSection()），不受這裡影響。只在 textConversion 真的
   // 變動時才重新走訪，避免每次無關的偏好變更（字級/邊距等）都觸發一次
   // DOM 全文字節點掃描。
+  //
+  // 審查 Minor 修正：下方對 prefs.textConversion 用 truthy 判斷，無法
+  // 區分「這次呼叫沒有帶這個欄位」與「明確想清空/取消覆寫」——目前
+  // TextConversionMode 三個合法值（original/toTraditional/toSimplified）
+  // 皆為非空字串，resolveTextConversion() 的 Dart 端契約也保證一定會解析
+  // 出三者之一，不存在「明確清空」的情境，故此處刻意用 truthy 簡化；若
+  // 未來 textConversion 開放傳入 null/undefined 代表清空覆寫，需要改成
+  // `'textConversion' in prefs` 或等效的顯式存在性檢查。
   const previousTextConversion = currentTextConversion
   if (prefs.textConversion) {
     currentTextConversion = prefs.textConversion

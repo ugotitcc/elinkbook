@@ -163,6 +163,10 @@ export function resolveDisplayRange(doc, anchor) {
     node = walker.nextNode()
   }
 
+  // 審查 Minor 修正：刻意不寫 catch——vendored CFI.toRange() 自己已經用
+  // try/catch 把內部拋出的 IndexSizeError 吞掉、回傳 null（見上方文件
+  // 註解），[anchor] 因此不會真的把例外拋到這裡；此處只需要 finally
+  // 保證「不論是否命中該吞掉路徑，暫時還原的顯示文字都會被復原」。
   let captured = null
   try {
     const origRange = anchor(doc)
