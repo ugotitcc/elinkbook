@@ -2,7 +2,11 @@ import { makeBook } from './view.js'
 import { Overlayer } from './overlayer.js'
 import { compare as compareCfi } from './epubcfi.js'
 import { resolveTtsSafeWindowDirection } from './tts-safe-window.js'
-import { toOriginalRange, resolveDisplayRange } from './text-conversion-walker.js'
+import {
+  applyTextConversion,
+  toOriginalRange,
+  resolveDisplayRange,
+} from './text-conversion-walker.js'
 
 const view = document.getElementById('view')
 
@@ -118,6 +122,14 @@ let currentWritingMode = 'horizontal'
 // undefined）。
 let lastAppliedPrefs = initialPrefs
 
+// epic-42-text-conversion Issue 2：目前生效的簡繁顯示轉換模式（issues.md
+// Issue 2「觸發與即時切換」），比照 currentWritingMode 既有模式——模組
+// 層級可變狀態，初始值來自開書當下的 initialPrefs（見上方
+// buildFoliatePreferencesMap()／_buildIndexUri() 的既有查詢字串管線），
+// window.applyPreferences() 每次呼叫時視 prefs.textConversion 是否存在
+// 更新。
+let currentTextConversion = initialPrefs.textConversion || 'original'
+
 // 目前顯示中標記的 cfi → Dart 端不透明 id（"highlight:5"/"note:12"）對照
 // 表（epic-17 Issue 8）。view.addAnnotation({value}) 的 value 欄位本身
 // 必須是 view.resolveNavigation() 可解析的目標（此處固定用 cfi 字串），
@@ -127,6 +139,12 @@ let lastAppliedPrefs = initialPrefs
 // 「已記錄的既有 API 落差」。window.setDecorations() 每次呼叫時整組
 // 重建，非增量更新。
 let decorationIdByCfi = new Map()
+
+// epic-42-text-conversion Issue 2（審查修正 I-1）：window.setDecorations()
+// 最後一次收到的完整清單，供簡繁模式切換後重新呼叫 window.setDecorations()
+// 使用——見 window.applyPreferences() 內對 currentTextConversion 變動的
+// 處理（Step 3）。
+let lastDecorations = []
 
 /**
  * 依目前偏好 [prefs] 產生要疊加在書本樣式之上的覆蓋 CSS 文字（透過
@@ -242,6 +260,36 @@ window.applyPreferences = function (prefs) {
   // 不需要額外判斷 isFixedLayout，見 plans/plan-issue-11.md 規劃階段
   // 查證第 3 點）。
   view.clearLocationDensity()
+
+  // epic-42-text-conversion Issue 2：簡繁轉換閱讀中即時切換（issues.md
+  // Issue 2「閱讀中即時切換」）。刻意放在下方 FXL isFixedLayout early
+  // return 之前——FXL EPUB/KF8（非 CBZ）章節同樣是含真實文字的 XHTML
+  // 文件，也需要套用（Global Constraints）；isIndexMode 下的 headless
+  // webview 沒有實際渲染中的內容需要走訪，略過即可，全文檢索索引一律讀取
+  // view.book.sections[i].createDocument() 產生的獨立未轉換文件（見
+  // extractSegmentsForSection()），不受這裡影響。只在 textConversion 真的
+  // 變動時才重新走訪，避免每次無關的偏好變更（字級/邊距等）都觸發一次
+  // DOM 全文字節點掃描。
+  const previousTextConversion = currentTextConversion
+  if (prefs.textConversion) {
+    currentTextConversion = prefs.textConversion
+  }
+  if (!isIndexMode && prefs.textConversion && prefs.textConversion !== previousTextConversion) {
+    for (const { doc } of view.renderer.getContents()) {
+      applyTextConversion(doc, currentTextConversion)
+    }
+    // 審查修正 I-1：applyTextConversion() 只更新文字節點內容，不會通知
+    // Overlayer 既有 <rect> 已經因文字重排而錯位。重新呼叫
+    // window.setDecorations() 強制對每筆既有標記重新走一次
+    // view.resolveCFI()（Task 2 已修復其在縮短詞情境下的座標保護），
+    // 依新的 _elinkOffsetMap 重新算出正確位置並重繪，而非只呼叫
+    // Overlayer.redraw() 重用舊 Range——連續兩次不同長度的模式切換下，
+    // 重用舊 Range 的 offset 會被瀏覽器依「文字內容變動時既有 Range
+    // 邊界點如何調整」這個規格上不夠明確的行為自動夾住，位置未必精確。
+    if (lastDecorations.length > 0) {
+      window.setDecorations(lastDecorations)
+    }
+  }
 
   // Epic 20 Issue 2：FXL（定樣式）書籍不套用流式（reflowable） Paginator
   // 專屬的排版參數。`foliate-fxl` 的 observedAttributes 只有
@@ -469,6 +517,9 @@ window.jumpToLocator = function (cfi) {
  * 覆蓋行為完全發生在這裡（JS 端 Map 語意）。
  */
 window.setDecorations = function (decorations) {
+  // epic-42-text-conversion Issue 2（審查修正 I-1）：記錄最後一次收到的
+  // 完整清單，供簡繁模式切換後重新呼叫本函式使用。
+  lastDecorations = decorations
   for (const cfi of decorationIdByCfi.keys()) {
     view.deleteAnnotation({ value: cfi })
   }
@@ -1061,6 +1112,12 @@ async function openBook() {
       if (isIndexMode) return
       const doc = e.detail.doc
       const index = e.detail.index
+      // epic-42-text-conversion Issue 2：新章節載入／look-ahead 預讀章節
+      // 時套用目前生效的簡繁轉換模式（issues.md Issue 2「開書當下與逐
+      // section 觸發」）。currentTextConversion 此時已由上方模組層級宣告
+      // 賦予 initialPrefs 的初始值，不依賴 window.applyPreferences() 是否
+      // 已執行過。
+      applyTextConversion(doc, currentTextConversion)
       const classifier = new TouchIntentClassifier()
 
       // 選取範圍即時回報（epic-17 Issue 8）：抽成共用函式，供既有
