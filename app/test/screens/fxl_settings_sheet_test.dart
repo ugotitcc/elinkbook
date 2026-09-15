@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
@@ -380,6 +381,120 @@ void main() {
         reason: 'fxl_settings_direction_$suffix 應顯示標籤「$label」',
       );
     }
+  });
+
+  testWidgets('showTextConversion: true 時顯示簡繁轉換覆寫選項', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: BookReaderPrefs.empty,
+            onChanged: (_) {},
+            isEinkMode: false,
+            showTextConversion: true,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byKey(const Key('fxl_settings_text_conversion_global')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('showTextConversion: false 時不顯示簡繁轉換覆寫選項（CBZ）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: BookReaderPrefs.empty,
+            onChanged: (_) {},
+            isEinkMode: false,
+            showTextConversion: false,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byKey(const Key('fxl_settings_text_conversion_global')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('省略 showTextConversion 參數時，預設顯示簡繁轉換覆寫選項（向後相容）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: BookReaderPrefs.empty,
+            onChanged: (_) {},
+            isEinkMode: false,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byKey(const Key('fxl_settings_text_conversion_global')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('點擊「轉換為繁體」圖示後，onChanged 帶入 TextConversionMode.toTraditional，其餘欄位維持原值',
+      (tester) async {
+    BookReaderPrefs? changed;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: const BookReaderPrefs(dualPageMode: DualPageMode.always),
+            onChanged: (prefs) => changed = prefs,
+            isEinkMode: false,
+            showTextConversion: true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(
+      find.byKey(const Key('fxl_settings_text_conversion_traditional')),
+    );
+    await tester.pump();
+
+    expect(changed?.textConversionOverride, TextConversionMode.toTraditional);
+    expect(changed?.dualPageMode, DualPageMode.always);
+  });
+
+  testWidgets(
+      'textConversionOverride 初始為 toSimplified 時，點擊「使用全域預設」圖示後，'
+      'onChanged 帶入 null，其餘欄位不受影響', (tester) async {
+    BookReaderPrefs? changed;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: const BookReaderPrefs(
+              dualPageMode: DualPageMode.never,
+              textConversionOverride: TextConversionMode.toSimplified,
+            ),
+            onChanged: (prefs) => changed = prefs,
+            isEinkMode: false,
+            showTextConversion: true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(
+      find.byKey(const Key('fxl_settings_text_conversion_global')),
+    );
+    await tester.pump();
+
+    expect(changed?.textConversionOverride, isNull);
+    expect(changed?.dualPageMode, DualPageMode.never);
   });
 }
 
