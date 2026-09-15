@@ -36,7 +36,7 @@
 
 ## Issue 0b：台灣常用詞字典擴充＋`TextOffsetMap` 演算法（補齊 Issue 0 的 ADR 0032 落差）
 
-**Status:** ready-for-agent（2026-09-15 新增——`0d2a1e90`「簡轉繁的部份，改為轉換為台灣常用語」把方案由 ADR 0030 升級為 ADR 0032，但僅改寫本檔案 Issue 0 段落文字與 `spec.md`，未同步更新 Issue 0「Status」、未實際落地程式碼；本 Issue 補齊該落差，見上方「2026-09-15 文件現況更正」）
+**Status:** completed（2026-09-15 新增——`0d2a1e90`「簡轉繁的部份，改為轉換為台灣常用語」把方案由 ADR 0030 升級為 ADR 0032，但僅改寫本檔案 Issue 0 段落文字與 `spec.md`，未同步更新 Issue 0「Status」、未實際落地程式碼；本 Issue 補齊該落差，見上方「2026-09-15 文件現況更正」。**2026-09-15 已完成並合併回 `main`（PR [#246](https://git.jigong.org/huthief/elinkBook/pulls/246)，分支 `feat/epic-42-issue-0b`）**：`plans/plan-issue-0b.md` 7 個 Task 全數完成——vendor `TWPhrases.txt`（818 條）／`TSPhrases.txt`（480 條）、`parsePhraseTable()`／`assertMaxPhraseKeyLength()`、`s2twpPhraseDict`／`tw2sPhraseDict` 雙端字典、`TextOffsetMap`（Dart＋JS）、`convertText()` 片語優先轉換（`toTraditional` 兩階段／`toSimplified` 單一階段不對稱設計）、新增 `convertTextDetailed()`／`applyTextConversionToString()`。獨立程式審查（`reviews/review-issue-0b.md`）：0 Critical／0 Important／1 Minor（README.md 詞條數量誤差，已修訂），結論 Ready to merge: Yes。`node`／`flutter test`／`flutter analyze` 全數通過零回歸。Issue 2 現已可開工。）
 
 **依賴：** Issue 0（既有 `TextConversionMode` enum／`convertText()` 介面／`parseCharTable()` 生成腳本框架，本 Issue 在其上擴充，不變更既有函式簽章）
 
