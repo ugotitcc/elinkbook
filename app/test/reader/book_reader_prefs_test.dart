@@ -10,6 +10,7 @@ import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 
 void main() {
@@ -41,6 +42,7 @@ void main() {
     expect(prefs.marginRight, isNull);
     expect(prefs.letterSpacing, isNull);
     expect(prefs.pdfPageTurnAnimation, isNull);
+    expect(prefs.textConversionOverride, isNull);
   });
 
   test('兩個欄位值完全相同的 BookReaderPrefs 視為相等', () {
@@ -259,6 +261,27 @@ void main() {
     expect(a, isNot(b));
   });
 
+  test('textConversionOverride 值相同的 BookReaderPrefs 視為相等', () {
+    const a = BookReaderPrefs(
+      textConversionOverride: TextConversionMode.toTraditional,
+    );
+    const b = BookReaderPrefs(
+      textConversionOverride: TextConversionMode.toTraditional,
+    );
+    expect(a, b);
+    expect(a.hashCode, b.hashCode);
+  });
+
+  test('textConversionOverride 不同時視為不相等', () {
+    const a = BookReaderPrefs(
+      textConversionOverride: TextConversionMode.toTraditional,
+    );
+    const b = BookReaderPrefs(
+      textConversionOverride: TextConversionMode.toSimplified,
+    );
+    expect(a, isNot(b));
+  });
+
   test('換頁動畫欄位的 toMap／fromMap round-trip 保留欄位值，null 亦正確 round-trip',
       () {
     const withNone =
@@ -457,6 +480,20 @@ void main() {
     expect(BookReaderPrefs.fromMap(nullMap).letterSpacing, isNull);
   });
 
+  test('textConversionOverride 為具體值／null 皆正確 toMap／fromMap round-trip', () {
+    const withValue =
+        BookReaderPrefs(textConversionOverride: TextConversionMode.toSimplified);
+    final valueMap = withValue.toMap('book1');
+    expect(valueMap['text_conversion_override'], 'toSimplified');
+    expect(BookReaderPrefs.fromMap(valueMap).textConversionOverride,
+        TextConversionMode.toSimplified);
+
+    const withNull = BookReaderPrefs();
+    final nullMap = withNull.toMap('book1');
+    expect(nullMap['text_conversion_override'], isNull);
+    expect(BookReaderPrefs.fromMap(nullMap).textConversionOverride, isNull);
+  });
+
   test('fromMap 餵入 int 型別的 letter_spacing（模擬 SQLite/JSON 對整數值的型別行為）不拋例外，正確轉為 double',
       () {
     final prefs = BookReaderPrefs.fromMap({'letter_spacing': 0});
@@ -482,6 +519,19 @@ void main() {
 
     expect(updated.pdfContrast, 10);
     expect(updated.pdfPageTurnAnimation, PdfPageTurnAnimation.none);
+  });
+
+  test('copyWith 更新 textConversionOverride 時，其餘欄位保留原值', () {
+    const original = BookReaderPrefs(
+      fontSize: 18,
+      textConversionOverride: TextConversionMode.original,
+    );
+    final updated = original.copyWith(
+      textConversionOverride: TextConversionMode.toTraditional,
+    );
+
+    expect(updated.fontSize, 18);
+    expect(updated.textConversionOverride, TextConversionMode.toTraditional);
   });
 
   group('enumByNameOrNull', () {
@@ -510,7 +560,8 @@ void main() {
       ..['dual_page_mode'] = 'not_a_real_enum_value'
       ..['dual_page_direction'] = 'not_a_real_enum_value'
       ..['column_mode'] = 'not_a_real_enum_value'
-      ..['pdf_page_turn_animation'] = 'not_a_real_enum_value';
+      ..['pdf_page_turn_animation'] = 'not_a_real_enum_value'
+      ..['text_conversion_override'] = 'not_a_real_enum_value';
 
     final restored = BookReaderPrefs.fromMap(map);
 
@@ -524,9 +575,10 @@ void main() {
     expect(restored.dualPageDirection, isNull);
     expect(restored.columnMode, isNull);
     expect(restored.pdfPageTurnAnimation, isNull);
+    expect(restored.textConversionOverride, isNull);
   });
 
-  test('reflowableEpubFields() 過濾掉 PDF／雙頁／pageMargins 共 11 個欄位，其餘 20 個流式 EPUB 欄位保留（epic-28 Issue 3 欄位污染防護）',
+  test('reflowableEpubFields() 過濾掉 PDF／雙頁／pageMargins 共 11 個欄位，其餘 21 個流式 EPUB 欄位保留（epic-28 Issue 3 欄位污染防護）',
       () {
     const prefs = BookReaderPrefs(
       fontFamily: 'SourceHanSansTC',
@@ -549,6 +601,7 @@ void main() {
       fullscreen: true,
       columnMode: ColumnMode.double,
       columnSize: 800,
+      textConversionOverride: TextConversionMode.toTraditional,
       pageMargins: 20,
       pdfFitMode: PdfFitMode.fitWidth,
       pdfContrast: 20,
@@ -585,6 +638,7 @@ void main() {
     expect(filtered.fullscreen, isTrue);
     expect(filtered.columnMode, ColumnMode.double);
     expect(filtered.columnSize, 800);
+    expect(filtered.textConversionOverride, TextConversionMode.toTraditional);
 
     // 11 個強制清空欄位。
     expect(filtered.pageMargins, isNull);
