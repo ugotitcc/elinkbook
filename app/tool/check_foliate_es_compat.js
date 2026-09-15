@@ -2,7 +2,7 @@
 /**
  * 靜態掃描 app/android/app/src/main/assets/foliate/（readest/foliate-js
  * 釘定版本，見 ADR 0011「不修改釘定版本」）是否使用了較新的 ES 內建方法，
- * 而目前 lib/reader/foliate_reader_view.dart 的 _esCompatPolyfillJs
+ * 而目前 lib/reader/foliate_native_bridge.dart 的 esCompatPolyfillJs
  * 還沒有對應的 polyfill。
  *
  * 背景（見 epic-19 兩輪 /diagnose 紀錄）：這份釘定的 vendor 程式碼會無條件
@@ -36,13 +36,13 @@ const FOLIATE_ASSETS_DIR = path.join(
 );
 const POLYFILL_SOURCE_FILE = path.join(
   REPO_ROOT,
-  'app', 'lib', 'reader', 'foliate_reader_view.dart',
+  'app', 'lib', 'reader', 'foliate_native_bridge.dart',
 );
 
 /**
  * 已知「較新、Android System WebView 可能還不支援」的 ES 內建方法/靜態方法
  * 清單。`usagePattern` 用來在 foliate-js 原始碼裡偵測「有沒有被呼叫到」；
- * `polyfillMarker` 用來在 _esCompatPolyfillJs 的原始碼裡偵測「有沒有已經
+ * `polyfillMarker` 用來在 esCompatPolyfillJs 的原始碼裡偵測「有沒有已經
  * 補上對應防護」（用字串包含比對，不要求逐字一致，只要求那個方法名稱有
  * 出現在一個看起來像防護／賦值的上下文）。`minChromium` 僅供報告訊息參考，
  * 不影響判斷邏輯（判斷邏輯只看「有沒有 polyfill」，不管實際裝置版本）。
@@ -193,14 +193,14 @@ function listJsFilesRecursive(dir) {
 }
 
 function extractPolyfillSource(dartSource) {
-  // _esCompatPolyfillJs 是一個 Dart 三引號字串常數（'''...'''），直接抓
+  // esCompatPolyfillJs 是一個 Dart 三引號字串常數（'''...'''），直接抓
   // 這個常數宣告與它後面第一個 ''' 之間的內容，不需要完整解析 Dart 語法。
   const match = dartSource.match(
-    /const _esCompatPolyfillJs = '''([\s\S]*?)''';/,
+    /const esCompatPolyfillJs = '''([\s\S]*?)''';/,
   );
   if (!match) {
     throw new Error(
-      '在 foliate_reader_view.dart 找不到 _esCompatPolyfillJs 常數' +
+      '在 foliate_native_bridge.dart 找不到 esCompatPolyfillJs 常數' +
       '——是不是被改名或搬移了？請同步更新這支腳本的 POLYFILL_SOURCE_FILE' +
       '/extractPolyfillSource() 邏輯。',
     );
@@ -261,7 +261,7 @@ function main() {
 
   console.error(
     `[check_foliate_es_compat] 發現 ${findings.length} 處較新 ES 內建方法` +
-    '用法，_esCompatPolyfillJs 目前沒有對應防護：\n',
+    '用法，esCompatPolyfillJs 目前沒有對應防護：\n',
   );
   for (const finding of findings) {
     console.error(
@@ -272,8 +272,8 @@ function main() {
     );
   }
   console.error(
-    '請至 app/lib/reader/foliate_reader_view.dart 的 ' +
-    '_esCompatPolyfillJs 補上對應的 polyfill（僅在缺席時才定義，比照既有' +
+    '請至 app/lib/reader/foliate_native_bridge.dart 的 ' +
+    'esCompatPolyfillJs 補上對應的 polyfill（僅在缺席時才定義，比照既有' +
     '寫法），並用 Node.js + @xmldom/xmldom 對照未經修改的實際 epub.js 驗證' +
     '過缺席時會拋出例外、補上後可修復，再重新執行這支腳本確認乾淨。',
   );
