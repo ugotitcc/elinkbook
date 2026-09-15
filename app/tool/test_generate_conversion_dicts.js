@@ -48,7 +48,8 @@ function testBmpToSipPairSkipped() {
   // BMP（UTF-16 長度 1）↔ 輔助平面/SIP（代理對，UTF-16 長度 2）字元對
   // 兩邊都算「1 個 code point」會被誤判為合法——但 epubcfi.js 的 Range
   // offset 計算用的是原生 String.length（UTF-16 code unit 數，見
-  // epubcfi.js:266 `const { length } = n.nodeValue`），這種配對會讓
+  // epubcfi.js 的 `const { length } = n.nodeValue`；行號會隨釘定版本
+  // 升級漂移，不在此寫死），這種配對會讓
   // node.nodeValue.length 在轉換後改變，打破 ADR 0030 的 ΔL=0。
   // 㓆（U+34C6，BMP，length===1）-> 𠗣（U+205E3，輔助平面，代理對，
   // length===2）：code point 數皆為 1，但 UTF-16 長度不同，應被跳過。

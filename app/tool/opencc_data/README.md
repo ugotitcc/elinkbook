@@ -2,12 +2,13 @@
 
 `STCharacters.txt`（簡體→繁體，key=簡體字）／`TSCharacters.txt`（繁體→簡體，
 key=繁體字）直接取自 [BYVoid/OpenCC](https://github.com/BYVoid/OpenCC)
-專案的 `data/dictionary/` 目錄，授權 Apache-2.0（見上游倉庫的 LICENSE），
-不經修改、原樣 vendor 進本專案版控。
+專案的 `data/dictionary/` 目錄，授權 Apache-2.0（全文已 vendor 進本目錄的
+`LICENSE`），不經修改、原樣 vendor 進本專案版控。
 
 - 來源網址：
   - https://raw.githubusercontent.com/BYVoid/OpenCC/master/data/dictionary/STCharacters.txt
   - https://raw.githubusercontent.com/BYVoid/OpenCC/master/data/dictionary/TSCharacters.txt
+  - https://raw.githubusercontent.com/BYVoid/OpenCC/master/LICENSE
 - 下載日期：2026-09-15
 - 用途：`app/tool/generate_conversion_dicts.js` 讀取這兩個檔案，產生
   `app/android/app/src/main/assets/foliate/text_conversion_dict.js` 與

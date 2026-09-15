@@ -50,11 +50,11 @@ const GENERATED_FILE_HEADER =
  *    拋例外中止生成——這類異常視為資料格式錯誤，不應該靜默處理。
  * 2. **UTF-16 `.length`（code unit 數）必須相等**：`Array.from().length`
  *    算的是 Unicode code point，但 `epubcfi.js` 的 Range offset 計算
- *    （`epubcfi.js:266`：`const { length } = n.nodeValue`）用的是原生
- *    JS 字串 `.length`，即 UTF-16 code unit 數。OpenCC 原始表中存在
- *    BMP（`.length===1`）↔ 輔助平面/SIP 代理對字元（`.length===2`）的
- *    配對，兩者 code point 數都是 1、會通過第 1 層防護，但 UTF-16
- *    `.length` 不同，若進入字典會讓 DOM 文字節點轉換後長度改變，打破
+ *    （搜尋 `const { length } = n.nodeValue`；行號會隨釘定版本升級漂移，
+ *    不在此寫死）用的是原生 JS 字串 `.length`，即 UTF-16 code unit 數。
+ *    OpenCC 原始表中存在 BMP（`.length===1`）↔ 輔助平面/SIP 代理對字元
+ *    （`.length===2`）的配對，兩者 code point 數都是 1、會通過第 1 層防護，
+ *    但 UTF-16 `.length` 不同，若進入字典會讓 DOM 文字節點轉換後長度改變，打破
  *    ADR 0030 的 ΔL=0 前提。這類配對**跳過（`continue`）不列入字典**
  *    （而非拋例外中止）——因為這是真實資料中會出現的合法字元、只是
  *    不適合本專案的轉換機制，跳過後這些字元在 `convertText()` 維持
