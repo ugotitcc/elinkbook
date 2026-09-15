@@ -13,6 +13,7 @@ import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import '../support/fake_inappwebview_platform.dart';
@@ -81,6 +82,28 @@ void main() {
         'columnMode': 'single',
         'isLandscape': false, 'isComicBookHint': false,
       });
+    });
+
+    test('textConversion 非 null 時 map 含 textConversion 字串', () {
+      const view = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        textConversion: TextConversionMode.toTraditional,
+      );
+      expect(buildFoliatePreferencesMap(view), {
+        'textConversion': 'toTraditional',
+        'isLandscape': false, 'isComicBookHint': false,
+      });
+    });
+
+    test('textConversion 為 null 時 map 不含 textConversion 欄位', () {
+      const view = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      );
+      expect(buildFoliatePreferencesMap(view).containsKey('textConversion'), isFalse);
     });
 
     test('showFooter: false 時 map 含 showFooter: false', () {
@@ -364,6 +387,22 @@ void main() {
         onPageRendered: _noop,
         onError: _noopError,
         writingMode: WritingMode.vertical,
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isTrue);
+    });
+
+    test('textConversion 變動回傳 true', () {
+      const oldView = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        textConversion: TextConversionMode.original,
+      );
+      const newView = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        textConversion: TextConversionMode.toTraditional,
       );
       expect(foliatePreferencesChanged(oldView, newView), isTrue);
     });
