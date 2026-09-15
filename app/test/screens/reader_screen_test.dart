@@ -9434,6 +9434,54 @@ void main() {
       );
     });
 
+    testWidgets('單書覆寫簡繁轉換時，TtsAudioHandler 綁定的系統通知/鎖定畫面書名依轉換模式呈現（epic-42-text-conversion Issue 3 審查修正 I-1）',
+        (tester) async {
+      await prefsManager.saveBookPrefs(
+        'b_tts_text_conversion',
+        const BookReaderPrefs(
+          textConversionOverride: TextConversionMode.toTraditional,
+        ),
+      );
+      final ttsProvider = FakeTtsProvider();
+      final ttsAudioHandler = TtsAudioHandler();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_text_conversion',
+            bookTitle: '国电脑',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+            ttsAudioHandler: ttsAudioHandler,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_chrome_tts_button')));
+      await tester.pump();
+
+      expect(ttsAudioHandler.mediaItem.value?.title, '國電腦');
+    });
+
     testWidgets('未提供 ttsAudioHandler／ttsAudioFocusSource 時，既有播放/暫停行為零回歸', (
       tester,
     ) async {

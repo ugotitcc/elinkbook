@@ -3142,7 +3142,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
     _ttsController = controller;
     controller.addListener(_onTtsStatusChanged);
-    widget.ttsAudioHandler?.attachController(controller, bookTitle: widget.bookTitle);
+    widget.ttsAudioHandler?.attachController(controller, bookTitle: _displayBookTitle);
     final focusSource = widget.ttsAudioFocusSource;
     if (focusSource != null) {
       _ttsAudioFocusCoordinator =
