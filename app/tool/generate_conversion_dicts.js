@@ -41,6 +41,54 @@ const GENERATED_FILE_HEADER =
   'app/tool/opencc_data/README.md。\n';
 
 /**
+ * 解析 OpenCC 字典表（TSV：key\tvalue1 value2 ...，'#' 開頭為註解行），
+ * 不限字元數，右欄若有多個以半形空格分隔的候選字，只取第一個。片語表
+ * （TWPhrases.txt／TSPhrases.txt）與字元表（STCharacters.txt／
+ * TSCharacters.txt）共用同一套基礎解析規則——parseCharTable() 的長度
+ * 限制／BMP↔輔助平面過濾是疊加在這個共用邏輯之上的額外約束（見下）。
+ *
+ * 同一鍵不得重複、值不得為空字串（`issues.md` 明訂的正規化約束，審查
+ * 修正 I-3）——上游 OpenCC 資料若出現格式異常或鍵值衝突，直接拋例外
+ * 中止生成，不靜默覆蓋/跳過（已用實際下載的 TWPhrases.txt／TSPhrases.txt
+ * 與既有 STCharacters.txt／TSCharacters.txt 驗證過皆無重複鍵，此防護
+ * 不影響既有生成流程）。
+ * @param {string} tsvContent
+ * @returns {Record<string, string>}
+ */
+function parsePhraseTable(tsvContent) {
+  const dict = {};
+  const lines = tsvContent.split('\n');
+  for (const rawLine of lines) {
+    // 審查修正 I-3 複審發現的邏輯短路：不可先對整行 rawLine.trim() 再找
+    // tab 位置——'內存\t'.trim() 會把結尾的 '\t' 一併削掉（tab 是
+    // trim() 認定的空白字元），導致值為空的行被誤判成「找不到 tab」而
+    // 提前 continue，永遠到不了下面的空值拋例外檢查。改為：只用
+    // rawLine（未 trim）找 tab 位置，trim 動作限定在切出來的 key／
+    // candidates 各自身上。
+    const trimmedForBlankCheck = rawLine.trim();
+    if (!trimmedForBlankCheck || trimmedForBlankCheck.startsWith('#')) {
+      continue;
+    }
+    const tabIndex = rawLine.indexOf('\t');
+    if (tabIndex < 0) continue;
+    const key = rawLine.slice(0, tabIndex).trim();
+    if (!key) continue;
+    const candidates = rawLine.slice(tabIndex + 1).trim();
+    const value = candidates ? candidates.split(' ')[0] : '';
+    if (!value) {
+      throw new Error(`片語字典值為空字串："${key}"，原始行：${rawLine}`);
+    }
+    if (Object.prototype.hasOwnProperty.call(dict, key)) {
+      throw new Error(
+        `片語字典鍵重複："${key}"（舊值 "${dict[key]}" vs 新值 "${value}"）`,
+      );
+    }
+    dict[key] = value;
+  }
+  return dict;
+}
+
+/**
  * 解析 OpenCC 字元對照表（TSV：key\tvalue1 value2 ...，'#' 開頭為註解行）。
  * 右欄若有多個以半形空格分隔的候選字，只取第一個。
  *
@@ -64,24 +112,15 @@ const GENERATED_FILE_HEADER =
  * @returns {Record<string, string>}
  */
 function parseCharTable(tsvContent) {
+  const raw = parsePhraseTable(tsvContent);
   const dict = {};
-  const lines = tsvContent.split('\n');
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith('#')) continue;
-    const tabIndex = line.indexOf('\t');
-    if (tabIndex < 0) continue;
-    const key = line.slice(0, tabIndex);
-    const candidates = line.slice(tabIndex + 1).trim();
-    if (!key || !candidates) continue;
-    const value = candidates.split(' ')[0];
+  for (const [key, value] of Object.entries(raw)) {
     const keyCodepoints = Array.from(key).length;
     const valueCodepoints = Array.from(value).length;
     if (keyCodepoints !== 1 || valueCodepoints !== 1) {
       throw new Error(
         `字典項 code point 數不為 1：` +
-        `"${key}"(${keyCodepoints}) -> "${value}"(${valueCodepoints})，` +
-        `原始行：${rawLine}`,
+        `"${key}"(${keyCodepoints}) -> "${value}"(${valueCodepoints})`,
       );
     }
     // UTF-16 code unit 數不相等（BMP ↔ 輔助平面配對）：跳過，不進字典。
@@ -89,6 +128,32 @@ function parseCharTable(tsvContent) {
     dict[key] = value;
   }
   return dict;
+}
+
+// 片語比對時，單一詞條 code point 數的安全上限——必須與
+// app/lib/reader/text_conversion.dart 的 kMaxPhraseKeyLength、
+// app/android/app/src/main/assets/foliate/text-conversion.js 的
+// MAX_PHRASE_KEY_LENGTH 保持一致，三處數值目前皆為 16。
+const MAX_PHRASE_KEY_LENGTH = 16;
+
+/**
+ * 確保 dict 內每一個鍵的 code point 數不超過 MAX_PHRASE_KEY_LENGTH——
+ * 執行期演算法的最長匹配只會嘗試到這個長度，超過的詞條會被靜默漏未
+ * 比對，必須在生成階段擋下來（見上方常數說明）。
+ * @param {Record<string,string>} dict
+ * @param {string} label
+ */
+function assertMaxPhraseKeyLength(dict, label) {
+  for (const key of Object.keys(dict)) {
+    const len = Array.from(key).length;
+    if (len > MAX_PHRASE_KEY_LENGTH) {
+      throw new Error(
+        `${label} 詞條 "${key}" 長度 ${len} 超過 MAX_PHRASE_KEY_LENGTH=` +
+        `${MAX_PHRASE_KEY_LENGTH}，需同步調高 text_conversion.dart 的 ` +
+        'kMaxPhraseKeyLength 與 text-conversion.js 的 MAX_PHRASE_KEY_LENGTH。',
+      );
+    }
+  }
 }
 
 /** 產生 JS 物件字面量／Dart Map 字面量共用的字串（單字元字串在兩種語言
@@ -130,7 +195,12 @@ function main() {
   );
 }
 
-module.exports = { parseCharTable, toMapLiteral };
+module.exports = {
+  parseCharTable,
+  parsePhraseTable,
+  toMapLiteral,
+  assertMaxPhraseKeyLength,
+};
 
 if (require.main === module) {
   main();
