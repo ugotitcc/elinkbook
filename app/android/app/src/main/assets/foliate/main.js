@@ -2,8 +2,45 @@ import { makeBook } from './view.js'
 import { Overlayer } from './overlayer.js'
 import { compare as compareCfi } from './epubcfi.js'
 import { resolveTtsSafeWindowDirection } from './tts-safe-window.js'
+import { toOriginalRange, resolveDisplayRange } from './text-conversion-walker.js'
 
 const view = document.getElementById('view')
+
+// epic-42-text-conversion Issue 2：CFI 座標保護（見
+// docs/epics/epic-42-text-conversion/offset-mapping-spec.md 第 3.2
+// 節；2026-09-15 依 reviews/review-plan-issue-2.md Issue C-2 修訂）。
+// view.getCFI()／view.resolveCFI() 是 view.js（釘定 vendor 檔案，
+// ADR 0011 禁止修改）僅有的兩個 Range↔CFI 轉換入口，main.js 自己的
+// reportSelection()／buildTocEntry()／extractSegmentsForSection()，以及
+// view.js 內部 #onRelocate()（算「目前閱讀位置」CFI，main.js 完全沒有
+// 對應呼叫點）全部流經這兩個公開方法。在實例上直接賦值會建立一個遮蔽
+// 原型方法的自有屬性（標準 JS own-property shadowing），讓上述「全部
+// 呼叫點」自動套用這層轉換，不需要逐一修改各呼叫點，也不修改 view.js
+// 原始碼本身。buildTocEntry()／extractSegmentsForSection() 是對
+// view.book.sections[i].createDocument() 產生的獨立、從未被
+// applyTextConversion() 觸碰過的新文件操作，其文字節點沒有
+// _elinkOffsetMap，toOriginalRange()／resolveDisplayRange() 對它們是
+// 恆等變換，這個全域攔截不會影響 TTS／目錄既有的「CFI 永遠對應原文」
+// 不變量（Global Constraints）。
+//
+// view.resolveCFI 刻意不寫成「事後調整 anchor(doc) 的回傳值」（例如
+// (doc) => adjustXxx(anchor(doc))）——anchor(doc) 內部呼叫真正的
+// CFI.toRange()，其 range.setEnd() 直接用原文 offset 對目前顯示中（可能
+// 已轉換、長度較短）的 live 節點呼叫瀏覽器原生 Range API，縮短詞情境下
+// 會在 anchor(doc) 內部就拋出 IndexSizeError 並被其自身 try/catch 吞成
+// null，事後調整完全沒有機會執行（詳見 resolveDisplayRange() 文件註解與
+// 審查報告 Issue C-2）。resolveDisplayRange(doc, anchor) 把 anchor 整個
+// 閉包原封不動傳進去，由它自己負責在呼叫前後做暫時文字復原。
+const originalGetCFI = view.getCFI.bind(view)
+view.getCFI = (index, range) => originalGetCFI(index, toOriginalRange(range))
+
+const originalResolveCFI = view.resolveCFI.bind(view)
+view.resolveCFI = (cfi) => {
+  const resolved = originalResolveCFI(cfi)
+  if (!resolved) return resolved
+  const { index, anchor } = resolved
+  return { index, anchor: (doc) => resolveDisplayRange(doc, anchor) }
+}
 
 // 直排底線位置（使用者需求，2026-09-08 /grill-with-docs）：overlayer.js 是
 // readest/foliate-js 釘定版本，CLAUDE.md 明文規定不可修改，其
