@@ -1,7 +1,8 @@
 import 'page_turn_mode.dart';
 import 'screen_orientation_setting.dart';
+import 'text_conversion_mode.dart';
 
-/// 「閱讀預設值」畫面（`ReadingDefaultsScreen`，FR-36/37/38/42）對應的 7 個
+/// 「閱讀預設值」畫面（`ReadingDefaultsScreen`，FR-36/37/38/42）對應的 8 個
 /// 欄位，從 `GlobalReaderPrefs` 拆出（2026-09-13，見
 /// `docs/superpowers/plans/2026-09-13-split-global-reader-prefs.md`）。UI
 /// 畫面與本類別現在是同一件事——見 `CONTEXT.md`「閱讀預設值」詞條
@@ -27,6 +28,11 @@ class ReadingDefaults {
   final bool showHeader;
   final bool showFooter;
 
+  /// 簡繁顯示轉換全域預設值（FR-48），預設 `original`（不轉換，維持既有
+  /// 行為）。與單書層 `BookReaderPrefs.textConversionOverride` 為雙層解析
+  /// 關係，見 `resolveTextConversion()`。
+  final TextConversionMode textConversion;
+
   const ReadingDefaults({
     this.pageTurnMode = PageTurnMode.paginated,
     this.screenOrientation = ScreenOrientationSetting.auto,
@@ -35,6 +41,7 @@ class ReadingDefaults {
     this.openLastBookOnLaunch = true,
     this.showHeader = false,
     this.showFooter = false,
+    this.textConversion = TextConversionMode.original,
   });
 
   const ReadingDefaults.initial() : this();
@@ -47,6 +54,7 @@ class ReadingDefaults {
     bool? openLastBookOnLaunch,
     bool? showHeader,
     bool? showFooter,
+    TextConversionMode? textConversion,
   }) {
     return ReadingDefaults(
       pageTurnMode: pageTurnMode ?? this.pageTurnMode,
@@ -56,6 +64,7 @@ class ReadingDefaults {
       openLastBookOnLaunch: openLastBookOnLaunch ?? this.openLastBookOnLaunch,
       showHeader: showHeader ?? this.showHeader,
       showFooter: showFooter ?? this.showFooter,
+      textConversion: textConversion ?? this.textConversion,
     );
   }
 
@@ -68,7 +77,8 @@ class ReadingDefaults {
       other.fullscreen == fullscreen &&
       other.openLastBookOnLaunch == openLastBookOnLaunch &&
       other.showHeader == showHeader &&
-      other.showFooter == showFooter;
+      other.showFooter == showFooter &&
+      other.textConversion == textConversion;
 
   @override
   int get hashCode => Object.hash(
@@ -79,5 +89,6 @@ class ReadingDefaults {
         openLastBookOnLaunch,
         showHeader,
         showFooter,
+        textConversion,
       );
 }

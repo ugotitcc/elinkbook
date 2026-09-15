@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/reading_defaults.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 
 void main() {
   test('ReadingDefaults.initial() 回傳與現行硬編碼預設一致的值', () {
@@ -13,6 +14,7 @@ void main() {
     expect(prefs.openLastBookOnLaunch, isTrue);
     expect(prefs.showHeader, isFalse);
     expect(prefs.showFooter, isFalse);
+    expect(prefs.textConversion, TextConversionMode.original);
   });
 
   test('copyWith 只更新指定欄位，其餘欄位保留原值', () {
@@ -40,6 +42,14 @@ void main() {
     expect(updated.pageTurnMode, original.pageTurnMode);
   });
 
+  test('copyWith 可個別更新 textConversion', () {
+    const original = ReadingDefaults.initial();
+    final updated =
+        original.copyWith(textConversion: TextConversionMode.toTraditional);
+    expect(updated.textConversion, TextConversionMode.toTraditional);
+    expect(updated.pageTurnMode, original.pageTurnMode);
+  });
+
   test('copyWith 可個別更新 showHeader／showFooter', () {
     const original = ReadingDefaults.initial();
     final updated = original.copyWith(showHeader: true, showFooter: true);
@@ -48,7 +58,7 @@ void main() {
     expect(updated.fullscreen, original.fullscreen);
   });
 
-  test('七個欄位值皆相同的 ReadingDefaults 視為相等', () {
+  test('八個欄位值皆相同的 ReadingDefaults 視為相等', () {
     const a = ReadingDefaults(
       pageTurnMode: PageTurnMode.scroll,
       screenOrientation: ScreenOrientationSetting.lock90,
@@ -57,6 +67,7 @@ void main() {
       openLastBookOnLaunch: false,
       showHeader: true,
       showFooter: true,
+      textConversion: TextConversionMode.toSimplified,
     );
     const b = ReadingDefaults(
       pageTurnMode: PageTurnMode.scroll,
@@ -66,6 +77,7 @@ void main() {
       openLastBookOnLaunch: false,
       showHeader: true,
       showFooter: true,
+      textConversion: TextConversionMode.toSimplified,
     );
     expect(a, b);
     expect(a.hashCode, b.hashCode);
@@ -82,5 +94,8 @@ void main() {
     expect(a == a.copyWith(openLastBookOnLaunch: false), isFalse);
     expect(a == a.copyWith(showHeader: true), isFalse);
     expect(a == a.copyWith(showFooter: true), isFalse);
+    expect(
+        a == a.copyWith(textConversion: TextConversionMode.toTraditional),
+        isFalse);
   });
 }
