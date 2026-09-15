@@ -118,7 +118,7 @@
 
 ## Issue 3：Dart 端跨畫面顯示轉換
 
-**Status:** ready-for-agent
+**Status:** completed（**2026-09-16 已完成並合併回 `main`（PR [#249](https://git.jigong.org/huthief/elinkBook/pulls/249)，分支 `feat/epic-42-issue-3`）**：`plans/plan-issue-3.md`（經 `reviews/review-plan-issue-3.md` 審查修正 1 項 Critical──C-1 `BookCover`／`CoverPlaceholder` 遺漏轉換導致 Task 4 測試斷言邏輯矛盾──與 2 項 Important（I-1 `_openBookActionSheet` 動作選單標題漏轉、I-2 `_initialize()` 的 `unawaited` 造成啟動畫面閃爍競態）／1 項 Minor（M-1 `_currentChapterTitle()` 待活化方法字形遺漏）後定案；1 項 Minor M-2〔全套 `flutter test` 改限定測試清單〕經技術理由駁回未採納）4 個 Task 全數完成：`TocBottomSheet`／`NotesBottomSheet` 新增 `textConversion` 建構參數（預設 `TextConversionMode.original`，比照 `FxlSettingsSheet.showTextConversion` 既有先例向後相容）、`ReaderScreen` 新增 `_textConversionMode`／`_displayBookTitle`／`_displayBookAuthor` 三個私有 getter 收斂所有單書情境渲染點（頁首、底部工具列、單書搜尋標題、目錄、筆記）、`LibraryScreen` 新增 `_textConversion` 全域跨書情境狀態並接線至書架格狀/列表視圖、繼續閱讀列、書籍詳細資料對話框、單書動作選單、`BookCover`／`CoverPlaceholder`。獨立程式審查（`reviews/review-issue-3.md`）：實際執行全部 6 個目標測試檔（401 項）與 `flutter analyze`，確認 0 Critical／1 Important（TTS 背景播放系統通知欄/鎖定畫面書名〔`reader_screen.dart:3145`〕未轉換，此呼叫點從未列於本 Issue 範圍，屬 issues.md 原始範圍疏漏而非實作偏離）／1 Minor（Task 4 兩則測試斷言需依 C-1 修正後的真實畫面結構訂正，屬合理修正），Important 發現已於審查後追加 commit 補上（`fix(reader): TTS 系統通知/鎖定畫面書名接上簡繁顯示轉換`，並新增對應測試），結論 Ready to merge: Yes。**已知範圍落差（非本 Issue 遺漏，供未來參考）**：issues.md 原始範圍「劃線清單摘要片段」需轉換一項，經查證 `Highlight` model 從未儲存原文片段（`markdown_export.dart` 既有設計決策）故無對應程式碼可改；`BookSearchScreen` 的書名/作者轉換僅涵蓋 `ReaderScreen._buildSearchableBook()` 單書搜尋入口，`LibrarySearchScreen` 全庫搜尋下鑽入口維持不轉換，留待 Issue 4 或另立工單處理。）
 
 **依賴：** Issue 0（`convertText`）、Issue 1（`resolveTextConversion`／`GlobalReaderPrefs.reading.textConversion`）
 

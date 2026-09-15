@@ -50,7 +50,7 @@
 - Consumes: `app/lib/reader/text_conversion.dart` 的 `convertText(String, TextConversionMode)`（Issue 0）；`app/lib/reader/text_conversion_mode.dart` 的 `TextConversionMode`（Issue 0）。
 - Produces: `TocBottomSheet.textConversion`（`TextConversionMode`，預設 `TextConversionMode.original`），供 Task 3 `reader_screen.dart` 的 `_openToc()`／`_openPdfToc()` 呼叫點消費。
 
-- [ ] **Step 1: 新增失敗測試**
+- [x] **Step 1: 新增失敗測試**
 
 在 `app/test/screens/toc_bottom_sheet_test.dart` 第 1 行之後新增 import：
 
@@ -135,12 +135,12 @@ import 'package:elinkbook/reader/text_conversion_mode.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/toc_bottom_sheet_test.dart test/screens/toc_bottom_sheet_pdf_test.dart`
 Expected: 新增的 3 個測試皆 FAIL（`textConversion` 不是 `TocBottomSheet` 已知的具名參數，編譯錯誤）。
 
-- [ ] **Step 3: 實作 `textConversion` 參數**
+- [x] **Step 3: 實作 `textConversion` 參數**
 
 在 `app/lib/screens/toc_bottom_sheet.dart` 第 6 行（`import '../reader/toc_entry.dart';`）之後新增：
 
@@ -195,17 +195,17 @@ import '../reader/text_conversion_mode.dart';
         ),
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/toc_bottom_sheet_test.dart test/screens/toc_bottom_sheet_pdf_test.dart`
 Expected: 全數 PASS（既有 15 個測試零回歸＋新增 3 個測試通過）。
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/toc_bottom_sheet.dart app/test/screens/toc_bottom_sheet_test.dart app/test/screens/toc_bottom_sheet_pdf_test.dart
@@ -224,7 +224,7 @@ git commit -m "feat(reader): TocBottomSheet 新增簡繁轉換 textConversion �
 - Consumes: `convertText(String, TextConversionMode)`（Issue 0）。
 - Produces: `NotesBottomSheet.textConversion`（`TextConversionMode`，預設 `TextConversionMode.original`），供 Task 3 `reader_screen.dart` 的 `_openNotesSheet()` 呼叫點消費。
 
-- [ ] **Step 1: 新增失敗測試**
+- [x] **Step 1: 新增失敗測試**
 
 在 `app/test/screens/notes_bottom_sheet_test.dart` 第 13 行（`import 'package:elinkbook/screens/notes_bottom_sheet.dart';`）之後新增：
 
@@ -330,12 +330,12 @@ Future<void> _pumpSheet(
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/notes_bottom_sheet_test.dart`
 Expected: 新增的 2 個測試皆 FAIL（`textConversion` 不是 `NotesBottomSheet` 已知的具名參數，編譯錯誤）。
 
-- [ ] **Step 3: 實作 `textConversion` 參數**
+- [x] **Step 3: 實作 `textConversion` 參數**
 
 在 `app/lib/screens/notes_bottom_sheet.dart` 第 17 行（`import '../reader/notes_repository.dart';`）之後新增：
 
@@ -393,17 +393,17 @@ import '../reader/text_conversion_mode.dart';
         title: Text(convertText(bookmark.name, widget.textConversion)),
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/notes_bottom_sheet_test.dart`
 Expected: 全數 PASS（既有測試零回歸＋新增 2 個測試通過）。
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/notes_bottom_sheet.dart app/test/screens/notes_bottom_sheet_test.dart
@@ -422,7 +422,7 @@ git commit -m "feat(reader): NotesBottomSheet 新增簡繁轉換 textConversion 
 - Consumes: `resolveTextConversion(BookReaderPrefs, ReadingDefaults)`（Issue 1）、`convertText(String, TextConversionMode)`（Issue 0）、`TocBottomSheet.textConversion`／`NotesBottomSheet.textConversion`（Task 1／Task 2）。
 - Produces: `_ReaderScreenState._textConversionMode`／`_displayBookTitle`／`_displayBookAuthor` 三個私有 getter（本 Issue 內部使用，不對外公開）。
 
-- [ ] **Step 1: 新增失敗測試**
+- [x] **Step 1: 新增失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart` 找到第 4806-4856 行「流式 EPUB：目錄尚未載入時，頁首顯示書名而非「閱讀器」」測試結尾的 `});`，在其後新增：
 
@@ -670,12 +670,12 @@ git commit -m "feat(reader): NotesBottomSheet 新增簡繁轉換 textConversion 
     });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: 新增的 6 個測試皆 FAIL（斷言值仍是未轉換的原文，例如 `headerText.data` 為 `'国电脑'` 而非 `'國電腦'`；`sheet.textConversion` 不存在等）。
 
-- [ ] **Step 3: 實作接線**
+- [x] **Step 3: 實作接線**
 
 在 `app/lib/screens/reader_screen.dart` 第 56 行（`import '../reader/resolve_text_conversion.dart';`）之後新增：
 
@@ -871,17 +871,17 @@ import '../reader/text_conversion_mode.dart';
 
 此方法目前無呼叫端（私有方法且僅同檔案可存取），測試無法從外部驗證，故不新增對應測試——單純防止未來解註解啟用時產生字形遺漏。
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: 全數 PASS（既有測試零回歸＋新增 6 個測試通過）。
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -902,7 +902,7 @@ git commit -m "feat(reader): ReaderScreen 頁首/底部工具列/單書搜尋/�
 - Consumes: `GlobalReaderPrefs.reading.textConversion`（Issue 1）、`convertText(String, TextConversionMode)`（Issue 0）。
 - Produces: `BookCover.textConversion`（`TextConversionMode`，預設 `TextConversionMode.original`，向後相容既有 8 處呼叫點），供本 Task 內 `_BookGridTile`／`_BookListTile`／`_ContinueReadingRow` 消費，其餘既有呼叫點（`layout_preset_book_picker_screen.dart`、`library_screen.dart` 的 `_GroupGridTile`／`_GroupListTile`、`library_search_screen.dart`）維持預設值不變，本 Task 不擴及。`_LibraryScreenState._textConversion` 為純內部狀態，不對外公開（本計畫最後一個 Task）。
 
-- [ ] **Step 1: 新增失敗測試**
+- [x] **Step 1: 新增失敗測試**
 
 **審查修正 C-1**：`BookCover` 在書籍無 `coverPath` 時會退回 `CoverPlaceholder` 繪製書名縮略文字（`app/lib/library/widgets/book_cover.dart:41-44`／`:122-157`，容器高度 ≥56dp 且寬度 ≥36dp 時顯示）——`_BookGridTile`／`_BookListTile`（48×64）／`_ContinueReadingRow`（40×56）三處的 `BookCover` 尺寸皆超過此門檻，因此測試環境下每個書籍項目同時存在「封面縮略文字」與「卡片/列標題文字」兩處書名渲染，需一併修改 `BookCover` 才能讓兩處轉換結果一致（否則會出現封面縮略仍是簡體、標題已是繁體的畫面不一致，且下方 Task 4 測試斷言在只改標題不改封面時必定矛盾失敗）。
 
@@ -1195,12 +1195,12 @@ Book _book({required bool isDownloaded, String title = '測試書'}) {
 import 'package:elinkbook/reader/text_conversion_mode.dart';
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/library/widgets/book_cover_test.dart test/screens/library_screen_test.dart`
 Expected: `book_cover_test.dart` 新增的 1 個測試、`library_screen_test.dart` 新增的 6 個測試皆 FAIL（`BookCover`／`_BookGridTile`／`_BookListTile`／`_ContinueReadingRow`／`_BookDetailsDialog` 尚未接受 `textConversion` 參數，編譯錯誤；`_openBookActionSheet` 標題斷言值仍是未轉換的原文「国电脑」）。
 
-- [ ] **Step 3: 實作接線**
+- [x] **Step 3: 實作接線**
 
 在 `app/lib/screens/library_screen.dart` 第 1 行（`import 'dart:io';`）之前新增：
 
@@ -1759,22 +1759,22 @@ class _BookDetailsDialog extends StatefulWidget {
               ),
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/library/widgets/book_cover_test.dart test/screens/library_screen_test.dart`
 Expected: 全數 PASS（既有測試零回歸＋ `book_cover_test.dart` 新增 1 個測試、`library_screen_test.dart` 新增 6 個測試通過）。
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: 執行完整 `flutter test`（本計畫最後一個 Task，比照專案慣例跑一次全套）**
+- [x] **Step 6: 執行完整 `flutter test`（本計畫最後一個 Task，比照專案慣例跑一次全套）**
 
 Run: `flutter test`
 Expected: 全數通過（既有已知不穩定案例除外，例如 `adaptive_shell_scaffold_test.dart` 既有失敗案例，非本次異動引入）。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/lib/library/widgets/book_cover.dart app/test/screens/library_screen_test.dart app/test/library/widgets/book_cover_test.dart
