@@ -10,6 +10,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_paging.dart';
@@ -578,6 +579,241 @@ void main() {
           '返回書架後應重新載入書籍清單，顯示閱讀器寫入的最新進度，'
           '而非停留在舊快照的 0%',
     );
+  });
+
+  testWidgets('全域簡繁轉換為繁體時，書架格狀視圖書名依轉換模式呈現（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    final book = _testBook(id: '1', title: '国电脑');
+    final localPrefsManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+        reading: const ReadingDefaults(
+          openLastBookOnLaunch: false,
+          textConversion: TextConversionMode.toTraditional,
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: localPrefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('book_item_1')),
+        matching: find.text('國電腦'),
+      ),
+      findsNWidgets(2),
+      reason: 'CoverPlaceholder 書名縮略與卡片下方標題文字各顯示一次，比照既有測試慣例',
+    );
+    expect(find.text('国电脑'), findsNothing);
+  });
+
+  testWidgets('全域簡繁轉換為繁體時，書架列表視圖書名／作者依轉換模式呈現（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    final book = _testBook(id: '1', title: '国电脑', author: '电脑作者');
+    final localPrefsManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+        reading: const ReadingDefaults(
+          openLastBookOnLaunch: false,
+          textConversion: TextConversionMode.toTraditional,
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: localPrefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_view_toggle_option')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('book_item_1')),
+        matching: find.text('國電腦'),
+      ),
+      findsNWidgets(2),
+      reason: 'CoverPlaceholder 書名縮略與列標題文字各顯示一次，比照既有測試慣例',
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('book_item_1')),
+        matching: find.text('電腦作者'),
+      ),
+      findsOneWidget,
+      reason: '作者僅顯示於列表副標題，CoverPlaceholder 不含作者欄位',
+    );
+  });
+
+  testWidgets('全域簡繁轉換為繁體時，繼續閱讀列書名依轉換模式呈現（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    final book = _testBook(
+      id: '1',
+      title: '国电脑',
+      lastReadTime: DateTime(2026, 1, 1),
+    );
+    final localPrefsManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+        reading: const ReadingDefaults(
+          openLastBookOnLaunch: false,
+          textConversion: TextConversionMode.toTraditional,
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: localPrefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('library_continue_reading_row')),
+        matching: find.text('國電腦'),
+      ),
+      findsNWidgets(2),
+      reason: 'BookCover 退回文字縮略與 _ContinueReadingRow 標題文字各顯示一次，比照既有測試慣例',
+    );
+  });
+
+  testWidgets('全域簡繁轉換為繁體時，書籍詳細資料對話框書名／作者依轉換模式呈現（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    final book = _testBook(id: '1', title: '国电脑', author: '电脑作者');
+    final localPrefsManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+        reading: const ReadingDefaults(
+          openLastBookOnLaunch: false,
+          textConversion: TextConversionMode.toTraditional,
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: localPrefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('詳細資料'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('book_details_dialog')),
+        matching: find.text('國電腦'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('作者：電腦作者'), findsOneWidget);
+  });
+
+  testWidgets('外部刷新訊號觸發時，重新載入全域簡繁轉換預設值（epic-42-text-conversion Issue 3）',
+      (tester) async {
+    final book = _testBook(id: '1', title: '国电脑');
+    final localPrefsManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+        reading: const ReadingDefaults(openLastBookOnLaunch: false),
+      ),
+    );
+    final refreshSignal = ChangeNotifier();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: localPrefsManager,
+          refreshSignal: refreshSignal,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('book_item_1')),
+        matching: find.text('国电脑'),
+      ),
+      findsNWidgets(2),
+      reason: 'CoverPlaceholder 縮略與卡片標題各顯示一次，比照既有測試慣例（轉換前）',
+    );
+
+    localPrefsManager.globalPrefs = localPrefsManager.globalPrefs.copyWith(
+      reading: const ReadingDefaults(
+        openLastBookOnLaunch: false,
+        textConversion: TextConversionMode.toTraditional,
+      ),
+    );
+    refreshSignal.notifyListeners();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('book_item_1')),
+        matching: find.text('國電腦'),
+      ),
+      findsNWidgets(2),
+      reason: 'CoverPlaceholder 縮略與卡片標題各顯示一次，比照既有測試慣例（轉換後）',
+    );
+  });
+
+  testWidgets('全域簡繁轉換為繁體時，單書動作選單頂部標題依轉換模式呈現（epic-42-text-conversion Issue 3，審查修正 I-1）',
+      (tester) async {
+    final book = _testBook(id: '1', title: '国电脑');
+    final localPrefsManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+        reading: const ReadingDefaults(
+          openLastBookOnLaunch: false,
+          textConversion: TextConversionMode.toTraditional,
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: localPrefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('國電腦'), findsWidgets,
+        reason: '書架卡片（CoverPlaceholder 縮略＋標題）與動作選單頂部標題皆顯示已轉換文字');
+    expect(find.text('国电脑'), findsNothing);
   });
 
   testWidgets('切換檢視模式按鈕後，書架從 grid 切換為列表呈現', (tester) async {
