@@ -52,7 +52,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   }) async {
     final db = await openDatabase(
       path,
-      version: 25,
+      version: 26,
       singleInstance: singleInstance,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
@@ -235,6 +235,16 @@ class SqliteLibraryRepository implements LibraryRepository {
             // ALTER TABLE，oldVersion == 1 的裝置會重複 ALTER TABLE 拋出
             // 崩潰。
             await _addPdfPageTurnAnimationColumn(db);
+          }
+          if (oldVersion < 26) {
+            // epic-42-text-conversion Issue 1：簡繁轉換單書覆寫欄位。
+            // 必須放在 else 分支內（oldVersion >= 2）——理由同
+            // _addPdfPageTurnAnimationColumn：oldVersion < 2 時
+            // _createBookReaderPrefsTable 已一步到位建表含
+            // text_conversion_override，若在 else 分支外無條件執行
+            // ALTER TABLE，oldVersion == 1 的裝置會重複 ALTER TABLE
+            // 拋出崩潰。
+            await _addTextConversionOverrideColumn(db);
           }
         }
         if (oldVersion < 5) {
@@ -487,7 +497,8 @@ class SqliteLibraryRepository implements LibraryRepository {
         margin_right REAL,
         fullscreen INTEGER,
         letter_spacing REAL,
-        pdf_page_turn_animation TEXT
+        pdf_page_turn_animation TEXT,
+        text_conversion_override TEXT
       )
     ''');
   }
@@ -737,6 +748,19 @@ class SqliteLibraryRepository implements LibraryRepository {
     if (tables.isNotEmpty) {
       await db.execute(
           'ALTER TABLE book_reader_prefs ADD COLUMN pdf_page_turn_animation TEXT');
+    }
+  }
+
+  static Future<void> _addTextConversionOverrideColumn(Database db) async {
+    // epic-42-text-conversion Issue 1：簡繁轉換覆寫欄位，補追加到既有
+    // （version 2 起已存在）的 book_reader_prefs 表。比照
+    // _addPdfPageTurnAnimationColumn 既有慣例，僅在表已存在時才執行
+    // ALTER TABLE。
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='book_reader_prefs'");
+    if (tables.isNotEmpty) {
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN text_conversion_override TEXT');
     }
   }
 
