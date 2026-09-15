@@ -1133,7 +1133,8 @@ Book _book({required bool isDownloaded, String title = '測試書'}) {
         of: find.byKey(const Key('book_item_1')),
         matching: find.text('国电脑'),
       ),
-      findsOneWidget,
+      findsNWidgets(2),
+      reason: 'CoverPlaceholder 縮略與卡片標題各顯示一次，比照既有測試慣例（轉換前，審查修正 C-1 落地後兩處皆顯示同一文字）',
     );
 
     localPrefsManager.globalPrefs = localPrefsManager.globalPrefs.copyWith(
@@ -1150,7 +1151,8 @@ Book _book({required bool isDownloaded, String title = '測試書'}) {
         of: find.byKey(const Key('book_item_1')),
         matching: find.text('國電腦'),
       ),
-      findsOneWidget,
+      findsNWidgets(2),
+      reason: 'CoverPlaceholder 縮略與卡片標題各顯示一次，比照既有測試慣例（轉換後）',
     );
   });
 
@@ -1180,7 +1182,8 @@ Book _book({required bool isDownloaded, String title = '測試書'}) {
     await tester.tap(find.byKey(const Key('book_action_menu_1')));
     await tester.pumpAndSettle();
 
-    expect(find.text('國電腦'), findsOneWidget);
+    expect(find.text('國電腦'), findsWidgets,
+        reason: '書架卡片（CoverPlaceholder 縮略＋標題）與動作選單頂部標題皆顯示已轉換文字');
     expect(find.text('国电脑'), findsNothing);
   });
 
@@ -1793,3 +1796,5 @@ git commit -m "feat(library): LibraryScreen 書架書名/作者接上全域簡�
 **已與使用者確認的範圍界線**：`BookSearchScreen` 的 AppBar 書名/作者轉換只處理 `ReaderScreen._buildSearchableBook()`（單書搜尋，明確單書情境）這一個入口，`LibrarySearchScreen._openBookSearch()`（全庫搜尋下鑽單書搜尋）維持現狀不轉換，留給後續 Issue 4（全文檢索）或另立工單處理一致性；此為使用者明確選擇的處理方式，非遺漏。
 
 **審查修訂記錄**（`reviews/review-plan-issue-3.md`）：C-1（`BookCover`／`CoverPlaceholder` 遺漏轉換導致 Task 4 測試斷言邏輯矛盾）與 I-1（`_openBookActionSheet` 動作選單標題漏轉）、I-2（`_initialize()` 的 `unawaited` 造成啟動畫面閃爍競態）、M-1（`_currentChapterTitle()` 待活化方法字形遺漏）均已採納並落地於 Task 3／Task 4。M-2（Task 4 Step 6 全套 `flutter test` 建議改為限定目標測試清單）**不採納**：專案 `CLAUDE.md`「測試執行範圍」明文規定完整 `flutter test` 僅在整張計畫最後一個 Task 執行一次，`plan-issue-1.md`／`plan-issue-2.md` 皆遵循同一慣例；且本計畫 Step 6 原稿已明確列出「既有已知不穩定案例除外」的例外條款，M-2 描述的風險已被既有寫法涵蓋，改為限定清單反而會弱化全套回歸驗證的覆蓋範圍，故維持原寫法。`BookCover` 新增的 `textConversion` 只接到本 Task 已修改的三個消費端（`_BookGridTile`／`_BookListTile`／`_ContinueReadingRow`），`layout_preset_book_picker_screen.dart`／`_GroupGridTile`／`_GroupListTile`／`library_search_screen.dart` 等既有呼叫點不在本 Issue 範圍內、維持預設值不變，避免未經審查確認的範圍擴張。
+
+**Issue 3 程式審查修訂記錄**（`reviews/review-issue-3.md`，審查對象為 `feat/epic-42-issue-3` 分支 `906afb1b..4a0e5e8e` 的實作）：Important #1——`_buildTtsController()`（`reader_screen.dart:3145`）呼叫 `widget.ttsAudioHandler?.attachController()` 時仍傳入未轉換的 `widget.bookTitle`，寫入 `MediaItem.title` 後會讓 Android 系統通知欄/鎖定畫面顯示原文書名。此呼叫點從未列在 `issues.md` Issue 3「範圍」或本計畫的 File Structure／Task 列表中，是 issues.md 原始範圍本身的疏漏、非本計畫或實作對已核准計畫的偏離，已在後續 commit（`fix(reader): TTS 系統通知/鎖定畫面書名接上簡繁顯示轉換`）補上，改傳 `_displayBookTitle`，並於「背景播放與系統整合（epic-34-tts-readalong Issue 7）」測試群組新增對應測試。Minor #1——Task 4 Step 1 的「外部刷新訊號觸發時」與「單書動作選單頂部標題」兩則測試，本文件原稿的 `findsOneWidget` 斷言在 C-1 修正（`BookCover` 一併轉換）落地後會自相矛盾（畫面此時同時存在封面縮略與卡片/選單標題等多處已轉換文字），實作階段已正確訂正為 `findsNWidgets(2)`／`findsWidgets`，本文件上方兩則測試程式碼已同步更新以反映實際落地版本。
