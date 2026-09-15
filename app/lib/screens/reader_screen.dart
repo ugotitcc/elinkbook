@@ -53,6 +53,7 @@ import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/toc_entry.dart';
 import '../reader/toc_navigator.dart';
+import '../reader/resolve_text_conversion.dart';
 import '../reader/resolved_preferences.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
@@ -3132,6 +3133,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   Widget _buildNativeView(BookFormat format, bool isLandscape) {
     final resolved = _resolved!;
+    // epic-42-text-conversion Issue 2：_resolved 非 null 時 _loaded 恆非
+    // null（兩者在 initState()／_handlePrefsChanged() 內永遠同時賦值，見
+    // resolve_text_conversion.dart 呼叫端查證）。
+    final textConversionMode =
+        resolveTextConversion(_prefs, _loaded!.globalPrefs.reading);
     switch (format) {
       case BookFormat.epub:
       case BookFormat.azw3:
@@ -3170,6 +3176,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           textColor: _themedTextColor,
           backgroundColor: _themedBackgroundColor,
           dualPageMode: resolved.dualPageMode,
+          textConversion: textConversionMode,
           isLandscape: isLandscape,
           customFonts: _customFonts,
           navZoneActions: resolved.navZoneActions,
