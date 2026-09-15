@@ -63,7 +63,7 @@
 
 ## Issue 1：資料模型＋全域/單書 UI 入口
 
-**Status:** ready-for-agent
+**Status:** completed（**2026-09-15 已完成並合併回 `main`（PR [#247](https://git.jigong.org/huthief/elinkBook/pulls/247)，分支 `feat/epic-42-issue-1`）**：`plans/plan-issue-1.md` 8 個 Task 全數完成——`BookReaderPrefs.textConversionOverride`／`ReadingDefaults.textConversion`／`resolveTextConversion()`＋SQLite v25→v26 遷移＋`ReadingDefaultsScreen`／`ReaderSettingsSheet`／`FxlSettingsSheet` UI。獨立程式審查（`reviews/review-issue-1.md`）：0 Critical／0 Important／2 Minor，結論 Ready to merge: Yes。`flutter test`（9 個目標測試檔合計 525 項）／`flutter analyze` 全數通過零回歸。Issue 2 現已可開工。）
 
 **依賴：** Issue 0
 

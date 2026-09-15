@@ -50,7 +50,7 @@
 | 40 | `epic-38-reader-chrome-tts-redesign` 閱讀器 Chrome／TTS 重構（`DESIGN.md` §19 階段二） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 41 | `epic-39-layout-settings-redesign` 版面設定三畫面主題化＋E-Ink 步進器（`DESIGN.md` §18.3 補實作） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 42 | `epic-41-search-architecture-hardening` 全文檢索模組架構深化機會（epic-10-search 開發後盤點） | 🟡 開發中 (Active) | Issue 1-5（PR #240-#244）已完成並合併；僅剩 Issue 6 `needs-info` 暫緩，待人類決定歸檔時機 |
-| 43 | `epic-42-text-conversion` 簡繁轉換（FR-48） | 🟡 開發中 (Active) | Issue 0（PR #245）／Issue 0b（PR #246）已完成並合併，ADR 0032 方案（台灣常用詞字典＋TextOffsetMap）補齊完畢；Issue 1-5 待開工 |
+| 43 | `epic-42-text-conversion` 簡繁轉換（FR-48） | 🟡 開發中 (Active) | Issue 0（PR #245）／Issue 0b（PR #246）／Issue 1（PR #247）已完成並合併，資料模型＋全域/單書 UI 入口到位；Issue 2-5 待開工 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。
