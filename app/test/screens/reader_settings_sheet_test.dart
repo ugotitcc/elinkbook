@@ -8,6 +8,7 @@ import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/layout_preset.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
@@ -715,6 +716,47 @@ void main() {
 
     expect(result, isNotNull);
     expect(result!.pageTurnModeOverride, PageTurnMode.scroll);
+  });
+
+  testWidgets('點擊「轉換為繁體」圖示後，onChanged 帶入 TextConversionMode.toTraditional',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => result = prefs,
+    );
+    await switchToTab(tester, '呈現');
+
+    await tester.tap(
+      find.byKey(const Key('reader_settings_text_conversion_traditional')),
+    );
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.textConversionOverride, TextConversionMode.toTraditional);
+  });
+
+  testWidgets(
+      'textConversionOverride 初始為 toSimplified 時，點擊「使用全域預設」圖示後，'
+      'onChanged 帶入 null', (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(
+        textConversionOverride: TextConversionMode.toSimplified,
+      ),
+      (prefs) => result = prefs,
+    );
+    await switchToTab(tester, '呈現');
+
+    await tester.tap(
+      find.byKey(const Key('reader_settings_text_conversion_global')),
+    );
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.textConversionOverride, isNull);
   });
 
   testWidgets(
