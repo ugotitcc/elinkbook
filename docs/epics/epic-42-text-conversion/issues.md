@@ -90,7 +90,7 @@
 
 ## Issue 2：JS 端 DOM Walker 與雙向分段偏移映射（CFI 保護）
 
-**Status:** ready-for-agent
+**Status:** completed（**2026-09-16 已完成並合併回 `main`（PR [#248](https://git.jigong.org/huthief/elinkBook/pulls/248)，分支 `feat/epic-42-issue-2`）**：`plans/plan-issue-2.md`（經 `review-plan-issue-2.md` 審查修正 2 項 Critical──C-1 `toOriginalRange()` 須回傳純資料物件、不得建構真實 DOM Range；C-2 `resolveDisplayRange()` 須在呼叫 `anchor(doc)` 前暫時復原已轉換節點原文，不得事後調整其回傳值──與 2 項 Important／2 項 Minor 後定案）6 個 Task 全數完成：新增 `text-conversion-walker.js`（`applyTextConversion`／`adjustOffsetForCfi`／`toOriginalRange`／`resolveDisplayRange`）、`main.js` 對 `view.getCFI`／`view.resolveCFI` 做實例層級方法遮蔽（全專案唯一 Range↔CFI 轉換入口，涵蓋 `view.js` 內部 `#onRelocate()`／`#toSearchMatch()`／`resolveNavigation()`）、DOM Walker 接線至 `'load'` 事件與 `window.applyPreferences()` 即時切換（並重新呼叫 `window.setDecorations()` 修正既有標記錯位）、`FoliateReaderView.textConversion` 建構參數、`reader_screen.dart` 傳入 `resolveTextConversion()` 解析結果、CFI 穩定性回歸整合測試。獨立程式審查（`reviews/review-issue-2.md`）：實際執行全部驗證指令（含另開 worktree 跑 `.mjs` 測試／`flutter analyze`／327 項目標 `flutter test`／獨立查證 `view.js`／`epub.js` 原始碼確認方法遮蔽涵蓋所有呼叫點），確認 0 Critical／0 Important（僅真機 `integration_test` 待執行，非實作缺口）／2 Minor（`resolveDisplayRange()` try/finally 無 catch 之隱含假設、`applyPreferences()` truthy 判斷之未來限制，皆已於合併前補上說明註解），結論 Ready to merge: Yes。至此 CFI（劃線／書籤／閱讀位置／TTS）在簡繁顯示轉換下的座標保護已完整落地，Issue 3-5（皆依賴 Issue 0／Issue 1，彼此獨立）已可開工。）
 
 **依賴：** Issue 0（字典檔案／`convertText`）、Issue 0b（`TWPhrases`／`s2twp`／`tw2s` 字典與 `TextOffsetMap` 演算法，本 Issue 的 DOM Walker 直接消費、不重新實作）、Issue 1（`resolveTextConversion`／偏好設定管線）
 
