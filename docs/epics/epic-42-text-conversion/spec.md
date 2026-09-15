@@ -1,6 +1,6 @@
 # Epic 42 — 簡繁轉換：規格 (Spec)
 
-這是實作 `epic-42-text-conversion` 的唯一事實來源。決策的完整討論過程與理由請見 `design.md`（`/grill-with-docs` 2026-09-14／2026-09-15，15 項 Discovery 決策）與審查修訂（`reviews/review-epic-and-design.md`，2026-09-15，本檔案依專案慣例不進版控）、[ADR 0030](../../adr/0030-text-conversion-character-level-for-cfi-safety.md)（轉換精細度定案為 1:1 字元轉換）、[ADR 0031](../../adr/0031-text-conversion-dual-runtime-dictionary-not-opencc-js.md)（函式庫選型：雙端共用原始字元表，不 vendor `opencc-js`）。本文件延續 `design.md` 的所有範圍界定與審查修訂結果，不重複列出理由，僅在此定案核心介面/型別，供 Scrum Master 階段拆解工單使用。
+這是實作 `epic-42-text-conversion` 的唯一事實來源。決策的完整討論過程與理由請見 `design.md`（`/grill-with-docs` 2026-09-14／2026-09-15，15 項 Discovery 決策）與審查修訂（`reviews/review-epic-and-design.md`，2026-09-15，本檔案依專案慣例不進版控）、[ADR 0032](../../adr/0032-text-conversion-taiwan-phrases-with-piecewise-offset-map.md)（取代 [ADR 0030](../../adr/0030-text-conversion-character-level-for-cfi-safety.md)，簡轉繁採 `s2twp`＋雙向分段偏移映射，繁轉簡採 `tw2s` 保留原著文風）、[ADR 0031](../../adr/0031-text-conversion-dual-runtime-dictionary-not-opencc-js.md)（函式庫選型：雙端共用原始字元/詞彙表，不 vendor 龐大 `opencc-js` bundle）及 [offset-mapping-spec.md](./offset-mapping-spec.md)（雙向字元偏移映射演算法規格）。本文件延續 `design.md` 的所有範圍界定與審查修訂結果，不重複列出理由，僅在此定案核心介面/型別，供 Scrum Master 階段拆解工單使用。
 
 ## Problem Statement
 
@@ -11,7 +11,7 @@
 三態顯示切換（原文／轉換為繁體／轉換為簡體），涵蓋：
 
 1. **資料模型**：`GlobalReaderPrefs.reading`（`ReadingDefaults`）與 `BookReaderPrefs` 各新增一個欄位，比照既有「排版方向覆寫」雙層解析模式。
-2. **雙端字元轉換模組**：JS 端（WebView 顯示層，1:1 字元 DOM Walker，見 ADR 0030）與 Dart 端（純 Dart 查找表，見 ADR 0031），皆由同一份 OpenCC 原始字元表資料生成，結果一致。
+2. **雙端字元/詞彙轉換模組**：JS 端（WebView 顯示層，含 `TextOffsetMap` 雙向偏移映射，見 ADR 0032 與 `offset-mapping-spec.md`）與 Dart 端（純 Dart 查找表/Trie，見 ADR 0031），由 OpenCC 原始表生成，結果一致。
 3. **UI 入口**：`ReadingDefaultsScreen`（全域預設）＋ `ReaderSettingsSheet`／`FxlSettingsSheet`（單書覆寫，依格式分流）。
 4. **全文檢索整合**：`SearchRepository` 查詢端 Query Expansion。
 5. **TTS 整合**：朗讀段文字轉換與 CFI 錨點解耦。
@@ -34,17 +34,22 @@
   - 寫入路徑新增對應 `sp.setString(_textConversionKey, prefs.reading.textConversion.name)`。
 - **生效值解析**：新增純函式（暫名 `resolveTextConversion(BookReaderPrefs book, ReadingDefaults global)`，比照專案既有「純函式優先」慣例）回傳 `book.textConversionOverride ?? global.textConversion`（審查修正 M-2：第二個參數型別為 `ReadingDefaults`，故直接取其 `textConversion` 欄位，不經過 `.reading`——`.reading` 是 `GlobalReaderPrefs` 才有的巢狀欄位，先前版本此處筆誤），供 `ReaderScreen`／各 Flutter 端渲染呼叫點統一使用，不在多處重複 `??` 邏輯。
 
-### JS 端字元轉換模組（見 ADR 0030／ADR 0031）
+### JS 端轉換與偏移映射模組（見 ADR 0032／ADR 0031／offset-mapping-spec.md）
 
-- 新增 vendor 檔案（暫名 `app/android/app/src/main/assets/foliate/text_conversion_dict.js`，精確檔名/路徑留待實作階段），內容為由 `STCharacters.txt`／`TSCharacters.txt` 生成的兩個純物件字面量（`s2t`／`t2s` 查找表），比照 `foliate-js` 釘定版本、不經 npm 建置的 vendoring 慣例。
-- **字典生成腳本的正規化約束（審查修正 I-3）**：OpenCC 原始字元表為 TSV 格式，右側目標欄位可能包含多個以半形空格分隔的候選字（例如 `后\t後 后`、`干\t乾 幹 干`）——生成腳本**必須**先以空白分割右側欄位、只取第一個候選字（`candidates.split(' ')[0]`），並內建 assertion 嚴格檢驗產生的每一組鍵值皆為 `key.runes.length === 1 && value.runes.length === 1`，任何一筆不滿足即中止生成，防止多字元候選字被誤植入字典而打破 ADR 0030 的 ΔL=0 前提。JS 與 Dart 兩份查找表須用同一份生成邏輯／同一次執行輸出，避免各自實作規則漂移。
+- 新增 vendor 檔案（暫名 `app/android/app/src/main/assets/foliate/text_conversion_dict.js`，精確檔名/路徑留待實作階段），內容包含由 `STCharacters.txt`、`TSCharacters.txt` 與 `TWPhrases.txt` 等生成的精簡查找表/前綴樹，比照 `foliate-js` 釘定版本、不經 npm 建置的 vendoring 慣例。
+- **字典模式配置（方案 A，見 ADR 0032）**：
+  - **`toTraditional`（簡轉繁）**：採用 `s2twp`（包含 `TWPhrases` 817 條台灣慣用語在地化，如「記憶體」、「軟體」、「程式碼」、「伺服器」）。
+  - **`toSimplified`（繁轉簡）**：採用 `tw2s`（標準字形簡化，保留原書作者之文筆與台灣慣用譯名風格，如「妥瑞氏症」、「好市多」、「計程車」不強制套用大陸用語）。
 - 新增 DOM Walker 函式（暫名 `applyTextConversion(root, mode)`，於 `main.js` 或獨立模組），比照 `extractSegmentsForSection`（`main.js:683-738`）既有的 `createTreeWalker`／`NodeFilter.SHOW_TEXT` 寫法：
   - 走訪範圍：目前渲染中 section 的可見文字節點，排除 `<rt>`／`<script>`／`<style>` 標籤（沿用 `extractSegmentsForSection` 既有排除清單並視需要擴充）。
-  - **原始文字快取（審查修正 I-1，取代「單向反向查表還原」的錯誤假設）**：簡化字存在真實的多對一併字（例如「後」「后」皆簡化為「后」；「幹」「乾」「干」皆簡化為「干」），`s2t`/`t2s` 字典**不是雙射**，不存在無損的反向轉換——若走訪節點時原地覆寫 `node.nodeValue` 且不備份原文，切回「原文」模式時無法正確還原（例如「后」不知道該還原成「後」還是「后」）。走訪每個文字節點時，若尚未快取過，先用動態屬性存一份原文：`if (node._elinkOrigText === undefined) node._elinkOrigText = node.nodeValue;`；**任何模式切換皆以 `node._elinkOrigText` 為轉換輸入基準，絕不對已轉換的 `node.nodeValue` 做二次轉換或反向推導**：`original` 模式直接 `node.nodeValue = node._elinkOrigText`；`toTraditional`／`toSimplified` 模式對 `node._elinkOrigText` 逐字元查表後寫入 `node.nodeValue`。
-  - 轉換邏輯：**逐字元查表替換**，**不得**做任何多字元 lookahead 或長度改變的替換（ADR 0030 決策 4 的硬性限制）。**注意**：ΔL=0（長度不變，保護 CFI）與「是否雙射／可逆」是兩個獨立性質——上一段的原始文字快取解決的是後者，不影響、也不依賴 ADR 0030 對前者的結論。
-  - **開書當下與逐 section 觸發**：比照第 3 點「逐 section Lazy 轉換」，在 `beforeRender`／section 渲染完成的既有掛鉤點呼叫（精確整合點留待實作階段對照 `paginator.js` 現行渲染生命週期 API 查證）。
-  - **閱讀中即時切換的更新路徑（審查修正 I-2）**：`buildFoliatePreferencesMap`（`foliate_reader_view.dart:98`）需新增注入 `textConversion: resolveTextConversion(...).name`。`main.js` 的 `window.applyPreferences`（194 行起）需比照既有 `writingMode` 變動偵測手法（`main.js:345-356`：僅在真的變動、而非「有帶欄位就觸發」時才動作，避免裝置旋轉等既有 `applyPreferences(lastAppliedPrefs)` 重呼叫造成多餘副作用）——偵測 `prefs.textConversion !== lastAppliedPrefs?.textConversion` 時，呼叫 `view.goTo(view.lastLocation?.cfi)` 觸發目前章節以新的轉換模式重新載入（與 `writingMode` 完全同一套既有機制，不需要另外設計對目前可見 DOM 直接重新走訪的替代路徑）。
-  - **前置條件**：`app/tool/check_foliate_es_compat.js` 的 `extractPolyfillSource()` 目前寫死抓取 `foliate_reader_view.dart` 裡的 `_esCompatPolyfillJs`，但該常數已搬到 `foliate_native_bridge.dart:219` 且改名為 `esCompatPolyfillJs`（無底線前綴），腳本執行必定拋例外。**本 Epic 開始改動 `main.js`／`foliate_native_bridge.dart` 前，須先修復這支守門腳本的引用路徑**（獨立於本 Epic 的既有 bug，但會擋住本 Epic 新增 vendor 檔案的 ES 相容性檢查）。
+  - **原始文字快取**：走訪每個文字節點時，若尚未快取過，先用動態屬性存一份原文：`if (node._elinkOrigText === undefined) node._elinkOrigText = node.nodeValue;`；任何模式切換皆以 `node._elinkOrigText` 為轉換輸入基準。
+  - **分段偏移映射產製（`TextOffsetMap`）**：在文字節點替換文字時，若 `dispText.length !== origText.length`，生成雙向映射陣列綁定至 `node._elinkOffsetMap`；若長度無變更（全量統計佔 97.6%），則設為 `null`，保持零額外開銷。
+  - **雙向 CFI 座標適配**：
+    - `epubcfi.fromRange()` 前：透過 `displayToOrig(map, offset, snapPolicy)` 將選取起訖點映射回原始文字 offset，保證儲存之 CFI 恆對應原文 EPUB 文本。
+    - `epubcfi.toRange()` 後：透過 `origToDisplay(map, offset)` 將原文 offset 校正為 live DOM 當下 offset，精確框選台灣常用詞並加入邊界保護，消除 `IndexSizeError`。
+  - **開書當下與逐 section 觸發**：在 `view.addEventListener('load', ...)` 監聽器內呼叫 `applyTextConversion(e.detail.doc, currentTextConversion)`。
+  - **閱讀中即時切換**：`window.applyPreferences` 偵測 `prefs.textConversion` 變動時，直接走訪 `view.renderer.getContents()` 所有可見 `doc` 並呼叫 `applyTextConversion` 原地刷新。
+  - **前置條件**：`app/tool/check_foliate_es_compat.js` 修復引用路徑至 `foliate_native_bridge.dart:219` 的 `esCompatPolyfillJs`。
 
 ### Dart 端字元轉換模組（見 ADR 0031）
 

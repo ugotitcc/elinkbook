@@ -1,0 +1,80 @@
+OpenCC Length Difference Analysis: tw2s (Taiwan Traditional -> Simplified)
+========================================================================================
+opencc-js version: 1.4.2
+Direction: tw2s (Taiwan Traditional -> Simplified Chinese standard)
+Generated: 2026-09-15T01:47:29.149Z
+
+PRIMARY METRIC
+--------------
+UTF-16 code units (JavaScript String.length / Dart String.length / DOM Range Offset)
+
+TOTAL STATISTICS
+----------------
+Total unique vocabulary entries analyzed: 5135
+🔴 UTF-16 length CHANGED (offset drift): 220 (4.284%)
+   - UTF-16 length increased (+): 191
+   - UTF-16 length decreased (-): 29
+   - Causes breakdown:
+     * Taiwan regional phrase length change: 0 entries (tw2s does not convert regional phrases)
+     * Unicode surrogate pair character change (diffCP=0): 220 entries
+🟡 Code Point changed but UTF-16 unchanged: 0 (0.000%)
+🟢 Length completely unchanged: 4915 (95.716%)
+
+LENGTH CHANGE CATEGORIES
+------------------------
+1→2: 190
+2→1: 29
+3→4: 1
+
+SURROGATE PAIR CHARACTERS CAUSING OFFSET DRIFT (SAMPLE)
+-------------------------------------------------------
+二噁英 -> 二𫫇英 (UTF-16: 3→4, diff: +1)
+紃 -> 𬘓 (UTF-16: 1→2, diff: +1)
+娙 -> 𫰛 (UTF-16: 1→2, diff: +1)
+浿 -> 𬇙 (UTF-16: 1→2, diff: +1)
+紞 -> 𬘘 (UTF-16: 1→2, diff: +1)
+訏 -> 𬣙 (UTF-16: 1→2, diff: +1)
+軏 -> 𫐄 (UTF-16: 1→2, diff: +1)
+埨 -> 𫭢 (UTF-16: 1→2, diff: +1)
+晛 -> 𬀪 (UTF-16: 1→2, diff: +1)
+桱 -> 𣐕 (UTF-16: 1→2, diff: +1)
+梜 -> 𬂩 (UTF-16: 1→2, diff: +1)
+軝 -> 𬨂 (UTF-16: 1→2, diff: +1)
+釴 -> 𬬩 (UTF-16: 1→2, diff: +1)
+𡞵 -> 㛟 (UTF-16: 2→1, diff: -1)
+湋 -> 𣲗 (UTF-16: 1→2, diff: +1)
+睍 -> 𪾢 (UTF-16: 1→2, diff: +1)
+絪 -> 𬘡 (UTF-16: 1→2, diff: +1)
+詀 -> 𧮪 (UTF-16: 1→2, diff: +1)
+詝 -> 𬣞 (UTF-16: 1→2, diff: +1)
+𨋢 -> 䢂 (UTF-16: 2→1, diff: -1)
+釿 -> 𬬱 (UTF-16: 1→2, diff: +1)
+鈇 -> 𫓧 (UTF-16: 1→2, diff: +1)
+勣 -> 𪟝 (UTF-16: 1→2, diff: +1)
+嗰 -> 𠮶 (UTF-16: 1→2, diff: +1)
+𡻕 -> 岁 (UTF-16: 2→1, diff: -1)
+暐 -> 𬀩 (UTF-16: 1→2, diff: +1)
+絺 -> 𫄨 (UTF-16: 1→2, diff: +1)
+綄 -> 𬘫 (UTF-16: 1→2, diff: +1)
+綎 -> 𬘩 (UTF-16: 1→2, diff: +1)
+蒍 -> 𫇭 (UTF-16: 1→2, diff: +1)
+詪 -> 𬣳 (UTF-16: 1→2, diff: +1)
+詷 -> 𫍣 (UTF-16: 1→2, diff: +1)
+𧵳 -> 䞌 (UTF-16: 2→1, diff: -1)
+輄 -> 𨐈 (UTF-16: 1→2, diff: +1)
+輋 -> 𪨶 (UTF-16: 1→2, diff: +1)
+鉊 -> 𬬿 (UTF-16: 1→2, diff: +1)
+鉝 -> 𫟷 (UTF-16: 1→2, diff: +1)
+鉥 -> 𬬸 (UTF-16: 1→2, diff: +1)
+鉧 -> 𬭁 (UTF-16: 1→2, diff: +1)
+鉮 -> 𬬹 (UTF-16: 1→2, diff: +1)
+隑 -> 𬮿 (UTF-16: 1→2, diff: +1)
+頍 -> 𫠆 (UTF-16: 1→2, diff: +1)
+僤 -> 𫢸 (UTF-16: 1→2, diff: +1)
+塸 -> 𫭟 (UTF-16: 1→2, diff: +1)
+塿 -> 𪣻 (UTF-16: 1→2, diff: +1)
+㜢 -> 𡞱 (UTF-16: 1→2, diff: +1)
+𡠹 -> 㛿 (UTF-16: 2→1, diff: -1)
+嵽 -> 𫶇 (UTF-16: 1→2, diff: +1)
+彄 -> 𫸩 (UTF-16: 1→2, diff: +1)
+漍 -> 𬇹 (UTF-16: 1→2, diff: +1)

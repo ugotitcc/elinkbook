@@ -2,7 +2,7 @@
 
 ## 狀態
 
-已採納
+被 [ADR 0032](./0032-text-conversion-taiwan-phrases-with-piecewise-offset-map.md) 取代（由 1:1 純字元對照升級為支援台灣常用詞之雙向分段偏移映射架構）
 
 ## 背景
 

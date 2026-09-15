@@ -1,30 +1,34 @@
 # Epic 42 — 簡繁轉換：工單清單 (Issues)
 
-依 `spec.md`（唯一事實來源，含 ADR 0030／ADR 0031 與 spec 審查修訂）拆解為 Issue 0-5。**Issue 0 優先開始；Issue 1 依賴 Issue 0（`TextConversionMode` enum 定義，見 `reviews/review-issues.md` I-1 修正，推翻先前「Issue 0/1 彼此獨立」的誤判）；Issue 2-5 皆阻塞於 Issue 0＋Issue 1，但彼此互相獨立、可平行進行**（2026-09-15 `/to-tickets` 確認拆分方式；2026-09-15 依審查報告修正依賴關係與多項技術細節）。
+依 `spec.md`（唯一事實來源，含 ADR 0032／ADR 0031、offset-mapping-spec.md 與 spec 審查修訂）拆解為 Issue 0-5。**Issue 0 優先開始；Issue 1 依賴 Issue 0（`TextConversionMode` enum 定義）；Issue 2-5 皆阻塞於 Issue 0＋Issue 1，但彼此互相獨立、可平行進行**（2026-09-15 決策確認方案 A：簡轉繁 `s2twp`＋雙向分段偏移映射，繁轉簡 `tw2s` 保留原著文風）。
 
 ---
 
-## Issue 0：前置修復＋雙端字典生成
+## Issue 0：前置修復＋雙端字典生成（支援台灣常用詞）
 
 **Status:** ready-for-agent
 
 **依賴：** 無（可立即開始）
 
 **範圍：**
-- 修復 `app/tool/check_foliate_es_compat.js` 的 `extractPolyfillSource()`：目前寫死抓取 `foliate_reader_view.dart` 裡的 `_esCompatPolyfillJs`，但該常數已搬到 `foliate_native_bridge.dart:219` 且改名為 `esCompatPolyfillJs`（無底線前綴），腳本執行必定拋例外。修正引用路徑（檔案＋常數名稱），確認腳本可正常執行不拋例外。此為既有、與本 Epic 決策無關的 bug，但會擋住本 Epic 後續新增 vendor 檔案的 ES 相容性檢查，須最優先處理。
-- 新增字典生成腳本（一次性執行或未來可重跑），輸入為 OpenCC 原始字元表（`STCharacters.txt`／`TSCharacters.txt`）。**來源與存放規範（審查修正 I-3）**：專案目前未內含這兩個檔案，須從 BYVoid/OpenCC 官方倉庫取得（例如 `https://raw.githubusercontent.com/BYVoid/OpenCC/master/data/dictionary/`，實作時查證當下的正確路徑/發行版標籤是否仍有效，不假設此處網址永久不變）；原始 TSV 檔存放於專案內固定目錄（暫名 `app/tool/opencc_data/`），比照既有 vendoring 慣例納入版控；生成腳本本身放在 `app/tool/`（暫名 `generate_conversion_dicts.js` 或等效）。輸出兩份查找表：
-  - JS 端 vendor 檔案（`app/android/app/src/main/assets/foliate/` 下，暫名 `text_conversion_dict.js`，純物件字面量，比照 `foliate-js` 釘定版本、不經 npm 建置的 vendoring 慣例）。
-  - Dart 端檔案（暫名 `app/lib/reader/text_conversion_dict.dart`，`Map<String, String>` 常數）。
-  - **正規化約束（spec.md 審查修正 I-3）**：右側目標欄位若含多個以半形空格分隔的候選字（例如 `后\t後 后`），只取第一個候選字；生成腳本須內建 assertion 嚴格檢驗每組鍵值皆為 `key.runes.length === 1 && value.runes.length === 1`，任何一筆不滿足即中止生成。JS 與 Dart 兩份查找表須用同一份生成邏輯／同一次執行輸出。
-- 新增 `enum TextConversionMode { original, toTraditional, toSimplified }`（`app/lib/reader/text_conversion_mode.dart`，比照 `dual_page_mode.dart` 既有單檔單 enum 慣例）。
-- 新增 Dart 純函式 `String convertText(String input, TextConversionMode mode)`：`original` 時原樣回傳，其餘依對應字典逐字元查表替換，查不到的字元維持原樣。
+- 修復 `app/tool/check_foliate_es_compat.js` 的 `extractPolyfillSource()`：目前寫死抓取 `foliate_reader_view.dart` 裡的 `_esCompatPolyfillJs`，修正引用路徑至 `foliate_native_bridge.dart:219` 的 `esCompatPolyfillJs`，確認腳本可正常執行不拋例外。
+- 新增字典生成腳本（`app/tool/generate_conversion_dicts.js`），輸入為 OpenCC 原始字元與常用詞表（`STCharacters.txt`、`TSCharacters.txt`、`TWPhrases.txt`、`TWVariants.txt` 等，存放於 `app/tool/opencc_data/`）。依據 **方案 A（ADR 0032）** 輸出兩端查找表：
+  - **簡轉繁（`toTraditional`）**：`s2twp` 字典組合（單字＋`TWPhrases` 817 條台灣在地化慣用語，如「記憶體」、「軟體」、「程式碼」、「伺服器」）。
+  - **繁轉簡（`toSimplified`）**：`tw2s` 字典組合（標準台繁到簡體字形，不套用大陸用語，忠實保留原著風格）。
+  - JS 端 vendor 檔案（`app/android/app/src/main/assets/foliate/text_conversion_dict.js`）。
+  - Dart 端檔案（`app/lib/reader/text_conversion_dict.dart`）。
+- 新增 `enum TextConversionMode { original, toTraditional, toSimplified }`（`app/lib/reader/text_conversion_mode.dart`）。
+- 新增 Dart 純函式 `String convertText(String input, TextConversionMode mode)` 與 `TextOffsetMap` 演算法類別（支援片語匹配與字元替換）。
 
 **單元測試要求：**
-- `convertText()`：已知字元對正確轉換（含至少一組多對一併字案例，如「後」「后」皆應轉換為「后」）；查不到的字元原樣保留；`original` 模式恆等於輸入。
-- 字典生成腳本：對含多候選字的測試輸入行，驗證只取第一個候選字；對刻意植入的多字元候選字輸入，驗證 assertion 會中止生成（不會產生 ΔL≠0 的字典項）。
-- `check_foliate_es_compat.js` 修復後可正常執行完畢、不拋例外（回歸驗證）。
+- `convertText()`：
+  - 簡轉繁（`s2twp`）：驗證一般字形轉換（如「后」→「後」）與台灣慣用詞轉換（如「内存」→「記憶體」、「软件」→「軟體」）。
+  - 繁轉簡（`tw2s`）：驗證字形轉換（如「記憶體」→「记忆体」、「妥瑞氏症」→「妥瑞氏症」，不被替換為大陸詞彙）。
+  - 查不到之字詞原樣保留；`original` 模式恆等於輸入。
+- 字典生成腳本：驗證產出的 JS 與 Dart 檔案結構正確，語法可通過 `node --check`。
+- `check_foliate_es_compat.js` 修復後可正常執行完畢、不拋例外。
 
-**驗收標準：** 上述測試通過；JS 字典檔案已 vendor 進版控且可被 WebView 載入（至少手動驗證一次 `node --check text_conversion_dict.js` 語法正確）；`flutter analyze` 乾淨。
+**驗收標準：** 上述測試通過；雙端字典檔案已 vendor 進版控；`flutter analyze` 乾淨。
 
 ---
 
@@ -32,48 +36,54 @@
 
 **Status:** ready-for-agent
 
-**依賴：** Issue 0（審查修正 I-1：本工單引用 Issue 0 定義的 `TextConversionMode` enum，非真正獨立，先前「與 Issue 0 平行」的標註有誤，已修正）
+**依賴：** Issue 0
 
 **範圍：**
 - `BookReaderPrefs` 新增欄位 `final TextConversionMode? textConversionOverride;`（`null` = 未覆寫）：`toMap()`／`fromMap()`／`copyWith()`／`==`／`hashCode` 依既有欄位模式一併補上；`reflowableEpubFields()` 保留此欄位（不強制清 null）。
 - `ReadingDefaults` 新增欄位 `final TextConversionMode textConversion;`（non-nullable，預設 `TextConversionMode.original`）：`copyWith()`／`==`／`hashCode` 依既有模式一併補上。
 - `ReaderPrefsManagerImpl`：新增 SharedPreferences key、`loadGlobalPrefs()` 讀取（沿用既有 `_readEnum` helper）、寫入路徑補上對應 `sp.setString(...)`。
 - 新增純函式 `resolveTextConversion(BookReaderPrefs book, ReadingDefaults global)`，回傳 `book.textConversionOverride ?? global.textConversion`。
-- SQLite 版本 25→26：`book_reader_prefs` 新增欄位 `text_conversion_override TEXT`（可空）。**遷移程式碼須放在 `sqlite_library_repository.dart` 既有 `else`（`oldVersion >= 2`）分支內的 `if (oldVersion < 26)`**，比照該檔案既有欄位新增慣例，不得放在 `if/else` 區塊外（否則 `oldVersion == 1` 裝置升級會拋出 `duplicate column name` 例外）。
-- **全域預設 UI**：`ReadingDefaultsScreen` 新增一列三態選擇器（沿用該畫面既有欄位樣式）。
-- **單書覆寫 UI**：`ReaderSettingsSheet`（流式 EPUB／KF8／TXT／MD）與 `FxlSettingsSheet`（FXL EPUB／KF8）皆新增含 `null` 的四態選擇器（`null` 標示「使用全域預設」，比照 `reader_settings_sheet.dart:959-963` `_buildScreenOrientationOverrideRow()` 既有模式，選項清單第一項固定為全域預設）。`FxlSettingsSheet` 需新增建構子參數（暫名 `final bool showTextConversion;`），由呼叫端 `reader_screen.dart` 依開啟中書籍格式判斷（非 CBZ）傳入；CBZ 開啟該 Sheet 時此欄位不顯示。PDF（`PdfSettingsSheet`）不新增此欄位。
+- SQLite 版本 25→26：`book_reader_prefs` 新增欄位 `text_conversion_override TEXT`（可空）。遷移程式碼須放在 `sqlite_library_repository.dart` 既有 `else`（`oldVersion >= 2`）分支內的 `if (oldVersion < 26)`。
+- **全域預設 UI**：`ReadingDefaultsScreen` 新增一列三態選擇器。
+- **單書覆寫 UI**：`ReaderSettingsSheet`（流式 EPUB／KF8／TXT／MD）與 `FxlSettingsSheet`（FXL EPUB／KF8）皆新增含 `null` 的四態選擇器。`FxlSettingsSheet` 需新增建構子參數 `final bool showTextConversion;`，非 CBZ 時顯示。PDF 不新增此欄位。
 
 **單元測試要求：**
 - `BookReaderPrefs`／`ReadingDefaults` 的 `toMap`/`fromMap`/`copyWith`/`==`/`hashCode` 新欄位往返正確。
 - `resolveTextConversion()`：`book.textConversionOverride` 非 null 時優先於 `global.textConversion`；為 null 時回退全域值。
 - SQLite migration（v25→v26）：既有裝置升級後 `text_conversion_override` 存在且為 `NULL`；模擬 `oldVersion == 1` 升級不拋 `duplicate column name` 例外。
-- Widget test：`ReadingDefaultsScreen` 三態選擇器可正確切換並持久化（重新載入後值不變）。
-- Widget test：`ReaderSettingsSheet`／`FxlSettingsSheet` 四態選擇器（含「使用全域預設」）正確寫回 `textConversionOverride`。
-- Widget test：`FxlSettingsSheet` 傳入 `showTextConversion: true`（FXL EPUB/KF8）時顯示該選項；傳入 `showTextConversion: false`（CBZ）時該控制項不存在。
+- Widget test：`ReadingDefaultsScreen` 三態選擇器可正確切換並持久化。
+- Widget test：`ReaderSettingsSheet`／`FxlSettingsSheet` 四態選擇器正確寫回 `textConversionOverride`。
+- Widget test：`FxlSettingsSheet` 依 `showTextConversion` 決定是否渲染。
 
-**驗收標準：** 上述測試通過、`flutter analyze` 乾淨；真機或模擬器上可在系統設定與單書版面設定切換此偏好並正確持久化（此時切換尚不會改變畫面文字，轉換效果由 Issue 2／3 接上）。
+**驗收標準：** 上述測試通過、`flutter analyze` 乾淨；系統設定與單書設定切換此偏好正確持久化。
 
 ---
 
-## Issue 2：JS 端 DOM Walker 與 CFI 安全轉換
+## Issue 2：JS 端 DOM Walker 與雙向分段偏移映射（CFI 保護）
 
 **Status:** ready-for-agent
 
 **依賴：** Issue 0（字典檔案／`convertText`）、Issue 1（`resolveTextConversion`／偏好設定管線）
 
 **範圍：**
-- 新增 DOM Walker 函式（暫名 `applyTextConversion(root, mode)`，於 `main.js` 或獨立模組），比照 `extractSegmentsForSection`（`main.js:683-738`）既有的 `createTreeWalker`／`NodeFilter.SHOW_TEXT` 寫法，走訪目前渲染中 section 的可見文字節點，排除 `<rt>`／`<script>`／`<style>` 標籤。
-- **原始文字快取**：每個文字節點首次走訪時，以動態屬性快取原文（`if (node._elinkOrigText === undefined) node._elinkOrigText = node.nodeValue;`）。任何模式切換皆以 `node._elinkOrigText` 為轉換輸入基準，絕不對已轉換的 `node.nodeValue` 做二次轉換或反向推導：`original` 模式直接還原 `node._elinkOrigText`；`toTraditional`／`toSimplified` 對 `node._elinkOrigText` 逐字元查表後寫入。
-- 轉換邏輯逐字元查表替換，不得做任何多字元 lookahead 或長度改變的替換。
-- **新章節載入時的觸發點（審查修正 M-2，取代原「`beforeRender`」錯誤措辭）**：`main.js` 並沒有公開的 `beforeRender` 事件可掛鉤——比照既有 `view.addEventListener('load', ...)`（`main.js:1020`，新章節載入時觸發，`e.detail.doc` 即該 section 渲染後的 DOM），在此既有監聽器內對新載入章節呼叫 `applyTextConversion(e.detail.doc, currentTextConversion)`。
-- **閱讀中即時切換（審查修正 C-1，推翻原「呼叫 `view.goTo()`」方案）**：原規劃比照 `writingMode` 變動時呼叫 `view.goTo(view.lastLocation?.cfi)`，但核對 `paginator.js:3651-3673` 的 `#goTo()` 確認：`directionChanged`（是否變更排版方向）為 `false` 時，會直接命中「View already loaded — reuse it without clearing/reloading」分支，完全不重建 DOM、不觸發任何渲染事件——簡繁切換不改變排版方向，`directionChanged` 恆為 `false`，呼叫 `view.goTo()` 對畫面文字沒有任何刷新效果，這是與 `writingMode`（改變 `directionChanged`）本質不同的情境，不能類比套用。**改採**：`buildFoliatePreferencesMap`（`foliate_reader_view.dart:98`）新增注入 `textConversion: resolveTextConversion(...).name`；`main.js` 的 `window.applyPreferences` 偵測 `prefs.textConversion !== lastAppliedPrefs?.textConversion` 時，直接走訪目前所有可見文件（既有 API `view.renderer.getContents()`，已用於 `main.js:571/1067`，回傳目前可見的 `{ doc, index, overlayer }` 物件）並對每個 `doc` 呼叫 `applyTextConversion(doc, prefs.textConversion)`，不經過 `view.goTo()`——得益於 `_elinkOrigText` 快取與 ΔL=0，原地置換不會造成版面尺寸跳動。
+- 新增 DOM Walker 函式 `applyTextConversion(root, mode)`（於 `main.js` 或獨立模組），走訪目前渲染中 section 的可見文字節點，排除 `<rt>`／`<script>`／`<style>` 標籤。
+- **原始文字快取**：文字節點首次走訪時，動態快取原文（`if (node._elinkOrigText === undefined) node._elinkOrigText = node.nodeValue;`），任何模式轉換皆以 `node._elinkOrigText` 為基準輸入。
+- **雙向分段偏移映射（`TextOffsetMap`，見 ADR 0032 與 `offset-mapping-spec.md`）**：
+  - 在進行 `s2twp` 詞彙替換時，若 `dispText.length !== origText.length`（全量約 2.4%，含「記憶體」等 237 條長度改變詞彙與擴展區代理對），建立 `TextOffsetMap` 綁定於 `node._elinkOffsetMap`；其餘 97.6% 節點保持 `null`（零開銷）。
+  - **`fromRange` 攔截**：使用者在畫面選取文字建立劃線時，透過 `displayToOrig(map, offset, snapPolicy)` 將選取座標轉為原始未轉換文字的 offset，再傳給 `epubcfi.fromRange`，保證存入資料庫的 CFI 100% 依據原文。
+  - **`toRange` 攔截**：讀取 CFI 還原劃線時，透過 `origToDisplay(map, offset)` 將原文 offset 映射回 live DOM 當下位置，精確包裹台灣常用詞，且杜絕 `IndexSizeError`。
+- **觸發與即時切換**：
+  - 新章節載入：在 `view.addEventListener('load', ...)` 監聽器內對 `e.detail.doc` 執行轉換。
+  - 閱讀中即時切換：`window.applyPreferences` 偵測 `prefs.textConversion` 變動時，走訪 `view.renderer.getContents()` 所有可見 `doc` 原地執行 `applyTextConversion` 刷新。
 
 **單元測試要求：**
-- **CFI 穩定性回歸測試（優先度最高）**：以既有劃線/書籤整合測試 fixture 為基礎，驗證「在『轉換為繁體』模式下建立一筆劃線 → 切回『原文』模式 → 該劃線仍精確框住同一段原文文字」；反向（原文模式建立、切到轉換模式驗證）亦須覆蓋。
-- DOM Walker 原始文字還原：模擬文本含併字字元（如「幹」「后」），走過 `original` → `toSimplified` → `original` 循環後，文字節點內容須與初始原文 100% 一致。
-- `app/integration_test/`（真機）：DOM Walker 實際套用於已渲染 WebView 內容後，既有劃線/書籤渲染位置不偏移；閱讀中透過 Bottom Sheet 切換模式，畫面文字立即刷新（不需翻頁）。
+- **CFI 穩定性回歸測試（核心）**：
+  - 包含非等長詞彙（例如原文「内存」，轉換為「記憶體」；或「方便面」→「泡麵」）的段落，驗證在繁體模式下建立劃線，產生的 CFI 反查原文位置 100% 正確；切回原文模式劃線精確落在「内存」上；切回繁體模式再度精確落在「記憶體」上，無任何字元偏斜。
+  - 邊界貼齊測試：驗證光標落在置換詞中間時，Floor/Ceil 貼齊策略可完整框選整個詞彙。
+- DOM Walker 原始文字還原：走過 `original` → `toTraditional` → `original` 循環後，文字節點內容與初始原文 100% 一致。
+- `app/integration_test/`（真機）：在 WebView 內切換模式時畫面即時刷新，台灣常用詞正確呈現且既有劃線不偏移。
 
-**驗收標準：** 上述測試通過；真機開啟 EPUB/KF8/TXT/MD 書籍，切換三態顯示模式時畫面文字正確轉換，既有劃線/書籤定位不受影響，閱讀中即時切換立即生效。
+**驗收標準：** 上述測試通過；真機開啟 EPUB 驗證簡轉繁具備台灣在地化詞彙（「記憶體」、「軟體」等），繁轉簡忠實保留原著文風，劃線與書籤在三態切換下定位 100% 精確穩定。
 
 ---
 
