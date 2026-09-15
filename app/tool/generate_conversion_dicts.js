@@ -25,6 +25,8 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const DATA_DIR = path.join(REPO_ROOT, 'app', 'tool', 'opencc_data');
 const S2T_INPUT = path.join(DATA_DIR, 'STCharacters.txt');
 const T2S_INPUT = path.join(DATA_DIR, 'TSCharacters.txt');
+const TW_PHRASES_INPUT = path.join(DATA_DIR, 'TWPhrases.txt');
+const TS_PHRASES_INPUT = path.join(DATA_DIR, 'TSPhrases.txt');
 const JS_OUTPUT = path.join(
   REPO_ROOT,
   'app', 'android', 'app', 'src', 'main', 'assets', 'foliate',
@@ -169,29 +171,39 @@ function toMapLiteral(dict) {
 function main() {
   const s2tSource = fs.readFileSync(S2T_INPUT, 'utf8');
   const t2sSource = fs.readFileSync(T2S_INPUT, 'utf8');
+  const twPhrasesSource = fs.readFileSync(TW_PHRASES_INPUT, 'utf8');
+  const tsPhrasesSource = fs.readFileSync(TS_PHRASES_INPUT, 'utf8');
 
   const s2tDict = parseCharTable(s2tSource);
   const t2sDict = parseCharTable(t2sSource);
+  const s2twpPhraseDict = parsePhraseTable(twPhrasesSource);
+  const tw2sPhraseDict = parsePhraseTable(tsPhrasesSource);
+  assertMaxPhraseKeyLength(s2twpPhraseDict, 'TWPhrases');
+  assertMaxPhraseKeyLength(tw2sPhraseDict, 'TSPhrases');
 
   const jsContent =
     GENERATED_FILE_HEADER +
     `export const s2tDict = ${toMapLiteral(s2tDict)};\n\n` +
-    `export const t2sDict = ${toMapLiteral(t2sDict)};\n`;
+    `export const t2sDict = ${toMapLiteral(t2sDict)};\n\n` +
+    `export const s2twpPhraseDict = ${toMapLiteral(s2twpPhraseDict)};\n\n` +
+    `export const tw2sPhraseDict = ${toMapLiteral(tw2sPhraseDict)};\n`;
   fs.writeFileSync(JS_OUTPUT, jsContent, 'utf8');
 
   const dartContent =
     GENERATED_FILE_HEADER +
-    // 審查修正 M-3：巨大的靜態常數 Map 字面量會稀釋覆蓋率報告，標記
-    // 排除在覆蓋率統計外（JS 端沒有對應的覆蓋率工具慣例，故只加在此處）。
     '// coverage:ignore-file\n' +
     '\n' +
     `const Map<String, String> kS2tDict = ${toMapLiteral(s2tDict)};\n\n` +
-    `const Map<String, String> kT2sDict = ${toMapLiteral(t2sDict)};\n`;
+    `const Map<String, String> kT2sDict = ${toMapLiteral(t2sDict)};\n\n` +
+    `const Map<String, String> kS2twpPhraseDict = ${toMapLiteral(s2twpPhraseDict)};\n\n` +
+    `const Map<String, String> kTw2sPhraseDict = ${toMapLiteral(tw2sPhraseDict)};\n`;
   fs.writeFileSync(DART_OUTPUT, dartContent, 'utf8');
 
   console.log(
     `[generate_conversion_dicts] 完成：s2t ${Object.keys(s2tDict).length} ` +
-    `筆、t2s ${Object.keys(t2sDict).length} 筆。`,
+    `筆、t2s ${Object.keys(t2sDict).length} 筆、s2twp 片語 ` +
+    `${Object.keys(s2twpPhraseDict).length} 筆、tw2s 片語 ` +
+    `${Object.keys(tw2sPhraseDict).length} 筆。`,
   );
 }
 
