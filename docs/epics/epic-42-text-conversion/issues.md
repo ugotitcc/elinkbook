@@ -6,7 +6,7 @@
 
 ## Issue 0：前置修復＋雙端字典生成（支援台灣常用詞）
 
-**Status:** ready-for-agent
+**Status:** completed（`plans/plan-issue-0.md` 5 個 Task 全數完成，`check_foliate_es_compat.js` 常數引用漂移已修復，`TextConversionMode` enum／`convertText()`／`parseCharTable()`／JS-Dart 雙端同源查找表皆已落地，`flutter analyze`/`flutter test`／`node` 腳本測試全數通過。獨立程式審查 `reviews/review-issue-0.md`：0 Critical／0 Important／2 Minor，皆已修訂〔移除 `epubcfi.js:266` 行號耦合、vendor OpenCC LICENSE 全文〕，結論 Ready to merge: Yes）
 
 **依賴：** 無（可立即開始）
 

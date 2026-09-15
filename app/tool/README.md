@@ -7,7 +7,7 @@
 靜態掃描 `app/android/app/src/main/assets/foliate/`（`readest/foliate-js`
 釘定版本，見 ADR 0011）是否使用了較新的 ES 內建方法（`Object.groupBy`／
 `Array.prototype.at`／`Array.prototype.findLastIndex` 等），而
-`app/lib/reader/foliate_epub_reader_view.dart` 的 `_esCompatPolyfillJs`
+`app/lib/reader/foliate_native_bridge.dart` 的 `esCompatPolyfillJs`
 還沒有對應的 polyfill。
 
 **背景**：這份釘定的 vendor 程式碼在兩次真機 `/diagnose` 中都發現無條件呼叫
@@ -38,13 +38,13 @@ node app/tool/check_foliate_es_compat.js
 
 ### 找到問題時怎麼修
 
-1. 到 `app/lib/reader/foliate_epub_reader_view.dart` 的 `_esCompatPolyfillJs`
+1. 到 `app/lib/reader/foliate_native_bridge.dart` 的 `esCompatPolyfillJs`
    補上對應的 polyfill（僅在缺席時才定義，比照既有寫法，不覆蓋原生實作）。
 2. 用 Node.js + `@xmldom/xmldom`（或視情況調整）對照未經修改的實際
    `epub.js`/`epubcfi.js`/`paginator.js` 驗證：缺席時真的會拋出例外、補上
    polyfill 後可修復（比照 epic-19 兩輪 `/diagnose` 紀錄的既有作法）。
 3. 重新執行這支腳本確認乾淨。
-4. 補上/更新 `app/test/reader/foliate_epub_reader_view_test.dart` 裡驗證
+4. 補上/更新 `app/test/reader/foliate_reader_view_test.dart` 裡驗證
    `initialUserScripts` 內容的既有測試，涵蓋新補上的 polyfill 名稱。
 
 ### 已知限制
