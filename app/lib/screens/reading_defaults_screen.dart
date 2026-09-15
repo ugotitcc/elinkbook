@@ -4,6 +4,7 @@ import '../reader/global_reader_prefs.dart';
 import '../reader/page_turn_mode.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/screen_orientation_setting.dart';
+import '../reader/text_conversion_mode.dart';
 
 /// 閱讀預設值畫面（FR-36/37/38/42）：音量鍵翻頁開關、翻頁模式、螢幕方向、
 /// 全螢幕模式四個獨立控制項，皆讀寫 [GlobalReaderPrefs]。**即時生效、無
@@ -142,6 +143,35 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                             'reading_defaults_screen_orientation_lock270'),
                         title: const Text('鎖定 270°'),
                         value: ScreenOrientationSetting.lock270,
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                _buildSectionHeader(context, '簡繁轉換顯示'),
+                RadioGroup<TextConversionMode>(
+                  groupValue: _prefs.reading.textConversion,
+                  onChanged: (mode) => _update(
+                    _prefs.copyWith(
+                      reading: _prefs.reading.copyWith(textConversion: mode),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      RadioListTile<TextConversionMode>(
+                        key: const Key('reading_defaults_text_conversion_original'),
+                        title: const Text('原文'),
+                        value: TextConversionMode.original,
+                      ),
+                      RadioListTile<TextConversionMode>(
+                        key: const Key('reading_defaults_text_conversion_traditional'),
+                        title: const Text('轉換為繁體'),
+                        value: TextConversionMode.toTraditional,
+                      ),
+                      RadioListTile<TextConversionMode>(
+                        key: const Key('reading_defaults_text_conversion_simplified'),
+                        title: const Text('轉換為簡體'),
+                        value: TextConversionMode.toSimplified,
                       ),
                     ],
                   ),
