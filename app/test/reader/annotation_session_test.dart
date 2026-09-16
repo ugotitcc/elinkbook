@@ -173,4 +173,98 @@ void main() {
       expect(inserted.progression, isNull);
     });
   });
+
+  group('AnnotationSession.createOrUpdateNote', () {
+    test('existing 為 null 時 insert 新備註', () async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final session = AnnotationSession(
+        highlightsRepository: highlightsRepo,
+        notesRepository: notesRepo,
+        bookId: 'b1',
+      );
+
+      final snapshot = await session.createOrUpdateNote(
+        locator: const AnnotationLocator.epub(locatorJson: 'loc-a', progression: 0.3),
+        text: '新備註',
+      );
+
+      expect(snapshot.notes, hasLength(1));
+      expect(snapshot.notes.single.text, '新備註');
+      expect(snapshot.notes.single.highlightId, isNull);
+    });
+
+    test('existing 非 null 時呼叫 updateText 而非 insert', () async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      const existing = Note(
+        id: 'n1',
+        bookId: 'b1',
+        text: '舊文字',
+        epubLocatorJson: 'loc-a',
+        progression: 0.3,
+      );
+      await notesRepo.insert(existing);
+      final session = AnnotationSession(
+        highlightsRepository: highlightsRepo,
+        notesRepository: notesRepo,
+        bookId: 'b1',
+      );
+
+      final snapshot = await session.createOrUpdateNote(
+        locator: const AnnotationLocator.epub(locatorJson: 'loc-a', progression: 0.3),
+        text: '改過的文字',
+        existing: existing,
+      );
+
+      expect(snapshot.notes, hasLength(1));
+      expect(snapshot.notes.single.id, 'n1');
+      expect(snapshot.notes.single.text, '改過的文字');
+    });
+
+    test('pendingHighlightId 非 null 時新備註依附該筆畫線', () async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final session = AnnotationSession(
+        highlightsRepository: highlightsRepo,
+        notesRepository: notesRepo,
+        bookId: 'b1',
+      );
+
+      final snapshot = await session.createOrUpdateNote(
+        locator: const AnnotationLocator.epub(locatorJson: 'loc-a'),
+        text: '依附的備註',
+        pendingHighlightId: 'h1',
+      );
+
+      expect(snapshot.notes.single.highlightId, 'h1');
+    });
+
+    // I-1（審查修訂）：前 3 則測試皆用 AnnotationLocator.epub，完全沒有
+    // 覆蓋 PDF 新增路徑——若實作組裝 Note(...) 時漏傳 pdfPageIndex/pdfRect，
+    // 前 3 則測試仍會全數通過，無法在單元測試層攔截。
+    test('PDF：existing 為 null 時正確寫入 pdfPageIndex/pdfRect，EPUB 欄位維持 null', () async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final session = AnnotationSession(
+        highlightsRepository: highlightsRepo,
+        notesRepository: notesRepo,
+        bookId: 'b1',
+      );
+      const rect = PercentRect(left: 0.1, top: 0.2, right: 0.8, bottom: 0.4);
+
+      final snapshot = await session.createOrUpdateNote(
+        locator: const AnnotationLocator.pdf(pageIndex: 2, rect: rect),
+        text: 'PDF備註',
+      );
+
+      expect(snapshot.notes, hasLength(1));
+      final inserted = snapshot.notes.single;
+      expect(inserted.text, 'PDF備註');
+      expect(inserted.pdfPageIndex, 2);
+      expect(inserted.pdfRect, rect);
+      expect(inserted.epubLocatorJson, isNull);
+      expect(inserted.progression, isNull);
+    });
+  });
 }

@@ -90,4 +90,29 @@ class AnnotationSession {
     final snapshot = await reload();
     return (snapshot: snapshot, highlightId: id);
   }
+
+  /// `existing != null` 時呼叫 `updateText`，否則 insert 新 Note。跳窗拿
+  /// `text` 的步驟維持在 ReaderScreen，這裡只收「給定 text 之後」的 CRUD。
+  Future<AnnotationSnapshot> createOrUpdateNote({
+    required AnnotationLocator locator,
+    required String text,
+    Note? existing,
+    String? pendingHighlightId,
+  }) async {
+    if (existing != null) {
+      await notesRepository.updateText(existing.id, text);
+    } else {
+      await notesRepository.insert(Note(
+        id: const Uuid().v4(),
+        bookId: bookId,
+        text: text,
+        epubLocatorJson: locator.epubLocatorJson,
+        progression: locator.progression,
+        pdfPageIndex: locator.pdfPageIndex,
+        pdfRect: locator.pdfRect,
+        highlightId: pendingHighlightId,
+      ));
+    }
+    return reload();
+  }
 }
