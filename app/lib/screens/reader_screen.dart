@@ -1106,21 +1106,35 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   ) async {
     final repository = widget.bookReaderPrefsRepository;
     if (repository == null || targetBookIds.isEmpty) return;
-    if (!layout_preset_actions.layoutPresetTargetsCurrentBookOnly(
-      targetBookIds,
-      widget.bookId,
-    )) {
-      final confirmed = await _confirmApplyToOtherBooks(targetBookIds.length);
-      if (!confirmed || !mounted) return;
-    }
-    await layout_preset_actions.applyLayoutPresetPrefs(
-      repository,
-      prefs: prefs,
-      targetBookIds: targetBookIds,
-    );
-    if (!mounted) return;
-    if (targetBookIds.contains(widget.bookId)) {
-      _handlePrefsChanged(prefs);
+    try {
+      if (!layout_preset_actions.layoutPresetTargetsCurrentBookOnly(
+        targetBookIds,
+        widget.bookId,
+      )) {
+        final confirmed =
+            await _confirmApplyToOtherBooks(targetBookIds.length);
+        if (!confirmed || !mounted) return;
+      }
+      await layout_preset_actions.applyLayoutPresetPrefs(
+        repository,
+        prefs: prefs,
+        targetBookIds: targetBookIds,
+      );
+      if (!mounted) return;
+      if (targetBookIds.contains(widget.bookId)) {
+        _handlePrefsChanged(prefs);
+      }
+    } catch (e, stackTrace) {
+      // Epic 43 Issue 5：比照 _handleSaveAsPreset 既有的 try/catch +
+      // SnackBar 模式，補齊套用預設集失敗時的使用者可見提示。
+      debugPrint('套用版面設定失敗：$e\n$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: const Key('reader_apply_preset_error_snackbar'),
+          content: Text('套用版面設定失敗：$e'),
+        ),
+      );
     }
   }
 
@@ -1140,10 +1154,26 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }) async {
     final repository = widget.bookReaderPrefsRepository;
     if (repository == null || targetBookIds.isEmpty) return;
-    final sourcePrefs =
-        (await repository.load(sourceBookId)).reflowableEpubFields();
-    if (!mounted) return;
-    await _applyPrefsToTargets(sourcePrefs, targetBookIds);
+    try {
+      final sourcePrefs =
+          (await repository.load(sourceBookId)).reflowableEpubFields();
+      if (!mounted) return;
+      await _applyPrefsToTargets(sourcePrefs, targetBookIds);
+    } catch (e, stackTrace) {
+      // Epic 43 Issue 5（I-2 審查修訂）：repository.load() 發生在呼叫
+      // _applyPrefsToTargets 之前，不在它內部的 try/catch 保護範圍內，
+      // 需要自己獨立這一層——與 _applyPrefsToTargets 內部的 try/catch
+      // 是兩層獨立保護，不會為同一次失敗重複顯示兩次 SnackBar（見上方
+      // Global Constraints 說明）。
+      debugPrint('套用版面設定失敗：$e\n$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: const Key('reader_apply_preset_error_snackbar'),
+          content: Text('套用版面設定失敗：$e'),
+        ),
+      );
+    }
   }
 
   Future<void> _handleDeletePreset(int id) async {
@@ -1159,10 +1189,23 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final confirmed = await _confirmDeletePreset(presetName);
     // I-2（審查修訂）：理由同上（`_handleSaveAsPreset` 覆蓋確認）。
     if (!confirmed || !mounted) return;
-    final updated =
-        await layout_preset_actions.deleteLayoutPreset(repository, id);
-    if (!mounted) return;
-    setState(() => _layoutPresets = updated);
+    try {
+      final updated =
+          await layout_preset_actions.deleteLayoutPreset(repository, id);
+      if (!mounted) return;
+      setState(() => _layoutPresets = updated);
+    } catch (e, stackTrace) {
+      // Epic 43 Issue 5：比照 _handleSaveAsPreset 既有的 try/catch +
+      // SnackBar 模式，補齊刪除預設集失敗時的使用者可見提示。
+      debugPrint('刪除預設集失敗：$e\n$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: const Key('reader_delete_preset_error_snackbar'),
+          content: Text('刪除預設集失敗：$e'),
+        ),
+      );
+    }
   }
 
   Future<bool> _confirmDeletePreset(String name) async {

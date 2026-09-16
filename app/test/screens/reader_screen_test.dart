@@ -95,6 +95,39 @@ class _ThrowingLayoutPresetRepository extends LayoutPresetRepository {
   Future<void> insert(LayoutPreset preset) async {
     throw Exception('模擬 insert 失敗（測試用）');
   }
+
+  // Epic 43 Issue 5：供「刪除預設集失敗」測試使用。
+  @override
+  Future<void> delete(int id) async {
+    throw Exception('模擬 delete 失敗（測試用）');
+  }
+}
+
+// Epic 43 Issue 5：模擬 BookReaderPrefsRepository.load()/save()/
+// saveMultiple() 拋出未預期例外的情境，比照上方 _ThrowingLayoutPreset-
+// Repository 手法——單一「全部拋例外」的測試替身供「套用預設集」
+// （Task 1，觸發 save/saveMultiple）與「套用來源書籍」（Task 2，觸發
+// load）兩則測試共用。
+class _ThrowingBookReaderPrefsRepository extends BookReaderPrefsRepository {
+  _ThrowingBookReaderPrefsRepository(super.db);
+
+  @override
+  Future<BookReaderPrefs> load(String bookId) async {
+    throw Exception('模擬 load 失敗（測試用）');
+  }
+
+  @override
+  Future<void> save(String bookId, BookReaderPrefs prefs) async {
+    throw Exception('模擬 save 失敗（測試用）');
+  }
+
+  @override
+  Future<void> saveMultiple(
+    List<String> bookIds,
+    BookReaderPrefs prefs,
+  ) async {
+    throw Exception('模擬 saveMultiple 失敗（測試用）');
+  }
 }
 
 /// `BookSearchDetailResult.book` 只是型別要求的欄位，`BookSearchScreen`
@@ -7986,6 +8019,10 @@ void main() {
       // 拋出例外的假 repository；其餘既有呼叫點沿用預設值，行為不變。
       bool includeLayoutPresetRepository = true,
       LayoutPresetRepository? layoutPresetRepositoryOverride,
+      // Epic 43 Issue 5：讓「套用預設集」/「套用來源書籍」的失敗路徑測試
+      // 可以注入一個會拋出例外的假 BookReaderPrefsRepository；其餘既有
+      // 呼叫點沿用預設值，行為不變。
+      BookReaderPrefsRepository? bookReaderPrefsRepositoryOverride,
     }) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
@@ -8008,7 +8045,8 @@ void main() {
             isFixedLayout: false,
             libraryRepository: libraryRepository,
             layoutPresetRepository: effectiveLayoutPresetRepository,
-            bookReaderPrefsRepository: bookReaderPrefsRepository,
+            bookReaderPrefsRepository:
+                bookReaderPrefsRepositoryOverride ?? bookReaderPrefsRepository,
           ),
         ),
       );
@@ -8232,6 +8270,55 @@ void main() {
       expect(sheetAfterApply.prefs.fontSize, 24 / 16);
     });
 
+    // M-2（審查修訂）：只用「套用到目前書籍」（save() 拋例外）驗證，不另外
+    // 補一則「套用到其他書籍」（saveMultiple() 拋例外）——兩條路徑在
+    // _applyPrefsToTargets 內部共用同一個 try/catch 區塊，save/saveMultiple
+    // 各自的分支邏輯本身已由 Issue 2 的 layout_preset_actions_test.dart
+    // 獨立驗證過，此處只需要證明「這一個 catch 區塊」有效即可，不需要
+    // 為同一段 catch 邏輯重複測兩次。
+    testWidgets('套用預設集到目前書籍：寫入過程拋出例外時顯示提示，不被靜默吞掉', (
+      tester,
+    ) async {
+      await tester.runAsync(
+        () => layoutPresetRepository.insert(
+          LayoutPreset(
+            id: null,
+            name: '測試預設集',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            prefs: const BookReaderPrefs(fontSize: 24 / 16),
+          ),
+        ),
+      );
+      final throwingBookReaderPrefsRepository =
+          _ThrowingBookReaderPrefsRepository(libraryRepository.database);
+      await pumpReaderScreen(
+        tester,
+        bookReaderPrefsRepositoryOverride: throwingBookReaderPrefsRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pumpAndSettle();
+      await switchToTab(tester, '預設集');
+      await tester.ensureVisible(
+        find.byKey(const Key('reader_settings_preset_slot_0_apply_current')),
+      );
+      await tester.tap(
+        find.byKey(const Key('reader_settings_preset_slot_0_apply_current')),
+      );
+      await tester.pump();
+      await tester.runAsync(
+        () => Future.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('reader_apply_preset_error_snackbar')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('套用預設集到其他書籍（多本）：跳出「即將覆蓋 N 本書」確認對話框，確認後批次寫入', (tester) async {
       await tester.runAsync(
         () => layoutPresetRepository.insert(
@@ -8326,6 +8413,53 @@ void main() {
       expect(all, isEmpty);
     });
 
+    testWidgets('刪除預設集：刪除過程拋出例外時顯示提示，不被靜默吞掉', (tester) async {
+      await tester.runAsync(
+        () => layoutPresetRepository.insert(
+          LayoutPreset(
+            id: null,
+            name: '待刪除',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            prefs: BookReaderPrefs.empty,
+          ),
+        ),
+      );
+      final throwingRepository = _ThrowingLayoutPresetRepository(
+        libraryRepository.database,
+      );
+      await pumpReaderScreen(
+        tester,
+        layoutPresetRepositoryOverride: throwingRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pumpAndSettle();
+      await switchToTab(tester, '預設集');
+      await tester.ensureVisible(
+        find.byKey(const Key('reader_settings_preset_slot_0_delete')),
+      );
+      await tester.tap(
+        find.byKey(const Key('reader_settings_preset_slot_0_delete')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('layout_preset_delete_confirm')));
+      await tester.pump();
+      await tester.runAsync(
+        () => Future.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('reader_delete_preset_error_snackbar')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      // M-3（審查修訂）：驗證刪除失敗時底層資料未被誤刪，狀態未受污染。
+      final all = await tester.runAsync(() => layoutPresetRepository.listAll());
+      expect(all, hasLength(1));
+    });
+
     testWidgets('刪除預設集：確認對話框取消時不刪除', (tester) async {
       await tester.runAsync(
         () => layoutPresetRepository.insert(
@@ -8405,6 +8539,51 @@ void main() {
       );
       expect(saved!.fontSize, 20 / 16);
       expect(saved.pdfContrast, isNull);
+    });
+
+    testWidgets('複製其他書籍設定到本書：讀取來源書籍設定拋出例外時顯示提示，不被靜默吞掉', (
+      tester,
+    ) async {
+      final throwingBookReaderPrefsRepository =
+          _ThrowingBookReaderPrefsRepository(libraryRepository.database);
+      await pumpReaderScreen(
+        tester,
+        bookReaderPrefsRepositoryOverride: throwingBookReaderPrefsRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pumpAndSettle();
+      await switchToTab(tester, '預設集');
+      await tester.ensureVisible(
+        find.byKey(const Key('reader_settings_copy_from_book_current')),
+      );
+      await tester.tap(
+        find.byKey(const Key('reader_settings_copy_from_book_current')),
+      );
+      await tester.pump();
+      await tester.runAsync(
+        () => Future.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const Key('layout_preset_book_picker_item_b_other')),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const Key('layout_preset_book_picker_confirm')),
+      );
+      await tester.pump();
+      await tester.runAsync(
+        () => Future.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('reader_apply_preset_error_snackbar')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('PDF：框選矩形命中既有畫線時，工具列顯示刪除按鈕，點擊後刪除該畫線', (tester) async {
