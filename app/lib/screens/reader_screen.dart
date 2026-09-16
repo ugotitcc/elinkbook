@@ -77,6 +77,7 @@ import 'pdf_settings_sheet.dart';
 import '../reader/book_reader_prefs_repository.dart';
 import '../reader/layout_preset.dart';
 import '../reader/layout_preset_repository.dart';
+import '../reader/layout_preset_actions.dart' as layout_preset_actions;
 import 'reader_chrome_bottom_bar.dart';
 import 'reader_footer.dart';
 import 'reader_settings_sheet.dart';
@@ -983,32 +984,31 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       final name = await showLayoutPresetNameDialog(context);
       if (name == null || !mounted) return;
       final filteredPrefs = currentDraft.reflowableEpubFields();
-      final now = DateTime.now();
+      List<LayoutPreset> updated;
       if (_layoutPresets.length < 3) {
-        await repository.insert(LayoutPreset(
-          id: null,
+        updated = await layout_preset_actions.insertNewLayoutPreset(
+          repository,
           name: name,
-          createdAt: now,
-          updatedAt: now,
           prefs: filteredPrefs,
-        ));
+        );
       } else {
         final target = await _selectPresetToOverwrite();
         if (target == null || !mounted) return;
         final confirmed = await _confirmOverwrite(target.name);
-        if (!confirmed) return;
-        await repository.replace(
-          target.id!,
-          LayoutPreset(
-            id: target.id,
-            name: name,
-            createdAt: target.createdAt,
-            updatedAt: now,
-            prefs: filteredPrefs,
-          ),
+        // I-2（審查修訂）：對話框彈出期間使用者可能退出閱讀器，pop 後
+        // State 可能已 unmounted，比照 issues.md I-3／Task 7
+        // _applyPrefsToTargets 既有慣例，`!confirmed` 與 `!mounted`
+        // 合併檢查。
+        if (!confirmed || !mounted) return;
+        updated = await layout_preset_actions.overwriteLayoutPreset(
+          repository,
+          target: target,
+          name: name,
+          prefs: filteredPrefs,
         );
       }
-      await _loadLayoutPresets();
+      if (!mounted) return;
+      setState(() => _layoutPresets = updated);
     } catch (e, stackTrace) {
       debugPrint('另存為新預設集失敗：$e\n$stackTrace');
       if (!mounted) return;
@@ -1161,9 +1161,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       }
     }
     final confirmed = await _confirmDeletePreset(presetName);
-    if (!confirmed) return;
-    await repository.delete(id);
-    await _loadLayoutPresets();
+    // I-2（審查修訂）：理由同上（`_handleSaveAsPreset` 覆蓋確認）。
+    if (!confirmed || !mounted) return;
+    final updated =
+        await layout_preset_actions.deleteLayoutPreset(repository, id);
+    if (!mounted) return;
+    setState(() => _layoutPresets = updated);
   }
 
   Future<bool> _confirmDeletePreset(String name) async {
