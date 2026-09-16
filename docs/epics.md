@@ -50,7 +50,7 @@
 | 40 | `epic-38-reader-chrome-tts-redesign` 閱讀器 Chrome／TTS 重構（`DESIGN.md` §19 階段二） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 41 | `epic-39-layout-settings-redesign` 版面設定三畫面主題化＋E-Ink 步進器（`DESIGN.md` §18.3 補實作） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 42 | `epic-41-search-architecture-hardening` 全文檢索模組架構深化機會（epic-10-search 開發後盤點） | 🟡 開發中 (Active) | Issue 1-5（PR #240-#244）已完成並合併；僅剩 Issue 6 `needs-info` 暫緩，待人類決定歸檔時機 |
-| 43 | `epic-42-text-conversion` 簡繁轉換（FR-48） | 🟡 開發中 (Active) | Issue 0（PR #245）／Issue 0b（PR #246）／Issue 1（PR #247）／Issue 2（PR #248）／Issue 3（PR #249）已完成並合併，Dart 端跨畫面顯示轉換（目錄／書籤／頁首/底部工具列/單書搜尋/TTS 通知欄／書架）到位；Issue 4-5 待開工 |
+| 43 | `epic-42-text-conversion` 簡繁轉換（FR-48） | 🟡 開發中 (Active) | Issue 0（PR #245）／Issue 0b（PR #246）／Issue 1（PR #247）／Issue 2（PR #248）／Issue 3（PR #249）／Issue 4（PR #250）已完成並合併，全文檢索多變體查詢擴充（`queryVariants`／`findMatchingVariant`、`SqliteSearchRepository` 三查詢方法、`BookSearchScreen`／`LibrarySearchScreen` 顯示轉換與跨字形高亮）到位；Issue 5 待開工 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。

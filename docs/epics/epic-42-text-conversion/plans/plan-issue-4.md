@@ -48,7 +48,7 @@
 - Consumes: `convertText(String, TextConversionMode)`（Issue 0，`app/lib/reader/text_conversion.dart`）。
 - Produces: `List<String> queryVariants(String q0)`、`String? findMatchingVariant(String text, List<String> variants)`，供 Task 2（`SqliteSearchRepository`）與 Task 3（`BookSearchScreen`）消費。
 
-- [ ] **Step 1: 新增失敗測試**
+- [x] **Step 1: 新增失敗測試**
 
 建立 `app/test/search/search_query_variants_test.dart`：
 
@@ -137,12 +137,12 @@ import 'package:elinkbook/search/search_query_variants.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/search/search_query_variants_test.dart test/search/highlight_segments_test.dart`
 Expected: FAIL（`package:elinkbook/search/search_query_variants.dart` 找不到，兩個測試檔皆編譯錯誤）。
 
-- [ ] **Step 3: 實作 `queryVariants()`／`findMatchingVariant()`**
+- [x] **Step 3: 實作 `queryVariants()`／`findMatchingVariant()`**
 
 建立 `app/lib/search/search_query_variants.dart`：
 
@@ -182,17 +182,17 @@ String? findMatchingVariant(String text, List<String> variants) {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/search/search_query_variants_test.dart test/search/highlight_segments_test.dart`
 Expected: 全數 PASS（`search_query_variants_test.dart` 7 個測試＋`highlight_segments_test.dart` 既有測試零回歸＋新增 2 個測試）。
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/search/search_query_variants.dart app/test/search/search_query_variants_test.dart app/test/search/highlight_segments_test.dart
@@ -211,7 +211,7 @@ git commit -m "feat(search): 新增 queryVariants/findMatchingVariant 多變體�
 - Consumes: `queryVariants(String)`／`findMatchingVariant(String, List<String>)`（Task 1）。
 - Produces: 無新增公開介面——`SearchRepository` 抽象介面（`searchTitleAuthor`／`searchContent`／`searchContentInBook`）簽章完全不變，本 Task 只改內部實作，`FakeSearchRepository`（`test/support/fake_search_repository.dart`）與所有既有呼叫端（`BookSearchScreen`／`LibrarySearchScreen`）零回歸、不需修改。
 
-- [ ] **Step 1: 新增失敗測試**
+- [x] **Step 1: 新增失敗測試**
 
 在 `app/test/search/search_repository_test.dart` 找到第 95-104 行「查詢字串含 % 或 _ 時視為一般字元比對」測試結尾的 `});`（第 103 行）與 `group('searchTitleAuthor', ...)` 結尾的 `});`（第 104 行）之間，新增：
 
@@ -293,12 +293,12 @@ git commit -m "feat(search): 新增 queryVariants/findMatchingVariant 多變體�
 
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/search/search_repository_test.dart`
 Expected: 新增的 4 個測試皆 FAIL（目前查詢只比對單一原始查詢字串，簡體查詢命中不到繁體內容，反之亦然）。
 
-- [ ] **Step 3: 實作多變體查詢**
+- [x] **Step 3: 實作多變體查詢**
 
 在 `app/lib/search/search_repository.dart` 第 5 行（`import 'cjk_tokenizer.dart';`）之後新增：
 
@@ -577,17 +577,17 @@ import 'search_query_variants.dart';
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/search/search_repository_test.dart`
 Expected: 全數 PASS（既有測試零回歸＋新增 4 個測試通過）。
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/search/search_repository.dart app/test/search/search_repository_test.dart
@@ -608,7 +608,7 @@ git commit -m "feat(search): SqliteSearchRepository 三個查詢方法改用多�
 
 **審查修正說明（review-plan-issue-4.md I-2，架構調整，非原樣採納審查建議的程式碼）**：審查發現 `LibrarySearchScreen._openBookSearch()` 下鑽開啟本畫面時傳入未轉換的原始 `Book`，導致 AppBar 標題／作者顯示原文。審查建議的修法是讓 `LibrarySearchScreen` 在下鑽前用**全域**模式預先轉換 `book.title`／`book.author` 再傳入——但本畫面 AppBar 標題／作者依 Issue 3 既定設計是**單書情境**（`resolveTextConversion(bookPrefs, global)`，可被該書的 `textConversionOverride` 覆寫），若改用呼叫端的全域模式預先轉換，當目標書籍有單書覆寫、且覆寫值與全域值不同時，會與從 `ReaderScreen` 進入本畫面時顯示的字形不一致（同一本書、同一個 `BookSearchScreen`，卻依入口不同顯示不同字形）；且預先轉換後的字串會被存進傳給 `_handleSnippetTap()` 開書路徑（`buildReaderScreen(book: widget.book, ...)`）的 `Book` 物件，有非必要的雙重轉換風險。改為讓 `BookSearchScreen` **自行**呼叫 `widget.prefsManager.load(widget.book.id)` 解析該書的單書情境生效值——與 `ReaderScreen` 使用同一套 `resolveTextConversion()` 邏輯，對任何入口（`ReaderScreen` 或 `LibrarySearchScreen`）都能得到一致且正確的結果，`LibrarySearchScreen._openBookSearch()` 因此不需要修改（Task 4 不再包含這項）。
 
-- [ ] **Step 1: 新增失敗測試**
+- [x] **Step 1: 新增失敗測試**
 
 在 `app/test/screens/book_search_screen_test.dart` 第 14 行（`import 'package:elinkbook/search/search_repository.dart';`）之後新增：
 
@@ -753,12 +753,12 @@ import 'package:elinkbook/reader/text_conversion_mode.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/book_search_screen_test.dart`
 Expected: 新增的 3 個測試皆 FAIL（摘要片段仍是未轉換的原文；高亮比對找不到任何變體，`boldSpans` 為空清單；AppBar 標題仍是 `_testBook()` 預設的「測試書」，非測試傳入的覆寫書名）。
 
-- [ ] **Step 3: 實作轉換與跨字形高亮**
+- [x] **Step 3: 實作轉換與跨字形高亮**
 
 在 `app/lib/screens/book_search_screen.dart` 第 10 行（`import '../reader/reader_prefs_manager.dart';`）之後新增：
 
@@ -1020,17 +1020,17 @@ import '../search/search_query_variants.dart';
     final segments = splitHighlightSegments(text, matchQuery);
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/book_search_screen_test.dart`
 Expected: 全數 PASS（既有測試零回歸＋新增 3 個測試通過）。
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/book_search_screen.dart app/test/screens/book_search_screen_test.dart
@@ -1051,7 +1051,7 @@ git commit -m "feat(search): BookSearchScreen 內容匹配摘要片段接上顯�
 
 **範圍澄清（已與使用者確認）**：issues.md Issue 4 字面範圍只提到「內容匹配摘要片段」需轉換，但 spec.md「Dart 端字元轉換模組」跨書情境條列把「書架書名/作者渲染（LibraryScreen）、全庫搜尋結果片段（書名/作者匹配區＋內容匹配區）」寫在同一句——本 Task 依 spec.md（唯一事實來源）辦理，一併轉換 `_buildTitleAuthorTile()` 與 `_buildContentGroupCard()` 書籍標頭的書名/作者，不只轉換內容匹配摘要片段，避免使用者從已轉換的 `LibraryScreen` 進到 `LibrarySearchScreen` 時書名字形突然跳回原文。
 
-- [ ] **Step 1: 新增失敗測試**
+- [x] **Step 1: 新增失敗測試**
 
 在 `app/test/screens/library_search_screen_test.dart` 找到既有 import 區塊內 `import 'package:elinkbook/reader/percent_rect.dart';` 之後新增：
 
@@ -1156,12 +1156,12 @@ import 'package:elinkbook/reader/text_conversion_mode.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/library_search_screen_test.dart`
 Expected: 新增的測試 FAIL（書名/作者/摘要片段仍是未轉換的原文；即使補上 `_textConversion` 轉換邏輯而未同步修正 `BookCover` 呼叫點，`findsNWidgets(2)` 也會因 `CoverPlaceholder` 仍顯示原文而只找到 1 個繁體 widget，持續失敗）。
 
-- [ ] **Step 3: 實作轉換**
+- [x] **Step 3: 實作轉換**
 
 在 `app/lib/screens/library_search_screen.dart` 第 10 行（`import '../reader/reader_prefs_manager.dart';`）之後新增：
 
@@ -1316,22 +1316,22 @@ import '../reader/text_conversion_mode.dart';
               title: Text(convertText(group.matches[i].snippet, _textConversion)),
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/library_search_screen_test.dart`
 Expected: 全數 PASS（既有測試零回歸＋新增測試通過）。
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: 執行完整 `flutter test`（本計畫最後一個 Task，比照專案慣例跑一次全套）**
+- [x] **Step 6: 執行完整 `flutter test`（本計畫最後一個 Task，比照專案慣例跑一次全套）**
 
 Run: `flutter test`
 Expected: 全數通過（既有已知不穩定案例除外，例如 `adaptive_shell_scaffold_test.dart` 既有失敗案例，非本次異動引入）。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/library_search_screen.dart app/test/screens/library_search_screen_test.dart

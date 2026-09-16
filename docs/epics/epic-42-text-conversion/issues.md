@@ -138,7 +138,7 @@
 
 ## Issue 4：全文檢索多變體查詢擴充
 
-**Status:** ready-for-agent
+**Status:** completed（**2026-09-16 已完成並合併回 `main`（PR [#250](https://git.jigong.org/huthief/elinkBook/pulls/250)，分支 `feat/epic-42-issue-4`）**：`plans/plan-issue-4.md`（經 `reviews/review-plan-issue-4.md` 審查修正 1 項 Critical（C-1 `LibrarySearchScreen` 的 `BookCover` 漏傳 `textConversion` 導致封面縮略字與標題字形矛盾）、3 項 Important（I-1 `initState()` 用 `unawaited` 造成偏好載入與初始查詢並行競態、I-2 `BookSearchScreen` AppBar 單書情境轉換改為畫面自行解析而非依賴呼叫端預先轉換、I-3 缺少 `splitHighlightSegments` 跨字形命中純函式單元測試）與 2 項 Minor（M-1 `_buildHighlightedText` 重複呼叫 `queryVariants`、M-3 `tokenizedVariants` 去重防禦）後定案）4 個 Task 全數完成：新增共用純函式模組 `search_query_variants.dart`（`queryVariants()`／`findMatchingVariant()`，正向產生原文/繁體/簡體三個變體，不做反向字典轉換）；`SqliteSearchRepository` 三個查詢方法（`searchTitleAuthor`／`searchContent`／`searchContentInBook`）與 `_truncate()` 改用多變體查詢，修正跨字形命中時的截斷定位；`BookSearchScreen` 內容匹配摘要片段套用全域（跨書情境）顯示轉換、關鍵字高亮改用跨字形變體比對，AppBar 標題／工具列作者改為畫面自行解析單書情境轉換模式；`LibrarySearchScreen` 書名/作者匹配區、內容匹配區書籍標頭與摘要片段套用全域顯示轉換，含 `BookCover.textConversion`。獨立程式審查（`reviews/review-issue-4.md`）：實際執行全部 5 個目標測試檔（84 項）與 `flutter analyze`，確認 0 Critical／0 Important／1 Minor（整個 repo 相對目前 Dart SDK 版本存在既有格式化工具鏈落差，經交叉驗證與本次異動無關），結論 Ready to merge: Yes，未產生任何審查後追加 commit。）
 
 **依賴：** Issue 0（`convertText`）、Issue 1（`GlobalReaderPrefs.reading.textConversion`，供結果摘要片段顯示轉換用）
 
