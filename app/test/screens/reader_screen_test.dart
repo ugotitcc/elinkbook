@@ -97,6 +97,33 @@ class _ThrowingLayoutPresetRepository extends LayoutPresetRepository {
   }
 }
 
+// Epic 43 Issue 5：模擬 BookReaderPrefsRepository.load()/save()/
+// saveMultiple() 拋出未預期例外的情境，比照上方 _ThrowingLayoutPreset-
+// Repository 手法——單一「全部拋例外」的測試替身供「套用預設集」
+// （Task 1，觸發 save/saveMultiple）與「套用來源書籍」（Task 2，觸發
+// load）兩則測試共用。
+class _ThrowingBookReaderPrefsRepository extends BookReaderPrefsRepository {
+  _ThrowingBookReaderPrefsRepository(super.db);
+
+  @override
+  Future<BookReaderPrefs> load(String bookId) async {
+    throw Exception('模擬 load 失敗（測試用）');
+  }
+
+  @override
+  Future<void> save(String bookId, BookReaderPrefs prefs) async {
+    throw Exception('模擬 save 失敗（測試用）');
+  }
+
+  @override
+  Future<void> saveMultiple(
+    List<String> bookIds,
+    BookReaderPrefs prefs,
+  ) async {
+    throw Exception('模擬 saveMultiple 失敗（測試用）');
+  }
+}
+
 /// `BookSearchDetailResult.book` 只是型別要求的欄位，`BookSearchScreen`
 /// 實際渲染／跳轉行為只讀取 `widget.book`（也就是 `ReaderScreen` 合成的
 /// 那一個），不讀取 `result.book`，故這裡用什麼內容皆不影響測試行為，純粹
@@ -7986,6 +8013,10 @@ void main() {
       // 拋出例外的假 repository；其餘既有呼叫點沿用預設值，行為不變。
       bool includeLayoutPresetRepository = true,
       LayoutPresetRepository? layoutPresetRepositoryOverride,
+      // Epic 43 Issue 5：讓「套用預設集」/「套用來源書籍」的失敗路徑測試
+      // 可以注入一個會拋出例外的假 BookReaderPrefsRepository；其餘既有
+      // 呼叫點沿用預設值，行為不變。
+      BookReaderPrefsRepository? bookReaderPrefsRepositoryOverride,
     }) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
@@ -8008,7 +8039,8 @@ void main() {
             isFixedLayout: false,
             libraryRepository: libraryRepository,
             layoutPresetRepository: effectiveLayoutPresetRepository,
-            bookReaderPrefsRepository: bookReaderPrefsRepository,
+            bookReaderPrefsRepository:
+                bookReaderPrefsRepositoryOverride ?? bookReaderPrefsRepository,
           ),
         ),
       );
@@ -8230,6 +8262,55 @@ void main() {
         find.byType(ReaderSettingsSheet),
       );
       expect(sheetAfterApply.prefs.fontSize, 24 / 16);
+    });
+
+    // M-2（審查修訂）：只用「套用到目前書籍」（save() 拋例外）驗證，不另外
+    // 補一則「套用到其他書籍」（saveMultiple() 拋例外）——兩條路徑在
+    // _applyPrefsToTargets 內部共用同一個 try/catch 區塊，save/saveMultiple
+    // 各自的分支邏輯本身已由 Issue 2 的 layout_preset_actions_test.dart
+    // 獨立驗證過，此處只需要證明「這一個 catch 區塊」有效即可，不需要
+    // 為同一段 catch 邏輯重複測兩次。
+    testWidgets('套用預設集到目前書籍：寫入過程拋出例外時顯示提示，不被靜默吞掉', (
+      tester,
+    ) async {
+      await tester.runAsync(
+        () => layoutPresetRepository.insert(
+          LayoutPreset(
+            id: null,
+            name: '測試預設集',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            prefs: const BookReaderPrefs(fontSize: 24 / 16),
+          ),
+        ),
+      );
+      final throwingBookReaderPrefsRepository =
+          _ThrowingBookReaderPrefsRepository(libraryRepository.database);
+      await pumpReaderScreen(
+        tester,
+        bookReaderPrefsRepositoryOverride: throwingBookReaderPrefsRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pumpAndSettle();
+      await switchToTab(tester, '預設集');
+      await tester.ensureVisible(
+        find.byKey(const Key('reader_settings_preset_slot_0_apply_current')),
+      );
+      await tester.tap(
+        find.byKey(const Key('reader_settings_preset_slot_0_apply_current')),
+      );
+      await tester.pump();
+      await tester.runAsync(
+        () => Future.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('reader_apply_preset_error_snackbar')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('套用預設集到其他書籍（多本）：跳出「即將覆蓋 N 本書」確認對話框，確認後批次寫入', (tester) async {

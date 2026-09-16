@@ -1106,21 +1106,35 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   ) async {
     final repository = widget.bookReaderPrefsRepository;
     if (repository == null || targetBookIds.isEmpty) return;
-    if (!layout_preset_actions.layoutPresetTargetsCurrentBookOnly(
-      targetBookIds,
-      widget.bookId,
-    )) {
-      final confirmed = await _confirmApplyToOtherBooks(targetBookIds.length);
-      if (!confirmed || !mounted) return;
-    }
-    await layout_preset_actions.applyLayoutPresetPrefs(
-      repository,
-      prefs: prefs,
-      targetBookIds: targetBookIds,
-    );
-    if (!mounted) return;
-    if (targetBookIds.contains(widget.bookId)) {
-      _handlePrefsChanged(prefs);
+    try {
+      if (!layout_preset_actions.layoutPresetTargetsCurrentBookOnly(
+        targetBookIds,
+        widget.bookId,
+      )) {
+        final confirmed =
+            await _confirmApplyToOtherBooks(targetBookIds.length);
+        if (!confirmed || !mounted) return;
+      }
+      await layout_preset_actions.applyLayoutPresetPrefs(
+        repository,
+        prefs: prefs,
+        targetBookIds: targetBookIds,
+      );
+      if (!mounted) return;
+      if (targetBookIds.contains(widget.bookId)) {
+        _handlePrefsChanged(prefs);
+      }
+    } catch (e, stackTrace) {
+      // Epic 43 Issue 5：比照 _handleSaveAsPreset 既有的 try/catch +
+      // SnackBar 模式，補齊套用預設集失敗時的使用者可見提示。
+      debugPrint('套用版面設定失敗：$e\n$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: const Key('reader_apply_preset_error_snackbar'),
+          content: Text('套用版面設定失敗：$e'),
+        ),
+      );
     }
   }
 
