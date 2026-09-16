@@ -1,0 +1,19 @@
+/// `ReaderScreen` 版面設定預設集「另存／套用／套用來源書籍／刪除」共用
+/// 操作的純函式模組（Epic 43 Issue 2）。頂層函式，不做成類別——
+/// `LayoutPresetRepository`／`BookReaderPrefsRepository` 分屬不同操作
+/// 子集，已證實不永遠成對提供（`issues.md` Issue 2 Q3），比照
+/// `bookmark_toggle.dart` 既有風格，各函式各自宣告自己實際需要的
+/// repository 為必要參數。
+library;
+
+/// `_handleApplyPreset`/`_handleApplyFromBook` 原本各自重複的 inline
+/// 判斷抽成純函式——「套用到目前書籍」的快速動作固定產生
+/// `targetBookIds == [currentBookId]` 這個形狀，用來與「套用到其他
+/// 書籍」picker 只勾選 1 本其他書籍時的 `targetBookIds.length == 1`
+/// 區分開來（後者仍需要確認對話框，見 `ReaderScreen._applyPrefsToTargets`
+/// 文件）。
+bool layoutPresetTargetsCurrentBookOnly(
+  List<String> targetBookIds,
+  String currentBookId,
+) =>
+    targetBookIds.length == 1 && targetBookIds.single == currentBookId;
