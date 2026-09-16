@@ -259,7 +259,7 @@ Deletion test：刪掉其中一份，複雜度不會消失——它會在另一�
 
 ## Issue 4：抽出 FoliateBridgeHandlers，收斂 JS→Dart handler name 字串常值重複
 
-**Status:** ready-for-agent
+**Status:** completed（**2026-09-17 已完成並合併回 `main`（PR [#254](https://git.jigong.org/huthief/elinkBook/pulls/254)，分支 `feat/epic-43-issue-4`）**：`plans/plan-issue-4.md`（經 `reviews/review-plan-issue-4.md` 審查修訂 1 項 Important（I-1 `git add` 路徑）與 2 項 Minor（M-1 `const` 宣告、M-2 驗證指令涵蓋範圍）採納，1 項 Minor（M-3 新增 `all`/`values` 聚合集合）評估為 YAGNI 明確不採納）4 個 Task 全數完成：新增 `app/lib/reader/foliate_bridge_handlers.dart`（`abstract final class FoliateBridgeHandlers`，11 個 `static const String`），`foliate_reader_view.dart`（12 處）／`search/foliate_content_indexer.dart`（5 處）全部 `handlerName: '...'` 字面值改為常數引用，`JsBridgeGateway` 兩處轉呼叫參數變數維持不動，`main.js` 未觸碰。獨立程式審查（`reviews/review-issue-4.md`）：0 Critical／0 Important／2 Minor（皆記錄性質，非需修正項目），並逐項核對 I-1/M-1/M-2/M-3 四項審查修訂皆正確落地（特別確認 M-3 未被偷加），結論 Ready to merge: Yes。異動觸及測試檔（`foliate_bridge_handlers_test.dart`／`foliate_reader_view_test.dart`）全過／`flutter analyze`（No issues found）皆為綠燈。）
 
 **依賴：** 無，與其餘 Issue 皆獨立，可隨時進行。
 
