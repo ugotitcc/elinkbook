@@ -77,6 +77,7 @@ import 'pdf_settings_sheet.dart';
 import '../reader/book_reader_prefs_repository.dart';
 import '../reader/layout_preset.dart';
 import '../reader/layout_preset_repository.dart';
+import '../reader/layout_preset_actions.dart' as layout_preset_actions;
 import 'reader_chrome_bottom_bar.dart';
 import 'reader_footer.dart';
 import 'reader_settings_sheet.dart';
@@ -983,32 +984,31 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       final name = await showLayoutPresetNameDialog(context);
       if (name == null || !mounted) return;
       final filteredPrefs = currentDraft.reflowableEpubFields();
-      final now = DateTime.now();
+      List<LayoutPreset> updated;
       if (_layoutPresets.length < 3) {
-        await repository.insert(LayoutPreset(
-          id: null,
+        updated = await layout_preset_actions.insertNewLayoutPreset(
+          repository,
           name: name,
-          createdAt: now,
-          updatedAt: now,
           prefs: filteredPrefs,
-        ));
+        );
       } else {
         final target = await _selectPresetToOverwrite();
         if (target == null || !mounted) return;
         final confirmed = await _confirmOverwrite(target.name);
-        if (!confirmed) return;
-        await repository.replace(
-          target.id!,
-          LayoutPreset(
-            id: target.id,
-            name: name,
-            createdAt: target.createdAt,
-            updatedAt: now,
-            prefs: filteredPrefs,
-          ),
+        // I-2（審查修訂）：對話框彈出期間使用者可能退出閱讀器，pop 後
+        // State 可能已 unmounted，比照 issues.md I-3／Task 7
+        // _applyPrefsToTargets 既有慣例，`!confirmed` 與 `!mounted`
+        // 合併檢查。
+        if (!confirmed || !mounted) return;
+        updated = await layout_preset_actions.overwriteLayoutPreset(
+          repository,
+          target: target,
+          name: name,
+          prefs: filteredPrefs,
         );
       }
-      await _loadLayoutPresets();
+      if (!mounted) return;
+      setState(() => _layoutPresets = updated);
     } catch (e, stackTrace) {
       debugPrint('另存為新預設集失敗：$e\n$stackTrace');
       if (!mounted) return;
@@ -1087,44 +1087,53 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     return confirmed ?? false;
   }
 
-  /// 套用預設集（epic-28-reader-settings-enhancements Issue 3）：「套用到
-  /// 目前書籍」（`targetBookIds` 恰為 `[widget.bookId]`，[ReaderSettingsSheet]
-  /// 的「套用到本書」快速按鈕固定產生這個形狀）直接寫入不需確認；其餘
-  /// 情況（「套用到其他書籍」流程，即使使用者只勾選 1 本其他書籍）皆先
-  /// 跳出「即將覆蓋 N 本書」確認——**判斷依據刻意不是 `targetBookIds.length
-  /// > 1`**：使用者透過「套用到其他書籍」picker 只勾選 1 本書時，
-  /// `targetBookIds.length == 1`，但這仍是「其他書籍」語意（design.md
-  /// 「套用目標二選一」的第二選項），不是「套用到目前書籍」的快速動作，
-  /// 兩者不可用數量混為一談。目標含目前書籍時，寫入後呼叫既有
-  /// [_handlePrefsChanged] 即時刷新畫面（比照 spec.md「套用到目前書籍後
-  /// 的畫面刷新」，不新增另一條刷新路徑）。
+  /// 套用版面設定至一批書籍（epic-28-reader-settings-enhancements Issue 3，
+  /// 經 Epic 43 Issue 2 收斂為 [_handleApplyPreset]/[_handleApplyFromBook]
+  /// 共用核心）：「套用到目前書籍」（`targetBookIds` 恰為 `[widget.bookId]`，
+  /// [ReaderSettingsSheet] 的「套用到本書」快速按鈕固定產生這個形狀）直接
+  /// 寫入不需確認；其餘情況（「套用到其他書籍」流程，即使使用者只勾選 1
+  /// 本其他書籍）皆先跳出「即將覆蓋 N 本書」確認——**判斷依據刻意不是
+  /// `targetBookIds.length > 1`**：使用者透過「套用到其他書籍」picker 只
+  /// 勾選 1 本書時，`targetBookIds.length == 1`，但這仍是「其他書籍」語意
+  /// （design.md「套用目標二選一」的第二選項），不是「套用到目前書籍」的
+  /// 快速動作，兩者不可用數量混為一談，見
+  /// [layout_preset_actions.layoutPresetTargetsCurrentBookOnly]。目標含
+  /// 目前書籍時，寫入後呼叫既有 [_handlePrefsChanged] 即時刷新畫面（比照
+  /// spec.md「套用到目前書籍後的畫面刷新」，不新增另一條刷新路徑）。
+  Future<void> _applyPrefsToTargets(
+    BookReaderPrefs prefs,
+    List<String> targetBookIds,
+  ) async {
+    final repository = widget.bookReaderPrefsRepository;
+    if (repository == null || targetBookIds.isEmpty) return;
+    if (!layout_preset_actions.layoutPresetTargetsCurrentBookOnly(
+      targetBookIds,
+      widget.bookId,
+    )) {
+      final confirmed = await _confirmApplyToOtherBooks(targetBookIds.length);
+      if (!confirmed || !mounted) return;
+    }
+    await layout_preset_actions.applyLayoutPresetPrefs(
+      repository,
+      prefs: prefs,
+      targetBookIds: targetBookIds,
+    );
+    if (!mounted) return;
+    if (targetBookIds.contains(widget.bookId)) {
+      _handlePrefsChanged(prefs);
+    }
+  }
+
   Future<void> _handleApplyPreset(
     LayoutPreset preset, {
     required List<String> targetBookIds,
   }) async {
-    final repository = widget.bookReaderPrefsRepository;
-    if (repository == null || targetBookIds.isEmpty) return;
-    final isCurrentBookOnly =
-        targetBookIds.length == 1 && targetBookIds.single == widget.bookId;
-    if (!isCurrentBookOnly) {
-      final confirmed = await _confirmApplyToOtherBooks(targetBookIds.length);
-      if (!confirmed) return;
-    }
-    if (targetBookIds.length == 1) {
-      await repository.save(targetBookIds.first, preset.prefs);
-    } else {
-      await repository.saveMultiple(targetBookIds, preset.prefs);
-    }
-    if (targetBookIds.contains(widget.bookId)) {
-      _handlePrefsChanged(preset.prefs);
-    }
+    await _applyPrefsToTargets(preset.prefs, targetBookIds);
   }
 
   /// 書籍設定複製（epic-28-reader-settings-enhancements Issue 3）：先讀取
   /// 來源書籍目前的版面偏好設定，以 [BookReaderPrefs.reflowableEpubFields]
-  /// 過濾後寫入。確認對話框觸發條件與批次寫入門檻，語意皆與
-  /// [_handleApplyPreset] 一致（見該方法文件「判斷依據刻意不是
-  /// targetBookIds.length > 1」的說明）。
+  /// 過濾後交給 [_applyPrefsToTargets] 處理後續判斷/確認/寫入/刷新。
   Future<void> _handleApplyFromBook(
     String sourceBookId, {
     required List<String> targetBookIds,
@@ -1134,20 +1143,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final sourcePrefs =
         (await repository.load(sourceBookId)).reflowableEpubFields();
     if (!mounted) return;
-    final isCurrentBookOnly =
-        targetBookIds.length == 1 && targetBookIds.single == widget.bookId;
-    if (!isCurrentBookOnly) {
-      final confirmed = await _confirmApplyToOtherBooks(targetBookIds.length);
-      if (!confirmed) return;
-    }
-    if (targetBookIds.length == 1) {
-      await repository.save(targetBookIds.first, sourcePrefs);
-    } else {
-      await repository.saveMultiple(targetBookIds, sourcePrefs);
-    }
-    if (targetBookIds.contains(widget.bookId)) {
-      _handlePrefsChanged(sourcePrefs);
-    }
+    await _applyPrefsToTargets(sourcePrefs, targetBookIds);
   }
 
   Future<void> _handleDeletePreset(int id) async {
@@ -1161,9 +1157,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       }
     }
     final confirmed = await _confirmDeletePreset(presetName);
-    if (!confirmed) return;
-    await repository.delete(id);
-    await _loadLayoutPresets();
+    // I-2（審查修訂）：理由同上（`_handleSaveAsPreset` 覆蓋確認）。
+    if (!confirmed || !mounted) return;
+    final updated =
+        await layout_preset_actions.deleteLayoutPreset(repository, id);
+    if (!mounted) return;
+    setState(() => _layoutPresets = updated);
   }
 
   Future<bool> _confirmDeletePreset(String name) async {

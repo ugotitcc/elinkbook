@@ -1,0 +1,239 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/reader/book_reader_prefs.dart';
+import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/layout_preset.dart';
+import 'package:elinkbook/reader/layout_preset_actions.dart';
+import 'package:elinkbook/reader/layout_preset_repository.dart';
+
+void main() {
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  group('layoutPresetTargetsCurrentBookOnly', () {
+    test('targetBookIds 恰為 [currentBookId] 時回傳 true', () {
+      expect(layoutPresetTargetsCurrentBookOnly(['b1'], 'b1'), isTrue);
+    });
+
+    test('targetBookIds 有多本書時回傳 false（即使包含 currentBookId）', () {
+      expect(layoutPresetTargetsCurrentBookOnly(['b1', 'b2'], 'b1'), isFalse);
+    });
+
+    test('targetBookIds 恰有 1 本但不是 currentBookId 時回傳 false', () {
+      expect(layoutPresetTargetsCurrentBookOnly(['b2'], 'b1'), isFalse);
+    });
+
+    test('targetBookIds 為空清單時回傳 false', () {
+      expect(layoutPresetTargetsCurrentBookOnly([], 'b1'), isFalse);
+    });
+  });
+
+  group('insertNewLayoutPreset', () {
+    late SqliteLibraryRepository libraryRepository;
+    late LayoutPresetRepository repository;
+
+    setUp(() async {
+      libraryRepository =
+          await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      repository = LayoutPresetRepository(libraryRepository.database);
+    });
+
+    tearDown(() async {
+      await libraryRepository.close();
+    });
+
+    test('insert 後回傳的清單包含新預設集，且已由資料庫指派 id', () async {
+      final updated = await insertNewLayoutPreset(
+        repository,
+        name: '臥室夜讀直排',
+        prefs: const BookReaderPrefs(fontSize: 18),
+      );
+
+      expect(updated, hasLength(1));
+      expect(updated.single.id, isNotNull);
+      expect(updated.single.name, '臥室夜讀直排');
+      expect(updated.single.prefs.fontSize, 18);
+    });
+
+    test('回傳的清單反映目前完整內容，依插入順序排列', () async {
+      await insertNewLayoutPreset(
+        repository,
+        name: '第一組',
+        prefs: BookReaderPrefs.empty,
+      );
+
+      final updated = await insertNewLayoutPreset(
+        repository,
+        name: '第二組',
+        prefs: BookReaderPrefs.empty,
+      );
+
+      expect(updated.map((p) => p.name).toList(), ['第一組', '第二組']);
+    });
+  });
+
+  group('overwriteLayoutPreset', () {
+    late SqliteLibraryRepository libraryRepository;
+    late LayoutPresetRepository repository;
+
+    setUp(() async {
+      libraryRepository =
+          await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      repository = LayoutPresetRepository(libraryRepository.database);
+    });
+
+    tearDown(() async {
+      await libraryRepository.close();
+    });
+
+    test('覆蓋後 id／createdAt 不變，name／prefs 更新為新值', () async {
+      final createdAt = DateTime.fromMillisecondsSinceEpoch(1000);
+      await repository.insert(LayoutPreset(
+        id: null,
+        name: '舊名稱',
+        createdAt: createdAt,
+        updatedAt: createdAt,
+        prefs: const BookReaderPrefs(fontSize: 16),
+      ));
+      final target = (await repository.listAll()).single;
+
+      final updated = await overwriteLayoutPreset(
+        repository,
+        target: target,
+        name: '新名稱',
+        prefs: const BookReaderPrefs(fontSize: 20),
+      );
+
+      expect(updated, hasLength(1));
+      expect(updated.single.id, target.id);
+      expect(updated.single.name, '新名稱');
+      expect(updated.single.prefs.fontSize, 20);
+      expect(updated.single.createdAt, target.createdAt);
+    });
+
+    test('target.id 為 null（未持久化的暫存物件）時觸發 assert', () async {
+      final target = LayoutPreset(
+        id: null,
+        name: '暫存',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        prefs: BookReaderPrefs.empty,
+      );
+
+      expect(
+        () => overwriteLayoutPreset(
+          repository,
+          target: target,
+          name: '新名稱',
+          prefs: BookReaderPrefs.empty,
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+  });
+
+  group('deleteLayoutPreset', () {
+    late SqliteLibraryRepository libraryRepository;
+    late LayoutPresetRepository repository;
+
+    setUp(() async {
+      libraryRepository =
+          await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      repository = LayoutPresetRepository(libraryRepository.database);
+    });
+
+    tearDown(() async {
+      await libraryRepository.close();
+    });
+
+    test('刪除後回傳的清單不含該筆，其餘保留', () async {
+      await repository.insert(LayoutPreset(
+        id: null,
+        name: '保留組',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        prefs: BookReaderPrefs.empty,
+      ));
+      await repository.insert(LayoutPreset(
+        id: null,
+        name: '刪除組',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        prefs: BookReaderPrefs.empty,
+      ));
+      final toDelete =
+          (await repository.listAll()).firstWhere((p) => p.name == '刪除組');
+
+      final updated = await deleteLayoutPreset(repository, toDelete.id!);
+
+      expect(updated, hasLength(1));
+      expect(updated.single.name, '保留組');
+    });
+  });
+
+  group('applyLayoutPresetPrefs', () {
+    late SqliteLibraryRepository libraryRepository;
+    late BookReaderPrefsRepository repository;
+
+    setUp(() async {
+      libraryRepository =
+          await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      repository = BookReaderPrefsRepository(libraryRepository.database);
+      for (final id in ['b1', 'b2', 'b3']) {
+        await libraryRepository.insertBook(Book(
+          id: id,
+          title: '書名$id',
+          format: BookFileFormat.epub,
+          filePath: 'content://example/$id',
+          source: BookSource.local,
+          createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+          lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        ));
+      }
+    });
+
+    tearDown(() async {
+      await libraryRepository.close();
+    });
+
+    test('targetBookIds 只有 1 本時呼叫 save（單筆寫入）', () async {
+      await applyLayoutPresetPrefs(
+        repository,
+        prefs: const BookReaderPrefs(fontSize: 18),
+        targetBookIds: ['b1'],
+      );
+
+      expect((await repository.load('b1')).fontSize, 18);
+    });
+
+    test('targetBookIds 有多本時呼叫 saveMultiple（批次寫入），皆正確寫入', () async {
+      await applyLayoutPresetPrefs(
+        repository,
+        prefs: const BookReaderPrefs(fontSize: 22),
+        targetBookIds: ['b1', 'b2', 'b3'],
+      );
+
+      expect((await repository.load('b1')).fontSize, 22);
+      expect((await repository.load('b2')).fontSize, 22);
+      expect((await repository.load('b3')).fontSize, 22);
+    });
+
+    // I-1（審查修訂）：targetBookIds 為空清單時，length==1 判定為
+    // false 會落入 else 分支呼叫 saveMultiple([], prefs)，開啟一次
+    // 完全無謂的 SQLite transaction——補上提早返回並驗證不寫入。
+    test('targetBookIds 為空清單時不執行寫入且安全返回', () async {
+      await applyLayoutPresetPrefs(
+        repository,
+        prefs: const BookReaderPrefs(fontSize: 20),
+        targetBookIds: [],
+      );
+
+      expect((await repository.load('b1')).fontSize, isNull);
+    });
+  });
+}
