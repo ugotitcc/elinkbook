@@ -8,7 +8,11 @@ import '../library/models/library_enums.dart';
 import '../library/library_repository.dart';
 import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../reader/resolve_text_conversion.dart';
+import '../reader/text_conversion.dart';
+import '../reader/text_conversion_mode.dart';
 import '../search/highlight_segments.dart';
+import '../search/search_query_variants.dart';
 import '../search/search_repository.dart';
 import 'library_paging.dart';
 import 'library_screen_dependencies.dart';
@@ -66,9 +70,36 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
   /// E-Ink 模式每頁筆數（spec.md §9.3）。
   static const _kEinkItemsPerPage = 10;
 
+  /// 內容匹配摘要片段的顯示轉換模式（FR-48，epic-42-text-conversion
+  /// Issue 4，spec.md「全文檢索整合」）：一律採全域預設值（「跨書情境」
+  /// 規則），不做單書覆寫。
+  TextConversionMode _contentTextConversion = TextConversionMode.original;
+
+  /// AppBar 書名／工具列作者的顯示轉換模式（FR-48，單書情境）：依
+  /// [widget.book] 所屬的 `resolveTextConversion()` 解析值——與
+  /// [_contentTextConversion] 刻意不同層級（見 spec.md「Dart 端字元轉換
+  /// 模組」呼叫點分流規則）。本畫面自行解析、不依賴呼叫端是否已預先轉換
+  /// 過傳入的 [widget.book]（審查修正 review-plan-issue-4.md I-2）：
+  /// `LibrarySearchScreen` 下鑽入口與 `ReaderScreen` 單書搜尋入口皆傳入
+  /// 未轉換的原始 `Book`，本畫面統一在此處解析，兩個入口顯示結果一致。
+  TextConversionMode _titleTextConversion = TextConversionMode.original;
+
   @override
   void initState() {
     super.initState();
+    unawaited(_initialize());
+  }
+
+  Future<void> _initialize() async {
+    final loaded = await widget.prefsManager.load(widget.book.id);
+    if (!mounted) return;
+    setState(() {
+      _contentTextConversion = loaded.globalPrefs.reading.textConversion;
+      _titleTextConversion = resolveTextConversion(
+        loaded.bookPrefs,
+        loaded.globalPrefs.reading,
+      );
+    });
     // 裝置不支援全文檢索時跳過初始查詢，由 UI 呈現降級提示（review-plan-issue-7.md I-3）。
     if (!widget.readerFeatureRepositories.isFullTextSearchAvailable) {
       return;
@@ -165,7 +196,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.book.title,
+          convertText(widget.book.title, _titleTextConversion),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -237,7 +268,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
           if (widget.book.author != null && widget.book.author!.isNotEmpty)
             Flexible(
               child: Text(
-                widget.book.author!,
+                convertText(widget.book.author!, _titleTextConversion),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall,
@@ -272,6 +303,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
     }
 
     final trimmedQuery = _controller.text.trim();
+    final variants = queryVariants(trimmedQuery);
     final isPdf = widget.book.format == BookFileFormat.pdf;
 
     if (!widget.isEinkMode) {
@@ -281,7 +313,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
         itemBuilder: (context, index) => _buildSnippetTile(
           result.matches[index],
           index,
-          trimmedQuery,
+          variants,
           isPdf,
         ),
       );
@@ -303,7 +335,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
           child: ListView(
             children: [
               for (var i = pageStart; i < pageEnd; i++)
-                _buildSnippetTile(result.matches[i], i, trimmedQuery, isPdf),
+                _buildSnippetTile(result.matches[i], i, variants, isPdf),
             ],
           ),
         ),
@@ -327,7 +359,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
   Widget _buildSnippetTile(
     ContentMatchSnippet snippet,
     int index,
-    String query,
+    List<String> variants,
     bool isPdf,
   ) {
     // 位置標籤：PDF「第 X 頁」，其餘「第 X 章」（chapterIndex 為 0-based）。
@@ -335,11 +367,12 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
     final locationText = chapterIndex != null
         ? (isPdf ? '第 ${chapterIndex + 1} 頁' : '第 ${chapterIndex + 1} 章')
         : null;
+    final displaySnippet = convertText(snippet.snippet, _contentTextConversion);
 
     return ListTile(
       key: Key('book_search_snippet_$index'),
       dense: true,
-      title: _buildHighlightedText(snippet.snippet, query),
+      title: _buildHighlightedText(displaySnippet, variants),
       subtitle: locationText != null ? Text(locationText) : null,
       onTap: () => _handleSnippetTap(snippet),
     );
@@ -350,8 +383,16 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
   /// 避免電子紙殘影）。spec.md §9.3。使用 Text.rich 支援系統文字縮放。
   /// 命中位置切分邏輯已抽至 [splitHighlightSegments]（epic-41 Issue 4），
   /// 本方法只負責把切分結果轉成有樣式的 TextSpan。
-  Widget _buildHighlightedText(String text, String query) {
-    final segments = splitHighlightSegments(text, query);
+  Widget _buildHighlightedText(String text, List<String> variants) {
+    // 跨字形高亮：命中內容字形可能與使用者輸入字形不同（例如使用者輸入
+    // 簡體「电脑」命中繁體原文「電腦」的章節），改用 findMatchingVariant()
+    // 依序嘗試 indexOf，取第一個能在 text 中找到的變體做為高亮比對
+    // 基準，而非只用原始查詢字串——找不到任何變體時（理論上不會發生，
+    // 見 search_query_variants.dart 說明）保底退回 variants.first（恆為
+    // 原始查詢字串 q0，見 queryVariants() 文件註解），交由
+    // splitHighlightSegments() 既有「找不到則不高亮」邏輯安全處理。
+    final matchQuery = findMatchingVariant(text, variants) ?? variants.first;
+    final segments = splitHighlightSegments(text, matchQuery);
     final hasMatch = segments.any((segment) => segment.isMatch);
     if (!hasMatch) {
       // 完全沒有命中（含 query 為空字串）：直接回傳純 Text，不得改用
