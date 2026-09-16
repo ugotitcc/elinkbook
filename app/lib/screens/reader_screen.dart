@@ -1901,18 +1901,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     FoliateReaderView.clearSelection(_foliateEpubReaderViewKey);
   }
 
-  /// 刪除既有畫線/備註的共用邏輯（epic-27-reader-device-compat Issue 11，
-  /// 直接搬用舊 `_showAnnotationActionDialog` 的 delete 分支：note/
-  /// highlight 各自存在才各自刪除，單筆刪除＝整筆一起刪，spec.md 決策
-  /// #13）。EPUB／PDF 各自的 reload／關閉工具列方式不同，由呼叫端各自的
-  /// wrapper 負責。
-  Future<void> _deleteAnnotationRecords(AnnotationListItem item) async {
-    final note = item.note;
-    final highlight = item.highlight;
-    if (note != null) await widget.notesRepository!.delete(note.id);
-    if (highlight != null) await widget.highlightsRepository!.delete(highlight.id);
-  }
-
   Future<void> _handleDeleteExistingAnnotation(AnnotationListItem item) async {
     final session = _annotationSession;
     if (session == null) return;
@@ -1927,8 +1915,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   Future<void> _handlePdfDeleteExistingAnnotation(AnnotationListItem item) async {
-    await _deleteAnnotationRecords(item);
-    await _reloadPdfAnnotationsAndSync();
+    final session = _annotationSession;
+    if (session == null) return;
+    final snapshot = await session.deleteExisting(item);
+    if (!mounted) return;
+    setState(() {
+      _highlights = snapshot.highlights;
+      _notes = snapshot.notes;
+    });
+    _sendPdfAnnotationsToNative();
     _handlePdfSelectionCanceled();
   }
 
@@ -2088,24 +2083,25 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   Future<void> _handlePdfHighlightStyleSelected(HighlightStyle style) async {
     final selection = _currentPdfSelection;
-    final repository = widget.highlightsRepository;
-    if (selection == null || repository == null) return;
-    final highlightId = const Uuid().v4();
-    await repository.insert(Highlight(
-      id: highlightId,
-      bookId: widget.bookId,
+    final session = _annotationSession;
+    if (selection == null || session == null) return;
+    final result = await session.createHighlight(
+      locator: AnnotationLocator.pdf(pageIndex: selection.pageIndex, rect: selection.rect),
       style: style,
-      pdfPageIndex: selection.pageIndex,
-      pdfRect: selection.rect,
-    ));
-    _pendingPdfHighlightIdForSelection = highlightId;
-    await _reloadPdfAnnotationsAndSync();
+    );
+    if (!mounted) return;
+    setState(() {
+      _highlights = result.snapshot.highlights;
+      _notes = result.snapshot.notes;
+      _pendingPdfHighlightIdForSelection = result.highlightId;
+    });
+    _sendPdfAnnotationsToNative();
   }
 
   Future<void> _handlePdfNotePressed() async {
     final selection = _currentPdfSelection;
-    final repository = widget.notesRepository;
-    if (selection == null || repository == null) return;
+    final session = _annotationSession;
+    if (selection == null || session == null) return;
     final existing = resolvePdfExistingAnnotation(
       selection: selection,
       highlights: _highlights,
@@ -2117,24 +2113,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       title: existing != null ? '編輯備註' : '新增備註',
     );
     if (text == null) return;
-    if (existing != null) {
-      await repository.updateText(existing.id, text);
-    } else {
-      await repository.insert(Note(
-        id: const Uuid().v4(),
-        bookId: widget.bookId,
-        text: text,
-        pdfPageIndex: selection.pageIndex,
-        pdfRect: selection.rect,
-        highlightId: _pendingPdfHighlightIdForSelection,
-      ));
-    }
-    await _reloadPdfAnnotationsAndSync();
+    final snapshot = await session.createOrUpdateNote(
+      locator: AnnotationLocator.pdf(pageIndex: selection.pageIndex, rect: selection.rect),
+      text: text,
+      existing: existing,
+      pendingHighlightId: _pendingPdfHighlightIdForSelection,
+    );
     if (!mounted) return;
     setState(() {
+      _highlights = snapshot.highlights;
+      _notes = snapshot.notes;
       _currentPdfSelection = null;
       _pendingPdfHighlightIdForSelection = null;
     });
+    _sendPdfAnnotationsToNative();
   }
 
   /// 重新查詢本書全部劃線/備註並送給原生端重繪 Bitmap 疊加（PDF 版本，
@@ -2142,15 +2134,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// [_highlights]／[_notes] state 欄位——單一 ReaderScreen 會話只會載入
   /// 其中一種格式的書籍，不會同時混用。
   Future<void> _reloadPdfAnnotationsAndSync() async {
-    final highlightsRepository = widget.highlightsRepository;
-    final notesRepository = widget.notesRepository;
-    if (highlightsRepository == null || notesRepository == null) return;
-    final highlights = await highlightsRepository.listByBook(widget.bookId);
-    final notes = await notesRepository.listByBook(widget.bookId);
+    final session = _annotationSession;
+    if (session == null) return;
+    final snapshot = await session.reload();
     if (!mounted) return;
     setState(() {
-      _highlights = highlights;
-      _notes = notes;
+      _highlights = snapshot.highlights;
+      _notes = snapshot.notes;
     });
     _sendPdfAnnotationsToNative();
   }
