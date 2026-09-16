@@ -8,6 +8,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../library/models/book.dart';
 import '../reader/foliate_bridge_codec.dart';
+import '../reader/foliate_bridge_handlers.dart';
 import '../reader/foliate_native_bridge.dart';
 import '../reader/js_bridge_gateway.dart';
 import '../reader/tts_segment_cfi.dart';
@@ -102,7 +103,7 @@ class FoliateContentIndexer implements ContentIndexer {
                 c.addJavaScriptHandler(handlerName: name, callback: callback),
           );
           gateway.register<int>(
-            handlerName: 'onSectionCountReady',
+            handlerName: FoliateBridgeHandlers.onSectionCountReady,
             parse: (args) =>
                 args.isNotEmpty ? (args[0] as num).toInt() : 0,
             fallback: 0,
@@ -111,7 +112,7 @@ class FoliateContentIndexer implements ContentIndexer {
           // 不透過 gateway.register()，改直接註冊原生 handler 自行比對
           // 章節索引（見上方 expectedSectionIndex 註解）。
           c.addJavaScriptHandler(
-            handlerName: 'onSegmentsForSectionReady',
+            handlerName: FoliateBridgeHandlers.onSegmentsForSectionReady,
             callback: (args) {
               final receivedIndex =
                   args.isNotEmpty ? (args[0] as num).toInt() : -1;
@@ -129,14 +130,14 @@ class FoliateContentIndexer implements ContentIndexer {
             },
           );
           c.addJavaScriptHandler(
-            handlerName: 'onPageRendered',
+            handlerName: FoliateBridgeHandlers.onPageRendered,
             callback: (args) {
               if (!readyCompleter.isCompleted) readyCompleter.complete();
               return null;
             },
           );
           c.addJavaScriptHandler(
-            handlerName: 'onError',
+            handlerName: FoliateBridgeHandlers.onError,
             callback: (args) {
               if (!readyCompleter.isCompleted) {
                 readyCompleter.completeError(
@@ -161,7 +162,7 @@ class FoliateContentIndexer implements ContentIndexer {
       final sectionCount = await gateway
           .request<int>(
             jsCall: 'window.getSectionCount()',
-            handlerName: 'onSectionCountReady',
+            handlerName: FoliateBridgeHandlers.onSectionCountReady,
           )
           .timeout(
             const Duration(seconds: 15),
