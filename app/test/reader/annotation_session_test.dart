@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/reader/annotation_list_item.dart';
 import 'package:elinkbook/reader/annotation_session.dart';
 import 'package:elinkbook/reader/highlight.dart';
-import 'package:elinkbook/reader/annotation_list_item.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/reader/note.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
