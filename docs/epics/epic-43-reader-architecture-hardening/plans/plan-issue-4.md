@@ -1,6 +1,6 @@
 # Epic 43 Issue 4 — FoliateBridgeHandlers Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 收斂 JS→Dart `callHandler()` 的 11 個相異 handler name 字串常值（目前在 `foliate_reader_view.dart`／`search/foliate_content_indexer.dart` 兩個檔案內以字面值手打兩次以上）成單一常數集合 `FoliateBridgeHandlers`，消除「任一處打錯字，型別系統攔不到、只會執行期靜默逾時」的風險。
 
@@ -32,7 +32,7 @@
 **Interfaces:**
 - Produces: `abstract final class FoliateBridgeHandlers`，11 個 `static const String` 欄位：`onTableOfContentsReady`／`onTtsSegmentsReady`／`onTtsSegmentIndexReady`／`onPageRendered`／`onError`／`onTtsHighlightOutOfSafeWindow`／`onSelectionCleared`／`onSectionCountReady`／`onSegmentsForSectionReady`／`onLocatorChanged`／`onSelectionChanged`。
 
-- [ ] **Step 1: 建立測試檔並寫入失敗測試**
+- [x] **Step 1: 建立測試檔並寫入失敗測試**
 
 建立 `app/test/reader/foliate_bridge_handlers_test.dart`：
 
@@ -99,12 +99,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/foliate_bridge_handlers_test.dart`
 Expected: FAIL（`foliate_bridge_handlers.dart` 尚不存在，import 錯誤）
 
-- [ ] **Step 3: 建立 `foliate_bridge_handlers.dart`**
+- [x] **Step 3: 建立 `foliate_bridge_handlers.dart`**
 
 ```dart
 /// JS→Dart `callHandler()` 的 handler name 常數（Epic 43 Issue 4）。
@@ -128,12 +128,12 @@ abstract final class FoliateBridgeHandlers {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/foliate_bridge_handlers_test.dart`
 Expected: PASS（2 個測試全過）
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/reader/foliate_bridge_handlers.dart test/reader/foliate_bridge_handlers_test.dart
@@ -150,12 +150,12 @@ git commit -m "feat(reader): 新增 FoliateBridgeHandlers handler name 常數集
 **Interfaces:**
 - Consumes: `FoliateBridgeHandlers`（Task 1，`app/lib/reader/foliate_bridge_handlers.dart`）。
 
-- [ ] **Step 1: 執行既有測試建立基準線**
+- [x] **Step 1: 執行既有測試建立基準線**
 
 Run: `flutter test test/reader/foliate_reader_view_test.dart`
 Expected: PASS（記錄目前全數通過，作為本 Task 修改後的零回歸基準）
 
-- [ ] **Step 2: 新增 import**
+- [x] **Step 2: 新增 import**
 
 在 `foliate_reader_view.dart` 頂部 import 區塊（`import 'foliate_bridge_codec.dart';` 後，第 17 行後）新增：
 
@@ -163,7 +163,7 @@ Expected: PASS（記錄目前全數通過，作為本 Task 修改後的零回歸
 import 'foliate_bridge_handlers.dart';
 ```
 
-- [ ] **Step 3: 替換全部 12 處 `handlerName: '...'` 字面值**
+- [x] **Step 3: 替換全部 12 處 `handlerName: '...'` 字面值**
 
 逐一找到以下 12 處（皆為單行字面值替換，前後程式碼不變，只改 `handlerName:` 這一行本身）：
 
@@ -277,17 +277,17 @@ import 'foliate_bridge_handlers.dart';
 
 **注意：** 第 609 行 `registerHandler: (name, callback) => controller.addJavaScriptHandler(handlerName: name, callback: callback),` **不要修改**——`name` 是 `JsBridgeGateway` 建構子注入的參數變數，不是字面值（見 Global Constraints）。
 
-- [ ] **Step 4: 執行測試確認零回歸**
+- [x] **Step 4: 執行測試確認零回歸**
 
 Run: `flutter test test/reader/foliate_bridge_handlers_test.dart test/reader/foliate_reader_view_test.dart`（M-2 審查修訂：一併納入 Task 1 新增的常數測試，接入過程中持續受測，耗時可忽略）
 Expected: PASS（`foliate_reader_view_test.dart` 與 Step 1 記錄的基準線一致，無新增失敗；`foliate_bridge_handlers_test.dart` 維持 Task 1 完成後的通過數）
 
-- [ ] **Step 5: flutter analyze**
+- [x] **Step 5: flutter analyze**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/reader/foliate_reader_view.dart
@@ -304,7 +304,7 @@ git commit -m "refactor(reader): foliate_reader_view 改用 FoliateBridgeHandler
 **Interfaces:**
 - Consumes: `FoliateBridgeHandlers`（Task 1）。
 
-- [ ] **Step 1: 新增 import**
+- [x] **Step 1: 新增 import**
 
 在 `foliate_content_indexer.dart` 頂部 import 區塊（`import '../reader/foliate_bridge_codec.dart';` 後，第 10 行後）新增：
 
@@ -312,7 +312,7 @@ git commit -m "refactor(reader): foliate_reader_view 改用 FoliateBridgeHandler
 import '../reader/foliate_bridge_handlers.dart';
 ```
 
-- [ ] **Step 2: 替換全部 5 處 `handlerName: '...'` 字面值**
+- [x] **Step 2: 替換全部 5 處 `handlerName: '...'` 字面值**
 
 1. 約第 105 行（`gateway.register<int>(` → `onSectionCountReady`）：
    ```dart
@@ -361,7 +361,7 @@ import '../reader/foliate_bridge_handlers.dart';
 
 **注意：** 第 102 行 `registerHandler: (name, callback) => c.addJavaScriptHandler(handlerName: name, callback: callback),` **不要修改**（理由同 Task 2 注意事項）。
 
-- [ ] **Step 3: 驗證（本檔案無既有測試檔可跑，見 Global Constraints）**
+- [x] **Step 3: 驗證（本檔案無既有測試檔可跑，見 Global Constraints）**
 
 Run: `flutter test test/reader/foliate_bridge_handlers_test.dart`（M-2 審查修訂：`foliate_content_indexer.dart` 本身沒有既有測試檔，但至少確保常數集合本身仍完整正確）
 Expected: PASS（維持 Task 1 完成後的通過數）
@@ -371,7 +371,7 @@ Expected: `No issues found!`
 
 人工核對：用 `grep -n "handlerName:" app/lib/search/foliate_content_indexer.dart` 確認除第 102 行（`name` 變數，不動）外，其餘 5 處皆已改為 `FoliateBridgeHandlers.xxx`，且對照 Task 1 常數值逐一與替換前的原始字面值完全相符（`onSectionCountReady`/`onSegmentsForSectionReady`/`onPageRendered`/`onError`）。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add lib/search/foliate_content_indexer.dart
@@ -384,20 +384,20 @@ git commit -m "refactor(reader): foliate_content_indexer 改用 FoliateBridgeHan
 
 **Files:** 無新增/修改（純驗證）
 
-- [ ] **Step 1: 完整 flutter analyze**
+- [x] **Step 1: 完整 flutter analyze**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 2: 完整 flutter test**
+- [x] **Step 2: 完整 flutter test**
 
 Run: `flutter test`
 Expected: 全數通過，零回歸（若有既有已知不穩定測試案例，比照 `epic-41`/`epic-43` Issue 1/2 慣例於 PR 描述註明，不視為本 Issue 造成的回歸）
 
-- [ ] **Step 3: 於 `plan-issue-4.md` 標記全部 Task 完成**
+- [x] **Step 3: 於 `plan-issue-4.md` 標記全部 Task 完成**
 
-將本檔案所有 `- [ ]` 改為 `- [x]`。
+將本檔案所有 `- [x]` 改為 `- [x]`。
 
-- [ ] **Step 4: 發起獨立程式審查**
+- [x] **Step 4: 發起獨立程式審查**
 
 比照 `docs/agents/issue-tracker.md`／`sdd-workflow` 既有流程，使用 `/superpowers:requesting-code-review` 對本次異動（`git diff` 對比 Task 1 之前的 commit）發起審查，結果存至 `docs/epics/epic-43-reader-architecture-hardening/reviews/review-issue-4.md`（不進版控）。
