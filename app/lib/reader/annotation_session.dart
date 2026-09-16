@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
 import 'highlight.dart';
+import 'highlights_repository.dart';
 import 'note.dart';
+import 'notes_repository.dart';
 import 'percent_rect.dart';
 
 /// 劃線/備註 CRUD 完成後的最新清單快照（Epic 43 Issue 1）。無狀態回傳值
@@ -44,4 +46,25 @@ class AnnotationLocator {
   final double? progression;
   final int? pdfPageIndex;
   final PercentRect? pdfRect;
+}
+
+/// 建構子注入依賴；只做 repository CRUD＋查詢，不依賴 BuildContext／
+/// GlobalKey（`/grilling` Q3/Q5/Q6：送原生端、跳窗拿文字、UI 收尾皆留在
+/// ReaderScreen 呼叫端），純資料物件，回傳快照而非產生副作用（Q2）。
+class AnnotationSession {
+  AnnotationSession({
+    required this.highlightsRepository,
+    required this.notesRepository,
+    required this.bookId,
+  });
+
+  final HighlightsRepository highlightsRepository;
+  final NotesRepository notesRepository;
+  final String bookId;
+
+  Future<AnnotationSnapshot> reload() async {
+    final highlights = await highlightsRepository.listByBook(bookId);
+    final notes = await notesRepository.listByBook(bookId);
+    return AnnotationSnapshot(highlights: highlights, notes: notes);
+  }
 }

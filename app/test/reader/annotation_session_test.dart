@@ -2,8 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/annotation_session.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
+import 'package:elinkbook/reader/highlights_repository.dart';
 import 'package:elinkbook/reader/note.dart';
+import 'package:elinkbook/reader/notes_repository.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
+
+import '../support/fake_highlights_repository.dart';
+import '../support/fake_notes_repository.dart';
 
 void main() {
   group('AnnotationSnapshot', () {
@@ -50,6 +55,74 @@ void main() {
       expect(locator.pdfRect, rect);
       expect(locator.epubLocatorJson, isNull);
       expect(locator.progression, isNull);
+    });
+  });
+
+  group('AnnotationSession.reload', () {
+    test('回傳兩個 repository 目前的完整清單', () async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      await highlightsRepo.insert(const Highlight(
+        id: 'h1',
+        bookId: 'b1',
+        style: HighlightStyle.highlighterYellow,
+        epubLocatorJson: 'loc',
+        progression: 0.1,
+      ));
+      await notesRepo.insert(const Note(
+        id: 'n1',
+        bookId: 'b1',
+        text: 'hi',
+        epubLocatorJson: 'loc',
+        progression: 0.1,
+      ));
+      final session = AnnotationSession(
+        highlightsRepository: highlightsRepo,
+        notesRepository: notesRepo,
+        bookId: 'b1',
+      );
+
+      final snapshot = await session.reload();
+
+      expect(snapshot.highlights, hasLength(1));
+      expect(snapshot.highlights.single.id, 'h1');
+      expect(snapshot.notes, hasLength(1));
+      expect(snapshot.notes.single.id, 'n1');
+    });
+
+    // M-2（審查修訂）：不同 bookId 的資料須被過濾掉，避免未來實作遺漏
+    // bookId 參數過濾而混入其他書籍的劃線/備註。
+    test('只回傳指定 bookId 的資料，其他書籍的劃線/備註不混入', () async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      await highlightsRepo.insert(const Highlight(
+        id: 'h1',
+        bookId: 'b1',
+        style: HighlightStyle.highlighterYellow,
+        epubLocatorJson: 'loc',
+      ));
+      await highlightsRepo.insert(const Highlight(
+        id: 'h-other',
+        bookId: 'b_other',
+        style: HighlightStyle.highlighterYellow,
+        epubLocatorJson: 'loc',
+      ));
+      await notesRepo.insert(const Note(id: 'n1', bookId: 'b1', text: 'hi', epubLocatorJson: 'loc'));
+      await notesRepo.insert(
+        const Note(id: 'n-other', bookId: 'b_other', text: 'hi', epubLocatorJson: 'loc'),
+      );
+      final session = AnnotationSession(
+        highlightsRepository: highlightsRepo,
+        notesRepository: notesRepo,
+        bookId: 'b1',
+      );
+
+      final snapshot = await session.reload();
+
+      expect(snapshot.highlights, hasLength(1));
+      expect(snapshot.highlights.single.id, 'h1');
+      expect(snapshot.notes, hasLength(1));
+      expect(snapshot.notes.single.id, 'n1');
     });
   });
 }
