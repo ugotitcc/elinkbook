@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
+import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/layout_preset.dart';
 import 'package:elinkbook/reader/layout_preset_actions.dart';
 import 'package:elinkbook/reader/layout_preset_repository.dart';
@@ -170,6 +173,67 @@ void main() {
 
       expect(updated, hasLength(1));
       expect(updated.single.name, '保留組');
+    });
+  });
+
+  group('applyLayoutPresetPrefs', () {
+    late SqliteLibraryRepository libraryRepository;
+    late BookReaderPrefsRepository repository;
+
+    setUp(() async {
+      libraryRepository =
+          await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      repository = BookReaderPrefsRepository(libraryRepository.database);
+      for (final id in ['b1', 'b2', 'b3']) {
+        await libraryRepository.insertBook(Book(
+          id: id,
+          title: '書名$id',
+          format: BookFileFormat.epub,
+          filePath: 'content://example/$id',
+          source: BookSource.local,
+          createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+          lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        ));
+      }
+    });
+
+    tearDown(() async {
+      await libraryRepository.close();
+    });
+
+    test('targetBookIds 只有 1 本時呼叫 save（單筆寫入）', () async {
+      await applyLayoutPresetPrefs(
+        repository,
+        prefs: const BookReaderPrefs(fontSize: 18),
+        targetBookIds: ['b1'],
+      );
+
+      expect((await repository.load('b1')).fontSize, 18);
+    });
+
+    test('targetBookIds 有多本時呼叫 saveMultiple（批次寫入），皆正確寫入', () async {
+      await applyLayoutPresetPrefs(
+        repository,
+        prefs: const BookReaderPrefs(fontSize: 22),
+        targetBookIds: ['b1', 'b2', 'b3'],
+      );
+
+      expect((await repository.load('b1')).fontSize, 22);
+      expect((await repository.load('b2')).fontSize, 22);
+      expect((await repository.load('b3')).fontSize, 22);
+    });
+
+    // I-1（審查修訂）：targetBookIds 為空清單時，length==1 判定為
+    // false 會落入 else 分支呼叫 saveMultiple([], prefs)，開啟一次
+    // 完全無謂的 SQLite transaction——補上提早返回並驗證不寫入。
+    test('targetBookIds 為空清單時不執行寫入且安全返回', () async {
+      await applyLayoutPresetPrefs(
+        repository,
+        prefs: const BookReaderPrefs(fontSize: 20),
+        targetBookIds: [],
+      );
+
+      expect((await repository.load('b1')).fontSize, isNull);
     });
   });
 }

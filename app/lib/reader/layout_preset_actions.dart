@@ -7,6 +7,7 @@
 library;
 
 import 'book_reader_prefs.dart';
+import 'book_reader_prefs_repository.dart';
 import 'layout_preset.dart';
 import 'layout_preset_repository.dart';
 
@@ -75,4 +76,28 @@ Future<List<LayoutPreset>> deleteLayoutPreset(
 ) async {
   await repository.delete(id);
   return repository.listAll();
+}
+
+/// `_handleApplyPreset`/`_handleApplyFromBook` 共用的核心：只做寫入
+/// （單筆 `save`／批次 `saveMultiple`），不含確認對話框、不含
+/// `_handlePrefsChanged` 呼叫（皆需要 BuildContext／ReaderScreen 自身
+/// 狀態，留在呼叫端，比照 Epic 43 Issue 1 一貫的邊界原則）。
+///
+/// I-1（審查修訂）：`targetBookIds` 為空清單時提早返回——本函式是
+/// `layout_preset_actions.dart` 模組導出的公開頂層函式，即使目前唯一
+/// 呼叫端 `ReaderScreen._applyPrefsToTargets` 已自行 guard
+/// `targetBookIds.isEmpty`，本函式仍應有自我防禦能力，避免空清單落入
+/// `else` 分支對 `saveMultiple([], prefs)` 開啟一次無謂的 SQLite
+/// transaction。
+Future<void> applyLayoutPresetPrefs(
+  BookReaderPrefsRepository repository, {
+  required BookReaderPrefs prefs,
+  required List<String> targetBookIds,
+}) async {
+  if (targetBookIds.isEmpty) return;
+  if (targetBookIds.length == 1) {
+    await repository.save(targetBookIds.first, prefs);
+  } else {
+    await repository.saveMultiple(targetBookIds, prefs);
+  }
 }
