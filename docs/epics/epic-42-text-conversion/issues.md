@@ -164,7 +164,7 @@
 
 ## Issue 5：TTS 朗讀文字轉換整合
 
-**Status:** ready-for-agent
+**Status:** completed（**2026-09-16 已完成並合併回 `main`（PR [#251](https://git.jigong.org/huthief/elinkBook/pulls/251)，分支 `feat/epic-42-issue-5`）**：`plans/plan-issue-5.md` 2 個 Task 全數完成——新增零 DOM 依賴的純函式 `convertTtsSegments(segments, mode)`（`text-conversion.js`，重用 Issue 0b 已交付的 `applyTextConversionToString()`），只轉換 `segments[].text` 供語音合成器朗讀，`segmentId`／`cfi` 原樣保留；`main.js` 的 `window.buildTtsSegments()`（TTS 播放專用）接上這個轉換，使用既有模組層級變數 `currentTextConversion`（Issue 2 已維護為該書「單書情境」生效值）；`window.buildSegmentsForSection()`（epic-10-search 全文檢索背景索引專用，與 `buildTtsSegments()` 共用同一份 `extractSegmentsForSection()` 核心邏輯）刻意維持原樣不動，索引永遠寫入原文，不受本次異動影響（呼應 Issue 4 既有不變量）。全程未修改任何 Dart 端實作程式碼。獨立程式審查（`reviews/review-issue-5.md`）：實際執行 `node app/tool/test_tts_segment_conversion.mjs`、`flutter test test/reader/foliate_reader_view_test.dart`（107 項，含新增 3 項）與 `flutter analyze`，並直接讀取 `window.buildSegmentsForSection` 函式本體原始碼交叉驗證核心回歸案例（索引寫入端未被污染），確認 0 Critical／0 Important／1 Minor（測試向量「軟件→軟體」註解稱「沿用既有驗證向量」略有誇大，實為新增向量，惟轉換結果已獨立驗證正確，純屬文件敘述精確度問題），結論 Ready to merge: Yes。**已知範圍落差（非本 Issue 遺漏）**：真機驗證（朗讀語音內容、Read-along 同步高亮定位）比照 Issue 2／3／4 既有先例，未納入本計畫自動化任務範圍，留待人類 QA 於真機執行。）
 
 **依賴：** Issue 0（`convertText`）、Issue 1（`resolveTextConversion`）
 
