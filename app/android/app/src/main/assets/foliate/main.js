@@ -7,6 +7,7 @@ import {
   toOriginalRange,
   resolveDisplayRange,
 } from './text-conversion-walker.js'
+import { convertTtsSegments } from './text-conversion.js'
 
 const view = document.getElementById('view')
 
@@ -842,8 +843,17 @@ async function extractSegmentsForSection(sectionIndex) {
 window.buildTtsSegments = async function (sectionIndex) {
   try {
     const segments = await extractSegmentsForSection(sectionIndex)
+    // epic-42-text-conversion Issue 5：只有語音朗讀路徑套用顯示轉換，
+    // segmentId／cfi 兩欄位由 convertTtsSegments() 原樣保留不動——cfi 來自
+    // extractSegmentsForSection() 對 view.book.sections[i].createDocument()
+    // 產生之獨立未轉換文件計算，天生恆對應原文，不需要、也不應該跟著
+    // 轉換（見上方 view.getCFI 全域遮蔽註解）。
+    // window.buildSegmentsForSection()（全文檢索索引專用）刻意不套用這層
+    // 轉換，索引永遠寫入原文（epic-42-text-conversion Issue 4 Global
+    // Constraints「索引寫入端不變」）。
+    const converted = convertTtsSegments(segments, currentTextConversion)
     window.flutter_inappwebview.callHandler(
-      'onTtsSegmentsReady', sectionIndex, JSON.stringify(segments),
+      'onTtsSegmentsReady', sectionIndex, JSON.stringify(converted),
     )
   } catch (e) {
     window.flutter_inappwebview.callHandler(
