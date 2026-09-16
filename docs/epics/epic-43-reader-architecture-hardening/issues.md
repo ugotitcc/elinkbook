@@ -6,7 +6,7 @@
 
 ## Issue 1：收斂 ReaderScreen 的劃線/備註 CRUD 成 AnnotationSession 模組
 
-**Status:** ready-for-agent
+**Status:** completed（**2026-09-16 已完成並合併回 `main`（PR [#252](https://git.jigong.org/huthief/elinkBook/pulls/252)，分支 `feat/epic-43-issue-1`）**：`plans/plan-issue-1.md` 8 個 Task 全數完成——新增 `app/lib/reader/annotation_session.dart`（`AnnotationSnapshot`／`AnnotationLocator`／`AnnotationSession` 含 `reload`/`createHighlight`/`createOrUpdateNote`/`deleteExisting`），`ReaderScreen` EPUB／PDF 兩側劃線/備註 CRUD 改用 `_annotationSession`，對應方法維持各自獨立不合併，`_deleteAnnotationRecords` 已整個移除無殘留呼叫點。獨立程式審查（`reviews/review-issue-1.md`）：0 Critical／0 Important／2 Minor（Minor 1 純記錄性質、已於報告中確認不需修改；Minor 2 `annotation_session_test.dart` import 排序已於審查後追加 commit 修正），結論 Ready to merge: Yes。`flutter analyze`（No issues found）／`flutter test`（245+ 測試全過，含新增 15 個 `AnnotationSession` 單元測試）皆為綠燈，零回歸。）
 
 **依賴：** 無
 
