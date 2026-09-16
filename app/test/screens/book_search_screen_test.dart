@@ -10,6 +10,9 @@ import 'package:elinkbook/screens/book_search_screen.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/search/search_repository.dart';
+import 'package:elinkbook/reader/book_reader_prefs.dart';
+import 'package:elinkbook/reader/global_reader_prefs.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
@@ -442,5 +445,135 @@ void main() {
       lessThan(controlHeight * 1.3),
       reason: '片段標題不應因高亮 TextSpan 誤用 DefaultTextStyle.of(context) 而暴增字級',
     );
+  });
+
+  testWidgets('全域簡繁轉換為繁體時，內容匹配摘要片段依轉換模式呈現（epic-42-text-conversion Issue 4）',
+      (tester) async {
+    final searchRepo = FakeSearchRepository(
+      bookSearchDetailResult: BookSearchDetailResult(
+        book: _testBook(),
+        matches: const [
+          ContentMatchSnippet(
+            snippet: '国电脑维修站',
+            locator: 'epubcfi(/6/2)',
+            chapterIndex: 1,
+          ),
+        ],
+        totalMatches: 1,
+        isTruncated: false,
+      ),
+    );
+    final prefsManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+        reading: const ReadingDefaults(
+          textConversion: TextConversionMode.toTraditional,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(BookSearchScreen(
+      book: _testBook(),
+      initialQuery: '国电脑',
+      searchRepository: searchRepo,
+      prefsManager: prefsManager,
+      libraryRepository: FakeLibraryRepository(),
+    )));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('國電腦維修站'), findsOneWidget);
+    expect(find.textContaining('国电脑维修站'), findsNothing);
+  });
+
+  testWidgets('跨字形高亮：轉換後顯示的文字仍能正確高亮使用者輸入的查詢字詞（spec.md 審查修正 I-2）',
+      (tester) async {
+    final searchRepo = FakeSearchRepository(
+      bookSearchDetailResult: BookSearchDetailResult(
+        book: _testBook(),
+        matches: const [
+          ContentMatchSnippet(
+            snippet: '這裡有電腦維修的說明',
+            locator: 'epubcfi(/6/2)',
+            chapterIndex: 1,
+          ),
+        ],
+        totalMatches: 1,
+        isTruncated: false,
+      ),
+    );
+
+    // 顯示模式維持 original（不轉換），片段本身已是繁體「電腦」，使用者
+    // 卻用簡體「电脑」搜尋——高亮比對必須改用能在文字中找到的變體
+    // 「電腦」，而非直接用使用者輸入的「电脑」（否則 indexOf 找不到，
+    // 完全不會產生任何高亮片段）。
+    await tester.pumpWidget(_wrap(BookSearchScreen(
+      book: _testBook(),
+      initialQuery: '电脑',
+      searchRepository: searchRepo,
+      prefsManager: FakeReaderPrefsManager(),
+      libraryRepository: FakeLibraryRepository(),
+    )));
+    await tester.pumpAndSettle();
+
+    final texts = tester.widgetList<Text>(
+      find.descendant(
+        of: find.byKey(const Key('book_search_snippet_0')),
+        matching: find.byType(Text),
+      ),
+    );
+    final richText = texts.firstWhere((t) => t.textSpan != null);
+    final boldSpans = (richText.textSpan as TextSpan)
+        .children!
+        .whereType<TextSpan>()
+        .where((s) => s.style?.fontWeight == FontWeight.bold)
+        .toList();
+    expect(boldSpans, hasLength(1));
+    expect(boldSpans.single.text, '電腦');
+  });
+
+  testWidgets(
+      '單書覆寫簡繁轉換時，AppBar 標題／工具列作者依該書生效模式呈現，與內容摘要片段的全域轉換模式各自獨立'
+      '（epic-42-text-conversion Issue 4，審查修正 review-plan-issue-4.md I-2）', (tester) async {
+    final book = _testBook(title: '国电脑维修', author: '电脑作者');
+    final searchRepo = FakeSearchRepository(
+      bookSearchDetailResult: BookSearchDetailResult(
+        book: book,
+        matches: const [
+          ContentMatchSnippet(
+            snippet: '国电脑维修站',
+            locator: 'epubcfi(/6/2)',
+            chapterIndex: 1,
+          ),
+        ],
+        totalMatches: 1,
+        isTruncated: false,
+      ),
+    );
+    final prefsManager = FakeReaderPrefsManager(
+      bookPrefsByBookId: {
+        book.id: const BookReaderPrefs(
+          textConversionOverride: TextConversionMode.toSimplified,
+        ),
+      },
+      globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+        reading: const ReadingDefaults(
+          textConversion: TextConversionMode.toTraditional,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(BookSearchScreen(
+      book: book,
+      initialQuery: '国电脑',
+      searchRepository: searchRepo,
+      prefsManager: prefsManager,
+      libraryRepository: FakeLibraryRepository(),
+    )));
+    await tester.pumpAndSettle();
+
+    // AppBar 標題（單書情境，該書覆寫值 toSimplified）維持簡體原文不變，
+    // 不受全域值 toTraditional 影響。
+    expect(find.widgetWithText(AppBar, '国电脑维修'), findsOneWidget);
+    // 內容摘要片段（跨書情境，一律採全域值 toTraditional）轉為繁體。
+    expect(find.textContaining('國電腦維修站'), findsOneWidget);
   });
 }

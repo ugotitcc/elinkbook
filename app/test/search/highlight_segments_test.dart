@@ -1,6 +1,7 @@
 // app/test/search/highlight_segments_test.dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/search/highlight_segments.dart';
+import 'package:elinkbook/search/search_query_variants.dart';
 
 void main() {
   group('splitHighlightSegments', () {
@@ -84,6 +85,32 @@ void main() {
         const HighlightSegment('EPUB', true),
         const HighlightSegment(' 規範說明', false),
       ]);
+    });
+  });
+
+  group('跨字形高亮整合（epic-42-text-conversion Issue 4 審查修正 I-3）', () {
+    test('查詢詞字形與內文字形不同時，改用 findMatchingVariant 取得之變體切分，正確產出 isMatch: true 的高亮片段', () {
+      const text = '這裡是電腦維修中心';
+      const query = '电脑维修'; // 簡體查詢，繁體內文
+      final matchVariant = findMatchingVariant(text, queryVariants(query));
+      expect(matchVariant, '電腦維修');
+
+      final segments = splitHighlightSegments(text, matchVariant!);
+      expect(segments, [
+        const HighlightSegment('這裡是', false),
+        const HighlightSegment('電腦維修', true),
+        const HighlightSegment('中心', false),
+      ]);
+    });
+
+    test('三個變體皆找不到時，findMatchingVariant 回傳 null，呼叫端保底退回原始查詢字串仍安全（不拋例外、無高亮片段）', () {
+      const text = '完全不相關的內容';
+      const query = '电脑';
+      final matchVariant = findMatchingVariant(text, queryVariants(query));
+      expect(matchVariant, isNull);
+
+      final segments = splitHighlightSegments(text, matchVariant ?? query);
+      expect(segments, [const HighlightSegment('完全不相關的內容', false)]);
     });
   });
 

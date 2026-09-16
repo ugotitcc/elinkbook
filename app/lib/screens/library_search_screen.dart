@@ -8,6 +8,8 @@ import '../library/models/book.dart';
 import '../library/widgets/book_cover.dart';
 import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../reader/text_conversion.dart';
+import '../reader/text_conversion_mode.dart';
 import '../search/full_text_search_settings_repository.dart';
 import '../search/full_text_search_toggles_controller.dart';
 import '../search/search_repository.dart';
@@ -72,14 +74,34 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
   /// 量測可用高度，見 Global Constraints 對這個已知簡化的說明）。
   static const _kEinkResultsPerPage = 5;
 
+  /// 書名/作者匹配區＋內容匹配區的顯示轉換模式（FR-48，epic-42-text-
+  /// conversion Issue 4，spec.md「Dart 端字元轉換模組」跨書情境條列：
+  /// 「全庫搜尋結果片段（書名/作者匹配區＋內容匹配區）」）：一律採全域
+  /// 預設值，不做任何單書覆寫。
+  TextConversionMode _textConversion = TextConversionMode.original;
+
   @override
   void initState() {
     super.initState();
-    _loadFullTextSearchSettings();
+    unawaited(_initialize());
+  }
+
+  Future<void> _initialize() async {
+    await Future.wait([
+      _loadFullTextSearchSettings(),
+      _loadTextConversion(),
+    ]);
+    if (!mounted) return;
     final initial = widget.initialQuery.trim();
     if (initial.isNotEmpty) {
       _runSearch(initial);
     }
+  }
+
+  Future<void> _loadTextConversion() async {
+    final globalPrefs = await widget.prefsManager.loadGlobalPrefs();
+    if (!mounted) return;
+    setState(() => _textConversion = globalPrefs.reading.textConversion);
   }
 
   @override
@@ -299,10 +321,15 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
   Widget _buildTitleAuthorTile(Book book) {
     return ListTile(
       key: Key('library_search_title_author_result_${book.id}'),
-      leading: SizedBox(width: 40, height: 56, child: BookCover(book: book)),
-      title: Text(book.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      leading: SizedBox(
+        width: 40,
+        height: 56,
+        child: BookCover(book: book, textConversion: _textConversion),
+      ),
+      title: Text(convertText(book.title, _textConversion),
+          maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
-        book.author ?? '',
+        convertText(book.author ?? '', _textConversion),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -322,15 +349,15 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
             leading: SizedBox(
               width: 40,
               height: 56,
-              child: BookCover(book: group.book),
+              child: BookCover(book: group.book, textConversion: _textConversion),
             ),
             title: Text(
-              group.book.title,
+              convertText(group.book.title, _textConversion),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             subtitle: Text(
-              group.book.author ?? '',
+              convertText(group.book.author ?? '', _textConversion),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -341,7 +368,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
                 'library_search_content_snippet_${group.book.id}_$i',
               ),
               dense: true,
-              title: Text(group.matches[i].snippet),
+              title: Text(convertText(group.matches[i].snippet, _textConversion)),
               onTap: () => _openBook(
                 group.book,
                 jumpTarget: ReaderJumpTarget.fromContentLocator(

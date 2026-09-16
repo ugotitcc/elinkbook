@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../library/models/book.dart';
 import 'cjk_tokenizer.dart';
+import 'search_query_variants.dart';
 
 /// 全庫搜尋「內容匹配」單一可跳轉片段（epic-10-search Issue 4，見
 /// spec.md §5）。[snippet] 為 `raw_text` 的顯示片段（可能截斷加省略號，
@@ -100,14 +101,27 @@ class SqliteSearchRepository implements SearchRepository {
     // 【審查修正 M-3】跳脫 LIKE 萬用字元 `%`／`_`（先跳脫反斜線本身，避免
     // 跳脫序列彼此汙染），否則使用者輸入的 `%` 會被當成萬用字元比對到
     // 全部書籍。
-    final escaped = trimmed
-        .replaceAll('\\', '\\\\')
-        .replaceAll('%', '\\%')
-        .replaceAll('_', '\\_');
+    // 【Issue 4：多變體查詢擴充】對 queryVariants() 產生的每個變體各自
+    // 跳脫萬用字元，以 SQL OR 串接（例如 2 個變體時
+    // `(title LIKE ? OR author LIKE ?) OR (title LIKE ? OR author LIKE ?)`），
+    // variants 只有 1 項時等同既有行為不變。
+    final variants = queryVariants(trimmed);
+    final whereClauses = <String>[];
+    final whereArgs = <Object?>[];
+    for (final variant in variants) {
+      final escaped = variant
+          .replaceAll('\\', '\\\\')
+          .replaceAll('%', '\\%')
+          .replaceAll('_', '\\_');
+      whereClauses
+          .add("(title LIKE ? ESCAPE '\\' OR author LIKE ? ESCAPE '\\')");
+      whereArgs.add('%$escaped%');
+      whereArgs.add('%$escaped%');
+    }
     final rows = await _database.query(
       'books',
-      where: "title LIKE ? ESCAPE '\\' OR author LIKE ? ESCAPE '\\'",
-      whereArgs: ['%$escaped%', '%$escaped%'],
+      where: whereClauses.join(' OR '),
+      whereArgs: whereArgs,
       orderBy: 'lastReadTime DESC',
     );
     return rows.map(Book.fromMap).toList();
@@ -119,8 +133,17 @@ class SqliteSearchRepository implements SearchRepository {
     int perBookLimit = 3,
   }) async {
     final trimmedQuery = query.trim();
-    final tokenized = tokenizeForQuery(trimmedQuery);
-    if (tokenized.isEmpty) return const [];
+    // 【Issue 4：多變體查詢擴充，spec.md「全文檢索整合」】不假設任何
+    // 反向關係，一律正向查原文/繁體/簡體三種可能字形（見本檔案
+    // search_query_variants.dart 文件註解）。
+    final variants = queryVariants(trimmedQuery);
+    // 審查修正 M-3：改用 toSet() 去重——variants 本身雖已去重，但極端輸入
+    // 下（例如經 tokenizeForQuery() 的空白正規化）仍可能有兩個不同變體
+    // 產生完全相同的 tokenized 字串，避免組出 `"A" OR "A"` 冗餘子句。
+    final tokenizedVariants =
+        variants.map(tokenizeForQuery).where((t) => t.isNotEmpty).toSet();
+    if (tokenizedVariants.isEmpty) return const [];
+    final matchQuery = tokenizedVariants.join(' OR ');
 
     // 【審查修正 I-2，推翻原計畫第一版「分兩次查詢」設計】單一查詢直接
     // JOIN books 表帶出完整欄位，不再另外對 `books WHERE id IN (?, ?, ...)`
@@ -162,7 +185,7 @@ class SqliteSearchRepository implements SearchRepository {
         JOIN books b ON b.id = sub.book_id
         WHERE sub.rn <= ?
         ORDER BY sub.rn, sub.score
-      ''', [tokenized, perBookLimit]);
+      ''', [matchQuery, perBookLimit]);
     } on DatabaseException {
       // 【審查修正 M-4】tokenizeForQuery() 保證輸出恆為合法的 FTS5 phrase
       // 語法，正常情況下不會走到這裡；無法窮舉所有邊界輸入，保留這層
@@ -187,7 +210,7 @@ class SqliteSearchRepository implements SearchRepository {
       );
       snippetsByBookId.putIfAbsent(bookId, () => []).add(
             ContentMatchSnippet(
-              snippet: _truncate(row['raw_text'] as String, trimmedQuery),
+              snippet: _truncate(row['raw_text'] as String, variants),
               locator: row['locator'] as String,
               chapterIndex: row['chapter_index'] as int?,
             ),
@@ -212,8 +235,12 @@ class SqliteSearchRepository implements SearchRepository {
     bool sortByBookOrder = true,
   }) async {
     final trimmedQuery = query.trim();
-    final tokenized = tokenizeForQuery(trimmedQuery);
-    if (tokenized.isEmpty) return null;
+    final variants = queryVariants(trimmedQuery);
+    // 審查修正 M-3：見 searchContent() 同一處註解說明。
+    final tokenizedVariants =
+        variants.map(tokenizeForQuery).where((t) => t.isNotEmpty).toSet();
+    if (tokenizedVariants.isEmpty) return null;
+    final matchQuery = tokenizedVariants.join(' OR ');
 
     // 先查詢該書是否存在，帶出 Book 物件（books 表與 book_content_fts
     // 沒有共通鍵可一次 JOIN 帶出，維持獨立查詢）。
@@ -259,7 +286,7 @@ class SqliteSearchRepository implements SearchRepository {
         ) sub
         $orderClause
         LIMIT ?
-      ''', [tokenized, bookId, limit]);
+      ''', [matchQuery, bookId, limit]);
     } on DatabaseException {
       return null;
     }
@@ -276,7 +303,7 @@ class SqliteSearchRepository implements SearchRepository {
     final totalMatches = rows.first['total_count'] as int;
     final matches = rows
         .map((row) => ContentMatchSnippet(
-              snippet: _truncate(row['raw_text'] as String, trimmedQuery),
+              snippet: _truncate(row['raw_text'] as String, variants),
               locator: row['locator'] as String,
               chapterIndex: row['chapter_index'] as int?,
             ))
@@ -290,22 +317,27 @@ class SqliteSearchRepository implements SearchRepository {
     );
   }
 
-  /// 【審查修正 I-4，推翻原計畫第一版「固定從頭截斷」設計】以 [query]
-  /// （未經 `tokenizeForQuery()` 轉換的原始查詢字串）在 [text] 中的位置
-  /// 為中心截斷，而非固定取前 [_maxSnippetRunes] 個字元——CJK 統一表意
-  /// 文字（U+4E00-U+9FFF）皆落在 UTF-16 基本多文種平面（BMP）內，
-  /// `String.indexOf()` 回傳的 UTF-16 code unit 索引與 rune 索引一致，
-  /// 可直接當作 rune 索引使用；`token_text` 只用於索引比對，`raw_text`
-  /// 保留原始未加空白的文字序列，[query] 理論上會以連續子字串的形式
-  /// 出現在 [text] 中。
-  static String _truncate(String text, String query) {
+  /// 【審查修正 I-4，推翻原計畫第一版「固定從頭截斷」設計；Issue 4 再次
+  /// 修正為多變體版本】以 [variants]（`queryVariants()` 產生的原文/繁體/
+  /// 簡體三個變體）中第一個能在 [text] 中找到的變體為中心截斷，而非固定
+  /// 取前 [_maxSnippetRunes] 個字元，也不再只用單一原始查詢字串——命中
+  /// 內容字形可能與使用者輸入字形不同（跨字形命中，審查修正 I-2），例如
+  /// 原文「電腦」被簡體「电脑」命中時，比對基準必須是「電腦」而非
+  /// 「电脑」才能定位到正確視窗。CJK 統一表意文字（U+4E00-U+9FFF）皆落在
+  /// UTF-16 基本多文種平面（BMP）內，`String.indexOf()` 回傳的 UTF-16
+  /// code unit 索引與 rune 索引一致，可直接當作 rune 索引使用；
+  /// `token_text` 只用於索引比對，`raw_text` 保留原始未加空白的文字序列。
+  static String _truncate(String text, List<String> variants) {
     final runes = text.runes.toList();
     if (runes.length <= _maxSnippetRunes) return text;
 
-    final matchIndex = text.toLowerCase().indexOf(query.toLowerCase());
+    final matchVariant = findMatchingVariant(text, variants);
+    final matchIndex = matchVariant == null
+        ? -1
+        : text.toLowerCase().indexOf(matchVariant.toLowerCase());
     if (matchIndex < 0) {
-      // 找不到（理論上不會發生，見上方說明，但輸入型態多樣不假設一定
-      // 找得到）：退回從頭截斷的保底邏輯。
+      // 找不到任何變體（理論上不會發生，見上方說明，但輸入型態多樣不
+      // 假設一定找得到）：退回從頭截斷的保底邏輯。
       return '${String.fromCharCodes(runes.take(_maxSnippetRunes))}…';
     }
 

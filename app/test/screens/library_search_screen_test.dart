@@ -18,6 +18,8 @@ import 'package:elinkbook/search/search_repository.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
+import 'package:elinkbook/reader/global_reader_prefs.dart';
+import 'package:elinkbook/reader/text_conversion_mode.dart';
 
 import '../support/fake_full_text_search_settings_repository.dart';
 import '../support/fake_library_repository.dart';
@@ -237,6 +239,97 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('含有關鍵字的句子'), findsOneWidget);
+  });
+
+  testWidgets(
+      '全域簡繁轉換為繁體時，書名/作者匹配區、內容匹配區書籍標頭與摘要片段皆依轉換模式呈現'
+      '（epic-42-text-conversion Issue 4）', (tester) async {
+    final matchedBook = _testBook(id: 'b1', title: '国电脑维修', author: '电脑作者');
+    final searchRepository = FakeSearchRepository(
+      titleAuthorResults: [matchedBook],
+      contentResults: [
+        BookContentMatches(
+          book: matchedBook,
+          matches: const [
+            ContentMatchSnippet(
+              snippet: '含有电脑维修关键字的句子',
+              locator: 'epubcfi(/6/2)',
+            ),
+          ],
+        ),
+      ],
+    );
+    final prefsManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+        reading: const ReadingDefaults(
+          textConversion: TextConversionMode.toTraditional,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        initialQuery: '国电脑',
+        searchRepository: searchRepository,
+        prefsManager: prefsManager,
+        libraryRepository: FakeLibraryRepository(),
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          fullTextSearchSettingsRepository:
+              FakeFullTextSearchSettingsRepository(initialEnabled: {
+            ContentIndexCategory.pdf: true,
+            ContentIndexCategory.foliate: true,
+          }),
+        ),
+      )),
+    );
+    await tester.pumpAndSettle();
+
+    // 審查修正 C-1：BookCover 無封面圖時會退回 CoverPlaceholder 渲染書名
+    // 縮略文字（本畫面兩處 BookCover 皆為 40×56 尺寸，已達 CoverPlaceholder
+    // 顯示文字的門檻——見 app/lib/library/widgets/book_cover.dart
+    // _titleRowMinHeight/_titleRowMinWidth），與 ListTile.title／書籍標頭
+    // 各顯示一次已轉換文字，兩處合計 2 個 widget；比照
+    // library_screen_test.dart 既有測試慣例。
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('library_search_title_author_result_b1')),
+        matching: find.text('國電腦維修'),
+      ),
+      findsNWidgets(2),
+      reason: 'CoverPlaceholder 縮略與 ListTile.title 各顯示一次',
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('library_search_title_author_result_b1')),
+        matching: find.text('国电脑维修'),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('library_search_title_author_result_b1')),
+        matching: find.text('電腦作者'),
+      ),
+      findsOneWidget,
+      reason: '作者僅顯示於列表副標題，CoverPlaceholder 不含作者欄位',
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('library_search_content_group_b1')),
+        matching: find.text('國電腦維修'),
+      ),
+      findsNWidgets(2),
+      reason: '內容匹配卡片的 CoverPlaceholder 縮略與書籍標頭各顯示一次，皆需要轉換',
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('library_search_content_group_b1')),
+        matching: find.text('国电脑维修'),
+      ),
+      findsNothing,
+    );
+    expect(find.text('含有電腦維修關鍵字的句子'), findsOneWidget);
+    expect(find.text('含有电脑维修关键字的句子'), findsNothing);
   });
 
   testWidgets('兩個開關皆關閉時，內容匹配區顯示通用引導卡片', (tester) async {
