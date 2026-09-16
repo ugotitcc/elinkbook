@@ -176,7 +176,7 @@ git commit -m "feat(reader): 新增 convertTtsSegments() 朗讀段簡繁轉換�
 - Consumes: `convertTtsSegments(segments, mode)`（Task 1）、既有模組層級變數 `currentTextConversion`（`main.js:131`，Issue 2 交付）。
 - Produces: 無新增對外介面——`window.buildTtsSegments()` 既有回傳格式（`callHandler('onTtsSegmentsReady', sectionIndex, JSON.stringify(...))`，陣列元素形狀 `{segmentId, cfi, text}`）完全不變，只有 `text` 欄位內容依模式改變；`Dart` 端 `TtsSegmentCfi.fromWire()`／`FoliateReaderView.loadTtsSegments()`／`TtsController` 皆不需要修改（本 Task 不涉及任何 Dart 檔案的實作程式碼異動，僅新增 Dart 端 regression guard 測試）。
 
-- [ ] **Step 1: 新增失敗測試**
+- [x] **Step 1: 新增失敗測試**
 
 在 `app/test/reader/foliate_reader_view_test.dart` 找到「main.js 朗讀段長段落次要邊界切分 regression guard（epic-34-tts-readalong Issue 11）」測試群組結尾的 `});`，與下一個「main.js 安全視窗跟隨翻頁 + E-Ink 高對比 regression guard」群組開頭之間，新增：
 
@@ -247,12 +247,12 @@ git commit -m "feat(reader): 新增 convertTtsSegments() 朗讀段簡繁轉換�
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/foliate_reader_view_test.dart`
 Expected: 新增的 3 個測試皆 FAIL（`main.js` 目前尚未 import `convertTtsSegments`，也沒有 `const converted = convertTtsSegments(...)`／`JSON.stringify(converted)` 字串；`window.buildSegmentsForSection` 目前確實不含 `convertTtsSegments` 字串，第 3 個測試在 Step 1 當下已是 PASS 而非 FAIL——這是刻意的：它是防止 Step 3 實作時「誤把轉換也接到 buildSegmentsForSection」的預防性 regression guard，本來就該在修改前後皆維持 PASS）。
 
-- [ ] **Step 3: 實作 main.js 接線**
+- [x] **Step 3: 實作 main.js 接線**
 
 在 `app/android/app/src/main/assets/foliate/main.js` 第 4-9 行（import 區塊）：
 
@@ -316,22 +316,22 @@ window.buildTtsSegments = async function (sectionIndex) {
 
 **`window.buildSegmentsForSection`（緊接在下方，第 863-874 行）維持完全不動**，繼續對未轉換的 `segments` 直接 `JSON.stringify`——這是本 Task 刻意不修改的部分，不要一併套用轉換。
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/foliate_reader_view_test.dart`
 Expected: 全數 PASS（既有測試零回歸＋新增 3 個測試通過）。
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: 重新執行 Task 1 的 Node 測試，確認零回歸**
+- [x] **Step 6: 重新執行 Task 1 的 Node 測試，確認零回歸**
 
 Run: `node app/tool/test_tts_segment_conversion.mjs`
 Expected: `[test_tts_segment_conversion] 全部通過`（本 Task 未修改 `text-conversion.js`，純粹確認前一個 Task 的產出未被意外破壞）。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js app/test/reader/foliate_reader_view_test.dart

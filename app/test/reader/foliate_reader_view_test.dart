@@ -1734,6 +1734,70 @@ void main() {
     });
   });
 
+  group(
+      'main.js 朗讀段文字簡繁轉換 regression guard '
+      '（epic-42-text-conversion Issue 5）', () {
+    late String mainJsSource;
+
+    setUpAll(() {
+      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
+          .readAsStringSync();
+    });
+
+    test('main.js 從 text-conversion.js 匯入 convertTtsSegments()，不自行內嵌轉換邏輯',
+        () {
+      expect(
+        mainJsSource.contains(
+          "import { convertTtsSegments } from './text-conversion.js'",
+        ),
+        isTrue,
+        reason: 'main.js 須從 text-conversion.js 匯入純函式，不可自行內嵌'
+            '簡繁轉換邏輯（該邏輯已由 app/tool/test_tts_segment_conversion.mjs '
+            '單元測試涵蓋，這裡只驗證 main.js 接線正確，不重複驗證轉換'
+            '細節，比照既有 resolveTtsSafeWindowDirection 接線測試慣例）。',
+      );
+    });
+
+    test('window.buildTtsSegments 呼叫 convertTtsSegments() 並回傳轉換後結果，而非原始 segments',
+        () {
+      expect(
+        mainJsSource.contains(
+          'const converted = convertTtsSegments(segments, currentTextConversion)',
+        ),
+        isTrue,
+        reason: '朗讀段文字須依目前生效的簡繁轉換模式（currentTextConversion，'
+            '該書單書情境生效值，見 Issue 2 既有維護邏輯）轉換後才送給語音'
+            '合成器。',
+      );
+      expect(
+        mainJsSource.contains(
+          "'onTtsSegmentsReady', sectionIndex, JSON.stringify(converted),",
+        ),
+        isTrue,
+        reason: '回呼 Dart 端的必須是轉換後的 converted，而非未轉換的原始 '
+            'segments，否則轉換形同白做。',
+      );
+    });
+
+    test(
+        'window.buildSegmentsForSection（全文檢索索引專用）刻意不套用轉換，索引永遠寫入原文'
+        '（epic-42-text-conversion Issue 4 Global Constraints「索引寫入端不變」）',
+        () {
+      final indexerStart = mainJsSource
+          .indexOf('window.buildSegmentsForSection = async function');
+      expect(indexerStart, greaterThan(-1),
+          reason: '找不到 window.buildSegmentsForSection 定義。');
+      final indexerBody = mainJsSource.substring(indexerStart);
+      expect(
+        indexerBody.contains('convertTtsSegments'),
+        isFalse,
+        reason: '全文檢索索引路徑若也套用顯示轉換，會讓 book_content_fts 索引'
+            '到已轉換文字，違反 Issue 4 訂下的「索引寫入端不變，永遠索引'
+            '原文」不變量，之後任何顯示模式下的原文搜尋都會漏檢。',
+      );
+    });
+  });
+
   group('main.js 安全視窗跟隨翻頁 + E-Ink 高對比 regression guard（epic-34-tts-readalong Issue 8／epic-26-architecture-hardening Issue 12）', () {
     late String mainJsSource;
 
