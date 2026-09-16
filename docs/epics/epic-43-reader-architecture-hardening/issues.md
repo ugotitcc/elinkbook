@@ -310,7 +310,7 @@ Deletion test：刪掉其中一份，複雜度不會消失——它會在另一�
 
 ## Issue 5：補齊版面設定預設集「套用／刪除」的錯誤處理一致性
 
-**Status:** ready-for-agent
+**Status:** completed（**2026-09-17 已完成並合併回 `main`（PR [#255](https://git.jigong.org/huthief/elinkBook/pulls/255)，分支 `feat/epic-43-issue-5`）**：`plans/plan-issue-5.md`（經 `reviews/review-plan-issue-5.md` 審查修訂 4 項 Minor——M-1 措辭統一、M-2 saveMultiple 覆蓋範圍加註解不重複測試、M-3 刪除失敗測試補資料完整性斷言、M-4 紅燈步驟改用 `--plain-name` 加速——後定案）4 個 Task 全數完成：`_applyPrefsToTargets`／`_handleApplyFromBook`（自己獨立一層 try/catch，涵蓋 `repository.load()`）／`_handleDeletePreset` 皆補上 try/catch + SnackBar（`reader_apply_preset_error_snackbar`／`reader_delete_preset_error_snackbar`），比照既有 `_handleSaveAsPreset` 模式；新增測試替身 `_ThrowingBookReaderPrefsRepository` 與 `_ThrowingLayoutPresetRepository.delete()` 覆寫。獨立程式審查（`reviews/review-issue-5.md`）：0 Critical／0 Important／0 Minor，實測確認 `_handleApplyFromBook` 兩層獨立 try/catch 不會重複顯示 SnackBar，M-1～M-4 四項修訂皆確實落地，結論 Ready to merge: Yes。`flutter test`（預設集群組 14 案例＋整檔 233 案例全過，零回歸）／`flutter analyze`（No issues found）皆為綠燈。）
 
 **依賴：** Issue 2（直接修改 Issue 2 收斂後的 `_handleApplyPreset`/`_handleApplyFromBook`/`_handleDeletePreset`/`_applyPrefsToTargets`，需等 Issue 2 合併後才有意義的 diff 基礎）
 
