@@ -3,9 +3,7 @@ import 'package:elinkbook/reader/annotation_session.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/annotation_list_item.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
-import 'package:elinkbook/reader/highlights_repository.dart';
 import 'package:elinkbook/reader/note.dart';
-import 'package:elinkbook/reader/notes_repository.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
 
 import '../support/fake_highlights_repository.dart';
