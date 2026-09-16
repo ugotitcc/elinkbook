@@ -66,3 +66,13 @@ Future<List<LayoutPreset>> overwriteLayoutPreset(
   );
   return repository.listAll();
 }
+
+/// 刪除一組預設集，完成後回傳 [repository] 目前的完整清單，取代呼叫端
+/// 另外呼叫 `_loadLayoutPresets()`。
+Future<List<LayoutPreset>> deleteLayoutPreset(
+  LayoutPresetRepository repository,
+  int id,
+) async {
+  await repository.delete(id);
+  return repository.listAll();
+}

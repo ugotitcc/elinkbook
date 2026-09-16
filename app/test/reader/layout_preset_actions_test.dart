@@ -133,4 +133,43 @@ void main() {
       );
     });
   });
+
+  group('deleteLayoutPreset', () {
+    late SqliteLibraryRepository libraryRepository;
+    late LayoutPresetRepository repository;
+
+    setUp(() async {
+      libraryRepository =
+          await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      repository = LayoutPresetRepository(libraryRepository.database);
+    });
+
+    tearDown(() async {
+      await libraryRepository.close();
+    });
+
+    test('刪除後回傳的清單不含該筆，其餘保留', () async {
+      await repository.insert(LayoutPreset(
+        id: null,
+        name: '保留組',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        prefs: BookReaderPrefs.empty,
+      ));
+      await repository.insert(LayoutPreset(
+        id: null,
+        name: '刪除組',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        prefs: BookReaderPrefs.empty,
+      ));
+      final toDelete =
+          (await repository.listAll()).firstWhere((p) => p.name == '刪除組');
+
+      final updated = await deleteLayoutPreset(repository, toDelete.id!);
+
+      expect(updated, hasLength(1));
+      expect(updated.single.name, '保留組');
+    });
+  });
 }
