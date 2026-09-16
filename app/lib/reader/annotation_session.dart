@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
+import 'annotation_list_item.dart';
 import 'highlight.dart';
 import 'highlight_style.dart';
 import 'highlights_repository.dart';
@@ -113,6 +114,16 @@ class AnnotationSession {
         highlightId: pendingHighlightId,
       ));
     }
+    return reload();
+  }
+
+  /// 對應現有 ReaderScreen._deleteAnnotationRecords，刪除後內部呼叫一次
+  /// reload() 回傳最新快照——呼叫端不需要再自己額外呼叫 reload。
+  Future<AnnotationSnapshot> deleteExisting(AnnotationListItem item) async {
+    final note = item.note;
+    final highlight = item.highlight;
+    if (note != null) await notesRepository.delete(note.id);
+    if (highlight != null) await highlightsRepository.delete(highlight.id);
     return reload();
   }
 }

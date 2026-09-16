@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/annotation_session.dart';
 import 'package:elinkbook/reader/highlight.dart';
+import 'package:elinkbook/reader/annotation_list_item.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/reader/highlights_repository.dart';
 import 'package:elinkbook/reader/note.dart';
@@ -265,6 +266,78 @@ void main() {
       expect(inserted.pdfRect, rect);
       expect(inserted.epubLocatorJson, isNull);
       expect(inserted.progression, isNull);
+    });
+  });
+
+  group('AnnotationSession.deleteExisting', () {
+    test('只有 highlight 時只刪除 highlight', () async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      const highlight = Highlight(
+        id: 'h1',
+        bookId: 'b1',
+        style: HighlightStyle.highlighterYellow,
+        epubLocatorJson: 'loc',
+      );
+      await highlightsRepo.insert(highlight);
+      final session = AnnotationSession(
+        highlightsRepository: highlightsRepo,
+        notesRepository: notesRepo,
+        bookId: 'b1',
+      );
+
+      final snapshot =
+          await session.deleteExisting(const AnnotationListItem(highlight: highlight));
+
+      expect(snapshot.highlights, isEmpty);
+    });
+
+    test('只有 note 時只刪除 note', () async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      const note = Note(id: 'n1', bookId: 'b1', text: '純備註', epubLocatorJson: 'loc');
+      await notesRepo.insert(note);
+      final session = AnnotationSession(
+        highlightsRepository: highlightsRepo,
+        notesRepository: notesRepo,
+        bookId: 'b1',
+      );
+
+      final snapshot = await session.deleteExisting(const AnnotationListItem(note: note));
+
+      expect(snapshot.notes, isEmpty);
+    });
+
+    test('highlight 與依附備註皆有時兩者一併刪除', () async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      const highlight = Highlight(
+        id: 'h1',
+        bookId: 'b1',
+        style: HighlightStyle.highlighterYellow,
+        epubLocatorJson: 'loc',
+      );
+      const note = Note(
+        id: 'n1',
+        bookId: 'b1',
+        text: '依附備註',
+        epubLocatorJson: 'loc',
+        highlightId: 'h1',
+      );
+      await highlightsRepo.insert(highlight);
+      await notesRepo.insert(note);
+      final session = AnnotationSession(
+        highlightsRepository: highlightsRepo,
+        notesRepository: notesRepo,
+        bookId: 'b1',
+      );
+
+      final snapshot = await session.deleteExisting(
+        const AnnotationListItem(highlight: highlight, note: note),
+      );
+
+      expect(snapshot.highlights, isEmpty);
+      expect(snapshot.notes, isEmpty);
     });
   });
 }
