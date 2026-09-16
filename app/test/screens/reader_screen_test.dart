@@ -95,6 +95,12 @@ class _ThrowingLayoutPresetRepository extends LayoutPresetRepository {
   Future<void> insert(LayoutPreset preset) async {
     throw Exception('模擬 insert 失敗（測試用）');
   }
+
+  // Epic 43 Issue 5：供「刪除預設集失敗」測試使用。
+  @override
+  Future<void> delete(int id) async {
+    throw Exception('模擬 delete 失敗（測試用）');
+  }
 }
 
 // Epic 43 Issue 5：模擬 BookReaderPrefsRepository.load()/save()/
@@ -8405,6 +8411,53 @@ void main() {
 
       final all = await tester.runAsync(() => layoutPresetRepository.listAll());
       expect(all, isEmpty);
+    });
+
+    testWidgets('刪除預設集：刪除過程拋出例外時顯示提示，不被靜默吞掉', (tester) async {
+      await tester.runAsync(
+        () => layoutPresetRepository.insert(
+          LayoutPreset(
+            id: null,
+            name: '待刪除',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            prefs: BookReaderPrefs.empty,
+          ),
+        ),
+      );
+      final throwingRepository = _ThrowingLayoutPresetRepository(
+        libraryRepository.database,
+      );
+      await pumpReaderScreen(
+        tester,
+        layoutPresetRepositoryOverride: throwingRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pumpAndSettle();
+      await switchToTab(tester, '預設集');
+      await tester.ensureVisible(
+        find.byKey(const Key('reader_settings_preset_slot_0_delete')),
+      );
+      await tester.tap(
+        find.byKey(const Key('reader_settings_preset_slot_0_delete')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('layout_preset_delete_confirm')));
+      await tester.pump();
+      await tester.runAsync(
+        () => Future.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('reader_delete_preset_error_snackbar')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      // M-3（審查修訂）：驗證刪除失敗時底層資料未被誤刪，狀態未受污染。
+      final all = await tester.runAsync(() => layoutPresetRepository.listAll());
+      expect(all, hasLength(1));
     });
 
     testWidgets('刪除預設集：確認對話框取消時不刪除', (tester) async {

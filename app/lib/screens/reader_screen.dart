@@ -1189,10 +1189,23 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final confirmed = await _confirmDeletePreset(presetName);
     // I-2（審查修訂）：理由同上（`_handleSaveAsPreset` 覆蓋確認）。
     if (!confirmed || !mounted) return;
-    final updated =
-        await layout_preset_actions.deleteLayoutPreset(repository, id);
-    if (!mounted) return;
-    setState(() => _layoutPresets = updated);
+    try {
+      final updated =
+          await layout_preset_actions.deleteLayoutPreset(repository, id);
+      if (!mounted) return;
+      setState(() => _layoutPresets = updated);
+    } catch (e, stackTrace) {
+      // Epic 43 Issue 5：比照 _handleSaveAsPreset 既有的 try/catch +
+      // SnackBar 模式，補齊刪除預設集失敗時的使用者可見提示。
+      debugPrint('刪除預設集失敗：$e\n$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: const Key('reader_delete_preset_error_snackbar'),
+          content: Text('刪除預設集失敗：$e'),
+        ),
+      );
+    }
   }
 
   Future<bool> _confirmDeletePreset(String name) async {
