@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import 'highlight.dart';
+import 'highlight_style.dart';
 import 'highlights_repository.dart';
 import 'note.dart';
 import 'notes_repository.dart';
@@ -66,5 +68,26 @@ class AnnotationSession {
     final highlights = await highlightsRepository.listByBook(bookId);
     final notes = await notesRepository.listByBook(bookId);
     return AnnotationSnapshot(highlights: highlights, notes: notes);
+  }
+
+  /// 回傳新建 highlight 的 id（供呼叫端設定
+  /// `_pendingHighlightIdForSelection`/`_pendingPdfHighlightIdForSelection`），
+  /// 取代原本用 side-effect 直接寫欄位的作法。
+  Future<({AnnotationSnapshot snapshot, String highlightId})> createHighlight({
+    required AnnotationLocator locator,
+    required HighlightStyle style,
+  }) async {
+    final id = const Uuid().v4();
+    await highlightsRepository.insert(Highlight(
+      id: id,
+      bookId: bookId,
+      style: style,
+      epubLocatorJson: locator.epubLocatorJson,
+      progression: locator.progression,
+      pdfPageIndex: locator.pdfPageIndex,
+      pdfRect: locator.pdfRect,
+    ));
+    final snapshot = await reload();
+    return (snapshot: snapshot, highlightId: id);
   }
 }

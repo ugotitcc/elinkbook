@@ -125,4 +125,52 @@ void main() {
       expect(snapshot.notes.single.id, 'n1');
     });
   });
+
+  group('AnnotationSession.createHighlight', () {
+    test('EPUB：寫入 epubLocatorJson/progression，PDF 欄位維持 null，回傳新 id', () async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final session = AnnotationSession(
+        highlightsRepository: highlightsRepo,
+        notesRepository: notesRepo,
+        bookId: 'b1',
+      );
+
+      final result = await session.createHighlight(
+        locator: const AnnotationLocator.epub(locatorJson: 'loc-a', progression: 0.2),
+        style: HighlightStyle.highlighterYellow,
+      );
+
+      expect(result.snapshot.highlights, hasLength(1));
+      final inserted = result.snapshot.highlights.single;
+      expect(inserted.id, result.highlightId);
+      expect(inserted.epubLocatorJson, 'loc-a');
+      expect(inserted.progression, 0.2);
+      expect(inserted.pdfPageIndex, isNull);
+      expect(inserted.pdfRect, isNull);
+    });
+
+    test('PDF：寫入 pdfPageIndex/pdfRect，EPUB 欄位維持 null', () async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final session = AnnotationSession(
+        highlightsRepository: highlightsRepo,
+        notesRepository: notesRepo,
+        bookId: 'b1',
+      );
+      const rect = PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2);
+
+      final result = await session.createHighlight(
+        locator: const AnnotationLocator.pdf(pageIndex: 4, rect: rect),
+        style: HighlightStyle.underline,
+      );
+
+      final inserted = result.snapshot.highlights.single;
+      expect(inserted.id, result.highlightId);
+      expect(inserted.pdfPageIndex, 4);
+      expect(inserted.pdfRect, rect);
+      expect(inserted.epubLocatorJson, isNull);
+      expect(inserted.progression, isNull);
+    });
+  });
 }
