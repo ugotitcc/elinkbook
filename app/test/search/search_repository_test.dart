@@ -101,6 +101,18 @@ void main() {
 
       expect(results.map((b) => b.id).toList(), ['b2']);
     });
+
+    test('跨字形命中：簡體查詢可命中繁體書名，繁體查詢也可命中繁體書名（epic-42-text-conversion Issue 4）',
+        () async {
+      await repository.insertBook(_book('b1', title: '電腦維修入門'));
+      await repository.insertBook(_book('b2', title: '完全不相關的書名'));
+
+      final bySimplified = await searchRepository.searchTitleAuthor('电脑');
+      expect(bySimplified.map((b) => b.id).toList(), ['b1']);
+
+      final byTraditional = await searchRepository.searchTitleAuthor('電腦');
+      expect(byTraditional.map((b) => b.id).toList(), ['b1']);
+    });
   });
 
   group('searchContent', () {
@@ -206,6 +218,43 @@ void main() {
 
       expect(results.single.matches.single.chapterIndex, 3);
     });
+
+    test(
+        '跨字形命中：內容為繁體時可用簡體查詢命中，內容為簡體時可用繁體查詢命中'
+        '（spec.md 審查修正 C-1 核心回歸案例：不因目前顯示模式而漏檢）', () async {
+      await repository.insertBook(_book('b1', title: '繁體書'));
+      await insertContentRow('b1', '這一段含有電腦維修的內容');
+      await repository.insertBook(_book('b2', title: '簡體書'));
+      await insertContentRow('b2', '这一段含有电脑维修的内容');
+
+      final bySimplified = await searchRepository.searchContent('电脑');
+      expect(bySimplified.map((m) => m.book.id).toSet(), {'b1', 'b2'});
+
+      final byTraditional = await searchRepository.searchContent('電腦');
+      expect(byTraditional.map((m) => m.book.id).toSet(), {'b1', 'b2'});
+    });
+
+    test('跨字形截斷定位：命中內容字形與查詢字形不同時，截斷視窗仍以實際命中的變體為中心（審查修正 I-2）',
+        () async {
+      await repository.insertBook(_book('b1'));
+      const keyword = '電腦維修';
+      final prefix = List.filled(40, '填').join();
+      final suffix = List.filled(66, '填').join();
+      final rawText = '$prefix$keyword$suffix';
+      await insertContentRow('b1', rawText);
+
+      // 使用者輸入簡體「电脑维修」，命中的原文卻是繁體「電腦維修」。
+      final results = await searchRepository.searchContent('电脑维修');
+
+      final snippet = results.single.matches.single.snippet;
+      expect(
+        snippet,
+        contains(keyword),
+        reason: '截斷視窗必須以實際命中的繁體變體為中心，而非誤判為找不到後退回從頭截斷',
+      );
+      expect(snippet, startsWith('…'));
+      expect(snippet, endsWith('…'));
+    });
   });
 
   group('searchContentInBook', () {
@@ -307,6 +356,22 @@ void main() {
 
       final result = await searchRepository.searchContentInBook('b1', '   ');
       expect(result, isNull);
+    });
+
+    test('跨字形命中：單書搜尋時簡體查詢可命中繁體內容，繁體查詢也可命中（epic-42-text-conversion Issue 4）',
+        () async {
+      await repository.insertBook(_book('b1', title: '書一'));
+      await insertContentRow('b1', '這裡有電腦維修的說明');
+
+      final bySimplified =
+          await searchRepository.searchContentInBook('b1', '电脑维修');
+      expect(bySimplified, isNotNull);
+      expect(bySimplified!.matches, hasLength(1));
+
+      final byTraditional =
+          await searchRepository.searchContentInBook('b1', '電腦維修');
+      expect(byTraditional, isNotNull);
+      expect(byTraditional!.matches, hasLength(1));
     });
 
     test('指定 bookId 不存在時回傳 null', () async {
