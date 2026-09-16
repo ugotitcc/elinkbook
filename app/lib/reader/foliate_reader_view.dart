@@ -15,6 +15,7 @@ import 'epub_position_info.dart';
 import 'epub_selection_info.dart';
 import 'epub_text_align.dart';
 import 'foliate_bridge_codec.dart';
+import 'foliate_bridge_handlers.dart';
 import 'foliate_native_bridge.dart';
 import 'js_bridge_gateway.dart';
 import 'page_turn_mode.dart';
@@ -575,7 +576,7 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     if (_controller == null) return Future.value(const []);
     return _gateway.request<List<TocEntry>>(
       jsCall: 'window.getTableOfContents()',
-      handlerName: 'onTableOfContentsReady',
+      handlerName: FoliateBridgeHandlers.onTableOfContentsReady,
     );
   }
 
@@ -583,7 +584,7 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     if (_controller == null) return Future.value(const []);
     return _gateway.request<List<TtsSegmentCfi>>(
       jsCall: 'window.buildTtsSegments($sectionIndex)',
-      handlerName: 'onTtsSegmentsReady',
+      handlerName: FoliateBridgeHandlers.onTtsSegmentsReady,
       timeout: const Duration(seconds: 5),
     );
   }
@@ -596,7 +597,7 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     return _gateway.request<int>(
       jsCall:
           'window.lookupTtsSegmentIndex(${jsonEncode(visibleCfi)}, ${jsonEncode(segmentCfis)})',
-      handlerName: 'onTtsSegmentIndexReady',
+      handlerName: FoliateBridgeHandlers.onTtsSegmentIndexReady,
       timeout: const Duration(seconds: 5),
     );
   }
@@ -611,24 +612,24 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       ),
     );
     _gateway.register<List<TocEntry>>(
-      handlerName: 'onTableOfContentsReady',
+      handlerName: FoliateBridgeHandlers.onTableOfContentsReady,
       parse: (args) =>
           parseTableOfContents(args.isNotEmpty ? args[0] as String : '[]'),
       fallback: const [],
     );
     _gateway.register<List<TtsSegmentCfi>>(
-      handlerName: 'onTtsSegmentsReady',
+      handlerName: FoliateBridgeHandlers.onTtsSegmentsReady,
       parse: (args) =>
           parseTtsSegments(args.length > 1 ? args[1] as String : '[]'),
       fallback: const [],
     );
     _gateway.register<int>(
-      handlerName: 'onTtsSegmentIndexReady',
+      handlerName: FoliateBridgeHandlers.onTtsSegmentIndexReady,
       parse: (args) => args.isNotEmpty ? (args[0] as num).toInt() : 0,
       fallback: 0,
     );
     controller.addJavaScriptHandler(
-      handlerName: 'onPageRendered',
+      handlerName: FoliateBridgeHandlers.onPageRendered,
       callback: (args) {
         widget.onPageRendered();
         final writingModeStr =
@@ -642,13 +643,13 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       },
     );
     controller.addJavaScriptHandler(
-      handlerName: 'onError',
+      handlerName: FoliateBridgeHandlers.onError,
       callback: (args) {
         widget.onError(args.isNotEmpty ? args[0] as String : '未知錯誤');
       },
     );
     controller.addJavaScriptHandler(
-      handlerName: 'onLocatorChanged',
+      handlerName: FoliateBridgeHandlers.onLocatorChanged,
       // epic-26-architecture-hardening Issue 10：解析邏輯抽成
       // foliate_bridge_codec.dart 的 parseLocatorChanged() 純函式（比照
       // extractCfi()/parseTableOfContents() 既有慣例），可脫離 WebView
@@ -657,7 +658,7 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
           widget.onLocatorChanged?.call(parseLocatorChanged(args)),
     );
     controller.addJavaScriptHandler(
-      handlerName: 'onTtsHighlightOutOfSafeWindow',
+      handlerName: FoliateBridgeHandlers.onTtsHighlightOutOfSafeWindow,
       callback: (args) {
         // 審查修正（review-plan-issue-8.md Important #3）：比照既有
         // onSelectionChanged 的防禦性轉型慣例（見上方 argAt()），用
@@ -671,7 +672,7 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       },
     );
     controller.addJavaScriptHandler(
-      handlerName: 'onSelectionChanged',
+      handlerName: FoliateBridgeHandlers.onSelectionChanged,
       callback: (args) {
         // 審查修正：同 onLocatorChanged，改用防禦性轉型取代直接強制轉型。
         num? argAt(int index) =>
@@ -694,7 +695,7 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       },
     );
     controller.addJavaScriptHandler(
-      handlerName: 'onSelectionCleared',
+      handlerName: FoliateBridgeHandlers.onSelectionCleared,
       callback: (args) {
         _hasActiveSelection = false;
         widget.onSelectionCleared?.call();
