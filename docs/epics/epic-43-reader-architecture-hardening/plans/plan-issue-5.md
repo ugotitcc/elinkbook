@@ -1,6 +1,6 @@
 # Epic 43 Issue 5 — Layout Preset Error Handling Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 補齊 `ReaderScreen` 版面設定預設集「套用／套用來源書籍／刪除」三個操作失敗時的錯誤處理一致性——目前三者失敗時皆靜默無提示（例外被吞掉），比照既有 `_handleSaveAsPreset` 的 try/catch + SnackBar 模式補齊。
 
@@ -34,12 +34,12 @@
 - Consumes: `layout_preset_actions.applyLayoutPresetPrefs`／`layoutPresetTargetsCurrentBookOnly`（Epic 43 Issue 2，已存在）。
 - Produces: `_applyPrefsToTargets` 失敗時顯示 `Key('reader_apply_preset_error_snackbar')` 的 SnackBar；測試替身 `_ThrowingBookReaderPrefsRepository`（覆寫 `load`/`save`/`saveMultiple` 皆拋例外，供本 Task 與 Task 2 共用）；`pumpReaderScreen(..., bookReaderPrefsRepositoryOverride: ...)`。
 
-- [ ] **Step 1: 執行既有測試建立基準線**
+- [x] **Step 1: 執行既有測試建立基準線**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（記錄目前全數通過，作為本 Task 修改後的零回歸基準）
 
-- [ ] **Step 2: 新增測試替身與 `pumpReaderScreen` 參數**
+- [x] **Step 2: 新增測試替身與 `pumpReaderScreen` 參數**
 
 找到現有的 `_ThrowingLayoutPresetRepository`（約第 91-98 行）：
 
@@ -167,7 +167,7 @@ class _ThrowingBookReaderPrefsRepository extends BookReaderPrefsRepository {
       );
 ```
 
-- [ ] **Step 3: 寫入失敗測試**
+- [x] **Step 3: 寫入失敗測試**
 
 在既有「套用預設集到目前書籍：立即寫入且畫面即時反映新值」測試（約第 8187 行）後新增：
 
@@ -222,12 +222,12 @@ class _ThrowingBookReaderPrefsRepository extends BookReaderPrefsRepository {
     });
 ```
 
-- [ ] **Step 4: 執行測試確認失敗**
+- [x] **Step 4: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "預設集"`（M-4 審查修訂：只跑版面設定預設集群組即可看到新測試失敗，不需要跑全檔）
 Expected: FAIL（`tester.takeException()` 回傳非 null 的未捕捉例外，而非單純找不到 SnackBar——`_applyPrefsToTargets` 目前完全沒有 try/catch 保護，`repository.save()` 拋出的例外會是未捕捉例外，與 Task 2/3 的情況本質相同；M-1 審查修訂：先前誤以為是「被靜默吞掉」的語意，實際在測試環境下三者皆是未捕捉例外，只是在真機/生產環境的 UI 互動下使用者看不到任何提示才是「看似被吞掉」）
 
-- [ ] **Step 5: 改寫 `_applyPrefsToTargets`**
+- [x] **Step 5: 改寫 `_applyPrefsToTargets`**
 
 找到現有方法（約第 1103-1125 行）：
 
@@ -299,17 +299,17 @@ Expected: FAIL（`tester.takeException()` 回傳非 null 的未捕捉例外，�
   }
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（與 Step 1 記錄的基準線一致，外加 Step 3 新測試通過）
 
-- [ ] **Step 7: flutter analyze**
+- [x] **Step 7: flutter analyze**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart test/screens/reader_screen_test.dart
@@ -327,12 +327,12 @@ git commit -m "fix(reader): _applyPrefsToTargets 補上 try/catch 與失敗提�
 **Interfaces:**
 - Consumes: `_ThrowingBookReaderPrefsRepository`（Task 1）、`pumpReaderScreen(..., bookReaderPrefsRepositoryOverride: ...)`（Task 1）。
 
-- [ ] **Step 1: 執行既有測試建立基準線**
+- [x] **Step 1: 執行既有測試建立基準線**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（延續 Task 1 完成後的狀態）
 
-- [ ] **Step 2: 寫入失敗測試**
+- [x] **Step 2: 寫入失敗測試**
 
 在既有「複製其他書籍設定到本書：正確以 reflowableEpubFields() 過濾後寫入並即時反映」測試（約第 8361 行）後新增：
 
@@ -385,12 +385,12 @@ Expected: PASS（延續 Task 1 完成後的狀態）
 
 **注意：** 這則測試觸發的是 `_handleApplyFromBook` 自己的 `repository.load(sourceBookId)` 拋例外——這一步發生在呼叫 `_applyPrefsToTargets` **之前**，因此驗證的是本 Task 新增的外層 try/catch，而不是 Task 1 已經覆蓋的內層 try/catch（若本 Task 尚未實作，`repository.load()` 拋出的例外會是完全未捕捉的例外，直接讓 `tester.takeException()` 非 null，而不是「SnackBar 沒顯示」——Step 3 會看到這個現象）。
 
-- [ ] **Step 3: 執行測試確認失敗**
+- [x] **Step 3: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "預設集"`（M-4 審查修訂：理由同 Task 1 Step 4）
 Expected: FAIL（`tester.takeException()` 回傳非 null 的未捕捉例外，而非單純找不到 SnackBar——因為 `repository.load()` 拋出的例外目前完全沒有 try/catch 保護）
 
-- [ ] **Step 4: 改寫 `_handleApplyFromBook`**
+- [x] **Step 4: 改寫 `_handleApplyFromBook`**
 
 找到現有方法（約第 1137-1147 行）：
 
@@ -440,17 +440,17 @@ Expected: FAIL（`tester.takeException()` 回傳非 null 的未捕捉例外，�
   }
 ```
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（與 Step 1 記錄的基準線一致，外加 Step 2 新測試通過）
 
-- [ ] **Step 6: flutter analyze**
+- [x] **Step 6: flutter analyze**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart test/screens/reader_screen_test.dart
@@ -468,12 +468,12 @@ git commit -m "fix(reader): _handleApplyFromBook 補上獨立的 try/catch 與�
 **Interfaces:**
 - Consumes: `_ThrowingLayoutPresetRepository`（既有，Task 3 為其新增 `delete()` 覆寫）。
 
-- [ ] **Step 1: 執行既有測試建立基準線**
+- [x] **Step 1: 執行既有測試建立基準線**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（延續 Task 2 完成後的狀態）
 
-- [ ] **Step 2: `_ThrowingLayoutPresetRepository` 新增 `delete()` 覆寫，並寫入失敗測試**
+- [x] **Step 2: `_ThrowingLayoutPresetRepository` 新增 `delete()` 覆寫，並寫入失敗測試**
 
 找到現有的 `_ThrowingLayoutPresetRepository`（約第 91-98 行）：
 
@@ -558,12 +558,12 @@ class _ThrowingLayoutPresetRepository extends LayoutPresetRepository {
     });
 ```
 
-- [ ] **Step 3: 執行測試確認失敗**
+- [x] **Step 3: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "預設集"`（M-4 審查修訂：理由同 Task 1 Step 4）
 Expected: FAIL（`tester.takeException()` 回傳非 null 的未捕捉例外——`deleteLayoutPreset()` 拋出的例外目前完全沒有 try/catch 保護）
 
-- [ ] **Step 4: 改寫 `_handleDeletePreset`**
+- [x] **Step 4: 改寫 `_handleDeletePreset`**
 
 找到現有方法（約第 1149-1166 行）：
 
@@ -624,17 +624,17 @@ Expected: FAIL（`tester.takeException()` 回傳非 null 的未捕捉例外—�
   }
 ```
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（與 Step 1 記錄的基準線一致，外加 Step 2 新測試通過）
 
-- [ ] **Step 6: flutter analyze**
+- [x] **Step 6: flutter analyze**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart test/screens/reader_screen_test.dart
@@ -647,20 +647,20 @@ git commit -m "fix(reader): _handleDeletePreset 補上 try/catch 與失敗提示
 
 **Files:** 無新增/修改（純驗證）
 
-- [ ] **Step 1: 完整 flutter analyze**
+- [x] **Step 1: 完整 flutter analyze**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 2: 完整 flutter test**
+- [x] **Step 2: 完整 flutter test**
 
 Run: `flutter test`
 Expected: 全數通過，零回歸（若有既有已知不穩定測試案例，比照 `epic-41`/`epic-43` Issue 1/2/4 慣例於 PR 描述註明，不視為本 Issue 造成的回歸）
 
-- [ ] **Step 3: 於 `plan-issue-5.md` 標記全部 Task 完成**
+- [x] **Step 3: 於 `plan-issue-5.md` 標記全部 Task 完成**
 
-將本檔案所有 `- [ ]` 改為 `- [x]`。
+將本檔案所有 `- [x]` 改為 `- [x]`。
 
-- [ ] **Step 4: 發起獨立程式審查**
+- [x] **Step 4: 發起獨立程式審查**
 
 比照 `docs/agents/issue-tracker.md`／`sdd-workflow` 既有流程，使用 `/superpowers:requesting-code-review` 對本次異動（`git diff` 對比 Task 1 之前的 commit）發起審查，結果存至 `docs/epics/epic-43-reader-architecture-hardening/reviews/review-issue-5.md`（不進版控）。
