@@ -8488,6 +8488,51 @@ void main() {
       expect(saved.pdfContrast, isNull);
     });
 
+    testWidgets('複製其他書籍設定到本書：讀取來源書籍設定拋出例外時顯示提示，不被靜默吞掉', (
+      tester,
+    ) async {
+      final throwingBookReaderPrefsRepository =
+          _ThrowingBookReaderPrefsRepository(libraryRepository.database);
+      await pumpReaderScreen(
+        tester,
+        bookReaderPrefsRepositoryOverride: throwingBookReaderPrefsRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pumpAndSettle();
+      await switchToTab(tester, '預設集');
+      await tester.ensureVisible(
+        find.byKey(const Key('reader_settings_copy_from_book_current')),
+      );
+      await tester.tap(
+        find.byKey(const Key('reader_settings_copy_from_book_current')),
+      );
+      await tester.pump();
+      await tester.runAsync(
+        () => Future.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const Key('layout_preset_book_picker_item_b_other')),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const Key('layout_preset_book_picker_confirm')),
+      );
+      await tester.pump();
+      await tester.runAsync(
+        () => Future.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('reader_apply_preset_error_snackbar')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('PDF：框選矩形命中既有畫線時，工具列顯示刪除按鈕，點擊後刪除該畫線', (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
       final notesRepo = FakeNotesRepository();

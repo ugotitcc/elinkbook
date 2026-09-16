@@ -1154,10 +1154,26 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }) async {
     final repository = widget.bookReaderPrefsRepository;
     if (repository == null || targetBookIds.isEmpty) return;
-    final sourcePrefs =
-        (await repository.load(sourceBookId)).reflowableEpubFields();
-    if (!mounted) return;
-    await _applyPrefsToTargets(sourcePrefs, targetBookIds);
+    try {
+      final sourcePrefs =
+          (await repository.load(sourceBookId)).reflowableEpubFields();
+      if (!mounted) return;
+      await _applyPrefsToTargets(sourcePrefs, targetBookIds);
+    } catch (e, stackTrace) {
+      // Epic 43 Issue 5（I-2 審查修訂）：repository.load() 發生在呼叫
+      // _applyPrefsToTargets 之前，不在它內部的 try/catch 保護範圍內，
+      // 需要自己獨立這一層——與 _applyPrefsToTargets 內部的 try/catch
+      // 是兩層獨立保護，不會為同一次失敗重複顯示兩次 SnackBar（見上方
+      // Global Constraints 說明）。
+      debugPrint('套用版面設定失敗：$e\n$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: const Key('reader_apply_preset_error_snackbar'),
+          content: Text('套用版面設定失敗：$e'),
+        ),
+      );
+    }
   }
 
   Future<void> _handleDeletePreset(int id) async {
