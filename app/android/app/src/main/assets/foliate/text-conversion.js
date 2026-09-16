@@ -100,3 +100,24 @@ export function applyTextConversionToString(text, mode) {
 
   return { text: result, offsetMap: builder.build() }
 }
+
+/**
+ * 朗讀段清單依 [mode] 轉換顯示文字（epic-42-text-conversion Issue 5，
+ * issues.md「範圍」：「回傳的 segments[].text 在傳給語音合成器前，經過
+ * 一次 convertText(text, mode) 轉換」）。只轉換 [segments] 陣列中每個
+ * 元素的 `text` 欄位供語音合成器朗讀，`segmentId`／`cfi` 原樣保留——
+ * `cfi` 是 main.js `extractSegmentsForSection()` 對
+ * `view.book.sections[i].createDocument()` 產生之獨立、從未被
+ * `applyTextConversion()` 走訪過的文件計算得出，本就恆對應原文，轉換
+ * 顯示文字不影響它，也不應該讓它跟著變動（見 main.js 頂層 `view.getCFI`
+ * 全域遮蔽註解）。
+ * @param {{segmentId: string, cfi: string, text: string}[]} segments
+ * @param {'original' | 'toTraditional' | 'toSimplified'} mode
+ * @returns {{segmentId: string, cfi: string, text: string}[]}
+ */
+export function convertTtsSegments(segments, mode) {
+  return segments.map((segment) => ({
+    ...segment,
+    text: applyTextConversionToString(segment.text, mode).text,
+  }))
+}
