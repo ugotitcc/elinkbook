@@ -51,7 +51,7 @@
 | 41 | `epic-39-layout-settings-redesign` 版面設定三畫面主題化＋E-Ink 步進器（`DESIGN.md` §18.3 補實作） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 42 | `epic-41-search-architecture-hardening` 全文檢索模組架構深化機會（epic-10-search 開發後盤點） | 🟡 開發中 (Active) | Issue 1-5（PR #240-#244）已完成並合併；僅剩 Issue 6 `needs-info` 暫緩，待人類決定歸檔時機 |
 | 43 | `epic-42-text-conversion` 簡繁轉換（FR-48） | 🟡 開發中 (Active) | Issue 0／0b／1-5（PR #245-#251）全數完成並合併，待歸檔 |
-| 44 | `epic-43-reader-architecture-hardening` 閱讀器模組架構深化機會（`reader_screen.dart`/`library_screen.dart` 熱點盤點） | 🟡 開發中 (Active) | Issue 1（PR #252）已完成並合併；Issue 2/4/5 待實作，Issue 3 `needs-info` 記錄用暫緩 |
+| 44 | `epic-43-reader-architecture-hardening` 閱讀器模組架構深化機會（`reader_screen.dart`/`library_screen.dart` 熱點盤點） | 🟡 開發中 (Active) | Issue 1/2（PR #252/#253）已完成並合併；Issue 4/5 待實作，Issue 3 `needs-info` 記錄用暫緩 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。

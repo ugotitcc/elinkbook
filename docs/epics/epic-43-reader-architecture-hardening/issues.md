@@ -137,7 +137,7 @@ Deletion test：刪掉其中一份，複雜度不會消失——它會在另一�
 
 ## Issue 2：抽出 LayoutPreset 共用操作函式，合併 applyPreset/applyFromBook 重複邏輯
 
-**Status:** ready-for-agent
+**Status:** completed（**2026-09-16 已完成並合併回 `main`（PR [#253](https://git.jigong.org/huthief/elinkBook/pulls/253)，分支 `feat/epic-43-issue-2`）**：`plans/plan-issue-2.md`（經 `reviews/review-plan-issue-2.md` 審查修訂 2 項 Important——I-1 `applyLayoutPresetPrefs()` 空清單提早返回、I-2 `_handleSaveAsPreset`/`_handleDeletePreset` 補齊 `!confirmed || !mounted` 生命週期防禦——與 2 項 Minor 後定案）8 個 Task 全數完成：新增 `app/lib/reader/layout_preset_actions.dart`（`layoutPresetTargetsCurrentBookOnly`/`insertNewLayoutPreset`/`overwriteLayoutPreset`/`deleteLayoutPreset`/`applyLayoutPresetPrefs`，頂層函式、無 `BuildContext` 依賴），`ReaderScreen` 新增 `_applyPrefsToTargets` 收斂 `_handleApplyPreset`/`_handleApplyFromBook` 重複中段邏輯，`_handleSaveAsPreset`/`_handleDeletePreset` 改呼叫對應函式後直接 `setState`；對外方法簽章（含 `ReaderSettingsSheet` 6 個 callback 參數）維持不變。獨立程式審查（`reviews/review-issue-2.md`）：0 Critical／0 Important／2 Minor（皆觀察性記錄，非需修正項目），並逐項核對 I-1/I-2/M-1/M-2 四項審查修訂皆已落地，結論 Ready to merge: Yes。`flutter test test/reader/layout_preset_actions_test.dart test/screens/reader_screen_test.dart`（12+242 個測試全過，零回歸）／`flutter analyze`（No issues found）皆為綠燈。）
 
 **依賴：** 建議候選 1（Issue 1）完成後再進行，降低同時改 `reader_screen.dart` 的 merge 衝突風險。
 
