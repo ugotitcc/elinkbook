@@ -41,3 +41,28 @@ Future<List<LayoutPreset>> insertNewLayoutPreset(
   ));
   return repository.listAll();
 }
+
+/// 覆蓋既有一組（存滿 3 組時的路徑）。[target] 須為已持久化的預設集
+/// （`target.id` 非 null）——未存檔的暫存物件呼叫本函式屬於呼叫端邏輯
+/// 錯誤，assert 讓誤傳時有明確的除錯訊息，而非隱蔽的 `target.id!`
+/// 執行期 null check 崩潰。[prefs] 過濾責任同 [insertNewLayoutPreset]。
+Future<List<LayoutPreset>> overwriteLayoutPreset(
+  LayoutPresetRepository repository, {
+  required LayoutPreset target,
+  required String name,
+  required BookReaderPrefs prefs,
+}) async {
+  assert(target.id != null,
+      'Target layout preset must have a valid id for overwrite');
+  await repository.replace(
+    target.id!,
+    LayoutPreset(
+      id: target.id,
+      name: name,
+      createdAt: target.createdAt,
+      updatedAt: DateTime.now(),
+      prefs: prefs,
+    ),
+  );
+  return repository.listAll();
+}

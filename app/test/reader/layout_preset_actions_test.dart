@@ -73,4 +73,64 @@ void main() {
       expect(updated.map((p) => p.name).toList(), ['第一組', '第二組']);
     });
   });
+
+  group('overwriteLayoutPreset', () {
+    late SqliteLibraryRepository libraryRepository;
+    late LayoutPresetRepository repository;
+
+    setUp(() async {
+      libraryRepository =
+          await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      repository = LayoutPresetRepository(libraryRepository.database);
+    });
+
+    tearDown(() async {
+      await libraryRepository.close();
+    });
+
+    test('覆蓋後 id／createdAt 不變，name／prefs 更新為新值', () async {
+      final createdAt = DateTime.fromMillisecondsSinceEpoch(1000);
+      await repository.insert(LayoutPreset(
+        id: null,
+        name: '舊名稱',
+        createdAt: createdAt,
+        updatedAt: createdAt,
+        prefs: const BookReaderPrefs(fontSize: 16),
+      ));
+      final target = (await repository.listAll()).single;
+
+      final updated = await overwriteLayoutPreset(
+        repository,
+        target: target,
+        name: '新名稱',
+        prefs: const BookReaderPrefs(fontSize: 20),
+      );
+
+      expect(updated, hasLength(1));
+      expect(updated.single.id, target.id);
+      expect(updated.single.name, '新名稱');
+      expect(updated.single.prefs.fontSize, 20);
+      expect(updated.single.createdAt, target.createdAt);
+    });
+
+    test('target.id 為 null（未持久化的暫存物件）時觸發 assert', () async {
+      final target = LayoutPreset(
+        id: null,
+        name: '暫存',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        prefs: BookReaderPrefs.empty,
+      );
+
+      expect(
+        () => overwriteLayoutPreset(
+          repository,
+          target: target,
+          name: '新名稱',
+          prefs: BookReaderPrefs.empty,
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+  });
 }
