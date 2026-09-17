@@ -1,5 +1,6 @@
 // app/test/search/pdf_content_indexer_test.dart
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -92,15 +93,28 @@ void main() {
     // 原生端），驗證：(1) filePath 含 "://" 時確實呼叫這個 resolver 而非
     // 直接把 content:// 字串傳給 PdfDocument.openFile()；(2) 解析出的暫存
     // 檔路徑正確被拿去開啟；(3) 處理完畢後暫存檔被刪除。
+    //
+    // 【review-issue-0.md Minor #1 修正】mock 必須回傳「真正的暫存檔複本」，
+    // 不可直接回傳共用 fixture 本身的路徑——production 端的 finally 區塊
+    // 會把 content:// 解析出來的路徑當作自己擁有的暫存檔無條件刪除
+    // （pdf_content_indexer.dart 的 indexBook()），若 mock 回傳 fixture
+    // 本體，會把版本控制中的共用測試檔案一併刪除。比照
+    // pdf_reader_view_test.dart 既有「複製位元組到 Directory.systemTemp
+    // 再回傳該路徑」的既定寫法。
     test('content:// URI 書籍透過 readContentUriAll 解析為暫存檔後開啟，處理完畢後刪除暫存檔',
         () async {
       final original = readContentUriAll;
       addTearDown(() => readContentUriAll = original);
 
+      final tmpFile = File(
+          '${Directory.systemTemp.path}/pdf_content_indexer_test_${DateTime.now().microsecondsSinceEpoch}.pdf');
+      await tmpFile.writeAsBytes(
+          await File('test/fixtures/sample_multi_page.pdf').readAsBytes());
+
       var resolvedUri = '';
       readContentUriAll = (uri) async {
         resolvedUri = uri;
-        return 'test/fixtures/sample_multi_page.pdf';
+        return tmpFile.path;
       };
 
       const indexer = PdfContentIndexer();
@@ -111,6 +125,10 @@ void main() {
       expect(resolvedUri, 'content://com.example.provider/doc123');
       expect(segments, isNotEmpty);
       expect(segments.map((s) => s.chapterIndex).toSet(), {0, 1, 2, 3, 4});
+      expect(File('test/fixtures/sample_multi_page.pdf').existsSync(), isTrue,
+          reason: '共用測試 fixture 不應被 indexBook() 的暫存檔清理邏輯誤刪');
+      expect(tmpFile.existsSync(), isFalse,
+          reason: 'indexBook() 應刪除它自己材質化出來的暫存檔複本（驗證清理邏輯本身仍正確運作）');
     });
 
     test('readContentUriAll 回傳 null 時拋出明確例外（而非讓 PdfDocument.openFile 收到 null）',
