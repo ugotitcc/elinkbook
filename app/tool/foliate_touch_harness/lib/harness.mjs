@@ -34,11 +34,14 @@ async function listFilesRecursive(dir, base = dir) {
  * fixture EPUB 的 headless 頁面。呼叫端用完須自行
  * `await browser.close()`。
  */
-export async function launchHarnessPage({ fixtureFileName, writingMode = 'horizontal' }) {
+export async function launchHarnessPage({ fixtureFileName, fixtureBuffer, writingMode = 'horizontal' }) {
   const relFiles = await listFilesRecursive(FOLIATE_DIR)
   const fileMap = new Map()
   for (const rel of relFiles) fileMap.set(rel, await readFile(path.join(FOLIATE_DIR, rel)))
-  const fixtureBuf = await readFile(path.join(FIXTURES_DIR, fixtureFileName))
+  // fixtureBuffer：呼叫端直接提供記憶體中組好的 EPUB bytes（例如
+  // scenario-disable-publisher-styles.mjs 用來測試「書本自帶 CSS」情境，
+  // 不需要另外提交一份實體 fixture 檔案），優先於 fixtureFileName。
+  const fixtureBuf = fixtureBuffer ?? await readFile(path.join(FIXTURES_DIR, fixtureFileName))
 
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
   const page = await browser.newPage()

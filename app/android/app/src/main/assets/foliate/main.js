@@ -153,12 +153,34 @@ let lastDecorations = []
  * `publisherStyles === false` 時改用萬用選取器 `*`，讓覆蓋規則的優先度
  * 蓋過書本自己更具體的選取器（比照 Readium「忽略出版社樣式」的既有語意
  * 精神，非逐位元組相同的實作，這兩套渲染引擎本就刻意獨立，見 ADR 0011）。
+ *
+ * /diagnose（2026-09-17，「停用書本 CSS」沒有效果）：上面這組 selector
+ * 切換只影響 font-family/font-weight/line-height/letter-spacing/
+ * text-align/文字色/背景色這幾項本來就由 App 滑桿控制的屬性，從未處理
+ * 書本自己宣告的 margin/padding 等版面配置屬性，導致停用開關對這類屬性
+ * 完全無效（真實案例：某書 `.main { margin: 3em ...; }`，開關切換前後
+ * computed margin-top 皆為 48px，見
+ * app/tool/foliate_touch_harness/scenario-disable-publisher-styles.mjs）。
+ * 額外加這一條 `* { margin/padding: 0 !important }` 全域重置規則，才是
+ * 真正讓「停用書本 CSS」對版面配置屬性生效的關鍵；下方 paragraphSpacing
+ * 仍會用更高特異度的 `p` 選取器覆蓋回使用者設定的段落間距，不受影響。
+ *
+ * 但 `ul`/`ol` 的項目符號/編號縮排，瀏覽器原生就是靠 `padding-left`
+ * 實作（沒有獨立的「縮排」屬性）——上面那條全域 padding 重置連帶把這個
+ * 瀏覽器內建外觀也清掉了，並非預期行為。額外用 `ul, ol` 專屬規則
+ * 覆蓋回瀏覽器慣例縮排值，選取器特異度天生贏過上面的 `*`，不需要調整
+ * 兩條規則的先後順序。
  */
 function buildOverrideCss(prefs) {
   const rules = []
   const selector = prefs.publisherStyles === false
     ? '*'
     : 'body, p, div, li, span, td, th, blockquote, dd, dt, a, h1, h2, h3, h4, h5, h6'
+
+  if (prefs.publisherStyles === false) {
+    rules.push('* { margin: 0 !important; padding: 0 !important; }')
+    rules.push('ul, ol { padding-left: 40px !important; }')
+  }
 
   if (prefs.writingMode === 'vertical') {
     // 註：若原書宣告 vertical-lr，覆蓋時亦統一輸出 CJK 主流之 vertical-rl !important（符合本 App 直排規劃目標）
