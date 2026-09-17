@@ -3930,6 +3930,34 @@ void main() {
     });
   });
 
+  group('findBookById', () {
+    test('命中：回傳對應書籍', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.insertBook(Book(
+        id: 'book1',
+        title: '本機書',
+        format: BookFileFormat.epub,
+        filePath: '/books/book1.epub',
+        source: BookSource.local,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      final found = await repo.findBookById('book1');
+      expect(found?.id, 'book1');
+      expect(found?.title, '本機書');
+    });
+
+    test('未命中：回傳 null', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      expect(await repo.findBookById('does-not-exist'), isNull);
+    });
+  });
+
   group('listUndownloadedBooksForRemoteServer', () {
     test('回傳指定站點中 isDownloaded=false 的書籍，排除已下載與其他站點', () async {
       final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);

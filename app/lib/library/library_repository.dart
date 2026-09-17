@@ -62,6 +62,11 @@ abstract class LibraryRepository {
   /// 透過這個方法間接查詢，維持「`books`／`groups` 兩張表唯一存取入口」
   /// 的既有邊界（見本類別文件），不直接對 `books` 表下 SQL。
   Future<List<Book>> listUndownloadedBooksForRemoteServer(String serverId);
+
+  /// 依主鍵 [id] 精確查詢單一書籍，供 WiFi 傳書下載路由解析下載來源使用
+  /// （epic-44-wifi-book-transfer Issue 0，spec.md「`LibraryRepository`
+  /// 異動」）。命中回傳該本書，未命中回傳 `null`。
+  Future<Book?> findBookById(String id);
 }
 
 /// `LibraryRepository` 操作違反資料規則時拋出（例如嘗試刪除/重新命名系統

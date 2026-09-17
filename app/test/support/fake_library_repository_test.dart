@@ -110,6 +110,30 @@ void main() {
     });
   });
 
+  group('FakeLibraryRepository.findBookById', () {
+    test('命中：回傳對應書籍', () async {
+      final repo = FakeLibraryRepository();
+      await repo.insertBook(Book(
+        id: 'book1',
+        title: '本機書',
+        format: BookFileFormat.epub,
+        filePath: '/books/book1.epub',
+        source: BookSource.local,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      final found = await repo.findBookById('book1');
+      expect(found?.id, 'book1');
+      expect(found?.title, '本機書');
+    });
+
+    test('未命中：回傳 null', () async {
+      final repo = FakeLibraryRepository();
+      expect(await repo.findBookById('does-not-exist'), isNull);
+    });
+  });
+
   group('FakeLibraryRepository._withGroupName 保留所有新欄位', () {
     test('renameGroup 後，書籍的 remoteServerId 與 contentFingerprint 等欄位皆保留', () async {
       final repo = FakeLibraryRepository();

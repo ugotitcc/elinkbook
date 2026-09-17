@@ -1174,6 +1174,18 @@ class SqliteLibraryRepository implements LibraryRepository {
   }
 
   @override
+  Future<Book?> findBookById(String id) async {
+    final rows = await _db.query(
+      'books',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return Book.fromMap(rows.first);
+  }
+
+  @override
   Future<bool> detectAndCacheEpubLayout(String bookId, String filePath) async {
     final response = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
       'detectEpubLayout',

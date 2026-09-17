@@ -204,6 +204,14 @@ class FakeLibraryRepository implements LibraryRepository {
         .toList();
   }
 
+  @override
+  Future<Book?> findBookById(String id) async {
+    for (final book in _books) {
+      if (book.id == id) return book;
+    }
+    return null;
+  }
+
   Book _withGroupName(Book book, String groupName) => Book(
         id: book.id,
         title: book.title,
