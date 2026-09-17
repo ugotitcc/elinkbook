@@ -119,6 +119,17 @@ dependencies:
   # （AudioSession.instance／interruptionEventStream／
   # becomingNoisyEventStream），不依賴透過遞移相依隱式取用。
   audio_session: ^0.2.4
+  # 本機 HTTP Server 框架（epic-44-wifi-book-transfer）：官方 Dart 團隊
+  # 維護，WiFi 傳書路由/中介層皆用其標準機制，不手刻 socket 處理。
+  shelf: ^1.4.2
+  # 解析上傳的 multipart/form-data 請求（epic-44-wifi-book-transfer）。
+  shelf_multipart: ^2.0.1
+  # 畫面上算圖顯示連線用 QR Code（epic-44-wifi-book-transfer）：純本機
+  # 算圖，不需要網路連線，適合手機熱點分享情境。
+  qr_flutter: ^4.1.0
+  # 螢幕常亮（epic-44-wifi-book-transfer）：WiFi 傳書畫面顯示中防止螢幕
+  # 休眠中斷傳輸，對應 design.md「前景執行穩健度」承諾。
+  wakelock_plus: ^1.5.2
 
 dev_dependencies:
   flutter_test:
