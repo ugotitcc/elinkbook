@@ -52,7 +52,7 @@
 | 42 | `epic-41-search-architecture-hardening` 全文檢索模組架構深化機會（epic-10-search 開發後盤點） | 🟡 開發中 (Active) | Issue 1-6（PR #240-#244、#256）全數完成並合併，待歸檔 |
 | 43 | `epic-42-text-conversion` 簡繁轉換（FR-48） | 🟡 開發中 (Active) | Issue 0／0b／1-5（PR #245-#251）全數完成並合併，待歸檔 |
 | 44 | `epic-43-reader-architecture-hardening` 閱讀器模組架構深化機會（`reader_screen.dart`/`library_screen.dart` 熱點盤點） | 🟡 開發中 (Active) | Issue 1/2/4/5（PR #252/#253/#254/#255）全數完成並合併；Issue 3 `needs-info` 記錄用暫緩、不產生程式碼異動，待人類決定歸檔時機 |
-| 45 | `epic-44-wifi-book-transfer` WiFi 傳書（同區網雙向搬書，免對方裝 App） | 🟡 開發中 (Active) | Discovery 完成，`design.md` 已產出，待 Architecting |
+| 45 | `epic-44-wifi-book-transfer` WiFi 傳書（同區網雙向搬書，免對方裝 App） | 🟡 開發中 (Active) | Discovery／Architecting 完成，`spec.md` 已產出，待 Scrum Master 拆 Issue |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。
