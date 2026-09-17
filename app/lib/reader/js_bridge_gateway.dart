@@ -6,6 +6,12 @@ import 'dart:async';
 /// 注入函式，讓這個類別可以脫離真正的 WebView 環境被單元測試——現有的
 /// `fake_inappwebview_platform.dart` 沒有能力模擬 JS handler 回呼，這是
 /// 過去三個 `_requestXxx` 完全沒有 Dart 測試涵蓋的根本原因。
+///
+/// 同一個 [handlerName] 同時只能有一個 pending 請求：呼叫端必須自行保證
+/// 不會在前一次對同一 handler 的 [request] 完成前又發出新的請求，否則
+/// 回應會被誤配對給錯的呼叫。若違反這個約定，舊請求會被視為過期並以
+/// `StateError` 提前結束（見 [request] 實作），不會靜默覆寫或無限期掛住
+/// （epic-41-search-architecture-hardening Issue 6）。
 class JsBridgeGateway {
   JsBridgeGateway({
     required this.evaluate,
@@ -68,6 +74,24 @@ class JsBridgeGateway {
       _fallbackByHandler.containsKey(handlerName),
       'Handler "$handlerName" 尚未透過 register() 註冊 fallback 值',
     );
+    // 同一 handler 若已有尚未完成的舊請求，代表呼叫端在前一次請求完成前
+    // 又發出了新請求——依既有不變量（completer 只要還留在 _pending 裡
+    // 就一定尚未 complete，見 register() 的 callback 與下方 timeout 的
+    // onTimeout，皆是「complete 的同時立即 remove」成對發生），此時直接
+    // 讓舊請求以明確錯誤結束，取代原本「靜默覆寫、舊呼叫者的回應被之後
+    // 抵達的 JS 回呼誤配對，或完全沒設 timeout 時永遠掛住」的行為
+    // （epic-41-search-architecture-hardening Issue 6，全 build 強制生效，
+    // 不可用 assert()——release build 會被整個移除）。
+    final existing = _pending[handlerName];
+    if (existing != null) {
+      existing.completeError(
+        StateError(
+          'JsBridgeGateway: handler "$handlerName" 的前一個 request() '
+          '尚未完成前又收到新的請求，舊請求已被取代並以錯誤結束（呼叫端'
+          '需自行保證同一 handler 不會重疊發出請求）。',
+        ),
+      );
+    }
     final completer = Completer<T>();
     _pending[handlerName] = completer;
     evaluate(jsCall);

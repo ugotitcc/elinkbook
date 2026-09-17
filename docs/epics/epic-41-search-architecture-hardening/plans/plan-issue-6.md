@@ -35,7 +35,7 @@
 - Consumes：既有 `JsBridgeGateway` 建構子（`evaluate`／`registerHandler`）與 `register<T>()`／`request<T>()` 方法簽章，完全不變，不新增任何參數。
 - Produces：`request<T>()` 的新行為——呼叫時若對應 `handlerName` 在 `_pending` 中已有尚未完成的舊 `Completer`，該舊 `Completer` 會以 `StateError` 完成（新請求本身仍正常回傳一個新的、會等待 handler 回呼的 `Future<T>`，不受影響）。本 Issue 只有這一個 Task，無下游任務依賴此處的具體型別。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 在 `app/test/reader/js_bridge_gateway_test.dart` 既有 `group('JsBridgeGateway', () { ... })` 內，緊接在最後一個既有測試（`'parse 拋出例外時立即退回 fallback，不需要等逾時'`，目前結尾在第 139 行 `});`）之後、`group` 自己的收尾 `});`（第 140 行）之前，新增兩個測試案例。**兩者皆改用 `fakeAsync`／`flushMicrotasks()`，不直接 `await` 可能永遠不完成的 Future**（審查 `reviews/review-plan-issue-6.md` I-2：在紅燈階段 `await expectLater(firstFuture, ...)` 會卡到 `flutter test` 預設的 30 秒 test timeout 才失敗，改用 `catchError`／`.then(onError: ...)` 把結果捕捉到區域變數、`flushMicrotasks()` 後直接斷言變數，紅燈階段能立即失敗）：
 
@@ -171,7 +171,7 @@
 
 修改後，該檔案最上方的 import 區塊（第 1-3 行）不需要變動——`fake_async`／`StateError`／`isA`／`having` 皆已隨既有的 `package:fake_async/fake_async.dart`／`package:flutter_test/flutter_test.dart` 匯入可用（既有 Test 2-4 已在用 `fakeAsync`）。
 
-- [ ] **Step 2: 執行測試，確認會失敗**
+- [x] **Step 2: 執行測試，確認會失敗**
 
 於 `app/` 目錄下執行：
 
@@ -181,7 +181,7 @@ flutter test test/reader/js_bridge_gateway_test.dart --plain-name "同一個 han
 
 Expected: FAIL（兩個新測試皆失敗，且是**立即失敗**、不會卡住等待——這正是改用 `fakeAsync`＋`flushMicrotasks()` 而非直接 `await` 的目的）：現行 `request()` 尚未實作防呆，`firstError`／`firstResult` 在 `flushMicrotasks()` 後仍維持初始值 `null`，`expect(firstError, isA<StateError>()...)` 直接判定失敗；`secondResult`/`firstResult` 相關斷言則因現行「靜默覆寫」的既有行為（新請求正常運作、舊請求永遠不完成）而部分通過、部分失敗，整體測試仍為 FAIL。
 
-- [ ] **Step 3: 實作最小程式碼**
+- [x] **Step 3: 實作最小程式碼**
 
 修改 `app/lib/reader/js_bridge_gateway.dart`。
 
@@ -250,7 +250,7 @@ class JsBridgeGateway {
   }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 ```bash
 flutter test test/reader/js_bridge_gateway_test.dart --plain-name "同一個 handler 尚有 pending 請求"
@@ -258,7 +258,7 @@ flutter test test/reader/js_bridge_gateway_test.dart --plain-name "同一個 han
 
 Expected: PASS（兩個新測試皆通過）
 
-- [ ] **Step 5: 執行完整 `js_bridge_gateway_test.dart`，確認既有 4 個測試案例零回歸**
+- [x] **Step 5: 執行完整 `js_bridge_gateway_test.dart`，確認既有 4 個測試案例零回歸**
 
 ```bash
 flutter test test/reader/js_bridge_gateway_test.dart
@@ -266,7 +266,7 @@ flutter test test/reader/js_bridge_gateway_test.dart
 
 Expected: PASS（6 個測試全過：既有 4 個＋新增 2 個）——尤其確認既有「逾時退回 fallback」／「timeout 為 null 時不受打斷」／「parse 拋出例外」三個測試案例不受本次改動影響，因為它們都只呼叫一次 `request()`，不會觸發新加的重疊防呆分支。
 
-- [ ] **Step 6: 執行完整 `flutter analyze`／`flutter test`**
+- [x] **Step 6: 執行完整 `flutter analyze`／`flutter test`**
 
 本 Task 是整份計畫最後一個 Task，依專案 `CLAUDE.md`「測試執行範圍」慣例於此執行一次完整驗證：
 
@@ -282,7 +282,7 @@ flutter test
 
 Expected: 全數通過，零回歸（尤其 `test/reader/foliate_reader_view_test.dart`／`test/search/foliate_content_indexer_test.dart`——若這兩個測試檔存在，其涵蓋的 4 個既有 `JsBridgeGateway` 呼叫點應完全不受影響）。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/reader/js_bridge_gateway.dart app/test/reader/js_bridge_gateway_test.dart
