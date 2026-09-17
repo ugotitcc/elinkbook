@@ -129,7 +129,7 @@ void main() {
     });
     var readAllCalled = false;
 
-    const channel = MethodChannel('elinkbook/reader_resources');
+    const channel = MethodChannel('elinkbook/reader_resources_cache');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
       switch (call.method) {

@@ -274,7 +274,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   PdfDocument? _document;
   Object? _error;
   bool _renderedNotified = false;
-  static const _resourceChannel = MethodChannel('elinkbook/reader_resources');
+  static const _resourceChannel = MethodChannel('elinkbook/reader_resources_cache');
   String? _contentUriTmpPath;
 
   /// 最近一次雙頁版面計算結果，由 [_layoutSpreadPages] 在 build 期間寫入
