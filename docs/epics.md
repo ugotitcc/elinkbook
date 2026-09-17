@@ -49,7 +49,7 @@
 | 39 | `epic-37-test-suite-flakiness` 全套測試套件既有不穩定性追蹤 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 40 | `epic-38-reader-chrome-tts-redesign` 閱讀器 Chrome／TTS 重構（`DESIGN.md` §19 階段二） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 41 | `epic-39-layout-settings-redesign` 版面設定三畫面主題化＋E-Ink 步進器（`DESIGN.md` §18.3 補實作） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
-| 42 | `epic-41-search-architecture-hardening` 全文檢索模組架構深化機會（epic-10-search 開發後盤點） | 🟡 開發中 (Active) | Issue 1-5（PR #240-#244）已完成並合併；僅剩 Issue 6 `needs-info` 暫緩，待人類決定歸檔時機 |
+| 42 | `epic-41-search-architecture-hardening` 全文檢索模組架構深化機會（epic-10-search 開發後盤點） | 🟡 開發中 (Active) | Issue 1-5（PR #240-#244）已完成並合併；Issue 6 已於 2026-09-17 `/grill-with-docs` 重新評估定案並改為 `ready-for-agent`，待實作 |
 | 43 | `epic-42-text-conversion` 簡繁轉換（FR-48） | 🟡 開發中 (Active) | Issue 0／0b／1-5（PR #245-#251）全數完成並合併，待歸檔 |
 | 44 | `epic-43-reader-architecture-hardening` 閱讀器模組架構深化機會（`reader_screen.dart`/`library_screen.dart` 熱點盤點） | 🟡 開發中 (Active) | Issue 1/2/4/5（PR #252/#253/#254/#255）全數完成並合併；Issue 3 `needs-info` 記錄用暫緩、不產生程式碼異動，待人類決定歸檔時機 |
 

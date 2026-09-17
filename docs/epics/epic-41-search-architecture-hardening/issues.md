@@ -250,31 +250,33 @@
 
 ---
 
-## Issue 6：（記錄用，暫不動手）JsBridgeGateway 對「連續請求同一 handler、按序配對」場景介面太淺
+## Issue 6：JsBridgeGateway 對「同一 handler 重疊請求」補一道呼叫端防呆
 
-**Status:** needs-info
+**Status:** ready-for-agent（2026-09-17 `/grill-with-docs` 重新評估定案，見下方「2026-09-17 重新評估」；不擴充 `JsBridgeGateway` 對外介面，改為既有 `request()` 內補一道防呆）
 
 **依賴：** 無
 
-**來源：** `/improve-codebase-architecture` 候選 6（Speculative）。`/grilling` Q8 已確認：不擴充 `JsBridgeGateway` 介面，先只記錄，等出現觸發條件再重新評估。
+**來源：** `/improve-codebase-architecture` 候選 6（Speculative）。原 `/grilling` Q8（epic-41 Architecting 階段）已確認：不擴充 `JsBridgeGateway` 介面，先只記錄，等出現觸發條件再重新評估。2026-09-17 `/grill-with-docs` 重新評估後拍板落地為下方最小防護方案，不等第二個「一模一樣形狀」的呼叫端出現。
 
 **背景：** `JsBridgeGateway`（`reader/js_bridge_gateway.dart:28-83`）設計是「每個 handler name 同時只能有一個 pending completer」。`FoliateContentIndexer.indexBook()` 需要在同一次呼叫內對 `onSegmentsForSectionReady` 這個 handler 連續呼叫 N 次（每章節一次）——`foliate_content_indexer.dart:50-59` 的既有註解明白指出：某章逾時後才遲到抵達的舊回應，會被 gateway 誤判成下一章的回應、造成資料錯位（已證實可重現的競態，非理論疑慮）。現行解法是**繞過 gateway**，在 `foliate_content_indexer.dart:110-193` 自己重新實作一套「記錄目前預期章節索引＋手動 completer＋手動 timeout」的邏輯——等於在呼叫端重新發明了 gateway 原本要收斂掉的「發請求→等回呼→逾時處理」樣板，只是多加了一層「章節序號比對，過期就丟棄」。
 
-**為什麼現在不動手（`/grilling` Q8）：** 目前只有 `FoliateContentIndexer` 這一個呼叫端需要「連續呼叫同一 handler、按序配對、丟棄過期回應」這個模式——「一個轉接器只是假設性接縫」，現有繞過寫法行為正確、有明確註解說明競態原因，只是不夠深。貿然在 `JsBridgeGateway` 加一個目前只有一個真實用法的抽象，風險是「做了但用不到」。
+**2026-09-17 `/grill-with-docs` 重新評估新增背景：** 原 Q8「目前只有一個真實用法」的前提並不完整——`TtsController.play()`（`tts_controller.dart:98-121`）過去也踩過同一個底層限制，只是問題形狀不同：`loadSegments()` 底層就是 `JsBridgeGateway.request()` 打 `onTtsSegmentsReady` handler，`play()` 在 idle 狀態下若不設防重入旗標，使用者連點播放鍵會觸發第二次 `loadSegments()` 與第一次並行，導致 `_segments` 互相覆寫（已於審查 `review-issue-4-code.md` 用可控 Completer 實測重現）。解法不是擴充 gateway，而是在呼叫端加 `_isLoadingSegments` 旗標＋`_playGeneration` 世代編號**完全禁止重入**——與 `FoliateContentIndexer`「容忍重入＋序號丟棄過期回應」是不同形狀的解法，因此嚴格照 Q8 原文「連續呼叫同一 handler、按序配對」的字面定義仍不算同一個模式，但兩者共同指向同一個更底層、目前完全沒寫在 `JsBridgeGateway` 文件裡的隱性契約：**呼叫端必須自行保證同一 handler 不會有第二個請求在前一個完成前發出，否則回應會被靜默誤配對給錯的呼叫**。這個隱性契約目前已造成至少兩次呼叫端各自用不同手法自行規避，值得補一層防呆，不需要等到出現「一模一樣形狀」的第二個呼叫端才動手。
 
-**觸發重新評估的條件：** 出現第二個呼叫端需要同樣「連續對同一 handler 發出請求、需要按呼叫順序配對回應、且要丟棄過期回應」的模式時（例如未來格式擴充需要另一套逐章節/逐頁背景擷取），回頭評估是否在 `JsBridgeGateway` 增加一個帶關聯值（correlation id）的請求模式：
+另查證發現 `_requestTableOfContents()`（`foliate_reader_view.dart:575-581`）呼叫 `gateway.request()` 時完全沒帶 `timeout` 參數——目前若被重入，原呼叫者的 `await` 會**永遠**掛住，比有 5 秒 timeout 兜底的 TTS 更嚴重。下方 Solution 的做法會一併堵上這個既有缺口，不需要另外修改 `_requestTableOfContents()` 的呼叫方式。
 
-```dart
-Future<T> requestCorrelated<T>({
-  required void Function() jsCall,
-  required String handlerName,
-  required dynamic Function(dynamic) correlationExtractor,
-  required dynamic expectedCorrelation,
-  required T Function(dynamic) parse,
-  required Duration timeout,
-});
-```
+**為什麼不做完整 `requestCorrelated()`（原方案降級為記錄，見下）：** `FoliateContentIndexer` 與 `TtsController` 兩個案例的問題形狀不同（容忍重入＋序號丟棄 vs. 完全禁止重入），現在硬設計一個共通的關聯式請求 API 有過度概化風險；仍維持 Q8 原本「等真正出現同形狀需求再設計」的判斷，本 Issue 只處理下方這道與具體介面設計無關的最小防護。`JsBridgeGateway` 本身是薄薄一層、可逆性高，不到需要 ADR 正式定案的門檻（2026-09-17 `/grill-with-docs` Q3 已確認），本次結論記錄於本 Issue 與下方 `JsBridgeGateway` class doc comment 即可。
 
-屆時把 `FoliateContentIndexer` 現有的手動 completer/timeout/序號比對邏輯一併收斂進去。
+**Solution：**
 
-**驗收標準：** 無（本 Issue 純記錄，不產生程式碼異動）。若之後決定動手，需另外走一輪 `/grilling` 敲定 `requestCorrelated()` 的確切簽章與逾時語意，再拆新 Issue。
+- 在 `JsBridgeGateway.request<T>()`（`js_bridge_gateway.dart:62-83`）內，於 `_pending[handlerName] = completer;` 這行**之前**新增檢查：若 `_pending[handlerName]` 已存在舊 completer（代表前一個對同一 handler 的請求尚未完成又被呼叫），先呼叫該舊 completer 的 `completeError(StateError(...))`，訊息需點出「handler 名稱＋前一個請求尚未完成又收到新請求，可能是呼叫端未做重入防護」，再繼續原有流程（註冊新 completer、`evaluate(jsCall)`）——新請求本身行為不變，仍會正常等待/逾時/取得結果。
+  - 全 build 皆強制生效（不可用 `assert()`，release build 會被整個移除，等於正式環境完全沒有保護力）。
+  - 依現有程式碼既有不變量（completer 只要還留在 `_pending` 裡就一定尚未 complete——`register()` 的 callback 與 `request()` 的 timeout `onTimeout` 都是「complete 的同時立即 `_pending.remove()`」成對發生，見 `js_bridge_gateway.dart:41-52`／`78-81`），不需要額外檢查 `existing.isCompleted`。
+  - 這個改動對 `foliate_reader_view.dart`（TOC／TTS segments／TTS segment index）與 `foliate_content_indexer.dart`（`onSectionCountReady`）現有 4 個呼叫點皆無感——目前沒有任何合法情境會重入同一 handler，此防呆純粹是替未來還沒學到這個教訓的呼叫端補安全網。
+- 在 `JsBridgeGateway` class doc comment（`js_bridge_gateway.dart:1-8`）補一句話說明這個「同一 handler 同時只能有一個 pending completer、呼叫端需自行避免重疊請求」的隱性契約，讓下一位讀者不需要重新挖掘 `FoliateContentIndexer`／`TtsController` 兩處既有繞過寫法才能發現這個限制。
+
+**單元測試要求：**
+
+- `app/test/reader/js_bridge_gateway_test.dart` 新增案例：對同一 `handlerName` 連續呼叫 `request()` 兩次、第一次尚未經由 handler 回呼完成前即發出第二次——斷言第一次呼叫回傳的 `Future` 以 `StateError`（或其子型別）完成（`throwsA(isA<StateError>())`），第二次呼叫回傳的 `Future` 在之後 handler 正常回呼時能正確 resolve，不受影響。
+- 既有 `js_bridge_gateway_test.dart`／`foliate_reader_view_test.dart`／`foliate_content_indexer_test.dart`（若存在）相關測試須零回歸——現有 4 個呼叫點皆不觸發重入路徑，行為不受本次改動影響。
+
+**驗收標準：** `JsBridgeGateway.request()` 對「同一 handler 重疊請求」不再靜默誤配對或無限期掛住，改為讓被取代的舊請求明確拋出可辨識的錯誤；`flutter analyze` 乾淨；`flutter test` 全數通過，零回歸。
