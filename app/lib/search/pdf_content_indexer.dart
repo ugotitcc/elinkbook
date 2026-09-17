@@ -91,12 +91,12 @@ class PdfContentIndexer implements ContentIndexer {
   }
 }
 
-const _resourceChannel = MethodChannel('elinkbook/reader_resources');
+const _resourceChannel = MethodChannel('elinkbook/reader_resources_cache');
 
 /// 串流複製 `content://` URI 為本機暫存檔，回傳暫存檔路徑（失敗回傳
 /// null）。與 `PdfReaderView._openContentUriDocument()` 呼叫同一條既有原生
-/// 通道／方法（`elinkbook/reader_resources` 的 `readContentUriAll`），不
-/// 新增原生端程式碼。頂層函式變數寫法（非固定函式宣告）比照
+/// 通道／方法（`elinkbook/reader_resources_cache` 的 `readContentUriAll`），
+/// 不新增原生端程式碼。頂層函式變數寫法（非固定函式宣告）比照
 /// `foliate_native_bridge.dart` 的 `cacheBookForServing`，供測試覆寫。
 Future<String?> Function(String uri) readContentUriAll =
     _defaultReadContentUriAll;
