@@ -78,13 +78,18 @@ typedef CheckNetworkAvailability = Future<NetworkAvailability> Function();
 
 /// 生產環境實作（`main.dart` 組裝）。分層判定（design.md「網路先決條件」）：
 /// 1. `connectivity_plus` 判斷已連到別人的 WiFi → 找 `wlan0`-類介面的 IP，kind = wifiClient。
-/// 2. 否則列舉 `NetworkInterface.list()`，用蜂巢式介面名稱黑名單
-///    （`rmnet*`/`ccmni*`/`pdp*` 等）與 VPN 介面黑名單（`tun*`/`ppp*`）
-///    過濾；剩餘介面中若有私有網段 IP（非電信），kind = hotspot、
-///    取第一個作為 ipAddress。
-/// 3. 過濾後空無一物 → kind = unavailable，ipAddress 為 null，但
-///    allCandidates 仍列出全部原始介面（含被濾掉的）。
+/// 2. 否則列舉 `NetworkInterface.list()`，轉呼叫下方純函式
+///    `classifyNetworkInterfaces()` 完成分類與 IP 挑選。
 Future<NetworkAvailability> checkNetworkAvailability() async { /* ... */ }
+
+/// **（第二輪 `/receiving-code-review` 審查修正，2026-09-17，見「測試
+/// seam 設計」）** 純函式，供 `checkNetworkAvailability()` 呼叫，也供
+/// 單元測試直接餵入假資料驗證。用蜂巢式介面名稱黑名單（`rmnet*`/
+/// `ccmni*`/`pdp*` 等）與 VPN 介面黑名單（`tun*`/`ppp*`）過濾 [raw]；
+/// 剩餘介面中若有私有網段 IP（非電信），kind = hotspot、取第一個作為
+/// ipAddress；過濾後空無一物 → kind = unavailable，ipAddress 為
+/// null；[raw] 原樣回填為 allCandidates（不論過濾結果為何皆列出全部）。
+NetworkAvailability classifyNetworkInterfaces(List<NetworkInterfaceCandidate> raw) { /* ... */ }
 ```
 
 `WifiTransferScreen` 的畫面邏輯：
@@ -121,7 +126,12 @@ class DownloadableBook {
   /// `filePath` 為 `content://` URI 時恆為 `null`——`File` 無法直接對
   /// `content://` 取得大小，且清單建立階段**嚴禁**呼叫
   /// `materializeContentUri` 觸發材質化（那會讓瀏覽清單時就把整個書架
-  /// 複製一份到快取目錄，塞爆手機儲存空間）。
+  /// 複製一份到快取目錄，塞爆手機儲存空間）。**（第二輪
+  /// `/receiving-code-review` 審查修正，2026-09-17）** 讀取前須先
+  /// `await file.exists()` 防呆——書籍記錄可能因使用者在系統層級手動
+  /// 移動/刪除本機檔案而失效，直接呼叫 `.length()` 會拋
+  /// `FileSystemException` 中斷整個清單查詢；不存在時 `sizeBytes` 同樣
+  /// 回傳 `null`（不因此把整支 `/api/books` 請求打掛）。
   final int? sizeBytes;
   const DownloadableBook({required this.id, required this.title, required this.format, this.sizeBytes});
 }
@@ -189,14 +199,19 @@ class WifiTransferService {
     required BookFileFormat format,
   }) async { /* ... */ }
 
-  /// 對應「下載清單僅列出 isDownloaded == true」決策。透過
-  /// `LibraryRepository.findBookById()`（見下方 I-2 新增方法）取單筆
-  /// 記錄，不對整庫 `listBooks()` 做記憶體過濾。
+  /// 對應「下載清單僅列出 isDownloaded == true」決策。**（第二輪
+  /// `/receiving-code-review` 審查修正，2026-09-17：上一版此處文件註解
+  /// 誤貼了 `findBookById()` 的說明——`findBookById` 是單筆查詢，這個
+  /// 方法要列出「全部」可下載的書，兩者語意不相容，已修正）** 呼叫
+  /// `libraryRepository.listBooks()` 並過濾 `isDownloaded == true`。
   Future<List<DownloadableBook>> listDownloadableBooks() async { /* ... */ }
 
   /// 對應「content:// 下載」＋「TXT/MD 來源書籍誠實回傳 .epub」決策。
-  /// bookId 找不到、isDownloaded == false，或 `content://` 材質化失敗
-  /// （`materializeContentUri` 回傳 null）時回傳 null（呼叫端回 404／500）。
+  /// **（第二輪 `/receiving-code-review` 審查修正，2026-09-17：補上原本
+  /// 遺漏的 `findBookById` 呼叫——這才是真正需要單筆查詢的地方）** 先呼叫
+  /// `libraryRepository.findBookById(bookId)`；找不到或 `!isDownloaded`
+  /// 時回傳 `null`（呼叫端回 404）；`content://` 材質化失敗
+  /// （`materializeContentUri` 回傳 null）時同樣回傳 `null`（呼叫端回 500）。
   Future<DownloadSource?> resolveDownloadSource(String bookId) async { /* ... */ }
 }
 ```
@@ -246,7 +261,7 @@ class WifiTransferHttpServer {
 
 **併發節流實作**：`WifiTransferHttpServer` 內部維護一個計數號誌（counting semaphore，上限 `maxConcurrentTransfers`），`/api/books/<id>/download` 與 `/api/upload` 的 handler 進入實際傳輸邏輯前先 `await` 取得許可、結束後釋放（同時更新上方 `activeTransfersNotifier`）——超額請求會在 handler 內部等待而非立即回覆錯誤，PC 端瀏覽器體感是「傳輸稍晚開始」而非跳出錯誤訊息，符合專案「零意外」原則。初始上限定為 2，具體數字留待真機測試（低階 E-Ink 裝置）調校，非本文件鎖死。
 
-**（`/receiving-code-review` 審查修正，2026-09-17）I-1 暫存檔清理時機**：`shelf` 的 `Response` 沒有內建「串流真正傳輸完成」回呼，若在回傳 `Response.ok(file.openRead(), ...)` 之後立即或同步呼叫 `deleteFile()`，暫存檔會在客戶端仍在讀取串流中途被刪除（回應 0 位元組或 `FileSystemException`）。必須把 `file.openRead()` 包裝成一個轉接 `Stream`，在其 `onDone`／`onError` 回呼（串流真正 EOF 或客戶端 RST 斷線時才會觸發）內非同步呼叫 `deleteFile(resolvedPath)`，不可在 handler 回傳 `Response` 的當下直接清理。
+**（`/receiving-code-review` 審查修正，2026-09-17；第二輪審查補上 `onCancel` 分支）暫存檔清理時機**：`shelf` 的 `Response` 沒有內建「串流真正傳輸完成」回呼，若在回傳 `Response.ok(file.openRead(), ...)` 之後立即或同步呼叫 `deleteFile()`，暫存檔會在客戶端仍在讀取串流中途被刪除（回應 0 位元組或 `FileSystemException`）。必須把 `file.openRead()` 包裝成一個轉接 `Stream`，在 `onDone`（串流真正 EOF）／`onError`（讀取例外）**／`onCancel`（客戶端中途取消下載或斷線——底層是下游訂閱被 `cancel()`，不會觸發 `onDone`/`onError`，這是本輪審查發現的遺漏分支，大檔案下載中途取消是常見情境，不補上會讓暫存檔永久殘留）**三個回呼皆非同步呼叫 `deleteFile(resolvedPath)`（用一個旗標確保只清理一次），不可在 handler 回傳 `Response` 的當下直接清理。
 
 **（`/receiving-code-review` 審查修正，2026-09-17）M-1 上傳檔名消毒**：`originalFileName` 來自客戶端、不可信任，若夾帶 `../` 直接與落地目錄路徑拼接可能造成路徑穿越寫到目錄外的檔案。落地檔名一律用 `p.basename(originalFileName)` 取檔名部分＋附加唯一前綴（避免同名檔案互相覆蓋），原始檔名只透過 `importFiles()` 的 `displayNames` 參數保留供顯示，不參與實體路徑組裝。
 
@@ -256,7 +271,7 @@ class WifiTransferHttpServer {
 
 單一自我完備的 HTML 檔案，`<style>`／`<script>` 皆內嵌，不引用任何外部資源：
 
-- 上傳區：`<input type="file" multiple>` + 拖放區，JS 用 `fetch('/api/upload', {method:'POST', body: formData})`，`XMLHttpRequest.upload.onprogress` 顯示上傳進度（原生瀏覽器 API，不需額外套件）；結果依伺服器回應的 JSON 陣列逐檔顯示「已匯入／已存在已略過／格式不支援」。
+- 上傳區：`<input type="file" multiple>` + 拖放區。**（第二輪 `/receiving-code-review` 審查修正，2026-09-17：`fetch()` 原生不支援上傳進度事件，上一版寫法自相矛盾）** JS 一律用 `XMLHttpRequest`（`xhr.open('POST', '/api/upload')`＋`xhr.upload.onprogress` 顯示進度＋`xhr.send(formData)`），不使用 `fetch()`；結果依伺服器回應的 JSON 陣列逐檔顯示「已匯入／已存在已略過／格式不支援**／匯入失敗**」（對應 `UploadOutcome` 四個值，上一版文案漏了 `failed`）。
 - 下載區：頁面載入時 `fetch('/api/books')` 取得清單渲染成勾選清單；使用者勾選後，JS **依序**（`for...of` + `await` 逐一觸發，符合「併發節流」對 PC 端的要求）對每本書建立 `<a href="/api/books/<id>/download" download>` 並程式化點擊，下載進度交由瀏覽器原生下載列顯示（`Content-Length` 已正確設定）。
 
 ## `WifiTransferScreen` 畫面邏輯
@@ -264,8 +279,10 @@ class WifiTransferHttpServer {
 **（`/receiving-code-review` 審查修正，2026-09-17，補齊原本遺漏的畫面規格）**
 
 - **入口位置**：`SourcesHomeScreen`「本機」分區新增第三張卡片（本機檔案/資料夾選擇之後），圖示 `Icons.wifi`，`WifiTransferDependencies` 任一必要欄位為 `null` 時不顯示此卡片（比照既有 Google Drive／OneDrive／遠端書庫入口的既定顯示規則）。
+- **裝配串接**（**第二輪 `/receiving-code-review` 審查修正，2026-09-17**：查證 `SourcesHomeScreen` 的依賴一律經 `AdaptiveShellScaffold` 從 `main.dart` 三層轉傳（`cloudAccountDependencies`/`remoteLibraryDependencies` 皆是此模式），上一版規格只寫了 `SourcesHomeScreen` 本身、漏了這兩層——若不補上，正式環境入口永遠拿不到非 `null` 的依賴，實質等於功能永遠隱藏）：`AdaptiveShellScaffold` 新增建構參數 `WifiTransferDependencies? wifiTransferDependencies`（預設 `null`），建構 `SourcesHomeScreen` 時原樣往下傳；`main.dart` 組裝生產環境的 `WifiTransferDependencies`（`libraryRepository`/`importService`/`computeFingerprint` 用既有實例，`checkNetworkAvailability` 接上本 Epic 的真實實作），傳給 `AdaptiveShellScaffold`。
 - **Widget Key**（供 widget test 使用）：`Key('sources_wifi_transfer_tile')`（入口卡片）、`Key('wifi_transfer_ip_text')`（顯示的網址文字）、`Key('wifi_transfer_qr_code')`（QR Code widget）。
-- **離開畫面示警**（對應 I-4）：`PopScope` 的 `canPop` 讀取 `WifiTransferHttpServer.activeTransfersNotifier.value > 0`；大於 0 時攔截返回、跳確認對話框「目前尚有檔案正在傳輸，離開將中斷連線，是否確定離開？」，使用者確認才真正 `stop()` 伺服器並離開。
+- **離開畫面示警**（對應 I-4）：`PopScope` 的 `canPop` 讀取 `activeTransfersNotifier.value > 0`；大於 0 時攔截返回、跳確認對話框「目前尚有檔案正在傳輸，離開將中斷連線，是否確定離開？」，使用者確認才真正 `stop()` 伺服器並離開。
+- **測試接縫**（**第二輪 `/receiving-code-review` 審查修正，2026-09-17**：`WifiTransferScreen` 若在 `initState()` 直接自己建構真實 `WifiTransferHttpServer`，widget test 無法在不綁定真實 socket 的情況下操控 `activeTransfersNotifier` 驗證上面的 `PopScope` 行為）：`WifiTransferScreen` 建構子新增 `@visibleForTesting final ValueListenable<int>? activeTransfersNotifierOverride`（預設 `null`）——非 `null` 時直接使用它驅動 `PopScope` 判斷、且不啟動真實伺服器，供 widget test 注入一個可控的 `ValueNotifier<int>` 驗證示警對話框；生產環境不傳，走真實 `WifiTransferHttpServer.activeTransfersNotifier`。比照既有 `TapZoneDetector` 建構子注入時間來源（`nowMs`）供測試控制的既定慣例，不引入 `createOpdsClient` 那種完整 factory-function 抽象——這裡只需要控制單一個 `ValueListenable`，沒有整個伺服器生命週期需要替換。
 - **螢幕常亮**（對應 I-5）：`initState()` 呼叫 `WakelockPlus.enable()`，`dispose()` 呼叫 `WakelockPlus.disable()`，疊加在既有「勿切換 App」文字提示之上（design.md「前景執行穩健度」）。
 
 ## 依賴注入收斂（`wifi_transfer_dependencies.dart`）
@@ -305,7 +322,7 @@ class WifiTransferDependencies {
 比照 CLAUDE.md「兩層測試架構」：
 
 - `app/test/wifi_transfer/wifi_transfer_service_test.dart`：純 Dart `test()`，注入假 `LibraryRepository`／`BookImportService`／`computeFingerprint`／`materializeContentUri`，驗證上傳去重規則、下載清單過濾規則、TXT/MD 檔名改寫規則，不觸碰真實 sqflite 或 socket。
-- `app/test/wifi_transfer/network_availability_test.dart`：`checkNetworkAvailability()` 內部呼叫 `NetworkInterface.list()`／`Connectivity()` 皆為平台相依，`flutter test` 環境不可靠——**改為只對「給定一組假網路介面清單，黑名單過濾邏輯是否正確分類」這個純函式部分做單元測試**（例如把過濾邏輯拆成 `NetworkAvailabilityKind _classify(List<NetworkInterfaceCandidate> raw)` 獨立可測的純函式，`checkNetworkAvailability()` 本身只負責呼叫平台 API 取得原始清單、轉呼叫 `_classify()`），比照 `OpdsClient`/`ComputeRemoteFingerprint` 既有「把平台相依部分縮到最小、邏輯部分獨立可測」的既定慣例。
+- `app/test/wifi_transfer/network_availability_test.dart`：`checkNetworkAvailability()` 內部呼叫 `NetworkInterface.list()`／`Connectivity()` 皆為平台相依，`flutter test` 環境不可靠——**改為只對「給定一組假網路介面清單，黑名單過濾＋IP 挑選邏輯是否正確」這個純函式部分做單元測試**。**（第二輪 `/receiving-code-review` 審查修正，2026-09-17）** 純函式簽章改為 `NetworkAvailability classifyNetworkInterfaces(List<NetworkInterfaceCandidate> raw)`（回傳完整 `NetworkAvailability`，不是只回傳 `kind`）——原本規劃只回傳 `NetworkAvailabilityKind`，但單元測試需要一併驗證挑選出的 `ipAddress` 與原樣傳回的 `allCandidates`，且 `kind`／`ipAddress` 挑選本來就是同一輪過濾邏輯的產物，回傳完整物件比額外再寫一次選 IP 邏輯更省工。`checkNetworkAvailability()` 本身只負責呼叫平台 API 取得原始清單、轉呼叫 `classifyNetworkInterfaces()`，比照 `OpdsClient`/`ComputeRemoteFingerprint` 既有「把平台相依部分縮到最小、邏輯部分獨立可測」的既定慣例。
 - `app/integration_test/wifi_transfer_screen_test.dart`：**必須**在真實裝置上執行——驗證伺服器真的能綁定 socket、`GET /` 真的能取得 HTML、`POST /api/upload` 真的能收到 multipart 並讓書籍出現在圖書庫、下載真的能取得正確位元組（含 `content://` 來源與 TXT/MD 改名情境）。
 
 ## 更新 `design.md`「依賴事實」的解決狀態
@@ -327,3 +344,15 @@ class WifiTransferDependencies {
 - **M-1（路徑穿越消毒）／M-2（未消費 part 阻塞）／M-3（綁定 `anyIPv4`）／M-4（UI 入口/Key 規格）**：查證皆合理，已採納補入。
 
 本輪修訂未變動任何既有的 `/grilling`／Architecting 決策形狀，全部是規格完整性與執行期正確性的補強。
+
+## `review-issues.md` 審查後續（第二輪，2026-09-17，`/receiving-code-review`）
+
+審查對象是 `issues.md`，但發現兩個問題其實根源在本 `spec.md`——修正需要同步回本文件，不只是 `issues.md`：
+
+- **C-1（`listDownloadableBooks()`/`resolveDownloadSource()` 文件註解錯置）**：查證屬實，根因是本文件自己上一輪審查修正時把 `findBookById()` 的說明誤貼到 `listDownloadableBooks()`（該方法要列全部書，不可能吃單一 `bookId`），`resolveDownloadSource()` 反而漏了這個呼叫——已在上方「`wifi_transfer_service.dart`」小節修正兩處文件註解。
+- **I-3（暫存檔清理漏 `onCancel`）**：查證屬實（客戶端中途取消下載時觸發的是 `onCancel`，不是 `onDone`/`onError`），已補進「HTTP 路由表」的暫存檔清理時機說明。
+- **I-2（漏排 `AdaptiveShellScaffold`／`main.dart` 裝配）／I-5（`activeTransfersNotifier` 缺測試接縫）**：查證屬實，已補進「`WifiTransferScreen` 畫面邏輯」小節；I-5 的具體做法改用比照既有 `TapZoneDetector` 建構子注入時間來源的既定慣例（單一 `@visibleForTesting` 覆寫欄位），未採用審查建議的完整 `serverOverride` 寫法（沒有整個伺服器生命週期需要替換，只需要控制一個 `ValueListenable`）。
+- **M-1（`classifyNetworkInterfaces` 簽章）／M-2（`fetch()` 不支援上傳進度，統一改 `XMLHttpRequest`）／M-3（上傳結果文案補 `failed`）／M-4（`sizeBytes` 補 `existsSync()` 防呆）**：查證皆屬實，已分別補入。
+- **I-4（Issue 2/3 檔案 100% 重疊的合併衝突風險）**：查證屬實，但這是切片顆粒度/執行順序的操作面問題，不影響本 `spec.md` 定義的任何介面，修正記錄在 `issues.md` 本身。
+- **I-1（`issues.md` 漏排 `wifi_transfer_service.dart` 骨架）**：查證屬實，純屬 Scrum Master 切片順序問題，本 `spec.md` 對 `WifiTransferService` 的完整介面定義本身沒有缺漏，修正記錄在 `issues.md`。
+- **M-5（依賴套件釘死版本號）**：不採納——版本號未經查證，且專案既有 Epic（`epic-29`／`epic-30`）新增依賴時皆不釘版本，讓實作當下 `flutter pub add` 取得當時相容的最新版本，是更正確的做法。

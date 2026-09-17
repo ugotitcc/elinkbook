@@ -1,0 +1,110 @@
+# Epic 44 — WiFi 傳書：工單清單 (Issues)
+
+依 `spec.md`（Architecting 產出，已通過 `reviews/review-spec.md` 審查修訂）拆解為 4 個垂直切片（tracer bullet），每個切片皆貫穿邏輯/HTTP/UI/測試整條路徑，可獨立驗收。2026-09-17 與使用者確認顆粒度與相依關係後定案發布（不拆分、不合併）。相依順序：Issue 0 無依賴 → Issue 1 依賴 0 → Issue 2／Issue 3 皆依賴 0＋1（互相獨立、可平行）。
+
+**（`/receiving-code-review` 審查修正，2026-09-17）Issue 2／Issue 3 平行執行的操作面提醒**：兩者邏輯獨立（Issue 3 不需要等 Issue 2 的程式碼合併回主幹才能開始寫），依賴關係維持不變；但兩者會改到相同的 3 個檔案（`wifi_transfer_service.dart`／`wifi_transfer_http_server.dart`／`assets/wifi_transfer/index.html`，各自新增不同方法/路由/UI 區塊），若真的分兩個 worktree／subagent 平行進行，合併回主幹時預期會在這些檔案產生文字衝突（非邏輯衝突，各自新增的內容不互相牴觸，純粹是同檔案不同位置的文字合併）。建議其中一個先完成並合併回 `main`，另一個在合併後 `rebase` 再繼續，而非兩者同時各自開分支後才一起處理合併；若人力/時程仍要同時開工，動工前先協調好各自要新增的方法/路由名稱與大致插入位置，降低合併時的排解成本。
+
+---
+
+## Issue 0：依賴引進與共用檔案 Prefactor
+
+**Status:** ready-for-agent
+
+**依賴：** 無，可立即開始。
+
+**背景：** 本身不含任何使用者可見的 WiFi 傳書功能，是後續全部切片共用的基礎設施（`spec.md`「新增依賴」「共用檔案異動」「`LibraryRepository` 異動」已定案介面）。`readContentUriAll` 的 channel 改名修正原本就存在於既有 PDF 開書/背景索引路徑的 ANR 風險，不是 WiFi 傳書新增的問題，但本 Epic 是第一個明確要求它被修正的呼叫端，順勢一併處理。
+
+**What to build：**
+- `pubspec.yaml` 新增正式 `dependencies`：`shelf`、`shelf_multipart`、`qr_flutter`、`wakelock_plus`。
+- `app/lib/reader/pdf_reader_view.dart:277` 的 `_resourceChannel`：channel 名稱由 `elinkbook/reader_resources` 改為 `elinkbook/reader_resources_cache`（該檔案僅此一處呼叫點使用這個常數）。
+- `app/lib/search/pdf_content_indexer.dart:94` 的 `_resourceChannel`：同樣改名（該檔案僅此一處呼叫點使用這個常數）。
+- `ReaderResourceChannel.kt` **不需要修改**——`readContentUriAll` 等方法本來就由同一個 `onMethodCall()` 同時服務兩條 channel，差別只在 Dart 端呼叫哪一個 channel 名稱。
+- `LibraryRepository` 新增抽象方法 `Future<Book?> findBookById(String id);`，`SqliteLibraryRepository` 實作為 `SELECT * FROM books WHERE id = ?`，`FakeLibraryRepository`（`app/test/support/`）比照既有介面/實作/Fake 三件套模式補上。
+
+**單元測試要求：**
+- `findBookById()`：命中／未命中兩種情境，`SqliteLibraryRepository` 與 `FakeLibraryRepository` 兩層皆須覆蓋。
+- `pdf_reader_view.dart`／`pdf_content_indexer.dart` 既有測試套件（含 `content://` 開書/背景索引情境）全數維持綠燈，確認 channel 改名對既有呼叫端行為零回歸（Dart 端只是 `await` 一個 `Future`，換到背景執行緒不影響呼叫方式或回傳值）。
+
+**驗收標準：** `flutter analyze` 乾淨；`flutter test` 全數通過、零回歸；`pubspec.yaml` 四個新依賴皆可正常 `flutter pub get`；真機（或至少一次手動驗證）確認既有 `content://` PDF 開書與背景全文索引仍正常運作。
+
+**Blocked by：** 無。
+
+---
+
+## Issue 1：網路偵測＋WiFi 傳書畫面骨架＋伺服器基礎設施＋入口
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 0（`wakelock_plus`／`shelf` 依賴、`findBookById` 尚不需要在本 Issue 使用，但共用 Prefactor 須先落地）。
+
+**背景：** `spec.md`「`network_availability.dart`」「`wifi_transfer_http_server.dart`」「`WifiTransferScreen` 畫面邏輯」「依賴注入收斂」已定案介面。本 Issue 建好整條「打開 WiFi 傳書、PC 瀏覽器連得上」的骨架，`/api/*` 路由本身留給 Issue 2／3 各自實作，但伺服器啟動/停止、併發節流號誌、活躍傳輸狀態、螢幕常亮、離開畫面示警等**跨路由共用**的機制在本 Issue 一次建好，讓 Issue 2／3 只需要專注各自的路由邏輯。
+
+**What to build：**
+- `network_availability.dart`：`NetworkAvailabilityKind`／`NetworkInterfaceCandidate`／`NetworkAvailability`／`CheckNetworkAvailability` 型別；`checkNetworkAvailability()` 分層判定（`connectivity_plus` 判斷 WiFi 客戶端 → 否則 `NetworkInterface.list()` 列舉＋轉呼叫純函式）；過濾＋IP 挑選邏輯獨立成可測的純函式 `NetworkAvailability classifyNetworkInterfaces(List<NetworkInterfaceCandidate> raw)`（**`/receiving-code-review` 第二輪審查修正**：簽章由原訂只回傳 `NetworkAvailabilityKind` 改為回傳完整 `NetworkAvailability`，因為測試需要一併驗證挑選出的 `ipAddress` 與 `allCandidates`）。
+- **`wifi_transfer_service.dart`：`WifiTransferService` 類別骨架**（**`/receiving-code-review` 第二輪審查修正，原本遺漏**：`wifi_transfer_http_server.dart` 建構子強制吃 `required WifiTransferService service`，沒有這個骨架 Issue 1 會編譯不過）——完整欄位宣告與建構子（`libraryRepository`／`importService`／`computeFingerprint`／`materializeContentUri`／`deleteFile`），三個業務方法（`listDownloadableBooks`／`resolveDownloadSource`／`handleUploadedFile`）先宣告簽章、方法體 `throw UnimplementedError()`，留給 Issue 2／3 分別填入。
+- `wifi_transfer_http_server.dart`：`WifiTransferHttpServer` 類別——`start()`／`stop()`（bind `InternetAddress.anyIPv4`，`ipAddress` 僅供顯示；port 先試固定值失敗才 `port: 0`）、併發節流計數號誌（`maxConcurrentTransfers` 預設 2）、`activeTransfersNotifier`（`ValueListenable<int>`）、`GET /` 路由（`rootBundle.loadString('assets/wifi_transfer/index.html')` 回應）；`/api/books`／`/api/books/<id>/download`／`/api/upload` 先回 501，交由 Issue 2／3 補上。
+- `assets/wifi_transfer/index.html`：單一自我完備 HTML 檔案骨架（無外部資源），`pubspec.yaml` 宣告為 asset；上傳/下載區塊的實際 JS 邏輯可先留白或顯示「開發中」，Issue 2／3 補上。
+- `wifi_transfer_dependencies.dart`：`WifiTransferDependencies` bundle（`libraryRepository`／`importService`／`computeFingerprint`／`checkNetworkAvailability`，皆 nullable）。
+- `WifiTransferScreen`：顯示 `checkNetworkAvailability()` 結果——`wifiClient`/`hotspot` 顯示 IP 文字＋QR Code（`Key('wifi_transfer_ip_text')`／`Key('wifi_transfer_qr_code')`）；`unavailable` 停用並顯示「我確定目前是用手機熱點」手動覆寫按鈕（按下後列出 `allCandidates`）；`initState()`/`dispose()` 呼叫 `WakelockPlus.enable()`/`disable()`；`PopScope` 讀 `activeTransfersNotifier.value > 0` 決定是否跳確認對話框；建構子新增 `@visibleForTesting final ValueListenable<int>? activeTransfersNotifierOverride`（**`/receiving-code-review` 第二輪審查修正，原本遺漏**：非 `null` 時直接用它驅動 `PopScope`、不啟動真實伺服器，供 widget test 注入可控 `ValueNotifier<int>`；生產環境不傳，走真實伺服器的 `activeTransfersNotifier`）。
+- **裝配串接**（**`/receiving-code-review` 第二輪審查修正，原本遺漏**：查證 `SourcesHomeScreen` 的依賴一律經 `AdaptiveShellScaffold` 從 `main.dart` 三層轉傳，只改 `SourcesHomeScreen` 本身，正式環境永遠拿不到非 `null` 依賴，入口實質永久隱藏）：`AdaptiveShellScaffold` 新增建構參數 `WifiTransferDependencies? wifiTransferDependencies`（預設 `null`），建構 `SourcesHomeScreen` 時原樣往下傳；`main.dart` 組裝生產環境的 `WifiTransferDependencies` 並傳給 `AdaptiveShellScaffold`。
+- `SourcesHomeScreen`「本機」分區新增入口卡片（`Key('sources_wifi_transfer_tile')`，圖示 `Icons.wifi`），`WifiTransferDependencies` 任一必要欄位為 `null` 時不顯示。
+
+**單元測試要求：**
+- `classifyNetworkInterfaces()`：純函式單元測試，餵入假網路介面清單（純 WiFi、純蜂巢式、蜂巢式+熱點混合、全空）驗證回傳的 `kind`／`ipAddress`／`allCandidates` 皆正確，不觸碰真實 `NetworkInterface.list()`/`Connectivity()`。
+- `WifiTransferScreen` widget test：注入假 `CheckNetworkAvailability` 分別回傳 `wifiClient`/`hotspot`/`unavailable` 三種情境，驗證 IP/QR 顯示、停用文案、手動覆寫按鈕與 `allCandidates` 清單渲染；透過 `activeTransfersNotifierOverride` 注入的 `ValueNotifier<int>` 設為正整數時驗證觸發 `PopScope` 示警對話框，設回 0 時驗證正常放行離開。
+- `SourcesHomeScreen` widget test：`WifiTransferDependencies` 為 `null`／非 `null` 兩種情境下入口卡片的顯示/隱藏。
+- `AdaptiveShellScaffold` widget test：`wifiTransferDependencies` 正確原樣傳遞給內部 `SourcesHomeScreen`。
+- `integration_test/`：真機驗證伺服器真的能綁定 socket、PC 瀏覽器（或另一支裝置的瀏覽器）連線 `GET /` 能取得首頁 HTML。
+
+**驗收標準：** 使用者可從「來源」畫面點開 WiFi 傳書，看到 IP/QR Code；同一 WiFi 下的瀏覽器連得上首頁；沒有 WiFi/熱點時功能停用並可手動覆寫；離開畫面時（模擬有傳輸中）跳出確認對話框；`flutter analyze` 乾淨、`flutter test` 通過。
+
+**Blocked by：** Issue 0。
+
+---
+
+## Issue 2：下載功能
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 0（`findBookById`／修正後的 `readContentUriAll`）、Issue 1（`WifiTransferHttpServer`／`WifiTransferService` 骨架、併發號誌、首頁）。
+
+**背景：** `spec.md`「`wifi_transfer_service.dart`」「HTTP 路由表」`GET /api/books`／`GET /api/books/<id>/download` 兩條路由已定案介面。與 Issue 3（上傳）互相獨立，可平行進行。
+
+**What to build：**
+- `WifiTransferService.listDownloadableBooks()`：**（`/receiving-code-review` 第二輪審查修正，C-1：上一版誤寫成透過 `findBookById` 列全部書，邏輯上不可能——`findBookById` 是單筆查詢，列全部書只能查整庫）** 呼叫 `libraryRepository.listBooks()` 並過濾 `isDownloaded == true`；`DownloadableBook.sizeBytes` 僅對非 `content://` 路徑、且 `await file.exists()` 為真時才呼叫 `File(filePath).length()`（**第二輪審查修正，M-4**：書籍記錄可能因使用者手動搬移/刪除本機檔案而失效，直接呼叫 `.length()` 會拋例外打斷整個清單查詢），`content://` 或檔案不存在時 `sizeBytes` 恆為 `null`（清單階段嚴禁觸發材質化）。
+- `WifiTransferService.resolveDownloadSource(bookId)`：**（`/receiving-code-review` 第二輪審查修正，C-1：上一版遺漏這裡才是真正該呼叫 `findBookById` 的地方）** 先呼叫 `libraryRepository.findBookById(bookId)`；找不到或 `!isDownloaded` 回傳 `null`。找到後：`content://` 書籍呼叫（Issue 0 修正後的）`readContentUriAll` 材質化為暫存檔；TXT/MD 來源書籍的 `downloadFileName` 改寫為 `.epub`；材質化失敗（回傳 `null`）時整體回傳 `null`。
+- `GET /api/books` 路由：回傳 JSON 陣列 `[{id, title, format, sizeBytes}]`。
+- `GET /api/books/<id>/download` 路由：取得許可（沿用 Issue 1 的併發號誌）→ `resolveDownloadSource()`；找不到／材質化失敗回 404／500；成功則 `Content-Disposition` 依 RFC 5987/6266 處理中文檔名＋正確 `Content-Length`；`isTemporaryFile == true` 時把 `file.openRead()` 包裝成轉接 `Stream`，在 `onDone`（EOF）／`onError`（讀取例外）**／`onCancel`（客戶端中途取消下載或斷線——第二輪審查修正 I-3：底層是下游訂閱被 `cancel()`，不會觸發 `onDone`/`onError`，大檔案下載中途取消是常見情境，漏掉這個分支會讓暫存檔永久殘留）**三個回呼皆非同步刪除暫存檔（用旗標確保只清理一次），不可在回傳 `Response` 當下立即清理。
+- `assets/wifi_transfer/index.html` 補上下載區塊 JS：頁面載入 `fetch('/api/books')` 渲染勾選清單；勾選後**依序**（`for...of`+`await`）建立 `<a download>` 並程式化點擊觸發下載。
+
+**單元測試要求：**
+- `WifiTransferService` 純 Dart 測試：注入假 `LibraryRepository`（含 `content://`、本機路徑、與「記錄存在但檔案已不存在」三種 `filePath` 情境）／假 `materializeContentUri`，驗證 `listDownloadableBooks()` 排除 `isDownloaded == false` 的書、`content://` 與檔案不存在兩種情境 `sizeBytes` 皆為 `null`；`resolveDownloadSource()` 對找不到的 `bookId`／`!isDownloaded` 回傳 `null`、對 TXT/MD 來源書籍正確改寫 `.epub` 副檔名、材質化失敗時回傳 `null`（驗證確實有呼叫 `findBookById`，而非誤用其他查詢方法）。
+- 下載串流清理的純 Dart 測試：模擬來源 stream 分別觸發 `onDone`／`onError`／訂閱被 `cancel()` 三種情境，驗證 `deleteFile` 恰好被呼叫一次。
+- `integration_test/`：真機下載一本本機路徑來源的書、一本 `content://` 來源的書、一本 TXT 來源的書，驗證取得的位元組正確、檔名正確（含中文書名）、暫存檔在下載完成後確實被清理；下載中途手動取消一次，驗證暫存檔同樣被清理。
+
+**驗收標準：** PC 瀏覽器打開 WiFi 傳書頁面，能看到書架清單（僅含已下載書籍）並成功下載，含 `content://` 來源與 TXT/MD 誠實改名兩種情境；`flutter analyze` 乾淨、`flutter test` 通過。
+
+**Blocked by：** Issue 0、Issue 1。
+
+---
+
+## Issue 3：上傳功能
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 0（依賴引進、內容指紋既有機制）、Issue 1（`WifiTransferHttpServer`／`WifiTransferService` 骨架、併發號誌）。
+
+**背景：** `spec.md`「`wifi_transfer_service.dart`」「HTTP 路由表」`POST /api/upload` 已定案介面。與 Issue 2（下載）互相獨立，可平行進行。
+
+**What to build：**
+- `WifiTransferService.handleUploadedFile()`：對落地檔案算內容指紋 → 查 `findByContentFingerprint()`，命中則刪除落地檔案並回傳 `duplicateSkipped`；沒命中呼叫 `importService.importFiles([landedPath], displayNames: [originalFileName])`，檢查 `result.importedBooks.isEmpty`——是則刪除落地檔案並回傳 `failed`，否則回傳 `imported`；任何未預期例外同樣清理落地檔案並回傳 `failed`。
+- `POST /api/upload` 路由：取得許可（沿用 Issue 1 的併發號誌）→ `shelf_multipart` 逐一解析檔案 part；副檔名不在白名單（`fileExtensionFor()` 反查）先 `await part.drain()` 耗盡串流才回傳該檔案 `unsupportedFormat`；在白名單則以 `p.basename(originalFileName)` 消毒＋附加唯一前綴落地到持久化 App 文件目錄，呼叫 `handleUploadedFile()`；回應 JSON 陣列 `[{originalFileName, outcome}]`。
+- `assets/wifi_transfer/index.html` 補上上傳區塊 JS：`<input type="file" multiple>`＋拖放區。**（`/receiving-code-review` 第二輪審查修正，M-2：`fetch()` 原生不支援上傳進度事件，上一版寫法自相矛盾）** 一律用 `XMLHttpRequest`（`xhr.open('POST', '/api/upload')`＋`xhr.upload.onprogress` 顯示進度＋`xhr.send(formData)`），不使用 `fetch()`；依回應 JSON 逐檔顯示「已匯入／已存在已略過／格式不支援**／匯入失敗**」（**第二輪審查修正，M-3**：對應 `UploadOutcome` 四個值，上一版文案漏了 `failed`）。
+
+**單元測試要求：**
+- `WifiTransferService` 純 Dart 測試：注入假 `BookImportService`（分別模擬「成功匯入」「回傳空清單（損毀/空內容）」「拋例外」三種情境）／假 `computeFingerprint`／假 `findByContentFingerprint` 命中情境，驗證 `handleUploadedFile()` 三種情境皆正確清理落地檔案並回傳對應 `UploadOutcome`（`imported`／`duplicateSkipped`／`failed`）。
+- `integration_test/`：真機上傳一個支援格式檔案（成功出現在圖書庫）、一個不支援格式檔案（被拒絕，`part.drain()` 後續 part 仍可正常解析）、重複上傳同一檔案兩次（第二次靜默略過、書架上只有一筆記錄）。
+
+**驗收標準：** PC 瀏覽器拖曳上傳一個書籍檔案，成功出現在手機書架上；不支援格式被拒絕且不影響同一請求內其他檔案的解析；重複上傳同一檔案不會產生重複記錄；`flutter analyze` 乾淨、`flutter test` 通過。
+
+**Blocked by：** Issue 0、Issue 1。
