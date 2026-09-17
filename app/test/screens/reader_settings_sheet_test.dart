@@ -1129,6 +1129,50 @@ void main() {
     expect(result?.fontFamily, 'MyCustomFamily');
   });
 
+  testWidgets(
+      '自訂字型清單中存在過長顯示名稱時，字型下拉選單不應造成 RenderFlex overflow'
+      '（bugfix：DropdownButton 內部以 IndexedStack 疊放「所有」選項決定自身寬度，'
+      '不只是目前選中的值，過長字型名稱會把整顆 Row 撐爆版）', (tester) async {
+    // 比照畫面截圖的手機寬度（412 logical px），_pumpSheet 預設的 800 寬度太寬
+    // 不會重現這個 overflow。
+    tester.view.physicalSize = const Size(412, 1800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: ReaderSettingsSheet(
+          // 刻意選 null（顯示最短的「使用書本內建字型」），驗證即使目前選中值
+          // 很短，只要清單中存在過長名稱仍會撐爆版（而非只有選中過長值時才會）。
+          prefs: const BookReaderPrefs(),
+          onChanged: _noopOnChanged,
+          bookId: 'b1',
+          customFonts: const [
+            CustomFont(
+              id: 1,
+              displayName: '這是一個非常非常非常長的自訂字型顯示名稱範例測試用',
+              familyName: 'CustomLongFontName',
+              fontUri: 'content://example/font1',
+            ),
+          ],
+          layoutPresets: const [],
+          isEinkMode: false,
+          onSaveAsPreset: _noopSaveAsPreset,
+          onApplyPreset: _noopApplyPreset,
+          onApplyFromBook: _noopApplyFromBook,
+          onRequestBookPicker: _noopRequestBookPicker,
+          onDeletePreset: _noopDeletePreset,
+        ),
+      ),
+    ));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+  });
+
   group('「系統預設」固定列（一鍵重置字級/字重/行距/段落間距/字距覆寫）', () {
     testWidgets('沒有任何覆寫時，固定列顯示打勾指示器，不顯示套用按鈕', (tester) async {
       await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);

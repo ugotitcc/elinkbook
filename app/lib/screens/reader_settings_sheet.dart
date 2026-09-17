@@ -658,34 +658,42 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return EBFieldCard(
       child: Row(
         children: [
-          const Expanded(
-            child: Text('字型', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          DropdownButton<String?>(
-            key: const Key('reader_settings_font_family'),
-            value: _fontFamily,
-            items: [
-              const DropdownMenuItem<String?>(
-                value: null,
-                child: Text('使用書本內建字型'),
-              ),
-              ...AppFont.values.map(
-                (font) => DropdownMenuItem<String?>(
-                  value: font.familyName,
-                  child: Text(_fontDisplayName(font)),
+          const Text('字型', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(width: 12),
+          // DropdownButton 內部以 IndexedStack 疊放「所有」選項來決定自身寬度
+          // （不只是目前選中的值），字型名稱過長（尤其使用者自訂字型）時會把
+          // 整顆 Row 撐爆版。isExpanded:true 讓寬度改吃 Expanded 給的可用空間，
+          // 搭配 Text 的 overflow: ellipsis 讓過長名稱改為截斷顯示，而非溢位。
+          Expanded(
+            child: DropdownButton<String?>(
+              key: const Key('reader_settings_font_family'),
+              isExpanded: true,
+              value: _fontFamily,
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('使用書本內建字型', overflow: TextOverflow.ellipsis),
                 ),
-              ),
-              ...widget.customFonts.map(
-                (font) => DropdownMenuItem<String?>(
-                  value: font.familyName,
-                  child: Text(font.displayName),
+                ...AppFont.values.map(
+                  (font) => DropdownMenuItem<String?>(
+                    value: font.familyName,
+                    child: Text(_fontDisplayName(font),
+                        overflow: TextOverflow.ellipsis),
+                  ),
                 ),
-              ),
-            ],
-            onChanged: (value) => setState(() {
-              _fontFamily = value;
-              _notifyChanged();
-            }),
+                ...widget.customFonts.map(
+                  (font) => DropdownMenuItem<String?>(
+                    value: font.familyName,
+                    child: Text(font.displayName,
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                ),
+              ],
+              onChanged: (value) => setState(() {
+                _fontFamily = value;
+                _notifyChanged();
+              }),
+            ),
           ),
         ],
       ),
