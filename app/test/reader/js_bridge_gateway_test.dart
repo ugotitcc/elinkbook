@@ -137,5 +137,136 @@ void main() {
         expect(result, -1);
       });
     });
+
+    test(
+      '同一個 handler 尚有 pending 請求（未設定 timeout）時又發出新請求，'
+      '舊請求的 Future 會立即以帶有 handler 名稱的 StateError 結束，'
+      '新請求不受影響、能在 handler 真正回呼時正常完成',
+      () {
+        fakeAsync((async) {
+          void Function(List<dynamic> args)? registeredCallback;
+          final gateway = JsBridgeGateway(
+            evaluate: (_) {},
+            registerHandler: (name, callback) =>
+                registeredCallback = callback,
+          );
+          gateway.register<String>(
+            handlerName: 'onFooReady',
+            parse: (args) => args[0] as String,
+            fallback: '',
+          );
+
+          Object? firstError;
+          gateway
+              .request<String>(
+                jsCall: 'window.foo(1)',
+                handlerName: 'onFooReady',
+              )
+              .catchError((Object e) {
+                firstError = e;
+                return '';
+              });
+
+          String? secondResult;
+          gateway
+              .request<String>(
+                jsCall: 'window.foo(2)',
+                handlerName: 'onFooReady',
+              )
+              .then((value) => secondResult = value);
+
+          async.flushMicrotasks();
+
+          // 審查 M-1：不只驗證型別，還核對訊息點出了是哪個 handler——
+          // 防止實作寫成 `throw StateError('')` 這種型別對但內容空洞的
+          // 版本也能矇混過關。
+          expect(
+            firstError,
+            isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              contains('onFooReady'),
+            ),
+          );
+          expect(secondResult, isNull); // 尚未收到 handler 回呼。
+
+          registeredCallback!(['second-result']);
+          async.flushMicrotasks();
+
+          expect(secondResult, 'second-result');
+        });
+      },
+    );
+
+    test(
+      '同一個 handler 尚有 pending 請求（已設定 timeout）時又發出新請求，'
+      '舊請求立即以 StateError 結束，不會等到自己的 timeout 才回退 fallback',
+      () {
+        fakeAsync((async) {
+          void Function(List<dynamic> args)? registeredCallback;
+          final gateway = JsBridgeGateway(
+            evaluate: (_) {},
+            registerHandler: (name, callback) =>
+                registeredCallback = callback,
+          );
+          gateway.register<String>(
+            handlerName: 'onTtsSegmentsReady',
+            parse: (args) => args[0] as String,
+            fallback: 'FALLBACK',
+          );
+
+          Object? firstError;
+          String? firstResult;
+          // 審查 I-1 複審：單一 `.then(onValue, onError: ...)` 呼叫的 R
+          // 型別由 onValue 推斷（此處為 String?），onError 若回傳型別不
+          // 相容的值（`(Object e) => firstError = e` 回傳的是 `e` 本身，
+          // 型別為 Object），會在 onError 真正被呼叫時觸發執行期
+          // `ArgumentError`。改用 `.then().catchError()` 兩段式，對齊
+          // 上一個測試已驗證可行的寫法。
+          gateway
+              .request<String>(
+                jsCall: 'window.foo(1)',
+                handlerName: 'onTtsSegmentsReady',
+                timeout: const Duration(seconds: 5),
+              )
+              .then((value) => firstResult = value)
+              .catchError((Object e) {
+                firstError = e;
+                return '';
+              });
+
+          gateway.request<String>(
+            jsCall: 'window.foo(2)',
+            handlerName: 'onTtsSegmentsReady',
+            timeout: const Duration(seconds: 5),
+          );
+
+          // 確保 handler 已註冊，避免 unused_local_variable 分析警告。
+          expect(registeredCallback, isNotNull);
+
+          // 審查 I-1：尚未經過任何時間就應該已經收到錯誤——不是靠 5 秒
+          // 逾時機制救回來的，也絕不能回退 fallback 值。
+          async.flushMicrotasks();
+
+          expect(
+            firstError,
+            isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              contains('onTtsSegmentsReady'),
+            ),
+          );
+          expect(firstResult, isNull);
+
+          // 推進超過 5 秒，確認 Future.timeout() 內部的計時器已隨舊請求
+          // 提前結束而被取消，不會在背景殘留、事後又把結果覆寫成 fallback。
+          async.elapse(const Duration(seconds: 6));
+          async.flushMicrotasks();
+
+          expect(firstError, isA<StateError>());
+          expect(firstResult, isNull);
+        });
+      },
+    );
   });
 }
