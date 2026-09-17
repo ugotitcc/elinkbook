@@ -252,7 +252,7 @@
 
 ## Issue 6：JsBridgeGateway 對「同一 handler 重疊請求」補一道呼叫端防呆
 
-**Status:** ready-for-agent（2026-09-17 `/grill-with-docs` 重新評估定案，見下方「2026-09-17 重新評估」；不擴充 `JsBridgeGateway` 對外介面，改為既有 `request()` 內補一道防呆）
+**Status:** completed（**2026-09-17 已完成並合併回 `main`（PR [#256](https://git.jigong.org/huthief/elinkBook/pulls/256)，分支 `epic/41-issue-6-js-bridge-overlap-guard`）**：`plans/plan-issue-6.md` 唯一 Task 全數完成（經兩輪計畫審查修訂：I-1 補齊 `timeout` 分支測試、I-2 改用 `fakeAsync` 避免紅燈卡 30 秒、M-1 例外訊息斷言、複審修正 `.then()/.catchError()` 執行期型別陷阱）——`JsBridgeGateway.request()` 補上同一 handler 重疊請求防呆，`js_bridge_gateway.dart` class doc comment 同步補充隱性契約說明，新增 2 個 `fakeAsync` 單元測試（無 timeout／有 timeout 各一）。獨立程式審查（`reviews/review-issue-6.md`）：0 Critical／0 Important／1 Minor（commit 切分風格觀察，不影響合併），結論 Ready to merge: Yes。`flutter test test/reader/js_bridge_gateway_test.dart`（6/6 全過，零回歸）／`flutter analyze`（No issues found）／完整 `flutter test`（2522 案例，2 個既有失敗與本次改動無關，為此 Epic 已知既有基準線）皆為綠燈。）
 
 **依賴：** 無
 
