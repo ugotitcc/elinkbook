@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
+import '../library/models/book.dart';
 import '../library/models/library_enums.dart';
 
 /// 一次上傳單一檔案的處理結果（epic-44-wifi-book-transfer spec.md
@@ -88,10 +91,42 @@ class WifiTransferService {
     throw UnimplementedError('Issue 3 實作：上傳落地/去重/匯入邏輯');
   }
 
-  /// Issue 2 實作：呼叫 `libraryRepository.listBooks()` 並過濾
-  /// `isDownloaded == true`，詳見 spec.md「`wifi_transfer_service.dart`」。
+  /// 對應「下載清單僅列出 isDownloaded == true」決策（spec.md
+  /// 「`wifi_transfer_service.dart`」）。[DownloadableBook.sizeBytes] 只對
+  /// 非 `content://` 的本機實體檔案計算，且須先 `await file.exists()`
+  /// 防呆——書籍記錄可能因使用者在系統層級手動搬移/刪除本機檔案而失效，
+  /// 直接呼叫 `.length()` 會拋 `FileSystemException` 中斷整個清單查詢；
+  /// `content://` 或檔案不存在時 sizeBytes 恆為 null，清單建立階段嚴禁
+  /// 呼叫 [materializeContentUri] 觸發材質化（會讓瀏覽清單時就把整個書架
+  /// 複製一份到快取目錄）。
   Future<List<DownloadableBook>> listDownloadableBooks() async {
-    throw UnimplementedError('Issue 2 實作：下載清單查詢');
+    final books = await libraryRepository.listBooks();
+    final result = <DownloadableBook>[];
+    for (final book in books) {
+      if (!book.isDownloaded) continue;
+      result.add(DownloadableBook(
+        id: book.id,
+        title: book.title,
+        format: book.format,
+        sizeBytes: await _localSizeBytes(book),
+      ));
+    }
+    return result;
+  }
+
+  Future<int?> _localSizeBytes(Book book) async {
+    if (book.filePath.contains('://')) return null;
+    // 【`/receiving-code-review` 審查修正，review-plan-issue-2.md I-5】
+    // await file.exists() 與 file.length() 之間仍有極短暫的 TOCTOU
+    // 間隙（檔案在這中間被外部刪除/權限被收回），用 try-catch 兜底，
+    // 讓單一一本書的檔案系統例外不會打垮整支 /api/books 清單查詢。
+    try {
+      final file = File(book.filePath);
+      if (!await file.exists()) return null;
+      return await file.length();
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Issue 2 實作：`findBookById(bookId)` → `content://` 材質化 →
