@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -145,8 +146,7 @@ class WifiTransferHttpServer {
       );
     }
     if (request.method == 'GET' && path == 'api/books') {
-      // Issue 2 補上：service.listDownloadableBooks()。
-      return shelf.Response(501, body: 'Not Implemented');
+      return _handleListBooks();
     }
     if (request.method == 'GET' &&
         RegExp(r'^api/books/[^/]+/download$').hasMatch(path)) {
@@ -158,6 +158,30 @@ class WifiTransferHttpServer {
       return shelf.Response(501, body: 'Not Implemented');
     }
     return shelf.Response.notFound('Not Found');
+  }
+
+  Future<shelf.Response> _handleListBooks() async {
+    final books = await service.listDownloadableBooks();
+    final payload = [
+      for (final book in books)
+        {
+          'id': book.id,
+          'title': book.title,
+          'format': book.format.name,
+          'sizeBytes': book.sizeBytes,
+        },
+    ];
+    return shelf.Response.ok(
+      jsonEncode(payload),
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        // 【`/receiving-code-review` 審查修正，review-plan-issue-2.md
+        // M-2】比照 Issue 1 的 GET / 路由既有理由：這份清單反映手機當下
+        // 的圖書庫狀態（使用者可能在 PC 端頁面開著時於手機端刪書/匯入），
+        // 不該被瀏覽器快取。
+        'cache-control': 'no-cache',
+      },
+    );
   }
 }
 

@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/wifi_transfer/wifi_transfer_http_server.dart';
 import 'package:elinkbook/wifi_transfer/wifi_transfer_service.dart';
 
@@ -89,10 +91,56 @@ void main() {
       expect(response.body, contains('elinkBook WiFi 傳書'));
     });
 
-    test('GET /api/books 回傳 501（留給 Issue 2 實作）', () async {
-      final response =
-          await _realGet('http://127.0.0.1:${httpServer.port}/api/books');
-      expect(response.statusCode, 501);
+    test('GET /api/books 回傳 JSON 陣列，欄位對應正確且僅列出 isDownloaded 書籍',
+        () async {
+      final now = DateTime.fromMillisecondsSinceEpoch(0);
+      final downloaded = Book(
+        id: 'b1',
+        title: '已下載的書',
+        format: BookFileFormat.epub,
+        filePath: 'content://com.example/document/1',
+        source: BookSource.local,
+        createTime: now,
+        lastReadTime: now,
+      );
+      final notDownloaded = Book(
+        id: 'b2',
+        title: '未下載的書',
+        format: BookFileFormat.pdf,
+        filePath: 'content://com.example/document/2',
+        source: BookSource.local,
+        isDownloaded: false,
+        createTime: now,
+        lastReadTime: now,
+      );
+      final serverWithBooks = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(
+            initialBooks: [downloaded, notDownloaded],
+          ),
+          importService: FakeBookImportService(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          materializeContentUri: (uri) async => null,
+          deleteFile: (path) async {},
+        ),
+      );
+      final serverWithBooksHttp =
+          await serverWithBooks.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => serverWithBooks.stop(serverWithBooksHttp));
+
+      final response = await _realGet(
+          'http://127.0.0.1:${serverWithBooksHttp.port}/api/books');
+
+      expect(response.statusCode, 200);
+      expect(response.headers['content-type'], contains('application/json'));
+      expect(response.headers['cache-control'], 'no-cache');
+      final payload = jsonDecode(response.body) as List<dynamic>;
+      expect(payload, hasLength(1));
+      final entry = payload.single as Map<String, dynamic>;
+      expect(entry['id'], 'b1');
+      expect(entry['title'], '已下載的書');
+      expect(entry['format'], 'epub');
+      expect(entry['sizeBytes'], isNull);
     });
 
     test('GET /api/books/<id>/download 回傳 501（留給 Issue 2 實作）', () async {
