@@ -1,6 +1,6 @@
 # Epic 44 Issue 3：上傳功能 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 讓 PC 端瀏覽器能在 WiFi 傳書首頁拖放/選擇檔案上傳，手機端依副檔名白名單判斷是否接受、算內容指紋去重、呼叫既有匯入管線寫入圖書庫，並讓格式不支援的檔案不會卡住同一請求內其他檔案的解析。
 
@@ -36,7 +36,7 @@
 - Consumes：`LibraryRepository.findByContentFingerprint(String)`（既有）、`BookImportService.importFiles(List<String>, {List<String?>? displayNames, ...})`（既有）、`ComputeRemoteFingerprint`（既有 typedef）、`WifiTransferService.deleteFile`（既有建構子欄位）。
 - Produces：`WifiTransferService.handleUploadedFile()` 由 `throw UnimplementedError()` 改為真正實作，回傳型別維持 `Future<UploadResult>` 不變。
 
-- [ ] **Step 1: 擴充 `FakeBookImportService`，記錄 `importFiles()` 的 `displayNames` 參數**
+- [x] **Step 1: 擴充 `FakeBookImportService`，記錄 `importFiles()` 的 `displayNames` 參數**
 
 當前 `ImportCallRecord`／`FakeBookImportService.importFiles()` 沒有記錄呼叫端傳入的 `displayNames`，本 Task 的測試需要驗證 `handleUploadedFile()` 確實把 `originalFileName` 透過 `displayNames` 傳給 `importFiles()`（spec.md 明確要求：「原始檔名只透過 `importFiles()` 的 `displayNames` 參數保留供顯示，不參與實體路徑組裝」）。
 
@@ -113,7 +113,7 @@ class ImportCallRecord {
 
 （純新增可為 `null` 的欄位，既有呼叫端／既有測試斷言皆不受影響。）
 
-- [ ] **Step 2: 寫失敗測試**
+- [x] **Step 2: 寫失敗測試**
 
 Edit `app/test/wifi_transfer/wifi_transfer_service_test.dart`。先在檔案頂部新增 import（於既有 import 區塊）：
 
@@ -374,12 +374,12 @@ Book _bookWith({
   });
 ```
 
-- [ ] **Step 3: 執行測試，確認失敗**
+- [x] **Step 3: 執行測試，確認失敗**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_service_test.dart`
 Expected: FAIL——`handleUploadedFile` 群組的 6 個測試因 `UnimplementedError` 被拋出而失敗。
 
-- [ ] **Step 4: 實作 `handleUploadedFile()`**
+- [x] **Step 4: 實作 `handleUploadedFile()`**
 
 Edit `app/lib/wifi_transfer/wifi_transfer_service.dart`：
 
@@ -473,17 +473,17 @@ Edit `app/lib/wifi_transfer/wifi_transfer_service.dart`：
   }
 ```
 
-- [ ] **Step 5: 執行測試，確認通過**
+- [x] **Step 5: 執行測試，確認通過**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_service_test.dart`
 Expected: PASS，全數測試通過（含 Issue 2 遺留的 `listDownloadableBooks`／`resolveDownloadSource` 群組，共 20 個測試）。
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/wifi_transfer/wifi_transfer_service.dart test/wifi_transfer/wifi_transfer_service_test.dart test/support/fake_book_import_service.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/wifi_transfer/wifi_transfer_service.dart app/test/wifi_transfer/wifi_transfer_service_test.dart app/test/support/fake_book_import_service.dart
@@ -523,7 +523,7 @@ EOF
 - Consumes：`fileExtensionFor(BookFileFormat)`（既有，`app/lib/remote/opds_client.dart`）。
 - Produces：頂層函式 `BookFileFormat? bookFileFormatForFileName(String fileName)`，供 Task 3 的上傳路由判斷白名單使用。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 Edit `app/test/wifi_transfer/wifi_transfer_http_server_test.dart`，在檔案結尾（`buildContentDispositionHeader` 群組的 `});` 之後、`}` 之前）新增：
 
@@ -552,12 +552,12 @@ Edit `app/test/wifi_transfer/wifi_transfer_http_server_test.dart`，在檔案結
   });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: FAIL，編譯錯誤（`bookFileFormatForFileName` 尚未定義）。
 
-- [ ] **Step 3: 實作 `bookFileFormatForFileName()`**
+- [x] **Step 3: 實作 `bookFileFormatForFileName()`**
 
 Edit `app/lib/wifi_transfer/wifi_transfer_http_server.dart`：
 
@@ -611,17 +611,17 @@ BookFileFormat? bookFileFormatForFileName(String fileName) {
 }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: PASS，`bookFileFormatForFileName` 群組的 3 個測試（連同其餘既有測試）全數通過。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/wifi_transfer/wifi_transfer_http_server.dart test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/wifi_transfer/wifi_transfer_http_server.dart app/test/wifi_transfer/wifi_transfer_http_server_test.dart
@@ -650,7 +650,7 @@ EOF
 - Consumes：`WifiTransferService.handleUploadedFile()`（Task 1）、`bookFileFormatForFileName()`（Task 2）、`withTransferPermit()`（Issue 1 既有）。
 - Produces：`POST /api/upload` 路由——`shelf_multipart` 逐一解析 part；格式不在白名單先 `drain()` 該 part 再記錄 `unsupportedFormat`；在白名單則落地到持久化目錄後呼叫 `handleUploadedFile()`；回應 JSON 陣列 `[{originalFileName, outcome}]`。整個處理過程包在既有 `withTransferPermit()` 內，不需要 Issue 2 那種手動配對許可的寫法（回傳 `Response` 前所有檔案早已落地/匯入完畢）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 Edit `app/test/wifi_transfer/wifi_transfer_http_server_test.dart`。先在檔案頂部新增 import：
 
@@ -993,12 +993,12 @@ Future<_Resp> _realMultipartUpload(
   });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: FAIL——上傳相關測試回應狀態碼為 501，不是 200/400。
 
-- [ ] **Step 3: 實作 `POST /api/upload` 路由**
+- [x] **Step 3: 實作 `POST /api/upload` 路由**
 
 Edit `app/lib/wifi_transfer/wifi_transfer_http_server.dart`：
 
@@ -1196,17 +1196,17 @@ import 'wifi_transfer_service.dart';
   }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: PASS，全數測試通過（含 Task 1～2 累積的所有測試）。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/wifi_transfer/wifi_transfer_http_server.dart test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/wifi_transfer/wifi_transfer_http_server.dart app/test/wifi_transfer/wifi_transfer_http_server_test.dart
@@ -1256,7 +1256,7 @@ EOF
 - Consumes：`POST /api/upload`（Task 3）。
 - Produces：頁面提供拖放區＋檔案選擇器，選定/拖放檔案後以 `XMLHttpRequest` 上傳並顯示進度，完成後依伺服器回應的 JSON 陣列逐檔顯示結果。無自動化測試（純 HTML/JS，不在 `flutter test`／`flutter analyze` 範圍內；背後路由已由 Task 3 覆蓋，整體串接由 Task 5 的 `integration_test/` 間接驗證）。
 
-- [ ] **Step 1: 修改 `index.html`**
+- [x] **Step 1: 修改 `index.html`**
 
 Edit `app/assets/wifi_transfer/index.html`：
 
@@ -1432,12 +1432,12 @@ Edit `app/assets/wifi_transfer/index.html`：
   </script>
 ```
 
-- [ ] **Step 2: 執行既有測試，確認未破壞 `GET /` 驗證**
+- [x] **Step 2: 執行既有測試，確認未破壞 `GET /` 驗證**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: PASS——`GET / 回傳 index.html 內容與正確 Content-Type／Cache-Control` 測試仍通過（只斷言 `contains('elinkBook WiFi 傳書')`，`<h1>` 未變動）。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/assets/wifi_transfer/index.html
@@ -1475,7 +1475,7 @@ EOF
 
 **重複上傳測試改用 PDF，不用 EPUB**：見本計畫 Global Constraints 的「已知限制」說明——真實 EPUB 檔案若帶 `dc:identifier`，`handleUploadedFile()` 的去重指紋（內容 SHA-256）與 `BookImportServiceImpl` 正式匯入時存入的指紋（`dc:identifier`）不同，可能偵測不到重複；`test/fixtures/sample.epub` 實際上就帶有 `dc:identifier`（`urn:uuid:00000000-0000-0000-0000-000000000001`），若拿它測「重複上傳」會不穩定。PDF 格式的 `extractMetadata` 原生端不回傳 identifier，兩處指紋計算天然一致，用 `test/fixtures/sample.pdf` 才能穩定驗證去重邏輯本身正確。
 
-- [ ] **Step 1: 修改測試檔**
+- [x] **Step 1: 修改測試檔**
 
 Edit `app/integration_test/wifi_transfer_screen_test.dart`。先在檔案頂部新增 import：
 
@@ -1678,17 +1678,17 @@ import '../test/support/fake_fingerprint_computer.dart';
   });
 ```
 
-- [ ] **Step 2: `flutter analyze` 確認乾淨**
+- [x] **Step 2: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze integration_test/wifi_transfer_screen_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 3: 真機執行（需人類操作：裝置已連上 WiFi 或開啟熱點）**
+- [x] **Step 3: 真機執行（需人類操作：裝置已連上 WiFi 或開啟熱點）**
 
 Run: `flutter test integration_test/wifi_transfer_screen_test.dart -d <device-id>`
 Expected: 8 個測試全數通過（Issue 2 遺留的 5 個下載測試＋本 Task 新增的 3 個上傳測試）。若裝置目前未連上 WiFi/熱點，測試會以明確的 `fail()` 訊息中止（而非誤判為程式錯誤），依訊息指示連線後重跑。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/integration_test/wifi_transfer_screen_test.dart
@@ -1716,21 +1716,21 @@ EOF
 
 **Files:** 無新增/修改檔案，純驗證步驟。
 
-- [ ] **Step 1: 完整 `flutter analyze`**
+- [x] **Step 1: 完整 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 2: 完整 `flutter test`（CLAUDE.md 規定：整張計畫最後一個 Task 才跑一次）**
+- [x] **Step 2: 完整 `flutter test`（CLAUDE.md 規定：整張計畫最後一個 Task 才跑一次）**
 
 Run: `flutter test`
 Expected: 全數通過（或與 PR #258 合併當下已知、與本次異動無關的既存缺陷數量一致——`adaptive_shell_scaffold_test.dart` 的 `_batchActions` `LateInitializationError`，見 `reviews/review-issue-2.md`「驗證記錄」——需在審查報告中列出並比對 base commit 確認非本次異動引入的回歸）。
 
-- [ ] **Step 3: 確認 Task 5 的真機測試已至少執行過一次**
+- [x] **Step 3: 確認 Task 5 的真機測試已至少執行過一次**
 
 若尚未在真實裝置上跑過 Task 5 的 `integration_test/wifi_transfer_screen_test.dart`，於此時執行：
 
 Run: `flutter test integration_test/wifi_transfer_screen_test.dart -d <device-id>`
 Expected: 8 個測試全數通過。
 
-- [ ] **Step 4: 更新 `docs/epics/epic-44-wifi-book-transfer/issues.md` 與 `docs/epics.md` 進度**（比照 Issue 1／2 完成後的既有慣例，由人類或執行者在確認上述驗證皆通過後手動進行，非本計畫自動化步驟的一部分）
+- [x] **Step 4: 更新 `docs/epics/epic-44-wifi-book-transfer/issues.md` 與 `docs/epics.md` 進度**（比照 Issue 1／2 完成後的既有慣例，由人類或執行者在確認上述驗證皆通過後手動進行，非本計畫自動化步驟的一部分）
