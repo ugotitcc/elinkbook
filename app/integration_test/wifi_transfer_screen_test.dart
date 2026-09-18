@@ -7,8 +7,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:elinkbook/library/book_content_fingerprint.dart';
+import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/screens/wifi_transfer_screen.dart';
 import 'package:elinkbook/wifi_transfer/network_availability.dart';
 
@@ -315,5 +319,153 @@ void main() {
     }
     expect(leftover, isEmpty,
         reason: '中途取消下載後，暫存檔仍應被清理，殘留：$leftover');
+  });
+
+  testWidgets(
+      '真機：上傳一個支援格式檔案，成功出現在圖書庫（Issue 3 驗收）',
+      (tester) async {
+    sqfliteFfiInit();
+    final repository =
+        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    addTearDown(() => repository.close());
+    final importService = BookImportServiceImpl(repository: repository);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WifiTransferScreen(
+          libraryRepository: repository,
+          importService: importService,
+          computeFingerprint: computeBookContentFingerprint,
+          checkNetworkAvailability: checkNetworkAvailability,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+    if (tester.any(find.text('請連線至 WiFi 或開啟手機熱點'))) {
+      fail('真機測試裝置目前沒有連上 WiFi／開啟熱點，無法驗證上傳；'
+          '請先連線至 WiFi 或開啟手機熱點後重跑本測試。');
+    }
+    final ipTextWidget =
+        tester.widget<Text>(find.byKey(const Key('wifi_transfer_ip_text')));
+    final baseUrl = ipTextWidget.data!;
+
+    final bytes =
+        (await rootBundle.load('test/fixtures/sample.pdf')).buffer.asUint8List();
+    final request =
+        http.MultipartRequest('POST', Uri.parse('$baseUrl/api/upload'))
+          ..files.add(http.MultipartFile.fromBytes('files', bytes,
+              filename: '真機上傳測試書.pdf'));
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    expect(response.statusCode, 200);
+    final results = jsonDecode(response.body) as List<dynamic>;
+    expect(results.single['outcome'], 'imported');
+
+    final books = await repository.listBooks();
+    expect(books, hasLength(1));
+    expect(books.single.format, BookFileFormat.pdf);
+  });
+
+  testWidgets(
+      '真機：上傳不支援格式檔案被拒絕，且不影響同一請求內其他檔案的解析'
+      '（Issue 3 M-2 驗收）', (tester) async {
+    sqfliteFfiInit();
+    final repository =
+        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    addTearDown(() => repository.close());
+    final importService = BookImportServiceImpl(repository: repository);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WifiTransferScreen(
+          libraryRepository: repository,
+          importService: importService,
+          computeFingerprint: computeBookContentFingerprint,
+          checkNetworkAvailability: checkNetworkAvailability,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+    if (tester.any(find.text('請連線至 WiFi 或開啟手機熱點'))) {
+      fail('真機測試裝置目前沒有連上 WiFi／開啟熱點，無法驗證上傳；'
+          '請先連線至 WiFi 或開啟手機熱點後重跑本測試。');
+    }
+    final ipTextWidget =
+        tester.widget<Text>(find.byKey(const Key('wifi_transfer_ip_text')));
+    final baseUrl = ipTextWidget.data!;
+
+    final pdfBytes =
+        (await rootBundle.load('test/fixtures/sample.pdf')).buffer.asUint8List();
+    final request =
+        http.MultipartRequest('POST', Uri.parse('$baseUrl/api/upload'))
+          ..files.add(http.MultipartFile.fromBytes(
+              'files', Uint8List.fromList([1, 2, 3]),
+              filename: '不支援的檔案.docx'))
+          ..files.add(http.MultipartFile.fromBytes('files', pdfBytes,
+              filename: '正常上傳.pdf'));
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    expect(response.statusCode, 200);
+    final results = jsonDecode(response.body) as List<dynamic>;
+    expect(results, hasLength(2));
+    expect(results[0]['outcome'], 'unsupportedFormat');
+    expect(results[1]['outcome'], 'imported');
+    final books = await repository.listBooks();
+    expect(books, hasLength(1));
+  });
+
+  testWidgets(
+      '真機：重複上傳同一檔案兩次，第二次靜默略過、書架上只有一筆記錄'
+      '（Issue 3 驗收；改用 PDF，理由見 plan-issue-3.md「已知限制」）',
+      (tester) async {
+    sqfliteFfiInit();
+    final repository =
+        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    addTearDown(() => repository.close());
+    final importService = BookImportServiceImpl(repository: repository);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WifiTransferScreen(
+          libraryRepository: repository,
+          importService: importService,
+          computeFingerprint: computeBookContentFingerprint,
+          checkNetworkAvailability: checkNetworkAvailability,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+    if (tester.any(find.text('請連線至 WiFi 或開啟手機熱點'))) {
+      fail('真機測試裝置目前沒有連上 WiFi／開啟熱點，無法驗證上傳；'
+          '請先連線至 WiFi 或開啟手機熱點後重跑本測試。');
+    }
+    final ipTextWidget =
+        tester.widget<Text>(find.byKey(const Key('wifi_transfer_ip_text')));
+    final baseUrl = ipTextWidget.data!;
+
+    final bytes =
+        (await rootBundle.load('test/fixtures/sample.pdf')).buffer.asUint8List();
+
+    Future<String> uploadOnce() async {
+      final request =
+          http.MultipartRequest('POST', Uri.parse('$baseUrl/api/upload'))
+            ..files.add(http.MultipartFile.fromBytes('files', bytes,
+                filename: '重複測試.pdf'));
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      expect(response.statusCode, 200);
+      final results = jsonDecode(response.body) as List<dynamic>;
+      return results.single['outcome'] as String;
+    }
+
+    final firstOutcome = await uploadOnce();
+    final secondOutcome = await uploadOnce();
+
+    expect(firstOutcome, 'imported');
+    expect(secondOutcome, 'duplicateSkipped');
+    final books = await repository.listBooks();
+    expect(books, hasLength(1));
   });
 }
