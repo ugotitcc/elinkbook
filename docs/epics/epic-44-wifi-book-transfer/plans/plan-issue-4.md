@@ -52,7 +52,7 @@ graph TD
 - Consumes: `_activeTransfersNotifier`（既有 `ValueListenable<int>`）。
 - Produces: 在 `WifiTransferScreen` 的 QR Code 下方，當 `activeCount > 0` 時渲染 `wifi_transfer_active_transfers_banner`，傳輸歸零時隱藏。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 Edit `app/test/screens/wifi_transfer_screen_test.dart`，在檔案末尾（最後一個 `testWidgets` 之後、`}` 之前）新增測試：
 
@@ -129,12 +129,12 @@ Edit `app/test/screens/wifi_transfer_screen_test.dart`，在檔案末尾（最�
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/wifi_transfer_screen_test.dart`
 Expected: FAIL——找不到 `wifi_transfer_active_transfers_banner`。
 
-- [ ] **Step 3: 實作手機端傳輸狀態指示條**
+- [x] **Step 3: 實作手機端傳輸狀態指示條**
 
 Edit `app/lib/screens/wifi_transfer_screen.dart`：
 在 `_buildBody()` 中的 `QrImageView` 與其後面的 `SizedBox(height: 16)` 之間新增監聽 `_activeTransfersNotifier` 的組件：
@@ -227,17 +227,17 @@ Edit `app/lib/screens/wifi_transfer_screen.dart`：
           );
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/wifi_transfer_screen_test.dart`
 Expected: PASS，所有測試（包含新增測試）全數通過。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/wifi_transfer_screen.dart test/screens/wifi_transfer_screen_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/wifi_transfer_screen.dart app/test/screens/wifi_transfer_screen_test.dart
@@ -267,7 +267,7 @@ EOF
 - Consumes: `POST /api/upload`。
 - Produces: `#upload-section` 調整至頂部；上傳期間鎖定拖放區；上傳中即時顯示 `已傳輸量 / 總容量 (百分比)`；位元組上傳完畢時顯示轉圈動畫與「上傳完成，手機端處理匯入中，請稍候…」。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 Edit `app/test/wifi_transfer/wifi_transfer_http_server_test.dart`，在 `GET / 回傳 index.html 內容與正確 Content-Type／Cache-Control` 測試後方新增：
 
@@ -296,12 +296,12 @@ Edit `app/test/wifi_transfer/wifi_transfer_http_server_test.dart`，在 `GET / �
     });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: FAIL——`uploadIndex` 大於 `downloadIndex`，且找不到 `upload-status-text` 等元素。
 
-- [ ] **Step 3: 調整 `index.html` 佈局與上傳功能**
+- [x] **Step 3: 調整 `index.html` 佈局與上傳功能**
 
 Edit `app/assets/wifi_transfer/index.html`：
 1. CSS 新增轉圈動畫與禁用樣式：
@@ -464,17 +464,17 @@ Edit `app/assets/wifi_transfer/index.html`：
     }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: PASS。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/assets/wifi_transfer/index.html app/test/wifi_transfer/wifi_transfer_http_server_test.dart
@@ -504,7 +504,7 @@ EOF
 - Consumes: `GET /api/books`、`GET /api/books/<id>/download`。
 - Produces: 搜尋框（即時過濾）、20 本/頁分頁、跨頁勾選 `Set` 記憶、「全選目前頁」「清除勾選」快捷按鈕。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 Edit `app/test/wifi_transfer/wifi_transfer_http_server_test.dart`，在 Task 2 新增的測試後方追加：
 
@@ -529,12 +529,12 @@ Edit `app/test/wifi_transfer/wifi_transfer_http_server_test.dart`，在 Task 2 �
     });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: FAIL——找不到 `download-search-input` 等元素。
 
-- [ ] **Step 3: 實作搜尋、分頁與跨頁勾選邏輯**
+- [x] **Step 3: 實作搜尋、分頁與跨頁勾選邏輯**
 
 Edit `app/assets/wifi_transfer/index.html`：
 1. CSS 新增樣式：
@@ -784,17 +784,17 @@ Edit `app/assets/wifi_transfer/index.html`：
     }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: PASS。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/assets/wifi_transfer/index.html app/test/wifi_transfer/wifi_transfer_http_server_test.dart
@@ -819,16 +819,16 @@ EOF
 
 **Files:** 無新增檔案，純驗證與文件進度標記。
 
-- [ ] **Step 1: 完整 `flutter analyze`**
+- [x] **Step 1: 完整 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 2: 執行 WiFi 傳書相關單元與 Widget 測試**
+- [x] **Step 2: 執行 WiFi 傳書相關單元與 Widget 測試**
 
 Run: `flutter test test/screens/wifi_transfer_screen_test.dart test/wifi_transfer/`
 Expected: 全數通過且零失敗（無任何測試失敗或跳過）。
 
-- [ ] **Step 3: 更新 Issue 4 與 epics.md 進度**
+- [x] **Step 3: 更新 Issue 4 與 epics.md 進度**
 
 將 `docs/epics/epic-44-wifi-book-transfer/issues.md` 的 Issue 4 狀態標記為 `completed`，並在 `docs/epics.md` 更新備註。

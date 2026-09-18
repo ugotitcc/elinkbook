@@ -151,10 +151,10 @@ void main() {
       ),
       activeTransfersNotifierOverride: notifier,
     ));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(find.text('目前尚有檔案正在傳輸'), findsOneWidget);
 
@@ -207,5 +207,77 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('請連線至 WiFi 或開啟手機熱點'), findsOneWidget);
+  });
+
+  testWidgets(
+      'activeTransfersNotifier 狀態變化：activeCount 為 0 時不顯示傳輸中橫幅，'
+      '大於 0 時即時顯示傳輸中橫幅與檔案數量（Issue 4）', (tester) async {
+    final activeNotifier = ValueNotifier<int>(0);
+    await tester.pumpWidget(buildScreen(
+      checkNetworkAvailability: () async => const NetworkAvailability(
+        kind: NetworkAvailabilityKind.wifiClient,
+        ipAddress: '192.168.1.5',
+      ),
+      activeTransfersNotifierOverride: activeNotifier,
+    ));
+    await tester.pumpAndSettle();
+
+    // 初始 activeCount 為 0，不顯示橫幅
+    expect(
+      find.byKey(const Key('wifi_transfer_active_transfers_banner')),
+      findsNothing,
+    );
+
+    // activeCount 變為 2，顯示橫幅與數量
+    activeNotifier.value = 2;
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('wifi_transfer_active_transfers_banner')),
+      findsOneWidget,
+    );
+    expect(find.text('正在傳輸中（2 個檔案）…'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    // activeCount 歸 0，橫幅自動隱藏
+    activeNotifier.value = 0;
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('wifi_transfer_active_transfers_banner')),
+      findsNothing,
+    );
+  });
+
+  testWidgets(
+      'activeTransfersNotifier 在 E-Ink 高對比主題下正常渲染黑白指示條（Issue 4 / I-1）', (tester) async {
+    final activeNotifier = ValueNotifier<int>(1);
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData.light().copyWith(
+        colorScheme: const ColorScheme.light(primary: Colors.black),
+        scaffoldBackgroundColor: Colors.white,
+      ),
+      home: WifiTransferScreen(
+        libraryRepository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        computeFingerprint: FakeFingerprintComputer().call,
+        checkNetworkAvailability: () async => const NetworkAvailability(
+          kind: NetworkAvailabilityKind.wifiClient,
+          ipAddress: '192.168.1.5',
+        ),
+        activeTransfersNotifierOverride: activeNotifier,
+      ),
+    ));
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('wifi_transfer_active_transfers_banner')),
+      findsOneWidget,
+    );
+    expect(find.text('正在傳輸中（1 個檔案）…'), findsOneWidget);
+    final indicator = tester.widget<CircularProgressIndicator>(
+      find.byType(CircularProgressIndicator),
+    );
+    expect(indicator.color, Colors.black);
   });
 }
