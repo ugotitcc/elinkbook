@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/wifi_transfer/wifi_transfer_service.dart';
@@ -15,6 +17,7 @@ Book _bookWith({
   bool isDownloaded = true,
   BookFileFormat format = BookFileFormat.epub,
   String title = '書名',
+  String? contentFingerprint,
 }) {
   final now = DateTime.fromMillisecondsSinceEpoch(0);
   return Book(
@@ -24,9 +27,45 @@ Book _bookWith({
     filePath: filePath,
     source: BookSource.local,
     isDownloaded: isDownloaded,
+    contentFingerprint: contentFingerprint,
     createTime: now,
     lastReadTime: now,
   );
+}
+
+// 以 Future.error 直接模擬匯入失敗，避免 Completer 同步 completeError 的
+// 未處理例外空窗（見上方說明）。
+class _ThrowingImportService implements BookImportService {
+  ImportCallRecord? lastImportCall;
+  @override
+  Future<ImportResult> importFiles(
+    List<String> uris, {
+    List<String?>? displayNames,
+    String? folderName,
+    BookSource source = BookSource.local,
+    String? remoteServerId,
+    Map<String, String>? remoteBookIds,
+    Map<String, String>? remoteDownloadUrls,
+    Map<String, String>? cloudFileIds,
+  }) {
+    lastImportCall = ImportCallRecord(
+      uris: uris,
+      displayNames: displayNames,
+      source: source,
+      remoteServerId: remoteServerId,
+      remoteBookIds: remoteBookIds,
+      remoteDownloadUrls: remoteDownloadUrls,
+      cloudFileIds: cloudFileIds,
+    );
+    return Future.error(StateError('模擬匯入失敗'));
+  }
+
+  @override
+  Future<ImportResult> importFolder(
+    String folderUri, {
+    bool autoGroupByFolderName = true,
+  }) =>
+      Future.value(const ImportResult(importedBooks: []));
 }
 
 void main() {
@@ -44,18 +83,157 @@ void main() {
     );
   }
 
-  test('handleUploadedFile 尚未實作，呼叫時明確拋出 UnimplementedError（Issue 3 填入前的契約）',
-      () async {
-    final service = buildService();
+  group('handleUploadedFile', () {
+    test('沒有重複、匯入成功：回傳 imported，落地檔案不會被刪除，displayNames '
+        '正確帶入原始檔名', () async {
+      final fingerprintComputer = FakeFingerprintComputer();
+      final importService = FakeBookImportService()
+        ..pendingCompleter = (Completer<ImportResult>()
+          ..complete(ImportResult(
+            importedBooks: [_bookWith(id: 'new-1', filePath: '/tmp/landed.epub')],
+          )));
+      final deleteCalls = <String>[];
+      final service = WifiTransferService(
+        libraryRepository: FakeLibraryRepository(),
+        importService: importService,
+        computeFingerprint: fingerprintComputer.call,
+        materializeContentUri: (uri) async => null,
+        deleteFile: (path) async => deleteCalls.add(path),
+      );
 
-    await expectLater(
-      service.handleUploadedFile(
-        landedPath: '/tmp/a.epub',
-        originalFileName: 'a.epub',
+      final result = await service.handleUploadedFile(
+        landedPath: '/tmp/landed.epub',
+        originalFileName: '我的書.epub',
         format: BookFileFormat.epub,
-      ),
-      throwsA(isA<UnimplementedError>()),
-    );
+      );
+
+      expect(result.outcome, UploadOutcome.imported);
+      expect(result.originalFileName, '我的書.epub');
+      expect(deleteCalls, isEmpty);
+      expect(importService.lastImportCall!.uris, ['/tmp/landed.epub']);
+      expect(importService.lastImportCall!.displayNames, ['我的書.epub']);
+    });
+
+    test('內容指紋命中圖書庫既有書籍：回傳 duplicateSkipped，刪除落地檔案，'
+        '且不呼叫 importFiles', () async {
+      final fingerprintComputer = FakeFingerprintComputer()
+        ..nextFingerprint = 'shared-fingerprint';
+      final existing = _bookWith(
+        id: 'existing-1',
+        filePath: '/tmp/existing.epub',
+        contentFingerprint: 'shared-fingerprint',
+      );
+      final importService = FakeBookImportService();
+      final deleteCalls = <String>[];
+      final service = WifiTransferService(
+        libraryRepository: FakeLibraryRepository(initialBooks: [existing]),
+        importService: importService,
+        computeFingerprint: fingerprintComputer.call,
+        materializeContentUri: (uri) async => null,
+        deleteFile: (path) async => deleteCalls.add(path),
+      );
+
+      final result = await service.handleUploadedFile(
+        landedPath: '/tmp/landed.epub',
+        originalFileName: '重複的書.epub',
+        format: BookFileFormat.epub,
+      );
+
+      expect(result.outcome, UploadOutcome.duplicateSkipped);
+      expect(deleteCalls, ['/tmp/landed.epub']);
+      expect(importService.lastImportCall, isNull);
+    });
+
+    test('importFiles 回傳空清單（模擬損毀/空內容檔案）：回傳 failed，刪除落地檔案',
+        () async {
+      final fingerprintComputer = FakeFingerprintComputer();
+      final deleteCalls = <String>[];
+      final service = WifiTransferService(
+        libraryRepository: FakeLibraryRepository(),
+        importService: FakeBookImportService(), // 預設回傳空清單
+        computeFingerprint: fingerprintComputer.call,
+        materializeContentUri: (uri) async => null,
+        deleteFile: (path) async => deleteCalls.add(path),
+      );
+
+      final result = await service.handleUploadedFile(
+        landedPath: '/tmp/landed.pdf',
+        originalFileName: '損毀的書.pdf',
+        format: BookFileFormat.pdf,
+      );
+
+      expect(result.outcome, UploadOutcome.failed);
+      expect(deleteCalls, ['/tmp/landed.pdf']);
+    });
+
+    test('importFiles 拋出例外：回傳 failed，刪除落地檔案，例外不會冒出中斷上傳請求',
+        () async {
+      final fingerprintComputer = FakeFingerprintComputer();
+      // 直接以 Future.error 模擬失敗，避免 Completer 同步 completeError 與
+      // 錯誤處理器掛載之間的空窗被測試 zone 視為未處理例外。
+      final importService = _ThrowingImportService();
+      final deleteCalls = <String>[];
+      final service = WifiTransferService(
+        libraryRepository: FakeLibraryRepository(),
+        importService: importService,
+        computeFingerprint: fingerprintComputer.call,
+        materializeContentUri: (uri) async => null,
+        deleteFile: (path) async => deleteCalls.add(path),
+      );
+
+      final result = await service.handleUploadedFile(
+        landedPath: '/tmp/landed.epub',
+        originalFileName: '例外的書.epub',
+        format: BookFileFormat.epub,
+      );
+
+      expect(result.outcome, UploadOutcome.failed);
+      expect(deleteCalls, ['/tmp/landed.epub']);
+    });
+
+    test('computeFingerprint 本身拋出例外：回傳 failed，刪除落地檔案', () async {
+      final deleteCalls = <String>[];
+      final service = WifiTransferService(
+        libraryRepository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        computeFingerprint: (path, format) async =>
+            throw StateError('模擬指紋計算失敗'),
+        materializeContentUri: (uri) async => null,
+        deleteFile: (path) async => deleteCalls.add(path),
+      );
+
+      final result = await service.handleUploadedFile(
+        landedPath: '/tmp/landed.epub',
+        originalFileName: '無法計算指紋的書.epub',
+        format: BookFileFormat.epub,
+      );
+
+      expect(result.outcome, UploadOutcome.failed);
+      expect(deleteCalls, ['/tmp/landed.epub']);
+    });
+
+    test(
+        'importFiles 拋出例外，且清理落地檔案時 deleteFile 本身也拋出例外：'
+        '仍回傳 failed，例外不會冒出（`review-plan-issue-3.md` I-1 回歸測試）',
+        () async {
+      final fingerprintComputer = FakeFingerprintComputer();
+      final importService = _ThrowingImportService();
+      final service = WifiTransferService(
+        libraryRepository: FakeLibraryRepository(),
+        importService: importService,
+        computeFingerprint: fingerprintComputer.call,
+        materializeContentUri: (uri) async => null,
+        deleteFile: (path) async => throw FileSystemException('模擬清理失敗'),
+      );
+
+      final result = await service.handleUploadedFile(
+        landedPath: '/tmp/landed.epub',
+        originalFileName: '清理也失敗的書.epub',
+        format: BookFileFormat.epub,
+      );
+
+      expect(result.outcome, UploadOutcome.failed);
+    });
   });
 
   group('listDownloadableBooks', () {

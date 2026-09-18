@@ -22,6 +22,18 @@
   .placeholder { color: #888; }
   .book-item { display: block; padding: 4px 0; }
   button { font-size: 14px; padding: 8px 16px; margin-top: 8px; }
+  #upload-dropzone {
+    border: 2px dashed #aaa;
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    color: #666;
+  }
+  #upload-dropzone.dragover { border-color: #333; background: #f0f0f0; }
+  #upload-dropzone label { text-decoration: underline; cursor: pointer; }
+  #upload-progress { display: none; width: 100%; margin-top: 8px; }
+  #upload-result-list { list-style: none; padding: 0; margin: 8px 0 0; }
+  #upload-result-list li { padding: 4px 0; }
 </style>
 </head>
 <body>
@@ -34,7 +46,13 @@
   </section>
   <section id="upload-section">
     <h2>上傳書籍</h2>
-    <p class="placeholder">開發中（Issue 3）</p>
+    <div id="upload-dropzone">
+      拖放檔案到此處，或
+      <label for="upload-file-input">選擇檔案</label>
+    </div>
+    <input id="upload-file-input" type="file" multiple style="display: none;">
+    <progress id="upload-progress" value="0" max="100"></progress>
+    <ul id="upload-result-list"></ul>
   </section>
   <script>
     function formatBytes(bytes) {
@@ -116,6 +134,96 @@
       .addEventListener('click', downloadSelectedBooks);
 
     loadDownloadableBooks();
+
+    // 對應 UploadOutcome 四個值（wifi_transfer_service.dart）的顯示文案。
+    const UPLOAD_OUTCOME_LABELS = {
+      imported: '已匯入',
+      duplicateSkipped: '已存在，已略過',
+      unsupportedFormat: '格式不支援',
+      failed: '匯入失敗',
+    };
+
+    // 【spec.md「PC 端網頁」第二輪審查修正】fetch() 原生不支援上傳進度
+    // 事件，一律改用 XMLHttpRequest（xhr.upload.onprogress 顯示進度）。
+    function uploadFiles(fileList) {
+      if (fileList.length === 0) return;
+      const formData = new FormData();
+      for (const file of fileList) {
+        formData.append('files', file, file.name);
+      }
+      const progressEl = document.getElementById('upload-progress');
+      const resultListEl = document.getElementById('upload-result-list');
+      progressEl.style.display = '';
+      progressEl.value = 0;
+      resultListEl.innerHTML = '';
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload');
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          progressEl.value = (event.loaded / event.total) * 100;
+        }
+      };
+      // 【`/receiving-code-review` 審查修正，review-plan-issue-3.md M-1】
+      // 非 2xx 回應（例如 400）的 body 是 `{"error": "..."}` 物件而非陣列，
+      // 若不先檢查 xhr.status／Array.isArray() 就直接 for...of 疊代，會
+      // 拋出 `TypeError: results is not iterable`；上傳成功時額外呼叫
+      // loadDownloadableBooks() 刷新下方下載清單，避免使用者誤以為書籍
+      // 未被手機收錄。
+      xhr.onload = () => {
+        progressEl.style.display = 'none';
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const results = JSON.parse(xhr.responseText);
+            if (Array.isArray(results)) {
+              let hasImported = false;
+              for (const result of results) {
+                const li = document.createElement('li');
+                const label = UPLOAD_OUTCOME_LABELS[result.outcome] || result.outcome;
+                li.textContent = result.originalFileName + '：' + label;
+                resultListEl.appendChild(li);
+                if (result.outcome === 'imported') hasImported = true;
+              }
+              if (hasImported) loadDownloadableBooks();
+              return;
+            }
+          } catch (err) {
+            // 落到下方統一的失敗訊息分支。
+          }
+        }
+        const li = document.createElement('li');
+        li.textContent = '上傳失敗：' +
+          (xhr.status ? `伺服器回應錯誤 (${xhr.status})` : '無法解析伺服器回應');
+        resultListEl.appendChild(li);
+      };
+      xhr.onerror = () => {
+        progressEl.style.display = 'none';
+        const li = document.createElement('li');
+        li.textContent = '上傳失敗：網路錯誤';
+        resultListEl.appendChild(li);
+      };
+      xhr.send(formData);
+    }
+
+    const uploadFileInput = document.getElementById('upload-file-input');
+    uploadFileInput.addEventListener('change', () => {
+      uploadFiles(uploadFileInput.files);
+      uploadFileInput.value = '';
+    });
+
+    const uploadDropzone = document.getElementById('upload-dropzone');
+    uploadDropzone.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      uploadDropzone.classList.add('dragover');
+    });
+    uploadDropzone.addEventListener('dragleave', () => {
+      uploadDropzone.classList.remove('dragover');
+    });
+    uploadDropzone.addEventListener('drop', (event) => {
+      event.preventDefault();
+      uploadDropzone.classList.remove('dragover');
+      uploadFiles(event.dataTransfer.files);
+    });
   </script>
 </body>
 </html>
