@@ -20,17 +20,102 @@
     margin-bottom: 16px;
   }
   .placeholder { color: #888; }
+  .book-item { display: block; padding: 4px 0; }
+  button { font-size: 14px; padding: 8px 16px; margin-top: 8px; }
 </style>
 </head>
 <body>
   <h1>elinkBook WiFi 傳書</h1>
   <section id="download-section">
     <h2>下載書籍</h2>
-    <p class="placeholder">開發中（Issue 2）</p>
+    <div id="download-list" class="placeholder">載入中…</div>
+    <button id="download-selected-button" type="button">下載已勾選書籍</button>
+    <p id="download-status" class="placeholder"></p>
   </section>
   <section id="upload-section">
     <h2>上傳書籍</h2>
     <p class="placeholder">開發中（Issue 3）</p>
   </section>
+  <script>
+    function formatBytes(bytes) {
+      if (bytes == null) return '';
+      if (bytes < 1024) return ' (' + bytes + ' B)';
+      if (bytes < 1024 * 1024) return ' (' + (bytes / 1024).toFixed(1) + ' KB)';
+      return ' (' + (bytes / (1024 * 1024)).toFixed(1) + ' MB)';
+    }
+
+    async function loadDownloadableBooks() {
+      const listEl = document.getElementById('download-list');
+      try {
+        const response = await fetch('/api/books');
+        const books = await response.json();
+        if (books.length === 0) {
+          listEl.textContent = '目前沒有可下載的書籍';
+          listEl.className = 'placeholder';
+          return;
+        }
+        listEl.className = '';
+        listEl.innerHTML = '';
+        for (const book of books) {
+          const label = document.createElement('label');
+          label.className = 'book-item';
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.value = book.id;
+          checkbox.className = 'download-book-checkbox';
+          label.appendChild(checkbox);
+          label.appendChild(
+            document.createTextNode(' ' + book.title + formatBytes(book.sizeBytes))
+          );
+          listEl.appendChild(label);
+        }
+      } catch (err) {
+        listEl.textContent = '無法載入書籍清單';
+        listEl.className = 'placeholder';
+      }
+    }
+
+    // 依序（for...of + await）逐一觸發下載：<a download> 程式化點擊觸發的
+    // 瀏覽器原生下載沒有 JS 可觀察的「完成」事件，改用短暫延遲讓每個下載
+    // 至少先各自開始，而非同一瞬間一次全部觸發；伺服器端的併發節流
+    // （withTransferPermit/_acquirePermit）才是真正保證同時傳輸數量上限
+    // 的機制，這裡的延遲只是讓 PC 端使用體感更像「依序」。
+    //
+    // 【`/receiving-code-review` 審查修正，review-plan-issue-2.md M-2】
+    // 未勾選任何書籍時給予明確提示（而非靜默無反應）；按鈕在下載期間
+    // disabled，避免使用者快速連點觸發多輪重入下載。
+    async function downloadSelectedBooks() {
+      const statusEl = document.getElementById('download-status');
+      const button = document.getElementById('download-selected-button');
+      const checkboxes =
+        document.querySelectorAll('.download-book-checkbox:checked');
+      if (checkboxes.length === 0) {
+        statusEl.textContent = '請至少勾選一本書';
+        return;
+      }
+      button.disabled = true;
+      statusEl.textContent = '下載中…';
+      try {
+        for (const checkbox of checkboxes) {
+          const link = document.createElement('a');
+          link.href = '/api/books/' + encodeURIComponent(checkbox.value) + '/download';
+          link.download = '';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+        statusEl.textContent = '已觸發全部下載';
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    document
+      .getElementById('download-selected-button')
+      .addEventListener('click', downloadSelectedBooks);
+
+    loadDownloadableBooks();
+  </script>
 </body>
 </html>

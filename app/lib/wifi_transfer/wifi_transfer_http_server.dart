@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -34,10 +35,32 @@ class WifiTransferHttpServer {
 
   /// 併發節流：進入實際傳輸邏輯前先取得許可（超過 [maxConcurrentTransfers]
   /// 時在此等待，不回錯誤碼給客戶端，符合「零意外」原則），結束時（含
-  /// 拋出例外）一律釋放並同步更新 [activeTransfersNotifier]。Issue 2／3
-  /// 的下載/上傳路由須把各自的實際傳輸邏輯包在這個方法內呼叫，例如：
-  /// `return withTransferPermit(() => _handleDownload(bookId));`
+  /// 拋出例外）一律釋放並同步更新 [activeTransfersNotifier]。上傳路由
+  /// （Issue 3）會在同一個 [action] 呼叫內同步讀完整個請求 body 才回傳，
+  /// 可直接把處理邏輯包在這個方法內呼叫。
+  ///
+  /// **（Issue 2 撰寫下載路由時發現並修正的設計限制）** 下載路由不能沿用
+  /// 這個包裝寫法：`shelf` 的 handler 一旦回傳 `shelf.Response`（內含尚未
+  /// 被消費的 `Stream<List<int>>` 主體），實際位元組傳輸是在 handler 回傳
+  /// 之後才由 `shelf_io` 非同步消費該 Stream；若把「建構 Response」當成
+  /// 這裡的 [action]，`finally` 會在 Response 物件建好、位元組其實還沒送
+  /// 到客戶端前就釋放許可，讓併發節流對下載形同虛設、
+  /// [activeTransfersNotifier] 也無法正確反映「離開畫面時是否真的有傳輸
+  /// 中」。下載路由改用下方 [_acquirePermit]／[_releasePermit] 手動配對，
+  /// 於串流真正結束時才釋放，見 `_handleDownload`。
   Future<T> withTransferPermit<T>(Future<T> Function() action) async {
+    await _acquirePermit();
+    try {
+      return await action();
+    } finally {
+      _releasePermit();
+    }
+  }
+
+  /// 取得一個併發傳輸許可；超過 [maxConcurrentTransfers] 時在此等待，直到
+  /// 有人呼叫 [_releasePermit]。伺服器已 [stop] 時，仍在排隊中的呼叫會
+  /// 以 [StateError] 結束（見 [stop]）。
+  Future<void> _acquirePermit() async {
     if (_activePermits >= maxConcurrentTransfers) {
       final completer = Completer<void>();
       _waitQueue.add(completer);
@@ -47,15 +70,23 @@ class WifiTransferHttpServer {
       }
     }
     _activePermits++;
-    _activeTransfersNotifier.value = _activePermits;
-    try {
-      return await action();
-    } finally {
-      _activePermits--;
+    // 【`/receiving-code-review` 審查修正，review-plan-issue-2.md C-1】
+    // 伺服器已 dispose() 時，_activeTransfersNotifier 已被銷毀，不可再
+    // 寫入 .value（會拋出 FlutterError）——此時已沒有任何 UI 在監聽，
+    // 純粹略過通知，計數本身仍照常維護。
+    if (!_disposed) {
       _activeTransfersNotifier.value = _activePermits;
-      if (_waitQueue.isNotEmpty && !_stopped) {
-        _waitQueue.removeAt(0).complete();
-      }
+    }
+  }
+
+  /// 釋放一個由 [_acquirePermit] 取得的許可，喚醒排隊中的下一個呼叫（若有）。
+  void _releasePermit() {
+    _activePermits--;
+    if (!_disposed) {
+      _activeTransfersNotifier.value = _activePermits;
+    }
+    if (_waitQueue.isNotEmpty && !_stopped) {
+      _waitQueue.removeAt(0).complete();
     }
   }
 
@@ -82,10 +113,18 @@ class WifiTransferHttpServer {
     await server.close(force: true);
   }
 
+  bool _disposed = false;
+
   /// 釋放 [_activeTransfersNotifier] 持有的資源（`/receiving-code-review`
   /// 審查修正，review-issue-1.md Minor #2）。呼叫端（`WifiTransferScreen.
   /// dispose()`）應在呼叫 [stop] 之後一併呼叫本方法。
+  ///
+  /// **（`/receiving-code-review` 審查修正，review-plan-issue-2.md C-1）**
+  /// 先標記 [_disposed]，讓仍在進行中的下載（`stop()` 是非同步的，呼叫端
+  /// 不會 `await` 它就緊接著呼叫本方法）稍後觸發 [_releasePermit] 時不會
+  /// 對已銷毀的 [_activeTransfersNotifier] 賦值。
   void dispose() {
+    _disposed = true;
     _activeTransfersNotifier.dispose();
   }
 
@@ -107,13 +146,12 @@ class WifiTransferHttpServer {
       );
     }
     if (request.method == 'GET' && path == 'api/books') {
-      // Issue 2 補上：service.listDownloadableBooks()。
-      return shelf.Response(501, body: 'Not Implemented');
+      return _handleListBooks();
     }
-    if (request.method == 'GET' &&
-        RegExp(r'^api/books/[^/]+/download$').hasMatch(path)) {
-      // Issue 2 補上：service.resolveDownloadSource()。
-      return shelf.Response(501, body: 'Not Implemented');
+    final downloadMatch =
+        RegExp(r'^api/books/([^/]+)/download$').firstMatch(path);
+    if (request.method == 'GET' && downloadMatch != null) {
+      return _handleDownload(downloadMatch.group(1)!);
     }
     if (request.method == 'POST' && path == 'api/upload') {
       // Issue 3 補上：shelf_multipart 解析＋service.handleUploadedFile()。
@@ -121,4 +159,188 @@ class WifiTransferHttpServer {
     }
     return shelf.Response.notFound('Not Found');
   }
+
+  Future<shelf.Response> _handleListBooks() async {
+    final books = await service.listDownloadableBooks();
+    final payload = [
+      for (final book in books)
+        {
+          'id': book.id,
+          'title': book.title,
+          'format': book.format.name,
+          'sizeBytes': book.sizeBytes,
+        },
+    ];
+    return shelf.Response.ok(
+      jsonEncode(payload),
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        // 【`/receiving-code-review` 審查修正，review-plan-issue-2.md
+        // M-2】比照 Issue 1 的 GET / 路由既有理由：這份清單反映手機當下
+        // 的圖書庫狀態（使用者可能在 PC 端頁面開著時於手機端刪書/匯入），
+        // 不該被瀏覽器快取。
+        'cache-control': 'no-cache',
+      },
+    );
+  }
+
+  /// 處理 `GET /api/books/<id>/download`（epic-44-wifi-book-transfer
+  /// spec.md「HTTP 路由表」）。併發許可改用 [_acquirePermit]／
+  /// [_releasePermit] 手動配對（而非 [withTransferPermit]），理由見
+  /// [withTransferPermit] 文件註解：許可須持有到位元組真正傳輸完畢（由
+  /// [wrapStreamWithCleanup] 的完成/例外/取消三個回呼觸發釋放），不能在
+  /// `Response` 物件建構完成的當下就釋放。
+  Future<shelf.Response> _handleDownload(String bookId) async {
+    await _acquirePermit();
+    var permitReleased = false;
+    void releasePermitOnce() {
+      if (permitReleased) return;
+      permitReleased = true;
+      _releasePermit();
+    }
+    // 【`/receiving-code-review` 審查修正，review-plan-issue-2.md I-3】
+    // 提升到 try 區塊外宣告，讓下方 catch 區塊能存取已材質化的
+    // content:// 暫存檔路徑並清理——原設計把它宣告在 try 內，catch 區塊
+    // 根本無法引用它（連編譯都過不了），materializeContentUri() 產生的
+    // 暫存檔在 resolveDownloadSource() 成功之後、file.length() 之前若
+    // 拋出任何例外，會永久殘留在快取目錄中。
+    DownloadSource? source;
+    try {
+      source = await service.resolveDownloadSource(bookId);
+      if (source == null) {
+        releasePermitOnce();
+        return shelf.Response.notFound('Not Found');
+      }
+      final file = File(source.resolvedPath);
+      final length = await file.length();
+      var cleanedUp = false;
+      Future<void> finishOnce() async {
+        if (cleanedUp) return;
+        cleanedUp = true;
+        releasePermitOnce();
+        if (source!.isTemporaryFile) {
+          // 【審查修正 I-5】刪除暫存檔是 best-effort 清理，失敗（例如
+          // 已被其他流程刪除）不應成為未捕捉的非同步例外冒出、觸發全域
+          // 錯誤處理器——比照本專案既有「靜默略過非關鍵清理失敗」慣例。
+          try {
+            await service.deleteFile(source.resolvedPath);
+          } catch (_) {}
+        }
+      }
+
+      final body = wrapStreamWithCleanup(file.openRead(), finishOnce);
+      return shelf.Response.ok(
+        body,
+        headers: {
+          'content-type': 'application/octet-stream',
+          'content-length': '$length',
+          'content-disposition':
+              buildContentDispositionHeader(source.downloadFileName),
+        },
+      );
+    } catch (_) {
+      releasePermitOnce();
+      // 【審查修正 I-3】resolveDownloadSource() 成功後、file.length() 之前
+      // 若拋出例外，已材質化的 content:// 暫存檔仍須清理，否則永久洩漏。
+      final resolvedSource = source;
+      if (resolvedSource != null && resolvedSource.isTemporaryFile) {
+        try {
+          await service.deleteFile(resolvedSource.resolvedPath);
+        } catch (_) {}
+      }
+      rethrow;
+    }
+  }
+}
+
+/// 把 [source] 包裝成一個轉接 `Stream`，在來源串流真正結束時（正常
+/// EOF、讀取例外，或下游訂閱被取消——三者對應下載請求的「正常完成」
+/// 「讀取失敗」「客戶端中途取消/斷線」）非同步呼叫恰好一次 [onFinished]
+/// （epic-44-wifi-book-transfer spec.md「HTTP 路由表」暫存檔清理時機）。
+/// `shelf` 的 `Response` 沒有內建「串流真正傳輸完成」回呼，若在回傳
+/// `Response.ok(...)` 之後立即清理暫存檔／釋放併發許可，會在客戶端仍在
+/// 讀取串流中途執行，造成 0 位元組回應或許可提前釋放讓節流形同虛設。
+Stream<List<int>> wrapStreamWithCleanup(
+  Stream<List<int>> source,
+  Future<void> Function() onFinished,
+) {
+  var finished = false;
+  Future<void> finishOnce() {
+    if (finished) return Future<void>.value();
+    finished = true;
+    return onFinished();
+  }
+
+  StreamSubscription<List<int>>? subscription;
+  late final StreamController<List<int>> controller;
+  controller = StreamController<List<int>>(
+    onListen: () {
+      subscription = source.listen(
+        controller.add,
+        onError: (Object error, StackTrace stackTrace) {
+          controller.addError(error, stackTrace);
+          controller.close();
+          finishOnce();
+        },
+        onDone: () {
+          // 【`/receiving-code-review` 審查修正 I-1】controller.close() 只
+          // 代表「不會再新增事件」，controller.done 才是「done 事件已真正
+          // 送達下游監聽者」——許可（Task 3 的 _releasePermit）／暫存檔
+          // 清理必須等到這個時間點才執行，否則會在資料其實還在 controller
+          // 內部緩衝佇列、尚未送達 shelf_io／客戶端時就提前釋放。
+          controller.close();
+          controller.done.then((_) => finishOnce());
+        },
+        cancelOnError: true,
+      );
+    },
+    // 【`/receiving-code-review` 審查修正 I-1】把下游（`shelf_io` 寫入
+    // socket 時）的暫停/恢復訊號轉發給內部對 [source] 的訂閱，避免
+    // `file.openRead()` 在慢速網路下無視背壓、把整個檔案讀進無界的
+    // controller 內部緩衝佇列（大檔案 OOM 風險）。
+    onPause: () => subscription?.pause(),
+    onResume: () => subscription?.resume(),
+    onCancel: () async {
+      // 【`/receiving-code-review` 審查修正 I-2】先 await 內部訂閱真正
+      // 取消完成（底層檔案控制代碼確實釋放）才呼叫 finishOnce()（可能
+      // 觸發 deleteFile()），避免控制代碼尚未釋放就嘗試刪除檔案。
+      await subscription?.cancel();
+      await finishOnce();
+    },
+  );
+  return controller.stream;
+}
+
+/// 建構下載路由的 `Content-Disposition` 標頭值（RFC 5987/6266，spec.md
+/// 「HTTP 路由表」）：`filename` 提供給不支援 `filename*` 的舊版客戶端
+/// 當退路（僅保留可安全放進雙引號 quoted-string 的可列印 ASCII 字元，
+/// 控制字元/非 ASCII 一律替換為 `_`），`filename*` 用 `Uri.encodeComponent`
+/// 完整 percent-encode 原始檔名，同時支援中文書名在跨平台瀏覽器正確
+/// 顯示。**安全性**：[downloadFileName] 源自使用者可匯入的書籍標題（不可
+/// 信任輸入，例如惡意 EPUB 中繼資料可能夾帶 `\r\n` 意圖進行 HTTP header
+/// injection）——兩個輸出分支皆對原始字串做完整轉換（ASCII 白名單過濾／
+/// percent-encoding），任何控制字元皆不會以原始位元組型式出現在標頭值中。
+String buildContentDispositionHeader(String downloadFileName) {
+  final fallback = _asciiFallbackFilename(downloadFileName);
+  // 【`/receiving-code-review` 審查修正，review-plan-issue-2.md M-1】
+  // `Uri.encodeComponent`（比照 JavaScript `encodeURIComponent`）刻意
+  // 不 percent-encode `- _ . ! ~ * ' ( )` 這組「unreserved」字元，但
+  // RFC 5987 的 `attr-char` 文法明確排除單引號——單引號同時也是
+  // `filename*=UTF-8''<value>` 語法本身的分隔符，若書名含 `'`（例如
+  // `John's Book.epub`）没有另外處理會不符合規範，額外手動跳脫為
+  // `%27`。
+  final encoded =
+      Uri.encodeComponent(downloadFileName).replaceAll("'", '%27');
+  return 'attachment; filename="$fallback"; filename*=UTF-8\'\'$encoded';
+}
+
+String _asciiFallbackFilename(String filename) {
+  final buffer = StringBuffer();
+  for (final rune in filename.runes) {
+    final isSafePrintableAscii =
+        rune >= 0x20 && rune <= 0x7E && rune != 0x22 && rune != 0x5C;
+    buffer.writeCharCode(isSafePrintableAscii ? rune : 0x5F); // '_'
+  }
+  final result = buffer.toString();
+  return result.isEmpty ? '_' : result;
 }
