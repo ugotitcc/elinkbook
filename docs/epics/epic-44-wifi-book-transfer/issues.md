@@ -33,7 +33,7 @@
 
 ## Issue 1：網路偵測＋WiFi 傳書畫面骨架＋伺服器基礎設施＋入口
 
-**Status:** ready-for-agent
+**Status:** completed（**2026-09-18 已完成並合併回 `main`（PR [#257](https://git.jigong.org/huthief/elinkBook/pulls/257)，分支 `feat/epic-44-issue-1`）**：`plans/plan-issue-1.md` 11 個 Task 全數完成——`network_availability.dart`（三態偵測＋純函式 `classifyNetworkInterfaces()`）、`WifiTransferService` 骨架（三個業務方法 `throw UnimplementedError()` 留給 Issue 2／3）、`assets/wifi_transfer/index.html`、`WifiTransferHttpServer`（`start()`/`stop()`、`withTransferPermit()` 併發節流、`GET /` 真實服務首頁，`/api/*` 先回 501）、`WifiTransferDependencies` bundle、`WifiTransferScreen`（IP/QR Code、手動覆寫、螢幕常亮、離開示警）、`SourcesHomeScreen`／`AdaptiveShellScaffold`／`main.dart` 三層裝配串接、`integration_test/wifi_transfer_screen_test.dart` 真機驗證。獨立程式審查（`reviews/review-issue-1.md`）：0 Critical／0 Important／4 Minor，結論 Ready to merge: Yes；審查後追加 commit（`2a629676`）採納 Minor #2（`WifiTransferHttpServer` 新增 `dispose()` 釋放 `_activeTransfersNotifier`）與 Minor #3（測試輔助函式 `_realGet`/`_realPost` 收斂為共用的 `_sendRealRequest()`），Minor #1（`main.dart` import 順序）與 Minor #4（`/api/books/<id>/download` 路徑邊界情境，留給 Issue 2）依人類決定維持原狀。`flutter analyze`（No issues found）／本次異動觸及測試檔全數通過／完整 `flutter test`（2558 passed / 1 skipped / 2 failed，2 個失敗經比對為 base commit 既存缺陷，非本 Issue 引入的回歸）皆為綠燈。Issue 2／3 現已可開工。）
 
 **依賴：** Issue 0（`wakelock_plus`／`shelf` 依賴、`findBookById` 尚不需要在本 Issue 使用，但共用 Prefactor 須先落地）。
 
