@@ -307,7 +307,9 @@
       button.disabled = true;
       statusEl.textContent = '下載中…';
       try {
-        for (const bookId of selectedBookIds) {
+        // 【`/receiving-code-review` 審查修正 M-2】建立不可變陣列快照，避免下載期間被「清除勾選」異動
+        const bookIds = [...selectedBookIds];
+        for (const bookId of bookIds) {
           const link = document.createElement('a');
           link.href = '/api/books/' + encodeURIComponent(bookId) + '/download';
           link.download = '';
@@ -316,7 +318,7 @@
           document.body.removeChild(link);
           await new Promise((resolve) => setTimeout(resolve, 300));
         }
-        statusEl.textContent = '已觸發全部下載（共 ' + selectedBookIds.size + ' 本）';
+        statusEl.textContent = '已觸發全部下載（共 ' + bookIds.length + ' 本）';
       } finally {
         button.disabled = false;
       }
@@ -346,11 +348,14 @@
 
     function uploadFiles(fileList) {
       if (fileList.length === 0) return;
+      const dropzoneEl = document.getElementById('upload-dropzone');
+      // 【`/receiving-code-review` 審查修正 M-1】防重入：若拖放區已處於 disabled 狀態則直接返回
+      if (dropzoneEl.classList.contains('disabled')) return;
+
       const formData = new FormData();
       for (const file of fileList) {
         formData.append('files', file, file.name);
       }
-      const dropzoneEl = document.getElementById('upload-dropzone');
       const fileInputEl = document.getElementById('upload-file-input');
       const progressEl = document.getElementById('upload-progress');
       const statusContainer = document.getElementById('upload-status-container');
@@ -394,6 +399,12 @@
         }
       };
 
+      // 【`/receiving-code-review` 審查修正 M-4】上傳位元組完畢時兜底切換至轉圈與處理中提示，避免 onprogress 節流遺漏
+      xhr.upload.onload = () => {
+        statusSpinner.style.display = 'inline-block';
+        statusText.textContent = '上傳完成，手機端處理與匯入中，請稍候…';
+      };
+
       const cleanup = () => {
         dropzoneEl.classList.remove('disabled');
         dropzoneEl.removeAttribute('aria-disabled');
@@ -432,6 +443,20 @@
         cleanup();
         const li = document.createElement('li');
         li.textContent = '上傳失敗：網路錯誤';
+        resultListEl.appendChild(li);
+      };
+
+      // 【`/receiving-code-review` 審查修正 M-3】上傳中斷與逾時時確保解鎖 UI 狀態
+      xhr.onabort = () => {
+        cleanup();
+        const li = document.createElement('li');
+        li.textContent = '上傳已中斷';
+        resultListEl.appendChild(li);
+      };
+      xhr.ontimeout = () => {
+        cleanup();
+        const li = document.createElement('li');
+        li.textContent = '上傳逾時';
         resultListEl.appendChild(li);
       };
       xhr.send(formData);
