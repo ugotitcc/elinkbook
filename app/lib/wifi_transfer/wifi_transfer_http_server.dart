@@ -34,10 +34,32 @@ class WifiTransferHttpServer {
 
   /// 併發節流：進入實際傳輸邏輯前先取得許可（超過 [maxConcurrentTransfers]
   /// 時在此等待，不回錯誤碼給客戶端，符合「零意外」原則），結束時（含
-  /// 拋出例外）一律釋放並同步更新 [activeTransfersNotifier]。Issue 2／3
-  /// 的下載/上傳路由須把各自的實際傳輸邏輯包在這個方法內呼叫，例如：
-  /// `return withTransferPermit(() => _handleDownload(bookId));`
+  /// 拋出例外）一律釋放並同步更新 [activeTransfersNotifier]。上傳路由
+  /// （Issue 3）會在同一個 [action] 呼叫內同步讀完整個請求 body 才回傳，
+  /// 可直接把處理邏輯包在這個方法內呼叫。
+  ///
+  /// **（Issue 2 撰寫下載路由時發現並修正的設計限制）** 下載路由不能沿用
+  /// 這個包裝寫法：`shelf` 的 handler 一旦回傳 `shelf.Response`（內含尚未
+  /// 被消費的 `Stream<List<int>>` 主體），實際位元組傳輸是在 handler 回傳
+  /// 之後才由 `shelf_io` 非同步消費該 Stream；若把「建構 Response」當成
+  /// 這裡的 [action]，`finally` 會在 Response 物件建好、位元組其實還沒送
+  /// 到客戶端前就釋放許可，讓併發節流對下載形同虛設、
+  /// [activeTransfersNotifier] 也無法正確反映「離開畫面時是否真的有傳輸
+  /// 中」。下載路由改用下方 [_acquirePermit]／[_releasePermit] 手動配對，
+  /// 於串流真正結束時才釋放，見 `_handleDownload`。
   Future<T> withTransferPermit<T>(Future<T> Function() action) async {
+    await _acquirePermit();
+    try {
+      return await action();
+    } finally {
+      _releasePermit();
+    }
+  }
+
+  /// 取得一個併發傳輸許可；超過 [maxConcurrentTransfers] 時在此等待，直到
+  /// 有人呼叫 [_releasePermit]。伺服器已 [stop] 時，仍在排隊中的呼叫會
+  /// 以 [StateError] 結束（見 [stop]）。
+  Future<void> _acquirePermit() async {
     if (_activePermits >= maxConcurrentTransfers) {
       final completer = Completer<void>();
       _waitQueue.add(completer);
@@ -47,15 +69,23 @@ class WifiTransferHttpServer {
       }
     }
     _activePermits++;
-    _activeTransfersNotifier.value = _activePermits;
-    try {
-      return await action();
-    } finally {
-      _activePermits--;
+    // 【`/receiving-code-review` 審查修正，review-plan-issue-2.md C-1】
+    // 伺服器已 dispose() 時，_activeTransfersNotifier 已被銷毀，不可再
+    // 寫入 .value（會拋出 FlutterError）——此時已沒有任何 UI 在監聽，
+    // 純粹略過通知，計數本身仍照常維護。
+    if (!_disposed) {
       _activeTransfersNotifier.value = _activePermits;
-      if (_waitQueue.isNotEmpty && !_stopped) {
-        _waitQueue.removeAt(0).complete();
-      }
+    }
+  }
+
+  /// 釋放一個由 [_acquirePermit] 取得的許可，喚醒排隊中的下一個呼叫（若有）。
+  void _releasePermit() {
+    _activePermits--;
+    if (!_disposed) {
+      _activeTransfersNotifier.value = _activePermits;
+    }
+    if (_waitQueue.isNotEmpty && !_stopped) {
+      _waitQueue.removeAt(0).complete();
     }
   }
 
@@ -82,10 +112,18 @@ class WifiTransferHttpServer {
     await server.close(force: true);
   }
 
+  bool _disposed = false;
+
   /// 釋放 [_activeTransfersNotifier] 持有的資源（`/receiving-code-review`
   /// 審查修正，review-issue-1.md Minor #2）。呼叫端（`WifiTransferScreen.
   /// dispose()`）應在呼叫 [stop] 之後一併呼叫本方法。
+  ///
+  /// **（`/receiving-code-review` 審查修正，review-plan-issue-2.md C-1）**
+  /// 先標記 [_disposed]，讓仍在進行中的下載（`stop()` 是非同步的，呼叫端
+  /// 不會 `await` 它就緊接著呼叫本方法）稍後觸發 [_releasePermit] 時不會
+  /// 對已銷毀的 [_activeTransfersNotifier] 賦值。
   void dispose() {
+    _disposed = true;
     _activeTransfersNotifier.dispose();
   }
 
