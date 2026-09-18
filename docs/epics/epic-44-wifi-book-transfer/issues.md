@@ -90,7 +90,7 @@
 
 ## Issue 3：上傳功能
 
-**Status:** ready-for-agent
+**Status:** completed（**2026-09-18 已完成並合併回 `main`（PR [#259](https://git.jigong.org/huthief/elinkBook/pulls/259)，分支 `feat/epic-44-issue-3`）**：`plans/plan-issue-3.md` 6 個 Task 全數完成——`WifiTransferService.handleUploadedFile()` 實作（算指紋 → 查重複 → 匯入或清理，包含例外安全的 `safeDelete()` 包裝）、`bookFileFormatForFileName()` 純函式反查白名單副檔名、`POST /api/upload` 路由（`shelf_multipart` 逐一解析 part，非白名單先以 `part.drain()` 耗盡串流避免阻塞後續解析，白名單檔名消毒並落地至持久目錄後調用服務處理）、`assets/wifi_transfer/index.html` 上傳區塊 JS（拖放區＋選檔、XHR 支援進度回報、逐檔狀態與完成自動刷新書籍列表）、`integration_test/wifi_transfer_screen_test.dart` 新增 3 個真機測試。獨立程式審查（`reviews/review-issue-3.md`）：0 Critical／0 Important／3 Minor，結論 Ready to merge: Yes。`flutter analyze` 乾淨、單元測試 56 個通過、真機測試通過。）
 
 **依賴：** Issue 0（依賴引進、內容指紋既有機制）、Issue 1（`WifiTransferHttpServer`／`WifiTransferService` 骨架、併發號誌）。
 
