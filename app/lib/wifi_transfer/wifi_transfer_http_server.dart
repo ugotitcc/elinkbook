@@ -160,3 +160,61 @@ class WifiTransferHttpServer {
     return shelf.Response.notFound('Not Found');
   }
 }
+
+/// 把 [source] 包裝成一個轉接 `Stream`，在來源串流真正結束時（正常
+/// EOF、讀取例外，或下游訂閱被取消——三者對應下載請求的「正常完成」
+/// 「讀取失敗」「客戶端中途取消/斷線」）非同步呼叫恰好一次 [onFinished]
+/// （epic-44-wifi-book-transfer spec.md「HTTP 路由表」暫存檔清理時機）。
+/// `shelf` 的 `Response` 沒有內建「串流真正傳輸完成」回呼，若在回傳
+/// `Response.ok(...)` 之後立即清理暫存檔／釋放併發許可，會在客戶端仍在
+/// 讀取串流中途執行，造成 0 位元組回應或許可提前釋放讓節流形同虛設。
+Stream<List<int>> wrapStreamWithCleanup(
+  Stream<List<int>> source,
+  Future<void> Function() onFinished,
+) {
+  var finished = false;
+  Future<void> finishOnce() {
+    if (finished) return Future<void>.value();
+    finished = true;
+    return onFinished();
+  }
+
+  StreamSubscription<List<int>>? subscription;
+  late final StreamController<List<int>> controller;
+  controller = StreamController<List<int>>(
+    onListen: () {
+      subscription = source.listen(
+        controller.add,
+        onError: (Object error, StackTrace stackTrace) {
+          controller.addError(error, stackTrace);
+          controller.close();
+          finishOnce();
+        },
+        onDone: () {
+          // 【`/receiving-code-review` 審查修正 I-1】controller.close() 只
+          // 代表「不會再新增事件」，controller.done 才是「done 事件已真正
+          // 送達下游監聽者」——許可（Task 3 的 _releasePermit）／暫存檔
+          // 清理必須等到這個時間點才執行，否則會在資料其實還在 controller
+          // 內部緩衝佇列、尚未送達 shelf_io／客戶端時就提前釋放。
+          controller.close();
+          controller.done.then((_) => finishOnce());
+        },
+        cancelOnError: true,
+      );
+    },
+    // 【`/receiving-code-review` 審查修正 I-1】把下游（`shelf_io` 寫入
+    // socket 時）的暫停/恢復訊號轉發給內部對 [source] 的訂閱，避免
+    // `file.openRead()` 在慢速網路下無視背壓、把整個檔案讀進無界的
+    // controller 內部緩衝佇列（大檔案 OOM 風險）。
+    onPause: () => subscription?.pause(),
+    onResume: () => subscription?.resume(),
+    onCancel: () async {
+      // 【`/receiving-code-review` 審查修正 I-2】先 await 內部訂閱真正
+      // 取消完成（底層檔案控制代碼確實釋放）才呼叫 finishOnce()（可能
+      // 觸發 deleteFile()），避免控制代碼尚未釋放就嘗試刪除檔案。
+      await subscription?.cancel();
+      await finishOnce();
+    },
+  );
+  return controller.stream;
+}

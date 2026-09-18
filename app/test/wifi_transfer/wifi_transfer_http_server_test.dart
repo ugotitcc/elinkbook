@@ -203,4 +203,128 @@ void main() {
       expect(await task1, 1);
     });
   });
+
+  group('wrapStreamWithCleanup', () {
+    test('來源串流正常 EOF（onDone）：資料原樣轉發，onFinished 恰好被呼叫一次',
+        () async {
+      final source = StreamController<List<int>>();
+      var finishedCount = 0;
+      final wrapped = wrapStreamWithCleanup(source.stream, () async {
+        finishedCount++;
+      });
+
+      final received = <int>[];
+      final done = Completer<void>();
+      wrapped.listen(
+        received.addAll,
+        onDone: () => done.complete(),
+      );
+
+      source
+        ..add([1, 2, 3])
+        ..add([4, 5]);
+      await source.close();
+      await done.future;
+      // 【`/receiving-code-review` 審查修正 I-1】onFinished 改為等待
+      // controller.done（真正送達下游）才呼叫，與下游自己的 onDone 回呼
+      // 是兩個獨立的 Future 鏈，給一次事件迴圈機會讓前者的延續完成。
+      await Future<void>.delayed(Duration.zero);
+
+      expect(received, [1, 2, 3, 4, 5]);
+      expect(finishedCount, 1);
+    });
+
+    test('來源串流拋出讀取例外（onError）：例外會轉發給下游，onFinished 恰好被呼叫一次',
+        () async {
+      final source = StreamController<List<int>>();
+      var finishedCount = 0;
+      final wrapped = wrapStreamWithCleanup(source.stream, () async {
+        finishedCount++;
+      });
+
+      final errors = <Object>[];
+      final done = Completer<void>();
+      wrapped.listen(
+        (_) {},
+        onError: (Object error, StackTrace stackTrace) => errors.add(error),
+        onDone: () => done.complete(),
+      );
+
+      source.addError(StateError('讀取失敗'));
+      await done.future;
+      await Future<void>.delayed(Duration.zero);
+
+      expect(errors, hasLength(1));
+      expect(finishedCount, 1);
+    });
+
+    test('下游訂閱被 cancel()（模擬客戶端中途取消下載/斷線）：等待內部訂閱真正'
+        '取消完成後，onFinished 才恰好被呼叫一次', () async {
+      final source = StreamController<List<int>>();
+      var finishedCount = 0;
+      final wrapped = wrapStreamWithCleanup(source.stream, () async {
+        finishedCount++;
+      });
+
+      final subscription = wrapped.listen((_) {});
+      source.add([1, 2, 3]);
+      await Future<void>.delayed(Duration.zero);
+      // 【`/receiving-code-review` 審查修正 I-2】onCancel 內部須先
+      // await 對 source 的訂閱真正取消完成，才呼叫 onFinished；本測試
+      // 的 subscription.cancel() 回傳的 Future 須等到那個內部 await
+      // 也完成才 resolve（不能提早釋放，實務上對應「檔案控制代碼真正
+      // 關閉後才刪除暫存檔」）。
+      await subscription.cancel();
+
+      expect(finishedCount, 1);
+      expect(source.hasListener, isFalse,
+          reason: '下游取消後，內部應已完成對來源 StreamController 的取消訂閱');
+    });
+
+    test('onFinished 只會被呼叫一次，即使 onDone 之後下游又被取消', () async {
+      final source = StreamController<List<int>>();
+      var finishedCount = 0;
+      final wrapped = wrapStreamWithCleanup(source.stream, () async {
+        finishedCount++;
+      });
+
+      final done = Completer<void>();
+      final subscription = wrapped.listen((_) {}, onDone: () => done.complete());
+      await source.close();
+      await done.future;
+      await Future<void>.delayed(Duration.zero);
+      await subscription.cancel();
+
+      expect(finishedCount, 1);
+    });
+
+    test(
+        '下游暫停訂閱（onPause）時，內部對來源的訂閱也會暫停——不會在慢速'
+        '消費時無視背壓持續灌入資料（審查修正 I-1 的背壓轉發驗證）',
+        () async {
+      final source = StreamController<List<int>>();
+      final wrapped = wrapStreamWithCleanup(source.stream, () async {});
+
+      final received = <int>[];
+      final subscription = wrapped.listen(received.addAll);
+      subscription.pause();
+      await Future<void>.delayed(Duration.zero);
+
+      // `source.isPaused` 反映的是「它自己內部訂閱」（也就是本函式對
+      // source 建立的那個 subscription）目前是否被暫停——若 onPause 有
+      // 正確轉發，這裡應為 true，證明下游的暫停訊號確實傳到了上游。
+      expect(source.isPaused, isTrue,
+          reason: '下游暫停應轉發至內部對 source 的訂閱（背壓正確傳遞）');
+      source.add([1, 2, 3]);
+      await Future<void>.delayed(Duration.zero);
+      expect(received, isEmpty,
+          reason: '下游暫停期間，資料不應被送達（背壓已正確轉發至來源）');
+
+      subscription.resume();
+      await Future<void>.delayed(Duration.zero);
+      expect(received, [1, 2, 3]);
+
+      await subscription.cancel();
+    });
+  });
 }
