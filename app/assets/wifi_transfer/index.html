@@ -34,16 +34,34 @@
   #upload-progress { display: none; width: 100%; margin-top: 8px; }
   #upload-result-list { list-style: none; padding: 0; margin: 8px 0 0; }
   #upload-result-list li { padding: 4px 0; }
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #upload-dropzone.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+    background: #f9f9f9;
+  }
+  #upload-status-container {
+    display: none;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #444;
+  }
 </style>
 </head>
 <body>
   <h1>elinkBook WiFi 傳書</h1>
-  <section id="download-section">
-    <h2>下載書籍</h2>
-    <div id="download-list" class="placeholder">載入中…</div>
-    <button id="download-selected-button" type="button">下載已勾選書籍</button>
-    <p id="download-status" class="placeholder"></p>
-  </section>
   <section id="upload-section">
     <h2>上傳書籍</h2>
     <div id="upload-dropzone">
@@ -52,7 +70,19 @@
     </div>
     <input id="upload-file-input" type="file" multiple style="display: none;">
     <progress id="upload-progress" value="0" max="100"></progress>
+    <div id="upload-status-container">
+      <span id="upload-status-spinner" class="spinner" style="display: none;"></span>
+      <span id="upload-status-text"></span>
+      <span id="upload-bytes-text" style="float: right; color: #666;"></span>
+      <div style="clear: both;"></div>
+    </div>
     <ul id="upload-result-list"></ul>
+  </section>
+  <section id="download-section">
+    <h2>下載書籍</h2>
+    <div id="download-list" class="placeholder">載入中…</div>
+    <button id="download-selected-button" type="button">下載已勾選書籍</button>
+    <p id="download-status" class="placeholder"></p>
   </section>
   <script>
     function formatBytes(bytes) {
@@ -143,35 +173,75 @@
       failed: '匯入失敗',
     };
 
-    // 【spec.md「PC 端網頁」第二輪審查修正】fetch() 原生不支援上傳進度
-    // 事件，一律改用 XMLHttpRequest（xhr.upload.onprogress 顯示進度）。
+    // 【`/receiving-code-review` 審查修正 I-2】無括號短格式容量顯示，供上傳進度列使用
+    function formatBytesShort(bytes) {
+      if (bytes == null) return '';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
     function uploadFiles(fileList) {
       if (fileList.length === 0) return;
       const formData = new FormData();
       for (const file of fileList) {
         formData.append('files', file, file.name);
       }
+      const dropzoneEl = document.getElementById('upload-dropzone');
+      const fileInputEl = document.getElementById('upload-file-input');
       const progressEl = document.getElementById('upload-progress');
+      const statusContainer = document.getElementById('upload-status-container');
+      const statusSpinner = document.getElementById('upload-status-spinner');
+      const statusText = document.getElementById('upload-status-text');
+      const bytesText = document.getElementById('upload-bytes-text');
       const resultListEl = document.getElementById('upload-result-list');
+
+      // 【`/receiving-code-review` 審查修正 M-3】設置 aria-disabled
+      dropzoneEl.classList.add('disabled');
+      dropzoneEl.setAttribute('aria-disabled', 'true');
+      fileInputEl.disabled = true;
       progressEl.style.display = '';
       progressEl.value = 0;
+      statusContainer.style.display = 'block';
+      statusSpinner.style.display = 'none';
+      statusText.textContent = '準備上傳…';
+      bytesText.textContent = '';
       resultListEl.innerHTML = '';
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload');
       xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          progressEl.value = (event.loaded / event.total) * 100;
+        if (event.lengthComputable && event.total > 0) {
+          const percent = (event.loaded / event.total) * 100;
+          progressEl.value = percent;
+          if (event.loaded < event.total) {
+            statusText.textContent = '正在上傳… (' + Math.round(percent) + '%)';
+            bytesText.textContent = formatBytesShort(event.loaded) + ' / ' + formatBytesShort(event.total);
+          } else {
+            // 上傳位元組已傳輸完畢，進入手機端計算指紋與匯入階段
+            statusSpinner.style.display = 'inline-block';
+            statusText.textContent = '上傳完成，手機端處理與匯入中，請稍候…';
+            bytesText.textContent = formatBytesShort(event.total);
+          }
+        } else {
+          // 【`/receiving-code-review` 審查修正 I-3】降級處理：無法預知總量時顯示已傳量與不確定進度條
+          statusText.textContent = '正在上傳…';
+          bytesText.textContent = formatBytesShort(event.loaded) + ' / 未知';
+          progressEl.removeAttribute('value');
         }
       };
-      // 【`/receiving-code-review` 審查修正，review-plan-issue-3.md M-1】
-      // 非 2xx 回應（例如 400）的 body 是 `{"error": "..."}` 物件而非陣列，
-      // 若不先檢查 xhr.status／Array.isArray() 就直接 for...of 疊代，會
-      // 拋出 `TypeError: results is not iterable`；上傳成功時額外呼叫
-      // loadDownloadableBooks() 刷新下方下載清單，避免使用者誤以為書籍
-      // 未被手機收錄。
-      xhr.onload = () => {
+
+      const cleanup = () => {
+        dropzoneEl.classList.remove('disabled');
+        dropzoneEl.removeAttribute('aria-disabled');
+        fileInputEl.disabled = false;
         progressEl.style.display = 'none';
+        statusContainer.style.display = 'none';
+        statusSpinner.style.display = 'none';
+      };
+
+      xhr.onload = () => {
+        cleanup();
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const results = JSON.parse(xhr.responseText);
@@ -187,17 +257,16 @@
               if (hasImported) loadDownloadableBooks();
               return;
             }
-          } catch (err) {
-            // 落到下方統一的失敗訊息分支。
-          }
+          } catch (err) {}
         }
         const li = document.createElement('li');
         li.textContent = '上傳失敗：' +
           (xhr.status ? `伺服器回應錯誤 (${xhr.status})` : '無法解析伺服器回應');
         resultListEl.appendChild(li);
       };
+
       xhr.onerror = () => {
-        progressEl.style.display = 'none';
+        cleanup();
         const li = document.createElement('li');
         li.textContent = '上傳失敗：網路錯誤';
         resultListEl.appendChild(li);

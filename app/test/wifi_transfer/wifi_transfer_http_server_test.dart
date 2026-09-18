@@ -130,6 +130,29 @@ void main() {
       expect(response.body, contains('elinkBook WiFi 傳書'));
     });
 
+    test('GET /：HTML 結構中 #upload-section 位於 #download-section 之前（Issue 4 佈局重排）',
+        () async {
+      final response = await _realGet('http://127.0.0.1:${httpServer.port}/');
+      expect(response.statusCode, 200);
+      final body = response.body;
+      final uploadIndex = body.indexOf('id="upload-section"');
+      final downloadIndex = body.indexOf('id="download-section"');
+      expect(uploadIndex, greaterThan(-1));
+      expect(downloadIndex, greaterThan(-1));
+      expect(uploadIndex, lessThan(downloadIndex),
+          reason: '上傳區塊應位於下載區塊之前，避免藏書量多時需一直下拉');
+    });
+
+    test('GET /：HTML 包含上傳狀態與雙階段進度元素（Issue 4 上傳體驗增強）', () async {
+      final response = await _realGet('http://127.0.0.1:${httpServer.port}/');
+      expect(response.statusCode, 200);
+      final body = response.body;
+      expect(body, contains('id="upload-status-text"'));
+      expect(body, contains('id="upload-status-spinner"'));
+      expect(body, contains('id="upload-bytes-text"'));
+      expect(body, contains('formatBytesShort'));
+    });
+
     test('GET /index.html 與 GET / 行為相同（M-3：容錯使用者手動輸入的網址）',
         () async {
       final response =
