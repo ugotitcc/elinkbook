@@ -5,8 +5,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:shelf_multipart/shelf_multipart.dart';
 
 import '../library/models/library_enums.dart';
 import '../remote/opds_client.dart' show fileExtensionFor;
@@ -157,8 +159,7 @@ class WifiTransferHttpServer {
       return _handleDownload(downloadMatch.group(1)!);
     }
     if (request.method == 'POST' && path == 'api/upload') {
-      // Issue 3 補上：shelf_multipart 解析＋service.handleUploadedFile()。
-      return shelf.Response(501, body: 'Not Implemented');
+      return withTransferPermit(() => _handleUpload(request));
     }
     return shelf.Response.notFound('Not Found');
   }
@@ -252,6 +253,144 @@ class WifiTransferHttpServer {
         } catch (_) {}
       }
       rethrow;
+    }
+  }
+
+  /// 處理 `POST /api/upload`（epic-44-wifi-book-transfer spec.md「HTTP
+  /// 路由表」）。與 [_handleDownload] 不同，這裡整個請求（解析／落地／
+  /// 呼叫 [WifiTransferService.handleUploadedFile]）都在回傳 `Response`
+  /// 之前同步完成，因此直接沿用 [withTransferPermit] 即可（見該方法文件
+  /// 註解），不需要 [_acquirePermit]／[_releasePermit] 手動配對。
+  Future<shelf.Response> _handleUpload(shelf.Request request) async {
+    final form = request.formData();
+    if (form == null) {
+      return shelf.Response(
+        400,
+        body: jsonEncode({'error': '不是合法的 multipart/form-data 請求'}),
+        // 【`/receiving-code-review` 審查修正，review-plan-issue-3.md M-2】
+        headers: {
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-cache',
+        },
+      );
+    }
+    final results = <Map<String, String>>[];
+    // 【`/receiving-code-review` 審查修正，review-plan-issue-3.md I-4】
+    // 這裡攔截的是 shelf_multipart 解析器本身在 part 與 part 之間中斷（例如
+    // 客戶端在兩個檔案之間斷線，錯誤發生在 await for 還沒產生下一個 data
+    // 物件之前）——[_landUpload]／[WifiTransferService.handleUploadedFile]
+    // 各自已完整吞下自己範圍內的例外（見兩者文件註解），不會讓例外冒到
+    // 這裡；這層 try-catch 涵蓋的是它們之外、屬於解析器本身的例外，不是
+    // 兩者的重複防護。
+    try {
+      await for (final data in form.formData) {
+        final filename = data.filename;
+        final format =
+            filename == null ? null : bookFileFormatForFileName(filename);
+        if (filename == null || format == null) {
+          // 【spec.md「HTTP 路由表」M-2】格式不在白名單時，必須先耗盡這個
+          // part 的位元組串流，shelf_multipart 底層（單一 TCP 串流依序切
+          // 出多個 part）才能定位下一個 part 的邊界繼續解析，否則整個上傳
+          // 請求會卡死。
+          try {
+            await data.part.drain<void>();
+          } catch (_) {
+            // 【review-plan-issue-3.md I-4】耗盡動作本身失敗（例如客戶端
+            // 在此時斷線）：忽略，讓迴圈能繼續處理下一個 part（若解析器
+            // 仍能定位邊界的話），不因單一 part 的清理失敗中斷整批上傳。
+          }
+          results.add({
+            'originalFileName': filename ?? '(未知檔名)',
+            'outcome': UploadOutcome.unsupportedFormat.name,
+          });
+          continue;
+        }
+        final outcome = await _landAndProcess(data.part, filename, format);
+        results.add({'originalFileName': filename, 'outcome': outcome.name});
+      }
+    } catch (_) {
+      if (results.isEmpty) {
+        return shelf.Response(
+          400,
+          body: jsonEncode({'error': '上傳串流解析中斷或格式錯誤'}),
+          headers: {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-cache',
+          },
+        );
+      }
+    }
+    return shelf.Response.ok(
+      jsonEncode(results),
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        // 【review-plan-issue-3.md M-2】比照 GET /api/books 既有理由。
+        'cache-control': 'no-cache',
+      },
+    );
+  }
+
+  Future<UploadOutcome> _landAndProcess(
+    Stream<List<int>> partStream,
+    String originalFileName,
+    BookFileFormat format,
+  ) async {
+    final landedPath = await _landUpload(partStream, originalFileName);
+    if (landedPath == null) return UploadOutcome.failed;
+    final result = await service.handleUploadedFile(
+      landedPath: landedPath,
+      originalFileName: originalFileName,
+      format: format,
+    );
+    return result.outcome;
+  }
+
+  /// 把上傳位元組串流落地到 App 持久化文件目錄的 `wifi_transfer_uploads/`
+  /// 子目錄（spec.md「HTTP 路由表」M-1）：檔名一律先用 [p.basename] 消毒
+  /// （避免 `originalFileName` 夾帶 `../` 造成路徑穿越）＋過濾作業系統
+  /// 禁用字元（`review-plan-issue-3.md` I-3：`p.basename()` 不會過濾
+  /// Windows／部分 Android 外部儲存的禁用字元，書名帶副標題冒號極為常見）
+  /// 再附加微秒時間戳前綴（避免同名檔案互相覆蓋）。串流落地失敗（例如
+  /// 磁碟空間不足、連線中斷）時關閉並清除可能已部分寫入的殘檔並回傳
+  /// `null`，呼叫端視為 [UploadOutcome.failed]，不中斷同一請求內其他檔案
+  /// 的解析。
+  Future<String?> _landUpload(
+    Stream<List<int>> partStream,
+    String originalFileName,
+  ) async {
+    final docsDir = await getApplicationDocumentsDirectory();
+    final uploadsDir = Directory(p.join(docsDir.path, 'wifi_transfer_uploads'));
+    if (!await uploadsDir.exists()) await uploadsDir.create(recursive: true);
+    // 【`/receiving-code-review` 審查修正，review-plan-issue-3.md I-3】
+    final sanitized =
+        p.basename(originalFileName).replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    final safeName = '${DateTime.now().microsecondsSinceEpoch}_$sanitized';
+    final landedPath = p.join(uploadsDir.path, safeName);
+    // 【`/receiving-code-review` 審查修正，review-plan-issue-3.md I-2】
+    // sink 宣告於 try 外，讓 catch 區塊能在刪除殘檔前先關閉它——若不關閉
+    // 就嘗試刪除，仍持有寫入控制代碼的檔案在部分作業系統/檔案系統上會
+    // 刪除失敗，讓已寫入一半的殘檔永久殘留。
+    IOSink? sink;
+    try {
+      sink = File(landedPath).openWrite();
+      await sink.addStream(partStream);
+      await sink.flush();
+      await sink.close();
+      sink = null;
+      return landedPath;
+    } catch (_) {
+      if (sink != null) {
+        try {
+          await sink.close();
+        } catch (_) {}
+      }
+      final partial = File(landedPath);
+      if (await partial.exists()) {
+        try {
+          await partial.delete();
+        } catch (_) {}
+      }
+      return null;
     }
   }
 }

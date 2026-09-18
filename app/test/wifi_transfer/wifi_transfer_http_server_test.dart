@@ -4,14 +4,18 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/wifi_transfer/wifi_transfer_http_server.dart';
 import 'package:elinkbook/wifi_transfer/wifi_transfer_service.dart';
 
 import '../support/fake_book_import_service.dart';
-import '../support/fake_library_repository.dart';
 import '../support/fake_fingerprint_computer.dart';
+import '../support/fake_library_repository.dart';
+import '../support/fake_path_provider_platform.dart';
 
 class _Resp {
   final int statusCode;
@@ -70,6 +74,23 @@ Future<_BytesResp> _realGetBytes(String url) async {
   } finally {
     client.close(force: true);
   }
+}
+
+Future<_Resp> _realMultipartUpload(
+  String url,
+  List<({String filename, List<int> bytes})> files,
+) async {
+  final request = http.MultipartRequest('POST', Uri.parse(url));
+  for (final file in files) {
+    request.files.add(
+      http.MultipartFile.fromBytes('files', file.bytes, filename: file.filename),
+    );
+  }
+  final streamedResponse = await request.send();
+  final response = await http.Response.fromStream(streamedResponse);
+  final headers = <String, String>{};
+  response.headers.forEach((key, value) => headers[key] = value);
+  return _Resp(response.statusCode, headers, response.body);
 }
 
 void main() {
@@ -175,10 +196,10 @@ void main() {
       expect(response.statusCode, 404);
     });
 
-    test('POST /api/upload 回傳 501（留給 Issue 3 實作）', () async {
+    test('POST /api/upload：非 multipart 請求回傳 400', () async {
       final response =
           await _realPost('http://127.0.0.1:${httpServer.port}/api/upload');
-      expect(response.statusCode, 501);
+      expect(response.statusCode, 400);
     });
 
     test('未知路徑回傳 404', () async {
@@ -680,6 +701,256 @@ void main() {
     test('無副檔名或空字串回傳 null', () {
       expect(bookFileFormatForFileName('book'), isNull);
       expect(bookFileFormatForFileName(''), isNull);
+    });
+  });
+
+  group('POST /api/upload', () {
+    // 【`/receiving-code-review` 審查修正，review-plan-issue-3.md C-1】
+    // 本群組所有測試皆透過真實 HTTP 請求觸發 _landUpload()，其內部呼叫
+    // path_provider 的 getApplicationDocumentsDirectory()——純 Dart
+    // `flutter test` 環境沒有原生實作可回應，需替換 PathProviderPlatform
+    // 為 FakePathProviderPlatform（比照 book_import_service_test.dart 等
+    // 既有慣例），否則 100% 拋出 MissingPluginException。
+    late Directory tempDocsDir;
+    late PathProviderPlatform originalPathProvider;
+
+    setUp(() {
+      originalPathProvider = PathProviderPlatform.instance;
+      tempDocsDir = Directory.systemTemp.createTempSync('wifi_upload_test_');
+      PathProviderPlatform.instance = FakePathProviderPlatform(tempDocsDir.path);
+    });
+
+    tearDown(() {
+      PathProviderPlatform.instance = originalPathProvider;
+      if (tempDocsDir.existsSync()) {
+        try {
+          tempDocsDir.deleteSync(recursive: true);
+        } catch (_) {}
+      }
+    });
+
+    test('上傳一個支援格式的檔案：回傳 200、outcome 為 imported，落地檔案內容正確、'
+        'displayNames 正確帶入原始檔名', () async {
+      final importedBook = Book(
+        id: 'x',
+        title: 'x',
+        format: BookFileFormat.epub,
+        filePath: 'x',
+        source: BookSource.local,
+        createTime: DateTime.fromMillisecondsSinceEpoch(0),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
+      );
+      final importService = FakeBookImportService()
+        ..pendingCompleter = (Completer<ImportResult>()
+          ..complete(ImportResult(importedBooks: [importedBook])));
+      final wifiServer = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(),
+          importService: importService,
+          computeFingerprint: FakeFingerprintComputer().call,
+          materializeContentUri: (uri) async => null,
+          deleteFile: (path) async {},
+        ),
+      );
+      final server = await wifiServer.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => wifiServer.stop(server));
+
+      final response = await _realMultipartUpload(
+        'http://127.0.0.1:${server.port}/api/upload',
+        [(filename: '我的書.epub', bytes: [1, 2, 3, 4, 5])],
+      );
+
+      expect(response.statusCode, 200);
+      final results = jsonDecode(response.body) as List<dynamic>;
+      expect(results, hasLength(1));
+      expect(results.single['originalFileName'], '我的書.epub');
+      expect(results.single['outcome'], 'imported');
+      final landedPath = importService.lastImportCall!.uris.single;
+      addTearDown(() async {
+        final f = File(landedPath);
+        if (await f.exists()) await f.delete();
+      });
+      expect(await File(landedPath).readAsBytes(), [1, 2, 3, 4, 5]);
+      expect(landedPath.endsWith('我的書.epub'), isTrue);
+      expect(importService.lastImportCall!.displayNames, ['我的書.epub']);
+    });
+
+    test('上傳不支援格式的檔案：回傳 200、outcome 為 unsupportedFormat，未呼叫 '
+        'importFiles', () async {
+      final importService = FakeBookImportService();
+      final wifiServer = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(),
+          importService: importService,
+          computeFingerprint: FakeFingerprintComputer().call,
+          materializeContentUri: (uri) async => null,
+          deleteFile: (path) async {},
+        ),
+      );
+      final server = await wifiServer.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => wifiServer.stop(server));
+
+      final response = await _realMultipartUpload(
+        'http://127.0.0.1:${server.port}/api/upload',
+        [(filename: '文件.docx', bytes: [1, 2, 3])],
+      );
+
+      expect(response.statusCode, 200);
+      final results = jsonDecode(response.body) as List<dynamic>;
+      expect(results.single['originalFileName'], '文件.docx');
+      expect(results.single['outcome'], 'unsupportedFormat');
+      expect(importService.lastImportCall, isNull);
+    });
+
+    test(
+        '同一請求內第一個檔案格式不支援、第二個支援：不支援的那個不會卡住'
+        '後續 part 的解析（M-2 驗證），第二個檔案正常匯入', () async {
+      final importedBook = Book(
+        id: 'x',
+        title: 'x',
+        format: BookFileFormat.pdf,
+        filePath: 'x',
+        source: BookSource.local,
+        createTime: DateTime.fromMillisecondsSinceEpoch(0),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
+      );
+      final importService = FakeBookImportService()
+        ..pendingCompleter = (Completer<ImportResult>()
+          ..complete(ImportResult(importedBooks: [importedBook])));
+      final wifiServer = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(),
+          importService: importService,
+          computeFingerprint: FakeFingerprintComputer().call,
+          materializeContentUri: (uri) async => null,
+          deleteFile: (path) async {},
+        ),
+      );
+      final server = await wifiServer.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => wifiServer.stop(server));
+
+      final response = await _realMultipartUpload(
+        'http://127.0.0.1:${server.port}/api/upload',
+        [
+          (filename: '不支援.docx', bytes: List.filled(1024, 7)),
+          (filename: '支援.pdf', bytes: [9, 9, 9]),
+        ],
+      );
+
+      expect(response.statusCode, 200);
+      final results = jsonDecode(response.body) as List<dynamic>;
+      expect(results, hasLength(2));
+      expect(results[0]['outcome'], 'unsupportedFormat');
+      expect(results[1]['outcome'], 'imported');
+      addTearDown(() async {
+        final landedPath = importService.lastImportCall!.uris.single;
+        final f = File(landedPath);
+        if (await f.exists()) await f.delete();
+      });
+    });
+
+    test('內容指紋命中既有書籍：回傳 duplicateSkipped，落地暫存檔已被刪除',
+        () async {
+      final fingerprintComputer = FakeFingerprintComputer()
+        ..nextFingerprint = 'dup-fp';
+      final existing = Book(
+        id: 'existing',
+        title: 'existing',
+        format: BookFileFormat.epub,
+        filePath: '/tmp/existing.epub',
+        source: BookSource.local,
+        contentFingerprint: 'dup-fp',
+        createTime: DateTime.fromMillisecondsSinceEpoch(0),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
+      );
+      final deleteCalls = <String>[];
+      final wifiServer = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(initialBooks: [existing]),
+          importService: FakeBookImportService(),
+          computeFingerprint: fingerprintComputer.call,
+          materializeContentUri: (uri) async => null,
+          deleteFile: (path) async => deleteCalls.add(path),
+        ),
+      );
+      final server = await wifiServer.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => wifiServer.stop(server));
+
+      final response = await _realMultipartUpload(
+        'http://127.0.0.1:${server.port}/api/upload',
+        [(filename: '重複的書.epub', bytes: [1, 2, 3])],
+      );
+
+      expect(response.statusCode, 200);
+      final results = jsonDecode(response.body) as List<dynamic>;
+      expect(results.single['outcome'], 'duplicateSkipped');
+      expect(deleteCalls, hasLength(1));
+      expect(deleteCalls.single.endsWith('重複的書.epub'), isTrue);
+    });
+
+    test('沒有任何檔案的合法 multipart 請求：回傳 200 與空陣列', () async {
+      final wifiServer = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          materializeContentUri: (uri) async => null,
+          deleteFile: (path) async {},
+        ),
+      );
+      final server = await wifiServer.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => wifiServer.stop(server));
+
+      final response = await _realMultipartUpload(
+        'http://127.0.0.1:${server.port}/api/upload',
+        [],
+      );
+
+      expect(response.statusCode, 200);
+      expect(jsonDecode(response.body), isEmpty);
+    });
+
+    test(
+        '檔名含作業系統禁用字元（例如冒號）：仍能成功落地並匯入，不因'
+        '非法檔名字元拋出 FileSystemException（`review-plan-issue-3.md` '
+        'I-3 回歸測試）', () async {
+      final importedBook = Book(
+        id: 'x',
+        title: 'x',
+        format: BookFileFormat.epub,
+        filePath: 'x',
+        source: BookSource.local,
+        createTime: DateTime.fromMillisecondsSinceEpoch(0),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
+      );
+      final importService = FakeBookImportService()
+        ..pendingCompleter = (Completer<ImportResult>()
+          ..complete(ImportResult(importedBooks: [importedBook])));
+      final wifiServer = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(),
+          importService: importService,
+          computeFingerprint: FakeFingerprintComputer().call,
+          materializeContentUri: (uri) async => null,
+          deleteFile: (path) async {},
+        ),
+      );
+      final server = await wifiServer.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => wifiServer.stop(server));
+
+      final response = await _realMultipartUpload(
+        'http://127.0.0.1:${server.port}/api/upload',
+        [(filename: '深入理解電腦系統：工程師觀點.epub', bytes: [1, 2, 3])],
+      );
+
+      expect(response.statusCode, 200);
+      final results = jsonDecode(response.body) as List<dynamic>;
+      expect(results.single['outcome'], 'imported');
+      addTearDown(() async {
+        final landedPath = importService.lastImportCall!.uris.single;
+        final f = File(landedPath);
+        if (await f.exists()) await f.delete();
+      });
     });
   });
 }
