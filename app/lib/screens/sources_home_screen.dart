@@ -7,6 +7,7 @@ import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
 import '../remote/remote_catalog_dependencies.dart';
+import '../wifi_transfer/wifi_transfer_dependencies.dart';
 import 'cloud_browser_screen.dart';
 import 'library_screen_dependencies.dart';
 import 'remote_server_list_screen.dart';
@@ -14,6 +15,7 @@ import 'support/book_import_picker_helper.dart';
 import 'widgets/download_queue_panel.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_section_header.dart';
+import 'wifi_transfer_screen.dart';
 
 /// 「來源」目的地聚合頁（epic-36-adaptive-shelf-navigation spec.md
 /// §功能①）：只聚合既有本機/雲端/OPDS 入口，不新增任何底層匯入/雲端
@@ -40,6 +42,11 @@ class SourcesHomeScreen extends StatelessWidget {
   /// 這裡維持同一個「有齊全相依才啟用」的既有慣例。
   final DownloadQueueController? downloadQueueController;
 
+  /// WiFi 傳書入口依賴（epic-44-wifi-book-transfer Issue 1，spec.md
+  /// 「依賴注入收斂」）：任一必要欄位為 `null` 時「本機」分區不顯示此
+  /// 入口。
+  final WifiTransferDependencies? wifiTransferDependencies;
+
   const SourcesHomeScreen({
     super.key,
     required this.repository,
@@ -52,6 +59,7 @@ class SourcesHomeScreen extends StatelessWidget {
     this.onNavigateToLibrary,
     this.onNavigateToSettings,
     this.downloadQueueController,
+    this.wifiTransferDependencies,
   });
 
   Future<void> _handlePickFiles(BuildContext context) async {
@@ -131,6 +139,20 @@ class SourcesHomeScreen extends StatelessWidget {
     );
   }
 
+  void _openWifiTransfer(BuildContext context) {
+    final deps = wifiTransferDependencies!;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => WifiTransferScreen(
+          libraryRepository: deps.libraryRepository!,
+          importService: deps.importService!,
+          computeFingerprint: deps.computeFingerprint!,
+          checkNetworkAvailability: deps.checkNetworkAvailability!,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final googleDriveClient = cloudAccountDependencies.googleDriveStorageClient;
@@ -149,6 +171,11 @@ class SourcesHomeScreen extends StatelessWidget {
         remoteLibraryDependencies.thumbnailCache != null &&
         computeFingerprint != null &&
         downloadQueueController != null;
+    final wifiTransferEnabled =
+        wifiTransferDependencies?.libraryRepository != null &&
+        wifiTransferDependencies?.importService != null &&
+        wifiTransferDependencies?.computeFingerprint != null &&
+        wifiTransferDependencies?.checkNetworkAvailability != null;
     return Scaffold(
       appBar: AppBar(
         title: const Text('來源'),
@@ -190,6 +217,17 @@ class SourcesHomeScreen extends StatelessWidget {
               onTap: () => _handlePickFolder(context),
             ),
           ),
+          if (wifiTransferEnabled)
+            EBFieldCard(
+              padding: EdgeInsets.zero,
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: ListTile(
+                key: const Key('sources_wifi_transfer_tile'),
+                leading: const Icon(Icons.wifi),
+                title: const Text('WiFi 傳書'),
+                onTap: () => _openWifiTransfer(context),
+              ),
+            ),
           const EBSectionHeader(title: '已連結服務'),
           EBFieldCard(
             padding: EdgeInsets.zero,
