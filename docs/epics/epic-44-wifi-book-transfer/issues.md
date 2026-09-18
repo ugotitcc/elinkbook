@@ -113,7 +113,7 @@
 
 ## Issue 4：WiFi 傳書體驗強化（上傳狀態與進度、佈局重排、下載搜尋與分頁、手機端傳輸指示）
 
-**Status:** completed（**2026-09-19 已完成，分支 `feat/epic-44-issue-4`：`plans/plan-issue-4.md` 4 個 Task 全數完成——`WifiTransferScreen` QR Code 下方動態傳輸指示條（`_activeTransfersNotifier` 監聽、E-Ink 高對比適配、Widget 測試 2 項）、`index.html` 上傳區塊置頂與雙階段進度（含 `formatBytesShort`、`aria-disabled`、`lengthComputable` 降級、轉圈動畫）、下載清單即時搜尋/20 本分頁/`Set` 跨頁勾選/全選清除快捷與下載； `flutter analyze` 零問題、76 項 WiFi 傳書相關測試全數通過，待建立 PR 合併回 `main`。**）
+**Status:** completed（**2026-09-18 已完成，PR #260 已合併：`plans/plan-issue-4.md` 4 個 Task 全數完成——`WifiTransferScreen` QR Code 下方動態傳輸指示條（`_activeTransfersNotifier` 監聽、E-Ink 高對比適配、Widget 測試 2 項）、`index.html` 上傳區塊置頂與雙階段進度（含 `formatBytesShort`、`aria-disabled`、`lengthComputable` 降級、轉圈動畫、M-1 防重入、M-3 onabort/ontimeout、M-4 upload.onload 兜底）、下載清單即時搜尋/20 本分頁/`Set` 跨頁勾選（M-2 快照疊代）/全選清除快捷與下載； `flutter analyze` 零問題、76 項 WiFi 傳書相關測試全數通過。**）
 
 **依賴：** Issue 1、Issue 2、Issue 3。
 
