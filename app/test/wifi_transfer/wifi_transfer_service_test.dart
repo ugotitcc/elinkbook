@@ -118,4 +118,126 @@ void main() {
       expect(result.firstWhere((b) => b.id == 'b2').sizeBytes, isNotNull);
     });
   });
+
+  group('resolveDownloadSource', () {
+    test('找不到書籍：回傳 null（呼叫端回 404）', () async {
+      final service = buildService();
+
+      expect(await service.resolveDownloadSource('missing'), isNull);
+    });
+
+    test('書籍存在但 isDownloaded == false：回傳 null', () async {
+      final book = _bookWith(
+          id: 'b1', filePath: 'test/fixtures/sample.pdf', isDownloaded: false);
+      final service = buildService(initialBooks: [book]);
+
+      expect(await service.resolveDownloadSource('b1'), isNull);
+    });
+
+    test(
+        '圖書庫有多本書時，依 bookId 精確比對出正確的那一本（確實呼叫'
+        ' findBookById，而非誤用 listBooks() 取第一筆）', () async {
+      final first =
+          _bookWith(id: 'b1', filePath: 'test/fixtures/sample.epub', title: '第一本');
+      final second = _bookWith(
+          id: 'b2',
+          filePath: 'test/fixtures/sample.pdf',
+          format: BookFileFormat.pdf,
+          title: '第二本');
+      final service = buildService(initialBooks: [first, second]);
+
+      final source = await service.resolveDownloadSource('b2');
+
+      expect(source!.resolvedPath, 'test/fixtures/sample.pdf');
+      expect(source.downloadFileName, '第二本.pdf');
+    });
+
+    test('本機路徑來源：resolvedPath 為原始 filePath、isTemporaryFile 為 false、'
+        '副檔名維持原格式', () async {
+      final book = _bookWith(
+        id: 'b1',
+        filePath: 'test/fixtures/sample.pdf',
+        format: BookFileFormat.pdf,
+        title: '測試書',
+      );
+      final service = buildService(initialBooks: [book]);
+
+      final source = await service.resolveDownloadSource('b1');
+
+      expect(source, isNotNull);
+      expect(source!.resolvedPath, 'test/fixtures/sample.pdf');
+      expect(source.downloadFileName, '測試書.pdf');
+      expect(source.isTemporaryFile, isFalse);
+    });
+
+    test(
+        '本機路徑但檔案已被外部刪除：回傳 null（呼叫端回 404，而非因'
+        ' file.length() 拋出 FileSystemException 回 500——審查修正 I-4）',
+        () async {
+      final book = _bookWith(
+          id: 'b1', filePath: 'test/fixtures/does_not_exist_book.pdf');
+      final service = buildService(initialBooks: [book]);
+
+      expect(await service.resolveDownloadSource('b1'), isNull);
+    });
+
+    test('content:// 來源：呼叫 materializeContentUri 並回傳其結果、'
+        'isTemporaryFile 為 true', () async {
+      final book = _bookWith(
+        id: 'b1',
+        filePath: 'content://com.example.provider/document/42',
+        title: '測試書',
+      );
+      final calls = <String>[];
+      final service = buildService(
+        initialBooks: [book],
+        materializeContentUri: (uri) async {
+          calls.add(uri);
+          return '/tmp/materialized.epub';
+        },
+      );
+
+      final source = await service.resolveDownloadSource('b1');
+
+      expect(calls, ['content://com.example.provider/document/42']);
+      expect(source!.resolvedPath, '/tmp/materialized.epub');
+      expect(source.isTemporaryFile, isTrue);
+    });
+
+    test('content:// 材質化失敗（回傳 null）：整體回傳 null', () async {
+      final book = _bookWith(
+          id: 'b1', filePath: 'content://com.example.provider/document/42');
+      final service = buildService(initialBooks: [book]);
+
+      expect(await service.resolveDownloadSource('b1'), isNull);
+    });
+
+    test('TXT 來源書籍：downloadFileName 誠實改寫為 .epub', () async {
+      final book = _bookWith(
+        id: 'b1',
+        filePath: 'test/fixtures/sample.pdf',
+        format: BookFileFormat.txt,
+        title: '我的筆記',
+      );
+      final service = buildService(initialBooks: [book]);
+
+      final source = await service.resolveDownloadSource('b1');
+
+      expect(source!.downloadFileName, '我的筆記.epub');
+    });
+
+    test('MD 來源書籍：downloadFileName 誠實改寫為 .epub', () async {
+      final book = _bookWith(
+        id: 'b1',
+        filePath: 'test/fixtures/sample.pdf',
+        format: BookFileFormat.md,
+        title: '我的筆記',
+      );
+      final service = buildService(initialBooks: [book]);
+
+      final source = await service.resolveDownloadSource('b1');
+
+      expect(source!.downloadFileName, '我的筆記.epub');
+    });
+  });
 }

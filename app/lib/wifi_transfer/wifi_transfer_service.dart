@@ -5,6 +5,7 @@ import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../library/models/library_enums.dart';
+import '../remote/opds_client.dart' show fileExtensionFor;
 
 /// 一次上傳單一檔案的處理結果（epic-44-wifi-book-transfer spec.md
 /// 「`wifi_transfer_service.dart`」，Issue 3 填入 [WifiTransferService.handleUploadedFile]
@@ -129,9 +130,45 @@ class WifiTransferService {
     }
   }
 
-  /// Issue 2 實作：`findBookById(bookId)` → `content://` 材質化 →
-  /// TXT/MD 副檔名改寫，詳見 spec.md「`wifi_transfer_service.dart`」。
+  /// 對應「content:// 下載」＋「TXT/MD 來源書籍誠實回傳 .epub」決策
+  /// （spec.md「`wifi_transfer_service.dart`」）。找不到書籍、
+  /// `!isDownloaded`、本機檔案已被外部刪除，或 `content://` 材質化失敗時
+  /// 皆回傳 `null`——路由層（`WifiTransferHttpServer`）無法從單一
+  /// nullable 回傳型別區分這些原因（`DownloadSource?` 是 Issue 1 已定案、
+  /// 已合併的方法簽章，本 Issue 不變更它），一律視為 404，比照 spec.md
+  /// 「HTTP 路由表」對本路由僅明確提及 404 的用詞——材質化失敗屬於極少
+  /// 發生的邊界情境（SAF 授權過期或裝置儲存空間不足）。
+  ///
+  /// **（`/receiving-code-review` 審查修正，review-plan-issue-2.md I-4）**
+  /// 本機路徑（非 `content://`）情境下，Task 1 的 `_localSizeBytes()`
+  /// 已對「記錄存在但檔案已被外部刪除」做了防呆，這裡原本遺漏了同一種
+  /// 防呆——若不檢查，`_handleDownload()`（Task 7）稍後呼叫
+  /// `file.length()` 會拋出未預期的 `FileSystemException`，讓路由回傳
+  /// HTTP 500 而非語意正確的 404。
   Future<DownloadSource?> resolveDownloadSource(String bookId) async {
-    throw UnimplementedError('Issue 2 實作：下載來源解析');
+    final book = await libraryRepository.findBookById(bookId);
+    if (book == null || !book.isDownloaded) return null;
+    final isContentUri = book.filePath.contains('://');
+    final resolvedPath = isContentUri
+        ? await materializeContentUri(book.filePath)
+        : book.filePath;
+    if (resolvedPath == null) return null;
+    if (!isContentUri && !await File(resolvedPath).exists()) return null;
+    return DownloadSource(
+      resolvedPath: resolvedPath,
+      downloadFileName: _downloadFileNameFor(book),
+      isTemporaryFile: isContentUri,
+    );
+  }
+
+  /// TXT／MD 來源書籍在匯入時已被合成為 EPUB3 結構（`Book.filePath` 指向
+  /// 合成檔案，見 ADR 0023），下載時對使用者誠實回傳 `.epub`，而非 `Book`
+  /// 記錄本身仍保留的 `txt`／`md` 格式標記。
+  String _downloadFileNameFor(Book book) {
+    final honestFormat =
+        (book.format == BookFileFormat.txt || book.format == BookFileFormat.md)
+            ? BookFileFormat.epub
+            : book.format;
+    return '${book.title}.${fileExtensionFor(honestFormat)}';
   }
 }
