@@ -64,7 +64,7 @@
 
 ## Issue 2：下載功能
 
-**Status:** ready-for-agent
+**Status:** completed（**2026-09-18 已完成並合併回 `main`（PR [#258](https://git.jigong.org/huthief/elinkBook/pulls/258)，分支 `feat/epic-44-issue-2`）**：`plans/plan-issue-2.md` 10 個 Task 全數完成——`WifiTransferService.listDownloadableBooks()`／`resolveDownloadSource()` 兩個純邏輯方法實作、`WifiTransferHttpServer.withTransferPermit()` 內部重構為 `_acquirePermit()`／`_releasePermit()`（讓併發許可持有到下載串流真正結束才釋放，而非 `Response` 物件建構完成的當下）、新增 `wrapStreamWithCleanup()` 純函式（正確轉發下游背壓、`onDone`/`onError`/`onCancel` 三路徑皆恰好清理一次）、新增 `buildContentDispositionHeader()` 純函式（RFC 5987/6266，含 HTTP header injection 防護）、`GET /api/books`／`GET /api/books/<id>/download` 兩條路由、`assets/wifi_transfer/index.html` 下載區塊 JS、`integration_test/wifi_transfer_screen_test.dart` 新增 5 個真機測試。獨立程式審查（`reviews/review-issue-2.md`）：0 Critical／1 Important（測試覆蓋面：缺少「兩個真實並發下載請求」直接驗證節流生效的端對端測試，不影響程式碼正確性判斷）／3 Minor（清單 `format` 欄位與 TXT/MD 誠實下載檔名不一致、一個已定案的極窄 TOCTOU→500 取捨、無 HTTP Range 續傳支援），結論 Ready to merge: Yes。`flutter analyze`（No issues found）／`test/wifi_transfer/` 48 個測試全數通過／完整 `flutter test`（2587 passed / 1 skipped / 2 failed，2 個失敗經比對為既存缺陷，非本 Issue 引入的回歸）皆為綠燈；真機 `integration_test` 因審查環境無裝置未能獨立驗證，僅審查程式邏輯合理性。）
 
 **依賴：** Issue 0（`findBookById`／修正後的 `readContentUriAll`）、Issue 1（`WifiTransferHttpServer`／`WifiTransferService` 骨架、併發號誌、首頁）。
 
