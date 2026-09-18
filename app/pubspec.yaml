@@ -197,6 +197,7 @@ flutter:
     - test/fixtures/sample_synth.md
     - test/fixtures/sample.md
     - test/fixtures/sample.ttf
+    - assets/wifi_transfer/index.html
     - assets/fonts/GuanKiapTsingKhai.ttf
     # 開發期暫停用（建置速度優化，其餘 4 款字型檔約 134MB）：檔案暫存於
     # tmp/fonts/（見 tmp/fonts/README.md 的恢復步驟），正式建置前需恢復。
