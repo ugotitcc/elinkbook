@@ -153,6 +153,25 @@ void main() {
       expect(body, contains('formatBytesShort'));
     });
 
+    test('GET /：HTML 包含書籍清單搜尋、分頁控制項與批次勾選工具列（Issue 4 下載體驗增強）',
+        () async {
+      final response = await _realGet('http://127.0.0.1:${httpServer.port}/');
+      expect(response.statusCode, 200);
+      final body = response.body;
+      expect(body, contains('id="download-search-input"'));
+      expect(body, contains('id="download-search-stats"'));
+      expect(body, contains('id="download-select-page-button"'));
+      expect(body, contains('id="download-clear-selection-button"'));
+      expect(body, contains('id="download-selection-count"'));
+      expect(body, contains('id="download-pagination"'));
+      expect(body, contains('id="download-prev-page-button"'));
+      expect(body, contains('id="download-next-page-button"'));
+      expect(body, contains('id="download-page-info"'));
+      expect(body, contains('const PAGE_SIZE = 20;'));
+      expect(body, contains('new Set()'));
+      expect(body, contains('toLowerCase()'));
+    });
+
     test('GET /index.html 與 GET / 行為相同（M-3：容錯使用者手動輸入的網址）',
         () async {
       final response =
