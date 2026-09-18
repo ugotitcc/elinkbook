@@ -38,6 +38,8 @@ import 'reader/tts_provider.dart';
 import 'remote/opds_client.dart';
 import 'remote/opds_http_client.dart';
 import 'remote/remote_server_repository.dart';
+import 'wifi_transfer/network_availability.dart';
+import 'wifi_transfer/wifi_transfer_dependencies.dart';
 import 'remote/remote_thumbnail_cache.dart';
 import 'remote/sqlite_remote_server_repository.dart';
 import 'screens/adaptive_shell_scaffold.dart';
@@ -274,6 +276,7 @@ Future<void> main() async {
       computeFingerprint: computeBookContentFingerprint,
       thumbnailCache: thumbnailCache,
       isMobileDataConnection: _isMobileDataConnection,
+      checkNetworkAvailability: checkNetworkAvailability,
       downloadQueueController: downloadQueueController,
       navigatorKey: navigatorKey,
       initialTheme: initialTheme,
@@ -330,6 +333,11 @@ class ElinkBookApp extends StatefulWidget {
   final bool isFullTextSearchAvailable;
   final SearchRepository? searchRepository;
 
+  /// WiFi 傳書入口的網路先決條件偵測（epic-44-wifi-book-transfer
+  /// Issue 1），生產環境傳入 `checkNetworkAvailability`（`network_availability.dart`
+  /// 頂層函式）。
+  final CheckNetworkAvailability? checkNetworkAvailability;
+
   ElinkBookApp({
     super.key,
     required this.repository,
@@ -367,6 +375,7 @@ class ElinkBookApp extends StatefulWidget {
     this.fullTextSearchSettingsRepository,
     this.isFullTextSearchAvailable = true,
     this.searchRepository,
+    this.checkNetworkAvailability,
     AppThemePreferences? themePreferences,
   }) : themePreferences = themePreferences ?? AppThemePreferences();
 
@@ -471,6 +480,12 @@ class _ElinkBookAppState extends State<ElinkBookApp>
           isEinkMode: _isEinkMode,
           onThemeChanged: _handleThemeChanged,
           onEinkModeChanged: _handleEinkModeChanged,
+        ),
+        wifiTransferDependencies: WifiTransferDependencies(
+          libraryRepository: widget.repository,
+          importService: widget.importService,
+          computeFingerprint: widget.computeFingerprint,
+          checkNetworkAvailability: widget.checkNetworkAvailability,
         ),
       ),
     );
