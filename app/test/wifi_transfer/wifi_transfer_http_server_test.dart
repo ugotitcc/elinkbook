@@ -660,4 +660,26 @@ void main() {
       expect(header, contains('filename="_"'));
     });
   });
+
+  group('bookFileFormatForFileName', () {
+    test('支援的副檔名對應到正確的 BookFileFormat，且不分大小寫', () {
+      expect(bookFileFormatForFileName('book.epub'), BookFileFormat.epub);
+      expect(bookFileFormatForFileName('book.EPUB'), BookFileFormat.epub);
+      expect(bookFileFormatForFileName('book.pdf'), BookFileFormat.pdf);
+      expect(bookFileFormatForFileName('book.txt'), BookFileFormat.txt);
+      expect(bookFileFormatForFileName('book.azw3'), BookFileFormat.azw3);
+      expect(bookFileFormatForFileName('book.cbz'), BookFileFormat.cbz);
+      expect(bookFileFormatForFileName('book.md'), BookFileFormat.md);
+    });
+
+    test('不在白名單內的副檔名回傳 null', () {
+      expect(bookFileFormatForFileName('book.docx'), isNull);
+      expect(bookFileFormatForFileName('book.zip'), isNull);
+    });
+
+    test('無副檔名或空字串回傳 null', () {
+      expect(bookFileFormatForFileName('book'), isNull);
+      expect(bookFileFormatForFileName(''), isNull);
+    });
+  });
 }

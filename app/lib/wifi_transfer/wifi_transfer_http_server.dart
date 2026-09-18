@@ -4,9 +4,12 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:path/path.dart' as p;
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf/shelf_io.dart' as shelf_io;
 
+import '../library/models/library_enums.dart';
+import '../remote/opds_client.dart' show fileExtensionFor;
 import 'wifi_transfer_service.dart';
 
 /// 「來源」畫面 WiFi 傳書入口啟動的本機 HTTP Server 薄殼層
@@ -343,4 +346,18 @@ String _asciiFallbackFilename(String filename) {
   }
   final result = buffer.toString();
   return result.isEmpty ? '_' : result;
+}
+
+/// 依檔名副檔名反查對應的 [BookFileFormat]（epic-44-wifi-book-transfer
+/// spec.md「HTTP 路由表」上傳白名單判斷）：反查既有 [fileExtensionFor] 的
+/// 對應表，不重新維護第二份白名單常數。副檔名比對不分大小寫；無副檔名或
+/// 不在白名單內一律回傳 `null`（呼叫端視為 [UploadOutcome.unsupportedFormat]）。
+BookFileFormat? bookFileFormatForFileName(String fileName) {
+  final extension = p.extension(fileName);
+  if (extension.isEmpty) return null;
+  final normalized = extension.substring(1).toLowerCase();
+  for (final format in BookFileFormat.values) {
+    if (fileExtensionFor(format) == normalized) return format;
+  }
+  return null;
 }
