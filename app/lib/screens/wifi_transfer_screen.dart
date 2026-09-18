@@ -243,6 +243,64 @@ class _WifiTransferScreenState extends State<WifiTransferScreen> {
                     size: 200,
                     backgroundColor: Colors.white,
                   ),
+                  ValueListenableBuilder<int>(
+                    valueListenable: _activeTransfersNotifier,
+                    builder: (context, activeCount, _) {
+                      if (activeCount <= 0) {
+                        return const SizedBox.shrink();
+                      }
+                      final theme = Theme.of(context);
+                      // 【`/receiving-code-review` 審查修正 I-1】以亮度與 primary/scaffold 顏色
+                      // 推斷 E-Ink 高對比主題；未來若全面重構可改為讀取 AppThemePreferences.isEinkMode。
+                      final isEink = theme.brightness == Brightness.light &&
+                          theme.colorScheme.primary == Colors.black &&
+                          theme.scaffoldBackgroundColor == Colors.white;
+                      return Container(
+                        key: const Key('wifi_transfer_active_transfers_banner'),
+                        margin: const EdgeInsets.only(top: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isEink
+                              ? Colors.white
+                              : theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isEink
+                                ? Colors.black
+                                : theme.colorScheme.outline.withValues(alpha: 0.35),
+                            width: 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: isEink ? Colors.black : theme.colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              '正在傳輸中（$activeCount 個檔案）…',
+                              key: const Key('wifi_transfer_active_transfers_text'),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: isEink
+                                    ? Colors.black
+                                    : theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                   const SizedBox(height: 16),
                 ],
               ),
