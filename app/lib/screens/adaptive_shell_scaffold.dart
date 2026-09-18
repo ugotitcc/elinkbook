@@ -5,6 +5,7 @@ import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../wifi_transfer/wifi_transfer_dependencies.dart';
 import 'library_screen.dart';
 import 'library_screen_dependencies.dart';
 import 'settings_scaffold.dart';
@@ -42,6 +43,10 @@ class AdaptiveShellScaffold extends StatefulWidget {
   final DownloadQueueController? downloadQueueController;
   final LibraryThemeDependencies themeDependencies;
 
+  /// WiFi 傳書入口依賴（epic-44-wifi-book-transfer Issue 1），原樣往下
+  /// 傳給 `SourcesHomeScreen`。
+  final WifiTransferDependencies? wifiTransferDependencies;
+
   const AdaptiveShellScaffold({
     super.key,
     required this.repository,
@@ -55,6 +60,7 @@ class AdaptiveShellScaffold extends StatefulWidget {
     this.isMobileDataConnection,
     this.downloadQueueController,
     this.themeDependencies = const LibraryThemeDependencies(),
+    this.wifiTransferDependencies,
   });
 
   @override
@@ -119,6 +125,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
               isEinkMode: widget.themeDependencies.isEinkMode,
               onNavigateToLibrary: () => _navigateTo(0),
               onNavigateToSettings: () => _navigateTo(2),
+              wifiTransferDependencies: widget.wifiTransferDependencies,
             ),
             SettingsScaffold(
               prefsManager: widget.prefsManager,

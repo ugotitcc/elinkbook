@@ -6,9 +6,16 @@ import 'package:elinkbook/cloud_import/cloud_download_job.dart';
 import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/cloud_browser_screen.dart';
+import 'package:wakelock_plus/wakelock_plus.dart' show wakelockPlusPlatformInstance;
+import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interface.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
 import 'package:elinkbook/screens/sources_home_screen.dart';
+import 'package:elinkbook/screens/wifi_transfer_screen.dart';
+import 'package:elinkbook/wifi_transfer/network_availability.dart';
+import 'package:elinkbook/wifi_transfer/wifi_transfer_dependencies.dart';
+
+import '../support/fake_wakelock_plus_platform.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
@@ -24,11 +31,21 @@ void main() {
   );
   const folderPickerChannel = MethodChannel('elinkbook/folder_picker');
 
+  late FakeWakelockPlusPlatform fakeWakelock;
+  late WakelockPlusPlatformInterface originalWakelockPlatform;
+
+  setUp(() {
+    fakeWakelock = FakeWakelockPlusPlatform();
+    originalWakelockPlatform = wakelockPlusPlatformInstance;
+    wakelockPlusPlatformInstance = fakeWakelock;
+  });
+
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(filePickerChannel, null);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(folderPickerChannel, null);
+    wakelockPlusPlatformInstance = originalWakelockPlatform;
   });
 
   testWidgets('點擊「選擇檔案」觸發 FilePicker 並匯入', (tester) async {
@@ -311,5 +328,69 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+
+  testWidgets('wifiTransferDependencies 為 null 時不顯示 WiFi 傳書入口', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SourcesHomeScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('sources_wifi_transfer_tile')), findsNothing);
+  });
+
+  testWidgets('wifiTransferDependencies 任一欄位為 null 時不顯示入口', (tester) async {
+    final fingerprintComputer = FakeFingerprintComputer();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SourcesHomeScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          wifiTransferDependencies: WifiTransferDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            importService: FakeBookImportService(),
+            computeFingerprint: fingerprintComputer.call,
+            // checkNetworkAvailability 刻意缺漏
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('sources_wifi_transfer_tile')), findsNothing);
+  });
+
+  testWidgets('wifiTransferDependencies 齊全時顯示入口並可點擊導覽至 WifiTransferScreen',
+      (tester) async {
+    final fingerprintComputer = FakeFingerprintComputer();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SourcesHomeScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          wifiTransferDependencies: WifiTransferDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            importService: FakeBookImportService(),
+            computeFingerprint: fingerprintComputer.call,
+            checkNetworkAvailability: () async => const NetworkAvailability(
+              kind: NetworkAvailabilityKind.unavailable,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('sources_wifi_transfer_tile')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('sources_wifi_transfer_tile')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(WifiTransferScreen), findsOneWidget);
   });
 }

@@ -152,6 +152,7 @@ dev_dependencies:
   # 需要這個 platform interface 套件才能取得 FlutterSecureStoragePlatform
   # 型別以設定 .instance。
   flutter_secure_storage_platform_interface: ^2.0.1
+  wakelock_plus_platform_interface: ^1.6.0
 
 # flutter_inappwebview_android 1.1.3 有 toMap() 無限遞迴 bug（line 198 呼叫
 # ...toMap() 而非手動組裝 map），造成 InternalStoragePathHandler 使用時
@@ -197,6 +198,7 @@ flutter:
     - test/fixtures/sample_synth.md
     - test/fixtures/sample.md
     - test/fixtures/sample.ttf
+    - assets/wifi_transfer/index.html
     - assets/fonts/GuanKiapTsingKhai.ttf
     # 開發期暫停用（建置速度優化，其餘 4 款字型檔約 134MB）：檔案暫存於
     # tmp/fonts/（見 tmp/fonts/README.md 的恢復步驟），正式建置前需恢復。

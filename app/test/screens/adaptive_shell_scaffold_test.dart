@@ -8,10 +8,14 @@ import 'package:elinkbook/screens/adaptive_shell_scaffold.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
+import 'package:elinkbook/screens/sources_home_screen.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
+import 'package:elinkbook/wifi_transfer/network_availability.dart';
+import 'package:elinkbook/wifi_transfer/wifi_transfer_dependencies.dart';
 
 import '../support/fake_book_import_service.dart';
+import '../support/fake_fingerprint_computer.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_custom_fonts_repository.dart';
@@ -273,5 +277,35 @@ void main() {
       fullTextSearchSettingsRepository,
     );
     expect(settingsScreen.isFullTextSearchAvailable, isFalse);
+  });
+
+  testWidgets('wifiTransferDependencies 正確原樣傳遞給 SourcesHomeScreen', (tester) async {
+    final fingerprintComputer = FakeFingerprintComputer();
+    final wifiDeps = WifiTransferDependencies(
+      libraryRepository: FakeLibraryRepository(),
+      importService: FakeBookImportService(),
+      computeFingerprint: fingerprintComputer.call,
+      checkNetworkAvailability: () async =>
+          const NetworkAvailability(kind: NetworkAvailabilityKind.unavailable),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: AdaptiveShellScaffold(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          wifiTransferDependencies: wifiDeps,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_source_button')));
+    await tester.pumpAndSettle();
+
+    final sourcesHomeScreen =
+        tester.widget<SourcesHomeScreen>(find.byType(SourcesHomeScreen));
+    expect(sourcesHomeScreen.wifiTransferDependencies, wifiDeps);
   });
 }
