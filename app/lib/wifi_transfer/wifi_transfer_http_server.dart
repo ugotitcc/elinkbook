@@ -148,10 +148,10 @@ class WifiTransferHttpServer {
     if (request.method == 'GET' && path == 'api/books') {
       return _handleListBooks();
     }
-    if (request.method == 'GET' &&
-        RegExp(r'^api/books/[^/]+/download$').hasMatch(path)) {
-      // Issue 2 補上：service.resolveDownloadSource()。
-      return shelf.Response(501, body: 'Not Implemented');
+    final downloadMatch =
+        RegExp(r'^api/books/([^/]+)/download$').firstMatch(path);
+    if (request.method == 'GET' && downloadMatch != null) {
+      return _handleDownload(downloadMatch.group(1)!);
     }
     if (request.method == 'POST' && path == 'api/upload') {
       // Issue 3 補上：shelf_multipart 解析＋service.handleUploadedFile()。
@@ -182,6 +182,74 @@ class WifiTransferHttpServer {
         'cache-control': 'no-cache',
       },
     );
+  }
+
+  /// 處理 `GET /api/books/<id>/download`（epic-44-wifi-book-transfer
+  /// spec.md「HTTP 路由表」）。併發許可改用 [_acquirePermit]／
+  /// [_releasePermit] 手動配對（而非 [withTransferPermit]），理由見
+  /// [withTransferPermit] 文件註解：許可須持有到位元組真正傳輸完畢（由
+  /// [wrapStreamWithCleanup] 的完成/例外/取消三個回呼觸發釋放），不能在
+  /// `Response` 物件建構完成的當下就釋放。
+  Future<shelf.Response> _handleDownload(String bookId) async {
+    await _acquirePermit();
+    var permitReleased = false;
+    void releasePermitOnce() {
+      if (permitReleased) return;
+      permitReleased = true;
+      _releasePermit();
+    }
+    // 【`/receiving-code-review` 審查修正，review-plan-issue-2.md I-3】
+    // 提升到 try 區塊外宣告，讓下方 catch 區塊能存取已材質化的
+    // content:// 暫存檔路徑並清理——原設計把它宣告在 try 內，catch 區塊
+    // 根本無法引用它（連編譯都過不了），materializeContentUri() 產生的
+    // 暫存檔在 resolveDownloadSource() 成功之後、file.length() 之前若
+    // 拋出任何例外，會永久殘留在快取目錄中。
+    DownloadSource? source;
+    try {
+      source = await service.resolveDownloadSource(bookId);
+      if (source == null) {
+        releasePermitOnce();
+        return shelf.Response.notFound('Not Found');
+      }
+      final file = File(source.resolvedPath);
+      final length = await file.length();
+      var cleanedUp = false;
+      Future<void> finishOnce() async {
+        if (cleanedUp) return;
+        cleanedUp = true;
+        releasePermitOnce();
+        if (source!.isTemporaryFile) {
+          // 【審查修正 I-5】刪除暫存檔是 best-effort 清理，失敗（例如
+          // 已被其他流程刪除）不應成為未捕捉的非同步例外冒出、觸發全域
+          // 錯誤處理器——比照本專案既有「靜默略過非關鍵清理失敗」慣例。
+          try {
+            await service.deleteFile(source.resolvedPath);
+          } catch (_) {}
+        }
+      }
+
+      final body = wrapStreamWithCleanup(file.openRead(), finishOnce);
+      return shelf.Response.ok(
+        body,
+        headers: {
+          'content-type': 'application/octet-stream',
+          'content-length': '$length',
+          'content-disposition':
+              buildContentDispositionHeader(source.downloadFileName),
+        },
+      );
+    } catch (_) {
+      releasePermitOnce();
+      // 【審查修正 I-3】resolveDownloadSource() 成功後、file.length() 之前
+      // 若拋出例外，已材質化的 content:// 暫存檔仍須清理，否則永久洩漏。
+      final resolvedSource = source;
+      if (resolvedSource != null && resolvedSource.isTemporaryFile) {
+        try {
+          await service.deleteFile(resolvedSource.resolvedPath);
+        } catch (_) {}
+      }
+      rethrow;
+    }
   }
 }
 

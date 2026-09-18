@@ -46,6 +46,32 @@ Future<_Resp> _realGet(String url) =>
 Future<_Resp> _realPost(String url) =>
     _sendRealRequest(url, openRequest: (client, uri) => client.postUrl(uri));
 
+class _BytesResp {
+  final int statusCode;
+  final Map<String, String> headers;
+  final List<int> bodyBytes;
+  _BytesResp(this.statusCode, this.headers, this.bodyBytes);
+}
+
+Future<_BytesResp> _realGetBytes(String url) async {
+  final client = HttpClient();
+  try {
+    final req = await client.getUrl(Uri.parse(url));
+    final resp = await req.close();
+    final bytes = <int>[];
+    await for (final chunk in resp) {
+      bytes.addAll(chunk);
+    }
+    final headers = <String, String>{};
+    resp.headers.forEach((name, values) {
+      headers[name] = values.join(', ');
+    });
+    return _BytesResp(resp.statusCode, headers, bytes);
+  } finally {
+    client.close(force: true);
+  }
+}
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -143,10 +169,10 @@ void main() {
       expect(entry['sizeBytes'], isNull);
     });
 
-    test('GET /api/books/<id>/download 回傳 501（留給 Issue 2 實作）', () async {
+    test('GET /api/books/<id>/download：找不到書籍回傳 404', () async {
       final response = await _realGet(
-          'http://127.0.0.1:${httpServer.port}/api/books/abc123/download');
-      expect(response.statusCode, 501);
+          'http://127.0.0.1:${httpServer.port}/api/books/no-such-book/download');
+      expect(response.statusCode, 404);
     });
 
     test('POST /api/upload 回傳 501（留給 Issue 3 實作）', () async {
@@ -249,6 +275,214 @@ void main() {
 
       holdFirst.complete();
       expect(await task1, 1);
+    });
+  });
+
+  group('GET /api/books/<id>/download', () {
+    Book bookWith({
+      required String id,
+      required String filePath,
+      String title = '書名',
+      BookFileFormat format = BookFileFormat.epub,
+    }) {
+      final now = DateTime.fromMillisecondsSinceEpoch(0);
+      return Book(
+        id: id,
+        title: title,
+        format: format,
+        filePath: filePath,
+        source: BookSource.local,
+        createTime: now,
+        lastReadTime: now,
+      );
+    }
+
+    test('本機路徑來源：回傳正確位元組、Content-Length 與 Content-Disposition',
+        () async {
+      final book = bookWith(
+        id: 'b1',
+        filePath: 'test/fixtures/sample.pdf',
+        title: '測試書',
+        format: BookFileFormat.pdf,
+      );
+      final wifiServer = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          materializeContentUri: (uri) async => null,
+          deleteFile: (path) async {},
+        ),
+      );
+      final server = await wifiServer.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => wifiServer.stop(server));
+
+      final response = await _realGetBytes(
+          'http://127.0.0.1:${server.port}/api/books/b1/download');
+
+      final expectedBytes = await File('test/fixtures/sample.pdf').readAsBytes();
+      expect(response.statusCode, 200);
+      expect(response.bodyBytes, expectedBytes);
+      expect(response.headers['content-length'], '${expectedBytes.length}');
+      expect(response.headers['content-disposition'],
+          contains(buildContentDispositionHeader('測試書.pdf')));
+    });
+
+    test('content:// 來源：呼叫 materializeContentUri，下載完成後呼叫 deleteFile '
+        '恰好一次', () async {
+      final tempFile = File(
+          '${Directory.systemTemp.path}/wifi_transfer_download_test_${DateTime.now().microsecondsSinceEpoch}.epub');
+      await tempFile.writeAsBytes([1, 2, 3, 4, 5]);
+      addTearDown(() async {
+        if (await tempFile.exists()) await tempFile.delete();
+      });
+      final book = bookWith(
+        id: 'b1',
+        filePath: 'content://com.example/document/1',
+        title: 'content 書',
+      );
+      final deleteCalls = <String>[];
+      final wifiServer = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          materializeContentUri: (uri) async => tempFile.path,
+          deleteFile: (path) async {
+            deleteCalls.add(path);
+            if (await File(path).exists()) await File(path).delete();
+          },
+        ),
+      );
+      final server = await wifiServer.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => wifiServer.stop(server));
+
+      final response = await _realGetBytes(
+          'http://127.0.0.1:${server.port}/api/books/b1/download');
+
+      expect(response.statusCode, 200);
+      expect(response.bodyBytes, [1, 2, 3, 4, 5]);
+      expect(deleteCalls, [tempFile.path]);
+    });
+
+    test('resolveDownloadSource 回傳 null（材質化失敗）：回傳 404', () async {
+      final book =
+          bookWith(id: 'b1', filePath: 'content://com.example/document/1');
+      final wifiServer = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          materializeContentUri: (uri) async => null,
+          deleteFile: (path) async {},
+        ),
+      );
+      final server = await wifiServer.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => wifiServer.stop(server));
+
+      final response = await _realGet(
+          'http://127.0.0.1:${server.port}/api/books/b1/download');
+
+      expect(response.statusCode, 404);
+    });
+
+    test(
+        'resolveDownloadSource 成功後、file.length() 才拋出例外：仍會清理'
+        '已材質化的 content:// 暫存檔並釋放許可（審查修正 I-3）', () async {
+      final book =
+          bookWith(id: 'b1', filePath: 'content://com.example/document/1');
+      final deleteCalls = <String>[];
+      final nonexistentPath =
+          '${Directory.systemTemp.path}/wifi_transfer_i3_test_${DateTime.now().microsecondsSinceEpoch}.epub';
+      final wifiServer = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          // 回傳一個不存在的路徑，模擬材質化「回報成功」但緊接著
+          // file.length() 讀取時才發現實際上失敗（例如檔案系統極短暫的
+          // 競態）——重點是驗證 catch 區塊確實會嘗試清理這個路徑。
+          materializeContentUri: (uri) async => nonexistentPath,
+          deleteFile: (path) async {
+            deleteCalls.add(path);
+          },
+        ),
+      );
+      final server = await wifiServer.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => wifiServer.stop(server));
+
+      final response = await _realGet(
+          'http://127.0.0.1:${server.port}/api/books/b1/download');
+
+      expect(response.statusCode, 500);
+      expect(deleteCalls, [nonexistentPath]);
+      expect(wifiServer.activeTransfersNotifier.value, 0);
+    });
+
+    test(
+        'deleteFile 清理暫存檔時拋出例外：不會成為未捕捉的非同步例外，'
+        '許可仍正確釋放（審查修正 I-5）', () async {
+      final tempFile = File(
+          '${Directory.systemTemp.path}/wifi_transfer_i5_test_${DateTime.now().microsecondsSinceEpoch}.epub');
+      await tempFile.writeAsBytes([1, 2, 3]);
+      addTearDown(() async {
+        if (await tempFile.exists()) await tempFile.delete();
+      });
+      final book =
+          bookWith(id: 'b1', filePath: 'content://com.example/document/1');
+      final wifiServer = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          materializeContentUri: (uri) async => tempFile.path,
+          deleteFile: (path) async => throw FileSystemException('模擬刪除失敗'),
+        ),
+      );
+      final server = await wifiServer.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => wifiServer.stop(server));
+
+      final response = await _realGetBytes(
+          'http://127.0.0.1:${server.port}/api/books/b1/download');
+
+      expect(response.statusCode, 200);
+      expect(response.bodyBytes, [1, 2, 3]);
+      await Future<void>.delayed(Duration.zero);
+      expect(wifiServer.activeTransfersNotifier.value, 0);
+    });
+
+    test(
+        '下載期間 activeTransfersNotifier 維持在 1，直到用戶端讀完整個回應串流'
+        '（許可涵蓋整個串流生命週期，非僅至 Response 建構完成——Task 3/7 的'
+        '設計修正）', () async {
+      final book = bookWith(id: 'b1', filePath: 'test/fixtures/sample.pdf');
+      final wifiServer = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          materializeContentUri: (uri) async => null,
+          deleteFile: (path) async {},
+        ),
+        maxConcurrentTransfers: 1,
+      );
+      final server = await wifiServer.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => wifiServer.stop(server));
+
+      final client = HttpClient();
+      addTearDown(() => client.close(force: true));
+      final request = await client
+          .getUrl(Uri.parse('http://127.0.0.1:${server.port}/api/books/b1/download'));
+      final response = await request.close();
+
+      expect(wifiServer.activeTransfersNotifier.value, 1,
+          reason: '許可應持續持有，直到位元組真正傳輸完畢，而非 Response 建構'
+              '完成的當下就釋放');
+
+      await response.drain<void>();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(wifiServer.activeTransfersNotifier.value, 0);
     });
   });
 
