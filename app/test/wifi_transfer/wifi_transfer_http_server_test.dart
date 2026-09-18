@@ -18,10 +18,14 @@ class _Resp {
   _Resp(this.statusCode, this.headers, this.body);
 }
 
-Future<_Resp> _realGet(String url) async {
+Future<_Resp> _sendRealRequest(
+  String url, {
+  required Future<HttpClientRequest> Function(HttpClient client, Uri uri)
+      openRequest,
+}) async {
   final client = HttpClient();
   try {
-    final req = await client.getUrl(Uri.parse(url));
+    final req = await openRequest(client, Uri.parse(url));
     final resp = await req.close();
     final body = await resp.transform(utf8.decoder).join();
     final headers = <String, String>{};
@@ -34,21 +38,11 @@ Future<_Resp> _realGet(String url) async {
   }
 }
 
-Future<_Resp> _realPost(String url) async {
-  final client = HttpClient();
-  try {
-    final req = await client.postUrl(Uri.parse(url));
-    final resp = await req.close();
-    final body = await resp.transform(utf8.decoder).join();
-    final headers = <String, String>{};
-    resp.headers.forEach((name, values) {
-      headers[name] = values.join(', ');
-    });
-    return _Resp(resp.statusCode, headers, body);
-  } finally {
-    client.close(force: true);
-  }
-}
+Future<_Resp> _realGet(String url) =>
+    _sendRealRequest(url, openRequest: (client, uri) => client.getUrl(uri));
+
+Future<_Resp> _realPost(String url) =>
+    _sendRealRequest(url, openRequest: (client, uri) => client.postUrl(uri));
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

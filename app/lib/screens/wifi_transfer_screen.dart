@@ -149,6 +149,7 @@ class _WifiTransferScreenState extends State<WifiTransferScreen> {
     if (httpServer != null && wifiServer != null) {
       wifiServer.stop(httpServer);
     }
+    wifiServer?.dispose();
     _fallbackNotifier.dispose();
     super.dispose();
   }

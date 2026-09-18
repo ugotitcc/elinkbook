@@ -82,6 +82,13 @@ class WifiTransferHttpServer {
     await server.close(force: true);
   }
 
+  /// 釋放 [_activeTransfersNotifier] 持有的資源（`/receiving-code-review`
+  /// 審查修正，review-issue-1.md Minor #2）。呼叫端（`WifiTransferScreen.
+  /// dispose()`）應在呼叫 [stop] 之後一併呼叫本方法。
+  void dispose() {
+    _activeTransfersNotifier.dispose();
+  }
+
   Future<shelf.Response> _handleRequest(shelf.Request request) async {
     final path = request.url.path;
     // 【`/receiving-code-review` 審查修正，M-3】容錯使用者/瀏覽器手動
