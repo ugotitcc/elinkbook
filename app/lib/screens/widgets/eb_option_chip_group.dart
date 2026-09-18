@@ -11,7 +11,8 @@ import 'reader_option_tile.dart';
 class EBOptionChipItem<T> {
   final Key? itemKey;
   final T value;
-  final IconData icon;
+  final IconData? icon;
+  final Widget? iconWidget;
   final String label;
   final String tooltip;
   final VoidCallback? onTap;
@@ -19,11 +20,12 @@ class EBOptionChipItem<T> {
   const EBOptionChipItem({
     this.itemKey,
     required this.value,
-    required this.icon,
+    this.icon,
+    this.iconWidget,
     required this.label,
     required this.tooltip,
     this.onTap,
-  });
+  }) : assert(icon != null || iconWidget != null, 'Must provide either icon or iconWidget');
 }
 
 /// 取代分散在三個版面設定 Bottom Sheet 共 13 處「`Wrap` 包一組
@@ -81,6 +83,7 @@ class EBOptionChipGroup<T> extends StatelessWidget {
               value: item.value,
               groupValue: groupValue,
               icon: item.icon,
+              iconWidget: item.iconWidget,
               label: showLabel ? item.label : null,
               tooltip: item.tooltip,
               iconSize: iconSize,

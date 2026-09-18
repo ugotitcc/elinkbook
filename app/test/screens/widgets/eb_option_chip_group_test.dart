@@ -247,8 +247,31 @@ void main() {
     final verticalTileAfter = tester.widget<Container>(
         find.byKey(const Key('writing_mode_vertical')));
     expect(
-      (bookTileAfter.decoration as BoxDecoration).color,
-      isNot((verticalTileAfter.decoration as BoxDecoration).color),
+        (bookTileAfter.decoration as BoxDecoration).color,
+        isNot((verticalTileAfter.decoration as BoxDecoration).color),
     );
+  });
+
+  testWidgets('支援自訂 iconWidget 替代預設 IconData', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: EBOptionChipGroup<String>(
+          items: [
+            EBOptionChipItem<String>(
+              itemKey: const Key('custom_widget_chip'),
+              value: 'custom',
+              iconWidget: const Text('自訂圖示', key: Key('custom_icon_text')),
+              label: '標籤',
+              tooltip: '提示',
+            ),
+          ],
+          groupValue: 'custom',
+          onSelected: (_) {},
+        ),
+      ),
+    ));
+
+    expect(find.byKey(const Key('custom_icon_text')), findsOneWidget);
+    expect(find.text('標籤'), findsOneWidget);
   });
 }

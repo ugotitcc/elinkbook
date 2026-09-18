@@ -5,7 +5,8 @@ class ReaderOptionTile<T> extends StatelessWidget {
   final Key? itemKey;
   final T value;
   final T groupValue;
-  final IconData icon;
+  final IconData? icon;
+  final Widget? iconWidget;
   final String? label;
   final String tooltip;
   final ValueChanged<T> onSelected;
@@ -19,7 +20,8 @@ class ReaderOptionTile<T> extends StatelessWidget {
     this.itemKey,
     required this.value,
     required this.groupValue,
-    required this.icon,
+    this.icon,
+    this.iconWidget,
     this.label,
     required this.tooltip,
     required this.onSelected,
@@ -27,7 +29,7 @@ class ReaderOptionTile<T> extends StatelessWidget {
     this.iconSize = 20,
     this.labelFontSize = 13,
     this.forceUnselected = false,
-  });
+  }) : assert(icon != null || iconWidget != null, 'Must provide either icon or iconWidget');
 
   @override
   Widget build(BuildContext context) {
@@ -64,10 +66,23 @@ class ReaderOptionTile<T> extends StatelessWidget {
       );
     }
 
+    Widget? leadingIcon;
+    if (iconWidget != null) {
+      leadingIcon = IconTheme.merge(
+        data: IconThemeData(color: foregroundColor, size: iconSize),
+        child: DefaultTextStyle.merge(
+          style: TextStyle(color: foregroundColor),
+          child: iconWidget!,
+        ),
+      );
+    } else if (icon != null) {
+      leadingIcon = Icon(icon, size: iconSize, color: foregroundColor);
+    }
+
     final content = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: iconSize, color: foregroundColor),
+        ?leadingIcon,
         if (label != null) ...[
           const SizedBox(width: 6),
           Text(

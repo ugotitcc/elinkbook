@@ -15,6 +15,7 @@ import '../reader/writing_mode.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_option_chip_group.dart';
 import 'widgets/eb_stepper.dart';
+import 'widgets/text_conversion_icon.dart';
 
 /// 版面設定 Bottom Sheet（FR-09／FR-10 字型、數值型控制項與三個持久化覆寫
 /// 選擇器），比照 prototype/index.html 第 1379-1520 行設計。
@@ -970,27 +971,42 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// 簡繁轉換覆寫（FR-48，全域/單書雙層解析，見 `resolveTextConversion()`）：
   /// `null`＝使用全域預設，非 `null`＝單書覆寫。
   Widget _buildTextConversionOverrideRow() {
-    const options = [
-      (null, 'global', Icons.tune, '使用全域預設', '全域'),
-      (TextConversionMode.original, 'original', Icons.article_outlined, '原文', '原文'),
-      (TextConversionMode.toTraditional, 'traditional', Icons.translate, '轉換為繁體', '繁體'),
-      (TextConversionMode.toSimplified, 'simplified', Icons.g_translate, '轉換為簡體', '簡體'),
+    final items = [
+      const EBOptionChipItem<TextConversionMode?>(
+        itemKey: Key('reader_settings_text_conversion_global'),
+        value: null,
+        icon: Icons.tune,
+        label: '全域',
+        tooltip: '使用全域預設',
+      ),
+      const EBOptionChipItem<TextConversionMode?>(
+        itemKey: Key('reader_settings_text_conversion_original'),
+        value: TextConversionMode.original,
+        icon: Icons.article_outlined,
+        label: '原文',
+        tooltip: '原文',
+      ),
+      const EBOptionChipItem<TextConversionMode?>(
+        itemKey: Key('reader_settings_text_conversion_traditional'),
+        value: TextConversionMode.toTraditional,
+        iconWidget: TextConversionIcon(mode: TextConversionMode.toTraditional),
+        label: '繁體',
+        tooltip: '轉換為繁體',
+      ),
+      const EBOptionChipItem<TextConversionMode?>(
+        itemKey: Key('reader_settings_text_conversion_simplified'),
+        value: TextConversionMode.toSimplified,
+        iconWidget: TextConversionIcon(mode: TextConversionMode.toSimplified),
+        label: '簡體',
+        tooltip: '轉換為簡體',
+      ),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('簡繁轉換覆寫', style: TextStyle(fontWeight: FontWeight.bold)),
         EBOptionChipGroup<TextConversionMode?>(
-          items: options.map((option) {
-            final (mode, keySuffix, icon, tooltip, label) = option;
-            return EBOptionChipItem<TextConversionMode?>(
-              itemKey: Key('reader_settings_text_conversion_$keySuffix'),
-              value: mode,
-              icon: icon,
-              label: label,
-              tooltip: tooltip,
-            );
-          }).toList(),
+          items: items,
           groupValue: _textConversionOverride,
           visualDensity: VisualDensity.compact,
           onSelected: (v) => setState(() {

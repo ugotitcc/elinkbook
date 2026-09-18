@@ -6,6 +6,7 @@ import '../reader/dual_page_mode.dart';
 import '../reader/text_conversion_mode.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_option_chip_group.dart';
+import 'widgets/text_conversion_icon.dart';
 
 /// EPUB 固定版面（FXL 漫畫）專屬的精簡版設定 Bottom Sheet（見
 /// docs/epics/epic-16-dual-page/spec.md「模組」段落）：提供「雙頁模式」
@@ -191,38 +192,35 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               const SizedBox(height: 8),
               EBOptionChipGroup<TextConversionMode?>(
                 items: const [
-                  (null, 'global', Icons.tune, '使用全域預設', '全域'),
-                  (
-                    TextConversionMode.original,
-                    'original',
-                    Icons.article_outlined,
-                    '原文',
-                    '原文',
+                  EBOptionChipItem<TextConversionMode?>(
+                    itemKey: Key('fxl_settings_text_conversion_global'),
+                    value: null,
+                    icon: Icons.tune,
+                    label: '全域',
+                    tooltip: '使用全域預設',
                   ),
-                  (
-                    TextConversionMode.toTraditional,
-                    'traditional',
-                    Icons.translate,
-                    '轉換為繁體',
-                    '繁體',
+                  EBOptionChipItem<TextConversionMode?>(
+                    itemKey: Key('fxl_settings_text_conversion_original'),
+                    value: TextConversionMode.original,
+                    icon: Icons.article_outlined,
+                    label: '原文',
+                    tooltip: '原文',
                   ),
-                  (
-                    TextConversionMode.toSimplified,
-                    'simplified',
-                    Icons.g_translate,
-                    '轉換為簡體',
-                    '簡體',
+                  EBOptionChipItem<TextConversionMode?>(
+                    itemKey: Key('fxl_settings_text_conversion_traditional'),
+                    value: TextConversionMode.toTraditional,
+                    iconWidget: TextConversionIcon(mode: TextConversionMode.toTraditional),
+                    label: '繁體',
+                    tooltip: '轉換為繁體',
                   ),
-                ].map((option) {
-                  final (mode, keySuffix, icon, tooltip, label) = option;
-                  return EBOptionChipItem<TextConversionMode?>(
-                    itemKey: Key('fxl_settings_text_conversion_$keySuffix'),
-                    value: mode,
-                    icon: icon,
-                    label: label,
-                    tooltip: tooltip,
-                  );
-                }).toList(),
+                  EBOptionChipItem<TextConversionMode?>(
+                    itemKey: Key('fxl_settings_text_conversion_simplified'),
+                    value: TextConversionMode.toSimplified,
+                    iconWidget: TextConversionIcon(mode: TextConversionMode.toSimplified),
+                    label: '簡體',
+                    tooltip: '轉換為簡體',
+                  ),
+                ],
                 groupValue: _textConversionOverride,
                 visualDensity: VisualDensity.compact,
                 onSelected: (v) => setState(() {
