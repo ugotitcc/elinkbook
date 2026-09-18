@@ -34,7 +34,7 @@
 - Consumes：`LibraryRepository.listBooks()`（既有）、`Book.isDownloaded`／`Book.filePath`（既有）。
 - Produces：`WifiTransferService.listDownloadableBooks()` 由 `throw UnimplementedError()` 改為真正實作，回傳型別維持 `Future<List<DownloadableBook>>` 不變。新增私有 helper `Future<int?> _localSizeBytes(Book book)`（僅供本檔案內部使用，不對外匯出）。
 
-- [ ] **Step 1: 寫失敗測試——移除舊的「三方法皆拋出」測試，改為只鎖定 `handleUploadedFile` 仍未實作，並新增 `listDownloadableBooks` 測試群組**
+- [x] **Step 1: 寫失敗測試——移除舊的「三方法皆拋出」測試，改為只鎖定 `handleUploadedFile` 仍未實作，並新增 `listDownloadableBooks` 測試群組**
 
 Edit `app/test/wifi_transfer/wifi_transfer_service_test.dart`，整份取代為：
 
@@ -162,12 +162,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_service_test.dart`
 Expected: FAIL——`listDownloadableBooks` 群組的 4 個測試因 `UnimplementedError` 被拋出而失敗（`handleUploadedFile` 那個測試仍會通過）。
 
-- [ ] **Step 3: 實作 `listDownloadableBooks()`**
+- [x] **Step 3: 實作 `listDownloadableBooks()`**
 
 Edit `app/lib/wifi_transfer/wifi_transfer_service.dart`：
 
@@ -240,17 +240,17 @@ import '../library/models/library_enums.dart';
   }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_service_test.dart`
 Expected: PASS，5 個測試全數通過。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/wifi_transfer/wifi_transfer_service.dart test/wifi_transfer/wifi_transfer_service_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/wifi_transfer/wifi_transfer_service.dart app/test/wifi_transfer/wifi_transfer_service_test.dart
@@ -283,7 +283,7 @@ EOF
 - Consumes：`LibraryRepository.findBookById()`（Issue 0 已提供）、`WifiTransferService.materializeContentUri`（既有建構子欄位）、`fileExtensionFor()`（`app/lib/remote/opds_client.dart`，既有共用函式）。
 - Produces：`WifiTransferService.resolveDownloadSource()` 由 `throw UnimplementedError()` 改為真正實作，回傳型別維持 `Future<DownloadSource?>` 不變（Issue 1 已定案的公開簽章）。新增私有 helper `String _downloadFileNameFor(Book book)`。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 Edit `app/test/wifi_transfer/wifi_transfer_service_test.dart`，在 `listDownloadableBooks` 群組**之後**（`main()` 結尾 `}` 之前）新增：
 
@@ -408,12 +408,12 @@ Edit `app/test/wifi_transfer/wifi_transfer_service_test.dart`，在 `listDownloa
   });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_service_test.dart`
 Expected: FAIL——`resolveDownloadSource` 群組的 9 個測試因 `UnimplementedError` 被拋出而失敗。
 
-- [ ] **Step 3: 實作 `resolveDownloadSource()`**
+- [x] **Step 3: 實作 `resolveDownloadSource()`**
 
 Edit `app/lib/wifi_transfer/wifi_transfer_service.dart`：
 
@@ -494,17 +494,17 @@ import '../remote/opds_client.dart' show fileExtensionFor;
   }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_service_test.dart`
 Expected: PASS，14 個測試全數通過。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/wifi_transfer/wifi_transfer_service.dart test/wifi_transfer/wifi_transfer_service_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/wifi_transfer/wifi_transfer_service.dart app/test/wifi_transfer/wifi_transfer_service_test.dart
@@ -541,12 +541,12 @@ EOF
 
 **（`/receiving-code-review` 審查修正，`review-plan-issue-2.md` C-1）** `WifiTransferScreen.dispose()`（Issue 1 既有程式碼，`app/lib/screens/wifi_transfer_screen.dart:145-154`）呼叫 `wifiServer.stop(httpServer)`（非同步、未 `await`）後，同一個同步方法內緊接著呼叫 `wifiServer.dispose()`，讓 `_activeTransfersNotifier` 立刻進入 disposed 狀態。若使用者在下載進行中透過 `PopScope` 的確認對話框主動離開畫面，串流稍後才真正結束時觸發的 `_releasePermit()` 會對已 disposed 的 `ValueNotifier` 賦值，拋出 `FlutterError: A ValueNotifier<int> was used after being disposed.`——這是可被使用者操作真實觸發的路徑，不是理論邊界情況。修法：新增 `_disposed` 旗標，`dispose()` 設為 `true`；`_acquirePermit`／`_releasePermit` 寫入 `.value` 前檢查 `!_disposed`，`_activePermits`／`_waitQueue` 的計數與排隊邏輯本身不受影響（伺服器都已經 dispose，不會再有新的下載請求進來，只是不再嘗試通知一個沒有任何 UI 在監聽的已銷毀 notifier）。
 
-- [ ] **Step 1: 執行既有測試，確認目前是綠燈（重構前基準）**
+- [x] **Step 1: 執行既有測試，確認目前是綠燈（重構前基準）**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: PASS，`WifiTransferHttpServer.withTransferPermit 併發節流` 群組的 3 個測試（連同其餘既有測試）全數通過。
 
-- [ ] **Step 2: 重構 `withTransferPermit()`**
+- [x] **Step 2: 重構 `withTransferPermit()`**
 
 Edit `app/lib/wifi_transfer/wifi_transfer_http_server.dart`：
 
@@ -678,17 +678,17 @@ Edit `app/lib/wifi_transfer/wifi_transfer_http_server.dart`：
   }
 ```
 
-- [ ] **Step 3: 執行既有測試，確認重構後仍是綠燈（零回歸）**
+- [x] **Step 3: 執行既有測試，確認重構後仍是綠燈（零回歸）**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: PASS，與 Step 1 相同的測試集合全數通過，行為不變。
 
-- [ ] **Step 4: `flutter analyze` 確認乾淨**
+- [x] **Step 4: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/wifi_transfer/wifi_transfer_http_server.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/wifi_transfer/wifi_transfer_http_server.dart
@@ -731,7 +731,7 @@ EOF
 - **I-1（背壓／OOM 風險＋許可提前釋放）**：`StreamController` 若不實作 `onPause`/`onResume`，下游（`shelf_io` 把 Response body 寫進 socket 時，遇 TCP 壅塞會對其消費的 Stream 呼叫 `pause()`）發出的暫停訊號不會傳遞給內部對 `source`（`file.openRead()`）的訂閱——本機磁碟讀取速度遠快於慢速 WiFi 網路的發送速度，`source` 會不受控制地把整個檔案全部讀進 `controller` 的內部緩衝佇列（無界佇列，不會因為下游暫停而停止累積），大檔案在慢速網路下有 OOM 風險；同時 `source` 很快讀到 EOF 觸發 `onDone`，若 `finishOnce()`（進而釋放併發許可）在這個當下就執行，前面 Task 3 才修正的「許可持有到位元組真正傳輸完畢」設計承諾就被這裡的實作破功——必須改為等待 `controller.done`（等同 `controller.close()` 的回傳值，代表 done 事件已真正送達下游監聽者）完成後才呼叫 `finishOnce()`。
 - **I-2（`onCancel` 未等待訂閱真正取消）**：`subscription?.cancel()` 是非同步操作（底層要等作業系統真正釋放檔案控制代碼），若不 `await` 就緊接著呼叫 `finishOnce()`（進而可能呼叫 `deleteFile()`），檔案控制代碼可能尚未被完全釋放就嘗試刪除，有觸發 `FileSystemException` 的風險。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 Edit `app/test/wifi_transfer/wifi_transfer_http_server_test.dart`，在檔案結尾（最後一個 `});` 之後、`}` 之前）新增一個新的頂層 `group`：
 
@@ -871,12 +871,12 @@ import 'dart:async';
 
 （`dart:async` 已因 `Completer` 使用被既有測試 import，若編譯器提示重複 import 則略過此步驟。）
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: FAIL，編譯錯誤（`wrapStreamWithCleanup` 尚未定義）。
 
-- [ ] **Step 3: 實作 `wrapStreamWithCleanup()`**
+- [x] **Step 3: 實作 `wrapStreamWithCleanup()`**
 
 Edit `app/lib/wifi_transfer/wifi_transfer_http_server.dart`，在 `WifiTransferHttpServer` 類別定義**之後**（檔案結尾）新增：
 
@@ -941,17 +941,17 @@ Stream<List<int>> wrapStreamWithCleanup(
 }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: PASS，`wrapStreamWithCleanup` 群組的 5 個測試（連同其餘既有測試）全數通過。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/wifi_transfer/wifi_transfer_http_server.dart test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/wifi_transfer/wifi_transfer_http_server.dart app/test/wifi_transfer/wifi_transfer_http_server_test.dart
@@ -993,7 +993,7 @@ EOF
 - Consumes：無。
 - Produces：頂層函式 `String buildContentDispositionHeader(String downloadFileName)`，供 Task 7 的下載路由組 `content-disposition` 標頭值。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 Edit `app/test/wifi_transfer/wifi_transfer_http_server_test.dart`，在 `wrapStreamWithCleanup` 群組**之後**新增：
 
@@ -1051,12 +1051,12 @@ Edit `app/test/wifi_transfer/wifi_transfer_http_server_test.dart`，在 `wrapStr
   });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: FAIL，編譯錯誤（`buildContentDispositionHeader` 尚未定義）。
 
-- [ ] **Step 3: 實作 `buildContentDispositionHeader()`**
+- [x] **Step 3: 實作 `buildContentDispositionHeader()`**
 
 Edit `app/lib/wifi_transfer/wifi_transfer_http_server.dart`，在 `wrapStreamWithCleanup()` 函式**之後**（檔案結尾）新增：
 
@@ -1097,17 +1097,17 @@ String _asciiFallbackFilename(String filename) {
 }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: PASS，`buildContentDispositionHeader` 群組的 6 個測試（連同其餘既有測試）全數通過。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/wifi_transfer/wifi_transfer_http_server.dart test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/wifi_transfer/wifi_transfer_http_server.dart app/test/wifi_transfer/wifi_transfer_http_server_test.dart
@@ -1142,7 +1142,7 @@ EOF
 - Consumes：`WifiTransferService.listDownloadableBooks()`（Task 1）。
 - Produces：`GET /api/books` 回傳 JSON 陣列 `[{id, title, format, sizeBytes}]`（`content-type: application/json; charset=utf-8`）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 Edit `app/test/wifi_transfer/wifi_transfer_http_server_test.dart`：先在檔案頂部新增 import（`dart:convert` 已因既有 `_sendRealRequest` 的 `utf8.decoder` 使用而存在，不重複新增）：
 
@@ -1210,12 +1210,12 @@ import 'package:elinkbook/library/models/library_enums.dart';
 
 （此測試不使用 `setUp` 建立的共用 `wifiServer`/`httpServer`——需要自訂的 `FakeLibraryRepository(initialBooks: ...)`，故自行 `start`/`addTearDown(stop)`，比照本檔案 `withTransferPermit 併發節流` 群組既有的獨立實例慣例。）
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: FAIL——回應狀態碼為 501，不是 200。
 
-- [ ] **Step 3: 實作 `GET /api/books` 路由**
+- [x] **Step 3: 實作 `GET /api/books` 路由**
 
 Edit `app/lib/wifi_transfer/wifi_transfer_http_server.dart`：
 
@@ -1290,17 +1290,17 @@ import 'wifi_transfer_service.dart';
   }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: PASS，全數測試通過。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/wifi_transfer/wifi_transfer_http_server.dart test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/wifi_transfer/wifi_transfer_http_server.dart app/test/wifi_transfer/wifi_transfer_http_server_test.dart
@@ -1331,7 +1331,7 @@ EOF
 - Consumes：`WifiTransferService.resolveDownloadSource()`（Task 2）、`_acquirePermit()`／`_releasePermit()`（Task 3）、`wrapStreamWithCleanup()`（Task 4）、`buildContentDispositionHeader()`（Task 5）。
 - Produces：`GET /api/books/<id>/download` 路由——找不到書籍回 404；成功則以 `Content-Disposition`＋正確 `Content-Length` 串流檔案；`isTemporaryFile == true` 時下載完成/中途取消後刪除暫存檔（`deleteFile` 失敗一律吞掉，不冒出未捕捉例外——`/receiving-code-review` 審查修正 I-5）；`resolveDownloadSource()` 成功後、真正建立串流前若拋出任何例外，仍會清理已材質化的 content:// 暫存檔（審查修正 I-3）；併發許可持有到串流真正結束才釋放（見 Task 3 說明）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 Edit `app/test/wifi_transfer/wifi_transfer_http_server_test.dart`。下載路由回應是二進位內容（PDF/EPUB 位元組），既有的 `_realGet`／`_sendRealRequest` 一律用 `utf8.decoder` 把回應主體解碼成 `String`——對任意二進位內容（非合法 UTF-8 位元組序列，例如真實 PDF 檔案）幾乎必定拋出 `FormatException`，不能直接沿用。先在 `_realPost` 定義**之後**新增一組專供二進位回應使用的獨立 helper：
 
@@ -1588,12 +1588,12 @@ Future<_BytesResp> _realGetBytes(String url) async {
 
 （`Book`／`BookFileFormat`／`BookSource` 已於 Task 6 加入 import；`dart:io` 的 `HttpClient`／`File`／`Directory` 已由檔案既有 import 涵蓋。）
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: FAIL——下載相關測試回應狀態碼為 501，不是 200/404；`activeTransfersNotifier` 測試因路由仍是 501 佔位而不成立。
 
-- [ ] **Step 3: 實作 `GET /api/books/<id>/download` 路由**
+- [x] **Step 3: 實作 `GET /api/books/<id>/download` 路由**
 
 Edit `app/lib/wifi_transfer/wifi_transfer_http_server.dart`：
 
@@ -1687,17 +1687,17 @@ Edit `app/lib/wifi_transfer/wifi_transfer_http_server.dart`：
   }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: PASS，全數測試通過（含 Task 1～6 累積的所有測試）。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/wifi_transfer/wifi_transfer_http_server.dart test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/wifi_transfer/wifi_transfer_http_server.dart app/test/wifi_transfer/wifi_transfer_http_server_test.dart
@@ -1738,7 +1738,7 @@ EOF
 - Consumes：`GET /api/books`（Task 6）、`GET /api/books/<id>/download`（Task 7）。
 - Produces：頁面載入時渲染可下載書籍勾選清單；使用者勾選後依序觸發下載。無自動化測試（純 HTML/JS，不在 `flutter test`／`flutter analyze` 範圍內；由 Task 9 的 `integration_test/` 透過實際 HTTP 呼叫間接驗證背後路由，頁面本身的視覺/互動建議另行人工於桌面瀏覽器開啟驗證）。
 
-- [ ] **Step 1: 修改 `index.html`**
+- [x] **Step 1: 修改 `index.html`**
 
 Edit `app/assets/wifi_transfer/index.html`：
 
@@ -1895,12 +1895,12 @@ Edit `app/assets/wifi_transfer/index.html`：
 </html>
 ```
 
-- [ ] **Step 2: 執行既有測試，確認未破壞 `GET /` 驗證**
+- [x] **Step 2: 執行既有測試，確認未破壞 `GET /` 驗證**
 
 Run: `flutter test test/wifi_transfer/wifi_transfer_http_server_test.dart`
 Expected: PASS——`GET / 回傳 index.html 內容與正確 Content-Type／Cache-Control` 測試仍通過（只斷言 `contains('elinkBook WiFi 傳書')`，`<h1>` 未變動）。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/assets/wifi_transfer/index.html
@@ -1932,7 +1932,7 @@ EOF
 - Consumes：`WifiTransferScreen`（Issue 1）、`elinkbook/book_metadata` channel 的 `createTestContentUri`／`takePersistableUriPermission`（既有測試專用方法，見 `content_uri_acceptance_test.dart` 既有先例）。
 - Produces：4 個新增 `testWidgets`，真機驗證本機路徑／`content://`／TXT 來源下載，以及中途取消下載後暫存檔仍會被清理。**必須在真實裝置上執行**（`-d <device-id>`），且裝置須已連上 WiFi 或已開啟手機熱點。
 
-- [ ] **Step 1: 修改測試檔**
+- [x] **Step 1: 修改測試檔**
 
 Edit `app/integration_test/wifi_transfer_screen_test.dart`，整份取代為：
 
@@ -2259,17 +2259,17 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: `flutter analyze` 確認乾淨**
+- [x] **Step 2: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze integration_test/wifi_transfer_screen_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 3: 真機執行（需人類操作：裝置已連上 WiFi 或開啟熱點）**
+- [x] **Step 3: 真機執行（需人類操作：裝置已連上 WiFi 或開啟熱點）**
 
 Run: `flutter test integration_test/wifi_transfer_screen_test.dart -d <device-id>`
 Expected: 5 個測試全數通過。若裝置目前未連上 WiFi/熱點，測試會以明確的 `fail()` 訊息中止（而非誤判為程式錯誤），依訊息指示連線後重跑。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/integration_test/wifi_transfer_screen_test.dart
@@ -2295,21 +2295,21 @@ EOF
 
 **Files:** 無新增/修改檔案，純驗證步驟。
 
-- [ ] **Step 1: 完整 `flutter analyze`**
+- [x] **Step 1: 完整 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 2: 完整 `flutter test`（CLAUDE.md 規定：整張計畫最後一個 Task 才跑一次）**
+- [x] **Step 2: 完整 `flutter test`（CLAUDE.md 規定：整張計畫最後一個 Task 才跑一次）**
 
 Run: `flutter test`
 Expected: 全數通過（或與 PR #257 合併當下已知、與本次異動無關的既存缺陷數量一致，需在審查報告中列出並比對 base commit 確認非本次異動引入的回歸——比照 Issue 1 審查報告先例）。
 
-- [ ] **Step 3: 確認 Task 9 的真機測試已至少執行過一次**
+- [x] **Step 3: 確認 Task 9 的真機測試已至少執行過一次**
 
 若尚未在真實裝置上跑過 Task 9 的 `integration_test/wifi_transfer_screen_test.dart`，於此時執行：
 
 Run: `flutter test integration_test/wifi_transfer_screen_test.dart -d <device-id>`
 Expected: 5 個測試全數通過。
 
-- [ ] **Step 4: 更新 `docs/epics/epic-44-wifi-book-transfer/issues.md` 與 `docs/epics.md` 進度**（比照 Issue 1 完成後的既有慣例，由人類或執行者在確認上述驗證皆通過後手動進行，非本計畫自動化步驟的一部分）
+- [x] **Step 4: 更新 `docs/epics/epic-44-wifi-book-transfer/issues.md` 與 `docs/epics.md` 進度**（比照 Issue 1 完成後的既有慣例，由人類或執行者在確認上述驗證皆通過後手動進行，非本計畫自動化步驟的一部分）
