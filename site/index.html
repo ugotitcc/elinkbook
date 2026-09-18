@@ -104,7 +104,7 @@
             </h1>
 
             <p class="hero-subtitle">
-              elinkBook 融匯東方古典書香美學與現代排版技術，解決數位閱讀長久以來的排版痛點。支援 ePub3、PDF、TXT、KF8/AZW3、CBZ 與 Markdown，提供純粹沉浸的讀書享受。
+              elinkBook 融匯東方古典書香美學與現代排版技術，解決數位閱讀長久以來的排版痛點。支援 ePub3、PDF、TXT、KF8/AZW3、CBZ 與 Markdown，兼備雙向簡繁在地轉換、WiFi 隔空傳書與雲端書庫，提供純粹沉浸的讀書享受。
             </p>
 
             <div class="hero-cta-group">
@@ -145,6 +145,11 @@
                 <span class="mockup-toolbar-label">排版：</span>
                 <button type="button" class="demo-chip-btn active" id="btn-mode-vertical" title="直排閱讀 (Vertical RTL)">直排 (RTL)</button>
                 <button type="button" class="demo-chip-btn" id="btn-mode-horizontal" title="橫排閱讀 (Horizontal LTR)">橫排 (LTR)</button>
+              </div>
+              <div class="mockup-chip-group">
+                <span class="mockup-toolbar-label">轉換：</span>
+                <button type="button" class="demo-chip-btn active" id="btn-conv-tc" title="繁體中文（含台灣慣用詞）">繁體</button>
+                <button type="button" class="demo-chip-btn" id="btn-conv-sc" title="簡體中文即時切換">簡體</button>
               </div>
               <div class="mockup-chip-group">
                 <span class="mockup-toolbar-label">主題：</span>
@@ -308,6 +313,19 @@
                           <button type="button" class="segment-btn" id="layout-dir-horizontal">橫排</button>
                         </div>
                       </div>
+
+                      <!-- 簡繁轉換 -->
+                      <div class="layout-option-row">
+                        <div class="option-label-group">
+                          <span class="option-title">簡繁轉換</span>
+                          <span class="option-desc">原文 / 繁體(台灣慣用) / 簡體</span>
+                        </div>
+                        <div class="segmented-btn-group">
+                          <button type="button" class="segment-btn active" id="layout-conv-original">原文</button>
+                          <button type="button" class="segment-btn" id="layout-conv-traditional">繁體</button>
+                          <button type="button" class="segment-btn" id="layout-conv-simplified">簡體</button>
+                        </div>
+                      </div>
                     </div>
 
                     <!-- 邊界頁籤 -->
@@ -383,7 +401,7 @@
       <div class="container">
         <div class="section-header">
           <span class="section-tag">Features & Capabilities</span>
-          <h2 class="section-title">匠心雕琢的六大核心閱讀體驗</h2>
+          <h2 class="section-title">匠心雕琢的八大核心閱讀體驗</h2>
           <p class="section-desc">從字裡行間的標點對齊到電子墨水屏的硬體適配，每一處細節皆為重度閱讀愛好者量身打造。</p>
         </div>
 
@@ -507,6 +525,50 @@
             </div>
           </div>
 
+          <!-- 功能 7 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m5 8 6 6"/>
+                <path d="m4 14 6-6 2-3"/>
+                <path d="M2 5h12"/>
+                <path d="M7 2h1"/>
+                <path d="m22 22-5-10-5 10"/>
+                <path d="M14 18h6"/>
+              </svg>
+            </div>
+            <h3 class="feature-card-title">雙向簡繁智慧轉換</h3>
+            <p class="feature-card-desc">
+              精準雙向簡繁即時轉換，整合 OpenCC 詞庫與台灣常用語在地化字典（如「軟體」、「記憶體」）。採無損顯示層渲染與分段偏移映射，不修改原始檔案，劃線、註記與 CFI 閱讀座標 100% 精準無偏差，並連動全文檢索與 TTS 朗讀。
+            </p>
+            <div class="feature-tags">
+              <span class="feature-tag-item">台灣常用語轉換</span>
+              <span class="feature-tag-item">CFI 座標防護</span>
+              <span class="feature-tag-item">全域預設＋單書覆寫</span>
+            </div>
+          </div>
+
+          <!-- 功能 8 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                <line x1="12" y1="20" x2="12.01" y2="20"/>
+              </svg>
+            </div>
+            <h3 class="feature-card-title">同區網 WiFi 隔空傳書</h3>
+            <p class="feature-card-desc">
+              在同一 Wi-Fi 區域網路或手機自開熱點下，電腦、平板透過瀏覽器輸入專屬網址即可連線。支援拖曳批次上傳、即時進度通知，亦可直接瀏覽與下載已存圖書至電腦，免裝任何 App、純區網傳輸零外洩。
+            </p>
+            <div class="feature-tags">
+              <span class="feature-tag-item">免裝第三方 App</span>
+              <span class="feature-tag-item">雙向極速傳輸</span>
+              <span class="feature-tag-item">純區網零雲端風險</span>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>
@@ -573,6 +635,10 @@
               </li>
               <li>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>同區網 WiFi 傳書</strong>：內建輕量 HTTP 伺服器，跨裝置瀏覽器免裝軟體直接拖曳上傳與書庫下載</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
                 <span><strong>儲存取用架構</strong>：遵循 Android 最新 SAF (Storage Access Framework) 安全沙盒機制</span>
               </li>
             </ul>
@@ -598,6 +664,10 @@
               <li>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
                 <span><strong>版面精細調節</strong>：行距、字距、段落間距、邊界空白均支援微調控制</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>雙向簡繁轉換</strong>：內建 OpenCC 與台灣常用語在地化字典，具備 CFI 劃線座標安全防護與朗讀連動</span>
               </li>
               <li>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
@@ -705,10 +775,16 @@
         <h3>2. 網路連線與雲端服務授權 (Network & Cloud Storage)</h3>
         <ul>
           <li><strong>雲端同步與遠端書庫</strong>：當您主動啟用 Google Drive、OneDrive 備份同步或連線至個人 Calibre/OPDS 遠端書庫時，本 APP 透過標準 OAuth 2.0 協議取得傳輸權限。</li>
+          <li><strong>WiFi 區網傳書</strong>：當您啟用本機傳輸服務時，本 APP 僅在您所連線之本機區域網路（Wi-Fi 或個人熱點）啟動微型 HTTP 傳輸服務，供您透過瀏覽器傳輸書籍。所有檔案傳輸均僅在您的本機區域網路內部進行點對點通訊，絕不上傳至任何外部伺服器或第三方雲端。</li>
           <li><strong>資料傳輸安全</strong>：本 APP 僅傳輸您指定同步之書籍元數據或檔案，所有網路通訊均經過 TLS/HTTPS 加密傳輸，且絕不會將您的雲端授權憑證回傳至任何未經授權的第三方主機。</li>
         </ul>
 
-        <h3>3. 意見反應與客服支援 (Support & Contact)</h3>
+        <h3>3. 本機離線簡繁轉換與資料隱私 (Text Conversion)</h3>
+        <p>
+          本 APP 提供之雙向簡繁轉換功能均以內建之 OpenCC 離線字詞字典於本機端執行即時渲染轉換，不會將您的書籍內文、字彙偏好或閱讀紀錄上傳至網路，全面落實離線純淨安全。
+        </p>
+
+        <h3>4. 意見反應與客服支援 (Support & Contact)</h3>
         <p>
           當您透過本 APP 或 ugotit.cc 官方網站使用意見反饋、問題回報或客服聯繫服務時，我們會依需求請您提供聯絡電子郵件 (E-mail) 與問題描述，此資訊僅用於回覆您的諮詢與協助排查技術問題。
         </p>
@@ -809,7 +885,7 @@
 
         <h2>二、服務內容與授權範圍</h2>
         <ol>
-          <li>本軟體提供跨平台之電子書檔案解析、排版渲染、書庫管理、筆記標註與雲端輔助同步功能。</li>
+          <li>本軟體提供跨平台之電子書檔案解析、排版渲染、書庫管理、雙向簡繁轉換、WiFi 隔空傳書、筆記標註與雲端輔助同步功能。</li>
           <li>ugotit.cc 授予使用者一項個人的、非專屬的、不可轉讓的、免費的合法使用授權，使用者僅得依據本條款將本軟體用於個人非商業用途。</li>
           <li>本軟體本身為純閱讀工具，<strong>不內建、不販售、亦不提供任何受著作權保護之商業電子書籍內容</strong>，使用者須自行匯入合法取得之電子書檔案。</li>
         </ol>

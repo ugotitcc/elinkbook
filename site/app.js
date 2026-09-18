@@ -181,6 +181,100 @@
     if (layoutDirHorizontal) layoutDirHorizontal.addEventListener('click', () => setDirection('horizontal'));
 
     // ==========================================
+    // 1b. 簡繁轉換模式切換 (原文 / 繁體台灣慣用語 / 簡體中文)
+    // ==========================================
+    let currentConversion = 'original'; // 'original' | 'traditional' | 'simplified'
+
+    const textContentMap = {
+      traditional: `晉太元中，武陵人捕魚為業。緣溪行，忘路之遠近。忽逢桃花林，夾岸數百步，中無雜樹，芳草鮮美，落英繽紛。<span id="demo-tts-sentence" class="tts-sentence">漁人甚異之，復前行，欲窮其林。</span>林盡水源，便得一山，山有小口，彷彿若有光。便捨船，從口入。初極狹，纔通人。復行數十步，豁然開朗。<br>土地平曠，屋舍儼然，有良田、美池、桑竹之屬。阡陌交通，雞犬相聞。其中往來種作，男女衣著，悉如外人。黃髮垂髫，並怡然自樂。`,
+      simplified: `晋太元中，武陵人捕鱼为业。缘溪行，忘路之远近。忽逢桃花林，夹岸数百步，中无杂树，芳草鲜美，落英缤纷。<span id="demo-tts-sentence" class="tts-sentence">渔人甚异之，复前行，欲穷其林。</span>林尽水源，便得一山，山有小口，仿佛若有光。便舍船，从口入。初极狭，才通人。复行数十步，豁然开朗。<br>土地平旷，屋舍俨然，有良田、美池、桑竹之属。阡陌交通，鸡犬相闻。其中往来种作，男女衣着，悉如外人。黄发垂髫，并怡然自乐。`
+    };
+
+    const chapterTitleMap = {
+      traditional: '《桃花源記》節選',
+      simplified: '《桃花源记》节选'
+    };
+
+    const statusTitleMap = {
+      traditional: '《桃花源記》',
+      simplified: '《桃花源记》'
+    };
+
+    const demoSentencesMap = {
+      traditional: [
+        '漁人甚異之，復前行，欲窮其林。',
+        '忽逢桃花林，夾岸數百步，中無雜樹，芳草鮮美，落英繽紛。',
+        '便捨船，從口入。初極狹，纔通人。復行數十步，豁然開朗。',
+        '土地平曠，屋舍儼然，有良田、美池、桑竹之屬。'
+      ],
+      simplified: [
+        '渔人甚异之，复前行，欲穷其林。',
+        '忽逢桃花林，夹岸数百步，中无杂树，芳草鲜美，落英缤纷。',
+        '便舍船，从口入。初极狭，才通人。复行数十步，豁然开朗。',
+        '土地平旷，屋舍俨然，有良田、美池、桑竹之属。'
+      ]
+    };
+
+    function getActiveSentences() {
+      return demoSentencesMap[currentConversion === 'simplified' ? 'simplified' : 'traditional'];
+    }
+
+    const btnConvTc = document.getElementById('btn-conv-tc');
+    const btnConvSc = document.getElementById('btn-conv-sc');
+    const layoutConvOriginal = document.getElementById('layout-conv-original');
+    const layoutConvTraditional = document.getElementById('layout-conv-traditional');
+    const layoutConvSimplified = document.getElementById('layout-conv-simplified');
+    const chapterTitleEl = document.getElementById('reader-chapter-title');
+    const statusTitleEl = document.querySelector('.status-book-title');
+
+    function setConversion(mode) {
+      currentConversion = mode;
+      const isSimp = (mode === 'simplified');
+      const textKey = isSimp ? 'simplified' : 'traditional';
+
+      if (textFlow) {
+        textFlow.innerHTML = textContentMap[textKey];
+      }
+      if (chapterTitleEl) {
+        chapterTitleEl.textContent = chapterTitleMap[textKey];
+      }
+      if (statusTitleEl) {
+        statusTitleEl.textContent = statusTitleMap[textKey];
+      }
+
+      // 更新外部工具列按鈕高亮
+      if (btnConvTc) btnConvTc.classList.toggle('active', !isSimp);
+      if (btnConvSc) btnConvSc.classList.toggle('active', isSimp);
+
+      // 更新版面設定面板抽屜按鈕高亮
+      if (layoutConvOriginal) layoutConvOriginal.classList.toggle('active', mode === 'original');
+      if (layoutConvTraditional) layoutConvTraditional.classList.toggle('active', mode === 'traditional');
+      if (layoutConvSimplified) layoutConvSimplified.classList.toggle('active', mode === 'simplified');
+
+      // 更新 TTS 句子高亮狀態
+      const curTtsSentence = document.getElementById('demo-tts-sentence');
+      if (isTtsActive && curTtsSentence) {
+        curTtsSentence.className = isTtsPlaying ? 'tts-sentence active-sentence' : 'tts-sentence paused-sentence';
+        curTtsSentence.textContent = getActiveSentences()[sentenceIndex];
+      }
+
+      if (mode === 'simplified') {
+        showToast('已切換為簡體中文顯示（CFI 座標保護）');
+      } else if (mode === 'traditional') {
+        showToast('已切換為繁體中文顯示（台灣慣用語在地化）');
+      } else {
+        showToast('已切換為書籍原文顯示');
+      }
+      triggerEinkFlash();
+    }
+
+    if (btnConvTc) btnConvTc.addEventListener('click', () => setConversion('traditional'));
+    if (btnConvSc) btnConvSc.addEventListener('click', () => setConversion('simplified'));
+    if (layoutConvOriginal) layoutConvOriginal.addEventListener('click', () => setConversion('original'));
+    if (layoutConvTraditional) layoutConvTraditional.addEventListener('click', () => setConversion('traditional'));
+    if (layoutConvSimplified) layoutConvSimplified.addEventListener('click', () => setConversion('simplified'));
+
+    // ==========================================
     // 2. 主題系統 (晴空 Light / 夜讀 Dark / 宣紙 Sepia + E-Ink 修飾子)
     // 依據 prototype/elinkbook_theme_prototype.html 規範
     // ==========================================
@@ -347,7 +441,6 @@
     // 5. TTS 朗讀工具列互動 (2c) —《桃花源記》
     // ==========================================
     const btnNavTts = document.getElementById('btn-nav-tts');
-    const ttsSentence = document.getElementById('demo-tts-sentence');
     const ttsPlayBtn = document.getElementById('tts-play-btn');
     const ttsPrevBtn = document.getElementById('tts-prev-btn');
     const ttsNextBtn = document.getElementById('tts-next-btn');
@@ -361,13 +454,6 @@
     let isTtsActive = false;
     let isTtsPlaying = true;
     let isTtsCollapsed = false;
-
-    const demoSentences = [
-      '漁人甚異之，復前行，欲窮其林。',
-      '忽逢桃花林，夾岸數百步，中無雜樹，芳草鮮美，落英繽紛。',
-      '便捨船，從口入。初極狹，纔通人。復行數十步，豁然開朗。',
-      '土地平曠，屋舍儼然，有良田、美池、桑竹之屬。'
-    ];
     let sentenceIndex = 0;
 
     function startTts() {
@@ -375,9 +461,10 @@
       isTtsPlaying = true;
       if (normalChrome) normalChrome.classList.add('hidden');
       if (ttsChrome) ttsChrome.classList.remove('hidden');
-      if (ttsSentence) {
-        ttsSentence.className = 'tts-sentence active-sentence';
-        ttsSentence.textContent = demoSentences[sentenceIndex];
+      const curTtsSentence = document.getElementById('demo-tts-sentence');
+      if (curTtsSentence) {
+        curTtsSentence.className = 'tts-sentence active-sentence';
+        curTtsSentence.textContent = getActiveSentences()[sentenceIndex];
       }
       if (ttsPlayBtn) {
         ttsPlayBtn.textContent = '⏸ 暫停';
@@ -390,9 +477,10 @@
       isTtsActive = false;
       if (ttsChrome) ttsChrome.classList.add('hidden');
       if (isChromeVisible && normalChrome) normalChrome.classList.remove('hidden');
-      if (ttsSentence) {
-        ttsSentence.className = 'tts-sentence';
-        ttsSentence.textContent = demoSentences[0];
+      const curTtsSentence = document.getElementById('demo-tts-sentence');
+      if (curTtsSentence) {
+        curTtsSentence.className = 'tts-sentence';
+        curTtsSentence.textContent = getActiveSentences()[0];
       }
       sentenceIndex = 0;
       showToast('已停止朗讀，回到一般閱讀工具列');
@@ -405,13 +493,14 @@
     if (ttsPlayBtn) {
       ttsPlayBtn.addEventListener('click', () => {
         isTtsPlaying = !isTtsPlaying;
+        const curTtsSentence = document.getElementById('demo-tts-sentence');
         if (isTtsPlaying) {
           ttsPlayBtn.textContent = '⏸ 暫停';
-          if (ttsSentence) ttsSentence.className = 'tts-sentence active-sentence';
+          if (curTtsSentence) curTtsSentence.className = 'tts-sentence active-sentence';
           showToast('繼續語音朗讀');
         } else {
           ttsPlayBtn.textContent = '▶ 播放';
-          if (ttsSentence) ttsSentence.className = 'tts-sentence paused-sentence';
+          if (curTtsSentence) curTtsSentence.className = 'tts-sentence paused-sentence';
           showToast('語音朗讀已暫停');
         }
         triggerEinkFlash();
@@ -420,10 +509,12 @@
 
     if (ttsPrevBtn) {
       ttsPrevBtn.addEventListener('click', () => {
+        const sentences = getActiveSentences();
         if (sentenceIndex > 0) {
           sentenceIndex--;
-          if (ttsSentence) ttsSentence.textContent = demoSentences[sentenceIndex];
-          showToast(`朗讀前一句：${demoSentences[sentenceIndex]}`);
+          const curTtsSentence = document.getElementById('demo-tts-sentence');
+          if (curTtsSentence) curTtsSentence.textContent = sentences[sentenceIndex];
+          showToast(`朗讀前一句：${sentences[sentenceIndex]}`);
           triggerEinkFlash();
         } else {
           showToast('已是本篇開頭第一句');
@@ -433,10 +524,12 @@
 
     if (ttsNextBtn) {
       ttsNextBtn.addEventListener('click', () => {
-        if (sentenceIndex < demoSentences.length - 1) {
+        const sentences = getActiveSentences();
+        if (sentenceIndex < sentences.length - 1) {
           sentenceIndex++;
-          if (ttsSentence) ttsSentence.textContent = demoSentences[sentenceIndex];
-          showToast(`朗讀下一句：${demoSentences[sentenceIndex]}`);
+          const curTtsSentence = document.getElementById('demo-tts-sentence');
+          if (curTtsSentence) curTtsSentence.textContent = sentences[sentenceIndex];
+          showToast(`朗讀下一句：${sentences[sentenceIndex]}`);
           triggerEinkFlash();
         } else {
           showToast('已到達示範文章尾端');

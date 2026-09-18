@@ -506,7 +506,7 @@ img {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px 8px;
 }
 
 .mockup-chip-group {
