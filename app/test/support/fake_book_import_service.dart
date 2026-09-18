@@ -8,6 +8,7 @@ import 'package:elinkbook/library/models/library_enums.dart';
 /// 以及雲端匯入時帶入的 cloudFileIds。
 class ImportCallRecord {
   final List<String> uris;
+  final List<String?>? displayNames;
   final BookSource source;
   final String? remoteServerId;
   final Map<String, String>? remoteBookIds;
@@ -16,6 +17,7 @@ class ImportCallRecord {
 
   const ImportCallRecord({
     required this.uris,
+    this.displayNames,
     required this.source,
     this.remoteServerId,
     this.remoteBookIds,
@@ -54,6 +56,7 @@ class FakeBookImportService implements BookImportService {
   }) {
     lastImportCall = ImportCallRecord(
       uris: uris,
+      displayNames: displayNames,
       source: source,
       remoteServerId: remoteServerId,
       remoteBookIds: remoteBookIds,

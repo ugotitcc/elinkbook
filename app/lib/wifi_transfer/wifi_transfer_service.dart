@@ -82,14 +82,78 @@ class WifiTransferService {
     required this.deleteFile,
   });
 
-  /// Issue 3 實作：對落地檔案算內容指紋 → 查重複 → 匯入或略過，詳見
-  /// spec.md「`wifi_transfer_service.dart`」。
+  /// 對應「上傳位元組落地路徑」＋「重複匯入偵測」決策（spec.md
+  /// 「`wifi_transfer_service.dart`」）：呼叫端（`WifiTransferHttpServer`）
+  /// 已把上傳位元組寫入持久化目錄的 [landedPath]（副檔名已通過白名單檢查，
+  /// 不通過的呼叫端直接回傳 `unsupportedFormat`、不呼叫本方法；[landedPath]
+  /// 的檔名本身已由呼叫端消毒＋附加唯一前綴，[originalFileName] 只用於
+  /// 顯示，不參與實體路徑組裝）。內部依序：算指紋 → 查
+  /// `findByContentFingerprint` → 命中則刪除 [landedPath] 並回傳
+  /// `duplicateSkipped`；沒命中才呼叫
+  /// `importService.importFiles([landedPath], displayNames: [originalFileName])`。
+  /// 呼叫後檢查 `result.importedBooks.isEmpty`——是則刪除 [landedPath]、
+  /// 回傳 `failed`；任何未預期例外（`catch`，含指紋計算本身失敗）同樣刪除
+  /// [landedPath] 並回傳 `failed`，不讓例外冒出中斷整個上傳請求。
+  ///
+  /// **已知限制**：本方法呼叫 `computeFingerprint(landedPath, format)` 時
+  /// 不傳入 `epubIdentifier`（`ComputeRemoteFingerprint` typedef 本身也
+  /// 沒有這個參數位置），對帶有 `dc:identifier` 的 EPUB 檔案，這裡算出的
+  /// 指紋（內容 SHA-256）與 `BookImportServiceImpl._importSingleFile()`
+  /// 正式匯入時實際存入 `Book.contentFingerprint` 的值（`dc:identifier`）
+  /// 不同，重複上傳同一份這樣的 EPUB 可能偵測不到重複——與既有
+  /// `RemoteDownloadJob.hasDuplicate()`（OPDS 遠端下載去重）相同的既定
+  /// 限制，非本方法特有，詳見本 Issue plan 的 Global Constraints。
   Future<UploadResult> handleUploadedFile({
     required String landedPath,
     required String originalFileName,
     required BookFileFormat format,
   }) async {
-    throw UnimplementedError('Issue 3 實作：上傳落地/去重/匯入邏輯');
+    // 【`/receiving-code-review` 審查修正，review-plan-issue-3.md I-1】
+    // deleteFile 是使用者注入的清理動作（生產環境為 File.delete()），本身
+    // 可能拋出例外（檔案已被其他流程刪除/權限問題）。下方每個清理呼叫都
+    // 已經身處某個決定「回傳什麼結果」的分支，若 deleteFile 在這裡失敗
+    // 又沒有內層防護，例外會直接冒出、逃出整個方法，違反「不可讓例外冒出
+    // 中斷整個上傳請求」的契約——比照 Issue 2 對 deleteFile 呼叫的既有
+    // 靜默吞錯慣例。
+    Future<void> safeDelete(String path) async {
+      try {
+        await deleteFile(path);
+      } catch (_) {}
+    }
+
+    try {
+      final fingerprint = await computeFingerprint(landedPath, format);
+      final duplicate =
+          await libraryRepository.findByContentFingerprint(fingerprint);
+      if (duplicate != null) {
+        await safeDelete(landedPath);
+        return UploadResult(
+          originalFileName: originalFileName,
+          outcome: UploadOutcome.duplicateSkipped,
+        );
+      }
+      final result = await importService.importFiles(
+        [landedPath],
+        displayNames: [originalFileName],
+      );
+      if (result.importedBooks.isEmpty) {
+        await safeDelete(landedPath);
+        return UploadResult(
+          originalFileName: originalFileName,
+          outcome: UploadOutcome.failed,
+        );
+      }
+      return UploadResult(
+        originalFileName: originalFileName,
+        outcome: UploadOutcome.imported,
+      );
+    } catch (_) {
+      await safeDelete(landedPath);
+      return UploadResult(
+        originalFileName: originalFileName,
+        outcome: UploadOutcome.failed,
+      );
+    }
   }
 
   /// 對應「下載清單僅列出 isDownloaded == true」決策（spec.md
