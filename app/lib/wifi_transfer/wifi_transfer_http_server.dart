@@ -218,3 +218,37 @@ Stream<List<int>> wrapStreamWithCleanup(
   );
   return controller.stream;
 }
+
+/// 建構下載路由的 `Content-Disposition` 標頭值（RFC 5987/6266，spec.md
+/// 「HTTP 路由表」）：`filename` 提供給不支援 `filename*` 的舊版客戶端
+/// 當退路（僅保留可安全放進雙引號 quoted-string 的可列印 ASCII 字元，
+/// 控制字元/非 ASCII 一律替換為 `_`），`filename*` 用 `Uri.encodeComponent`
+/// 完整 percent-encode 原始檔名，同時支援中文書名在跨平台瀏覽器正確
+/// 顯示。**安全性**：[downloadFileName] 源自使用者可匯入的書籍標題（不可
+/// 信任輸入，例如惡意 EPUB 中繼資料可能夾帶 `\r\n` 意圖進行 HTTP header
+/// injection）——兩個輸出分支皆對原始字串做完整轉換（ASCII 白名單過濾／
+/// percent-encoding），任何控制字元皆不會以原始位元組型式出現在標頭值中。
+String buildContentDispositionHeader(String downloadFileName) {
+  final fallback = _asciiFallbackFilename(downloadFileName);
+  // 【`/receiving-code-review` 審查修正，review-plan-issue-2.md M-1】
+  // `Uri.encodeComponent`（比照 JavaScript `encodeURIComponent`）刻意
+  // 不 percent-encode `- _ . ! ~ * ' ( )` 這組「unreserved」字元，但
+  // RFC 5987 的 `attr-char` 文法明確排除單引號——單引號同時也是
+  // `filename*=UTF-8''<value>` 語法本身的分隔符，若書名含 `'`（例如
+  // `John's Book.epub`）没有另外處理會不符合規範，額外手動跳脫為
+  // `%27`。
+  final encoded =
+      Uri.encodeComponent(downloadFileName).replaceAll("'", '%27');
+  return 'attachment; filename="$fallback"; filename*=UTF-8\'\'$encoded';
+}
+
+String _asciiFallbackFilename(String filename) {
+  final buffer = StringBuffer();
+  for (final rune in filename.runes) {
+    final isSafePrintableAscii =
+        rune >= 0x20 && rune <= 0x7E && rune != 0x22 && rune != 0x5C;
+    buffer.writeCharCode(isSafePrintableAscii ? rune : 0x5F); // '_'
+  }
+  final result = buffer.toString();
+  return result.isEmpty ? '_' : result;
+}

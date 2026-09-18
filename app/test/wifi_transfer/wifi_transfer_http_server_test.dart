@@ -327,4 +327,55 @@ void main() {
       await subscription.cancel();
     });
   });
+
+  group('buildContentDispositionHeader', () {
+    test('純 ASCII 檔名：fallback 與 filename* 皆為原始檔名', () {
+      final header = buildContentDispositionHeader('book.epub');
+      expect(header,
+          "attachment; filename=\"book.epub\"; filename*=UTF-8''book.epub");
+    });
+
+    test('中文檔名：fallback 以底線替代非 ASCII 字元，filename* 為 percent-encoded '
+        '原始檔名（同時支援中文書名正確顯示）', () {
+      final header = buildContentDispositionHeader('書名.epub');
+      expect(
+        header,
+        "attachment; filename=\"__.epub\"; "
+        "filename*=UTF-8''%E6%9B%B8%E5%90%8D.epub",
+      );
+    });
+
+    test('檔名含雙引號與反斜線：fallback 以底線替代，避免破壞 quoted-string 語法',
+        () {
+      final header = buildContentDispositionHeader('a"b\\c.epub');
+      expect(header, contains('filename="a_b_c.epub"'));
+    });
+
+    test(
+        '檔名含 CRLF（模擬惡意書名中繼資料嘗試 HTTP header injection）：'
+        'fallback 與 filename* 皆不含原始的 \\r／\\n 位元組', () {
+      final malicious = 'evil\r\nSet-Cookie: x=1.epub';
+      final header = buildContentDispositionHeader(malicious);
+
+      expect(header.contains('\r'), isFalse);
+      expect(header.contains('\n'), isFalse);
+    });
+
+    test(
+        '檔名含單引號（`/receiving-code-review` 審查修正 M-1）：filename* '
+        '中的單引號額外跳脫為 %27，不與 UTF-8\'\' 語法本身的分隔符混淆',
+        () {
+      final header = buildContentDispositionHeader("John's Book.epub");
+      expect(header, contains("filename*=UTF-8''John%27s%20Book.epub"));
+      expect(
+        header.substring(header.indexOf("filename*=UTF-8''") + 18),
+        isNot(contains("'")),
+      );
+    });
+
+    test('空字串輸入：fallback 退回單一底線，不產生空的 quoted-string', () {
+      final header = buildContentDispositionHeader('');
+      expect(header, contains('filename="_"'));
+    });
+  });
 }
