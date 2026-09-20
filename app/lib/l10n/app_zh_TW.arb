@@ -1,0 +1,11 @@
+{
+  "@@locale": "zh_TW",
+  "groupUncategorized": "未分類",
+  "@groupUncategorized": {
+    "description": "系統保留分類「未分類」的表現層顯示名稱（僅用於畫面呈現，不影響底層資料庫欄位值，見 CONTEXT.md「介面語言」詞條）"
+  },
+  "close": "關閉",
+  "@close": {
+    "description": "通用「關閉」按鈕/圖示的無障礙提示文字（tooltip）"
+  }
+}

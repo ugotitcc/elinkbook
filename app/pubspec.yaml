@@ -34,6 +34,10 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  # 多語系介面（epic-45-interface-i18n，FR-49）：Flutter 官方標準方案。
+  flutter_localizations:
+    sdk: flutter
+  intl:
 
   # 整合測試使用 getTemporaryDirectory() 刪除暫存檔案。
   path_provider: ^2.1.6
@@ -166,11 +170,8 @@ dependency_overrides:
 
 # The following section is specific to Flutter packages.
 flutter:
-
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
   uses-material-design: true
+  generate: true
 
   # To add assets to your application, add an assets section, like this:
   assets:
