@@ -8,7 +8,7 @@
 
 ## Issue 0：依賴引進＋核心型別骨架＋`MaterialApp` 接線
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** 無，可立即開始。
 
