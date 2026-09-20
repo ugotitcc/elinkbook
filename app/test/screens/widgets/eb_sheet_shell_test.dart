@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
-// ignore: unused_import
-import 'package:elinkbook/l10n/app_localizations.dart';
 
 import '../../support/pump_localized_widget.dart';
 

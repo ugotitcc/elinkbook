@@ -35,6 +35,7 @@
 - Create: `app/lib/l10n/app_zh_TW.arb`
 - Create: `app/lib/l10n/app_zh_CN.arb`
 - Create: `app/lib/l10n/app_en.arb`
+- Create: `app/lib/l10n/app_zh.arb`（`/superpowers:requesting-code-review` `review-issue-0.md` Important #1 事後補記，見下方 Step 5 之後的附註）
 - Test: `app/test/l10n/app_localizations_generated_test.dart`
 
 **Interfaces:**
@@ -145,6 +146,23 @@ preferred-supported-locales: ["zh_TW"]
   "close": "Close"
 }
 ```
+
+**必要的第 4 份 ARB（`/superpowers:requesting-code-review` `review-issue-0.md` Important #1 事後補記，非計畫撰寫當下已知，Task 1 實作時才發現）**：`app/lib/l10n/app_zh.arb`（內容與 `app_zh_TW.arb` 一致：`未分類`／`關閉`），無 `@` 描述區塊：
+
+```json
+{
+  "@@locale": "zh",
+  "groupUncategorized": "未分類",
+  "close": "關閉"
+}
+```
+
+**原因**：Flutter 3.41.9 的 `flutter gen-l10n` 在同時存在 `zh_TW`／`zh_CN` 兩個帶 country code 的變體時，強制要求一個不帶 country code 的 `zh` 基礎 ARB 檔案作為 fallback，否則會報錯：
+```
+Arb file for a fallback, zh, does not exist, even though
+the following locale(s) exist: [zh_CN, zh_TW].
+```
+`review-issue-0.md` 審查時已實測移除此檔案會導致 `gen-l10n` 直接失敗，確認這是工具限制而非失誤。**已知影響（記錄於此，供 Issue 1 實作者留意）**：`AppLocalizations.supportedLocales` 因此含 4 個項目（多一個裸 `zh`），本 App 自身的 locale 決策路徑（`_localeOverride?.locale`／`resolveMaterialAppLocale()`）永遠不會選出這個裸 `Locale('zh')`，目前不構成執行期臭蟲；但 Issue 1 的語言選擇 UI 若要列舉支援語言產生選單，**一律走 `AppLocale.values`（3 個成員），不要直接迭代 `AppLocalizations.supportedLocales`（4 個項目，多一個裸 `zh` 會讓選單多出不該有的選項）**。
 
 - [ ] **Step 6: 安裝依賴並產生 `AppLocalizations`**
 
@@ -1074,3 +1092,5 @@ git commit -m "docs(epic-45): 標記 Issue 0 為 completed"
 - **未使用 placeholder**：所有 Step 皆含可直接執行的完整程式碼／指令，無「TBD」「依實際情況調整」等字樣。
 
 **2026-09-21 `/superpowers:receiving-code-review` 審查（`reviews/review-plan-issue-0.md`，結論 Changes Requested，0 Critical／2 Important／4 Minor）已完成修訂，6 項全數查證屬實**：I-1（`elinkbook_app_locale_test.dart` 缺少 `MaterialApp.localeListResolutionCallback` 實際接線驗證與 `AppLocalizations.of(context)` 有效性驗證——Task 2 只測了純函式本身，沒有測試證明 `main.dart` 真的把它接上去）——Task 5 新增兩個 test，直接呼叫 `materialApp.localeListResolutionCallback` 實例＋透過 `AdaptiveShellScaffold` 的 context 驗證 `AppLocalizations.of()` 可用。I-2（`pumpLocalizedWidget()` 缺 `navigatorObservers`，會阻礙後續 Issue 3-6/9 遷移既有仰賴 `NavigatorObserver` 的測試檔）——Task 4 新增該參數＋對應測試。M-1（nullable 型別加 `late` 屬反模式）——Task 5 移除。M-2（Task 6 測試迴圈補關閉驗證，額外覆蓋「三語言下關閉按鈕真的可點擊生效」而不只是 tooltip 文字）——Task 6 補上。M-3（Task 7 Step 5 在 `app/` 目錄下執行 `git add docs/...` 會因路徑不存在觸發 pathspec 錯誤）——修正為 `../docs/...`。M-4（Task 1 產生檔測試漏驗證 `close` key）——補上三語言斷言。本輪修訂全數為測試覆蓋率與程式碼正確性補強，未變動任何既有架構決策。
+
+**2026-09-21 `/superpowers:requesting-code-review` 對實際落地程式碼（分支 `feat/epic-45-issue-0`，7 個 Task 皆已執行完成）的審查（`reviews/review-issue-0.md`，結論 Ready to merge: Yes，0 Critical／1 Important／2 Minor）已完成修訂**：Important（`app/lib/l10n/app_zh.arb` 是 Task 1 實作時才發現、`gen-l10n` 工具限制強制要求的必要第 4 份 ARB，但未同步反映回本計畫文件）——已補入 Task 1 的 Files 清單與 Step 5 之後的附註，並記錄「Issue 1 語言選單須走 `AppLocale.values`、不可直接迭代 `AppLocalizations.supportedLocales`」這個陷阱提醒。Minor #1（`pubspec.yaml` 誤刪與本次改動無關的既有註解）／Minor #2（`eb_sheet_shell_test.dart` 新增一個靠 `// ignore: unused_import` 壓下警告、實際上沒用到的 import）——皆已在分支上直接修正程式碼（非計畫文件），`flutter analyze` 確認乾淨、`eb_sheet_shell_test.dart` 全部 6 個 test 重跑確認通過。本輪修訂為分支程式碼的整潔性補強＋計畫文件與實作現況同步，未變動任何架構決策，本 Issue 原本「零使用者可見行為變動」的核心承諾不受影響。
