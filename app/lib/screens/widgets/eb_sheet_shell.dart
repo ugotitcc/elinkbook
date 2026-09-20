@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// 底部抽屜外殼基礎元件（`DESIGN.md` §10）：拖曳把手＋標題＋右上角關閉
 /// 按鈕＋高度限制，本 Epic 首次落地、只給 `BookActionSheet` 使用（既有
 /// `NotesBottomSheet`／閱讀器內既有 Bottom Sheet 不在本次改用範圍，見
@@ -88,7 +90,7 @@ class EBSheetShell extends StatelessWidget {
                   IconButton(
                     key: const Key('eb_sheet_shell_close_button'),
                     icon: const Icon(Icons.close),
-                    tooltip: '關閉',
+                    tooltip: AppLocalizations.of(context)?.close ?? '關閉',
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
