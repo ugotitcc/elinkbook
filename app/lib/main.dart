@@ -59,6 +59,9 @@ import 'search/foliate_content_indexer.dart';
 import 'search/full_text_search_settings_repository.dart';
 import 'search/pdf_content_indexer.dart';
 import 'search/search_repository.dart';
+import 'l10n/app_locale.dart';
+import 'l10n/app_locale_preferences.dart';
+import 'l10n/app_localizations.dart';
 import 'theme/app_theme_preferences.dart';
 
 /// [LibraryScreen.isMobileDataConnection] 生產環境實作
@@ -89,6 +92,9 @@ Future<void> main() async {
   final themePreferences = AppThemePreferences();
   final initialTheme = await themePreferences.loadTheme();
   final initialEinkMode = await themePreferences.loadEinkMode();
+
+  final localePreferences = AppLocalePreferences();
+  final initialLocaleOverride = await localePreferences.loadLocaleOverride();
 
   final dbPath = await defaultLibraryDatabasePath();
   final repository = await SqliteLibraryRepository.open(dbPath);
@@ -282,6 +288,8 @@ Future<void> main() async {
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
       themePreferences: themePreferences,
+      localePreferences: localePreferences,
+      initialLocaleOverride: initialLocaleOverride,
       fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
       isFullTextSearchAvailable: repository.isFullTextSearchAvailable,
       searchRepository: searchRepository,
@@ -326,6 +334,8 @@ class ElinkBookApp extends StatefulWidget {
   final Future<bool> Function()? isMobileDataConnection;
   final DownloadQueueController? downloadQueueController;
   final GlobalKey<NavigatorState>? navigatorKey;
+  final AppLocalePreferences localePreferences;
+  final AppLocale? initialLocaleOverride;
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
   final bool initialEinkMode;
@@ -376,8 +386,11 @@ class ElinkBookApp extends StatefulWidget {
     this.isFullTextSearchAvailable = true,
     this.searchRepository,
     this.checkNetworkAvailability,
+    this.initialLocaleOverride,
+    AppLocalePreferences? localePreferences,
     AppThemePreferences? themePreferences,
-  }) : themePreferences = themePreferences ?? AppThemePreferences();
+  })  : themePreferences = themePreferences ?? AppThemePreferences(),
+        localePreferences = localePreferences ?? AppLocalePreferences();
 
   @override
   State<ElinkBookApp> createState() => _ElinkBookAppState();
@@ -387,6 +400,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
     with WidgetsBindingObserver {
   late AppTheme _theme;
   late bool _isEinkMode;
+  AppLocale? _localeOverride;
 
   @override
   void initState() {
@@ -394,6 +408,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
     WidgetsBinding.instance.addObserver(this);
     _theme = widget.initialTheme;
     _isEinkMode = widget.initialEinkMode;
+    _localeOverride = widget.initialLocaleOverride;
   }
 
   @override
@@ -433,6 +448,11 @@ class _ElinkBookAppState extends State<ElinkBookApp>
       title: 'elinkBook',
       theme: themeData,
       themeAnimationDuration: Duration.zero,
+      locale: _localeOverride?.locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localeListResolutionCallback: (deviceLocales, supportedLocales) =>
+          resolveMaterialAppLocale(deviceLocales),
       home: AdaptiveShellScaffold(
         repository: widget.repository,
         importService: widget.importService,
