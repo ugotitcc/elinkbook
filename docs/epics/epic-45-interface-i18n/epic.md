@@ -1,0 +1,11 @@
+# `epic-45-interface-i18n` 多語系介面
+
+**狀態：** 🟡 開發中 (Active)
+**存放路徑：** `docs/epics/epic-45-interface-i18n/`
+**關聯 PRD 章節：** FR-49
+
+## 開發記錄
+
+2026-09-20 使用者提出「多語系介面：正體中文、簡體中文、英文」需求（PRD FR-49），`/grill-with-docs`（`/grilling`＋`/domain-modeling`）完成 3 輪 16 題 Discovery，`design.md` 已產出。**核心決策**：一次涵蓋全部既有畫面（不分期），範圍含 UI 靜態字串＋執行期動態訊息（不含 Console Log），系統保留字串（如「未分類」）納入、使用者輸入資料與專有名詞（字型名稱／雲端品牌名）不納入；首次啟動依裝置系統語言自動偵測、使用者可在「設定→外觀」手動覆寫、即時切換不需重啟；偏好存裝置本地 `SharedPreferences`、不跨裝置同步；技術路線為 Flutter 官方 `flutter_localizations`＋`intl`（ARB／`gen-l10n`），含 ICU plural 與 `DateFormat` 在地化；簡體中文／英文採人工翻譯（不借用 `epic-42` 字元級轉換機制），由 Claude Code 草擬、使用者審閱；原生層 `MethodChannel` 錯誤往後一律依錯誤代碼在 Dart 端對應在地化字串，原生中文訊息僅作診斷用途；比照 `check_foliate_es_compat.js` 慣例建立防遺漏稽核腳本。`CONTEXT.md` 新增「介面語言（App Locale，FR-49）」詞條並與既有「簡繁轉換」詞條劃清界線。新增 `ADR 0033`（介面語言偏好不跨裝置同步）與 `ADR 0034`（原生層錯誤訊息不做跨端在地化，改用錯誤代碼於 Dart 端對應），記錄兩項關鍵取捨。下一步：進入 Architecting 階段，盤點全部既有畫面硬編碼字串範圍並撰寫 `spec.md`。
+
+**2026-09-20 `/superpowers:receiving-code-review` 審查（`reviews/review-epic-and-design.md`，結論 Changes Requested，2 Critical／4 Important／3 Minor）已完成修訂，9 項全數查證屬實並補進 `design.md`**：**C-1**（`BookGroup.uncategorized`／`'未分類'` 查證確實是 SQLite `groups` 表主鍵、`books.groupName` 預設值，也是重新命名/刪除保護邏輯的比對字面值）——補入「系統保留分類名稱的在地化契約」：持久化層永遠維持固定字面值不動、表現層純轉譯、分類新增/重新命名新增撞名防線（不得等於當前語言下的翻譯結果）。**C-2**（查證 `app/test/` 現況 43 檔 314 處中文 `find.text()`、68 檔 772 處裸 `MaterialApp(`、零處配置 `localizationsDelegates`，且 Flutter 測試環境預設 Locale 為 `en_US`）——補入「測試套件相容性」：統一測試包裝器＋測試環境釘定正體中文 Locale，讓既有斷言在遷移過程中不中斷。**I-1**（「跟隨系統」語意模糊、手動覆寫後不可逆）——修正為 `app_locale` nullable 儲存語意＋4 選項（含「跟隨系統」）＋`localeListResolutionCallback` 動態解析。**I-2**（港澳繁體／新馬簡體等 BCP 47 變體未規範）——補入 Locale 解析矩陣（依 `scriptCode`/`countryCode` 分類而非精確比對 `zh_TW`/`zh_CN`）。**I-3**（查證 `sync_settings_screen.dart`／`opds_http_client.dart`／`sync_engine.dart` 等 14 個檔案皆有原生 channel 以外的 Dart 端硬編碼例外訊息）——「原生層錯誤訊息」擴大為「執行期例外訊息在地化」，原則擴及所有 Dart 端非同步例外，禁止使用者可見介面直接顯示 `e.toString()`。**I-4**（`markdown_export.dart` 查證確實混雜系統結構文字與使用者資料）——裁定系統產生的結構文字（標題/區塊標籤）納入涵蓋範圍，`generateMarkdownExport()` 需於 Architecting 階段擴充參數。**M-1**（ICU plural 範例應綁定總數而非目前進度）、**M-2**（稽核腳本需白名單排除系統保留字/字型品牌名/字典檔/測試 fixture）、**M-3**（ADR 相對連結補齊）皆採納並補入 `design.md`；`CONTEXT.md`「介面語言」詞條同步補上「未分類」持久化層不動的說明。本輪修訂全數為技術完整性與正確性補強，未變動任何既有 `/grilling` 產品決策形狀（全範圍涵蓋、裝置本地儲存、人工翻譯、SDD Epic 流程等皆維持原樣）。下一步：進入 Architecting 階段，撰寫 `spec.md`。
