@@ -22,8 +22,9 @@ Future<void> pumpLocalizedWidget(
   bool isEinkMode = false,
   GlobalKey<NavigatorState>? navigatorKey,
   List<NavigatorObserver> navigatorObservers = const <NavigatorObserver>[],
+  MediaQueryData? mediaQueryData,
 }) async {
-  await tester.pumpWidget(MaterialApp(
+  final app = MaterialApp(
     navigatorKey: navigatorKey,
     navigatorObservers: navigatorObservers,
     locale: locale,
@@ -31,5 +32,10 @@ Future<void> pumpLocalizedWidget(
     supportedLocales: AppLocalizations.supportedLocales,
     theme: resolveThemeData(theme: theme, isEinkMode: isEinkMode),
     home: home,
-  ));
+  );
+  await tester.pumpWidget(
+    mediaQueryData == null
+        ? app
+        : MediaQuery(data: mediaQueryData, child: app),
+  );
 }

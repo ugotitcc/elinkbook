@@ -28,7 +28,6 @@ import '../library/models/library_enums.dart';
 import '../library/widgets/book_cover.dart';
 import '../theme/elink_tokens.dart';
 
-// ignore: unused_import
 import 'package:intl/intl.dart';
 
 import '../l10n/app_localizations.dart';
@@ -1384,7 +1383,7 @@ class _GroupGridTile extends StatelessWidget {
                         vertical: 2,
                       ),
                       child: Text(
-                        '分類',
+                        AppLocalizations.of(context)!.libraryGroupBadgeLabel,
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
@@ -1428,7 +1427,7 @@ class _GroupGridTile extends StatelessWidget {
           SizedBox(
             height: gridTileFooterHeight(MediaQuery.textScalerOf(context)),
             child: Text(
-              '${tile.name} (${tile.totalCount})',
+              '${tile.name} (${AppLocalizations.of(context)!.libraryGroupTileCount(tile.totalCount)})',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
@@ -1479,7 +1478,7 @@ class _GroupListTile extends StatelessWidget {
       // 進而讓依此估算出的 pageSize 偏多、造成本頁部分項目被裁切。
       title: Text(tile.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
-        '${tile.totalCount} 本',
+        AppLocalizations.of(context)!.libraryGroupTileCount(tile.totalCount),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -1594,7 +1593,7 @@ class _BookGridTile extends StatelessWidget {
                             minWidth: 32,
                             minHeight: 32,
                           ),
-                          tooltip: '更多',
+                          tooltip: AppLocalizations.of(context)!.libraryBookMenuTooltip,
                           onPressed: onMenuTap,
                         ),
                       ),
@@ -1709,7 +1708,7 @@ class _BookListTile extends StatelessWidget {
             IconButton(
               key: Key('book_action_menu_${book.id}'),
               icon: const Icon(Icons.more_vert),
-              tooltip: '更多',
+              tooltip: AppLocalizations.of(context)!.libraryBookMenuTooltip,
               onPressed: onMenuTap,
             ),
         ],
@@ -1755,7 +1754,10 @@ class _ContinueReadingRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('繼續閱讀', style: TextStyle(fontSize: 12)),
+                  Text(
+                    AppLocalizations.of(context)!.libraryContinueReadingLabel,
+                    style: const TextStyle(fontSize: 12),
+                  ),
                   Text(
                     convertText(book.title, textConversion),
                     maxLines: 1,
@@ -1776,6 +1778,8 @@ class _ContinueReadingRow extends StatelessWidget {
   }
 }
 
+enum _FileSizeStatus { notDownloaded, unknown }
+
 /// 單書「詳細資料」對話框（`spec.md` 功能④）：檔案大小查詢為非同步、
 /// 具防護——`!book.isDownloaded` 直接顯示「尚未下載」不查詢檔案；
 /// `content://` URI 或讀取失敗（`FileSystemException`）一律顯示
@@ -1790,30 +1794,22 @@ class _BookDetailsDialog extends StatefulWidget {
 }
 
 class _BookDetailsDialogState extends State<_BookDetailsDialog> {
-  late final Future<String> _fileSizeFuture;
+  late final Future<Object> _fileSizeFuture;
 
   @override
   void initState() {
     super.initState();
-    _fileSizeFuture = _resolveFileSizeText(widget.book);
+    _fileSizeFuture = _resolveFileSize(widget.book);
   }
 
-  static Future<String> _resolveFileSizeText(Book book) async {
-    if (!book.isDownloaded) return '尚未下載';
+  static Future<Object> _resolveFileSize(Book book) async {
+    if (!book.isDownloaded) return _FileSizeStatus.notDownloaded;
     try {
-      // 【review-plan-issue-4.md I-4】改用同步 I/O 取代 `await length()`：
-      // 後者依賴原生 I/O 事件佇列完成，在 Flutter test 的 fake-async 環境下
-      // 永遠不會完成（Future 永遠卡在 waiting），導致 `catch (_)` 無法觸發、
-      // FutureBuilder 永遠顯示「讀取中...」。
-      // 先用 `existsSync()` 確認檔案存在（content:// URI 在桌面端必定回傳
-      // false），再以 `statSync().size` 同步取得大小——兩者皆為同步系統呼叫，
-      // 立即回傳或拋出 `FileSystemException`，讓 `catch (_)` 正常攔截。
       final file = File(book.filePath);
-      if (!file.existsSync()) return '未知大小';
-      final length = file.statSync().size;
-      return _formatFileSize(length);
+      if (!file.existsSync()) return _FileSizeStatus.unknown;
+      return file.statSync().size;
     } catch (_) {
-      return '未知大小';
+      return _FileSizeStatus.unknown;
     }
   }
 
@@ -1823,41 +1819,58 @@ class _BookDetailsDialogState extends State<_BookDetailsDialog> {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  static String _formatLastReadTime(DateTime time) {
-    if (time.millisecondsSinceEpoch <= 0) return '尚未閱讀';
-    final y = time.year;
-    final m = time.month.toString().padLeft(2, '0');
-    final d = time.day.toString().padLeft(2, '0');
-    return '$y/$m/$d';
+  static String _formatLastReadTime(
+    DateTime time,
+    AppLocalizations l10n,
+    Locale locale,
+  ) {
+    if (time.millisecondsSinceEpoch <= 0) return l10n.libraryNeverRead;
+    return DateFormat.yMd(locale.toString()).format(time);
   }
 
   @override
   Widget build(BuildContext context) {
     final book = widget.book;
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context);
     return AlertDialog(
       key: const Key('book_details_dialog'),
       title: Text(convertText(book.title, widget.textConversion)),
-      content: FutureBuilder<String>(
+      content: FutureBuilder<Object>(
         future: _fileSizeFuture,
         builder: (context, snapshot) {
-          // 【review-plan-issue-4.md M-2】`_resolveFileSizeText()` 內部已用
-          // try-catch 保證 Future 本身不會拋錯，但 FutureBuilder 遭遇未預期
-          // 的 error 狀態時，`snapshot.data` 為 null 會讓畫面永遠卡在
-          // 「讀取中...」，改為明確判斷 hasError。
-          final fileSizeText = snapshot.hasError
-              ? '未知大小'
-              : (snapshot.data ?? '讀取中...');
+          final String fileSizeText;
+          if (snapshot.hasError) {
+            fileSizeText = l10n.libraryUnknownFileSize;
+          } else if (!snapshot.hasData) {
+            fileSizeText = l10n.libraryLoadingEllipsis;
+          } else {
+            fileSizeText = switch (snapshot.data!) {
+              _FileSizeStatus.notDownloaded => l10n.libraryBookNotDownloaded,
+              _FileSizeStatus.unknown => l10n.libraryUnknownFileSize,
+              final int bytes => _formatFileSize(bytes),
+              _ => l10n.libraryUnknownFileSize,
+            };
+          }
           return Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '作者：${book.author == null ? '未知' : convertText(book.author!, widget.textConversion)}',
+                l10n.libraryDetailAuthorLabel(
+                  book.author == null
+                      ? l10n.libraryUnknownAuthor
+                      : convertText(book.author!, widget.textConversion),
+                ),
               ),
-              Text('格式：${book.format.name}'),
-              Text('檔案大小：$fileSizeText'),
-              Text('進度：${_progressText(book)}'),
-              Text('最後閱讀：${_formatLastReadTime(book.lastReadTime)}'),
+              Text(l10n.libraryDetailFormatLabel(book.format.name)),
+              Text(l10n.libraryDetailFileSizeLabel(fileSizeText)),
+              Text(l10n.libraryDetailProgressLabel(_progressText(book))),
+              Text(
+                l10n.libraryDetailLastReadLabel(
+                  _formatLastReadTime(book.lastReadTime, l10n, locale),
+                ),
+              ),
             ],
           );
         },
@@ -1866,7 +1879,7 @@ class _BookDetailsDialogState extends State<_BookDetailsDialog> {
         TextButton(
           key: const Key('book_details_dialog_close_button'),
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('關閉'),
+          child: Text(l10n.close),
         ),
       ],
     );
@@ -1968,12 +1981,13 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (_existingPrefs == null) {
       // 【review-plan-issue-4.md M-3】loading 狀態仍保留 title／取消按鈕，
       // 避免儲存層載入慢時使用者無法從畫面上退出。
       return AlertDialog(
         key: const Key('layout_override_dialog'),
-        title: const Text('版面覆寫'),
+        title: Text(l10n.libraryLayoutOverrideTitle),
         content: const SizedBox(
           height: 80,
           child: Center(child: CircularProgressIndicator()),
@@ -1982,20 +1996,20 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
           TextButton(
             key: const Key('layout_override_cancel_button'),
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
         ],
       );
     }
     return AlertDialog(
       key: const Key('layout_override_dialog'),
-      title: const Text('版面覆寫'),
+      title: Text(l10n.libraryLayoutOverrideTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('排版方向'),
+            Text(l10n.libraryLayoutOverrideWritingModeLabel),
             Wrap(
               spacing: 4,
               children: [
@@ -2004,7 +2018,7 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
                   value: null,
                   groupValue: _writingMode,
                   icon: Icons.auto_awesome,
-                  tooltip: '使用書籍排版',
+                  tooltip: l10n.libraryLayoutOverrideWritingModeDefault,
                   onSelected: (v) => setState(() => _writingMode = v),
                 ),
                 ReaderOptionTile<WritingMode?>(
@@ -2012,7 +2026,7 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
                   value: WritingMode.horizontal,
                   groupValue: _writingMode,
                   icon: Icons.text_rotation_none,
-                  tooltip: '橫排',
+                  tooltip: l10n.libraryLayoutOverrideWritingModeHorizontal,
                   onSelected: (v) => setState(() => _writingMode = v),
                 ),
                 ReaderOptionTile<WritingMode?>(
@@ -2020,13 +2034,13 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
                   value: WritingMode.vertical,
                   groupValue: _writingMode,
                   icon: Icons.text_rotate_vertical,
-                  tooltip: '直排',
+                  tooltip: l10n.libraryLayoutOverrideWritingModeVertical,
                   onSelected: (v) => setState(() => _writingMode = v),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            const Text('翻頁模式'),
+            Text(l10n.libraryLayoutOverridePageTurnModeLabel),
             Wrap(
               spacing: 4,
               children: [
@@ -2035,7 +2049,7 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
                   value: null,
                   groupValue: _pageTurnMode,
                   icon: Icons.tune,
-                  tooltip: '使用全域預設',
+                  tooltip: l10n.libraryLayoutOverridePageTurnModeDefault,
                   onSelected: (v) => setState(() => _pageTurnMode = v),
                 ),
                 ReaderOptionTile<PageTurnMode?>(
@@ -2045,7 +2059,7 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
                   value: PageTurnMode.paginated,
                   groupValue: _pageTurnMode,
                   icon: Icons.menu_book,
-                  tooltip: '分頁',
+                  tooltip: l10n.libraryLayoutOverridePageTurnModePaginated,
                   onSelected: (v) => setState(() => _pageTurnMode = v),
                 ),
                 ReaderOptionTile<PageTurnMode?>(
@@ -2053,7 +2067,7 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
                   value: PageTurnMode.scroll,
                   groupValue: _pageTurnMode,
                   icon: Icons.swap_vert,
-                  tooltip: '捲動',
+                  tooltip: l10n.libraryLayoutOverridePageTurnModeScroll,
                   onSelected: (v) => setState(() => _pageTurnMode = v),
                 ),
               ],
@@ -2065,12 +2079,12 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
         TextButton(
           key: const Key('layout_override_cancel_button'),
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+          child: Text(l10n.cancel),
         ),
         TextButton(
           key: const Key('layout_override_save_button'),
           onPressed: _save,
-          child: const Text('儲存'),
+          child: Text(l10n.libraryLayoutOverrideSaveButton),
         ),
       ],
     );

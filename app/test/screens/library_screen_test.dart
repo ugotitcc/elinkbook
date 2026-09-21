@@ -23,8 +23,7 @@ import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/widgets/book_cover.dart';
-import 'package:elinkbook/theme/app_theme.dart';
-import 'package:elinkbook/theme/app_theme_data.dart';
+
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
@@ -105,15 +104,13 @@ void main() {
   });
 
   testWidgets('圖書庫為空時顯示「尚未匯入書籍」提示與匯入按鈕', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -126,15 +123,13 @@ void main() {
   });
 
   testWidgets('圖書庫載入資料失敗時，畫面降級顯示空清單狀態而非永遠卡在載入中', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(throwOnListBooks: true),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -144,15 +139,13 @@ void main() {
 
   testWidgets('有書籍時，書架 grid 呈現正確渲染書籍項目（標題、進度固定 0%）', (tester) async {
     final book = _testBook(id: '1', title: '紅樓夢', author: '曹雪芹');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -184,15 +177,13 @@ void main() {
     });
 
     final book = _testBook(id: '1', title: '紅樓夢');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -214,15 +205,13 @@ void main() {
     });
 
     final book = _testBook(id: '1', title: '紅樓夢');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -238,16 +227,14 @@ void main() {
       'prototype/elinkbook_theme_prototype.html 常駐搜尋列設計）', () {
     testWidgets('AppBar 下方顯示常駐搜尋列', (tester) async {
       final book = _testBook(id: '1', title: '紅樓夢');
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('library_search_field')), findsOneWidget);
@@ -260,16 +247,14 @@ void main() {
         _testBook(id: '2', title: 'Dune', author: 'Frank Herbert', groupName: '科幻'),
         _testBook(id: '3', title: '三國演義', author: '羅貫中', groupName: '古典文學'),
       ];
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: books),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       // 搜尋前：分類拼貼格存在。
@@ -295,16 +280,14 @@ void main() {
         _testBook(id: '1', title: '紅樓夢', groupName: '古典文學'),
         _testBook(id: '2', title: 'Dune', groupName: '科幻'),
       ];
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: books),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -327,16 +310,14 @@ void main() {
         _testBook(id: '1', title: '紅樓夢', groupName: '古典文學'),
         _testBook(id: '2', title: 'Dune', groupName: '科幻'),
       ];
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: books),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('group_tile_古典文學')));
@@ -356,16 +337,14 @@ void main() {
 
     testWidgets('未輸入文字時不顯示清除按鈕，輸入文字後才顯示', (tester) async {
       final book = _testBook(id: '1', title: '紅樓夢');
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('library_search_clear_button')), findsNothing);
@@ -381,16 +360,14 @@ void main() {
         _testBook(id: '1', title: '紅樓夢', groupName: '古典文學'),
         _testBook(id: '2', title: 'Dune', groupName: '科幻'),
       ];
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: books),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byKey(const Key('library_search_field')), 'dune');
@@ -425,16 +402,14 @@ void main() {
       });
 
       final book = _testBook(id: '1', title: '紅樓夢');
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
@@ -454,15 +429,13 @@ void main() {
     });
 
     final book = _testBook(id: '1', title: '紅樓夢');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -485,15 +458,13 @@ void main() {
 
   testWidgets('書架封面格狀檢視含欄格間距，避免封面互相緊貼', (tester) async {
     final book = _testBook(id: '1', title: '紅樓夢');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -519,15 +490,13 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -593,15 +562,13 @@ void main() {
         ),
       ),
     );
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: localPrefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -627,15 +594,13 @@ void main() {
         ),
       ),
     );
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: localPrefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('library_sort_view_button')));
@@ -676,15 +641,13 @@ void main() {
         ),
       ),
     );
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: localPrefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -709,15 +672,13 @@ void main() {
         ),
       ),
     );
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: localPrefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -745,16 +706,14 @@ void main() {
       ),
     );
     final refreshSignal = ChangeNotifier();
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: localPrefsManager,
           refreshSignal: refreshSignal,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -797,15 +756,13 @@ void main() {
         ),
       ),
     );
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: localPrefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -819,15 +776,13 @@ void main() {
 
   testWidgets('切換檢視模式按鈕後，書架從 grid 切換為列表呈現', (tester) async {
     final book = _testBook(id: '1', title: '紅樓夢', author: '曹雪芹');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -848,15 +803,13 @@ void main() {
     final book = _testBook(id: '1', title: '紅樓夢', author: '曹雪芹');
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -872,16 +825,14 @@ void main() {
     // 模擬 App 重啟：SharedPreferences.setMockInitialValues 的模擬儲存體會
     // 延續到同一個測試行程內建立的新 LibraryScreen 實例，等同於重啟後讀到
     // 上次寫入的值。
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           key: const Key('library_screen_after_restart'),
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -912,15 +863,13 @@ void main() {
       lastReadTime: now,
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [bookB, bookA]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -953,15 +902,13 @@ void main() {
     final book = _testBook(id: '1', title: '紅樓夢', author: '曹雪芹');
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -971,16 +918,14 @@ void main() {
     await tester.pumpAndSettle();
 
     // 模擬 App 重啟
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           key: const Key('library_screen_after_restart'),
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1006,15 +951,13 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1069,16 +1012,14 @@ void main() {
         initialBooks: [bookWithCover, bookWithoutCover],
       );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: repository,
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       final groupTileFinder = find.byKey(const Key('group_tile_測試分類'));
@@ -1289,15 +1230,13 @@ void main() {
 
   testWidgets('長按書籍卡片後進入選取模式，且該卡片顯示為已選取狀態', (tester) async {
     final book = _testBook(id: '1', title: '紅樓夢');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1316,15 +1255,13 @@ void main() {
   testWidgets('選取模式下點擊其他卡片可加選/取消選；點擊卡片不再導覽進閱讀器', (tester) async {
     final bookA = _testBook(id: '1', title: 'A書');
     final bookB = _testBook(id: '2', title: 'B書');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [bookA, bookB]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1347,15 +1284,13 @@ void main() {
       title: '紅樓夢',
       filePath: 'content://example/1.unknown',
     );
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1383,15 +1318,13 @@ void main() {
 
   testWidgets('選取模式下觸發系統返回鍵時退出選取模式，而非真的離開畫面', (tester) async {
     final book = _testBook(id: '1', title: '紅樓夢');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1460,15 +1393,13 @@ void main() {
     final bookB = _testBook(id: '2', title: 'B漫畫');
     final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1504,15 +1435,13 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: [epubBook, pdfBook]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1542,15 +1471,13 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: [pdfBook]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1579,15 +1506,13 @@ void main() {
       detectedIsFixedLayout: false,
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1623,15 +1548,13 @@ void main() {
       detectedIsFixedLayout: false,
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1657,15 +1580,13 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: [txtBook]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1743,15 +1664,13 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1791,8 +1710,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('奇幻 (1)'), findsOneWidget);
-    expect(find.text('科幻 (1)'), findsOneWidget);
+    expect(find.text('奇幻 (1 本)'), findsOneWidget);
+    expect(find.text('科幻 (1 本)'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('group_tile_奇幻')));
     await tester.pumpAndSettle();
@@ -1810,7 +1729,7 @@ void main() {
     // bookA 已被移出「奇幻」——「奇幻」拼貼格應消失（剩 0 本），「科幻」
     // 拼貼格應顯示 2 本。
     expect(find.byKey(const Key('group_tile_奇幻')), findsNothing);
-    expect(find.text('科幻 (2)'), findsOneWidget);
+    expect(find.text('科幻 (2 本)'), findsOneWidget);
   });
 
   testWidgets('分類拼貼格彼此的相對順序跟隨目前選定的排序模式（最後閱讀），'
@@ -1841,15 +1760,13 @@ void main() {
       initialBooks: [generalBook, fantasyBook, wuxiaBook],
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1879,15 +1796,13 @@ void main() {
     final book = _testBook(id: '1', title: '測試書');
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1925,15 +1840,13 @@ void main() {
       initialBooks: [bookA, bookB, bookC],
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -1993,15 +1906,13 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -2032,15 +1943,13 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -2070,10 +1979,9 @@ void main() {
       final highlightsRepository = FakeHighlightsRepository();
       final notesRepository = FakeNotesRepository();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
@@ -2082,8 +1990,7 @@ void main() {
               notesRepository: notesRepository,
             ),
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('book_item_1')));
@@ -2117,10 +2024,9 @@ void main() {
       );
       final ttsProvider = FakeTtsProvider();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
@@ -2128,8 +2034,7 @@ void main() {
               ttsProvider: ttsProvider,
             ),
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('book_item_1')));
@@ -2161,10 +2066,9 @@ void main() {
     final ttsAudioHandler = TtsAudioHandler();
     final ttsAudioFocusSource = FakeTtsAudioFocusSource();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
@@ -2173,7 +2077,6 @@ void main() {
             ttsAudioFocusSource: ttsAudioFocusSource,
           ),
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -2198,10 +2101,9 @@ void main() {
     );
     final searchRepository = FakeSearchRepository();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
@@ -2210,7 +2112,6 @@ void main() {
             isFullTextSearchAvailable: false,
           ),
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -2237,16 +2138,14 @@ void main() {
       );
       final repository = FakeLibraryRepository(initialBooks: [book]);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: repository,
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('book_item_1')));
@@ -2286,10 +2185,9 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
@@ -2299,7 +2197,6 @@ void main() {
             notesRepository: notesRepository,
           ),
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -2416,10 +2313,9 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
@@ -2429,7 +2325,6 @@ void main() {
             notesRepository: notesRepository,
           ),
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -2504,15 +2399,13 @@ void main() {
       initialBooks: [bookSci, bookFan, bookNone],
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('library_sort_view_button')));
@@ -2543,15 +2436,13 @@ void main() {
     final bookNone = _testBook(id: '2', title: '未分類書');
     final repository = FakeLibraryRepository(initialBooks: [bookFan, bookNone]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -2571,15 +2462,13 @@ void main() {
   ) async {
     final book = _testBook(id: '1', title: '懸疑小說', groupName: '懸疑');
     final repository = FakeLibraryRepository(initialBooks: [book]);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -2599,7 +2488,7 @@ void main() {
     // '科幻' 不在 _groups 快照中（快照仍是建構時的 {未分類, 懸疑}），書籍
     // 仍應被兜底桶收留、出現在某個拼貼格，而不是從書架上「消失」。
     expect(find.byKey(const Key('group_tile_科幻')), findsOneWidget);
-    expect(find.text('科幻 (1)'), findsOneWidget);
+    expect(find.text('科幻 (1 本)'), findsOneWidget);
   });
 
   testWidgets('分類拼貼格的封面預覽只取該分類前 4 本書，且保留目前排序結果的順序', (tester) async {
@@ -2635,19 +2524,17 @@ void main() {
     ];
     final repository = FakeLibraryRepository(initialBooks: books);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('奇幻 (5)'), findsOneWidget);
+    expect(find.text('奇幻 (5 本)'), findsOneWidget);
 
     final tileFinder = find.byKey(const Key('group_tile_奇幻'));
     expect(
@@ -2681,16 +2568,13 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: books);
 
-    final theme = resolveThemeData(theme: AppTheme.light, isEinkMode: false);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: theme,
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -2722,7 +2606,7 @@ void main() {
 
     final labelFinder = find.descendant(
       of: tileFinder,
-      matching: find.text('奇幻 (4)'),
+      matching: find.text('奇幻 (4 本)'),
     );
     final labelTopY = tester.getTopLeft(labelFinder).dy;
 
@@ -2737,23 +2621,19 @@ void main() {
     final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
     final bookB = _testBook(id: '2', title: 'B書', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
-    final theme = resolveThemeData(theme: AppTheme.light, isEinkMode: false);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: theme,
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
     final tileFinder = find.byKey(const Key('group_tile_奇幻'));
     expect(tileFinder, findsOneWidget);
-    expect(find.text('奇幻 (2)'), findsOneWidget);
+    expect(find.text('奇幻 (2 本)'), findsOneWidget);
 
     // Issue 9：2 本書皆無 coverPath，BookCover 各自退回 CoverPlaceholder
     // （依格式圖示＋書名），拼貼格本身「不足 4 本」的 2 個空格佔位
@@ -2782,17 +2662,13 @@ void main() {
   testWidgets('分類拼貼格（列表檢視）不足 4 本時以中性色塊佔位', (tester) async {
     final book = _testBook(id: '1', title: 'A書', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [book]);
-    final theme = resolveThemeData(theme: AppTheme.light, isEinkMode: false);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: theme,
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('library_sort_view_button')));
@@ -2839,15 +2715,13 @@ void main() {
     final bookB = _testBook(id: '2', title: 'B書', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -2870,15 +2744,13 @@ void main() {
     final book = _testBook(id: '1', title: 'A書', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -2906,15 +2778,13 @@ void main() {
     final book = _testBook(id: '1', title: 'A書', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -2939,15 +2809,13 @@ void main() {
     final book = _testBook(id: '1', title: 'A書');
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -2971,15 +2839,13 @@ void main() {
     final book = _testBook(id: '1', title: 'A書', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -3011,15 +2877,13 @@ void main() {
     final book = _testBook(id: '1', title: 'A書', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -3043,15 +2907,13 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('library_sort_view_button')));
@@ -3085,10 +2947,9 @@ void main() {
       );
       final customFontsRepository = FakeCustomFontsRepository();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
@@ -3096,8 +2957,7 @@ void main() {
               customFontsRepository: customFontsRepository,
             ),
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('book_item_1')));
@@ -3135,10 +2995,9 @@ void main() {
         filePath: 'content://example/1.txt',
       );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
@@ -3147,8 +3006,7 @@ void main() {
               bookReaderPrefsRepository: bookReaderPrefsRepository,
             ),
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('book_item_1')));
@@ -3188,10 +3046,9 @@ void main() {
         runCheckpoint: () async {},
       );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
@@ -3199,8 +3056,7 @@ void main() {
               syncCheckpointTrigger: syncCheckpointTrigger,
             ),
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('book_item_1')));
@@ -3239,15 +3095,13 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [older, newer]),
           importService: FakeBookImportService(),
           prefsManager: fakeManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -3274,15 +3128,13 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: fakeManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -3298,15 +3150,13 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: const []),
           importService: FakeBookImportService(),
           prefsManager: fakeManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -3337,15 +3187,13 @@ void main() {
     ];
     final repository = FakeLibraryRepository(initialBooks: books);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -3368,7 +3216,7 @@ void main() {
 
     final groupLabelTop = tester
         .getTopLeft(
-          find.descendant(of: groupTileFinder, matching: find.text('奇幻 (1)')),
+          find.descendant(of: groupTileFinder, matching: find.text('奇幻 (1 本)')),
         )
         .dy;
     // Issue 9：BookCover 無封面圖時改用 CoverPlaceholder，其內建書名縮略
@@ -3421,19 +3269,14 @@ void main() {
     ];
     final repository = FakeLibraryRepository(initialBooks: books);
 
-    await tester.pumpWidget(
-      MediaQuery(
-        // 模擬系統字級放大 1.5 倍（Android「顯示大小」設定常見選項）。
-        data: MediaQueryData(textScaler: TextScaler.linear(1.5)),
-        child: MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: repository,
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      ),
+      mediaQueryData: MediaQueryData(textScaler: TextScaler.linear(1.5)),
     );
     await tester.pumpAndSettle();
 
@@ -3466,18 +3309,14 @@ void main() {
     ];
     final repository = FakeLibraryRepository(initialBooks: books);
 
-    await tester.pumpWidget(
-      MediaQuery(
-        data: const MediaQueryData(textScaler: _NonLinearTextScaler(1.5)),
-        child: MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: repository,
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      ),
+      mediaQueryData: const MediaQueryData(textScaler: _NonLinearTextScaler(1.5)),
     );
     await tester.pumpAndSettle();
 
@@ -3520,10 +3359,9 @@ void main() {
         const Bookmark(id: 'bm1', bookId: 'b1', name: '第一章'),
       );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: repository,
             importService: FakeBookImportService(),
             prefsManager: FakeReaderPrefsManager(
@@ -3535,8 +3373,7 @@ void main() {
               bookmarksRepository: bookmarksRepository,
             ),
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       // 長按（_onBookLongPress → _enterSelectionMode）已經把這本書放進
@@ -3580,10 +3417,9 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: FakeReaderPrefsManager(
@@ -3592,7 +3428,6 @@ void main() {
             ),
           ),
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -3650,10 +3485,9 @@ void main() {
     testWidgets('點擊待下載書籍先跳出確認對話框，取消則不觸發下載', (tester) async {
       final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
       final opdsClient = FakeOpdsClient();
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: repository,
             importService: FakeBookImportService(),
             prefsManager: FakeReaderPrefsManager(),
@@ -3665,8 +3499,7 @@ void main() {
             ),
             isMobileDataConnection: () async => false,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('book_item_b1')));
@@ -3686,10 +3519,9 @@ void main() {
 
     testWidgets('偵測到行動數據連線時，確認對話框額外顯示流量提示文字', (tester) async {
       final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: repository,
             importService: FakeBookImportService(),
             prefsManager: FakeReaderPrefsManager(),
@@ -3701,8 +3533,7 @@ void main() {
             ),
             isMobileDataConnection: () async => true,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('book_item_b1')));
@@ -3716,10 +3547,9 @@ void main() {
     ) async {
       final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
       final opdsClient = FakeOpdsClient();
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: repository,
             importService: FakeBookImportService(),
             prefsManager: FakeReaderPrefsManager(),
@@ -3731,8 +3561,7 @@ void main() {
             ),
             isMobileDataConnection: () async => false,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('book_item_b1')));
@@ -3768,10 +3597,9 @@ void main() {
       final opdsClient = FakeOpdsClient();
       final fullTextSearchSettingsRepository =
           FakeFullTextSearchSettingsRepository();
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: repository,
             importService: FakeBookImportService(),
             prefsManager: FakeReaderPrefsManager(),
@@ -3787,8 +3615,7 @@ void main() {
             ),
             isMobileDataConnection: () async => false,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('book_item_b1')));
@@ -3819,10 +3646,9 @@ void main() {
     testWidgets('下載失敗時顯示錯誤訊息，書籍狀態不變', (tester) async {
       final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
       final opdsClient = FakeOpdsClient(downloadError: StateError('模擬下載失敗'));
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: repository,
             importService: FakeBookImportService(),
             prefsManager: FakeReaderPrefsManager(),
@@ -3834,8 +3660,7 @@ void main() {
             ),
             isMobileDataConnection: () async => false,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('book_item_b1')));
@@ -3863,15 +3688,13 @@ void main() {
   testWidgets('LibraryScreen 點擊排序按鈕，彈出選單中當前選中的排序項目顯示 Checkmark 圖示', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -3904,17 +3727,15 @@ void main() {
         filePath: 'content://example/1.txt',
       );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
             themeDependencies: LibraryThemeDependencies(isEinkMode: true),
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('book_item_1')));
@@ -3936,16 +3757,14 @@ void main() {
 
   testWidgets('空書架點擊「匯入書籍」呼叫 onNavigateToSource callback（issues.md Issue 1 明訂，審查報告 I-1）', (tester) async {
     var sourceTapped = 0;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
           onNavigateToSource: () => sourceTapped++,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -3957,16 +3776,14 @@ void main() {
 
   testWidgets('點擊 AppBar「來源」圖示呼叫 onNavigateToSource callback（審查報告 M-3）', (tester) async {
     var sourceTapped = 0;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: const []),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
           onNavigateToSource: () => sourceTapped++,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -3986,15 +3803,13 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: books),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4024,15 +3839,13 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: books),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4074,15 +3887,13 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: books),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4122,15 +3933,13 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: books),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4162,15 +3971,13 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: groupBooks),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4209,15 +4016,13 @@ void main() {
     });
 
     tester.view.physicalSize = const Size(400, 600); // 較矮（直向：width < height）
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: books),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
     final shortPageSize = _measuredPageSize(tester);
@@ -4254,16 +4059,14 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: books),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
       final gridPageSize = _measuredPageSize(tester);
 
@@ -4302,15 +4105,13 @@ void main() {
   );
 
   testWidgets('書庫全空時不渲染繼續閱讀列', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4331,15 +4132,13 @@ void main() {
       lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [bookA, bookB]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4367,16 +4166,14 @@ void main() {
       lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository:
               FakeLibraryRepository(initialBooks: [older, newer, neverRead]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4414,15 +4211,13 @@ void main() {
       lastReadTime: DateTime(2026, 1, 1),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('library_continue_reading_row')), findsOneWidget);
@@ -4451,15 +4246,13 @@ void main() {
       lastReadTime: DateTime(2026, 1, 1),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [mostRecent, other]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('library_continue_reading_row')), findsOneWidget);
@@ -4486,15 +4279,13 @@ void main() {
     tester,
   ) async {
     final book = _testBook(id: '1', title: '書A');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4507,15 +4298,13 @@ void main() {
 
   testWidgets('多選模式進行中時 book_action_menu 不顯示（與長按多選互斥）', (tester) async {
     final book = _testBook(id: '1', title: '書A');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4529,15 +4318,13 @@ void main() {
     tester,
   ) async {
     final book = _testBook(id: '1', title: '書A', isDownloaded: false);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4553,15 +4340,13 @@ void main() {
 
   testWidgets('詳細資料：content:// URI 或讀取失敗時顯示「未知大小」，不崩潰', (tester) async {
     final book = _testBook(id: '1', title: '書A', isDownloaded: true);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4594,15 +4379,13 @@ void main() {
       filePath: tempFile.path,
       isDownloaded: true,
     );
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4622,15 +4405,13 @@ void main() {
       title: '書A',
       lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
     );
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4648,16 +4429,14 @@ void main() {
     '結構為 Row，先前測試只覆蓋了格狀模式，補上清單模式的整合測試）',
     (tester) async {
       final book = _testBook(id: '1', title: '書A');
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       // 切換為清單檢視（既有既有慣例：見本檔案「library_sort_view_button」
@@ -4731,15 +4510,13 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4770,16 +4547,14 @@ void main() {
       final book = _testBook(id: '1', title: '書A', lastReadTime: DateTime(2026, 6, 1));
       final repository = FakeLibraryRepository(initialBooks: [book]);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: repository,
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('library_continue_reading_row')), findsOneWidget);
@@ -4804,15 +4579,13 @@ void main() {
 
   testWidgets('bookReaderPrefsRepository 未提供時，「版面覆寫」選項不顯示', (tester) async {
     final book = _testBook(id: '1', title: '書A');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4846,10 +4619,9 @@ void main() {
         ),
       );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
+      await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
             repository: repository,
             importService: FakeBookImportService(),
             prefsManager: prefsManager,
@@ -4857,8 +4629,7 @@ void main() {
               bookReaderPrefsRepository: bookReaderPrefsRepository,
             ),
           ),
-        ),
-      );
+    );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('book_action_menu_1')));
@@ -4890,10 +4661,9 @@ void main() {
       '點擊「搜尋書本內容」入口，帶同一組關鍵字導航至 LibrarySearchScreen（epic-10-search Issue 4）',
       (tester) async {
     final book = _testBook(id: '1', title: '紅樓夢', author: '曹雪芹');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
@@ -4901,7 +4671,6 @@ void main() {
             searchRepository: FakeSearchRepository(),
           ),
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4930,15 +4699,13 @@ void main() {
   testWidgets('searchRepository 為 null 時，「搜尋書本內容」入口停用（點擊無反應）',
       (tester) async {
     final book = _testBook(id: '1', title: '紅樓夢');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4952,10 +4719,9 @@ void main() {
 
   testWidgets('多選模式下，「搜尋書本內容」入口停用（審查修正 M-2）', (tester) async {
     final book = _testBook(id: '1', title: '紅樓夢');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
@@ -4963,7 +4729,6 @@ void main() {
             searchRepository: FakeSearchRepository(),
           ),
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -4983,19 +4748,15 @@ void main() {
       '（回歸保護：`late final` 誤用曾在 Epic 45 觸發 LateInitializationError，見 '
       'docs/epics/epic-45-interface-i18n/reviews/review-issue-1.md I-1）',
       (tester) async {
-    Widget buildWith(LibraryReaderFeatureRepositories deps) {
-      return MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-          readerFeatureRepositories: deps,
-        ),
-      );
-    }
-
-    await tester.pumpWidget(buildWith(LibraryReaderFeatureRepositories()));
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     // 重新 pumpWidget 同一個 LibraryScreen（同一個 widget tree 位置，State
@@ -5007,10 +4768,117 @@ void main() {
     // LibraryScreen.didUpdateWidget() 的 _batchActions 重新賦值分支。修復前
     // （`late final`）這裡會拋出 LateInitializationError；修復後（`late`）
     // 應正常通過。
-    await tester.pumpWidget(buildWith(LibraryReaderFeatureRepositories()));
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+  });
+
+  group('三語言渲染驗證（epic-45-interface-i18n Issue 3）', () {
+    testWidgets('英文介面下 AppBar／空狀態／選取模式文字正確以英文渲染', (tester) async {
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+        locale: const Locale('en'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Library'), findsOneWidget);
+      expect(find.text('No books imported yet'), findsOneWidget);
+      expect(find.text('Import Books'), findsOneWidget);
+    });
+
+    testWidgets('英文介面下選取模式 AppBar 標題依 ICU plural 正確處理單複數', (tester) async {
+      final books = [
+        _testBook(id: '1', title: 'Book A'),
+        _testBook(id: '2', title: 'Book B'),
+      ];
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: books),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+        locale: const Locale('en'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.byKey(const Key('book_item_1')));
+      await tester.pumpAndSettle();
+      expect(find.text('1 selected'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('book_item_2')));
+      await tester.pumpAndSettle();
+      expect(find.text('2 selected'), findsOneWidget);
+    });
+
+    testWidgets('簡體中文介面下分類拼貼格數量與刪除確認訊息正確以簡體渲染', (tester) async {
+      final book = _testBook(id: '1', title: '測試書', groupName: '奇幻');
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+        locale: const Locale('zh', 'CN'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('1 本'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+      await tester.pumpAndSettle();
+      await tester.longPress(find.byKey(const Key('book_item_1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_delete_books_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('删除书籍'), findsOneWidget);
+      expect(find.textContaining('将删除已选取的 1 本书籍'), findsOneWidget);
+    });
+
+    testWidgets('英文介面下書籍詳細資料對話框日期依 en 地區慣例格式化（非手動 y/m/d 拼接）',
+        (tester) async {
+      final book = _testBook(
+        id: '1',
+        title: 'Test Book',
+        lastReadTime: DateTime(2026, 3, 15),
+      );
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+        locale: const Locale('en'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_action_menu_1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('book_action_details')));
+      await tester.pumpAndSettle();
+
+      // DateFormat.yMd('en') 輸出格式為 "3/15/2026"（月/日/年），與手動拼接
+      // 的 "2026/3/15"（年/月/日）不同，藉此驗證確實改用 DateFormat 而非
+      // 殘留手動字串拼接。
+      expect(find.textContaining('3/15/2026'), findsOneWidget);
+    });
   });
 }
 
