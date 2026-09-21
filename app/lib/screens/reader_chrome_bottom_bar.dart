@@ -52,6 +52,7 @@ class ReaderChromeBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final minSize = isEinkMode ? 56.0 : 48.0;
     // 前景色／停用前景色交給 IconButton.styleFrom 統一管理（審查修正
     // review-issue-1.md C-2）：底下每顆 IconButton 的 Icon 一律不再自帶
