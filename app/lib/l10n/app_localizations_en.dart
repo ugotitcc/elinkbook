@@ -74,4 +74,52 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get libraryMoveToGroupTitle => 'Move to Category';
+
+  @override
+  String get errorNetworkConnection =>
+      'Failed to load. Please check your network connection.';
+
+  @override
+  String cloudBrowserDuplicateConfirmMessage(String name) {
+    return '\"$name\" was already imported before. Create a new copy anyway?';
+  }
+
+  @override
+  String cloudBrowserDownloadQueued(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files',
+      one: '1 file',
+    );
+    return 'Added to download queue ($_temp0), check progress in the Sources screen';
+  }
+
+  @override
+  String get cloudBrowserMobileDataDialogTitle => 'Mobile Data Download Notice';
+
+  @override
+  String get cloudBrowserMobileDataDialogMessage =>
+      'You\'re currently on a mobile data connection, and some selected files are over 20MB. Downloading may incur data charges. Continue anyway?';
+
+  @override
+  String get cloudBrowserMobileDataDialogConfirm => 'Continue Download';
+
+  @override
+  String get cloudBrowserDownloadSelectedTooltip => 'Download Selected';
+
+  @override
+  String cloudBrowserReauthMessage(String provider) {
+    return 'Login expired. Please reconnect your $provider account in Settings.';
+  }
+
+  @override
+  String get cloudBrowserGenericProviderLabel => 'cloud';
+
+  @override
+  String get cloudBrowserImportCategoryLabel => 'Import to category:';
+
+  @override
+  String get cloudBrowserTruncatedNotice =>
+      'This folder has many files; only the first 1000 are shown.';
 }

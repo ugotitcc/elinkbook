@@ -19,5 +19,16 @@
   "libraryGroupDeleteConfirmMessage": "确定要删除分类「{name}」吗？该分类下的书籍将改列为「{uncategorized}」。",
   "libraryGroupDeleteButton": "删除",
   "libraryGroupReservedNameError": "「{name}」是系统保留的分类名称，请使用其他名称",
-  "libraryMoveToGroupTitle": "移动到分类"
+  "libraryMoveToGroupTitle": "移动到分类",
+  "errorNetworkConnection": "加载失败，请检查网络连接",
+  "cloudBrowserDuplicateConfirmMessage": "「{name}」之前已导入过，仍要建立新的一份吗？",
+  "cloudBrowserDownloadQueued": "已加入下载队列（{count, plural, =1{1 个文件} other{{count} 个文件}}），可至「来源」画面查看进度",
+  "cloudBrowserMobileDataDialogTitle": "移动数据下载提醒",
+  "cloudBrowserMobileDataDialogMessage": "目前使用移动数据连接，勾选的文件中有超过 20MB 的项目，下载可能产生流量费用，确定要继续吗？",
+  "cloudBrowserMobileDataDialogConfirm": "继续下载",
+  "cloudBrowserDownloadSelectedTooltip": "下载已选取",
+  "cloudBrowserReauthMessage": "登录已过期，请至「设置」重新连接 {provider} 账户",
+  "cloudBrowserGenericProviderLabel": "云端",
+  "cloudBrowserImportCategoryLabel": "导入分类：",
+  "cloudBrowserTruncatedNotice": "这个文件夹里的文件较多，仅显示前 1000 个"
 }

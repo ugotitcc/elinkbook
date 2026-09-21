@@ -97,5 +97,64 @@
   "libraryMoveToGroupTitle": "移動到分類",
   "@libraryMoveToGroupTitle": {
     "description": "「移動到分類」目的地選擇對話框標題"
+  },
+  "errorNetworkConnection": "載入失敗，請檢查網路連線",
+  "@errorNetworkConnection": {
+    "description": "一般網路/連線失敗的錯誤訊息（spec.md §6 執行期例外訊息在地化慣例）"
+  },
+  "cloudBrowserDuplicateConfirmMessage": "「{name}」之前匯入過了，仍要建立新的一份嗎？",
+  "@cloudBrowserDuplicateConfirmMessage": {
+    "description": "選檔前置重複偵測（Layer 1）命中既有書籍時的確認訊息，{name} 為雲端檔案名稱",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cloudBrowserDownloadQueued": "已加入下載佇列（{count, plural, =1{1 個檔案} other{{count} 個檔案}}），可至「來源」畫面查看進度",
+  "@cloudBrowserDownloadQueued": {
+    "description": "下載加入佇列後的 SnackBar 提示，{count} 為選取的檔案數，需正確處理英文單複數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cloudBrowserMobileDataDialogTitle": "行動數據下載提醒",
+  "@cloudBrowserMobileDataDialogTitle": {
+    "description": "行動數據流量警示對話框標題"
+  },
+  "cloudBrowserMobileDataDialogMessage": "目前使用行動數據連線，勾選的檔案中有超過 20MB 的項目，下載可能產生流量費用，確定要繼續嗎？",
+  "@cloudBrowserMobileDataDialogMessage": {
+    "description": "行動數據流量警示對話框內容"
+  },
+  "cloudBrowserMobileDataDialogConfirm": "繼續下載",
+  "@cloudBrowserMobileDataDialogConfirm": {
+    "description": "行動數據流量警示對話框的確認按鈕文字"
+  },
+  "cloudBrowserDownloadSelectedTooltip": "下載已選取",
+  "@cloudBrowserDownloadSelectedTooltip": {
+    "description": "AppBar 下載按鈕的無障礙提示文字（tooltip）"
+  },
+  "cloudBrowserReauthMessage": "登入已過期，請至「設定」重新連結 {provider} 帳號",
+  "@cloudBrowserReauthMessage": {
+    "description": "雲端帳號授權過期時的提示訊息，{provider} 為服務商品牌名（如 Google Drive／OneDrive，不翻譯）或找不到品牌名時的通用「雲端」標籤",
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "cloudBrowserGenericProviderLabel": "雲端",
+  "@cloudBrowserGenericProviderLabel": {
+    "description": "cloudBrowserReauthMessage 在 widget.title 為 null 時的通用服務商標籤 fallback"
+  },
+  "cloudBrowserImportCategoryLabel": "匯入分類：",
+  "@cloudBrowserImportCategoryLabel": {
+    "description": "雲端瀏覽畫面「匯入分類」下拉選單前的標籤文字"
+  },
+  "cloudBrowserTruncatedNotice": "這個資料夾檔案較多，僅顯示前 1000 筆",
+  "@cloudBrowserTruncatedNotice": {
+    "description": "資料夾檔案數超過清單上限（1000 筆）時的提示文字"
   }
 }
