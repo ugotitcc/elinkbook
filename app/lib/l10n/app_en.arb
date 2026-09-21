@@ -30,5 +30,10 @@
   "cloudBrowserReauthMessage": "Login expired. Please reconnect your {provider} account in Settings.",
   "cloudBrowserGenericProviderLabel": "cloud",
   "cloudBrowserImportCategoryLabel": "Import to category:",
-  "cloudBrowserTruncatedNotice": "This folder has many files; only the first 1000 are shown."
+  "cloudBrowserTruncatedNotice": "This folder has many files; only the first 1000 are shown.",
+  "bookActionShowDetails": "Details",
+  "bookActionMove": "Move",
+  "bookActionLayoutOverride": "Layout Override",
+  "bookActionRemoveCache": "Remove Cache",
+  "bookActionDelete": "Delete"
 }

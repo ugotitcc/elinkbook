@@ -119,6 +119,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cloudBrowserTruncatedNotice => '這個資料夾檔案較多，僅顯示前 1000 筆';
+
+  @override
+  String get bookActionShowDetails => '詳細資料';
+
+  @override
+  String get bookActionMove => '移動';
+
+  @override
+  String get bookActionLayoutOverride => '版面覆寫';
+
+  @override
+  String get bookActionRemoveCache => '移除快取';
+
+  @override
+  String get bookActionDelete => '刪除';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -236,6 +251,21 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get cloudBrowserTruncatedNotice => '这个文件夹里的文件较多，仅显示前 1000 个';
+
+  @override
+  String get bookActionShowDetails => '详细资料';
+
+  @override
+  String get bookActionMove => '移动';
+
+  @override
+  String get bookActionLayoutOverride => '排版覆盖';
+
+  @override
+  String get bookActionRemoveCache => '移除缓存';
+
+  @override
+  String get bookActionDelete => '删除';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -353,4 +383,19 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get cloudBrowserTruncatedNotice => '這個資料夾檔案較多，僅顯示前 1000 筆';
+
+  @override
+  String get bookActionShowDetails => '詳細資料';
+
+  @override
+  String get bookActionMove => '移動';
+
+  @override
+  String get bookActionLayoutOverride => '版面覆寫';
+
+  @override
+  String get bookActionRemoveCache => '移除快取';
+
+  @override
+  String get bookActionDelete => '刪除';
 }

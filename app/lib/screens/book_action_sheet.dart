@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../library/models/book.dart';
 
 /// 單書「⋮」動作選單的動作類型（`spec.md` 功能④）。Sheet 關閉後
@@ -46,6 +47,7 @@ class BookActionSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // 【review-plan-issue-4.md C-1】外層包 SingleChildScrollView：橫向
     // （Landscape）或無障礙大字級下，`EBSheetShell` 的 `Flexible` 給予的
     // 高度可能小於 5 個 ListTile 的總高度（56dp × 5 = 280dp），裸 Column
@@ -58,33 +60,33 @@ class BookActionSheet extends StatelessWidget {
           ListTile(
             key: const Key('book_action_details'),
             leading: const Icon(Icons.info_outline),
-            title: const Text('詳細資料'),
+            title: Text(l10n.bookActionShowDetails),
             onTap: () => _handle(context, BookAction.showDetails),
           ),
           ListTile(
             key: const Key('book_action_move'),
             leading: const Icon(Icons.drive_file_move),
-            title: const Text('移動'),
+            title: Text(l10n.bookActionMove),
             onTap: () => _handle(context, BookAction.move),
           ),
           if (showLayoutOverride)
             ListTile(
               key: const Key('book_action_layout_override'),
               leading: const Icon(Icons.view_column_outlined),
-              title: const Text('版面覆寫'),
+              title: Text(l10n.bookActionLayoutOverride),
               onTap: () => _handle(context, BookAction.layoutOverride),
             ),
           if (showRemoveCache)
             ListTile(
               key: const Key('book_action_remove_cache'),
               leading: const Icon(Icons.cloud_off_outlined),
-              title: const Text('移除快取'),
+              title: Text(l10n.bookActionRemoveCache),
               onTap: () => _handle(context, BookAction.removeCache),
             ),
           ListTile(
             key: const Key('book_action_delete'),
             leading: const Icon(Icons.delete),
-            title: const Text('刪除'),
+            title: Text(l10n.bookActionDelete),
             onTap: () => _handle(context, BookAction.delete),
           ),
         ],

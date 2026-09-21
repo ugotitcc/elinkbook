@@ -122,4 +122,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cloudBrowserTruncatedNotice =>
       'This folder has many files; only the first 1000 are shown.';
+
+  @override
+  String get bookActionShowDetails => 'Details';
+
+  @override
+  String get bookActionMove => 'Move';
+
+  @override
+  String get bookActionLayoutOverride => 'Layout Override';
+
+  @override
+  String get bookActionRemoveCache => 'Remove Cache';
+
+  @override
+  String get bookActionDelete => 'Delete';
 }

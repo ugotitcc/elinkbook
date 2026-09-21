@@ -156,5 +156,25 @@
   "cloudBrowserTruncatedNotice": "這個資料夾檔案較多，僅顯示前 1000 筆",
   "@cloudBrowserTruncatedNotice": {
     "description": "資料夾檔案數超過清單上限（1000 筆）時的提示文字"
+  },
+  "bookActionShowDetails": "詳細資料",
+  "@bookActionShowDetails": {
+    "description": "單書「⋮」動作選單「詳細資料」選項文字"
+  },
+  "bookActionMove": "移動",
+  "@bookActionMove": {
+    "description": "單書「⋮」動作選單「移動」選項文字（移動到分類）"
+  },
+  "bookActionLayoutOverride": "版面覆寫",
+  "@bookActionLayoutOverride": {
+    "description": "單書「⋮」動作選單「版面覆寫」選項文字"
+  },
+  "bookActionRemoveCache": "移除快取",
+  "@bookActionRemoveCache": {
+    "description": "單書「⋮」動作選單「移除快取」選項文字（僅 Calibre 來源已下載書籍顯示）"
+  },
+  "bookActionDelete": "刪除",
+  "@bookActionDelete": {
+    "description": "單書「⋮」動作選單「刪除」選項文字"
   }
 }

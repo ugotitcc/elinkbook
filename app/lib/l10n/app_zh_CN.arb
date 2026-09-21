@@ -30,5 +30,10 @@
   "cloudBrowserReauthMessage": "登录已过期，请至「设置」重新连接 {provider} 账户",
   "cloudBrowserGenericProviderLabel": "云端",
   "cloudBrowserImportCategoryLabel": "导入分类：",
-  "cloudBrowserTruncatedNotice": "这个文件夹里的文件较多，仅显示前 1000 个"
+  "cloudBrowserTruncatedNotice": "这个文件夹里的文件较多，仅显示前 1000 个",
+  "bookActionShowDetails": "详细资料",
+  "bookActionMove": "移动",
+  "bookActionLayoutOverride": "排版覆盖",
+  "bookActionRemoveCache": "移除缓存",
+  "bookActionDelete": "删除"
 }

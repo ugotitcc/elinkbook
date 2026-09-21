@@ -285,6 +285,36 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'這個資料夾檔案較多，僅顯示前 1000 筆'**
   String get cloudBrowserTruncatedNotice;
+
+  /// 單書「⋮」動作選單「詳細資料」選項文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'詳細資料'**
+  String get bookActionShowDetails;
+
+  /// 單書「⋮」動作選單「移動」選項文字（移動到分類）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'移動'**
+  String get bookActionMove;
+
+  /// 單書「⋮」動作選單「版面覆寫」選項文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'版面覆寫'**
+  String get bookActionLayoutOverride;
+
+  /// 單書「⋮」動作選單「移除快取」選項文字（僅 Calibre 來源已下載書籍顯示）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'移除快取'**
+  String get bookActionRemoveCache;
+
+  /// 單書「⋮」動作選單「刪除」選項文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get bookActionDelete;
 }
 
 class _AppLocalizationsDelegate

@@ -30,5 +30,10 @@
   "cloudBrowserReauthMessage": "登入已過期，請至「設定」重新連結 {provider} 帳號",
   "cloudBrowserGenericProviderLabel": "雲端",
   "cloudBrowserImportCategoryLabel": "匯入分類：",
-  "cloudBrowserTruncatedNotice": "這個資料夾檔案較多，僅顯示前 1000 筆"
+  "cloudBrowserTruncatedNotice": "這個資料夾檔案較多，僅顯示前 1000 筆",
+  "bookActionShowDetails": "詳細資料",
+  "bookActionMove": "移動",
+  "bookActionLayoutOverride": "版面覆寫",
+  "bookActionRemoveCache": "移除快取",
+  "bookActionDelete": "刪除"
 }
