@@ -33,4 +33,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsLanguageEn => 'English';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get confirm => 'OK';
+
+  @override
+  String get errorOperationFailed =>
+      'Operation failed. Please try again later.';
+
+  @override
+  String get libraryGroupManageTitle => 'Manage Categories';
+
+  @override
+  String get libraryGroupAddFieldLabel => 'New category name';
+
+  @override
+  String get libraryGroupAddButton => 'Add';
+
+  @override
+  String get libraryGroupRenameTitle => 'Rename Category';
+
+  @override
+  String get libraryGroupDeleteTitle => 'Delete Category';
+
+  @override
+  String libraryGroupDeleteConfirmMessage(String name, String uncategorized) {
+    return 'Delete category \"$name\"? Books in this category will be moved to \"$uncategorized\".';
+  }
+
+  @override
+  String get libraryGroupDeleteButton => 'Delete';
+
+  @override
+  String libraryGroupReservedNameError(String name) {
+    return '\"$name\" is a reserved category name. Please use a different name.';
+  }
 }

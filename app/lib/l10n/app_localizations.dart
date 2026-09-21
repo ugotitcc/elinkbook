@@ -147,6 +147,72 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'English'**
   String get settingsLanguageEn;
+
+  /// 通用「取消」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'取消'**
+  String get cancel;
+
+  /// 通用「確定」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定'**
+  String get confirm;
+
+  /// 通用操作失敗的 catch-all 錯誤訊息（非例外物件原始文字，見 spec.md §6 執行期例外訊息在地化慣例）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'操作失敗，請稍後再試'**
+  String get errorOperationFailed;
+
+  /// 分類管理對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'管理分類'**
+  String get libraryGroupManageTitle;
+
+  /// 分類管理對話框新增分類輸入框的 labelText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'新增分類名稱'**
+  String get libraryGroupAddFieldLabel;
+
+  /// 分類管理對話框「新增」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'新增'**
+  String get libraryGroupAddButton;
+
+  /// 重新命名分類子對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重新命名分類'**
+  String get libraryGroupRenameTitle;
+
+  /// 刪除分類確認子對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除分類'**
+  String get libraryGroupDeleteTitle;
+
+  /// 刪除分類確認訊息，{name} 為被刪除的分類名稱（使用者自訂，不翻譯），{uncategorized} 為 groupUncategorized 的已轉譯結果
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定要刪除分類「{name}」嗎？該分類下的書籍將改列為「{uncategorized}」。'**
+  String libraryGroupDeleteConfirmMessage(String name, String uncategorized);
+
+  /// 刪除分類確認子對話框的「刪除」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get libraryGroupDeleteButton;
+
+  /// 新增/重新命名分類時，輸入名稱命中三語言任一保留字時顯示的錯誤訊息，{name} 為使用者實際輸入的名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'「{name}」是系統保留的分類名稱，請使用其他名稱'**
+  String libraryGroupReservedNameError(String name);
 }
 
 class _AppLocalizationsDelegate

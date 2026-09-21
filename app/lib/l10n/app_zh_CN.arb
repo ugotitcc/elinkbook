@@ -7,5 +7,16 @@
   "settingsLanguageFollowSystemSubtitle": "跟随系统（{language}）",
   "settingsLanguageZhTW": "正体中文",
   "settingsLanguageZhCN": "简体中文",
-  "settingsLanguageEn": "English"
+  "settingsLanguageEn": "English",
+  "cancel": "取消",
+  "confirm": "确定",
+  "errorOperationFailed": "操作失败，请稍后再试",
+  "libraryGroupManageTitle": "管理分类",
+  "libraryGroupAddFieldLabel": "新增分类名称",
+  "libraryGroupAddButton": "新增",
+  "libraryGroupRenameTitle": "重新命名分类",
+  "libraryGroupDeleteTitle": "删除分类",
+  "libraryGroupDeleteConfirmMessage": "确定要删除分类「{name}」吗？该分类下的书籍将改列为「{uncategorized}」。",
+  "libraryGroupDeleteButton": "删除",
+  "libraryGroupReservedNameError": "「{name}」是系统保留的分类名称，请使用其他名称"
 }

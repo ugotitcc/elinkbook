@@ -7,5 +7,16 @@
   "settingsLanguageFollowSystemSubtitle": "Follow System ({language})",
   "settingsLanguageZhTW": "Traditional Chinese",
   "settingsLanguageZhCN": "Simplified Chinese",
-  "settingsLanguageEn": "English"
+  "settingsLanguageEn": "English",
+  "cancel": "Cancel",
+  "confirm": "OK",
+  "errorOperationFailed": "Operation failed. Please try again later.",
+  "libraryGroupManageTitle": "Manage Categories",
+  "libraryGroupAddFieldLabel": "New category name",
+  "libraryGroupAddButton": "Add",
+  "libraryGroupRenameTitle": "Rename Category",
+  "libraryGroupDeleteTitle": "Delete Category",
+  "libraryGroupDeleteConfirmMessage": "Delete category \"{name}\"? Books in this category will be moved to \"{uncategorized}\".",
+  "libraryGroupDeleteButton": "Delete",
+  "libraryGroupReservedNameError": "\"{name}\" is a reserved category name. Please use a different name."
 }

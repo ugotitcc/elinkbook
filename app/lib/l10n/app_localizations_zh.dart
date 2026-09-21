@@ -33,6 +33,43 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsLanguageEn => 'English';
+
+  @override
+  String get cancel => '取消';
+
+  @override
+  String get confirm => '確定';
+
+  @override
+  String get errorOperationFailed => '操作失敗，請稍後再試';
+
+  @override
+  String get libraryGroupManageTitle => '管理分類';
+
+  @override
+  String get libraryGroupAddFieldLabel => '新增分類名稱';
+
+  @override
+  String get libraryGroupAddButton => '新增';
+
+  @override
+  String get libraryGroupRenameTitle => '重新命名分類';
+
+  @override
+  String get libraryGroupDeleteTitle => '刪除分類';
+
+  @override
+  String libraryGroupDeleteConfirmMessage(String name, String uncategorized) {
+    return '確定要刪除分類「$name」嗎？該分類下的書籍將改列為「$uncategorized」。';
+  }
+
+  @override
+  String get libraryGroupDeleteButton => '刪除';
+
+  @override
+  String libraryGroupReservedNameError(String name) {
+    return '「$name」是系統保留的分類名稱，請使用其他名稱';
+  }
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -64,6 +101,43 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get settingsLanguageEn => 'English';
+
+  @override
+  String get cancel => '取消';
+
+  @override
+  String get confirm => '确定';
+
+  @override
+  String get errorOperationFailed => '操作失败，请稍后再试';
+
+  @override
+  String get libraryGroupManageTitle => '管理分类';
+
+  @override
+  String get libraryGroupAddFieldLabel => '新增分类名称';
+
+  @override
+  String get libraryGroupAddButton => '新增';
+
+  @override
+  String get libraryGroupRenameTitle => '重新命名分类';
+
+  @override
+  String get libraryGroupDeleteTitle => '删除分类';
+
+  @override
+  String libraryGroupDeleteConfirmMessage(String name, String uncategorized) {
+    return '确定要删除分类「$name」吗？该分类下的书籍将改列为「$uncategorized」。';
+  }
+
+  @override
+  String get libraryGroupDeleteButton => '删除';
+
+  @override
+  String libraryGroupReservedNameError(String name) {
+    return '「$name」是系统保留的分类名称，请使用其他名称';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -95,4 +169,41 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsLanguageEn => 'English';
+
+  @override
+  String get cancel => '取消';
+
+  @override
+  String get confirm => '確定';
+
+  @override
+  String get errorOperationFailed => '操作失敗，請稍後再試';
+
+  @override
+  String get libraryGroupManageTitle => '管理分類';
+
+  @override
+  String get libraryGroupAddFieldLabel => '新增分類名稱';
+
+  @override
+  String get libraryGroupAddButton => '新增';
+
+  @override
+  String get libraryGroupRenameTitle => '重新命名分類';
+
+  @override
+  String get libraryGroupDeleteTitle => '刪除分類';
+
+  @override
+  String libraryGroupDeleteConfirmMessage(String name, String uncategorized) {
+    return '確定要刪除分類「$name」嗎？該分類下的書籍將改列為「$uncategorized」。';
+  }
+
+  @override
+  String get libraryGroupDeleteButton => '刪除';
+
+  @override
+  String libraryGroupReservedNameError(String name) {
+    return '「$name」是系統保留的分類名稱，請使用其他名稱';
+  }
 }

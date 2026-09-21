@@ -36,5 +36,62 @@
   "settingsLanguageEn": "English",
   "@settingsLanguageEn": {
     "description": "語言選項：英文（語言本身的固有名稱，不翻譯）"
+  },
+  "cancel": "取消",
+  "@cancel": {
+    "description": "通用「取消」按鈕文字"
+  },
+  "confirm": "確定",
+  "@confirm": {
+    "description": "通用「確定」按鈕文字"
+  },
+  "errorOperationFailed": "操作失敗，請稍後再試",
+  "@errorOperationFailed": {
+    "description": "通用操作失敗的 catch-all 錯誤訊息（非例外物件原始文字，見 spec.md §6 執行期例外訊息在地化慣例）"
+  },
+  "libraryGroupManageTitle": "管理分類",
+  "@libraryGroupManageTitle": {
+    "description": "分類管理對話框標題"
+  },
+  "libraryGroupAddFieldLabel": "新增分類名稱",
+  "@libraryGroupAddFieldLabel": {
+    "description": "分類管理對話框新增分類輸入框的 labelText"
+  },
+  "libraryGroupAddButton": "新增",
+  "@libraryGroupAddButton": {
+    "description": "分類管理對話框「新增」按鈕文字"
+  },
+  "libraryGroupRenameTitle": "重新命名分類",
+  "@libraryGroupRenameTitle": {
+    "description": "重新命名分類子對話框標題"
+  },
+  "libraryGroupDeleteTitle": "刪除分類",
+  "@libraryGroupDeleteTitle": {
+    "description": "刪除分類確認子對話框標題"
+  },
+  "libraryGroupDeleteConfirmMessage": "確定要刪除分類「{name}」嗎？該分類下的書籍將改列為「{uncategorized}」。",
+  "@libraryGroupDeleteConfirmMessage": {
+    "description": "刪除分類確認訊息，{name} 為被刪除的分類名稱（使用者自訂，不翻譯），{uncategorized} 為 groupUncategorized 的已轉譯結果",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "uncategorized": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryGroupDeleteButton": "刪除",
+  "@libraryGroupDeleteButton": {
+    "description": "刪除分類確認子對話框的「刪除」按鈕文字"
+  },
+  "libraryGroupReservedNameError": "「{name}」是系統保留的分類名稱，請使用其他名稱",
+  "@libraryGroupReservedNameError": {
+    "description": "新增/重新命名分類時，輸入名稱命中三語言任一保留字時顯示的錯誤訊息，{name} 為使用者實際輸入的名稱",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   }
 }
