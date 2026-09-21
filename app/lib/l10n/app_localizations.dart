@@ -315,6 +315,30 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'刪除'**
   String get bookActionDelete;
+
+  /// 「啟用全文檢索」確認對話框標題（PDF／其他格式共用同一對話框）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'啟用全文檢索'**
+  String get fullTextSearchEnableDialogTitle;
+
+  /// 啟用 PDF 全文檢索時的確認訊息（額外附加掃描件提示）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量消耗，是否繼續？\n\n部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容，索引後仍查不到屬於正常情況。'**
+  String get fullTextSearchEnableMessagePdf;
+
+  /// 啟用其他格式（EPUB/TXT/KF8）全文檢索時的確認訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量消耗，是否繼續？'**
+  String get fullTextSearchEnableMessageOther;
+
+  /// 「啟用全文檢索」確認對話框的確認按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確認開啟'**
+  String get fullTextSearchEnableConfirmButton;
 }
 
 class _AppLocalizationsDelegate

@@ -1,6 +1,7 @@
 // app/test/screens/full_text_search_confirm_dialog_test.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/full_text_search_confirm_dialog.dart';
 import 'package:elinkbook/search/full_text_search_settings_repository.dart';
 
@@ -22,10 +23,14 @@ Future<bool?> _open(
   required ContentIndexCategory category,
   bool isEinkMode = false,
   NavigatorObserver? observer,
+  Locale locale = const Locale('zh', 'TW'),
 }) async {
   bool? result;
   await tester.pumpWidget(
     MaterialApp(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       navigatorObservers: observer == null ? [] : [observer],
       home: Builder(
         builder: (context) => ElevatedButton(
@@ -64,6 +69,8 @@ void main() {
     bool? result;
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => ElevatedButton(
             onPressed: () async {
@@ -103,6 +110,8 @@ void main() {
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => ElevatedButton(
             onPressed: () => showFullTextSearchEnableConfirmDialog(
@@ -152,5 +161,18 @@ void main() {
     final route = observer.lastPushedRoute;
     expect(route, isA<DialogRoute>());
     expect((route as DialogRoute).transitionDuration, isNot(Duration.zero));
+  });
+
+  testWidgets('英文介面下標題/訊息/按鈕正確以英文渲染', (tester) async {
+    await _open(
+      tester,
+      category: ContentIndexCategory.pdf,
+      locale: const Locale('en'),
+    );
+
+    expect(find.text('Enable Full-Text Search'), findsOneWidget);
+    expect(find.text('Enable'), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.textContaining('scanned/image-based PDFs'), findsOneWidget);
   });
 }

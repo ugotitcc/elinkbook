@@ -137,4 +137,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookActionDelete => 'Delete';
+
+  @override
+  String get fullTextSearchEnableDialogTitle => 'Enable Full-Text Search';
+
+  @override
+  String get fullTextSearchEnableMessagePdf =>
+      'This will start background indexing (including existing books in your library), which increases CPU and battery usage. Continue?\n\nSome scanned/image-based PDFs may not contain searchable text — it\'s normal if they still can\'t be found after indexing.';
+
+  @override
+  String get fullTextSearchEnableMessageOther =>
+      'This will start background indexing (including existing books in your library), which increases CPU and battery usage. Continue?';
+
+  @override
+  String get fullTextSearchEnableConfirmButton => 'Enable';
 }

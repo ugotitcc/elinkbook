@@ -176,5 +176,21 @@
   "bookActionDelete": "刪除",
   "@bookActionDelete": {
     "description": "單書「⋮」動作選單「刪除」選項文字"
+  },
+  "fullTextSearchEnableDialogTitle": "啟用全文檢索",
+  "@fullTextSearchEnableDialogTitle": {
+    "description": "「啟用全文檢索」確認對話框標題（PDF／其他格式共用同一對話框）"
+  },
+  "fullTextSearchEnableMessagePdf": "將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量消耗，是否繼續？\n\n部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容，索引後仍查不到屬於正常情況。",
+  "@fullTextSearchEnableMessagePdf": {
+    "description": "啟用 PDF 全文檢索時的確認訊息（額外附加掃描件提示）"
+  },
+  "fullTextSearchEnableMessageOther": "將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量消耗，是否繼續？",
+  "@fullTextSearchEnableMessageOther": {
+    "description": "啟用其他格式（EPUB/TXT/KF8）全文檢索時的確認訊息"
+  },
+  "fullTextSearchEnableConfirmButton": "確認開啟",
+  "@fullTextSearchEnableConfirmButton": {
+    "description": "「啟用全文檢索」確認對話框的確認按鈕文字"
   }
 }

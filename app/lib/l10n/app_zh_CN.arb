@@ -35,5 +35,9 @@
   "bookActionMove": "移动",
   "bookActionLayoutOverride": "排版覆盖",
   "bookActionRemoveCache": "移除缓存",
-  "bookActionDelete": "删除"
+  "bookActionDelete": "删除",
+  "fullTextSearchEnableDialogTitle": "启用全文检索",
+  "fullTextSearchEnableMessagePdf": "将触发后台索引建立（含既有书库旧书回填），过程会增加运算与电量消耗，是否继续？\n\n部分扫描/图片型 PDF 可能没有可搜索的文字内容，索引后仍查不到属于正常情况。",
+  "fullTextSearchEnableMessageOther": "将触发后台索引建立（含既有书库旧书回填），过程会增加运算与电量消耗，是否继续？",
+  "fullTextSearchEnableConfirmButton": "确认开启"
 }

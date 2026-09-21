@@ -134,6 +134,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get bookActionDelete => '刪除';
+
+  @override
+  String get fullTextSearchEnableDialogTitle => '啟用全文檢索';
+
+  @override
+  String get fullTextSearchEnableMessagePdf =>
+      '將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量消耗，是否繼續？\n\n部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容，索引後仍查不到屬於正常情況。';
+
+  @override
+  String get fullTextSearchEnableMessageOther =>
+      '將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量消耗，是否繼續？';
+
+  @override
+  String get fullTextSearchEnableConfirmButton => '確認開啟';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -266,6 +280,20 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get bookActionDelete => '删除';
+
+  @override
+  String get fullTextSearchEnableDialogTitle => '启用全文检索';
+
+  @override
+  String get fullTextSearchEnableMessagePdf =>
+      '将触发后台索引建立（含既有书库旧书回填），过程会增加运算与电量消耗，是否继续？\n\n部分扫描/图片型 PDF 可能没有可搜索的文字内容，索引后仍查不到属于正常情况。';
+
+  @override
+  String get fullTextSearchEnableMessageOther =>
+      '将触发后台索引建立（含既有书库旧书回填），过程会增加运算与电量消耗，是否继续？';
+
+  @override
+  String get fullTextSearchEnableConfirmButton => '确认开启';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -398,4 +426,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get bookActionDelete => '刪除';
+
+  @override
+  String get fullTextSearchEnableDialogTitle => '啟用全文檢索';
+
+  @override
+  String get fullTextSearchEnableMessagePdf =>
+      '將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量消耗，是否繼續？\n\n部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容，索引後仍查不到屬於正常情況。';
+
+  @override
+  String get fullTextSearchEnableMessageOther =>
+      '將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量消耗，是否繼續？';
+
+  @override
+  String get fullTextSearchEnableConfirmButton => '確認開啟';
 }
