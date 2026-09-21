@@ -1,3 +1,4 @@
+import 'package:elinkbook/reader/book_format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_toc_item.dart';
@@ -214,7 +215,46 @@ void main() {
 
     expect(find.text('电脑'), findsOneWidget);
   });
+  testWidgets('英文介面下標題/空狀態/PDF 分頁籤正確以英文渲染', (tester) async {
+    // EPUB 情境
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: TocBottomSheet(
+          entries: const [],
+          initiallyExpandedEntries: const {},
+          currentEntry: null,
+          onEntrySelected: (_) {},
+        ),
+      ),
+    ));
+
+    expect(find.text('📖 Table of Contents'), findsOneWidget);
+
+    // PDF 情境
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: TocBottomSheet(
+          format: BookFormat.pdf,
+          entries: const [],
+          initiallyExpandedEntries: const {},
+          currentEntry: null,
+          onEntrySelected: (_) {},
+        ),
+      ),
+    ));
+
+    expect(find.text('Chapters'), findsOneWidget);
+    expect(find.text('Thumbnails'), findsOneWidget);
+    expect(find.text('Search'), findsOneWidget);
+  });
 }
+
 
 Future<void> _pumpModalSheet(
   WidgetTester tester,

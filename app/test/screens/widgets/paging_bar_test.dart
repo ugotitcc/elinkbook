@@ -212,6 +212,27 @@ void main() {
     );
   });
 
+  testWidgets('英文介面下上一頁/下一頁 tooltip 正確以英文渲染', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: PagingBar(
+            currentPage: 1,
+            pageCount: 5,
+            onPrevious: () {},
+            onNext: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byTooltip('Previous page'), findsOneWidget);
+    expect(find.byTooltip('Next page'), findsOneWidget);
+  });
+
   test('PagingBar.resolvedHeight()：一般模式 52.0，E-Ink 模式 56.0（epic-36 Issue 7）', () {
     expect(PagingBar.resolvedHeight(false), 52.0);
     expect(PagingBar.resolvedHeight(true), 56.0);

@@ -39,7 +39,7 @@
 - Consumes：`AppLocalizations.of(context)!`。
 - Produces：ARB key `readerBackTooltip`/`readerSearchTooltip`/`readerHideToolbarTooltip`/`readerShowToolbarTooltip`。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb` 檔尾新增：
 ```json
@@ -85,12 +85,12 @@
   "readerShowToolbarTooltip": "顯示工具列"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
 Run: `flutter gen-l10n`
 Expected: 無錯誤。
 
-- [ ] **Step 3: 修改 `reader_chrome_top_bar.dart`**
+- [x] **Step 3: 修改 `reader_chrome_top_bar.dart`**
 
 在檔案頂部新增 import：
 ```dart
@@ -115,7 +115,7 @@ import '../l10n/app_localizations.dart';
 - 第 134 行 `tooltip: '搜尋內文',` → `tooltip: l10n.readerSearchTooltip,`
 - 第 143 行 `tooltip: isBottomChromeVisible ? '隱藏工具列' : '顯示工具列',` → `tooltip: isBottomChromeVisible ? l10n.readerHideToolbarTooltip : l10n.readerShowToolbarTooltip,`
 
-- [ ] **Step 4: 遷移既有測試檔**
+- [x] **Step 4: 遷移既有測試檔**
 
 `app/test/screens/reader_chrome_top_bar_test.dart` 有 1 處 `MaterialApp(`。找到該處呼叫，補上：
 ```dart
@@ -128,7 +128,7 @@ import 'package:elinkbook/l10n/app_localizations.dart';
 ```
 （保留原有 `theme:`/`home:` 等既有參數不動；若該檔案沒有指定 `locale:`，維持不指定——`pumpLocalizedWidget()` 的既有慣例是預設 `zh_TW`，但這裡是直接在既有 `MaterialApp(` 補參數，不引入 `pumpLocalizedWidget()`，`Flutter` 在未指定 `locale` 時會用系統/測試環境 locale 解析；為避免非決定性，額外明確加上 `locale: const Locale('zh', 'TW'),`）。
 
-- [ ] **Step 5: 新增三語言渲染驗證測試**
+- [x] **Step 5: 新增三語言渲染驗證測試**
 
 在檔案 `main()` 最後一個 `testWidgets` 之後新增：
 ```dart
@@ -160,17 +160,17 @@ import 'package:elinkbook/l10n/app_localizations.dart';
 
 > 若上述建構參數與檔案既有 `testWidgets` 實際使用的建構寫法不完全一致（例如既有測試已有可重用的 `_buildTopBar()` helper），改用該 helper 並傳入 `locale: const Locale('en')`，斷言邏輯不變。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/reader_chrome_top_bar_test.dart`
 Expected: 全數通過（既有＋新增 1 個）。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/reader_chrome_top_bar.dart test/screens/reader_chrome_top_bar_test.dart`
 Expected: No issues found!
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/reader_chrome_top_bar.dart app/test/screens/reader_chrome_top_bar_test.dart app/lib/l10n/
@@ -190,7 +190,7 @@ git commit -m "feat(epic-45): reader_chrome_top_bar.dart 字串抽取三語言�
 - Consumes：`AppLocalizations.of(context)!`。
 - Produces：ARB key `readerTocTooltip`/`readerBookmarkAddedTooltip`/`readerBookmarkAddTooltip`/`readerAnnotationsTooltip`/`readerLayoutTooltip`/`readerTtsTooltip`。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb` 檔尾新增：
 ```json
@@ -250,12 +250,12 @@ git commit -m "feat(epic-45): reader_chrome_top_bar.dart 字串抽取三語言�
   "readerTtsTooltip": "朗讀"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
 Run: `flutter gen-l10n`
 Expected: 無錯誤。
 
-- [ ] **Step 3: 修改 `reader_chrome_bottom_bar.dart`**
+- [x] **Step 3: 修改 `reader_chrome_bottom_bar.dart`**
 
 新增 import：
 ```dart
@@ -271,23 +271,23 @@ import '../l10n/app_localizations.dart';
 
 其餘 `Row`／`DecoratedBox`／`Material` 版面結構原樣不動。
 
-- [ ] **Step 4: 遷移既有測試檔**
+- [x] **Step 4: 遷移既有測試檔**
 
 `app/test/screens/reader_chrome_bottom_bar_test.dart` 1 處 `MaterialApp(`，比照 Task 1 Step 4 補上 `localizationsDelegates`/`supportedLocales`/`locale: const Locale('zh', 'TW')`。
 
-- [ ] **Step 5: 新增三語言渲染驗證測試**
+- [x] **Step 5: 新增三語言渲染驗證測試**
 
 新增一則 `testWidgets('英文介面下選單列 tooltip 正確以英文渲染', ...)`，沿用檔案既有的 `ReaderChromeBottomBar` 建構寫法（`bookTitle`/`pageProgressText`/`footer`/`onTocTap`/`isBookmarked`/`onBookmarkTap`/`onAnnotationsTap`/`onLayoutTap`/`onTtsTap`/`backgroundColor`/`iconColor` 皆填入非 null 測試值，其中 `onTtsTap` 需非 null 才會渲染朗讀按鈕），把 `locale` 改為 `const Locale('en')`，斷言 `find.byTooltip('Table of contents')`／`find.byTooltip('Highlights & notes')`／`find.byTooltip('Layout')`／`find.byTooltip('Read aloud')` 皆 `findsOneWidget`。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/reader_chrome_bottom_bar_test.dart`
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/reader_chrome_bottom_bar.dart test/screens/reader_chrome_bottom_bar_test.dart`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/reader_chrome_bottom_bar.dart app/test/screens/reader_chrome_bottom_bar_test.dart app/lib/l10n/
@@ -307,7 +307,7 @@ git commit -m "feat(epic-45): reader_chrome_bottom_bar.dart 字串抽取三語�
 - Consumes：`AppLocalizations.of(context)!`。
 - Produces：ARB key `readerPagingPreviousTooltip`/`readerPagingNextTooltip`。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -339,9 +339,9 @@ git commit -m "feat(epic-45): reader_chrome_bottom_bar.dart 字串抽取三語�
   "readerPagingNextTooltip": "下一頁"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `paging_bar.dart`**
+- [x] **Step 3: 修改 `paging_bar.dart`**
 
 新增 import：`import '../../l10n/app_localizations.dart';`（本檔案在 `screens/widgets/` 下，相對路徑為兩層）。
 
@@ -351,23 +351,23 @@ git commit -m "feat(epic-45): reader_chrome_bottom_bar.dart 字串抽取三語�
 
 `Text('${currentPage + 1} / $pageCount')` 為純數字格式，不需要翻譯，原樣保留。
 
-- [ ] **Step 4: 遷移既有測試檔（8 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（8 處 `MaterialApp(`）**
 
 `app/test/screens/widgets/paging_bar_test.dart` 8 處皆補上 `localizationsDelegates`/`supportedLocales`/`locale: const Locale('zh', 'TW')`（若檔案已有共用 helper 包裝 `MaterialApp`，只需修改該 helper 一處）。
 
-- [ ] **Step 5: 新增三語言渲染驗證測試**
+- [x] **Step 5: 新增三語言渲染驗證測試**
 
 新增 `testWidgets('英文介面下上一頁/下一頁 tooltip 正確以英文渲染', ...)`，沿用既有 `PagingBar` 建構寫法，`locale: const Locale('en')`，斷言 `find.byTooltip('Previous page')`／`find.byTooltip('Next page')` 皆 `findsOneWidget`。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/widgets/paging_bar_test.dart`
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/widgets/paging_bar.dart test/screens/widgets/paging_bar_test.dart`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/widgets/paging_bar.dart app/test/screens/widgets/paging_bar_test.dart app/lib/l10n/
@@ -387,7 +387,7 @@ git commit -m "feat(epic-45): paging_bar.dart 字串抽取三語言在地化"
 - Consumes：`AppLocalizations.of(context)!`。
 - Produces：ARB key `readerPdfNoPagesAvailable`。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -403,9 +403,9 @@ git commit -m "feat(epic-45): paging_bar.dart 字串抽取三語言在地化"
 
 `app_zh.arb`：`"readerPdfNoPagesAvailable": "無可用頁面"`
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `pdf_thumbnail_panel.dart`**
+- [x] **Step 3: 修改 `pdf_thumbnail_panel.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -424,23 +424,23 @@ git commit -m "feat(epic-45): paging_bar.dart 字串抽取三語言在地化"
 
 （原本 `const Center(...)` 因內容改為動態不再能是 `const`，移除 `const` 關鍵字。）
 
-- [ ] **Step 4: 遷移既有測試檔（9 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（9 處 `MaterialApp(`）**
 
 `app/test/screens/pdf_thumbnail_panel_test.dart` 9 處補上 `localizationsDelegates`/`supportedLocales`/`locale`（同樣優先修改共用 helper，若存在）。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 新增 `testWidgets('英文介面下無頁面時顯示英文空狀態文字', ...)`，建構 `PdfThumbnailPanel(totalPages: 0, ...)`，`locale: const Locale('en')`，斷言 `find.text('No pages available')` `findsOneWidget`。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/pdf_thumbnail_panel_test.dart`
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/pdf_thumbnail_panel.dart test/screens/pdf_thumbnail_panel_test.dart`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/pdf_thumbnail_panel.dart app/test/screens/pdf_thumbnail_panel_test.dart app/lib/l10n/
@@ -462,7 +462,7 @@ git commit -m "feat(epic-45): pdf_thumbnail_panel.dart 字串抽取三語言在�
 
 **計劃範圍澄清**：`showNoteTextDialog(BuildContext context, {String initialText = '', String title = '備註'})` 的 `title` 具名參數預設值 `'備註'`——查證全部 3 個呼叫端（`reader_screen.dart` 2 處、`notes_bottom_sheet.dart` 1 處）皆明確傳入 `title:`（見 Task 18/Task 11），這個預設值在目前程式碼中不可觸及。但 `showNoteTextDialog` 本身即接收 `BuildContext context` 作為函式參數（不同於 `ReaderScreen.bookTitle` 是「widget 建構子預設值」、必須是編譯期常數的限制），故本 Task 直接把預設值改為 `null`、在函式本體內用 `title ?? AppLocalizations.of(context)!.readerNoteDialogDefaultTitle` 解析，比 Task 18 的 `bookTitle` 處理更單純，不需要拆 `FutureBuilder`。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -494,9 +494,9 @@ git commit -m "feat(epic-45): pdf_thumbnail_panel.dart 字串抽取三語言在�
   "readerNoteDialogDefaultTitle": "備註"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `note_edit_dialog.dart`**
+- [x] **Step 3: 修改 `note_edit_dialog.dart`**
 
 ```dart
 import 'package:flutter/material.dart';
@@ -550,23 +550,23 @@ Future<String?> showNoteTextDialog(
   }
 ```
 
-- [ ] **Step 4: 遷移既有測試檔（4 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（4 處 `MaterialApp(`）**
 
 `app/test/screens/note_edit_dialog_test.dart` 4 處補上 l10n 三參數。既有測試若有斷言預設標題「備註」的案例（呼叫 `showNoteTextDialog(context)` 不傳 `title`），因預設 locale 為 `zh_TW`，斷言值不變、無需修改斷言內容。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 新增 `testWidgets('英文介面下取消/儲存按鈕正確以英文渲染', ...)`，`locale: const Locale('en')`，斷言 `find.text('Cancel')`／`find.text('Save')` `findsOneWidget`。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/note_edit_dialog_test.dart`
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/note_edit_dialog.dart test/screens/note_edit_dialog_test.dart`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/note_edit_dialog.dart app/test/screens/note_edit_dialog_test.dart app/lib/l10n/
@@ -586,7 +586,7 @@ git commit -m "feat(epic-45): note_edit_dialog.dart 字串抽取三語言在地�
 - Consumes：`AppLocalizations.of(context)!`；`close`（Issue 0 既有共用 key，`關閉` tooltip 直接複用，不新增）。
 - Produces：ARB key `readerAnnotationUnderlineTooltip`/`readerAnnotationCopyTooltip`/`readerAnnotationEditNoteTooltip`/`readerAnnotationAddNoteTooltip`/`readerAnnotationDeleteHighlightAndNote`/`readerAnnotationDeleteHighlight`/`readerAnnotationDeleteNote`（後三個供 Task 18 的 `reader_screen.dart._annotationDeleteButtonLabel()` 使用）。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -653,9 +653,9 @@ git commit -m "feat(epic-45): note_edit_dialog.dart 字串抽取三語言在地�
   "readerAnnotationDeleteNote": "刪除備註"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `annotation_toolbar.dart`**
+- [x] **Step 3: 修改 `annotation_toolbar.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -665,23 +665,23 @@ git commit -m "feat(epic-45): note_edit_dialog.dart 字串抽取三語言在地�
 - `tooltip: '複製',` → `tooltip: l10n.readerAnnotationCopyTooltip,`
 - `tooltip: hasExistingNote ? '編輯備註' : '新增備註',` → `tooltip: hasExistingNote ? l10n.readerAnnotationEditNoteTooltip : l10n.readerAnnotationAddNoteTooltip,`
 
-- [ ] **Step 4: 遷移既有測試檔（14 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（14 處 `MaterialApp(`）**
 
 `app/test/screens/annotation_toolbar_test.dart` 14 處補上 l10n 三參數（優先修改共用 helper）。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 新增 `testWidgets('英文介面下底線/關閉/複製/備註 tooltip 正確以英文渲染', ...)`，`locale: const Locale('en')`，斷言 `find.byTooltip('Underline')`／`find.byTooltip('Close')`／`find.byTooltip('Copy')`／`find.byTooltip('Add note')` 皆 `findsOneWidget`。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/annotation_toolbar_test.dart`
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/annotation_toolbar.dart test/screens/annotation_toolbar_test.dart`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/annotation_toolbar.dart app/test/screens/annotation_toolbar_test.dart app/lib/l10n/
@@ -701,7 +701,7 @@ git commit -m "feat(epic-45): annotation_toolbar.dart 字串抽取三語言在�
 - Consumes：`AppLocalizations.of(context)!`。
 - Produces：ARB key `readerPdfSearchHint`/`readerPdfSearchNoMatches`/`readerPdfSearchPreviousTooltip`/`readerPdfSearchNextTooltip`。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -747,9 +747,9 @@ git commit -m "feat(epic-45): annotation_toolbar.dart 字串抽取三語言在�
   "readerPdfSearchNextTooltip": "下一個"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `pdf_search_panel.dart`**
+- [x] **Step 3: 修改 `pdf_search_panel.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -825,23 +825,23 @@ git commit -m "feat(epic-45): annotation_toolbar.dart 字串抽取三語言在�
 
 （`state.matchCount`／`state.currentIndex` 組成的 `'N / M'` 是純數字格式，不需要 ICU plural，原樣保留。）
 
-- [ ] **Step 4: 遷移既有測試檔（7 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（7 處 `MaterialApp(`）**
 
 `app/test/screens/pdf_search_panel_test.dart` 7 處補上 l10n 三參數。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 新增 `testWidgets('英文介面下搜尋提示與上一個/下一個 tooltip 正確以英文渲染', ...)`，`locale: const Locale('en')`，斷言輸入框 hint 與 `find.byTooltip('Previous')`／`find.byTooltip('Next')`（觸發搜尋有結果情境）。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/pdf_search_panel_test.dart`
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/pdf_search_panel.dart test/screens/pdf_search_panel_test.dart`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/pdf_search_panel.dart app/test/screens/pdf_search_panel_test.dart app/lib/l10n/
@@ -863,7 +863,7 @@ git commit -m "feat(epic-45): pdf_search_panel.dart 字串抽取三語言在地�
 
 **計劃範圍澄清**：`_describeReadingPosition()` 是頂層私有函式（非 Widget 方法），目前簽章 `String _describeReadingPosition(ReadingPositionSnapshot snapshot, BookFileFormat format)` 沒有 `BuildContext`／`AppLocalizations` 可用。本 Task 新增 `AppLocalizations l10n` 參數，由唯一呼叫端 `showReadingPositionConflictDialog()` 的 `builder:` 回呼內（已持有 `dialogContext`）解析後傳入。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -949,9 +949,9 @@ git commit -m "feat(epic-45): pdf_search_panel.dart 字串抽取三語言在地�
   "readerPositionConflictKeepLocal": "保留本機"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `reading_position_conflict_dialog.dart`**
+- [x] **Step 3: 修改 `reading_position_conflict_dialog.dart`**
 
 ```dart
 import 'package:flutter/material.dart';
@@ -1016,23 +1016,23 @@ Future<ReadingPositionChoice?> showReadingPositionConflictDialog(
 }
 ```
 
-- [ ] **Step 4: 遷移既有測試檔（1 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（1 處 `MaterialApp(`）**
 
 `app/test/screens/reading_position_conflict_dialog_test.dart` 補上 l10n 三參數。既有斷言若用 `find.textContaining(...)` 比對組合後的中文訊息，因預設 `zh_TW`、且組合結果與原字面值相同，不需修改斷言內容。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 新增 `testWidgets('英文介面下標題/訊息/按鈕正確以英文渲染', ...)`，`locale: const Locale('en')`，斷言 `find.textContaining('doesn't match')`／`find.text('Keep cloud')`／`find.text('Keep this device')`。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/reading_position_conflict_dialog_test.dart`
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/reading_position_conflict_dialog.dart test/screens/reading_position_conflict_dialog_test.dart`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/reading_position_conflict_dialog.dart app/test/screens/reading_position_conflict_dialog_test.dart app/lib/l10n/
@@ -1052,7 +1052,7 @@ git commit -m "feat(epic-45): reading_position_conflict_dialog.dart 字串抽取
 - Consumes：`AppLocalizations.of(context)!`。
 - Produces：ARB key `readerTocTitle`/`readerTocEmptyMessage`/`readerTocTabChapters`/`readerTocTabThumbnails`/`readerTocTabSearch`/`readerFeatureComingSoon`。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -1112,9 +1112,9 @@ git commit -m "feat(epic-45): reading_position_conflict_dialog.dart 字串抽取
   "readerFeatureComingSoon": "此功能將於後續版本提供"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `toc_bottom_sheet.dart`**
+- [x] **Step 3: 修改 `toc_bottom_sheet.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -1198,23 +1198,23 @@ git commit -m "feat(epic-45): reading_position_conflict_dialog.dart 字串抽取
 
 （`const TabBar(...)` 因子項不再是 `const` 而移除 `const`；`_buildEntryRow()` 方法本身不含硬編碼字串，僅 `pageLabel` 這種純數字/省略號 `'…'`，維持原樣不動。）
 
-- [ ] **Step 4: 遷移既有測試檔（8 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（8 處 `MaterialApp(`）**
 
 `app/test/screens/toc_bottom_sheet_test.dart` 8 處補上 l10n 三參數。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 新增 `testWidgets('英文介面下標題/空狀態/PDF 分頁籤正確以英文渲染', ...)`，需覆蓋一則 EPUB 情境（斷言 `find.text('📖 Table of Contents')`）與一則 PDF 情境（`format: BookFormat.pdf`，斷言 `find.text('Chapters')`／`find.text('Thumbnails')`／`find.text('Search')`）。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/toc_bottom_sheet_test.dart`
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/toc_bottom_sheet.dart test/screens/toc_bottom_sheet_test.dart`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/toc_bottom_sheet.dart app/test/screens/toc_bottom_sheet_test.dart app/lib/l10n/
@@ -1234,7 +1234,7 @@ git commit -m "feat(epic-45): toc_bottom_sheet.dart 字串抽取三語言在地�
 - Consumes：`AppLocalizations.of(context)!`。
 - Produces：ARB key `readerTtsCbzUnsupportedTooltip`/`readerTtsPreviousTooltip`/`readerTtsPauseTooltip`/`readerTtsPlayTooltip`/`readerTtsNextTooltip`/`readerTtsSpeedTooltip`/`readerTtsVoiceTooltip`/`readerTtsSleepTimerLabel`/`readerTtsSleepTimerLabelWithMinutes`/`readerTtsCollapseLabel`/`readerTtsExpandLabel`/`readerTtsStopLabel`。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -1346,9 +1346,9 @@ git commit -m "feat(epic-45): toc_bottom_sheet.dart 字串抽取三語言在地�
   "readerTtsStopLabel": "停止"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `tts_panel.dart`**
+- [x] **Step 3: 修改 `tts_panel.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -1363,23 +1363,23 @@ git commit -m "feat(epic-45): toc_bottom_sheet.dart 字串抽取三語言在地�
 - `label: Text(isCollapsed ? '展開' : '收合'),` → `label: Text(isCollapsed ? l10n.readerTtsExpandLabel : l10n.readerTtsCollapseLabel),`
 - `label: const Text('停止'),` → `label: Text(l10n.readerTtsStopLabel),`（移除 `const`）
 
-- [ ] **Step 4: 遷移既有測試檔（1 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（1 處 `MaterialApp(`）**
 
 `app/test/screens/tts_panel_test.dart` 補上 l10n 三參數。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 新增 `testWidgets('英文介面下播放/收合/停止按鈕文字正確以英文渲染', ...)`，`locale: const Locale('en')`，斷言 `find.byTooltip('Play')` 或 `find.byTooltip('Pause')`（依 `status` 測試值而定）、`find.text('Stop')`。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/tts_panel_test.dart`
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/tts_panel.dart test/screens/tts_panel_test.dart`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/tts_panel.dart app/test/screens/tts_panel_test.dart app/lib/l10n/
@@ -1401,7 +1401,7 @@ git commit -m "feat(epic-45): tts_panel.dart 字串抽取三語言在地化"
 
 **計劃範圍澄清（架構必要偏離）**：原始 `_confirmDeleteAll({required String itemLabel, required int count, ...})` 把中文詞彙 `itemLabel`（'劃線'/'備註'）直接嵌進 `'確定要刪除全部$itemLabel嗎？（共 $count 筆）'` 字串模板——這種「詞彙插槽」模式在英文語序下無法正確運作（例如「Delete all highlights?」而非「Delete all $itemLabel?」的直譯語序）。本 Task 改為呼叫端各自傳入**已完整解析好的在地化標題字串**（`title` 參數取代 `itemLabel`），`_confirmDeleteAll` 本身不再組字串。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -1574,9 +1574,9 @@ git commit -m "feat(epic-45): tts_panel.dart 字串抽取三語言在地化"
   "readerNotesSheetDeleteAllNotesConfirm": "確定要刪除全部備註嗎？（共 {count} 筆）"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `notes_bottom_sheet.dart`**
+- [x] **Step 3: 修改 `notes_bottom_sheet.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -1965,23 +1965,23 @@ git commit -m "feat(epic-45): tts_panel.dart 字串抽取三語言在地化"
 
 （`_loadBookmarks()`／`_loadAnnotations()`／`_exportMarkdown()`／`_matchesCurrentPosition()`／`_bookmarkAtCurrentPosition`／`_toggleBookmark()`／`_deleteBookmark()`／`_deleteAnnotationItem()`／`initState()`／`dispose()` 等其餘方法不含硬編碼字串或無需改動，原樣保留。）
 
-- [ ] **Step 4: 遷移既有測試檔（2 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（2 處 `MaterialApp(`）**
 
 `app/test/screens/notes_bottom_sheet_test.dart` 2 處補上 l10n 三參數。既有測試若直接呼叫 `widget._confirmDeleteAll` 或依賴 `itemLabel` 具名參數（不太可能，該方法是 private），無需修改；若有測試建構 `_TtsSleepTimerSheet`（不相關）忽略。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 新增 `testWidgets('英文介面下分頁籤/按鈕/空狀態文字正確以英文渲染', ...)`，`locale: const Locale('en')`，斷言 `find.text('Notes')`／`find.text('Bookmarks')`／`find.text('Highlights & Notes')`。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/notes_bottom_sheet_test.dart`
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/notes_bottom_sheet.dart test/screens/notes_bottom_sheet_test.dart`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/notes_bottom_sheet.dart app/test/screens/notes_bottom_sheet_test.dart app/lib/l10n/
@@ -2000,7 +2000,7 @@ git commit -m "feat(epic-45): notes_bottom_sheet.dart 字串抽取三語言在�
 - Consumes：`AppLocalizations.of(context)!`。
 - Produces：本 Task 建立的 ARB key 中，以下 **9 個為「三份版面設定 Bottom Sheet 共用」key**，Task 14（`pdf_settings_sheet.dart`）與 Task 15/16（`reader_settings_sheet.dart`）直接消費、不重複新增：`readerDualPageAutoTooltip`/`readerDualPageAutoLabel`/`readerDualPageAlwaysTooltip`/`readerDualPageAlwaysLabel`/`readerDualPageNeverTooltip`/`readerDualPageNeverLabel`/`readerFullscreenModeLabel`/`readerShowFooterLabel`/`readerUseGlobalDefaultTooltip`/`readerGlobalLabel`。其餘為 fxl 專屬：`readerFxlSettingsTitle`/`readerDualPageModeLabel`/`readerPageDirectionLabel`/`readerDualPageDirectionLtrTooltip`/`readerDualPageDirectionLtrLabel`/`readerDualPageDirectionRtlTooltip`/`readerDualPageDirectionRtlLabel`/`readerTextConversionOverrideLabel`/`readerTextConversionOriginalLabel`/`readerTextConversionTraditionalLabel`/`readerTextConversionTraditionalTooltip`/`readerTextConversionSimplifiedLabel`/`readerTextConversionSimplifiedTooltip`/`readerShowHeaderLabel`（`readerTextConversionOverrideLabel` 等 6 個文字轉換相關 key 與 `readerShowHeaderLabel` 之後也會被 Task 15/16 `reader_settings_sheet.dart` 重用，一併在本 Task 建立）。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -2186,9 +2186,9 @@ git commit -m "feat(epic-45): notes_bottom_sheet.dart 字串抽取三語言在�
   "readerShowFooterLabel": "顯示頁尾"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `fxl_settings_sheet.dart`**
+- [x] **Step 3: 修改 `fxl_settings_sheet.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -2241,17 +2241,17 @@ git commit -m "feat(epic-45): notes_bottom_sheet.dart 字串抽取三語言在�
 
 文字轉換 `EBOptionChipGroup<TextConversionMode?>` 的 `items:` 由 `const [...]` 改為 `[...]`（移除 `const`），四個 `EBOptionChipItem` 的 `label:`／`tooltip:` 依上表替換，`itemKey`／`value`／`iconWidget` 不動。
 
-- [ ] **Step 4: 執行測試確認未觸及的測試檔仍通過（本 Task 不遷移測試，預期紅燈）**
+- [x] **Step 4: 執行測試確認未觸及的測試檔仍通過（本 Task 不遷移測試，預期紅燈）**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart`
 Expected: 因缺少 `localizationsDelegates`，測試會以 `Null check operator used on a null value` 失敗——此為預期中的紅燈，留給 Task 13 修復。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/fxl_settings_sheet.dart`
 Expected: No issues found!
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/fxl_settings_sheet.dart app/lib/l10n/
@@ -2268,7 +2268,7 @@ git commit -m "feat(epic-45): fxl_settings_sheet.dart 字串抽取三語言在�
 **Interfaces:**
 - Consumes：Task 12 產出的 `FxlSettingsSheet`（介面簽章未變動，僅內部文字改用 l10n）。
 
-- [ ] **Step 1: 遷移 21 處 `MaterialApp(` 呼叫**
+- [x] **Step 1: 遷移 21 處 `MaterialApp(` 呼叫**
 
 先 Grep 確認實際寫法分布：`grep -c "MaterialApp(" test/screens/fxl_settings_sheet_test.dart` 應為 21。若檔案已有共用 helper（例如 `_wrap()`／`_pumpSheet()`）包裝 `MaterialApp`，優先只修改該 helper 一處，補上：
 ```dart
@@ -2278,24 +2278,24 @@ locale: const Locale('zh', 'TW'),
 ```
 並在檔案頂部新增 `import 'package:elinkbook/l10n/app_localizations.dart';`。若 21 處是分散在各個 `testWidgets` 內各自建構（無共用 helper），逐一比照相同規則補上三個參數——純機械式改動，不變動任何既有斷言內容（預設 `zh_TW` 讓既有中文 `find.text(...)` 斷言維持通過）。
 
-- [ ] **Step 2: 新增三語言渲染驗證測試**
+- [x] **Step 2: 新增三語言渲染驗證測試**
 
 新增 `testWidgets('英文介面下雙頁模式/翻頁方向/全螢幕開關文字正確以英文渲染', ...)`，`locale: const Locale('en')`，斷言 `find.text('Dual-page mode')`／`find.text('Fullscreen mode')`。
 
-- [ ] **Step 3: 執行測試確認全數通過**
+- [x] **Step 3: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart`
 Expected: 全數通過（既有＋新增 1 個）。
 
-- [ ] **Step 4: `grep` 驗證零殘留**
+- [x] **Step 4: `grep` 驗證零殘留**
 
 Run: `grep -c "MaterialApp(" test/screens/fxl_settings_sheet_test.dart`（若已改用共用 helper 且該 helper 仍含一處 `MaterialApp(`，此數字應為 1；若逐一內嵌則應為 0，取決於 Step 1 實際採用的模式，Task 執行者需在此記錄實際數字與說明）。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze test/screens/fxl_settings_sheet_test.dart`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/test/screens/fxl_settings_sheet_test.dart
@@ -2315,7 +2315,7 @@ git commit -m "test(epic-45): fxl_settings_sheet_test.dart 遷移至 pumpLocaliz
 - Consumes：`AppLocalizations.of(context)!`；Task 12 共用 key `readerDualPageModeLabel`/`readerDualPageAutoTooltip`/`readerDualPageAutoLabel`/`readerDualPageAlwaysTooltip`/`readerDualPageAlwaysLabel`/`readerDualPageNeverTooltip`/`readerDualPageNeverLabel`/`readerFullscreenModeLabel`/`readerShowFooterLabel`。
 - Produces：`readerPdfSettingsTitle`/`readerPdfSettingsTabDisplay`/`readerPdfSettingsTabFilters`/`readerPdfSettingsTabCrop`/`readerPdfFitModeLabel`/`readerPdfFitPageTooltip`/`readerPdfFitPageLabel`/`readerPdfFitWidthTooltip`/`readerPdfFitWidthLabel`/`readerPdfFitActualTooltip`/`readerPdfFitActualLabel`/`readerPdfDualPageCoverAloneLabel`/`readerPdfPageOrientationLabel`/`readerPdfDirectionLtrTooltip`/`readerPdfDirectionLtrLabel`/`readerPdfDirectionRtlTooltip`/`readerPdfDirectionRtlLabel`/`readerPdfPageTurnAnimationLabel`/`readerPdfPageTurnAnimationSlide`/`readerPdfPageTurnAnimationNone`/`readerPdfContrastLabel`/`readerPdfBrightnessLabel`/`readerPdfBoldStrengthLabel`/`readerPdfCropModeLabel`/`readerPdfCropNoneTooltip`/`readerPdfCropNoneLabel`/`readerPdfCropAutoTooltip`/`readerPdfCropAutoLabel`/`readerPdfCropManualLabel`/`readerPdfCropManualTooltip`。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -2483,9 +2483,9 @@ git commit -m "test(epic-45): fxl_settings_sheet_test.dart 遷移至 pumpLocaliz
   "readerPdfCropManualTooltip": "手動選區"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `pdf_settings_sheet.dart`**
+- [x] **Step 3: 修改 `pdf_settings_sheet.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -2518,23 +2518,23 @@ git commit -m "test(epic-45): fxl_settings_sheet_test.dart 遷移至 pumpLocaliz
 - `'裁切模式'` → `l10n.readerPdfCropModeLabel`
 - 手動選區 `EBOptionChipItem`：`label: '手動'` → `l10n.readerPdfCropManualLabel`，`tooltip: '手動選區'` → `l10n.readerPdfCropManualTooltip`
 
-- [ ] **Step 4: 遷移既有測試檔（3 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（3 處 `MaterialApp(`）**
 
 `app/test/screens/pdf_settings_sheet_test.dart` 3 處補上 l10n 三參數。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 新增 `testWidgets('英文介面下分頁籤/Fit 模式/裁切模式文字正確以英文渲染', ...)`，`locale: const Locale('en')`，斷言 `find.text('Display')`／`find.text('Filters')`／`find.text('Crop')`。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/pdf_settings_sheet_test.dart`
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/pdf_settings_sheet.dart test/screens/pdf_settings_sheet_test.dart`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/pdf_settings_sheet.dart app/test/screens/pdf_settings_sheet_test.dart app/lib/l10n/
@@ -2555,7 +2555,7 @@ git commit -m "feat(epic-45): pdf_settings_sheet.dart 字串抽取三語言在�
 
 **計劃範圍澄清**：`reader_settings_sheet.dart` 依 Global Constraints「不得抽成獨立 StatefulWidget」的既有不可逆技術決策，全檔案 4 個 `_buildXxxTab()` 皆是同一個 `_ReaderSettingsSheetState` 的方法；本 Task 只處理 `build()`（標題列＋ TabBar 4 個標籤）與 `_buildTextContentTab()`／`_buildBoundaryTab()`／`_buildFontFamilyDropdown()`／`_buildOverrideBadge()`／`_buildSliderRow()` 五個方法，`_fontDisplayName()`（字型品牌名，Global Constraints 明訂不翻譯）不動。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -2668,9 +2668,9 @@ git commit -m "feat(epic-45): pdf_settings_sheet.dart 字串抽取三語言在�
   "readerSettingsUseBookFontLabel": "使用書本內建字型"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `reader_settings_sheet.dart`**
+- [x] **Step 3: 修改 `reader_settings_sheet.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -2708,16 +2708,16 @@ git commit -m "feat(epic-45): pdf_settings_sheet.dart 字串抽取三語言在�
 ```
 （`'此書已覆寫'`→`l10n.readerSettingsOverriddenBadge`、`'恢復本書原樣式'`→`l10n.readerSettingsResetToBookStyleTooltip`、`'跟隨本書原樣式，尚未調整'`→`l10n.readerSettingsNotOverriddenTooltip`、`'使用全域預設'`徽章文字→`l10n.readerUseGlobalDefaultTooltip`〔Task 12 共用 key〕；其餘 `EBStepper`／`Slider`／`IconButton` 結構不動。）
 
-- [ ] **Step 4: 執行測試確認未觸及的測試檔仍通過（本 Task 不遷移測試，預期紅燈）**
+- [x] **Step 4: 執行測試確認未觸及的測試檔仍通過（本 Task 不遷移測試，預期紅燈）**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: `Null check operator used on a null value`，留給 Task 17 修復。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/reader_settings_sheet.dart`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/lib/l10n/
@@ -2738,7 +2738,7 @@ git commit -m "feat(epic-45): reader_settings_sheet.dart 字串抽取第 1 部�
 
 **計劃範圍澄清**：0°／90°／180°／270° 這四個螢幕方向覆寫選項的**短標籤**（`label`，例如 `'0°'`）是語言無關的純數字＋角度符號記號，不經 ARB 翻譯，維持 Dart 字面值；但**tooltip**（例如 `'鎖定 0°'`）含動詞，三語言用字不同，需要 ARB key。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -3011,9 +3011,9 @@ git commit -m "feat(epic-45): reader_settings_sheet.dart 字串抽取第 1 部�
   "readerSettingsDeletePresetTooltip": "刪除"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `reader_settings_sheet.dart`**
+- [x] **Step 3: 修改 `reader_settings_sheet.dart`**
 
 `_buildPresentationTab()` 開頭新增 `final l10n = AppLocalizations.of(context)!;`，`SwitchListTile(title: const Text('全螢幕模式', ...))` → `Text(l10n.readerFullscreenModeLabel, ...)`（移除 `const`）。
 
@@ -3108,16 +3108,16 @@ git commit -m "feat(epic-45): reader_settings_sheet.dart 字串抽取第 1 部�
 
 `_buildPresetSlot()` 開頭新增 `final l10n = AppLocalizations.of(context)!;`，呼叫 `_presetSummary(preset.prefs)` 改為 `_presetSummary(preset.prefs, l10n)`；`Text('（空）', ...)` → `Text(l10n.readerSettingsPresetEmptySlot, ...)`；`child: const Text('套用')` → `Text(l10n.readerSettingsApplyButton)`；`tooltip: '套用到其他書籍'` → `l10n.readerSettingsApplyToOtherBooksTooltip`；`tooltip: '刪除'` → `l10n.readerSettingsDeletePresetTooltip`。
 
-- [ ] **Step 4: 執行測試確認未觸及的測試檔仍通過（本 Task 不遷移測試，預期紅燈）**
+- [x] **Step 4: 執行測試確認未觸及的測試檔仍通過（本 Task 不遷移測試，預期紅燈）**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: `Null check operator used on a null value`，留給 Task 17 修復。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/reader_settings_sheet.dart`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/lib/l10n/
@@ -3134,28 +3134,28 @@ git commit -m "feat(epic-45): reader_settings_sheet.dart 字串抽取第 2 部�
 **Interfaces:**
 - Consumes：Task 15／16 產出的 `ReaderSettingsSheet`（介面簽章未變動，僅內部文字改用 l10n）。
 
-- [ ] **Step 1: 遷移 8 處 `MaterialApp(` 呼叫**
+- [x] **Step 1: 遷移 8 處 `MaterialApp(` 呼叫**
 
 比照 Task 13 Step 1 規則：優先修改共用 helper（若存在），否則逐一補上 `localizationsDelegates`/`supportedLocales`/`locale: const Locale('zh', 'TW')` 與頂部 `import 'package:elinkbook/l10n/app_localizations.dart';`。
 
-- [ ] **Step 2: 新增三語言渲染驗證測試**
+- [x] **Step 2: 新增三語言渲染驗證測試**
 
 新增 `testWidgets('英文介面下四個分頁籤標題與版面設定標題正確以英文渲染', ...)`，`locale: const Locale('en')`，斷言 `find.text('⚙️ Layout Settings')`／`find.text('Text')`／`find.text('Margins')`／`find.text('Display')`／`find.text('Presets')`。
 
-- [ ] **Step 3: 執行測試確認全數通過**
+- [x] **Step 3: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: 全數通過（既有＋新增 1 個）。
 
-- [ ] **Step 4: `grep` 驗證零殘留**
+- [x] **Step 4: `grep` 驗證零殘留**
 
 Run: `grep -c "MaterialApp(" test/screens/reader_settings_sheet_test.dart`，記錄實際數字（依 Step 1 是否採用共用 helper 而定，見 Task 13 Step 4 同等說明）。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze test/screens/reader_settings_sheet_test.dart`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/test/screens/reader_settings_sheet_test.dart

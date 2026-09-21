@@ -15,9 +15,10 @@ void main() {
     VoidCallback? onLayoutTap,
     VoidCallback? onTtsTap,
     bool isEinkMode = false,
+    Locale locale = const Locale('zh', 'TW'),
   }) {
     return MaterialApp(
-        locale: const Locale('zh', 'TW'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
@@ -152,5 +153,23 @@ void main() {
     );
     expect(size.height, greaterThanOrEqualTo(48));
     expect(size.height, lessThan(56));
+  });
+
+  testWidgets('英文介面下選單列 tooltip 正確以英文渲染', (tester) async {
+    await tester.pumpWidget(
+      buildBottomBar(
+        locale: const Locale('en'),
+        onTocTap: () {},
+        onBookmarkTap: () {},
+        onAnnotationsTap: () {},
+        onLayoutTap: () {},
+        onTtsTap: () {},
+      ),
+    );
+
+    expect(find.byTooltip('Table of contents'), findsOneWidget);
+    expect(find.byTooltip('Highlights & notes'), findsOneWidget);
+    expect(find.byTooltip('Layout'), findsOneWidget);
+    expect(find.byTooltip('Read aloud'), findsOneWidget);
   });
 }

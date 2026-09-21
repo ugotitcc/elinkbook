@@ -182,7 +182,7 @@ void main() {
     await tester.pump();
 
     await tester.pumpWidget(const MaterialApp(
-        locale: const Locale('zh', 'TW'),
+        locale: Locale('zh', 'TW'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,home: Scaffold(body: SizedBox.shrink())));
 
@@ -214,7 +214,7 @@ void main() {
 
     // 縮圖仍在渲染中（completer 尚未完成）時就把面板從 widget tree 移除。
     await tester.pumpWidget(const MaterialApp(
-        locale: const Locale('zh', 'TW'),
+        locale: Locale('zh', 'TW'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,home: Scaffold(body: SizedBox.shrink())));
 
@@ -227,5 +227,23 @@ void main() {
 
     expect(images[0].debugDisposed, isTrue,
         reason: '面板已 unmount，遲來的縮圖影像不應洩漏，須被 dispose()');
+  });
+  testWidgets('英文介面下無頁面時顯示英文空狀態文字', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: PdfThumbnailPanel(
+            totalPages: 0,
+            renderThumbnail: (_) async => null,
+            onPageSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('No pages available'), findsOneWidget);
   });
 }

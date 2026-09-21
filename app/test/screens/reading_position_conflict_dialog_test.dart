@@ -16,10 +16,11 @@ void main() {
 
   Future<void> pumpTrigger(
     WidgetTester tester,
-    ValueSetter<ReadingPositionChoice?> onResult,
-  ) async {
+    ValueSetter<ReadingPositionChoice?> onResult, {
+    Locale locale = const Locale('zh', 'TW'),
+  }) async {
     await tester.pumpWidget(MaterialApp(
-        locale: const Locale('zh', 'TW'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       home: Builder(
@@ -81,5 +82,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(result, isNull);
+  });
+  testWidgets('英文介面下標題/訊息/按鈕正確以英文渲染', (tester) async {
+    await pumpTrigger(tester, (_) {}, locale: const Locale('en'));
+    await tester.tap(find.text('trigger'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining("doesn't match"), findsOneWidget);
+    expect(find.text('Keep cloud'), findsOneWidget);
+    expect(find.text('Keep this device'), findsOneWidget);
   });
 }

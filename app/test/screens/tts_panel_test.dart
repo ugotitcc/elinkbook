@@ -20,9 +20,10 @@ void main() {
     VoidCallback? onSleepTimerTap,
     VoidCallback? onToggleCollapse,
     VoidCallback? onStop,
+    Locale locale = const Locale('zh', 'TW'),
   }) {
     return MaterialApp(
-        locale: const Locale('zh', 'TW'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
@@ -213,5 +214,14 @@ void main() {
     );
     expect(size.height, greaterThanOrEqualTo(52));
     expect(size.height, lessThan(56));
+  });
+  testWidgets('英文介面下播放/收合/停止按鈕文字正確以英文渲染', (tester) async {
+    await tester.pumpWidget(buildPanel(
+      locale: const Locale('en'),
+      status: TtsPlaybackStatus.paused,
+    ));
+
+    expect(find.byTooltip('Play'), findsOneWidget);
+    expect(find.text('Stop'), findsOneWidget);
   });
 }

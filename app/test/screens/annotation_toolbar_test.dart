@@ -396,4 +396,28 @@ void main() {
       expect(shape.side.width, 1.5);
     });
   });
+  testWidgets('英文介面下底線/關閉/複製/備註 tooltip 正確以英文渲染', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: Scaffold(
+          body: AnnotationToolbar(
+            onStyleSelected: (_) {},
+            onNotePressed: () {},
+            onClosePressed: () {},
+            onCopyPressed: () {},
+            isEinkMode: false,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byTooltip('Underline'), findsOneWidget);
+    expect(find.byTooltip('Close'), findsOneWidget);
+    expect(find.byTooltip('Copy'), findsOneWidget);
+    expect(find.byTooltip('Add note'), findsOneWidget);
+  });
 }

@@ -14,9 +14,10 @@ void main() {
     VoidCallback? onToggleBottomChrome,
     bool showTtsIndicator = false,
     bool isEinkMode = false,
+    Locale locale = const Locale('zh', 'TW'),
   }) {
     return MaterialApp(
-        locale: const Locale('zh', 'TW'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
@@ -181,5 +182,12 @@ void main() {
     );
     expect(size.width, greaterThanOrEqualTo(48));
     expect(size.width, lessThan(56));
+  });
+
+  testWidgets('英文介面下返回/搜尋 tooltip 正確以英文渲染', (tester) async {
+    await tester.pumpWidget(buildTopBar(locale: const Locale('en')));
+
+    expect(find.byTooltip('Back'), findsOneWidget);
+    expect(find.byTooltip('Search in book'), findsOneWidget);
   });
 }

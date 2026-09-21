@@ -115,4 +115,25 @@ void main() {
     expect(result, isNull);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('英文介面下取消/儲存按鈕正確以英文渲染', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showNoteTextDialog(context),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.text('Save'), findsOneWidget);
+  });
 }

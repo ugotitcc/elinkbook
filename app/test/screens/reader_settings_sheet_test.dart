@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/custom_font.dart';
@@ -632,6 +633,9 @@ void main() {
     });
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: _TestSettingsSheetWrapper(
           initialPrefs: const BookReaderPrefs(fontSize: 1.25), // UI 20.0
@@ -1143,6 +1147,9 @@ void main() {
     });
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: ReaderSettingsSheet(
           // 刻意選 null（顯示最短的「使用書本內建字型」），驗證即使目前選中值
@@ -1525,6 +1532,9 @@ void main() {
     });
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: buildEinkThemeData(),
       home: Scaffold(
         body: ReaderSettingsSheet(
@@ -1571,6 +1581,9 @@ void main() {
     });
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: buildEinkThemeData(),
       home: Scaffold(
         body: ReaderSettingsSheet(
@@ -1671,6 +1684,9 @@ void main() {
       (tester) async {
     // E-Ink 主題：純黑 1.5dp 邊框。
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: buildEinkThemeData(),
       home: Scaffold(
         body: ReaderSettingsSheet(
@@ -2166,6 +2182,9 @@ void main() {
     );
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: buildEinkThemeData(),
       home: Scaffold(
         body: ReaderSettingsSheet(
@@ -2214,6 +2233,21 @@ void main() {
     ));
     expect(einkDeleteIcon.color, Colors.white);
   });
+
+  testWidgets('英文介面下四個分頁籤標題與版面設定標題正確以英文渲染', (tester) async {
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (_) {},
+      locale: const Locale('en'),
+    );
+
+    expect(find.text('⚙️ Layout Settings'), findsOneWidget);
+    expect(find.text('Text'), findsOneWidget);
+    expect(find.text('Margins'), findsOneWidget);
+    expect(find.text('Display'), findsOneWidget);
+    expect(find.text('Presets'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpSheet(
@@ -2229,6 +2263,7 @@ Future<void> _pumpSheet(
   Future<List<String>?> Function({required bool multiSelect})? onRequestBookPicker,
   void Function(int)? onDeletePreset,
   bool isEinkMode = false,
+  Locale locale = const Locale('zh', 'TW'),
 }) async {
   // 設定較大的 Viewport，以防 ListView 元件超出預設的 800x600 範圍導致 tap 失敗
   // （Issue 14 邊距拆為 4 個獨立滑桿後內容變高，1200 已不足，調高至 1600；加入預設集區塊後調高至 2400）
@@ -2240,6 +2275,9 @@ Future<void> _pumpSheet(
   });
 
   await tester.pumpWidget(MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: ReaderSettingsSheet(
         prefs: prefs,
@@ -2314,8 +2352,12 @@ Future<void> _pumpModalSheet(
   BookReaderPrefs prefs,
   ValueChanged<BookReaderPrefs> onChanged, {
   bool isEinkMode = false,
+  Locale locale = const Locale('zh', 'TW'),
 }) async {
   await tester.pumpWidget(MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: Builder(
         builder: (context) => ElevatedButton(

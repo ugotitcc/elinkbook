@@ -7,6 +7,7 @@ import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
@@ -818,6 +819,9 @@ void main() {
   testWidgets('PdfSettingsSheet 在 E-Ink 模式下選中項目呈現高對比底色', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: buildEinkThemeData(),
         home: Scaffold(
           body: PdfSettingsSheet(
@@ -1009,6 +1013,19 @@ void main() {
           '應維持未選中樣式（forceUnselected 機制的關鍵驗證）',
     );
   });
+
+  testWidgets('英文介面下分頁籤/Fit 模式/裁切模式文字正確以英文渲染', (tester) async {
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(),
+      (_) {},
+      locale: const Locale('en'),
+    );
+
+    expect(find.text('Display'), findsOneWidget);
+    expect(find.text('Filters'), findsOneWidget);
+    expect(find.text('Crop'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpSheet(
@@ -1017,9 +1034,13 @@ Future<void> _pumpSheet(
   ValueChanged<BookReaderPrefs> onChanged, {
   VoidCallback onRequestManualCrop = _noopVoid,
   bool isEinkMode = false,
+  Locale locale = const Locale('zh', 'TW'),
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: PdfSettingsSheet(
           prefs: prefs,
@@ -1040,9 +1061,13 @@ Future<void> _pumpModalSheet(
   ValueChanged<BookReaderPrefs> onChanged, {
   VoidCallback onRequestManualCrop = _noopVoid,
   bool isEinkMode = false,
+  Locale locale = const Locale('zh', 'TW'),
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Builder(
           builder: (context) => ElevatedButton(
