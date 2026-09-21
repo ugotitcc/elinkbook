@@ -70,6 +70,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String libraryGroupReservedNameError(String name) {
     return '「$name」是系統保留的分類名稱，請使用其他名稱';
   }
+
+  @override
+  String get libraryMoveToGroupTitle => '移動到分類';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -138,6 +141,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String libraryGroupReservedNameError(String name) {
     return '「$name」是系统保留的分类名称，请使用其他名称';
   }
+
+  @override
+  String get libraryMoveToGroupTitle => '移动到分类';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -206,4 +212,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String libraryGroupReservedNameError(String name) {
     return '「$name」是系統保留的分類名稱，請使用其他名稱';
   }
+
+  @override
+  String get libraryMoveToGroupTitle => '移動到分類';
 }

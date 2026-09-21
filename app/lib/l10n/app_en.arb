@@ -18,5 +18,6 @@
   "libraryGroupDeleteTitle": "Delete Category",
   "libraryGroupDeleteConfirmMessage": "Delete category \"{name}\"? Books in this category will be moved to \"{uncategorized}\".",
   "libraryGroupDeleteButton": "Delete",
-  "libraryGroupReservedNameError": "\"{name}\" is a reserved category name. Please use a different name."
+  "libraryGroupReservedNameError": "\"{name}\" is a reserved category name. Please use a different name.",
+  "libraryMoveToGroupTitle": "Move to Category"
 }

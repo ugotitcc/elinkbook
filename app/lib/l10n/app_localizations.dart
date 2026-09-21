@@ -213,6 +213,12 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'「{name}」是系統保留的分類名稱，請使用其他名稱'**
   String libraryGroupReservedNameError(String name);
+
+  /// 「移動到分類」目的地選擇對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'移動到分類'**
+  String get libraryMoveToGroupTitle;
 }
 
 class _AppLocalizationsDelegate

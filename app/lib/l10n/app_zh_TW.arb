@@ -93,5 +93,9 @@
         "type": "String"
       }
     }
+  },
+  "libraryMoveToGroupTitle": "移動到分類",
+  "@libraryMoveToGroupTitle": {
+    "description": "「移動到分類」目的地選擇對話框標題"
   }
 }

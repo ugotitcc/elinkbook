@@ -18,5 +18,6 @@
   "libraryGroupDeleteTitle": "刪除分類",
   "libraryGroupDeleteConfirmMessage": "確定要刪除分類「{name}」嗎？該分類下的書籍將改列為「{uncategorized}」。",
   "libraryGroupDeleteButton": "刪除",
-  "libraryGroupReservedNameError": "「{name}」是系統保留的分類名稱，請使用其他名稱"
+  "libraryGroupReservedNameError": "「{name}」是系統保留的分類名稱，請使用其他名稱",
+  "libraryMoveToGroupTitle": "移動到分類"
 }

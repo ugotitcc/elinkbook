@@ -71,4 +71,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String libraryGroupReservedNameError(String name) {
     return '\"$name\" is a reserved category name. Please use a different name.';
   }
+
+  @override
+  String get libraryMoveToGroupTitle => 'Move to Category';
 }
