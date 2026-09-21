@@ -28,6 +28,7 @@ import 'package:elinkbook/theme/app_theme_data.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
+import '../support/pump_localized_widget.dart';
 import '../support/fake_search_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_opds_client.dart';
@@ -1094,14 +1095,12 @@ void main() {
 
   testWidgets('管理分類對話框：新增分類後，因無書籍歸屬，書架不會顯示該分類的拼貼格', (tester) async {
     final repository = FakeLibraryRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: repository,
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: repository,
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
       ),
     );
     await tester.pumpAndSettle();
@@ -1137,14 +1136,12 @@ void main() {
     final book = _testBook(id: '1', title: '奇幻小說', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: repository,
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: repository,
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
       ),
     );
     await tester.pumpAndSettle();
@@ -1183,14 +1180,12 @@ void main() {
     final book = _testBook(id: '1', title: '奇幻小說', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: repository,
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: repository,
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
       ),
     );
     await tester.pumpAndSettle();
@@ -1225,14 +1220,12 @@ void main() {
 
   testWidgets('管理分類對話框：嘗試刪除「未分類」時操作被禁止（找不到刪除/重新命名按鈕）', (tester) async {
     final repository = FakeLibraryRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: repository,
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: repository,
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
       ),
     );
     await tester.pumpAndSettle();
@@ -1256,14 +1249,12 @@ void main() {
     final book = _testBook(id: '1', title: '奇幻小說', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: repository,
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: repository,
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
       ),
     );
     await tester.pumpAndSettle();
@@ -1430,14 +1421,12 @@ void main() {
     final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
     await repository.upsertGroup('奇幻');
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: repository,
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: repository,
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
       ),
     );
     await tester.pumpAndSettle();
@@ -1703,14 +1692,12 @@ void main() {
     final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
     await repository.upsertGroup('奇幻');
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: repository,
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: repository,
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
       ),
     );
     await tester.pumpAndSettle();
@@ -1794,14 +1781,12 @@ void main() {
     final bookB = _testBook(id: '2', title: 'B書', groupName: '科幻');
     final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: repository,
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: repository,
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
       ),
     );
     await tester.pumpAndSettle();
@@ -4699,14 +4684,12 @@ void main() {
     final groupSeed = _testBook(id: '2', title: '書B', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [book, groupSeed]);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: repository,
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: repository,
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
       ),
     );
     await tester.pumpAndSettle();

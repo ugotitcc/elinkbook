@@ -368,6 +368,73 @@ void main() {
 
       expect(importService.lastImportCall?.source, BookSource.googleDrive);
     });
+
+    testWidgets(
+      '英文介面下點擊轉譯後的「Uncategorized」選項下載，底層仍以原始 Sentinel 匯入（folderName 為 null，不受顯示轉譯污染，/receiving-code-review Important #2 修正）',
+      (tester) async {
+        final libraryRepository = FakeLibraryRepository();
+        await libraryRepository.upsertGroup('小說');
+        final importService = FakeBookImportService();
+        final client = FakeCloudStorageClient(
+          folderContents: {
+            null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+          },
+          downloadContents: {
+            'file-1': [1, 2, 3],
+          },
+        );
+        await pumpScreen(
+          tester,
+          client: client,
+          libraryRepository: libraryRepository,
+          importService: importService,
+          locale: const Locale('en'),
+        );
+
+        await tester.tap(
+          find.byKey(const Key('google_drive_browser_entry_file-1')),
+        );
+        await tester.pump();
+
+        // 即使不主動切換分類（預設即為「未分類」），仍實際打開下拉選單並
+        // 點擊轉譯後的顯示文字「Uncategorized」，驗證點擊轉譯文字選項本身
+        // 不會把底層值污染成顯示字串。
+        await tester.tap(
+          find.byKey(const Key('google_drive_browser_group_dropdown')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Uncategorized').last);
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.byKey(const Key('google_drive_browser_download_button')),
+        );
+        await tester.pump();
+
+        expect(
+          find.byKey(const Key('google_drive_browser_queued_snackbar')),
+          findsOneWidget,
+        );
+
+        for (var i = 0; i < 30; i++) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 50)),
+          );
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+
+        expect(importService.lastImportCall, isNotNull);
+        expect(
+          importService.lastImportCall!.folderName,
+          isNull,
+          reason:
+              '選取「未分類」（無論顯示為正體中文／簡體中文／英文）時，folderName '
+              '必須是 null（BookImportService 對應底層 Sentinel 的既定契約），'
+              '不可是任何語言的顯示字串',
+        );
+      },
+    );
   });
 
   group('選檔前置重複偵測（Layer 1）', () {

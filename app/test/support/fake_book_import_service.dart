@@ -9,6 +9,7 @@ import 'package:elinkbook/library/models/library_enums.dart';
 class ImportCallRecord {
   final List<String> uris;
   final List<String?>? displayNames;
+  final String? folderName;
   final BookSource source;
   final String? remoteServerId;
   final Map<String, String>? remoteBookIds;
@@ -18,6 +19,7 @@ class ImportCallRecord {
   const ImportCallRecord({
     required this.uris,
     this.displayNames,
+    this.folderName,
     required this.source,
     this.remoteServerId,
     this.remoteBookIds,
@@ -57,6 +59,7 @@ class FakeBookImportService implements BookImportService {
     lastImportCall = ImportCallRecord(
       uris: uris,
       displayNames: displayNames,
+      folderName: folderName,
       source: source,
       remoteServerId: remoteServerId,
       remoteBookIds: remoteBookIds,
