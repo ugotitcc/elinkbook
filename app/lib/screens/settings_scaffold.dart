@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../cloud_import/cloud_account_repository.dart';
 import '../cloud_import/google_drive_oauth_client.dart';
 import '../cloud_import/onedrive_oauth_client.dart';
+import '../l10n/app_locale.dart';
+import '../l10n/app_localizations.dart';
 import '../reader/custom_fonts_repository.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/tts_provider.dart';
@@ -23,6 +25,7 @@ import 'sync_settings_screen.dart';
 import 'tts_defaults_screen.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_section_header.dart';
+import 'widgets/eb_sheet_shell.dart';
 
 /// 設定畫面：四分區（外觀／閱讀／同步與帳號／關於，`DESIGN.md` §17，
 /// epic-36-adaptive-shelf-navigation spec.md §功能⑤）。「佈景」（主題圓點，
@@ -38,6 +41,12 @@ class SettingsScaffold extends StatefulWidget {
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
   final ValueChanged<bool>? onEinkModeChanged;
+
+  /// 介面語言（FR-49，epic-45-interface-i18n Issue 1）。`null` 代表跟隨
+  /// 系統，比照 `spec.md` §4 `LibraryLocaleDependencies` 的 nullable 儲存
+  /// 語意。
+  final AppLocale? currentLocaleOverride;
+  final ValueChanged<AppLocale?>? onLocaleChanged;
   final CustomFontsRepository? customFontsRepository;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
@@ -63,6 +72,8 @@ class SettingsScaffold extends StatefulWidget {
     this.isEinkMode = false,
     this.onThemeChanged,
     this.onEinkModeChanged,
+    this.currentLocaleOverride,
+    this.onLocaleChanged,
     this.customFontsRepository,
     this.syncAccountRepository,
     this.syncClient,
@@ -170,6 +181,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         title: const Text('設定'),
@@ -220,6 +232,15 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                   ),
                 ],
               ),
+            ),
+          ),
+          _SettingsCard(
+            child: ListTile(
+              key: const Key('settings_language_button'),
+              title: Text(l10n.settingsLanguageTitle),
+              subtitle: _buildLanguageSubtitle(context, l10n),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _openLanguagePicker(context, l10n),
             ),
           ),
           _SettingsCard(
@@ -516,6 +537,42 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
     AppTheme.dark => '深色',
     AppTheme.sepia => '羊皮紙',
   };
+
+  Widget _buildLanguageSubtitle(BuildContext context, AppLocalizations l10n) {
+    final override = widget.currentLocaleOverride;
+    if (override != null) {
+      return Text(_languageLabel(override, l10n));
+    }
+    final resolved = resolveSupportedLocale(
+      View.of(context).platformDispatcher.locale,
+    );
+    return Text(
+      l10n.settingsLanguageFollowSystemSubtitle(_languageLabel(resolved, l10n)),
+    );
+  }
+
+  String _languageLabel(AppLocale locale, AppLocalizations l10n) =>
+      switch (locale) {
+        AppLocale.zhTW => l10n.settingsLanguageZhTW,
+        AppLocale.zhCN => l10n.settingsLanguageZhCN,
+        AppLocale.en => l10n.settingsLanguageEn,
+      };
+
+  Future<void> _openLanguagePicker(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) async {
+    final choice = await EBSheetShell.show<_LocaleChoice>(
+      context,
+      title: l10n.settingsLanguageTitle,
+      isEinkMode: widget.isEinkMode,
+      builder: (context) => _LanguagePickerSheet(
+        currentLocaleOverride: widget.currentLocaleOverride,
+      ),
+    );
+    if (choice == null) return;
+    widget.onLocaleChanged?.call(choice.value);
+  }
 }
 
 /// 視覺還原（Visual Accuracy Mode，`docs/research/uiux/VISUAL_ANALYSIS.md`）：
@@ -584,4 +641,67 @@ class _LockedDotBorderPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _LockedDotBorderPainter oldDelegate) =>
       oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
+}
+
+/// [EBSheetShell.show] 的回傳型別包裝：`null`（整個 Future 的結果）代表
+/// 使用者未選取任何選項就關閉 Sheet（滑動/點擊外部），[_LocaleChoice.value]
+/// 才是使用者實際選取的語言——`value` 本身也可能是 `null`（代表「跟隨
+/// 系統」），兩種「null」意義不同，若不用這層包裝、直接讓
+/// `EBSheetShell.show<AppLocale?>` 回傳 `AppLocale?`，會無法分辨「使用者選了跟隨系統」
+/// 與「使用者什麼都沒選就關閉」。
+class _LocaleChoice {
+  final AppLocale? value;
+
+  const _LocaleChoice(this.value);
+}
+
+class _LanguagePickerSheet extends StatelessWidget {
+  final AppLocale? currentLocaleOverride;
+
+  const _LanguagePickerSheet({required this.currentLocaleOverride});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    // 【/receiving-code-review I-1 修正】`RadioListTile.groupValue`／
+    // `onChanged` 已棄用（見 reading_defaults_screen.dart／commit
+    // 5fa3f5bb 既有慣例），改用外層 `RadioGroup<T>` 統一管理選中值與變更
+    // 回呼，個別 `RadioListTile` 只宣告自己的 `value`。
+    //
+    // 【/receiving-code-review M-2 補述】Radio 的原生行為是「點擊與
+    // groupValue 相同的選項不會觸發 onChanged」——若使用者打開選擇器後
+    // 點擊「目前已選中的語言」，Sheet 不會自動關閉（需手動點右上角關閉或
+    // 點遮罩），這是符合預期的單選元件原生行為，不是缺陷；未來若要優化
+    // 這個互動（例如點擊已選中項也能關閉），需另外包一層 `GestureDetector`
+    // /`InkWell`，不在本 Issue 範圍內。
+    return RadioGroup<AppLocale?>(
+      groupValue: currentLocaleOverride,
+      onChanged: (value) => Navigator.of(context).pop(_LocaleChoice(value)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          RadioListTile<AppLocale?>(
+            key: const Key('settings_language_option_follow_system'),
+            title: Text(l10n.settingsLanguageFollowSystem),
+            value: null,
+          ),
+          RadioListTile<AppLocale?>(
+            key: const Key('settings_language_option_zh_tw'),
+            title: Text(l10n.settingsLanguageZhTW),
+            value: AppLocale.zhTW,
+          ),
+          RadioListTile<AppLocale?>(
+            key: const Key('settings_language_option_zh_cn'),
+            title: Text(l10n.settingsLanguageZhCN),
+            value: AppLocale.zhCN,
+          ),
+          RadioListTile<AppLocale?>(
+            key: const Key('settings_language_option_en'),
+            title: Text(l10n.settingsLanguageEn),
+            value: AppLocale.en,
+          ),
+        ],
+      ),
+    );
+  }
 }

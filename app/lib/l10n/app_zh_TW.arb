@@ -7,5 +7,34 @@
   "close": "關閉",
   "@close": {
     "description": "通用「關閉」按鈕/圖示的無障礙提示文字（tooltip）"
+  },
+  "settingsLanguageTitle": "語言",
+  "@settingsLanguageTitle": {
+    "description": "設定「外觀」分區的語言選擇入口標題"
+  },
+  "settingsLanguageFollowSystem": "跟隨系統",
+  "@settingsLanguageFollowSystem": {
+    "description": "語言選擇器中「跟隨系統」選項標籤"
+  },
+  "settingsLanguageFollowSystemSubtitle": "跟隨系統（{language}）",
+  "@settingsLanguageFollowSystemSubtitle": {
+    "description": "「語言」入口未手動覆寫時的動態副標題，{language} 為依目前系統語言解析出的語言顯示名稱",
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLanguageZhTW": "正體中文",
+  "@settingsLanguageZhTW": {
+    "description": "語言選項：正體中文"
+  },
+  "settingsLanguageZhCN": "簡體中文",
+  "@settingsLanguageZhCN": {
+    "description": "語言選項：簡體中文"
+  },
+  "settingsLanguageEn": "English",
+  "@settingsLanguageEn": {
+    "description": "語言選項：英文（語言本身的固有名稱，不翻譯）"
   }
 }

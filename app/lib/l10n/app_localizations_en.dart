@@ -13,4 +13,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get close => 'Close';
+
+  @override
+  String get settingsLanguageTitle => 'Language';
+
+  @override
+  String get settingsLanguageFollowSystem => 'Follow System';
+
+  @override
+  String settingsLanguageFollowSystemSubtitle(String language) {
+    return 'Follow System ($language)';
+  }
+
+  @override
+  String get settingsLanguageZhTW => 'Traditional Chinese';
+
+  @override
+  String get settingsLanguageZhCN => 'Simplified Chinese';
+
+  @override
+  String get settingsLanguageEn => 'English';
 }

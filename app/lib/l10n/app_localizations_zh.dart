@@ -13,6 +13,26 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get close => '關閉';
+
+  @override
+  String get settingsLanguageTitle => '語言';
+
+  @override
+  String get settingsLanguageFollowSystem => '跟隨系統';
+
+  @override
+  String settingsLanguageFollowSystemSubtitle(String language) {
+    return '跟隨系統（$language）';
+  }
+
+  @override
+  String get settingsLanguageZhTW => '正體中文';
+
+  @override
+  String get settingsLanguageZhCN => '簡體中文';
+
+  @override
+  String get settingsLanguageEn => 'English';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -24,6 +44,26 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get close => '关闭';
+
+  @override
+  String get settingsLanguageTitle => '语言';
+
+  @override
+  String get settingsLanguageFollowSystem => '跟随系统';
+
+  @override
+  String settingsLanguageFollowSystemSubtitle(String language) {
+    return '跟随系统（$language）';
+  }
+
+  @override
+  String get settingsLanguageZhTW => '正体中文';
+
+  @override
+  String get settingsLanguageZhCN => '简体中文';
+
+  @override
+  String get settingsLanguageEn => 'English';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -35,4 +75,24 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get close => '關閉';
+
+  @override
+  String get settingsLanguageTitle => '語言';
+
+  @override
+  String get settingsLanguageFollowSystem => '跟隨系統';
+
+  @override
+  String settingsLanguageFollowSystemSubtitle(String language) {
+    return '跟隨系統（$language）';
+  }
+
+  @override
+  String get settingsLanguageZhTW => '正體中文';
+
+  @override
+  String get settingsLanguageZhCN => '簡體中文';
+
+  @override
+  String get settingsLanguageEn => 'English';
 }
