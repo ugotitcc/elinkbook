@@ -12,6 +12,7 @@ import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
+import '../support/pump_localized_widget.dart';
 
 void main() {
   late SqliteLibraryRepository sqliteRepo;
@@ -113,14 +114,13 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     AppTheme? receivedTheme;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SettingsScaffold(
-          prefsManager: prefsManager,
-          currentTheme: AppTheme.light,
-          isEinkMode: false,
-          onThemeChanged: (theme) => receivedTheme = theme,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        prefsManager: prefsManager,
+        currentTheme: AppTheme.light,
+        isEinkMode: false,
+        onThemeChanged: (theme) => receivedTheme = theme,
       ),
     );
     await tester.pumpAndSettle();
@@ -138,14 +138,13 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     bool? receivedEinkMode;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SettingsScaffold(
-          prefsManager: prefsManager,
-          currentTheme: AppTheme.light,
-          isEinkMode: false,
-          onEinkModeChanged: (enabled) => receivedEinkMode = enabled,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        prefsManager: prefsManager,
+        currentTheme: AppTheme.light,
+        isEinkMode: false,
+        onEinkModeChanged: (enabled) => receivedEinkMode = enabled,
       ),
     );
     await tester.pumpAndSettle();
