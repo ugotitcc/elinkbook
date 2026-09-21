@@ -22,6 +22,7 @@ import '../remote/remote_thumbnail_cache.dart';
 import '../sync/sync_account_repository.dart';
 import '../sync/sync_checkpoint_trigger.dart';
 import '../sync/sync_client.dart';
+import '../l10n/app_locale.dart';
 import '../theme/app_theme.dart';
 
 /// 收斂 `LibraryScreen` 建構子中「轉送給 `ReaderScreen` 的個人化閱讀功能」
@@ -159,5 +160,19 @@ class LibraryThemeDependencies {
     this.isEinkMode = false,
     this.onThemeChanged,
     this.onEinkModeChanged,
+  });
+}
+
+/// 收斂介面語言相關欄位（epic-45-interface-i18n Issue 1，`spec.md` §4）。
+/// `currentLocaleOverride == null` 代表跟隨系統（比照 `AppLocalePreferences`
+/// 既有 nullable 儲存語意，見 `app/lib/l10n/app_locale_preferences.dart`）。
+@immutable
+class LibraryLocaleDependencies {
+  final AppLocale? currentLocaleOverride;
+  final ValueChanged<AppLocale?>? onLocaleChanged;
+
+  const LibraryLocaleDependencies({
+    this.currentLocaleOverride,
+    this.onLocaleChanged,
   });
 }
