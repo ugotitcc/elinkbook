@@ -399,6 +399,96 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'第 {chapter} 章'**
   String bookSearchLocationChapter(int chapter);
+
+  /// 書內搜尋畫面 AppBar「全文檢索設定」入口彈出的 EBSheetShell 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'全文檢索設定'**
+  String get librarySearchSettingsSheetTitle;
+
+  /// 全庫內容搜尋畫面的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'搜尋書內內容'**
+  String get librarySearchScreenTitle;
+
+  /// 全庫內容搜尋畫面 AppBar 設定圖示的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'全文檢索設定'**
+  String get librarySearchSettingsTooltip;
+
+  /// 全庫內容搜尋畫面輸入框的 hintText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'搜尋書名、作者或書本內容...'**
+  String get librarySearchFieldHint;
+
+  /// 全庫內容搜尋結果「書名/作者匹配」分區標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'書名/作者匹配'**
+  String get librarySearchTitleAuthorSectionHeader;
+
+  /// 全庫內容搜尋結果「內容匹配」分區標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'內容匹配'**
+  String get librarySearchContentSectionHeader;
+
+  /// PDF／其他格式全文檢索皆未啟用時的引導卡片文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未啟用全文檢索，開啟後才能搜尋書本內容（點擊右上角設定圖示開啟）'**
+  String get librarySearchGuidanceNotEnabled;
+
+  /// 僅 PDF 全文檢索已啟用時的引導卡片文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已啟用「PDF」全文檢索，其他格式尚未啟用'**
+  String get librarySearchGuidancePdfOnly;
+
+  /// 僅其他格式全文檢索已啟用時的引導卡片文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已啟用「其他格式」全文檢索，PDF 內容尚未啟用'**
+  String get librarySearchGuidanceOtherOnly;
+
+  /// 內容匹配卡片「查看全部」下鑽按鈕文字，{total} 為該書總命中數，{remaining} 為清單未顯示的剩餘筆數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{total, plural, =1{查看全部 1 筆結果} other{查看全部 {total} 筆結果}}（{remaining, plural, =1{還有 1 筆} other{還有 {remaining} 筆}}）'**
+  String librarySearchDrillDownButton(int total, int remaining);
+
+  /// 全文檢索設定面板 PDF 開關項目標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'PDF 全文檢索'**
+  String get librarySearchPdfToggleTitle;
+
+  /// 全文檢索設定面板 PDF 開關項目副標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容'**
+  String get librarySearchPdfToggleSubtitle;
+
+  /// 全文檢索設定面板「重建索引」按鈕的無障礙提示文字，PDF／其他格式兩個開關項目共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重建索引'**
+  String get librarySearchRebuildIndexTooltip;
+
+  /// 全文檢索設定面板「其他格式」開關項目標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'其他格式全文檢索'**
+  String get librarySearchFoliateToggleTitle;
+
+  /// 全文檢索設定面板「其他格式」開關項目副標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'EPUB／TXT／KF8 等格式的背景索引建置'**
+  String get librarySearchFoliateToggleSubtitle;
 }
 
 class _AppLocalizationsDelegate

@@ -49,5 +49,20 @@
   "bookSearchSortByRelevance": "依相關度排序",
   "fullTextSearchNoContentMatches": "查無符合的書內內容",
   "bookSearchLocationPage": "第 {page} 頁",
-  "bookSearchLocationChapter": "第 {chapter} 章"
+  "bookSearchLocationChapter": "第 {chapter} 章",
+  "librarySearchSettingsSheetTitle": "全文檢索設定",
+  "librarySearchScreenTitle": "搜尋書內內容",
+  "librarySearchSettingsTooltip": "全文檢索設定",
+  "librarySearchFieldHint": "搜尋書名、作者或書本內容...",
+  "librarySearchTitleAuthorSectionHeader": "書名/作者匹配",
+  "librarySearchContentSectionHeader": "內容匹配",
+  "librarySearchGuidanceNotEnabled": "尚未啟用全文檢索，開啟後才能搜尋書本內容（點擊右上角設定圖示開啟）",
+  "librarySearchGuidancePdfOnly": "已啟用「PDF」全文檢索，其他格式尚未啟用",
+  "librarySearchGuidanceOtherOnly": "已啟用「其他格式」全文檢索，PDF 內容尚未啟用",
+  "librarySearchDrillDownButton": "{total, plural, =1{查看全部 1 筆結果} other{查看全部 {total} 筆結果}}（{remaining, plural, =1{還有 1 筆} other{還有 {remaining} 筆}}）",
+  "librarySearchPdfToggleTitle": "PDF 全文檢索",
+  "librarySearchPdfToggleSubtitle": "部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容",
+  "librarySearchRebuildIndexTooltip": "重建索引",
+  "librarySearchFoliateToggleTitle": "其他格式全文檢索",
+  "librarySearchFoliateToggleSubtitle": "EPUB／TXT／KF8 等格式的背景索引建置"
 }

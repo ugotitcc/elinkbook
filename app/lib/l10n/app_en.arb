@@ -49,5 +49,20 @@
   "bookSearchSortByRelevance": "By relevance",
   "fullTextSearchNoContentMatches": "No matching content found",
   "bookSearchLocationPage": "Page {page}",
-  "bookSearchLocationChapter": "Chapter {chapter}"
+  "bookSearchLocationChapter": "Chapter {chapter}",
+  "librarySearchSettingsSheetTitle": "Full-Text Search Settings",
+  "librarySearchScreenTitle": "Search Book Content",
+  "librarySearchSettingsTooltip": "Full-Text Search Settings",
+  "librarySearchFieldHint": "Search by title, author, or content...",
+  "librarySearchTitleAuthorSectionHeader": "Title/Author Matches",
+  "librarySearchContentSectionHeader": "Content Matches",
+  "librarySearchGuidanceNotEnabled": "Full-text search is not enabled yet. Enable it to search book content (tap the settings icon in the top right).",
+  "librarySearchGuidancePdfOnly": "\"PDF\" full-text search is enabled; other formats are not yet enabled",
+  "librarySearchGuidanceOtherOnly": "\"Other formats\" full-text search is enabled; PDF content is not yet enabled",
+  "librarySearchDrillDownButton": "{total, plural, =1{View all 1 result} other{View all {total} results}} ({remaining, plural, =1{1 more} other{{remaining} more}})",
+  "librarySearchPdfToggleTitle": "PDF Full-Text Search",
+  "librarySearchPdfToggleSubtitle": "Some scanned/image-based PDFs may not have searchable text",
+  "librarySearchRebuildIndexTooltip": "Rebuild Index",
+  "librarySearchFoliateToggleTitle": "Other Formats Full-Text Search",
+  "librarySearchFoliateToggleSubtitle": "Background indexing for EPUB, TXT, KF8, and other formats"
 }

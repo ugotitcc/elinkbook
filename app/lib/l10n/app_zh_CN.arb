@@ -49,5 +49,20 @@
   "bookSearchSortByRelevance": "按相关度排序",
   "fullTextSearchNoContentMatches": "未找到符合的书内内容",
   "bookSearchLocationPage": "第 {page} 页",
-  "bookSearchLocationChapter": "第 {chapter} 章"
+  "bookSearchLocationChapter": "第 {chapter} 章",
+  "librarySearchSettingsSheetTitle": "全文检索设置",
+  "librarySearchScreenTitle": "搜索书内内容",
+  "librarySearchSettingsTooltip": "全文检索设置",
+  "librarySearchFieldHint": "搜索书名、作者或书本内容...",
+  "librarySearchTitleAuthorSectionHeader": "书名/作者匹配",
+  "librarySearchContentSectionHeader": "内容匹配",
+  "librarySearchGuidanceNotEnabled": "尚未启用全文检索，开启后才能搜索书本内容（点击右上角设置图标开启）",
+  "librarySearchGuidancePdfOnly": "已启用「PDF」全文检索，其他格式尚未启用",
+  "librarySearchGuidanceOtherOnly": "已启用「其他格式」全文检索，PDF 内容尚未启用",
+  "librarySearchDrillDownButton": "{total, plural, =1{查看全部 1 条结果} other{查看全部 {total} 条结果}}（{remaining, plural, =1{还有 1 条} other{还有 {remaining} 条}}）",
+  "librarySearchPdfToggleTitle": "PDF 全文检索",
+  "librarySearchPdfToggleSubtitle": "部分扫描/图片型 PDF 可能没有可搜索的文字内容",
+  "librarySearchRebuildIndexTooltip": "重建索引",
+  "librarySearchFoliateToggleTitle": "其他格式全文检索",
+  "librarySearchFoliateToggleSubtitle": "EPUB／TXT／KF8 等格式的后台索引建立"
 }

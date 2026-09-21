@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../library/widgets/book_cover.dart';
@@ -193,7 +194,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
   Future<void> _openQuickSettingsSheet() async {
     await EBSheetShell.show<void>(
       context,
-      title: '全文檢索設定',
+      title: AppLocalizations.of(context)!.librarySearchSettingsSheetTitle,
       isEinkMode: widget.isEinkMode,
       builder: (context) => _FullTextSearchQuickSettingsPanel(
         repository:
@@ -218,15 +219,16 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final trimmedQuery = _controller.text.trim();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('搜尋書內內容'),
+        title: Text(l10n.librarySearchScreenTitle),
         actions: [
           IconButton(
             key: const Key('library_search_screen_settings_button'),
             icon: const Icon(Icons.settings),
-            tooltip: '全文檢索設定',
+            tooltip: l10n.librarySearchSettingsTooltip,
             onPressed: _openQuickSettingsSheet,
           ),
         ],
@@ -235,10 +237,6 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(12),
-            // 清除按鈕的顯示與否需要跟著每一次按鍵輸入即時反應，不能依賴
-            // _handleQueryChanged 的 300ms 防手震 setState（見該方法：非空
-            // 字串時只排程 Timer，不會立即 setState），故另外監聽
-            // _controller 本身觸發重建。
             child: ListenableBuilder(
               listenable: _controller,
               builder: (context, _) {
@@ -251,7 +249,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
                   onChanged: _handleQueryChanged,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
-                    hintText: '搜尋書名、作者或書本內容...',
+                    hintText: l10n.librarySearchFieldHint,
                     isDense: true,
                     border: const OutlineInputBorder(),
                     suffixIcon: hasText
@@ -259,7 +257,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
                             key: const Key(
                                 'library_search_screen_clear_button'),
                             icon: const Icon(Icons.close),
-                            tooltip: '清除',
+                            tooltip: l10n.searchClearTooltip,
                             onPressed: () {
                               _controller.clear();
                               _handleQueryChanged('');
@@ -293,10 +291,11 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
     if (titleAuthorResults == null || contentResults == null) {
       return const SizedBox.shrink();
     }
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       children: [
         if (titleAuthorResults.isNotEmpty) ...[
-          const EBSectionHeader(title: '書名/作者匹配'),
+          EBSectionHeader(title: l10n.librarySearchTitleAuthorSectionHeader),
           ..._buildSection<Book>(
             items: titleAuthorResults,
             paging: _titleAuthorPaging,
@@ -304,7 +303,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
             pagingBarKey: 'library_search_title_author_paging_bar',
           ),
         ],
-        const EBSectionHeader(title: '內容匹配'),
+        EBSectionHeader(title: l10n.librarySearchContentSectionHeader),
         if (contentResults.isEmpty)
           _buildContentGuidanceCard()
         else
@@ -385,8 +384,10 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
                   key: Key('library_search_drill_down_${group.book.id}'),
                   onPressed: () => _openBookSearch(group.book),
                   child: Text(
-                    '查看全部 ${group.totalMatches} 筆結果'
-                    '（還有 ${group.totalMatches - group.matches.length} 筆）',
+                    AppLocalizations.of(context)!.librarySearchDrillDownButton(
+                      group.totalMatches,
+                      group.totalMatches - group.matches.length,
+                    ),
                   ),
                 ),
               ),
@@ -460,33 +461,34 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
   }
 
   Widget _buildContentGuidanceCard() {
+    final l10n = AppLocalizations.of(context)!;
     if (!widget.readerFeatureRepositories.isFullTextSearchAvailable) {
-      return const Padding(
-        padding: EdgeInsets.all(12),
-        child: Text('本裝置不支援全文檢索'),
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text(l10n.fullTextSearchUnavailableMessage),
       );
     }
     if (_pdfEnabled && _foliateEnabled) {
-      return const Padding(
-        padding: EdgeInsets.all(12),
-        child: Text('查無符合的書內內容'),
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text(l10n.fullTextSearchNoContentMatches),
       );
     }
     return EBFieldCard(
       key: const Key('library_search_content_guidance_card'),
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Text(_guidanceMessage()),
+      child: Text(_guidanceMessage(l10n)),
     );
   }
 
-  String _guidanceMessage() {
+  String _guidanceMessage(AppLocalizations l10n) {
     if (!_pdfEnabled && !_foliateEnabled) {
-      return '尚未啟用全文檢索，開啟後才能搜尋書本內容（點擊右上角設定圖示開啟）';
+      return l10n.librarySearchGuidanceNotEnabled;
     }
     if (_pdfEnabled) {
-      return '已啟用「PDF」全文檢索，其他格式尚未啟用';
+      return l10n.librarySearchGuidancePdfOnly;
     }
-    return '已啟用「其他格式」全文檢索，PDF 內容尚未啟用';
+    return l10n.librarySearchGuidanceOtherOnly;
   }
 }
 
@@ -546,11 +548,12 @@ class _FullTextSearchQuickSettingsPanelState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (!widget.isFullTextSearchAvailable) {
-      return const Padding(
-        key: Key('library_search_full_text_search_unavailable_hint'),
-        padding: EdgeInsets.all(16),
-        child: Text('本裝置不支援全文檢索'),
+      return Padding(
+        key: const Key('library_search_full_text_search_unavailable_hint'),
+        padding: const EdgeInsets.all(16),
+        child: Text(l10n.fullTextSearchUnavailableMessage),
       );
     }
     return Padding(
@@ -559,8 +562,8 @@ class _FullTextSearchQuickSettingsPanelState
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            title: const Text('PDF 全文檢索'),
-            subtitle: const Text('部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容'),
+            title: Text(l10n.librarySearchPdfToggleTitle),
+            subtitle: Text(l10n.librarySearchPdfToggleSubtitle),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -568,7 +571,7 @@ class _FullTextSearchQuickSettingsPanelState
                   key: const Key(
                       'library_search_full_text_search_pdf_rebuild_button'),
                   icon: const Icon(Icons.refresh),
-                  tooltip: '重建索引',
+                  tooltip: l10n.librarySearchRebuildIndexTooltip,
                   onPressed:
                       !_controller.pdfEnabled || widget.repository == null
                           ? null
@@ -587,8 +590,8 @@ class _FullTextSearchQuickSettingsPanelState
             ),
           ),
           ListTile(
-            title: const Text('其他格式全文檢索'),
-            subtitle: const Text('EPUB／TXT／KF8 等格式的背景索引建置'),
+            title: Text(l10n.librarySearchFoliateToggleTitle),
+            subtitle: Text(l10n.librarySearchFoliateToggleSubtitle),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -596,7 +599,7 @@ class _FullTextSearchQuickSettingsPanelState
                   key: const Key(
                       'library_search_full_text_search_foliate_rebuild_button'),
                   icon: const Icon(Icons.refresh),
-                  tooltip: '重建索引',
+                  tooltip: l10n.librarySearchRebuildIndexTooltip,
                   onPressed:
                       !_controller.foliateEnabled || widget.repository == null
                           ? null

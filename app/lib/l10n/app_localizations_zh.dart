@@ -198,6 +198,66 @@ class AppLocalizationsZh extends AppLocalizations {
   String bookSearchLocationChapter(int chapter) {
     return '第 $chapter 章';
   }
+
+  @override
+  String get librarySearchSettingsSheetTitle => '全文檢索設定';
+
+  @override
+  String get librarySearchScreenTitle => '搜尋書內內容';
+
+  @override
+  String get librarySearchSettingsTooltip => '全文檢索設定';
+
+  @override
+  String get librarySearchFieldHint => '搜尋書名、作者或書本內容...';
+
+  @override
+  String get librarySearchTitleAuthorSectionHeader => '書名/作者匹配';
+
+  @override
+  String get librarySearchContentSectionHeader => '內容匹配';
+
+  @override
+  String get librarySearchGuidanceNotEnabled =>
+      '尚未啟用全文檢索，開啟後才能搜尋書本內容（點擊右上角設定圖示開啟）';
+
+  @override
+  String get librarySearchGuidancePdfOnly => '已啟用「PDF」全文檢索，其他格式尚未啟用';
+
+  @override
+  String get librarySearchGuidanceOtherOnly => '已啟用「其他格式」全文檢索，PDF 內容尚未啟用';
+
+  @override
+  String librarySearchDrillDownButton(int total, int remaining) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '查看全部 $total 筆結果',
+      one: '查看全部 1 筆結果',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: '還有 $remaining 筆',
+      one: '還有 1 筆',
+    );
+    return '$_temp0（$_temp1）';
+  }
+
+  @override
+  String get librarySearchPdfToggleTitle => 'PDF 全文檢索';
+
+  @override
+  String get librarySearchPdfToggleSubtitle => '部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容';
+
+  @override
+  String get librarySearchRebuildIndexTooltip => '重建索引';
+
+  @override
+  String get librarySearchFoliateToggleTitle => '其他格式全文檢索';
+
+  @override
+  String get librarySearchFoliateToggleSubtitle => 'EPUB／TXT／KF8 等格式的背景索引建置';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -394,6 +454,66 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String bookSearchLocationChapter(int chapter) {
     return '第 $chapter 章';
   }
+
+  @override
+  String get librarySearchSettingsSheetTitle => '全文检索设置';
+
+  @override
+  String get librarySearchScreenTitle => '搜索书内内容';
+
+  @override
+  String get librarySearchSettingsTooltip => '全文检索设置';
+
+  @override
+  String get librarySearchFieldHint => '搜索书名、作者或书本内容...';
+
+  @override
+  String get librarySearchTitleAuthorSectionHeader => '书名/作者匹配';
+
+  @override
+  String get librarySearchContentSectionHeader => '内容匹配';
+
+  @override
+  String get librarySearchGuidanceNotEnabled =>
+      '尚未启用全文检索，开启后才能搜索书本内容（点击右上角设置图标开启）';
+
+  @override
+  String get librarySearchGuidancePdfOnly => '已启用「PDF」全文检索，其他格式尚未启用';
+
+  @override
+  String get librarySearchGuidanceOtherOnly => '已启用「其他格式」全文检索，PDF 内容尚未启用';
+
+  @override
+  String librarySearchDrillDownButton(int total, int remaining) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '查看全部 $total 条结果',
+      one: '查看全部 1 条结果',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: '还有 $remaining 条',
+      one: '还有 1 条',
+    );
+    return '$_temp0（$_temp1）';
+  }
+
+  @override
+  String get librarySearchPdfToggleTitle => 'PDF 全文检索';
+
+  @override
+  String get librarySearchPdfToggleSubtitle => '部分扫描/图片型 PDF 可能没有可搜索的文字内容';
+
+  @override
+  String get librarySearchRebuildIndexTooltip => '重建索引';
+
+  @override
+  String get librarySearchFoliateToggleTitle => '其他格式全文检索';
+
+  @override
+  String get librarySearchFoliateToggleSubtitle => 'EPUB／TXT／KF8 等格式的后台索引建立';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -590,4 +710,64 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String bookSearchLocationChapter(int chapter) {
     return '第 $chapter 章';
   }
+
+  @override
+  String get librarySearchSettingsSheetTitle => '全文檢索設定';
+
+  @override
+  String get librarySearchScreenTitle => '搜尋書內內容';
+
+  @override
+  String get librarySearchSettingsTooltip => '全文檢索設定';
+
+  @override
+  String get librarySearchFieldHint => '搜尋書名、作者或書本內容...';
+
+  @override
+  String get librarySearchTitleAuthorSectionHeader => '書名/作者匹配';
+
+  @override
+  String get librarySearchContentSectionHeader => '內容匹配';
+
+  @override
+  String get librarySearchGuidanceNotEnabled =>
+      '尚未啟用全文檢索，開啟後才能搜尋書本內容（點擊右上角設定圖示開啟）';
+
+  @override
+  String get librarySearchGuidancePdfOnly => '已啟用「PDF」全文檢索，其他格式尚未啟用';
+
+  @override
+  String get librarySearchGuidanceOtherOnly => '已啟用「其他格式」全文檢索，PDF 內容尚未啟用';
+
+  @override
+  String librarySearchDrillDownButton(int total, int remaining) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '查看全部 $total 筆結果',
+      one: '查看全部 1 筆結果',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: '還有 $remaining 筆',
+      one: '還有 1 筆',
+    );
+    return '$_temp0（$_temp1）';
+  }
+
+  @override
+  String get librarySearchPdfToggleTitle => 'PDF 全文檢索';
+
+  @override
+  String get librarySearchPdfToggleSubtitle => '部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容';
+
+  @override
+  String get librarySearchRebuildIndexTooltip => '重建索引';
+
+  @override
+  String get librarySearchFoliateToggleTitle => '其他格式全文檢索';
+
+  @override
+  String get librarySearchFoliateToggleSubtitle => 'EPUB／TXT／KF8 等格式的背景索引建置';
 }

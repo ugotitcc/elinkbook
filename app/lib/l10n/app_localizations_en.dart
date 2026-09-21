@@ -202,4 +202,69 @@ class AppLocalizationsEn extends AppLocalizations {
   String bookSearchLocationChapter(int chapter) {
     return 'Chapter $chapter';
   }
+
+  @override
+  String get librarySearchSettingsSheetTitle => 'Full-Text Search Settings';
+
+  @override
+  String get librarySearchScreenTitle => 'Search Book Content';
+
+  @override
+  String get librarySearchSettingsTooltip => 'Full-Text Search Settings';
+
+  @override
+  String get librarySearchFieldHint => 'Search by title, author, or content...';
+
+  @override
+  String get librarySearchTitleAuthorSectionHeader => 'Title/Author Matches';
+
+  @override
+  String get librarySearchContentSectionHeader => 'Content Matches';
+
+  @override
+  String get librarySearchGuidanceNotEnabled =>
+      'Full-text search is not enabled yet. Enable it to search book content (tap the settings icon in the top right).';
+
+  @override
+  String get librarySearchGuidancePdfOnly =>
+      '\"PDF\" full-text search is enabled; other formats are not yet enabled';
+
+  @override
+  String get librarySearchGuidanceOtherOnly =>
+      '\"Other formats\" full-text search is enabled; PDF content is not yet enabled';
+
+  @override
+  String librarySearchDrillDownButton(int total, int remaining) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'View all $total results',
+      one: 'View all 1 result',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: '$remaining more',
+      one: '1 more',
+    );
+    return '$_temp0 ($_temp1)';
+  }
+
+  @override
+  String get librarySearchPdfToggleTitle => 'PDF Full-Text Search';
+
+  @override
+  String get librarySearchPdfToggleSubtitle =>
+      'Some scanned/image-based PDFs may not have searchable text';
+
+  @override
+  String get librarySearchRebuildIndexTooltip => 'Rebuild Index';
+
+  @override
+  String get librarySearchFoliateToggleTitle =>
+      'Other Formats Full-Text Search';
+
+  @override
+  String get librarySearchFoliateToggleSubtitle =>
+      'Background indexing for EPUB, TXT, KF8, and other formats';
 }
