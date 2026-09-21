@@ -258,6 +258,223 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get librarySearchFoliateToggleSubtitle => 'EPUB／TXT／KF8 等格式的背景索引建置';
+
+  @override
+  String get libraryBackButtonTooltip => '返回上層';
+
+  @override
+  String get libraryShelfTitle => '書架';
+
+  @override
+  String get librarySortViewTooltip => '排序與檢視';
+
+  @override
+  String get librarySortByLastRead => '最後閱讀';
+
+  @override
+  String get librarySortByCreateTime => '建立時間';
+
+  @override
+  String get librarySortByAuthor => '作者';
+
+  @override
+  String get librarySortByTitle => '書名';
+
+  @override
+  String get libraryToggleViewToList => '切換為列表';
+
+  @override
+  String get libraryToggleViewToShelf => '切換為書架';
+
+  @override
+  String get libraryManageGroupsMenuItem => '管理分類...';
+
+  @override
+  String get librarySourceTooltip => '來源';
+
+  @override
+  String get librarySettingsTooltip => '設定';
+
+  @override
+  String get libraryCancelSelectionTooltip => '取消選取';
+
+  @override
+  String librarySelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已選取 $count 本',
+      one: '已選取 1 本',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryMoveToGroupTooltip => '移動到分類';
+
+  @override
+  String get libraryForceFxlTooltip => '強制 FXL';
+
+  @override
+  String get libraryRestoreAutoLayoutTooltip => '恢復自動判斷';
+
+  @override
+  String get libraryDeleteTooltip => '刪除';
+
+  @override
+  String get libraryRemoveLocalCacheTooltip => '移除本機快取';
+
+  @override
+  String get libraryEmptyStateMessage => '尚未匯入書籍';
+
+  @override
+  String get libraryEmptyStateImportButton => '匯入書籍';
+
+  @override
+  String get librarySearchHint => '搜尋書名或作者...';
+
+  @override
+  String get libraryContentSearchEntryLabel => '搜尋書本內容';
+
+  @override
+  String get libraryNoMatchingBooks => '找不到符合的書籍';
+
+  @override
+  String get libraryDeleteBooksDialogTitle => '刪除書籍';
+
+  @override
+  String libraryDeleteBooksConfirmMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '將刪除已選取的 $count 本書籍，並一併刪除其書籤、劃線與備註，此操作無法復原。確定要刪除嗎？',
+      one: '將刪除已選取的 1 本書籍，並一併刪除其書籤、劃線與備註，此操作無法復原。確定要刪除嗎？',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryDeleteBooksConfirmButton => '刪除';
+
+  @override
+  String get libraryRedownloadAction => '重新下載';
+
+  @override
+  String libraryRedownloadConfirmMessage(String title) {
+    return '即將重新下載「$title」，確定要繼續嗎？';
+  }
+
+  @override
+  String libraryRedownloadConfirmMessageMobileData(String title) {
+    return '即將重新下載「$title」，目前使用行動數據連線，可能產生流量費用，確定要繼續嗎？';
+  }
+
+  @override
+  String get libraryRemoteDisabledMessage => '遠端書庫功能未啟用，無法重新下載';
+
+  @override
+  String get libraryRemoteServerNotFoundMessage => '找不到對應的遠端書庫站點';
+
+  @override
+  String get libraryRedownloadFailedMessage => '重新下載失敗，請稍後再試';
+
+  @override
+  String libraryRemoveCacheConfirmMessage(String title) {
+    return '將移除「$title」的本機檔案，書籍紀錄與閱讀進度會保留，之後可重新下載。確定要移除嗎？';
+  }
+
+  @override
+  String get libraryRemoveCacheConfirmButton => '移除';
+
+  @override
+  String get libraryGroupBadgeLabel => '分類';
+
+  @override
+  String libraryGroupTileCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 本',
+      one: '1 本',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryBookMenuTooltip => '更多';
+
+  @override
+  String get libraryContinueReadingLabel => '繼續閱讀';
+
+  @override
+  String get libraryBookNotDownloaded => '尚未下載';
+
+  @override
+  String get libraryUnknownFileSize => '未知大小';
+
+  @override
+  String get libraryLoadingEllipsis => '讀取中...';
+
+  @override
+  String libraryDetailAuthorLabel(String author) {
+    return '作者：$author';
+  }
+
+  @override
+  String get libraryUnknownAuthor => '未知';
+
+  @override
+  String libraryDetailFormatLabel(String format) {
+    return '格式：$format';
+  }
+
+  @override
+  String libraryDetailFileSizeLabel(String size) {
+    return '檔案大小：$size';
+  }
+
+  @override
+  String libraryDetailProgressLabel(String progress) {
+    return '進度：$progress';
+  }
+
+  @override
+  String libraryDetailLastReadLabel(String date) {
+    return '最後閱讀：$date';
+  }
+
+  @override
+  String get libraryNeverRead => '尚未閱讀';
+
+  @override
+  String get libraryLayoutOverrideTitle => '版面覆寫';
+
+  @override
+  String get libraryLayoutOverrideWritingModeLabel => '排版方向';
+
+  @override
+  String get libraryLayoutOverrideWritingModeDefault => '使用書籍排版';
+
+  @override
+  String get libraryLayoutOverrideWritingModeHorizontal => '橫排';
+
+  @override
+  String get libraryLayoutOverrideWritingModeVertical => '直排';
+
+  @override
+  String get libraryLayoutOverridePageTurnModeLabel => '翻頁模式';
+
+  @override
+  String get libraryLayoutOverridePageTurnModeDefault => '使用全域預設';
+
+  @override
+  String get libraryLayoutOverridePageTurnModePaginated => '分頁';
+
+  @override
+  String get libraryLayoutOverridePageTurnModeScroll => '捲動';
+
+  @override
+  String get libraryLayoutOverrideSaveButton => '儲存';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -514,6 +731,223 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get librarySearchFoliateToggleSubtitle => 'EPUB／TXT／KF8 等格式的后台索引建立';
+
+  @override
+  String get libraryBackButtonTooltip => '返回上层';
+
+  @override
+  String get libraryShelfTitle => '书架';
+
+  @override
+  String get librarySortViewTooltip => '排序与检视';
+
+  @override
+  String get librarySortByLastRead => '最后阅读';
+
+  @override
+  String get librarySortByCreateTime => '建立时间';
+
+  @override
+  String get librarySortByAuthor => '作者';
+
+  @override
+  String get librarySortByTitle => '书名';
+
+  @override
+  String get libraryToggleViewToList => '切换为列表';
+
+  @override
+  String get libraryToggleViewToShelf => '切换为书架';
+
+  @override
+  String get libraryManageGroupsMenuItem => '管理分类...';
+
+  @override
+  String get librarySourceTooltip => '来源';
+
+  @override
+  String get librarySettingsTooltip => '设置';
+
+  @override
+  String get libraryCancelSelectionTooltip => '取消选取';
+
+  @override
+  String librarySelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已选取 $count 本',
+      one: '已选取 1 本',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryMoveToGroupTooltip => '移动到分类';
+
+  @override
+  String get libraryForceFxlTooltip => '强制 FXL';
+
+  @override
+  String get libraryRestoreAutoLayoutTooltip => '恢复自动判断';
+
+  @override
+  String get libraryDeleteTooltip => '删除';
+
+  @override
+  String get libraryRemoveLocalCacheTooltip => '移除本机缓存';
+
+  @override
+  String get libraryEmptyStateMessage => '尚未导入书籍';
+
+  @override
+  String get libraryEmptyStateImportButton => '导入书籍';
+
+  @override
+  String get librarySearchHint => '搜索书名或作者...';
+
+  @override
+  String get libraryContentSearchEntryLabel => '搜索书本内容';
+
+  @override
+  String get libraryNoMatchingBooks => '找不到符合的书籍';
+
+  @override
+  String get libraryDeleteBooksDialogTitle => '删除书籍';
+
+  @override
+  String libraryDeleteBooksConfirmMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '将删除已选取的 $count 本书籍，并一并删除其书签、划线与备注，此操作无法恢复。确定要删除吗？',
+      one: '将删除已选取的 1 本书籍，并一并删除其书签、划线与备注，此操作无法恢复。确定要删除吗？',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryDeleteBooksConfirmButton => '删除';
+
+  @override
+  String get libraryRedownloadAction => '重新下载';
+
+  @override
+  String libraryRedownloadConfirmMessage(String title) {
+    return '即将重新下载「$title」，确定要继续吗？';
+  }
+
+  @override
+  String libraryRedownloadConfirmMessageMobileData(String title) {
+    return '即将重新下载「$title」，目前使用移动数据连接，可能产生流量费用，确定要继续吗？';
+  }
+
+  @override
+  String get libraryRemoteDisabledMessage => '远程书库功能未启用，无法重新下载';
+
+  @override
+  String get libraryRemoteServerNotFoundMessage => '找不到对应的远程书库站点';
+
+  @override
+  String get libraryRedownloadFailedMessage => '重新下载失败，请稍后再试';
+
+  @override
+  String libraryRemoveCacheConfirmMessage(String title) {
+    return '将移除「$title」的本机文件，书籍记录与阅读进度会保留，之后可重新下载。确定要移除吗？';
+  }
+
+  @override
+  String get libraryRemoveCacheConfirmButton => '移除';
+
+  @override
+  String get libraryGroupBadgeLabel => '分类';
+
+  @override
+  String libraryGroupTileCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 本',
+      one: '1 本',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryBookMenuTooltip => '更多';
+
+  @override
+  String get libraryContinueReadingLabel => '继续阅读';
+
+  @override
+  String get libraryBookNotDownloaded => '尚未下载';
+
+  @override
+  String get libraryUnknownFileSize => '未知大小';
+
+  @override
+  String get libraryLoadingEllipsis => '读取中...';
+
+  @override
+  String libraryDetailAuthorLabel(String author) {
+    return '作者：$author';
+  }
+
+  @override
+  String get libraryUnknownAuthor => '未知';
+
+  @override
+  String libraryDetailFormatLabel(String format) {
+    return '格式：$format';
+  }
+
+  @override
+  String libraryDetailFileSizeLabel(String size) {
+    return '文件大小：$size';
+  }
+
+  @override
+  String libraryDetailProgressLabel(String progress) {
+    return '进度：$progress';
+  }
+
+  @override
+  String libraryDetailLastReadLabel(String date) {
+    return '最后阅读：$date';
+  }
+
+  @override
+  String get libraryNeverRead => '尚未阅读';
+
+  @override
+  String get libraryLayoutOverrideTitle => '排版覆盖';
+
+  @override
+  String get libraryLayoutOverrideWritingModeLabel => '排版方向';
+
+  @override
+  String get libraryLayoutOverrideWritingModeDefault => '使用书籍排版';
+
+  @override
+  String get libraryLayoutOverrideWritingModeHorizontal => '横排';
+
+  @override
+  String get libraryLayoutOverrideWritingModeVertical => '竖排';
+
+  @override
+  String get libraryLayoutOverridePageTurnModeLabel => '翻页模式';
+
+  @override
+  String get libraryLayoutOverridePageTurnModeDefault => '使用全局默认';
+
+  @override
+  String get libraryLayoutOverridePageTurnModePaginated => '分页';
+
+  @override
+  String get libraryLayoutOverridePageTurnModeScroll => '滚动';
+
+  @override
+  String get libraryLayoutOverrideSaveButton => '保存';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -770,4 +1204,221 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get librarySearchFoliateToggleSubtitle => 'EPUB／TXT／KF8 等格式的背景索引建置';
+
+  @override
+  String get libraryBackButtonTooltip => '返回上層';
+
+  @override
+  String get libraryShelfTitle => '書架';
+
+  @override
+  String get librarySortViewTooltip => '排序與檢視';
+
+  @override
+  String get librarySortByLastRead => '最後閱讀';
+
+  @override
+  String get librarySortByCreateTime => '建立時間';
+
+  @override
+  String get librarySortByAuthor => '作者';
+
+  @override
+  String get librarySortByTitle => '書名';
+
+  @override
+  String get libraryToggleViewToList => '切換為列表';
+
+  @override
+  String get libraryToggleViewToShelf => '切換為書架';
+
+  @override
+  String get libraryManageGroupsMenuItem => '管理分類...';
+
+  @override
+  String get librarySourceTooltip => '來源';
+
+  @override
+  String get librarySettingsTooltip => '設定';
+
+  @override
+  String get libraryCancelSelectionTooltip => '取消選取';
+
+  @override
+  String librarySelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已選取 $count 本',
+      one: '已選取 1 本',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryMoveToGroupTooltip => '移動到分類';
+
+  @override
+  String get libraryForceFxlTooltip => '強制 FXL';
+
+  @override
+  String get libraryRestoreAutoLayoutTooltip => '恢復自動判斷';
+
+  @override
+  String get libraryDeleteTooltip => '刪除';
+
+  @override
+  String get libraryRemoveLocalCacheTooltip => '移除本機快取';
+
+  @override
+  String get libraryEmptyStateMessage => '尚未匯入書籍';
+
+  @override
+  String get libraryEmptyStateImportButton => '匯入書籍';
+
+  @override
+  String get librarySearchHint => '搜尋書名或作者...';
+
+  @override
+  String get libraryContentSearchEntryLabel => '搜尋書本內容';
+
+  @override
+  String get libraryNoMatchingBooks => '找不到符合的書籍';
+
+  @override
+  String get libraryDeleteBooksDialogTitle => '刪除書籍';
+
+  @override
+  String libraryDeleteBooksConfirmMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '將刪除已選取的 $count 本書籍，並一併刪除其書籤、劃線與備註，此操作無法復原。確定要刪除嗎？',
+      one: '將刪除已選取的 1 本書籍，並一併刪除其書籤、劃線與備註，此操作無法復原。確定要刪除嗎？',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryDeleteBooksConfirmButton => '刪除';
+
+  @override
+  String get libraryRedownloadAction => '重新下載';
+
+  @override
+  String libraryRedownloadConfirmMessage(String title) {
+    return '即將重新下載「$title」，確定要繼續嗎？';
+  }
+
+  @override
+  String libraryRedownloadConfirmMessageMobileData(String title) {
+    return '即將重新下載「$title」，目前使用行動數據連線，可能產生流量費用，確定要繼續嗎？';
+  }
+
+  @override
+  String get libraryRemoteDisabledMessage => '遠端書庫功能未啟用，無法重新下載';
+
+  @override
+  String get libraryRemoteServerNotFoundMessage => '找不到對應的遠端書庫站點';
+
+  @override
+  String get libraryRedownloadFailedMessage => '重新下載失敗，請稍後再試';
+
+  @override
+  String libraryRemoveCacheConfirmMessage(String title) {
+    return '將移除「$title」的本機檔案，書籍紀錄與閱讀進度會保留，之後可重新下載。確定要移除嗎？';
+  }
+
+  @override
+  String get libraryRemoveCacheConfirmButton => '移除';
+
+  @override
+  String get libraryGroupBadgeLabel => '分類';
+
+  @override
+  String libraryGroupTileCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 本',
+      one: '1 本',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryBookMenuTooltip => '更多';
+
+  @override
+  String get libraryContinueReadingLabel => '繼續閱讀';
+
+  @override
+  String get libraryBookNotDownloaded => '尚未下載';
+
+  @override
+  String get libraryUnknownFileSize => '未知大小';
+
+  @override
+  String get libraryLoadingEllipsis => '讀取中...';
+
+  @override
+  String libraryDetailAuthorLabel(String author) {
+    return '作者：$author';
+  }
+
+  @override
+  String get libraryUnknownAuthor => '未知';
+
+  @override
+  String libraryDetailFormatLabel(String format) {
+    return '格式：$format';
+  }
+
+  @override
+  String libraryDetailFileSizeLabel(String size) {
+    return '檔案大小：$size';
+  }
+
+  @override
+  String libraryDetailProgressLabel(String progress) {
+    return '進度：$progress';
+  }
+
+  @override
+  String libraryDetailLastReadLabel(String date) {
+    return '最後閱讀：$date';
+  }
+
+  @override
+  String get libraryNeverRead => '尚未閱讀';
+
+  @override
+  String get libraryLayoutOverrideTitle => '版面覆寫';
+
+  @override
+  String get libraryLayoutOverrideWritingModeLabel => '排版方向';
+
+  @override
+  String get libraryLayoutOverrideWritingModeDefault => '使用書籍排版';
+
+  @override
+  String get libraryLayoutOverrideWritingModeHorizontal => '橫排';
+
+  @override
+  String get libraryLayoutOverrideWritingModeVertical => '直排';
+
+  @override
+  String get libraryLayoutOverridePageTurnModeLabel => '翻頁模式';
+
+  @override
+  String get libraryLayoutOverridePageTurnModeDefault => '使用全域預設';
+
+  @override
+  String get libraryLayoutOverridePageTurnModePaginated => '分頁';
+
+  @override
+  String get libraryLayoutOverridePageTurnModeScroll => '捲動';
+
+  @override
+  String get libraryLayoutOverrideSaveButton => '儲存';
 }

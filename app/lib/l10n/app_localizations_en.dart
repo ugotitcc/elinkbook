@@ -267,4 +267,226 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get librarySearchFoliateToggleSubtitle =>
       'Background indexing for EPUB, TXT, KF8, and other formats';
+
+  @override
+  String get libraryBackButtonTooltip => 'Back';
+
+  @override
+  String get libraryShelfTitle => 'Library';
+
+  @override
+  String get librarySortViewTooltip => 'Sort & View';
+
+  @override
+  String get librarySortByLastRead => 'Last Read';
+
+  @override
+  String get librarySortByCreateTime => 'Date Added';
+
+  @override
+  String get librarySortByAuthor => 'Author';
+
+  @override
+  String get librarySortByTitle => 'Title';
+
+  @override
+  String get libraryToggleViewToList => 'Switch to List';
+
+  @override
+  String get libraryToggleViewToShelf => 'Switch to Grid';
+
+  @override
+  String get libraryManageGroupsMenuItem => 'Manage Categories...';
+
+  @override
+  String get librarySourceTooltip => 'Sources';
+
+  @override
+  String get librarySettingsTooltip => 'Settings';
+
+  @override
+  String get libraryCancelSelectionTooltip => 'Cancel Selection';
+
+  @override
+  String librarySelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count selected',
+      one: '1 selected',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryMoveToGroupTooltip => 'Move to Category';
+
+  @override
+  String get libraryForceFxlTooltip => 'Force Fixed Layout';
+
+  @override
+  String get libraryRestoreAutoLayoutTooltip => 'Restore Auto-Detect';
+
+  @override
+  String get libraryDeleteTooltip => 'Delete';
+
+  @override
+  String get libraryRemoveLocalCacheTooltip => 'Remove Local Cache';
+
+  @override
+  String get libraryEmptyStateMessage => 'No books imported yet';
+
+  @override
+  String get libraryEmptyStateImportButton => 'Import Books';
+
+  @override
+  String get librarySearchHint => 'Search by title or author...';
+
+  @override
+  String get libraryContentSearchEntryLabel => 'Search Book Content';
+
+  @override
+  String get libraryNoMatchingBooks => 'No matching books found';
+
+  @override
+  String get libraryDeleteBooksDialogTitle => 'Delete Books';
+
+  @override
+  String libraryDeleteBooksConfirmMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'This will delete the $count selected books, including their bookmarks, highlights, and notes. This cannot be undone. Delete anyway?',
+      one:
+          'This will delete the 1 selected book, including its bookmarks, highlights, and notes. This cannot be undone. Delete anyway?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryDeleteBooksConfirmButton => 'Delete';
+
+  @override
+  String get libraryRedownloadAction => 'Redownload';
+
+  @override
+  String libraryRedownloadConfirmMessage(String title) {
+    return 'About to redownload \"$title\". Continue?';
+  }
+
+  @override
+  String libraryRedownloadConfirmMessageMobileData(String title) {
+    return 'About to redownload \"$title\" on a mobile data connection, which may incur data charges. Continue?';
+  }
+
+  @override
+  String get libraryRemoteDisabledMessage =>
+      'Remote library feature is not enabled; cannot redownload';
+
+  @override
+  String get libraryRemoteServerNotFoundMessage =>
+      'Could not find the matching remote library server';
+
+  @override
+  String get libraryRedownloadFailedMessage =>
+      'Redownload failed. Please try again later.';
+
+  @override
+  String libraryRemoveCacheConfirmMessage(String title) {
+    return 'This will remove the local file for \"$title\". The book record and reading progress will be kept, and you can redownload it later. Remove anyway?';
+  }
+
+  @override
+  String get libraryRemoveCacheConfirmButton => 'Remove';
+
+  @override
+  String get libraryGroupBadgeLabel => 'Category';
+
+  @override
+  String libraryGroupTileCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count books',
+      one: '1 book',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryBookMenuTooltip => 'More';
+
+  @override
+  String get libraryContinueReadingLabel => 'Continue Reading';
+
+  @override
+  String get libraryBookNotDownloaded => 'Not downloaded';
+
+  @override
+  String get libraryUnknownFileSize => 'Unknown size';
+
+  @override
+  String get libraryLoadingEllipsis => 'Loading...';
+
+  @override
+  String libraryDetailAuthorLabel(String author) {
+    return 'Author: $author';
+  }
+
+  @override
+  String get libraryUnknownAuthor => 'Unknown';
+
+  @override
+  String libraryDetailFormatLabel(String format) {
+    return 'Format: $format';
+  }
+
+  @override
+  String libraryDetailFileSizeLabel(String size) {
+    return 'File size: $size';
+  }
+
+  @override
+  String libraryDetailProgressLabel(String progress) {
+    return 'Progress: $progress';
+  }
+
+  @override
+  String libraryDetailLastReadLabel(String date) {
+    return 'Last read: $date';
+  }
+
+  @override
+  String get libraryNeverRead => 'Never read';
+
+  @override
+  String get libraryLayoutOverrideTitle => 'Layout Override';
+
+  @override
+  String get libraryLayoutOverrideWritingModeLabel => 'Writing Mode';
+
+  @override
+  String get libraryLayoutOverrideWritingModeDefault => 'Use Book\'s Layout';
+
+  @override
+  String get libraryLayoutOverrideWritingModeHorizontal => 'Horizontal';
+
+  @override
+  String get libraryLayoutOverrideWritingModeVertical => 'Vertical';
+
+  @override
+  String get libraryLayoutOverridePageTurnModeLabel => 'Page Turn Mode';
+
+  @override
+  String get libraryLayoutOverridePageTurnModeDefault => 'Use Global Default';
+
+  @override
+  String get libraryLayoutOverridePageTurnModePaginated => 'Paginated';
+
+  @override
+  String get libraryLayoutOverridePageTurnModeScroll => 'Scroll';
+
+  @override
+  String get libraryLayoutOverrideSaveButton => 'Save';
 }

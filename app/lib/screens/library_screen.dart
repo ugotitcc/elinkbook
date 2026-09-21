@@ -28,6 +28,10 @@ import '../library/models/library_enums.dart';
 import '../library/widgets/book_cover.dart';
 import '../theme/elink_tokens.dart';
 
+// ignore: unused_import
+import 'package:intl/intl.dart';
+
+import '../l10n/app_localizations.dart';
 import 'book_action_sheet.dart';
 import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
@@ -407,21 +411,24 @@ class _LibraryScreenState extends State<LibraryScreen>
   Future<bool?> _confirmDeleteBooks(int count) {
     return showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('刪除書籍'),
-        content: Text('將刪除已選取的 $count 本書籍，並一併刪除其書籤、劃線與備註，此操作無法復原。確定要刪除嗎？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            key: const Key('library_delete_confirm_button'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('刪除'),
-          ),
-        ],
-      ),
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext)!;
+        return AlertDialog(
+          title: Text(l10n.libraryDeleteBooksDialogTitle),
+          content: Text(l10n.libraryDeleteBooksConfirmMessage(count)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              key: const Key('library_delete_confirm_button'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.libraryDeleteBooksConfirmButton),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -484,27 +491,30 @@ class _LibraryScreenState extends State<LibraryScreen>
   Future<bool?> _confirmRedownload(Book book, bool isMobileData) {
     return showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        key: const Key('library_redownload_dialog'),
-        title: const Text('重新下載'),
-        content: Text(
-          isMobileData
-              ? '即將重新下載「${book.title}」，目前使用行動數據連線，可能產生流量費用，確定要繼續嗎？'
-              : '即將重新下載「${book.title}」，確定要繼續嗎？',
-        ),
-        actions: [
-          TextButton(
-            key: const Key('library_redownload_cancel_button'),
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext)!;
+        return AlertDialog(
+          key: const Key('library_redownload_dialog'),
+          title: Text(l10n.libraryRedownloadAction),
+          content: Text(
+            isMobileData
+                ? l10n.libraryRedownloadConfirmMessageMobileData(book.title)
+                : l10n.libraryRedownloadConfirmMessage(book.title),
           ),
-          TextButton(
-            key: const Key('library_redownload_confirm_button'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('重新下載'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              key: const Key('library_redownload_cancel_button'),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              key: const Key('library_redownload_confirm_button'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.libraryRedownloadAction),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -526,9 +536,11 @@ class _LibraryScreenState extends State<LibraryScreen>
         createOpdsClient == null ||
         remoteServerId == null ||
         remoteDownloadUrl == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('遠端書庫功能未啟用，無法重新下載')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.libraryRemoteDisabledMessage),
+        ),
+      );
       return;
     }
     if (_redownloadingBookIds.contains(book.id)) return;
@@ -556,9 +568,13 @@ class _LibraryScreenState extends State<LibraryScreen>
       }
       if (server == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('找不到對應的遠端書庫站點')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.libraryRemoteServerNotFoundMessage,
+            ),
+          ),
+        );
         return;
       }
       final password = await remoteServerRepository.loadPassword(
@@ -611,9 +627,11 @@ class _LibraryScreenState extends State<LibraryScreen>
         if (await leftover.exists()) await leftover.delete();
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('重新下載失敗，請稍後再試')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.libraryRedownloadFailedMessage),
+        ),
+      );
     } finally {
       _redownloadingBookIds.remove(book.id);
     }
@@ -727,24 +745,24 @@ class _LibraryScreenState extends State<LibraryScreen>
   Future<bool?> _confirmRemoveBookCache(Book book) {
     return showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('移除本機快取'),
-        content: Text(
-          '將移除「${book.title}」的本機檔案，書籍紀錄與閱讀進度會保留，之後可重新'
-          '下載。確定要移除嗎？',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            key: const Key('book_action_remove_cache_confirm_button'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('移除'),
-          ),
-        ],
-      ),
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext)!;
+        return AlertDialog(
+          title: Text(l10n.libraryRemoveLocalCacheTooltip),
+          content: Text(l10n.libraryRemoveCacheConfirmMessage(book.title)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              key: const Key('book_action_remove_cache_confirm_button'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.libraryRemoveCacheConfirmButton),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -797,7 +815,7 @@ class _LibraryScreenState extends State<LibraryScreen>
         onChanged: _onSearchChanged,
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.search),
-          hintText: '搜尋書名或作者...',
+          hintText: AppLocalizations.of(context)!.librarySearchHint,
           isDense: true,
           border: const OutlineInputBorder(),
           suffixIcon: _searchQuery.isEmpty
@@ -861,7 +879,11 @@ class _LibraryScreenState extends State<LibraryScreen>
           children: [
             const Icon(Icons.travel_explore, size: 18),
             const SizedBox(width: 8),
-            const Expanded(child: Text('搜尋書本內容')),
+            Expanded(
+              child: Text(
+                AppLocalizations.of(context)!.libraryContentSearchEntryLabel,
+              ),
+            ),
             const Icon(Icons.chevron_right, size: 18),
           ],
         ),
@@ -899,7 +921,12 @@ class _LibraryScreenState extends State<LibraryScreen>
                   Expanded(
                     child: searchResults != null
                         ? (searchResults.isEmpty
-                              ? const Center(child: Text('找不到符合的書籍'))
+                              ? Center(
+                                  child: Text(
+                                    AppLocalizations.of(context)!
+                                        .libraryNoMatchingBooks,
+                                  ),
+                                )
                               : _buildBookList(
                                   books,
                                   searchResults: searchResults,
@@ -915,25 +942,27 @@ class _LibraryScreenState extends State<LibraryScreen>
   }
 
   AppBar _buildNormalAppBar(List<Book>? books) {
+    final l10n = AppLocalizations.of(context)!;
     return AppBar(
       leading: _activeGroupFilter == null
           ? null
           : IconButton(
               key: const Key('library_back_from_group_button'),
               icon: const Icon(Icons.arrow_back),
-              tooltip: '返回上層',
+              tooltip: l10n.libraryBackButtonTooltip,
               onPressed: _exitGroupFilteredView,
             ),
-      title: Text(_activeGroupFilter ?? '書架'),
+      title: Text(_activeGroupFilter ?? l10n.libraryShelfTitle),
       actions: [
         PopupMenuButton<void>(
           key: const Key('library_sort_view_button'),
           icon: const Icon(Icons.sort),
-          tooltip: '排序與檢視',
+          tooltip: l10n.librarySortViewTooltip,
           enabled: books != null,
           itemBuilder: (context) {
             final currentSort = _bookListController.sortBy;
             final primaryColor = Theme.of(context).colorScheme.primary;
+            final menuL10n = AppLocalizations.of(context)!;
             return [
               for (final sortBy in LibrarySortBy.values)
                 PopupMenuItem<void>(
@@ -949,7 +978,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        _sortLabel(sortBy),
+                        _sortLabel(sortBy, menuL10n),
                         style: TextStyle(
                           fontWeight: currentSort == sortBy
                               ? FontWeight.bold
@@ -965,14 +994,16 @@ class _LibraryScreenState extends State<LibraryScreen>
                 key: const Key('library_sort_view_toggle_option'),
                 onTap: _toggleViewMode,
                 child: Text(
-                  _viewMode == LibraryViewMode.grid ? '切換為列表' : '切換為書架',
+                  _viewMode == LibraryViewMode.grid
+                      ? menuL10n.libraryToggleViewToList
+                      : menuL10n.libraryToggleViewToShelf,
                 ),
               ),
               if (_activeGroupFilter == null)
                 PopupMenuItem<void>(
                   key: const Key('library_manage_groups_option'),
                   onTap: _openManageGroupsDialog,
-                  child: const Text('管理分類...'),
+                  child: Text(menuL10n.libraryManageGroupsMenuItem),
                 ),
             ];
           },
@@ -980,13 +1011,13 @@ class _LibraryScreenState extends State<LibraryScreen>
         IconButton(
           key: const Key('library_source_button'),
           icon: const Icon(Icons.cloud_download),
-          tooltip: '來源',
+          tooltip: l10n.librarySourceTooltip,
           onPressed: widget.onNavigateToSource,
         ),
         IconButton(
           key: const Key('library_settings_button'),
           icon: const Icon(Icons.settings),
-          tooltip: '設定',
+          tooltip: l10n.librarySettingsTooltip,
           onPressed: widget.onNavigateToSettings,
         ),
       ],
@@ -995,44 +1026,45 @@ class _LibraryScreenState extends State<LibraryScreen>
 
   AppBar _buildSelectionAppBar() {
     final count = _selectedBookIds?.length ?? 0;
+    final l10n = AppLocalizations.of(context)!;
     return AppBar(
       key: const Key('library_selection_app_bar'),
       leading: IconButton(
         key: const Key('library_selection_cancel_button'),
         icon: const Icon(Icons.close),
-        tooltip: '取消選取',
+        tooltip: l10n.libraryCancelSelectionTooltip,
         onPressed: _exitSelectionMode,
       ),
-      title: Text('已選取 $count 本'),
+      title: Text(l10n.librarySelectedCount(count)),
       actions: [
         IconButton(
           key: const Key('library_move_to_group_button'),
           icon: const Icon(Icons.drive_file_move),
-          tooltip: '移動到分類',
+          tooltip: l10n.libraryMoveToGroupTooltip,
           onPressed: count == 0 ? null : _moveSelectedBooksToGroup,
         ),
         IconButton(
           key: const Key('library_force_fxl_button'),
           icon: const Icon(Icons.menu_book),
-          tooltip: '強制 FXL',
+          tooltip: l10n.libraryForceFxlTooltip,
           onPressed: count == 0 ? null : _forceFixedLayoutForSelectedBooks,
         ),
         IconButton(
           key: const Key('library_restore_auto_layout_button'),
           icon: const Icon(Icons.restore),
-          tooltip: '恢復自動判斷',
+          tooltip: l10n.libraryRestoreAutoLayoutTooltip,
           onPressed: count == 0 ? null : _restoreAutoLayoutForSelectedBooks,
         ),
         IconButton(
           key: const Key('library_delete_books_button'),
           icon: const Icon(Icons.delete),
-          tooltip: '刪除',
+          tooltip: l10n.libraryDeleteTooltip,
           onPressed: count == 0 ? null : _deleteSelectedBooks,
         ),
         IconButton(
           key: const Key('library_remove_local_cache_button'),
           icon: const Icon(Icons.cloud_off_outlined),
-          tooltip: '移除本機快取',
+          tooltip: l10n.libraryRemoveLocalCacheTooltip,
           onPressed: count == 0 ? null : _removeLocalCacheForSelectedBooks,
         ),
       ],
@@ -1040,16 +1072,17 @@ class _LibraryScreenState extends State<LibraryScreen>
   }
 
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('尚未匯入書籍'),
+          Text(l10n.libraryEmptyStateMessage),
           const SizedBox(height: 12),
           ElevatedButton(
             key: const Key('library_empty_import_button'),
             onPressed: widget.onNavigateToSource,
-            child: const Text('匯入書籍'),
+            child: Text(l10n.libraryEmptyStateImportButton),
           ),
         ],
       ),
@@ -1455,16 +1488,16 @@ class _GroupListTile extends StatelessWidget {
   }
 }
 
-String _sortLabel(LibrarySortBy sortBy) {
+String _sortLabel(LibrarySortBy sortBy, AppLocalizations l10n) {
   switch (sortBy) {
     case LibrarySortBy.lastRead:
-      return '最後閱讀';
+      return l10n.librarySortByLastRead;
     case LibrarySortBy.createTime:
-      return '建立時間';
+      return l10n.librarySortByCreateTime;
     case LibrarySortBy.author:
-      return '作者';
+      return l10n.librarySortByAuthor;
     case LibrarySortBy.title:
-      return '書名';
+      return l10n.librarySortByTitle;
   }
 }
 
