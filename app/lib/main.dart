@@ -440,6 +440,11 @@ class _ElinkBookAppState extends State<ElinkBookApp>
     widget.themePreferences.saveEinkMode(enabled);
   }
 
+  void _handleLocaleChanged(AppLocale? locale) {
+    setState(() => _localeOverride = locale);
+    widget.localePreferences.saveLocaleOverride(locale);
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeData = resolveThemeData(theme: _theme, isEinkMode: _isEinkMode);
@@ -500,6 +505,10 @@ class _ElinkBookAppState extends State<ElinkBookApp>
           isEinkMode: _isEinkMode,
           onThemeChanged: _handleThemeChanged,
           onEinkModeChanged: _handleEinkModeChanged,
+        ),
+        localeDependencies: LibraryLocaleDependencies(
+          currentLocaleOverride: _localeOverride,
+          onLocaleChanged: _handleLocaleChanged,
         ),
         wifiTransferDependencies: WifiTransferDependencies(
           libraryRepository: widget.repository,

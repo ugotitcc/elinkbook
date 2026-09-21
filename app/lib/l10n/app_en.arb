@@ -1,5 +1,11 @@
 {
   "@@locale": "en",
   "groupUncategorized": "Uncategorized",
-  "close": "Close"
+  "close": "Close",
+  "settingsLanguageTitle": "Language",
+  "settingsLanguageFollowSystem": "Follow System",
+  "settingsLanguageFollowSystemSubtitle": "Follow System ({language})",
+  "settingsLanguageZhTW": "Traditional Chinese",
+  "settingsLanguageZhCN": "Simplified Chinese",
+  "settingsLanguageEn": "English"
 }

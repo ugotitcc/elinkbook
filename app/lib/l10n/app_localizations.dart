@@ -111,6 +111,42 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'關閉'**
   String get close;
+
+  /// 設定「外觀」分區的語言選擇入口標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'語言'**
+  String get settingsLanguageTitle;
+
+  /// 語言選擇器中「跟隨系統」選項標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'跟隨系統'**
+  String get settingsLanguageFollowSystem;
+
+  /// 「語言」入口未手動覆寫時的動態副標題，{language} 為依目前系統語言解析出的語言顯示名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'跟隨系統（{language}）'**
+  String settingsLanguageFollowSystemSubtitle(String language);
+
+  /// 語言選項：正體中文
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'正體中文'**
+  String get settingsLanguageZhTW;
+
+  /// 語言選項：簡體中文
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'簡體中文'**
+  String get settingsLanguageZhCN;
+
+  /// 語言選項：英文（語言本身的固有名稱，不翻譯）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'English'**
+  String get settingsLanguageEn;
 }
 
 class _AppLocalizationsDelegate

@@ -4994,6 +4994,41 @@ void main() {
 
     expect(find.byType(LibrarySearchScreen), findsNothing);
   });
+
+  testWidgets(
+      'readerFeatureRepositories 參考改變時 didUpdateWidget 重新賦值 _batchActions 不拋例外'
+      '（回歸保護：`late final` 誤用曾在 Epic 45 觸發 LateInitializationError，見 '
+      'docs/epics/epic-45-interface-i18n/reviews/review-issue-1.md I-1）',
+      (tester) async {
+    Widget buildWith(LibraryReaderFeatureRepositories deps) {
+      return MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          readerFeatureRepositories: deps,
+        ),
+      );
+    }
+
+    await tester.pumpWidget(buildWith(LibraryReaderFeatureRepositories()));
+    await tester.pumpAndSettle();
+
+    // 重新 pumpWidget 同一個 LibraryScreen（同一個 widget tree 位置，State
+    // 因此被重用、didUpdateWidget() 會被呼叫），但 readerFeatureRepositories
+    // 改傳一個「欄位值相同但非同一物件參考」的新實例（刻意不用 const，避免
+    // Dart 對相同引數的 const 建構式做規範化、折疊成同一個實例而測不出這個
+    // 回歸）——LibraryReaderFeatureRepositories 未覆寫 ==（見本檔案上方既有
+    // 註解「沒有覆寫 ==（預設參考相等）」），因此這裡必定觸發
+    // LibraryScreen.didUpdateWidget() 的 _batchActions 重新賦值分支。修復前
+    // （`late final`）這裡會拋出 LateInitializationError；修復後（`late`）
+    // 應正常通過。
+    await tester.pumpWidget(buildWith(LibraryReaderFeatureRepositories()));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
 }
 
 /// 刻意「非線性」的測試用 TextScaler：對較大的輸入值套用較低的有效縮放

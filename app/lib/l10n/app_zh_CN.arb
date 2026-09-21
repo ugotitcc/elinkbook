@@ -1,5 +1,11 @@
 {
   "@@locale": "zh_CN",
   "groupUncategorized": "未分类",
-  "close": "关闭"
+  "close": "关闭",
+  "settingsLanguageTitle": "语言",
+  "settingsLanguageFollowSystem": "跟随系统",
+  "settingsLanguageFollowSystemSubtitle": "跟随系统（{language}）",
+  "settingsLanguageZhTW": "正体中文",
+  "settingsLanguageZhCN": "简体中文",
+  "settingsLanguageEn": "English"
 }

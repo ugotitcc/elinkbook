@@ -43,6 +43,9 @@ class AdaptiveShellScaffold extends StatefulWidget {
   final DownloadQueueController? downloadQueueController;
   final LibraryThemeDependencies themeDependencies;
 
+  /// 介面語言依賴（epic-45-interface-i18n Issue 1，`spec.md` §4）。
+  final LibraryLocaleDependencies localeDependencies;
+
   /// WiFi 傳書入口依賴（epic-44-wifi-book-transfer Issue 1），原樣往下
   /// 傳給 `SourcesHomeScreen`。
   final WifiTransferDependencies? wifiTransferDependencies;
@@ -60,6 +63,7 @@ class AdaptiveShellScaffold extends StatefulWidget {
     this.isMobileDataConnection,
     this.downloadQueueController,
     this.themeDependencies = const LibraryThemeDependencies(),
+    this.localeDependencies = const LibraryLocaleDependencies(),
     this.wifiTransferDependencies,
   });
 
@@ -133,6 +137,9 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
               isEinkMode: widget.themeDependencies.isEinkMode,
               onThemeChanged: widget.themeDependencies.onThemeChanged,
               onEinkModeChanged: widget.themeDependencies.onEinkModeChanged,
+              currentLocaleOverride:
+                  widget.localeDependencies.currentLocaleOverride,
+              onLocaleChanged: widget.localeDependencies.onLocaleChanged,
               customFontsRepository:
                   widget.readerFeatureRepositories.customFontsRepository,
               syncAccountRepository:

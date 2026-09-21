@@ -4,18 +4,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/l10n/app_locale.dart';
 import 'package:elinkbook/screens/adaptive_shell_scaffold.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
 import 'package:elinkbook/screens/sources_home_screen.dart';
-import 'package:elinkbook/theme/app_theme.dart';
-import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/wifi_transfer/network_availability.dart';
 import 'package:elinkbook/wifi_transfer/wifi_transfer_dependencies.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_fingerprint_computer.dart';
+import '../support/pump_localized_widget.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_custom_fonts_repository.dart';
@@ -31,18 +31,15 @@ void main() {
   });
 
   Widget buildApp() {
-    return MaterialApp(
-      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-      home: AdaptiveShellScaffold(
-        repository: FakeLibraryRepository(),
-        importService: FakeBookImportService(),
-        prefsManager: prefsManager,
-      ),
+    return AdaptiveShellScaffold(
+      repository: FakeLibraryRepository(),
+      importService: FakeBookImportService(),
+      prefsManager: prefsManager,
     );
   }
 
   testWidgets('三個目的地圖示切換後 IndexedStack.index 正確且畫面對應正確', (tester) async {
-    await tester.pumpWidget(buildApp());
+    await pumpLocalizedWidget(tester, buildApp());
     await tester.pumpAndSettle();
 
     expect(find.byType(LibraryScreen), findsOneWidget);
@@ -60,7 +57,7 @@ void main() {
   });
 
   testWidgets('切換目的地不重建 LibraryScreen 的 State（狀態保留）', (tester) async {
-    await tester.pumpWidget(buildApp());
+    await pumpLocalizedWidget(tester, buildApp());
     await tester.pumpAndSettle();
 
     final stateBefore = tester.state(find.byType(LibraryScreen));
@@ -76,15 +73,13 @@ void main() {
 
   testWidgets('切回書架分頁時觸發 refreshSignal，書架重新載入資料', (tester) async {
     final repository = FakeLibraryRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: AdaptiveShellScaffold(
+    await pumpLocalizedWidget(
+      tester,
+      AdaptiveShellScaffold(
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -110,7 +105,7 @@ void main() {
   });
 
   testWidgets('非書架分頁時系統返回鍵優先切回書架', (tester) async {
-    await tester.pumpWidget(buildApp());
+    await pumpLocalizedWidget(tester, buildApp());
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('library_source_button')));
@@ -126,10 +121,9 @@ void main() {
   testWidgets('SettingsScreen 收到 customFontsRepository/onEinkModeChanged 轉送（取代原 library_screen_test.dart 的 2 則測試）', (tester) async {
     final customFontsRepository = FakeCustomFontsRepository();
     bool? toggledValue;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: AdaptiveShellScaffold(
+    await pumpLocalizedWidget(
+      tester,
+      AdaptiveShellScaffold(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
@@ -140,7 +134,6 @@ void main() {
             onEinkModeChanged: (val) => toggledValue = val,
           ),
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -160,18 +153,15 @@ void main() {
 
   testWidgets('上層 themeDependencies 更新後，已切換過去的 SettingsScreen 收到最新 isEinkMode（審查報告 C-1 回歸測試：子畫面不得在 initState 快取）', (tester) async {
     Widget buildWithEink(bool isEinkMode) {
-      return MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: isEinkMode),
-        home: AdaptiveShellScaffold(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-          themeDependencies: LibraryThemeDependencies(isEinkMode: isEinkMode),
-        ),
+      return AdaptiveShellScaffold(
+        repository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
+        themeDependencies: LibraryThemeDependencies(isEinkMode: isEinkMode),
       );
     }
 
-    await tester.pumpWidget(buildWithEink(false));
+    await pumpLocalizedWidget(tester, buildWithEink(false), isEinkMode: false);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('library_settings_button')));
     await tester.pumpAndSettle();
@@ -184,7 +174,7 @@ void main() {
     // 位置），但 themeDependencies.isEinkMode 已改變——模擬使用者在別處
     // 切換 E-Ink 模式後，main.dart 的 setState() 觸發整棵 widget tree
     // 帶著新的 themeDependencies 重新 build()。
-    await tester.pumpWidget(buildWithEink(true));
+    await pumpLocalizedWidget(tester, buildWithEink(true), isEinkMode: true);
     await tester.pumpAndSettle();
 
     settingsScreen = tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
@@ -197,7 +187,7 @@ void main() {
   });
 
   testWidgets('在設定分頁點擊「書架」圖示切回書架分頁', (tester) async {
-    await tester.pumpWidget(buildApp());
+    await pumpLocalizedWidget(tester, buildApp());
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('library_settings_button')));
@@ -210,7 +200,7 @@ void main() {
   });
 
   testWidgets('在設定分頁點擊「來源」圖示切到來源分頁', (tester) async {
-    await tester.pumpWidget(buildApp());
+    await pumpLocalizedWidget(tester, buildApp());
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('library_settings_button')));
@@ -224,17 +214,15 @@ void main() {
 
   testWidgets('SettingsScaffold 收到 readerFeatureRepositories.ttsProvider 轉送', (tester) async {
     final ttsProvider = FakeTtsProvider();
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: AdaptiveShellScaffold(
+    await pumpLocalizedWidget(
+      tester,
+      AdaptiveShellScaffold(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
           readerFeatureRepositories:
               LibraryReaderFeatureRepositories(ttsProvider: ttsProvider),
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -251,10 +239,9 @@ void main() {
       (tester) async {
     final fullTextSearchSettingsRepository =
         FakeFullTextSearchSettingsRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: AdaptiveShellScaffold(
+    await pumpLocalizedWidget(
+      tester,
+      AdaptiveShellScaffold(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
@@ -263,7 +250,6 @@ void main() {
             isFullTextSearchAvailable: false,
           ),
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -288,16 +274,14 @@ void main() {
       checkNetworkAvailability: () async =>
           const NetworkAvailability(kind: NetworkAvailabilityKind.unavailable),
     );
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: AdaptiveShellScaffold(
+    await pumpLocalizedWidget(
+      tester,
+      AdaptiveShellScaffold(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
           wifiTransferDependencies: wifiDeps,
         ),
-      ),
     );
     await tester.pumpAndSettle();
 
@@ -307,5 +291,34 @@ void main() {
     final sourcesHomeScreen =
         tester.widget<SourcesHomeScreen>(find.byType(SourcesHomeScreen));
     expect(sourcesHomeScreen.wifiTransferDependencies, wifiDeps);
+  });
+
+  testWidgets('SettingsScaffold 收到 localeDependencies.currentLocaleOverride／onLocaleChanged 轉送',
+      (tester) async {
+    AppLocale? received;
+    await pumpLocalizedWidget(
+      tester,
+      AdaptiveShellScaffold(
+        repository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
+        localeDependencies: LibraryLocaleDependencies(
+          currentLocaleOverride: AppLocale.zhCN,
+          onLocaleChanged: (locale) => received = locale,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+
+    final settingsScaffold =
+        tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
+    expect(settingsScaffold.currentLocaleOverride, AppLocale.zhCN);
+    expect(settingsScaffold.onLocaleChanged, isNotNull);
+
+    settingsScaffold.onLocaleChanged!(AppLocale.en);
+    expect(received, AppLocale.en);
   });
 }

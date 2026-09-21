@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/main.dart';
 import 'package:elinkbook/l10n/app_locale.dart';
+import 'package:elinkbook/l10n/app_locale_preferences.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/adaptive_shell_scaffold.dart';
 
@@ -124,5 +125,62 @@ void main() {
     final scaffoldContext =
         tester.element(find.byType(AdaptiveShellScaffold));
     expect(AppLocalizations.of(scaffoldContext), isNotNull);
+  });
+
+  testWidgets(
+      '選取語言後，MaterialApp.locale 立即反映新語言，且 AppLocalePreferences.saveLocaleOverride 持久化新值',
+      (tester) async {
+    await tester.pumpWidget(
+      ElinkBookApp(
+        repository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        prefsManager: FakeReaderPrefsManager(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_language_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_language_option_zh_cn')));
+    await tester.pumpAndSettle();
+
+    final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(materialApp.locale, const Locale('zh', 'CN'));
+
+    final saved = await AppLocalePreferences().loadLocaleOverride();
+    expect(saved, AppLocale.zhCN);
+  });
+
+  testWidgets('選取「跟隨系統」後，MaterialApp.locale 變回 null（不再手動覆寫）',
+      (tester) async {
+    await tester.pumpWidget(
+      ElinkBookApp(
+        repository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        prefsManager: FakeReaderPrefsManager(),
+        initialLocaleOverride: AppLocale.en,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final before = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(before.locale, const Locale('en'));
+
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_language_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('settings_language_option_follow_system')),
+    );
+    await tester.pumpAndSettle();
+
+    final after = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(after.locale, isNull);
+
+    final saved = await AppLocalePreferences().loadLocaleOverride();
+    expect(saved, isNull);
   });
 }

@@ -41,7 +41,7 @@
 
 ## Issue 1：語言選擇 UI（設定→外觀）
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 0（`AppLocale`／`AppLocalePreferences`／`MaterialApp` 接線）。
 
@@ -62,6 +62,8 @@
 **驗收標準：** 使用者可在「設定→外觀」看到「語言」項目，4 個選項可切換；切換後畫面立即以新語言渲染（至少「語言」設定項本身與已完成的其他字串），不需重啟 App；重新啟動 App 後記住選擇；選「跟隨系統」後裝置系統語言變更時 App 動態跟隨。`flutter analyze` 乾淨、`flutter test` 通過。
 
 **Blocked by：** Issue 0。
+
+**已知限制（追記，`/superpowers:requesting-code-review` review-issue-1.md M-2）**：`_LanguagePickerSheet` 點擊「目前已選中的語言」時，因 Flutter `RadioGroup`/`RadioListTile` 原生行為（`value == groupValue` 時不觸發 `onChanged`），Sheet 不會自動關閉，需使用者手動點右上角關閉鈕或點遮罩——這是符合預期的單選元件原生行為，不是缺陷，不阻塞本 Issue 驗收。若未來要優化這個互動（例如點擊已選中項也能關閉 Sheet），需另外包一層手勢偵測，留待後續視情況另立小工單處理，非本 Epic 當前排程項目。
 
 ---
 

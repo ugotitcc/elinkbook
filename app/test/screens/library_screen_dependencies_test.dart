@@ -8,6 +8,7 @@ import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/cloud_import/google_drive_oauth_client.dart';
 import 'package:elinkbook/cloud_import/onedrive_oauth_client.dart';
 import 'package:elinkbook/remote/opds_client.dart';
+import 'package:elinkbook/l10n/app_locale.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 
 import '../support/fake_bookmarks_repository.dart';
@@ -153,5 +154,19 @@ void main() {
     expect(dependencies.isEinkMode, isTrue);
     expect(dependencies.onThemeChanged, same(onThemeChanged));
     expect(dependencies.onEinkModeChanged, same(onEinkModeChanged));
+  });
+
+  test('LibraryLocaleDependencies 原樣持有兩個注入的值，未提供時皆為 null（跟隨系統／無回呼）', () {
+    const empty = LibraryLocaleDependencies();
+    expect(empty.currentLocaleOverride, isNull);
+    expect(empty.onLocaleChanged, isNull);
+
+    void onLocaleChanged(AppLocale? locale) {}
+    final dependencies = LibraryLocaleDependencies(
+      currentLocaleOverride: AppLocale.zhCN,
+      onLocaleChanged: onLocaleChanged,
+    );
+    expect(dependencies.currentLocaleOverride, AppLocale.zhCN);
+    expect(dependencies.onLocaleChanged, same(onLocaleChanged));
   });
 }
