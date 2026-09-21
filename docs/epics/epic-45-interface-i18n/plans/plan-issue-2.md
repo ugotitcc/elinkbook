@@ -1,6 +1,6 @@
 # Epic 45 Issue 2：系統保留分類名稱在地化契約 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 讓系統保留分類「未分類」在書架分類管理相關的 3 個畫面（`library_group_management_dialog.dart`／`library_move_to_group_dialog.dart`／`cloud_browser_screen.dart`）依目前介面語言正確顯示，使用者自訂分類名稱維持原樣不受影響；新增/重新命名分類時，前端攔截三語言任一保留字，不讓使用者建立出會在切換語言後與系統保留分類撞名的「幽靈重複群組」。
 
@@ -35,7 +35,7 @@
 **Interfaces:**
 - Produces: `String localizeGroupName(String name, AppLocalizations l10n)`；`extension BookGroupL10n on BookGroup { String displayName(AppLocalizations l10n) }`；`bool isReservedGroupName(String name)`（公開頂層函式，純邏輯、不需要 `AppLocalizations`），供 Task 2/3/4 使用。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 建立 `app/test/library/models/book_group_test.dart`：
 
@@ -100,12 +100,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/library/models/book_group_test.dart`
 Expected: 編譯錯誤（`localizeGroupName`/`isReservedGroupName`/`BookGroupL10n` 尚未定義）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 修改 `app/lib/library/models/book_group.dart`：
 
@@ -156,17 +156,17 @@ bool isReservedGroupName(String name) {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/library/models/book_group_test.dart`
 Expected: PASS（6 個 test）。
 
-- [ ] **Step 5: `flutter analyze`**
+- [x] **Step 5: `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: "No issues found!"
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/library/models/book_group.dart test/library/models/book_group_test.dart
@@ -187,7 +187,7 @@ git commit -m "feat(epic-45): book_group.dart 新增 localizeGroupName/isReserve
 - Consumes: `isReservedGroupName()`／`BookGroupL10n.displayName()`（Task 1）。
 - Produces: ARB key `cancel`／`confirm`／`errorOperationFailed`（三者皆為通用 key，供 Task 3/4 沿用）／`libraryGroupManageTitle`／`libraryGroupAddFieldLabel`／`libraryGroupAddButton`／`libraryGroupRenameTitle`／`libraryGroupDeleteTitle`／`libraryGroupDeleteConfirmMessage`／`libraryGroupDeleteButton`／`libraryGroupReservedNameError`。
 
-- [ ] **Step 1: 新增 ARB key（4 份檔案）**
+- [x] **Step 1: 新增 ARB key（4 份檔案）**
 
 `app/lib/l10n/app_zh_TW.arb`（在既有 `settingsLanguageEn`/`@settingsLanguageEn` 區塊之後新增，記得補上前一個區塊結尾的逗號）：
 
@@ -299,12 +299,12 @@ git commit -m "feat(epic-45): book_group.dart 新增 localizeGroupName/isReserve
   "libraryGroupReservedNameError": "「{name}」是系統保留的分類名稱，請使用其他名稱"
 ```
 
-- [ ] **Step 2: 重新產生 `AppLocalizations`**
+- [x] **Step 2: 重新產生 `AppLocalizations`**
 
 Run: `flutter gen-l10n`
 Expected: 無錯誤；新增 getter `cancel`/`confirm`/`errorOperationFailed`/`libraryGroupManageTitle`/`libraryGroupAddFieldLabel`/`libraryGroupAddButton`/`libraryGroupRenameTitle`/`libraryGroupDeleteTitle`/`libraryGroupDeleteButton`/`libraryGroupReservedNameError`（後者帶 `String name` 參數）；`libraryGroupDeleteConfirmMessage(String name, String uncategorized)`（帶 2 參數方法）。
 
-- [ ] **Step 3: `FakeLibraryRepository` 新增呼叫紀錄欄位**
+- [x] **Step 3: `FakeLibraryRepository` 新增呼叫紀錄欄位**
 
 修改 `app/test/support/fake_library_repository.dart`，在 `final List<String> deleteBookCalls = [];` 之後新增：
 
@@ -348,7 +348,7 @@ Expected: 無錯誤；新增 getter `cancel`/`confirm`/`errorOperationFailed`/`l
   }
 ```
 
-- [ ] **Step 4: 寫失敗測試（既有 3 個測試遷移 + 新增 4 個測試）**
+- [x] **Step 4: 寫失敗測試（既有 3 個測試遷移 + 新增 4 個測試）**
 
 修改 `app/test/screens/library_group_management_dialog_test.dart`，開頭新增 import：
 
@@ -531,12 +531,12 @@ import '../support/pump_localized_widget.dart';
   });
 ```
 
-- [ ] **Step 5: 執行測試確認失敗**
+- [x] **Step 5: 執行測試確認失敗**
 
 Run: `flutter test test/screens/library_group_management_dialog_test.dart`
 Expected: 編譯錯誤（`isReservedGroupName` 已存在於 `book_group.dart`，但 `library_group_management_dialog.dart` 尚未呼叫它、`AppLocalizations` 尚未接上，既有測試因裸 `MaterialApp` 已改成 `pumpLocalizedWidget()` 呼叫但實作端尚未要求 `AppLocalizations` 故仍可能編譯通過但新測試斷言全部失敗——實際結果依編譯器判斷，兩者皆屬「未通過」的預期紅燈狀態）。
 
-- [ ] **Step 6: 實作 `library_group_management_dialog.dart`**
+- [x] **Step 6: 實作 `library_group_management_dialog.dart`**
 
 完整改寫 `app/lib/screens/library_group_management_dialog.dart`：
 
@@ -813,17 +813,17 @@ class _LibraryGroupManagementDialogState
 }
 ```
 
-- [ ] **Step 7: 執行測試確認通過**
+- [x] **Step 7: 執行測試確認通過**
 
 Run: `flutter test test/screens/library_group_management_dialog_test.dart`
 Expected: PASS（既有 3 個測試遷移後通過＋新增 4 個測試，共 7 個，零回歸）。
 
-- [ ] **Step 8: `flutter analyze`**
+- [x] **Step 8: `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: "No issues found!"
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add lib/l10n/ lib/screens/library_group_management_dialog.dart test/support/fake_library_repository.dart test/screens/library_group_management_dialog_test.dart
@@ -843,7 +843,7 @@ git commit -m "feat(epic-45): library_group_management_dialog.dart 撞名防線�
 - Consumes: `BookGroupL10n.displayName()`（Task 1）；`cancel`（Task 2 已建立的通用 ARB key）。
 - Produces: ARB key `libraryMoveToGroupTitle`。
 
-- [ ] **Step 1: 新增 ARB key（4 份檔案）**
+- [x] **Step 1: 新增 ARB key（4 份檔案）**
 
 `app/lib/l10n/app_zh_TW.arb`（在 Task 2 新增的 `libraryGroupReservedNameError`/`@libraryGroupReservedNameError` 區塊之後新增）：
 
@@ -872,12 +872,12 @@ git commit -m "feat(epic-45): library_group_management_dialog.dart 撞名防線�
   "libraryMoveToGroupTitle": "移動到分類"
 ```
 
-- [ ] **Step 2: 重新產生 `AppLocalizations`**
+- [x] **Step 2: 重新產生 `AppLocalizations`**
 
 Run: `flutter gen-l10n`
 Expected: 無錯誤；新增 getter `libraryMoveToGroupTitle`。
 
-- [ ] **Step 3: 寫失敗測試（既有 2 個測試遷移 + 新增 1 個測試）**
+- [x] **Step 3: 寫失敗測試（既有 2 個測試遷移 + 新增 1 個測試）**
 
 修改 `app/test/screens/library_move_to_group_dialog_test.dart`，開頭新增 import：
 
@@ -936,12 +936,12 @@ import '../support/pump_localized_widget.dart';
   });
 ```
 
-- [ ] **Step 4: 執行測試確認失敗**
+- [x] **Step 4: 執行測試確認失敗**
 
 Run: `flutter test test/screens/library_move_to_group_dialog_test.dart`
 Expected: 新增測試 FAIL（`Move to Category`/`Uncategorized` 尚未出現，畫面仍顯示正體中文原字面值）；既有 2 個測試因 `LibraryMoveToGroupDialog.build()` 尚未呼叫 `AppLocalizations.of(context)!` 目前仍可正常通過（尚未變成強制要求），故此步驟只有新測試處於紅燈，這是正常的中間狀態。
 
-- [ ] **Step 5: 實作 `library_move_to_group_dialog.dart`**
+- [x] **Step 5: 實作 `library_move_to_group_dialog.dart`**
 
 完整改寫 `app/lib/screens/library_move_to_group_dialog.dart`：
 
@@ -984,17 +984,17 @@ class LibraryMoveToGroupDialog extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 Run: `flutter test test/screens/library_move_to_group_dialog_test.dart`
 Expected: PASS（既有 2 個測試＋新增 1 個，共 3 個，零回歸）。
 
-- [ ] **Step 7: `flutter analyze`**
+- [x] **Step 7: `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: "No issues found!"
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add lib/l10n/ lib/screens/library_move_to_group_dialog.dart test/screens/library_move_to_group_dialog_test.dart
@@ -1014,7 +1014,7 @@ git commit -m "feat(epic-45): library_move_to_group_dialog.dart 字串抽取"
 - Consumes: `localizeGroupName()`（Task 1，直接呼叫、非經 `BookGroup` 物件——`_selectedGroupName`／下拉選單項目皆為裸 `String`）；`cancel`（Task 2 通用 ARB key）。
 - Produces: ARB key `errorNetworkConnection`／`cloudBrowserDuplicateConfirmMessage`／`cloudBrowserDownloadQueued`（ICU plural）／`cloudBrowserMobileDataDialogTitle`／`cloudBrowserMobileDataDialogMessage`／`cloudBrowserMobileDataDialogConfirm`／`cloudBrowserDownloadSelectedTooltip`／`cloudBrowserReauthMessage`／`cloudBrowserGenericProviderLabel`／`cloudBrowserImportCategoryLabel`／`cloudBrowserTruncatedNotice`。**`errorNetworkConnection` 刻意採用 `spec.md` §6 執行期例外訊息在地化慣例已預告的 key 名稱**，供 Issue 7 未來若在其他檔案也需要相同語意時直接沿用，不必另創同義詞。
 
-- [ ] **Step 1: 新增 ARB key（4 份檔案）**
+- [x] **Step 1: 新增 ARB key（4 份檔案）**
 
 `app/lib/l10n/app_zh_TW.arb`（在 Task 3 新增的 `libraryMoveToGroupTitle`/`@libraryMoveToGroupTitle` 區塊之後新增）：
 
@@ -1128,12 +1128,12 @@ git commit -m "feat(epic-45): library_move_to_group_dialog.dart 字串抽取"
   "cloudBrowserTruncatedNotice": "這個資料夾檔案較多，僅顯示前 1000 筆"
 ```
 
-- [ ] **Step 2: 重新產生 `AppLocalizations`**
+- [x] **Step 2: 重新產生 `AppLocalizations`**
 
 Run: `flutter gen-l10n`
 Expected: 無錯誤；`cloudBrowserDownloadQueued(int count)`／`cloudBrowserDuplicateConfirmMessage(String name)`／`cloudBrowserReauthMessage(String provider)` 為帶參數方法，其餘為無參數 getter。
 
-- [ ] **Step 3: 寫失敗測試（既有測試遷移 + 新增 8 個測試，含 `/receiving-code-review` I-2 修正後補齊的 title 回退路徑覆蓋、M-3 修正後拆分的單複數獨立測試）**
+- [x] **Step 3: 寫失敗測試（既有測試遷移 + 新增 8 個測試，含 `/receiving-code-review` I-2 修正後補齊的 title 回退路徑覆蓋、M-3 修正後拆分的單複數獨立測試）**
 
 修改 `app/test/screens/cloud_browser_screen_test.dart`，開頭新增 import：
 
@@ -1378,12 +1378,12 @@ class _NetworkErrorCloudStorageClient extends FakeCloudStorageClient {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認失敗**
+- [x] **Step 4: 執行測試確認失敗**
 
 Run: `flutter test test/screens/cloud_browser_screen_test.dart`
 Expected: 新增的 8 個測試皆 FAIL（畫面尚未接上對應 `AppLocalizations` key，仍顯示 Step 5 實作前的原始正體中文字面值，找不到任何預期的英文文字）；既有 17 個測試預期仍 PASS（尚未變更任何既有 Key 結構）。
 
-- [ ] **Step 5: 實作 `cloud_browser_screen.dart`**
+- [x] **Step 5: 實作 `cloud_browser_screen.dart`**
 
 修改 `app/lib/screens/cloud_browser_screen.dart`。
 
@@ -1574,17 +1574,17 @@ import '../l10n/app_localizations.dart';
   }
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 Run: `flutter test test/screens/cloud_browser_screen_test.dart`
 Expected: PASS（既有 17 個測試＋新增 8 個，共 25 個，零回歸）。
 
-- [ ] **Step 7: `flutter analyze`**
+- [x] **Step 7: `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: "No issues found!"
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add lib/l10n/ lib/screens/cloud_browser_screen.dart test/screens/cloud_browser_screen_test.dart
@@ -1597,17 +1597,17 @@ git commit -m "feat(epic-45): cloud_browser_screen.dart 分類下拉選單在地
 
 **Files:** `docs/epics/epic-45-interface-i18n/issues.md`／`epic.md`／`docs/epics.md`，無程式碼修改。
 
-- [ ] **Step 1: 完整 `flutter analyze`**
+- [x] **Step 1: 完整 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: "No issues found!"
 
-- [ ] **Step 2: 完整 `flutter test`**
+- [x] **Step 2: 完整 `flutter test`**
 
 Run: `flutter test`
 Expected: 全數通過（若有既存、與本 Issue 無關的既知不穩定測試，比對是否為 base commit 既存缺陷而非本 Issue 引入的回歸）。
 
-- [ ] **Step 3: 確認 `reader_screen.dart`／`reader_screen_test.dart` 零異動**
+- [x] **Step 3: 確認 `reader_screen.dart`／`reader_screen_test.dart` 零異動**
 
 Run:
 ```bash
@@ -1615,7 +1615,7 @@ git diff main -- lib/screens/reader_screen.dart test/screens/reader_screen_test.
 ```
 Expected: 空輸出（無任何差異），驗證 Global Constraints「嚴禁觸碰 reader_screen.dart」承諾兌現。
 
-- [ ] **Step 4: 手動驗證三語言下分類名稱顯示**
+- [x] **Step 4: 手動驗證三語言下分類名稱顯示**
 
 Run:
 ```bash
@@ -1623,7 +1623,7 @@ flutter run
 ```
 Expected: 「設定→語言」切換至簡體中文／English 後，書架的分類管理對話框、「移動到分類」對話框、雲端匯入畫面的分類下拉選單，「未分類」皆正確顯示為「未分类」／"Uncategorized"；使用者自訂分類名稱不受影響；嘗試新增/重新命名為任一語言的保留字皆被攔截並顯示錯誤。
 
-- [ ] **Step 5: 修訂 `issues.md`——標記 Issue 2 完成＋修正 Issue 6 檔案清單**
+- [x] **Step 5: 修訂 `issues.md`——標記 Issue 2 完成＋修正 Issue 6 檔案清單**
 
 在「Issue 2」標題旁補上 `**Status:** completed`。
 
@@ -1639,15 +1639,15 @@ Expected: 「設定→語言」切換至簡體中文／English 後，書架的�
 `remote_server_list_screen.dart`／`remote_server_form_screen.dart`／`remote_catalog_screen.dart`／`wifi_transfer_screen.dart`／`sources_home_screen.dart`／`adaptive_shell_scaffold.dart`／`support/book_import_picker_helper.dart`（本檔案同時是 Issue 7 錯誤代碼映射函式的落點，若排程上與 Issue 7 重疊建議協調）。**`cloud_browser_screen.dart` 已在 Issue 2 完整處理（含分類下拉選單與其餘既有字串），本 Issue 不再處理**（`plan-issue-2.md` Global Constraints 記錄之範圍爭議，2026-09-21 使用者裁定 Issue 2 一次抽完）。
 ```
 
-- [ ] **Step 6: 更新 `epic.md`**
+- [x] **Step 6: 更新 `epic.md`**
 
 新增一段開發記錄，記錄本 Issue 完成情況（`book_group.dart` 新增 `localizeGroupName`/`isReservedGroupName`／3 個畫面完整字串抽取／撞名防線／`issues.md` Issue 6 範圍同步修正）與下一步（認領 Issue 3-6 任一模組）。
 
-- [ ] **Step 7: 更新 `docs/epics.md` 進度**
+- [x] **Step 7: 更新 `docs/epics.md` 進度**
 
 把第 46 列（`epic-45-interface-i18n`）備註欄位改為反映 Issue 2 已完成（例如「Issue 0／1／2 已完成並合併，待認領 Issue 3-6」，實際 PR 編號待發 PR 時才會知道）。
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add ../docs/epics/epic-45-interface-i18n/issues.md ../docs/epics/epic-45-interface-i18n/epic.md ../docs/epics.md
