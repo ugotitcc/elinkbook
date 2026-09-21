@@ -1785,9 +1785,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final book = _buildSearchableBook();
     if (searchRepository == null || libraryRepository == null || book == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          key: Key('reader_chrome_search_unavailable_snackbar'),
-          content: Text('搜尋功能暫時無法使用'),
+        SnackBar(
+          key: const Key('reader_chrome_search_unavailable_snackbar'),
+          content: Text(AppLocalizations.of(context)!.readerSearchUnavailableMessage),
         ),
       );
       return;
@@ -1855,7 +1855,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_state != _RenderState.loading) return;
     setState(() {
       _state = _RenderState.error;
-      _errorMessage = '開書逾時，可能是系統 WebView 版本過舊或檔案異常';
+      _errorMessage = AppLocalizations.of(context)!.readerOpenBookTimeoutMessage;
     });
   }
 
@@ -1984,9 +1984,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        key: Key('reader_copy_selection_snackbar'),
-        content: Text('已複製到剪貼簿'),
+      SnackBar(
+        key: const Key('reader_copy_selection_snackbar'),
+        content: Text(AppLocalizations.of(context)!.readerCopiedToClipboardMessage),
       ),
     );
   }
@@ -1994,11 +1994,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 刪除按鈕的 tooltip 文字，依 [item] 實際含有的內容組合而定
   /// （epic-27-reader-device-compat Issue 11）。
   String _annotationDeleteButtonLabel(AnnotationListItem item) {
+    final l10n = AppLocalizations.of(context)!;
     final hasHighlight = item.highlight != null;
     final hasNote = item.note != null;
-    if (hasHighlight && hasNote) return '刪除畫線與備註';
-    if (hasHighlight) return '刪除畫線';
-    return '刪除備註';
+    if (hasHighlight && hasNote) return l10n.readerAnnotationDeleteHighlightAndNote;
+    if (hasHighlight) return l10n.readerAnnotationDeleteHighlight;
+    return l10n.readerAnnotationDeleteNote;
   }
 
   void _handlePdfSelectionRectComputed(PdfSelectionInfo info) {
@@ -2065,10 +2066,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       highlights: _highlights,
       notes: _notes,
     )?.note;
+    final l10n = AppLocalizations.of(context)!;
     final text = await showNoteTextDialog(
       context,
       initialText: existing?.text ?? '',
-      title: existing != null ? '編輯備註' : '新增備註',
+      title: existing != null ? l10n.readerAnnotationEditNoteTooltip : l10n.readerAnnotationAddNoteTooltip,
     );
     if (text == null) return;
     final snapshot = await session.createOrUpdateNote(
@@ -2160,10 +2162,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       highlights: _highlights,
       notes: _notes,
     )?.note;
+    final l10n = AppLocalizations.of(context)!;
     final text = await showNoteTextDialog(
       context,
       initialText: existing?.text ?? '',
-      title: existing != null ? '編輯備註' : '新增備註',
+      title: existing != null ? l10n.readerAnnotationEditNoteTooltip : l10n.readerAnnotationAddNoteTooltip,
     );
     if (text == null) return;
     final snapshot = await session.createOrUpdateNote(
@@ -2714,11 +2717,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               children: [
                 // 審查修正（review-plan-issue-2.md M3）：補上標題列，
                 // 讓使用者知道目前是在選語音，不是一份沒有上下文的清單。
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Text(
-                    '朗讀語音',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    AppLocalizations.of(context)!.readerTtsVoicePickerTitle,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 for (final voice in voices)
@@ -2736,13 +2739,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   Widget _buildBody(BookFormat format, bool isLandscape) {
+    final l10n = AppLocalizations.of(context)!;
     if (format == BookFormat.unknown) {
       // 審查修正（epic-38-reader-chrome-tts-redesign Issue 1）：早退分支
       // 也要疊上 ReaderChromeTopBar，否則 Scaffold.appBar 已恆為 null 後，
       // 使用者在不支援格式畫面完全沒有返回鍵、無法離開閱讀器。
       return Stack(
         children: [
-          const Center(child: Text('不支援的檔案格式')),
+          Center(child: Text(l10n.readerUnsupportedFormatMessage)),
           if (!_cropEditModeActive) _buildChromeTopBar(format),
         ],
       );
@@ -2757,7 +2761,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         children: [
           Center(
             child: Text(
-              _errorMessage ?? '無法載入書籍',
+              _errorMessage ?? l10n.readerFailedToLoadBookMessage,
               key: const Key('reader_error_text'),
             ),
           ),
@@ -3493,6 +3497,7 @@ class _TtsSleepTimerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final primaryColor = Theme.of(context).colorScheme.primary;
     return SafeArea(
       child: Column(
@@ -3501,14 +3506,14 @@ class _TtsSleepTimerSheet extends StatelessWidget {
           for (final option in options)
             ListTile(
               key: Key('reader_tts_sleep_timer_option_${option.inMinutes}'),
-              title: Text('${option.inMinutes} 分鐘'),
+              title: Text(l10n.readerTtsSleepTimerOptionMinutes(option.inMinutes)),
               trailing:
                   selected == option ? Icon(Icons.check, color: primaryColor) : null,
               onTap: () => onSelected(option),
             ),
           ListTile(
             key: const Key('reader_tts_sleep_timer_option_none'),
-            title: const Text('不限時'),
+            title: Text(l10n.readerTtsSleepTimerNoLimitLabel),
             trailing: selected == null ? Icon(Icons.check, color: primaryColor) : null,
             onTap: () => onSelected(null),
           ),

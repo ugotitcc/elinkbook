@@ -3554,7 +3554,7 @@ git commit -m "feat(epic-45): reader_screen.dart 字串抽取第 1 部分（book
 
 **計劃範圍澄清**：`_TtsSleepTimerSheet.options` 由既有唯一呼叫端固定傳入 `[15, 30, 45, 60]` 分鐘（`Duration` 清單，不含 1 分鐘選項），故 `'${option.inMinutes} 分鐘'` 不需要 ICU plural（比照 Global Constraints 已聲明「本模組未發現需要 plural 的計數字串」的判斷，這是唯一一處計數字串，經確認不會遇到單數情境）。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -3629,9 +3629,9 @@ git commit -m "feat(epic-45): reader_screen.dart 字串抽取第 1 部分（book
   "readerTtsSleepTimerNoLimitLabel": "不限時"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: `_displayBookTitle` getter 安全解析 `null`**
+- [x] **Step 3: `_displayBookTitle` getter 安全解析 `null`**
 
 ```dart
   /// 依 [_textConversionMode] 轉換後的書名，供頁首／底部工具列／單書
@@ -3648,7 +3648,7 @@ git commit -m "feat(epic-45): reader_screen.dart 字串抽取第 1 部分（book
   }
 ```
 
-- [ ] **Step 4: 其餘字串批次替換**
+- [x] **Step 4: 其餘字串批次替換**
 
 `_openBookSearch()`：`content: Text('搜尋功能暫時無法使用')` → `content: Text(AppLocalizations.of(context)!.readerSearchUnavailableMessage)`。
 
@@ -3750,22 +3750,22 @@ TTS 語音選單（`_openVoicePicker` 或等效方法內，`'朗讀語音'` 標�
   }
 ```
 
-- [ ] **Step 5: 確認 `_buildSearchableBook()` 的 Sentinel 字面值零異動**
+- [x] **Step 5: 確認 `_buildSearchableBook()` 的 Sentinel 字面值零異動**
 
 Run: `grep -n "groupName: BookGroup.uncategorized" lib/screens/reader_screen.dart`
 Expected: 恰好 1 處命中（`_buildSearchableBook()` 內），維持原樣未被本 Task 或 Task 18 誤觸。
 
-- [ ] **Step 6: 執行測試確認未觸及的測試檔仍通過（本 Task 不遷移測試，預期紅燈）**
+- [x] **Step 6: 執行測試確認未觸及的測試檔仍通過（本 Task 不遷移測試，預期紅燈）**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: 生產程式碼字串抽取已全數完成，但測試檔尚未遷移，預期仍是紅燈（`Null check operator used on a null value`），留給 Task 20 修復。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/reader_screen.dart`
 Expected: No issues found!
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/lib/l10n/
