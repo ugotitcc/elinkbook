@@ -1,6 +1,6 @@
 # Epic 45 Issue 3：書架模組字串抽取＋測試遷移 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 把書架模組（`LibraryScreen` 及其批次操作、書內搜尋、單書動作選單、格式選擇等相關畫面）的全部硬編碼中文字串改為 `AppLocalizations` key，三語言（正體中文／簡體中文／英文）皆補上真實翻譯，對應測試檔同步遷移至 `pumpLocalizedWidget()`，零使用者可見行為變動（除新增語言支援本身）。
 
@@ -39,7 +39,7 @@
 - Consumes：`AppLocalizations.of(context)!`（`app/lib/l10n/app_localizations.dart`，Issue 0 已接線）。
 - Produces：ARB key `bookActionShowDetails`/`bookActionMove`/`bookActionLayoutOverride`/`bookActionRemoveCache`/`bookActionDelete`（後續 Task 不依賴這些 key，本檔案自成一格）。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 在 `app/lib/l10n/app_zh_TW.arb` 檔尾（`}` 前）新增：
 
@@ -96,7 +96,7 @@
   "bookActionDelete": "刪除"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n` 確認 ARB 語法正確**
+- [x] **Step 2: 執行 `flutter gen-l10n` 確認 ARB 語法正確**
 
 Run（在 `app/` 目錄下）：
 ```bash
@@ -104,7 +104,7 @@ flutter gen-l10n
 ```
 Expected: 無錯誤輸出，`app/lib/l10n/app_localizations*.dart` 新增 5 個 getter。
 
-- [ ] **Step 3: 修改 `book_action_sheet.dart` 使用 `AppLocalizations`**
+- [x] **Step 3: 修改 `book_action_sheet.dart` 使用 `AppLocalizations`**
 
 修改 `app/lib/screens/book_action_sheet.dart`：
 
@@ -207,7 +207,7 @@ class BookActionSheet extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4: 遷移既有測試檔至含 `AppLocalizations` 的 `MaterialApp`**
+- [x] **Step 4: 遷移既有測試檔至含 `AppLocalizations` 的 `MaterialApp`**
 
 `app/test/screens/book_action_sheet_test.dart` 的 `_buildApp()`／`_buildResultApp()` 兩個 helper 目前回傳裸 `MaterialApp(home: ...)`。修改這兩個 helper（檔案其餘部分不變）：
 
@@ -289,7 +289,7 @@ Widget _buildResultApp({
 
 其餘測試內容（`main()` 內 10 個 `testWidgets`）維持原樣不動——因為預設 `locale` 已釘定為 `zh_TW`，既有 `find.byKey(...)` 斷言全數不受影響（本檔案沒有 `find.text('...')` 斷言中文字面值）。
 
-- [ ] **Step 5: 新增三語言渲染驗證測試**
+- [x] **Step 5: 新增三語言渲染驗證測試**
 
 在 `app/test/screens/book_action_sheet_test.dart` 檔尾 `main()` 的最後一個 `testWidgets` 之後、`}` 之前新增：
 
@@ -319,7 +319,7 @@ Widget _buildResultApp({
   });
 ```
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run:
 ```bash
@@ -327,7 +327,7 @@ flutter test test/screens/book_action_sheet_test.dart
 ```
 Expected: 全數通過（既有 10 個＋新增 2 個，共 12 個）。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run:
 ```bash
@@ -335,7 +335,7 @@ flutter analyze lib/screens/book_action_sheet.dart test/screens/book_action_shee
 ```
 Expected: No issues found!
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/book_action_sheet.dart app/test/screens/book_action_sheet_test.dart app/lib/l10n/
@@ -355,7 +355,7 @@ git commit -m "feat(epic-45): book_action_sheet.dart 字串抽取三語言在地
 - Consumes：`AppLocalizations.of(context)!`。
 - Produces：ARB key `fullTextSearchEnableDialogTitle`/`fullTextSearchEnableMessagePdf`/`fullTextSearchEnableMessageOther`/`fullTextSearchEnableConfirmButton`；`cancel`（沿用 Issue 2 已建立的全域共用 key）。此檔案同時被 Issue 5（`settings_scaffold.dart`）呼叫，Issue 5 的計畫應直接消費這些既有 key，不重複新增。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb` 檔尾新增：
 
@@ -405,12 +405,12 @@ git commit -m "feat(epic-45): book_action_sheet.dart 字串抽取三語言在地
   "fullTextSearchEnableConfirmButton": "確認開啟"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
 Run: `flutter gen-l10n`
 Expected: 無錯誤。
 
-- [ ] **Step 3: 修改 `full_text_search_confirm_dialog.dart`**
+- [x] **Step 3: 修改 `full_text_search_confirm_dialog.dart`**
 
 ```dart
 // app/lib/screens/full_text_search_confirm_dialog.dart
@@ -478,7 +478,7 @@ Future<bool> showFullTextSearchEnableConfirmDialog(
 }
 ```
 
-- [ ] **Step 4: 遷移既有測試檔**
+- [x] **Step 4: 遷移既有測試檔**
 
 `app/test/screens/full_text_search_confirm_dialog_test.dart` 有 3 處建構 `MaterialApp`：`_open()` helper（1 處）與 2 處內嵌在個別 `testWidgets` 內（無法改用 `_open()`，因為這兩個測試需要在對話框關閉「前」先取得 Future 控制權，見既有註解）。三處皆補上 `localizationsDelegates`/`supportedLocales`/`locale`：
 
@@ -663,7 +663,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 5: 執行測試確認全數通過**
+- [x] **Step 5: 執行測試確認全數通過**
 
 Run:
 ```bash
@@ -671,7 +671,7 @@ flutter test test/screens/full_text_search_confirm_dialog_test.dart
 ```
 Expected: 全數通過（既有 6 個＋新增 1 個，共 7 個）。
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run:
 ```bash
@@ -679,7 +679,7 @@ flutter analyze lib/screens/full_text_search_confirm_dialog.dart test/screens/fu
 ```
 Expected: No issues found!
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/full_text_search_confirm_dialog.dart app/test/screens/full_text_search_confirm_dialog_test.dart app/lib/l10n/
@@ -699,7 +699,7 @@ git commit -m "feat(epic-45): full_text_search_confirm_dialog.dart 三語言在�
 - Consumes：`AppLocalizations.of(context)!`。
 - Produces：ARB key `bookSearchHint`/`searchClearTooltip`/`fullTextSearchUnavailableMessage`/`bookSearchResultsSummary`/`bookSearchResultsSummaryTruncated`/`bookSearchSortByPosition`/`bookSearchSortByRelevance`/`fullTextSearchNoContentMatches`/`bookSearchLocationPage`/`bookSearchLocationChapter`。**`searchClearTooltip`／`fullTextSearchUnavailableMessage`／`fullTextSearchNoContentMatches` 三個 key 在本 Task 首次定義，Task 4（`library_search_screen.dart`）會直接消費這三個既有 key，不重複新增**（兩檔案皆有完全相同語意的「清除」按鈕/「本裝置不支援全文檢索」/「查無符合的書內內容」文字）。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb` 檔尾新增：
 
@@ -814,12 +814,12 @@ git commit -m "feat(epic-45): full_text_search_confirm_dialog.dart 三語言在�
   "bookSearchLocationChapter": "第 {chapter} 章"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
 Run: `flutter gen-l10n`
 Expected: 無錯誤。
 
-- [ ] **Step 3: 修改 `book_search_screen.dart` `build()`／`_buildToolbar()`／`_buildResults()`／`_buildSnippetTile()`**
+- [x] **Step 3: 修改 `book_search_screen.dart` `build()`／`_buildToolbar()`／`_buildResults()`／`_buildSnippetTile()`**
 
 修改 `app/lib/screens/book_search_screen.dart`（僅列出需要異動的方法，檔案其餘部分——`_BookSearchScreenState` 的欄位/`initState`/`_handleQueryChanged`/`_toggleSort`/`_handleSnippetTap`/`_buildHighlightedText` 等——原樣保留不動）：
 
@@ -1041,7 +1041,7 @@ import '../l10n/app_localizations.dart';
   }
 ```
 
-- [ ] **Step 4: 遷移既有測試檔至含 `AppLocalizations` 的 `_wrap()`**
+- [x] **Step 4: 遷移既有測試檔至含 `AppLocalizations` 的 `_wrap()`**
 
 修改 `app/test/screens/book_search_screen_test.dart` 開頭的 import 與 `_wrap()`：
 
@@ -1062,7 +1062,7 @@ Widget _wrap(Widget child, {Locale locale = const Locale('zh', 'TW')}) => Materi
 
 檔案其餘 18 處 `_wrap(...)` 呼叫端與既有 `testWidgets` 內容不變（預設 `locale` 為 `zh_TW`，既有中文斷言不受影響）。
 
-- [ ] **Step 5: 新增三語言渲染驗證測試**
+- [x] **Step 5: 新增三語言渲染驗證測試**
 
 在 `app/test/screens/book_search_screen_test.dart` 檔尾 `main()` 最後一個 `testWidgets` 之後新增（需要先確認檔案內既有一個可重用的 `BookSearchDetailResult`／`FakeSearchRepository` 建構模式，直接沿用該檔案既有的 fixture 建構函式 `_testBook()`／`_makeResult()`）：
 
@@ -1097,7 +1097,7 @@ Widget _wrap(Widget child, {Locale locale = const Locale('zh', 'TW')}) => Materi
 
 > 若上述 fixture 建構參數（`LibraryReaderFeatureRepositories`／`LibrarySyncDependencies` 建構子欄位、`FakeSearchRepository` 建構參數名）與檔案既有寫法不完全一致，以該測試檔案中其他既有 `testWidgets` 實際使用的建構寫法為準（本 Step 的重點是「新增一則英文渲染驗證」，具體 fixture 組裝請對照同檔案其他測試）。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run:
 ```bash
@@ -1105,7 +1105,7 @@ flutter test test/screens/book_search_screen_test.dart
 ```
 Expected: 全數通過（既有測試＋新增 1 個）。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run:
 ```bash
@@ -1113,7 +1113,7 @@ flutter analyze lib/screens/book_search_screen.dart test/screens/book_search_scr
 ```
 Expected: No issues found!
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/book_search_screen.dart app/test/screens/book_search_screen_test.dart app/lib/l10n/
@@ -1133,7 +1133,7 @@ git commit -m "feat(epic-45): book_search_screen.dart 字串抽取三語言在�
 - Consumes：`AppLocalizations.of(context)!`；Task 2 定義的 `cancel`（間接，透過 `showFullTextSearchEnableConfirmDialog()`）；Task 3 定義的 `searchClearTooltip`/`fullTextSearchUnavailableMessage`/`fullTextSearchNoContentMatches`（直接重用，不重新定義）。
 - Produces：ARB key `librarySearchSettingsSheetTitle`/`librarySearchScreenTitle`/`librarySearchSettingsTooltip`/`librarySearchFieldHint`/`librarySearchTitleAuthorSectionHeader`/`librarySearchContentSectionHeader`/`librarySearchGuidanceNotEnabled`/`librarySearchGuidancePdfOnly`/`librarySearchGuidanceOtherOnly`/`librarySearchDrillDownButton`/`librarySearchPdfToggleTitle`/`librarySearchPdfToggleSubtitle`/`librarySearchRebuildIndexTooltip`/`librarySearchFoliateToggleTitle`/`librarySearchFoliateToggleSubtitle`。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb` 檔尾新增：
 
@@ -1268,12 +1268,12 @@ git commit -m "feat(epic-45): book_search_screen.dart 字串抽取三語言在�
   "librarySearchFoliateToggleSubtitle": "EPUB／TXT／KF8 等格式的背景索引建置"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
 Run: `flutter gen-l10n`
 Expected: 無錯誤。
 
-- [ ] **Step 3: 修改 `library_search_screen.dart`**
+- [x] **Step 3: 修改 `library_search_screen.dart`**
 
 在 import 區塊新增：
 ```dart
@@ -1540,7 +1540,7 @@ import '../l10n/app_localizations.dart';
 
 > `EBSectionHeader(title: '...')` 原本傳入 `const` 字面值字串，改傳動態 `l10n.xxx` 後該行不能再標 `const`——確認 `EBSectionHeader` 建構子本身沒有標記 `@required const` 限制（若 `flutter analyze` 在此報錯，移除誤留的 `const` 關鍵字即可）。
 
-- [ ] **Step 4: 遷移既有測試檔至含 `AppLocalizations` 的 `wrap()`**
+- [x] **Step 4: 遷移既有測試檔至含 `AppLocalizations` 的 `wrap()`**
 
 修改 `app/test/screens/library_search_screen_test.dart` 開頭新增 import：
 ```dart
@@ -1561,7 +1561,7 @@ import 'package:elinkbook/l10n/app_localizations.dart';
 
 檔案其餘 28 處 `wrap(...)` 呼叫端與既有 `testWidgets` 內容不變。
 
-- [ ] **Step 5: 新增三語言渲染驗證測試**
+- [x] **Step 5: 新增三語言渲染驗證測試**
 
 在 `app/test/screens/library_search_screen_test.dart` 檔尾 `main()` 最後一個 `testWidgets` 之後新增：
 
@@ -1611,7 +1611,7 @@ import 'package:elinkbook/l10n/app_localizations.dart';
 
 > 若 `FakeSearchRepository`／`_testBook()` 的建構參數名稱與上方範例不完全一致，以檔案內既有 `testWidgets` 的實際寫法為準（同 Task 3 Step 5 的提醒）。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run:
 ```bash
@@ -1619,7 +1619,7 @@ flutter test test/screens/library_search_screen_test.dart
 ```
 Expected: 全數通過（既有測試＋新增 2 個）。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run:
 ```bash
@@ -1627,7 +1627,7 @@ flutter analyze lib/screens/library_search_screen.dart test/screens/library_sear
 ```
 Expected: No issues found!
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/library_search_screen.dart app/test/screens/library_search_screen_test.dart app/lib/l10n/
@@ -1648,7 +1648,7 @@ git commit -m "feat(epic-45): library_search_screen.dart 字串抽取三語言�
 
 **本 Task 不修改任何測試檔**——`library_screen_test.dart` 的遷移獨立成 Task 6（下一個 Task），讓「production 字串抽取是否正確」與「測試遷移是否完整」成為兩個獨立的審查關卡。**本 Task 完成後、Task 6 執行前，`flutter test test/screens/library_screen_test.dart` 預期大量失敗（`Null check operator used on a null value`，因為裸 `MaterialApp` 尚未遷移）——這是預期中的紅燈狀態，不是本 Task 的回歸，Step 5 會明確驗證這個狀態。**
 
-- [ ] **Step 1: 新增 ARB key（四語言，53 個 key）**
+- [x] **Step 1: 新增 ARB key（四語言，53 個 key）**
 
 `app_zh_TW.arb` 檔尾新增（依畫面區塊分組，方便核對）：
 
@@ -2138,12 +2138,12 @@ git commit -m "feat(epic-45): library_search_screen.dart 字串抽取三語言�
   "libraryLayoutOverrideSaveButton": "儲存"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n` 確認 ARB 語法正確**
+- [x] **Step 2: 執行 `flutter gen-l10n` 確認 ARB 語法正確**
 
 Run: `flutter gen-l10n`
 Expected: 無錯誤，`AppLocalizations` 新增 53 個 getter/方法。
 
-- [ ] **Step 3: import 與 AppBar／選取模式 AppBar／空狀態／搜尋列**
+- [x] **Step 3: import 與 AppBar／選取模式 AppBar／空狀態／搜尋列**
 
 在 `app/lib/screens/library_screen.dart` import 區塊新增：
 ```dart
@@ -2361,7 +2361,7 @@ import '../l10n/app_localizations.dart';
 ```
 （`build()` 其餘結構不變。）
 
-- [ ] **Step 4: 刪除／重新下載／移除快取三個確認對話框＋對應 SnackBar**
+- [x] **Step 4: 刪除／重新下載／移除快取三個確認對話框＋對應 SnackBar**
 
 `_confirmDeleteBooks()`（原第 407-426 行）：
 ```dart
@@ -2550,7 +2550,7 @@ import '../l10n/app_localizations.dart';
   }
 ```
 
-- [ ] **Step 5: 執行測試確認「預期中的紅燈」——production 已改、測試尚未遷移**
+- [x] **Step 5: 執行測試確認「預期中的紅燈」——production 已改、測試尚未遷移**
 
 Run:
 ```bash
@@ -2558,7 +2558,7 @@ flutter test test/screens/library_screen_test.dart 2>&1 | tail -20
 ```
 Expected: 大量測試因 `Null check operator used on a null value`（`AppLocalizations.of(context)!` 在裸 `MaterialApp` 下崩潰）失敗——這證實 Step 3/4 的改動確實生效（若測試仍全數通過，代表某處改動漏掉或裸 `MaterialApp` 意外仍能運作，需回頭檢查）。這個紅燈狀態會在 Task 6 完成後轉綠，本 Step **不需要**修正任何東西，只是驗證檢查點。
 
-- [ ] **Step 6: `flutter analyze` 確認 production 程式碼本身乾淨**
+- [x] **Step 6: `flutter analyze` 確認 production 程式碼本身乾淨**
 
 Run:
 ```bash
@@ -2566,7 +2566,7 @@ flutter analyze lib/screens/library_screen.dart
 ```
 Expected: No issues found!（`flutter analyze` 不執行測試，不受 Step 5 的紅燈狀態影響）
 
-- [ ] **Step 7: Commit（production code only，測試遷移留給 Task 6）**
+- [x] **Step 7: Commit（production code only，測試遷移留給 Task 6）**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/lib/l10n/
@@ -2587,7 +2587,7 @@ git commit -m "feat(epic-45): library_screen.dart AppBar/選取模式/對話框�
 - Consumes：Task 5 已定義的全部 53 個 ARB key；`pumpLocalizedWidget()`（Issue 0，本 Task 擴充其簽章）。
 - Produces：`library_screen_test.dart` 完整遷移後的狀態，供未來任何觸及 `LibraryScreen` 的測試檔案（含未來 Issue）直接沿用 `pumpLocalizedWidget()` 而不再需要裸 `MaterialApp` 特例處理。
 
-- [ ] **Step 1: `pumpLocalizedWidget()` 新增 `mediaQueryData` 可選參數**
+- [x] **Step 1: `pumpLocalizedWidget()` 新增 `mediaQueryData` 可選參數**
 
 `library_screen_test.dart` 有 2 處測試需要模擬系統字級縮放，原本用 `MediaQuery(data: ..., child: MaterialApp(...))` 包裝。修改 `app/test/support/pump_localized_widget.dart`：
 
@@ -2639,7 +2639,7 @@ Future<void> pumpLocalizedWidget(
 }
 ```
 
-- [ ] **Step 2: 分類拼貼格（`_GroupGridTile`／`_GroupListTile`）＋ `_sortLabel()`**
+- [x] **Step 2: 分類拼貼格（`_GroupGridTile`／`_GroupListTile`）＋ `_sortLabel()`**
 
 `_GroupGridTile.build()` 內「分類」角標（原第 1345-1362 行附近）：
 ```dart
@@ -2704,7 +2704,7 @@ String _sortLabel(LibrarySortBy sortBy, AppLocalizations l10n) {
 ```
 （呼叫端已在 Task 5 Step 3 的 `_buildNormalAppBar()` 改為 `_sortLabel(sortBy, menuL10n)`。）
 
-- [ ] **Step 3: 書籍格/列項目（`_BookGridTile`／`_BookListTile`）＋繼續閱讀列**
+- [x] **Step 3: 書籍格/列項目（`_BookGridTile`／`_BookListTile`）＋繼續閱讀列**
 
 `_BookGridTile.build()`「更多」tooltip（原第 1552-1566 行）：
 ```dart
@@ -2745,7 +2745,7 @@ String _sortLabel(LibrarySortBy sortBy, AppLocalizations l10n) {
 ```
 （原本是 `const Text('繼續閱讀', style: TextStyle(fontSize: 12))`——改為動態值後 `Text`／`TextStyle` 皆不能再是 `const`。）
 
-- [ ] **Step 4: `_BookDetailsDialog`（含日期格式化）**
+- [x] **Step 4: `_BookDetailsDialog`（含日期格式化）**
 
 > **審查修訂（`review-plan-issue-3.md` C-1）**：原計畫第一版在 `initState()` 內呼叫 `AppLocalizations.of(context)!`，把結果傳給 `_resolveFileSizeText()` 存進 `_fileSizeFuture`。已查證這是真實的 Flutter 框架限制，非審查方誤判——`AppLocalizations.of(context)` 底層呼叫 `context.dependOnInheritedWidgetOfExactType()`，而 `StatefulElement.dependOnInheritedElement()`（`flutter/packages/flutter/lib/src/widgets/framework.dart`）明確斷言 `state._debugLifecycleState != _StateLifecycle.created`；`State.initState()` 執行期間這個欄位恆為 `created`（要到 `initState()` 返回後框架才會轉為 `initialized`），故在 `initState()` 內呼叫必定拋出 `dependOnInheritedWidgetOfExactType<AppLocalizations>() or dependOnInheritedElement() was called before _BookDetailsDialogState.initState() completed.`（已於本機 Flutter SDK 原始碼逐行追蹤確認，非僅憑文件註解）。修訂為審查建議的作法：`_resolveFileSizeText()`（更名 `_resolveFileSize()`）不再依賴 `AppLocalizations`，只負責純 I/O，回傳「位元組數或狀態」的裸資料；實際轉譯字串挪到 `FutureBuilder` 的 `builder(context, snapshot)`（`build()` 內，`context` 安全可用）內完成。
 
@@ -2857,7 +2857,7 @@ enum _FileSizeStatus { notDownloaded, unknown }
 
 > `l10n.close` 沿用 Issue 2 已建立的全域共用 key（不需要新增 `bookDetailsCloseButton`——原本這裡的「關閉」與 Issue 2 `library_group_management_dialog.dart` 的「關閉」語意完全相同）。
 
-- [ ] **Step 5: `_LayoutOverrideDialog`**
+- [x] **Step 5: `_LayoutOverrideDialog`**
 
 `build()`（原第 1936-2044 行，`_load()`／`_save()` 方法本身不含字串、不需要修改）：
 ```dart
@@ -2971,7 +2971,7 @@ enum _FileSizeStatus { notDownloaded, unknown }
   }
 ```
 
-- [ ] **Step 6: `flutter analyze` 確認 production 程式碼乾淨**
+- [x] **Step 6: `flutter analyze` 確認 production 程式碼乾淨**
 
 Run:
 ```bash
@@ -2979,7 +2979,7 @@ flutter analyze lib/screens/library_screen.dart
 ```
 Expected: No issues found!
 
-- [ ] **Step 7: 遷移 `library_screen_test.dart` 全部 113 處裸 `MaterialApp`**
+- [x] **Step 7: 遷移 `library_screen_test.dart` 全部 113 處裸 `MaterialApp`**
 
 在 `app/test/screens/library_screen_test.dart` import 區塊確認已有：
 ```dart
@@ -3084,7 +3084,7 @@ import '../support/pump_localized_widget.dart';
    ```
    Expected: `0`（比對 Issue 2 遺留下 9 處已遷移＋本次全部遷移完畢後，全檔案不應再有任何 `MaterialApp(` 字面出現，除非該行是 import 語句本身，用 `grep -n` 逐一確認每個殘留都不是被遺漏的呼叫）。
 
-- [ ] **Step 8: 執行 `library_screen_test.dart` 確認全數通過**
+- [x] **Step 8: 執行 `library_screen_test.dart` 確認全數通過**
 
 Run:
 ```bash
@@ -3092,7 +3092,7 @@ flutter test test/screens/library_screen_test.dart
 ```
 Expected: 全數通過（既有全部測試，零回歸；Task 5 Step 5 的紅燈狀態應已轉綠）。
 
-- [ ] **Step 9: 新增三語言渲染驗證測試**
+- [x] **Step 9: 新增三語言渲染驗證測試**
 
 在 `app/test/screens/library_screen_test.dart` 檔尾（`main()` 結尾 `}` 之前，`class _NonLinearTextScaler` 定義之前）新增：
 
@@ -3199,7 +3199,7 @@ Expected: 全數通過（既有全部測試，零回歸；Task 5 Step 5 的紅�
 
 > 若 `_testBook()` fixture 不支援 `groupName`／`lastReadTime` 具名參數，對照檔案既有其他測試的 `_testBook()` 呼叫寫法調整（該檔案已有多處類似用法，見既有「管理分類對話框」與「詳細資料」相關測試群組）。
 
-- [ ] **Step 10: 執行完整測試確認新增測試通過**
+- [x] **Step 10: 執行完整測試確認新增測試通過**
 
 Run:
 ```bash
@@ -3207,7 +3207,7 @@ flutter test test/screens/library_screen_test.dart
 ```
 Expected: 全數通過（既有全部測試＋新增 4 個）。
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/support/pump_localized_widget.dart app/test/screens/library_screen_test.dart
@@ -3222,7 +3222,7 @@ git commit -m "feat(epic-45): library_screen.dart 剩餘字串抽取（拼貼格
 
 **Interfaces:** 無。
 
-- [ ] **Step 1: 完整 `flutter analyze`**
+- [x] **Step 1: 完整 `flutter analyze`**
 
 Run:
 ```bash
@@ -3230,7 +3230,7 @@ flutter analyze
 ```
 Expected: No issues found!
 
-- [ ] **Step 2: 完整 `flutter test`**
+- [x] **Step 2: 完整 `flutter test`**
 
 Run:
 ```bash
@@ -3238,7 +3238,7 @@ flutter test
 ```
 Expected: 全數通過（比對 Issue 2 合併時的基準測試數，本 Issue 新增：Task 1 新增 2 個、Task 2 新增 1 個、Task 3 新增 1 個、Task 4 新增 2 個、Task 6 新增 4 個，共淨增 10 個測試）。
 
-- [ ] **Step 3: 確認 `reader_screen.dart`／`reader_screen_test.dart` 零異動**
+- [x] **Step 3: 確認 `reader_screen.dart`／`reader_screen_test.dart` 零異動**
 
 Run:
 ```bash
@@ -3246,7 +3246,7 @@ git diff main -- app/lib/screens/reader_screen.dart app/test/screens/reader_scre
 ```
 Expected: 空輸出，驗證 Global Constraints「嚴禁觸碰 `reader_screen.dart`」承諾兌現。
 
-- [ ] **Step 4: 手動驗證三語言下書架模組正確渲染**
+- [x] **Step 4: 手動驗證三語言下書架模組正確渲染**
 
 Run:
 ```bash
@@ -3254,7 +3254,7 @@ flutter run
 ```
 Expected: 「設定→語言」切換至簡體中文／English 後，書架 AppBar／選取模式工具列／排序選單／分類拼貼格／書籍詳細資料對話框／版面覆寫對話框／書內搜尋／全庫內容搜尋／單書動作選單皆正確顯示對應語言；日期格式依地區慣例呈現（英文為 M/D/Y，非年/月/日）；ICU plural 在英文下單複數正確（1 本書選取顯示 "1 selected" 非 "1 selecteds"）。
 
-- [ ] **Step 5: 修訂 `issues.md`——標記 Issue 3 完成**
+- [x] **Step 5: 修訂 `issues.md`——標記 Issue 3 完成**
 
 在 `docs/epics/epic-45-interface-i18n/issues.md`「Issue 3」標題旁補上 `**Status:** completed`。並在「What to build」段落末尾補註：
 
@@ -3262,15 +3262,15 @@ Expected: 「設定→語言」切換至簡體中文／English 後，書架 AppB
 **實際執行範圍修正記錄（2026-XX-XX 認領時 grep 盤點）**：移出 `library_batch_actions.dart`（純邏輯類別，零硬編碼字串）、`format_selection_dialog.dart`（實際屬 Issue 6 範圍，唯一呼叫端為 `remote_catalog_screen.dart`）、`layout_preset_book_picker_screen.dart`（實際屬 Issue 4 範圍，唯一呼叫端為 `reader_screen.dart`）、`library/widgets/cover_placeholder.dart`（檔案不存在，`library/widgets/` 僅有 `book_cover.dart` 且零硬編碼字串）；新增 `full_text_search_confirm_dialog.dart`（與 Issue 5 `settings_scaffold.dart` 共用，比照 Issue 0 收斂 `eb_sheet_shell.dart` 先例，本 Issue 一次處理完畢）。
 ```
 
-- [ ] **Step 6: 更新 `epic.md`**
+- [x] **Step 6: 更新 `epic.md`**
 
 新增一段開發記錄，記錄本 Issue 完成情況（`library_screen.dart`／`library_search_screen.dart`／`book_search_screen.dart`／`book_action_sheet.dart`／`full_text_search_confirm_dialog.dart` 完整字串抽取、新增 84 個 ARB key、`DateFormat` 首次落地、`library_screen_test.dart` 113 處測試全面遷移、範圍修正記錄）與下一步（認領 Issue 4-6 任一模組，Issue 5 屆時可直接沿用本 Issue 已完成的 `full_text_search_confirm_dialog.dart` 在地化）。
 
-- [ ] **Step 7: 更新 `docs/epics.md` 進度**
+- [x] **Step 7: 更新 `docs/epics.md` 進度**
 
 把第 46 列（`epic-45-interface-i18n`）備註欄位改為反映 Issue 3 已完成（例如「Issue 0／1／2／3 已完成，待認領 Issue 4-6」）。
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add docs/epics/epic-45-interface-i18n/issues.md docs/epics/epic-45-interface-i18n/epic.md docs/epics.md
