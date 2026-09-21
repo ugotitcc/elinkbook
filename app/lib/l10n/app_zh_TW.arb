@@ -156,5 +156,463 @@
   "cloudBrowserTruncatedNotice": "這個資料夾檔案較多，僅顯示前 1000 筆",
   "@cloudBrowserTruncatedNotice": {
     "description": "資料夾檔案數超過清單上限（1000 筆）時的提示文字"
+  },
+  "bookActionShowDetails": "詳細資料",
+  "@bookActionShowDetails": {
+    "description": "單書「⋮」動作選單「詳細資料」選項文字"
+  },
+  "bookActionMove": "移動",
+  "@bookActionMove": {
+    "description": "單書「⋮」動作選單「移動」選項文字（移動到分類）"
+  },
+  "bookActionLayoutOverride": "版面覆寫",
+  "@bookActionLayoutOverride": {
+    "description": "單書「⋮」動作選單「版面覆寫」選項文字"
+  },
+  "bookActionRemoveCache": "移除快取",
+  "@bookActionRemoveCache": {
+    "description": "單書「⋮」動作選單「移除快取」選項文字（僅 Calibre 來源已下載書籍顯示）"
+  },
+  "bookActionDelete": "刪除",
+  "@bookActionDelete": {
+    "description": "單書「⋮」動作選單「刪除」選項文字"
+  },
+  "fullTextSearchEnableDialogTitle": "啟用全文檢索",
+  "@fullTextSearchEnableDialogTitle": {
+    "description": "「啟用全文檢索」確認對話框標題（PDF／其他格式共用同一對話框）"
+  },
+  "fullTextSearchEnableMessagePdf": "將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量消耗，是否繼續？\n\n部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容，索引後仍查不到屬於正常情況。",
+  "@fullTextSearchEnableMessagePdf": {
+    "description": "啟用 PDF 全文檢索時的確認訊息（額外附加掃描件提示）"
+  },
+  "fullTextSearchEnableMessageOther": "將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量消耗，是否繼續？",
+  "@fullTextSearchEnableMessageOther": {
+    "description": "啟用其他格式（EPUB/TXT/KF8）全文檢索時的確認訊息"
+  },
+  "fullTextSearchEnableConfirmButton": "確認開啟",
+  "@fullTextSearchEnableConfirmButton": {
+    "description": "「啟用全文檢索」確認對話框的確認按鈕文字"
+  },
+  "bookSearchHint": "在本書中搜尋...",
+  "@bookSearchHint": {
+    "description": "單書內容搜尋畫面輸入框的 hintText"
+  },
+  "searchClearTooltip": "清除",
+  "@searchClearTooltip": {
+    "description": "搜尋輸入框「清除」按鈕的無障礙提示文字，book_search_screen.dart／library_search_screen.dart 共用"
+  },
+  "fullTextSearchUnavailableMessage": "本裝置不支援全文檢索",
+  "@fullTextSearchUnavailableMessage": {
+    "description": "裝置不支援全文檢索時的提示訊息，book_search_screen.dart／library_search_screen.dart 共用"
+  },
+  "bookSearchResultsSummary": "{total, plural, =1{共 1 筆結果} other{共 {total} 筆結果}}",
+  "@bookSearchResultsSummary": {
+    "description": "單書內容搜尋結果數量摘要（未截斷情境），{total} 為結果總數",
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "bookSearchResultsSummaryTruncated": "僅顯示前 {shown} 筆，共 {total, plural, =1{1 筆結果} other{{total} 筆結果}}",
+  "@bookSearchResultsSummaryTruncated": {
+    "description": "單書內容搜尋結果數量摘要（截斷情境），{shown} 為目前清單實際渲染的筆數（呼叫端傳入 result.matches.length），{total} 為該書全部命中筆數（result.totalMatches）",
+    "placeholders": {
+      "shown": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "bookSearchSortByPosition": "依書中順序",
+  "@bookSearchSortByPosition": {
+    "description": "單書內容搜尋結果排序切換按鈕：依書中出現順序"
+  },
+  "bookSearchSortByRelevance": "依相關度排序",
+  "@bookSearchSortByRelevance": {
+    "description": "單書內容搜尋結果排序切換按鈕：依相關度"
+  },
+  "fullTextSearchNoContentMatches": "查無符合的書內內容",
+  "@fullTextSearchNoContentMatches": {
+    "description": "全文檢索已啟用但查無結果時的提示，book_search_screen.dart／library_search_screen.dart 共用"
+  },
+  "bookSearchLocationPage": "第 {page} 頁",
+  "@bookSearchLocationPage": {
+    "description": "PDF 搜尋結果片段的位置標籤，{page} 為頁碼（1-based）",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "bookSearchLocationChapter": "第 {chapter} 章",
+  "@bookSearchLocationChapter": {
+    "description": "非 PDF 格式搜尋結果片段的位置標籤，{chapter} 為章節序號（1-based）",
+    "placeholders": {
+      "chapter": {
+        "type": "int"
+      }
+    }
+  },
+  "librarySearchSettingsSheetTitle": "全文檢索設定",
+  "@librarySearchSettingsSheetTitle": {
+    "description": "書內搜尋畫面 AppBar「全文檢索設定」入口彈出的 EBSheetShell 標題"
+  },
+  "librarySearchScreenTitle": "搜尋書內內容",
+  "@librarySearchScreenTitle": {
+    "description": "全庫內容搜尋畫面的 AppBar 標題"
+  },
+  "librarySearchSettingsTooltip": "全文檢索設定",
+  "@librarySearchSettingsTooltip": {
+    "description": "全庫內容搜尋畫面 AppBar 設定圖示的無障礙提示文字"
+  },
+  "librarySearchFieldHint": "搜尋書名、作者或書本內容...",
+  "@librarySearchFieldHint": {
+    "description": "全庫內容搜尋畫面輸入框的 hintText"
+  },
+  "librarySearchTitleAuthorSectionHeader": "書名/作者匹配",
+  "@librarySearchTitleAuthorSectionHeader": {
+    "description": "全庫內容搜尋結果「書名/作者匹配」分區標題"
+  },
+  "librarySearchContentSectionHeader": "內容匹配",
+  "@librarySearchContentSectionHeader": {
+    "description": "全庫內容搜尋結果「內容匹配」分區標題"
+  },
+  "librarySearchGuidanceNotEnabled": "尚未啟用全文檢索，開啟後才能搜尋書本內容（點擊右上角設定圖示開啟）",
+  "@librarySearchGuidanceNotEnabled": {
+    "description": "PDF／其他格式全文檢索皆未啟用時的引導卡片文字"
+  },
+  "librarySearchGuidancePdfOnly": "已啟用「PDF」全文檢索，其他格式尚未啟用",
+  "@librarySearchGuidancePdfOnly": {
+    "description": "僅 PDF 全文檢索已啟用時的引導卡片文字"
+  },
+  "librarySearchGuidanceOtherOnly": "已啟用「其他格式」全文檢索，PDF 內容尚未啟用",
+  "@librarySearchGuidanceOtherOnly": {
+    "description": "僅其他格式全文檢索已啟用時的引導卡片文字"
+  },
+  "librarySearchDrillDownButton": "{total, plural, =1{查看全部 1 筆結果} other{查看全部 {total} 筆結果}}（{remaining, plural, =1{還有 1 筆} other{還有 {remaining} 筆}}）",
+  "@librarySearchDrillDownButton": {
+    "description": "內容匹配卡片「查看全部」下鑽按鈕文字，{total} 為該書總命中數，{remaining} 為清單未顯示的剩餘筆數",
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "librarySearchPdfToggleTitle": "PDF 全文檢索",
+  "@librarySearchPdfToggleTitle": {
+    "description": "全文檢索設定面板 PDF 開關項目標題"
+  },
+  "librarySearchPdfToggleSubtitle": "部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容",
+  "@librarySearchPdfToggleSubtitle": {
+    "description": "全文檢索設定面板 PDF 開關項目副標題"
+  },
+  "librarySearchRebuildIndexTooltip": "重建索引",
+  "@librarySearchRebuildIndexTooltip": {
+    "description": "全文檢索設定面板「重建索引」按鈕的無障礙提示文字，PDF／其他格式兩個開關項目共用"
+  },
+  "librarySearchFoliateToggleTitle": "其他格式全文檢索",
+  "@librarySearchFoliateToggleTitle": {
+    "description": "全文檢索設定面板「其他格式」開關項目標題"
+  },
+  "librarySearchFoliateToggleSubtitle": "EPUB／TXT／KF8 等格式的背景索引建置",
+  "@librarySearchFoliateToggleSubtitle": {
+    "description": "全文檢索設定面板「其他格式」開關項目副標題"
+  },
+  "libraryBackButtonTooltip": "返回上層",
+  "@libraryBackButtonTooltip": {
+    "description": "下鑽分類檢視時 AppBar 返回按鈕的無障礙提示文字"
+  },
+  "libraryShelfTitle": "書架",
+  "@libraryShelfTitle": {
+    "description": "書架頂層（未下鑽任何分類）AppBar 標題"
+  },
+  "librarySortViewTooltip": "排序與檢視",
+  "@librarySortViewTooltip": {
+    "description": "AppBar 排序/檢視選單按鈕的無障礙提示文字"
+  },
+  "librarySortByLastRead": "最後閱讀",
+  "@librarySortByLastRead": {
+    "description": "排序選單選項：依最後閱讀時間"
+  },
+  "librarySortByCreateTime": "建立時間",
+  "@librarySortByCreateTime": {
+    "description": "排序選單選項：依建立時間"
+  },
+  "librarySortByAuthor": "作者",
+  "@librarySortByAuthor": {
+    "description": "排序選單選項：依作者"
+  },
+  "librarySortByTitle": "書名",
+  "@librarySortByTitle": {
+    "description": "排序選單選項：依書名"
+  },
+  "libraryToggleViewToList": "切換為列表",
+  "@libraryToggleViewToList": {
+    "description": "排序選單「切換檢視模式」項目文字（目前為格狀時顯示，點擊後切換為列表）"
+  },
+  "libraryToggleViewToShelf": "切換為書架",
+  "@libraryToggleViewToShelf": {
+    "description": "排序選單「切換檢視模式」項目文字（目前為列表時顯示，點擊後切換為格狀）"
+  },
+  "libraryManageGroupsMenuItem": "管理分類...",
+  "@libraryManageGroupsMenuItem": {
+    "description": "排序選單「管理分類」項目文字（僅頂層書架顯示，下鑽分類時不顯示）"
+  },
+  "librarySourceTooltip": "來源",
+  "@librarySourceTooltip": {
+    "description": "AppBar「來源」圖示按鈕的無障礙提示文字"
+  },
+  "librarySettingsTooltip": "設定",
+  "@librarySettingsTooltip": {
+    "description": "AppBar「設定」圖示按鈕的無障礙提示文字"
+  },
+  "libraryCancelSelectionTooltip": "取消選取",
+  "@libraryCancelSelectionTooltip": {
+    "description": "選取模式 AppBar「✕」取消按鈕的無障礙提示文字"
+  },
+  "librarySelectedCount": "{count, plural, =1{已選取 1 本} other{已選取 {count} 本}}",
+  "@librarySelectedCount": {
+    "description": "選取模式 AppBar 標題，{count} 為目前已選取的書籍數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryMoveToGroupTooltip": "移動到分類",
+  "@libraryMoveToGroupTooltip": {
+    "description": "選取模式 AppBar「移動到分類」圖示按鈕的無障礙提示文字"
+  },
+  "libraryForceFxlTooltip": "強制 FXL",
+  "@libraryForceFxlTooltip": {
+    "description": "選取模式 AppBar「強制 FXL」圖示按鈕的無障礙提示文字"
+  },
+  "libraryRestoreAutoLayoutTooltip": "恢復自動判斷",
+  "@libraryRestoreAutoLayoutTooltip": {
+    "description": "選取模式 AppBar「恢復自動判斷」圖示按鈕的無障礙提示文字"
+  },
+  "libraryDeleteTooltip": "刪除",
+  "@libraryDeleteTooltip": {
+    "description": "選取模式 AppBar「刪除」圖示按鈕的無障礙提示文字"
+  },
+  "libraryRemoveLocalCacheTooltip": "移除本機快取",
+  "@libraryRemoveLocalCacheTooltip": {
+    "description": "選取模式 AppBar「移除本機快取」圖示按鈕的無障礙提示文字，同時作為單書移除快取確認對話框標題（文字完全相同）"
+  },
+  "libraryEmptyStateMessage": "尚未匯入書籍",
+  "@libraryEmptyStateMessage": {
+    "description": "書架無任何書籍時的空狀態提示文字"
+  },
+  "libraryEmptyStateImportButton": "匯入書籍",
+  "@libraryEmptyStateImportButton": {
+    "description": "空狀態「匯入書籍」按鈕文字"
+  },
+  "librarySearchHint": "搜尋書名或作者...",
+  "@librarySearchHint": {
+    "description": "書架常駐搜尋列輸入框的 hintText"
+  },
+  "libraryContentSearchEntryLabel": "搜尋書本內容",
+  "@libraryContentSearchEntryLabel": {
+    "description": "書架搜尋列下方「搜尋書本內容」導覽橫幅文字"
+  },
+  "libraryNoMatchingBooks": "找不到符合的書籍",
+  "@libraryNoMatchingBooks": {
+    "description": "書架快速搜尋（書名/作者）查無結果時的提示文字"
+  },
+  "libraryDeleteBooksDialogTitle": "刪除書籍",
+  "@libraryDeleteBooksDialogTitle": {
+    "description": "刪除書籍確認對話框標題（單書／批次共用）"
+  },
+  "libraryDeleteBooksConfirmMessage": "{count, plural, =1{將刪除已選取的 1 本書籍，並一併刪除其書籤、劃線與備註，此操作無法復原。確定要刪除嗎？} other{將刪除已選取的 {count} 本書籍，並一併刪除其書籤、劃線與備註，此操作無法復原。確定要刪除嗎？}}",
+  "@libraryDeleteBooksConfirmMessage": {
+    "description": "刪除書籍確認對話框內容，{count} 為將被刪除的書籍數（單書刪除時為 1）",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDeleteBooksConfirmButton": "刪除",
+  "@libraryDeleteBooksConfirmButton": {
+    "description": "刪除書籍確認對話框的「刪除」按鈕文字"
+  },
+  "libraryRedownloadAction": "重新下載",
+  "@libraryRedownloadAction": {
+    "description": "重新下載確認對話框的標題與確認按鈕（兩處文字完全相同，共用一個 key）"
+  },
+  "libraryRedownloadConfirmMessage": "即將重新下載「{title}」，確定要繼續嗎？",
+  "@libraryRedownloadConfirmMessage": {
+    "description": "重新下載確認訊息（非行動數據連線情境），{title} 為書名",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryRedownloadConfirmMessageMobileData": "即將重新下載「{title}」，目前使用行動數據連線，可能產生流量費用，確定要繼續嗎？",
+  "@libraryRedownloadConfirmMessageMobileData": {
+    "description": "重新下載確認訊息（行動數據連線情境），{title} 為書名",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryRemoteDisabledMessage": "遠端書庫功能未啟用，無法重新下載",
+  "@libraryRemoteDisabledMessage": {
+    "description": "遠端書庫依賴未提供時，點擊重新下載顯示的 SnackBar 訊息"
+  },
+  "libraryRemoteServerNotFoundMessage": "找不到對應的遠端書庫站點",
+  "@libraryRemoteServerNotFoundMessage": {
+    "description": "重新下載時找不到書籍對應的遠端站點設定，顯示的 SnackBar 訊息"
+  },
+  "libraryRedownloadFailedMessage": "重新下載失敗，請稍後再試",
+  "@libraryRedownloadFailedMessage": {
+    "description": "重新下載過程發生例外時顯示的 SnackBar 訊息"
+  },
+  "libraryRemoveCacheConfirmMessage": "將移除「{title}」的本機檔案，書籍紀錄與閱讀進度會保留，之後可重新下載。確定要移除嗎？",
+  "@libraryRemoveCacheConfirmMessage": {
+    "description": "移除本機快取確認對話框內容，{title} 為書名",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryRemoveCacheConfirmButton": "移除",
+  "@libraryRemoveCacheConfirmButton": {
+    "description": "移除本機快取確認對話框的「移除」按鈕文字"
+  },
+  "libraryGroupBadgeLabel": "分類",
+  "@libraryGroupBadgeLabel": {
+    "description": "分類拼貼格（格狀檢視）左上角角標文字"
+  },
+  "libraryGroupTileCount": "{count, plural, =1{1 本} other{{count} 本}}",
+  "@libraryGroupTileCount": {
+    "description": "分類拼貼格顯示的書籍數量，{count} 為該分類書籍總數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryBookMenuTooltip": "更多",
+  "@libraryBookMenuTooltip": {
+    "description": "書籍格/列項目「⋮」動作選單按鈕的無障礙提示文字（格狀／列表檢視共用）"
+  },
+  "libraryContinueReadingLabel": "繼續閱讀",
+  "@libraryContinueReadingLabel": {
+    "description": "書架頂部常駐「繼續閱讀列」的小標籤文字"
+  },
+  "libraryBookNotDownloaded": "尚未下載",
+  "@libraryBookNotDownloaded": {
+    "description": "書籍詳細資料對話框「檔案大小」欄位在書籍尚未下載時顯示"
+  },
+  "libraryUnknownFileSize": "未知大小",
+  "@libraryUnknownFileSize": {
+    "description": "書籍詳細資料對話框「檔案大小」欄位在檔案不存在/讀取失敗/發生例外時的回退顯示"
+  },
+  "libraryLoadingEllipsis": "讀取中...",
+  "@libraryLoadingEllipsis": {
+    "description": "書籍詳細資料對話框「檔案大小」欄位在 FutureBuilder 尚未回傳結果時顯示"
+  },
+  "libraryDetailAuthorLabel": "作者：{author}",
+  "@libraryDetailAuthorLabel": {
+    "description": "書籍詳細資料對話框「作者」欄位，{author} 為已解析的作者顯示文字（含 libraryUnknownAuthor 回退與簡繁轉換結果）",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryUnknownAuthor": "未知",
+  "@libraryUnknownAuthor": {
+    "description": "書籍作者欄位為 null 時的回退文字，供組進 libraryDetailAuthorLabel 的 {author} placeholder"
+  },
+  "libraryDetailFormatLabel": "格式：{format}",
+  "@libraryDetailFormatLabel": {
+    "description": "書籍詳細資料對話框「格式」欄位，{format} 為格式名稱（epub/pdf 等，不翻譯）",
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryDetailFileSizeLabel": "檔案大小：{size}",
+  "@libraryDetailFileSizeLabel": {
+    "description": "書籍詳細資料對話框「檔案大小」欄位，{size} 為已格式化的大小文字或上述三種回退文字之一",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryDetailProgressLabel": "進度：{progress}",
+  "@libraryDetailProgressLabel": {
+    "description": "書籍詳細資料對話框「進度」欄位，{progress} 為百分比字串（如 50%，不需翻譯）",
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryDetailLastReadLabel": "最後閱讀：{date}",
+  "@libraryDetailLastReadLabel": {
+    "description": "書籍詳細資料對話框「最後閱讀」欄位，{date} 為已依 DateFormat 格式化的日期字串或 libraryNeverRead",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryNeverRead": "尚未閱讀",
+  "@libraryNeverRead": {
+    "description": "書籍從未被閱讀過（lastReadTime epoch 0）時的回退文字"
+  },
+  "libraryLayoutOverrideTitle": "版面覆寫",
+  "@libraryLayoutOverrideTitle": {
+    "description": "版面覆寫對話框標題（loading／已載入兩種狀態皆使用同一文字）"
+  },
+  "libraryLayoutOverrideWritingModeLabel": "排版方向",
+  "@libraryLayoutOverrideWritingModeLabel": {
+    "description": "版面覆寫對話框「排版方向」區塊小標題"
+  },
+  "libraryLayoutOverrideWritingModeDefault": "使用書籍排版",
+  "@libraryLayoutOverrideWritingModeDefault": {
+    "description": "版面覆寫對話框排版方向選項：使用書籍原生排版（不覆寫）"
+  },
+  "libraryLayoutOverrideWritingModeHorizontal": "橫排",
+  "@libraryLayoutOverrideWritingModeHorizontal": {
+    "description": "版面覆寫對話框排版方向選項：強制橫排"
+  },
+  "libraryLayoutOverrideWritingModeVertical": "直排",
+  "@libraryLayoutOverrideWritingModeVertical": {
+    "description": "版面覆寫對話框排版方向選項：強制直排"
+  },
+  "libraryLayoutOverridePageTurnModeLabel": "翻頁模式",
+  "@libraryLayoutOverridePageTurnModeLabel": {
+    "description": "版面覆寫對話框「翻頁模式」區塊小標題"
+  },
+  "libraryLayoutOverridePageTurnModeDefault": "使用全域預設",
+  "@libraryLayoutOverridePageTurnModeDefault": {
+    "description": "版面覆寫對話框翻頁模式選項：使用全域預設（不覆寫）"
+  },
+  "libraryLayoutOverridePageTurnModePaginated": "分頁",
+  "@libraryLayoutOverridePageTurnModePaginated": {
+    "description": "版面覆寫對話框翻頁模式選項：強制分頁"
+  },
+  "libraryLayoutOverridePageTurnModeScroll": "捲動",
+  "@libraryLayoutOverridePageTurnModeScroll": {
+    "description": "版面覆寫對話框翻頁模式選項：強制捲動"
+  },
+  "libraryLayoutOverrideSaveButton": "儲存",
+  "@libraryLayoutOverrideSaveButton": {
+    "description": "版面覆寫對話框「儲存」按鈕文字"
   }
 }

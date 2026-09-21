@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/book_action_sheet.dart';
@@ -20,8 +21,12 @@ Book _book() {
 Widget _buildApp({
   bool showRemoveCache = true,
   bool showLayoutOverride = true,
+  Locale locale = const Locale('zh', 'TW'),
 }) {
   return MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Builder(
       builder: (context) => ElevatedButton(
         onPressed: () => showModalBottomSheet<void>(
@@ -43,8 +48,12 @@ Widget _buildResultApp({
   required ValueNotifier<BookAction?> resultNotifier,
   bool showRemoveCache = true,
   bool showLayoutOverride = true,
+  Locale locale = const Locale('zh', 'TW'),
 }) {
   return MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Builder(
       builder: (context) => ElevatedButton(
         onPressed: () async {
@@ -150,5 +159,29 @@ void main() {
     await tester.tap(find.byKey(const Key('book_action_delete')));
     await tester.pumpAndSettle();
     expect(resultNotifier.value, BookAction.delete);
+  });
+
+  testWidgets('英文介面下五個選項文字正確以英文渲染', (tester) async {
+    await tester.pumpWidget(_buildApp(locale: const Locale('en')));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Details'), findsOneWidget);
+    expect(find.text('Move'), findsOneWidget);
+    expect(find.text('Layout Override'), findsOneWidget);
+    expect(find.text('Remove Cache'), findsOneWidget);
+    expect(find.text('Delete'), findsOneWidget);
+  });
+
+  testWidgets('簡體中文介面下選項文字正確以簡體渲染', (tester) async {
+    await tester.pumpWidget(
+      _buildApp(locale: const Locale('zh', 'CN')),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('详细资料'), findsOneWidget);
+    expect(find.text('排版覆盖'), findsOneWidget);
+    expect(find.text('移除缓存'), findsOneWidget);
   });
 }

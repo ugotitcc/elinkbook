@@ -96,7 +96,7 @@
 
 ## Issue 3：書架模組字串抽取＋測試遷移
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 0、Issue 2（分類名稱顯示已在 Issue 2 處理，本 Issue 處理該模組其餘字串）。
 
@@ -107,6 +107,8 @@
 - 每個檔案：硬編碼中文字串改為對應 ARB key（新增至三份 ARB，三語言皆填入真實翻譯）。
 - **日期格式化（`/receiving-code-review` review-issues I-1 修正）**：`library_screen.dart:1798` 附近的書籍列表日期顯示（`'${date.year}/${date.month}/${date.day}'` 手動拼接），改用 `intl` 的 `DateFormat.yMd(Localizations.localeOf(context).toString())` 依目前介面語言格式化，不維持手動字串拼接。
 - **ICU plural（`/receiving-code-review` review-issues I-2 修正）**：`library_screen.dart:412`（刪除確認對話框「將刪除已選取的 $count 本書籍...」）與 `:1006`（「已選取 $count 本」）兩處計數字串，ARB 定義時必須採用 ICU `plural` 語法（例如 `librarySelectedCount: "{count, plural, =1{已選取 1 本} other{已選取 {count} 本}}"`，中文雖無文法複數變化但英文版本 `other` 分支需要正確單複數），不得機械式抽取成固定字串模板。
+
+**實際執行範圍修正記錄（2026-09-21 認領時 grep 盤點）**：移出 `library_batch_actions.dart`（純邏輯類別，零硬編碼字串）、`format_selection_dialog.dart`（實際屬 Issue 6 範圍，唯一呼叫端為 `remote_catalog_screen.dart`）、`layout_preset_book_picker_screen.dart`（實際屬 Issue 4 範圍，唯一呼叫端為 `reader_screen.dart`）、`library/widgets/cover_placeholder.dart`（檔案不存在，`library/widgets/` 僅有 `book_cover.dart` 且零硬編碼字串）；新增 `full_text_search_confirm_dialog.dart`（與 Issue 5 `settings_scaffold.dart` 共用，比照 Issue 0 收斂 `eb_sheet_shell.dart` 先例，本 Issue 一次處理完畢）。
 
 **單元測試要求：**
 - 上述每個檔案的既有測試改用 `pumpLocalizedWidget()`，斷言由裸中文字串改為透過 `AppLocalizations`（或維持字面值斷言但測試環境 locale 釘定 `zh_TW`，見 `spec.md` §8），確保零回歸。

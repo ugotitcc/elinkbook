@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
@@ -63,7 +64,11 @@ void main() {
   // 強制解包會直接拋出 `Null check operator used on a null value`——任何
   // 渲染出真實書籍項目（含 `BookCover`）的測試都會炸掉。比照
   // `library_screen_test.dart` 既有標準寫法補上主題。
-  Widget wrap(Widget child) => MaterialApp(
+  Widget wrap(Widget child, {Locale locale = const Locale('zh', 'TW')}) =>
+      MaterialApp(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: child,
       );
@@ -1064,5 +1069,47 @@ void main() {
 
     // BookSearchScreen 被推入導覽堆疊
     expect(find.byType(BookSearchScreen), findsOneWidget);
+  });
+
+  testWidgets('英文介面下 AppBar 標題、搜尋提示、分區標題正確以英文渲染', (tester) async {
+    await tester.pumpWidget(
+      wrap(
+        LibrarySearchScreen(
+          searchRepository: FakeSearchRepository(
+            titleAuthorResults: [_testBook(id: 'b1', title: 'Fantasy Book')],
+          ),
+          prefsManager: FakeReaderPrefsManager(),
+          libraryRepository: FakeLibraryRepository(),
+          initialQuery: 'fantasy',
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Search Book Content'), findsOneWidget);
+    expect(find.text('Title/Author Matches'), findsOneWidget);
+    expect(find.text('Content Matches'), findsOneWidget);
+  });
+
+  testWidgets('簡體中文介面下全文檢索設定面板文字正確以簡體渲染', (tester) async {
+    await tester.pumpWidget(
+      wrap(
+        LibrarySearchScreen(
+          searchRepository: FakeSearchRepository(),
+          prefsManager: FakeReaderPrefsManager(),
+          libraryRepository: FakeLibraryRepository(),
+        ),
+        locale: const Locale('zh', 'CN'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('library_search_screen_settings_button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('PDF 全文检索'), findsOneWidget);
+    expect(find.text('其他格式全文检索'), findsOneWidget);
   });
 }

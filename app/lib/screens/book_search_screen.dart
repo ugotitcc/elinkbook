@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../library/models/book.dart';
 import '../library/models/library_enums.dart';
 import '../library/library_repository.dart';
@@ -193,6 +194,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -218,14 +220,14 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
                   onChanged: _handleQueryChanged,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
-                    hintText: '在本書中搜尋...',
+                    hintText: l10n.bookSearchHint,
                     isDense: true,
                     border: const OutlineInputBorder(),
                     suffixIcon: hasText
                         ? IconButton(
                             key: const Key('book_search_screen_clear_button'),
                             icon: const Icon(Icons.close),
-                            tooltip: '清除',
+                            tooltip: l10n.searchClearTooltip,
                             onPressed: () {
                               _controller.clear();
                               _handleQueryChanged('');
@@ -239,9 +241,9 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
           ),
           // 不支援提示或工具列
           if (!widget.readerFeatureRepositories.isFullTextSearchAvailable)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('本裝置不支援全文檢索'),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(l10n.fullTextSearchUnavailableMessage),
             )
           else ...[
             _buildToolbar(),
@@ -258,9 +260,13 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
     if (result == null || result.matches.isEmpty) {
       return const SizedBox.shrink();
     }
+    final l10n = AppLocalizations.of(context)!;
     final summaryText = result.isTruncated
-        ? '僅顯示前 ${result.matches.length} 筆，共 ${result.totalMatches} 筆'
-        : '共 ${result.totalMatches} 筆結果';
+        ? l10n.bookSearchResultsSummaryTruncated(
+            result.matches.length,
+            result.totalMatches,
+          )
+        : l10n.bookSearchResultsSummary(result.totalMatches);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
@@ -287,7 +293,11 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
               _sortByBookOrder ? Icons.sort : Icons.trending_up,
               size: 18,
             ),
-            label: Text(_sortByBookOrder ? '依書中順序' : '依相關度排序'),
+            label: Text(
+              _sortByBookOrder
+                  ? l10n.bookSearchSortByPosition
+                  : l10n.bookSearchSortByRelevance,
+            ),
             onPressed: _toggleSort,
           ),
         ],
@@ -299,7 +309,9 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
     final result = _result;
     if (result == null) return const SizedBox.shrink();
     if (result.matches.isEmpty) {
-      return const Center(child: Text('查無符合的書內內容'));
+      return Center(
+        child: Text(AppLocalizations.of(context)!.fullTextSearchNoContentMatches),
+      );
     }
 
     final trimmedQuery = _controller.text.trim();
@@ -364,8 +376,11 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
   ) {
     // 位置標籤：PDF「第 X 頁」，其餘「第 X 章」（chapterIndex 為 0-based）。
     final chapterIndex = snippet.chapterIndex;
+    final l10n = AppLocalizations.of(context)!;
     final locationText = chapterIndex != null
-        ? (isPdf ? '第 ${chapterIndex + 1} 頁' : '第 ${chapterIndex + 1} 章')
+        ? (isPdf
+            ? l10n.bookSearchLocationPage(chapterIndex + 1)
+            : l10n.bookSearchLocationChapter(chapterIndex + 1))
         : null;
     final displaySnippet = convertText(snippet.snippet, _contentTextConversion);
 

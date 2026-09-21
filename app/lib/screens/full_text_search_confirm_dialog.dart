@@ -1,6 +1,7 @@
 // app/lib/screens/full_text_search_confirm_dialog.dart
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../search/full_text_search_settings_repository.dart';
 
 /// 「啟用全文檢索」確認對話框（epic-10-search Issue 3，見 spec.md §4）：
@@ -19,40 +20,44 @@ import '../search/full_text_search_settings_repository.dart';
 /// （`SettingsScaffold`）在使用者按下「確認開啟」（本函式回傳 `true`）之後
 /// 才呼叫 `setEnabled(category, true)`，比照既有
 /// `showCloudDuplicateConfirmDialog()` 純回傳 bool 的既有慣例。
+/// 同時被 `library_search_screen.dart`（epic-45-interface-i18n Issue 3）與
+/// `settings_scaffold.dart`（Issue 5）共用，本檔案的在地化已在 Issue 3
+/// 一次完成。
 Future<bool> showFullTextSearchEnableConfirmDialog(
   BuildContext context, {
   required ContentIndexCategory category,
   bool isEinkMode = false,
 }) async {
+  final l10n = AppLocalizations.of(context)!;
   final message = category == ContentIndexCategory.pdf
-      ? '將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量'
-          '消耗，是否繼續？\n\n部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容，'
-          '索引後仍查不到屬於正常情況。'
-      : '將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量'
-          '消耗，是否繼續？';
+      ? l10n.fullTextSearchEnableMessagePdf
+      : l10n.fullTextSearchEnableMessageOther;
   final result = await showDialog<bool>(
     context: context,
     animationStyle: isEinkMode ? AnimationStyle.noAnimation : null,
-    builder: (context) => AlertDialog(
-      key: const Key('full_text_search_enable_confirm_dialog'),
-      title: const Text('啟用全文檢索'),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400),
-        child: Text(message),
-      ),
-      actions: [
-        TextButton(
-          key: const Key('full_text_search_enable_confirm_dialog_cancel'),
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('取消'),
+    builder: (dialogContext) {
+      final dialogL10n = AppLocalizations.of(dialogContext)!;
+      return AlertDialog(
+        key: const Key('full_text_search_enable_confirm_dialog'),
+        title: Text(dialogL10n.fullTextSearchEnableDialogTitle),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Text(message),
         ),
-        TextButton(
-          key: const Key('full_text_search_enable_confirm_dialog_confirm'),
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('確認開啟'),
-        ),
-      ],
-    ),
+        actions: [
+          TextButton(
+            key: const Key('full_text_search_enable_confirm_dialog_cancel'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(dialogL10n.cancel),
+          ),
+          TextButton(
+            key: const Key('full_text_search_enable_confirm_dialog_confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(dialogL10n.fullTextSearchEnableConfirmButton),
+          ),
+        ],
+      );
+    },
   );
   return result ?? false;
 }
