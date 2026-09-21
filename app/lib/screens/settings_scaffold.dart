@@ -546,9 +546,8 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
     final resolved = resolveSupportedLocale(
       View.of(context).platformDispatcher.locale,
     );
-    return Text(
-      l10n.settingsLanguageFollowSystemSubtitle(_languageLabel(resolved, l10n)),
-    );
+    final resolvedLabel = _languageLabel(resolved, l10n);
+    return Text(l10n.settingsLanguageFollowSystemSubtitle(resolvedLabel));
   }
 
   String _languageLabel(AppLocale locale, AppLocalizations l10n) =>

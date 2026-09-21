@@ -63,6 +63,8 @@
 
 **Blocked by：** Issue 0。
 
+**已知限制（追記，`/superpowers:requesting-code-review` review-issue-1.md M-2）**：`_LanguagePickerSheet` 點擊「目前已選中的語言」時，因 Flutter `RadioGroup`/`RadioListTile` 原生行為（`value == groupValue` 時不觸發 `onChanged`），Sheet 不會自動關閉，需使用者手動點右上角關閉鈕或點遮罩——這是符合預期的單選元件原生行為，不是缺陷，不阻塞本 Issue 驗收。若未來要優化這個互動（例如點擊已選中項也能關閉 Sheet），需另外包一層手勢偵測，留待後續視情況另立小工單處理，非本 Epic 當前排程項目。
+
 ---
 
 ## Issue 2：系統保留分類名稱在地化契約
