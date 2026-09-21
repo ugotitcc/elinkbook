@@ -192,5 +192,68 @@
   "fullTextSearchEnableConfirmButton": "確認開啟",
   "@fullTextSearchEnableConfirmButton": {
     "description": "「啟用全文檢索」確認對話框的確認按鈕文字"
+  },
+  "bookSearchHint": "在本書中搜尋...",
+  "@bookSearchHint": {
+    "description": "單書內容搜尋畫面輸入框的 hintText"
+  },
+  "searchClearTooltip": "清除",
+  "@searchClearTooltip": {
+    "description": "搜尋輸入框「清除」按鈕的無障礙提示文字，book_search_screen.dart／library_search_screen.dart 共用"
+  },
+  "fullTextSearchUnavailableMessage": "本裝置不支援全文檢索",
+  "@fullTextSearchUnavailableMessage": {
+    "description": "裝置不支援全文檢索時的提示訊息，book_search_screen.dart／library_search_screen.dart 共用"
+  },
+  "bookSearchResultsSummary": "{total, plural, =1{共 1 筆結果} other{共 {total} 筆結果}}",
+  "@bookSearchResultsSummary": {
+    "description": "單書內容搜尋結果數量摘要（未截斷情境），{total} 為結果總數",
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "bookSearchResultsSummaryTruncated": "僅顯示前 {shown} 筆，共 {total, plural, =1{1 筆結果} other{{total} 筆結果}}",
+  "@bookSearchResultsSummaryTruncated": {
+    "description": "單書內容搜尋結果數量摘要（截斷情境），{shown} 為目前清單實際渲染的筆數（呼叫端傳入 result.matches.length），{total} 為該書全部命中筆數（result.totalMatches）",
+    "placeholders": {
+      "shown": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "bookSearchSortByPosition": "依書中順序",
+  "@bookSearchSortByPosition": {
+    "description": "單書內容搜尋結果排序切換按鈕：依書中出現順序"
+  },
+  "bookSearchSortByRelevance": "依相關度排序",
+  "@bookSearchSortByRelevance": {
+    "description": "單書內容搜尋結果排序切換按鈕：依相關度"
+  },
+  "fullTextSearchNoContentMatches": "查無符合的書內內容",
+  "@fullTextSearchNoContentMatches": {
+    "description": "全文檢索已啟用但查無結果時的提示，book_search_screen.dart／library_search_screen.dart 共用"
+  },
+  "bookSearchLocationPage": "第 {page} 頁",
+  "@bookSearchLocationPage": {
+    "description": "PDF 搜尋結果片段的位置標籤，{page} 為頁碼（1-based）",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "bookSearchLocationChapter": "第 {chapter} 章",
+  "@bookSearchLocationChapter": {
+    "description": "非 PDF 格式搜尋結果片段的位置標籤，{chapter} 為章節序號（1-based）",
+    "placeholders": {
+      "chapter": {
+        "type": "int"
+      }
+    }
   }
 }

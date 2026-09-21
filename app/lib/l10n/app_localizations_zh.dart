@@ -148,6 +148,56 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get fullTextSearchEnableConfirmButton => '確認開啟';
+
+  @override
+  String get bookSearchHint => '在本書中搜尋...';
+
+  @override
+  String get searchClearTooltip => '清除';
+
+  @override
+  String get fullTextSearchUnavailableMessage => '本裝置不支援全文檢索';
+
+  @override
+  String bookSearchResultsSummary(int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '共 $total 筆結果',
+      one: '共 1 筆結果',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookSearchResultsSummaryTruncated(int shown, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total 筆結果',
+      one: '1 筆結果',
+    );
+    return '僅顯示前 $shown 筆，共 $_temp0';
+  }
+
+  @override
+  String get bookSearchSortByPosition => '依書中順序';
+
+  @override
+  String get bookSearchSortByRelevance => '依相關度排序';
+
+  @override
+  String get fullTextSearchNoContentMatches => '查無符合的書內內容';
+
+  @override
+  String bookSearchLocationPage(int page) {
+    return '第 $page 頁';
+  }
+
+  @override
+  String bookSearchLocationChapter(int chapter) {
+    return '第 $chapter 章';
+  }
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -294,6 +344,56 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get fullTextSearchEnableConfirmButton => '确认开启';
+
+  @override
+  String get bookSearchHint => '在本书中搜索...';
+
+  @override
+  String get searchClearTooltip => '清除';
+
+  @override
+  String get fullTextSearchUnavailableMessage => '本设备不支持全文检索';
+
+  @override
+  String bookSearchResultsSummary(int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '共 $total 条结果',
+      one: '共 1 条结果',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookSearchResultsSummaryTruncated(int shown, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total 条结果',
+      one: '1 条结果',
+    );
+    return '仅显示前 $shown 条，共 $_temp0';
+  }
+
+  @override
+  String get bookSearchSortByPosition => '依书中顺序';
+
+  @override
+  String get bookSearchSortByRelevance => '按相关度排序';
+
+  @override
+  String get fullTextSearchNoContentMatches => '未找到符合的书内内容';
+
+  @override
+  String bookSearchLocationPage(int page) {
+    return '第 $page 页';
+  }
+
+  @override
+  String bookSearchLocationChapter(int chapter) {
+    return '第 $chapter 章';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -440,4 +540,54 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get fullTextSearchEnableConfirmButton => '確認開啟';
+
+  @override
+  String get bookSearchHint => '在本書中搜尋...';
+
+  @override
+  String get searchClearTooltip => '清除';
+
+  @override
+  String get fullTextSearchUnavailableMessage => '本裝置不支援全文檢索';
+
+  @override
+  String bookSearchResultsSummary(int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '共 $total 筆結果',
+      one: '共 1 筆結果',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookSearchResultsSummaryTruncated(int shown, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total 筆結果',
+      one: '1 筆結果',
+    );
+    return '僅顯示前 $shown 筆，共 $_temp0';
+  }
+
+  @override
+  String get bookSearchSortByPosition => '依書中順序';
+
+  @override
+  String get bookSearchSortByRelevance => '依相關度排序';
+
+  @override
+  String get fullTextSearchNoContentMatches => '查無符合的書內內容';
+
+  @override
+  String bookSearchLocationPage(int page) {
+    return '第 $page 頁';
+  }
+
+  @override
+  String bookSearchLocationChapter(int chapter) {
+    return '第 $chapter 章';
+  }
 }

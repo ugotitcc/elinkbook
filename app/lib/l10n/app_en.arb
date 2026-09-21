@@ -39,5 +39,15 @@
   "fullTextSearchEnableDialogTitle": "Enable Full-Text Search",
   "fullTextSearchEnableMessagePdf": "This will start background indexing (including existing books in your library), which increases CPU and battery usage. Continue?\n\nSome scanned/image-based PDFs may not contain searchable text — it's normal if they still can't be found after indexing.",
   "fullTextSearchEnableMessageOther": "This will start background indexing (including existing books in your library), which increases CPU and battery usage. Continue?",
-  "fullTextSearchEnableConfirmButton": "Enable"
+  "fullTextSearchEnableConfirmButton": "Enable",
+  "bookSearchHint": "Search in this book...",
+  "searchClearTooltip": "Clear",
+  "fullTextSearchUnavailableMessage": "Full-text search is not supported on this device",
+  "bookSearchResultsSummary": "{total, plural, =1{1 result} other{{total} results}}",
+  "bookSearchResultsSummaryTruncated": "Showing first {shown} of {total, plural, =1{1 result} other{{total} results}}",
+  "bookSearchSortByPosition": "By book order",
+  "bookSearchSortByRelevance": "By relevance",
+  "fullTextSearchNoContentMatches": "No matching content found",
+  "bookSearchLocationPage": "Page {page}",
+  "bookSearchLocationChapter": "Chapter {chapter}"
 }

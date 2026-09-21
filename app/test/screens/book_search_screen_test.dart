@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
@@ -39,7 +40,10 @@ Book _testBook({
   );
 }
 
-Widget _wrap(Widget child) => MaterialApp(
+Widget _wrap(Widget child, {Locale locale = const Locale('zh', 'TW')}) => MaterialApp(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: child,
     );
@@ -575,5 +579,32 @@ void main() {
     expect(find.widgetWithText(AppBar, '国电脑维修'), findsOneWidget);
     // 內容摘要片段（跨書情境，一律採全域值 toTraditional）轉為繁體。
     expect(find.textContaining('國電腦維修站'), findsOneWidget);
+  });
+
+  testWidgets('英文介面下搜尋提示、排序按鈕、位置標籤正確以英文渲染', (tester) async {
+    final book = _testBook();
+    final searchRepository = FakeSearchRepository(
+      bookSearchDetailResult: _makeResult(book: book, matchCount: 2, totalMatches: 2),
+    );
+    await tester.pumpWidget(
+      _wrap(
+        BookSearchScreen(
+          book: book,
+          initialQuery: '關鍵字',
+          searchRepository: searchRepository,
+          prefsManager: FakeReaderPrefsManager(),
+          libraryRepository: FakeLibraryRepository(),
+          readerFeatureRepositories: const LibraryReaderFeatureRepositories(),
+          syncDependencies: const LibrarySyncDependencies(),
+          isEinkMode: false,
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Search in this book...'), findsOneWidget);
+    expect(find.textContaining('results'), findsOneWidget);
+    expect(find.text('By book order'), findsOneWidget);
   });
 }

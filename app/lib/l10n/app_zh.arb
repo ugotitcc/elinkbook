@@ -39,5 +39,15 @@
   "fullTextSearchEnableDialogTitle": "啟用全文檢索",
   "fullTextSearchEnableMessagePdf": "將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量消耗，是否繼續？\n\n部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容，索引後仍查不到屬於正常情況。",
   "fullTextSearchEnableMessageOther": "將觸發背景索引建置（含既有書庫舊書回填），過程會增加運算與電量消耗，是否繼續？",
-  "fullTextSearchEnableConfirmButton": "確認開啟"
+  "fullTextSearchEnableConfirmButton": "確認開啟",
+  "bookSearchHint": "在本書中搜尋...",
+  "searchClearTooltip": "清除",
+  "fullTextSearchUnavailableMessage": "本裝置不支援全文檢索",
+  "bookSearchResultsSummary": "{total, plural, =1{共 1 筆結果} other{共 {total} 筆結果}}",
+  "bookSearchResultsSummaryTruncated": "僅顯示前 {shown} 筆，共 {total, plural, =1{1 筆結果} other{{total} 筆結果}}",
+  "bookSearchSortByPosition": "依書中順序",
+  "bookSearchSortByRelevance": "依相關度排序",
+  "fullTextSearchNoContentMatches": "查無符合的書內內容",
+  "bookSearchLocationPage": "第 {page} 頁",
+  "bookSearchLocationChapter": "第 {chapter} 章"
 }

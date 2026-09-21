@@ -339,6 +339,66 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'確認開啟'**
   String get fullTextSearchEnableConfirmButton;
+
+  /// 單書內容搜尋畫面輸入框的 hintText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'在本書中搜尋...'**
+  String get bookSearchHint;
+
+  /// 搜尋輸入框「清除」按鈕的無障礙提示文字，book_search_screen.dart／library_search_screen.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'清除'**
+  String get searchClearTooltip;
+
+  /// 裝置不支援全文檢索時的提示訊息，book_search_screen.dart／library_search_screen.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'本裝置不支援全文檢索'**
+  String get fullTextSearchUnavailableMessage;
+
+  /// 單書內容搜尋結果數量摘要（未截斷情境），{total} 為結果總數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{total, plural, =1{共 1 筆結果} other{共 {total} 筆結果}}'**
+  String bookSearchResultsSummary(int total);
+
+  /// 單書內容搜尋結果數量摘要（截斷情境），{shown} 為目前清單實際渲染的筆數（呼叫端傳入 result.matches.length），{total} 為該書全部命中筆數（result.totalMatches）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'僅顯示前 {shown} 筆，共 {total, plural, =1{1 筆結果} other{{total} 筆結果}}'**
+  String bookSearchResultsSummaryTruncated(int shown, int total);
+
+  /// 單書內容搜尋結果排序切換按鈕：依書中出現順序
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'依書中順序'**
+  String get bookSearchSortByPosition;
+
+  /// 單書內容搜尋結果排序切換按鈕：依相關度
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'依相關度排序'**
+  String get bookSearchSortByRelevance;
+
+  /// 全文檢索已啟用但查無結果時的提示，book_search_screen.dart／library_search_screen.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'查無符合的書內內容'**
+  String get fullTextSearchNoContentMatches;
+
+  /// PDF 搜尋結果片段的位置標籤，{page} 為頁碼（1-based）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'第 {page} 頁'**
+  String bookSearchLocationPage(int page);
+
+  /// 非 PDF 格式搜尋結果片段的位置標籤，{chapter} 為章節序號（1-based）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'第 {chapter} 章'**
+  String bookSearchLocationChapter(int chapter);
 }
 
 class _AppLocalizationsDelegate

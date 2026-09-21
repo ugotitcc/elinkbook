@@ -151,4 +151,55 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fullTextSearchEnableConfirmButton => 'Enable';
+
+  @override
+  String get bookSearchHint => 'Search in this book...';
+
+  @override
+  String get searchClearTooltip => 'Clear';
+
+  @override
+  String get fullTextSearchUnavailableMessage =>
+      'Full-text search is not supported on this device';
+
+  @override
+  String bookSearchResultsSummary(int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total results',
+      one: '1 result',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookSearchResultsSummaryTruncated(int shown, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total results',
+      one: '1 result',
+    );
+    return 'Showing first $shown of $_temp0';
+  }
+
+  @override
+  String get bookSearchSortByPosition => 'By book order';
+
+  @override
+  String get bookSearchSortByRelevance => 'By relevance';
+
+  @override
+  String get fullTextSearchNoContentMatches => 'No matching content found';
+
+  @override
+  String bookSearchLocationPage(int page) {
+    return 'Page $page';
+  }
+
+  @override
+  String bookSearchLocationChapter(int chapter) {
+    return 'Chapter $chapter';
+  }
 }

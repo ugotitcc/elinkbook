@@ -39,5 +39,15 @@
   "fullTextSearchEnableDialogTitle": "启用全文检索",
   "fullTextSearchEnableMessagePdf": "将触发后台索引建立（含既有书库旧书回填），过程会增加运算与电量消耗，是否继续？\n\n部分扫描/图片型 PDF 可能没有可搜索的文字内容，索引后仍查不到属于正常情况。",
   "fullTextSearchEnableMessageOther": "将触发后台索引建立（含既有书库旧书回填），过程会增加运算与电量消耗，是否继续？",
-  "fullTextSearchEnableConfirmButton": "确认开启"
+  "fullTextSearchEnableConfirmButton": "确认开启",
+  "bookSearchHint": "在本书中搜索...",
+  "searchClearTooltip": "清除",
+  "fullTextSearchUnavailableMessage": "本设备不支持全文检索",
+  "bookSearchResultsSummary": "{total, plural, =1{共 1 条结果} other{共 {total} 条结果}}",
+  "bookSearchResultsSummaryTruncated": "仅显示前 {shown} 条，共 {total, plural, =1{1 条结果} other{{total} 条结果}}",
+  "bookSearchSortByPosition": "依书中顺序",
+  "bookSearchSortByRelevance": "按相关度排序",
+  "fullTextSearchNoContentMatches": "未找到符合的书内内容",
+  "bookSearchLocationPage": "第 {page} 页",
+  "bookSearchLocationChapter": "第 {chapter} 章"
 }
