@@ -51,11 +51,12 @@ class _LibraryGroupManagementDialogState
   }
 
   Future<void> _addGroup() async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final name = _addController.text.trim();
     if (name.isEmpty) return;
     if (isReservedGroupName(name)) {
-      setState(() => _errorMessage = l10n.libraryGroupReservedNameError(name));
+      setState(() => _errorMessage = l10n?.libraryGroupReservedNameError(name) ??
+          '「$name」是系統保留的分類名稱，請使用其他名稱');
       return;
     }
     try {
@@ -69,19 +70,19 @@ class _LibraryGroupManagementDialogState
       setState(() => _errorMessage = e.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _errorMessage = l10n.errorOperationFailed);
+      setState(() => _errorMessage = l10n?.errorOperationFailed ?? '操作失敗，請稍後再試');
     }
   }
 
   Future<void> _renameGroup(String oldName) async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final controller = TextEditingController(text: oldName);
     final newName = await showDialog<String>(
       context: context,
       builder: (dialogContext) {
-        final dialogL10n = AppLocalizations.of(dialogContext)!;
+        final dialogL10n = AppLocalizations.of(dialogContext);
         return AlertDialog(
-          title: Text(dialogL10n.libraryGroupRenameTitle),
+          title: Text(dialogL10n?.libraryGroupRenameTitle ?? '重新命名分類'),
           content: TextField(
             key: const Key('library_group_rename_field'),
             controller: controller,
@@ -90,13 +91,13 @@ class _LibraryGroupManagementDialogState
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(dialogL10n.cancel),
+              child: Text(dialogL10n?.cancel ?? '取消'),
             ),
             TextButton(
               key: const Key('library_group_rename_confirm'),
               onPressed: () =>
                   Navigator.of(dialogContext).pop(controller.text.trim()),
-              child: Text(dialogL10n.confirm),
+              child: Text(dialogL10n?.confirm ?? '確定'),
             ),
           ],
         );
@@ -112,7 +113,8 @@ class _LibraryGroupManagementDialogState
     if (isReservedGroupName(newName)) {
       if (!mounted) return;
       setState(
-        () => _errorMessage = l10n.libraryGroupReservedNameError(newName),
+        () => _errorMessage = l10n?.libraryGroupReservedNameError(newName) ??
+            '「$newName」是系統保留的分類名稱，請使用其他名稱',
       );
       return;
     }
@@ -126,33 +128,35 @@ class _LibraryGroupManagementDialogState
       setState(() => _errorMessage = e.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _errorMessage = l10n.errorOperationFailed);
+      setState(() => _errorMessage = l10n?.errorOperationFailed ?? '操作失敗，請稍後再試');
     }
   }
 
   Future<void> _confirmDeleteGroup(String name) async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
-        final dialogL10n = AppLocalizations.of(dialogContext)!;
+        final dialogL10n = AppLocalizations.of(dialogContext);
         return AlertDialog(
-          title: Text(dialogL10n.libraryGroupDeleteTitle),
+          title: Text(dialogL10n?.libraryGroupDeleteTitle ?? '刪除分類'),
           content: Text(
-            dialogL10n.libraryGroupDeleteConfirmMessage(
-              name,
-              dialogL10n.groupUncategorized,
-            ),
+            dialogL10n != null
+                ? dialogL10n.libraryGroupDeleteConfirmMessage(
+                    name,
+                    dialogL10n.groupUncategorized,
+                  )
+                : '確定要刪除分類「$name」嗎？該分類下的書籍將改列為「${BookGroup.uncategorized}」。',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(dialogL10n.cancel),
+              child: Text(dialogL10n?.cancel ?? '取消'),
             ),
             TextButton(
               key: const Key('library_group_delete_confirm'),
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(dialogL10n.libraryGroupDeleteButton),
+              child: Text(dialogL10n?.libraryGroupDeleteButton ?? '刪除'),
             ),
           ],
         );
@@ -169,15 +173,15 @@ class _LibraryGroupManagementDialogState
       setState(() => _errorMessage = e.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _errorMessage = l10n.errorOperationFailed);
+      setState(() => _errorMessage = l10n?.errorOperationFailed ?? '操作失敗，請稍後再試');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text(l10n.libraryGroupManageTitle),
+      title: Text(l10n?.libraryGroupManageTitle ?? '管理分類'),
       content: SizedBox(
         width: double.maxFinite,
         // 【診斷修正，見 tmp/epic-18/分類異常.jpg】分類數量較多時，下方的
@@ -213,7 +217,7 @@ class _LibraryGroupManagementDialogState
                     final isProtected = group.name == BookGroup.uncategorized;
                     return ListTile(
                       key: Key('library_group_manage_item_${group.name}'),
-                      title: Text(group.displayName(l10n)),
+                      title: Text(l10n != null ? group.displayName(l10n) : group.name),
                       trailing: isProtected
                           ? null
                           : Row(
@@ -245,7 +249,7 @@ class _LibraryGroupManagementDialogState
                 key: const Key('library_group_add_field'),
                 controller: _addController,
                 decoration: InputDecoration(
-                  labelText: l10n.libraryGroupAddFieldLabel,
+                  labelText: l10n?.libraryGroupAddFieldLabel ?? '新增分類名稱',
                 ),
                 onSubmitted: (_) => _addGroup(),
               ),
@@ -257,12 +261,12 @@ class _LibraryGroupManagementDialogState
         TextButton(
           key: const Key('library_group_close_button'),
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.close),
+          child: Text(l10n?.close ?? '關閉'),
         ),
         TextButton(
           key: const Key('library_group_add_button'),
           onPressed: _addGroup,
-          child: Text(l10n.libraryGroupAddButton),
+          child: Text(l10n?.libraryGroupAddButton ?? '新增'),
         ),
       ],
     );

@@ -151,10 +151,10 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
       });
     } catch (_) {
       if (!mounted) return;
-      final l10n = AppLocalizations.of(context)!;
+      final l10n = AppLocalizations.of(context);
       setState(() {
         _loading = false;
-        _errorText = l10n.errorNetworkConnection;
+        _errorText = l10n?.errorNetworkConnection ?? '載入失敗，請檢查網路連線';
       });
     }
   }
@@ -199,10 +199,11 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
     }
     if (hasDuplicate) {
       if (!mounted) return;
-      final l10n = AppLocalizations.of(context)!;
+      final l10n = AppLocalizations.of(context);
       final proceed = await showCloudDuplicateConfirmDialog(
         context,
-        l10n.cloudBrowserDuplicateConfirmMessage(entry.name),
+        l10n?.cloudBrowserDuplicateConfirmMessage(entry.name) ??
+            '「${entry.name}」之前匯入過了，仍要建立新的一份嗎？',
       );
       if (!proceed) return;
     }
@@ -248,11 +249,12 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
         ),
     ]);
     if (!mounted) return;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         key: const Key('google_drive_browser_queued_snackbar'),
-        content: Text(l10n.cloudBrowserDownloadQueued(selected.length)),
+        content: Text(l10n?.cloudBrowserDownloadQueued(selected.length) ??
+            '已加入下載佇列（${selected.length} 個檔案），可至「來源」畫面查看進度'),
       ),
     );
     setState(() => _selectedIds.clear());
@@ -266,21 +268,22 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
     return showDialog<bool>(
       context: context,
       builder: (dialogContext) {
-        final dialogL10n = AppLocalizations.of(dialogContext)!;
+        final dialogL10n = AppLocalizations.of(dialogContext);
         return AlertDialog(
           key: const Key('cloud_mobile_data_dialog'),
-          title: Text(dialogL10n.cloudBrowserMobileDataDialogTitle),
-          content: Text(dialogL10n.cloudBrowserMobileDataDialogMessage),
+          title: Text(dialogL10n?.cloudBrowserMobileDataDialogTitle ?? '行動數據下載提醒'),
+          content: Text(dialogL10n?.cloudBrowserMobileDataDialogMessage ??
+              '目前使用行動數據連線，勾選的檔案中有超過 20MB 的項目，下載可能產生流量費用，確定要繼續嗎？'),
           actions: [
             TextButton(
               key: const Key('cloud_mobile_data_dialog_cancel'),
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(dialogL10n.cancel),
+              child: Text(dialogL10n?.cancel ?? '取消'),
             ),
             TextButton(
               key: const Key('cloud_mobile_data_dialog_confirm'),
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(dialogL10n.cloudBrowserMobileDataDialogConfirm),
+              child: Text(dialogL10n?.cloudBrowserMobileDataDialogConfirm ?? '繼續下載'),
             ),
           ],
         );
@@ -290,7 +293,7 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title ?? 'Google Drive'),
@@ -298,7 +301,7 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
           IconButton(
             key: const Key('google_drive_browser_download_button'),
             icon: const Icon(Icons.download),
-            tooltip: l10n.cloudBrowserDownloadSelectedTooltip,
+            tooltip: l10n?.cloudBrowserDownloadSelectedTooltip ?? '下載已選取',
             onPressed: _selectedIds.isEmpty ? null : _startDownload,
           ),
         ],
@@ -314,9 +317,11 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  l10n.cloudBrowserReauthMessage(
-                    widget.title ?? l10n.cloudBrowserGenericProviderLabel,
-                  ),
+                  l10n != null
+                      ? l10n.cloudBrowserReauthMessage(
+                          widget.title ?? l10n.cloudBrowserGenericProviderLabel,
+                        )
+                      : '登入已過期，請至「設定」重新連結 ${widget.title ?? '雲端'} 帳號',
                   key: const Key('google_drive_browser_reauth_text'),
                   textAlign: TextAlign.center,
                 ),
@@ -334,14 +339,14 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
   }
 
   Widget _buildContent() {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              Text(l10n.cloudBrowserImportCategoryLabel),
+              Text(l10n?.cloudBrowserImportCategoryLabel ?? '匯入分類：'),
               const SizedBox(width: 8),
               DropdownButton<String>(
                 key: const Key('google_drive_browser_group_dropdown'),
@@ -349,7 +354,9 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
                 items: [
                   DropdownMenuItem(
                     value: BookGroup.uncategorized,
-                    child: Text(localizeGroupName(BookGroup.uncategorized, l10n)),
+                    child: Text(l10n != null
+                        ? localizeGroupName(BookGroup.uncategorized, l10n)
+                        : BookGroup.uncategorized),
                   ),
                   for (final group in _groups.where(
                     (g) => g.name != BookGroup.uncategorized,
@@ -371,7 +378,7 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              l10n.cloudBrowserTruncatedNotice,
+              l10n?.cloudBrowserTruncatedNotice ?? '這個資料夾檔案較多，僅顯示前 1000 筆',
               key: const Key('google_drive_browser_truncated_text'),
             ),
           ),

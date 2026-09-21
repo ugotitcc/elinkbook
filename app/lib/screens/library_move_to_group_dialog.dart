@@ -15,20 +15,20 @@ class LibraryMoveToGroupDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     return SimpleDialog(
-      title: Text(l10n.libraryMoveToGroupTitle),
+      title: Text(l10n?.libraryMoveToGroupTitle ?? '移動到分類'),
       children: [
         for (final group in groups)
           SimpleDialogOption(
             key: Key('library_move_to_group_option_${group.name}'),
             onPressed: () => Navigator.of(context).pop(group.name),
-            child: Text(group.displayName(l10n)),
+            child: Text(l10n != null ? group.displayName(l10n) : group.name),
           ),
         SimpleDialogOption(
           key: const Key('library_move_to_group_cancel'),
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.cancel),
+          child: Text(l10n?.cancel ?? '取消'),
         ),
       ],
     );
