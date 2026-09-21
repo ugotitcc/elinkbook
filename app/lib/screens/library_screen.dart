@@ -111,7 +111,7 @@ class _LibraryScreenState extends State<LibraryScreen>
     with WidgetsBindingObserver {
   final _preferences = LibraryPreferences();
   late final LibraryBookListController _bookListController;
-  late final LibraryBatchActions _batchActions;
+  late LibraryBatchActions _batchActions;
 
   String? _activeGroupFilter;
   LibraryViewMode _viewMode = LibraryViewMode.grid;
