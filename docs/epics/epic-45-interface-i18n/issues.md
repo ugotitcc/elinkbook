@@ -41,7 +41,7 @@
 
 ## Issue 1：語言選擇 UI（設定→外觀）
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 0（`AppLocale`／`AppLocalePreferences`／`MaterialApp` 接線）。
 
