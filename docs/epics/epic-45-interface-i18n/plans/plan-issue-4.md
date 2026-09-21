@@ -3177,7 +3177,7 @@ git commit -m "test(epic-45): reader_settings_sheet_test.dart 遷移至 pumpLoca
 
 **計劃範圍澄清（`bookTitle` 建構子預設值處理）**：`reader_screen.dart:140` 欄位宣告 `final String bookTitle;`、`reader_screen.dart:240` 建構子 `this.bookTitle = '未知書籍',`。因建構子預設值必須是編譯期常數，無法在此直接呼叫 `AppLocalizations.of(context)!`。已查證：全專案唯一正式生產呼叫端 `buildReaderScreen()`（`reader_screen_route.dart:34`）永遠明確傳入 `bookTitle: book.title`，這個預設值只有測試直接建構 `ReaderScreen(...)` 未帶 `bookTitle` 時才會命中（`reader_screen_test.dart:9594`）。本 Task 把欄位改為 `final String? bookTitle;`（建構子該參數移除預設值、允許 `null`），在 Task 19 的 `_displayBookTitle` getter（`build()` 執行期間才會被存取，非 `initState()`）內解析 `null` 為 `AppLocalizations.of(context)!.readerUnknownBookTitle`——完整實作見 Task 19，本 Task 只改欄位型別／建構子，`_displayBookTitle` getter 留給 Task 19 一併處理（避免同一段落被兩個 Task 重複touch）。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -3296,14 +3296,14 @@ git commit -m "test(epic-45): reader_settings_sheet_test.dart 遷移至 pumpLoca
   "readerDeletePresetFailedMessage": "刪除預設集失敗：{error}"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 查證 `reader_screen_route.dart` 不受影響**
+- [x] **Step 3: 查證 `reader_screen_route.dart` 不受影響**
 
 Run: `grep -n "bookTitle" app/lib/screens/reader_screen_route.dart`
 Expected: 僅一行 `bookTitle: book.title,`——`book.title`（`Book` model 欄位）本身是 `String`（非 nullable），賦值給改為 `String?` 的具名參數完全相容，無需修改此檔案。
 
-- [ ] **Step 4: 修改 `reader_screen.dart` 欄位與建構子**
+- [x] **Step 4: 修改 `reader_screen.dart` 欄位與建構子**
 
 新增 import（若尚未存在）：`import 'package:intl/intl.dart';`（供 Step 5 的 `DateFormat.yMd()` 使用；`app_localizations.dart` import 已由更早的 Issue 0 引入，確認存在）。
 
@@ -3318,7 +3318,7 @@ Expected: 僅一行 `bookTitle: book.title,`——`book.title`（`Book` model �
 ```
 （移除 `= '未知書籍'` 預設值。）
 
-- [ ] **Step 5: 修改版面預設集對話框批次（`_handleSaveAsPreset`／`_selectPresetToOverwrite`／`_confirmOverwrite`／`_confirmApplyToOtherBooks`／`_applyPrefsToTargets`／`_handleApplyFromBook`／`_handleDeletePreset`／`_confirmDeletePreset`）**
+- [x] **Step 5: 修改版面預設集對話框批次（`_handleSaveAsPreset`／`_selectPresetToOverwrite`／`_confirmOverwrite`／`_confirmApplyToOtherBooks`／`_applyPrefsToTargets`／`_handleApplyFromBook`／`_handleDeletePreset`／`_confirmDeletePreset`）**
 
 依序替換（`debugPrint(...)` 內的中文診斷文字**不**屬於本 Epic 範圍，維持原樣不動，只替換 `SnackBar`／`AlertDialog` 內使用者可見的文字）：
 
@@ -3523,17 +3523,17 @@ Expected: 僅一行 `bookTitle: book.title,`——`book.title`（`Book` model �
   }
 ```
 
-- [ ] **Step 6: 執行測試確認未觸及的測試檔仍通過（本 Task 不遷移測試，預期紅燈）**
+- [x] **Step 6: 執行測試確認未觸及的測試檔仍通過（本 Task 不遷移測試，預期紅燈）**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: 因 `bookTitle` 型別變動與新增 l10n 呼叫，既有測試會出現大量失敗（缺少 `localizationsDelegates` 的 `Null check operator` 與型別不符）——此為預期中的紅燈，留給 Task 19 完成剩餘字串抽取、Task 20 完成測試遷移後才會轉綠。**本 Step 僅確認 `flutter analyze` 乾淨、編譯無誤**，不要求測試通過。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/reader_screen.dart`
 Expected: No issues found!（`reader_screen_route.dart` 亦一併確認：`flutter analyze lib/screens/reader_screen_route.dart`）
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/lib/l10n/
