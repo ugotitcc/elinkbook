@@ -69,7 +69,7 @@
 
 ## Issue 2：系統保留分類名稱在地化契約
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 0。
 
@@ -169,7 +169,7 @@
 **背景：** 同 Issue 3 模式，範圍為未歸入 Issue 3-5 的其餘畫面（遠端書庫、雲端匯入、WiFi 傳書、來源導覽等）。
 
 **What to build（代表性範圍，實際檔案清單以認領當下重新 grep 盤點為準）：**
-- `remote_server_list_screen.dart`／`remote_server_form_screen.dart`／`remote_catalog_screen.dart`／`cloud_browser_screen.dart`（分類下拉選單已在 Issue 2 處理，本 Issue 處理其餘字串）／`wifi_transfer_screen.dart`／`sources_home_screen.dart`／`adaptive_shell_scaffold.dart`／`support/book_import_picker_helper.dart`（本檔案同時是 Issue 7 錯誤代碼映射函式的落點，若排程上與 Issue 7 重疊建議協調）。
+- `remote_server_list_screen.dart`／`remote_server_form_screen.dart`／`remote_catalog_screen.dart`／`wifi_transfer_screen.dart`／`sources_home_screen.dart`／`adaptive_shell_scaffold.dart`／`support/book_import_picker_helper.dart`（本檔案同時是 Issue 7 錯誤代碼映射函式的落點，若排程上與 Issue 7 重疊建議協調）。**`cloud_browser_screen.dart` 已在 Issue 2 完整處理（含分類下拉選單與其餘既有字串），本 Issue 不再處理**（`plan-issue-2.md` Global Constraints 記錄之範圍爭議，2026-09-21 使用者裁定 Issue 2 一次抽完）。
 - **ICU plural（`/receiving-code-review` review-issues I-2 修正）**：`book_import_picker_helper.dart:106-110`（`showImportResultSnackBar()` 的「已匯入 $importedCount 本」／「$skippedCount 本已存在，已跳過」）採用 ICU `plural` 語法，`importedCount`／`skippedCount` 各自獨立處理單複數（兩個計數彼此獨立，不可共用同一個 `plural` 判斷式）。
 
 **單元測試要求：** 同 Issue 3 模式，逐檔改用 `pumpLocalizedWidget()`，零回歸；`showImportResultSnackBar()` 驗證匯入本數／跳過本數各自為 0／1／多本時，英文版單複數皆正確。

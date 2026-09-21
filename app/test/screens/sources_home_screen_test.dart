@@ -24,6 +24,7 @@ import '../support/fake_fingerprint_computer.dart';
 import '../support/fake_remote_server_repository.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_thumbnail_cache.dart';
+import '../support/pump_localized_widget.dart';
 
 void main() {
   const filePickerChannel = MethodChannel(
@@ -143,18 +144,17 @@ void main() {
 
   testWidgets('依賴齊全時點擊 Google Drive 項目導覽至 CloudBrowserScreen', (tester) async {
     final fingerprintComputer = FakeFingerprintComputer();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SourcesHomeScreen(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
-          cloudAccountDependencies: LibraryCloudAccountDependencies(
-            googleDriveStorageClient: FakeCloudStorageClient(),
-          ),
-          computeFingerprint: fingerprintComputer.call,
-          downloadQueueController: DownloadQueueController(
-            onDuplicateConfirm: (_) async => false,
-          ),
+    await pumpLocalizedWidget(
+      tester,
+      SourcesHomeScreen(
+        repository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        cloudAccountDependencies: LibraryCloudAccountDependencies(
+          googleDriveStorageClient: FakeCloudStorageClient(),
+        ),
+        computeFingerprint: fingerprintComputer.call,
+        downloadQueueController: DownloadQueueController(
+          onDuplicateConfirm: (_) async => false,
         ),
       ),
     );
@@ -168,18 +168,17 @@ void main() {
 
   testWidgets('依賴齊全時點擊 OneDrive 項目導覽至 CloudBrowserScreen', (tester) async {
     final fingerprintComputer = FakeFingerprintComputer();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SourcesHomeScreen(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
-          cloudAccountDependencies: LibraryCloudAccountDependencies(
-            oneDriveStorageClient: FakeCloudStorageClient(),
-          ),
-          computeFingerprint: fingerprintComputer.call,
-          downloadQueueController: DownloadQueueController(
-            onDuplicateConfirm: (_) async => false,
-          ),
+    await pumpLocalizedWidget(
+      tester,
+      SourcesHomeScreen(
+        repository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        cloudAccountDependencies: LibraryCloudAccountDependencies(
+          oneDriveStorageClient: FakeCloudStorageClient(),
+        ),
+        computeFingerprint: fingerprintComputer.call,
+        downloadQueueController: DownloadQueueController(
+          onDuplicateConfirm: (_) async => false,
         ),
       ),
     );

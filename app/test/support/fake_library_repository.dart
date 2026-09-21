@@ -63,6 +63,13 @@ class FakeLibraryRepository implements LibraryRepository {
   /// 呼叫紀錄慣例）。
   final List<String> deleteBookCalls = [];
 
+  /// 記錄每次 [upsertGroup] 呼叫的 name，供測試驗證「前端攔截保留名稱後
+  /// 未呼叫 repository」（epic-45-interface-i18n Issue 2）。
+  final List<String> upsertGroupCalls = [];
+
+  /// 記錄每次 [renameGroup] 呼叫的 (oldName, newName)，理由同上。
+  final List<(String oldName, String newName)> renameGroupCalls = [];
+
   @override
   Future<void> deleteBook(String id) async {
     deleteBookCalls.add(id);
@@ -105,11 +112,13 @@ class FakeLibraryRepository implements LibraryRepository {
 
   @override
   Future<void> upsertGroup(String name) async {
+    upsertGroupCalls.add(name);
     _groups.add(name);
   }
 
   @override
   Future<void> renameGroup(String oldName, String newName) async {
+    renameGroupCalls.add((oldName, newName));
     if (oldName == BookGroup.uncategorized) {
       throw LibraryRepositoryException(
           '系統保留群組「${BookGroup.uncategorized}」不可重新命名');

@@ -33,4 +33,93 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsLanguageEn => 'English';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get confirm => 'OK';
+
+  @override
+  String get errorOperationFailed =>
+      'Operation failed. Please try again later.';
+
+  @override
+  String get libraryGroupManageTitle => 'Manage Categories';
+
+  @override
+  String get libraryGroupAddFieldLabel => 'New category name';
+
+  @override
+  String get libraryGroupAddButton => 'Add';
+
+  @override
+  String get libraryGroupRenameTitle => 'Rename Category';
+
+  @override
+  String get libraryGroupDeleteTitle => 'Delete Category';
+
+  @override
+  String libraryGroupDeleteConfirmMessage(String name, String uncategorized) {
+    return 'Delete category \"$name\"? Books in this category will be moved to \"$uncategorized\".';
+  }
+
+  @override
+  String get libraryGroupDeleteButton => 'Delete';
+
+  @override
+  String libraryGroupReservedNameError(String name) {
+    return '\"$name\" is a reserved category name. Please use a different name.';
+  }
+
+  @override
+  String get libraryMoveToGroupTitle => 'Move to Category';
+
+  @override
+  String get errorNetworkConnection =>
+      'Failed to load. Please check your network connection.';
+
+  @override
+  String cloudBrowserDuplicateConfirmMessage(String name) {
+    return '\"$name\" was already imported before. Create a new copy anyway?';
+  }
+
+  @override
+  String cloudBrowserDownloadQueued(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files',
+      one: '1 file',
+    );
+    return 'Added to download queue ($_temp0), check progress in the Sources screen';
+  }
+
+  @override
+  String get cloudBrowserMobileDataDialogTitle => 'Mobile Data Download Notice';
+
+  @override
+  String get cloudBrowserMobileDataDialogMessage =>
+      'You\'re currently on a mobile data connection, and some selected files are over 20MB. Downloading may incur data charges. Continue anyway?';
+
+  @override
+  String get cloudBrowserMobileDataDialogConfirm => 'Continue Download';
+
+  @override
+  String get cloudBrowserDownloadSelectedTooltip => 'Download Selected';
+
+  @override
+  String cloudBrowserReauthMessage(String provider) {
+    return 'Login expired. Please reconnect your $provider account in Settings.';
+  }
+
+  @override
+  String get cloudBrowserGenericProviderLabel => 'cloud';
+
+  @override
+  String get cloudBrowserImportCategoryLabel => 'Import to category:';
+
+  @override
+  String get cloudBrowserTruncatedNotice =>
+      'This folder has many files; only the first 1000 are shown.';
 }

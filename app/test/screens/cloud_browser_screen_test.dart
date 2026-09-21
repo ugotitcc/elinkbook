@@ -10,8 +10,6 @@ import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/widgets/book_cover.dart';
 import 'package:elinkbook/screens/cloud_browser_screen.dart';
-import 'package:elinkbook/theme/app_theme.dart';
-import 'package:elinkbook/theme/app_theme_data.dart';
 
 import 'package:elinkbook/library/models/book.dart';
 
@@ -20,6 +18,7 @@ import '../support/fake_cloud_storage_client.dart';
 import '../support/fake_fingerprint_computer.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_path_provider_platform.dart';
+import '../support/pump_localized_widget.dart';
 
 void main() {
   const folderEntry = CloudFileEntry(
@@ -96,27 +95,29 @@ void main() {
     FakeFingerprintComputer? fingerprintComputer,
     Future<bool> Function()? isMobileDataConnection,
     String? folderId,
+    String? title,
     DownloadQueueController? downloadQueueController,
+    Locale locale = const Locale('zh', 'TW'),
   }) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: CloudBrowserScreen(
-          client: client,
-          libraryRepository: libraryRepository ?? FakeLibraryRepository(),
-          importService: importService ?? FakeBookImportService(),
-          source: BookSource.googleDrive,
-          computeFingerprint:
-              (fingerprintComputer ?? FakeFingerprintComputer()).call,
-          isMobileDataConnection: isMobileDataConnection,
-          downloadQueueController:
-              downloadQueueController ??
-              DownloadQueueController(
-                onDuplicateConfirm: (_) async => false,
-              ),
-          folderId: folderId,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      CloudBrowserScreen(
+        client: client,
+        libraryRepository: libraryRepository ?? FakeLibraryRepository(),
+        importService: importService ?? FakeBookImportService(),
+        source: BookSource.googleDrive,
+        computeFingerprint:
+            (fingerprintComputer ?? FakeFingerprintComputer()).call,
+        isMobileDataConnection: isMobileDataConnection,
+        downloadQueueController:
+            downloadQueueController ??
+            DownloadQueueController(
+              onDuplicateConfirm: (_) async => false,
+            ),
+        folderId: folderId,
+        title: title,
       ),
+      locale: locale,
     );
     await tester.pumpAndSettle();
   }
@@ -367,6 +368,73 @@ void main() {
 
       expect(importService.lastImportCall?.source, BookSource.googleDrive);
     });
+
+    testWidgets(
+      '英文介面下點擊轉譯後的「Uncategorized」選項下載，底層仍以原始 Sentinel 匯入（folderName 為 null，不受顯示轉譯污染，/receiving-code-review Important #2 修正）',
+      (tester) async {
+        final libraryRepository = FakeLibraryRepository();
+        await libraryRepository.upsertGroup('小說');
+        final importService = FakeBookImportService();
+        final client = FakeCloudStorageClient(
+          folderContents: {
+            null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+          },
+          downloadContents: {
+            'file-1': [1, 2, 3],
+          },
+        );
+        await pumpScreen(
+          tester,
+          client: client,
+          libraryRepository: libraryRepository,
+          importService: importService,
+          locale: const Locale('en'),
+        );
+
+        await tester.tap(
+          find.byKey(const Key('google_drive_browser_entry_file-1')),
+        );
+        await tester.pump();
+
+        // 即使不主動切換分類（預設即為「未分類」），仍實際打開下拉選單並
+        // 點擊轉譯後的顯示文字「Uncategorized」，驗證點擊轉譯文字選項本身
+        // 不會把底層值污染成顯示字串。
+        await tester.tap(
+          find.byKey(const Key('google_drive_browser_group_dropdown')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Uncategorized').last);
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.byKey(const Key('google_drive_browser_download_button')),
+        );
+        await tester.pump();
+
+        expect(
+          find.byKey(const Key('google_drive_browser_queued_snackbar')),
+          findsOneWidget,
+        );
+
+        for (var i = 0; i < 30; i++) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 50)),
+          );
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+
+        expect(importService.lastImportCall, isNotNull);
+        expect(
+          importService.lastImportCall!.folderName,
+          isNull,
+          reason:
+              '選取「未分類」（無論顯示為正體中文／簡體中文／英文）時，folderName '
+              '必須是 null（BookImportService 對應底層 Sentinel 的既定契約），'
+              '不可是任何語言的顯示字串',
+        );
+      },
+    );
   });
 
   group('選檔前置重複偵測（Layer 1）', () {
@@ -649,11 +717,195 @@ void main() {
       expect(importService.lastImportCall, isNull);
     });
   });
+
+  testWidgets('分類下拉選單「未分類」選項依目前介面語言正確轉譯，使用者自訂分類原樣顯示', (tester) async {
+    final libraryRepository = FakeLibraryRepository();
+    await libraryRepository.upsertGroup('小說');
+    final client = FakeCloudStorageClient(
+      folderContents: {
+        null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+      },
+    );
+    await pumpScreen(
+      tester,
+      client: client,
+      libraryRepository: libraryRepository,
+      locale: const Locale('en'),
+    );
+
+    await tester.tap(
+      find.byKey(const Key('google_drive_browser_group_dropdown')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Uncategorized').last, findsOneWidget);
+    expect(find.text('小說').last, findsOneWidget);
+    expect(find.text('Import to category:'), findsOneWidget);
+  });
+
+  testWidgets('英文介面下，資料夾檔案數超過 1000 筆時提示文字正確以英文渲染', (tester) async {
+    final client = FakeCloudStorageClient(
+      folderContents: {
+        null: const CloudFolderListing(
+          entries: [fileEntryNoThumbnail],
+          truncated: true,
+        ),
+      },
+    );
+    await pumpScreen(tester, client: client, locale: const Locale('en'));
+
+    expect(
+      find.text('This folder has many files; only the first 1000 are shown.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+      '英文介面下，access token 過期時重新連結訊息正確代入品牌名並以英文渲染'
+      '（/receiving-code-review I-2 修正：明確傳入 title，原測試未注入 '
+      'title 時 widget.title 恆為 null，斷言與實作回退邏輯不符）',
+      (tester) async {
+    final client = _ThrowingCloudStorageClient();
+    await pumpScreen(
+      tester,
+      client: client,
+      title: 'Google Drive',
+      locale: const Locale('en'),
+    );
+
+    expect(
+      find.text('Login expired. Please reconnect your Google Drive account '
+          'in Settings.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+      '英文介面下，未提供 title 時重新連結訊息正確回退為通用「cloud」標籤'
+      '（/receiving-code-review I-2 修正一併補齊的回退路徑覆蓋）',
+      (tester) async {
+    final client = _ThrowingCloudStorageClient();
+    await pumpScreen(tester, client: client, locale: const Locale('en'));
+
+    expect(
+      find.text('Login expired. Please reconnect your cloud account '
+          'in Settings.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('英文介面下，一般載入失敗訊息正確以英文渲染', (tester) async {
+    final client = _NetworkErrorCloudStorageClient();
+    await pumpScreen(tester, client: client, locale: const Locale('en'));
+
+    expect(
+      find.text('Failed to load. Please check your network connection.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('英文介面下，行動數據對話框標題/內容/按鈕正確以英文渲染', (tester) async {
+    final client = FakeCloudStorageClient(
+      folderContents: {
+        null: const CloudFolderListing(entries: [largeFileEntry]),
+      },
+    );
+    await pumpScreen(
+      tester,
+      client: client,
+      isMobileDataConnection: () async => true,
+      locale: const Locale('en'),
+    );
+
+    await tester.tap(
+      find.byKey(const Key('google_drive_browser_entry_file-large')),
+    );
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const Key('google_drive_browser_download_button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mobile Data Download Notice'), findsOneWidget);
+    expect(
+      find.text(
+        "You're currently on a mobile data connection, and some selected "
+        'files are over 20MB. Downloading may incur data charges. Continue '
+        'anyway?',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Continue Download'), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+  });
+
+  testWidgets(
+      '下載加入佇列（1 個檔案）SnackBar 依 ICU plural 正確以英文單數渲染 (1 file)'
+      '（/receiving-code-review M-3 修正：拆分自原本單一測試內連續 pump 兩個'
+      '獨立 client 的寫法，避免前次 pump 殘留的 SnackBar 排程互相干擾）',
+      (tester) async {
+    final client = FakeCloudStorageClient(
+      folderContents: {
+        null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+      },
+      downloadContents: {'file-1': [1, 2, 3]},
+    );
+    await pumpScreen(tester, client: client, locale: const Locale('en'));
+    await tester.tap(
+      find.byKey(const Key('google_drive_browser_entry_file-1')),
+    );
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const Key('google_drive_browser_download_button')),
+    );
+    await tester.pump();
+
+    expect(find.text('Added to download queue (1 file), check progress '
+        'in the Sources screen'), findsOneWidget);
+  });
+
+  testWidgets('下載加入佇列（多個檔案）SnackBar 依 ICU plural 正確以英文複數渲染 (2 files)',
+      (tester) async {
+    final client = FakeCloudStorageClient(
+      folderContents: {
+        null: const CloudFolderListing(
+          entries: [fileEntryNoThumbnail, fileEntryWithThumbnail],
+        ),
+      },
+      downloadContents: {
+        'file-1': [1, 2, 3],
+        'file-2': [4, 5, 6],
+      },
+    )..thumbnailBytes = validPngBytes;
+    await pumpScreen(tester, client: client, locale: const Locale('en'));
+    await tester.tap(
+      find.byKey(const Key('google_drive_browser_entry_file-1')),
+    );
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const Key('google_drive_browser_entry_file-2')),
+    );
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const Key('google_drive_browser_download_button')),
+    );
+    await tester.pump();
+
+    expect(find.text('Added to download queue (2 files), check progress '
+        'in the Sources screen'), findsOneWidget);
+  });
 }
 
 class _ThrowingCloudStorageClient extends FakeCloudStorageClient {
   @override
   Future<CloudFolderListing> listFolder({String? folderId}) async {
     throw CloudAuthRequiredException();
+  }
+}
+
+class _NetworkErrorCloudStorageClient extends FakeCloudStorageClient {
+  @override
+  Future<CloudFolderListing> listFolder({String? folderId}) async {
+    throw Exception('network down');
   }
 }

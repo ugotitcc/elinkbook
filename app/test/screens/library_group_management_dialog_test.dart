@@ -6,6 +6,7 @@ import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
 import '../support/fake_library_repository.dart';
+import '../support/pump_localized_widget.dart';
 
 void main() {
   testWidgets(
@@ -18,21 +19,20 @@ void main() {
     }
     final groups = await repository.listGroups();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: ElevatedButton(
-                onPressed: () => showDialog<void>(
-                  context: context,
-                  builder: (_) => LibraryGroupManagementDialog(
-                    repository: repository,
-                    initialGroups: groups,
-                  ),
+    await pumpLocalizedWidget(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => LibraryGroupManagementDialog(
+                  repository: repository,
+                  initialGroups: groups,
                 ),
-                child: const Text('open'),
               ),
+              child: const Text('open'),
             ),
           ),
         ),
@@ -66,26 +66,25 @@ void main() {
     final groups = await repository.listGroups();
     final theme = resolveThemeData(theme: AppTheme.light, isEinkMode: false);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: theme,
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: ElevatedButton(
-                onPressed: () => showDialog<void>(
-                  context: context,
-                  builder: (_) => LibraryGroupManagementDialog(
-                    repository: repository,
-                    initialGroups: groups,
-                  ),
+    await pumpLocalizedWidget(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => LibraryGroupManagementDialog(
+                  repository: repository,
+                  initialGroups: groups,
                 ),
-                child: const Text('open'),
               ),
+              child: const Text('open'),
             ),
           ),
         ),
       ),
+      theme: AppTheme.light,
     );
 
     await tester.tap(find.text('open'));
@@ -108,21 +107,20 @@ void main() {
     await repository.upsertGroup('A');
     final groups = await repository.listGroups();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: ElevatedButton(
-                onPressed: () => showDialog<void>(
-                  context: context,
-                  builder: (_) => LibraryGroupManagementDialog(
-                    repository: repository,
-                    initialGroups: groups,
-                  ),
+    await pumpLocalizedWidget(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => LibraryGroupManagementDialog(
+                  repository: repository,
+                  initialGroups: groups,
                 ),
-                child: const Text('open'),
               ),
+              child: const Text('open'),
             ),
           ),
         ),
@@ -141,5 +139,173 @@ void main() {
 
     expect(addButtonX, greaterThan(closeButtonX),
         reason: '「新增」應排在「關閉」右側，即畫面最右邊');
+  });
+
+  testWidgets(
+      '新增分類時輸入三語言任一保留字，前端攔截、不呼叫 repository.upsertGroup()、顯示錯誤訊息',
+      (tester) async {
+    final repository = FakeLibraryRepository();
+    final groups = await repository.listGroups();
+
+    await pumpLocalizedWidget(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => LibraryGroupManagementDialog(
+                  repository: repository,
+                  initialGroups: groups,
+                ),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    for (final reserved in ['未分類', '未分类', 'Uncategorized']) {
+      await tester.enterText(
+        find.byKey(const Key('library_group_add_field')),
+        reserved,
+      );
+      await tester.tap(find.byKey(const Key('library_group_add_button')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('「$reserved」是系統保留的分類名稱，請使用其他名稱'),
+        findsOneWidget,
+        reason: '「$reserved」應被前端攔截並顯示錯誤',
+      );
+    }
+
+    expect(repository.upsertGroupCalls, isEmpty);
+  });
+
+  testWidgets(
+      '重新命名分類時輸入保留字，前端攔截、不呼叫 repository.renameGroup()、顯示錯誤訊息',
+      (tester) async {
+    final repository = FakeLibraryRepository();
+    await repository.upsertGroup('奇幻');
+    final groups = await repository.listGroups();
+
+    await pumpLocalizedWidget(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => LibraryGroupManagementDialog(
+                  repository: repository,
+                  initialGroups: groups,
+                ),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_rename_button_奇幻')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('library_group_rename_field')),
+      '未分类',
+    );
+    await tester.tap(find.byKey(const Key('library_group_rename_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('「未分类」是系統保留的分類名稱，請使用其他名稱'),
+      findsOneWidget,
+    );
+    expect(repository.renameGroupCalls, isEmpty);
+  });
+
+  testWidgets('分類清單中「未分類」依目前介面語言正確轉譯，使用者自訂分類原樣顯示',
+      (tester) async {
+    final repository = FakeLibraryRepository();
+    await repository.upsertGroup('Fantasy');
+    final groups = await repository.listGroups();
+
+    await pumpLocalizedWidget(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => LibraryGroupManagementDialog(
+                  repository: repository,
+                  initialGroups: groups,
+                ),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+      locale: const Locale('zh', 'CN'),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('未分类'), findsOneWidget);
+    expect(find.text('Fantasy'), findsOneWidget);
+    expect(find.text('未分類'), findsNothing, reason: '不應顯示未轉譯的正體中文原字面值');
+  });
+
+  testWidgets('刪除分類確認訊息中的目的地分類名稱依目前介面語言正確轉譯', (tester) async {
+    final repository = FakeLibraryRepository();
+    await repository.upsertGroup('奇幻');
+    final groups = await repository.listGroups();
+
+    await pumpLocalizedWidget(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => LibraryGroupManagementDialog(
+                  repository: repository,
+                  initialGroups: groups,
+                ),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+      locale: const Locale('en'),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_delete_button_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Delete category "奇幻"? Books in this category will be '
+          'moved to "Uncategorized".'),
+      findsOneWidget,
+    );
   });
 }

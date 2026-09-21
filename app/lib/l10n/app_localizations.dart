@@ -147,6 +147,144 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'English'**
   String get settingsLanguageEn;
+
+  /// 通用「取消」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'取消'**
+  String get cancel;
+
+  /// 通用「確定」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定'**
+  String get confirm;
+
+  /// 通用操作失敗的 catch-all 錯誤訊息（非例外物件原始文字，見 spec.md §6 執行期例外訊息在地化慣例）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'操作失敗，請稍後再試'**
+  String get errorOperationFailed;
+
+  /// 分類管理對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'管理分類'**
+  String get libraryGroupManageTitle;
+
+  /// 分類管理對話框新增分類輸入框的 labelText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'新增分類名稱'**
+  String get libraryGroupAddFieldLabel;
+
+  /// 分類管理對話框「新增」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'新增'**
+  String get libraryGroupAddButton;
+
+  /// 重新命名分類子對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重新命名分類'**
+  String get libraryGroupRenameTitle;
+
+  /// 刪除分類確認子對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除分類'**
+  String get libraryGroupDeleteTitle;
+
+  /// 刪除分類確認訊息，{name} 為被刪除的分類名稱（使用者自訂，不翻譯），{uncategorized} 為 groupUncategorized 的已轉譯結果
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定要刪除分類「{name}」嗎？該分類下的書籍將改列為「{uncategorized}」。'**
+  String libraryGroupDeleteConfirmMessage(String name, String uncategorized);
+
+  /// 刪除分類確認子對話框的「刪除」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get libraryGroupDeleteButton;
+
+  /// 新增/重新命名分類時，輸入名稱命中三語言任一保留字時顯示的錯誤訊息，{name} 為使用者實際輸入的名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'「{name}」是系統保留的分類名稱，請使用其他名稱'**
+  String libraryGroupReservedNameError(String name);
+
+  /// 「移動到分類」目的地選擇對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'移動到分類'**
+  String get libraryMoveToGroupTitle;
+
+  /// 一般網路/連線失敗的錯誤訊息（spec.md §6 執行期例外訊息在地化慣例）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'載入失敗，請檢查網路連線'**
+  String get errorNetworkConnection;
+
+  /// 選檔前置重複偵測（Layer 1）命中既有書籍時的確認訊息，{name} 為雲端檔案名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'「{name}」之前匯入過了，仍要建立新的一份嗎？'**
+  String cloudBrowserDuplicateConfirmMessage(String name);
+
+  /// 下載加入佇列後的 SnackBar 提示，{count} 為選取的檔案數，需正確處理英文單複數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已加入下載佇列（{count, plural, =1{1 個檔案} other{{count} 個檔案}}），可至「來源」畫面查看進度'**
+  String cloudBrowserDownloadQueued(int count);
+
+  /// 行動數據流量警示對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'行動數據下載提醒'**
+  String get cloudBrowserMobileDataDialogTitle;
+
+  /// 行動數據流量警示對話框內容
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'目前使用行動數據連線，勾選的檔案中有超過 20MB 的項目，下載可能產生流量費用，確定要繼續嗎？'**
+  String get cloudBrowserMobileDataDialogMessage;
+
+  /// 行動數據流量警示對話框的確認按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'繼續下載'**
+  String get cloudBrowserMobileDataDialogConfirm;
+
+  /// AppBar 下載按鈕的無障礙提示文字（tooltip）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下載已選取'**
+  String get cloudBrowserDownloadSelectedTooltip;
+
+  /// 雲端帳號授權過期時的提示訊息，{provider} 為服務商品牌名（如 Google Drive／OneDrive，不翻譯）或找不到品牌名時的通用「雲端」標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'登入已過期，請至「設定」重新連結 {provider} 帳號'**
+  String cloudBrowserReauthMessage(String provider);
+
+  /// cloudBrowserReauthMessage 在 widget.title 為 null 時的通用服務商標籤 fallback
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'雲端'**
+  String get cloudBrowserGenericProviderLabel;
+
+  /// 雲端瀏覽畫面「匯入分類」下拉選單前的標籤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'匯入分類：'**
+  String get cloudBrowserImportCategoryLabel;
+
+  /// 資料夾檔案數超過清單上限（1000 筆）時的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'這個資料夾檔案較多，僅顯示前 1000 筆'**
+  String get cloudBrowserTruncatedNotice;
 }
 
 class _AppLocalizationsDelegate
