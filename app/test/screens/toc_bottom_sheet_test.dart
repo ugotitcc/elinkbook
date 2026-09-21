@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_toc_item.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/toc_entry.dart';
 import 'package:elinkbook/screens/toc_bottom_sheet.dart';
@@ -31,6 +32,9 @@ void main() {
   testWidgets('多層級結構正確渲染，當前章節路徑預設展開、其餘章節預設收起',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           entries: entries,
@@ -58,6 +62,9 @@ void main() {
 
   testWidgets('當前章節項目標題以粗體高亮顯示，其餘項目不受影響', (tester) async {
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           entries: entries,
@@ -79,6 +86,9 @@ void main() {
       (tester) async {
     BookTocItem? selected;
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           entries: entries,
@@ -99,6 +109,9 @@ void main() {
       (tester) async {
     var selectedCount = 0;
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           entries: entries,
@@ -122,6 +135,9 @@ void main() {
       'EPUB／TXT／MD 目錄項目不顯示頁碼標籤（僅標題），epic-26-architecture-hardening '
       'Issue 5：EpubPageEstimator／totalCharacterCount 估算管線已移除', (tester) async {
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           entries: entries,
@@ -159,6 +175,9 @@ void main() {
       const TocEntry(title: '电脑', locatorJson: 'l1', progression: 0.0),
     ];
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           entries: tocEntries,
@@ -180,6 +199,9 @@ void main() {
       const TocEntry(title: '电脑', locatorJson: 'l1', progression: 0.0),
     ];
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           entries: tocEntries,
@@ -199,6 +221,9 @@ Future<void> _pumpModalSheet(
   List<TocEntry> entries,
 ) async {
   await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: Builder(
         builder: (context) => ElevatedButton(

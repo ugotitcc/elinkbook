@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/dual_page_direction.dart';
 import '../reader/dual_page_mode.dart';
@@ -101,26 +102,45 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    const dualPageOptions = [
+    final l10n = AppLocalizations.of(context)!;
+    final dualPageOptions = [
       (
         DualPageMode.auto,
         'auto',
         Icons.stay_current_landscape,
-        '自動（橫向雙頁）',
-        '自動',
+        l10n.readerDualPageAutoTooltip,
+        l10n.readerDualPageAutoLabel,
       ),
-      (DualPageMode.always, 'always', Icons.view_column, '永遠雙頁', '雙頁'),
-      (DualPageMode.never, 'never', Icons.crop_portrait, '永遠單頁', '單頁'),
+      (
+        DualPageMode.always,
+        'always',
+        Icons.view_column,
+        l10n.readerDualPageAlwaysTooltip,
+        l10n.readerDualPageAlwaysLabel,
+      ),
+      (
+        DualPageMode.never,
+        'never',
+        Icons.crop_portrait,
+        l10n.readerDualPageNeverTooltip,
+        l10n.readerDualPageNeverLabel,
+      ),
     ];
-    const directionOptions = [
+    final directionOptions = [
       (
         DualPageDirection.ltr,
         'ltr',
         Icons.arrow_forward,
-        '左到右（LTR，美漫慣例）',
-        '左翻',
+        l10n.readerDualPageDirectionLtrTooltip,
+        l10n.readerDualPageDirectionLtrLabel,
       ),
-      (DualPageDirection.rtl, 'rtl', Icons.arrow_back, '右到左（RTL，日漫慣例）', '右翻'),
+      (
+        DualPageDirection.rtl,
+        'rtl',
+        Icons.arrow_back,
+        l10n.readerDualPageDirectionRtlTooltip,
+        l10n.readerDualPageDirectionRtlLabel,
+      ),
     ];
     return SafeArea(
       child: Padding(
@@ -131,10 +151,10 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    '⚙️ 漫畫版面設定',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    l10n.readerFxlSettingsTitle,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 IconButton(
@@ -145,7 +165,8 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               ],
             ),
             const SizedBox(height: 16),
-            const Text('雙頁模式', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(l10n.readerDualPageModeLabel,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             EBOptionChipGroup<DualPageMode>(
               items: dualPageOptions.map((option) {
@@ -166,7 +187,8 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               }),
             ),
             const SizedBox(height: 16),
-            const Text('翻頁方向', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(l10n.readerPageDirectionLabel,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             EBOptionChipGroup<DualPageDirection>(
               items: directionOptions.map((option) {
@@ -188,37 +210,40 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
             ),
             const SizedBox(height: 16),
             if (widget.showTextConversion) ...[
-              const Text('簡繁轉換覆寫', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(l10n.readerTextConversionOverrideLabel,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               EBOptionChipGroup<TextConversionMode?>(
-                items: const [
+                items: [
                   EBOptionChipItem<TextConversionMode?>(
-                    itemKey: Key('fxl_settings_text_conversion_global'),
+                    itemKey: const Key('fxl_settings_text_conversion_global'),
                     value: null,
                     icon: Icons.tune,
-                    label: '全域',
-                    tooltip: '使用全域預設',
+                    label: l10n.readerGlobalLabel,
+                    tooltip: l10n.readerUseGlobalDefaultTooltip,
                   ),
                   EBOptionChipItem<TextConversionMode?>(
-                    itemKey: Key('fxl_settings_text_conversion_original'),
+                    itemKey: const Key('fxl_settings_text_conversion_original'),
                     value: TextConversionMode.original,
                     icon: Icons.article_outlined,
-                    label: '原文',
-                    tooltip: '原文',
+                    label: l10n.readerTextConversionOriginalLabel,
+                    tooltip: l10n.readerTextConversionOriginalLabel,
                   ),
                   EBOptionChipItem<TextConversionMode?>(
-                    itemKey: Key('fxl_settings_text_conversion_traditional'),
+                    itemKey: const Key('fxl_settings_text_conversion_traditional'),
                     value: TextConversionMode.toTraditional,
-                    iconWidget: TextConversionIcon(mode: TextConversionMode.toTraditional),
-                    label: '繁體',
-                    tooltip: '轉換為繁體',
+                    iconWidget:
+                        const TextConversionIcon(mode: TextConversionMode.toTraditional),
+                    label: l10n.readerTextConversionTraditionalLabel,
+                    tooltip: l10n.readerTextConversionTraditionalTooltip,
                   ),
                   EBOptionChipItem<TextConversionMode?>(
-                    itemKey: Key('fxl_settings_text_conversion_simplified'),
+                    itemKey: const Key('fxl_settings_text_conversion_simplified'),
                     value: TextConversionMode.toSimplified,
-                    iconWidget: TextConversionIcon(mode: TextConversionMode.toSimplified),
-                    label: '簡體',
-                    tooltip: '轉換為簡體',
+                    iconWidget:
+                        const TextConversionIcon(mode: TextConversionMode.toSimplified),
+                    label: l10n.readerTextConversionSimplifiedLabel,
+                    tooltip: l10n.readerTextConversionSimplifiedTooltip,
                   ),
                 ],
                 groupValue: _textConversionOverride,
@@ -234,7 +259,8 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               padding: EdgeInsets.zero,
               child: SwitchListTile(
                 key: const Key('fxl_settings_fullscreen'),
-                title: const Text('全螢幕模式', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(l10n.readerFullscreenModeLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 value: _fullscreen,
                 onChanged: (v) => setState(() {
                   _fullscreen = v;
@@ -246,7 +272,8 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               padding: EdgeInsets.zero,
               child: SwitchListTile(
                 key: const Key('fxl_settings_show_header'),
-                title: const Text('顯示頁首', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(l10n.readerShowHeaderLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 value: _showHeader,
                 onChanged: (v) => setState(() {
                   _showHeader = v;
@@ -258,7 +285,8 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               padding: EdgeInsets.zero,
               child: SwitchListTile(
                 key: const Key('fxl_settings_show_footer'),
-                title: const Text('顯示頁尾', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(l10n.readerShowFooterLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 value: _showFooter,
                 onChanged: (v) => setState(() {
                   _showFooter = v;

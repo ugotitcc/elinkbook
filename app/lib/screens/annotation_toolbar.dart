@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 import '../reader/highlight_style.dart';
 import '../theme/elink_tokens.dart';
 
@@ -52,6 +54,7 @@ class AnnotationToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final tokens = Theme.of(context).extension<ElinkTokens>()!;
     final colorScheme = Theme.of(context).colorScheme;
     return Material(
@@ -92,13 +95,13 @@ class AnnotationToolbar extends StatelessWidget {
                 IconButton(
                   key: const Key('annotation_toolbar_underline'),
                   icon: const Icon(Icons.format_underline),
-                  tooltip: '底線',
+                  tooltip: l10n.readerAnnotationUnderlineTooltip,
                   onPressed: () => onStyleSelected(HighlightStyle.underline),
                 ),
                 IconButton(
                   key: const Key('annotation_toolbar_close'),
                   icon: const Icon(Icons.close),
-                  tooltip: '關閉',
+                  tooltip: l10n.close,
                   onPressed: onClosePressed,
                 ),
               ],
@@ -109,13 +112,13 @@ class AnnotationToolbar extends StatelessWidget {
                 IconButton(
                   key: const Key('annotation_toolbar_copy'),
                   icon: const Icon(Icons.copy),
-                  tooltip: '複製',
+                  tooltip: l10n.readerAnnotationCopyTooltip,
                   onPressed: onCopyPressed,
                 ),
                 IconButton(
                   key: const Key('annotation_toolbar_note'),
                   icon: const Icon(Icons.edit_note),
-                  tooltip: hasExistingNote ? '編輯備註' : '新增備註',
+                  tooltip: hasExistingNote ? l10n.readerAnnotationEditNoteTooltip : l10n.readerAnnotationAddNoteTooltip,
                   onPressed: onNotePressed,
                 ),
                 if (onDeletePressed != null)

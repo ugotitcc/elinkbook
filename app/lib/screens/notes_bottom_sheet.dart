@@ -17,6 +17,7 @@ import '../reader/notes_repository.dart';
 import '../reader/text_conversion.dart';
 import '../reader/text_conversion_mode.dart';
 import '../reader/markdown_export.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/elink_tokens.dart';
 import 'note_edit_dialog.dart';
 import 'widgets/eb_field_card.dart';
@@ -185,18 +186,19 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // `DESIGN.md` §10／§14.2：筆記面板由 `EBSheetShell` 統一包裹（拖曳
     // 把手／標題／關閉按鈕／高度上限 85% 螢幕高度），取代原本自建的
     // SafeArea+SizedBox(固定高度)+手刻標題列；「導出為 Markdown」透過
     // `EBSheetShell.actions` 插入標題列。
     return EBSheetShell(
-      title: '筆記',
+      title: l10n.readerNotesSheetTitle,
       actions: [
         IconButton(
           key: const Key('notes_sheet_export_markdown'),
           onPressed: _exportMarkdown,
           icon: const Icon(Icons.ios_share),
-          tooltip: '導出為 Markdown',
+          tooltip: l10n.readerNotesSheetExportMarkdownTooltip,
         ),
       ],
       child: Column(
@@ -205,16 +207,16 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
           // （舊版曾用 🔖／✏️ 作為分頁圖示，已淘汰）。
           TabBar(
             controller: _tabController,
-            tabs: const [
+            tabs: [
               Tab(
-                key: Key('notes_sheet_tab_bookmarks'),
-                icon: Icon(Icons.bookmark_outline),
-                text: '書籤',
+                key: const Key('notes_sheet_tab_bookmarks'),
+                icon: const Icon(Icons.bookmark_outline),
+                text: l10n.readerNotesSheetTabBookmarks,
               ),
               Tab(
-                key: Key('notes_sheet_tab_annotations'),
-                icon: Icon(Icons.edit_note),
-                text: '劃線與備註',
+                key: const Key('notes_sheet_tab_annotations'),
+                icon: const Icon(Icons.edit_note),
+                text: l10n.readerNotesSheetTabAnnotations,
               ),
             ],
           ),
@@ -233,6 +235,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   }
 
   Widget _buildBookmarksTab() {
+    final l10n = AppLocalizations.of(context)!;
     final existing = _bookmarkAtCurrentPosition;
     return Column(
       children: [
@@ -244,14 +247,16 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
                 child: OutlinedButton.icon(
                   key: const Key('notes_sheet_bookmark_toggle'),
                   icon: Icon(existing != null ? Icons.star : Icons.star_border),
-                  label: Text(existing != null ? '已加入此頁書籤' : '加入此頁書籤'),
+                  label: Text(existing != null
+                      ? l10n.readerBookmarkAddedTooltip
+                      : l10n.readerBookmarkAddTooltip),
                   onPressed: _toggleBookmark,
                 ),
               ),
               IconButton(
                 key: const Key('notes_sheet_delete_all_bookmarks'),
                 icon: const Icon(Icons.delete_sweep),
-                tooltip: '刪除該書所有書籤',
+                tooltip: l10n.readerNotesSheetDeleteAllBookmarksTooltip,
                 onPressed:
                     _bookmarks.isEmpty ? null : _confirmDeleteAllBookmarks,
               ),
@@ -315,25 +320,28 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
     _renameController = controller;
     final newName = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('重新命名書籤'),
-        content: TextField(
-          key: const Key('notes_sheet_rename_field'),
-          controller: controller,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext)!;
+        return AlertDialog(
+          title: Text(l10n.readerNotesSheetRenameBookmarkTitle),
+          content: TextField(
+            key: const Key('notes_sheet_rename_field'),
+            controller: controller,
+            autofocus: true,
           ),
-          TextButton(
-            key: const Key('notes_sheet_rename_confirm'),
-            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
-            child: const Text('儲存'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              key: const Key('notes_sheet_rename_confirm'),
+              onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+              child: Text(l10n.readerNoteDialogSaveButton),
+            ),
+          ],
+        );
+      },
     );
     if (newName == null || newName.trim().isEmpty) return;
     await widget.bookmarksRepository.rename(bookmark.id, newName.trim());
@@ -348,22 +356,27 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   Future<void> _confirmDeleteAllBookmarks() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('確定要刪除全部書籤嗎？（共 ${_bookmarks.length} 筆）'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext)!;
+        return AlertDialog(
+          title: Text(
+            l10n.readerNotesSheetDeleteAllBookmarksConfirm(_bookmarks.length),
           ),
-          TextButton(
-            key: const Key('notes_sheet_delete_all_bookmarks_confirm'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.error),
-            child: const Text('刪除'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              key: const Key('notes_sheet_delete_all_bookmarks_confirm'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(dialogContext).colorScheme.error),
+              child: Text(l10n.readerDeleteConfirmButton),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed != true) return;
     await widget.bookmarksRepository.deleteAllForBook(widget.bookId);
@@ -371,6 +384,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   }
 
   Widget _buildBookmarkRow(Bookmark bookmark) {
+    final l10n = AppLocalizations.of(context)!;
     return EBFieldCard(
       padding: EdgeInsets.zero,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -384,13 +398,13 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
             IconButton(
               key: Key('notes_sheet_bookmark_rename_${bookmark.id}'),
               icon: const Icon(Icons.edit),
-              tooltip: '重新命名',
+              tooltip: l10n.readerNotesSheetRenameTooltip,
               onPressed: () => _renameBookmark(bookmark),
             ),
             IconButton(
               key: Key('notes_sheet_bookmark_delete_${bookmark.id}'),
               icon: const Icon(Icons.delete),
-              tooltip: '刪除',
+              tooltip: l10n.readerNotesSheetDeleteItemTooltip,
               onPressed: () => _deleteBookmark(bookmark),
             ),
           ],
@@ -400,11 +414,13 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   }
 
   Widget _buildAnnotationsTab() {
+    final l10n = AppLocalizations.of(context)!;
     final highlightsRepository = widget.highlightsRepository;
     final notesRepository = widget.notesRepository;
     if (highlightsRepository == null || notesRepository == null) {
-      return const Center(
-        child: Text('尚無劃線或備註', key: Key('notes_sheet_annotations_placeholder')),
+      return Center(
+        child: Text(l10n.readerNotesSheetNoAnnotationsPlaceholder,
+            key: const Key('notes_sheet_annotations_placeholder')),
       );
     }
     final items = mergeAnnotations(_highlights, _notes);
@@ -418,7 +434,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
                 child: OutlinedButton(
                   key: const Key('notes_sheet_delete_all_highlights'),
                   onPressed: _highlights.isEmpty ? null : _confirmDeleteAllHighlights,
-                  child: const Text('刪除所有劃線'),
+                  child: Text(l10n.readerNotesSheetDeleteAllHighlightsButton),
                 ),
               ),
               const SizedBox(width: 8),
@@ -426,7 +442,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
                 child: OutlinedButton(
                   key: const Key('notes_sheet_delete_all_notes'),
                   onPressed: _notes.isEmpty ? null : _confirmDeleteAllNotes,
-                  child: const Text('刪除所有備註'),
+                  child: Text(l10n.readerNotesSheetDeleteAllNotesButton),
                 ),
               ),
             ],
@@ -434,8 +450,9 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
         ),
         Expanded(
           child: items.isEmpty
-              ? const Center(
-                  child: Text('尚無劃線或備註', key: Key('notes_sheet_annotations_placeholder')),
+              ? Center(
+                  child: Text(l10n.readerNotesSheetNoAnnotationsPlaceholder,
+                      key: const Key('notes_sheet_annotations_placeholder')),
                 )
               : ListView.builder(
                   key: const Key('notes_sheet_annotation_list'),
@@ -448,6 +465,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   }
 
   Widget _buildAnnotationRow(AnnotationListItem item) {
+    final l10n = AppLocalizations.of(context)!;
     final highlight = item.highlight;
     final note = item.note;
     return EBFieldCard(
@@ -463,8 +481,8 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
               : noteOnlyTint,
         ),
         title: Text(highlight != null
-            ? _highlightStyleLabel(highlight.style)
-            : '備註'),
+            ? _highlightStyleLabel(highlight.style, l10n)
+            : l10n.readerNotesSheetNoteLabel),
         subtitle: note != null
             ? Text(note.text, maxLines: 2, overflow: TextOverflow.ellipsis)
             : null,
@@ -476,13 +494,13 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
               IconButton(
                 key: Key('notes_sheet_annotation_edit_${note.id}'),
                 icon: const Icon(Icons.edit),
-                tooltip: '編輯備註',
+                tooltip: l10n.readerAnnotationEditNoteTooltip,
                 onPressed: () => _editNoteText(note),
               ),
             IconButton(
               key: Key('notes_sheet_annotation_delete_${item.key}'),
               icon: const Icon(Icons.delete),
-              tooltip: '刪除',
+              tooltip: l10n.readerNotesSheetDeleteItemTooltip,
               onPressed: () => _deleteAnnotationItem(item),
             ),
           ],
@@ -491,26 +509,24 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
     );
   }
 
-  /// 供劃線清單項目顯示用的中文標籤。【審查修正】刻意不放在
-  /// `reader/highlight_style.dart`（領域模型層）——`reader/` 目錄下的其他
-  /// 列舉（`BookFormat`／`WritingMode`／`PdfCropMode` 等）皆不含 UI 顯示
-  /// 字串，是純格式無關的領域模型；本函式是唯一消費端，收斂在這裡避免
-  /// 領域模型檔案摻雜 UI 層級的字串常數。
-  String _highlightStyleLabel(HighlightStyle style) {
+  /// 供劃線清單項目顯示用的標籤（[l10n] 由呼叫端傳入，供三語言轉譯）。
+  String _highlightStyleLabel(HighlightStyle style, AppLocalizations l10n) {
     switch (style) {
       case HighlightStyle.highlighterYellow:
-        return '螢光筆（黃）';
+        return l10n.readerHighlightStyleYellow;
       case HighlightStyle.highlighterPink:
-        return '螢光筆（粉）';
+        return l10n.readerHighlightStylePink;
       case HighlightStyle.highlighterBlue:
-        return '螢光筆（藍）';
+        return l10n.readerHighlightStyleBlue;
       case HighlightStyle.underline:
-        return '底線';
+        return l10n.readerHighlightStyleUnderline;
     }
   }
 
   Future<void> _editNoteText(Note note) async {
-    final newText = await showNoteTextDialog(context, initialText: note.text, title: '編輯備註');
+    final l10n = AppLocalizations.of(context)!;
+    final newText = await showNoteTextDialog(context,
+        initialText: note.text, title: l10n.readerAnnotationEditNoteTooltip);
     if (newText == null) return;
     await widget.notesRepository!.updateText(note.id, newText);
     await _loadAnnotations();
@@ -527,45 +543,41 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
     widget.onAnnotationsChanged?.call();
   }
 
-  /// 「批次刪除全部」確認 Dialog 共用邏輯（審查修正：`_confirmDeleteAllHighlights`
-  /// 與 `_confirmDeleteAllNotes` 原本各自重複同一套 `AlertDialog` 結構，僅
-  /// 標籤文字、Key、實際刪除呼叫不同，收斂為單一輔助方法）。[itemLabel] 為
-  /// 顯示於確認標題的項目名稱（例如「劃線」／「備註」），[count] 為顯示的
-  /// 筆數，[confirmKey] 供測試辨識「刪除」按鈕，[onConfirm] 為使用者確認後
-  /// 才執行的實際刪除／重新整理／通知邏輯。
   Future<void> _confirmDeleteAll({
-    required String itemLabel,
-    required int count,
+    required String title,
     required Key confirmKey,
     required Future<void> Function() onConfirm,
   }) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('確定要刪除全部$itemLabel嗎？（共 $count 筆）'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            key: confirmKey,
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.error),
-            child: const Text('刪除'),
-          ),
-        ],
-      ),
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext)!;
+        return AlertDialog(
+          title: Text(title),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              key: confirmKey,
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(dialogContext).colorScheme.error),
+              child: Text(l10n.readerDeleteConfirmButton),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed != true) return;
     await onConfirm();
   }
 
   Future<void> _confirmDeleteAllHighlights() {
+    final l10n = AppLocalizations.of(context)!;
     return _confirmDeleteAll(
-      itemLabel: '劃線',
-      count: _highlights.length,
+      title: l10n.readerNotesSheetDeleteAllHighlightsConfirm(_highlights.length),
       confirmKey: const Key('notes_sheet_delete_all_highlights_confirm'),
       onConfirm: () async {
         await widget.highlightsRepository!.deleteAllForBook(widget.bookId);
@@ -576,9 +588,9 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   }
 
   Future<void> _confirmDeleteAllNotes() {
+    final l10n = AppLocalizations.of(context)!;
     return _confirmDeleteAll(
-      itemLabel: '備註',
-      count: _notes.length,
+      title: l10n.readerNotesSheetDeleteAllNotesConfirm(_notes.length),
       confirmKey: const Key('notes_sheet_delete_all_notes_confirm'),
       onConfirm: () async {
         await widget.notesRepository!.deleteAllForBook(widget.bookId);

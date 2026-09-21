@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../reader/tts_controller.dart';
 
 /// TTS 朗讀常駐面板（epic-38-reader-chrome-tts-redesign Issue 2，spec.md
@@ -65,6 +66,7 @@ class TtsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final playing = status == TtsPlaybackStatus.playing;
     final minSize = isEinkMode ? 56.0 : 52.0;
     final colorScheme = Theme.of(context).colorScheme;
@@ -122,7 +124,7 @@ class TtsPanel extends StatelessWidget {
                           IconButton(
                             key: const Key('reader_tts_play_pause_button'),
                             icon: const Icon(Icons.play_arrow),
-                            tooltip: 'CBZ 為純圖像格式，不支援語音朗讀',
+                            tooltip: l10n.readerTtsCbzUnsupportedTooltip,
                             style: buttonStyle,
                             onPressed: null,
                           ),
@@ -133,7 +135,7 @@ class TtsPanel extends StatelessWidget {
                           IconButton(
                             key: const Key('reader_tts_previous_button'),
                             icon: const Icon(Icons.skip_previous),
-                            tooltip: '上一句',
+                            tooltip: l10n.readerTtsPreviousTooltip,
                             style: buttonStyle,
                             onPressed: onPrevious,
                           ),
@@ -145,7 +147,9 @@ class TtsPanel extends StatelessWidget {
                             icon: Icon(
                               playing ? Icons.pause : Icons.play_arrow,
                             ),
-                            tooltip: playing ? '暫停朗讀' : '開始朗讀',
+                            tooltip: playing
+                                ? l10n.readerTtsPauseTooltip
+                                : l10n.readerTtsPlayTooltip,
                             style: playPauseStyle,
                             onPressed: onPlayPause,
                           ),
@@ -154,7 +158,7 @@ class TtsPanel extends StatelessWidget {
                           IconButton(
                             key: const Key('reader_tts_next_button'),
                             icon: const Icon(Icons.skip_next),
-                            tooltip: '下一句',
+                            tooltip: l10n.readerTtsNextTooltip,
                             style: buttonStyle,
                             onPressed: onNext,
                           ),
@@ -170,7 +174,8 @@ class TtsPanel extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            tooltip: '朗讀語速：${speed.toStringAsFixed(2)}x（點擊切換）',
+                            tooltip: l10n.readerTtsSpeedTooltip(
+                                speed.toStringAsFixed(2)),
                             style: buttonStyle,
                             onPressed: onSpeedTap,
                           ),
@@ -179,7 +184,7 @@ class TtsPanel extends StatelessWidget {
                           IconButton(
                             key: const Key('reader_tts_voice_button'),
                             icon: const Icon(Icons.record_voice_over),
-                            tooltip: '選擇語音',
+                            tooltip: l10n.readerTtsVoiceTooltip,
                             style: buttonStyle,
                             onPressed: onVoiceTap,
                           ),
@@ -210,8 +215,9 @@ class TtsPanel extends StatelessWidget {
                       icon: const Icon(Icons.bedtime_outlined),
                       label: Text(
                         sleepTimerRemaining == null
-                            ? '定時'
-                            : '定時 ${sleepTimerRemaining!.inMinutes} 分',
+                            ? l10n.readerTtsSleepTimerLabel
+                            : l10n.readerTtsSleepTimerLabelWithMinutes(
+                                sleepTimerRemaining!.inMinutes),
                       ),
                     ),
                   ),
@@ -228,7 +234,9 @@ class TtsPanel extends StatelessWidget {
                       icon: Icon(
                         isCollapsed ? Icons.expand_less : Icons.expand_more,
                       ),
-                      label: Text(isCollapsed ? '展開' : '收合'),
+                      label: Text(isCollapsed
+                          ? l10n.readerTtsExpandLabel
+                          : l10n.readerTtsCollapseLabel),
                     ),
                   ),
                 ),
@@ -243,7 +251,7 @@ class TtsPanel extends StatelessWidget {
                         minimumSize: Size.fromHeight(minSize),
                       ),
                       icon: const Icon(Icons.stop),
-                      label: const Text('停止'),
+                      label: Text(l10n.readerTtsStopLabel),
                     ),
                   ),
                 ),

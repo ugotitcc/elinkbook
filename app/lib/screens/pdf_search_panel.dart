@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 import '../reader/pdf_search_state.dart';
 
 /// PDF 內文搜尋面板（epic-24-pdf-engine-rebuild Issue 6），掛載於
@@ -63,6 +65,7 @@ class _PdfSearchPanelState extends State<PdfSearchPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -72,9 +75,9 @@ class _PdfSearchPanelState extends State<PdfSearchPanel> {
             key: const Key('pdf_search_field'),
             controller: _controller,
             textInputAction: TextInputAction.search,
-            decoration: const InputDecoration(
-              hintText: '搜尋文字…',
-              prefixIcon: Icon(Icons.search),
+            decoration: InputDecoration(
+              hintText: l10n.readerPdfSearchHint,
+              prefixIcon: const Icon(Icons.search),
             ),
             onChanged: _handleChanged,
           ),
@@ -91,10 +94,10 @@ class _PdfSearchPanelState extends State<PdfSearchPanel> {
                 );
               }
               if (state.matchCount == 0) {
-                return const Padding(
-                  key: Key('pdf_search_empty'),
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Center(child: Text('找不到符合的文字')),
+                return Padding(
+                  key: const Key('pdf_search_empty'),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: Text(l10n.readerPdfSearchNoMatches)),
                 );
               }
               return Row(
@@ -107,13 +110,13 @@ class _PdfSearchPanelState extends State<PdfSearchPanel> {
                       IconButton(
                         key: const Key('pdf_search_prev_button'),
                         icon: const Icon(Icons.keyboard_arrow_up),
-                        tooltip: '上一個',
+                        tooltip: l10n.readerPdfSearchPreviousTooltip,
                         onPressed: widget.onPrevious,
                       ),
                       IconButton(
                         key: const Key('pdf_search_next_button'),
                         icon: const Icon(Icons.keyboard_arrow_down),
-                        tooltip: '下一個',
+                        tooltip: l10n.readerPdfSearchNextTooltip,
                         onPressed: widget.onNext,
                       ),
                     ],

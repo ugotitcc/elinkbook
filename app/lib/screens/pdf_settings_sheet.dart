@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/dual_page_direction.dart';
 import '../reader/dual_page_mode.dart';
@@ -107,6 +108,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: SizedBox(
         // TabBarView 無法在無邊界的父層自我量測高度（不同於 ReaderSettingsSheet
@@ -119,10 +121,10 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      '⚙️ PDF 版面設定',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      l10n.readerPdfSettingsTitle,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                   IconButton(
@@ -135,10 +137,10 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
             ),
             TabBar(
               controller: _tabController,
-              tabs: const [
-                Tab(key: Key('pdf_settings_tab_display'), text: '顯示'),
-                Tab(key: Key('pdf_settings_tab_filters'), text: '濾鏡'),
-                Tab(key: Key('pdf_settings_tab_crop'), text: '裁切'),
+              tabs: [
+                Tab(key: const Key('pdf_settings_tab_display'), text: l10n.readerPdfSettingsTabDisplay),
+                Tab(key: const Key('pdf_settings_tab_filters'), text: l10n.readerPdfSettingsTabFilters),
+                Tab(key: const Key('pdf_settings_tab_crop'), text: l10n.readerPdfSettingsTabCrop),
               ],
             ),
             Expanded(
@@ -158,53 +160,72 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   }
 
   Widget _buildDisplayTab(BuildContext context) {
-    const fitOptions = [
-      (PdfFitMode.pageFit, 'page_fit', Icons.fit_screen, 'Page-fit（整頁）', '整頁'),
+    final l10n = AppLocalizations.of(context)!;
+    final fitOptions = [
+      (
+        PdfFitMode.pageFit,
+        'page_fit',
+        Icons.fit_screen,
+        l10n.readerPdfFitPageTooltip,
+        l10n.readerPdfFitPageLabel
+      ),
       (
         PdfFitMode.fitWidth,
         'fit_width',
         Icons.swap_horiz,
-        'Fit Width（頁寬）',
-        '頁寬',
+        l10n.readerPdfFitWidthTooltip,
+        l10n.readerPdfFitWidthLabel,
       ),
       (
         PdfFitMode.actualSize,
         'actual_size',
         Icons.crop_original,
-        '真實比例 1:1',
-        '原比',
+        l10n.readerPdfFitActualTooltip,
+        l10n.readerPdfFitActualLabel,
       ),
     ];
-    const dualPageOptions = [
+    final dualPageOptions = [
       (
         DualPageMode.auto,
         'auto',
         Icons.stay_current_landscape,
-        '自動（橫向雙頁）',
-        '自動',
+        l10n.readerDualPageAutoTooltip,
+        l10n.readerDualPageAutoLabel,
       ),
-      (DualPageMode.always, 'always', Icons.view_column, '永遠雙頁', '雙頁'),
-      (DualPageMode.never, 'never', Icons.crop_portrait, '永遠單頁', '單頁'),
+      (
+        DualPageMode.always,
+        'always',
+        Icons.view_column,
+        l10n.readerDualPageAlwaysTooltip,
+        l10n.readerDualPageAlwaysLabel
+      ),
+      (
+        DualPageMode.never,
+        'never',
+        Icons.crop_portrait,
+        l10n.readerDualPageNeverTooltip,
+        l10n.readerDualPageNeverLabel
+      ),
     ];
-    const directionOptions = [
+    final directionOptions = [
       (
         DualPageDirection.ltr,
         'ltr',
         Icons.format_textdirection_l_to_r,
-        '左到右',
-        '左翻',
+        l10n.readerPdfDirectionLtrTooltip,
+        l10n.readerPdfDirectionLtrLabel,
       ),
       (
         DualPageDirection.rtl,
         'rtl',
         Icons.format_textdirection_r_to_l,
-        '右到左（日漫慣例）',
-        '右翻',
+        l10n.readerPdfDirectionRtlTooltip,
+        l10n.readerPdfDirectionRtlLabel,
       ),
     ];
-    const pageTurnAnimationOptions = [
-      (PdfPageTurnAnimation.slide, 'slide', Icons.swipe, '滑動', '滑動'),
-      (PdfPageTurnAnimation.none, 'none', Icons.flash_on, '無', '無'),
+    final pageTurnAnimationOptions = [
+      (PdfPageTurnAnimation.slide, 'slide', Icons.swipe, l10n.readerPdfPageTurnAnimationSlide, l10n.readerPdfPageTurnAnimationSlide),
+      (PdfPageTurnAnimation.none, 'none', Icons.flash_on, l10n.readerPdfPageTurnAnimationNone, l10n.readerPdfPageTurnAnimationNone),
     ];
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -213,7 +234,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Fit 模式', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(l10n.readerPdfFitModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             EBOptionChipGroup<PdfFitMode>(
               items: fitOptions.map((option) {
@@ -233,7 +254,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               }),
             ),
             const SizedBox(height: 16),
-            const Text('雙頁模式', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(l10n.readerDualPageModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             EBOptionChipGroup<DualPageMode>(
               items: dualPageOptions.map((option) {
@@ -257,7 +278,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               padding: EdgeInsets.zero,
               child: SwitchListTile(
                 key: const Key('pdf_settings_dual_page_cover_alone'),
-                title: const Text('封面獨立顯示', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(l10n.readerPdfDualPageCoverAloneLabel, style: TextStyle(fontWeight: FontWeight.bold)),
                 value: _dualPageCoverAlone,
                 onChanged: (v) => setState(() {
                   _dualPageCoverAlone = v;
@@ -269,7 +290,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               padding: EdgeInsets.zero,
               child: SwitchListTile(
                 key: const Key('pdf_settings_show_footer'),
-                title: const Text('顯示頁尾', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(l10n.readerShowFooterLabel, style: TextStyle(fontWeight: FontWeight.bold)),
                 value: _showFooter,
                 onChanged: (v) => setState(() {
                   _showFooter = v;
@@ -281,7 +302,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               padding: EdgeInsets.zero,
               child: SwitchListTile(
                 key: const Key('pdf_settings_fullscreen'),
-                title: const Text('全螢幕模式', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(l10n.readerFullscreenModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
                 value: _fullscreen,
                 onChanged: (v) => setState(() {
                   _fullscreen = v;
@@ -290,7 +311,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               ),
             ),
             const SizedBox(height: 16),
-            const Text('頁面方向', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(l10n.readerPdfPageOrientationLabel, style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             EBOptionChipGroup<DualPageDirection>(
               items: directionOptions.map((option) {
@@ -310,7 +331,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               }),
             ),
             const SizedBox(height: 16),
-            const Text('換頁動畫', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(l10n.readerPdfPageTurnAnimationLabel, style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             EBOptionChipGroup<PdfPageTurnAnimation>(
               items: pageTurnAnimationOptions.map((option) {
@@ -336,6 +357,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   }
 
   Widget _buildFiltersTab() {
+    final l10n = AppLocalizations.of(context)!;
     // 視覺還原（VISUAL_ANALYSIS.md）：每個數值列改用 EBFieldCard 包裹後
     // 整體高度增加，固定 400px 高的 Bottom Sheet（見 build() 註解）容不下
     // 3 列，比照 _buildDisplayTab 既有的 SingleChildScrollView 做法補上
@@ -349,7 +371,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
           children: [
             _buildSliderRow(
               keyPrefix: 'pdf_settings_contrast',
-              label: '對比度',
+              label: l10n.readerPdfContrastLabel,
               value: _contrast,
               min: -100,
               max: 100,
@@ -361,7 +383,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
             ),
             _buildSliderRow(
               keyPrefix: 'pdf_settings_brightness',
-              label: '亮度',
+              label: l10n.readerPdfBrightnessLabel,
               value: _brightness,
               min: -100,
               max: 100,
@@ -373,7 +395,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
             ),
             _buildSliderRow(
               keyPrefix: 'pdf_settings_bold_strength',
-              label: '加粗強度',
+              label: l10n.readerPdfBoldStrengthLabel,
               value: _boldStrength,
               min: 0,
               max: 100,
@@ -390,16 +412,29 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   }
 
   Widget _buildCropTab(BuildContext context) {
-    const options = [
-      (PdfCropMode.none, 'none', Icons.crop_free, '不裁切', '不裁'),
-      (PdfCropMode.autoDetect, 'auto', Icons.auto_fix_high, '智慧自動', '智慧'),
+    final l10n = AppLocalizations.of(context)!;
+    final options = [
+      (
+        PdfCropMode.none,
+        'none',
+        Icons.crop_free,
+        l10n.readerPdfCropNoneTooltip,
+        l10n.readerPdfCropNoneLabel
+      ),
+      (
+        PdfCropMode.autoDetect,
+        'auto',
+        Icons.auto_fix_high,
+        l10n.readerPdfCropAutoTooltip,
+        l10n.readerPdfCropAutoLabel
+      ),
     ];
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('裁切模式', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(l10n.readerPdfCropModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           EBOptionChipGroup<PdfCropMode>(
             items: [
@@ -426,8 +461,8 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                 itemKey: const Key('pdf_settings_crop_mode_manual'),
                 value: PdfCropMode.manual,
                 icon: Icons.crop,
-                label: '手動',
-                tooltip: '手動選區',
+                label: l10n.readerPdfCropManualLabel,
+                tooltip: l10n.readerPdfCropManualTooltip,
                 onTap: () => widget.onRequestManualCrop(),
               ),
             ],

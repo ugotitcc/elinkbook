@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/pdf_search_state.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/pdf_search_panel.dart';
 
 void main() {
@@ -10,6 +11,9 @@ void main() {
     addTearDown(notifier.dispose);
 
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: PdfSearchPanel(
           searchStateListenable: notifier,
@@ -36,6 +40,9 @@ void main() {
     addTearDown(notifier.dispose);
 
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: PdfSearchPanel(
           searchStateListenable: notifier,
@@ -60,6 +67,9 @@ void main() {
     addTearDown(notifier.dispose);
 
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: PdfSearchPanel(
           searchStateListenable: notifier,
@@ -82,6 +92,9 @@ void main() {
     addTearDown(notifier.dispose);
 
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: PdfSearchPanel(
           searchStateListenable: notifier,
@@ -102,6 +115,9 @@ void main() {
     addTearDown(notifier.dispose);
 
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: PdfSearchPanel(
           searchStateListenable: notifier,
@@ -126,6 +142,9 @@ void main() {
     addTearDown(notifier.dispose);
 
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: PdfSearchPanel(
           searchStateListenable: notifier,
@@ -150,6 +169,9 @@ void main() {
     addTearDown(notifier.dispose);
 
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: PdfSearchPanel(
           searchStateListenable: notifier,

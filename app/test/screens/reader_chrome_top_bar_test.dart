@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/screens/reader_chrome_top_bar.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 
 void main() {
   Widget buildTopBar({
@@ -15,6 +16,9 @@ void main() {
     bool isEinkMode = false,
   }) {
     return MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: ReaderChromeTopBar(
           onBack: onBack ?? () {},

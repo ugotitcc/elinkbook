@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/reading_position_conflict_dialog.dart';
 import 'package:elinkbook/sync/sync_reading_position.dart';
 
@@ -18,6 +19,9 @@ void main() {
     ValueSetter<ReadingPositionChoice?> onResult,
   ) async {
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Builder(
         builder: (context) => ElevatedButton(
           onPressed: () async {

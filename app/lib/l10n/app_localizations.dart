@@ -843,6 +843,1288 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'儲存'**
   String get libraryLayoutOverrideSaveButton;
+
+  /// 閱讀器頂部 Chrome 列返回按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'返回'**
+  String get readerBackTooltip;
+
+  /// 閱讀器頂部 Chrome 列搜尋按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'搜尋內文'**
+  String get readerSearchTooltip;
+
+  /// 閱讀器頂部 Chrome 列收合底部工具列按鈕的提示文字（底部工具列目前顯示中）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'隱藏工具列'**
+  String get readerHideToolbarTooltip;
+
+  /// 閱讀器頂部 Chrome 列展開底部工具列按鈕的提示文字（底部工具列目前收合中）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示工具列'**
+  String get readerShowToolbarTooltip;
+
+  /// 閱讀器底部選單列「目錄」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'目錄'**
+  String get readerTocTooltip;
+
+  /// 閱讀器底部選單列書籤按鈕提示文字：目前頁已加入書籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已加入此頁書籤'**
+  String get readerBookmarkAddedTooltip;
+
+  /// 閱讀器底部選單列書籤按鈕提示文字：目前頁尚未加入書籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'加入此頁書籤'**
+  String get readerBookmarkAddTooltip;
+
+  /// 閱讀器底部選單列「劃線筆記」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'劃線筆記'**
+  String get readerAnnotationsTooltip;
+
+  /// 閱讀器底部選單列「版面」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'版面'**
+  String get readerLayoutTooltip;
+
+  /// 閱讀器底部選單列「朗讀」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'朗讀'**
+  String get readerTtsTooltip;
+
+  /// PagingBar「上一頁」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上一頁'**
+  String get readerPagingPreviousTooltip;
+
+  /// PagingBar「下一頁」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下一頁'**
+  String get readerPagingNextTooltip;
+
+  /// PDF 縮圖面板在 totalPages <= 0 時顯示的空狀態文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無可用頁面'**
+  String get readerPdfNoPagesAvailable;
+
+  /// 備註編輯對話框「儲存」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'儲存'**
+  String get readerNoteDialogSaveButton;
+
+  /// showNoteTextDialog() 呼叫端未明確指定 title 時的預設對話框標題（目前所有呼叫端皆明確指定，此為防禦性預設值）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'備註'**
+  String get readerNoteDialogDefaultTitle;
+
+  /// 選字浮動工具列「底線」樣式按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'底線'**
+  String get readerAnnotationUnderlineTooltip;
+
+  /// 選字浮動工具列「複製」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'複製'**
+  String get readerAnnotationCopyTooltip;
+
+  /// 選字浮動工具列備註按鈕提示文字：這次選取已有備註
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'編輯備註'**
+  String get readerAnnotationEditNoteTooltip;
+
+  /// 選字浮動工具列備註按鈕提示文字：這次選取尚無備註
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'新增備註'**
+  String get readerAnnotationAddNoteTooltip;
+
+  /// 選字浮動工具列刪除按鈕提示文字：這次選取同時命中劃線與備註
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除畫線與備註'**
+  String get readerAnnotationDeleteHighlightAndNote;
+
+  /// 選字浮動工具列刪除按鈕提示文字：這次選取只命中劃線
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除畫線'**
+  String get readerAnnotationDeleteHighlight;
+
+  /// 選字浮動工具列刪除按鈕提示文字：這次選取只命中備註
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除備註'**
+  String get readerAnnotationDeleteNote;
+
+  /// PDF 內文搜尋面板輸入框的 hintText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'搜尋文字…'**
+  String get readerPdfSearchHint;
+
+  /// PDF 內文搜尋查無結果時的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'找不到符合的文字'**
+  String get readerPdfSearchNoMatches;
+
+  /// PDF 內文搜尋「上一個」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上一個'**
+  String get readerPdfSearchPreviousTooltip;
+
+  /// PDF 內文搜尋「下一個」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下一個'**
+  String get readerPdfSearchNextTooltip;
+
+  /// 閱讀位置衝突對話框標題，{bookTitle} 為書名（使用者資料，不翻譯）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'「{bookTitle}」的閱讀進度不一致'**
+  String readerPositionConflictTitle(String bookTitle);
+
+  /// 閱讀位置衝突對話框內容，{local}／{remote} 為已格式化的位置描述文字（readerPositionConflictPdfLocation 或 readerPositionConflictEpubLocation 的結果）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'偵測到另一台裝置也更新過這本書的閱讀進度，請選擇要保留哪一邊：\n\n本機：{local}\n雲端：{remote}'**
+  String readerPositionConflictMessage(String local, String remote);
+
+  /// PDF 格式的位置描述，{page} 為頁碼（1-based），{percent} 為進度百分比整數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'第 {page} 頁（進度 {percent}%）'**
+  String readerPositionConflictPdfLocation(int page, int percent);
+
+  /// 非 PDF 格式（CFI 定位無法簡單轉人類可讀文字）的位置描述，{percent} 為進度百分比整數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'進度 {percent}%'**
+  String readerPositionConflictEpubLocation(int percent);
+
+  /// 閱讀位置衝突對話框「保留雲端」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'保留雲端'**
+  String get readerPositionConflictKeepCloud;
+
+  /// 閱讀位置衝突對話框「保留本機」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'保留本機'**
+  String get readerPositionConflictKeepLocal;
+
+  /// 目錄 Bottom Sheet 標題列文字（含書本 Emoji，比照既有設計慣例保留）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'📖 目錄'**
+  String get readerTocTitle;
+
+  /// 本書解析不出任何目錄項目時的空狀態提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'本書無目錄資料'**
+  String get readerTocEmptyMessage;
+
+  /// PDF 目錄 Bottom Sheet 第一個分頁籤：章節目錄
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'章節目錄'**
+  String get readerTocTabChapters;
+
+  /// PDF 目錄 Bottom Sheet 第二個分頁籤：頁碼縮圖
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'縮圖'**
+  String get readerTocTabThumbnails;
+
+  /// PDF 目錄 Bottom Sheet 第三個分頁籤：內文搜尋
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'搜尋'**
+  String get readerTocTabSearch;
+
+  /// 縮圖/搜尋分頁內容為 null 時的佔位文字（目前兩個分頁皆已實作，此為向後相容的防禦性回退）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'此功能將於後續版本提供'**
+  String get readerFeatureComingSoon;
+
+  /// TTS 面板播放鍵在 CBZ（純圖像格式）停用狀態下的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'CBZ 為純圖像格式，不支援語音朗讀'**
+  String get readerTtsCbzUnsupportedTooltip;
+
+  /// TTS 面板「上一句」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上一句'**
+  String get readerTtsPreviousTooltip;
+
+  /// TTS 面板播放/暫停鍵提示文字：目前朗讀中，點擊暫停
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'暫停朗讀'**
+  String get readerTtsPauseTooltip;
+
+  /// TTS 面板播放/暫停鍵提示文字：目前暫停中，點擊開始
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'開始朗讀'**
+  String get readerTtsPlayTooltip;
+
+  /// TTS 面板「下一句」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下一句'**
+  String get readerTtsNextTooltip;
+
+  /// TTS 面板語速按鈕的無障礙提示文字，{speed} 為目前語速（已格式化為小數點後兩位的字串）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'朗讀語速：{speed}x（點擊切換）'**
+  String readerTtsSpeedTooltip(String speed);
+
+  /// TTS 面板「選擇語音」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選擇語音'**
+  String get readerTtsVoiceTooltip;
+
+  /// TTS 面板睡眠定時器按鈕文字：尚未設定定時器
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'定時'**
+  String get readerTtsSleepTimerLabel;
+
+  /// TTS 面板睡眠定時器按鈕文字：已設定定時器，{minutes} 為剩餘分鐘數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'定時 {minutes} 分'**
+  String readerTtsSleepTimerLabelWithMinutes(int minutes);
+
+  /// TTS 面板收合/展開按鈕文字：目前展開中，點擊收合
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'收合'**
+  String get readerTtsCollapseLabel;
+
+  /// TTS 面板收合/展開按鈕文字：目前收合中，點擊展開
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'展開'**
+  String get readerTtsExpandLabel;
+
+  /// TTS 面板「停止朗讀」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'停止'**
+  String get readerTtsStopLabel;
+
+  /// 筆記 Bottom Sheet（書籤／劃線與備註）的標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'筆記'**
+  String get readerNotesSheetTitle;
+
+  /// 筆記 Bottom Sheet 標題列「導出為 Markdown」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'導出為 Markdown'**
+  String get readerNotesSheetExportMarkdownTooltip;
+
+  /// 筆記 Bottom Sheet 第一個分頁籤：書籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'書籤'**
+  String get readerNotesSheetTabBookmarks;
+
+  /// 筆記 Bottom Sheet 第二個分頁籤：劃線與備註
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'劃線與備註'**
+  String get readerNotesSheetTabAnnotations;
+
+  /// 書籤分頁「刪除該書所有書籤」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除該書所有書籤'**
+  String get readerNotesSheetDeleteAllBookmarksTooltip;
+
+  /// 重新命名書籤對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重新命名書籤'**
+  String get readerNotesSheetRenameBookmarkTitle;
+
+  /// 筆記 Bottom Sheet 內各種刪除確認對話框的「刪除」按鈕文字（書籤/劃線/備註批次刪除共用）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get readerDeleteConfirmButton;
+
+  /// 刪除全部書籤確認對話框標題，{count} 為目前書籤總數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定要刪除全部書籤嗎？（共 {count} 筆）'**
+  String readerNotesSheetDeleteAllBookmarksConfirm(int count);
+
+  /// 書籤列項目「重新命名」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重新命名'**
+  String get readerNotesSheetRenameTooltip;
+
+  /// 書籤/劃線/備註單筆項目「刪除」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get readerNotesSheetDeleteItemTooltip;
+
+  /// 劃線與備註分頁的空狀態提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚無劃線或備註'**
+  String get readerNotesSheetNoAnnotationsPlaceholder;
+
+  /// 劃線與備註分頁「刪除所有劃線」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除所有劃線'**
+  String get readerNotesSheetDeleteAllHighlightsButton;
+
+  /// 劃線與備註分頁「刪除所有備註」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除所有備註'**
+  String get readerNotesSheetDeleteAllNotesButton;
+
+  /// 劃線與備註合併清單中，純備註項目（無對應劃線）的項目標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'備註'**
+  String get readerNotesSheetNoteLabel;
+
+  /// 劃線清單項目標題：黃色螢光筆樣式
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'螢光筆（黃）'**
+  String get readerHighlightStyleYellow;
+
+  /// 劃線清單項目標題：粉色螢光筆樣式
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'螢光筆（粉）'**
+  String get readerHighlightStylePink;
+
+  /// 劃線清單項目標題：藍色螢光筆樣式
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'螢光筆（藍）'**
+  String get readerHighlightStyleBlue;
+
+  /// 劃線清單項目標題：底線樣式
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'底線'**
+  String get readerHighlightStyleUnderline;
+
+  /// 刪除全部劃線確認對話框標題，{count} 為目前劃線總數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定要刪除全部劃線嗎？（共 {count} 筆）'**
+  String readerNotesSheetDeleteAllHighlightsConfirm(int count);
+
+  /// 刪除全部備註確認對話框標題，{count} 為目前備註總數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定要刪除全部備註嗎？（共 {count} 筆）'**
+  String readerNotesSheetDeleteAllNotesConfirm(int count);
+
+  /// FXL（固定版面）版面設定 Bottom Sheet 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'⚙️ 漫畫版面設定'**
+  String get readerFxlSettingsTitle;
+
+  /// 雙頁模式選項群組的小標題，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'雙頁模式'**
+  String get readerDualPageModeLabel;
+
+  /// 雙頁模式「自動」選項 tooltip，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'自動（橫向雙頁）'**
+  String get readerDualPageAutoTooltip;
+
+  /// 雙頁模式「自動」選項短標籤，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'自動'**
+  String get readerDualPageAutoLabel;
+
+  /// 雙頁模式「永遠雙頁」選項 tooltip，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'永遠雙頁'**
+  String get readerDualPageAlwaysTooltip;
+
+  /// 雙頁模式「永遠雙頁」選項短標籤，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'雙頁'**
+  String get readerDualPageAlwaysLabel;
+
+  /// 雙頁模式「永遠單頁」選項 tooltip，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'永遠單頁'**
+  String get readerDualPageNeverTooltip;
+
+  /// 雙頁模式「永遠單頁」選項短標籤，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'單頁'**
+  String get readerDualPageNeverLabel;
+
+  /// fxl_settings_sheet.dart 翻頁方向選項群組的小標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'翻頁方向'**
+  String get readerPageDirectionLabel;
+
+  /// fxl_settings_sheet.dart 翻頁方向「左到右」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'左到右（LTR，美漫慣例）'**
+  String get readerDualPageDirectionLtrTooltip;
+
+  /// fxl_settings_sheet.dart 翻頁方向「左到右」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'左翻'**
+  String get readerDualPageDirectionLtrLabel;
+
+  /// fxl_settings_sheet.dart 翻頁方向「右到左」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'右到左（RTL，日漫慣例）'**
+  String get readerDualPageDirectionRtlTooltip;
+
+  /// fxl_settings_sheet.dart 翻頁方向「右到左」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'右翻'**
+  String get readerDualPageDirectionRtlLabel;
+
+  /// 簡繁轉換覆寫選項群組的小標題，fxl_settings_sheet.dart／reader_settings_sheet.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'簡繁轉換覆寫'**
+  String get readerTextConversionOverrideLabel;
+
+  /// 「使用全域預設」選項的短標籤，簡繁轉換覆寫／翻頁模式覆寫／螢幕方向覆寫共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'全域'**
+  String get readerGlobalLabel;
+
+  /// 「使用全域預設」選項的 tooltip，簡繁轉換覆寫／翻頁模式覆寫／螢幕方向覆寫共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'使用全域預設'**
+  String get readerUseGlobalDefaultTooltip;
+
+  /// 簡繁轉換覆寫「原文」選項的標籤與 tooltip（兩者文字相同，共用一個 key）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'原文'**
+  String get readerTextConversionOriginalLabel;
+
+  /// 簡繁轉換覆寫「繁體」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'繁體'**
+  String get readerTextConversionTraditionalLabel;
+
+  /// 簡繁轉換覆寫「繁體」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'轉換為繁體'**
+  String get readerTextConversionTraditionalTooltip;
+
+  /// 簡繁轉換覆寫「簡體」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'簡體'**
+  String get readerTextConversionSimplifiedLabel;
+
+  /// 簡繁轉換覆寫「簡體」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'轉換為簡體'**
+  String get readerTextConversionSimplifiedTooltip;
+
+  /// 全螢幕模式開關標題，fxl_settings_sheet.dart／pdf_settings_sheet.dart／reader_settings_sheet.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'全螢幕模式'**
+  String get readerFullscreenModeLabel;
+
+  /// 顯示頁首開關標題，fxl_settings_sheet.dart／reader_settings_sheet.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示頁首'**
+  String get readerShowHeaderLabel;
+
+  /// 顯示頁尾開關標題，fxl_settings_sheet.dart／pdf_settings_sheet.dart／reader_settings_sheet.dart 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示頁尾'**
+  String get readerShowFooterLabel;
+
+  /// PDF 版面設定 Bottom Sheet 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'⚙️ PDF 版面設定'**
+  String get readerPdfSettingsTitle;
+
+  /// PDF 版面設定第一個分頁籤：顯示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示'**
+  String get readerPdfSettingsTabDisplay;
+
+  /// PDF 版面設定第二個分頁籤：濾鏡
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'濾鏡'**
+  String get readerPdfSettingsTabFilters;
+
+  /// PDF 版面設定第三個分頁籤：裁切
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'裁切'**
+  String get readerPdfSettingsTabCrop;
+
+  /// PDF 顯示分頁「Fit 模式」選項群組小標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'Fit 模式'**
+  String get readerPdfFitModeLabel;
+
+  /// PDF Fit 模式「整頁」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'Page-fit（整頁）'**
+  String get readerPdfFitPageTooltip;
+
+  /// PDF Fit 模式「整頁」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'整頁'**
+  String get readerPdfFitPageLabel;
+
+  /// PDF Fit 模式「頁寬」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'Fit Width（頁寬）'**
+  String get readerPdfFitWidthTooltip;
+
+  /// PDF Fit 模式「頁寬」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'頁寬'**
+  String get readerPdfFitWidthLabel;
+
+  /// PDF Fit 模式「原比」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'真實比例 1:1'**
+  String get readerPdfFitActualTooltip;
+
+  /// PDF Fit 模式「原比」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'原比'**
+  String get readerPdfFitActualLabel;
+
+  /// PDF 雙頁模式「封面獨立顯示」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'封面獨立顯示'**
+  String get readerPdfDualPageCoverAloneLabel;
+
+  /// PDF 顯示分頁「頁面方向」選項群組小標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'頁面方向'**
+  String get readerPdfPageOrientationLabel;
+
+  /// PDF 頁面方向「左到右」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'左到右'**
+  String get readerPdfDirectionLtrTooltip;
+
+  /// PDF 頁面方向「左到右」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'左翻'**
+  String get readerPdfDirectionLtrLabel;
+
+  /// PDF 頁面方向「右到左」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'右到左（日漫慣例）'**
+  String get readerPdfDirectionRtlTooltip;
+
+  /// PDF 頁面方向「右到左」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'右翻'**
+  String get readerPdfDirectionRtlLabel;
+
+  /// PDF 顯示分頁「換頁動畫」選項群組小標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'換頁動畫'**
+  String get readerPdfPageTurnAnimationLabel;
+
+  /// 換頁動畫「滑動」選項標籤與 tooltip（文字相同）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'滑動'**
+  String get readerPdfPageTurnAnimationSlide;
+
+  /// 換頁動畫「無」選項標籤與 tooltip（文字相同）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無'**
+  String get readerPdfPageTurnAnimationNone;
+
+  /// PDF 濾鏡分頁「對比度」滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'對比度'**
+  String get readerPdfContrastLabel;
+
+  /// PDF 濾鏡分頁「亮度」滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'亮度'**
+  String get readerPdfBrightnessLabel;
+
+  /// PDF 濾鏡分頁「加粗強度」滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'加粗強度'**
+  String get readerPdfBoldStrengthLabel;
+
+  /// PDF 裁切分頁「裁切模式」選項群組小標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'裁切模式'**
+  String get readerPdfCropModeLabel;
+
+  /// 裁切模式「不裁切」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'不裁切'**
+  String get readerPdfCropNoneTooltip;
+
+  /// 裁切模式「不裁切」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'不裁'**
+  String get readerPdfCropNoneLabel;
+
+  /// 裁切模式「智慧自動」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'智慧自動'**
+  String get readerPdfCropAutoTooltip;
+
+  /// 裁切模式「智慧自動」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'智慧'**
+  String get readerPdfCropAutoLabel;
+
+  /// 裁切模式「手動」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'手動'**
+  String get readerPdfCropManualLabel;
+
+  /// 裁切模式「手動」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'手動選區'**
+  String get readerPdfCropManualTooltip;
+
+  /// EPUB 版面設定 Bottom Sheet 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'⚙️ 版面設定'**
+  String get readerSettingsTitle;
+
+  /// 版面設定第一個分頁籤：文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'文字'**
+  String get readerSettingsTabText;
+
+  /// 版面設定第二個分頁籤：邊界
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'邊界'**
+  String get readerSettingsTabBoundary;
+
+  /// 版面設定第三個分頁籤：呈現
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'呈現'**
+  String get readerSettingsTabPresentation;
+
+  /// 版面設定第四個分頁籤：預設集
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'預設集'**
+  String get readerSettingsTabPreferences;
+
+  /// 文字分頁「字級」滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字級'**
+  String get readerSettingsFontSizeLabel;
+
+  /// 文字分頁「字重」滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字重'**
+  String get readerSettingsFontWeightLabel;
+
+  /// 文字分頁「行距」滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'行距'**
+  String get readerSettingsLineHeightLabel;
+
+  /// 文字分頁「段落間距」滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'段落間距'**
+  String get readerSettingsParagraphSpacingLabel;
+
+  /// 文字分頁「字距」滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字距'**
+  String get readerSettingsLetterSpacingLabel;
+
+  /// 文字分頁「停用書本 CSS」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'停用書本 CSS'**
+  String get readerSettingsDisableBookCssLabel;
+
+  /// 邊界分頁「上邊界」滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上邊界'**
+  String get readerSettingsMarginTopLabel;
+
+  /// 邊界分頁「下邊界」滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下邊界'**
+  String get readerSettingsMarginBottomLabel;
+
+  /// 邊界分頁「左邊界」滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'左邊界'**
+  String get readerSettingsMarginLeftLabel;
+
+  /// 邊界分頁「右邊界」滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'右邊界'**
+  String get readerSettingsMarginRightLabel;
+
+  /// 數值型設定已對本書覆寫時顯示的徽章文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'此書已覆寫'**
+  String get readerSettingsOverriddenBadge;
+
+  /// 已覆寫欄位旁「恢復本書原樣式」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'恢復本書原樣式'**
+  String get readerSettingsResetToBookStyleTooltip;
+
+  /// 未覆寫欄位「使用全域預設」徽章的 Tooltip 說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'跟隨本書原樣式，尚未調整'**
+  String get readerSettingsNotOverriddenTooltip;
+
+  /// 字型下拉選單「使用書本內建字型」選項（不指定自訂字型）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'使用書本內建字型'**
+  String get readerSettingsUseBookFontLabel;
+
+  /// 呈現分頁「欄數」選項群組小標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'欄數'**
+  String get readerSettingsColumnCountLabel;
+
+  /// 欄數「自動」選項標籤與 tooltip（文字相同）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'自動'**
+  String get readerSettingsColumnAutoLabel;
+
+  /// 欄數「單欄」選項標籤與 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'單欄'**
+  String get readerSettingsColumnSingleLabel;
+
+  /// 欄數「雙欄」選項標籤與 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'雙欄'**
+  String get readerSettingsColumnDoubleLabel;
+
+  /// E-Ink 模式下欄位大小標題（不含數值，避免與 EBStepper 內顯示的數值重複）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'欄位大小'**
+  String get readerSettingsColumnSizeLabel;
+
+  /// 一般主題下欄位大小標題（含目前數值），{size} 為像素數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'欄位大小 {size}px'**
+  String readerSettingsColumnSizeWithValueLabel(int size);
+
+  /// 呈現分頁「文字對齊」選項群組小標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'文字對齊'**
+  String get readerSettingsTextAlignLabel;
+
+  /// 文字對齊「置中」選項標籤與 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'置中'**
+  String get readerSettingsTextAlignCenterLabel;
+
+  /// 文字對齊「齊行」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'左右對齊'**
+  String get readerSettingsTextAlignJustifyTooltip;
+
+  /// 文字對齊「齊行」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'齊行'**
+  String get readerSettingsTextAlignJustifyLabel;
+
+  /// 文字對齊「起始」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'起始邊對齊'**
+  String get readerSettingsTextAlignStartTooltip;
+
+  /// 文字對齊「起始」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'起始'**
+  String get readerSettingsTextAlignStartLabel;
+
+  /// 文字對齊「結尾」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'結尾邊對齊'**
+  String get readerSettingsTextAlignEndTooltip;
+
+  /// 文字對齊「結尾」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'結尾'**
+  String get readerSettingsTextAlignEndLabel;
+
+  /// 文字對齊「靠左」選項標籤與 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'靠左'**
+  String get readerSettingsTextAlignLeftLabel;
+
+  /// 文字對齊「靠右」選項標籤與 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'靠右'**
+  String get readerSettingsTextAlignRightLabel;
+
+  /// 呈現分頁「排版方向模式」選項群組小標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'排版方向模式'**
+  String get readerSettingsWritingModeLabel;
+
+  /// 排版方向「採用書籍排版」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'採用書籍排版'**
+  String get readerSettingsWritingModeBookTooltip;
+
+  /// 排版方向「採用書籍排版」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'書籍'**
+  String get readerSettingsWritingModeBookLabel;
+
+  /// 排版方向「強制直排」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'強制直排'**
+  String get readerSettingsWritingModeVerticalTooltip;
+
+  /// 排版方向「強制直排」選項短標籤，亦供預設集摘要文字重用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'直排'**
+  String get readerSettingsWritingModeVerticalLabel;
+
+  /// 排版方向「強制橫排」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'強制橫排'**
+  String get readerSettingsWritingModeHorizontalTooltip;
+
+  /// 排版方向「強制橫排」選項短標籤，亦供預設集摘要文字重用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'橫排'**
+  String get readerSettingsWritingModeHorizontalLabel;
+
+  /// 呈現分頁「翻頁模式覆寫」選項群組小標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'翻頁模式覆寫'**
+  String get readerSettingsPageTurnModeLabel;
+
+  /// 翻頁模式「點擊翻頁」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'點擊翻頁'**
+  String get readerSettingsPageTurnPaginatedTooltip;
+
+  /// 翻頁模式「點擊翻頁」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'點擊'**
+  String get readerSettingsPageTurnPaginatedLabel;
+
+  /// 翻頁模式「滾動翻頁」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'滾動翻頁'**
+  String get readerSettingsPageTurnScrollTooltip;
+
+  /// 翻頁模式「滾動翻頁」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'滾動'**
+  String get readerSettingsPageTurnScrollLabel;
+
+  /// 呈現分頁「螢幕方向鎖定覆寫」選項群組小標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'螢幕方向鎖定覆寫'**
+  String get readerSettingsScreenOrientationLabel;
+
+  /// 螢幕方向「自動旋轉」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'自動旋轉'**
+  String get readerSettingsOrientationAutoTooltip;
+
+  /// 螢幕方向「自動旋轉」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'自動'**
+  String get readerSettingsOrientationAutoLabel;
+
+  /// 螢幕方向「鎖定 0°」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'鎖定 0°'**
+  String get readerSettingsOrientationLock0Tooltip;
+
+  /// 螢幕方向「鎖定 90°」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'鎖定 90°'**
+  String get readerSettingsOrientationLock90Tooltip;
+
+  /// 螢幕方向「鎖定 180°」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'鎖定 180°'**
+  String get readerSettingsOrientationLock180Tooltip;
+
+  /// 螢幕方向「鎖定 270°」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'鎖定 270°'**
+  String get readerSettingsOrientationLock270Tooltip;
+
+  /// 預設集分頁「另存為新預設集」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'將目前設定存為新預設集'**
+  String get readerSettingsSaveAsPresetButton;
+
+  /// 預設集分頁「已儲存的預設集」區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已儲存的預設集'**
+  String get readerSettingsSavedPresetsLabel;
+
+  /// 預設集分頁「從其他書籍複製」區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'從其他書籍複製'**
+  String get readerSettingsCopyFromBookLabel;
+
+  /// 「複製到本書」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'複製到本書'**
+  String get readerSettingsCopyToCurrentBookButton;
+
+  /// 「複製到其他書籍」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'複製到其他書籍'**
+  String get readerSettingsCopyToOtherBooksButton;
+
+  /// 固定列（重設為本書原樣式）的標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'系統預設'**
+  String get readerSettingsResetPresetTitle;
+
+  /// 固定列（重設為本書原樣式）的副標題說明
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'移除本書所有字級/字重/行距/段落間距/字距覆寫，改用書本原始樣式'**
+  String get readerSettingsResetPresetSubtitle;
+
+  /// 預設集卡片列「套用」按鈕文字，固定列與各 preset slot 共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'套用'**
+  String get readerSettingsApplyButton;
+
+  /// 預設集摘要文字中，欄位未收錄時的回退顯示（例如字級/行距缺席）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'預設'**
+  String get readerSettingsPresetDefaultValue;
+
+  /// 預設集摘要文字中，排版方向欄位為 null（自動偵測）時的顯示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'自動'**
+  String get readerSettingsPresetSummaryAutoLabel;
+
+  /// 預設集卡片副標題摘要格式，三個 placeholder 皆為已格式化完成的字串（含 readerSettingsPresetDefaultValue／readerSettingsPresetSummaryAutoLabel 等回退值）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字級{fontSize}・行距{lineHeight}・{writingMode}'**
+  String readerSettingsPresetSummaryFormat(
+    String fontSize,
+    String lineHeight,
+    String writingMode,
+  );
+
+  /// 預設集尚未使用的空 slot 顯示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'（空）'**
+  String get readerSettingsPresetEmptySlot;
+
+  /// 預設集卡片列「套用到其他書籍」圖示按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'套用到其他書籍'**
+  String get readerSettingsApplyToOtherBooksTooltip;
+
+  /// 預設集卡片列「刪除」圖示按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get readerSettingsDeletePresetTooltip;
+
+  /// ReaderScreen.bookTitle 未提供（僅測試直接建構時可能發生，正式生產路徑必定提供書名）時的回退顯示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'未知書籍'**
+  String get readerUnknownBookTitle;
+
+  /// layoutPresetRepository 未提供時，點擊「另存為新預設集」顯示的 SnackBar 訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'暫時無法儲存預設集'**
+  String get readerSaveAsPresetUnavailableMessage;
+
+  /// 另存為新預設集過程發生例外時顯示的 SnackBar 訊息，{error} 為例外物件的字串表示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'另存為新預設集失敗：{error}'**
+  String readerSaveAsPresetFailedMessage(String error);
+
+  /// 已存滿 3 組預設集時，選擇要覆蓋哪一組的對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選擇要覆蓋的預設集'**
+  String get readerOverwritePresetPickerTitle;
+
+  /// 覆蓋預設集選單的單一選項文字，{name} 為預設集名稱，{date} 為已依 DateFormat.yMd() 格式化的最後更新日期字串
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{name}（最後更新：{date}）'**
+  String readerOverwritePresetOptionLabel(String name, String date);
+
+  /// 覆蓋預設集二次確認對話框標題與確認按鈕（兩處文字相同，共用一個 key）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確認覆蓋'**
+  String get readerConfirmOverwriteTitle;
+
+  /// 覆蓋預設集二次確認訊息，{name} 為預設集名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'即將覆蓋預設集「{name}」，此動作無法復原。'**
+  String readerOverwritePresetConfirmMessage(String name);
+
+  /// 套用版面設定到其他書籍的確認對話框標題與確認按鈕（兩處文字相同，共用一個 key）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確認套用'**
+  String get readerConfirmApplyTitle;
+
+  /// 套用版面設定到其他書籍的確認訊息，{count} 為目標書籍數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{count, plural, =1{即將覆蓋 1 本書的版面設定，此動作無法復原。} other{即將覆蓋 {count} 本書的版面設定，此動作無法復原。}}'**
+  String readerApplyToOthersConfirmMessage(int count);
+
+  /// 套用版面設定（來自預設集或來自其他書籍）過程發生例外時顯示的 SnackBar 訊息，{error} 為例外物件的字串表示，兩處呼叫端共用
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'套用版面設定失敗：{error}'**
+  String readerApplyPresetFailedMessage(String error);
+
+  /// 刪除預設集確認對話框標題與確認按鈕（兩處文字相同，共用一個 key）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確認刪除'**
+  String get readerConfirmDeleteTitle;
+
+  /// 刪除預設集確認訊息，{name} 為預設集名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'即將刪除預設集「{name}」，此動作無法復原。'**
+  String readerDeletePresetConfirmMessage(String name);
+
+  /// 刪除預設集過程發生例外時顯示的 SnackBar 訊息，{error} 為例外物件的字串表示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除預設集失敗：{error}'**
+  String readerDeletePresetFailedMessage(String error);
+
+  /// searchRepository／libraryRepository 未提供或書籍格式無法辨識時，點擊搜尋顯示的 SnackBar 訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'搜尋功能暫時無法使用'**
+  String get readerSearchUnavailableMessage;
+
+  /// 開書逾時錯誤畫面顯示的訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'開書逾時，可能是系統 WebView 版本過舊或檔案異常'**
+  String get readerOpenBookTimeoutMessage;
+
+  /// 選字工具列「複製」按鈕點擊後的 SnackBar 提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已複製到剪貼簿'**
+  String get readerCopiedToClipboardMessage;
+
+  /// TTS 選擇語音選單的標題列文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'朗讀語音'**
+  String get readerTtsVoicePickerTitle;
+
+  /// 書籍格式無法辨識（BookFormat.unknown）時的畫面中央提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'不支援的檔案格式'**
+  String get readerUnsupportedFormatMessage;
+
+  /// 開書失敗且 _errorMessage 為 null 時的回退錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法載入書籍'**
+  String get readerFailedToLoadBookMessage;
+
+  /// TTS 睡眠定時器選單的分鐘數選項文字，{minutes} 為分鐘數（固定選項 15/30/45/60，恆大於 1，不需要 ICU plural）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{minutes} 分鐘'**
+  String readerTtsSleepTimerOptionMinutes(int minutes);
+
+  /// TTS 睡眠定時器選單「不限時」選項文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'不限時'**
+  String get readerTtsSleepTimerNoLimitLabel;
 }
 
 class _AppLocalizationsDelegate

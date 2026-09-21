@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 import '../library/models/library_enums.dart';
 import '../sync/sync_reading_position.dart';
 
@@ -10,12 +12,16 @@ import '../sync/sync_reading_position.dart';
 String _describeReadingPosition(
   ReadingPositionSnapshot snapshot,
   BookFileFormat format,
+  AppLocalizations l10n,
 ) {
   final percent = (snapshot.progress * 100).round();
   if (format == BookFileFormat.pdf && snapshot.pdfPageIndex != null) {
-    return '第 ${snapshot.pdfPageIndex! + 1} 頁（進度 $percent%）';
+    return l10n.readerPositionConflictPdfLocation(
+      snapshot.pdfPageIndex! + 1,
+      percent,
+    );
   }
-  return '進度 $percent%';
+  return l10n.readerPositionConflictEpubLocation(percent);
 }
 
 /// 閱讀位置衝突對話框（epic-8-sync Issue 5，FR-19：「若開啟書籍時雲端
@@ -30,27 +36,31 @@ Future<ReadingPositionChoice?> showReadingPositionConflictDialog(
 ) {
   return showDialog<ReadingPositionChoice>(
     context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text('「${conflict.bookTitle}」的閱讀進度不一致'),
-      content: Text(
-        '偵測到另一台裝置也更新過這本書的閱讀進度，請選擇要保留哪一邊：\n\n'
-        '本機：${_describeReadingPosition(conflict.local, conflict.format)}\n'
-        '雲端：${_describeReadingPosition(conflict.remote, conflict.format)}',
-      ),
-      actions: [
-        TextButton(
-          key: const Key('reading_position_conflict_keep_cloud'),
-          onPressed: () =>
-              Navigator.of(dialogContext).pop(ReadingPositionChoice.keepCloud),
-          child: const Text('保留雲端'),
+    builder: (dialogContext) {
+      final l10n = AppLocalizations.of(dialogContext)!;
+      return AlertDialog(
+        title: Text(l10n.readerPositionConflictTitle(conflict.bookTitle)),
+        content: Text(
+          l10n.readerPositionConflictMessage(
+            _describeReadingPosition(conflict.local, conflict.format, l10n),
+            _describeReadingPosition(conflict.remote, conflict.format, l10n),
+          ),
         ),
-        TextButton(
-          key: const Key('reading_position_conflict_keep_local'),
-          onPressed: () =>
-              Navigator.of(dialogContext).pop(ReadingPositionChoice.keepLocal),
-          child: const Text('保留本機'),
-        ),
-      ],
-    ),
+        actions: [
+          TextButton(
+            key: const Key('reading_position_conflict_keep_cloud'),
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(ReadingPositionChoice.keepCloud),
+            child: Text(l10n.readerPositionConflictKeepCloud),
+          ),
+          TextButton(
+            key: const Key('reading_position_conflict_keep_local'),
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(ReadingPositionChoice.keepLocal),
+            child: Text(l10n.readerPositionConflictKeepLocal),
+          ),
+        ],
+      );
+    },
   );
 }
