@@ -124,7 +124,7 @@
 
 ## Issue 4：閱讀器 Chrome Bar 模組字串抽取＋測試遷移
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 0。
 
@@ -132,6 +132,8 @@
 
 **What to build（代表性範圍，實際檔案清單以認領當下重新 grep 盤點為準）：**
 - `reader_screen.dart`（`_buildSearchableBook()` 的 `BookGroup.uncategorized` 用法除外，見 Issue 2 的不可變性警示，本 Issue 抽取其餘字串時同樣不得觸碰該行）／`reader_chrome_top_bar.dart`／`reader_chrome_bottom_bar.dart`／`reader_footer.dart`／`toc_bottom_sheet.dart`／`toc_bottom_sheet_pdf.dart`／`notes_bottom_sheet.dart`（依賴的 `EBSheetShell` 已在 Issue 0 處理，本 Issue 不重複修改 `eb_sheet_shell.dart`）／`note_edit_dialog.dart`／`annotation_toolbar.dart`／`tts_panel.dart`／`pdf_search_panel.dart`／`pdf_settings_sheet.dart`／`fxl_settings_sheet.dart`／`reader_settings_sheet.dart`／`pdf_thumbnail_panel.dart`／`paging_bar.dart`／`reading_position_conflict_dialog.dart`／`full_text_search_confirm_dialog.dart`／其餘共用小元件（`widgets/eb_option_chip_group.dart`／`widgets/eb_section_header.dart`／`widgets/eb_stepper.dart`／`widgets/eb_field_card.dart`／`reader_option_tile.dart`／`text_conversion_icon.dart`——**不含** `eb_sheet_shell.dart`，見上）。
+
+**實際執行範圍修正記錄（認領時 grep 盤點）**：移出 `toc_bottom_sheet_pdf.dart`（不存在）、`reader_footer.dart`（零硬編碼字串）、`widgets/eb_option_chip_group.dart`／`widgets/eb_section_header.dart`／`widgets/eb_stepper.dart`／`widgets/eb_field_card.dart`／`reader_option_tile.dart`（零硬編碼字串）、`widgets/text_conversion_icon.dart`（4 處命中是簡/繁字元示意圖示本身要呈現的文字，非待翻譯 UI 文案，不修改）。
 
 **單元測試要求：** 同 Issue 3 模式，逐檔改用 `pumpLocalizedWidget()`，零回歸。
 

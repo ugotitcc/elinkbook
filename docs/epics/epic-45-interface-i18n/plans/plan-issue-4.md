@@ -4070,7 +4070,7 @@ git commit -m "test(epic-45): reader_screen_test.dart 227 處測試遷移至在�
 - Modify: `docs/epics/epic-45-interface-i18n/epic.md`
 - Modify: `docs/epics.md`
 
-- [ ] **Step 1: 完整 `flutter analyze`**
+- [x] **Step 1: 完整 `flutter analyze`**
 
 Run（在 `app/` 目錄下）：
 ```bash
@@ -4078,7 +4078,7 @@ flutter analyze
 ```
 Expected: No issues found!
 
-- [ ] **Step 2: 完整 `flutter test`**
+- [x] **Step 2: 完整 `flutter test`**
 
 Run:
 ```bash
@@ -4086,26 +4086,26 @@ flutter test
 ```
 Expected: 全數通過，與本 Issue 認領前的 base commit 相比零新增失敗（若有既存不穩定測試，需與 base commit 重跑比對，證實非本 Issue 引入，比照 Issue 0／3 既有先例的查證方式）。
 
-- [ ] **Step 3: 確認 `_buildSearchableBook()` Sentinel 字面值最終零異動**
+- [x] **Step 3: 確認 `_buildSearchableBook()` Sentinel 字面值最終零異動**
 
 Run: `git diff main -- lib/screens/reader_screen.dart | grep -A2 -B2 "BookGroup.uncategorized"`
 Expected: 該行未出現在 diff 中（或出現但確認只是上下文行、實際內容未變）。
 
-- [ ] **Step 4: 確認範圍修正已同步記錄**
+- [x] **Step 4: 確認範圍修正已同步記錄**
 
 在 `docs/epics/epic-45-interface-i18n/issues.md`「Issue 4」段落：
 1. `**Status:** ready-for-agent` 改為 `**Status:** completed`。
 2. 在「What to build」段落後新增「**實際執行範圍修正記錄（認領時 grep 盤點）**」段落，內容比照 Issue 3 先例，記錄：移出 `toc_bottom_sheet_pdf.dart`（不存在）、`reader_footer.dart`（零硬編碼字串）、`widgets/eb_option_chip_group.dart`／`widgets/eb_section_header.dart`／`widgets/eb_stepper.dart`／`widgets/eb_field_card.dart`／`widgets/reader_option_tile.dart`（零硬編碼字串）、`widgets/text_conversion_icon.dart`（4 處命中是簡/繁字元示意圖示本身要呈現的文字，非待翻譯 UI 文案，不修改）。
 
-- [ ] **Step 5: 更新 `epic.md`**
+- [x] **Step 5: 更新 `epic.md`**
 
 在「開發記錄」段落末尾新增一則，比照既有格式，記錄：Task 1-21 完成概況、`reader_screen.dart`／`reader_screen_test.dart` 的規模與處理方式（bookTitle nullable 化、227 處測試遷移採用轉換規則而非逐一列舉）、跨三個版面設定 Bottom Sheet（`fxl_settings_sheet.dart`／`pdf_settings_sheet.dart`／`reader_settings_sheet.dart`）共用 10 個 ARB key 的 DRY 設計、`flutter analyze`／`flutter test` 最終結果。
 
-- [ ] **Step 6: 更新 `docs/epics.md`**
+- [x] **Step 6: 更新 `docs/epics.md`**
 
 `epic-45-interface-i18n` 該列備註欄位改為「Issue 0／1／2／3／4 已完成，待認領 Issue 5-6」。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/ docs/epics/epic-45-interface-i18n/issues.md docs/epics/epic-45-interface-i18n/epic.md docs/epics.md
