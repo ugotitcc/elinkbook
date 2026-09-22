@@ -163,7 +163,7 @@
 - `settings_scaffold_test.dart` 已在 Issue 1 完整遷移至 `pumpLocalizedWidget()`，本 Issue 不重複遷移。
 - `cloud_account_settings_screen.dart._buildProviderTile()` 的 `title`（`'Google Drive'`／`'OneDrive'`）為雲端服務商品牌名不翻譯。
 
-**單元測試要求：** 同 Issue 3 模式，逐檔改用 `pumpLocalizedWidget()`，零回歸；`font_management_screen_test.dart` 特別驗證字型品牌名（思源黑體等）三語言下皆維持原文不翻譯；`sync_settings_screen_test.dart` 驗證三語言下「最後同步」日期時間格式符合各自地區慣例；`settings_scaffold_test.dart` 驗證索引進度字串英文版單複數正確。
+**單元測試要求（`/superpowers:requesting-code-review` review-issue-5.md Minor #1 修正——原文字與下方「實際執行範圍修正記錄」不一致，已同步）：** 除 `settings_scaffold_test.dart`（Issue 1 已完整遷移至 `pumpLocalizedWidget()`，本 Issue 不重複遷移，見上）外，其餘 8 個測試檔維持裸 `MaterialApp(...)` 呼叫、逐一補上 `locale`/`localizationsDelegates`/`supportedLocales` 三參數，零回歸；`font_management_screen_test.dart` 特別驗證字型品牌名（思源黑體等）三語言下皆維持原文不翻譯，並驗證 `buildUploadResultMessage()` 上傳結果訊息 ICU plural 單複數正確；`sync_settings_screen_test.dart` 驗證三語言下「最後同步」日期時間格式符合各自地區慣例。
 
 **驗收標準：** 系統設定四分區全部子畫面在三語言下正確渲染，內建字型名稱維持不翻譯；`flutter analyze` 乾淨、`flutter test`（含本模組觸及的測試檔）全數通過。
 
