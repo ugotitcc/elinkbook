@@ -369,5 +369,16 @@
   "settingsAboutLabel": "关于",
   "settingsReaderConsoleLogLabel": "阅读器 Console Log",
   "settingsConsoleLogInterceptLabel": "Console Log 拦截",
-  "settingsConsoleLogInterceptSubtitle": "关闭后仅保留错误讯息，用于问题回报时的诊断纪录"
+  "settingsConsoleLogInterceptSubtitle": "关闭后仅保留错误讯息，用于问题回报时的诊断纪录",
+  "navZoneSettingsTitle": "导航热区",
+  "navZoneSettingsPageTurnModeLabel": "翻页方式",
+  "navZoneSettingsSimpleModeLabel": "简单",
+  "navZoneSettingsCustomModeLabel": "自定义",
+  "navZoneSettingsShowDebugOverlayLabel": "显示热区辅助线",
+  "navZoneSettingsSaveCustomButton": "保存自定义热区设定",
+  "navZoneActionPreviousPage": "上一页",
+  "navZoneActionNextPage": "下一页",
+  "navZoneActionMenu": "选单",
+  "navZoneActionNone": "无动作",
+  "navZoneCustomValidationError": "至少需要 1 格设为「选单」，否则将无法退出沉浸模式"
 }

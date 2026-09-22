@@ -2326,6 +2326,72 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄'**
   String get settingsConsoleLogInterceptSubtitle;
+
+  /// 導航熱區設定畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'導航熱區'**
+  String get navZoneSettingsTitle;
+
+  /// 導航熱區設定畫面「翻頁方式」（簡單/自訂模板切換）區塊標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'翻頁方式'**
+  String get navZoneSettingsPageTurnModeLabel;
+
+  /// 翻頁方式切換鈕「簡單」選項文字（三選一固定模板）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'簡單'**
+  String get navZoneSettingsSimpleModeLabel;
+
+  /// 翻頁方式切換鈕「自訂」選項文字（9 格自由編輯器）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'自訂'**
+  String get navZoneSettingsCustomModeLabel;
+
+  /// 「顯示熱區輔助線」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示熱區輔助線'**
+  String get navZoneSettingsShowDebugOverlayLabel;
+
+  /// 自訂熱區編輯器「儲存自訂熱區設定」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'儲存自訂熱區設定'**
+  String get navZoneSettingsSaveCustomButton;
+
+  /// 自訂熱區九宮格「上一頁」動作的格內文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上一頁'**
+  String get navZoneActionPreviousPage;
+
+  /// 自訂熱區九宮格「下一頁」動作的格內文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下一頁'**
+  String get navZoneActionNextPage;
+
+  /// 自訂熱區九宮格「選單」動作的格內文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選單'**
+  String get navZoneActionMenu;
+
+  /// 自訂熱區九宮格「無動作」動作的格內文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無動作'**
+  String get navZoneActionNone;
+
+  /// 自訂熱區儲存時驗證失敗（沒有任何格子設為選單）的錯誤提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'至少需要 1 格設為「選單」，否則將無法退出沉浸模式'**
+  String get navZoneCustomValidationError;
 }
 
 class _AppLocalizationsDelegate

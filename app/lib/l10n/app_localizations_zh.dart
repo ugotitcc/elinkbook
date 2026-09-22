@@ -1269,6 +1269,39 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsConsoleLogInterceptSubtitle => '關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄';
+
+  @override
+  String get navZoneSettingsTitle => '導航熱區';
+
+  @override
+  String get navZoneSettingsPageTurnModeLabel => '翻頁方式';
+
+  @override
+  String get navZoneSettingsSimpleModeLabel => '簡單';
+
+  @override
+  String get navZoneSettingsCustomModeLabel => '自訂';
+
+  @override
+  String get navZoneSettingsShowDebugOverlayLabel => '顯示熱區輔助線';
+
+  @override
+  String get navZoneSettingsSaveCustomButton => '儲存自訂熱區設定';
+
+  @override
+  String get navZoneActionPreviousPage => '上一頁';
+
+  @override
+  String get navZoneActionNextPage => '下一頁';
+
+  @override
+  String get navZoneActionMenu => '選單';
+
+  @override
+  String get navZoneActionNone => '無動作';
+
+  @override
+  String get navZoneCustomValidationError => '至少需要 1 格設為「選單」，否則將無法退出沉浸模式';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -2536,6 +2569,39 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get settingsConsoleLogInterceptSubtitle => '关闭后仅保留错误讯息，用于问题回报时的诊断纪录';
+
+  @override
+  String get navZoneSettingsTitle => '导航热区';
+
+  @override
+  String get navZoneSettingsPageTurnModeLabel => '翻页方式';
+
+  @override
+  String get navZoneSettingsSimpleModeLabel => '简单';
+
+  @override
+  String get navZoneSettingsCustomModeLabel => '自定义';
+
+  @override
+  String get navZoneSettingsShowDebugOverlayLabel => '显示热区辅助线';
+
+  @override
+  String get navZoneSettingsSaveCustomButton => '保存自定义热区设定';
+
+  @override
+  String get navZoneActionPreviousPage => '上一页';
+
+  @override
+  String get navZoneActionNextPage => '下一页';
+
+  @override
+  String get navZoneActionMenu => '选单';
+
+  @override
+  String get navZoneActionNone => '无动作';
+
+  @override
+  String get navZoneCustomValidationError => '至少需要 1 格设为「选单」，否则将无法退出沉浸模式';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -3803,4 +3869,37 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsConsoleLogInterceptSubtitle => '關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄';
+
+  @override
+  String get navZoneSettingsTitle => '導航熱區';
+
+  @override
+  String get navZoneSettingsPageTurnModeLabel => '翻頁方式';
+
+  @override
+  String get navZoneSettingsSimpleModeLabel => '簡單';
+
+  @override
+  String get navZoneSettingsCustomModeLabel => '自訂';
+
+  @override
+  String get navZoneSettingsShowDebugOverlayLabel => '顯示熱區輔助線';
+
+  @override
+  String get navZoneSettingsSaveCustomButton => '儲存自訂熱區設定';
+
+  @override
+  String get navZoneActionPreviousPage => '上一頁';
+
+  @override
+  String get navZoneActionNextPage => '下一頁';
+
+  @override
+  String get navZoneActionMenu => '選單';
+
+  @override
+  String get navZoneActionNone => '無動作';
+
+  @override
+  String get navZoneCustomValidationError => '至少需要 1 格設為「選單」，否則將無法退出沉浸模式';
 }

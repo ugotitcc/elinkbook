@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../reader/global_reader_prefs.dart';
 import '../reader/nav_zone_mode.dart';
 import '../reader/reader_prefs_manager.dart';
@@ -102,7 +103,8 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
   void _saveCustomActions() {
     if (!isValidCustomZoneConfig(_customActions)) {
       setState(() {
-        _validationError = '至少需要 1 格設為「選單」，否則將無法退出沉浸模式';
+        _validationError =
+            AppLocalizations.of(context)!.navZoneCustomValidationError;
       });
       return;
     }
@@ -119,22 +121,24 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
   }
 
   String _actionLabel(ZoneAction action) {
+    final l10n = AppLocalizations.of(context)!;
     switch (action) {
       case ZoneAction.previousPage:
-        return '上一頁';
+        return l10n.navZoneActionPreviousPage;
       case ZoneAction.nextPage:
-        return '下一頁';
+        return l10n.navZoneActionNextPage;
       case ZoneAction.menu:
-        return '選單';
+        return l10n.navZoneActionMenu;
       case ZoneAction.none:
-        return '無動作';
+        return l10n.navZoneActionNone;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('導航熱區')),
+      appBar: AppBar(title: Text(l10n.navZoneSettingsTitle)),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(
@@ -147,13 +151,19 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
-                      const Text('翻頁方式'),
+                      Text(l10n.navZoneSettingsPageTurnModeLabel),
                       const Spacer(),
                       SegmentedButton<bool>(
                         key: const Key('nav_zone_template_toggle'),
-                        segments: const [
-                          ButtonSegment(value: false, label: Text('簡單')),
-                          ButtonSegment(value: true, label: Text('自訂')),
+                        segments: [
+                          ButtonSegment(
+                            value: false,
+                            label: Text(l10n.navZoneSettingsSimpleModeLabel),
+                          ),
+                          ButtonSegment(
+                            value: true,
+                            label: Text(l10n.navZoneSettingsCustomModeLabel),
+                          ),
                         ],
                         selected: {
                           _prefs.navZone.navZoneMode == NavZoneMode.custom,
@@ -205,7 +215,7 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
                 const Divider(),
                 SwitchListTile(
                   key: const Key('nav_zone_debug_overlay_switch'),
-                  title: const Text('顯示熱區輔助線'),
+                  title: Text(l10n.navZoneSettingsShowDebugOverlayLabel),
                   value: _prefs.navZone.showNavZoneDebugOverlay,
                   onChanged: _toggleDebugOverlay,
                 ),
@@ -386,7 +396,9 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
           ElevatedButton(
             key: const Key('nav_zone_save_custom_button'),
             onPressed: _saveCustomActions,
-            child: const Text('儲存自訂熱區設定'),
+            child: Text(
+              AppLocalizations.of(context)!.navZoneSettingsSaveCustomButton,
+            ),
           ),
         ],
       ),

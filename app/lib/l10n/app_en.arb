@@ -369,5 +369,16 @@
   "settingsAboutLabel": "About",
   "settingsReaderConsoleLogLabel": "Reader Console Log",
   "settingsConsoleLogInterceptLabel": "Console Log Interception",
-  "settingsConsoleLogInterceptSubtitle": "When off, only error messages are kept for diagnostic reports"
+  "settingsConsoleLogInterceptSubtitle": "When off, only error messages are kept for diagnostic reports",
+  "navZoneSettingsTitle": "Navigation Zones",
+  "navZoneSettingsPageTurnModeLabel": "Page Turn Method",
+  "navZoneSettingsSimpleModeLabel": "Simple",
+  "navZoneSettingsCustomModeLabel": "Custom",
+  "navZoneSettingsShowDebugOverlayLabel": "Show zone guide overlay",
+  "navZoneSettingsSaveCustomButton": "Save Custom Zone Settings",
+  "navZoneActionPreviousPage": "Previous Page",
+  "navZoneActionNextPage": "Next Page",
+  "navZoneActionMenu": "Menu",
+  "navZoneActionNone": "No Action",
+  "navZoneCustomValidationError": "At least 1 cell must be set to \"Menu\", otherwise there will be no way to exit immersive mode"
 }

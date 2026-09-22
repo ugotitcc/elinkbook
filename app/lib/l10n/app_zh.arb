@@ -369,5 +369,16 @@
   "settingsAboutLabel": "關於",
   "settingsReaderConsoleLogLabel": "閱讀器 Console Log",
   "settingsConsoleLogInterceptLabel": "Console Log 攔截",
-  "settingsConsoleLogInterceptSubtitle": "關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄"
+  "settingsConsoleLogInterceptSubtitle": "關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄",
+  "navZoneSettingsTitle": "導航熱區",
+  "navZoneSettingsPageTurnModeLabel": "翻頁方式",
+  "navZoneSettingsSimpleModeLabel": "簡單",
+  "navZoneSettingsCustomModeLabel": "自訂",
+  "navZoneSettingsShowDebugOverlayLabel": "顯示熱區輔助線",
+  "navZoneSettingsSaveCustomButton": "儲存自訂熱區設定",
+  "navZoneActionPreviousPage": "上一頁",
+  "navZoneActionNextPage": "下一頁",
+  "navZoneActionMenu": "選單",
+  "navZoneActionNone": "無動作",
+  "navZoneCustomValidationError": "至少需要 1 格設為「選單」，否則將無法退出沉浸模式"
 }

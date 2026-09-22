@@ -1307,4 +1307,38 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsConsoleLogInterceptSubtitle =>
       'When off, only error messages are kept for diagnostic reports';
+
+  @override
+  String get navZoneSettingsTitle => 'Navigation Zones';
+
+  @override
+  String get navZoneSettingsPageTurnModeLabel => 'Page Turn Method';
+
+  @override
+  String get navZoneSettingsSimpleModeLabel => 'Simple';
+
+  @override
+  String get navZoneSettingsCustomModeLabel => 'Custom';
+
+  @override
+  String get navZoneSettingsShowDebugOverlayLabel => 'Show zone guide overlay';
+
+  @override
+  String get navZoneSettingsSaveCustomButton => 'Save Custom Zone Settings';
+
+  @override
+  String get navZoneActionPreviousPage => 'Previous Page';
+
+  @override
+  String get navZoneActionNextPage => 'Next Page';
+
+  @override
+  String get navZoneActionMenu => 'Menu';
+
+  @override
+  String get navZoneActionNone => 'No Action';
+
+  @override
+  String get navZoneCustomValidationError =>
+      'At least 1 cell must be set to \"Menu\", otherwise there will be no way to exit immersive mode';
 }
