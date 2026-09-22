@@ -4,6 +4,7 @@ import '../cloud_import/cloud_account_repository.dart';
 import '../cloud_import/cloud_provider.dart';
 import '../cloud_import/google_drive_oauth_client.dart';
 import '../cloud_import/onedrive_oauth_client.dart';
+import '../l10n/app_localizations.dart';
 
 /// Settings「已連結的雲端匯入帳戶」子頁面（spec.md「UI 落地位置」）：
 /// 顯示 Google Drive／OneDrive 各自的連結狀態（未連結／已連結＋帳號
@@ -116,8 +117,9 @@ class _CloudAccountSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('已連結的雲端匯入帳戶')),
+      appBar: AppBar(title: Text(l10n.cloudAccountSettingsTitle)),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(
@@ -130,6 +132,7 @@ class _CloudAccountSettingsScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildProviderTile(
+                    l10n,
                     title: 'Google Drive',
                     keyPrefix: 'google_drive',
                     linked: _googleDriveLinked,
@@ -140,6 +143,7 @@ class _CloudAccountSettingsScreenState
                   ),
                   const SizedBox(height: 24),
                   _buildProviderTile(
+                    l10n,
                     title: 'OneDrive',
                     keyPrefix: 'onedrive',
                     linked: _oneDriveLinked,
@@ -159,7 +163,8 @@ class _CloudAccountSettingsScreenState
   /// （Google Drive 沿用 Issue 1 已核准的 `google_drive` 前綴，維持不變，
   /// 不因抽出共用 helper 而變動既有 key 字串，避免破壞 Issue 1 既有
   /// widget test）。
-  Widget _buildProviderTile({
+  Widget _buildProviderTile(
+    AppLocalizations l10n, {
     required String title,
     required String keyPrefix,
     required bool linked,
@@ -175,18 +180,18 @@ class _CloudAccountSettingsScreenState
         const SizedBox(height: 8),
         if (linked) ...[
           Text(
-            '已連結：${email ?? ''}',
+            l10n.cloudAccountSettingsLinkedEmail(email ?? ''),
             key: Key('cloud_account_settings_${keyPrefix}_linked_email'),
           ),
           const SizedBox(height: 8),
           ElevatedButton(
             key: Key('cloud_account_settings_${keyPrefix}_unlink_button'),
             onPressed: onUnlink,
-            child: const Text('解除連結'),
+            child: Text(l10n.cloudAccountSettingsUnlinkButton),
           ),
         ] else ...[
           Text(
-            '未連結',
+            l10n.cloudAccountSettingsUnlinkedText,
             key: Key('cloud_account_settings_${keyPrefix}_unlinked_text'),
           ),
           const SizedBox(height: 8),
@@ -199,7 +204,7 @@ class _CloudAccountSettingsScreenState
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('連結'),
+                : Text(l10n.cloudAccountSettingsLinkButton),
           ),
         ],
       ],

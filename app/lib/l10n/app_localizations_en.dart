@@ -1194,4 +1194,408 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get readerTtsSleepTimerNoLimitLabel => 'No limit';
+
+  @override
+  String get settingsScaffoldTitle => 'Settings';
+
+  @override
+  String get settingsLibraryTooltip => 'Library';
+
+  @override
+  String get settingsSourceTooltip => 'Sources';
+
+  @override
+  String get settingsAppearanceSectionTitle => 'Appearance';
+
+  @override
+  String get settingsThemeLabel => 'Theme';
+
+  @override
+  String get settingsThemeLockedHint =>
+      'This selects the theme to restore when E-Ink mode is turned off';
+
+  @override
+  String settingsThemeDotSemanticsLabel(String themeName) {
+    return '$themeName theme';
+  }
+
+  @override
+  String settingsThemeDotLockedSemanticsLabel(
+    String themeName,
+    String currentThemeName,
+  ) {
+    return '$themeName theme, locked. This selects the theme to restore when E-Ink mode is off. Currently selected: $currentThemeName';
+  }
+
+  @override
+  String get settingsThemeLight => 'Light';
+
+  @override
+  String get settingsThemeDark => 'Dark';
+
+  @override
+  String get settingsThemeSepia => 'Sepia';
+
+  @override
+  String get settingsEinkModeLabel => 'E-Ink high contrast mode';
+
+  @override
+  String get settingsEinkModeSubtitle =>
+      'Disables animations and gradients, showing pure black-and-white high contrast optimized for e-paper screens';
+
+  @override
+  String get settingsFontManagementLabel => 'Font Management';
+
+  @override
+  String get settingsReadingSectionTitle => 'Reading';
+
+  @override
+  String get settingsReadingDefaultsLabel => 'Reading Defaults';
+
+  @override
+  String get settingsNavZoneLabel => 'Navigation Zones';
+
+  @override
+  String get settingsTtsDefaultsLabel => 'Read-Aloud Voice & Speed';
+
+  @override
+  String get settingsFullTextSearchUnavailableLabel => 'Full-Text Search';
+
+  @override
+  String get settingsFullTextSearchUnavailableSubtitle =>
+      'Full-text search isn\'t supported on this device';
+
+  @override
+  String get settingsFullTextSearchPdfLabel => 'PDF Full-Text Search';
+
+  @override
+  String get settingsFullTextSearchPdfSubtitle =>
+      'Some scanned or image-based PDFs may not have searchable text';
+
+  @override
+  String get settingsFullTextSearchRebuildIndexTooltip => 'Rebuild index';
+
+  @override
+  String get settingsFullTextSearchFoliateLabel =>
+      'Other Formats Full-Text Search';
+
+  @override
+  String get settingsFullTextSearchFoliateSubtitle =>
+      'Background index building for EPUB／TXT／KF8 and similar formats';
+
+  @override
+  String get settingsSyncAccountSectionTitle => 'Sync & Accounts';
+
+  @override
+  String get settingsSyncLabel => 'Sync';
+
+  @override
+  String get settingsCloudAccountLabel => 'Linked Cloud Import Accounts';
+
+  @override
+  String get settingsAboutSectionTitle => 'About';
+
+  @override
+  String get settingsAboutLabel => 'About';
+
+  @override
+  String get settingsReaderConsoleLogLabel => 'Reader Console Log';
+
+  @override
+  String get settingsConsoleLogInterceptLabel => 'Console Log Interception';
+
+  @override
+  String get settingsConsoleLogInterceptSubtitle =>
+      'When off, only error messages are kept for diagnostic reports';
+
+  @override
+  String get navZoneSettingsTitle => 'Navigation Zones';
+
+  @override
+  String get navZoneSettingsPageTurnModeLabel => 'Page Turn Method';
+
+  @override
+  String get navZoneSettingsSimpleModeLabel => 'Simple';
+
+  @override
+  String get navZoneSettingsCustomModeLabel => 'Custom';
+
+  @override
+  String get navZoneSettingsShowDebugOverlayLabel => 'Show zone guide overlay';
+
+  @override
+  String get navZoneSettingsSaveCustomButton => 'Save Custom Zone Settings';
+
+  @override
+  String get navZoneActionPreviousPage => 'Previous Page';
+
+  @override
+  String get navZoneActionNextPage => 'Next Page';
+
+  @override
+  String get navZoneActionMenu => 'Menu';
+
+  @override
+  String get navZoneActionNone => 'No Action';
+
+  @override
+  String get navZoneCustomValidationError =>
+      'At least 1 cell must be set to \"Menu\", otherwise there will be no way to exit immersive mode';
+
+  @override
+  String get readingDefaultsTitle => 'Reading Defaults';
+
+  @override
+  String get readingDefaultsVolumeKeyLabel => 'Volume key page turn';
+
+  @override
+  String get readingDefaultsPageTurnModeSectionTitle => 'Page Turn Method';
+
+  @override
+  String get readingDefaultsPaginatedLabel => 'Tap to turn';
+
+  @override
+  String get readingDefaultsScrollLabel => 'Scroll to turn';
+
+  @override
+  String get readingDefaultsScreenOrientationSectionTitle =>
+      'Screen Orientation';
+
+  @override
+  String get readingDefaultsOrientationAutoLabel => 'Auto-rotate';
+
+  @override
+  String get readingDefaultsOrientationLock0Label => 'Lock 0°';
+
+  @override
+  String get readingDefaultsOrientationLock90Label => 'Lock 90°';
+
+  @override
+  String get readingDefaultsOrientationLock180Label => 'Lock 180°';
+
+  @override
+  String get readingDefaultsOrientationLock270Label => 'Lock 270°';
+
+  @override
+  String get readingDefaultsTextConversionSectionTitle =>
+      'Text Conversion Display';
+
+  @override
+  String get readingDefaultsTextConversionOriginalLabel => 'Original';
+
+  @override
+  String get readingDefaultsTextConversionTraditionalLabel =>
+      'Convert to Traditional';
+
+  @override
+  String get readingDefaultsTextConversionSimplifiedLabel =>
+      'Convert to Simplified';
+
+  @override
+  String get readingDefaultsFullscreenLabel => 'Fullscreen mode';
+
+  @override
+  String get readingDefaultsOpenLastBookLabel =>
+      'Open the last read book on launch';
+
+  @override
+  String get readingDefaultsShowHeaderLabel => 'Show header';
+
+  @override
+  String get readingDefaultsShowFooterLabel => 'Show footer';
+
+  @override
+  String get ttsDefaultsTitle => 'Read-Aloud Voice & Speed';
+
+  @override
+  String get ttsDefaultsVoiceSectionTitle => 'Voice';
+
+  @override
+  String get ttsDefaultsVoiceUnavailableHint =>
+      'No voice is installed or supported on this device';
+
+  @override
+  String get ttsDefaultsSpeedSectionTitle => 'Speed';
+
+  @override
+  String get syncSettingsTitle => 'Sync';
+
+  @override
+  String get syncSettingsSyncFailedMessage =>
+      'Sync failed. Please check your network connection.';
+
+  @override
+  String get syncSettingsNeverSynced => 'Never synced';
+
+  @override
+  String syncSettingsLastSyncedAt(String formatted) {
+    return 'Last synced: $formatted';
+  }
+
+  @override
+  String get syncSettingsConnectionFailedMessage =>
+      'Connection failed. Please check the server URL and your credentials.';
+
+  @override
+  String syncSettingsLoggedInAs(String email) {
+    return 'Signed in as: $email';
+  }
+
+  @override
+  String get syncSettingsManualSyncButton => 'Sync Now';
+
+  @override
+  String get syncSettingsLogoutButton => 'Sign Out';
+
+  @override
+  String get syncSettingsServerUrlLabel => 'Server URL';
+
+  @override
+  String get syncSettingsPasswordLabel => 'Password';
+
+  @override
+  String get syncSettingsShowPasswordTooltip => 'Show password';
+
+  @override
+  String get syncSettingsHidePasswordTooltip => 'Hide password';
+
+  @override
+  String get syncSettingsConnectButton => 'Connect / Sign In';
+
+  @override
+  String get cloudAccountSettingsTitle => 'Linked Cloud Import Accounts';
+
+  @override
+  String cloudAccountSettingsLinkedEmail(String email) {
+    return 'Linked: $email';
+  }
+
+  @override
+  String get cloudAccountSettingsUnlinkButton => 'Unlink';
+
+  @override
+  String get cloudAccountSettingsUnlinkedText => 'Not linked';
+
+  @override
+  String get cloudAccountSettingsLinkButton => 'Link';
+
+  @override
+  String get fontManagementTitle => 'Font Management';
+
+  @override
+  String get fontManagementUploadTooltip => 'Upload font';
+
+  @override
+  String get fontManagementBuiltInSectionLabel => 'Built-in Fonts';
+
+  @override
+  String get fontManagementCustomSectionLabel => 'Custom Fonts';
+
+  @override
+  String get fontManagementNoCustomFontsHint => 'No custom fonts uploaded yet';
+
+  @override
+  String get fontManagementRenameTooltip => 'Rename';
+
+  @override
+  String get fontManagementDeleteTooltip => 'Delete';
+
+  @override
+  String get fontManagementRenameDialogTitle => 'Rename';
+
+  @override
+  String fontManagementDeleteConfirmTitle(String fontName) {
+    return 'Delete \"$fontName\"?';
+  }
+
+  @override
+  String fontManagementDeleteConfirmMessage(int usageCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      usageCount,
+      locale: localeName,
+      other:
+          '$usageCount books currently use this font. They will fall back to the default font after deletion.',
+      one:
+          '1 book currently uses this font. It will fall back to the default font after deletion.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadBothMessage(int addedCount, int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: 'Added $addedCount fonts',
+      one: 'Added 1 font',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount already exist and were skipped',
+      one: '1 already exists and was skipped',
+    );
+    return '$_temp0, $_temp1';
+  }
+
+  @override
+  String fontManagementUploadAddedOnlyMessage(int addedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: 'Added $addedCount fonts',
+      one: 'Added 1 font',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadSkippedOnlyMessage(int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount fonts already exist and were skipped',
+      one: '1 font already exists and was skipped',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get readerConsoleLogTitle => 'Reader Console Log';
+
+  @override
+  String get readerConsoleLogCopyAllTooltip => 'Copy all';
+
+  @override
+  String get readerConsoleLogClearTooltip => 'Clear';
+
+  @override
+  String get readerConsoleLogEmptyHint => 'No records yet';
+
+  @override
+  String get readerConsoleLogCopiedMessage => 'Copied all records to clipboard';
+
+  @override
+  String get aboutScreenTitle => 'About';
+
+  @override
+  String get aboutScreenVersionLabel => 'Version';
+
+  @override
+  String get aboutScreenBuildTimeLabel => 'Build Time';
+
+  @override
+  String get aboutScreenWebViewVersionLabel => 'System WebView Version';
+
+  @override
+  String get aboutScreenViewLicensesButton => 'Open Source Licenses';
+
+  @override
+  String get aboutScreenLoadingText => 'Loading...';
+
+  @override
+  String get aboutScreenFailedToLoadVersionMessage => 'Failed to get version';
+
+  @override
+  String get aboutScreenUnavailableText => 'Unavailable';
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
+import '../l10n/app_localizations.dart';
 import '../sync/sync_account_repository.dart';
 import '../sync/sync_client.dart';
 
@@ -93,21 +95,20 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     } else {
       setState(() => _syncing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('同步失敗，請確認網路連線')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.syncSettingsSyncFailedMessage)),
       );
     }
   }
 
   /// 絕對日期時間格式（Q9 決策：不用相對時間，避免畫面停留很久後文字
-  /// 顯得不準確）。不引入 `intl` 套件——只有這一處需要格式化，手動拼接
-  /// 即可。
-  String _formatLastSyncedAt() {
+  /// 顯得不準確），依目前介面語言格式化（`DateFormat.yMd(locale).add_Hm()`）。
+  String _formatLastSyncedAt(AppLocalizations l10n) {
     final millis = _lastSyncedAtMillis;
-    if (millis == null) return '尚未同步過';
+    if (millis == null) return l10n.syncSettingsNeverSynced;
     final dt = DateTime.fromMillisecondsSinceEpoch(millis);
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '最後同步：${dt.year}-${two(dt.month)}-${two(dt.day)} '
-        '${two(dt.hour)}:${two(dt.minute)}';
+    final locale = Localizations.localeOf(context).toString();
+    final formatted = DateFormat.yMd(locale).add_Hm().format(dt);
+    return l10n.syncSettingsLastSyncedAt(formatted);
   }
 
   Future<void> _connect() async {
@@ -131,7 +132,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     } else {
       setState(() {
         _connecting = false;
-        _errorText = '連線失敗，請確認伺服器網址與帳號密碼是否正確';
+        _errorText = AppLocalizations.of(context)!.syncSettingsConnectionFailedMessage;
       });
     }
   }
@@ -149,8 +150,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('同步')),
+      appBar: AppBar(title: Text(l10n.syncSettingsTitle)),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(
@@ -159,22 +161,24 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
             )
           : Padding(
               padding: const EdgeInsets.all(16),
-              child: _isLoggedIn ? _buildLoggedInView() : _buildLoginForm(),
+              child: _isLoggedIn
+                  ? _buildLoggedInView(l10n)
+                  : _buildLoginForm(l10n),
             ),
     );
   }
 
-  Widget _buildLoggedInView() {
+  Widget _buildLoggedInView(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '已登入：${_loggedInEmail ?? ''}',
+          l10n.syncSettingsLoggedInAs(_loggedInEmail ?? ''),
           key: const Key('sync_settings_logged_in_email'),
         ),
         const SizedBox(height: 16),
         Text(
-          _formatLastSyncedAt(),
+          _formatLastSyncedAt(l10n),
           key: const Key('sync_settings_last_synced_text'),
         ),
         const SizedBox(height: 8),
@@ -187,26 +191,26 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('立即同步'),
+              : Text(l10n.syncSettingsManualSyncButton),
         ),
         const SizedBox(height: 16),
         ElevatedButton(
           key: const Key('sync_settings_logout_button'),
           onPressed: _logout,
-          child: const Text('登出'),
+          child: Text(l10n.syncSettingsLogoutButton),
         ),
       ],
     );
   }
 
-  Widget _buildLoginForm() {
+  Widget _buildLoginForm(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
           key: const Key('sync_settings_base_url_field'),
           controller: _baseUrlController,
-          decoration: const InputDecoration(labelText: '伺服器網址'),
+          decoration: InputDecoration(labelText: l10n.syncSettingsServerUrlLabel),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -226,11 +230,13 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           autocorrect: false,
           enableSuggestions: false,
           decoration: InputDecoration(
-            labelText: '密碼',
+            labelText: l10n.syncSettingsPasswordLabel,
             suffixIcon: IconButton(
               key: const Key('sync_settings_password_visibility_toggle'),
               icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-              tooltip: _obscurePassword ? '顯示密碼' : '隱藏密碼',
+              tooltip: _obscurePassword
+                  ? l10n.syncSettingsShowPasswordTooltip
+                  : l10n.syncSettingsHidePasswordTooltip,
               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
             ),
           ),
@@ -254,7 +260,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('連線／登入'),
+              : Text(l10n.syncSettingsConnectButton),
         ),
       ],
     );

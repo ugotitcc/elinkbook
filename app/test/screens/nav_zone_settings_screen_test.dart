@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/nav_zone_mode.dart';
 import 'package:elinkbook/reader/zone_action.dart';
@@ -10,6 +11,9 @@ void main() {
   testWidgets('載入完成前顯示載入指示器，載入完成後顯示「翻頁方式」二選一與 3 張模板卡片', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
 
@@ -37,6 +41,9 @@ void main() {
       (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -65,6 +72,9 @@ void main() {
           const GlobalReaderPrefs.initial().copyWith(navZone: const NavZonePrefs(navZoneMode: NavZoneMode.oneHand)),
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -84,6 +94,9 @@ void main() {
           const GlobalReaderPrefs.initial().copyWith(navZone: const NavZonePrefs(navZoneMode: NavZoneMode.custom)),
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -99,6 +112,9 @@ void main() {
   testWidgets('點擊「左翻頁」模板卡片觸發 GlobalReaderPrefs 更新為 leftFlip', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -116,6 +132,9 @@ void main() {
   testWidgets('點擊「單手」模板卡片觸發 GlobalReaderPrefs 更新為 oneHand', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -139,6 +158,9 @@ void main() {
           const GlobalReaderPrefs.initial().copyWith(navZone: const NavZonePrefs(navZoneMode: NavZoneMode.leftFlip)),
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -171,6 +193,9 @@ void main() {
           .copyWith(navZone: const NavZonePrefs(navZoneMode: NavZoneMode.rightFlip)),
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -198,6 +223,9 @@ void main() {
           const GlobalReaderPrefs.initial().copyWith(navZone: const NavZonePrefs(navZoneMode: NavZoneMode.custom)),
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -218,6 +246,9 @@ void main() {
   testWidgets('點擊「自訂」segment，切換為 custom 模式並顯示 9 格編輯器', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -239,6 +270,9 @@ void main() {
           const GlobalReaderPrefs.initial().copyWith(navZone: const NavZonePrefs(navZoneMode: NavZoneMode.custom)),
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -268,6 +302,9 @@ void main() {
       ),
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -305,6 +342,9 @@ void main() {
   testWidgets('切換「顯示熱區輔助線」開關觸發 GlobalReaderPrefs 更新', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -328,6 +368,9 @@ void main() {
 
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -363,6 +406,9 @@ void main() {
 
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -414,6 +460,9 @@ void main() {
 
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -482,6 +531,9 @@ void main() {
       '不同）', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -512,5 +564,38 @@ void main() {
     final rightFlipChevronRightColor =
         colorOfIcon(const Key('nav_zone_mode_rightFlip'), Icons.chevron_right);
     expect(leftFlipChevronRightColor, rightFlipChevronRightColor);
+  });
+
+  testWidgets('英文介面下畫面標題與翻頁方式標籤正確以英文渲染', (tester) async {
+    final fakeManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: NavZoneSettingsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Navigation Zones'), findsOneWidget);
+    expect(find.text('Page Turn Method'), findsOneWidget);
+    expect(find.text('Simple'), findsOneWidget);
+    expect(find.text('Custom'), findsOneWidget);
+    expect(find.text('Show zone guide overlay'), findsOneWidget);
+  });
+
+  testWidgets('英文介面下自訂熱區九宮格動作文字正確以英文渲染', (tester) async {
+    final fakeManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: NavZoneSettingsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Custom'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Menu'), findsWidgets);
   });
 }

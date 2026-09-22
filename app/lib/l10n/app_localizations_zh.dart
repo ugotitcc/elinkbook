@@ -1163,6 +1163,392 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get readerTtsSleepTimerNoLimitLabel => '不限時';
+
+  @override
+  String get settingsScaffoldTitle => '設定';
+
+  @override
+  String get settingsLibraryTooltip => '書架';
+
+  @override
+  String get settingsSourceTooltip => '來源';
+
+  @override
+  String get settingsAppearanceSectionTitle => '外觀';
+
+  @override
+  String get settingsThemeLabel => '佈景';
+
+  @override
+  String get settingsThemeLockedHint => '這裡選的是關閉 E-Ink 後要恢復的主題';
+
+  @override
+  String settingsThemeDotSemanticsLabel(String themeName) {
+    return '$themeName佈景';
+  }
+
+  @override
+  String settingsThemeDotLockedSemanticsLabel(
+    String themeName,
+    String currentThemeName,
+  ) {
+    return '$themeName佈景，已鎖定，這裡選的是關閉 E-Ink 後要恢復的主題，目前選擇：$currentThemeName';
+  }
+
+  @override
+  String get settingsThemeLight => '淺色';
+
+  @override
+  String get settingsThemeDark => '深色';
+
+  @override
+  String get settingsThemeSepia => '羊皮紙';
+
+  @override
+  String get settingsEinkModeLabel => 'E-Ink 高對比模式';
+
+  @override
+  String get settingsEinkModeSubtitle => '停用動畫與漸層，以純黑白高對比顯示，專為電子紙螢幕最佳化';
+
+  @override
+  String get settingsFontManagementLabel => '字型管理';
+
+  @override
+  String get settingsReadingSectionTitle => '閱讀';
+
+  @override
+  String get settingsReadingDefaultsLabel => '閱讀預設值';
+
+  @override
+  String get settingsNavZoneLabel => '導航熱區';
+
+  @override
+  String get settingsTtsDefaultsLabel => '朗讀語音與語速';
+
+  @override
+  String get settingsFullTextSearchUnavailableLabel => '全文檢索';
+
+  @override
+  String get settingsFullTextSearchUnavailableSubtitle => '本裝置不支援全文檢索';
+
+  @override
+  String get settingsFullTextSearchPdfLabel => 'PDF 全文檢索';
+
+  @override
+  String get settingsFullTextSearchPdfSubtitle => '部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容';
+
+  @override
+  String get settingsFullTextSearchRebuildIndexTooltip => '重建索引';
+
+  @override
+  String get settingsFullTextSearchFoliateLabel => '其他格式全文檢索';
+
+  @override
+  String get settingsFullTextSearchFoliateSubtitle => 'EPUB／TXT／KF8 等格式的背景索引建置';
+
+  @override
+  String get settingsSyncAccountSectionTitle => '同步與帳號';
+
+  @override
+  String get settingsSyncLabel => '同步';
+
+  @override
+  String get settingsCloudAccountLabel => '已連結的雲端匯入帳戶';
+
+  @override
+  String get settingsAboutSectionTitle => '關於';
+
+  @override
+  String get settingsAboutLabel => '關於';
+
+  @override
+  String get settingsReaderConsoleLogLabel => '閱讀器 Console Log';
+
+  @override
+  String get settingsConsoleLogInterceptLabel => 'Console Log 攔截';
+
+  @override
+  String get settingsConsoleLogInterceptSubtitle => '關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄';
+
+  @override
+  String get navZoneSettingsTitle => '導航熱區';
+
+  @override
+  String get navZoneSettingsPageTurnModeLabel => '翻頁方式';
+
+  @override
+  String get navZoneSettingsSimpleModeLabel => '簡單';
+
+  @override
+  String get navZoneSettingsCustomModeLabel => '自訂';
+
+  @override
+  String get navZoneSettingsShowDebugOverlayLabel => '顯示熱區輔助線';
+
+  @override
+  String get navZoneSettingsSaveCustomButton => '儲存自訂熱區設定';
+
+  @override
+  String get navZoneActionPreviousPage => '上一頁';
+
+  @override
+  String get navZoneActionNextPage => '下一頁';
+
+  @override
+  String get navZoneActionMenu => '選單';
+
+  @override
+  String get navZoneActionNone => '無動作';
+
+  @override
+  String get navZoneCustomValidationError => '至少需要 1 格設為「選單」，否則將無法退出沉浸模式';
+
+  @override
+  String get readingDefaultsTitle => '閱讀預設值';
+
+  @override
+  String get readingDefaultsVolumeKeyLabel => '音量鍵翻頁';
+
+  @override
+  String get readingDefaultsPageTurnModeSectionTitle => '翻頁模式';
+
+  @override
+  String get readingDefaultsPaginatedLabel => '點擊翻頁';
+
+  @override
+  String get readingDefaultsScrollLabel => '滾動翻頁';
+
+  @override
+  String get readingDefaultsScreenOrientationSectionTitle => '螢幕方向';
+
+  @override
+  String get readingDefaultsOrientationAutoLabel => '自動旋轉';
+
+  @override
+  String get readingDefaultsOrientationLock0Label => '鎖定 0°';
+
+  @override
+  String get readingDefaultsOrientationLock90Label => '鎖定 90°';
+
+  @override
+  String get readingDefaultsOrientationLock180Label => '鎖定 180°';
+
+  @override
+  String get readingDefaultsOrientationLock270Label => '鎖定 270°';
+
+  @override
+  String get readingDefaultsTextConversionSectionTitle => '簡繁轉換顯示';
+
+  @override
+  String get readingDefaultsTextConversionOriginalLabel => '原文';
+
+  @override
+  String get readingDefaultsTextConversionTraditionalLabel => '轉換為繁體';
+
+  @override
+  String get readingDefaultsTextConversionSimplifiedLabel => '轉換為簡體';
+
+  @override
+  String get readingDefaultsFullscreenLabel => '全螢幕模式';
+
+  @override
+  String get readingDefaultsOpenLastBookLabel => '啟動時開啟最後閱讀的那本書';
+
+  @override
+  String get readingDefaultsShowHeaderLabel => '顯示頁首';
+
+  @override
+  String get readingDefaultsShowFooterLabel => '顯示頁尾';
+
+  @override
+  String get ttsDefaultsTitle => '朗讀語音與語速';
+
+  @override
+  String get ttsDefaultsVoiceSectionTitle => '語音';
+
+  @override
+  String get ttsDefaultsVoiceUnavailableHint => '目前裝置未安裝或不支援語音選擇';
+
+  @override
+  String get ttsDefaultsSpeedSectionTitle => '語速';
+
+  @override
+  String get syncSettingsTitle => '同步';
+
+  @override
+  String get syncSettingsSyncFailedMessage => '同步失敗，請確認網路連線';
+
+  @override
+  String get syncSettingsNeverSynced => '尚未同步過';
+
+  @override
+  String syncSettingsLastSyncedAt(String formatted) {
+    return '最後同步：$formatted';
+  }
+
+  @override
+  String get syncSettingsConnectionFailedMessage => '連線失敗，請確認伺服器網址與帳號密碼是否正確';
+
+  @override
+  String syncSettingsLoggedInAs(String email) {
+    return '已登入：$email';
+  }
+
+  @override
+  String get syncSettingsManualSyncButton => '立即同步';
+
+  @override
+  String get syncSettingsLogoutButton => '登出';
+
+  @override
+  String get syncSettingsServerUrlLabel => '伺服器網址';
+
+  @override
+  String get syncSettingsPasswordLabel => '密碼';
+
+  @override
+  String get syncSettingsShowPasswordTooltip => '顯示密碼';
+
+  @override
+  String get syncSettingsHidePasswordTooltip => '隱藏密碼';
+
+  @override
+  String get syncSettingsConnectButton => '連線／登入';
+
+  @override
+  String get cloudAccountSettingsTitle => '已連結的雲端匯入帳戶';
+
+  @override
+  String cloudAccountSettingsLinkedEmail(String email) {
+    return '已連結：$email';
+  }
+
+  @override
+  String get cloudAccountSettingsUnlinkButton => '解除連結';
+
+  @override
+  String get cloudAccountSettingsUnlinkedText => '未連結';
+
+  @override
+  String get cloudAccountSettingsLinkButton => '連結';
+
+  @override
+  String get fontManagementTitle => '字型管理';
+
+  @override
+  String get fontManagementUploadTooltip => '上傳字型';
+
+  @override
+  String get fontManagementBuiltInSectionLabel => '內建字型';
+
+  @override
+  String get fontManagementCustomSectionLabel => '自訂字型';
+
+  @override
+  String get fontManagementNoCustomFontsHint => '尚未上傳任何自訂字型';
+
+  @override
+  String get fontManagementRenameTooltip => '重新命名';
+
+  @override
+  String get fontManagementDeleteTooltip => '刪除';
+
+  @override
+  String get fontManagementRenameDialogTitle => '重新命名';
+
+  @override
+  String fontManagementDeleteConfirmTitle(String fontName) {
+    return '確定要刪除「$fontName」嗎？';
+  }
+
+  @override
+  String fontManagementDeleteConfirmMessage(int usageCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      usageCount,
+      locale: localeName,
+      other: '目前有 $usageCount 本書使用此字型，刪除後將自動改用預設字型',
+      one: '目前有 1 本書使用此字型，刪除後將自動改用預設字型',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadBothMessage(int addedCount, int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: '已新增 $addedCount 款字型',
+      one: '已新增 1 款字型',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 款已存在已跳過',
+      one: '1 款已存在已跳過',
+    );
+    return '$_temp0，$_temp1';
+  }
+
+  @override
+  String fontManagementUploadAddedOnlyMessage(int addedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: '已新增 $addedCount 款字型',
+      one: '已新增 1 款字型',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadSkippedOnlyMessage(int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 款字型已存在，已跳過',
+      one: '1 款字型已存在，已跳過',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get readerConsoleLogTitle => '閱讀器 Console Log';
+
+  @override
+  String get readerConsoleLogCopyAllTooltip => '複製全部';
+
+  @override
+  String get readerConsoleLogClearTooltip => '清空';
+
+  @override
+  String get readerConsoleLogEmptyHint => '目前沒有記錄';
+
+  @override
+  String get readerConsoleLogCopiedMessage => '已複製全部記錄到剪貼簿';
+
+  @override
+  String get aboutScreenTitle => '關於';
+
+  @override
+  String get aboutScreenVersionLabel => '版本';
+
+  @override
+  String get aboutScreenBuildTimeLabel => '編譯時間';
+
+  @override
+  String get aboutScreenWebViewVersionLabel => '系統 WebView 版本';
+
+  @override
+  String get aboutScreenViewLicensesButton => '開源授權清單';
+
+  @override
+  String get aboutScreenLoadingText => '讀取中...';
+
+  @override
+  String get aboutScreenFailedToLoadVersionMessage => '無法取得版本號';
+
+  @override
+  String get aboutScreenUnavailableText => '無法取得';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -2324,6 +2710,392 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get readerTtsSleepTimerNoLimitLabel => '不限时';
+
+  @override
+  String get settingsScaffoldTitle => '设定';
+
+  @override
+  String get settingsLibraryTooltip => '书架';
+
+  @override
+  String get settingsSourceTooltip => '来源';
+
+  @override
+  String get settingsAppearanceSectionTitle => '外观';
+
+  @override
+  String get settingsThemeLabel => '布景';
+
+  @override
+  String get settingsThemeLockedHint => '这里选的是关闭 E-Ink 后要恢复的主题';
+
+  @override
+  String settingsThemeDotSemanticsLabel(String themeName) {
+    return '$themeName布景';
+  }
+
+  @override
+  String settingsThemeDotLockedSemanticsLabel(
+    String themeName,
+    String currentThemeName,
+  ) {
+    return '$themeName布景，已锁定，这里选的是关闭 E-Ink 后要恢复的主题，目前选择：$currentThemeName';
+  }
+
+  @override
+  String get settingsThemeLight => '浅色';
+
+  @override
+  String get settingsThemeDark => '深色';
+
+  @override
+  String get settingsThemeSepia => '羊皮纸';
+
+  @override
+  String get settingsEinkModeLabel => 'E-Ink 高对比模式';
+
+  @override
+  String get settingsEinkModeSubtitle => '停用动画与渐层，以纯黑白高对比显示，专为电子纸屏幕最佳化';
+
+  @override
+  String get settingsFontManagementLabel => '字体管理';
+
+  @override
+  String get settingsReadingSectionTitle => '阅读';
+
+  @override
+  String get settingsReadingDefaultsLabel => '阅读预设值';
+
+  @override
+  String get settingsNavZoneLabel => '导航热区';
+
+  @override
+  String get settingsTtsDefaultsLabel => '朗读语音与语速';
+
+  @override
+  String get settingsFullTextSearchUnavailableLabel => '全文检索';
+
+  @override
+  String get settingsFullTextSearchUnavailableSubtitle => '本装置不支持全文检索';
+
+  @override
+  String get settingsFullTextSearchPdfLabel => 'PDF 全文检索';
+
+  @override
+  String get settingsFullTextSearchPdfSubtitle => '部分扫描/图片型 PDF 可能没有可搜索的文字内容';
+
+  @override
+  String get settingsFullTextSearchRebuildIndexTooltip => '重建索引';
+
+  @override
+  String get settingsFullTextSearchFoliateLabel => '其他格式全文检索';
+
+  @override
+  String get settingsFullTextSearchFoliateSubtitle => 'EPUB／TXT／KF8 等格式的背景索引建置';
+
+  @override
+  String get settingsSyncAccountSectionTitle => '同步与账号';
+
+  @override
+  String get settingsSyncLabel => '同步';
+
+  @override
+  String get settingsCloudAccountLabel => '已链接的云端导入账户';
+
+  @override
+  String get settingsAboutSectionTitle => '关于';
+
+  @override
+  String get settingsAboutLabel => '关于';
+
+  @override
+  String get settingsReaderConsoleLogLabel => '阅读器 Console Log';
+
+  @override
+  String get settingsConsoleLogInterceptLabel => 'Console Log 拦截';
+
+  @override
+  String get settingsConsoleLogInterceptSubtitle => '关闭后仅保留错误讯息，用于问题回报时的诊断纪录';
+
+  @override
+  String get navZoneSettingsTitle => '导航热区';
+
+  @override
+  String get navZoneSettingsPageTurnModeLabel => '翻页方式';
+
+  @override
+  String get navZoneSettingsSimpleModeLabel => '简单';
+
+  @override
+  String get navZoneSettingsCustomModeLabel => '自定义';
+
+  @override
+  String get navZoneSettingsShowDebugOverlayLabel => '显示热区辅助线';
+
+  @override
+  String get navZoneSettingsSaveCustomButton => '保存自定义热区设定';
+
+  @override
+  String get navZoneActionPreviousPage => '上一页';
+
+  @override
+  String get navZoneActionNextPage => '下一页';
+
+  @override
+  String get navZoneActionMenu => '选单';
+
+  @override
+  String get navZoneActionNone => '无动作';
+
+  @override
+  String get navZoneCustomValidationError => '至少需要 1 格设为「选单」，否则将无法退出沉浸模式';
+
+  @override
+  String get readingDefaultsTitle => '阅读预设值';
+
+  @override
+  String get readingDefaultsVolumeKeyLabel => '音量键翻页';
+
+  @override
+  String get readingDefaultsPageTurnModeSectionTitle => '翻页模式';
+
+  @override
+  String get readingDefaultsPaginatedLabel => '点击翻页';
+
+  @override
+  String get readingDefaultsScrollLabel => '滚动翻页';
+
+  @override
+  String get readingDefaultsScreenOrientationSectionTitle => '屏幕方向';
+
+  @override
+  String get readingDefaultsOrientationAutoLabel => '自动旋转';
+
+  @override
+  String get readingDefaultsOrientationLock0Label => '锁定 0°';
+
+  @override
+  String get readingDefaultsOrientationLock90Label => '锁定 90°';
+
+  @override
+  String get readingDefaultsOrientationLock180Label => '锁定 180°';
+
+  @override
+  String get readingDefaultsOrientationLock270Label => '锁定 270°';
+
+  @override
+  String get readingDefaultsTextConversionSectionTitle => '简繁转换显示';
+
+  @override
+  String get readingDefaultsTextConversionOriginalLabel => '原文';
+
+  @override
+  String get readingDefaultsTextConversionTraditionalLabel => '转换为繁体';
+
+  @override
+  String get readingDefaultsTextConversionSimplifiedLabel => '转换为简体';
+
+  @override
+  String get readingDefaultsFullscreenLabel => '全屏幕模式';
+
+  @override
+  String get readingDefaultsOpenLastBookLabel => '启动时打开最后阅读的那本书';
+
+  @override
+  String get readingDefaultsShowHeaderLabel => '显示页首';
+
+  @override
+  String get readingDefaultsShowFooterLabel => '显示页尾';
+
+  @override
+  String get ttsDefaultsTitle => '朗读语音与语速';
+
+  @override
+  String get ttsDefaultsVoiceSectionTitle => '语音';
+
+  @override
+  String get ttsDefaultsVoiceUnavailableHint => '目前装置未安装或不支持语音选择';
+
+  @override
+  String get ttsDefaultsSpeedSectionTitle => '语速';
+
+  @override
+  String get syncSettingsTitle => '同步';
+
+  @override
+  String get syncSettingsSyncFailedMessage => '同步失败，请确认网络连线';
+
+  @override
+  String get syncSettingsNeverSynced => '尚未同步过';
+
+  @override
+  String syncSettingsLastSyncedAt(String formatted) {
+    return '最后同步：$formatted';
+  }
+
+  @override
+  String get syncSettingsConnectionFailedMessage => '连线失败，请确认服务器网址与账号密码是否正确';
+
+  @override
+  String syncSettingsLoggedInAs(String email) {
+    return '已登入：$email';
+  }
+
+  @override
+  String get syncSettingsManualSyncButton => '立即同步';
+
+  @override
+  String get syncSettingsLogoutButton => '登出';
+
+  @override
+  String get syncSettingsServerUrlLabel => '服务器网址';
+
+  @override
+  String get syncSettingsPasswordLabel => '密码';
+
+  @override
+  String get syncSettingsShowPasswordTooltip => '显示密码';
+
+  @override
+  String get syncSettingsHidePasswordTooltip => '隐藏密码';
+
+  @override
+  String get syncSettingsConnectButton => '连线／登入';
+
+  @override
+  String get cloudAccountSettingsTitle => '已链接的云端导入账户';
+
+  @override
+  String cloudAccountSettingsLinkedEmail(String email) {
+    return '已链接：$email';
+  }
+
+  @override
+  String get cloudAccountSettingsUnlinkButton => '解除链接';
+
+  @override
+  String get cloudAccountSettingsUnlinkedText => '未链接';
+
+  @override
+  String get cloudAccountSettingsLinkButton => '链接';
+
+  @override
+  String get fontManagementTitle => '字体管理';
+
+  @override
+  String get fontManagementUploadTooltip => '上传字体';
+
+  @override
+  String get fontManagementBuiltInSectionLabel => '内建字体';
+
+  @override
+  String get fontManagementCustomSectionLabel => '自定义字体';
+
+  @override
+  String get fontManagementNoCustomFontsHint => '尚未上传任何自定义字体';
+
+  @override
+  String get fontManagementRenameTooltip => '重新命名';
+
+  @override
+  String get fontManagementDeleteTooltip => '删除';
+
+  @override
+  String get fontManagementRenameDialogTitle => '重新命名';
+
+  @override
+  String fontManagementDeleteConfirmTitle(String fontName) {
+    return '确定要删除「$fontName」吗？';
+  }
+
+  @override
+  String fontManagementDeleteConfirmMessage(int usageCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      usageCount,
+      locale: localeName,
+      other: '目前有 $usageCount 本书使用此字体，删除后将自动改用预设字体',
+      one: '目前有 1 本书使用此字体，删除后将自动改用预设字体',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadBothMessage(int addedCount, int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: '已新增 $addedCount 款字体',
+      one: '已新增 1 款字体',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 款已存在已跳过',
+      one: '1 款已存在已跳过',
+    );
+    return '$_temp0，$_temp1';
+  }
+
+  @override
+  String fontManagementUploadAddedOnlyMessage(int addedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: '已新增 $addedCount 款字体',
+      one: '已新增 1 款字体',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadSkippedOnlyMessage(int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 款字体已存在，已跳过',
+      one: '1 款字体已存在，已跳过',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get readerConsoleLogTitle => '阅读器 Console Log';
+
+  @override
+  String get readerConsoleLogCopyAllTooltip => '复制全部';
+
+  @override
+  String get readerConsoleLogClearTooltip => '清空';
+
+  @override
+  String get readerConsoleLogEmptyHint => '目前没有记录';
+
+  @override
+  String get readerConsoleLogCopiedMessage => '已复制全部记录到剪贴板';
+
+  @override
+  String get aboutScreenTitle => '关于';
+
+  @override
+  String get aboutScreenVersionLabel => '版本';
+
+  @override
+  String get aboutScreenBuildTimeLabel => '编译时间';
+
+  @override
+  String get aboutScreenWebViewVersionLabel => '系统 WebView 版本';
+
+  @override
+  String get aboutScreenViewLicensesButton => '开源授权清单';
+
+  @override
+  String get aboutScreenLoadingText => '读取中...';
+
+  @override
+  String get aboutScreenFailedToLoadVersionMessage => '无法取得版本号';
+
+  @override
+  String get aboutScreenUnavailableText => '无法取得';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -3485,4 +4257,390 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerTtsSleepTimerNoLimitLabel => '不限時';
+
+  @override
+  String get settingsScaffoldTitle => '設定';
+
+  @override
+  String get settingsLibraryTooltip => '書架';
+
+  @override
+  String get settingsSourceTooltip => '來源';
+
+  @override
+  String get settingsAppearanceSectionTitle => '外觀';
+
+  @override
+  String get settingsThemeLabel => '佈景';
+
+  @override
+  String get settingsThemeLockedHint => '這裡選的是關閉 E-Ink 後要恢復的主題';
+
+  @override
+  String settingsThemeDotSemanticsLabel(String themeName) {
+    return '$themeName佈景';
+  }
+
+  @override
+  String settingsThemeDotLockedSemanticsLabel(
+    String themeName,
+    String currentThemeName,
+  ) {
+    return '$themeName佈景，已鎖定，這裡選的是關閉 E-Ink 後要恢復的主題，目前選擇：$currentThemeName';
+  }
+
+  @override
+  String get settingsThemeLight => '淺色';
+
+  @override
+  String get settingsThemeDark => '深色';
+
+  @override
+  String get settingsThemeSepia => '羊皮紙';
+
+  @override
+  String get settingsEinkModeLabel => 'E-Ink 高對比模式';
+
+  @override
+  String get settingsEinkModeSubtitle => '停用動畫與漸層，以純黑白高對比顯示，專為電子紙螢幕最佳化';
+
+  @override
+  String get settingsFontManagementLabel => '字型管理';
+
+  @override
+  String get settingsReadingSectionTitle => '閱讀';
+
+  @override
+  String get settingsReadingDefaultsLabel => '閱讀預設值';
+
+  @override
+  String get settingsNavZoneLabel => '導航熱區';
+
+  @override
+  String get settingsTtsDefaultsLabel => '朗讀語音與語速';
+
+  @override
+  String get settingsFullTextSearchUnavailableLabel => '全文檢索';
+
+  @override
+  String get settingsFullTextSearchUnavailableSubtitle => '本裝置不支援全文檢索';
+
+  @override
+  String get settingsFullTextSearchPdfLabel => 'PDF 全文檢索';
+
+  @override
+  String get settingsFullTextSearchPdfSubtitle => '部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容';
+
+  @override
+  String get settingsFullTextSearchRebuildIndexTooltip => '重建索引';
+
+  @override
+  String get settingsFullTextSearchFoliateLabel => '其他格式全文檢索';
+
+  @override
+  String get settingsFullTextSearchFoliateSubtitle => 'EPUB／TXT／KF8 等格式的背景索引建置';
+
+  @override
+  String get settingsSyncAccountSectionTitle => '同步與帳號';
+
+  @override
+  String get settingsSyncLabel => '同步';
+
+  @override
+  String get settingsCloudAccountLabel => '已連結的雲端匯入帳戶';
+
+  @override
+  String get settingsAboutSectionTitle => '關於';
+
+  @override
+  String get settingsAboutLabel => '關於';
+
+  @override
+  String get settingsReaderConsoleLogLabel => '閱讀器 Console Log';
+
+  @override
+  String get settingsConsoleLogInterceptLabel => 'Console Log 攔截';
+
+  @override
+  String get settingsConsoleLogInterceptSubtitle => '關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄';
+
+  @override
+  String get navZoneSettingsTitle => '導航熱區';
+
+  @override
+  String get navZoneSettingsPageTurnModeLabel => '翻頁方式';
+
+  @override
+  String get navZoneSettingsSimpleModeLabel => '簡單';
+
+  @override
+  String get navZoneSettingsCustomModeLabel => '自訂';
+
+  @override
+  String get navZoneSettingsShowDebugOverlayLabel => '顯示熱區輔助線';
+
+  @override
+  String get navZoneSettingsSaveCustomButton => '儲存自訂熱區設定';
+
+  @override
+  String get navZoneActionPreviousPage => '上一頁';
+
+  @override
+  String get navZoneActionNextPage => '下一頁';
+
+  @override
+  String get navZoneActionMenu => '選單';
+
+  @override
+  String get navZoneActionNone => '無動作';
+
+  @override
+  String get navZoneCustomValidationError => '至少需要 1 格設為「選單」，否則將無法退出沉浸模式';
+
+  @override
+  String get readingDefaultsTitle => '閱讀預設值';
+
+  @override
+  String get readingDefaultsVolumeKeyLabel => '音量鍵翻頁';
+
+  @override
+  String get readingDefaultsPageTurnModeSectionTitle => '翻頁模式';
+
+  @override
+  String get readingDefaultsPaginatedLabel => '點擊翻頁';
+
+  @override
+  String get readingDefaultsScrollLabel => '滾動翻頁';
+
+  @override
+  String get readingDefaultsScreenOrientationSectionTitle => '螢幕方向';
+
+  @override
+  String get readingDefaultsOrientationAutoLabel => '自動旋轉';
+
+  @override
+  String get readingDefaultsOrientationLock0Label => '鎖定 0°';
+
+  @override
+  String get readingDefaultsOrientationLock90Label => '鎖定 90°';
+
+  @override
+  String get readingDefaultsOrientationLock180Label => '鎖定 180°';
+
+  @override
+  String get readingDefaultsOrientationLock270Label => '鎖定 270°';
+
+  @override
+  String get readingDefaultsTextConversionSectionTitle => '簡繁轉換顯示';
+
+  @override
+  String get readingDefaultsTextConversionOriginalLabel => '原文';
+
+  @override
+  String get readingDefaultsTextConversionTraditionalLabel => '轉換為繁體';
+
+  @override
+  String get readingDefaultsTextConversionSimplifiedLabel => '轉換為簡體';
+
+  @override
+  String get readingDefaultsFullscreenLabel => '全螢幕模式';
+
+  @override
+  String get readingDefaultsOpenLastBookLabel => '啟動時開啟最後閱讀的那本書';
+
+  @override
+  String get readingDefaultsShowHeaderLabel => '顯示頁首';
+
+  @override
+  String get readingDefaultsShowFooterLabel => '顯示頁尾';
+
+  @override
+  String get ttsDefaultsTitle => '朗讀語音與語速';
+
+  @override
+  String get ttsDefaultsVoiceSectionTitle => '語音';
+
+  @override
+  String get ttsDefaultsVoiceUnavailableHint => '目前裝置未安裝或不支援語音選擇';
+
+  @override
+  String get ttsDefaultsSpeedSectionTitle => '語速';
+
+  @override
+  String get syncSettingsTitle => '同步';
+
+  @override
+  String get syncSettingsSyncFailedMessage => '同步失敗，請確認網路連線';
+
+  @override
+  String get syncSettingsNeverSynced => '尚未同步過';
+
+  @override
+  String syncSettingsLastSyncedAt(String formatted) {
+    return '最後同步：$formatted';
+  }
+
+  @override
+  String get syncSettingsConnectionFailedMessage => '連線失敗，請確認伺服器網址與帳號密碼是否正確';
+
+  @override
+  String syncSettingsLoggedInAs(String email) {
+    return '已登入：$email';
+  }
+
+  @override
+  String get syncSettingsManualSyncButton => '立即同步';
+
+  @override
+  String get syncSettingsLogoutButton => '登出';
+
+  @override
+  String get syncSettingsServerUrlLabel => '伺服器網址';
+
+  @override
+  String get syncSettingsPasswordLabel => '密碼';
+
+  @override
+  String get syncSettingsShowPasswordTooltip => '顯示密碼';
+
+  @override
+  String get syncSettingsHidePasswordTooltip => '隱藏密碼';
+
+  @override
+  String get syncSettingsConnectButton => '連線／登入';
+
+  @override
+  String get cloudAccountSettingsTitle => '已連結的雲端匯入帳戶';
+
+  @override
+  String cloudAccountSettingsLinkedEmail(String email) {
+    return '已連結：$email';
+  }
+
+  @override
+  String get cloudAccountSettingsUnlinkButton => '解除連結';
+
+  @override
+  String get cloudAccountSettingsUnlinkedText => '未連結';
+
+  @override
+  String get cloudAccountSettingsLinkButton => '連結';
+
+  @override
+  String get fontManagementTitle => '字型管理';
+
+  @override
+  String get fontManagementUploadTooltip => '上傳字型';
+
+  @override
+  String get fontManagementBuiltInSectionLabel => '內建字型';
+
+  @override
+  String get fontManagementCustomSectionLabel => '自訂字型';
+
+  @override
+  String get fontManagementNoCustomFontsHint => '尚未上傳任何自訂字型';
+
+  @override
+  String get fontManagementRenameTooltip => '重新命名';
+
+  @override
+  String get fontManagementDeleteTooltip => '刪除';
+
+  @override
+  String get fontManagementRenameDialogTitle => '重新命名';
+
+  @override
+  String fontManagementDeleteConfirmTitle(String fontName) {
+    return '確定要刪除「$fontName」嗎？';
+  }
+
+  @override
+  String fontManagementDeleteConfirmMessage(int usageCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      usageCount,
+      locale: localeName,
+      other: '目前有 $usageCount 本書使用此字型，刪除後將自動改用預設字型',
+      one: '目前有 1 本書使用此字型，刪除後將自動改用預設字型',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadBothMessage(int addedCount, int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: '已新增 $addedCount 款字型',
+      one: '已新增 1 款字型',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 款已存在已跳過',
+      one: '1 款已存在已跳過',
+    );
+    return '$_temp0，$_temp1';
+  }
+
+  @override
+  String fontManagementUploadAddedOnlyMessage(int addedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: '已新增 $addedCount 款字型',
+      one: '已新增 1 款字型',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadSkippedOnlyMessage(int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 款字型已存在，已跳過',
+      one: '1 款字型已存在，已跳過',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get readerConsoleLogTitle => '閱讀器 Console Log';
+
+  @override
+  String get readerConsoleLogCopyAllTooltip => '複製全部';
+
+  @override
+  String get readerConsoleLogClearTooltip => '清空';
+
+  @override
+  String get readerConsoleLogEmptyHint => '目前沒有記錄';
+
+  @override
+  String get readerConsoleLogCopiedMessage => '已複製全部記錄到剪貼簿';
+
+  @override
+  String get aboutScreenTitle => '關於';
+
+  @override
+  String get aboutScreenVersionLabel => '版本';
+
+  @override
+  String get aboutScreenBuildTimeLabel => '編譯時間';
+
+  @override
+  String get aboutScreenWebViewVersionLabel => '系統 WebView 版本';
+
+  @override
+  String get aboutScreenViewLicensesButton => '開源授權清單';
+
+  @override
+  String get aboutScreenLoadingText => '讀取中...';
+
+  @override
+  String get aboutScreenFailedToLoadVersionMessage => '無法取得版本號';
+
+  @override
+  String get aboutScreenUnavailableText => '無法取得';
 }

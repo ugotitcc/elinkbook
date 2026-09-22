@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
@@ -22,6 +23,9 @@ void main() {
       ),
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
 
@@ -74,6 +78,9 @@ void main() {
   testWidgets('切換音量鍵翻頁開關立即呼叫 saveGlobalPrefs 並反映新值', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -89,6 +96,9 @@ void main() {
   testWidgets('切換全螢幕模式開關立即呼叫 saveGlobalPrefs 並反映新值', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -106,6 +116,9 @@ void main() {
   testWidgets('點選翻頁模式選項立即呼叫 saveGlobalPrefs 更新為對應模式', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -124,6 +137,9 @@ void main() {
   testWidgets('點選螢幕方向選項立即呼叫 saveGlobalPrefs 更新為對應設定', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -143,6 +159,9 @@ void main() {
       (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -162,6 +181,9 @@ void main() {
     // 重新載入持久化（issues.md:50 規定）：以同一個 fakeManager 重建畫面，
     // 驗證剛才儲存的值會反映在選中狀態。
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -181,6 +203,9 @@ void main() {
   testWidgets('畫面上不存在任何「儲存」按鈕', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -196,6 +221,9 @@ void main() {
           .copyWith(reading: const ReadingDefaults(openLastBookOnLaunch: false)),
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -215,6 +243,9 @@ void main() {
       (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -231,6 +262,9 @@ void main() {
       (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -254,6 +288,9 @@ void main() {
           reading: const ReadingDefaults(showHeader: true, showFooter: false)),
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -274,6 +311,9 @@ void main() {
   testWidgets('切換顯示頁首開關立即呼叫 saveGlobalPrefs 並反映新值', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -291,6 +331,9 @@ void main() {
   testWidgets('切換顯示頁尾開關立即呼叫 saveGlobalPrefs 並反映新值', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
     ));
     await tester.pumpAndSettle();
@@ -303,5 +346,38 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fakeManager.savedGlobalPrefsCalls.last.reading.showFooter, isTrue);
+  });
+
+  testWidgets('英文介面下四個分區標題與選項標籤正確以英文渲染', (tester) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final fakeManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: ReadingDefaultsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reading Defaults'), findsOneWidget);
+    expect(find.text('Volume key page turn'), findsOneWidget);
+    expect(find.text('Page Turn Method'), findsOneWidget);
+    expect(find.text('Tap to turn'), findsOneWidget);
+    expect(find.text('Scroll to turn'), findsOneWidget);
+    expect(find.text('Screen Orientation'), findsOneWidget);
+    expect(find.text('Auto-rotate'), findsOneWidget);
+    expect(find.text('Text Conversion Display'), findsOneWidget);
+    expect(find.text('Convert to Traditional'), findsOneWidget);
+    expect(find.text('Convert to Simplified'), findsOneWidget);
+    expect(find.text('Fullscreen mode'), findsOneWidget);
+    expect(find.text('Open the last read book on launch'), findsOneWidget);
+    expect(find.text('Show header'), findsOneWidget);
+    expect(find.text('Show footer'), findsOneWidget);
   });
 }

@@ -2125,6 +2125,675 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'不限時'**
   String get readerTtsSleepTimerNoLimitLabel;
+
+  /// 設定畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'設定'**
+  String get settingsScaffoldTitle;
+
+  /// 設定畫面 AppBar 右上角「書架」導覽按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'書架'**
+  String get settingsLibraryTooltip;
+
+  /// 設定畫面 AppBar 右上角「來源」導覽按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'來源'**
+  String get settingsSourceTooltip;
+
+  /// 設定畫面「外觀」分區標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'外觀'**
+  String get settingsAppearanceSectionTitle;
+
+  /// 設定畫面「佈景」項目標題（主題色點選取器入口）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'佈景'**
+  String get settingsThemeLabel;
+
+  /// E-Ink 模式開啟時，「佈景」項目下方顯示的提示文字，說明目前選的是解除 E-Ink 後要恢復的主題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'這裡選的是關閉 E-Ink 後要恢復的主題'**
+  String get settingsThemeLockedHint;
+
+  /// 主題色點的無障礙 Semantics 標籤（一般狀態），{themeName} 為 settingsThemeLight/Dark/Sepia 的已轉譯結果
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{themeName}佈景'**
+  String settingsThemeDotSemanticsLabel(String themeName);
+
+  /// 主題色點的無障礙 Semantics 標籤（E-Ink 鎖定狀態），{themeName} 為該色點對應主題名稱，{currentThemeName} 為目前實際選擇（鎖定後要恢復）的主題名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{themeName}佈景，已鎖定，這裡選的是關閉 E-Ink 後要恢復的主題，目前選擇：{currentThemeName}'**
+  String settingsThemeDotLockedSemanticsLabel(
+    String themeName,
+    String currentThemeName,
+  );
+
+  /// 淺色主題的顯示名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'淺色'**
+  String get settingsThemeLight;
+
+  /// 深色主題的顯示名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'深色'**
+  String get settingsThemeDark;
+
+  /// 羊皮紙主題的顯示名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'羊皮紙'**
+  String get settingsThemeSepia;
+
+  /// 設定畫面「E-Ink 高對比模式」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'E-Ink 高對比模式'**
+  String get settingsEinkModeLabel;
+
+  /// 設定畫面「E-Ink 高對比模式」開關的說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'停用動畫與漸層，以純黑白高對比顯示，專為電子紙螢幕最佳化'**
+  String get settingsEinkModeSubtitle;
+
+  /// 設定畫面「字型管理」項目標題，同時是 FontManagementScreen 的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字型管理'**
+  String get settingsFontManagementLabel;
+
+  /// 設定畫面「閱讀」分區標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'閱讀'**
+  String get settingsReadingSectionTitle;
+
+  /// 設定畫面「閱讀預設值」項目標題，同時是 ReadingDefaultsScreen 的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'閱讀預設值'**
+  String get settingsReadingDefaultsLabel;
+
+  /// 設定畫面「導航熱區」項目標題，同時是 NavZoneSettingsScreen 的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'導航熱區'**
+  String get settingsNavZoneLabel;
+
+  /// 設定畫面「朗讀語音與語速」項目標題，同時是 TtsDefaultsScreen 的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'朗讀語音與語速'**
+  String get settingsTtsDefaultsLabel;
+
+  /// 裝置不支援全文檢索時顯示的卡片標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'全文檢索'**
+  String get settingsFullTextSearchUnavailableLabel;
+
+  /// 裝置不支援全文檢索時顯示的卡片說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'本裝置不支援全文檢索'**
+  String get settingsFullTextSearchUnavailableSubtitle;
+
+  /// PDF 全文檢索開關卡片標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'PDF 全文檢索'**
+  String get settingsFullTextSearchPdfLabel;
+
+  /// PDF 全文檢索開關卡片說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容'**
+  String get settingsFullTextSearchPdfSubtitle;
+
+  /// PDF／其他格式全文檢索卡片「重建索引」按鈕的無障礙提示文字（兩處共用同一 key）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重建索引'**
+  String get settingsFullTextSearchRebuildIndexTooltip;
+
+  /// EPUB／TXT／KF8 等格式全文檢索開關卡片標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'其他格式全文檢索'**
+  String get settingsFullTextSearchFoliateLabel;
+
+  /// EPUB／TXT／KF8 等格式全文檢索開關卡片說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'EPUB／TXT／KF8 等格式的背景索引建置'**
+  String get settingsFullTextSearchFoliateSubtitle;
+
+  /// 設定畫面「同步與帳號」分區標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'同步與帳號'**
+  String get settingsSyncAccountSectionTitle;
+
+  /// 設定畫面「同步」項目標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'同步'**
+  String get settingsSyncLabel;
+
+  /// 設定畫面「已連結的雲端匯入帳戶」項目標題，同時是 CloudAccountSettingsScreen 的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已連結的雲端匯入帳戶'**
+  String get settingsCloudAccountLabel;
+
+  /// 設定畫面「關於」分區標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'關於'**
+  String get settingsAboutSectionTitle;
+
+  /// 設定畫面「關於」項目標題（與分區標題文字相同，共用一個 key）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'關於'**
+  String get settingsAboutLabel;
+
+  /// 設定畫面「閱讀器 Console Log」項目標題，同時是 ReaderConsoleLogScreen 的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'閱讀器 Console Log'**
+  String get settingsReaderConsoleLogLabel;
+
+  /// 設定畫面「Console Log 攔截」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'Console Log 攔截'**
+  String get settingsConsoleLogInterceptLabel;
+
+  /// 設定畫面「Console Log 攔截」開關的說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄'**
+  String get settingsConsoleLogInterceptSubtitle;
+
+  /// 導航熱區設定畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'導航熱區'**
+  String get navZoneSettingsTitle;
+
+  /// 導航熱區設定畫面「翻頁方式」（簡單/自訂模板切換）區塊標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'翻頁方式'**
+  String get navZoneSettingsPageTurnModeLabel;
+
+  /// 翻頁方式切換鈕「簡單」選項文字（三選一固定模板）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'簡單'**
+  String get navZoneSettingsSimpleModeLabel;
+
+  /// 翻頁方式切換鈕「自訂」選項文字（9 格自由編輯器）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'自訂'**
+  String get navZoneSettingsCustomModeLabel;
+
+  /// 「顯示熱區輔助線」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示熱區輔助線'**
+  String get navZoneSettingsShowDebugOverlayLabel;
+
+  /// 自訂熱區編輯器「儲存自訂熱區設定」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'儲存自訂熱區設定'**
+  String get navZoneSettingsSaveCustomButton;
+
+  /// 自訂熱區九宮格「上一頁」動作的格內文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上一頁'**
+  String get navZoneActionPreviousPage;
+
+  /// 自訂熱區九宮格「下一頁」動作的格內文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下一頁'**
+  String get navZoneActionNextPage;
+
+  /// 自訂熱區九宮格「選單」動作的格內文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選單'**
+  String get navZoneActionMenu;
+
+  /// 自訂熱區九宮格「無動作」動作的格內文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無動作'**
+  String get navZoneActionNone;
+
+  /// 自訂熱區儲存時驗證失敗（沒有任何格子設為選單）的錯誤提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'至少需要 1 格設為「選單」，否則將無法退出沉浸模式'**
+  String get navZoneCustomValidationError;
+
+  /// 閱讀預設值畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'閱讀預設值'**
+  String get readingDefaultsTitle;
+
+  /// 「音量鍵翻頁」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'音量鍵翻頁'**
+  String get readingDefaultsVolumeKeyLabel;
+
+  /// 「翻頁模式」（點擊/滾動）區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'翻頁模式'**
+  String get readingDefaultsPageTurnModeSectionTitle;
+
+  /// 翻頁模式選項：點擊翻頁
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'點擊翻頁'**
+  String get readingDefaultsPaginatedLabel;
+
+  /// 翻頁模式選項：滾動翻頁
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'滾動翻頁'**
+  String get readingDefaultsScrollLabel;
+
+  /// 「螢幕方向」區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'螢幕方向'**
+  String get readingDefaultsScreenOrientationSectionTitle;
+
+  /// 螢幕方向選項：自動旋轉
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'自動旋轉'**
+  String get readingDefaultsOrientationAutoLabel;
+
+  /// 螢幕方向選項：鎖定 0 度
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'鎖定 0°'**
+  String get readingDefaultsOrientationLock0Label;
+
+  /// 螢幕方向選項：鎖定 90 度
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'鎖定 90°'**
+  String get readingDefaultsOrientationLock90Label;
+
+  /// 螢幕方向選項：鎖定 180 度
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'鎖定 180°'**
+  String get readingDefaultsOrientationLock180Label;
+
+  /// 螢幕方向選項：鎖定 270 度
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'鎖定 270°'**
+  String get readingDefaultsOrientationLock270Label;
+
+  /// 「簡繁轉換顯示」區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'簡繁轉換顯示'**
+  String get readingDefaultsTextConversionSectionTitle;
+
+  /// 簡繁轉換選項：原文（不轉換）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'原文'**
+  String get readingDefaultsTextConversionOriginalLabel;
+
+  /// 簡繁轉換選項：轉換為繁體
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'轉換為繁體'**
+  String get readingDefaultsTextConversionTraditionalLabel;
+
+  /// 簡繁轉換選項：轉換為簡體
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'轉換為簡體'**
+  String get readingDefaultsTextConversionSimplifiedLabel;
+
+  /// 「全螢幕模式」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'全螢幕模式'**
+  String get readingDefaultsFullscreenLabel;
+
+  /// 「啟動時開啟最後閱讀的那本書」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'啟動時開啟最後閱讀的那本書'**
+  String get readingDefaultsOpenLastBookLabel;
+
+  /// 「顯示頁首」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示頁首'**
+  String get readingDefaultsShowHeaderLabel;
+
+  /// 「顯示頁尾」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示頁尾'**
+  String get readingDefaultsShowFooterLabel;
+
+  /// 朗讀預設值畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'朗讀語音與語速'**
+  String get ttsDefaultsTitle;
+
+  /// 「語音」選擇區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'語音'**
+  String get ttsDefaultsVoiceSectionTitle;
+
+  /// 裝置沒有可用 TTS 引擎或語音清單為空時顯示的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'目前裝置未安裝或不支援語音選擇'**
+  String get ttsDefaultsVoiceUnavailableHint;
+
+  /// 「語速」調整區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'語速'**
+  String get ttsDefaultsSpeedSectionTitle;
+
+  /// 同步設定畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'同步'**
+  String get syncSettingsTitle;
+
+  /// 手動觸發「立即同步」失敗時的 SnackBar 訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'同步失敗，請確認網路連線'**
+  String get syncSettingsSyncFailedMessage;
+
+  /// 尚未有任何一次成功同步紀錄時顯示的文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未同步過'**
+  String get syncSettingsNeverSynced;
+
+  /// 最後同步時間顯示，{formatted} 為已依目前介面語言格式化的日期時間字串（DateFormat.yMd(locale).add_Hm() 的結果）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'最後同步：{formatted}'**
+  String syncSettingsLastSyncedAt(String formatted);
+
+  /// 登入/連線測試失敗時顯示的錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'連線失敗，請確認伺服器網址與帳號密碼是否正確'**
+  String get syncSettingsConnectionFailedMessage;
+
+  /// 已登入狀態顯示目前登入帳號的 email，{email} 為使用者資料不翻譯
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已登入：{email}'**
+  String syncSettingsLoggedInAs(String email);
+
+  /// 「立即同步」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'立即同步'**
+  String get syncSettingsManualSyncButton;
+
+  /// 「登出」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'登出'**
+  String get syncSettingsLogoutButton;
+
+  /// 伺服器網址輸入欄位標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'伺服器網址'**
+  String get syncSettingsServerUrlLabel;
+
+  /// 密碼輸入欄位標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'密碼'**
+  String get syncSettingsPasswordLabel;
+
+  /// 密碼欄位「顯示密碼」眼睛圖示按鈕提示文字（目前為隱藏狀態）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示密碼'**
+  String get syncSettingsShowPasswordTooltip;
+
+  /// 密碼欄位「隱藏密碼」眼睛圖示按鈕提示文字（目前為顯示狀態）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'隱藏密碼'**
+  String get syncSettingsHidePasswordTooltip;
+
+  /// 未登入表單「連線／登入」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'連線／登入'**
+  String get syncSettingsConnectButton;
+
+  /// 已連結的雲端匯入帳戶畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已連結的雲端匯入帳戶'**
+  String get cloudAccountSettingsTitle;
+
+  /// 雲端服務已連結狀態顯示的帳號 email，{email} 為使用者資料不翻譯
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已連結：{email}'**
+  String cloudAccountSettingsLinkedEmail(String email);
+
+  /// 「解除連結」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'解除連結'**
+  String get cloudAccountSettingsUnlinkButton;
+
+  /// 雲端服務尚未連結狀態顯示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'未連結'**
+  String get cloudAccountSettingsUnlinkedText;
+
+  /// 「連結」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'連結'**
+  String get cloudAccountSettingsLinkButton;
+
+  /// 字型管理畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字型管理'**
+  String get fontManagementTitle;
+
+  /// AppBar「上傳字型」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上傳字型'**
+  String get fontManagementUploadTooltip;
+
+  /// 「內建字型」區塊標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'內建字型'**
+  String get fontManagementBuiltInSectionLabel;
+
+  /// 「自訂字型」區塊標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'自訂字型'**
+  String get fontManagementCustomSectionLabel;
+
+  /// 使用者尚未上傳任何自訂字型時的空狀態提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未上傳任何自訂字型'**
+  String get fontManagementNoCustomFontsHint;
+
+  /// 自訂字型項目「重新命名」按鈕的無障礙提示文字，同時是重新命名對話框標題（共用同一 key）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重新命名'**
+  String get fontManagementRenameTooltip;
+
+  /// 自訂字型項目「刪除」按鈕的無障礙提示文字，同時是刪除確認對話框確認按鈕文字（共用同一 key）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get fontManagementDeleteTooltip;
+
+  /// 重新命名對話框標題（與 fontManagementRenameTooltip 文字相同，但語意角色不同，各自獨立宣告以便未來調整不互相牽動）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重新命名'**
+  String get fontManagementRenameDialogTitle;
+
+  /// 刪除自訂字型確認對話框標題，{fontName} 為使用者自訂的字型顯示名稱（不翻譯）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定要刪除「{fontName}」嗎？'**
+  String fontManagementDeleteConfirmTitle(String fontName);
+
+  /// 刪除自訂字型時，若有書籍正在使用該字型顯示的警告文字，{usageCount} 為使用中的書籍數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{usageCount, plural, =1{目前有 1 本書使用此字型，刪除後將自動改用預設字型} other{目前有 {usageCount} 本書使用此字型，刪除後將自動改用預設字型}}'**
+  String fontManagementDeleteConfirmMessage(int usageCount);
+
+  /// 批次上傳字型結果訊息：同時有新增與跳過的情境，{addedCount}／{skippedCount} 各自獨立處理單複數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{addedCount, plural, =1{已新增 1 款字型} other{已新增 {addedCount} 款字型}}，{skippedCount, plural, =1{1 款已存在已跳過} other{{skippedCount} 款已存在已跳過}}'**
+  String fontManagementUploadBothMessage(int addedCount, int skippedCount);
+
+  /// 批次上傳字型結果訊息：全部成功新增、沒有跳過的情境
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{addedCount, plural, =1{已新增 1 款字型} other{已新增 {addedCount} 款字型}}'**
+  String fontManagementUploadAddedOnlyMessage(int addedCount);
+
+  /// 批次上傳字型結果訊息：全部跳過、沒有新增成功的情境
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{skippedCount, plural, =1{1 款字型已存在，已跳過} other{{skippedCount} 款字型已存在，已跳過}}'**
+  String fontManagementUploadSkippedOnlyMessage(int skippedCount);
+
+  /// 閱讀器 Console Log 畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'閱讀器 Console Log'**
+  String get readerConsoleLogTitle;
+
+  /// 「複製全部」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'複製全部'**
+  String get readerConsoleLogCopyAllTooltip;
+
+  /// 「清空」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'清空'**
+  String get readerConsoleLogClearTooltip;
+
+  /// 沒有任何 Console Log 記錄時的空狀態提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'目前沒有記錄'**
+  String get readerConsoleLogEmptyHint;
+
+  /// 點擊「複製全部」後的 SnackBar 提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已複製全部記錄到剪貼簿'**
+  String get readerConsoleLogCopiedMessage;
+
+  /// 關於畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'關於'**
+  String get aboutScreenTitle;
+
+  /// 「版本」項目標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'版本'**
+  String get aboutScreenVersionLabel;
+
+  /// 「編譯時間」項目標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'編譯時間'**
+  String get aboutScreenBuildTimeLabel;
+
+  /// 「系統 WebView 版本」項目標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'系統 WebView 版本'**
+  String get aboutScreenWebViewVersionLabel;
+
+  /// 「開源授權清單」項目標題（點擊開啟 Flutter 內建授權清單頁）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'開源授權清單'**
+  String get aboutScreenViewLicensesButton;
+
+  /// 版本號/編譯時間/WebView 版本非同步載入完成前的暫時顯示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'讀取中...'**
+  String get aboutScreenLoadingText;
+
+  /// PackageInfo.fromPlatform() 呼叫失敗時，版本號欄位顯示的錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法取得版本號'**
+  String get aboutScreenFailedToLoadVersionMessage;
+
+  /// 編譯時間/WebView 版本呼叫失敗或回傳空值時顯示的通用錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法取得'**
+  String get aboutScreenUnavailableText;
 }
 
 class _AppLocalizationsDelegate
