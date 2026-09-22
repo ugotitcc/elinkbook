@@ -147,7 +147,7 @@
 
 ## Issue 5：系統設定四分區模組字串抽取＋測試遷移
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 0、Issue 1（「語言」項目本身已在 Issue 1 處理）。
 
@@ -157,6 +157,11 @@
 - `settings_scaffold.dart`（「語言」項目外的其餘字串）／`nav_zone_settings_screen.dart`／`tts_defaults_screen.dart`／`reading_defaults_screen.dart`／`sync_settings_screen.dart`／`cloud_account_settings_screen.dart`／`font_management_screen.dart`（內建字型名稱本身不翻譯，見 `design.md` 排除範圍，僅週邊 UI 文案抽取）／`reader_console_log_screen.dart`／`about_screen.dart`。
 - **日期格式化（`/receiving-code-review` review-issues I-1 修正）**：`sync_settings_screen.dart` 的 `_formatLastSyncedAt()`（`sync_settings_screen.dart:104-111`）目前手動拼接日期時間字串，既有程式碼註解明寫「不引入 `intl` 套件——只有這一處需要格式化」——這個決策前提已被本 Epic 推翻（`intl` 已是全域依賴），改用 `DateFormat.yMd(locale).add_Hm()`（或等效組合）依目前介面語言格式化。
 - **ICU plural（review-issues I-2 修正）**：`settings_scaffold.dart:289` 附近的全文檢索索引進度「已索引 $current / $total 本」，ARB 定義時採用 ICU `plural` 語法（比照 `design.md`／`spec.md` 既有「已索引 40/90 本」範例：英文版單複數綁定於 `total` 而非 `current`）。
+
+**實際執行範圍修正記錄（認領時 grep 盤點）**：
+- `settings_scaffold.dart` 原本要求的「已索引 $current / $total 本」ICU plural 索引進度字串經查證現行程式碼不存在（`issues.md` 原始描述已過時，本 Issue 未新增對應邏輯）。
+- `settings_scaffold_test.dart` 已在 Issue 1 完整遷移至 `pumpLocalizedWidget()`，本 Issue 不重複遷移。
+- `cloud_account_settings_screen.dart._buildProviderTile()` 的 `title`（`'Google Drive'`／`'OneDrive'`）為雲端服務商品牌名不翻譯。
 
 **單元測試要求：** 同 Issue 3 模式，逐檔改用 `pumpLocalizedWidget()`，零回歸；`font_management_screen_test.dart` 特別驗證字型品牌名（思源黑體等）三語言下皆維持原文不翻譯；`sync_settings_screen_test.dart` 驗證三語言下「最後同步」日期時間格式符合各自地區慣例；`settings_scaffold_test.dart` 驗證索引進度字串英文版單複數正確。
 

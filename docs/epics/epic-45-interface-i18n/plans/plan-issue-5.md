@@ -44,7 +44,7 @@
 
 **計劃範圍澄清（ICU plural 查證結果）**：`issues.md` 記載「`settings_scaffold.dart:289` 附近的全文檢索索引進度『已索引 $current / $total 本』」需要 ICU plural——實際 grep 全檔（`grep -n "索引\|current\|total" lib/screens/settings_scaffold.dart`）確認不存在任何此類進度文字，目前該區塊只有「PDF 全文檢索」/「其他格式全文檢索」兩張卡片＋「重建索引」按鈕＋開關，沒有顯示計數進度的 UI。本 Task 不新增對應 ICU plural 邏輯，此為範圍修正記錄的一部分（見 Task 12 Step 4）。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb` 檔尾新增：
 ```json
@@ -306,12 +306,12 @@
   "settingsConsoleLogInterceptSubtitle": "關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
 Run: `flutter gen-l10n`
 Expected: 無錯誤。
 
-- [ ] **Step 3: 修改 `settings_scaffold.dart`**
+- [x] **Step 3: 修改 `settings_scaffold.dart`**
 
 `build()` 方法（第 186-490 行）內，依序替換以下字面值（`final l10n = AppLocalizations.of(context)!;` 已存在於第 184 行，直接沿用；`const` 修飾詞若因子項不再是常數而需移除，一併處理）：
 
@@ -393,11 +393,11 @@ Expected: 無錯誤。
 
 （`_themeLabel()` 改為接收 `l10n` 參數而非直接呼叫 `AppLocalizations.of(context)!`，因為它本身沒有 `context` 參數、只有 `theme`——比起額外加一個 `BuildContext context` 參數，直接傳入呼叫端已解析好的 `l10n` 更簡潔，兩處呼叫端〔`_buildThemeDot()`〕都已持有 `l10n`。）
 
-- [ ] **Step 4: 遷移既有測試檔（新增斷言，不遷移 `MaterialApp`）**
+- [x] **Step 4: 遷移既有測試檔（新增斷言，不遷移 `MaterialApp`）**
 
 `app/test/screens/settings_scaffold_test.dart` 已全數使用 `pumpLocalizedWidget()`（Issue 1 完成），不需要新增 `localizationsDelegates` 等參數。找到既有斷言 `expect(find.text('設定'), findsOneWidget);`／`expect(find.text('佈景'), findsOneWidget);`（第 65-66、143 行附近）等處，確認斷言值不變（`pumpLocalizedWidget()` 預設 `locale: const Locale('zh', 'TW')`，這些中文斷言值與新 ARB key 在 `zh_TW` 下的值完全相同，不需要修改任何既有斷言）。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 在檔案 `main()` 最後一個 `testWidgets` 之後新增：
 ```dart
@@ -450,17 +450,17 @@ Expected: 無錯誤。
 
 > 若既有 `SettingsScaffold(...)` 建構參數（`prefsManager`／`isEinkMode`／`currentTheme` 等）與檔案既有其他 `testWidgets` 實際使用的建構寫法不完全一致，改用該既有寫法，斷言邏輯不變。「About」在英文下 `findsNWidgets(2)`——分區標題與項目標題共用同一 key、文字相同（比照計畫 Step 1 `settingsAboutLabel` description 註記）。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/settings_scaffold_test.dart`
 Expected: 全數通過（既有＋新增 2 個）。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/settings_scaffold.dart test/screens/settings_scaffold_test.dart`
 Expected: No issues found!
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/settings_scaffold.dart app/test/screens/settings_scaffold_test.dart app/lib/l10n/
@@ -481,7 +481,7 @@ git commit -m "feat(epic-45): settings_scaffold.dart 字串抽取三語言在地
 
 **計劃範圍澄清**：`navZoneActionPreviousPage`/`navZoneActionNextPage` 的中英文字面值恰好與 Issue 4 `widgets/paging_bar.dart` 的 `readerPagingPreviousTooltip`/`readerPagingNextTooltip` 相同（皆為「上一頁」/「下一頁」），但語意情境不同（本畫面是九宮格自訂熱區的動作標籤，非分頁按鈕 tooltip），刻意不重用 Issue 4 的 key、另建本模組專屬 key，維持模組邊界清晰（比照本 Epic 各模組皆各自宣告專屬 key 的既有慣例，只有 `cancel`/`close`/`confirm` 等通用泛型 key 才跨模組共用）。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -576,9 +576,9 @@ git commit -m "feat(epic-45): settings_scaffold.dart 字串抽取三語言在地
   "navZoneCustomValidationError": "至少需要 1 格設為「選單」，否則將無法退出沉浸模式"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `nav_zone_settings_screen.dart`**
+- [x] **Step 3: 修改 `nav_zone_settings_screen.dart`**
 
 新增 import：
 ```dart
@@ -630,12 +630,12 @@ import '../l10n/app_localizations.dart';
 `_buildCustomEditor()`（第 351-394 行，`_actionLabel()` 呼叫點原樣不動，只替換第 389 行）：
 - 第 389 行 `child: const Text('儲存自訂熱區設定'),` → `child: Text(AppLocalizations.of(context)!.navZoneSettingsSaveCustomButton),`
 
-- [ ] **Step 4: `flutter analyze` 確認乾淨**
+- [x] **Step 4: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/nav_zone_settings_screen.dart`
 Expected: No issues found!（此時測試檔尚未遷移，`flutter test test/screens/nav_zone_settings_screen_test.dart` 預期出現大量 `Null check operator` 失敗，留給 Task 3 處理，本 Step 不要求測試通過。）
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/nav_zone_settings_screen.dart app/lib/l10n/
@@ -652,13 +652,13 @@ git commit -m "feat(epic-45): nav_zone_settings_screen.dart 字串抽取三語�
 **Interfaces:**
 - Consumes：Task 2 完成的 `NavZoneSettingsScreen`（公開建構參數簽章不變）。
 
-- [ ] **Step 1: 檔案頂部新增 import**
+- [x] **Step 1: 檔案頂部新增 import**
 
 ```dart
 import 'package:elinkbook/l10n/app_localizations.dart';
 ```
 
-- [ ] **Step 2: 17 處 `MaterialApp(` 逐一補上三個 l10n 參數**
+- [x] **Step 2: 17 處 `MaterialApp(` 逐一補上三個 l10n 參數**
 
 Run 先確認實際次數：`grep -c "MaterialApp(" test/screens/nav_zone_settings_screen_test.dart`（預期 17）。逐一在每個 `MaterialApp(` 後緊接插入：
 ```dart
@@ -685,7 +685,7 @@ await tester.pumpWidget(MaterialApp(
 
 其餘 16 處套用相同規則，不變動任何既有 `home: NavZoneSettingsScreen(...)` 建構參數或其後的斷言內容。
 
-- [ ] **Step 3: 新增英文渲染驗證測試**
+- [x] **Step 3: 新增英文渲染驗證測試**
 
 在檔案 `main()` 最後新增：
 ```dart
@@ -725,22 +725,22 @@ await tester.pumpWidget(MaterialApp(
 
 > 若既有測試建構 `FakeReaderPrefsManager()`／`NavZoneSettingsScreen` 的寫法與檔案既有慣例不完全一致（例如需要預先 stub `loadGlobalPrefs()` 回傳值），改用該既有慣例，斷言邏輯不變。第二則測試點擊 `find.text('Custom')` 是為了從固定模板卡片切到「自訂」9 格編輯器，才能看到 `_actionLabel()` 渲染的動作文字——`nav_zone_template_toggle` 這個 Key 掛在整個 `SegmentedButton` 上，直接 `tap(find.byKey(...))` 命中的座標落在兩個 segment 分界線附近，不保證擊中「自訂」那個 segment；比照 `nav_zone_settings_screen_test.dart` 既有測試（`await tester.tap(find.text('自訂'));`）改用點擊 segment 文字本身，英文介面下對應文字即為 `'Custom'`。若既有測試已有更簡潔的切換方式（例如直接建構已是 `custom` 模式的 `GlobalReaderPrefs`），改用該既有方式。
 
-- [ ] **Step 4: 執行測試確認全數通過**
+- [x] **Step 4: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/nav_zone_settings_screen_test.dart`
 Expected: 全數通過（既有＋新增 2 個）。
 
-- [ ] **Step 5: `grep` 驗證零殘留**
+- [x] **Step 5: `grep` 驗證零殘留**
 
 Run: `grep -c "localizationsDelegates: AppLocalizations.localizationsDelegates" test/screens/nav_zone_settings_screen_test.dart`
 Expected: 19（17 既有＋2 新增）。
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze test/screens/nav_zone_settings_screen_test.dart`
 Expected: No issues found!
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/test/screens/nav_zone_settings_screen_test.dart
@@ -759,7 +759,7 @@ git commit -m "test(epic-45): nav_zone_settings_screen_test.dart 測試遷移＋
 - Consumes：`AppLocalizations.of(context)!`。
 - Produces：ARB key `readingDefaultsTitle`/`readingDefaultsVolumeKeyLabel`/`readingDefaultsPageTurnModeSectionTitle`/`readingDefaultsPaginatedLabel`/`readingDefaultsScrollLabel`/`readingDefaultsScreenOrientationSectionTitle`/`readingDefaultsOrientationAutoLabel`/`readingDefaultsOrientationLock0Label`/`readingDefaultsOrientationLock90Label`/`readingDefaultsOrientationLock180Label`/`readingDefaultsOrientationLock270Label`/`readingDefaultsTextConversionSectionTitle`/`readingDefaultsTextConversionOriginalLabel`/`readingDefaultsTextConversionTraditionalLabel`/`readingDefaultsTextConversionSimplifiedLabel`/`readingDefaultsFullscreenLabel`/`readingDefaultsOpenLastBookLabel`/`readingDefaultsShowHeaderLabel`/`readingDefaultsShowFooterLabel`。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -839,6 +839,7 @@ git commit -m "test(epic-45): nav_zone_settings_screen_test.dart 測試遷移＋
   "@readingDefaultsShowFooterLabel": {
     "description": "「顯示頁尾」開關標題"
   }
+}
 ```
 
 `app_zh_CN.arb`：
@@ -910,9 +911,9 @@ git commit -m "test(epic-45): nav_zone_settings_screen_test.dart 測試遷移＋
   "readingDefaultsShowFooterLabel": "顯示頁尾"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `reading_defaults_screen.dart`**
+- [x] **Step 3: 修改 `reading_defaults_screen.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -939,12 +940,12 @@ git commit -m "test(epic-45): nav_zone_settings_screen_test.dart 測試遷移＋
 
 `_buildSectionHeader()`（第 49-54 行）簽章與內容原樣不動（`String label` 參數，呼叫端已改傳已轉譯字串，不需要改這個方法本身）。
 
-- [ ] **Step 4: `flutter analyze` 確認乾淨**
+- [x] **Step 4: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/reading_defaults_screen.dart`
 Expected: No issues found!（測試檔尚未遷移，`flutter test` 預期紅燈，留給 Task 5。）
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/reading_defaults_screen.dart app/lib/l10n/
@@ -961,13 +962,13 @@ git commit -m "feat(epic-45): reading_defaults_screen.dart 字串抽取三語言
 **Interfaces:**
 - Consumes：Task 4 完成的 `ReadingDefaultsScreen`（公開建構參數簽章不變）。
 
-- [ ] **Step 1: 檔案頂部新增 import**
+- [x] **Step 1: 檔案頂部新增 import**
 
 ```dart
 import 'package:elinkbook/l10n/app_localizations.dart';
 ```
 
-- [ ] **Step 2: 14 處 `MaterialApp(` 逐一補上三個 l10n 參數**
+- [x] **Step 2: 14 處 `MaterialApp(` 逐一補上三個 l10n 參數**
 
 Run 先確認實際次數：`grep -c "MaterialApp(" test/screens/reading_defaults_screen_test.dart`（預期 14）。逐一補上：
 ```dart
@@ -994,7 +995,7 @@ await tester.pumpWidget(MaterialApp(
 
 其餘 13 處套用相同規則。
 
-- [ ] **Step 3: 新增英文渲染驗證測試**
+- [x] **Step 3: 新增英文渲染驗證測試**
 
 ```dart
   testWidgets('英文介面下四個分區標題與選項標籤正確以英文渲染', (tester) async {
@@ -1026,22 +1027,22 @@ await tester.pumpWidget(MaterialApp(
 
 > 若既有測試建構 `FakeReaderPrefsManager()` 的方式與檔案既有慣例不完全一致，改用該既有慣例。
 
-- [ ] **Step 4: 執行測試確認全數通過**
+- [x] **Step 4: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/reading_defaults_screen_test.dart`
 Expected: 全數通過（既有＋新增 1 個）。
 
-- [ ] **Step 5: `grep` 驗證零殘留**
+- [x] **Step 5: `grep` 驗證零殘留**
 
 Run: `grep -c "localizationsDelegates: AppLocalizations.localizationsDelegates" test/screens/reading_defaults_screen_test.dart`
 Expected: 15（14 既有＋1 新增）。
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze test/screens/reading_defaults_screen_test.dart`
 Expected: No issues found!
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/test/screens/reading_defaults_screen_test.dart
@@ -1063,7 +1064,7 @@ git commit -m "test(epic-45): reading_defaults_screen_test.dart 測試遷移＋�
 
 **計劃範圍澄清**：語速數值文字（`'${...}x'`／Slider `label`）為純數字＋固定後綴 `x` 格式，不含任何語意詞彙，不需要翻譯，原樣保留（Task 7 `_formatLastSyncedAt()` 以外，本 Issue 唯一涉及數字格式化的地方，但不涉及 `DateFormat`／ICU plural，維持既有 `toStringAsFixed()` 寫法不動）。`voice.displayName` 是系統/裝置提供的 TTS 語音顯示名稱（例如廠商語音包名稱），屬使用者裝置資料，不翻譯。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -1109,9 +1110,9 @@ git commit -m "test(epic-45): reading_defaults_screen_test.dart 測試遷移＋�
   "ttsDefaultsSpeedSectionTitle": "語速"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `tts_defaults_screen.dart`**
+- [x] **Step 3: 修改 `tts_defaults_screen.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -1129,11 +1130,11 @@ git commit -m "test(epic-45): reading_defaults_screen_test.dart 測試遷移＋�
   （原本 `const Padding(...)` 因子項不再是常數，移除該層 `const`。）
 - 第 107 行 `const EBSectionHeader(title: '語速'),` → `EBSectionHeader(title: l10n.ttsDefaultsSpeedSectionTitle),`
 
-- [ ] **Step 4: 遷移既有測試檔（9 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（9 處 `MaterialApp(`）**
 
 `app/test/screens/tts_defaults_screen_test.dart` 新增 import `package:elinkbook/l10n/app_localizations.dart`，9 處 `MaterialApp(` 逐一補上 `locale: const Locale('zh', 'TW')`/`localizationsDelegates`/`supportedLocales`（同前述 Task 範例規則）。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 ```dart
   testWidgets('英文介面下標題與分區標題正確以英文渲染', (tester) async {
@@ -1156,17 +1157,17 @@ git commit -m "test(epic-45): reading_defaults_screen_test.dart 測試遷移＋�
 
 > `ttsProvider` 未提供時（預設 `null`）會走「不可用提示」分支，若既有測試需要明確傳入 `ttsProvider: null` 或某個 Fake 才能重現此分支，比照既有測試檔慣例調整；`isEinkMode` 保留預設 `false`。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/tts_defaults_screen_test.dart`
 Expected: 全數通過（既有＋新增 1 個）。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/tts_defaults_screen.dart test/screens/tts_defaults_screen_test.dart`
 Expected: No issues found!
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/tts_defaults_screen.dart app/test/screens/tts_defaults_screen_test.dart app/lib/l10n/
@@ -1188,7 +1189,7 @@ git commit -m "feat(epic-45): tts_defaults_screen.dart 字串抽取三語言在�
 
 **計劃範圍澄清（`_formatLastSyncedAt()` 日期格式化重構）**：`issues.md` 記載的既有程式碼註解「不引入 `intl` 套件——只有這一處需要格式化，手動拼接即可」——`intl` 已是本 Epic 全域依賴（見 `pubspec.yaml`），改用 `DateFormat.yMd(locale).add_Hm()` 依目前介面語言格式化絕對日期時間（Q9 決策：不用相對時間，本次不變動）。`Email` 欄位的 `labelText: 'Email'` 字面值本身即為英文單詞、非中文，三語言皆維持原樣不翻譯，本 Task 不處理。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -1307,9 +1308,9 @@ git commit -m "feat(epic-45): tts_defaults_screen.dart 字串抽取三語言在�
   "syncSettingsConnectButton": "連線／登入"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `sync_settings_screen.dart`**
+- [x] **Step 3: 修改 `sync_settings_screen.dart`**
 
 新增 import：
 ```dart
@@ -1477,11 +1478,11 @@ import '../l10n/app_localizations.dart';
   }
 ```
 
-- [ ] **Step 4: 遷移既有測試檔（10 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（10 處 `MaterialApp(`）**
 
 `app/test/screens/sync_settings_screen_test.dart` 新增 import `package:elinkbook/l10n/app_localizations.dart`，10 處 `MaterialApp(` 逐一補上三個 l10n 參數。若既有測試斷言「最後同步：」相關文字（例如組合出 `'最後同步：2026-3-15 14:30'` 這類字串），確認斷言值改用 `DateFormat.yMd('zh_TW').add_Hm().format(dt)` 實際格式化結果重新核對（`zh_TW` 下 `DateFormat.yMd()` 輸出為 `2026/3/15` 而非原手動拼接的 `2026-03-15`——日期分隔符號與月/日補零方式皆改變，需要逐一核對既有斷言字面值並更新為 `DateFormat` 實際輸出，不可假設與手動拼接版本相同）。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 ```dart
   testWidgets('英文介面下已登入畫面文字正確以英文渲染，最後同步時間為英文日期格式',
@@ -1520,17 +1521,17 @@ import '../l10n/app_localizations.dart';
 
 > `DateFormat.yMd('en').add_Hm()` 對 `DateTime(2026, 3, 15, 14, 30)` 的實際輸出格式（月/日/年 + 時:分）請執行後以實際結果核對斷言，若與本計畫預期的 `'3/15/2026'` 不完全一致（例如含 `2:30 PM` 時間後綴），依實際輸出調整 `findsOneWidget` 斷言的比對字串，斷言邏輯（驗證日期確實依英文慣例格式化，非驗證特定 minute 顯示細節）不變。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/sync_settings_screen_test.dart`
 Expected: 全數通過（含既有「最後同步」相關斷言更新後，＋新增 1 個）。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/sync_settings_screen.dart test/screens/sync_settings_screen_test.dart`
 Expected: No issues found!
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/sync_settings_screen.dart app/test/screens/sync_settings_screen_test.dart app/lib/l10n/
@@ -1552,7 +1553,7 @@ git commit -m "feat(epic-45): sync_settings_screen.dart 字串抽取三語言在
 
 **計劃範圍澄清**：`_buildProviderTile({required String title, ...})` 的 `title` 參數（呼叫端固定傳入 `'Google Drive'`／`'OneDrive'`）為雲端服務商品牌名，`design.md` 明文排除，維持原樣不動、不新增對應 key。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -1610,9 +1611,9 @@ git commit -m "feat(epic-45): sync_settings_screen.dart 字串抽取三語言在
   "cloudAccountSettingsLinkButton": "連結"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `cloud_account_settings_screen.dart`**
+- [x] **Step 3: 修改 `cloud_account_settings_screen.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -1713,11 +1714,11 @@ git commit -m "feat(epic-45): sync_settings_screen.dart 字串抽取三語言在
   }
 ```
 
-- [ ] **Step 4: 遷移既有測試檔（6 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（6 處 `MaterialApp(`）**
 
 `app/test/screens/cloud_account_settings_screen_test.dart` 新增 import `package:elinkbook/l10n/app_localizations.dart`，6 處 `MaterialApp(` 逐一補上三個 l10n 參數。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 ```dart
   testWidgets('英文介面下已連結/未連結狀態文字正確以英文渲染', (tester) async {
@@ -1755,17 +1756,17 @@ git commit -m "feat(epic-45): sync_settings_screen.dart 字串抽取三語言在
 
 （**計劃審查修正（`review-plan-issue-5.md` I-1）**：本專案不存在 `FakeGoogleDriveOAuthClient`／`FakeOneDriveOAuthClient`，且 `FakeCloudAccountRepository` 只有無參數建構子（`test/support/fake_cloud_account_repository.dart:7`），連結狀態一律透過 `await repository.link(CloudProvider provider, CloudAccountTokens tokens)` 設定。既有測試對 OAuth client 一律使用真實類別＋假 repository 的組合：`GoogleDriveOAuthClient(accountRepository: fakeRepository)`／`OneDriveOAuthClient(accountRepository: fakeRepository)`（兩者預設會建構真正的 `http.Client()`，但本測試只渲染畫面、不點擊「連結」／「解除連結」按鈕觸發真實網路請求，故安全）。上方範例已改用這些既有真實物件。）
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/cloud_account_settings_screen_test.dart`
 Expected: 全數通過（既有＋新增 1 個）。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/cloud_account_settings_screen.dart test/screens/cloud_account_settings_screen_test.dart`
 Expected: No issues found!
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/cloud_account_settings_screen.dart app/test/screens/cloud_account_settings_screen_test.dart app/lib/l10n/
@@ -1787,7 +1788,7 @@ git commit -m "feat(epic-45): cloud_account_settings_screen.dart 字串抽取三
 
 **計劃範圍澄清（架構必要偏離）**：`buildUploadResultMessage({required int addedCount, required int skippedCount})` 是本檔案的**頂層純函式**（非 `State` 方法），沒有 `BuildContext` 可用，且被 `font_management_screen_test.dart` 一個不經過 widget tree 的 `test()`（非 `testWidgets()`）純邏輯測試直接呼叫並斷言回傳字串。本 Task 為它新增 `required AppLocalizations l10n` 具名參數——production 呼叫端（`_pickAndUploadFonts()`）傳入 `AppLocalizations.of(context)!`；純單元測試呼叫端改傳入 `gen-l10n` 生成的具體語言子類別（`AppLocalizationsZhTw()`/`AppLocalizationsEn()`，兩者皆可直接建構、不需要 widget tree／`BuildContext`）。`_builtInDisplayName()` 是 `_FontManagementScreenState` 實例方法，`context` 直接可用，不需要改簽章。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -1871,6 +1872,7 @@ git commit -m "feat(epic-45): cloud_account_settings_screen.dart 字串抽取三
       }
     }
   }
+}
 ```
 
 `app_zh_CN.arb`：
@@ -1924,9 +1926,9 @@ git commit -m "feat(epic-45): cloud_account_settings_screen.dart 字串抽取三
   "fontManagementUploadSkippedOnlyMessage": "{skippedCount, plural, =1{1 款字型已存在，已跳過} other{{skippedCount} 款字型已存在，已跳過}}"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `font_management_screen.dart`**
+- [x] **Step 3: 修改 `font_management_screen.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -2061,7 +2063,7 @@ String buildUploadResultMessage({
 }
 ```
 
-- [ ] **Step 4: 遷移既有測試檔（1 處 `MaterialApp(`＋`buildUploadResultMessage()` 純單元測試呼叫端）**
+- [x] **Step 4: 遷移既有測試檔（1 處 `MaterialApp(`＋`buildUploadResultMessage()` 純單元測試呼叫端）**
 
 `app/test/screens/font_management_screen_test.dart` 新增 import：
 ```dart
@@ -2087,7 +2089,7 @@ import 'package:elinkbook/l10n/app_localizations_zh.dart';
   });
 ```
 
-- [ ] **Step 5: 新增英文渲染驗證測試（含 ICU plural 單複數與純函式英文斷言）**
+- [x] **Step 5: 新增英文渲染驗證測試（含 ICU plural 單複數與純函式英文斷言）**
 
 在 widget 測試新增：
 ```dart
@@ -2135,17 +2137,17 @@ import 'package:elinkbook/l10n/app_localizations_zh.dart';
 
 > `FakeCustomFontsRepository` 的實際建構方式請對照檔案既有 Fake 實作調整。
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/font_management_screen_test.dart`
 Expected: 全數通過（既有＋新增 2 個）。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/font_management_screen.dart test/screens/font_management_screen_test.dart`
 Expected: No issues found!
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/font_management_screen.dart app/test/screens/font_management_screen_test.dart app/lib/l10n/
@@ -2165,7 +2167,7 @@ git commit -m "feat(epic-45): font_management_screen.dart 字串抽取三語言�
 - Consumes：`AppLocalizations.of(context)!`。
 - Produces：ARB key `readerConsoleLogTitle`/`readerConsoleLogCopyAllTooltip`/`readerConsoleLogClearTooltip`/`readerConsoleLogEmptyHint`/`readerConsoleLogCopiedMessage`。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -2189,6 +2191,7 @@ git commit -m "feat(epic-45): font_management_screen.dart 字串抽取三語言�
   "@readerConsoleLogCopiedMessage": {
     "description": "點擊「複製全部」後的 SnackBar 提示"
   }
+}
 ```
 
 `app_zh_CN.arb`：
@@ -2218,9 +2221,9 @@ git commit -m "feat(epic-45): font_management_screen.dart 字串抽取三語言�
   "readerConsoleLogCopiedMessage": "已複製全部記錄到剪貼簿"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `reader_console_log_screen.dart`**
+- [x] **Step 3: 修改 `reader_console_log_screen.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -2272,7 +2275,7 @@ git commit -m "feat(epic-45): font_management_screen.dart 字串抽取三語言�
   }
 ```
 
-- [ ] **Step 4: 遷移既有測試檔（4 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（4 處 `MaterialApp(`）**
 
 `app/test/screens/reader_console_log_screen_test.dart` 新增 import `package:elinkbook/l10n/app_localizations.dart`，4 處 `const MaterialApp(home: ReaderConsoleLogScreen())` 改為：
 ```dart
@@ -2285,7 +2288,7 @@ git commit -m "feat(epic-45): font_management_screen.dart 字串抽取三語言�
 ```
 （移除外層 `const`，`home:` 內層 `const ReaderConsoleLogScreen()` 本身仍可維持 `const`。）
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 ```dart
   testWidgets('英文介面下標題/按鈕提示/空狀態提示正確以英文渲染', (tester) async {
@@ -2305,17 +2308,17 @@ git commit -m "feat(epic-45): font_management_screen.dart 字串抽取三語言�
   });
 ```
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/reader_console_log_screen_test.dart`
 Expected: 全數通過（既有＋新增 1 個）。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/reader_console_log_screen.dart test/screens/reader_console_log_screen_test.dart`
 Expected: No issues found!
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/reader_console_log_screen.dart app/test/screens/reader_console_log_screen_test.dart app/lib/l10n/
@@ -2337,7 +2340,7 @@ git commit -m "feat(epic-45): reader_console_log_screen.dart 字串抽取三語�
 
 **計劃範圍澄清（初始值/錯誤狀態的 l10n 安全重構，比照 Issue 3 `_FileSizeStatus` 先例）**：`_versionText`/`_buildTimeText`/`_webViewVersion` 三個欄位目前直接以硬編碼中文字面值（`'讀取中...'`／`'無法取得版本號'`／`'無法取得'`）作為欄位初始值與非同步載入結果，欄位初始值在 `State` 建構當下（早於 `initState()`）就會賦值，若直接改成 `AppLocalizations.of(context)!.xxx` 會在沒有 `BuildContext` 的欄位初始化階段崩潰。本 Task 改用「查詢結果狀態與其在地化文字分離、只在 `build()` 轉譯」設計：新增私有 enum `_AsyncTextStatus { loading, error }`，三個欄位型別改為 `Object`（可能是 `_AsyncTextStatus.loading`／`_AsyncTextStatus.error`／實際載入成功的 `String` 資料），並新增 `_resolveAsyncText()` helper 只在 `build()` 執行期間呼叫 `AppLocalizations.of(context)!` 轉譯。`_versionForLicensePage`（`String?`，供 `showLicensePage()` 使用）維持原樣不動，本身不是顯示文字。
 
-- [ ] **Step 1: 新增 ARB key（四語言）**
+- [x] **Step 1: 新增 ARB key（四語言）**
 
 `app_zh_TW.arb`：
 ```json
@@ -2373,6 +2376,7 @@ git commit -m "feat(epic-45): reader_console_log_screen.dart 字串抽取三語�
   "@aboutScreenUnavailableText": {
     "description": "編譯時間/WebView 版本呼叫失敗或回傳空值時顯示的通用錯誤文字"
   }
+}
 ```
 
 `app_zh_CN.arb`：
@@ -2411,9 +2415,9 @@ git commit -m "feat(epic-45): reader_console_log_screen.dart 字串抽取三語�
   "aboutScreenUnavailableText": "無法取得"
 ```
 
-- [ ] **Step 2: 執行 `flutter gen-l10n`**
+- [x] **Step 2: 執行 `flutter gen-l10n`**
 
-- [ ] **Step 3: 修改 `about_screen.dart`**
+- [x] **Step 3: 修改 `about_screen.dart`**
 
 新增 import：`import '../l10n/app_localizations.dart';`
 
@@ -2542,7 +2546,7 @@ class _AboutScreenState extends State<AboutScreen> {
 
 （`versionText` 之所以額外用一個獨立的三元判斷、不直接沿用 `_resolveAsyncText()`，是因為版本號欄位的錯誤文字 `aboutScreenFailedToLoadVersionMessage`〔"無法取得版本號"〕與編譯時間/WebView 版本共用的通用錯誤文字 `aboutScreenUnavailableText`〔"無法取得"〕不同——`_resolveAsyncText()` 的 `error` 分支固定回傳 `aboutScreenUnavailableText`，版本號欄位需要在 `build()` 內另外特判。）
 
-- [ ] **Step 4: 遷移既有測試檔（2 處 `MaterialApp(`）**
+- [x] **Step 4: 遷移既有測試檔（2 處 `MaterialApp(`）**
 
 `app/test/screens/about_screen_test.dart` 新增 import `package:elinkbook/l10n/app_localizations.dart`，2 處 `const MaterialApp(home: AboutScreen())` 改為：
 ```dart
@@ -2556,7 +2560,7 @@ class _AboutScreenState extends State<AboutScreen> {
 
 既有測試斷言值不變（`find.text('關於')`／`find.text('開源授權清單')`／`buildTimeText.data == '無法取得'` 在 `zh_TW` 下與新 key 的值完全相同）。
 
-- [ ] **Step 5: 新增英文渲染驗證測試**
+- [x] **Step 5: 新增英文渲染驗證測試**
 
 ```dart
   testWidgets('英文介面下標題/項目標題/授權清單按鈕正確以英文渲染', (tester) async {
@@ -2605,17 +2609,17 @@ class _AboutScreenState extends State<AboutScreen> {
   });
 ```
 
-- [ ] **Step 6: 執行測試確認全數通過**
+- [x] **Step 6: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/about_screen_test.dart`
 Expected: 全數通過（既有 2 個＋新增 2 個）。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze lib/screens/about_screen.dart test/screens/about_screen_test.dart`
 Expected: No issues found!
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/about_screen.dart app/test/screens/about_screen_test.dart app/lib/l10n/
@@ -2631,7 +2635,7 @@ git commit -m "feat(epic-45): about_screen.dart 字串抽取三語言在地化�
 - Modify: `docs/epics/epic-45-interface-i18n/epic.md`
 - Modify: `docs/epics.md`
 
-- [ ] **Step 1: 完整 `flutter analyze`**
+- [x] **Step 1: 完整 `flutter analyze`**
 
 Run（在 `app/` 目錄下）：
 ```bash
@@ -2639,7 +2643,7 @@ flutter analyze
 ```
 Expected: No issues found!
 
-- [ ] **Step 2: 完整 `flutter test`**
+- [x] **Step 2: 完整 `flutter test`**
 
 Run:
 ```bash
@@ -2647,21 +2651,21 @@ flutter test
 ```
 Expected: 全數通過，與本 Issue 認領前的 base commit 相比零新增失敗（若有既存不穩定測試，需與 base commit 重跑比對，證實非本 Issue 引入，比照 Issue 0／3／4 既有先例的查證方式）。
 
-- [ ] **Step 3: 確認範圍修正已同步記錄**
+- [x] **Step 3: 確認範圍修正已同步記錄**
 
 在 `docs/epics/epic-45-interface-i18n/issues.md`「Issue 5」段落：
 1. `**Status:** ready-for-agent` 改為 `**Status:** completed`。
 2. 在「What to build」段落後新增「**實際執行範圍修正記錄（認領時 grep 盤點）**」段落，內容比照 Issue 3／4 先例，記錄：`settings_scaffold.dart` 原本要求的「已索引 $current / $total 本」ICU plural 索引進度字串經查證現行程式碼不存在（`issues.md` 原始描述已過時，本 Issue 未新增對應邏輯）；`settings_scaffold_test.dart` 已在 Issue 1 完整遷移至 `pumpLocalizedWidget()`，本 Issue 不重複遷移；`cloud_account_settings_screen.dart._buildProviderTile()` 的 `title`（`'Google Drive'`／`'OneDrive'`）為雲端服務商品牌名不翻譯。
 
-- [ ] **Step 4: 更新 `epic.md`**
+- [x] **Step 4: 更新 `epic.md`**
 
 在「開發記錄」段落末尾新增一則，比照既有格式，記錄：Task 1-12 完成概況、9 個檔案各自的 key 數量、`font_management_screen.dart.buildUploadResultMessage()` 頂層純函式簽章變更（新增 `AppLocalizations l10n` 參數，供純單元測試直接以 `AppLocalizationsZhTw()`/`AppLocalizationsEn()` 呼叫）、`about_screen.dart` 的 `_AsyncTextStatus` 查詢結果狀態分離設計（比照 Issue 3 `_FileSizeStatus` 先例）、`sync_settings_screen.dart._formatLastSyncedAt()` 改用 `DateFormat.yMd(locale).add_Hm()` 取代手動字串拼接、`flutter analyze`／`flutter test` 最終結果。
 
-- [ ] **Step 5: 更新 `docs/epics.md`**
+- [x] **Step 5: 更新 `docs/epics.md`**
 
 `epic-45-interface-i18n` 該列備註欄位改為「Issue 0／1／2／3／4／5 已完成，待認領 Issue 6」。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/ docs/epics/epic-45-interface-i18n/issues.md docs/epics/epic-45-interface-i18n/epic.md docs/epics.md
