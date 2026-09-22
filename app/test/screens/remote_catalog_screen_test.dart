@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:elinkbook/downloads/download_queue_controller.dart';
@@ -93,8 +94,12 @@ void main() {
     FakeRemoteThumbnailCache? thumbnailCache,
     String? feedUrl,
     DownloadQueueController? downloadQueueController,
+    Locale locale = const Locale('zh', 'TW'),
   }) async {
     await tester.pumpWidget(MaterialApp(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: RemoteCatalogScreen(
         server: server,
@@ -172,6 +177,9 @@ void main() {
       createOpdsClient: () => opdsClient,
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: RemoteCatalogScreen(
         server: server,
@@ -362,6 +370,9 @@ void main() {
         ),
       });
       await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
@@ -403,6 +414,9 @@ void main() {
         ),
       });
       await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
@@ -446,6 +460,9 @@ void main() {
         ),
       });
       await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
@@ -494,6 +511,9 @@ void main() {
       final downloadQueueController =
           DownloadQueueController(onDuplicateConfirm: (_) async => false);
       await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
@@ -551,6 +571,9 @@ void main() {
         server.baseUrl: const OpdsFeed(title: '根目錄', entries: [multiFormatEntry]),
       });
       await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
@@ -602,6 +625,9 @@ void main() {
         server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entryA, entryB]),
       });
       await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
@@ -646,6 +672,9 @@ void main() {
       final downloadQueueController =
           DownloadQueueController(onDuplicateConfirm: (_) async => false);
       await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
@@ -693,6 +722,9 @@ void main() {
       final downloadQueueController =
           DownloadQueueController(onDuplicateConfirm: (_) async => false);
       await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
@@ -738,6 +770,9 @@ void main() {
         server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
       });
       await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
@@ -808,6 +843,9 @@ void main() {
           },
         );
         await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
           navigatorKey: navigatorKey,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: RemoteCatalogScreen(
@@ -875,6 +913,9 @@ void main() {
           },
         );
         await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
           navigatorKey: navigatorKey,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: RemoteCatalogScreen(
@@ -931,6 +972,9 @@ void main() {
           },
         );
         await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
           navigatorKey: navigatorKey,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: RemoteCatalogScreen(
@@ -1006,4 +1050,32 @@ void main() {
     // 直接餵入一個非 content:// 的本機檔案路徑（比照 OPDS 下載佇列實際
     // 產生的檔案型態）驗證欄位持久化與檔案存活。
   });
+
+  testWidgets('英文介面下按鈕與下載佇列訊息正確顯示（含 ICU plural）', (tester) async {
+    final opdsClient = FakeOpdsClient(feeds: {
+      server.baseUrl: OpdsFeed(
+        title: '根目錄',
+        entries: [entry1, entry2],
+      ),
+    });
+    final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+    await pumpScreen(
+      tester,
+      opdsClient: opdsClient,
+      downloadQueueController: controller,
+      locale: const Locale('en'),
+    );
+
+    await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('remote_catalog_download_button')));
+    await tester.pump();
+
+    expect(
+      find.textContaining('Added 1 file to the download queue'),
+      findsOneWidget,
+    );
+  });
+
+
 }

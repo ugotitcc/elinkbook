@@ -6,6 +6,7 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/screens/remote_catalog_screen.dart';
 import 'package:elinkbook/screens/remote_server_form_screen.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
 import 'package:elinkbook/remote/remote_catalog_dependencies.dart';
 
@@ -44,8 +45,12 @@ void main() {
   Future<void> pumpScreen(
     WidgetTester tester, {
     required FakeRemoteServerRepository repository,
+    Locale locale = const Locale('zh', 'TW'),
   }) async {
     await tester.pumpWidget(MaterialApp(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: RemoteServerListScreen(
         repository: repository,
         libraryRepository: FakeLibraryRepository(),
@@ -170,5 +175,34 @@ void main() {
 
     expect(find.byType(RemoteCatalogScreen), findsOneWidget);
     expect(find.byType(RemoteServerFormScreen), findsNothing);
+  });
+
+  testWidgets('英文介面下顯示英文標題與空狀態文字', (tester) async {
+    await pumpScreen(
+      tester,
+      repository: FakeRemoteServerRepository(),
+      locale: const Locale('en'),
+    );
+    expect(find.text('Remote Library'), findsOneWidget);
+    expect(find.text('No remote library servers added yet'), findsOneWidget);
+  });
+
+  testWidgets('英文介面下刪除被擋下的站點顯示正確單複數示警文字', (tester) async {
+    final blockingBook = _fakeBook('book1', 'Pending Download');
+    final repository = FakeRemoteServerRepository(
+      initialServers: [profile('srv1')],
+      blockedDeletions: {'srv1': [blockingBook]},
+    );
+    await pumpScreen(tester, repository: repository, locale: const Locale('en'));
+
+    await tester.tap(find.byKey(const Key('remote_server_item_delete_srv1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('remote_server_delete_confirm_button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining("This server still has 1 book that only has a cloud record"),
+      findsOneWidget,
+    );
   });
 }

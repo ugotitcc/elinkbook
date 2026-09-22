@@ -13,6 +13,7 @@ import 'library_screen_dependencies.dart';
 import 'remote_server_list_screen.dart';
 import 'support/book_import_picker_helper.dart';
 import 'widgets/download_queue_panel.dart';
+import '../l10n/app_localizations.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_section_header.dart';
 import 'wifi_transfer_screen.dart';
@@ -155,6 +156,7 @@ class SourcesHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final googleDriveClient = cloudAccountDependencies.googleDriveStorageClient;
     final oneDriveClient = cloudAccountDependencies.oneDriveStorageClient;
     final googleDriveEnabled =
@@ -178,18 +180,18 @@ class SourcesHomeScreen extends StatelessWidget {
         wifiTransferDependencies?.checkNetworkAvailability != null;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('來源'),
+        title: Text(l10n.sourcesHomeTitle),
         actions: [
           IconButton(
             key: const Key('sources_library_button'),
             icon: const Icon(Icons.grid_view),
-            tooltip: '書架',
+            tooltip: l10n.sourcesHomeLibraryTooltip,
             onPressed: onNavigateToLibrary,
           ),
           IconButton(
             key: const Key('sources_settings_button'),
             icon: const Icon(Icons.settings),
-            tooltip: '設定',
+            tooltip: l10n.sourcesHomeSettingsTooltip,
             onPressed: onNavigateToSettings,
           ),
         ],
@@ -203,7 +205,7 @@ class SourcesHomeScreen extends StatelessWidget {
             child: ListTile(
               key: const Key('sources_pick_files_button'),
               leading: const Icon(Icons.description),
-              title: const Text('選擇檔案（可多選）'),
+              title: Text(l10n.sourcesHomePickFilesTitle),
               onTap: () => _handlePickFiles(context),
             ),
           ),
@@ -213,7 +215,7 @@ class SourcesHomeScreen extends StatelessWidget {
             child: ListTile(
               key: const Key('sources_pick_folder_button'),
               leading: const Icon(Icons.folder),
-              title: const Text('選擇資料夾'),
+              title: Text(l10n.sourcesHomePickFolderTitle),
               onTap: () => _handlePickFolder(context),
             ),
           ),
@@ -224,7 +226,7 @@ class SourcesHomeScreen extends StatelessWidget {
               child: ListTile(
                 key: const Key('sources_wifi_transfer_tile'),
                 leading: const Icon(Icons.wifi),
-                title: const Text('WiFi 傳書'),
+                title: Text(l10n.sourcesHomeWifiTransferTile),
                 onTap: () => _openWifiTransfer(context),
               ),
             ),
@@ -238,7 +240,7 @@ class SourcesHomeScreen extends StatelessWidget {
               title: const Text('Google Drive'),
               subtitle: googleDriveEnabled
                   ? null
-                  : const Text('尚未連結，請至設定畫面連結帳戶'),
+                  : Text(l10n.sourcesHomeCloudNotLinkedSubtitle),
               enabled: googleDriveEnabled,
               onTap: googleDriveEnabled
                   ? () => _openGoogleDriveBrowser(context, googleDriveClient)
@@ -252,7 +254,7 @@ class SourcesHomeScreen extends StatelessWidget {
               key: const Key('sources_onedrive_tile'),
               leading: const Icon(Icons.cloud_outlined),
               title: const Text('OneDrive'),
-              subtitle: oneDriveEnabled ? null : const Text('尚未連結，請至設定畫面連結帳戶'),
+              subtitle: oneDriveEnabled ? null : Text(l10n.sourcesHomeCloudNotLinkedSubtitle),
               enabled: oneDriveEnabled,
               onTap: oneDriveEnabled
                   ? () => _openOneDriveBrowser(context, oneDriveClient)
@@ -265,8 +267,8 @@ class SourcesHomeScreen extends StatelessWidget {
             child: ListTile(
               key: const Key('sources_remote_library_tile'),
               leading: const Icon(Icons.dns),
-              title: const Text('遠端書庫（OPDS）'),
-              subtitle: remoteEnabled ? null : const Text('尚未設定遠端書庫伺服器'),
+              title: Text(l10n.sourcesHomeRemoteLibraryTitle),
+              subtitle: remoteEnabled ? null : Text(l10n.sourcesHomeRemoteLibraryNotConfiguredSubtitle),
               enabled: remoteEnabled,
               onTap: remoteEnabled ? () => _openRemoteLibrary(context) : null,
             ),

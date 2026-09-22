@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:wakelock_plus/wakelock_plus.dart' show wakelockPlusPlatformInstance;
 import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interface.dart';
 import 'package:elinkbook/screens/wifi_transfer_screen.dart';
@@ -28,8 +29,12 @@ void main() {
   Widget buildScreen({
     required CheckNetworkAvailability checkNetworkAvailability,
     ValueListenable<int>? activeTransfersNotifierOverride,
+    Locale locale = const Locale('zh', 'TW'),
   }) {
     return MaterialApp(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: WifiTransferScreen(
         libraryRepository: FakeLibraryRepository(),
         importService: FakeBookImportService(),
@@ -253,6 +258,9 @@ void main() {
       'activeTransfersNotifier 在 E-Ink 高對比主題下正常渲染黑白指示條（Issue 4 / I-1）', (tester) async {
     final activeNotifier = ValueNotifier<int>(1);
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData.light().copyWith(
         colorScheme: const ColorScheme.light(primary: Colors.black),
         scaffoldBackgroundColor: Colors.white,
@@ -280,4 +288,46 @@ void main() {
     );
     expect(indicator.color, Colors.black);
   });
+
+  testWidgets('英文介面下傳輸中橫幅單複數皆正確顯示', (tester) async {
+    final activeNotifier = ValueNotifier<int>(1);
+    await tester.pumpWidget(buildScreen(
+      checkNetworkAvailability: () async => const NetworkAvailability(
+        kind: NetworkAvailabilityKind.wifiClient,
+        ipAddress: '192.168.1.5',
+      ),
+      activeTransfersNotifierOverride: activeNotifier,
+      locale: const Locale('en'),
+    ));
+    await tester.pump();
+
+    expect(find.text('Transferring (1 file)…'), findsOneWidget);
+
+    activeNotifier.value = 3;
+    await tester.pump();
+    expect(find.text('Transferring (3 files)…'), findsOneWidget);
+  });
+
+  testWidgets('英文介面下離開確認對話框文字正確', (tester) async {
+    final notifier = ValueNotifier<int>(1);
+    await tester.pumpWidget(buildScreen(
+      checkNetworkAvailability: () async => const NetworkAvailability(
+        kind: NetworkAvailabilityKind.wifiClient,
+        ipAddress: '192.168.1.5',
+      ),
+      activeTransfersNotifierOverride: notifier,
+      locale: const Locale('en'),
+    ));
+    await tester.pump();
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+
+    expect(find.text('Files are still transferring'), findsOneWidget);
+    await tester.tap(find.text('Leave Anyway'));
+    await tester.pumpAndSettle();
+    expect(find.text('Files are still transferring'), findsNothing);
+  });
+
+
 }

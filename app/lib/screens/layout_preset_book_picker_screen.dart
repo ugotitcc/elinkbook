@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../library/models/book.dart';
 import '../library/widgets/book_cover.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/elink_tokens.dart';
 
 /// 版面設定預設集／書籍設定複製的書籍選擇器（epic-28-reader-settings-
@@ -72,17 +73,22 @@ class _LayoutPresetBookPickerScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final filteredBooks = _filteredBooks;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.multiSelect ? '選擇書籍（可複選）' : '選擇書籍'),
+        title: Text(
+          widget.multiSelect
+              ? l10n.layoutPresetBookPickerTitleMulti
+              : l10n.layoutPresetBookPickerTitleSingle,
+        ),
         actions: [
           TextButton(
             key: const Key('layout_preset_book_picker_confirm'),
             onPressed: _selected.isEmpty
                 ? null
                 : () => Navigator.of(context).pop(_selected.toList()),
-            child: const Text('確定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -94,7 +100,7 @@ class _LayoutPresetBookPickerScreenState
               key: const Key('layout_preset_book_picker_search_field'),
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: '搜尋書名或作者',
+                hintText: l10n.layoutPresetBookPickerSearchHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -115,9 +121,9 @@ class _LayoutPresetBookPickerScreenState
           ),
           Expanded(
             child: widget.books.isEmpty
-                ? const Center(child: Text('沒有可選擇的流式 EPUB 書籍'))
+                ? Center(child: Text(l10n.layoutPresetBookPickerEmptyBooks))
                 : filteredBooks.isEmpty
-                    ? const Center(child: Text('找不到符合的書籍'))
+                    ? Center(child: Text(l10n.layoutPresetBookPickerNoMatch))
                     : _buildGrid(filteredBooks),
           ),
         ],
