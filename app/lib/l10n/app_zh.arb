@@ -434,5 +434,10 @@
   "fontManagementDeleteConfirmMessage": "{usageCount, plural, =1{目前有 1 本書使用此字型，刪除後將自動改用預設字型} other{目前有 {usageCount} 本書使用此字型，刪除後將自動改用預設字型}}",
   "fontManagementUploadBothMessage": "{addedCount, plural, =1{已新增 1 款字型} other{已新增 {addedCount} 款字型}}，{skippedCount, plural, =1{1 款已存在已跳過} other{{skippedCount} 款已存在已跳過}}",
   "fontManagementUploadAddedOnlyMessage": "{addedCount, plural, =1{已新增 1 款字型} other{已新增 {addedCount} 款字型}}",
-  "fontManagementUploadSkippedOnlyMessage": "{skippedCount, plural, =1{1 款字型已存在，已跳過} other{{skippedCount} 款字型已存在，已跳過}}"
+  "fontManagementUploadSkippedOnlyMessage": "{skippedCount, plural, =1{1 款字型已存在，已跳過} other{{skippedCount} 款字型已存在，已跳過}}",
+  "readerConsoleLogTitle": "閱讀器 Console Log",
+  "readerConsoleLogCopyAllTooltip": "複製全部",
+  "readerConsoleLogClearTooltip": "清空",
+  "readerConsoleLogEmptyHint": "目前沒有記錄",
+  "readerConsoleLogCopiedMessage": "已複製全部記錄到剪貼簿"
 }

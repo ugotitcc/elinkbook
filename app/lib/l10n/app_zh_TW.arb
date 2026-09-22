@@ -2024,5 +2024,25 @@
         "type": "int"
       }
     }
+  },
+  "readerConsoleLogTitle": "閱讀器 Console Log",
+  "@readerConsoleLogTitle": {
+    "description": "閱讀器 Console Log 畫面 AppBar 標題"
+  },
+  "readerConsoleLogCopyAllTooltip": "複製全部",
+  "@readerConsoleLogCopyAllTooltip": {
+    "description": "「複製全部」按鈕的無障礙提示文字"
+  },
+  "readerConsoleLogClearTooltip": "清空",
+  "@readerConsoleLogClearTooltip": {
+    "description": "「清空」按鈕的無障礙提示文字"
+  },
+  "readerConsoleLogEmptyHint": "目前沒有記錄",
+  "@readerConsoleLogEmptyHint": {
+    "description": "沒有任何 Console Log 記錄時的空狀態提示文字"
+  },
+  "readerConsoleLogCopiedMessage": "已複製全部記錄到剪貼簿",
+  "@readerConsoleLogCopiedMessage": {
+    "description": "點擊「複製全部」後的 SnackBar 提示"
   }
 }

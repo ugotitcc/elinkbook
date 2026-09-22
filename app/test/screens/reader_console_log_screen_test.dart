@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/reader_console_log.dart';
 import 'package:elinkbook/screens/reader_console_log_screen.dart';
 
@@ -26,7 +27,12 @@ void main() {
 
   testWidgets('沒有記錄時顯示空狀態', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(home: ReaderConsoleLogScreen()),
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const ReaderConsoleLogScreen(),
+      ),
     );
 
     expect(find.byKey(const Key('reader_console_log_empty')), findsOneWidget);
@@ -38,7 +44,12 @@ void main() {
     ReaderConsoleLog.add('[LOG] 第二筆訊息');
 
     await tester.pumpWidget(
-      const MaterialApp(home: ReaderConsoleLogScreen()),
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const ReaderConsoleLogScreen(),
+      ),
     );
 
     expect(find.byKey(const Key('reader_console_log_list')), findsOneWidget);
@@ -50,7 +61,12 @@ void main() {
     ReaderConsoleLog.add('[ERROR] 某筆訊息');
 
     await tester.pumpWidget(
-      const MaterialApp(home: ReaderConsoleLogScreen()),
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const ReaderConsoleLogScreen(),
+      ),
     );
     expect(find.byKey(const Key('reader_console_log_empty')), findsNothing);
 
@@ -67,7 +83,12 @@ void main() {
     ReaderConsoleLog.add('[LOG] 第二筆訊息');
 
     await tester.pumpWidget(
-      const MaterialApp(home: ReaderConsoleLogScreen()),
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const ReaderConsoleLogScreen(),
+      ),
     );
 
     await tester
@@ -77,5 +98,21 @@ void main() {
     expect(copiedData, hasLength(1));
     expect(copiedData.single.text, '[ERROR] 第一筆訊息\n[LOG] 第二筆訊息');
     expect(find.text('已複製全部記錄到剪貼簿'), findsOneWidget);
+  });
+
+  testWidgets('英文介面下標題/按鈕提示/空狀態提示正確以英文渲染', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const ReaderConsoleLogScreen(),
+      ),
+    );
+
+    expect(find.text('Reader Console Log'), findsOneWidget);
+    expect(find.text('No records yet'), findsOneWidget);
+    expect(find.byTooltip('Copy all'), findsOneWidget);
+    expect(find.byTooltip('Clear'), findsOneWidget);
   });
 }

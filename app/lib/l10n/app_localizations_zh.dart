@@ -1510,6 +1510,21 @@ class AppLocalizationsZh extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get readerConsoleLogTitle => '閱讀器 Console Log';
+
+  @override
+  String get readerConsoleLogCopyAllTooltip => '複製全部';
+
+  @override
+  String get readerConsoleLogClearTooltip => '清空';
+
+  @override
+  String get readerConsoleLogEmptyHint => '目前沒有記錄';
+
+  @override
+  String get readerConsoleLogCopiedMessage => '已複製全部記錄到剪貼簿';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -3018,6 +3033,21 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
     );
     return '$_temp0';
   }
+
+  @override
+  String get readerConsoleLogTitle => '阅读器 Console Log';
+
+  @override
+  String get readerConsoleLogCopyAllTooltip => '复制全部';
+
+  @override
+  String get readerConsoleLogClearTooltip => '清空';
+
+  @override
+  String get readerConsoleLogEmptyHint => '目前没有记录';
+
+  @override
+  String get readerConsoleLogCopiedMessage => '已复制全部记录到剪贴板';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -4526,4 +4556,19 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
     );
     return '$_temp0';
   }
+
+  @override
+  String get readerConsoleLogTitle => '閱讀器 Console Log';
+
+  @override
+  String get readerConsoleLogCopyAllTooltip => '複製全部';
+
+  @override
+  String get readerConsoleLogClearTooltip => '清空';
+
+  @override
+  String get readerConsoleLogEmptyHint => '目前沒有記錄';
+
+  @override
+  String get readerConsoleLogCopiedMessage => '已複製全部記錄到剪貼簿';
 }

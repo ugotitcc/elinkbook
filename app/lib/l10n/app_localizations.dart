@@ -2716,6 +2716,36 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'{skippedCount, plural, =1{1 款字型已存在，已跳過} other{{skippedCount} 款字型已存在，已跳過}}'**
   String fontManagementUploadSkippedOnlyMessage(int skippedCount);
+
+  /// 閱讀器 Console Log 畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'閱讀器 Console Log'**
+  String get readerConsoleLogTitle;
+
+  /// 「複製全部」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'複製全部'**
+  String get readerConsoleLogCopyAllTooltip;
+
+  /// 「清空」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'清空'**
+  String get readerConsoleLogClearTooltip;
+
+  /// 沒有任何 Console Log 記錄時的空狀態提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'目前沒有記錄'**
+  String get readerConsoleLogEmptyHint;
+
+  /// 點擊「複製全部」後的 SnackBar 提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已複製全部記錄到剪貼簿'**
+  String get readerConsoleLogCopiedMessage;
 }
 
 class _AppLocalizationsDelegate

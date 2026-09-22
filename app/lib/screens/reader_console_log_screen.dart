@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_localizations.dart';
 import '../reader/reader_console_log.dart';
 
 /// 閱讀器 WebView 診斷用 Console Log 檢視畫面（epic-18-reader-device-qa
@@ -11,20 +12,21 @@ class ReaderConsoleLogScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('閱讀器 Console Log'),
+        title: Text(l10n.readerConsoleLogTitle),
         actions: [
           IconButton(
             key: const Key('reader_console_log_copy_all_button'),
             icon: const Icon(Icons.copy_all_outlined),
-            tooltip: '複製全部',
+            tooltip: l10n.readerConsoleLogCopyAllTooltip,
             onPressed: () => _copyAllToClipboard(context),
           ),
           IconButton(
             key: const Key('reader_console_log_clear_button'),
             icon: const Icon(Icons.delete_outline),
-            tooltip: '清空',
+            tooltip: l10n.readerConsoleLogClearTooltip,
             onPressed: ReaderConsoleLog.clear,
           ),
         ],
@@ -33,9 +35,9 @@ class ReaderConsoleLogScreen extends StatelessWidget {
         valueListenable: ReaderConsoleLog.entries,
         builder: (context, entries, _) {
           if (entries.isEmpty) {
-            return const Center(
-              key: Key('reader_console_log_empty'),
-              child: Text('目前沒有記錄'),
+            return Center(
+              key: const Key('reader_console_log_empty'),
+              child: Text(l10n.readerConsoleLogEmptyHint),
             );
           }
           return ListView.builder(
@@ -67,7 +69,7 @@ class ReaderConsoleLogScreen extends StatelessWidget {
     await Clipboard.setData(ClipboardData(text: entries.join('\n')));
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已複製全部記錄到剪貼簿')),
+      SnackBar(content: Text(AppLocalizations.of(context)!.readerConsoleLogCopiedMessage)),
     );
   }
 }

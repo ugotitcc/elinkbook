@@ -1559,4 +1559,19 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get readerConsoleLogTitle => 'Reader Console Log';
+
+  @override
+  String get readerConsoleLogCopyAllTooltip => 'Copy all';
+
+  @override
+  String get readerConsoleLogClearTooltip => 'Clear';
+
+  @override
+  String get readerConsoleLogEmptyHint => 'No records yet';
+
+  @override
+  String get readerConsoleLogCopiedMessage => 'Copied all records to clipboard';
 }
