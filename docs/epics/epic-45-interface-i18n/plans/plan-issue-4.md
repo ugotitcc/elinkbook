@@ -3794,7 +3794,7 @@ git commit -m "feat(epic-45): reader_screen.dart 字串抽取第 2 部分（_dis
 | F | 1 | `home: PdfReaderView(...)`（直接測試 `PdfReaderView` 本身，不經過 `ReaderScreen`，不含任何 `AppLocalizations` 呼叫） |
 | G | 1 | `home: MediaQuery(data: const MediaQueryData(...), child: ReaderScreen(...))` |
 
-- [ ] **Step 1: 驗證模式分布與本計畫記錄一致**
+- [x] **Step 1: 驗證模式分布與本計畫記錄一致**
 
 Run（在 `app/` 目錄下）：
 ```bash
@@ -3809,14 +3809,14 @@ grep -c "home: MediaQuery(" test/screens/reader_screen_test.dart
 ```
 Expected：227／202／12／5／5／1／1／1（若實際數字與此有出入，以實際 grep 結果為準重新分類，不強行套用本表；下列 Step 2-6 的轉換規則對任何微小數字落差皆穩健適用，只要每一類別涵蓋的實際寫法符合下方特徵描述）。
 
-- [ ] **Step 2: 檔案頂部新增 import**
+- [x] **Step 2: 檔案頂部新增 import**
 
 ```dart
 import 'package:elinkbook/l10n/app_localizations.dart';
 ```
 （加在既有 `package:elinkbook/...` import 區塊。）
 
-- [ ] **Step 3: 轉換規則 A／B／E（合計 215 處，緊接 `home: ReaderScreen(...)` 的所有變體）**
+- [x] **Step 3: 轉換規則 A／B／E（合計 215 處，緊接 `home: ReaderScreen(...)` 的所有變體）**
 
 不論 `theme:` 是 `resolveThemeData(theme: AppTheme.light, isEinkMode: false/true)` 或 `buildThemeData(AppTheme.dark/light)`，在同一個 `MaterialApp(` 呼叫的參數列新增以下三行（緊接 `theme:` 之前或之後皆可，建議緊接 `MaterialApp(` 之後、`theme:` 之前，維持全檔案風格一致）：
 ```dart
@@ -3871,7 +3871,7 @@ await tester.pumpWidget(
 
 這是全 Task 工作量最大的部分（215 處機械式插入），逐一在每個符合「`MaterialApp(` 後緊接 `theme:`」特徵的位置插入上述三行，**不變動任何既有 `home: ReaderScreen(...)` 建構參數或其後的斷言內容**。
 
-- [ ] **Step 4: 轉換規則 C（5 處 `home: Builder(...)` 導覽情境）**
+- [x] **Step 4: 轉換規則 C（5 處 `home: Builder(...)` 導覽情境）**
 
 實際範例（`reader_screen_test.dart:3444-3455`，修改前後）：
 ```dart
@@ -3909,11 +3909,11 @@ await tester.pumpWidget(
 
 `MaterialPageRoute` 推入的 `ReaderScreen` 沿用外層 `MaterialApp` 的 `Navigator`，其 `localizationsDelegates` 一併生效，不需要在 `MaterialPageRoute` 內額外處理。
 
-- [ ] **Step 5: 轉換規則 D／F（6 處不含 `ReaderScreen` 或任何 l10n 消費者，維持不動）**
+- [x] **Step 5: 轉換規則 D／F（6 處不含 `ReaderScreen` 或任何 l10n 消費者，維持不動）**
 
 模式 D（5 處 `const MaterialApp(home: SizedBox.shrink())`）與模式 F（1 處 `home: PdfReaderView(...)`，直接測試 `PdfReaderView` 本身、不經過 `ReaderScreen`，`pdf_reader_view.dart` 不在本 Issue 範圍、未消費任何 `AppLocalizations`）**皆不需要修改**——這兩種寫法渲染的 widget 樹完全不含任何會呼叫 `AppLocalizations.of(context)!` 的元件，加上 `localizationsDelegates` 對它們而言是多餘的防禦性寫法。執行 Step 1 的 grep 指令確認這 6 處的行號後，逐一核對其 widget 樹內容符合「不含 `ReaderScreen`」的描述，若核對後發現其中有任何一處其實間接建構了本 Issue 已在地化的元件，改套用 Step 3 規則處理。
 
-- [ ] **Step 6: 轉換規則 G（1 處 `home: MediaQuery(...)`）**
+- [x] **Step 6: 轉換規則 G（1 處 `home: MediaQuery(...)`）**
 
 `reader_screen_test.dart:5375-5384` 附近：
 ```dart
@@ -3943,11 +3943,11 @@ await tester.pumpWidget(
         ...
 ```
 
-- [ ] **Step 7: 修正 `bookTitle` 預設值相關斷言（`reader_screen_test.dart:9594` 附近）**
+- [x] **Step 7: 修正 `bookTitle` 預設值相關斷言（`reader_screen_test.dart:9594` 附近）**
 
 該測試建構 `ReaderScreen(...)` 時未傳 `bookTitle`（命中 Task 18 的 nullable 預設值），斷言 `expect(ttsAudioHandler.mediaItem.value?.title, '未知書籍');`。因該測試所在的 `MaterialApp(` 已依 Step 3 規則補上 `locale: const Locale('zh', 'TW')`，`AppLocalizations.of(context)!.readerUnknownBookTitle` 在 `zh_TW` 下的值就是 `'未知書籍'`（Task 18 ARB 定義），**斷言字面值不需要修改**，只需確認該測試所在的 `MaterialApp(` 確實已套用 Step 3 規則（即補上 `locale: const Locale('zh', 'TW')`），執行 Step 9 測試時這一則會是驗證此行為的迴歸測試。
 
-- [ ] **Step 8: 新增三語言渲染驗證測試**
+- [x] **Step 8: 新增三語言渲染驗證測試**
 
 在檔案 `main()` 最後新增 4 個測試（沿用檔案既有的 `ReaderScreen` 建構模式，找一個已存在、建構參數最精簡的 `testWidgets` 作為範本複製調整 `locale`）：
 
@@ -4039,22 +4039,22 @@ await tester.pumpWidget(
 
 > 上述 4 則測試中「開啟版面設定／目錄 Bottom Sheet」的實際互動步驟（點擊哪個 `Key`）請對照檔案內既有 `testWidgets`（例如既有的「開啟版面設定」「開啟目錄」測試）採用相同手法，本計畫不重複列出已存在於檔案中的既有互動序列。
 
-- [ ] **Step 9: 執行測試確認全數通過**
+- [x] **Step 9: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: 全數通過（既有全部＋新增 4 個）。若有個別既存測試因本次型別/l10n 變動而失敗，逐一排查是否為斷言依賴了未同步更新的中文字面值（理論上不應發生，因預設 `zh_TW` 讓既有中文斷言不受影響）。
 
-- [ ] **Step 10: `grep` 驗證零殘留**
+- [x] **Step 10: `grep` 驗證零殘留**
 
 Run: `grep -c "MaterialApp(" test/screens/reader_screen_test.dart`
 Expected: 仍為 227（本 Task 是「補參數」而非「移除／替換 `MaterialApp(`」，數量不變；驗證方式改為確認 `grep -c "localizationsDelegates: AppLocalizations.localizationsDelegates" test/screens/reader_screen_test.dart` 至少為 221〔215 處規則 A/B/E＋5 處規則 C＋1 處規則 G，模式 D／F 的 6 處刻意不補——這 6 處是刻意排除的純佔位與非 l10n 測試〔見上方模式 D／F 定義：`const MaterialApp(home: SizedBox.shrink())` 與直接測試 `PdfReaderView` 本身的案例，皆不含任何會呼叫 `AppLocalizations.of(context)!` 的元件〕，不是漏遷移，後續維護者比對這個數字時不需要補上這 6 處〕）。
 
-- [ ] **Step 11: `flutter analyze` 確認乾淨**
+- [x] **Step 11: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze test/screens/reader_screen_test.dart`
 Expected: No issues found!
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add app/test/screens/reader_screen_test.dart

@@ -27,6 +27,7 @@ import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/reader_activity_tracker.dart';
 import 'package:elinkbook/screens/reader_chrome_bottom_bar.dart';
 import 'package:elinkbook/screens/tts_panel.dart';
@@ -189,6 +190,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -218,6 +222,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -256,6 +263,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -286,6 +296,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -317,6 +330,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -346,6 +362,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -403,6 +422,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -450,6 +472,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -499,6 +524,9 @@ void main() {
       final key = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             key: key,
@@ -548,6 +576,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -577,6 +608,9 @@ void main() {
       final key = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             key: key,
@@ -613,6 +647,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -642,6 +679,9 @@ void main() {
   testWidgets('不支援格式顯示明確錯誤訊息', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.unknown',
@@ -659,6 +699,9 @@ void main() {
     testWidgets('EPUB：頂部列標題為空字串，不顯示書名', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -679,6 +722,9 @@ void main() {
     testWidgets('PDF：頂部列標題為空字串，不顯示書名', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
@@ -700,6 +746,9 @@ void main() {
   testWidgets('EPUB 格式顯示「⚙️版面」按鈕，初始為停用狀態', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -721,6 +770,9 @@ void main() {
   testWidgets('PDF 格式顯示「⚙️版面」按鈕，初始為停用狀態', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -752,6 +804,9 @@ void main() {
       final repository = FakeLibraryRepository();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -782,6 +837,9 @@ void main() {
     final repository = FakeLibraryRepository();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -809,6 +867,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -841,6 +902,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -870,6 +934,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -894,6 +961,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -923,6 +993,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -944,6 +1017,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
@@ -966,6 +1042,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -1020,6 +1099,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -1077,6 +1159,9 @@ void main() {
       final repository = FakeLibraryRepository(detectedIsFixedLayout: false);
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -1101,6 +1186,9 @@ void main() {
       final repository = FakeLibraryRepository(detectedIsFixedLayout: true);
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -1124,6 +1212,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -1147,6 +1238,9 @@ void main() {
     final repository = FakeLibraryRepository();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.azw3',
@@ -1177,6 +1271,9 @@ void main() {
     final repository = FakeLibraryRepository();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.cbz',
@@ -1203,6 +1300,9 @@ void main() {
       '把它收斂到 Seam 1，flutter test 秒級即可攔截同類回歸）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.cbz',
@@ -1226,6 +1326,9 @@ void main() {
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.cbz',
@@ -1260,6 +1363,9 @@ void main() {
       '同一則審查修正的對照組）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -1285,6 +1391,9 @@ void main() {
     final repository = FakeLibraryRepository();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_synth.txt',
@@ -1308,6 +1417,9 @@ void main() {
     final repository = FakeLibraryRepository();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_synth.md',
@@ -1332,6 +1444,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -1359,6 +1474,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -1395,6 +1513,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -1422,6 +1543,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -1448,6 +1572,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -1471,6 +1598,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -1521,6 +1651,9 @@ void main() {
       final manager = FakeReaderPrefsManager();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -1562,6 +1695,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -1618,6 +1754,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -1654,6 +1793,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -1687,6 +1829,9 @@ void main() {
   testWidgets('固定版面點擊中間熱區可切換懸浮按鈕顯示/隱藏', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -1744,6 +1889,9 @@ void main() {
   testWidgets('固定版面點擊左/右熱區換頁後，懸浮按鈕維持原狀（不自動收起）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -1786,6 +1934,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -1840,6 +1991,9 @@ void main() {
     // onLayoutResolved 回調來設定 ReaderScreen 的 _isFixedLayout 狀態。
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -1886,6 +2040,9 @@ void main() {
   testWidgets('PDF 開書後，收到原生端 onPageChanged 回報時，頁尾正確顯示', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -1936,6 +2093,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -1973,6 +2133,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
@@ -1993,6 +2156,9 @@ void main() {
   testWidgets('PDF 頁尾行為不受本工單影響（既有回歸驗證）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -2022,6 +2188,9 @@ void main() {
   testWidgets('EPUB 格式顯示「目錄」按鈕，初始為停用狀態', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -2048,6 +2217,9 @@ void main() {
       '「PDF 不存在」，_pdfTocLoaded 完成前 onPressed 為 null）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -2075,6 +2247,9 @@ void main() {
       '_autoDetectedWritingMode 防呆條件）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -2109,6 +2284,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -2153,6 +2331,9 @@ void main() {
   testWidgets('點選目錄項目後，TocBottomSheet 關閉', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -2206,6 +2387,9 @@ void main() {
   testWidgets('PDF 開書後，無 AppBar；6 顆 FAB 正確顯示', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -2231,6 +2415,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -2273,6 +2460,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -2306,6 +2496,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -2347,6 +2540,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -2389,6 +2585,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -2435,6 +2634,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -2460,6 +2662,9 @@ void main() {
       final bookmarksRepository = FakeBookmarksRepository();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -2482,6 +2687,9 @@ void main() {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -2516,6 +2724,9 @@ void main() {
       final bookmarksRepository = FakeBookmarksRepository();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -2564,6 +2775,9 @@ void main() {
       final bookmarksRepository = FakeBookmarksRepository();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
@@ -2595,6 +2809,9 @@ void main() {
       final bookmarksRepository = FakeBookmarksRepository();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -2619,6 +2836,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -2658,6 +2878,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
@@ -2685,6 +2908,9 @@ void main() {
       final bookmarksRepository = FakeBookmarksRepository();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
@@ -2707,6 +2933,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -2749,6 +2978,9 @@ void main() {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -2793,6 +3025,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -2879,6 +3114,9 @@ void main() {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -2958,6 +3196,9 @@ void main() {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -3034,6 +3275,9 @@ void main() {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -3116,6 +3360,9 @@ void main() {
       final bookmarksRepository = FakeBookmarksRepository();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_chapter.epub',
@@ -3169,6 +3416,9 @@ void main() {
       final bookmarksRepository = FakeBookmarksRepository();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
@@ -3219,6 +3469,9 @@ void main() {
     final key = GlobalKey<State<ReaderScreen>>();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           key: key,
@@ -3255,6 +3508,9 @@ void main() {
       final key = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             key: key,
@@ -3291,6 +3547,9 @@ void main() {
       final key = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             key: key,
@@ -3393,6 +3652,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -3444,6 +3706,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -3492,6 +3757,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -3529,6 +3797,9 @@ void main() {
       '換頁，且不影響沉浸模式狀態（design.md 決策 #14；Issue 7 改斷言浮動按鈕）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -3573,6 +3844,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -3618,6 +3892,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -3670,6 +3947,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -3714,6 +3994,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -3788,6 +4071,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -3819,6 +4105,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -3871,6 +4160,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -3929,6 +4221,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -3968,6 +4263,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -4029,6 +4327,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4087,6 +4388,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4152,6 +4456,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4215,6 +4522,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4273,6 +4583,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4337,6 +4650,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4395,6 +4711,9 @@ void main() {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4462,6 +4781,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4499,6 +4821,9 @@ void main() {
       final bookmarksRepository = FakeBookmarksRepository();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -4566,6 +4891,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -4619,6 +4947,9 @@ void main() {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4675,6 +5006,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4725,6 +5059,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -4785,6 +5122,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4843,6 +5183,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4899,6 +5242,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4947,6 +5293,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -4977,6 +5326,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -5006,6 +5358,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -5050,6 +5405,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -5097,6 +5455,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -5128,6 +5489,9 @@ void main() {
   testWidgets('流式 EPUB：進度為純顯示、橫排時置於下方置中且不含手勢 widget（Issue 7）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -5174,6 +5538,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -5226,6 +5593,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -5284,6 +5654,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -5329,6 +5702,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -5373,6 +5749,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: MediaQuery(
             // 模擬有系統手勢列/三鍵導覽列的裝置：viewPadding.bottom > 0。
             data: const MediaQueryData(
@@ -5422,6 +5801,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -5461,6 +5843,9 @@ void main() {
       );
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -5488,6 +5873,9 @@ void main() {
       '（epic-22-reader-theme-integration Issue 1）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -5513,6 +5901,9 @@ void main() {
       '與改動前行為相容（epic-22-reader-theme-integration Issue 1）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.light),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -5538,6 +5929,9 @@ void main() {
       '（epic-22-reader-theme-integration Issue 1，圖片內容無法預期背景色）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -5579,6 +5973,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -5615,6 +6012,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(
               body: ElevatedButton(
@@ -5679,6 +6079,9 @@ void main() {
       );
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
@@ -5714,6 +6117,9 @@ void main() {
       );
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -5741,6 +6147,9 @@ void main() {
     testWidgets('PDF：全螢幕模式關閉（預設）時，觸發沉浸模式收合後頂部列工具列同樣隱藏', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
@@ -5773,6 +6182,9 @@ void main() {
       );
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
@@ -5814,6 +6226,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
             body: ElevatedButton(
@@ -5856,6 +6271,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
             body: ElevatedButton(
@@ -5901,6 +6319,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
             body: ElevatedButton(
@@ -5974,6 +6395,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
@@ -6006,6 +6430,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -6069,6 +6496,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -6102,6 +6532,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
@@ -6149,6 +6582,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -6185,6 +6621,9 @@ void main() {
       '（epic-27-reader-device-compat Issue 3）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -6269,6 +6708,9 @@ void main() {
       '（epic-27-reader-device-compat Issue 3）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -6298,6 +6740,9 @@ void main() {
       '非恆常存在——恆常存在會在渲染完成後永久蓋住書籍內容，是比原始黑屏更嚴重的回歸）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
@@ -6347,6 +6792,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.light),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -6423,6 +6871,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -6485,6 +6936,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -6538,6 +6992,9 @@ void main() {
       '同樣生效）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -6583,6 +7040,9 @@ void main() {
       '驗證意圖不變——淺色主題不套用深色主題那套透明遮罩特例）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.light),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -6624,6 +7084,9 @@ void main() {
       '（epic-22-reader-theme-integration Issue 3）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -6666,6 +7129,9 @@ void main() {
       '（epic-22-reader-theme-integration Issue 3）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.light),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -6705,6 +7171,9 @@ void main() {
       '對比模式的既有黑底白圖示不受影響）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: true),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -6744,6 +7213,9 @@ void main() {
       '內容通常是白底圖片，控制按鈕跟著深色主題變色會失去對比）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
@@ -6782,6 +7254,9 @@ void main() {
       '驗證不只最簡單的返回按鈕生效）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -6823,6 +7298,9 @@ void main() {
       '整個被錯誤文字取代，無法繼續閱讀）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -6889,6 +7367,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -6943,6 +7424,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -7015,6 +7499,9 @@ void main() {
       final highlightsRepository = FakeHighlightsRepository();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -7093,6 +7580,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -7133,6 +7623,9 @@ void main() {
   testWidgets('PDF：點擊 AnnotationToolbar 的關閉按鈕後，清空選取狀態、工具列消失', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -7175,6 +7668,9 @@ void main() {
     final key = GlobalKey<State<ReaderScreen>>();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           key: key,
@@ -7252,6 +7748,9 @@ void main() {
       final key = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             key: key,
@@ -7312,6 +7811,9 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -7345,6 +7847,9 @@ void main() {
       final key = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             key: key,
@@ -7400,6 +7905,9 @@ void main() {
       final key = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             key: key,
@@ -7470,6 +7978,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -7524,6 +8035,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           key: key,
@@ -7568,6 +8082,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           key: key,
@@ -7611,6 +8128,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           key: key,
@@ -7650,6 +8170,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           key: key,
@@ -7688,6 +8211,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           key: key,
@@ -7720,6 +8246,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           key: key,
@@ -7763,6 +8292,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           key: key,
@@ -7836,6 +8368,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           key: key,
@@ -7876,6 +8411,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           key: key,
@@ -7915,6 +8453,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           key: key,
@@ -8037,6 +8578,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -8602,6 +9146,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -8652,6 +9199,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -8710,6 +9260,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -8766,6 +9319,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -8808,6 +9364,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -8849,6 +9408,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -8899,6 +9461,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.cbz',
@@ -8946,6 +9511,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.cbz',
@@ -9019,6 +9587,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -9067,6 +9638,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -9128,6 +9702,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -9194,6 +9771,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -9234,6 +9814,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.cbz',
@@ -9284,6 +9867,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -9334,6 +9920,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -9383,6 +9972,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -9432,6 +10024,9 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
+            locale: const Locale('zh', 'TW'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
             home: ReaderScreen(
               filePath: 'test/fixtures/sample.epub',
@@ -9501,6 +10096,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -9553,6 +10151,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -9626,6 +10227,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -9668,6 +10272,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -9717,6 +10324,9 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
+            locale: const Locale('zh', 'TW'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
             home: ReaderScreen(
               filePath: 'test/fixtures/sample.epub',
@@ -9768,6 +10378,9 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           MaterialApp(
+            locale: const Locale('zh', 'TW'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
             home: ReaderScreen(
               filePath: 'test/fixtures/sample.epub',
@@ -9796,6 +10409,9 @@ void main() {
       final key = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             key: key,
@@ -9843,6 +10459,9 @@ void main() {
       final key = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             key: key,
@@ -9887,6 +10506,9 @@ void main() {
       final key = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             key: key,
@@ -9923,6 +10545,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -9953,6 +10578,9 @@ void main() {
         '小喇叭圖示不存在', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -9984,6 +10612,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -10020,6 +10651,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
@@ -10048,6 +10682,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -10095,6 +10732,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -10125,6 +10765,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -10152,6 +10795,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -10179,6 +10825,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -10223,6 +10872,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -10295,6 +10947,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -10358,6 +11013,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             key: key,
@@ -10427,6 +11085,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
@@ -10482,6 +11143,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -10503,7 +11167,7 @@ void main() {
 
       // 直接按系統返回鍵離開 BookSearchScreen，不點選任何片段
       // （Navigator.pop() 不帶值，等同 pop(null)）。
-      await tester.pageBack();
+      await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
 
       expect(find.byType(BookSearchScreen), findsNothing);
@@ -10519,6 +11183,130 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     });
+  });
+
+  testWidgets('英文介面下 bookTitle 為 null 時回退顯示 Unknown Book',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_en_unknown_title',
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Unknown Book'), findsWidgets);
+  });
+
+  testWidgets('簡體中文介面下版面設定 Bottom Sheet 標題正確以簡體渲染',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_zh_cn_settings',
+          bookTitle: '書名',
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(
+      () => Future.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('⚙️ 版面设定'), findsOneWidget);
+  });
+
+  testWidgets('英文介面下目錄 Bottom Sheet 標題正確以英文渲染', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_en_toc',
+          bookTitle: 'Title',
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final finder = find.byKey(const Key('reader_chrome_toc_button'));
+    expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
+
+    await tester.tap(finder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(TocBottomSheet), findsOneWidget);
+    expect(find.text('📖 Table of Contents'), findsOneWidget);
+  });
+
+  testWidgets('英文介面下不支援格式提示正確以英文渲染', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.unknown',
+          bookId: 'b_en_unsupported',
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Unsupported file format'), findsOneWidget);
   });
 
   tearDownAll(() {
