@@ -447,5 +447,16 @@
   "aboutScreenViewLicensesButton": "Open Source Licenses",
   "aboutScreenLoadingText": "Loading...",
   "aboutScreenFailedToLoadVersionMessage": "Failed to get version",
-  "aboutScreenUnavailableText": "Unavailable"
+  "aboutScreenUnavailableText": "Unavailable",
+  "remoteServerListTitle": "Remote Library",
+  "remoteServerListAddTooltip": "Add Server",
+  "remoteServerListEmptyState": "No remote library servers added yet",
+  "remoteServerListEditTooltip": "Edit",
+  "remoteServerListDeleteTooltip": "Delete",
+  "remoteServerListDeleteConfirmTitle": "Delete Server",
+  "remoteServerListDeleteConfirmMessage": "Delete server \"{name}\"? This cannot be undone.",
+  "remoteServerListDeleteBlockedTitle": "Cannot Delete Server",
+  "remoteServerListDeleteBlockedMessage": "{count, plural, =1{This server still has 1 book that only has a cloud record and has not been downloaded:} other{This server still has {count} books that only have a cloud record and have not been downloaded:}}\n{titles}\n\nPlease remove these books from your library, or download them again before deleting the server.",
+  "remoteServerListDeleteBlockedConfirmButton": "Got It",
+  "remoteServerListDeleteFailedMessage": "Failed to delete server. Please try again later."
 }

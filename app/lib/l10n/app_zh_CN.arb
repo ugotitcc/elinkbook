@@ -447,5 +447,16 @@
   "aboutScreenViewLicensesButton": "开源授权清单",
   "aboutScreenLoadingText": "读取中...",
   "aboutScreenFailedToLoadVersionMessage": "无法取得版本号",
-  "aboutScreenUnavailableText": "无法取得"
+  "aboutScreenUnavailableText": "无法取得",
+  "remoteServerListTitle": "远程书库",
+  "remoteServerListAddTooltip": "新增站点",
+  "remoteServerListEmptyState": "尚未新增任何远程书库站点",
+  "remoteServerListEditTooltip": "编辑",
+  "remoteServerListDeleteTooltip": "删除",
+  "remoteServerListDeleteConfirmTitle": "删除站点",
+  "remoteServerListDeleteConfirmMessage": "确定要删除站点「{name}」吗？此动作无法复原。",
+  "remoteServerListDeleteBlockedTitle": "无法删除站点",
+  "remoteServerListDeleteBlockedMessage": "{count, plural, =1{这个站点还有 1 本书仅有云端记录、尚未下载：} other{这个站点还有 {count} 本书仅有云端记录、尚未下载：}}\n{titles}\n\n请先于书架移除这些书籍，或重新下载后再删除站点。",
+  "remoteServerListDeleteBlockedConfirmButton": "了解",
+  "remoteServerListDeleteFailedMessage": "删除站点失败，请稍后再试"
 }

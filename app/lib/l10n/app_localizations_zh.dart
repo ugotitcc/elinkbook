@@ -1549,6 +1549,49 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aboutScreenUnavailableText => '無法取得';
+
+  @override
+  String get remoteServerListTitle => '遠端書庫';
+
+  @override
+  String get remoteServerListAddTooltip => '新增站點';
+
+  @override
+  String get remoteServerListEmptyState => '尚未新增任何遠端書庫站點';
+
+  @override
+  String get remoteServerListEditTooltip => '編輯';
+
+  @override
+  String get remoteServerListDeleteTooltip => '刪除';
+
+  @override
+  String get remoteServerListDeleteConfirmTitle => '刪除站點';
+
+  @override
+  String remoteServerListDeleteConfirmMessage(String name) {
+    return '確定要刪除站點「$name」嗎？此動作無法復原。';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedTitle => '無法刪除站點';
+
+  @override
+  String remoteServerListDeleteBlockedMessage(int count, String titles) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '這個站點還有 $count 本書僅有雲端紀錄、尚未下載：',
+      one: '這個站點還有 1 本書僅有雲端紀錄、尚未下載：',
+    );
+    return '$_temp0\n$titles\n\n請先於書架移除這些書籍，或重新下載後再刪除站點。';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedConfirmButton => '了解';
+
+  @override
+  String get remoteServerListDeleteFailedMessage => '刪除站點失敗，請稍後再試';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -3096,6 +3139,49 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get aboutScreenUnavailableText => '无法取得';
+
+  @override
+  String get remoteServerListTitle => '远程书库';
+
+  @override
+  String get remoteServerListAddTooltip => '新增站点';
+
+  @override
+  String get remoteServerListEmptyState => '尚未新增任何远程书库站点';
+
+  @override
+  String get remoteServerListEditTooltip => '编辑';
+
+  @override
+  String get remoteServerListDeleteTooltip => '删除';
+
+  @override
+  String get remoteServerListDeleteConfirmTitle => '删除站点';
+
+  @override
+  String remoteServerListDeleteConfirmMessage(String name) {
+    return '确定要删除站点「$name」吗？此动作无法复原。';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedTitle => '无法删除站点';
+
+  @override
+  String remoteServerListDeleteBlockedMessage(int count, String titles) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '这个站点还有 $count 本书仅有云端记录、尚未下载：',
+      one: '这个站点还有 1 本书仅有云端记录、尚未下载：',
+    );
+    return '$_temp0\n$titles\n\n请先于书架移除这些书籍，或重新下载后再删除站点。';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedConfirmButton => '了解';
+
+  @override
+  String get remoteServerListDeleteFailedMessage => '删除站点失败，请稍后再试';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -4643,4 +4729,47 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get aboutScreenUnavailableText => '無法取得';
+
+  @override
+  String get remoteServerListTitle => '遠端書庫';
+
+  @override
+  String get remoteServerListAddTooltip => '新增站點';
+
+  @override
+  String get remoteServerListEmptyState => '尚未新增任何遠端書庫站點';
+
+  @override
+  String get remoteServerListEditTooltip => '編輯';
+
+  @override
+  String get remoteServerListDeleteTooltip => '刪除';
+
+  @override
+  String get remoteServerListDeleteConfirmTitle => '刪除站點';
+
+  @override
+  String remoteServerListDeleteConfirmMessage(String name) {
+    return '確定要刪除站點「$name」嗎？此動作無法復原。';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedTitle => '無法刪除站點';
+
+  @override
+  String remoteServerListDeleteBlockedMessage(int count, String titles) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '這個站點還有 $count 本書僅有雲端紀錄、尚未下載：',
+      one: '這個站點還有 1 本書僅有雲端紀錄、尚未下載：',
+    );
+    return '$_temp0\n$titles\n\n請先於書架移除這些書籍，或重新下載後再刪除站點。';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedConfirmButton => '了解';
+
+  @override
+  String get remoteServerListDeleteFailedMessage => '刪除站點失敗，請稍後再試';
 }

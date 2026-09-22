@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../downloads/download_queue_controller.dart';
+import '../l10n/app_localizations.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../remote/remote_catalog_dependencies.dart';
@@ -106,21 +107,24 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
   /// 的帳密憑證，先跳確認對話框避免誤觸；「僅雲端紀錄書籍擋下刪除」的
   /// 示警對話框（下方）是另一個獨立情境，兩者不衝突。
   Future<void> _confirmDelete(RemoteServerProfile profile) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         key: const Key('remote_server_delete_confirm_dialog'),
-        title: const Text('刪除站點'),
-        content: Text('確定要刪除站點「${profile.name}」嗎？此動作無法復原。'),
+        title: Text(l10n.remoteServerListDeleteConfirmTitle),
+        content: Text(
+          l10n.remoteServerListDeleteConfirmMessage(profile.name),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             key: const Key('remote_server_delete_confirm_button'),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('刪除'),
+            child: Text(l10n.remoteServerListDeleteTooltip),
           ),
         ],
       ),
@@ -136,20 +140,23 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
       _load();
     } on RemoteServerDeletionBlockedException catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      final titles = e.blockingBooks.map((b) => '．${b.title}').join('\n');
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
           key: const Key('remote_server_delete_blocked_dialog'),
-          title: const Text('無法刪除站點'),
+          title: Text(l10n.remoteServerListDeleteBlockedTitle),
           content: Text(
-            '這個站點還有 ${e.blockingBooks.length} 本書僅有雲端紀錄、尚未下載：\n'
-            '${e.blockingBooks.map((b) => '．${b.title}').join('\n')}\n\n'
-            '請先於書架移除這些書籍，或重新下載後再刪除站點。',
+            l10n.remoteServerListDeleteBlockedMessage(
+              e.blockingBooks.length,
+              titles,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('了解'),
+              child: Text(l10n.remoteServerListDeleteBlockedConfirmButton),
             ),
           ],
         ),
@@ -160,9 +167,11 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
       // 讓使用者知道發生了什麼事。
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          key: Key('remote_server_delete_error_snackbar'),
-          content: Text('刪除站點失敗，請稍後再試'),
+        SnackBar(
+          key: const Key('remote_server_delete_error_snackbar'),
+          content: Text(
+            AppLocalizations.of(context)!.remoteServerListDeleteFailedMessage,
+          ),
         ),
       );
     }
@@ -170,14 +179,15 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('遠端書庫'),
+        title: Text(l10n.remoteServerListTitle),
         actions: [
           IconButton(
             key: const Key('remote_server_list_add_button'),
             icon: const Icon(Icons.add),
-            tooltip: '新增站點',
+            tooltip: l10n.remoteServerListAddTooltip,
             onPressed: _openAddForm,
           ),
         ],
@@ -189,10 +199,10 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
               ),
             )
           : _servers.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
-                    '尚未新增任何遠端書庫站點',
-                    key: Key('remote_server_list_empty_state'),
+                    l10n.remoteServerListEmptyState,
+                    key: const Key('remote_server_list_empty_state'),
                   ),
                 )
               : ListView.builder(
@@ -210,13 +220,13 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
                           IconButton(
                             key: Key('remote_server_item_edit_${profile.id}'),
                             icon: const Icon(Icons.edit),
-                            tooltip: '編輯',
+                            tooltip: l10n.remoteServerListEditTooltip,
                             onPressed: () => _openEditForm(profile),
                           ),
                           IconButton(
                             key: Key('remote_server_item_delete_${profile.id}'),
                             icon: const Icon(Icons.delete),
-                            tooltip: '刪除',
+                            tooltip: l10n.remoteServerListDeleteTooltip,
                             onPressed: () => _confirmDelete(profile),
                           ),
                         ],

@@ -447,5 +447,16 @@
   "aboutScreenViewLicensesButton": "開源授權清單",
   "aboutScreenLoadingText": "讀取中...",
   "aboutScreenFailedToLoadVersionMessage": "無法取得版本號",
-  "aboutScreenUnavailableText": "無法取得"
+  "aboutScreenUnavailableText": "無法取得",
+  "remoteServerListTitle": "遠端書庫",
+  "remoteServerListAddTooltip": "新增站點",
+  "remoteServerListEmptyState": "尚未新增任何遠端書庫站點",
+  "remoteServerListEditTooltip": "編輯",
+  "remoteServerListDeleteTooltip": "刪除",
+  "remoteServerListDeleteConfirmTitle": "刪除站點",
+  "remoteServerListDeleteConfirmMessage": "確定要刪除站點「{name}」嗎？此動作無法復原。",
+  "remoteServerListDeleteBlockedTitle": "無法刪除站點",
+  "remoteServerListDeleteBlockedMessage": "{count, plural, =1{這個站點還有 1 本書僅有雲端紀錄、尚未下載：} other{這個站點還有 {count} 本書僅有雲端紀錄、尚未下載：}}\n{titles}\n\n請先於書架移除這些書籍，或重新下載後再刪除站點。",
+  "remoteServerListDeleteBlockedConfirmButton": "了解",
+  "remoteServerListDeleteFailedMessage": "刪除站點失敗，請稍後再試"
 }

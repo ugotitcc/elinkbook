@@ -2794,6 +2794,72 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'無法取得'**
   String get aboutScreenUnavailableText;
+
+  /// 遠端書庫站點清單畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'遠端書庫'**
+  String get remoteServerListTitle;
+
+  /// AppBar「新增站點」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'新增站點'**
+  String get remoteServerListAddTooltip;
+
+  /// 尚未新增任何站點時的空狀態文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未新增任何遠端書庫站點'**
+  String get remoteServerListEmptyState;
+
+  /// 站點列項目「編輯」圖示按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'編輯'**
+  String get remoteServerListEditTooltip;
+
+  /// 站點列項目「刪除」圖示按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get remoteServerListDeleteTooltip;
+
+  /// 刪除站點確認對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除站點'**
+  String get remoteServerListDeleteConfirmTitle;
+
+  /// 刪除站點確認訊息，{name} 為使用者自訂的站點名稱（不翻譯）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定要刪除站點「{name}」嗎？此動作無法復原。'**
+  String remoteServerListDeleteConfirmMessage(String name);
+
+  /// 站點仍有僅雲端紀錄書籍、刪除被擋下時的示警對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法刪除站點'**
+  String get remoteServerListDeleteBlockedTitle;
+
+  /// 刪除被擋下時的示警訊息，{count} 為僅雲端紀錄書籍本數，{titles} 為呼叫端已組好的書名清單文字（每行一本，前綴「．」，不含末尾換行）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{count, plural, =1{這個站點還有 1 本書僅有雲端紀錄、尚未下載：} other{這個站點還有 {count} 本書僅有雲端紀錄、尚未下載：}}\n{titles}\n\n請先於書架移除這些書籍，或重新下載後再刪除站點。'**
+  String remoteServerListDeleteBlockedMessage(int count, String titles);
+
+  /// 示警對話框的確認按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'了解'**
+  String get remoteServerListDeleteBlockedConfirmButton;
+
+  /// 刪除防護例外以外的其餘刪除失敗時顯示的 SnackBar 訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除站點失敗，請稍後再試'**
+  String get remoteServerListDeleteFailedMessage;
 }
 
 class _AppLocalizationsDelegate

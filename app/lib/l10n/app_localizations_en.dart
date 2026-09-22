@@ -1598,4 +1598,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutScreenUnavailableText => 'Unavailable';
+
+  @override
+  String get remoteServerListTitle => 'Remote Library';
+
+  @override
+  String get remoteServerListAddTooltip => 'Add Server';
+
+  @override
+  String get remoteServerListEmptyState =>
+      'No remote library servers added yet';
+
+  @override
+  String get remoteServerListEditTooltip => 'Edit';
+
+  @override
+  String get remoteServerListDeleteTooltip => 'Delete';
+
+  @override
+  String get remoteServerListDeleteConfirmTitle => 'Delete Server';
+
+  @override
+  String remoteServerListDeleteConfirmMessage(String name) {
+    return 'Delete server \"$name\"? This cannot be undone.';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedTitle => 'Cannot Delete Server';
+
+  @override
+  String remoteServerListDeleteBlockedMessage(int count, String titles) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'This server still has $count books that only have a cloud record and have not been downloaded:',
+      one:
+          'This server still has 1 book that only has a cloud record and has not been downloaded:',
+    );
+    return '$_temp0\n$titles\n\nPlease remove these books from your library, or download them again before deleting the server.';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedConfirmButton => 'Got It';
+
+  @override
+  String get remoteServerListDeleteFailedMessage =>
+      'Failed to delete server. Please try again later.';
 }
