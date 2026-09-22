@@ -399,5 +399,9 @@
   "readingDefaultsFullscreenLabel": "全屏幕模式",
   "readingDefaultsOpenLastBookLabel": "启动时打开最后阅读的那本书",
   "readingDefaultsShowHeaderLabel": "显示页首",
-  "readingDefaultsShowFooterLabel": "显示页尾"
+  "readingDefaultsShowFooterLabel": "显示页尾",
+  "ttsDefaultsTitle": "朗读语音与语速",
+  "ttsDefaultsVoiceSectionTitle": "语音",
+  "ttsDefaultsVoiceUnavailableHint": "目前装置未安装或不支持语音选择",
+  "ttsDefaultsSpeedSectionTitle": "语速"
 }

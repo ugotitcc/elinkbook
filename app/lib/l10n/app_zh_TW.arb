@@ -1841,5 +1841,21 @@
   "readingDefaultsShowFooterLabel": "顯示頁尾",
   "@readingDefaultsShowFooterLabel": {
     "description": "「顯示頁尾」開關標題"
+  },
+  "ttsDefaultsTitle": "朗讀語音與語速",
+  "@ttsDefaultsTitle": {
+    "description": "朗讀預設值畫面 AppBar 標題"
+  },
+  "ttsDefaultsVoiceSectionTitle": "語音",
+  "@ttsDefaultsVoiceSectionTitle": {
+    "description": "「語音」選擇區塊標題"
+  },
+  "ttsDefaultsVoiceUnavailableHint": "目前裝置未安裝或不支援語音選擇",
+  "@ttsDefaultsVoiceUnavailableHint": {
+    "description": "裝置沒有可用 TTS 引擎或語音清單為空時顯示的提示文字"
+  },
+  "ttsDefaultsSpeedSectionTitle": "語速",
+  "@ttsDefaultsSpeedSectionTitle": {
+    "description": "「語速」調整區塊標題"
   }
 }

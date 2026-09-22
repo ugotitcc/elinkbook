@@ -399,5 +399,9 @@
   "readingDefaultsFullscreenLabel": "Fullscreen mode",
   "readingDefaultsOpenLastBookLabel": "Open the last read book on launch",
   "readingDefaultsShowHeaderLabel": "Show header",
-  "readingDefaultsShowFooterLabel": "Show footer"
+  "readingDefaultsShowFooterLabel": "Show footer",
+  "ttsDefaultsTitle": "Read-Aloud Voice & Speed",
+  "ttsDefaultsVoiceSectionTitle": "Voice",
+  "ttsDefaultsVoiceUnavailableHint": "No voice is installed or supported on this device",
+  "ttsDefaultsSpeedSectionTitle": "Speed"
 }

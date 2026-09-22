@@ -2506,6 +2506,30 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'顯示頁尾'**
   String get readingDefaultsShowFooterLabel;
+
+  /// 朗讀預設值畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'朗讀語音與語速'**
+  String get ttsDefaultsTitle;
+
+  /// 「語音」選擇區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'語音'**
+  String get ttsDefaultsVoiceSectionTitle;
+
+  /// 裝置沒有可用 TTS 引擎或語音清單為空時顯示的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'目前裝置未安裝或不支援語音選擇'**
+  String get ttsDefaultsVoiceUnavailableHint;
+
+  /// 「語速」調整區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'語速'**
+  String get ttsDefaultsSpeedSectionTitle;
 }
 
 class _AppLocalizationsDelegate

@@ -399,5 +399,9 @@
   "readingDefaultsFullscreenLabel": "全螢幕模式",
   "readingDefaultsOpenLastBookLabel": "啟動時開啟最後閱讀的那本書",
   "readingDefaultsShowHeaderLabel": "顯示頁首",
-  "readingDefaultsShowFooterLabel": "顯示頁尾"
+  "readingDefaultsShowFooterLabel": "顯示頁尾",
+  "ttsDefaultsTitle": "朗讀語音與語速",
+  "ttsDefaultsVoiceSectionTitle": "語音",
+  "ttsDefaultsVoiceUnavailableHint": "目前裝置未安裝或不支援語音選擇",
+  "ttsDefaultsSpeedSectionTitle": "語速"
 }

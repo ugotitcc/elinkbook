@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/tts_provider.dart';
 import 'package:elinkbook/screens/tts_defaults_screen.dart';
@@ -31,6 +32,9 @@ class _EmptyVoicesTtsProvider implements TtsProvider {
 void main() {
   testWidgets('ttsProvider 為 null 時顯示不可用提示，不崩潰，且無語音選項', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: TtsDefaultsScreen(prefsManager: FakeReaderPrefsManager()),
     ));
     await tester.pumpAndSettle();
@@ -48,6 +52,9 @@ void main() {
 
   testWidgets('ttsProvider 存在時列出 getAvailableVoices() 回傳的語音', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: TtsDefaultsScreen(
         prefsManager: FakeReaderPrefsManager(),
         ttsProvider: FakeTtsProvider(),
@@ -66,6 +73,9 @@ void main() {
       'ttsProvider 存在但 getAvailableVoices() 回傳空清單時，顯示不可用提示而非空白區塊'
       '（review-plan-issue-5.md I-2）', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: TtsDefaultsScreen(
         prefsManager: FakeReaderPrefsManager(),
         ttsProvider: _EmptyVoicesTtsProvider(),
@@ -87,6 +97,9 @@ void main() {
           .copyWith(tts: const TtsDefaults(ttsVoiceId: 'other-voice')),
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: TtsDefaultsScreen(
         prefsManager: fakeManager,
         ttsProvider: FakeTtsProvider(),
@@ -113,6 +126,9 @@ void main() {
       'E-Ink +/- 按鈕〕產生的可達值集合一致）', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: TtsDefaultsScreen(prefsManager: fakeManager, isEinkMode: false),
     ));
     await tester.pumpAndSettle();
@@ -150,6 +166,9 @@ void main() {
       '對 v=0.75 仍四捨五入成 0.8，導致拖曳永遠選不到 0.75x）', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: TtsDefaultsScreen(prefsManager: fakeManager, isEinkMode: false),
     ));
     await tester.pumpAndSettle();
@@ -170,6 +189,9 @@ void main() {
   testWidgets('E-Ink 模式隱藏 Slider，改用 +/- 按鈕以 0.1x 步進調整語速', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: TtsDefaultsScreen(prefsManager: fakeManager, isEinkMode: true),
     ));
     await tester.pumpAndSettle();
@@ -196,6 +218,9 @@ void main() {
           .copyWith(tts: const TtsDefaults(defaultTtsSpeed: 2.0)),
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: TtsDefaultsScreen(prefsManager: fakeManager, isEinkMode: true),
     ));
     await tester.pumpAndSettle();
@@ -221,6 +246,9 @@ void main() {
       '0.8x 就被錯誤停用，永遠到不了規格下限 0.75x）', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: TtsDefaultsScreen(prefsManager: fakeManager, isEinkMode: true),
     ));
     await tester.pumpAndSettle();
@@ -249,5 +277,22 @@ void main() {
 
     // 已達 0.75x 下限，減號按鈕停用。
     expect(tester.widget<IconButton>(decrementFinder).onPressed, isNull);
+  });
+
+  testWidgets('英文介面下標題與分區標題正確以英文渲染', (tester) async {
+    final fakeManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: TtsDefaultsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Read-Aloud Voice & Speed'), findsOneWidget);
+    expect(find.text('Voice'), findsOneWidget);
+    expect(find.text('No voice is installed or supported on this device'),
+        findsOneWidget);
+    expect(find.text('Speed'), findsOneWidget);
   });
 }

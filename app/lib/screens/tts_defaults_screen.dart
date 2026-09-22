@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../reader/global_reader_prefs.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/tts_provider.dart';
@@ -60,8 +61,9 @@ class _TtsDefaultsScreenState extends State<TtsDefaultsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('朗讀語音與語速')),
+      appBar: AppBar(title: Text(l10n.ttsDefaultsTitle)),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(
@@ -70,15 +72,15 @@ class _TtsDefaultsScreenState extends State<TtsDefaultsScreen> {
             )
           : ListView(
               children: [
-                const EBSectionHeader(title: '語音'),
+                EBSectionHeader(title: l10n.ttsDefaultsVoiceSectionTitle),
                 // 【review-plan-issue-5.md I-2】ttsProvider 缺席「或」裝置
                 // 雖有 TTS 引擎但回傳空清單（尚未安裝語言包）時，皆顯示同一
                 // 個不可用提示，不留空白區塊。
                 if (widget.ttsProvider == null || _voices.isEmpty)
-                  const Padding(
-                    key: Key('tts_defaults_voice_unavailable_hint'),
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Text('目前裝置未安裝或不支援語音選擇'),
+                  Padding(
+                    key: const Key('tts_defaults_voice_unavailable_hint'),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Text(l10n.ttsDefaultsVoiceUnavailableHint),
                   )
                 else
                   RadioGroup<String>(
@@ -104,7 +106,7 @@ class _TtsDefaultsScreenState extends State<TtsDefaultsScreen> {
                     ),
                   ),
                 const Divider(height: 1),
-                const EBSectionHeader(title: '語速'),
+                EBSectionHeader(title: l10n.ttsDefaultsSpeedSectionTitle),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(

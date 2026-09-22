@@ -1359,6 +1359,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get readingDefaultsShowFooterLabel => '顯示頁尾';
+
+  @override
+  String get ttsDefaultsTitle => '朗讀語音與語速';
+
+  @override
+  String get ttsDefaultsVoiceSectionTitle => '語音';
+
+  @override
+  String get ttsDefaultsVoiceUnavailableHint => '目前裝置未安裝或不支援語音選擇';
+
+  @override
+  String get ttsDefaultsSpeedSectionTitle => '語速';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -2716,6 +2728,18 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get readingDefaultsShowFooterLabel => '显示页尾';
+
+  @override
+  String get ttsDefaultsTitle => '朗读语音与语速';
+
+  @override
+  String get ttsDefaultsVoiceSectionTitle => '语音';
+
+  @override
+  String get ttsDefaultsVoiceUnavailableHint => '目前装置未安装或不支持语音选择';
+
+  @override
+  String get ttsDefaultsSpeedSectionTitle => '语速';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -4073,4 +4097,16 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readingDefaultsShowFooterLabel => '顯示頁尾';
+
+  @override
+  String get ttsDefaultsTitle => '朗讀語音與語速';
+
+  @override
+  String get ttsDefaultsVoiceSectionTitle => '語音';
+
+  @override
+  String get ttsDefaultsVoiceUnavailableHint => '目前裝置未安裝或不支援語音選擇';
+
+  @override
+  String get ttsDefaultsSpeedSectionTitle => '語速';
 }

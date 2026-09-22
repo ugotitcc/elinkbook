@@ -1403,4 +1403,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get readingDefaultsShowFooterLabel => 'Show footer';
+
+  @override
+  String get ttsDefaultsTitle => 'Read-Aloud Voice & Speed';
+
+  @override
+  String get ttsDefaultsVoiceSectionTitle => 'Voice';
+
+  @override
+  String get ttsDefaultsVoiceUnavailableHint =>
+      'No voice is installed or supported on this device';
+
+  @override
+  String get ttsDefaultsSpeedSectionTitle => 'Speed';
 }
