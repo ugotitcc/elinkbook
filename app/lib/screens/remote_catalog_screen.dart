@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../downloads/download_queue_controller.dart';
+import '../l10n/app_localizations.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../remote/remote_catalog_dependencies.dart';
@@ -12,7 +13,6 @@ import '../remote/remote_download_job.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
 import '../library/widgets/book_cover.dart';
-import '../l10n/app_localizations.dart';
 import 'format_selection_dialog.dart';
 
 /// OPDS 目錄瀏覽畫面（epic-30-calibre-remote-library Issue 2，

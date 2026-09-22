@@ -1569,6 +1569,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get remoteServerListDeleteConfirmTitle => '刪除站點';
 
   @override
+  String get remoteServerListDeleteConfirmButton => '刪除';
+
+  @override
   String remoteServerListDeleteConfirmMessage(String name) {
     return '確定要刪除站點「$name」嗎？此動作無法復原。';
   }
@@ -1770,6 +1773,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get downloadQueueStatusCancelled => '已取消';
+
+  @override
+  String downloadQueueDuplicateConfirmMessage(String name) {
+    return '偵測到「$name」與本機已有的一本書內容相同，仍要建立新的一份嗎？';
+  }
 
   @override
   String get sourcesHomeTitle => '來源';
@@ -3442,6 +3450,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get remoteServerListDeleteConfirmTitle => '删除站点';
 
   @override
+  String get remoteServerListDeleteConfirmButton => '删除';
+
+  @override
   String remoteServerListDeleteConfirmMessage(String name) {
     return '确定要删除站点「$name」吗？此动作无法复原。';
   }
@@ -3643,6 +3654,11 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get downloadQueueStatusCancelled => '已取消';
+
+  @override
+  String downloadQueueDuplicateConfirmMessage(String name) {
+    return '侦测到「$name」与本机已有的一本书内容相同，仍要建立新的一份吗？';
+  }
 
   @override
   String get sourcesHomeTitle => '来源';
@@ -5315,6 +5331,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get remoteServerListDeleteConfirmTitle => '刪除站點';
 
   @override
+  String get remoteServerListDeleteConfirmButton => '刪除';
+
+  @override
   String remoteServerListDeleteConfirmMessage(String name) {
     return '確定要刪除站點「$name」嗎？此動作無法復原。';
   }
@@ -5516,6 +5535,11 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get downloadQueueStatusCancelled => '已取消';
+
+  @override
+  String downloadQueueDuplicateConfirmMessage(String name) {
+    return '偵測到「$name」與本機已有的一本書內容相同，仍要建立新的一份嗎？';
+  }
 
   @override
   String get sourcesHomeTitle => '來源';

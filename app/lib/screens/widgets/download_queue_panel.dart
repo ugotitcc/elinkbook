@@ -107,12 +107,12 @@ class _QueueItemRow extends StatelessWidget {
             ],
           ),
         ),
-        _trailingAction(context, l10n),
+        _trailingAction(l10n),
       ],
     );
   }
 
-  Widget _trailingAction(BuildContext context, AppLocalizations l10n) {
+  Widget _trailingAction(AppLocalizations l10n) {
     switch (item.status) {
       case DownloadItemStatus.downloading:
         return IconButton(

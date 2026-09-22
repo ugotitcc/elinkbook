@@ -2831,6 +2831,12 @@ abstract class AppLocalizations {
   /// **'刪除站點'**
   String get remoteServerListDeleteConfirmTitle;
 
+  /// 刪除站點確認對話框的動作按鈕文字（審查意見 review-issue-6.md M-1：原與圖示按鈕的無障礙提示 remoteServerListDeleteTooltip 共用同一個 key，拆為獨立 key 避免兩處字義各自演進時互相牽制）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get remoteServerListDeleteConfirmButton;
+
   /// 刪除站點確認訊息，{name} 為使用者自訂的站點名稱（不翻譯）
   ///
   /// In zh_TW, this message translates to:
@@ -3172,6 +3178,12 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'已取消'**
   String get downloadQueueStatusCancelled;
+
+  /// 下載佇列指紋比對命中重複時的確認訊息（審查意見 review-issue-6.md I-1：原為 download_queue_controller.dart 內硬編碼中文，改由 main.dart 呼叫端在地化組裝）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'偵測到「{name}」與本機已有的一本書內容相同，仍要建立新的一份嗎？'**
+  String downloadQueueDuplicateConfirmMessage(String name);
 
   /// 「來源」聚合頁 AppBar 標題
   ///

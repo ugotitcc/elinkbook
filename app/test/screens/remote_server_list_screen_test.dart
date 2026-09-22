@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/downloads/download_queue_controller.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/remote/remote_catalog_dependencies.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/screens/remote_catalog_screen.dart';
 import 'package:elinkbook/screens/remote_server_form_screen.dart';
-import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
-import 'package:elinkbook/remote/remote_catalog_dependencies.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_fingerprint_computer.dart';

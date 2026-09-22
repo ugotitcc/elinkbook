@@ -29,12 +29,31 @@ void main() {
   }
 
   testWidgets('顯示標題與傳入訊息，點擊「仍要建立」回傳 true', (tester) async {
-    await pumpAndOpen(tester, message: '「紅樓夢」之前匯入過了，仍要建立新的一份嗎？');
+    bool? result;
+    const message = '「紅樓夢」之前匯入過了，仍要建立新的一份嗎？';
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Builder(
+        builder: (context) => ElevatedButton(
+          onPressed: () async {
+            result = await showCloudDuplicateConfirmDialog(context, message);
+          },
+          child: const Text('open'),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
     expect(find.text('重複的書籍'), findsOneWidget);
-    expect(find.text('「紅樓夢」之前匯入過了，仍要建立新的一份嗎？'), findsOneWidget);
+    expect(find.text(message), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('cloud_duplicate_dialog_confirm')));
     await tester.pumpAndSettle();
+
+    expect(result, isTrue);
   });
 
   testWidgets('點擊取消回傳 false', (tester) async {

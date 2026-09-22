@@ -1619,6 +1619,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get remoteServerListDeleteConfirmTitle => 'Delete Server';
 
   @override
+  String get remoteServerListDeleteConfirmButton => 'Delete';
+
+  @override
   String remoteServerListDeleteConfirmMessage(String name) {
     return 'Delete server \"$name\"? This cannot be undone.';
   }
@@ -1835,6 +1838,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get downloadQueueStatusCancelled => 'Cancelled';
+
+  @override
+  String downloadQueueDuplicateConfirmMessage(String name) {
+    return 'Detected that \"$name\" has the same content as an existing book on this device. Create a new copy anyway?';
+  }
 
   @override
   String get sourcesHomeTitle => 'Sources';

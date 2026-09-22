@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../l10n/app_localizations.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../search/pdf_content_indexer.dart' show readContentUriAll;
 import '../wifi_transfer/network_availability.dart';
 import '../wifi_transfer/wifi_transfer_http_server.dart';
-import '../l10n/app_localizations.dart';
 import '../wifi_transfer/wifi_transfer_service.dart';
 
 /// 呼叫端優先嘗試的固定埠；bind 失敗（`SocketException`，通常是埠號

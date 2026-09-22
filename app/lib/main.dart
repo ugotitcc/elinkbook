@@ -246,10 +246,14 @@ Future<void> main() async {
   // navigatorKey 取得目前可用的 BuildContext，不綁定觸發下載當下所在的
   // 那個畫面（使用者可能已經離開）。
   final downloadQueueController = DownloadQueueController(
-    onDuplicateConfirm: (message) async {
+    onDuplicateConfirm: (name) async {
       final context = navigatorKey.currentContext;
       if (context == null) return false;
-      return showCloudDuplicateConfirmDialog(context, message);
+      final l10n = AppLocalizations.of(context)!;
+      return showCloudDuplicateConfirmDialog(
+        context,
+        l10n.downloadQueueDuplicateConfirmMessage(name),
+      );
     },
   );
   runApp(

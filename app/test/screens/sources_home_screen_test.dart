@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:elinkbook/l10n/app_localizations.dart';
-import 'package:elinkbook/downloads/download_queue_controller.dart';
 import 'package:elinkbook/cloud_import/cloud_download_job.dart';
 import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
+import 'package:elinkbook/downloads/download_queue_controller.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/cloud_browser_screen.dart';
-import 'package:wakelock_plus/wakelock_plus.dart' show wakelockPlusPlatformInstance;
+import 'package:wakelock_plus/wakelock_plus.dart'
+    show wakelockPlusPlatformInstance;
 import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interface.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
@@ -70,9 +71,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: importService,
@@ -100,9 +101,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: importService,
@@ -127,9 +128,9 @@ void main() {
   testWidgets('雲端/OPDS 依賴缺席時對應項目為停用狀態', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
@@ -203,9 +204,9 @@ void main() {
   testWidgets('依賴齊全時點擊遠端書庫項目導覽至 RemoteServerListScreen', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
@@ -234,9 +235,9 @@ void main() {
     var settingsTapped = 0;
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
@@ -260,9 +261,9 @@ void main() {
       final fingerprintComputer = FakeFingerprintComputer();
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: SourcesHomeScreen(
             repository: FakeLibraryRepository(),
             importService: FakeBookImportService(),
@@ -291,9 +292,9 @@ void main() {
       );
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: SourcesHomeScreen(
             repository: FakeLibraryRepository(),
             importService: FakeBookImportService(),
@@ -313,9 +314,9 @@ void main() {
       );
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: SourcesHomeScreen(
             repository: FakeLibraryRepository(),
             importService: FakeBookImportService(),
@@ -357,9 +358,9 @@ void main() {
   testWidgets('wifiTransferDependencies 為 null 時不顯示 WiFi 傳書入口', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
@@ -375,9 +376,9 @@ void main() {
     final fingerprintComputer = FakeFingerprintComputer();
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
@@ -395,14 +396,15 @@ void main() {
     expect(find.byKey(const Key('sources_wifi_transfer_tile')), findsNothing);
   });
 
-  testWidgets('wifiTransferDependencies 齊全時顯示入口並可點擊導覽至 WifiTransferScreen',
-      (tester) async {
+  testWidgets('wifiTransferDependencies 齊全時顯示入口並可點擊導覽至 WifiTransferScreen', (
+    tester,
+  ) async {
     final fingerprintComputer = FakeFingerprintComputer();
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
@@ -442,14 +444,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sources'), findsOneWidget);
+    expect(find.text('Local'), findsOneWidget);
+    expect(find.text('Connected Services'), findsOneWidget);
     expect(find.text('Choose Files (multiple selection)'), findsOneWidget);
     expect(find.text('Choose Folder'), findsOneWidget);
     expect(find.text('Google Drive'), findsOneWidget);
-    expect(find.text('Not linked yet. Please link your account in Settings.'),
-        findsNWidgets(2));
+    expect(
+      find.text('Not linked yet. Please link your account in Settings.'),
+      findsNWidgets(2),
+    );
     expect(find.text('Remote Library (OPDS)'), findsOneWidget);
-    expect(find.text('No remote library server configured yet'), findsOneWidget);
+    expect(
+      find.text('No remote library server configured yet'),
+      findsOneWidget,
+    );
   });
-
-
 }

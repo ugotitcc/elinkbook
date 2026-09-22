@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../cloud_import/cloud_storage_client.dart';
 import '../downloads/download_queue_controller.dart';
+import '../l10n/app_localizations.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
@@ -13,7 +14,6 @@ import 'library_screen_dependencies.dart';
 import 'remote_server_list_screen.dart';
 import 'support/book_import_picker_helper.dart';
 import 'widgets/download_queue_panel.dart';
-import '../l10n/app_localizations.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_section_header.dart';
 import 'wifi_transfer_screen.dart';
@@ -198,7 +198,7 @@ class SourcesHomeScreen extends StatelessWidget {
       ),
       body: ListView(
         children: [
-          const EBSectionHeader(title: '本機'),
+          EBSectionHeader(title: l10n.sourcesHomeLocalSection),
           EBFieldCard(
             padding: EdgeInsets.zero,
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -230,7 +230,7 @@ class SourcesHomeScreen extends StatelessWidget {
                 onTap: () => _openWifiTransfer(context),
               ),
             ),
-          const EBSectionHeader(title: '已連結服務'),
+          EBSectionHeader(title: l10n.sourcesHomeConnectedServicesSection),
           EBFieldCard(
             padding: EdgeInsets.zero,
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

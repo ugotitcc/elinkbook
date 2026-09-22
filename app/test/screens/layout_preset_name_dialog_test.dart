@@ -32,7 +32,22 @@ void main() {
   }
 
   testWidgets('顯示標題、輸入名稱後點擊儲存回傳 trim 後的名稱', (tester) async {
-    await pumpAndOpen(tester);
+    String? result;
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Builder(
+        builder: (context) => ElevatedButton(
+          onPressed: () async {
+            result = await showLayoutPresetNameDialog(context);
+          },
+          child: const Text('open'),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
     expect(find.text('為預設集命名'), findsOneWidget);
 
     await tester.enterText(
@@ -42,6 +57,9 @@ void main() {
     await tester.tap(find.byKey(const Key('layout_preset_name_dialog_confirm')));
     await tester.pumpAndSettle();
 
+    // trim 的字元層邏輯本身另有 validateLayoutPresetName() 的純函式單元
+    // 測試覆蓋，這裡驗證的是對話框把該邏輯的結果原樣回傳給呼叫端。
+    expect(result, '我的預設集');
     expect(find.byKey(const Key('layout_preset_name_dialog_field')), findsNothing);
   });
 

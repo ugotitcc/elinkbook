@@ -124,7 +124,7 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
           TextButton(
             key: const Key('remote_server_delete_confirm_button'),
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.remoteServerListDeleteTooltip),
+            child: Text(l10n.remoteServerListDeleteConfirmButton),
           ),
         ],
       ),
