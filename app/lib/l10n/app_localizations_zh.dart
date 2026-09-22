@@ -1163,6 +1163,112 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get readerTtsSleepTimerNoLimitLabel => '不限時';
+
+  @override
+  String get settingsScaffoldTitle => '設定';
+
+  @override
+  String get settingsLibraryTooltip => '書架';
+
+  @override
+  String get settingsSourceTooltip => '來源';
+
+  @override
+  String get settingsAppearanceSectionTitle => '外觀';
+
+  @override
+  String get settingsThemeLabel => '佈景';
+
+  @override
+  String get settingsThemeLockedHint => '這裡選的是關閉 E-Ink 後要恢復的主題';
+
+  @override
+  String settingsThemeDotSemanticsLabel(String themeName) {
+    return '$themeName佈景';
+  }
+
+  @override
+  String settingsThemeDotLockedSemanticsLabel(
+    String themeName,
+    String currentThemeName,
+  ) {
+    return '$themeName佈景，已鎖定，這裡選的是關閉 E-Ink 後要恢復的主題，目前選擇：$currentThemeName';
+  }
+
+  @override
+  String get settingsThemeLight => '淺色';
+
+  @override
+  String get settingsThemeDark => '深色';
+
+  @override
+  String get settingsThemeSepia => '羊皮紙';
+
+  @override
+  String get settingsEinkModeLabel => 'E-Ink 高對比模式';
+
+  @override
+  String get settingsEinkModeSubtitle => '停用動畫與漸層，以純黑白高對比顯示，專為電子紙螢幕最佳化';
+
+  @override
+  String get settingsFontManagementLabel => '字型管理';
+
+  @override
+  String get settingsReadingSectionTitle => '閱讀';
+
+  @override
+  String get settingsReadingDefaultsLabel => '閱讀預設值';
+
+  @override
+  String get settingsNavZoneLabel => '導航熱區';
+
+  @override
+  String get settingsTtsDefaultsLabel => '朗讀語音與語速';
+
+  @override
+  String get settingsFullTextSearchUnavailableLabel => '全文檢索';
+
+  @override
+  String get settingsFullTextSearchUnavailableSubtitle => '本裝置不支援全文檢索';
+
+  @override
+  String get settingsFullTextSearchPdfLabel => 'PDF 全文檢索';
+
+  @override
+  String get settingsFullTextSearchPdfSubtitle => '部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容';
+
+  @override
+  String get settingsFullTextSearchRebuildIndexTooltip => '重建索引';
+
+  @override
+  String get settingsFullTextSearchFoliateLabel => '其他格式全文檢索';
+
+  @override
+  String get settingsFullTextSearchFoliateSubtitle => 'EPUB／TXT／KF8 等格式的背景索引建置';
+
+  @override
+  String get settingsSyncAccountSectionTitle => '同步與帳號';
+
+  @override
+  String get settingsSyncLabel => '同步';
+
+  @override
+  String get settingsCloudAccountLabel => '已連結的雲端匯入帳戶';
+
+  @override
+  String get settingsAboutSectionTitle => '關於';
+
+  @override
+  String get settingsAboutLabel => '關於';
+
+  @override
+  String get settingsReaderConsoleLogLabel => '閱讀器 Console Log';
+
+  @override
+  String get settingsConsoleLogInterceptLabel => 'Console Log 攔截';
+
+  @override
+  String get settingsConsoleLogInterceptSubtitle => '關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -2324,6 +2430,112 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get readerTtsSleepTimerNoLimitLabel => '不限时';
+
+  @override
+  String get settingsScaffoldTitle => '设定';
+
+  @override
+  String get settingsLibraryTooltip => '书架';
+
+  @override
+  String get settingsSourceTooltip => '来源';
+
+  @override
+  String get settingsAppearanceSectionTitle => '外观';
+
+  @override
+  String get settingsThemeLabel => '布景';
+
+  @override
+  String get settingsThemeLockedHint => '这里选的是关闭 E-Ink 后要恢复的主题';
+
+  @override
+  String settingsThemeDotSemanticsLabel(String themeName) {
+    return '$themeName布景';
+  }
+
+  @override
+  String settingsThemeDotLockedSemanticsLabel(
+    String themeName,
+    String currentThemeName,
+  ) {
+    return '$themeName布景，已锁定，这里选的是关闭 E-Ink 后要恢复的主题，目前选择：$currentThemeName';
+  }
+
+  @override
+  String get settingsThemeLight => '浅色';
+
+  @override
+  String get settingsThemeDark => '深色';
+
+  @override
+  String get settingsThemeSepia => '羊皮纸';
+
+  @override
+  String get settingsEinkModeLabel => 'E-Ink 高对比模式';
+
+  @override
+  String get settingsEinkModeSubtitle => '停用动画与渐层，以纯黑白高对比显示，专为电子纸屏幕最佳化';
+
+  @override
+  String get settingsFontManagementLabel => '字体管理';
+
+  @override
+  String get settingsReadingSectionTitle => '阅读';
+
+  @override
+  String get settingsReadingDefaultsLabel => '阅读预设值';
+
+  @override
+  String get settingsNavZoneLabel => '导航热区';
+
+  @override
+  String get settingsTtsDefaultsLabel => '朗读语音与语速';
+
+  @override
+  String get settingsFullTextSearchUnavailableLabel => '全文检索';
+
+  @override
+  String get settingsFullTextSearchUnavailableSubtitle => '本装置不支持全文检索';
+
+  @override
+  String get settingsFullTextSearchPdfLabel => 'PDF 全文检索';
+
+  @override
+  String get settingsFullTextSearchPdfSubtitle => '部分扫描/图片型 PDF 可能没有可搜索的文字内容';
+
+  @override
+  String get settingsFullTextSearchRebuildIndexTooltip => '重建索引';
+
+  @override
+  String get settingsFullTextSearchFoliateLabel => '其他格式全文检索';
+
+  @override
+  String get settingsFullTextSearchFoliateSubtitle => 'EPUB／TXT／KF8 等格式的背景索引建置';
+
+  @override
+  String get settingsSyncAccountSectionTitle => '同步与账号';
+
+  @override
+  String get settingsSyncLabel => '同步';
+
+  @override
+  String get settingsCloudAccountLabel => '已链接的云端导入账户';
+
+  @override
+  String get settingsAboutSectionTitle => '关于';
+
+  @override
+  String get settingsAboutLabel => '关于';
+
+  @override
+  String get settingsReaderConsoleLogLabel => '阅读器 Console Log';
+
+  @override
+  String get settingsConsoleLogInterceptLabel => 'Console Log 拦截';
+
+  @override
+  String get settingsConsoleLogInterceptSubtitle => '关闭后仅保留错误讯息，用于问题回报时的诊断纪录';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -3485,4 +3697,110 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerTtsSleepTimerNoLimitLabel => '不限時';
+
+  @override
+  String get settingsScaffoldTitle => '設定';
+
+  @override
+  String get settingsLibraryTooltip => '書架';
+
+  @override
+  String get settingsSourceTooltip => '來源';
+
+  @override
+  String get settingsAppearanceSectionTitle => '外觀';
+
+  @override
+  String get settingsThemeLabel => '佈景';
+
+  @override
+  String get settingsThemeLockedHint => '這裡選的是關閉 E-Ink 後要恢復的主題';
+
+  @override
+  String settingsThemeDotSemanticsLabel(String themeName) {
+    return '$themeName佈景';
+  }
+
+  @override
+  String settingsThemeDotLockedSemanticsLabel(
+    String themeName,
+    String currentThemeName,
+  ) {
+    return '$themeName佈景，已鎖定，這裡選的是關閉 E-Ink 後要恢復的主題，目前選擇：$currentThemeName';
+  }
+
+  @override
+  String get settingsThemeLight => '淺色';
+
+  @override
+  String get settingsThemeDark => '深色';
+
+  @override
+  String get settingsThemeSepia => '羊皮紙';
+
+  @override
+  String get settingsEinkModeLabel => 'E-Ink 高對比模式';
+
+  @override
+  String get settingsEinkModeSubtitle => '停用動畫與漸層，以純黑白高對比顯示，專為電子紙螢幕最佳化';
+
+  @override
+  String get settingsFontManagementLabel => '字型管理';
+
+  @override
+  String get settingsReadingSectionTitle => '閱讀';
+
+  @override
+  String get settingsReadingDefaultsLabel => '閱讀預設值';
+
+  @override
+  String get settingsNavZoneLabel => '導航熱區';
+
+  @override
+  String get settingsTtsDefaultsLabel => '朗讀語音與語速';
+
+  @override
+  String get settingsFullTextSearchUnavailableLabel => '全文檢索';
+
+  @override
+  String get settingsFullTextSearchUnavailableSubtitle => '本裝置不支援全文檢索';
+
+  @override
+  String get settingsFullTextSearchPdfLabel => 'PDF 全文檢索';
+
+  @override
+  String get settingsFullTextSearchPdfSubtitle => '部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容';
+
+  @override
+  String get settingsFullTextSearchRebuildIndexTooltip => '重建索引';
+
+  @override
+  String get settingsFullTextSearchFoliateLabel => '其他格式全文檢索';
+
+  @override
+  String get settingsFullTextSearchFoliateSubtitle => 'EPUB／TXT／KF8 等格式的背景索引建置';
+
+  @override
+  String get settingsSyncAccountSectionTitle => '同步與帳號';
+
+  @override
+  String get settingsSyncLabel => '同步';
+
+  @override
+  String get settingsCloudAccountLabel => '已連結的雲端匯入帳戶';
+
+  @override
+  String get settingsAboutSectionTitle => '關於';
+
+  @override
+  String get settingsAboutLabel => '關於';
+
+  @override
+  String get settingsReaderConsoleLogLabel => '閱讀器 Console Log';
+
+  @override
+  String get settingsConsoleLogInterceptLabel => 'Console Log 攔截';
+
+  @override
+  String get settingsConsoleLogInterceptSubtitle => '關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄';
 }

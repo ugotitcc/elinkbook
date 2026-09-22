@@ -1576,5 +1576,150 @@
   "readerTtsSleepTimerNoLimitLabel": "不限時",
   "@readerTtsSleepTimerNoLimitLabel": {
     "description": "TTS 睡眠定時器選單「不限時」選項文字"
+  },
+  "settingsScaffoldTitle": "設定",
+  "@settingsScaffoldTitle": {
+    "description": "設定畫面 AppBar 標題"
+  },
+  "settingsLibraryTooltip": "書架",
+  "@settingsLibraryTooltip": {
+    "description": "設定畫面 AppBar 右上角「書架」導覽按鈕的無障礙提示文字"
+  },
+  "settingsSourceTooltip": "來源",
+  "@settingsSourceTooltip": {
+    "description": "設定畫面 AppBar 右上角「來源」導覽按鈕的無障礙提示文字"
+  },
+  "settingsAppearanceSectionTitle": "外觀",
+  "@settingsAppearanceSectionTitle": {
+    "description": "設定畫面「外觀」分區標題"
+  },
+  "settingsThemeLabel": "佈景",
+  "@settingsThemeLabel": {
+    "description": "設定畫面「佈景」項目標題（主題色點選取器入口）"
+  },
+  "settingsThemeLockedHint": "這裡選的是關閉 E-Ink 後要恢復的主題",
+  "@settingsThemeLockedHint": {
+    "description": "E-Ink 模式開啟時，「佈景」項目下方顯示的提示文字，說明目前選的是解除 E-Ink 後要恢復的主題"
+  },
+  "settingsThemeDotSemanticsLabel": "{themeName}佈景",
+  "@settingsThemeDotSemanticsLabel": {
+    "description": "主題色點的無障礙 Semantics 標籤（一般狀態），{themeName} 為 settingsThemeLight/Dark/Sepia 的已轉譯結果",
+    "placeholders": {
+      "themeName": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsThemeDotLockedSemanticsLabel": "{themeName}佈景，已鎖定，這裡選的是關閉 E-Ink 後要恢復的主題，目前選擇：{currentThemeName}",
+  "@settingsThemeDotLockedSemanticsLabel": {
+    "description": "主題色點的無障礙 Semantics 標籤（E-Ink 鎖定狀態），{themeName} 為該色點對應主題名稱，{currentThemeName} 為目前實際選擇（鎖定後要恢復）的主題名稱",
+    "placeholders": {
+      "themeName": {
+        "type": "String"
+      },
+      "currentThemeName": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsThemeLight": "淺色",
+  "@settingsThemeLight": {
+    "description": "淺色主題的顯示名稱"
+  },
+  "settingsThemeDark": "深色",
+  "@settingsThemeDark": {
+    "description": "深色主題的顯示名稱"
+  },
+  "settingsThemeSepia": "羊皮紙",
+  "@settingsThemeSepia": {
+    "description": "羊皮紙主題的顯示名稱"
+  },
+  "settingsEinkModeLabel": "E-Ink 高對比模式",
+  "@settingsEinkModeLabel": {
+    "description": "設定畫面「E-Ink 高對比模式」開關標題"
+  },
+  "settingsEinkModeSubtitle": "停用動畫與漸層，以純黑白高對比顯示，專為電子紙螢幕最佳化",
+  "@settingsEinkModeSubtitle": {
+    "description": "設定畫面「E-Ink 高對比模式」開關的說明文字"
+  },
+  "settingsFontManagementLabel": "字型管理",
+  "@settingsFontManagementLabel": {
+    "description": "設定畫面「字型管理」項目標題，同時是 FontManagementScreen 的 AppBar 標題"
+  },
+  "settingsReadingSectionTitle": "閱讀",
+  "@settingsReadingSectionTitle": {
+    "description": "設定畫面「閱讀」分區標題"
+  },
+  "settingsReadingDefaultsLabel": "閱讀預設值",
+  "@settingsReadingDefaultsLabel": {
+    "description": "設定畫面「閱讀預設值」項目標題，同時是 ReadingDefaultsScreen 的 AppBar 標題"
+  },
+  "settingsNavZoneLabel": "導航熱區",
+  "@settingsNavZoneLabel": {
+    "description": "設定畫面「導航熱區」項目標題，同時是 NavZoneSettingsScreen 的 AppBar 標題"
+  },
+  "settingsTtsDefaultsLabel": "朗讀語音與語速",
+  "@settingsTtsDefaultsLabel": {
+    "description": "設定畫面「朗讀語音與語速」項目標題，同時是 TtsDefaultsScreen 的 AppBar 標題"
+  },
+  "settingsFullTextSearchUnavailableLabel": "全文檢索",
+  "@settingsFullTextSearchUnavailableLabel": {
+    "description": "裝置不支援全文檢索時顯示的卡片標題"
+  },
+  "settingsFullTextSearchUnavailableSubtitle": "本裝置不支援全文檢索",
+  "@settingsFullTextSearchUnavailableSubtitle": {
+    "description": "裝置不支援全文檢索時顯示的卡片說明文字"
+  },
+  "settingsFullTextSearchPdfLabel": "PDF 全文檢索",
+  "@settingsFullTextSearchPdfLabel": {
+    "description": "PDF 全文檢索開關卡片標題"
+  },
+  "settingsFullTextSearchPdfSubtitle": "部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容",
+  "@settingsFullTextSearchPdfSubtitle": {
+    "description": "PDF 全文檢索開關卡片說明文字"
+  },
+  "settingsFullTextSearchRebuildIndexTooltip": "重建索引",
+  "@settingsFullTextSearchRebuildIndexTooltip": {
+    "description": "PDF／其他格式全文檢索卡片「重建索引」按鈕的無障礙提示文字（兩處共用同一 key）"
+  },
+  "settingsFullTextSearchFoliateLabel": "其他格式全文檢索",
+  "@settingsFullTextSearchFoliateLabel": {
+    "description": "EPUB／TXT／KF8 等格式全文檢索開關卡片標題"
+  },
+  "settingsFullTextSearchFoliateSubtitle": "EPUB／TXT／KF8 等格式的背景索引建置",
+  "@settingsFullTextSearchFoliateSubtitle": {
+    "description": "EPUB／TXT／KF8 等格式全文檢索開關卡片說明文字"
+  },
+  "settingsSyncAccountSectionTitle": "同步與帳號",
+  "@settingsSyncAccountSectionTitle": {
+    "description": "設定畫面「同步與帳號」分區標題"
+  },
+  "settingsSyncLabel": "同步",
+  "@settingsSyncLabel": {
+    "description": "設定畫面「同步」項目標題"
+  },
+  "settingsCloudAccountLabel": "已連結的雲端匯入帳戶",
+  "@settingsCloudAccountLabel": {
+    "description": "設定畫面「已連結的雲端匯入帳戶」項目標題，同時是 CloudAccountSettingsScreen 的 AppBar 標題"
+  },
+  "settingsAboutSectionTitle": "關於",
+  "@settingsAboutSectionTitle": {
+    "description": "設定畫面「關於」分區標題"
+  },
+  "settingsAboutLabel": "關於",
+  "@settingsAboutLabel": {
+    "description": "設定畫面「關於」項目標題（與分區標題文字相同，共用一個 key）"
+  },
+  "settingsReaderConsoleLogLabel": "閱讀器 Console Log",
+  "@settingsReaderConsoleLogLabel": {
+    "description": "設定畫面「閱讀器 Console Log」項目標題，同時是 ReaderConsoleLogScreen 的 AppBar 標題"
+  },
+  "settingsConsoleLogInterceptLabel": "Console Log 攔截",
+  "@settingsConsoleLogInterceptLabel": {
+    "description": "設定畫面「Console Log 攔截」開關標題"
+  },
+  "settingsConsoleLogInterceptSubtitle": "關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄",
+  "@settingsConsoleLogInterceptSubtitle": {
+    "description": "設定畫面「Console Log 攔截」開關的說明文字"
   }
 }

@@ -184,32 +184,32 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('設定'),
+        title: Text(l10n.settingsScaffoldTitle),
         actions: [
           IconButton(
             key: const Key('settings_library_button'),
             icon: const Icon(Icons.grid_view),
-            tooltip: '書架',
+            tooltip: l10n.settingsLibraryTooltip,
             onPressed: widget.onNavigateToLibrary,
           ),
           IconButton(
             key: const Key('settings_source_button'),
             icon: const Icon(Icons.cloud_download),
-            tooltip: '來源',
+            tooltip: l10n.settingsSourceTooltip,
             onPressed: widget.onNavigateToSource,
           ),
         ],
       ),
       body: ListView(
         children: [
-          const EBSectionHeader(title: '外觀'),
+          EBSectionHeader(title: l10n.settingsAppearanceSectionTitle),
           _SettingsCard(
             child: ListTile(
-              title: const Text('佈景'),
+              title: Text(l10n.settingsThemeLabel),
               subtitle: widget.isEinkMode
-                  ? const Text(
-                      '這裡選的是關閉 E-Ink 後要恢復的主題',
-                      key: Key('settings_theme_locked_hint'),
+                  ? Text(
+                      l10n.settingsThemeLockedHint,
+                      key: const Key('settings_theme_locked_hint'),
                     )
                   : null,
               trailing: Row(
@@ -246,8 +246,8 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
           _SettingsCard(
             child: SwitchListTile(
               key: const Key('settings_eink_mode_switch'),
-              title: const Text('E-Ink 高對比模式'),
-              subtitle: const Text('停用動畫與漸層，以純黑白高對比顯示，專為電子紙螢幕最佳化'),
+              title: Text(l10n.settingsEinkModeLabel),
+              subtitle: Text(l10n.settingsEinkModeSubtitle),
               value: widget.isEinkMode,
               onChanged: widget.onEinkModeChanged,
             ),
@@ -255,7 +255,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
           _SettingsCard(
             child: ListTile(
               key: const Key('settings_font_management_button'),
-              title: const Text('字型管理'),
+              title: Text(l10n.settingsFontManagementLabel),
               trailing: const Icon(Icons.chevron_right),
               onTap: widget.customFontsRepository == null
                   ? null
@@ -270,11 +270,11 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                     },
             ),
           ),
-          const EBSectionHeader(title: '閱讀'),
+          EBSectionHeader(title: l10n.settingsReadingSectionTitle),
           _SettingsCard(
             child: ListTile(
               key: const Key('settings_reading_defaults_button'),
-              title: const Text('閱讀預設值'),
+              title: Text(l10n.settingsReadingDefaultsLabel),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push(
@@ -290,7 +290,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
           _SettingsCard(
             child: ListTile(
               key: const Key('settings_nav_zone_button'),
-              title: const Text('導航熱區'),
+              title: Text(l10n.settingsNavZoneLabel),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push(
@@ -306,7 +306,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
           _SettingsCard(
             child: ListTile(
               key: const Key('settings_tts_defaults_button'),
-              title: const Text('朗讀語音與語速'),
+              title: Text(l10n.settingsTtsDefaultsLabel),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push(
@@ -326,15 +326,15 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
               child: ListTile(
                 key: const Key('settings_full_text_search_unavailable_hint'),
                 leading: const Icon(Icons.info_outline),
-                title: const Text('全文檢索'),
-                subtitle: const Text('本裝置不支援全文檢索'),
+                title: Text(l10n.settingsFullTextSearchUnavailableLabel),
+                subtitle: Text(l10n.settingsFullTextSearchUnavailableSubtitle),
               ),
             )
           else ...[
             _SettingsCard(
               child: ListTile(
-                title: const Text('PDF 全文檢索'),
-                subtitle: const Text('部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容'),
+                title: Text(l10n.settingsFullTextSearchPdfLabel),
+                subtitle: Text(l10n.settingsFullTextSearchPdfSubtitle),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -342,7 +342,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                       key: const Key(
                           'settings_full_text_search_pdf_rebuild_button'),
                       icon: const Icon(Icons.refresh),
-                      tooltip: '重建索引',
+                      tooltip: l10n.settingsFullTextSearchRebuildIndexTooltip,
                       onPressed: !_fullTextSearchTogglesController
                                   .pdfEnabled ||
                               widget.fullTextSearchSettingsRepository == null
@@ -365,8 +365,8 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
             ),
             _SettingsCard(
               child: ListTile(
-                title: const Text('其他格式全文檢索'),
-                subtitle: const Text('EPUB／TXT／KF8 等格式的背景索引建置'),
+                title: Text(l10n.settingsFullTextSearchFoliateLabel),
+                subtitle: Text(l10n.settingsFullTextSearchFoliateSubtitle),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -374,7 +374,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                       key: const Key(
                           'settings_full_text_search_foliate_rebuild_button'),
                       icon: const Icon(Icons.refresh),
-                      tooltip: '重建索引',
+                      tooltip: l10n.settingsFullTextSearchRebuildIndexTooltip,
                       onPressed: !_fullTextSearchTogglesController
                                   .foliateEnabled ||
                               widget.fullTextSearchSettingsRepository == null
@@ -397,11 +397,11 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
               ),
             ),
           ],
-          const EBSectionHeader(title: '同步與帳號'),
+          EBSectionHeader(title: l10n.settingsSyncAccountSectionTitle),
           _SettingsCard(
             child: ListTile(
               key: const Key('settings_sync_button'),
-              title: const Text('同步'),
+              title: Text(l10n.settingsSyncLabel),
               trailing: const Icon(Icons.chevron_right),
               onTap:
                   widget.syncAccountRepository == null ||
@@ -426,7 +426,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
           _SettingsCard(
             child: ListTile(
               key: const Key('settings_cloud_account_button'),
-              title: const Text('已連結的雲端匯入帳戶'),
+              title: Text(l10n.settingsCloudAccountLabel),
               trailing: const Icon(Icons.chevron_right),
               onTap:
                   widget.cloudAccountRepository == null ||
@@ -448,11 +448,11 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                     },
             ),
           ),
-          const EBSectionHeader(title: '關於'),
+          EBSectionHeader(title: l10n.settingsAboutSectionTitle),
           _SettingsCard(
             child: ListTile(
               key: const Key('settings_about_button'),
-              title: const Text('關於'),
+              title: Text(l10n.settingsAboutLabel),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push(
@@ -464,7 +464,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
           _SettingsCard(
             child: ListTile(
               key: const Key('settings_reader_console_log_button'),
-              title: const Text('閱讀器 Console Log'),
+              title: Text(l10n.settingsReaderConsoleLogLabel),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push(
@@ -478,8 +478,8 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
           _SettingsCard(
             child: SwitchListTile(
               key: const Key('settings_console_log_switch'),
-              title: const Text('Console Log 攔截'),
-              subtitle: const Text('關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄'),
+              title: Text(l10n.settingsConsoleLogInterceptLabel),
+              subtitle: Text(l10n.settingsConsoleLogInterceptSubtitle),
               value: _consoleLogEnabled,
               onChanged: (value) => _updateConsoleLogEnabled(value),
             ),
@@ -490,15 +490,18 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
   }
 
   Widget _buildThemeDot(BuildContext context, AppTheme theme, String key) {
+    final l10n = AppLocalizations.of(context)!;
     final previewTheme = resolveThemeData(theme: theme, isEinkMode: false);
     final locked = widget.isEinkMode;
     final isCurrentTheme = widget.currentTheme == theme;
     final isSelected = isCurrentTheme && !locked;
     return Semantics(
       label: locked
-          ? '${_themeLabel(theme)}佈景，已鎖定，這裡選的是關閉 E-Ink 後要恢復的主題，'
-                '目前選擇：${_themeLabel(widget.currentTheme)}'
-          : '${_themeLabel(theme)}佈景',
+          ? l10n.settingsThemeDotLockedSemanticsLabel(
+              _themeLabel(theme, l10n),
+              _themeLabel(widget.currentTheme, l10n),
+            )
+          : l10n.settingsThemeDotSemanticsLabel(_themeLabel(theme, l10n)),
       button: !locked,
       child: GestureDetector(
         key: Key(key),
@@ -532,10 +535,10 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
     );
   }
 
-  String _themeLabel(AppTheme theme) => switch (theme) {
-    AppTheme.light => '淺色',
-    AppTheme.dark => '深色',
-    AppTheme.sepia => '羊皮紙',
+  String _themeLabel(AppTheme theme, AppLocalizations l10n) => switch (theme) {
+    AppTheme.light => l10n.settingsThemeLight,
+    AppTheme.dark => l10n.settingsThemeDark,
+    AppTheme.sepia => l10n.settingsThemeSepia,
   };
 
   Widget _buildLanguageSubtitle(BuildContext context, AppLocalizations l10n) {

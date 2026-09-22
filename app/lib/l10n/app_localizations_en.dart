@@ -1194,4 +1194,117 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get readerTtsSleepTimerNoLimitLabel => 'No limit';
+
+  @override
+  String get settingsScaffoldTitle => 'Settings';
+
+  @override
+  String get settingsLibraryTooltip => 'Library';
+
+  @override
+  String get settingsSourceTooltip => 'Sources';
+
+  @override
+  String get settingsAppearanceSectionTitle => 'Appearance';
+
+  @override
+  String get settingsThemeLabel => 'Theme';
+
+  @override
+  String get settingsThemeLockedHint =>
+      'This selects the theme to restore when E-Ink mode is turned off';
+
+  @override
+  String settingsThemeDotSemanticsLabel(String themeName) {
+    return '$themeName theme';
+  }
+
+  @override
+  String settingsThemeDotLockedSemanticsLabel(
+    String themeName,
+    String currentThemeName,
+  ) {
+    return '$themeName theme, locked. This selects the theme to restore when E-Ink mode is off. Currently selected: $currentThemeName';
+  }
+
+  @override
+  String get settingsThemeLight => 'Light';
+
+  @override
+  String get settingsThemeDark => 'Dark';
+
+  @override
+  String get settingsThemeSepia => 'Sepia';
+
+  @override
+  String get settingsEinkModeLabel => 'E-Ink high contrast mode';
+
+  @override
+  String get settingsEinkModeSubtitle =>
+      'Disables animations and gradients, showing pure black-and-white high contrast optimized for e-paper screens';
+
+  @override
+  String get settingsFontManagementLabel => 'Font Management';
+
+  @override
+  String get settingsReadingSectionTitle => 'Reading';
+
+  @override
+  String get settingsReadingDefaultsLabel => 'Reading Defaults';
+
+  @override
+  String get settingsNavZoneLabel => 'Navigation Zones';
+
+  @override
+  String get settingsTtsDefaultsLabel => 'Read-Aloud Voice & Speed';
+
+  @override
+  String get settingsFullTextSearchUnavailableLabel => 'Full-Text Search';
+
+  @override
+  String get settingsFullTextSearchUnavailableSubtitle =>
+      'Full-text search isn\'t supported on this device';
+
+  @override
+  String get settingsFullTextSearchPdfLabel => 'PDF Full-Text Search';
+
+  @override
+  String get settingsFullTextSearchPdfSubtitle =>
+      'Some scanned or image-based PDFs may not have searchable text';
+
+  @override
+  String get settingsFullTextSearchRebuildIndexTooltip => 'Rebuild index';
+
+  @override
+  String get settingsFullTextSearchFoliateLabel =>
+      'Other Formats Full-Text Search';
+
+  @override
+  String get settingsFullTextSearchFoliateSubtitle =>
+      'Background index building for EPUB／TXT／KF8 and similar formats';
+
+  @override
+  String get settingsSyncAccountSectionTitle => 'Sync & Accounts';
+
+  @override
+  String get settingsSyncLabel => 'Sync';
+
+  @override
+  String get settingsCloudAccountLabel => 'Linked Cloud Import Accounts';
+
+  @override
+  String get settingsAboutSectionTitle => 'About';
+
+  @override
+  String get settingsAboutLabel => 'About';
+
+  @override
+  String get settingsReaderConsoleLogLabel => 'Reader Console Log';
+
+  @override
+  String get settingsConsoleLogInterceptLabel => 'Console Log Interception';
+
+  @override
+  String get settingsConsoleLogInterceptSubtitle =>
+      'When off, only error messages are kept for diagnostic reports';
 }

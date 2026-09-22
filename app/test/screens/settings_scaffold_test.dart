@@ -1168,4 +1168,58 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  testWidgets('英文介面下設定畫面主要項目正確以英文渲染', (tester) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
+      locale: const Locale('en'),
+    );
+
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('Theme'), findsOneWidget);
+    expect(find.text('E-Ink high contrast mode'), findsOneWidget);
+    expect(find.text('Font Management'), findsOneWidget);
+    expect(find.text('Reading'), findsOneWidget);
+    expect(find.text('Reading Defaults'), findsOneWidget);
+    expect(find.text('Navigation Zones'), findsOneWidget);
+    expect(find.text('Read-Aloud Voice & Speed'), findsOneWidget);
+    expect(find.text('Sync & Accounts'), findsOneWidget);
+    expect(find.text('Sync'), findsOneWidget);
+    expect(find.text('Linked Cloud Import Accounts'), findsOneWidget);
+    expect(find.text('About'), findsNWidgets(2));
+    expect(find.text('Reader Console Log'), findsOneWidget);
+    expect(find.text('Console Log Interception'), findsOneWidget);
+  });
+
+  testWidgets('E-Ink 模式下佈景色點的無障礙標籤正確帶出鎖定提示文字（英文）',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        prefsManager: FakeReaderPrefsManager(),
+        isEinkMode: true,
+        currentTheme: AppTheme.dark,
+      ),
+      locale: const Locale('en'),
+    );
+
+    final semantics = tester.getSemantics(
+      find.byKey(const Key('settings_theme_dot_light')),
+    );
+    expect(semantics.label, contains('locked'));
+    expect(semantics.label, contains('Dark'));
+
+    handle.dispose();
+  });
 }
+

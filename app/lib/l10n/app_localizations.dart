@@ -2125,6 +2125,207 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'不限時'**
   String get readerTtsSleepTimerNoLimitLabel;
+
+  /// 設定畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'設定'**
+  String get settingsScaffoldTitle;
+
+  /// 設定畫面 AppBar 右上角「書架」導覽按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'書架'**
+  String get settingsLibraryTooltip;
+
+  /// 設定畫面 AppBar 右上角「來源」導覽按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'來源'**
+  String get settingsSourceTooltip;
+
+  /// 設定畫面「外觀」分區標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'外觀'**
+  String get settingsAppearanceSectionTitle;
+
+  /// 設定畫面「佈景」項目標題（主題色點選取器入口）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'佈景'**
+  String get settingsThemeLabel;
+
+  /// E-Ink 模式開啟時，「佈景」項目下方顯示的提示文字，說明目前選的是解除 E-Ink 後要恢復的主題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'這裡選的是關閉 E-Ink 後要恢復的主題'**
+  String get settingsThemeLockedHint;
+
+  /// 主題色點的無障礙 Semantics 標籤（一般狀態），{themeName} 為 settingsThemeLight/Dark/Sepia 的已轉譯結果
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{themeName}佈景'**
+  String settingsThemeDotSemanticsLabel(String themeName);
+
+  /// 主題色點的無障礙 Semantics 標籤（E-Ink 鎖定狀態），{themeName} 為該色點對應主題名稱，{currentThemeName} 為目前實際選擇（鎖定後要恢復）的主題名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{themeName}佈景，已鎖定，這裡選的是關閉 E-Ink 後要恢復的主題，目前選擇：{currentThemeName}'**
+  String settingsThemeDotLockedSemanticsLabel(
+    String themeName,
+    String currentThemeName,
+  );
+
+  /// 淺色主題的顯示名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'淺色'**
+  String get settingsThemeLight;
+
+  /// 深色主題的顯示名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'深色'**
+  String get settingsThemeDark;
+
+  /// 羊皮紙主題的顯示名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'羊皮紙'**
+  String get settingsThemeSepia;
+
+  /// 設定畫面「E-Ink 高對比模式」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'E-Ink 高對比模式'**
+  String get settingsEinkModeLabel;
+
+  /// 設定畫面「E-Ink 高對比模式」開關的說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'停用動畫與漸層，以純黑白高對比顯示，專為電子紙螢幕最佳化'**
+  String get settingsEinkModeSubtitle;
+
+  /// 設定畫面「字型管理」項目標題，同時是 FontManagementScreen 的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字型管理'**
+  String get settingsFontManagementLabel;
+
+  /// 設定畫面「閱讀」分區標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'閱讀'**
+  String get settingsReadingSectionTitle;
+
+  /// 設定畫面「閱讀預設值」項目標題，同時是 ReadingDefaultsScreen 的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'閱讀預設值'**
+  String get settingsReadingDefaultsLabel;
+
+  /// 設定畫面「導航熱區」項目標題，同時是 NavZoneSettingsScreen 的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'導航熱區'**
+  String get settingsNavZoneLabel;
+
+  /// 設定畫面「朗讀語音與語速」項目標題，同時是 TtsDefaultsScreen 的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'朗讀語音與語速'**
+  String get settingsTtsDefaultsLabel;
+
+  /// 裝置不支援全文檢索時顯示的卡片標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'全文檢索'**
+  String get settingsFullTextSearchUnavailableLabel;
+
+  /// 裝置不支援全文檢索時顯示的卡片說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'本裝置不支援全文檢索'**
+  String get settingsFullTextSearchUnavailableSubtitle;
+
+  /// PDF 全文檢索開關卡片標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'PDF 全文檢索'**
+  String get settingsFullTextSearchPdfLabel;
+
+  /// PDF 全文檢索開關卡片說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容'**
+  String get settingsFullTextSearchPdfSubtitle;
+
+  /// PDF／其他格式全文檢索卡片「重建索引」按鈕的無障礙提示文字（兩處共用同一 key）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重建索引'**
+  String get settingsFullTextSearchRebuildIndexTooltip;
+
+  /// EPUB／TXT／KF8 等格式全文檢索開關卡片標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'其他格式全文檢索'**
+  String get settingsFullTextSearchFoliateLabel;
+
+  /// EPUB／TXT／KF8 等格式全文檢索開關卡片說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'EPUB／TXT／KF8 等格式的背景索引建置'**
+  String get settingsFullTextSearchFoliateSubtitle;
+
+  /// 設定畫面「同步與帳號」分區標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'同步與帳號'**
+  String get settingsSyncAccountSectionTitle;
+
+  /// 設定畫面「同步」項目標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'同步'**
+  String get settingsSyncLabel;
+
+  /// 設定畫面「已連結的雲端匯入帳戶」項目標題，同時是 CloudAccountSettingsScreen 的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已連結的雲端匯入帳戶'**
+  String get settingsCloudAccountLabel;
+
+  /// 設定畫面「關於」分區標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'關於'**
+  String get settingsAboutSectionTitle;
+
+  /// 設定畫面「關於」項目標題（與分區標題文字相同，共用一個 key）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'關於'**
+  String get settingsAboutLabel;
+
+  /// 設定畫面「閱讀器 Console Log」項目標題，同時是 ReaderConsoleLogScreen 的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'閱讀器 Console Log'**
+  String get settingsReaderConsoleLogLabel;
+
+  /// 設定畫面「Console Log 攔截」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'Console Log 攔截'**
+  String get settingsConsoleLogInterceptLabel;
+
+  /// 設定畫面「Console Log 攔截」開關的說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄'**
+  String get settingsConsoleLogInterceptSubtitle;
 }
 
 class _AppLocalizationsDelegate
