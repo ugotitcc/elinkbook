@@ -11166,7 +11166,13 @@ void main() {
       expect(find.byType(BookSearchScreen), findsOneWidget);
 
       // 直接按系統返回鍵離開 BookSearchScreen，不點選任何片段
-      // （Navigator.pop() 不帶值，等同 pop(null)）。
+      // （Navigator.pop() 不帶值，等同 pop(null)）。改用 find.byType(BackButton)
+      // 而非 tester.pageBack()——後者內部靠比對 Material 預設 BackButton 的
+      // 英文 tooltip「Back」尋找，這個 MaterialApp 已補上 locale: zh_TW，
+      // AppBar 自動產生的 BackButton tooltip 因此變成中文「返回」，pageBack()
+      // 會找不到目標（epic-45-interface-i18n Issue 4 最終複審 Minor #4，比照
+      // library_screen_test.dart 同類問題的既有處置原則，此處按 Widget 型別
+      // 尋找不受 locale 影響）。
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
 
