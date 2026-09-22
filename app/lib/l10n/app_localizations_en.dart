@@ -1416,4 +1416,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ttsDefaultsSpeedSectionTitle => 'Speed';
+
+  @override
+  String get syncSettingsTitle => 'Sync';
+
+  @override
+  String get syncSettingsSyncFailedMessage =>
+      'Sync failed. Please check your network connection.';
+
+  @override
+  String get syncSettingsNeverSynced => 'Never synced';
+
+  @override
+  String syncSettingsLastSyncedAt(String formatted) {
+    return 'Last synced: $formatted';
+  }
+
+  @override
+  String get syncSettingsConnectionFailedMessage =>
+      'Connection failed. Please check the server URL and your credentials.';
+
+  @override
+  String syncSettingsLoggedInAs(String email) {
+    return 'Signed in as: $email';
+  }
+
+  @override
+  String get syncSettingsManualSyncButton => 'Sync Now';
+
+  @override
+  String get syncSettingsLogoutButton => 'Sign Out';
+
+  @override
+  String get syncSettingsServerUrlLabel => 'Server URL';
+
+  @override
+  String get syncSettingsPasswordLabel => 'Password';
+
+  @override
+  String get syncSettingsShowPasswordTooltip => 'Show password';
+
+  @override
+  String get syncSettingsHidePasswordTooltip => 'Hide password';
+
+  @override
+  String get syncSettingsConnectButton => 'Connect / Sign In';
 }

@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/sync_settings_screen.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_client.dart';
@@ -49,6 +50,9 @@ void main() {
     }));
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: SyncSettingsScreen(
         accountRepository: accountRepository,
         syncClient: client,
@@ -76,6 +80,9 @@ void main() {
     }));
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: SyncSettingsScreen(
         accountRepository: accountRepository,
         syncClient: client,
@@ -110,6 +117,9 @@ void main() {
     }));
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: SyncSettingsScreen(
         accountRepository: accountRepository,
         syncClient: client,
@@ -139,6 +149,9 @@ void main() {
     }));
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: SyncSettingsScreen(
         accountRepository: accountRepository,
         syncClient: client,
@@ -178,6 +191,9 @@ void main() {
     }));
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: SyncSettingsScreen(
         accountRepository: accountRepository,
         syncClient: client,
@@ -214,6 +230,9 @@ void main() {
     }));
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: SyncSettingsScreen(
         accountRepository: accountRepository,
         syncClient: client,
@@ -248,6 +267,9 @@ void main() {
     testWidgets('已登入且尚未同步過時，顯示「立即同步」按鈕與「尚未同步過」',
         (tester) async {
       await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SyncSettingsScreen(
           accountRepository: accountRepository,
           syncClient: neverCalledClient(),
@@ -266,6 +288,9 @@ void main() {
       final syncedAt = DateTime(2026, 9, 8, 14, 32);
 
       await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SyncSettingsScreen(
           accountRepository: accountRepository,
           syncClient: neverCalledClient(),
@@ -275,7 +300,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('2026-09-08 14:32'), findsOneWidget);
+      expect(find.textContaining('2026/9/8 14:32'), findsOneWidget);
     });
 
     testWidgets('點擊「立即同步」按鈕，成功後重新載入並顯示更新後的最後同步時間',
@@ -284,6 +309,9 @@ void main() {
       final syncedAt = DateTime(2026, 9, 8, 15, 0);
 
       await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SyncSettingsScreen(
           accountRepository: accountRepository,
           syncClient: neverCalledClient(),
@@ -302,12 +330,15 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(callCount, 1);
-      expect(find.textContaining('2026-09-08 15:00'), findsOneWidget);
+      expect(find.textContaining('2026/9/8 15:00'), findsOneWidget);
     });
 
     testWidgets('點擊「立即同步」按鈕，失敗時顯示 SnackBar「同步失敗，請確認網路連線」，且不更新最後同步時間顯示',
         (tester) async {
       await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SyncSettingsScreen(
           accountRepository: accountRepository,
           syncClient: neverCalledClient(),
@@ -323,6 +354,37 @@ void main() {
       expect(find.text('同步失敗，請確認網路連線'), findsOneWidget);
       expect(find.text('尚未同步過'), findsOneWidget,
           reason: '失敗時不應更新最後同步時間顯示。');
+    });
+
+    testWidgets('英文介面下已登入畫面文字正確以英文渲染，最後同步時間為英文日期格式',
+        (tester) async {
+      await accountRepository.saveCredentials(
+        authToken: 'token-abc',
+        userId: 'user-123',
+        email: 'user@example.com',
+      );
+      final client = buildClient(MockClient((request) async {
+        throw StateError('本測試不應該真的發出網路請求');
+      }));
+
+      await tester.pumpWidget(MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SyncSettingsScreen(
+          accountRepository: accountRepository,
+          syncClient: client,
+          onManualSync: throwingManualSync(),
+          loadLastSyncedAt: () async =>
+              DateTime(2026, 3, 15, 14, 30).millisecondsSinceEpoch,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Signed in as: user@example.com'), findsOneWidget);
+      expect(find.textContaining('Last synced: 3/15/2026'), findsOneWidget);
+      expect(find.text('Sync Now'), findsOneWidget);
+      expect(find.text('Sign Out'), findsOneWidget);
     });
   });
 }

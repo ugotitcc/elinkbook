@@ -1857,5 +1857,67 @@
   "ttsDefaultsSpeedSectionTitle": "語速",
   "@ttsDefaultsSpeedSectionTitle": {
     "description": "「語速」調整區塊標題"
+  },
+  "syncSettingsTitle": "同步",
+  "@syncSettingsTitle": {
+    "description": "同步設定畫面 AppBar 標題"
+  },
+  "syncSettingsSyncFailedMessage": "同步失敗，請確認網路連線",
+  "@syncSettingsSyncFailedMessage": {
+    "description": "手動觸發「立即同步」失敗時的 SnackBar 訊息"
+  },
+  "syncSettingsNeverSynced": "尚未同步過",
+  "@syncSettingsNeverSynced": {
+    "description": "尚未有任何一次成功同步紀錄時顯示的文字"
+  },
+  "syncSettingsLastSyncedAt": "最後同步：{formatted}",
+  "@syncSettingsLastSyncedAt": {
+    "description": "最後同步時間顯示，{formatted} 為已依目前介面語言格式化的日期時間字串（DateFormat.yMd(locale).add_Hm() 的結果）",
+    "placeholders": {
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "syncSettingsConnectionFailedMessage": "連線失敗，請確認伺服器網址與帳號密碼是否正確",
+  "@syncSettingsConnectionFailedMessage": {
+    "description": "登入/連線測試失敗時顯示的錯誤文字"
+  },
+  "syncSettingsLoggedInAs": "已登入：{email}",
+  "@syncSettingsLoggedInAs": {
+    "description": "已登入狀態顯示目前登入帳號的 email，{email} 為使用者資料不翻譯",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "syncSettingsManualSyncButton": "立即同步",
+  "@syncSettingsManualSyncButton": {
+    "description": "「立即同步」按鈕文字"
+  },
+  "syncSettingsLogoutButton": "登出",
+  "@syncSettingsLogoutButton": {
+    "description": "「登出」按鈕文字"
+  },
+  "syncSettingsServerUrlLabel": "伺服器網址",
+  "@syncSettingsServerUrlLabel": {
+    "description": "伺服器網址輸入欄位標籤"
+  },
+  "syncSettingsPasswordLabel": "密碼",
+  "@syncSettingsPasswordLabel": {
+    "description": "密碼輸入欄位標籤"
+  },
+  "syncSettingsShowPasswordTooltip": "顯示密碼",
+  "@syncSettingsShowPasswordTooltip": {
+    "description": "密碼欄位「顯示密碼」眼睛圖示按鈕提示文字（目前為隱藏狀態）"
+  },
+  "syncSettingsHidePasswordTooltip": "隱藏密碼",
+  "@syncSettingsHidePasswordTooltip": {
+    "description": "密碼欄位「隱藏密碼」眼睛圖示按鈕提示文字（目前為顯示狀態）"
+  },
+  "syncSettingsConnectButton": "連線／登入",
+  "@syncSettingsConnectButton": {
+    "description": "未登入表單「連線／登入」按鈕文字"
   }
 }

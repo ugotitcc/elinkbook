@@ -2530,6 +2530,84 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'語速'**
   String get ttsDefaultsSpeedSectionTitle;
+
+  /// 同步設定畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'同步'**
+  String get syncSettingsTitle;
+
+  /// 手動觸發「立即同步」失敗時的 SnackBar 訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'同步失敗，請確認網路連線'**
+  String get syncSettingsSyncFailedMessage;
+
+  /// 尚未有任何一次成功同步紀錄時顯示的文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未同步過'**
+  String get syncSettingsNeverSynced;
+
+  /// 最後同步時間顯示，{formatted} 為已依目前介面語言格式化的日期時間字串（DateFormat.yMd(locale).add_Hm() 的結果）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'最後同步：{formatted}'**
+  String syncSettingsLastSyncedAt(String formatted);
+
+  /// 登入/連線測試失敗時顯示的錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'連線失敗，請確認伺服器網址與帳號密碼是否正確'**
+  String get syncSettingsConnectionFailedMessage;
+
+  /// 已登入狀態顯示目前登入帳號的 email，{email} 為使用者資料不翻譯
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已登入：{email}'**
+  String syncSettingsLoggedInAs(String email);
+
+  /// 「立即同步」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'立即同步'**
+  String get syncSettingsManualSyncButton;
+
+  /// 「登出」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'登出'**
+  String get syncSettingsLogoutButton;
+
+  /// 伺服器網址輸入欄位標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'伺服器網址'**
+  String get syncSettingsServerUrlLabel;
+
+  /// 密碼輸入欄位標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'密碼'**
+  String get syncSettingsPasswordLabel;
+
+  /// 密碼欄位「顯示密碼」眼睛圖示按鈕提示文字（目前為隱藏狀態）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示密碼'**
+  String get syncSettingsShowPasswordTooltip;
+
+  /// 密碼欄位「隱藏密碼」眼睛圖示按鈕提示文字（目前為顯示狀態）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'隱藏密碼'**
+  String get syncSettingsHidePasswordTooltip;
+
+  /// 未登入表單「連線／登入」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'連線／登入'**
+  String get syncSettingsConnectButton;
 }
 
 class _AppLocalizationsDelegate

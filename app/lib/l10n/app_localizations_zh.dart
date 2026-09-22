@@ -1371,6 +1371,49 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ttsDefaultsSpeedSectionTitle => '語速';
+
+  @override
+  String get syncSettingsTitle => '同步';
+
+  @override
+  String get syncSettingsSyncFailedMessage => '同步失敗，請確認網路連線';
+
+  @override
+  String get syncSettingsNeverSynced => '尚未同步過';
+
+  @override
+  String syncSettingsLastSyncedAt(String formatted) {
+    return '最後同步：$formatted';
+  }
+
+  @override
+  String get syncSettingsConnectionFailedMessage => '連線失敗，請確認伺服器網址與帳號密碼是否正確';
+
+  @override
+  String syncSettingsLoggedInAs(String email) {
+    return '已登入：$email';
+  }
+
+  @override
+  String get syncSettingsManualSyncButton => '立即同步';
+
+  @override
+  String get syncSettingsLogoutButton => '登出';
+
+  @override
+  String get syncSettingsServerUrlLabel => '伺服器網址';
+
+  @override
+  String get syncSettingsPasswordLabel => '密碼';
+
+  @override
+  String get syncSettingsShowPasswordTooltip => '顯示密碼';
+
+  @override
+  String get syncSettingsHidePasswordTooltip => '隱藏密碼';
+
+  @override
+  String get syncSettingsConnectButton => '連線／登入';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -2740,6 +2783,49 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get ttsDefaultsSpeedSectionTitle => '语速';
+
+  @override
+  String get syncSettingsTitle => '同步';
+
+  @override
+  String get syncSettingsSyncFailedMessage => '同步失败，请确认网络连线';
+
+  @override
+  String get syncSettingsNeverSynced => '尚未同步过';
+
+  @override
+  String syncSettingsLastSyncedAt(String formatted) {
+    return '最后同步：$formatted';
+  }
+
+  @override
+  String get syncSettingsConnectionFailedMessage => '连线失败，请确认服务器网址与账号密码是否正确';
+
+  @override
+  String syncSettingsLoggedInAs(String email) {
+    return '已登入：$email';
+  }
+
+  @override
+  String get syncSettingsManualSyncButton => '立即同步';
+
+  @override
+  String get syncSettingsLogoutButton => '登出';
+
+  @override
+  String get syncSettingsServerUrlLabel => '服务器网址';
+
+  @override
+  String get syncSettingsPasswordLabel => '密码';
+
+  @override
+  String get syncSettingsShowPasswordTooltip => '显示密码';
+
+  @override
+  String get syncSettingsHidePasswordTooltip => '隐藏密码';
+
+  @override
+  String get syncSettingsConnectButton => '连线／登入';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -4109,4 +4195,47 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get ttsDefaultsSpeedSectionTitle => '語速';
+
+  @override
+  String get syncSettingsTitle => '同步';
+
+  @override
+  String get syncSettingsSyncFailedMessage => '同步失敗，請確認網路連線';
+
+  @override
+  String get syncSettingsNeverSynced => '尚未同步過';
+
+  @override
+  String syncSettingsLastSyncedAt(String formatted) {
+    return '最後同步：$formatted';
+  }
+
+  @override
+  String get syncSettingsConnectionFailedMessage => '連線失敗，請確認伺服器網址與帳號密碼是否正確';
+
+  @override
+  String syncSettingsLoggedInAs(String email) {
+    return '已登入：$email';
+  }
+
+  @override
+  String get syncSettingsManualSyncButton => '立即同步';
+
+  @override
+  String get syncSettingsLogoutButton => '登出';
+
+  @override
+  String get syncSettingsServerUrlLabel => '伺服器網址';
+
+  @override
+  String get syncSettingsPasswordLabel => '密碼';
+
+  @override
+  String get syncSettingsShowPasswordTooltip => '顯示密碼';
+
+  @override
+  String get syncSettingsHidePasswordTooltip => '隱藏密碼';
+
+  @override
+  String get syncSettingsConnectButton => '連線／登入';
 }

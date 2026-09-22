@@ -403,5 +403,18 @@
   "ttsDefaultsTitle": "朗讀語音與語速",
   "ttsDefaultsVoiceSectionTitle": "語音",
   "ttsDefaultsVoiceUnavailableHint": "目前裝置未安裝或不支援語音選擇",
-  "ttsDefaultsSpeedSectionTitle": "語速"
+  "ttsDefaultsSpeedSectionTitle": "語速",
+  "syncSettingsTitle": "同步",
+  "syncSettingsSyncFailedMessage": "同步失敗，請確認網路連線",
+  "syncSettingsNeverSynced": "尚未同步過",
+  "syncSettingsLastSyncedAt": "最後同步：{formatted}",
+  "syncSettingsConnectionFailedMessage": "連線失敗，請確認伺服器網址與帳號密碼是否正確",
+  "syncSettingsLoggedInAs": "已登入：{email}",
+  "syncSettingsManualSyncButton": "立即同步",
+  "syncSettingsLogoutButton": "登出",
+  "syncSettingsServerUrlLabel": "伺服器網址",
+  "syncSettingsPasswordLabel": "密碼",
+  "syncSettingsShowPasswordTooltip": "顯示密碼",
+  "syncSettingsHidePasswordTooltip": "隱藏密碼",
+  "syncSettingsConnectButton": "連線／登入"
 }

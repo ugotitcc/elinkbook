@@ -403,5 +403,18 @@
   "ttsDefaultsTitle": "Read-Aloud Voice & Speed",
   "ttsDefaultsVoiceSectionTitle": "Voice",
   "ttsDefaultsVoiceUnavailableHint": "No voice is installed or supported on this device",
-  "ttsDefaultsSpeedSectionTitle": "Speed"
+  "ttsDefaultsSpeedSectionTitle": "Speed",
+  "syncSettingsTitle": "Sync",
+  "syncSettingsSyncFailedMessage": "Sync failed. Please check your network connection.",
+  "syncSettingsNeverSynced": "Never synced",
+  "syncSettingsLastSyncedAt": "Last synced: {formatted}",
+  "syncSettingsConnectionFailedMessage": "Connection failed. Please check the server URL and your credentials.",
+  "syncSettingsLoggedInAs": "Signed in as: {email}",
+  "syncSettingsManualSyncButton": "Sync Now",
+  "syncSettingsLogoutButton": "Sign Out",
+  "syncSettingsServerUrlLabel": "Server URL",
+  "syncSettingsPasswordLabel": "Password",
+  "syncSettingsShowPasswordTooltip": "Show password",
+  "syncSettingsHidePasswordTooltip": "Hide password",
+  "syncSettingsConnectButton": "Connect / Sign In"
 }

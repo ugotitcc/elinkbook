@@ -403,5 +403,18 @@
   "ttsDefaultsTitle": "朗读语音与语速",
   "ttsDefaultsVoiceSectionTitle": "语音",
   "ttsDefaultsVoiceUnavailableHint": "目前装置未安装或不支持语音选择",
-  "ttsDefaultsSpeedSectionTitle": "语速"
+  "ttsDefaultsSpeedSectionTitle": "语速",
+  "syncSettingsTitle": "同步",
+  "syncSettingsSyncFailedMessage": "同步失败，请确认网络连线",
+  "syncSettingsNeverSynced": "尚未同步过",
+  "syncSettingsLastSyncedAt": "最后同步：{formatted}",
+  "syncSettingsConnectionFailedMessage": "连线失败，请确认服务器网址与账号密码是否正确",
+  "syncSettingsLoggedInAs": "已登入：{email}",
+  "syncSettingsManualSyncButton": "立即同步",
+  "syncSettingsLogoutButton": "登出",
+  "syncSettingsServerUrlLabel": "服务器网址",
+  "syncSettingsPasswordLabel": "密码",
+  "syncSettingsShowPasswordTooltip": "显示密码",
+  "syncSettingsHidePasswordTooltip": "隐藏密码",
+  "syncSettingsConnectButton": "连线／登入"
 }
