@@ -1478,4 +1478,85 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cloudAccountSettingsLinkButton => 'Link';
+
+  @override
+  String get fontManagementTitle => 'Font Management';
+
+  @override
+  String get fontManagementUploadTooltip => 'Upload font';
+
+  @override
+  String get fontManagementBuiltInSectionLabel => 'Built-in Fonts';
+
+  @override
+  String get fontManagementCustomSectionLabel => 'Custom Fonts';
+
+  @override
+  String get fontManagementNoCustomFontsHint => 'No custom fonts uploaded yet';
+
+  @override
+  String get fontManagementRenameTooltip => 'Rename';
+
+  @override
+  String get fontManagementDeleteTooltip => 'Delete';
+
+  @override
+  String get fontManagementRenameDialogTitle => 'Rename';
+
+  @override
+  String fontManagementDeleteConfirmTitle(String fontName) {
+    return 'Delete \"$fontName\"?';
+  }
+
+  @override
+  String fontManagementDeleteConfirmMessage(int usageCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      usageCount,
+      locale: localeName,
+      other:
+          '$usageCount books currently use this font. They will fall back to the default font after deletion.',
+      one:
+          '1 book currently uses this font. It will fall back to the default font after deletion.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadBothMessage(int addedCount, int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: 'Added $addedCount fonts',
+      one: 'Added 1 font',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount already exist and were skipped',
+      one: '1 already exists and was skipped',
+    );
+    return '$_temp0, $_temp1';
+  }
+
+  @override
+  String fontManagementUploadAddedOnlyMessage(int addedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: 'Added $addedCount fonts',
+      one: 'Added 1 font',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadSkippedOnlyMessage(int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount fonts already exist and were skipped',
+      one: '1 font already exists and was skipped',
+    );
+    return '$_temp0';
+  }
 }

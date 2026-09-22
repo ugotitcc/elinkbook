@@ -421,5 +421,18 @@
   "cloudAccountSettingsLinkedEmail": "已链接：{email}",
   "cloudAccountSettingsUnlinkButton": "解除链接",
   "cloudAccountSettingsUnlinkedText": "未链接",
-  "cloudAccountSettingsLinkButton": "链接"
+  "cloudAccountSettingsLinkButton": "链接",
+  "fontManagementTitle": "字体管理",
+  "fontManagementUploadTooltip": "上传字体",
+  "fontManagementBuiltInSectionLabel": "内建字体",
+  "fontManagementCustomSectionLabel": "自定义字体",
+  "fontManagementNoCustomFontsHint": "尚未上传任何自定义字体",
+  "fontManagementRenameTooltip": "重新命名",
+  "fontManagementDeleteTooltip": "删除",
+  "fontManagementRenameDialogTitle": "重新命名",
+  "fontManagementDeleteConfirmTitle": "确定要删除「{fontName}」吗？",
+  "fontManagementDeleteConfirmMessage": "{usageCount, plural, =1{目前有 1 本书使用此字体，删除后将自动改用预设字体} other{目前有 {usageCount} 本书使用此字体，删除后将自动改用预设字体}}",
+  "fontManagementUploadBothMessage": "{addedCount, plural, =1{已新增 1 款字体} other{已新增 {addedCount} 款字体}}，{skippedCount, plural, =1{1 款已存在已跳过} other{{skippedCount} 款已存在已跳过}}",
+  "fontManagementUploadAddedOnlyMessage": "{addedCount, plural, =1{已新增 1 款字体} other{已新增 {addedCount} 款字体}}",
+  "fontManagementUploadSkippedOnlyMessage": "{skippedCount, plural, =1{1 款字体已存在，已跳过} other{{skippedCount} 款字体已存在，已跳过}}"
 }

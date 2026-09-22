@@ -2638,6 +2638,84 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'連結'**
   String get cloudAccountSettingsLinkButton;
+
+  /// 字型管理畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字型管理'**
+  String get fontManagementTitle;
+
+  /// AppBar「上傳字型」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上傳字型'**
+  String get fontManagementUploadTooltip;
+
+  /// 「內建字型」區塊標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'內建字型'**
+  String get fontManagementBuiltInSectionLabel;
+
+  /// 「自訂字型」區塊標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'自訂字型'**
+  String get fontManagementCustomSectionLabel;
+
+  /// 使用者尚未上傳任何自訂字型時的空狀態提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未上傳任何自訂字型'**
+  String get fontManagementNoCustomFontsHint;
+
+  /// 自訂字型項目「重新命名」按鈕的無障礙提示文字，同時是重新命名對話框標題（共用同一 key）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重新命名'**
+  String get fontManagementRenameTooltip;
+
+  /// 自訂字型項目「刪除」按鈕的無障礙提示文字，同時是刪除確認對話框確認按鈕文字（共用同一 key）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get fontManagementDeleteTooltip;
+
+  /// 重新命名對話框標題（與 fontManagementRenameTooltip 文字相同，但語意角色不同，各自獨立宣告以便未來調整不互相牽動）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重新命名'**
+  String get fontManagementRenameDialogTitle;
+
+  /// 刪除自訂字型確認對話框標題，{fontName} 為使用者自訂的字型顯示名稱（不翻譯）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定要刪除「{fontName}」嗎？'**
+  String fontManagementDeleteConfirmTitle(String fontName);
+
+  /// 刪除自訂字型時，若有書籍正在使用該字型顯示的警告文字，{usageCount} 為使用中的書籍數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{usageCount, plural, =1{目前有 1 本書使用此字型，刪除後將自動改用預設字型} other{目前有 {usageCount} 本書使用此字型，刪除後將自動改用預設字型}}'**
+  String fontManagementDeleteConfirmMessage(int usageCount);
+
+  /// 批次上傳字型結果訊息：同時有新增與跳過的情境，{addedCount}／{skippedCount} 各自獨立處理單複數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{addedCount, plural, =1{已新增 1 款字型} other{已新增 {addedCount} 款字型}}，{skippedCount, plural, =1{1 款已存在已跳過} other{{skippedCount} 款已存在已跳過}}'**
+  String fontManagementUploadBothMessage(int addedCount, int skippedCount);
+
+  /// 批次上傳字型結果訊息：全部成功新增、沒有跳過的情境
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{addedCount, plural, =1{已新增 1 款字型} other{已新增 {addedCount} 款字型}}'**
+  String fontManagementUploadAddedOnlyMessage(int addedCount);
+
+  /// 批次上傳字型結果訊息：全部跳過、沒有新增成功的情境
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{skippedCount, plural, =1{1 款字型已存在，已跳過} other{{skippedCount} 款字型已存在，已跳過}}'**
+  String fontManagementUploadSkippedOnlyMessage(int skippedCount);
 }
 
 class _AppLocalizationsDelegate

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
+import 'package:elinkbook/l10n/app_localizations_en.dart';
+import 'package:elinkbook/l10n/app_localizations_zh.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/screens/font_management_screen.dart';
 import '../support/fake_custom_fonts_repository.dart';
@@ -13,6 +16,9 @@ void main() {
 
   Future<void> pumpScreen(WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: FontManagementScreen(repository: repository),
     ));
     await tester.pumpAndSettle();
@@ -124,6 +130,22 @@ void main() {
     expect(find.text('保留字型'), findsOneWidget);
   });
 
+  testWidgets('英文介面下標題/區塊標籤/空狀態提示正確以英文渲染', (tester) async {
+    final repository = FakeCustomFontsRepository();
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: FontManagementScreen(repository: repository),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Font Management'), findsOneWidget);
+    expect(find.text('Built-in Fonts'), findsOneWidget);
+    expect(find.text('Custom Fonts'), findsOneWidget);
+    expect(find.text('No custom fonts uploaded yet'), findsOneWidget);
+  });
+
   test('resolveUploadOutcome：同一批次內重複 family name 只寫入第一筆，其餘計入已存在',
       () {
     final outcome = resolveUploadOutcome(
@@ -137,14 +159,35 @@ void main() {
   });
 
   test('resolveUploadOutcome：合併訊息文案（有新增有跳過／全部新增／全部跳過）', () {
+    final l10n = AppLocalizationsZhTw();
     expect(
-      buildUploadResultMessage(addedCount: 3, skippedCount: 2),
+      buildUploadResultMessage(l10n: l10n, addedCount: 3, skippedCount: 2),
       '已新增 3 款字型，2 款已存在已跳過',
     );
-    expect(buildUploadResultMessage(addedCount: 3, skippedCount: 0), '已新增 3 款字型');
+    expect(buildUploadResultMessage(l10n: l10n, addedCount: 3, skippedCount: 0), '已新增 3 款字型');
     expect(
-      buildUploadResultMessage(addedCount: 0, skippedCount: 2),
+      buildUploadResultMessage(l10n: l10n, addedCount: 0, skippedCount: 2),
       '2 款字型已存在，已跳過',
+    );
+  });
+
+  test('buildUploadResultMessage：英文版單複數各自獨立正確變化', () {
+    final l10n = AppLocalizationsEn();
+    expect(
+      buildUploadResultMessage(l10n: l10n, addedCount: 1, skippedCount: 2),
+      'Added 1 font, 2 already exist and were skipped',
+    );
+    expect(
+      buildUploadResultMessage(l10n: l10n, addedCount: 3, skippedCount: 1),
+      'Added 3 fonts, 1 already exists and was skipped',
+    );
+    expect(
+      buildUploadResultMessage(l10n: l10n, addedCount: 1, skippedCount: 0),
+      'Added 1 font',
+    );
+    expect(
+      buildUploadResultMessage(l10n: l10n, addedCount: 0, skippedCount: 1),
+      '1 font already exists and was skipped',
     );
   });
 

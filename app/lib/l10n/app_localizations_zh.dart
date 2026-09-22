@@ -1431,6 +1431,85 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cloudAccountSettingsLinkButton => '連結';
+
+  @override
+  String get fontManagementTitle => '字型管理';
+
+  @override
+  String get fontManagementUploadTooltip => '上傳字型';
+
+  @override
+  String get fontManagementBuiltInSectionLabel => '內建字型';
+
+  @override
+  String get fontManagementCustomSectionLabel => '自訂字型';
+
+  @override
+  String get fontManagementNoCustomFontsHint => '尚未上傳任何自訂字型';
+
+  @override
+  String get fontManagementRenameTooltip => '重新命名';
+
+  @override
+  String get fontManagementDeleteTooltip => '刪除';
+
+  @override
+  String get fontManagementRenameDialogTitle => '重新命名';
+
+  @override
+  String fontManagementDeleteConfirmTitle(String fontName) {
+    return '確定要刪除「$fontName」嗎？';
+  }
+
+  @override
+  String fontManagementDeleteConfirmMessage(int usageCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      usageCount,
+      locale: localeName,
+      other: '目前有 $usageCount 本書使用此字型，刪除後將自動改用預設字型',
+      one: '目前有 1 本書使用此字型，刪除後將自動改用預設字型',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadBothMessage(int addedCount, int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: '已新增 $addedCount 款字型',
+      one: '已新增 1 款字型',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 款已存在已跳過',
+      one: '1 款已存在已跳過',
+    );
+    return '$_temp0，$_temp1';
+  }
+
+  @override
+  String fontManagementUploadAddedOnlyMessage(int addedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: '已新增 $addedCount 款字型',
+      one: '已新增 1 款字型',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadSkippedOnlyMessage(int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 款字型已存在，已跳過',
+      one: '1 款字型已存在，已跳過',
+    );
+    return '$_temp0';
+  }
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -2860,6 +2939,85 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get cloudAccountSettingsLinkButton => '链接';
+
+  @override
+  String get fontManagementTitle => '字体管理';
+
+  @override
+  String get fontManagementUploadTooltip => '上传字体';
+
+  @override
+  String get fontManagementBuiltInSectionLabel => '内建字体';
+
+  @override
+  String get fontManagementCustomSectionLabel => '自定义字体';
+
+  @override
+  String get fontManagementNoCustomFontsHint => '尚未上传任何自定义字体';
+
+  @override
+  String get fontManagementRenameTooltip => '重新命名';
+
+  @override
+  String get fontManagementDeleteTooltip => '删除';
+
+  @override
+  String get fontManagementRenameDialogTitle => '重新命名';
+
+  @override
+  String fontManagementDeleteConfirmTitle(String fontName) {
+    return '确定要删除「$fontName」吗？';
+  }
+
+  @override
+  String fontManagementDeleteConfirmMessage(int usageCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      usageCount,
+      locale: localeName,
+      other: '目前有 $usageCount 本书使用此字体，删除后将自动改用预设字体',
+      one: '目前有 1 本书使用此字体，删除后将自动改用预设字体',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadBothMessage(int addedCount, int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: '已新增 $addedCount 款字体',
+      one: '已新增 1 款字体',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 款已存在已跳过',
+      one: '1 款已存在已跳过',
+    );
+    return '$_temp0，$_temp1';
+  }
+
+  @override
+  String fontManagementUploadAddedOnlyMessage(int addedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: '已新增 $addedCount 款字体',
+      one: '已新增 1 款字体',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadSkippedOnlyMessage(int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 款字体已存在，已跳过',
+      one: '1 款字体已存在，已跳过',
+    );
+    return '$_temp0';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -4289,4 +4447,83 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get cloudAccountSettingsLinkButton => '連結';
+
+  @override
+  String get fontManagementTitle => '字型管理';
+
+  @override
+  String get fontManagementUploadTooltip => '上傳字型';
+
+  @override
+  String get fontManagementBuiltInSectionLabel => '內建字型';
+
+  @override
+  String get fontManagementCustomSectionLabel => '自訂字型';
+
+  @override
+  String get fontManagementNoCustomFontsHint => '尚未上傳任何自訂字型';
+
+  @override
+  String get fontManagementRenameTooltip => '重新命名';
+
+  @override
+  String get fontManagementDeleteTooltip => '刪除';
+
+  @override
+  String get fontManagementRenameDialogTitle => '重新命名';
+
+  @override
+  String fontManagementDeleteConfirmTitle(String fontName) {
+    return '確定要刪除「$fontName」嗎？';
+  }
+
+  @override
+  String fontManagementDeleteConfirmMessage(int usageCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      usageCount,
+      locale: localeName,
+      other: '目前有 $usageCount 本書使用此字型，刪除後將自動改用預設字型',
+      one: '目前有 1 本書使用此字型，刪除後將自動改用預設字型',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadBothMessage(int addedCount, int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: '已新增 $addedCount 款字型',
+      one: '已新增 1 款字型',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 款已存在已跳過',
+      one: '1 款已存在已跳過',
+    );
+    return '$_temp0，$_temp1';
+  }
+
+  @override
+  String fontManagementUploadAddedOnlyMessage(int addedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      addedCount,
+      locale: localeName,
+      other: '已新增 $addedCount 款字型',
+      one: '已新增 1 款字型',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fontManagementUploadSkippedOnlyMessage(int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 款字型已存在，已跳過',
+      one: '1 款字型已存在，已跳過',
+    );
+    return '$_temp0';
+  }
 }

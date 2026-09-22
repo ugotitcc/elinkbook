@@ -421,5 +421,18 @@
   "cloudAccountSettingsLinkedEmail": "Linked: {email}",
   "cloudAccountSettingsUnlinkButton": "Unlink",
   "cloudAccountSettingsUnlinkedText": "Not linked",
-  "cloudAccountSettingsLinkButton": "Link"
+  "cloudAccountSettingsLinkButton": "Link",
+  "fontManagementTitle": "Font Management",
+  "fontManagementUploadTooltip": "Upload font",
+  "fontManagementBuiltInSectionLabel": "Built-in Fonts",
+  "fontManagementCustomSectionLabel": "Custom Fonts",
+  "fontManagementNoCustomFontsHint": "No custom fonts uploaded yet",
+  "fontManagementRenameTooltip": "Rename",
+  "fontManagementDeleteTooltip": "Delete",
+  "fontManagementRenameDialogTitle": "Rename",
+  "fontManagementDeleteConfirmTitle": "Delete \"{fontName}\"?",
+  "fontManagementDeleteConfirmMessage": "{usageCount, plural, =1{1 book currently uses this font. It will fall back to the default font after deletion.} other{{usageCount} books currently use this font. They will fall back to the default font after deletion.}}",
+  "fontManagementUploadBothMessage": "{addedCount, plural, =1{Added 1 font} other{Added {addedCount} fonts}}, {skippedCount, plural, =1{1 already exists and was skipped} other{{skippedCount} already exist and were skipped}}",
+  "fontManagementUploadAddedOnlyMessage": "{addedCount, plural, =1{Added 1 font} other{Added {addedCount} fonts}}",
+  "fontManagementUploadSkippedOnlyMessage": "{skippedCount, plural, =1{1 font already exists and was skipped} other{{skippedCount} fonts already exist and were skipped}}"
 }

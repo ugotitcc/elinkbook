@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_localizations.dart';
 import '../library/library_repository.dart';
 import '../reader/app_font.dart';
 import '../reader/custom_font.dart';
@@ -71,9 +72,10 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('字型管理'),
+        title: Text(l10n.fontManagementTitle),
         actions: [
           IconButton(
             key: const Key('font_management_upload_button'),
@@ -84,27 +86,27 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.add),
-            tooltip: '上傳字型',
+            tooltip: l10n.fontManagementUploadTooltip,
             onPressed: _isUploading ? null : _pickAndUploadFonts,
           ),
         ],
       ),
       body: ListView(
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-            child: Text('內建字型', style: TextStyle(fontWeight: FontWeight.bold)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Text(l10n.fontManagementBuiltInSectionLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
           for (final font in AppFont.values)
             ListTile(title: Text(_builtInDisplayName(font))),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-            child: Text('自訂字型', style: TextStyle(fontWeight: FontWeight.bold)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Text(l10n.fontManagementCustomSectionLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
           if (_customFonts.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text('尚未上傳任何自訂字型'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(l10n.fontManagementNoCustomFontsHint),
             ),
           for (final font in _customFonts)
             ListTile(
@@ -115,13 +117,13 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
                   IconButton(
                     key: Key('font_management_rename_button_${font.id}'),
                     icon: const Icon(Icons.edit),
-                    tooltip: '重新命名',
+                    tooltip: l10n.fontManagementRenameTooltip,
                     onPressed: () => _renameFont(font),
                   ),
                   IconButton(
                     key: Key('font_management_delete_button_${font.id}'),
                     icon: const Icon(Icons.delete),
-                    tooltip: '刪除',
+                    tooltip: l10n.fontManagementDeleteTooltip,
                     onPressed: () => _deleteFont(font),
                   ),
                 ],
@@ -194,8 +196,10 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
 
       await _loadFonts();
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(buildUploadResultMessage(
+          l10n: l10n,
           addedCount: outcome.addedCount,
           skippedCount: outcome.skippedCount,
         )),
@@ -209,10 +213,11 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
     _renameController?.dispose();
     final controller = TextEditingController(text: font.displayName);
     _renameController = controller;
+    final l10n = AppLocalizations.of(context)!;
     final newName = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('重新命名'),
+        title: Text(l10n.fontManagementRenameDialogTitle),
         content: TextField(
           key: const Key('font_management_rename_field'),
           controller: controller,
@@ -221,13 +226,13 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             key: const Key('font_management_rename_confirm'),
             onPressed: () =>
                 Navigator.of(dialogContext).pop(controller.text.trim()),
-            child: const Text('確定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -240,23 +245,24 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
   Future<void> _deleteFont(CustomFont font) async {
     final usageCount = await widget.repository.countBooksUsing(font.familyName);
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('確定要刪除「${font.displayName}」嗎？'),
+        title: Text(l10n.fontManagementDeleteConfirmTitle(font.displayName)),
         content: usageCount > 0
-            ? Text('目前有 $usageCount 本書使用此字型，刪除後將自動改用預設字型')
+            ? Text(l10n.fontManagementDeleteConfirmMessage(usageCount))
             : null,
         actions: [
           TextButton(
             key: const Key('font_management_delete_cancel'),
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             key: const Key('font_management_delete_confirm'),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('刪除'),
+            child: Text(l10n.fontManagementDeleteTooltip),
           ),
         ],
       ),
@@ -308,16 +314,17 @@ UploadOutcome resolveUploadOutcome({
 }
 
 String buildUploadResultMessage({
+  required AppLocalizations l10n,
   required int addedCount,
   required int skippedCount,
 }) {
   if (addedCount > 0 && skippedCount > 0) {
-    return '已新增 $addedCount 款字型，$skippedCount 款已存在已跳過';
+    return l10n.fontManagementUploadBothMessage(addedCount, skippedCount);
   }
   if (addedCount > 0) {
-    return '已新增 $addedCount 款字型';
+    return l10n.fontManagementUploadAddedOnlyMessage(addedCount);
   }
-  return '$skippedCount 款字型已存在，已跳過';
+  return l10n.fontManagementUploadSkippedOnlyMessage(skippedCount);
 }
 
 /// 字型檔名去除副檔名，供 [parseFontFamilyName] 回傳 `null`（解析失敗）時
