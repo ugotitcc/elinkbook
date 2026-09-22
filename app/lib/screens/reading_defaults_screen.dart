@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../reader/global_reader_prefs.dart';
 import '../reader/page_turn_mode.dart';
 import '../reader/reader_prefs_manager.dart';
@@ -55,8 +56,9 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('閱讀預設值')),
+      appBar: AppBar(title: Text(l10n.readingDefaultsTitle)),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(
@@ -67,7 +69,7 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
               children: [
                 SwitchListTile(
                   key: const Key('reading_defaults_volume_key_switch'),
-                  title: const Text('音量鍵翻頁'),
+                  title: Text(l10n.readingDefaultsVolumeKeyLabel),
                   value: _prefs.reading.volumeKeyEnabled,
                   onChanged: (value) => _update(
                     _prefs.copyWith(
@@ -76,7 +78,7 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                   ),
                 ),
                 const Divider(height: 1),
-                _buildSectionHeader(context, '翻頁模式'),
+                _buildSectionHeader(context, l10n.readingDefaultsPageTurnModeSectionTitle),
                 RadioGroup<PageTurnMode>(
                   groupValue: _prefs.reading.pageTurnMode,
                   onChanged: (mode) => _update(
@@ -89,20 +91,20 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                       RadioListTile<PageTurnMode>(
                         key: const Key(
                             'reading_defaults_page_turn_mode_paginated'),
-                        title: const Text('點擊翻頁'),
+                        title: Text(l10n.readingDefaultsPaginatedLabel),
                         value: PageTurnMode.paginated,
                       ),
                       RadioListTile<PageTurnMode>(
                         key: const Key(
                             'reading_defaults_page_turn_mode_scroll'),
-                        title: const Text('滾動翻頁'),
+                        title: Text(l10n.readingDefaultsScrollLabel),
                         value: PageTurnMode.scroll,
                       ),
                     ],
                   ),
                 ),
                 const Divider(height: 1),
-                _buildSectionHeader(context, '螢幕方向'),
+                _buildSectionHeader(context, l10n.readingDefaultsScreenOrientationSectionTitle),
                 RadioGroup<ScreenOrientationSetting>(
                   groupValue: _prefs.reading.screenOrientation,
                   onChanged: (setting) => _update(
@@ -117,38 +119,38 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                       RadioListTile<ScreenOrientationSetting>(
                         key: const Key(
                             'reading_defaults_screen_orientation_auto'),
-                        title: const Text('自動旋轉'),
+                        title: Text(l10n.readingDefaultsOrientationAutoLabel),
                         value: ScreenOrientationSetting.auto,
                       ),
                       RadioListTile<ScreenOrientationSetting>(
                         key: const Key(
                             'reading_defaults_screen_orientation_lock0'),
-                        title: const Text('鎖定 0°'),
+                        title: Text(l10n.readingDefaultsOrientationLock0Label),
                         value: ScreenOrientationSetting.lock0,
                       ),
                       RadioListTile<ScreenOrientationSetting>(
                         key: const Key(
                             'reading_defaults_screen_orientation_lock90'),
-                        title: const Text('鎖定 90°'),
+                        title: Text(l10n.readingDefaultsOrientationLock90Label),
                         value: ScreenOrientationSetting.lock90,
                       ),
                       RadioListTile<ScreenOrientationSetting>(
                         key: const Key(
                             'reading_defaults_screen_orientation_lock180'),
-                        title: const Text('鎖定 180°'),
+                        title: Text(l10n.readingDefaultsOrientationLock180Label),
                         value: ScreenOrientationSetting.lock180,
                       ),
                       RadioListTile<ScreenOrientationSetting>(
                         key: const Key(
                             'reading_defaults_screen_orientation_lock270'),
-                        title: const Text('鎖定 270°'),
+                        title: Text(l10n.readingDefaultsOrientationLock270Label),
                         value: ScreenOrientationSetting.lock270,
                       ),
                     ],
                   ),
                 ),
                 const Divider(height: 1),
-                _buildSectionHeader(context, '簡繁轉換顯示'),
+                _buildSectionHeader(context, l10n.readingDefaultsTextConversionSectionTitle),
                 RadioGroup<TextConversionMode>(
                   groupValue: _prefs.reading.textConversion,
                   onChanged: (mode) => _update(
@@ -160,17 +162,17 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                     children: [
                       RadioListTile<TextConversionMode>(
                         key: const Key('reading_defaults_text_conversion_original'),
-                        title: const Text('原文'),
+                        title: Text(l10n.readingDefaultsTextConversionOriginalLabel),
                         value: TextConversionMode.original,
                       ),
                       RadioListTile<TextConversionMode>(
                         key: const Key('reading_defaults_text_conversion_traditional'),
-                        title: const Text('轉換為繁體'),
+                        title: Text(l10n.readingDefaultsTextConversionTraditionalLabel),
                         value: TextConversionMode.toTraditional,
                       ),
                       RadioListTile<TextConversionMode>(
                         key: const Key('reading_defaults_text_conversion_simplified'),
-                        title: const Text('轉換為簡體'),
+                        title: Text(l10n.readingDefaultsTextConversionSimplifiedLabel),
                         value: TextConversionMode.toSimplified,
                       ),
                     ],
@@ -179,7 +181,7 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                 const Divider(height: 1),
                 SwitchListTile(
                   key: const Key('reading_defaults_fullscreen_switch'),
-                  title: const Text('全螢幕模式'),
+                  title: Text(l10n.readingDefaultsFullscreenLabel),
                   value: _prefs.reading.fullscreen,
                   onChanged: (value) => _update(
                     _prefs.copyWith(
@@ -190,7 +192,7 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                 const Divider(height: 1),
                 SwitchListTile(
                   key: const Key('reading_defaults_open_last_book_switch'),
-                  title: const Text('啟動時開啟最後閱讀的那本書'),
+                  title: Text(l10n.readingDefaultsOpenLastBookLabel),
                   value: _prefs.reading.openLastBookOnLaunch,
                   onChanged: (value) => _update(
                     _prefs.copyWith(
@@ -203,7 +205,7 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                 const Divider(height: 1),
                 SwitchListTile(
                   key: const Key('reading_defaults_show_header_switch'),
-                  title: const Text('顯示頁首'),
+                  title: Text(l10n.readingDefaultsShowHeaderLabel),
                   value: _prefs.reading.showHeader,
                   onChanged: (value) => _update(
                     _prefs.copyWith(
@@ -216,7 +218,7 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                 const Divider(height: 1),
                 SwitchListTile(
                   key: const Key('reading_defaults_show_footer_switch'),
-                  title: const Text('顯示頁尾'),
+                  title: Text(l10n.readingDefaultsShowFooterLabel),
                   value: _prefs.reading.showFooter,
                   onChanged: (value) => _update(
                     _prefs.copyWith(

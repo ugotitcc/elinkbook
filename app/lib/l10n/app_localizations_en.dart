@@ -1341,4 +1341,66 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get navZoneCustomValidationError =>
       'At least 1 cell must be set to \"Menu\", otherwise there will be no way to exit immersive mode';
+
+  @override
+  String get readingDefaultsTitle => 'Reading Defaults';
+
+  @override
+  String get readingDefaultsVolumeKeyLabel => 'Volume key page turn';
+
+  @override
+  String get readingDefaultsPageTurnModeSectionTitle => 'Page Turn Method';
+
+  @override
+  String get readingDefaultsPaginatedLabel => 'Tap to turn';
+
+  @override
+  String get readingDefaultsScrollLabel => 'Scroll to turn';
+
+  @override
+  String get readingDefaultsScreenOrientationSectionTitle =>
+      'Screen Orientation';
+
+  @override
+  String get readingDefaultsOrientationAutoLabel => 'Auto-rotate';
+
+  @override
+  String get readingDefaultsOrientationLock0Label => 'Lock 0°';
+
+  @override
+  String get readingDefaultsOrientationLock90Label => 'Lock 90°';
+
+  @override
+  String get readingDefaultsOrientationLock180Label => 'Lock 180°';
+
+  @override
+  String get readingDefaultsOrientationLock270Label => 'Lock 270°';
+
+  @override
+  String get readingDefaultsTextConversionSectionTitle =>
+      'Text Conversion Display';
+
+  @override
+  String get readingDefaultsTextConversionOriginalLabel => 'Original';
+
+  @override
+  String get readingDefaultsTextConversionTraditionalLabel =>
+      'Convert to Traditional';
+
+  @override
+  String get readingDefaultsTextConversionSimplifiedLabel =>
+      'Convert to Simplified';
+
+  @override
+  String get readingDefaultsFullscreenLabel => 'Fullscreen mode';
+
+  @override
+  String get readingDefaultsOpenLastBookLabel =>
+      'Open the last read book on launch';
+
+  @override
+  String get readingDefaultsShowHeaderLabel => 'Show header';
+
+  @override
+  String get readingDefaultsShowFooterLabel => 'Show footer';
 }

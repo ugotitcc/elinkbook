@@ -1302,6 +1302,63 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get navZoneCustomValidationError => '至少需要 1 格設為「選單」，否則將無法退出沉浸模式';
+
+  @override
+  String get readingDefaultsTitle => '閱讀預設值';
+
+  @override
+  String get readingDefaultsVolumeKeyLabel => '音量鍵翻頁';
+
+  @override
+  String get readingDefaultsPageTurnModeSectionTitle => '翻頁模式';
+
+  @override
+  String get readingDefaultsPaginatedLabel => '點擊翻頁';
+
+  @override
+  String get readingDefaultsScrollLabel => '滾動翻頁';
+
+  @override
+  String get readingDefaultsScreenOrientationSectionTitle => '螢幕方向';
+
+  @override
+  String get readingDefaultsOrientationAutoLabel => '自動旋轉';
+
+  @override
+  String get readingDefaultsOrientationLock0Label => '鎖定 0°';
+
+  @override
+  String get readingDefaultsOrientationLock90Label => '鎖定 90°';
+
+  @override
+  String get readingDefaultsOrientationLock180Label => '鎖定 180°';
+
+  @override
+  String get readingDefaultsOrientationLock270Label => '鎖定 270°';
+
+  @override
+  String get readingDefaultsTextConversionSectionTitle => '簡繁轉換顯示';
+
+  @override
+  String get readingDefaultsTextConversionOriginalLabel => '原文';
+
+  @override
+  String get readingDefaultsTextConversionTraditionalLabel => '轉換為繁體';
+
+  @override
+  String get readingDefaultsTextConversionSimplifiedLabel => '轉換為簡體';
+
+  @override
+  String get readingDefaultsFullscreenLabel => '全螢幕模式';
+
+  @override
+  String get readingDefaultsOpenLastBookLabel => '啟動時開啟最後閱讀的那本書';
+
+  @override
+  String get readingDefaultsShowHeaderLabel => '顯示頁首';
+
+  @override
+  String get readingDefaultsShowFooterLabel => '顯示頁尾';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -2602,6 +2659,63 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get navZoneCustomValidationError => '至少需要 1 格设为「选单」，否则将无法退出沉浸模式';
+
+  @override
+  String get readingDefaultsTitle => '阅读预设值';
+
+  @override
+  String get readingDefaultsVolumeKeyLabel => '音量键翻页';
+
+  @override
+  String get readingDefaultsPageTurnModeSectionTitle => '翻页模式';
+
+  @override
+  String get readingDefaultsPaginatedLabel => '点击翻页';
+
+  @override
+  String get readingDefaultsScrollLabel => '滚动翻页';
+
+  @override
+  String get readingDefaultsScreenOrientationSectionTitle => '屏幕方向';
+
+  @override
+  String get readingDefaultsOrientationAutoLabel => '自动旋转';
+
+  @override
+  String get readingDefaultsOrientationLock0Label => '锁定 0°';
+
+  @override
+  String get readingDefaultsOrientationLock90Label => '锁定 90°';
+
+  @override
+  String get readingDefaultsOrientationLock180Label => '锁定 180°';
+
+  @override
+  String get readingDefaultsOrientationLock270Label => '锁定 270°';
+
+  @override
+  String get readingDefaultsTextConversionSectionTitle => '简繁转换显示';
+
+  @override
+  String get readingDefaultsTextConversionOriginalLabel => '原文';
+
+  @override
+  String get readingDefaultsTextConversionTraditionalLabel => '转换为繁体';
+
+  @override
+  String get readingDefaultsTextConversionSimplifiedLabel => '转换为简体';
+
+  @override
+  String get readingDefaultsFullscreenLabel => '全屏幕模式';
+
+  @override
+  String get readingDefaultsOpenLastBookLabel => '启动时打开最后阅读的那本书';
+
+  @override
+  String get readingDefaultsShowHeaderLabel => '显示页首';
+
+  @override
+  String get readingDefaultsShowFooterLabel => '显示页尾';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -3902,4 +4016,61 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get navZoneCustomValidationError => '至少需要 1 格設為「選單」，否則將無法退出沉浸模式';
+
+  @override
+  String get readingDefaultsTitle => '閱讀預設值';
+
+  @override
+  String get readingDefaultsVolumeKeyLabel => '音量鍵翻頁';
+
+  @override
+  String get readingDefaultsPageTurnModeSectionTitle => '翻頁模式';
+
+  @override
+  String get readingDefaultsPaginatedLabel => '點擊翻頁';
+
+  @override
+  String get readingDefaultsScrollLabel => '滾動翻頁';
+
+  @override
+  String get readingDefaultsScreenOrientationSectionTitle => '螢幕方向';
+
+  @override
+  String get readingDefaultsOrientationAutoLabel => '自動旋轉';
+
+  @override
+  String get readingDefaultsOrientationLock0Label => '鎖定 0°';
+
+  @override
+  String get readingDefaultsOrientationLock90Label => '鎖定 90°';
+
+  @override
+  String get readingDefaultsOrientationLock180Label => '鎖定 180°';
+
+  @override
+  String get readingDefaultsOrientationLock270Label => '鎖定 270°';
+
+  @override
+  String get readingDefaultsTextConversionSectionTitle => '簡繁轉換顯示';
+
+  @override
+  String get readingDefaultsTextConversionOriginalLabel => '原文';
+
+  @override
+  String get readingDefaultsTextConversionTraditionalLabel => '轉換為繁體';
+
+  @override
+  String get readingDefaultsTextConversionSimplifiedLabel => '轉換為簡體';
+
+  @override
+  String get readingDefaultsFullscreenLabel => '全螢幕模式';
+
+  @override
+  String get readingDefaultsOpenLastBookLabel => '啟動時開啟最後閱讀的那本書';
+
+  @override
+  String get readingDefaultsShowHeaderLabel => '顯示頁首';
+
+  @override
+  String get readingDefaultsShowFooterLabel => '顯示頁尾';
 }

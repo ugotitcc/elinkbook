@@ -2392,6 +2392,120 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'至少需要 1 格設為「選單」，否則將無法退出沉浸模式'**
   String get navZoneCustomValidationError;
+
+  /// 閱讀預設值畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'閱讀預設值'**
+  String get readingDefaultsTitle;
+
+  /// 「音量鍵翻頁」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'音量鍵翻頁'**
+  String get readingDefaultsVolumeKeyLabel;
+
+  /// 「翻頁模式」（點擊/滾動）區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'翻頁模式'**
+  String get readingDefaultsPageTurnModeSectionTitle;
+
+  /// 翻頁模式選項：點擊翻頁
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'點擊翻頁'**
+  String get readingDefaultsPaginatedLabel;
+
+  /// 翻頁模式選項：滾動翻頁
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'滾動翻頁'**
+  String get readingDefaultsScrollLabel;
+
+  /// 「螢幕方向」區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'螢幕方向'**
+  String get readingDefaultsScreenOrientationSectionTitle;
+
+  /// 螢幕方向選項：自動旋轉
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'自動旋轉'**
+  String get readingDefaultsOrientationAutoLabel;
+
+  /// 螢幕方向選項：鎖定 0 度
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'鎖定 0°'**
+  String get readingDefaultsOrientationLock0Label;
+
+  /// 螢幕方向選項：鎖定 90 度
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'鎖定 90°'**
+  String get readingDefaultsOrientationLock90Label;
+
+  /// 螢幕方向選項：鎖定 180 度
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'鎖定 180°'**
+  String get readingDefaultsOrientationLock180Label;
+
+  /// 螢幕方向選項：鎖定 270 度
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'鎖定 270°'**
+  String get readingDefaultsOrientationLock270Label;
+
+  /// 「簡繁轉換顯示」區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'簡繁轉換顯示'**
+  String get readingDefaultsTextConversionSectionTitle;
+
+  /// 簡繁轉換選項：原文（不轉換）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'原文'**
+  String get readingDefaultsTextConversionOriginalLabel;
+
+  /// 簡繁轉換選項：轉換為繁體
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'轉換為繁體'**
+  String get readingDefaultsTextConversionTraditionalLabel;
+
+  /// 簡繁轉換選項：轉換為簡體
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'轉換為簡體'**
+  String get readingDefaultsTextConversionSimplifiedLabel;
+
+  /// 「全螢幕模式」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'全螢幕模式'**
+  String get readingDefaultsFullscreenLabel;
+
+  /// 「啟動時開啟最後閱讀的那本書」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'啟動時開啟最後閱讀的那本書'**
+  String get readingDefaultsOpenLastBookLabel;
+
+  /// 「顯示頁首」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示頁首'**
+  String get readingDefaultsShowHeaderLabel;
+
+  /// 「顯示頁尾」開關標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示頁尾'**
+  String get readingDefaultsShowFooterLabel;
 }
 
 class _AppLocalizationsDelegate

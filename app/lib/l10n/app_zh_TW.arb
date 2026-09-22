@@ -1765,5 +1765,81 @@
   "navZoneCustomValidationError": "至少需要 1 格設為「選單」，否則將無法退出沉浸模式",
   "@navZoneCustomValidationError": {
     "description": "自訂熱區儲存時驗證失敗（沒有任何格子設為選單）的錯誤提示文字"
+  },
+  "readingDefaultsTitle": "閱讀預設值",
+  "@readingDefaultsTitle": {
+    "description": "閱讀預設值畫面 AppBar 標題"
+  },
+  "readingDefaultsVolumeKeyLabel": "音量鍵翻頁",
+  "@readingDefaultsVolumeKeyLabel": {
+    "description": "「音量鍵翻頁」開關標題"
+  },
+  "readingDefaultsPageTurnModeSectionTitle": "翻頁模式",
+  "@readingDefaultsPageTurnModeSectionTitle": {
+    "description": "「翻頁模式」（點擊/滾動）區塊標題"
+  },
+  "readingDefaultsPaginatedLabel": "點擊翻頁",
+  "@readingDefaultsPaginatedLabel": {
+    "description": "翻頁模式選項：點擊翻頁"
+  },
+  "readingDefaultsScrollLabel": "滾動翻頁",
+  "@readingDefaultsScrollLabel": {
+    "description": "翻頁模式選項：滾動翻頁"
+  },
+  "readingDefaultsScreenOrientationSectionTitle": "螢幕方向",
+  "@readingDefaultsScreenOrientationSectionTitle": {
+    "description": "「螢幕方向」區塊標題"
+  },
+  "readingDefaultsOrientationAutoLabel": "自動旋轉",
+  "@readingDefaultsOrientationAutoLabel": {
+    "description": "螢幕方向選項：自動旋轉"
+  },
+  "readingDefaultsOrientationLock0Label": "鎖定 0°",
+  "@readingDefaultsOrientationLock0Label": {
+    "description": "螢幕方向選項：鎖定 0 度"
+  },
+  "readingDefaultsOrientationLock90Label": "鎖定 90°",
+  "@readingDefaultsOrientationLock90Label": {
+    "description": "螢幕方向選項：鎖定 90 度"
+  },
+  "readingDefaultsOrientationLock180Label": "鎖定 180°",
+  "@readingDefaultsOrientationLock180Label": {
+    "description": "螢幕方向選項：鎖定 180 度"
+  },
+  "readingDefaultsOrientationLock270Label": "鎖定 270°",
+  "@readingDefaultsOrientationLock270Label": {
+    "description": "螢幕方向選項：鎖定 270 度"
+  },
+  "readingDefaultsTextConversionSectionTitle": "簡繁轉換顯示",
+  "@readingDefaultsTextConversionSectionTitle": {
+    "description": "「簡繁轉換顯示」區塊標題"
+  },
+  "readingDefaultsTextConversionOriginalLabel": "原文",
+  "@readingDefaultsTextConversionOriginalLabel": {
+    "description": "簡繁轉換選項：原文（不轉換）"
+  },
+  "readingDefaultsTextConversionTraditionalLabel": "轉換為繁體",
+  "@readingDefaultsTextConversionTraditionalLabel": {
+    "description": "簡繁轉換選項：轉換為繁體"
+  },
+  "readingDefaultsTextConversionSimplifiedLabel": "轉換為簡體",
+  "@readingDefaultsTextConversionSimplifiedLabel": {
+    "description": "簡繁轉換選項：轉換為簡體"
+  },
+  "readingDefaultsFullscreenLabel": "全螢幕模式",
+  "@readingDefaultsFullscreenLabel": {
+    "description": "「全螢幕模式」開關標題"
+  },
+  "readingDefaultsOpenLastBookLabel": "啟動時開啟最後閱讀的那本書",
+  "@readingDefaultsOpenLastBookLabel": {
+    "description": "「啟動時開啟最後閱讀的那本書」開關標題"
+  },
+  "readingDefaultsShowHeaderLabel": "顯示頁首",
+  "@readingDefaultsShowHeaderLabel": {
+    "description": "「顯示頁首」開關標題"
+  },
+  "readingDefaultsShowFooterLabel": "顯示頁尾",
+  "@readingDefaultsShowFooterLabel": {
+    "description": "「顯示頁尾」開關標題"
   }
 }
