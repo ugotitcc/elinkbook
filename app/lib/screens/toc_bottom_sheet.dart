@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../reader/book_format.dart';
 import '../reader/book_toc_item.dart';
 import '../reader/pdf_toc_item.dart';
@@ -126,6 +127,7 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
   }
 
   Widget _buildTocList() {
+    final l10n = AppLocalizations.of(context)!;
     final isEmpty = widget.entries.isEmpty;
     return ListView.builder(
       key: const Key('toc_bottom_sheet_list'),
@@ -141,8 +143,8 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('📖 目錄',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(l10n.readerTocTitle,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 IconButton(
                   key: const Key('toc_bottom_sheet_close_button'),
                   icon: const Icon(Icons.close),
@@ -153,10 +155,10 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
           );
         }
         if (isEmpty && index == 1) {
-          return const Padding(
-            key: Key('toc_bottom_sheet_empty_text'),
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: Text('本書無目錄資料')),
+          return Padding(
+            key: const Key('toc_bottom_sheet_empty_text'),
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: Text(l10n.readerTocEmptyMessage)),
           );
         }
         return _buildEntryRow(_visibleRows[index - 1]);
@@ -166,17 +168,18 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: widget.format == BookFormat.pdf
           ? DefaultTabController(
               length: 3,
               child: Column(
                 children: [
-                  const TabBar(
+                  TabBar(
                     tabs: [
-                      Tab(text: '章節目錄'),
-                      Tab(text: '縮圖'),
-                      Tab(text: '搜尋'),
+                      Tab(text: l10n.readerTocTabChapters),
+                      Tab(text: l10n.readerTocTabThumbnails),
+                      Tab(text: l10n.readerTocTabSearch),
                     ],
                   ),
                   Expanded(
@@ -184,9 +187,9 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
                       children: [
                         _buildTocList(),
                         widget.thumbnailTabContent ??
-                            const Center(child: Text('此功能將於後續版本提供')),
+                            Center(child: Text(l10n.readerFeatureComingSoon)),
                         widget.searchTabContent ??
-                            const Center(child: Text('此功能將於後續版本提供')),
+                            Center(child: Text(l10n.readerFeatureComingSoon)),
                       ],
                     ),
                   ),

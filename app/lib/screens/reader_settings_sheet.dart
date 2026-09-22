@@ -11,6 +11,7 @@ import '../reader/layout_preset.dart';
 import '../reader/page_turn_mode.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/text_conversion_mode.dart';
+import '../l10n/app_localizations.dart';
 import '../reader/writing_mode.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_option_chip_group.dart';
@@ -233,6 +234,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Column(
         children: [
@@ -240,10 +242,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    '⚙️ 版面設定',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    l10n.readerSettingsTitle,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 IconButton(
@@ -259,21 +261,23 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               length: 4,
               child: Column(
                 children: [
-                  const TabBar(
-                    key: Key('reader_settings_tab_bar'),
+                  TabBar(
+                    key: const Key('reader_settings_tab_bar'),
                     tabs: [
                       Tab(
-                        key: Key('reader_settings_tab_text_content'),
-                        text: '文字',
-                      ),
-                      Tab(key: Key('reader_settings_tab_boundary'), text: '邊界'),
-                      Tab(
-                        key: Key('reader_settings_tab_presentation'),
-                        text: '呈現',
+                        key: const Key('reader_settings_tab_text_content'),
+                        text: l10n.readerSettingsTabText,
                       ),
                       Tab(
-                        key: Key('reader_settings_tab_preferences'),
-                        text: '預設集',
+                          key: const Key('reader_settings_tab_boundary'),
+                          text: l10n.readerSettingsTabBoundary),
+                      Tab(
+                        key: const Key('reader_settings_tab_presentation'),
+                        text: l10n.readerSettingsTabPresentation,
+                      ),
+                      Tab(
+                        key: const Key('reader_settings_tab_preferences'),
+                        text: l10n.readerSettingsTabPreferences,
                       ),
                     ],
                   ),
@@ -316,6 +320,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// 意外重建/遺失（epic-28-reader-settings-enhancements Issue 5 審查，詳見
   /// design.md「2026-08-15 追加」審查回應 Important #3）。
   Widget _buildTextContentTab() {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       key: const Key('reader_settings_tab_text_content_list'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -323,7 +328,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _buildFontFamilyDropdown(),
         _buildSliderRow(
           keyPrefix: 'reader_settings_font_size',
-          label: '字級',
+          label: l10n.readerSettingsFontSizeLabel,
           value: _fontSize,
           min: 12,
           max: 80,
@@ -343,7 +348,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_font_weight',
-          label: '字重',
+          label: l10n.readerSettingsFontWeightLabel,
           value: _fontWeightMultiplier * 400,
           min: 300,
           max: 900,
@@ -363,7 +368,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_line_height',
-          label: '行距',
+          label: l10n.readerSettingsLineHeightLabel,
           value: _lineHeight,
           min: 0,
           max: 3,
@@ -383,7 +388,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_paragraph_spacing',
-          label: '段落間距',
+          label: l10n.readerSettingsParagraphSpacingLabel,
           value: _paragraphSpacing,
           min: 0,
           max: 40,
@@ -403,7 +408,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_letter_spacing',
-          label: '字距',
+          label: l10n.readerSettingsLetterSpacingLabel,
           value: _letterSpacing,
           min: -0.05,
           max: 1,
@@ -425,7 +430,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           padding: EdgeInsets.zero,
           child: SwitchListTile(
             key: const Key('reader_settings_disable_book_css'),
-            title: const Text('停用書本 CSS', style: TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(l10n.readerSettingsDisableBookCssLabel, style: TextStyle(fontWeight: FontWeight.bold)),
             value: !_publisherStyles,
             onChanged: (v) => setState(() {
               _publisherStyles = !v;
@@ -438,13 +443,14 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }
 
   Widget _buildBoundaryTab() {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       key: const Key('reader_settings_tab_boundary_list'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
         _buildSliderRow(
           keyPrefix: 'reader_settings_margin_top',
-          label: '上邊界',
+          label: l10n.readerSettingsMarginTopLabel,
           value: _marginTop,
           min: 0,
           max: 120,
@@ -457,7 +463,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_margin_bottom',
-          label: '下邊界',
+          label: l10n.readerSettingsMarginBottomLabel,
           value: _marginBottom,
           min: 0,
           max: 120,
@@ -470,7 +476,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_margin_left',
-          label: '左邊界',
+          label: l10n.readerSettingsMarginLeftLabel,
           value: _marginLeft,
           min: 0,
           max: 120,
@@ -483,7 +489,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_margin_right',
-          label: '右邊界',
+          label: l10n.readerSettingsMarginRightLabel,
           value: _marginRight,
           min: 0,
           max: 120,
@@ -498,7 +504,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           padding: EdgeInsets.zero,
           child: SwitchListTile(
             key: const Key('reader_settings_show_header'),
-            title: const Text('顯示頁首', style: TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(l10n.readerShowHeaderLabel, style: TextStyle(fontWeight: FontWeight.bold)),
             value: _showHeader,
             onChanged: (v) => setState(() {
               _showHeader = v;
@@ -510,7 +516,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           padding: EdgeInsets.zero,
           child: SwitchListTile(
             key: const Key('reader_settings_show_footer'),
-            title: const Text('顯示頁尾', style: TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(l10n.readerShowFooterLabel, style: TextStyle(fontWeight: FontWeight.bold)),
             value: _showFooter,
             onChanged: (v) => setState(() {
               _showFooter = v;
@@ -523,6 +529,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }
 
   Widget _buildPresentationTab() {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       key: const Key('reader_settings_tab_presentation_list'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -531,7 +538,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           padding: EdgeInsets.zero,
           child: SwitchListTile(
             key: const Key('reader_settings_fullscreen'),
-            title: const Text('全螢幕模式', style: TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(l10n.readerFullscreenModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
             value: _fullscreen,
             onChanged: (v) => setState(() {
               _fullscreen = v;
@@ -564,17 +571,18 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }
 
   Widget _buildColumnModeRow() {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('欄數', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(l10n.readerSettingsColumnCountLabel, style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           EBOptionChipGroup<ColumnMode>(
             items:
                 [
-                  (ColumnMode.auto, 'auto', Icons.auto_awesome, '自動', '自動'),
+                  (ColumnMode.auto, 'auto', Icons.auto_awesome, l10n.readerSettingsColumnAutoLabel, l10n.readerSettingsColumnAutoLabel),
                   (
                     ColumnMode.single,
                     'single',
@@ -582,7 +590,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                     '單欄',
                     '單欄',
                   ),
-                  (ColumnMode.double, 'double', Icons.book, '雙欄', '雙欄'),
+                  (ColumnMode.double, 'double', Icons.book, l10n.readerSettingsColumnDoubleLabel, l10n.readerSettingsColumnDoubleLabel),
                 ].map((option) {
                   final (mode, keySuffix, icon, tooltip, label) = option;
                   return EBOptionChipItem<ColumnMode>(
@@ -615,8 +623,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   // Slider 不具備數值回饋能力，標題仍須保留數值）。
                   Text(
                     widget.isEinkMode
-                        ? '欄位大小'
-                        : '欄位大小 ${_columnSize.round()}px',
+                        ? l10n.readerSettingsColumnSizeLabel
+                         : l10n.readerSettingsColumnSizeWithValueLabel(_columnSize.round()),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   widget.isEinkMode
@@ -656,6 +664,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }
 
   Widget _buildFontFamilyDropdown() {
+    final l10n = AppLocalizations.of(context)!;
     return EBFieldCard(
       child: Row(
         children: [
@@ -671,9 +680,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               isExpanded: true,
               value: _fontFamily,
               items: [
-                const DropdownMenuItem<String?>(
+                DropdownMenuItem<String?>(
                   value: null,
-                  child: Text('使用書本內建字型', overflow: TextOverflow.ellipsis),
+                  child: Text(l10n.readerSettingsUseBookFontLabel, overflow: TextOverflow.ellipsis),
                 ),
                 ...AppFont.values.map(
                   (font) => DropdownMenuItem<String?>(
@@ -750,6 +759,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     bool? isOverridden,
     VoidCallback? onReset,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     final divisions = ((max - min) / step).round();
     final clampedValue = value.clamp(min, max);
     return EBFieldCard(
@@ -770,22 +780,22 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                       Text(displayValue),
                       const SizedBox(width: 8),
                     ],
-                    _buildOverrideBadge('此書已覆寫'),
+                    _buildOverrideBadge(l10n.readerSettingsOverriddenBadge),
                     IconButton(
                       key: Key('${keyPrefix}_reset'),
                       icon: const Icon(Icons.block),
                       iconSize: 18,
                       visualDensity: VisualDensity.compact,
-                      tooltip: '恢復本書原樣式',
+                      tooltip: l10n.readerSettingsResetToBookStyleTooltip,
                       onPressed: onReset,
                     ),
                   ],
                 )
               else if (isOverridden == false)
                 Tooltip(
-                  message: '跟隨本書原樣式，尚未調整',
+                  message: l10n.readerSettingsNotOverriddenTooltip,
                   child: _buildOverrideBadge(
-                    '使用全域預設',
+                    l10n.readerUseGlobalDefaultTooltip,
                     key: Key('${keyPrefix}_unset_indicator'),
                   ),
                 ),
@@ -841,18 +851,19 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }
 
   Widget _buildTextAlignRow() {
-    const options = [
-      (EpubTextAlign.center, Icons.format_align_center, '置中', '置中'),
-      (EpubTextAlign.justify, Icons.format_align_justify, '左右對齊', '齊行'),
-      (EpubTextAlign.start, Icons.first_page, '起始邊對齊', '起始'),
-      (EpubTextAlign.end, Icons.last_page, '結尾邊對齊', '結尾'),
-      (EpubTextAlign.left, Icons.format_align_left, '靠左', '靠左'),
-      (EpubTextAlign.right, Icons.format_align_right, '靠右', '靠右'),
+    final l10n = AppLocalizations.of(context)!;
+    final options = [
+      (EpubTextAlign.center, Icons.format_align_center, l10n.readerSettingsTextAlignCenterLabel, l10n.readerSettingsTextAlignCenterLabel),
+      (EpubTextAlign.justify, Icons.format_align_justify, l10n.readerSettingsTextAlignJustifyTooltip, l10n.readerSettingsTextAlignJustifyLabel),
+      (EpubTextAlign.start, Icons.first_page, l10n.readerSettingsTextAlignStartTooltip, l10n.readerSettingsTextAlignStartLabel),
+      (EpubTextAlign.end, Icons.last_page, l10n.readerSettingsTextAlignEndTooltip, l10n.readerSettingsTextAlignEndLabel),
+      (EpubTextAlign.left, Icons.format_align_left, l10n.readerSettingsTextAlignLeftLabel, l10n.readerSettingsTextAlignLeftLabel),
+      (EpubTextAlign.right, Icons.format_align_right, l10n.readerSettingsTextAlignRightLabel, l10n.readerSettingsTextAlignRightLabel),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('文字對齊', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(l10n.readerSettingsTextAlignLabel, style: TextStyle(fontWeight: FontWeight.bold)),
         EBOptionChipGroup<EpubTextAlign>(
           items: options.map((option) {
             final (align, icon, tooltip, label) = option;
@@ -879,27 +890,28 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// `ReaderScreen._resolvedWritingMode`）、`vertical`＝強制直排、
   /// `horizontal`＝強制橫排。
   Widget _buildWritingModeOverrideRow() {
-    const options = [
-      (null, 'book', Icons.auto_stories, '採用書籍排版', '書籍'),
+    final l10n = AppLocalizations.of(context)!;
+    final options = [
+      (null, 'book', Icons.auto_stories, l10n.readerSettingsWritingModeBookTooltip, l10n.readerSettingsWritingModeBookLabel),
       (
         WritingMode.vertical,
         'vertical',
         Icons.text_rotate_vertical,
-        '強制直排',
-        '直排',
+        l10n.readerSettingsWritingModeVerticalTooltip,
+        l10n.readerSettingsWritingModeVerticalLabel,
       ),
       (
         WritingMode.horizontal,
         'horizontal',
         Icons.text_rotation_none,
-        '強制橫排',
-        '橫排',
+        l10n.readerSettingsWritingModeHorizontalTooltip,
+        l10n.readerSettingsWritingModeHorizontalLabel,
       ),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('排版方向模式', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(l10n.readerSettingsWritingModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
         EBOptionChipGroup<WritingMode?>(
           items: options.map((option) {
             final (mode, keySuffix, icon, tooltip, label) = option;
@@ -934,15 +946,16 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// 預設值（見 `ReaderScreen._resolvedPageTurnMode`），非 `null`＝單書
   /// 覆寫。
   Widget _buildPageTurnModeOverrideRow() {
-    const options = [
-      (null, 'global', Icons.tune, '使用全域預設', '全域'),
-      (PageTurnMode.paginated, 'paginated', Icons.menu_book, '點擊翻頁', '點擊'),
-      (PageTurnMode.scroll, 'scroll', Icons.swap_vert, '滾動翻頁', '滾動'),
+    final l10n = AppLocalizations.of(context)!;
+    final options = [
+      (null, 'global', Icons.tune, l10n.readerUseGlobalDefaultTooltip, l10n.readerGlobalLabel),
+      (PageTurnMode.paginated, 'paginated', Icons.menu_book, l10n.readerSettingsPageTurnPaginatedTooltip, l10n.readerSettingsPageTurnPaginatedLabel),
+      (PageTurnMode.scroll, 'scroll', Icons.swap_vert, l10n.readerSettingsPageTurnScrollTooltip, l10n.readerSettingsPageTurnScrollLabel),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('翻頁模式覆寫', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(l10n.readerSettingsPageTurnModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
         EBOptionChipGroup<PageTurnMode?>(
           items: options.map((option) {
             final (mode, keySuffix, icon, tooltip, label) = option;
@@ -971,40 +984,41 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// 簡繁轉換覆寫（FR-48，全域/單書雙層解析，見 `resolveTextConversion()`）：
   /// `null`＝使用全域預設，非 `null`＝單書覆寫。
   Widget _buildTextConversionOverrideRow() {
+    final l10n = AppLocalizations.of(context)!;
     final items = [
-      const EBOptionChipItem<TextConversionMode?>(
-        itemKey: Key('reader_settings_text_conversion_global'),
+      EBOptionChipItem<TextConversionMode?>(
+        itemKey: const Key('reader_settings_text_conversion_global'),
         value: null,
         icon: Icons.tune,
-        label: '全域',
-        tooltip: '使用全域預設',
+        label: l10n.readerGlobalLabel,
+        tooltip: l10n.readerUseGlobalDefaultTooltip,
       ),
-      const EBOptionChipItem<TextConversionMode?>(
-        itemKey: Key('reader_settings_text_conversion_original'),
+      EBOptionChipItem<TextConversionMode?>(
+        itemKey: const Key('reader_settings_text_conversion_original'),
         value: TextConversionMode.original,
         icon: Icons.article_outlined,
-        label: '原文',
-        tooltip: '原文',
+        label: l10n.readerTextConversionOriginalLabel,
+        tooltip: l10n.readerTextConversionOriginalLabel,
       ),
-      const EBOptionChipItem<TextConversionMode?>(
-        itemKey: Key('reader_settings_text_conversion_traditional'),
+      EBOptionChipItem<TextConversionMode?>(
+        itemKey: const Key('reader_settings_text_conversion_traditional'),
         value: TextConversionMode.toTraditional,
-        iconWidget: TextConversionIcon(mode: TextConversionMode.toTraditional),
-        label: '繁體',
-        tooltip: '轉換為繁體',
+        iconWidget: const TextConversionIcon(mode: TextConversionMode.toTraditional),
+        label: l10n.readerTextConversionTraditionalLabel,
+        tooltip: l10n.readerTextConversionTraditionalTooltip,
       ),
-      const EBOptionChipItem<TextConversionMode?>(
-        itemKey: Key('reader_settings_text_conversion_simplified'),
+      EBOptionChipItem<TextConversionMode?>(
+        itemKey: const Key('reader_settings_text_conversion_simplified'),
         value: TextConversionMode.toSimplified,
-        iconWidget: TextConversionIcon(mode: TextConversionMode.toSimplified),
-        label: '簡體',
-        tooltip: '轉換為簡體',
+        iconWidget: const TextConversionIcon(mode: TextConversionMode.toSimplified),
+        label: l10n.readerTextConversionSimplifiedLabel,
+        tooltip: l10n.readerTextConversionSimplifiedTooltip,
       ),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('簡繁轉換覆寫', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(l10n.readerTextConversionOverrideLabel, style: TextStyle(fontWeight: FontWeight.bold)),
         EBOptionChipGroup<TextConversionMode?>(
           items: items,
           groupValue: _textConversionOverride,
@@ -1023,23 +1037,24 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// 單書覆寫。0°／180° 與 90°／270° 分別共用同一個 Material icon，以
   /// `Transform.rotate` 配合角度旋轉提升視覺辨識度，tooltip 文字消歧。
   Widget _buildScreenOrientationOverrideRow() {
+    final l10n = AppLocalizations.of(context)!;
     // (setting, keySuffix, icon, tooltip, rotationAngle, label)
-    const options =
+    final options =
         <(ScreenOrientationSetting?, String, IconData, String, double, String)>[
-          (null, 'global', Icons.tune, '使用全域預設', 0.0, '全域'),
+          (null, 'global', Icons.tune, l10n.readerUseGlobalDefaultTooltip, 0.0, l10n.readerGlobalLabel),
           (
             ScreenOrientationSetting.auto,
             'auto',
             Icons.screen_rotation,
-            '自動旋轉',
+            l10n.readerSettingsOrientationAutoTooltip,
             0.0,
-            '自動',
+            l10n.readerSettingsOrientationAutoLabel,
           ),
           (
             ScreenOrientationSetting.lock0,
             'lock0',
             Icons.stay_current_portrait,
-            '鎖定 0°',
+            l10n.readerSettingsOrientationLock0Tooltip,
             0.0,
             '0°',
           ),
@@ -1047,7 +1062,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             ScreenOrientationSetting.lock90,
             'lock90',
             Icons.stay_current_landscape,
-            '鎖定 90°',
+            l10n.readerSettingsOrientationLock90Tooltip,
             0.0,
             '90°',
           ),
@@ -1055,7 +1070,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             ScreenOrientationSetting.lock180,
             'lock180',
             Icons.stay_current_portrait,
-            '鎖定 180°',
+            l10n.readerSettingsOrientationLock180Tooltip,
             pi,
             '180°',
           ),
@@ -1063,7 +1078,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             ScreenOrientationSetting.lock270,
             'lock270',
             Icons.stay_current_landscape,
-            '鎖定 270°',
+            l10n.readerSettingsOrientationLock270Tooltip,
             pi * 1.5,
             '270°',
           ),
@@ -1071,7 +1086,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('螢幕方向鎖定覆寫', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(l10n.readerSettingsScreenOrientationLabel, style: TextStyle(fontWeight: FontWeight.bold)),
         EBOptionChipGroup<ScreenOrientationSetting?>(
           items: options.map((option) {
             final (setting, keySuffix, icon, tooltip, _, label) = option;
@@ -1113,6 +1128,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// 「選中態＝主色實心填滿」語彙（`ReaderOptionTile`／`Switch` 皆同），
   /// 取代原本的 `inverseSurface`/`onInverseSurface`。
   Widget _buildLayoutPresetSection() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1122,16 +1138,16 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             key: const Key('reader_settings_save_as_preset'),
             onPressed: () => widget.onSaveAsPreset(_currentDraft),
             icon: const Icon(Icons.add),
-            label: const Text('將目前設定存為新預設集'),
+            label: Text(l10n.readerSettingsSaveAsPresetButton),
           ),
         ),
         const SizedBox(height: 16),
-        const Text('已儲存的預設集', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(l10n.readerSettingsSavedPresetsLabel, style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         _buildResetToBookDefaultRow(),
         ...List.generate(3, _buildPresetSlot),
         const SizedBox(height: 16),
-        const Text('從其他書籍複製', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(l10n.readerSettingsCopyFromBookLabel, style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -1139,7 +1155,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               child: OutlinedButton(
                 key: const Key('reader_settings_copy_from_book_current'),
                 onPressed: _handleCopyFromBookToCurrent,
-                child: const Text('複製到本書'),
+                child: Text(l10n.readerSettingsCopyToCurrentBookButton),
               ),
             ),
             const SizedBox(width: 8),
@@ -1147,7 +1163,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               child: OutlinedButton(
                 key: const Key('reader_settings_copy_from_book_others'),
                 onPressed: _handleCopyFromBookToOthers,
-                child: const Text('複製到其他書籍'),
+                child: Text(l10n.readerSettingsCopyToOtherBooksButton),
               ),
             ),
           ],
@@ -1249,6 +1265,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// 設定可供顯示（`GlobalReaderPrefs` 只涵蓋翻頁模式／螢幕方向／熱區等
   /// 欄位，見 `global_reader_prefs.dart`），顯示假數字會誤導使用者。
   Widget _buildResetToBookDefaultRow() {
+    final l10n = AppLocalizations.of(context)!;
     final isActive = !_fontSizeOverridden &&
         !_fontWeightOverridden &&
         !_lineHeightOverridden &&
@@ -1259,8 +1276,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return _buildPresetRow(
       rowKey: const Key('reader_settings_preset_reset_row'),
       titleKey: const Key('reader_settings_preset_reset_label'),
-      title: '系統預設',
-      subtitle: '移除本書所有字級/字重/行距/段落間距/字距覆寫，改用書本原始樣式',
+      title: l10n.readerSettingsResetPresetTitle,
+      subtitle: l10n.readerSettingsResetPresetSubtitle,
       isActive: isActive,
       trailing: isActive
           ? Row(
@@ -1271,7 +1288,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           : OutlinedButton(
               key: const Key('reader_settings_preset_reset_apply'),
               onPressed: _resetToBookDefault,
-              child: const Text('套用'),
+              child: Text(l10n.readerSettingsApplyButton),
             ),
     );
   }
@@ -1295,25 +1312,26 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// 「字級X・行距Y・橫排/直排」摘要文字（Reference 卡片副標題）：
   /// 對應欄位在 [prefs] 為 `null`（該 preset 未收錄這個欄位）時顯示
   /// 「預設」，不捏造具體數字。
-  String _presetSummary(BookReaderPrefs prefs) {
+  String _presetSummary(BookReaderPrefs prefs, AppLocalizations l10n) {
     final fontSize =
-        prefs.fontSize != null ? (prefs.fontSize! * 16).round().toString() : '預設';
+        prefs.fontSize != null ? (prefs.fontSize! * 16).round().toString() : l10n.readerSettingsPresetDefaultValue;
     final lineHeight =
-        prefs.lineHeight != null ? prefs.lineHeight!.toStringAsFixed(1) : '預設';
+        prefs.lineHeight != null ? prefs.lineHeight!.toStringAsFixed(1) : l10n.readerSettingsPresetDefaultValue;
     final writingMode = switch (prefs.writingModeOverride) {
-      WritingMode.vertical => '直排',
-      WritingMode.horizontal => '橫排',
-      null => '自動',
+      WritingMode.vertical => l10n.readerSettingsWritingModeVerticalLabel,
+      WritingMode.horizontal => l10n.readerSettingsWritingModeHorizontalLabel,
+      null => l10n.readerSettingsPresetSummaryAutoLabel,
     };
-    return '字級$fontSize・行距$lineHeight・$writingMode';
+    return l10n.readerSettingsPresetSummaryFormat(fontSize, lineHeight, writingMode);
   }
 
   Widget _buildPresetSlot(int index) {
+    final l10n = AppLocalizations.of(context)!;
     if (index >= widget.layoutPresets.length) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Text(
-          '（空）',
+          l10n.readerSettingsPresetEmptySlot,
           key: Key('reader_settings_preset_slot_${index}_empty'),
         ),
       );
@@ -1326,7 +1344,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       rowKey: Key('reader_settings_preset_slot_${index}_row'),
       titleKey: Key('reader_settings_preset_slot_${index}_label'),
       title: preset.name,
-      subtitle: _presetSummary(preset.prefs),
+      subtitle: _presetSummary(preset.prefs, l10n),
       isActive: isActive,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1346,13 +1364,13 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                 preset,
                 targetBookIds: [widget.bookId],
               ),
-              child: const Text('套用'),
+              child: Text(l10n.readerSettingsApplyButton),
             ),
           const SizedBox(width: 4),
           _buildBorderedIconButton(
             key: Key('reader_settings_preset_slot_${index}_apply_others'),
             icon: Icons.library_books,
-            tooltip: '套用到其他書籍',
+            tooltip: l10n.readerSettingsApplyToOtherBooksTooltip,
             onPressed: () => _handleApplyPresetToOthers(preset),
             color: foregroundColor,
             borderColor: isActive ? foregroundColor : null,
@@ -1361,7 +1379,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           _buildBorderedIconButton(
             key: Key('reader_settings_preset_slot_${index}_delete'),
             icon: Icons.delete,
-            tooltip: '刪除',
+            tooltip: l10n.readerSettingsDeletePresetTooltip,
             onPressed: () => widget.onDeletePreset(preset.id!),
             color: foregroundColor,
             borderColor: isActive ? foregroundColor : null,

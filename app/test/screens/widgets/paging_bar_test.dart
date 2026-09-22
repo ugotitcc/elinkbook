@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/screens/widgets/paging_bar.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('顯示目前頁碼與總頁數（1-based 呈現）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PagingBar(
             currentPage: 1,
@@ -23,6 +27,9 @@ void main() {
   testWidgets('onPrevious 為 null 時上一頁按鈕停用', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PagingBar(
             currentPage: 0,
@@ -49,6 +56,9 @@ void main() {
   testWidgets('onNext 為 null 時下一頁按鈕停用，點擊不崩潰', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PagingBar(
             currentPage: 2,
@@ -77,6 +87,9 @@ void main() {
       '（reviews/review-issue-4.md Minor 2）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Column(
             children: [
@@ -119,6 +132,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PagingBar(currentPage: 0, pageCount: 1, onPrevious: null, onNext: null),
         ),
@@ -128,6 +144,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PagingBar(
             currentPage: 0,
@@ -145,6 +164,9 @@ void main() {
   testWidgets('一般模式觸控目標 48dp，isEinkMode 時為 56dp', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PagingBar(
             currentPage: 0,
@@ -166,6 +188,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PagingBar(
             currentPage: 0,
@@ -185,6 +210,27 @@ void main() {
       tester.getSize(find.byKey(const Key('paging_bar_next_button'))),
       const Size(56, 56),
     );
+  });
+
+  testWidgets('英文介面下上一頁/下一頁 tooltip 正確以英文渲染', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: PagingBar(
+            currentPage: 1,
+            pageCount: 5,
+            onPrevious: () {},
+            onNext: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byTooltip('Previous page'), findsOneWidget);
+    expect(find.byTooltip('Next page'), findsOneWidget);
   });
 
   test('PagingBar.resolvedHeight()：一般模式 52.0，E-Ink 模式 56.0（epic-36 Issue 7）', () {

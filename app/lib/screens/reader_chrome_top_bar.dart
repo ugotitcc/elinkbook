@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 /// 閱讀器頂部 Chrome 列（epic-38-reader-chrome-tts-redesign Issue 1；
 /// 2026-09-10 修正：拆分頁首／工具列為兩組各自獨立的顯示開關，取代原本
 /// 「整條列一起顯示/隱藏、且跟全螢幕模式掛勾」的設計，理由與完整狀態表見
@@ -68,6 +70,7 @@ class ReaderChromeTopBar extends StatelessWidget {
     if (!isHeaderVisible && !isToolbarVisible && !showTtsIndicator) {
       return const SizedBox.shrink();
     }
+    final l10n = AppLocalizations.of(context)!;
     // DESIGN.md §7.2：一般模式最小觸控目標 48dp、E-Ink 模式 56dp。
     final minSize = isEinkMode ? 56.0 : 48.0;
     // 前景色／停用前景色交給 IconButton.styleFrom 統一管理（審查修正
@@ -99,7 +102,7 @@ class ReaderChromeTopBar extends StatelessWidget {
                 IconButton(
                   key: const Key('reader_chrome_back_button'),
                   icon: const Icon(Icons.arrow_back),
-                  tooltip: '返回',
+                  tooltip: l10n.readerBackTooltip,
                   style: buttonStyle,
                   onPressed: onBack,
                 ),
@@ -131,7 +134,7 @@ class ReaderChromeTopBar extends StatelessWidget {
                 IconButton(
                   key: const Key('reader_chrome_search_button'),
                   icon: const Icon(Icons.search),
-                  tooltip: '搜尋內文',
+                  tooltip: l10n.readerSearchTooltip,
                   style: buttonStyle,
                   onPressed: onSearchTap,
                 ),
@@ -140,7 +143,7 @@ class ReaderChromeTopBar extends StatelessWidget {
                   icon: Icon(
                     isBottomChromeVisible ? Icons.dock : Icons.dock_outlined,
                   ),
-                  tooltip: isBottomChromeVisible ? '隱藏工具列' : '顯示工具列',
+                  tooltip: isBottomChromeVisible ? l10n.readerHideToolbarTooltip : l10n.readerShowToolbarTooltip,
                   style: buttonStyle,
                   onPressed: onToggleBottomChrome,
                 ),

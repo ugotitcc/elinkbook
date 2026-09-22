@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 /// 備註文字輸入/編輯共用 Dialog（epic-6-annotations Issue 2，design.md
 /// 使用者流程步驟 2／3）：`ReaderScreen` 新增備註與 `NotesBottomSheet`
 /// 編輯既有備註文字共用同一個函式。回傳使用者輸入且已 trim 的文字；
@@ -17,11 +19,13 @@ import 'package:flutter/material.dart';
 Future<String?> showNoteTextDialog(
   BuildContext context, {
   String initialText = '',
-  String title = '備註',
+  String? title,
 }) {
+  final resolvedTitle = title ?? AppLocalizations.of(context)!.readerNoteDialogDefaultTitle;
   return showDialog<String>(
     context: context,
-    builder: (dialogContext) => _NoteTextDialog(initialText: initialText, title: title),
+    builder: (dialogContext) =>
+        _NoteTextDialog(initialText: initialText, title: resolvedTitle),
   );
 }
 
@@ -52,6 +56,7 @@ class _NoteTextDialogState extends State<_NoteTextDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
       title: Text(widget.title),
       content: TextField(
@@ -63,7 +68,7 @@ class _NoteTextDialogState extends State<_NoteTextDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+          child: Text(l10n.cancel),
         ),
         TextButton(
           key: const Key('note_edit_dialog_confirm'),
@@ -71,7 +76,7 @@ class _NoteTextDialogState extends State<_NoteTextDialog> {
             final text = _controller.text.trim();
             Navigator.of(context).pop(text.isEmpty ? null : text);
           },
-          child: const Text('儲存'),
+          child: Text(l10n.readerNoteDialogSaveButton),
         ),
       ],
     );

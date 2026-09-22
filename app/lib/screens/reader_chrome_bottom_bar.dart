@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 /// 閱讀器底部 Chrome 列（epic-38-reader-chrome-tts-redesign Issue 1，
 /// spec.md §功能①②）：格式無關，三列固定結構——頁碼列（34dp，純顯示書名
 /// ＋頁數/百分比）／跳頁列（56dp，內容由呼叫端建好傳入，見 [footer]）／
@@ -50,6 +52,7 @@ class ReaderChromeBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final minSize = isEinkMode ? 56.0 : 48.0;
     // 前景色／停用前景色交給 IconButton.styleFrom 統一管理（審查修正
     // review-issue-1.md C-2）：底下每顆 IconButton 的 Icon 一律不再自帶
@@ -126,7 +129,7 @@ class ReaderChromeBottomBar extends StatelessWidget {
                     child: IconButton(
                       key: const Key('reader_chrome_toc_button'),
                       icon: const Icon(Icons.menu_book),
-                      tooltip: '目錄',
+                      tooltip: l10n.readerTocTooltip,
                       style: buttonStyle,
                       onPressed: onTocTap,
                     ),
@@ -136,7 +139,7 @@ class ReaderChromeBottomBar extends StatelessWidget {
                       IconButton(
                         key: const Key('reader_chrome_bookmark_button'),
                         icon: Icon(isBookmarked ? Icons.star : Icons.star_border),
-                        tooltip: isBookmarked ? '已加入此頁書籤' : '加入此頁書籤',
+                        tooltip: isBookmarked ? l10n.readerBookmarkAddedTooltip : l10n.readerBookmarkAddTooltip,
                         style: buttonStyle,
                         onPressed: onBookmarkTap,
                       ),
@@ -147,7 +150,7 @@ class ReaderChromeBottomBar extends StatelessWidget {
                       IconButton(
                         key: const Key('reader_chrome_annotations_button'),
                         icon: const Icon(Icons.edit_note),
-                        tooltip: '劃線筆記',
+                        tooltip: l10n.readerAnnotationsTooltip,
                         style: buttonStyle,
                         onPressed: onAnnotationsTap,
                       ),
@@ -158,7 +161,7 @@ class ReaderChromeBottomBar extends StatelessWidget {
                       IconButton(
                         key: const Key('reader_chrome_layout_button'),
                         icon: const Icon(Icons.format_size),
-                        tooltip: '版面',
+                        tooltip: l10n.readerLayoutTooltip,
                         style: buttonStyle,
                         onPressed: onLayoutTap,
                       ),
@@ -170,7 +173,7 @@ class ReaderChromeBottomBar extends StatelessWidget {
                         IconButton(
                           key: const Key('reader_chrome_tts_button'),
                           icon: const Icon(Icons.record_voice_over),
-                          tooltip: '朗讀',
+                          tooltip: l10n.readerTtsTooltip,
                           style: buttonStyle,
                           onPressed: onTtsTap,
                         ),

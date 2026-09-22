@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/screens/pdf_thumbnail_panel.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 
 /// 合成 [count] 張 2×2 像素的真實 `ui.Image`，供測試用假 `renderThumbnail`
 /// callback 回傳——避免依賴真實 PDFium 渲染耗時，同時仍是真正的
@@ -28,6 +29,9 @@ void main() {
   testWidgets('totalPages 為 0 時顯示空狀態，不建構 GridView', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PdfThumbnailPanel(
             totalPages: 0,
@@ -49,6 +53,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PdfThumbnailPanel(
             totalPages: 50,
@@ -74,6 +81,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PdfThumbnailPanel(
             totalPages: 3,
@@ -99,6 +109,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PdfThumbnailPanel(
             totalPages: 5,
@@ -120,6 +133,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PdfThumbnailPanel(
             totalPages: 40,
@@ -150,6 +166,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PdfThumbnailPanel(
             totalPages: 5,
@@ -162,7 +181,10 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox.shrink())));
+    await tester.pumpWidget(const MaterialApp(
+        locale: Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,home: Scaffold(body: SizedBox.shrink())));
 
     for (final image in images) {
       expect(image.debugDisposed, isTrue);
@@ -176,6 +198,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PdfThumbnailPanel(
             totalPages: 1,
@@ -188,7 +213,10 @@ void main() {
     await tester.pump();
 
     // 縮圖仍在渲染中（completer 尚未完成）時就把面板從 widget tree 移除。
-    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox.shrink())));
+    await tester.pumpWidget(const MaterialApp(
+        locale: Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,home: Scaffold(body: SizedBox.shrink())));
 
     // 面板已 unmount 之後，非同步渲染才真正完成——這是 Critical 1 審查
     // 修正要保護的情境：遲來的 image 不會再被放進快取，必須在 `_load`
@@ -199,5 +227,23 @@ void main() {
 
     expect(images[0].debugDisposed, isTrue,
         reason: '面板已 unmount，遲來的縮圖影像不應洩漏，須被 dispose()');
+  });
+  testWidgets('英文介面下無頁面時顯示英文空狀態文字', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: PdfThumbnailPanel(
+            totalPages: 0,
+            renderThumbnail: (_) async => null,
+            onPageSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('No pages available'), findsOneWidget);
   });
 }

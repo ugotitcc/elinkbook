@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 import '../reader/pdf_thumbnail_cache.dart';
 
 /// PDF 頁碼縮圖面板（epic-24-pdf-engine-rebuild Issue 7），掛載於
@@ -82,9 +84,9 @@ class _PdfThumbnailPanelState extends State<PdfThumbnailPanel> {
   @override
   Widget build(BuildContext context) {
     if (widget.totalPages <= 0) {
-      return const Center(
-        key: Key('pdf_thumbnail_panel_empty'),
-        child: Text('無可用頁面'),
+      return Center(
+        key: const Key('pdf_thumbnail_panel_empty'),
+        child: Text(AppLocalizations.of(context)!.readerPdfNoPagesAvailable),
       );
     }
     return GridView.builder(

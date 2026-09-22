@@ -475,6 +475,694 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get libraryLayoutOverrideSaveButton => '儲存';
+
+  @override
+  String get readerBackTooltip => '返回';
+
+  @override
+  String get readerSearchTooltip => '搜尋內文';
+
+  @override
+  String get readerHideToolbarTooltip => '隱藏工具列';
+
+  @override
+  String get readerShowToolbarTooltip => '顯示工具列';
+
+  @override
+  String get readerTocTooltip => '目錄';
+
+  @override
+  String get readerBookmarkAddedTooltip => '已加入此頁書籤';
+
+  @override
+  String get readerBookmarkAddTooltip => '加入此頁書籤';
+
+  @override
+  String get readerAnnotationsTooltip => '劃線筆記';
+
+  @override
+  String get readerLayoutTooltip => '版面';
+
+  @override
+  String get readerTtsTooltip => '朗讀';
+
+  @override
+  String get readerPagingPreviousTooltip => '上一頁';
+
+  @override
+  String get readerPagingNextTooltip => '下一頁';
+
+  @override
+  String get readerPdfNoPagesAvailable => '無可用頁面';
+
+  @override
+  String get readerNoteDialogSaveButton => '儲存';
+
+  @override
+  String get readerNoteDialogDefaultTitle => '備註';
+
+  @override
+  String get readerAnnotationUnderlineTooltip => '底線';
+
+  @override
+  String get readerAnnotationCopyTooltip => '複製';
+
+  @override
+  String get readerAnnotationEditNoteTooltip => '編輯備註';
+
+  @override
+  String get readerAnnotationAddNoteTooltip => '新增備註';
+
+  @override
+  String get readerAnnotationDeleteHighlightAndNote => '刪除畫線與備註';
+
+  @override
+  String get readerAnnotationDeleteHighlight => '刪除畫線';
+
+  @override
+  String get readerAnnotationDeleteNote => '刪除備註';
+
+  @override
+  String get readerPdfSearchHint => '搜尋文字…';
+
+  @override
+  String get readerPdfSearchNoMatches => '找不到符合的文字';
+
+  @override
+  String get readerPdfSearchPreviousTooltip => '上一個';
+
+  @override
+  String get readerPdfSearchNextTooltip => '下一個';
+
+  @override
+  String readerPositionConflictTitle(String bookTitle) {
+    return '「$bookTitle」的閱讀進度不一致';
+  }
+
+  @override
+  String readerPositionConflictMessage(String local, String remote) {
+    return '偵測到另一台裝置也更新過這本書的閱讀進度，請選擇要保留哪一邊：\n\n本機：$local\n雲端：$remote';
+  }
+
+  @override
+  String readerPositionConflictPdfLocation(int page, int percent) {
+    return '第 $page 頁（進度 $percent%）';
+  }
+
+  @override
+  String readerPositionConflictEpubLocation(int percent) {
+    return '進度 $percent%';
+  }
+
+  @override
+  String get readerPositionConflictKeepCloud => '保留雲端';
+
+  @override
+  String get readerPositionConflictKeepLocal => '保留本機';
+
+  @override
+  String get readerTocTitle => '📖 目錄';
+
+  @override
+  String get readerTocEmptyMessage => '本書無目錄資料';
+
+  @override
+  String get readerTocTabChapters => '章節目錄';
+
+  @override
+  String get readerTocTabThumbnails => '縮圖';
+
+  @override
+  String get readerTocTabSearch => '搜尋';
+
+  @override
+  String get readerFeatureComingSoon => '此功能將於後續版本提供';
+
+  @override
+  String get readerTtsCbzUnsupportedTooltip => 'CBZ 為純圖像格式，不支援語音朗讀';
+
+  @override
+  String get readerTtsPreviousTooltip => '上一句';
+
+  @override
+  String get readerTtsPauseTooltip => '暫停朗讀';
+
+  @override
+  String get readerTtsPlayTooltip => '開始朗讀';
+
+  @override
+  String get readerTtsNextTooltip => '下一句';
+
+  @override
+  String readerTtsSpeedTooltip(String speed) {
+    return '朗讀語速：${speed}x（點擊切換）';
+  }
+
+  @override
+  String get readerTtsVoiceTooltip => '選擇語音';
+
+  @override
+  String get readerTtsSleepTimerLabel => '定時';
+
+  @override
+  String readerTtsSleepTimerLabelWithMinutes(int minutes) {
+    return '定時 $minutes 分';
+  }
+
+  @override
+  String get readerTtsCollapseLabel => '收合';
+
+  @override
+  String get readerTtsExpandLabel => '展開';
+
+  @override
+  String get readerTtsStopLabel => '停止';
+
+  @override
+  String get readerNotesSheetTitle => '筆記';
+
+  @override
+  String get readerNotesSheetExportMarkdownTooltip => '導出為 Markdown';
+
+  @override
+  String get readerNotesSheetTabBookmarks => '書籤';
+
+  @override
+  String get readerNotesSheetTabAnnotations => '劃線與備註';
+
+  @override
+  String get readerNotesSheetDeleteAllBookmarksTooltip => '刪除該書所有書籤';
+
+  @override
+  String get readerNotesSheetRenameBookmarkTitle => '重新命名書籤';
+
+  @override
+  String get readerDeleteConfirmButton => '刪除';
+
+  @override
+  String readerNotesSheetDeleteAllBookmarksConfirm(int count) {
+    return '確定要刪除全部書籤嗎？（共 $count 筆）';
+  }
+
+  @override
+  String get readerNotesSheetRenameTooltip => '重新命名';
+
+  @override
+  String get readerNotesSheetDeleteItemTooltip => '刪除';
+
+  @override
+  String get readerNotesSheetNoAnnotationsPlaceholder => '尚無劃線或備註';
+
+  @override
+  String get readerNotesSheetDeleteAllHighlightsButton => '刪除所有劃線';
+
+  @override
+  String get readerNotesSheetDeleteAllNotesButton => '刪除所有備註';
+
+  @override
+  String get readerNotesSheetNoteLabel => '備註';
+
+  @override
+  String get readerHighlightStyleYellow => '螢光筆（黃）';
+
+  @override
+  String get readerHighlightStylePink => '螢光筆（粉）';
+
+  @override
+  String get readerHighlightStyleBlue => '螢光筆（藍）';
+
+  @override
+  String get readerHighlightStyleUnderline => '底線';
+
+  @override
+  String readerNotesSheetDeleteAllHighlightsConfirm(int count) {
+    return '確定要刪除全部劃線嗎？（共 $count 筆）';
+  }
+
+  @override
+  String readerNotesSheetDeleteAllNotesConfirm(int count) {
+    return '確定要刪除全部備註嗎？（共 $count 筆）';
+  }
+
+  @override
+  String get readerFxlSettingsTitle => '⚙️ 漫畫版面設定';
+
+  @override
+  String get readerDualPageModeLabel => '雙頁模式';
+
+  @override
+  String get readerDualPageAutoTooltip => '自動（橫向雙頁）';
+
+  @override
+  String get readerDualPageAutoLabel => '自動';
+
+  @override
+  String get readerDualPageAlwaysTooltip => '永遠雙頁';
+
+  @override
+  String get readerDualPageAlwaysLabel => '雙頁';
+
+  @override
+  String get readerDualPageNeverTooltip => '永遠單頁';
+
+  @override
+  String get readerDualPageNeverLabel => '單頁';
+
+  @override
+  String get readerPageDirectionLabel => '翻頁方向';
+
+  @override
+  String get readerDualPageDirectionLtrTooltip => '左到右（LTR，美漫慣例）';
+
+  @override
+  String get readerDualPageDirectionLtrLabel => '左翻';
+
+  @override
+  String get readerDualPageDirectionRtlTooltip => '右到左（RTL，日漫慣例）';
+
+  @override
+  String get readerDualPageDirectionRtlLabel => '右翻';
+
+  @override
+  String get readerTextConversionOverrideLabel => '簡繁轉換覆寫';
+
+  @override
+  String get readerGlobalLabel => '全域';
+
+  @override
+  String get readerUseGlobalDefaultTooltip => '使用全域預設';
+
+  @override
+  String get readerTextConversionOriginalLabel => '原文';
+
+  @override
+  String get readerTextConversionTraditionalLabel => '繁體';
+
+  @override
+  String get readerTextConversionTraditionalTooltip => '轉換為繁體';
+
+  @override
+  String get readerTextConversionSimplifiedLabel => '簡體';
+
+  @override
+  String get readerTextConversionSimplifiedTooltip => '轉換為簡體';
+
+  @override
+  String get readerFullscreenModeLabel => '全螢幕模式';
+
+  @override
+  String get readerShowHeaderLabel => '顯示頁首';
+
+  @override
+  String get readerShowFooterLabel => '顯示頁尾';
+
+  @override
+  String get readerPdfSettingsTitle => '⚙️ PDF 版面設定';
+
+  @override
+  String get readerPdfSettingsTabDisplay => '顯示';
+
+  @override
+  String get readerPdfSettingsTabFilters => '濾鏡';
+
+  @override
+  String get readerPdfSettingsTabCrop => '裁切';
+
+  @override
+  String get readerPdfFitModeLabel => 'Fit 模式';
+
+  @override
+  String get readerPdfFitPageTooltip => 'Page-fit（整頁）';
+
+  @override
+  String get readerPdfFitPageLabel => '整頁';
+
+  @override
+  String get readerPdfFitWidthTooltip => 'Fit Width（頁寬）';
+
+  @override
+  String get readerPdfFitWidthLabel => '頁寬';
+
+  @override
+  String get readerPdfFitActualTooltip => '真實比例 1:1';
+
+  @override
+  String get readerPdfFitActualLabel => '原比';
+
+  @override
+  String get readerPdfDualPageCoverAloneLabel => '封面獨立顯示';
+
+  @override
+  String get readerPdfPageOrientationLabel => '頁面方向';
+
+  @override
+  String get readerPdfDirectionLtrTooltip => '左到右';
+
+  @override
+  String get readerPdfDirectionLtrLabel => '左翻';
+
+  @override
+  String get readerPdfDirectionRtlTooltip => '右到左（日漫慣例）';
+
+  @override
+  String get readerPdfDirectionRtlLabel => '右翻';
+
+  @override
+  String get readerPdfPageTurnAnimationLabel => '換頁動畫';
+
+  @override
+  String get readerPdfPageTurnAnimationSlide => '滑動';
+
+  @override
+  String get readerPdfPageTurnAnimationNone => '無';
+
+  @override
+  String get readerPdfContrastLabel => '對比度';
+
+  @override
+  String get readerPdfBrightnessLabel => '亮度';
+
+  @override
+  String get readerPdfBoldStrengthLabel => '加粗強度';
+
+  @override
+  String get readerPdfCropModeLabel => '裁切模式';
+
+  @override
+  String get readerPdfCropNoneTooltip => '不裁切';
+
+  @override
+  String get readerPdfCropNoneLabel => '不裁';
+
+  @override
+  String get readerPdfCropAutoTooltip => '智慧自動';
+
+  @override
+  String get readerPdfCropAutoLabel => '智慧';
+
+  @override
+  String get readerPdfCropManualLabel => '手動';
+
+  @override
+  String get readerPdfCropManualTooltip => '手動選區';
+
+  @override
+  String get readerSettingsTitle => '⚙️ 版面設定';
+
+  @override
+  String get readerSettingsTabText => '文字';
+
+  @override
+  String get readerSettingsTabBoundary => '邊界';
+
+  @override
+  String get readerSettingsTabPresentation => '呈現';
+
+  @override
+  String get readerSettingsTabPreferences => '預設集';
+
+  @override
+  String get readerSettingsFontSizeLabel => '字級';
+
+  @override
+  String get readerSettingsFontWeightLabel => '字重';
+
+  @override
+  String get readerSettingsLineHeightLabel => '行距';
+
+  @override
+  String get readerSettingsParagraphSpacingLabel => '段落間距';
+
+  @override
+  String get readerSettingsLetterSpacingLabel => '字距';
+
+  @override
+  String get readerSettingsDisableBookCssLabel => '停用書本 CSS';
+
+  @override
+  String get readerSettingsMarginTopLabel => '上邊界';
+
+  @override
+  String get readerSettingsMarginBottomLabel => '下邊界';
+
+  @override
+  String get readerSettingsMarginLeftLabel => '左邊界';
+
+  @override
+  String get readerSettingsMarginRightLabel => '右邊界';
+
+  @override
+  String get readerSettingsOverriddenBadge => '此書已覆寫';
+
+  @override
+  String get readerSettingsResetToBookStyleTooltip => '恢復本書原樣式';
+
+  @override
+  String get readerSettingsNotOverriddenTooltip => '跟隨本書原樣式，尚未調整';
+
+  @override
+  String get readerSettingsUseBookFontLabel => '使用書本內建字型';
+
+  @override
+  String get readerSettingsColumnCountLabel => '欄數';
+
+  @override
+  String get readerSettingsColumnAutoLabel => '自動';
+
+  @override
+  String get readerSettingsColumnSingleLabel => '單欄';
+
+  @override
+  String get readerSettingsColumnDoubleLabel => '雙欄';
+
+  @override
+  String get readerSettingsColumnSizeLabel => '欄位大小';
+
+  @override
+  String readerSettingsColumnSizeWithValueLabel(int size) {
+    return '欄位大小 ${size}px';
+  }
+
+  @override
+  String get readerSettingsTextAlignLabel => '文字對齊';
+
+  @override
+  String get readerSettingsTextAlignCenterLabel => '置中';
+
+  @override
+  String get readerSettingsTextAlignJustifyTooltip => '左右對齊';
+
+  @override
+  String get readerSettingsTextAlignJustifyLabel => '齊行';
+
+  @override
+  String get readerSettingsTextAlignStartTooltip => '起始邊對齊';
+
+  @override
+  String get readerSettingsTextAlignStartLabel => '起始';
+
+  @override
+  String get readerSettingsTextAlignEndTooltip => '結尾邊對齊';
+
+  @override
+  String get readerSettingsTextAlignEndLabel => '結尾';
+
+  @override
+  String get readerSettingsTextAlignLeftLabel => '靠左';
+
+  @override
+  String get readerSettingsTextAlignRightLabel => '靠右';
+
+  @override
+  String get readerSettingsWritingModeLabel => '排版方向模式';
+
+  @override
+  String get readerSettingsWritingModeBookTooltip => '採用書籍排版';
+
+  @override
+  String get readerSettingsWritingModeBookLabel => '書籍';
+
+  @override
+  String get readerSettingsWritingModeVerticalTooltip => '強制直排';
+
+  @override
+  String get readerSettingsWritingModeVerticalLabel => '直排';
+
+  @override
+  String get readerSettingsWritingModeHorizontalTooltip => '強制橫排';
+
+  @override
+  String get readerSettingsWritingModeHorizontalLabel => '橫排';
+
+  @override
+  String get readerSettingsPageTurnModeLabel => '翻頁模式覆寫';
+
+  @override
+  String get readerSettingsPageTurnPaginatedTooltip => '點擊翻頁';
+
+  @override
+  String get readerSettingsPageTurnPaginatedLabel => '點擊';
+
+  @override
+  String get readerSettingsPageTurnScrollTooltip => '滾動翻頁';
+
+  @override
+  String get readerSettingsPageTurnScrollLabel => '滾動';
+
+  @override
+  String get readerSettingsScreenOrientationLabel => '螢幕方向鎖定覆寫';
+
+  @override
+  String get readerSettingsOrientationAutoTooltip => '自動旋轉';
+
+  @override
+  String get readerSettingsOrientationAutoLabel => '自動';
+
+  @override
+  String get readerSettingsOrientationLock0Tooltip => '鎖定 0°';
+
+  @override
+  String get readerSettingsOrientationLock90Tooltip => '鎖定 90°';
+
+  @override
+  String get readerSettingsOrientationLock180Tooltip => '鎖定 180°';
+
+  @override
+  String get readerSettingsOrientationLock270Tooltip => '鎖定 270°';
+
+  @override
+  String get readerSettingsSaveAsPresetButton => '將目前設定存為新預設集';
+
+  @override
+  String get readerSettingsSavedPresetsLabel => '已儲存的預設集';
+
+  @override
+  String get readerSettingsCopyFromBookLabel => '從其他書籍複製';
+
+  @override
+  String get readerSettingsCopyToCurrentBookButton => '複製到本書';
+
+  @override
+  String get readerSettingsCopyToOtherBooksButton => '複製到其他書籍';
+
+  @override
+  String get readerSettingsResetPresetTitle => '系統預設';
+
+  @override
+  String get readerSettingsResetPresetSubtitle =>
+      '移除本書所有字級/字重/行距/段落間距/字距覆寫，改用書本原始樣式';
+
+  @override
+  String get readerSettingsApplyButton => '套用';
+
+  @override
+  String get readerSettingsPresetDefaultValue => '預設';
+
+  @override
+  String get readerSettingsPresetSummaryAutoLabel => '自動';
+
+  @override
+  String readerSettingsPresetSummaryFormat(
+    String fontSize,
+    String lineHeight,
+    String writingMode,
+  ) {
+    return '字級$fontSize・行距$lineHeight・$writingMode';
+  }
+
+  @override
+  String get readerSettingsPresetEmptySlot => '（空）';
+
+  @override
+  String get readerSettingsApplyToOtherBooksTooltip => '套用到其他書籍';
+
+  @override
+  String get readerSettingsDeletePresetTooltip => '刪除';
+
+  @override
+  String get readerUnknownBookTitle => '未知書籍';
+
+  @override
+  String get readerSaveAsPresetUnavailableMessage => '暫時無法儲存預設集';
+
+  @override
+  String readerSaveAsPresetFailedMessage(String error) {
+    return '另存為新預設集失敗：$error';
+  }
+
+  @override
+  String get readerOverwritePresetPickerTitle => '選擇要覆蓋的預設集';
+
+  @override
+  String readerOverwritePresetOptionLabel(String name, String date) {
+    return '$name（最後更新：$date）';
+  }
+
+  @override
+  String get readerConfirmOverwriteTitle => '確認覆蓋';
+
+  @override
+  String readerOverwritePresetConfirmMessage(String name) {
+    return '即將覆蓋預設集「$name」，此動作無法復原。';
+  }
+
+  @override
+  String get readerConfirmApplyTitle => '確認套用';
+
+  @override
+  String readerApplyToOthersConfirmMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '即將覆蓋 $count 本書的版面設定，此動作無法復原。',
+      one: '即將覆蓋 1 本書的版面設定，此動作無法復原。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String readerApplyPresetFailedMessage(String error) {
+    return '套用版面設定失敗：$error';
+  }
+
+  @override
+  String get readerConfirmDeleteTitle => '確認刪除';
+
+  @override
+  String readerDeletePresetConfirmMessage(String name) {
+    return '即將刪除預設集「$name」，此動作無法復原。';
+  }
+
+  @override
+  String readerDeletePresetFailedMessage(String error) {
+    return '刪除預設集失敗：$error';
+  }
+
+  @override
+  String get readerSearchUnavailableMessage => '搜尋功能暫時無法使用';
+
+  @override
+  String get readerOpenBookTimeoutMessage => '開書逾時，可能是系統 WebView 版本過舊或檔案異常';
+
+  @override
+  String get readerCopiedToClipboardMessage => '已複製到剪貼簿';
+
+  @override
+  String get readerTtsVoicePickerTitle => '朗讀語音';
+
+  @override
+  String get readerUnsupportedFormatMessage => '不支援的檔案格式';
+
+  @override
+  String get readerFailedToLoadBookMessage => '無法載入書籍';
+
+  @override
+  String readerTtsSleepTimerOptionMinutes(int minutes) {
+    return '$minutes 分鐘';
+  }
+
+  @override
+  String get readerTtsSleepTimerNoLimitLabel => '不限時';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -948,6 +1636,694 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get libraryLayoutOverrideSaveButton => '保存';
+
+  @override
+  String get readerBackTooltip => '返回';
+
+  @override
+  String get readerSearchTooltip => '搜索内文';
+
+  @override
+  String get readerHideToolbarTooltip => '隐藏工具栏';
+
+  @override
+  String get readerShowToolbarTooltip => '显示工具栏';
+
+  @override
+  String get readerTocTooltip => '目录';
+
+  @override
+  String get readerBookmarkAddedTooltip => '已加入此页书签';
+
+  @override
+  String get readerBookmarkAddTooltip => '加入此页书签';
+
+  @override
+  String get readerAnnotationsTooltip => '划线笔记';
+
+  @override
+  String get readerLayoutTooltip => '版面';
+
+  @override
+  String get readerTtsTooltip => '朗读';
+
+  @override
+  String get readerPagingPreviousTooltip => '上一页';
+
+  @override
+  String get readerPagingNextTooltip => '下一页';
+
+  @override
+  String get readerPdfNoPagesAvailable => '无可用页面';
+
+  @override
+  String get readerNoteDialogSaveButton => '保存';
+
+  @override
+  String get readerNoteDialogDefaultTitle => '备注';
+
+  @override
+  String get readerAnnotationUnderlineTooltip => '底线';
+
+  @override
+  String get readerAnnotationCopyTooltip => '复制';
+
+  @override
+  String get readerAnnotationEditNoteTooltip => '编辑备注';
+
+  @override
+  String get readerAnnotationAddNoteTooltip => '新增备注';
+
+  @override
+  String get readerAnnotationDeleteHighlightAndNote => '删除划线与备注';
+
+  @override
+  String get readerAnnotationDeleteHighlight => '删除划线';
+
+  @override
+  String get readerAnnotationDeleteNote => '删除备注';
+
+  @override
+  String get readerPdfSearchHint => '搜索文字…';
+
+  @override
+  String get readerPdfSearchNoMatches => '找不到符合的文字';
+
+  @override
+  String get readerPdfSearchPreviousTooltip => '上一个';
+
+  @override
+  String get readerPdfSearchNextTooltip => '下一个';
+
+  @override
+  String readerPositionConflictTitle(String bookTitle) {
+    return '“$bookTitle”的阅读进度不一致';
+  }
+
+  @override
+  String readerPositionConflictMessage(String local, String remote) {
+    return '侦测到另一台装置也更新过这本书的阅读进度，请选择要保留哪一边：\n\n本机：$local\n云端：$remote';
+  }
+
+  @override
+  String readerPositionConflictPdfLocation(int page, int percent) {
+    return '第 $page 页（进度 $percent%）';
+  }
+
+  @override
+  String readerPositionConflictEpubLocation(int percent) {
+    return '进度 $percent%';
+  }
+
+  @override
+  String get readerPositionConflictKeepCloud => '保留云端';
+
+  @override
+  String get readerPositionConflictKeepLocal => '保留本机';
+
+  @override
+  String get readerTocTitle => '📖 目录';
+
+  @override
+  String get readerTocEmptyMessage => '本书无目录资料';
+
+  @override
+  String get readerTocTabChapters => '章节目录';
+
+  @override
+  String get readerTocTabThumbnails => '缩图';
+
+  @override
+  String get readerTocTabSearch => '搜索';
+
+  @override
+  String get readerFeatureComingSoon => '此功能将于后续版本提供';
+
+  @override
+  String get readerTtsCbzUnsupportedTooltip => 'CBZ 为纯图像格式，不支持语音朗读';
+
+  @override
+  String get readerTtsPreviousTooltip => '上一句';
+
+  @override
+  String get readerTtsPauseTooltip => '暂停朗读';
+
+  @override
+  String get readerTtsPlayTooltip => '开始朗读';
+
+  @override
+  String get readerTtsNextTooltip => '下一句';
+
+  @override
+  String readerTtsSpeedTooltip(String speed) {
+    return '朗读语速：${speed}x（点击切换）';
+  }
+
+  @override
+  String get readerTtsVoiceTooltip => '选择语音';
+
+  @override
+  String get readerTtsSleepTimerLabel => '定时';
+
+  @override
+  String readerTtsSleepTimerLabelWithMinutes(int minutes) {
+    return '定时 $minutes 分';
+  }
+
+  @override
+  String get readerTtsCollapseLabel => '收起';
+
+  @override
+  String get readerTtsExpandLabel => '展开';
+
+  @override
+  String get readerTtsStopLabel => '停止';
+
+  @override
+  String get readerNotesSheetTitle => '笔记';
+
+  @override
+  String get readerNotesSheetExportMarkdownTooltip => '导出为 Markdown';
+
+  @override
+  String get readerNotesSheetTabBookmarks => '书签';
+
+  @override
+  String get readerNotesSheetTabAnnotations => '划线与备注';
+
+  @override
+  String get readerNotesSheetDeleteAllBookmarksTooltip => '删除该书所有书签';
+
+  @override
+  String get readerNotesSheetRenameBookmarkTitle => '重新命名书签';
+
+  @override
+  String get readerDeleteConfirmButton => '删除';
+
+  @override
+  String readerNotesSheetDeleteAllBookmarksConfirm(int count) {
+    return '确定要删除全部书签吗？（共 $count 笔）';
+  }
+
+  @override
+  String get readerNotesSheetRenameTooltip => '重新命名';
+
+  @override
+  String get readerNotesSheetDeleteItemTooltip => '删除';
+
+  @override
+  String get readerNotesSheetNoAnnotationsPlaceholder => '尚无划线或备注';
+
+  @override
+  String get readerNotesSheetDeleteAllHighlightsButton => '删除所有划线';
+
+  @override
+  String get readerNotesSheetDeleteAllNotesButton => '删除所有备注';
+
+  @override
+  String get readerNotesSheetNoteLabel => '备注';
+
+  @override
+  String get readerHighlightStyleYellow => '萤光笔（黄）';
+
+  @override
+  String get readerHighlightStylePink => '萤光笔（粉）';
+
+  @override
+  String get readerHighlightStyleBlue => '萤光笔（蓝）';
+
+  @override
+  String get readerHighlightStyleUnderline => '底线';
+
+  @override
+  String readerNotesSheetDeleteAllHighlightsConfirm(int count) {
+    return '确定要删除全部划线吗？（共 $count 笔）';
+  }
+
+  @override
+  String readerNotesSheetDeleteAllNotesConfirm(int count) {
+    return '确定要删除全部备注吗？（共 $count 笔）';
+  }
+
+  @override
+  String get readerFxlSettingsTitle => '⚙️ 漫画版面设定';
+
+  @override
+  String get readerDualPageModeLabel => '双页模式';
+
+  @override
+  String get readerDualPageAutoTooltip => '自动（横向双页）';
+
+  @override
+  String get readerDualPageAutoLabel => '自动';
+
+  @override
+  String get readerDualPageAlwaysTooltip => '永远双页';
+
+  @override
+  String get readerDualPageAlwaysLabel => '双页';
+
+  @override
+  String get readerDualPageNeverTooltip => '永远单页';
+
+  @override
+  String get readerDualPageNeverLabel => '单页';
+
+  @override
+  String get readerPageDirectionLabel => '翻页方向';
+
+  @override
+  String get readerDualPageDirectionLtrTooltip => '左到右（LTR，美漫惯例）';
+
+  @override
+  String get readerDualPageDirectionLtrLabel => '左翻';
+
+  @override
+  String get readerDualPageDirectionRtlTooltip => '右到左（RTL，日漫惯例）';
+
+  @override
+  String get readerDualPageDirectionRtlLabel => '右翻';
+
+  @override
+  String get readerTextConversionOverrideLabel => '简繁转换覆盖';
+
+  @override
+  String get readerGlobalLabel => '全局';
+
+  @override
+  String get readerUseGlobalDefaultTooltip => '使用全局预设';
+
+  @override
+  String get readerTextConversionOriginalLabel => '原文';
+
+  @override
+  String get readerTextConversionTraditionalLabel => '繁体';
+
+  @override
+  String get readerTextConversionTraditionalTooltip => '转换为繁体';
+
+  @override
+  String get readerTextConversionSimplifiedLabel => '简体';
+
+  @override
+  String get readerTextConversionSimplifiedTooltip => '转换为简体';
+
+  @override
+  String get readerFullscreenModeLabel => '全屏模式';
+
+  @override
+  String get readerShowHeaderLabel => '显示页首';
+
+  @override
+  String get readerShowFooterLabel => '显示页尾';
+
+  @override
+  String get readerPdfSettingsTitle => '⚙️ PDF 版面设定';
+
+  @override
+  String get readerPdfSettingsTabDisplay => '显示';
+
+  @override
+  String get readerPdfSettingsTabFilters => '滤镜';
+
+  @override
+  String get readerPdfSettingsTabCrop => '裁切';
+
+  @override
+  String get readerPdfFitModeLabel => 'Fit 模式';
+
+  @override
+  String get readerPdfFitPageTooltip => 'Page-fit（整页）';
+
+  @override
+  String get readerPdfFitPageLabel => '整页';
+
+  @override
+  String get readerPdfFitWidthTooltip => 'Fit Width（页宽）';
+
+  @override
+  String get readerPdfFitWidthLabel => '页宽';
+
+  @override
+  String get readerPdfFitActualTooltip => '真实比例 1:1';
+
+  @override
+  String get readerPdfFitActualLabel => '原比';
+
+  @override
+  String get readerPdfDualPageCoverAloneLabel => '封面独立显示';
+
+  @override
+  String get readerPdfPageOrientationLabel => '页面方向';
+
+  @override
+  String get readerPdfDirectionLtrTooltip => '左到右';
+
+  @override
+  String get readerPdfDirectionLtrLabel => '左翻';
+
+  @override
+  String get readerPdfDirectionRtlTooltip => '右到左（日漫惯例）';
+
+  @override
+  String get readerPdfDirectionRtlLabel => '右翻';
+
+  @override
+  String get readerPdfPageTurnAnimationLabel => '换页动画';
+
+  @override
+  String get readerPdfPageTurnAnimationSlide => '滑动';
+
+  @override
+  String get readerPdfPageTurnAnimationNone => '无';
+
+  @override
+  String get readerPdfContrastLabel => '对比度';
+
+  @override
+  String get readerPdfBrightnessLabel => '亮度';
+
+  @override
+  String get readerPdfBoldStrengthLabel => '加粗强度';
+
+  @override
+  String get readerPdfCropModeLabel => '裁切模式';
+
+  @override
+  String get readerPdfCropNoneTooltip => '不裁切';
+
+  @override
+  String get readerPdfCropNoneLabel => '不裁';
+
+  @override
+  String get readerPdfCropAutoTooltip => '智能自动';
+
+  @override
+  String get readerPdfCropAutoLabel => '智能';
+
+  @override
+  String get readerPdfCropManualLabel => '手动';
+
+  @override
+  String get readerPdfCropManualTooltip => '手动选区';
+
+  @override
+  String get readerSettingsTitle => '⚙️ 版面设定';
+
+  @override
+  String get readerSettingsTabText => '文字';
+
+  @override
+  String get readerSettingsTabBoundary => '边界';
+
+  @override
+  String get readerSettingsTabPresentation => '呈现';
+
+  @override
+  String get readerSettingsTabPreferences => '预设集';
+
+  @override
+  String get readerSettingsFontSizeLabel => '字级';
+
+  @override
+  String get readerSettingsFontWeightLabel => '字重';
+
+  @override
+  String get readerSettingsLineHeightLabel => '行距';
+
+  @override
+  String get readerSettingsParagraphSpacingLabel => '段落间距';
+
+  @override
+  String get readerSettingsLetterSpacingLabel => '字距';
+
+  @override
+  String get readerSettingsDisableBookCssLabel => '停用书本 CSS';
+
+  @override
+  String get readerSettingsMarginTopLabel => '上边界';
+
+  @override
+  String get readerSettingsMarginBottomLabel => '下边界';
+
+  @override
+  String get readerSettingsMarginLeftLabel => '左边界';
+
+  @override
+  String get readerSettingsMarginRightLabel => '右边界';
+
+  @override
+  String get readerSettingsOverriddenBadge => '此书已覆盖';
+
+  @override
+  String get readerSettingsResetToBookStyleTooltip => '恢复本书原样式';
+
+  @override
+  String get readerSettingsNotOverriddenTooltip => '跟随本书原样式，尚未调整';
+
+  @override
+  String get readerSettingsUseBookFontLabel => '使用书本内建字体';
+
+  @override
+  String get readerSettingsColumnCountLabel => '栏数';
+
+  @override
+  String get readerSettingsColumnAutoLabel => '自动';
+
+  @override
+  String get readerSettingsColumnSingleLabel => '单栏';
+
+  @override
+  String get readerSettingsColumnDoubleLabel => '双栏';
+
+  @override
+  String get readerSettingsColumnSizeLabel => '栏位大小';
+
+  @override
+  String readerSettingsColumnSizeWithValueLabel(int size) {
+    return '栏位大小 ${size}px';
+  }
+
+  @override
+  String get readerSettingsTextAlignLabel => '文字对齐';
+
+  @override
+  String get readerSettingsTextAlignCenterLabel => '置中';
+
+  @override
+  String get readerSettingsTextAlignJustifyTooltip => '左右对齐';
+
+  @override
+  String get readerSettingsTextAlignJustifyLabel => '齐行';
+
+  @override
+  String get readerSettingsTextAlignStartTooltip => '起始边对齐';
+
+  @override
+  String get readerSettingsTextAlignStartLabel => '起始';
+
+  @override
+  String get readerSettingsTextAlignEndTooltip => '结尾边对齐';
+
+  @override
+  String get readerSettingsTextAlignEndLabel => '结尾';
+
+  @override
+  String get readerSettingsTextAlignLeftLabel => '靠左';
+
+  @override
+  String get readerSettingsTextAlignRightLabel => '靠右';
+
+  @override
+  String get readerSettingsWritingModeLabel => '排版方向模式';
+
+  @override
+  String get readerSettingsWritingModeBookTooltip => '采用书籍排版';
+
+  @override
+  String get readerSettingsWritingModeBookLabel => '书籍';
+
+  @override
+  String get readerSettingsWritingModeVerticalTooltip => '强制直排';
+
+  @override
+  String get readerSettingsWritingModeVerticalLabel => '直排';
+
+  @override
+  String get readerSettingsWritingModeHorizontalTooltip => '强制横排';
+
+  @override
+  String get readerSettingsWritingModeHorizontalLabel => '横排';
+
+  @override
+  String get readerSettingsPageTurnModeLabel => '翻页模式覆盖';
+
+  @override
+  String get readerSettingsPageTurnPaginatedTooltip => '点击翻页';
+
+  @override
+  String get readerSettingsPageTurnPaginatedLabel => '点击';
+
+  @override
+  String get readerSettingsPageTurnScrollTooltip => '滚动翻页';
+
+  @override
+  String get readerSettingsPageTurnScrollLabel => '滚动';
+
+  @override
+  String get readerSettingsScreenOrientationLabel => '屏幕方向锁定覆盖';
+
+  @override
+  String get readerSettingsOrientationAutoTooltip => '自动旋转';
+
+  @override
+  String get readerSettingsOrientationAutoLabel => '自动';
+
+  @override
+  String get readerSettingsOrientationLock0Tooltip => '锁定 0°';
+
+  @override
+  String get readerSettingsOrientationLock90Tooltip => '锁定 90°';
+
+  @override
+  String get readerSettingsOrientationLock180Tooltip => '锁定 180°';
+
+  @override
+  String get readerSettingsOrientationLock270Tooltip => '锁定 270°';
+
+  @override
+  String get readerSettingsSaveAsPresetButton => '将目前设定存为新预设集';
+
+  @override
+  String get readerSettingsSavedPresetsLabel => '已保存的预设集';
+
+  @override
+  String get readerSettingsCopyFromBookLabel => '从其他书籍复制';
+
+  @override
+  String get readerSettingsCopyToCurrentBookButton => '复制到本书';
+
+  @override
+  String get readerSettingsCopyToOtherBooksButton => '复制到其他书籍';
+
+  @override
+  String get readerSettingsResetPresetTitle => '系统预设';
+
+  @override
+  String get readerSettingsResetPresetSubtitle =>
+      '移除本书所有字级/字重/行距/段落间距/字距覆盖，改用书本原始样式';
+
+  @override
+  String get readerSettingsApplyButton => '套用';
+
+  @override
+  String get readerSettingsPresetDefaultValue => '预设';
+
+  @override
+  String get readerSettingsPresetSummaryAutoLabel => '自动';
+
+  @override
+  String readerSettingsPresetSummaryFormat(
+    String fontSize,
+    String lineHeight,
+    String writingMode,
+  ) {
+    return '字级$fontSize・行距$lineHeight・$writingMode';
+  }
+
+  @override
+  String get readerSettingsPresetEmptySlot => '（空）';
+
+  @override
+  String get readerSettingsApplyToOtherBooksTooltip => '套用到其他书籍';
+
+  @override
+  String get readerSettingsDeletePresetTooltip => '删除';
+
+  @override
+  String get readerUnknownBookTitle => '未知书籍';
+
+  @override
+  String get readerSaveAsPresetUnavailableMessage => '暂时无法保存预设集';
+
+  @override
+  String readerSaveAsPresetFailedMessage(String error) {
+    return '另存为新预设集失败：$error';
+  }
+
+  @override
+  String get readerOverwritePresetPickerTitle => '选择要覆盖的预设集';
+
+  @override
+  String readerOverwritePresetOptionLabel(String name, String date) {
+    return '$name（最后更新：$date）';
+  }
+
+  @override
+  String get readerConfirmOverwriteTitle => '确认覆盖';
+
+  @override
+  String readerOverwritePresetConfirmMessage(String name) {
+    return '即将覆盖预设集“$name”，此操作无法复原。';
+  }
+
+  @override
+  String get readerConfirmApplyTitle => '确认套用';
+
+  @override
+  String readerApplyToOthersConfirmMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '即将覆盖 $count 本书的版面设定，此操作无法复原。',
+      one: '即将覆盖 1 本书的版面设定，此操作无法复原。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String readerApplyPresetFailedMessage(String error) {
+    return '套用版面设定失败：$error';
+  }
+
+  @override
+  String get readerConfirmDeleteTitle => '确认删除';
+
+  @override
+  String readerDeletePresetConfirmMessage(String name) {
+    return '即将删除预设集“$name”，此操作无法复原。';
+  }
+
+  @override
+  String readerDeletePresetFailedMessage(String error) {
+    return '删除预设集失败：$error';
+  }
+
+  @override
+  String get readerSearchUnavailableMessage => '搜索功能暂时无法使用';
+
+  @override
+  String get readerOpenBookTimeoutMessage => '开书逾时，可能是系统 WebView 版本过旧或文件异常';
+
+  @override
+  String get readerCopiedToClipboardMessage => '已复制到剪贴板';
+
+  @override
+  String get readerTtsVoicePickerTitle => '朗读语音';
+
+  @override
+  String get readerUnsupportedFormatMessage => '不支持的文件格式';
+
+  @override
+  String get readerFailedToLoadBookMessage => '无法载入书籍';
+
+  @override
+  String readerTtsSleepTimerOptionMinutes(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get readerTtsSleepTimerNoLimitLabel => '不限时';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -1421,4 +2797,692 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get libraryLayoutOverrideSaveButton => '儲存';
+
+  @override
+  String get readerBackTooltip => '返回';
+
+  @override
+  String get readerSearchTooltip => '搜尋內文';
+
+  @override
+  String get readerHideToolbarTooltip => '隱藏工具列';
+
+  @override
+  String get readerShowToolbarTooltip => '顯示工具列';
+
+  @override
+  String get readerTocTooltip => '目錄';
+
+  @override
+  String get readerBookmarkAddedTooltip => '已加入此頁書籤';
+
+  @override
+  String get readerBookmarkAddTooltip => '加入此頁書籤';
+
+  @override
+  String get readerAnnotationsTooltip => '劃線筆記';
+
+  @override
+  String get readerLayoutTooltip => '版面';
+
+  @override
+  String get readerTtsTooltip => '朗讀';
+
+  @override
+  String get readerPagingPreviousTooltip => '上一頁';
+
+  @override
+  String get readerPagingNextTooltip => '下一頁';
+
+  @override
+  String get readerPdfNoPagesAvailable => '無可用頁面';
+
+  @override
+  String get readerNoteDialogSaveButton => '儲存';
+
+  @override
+  String get readerNoteDialogDefaultTitle => '備註';
+
+  @override
+  String get readerAnnotationUnderlineTooltip => '底線';
+
+  @override
+  String get readerAnnotationCopyTooltip => '複製';
+
+  @override
+  String get readerAnnotationEditNoteTooltip => '編輯備註';
+
+  @override
+  String get readerAnnotationAddNoteTooltip => '新增備註';
+
+  @override
+  String get readerAnnotationDeleteHighlightAndNote => '刪除畫線與備註';
+
+  @override
+  String get readerAnnotationDeleteHighlight => '刪除畫線';
+
+  @override
+  String get readerAnnotationDeleteNote => '刪除備註';
+
+  @override
+  String get readerPdfSearchHint => '搜尋文字…';
+
+  @override
+  String get readerPdfSearchNoMatches => '找不到符合的文字';
+
+  @override
+  String get readerPdfSearchPreviousTooltip => '上一個';
+
+  @override
+  String get readerPdfSearchNextTooltip => '下一個';
+
+  @override
+  String readerPositionConflictTitle(String bookTitle) {
+    return '「$bookTitle」的閱讀進度不一致';
+  }
+
+  @override
+  String readerPositionConflictMessage(String local, String remote) {
+    return '偵測到另一台裝置也更新過這本書的閱讀進度，請選擇要保留哪一邊：\n\n本機：$local\n雲端：$remote';
+  }
+
+  @override
+  String readerPositionConflictPdfLocation(int page, int percent) {
+    return '第 $page 頁（進度 $percent%）';
+  }
+
+  @override
+  String readerPositionConflictEpubLocation(int percent) {
+    return '進度 $percent%';
+  }
+
+  @override
+  String get readerPositionConflictKeepCloud => '保留雲端';
+
+  @override
+  String get readerPositionConflictKeepLocal => '保留本機';
+
+  @override
+  String get readerTocTitle => '📖 目錄';
+
+  @override
+  String get readerTocEmptyMessage => '本書無目錄資料';
+
+  @override
+  String get readerTocTabChapters => '章節目錄';
+
+  @override
+  String get readerTocTabThumbnails => '縮圖';
+
+  @override
+  String get readerTocTabSearch => '搜尋';
+
+  @override
+  String get readerFeatureComingSoon => '此功能將於後續版本提供';
+
+  @override
+  String get readerTtsCbzUnsupportedTooltip => 'CBZ 為純圖像格式，不支援語音朗讀';
+
+  @override
+  String get readerTtsPreviousTooltip => '上一句';
+
+  @override
+  String get readerTtsPauseTooltip => '暫停朗讀';
+
+  @override
+  String get readerTtsPlayTooltip => '開始朗讀';
+
+  @override
+  String get readerTtsNextTooltip => '下一句';
+
+  @override
+  String readerTtsSpeedTooltip(String speed) {
+    return '朗讀語速：${speed}x（點擊切換）';
+  }
+
+  @override
+  String get readerTtsVoiceTooltip => '選擇語音';
+
+  @override
+  String get readerTtsSleepTimerLabel => '定時';
+
+  @override
+  String readerTtsSleepTimerLabelWithMinutes(int minutes) {
+    return '定時 $minutes 分';
+  }
+
+  @override
+  String get readerTtsCollapseLabel => '收合';
+
+  @override
+  String get readerTtsExpandLabel => '展開';
+
+  @override
+  String get readerTtsStopLabel => '停止';
+
+  @override
+  String get readerNotesSheetTitle => '筆記';
+
+  @override
+  String get readerNotesSheetExportMarkdownTooltip => '導出為 Markdown';
+
+  @override
+  String get readerNotesSheetTabBookmarks => '書籤';
+
+  @override
+  String get readerNotesSheetTabAnnotations => '劃線與備註';
+
+  @override
+  String get readerNotesSheetDeleteAllBookmarksTooltip => '刪除該書所有書籤';
+
+  @override
+  String get readerNotesSheetRenameBookmarkTitle => '重新命名書籤';
+
+  @override
+  String get readerDeleteConfirmButton => '刪除';
+
+  @override
+  String readerNotesSheetDeleteAllBookmarksConfirm(int count) {
+    return '確定要刪除全部書籤嗎？（共 $count 筆）';
+  }
+
+  @override
+  String get readerNotesSheetRenameTooltip => '重新命名';
+
+  @override
+  String get readerNotesSheetDeleteItemTooltip => '刪除';
+
+  @override
+  String get readerNotesSheetNoAnnotationsPlaceholder => '尚無劃線或備註';
+
+  @override
+  String get readerNotesSheetDeleteAllHighlightsButton => '刪除所有劃線';
+
+  @override
+  String get readerNotesSheetDeleteAllNotesButton => '刪除所有備註';
+
+  @override
+  String get readerNotesSheetNoteLabel => '備註';
+
+  @override
+  String get readerHighlightStyleYellow => '螢光筆（黃）';
+
+  @override
+  String get readerHighlightStylePink => '螢光筆（粉）';
+
+  @override
+  String get readerHighlightStyleBlue => '螢光筆（藍）';
+
+  @override
+  String get readerHighlightStyleUnderline => '底線';
+
+  @override
+  String readerNotesSheetDeleteAllHighlightsConfirm(int count) {
+    return '確定要刪除全部劃線嗎？（共 $count 筆）';
+  }
+
+  @override
+  String readerNotesSheetDeleteAllNotesConfirm(int count) {
+    return '確定要刪除全部備註嗎？（共 $count 筆）';
+  }
+
+  @override
+  String get readerFxlSettingsTitle => '⚙️ 漫畫版面設定';
+
+  @override
+  String get readerDualPageModeLabel => '雙頁模式';
+
+  @override
+  String get readerDualPageAutoTooltip => '自動（橫向雙頁）';
+
+  @override
+  String get readerDualPageAutoLabel => '自動';
+
+  @override
+  String get readerDualPageAlwaysTooltip => '永遠雙頁';
+
+  @override
+  String get readerDualPageAlwaysLabel => '雙頁';
+
+  @override
+  String get readerDualPageNeverTooltip => '永遠單頁';
+
+  @override
+  String get readerDualPageNeverLabel => '單頁';
+
+  @override
+  String get readerPageDirectionLabel => '翻頁方向';
+
+  @override
+  String get readerDualPageDirectionLtrTooltip => '左到右（LTR，美漫慣例）';
+
+  @override
+  String get readerDualPageDirectionLtrLabel => '左翻';
+
+  @override
+  String get readerDualPageDirectionRtlTooltip => '右到左（RTL，日漫慣例）';
+
+  @override
+  String get readerDualPageDirectionRtlLabel => '右翻';
+
+  @override
+  String get readerTextConversionOverrideLabel => '簡繁轉換覆寫';
+
+  @override
+  String get readerGlobalLabel => '全域';
+
+  @override
+  String get readerUseGlobalDefaultTooltip => '使用全域預設';
+
+  @override
+  String get readerTextConversionOriginalLabel => '原文';
+
+  @override
+  String get readerTextConversionTraditionalLabel => '繁體';
+
+  @override
+  String get readerTextConversionTraditionalTooltip => '轉換為繁體';
+
+  @override
+  String get readerTextConversionSimplifiedLabel => '簡體';
+
+  @override
+  String get readerTextConversionSimplifiedTooltip => '轉換為簡體';
+
+  @override
+  String get readerFullscreenModeLabel => '全螢幕模式';
+
+  @override
+  String get readerShowHeaderLabel => '顯示頁首';
+
+  @override
+  String get readerShowFooterLabel => '顯示頁尾';
+
+  @override
+  String get readerPdfSettingsTitle => '⚙️ PDF 版面設定';
+
+  @override
+  String get readerPdfSettingsTabDisplay => '顯示';
+
+  @override
+  String get readerPdfSettingsTabFilters => '濾鏡';
+
+  @override
+  String get readerPdfSettingsTabCrop => '裁切';
+
+  @override
+  String get readerPdfFitModeLabel => 'Fit 模式';
+
+  @override
+  String get readerPdfFitPageTooltip => 'Page-fit（整頁）';
+
+  @override
+  String get readerPdfFitPageLabel => '整頁';
+
+  @override
+  String get readerPdfFitWidthTooltip => 'Fit Width（頁寬）';
+
+  @override
+  String get readerPdfFitWidthLabel => '頁寬';
+
+  @override
+  String get readerPdfFitActualTooltip => '真實比例 1:1';
+
+  @override
+  String get readerPdfFitActualLabel => '原比';
+
+  @override
+  String get readerPdfDualPageCoverAloneLabel => '封面獨立顯示';
+
+  @override
+  String get readerPdfPageOrientationLabel => '頁面方向';
+
+  @override
+  String get readerPdfDirectionLtrTooltip => '左到右';
+
+  @override
+  String get readerPdfDirectionLtrLabel => '左翻';
+
+  @override
+  String get readerPdfDirectionRtlTooltip => '右到左（日漫慣例）';
+
+  @override
+  String get readerPdfDirectionRtlLabel => '右翻';
+
+  @override
+  String get readerPdfPageTurnAnimationLabel => '換頁動畫';
+
+  @override
+  String get readerPdfPageTurnAnimationSlide => '滑動';
+
+  @override
+  String get readerPdfPageTurnAnimationNone => '無';
+
+  @override
+  String get readerPdfContrastLabel => '對比度';
+
+  @override
+  String get readerPdfBrightnessLabel => '亮度';
+
+  @override
+  String get readerPdfBoldStrengthLabel => '加粗強度';
+
+  @override
+  String get readerPdfCropModeLabel => '裁切模式';
+
+  @override
+  String get readerPdfCropNoneTooltip => '不裁切';
+
+  @override
+  String get readerPdfCropNoneLabel => '不裁';
+
+  @override
+  String get readerPdfCropAutoTooltip => '智慧自動';
+
+  @override
+  String get readerPdfCropAutoLabel => '智慧';
+
+  @override
+  String get readerPdfCropManualLabel => '手動';
+
+  @override
+  String get readerPdfCropManualTooltip => '手動選區';
+
+  @override
+  String get readerSettingsTitle => '⚙️ 版面設定';
+
+  @override
+  String get readerSettingsTabText => '文字';
+
+  @override
+  String get readerSettingsTabBoundary => '邊界';
+
+  @override
+  String get readerSettingsTabPresentation => '呈現';
+
+  @override
+  String get readerSettingsTabPreferences => '預設集';
+
+  @override
+  String get readerSettingsFontSizeLabel => '字級';
+
+  @override
+  String get readerSettingsFontWeightLabel => '字重';
+
+  @override
+  String get readerSettingsLineHeightLabel => '行距';
+
+  @override
+  String get readerSettingsParagraphSpacingLabel => '段落間距';
+
+  @override
+  String get readerSettingsLetterSpacingLabel => '字距';
+
+  @override
+  String get readerSettingsDisableBookCssLabel => '停用書本 CSS';
+
+  @override
+  String get readerSettingsMarginTopLabel => '上邊界';
+
+  @override
+  String get readerSettingsMarginBottomLabel => '下邊界';
+
+  @override
+  String get readerSettingsMarginLeftLabel => '左邊界';
+
+  @override
+  String get readerSettingsMarginRightLabel => '右邊界';
+
+  @override
+  String get readerSettingsOverriddenBadge => '此書已覆寫';
+
+  @override
+  String get readerSettingsResetToBookStyleTooltip => '恢復本書原樣式';
+
+  @override
+  String get readerSettingsNotOverriddenTooltip => '跟隨本書原樣式，尚未調整';
+
+  @override
+  String get readerSettingsUseBookFontLabel => '使用書本內建字型';
+
+  @override
+  String get readerSettingsColumnCountLabel => '欄數';
+
+  @override
+  String get readerSettingsColumnAutoLabel => '自動';
+
+  @override
+  String get readerSettingsColumnSingleLabel => '單欄';
+
+  @override
+  String get readerSettingsColumnDoubleLabel => '雙欄';
+
+  @override
+  String get readerSettingsColumnSizeLabel => '欄位大小';
+
+  @override
+  String readerSettingsColumnSizeWithValueLabel(int size) {
+    return '欄位大小 ${size}px';
+  }
+
+  @override
+  String get readerSettingsTextAlignLabel => '文字對齊';
+
+  @override
+  String get readerSettingsTextAlignCenterLabel => '置中';
+
+  @override
+  String get readerSettingsTextAlignJustifyTooltip => '左右對齊';
+
+  @override
+  String get readerSettingsTextAlignJustifyLabel => '齊行';
+
+  @override
+  String get readerSettingsTextAlignStartTooltip => '起始邊對齊';
+
+  @override
+  String get readerSettingsTextAlignStartLabel => '起始';
+
+  @override
+  String get readerSettingsTextAlignEndTooltip => '結尾邊對齊';
+
+  @override
+  String get readerSettingsTextAlignEndLabel => '結尾';
+
+  @override
+  String get readerSettingsTextAlignLeftLabel => '靠左';
+
+  @override
+  String get readerSettingsTextAlignRightLabel => '靠右';
+
+  @override
+  String get readerSettingsWritingModeLabel => '排版方向模式';
+
+  @override
+  String get readerSettingsWritingModeBookTooltip => '採用書籍排版';
+
+  @override
+  String get readerSettingsWritingModeBookLabel => '書籍';
+
+  @override
+  String get readerSettingsWritingModeVerticalTooltip => '強制直排';
+
+  @override
+  String get readerSettingsWritingModeVerticalLabel => '直排';
+
+  @override
+  String get readerSettingsWritingModeHorizontalTooltip => '強制橫排';
+
+  @override
+  String get readerSettingsWritingModeHorizontalLabel => '橫排';
+
+  @override
+  String get readerSettingsPageTurnModeLabel => '翻頁模式覆寫';
+
+  @override
+  String get readerSettingsPageTurnPaginatedTooltip => '點擊翻頁';
+
+  @override
+  String get readerSettingsPageTurnPaginatedLabel => '點擊';
+
+  @override
+  String get readerSettingsPageTurnScrollTooltip => '滾動翻頁';
+
+  @override
+  String get readerSettingsPageTurnScrollLabel => '滾動';
+
+  @override
+  String get readerSettingsScreenOrientationLabel => '螢幕方向鎖定覆寫';
+
+  @override
+  String get readerSettingsOrientationAutoTooltip => '自動旋轉';
+
+  @override
+  String get readerSettingsOrientationAutoLabel => '自動';
+
+  @override
+  String get readerSettingsOrientationLock0Tooltip => '鎖定 0°';
+
+  @override
+  String get readerSettingsOrientationLock90Tooltip => '鎖定 90°';
+
+  @override
+  String get readerSettingsOrientationLock180Tooltip => '鎖定 180°';
+
+  @override
+  String get readerSettingsOrientationLock270Tooltip => '鎖定 270°';
+
+  @override
+  String get readerSettingsSaveAsPresetButton => '將目前設定存為新預設集';
+
+  @override
+  String get readerSettingsSavedPresetsLabel => '已儲存的預設集';
+
+  @override
+  String get readerSettingsCopyFromBookLabel => '從其他書籍複製';
+
+  @override
+  String get readerSettingsCopyToCurrentBookButton => '複製到本書';
+
+  @override
+  String get readerSettingsCopyToOtherBooksButton => '複製到其他書籍';
+
+  @override
+  String get readerSettingsResetPresetTitle => '系統預設';
+
+  @override
+  String get readerSettingsResetPresetSubtitle =>
+      '移除本書所有字級/字重/行距/段落間距/字距覆寫，改用書本原始樣式';
+
+  @override
+  String get readerSettingsApplyButton => '套用';
+
+  @override
+  String get readerSettingsPresetDefaultValue => '預設';
+
+  @override
+  String get readerSettingsPresetSummaryAutoLabel => '自動';
+
+  @override
+  String readerSettingsPresetSummaryFormat(
+    String fontSize,
+    String lineHeight,
+    String writingMode,
+  ) {
+    return '字級$fontSize・行距$lineHeight・$writingMode';
+  }
+
+  @override
+  String get readerSettingsPresetEmptySlot => '（空）';
+
+  @override
+  String get readerSettingsApplyToOtherBooksTooltip => '套用到其他書籍';
+
+  @override
+  String get readerSettingsDeletePresetTooltip => '刪除';
+
+  @override
+  String get readerUnknownBookTitle => '未知書籍';
+
+  @override
+  String get readerSaveAsPresetUnavailableMessage => '暫時無法儲存預設集';
+
+  @override
+  String readerSaveAsPresetFailedMessage(String error) {
+    return '另存為新預設集失敗：$error';
+  }
+
+  @override
+  String get readerOverwritePresetPickerTitle => '選擇要覆蓋的預設集';
+
+  @override
+  String readerOverwritePresetOptionLabel(String name, String date) {
+    return '$name（最後更新：$date）';
+  }
+
+  @override
+  String get readerConfirmOverwriteTitle => '確認覆蓋';
+
+  @override
+  String readerOverwritePresetConfirmMessage(String name) {
+    return '即將覆蓋預設集「$name」，此動作無法復原。';
+  }
+
+  @override
+  String get readerConfirmApplyTitle => '確認套用';
+
+  @override
+  String readerApplyToOthersConfirmMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '即將覆蓋 $count 本書的版面設定，此動作無法復原。',
+      one: '即將覆蓋 1 本書的版面設定，此動作無法復原。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String readerApplyPresetFailedMessage(String error) {
+    return '套用版面設定失敗：$error';
+  }
+
+  @override
+  String get readerConfirmDeleteTitle => '確認刪除';
+
+  @override
+  String readerDeletePresetConfirmMessage(String name) {
+    return '即將刪除預設集「$name」，此動作無法復原。';
+  }
+
+  @override
+  String readerDeletePresetFailedMessage(String error) {
+    return '刪除預設集失敗：$error';
+  }
+
+  @override
+  String get readerSearchUnavailableMessage => '搜尋功能暫時無法使用';
+
+  @override
+  String get readerOpenBookTimeoutMessage => '開書逾時，可能是系統 WebView 版本過舊或檔案異常';
+
+  @override
+  String get readerCopiedToClipboardMessage => '已複製到剪貼簿';
+
+  @override
+  String get readerTtsVoicePickerTitle => '朗讀語音';
+
+  @override
+  String get readerUnsupportedFormatMessage => '不支援的檔案格式';
+
+  @override
+  String get readerFailedToLoadBookMessage => '無法載入書籍';
+
+  @override
+  String readerTtsSleepTimerOptionMinutes(int minutes) {
+    return '$minutes 分鐘';
+  }
+
+  @override
+  String get readerTtsSleepTimerNoLimitLabel => '不限時';
 }

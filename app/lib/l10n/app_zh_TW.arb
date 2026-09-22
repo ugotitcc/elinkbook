@@ -614,5 +614,967 @@
   "libraryLayoutOverrideSaveButton": "儲存",
   "@libraryLayoutOverrideSaveButton": {
     "description": "版面覆寫對話框「儲存」按鈕文字"
+  },
+  "readerBackTooltip": "返回",
+  "@readerBackTooltip": {
+    "description": "閱讀器頂部 Chrome 列返回按鈕的無障礙提示文字"
+  },
+  "readerSearchTooltip": "搜尋內文",
+  "@readerSearchTooltip": {
+    "description": "閱讀器頂部 Chrome 列搜尋按鈕的無障礙提示文字"
+  },
+  "readerHideToolbarTooltip": "隱藏工具列",
+  "@readerHideToolbarTooltip": {
+    "description": "閱讀器頂部 Chrome 列收合底部工具列按鈕的提示文字（底部工具列目前顯示中）"
+  },
+  "readerShowToolbarTooltip": "顯示工具列",
+  "@readerShowToolbarTooltip": {
+    "description": "閱讀器頂部 Chrome 列展開底部工具列按鈕的提示文字（底部工具列目前收合中）"
+  },
+  "readerTocTooltip": "目錄",
+  "@readerTocTooltip": {
+    "description": "閱讀器底部選單列「目錄」按鈕的無障礙提示文字"
+  },
+  "readerBookmarkAddedTooltip": "已加入此頁書籤",
+  "@readerBookmarkAddedTooltip": {
+    "description": "閱讀器底部選單列書籤按鈕提示文字：目前頁已加入書籤"
+  },
+  "readerBookmarkAddTooltip": "加入此頁書籤",
+  "@readerBookmarkAddTooltip": {
+    "description": "閱讀器底部選單列書籤按鈕提示文字：目前頁尚未加入書籤"
+  },
+  "readerAnnotationsTooltip": "劃線筆記",
+  "@readerAnnotationsTooltip": {
+    "description": "閱讀器底部選單列「劃線筆記」按鈕的無障礙提示文字"
+  },
+  "readerLayoutTooltip": "版面",
+  "@readerLayoutTooltip": {
+    "description": "閱讀器底部選單列「版面」按鈕的無障礙提示文字"
+  },
+  "readerTtsTooltip": "朗讀",
+  "@readerTtsTooltip": {
+    "description": "閱讀器底部選單列「朗讀」按鈕的無障礙提示文字"
+  },
+  "readerPagingPreviousTooltip": "上一頁",
+  "@readerPagingPreviousTooltip": {
+    "description": "PagingBar「上一頁」按鈕的無障礙提示文字"
+  },
+  "readerPagingNextTooltip": "下一頁",
+  "@readerPagingNextTooltip": {
+    "description": "PagingBar「下一頁」按鈕的無障礙提示文字"
+  },
+  "readerPdfNoPagesAvailable": "無可用頁面",
+  "@readerPdfNoPagesAvailable": {
+    "description": "PDF 縮圖面板在 totalPages <= 0 時顯示的空狀態文字"
+  },
+  "readerNoteDialogSaveButton": "儲存",
+  "@readerNoteDialogSaveButton": {
+    "description": "備註編輯對話框「儲存」按鈕文字"
+  },
+  "readerNoteDialogDefaultTitle": "備註",
+  "@readerNoteDialogDefaultTitle": {
+    "description": "showNoteTextDialog() 呼叫端未明確指定 title 時的預設對話框標題（目前所有呼叫端皆明確指定，此為防禦性預設值）"
+  },
+  "readerAnnotationUnderlineTooltip": "底線",
+  "@readerAnnotationUnderlineTooltip": {
+    "description": "選字浮動工具列「底線」樣式按鈕的無障礙提示文字"
+  },
+  "readerAnnotationCopyTooltip": "複製",
+  "@readerAnnotationCopyTooltip": {
+    "description": "選字浮動工具列「複製」按鈕的無障礙提示文字"
+  },
+  "readerAnnotationEditNoteTooltip": "編輯備註",
+  "@readerAnnotationEditNoteTooltip": {
+    "description": "選字浮動工具列備註按鈕提示文字：這次選取已有備註"
+  },
+  "readerAnnotationAddNoteTooltip": "新增備註",
+  "@readerAnnotationAddNoteTooltip": {
+    "description": "選字浮動工具列備註按鈕提示文字：這次選取尚無備註"
+  },
+  "readerAnnotationDeleteHighlightAndNote": "刪除畫線與備註",
+  "@readerAnnotationDeleteHighlightAndNote": {
+    "description": "選字浮動工具列刪除按鈕提示文字：這次選取同時命中劃線與備註"
+  },
+  "readerAnnotationDeleteHighlight": "刪除畫線",
+  "@readerAnnotationDeleteHighlight": {
+    "description": "選字浮動工具列刪除按鈕提示文字：這次選取只命中劃線"
+  },
+  "readerAnnotationDeleteNote": "刪除備註",
+  "@readerAnnotationDeleteNote": {
+    "description": "選字浮動工具列刪除按鈕提示文字：這次選取只命中備註"
+  },
+  "readerPdfSearchHint": "搜尋文字…",
+  "@readerPdfSearchHint": {
+    "description": "PDF 內文搜尋面板輸入框的 hintText"
+  },
+  "readerPdfSearchNoMatches": "找不到符合的文字",
+  "@readerPdfSearchNoMatches": {
+    "description": "PDF 內文搜尋查無結果時的提示文字"
+  },
+  "readerPdfSearchPreviousTooltip": "上一個",
+  "@readerPdfSearchPreviousTooltip": {
+    "description": "PDF 內文搜尋「上一個」按鈕的無障礙提示文字"
+  },
+  "readerPdfSearchNextTooltip": "下一個",
+  "@readerPdfSearchNextTooltip": {
+    "description": "PDF 內文搜尋「下一個」按鈕的無障礙提示文字"
+  },
+  "readerPositionConflictTitle": "「{bookTitle}」的閱讀進度不一致",
+  "@readerPositionConflictTitle": {
+    "description": "閱讀位置衝突對話框標題，{bookTitle} 為書名（使用者資料，不翻譯）",
+    "placeholders": {
+      "bookTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "readerPositionConflictMessage": "偵測到另一台裝置也更新過這本書的閱讀進度，請選擇要保留哪一邊：\n\n本機：{local}\n雲端：{remote}",
+  "@readerPositionConflictMessage": {
+    "description": "閱讀位置衝突對話框內容，{local}／{remote} 為已格式化的位置描述文字（readerPositionConflictPdfLocation 或 readerPositionConflictEpubLocation 的結果）",
+    "placeholders": {
+      "local": {
+        "type": "String"
+      },
+      "remote": {
+        "type": "String"
+      }
+    }
+  },
+  "readerPositionConflictPdfLocation": "第 {page} 頁（進度 {percent}%）",
+  "@readerPositionConflictPdfLocation": {
+    "description": "PDF 格式的位置描述，{page} 為頁碼（1-based），{percent} 為進度百分比整數",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "readerPositionConflictEpubLocation": "進度 {percent}%",
+  "@readerPositionConflictEpubLocation": {
+    "description": "非 PDF 格式（CFI 定位無法簡單轉人類可讀文字）的位置描述，{percent} 為進度百分比整數",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "readerPositionConflictKeepCloud": "保留雲端",
+  "@readerPositionConflictKeepCloud": {
+    "description": "閱讀位置衝突對話框「保留雲端」按鈕文字"
+  },
+  "readerPositionConflictKeepLocal": "保留本機",
+  "@readerPositionConflictKeepLocal": {
+    "description": "閱讀位置衝突對話框「保留本機」按鈕文字"
+  },
+  "readerTocTitle": "📖 目錄",
+  "@readerTocTitle": {
+    "description": "目錄 Bottom Sheet 標題列文字（含書本 Emoji，比照既有設計慣例保留）"
+  },
+  "readerTocEmptyMessage": "本書無目錄資料",
+  "@readerTocEmptyMessage": {
+    "description": "本書解析不出任何目錄項目時的空狀態提示"
+  },
+  "readerTocTabChapters": "章節目錄",
+  "@readerTocTabChapters": {
+    "description": "PDF 目錄 Bottom Sheet 第一個分頁籤：章節目錄"
+  },
+  "readerTocTabThumbnails": "縮圖",
+  "@readerTocTabThumbnails": {
+    "description": "PDF 目錄 Bottom Sheet 第二個分頁籤：頁碼縮圖"
+  },
+  "readerTocTabSearch": "搜尋",
+  "@readerTocTabSearch": {
+    "description": "PDF 目錄 Bottom Sheet 第三個分頁籤：內文搜尋"
+  },
+  "readerFeatureComingSoon": "此功能將於後續版本提供",
+  "@readerFeatureComingSoon": {
+    "description": "縮圖/搜尋分頁內容為 null 時的佔位文字（目前兩個分頁皆已實作，此為向後相容的防禦性回退）"
+  },
+  "readerTtsCbzUnsupportedTooltip": "CBZ 為純圖像格式，不支援語音朗讀",
+  "@readerTtsCbzUnsupportedTooltip": {
+    "description": "TTS 面板播放鍵在 CBZ（純圖像格式）停用狀態下的提示文字"
+  },
+  "readerTtsPreviousTooltip": "上一句",
+  "@readerTtsPreviousTooltip": {
+    "description": "TTS 面板「上一句」按鈕的無障礙提示文字"
+  },
+  "readerTtsPauseTooltip": "暫停朗讀",
+  "@readerTtsPauseTooltip": {
+    "description": "TTS 面板播放/暫停鍵提示文字：目前朗讀中，點擊暫停"
+  },
+  "readerTtsPlayTooltip": "開始朗讀",
+  "@readerTtsPlayTooltip": {
+    "description": "TTS 面板播放/暫停鍵提示文字：目前暫停中，點擊開始"
+  },
+  "readerTtsNextTooltip": "下一句",
+  "@readerTtsNextTooltip": {
+    "description": "TTS 面板「下一句」按鈕的無障礙提示文字"
+  },
+  "readerTtsSpeedTooltip": "朗讀語速：{speed}x（點擊切換）",
+  "@readerTtsSpeedTooltip": {
+    "description": "TTS 面板語速按鈕的無障礙提示文字，{speed} 為目前語速（已格式化為小數點後兩位的字串）",
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "readerTtsVoiceTooltip": "選擇語音",
+  "@readerTtsVoiceTooltip": {
+    "description": "TTS 面板「選擇語音」按鈕的無障礙提示文字"
+  },
+  "readerTtsSleepTimerLabel": "定時",
+  "@readerTtsSleepTimerLabel": {
+    "description": "TTS 面板睡眠定時器按鈕文字：尚未設定定時器"
+  },
+  "readerTtsSleepTimerLabelWithMinutes": "定時 {minutes} 分",
+  "@readerTtsSleepTimerLabelWithMinutes": {
+    "description": "TTS 面板睡眠定時器按鈕文字：已設定定時器，{minutes} 為剩餘分鐘數",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "readerTtsCollapseLabel": "收合",
+  "@readerTtsCollapseLabel": {
+    "description": "TTS 面板收合/展開按鈕文字：目前展開中，點擊收合"
+  },
+  "readerTtsExpandLabel": "展開",
+  "@readerTtsExpandLabel": {
+    "description": "TTS 面板收合/展開按鈕文字：目前收合中，點擊展開"
+  },
+  "readerTtsStopLabel": "停止",
+  "@readerTtsStopLabel": {
+    "description": "TTS 面板「停止朗讀」按鈕文字"
+  },
+  "readerNotesSheetTitle": "筆記",
+  "@readerNotesSheetTitle": {
+    "description": "筆記 Bottom Sheet（書籤／劃線與備註）的標題"
+  },
+  "readerNotesSheetExportMarkdownTooltip": "導出為 Markdown",
+  "@readerNotesSheetExportMarkdownTooltip": {
+    "description": "筆記 Bottom Sheet 標題列「導出為 Markdown」按鈕的無障礙提示文字"
+  },
+  "readerNotesSheetTabBookmarks": "書籤",
+  "@readerNotesSheetTabBookmarks": {
+    "description": "筆記 Bottom Sheet 第一個分頁籤：書籤"
+  },
+  "readerNotesSheetTabAnnotations": "劃線與備註",
+  "@readerNotesSheetTabAnnotations": {
+    "description": "筆記 Bottom Sheet 第二個分頁籤：劃線與備註"
+  },
+  "readerNotesSheetDeleteAllBookmarksTooltip": "刪除該書所有書籤",
+  "@readerNotesSheetDeleteAllBookmarksTooltip": {
+    "description": "書籤分頁「刪除該書所有書籤」按鈕的無障礙提示文字"
+  },
+  "readerNotesSheetRenameBookmarkTitle": "重新命名書籤",
+  "@readerNotesSheetRenameBookmarkTitle": {
+    "description": "重新命名書籤對話框標題"
+  },
+  "readerDeleteConfirmButton": "刪除",
+  "@readerDeleteConfirmButton": {
+    "description": "筆記 Bottom Sheet 內各種刪除確認對話框的「刪除」按鈕文字（書籤/劃線/備註批次刪除共用）"
+  },
+  "readerNotesSheetDeleteAllBookmarksConfirm": "確定要刪除全部書籤嗎？（共 {count} 筆）",
+  "@readerNotesSheetDeleteAllBookmarksConfirm": {
+    "description": "刪除全部書籤確認對話框標題，{count} 為目前書籤總數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readerNotesSheetRenameTooltip": "重新命名",
+  "@readerNotesSheetRenameTooltip": {
+    "description": "書籤列項目「重新命名」按鈕的無障礙提示文字"
+  },
+  "readerNotesSheetDeleteItemTooltip": "刪除",
+  "@readerNotesSheetDeleteItemTooltip": {
+    "description": "書籤/劃線/備註單筆項目「刪除」按鈕的無障礙提示文字"
+  },
+  "readerNotesSheetNoAnnotationsPlaceholder": "尚無劃線或備註",
+  "@readerNotesSheetNoAnnotationsPlaceholder": {
+    "description": "劃線與備註分頁的空狀態提示文字"
+  },
+  "readerNotesSheetDeleteAllHighlightsButton": "刪除所有劃線",
+  "@readerNotesSheetDeleteAllHighlightsButton": {
+    "description": "劃線與備註分頁「刪除所有劃線」按鈕文字"
+  },
+  "readerNotesSheetDeleteAllNotesButton": "刪除所有備註",
+  "@readerNotesSheetDeleteAllNotesButton": {
+    "description": "劃線與備註分頁「刪除所有備註」按鈕文字"
+  },
+  "readerNotesSheetNoteLabel": "備註",
+  "@readerNotesSheetNoteLabel": {
+    "description": "劃線與備註合併清單中，純備註項目（無對應劃線）的項目標題"
+  },
+  "readerHighlightStyleYellow": "螢光筆（黃）",
+  "@readerHighlightStyleYellow": {
+    "description": "劃線清單項目標題：黃色螢光筆樣式"
+  },
+  "readerHighlightStylePink": "螢光筆（粉）",
+  "@readerHighlightStylePink": {
+    "description": "劃線清單項目標題：粉色螢光筆樣式"
+  },
+  "readerHighlightStyleBlue": "螢光筆（藍）",
+  "@readerHighlightStyleBlue": {
+    "description": "劃線清單項目標題：藍色螢光筆樣式"
+  },
+  "readerHighlightStyleUnderline": "底線",
+  "@readerHighlightStyleUnderline": {
+    "description": "劃線清單項目標題：底線樣式"
+  },
+  "readerNotesSheetDeleteAllHighlightsConfirm": "確定要刪除全部劃線嗎？（共 {count} 筆）",
+  "@readerNotesSheetDeleteAllHighlightsConfirm": {
+    "description": "刪除全部劃線確認對話框標題，{count} 為目前劃線總數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readerNotesSheetDeleteAllNotesConfirm": "確定要刪除全部備註嗎？（共 {count} 筆）",
+  "@readerNotesSheetDeleteAllNotesConfirm": {
+    "description": "刪除全部備註確認對話框標題，{count} 為目前備註總數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readerFxlSettingsTitle": "⚙️ 漫畫版面設定",
+  "@readerFxlSettingsTitle": {
+    "description": "FXL（固定版面）版面設定 Bottom Sheet 標題"
+  },
+  "readerDualPageModeLabel": "雙頁模式",
+  "@readerDualPageModeLabel": {
+    "description": "雙頁模式選項群組的小標題，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用"
+  },
+  "readerDualPageAutoTooltip": "自動（橫向雙頁）",
+  "@readerDualPageAutoTooltip": {
+    "description": "雙頁模式「自動」選項 tooltip，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用"
+  },
+  "readerDualPageAutoLabel": "自動",
+  "@readerDualPageAutoLabel": {
+    "description": "雙頁模式「自動」選項短標籤，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用"
+  },
+  "readerDualPageAlwaysTooltip": "永遠雙頁",
+  "@readerDualPageAlwaysTooltip": {
+    "description": "雙頁模式「永遠雙頁」選項 tooltip，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用"
+  },
+  "readerDualPageAlwaysLabel": "雙頁",
+  "@readerDualPageAlwaysLabel": {
+    "description": "雙頁模式「永遠雙頁」選項短標籤，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用"
+  },
+  "readerDualPageNeverTooltip": "永遠單頁",
+  "@readerDualPageNeverTooltip": {
+    "description": "雙頁模式「永遠單頁」選項 tooltip，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用"
+  },
+  "readerDualPageNeverLabel": "單頁",
+  "@readerDualPageNeverLabel": {
+    "description": "雙頁模式「永遠單頁」選項短標籤，fxl_settings_sheet.dart／pdf_settings_sheet.dart 共用"
+  },
+  "readerPageDirectionLabel": "翻頁方向",
+  "@readerPageDirectionLabel": {
+    "description": "fxl_settings_sheet.dart 翻頁方向選項群組的小標題"
+  },
+  "readerDualPageDirectionLtrTooltip": "左到右（LTR，美漫慣例）",
+  "@readerDualPageDirectionLtrTooltip": {
+    "description": "fxl_settings_sheet.dart 翻頁方向「左到右」選項 tooltip"
+  },
+  "readerDualPageDirectionLtrLabel": "左翻",
+  "@readerDualPageDirectionLtrLabel": {
+    "description": "fxl_settings_sheet.dart 翻頁方向「左到右」選項短標籤"
+  },
+  "readerDualPageDirectionRtlTooltip": "右到左（RTL，日漫慣例）",
+  "@readerDualPageDirectionRtlTooltip": {
+    "description": "fxl_settings_sheet.dart 翻頁方向「右到左」選項 tooltip"
+  },
+  "readerDualPageDirectionRtlLabel": "右翻",
+  "@readerDualPageDirectionRtlLabel": {
+    "description": "fxl_settings_sheet.dart 翻頁方向「右到左」選項短標籤"
+  },
+  "readerTextConversionOverrideLabel": "簡繁轉換覆寫",
+  "@readerTextConversionOverrideLabel": {
+    "description": "簡繁轉換覆寫選項群組的小標題，fxl_settings_sheet.dart／reader_settings_sheet.dart 共用"
+  },
+  "readerGlobalLabel": "全域",
+  "@readerGlobalLabel": {
+    "description": "「使用全域預設」選項的短標籤，簡繁轉換覆寫／翻頁模式覆寫／螢幕方向覆寫共用"
+  },
+  "readerUseGlobalDefaultTooltip": "使用全域預設",
+  "@readerUseGlobalDefaultTooltip": {
+    "description": "「使用全域預設」選項的 tooltip，簡繁轉換覆寫／翻頁模式覆寫／螢幕方向覆寫共用"
+  },
+  "readerTextConversionOriginalLabel": "原文",
+  "@readerTextConversionOriginalLabel": {
+    "description": "簡繁轉換覆寫「原文」選項的標籤與 tooltip（兩者文字相同，共用一個 key）"
+  },
+  "readerTextConversionTraditionalLabel": "繁體",
+  "@readerTextConversionTraditionalLabel": {
+    "description": "簡繁轉換覆寫「繁體」選項短標籤"
+  },
+  "readerTextConversionTraditionalTooltip": "轉換為繁體",
+  "@readerTextConversionTraditionalTooltip": {
+    "description": "簡繁轉換覆寫「繁體」選項 tooltip"
+  },
+  "readerTextConversionSimplifiedLabel": "簡體",
+  "@readerTextConversionSimplifiedLabel": {
+    "description": "簡繁轉換覆寫「簡體」選項短標籤"
+  },
+  "readerTextConversionSimplifiedTooltip": "轉換為簡體",
+  "@readerTextConversionSimplifiedTooltip": {
+    "description": "簡繁轉換覆寫「簡體」選項 tooltip"
+  },
+  "readerFullscreenModeLabel": "全螢幕模式",
+  "@readerFullscreenModeLabel": {
+    "description": "全螢幕模式開關標題，fxl_settings_sheet.dart／pdf_settings_sheet.dart／reader_settings_sheet.dart 共用"
+  },
+  "readerShowHeaderLabel": "顯示頁首",
+  "@readerShowHeaderLabel": {
+    "description": "顯示頁首開關標題，fxl_settings_sheet.dart／reader_settings_sheet.dart 共用"
+  },
+  "readerShowFooterLabel": "顯示頁尾",
+  "@readerShowFooterLabel": {
+    "description": "顯示頁尾開關標題，fxl_settings_sheet.dart／pdf_settings_sheet.dart／reader_settings_sheet.dart 共用"
+  },
+  "readerPdfSettingsTitle": "⚙️ PDF 版面設定",
+  "@readerPdfSettingsTitle": {
+    "description": "PDF 版面設定 Bottom Sheet 標題"
+  },
+  "readerPdfSettingsTabDisplay": "顯示",
+  "@readerPdfSettingsTabDisplay": {
+    "description": "PDF 版面設定第一個分頁籤：顯示"
+  },
+  "readerPdfSettingsTabFilters": "濾鏡",
+  "@readerPdfSettingsTabFilters": {
+    "description": "PDF 版面設定第二個分頁籤：濾鏡"
+  },
+  "readerPdfSettingsTabCrop": "裁切",
+  "@readerPdfSettingsTabCrop": {
+    "description": "PDF 版面設定第三個分頁籤：裁切"
+  },
+  "readerPdfFitModeLabel": "Fit 模式",
+  "@readerPdfFitModeLabel": {
+    "description": "PDF 顯示分頁「Fit 模式」選項群組小標題"
+  },
+  "readerPdfFitPageTooltip": "Page-fit（整頁）",
+  "@readerPdfFitPageTooltip": {
+    "description": "PDF Fit 模式「整頁」選項 tooltip"
+  },
+  "readerPdfFitPageLabel": "整頁",
+  "@readerPdfFitPageLabel": {
+    "description": "PDF Fit 模式「整頁」選項短標籤"
+  },
+  "readerPdfFitWidthTooltip": "Fit Width（頁寬）",
+  "@readerPdfFitWidthTooltip": {
+    "description": "PDF Fit 模式「頁寬」選項 tooltip"
+  },
+  "readerPdfFitWidthLabel": "頁寬",
+  "@readerPdfFitWidthLabel": {
+    "description": "PDF Fit 模式「頁寬」選項短標籤"
+  },
+  "readerPdfFitActualTooltip": "真實比例 1:1",
+  "@readerPdfFitActualTooltip": {
+    "description": "PDF Fit 模式「原比」選項 tooltip"
+  },
+  "readerPdfFitActualLabel": "原比",
+  "@readerPdfFitActualLabel": {
+    "description": "PDF Fit 模式「原比」選項短標籤"
+  },
+  "readerPdfDualPageCoverAloneLabel": "封面獨立顯示",
+  "@readerPdfDualPageCoverAloneLabel": {
+    "description": "PDF 雙頁模式「封面獨立顯示」開關標題"
+  },
+  "readerPdfPageOrientationLabel": "頁面方向",
+  "@readerPdfPageOrientationLabel": {
+    "description": "PDF 顯示分頁「頁面方向」選項群組小標題"
+  },
+  "readerPdfDirectionLtrTooltip": "左到右",
+  "@readerPdfDirectionLtrTooltip": {
+    "description": "PDF 頁面方向「左到右」選項 tooltip"
+  },
+  "readerPdfDirectionLtrLabel": "左翻",
+  "@readerPdfDirectionLtrLabel": {
+    "description": "PDF 頁面方向「左到右」選項短標籤"
+  },
+  "readerPdfDirectionRtlTooltip": "右到左（日漫慣例）",
+  "@readerPdfDirectionRtlTooltip": {
+    "description": "PDF 頁面方向「右到左」選項 tooltip"
+  },
+  "readerPdfDirectionRtlLabel": "右翻",
+  "@readerPdfDirectionRtlLabel": {
+    "description": "PDF 頁面方向「右到左」選項短標籤"
+  },
+  "readerPdfPageTurnAnimationLabel": "換頁動畫",
+  "@readerPdfPageTurnAnimationLabel": {
+    "description": "PDF 顯示分頁「換頁動畫」選項群組小標題"
+  },
+  "readerPdfPageTurnAnimationSlide": "滑動",
+  "@readerPdfPageTurnAnimationSlide": {
+    "description": "換頁動畫「滑動」選項標籤與 tooltip（文字相同）"
+  },
+  "readerPdfPageTurnAnimationNone": "無",
+  "@readerPdfPageTurnAnimationNone": {
+    "description": "換頁動畫「無」選項標籤與 tooltip（文字相同）"
+  },
+  "readerPdfContrastLabel": "對比度",
+  "@readerPdfContrastLabel": {
+    "description": "PDF 濾鏡分頁「對比度」滑桿標籤"
+  },
+  "readerPdfBrightnessLabel": "亮度",
+  "@readerPdfBrightnessLabel": {
+    "description": "PDF 濾鏡分頁「亮度」滑桿標籤"
+  },
+  "readerPdfBoldStrengthLabel": "加粗強度",
+  "@readerPdfBoldStrengthLabel": {
+    "description": "PDF 濾鏡分頁「加粗強度」滑桿標籤"
+  },
+  "readerPdfCropModeLabel": "裁切模式",
+  "@readerPdfCropModeLabel": {
+    "description": "PDF 裁切分頁「裁切模式」選項群組小標題"
+  },
+  "readerPdfCropNoneTooltip": "不裁切",
+  "@readerPdfCropNoneTooltip": {
+    "description": "裁切模式「不裁切」選項 tooltip"
+  },
+  "readerPdfCropNoneLabel": "不裁",
+  "@readerPdfCropNoneLabel": {
+    "description": "裁切模式「不裁切」選項短標籤"
+  },
+  "readerPdfCropAutoTooltip": "智慧自動",
+  "@readerPdfCropAutoTooltip": {
+    "description": "裁切模式「智慧自動」選項 tooltip"
+  },
+  "readerPdfCropAutoLabel": "智慧",
+  "@readerPdfCropAutoLabel": {
+    "description": "裁切模式「智慧自動」選項短標籤"
+  },
+  "readerPdfCropManualLabel": "手動",
+  "@readerPdfCropManualLabel": {
+    "description": "裁切模式「手動」選項短標籤"
+  },
+  "readerPdfCropManualTooltip": "手動選區",
+  "@readerPdfCropManualTooltip": {
+    "description": "裁切模式「手動」選項 tooltip"
+  },
+  "readerSettingsTitle": "⚙️ 版面設定",
+  "@readerSettingsTitle": {
+    "description": "EPUB 版面設定 Bottom Sheet 標題"
+  },
+  "readerSettingsTabText": "文字",
+  "@readerSettingsTabText": {
+    "description": "版面設定第一個分頁籤：文字"
+  },
+  "readerSettingsTabBoundary": "邊界",
+  "@readerSettingsTabBoundary": {
+    "description": "版面設定第二個分頁籤：邊界"
+  },
+  "readerSettingsTabPresentation": "呈現",
+  "@readerSettingsTabPresentation": {
+    "description": "版面設定第三個分頁籤：呈現"
+  },
+  "readerSettingsTabPreferences": "預設集",
+  "@readerSettingsTabPreferences": {
+    "description": "版面設定第四個分頁籤：預設集"
+  },
+  "readerSettingsFontSizeLabel": "字級",
+  "@readerSettingsFontSizeLabel": {
+    "description": "文字分頁「字級」滑桿標籤"
+  },
+  "readerSettingsFontWeightLabel": "字重",
+  "@readerSettingsFontWeightLabel": {
+    "description": "文字分頁「字重」滑桿標籤"
+  },
+  "readerSettingsLineHeightLabel": "行距",
+  "@readerSettingsLineHeightLabel": {
+    "description": "文字分頁「行距」滑桿標籤"
+  },
+  "readerSettingsParagraphSpacingLabel": "段落間距",
+  "@readerSettingsParagraphSpacingLabel": {
+    "description": "文字分頁「段落間距」滑桿標籤"
+  },
+  "readerSettingsLetterSpacingLabel": "字距",
+  "@readerSettingsLetterSpacingLabel": {
+    "description": "文字分頁「字距」滑桿標籤"
+  },
+  "readerSettingsDisableBookCssLabel": "停用書本 CSS",
+  "@readerSettingsDisableBookCssLabel": {
+    "description": "文字分頁「停用書本 CSS」開關標題"
+  },
+  "readerSettingsMarginTopLabel": "上邊界",
+  "@readerSettingsMarginTopLabel": {
+    "description": "邊界分頁「上邊界」滑桿標籤"
+  },
+  "readerSettingsMarginBottomLabel": "下邊界",
+  "@readerSettingsMarginBottomLabel": {
+    "description": "邊界分頁「下邊界」滑桿標籤"
+  },
+  "readerSettingsMarginLeftLabel": "左邊界",
+  "@readerSettingsMarginLeftLabel": {
+    "description": "邊界分頁「左邊界」滑桿標籤"
+  },
+  "readerSettingsMarginRightLabel": "右邊界",
+  "@readerSettingsMarginRightLabel": {
+    "description": "邊界分頁「右邊界」滑桿標籤"
+  },
+  "readerSettingsOverriddenBadge": "此書已覆寫",
+  "@readerSettingsOverriddenBadge": {
+    "description": "數值型設定已對本書覆寫時顯示的徽章文字"
+  },
+  "readerSettingsResetToBookStyleTooltip": "恢復本書原樣式",
+  "@readerSettingsResetToBookStyleTooltip": {
+    "description": "已覆寫欄位旁「恢復本書原樣式」按鈕的無障礙提示文字"
+  },
+  "readerSettingsNotOverriddenTooltip": "跟隨本書原樣式，尚未調整",
+  "@readerSettingsNotOverriddenTooltip": {
+    "description": "未覆寫欄位「使用全域預設」徽章的 Tooltip 說明文字"
+  },
+  "readerSettingsUseBookFontLabel": "使用書本內建字型",
+  "@readerSettingsUseBookFontLabel": {
+    "description": "字型下拉選單「使用書本內建字型」選項（不指定自訂字型）"
+  },
+  "readerSettingsColumnCountLabel": "欄數",
+  "@readerSettingsColumnCountLabel": {
+    "description": "呈現分頁「欄數」選項群組小標題"
+  },
+  "readerSettingsColumnAutoLabel": "自動",
+  "@readerSettingsColumnAutoLabel": {
+    "description": "欄數「自動」選項標籤與 tooltip（文字相同）"
+  },
+  "readerSettingsColumnSingleLabel": "單欄",
+  "@readerSettingsColumnSingleLabel": {
+    "description": "欄數「單欄」選項標籤與 tooltip"
+  },
+  "readerSettingsColumnDoubleLabel": "雙欄",
+  "@readerSettingsColumnDoubleLabel": {
+    "description": "欄數「雙欄」選項標籤與 tooltip"
+  },
+  "readerSettingsColumnSizeLabel": "欄位大小",
+  "@readerSettingsColumnSizeLabel": {
+    "description": "E-Ink 模式下欄位大小標題（不含數值，避免與 EBStepper 內顯示的數值重複）"
+  },
+  "readerSettingsColumnSizeWithValueLabel": "欄位大小 {size}px",
+  "@readerSettingsColumnSizeWithValueLabel": {
+    "description": "一般主題下欄位大小標題（含目前數值），{size} 為像素數",
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "readerSettingsTextAlignLabel": "文字對齊",
+  "@readerSettingsTextAlignLabel": {
+    "description": "呈現分頁「文字對齊」選項群組小標題"
+  },
+  "readerSettingsTextAlignCenterLabel": "置中",
+  "@readerSettingsTextAlignCenterLabel": {
+    "description": "文字對齊「置中」選項標籤與 tooltip"
+  },
+  "readerSettingsTextAlignJustifyTooltip": "左右對齊",
+  "@readerSettingsTextAlignJustifyTooltip": {
+    "description": "文字對齊「齊行」選項 tooltip"
+  },
+  "readerSettingsTextAlignJustifyLabel": "齊行",
+  "@readerSettingsTextAlignJustifyLabel": {
+    "description": "文字對齊「齊行」選項短標籤"
+  },
+  "readerSettingsTextAlignStartTooltip": "起始邊對齊",
+  "@readerSettingsTextAlignStartTooltip": {
+    "description": "文字對齊「起始」選項 tooltip"
+  },
+  "readerSettingsTextAlignStartLabel": "起始",
+  "@readerSettingsTextAlignStartLabel": {
+    "description": "文字對齊「起始」選項短標籤"
+  },
+  "readerSettingsTextAlignEndTooltip": "結尾邊對齊",
+  "@readerSettingsTextAlignEndTooltip": {
+    "description": "文字對齊「結尾」選項 tooltip"
+  },
+  "readerSettingsTextAlignEndLabel": "結尾",
+  "@readerSettingsTextAlignEndLabel": {
+    "description": "文字對齊「結尾」選項短標籤"
+  },
+  "readerSettingsTextAlignLeftLabel": "靠左",
+  "@readerSettingsTextAlignLeftLabel": {
+    "description": "文字對齊「靠左」選項標籤與 tooltip"
+  },
+  "readerSettingsTextAlignRightLabel": "靠右",
+  "@readerSettingsTextAlignRightLabel": {
+    "description": "文字對齊「靠右」選項標籤與 tooltip"
+  },
+  "readerSettingsWritingModeLabel": "排版方向模式",
+  "@readerSettingsWritingModeLabel": {
+    "description": "呈現分頁「排版方向模式」選項群組小標題"
+  },
+  "readerSettingsWritingModeBookTooltip": "採用書籍排版",
+  "@readerSettingsWritingModeBookTooltip": {
+    "description": "排版方向「採用書籍排版」選項 tooltip"
+  },
+  "readerSettingsWritingModeBookLabel": "書籍",
+  "@readerSettingsWritingModeBookLabel": {
+    "description": "排版方向「採用書籍排版」選項短標籤"
+  },
+  "readerSettingsWritingModeVerticalTooltip": "強制直排",
+  "@readerSettingsWritingModeVerticalTooltip": {
+    "description": "排版方向「強制直排」選項 tooltip"
+  },
+  "readerSettingsWritingModeVerticalLabel": "直排",
+  "@readerSettingsWritingModeVerticalLabel": {
+    "description": "排版方向「強制直排」選項短標籤，亦供預設集摘要文字重用"
+  },
+  "readerSettingsWritingModeHorizontalTooltip": "強制橫排",
+  "@readerSettingsWritingModeHorizontalTooltip": {
+    "description": "排版方向「強制橫排」選項 tooltip"
+  },
+  "readerSettingsWritingModeHorizontalLabel": "橫排",
+  "@readerSettingsWritingModeHorizontalLabel": {
+    "description": "排版方向「強制橫排」選項短標籤，亦供預設集摘要文字重用"
+  },
+  "readerSettingsPageTurnModeLabel": "翻頁模式覆寫",
+  "@readerSettingsPageTurnModeLabel": {
+    "description": "呈現分頁「翻頁模式覆寫」選項群組小標題"
+  },
+  "readerSettingsPageTurnPaginatedTooltip": "點擊翻頁",
+  "@readerSettingsPageTurnPaginatedTooltip": {
+    "description": "翻頁模式「點擊翻頁」選項 tooltip"
+  },
+  "readerSettingsPageTurnPaginatedLabel": "點擊",
+  "@readerSettingsPageTurnPaginatedLabel": {
+    "description": "翻頁模式「點擊翻頁」選項短標籤"
+  },
+  "readerSettingsPageTurnScrollTooltip": "滾動翻頁",
+  "@readerSettingsPageTurnScrollTooltip": {
+    "description": "翻頁模式「滾動翻頁」選項 tooltip"
+  },
+  "readerSettingsPageTurnScrollLabel": "滾動",
+  "@readerSettingsPageTurnScrollLabel": {
+    "description": "翻頁模式「滾動翻頁」選項短標籤"
+  },
+  "readerSettingsScreenOrientationLabel": "螢幕方向鎖定覆寫",
+  "@readerSettingsScreenOrientationLabel": {
+    "description": "呈現分頁「螢幕方向鎖定覆寫」選項群組小標題"
+  },
+  "readerSettingsOrientationAutoTooltip": "自動旋轉",
+  "@readerSettingsOrientationAutoTooltip": {
+    "description": "螢幕方向「自動旋轉」選項 tooltip"
+  },
+  "readerSettingsOrientationAutoLabel": "自動",
+  "@readerSettingsOrientationAutoLabel": {
+    "description": "螢幕方向「自動旋轉」選項短標籤"
+  },
+  "readerSettingsOrientationLock0Tooltip": "鎖定 0°",
+  "@readerSettingsOrientationLock0Tooltip": {
+    "description": "螢幕方向「鎖定 0°」選項 tooltip"
+  },
+  "readerSettingsOrientationLock90Tooltip": "鎖定 90°",
+  "@readerSettingsOrientationLock90Tooltip": {
+    "description": "螢幕方向「鎖定 90°」選項 tooltip"
+  },
+  "readerSettingsOrientationLock180Tooltip": "鎖定 180°",
+  "@readerSettingsOrientationLock180Tooltip": {
+    "description": "螢幕方向「鎖定 180°」選項 tooltip"
+  },
+  "readerSettingsOrientationLock270Tooltip": "鎖定 270°",
+  "@readerSettingsOrientationLock270Tooltip": {
+    "description": "螢幕方向「鎖定 270°」選項 tooltip"
+  },
+  "readerSettingsSaveAsPresetButton": "將目前設定存為新預設集",
+  "@readerSettingsSaveAsPresetButton": {
+    "description": "預設集分頁「另存為新預設集」按鈕文字"
+  },
+  "readerSettingsSavedPresetsLabel": "已儲存的預設集",
+  "@readerSettingsSavedPresetsLabel": {
+    "description": "預設集分頁「已儲存的預設集」區塊標題"
+  },
+  "readerSettingsCopyFromBookLabel": "從其他書籍複製",
+  "@readerSettingsCopyFromBookLabel": {
+    "description": "預設集分頁「從其他書籍複製」區塊標題"
+  },
+  "readerSettingsCopyToCurrentBookButton": "複製到本書",
+  "@readerSettingsCopyToCurrentBookButton": {
+    "description": "「複製到本書」按鈕文字"
+  },
+  "readerSettingsCopyToOtherBooksButton": "複製到其他書籍",
+  "@readerSettingsCopyToOtherBooksButton": {
+    "description": "「複製到其他書籍」按鈕文字"
+  },
+  "readerSettingsResetPresetTitle": "系統預設",
+  "@readerSettingsResetPresetTitle": {
+    "description": "固定列（重設為本書原樣式）的標題"
+  },
+  "readerSettingsResetPresetSubtitle": "移除本書所有字級/字重/行距/段落間距/字距覆寫，改用書本原始樣式",
+  "@readerSettingsResetPresetSubtitle": {
+    "description": "固定列（重設為本書原樣式）的副標題說明"
+  },
+  "readerSettingsApplyButton": "套用",
+  "@readerSettingsApplyButton": {
+    "description": "預設集卡片列「套用」按鈕文字，固定列與各 preset slot 共用"
+  },
+  "readerSettingsPresetDefaultValue": "預設",
+  "@readerSettingsPresetDefaultValue": {
+    "description": "預設集摘要文字中，欄位未收錄時的回退顯示（例如字級/行距缺席）"
+  },
+  "readerSettingsPresetSummaryAutoLabel": "自動",
+  "@readerSettingsPresetSummaryAutoLabel": {
+    "description": "預設集摘要文字中，排版方向欄位為 null（自動偵測）時的顯示文字"
+  },
+  "readerSettingsPresetSummaryFormat": "字級{fontSize}・行距{lineHeight}・{writingMode}",
+  "@readerSettingsPresetSummaryFormat": {
+    "description": "預設集卡片副標題摘要格式，三個 placeholder 皆為已格式化完成的字串（含 readerSettingsPresetDefaultValue／readerSettingsPresetSummaryAutoLabel 等回退值）",
+    "placeholders": {
+      "fontSize": {
+        "type": "String"
+      },
+      "lineHeight": {
+        "type": "String"
+      },
+      "writingMode": {
+        "type": "String"
+      }
+    }
+  },
+  "readerSettingsPresetEmptySlot": "（空）",
+  "@readerSettingsPresetEmptySlot": {
+    "description": "預設集尚未使用的空 slot 顯示文字"
+  },
+  "readerSettingsApplyToOtherBooksTooltip": "套用到其他書籍",
+  "@readerSettingsApplyToOtherBooksTooltip": {
+    "description": "預設集卡片列「套用到其他書籍」圖示按鈕的無障礙提示文字"
+  },
+  "readerSettingsDeletePresetTooltip": "刪除",
+  "@readerSettingsDeletePresetTooltip": {
+    "description": "預設集卡片列「刪除」圖示按鈕的無障礙提示文字"
+  },
+  "readerUnknownBookTitle": "未知書籍",
+  "@readerUnknownBookTitle": {
+    "description": "ReaderScreen.bookTitle 未提供（僅測試直接建構時可能發生，正式生產路徑必定提供書名）時的回退顯示文字"
+  },
+  "readerSaveAsPresetUnavailableMessage": "暫時無法儲存預設集",
+  "@readerSaveAsPresetUnavailableMessage": {
+    "description": "layoutPresetRepository 未提供時，點擊「另存為新預設集」顯示的 SnackBar 訊息"
+  },
+  "readerSaveAsPresetFailedMessage": "另存為新預設集失敗：{error}",
+  "@readerSaveAsPresetFailedMessage": {
+    "description": "另存為新預設集過程發生例外時顯示的 SnackBar 訊息，{error} 為例外物件的字串表示",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "readerOverwritePresetPickerTitle": "選擇要覆蓋的預設集",
+  "@readerOverwritePresetPickerTitle": {
+    "description": "已存滿 3 組預設集時，選擇要覆蓋哪一組的對話框標題"
+  },
+  "readerOverwritePresetOptionLabel": "{name}（最後更新：{date}）",
+  "@readerOverwritePresetOptionLabel": {
+    "description": "覆蓋預設集選單的單一選項文字，{name} 為預設集名稱，{date} 為已依 DateFormat.yMd() 格式化的最後更新日期字串",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "readerConfirmOverwriteTitle": "確認覆蓋",
+  "@readerConfirmOverwriteTitle": {
+    "description": "覆蓋預設集二次確認對話框標題與確認按鈕（兩處文字相同，共用一個 key）"
+  },
+  "readerOverwritePresetConfirmMessage": "即將覆蓋預設集「{name}」，此動作無法復原。",
+  "@readerOverwritePresetConfirmMessage": {
+    "description": "覆蓋預設集二次確認訊息，{name} 為預設集名稱",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "readerConfirmApplyTitle": "確認套用",
+  "@readerConfirmApplyTitle": {
+    "description": "套用版面設定到其他書籍的確認對話框標題與確認按鈕（兩處文字相同，共用一個 key）"
+  },
+  "readerApplyToOthersConfirmMessage": "{count, plural, =1{即將覆蓋 1 本書的版面設定，此動作無法復原。} other{即將覆蓋 {count} 本書的版面設定，此動作無法復原。}}",
+  "@readerApplyToOthersConfirmMessage": {
+    "description": "套用版面設定到其他書籍的確認訊息，{count} 為目標書籍數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readerApplyPresetFailedMessage": "套用版面設定失敗：{error}",
+  "@readerApplyPresetFailedMessage": {
+    "description": "套用版面設定（來自預設集或來自其他書籍）過程發生例外時顯示的 SnackBar 訊息，{error} 為例外物件的字串表示，兩處呼叫端共用",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "readerConfirmDeleteTitle": "確認刪除",
+  "@readerConfirmDeleteTitle": {
+    "description": "刪除預設集確認對話框標題與確認按鈕（兩處文字相同，共用一個 key）"
+  },
+  "readerDeletePresetConfirmMessage": "即將刪除預設集「{name}」，此動作無法復原。",
+  "@readerDeletePresetConfirmMessage": {
+    "description": "刪除預設集確認訊息，{name} 為預設集名稱",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "readerDeletePresetFailedMessage": "刪除預設集失敗：{error}",
+  "@readerDeletePresetFailedMessage": {
+    "description": "刪除預設集過程發生例外時顯示的 SnackBar 訊息，{error} 為例外物件的字串表示",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "readerSearchUnavailableMessage": "搜尋功能暫時無法使用",
+  "@readerSearchUnavailableMessage": {
+    "description": "searchRepository／libraryRepository 未提供或書籍格式無法辨識時，點擊搜尋顯示的 SnackBar 訊息"
+  },
+  "readerOpenBookTimeoutMessage": "開書逾時，可能是系統 WebView 版本過舊或檔案異常",
+  "@readerOpenBookTimeoutMessage": {
+    "description": "開書逾時錯誤畫面顯示的訊息"
+  },
+  "readerCopiedToClipboardMessage": "已複製到剪貼簿",
+  "@readerCopiedToClipboardMessage": {
+    "description": "選字工具列「複製」按鈕點擊後的 SnackBar 提示"
+  },
+  "readerTtsVoicePickerTitle": "朗讀語音",
+  "@readerTtsVoicePickerTitle": {
+    "description": "TTS 選擇語音選單的標題列文字"
+  },
+  "readerUnsupportedFormatMessage": "不支援的檔案格式",
+  "@readerUnsupportedFormatMessage": {
+    "description": "書籍格式無法辨識（BookFormat.unknown）時的畫面中央提示文字"
+  },
+  "readerFailedToLoadBookMessage": "無法載入書籍",
+  "@readerFailedToLoadBookMessage": {
+    "description": "開書失敗且 _errorMessage 為 null 時的回退錯誤文字"
+  },
+  "readerTtsSleepTimerOptionMinutes": "{minutes} 分鐘",
+  "@readerTtsSleepTimerOptionMinutes": {
+    "description": "TTS 睡眠定時器選單的分鐘數選項文字，{minutes} 為分鐘數（固定選項 15/30/45/60，恆大於 1，不需要 ICU plural）",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "readerTtsSleepTimerNoLimitLabel": "不限時",
+  "@readerTtsSleepTimerNoLimitLabel": {
+    "description": "TTS 睡眠定時器選單「不限時」選項文字"
   }
 }

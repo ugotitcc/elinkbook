@@ -489,4 +489,709 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get libraryLayoutOverrideSaveButton => 'Save';
+
+  @override
+  String get readerBackTooltip => 'Back';
+
+  @override
+  String get readerSearchTooltip => 'Search in book';
+
+  @override
+  String get readerHideToolbarTooltip => 'Hide toolbar';
+
+  @override
+  String get readerShowToolbarTooltip => 'Show toolbar';
+
+  @override
+  String get readerTocTooltip => 'Table of contents';
+
+  @override
+  String get readerBookmarkAddedTooltip => 'Bookmarked';
+
+  @override
+  String get readerBookmarkAddTooltip => 'Add bookmark';
+
+  @override
+  String get readerAnnotationsTooltip => 'Highlights & notes';
+
+  @override
+  String get readerLayoutTooltip => 'Layout';
+
+  @override
+  String get readerTtsTooltip => 'Read aloud';
+
+  @override
+  String get readerPagingPreviousTooltip => 'Previous page';
+
+  @override
+  String get readerPagingNextTooltip => 'Next page';
+
+  @override
+  String get readerPdfNoPagesAvailable => 'No pages available';
+
+  @override
+  String get readerNoteDialogSaveButton => 'Save';
+
+  @override
+  String get readerNoteDialogDefaultTitle => 'Note';
+
+  @override
+  String get readerAnnotationUnderlineTooltip => 'Underline';
+
+  @override
+  String get readerAnnotationCopyTooltip => 'Copy';
+
+  @override
+  String get readerAnnotationEditNoteTooltip => 'Edit note';
+
+  @override
+  String get readerAnnotationAddNoteTooltip => 'Add note';
+
+  @override
+  String get readerAnnotationDeleteHighlightAndNote =>
+      'Delete highlight & note';
+
+  @override
+  String get readerAnnotationDeleteHighlight => 'Delete highlight';
+
+  @override
+  String get readerAnnotationDeleteNote => 'Delete note';
+
+  @override
+  String get readerPdfSearchHint => 'Search text…';
+
+  @override
+  String get readerPdfSearchNoMatches => 'No matching text found';
+
+  @override
+  String get readerPdfSearchPreviousTooltip => 'Previous';
+
+  @override
+  String get readerPdfSearchNextTooltip => 'Next';
+
+  @override
+  String readerPositionConflictTitle(String bookTitle) {
+    return 'Reading position for “$bookTitle” doesn\'t match';
+  }
+
+  @override
+  String readerPositionConflictMessage(String local, String remote) {
+    return 'Another device also updated the reading position for this book. Choose which one to keep:\n\nThis device: $local\nCloud: $remote';
+  }
+
+  @override
+  String readerPositionConflictPdfLocation(int page, int percent) {
+    return 'Page $page ($percent% progress)';
+  }
+
+  @override
+  String readerPositionConflictEpubLocation(int percent) {
+    return '$percent% progress';
+  }
+
+  @override
+  String get readerPositionConflictKeepCloud => 'Keep cloud';
+
+  @override
+  String get readerPositionConflictKeepLocal => 'Keep this device';
+
+  @override
+  String get readerTocTitle => '📖 Table of Contents';
+
+  @override
+  String get readerTocEmptyMessage => 'This book has no table of contents';
+
+  @override
+  String get readerTocTabChapters => 'Chapters';
+
+  @override
+  String get readerTocTabThumbnails => 'Thumbnails';
+
+  @override
+  String get readerTocTabSearch => 'Search';
+
+  @override
+  String get readerFeatureComingSoon =>
+      'This feature is coming in a future version';
+
+  @override
+  String get readerTtsCbzUnsupportedTooltip =>
+      'CBZ is image-only and doesn\'t support read-aloud';
+
+  @override
+  String get readerTtsPreviousTooltip => 'Previous sentence';
+
+  @override
+  String get readerTtsPauseTooltip => 'Pause';
+
+  @override
+  String get readerTtsPlayTooltip => 'Play';
+
+  @override
+  String get readerTtsNextTooltip => 'Next sentence';
+
+  @override
+  String readerTtsSpeedTooltip(String speed) {
+    return 'Speed: ${speed}x (tap to change)';
+  }
+
+  @override
+  String get readerTtsVoiceTooltip => 'Choose voice';
+
+  @override
+  String get readerTtsSleepTimerLabel => 'Timer';
+
+  @override
+  String readerTtsSleepTimerLabelWithMinutes(int minutes) {
+    return 'Timer $minutes min';
+  }
+
+  @override
+  String get readerTtsCollapseLabel => 'Collapse';
+
+  @override
+  String get readerTtsExpandLabel => 'Expand';
+
+  @override
+  String get readerTtsStopLabel => 'Stop';
+
+  @override
+  String get readerNotesSheetTitle => 'Notes';
+
+  @override
+  String get readerNotesSheetExportMarkdownTooltip => 'Export as Markdown';
+
+  @override
+  String get readerNotesSheetTabBookmarks => 'Bookmarks';
+
+  @override
+  String get readerNotesSheetTabAnnotations => 'Highlights & Notes';
+
+  @override
+  String get readerNotesSheetDeleteAllBookmarksTooltip =>
+      'Delete all bookmarks for this book';
+
+  @override
+  String get readerNotesSheetRenameBookmarkTitle => 'Rename bookmark';
+
+  @override
+  String get readerDeleteConfirmButton => 'Delete';
+
+  @override
+  String readerNotesSheetDeleteAllBookmarksConfirm(int count) {
+    return 'Delete all $count bookmark(s)?';
+  }
+
+  @override
+  String get readerNotesSheetRenameTooltip => 'Rename';
+
+  @override
+  String get readerNotesSheetDeleteItemTooltip => 'Delete';
+
+  @override
+  String get readerNotesSheetNoAnnotationsPlaceholder =>
+      'No highlights or notes yet';
+
+  @override
+  String get readerNotesSheetDeleteAllHighlightsButton =>
+      'Delete all highlights';
+
+  @override
+  String get readerNotesSheetDeleteAllNotesButton => 'Delete all notes';
+
+  @override
+  String get readerNotesSheetNoteLabel => 'Note';
+
+  @override
+  String get readerHighlightStyleYellow => 'Highlighter (Yellow)';
+
+  @override
+  String get readerHighlightStylePink => 'Highlighter (Pink)';
+
+  @override
+  String get readerHighlightStyleBlue => 'Highlighter (Blue)';
+
+  @override
+  String get readerHighlightStyleUnderline => 'Underline';
+
+  @override
+  String readerNotesSheetDeleteAllHighlightsConfirm(int count) {
+    return 'Delete all $count highlight(s)?';
+  }
+
+  @override
+  String readerNotesSheetDeleteAllNotesConfirm(int count) {
+    return 'Delete all $count note(s)?';
+  }
+
+  @override
+  String get readerFxlSettingsTitle => '⚙️ Comic Layout Settings';
+
+  @override
+  String get readerDualPageModeLabel => 'Dual-page mode';
+
+  @override
+  String get readerDualPageAutoTooltip => 'Auto (dual-page in landscape)';
+
+  @override
+  String get readerDualPageAutoLabel => 'Auto';
+
+  @override
+  String get readerDualPageAlwaysTooltip => 'Always dual-page';
+
+  @override
+  String get readerDualPageAlwaysLabel => 'Dual';
+
+  @override
+  String get readerDualPageNeverTooltip => 'Always single-page';
+
+  @override
+  String get readerDualPageNeverLabel => 'Single';
+
+  @override
+  String get readerPageDirectionLabel => 'Page direction';
+
+  @override
+  String get readerDualPageDirectionLtrTooltip =>
+      'Left to right (LTR, Western comic convention)';
+
+  @override
+  String get readerDualPageDirectionLtrLabel => 'LTR';
+
+  @override
+  String get readerDualPageDirectionRtlTooltip =>
+      'Right to left (RTL, manga convention)';
+
+  @override
+  String get readerDualPageDirectionRtlLabel => 'RTL';
+
+  @override
+  String get readerTextConversionOverrideLabel => 'Script conversion override';
+
+  @override
+  String get readerGlobalLabel => 'Global';
+
+  @override
+  String get readerUseGlobalDefaultTooltip => 'Use global default';
+
+  @override
+  String get readerTextConversionOriginalLabel => 'Original';
+
+  @override
+  String get readerTextConversionTraditionalLabel => 'Traditional';
+
+  @override
+  String get readerTextConversionTraditionalTooltip => 'Convert to Traditional';
+
+  @override
+  String get readerTextConversionSimplifiedLabel => 'Simplified';
+
+  @override
+  String get readerTextConversionSimplifiedTooltip => 'Convert to Simplified';
+
+  @override
+  String get readerFullscreenModeLabel => 'Fullscreen mode';
+
+  @override
+  String get readerShowHeaderLabel => 'Show header';
+
+  @override
+  String get readerShowFooterLabel => 'Show footer';
+
+  @override
+  String get readerPdfSettingsTitle => '⚙️ PDF Layout Settings';
+
+  @override
+  String get readerPdfSettingsTabDisplay => 'Display';
+
+  @override
+  String get readerPdfSettingsTabFilters => 'Filters';
+
+  @override
+  String get readerPdfSettingsTabCrop => 'Crop';
+
+  @override
+  String get readerPdfFitModeLabel => 'Fit mode';
+
+  @override
+  String get readerPdfFitPageTooltip => 'Page-fit';
+
+  @override
+  String get readerPdfFitPageLabel => 'Page';
+
+  @override
+  String get readerPdfFitWidthTooltip => 'Fit Width';
+
+  @override
+  String get readerPdfFitWidthLabel => 'Width';
+
+  @override
+  String get readerPdfFitActualTooltip => 'Actual size 1:1';
+
+  @override
+  String get readerPdfFitActualLabel => 'Actual';
+
+  @override
+  String get readerPdfDualPageCoverAloneLabel => 'Show cover alone';
+
+  @override
+  String get readerPdfPageOrientationLabel => 'Page direction';
+
+  @override
+  String get readerPdfDirectionLtrTooltip => 'Left to right';
+
+  @override
+  String get readerPdfDirectionLtrLabel => 'LTR';
+
+  @override
+  String get readerPdfDirectionRtlTooltip => 'Right to left (manga convention)';
+
+  @override
+  String get readerPdfDirectionRtlLabel => 'RTL';
+
+  @override
+  String get readerPdfPageTurnAnimationLabel => 'Page-turn animation';
+
+  @override
+  String get readerPdfPageTurnAnimationSlide => 'Slide';
+
+  @override
+  String get readerPdfPageTurnAnimationNone => 'None';
+
+  @override
+  String get readerPdfContrastLabel => 'Contrast';
+
+  @override
+  String get readerPdfBrightnessLabel => 'Brightness';
+
+  @override
+  String get readerPdfBoldStrengthLabel => 'Bold strength';
+
+  @override
+  String get readerPdfCropModeLabel => 'Crop mode';
+
+  @override
+  String get readerPdfCropNoneTooltip => 'No crop';
+
+  @override
+  String get readerPdfCropNoneLabel => 'None';
+
+  @override
+  String get readerPdfCropAutoTooltip => 'Smart auto-crop';
+
+  @override
+  String get readerPdfCropAutoLabel => 'Smart';
+
+  @override
+  String get readerPdfCropManualLabel => 'Manual';
+
+  @override
+  String get readerPdfCropManualTooltip => 'Manual selection';
+
+  @override
+  String get readerSettingsTitle => '⚙️ Layout Settings';
+
+  @override
+  String get readerSettingsTabText => 'Text';
+
+  @override
+  String get readerSettingsTabBoundary => 'Margins';
+
+  @override
+  String get readerSettingsTabPresentation => 'Display';
+
+  @override
+  String get readerSettingsTabPreferences => 'Presets';
+
+  @override
+  String get readerSettingsFontSizeLabel => 'Font size';
+
+  @override
+  String get readerSettingsFontWeightLabel => 'Font weight';
+
+  @override
+  String get readerSettingsLineHeightLabel => 'Line height';
+
+  @override
+  String get readerSettingsParagraphSpacingLabel => 'Paragraph spacing';
+
+  @override
+  String get readerSettingsLetterSpacingLabel => 'Letter spacing';
+
+  @override
+  String get readerSettingsDisableBookCssLabel => 'Disable book CSS';
+
+  @override
+  String get readerSettingsMarginTopLabel => 'Top margin';
+
+  @override
+  String get readerSettingsMarginBottomLabel => 'Bottom margin';
+
+  @override
+  String get readerSettingsMarginLeftLabel => 'Left margin';
+
+  @override
+  String get readerSettingsMarginRightLabel => 'Right margin';
+
+  @override
+  String get readerSettingsOverriddenBadge => 'Overridden for this book';
+
+  @override
+  String get readerSettingsResetToBookStyleTooltip =>
+      'Reset to book\'s original style';
+
+  @override
+  String get readerSettingsNotOverriddenTooltip =>
+      'Following book\'s original style, not yet adjusted';
+
+  @override
+  String get readerSettingsUseBookFontLabel => 'Use book\'s built-in font';
+
+  @override
+  String get readerSettingsColumnCountLabel => 'Columns';
+
+  @override
+  String get readerSettingsColumnAutoLabel => 'Auto';
+
+  @override
+  String get readerSettingsColumnSingleLabel => 'Single';
+
+  @override
+  String get readerSettingsColumnDoubleLabel => 'Double';
+
+  @override
+  String get readerSettingsColumnSizeLabel => 'Column size';
+
+  @override
+  String readerSettingsColumnSizeWithValueLabel(int size) {
+    return 'Column size ${size}px';
+  }
+
+  @override
+  String get readerSettingsTextAlignLabel => 'Text align';
+
+  @override
+  String get readerSettingsTextAlignCenterLabel => 'Center';
+
+  @override
+  String get readerSettingsTextAlignJustifyTooltip => 'Justify';
+
+  @override
+  String get readerSettingsTextAlignJustifyLabel => 'Justify';
+
+  @override
+  String get readerSettingsTextAlignStartTooltip => 'Align to start edge';
+
+  @override
+  String get readerSettingsTextAlignStartLabel => 'Start';
+
+  @override
+  String get readerSettingsTextAlignEndTooltip => 'Align to end edge';
+
+  @override
+  String get readerSettingsTextAlignEndLabel => 'End';
+
+  @override
+  String get readerSettingsTextAlignLeftLabel => 'Left';
+
+  @override
+  String get readerSettingsTextAlignRightLabel => 'Right';
+
+  @override
+  String get readerSettingsWritingModeLabel => 'Writing mode override';
+
+  @override
+  String get readerSettingsWritingModeBookTooltip => 'Use book\'s writing mode';
+
+  @override
+  String get readerSettingsWritingModeBookLabel => 'Book';
+
+  @override
+  String get readerSettingsWritingModeVerticalTooltip => 'Force vertical';
+
+  @override
+  String get readerSettingsWritingModeVerticalLabel => 'Vertical';
+
+  @override
+  String get readerSettingsWritingModeHorizontalTooltip => 'Force horizontal';
+
+  @override
+  String get readerSettingsWritingModeHorizontalLabel => 'Horizontal';
+
+  @override
+  String get readerSettingsPageTurnModeLabel => 'Page-turn mode override';
+
+  @override
+  String get readerSettingsPageTurnPaginatedTooltip => 'Tap to turn page';
+
+  @override
+  String get readerSettingsPageTurnPaginatedLabel => 'Tap';
+
+  @override
+  String get readerSettingsPageTurnScrollTooltip => 'Scroll to read';
+
+  @override
+  String get readerSettingsPageTurnScrollLabel => 'Scroll';
+
+  @override
+  String get readerSettingsScreenOrientationLabel =>
+      'Screen orientation lock override';
+
+  @override
+  String get readerSettingsOrientationAutoTooltip => 'Auto-rotate';
+
+  @override
+  String get readerSettingsOrientationAutoLabel => 'Auto';
+
+  @override
+  String get readerSettingsOrientationLock0Tooltip => 'Lock 0°';
+
+  @override
+  String get readerSettingsOrientationLock90Tooltip => 'Lock 90°';
+
+  @override
+  String get readerSettingsOrientationLock180Tooltip => 'Lock 180°';
+
+  @override
+  String get readerSettingsOrientationLock270Tooltip => 'Lock 270°';
+
+  @override
+  String get readerSettingsSaveAsPresetButton =>
+      'Save current settings as new preset';
+
+  @override
+  String get readerSettingsSavedPresetsLabel => 'Saved presets';
+
+  @override
+  String get readerSettingsCopyFromBookLabel => 'Copy from another book';
+
+  @override
+  String get readerSettingsCopyToCurrentBookButton => 'Copy to this book';
+
+  @override
+  String get readerSettingsCopyToOtherBooksButton => 'Copy to other books';
+
+  @override
+  String get readerSettingsResetPresetTitle => 'System default';
+
+  @override
+  String get readerSettingsResetPresetSubtitle =>
+      'Remove this book\'s font size/weight/line height/paragraph spacing/letter spacing overrides and use the book\'s original style';
+
+  @override
+  String get readerSettingsApplyButton => 'Apply';
+
+  @override
+  String get readerSettingsPresetDefaultValue => 'Default';
+
+  @override
+  String get readerSettingsPresetSummaryAutoLabel => 'Auto';
+
+  @override
+  String readerSettingsPresetSummaryFormat(
+    String fontSize,
+    String lineHeight,
+    String writingMode,
+  ) {
+    return 'Size $fontSize · Line height $lineHeight · $writingMode';
+  }
+
+  @override
+  String get readerSettingsPresetEmptySlot => '(Empty)';
+
+  @override
+  String get readerSettingsApplyToOtherBooksTooltip => 'Apply to other books';
+
+  @override
+  String get readerSettingsDeletePresetTooltip => 'Delete';
+
+  @override
+  String get readerUnknownBookTitle => 'Unknown Book';
+
+  @override
+  String get readerSaveAsPresetUnavailableMessage =>
+      'Can\'t save preset right now';
+
+  @override
+  String readerSaveAsPresetFailedMessage(String error) {
+    return 'Failed to save new preset: $error';
+  }
+
+  @override
+  String get readerOverwritePresetPickerTitle => 'Choose a preset to overwrite';
+
+  @override
+  String readerOverwritePresetOptionLabel(String name, String date) {
+    return '$name (updated $date)';
+  }
+
+  @override
+  String get readerConfirmOverwriteTitle => 'Confirm Overwrite';
+
+  @override
+  String readerOverwritePresetConfirmMessage(String name) {
+    return 'This will overwrite preset “$name”. This can\'t be undone.';
+  }
+
+  @override
+  String get readerConfirmApplyTitle => 'Confirm Apply';
+
+  @override
+  String readerApplyToOthersConfirmMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'This will overwrite the layout settings of $count books. This can\'t be undone.',
+      one:
+          'This will overwrite the layout settings of 1 book. This can\'t be undone.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String readerApplyPresetFailedMessage(String error) {
+    return 'Failed to apply layout settings: $error';
+  }
+
+  @override
+  String get readerConfirmDeleteTitle => 'Confirm Delete';
+
+  @override
+  String readerDeletePresetConfirmMessage(String name) {
+    return 'This will delete preset “$name”. This can\'t be undone.';
+  }
+
+  @override
+  String readerDeletePresetFailedMessage(String error) {
+    return 'Failed to delete preset: $error';
+  }
+
+  @override
+  String get readerSearchUnavailableMessage =>
+      'Search is temporarily unavailable';
+
+  @override
+  String get readerOpenBookTimeoutMessage =>
+      'Timed out opening the book. The system WebView may be outdated, or the file may be corrupted.';
+
+  @override
+  String get readerCopiedToClipboardMessage => 'Copied to clipboard';
+
+  @override
+  String get readerTtsVoicePickerTitle => 'Voice';
+
+  @override
+  String get readerUnsupportedFormatMessage => 'Unsupported file format';
+
+  @override
+  String get readerFailedToLoadBookMessage => 'Failed to load book';
+
+  @override
+  String readerTtsSleepTimerOptionMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get readerTtsSleepTimerNoLimitLabel => 'No limit';
 }

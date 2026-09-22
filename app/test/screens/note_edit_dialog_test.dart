@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/screens/note_edit_dialog.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('輸入文字後按儲存，回傳已 trim 的文字', (tester) async {
     String? result;
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Builder(
           builder: (context) => ElevatedButton(
@@ -32,6 +36,9 @@ void main() {
   testWidgets('文字為空白時按儲存，回傳 null（視同取消）', (tester) async {
     String? result = 'not-set-yet';
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Builder(
           builder: (context) => ElevatedButton(
@@ -55,6 +62,9 @@ void main() {
 
   testWidgets('帶入 initialText 時，輸入框預先顯示該文字', (tester) async {
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Builder(
           builder: (context) => ElevatedButton(
@@ -75,6 +85,9 @@ void main() {
   testWidgets('按取消，回傳 null 且不拋出例外（含退場動畫期間）', (tester) async {
     String? result = 'not-set-yet';
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Builder(
           builder: (context) => ElevatedButton(
@@ -101,5 +114,26 @@ void main() {
 
     expect(result, isNull);
     expect(tester.takeException(), isNull);
+  });
+  testWidgets('英文介面下取消/儲存按鈕正確以英文渲染', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showNoteTextDialog(context),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.text('Save'), findsOneWidget);
   });
 }

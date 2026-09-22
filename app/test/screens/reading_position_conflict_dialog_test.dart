@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/reading_position_conflict_dialog.dart';
 import 'package:elinkbook/sync/sync_reading_position.dart';
 
@@ -15,9 +16,13 @@ void main() {
 
   Future<void> pumpTrigger(
     WidgetTester tester,
-    ValueSetter<ReadingPositionChoice?> onResult,
-  ) async {
+    ValueSetter<ReadingPositionChoice?> onResult, {
+    Locale locale = const Locale('zh', 'TW'),
+  }) async {
     await tester.pumpWidget(MaterialApp(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Builder(
         builder: (context) => ElevatedButton(
           onPressed: () async {
@@ -77,5 +82,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(result, isNull);
+  });
+  testWidgets('英文介面下標題/訊息/按鈕正確以英文渲染', (tester) async {
+    await pumpTrigger(tester, (_) {}, locale: const Locale('en'));
+    await tester.tap(find.text('trigger'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining("doesn't match"), findsOneWidget);
+    expect(find.text('Keep cloud'), findsOneWidget);
+    expect(find.text('Keep this device'), findsOneWidget);
   });
 }

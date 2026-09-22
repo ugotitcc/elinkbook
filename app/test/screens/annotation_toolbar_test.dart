@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/screens/annotation_toolbar.dart';
@@ -9,6 +10,9 @@ void main() {
   testWidgets('顯示螢光筆三色、底線、備註、關閉共 6 個按鈕', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Scaffold(
           body: AnnotationToolbar(
@@ -51,6 +55,9 @@ void main() {
     HighlightStyle? selected;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Scaffold(
           body: AnnotationToolbar(
@@ -74,6 +81,9 @@ void main() {
     HighlightStyle? selected;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Scaffold(
           body: AnnotationToolbar(
@@ -97,6 +107,9 @@ void main() {
     HighlightStyle? selected;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Scaffold(
           body: AnnotationToolbar(
@@ -120,6 +133,9 @@ void main() {
     HighlightStyle? selected;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Scaffold(
           body: AnnotationToolbar(
@@ -141,6 +157,9 @@ void main() {
     var pressed = false;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Scaffold(
           body: AnnotationToolbar(
@@ -162,6 +181,9 @@ void main() {
     var pressed = false;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Scaffold(
           body: AnnotationToolbar(
@@ -183,6 +205,9 @@ void main() {
     var pressed = false;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Scaffold(
           body: AnnotationToolbar(
@@ -203,6 +228,9 @@ void main() {
   testWidgets('onDeletePressed 為 null 時不顯示刪除按鈕', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Scaffold(
           body: AnnotationToolbar(
@@ -225,6 +253,9 @@ void main() {
     var pressed = false;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Scaffold(
           body: AnnotationToolbar(
@@ -253,6 +284,9 @@ void main() {
       'false 時顯示「新增備註」', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Scaffold(
           body: AnnotationToolbar(
@@ -273,6 +307,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Scaffold(
           body: AnnotationToolbar(
@@ -295,6 +332,9 @@ void main() {
     testWidgets('isEinkMode: false 時維持陰影，不加邊框', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: Scaffold(
             body: AnnotationToolbar(
@@ -324,6 +364,9 @@ void main() {
     testWidgets('isEinkMode: true 時陰影歸零，改用 outline 邊框', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
           theme: buildEinkThemeData(),
           home: Scaffold(
             body: AnnotationToolbar(
@@ -352,5 +395,29 @@ void main() {
       expect(shape.side.color, colorScheme.outline);
       expect(shape.side.width, 1.5);
     });
+  });
+  testWidgets('英文介面下底線/關閉/複製/備註 tooltip 正確以英文渲染', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: Scaffold(
+          body: AnnotationToolbar(
+            onStyleSelected: (_) {},
+            onNotePressed: () {},
+            onClosePressed: () {},
+            onCopyPressed: () {},
+            isEinkMode: false,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byTooltip('Underline'), findsOneWidget);
+    expect(find.byTooltip('Close'), findsOneWidget);
+    expect(find.byTooltip('Copy'), findsOneWidget);
+    expect(find.byTooltip('Add note'), findsOneWidget);
   });
 }

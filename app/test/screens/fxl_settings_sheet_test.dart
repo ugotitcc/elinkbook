@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
@@ -15,6 +16,9 @@ void main() {
   testWidgets('能正常 pump 起，顯示三個雙頁模式選項', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: BookReaderPrefs.empty,
@@ -34,6 +38,9 @@ void main() {
     BookReaderPrefs? changed;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: BookReaderPrefs.empty,
@@ -53,6 +60,9 @@ void main() {
   testWidgets('已有持久化 dualPageMode 時，初始狀態正確反映', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(dualPageMode: DualPageMode.never),
@@ -92,6 +102,9 @@ void main() {
   testWidgets('已持久化 fullscreen=true 時，全螢幕模式開關初始值反映為開啟', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(fullscreen: true),
@@ -116,6 +129,9 @@ void main() {
     BookReaderPrefs? changed;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(dualPageMode: DualPageMode.always),
@@ -147,6 +163,9 @@ void main() {
   testWidgets('已持久化 showHeader=true 時，顯示頁首開關初始值反映為開啟', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(showHeader: true),
@@ -169,6 +188,9 @@ void main() {
   testWidgets('已持久化 showFooter=true 時，顯示頁尾開關初始值反映為開啟', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(showFooter: true),
@@ -192,6 +214,9 @@ void main() {
     BookReaderPrefs? changed;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(dualPageMode: DualPageMode.always),
@@ -213,6 +238,9 @@ void main() {
     BookReaderPrefs? changed;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(fullscreen: true),
@@ -234,6 +262,9 @@ void main() {
     testWidgets('點擊 LTR 按鈕觸發 onChanged，dualPageDirection 更新為 ltr', (tester) async {
       BookReaderPrefs? changed;
       await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(dualPageDirection: DualPageDirection.rtl),
@@ -252,6 +283,9 @@ void main() {
     testWidgets('點擊 RTL 按鈕觸發 onChanged，dualPageDirection 更新為 rtl', (tester) async {
       BookReaderPrefs? changed;
       await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(dualPageDirection: DualPageDirection.ltr),
@@ -269,6 +303,9 @@ void main() {
 
     testWidgets('未指定時預設選中 RTL（全域預設值）', (tester) async {
       await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: BookReaderPrefs.empty,
@@ -304,6 +341,9 @@ void main() {
 
   testWidgets('FxlSettingsSheet 在 E-Ink 模式下雙頁模式選項具備高對比選中底色', (tester) async {
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       theme: buildEinkThemeData(),
       home: Scaffold(
         body: FxlSettingsSheet(
@@ -327,6 +367,9 @@ void main() {
       '對照表定義的短標籤（epic-39-layout-settings-redesign Issue 6）',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: FxlSettingsSheet(
           prefs: BookReaderPrefs.empty,
@@ -358,6 +401,9 @@ void main() {
       '（epic-39-layout-settings-redesign Issue 6）',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: FxlSettingsSheet(
           prefs: BookReaderPrefs.empty,
@@ -386,6 +432,9 @@ void main() {
   testWidgets('showTextConversion: true 時顯示簡繁轉換覆寫選項', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: BookReaderPrefs.empty,
@@ -406,6 +455,9 @@ void main() {
   testWidgets('showTextConversion: false 時不顯示簡繁轉換覆寫選項（CBZ）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: BookReaderPrefs.empty,
@@ -427,6 +479,9 @@ void main() {
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: BookReaderPrefs.empty,
@@ -448,6 +503,9 @@ void main() {
     BookReaderPrefs? changed;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(dualPageMode: DualPageMode.always),
@@ -474,6 +532,9 @@ void main() {
     BookReaderPrefs? changed;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(
@@ -496,6 +557,26 @@ void main() {
     expect(changed?.textConversionOverride, isNull);
     expect(changed?.dualPageMode, DualPageMode.never);
   });
+
+  testWidgets('英文介面下雙頁模式/翻頁方向/全螢幕開關文字正確以英文渲染', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: BookReaderPrefs.empty,
+            onChanged: (_) {},
+            isEinkMode: false,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Dual-page mode'), findsOneWidget);
+    expect(find.text('Fullscreen mode'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpModalSheet(
@@ -504,6 +585,9 @@ Future<void> _pumpModalSheet(
   ValueChanged<BookReaderPrefs> onChanged,
 ) async {
   await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: Builder(
         builder: (context) => ElevatedButton(

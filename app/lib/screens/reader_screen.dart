@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import 'package:clock/clock.dart';
+import 'package:intl/intl.dart';
+
+import '../l10n/app_localizations.dart';
 
 import '../reader/annotation_list_item.dart';
 import '../reader/annotation_resolution.dart';
@@ -137,7 +140,7 @@ class ReaderScreen extends StatefulWidget {
   /// 供「導出為 Markdown」使用的書籍中繼資料（epic-6-annotations
   /// Issue 5）。刻意為可選具名參數並附預設值——比照 [bookmarksRepository]
   /// 既有慣例，避免既有大量測試呼叫端需要逐一補上這三個參數。
-  final String bookTitle;
+  final String? bookTitle;
   final String? bookAuthor;
   final double bookProgress;
 
@@ -237,7 +240,7 @@ class ReaderScreen extends StatefulWidget {
     this.bookmarksRepository,
     this.highlightsRepository,
     this.notesRepository,
-    this.bookTitle = '未知書籍',
+    this.bookTitle,
     this.bookAuthor,
     this.bookProgress = 0.0,
     this.isFixedLayout,
@@ -970,12 +973,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 把兩種原本會靜默失敗的路徑都改成使用者可見的 SnackBar 提示，並保留
   /// debugPrint 供日後若再次收到回報時排查根因。
   Future<void> _handleSaveAsPreset(BookReaderPrefs currentDraft) async {
+    final l10n = AppLocalizations.of(context)!;
     final repository = widget.layoutPresetRepository;
     if (repository == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          key: Key('reader_save_as_preset_repository_unavailable_snackbar'),
-          content: Text('暫時無法儲存預設集'),
+        SnackBar(
+          key: const Key('reader_save_as_preset_repository_unavailable_snackbar'),
+          content: Text(l10n.readerSaveAsPresetUnavailableMessage),
         ),
       );
       return;
@@ -1015,28 +1019,32 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           key: const Key('reader_save_as_preset_error_snackbar'),
-          content: Text('另存為新預設集失敗：$e'),
+          content: Text(l10n.readerSaveAsPresetFailedMessage('$e')),
         ),
       );
     }
   }
 
   Future<LayoutPreset?> _selectPresetToOverwrite() {
+    final l10n = AppLocalizations.of(context)!;
+    final dateFormat = DateFormat.yMd(Localizations.localeOf(context).toString());
     return showDialog<LayoutPreset>(
       context: context,
       builder: (dialogContext) => SimpleDialog(
-        title: const Text('選擇要覆蓋的預設集'),
+        title: Text(l10n.readerOverwritePresetPickerTitle),
         children: [
           ..._layoutPresets.map((preset) => SimpleDialogOption(
                 key: Key('layout_preset_overwrite_option_${preset.id}'),
                 onPressed: () => Navigator.of(dialogContext).pop(preset),
-                child: Text(
-                    '${preset.name}（最後更新：${preset.updatedAt.year}/${preset.updatedAt.month}/${preset.updatedAt.day}）'),
+                child: Text(l10n.readerOverwritePresetOptionLabel(
+                  preset.name,
+                  dateFormat.format(preset.updatedAt),
+                )),
               )),
           SimpleDialogOption(
             key: const Key('layout_preset_overwrite_cancel'),
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
         ],
       ),
@@ -1044,20 +1052,21 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   Future<bool> _confirmOverwrite(String name) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('確認覆蓋'),
-        content: Text('即將覆蓋預設集「$name」，此動作無法復原。'),
+        title: Text(l10n.readerConfirmOverwriteTitle),
+        content: Text(l10n.readerOverwritePresetConfirmMessage(name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             key: const Key('layout_preset_overwrite_confirm'),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('確認覆蓋'),
+            child: Text(l10n.readerConfirmOverwriteTitle),
           ),
         ],
       ),
@@ -1066,20 +1075,21 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   Future<bool> _confirmApplyToOtherBooks(int count) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('確認套用'),
-        content: Text('即將覆蓋 $count 本書的版面設定，此動作無法復原。'),
+        title: Text(l10n.readerConfirmApplyTitle),
+        content: Text(l10n.readerApplyToOthersConfirmMessage(count)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             key: const Key('layout_preset_apply_confirm'),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('確認套用'),
+            child: Text(l10n.readerConfirmApplyTitle),
           ),
         ],
       ),
@@ -1132,7 +1142,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           key: const Key('reader_apply_preset_error_snackbar'),
-          content: Text('套用版面設定失敗：$e'),
+          content: Text(AppLocalizations.of(context)!.readerApplyPresetFailedMessage('$e')),
         ),
       );
     }
@@ -1170,7 +1180,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           key: const Key('reader_apply_preset_error_snackbar'),
-          content: Text('套用版面設定失敗：$e'),
+          content: Text(AppLocalizations.of(context)!.readerApplyPresetFailedMessage('$e')),
         ),
       );
     }
@@ -1202,27 +1212,28 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           key: const Key('reader_delete_preset_error_snackbar'),
-          content: Text('刪除預設集失敗：$e'),
+          content: Text(AppLocalizations.of(context)!.readerDeletePresetFailedMessage('$e')),
         ),
       );
     }
   }
 
   Future<bool> _confirmDeletePreset(String name) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('確認刪除'),
-        content: Text('即將刪除預設集「$name」，此動作無法復原。'),
+        title: Text(l10n.readerConfirmDeleteTitle),
+        content: Text(l10n.readerDeletePresetConfirmMessage(name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             key: const Key('layout_preset_delete_confirm'),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('確認刪除'),
+            child: Text(l10n.readerConfirmDeleteTitle),
           ),
         ],
       ),
@@ -1524,7 +1535,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _showThemedModalBottomSheet<void>(
       builder: (_) => NotesBottomSheet(
         bookId: widget.bookId,
-        bookTitle: widget.bookTitle,
+        bookTitle: _displayBookTitle,
         bookAuthor: widget.bookAuthor,
         bookProgress: latestProgress,
         bookmarksRepository: repository,
@@ -1774,9 +1785,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final book = _buildSearchableBook();
     if (searchRepository == null || libraryRepository == null || book == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          key: Key('reader_chrome_search_unavailable_snackbar'),
-          content: Text('搜尋功能暫時無法使用'),
+        SnackBar(
+          key: const Key('reader_chrome_search_unavailable_snackbar'),
+          content: Text(AppLocalizations.of(context)!.readerSearchUnavailableMessage),
         ),
       );
       return;
@@ -1844,7 +1855,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_state != _RenderState.loading) return;
     setState(() {
       _state = _RenderState.error;
-      _errorMessage = '開書逾時，可能是系統 WebView 版本過舊或檔案異常';
+      _errorMessage = AppLocalizations.of(context)!.readerOpenBookTimeoutMessage;
     });
   }
 
@@ -1973,9 +1984,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        key: Key('reader_copy_selection_snackbar'),
-        content: Text('已複製到剪貼簿'),
+      SnackBar(
+        key: const Key('reader_copy_selection_snackbar'),
+        content: Text(AppLocalizations.of(context)!.readerCopiedToClipboardMessage),
       ),
     );
   }
@@ -1983,11 +1994,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 刪除按鈕的 tooltip 文字，依 [item] 實際含有的內容組合而定
   /// （epic-27-reader-device-compat Issue 11）。
   String _annotationDeleteButtonLabel(AnnotationListItem item) {
+    final l10n = AppLocalizations.of(context)!;
     final hasHighlight = item.highlight != null;
     final hasNote = item.note != null;
-    if (hasHighlight && hasNote) return '刪除畫線與備註';
-    if (hasHighlight) return '刪除畫線';
-    return '刪除備註';
+    if (hasHighlight && hasNote) return l10n.readerAnnotationDeleteHighlightAndNote;
+    if (hasHighlight) return l10n.readerAnnotationDeleteHighlight;
+    return l10n.readerAnnotationDeleteNote;
   }
 
   void _handlePdfSelectionRectComputed(PdfSelectionInfo info) {
@@ -2054,10 +2066,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       highlights: _highlights,
       notes: _notes,
     )?.note;
+    final l10n = AppLocalizations.of(context)!;
     final text = await showNoteTextDialog(
       context,
       initialText: existing?.text ?? '',
-      title: existing != null ? '編輯備註' : '新增備註',
+      title: existing != null ? l10n.readerAnnotationEditNoteTooltip : l10n.readerAnnotationAddNoteTooltip,
     );
     if (text == null) return;
     final snapshot = await session.createOrUpdateNote(
@@ -2149,10 +2162,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       highlights: _highlights,
       notes: _notes,
     )?.note;
+    final l10n = AppLocalizations.of(context)!;
     final text = await showNoteTextDialog(
       context,
       initialText: existing?.text ?? '',
-      title: existing != null ? '編輯備註' : '新增備註',
+      title: existing != null ? l10n.readerAnnotationEditNoteTooltip : l10n.readerAnnotationAddNoteTooltip,
     );
     if (text == null) return;
     final snapshot = await session.createOrUpdateNote(
@@ -2352,10 +2366,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   /// 依 [_textConversionMode] 轉換後的書名，供頁首／底部工具列／單書
-  /// 搜尋標題等「單書情境」渲染點統一取用（審查修正 M-1，見
-  /// issues.md Issue 3：避免逐點各自呼叫 convertText() 造成遺漏）。
-  String get _displayBookTitle =>
-      convertText(widget.bookTitle, _textConversionMode);
+  /// 搜尋標題等「單書情境」渲染點統一取用。[widget.bookTitle] 為 `null`
+  /// 時（僅測試直接建構 `ReaderScreen` 未帶 `bookTitle` 才會發生，正式
+  /// 生產路徑 `buildReaderScreen()` 恆傳入書名，見 Task 18 計劃範圍
+  /// 澄清）回退為 `readerUnknownBookTitle` 在地化文字——此 getter 僅在
+  /// `build()` 或使用者互動 callback 內被呼叫（非 `initState()`），
+  /// 存取 `AppLocalizations.of(context)!` 安全。
+  String get _displayBookTitle {
+    final title = widget.bookTitle ??
+        AppLocalizations.of(context)!.readerUnknownBookTitle;
+    return convertText(title, _textConversionMode);
+  }
 
   /// 同 [_displayBookTitle]，供 `_buildSearchableBook()` 的作者欄位使用；
   /// [widget.bookAuthor] 為 null 時原樣回傳 null。
@@ -2696,11 +2717,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               children: [
                 // 審查修正（review-plan-issue-2.md M3）：補上標題列，
                 // 讓使用者知道目前是在選語音，不是一份沒有上下文的清單。
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Text(
-                    '朗讀語音',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    AppLocalizations.of(context)!.readerTtsVoicePickerTitle,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 for (final voice in voices)
@@ -2718,13 +2739,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   Widget _buildBody(BookFormat format, bool isLandscape) {
+    final l10n = AppLocalizations.of(context)!;
     if (format == BookFormat.unknown) {
       // 審查修正（epic-38-reader-chrome-tts-redesign Issue 1）：早退分支
       // 也要疊上 ReaderChromeTopBar，否則 Scaffold.appBar 已恆為 null 後，
       // 使用者在不支援格式畫面完全沒有返回鍵、無法離開閱讀器。
       return Stack(
         children: [
-          const Center(child: Text('不支援的檔案格式')),
+          Center(child: Text(l10n.readerUnsupportedFormatMessage)),
           if (!_cropEditModeActive) _buildChromeTopBar(format),
         ],
       );
@@ -2739,7 +2761,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         children: [
           Center(
             child: Text(
-              _errorMessage ?? '無法載入書籍',
+              _errorMessage ?? l10n.readerFailedToLoadBookMessage,
               key: const Key('reader_error_text'),
             ),
           ),
@@ -3475,6 +3497,7 @@ class _TtsSleepTimerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final primaryColor = Theme.of(context).colorScheme.primary;
     return SafeArea(
       child: Column(
@@ -3483,14 +3506,14 @@ class _TtsSleepTimerSheet extends StatelessWidget {
           for (final option in options)
             ListTile(
               key: Key('reader_tts_sleep_timer_option_${option.inMinutes}'),
-              title: Text('${option.inMinutes} 分鐘'),
+              title: Text(l10n.readerTtsSleepTimerOptionMinutes(option.inMinutes)),
               trailing:
                   selected == option ? Icon(Icons.check, color: primaryColor) : null,
               onTap: () => onSelected(option),
             ),
           ListTile(
             key: const Key('reader_tts_sleep_timer_option_none'),
-            title: const Text('不限時'),
+            title: Text(l10n.readerTtsSleepTimerNoLimitLabel),
             trailing: selected == null ? Icon(Icons.check, color: primaryColor) : null,
             onTap: () => onSelected(null),
           ),

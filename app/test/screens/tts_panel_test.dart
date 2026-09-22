@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/tts_controller.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/tts_panel.dart';
 
 void main() {
@@ -19,8 +20,12 @@ void main() {
     VoidCallback? onSleepTimerTap,
     VoidCallback? onToggleCollapse,
     VoidCallback? onStop,
+    Locale locale = const Locale('zh', 'TW'),
   }) {
     return MaterialApp(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TtsPanel(
           status: status,
@@ -209,5 +214,14 @@ void main() {
     );
     expect(size.height, greaterThanOrEqualTo(52));
     expect(size.height, lessThan(56));
+  });
+  testWidgets('英文介面下播放/收合/停止按鈕文字正確以英文渲染', (tester) async {
+    await tester.pumpWidget(buildPanel(
+      locale: const Locale('en'),
+      status: TtsPlaybackStatus.paused,
+    ));
+
+    expect(find.byTooltip('Play'), findsOneWidget);
+    expect(find.text('Stop'), findsOneWidget);
   });
 }

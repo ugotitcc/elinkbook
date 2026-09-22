@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// 書架換頁控制列（`DESIGN.md#L317` §15.1）：純呈現、無狀態，不知道
 /// 分頁邏輯本身——`currentPage`/`pageCount` 由呼叫端算好傳入，
 /// `onPrevious`/`onNext` 為 `null` 時代表已在邊界頁，按鈕自動停用。
@@ -47,6 +49,7 @@ class PagingBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // 觸控目標依 DESIGN.md §7.2：一般模式 48dp、E-Ink 模式 56dp。用
     // SizedBox 給 IconButton 緊約束（tight constraints），確保實際渲染
     // 尺寸精確等於指定值，不受 IconButton 內建最小尺寸影響。
@@ -68,7 +71,7 @@ class PagingBar extends StatelessWidget {
             child: IconButton(
               key: _previousButtonKey,
               icon: const Icon(Icons.chevron_left),
-              tooltip: '上一頁',
+              tooltip: l10n.readerPagingPreviousTooltip,
               onPressed: onPrevious,
             ),
           ),
@@ -82,7 +85,7 @@ class PagingBar extends StatelessWidget {
             child: IconButton(
               key: _nextButtonKey,
               icon: const Icon(Icons.chevron_right),
-              tooltip: '下一頁',
+              tooltip: l10n.readerPagingNextTooltip,
               onPressed: onNext,
             ),
           ),

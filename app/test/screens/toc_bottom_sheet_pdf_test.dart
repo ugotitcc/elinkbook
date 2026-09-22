@@ -1,3 +1,4 @@
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_format.dart';
@@ -21,6 +22,9 @@ void main() {
   testWidgets('PDF 節點頁碼顯示為 pageIndex+1（1-indexed）',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           entries: [ch1WithChild],
@@ -43,6 +47,9 @@ void main() {
 
   testWidgets('pageIndex 為 null 的 PDF 節點顯示佔位符', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           entries: [noDest],
@@ -63,6 +70,9 @@ void main() {
       (tester) async {
     PdfTocItem? selected;
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           entries: [ch1],
@@ -81,6 +91,9 @@ void main() {
 
   testWidgets('entries 為空清單時顯示提示文字，不拋出例外', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           entries: const [],
@@ -97,6 +110,9 @@ void main() {
 
   testWidgets('PDF 格式下顯示三個分頁籤，且縮圖與搜尋分頁顯示佔位文字', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           format: BookFormat.pdf,
@@ -130,6 +146,9 @@ void main() {
   testWidgets('傳入 searchTabContent 時，切換到搜尋分頁顯示該內容而非預設佔位文字',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           format: BookFormat.pdf,
@@ -150,6 +169,9 @@ void main() {
 
   testWidgets('未傳入 searchTabContent 時，搜尋分頁維持既有佔位文字（零回歸）', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           format: BookFormat.pdf,
@@ -170,6 +192,9 @@ void main() {
   testWidgets('傳入 thumbnailTabContent 時，切換到縮圖分頁顯示該內容而非預設佔位文字',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           format: BookFormat.pdf,
@@ -190,6 +215,9 @@ void main() {
 
   testWidgets('未傳入 thumbnailTabContent 時，縮圖分頁維持既有佔位文字（零回歸）', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           format: BookFormat.pdf,
@@ -212,6 +240,9 @@ void main() {
       (tester) async {
     const node = PdfTocItem(title: '電腦', pageIndex: 0, stableId: 'p_tc');
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
           format: BookFormat.pdf,

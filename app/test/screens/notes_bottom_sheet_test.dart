@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/bookmark.dart';
 import 'package:elinkbook/reader/bookmark_position_context.dart';
 import 'package:elinkbook/reader/annotation_list_item.dart';
@@ -35,9 +36,13 @@ Future<void> _pumpSheet(
   VoidCallback? onAnnotationsChanged,
   int initialTabIndex = 0,
   TextConversionMode textConversion = TextConversionMode.original,
+  Locale locale = const Locale('zh', 'TW'),
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: Scaffold(
         body: NotesBottomSheet(
@@ -821,6 +826,19 @@ void main() {
       Theme.of(context).colorScheme.error,
     );
   });
+
+  testWidgets('英文介面下分頁籤/按鈕/空狀態文字正確以英文渲染', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      locale: const Locale('en'),
+    );
+
+    expect(find.text('Notes'), findsOneWidget);
+    expect(find.text('Bookmarks'), findsOneWidget);
+    expect(find.text('Highlights & Notes'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpModalSheet(
@@ -828,9 +846,13 @@ Future<void> _pumpModalSheet(
   required FakeBookmarksRepository repository,
   String bookId = 'b1',
   String bookTitle = '測試書籍',
+  Locale locale = const Locale('zh', 'TW'),
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: Scaffold(
         body: Builder(
