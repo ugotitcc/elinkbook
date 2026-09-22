@@ -1592,6 +1592,65 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get remoteServerListDeleteFailedMessage => '刪除站點失敗，請稍後再試';
+
+  @override
+  String get remoteServerFormTitleAdd => '新增站點';
+
+  @override
+  String get remoteServerFormTitleEdit => '編輯站點';
+
+  @override
+  String get remoteServerFormNameLabel => '站點名稱';
+
+  @override
+  String get remoteServerFormBaseUrlLabel => '伺服器網址';
+
+  @override
+  String get remoteServerFormTypeOpds => '標準 OPDS';
+
+  @override
+  String get remoteServerFormTypeCalibreServer => '原生 Calibre Content Server';
+
+  @override
+  String get remoteServerFormUsernameLabel => '帳號（留空代表匿名連線）';
+
+  @override
+  String get remoteServerFormPasswordLabelEditing =>
+      '密碼（留空＝沿用既有密碼；清空上方帳號欄位則一併清除密碼）';
+
+  @override
+  String get remoteServerFormPasswordLabel => '密碼';
+
+  @override
+  String get remoteServerFormPasswordShowTooltip => '顯示密碼';
+
+  @override
+  String get remoteServerFormPasswordHideTooltip => '隱藏密碼';
+
+  @override
+  String get remoteServerFormAllowInsecureLabel => '允許不安全連線（自簽憑證／純 HTTP）';
+
+  @override
+  String get remoteServerFormValidationMissingFields => '請填寫站點名稱與網址';
+
+  @override
+  String get remoteServerFormValidationInvalidUrl =>
+      '請輸入有效的伺服器網址（需以 http:// 或 https:// 開頭）';
+
+  @override
+  String get remoteServerFormSaveFailedMessage => '儲存失敗，請稍後再試';
+
+  @override
+  String get remoteServerFormTestSuccess => '連線成功';
+
+  @override
+  String get remoteServerFormTestFailed => '連線失敗，請檢查網址/帳密/憑證設定';
+
+  @override
+  String get remoteServerFormTestConnectionButton => '測試連線';
+
+  @override
+  String get remoteServerFormSaveButton => '儲存';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -3182,6 +3241,65 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get remoteServerListDeleteFailedMessage => '删除站点失败，请稍后再试';
+
+  @override
+  String get remoteServerFormTitleAdd => '新增站点';
+
+  @override
+  String get remoteServerFormTitleEdit => '编辑站点';
+
+  @override
+  String get remoteServerFormNameLabel => '站点名称';
+
+  @override
+  String get remoteServerFormBaseUrlLabel => '服务器网址';
+
+  @override
+  String get remoteServerFormTypeOpds => '标准 OPDS';
+
+  @override
+  String get remoteServerFormTypeCalibreServer => '原生 Calibre Content Server';
+
+  @override
+  String get remoteServerFormUsernameLabel => '账号（留空代表匿名连线）';
+
+  @override
+  String get remoteServerFormPasswordLabelEditing =>
+      '密码（留空＝沿用既有密码；清空上方账号栏位则一并清除密码）';
+
+  @override
+  String get remoteServerFormPasswordLabel => '密码';
+
+  @override
+  String get remoteServerFormPasswordShowTooltip => '显示密码';
+
+  @override
+  String get remoteServerFormPasswordHideTooltip => '隐藏密码';
+
+  @override
+  String get remoteServerFormAllowInsecureLabel => '允许不安全连线（自签凭证／纯 HTTP）';
+
+  @override
+  String get remoteServerFormValidationMissingFields => '请填写站点名称与网址';
+
+  @override
+  String get remoteServerFormValidationInvalidUrl =>
+      '请输入有效的服务器网址（需以 http:// 或 https:// 开头）';
+
+  @override
+  String get remoteServerFormSaveFailedMessage => '储存失败，请稍后再试';
+
+  @override
+  String get remoteServerFormTestSuccess => '连线成功';
+
+  @override
+  String get remoteServerFormTestFailed => '连线失败，请检查网址/账密/凭证设定';
+
+  @override
+  String get remoteServerFormTestConnectionButton => '测试连线';
+
+  @override
+  String get remoteServerFormSaveButton => '储存';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -4772,4 +4890,63 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get remoteServerListDeleteFailedMessage => '刪除站點失敗，請稍後再試';
+
+  @override
+  String get remoteServerFormTitleAdd => '新增站點';
+
+  @override
+  String get remoteServerFormTitleEdit => '編輯站點';
+
+  @override
+  String get remoteServerFormNameLabel => '站點名稱';
+
+  @override
+  String get remoteServerFormBaseUrlLabel => '伺服器網址';
+
+  @override
+  String get remoteServerFormTypeOpds => '標準 OPDS';
+
+  @override
+  String get remoteServerFormTypeCalibreServer => '原生 Calibre Content Server';
+
+  @override
+  String get remoteServerFormUsernameLabel => '帳號（留空代表匿名連線）';
+
+  @override
+  String get remoteServerFormPasswordLabelEditing =>
+      '密碼（留空＝沿用既有密碼；清空上方帳號欄位則一併清除密碼）';
+
+  @override
+  String get remoteServerFormPasswordLabel => '密碼';
+
+  @override
+  String get remoteServerFormPasswordShowTooltip => '顯示密碼';
+
+  @override
+  String get remoteServerFormPasswordHideTooltip => '隱藏密碼';
+
+  @override
+  String get remoteServerFormAllowInsecureLabel => '允許不安全連線（自簽憑證／純 HTTP）';
+
+  @override
+  String get remoteServerFormValidationMissingFields => '請填寫站點名稱與網址';
+
+  @override
+  String get remoteServerFormValidationInvalidUrl =>
+      '請輸入有效的伺服器網址（需以 http:// 或 https:// 開頭）';
+
+  @override
+  String get remoteServerFormSaveFailedMessage => '儲存失敗，請稍後再試';
+
+  @override
+  String get remoteServerFormTestSuccess => '連線成功';
+
+  @override
+  String get remoteServerFormTestFailed => '連線失敗，請檢查網址/帳密/憑證設定';
+
+  @override
+  String get remoteServerFormTestConnectionButton => '測試連線';
+
+  @override
+  String get remoteServerFormSaveButton => '儲存';
 }

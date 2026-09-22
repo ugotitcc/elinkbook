@@ -1645,4 +1645,69 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get remoteServerListDeleteFailedMessage =>
       'Failed to delete server. Please try again later.';
+
+  @override
+  String get remoteServerFormTitleAdd => 'Add Server';
+
+  @override
+  String get remoteServerFormTitleEdit => 'Edit Server';
+
+  @override
+  String get remoteServerFormNameLabel => 'Server Name';
+
+  @override
+  String get remoteServerFormBaseUrlLabel => 'Server URL';
+
+  @override
+  String get remoteServerFormTypeOpds => 'Standard OPDS';
+
+  @override
+  String get remoteServerFormTypeCalibreServer =>
+      'Native Calibre Content Server';
+
+  @override
+  String get remoteServerFormUsernameLabel =>
+      'Username (leave blank for anonymous connection)';
+
+  @override
+  String get remoteServerFormPasswordLabelEditing =>
+      'Password (leave blank to keep the existing password; clearing the username above also clears the password)';
+
+  @override
+  String get remoteServerFormPasswordLabel => 'Password';
+
+  @override
+  String get remoteServerFormPasswordShowTooltip => 'Show Password';
+
+  @override
+  String get remoteServerFormPasswordHideTooltip => 'Hide Password';
+
+  @override
+  String get remoteServerFormAllowInsecureLabel =>
+      'Allow insecure connection (self-signed certificate / plain HTTP)';
+
+  @override
+  String get remoteServerFormValidationMissingFields =>
+      'Please fill in the server name and URL';
+
+  @override
+  String get remoteServerFormValidationInvalidUrl =>
+      'Please enter a valid server URL (must start with http:// or https://)';
+
+  @override
+  String get remoteServerFormSaveFailedMessage =>
+      'Failed to save. Please try again later.';
+
+  @override
+  String get remoteServerFormTestSuccess => 'Connection successful';
+
+  @override
+  String get remoteServerFormTestFailed =>
+      'Connection failed. Please check the URL/credentials/certificate settings.';
+
+  @override
+  String get remoteServerFormTestConnectionButton => 'Test Connection';
+
+  @override
+  String get remoteServerFormSaveButton => 'Save';
 }

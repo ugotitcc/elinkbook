@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/screens/remote_server_form_screen.dart';
 
@@ -12,8 +13,12 @@ void main() {
     required FakeRemoteServerRepository repository,
     required FakeOpdsClient opdsClient,
     RemoteServerProfile? existingProfile,
+    Locale locale = const Locale('zh', 'TW'),
   }) async {
     await tester.pumpWidget(MaterialApp(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: RemoteServerFormScreen(
         repository: repository,
         createOpdsClient: () => opdsClient,
@@ -145,6 +150,9 @@ void main() {
   testWidgets('新增模式儲存：呼叫 addServer 並帶入輸入的密碼，儲存後關閉畫面', (tester) async {
     final repository = FakeRemoteServerRepository();
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Navigator(
         onGenerateRoute: (settings) => MaterialPageRoute(
           builder: (context) => RemoteServerFormScreen(
@@ -311,5 +319,35 @@ void main() {
     final saveButton = tester
         .widget<ElevatedButton>(find.byKey(const Key('remote_server_form_save_button')));
     expect(saveButton.onPressed, isNotNull);
+  });
+
+  testWidgets('英文介面下顯示英文標題與按鈕文字', (tester) async {
+    await pumpScreen(
+      tester,
+      repository: FakeRemoteServerRepository(),
+      opdsClient: FakeOpdsClient(),
+      locale: const Locale('en'),
+    );
+    expect(find.text('Add Server'), findsOneWidget);
+    expect(find.text('Test Connection'), findsOneWidget);
+    expect(find.text('Save'), findsOneWidget);
+  });
+
+  testWidgets('英文介面下驗證錯誤與測試連線結果文字正確', (tester) async {
+    await pumpScreen(
+      tester,
+      repository: FakeRemoteServerRepository(),
+      opdsClient: FakeOpdsClient(testConnectionResult: false),
+      locale: const Locale('en'),
+    );
+    await tester.tap(find.byKey(const Key('remote_server_form_save_button')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Please fill in the server name and URL'), findsOneWidget);
+
+    await tester.enterText(
+        find.byKey(const Key('remote_server_form_base_url_field')), 'http://example.com/opds');
+    await tester.tap(find.byKey(const Key('remote_server_form_test_connection_button')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Connection failed'), findsOneWidget);
   });
 }

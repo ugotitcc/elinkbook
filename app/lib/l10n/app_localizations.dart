@@ -2860,6 +2860,120 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'刪除站點失敗，請稍後再試'**
   String get remoteServerListDeleteFailedMessage;
+
+  /// 新增模式的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'新增站點'**
+  String get remoteServerFormTitleAdd;
+
+  /// 編輯模式的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'編輯站點'**
+  String get remoteServerFormTitleEdit;
+
+  /// 站點名稱輸入框的 labelText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'站點名稱'**
+  String get remoteServerFormNameLabel;
+
+  /// 伺服器網址輸入框的 labelText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'伺服器網址'**
+  String get remoteServerFormBaseUrlLabel;
+
+  /// 伺服器類型下拉選單選項：標準 OPDS
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'標準 OPDS'**
+  String get remoteServerFormTypeOpds;
+
+  /// 伺服器類型下拉選單選項：原生 Calibre Content Server
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'原生 Calibre Content Server'**
+  String get remoteServerFormTypeCalibreServer;
+
+  /// 帳號輸入框的 labelText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'帳號（留空代表匿名連線）'**
+  String get remoteServerFormUsernameLabel;
+
+  /// 編輯模式下密碼輸入框的 labelText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'密碼（留空＝沿用既有密碼；清空上方帳號欄位則一併清除密碼）'**
+  String get remoteServerFormPasswordLabelEditing;
+
+  /// 新增模式下密碼輸入框的 labelText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'密碼'**
+  String get remoteServerFormPasswordLabel;
+
+  /// 密碼顯示/隱藏切換圖示，目前為隱藏狀態時的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示密碼'**
+  String get remoteServerFormPasswordShowTooltip;
+
+  /// 密碼顯示/隱藏切換圖示，目前為顯示狀態時的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'隱藏密碼'**
+  String get remoteServerFormPasswordHideTooltip;
+
+  /// 允許不安全連線開關的標題文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'允許不安全連線（自簽憑證／純 HTTP）'**
+  String get remoteServerFormAllowInsecureLabel;
+
+  /// 站點名稱或網址為空時的驗證錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'請填寫站點名稱與網址'**
+  String get remoteServerFormValidationMissingFields;
+
+  /// 網址格式不合法時的驗證錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'請輸入有效的伺服器網址（需以 http:// 或 https:// 開頭）'**
+  String get remoteServerFormValidationInvalidUrl;
+
+  /// SQLite／secure storage 寫入失敗時的錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'儲存失敗，請稍後再試'**
+  String get remoteServerFormSaveFailedMessage;
+
+  /// 測試連線成功時顯示的文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'連線成功'**
+  String get remoteServerFormTestSuccess;
+
+  /// 測試連線失敗時顯示的文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'連線失敗，請檢查網址/帳密/憑證設定'**
+  String get remoteServerFormTestFailed;
+
+  /// 「測試連線」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'測試連線'**
+  String get remoteServerFormTestConnectionButton;
+
+  /// 「儲存」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'儲存'**
+  String get remoteServerFormSaveButton;
 }
 
 class _AppLocalizationsDelegate

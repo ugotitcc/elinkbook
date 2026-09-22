@@ -2133,5 +2133,81 @@
   "remoteServerListDeleteFailedMessage": "刪除站點失敗，請稍後再試",
   "@remoteServerListDeleteFailedMessage": {
     "description": "刪除防護例外以外的其餘刪除失敗時顯示的 SnackBar 訊息"
+  },
+  "remoteServerFormTitleAdd": "新增站點",
+  "@remoteServerFormTitleAdd": {
+    "description": "新增模式的 AppBar 標題"
+  },
+  "remoteServerFormTitleEdit": "編輯站點",
+  "@remoteServerFormTitleEdit": {
+    "description": "編輯模式的 AppBar 標題"
+  },
+  "remoteServerFormNameLabel": "站點名稱",
+  "@remoteServerFormNameLabel": {
+    "description": "站點名稱輸入框的 labelText"
+  },
+  "remoteServerFormBaseUrlLabel": "伺服器網址",
+  "@remoteServerFormBaseUrlLabel": {
+    "description": "伺服器網址輸入框的 labelText"
+  },
+  "remoteServerFormTypeOpds": "標準 OPDS",
+  "@remoteServerFormTypeOpds": {
+    "description": "伺服器類型下拉選單選項：標準 OPDS"
+  },
+  "remoteServerFormTypeCalibreServer": "原生 Calibre Content Server",
+  "@remoteServerFormTypeCalibreServer": {
+    "description": "伺服器類型下拉選單選項：原生 Calibre Content Server"
+  },
+  "remoteServerFormUsernameLabel": "帳號（留空代表匿名連線）",
+  "@remoteServerFormUsernameLabel": {
+    "description": "帳號輸入框的 labelText"
+  },
+  "remoteServerFormPasswordLabelEditing": "密碼（留空＝沿用既有密碼；清空上方帳號欄位則一併清除密碼）",
+  "@remoteServerFormPasswordLabelEditing": {
+    "description": "編輯模式下密碼輸入框的 labelText"
+  },
+  "remoteServerFormPasswordLabel": "密碼",
+  "@remoteServerFormPasswordLabel": {
+    "description": "新增模式下密碼輸入框的 labelText"
+  },
+  "remoteServerFormPasswordShowTooltip": "顯示密碼",
+  "@remoteServerFormPasswordShowTooltip": {
+    "description": "密碼顯示/隱藏切換圖示，目前為隱藏狀態時的無障礙提示文字"
+  },
+  "remoteServerFormPasswordHideTooltip": "隱藏密碼",
+  "@remoteServerFormPasswordHideTooltip": {
+    "description": "密碼顯示/隱藏切換圖示，目前為顯示狀態時的無障礙提示文字"
+  },
+  "remoteServerFormAllowInsecureLabel": "允許不安全連線（自簽憑證／純 HTTP）",
+  "@remoteServerFormAllowInsecureLabel": {
+    "description": "允許不安全連線開關的標題文字"
+  },
+  "remoteServerFormValidationMissingFields": "請填寫站點名稱與網址",
+  "@remoteServerFormValidationMissingFields": {
+    "description": "站點名稱或網址為空時的驗證錯誤文字"
+  },
+  "remoteServerFormValidationInvalidUrl": "請輸入有效的伺服器網址（需以 http:// 或 https:// 開頭）",
+  "@remoteServerFormValidationInvalidUrl": {
+    "description": "網址格式不合法時的驗證錯誤文字"
+  },
+  "remoteServerFormSaveFailedMessage": "儲存失敗，請稍後再試",
+  "@remoteServerFormSaveFailedMessage": {
+    "description": "SQLite／secure storage 寫入失敗時的錯誤文字"
+  },
+  "remoteServerFormTestSuccess": "連線成功",
+  "@remoteServerFormTestSuccess": {
+    "description": "測試連線成功時顯示的文字"
+  },
+  "remoteServerFormTestFailed": "連線失敗，請檢查網址/帳密/憑證設定",
+  "@remoteServerFormTestFailed": {
+    "description": "測試連線失敗時顯示的文字"
+  },
+  "remoteServerFormTestConnectionButton": "測試連線",
+  "@remoteServerFormTestConnectionButton": {
+    "description": "「測試連線」按鈕文字"
+  },
+  "remoteServerFormSaveButton": "儲存",
+  "@remoteServerFormSaveButton": {
+    "description": "「儲存」按鈕文字"
   }
 }
