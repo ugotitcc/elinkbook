@@ -439,5 +439,13 @@
   "readerConsoleLogCopyAllTooltip": "复制全部",
   "readerConsoleLogClearTooltip": "清空",
   "readerConsoleLogEmptyHint": "目前没有记录",
-  "readerConsoleLogCopiedMessage": "已复制全部记录到剪贴板"
+  "readerConsoleLogCopiedMessage": "已复制全部记录到剪贴板",
+  "aboutScreenTitle": "关于",
+  "aboutScreenVersionLabel": "版本",
+  "aboutScreenBuildTimeLabel": "编译时间",
+  "aboutScreenWebViewVersionLabel": "系统 WebView 版本",
+  "aboutScreenViewLicensesButton": "开源授权清单",
+  "aboutScreenLoadingText": "读取中...",
+  "aboutScreenFailedToLoadVersionMessage": "无法取得版本号",
+  "aboutScreenUnavailableText": "无法取得"
 }

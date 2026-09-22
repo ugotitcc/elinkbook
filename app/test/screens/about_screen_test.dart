@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/about_screen.dart';
 
 const _appInfoChannel = MethodChannel('elinkbook/app_info');
@@ -29,7 +30,14 @@ void main() {
   });
 
   testWidgets('AboutScreen 正確渲染版本號、編譯時間與 WebView 版本', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: AboutScreen()));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const AboutScreen(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('關於'), findsOneWidget);
@@ -65,12 +73,64 @@ void main() {
       return null;
     });
 
-    await tester.pumpWidget(const MaterialApp(home: AboutScreen()));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const AboutScreen(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     final buildTimeText = tester.widget<Text>(
       find.byKey(const Key('about_screen_build_time_text')),
     );
     expect(buildTimeText.data, '無法取得');
+  });
+
+  testWidgets('英文介面下標題/項目標題/授權清單按鈕正確以英文渲染', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const AboutScreen(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('About'), findsOneWidget);
+    expect(find.text('Version'), findsOneWidget);
+    expect(find.text('Build Time'), findsOneWidget);
+    expect(find.text('System WebView Version'), findsOneWidget);
+    expect(find.text('Open Source Licenses'), findsOneWidget);
+  });
+
+  testWidgets('英文介面下 getBuildTime 呼叫失敗時降級顯示英文 Unavailable',
+      (tester) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_appInfoChannel, (call) async {
+      if (call.method == 'getSystemWebViewVersion') return '120.0.6099.43';
+      if (call.method == 'getBuildTime') {
+        throw PlatformException(code: 'unavailable');
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const AboutScreen(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final buildTimeText = tester.widget<Text>(
+      find.byKey(const Key('about_screen_build_time_text')),
+    );
+    expect(buildTimeText.data, 'Unavailable');
   });
 }

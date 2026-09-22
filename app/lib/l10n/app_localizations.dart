@@ -2746,6 +2746,54 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'已複製全部記錄到剪貼簿'**
   String get readerConsoleLogCopiedMessage;
+
+  /// 關於畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'關於'**
+  String get aboutScreenTitle;
+
+  /// 「版本」項目標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'版本'**
+  String get aboutScreenVersionLabel;
+
+  /// 「編譯時間」項目標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'編譯時間'**
+  String get aboutScreenBuildTimeLabel;
+
+  /// 「系統 WebView 版本」項目標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'系統 WebView 版本'**
+  String get aboutScreenWebViewVersionLabel;
+
+  /// 「開源授權清單」項目標題（點擊開啟 Flutter 內建授權清單頁）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'開源授權清單'**
+  String get aboutScreenViewLicensesButton;
+
+  /// 版本號/編譯時間/WebView 版本非同步載入完成前的暫時顯示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'讀取中...'**
+  String get aboutScreenLoadingText;
+
+  /// PackageInfo.fromPlatform() 呼叫失敗時，版本號欄位顯示的錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法取得版本號'**
+  String get aboutScreenFailedToLoadVersionMessage;
+
+  /// 編譯時間/WebView 版本呼叫失敗或回傳空值時顯示的通用錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法取得'**
+  String get aboutScreenUnavailableText;
 }
 
 class _AppLocalizationsDelegate

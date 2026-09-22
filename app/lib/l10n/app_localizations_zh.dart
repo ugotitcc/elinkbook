@@ -1525,6 +1525,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get readerConsoleLogCopiedMessage => '已複製全部記錄到剪貼簿';
+
+  @override
+  String get aboutScreenTitle => '關於';
+
+  @override
+  String get aboutScreenVersionLabel => '版本';
+
+  @override
+  String get aboutScreenBuildTimeLabel => '編譯時間';
+
+  @override
+  String get aboutScreenWebViewVersionLabel => '系統 WebView 版本';
+
+  @override
+  String get aboutScreenViewLicensesButton => '開源授權清單';
+
+  @override
+  String get aboutScreenLoadingText => '讀取中...';
+
+  @override
+  String get aboutScreenFailedToLoadVersionMessage => '無法取得版本號';
+
+  @override
+  String get aboutScreenUnavailableText => '無法取得';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -3048,6 +3072,30 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get readerConsoleLogCopiedMessage => '已复制全部记录到剪贴板';
+
+  @override
+  String get aboutScreenTitle => '关于';
+
+  @override
+  String get aboutScreenVersionLabel => '版本';
+
+  @override
+  String get aboutScreenBuildTimeLabel => '编译时间';
+
+  @override
+  String get aboutScreenWebViewVersionLabel => '系统 WebView 版本';
+
+  @override
+  String get aboutScreenViewLicensesButton => '开源授权清单';
+
+  @override
+  String get aboutScreenLoadingText => '读取中...';
+
+  @override
+  String get aboutScreenFailedToLoadVersionMessage => '无法取得版本号';
+
+  @override
+  String get aboutScreenUnavailableText => '无法取得';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -4571,4 +4619,28 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerConsoleLogCopiedMessage => '已複製全部記錄到剪貼簿';
+
+  @override
+  String get aboutScreenTitle => '關於';
+
+  @override
+  String get aboutScreenVersionLabel => '版本';
+
+  @override
+  String get aboutScreenBuildTimeLabel => '編譯時間';
+
+  @override
+  String get aboutScreenWebViewVersionLabel => '系統 WebView 版本';
+
+  @override
+  String get aboutScreenViewLicensesButton => '開源授權清單';
+
+  @override
+  String get aboutScreenLoadingText => '讀取中...';
+
+  @override
+  String get aboutScreenFailedToLoadVersionMessage => '無法取得版本號';
+
+  @override
+  String get aboutScreenUnavailableText => '無法取得';
 }

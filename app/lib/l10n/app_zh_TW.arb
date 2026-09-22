@@ -2044,5 +2044,37 @@
   "readerConsoleLogCopiedMessage": "已複製全部記錄到剪貼簿",
   "@readerConsoleLogCopiedMessage": {
     "description": "點擊「複製全部」後的 SnackBar 提示"
+  },
+  "aboutScreenTitle": "關於",
+  "@aboutScreenTitle": {
+    "description": "關於畫面 AppBar 標題"
+  },
+  "aboutScreenVersionLabel": "版本",
+  "@aboutScreenVersionLabel": {
+    "description": "「版本」項目標題"
+  },
+  "aboutScreenBuildTimeLabel": "編譯時間",
+  "@aboutScreenBuildTimeLabel": {
+    "description": "「編譯時間」項目標題"
+  },
+  "aboutScreenWebViewVersionLabel": "系統 WebView 版本",
+  "@aboutScreenWebViewVersionLabel": {
+    "description": "「系統 WebView 版本」項目標題"
+  },
+  "aboutScreenViewLicensesButton": "開源授權清單",
+  "@aboutScreenViewLicensesButton": {
+    "description": "「開源授權清單」項目標題（點擊開啟 Flutter 內建授權清單頁）"
+  },
+  "aboutScreenLoadingText": "讀取中...",
+  "@aboutScreenLoadingText": {
+    "description": "版本號/編譯時間/WebView 版本非同步載入完成前的暫時顯示文字"
+  },
+  "aboutScreenFailedToLoadVersionMessage": "無法取得版本號",
+  "@aboutScreenFailedToLoadVersionMessage": {
+    "description": "PackageInfo.fromPlatform() 呼叫失敗時，版本號欄位顯示的錯誤文字"
+  },
+  "aboutScreenUnavailableText": "無法取得",
+  "@aboutScreenUnavailableText": {
+    "description": "編譯時間/WebView 版本呼叫失敗或回傳空值時顯示的通用錯誤文字"
   }
 }

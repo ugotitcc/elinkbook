@@ -439,5 +439,13 @@
   "readerConsoleLogCopyAllTooltip": "Copy all",
   "readerConsoleLogClearTooltip": "Clear",
   "readerConsoleLogEmptyHint": "No records yet",
-  "readerConsoleLogCopiedMessage": "Copied all records to clipboard"
+  "readerConsoleLogCopiedMessage": "Copied all records to clipboard",
+  "aboutScreenTitle": "About",
+  "aboutScreenVersionLabel": "Version",
+  "aboutScreenBuildTimeLabel": "Build Time",
+  "aboutScreenWebViewVersionLabel": "System WebView Version",
+  "aboutScreenViewLicensesButton": "Open Source Licenses",
+  "aboutScreenLoadingText": "Loading...",
+  "aboutScreenFailedToLoadVersionMessage": "Failed to get version",
+  "aboutScreenUnavailableText": "Unavailable"
 }

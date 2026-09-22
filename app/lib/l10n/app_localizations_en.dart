@@ -1574,4 +1574,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get readerConsoleLogCopiedMessage => 'Copied all records to clipboard';
+
+  @override
+  String get aboutScreenTitle => 'About';
+
+  @override
+  String get aboutScreenVersionLabel => 'Version';
+
+  @override
+  String get aboutScreenBuildTimeLabel => 'Build Time';
+
+  @override
+  String get aboutScreenWebViewVersionLabel => 'System WebView Version';
+
+  @override
+  String get aboutScreenViewLicensesButton => 'Open Source Licenses';
+
+  @override
+  String get aboutScreenLoadingText => 'Loading...';
+
+  @override
+  String get aboutScreenFailedToLoadVersionMessage => 'Failed to get version';
+
+  @override
+  String get aboutScreenUnavailableText => 'Unavailable';
 }
