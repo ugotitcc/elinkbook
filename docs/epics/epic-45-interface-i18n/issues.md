@@ -135,6 +135,8 @@
 
 **實際執行範圍修正記錄（認領時 grep 盤點）**：移出 `toc_bottom_sheet_pdf.dart`（不存在）、`reader_footer.dart`（零硬編碼字串）、`widgets/eb_option_chip_group.dart`／`widgets/eb_section_header.dart`／`widgets/eb_stepper.dart`／`widgets/eb_field_card.dart`／`reader_option_tile.dart`（零硬編碼字串）、`widgets/text_conversion_icon.dart`（4 處命中是簡/繁字元示意圖示本身要呈現的文字，非待翻譯 UI 文案，不修改）。
 
+**2026-09-22 最終複審補記歸屬（`reviews/review-issue-4-final.md` Important #1／#2）**：`layout_preset_book_picker_screen.dart`（Issue 3 範圍修正記錄誤植為「實際屬 Issue 4 範圍」，本 Issue 認領當下的 grep 盤點未涵蓋此檔案，唯一呼叫端為 `reader_screen.dart._handleApplyFromBook()`）與 `layout_preset_name_dialog.dart`（唯一呼叫端為 `reader_screen.dart._handleSaveAsPreset()`，全 Epic 四個 Issue 的「What to build」清單自始皆未列入）在本 Issue 收尾時仍為硬編碼中文（`AppLocalizations` 使用量皆為 0），複審發現後改列入 Issue 6 範圍（見該段落），本 Issue 不處理；兩者的唯一入口皆在本 Issue 已在地化的「版面預設集」流程內，Issue 6 完成前，英文/簡體介面下該流程仍會出現中文夾雜。
+
 **單元測試要求：** 同 Issue 3 模式，逐檔改用 `pumpLocalizedWidget()`，零回歸。
 
 **驗收標準：** 閱讀器 Chrome Bar 全部面板/彈窗在三語言下正確渲染；`flutter analyze` 乾淨、`flutter test`（含本模組觸及的測試檔）全數通過。
@@ -174,6 +176,7 @@
 
 **What to build（代表性範圍，實際檔案清單以認領當下重新 grep 盤點為準）：**
 - `remote_server_list_screen.dart`／`remote_server_form_screen.dart`／`remote_catalog_screen.dart`／`wifi_transfer_screen.dart`／`sources_home_screen.dart`／`adaptive_shell_scaffold.dart`／`support/book_import_picker_helper.dart`（本檔案同時是 Issue 7 錯誤代碼映射函式的落點，若排程上與 Issue 7 重疊建議協調）。**`cloud_browser_screen.dart` 已在 Issue 2 完整處理（含分類下拉選單與其餘既有字串），本 Issue 不再處理**（`plan-issue-2.md` Global Constraints 記錄之範圍爭議，2026-09-21 使用者裁定 Issue 2 一次抽完）。
+- **`layout_preset_book_picker_screen.dart`／`layout_preset_name_dialog.dart`（2026-09-22 由 Issue 4 最終複審補記歸屬，見該 Issue 段落與 `reviews/review-issue-4-final.md` Important #1／#2）**：兩者唯一呼叫端皆為 `reader_screen.dart`（已在 Issue 4 在地化的「版面預設集」流程，分別是 `_handleApplyFromBook()`／`_handleSaveAsPreset()`），目前仍為硬編碼中文、`AppLocalizations` 使用量皆為 0。認領時請一併確認 Issue 4 收尾後這兩個檔案的呼叫端字串是否仍與本次盤點一致。
 - **ICU plural（`/receiving-code-review` review-issues I-2 修正）**：`book_import_picker_helper.dart:106-110`（`showImportResultSnackBar()` 的「已匯入 $importedCount 本」／「$skippedCount 本已存在，已跳過」）採用 ICU `plural` 語法，`importedCount`／`skippedCount` 各自獨立處理單複數（兩個計數彼此獨立，不可共用同一個 `plural` 判斷式）。
 
 **單元測試要求：** 同 Issue 3 模式，逐檔改用 `pumpLocalizedWidget()`，零回歸；`showImportResultSnackBar()` 驗證匯入本數／跳過本數各自為 0／1／多本時，英文版單複數皆正確。
