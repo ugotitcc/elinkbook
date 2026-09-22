@@ -11,6 +11,7 @@ import '../library/library_repository.dart';
 import '../search/pdf_content_indexer.dart' show readContentUriAll;
 import '../wifi_transfer/network_availability.dart';
 import '../wifi_transfer/wifi_transfer_http_server.dart';
+import '../l10n/app_localizations.dart';
 import '../wifi_transfer/wifi_transfer_service.dart';
 
 /// 呼叫端優先嘗試的固定埠；bind 失敗（`SocketException`，通常是埠號
@@ -155,19 +156,20 @@ class _WifiTransferScreenState extends State<WifiTransferScreen> {
   }
 
   Future<void> _confirmLeaveIfTransferring(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('目前尚有檔案正在傳輸'),
-        content: const Text('離開將中斷連線，是否確定離開？'),
+        title: Text(l10n.wifiTransferLeaveConfirmTitle),
+        content: Text(l10n.wifiTransferLeaveConfirmMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('確定離開'),
+            child: Text(l10n.wifiTransferLeaveConfirmButton),
           ),
         ],
       ),
@@ -179,6 +181,7 @@ class _WifiTransferScreenState extends State<WifiTransferScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ValueListenableBuilder<int>(
       valueListenable: _activeTransfersNotifier,
       builder: (context, activeCount, child) {
@@ -192,13 +195,14 @@ class _WifiTransferScreenState extends State<WifiTransferScreen> {
         );
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('WiFi 傳書')),
+        appBar: AppBar(title: Text(l10n.wifiTransferTitle)),
         body: _buildBody(context),
       ),
     );
   }
 
   Widget _buildBody(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return FutureBuilder<NetworkAvailability>(
       future: _availabilityFuture,
       builder: (context, snapshot) {
@@ -210,7 +214,7 @@ class _WifiTransferScreenState extends State<WifiTransferScreen> {
         // 以 !snapshot.hasData 防禦一次，避免任何未預期路徑導致
         // snapshot.data! 崩潰白屏。
         if (!snapshot.hasData) {
-          return const Center(child: Text('請連線至 WiFi 或開啟手機熱點'));
+          return Center(child: Text(l10n.wifiTransferUnavailableText));
         }
         final availability = snapshot.data!;
         final effectiveIp = _manualSelectedIp ?? availability.ipAddress;
@@ -229,7 +233,7 @@ class _WifiTransferScreenState extends State<WifiTransferScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const SizedBox(height: 16),
-                  const Text('在同一個 WiFi 下，用瀏覽器打開以下網址：'),
+                  Text(l10n.wifiTransferInstructionText),
                   const SizedBox(height: 8),
                   Text(url, key: const Key('wifi_transfer_ip_text')),
                   const SizedBox(height: 16),
@@ -287,7 +291,8 @@ class _WifiTransferScreenState extends State<WifiTransferScreen> {
                             ),
                             const SizedBox(width: 10),
                             Text(
-                              '正在傳輸中（$activeCount 個檔案）…',
+                              AppLocalizations.of(context)!
+                                  .wifiTransferActiveCountText(activeCount),
                               key: const Key('wifi_transfer_active_transfers_text'),
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -318,18 +323,18 @@ class _WifiTransferScreenState extends State<WifiTransferScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 16),
-                const Text('請連線至 WiFi 或開啟手機熱點'),
+                Text(l10n.wifiTransferUnavailableText),
                 const SizedBox(height: 16),
                 if (!_manualOverrideRequested)
                   ElevatedButton(
                     key: const Key('wifi_transfer_manual_override_button'),
                     onPressed: () =>
                         setState(() => _manualOverrideRequested = true),
-                    child: const Text('我確定目前是用手機熱點'),
+                    child: Text(l10n.wifiTransferManualOverrideButton),
                   ),
                 if (_manualOverrideRequested)
                   if (availability.allCandidates.isEmpty)
-                    const Text('找不到任何可用網路介面')
+                    Text(l10n.wifiTransferNoInterfacesText)
                   else
                     ...availability.allCandidates.map(
                       (candidate) => ListTile(

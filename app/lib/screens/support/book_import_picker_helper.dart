@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../library/book_import_service.dart';
 
 const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');
@@ -67,28 +68,29 @@ Future<ImportResult?> pickAndImportFolder(
 /// 「是否依資料夾名稱自動建立分類」確認對話框（原
 /// `_LibraryScreenState._confirmAutoGroupByFolderName()`，逐字搬遷）。
 Future<bool?> confirmAutoGroupByFolderName(BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
   var autoGroup = true;
   return showDialog<bool>(
     context: context,
     builder: (dialogContext) => StatefulBuilder(
       builder: (context, setDialogState) => AlertDialog(
-        title: const Text('匯入資料夾'),
+        title: Text(l10n.libraryImportFolderDialogTitle),
         content: CheckboxListTile(
           key: const Key('library_import_folder_auto_group_checkbox'),
           value: autoGroup,
           onChanged: (value) => setDialogState(() => autoGroup = value ?? true),
-          title: const Text('依資料夾名稱自動建立分類'),
+          title: Text(l10n.libraryImportFolderAutoGroupLabel),
           controlAffinity: ListTileControlAffinity.leading,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             key: const Key('library_import_folder_confirm'),
             onPressed: () => Navigator.of(dialogContext).pop(autoGroup),
-            child: const Text('匯入'),
+            child: Text(l10n.libraryImportFolderConfirmButton),
           ),
         ],
       ),
@@ -103,10 +105,14 @@ void showImportResultSnackBar(BuildContext context, ImportResult result) {
   final importedCount = result.importedBooks.length;
   final skippedCount = result.skippedDuplicateCount;
   if (importedCount <= 0 && skippedCount <= 0) return;
+  final l10n = AppLocalizations.of(context)!;
   final message = importedCount > 0
       ? (skippedCount > 0
-          ? '已匯入 $importedCount 本，$skippedCount 本已存在，已跳過'
-          : '已匯入 $importedCount 本書')
-      : '$skippedCount 本已存在，已跳過';
+          ? l10n.libraryImportResultBothMessage(
+              importedCount,
+              skippedCount,
+            )
+          : l10n.libraryImportResultImportedOnlyMessage(importedCount))
+      : l10n.libraryImportResultSkippedOnlyMessage(skippedCount);
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }

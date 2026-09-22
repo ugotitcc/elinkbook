@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../downloads/download_queue_controller.dart';
+import '../../l10n/app_localizations.dart';
 import 'eb_field_card.dart';
 import 'eb_section_header.dart';
 
@@ -16,6 +17,7 @@ class DownloadQueuePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
@@ -24,7 +26,7 @@ class DownloadQueuePanel extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const EBSectionHeader(title: '下載佇列'),
+            EBSectionHeader(title: l10n.downloadQueueTitle),
             for (final item in items)
               EBFieldCard(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -45,6 +47,7 @@ class _QueueItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final inProgress =
         item.status == DownloadItemStatus.pending ||
@@ -87,7 +90,7 @@ class _QueueItemRow extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(_statusLabel(item), style: TextStyle(fontSize: 12)),
+                    Text(_statusLabel(l10n, item), style: TextStyle(fontSize: 12)),
                   ],
                 )
               else
@@ -96,7 +99,7 @@ class _QueueItemRow extends StatelessWidget {
                     Icon(_statusIcon(item.status), size: 16),
                     const SizedBox(width: 4),
                     Text(
-                      _statusLabel(item),
+                      _statusLabel(l10n, item),
                       style: const TextStyle(fontSize: 12),
                     ),
                   ],
@@ -104,18 +107,18 @@ class _QueueItemRow extends StatelessWidget {
             ],
           ),
         ),
-        _trailingAction(context),
+        _trailingAction(context, l10n),
       ],
     );
   }
 
-  Widget _trailingAction(BuildContext context) {
+  Widget _trailingAction(BuildContext context, AppLocalizations l10n) {
     switch (item.status) {
       case DownloadItemStatus.downloading:
         return IconButton(
           key: Key('sources_download_queue_cancel_${item.id}'),
           icon: const Icon(Icons.close),
-          tooltip: '取消',
+          tooltip: l10n.downloadQueueCancelTooltip,
           onPressed: () => controller.cancel(item.id),
         );
       case DownloadItemStatus.failed:
@@ -123,7 +126,7 @@ class _QueueItemRow extends StatelessWidget {
         return IconButton(
           key: Key('sources_download_queue_retry_${item.id}'),
           icon: const Icon(Icons.refresh),
-          tooltip: '重試',
+          tooltip: l10n.downloadQueueRetryTooltip,
           onPressed: () => controller.retry(item.id),
         );
       case DownloadItemStatus.done:
@@ -131,7 +134,7 @@ class _QueueItemRow extends StatelessWidget {
         return IconButton(
           key: Key('sources_download_queue_dismiss_${item.id}'),
           icon: const Icon(Icons.close),
-          tooltip: '從清單移除',
+          tooltip: l10n.downloadQueueDismissTooltip,
           onPressed: () => controller.dismiss(item.id),
         );
       case DownloadItemStatus.pending:
@@ -157,23 +160,25 @@ class _QueueItemRow extends StatelessWidget {
     }
   }
 
-  String _statusLabel(DownloadQueueItem item) {
+  String _statusLabel(AppLocalizations l10n, DownloadQueueItem item) {
     switch (item.status) {
       case DownloadItemStatus.pending:
-        return '待機';
+        return l10n.downloadQueueStatusPending;
       case DownloadItemStatus.downloading:
         final progress = item.progress;
-        return progress == null ? '下載中' : '${(progress * 100).round()}%';
+        return progress == null
+            ? l10n.downloadQueueStatusDownloading
+            : '${(progress * 100).round()}%';
       case DownloadItemStatus.checkingDuplicate:
-        return '比對中';
+        return l10n.downloadQueueStatusCheckingDuplicate;
       case DownloadItemStatus.done:
-        return '完成';
+        return l10n.downloadQueueStatusDone;
       case DownloadItemStatus.duplicateSkipped:
-        return '重複已略過';
+        return l10n.downloadQueueStatusDuplicateSkipped;
       case DownloadItemStatus.failed:
-        return '失敗';
+        return l10n.downloadQueueStatusFailed;
       case DownloadItemStatus.cancelled:
-        return '已取消';
+        return l10n.downloadQueueStatusCancelled;
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../remote/opds_types.dart';
 
 /// 同一書目提供多個下載格式時的選擇彈窗（epic-30-calibre-remote-library
@@ -19,9 +20,10 @@ class FormatSelectionDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
       key: const Key('format_selection_dialog'),
-      title: Text('選擇格式：${entry.title}'),
+      title: Text(l10n.formatSelectionDialogTitle(entry.title)),
       // 〔審查 review-plan-issue-2.md Finding 2 採納〕格式選項較多或在
       // 橫向/小螢幕裝置上時，固定高度的 AlertDialog 內容可能超出可視
       // 範圍，外層包 SingleChildScrollView 防禦 RenderFlex overflow。
@@ -33,7 +35,11 @@ class FormatSelectionDialog extends StatelessWidget {
             return ListTile(
               key: Key('format_selection_option_${acquisition.href}'),
               enabled: supported,
-              title: Text(supported ? acquisition.format!.name.toUpperCase() : '不支援的格式'),
+              title: Text(
+                supported
+                    ? acquisition.format!.name.toUpperCase()
+                    : l10n.formatSelectionDialogUnsupportedFormat,
+              ),
               onTap: supported ? () => Navigator.of(context).pop(acquisition) : null,
             );
           }).toList(),
@@ -42,7 +48,7 @@ class FormatSelectionDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+          child: Text(l10n.cancel),
         ),
       ],
     );

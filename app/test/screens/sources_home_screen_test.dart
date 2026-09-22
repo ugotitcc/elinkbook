@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/downloads/download_queue_controller.dart';
 import 'package:elinkbook/cloud_import/cloud_download_job.dart';
 import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
@@ -69,6 +70,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: importService,
@@ -96,6 +100,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: importService,
@@ -120,6 +127,9 @@ void main() {
   testWidgets('雲端/OPDS 依賴缺席時對應項目為停用狀態', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
@@ -193,6 +203,9 @@ void main() {
   testWidgets('依賴齊全時點擊遠端書庫項目導覽至 RemoteServerListScreen', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
@@ -221,6 +234,9 @@ void main() {
     var settingsTapped = 0;
     await tester.pumpWidget(
       MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
@@ -244,6 +260,9 @@ void main() {
       final fingerprintComputer = FakeFingerprintComputer();
       await tester.pumpWidget(
         MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
           home: SourcesHomeScreen(
             repository: FakeLibraryRepository(),
             importService: FakeBookImportService(),
@@ -272,6 +291,9 @@ void main() {
       );
       await tester.pumpWidget(
         MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
           home: SourcesHomeScreen(
             repository: FakeLibraryRepository(),
             importService: FakeBookImportService(),
@@ -291,6 +313,9 @@ void main() {
       );
       await tester.pumpWidget(
         MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
           home: SourcesHomeScreen(
             repository: FakeLibraryRepository(),
             importService: FakeBookImportService(),
@@ -332,6 +357,9 @@ void main() {
   testWidgets('wifiTransferDependencies 為 null 時不顯示 WiFi 傳書入口', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
@@ -347,6 +375,9 @@ void main() {
     final fingerprintComputer = FakeFingerprintComputer();
     await tester.pumpWidget(
       MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
@@ -369,6 +400,9 @@ void main() {
     final fingerprintComputer = FakeFingerprintComputer();
     await tester.pumpWidget(
       MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
@@ -392,4 +426,30 @@ void main() {
 
     expect(find.byType(WifiTransferScreen), findsOneWidget);
   });
+
+  testWidgets('英文介面下標題與各入口列文字正確顯示', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SourcesHomeScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sources'), findsOneWidget);
+    expect(find.text('Choose Files (multiple selection)'), findsOneWidget);
+    expect(find.text('Choose Folder'), findsOneWidget);
+    expect(find.text('Google Drive'), findsOneWidget);
+    expect(find.text('Not linked yet. Please link your account in Settings.'),
+        findsNWidgets(2));
+    expect(find.text('Remote Library (OPDS)'), findsOneWidget);
+    expect(find.text('No remote library server configured yet'), findsOneWidget);
+  });
+
+
 }

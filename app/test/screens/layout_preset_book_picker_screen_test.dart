@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/layout_preset_book_picker_screen.dart';
@@ -14,6 +15,9 @@ void main() {
       (tester) async {
     List<String>? result;
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: Builder(
         builder: (context) => ElevatedButton(
@@ -52,6 +56,9 @@ void main() {
   testWidgets('單選模式（Radio 語意）：選取書一後再選取書二，最終只有書二保持選取狀態',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一'), _book('b2', '書二')],
@@ -94,6 +101,9 @@ void main() {
   testWidgets('單選模式：未點擊「確定」、直接返回時，回傳 null', (tester) async {
     List<String>? result = const ['sentinel'];
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: Builder(
         builder: (context) => ElevatedButton(
@@ -115,7 +125,7 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    await tester.pageBack();
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     expect(result, isNull);
@@ -124,6 +134,9 @@ void main() {
   testWidgets('複選模式：點擊兩本書的格子後點擊確定，回傳兩個 id 的清單', (tester) async {
     List<String>? result;
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: Builder(
         builder: (context) => ElevatedButton(
@@ -163,6 +176,9 @@ void main() {
 
   testWidgets('複選模式：未勾選任何項目時，確定按鈕停用', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一')],
@@ -179,6 +195,9 @@ void main() {
       (tester) async {
     List<String>? result = const ['sentinel'];
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: Builder(
         builder: (context) => ElevatedButton(
@@ -204,7 +223,7 @@ void main() {
         .tap(find.byKey(const Key('layout_preset_book_picker_item_b1')));
     await tester.pump();
 
-    await tester.pageBack();
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     expect(result, isNull);
@@ -212,6 +231,9 @@ void main() {
 
   testWidgets('書籍清單為空時顯示提示文字', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: const LayoutPresetBookPickerScreen(books: [], multiSelect: false),
     ));
@@ -233,6 +255,9 @@ void main() {
         )));
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '有封面的書', coverPath: coverFile.path)],
@@ -247,6 +272,9 @@ void main() {
 
   testWidgets('格線對無 coverPath 的書籍以通用書本圖示佔位', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '無封面的書')],
@@ -261,6 +289,9 @@ void main() {
 
   testWidgets('輸入書名子字串，格線即時篩選為符合的書籍', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '射鵰英雄傳'), _book('b2', '神鵰俠侶')],
@@ -281,6 +312,9 @@ void main() {
 
   testWidgets('輸入作者子字串，格線即時篩選為符合的書籍', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [
@@ -304,6 +338,9 @@ void main() {
 
   testWidgets('搜尋查無符合結果時顯示提示文字，與「無可選書籍」提示不同', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一')],
@@ -322,6 +359,9 @@ void main() {
 
   testWidgets('清空搜尋詞後，格線恢復顯示完整清單', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一'), _book('b2', '書二')],
@@ -347,6 +387,9 @@ void main() {
   testWidgets('多選模式下，篩選隱藏已選取項目後清空搜尋詞，該項目選取狀態仍保留',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '射鵰英雄傳'), _book('b2', '神鵰俠侶')],
@@ -389,6 +432,9 @@ void main() {
   testWidgets('GridView 由 Expanded 包裹（避免軟體鍵盤彈出時版面溢位）',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一')],
@@ -410,6 +456,9 @@ void main() {
   testWidgets('單選模式：未選取任何項目時，確定按鈕停用；選取後啟用',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一')],
@@ -430,6 +479,9 @@ void main() {
 
   testWidgets('搜尋輸入關鍵字時顯示清除按鈕，點擊後清空輸入框並恢復完整清單', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一'), _book('b2', '書二')],
@@ -460,6 +512,43 @@ void main() {
     expect(find.byKey(const Key('layout_preset_book_picker_item_b2')),
         findsOneWidget);
   });
+
+  testWidgets('英文介面下標題與空狀態文字正確顯示', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+      home: LayoutPresetBookPickerScreen(
+        books: const [],
+        multiSelect: false,
+      ),
+    ));
+
+    expect(find.text('Select Book'), findsOneWidget);
+    expect(
+      find.text('No reflowable EPUB books available to select'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('英文介面下複選模式標題與確定按鈕文字正確', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+      home: LayoutPresetBookPickerScreen(
+        books: [_book('b1', '書一')],
+        multiSelect: true,
+      ),
+    ));
+
+    expect(find.text('Select Books (multiple selection)'), findsOneWidget);
+    expect(find.text('OK'), findsOneWidget);
+  });
+
+
 }
 
 Book _book(String id, String title, {String? author, String? coverPath}) =>

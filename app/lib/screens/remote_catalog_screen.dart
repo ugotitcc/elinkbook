@@ -12,6 +12,7 @@ import '../remote/remote_download_job.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
 import '../library/widgets/book_cover.dart';
+import '../l10n/app_localizations.dart';
 import 'format_selection_dialog.dart';
 
 /// OPDS 目錄瀏覽畫面（epic-30-calibre-remote-library Issue 2，
@@ -78,7 +79,7 @@ class RemoteCatalogScreen extends StatefulWidget {
 class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
   late final OpdsClient _client;
   bool _loading = true;
-  String? _errorText;
+  bool _loadError = false;
   final List<OpdsNavigationLink> _navigationLinks = [];
   final List<OpdsEntry> _entries = [];
   String? _nextUrl;
@@ -116,7 +117,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
   Future<void> _load() async {
     setState(() {
       _loading = true;
-      _errorText = null;
+      _loadError = false;
     });
     _password = await widget.repository.loadPassword(widget.server.id);
     try {
@@ -141,7 +142,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _errorText = '載入失敗，請檢查網路連線或站點設定';
+        _loadError = true;
       });
     }
   }
@@ -243,9 +244,10 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
     }
     if (hasDuplicate) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       final proceed = await _showDuplicateConfirmDialog(
         context,
-        '「${entry.title}」之前匯入過了，仍要建立新的一份嗎？',
+        l10n.remoteCatalogDuplicateConfirmMessage(entry.title),
       );
       if (!proceed) return;
     }
@@ -287,7 +289,9 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         key: const Key('remote_catalog_queued_snackbar'),
-        content: Text('已加入下載佇列（${jobs.length} 個檔案），可至「來源」畫面查看進度'),
+        content: Text(
+          AppLocalizations.of(context)!.remoteCatalogQueuedMessage(jobs.length),
+        ),
       ),
     );
     setState(() => _selectedRemoteBookIds.clear());
@@ -295,6 +299,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title ?? widget.server.name),
@@ -302,7 +307,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
           IconButton(
             key: const Key('remote_catalog_download_button'),
             icon: const Icon(Icons.download),
-            tooltip: '下載已選取',
+            tooltip: l10n.remoteCatalogDownloadSelectedTooltip,
             onPressed: _selectedRemoteBookIds.isEmpty ? null : _startDownload,
           ),
         ],
@@ -311,9 +316,12 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
           ? const Center(
               child: CircularProgressIndicator(key: Key('remote_catalog_loading_indicator')),
             )
-          : _errorText != null
+          : _loadError
               ? Center(
-                  child: Text(_errorText!, key: const Key('remote_catalog_error_text')),
+                  child: Text(
+                    l10n.remoteCatalogLoadFailedMessage,
+                    key: const Key('remote_catalog_error_text'),
+                  ),
                 )
               : _buildContent(),
     );
@@ -347,6 +355,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
   }
 
   Widget _buildPaginationControls() {
+    final l10n = AppLocalizations.of(context)!;
     if (widget.isEinkMode) {
       if (_prevUrl == null && _nextUrl == null) return const SizedBox.shrink();
       return Padding(
@@ -357,13 +366,13 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
             OutlinedButton(
               key: const Key('remote_catalog_eink_prev_page_button'),
               onPressed: _prevUrl == null || _loadingMore ? null : () => _goToPage(_prevUrl!),
-              child: const Text('上一頁'),
+              child: Text(l10n.remoteCatalogEinkPrevPageButton),
             ),
             const SizedBox(width: 16),
             OutlinedButton(
               key: const Key('remote_catalog_eink_next_page_button'),
               onPressed: _nextUrl == null || _loadingMore ? null : () => _goToPage(_nextUrl!),
-              child: const Text('下一頁'),
+              child: Text(l10n.remoteCatalogEinkNextPageButton),
             ),
           ],
         ),
@@ -382,7 +391,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('載入更多'),
+              : Text(l10n.remoteCatalogLoadMoreButton),
         ),
       ),
     );
@@ -482,22 +491,23 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
 /// 兩層檢查共用同一個確認 UI，只有提示文字不同——精確比對命中不代表
 /// 強制阻擋，使用者可選擇仍要建立新副本。
 Future<bool> _showDuplicateConfirmDialog(BuildContext context, String message) async {
+  final l10n = AppLocalizations.of(context)!;
   final result = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
       key: const Key('remote_catalog_duplicate_dialog'),
-      title: const Text('重複的書籍'),
+      title: Text(l10n.remoteCatalogDuplicateDialogTitle),
       content: Text(message),
       actions: [
         TextButton(
           key: const Key('remote_catalog_duplicate_dialog_cancel'),
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('取消'),
+          child: Text(l10n.cancel),
         ),
         TextButton(
           key: const Key('remote_catalog_duplicate_dialog_confirm'),
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('仍要建立'),
+          child: Text(l10n.remoteCatalogDuplicateDialogConfirmButton),
         ),
       ],
     ),
