@@ -416,5 +416,10 @@
   "syncSettingsPasswordLabel": "密码",
   "syncSettingsShowPasswordTooltip": "显示密码",
   "syncSettingsHidePasswordTooltip": "隐藏密码",
-  "syncSettingsConnectButton": "连线／登入"
+  "syncSettingsConnectButton": "连线／登入",
+  "cloudAccountSettingsTitle": "已链接的云端导入账户",
+  "cloudAccountSettingsLinkedEmail": "已链接：{email}",
+  "cloudAccountSettingsUnlinkButton": "解除链接",
+  "cloudAccountSettingsUnlinkedText": "未链接",
+  "cloudAccountSettingsLinkButton": "链接"
 }

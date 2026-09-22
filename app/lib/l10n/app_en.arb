@@ -416,5 +416,10 @@
   "syncSettingsPasswordLabel": "Password",
   "syncSettingsShowPasswordTooltip": "Show password",
   "syncSettingsHidePasswordTooltip": "Hide password",
-  "syncSettingsConnectButton": "Connect / Sign In"
+  "syncSettingsConnectButton": "Connect / Sign In",
+  "cloudAccountSettingsTitle": "Linked Cloud Import Accounts",
+  "cloudAccountSettingsLinkedEmail": "Linked: {email}",
+  "cloudAccountSettingsUnlinkButton": "Unlink",
+  "cloudAccountSettingsUnlinkedText": "Not linked",
+  "cloudAccountSettingsLinkButton": "Link"
 }

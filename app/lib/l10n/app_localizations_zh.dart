@@ -1414,6 +1414,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get syncSettingsConnectButton => '連線／登入';
+
+  @override
+  String get cloudAccountSettingsTitle => '已連結的雲端匯入帳戶';
+
+  @override
+  String cloudAccountSettingsLinkedEmail(String email) {
+    return '已連結：$email';
+  }
+
+  @override
+  String get cloudAccountSettingsUnlinkButton => '解除連結';
+
+  @override
+  String get cloudAccountSettingsUnlinkedText => '未連結';
+
+  @override
+  String get cloudAccountSettingsLinkButton => '連結';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -2826,6 +2843,23 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get syncSettingsConnectButton => '连线／登入';
+
+  @override
+  String get cloudAccountSettingsTitle => '已链接的云端导入账户';
+
+  @override
+  String cloudAccountSettingsLinkedEmail(String email) {
+    return '已链接：$email';
+  }
+
+  @override
+  String get cloudAccountSettingsUnlinkButton => '解除链接';
+
+  @override
+  String get cloudAccountSettingsUnlinkedText => '未链接';
+
+  @override
+  String get cloudAccountSettingsLinkButton => '链接';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -4238,4 +4272,21 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get syncSettingsConnectButton => '連線／登入';
+
+  @override
+  String get cloudAccountSettingsTitle => '已連結的雲端匯入帳戶';
+
+  @override
+  String cloudAccountSettingsLinkedEmail(String email) {
+    return '已連結：$email';
+  }
+
+  @override
+  String get cloudAccountSettingsUnlinkButton => '解除連結';
+
+  @override
+  String get cloudAccountSettingsUnlinkedText => '未連結';
+
+  @override
+  String get cloudAccountSettingsLinkButton => '連結';
 }

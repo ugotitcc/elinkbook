@@ -1461,4 +1461,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get syncSettingsConnectButton => 'Connect / Sign In';
+
+  @override
+  String get cloudAccountSettingsTitle => 'Linked Cloud Import Accounts';
+
+  @override
+  String cloudAccountSettingsLinkedEmail(String email) {
+    return 'Linked: $email';
+  }
+
+  @override
+  String get cloudAccountSettingsUnlinkButton => 'Unlink';
+
+  @override
+  String get cloudAccountSettingsUnlinkedText => 'Not linked';
+
+  @override
+  String get cloudAccountSettingsLinkButton => 'Link';
 }

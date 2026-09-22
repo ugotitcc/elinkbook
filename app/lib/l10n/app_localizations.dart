@@ -2608,6 +2608,36 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'連線／登入'**
   String get syncSettingsConnectButton;
+
+  /// 已連結的雲端匯入帳戶畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已連結的雲端匯入帳戶'**
+  String get cloudAccountSettingsTitle;
+
+  /// 雲端服務已連結狀態顯示的帳號 email，{email} 為使用者資料不翻譯
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已連結：{email}'**
+  String cloudAccountSettingsLinkedEmail(String email);
+
+  /// 「解除連結」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'解除連結'**
+  String get cloudAccountSettingsUnlinkButton;
+
+  /// 雲端服務尚未連結狀態顯示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'未連結'**
+  String get cloudAccountSettingsUnlinkedText;
+
+  /// 「連結」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'連結'**
+  String get cloudAccountSettingsLinkButton;
 }
 
 class _AppLocalizationsDelegate
