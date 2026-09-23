@@ -538,5 +538,15 @@
   "layoutPresetBookPickerNoMatch": "找不到符合的书籍",
   "layoutPresetNameDialogTitle": "为预设集命名",
   "layoutPresetNameDialogEmptyError": "名称不可为空",
-  "layoutPresetNameDialogSaveButton": "储存"
+  "layoutPresetNameDialogSaveButton": "储存",
+  "markdownExportTitle": "# 阅读笔记：《{bookTitle}》",
+  "markdownExportAuthorLabel": "*   **作者**：{author}",
+  "markdownExportUnknownAuthor": "未知作者",
+  "markdownExportProgressLabel": "*   **阅读进度**：{percent}%",
+  "markdownExportTimeLabel": "*   **导出时间**：{time}",
+  "markdownExportBookmarksSection": "## 🔖 书签清单 ({count})",
+  "markdownExportNoBookmarks": "*(尚未加入书签)*",
+  "markdownExportAnnotationsSection": "## ✏️ 划线与个人备注 ({count})",
+  "markdownExportNoAnnotations": "*(尚未加入任何划线或备注)*",
+  "markdownExportAnnotationHeading": "### 📌 {label}（位置：{position}）"
 }

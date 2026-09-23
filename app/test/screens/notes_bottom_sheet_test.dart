@@ -754,6 +754,59 @@ void main() {
     expect(content, contains('*   第一章'));
   });
 
+  testWidgets('英文介面下點擊導出為 Markdown，寫出檔案內容確實切換為英文（驗證呼叫端真正從 context 解析 l10n，而非寫死語系）', (
+    tester,
+  ) async {
+    final tempDir = (await tester.runAsync(
+      () => Directory.systemTemp.createTemp('markdown_export_en_test'),
+    ))!;
+    addTearDown(() => tester.runAsync(() => tempDir.delete(recursive: true)));
+
+    final originalPathProvider = PathProviderPlatform.instance;
+    final originalSharePlatform = SharePlatform.instance;
+    PathProviderPlatform.instance = FakePathProviderPlatform(tempDir.path);
+    final fakeShare = FakeSharePlatform();
+    SharePlatform.instance = fakeShare;
+    addTearDown(() {
+      PathProviderPlatform.instance = originalPathProvider;
+      SharePlatform.instance = originalSharePlatform;
+    });
+
+    final repository = FakeBookmarksRepository();
+    await repository.insert(
+      const Bookmark(id: 'bm13', bookId: 'b1', name: 'Chapter 1', progression: 0.1),
+    );
+
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      bookTitle: 'Test Book',
+      bookAuthor: 'Test Author',
+      bookProgress: 0.42,
+      locale: const Locale('en'),
+    );
+
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('notes_sheet_export_markdown')));
+      final deadline = DateTime.now().add(const Duration(seconds: 5));
+      while (fakeShare.lastParams == null &&
+          DateTime.now().isBefore(deadline)) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    });
+    await tester.pump();
+
+    expect(fakeShare.lastParams, isNotNull);
+    final files = fakeShare.lastParams!.files;
+    expect(files, hasLength(1));
+    final exportedFile = File(files!.single.path);
+    final content = await tester.runAsync(() => exportedFile.readAsString());
+    expect(content, contains('# Reading Notes: Test Book'));
+    expect(content, contains('**Author**: Test Author'));
+    expect(content, contains('**Reading Progress**: 42%'));
+    expect(content, contains('*   Chapter 1'));
+  });
+
   testWidgets('點擊右上角 X 取消按鈕後，Bottom Sheet 關閉（Navigator.pop 生效）', (
     tester,
   ) async {

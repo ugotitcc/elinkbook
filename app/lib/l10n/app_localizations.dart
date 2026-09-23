@@ -3340,6 +3340,66 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'儲存'**
   String get layoutPresetNameDialogSaveButton;
+
+  /// Markdown 匯出檔案標題行，{bookTitle} 為使用者書名資料，不翻譯
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'# 閱讀筆記：《{bookTitle}》'**
+  String markdownExportTitle(String bookTitle);
+
+  /// Markdown 匯出的作者標籤行，{author} 為已解析好的作者字串（可能是使用者資料，也可能是 markdownExportUnknownAuthor 的在地化回退值）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'*   **作者**：{author}'**
+  String markdownExportAuthorLabel(String author);
+
+  /// Markdown 匯出時，書籍作者欄位為 null 的回退顯示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'未知作者'**
+  String get markdownExportUnknownAuthor;
+
+  /// Markdown 匯出的閱讀進度標籤行，{percent} 為 0-100 整數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'*   **閱讀進度**：{percent}%'**
+  String markdownExportProgressLabel(int percent);
+
+  /// Markdown 匯出的導出時間標籤行，{time} 為依目前介面語言格式化後的日期字串（DateFormat.yMd）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'*   **導出時間**：{time}'**
+  String markdownExportTimeLabel(String time);
+
+  /// Markdown 匯出的書籤清單區塊標題，{count} 為書籤本數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'## 🔖 書籤清單 ({count})'**
+  String markdownExportBookmarksSection(int count);
+
+  /// Markdown 匯出時，書籤清單為空的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'*(尚未加入書籤)*'**
+  String get markdownExportNoBookmarks;
+
+  /// Markdown 匯出的劃線與個人備註區塊標題，{count} 為劃線/備註合併總筆數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'## ✏️ 劃線與個人備註 ({count})'**
+  String markdownExportAnnotationsSection(int count);
+
+  /// Markdown 匯出時，劃線與備註清單為空的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'*(尚未加入任何劃線或備註)*'**
+  String get markdownExportNoAnnotations;
+
+  /// Markdown 匯出的單筆劃線/備註標題行，{label} 為樣式標籤（螢光筆/底線/備註），{position} 為 Bookmark.defaultName() 產出的位置文字（該函式本身不在本 Issue 翻譯範圍，見 spec.md §7）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'### 📌 {label}（位置：{position}）'**
+  String markdownExportAnnotationHeading(String label, String position);
 }
 
 class _AppLocalizationsDelegate

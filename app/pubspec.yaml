@@ -47,10 +47,30 @@ dependencies:
   # 改成跟 file_picker ^11.0.2（要求 win32 ^5.9.0）衝突，file_picker 要到
   # 12.x（beta）才支援 win32 ^6.x。三者無法在不動 file_picker／
   # package_info_plus 版本的前提下同時滿足，^11.1.0 是唯一不需連動升級這兩個
-  # 與本功能無關套件的 share_plus 版本（`SharePlus.instance.share(
-  # ShareParams(...))` 這個非淘汰 API 在此版本一樣存在）。未來若要升級
-  # share_plus，須同時處理這條 win32 相依鏈。
+  # 與本功能無關套件的 share_plus 版本。未來若要升級 share_plus，須同時
+  # 處理這條 win32 相依鏈。
+  #
+  # epic-45-interface-i18n Issue 8（review-issue-8.md I-1）：`lib/` 底下
+  # 目前沒有任何檔案直接 import `package:share_plus/share_plus.dart`
+  # 本身（`notes_bottom_sheet.dart` 已改為直接依賴下方的
+  # `share_plus_platform_interface`），但這個套件仍不可移除——
+  # `share_plus_platform_interface` 的 `SharePlatform._instance` 預設值
+  # 只是 `MethodChannelShare()`，真正讓這個 MethodChannel 在 Android/iOS
+  # 上有回應的原生外掛程式碼（`SharePlusPlugin` 等）是由 `share_plus`
+  # 套件的 `pubspec.yaml` `flutter: plugin:` 宣告驅動 Flutter 外掛自動
+  # 註冊機制產生的，與任何 Dart 檔案是否 import 該套件無關；移除會導致
+  # 真機分享功能失效，但 `flutter analyze`／`flutter test` 完全偵測不到。
   share_plus: ^11.1.0
+  # `notes_bottom_sheet.dart._exportMarkdown()` 直接依賴此平台介面（而非
+  # 透過 `SharePlus.instance` wrapper），避免 `SharePlus.instance` 這個
+  # `static final` 欄位在首次存取時快取住當下的 `SharePlatform.instance`，
+  # 導致同一個 `flutter test` 執行序列中，後續測試替換 `SharePlatform.
+  # instance` 為新的 Fake 後，透過 `SharePlus.instance` 呼叫仍會導向第一個
+  # 測試捕獲的舊 Fake（見 `share_plus-11.1.0/lib/share_plus.dart`：
+  # `static final SharePlus instance = SharePlus._(SharePlatform.instance);`）。
+  # 原本只宣告在 dev_dependencies（測試替身用），Issue 8 起也被生產碼直接
+  # import，故移至此正式依賴區塊（review-issue-8.md I-1）。
+  share_plus_platform_interface: ^6.1.0
   sqflite: ^2.4.2+1
   # epic-40-bundled-sqlite（ADR 0028）：從 dev_dependencies 移至此，
   # 同時服務正式 Android 建置（透過 databaseFactoryFfi，見 main.dart）與
@@ -149,7 +169,6 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   path_provider_platform_interface: ^2.1.0
-  share_plus_platform_interface: ^6.1.0
   flutter_inappwebview_platform_interface: ^1.3.0
   # flutter_secure_storage 測試替身：官方套件本身提供
   # TestFlutterSecureStoragePlatform（見 sync_account_repository_test.dart），

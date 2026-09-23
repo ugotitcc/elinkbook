@@ -1953,4 +1953,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get layoutPresetNameDialogSaveButton => 'Save';
+
+  @override
+  String markdownExportTitle(String bookTitle) {
+    return '# Reading Notes: $bookTitle';
+  }
+
+  @override
+  String markdownExportAuthorLabel(String author) {
+    return '*   **Author**: $author';
+  }
+
+  @override
+  String get markdownExportUnknownAuthor => 'Unknown Author';
+
+  @override
+  String markdownExportProgressLabel(int percent) {
+    return '*   **Reading Progress**: $percent%';
+  }
+
+  @override
+  String markdownExportTimeLabel(String time) {
+    return '*   **Export Time**: $time';
+  }
+
+  @override
+  String markdownExportBookmarksSection(int count) {
+    return '## 🔖 Bookmarks ($count)';
+  }
+
+  @override
+  String get markdownExportNoBookmarks => '*(No bookmarks yet)*';
+
+  @override
+  String markdownExportAnnotationsSection(int count) {
+    return '## ✏️ Highlights & Notes ($count)';
+  }
+
+  @override
+  String get markdownExportNoAnnotations => '*(No highlights or notes yet)*';
+
+  @override
+  String markdownExportAnnotationHeading(String label, String position) {
+    return '### 📌 $label (Position: $position)';
+  }
 }
