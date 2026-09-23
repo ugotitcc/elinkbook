@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import '../support/pump_until_pdf_ready.dart';
@@ -14,6 +15,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           key: key,
           filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -43,6 +47,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           key: key,
           filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -75,6 +82,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           key: key,
           filePath: 'test/fixtures/sample_multi_page.pdf',
