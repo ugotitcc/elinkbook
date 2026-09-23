@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 // 直接依賴平台介面以避免 SharePlus.instance 快取首個 Fake 導致的跨測試污染
 // （見 Task 2：SharePlus.instance 在首個測試捕獲 Fake 後，後續測試的 share 仍導向首個 Fake）
-import 'package:share_plus_platform_interface/share_plus_platform_interface.dart'; // ignore: depend_on_referenced_packages
+import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
 import 'package:uuid/uuid.dart';
 
 import '../reader/annotation_list_item.dart';
@@ -160,10 +160,12 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   }
 
   /// 【審查修正 M-1】包在 try-catch 內——`getTemporaryDirectory()`／
-  /// `writeAsString()`／`SharePlus.instance.share()` 皆涉及非同步 I/O 與
-  /// 平台通道，極端環境（例如儲存空間不足、使用者中途取消系統分享面板
+  /// `writeAsString()`／`SharePlatform.instance.share()` 皆涉及非同步 I/O
+  /// 與平台通道，極端環境（例如儲存空間不足、使用者中途取消系統分享面板
   /// 拋出例外）下不應讓整個 Bottom Sheet 崩潰，比照專案既有對外部 I/O
-  /// 失敗的防禦性慣例（見 `_loadFxlBookmarks()` 既有寫法）。
+  /// 失敗的防禦性慣例（見 `_loadFxlBookmarks()` 既有寫法）。直接呼叫
+  /// `SharePlatform.instance`（而非 `SharePlus.instance` wrapper）的理由
+  /// 見上方 import 旁註解（epic-45-interface-i18n Issue 8）。
   Future<void> _exportMarkdown() async {
     // 由 IconButton onPressed 觸發（使用者操作，widget 必然已完整掛載），
     // 不受「initState() 存取 l10n 陷阱」鐵律限制，比照

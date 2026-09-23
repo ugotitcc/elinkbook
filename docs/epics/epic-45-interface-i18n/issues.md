@@ -230,6 +230,8 @@
 
 **實際執行範圍修正記錄（認領時通讀全函式）**：原文建議新增「劃線樣式標籤 4 個 key」，實際查證 `notes_bottom_sheet.dart`（Issue 4 已在地化）內同名私有函式輸出文字與本檔案完全相同，且 Issue 4 已建立對應 ARB key（`readerHighlightStyleYellow`／`Pink`／`Blue`／`Underline`／`readerNotesSheetNoteLabel`），本 Issue 直接重用，不重複新增。另外發現 `spec.md` §7 條列清單遺漏 `'### 📌 $label（位置：...）'` 這行的「位置：」系統結構文字，補上新 key `markdownExportAnnotationHeading(label, position)`。實際新增 ARB key 為 9 個（`markdownExportTitle`／`markdownExportAuthorLabel`／`markdownExportUnknownAuthor`／`markdownExportProgressLabel`／`markdownExportTimeLabel`／`markdownExportBookmarksSection`／`markdownExportNoBookmarks`／`markdownExportAnnotationsSection`／`markdownExportNoAnnotations`）加上新發現的 `markdownExportAnnotationHeading` 共 10 個，重用既有 5 個 key。ARB 由 539 個 key 增至 549 個。
 
+**`review-issue-8.md` I-1 修正**：Task 2 撰寫英文端到端整合測試時發現 `SharePlus.instance` 是 `static final`，首次存取即快取住當下的 `SharePlatform.instance`，導致同一測試序列中後續測試替換 Fake 後仍導向前一個測試捕獲的舊 Fake；`notes_bottom_sheet.dart._exportMarkdown()` 因此改為直接呼叫 `SharePlatform.instance.share()`（而非透過 `SharePlus.instance` wrapper）。這個根因判斷正確，但原始實作把只宣告在 `dev_dependencies:` 的 `share_plus_platform_interface` 直接 import 進生產碼、用 `// ignore: depend_on_referenced_packages` 壓過 lint，未同步更新 `pubspec.yaml` 既有的 `share_plus` 版本鎖定理由註解與 `_exportMarkdown()` 的 KDoc，也未記錄進本文件——經複審後已修正：`share_plus_platform_interface` 移至 `pubspec.yaml` 正式 `dependencies:` 區塊並移除 `// ignore:`；`share_plus`（正式套件本身）維持不動且不可移除——查證 `share_plus_platform_interface` 的 `SharePlatform._instance` 預設值只是 `MethodChannelShare()`，真正讓這個 MethodChannel 在 Android/iOS 上有回應的原生外掛程式碼是由 `share_plus` 套件驅動 Flutter 外掛自動註冊機制產生，與 Dart 檔案是否直接 import 該套件無關，移除會導致真機分享功能失效但 `flutter analyze`／`flutter test` 偵測不到；`pubspec.yaml` 註解與 `notes_bottom_sheet.dart` KDoc 皆已同步更新反映實際呼叫的 API。
+
 **依賴：** Issue 0。
 
 **背景：** `spec.md` §7 已定案介面。獨立、範圍小，可隨時插入執行。
