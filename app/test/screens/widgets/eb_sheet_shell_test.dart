@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
 
 import '../../support/pump_localized_widget.dart';
@@ -25,6 +26,9 @@ Future<void> _pumpAndOpen(
   await tester.pumpWidget(
     MaterialApp(
       navigatorObservers: observer == null ? [] : [observer],
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Builder(
         builder: (context) => ElevatedButton(
           onPressed: () => EBSheetShell.show<void>(

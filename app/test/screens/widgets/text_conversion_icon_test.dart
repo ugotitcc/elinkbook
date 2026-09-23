@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/screens/widgets/text_conversion_icon.dart';
 
@@ -7,8 +8,11 @@ void main() {
   group('TextConversionIcon', () {
     testWidgets('toTraditional 模式正確渲染「简 → 繁」與箭頭圖示', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(
             body: TextConversionIcon(
               mode: TextConversionMode.toTraditional,
             ),
@@ -23,8 +27,11 @@ void main() {
 
     testWidgets('toSimplified 模式正確渲染「繁 → 简」與箭頭圖示', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(
             body: TextConversionIcon(
               mode: TextConversionMode.toSimplified,
             ),
@@ -39,8 +46,11 @@ void main() {
 
     testWidgets('original 模式回退為 article_outlined 圖示', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(
             body: TextConversionIcon(
               mode: TextConversionMode.original,
             ),
@@ -54,8 +64,11 @@ void main() {
     testWidgets('繼承 IconTheme 與 DefaultTextStyle 的前景顏色', (tester) async {
       const testColor = Colors.purple;
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(
             body: IconTheme(
               data: IconThemeData(color: testColor, size: 22),
               child: TextConversionIcon(

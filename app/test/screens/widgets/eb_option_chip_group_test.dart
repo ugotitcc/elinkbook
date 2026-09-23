@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/widgets/eb_option_chip_group.dart';
 
@@ -46,6 +47,9 @@ void main() {
     VoidCallback? onManualTap,
   }) {
     return MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: SizedBox(
           width: width,
@@ -140,6 +144,9 @@ void main() {
       ),
     );
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: SizedBox(
           width: 328,
@@ -196,6 +203,9 @@ void main() {
     WritingMode? selected = WritingMode.horizontal;
     await tester.pumpWidget(StatefulBuilder(
       builder: (context, setState) => MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: SizedBox(
             width: 400,
@@ -254,6 +264,9 @@ void main() {
 
   testWidgets('支援自訂 iconWidget 替代預設 IconData', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: EBOptionChipGroup<String>(
           items: [
