@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+// 直接依賴平台介面以避免 SharePlus.instance 快取首個 Fake 導致的跨測試污染
+// （見 Task 2：SharePlus.instance 在首個測試捕獲 Fake 後，後續測試的 share 仍導向首個 Fake）
+import 'package:share_plus_platform_interface/share_plus_platform_interface.dart'; // ignore: depend_on_referenced_packages
 import 'package:uuid/uuid.dart';
 
 import '../reader/annotation_list_item.dart';
@@ -163,8 +165,15 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   /// 拋出例外）下不應讓整個 Bottom Sheet 崩潰，比照專案既有對外部 I/O
   /// 失敗的防禦性慣例（見 `_loadFxlBookmarks()` 既有寫法）。
   Future<void> _exportMarkdown() async {
+    // 由 IconButton onPressed 觸發（使用者操作，widget 必然已完整掛載），
+    // 不受「initState() 存取 l10n 陷阱」鐵律限制，比照
+    // library_group_management_dialog.dart._addGroup() 既有先例，在方法
+    // 最前面同步取得即可，不需要額外 mounted 防衛（epic-45-interface-i18n
+    // Issue 8）。
+    final l10n = AppLocalizations.of(context)!;
     try {
       final markdown = generateMarkdownExport(
+        l10n: l10n,
         bookTitle: widget.bookTitle,
         bookAuthor: widget.bookAuthor,
         progress: widget.bookProgress,
@@ -176,7 +185,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
       final fileName = 'notes-${sanitizeMarkdownFileName(widget.bookTitle)}.md';
       final file = File('${tempDir.path}/$fileName');
       await file.writeAsString(markdown);
-      await SharePlus.instance.share(
+      await SharePlatform.instance.share(
         ShareParams(files: [XFile(file.path, mimeType: 'text/markdown')]),
       );
     } catch (e) {
