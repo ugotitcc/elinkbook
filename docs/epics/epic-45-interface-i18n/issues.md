@@ -226,7 +226,9 @@
 
 ## Issue 8：Markdown 匯出契約變更
 
-**Status:** ready-for-agent
+**Status:** completed
+
+**實際執行範圍修正記錄（認領時通讀全函式）**：原文建議新增「劃線樣式標籤 4 個 key」，實際查證 `notes_bottom_sheet.dart`（Issue 4 已在地化）內同名私有函式輸出文字與本檔案完全相同，且 Issue 4 已建立對應 ARB key（`readerHighlightStyleYellow`／`Pink`／`Blue`／`Underline`／`readerNotesSheetNoteLabel`），本 Issue 直接重用，不重複新增。另外發現 `spec.md` §7 條列清單遺漏 `'### 📌 $label（位置：...）'` 這行的「位置：」系統結構文字，補上新 key `markdownExportAnnotationHeading(label, position)`。實際新增 ARB key 為 9 個（`markdownExportTitle`／`markdownExportAuthorLabel`／`markdownExportUnknownAuthor`／`markdownExportProgressLabel`／`markdownExportTimeLabel`／`markdownExportBookmarksSection`／`markdownExportNoBookmarks`／`markdownExportAnnotationsSection`／`markdownExportNoAnnotations`）加上新發現的 `markdownExportAnnotationHeading` 共 10 個，重用既有 5 個 key。ARB 由 539 個 key 增至 549 個。
 
 **依賴：** Issue 0。
 
