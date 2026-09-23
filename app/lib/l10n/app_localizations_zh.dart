@@ -1882,6 +1882,50 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get layoutPresetNameDialogSaveButton => '儲存';
+
+  @override
+  String markdownExportTitle(String bookTitle) {
+    return '# 閱讀筆記：《$bookTitle》';
+  }
+
+  @override
+  String markdownExportAuthorLabel(String author) {
+    return '*   **作者**：$author';
+  }
+
+  @override
+  String get markdownExportUnknownAuthor => '未知作者';
+
+  @override
+  String markdownExportProgressLabel(int percent) {
+    return '*   **閱讀進度**：$percent%';
+  }
+
+  @override
+  String markdownExportTimeLabel(String time) {
+    return '*   **導出時間**：$time';
+  }
+
+  @override
+  String markdownExportBookmarksSection(int count) {
+    return '## 🔖 書籤清單 ($count)';
+  }
+
+  @override
+  String get markdownExportNoBookmarks => '*(尚未加入書籤)*';
+
+  @override
+  String markdownExportAnnotationsSection(int count) {
+    return '## ✏️ 劃線與個人備註 ($count)';
+  }
+
+  @override
+  String get markdownExportNoAnnotations => '*(尚未加入任何劃線或備註)*';
+
+  @override
+  String markdownExportAnnotationHeading(String label, String position) {
+    return '### 📌 $label（位置：$position）';
+  }
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -3762,6 +3806,50 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get layoutPresetNameDialogSaveButton => '储存';
+
+  @override
+  String markdownExportTitle(String bookTitle) {
+    return '# 阅读笔记：《$bookTitle》';
+  }
+
+  @override
+  String markdownExportAuthorLabel(String author) {
+    return '*   **作者**：$author';
+  }
+
+  @override
+  String get markdownExportUnknownAuthor => '未知作者';
+
+  @override
+  String markdownExportProgressLabel(int percent) {
+    return '*   **阅读进度**：$percent%';
+  }
+
+  @override
+  String markdownExportTimeLabel(String time) {
+    return '*   **导出时间**：$time';
+  }
+
+  @override
+  String markdownExportBookmarksSection(int count) {
+    return '## 🔖 书签清单 ($count)';
+  }
+
+  @override
+  String get markdownExportNoBookmarks => '*(尚未加入书签)*';
+
+  @override
+  String markdownExportAnnotationsSection(int count) {
+    return '## ✏️ 划线与个人备注 ($count)';
+  }
+
+  @override
+  String get markdownExportNoAnnotations => '*(尚未加入任何划线或备注)*';
+
+  @override
+  String markdownExportAnnotationHeading(String label, String position) {
+    return '### 📌 $label（位置：$position）';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -5642,4 +5730,48 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get layoutPresetNameDialogSaveButton => '儲存';
+
+  @override
+  String markdownExportTitle(String bookTitle) {
+    return '# 閱讀筆記：《$bookTitle》';
+  }
+
+  @override
+  String markdownExportAuthorLabel(String author) {
+    return '*   **作者**：$author';
+  }
+
+  @override
+  String get markdownExportUnknownAuthor => '未知作者';
+
+  @override
+  String markdownExportProgressLabel(int percent) {
+    return '*   **閱讀進度**：$percent%';
+  }
+
+  @override
+  String markdownExportTimeLabel(String time) {
+    return '*   **導出時間**：$time';
+  }
+
+  @override
+  String markdownExportBookmarksSection(int count) {
+    return '## 🔖 書籤清單 ($count)';
+  }
+
+  @override
+  String get markdownExportNoBookmarks => '*(尚未加入書籤)*';
+
+  @override
+  String markdownExportAnnotationsSection(int count) {
+    return '## ✏️ 劃線與個人備註 ($count)';
+  }
+
+  @override
+  String get markdownExportNoAnnotations => '*(尚未加入任何劃線或備註)*';
+
+  @override
+  String markdownExportAnnotationHeading(String label, String position) {
+    return '### 📌 $label（位置：$position）';
+  }
 }

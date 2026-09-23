@@ -538,5 +538,15 @@
   "layoutPresetBookPickerNoMatch": "No matching books found",
   "layoutPresetNameDialogTitle": "Name the Preset",
   "layoutPresetNameDialogEmptyError": "Name cannot be empty",
-  "layoutPresetNameDialogSaveButton": "Save"
+  "layoutPresetNameDialogSaveButton": "Save",
+  "markdownExportTitle": "# Reading Notes: {bookTitle}",
+  "markdownExportAuthorLabel": "*   **Author**: {author}",
+  "markdownExportUnknownAuthor": "Unknown Author",
+  "markdownExportProgressLabel": "*   **Reading Progress**: {percent}%",
+  "markdownExportTimeLabel": "*   **Export Time**: {time}",
+  "markdownExportBookmarksSection": "## 🔖 Bookmarks ({count})",
+  "markdownExportNoBookmarks": "*(No bookmarks yet)*",
+  "markdownExportAnnotationsSection": "## ✏️ Highlights & Notes ({count})",
+  "markdownExportNoAnnotations": "*(No highlights or notes yet)*",
+  "markdownExportAnnotationHeading": "### 📌 {label} (Position: {position})"
 }
