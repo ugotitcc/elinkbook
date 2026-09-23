@@ -254,9 +254,11 @@
 
 ## Issue 9：收斂清理——其餘邊角測試檔遷移至 `pumpLocalizedWidget()`
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 3、Issue 4、Issue 5、Issue 6（範圍取決於這四個 Issue 實際涵蓋面，本 Issue 只處理殘餘未觸及的測試檔）。
+
+**實際執行範圍修正記錄（`reviews/review-plan-issue-9.md` I-1／I-3 修正後，認領時逐一核對 `grep -c "MaterialApp("` 與 `grep -rl` 差集盲區）**：最初以檔案級差集盤點誤判 4 個檔案已完成（因檔內已有 `pumpLocalizedWidget` 局部遷移），經逐呼叫點核對補記歸屬——`test/reader/pdf_reader_view_test.dart`（7 處）、`test/reader/foliate_reader_view_test.dart`（15 處）、`test/screens/reader_screen_test.dart`（6 處，5 處為 `const MaterialApp(home: SizedBox.shrink())` dispose 容器、1 處為 `PdfReaderView` 靜態方法測試）、`test/screens/widgets/eb_sheet_shell_test.dart`（1 處 `_pumpAndOpen()` helper；另有 1 處刻意保留的 fallback 測試不遷移，見下）——合計 **25 個檔案、148 處** `MaterialApp(` 呼叫完成遷移（未計白名單 1 處）。`test/screens/widgets/eb_sheet_shell_test.dart:82-105`「AppLocalizations 不存在（裸 MaterialApp）時，tooltip 回退既有中文字面值」測試刻意保留裸 `MaterialApp`，驗證 `EBSheetShell` 無委派時安全回退為 `'關閉'`，本 Issue 嚴禁修改。`app/test/l10n/locale_switch_test.dart` 經查證尚不存在（僅有 4 個既有 l10n 測試檔），本 Issue 全新建立（非補完），針對 `SettingsScaffold`／`LibraryScreen` 在 `zh_TW`／`zh_CN`／`en` 三語言驗證代表性字串渲染。
 
 **背景：** `spec.md` §10（I-1 修正後）：既有 68 個測試檔中，Issue 3-6 已依模組逐一遷移對應測試檔；本 Issue 收斂清理剩餘未被任何模組 Issue 觸及、但仍是裸 `MaterialApp(...)` 的邊角測試檔（例如共用小元件測試、尚未歸類的獨立 widget 測試）。
 

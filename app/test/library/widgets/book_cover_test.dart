@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/widgets/book_cover.dart';
@@ -23,6 +24,9 @@ Book _book({required bool isDownloaded, String title = '測試書'}) {
 void main() {
   testWidgets('isDownloaded 為 false 時疊加雲朵角標', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: BookCover(book: _book(isDownloaded: false)),
     ));
@@ -32,6 +36,9 @@ void main() {
 
   testWidgets('isDownloaded 為 true 時不顯示雲朵角標', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: BookCover(book: _book(isDownloaded: true)),
     ));
@@ -41,6 +48,9 @@ void main() {
 
   testWidgets('沒有封面圖時顯示依格式圖示與書名', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: BookCover(book: _book(isDownloaded: true)),
     ));
@@ -55,6 +65,9 @@ void main() {
       'BookCover 作為對外生產元件的整合行為原本完全沒有測試保護，見'
       'reviews/review-plan-issue-9.md）', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: true),
       home: BookCover(book: _book(isDownloaded: true)),
     ));
@@ -68,6 +81,9 @@ void main() {
       'textConversion: toTraditional 時，CoverPlaceholder 書名縮略套用簡繁轉換（epic-42-text-conversion Issue 3）',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: BookCover(
         book: _book(isDownloaded: true, title: '国电脑'),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/widgets/eb_stepper.dart';
 
 void main() {
@@ -12,6 +13,9 @@ void main() {
     ValueChanged<double>? onChanged,
   }) {
     return MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: EBStepper(
           keyPrefix: 'test_stepper',

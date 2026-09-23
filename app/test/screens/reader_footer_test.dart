@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/reader_footer.dart';
 
 void main() {
   testWidgets('顯示進度百分比與目前頁碼／總頁數文字', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: ReaderFooter(
           currentPage: 5,
@@ -20,6 +24,9 @@ void main() {
   testWidgets('輸入框輸入合法頁碼並送出後，觸發 onPageChanged', (tester) async {
     int? received;
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: ReaderFooter(
           currentPage: 5,
@@ -39,6 +46,9 @@ void main() {
   testWidgets('輸入框送出跳頁後，主動收起鍵盤/輸入框焦點（審查修正）',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: ReaderFooter(
           currentPage: 5,
@@ -73,6 +83,9 @@ void main() {
   testWidgets('輸入框輸入超出範圍的頁碼時，箝制在合法範圍內', (tester) async {
     int? received;
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: ReaderFooter(
           currentPage: 5,
@@ -93,6 +106,9 @@ void main() {
   testWidgets('拖曳滑桿結束時觸發 onPageChanged', (tester) async {
     int? received;
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: ReaderFooter(
           currentPage: 5,
@@ -113,6 +129,9 @@ void main() {
   testWidgets('外部 currentPage 變動時（例如原生端翻頁回報），輸入框與滑桿同步更新',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: ReaderFooter(
           currentPage: 5,
@@ -124,6 +143,9 @@ void main() {
     expect(find.text('5'), findsOneWidget);
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: ReaderFooter(
           currentPage: 8, // 變動
@@ -142,6 +164,9 @@ void main() {
     // 審查修正：totalPages <= 1 時拖曳跳頁沒有實際意義，Slider 應停用
     // （視覺上呈現不可互動狀態），而不只是靠 max/divisions 防呆撐住。
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: ReaderFooter(
           currentPage: 1,
@@ -159,6 +184,9 @@ void main() {
 
   testWidgets('合併為單行後，頁尾高度明顯低於合併前的既有高度快照（84.0）', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: ReaderFooter(
           currentPage: 5,
@@ -178,6 +206,9 @@ void main() {
 
   testWidgets('滑桿 label 帶入正確的進度百分比字串', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: ReaderFooter(
           currentPage: 5,

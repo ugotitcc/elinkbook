@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/tap_zone_detector.dart';
 
 void main() {
@@ -12,6 +13,9 @@ void main() {
     void Function(String message)? onDebugEvent,
   }) {
     return MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: TapZoneDetector(
         onTap: onTap,
         nowMs: nowMs,
@@ -234,6 +238,9 @@ void main() {
     var fakeNowMs = 1000;
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: TapZoneDetector(
           onTap: () => tapped = true,
           nowMs: () => fakeNowMs,

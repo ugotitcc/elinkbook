@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/pdf_image_filters.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
@@ -24,6 +25,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -48,6 +52,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -73,6 +80,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -113,6 +123,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -134,6 +147,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -164,6 +180,9 @@ void main() {
       // 用夠高的可視區域讓多於 1 頁同時進入 pageOverlaysBuilder 的呼叫範圍。
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: SizedBox(
             height: 2000,
             child: PdfReaderView(
@@ -208,6 +227,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -236,6 +258,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -260,6 +285,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -294,6 +322,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -315,6 +346,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -351,6 +385,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -383,6 +420,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -414,6 +454,9 @@ void main() {
       
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -428,6 +471,9 @@ void main() {
       // 模擬連續拖曳：第一次變更
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -442,6 +488,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -476,6 +525,9 @@ void main() {
       
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -494,6 +546,9 @@ void main() {
       // 模擬智慧自動裁切偵測完成寫回
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -517,6 +572,9 @@ void main() {
       
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -535,6 +593,9 @@ void main() {
       // 啟用裁切模式
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PdfReaderView(
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',

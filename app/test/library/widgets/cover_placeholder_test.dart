@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/library/widgets/book_cover.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
@@ -7,6 +8,9 @@ import 'package:elinkbook/theme/app_theme_data.dart';
 void main() {
   Widget wrap(Widget child, {required bool isEinkMode}) {
     return MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: isEinkMode),
       home: Center(child: child),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/widgets/reader_option_tile.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
@@ -8,6 +9,9 @@ void main() {
     String selectedValue = 'A';
 
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: buildEinkThemeData(),
       home: Scaffold(
         body: StatefulBuilder(
@@ -56,6 +60,9 @@ void main() {
 
   testWidgets('iconSize 覆寫圖示大小，未提供時維持既有預設值 20', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Column(
           children: [
@@ -99,6 +106,9 @@ void main() {
 
   testWidgets('labelFontSize 覆寫標籤文字大小，未提供時維持既有預設值 13', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Column(
           children: [
@@ -135,6 +145,9 @@ void main() {
   testWidgets('forceUnselected: true 時，即使 value == groupValue 仍呈現未選中樣式',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: buildEinkThemeData(),
       home: Scaffold(
         body: ReaderOptionTile<String>(
