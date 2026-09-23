@@ -72,6 +72,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String libraryGroupNameAlreadyExistsError(String name) {
+    return '分類「$name」已存在，請使用其他名稱';
+  }
+
+  @override
   String get libraryMoveToGroupTitle => '移動到分類';
 
   @override
@@ -1953,6 +1958,11 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   }
 
   @override
+  String libraryGroupNameAlreadyExistsError(String name) {
+    return '分类「$name」已存在，请使用其他名称';
+  }
+
+  @override
   String get libraryMoveToGroupTitle => '移动到分类';
 
   @override
@@ -3831,6 +3841,11 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String libraryGroupReservedNameError(String name) {
     return '「$name」是系統保留的分類名稱，請使用其他名稱';
+  }
+
+  @override
+  String libraryGroupNameAlreadyExistsError(String name) {
+    return '分類「$name」已存在，請使用其他名稱';
   }
 
   @override

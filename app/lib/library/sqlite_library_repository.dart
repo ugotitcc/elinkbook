@@ -1268,13 +1268,18 @@ class SqliteLibraryRepository implements LibraryRepository {
   Future<void> renameGroup(String oldName, String newName) async {
     if (oldName == BookGroup.uncategorized) {
       throw LibraryRepositoryException(
-          '系統保留群組「${BookGroup.uncategorized}」不可重新命名');
+        '系統保留群組「${BookGroup.uncategorized}」不可重新命名',
+        reason: LibraryRepositoryErrorReason.reservedGroupRename,
+      );
     }
     await _db.transaction((txn) async {
       final existing =
           await txn.query('groups', where: 'name = ?', whereArgs: [newName]);
       if (existing.isNotEmpty) {
-        throw LibraryRepositoryException('分類「$newName」已存在');
+        throw LibraryRepositoryException(
+          '分類「$newName」已存在',
+          reason: LibraryRepositoryErrorReason.duplicateGroupName,
+        );
       }
       await txn.insert('groups', {'name': newName});
       await txn.update(
@@ -1291,7 +1296,9 @@ class SqliteLibraryRepository implements LibraryRepository {
   Future<void> deleteGroup(String name) async {
     if (name == BookGroup.uncategorized) {
       throw LibraryRepositoryException(
-          '系統保留群組「${BookGroup.uncategorized}」不可刪除');
+        '系統保留群組「${BookGroup.uncategorized}」不可刪除',
+        reason: LibraryRepositoryErrorReason.reservedGroupDelete,
+      );
     }
     await _db.transaction((txn) async {
       await txn.update(

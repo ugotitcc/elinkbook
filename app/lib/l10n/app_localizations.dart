@@ -214,6 +214,12 @@ abstract class AppLocalizations {
   /// **'「{name}」是系統保留的分類名稱，請使用其他名稱'**
   String libraryGroupReservedNameError(String name);
 
+  /// 重新命名分類時，新名稱與既有分類撞名時顯示的錯誤訊息，{name} 為使用者嘗試使用的新名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'分類「{name}」已存在，請使用其他名稱'**
+  String libraryGroupNameAlreadyExistsError(String name);
+
   /// 「移動到分類」目的地選擇對話框標題
   ///
   /// In zh_TW, this message translates to:

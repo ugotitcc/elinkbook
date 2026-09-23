@@ -121,10 +121,15 @@ class FakeLibraryRepository implements LibraryRepository {
     renameGroupCalls.add((oldName, newName));
     if (oldName == BookGroup.uncategorized) {
       throw LibraryRepositoryException(
-          '系統保留群組「${BookGroup.uncategorized}」不可重新命名');
+        '系統保留群組「${BookGroup.uncategorized}」不可重新命名',
+        reason: LibraryRepositoryErrorReason.reservedGroupRename,
+      );
     }
     if (_groups.contains(newName)) {
-      throw LibraryRepositoryException('分類「$newName」已存在');
+      throw LibraryRepositoryException(
+        '分類「$newName」已存在',
+        reason: LibraryRepositoryErrorReason.duplicateGroupName,
+      );
     }
     _groups
       ..remove(oldName)
@@ -140,7 +145,9 @@ class FakeLibraryRepository implements LibraryRepository {
   Future<void> deleteGroup(String name) async {
     if (name == BookGroup.uncategorized) {
       throw LibraryRepositoryException(
-          '系統保留群組「${BookGroup.uncategorized}」不可刪除');
+        '系統保留群組「${BookGroup.uncategorized}」不可刪除',
+        reason: LibraryRepositoryErrorReason.reservedGroupDelete,
+      );
     }
     _groups.remove(name);
     for (var i = 0; i < _books.length; i++) {

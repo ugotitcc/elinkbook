@@ -73,6 +73,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String libraryGroupNameAlreadyExistsError(String name) {
+    return '\"$name\" already exists. Please use a different name.';
+  }
+
+  @override
   String get libraryMoveToGroupTitle => 'Move to Category';
 
   @override

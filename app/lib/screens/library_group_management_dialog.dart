@@ -68,7 +68,8 @@ class _LibraryGroupManagementDialogState
       await _reloadGroups();
     } on LibraryRepositoryException catch (e) {
       if (!mounted) return;
-      setState(() => _errorMessage = e.message);
+      debugPrint('新增分類「$name」失敗: ${e.message}');
+      setState(() => _errorMessage = l10n.errorOperationFailed);
     } catch (_) {
       if (!mounted) return;
       setState(() => _errorMessage = l10n.errorOperationFailed);
@@ -125,7 +126,13 @@ class _LibraryGroupManagementDialogState
       await _reloadGroups();
     } on LibraryRepositoryException catch (e) {
       if (!mounted) return;
-      setState(() => _errorMessage = e.message);
+      debugPrint('重新命名分類「$oldName」為「$newName」失敗: ${e.message}');
+      setState(
+        () => _errorMessage =
+            e.reason == LibraryRepositoryErrorReason.duplicateGroupName
+                ? l10n.libraryGroupNameAlreadyExistsError(newName)
+                : l10n.errorOperationFailed,
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _errorMessage = l10n.errorOperationFailed);
@@ -168,7 +175,8 @@ class _LibraryGroupManagementDialogState
       await _reloadGroups();
     } on LibraryRepositoryException catch (e) {
       if (!mounted) return;
-      setState(() => _errorMessage = e.message);
+      debugPrint('刪除分類「$name」失敗: ${e.message}');
+      setState(() => _errorMessage = l10n.errorOperationFailed);
     } catch (_) {
       if (!mounted) return;
       setState(() => _errorMessage = l10n.errorOperationFailed);

@@ -19,6 +19,7 @@
   "libraryGroupDeleteConfirmMessage": "确定要删除分类「{name}」吗？该分类下的书籍将改列为「{uncategorized}」。",
   "libraryGroupDeleteButton": "删除",
   "libraryGroupReservedNameError": "「{name}」是系统保留的分类名称，请使用其他名称",
+  "libraryGroupNameAlreadyExistsError": "分类「{name}」已存在，请使用其他名称",
   "libraryMoveToGroupTitle": "移动到分类",
   "errorNetworkConnection": "加载失败，请检查网络连接",
   "cloudBrowserDuplicateConfirmMessage": "「{name}」之前已导入过，仍要建立新的一份吗？",

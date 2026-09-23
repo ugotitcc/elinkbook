@@ -19,6 +19,7 @@
   "libraryGroupDeleteConfirmMessage": "Delete category \"{name}\"? Books in this category will be moved to \"{uncategorized}\".",
   "libraryGroupDeleteButton": "Delete",
   "libraryGroupReservedNameError": "\"{name}\" is a reserved category name. Please use a different name.",
+  "libraryGroupNameAlreadyExistsError": "\"{name}\" already exists. Please use a different name.",
   "libraryMoveToGroupTitle": "Move to Category",
   "errorNetworkConnection": "Failed to load. Please check your network connection.",
   "cloudBrowserDuplicateConfirmMessage": "\"{name}\" was already imported before. Create a new copy anyway?",
