@@ -224,10 +224,16 @@ void main() {
       expect(groups.map((g) => g.name), isNot(contains('古典奇幻')));
     });
 
-    test('deleteGroup 對「未分類」拋出例外', () async {
+    test('deleteGroup 對「未分類」拋出例外，reason 為 reservedGroupDelete', () async {
       expect(
         () => repository.deleteGroup('未分類'),
-        throwsA(isA<LibraryRepositoryException>()),
+        throwsA(
+          isA<LibraryRepositoryException>().having(
+            (e) => e.reason,
+            'reason',
+            LibraryRepositoryErrorReason.reservedGroupDelete,
+          ),
+        ),
       );
     });
 
@@ -244,20 +250,32 @@ void main() {
       expect(groups.map((g) => g.name), isNot(contains('古典奇幻')));
     });
 
-    test('renameGroup 對「未分類」拋出例外', () async {
+    test('renameGroup 對「未分類」拋出例外，reason 為 reservedGroupRename', () async {
       expect(
         () => repository.renameGroup('未分類', '新名稱'),
-        throwsA(isA<LibraryRepositoryException>()),
+        throwsA(
+          isA<LibraryRepositoryException>().having(
+            (e) => e.reason,
+            'reason',
+            LibraryRepositoryErrorReason.reservedGroupRename,
+          ),
+        ),
       );
     });
 
-    test('renameGroup 目標名稱已存在時拋出例外', () async {
+    test('renameGroup 目標名稱已存在時拋出例外，reason 為 duplicateGroupName', () async {
       await repository.upsertGroup('古典奇幻');
       await repository.upsertGroup('文言經典');
 
       expect(
         () => repository.renameGroup('古典奇幻', '文言經典'),
-        throwsA(isA<LibraryRepositoryException>()),
+        throwsA(
+          isA<LibraryRepositoryException>().having(
+            (e) => e.reason,
+            'reason',
+            LibraryRepositoryErrorReason.duplicateGroupName,
+          ),
+        ),
       );
     });
   });

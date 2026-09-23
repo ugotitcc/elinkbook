@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
+import '../l10n/app_localizations.dart';
 import 'column_mode.dart';
 import 'custom_font.dart';
 import 'dual_page_mode.dart';
@@ -76,6 +77,26 @@ void handleFoliateConsoleMessage(
 }) {
   if (!consoleLogEnabled && levelName != 'ERROR') return;
   ReaderConsoleLog.add('[$levelName] $message');
+}
+
+/// [FoliateBridgeHandlers.onError] JS handler 的訊息解析邏輯，抽成頂層純函式
+/// 獨立測試——原因同 [handleFoliateConsoleMessage]：
+/// `FakePlatformInAppWebViewWidget`（`test/support/fake_inappwebview_platform.dart`）
+/// 無法真正觸發完整的 `addJavaScriptHandler` 回呼型別鏈，抽出後才能脫離該型別鏈
+/// 直接測試。main.js 的 `openBook()` 失敗時透過 `args[0]` 傳入原始技術性錯誤文字
+/// （可能是英文 JS Error message，見 main.js `String((e && e.message) || e)`），
+/// 依 `spec.md` §6「禁止在使用者可見文字中出現例外物件的原始文字內容」，這段原始
+/// 文字只能寫入 [ReaderConsoleLog]，回傳給使用者的一律是固定在地化訊息。[args] 可能
+/// 帶 `null` 或純空白字串（JS 端未附帶有意義的錯誤描述時），一併過濾為 `(no detail)`，
+/// 避免 Console Log 診斷輸出淪為無意義的 `"null"`/空白。
+String resolveFoliateOpenBookErrorMessage(
+  List<dynamic> args,
+  AppLocalizations l10n,
+) {
+  final raw = args.isNotEmpty ? args[0]?.toString().trim() : null;
+  final detail = (raw != null && raw.isNotEmpty) ? raw : '(no detail)';
+  ReaderConsoleLog.add('[FoliateReaderView] openBook 失敗: $detail');
+  return l10n.readerFailedToLoadBookMessage;
 }
 
 /// 把 [Color] 轉換為 CSS 合法的 6 位十六進位色碼字串（`#RRGGBB`，不含
@@ -542,11 +563,13 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
           _bookCacheDir = File(cachedPath).parent.path;
         });
       } else {
-        widget.onError('無法快取書籍檔案');
+        ReaderConsoleLog.add('[FoliateReaderView] _cacheBook 失敗：cacheBookForServing 回傳 null');
+        widget.onError(AppLocalizations.of(context)!.readerFailedToLoadBookMessage);
       }
     } catch (e) {
       if (!mounted) return;
-      widget.onError('快取書籍失敗: $e');
+      ReaderConsoleLog.add('[FoliateReaderView] _cacheBook 拋出例外: $e');
+      widget.onError(AppLocalizations.of(context)!.readerFailedToLoadBookMessage);
     }
   }
 
@@ -645,7 +668,10 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     controller.addJavaScriptHandler(
       handlerName: FoliateBridgeHandlers.onError,
       callback: (args) {
-        widget.onError(args.isNotEmpty ? args[0] as String : '未知錯誤');
+        if (!mounted) return;
+        widget.onError(
+          resolveFoliateOpenBookErrorMessage(args, AppLocalizations.of(context)!),
+        );
       },
     );
     controller.addJavaScriptHandler(

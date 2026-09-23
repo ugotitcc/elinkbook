@@ -69,12 +69,37 @@ abstract class LibraryRepository {
   Future<Book?> findBookById(String id);
 }
 
+/// [LibraryRepositoryException] 的語意分類，供呼叫端（表現層）對應正確的
+/// `AppLocalizations` 訊息（epic-45-interface-i18n Issue 7，`spec.md` §6：
+/// 服務層例外訊息本身只作診斷用途，使用者可見文字一律由表現層依這個分類
+/// 對應在地化字串，不可直接顯示 [LibraryRepositoryException.message]）。
+enum LibraryRepositoryErrorReason {
+  /// 嘗試重新命名系統保留群組「未分類」——UI 層已由 [isReservedGroupName]
+  /// 攔截在呼叫本函式之前，此分支理論上不可達，僅作防禦。
+  reservedGroupRename,
+
+  /// 嘗試刪除系統保留群組「未分類」——同上，理論上不可達，僅作防禦。
+  reservedGroupDelete,
+
+  /// 重新命名的目標名稱與既有分類撞名——UI 層無事前檢查，可達路徑。
+  duplicateGroupName,
+
+  /// 未分類的其他情況（保留給未來擴充，目前無拋出點使用）。
+  unknown,
+}
+
 /// `LibraryRepository` 操作違反資料規則時拋出（例如嘗試刪除/重新命名系統
-/// 保留的「未分類」群組、或重新命名為已存在的群組名稱）。
+/// 保留的「未分類」群組、或重新命名為已存在的群組名稱）。[message] 僅供
+/// 診斷/日誌用途（例如 `debugPrint`），**不可**直接顯示給使用者——使用者
+/// 可見文字由呼叫端依 [reason] 對應 `AppLocalizations`。
 class LibraryRepositoryException implements Exception {
   final String message;
-  const LibraryRepositoryException(this.message);
+  final LibraryRepositoryErrorReason reason;
+  const LibraryRepositoryException(
+    this.message, {
+    this.reason = LibraryRepositoryErrorReason.unknown,
+  });
 
   @override
-  String toString() => 'LibraryRepositoryException: $message';
+  String toString() => 'LibraryRepositoryException($reason): $message';
 }

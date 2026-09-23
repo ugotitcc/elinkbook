@@ -16,7 +16,9 @@ import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import 'package:elinkbook/reader/custom_font.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import '../support/fake_inappwebview_platform.dart';
+import '../support/pump_localized_widget.dart';
 
 void _noop() {}
 void _noopError(String message) {}
@@ -1927,48 +1929,83 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('cache failure calls onError', (tester) async {
+    testWidgets('cache failure calls onError（改為固定在地化訊息，不再是硬編碼中文字面值）',
+        (tester) async {
+      ReaderConsoleLog.clear();
       cacheBookForServing = (filePath, instanceId) async {
         return null;
       };
 
       String? receivedError;
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
+      await pumpLocalizedWidget(
+        tester,
+        Scaffold(
           body: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: (msg) => receivedError = msg,
           ),
         ),
-      ));
+      );
 
       await tester.pump();
-      expect(receivedError, '無法快取書籍檔案');
+      expect(receivedError, '無法載入書籍');
+      expect(
+        ReaderConsoleLog.entries.value.last,
+        contains('cacheBookForServing 回傳 null'),
+      );
     });
 
     testWidgets(
         'cacheBookForServing 拋出例外時（epic-18-reader-device-qa Issue 33），'
-        '呼叫 onError 帶入例外訊息，不會讓畫面永遠卡在載入指示器',
+        '呼叫 onError 帶入固定在地化訊息（不含例外原始文字），例外細節改寫入 Console Log，'
+        '不會讓畫面永遠卡在載入指示器',
         (tester) async {
+      ReaderConsoleLog.clear();
       cacheBookForServing = (filePath, instanceId) async {
         throw Exception('模擬檔案系統錯誤');
       };
 
       String? receivedError;
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
+      await pumpLocalizedWidget(
+        tester,
+        Scaffold(
           body: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: (msg) => receivedError = msg,
           ),
         ),
-      ));
+      );
 
       await tester.pump();
-      expect(receivedError, contains('快取書籍失敗'));
-      expect(receivedError, contains('模擬檔案系統錯誤'));
+      expect(receivedError, '無法載入書籍');
+      expect(
+        ReaderConsoleLog.entries.value.last,
+        contains('模擬檔案系統錯誤'),
+      );
+    });
+
+    testWidgets('英文介面下，cache 失敗顯示英文固定訊息', (tester) async {
+      cacheBookForServing = (filePath, instanceId) async {
+        return null;
+      };
+
+      String? receivedError;
+      await pumpLocalizedWidget(
+        tester,
+        Scaffold(
+          body: FoliateReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: (msg) => receivedError = msg,
+          ),
+        ),
+        locale: const Locale('en'),
+      );
+
+      await tester.pump();
+      expect(receivedError, 'Failed to load book');
     });
   });
 
@@ -2015,6 +2052,52 @@ void main() {
             '成 drawVerticalUnderlineLeft（直排／左側）或 Overlayer.underline'
             '（橫排／下方，維持既有行為不變）。',
       );
+    });
+  });
+
+  group('resolveFoliateOpenBookErrorMessage', () {
+    setUp(() => ReaderConsoleLog.clear());
+
+    test('main.js 回傳具體錯誤文字時，回傳固定在地化訊息、原始文字寫入 Console Log', () {
+      final l10n = lookupAppLocalizations(const Locale('zh', 'TW'));
+      final message =
+          resolveFoliateOpenBookErrorMessage(['SyntaxError: Unexpected token'], l10n);
+
+      expect(message, l10n.readerFailedToLoadBookMessage);
+      expect(
+        ReaderConsoleLog.entries.value.last,
+        contains('SyntaxError: Unexpected token'),
+      );
+    });
+
+    test('main.js 未帶任何錯誤細節（args 為空）時，仍回傳固定在地化訊息、不拋例外', () {
+      final l10n = lookupAppLocalizations(const Locale('zh', 'TW'));
+      final message = resolveFoliateOpenBookErrorMessage(const [], l10n);
+
+      expect(message, l10n.readerFailedToLoadBookMessage);
+    });
+
+    test('args 為 [null] 時，回傳固定在地化訊息、Console Log 記錄 (no detail) 而非 "null"', () {
+      final l10n = lookupAppLocalizations(const Locale('zh', 'TW'));
+      final message = resolveFoliateOpenBookErrorMessage([null], l10n);
+
+      expect(message, l10n.readerFailedToLoadBookMessage);
+      expect(ReaderConsoleLog.entries.value.last, contains('(no detail)'));
+    });
+
+    test('args 為 [\'   \']（純空白字串）時，回傳固定在地化訊息、Console Log 記錄 (no detail) 而非空白', () {
+      final l10n = lookupAppLocalizations(const Locale('zh', 'TW'));
+      final message = resolveFoliateOpenBookErrorMessage(['   '], l10n);
+
+      expect(message, l10n.readerFailedToLoadBookMessage);
+      expect(ReaderConsoleLog.entries.value.last, contains('(no detail)'));
+    });
+
+    test('英文介面下回傳英文固定訊息', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final message = resolveFoliateOpenBookErrorMessage(['boom'], l10n);
+
+      expect(message, 'Failed to load book');
     });
   });
 

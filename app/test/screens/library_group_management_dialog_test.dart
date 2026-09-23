@@ -98,8 +98,53 @@ void main() {
     await tester.tap(find.byKey(const Key('library_group_rename_confirm')));
     await tester.pumpAndSettle();
 
-    final errorText = tester.widget<Text>(find.text('分類「B」已存在'));
+    final errorText = tester.widget<Text>(find.text('分類「B」已存在，請使用其他名稱'));
     expect(errorText.style?.color, theme.colorScheme.error);
+  });
+
+  testWidgets('英文介面下，重新命名撞名顯示英文固定訊息（不含伺服器原始診斷文字）',
+      (tester) async {
+    final repository = FakeLibraryRepository();
+    await repository.upsertGroup('A');
+    await repository.upsertGroup('B');
+    final groups = await repository.listGroups();
+
+    await pumpLocalizedWidget(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => LibraryGroupManagementDialog(
+                  repository: repository,
+                  initialGroups: groups,
+                ),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+      locale: const Locale('en'),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_rename_button_A')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.byKey(const Key('library_group_rename_field')), 'B');
+    await tester.tap(find.byKey(const Key('library_group_rename_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('"B" already exists. Please use a different name.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('「新增」按鈕須位於「關閉」按鈕右側（最右邊）', (tester) async {

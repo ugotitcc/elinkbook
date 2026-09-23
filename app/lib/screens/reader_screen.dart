@@ -1019,7 +1019,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           key: const Key('reader_save_as_preset_error_snackbar'),
-          content: Text(l10n.readerSaveAsPresetFailedMessage('$e')),
+          content: Text(l10n.readerSaveAsPresetFailedMessage),
         ),
       );
     }
@@ -1142,7 +1142,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           key: const Key('reader_apply_preset_error_snackbar'),
-          content: Text(AppLocalizations.of(context)!.readerApplyPresetFailedMessage('$e')),
+          content: Text(AppLocalizations.of(context)!.readerApplyPresetFailedMessage),
         ),
       );
     }
@@ -1180,7 +1180,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           key: const Key('reader_apply_preset_error_snackbar'),
-          content: Text(AppLocalizations.of(context)!.readerApplyPresetFailedMessage('$e')),
+          content: Text(AppLocalizations.of(context)!.readerApplyPresetFailedMessage),
         ),
       );
     }
@@ -1212,7 +1212,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           key: const Key('reader_delete_preset_error_snackbar'),
-          content: Text(AppLocalizations.of(context)!.readerDeletePresetFailedMessage('$e')),
+          content: Text(AppLocalizations.of(context)!.readerDeletePresetFailedMessage),
         ),
       );
     }

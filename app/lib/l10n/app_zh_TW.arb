@@ -94,6 +94,15 @@
       }
     }
   },
+  "libraryGroupNameAlreadyExistsError": "分類「{name}」已存在，請使用其他名稱",
+  "@libraryGroupNameAlreadyExistsError": {
+    "description": "重新命名分類時，新名稱與既有分類撞名時顯示的錯誤訊息，{name} 為使用者嘗試使用的新名稱",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "libraryMoveToGroupTitle": "移動到分類",
   "@libraryMoveToGroupTitle": {
     "description": "「移動到分類」目的地選擇對話框標題"
@@ -1458,14 +1467,9 @@
   "@readerSaveAsPresetUnavailableMessage": {
     "description": "layoutPresetRepository 未提供時，點擊「另存為新預設集」顯示的 SnackBar 訊息"
   },
-  "readerSaveAsPresetFailedMessage": "另存為新預設集失敗：{error}",
+  "readerSaveAsPresetFailedMessage": "另存為新預設集失敗",
   "@readerSaveAsPresetFailedMessage": {
-    "description": "另存為新預設集過程發生例外時顯示的 SnackBar 訊息，{error} 為例外物件的字串表示",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
+    "description": "另存為新預設集過程發生例外時顯示的固定 SnackBar 訊息（不含例外原始文字，技術細節已由呼叫端 debugPrint() 記錄，見 epic-45-interface-i18n Issue 7）"
   },
   "readerOverwritePresetPickerTitle": "選擇要覆蓋的預設集",
   "@readerOverwritePresetPickerTitle": {
@@ -1509,14 +1513,9 @@
       }
     }
   },
-  "readerApplyPresetFailedMessage": "套用版面設定失敗：{error}",
+  "readerApplyPresetFailedMessage": "套用版面設定失敗",
   "@readerApplyPresetFailedMessage": {
-    "description": "套用版面設定（來自預設集或來自其他書籍）過程發生例外時顯示的 SnackBar 訊息，{error} 為例外物件的字串表示，兩處呼叫端共用",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
+    "description": "套用版面設定（來自預設集或來自其他書籍）過程發生例外時顯示的固定 SnackBar 訊息（不含例外原始文字，技術細節已由呼叫端 debugPrint() 記錄，見 epic-45-interface-i18n Issue 7），兩處呼叫端共用"
   },
   "readerConfirmDeleteTitle": "確認刪除",
   "@readerConfirmDeleteTitle": {
@@ -1531,14 +1530,9 @@
       }
     }
   },
-  "readerDeletePresetFailedMessage": "刪除預設集失敗：{error}",
+  "readerDeletePresetFailedMessage": "刪除預設集失敗",
   "@readerDeletePresetFailedMessage": {
-    "description": "刪除預設集過程發生例外時顯示的 SnackBar 訊息，{error} 為例外物件的字串表示",
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
+    "description": "刪除預設集過程發生例外時顯示的固定 SnackBar 訊息（不含例外原始文字，技術細節已由呼叫端 debugPrint() 記錄，見 epic-45-interface-i18n Issue 7）"
   },
   "readerSearchUnavailableMessage": "搜尋功能暫時無法使用",
   "@readerSearchUnavailableMessage": {

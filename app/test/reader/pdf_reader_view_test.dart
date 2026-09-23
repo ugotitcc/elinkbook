@@ -7,6 +7,8 @@ import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
+import 'package:elinkbook/reader/reader_console_log.dart';
+import '../support/pump_localized_widget.dart';
 import '../support/pump_until_pdf_ready.dart';
 
 void main() {
@@ -37,18 +39,19 @@ void main() {
     expect(errorMessage, isNull);
   });
 
-  testWidgets('開啟不存在的檔案，觸發 onError、不觸發 onPageRendered',
-      (tester) async {
+  testWidgets(
+      '開啟不存在的檔案，觸發 onError（固定在地化訊息，不含原始例外文字）、'
+      '不觸發 onPageRendered，例外細節寫入 Console Log', (tester) async {
+    ReaderConsoleLog.clear();
     var renderedCount = 0;
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: PdfReaderView(
-          filePath: 'test/fixtures/does_not_exist.pdf',
-          onPageRendered: () => renderedCount++,
-          onError: (msg) => errorMessage = msg,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      PdfReaderView(
+        filePath: 'test/fixtures/does_not_exist.pdf',
+        onPageRendered: () => renderedCount++,
+        onError: (msg) => errorMessage = msg,
       ),
     );
 
@@ -57,8 +60,34 @@ void main() {
       condition: () => renderedCount != 0 || errorMessage != null,
     );
 
-    expect(errorMessage, isNotNull);
+    expect(errorMessage, '無法載入書籍');
     expect(renderedCount, 0);
+    expect(
+      ReaderConsoleLog.entries.value.last,
+      contains('_openDocument 失敗'),
+    );
+  });
+
+  testWidgets('英文介面下，開檔失敗顯示英文固定訊息', (tester) async {
+    var renderedCount = 0;
+    String? errorMessage;
+
+    await pumpLocalizedWidget(
+      tester,
+      PdfReaderView(
+        filePath: 'test/fixtures/does_not_exist.pdf',
+        onPageRendered: () => renderedCount++,
+        onError: (msg) => errorMessage = msg,
+      ),
+      locale: const Locale('en'),
+    );
+
+    await pumpUntilPdfReady(
+      tester,
+      condition: () => renderedCount != 0 || errorMessage != null,
+    );
+
+    expect(errorMessage, 'Failed to load book');
   });
 
   testWidgets('pageCount／jumpToPage 正確運作，含邊界情況', (tester) async {
@@ -102,13 +131,12 @@ void main() {
     var renderedCount = 0;
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: PdfReaderView(
-          filePath: 'content://com.example.provider/document/42',
-          onPageRendered: () => renderedCount++,
-          onError: (msg) => errorMessage = msg,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      PdfReaderView(
+        filePath: 'content://com.example.provider/document/42',
+        onPageRendered: () => renderedCount++,
+        onError: (msg) => errorMessage = msg,
       ),
     );
 

@@ -179,6 +179,14 @@ void main() {
     );
   });
 
+  test('reader_screen 版面預設集錯誤訊息英文 ARB 驗證（{error} placeholder 移除後的固定文字）',
+      () {
+    final l10n = lookupAppLocalizations(const Locale('en'));
+    expect(l10n.readerSaveAsPresetFailedMessage, 'Failed to save new preset');
+    expect(l10n.readerApplyPresetFailedMessage, 'Failed to apply layout settings');
+    expect(l10n.readerDeletePresetFailedMessage, 'Failed to delete preset');
+  });
+
   group('epic-10-search Issue 5：initialJumpTarget 覆寫初始定位', () {
     testWidgets('PDF：initialJumpTarget.pdfPageIndex 優先於資料庫既有 lastPosition',
         (tester) async {
@@ -8763,6 +8771,7 @@ void main() {
         find.byKey(const Key('reader_save_as_preset_error_snackbar')),
         findsOneWidget,
       );
+      expect(find.text('另存為新預設集失敗'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -8860,6 +8869,7 @@ void main() {
         find.byKey(const Key('reader_apply_preset_error_snackbar')),
         findsOneWidget,
       );
+      expect(find.text('套用版面設定失敗'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -8998,6 +9008,7 @@ void main() {
         find.byKey(const Key('reader_delete_preset_error_snackbar')),
         findsOneWidget,
       );
+      expect(find.text('刪除預設集失敗'), findsOneWidget);
       expect(tester.takeException(), isNull);
       // M-3（審查修訂）：驗證刪除失敗時底層資料未被誤刪，狀態未受污染。
       final all = await tester.runAsync(() => layoutPresetRepository.listAll());

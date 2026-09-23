@@ -73,6 +73,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String libraryGroupNameAlreadyExistsError(String name) {
+    return '\"$name\" already exists. Please use a different name.';
+  }
+
+  @override
   String get libraryMoveToGroupTitle => 'Move to Category';
 
   @override
@@ -1113,9 +1118,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Can\'t save preset right now';
 
   @override
-  String readerSaveAsPresetFailedMessage(String error) {
-    return 'Failed to save new preset: $error';
-  }
+  String get readerSaveAsPresetFailedMessage => 'Failed to save new preset';
 
   @override
   String get readerOverwritePresetPickerTitle => 'Choose a preset to overwrite';
@@ -1150,9 +1153,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String readerApplyPresetFailedMessage(String error) {
-    return 'Failed to apply layout settings: $error';
-  }
+  String get readerApplyPresetFailedMessage =>
+      'Failed to apply layout settings';
 
   @override
   String get readerConfirmDeleteTitle => 'Confirm Delete';
@@ -1163,9 +1165,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String readerDeletePresetFailedMessage(String error) {
-    return 'Failed to delete preset: $error';
-  }
+  String get readerDeletePresetFailedMessage => 'Failed to delete preset';
 
   @override
   String get readerSearchUnavailableMessage =>

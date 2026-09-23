@@ -27,6 +27,7 @@ import 'percent_rect.dart';
 import 'reader_console_log.dart';
 import 'tap_zone_detector.dart';
 import 'zone_action.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/elink_tokens.dart';
 
 /// 以 pdfrx（PDFium + Dart FFI）為底層的 PDF 閱讀 widget
@@ -498,8 +499,9 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       setState(() => _document = document);
     } catch (e) {
       if (!mounted) return;
+      ReaderConsoleLog.add('[PdfReaderView] _openDocument 失敗: $e');
       setState(() => _error = e);
-      widget.onError(e.toString());
+      widget.onError(AppLocalizations.of(context)!.readerFailedToLoadBookMessage);
     }
   }
 

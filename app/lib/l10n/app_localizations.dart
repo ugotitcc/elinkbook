@@ -214,6 +214,12 @@ abstract class AppLocalizations {
   /// **'「{name}」是系統保留的分類名稱，請使用其他名稱'**
   String libraryGroupReservedNameError(String name);
 
+  /// 重新命名分類時，新名稱與既有分類撞名時顯示的錯誤訊息，{name} 為使用者嘗試使用的新名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'分類「{name}」已存在，請使用其他名稱'**
+  String libraryGroupNameAlreadyExistsError(String name);
+
   /// 「移動到分類」目的地選擇對話框標題
   ///
   /// In zh_TW, this message translates to:
@@ -2012,11 +2018,11 @@ abstract class AppLocalizations {
   /// **'暫時無法儲存預設集'**
   String get readerSaveAsPresetUnavailableMessage;
 
-  /// 另存為新預設集過程發生例外時顯示的 SnackBar 訊息，{error} 為例外物件的字串表示
+  /// 另存為新預設集過程發生例外時顯示的固定 SnackBar 訊息（不含例外原始文字，技術細節已由呼叫端 debugPrint() 記錄，見 epic-45-interface-i18n Issue 7）
   ///
   /// In zh_TW, this message translates to:
-  /// **'另存為新預設集失敗：{error}'**
-  String readerSaveAsPresetFailedMessage(String error);
+  /// **'另存為新預設集失敗'**
+  String get readerSaveAsPresetFailedMessage;
 
   /// 已存滿 3 組預設集時，選擇要覆蓋哪一組的對話框標題
   ///
@@ -2054,11 +2060,11 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{即將覆蓋 1 本書的版面設定，此動作無法復原。} other{即將覆蓋 {count} 本書的版面設定，此動作無法復原。}}'**
   String readerApplyToOthersConfirmMessage(int count);
 
-  /// 套用版面設定（來自預設集或來自其他書籍）過程發生例外時顯示的 SnackBar 訊息，{error} 為例外物件的字串表示，兩處呼叫端共用
+  /// 套用版面設定（來自預設集或來自其他書籍）過程發生例外時顯示的固定 SnackBar 訊息（不含例外原始文字，技術細節已由呼叫端 debugPrint() 記錄，見 epic-45-interface-i18n Issue 7），兩處呼叫端共用
   ///
   /// In zh_TW, this message translates to:
-  /// **'套用版面設定失敗：{error}'**
-  String readerApplyPresetFailedMessage(String error);
+  /// **'套用版面設定失敗'**
+  String get readerApplyPresetFailedMessage;
 
   /// 刪除預設集確認對話框標題與確認按鈕（兩處文字相同，共用一個 key）
   ///
@@ -2072,11 +2078,11 @@ abstract class AppLocalizations {
   /// **'即將刪除預設集「{name}」，此動作無法復原。'**
   String readerDeletePresetConfirmMessage(String name);
 
-  /// 刪除預設集過程發生例外時顯示的 SnackBar 訊息，{error} 為例外物件的字串表示
+  /// 刪除預設集過程發生例外時顯示的固定 SnackBar 訊息（不含例外原始文字，技術細節已由呼叫端 debugPrint() 記錄，見 epic-45-interface-i18n Issue 7）
   ///
   /// In zh_TW, this message translates to:
-  /// **'刪除預設集失敗：{error}'**
-  String readerDeletePresetFailedMessage(String error);
+  /// **'刪除預設集失敗'**
+  String get readerDeletePresetFailedMessage;
 
   /// searchRepository／libraryRepository 未提供或書籍格式無法辨識時，點擊搜尋顯示的 SnackBar 訊息
   ///
