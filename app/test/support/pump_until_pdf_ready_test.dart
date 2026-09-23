@@ -7,10 +7,14 @@ void main() {
   testWidgets('condition 省略時（null），確實跑滿 maxIterations 輪（以真實耗時下限驗證，'
       '而非只驗證「不拋例外」——避免 null 分支被誤判為提前終止卻測不出來）',
       (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,home: const SizedBox()));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const SizedBox(),
+      ),
+    );
 
     final stopwatch = Stopwatch()..start();
     await pumpUntilPdfReady(
@@ -31,10 +35,14 @@ void main() {
   });
 
   testWidgets('condition 提前滿足時，提前跳出、不跑滿 maxIterations', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,home: const SizedBox()));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const SizedBox(),
+      ),
+    );
     var callCount = 0;
 
     await pumpUntilPdfReady(
@@ -52,10 +60,14 @@ void main() {
   });
 
   testWidgets('maxIterations 上限確實生效（condition 永遠不滿足時）', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,home: const SizedBox()));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const SizedBox(),
+      ),
+    );
     var callCount = 0;
 
     await pumpUntilPdfReady(

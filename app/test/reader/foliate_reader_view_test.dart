@@ -764,9 +764,9 @@ void main() {
       final capturedActions = <ZoneAction>[];
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
@@ -810,9 +810,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
@@ -843,9 +843,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
@@ -885,9 +885,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FoliateReaderView(
             filePath: 'test/fixtures/sample.epub',
             onPageRendered: () {},
@@ -937,9 +937,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
@@ -974,9 +974,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
@@ -1004,9 +1004,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
@@ -1031,9 +1031,9 @@ void main() {
         'tmp/epic-18/review-issue-38-41.md Important #1）', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
@@ -1065,9 +1065,9 @@ void main() {
         'tmp/epic-18/review-issue-38-41.md Important #2）', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
@@ -1104,9 +1104,9 @@ void main() {
         'is not a function）', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
@@ -1134,9 +1134,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
@@ -1169,9 +1169,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
@@ -1203,9 +1203,9 @@ void main() {
     testWidgets('InAppWebView 的 onConsoleMessage 已被賦值', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
@@ -1951,9 +1951,9 @@ void main() {
       };
 
       await tester.pumpWidget(MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: const Scaffold(
           body: FoliateReaderView(
             filePath: '/tmp/sample.epub',
@@ -1964,10 +1964,14 @@ void main() {
       ));
 
       // 移除 widget（觸發 dispose），此時快取尚未完成
-      await tester.pumpWidget(MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,home: const Scaffold(body: SizedBox())));
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(body: SizedBox()),
+        ),
+      );
 
       // 讓 Future 完成，不應拋出例外
       completer.complete('/fake/cache/dir/current.epub');

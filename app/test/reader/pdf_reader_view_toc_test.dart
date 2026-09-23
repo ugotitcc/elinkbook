@@ -19,9 +19,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           key: key,
           filePath: 'test/fixtures/sample_pdf_toc.pdf',
@@ -70,9 +70,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           key: key,
           filePath: 'test/fixtures/sample.pdf',

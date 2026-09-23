@@ -401,10 +401,14 @@ void main() {
       // 移除畫面觸發 dispose()，比照既有「PDF 收到 onPageChanged 後離開
       // 畫面（dispose），正確寫入 ReadingPosition」測試的既有慣例（見
       // reader_screen_test.dart「Epic 5 Issue 2：閱讀位置記憶」區塊）。
-      await tester.pumpWidget(MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,home: const SizedBox.shrink()));
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const SizedBox.shrink(),
+        ),
+      );
       await tester.pump();
 
       expect(
@@ -457,10 +461,14 @@ void main() {
       await tester.pump();
 
       // 使用者未曾翻頁即離開閱讀畫面。
-      await tester.pumpWidget(MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,home: const SizedBox.shrink()));
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const SizedBox.shrink(),
+        ),
+      );
       await tester.pump();
 
       expect(
@@ -2132,10 +2140,14 @@ void main() {
     await tester.pump();
 
     // 導覽離開 ReaderScreen，觸發 dispose()。
-    await tester.pumpWidget(MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,home: const SizedBox.shrink()));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const SizedBox.shrink(),
+      ),
+    );
     await tester.pump();
 
     expect(prefsManager.savedReadingPositionCalls, hasLength(1));
@@ -2163,10 +2175,14 @@ void main() {
       );
       await tester.pump();
 
-      await tester.pumpWidget(MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,home: const SizedBox.shrink()));
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const SizedBox.shrink(),
+        ),
+      );
       await tester.pump();
 
       expect(prefsManager.savedReadingPositionCalls, isEmpty);
@@ -3615,9 +3631,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           key: key,
           filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -10694,10 +10710,14 @@ void main() {
     expect(tracker.isReaderOpen, isTrue, reason: '開啟閱讀畫面後應標記為已開啟');
 
     // 換掉整棵 widget 樹讓 ReaderScreen dispose。
-    await tester.pumpWidget(MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,home: const SizedBox.shrink()));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const SizedBox.shrink(),
+      ),
+    );
 
     expect(tracker.isReaderOpen, isFalse, reason: '離開閱讀畫面後應標記為已關閉');
   });

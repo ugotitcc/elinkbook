@@ -17,9 +17,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           filePath: 'test/fixtures/sample_multi_page.pdf',
           onPageRendered: () => renderedCount++,
@@ -49,9 +49,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           filePath: 'test/fixtures/sample_multi_page.pdf',
           onPageRendered: () => renderedCount++,
@@ -87,9 +87,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           filePath: 'test/fixtures/sample_multi_page.pdf',
           onPageRendered: () => renderedCount++,
@@ -113,9 +113,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           filePath: 'test/fixtures/sample_multi_page.pdf',
           onPageRendered: () => renderedCount++,
@@ -145,9 +145,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           filePath: 'test/fixtures/sample_multi_page.pdf',
           onPageRendered: () => renderedCount++,
@@ -186,9 +186,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           filePath: 'test/fixtures/sample_multi_page.pdf',
           onPageRendered: () => renderedCount++,
@@ -219,9 +219,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           filePath: 'test/fixtures/sample_multi_page.pdf',
           onPageRendered: () => renderedCount++,
@@ -258,9 +258,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: PdfReaderView(
           filePath: 'test/fixtures/sample_multi_page.pdf',
           onPageRendered: () => renderedCount++,

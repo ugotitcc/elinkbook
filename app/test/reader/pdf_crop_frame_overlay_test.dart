@@ -12,9 +12,9 @@ void main() {
   // 若需測試全頁裁切場景，請使用接近邊界但不精確落上的值
   // （例如 0.01 / 0.99）。
   Widget wrap(Widget child) => MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: SizedBox(width: 800, height: 1600, child: child)),
       );
 
@@ -164,9 +164,9 @@ void main() {
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: SizedBox(
             width: 800,

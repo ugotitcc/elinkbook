@@ -238,9 +238,9 @@ void main() {
     var fakeNowMs = 1000;
     await tester.pumpWidget(
       MaterialApp(
-      locale: const Locale('zh', 'TW'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: TapZoneDetector(
           onTap: () => tapped = true,
           nowMs: () => fakeNowMs,
