@@ -1091,9 +1091,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get readerSaveAsPresetUnavailableMessage => '暫時無法儲存預設集';
 
   @override
-  String readerSaveAsPresetFailedMessage(String error) {
-    return '另存為新預設集失敗：$error';
-  }
+  String get readerSaveAsPresetFailedMessage => '另存為新預設集失敗';
 
   @override
   String get readerOverwritePresetPickerTitle => '選擇要覆蓋的預設集';
@@ -1126,9 +1124,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String readerApplyPresetFailedMessage(String error) {
-    return '套用版面設定失敗：$error';
-  }
+  String get readerApplyPresetFailedMessage => '套用版面設定失敗';
 
   @override
   String get readerConfirmDeleteTitle => '確認刪除';
@@ -1139,9 +1135,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String readerDeletePresetFailedMessage(String error) {
-    return '刪除預設集失敗：$error';
-  }
+  String get readerDeletePresetFailedMessage => '刪除預設集失敗';
 
   @override
   String get readerSearchUnavailableMessage => '搜尋功能暫時無法使用';
@@ -2977,9 +2971,7 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get readerSaveAsPresetUnavailableMessage => '暂时无法保存预设集';
 
   @override
-  String readerSaveAsPresetFailedMessage(String error) {
-    return '另存为新预设集失败：$error';
-  }
+  String get readerSaveAsPresetFailedMessage => '另存为新预设集失败';
 
   @override
   String get readerOverwritePresetPickerTitle => '选择要覆盖的预设集';
@@ -3012,9 +3004,7 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   }
 
   @override
-  String readerApplyPresetFailedMessage(String error) {
-    return '套用版面设定失败：$error';
-  }
+  String get readerApplyPresetFailedMessage => '套用版面设定失败';
 
   @override
   String get readerConfirmDeleteTitle => '确认删除';
@@ -3025,9 +3015,7 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   }
 
   @override
-  String readerDeletePresetFailedMessage(String error) {
-    return '删除预设集失败：$error';
-  }
+  String get readerDeletePresetFailedMessage => '删除预设集失败';
 
   @override
   String get readerSearchUnavailableMessage => '搜索功能暂时无法使用';
@@ -4863,9 +4851,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get readerSaveAsPresetUnavailableMessage => '暫時無法儲存預設集';
 
   @override
-  String readerSaveAsPresetFailedMessage(String error) {
-    return '另存為新預設集失敗：$error';
-  }
+  String get readerSaveAsPresetFailedMessage => '另存為新預設集失敗';
 
   @override
   String get readerOverwritePresetPickerTitle => '選擇要覆蓋的預設集';
@@ -4898,9 +4884,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String readerApplyPresetFailedMessage(String error) {
-    return '套用版面設定失敗：$error';
-  }
+  String get readerApplyPresetFailedMessage => '套用版面設定失敗';
 
   @override
   String get readerConfirmDeleteTitle => '確認刪除';
@@ -4911,9 +4895,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String readerDeletePresetFailedMessage(String error) {
-    return '刪除預設集失敗：$error';
-  }
+  String get readerDeletePresetFailedMessage => '刪除預設集失敗';
 
   @override
   String get readerSearchUnavailableMessage => '搜尋功能暫時無法使用';
