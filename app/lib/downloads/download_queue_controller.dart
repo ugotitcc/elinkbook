@@ -103,7 +103,7 @@ abstract class QueuedDownloadJob {
 class DownloadQueueController extends ChangeNotifier {
   DownloadQueueController({required this.onDuplicateConfirm});
 
-  final Future<bool> Function(String message) onDuplicateConfirm;
+  final Future<bool> Function(String name) onDuplicateConfirm;
 
   // `Map` 在 Dart 保證依插入順序疊代，直接當成「有序＋可用 id 查找」的
   // 佇列項目存放結構，不需要另外維護一份 List 對照。
@@ -163,9 +163,7 @@ class DownloadQueueController extends ChangeNotifier {
       final fingerprint = await job.computeFingerprint(tempPath);
       final hasDuplicate = await job.hasDuplicate(fingerprint);
       if (hasDuplicate) {
-        final proceed = await onDuplicateConfirm(
-          '偵測到「${job.name}」與本機已有的一本書內容相同，仍要建立新的一份嗎？',
-        );
+        final proceed = await onDuplicateConfirm(job.name);
         if (!proceed) {
           await _deleteIfExists(tempPath);
           item.status = DownloadItemStatus.duplicateSkipped;

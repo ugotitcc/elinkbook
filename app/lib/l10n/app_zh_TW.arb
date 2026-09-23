@@ -2076,5 +2076,421 @@
   "aboutScreenUnavailableText": "無法取得",
   "@aboutScreenUnavailableText": {
     "description": "編譯時間/WebView 版本呼叫失敗或回傳空值時顯示的通用錯誤文字"
+  },
+  "remoteServerListTitle": "遠端書庫",
+  "@remoteServerListTitle": {
+    "description": "遠端書庫站點清單畫面 AppBar 標題"
+  },
+  "remoteServerListAddTooltip": "新增站點",
+  "@remoteServerListAddTooltip": {
+    "description": "AppBar「新增站點」按鈕的無障礙提示文字"
+  },
+  "remoteServerListEmptyState": "尚未新增任何遠端書庫站點",
+  "@remoteServerListEmptyState": {
+    "description": "尚未新增任何站點時的空狀態文字"
+  },
+  "remoteServerListEditTooltip": "編輯",
+  "@remoteServerListEditTooltip": {
+    "description": "站點列項目「編輯」圖示按鈕的無障礙提示文字"
+  },
+  "remoteServerListDeleteTooltip": "刪除",
+  "@remoteServerListDeleteTooltip": {
+    "description": "站點列項目「刪除」圖示按鈕的無障礙提示文字"
+  },
+  "remoteServerListDeleteConfirmTitle": "刪除站點",
+  "@remoteServerListDeleteConfirmTitle": {
+    "description": "刪除站點確認對話框標題"
+  },
+  "remoteServerListDeleteConfirmButton": "刪除",
+  "@remoteServerListDeleteConfirmButton": {
+    "description": "刪除站點確認對話框的動作按鈕文字（審查意見 review-issue-6.md M-1：原與圖示按鈕的無障礙提示 remoteServerListDeleteTooltip 共用同一個 key，拆為獨立 key 避免兩處字義各自演進時互相牽制）"
+  },
+  "remoteServerListDeleteConfirmMessage": "確定要刪除站點「{name}」嗎？此動作無法復原。",
+  "@remoteServerListDeleteConfirmMessage": {
+    "description": "刪除站點確認訊息，{name} 為使用者自訂的站點名稱（不翻譯）",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "remoteServerListDeleteBlockedTitle": "無法刪除站點",
+  "@remoteServerListDeleteBlockedTitle": {
+    "description": "站點仍有僅雲端紀錄書籍、刪除被擋下時的示警對話框標題"
+  },
+  "remoteServerListDeleteBlockedMessage": "{count, plural, =1{這個站點還有 1 本書僅有雲端紀錄、尚未下載：} other{這個站點還有 {count} 本書僅有雲端紀錄、尚未下載：}}\n{titles}\n\n請先於書架移除這些書籍，或重新下載後再刪除站點。",
+  "@remoteServerListDeleteBlockedMessage": {
+    "description": "刪除被擋下時的示警訊息，{count} 為僅雲端紀錄書籍本數，{titles} 為呼叫端已組好的書名清單文字（每行一本，前綴「．」，不含末尾換行）",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "titles": {
+        "type": "String"
+      }
+    }
+  },
+  "remoteServerListDeleteBlockedConfirmButton": "了解",
+  "@remoteServerListDeleteBlockedConfirmButton": {
+    "description": "示警對話框的確認按鈕文字"
+  },
+  "remoteServerListDeleteFailedMessage": "刪除站點失敗，請稍後再試",
+  "@remoteServerListDeleteFailedMessage": {
+    "description": "刪除防護例外以外的其餘刪除失敗時顯示的 SnackBar 訊息"
+  },
+  "remoteServerFormTitleAdd": "新增站點",
+  "@remoteServerFormTitleAdd": {
+    "description": "新增模式的 AppBar 標題"
+  },
+  "remoteServerFormTitleEdit": "編輯站點",
+  "@remoteServerFormTitleEdit": {
+    "description": "編輯模式的 AppBar 標題"
+  },
+  "remoteServerFormNameLabel": "站點名稱",
+  "@remoteServerFormNameLabel": {
+    "description": "站點名稱輸入框的 labelText"
+  },
+  "remoteServerFormBaseUrlLabel": "伺服器網址",
+  "@remoteServerFormBaseUrlLabel": {
+    "description": "伺服器網址輸入框的 labelText"
+  },
+  "remoteServerFormTypeOpds": "標準 OPDS",
+  "@remoteServerFormTypeOpds": {
+    "description": "伺服器類型下拉選單選項：標準 OPDS"
+  },
+  "remoteServerFormTypeCalibreServer": "原生 Calibre Content Server",
+  "@remoteServerFormTypeCalibreServer": {
+    "description": "伺服器類型下拉選單選項：原生 Calibre Content Server"
+  },
+  "remoteServerFormUsernameLabel": "帳號（留空代表匿名連線）",
+  "@remoteServerFormUsernameLabel": {
+    "description": "帳號輸入框的 labelText"
+  },
+  "remoteServerFormPasswordLabelEditing": "密碼（留空＝沿用既有密碼；清空上方帳號欄位則一併清除密碼）",
+  "@remoteServerFormPasswordLabelEditing": {
+    "description": "編輯模式下密碼輸入框的 labelText"
+  },
+  "remoteServerFormPasswordLabel": "密碼",
+  "@remoteServerFormPasswordLabel": {
+    "description": "新增模式下密碼輸入框的 labelText"
+  },
+  "remoteServerFormPasswordShowTooltip": "顯示密碼",
+  "@remoteServerFormPasswordShowTooltip": {
+    "description": "密碼顯示/隱藏切換圖示，目前為隱藏狀態時的無障礙提示文字"
+  },
+  "remoteServerFormPasswordHideTooltip": "隱藏密碼",
+  "@remoteServerFormPasswordHideTooltip": {
+    "description": "密碼顯示/隱藏切換圖示，目前為顯示狀態時的無障礙提示文字"
+  },
+  "remoteServerFormAllowInsecureLabel": "允許不安全連線（自簽憑證／純 HTTP）",
+  "@remoteServerFormAllowInsecureLabel": {
+    "description": "允許不安全連線開關的標題文字"
+  },
+  "remoteServerFormValidationMissingFields": "請填寫站點名稱與網址",
+  "@remoteServerFormValidationMissingFields": {
+    "description": "站點名稱或網址為空時的驗證錯誤文字"
+  },
+  "remoteServerFormValidationInvalidUrl": "請輸入有效的伺服器網址（需以 http:// 或 https:// 開頭）",
+  "@remoteServerFormValidationInvalidUrl": {
+    "description": "網址格式不合法時的驗證錯誤文字"
+  },
+  "remoteServerFormSaveFailedMessage": "儲存失敗，請稍後再試",
+  "@remoteServerFormSaveFailedMessage": {
+    "description": "SQLite／secure storage 寫入失敗時的錯誤文字"
+  },
+  "remoteServerFormTestSuccess": "連線成功",
+  "@remoteServerFormTestSuccess": {
+    "description": "測試連線成功時顯示的文字"
+  },
+  "remoteServerFormTestFailed": "連線失敗，請檢查網址/帳密/憑證設定",
+  "@remoteServerFormTestFailed": {
+    "description": "測試連線失敗時顯示的文字"
+  },
+  "remoteServerFormTestConnectionButton": "測試連線",
+  "@remoteServerFormTestConnectionButton": {
+    "description": "「測試連線」按鈕文字"
+  },
+  "remoteServerFormSaveButton": "儲存",
+  "@remoteServerFormSaveButton": {
+    "description": "「儲存」按鈕文字"
+  },
+  "formatSelectionDialogTitle": "選擇格式：{title}",
+  "@formatSelectionDialogTitle": {
+    "description": "格式選擇對話框標題，{title} 為書目標題（使用者資料，不翻譯）",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "formatSelectionDialogUnsupportedFormat": "不支援的格式",
+  "@formatSelectionDialogUnsupportedFormat": {
+    "description": "格式選項本身不受支援（format 為 null）時顯示的文字"
+  },
+  "cloudDuplicateDialogTitle": "重複的書籍",
+  "@cloudDuplicateDialogTitle": {
+    "description": "雲端匯入重複匯入確認彈窗標題"
+  },
+  "cloudDuplicateDialogConfirmButton": "仍要建立",
+  "@cloudDuplicateDialogConfirmButton": {
+    "description": "重複匯入確認彈窗的確認按鈕文字"
+  },
+  "remoteCatalogLoadFailedMessage": "載入失敗，請檢查網路連線或站點設定",
+  "@remoteCatalogLoadFailedMessage": {
+    "description": "載入 Feed 失敗時的錯誤文字"
+  },
+  "remoteCatalogDownloadSelectedTooltip": "下載已選取",
+  "@remoteCatalogDownloadSelectedTooltip": {
+    "description": "AppBar「下載已選取」按鈕的無障礙提示文字"
+  },
+  "remoteCatalogDuplicateConfirmMessage": "「{title}」之前匯入過了，仍要建立新的一份嗎？",
+  "@remoteCatalogDuplicateConfirmMessage": {
+    "description": "偵測到重複匯入時的確認訊息，{title} 為書目標題（使用者資料，不翻譯）",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "remoteCatalogQueuedMessage": "已加入下載佇列（{count, plural, =1{1 個檔案} other{{count} 個檔案}}），可至「來源」畫面查看進度",
+  "@remoteCatalogQueuedMessage": {
+    "description": "開始下載後的 SnackBar 訊息，{count} 為加入佇列的檔案數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "remoteCatalogEinkPrevPageButton": "上一頁",
+  "@remoteCatalogEinkPrevPageButton": {
+    "description": "E-Ink 離散換頁模式的「上一頁」按鈕文字"
+  },
+  "remoteCatalogEinkNextPageButton": "下一頁",
+  "@remoteCatalogEinkNextPageButton": {
+    "description": "E-Ink 離散換頁模式的「下一頁」按鈕文字"
+  },
+  "remoteCatalogLoadMoreButton": "載入更多",
+  "@remoteCatalogLoadMoreButton": {
+    "description": "非 E-Ink 模式連續捲動載入的「載入更多」按鈕文字"
+  },
+  "remoteCatalogDuplicateDialogTitle": "重複的書籍",
+  "@remoteCatalogDuplicateDialogTitle": {
+    "description": "重複匯入確認彈窗標題"
+  },
+  "remoteCatalogDuplicateDialogConfirmButton": "仍要建立",
+  "@remoteCatalogDuplicateDialogConfirmButton": {
+    "description": "重複匯入確認彈窗的確認按鈕文字"
+  },
+  "wifiTransferLeaveConfirmTitle": "目前尚有檔案正在傳輸",
+  "@wifiTransferLeaveConfirmTitle": {
+    "description": "離開畫面前的傳輸中示警對話框標題"
+  },
+  "wifiTransferLeaveConfirmMessage": "離開將中斷連線，是否確定離開？",
+  "@wifiTransferLeaveConfirmMessage": {
+    "description": "離開畫面前的傳輸中示警對話框訊息"
+  },
+  "wifiTransferLeaveConfirmButton": "確定離開",
+  "@wifiTransferLeaveConfirmButton": {
+    "description": "示警對話框的「確定離開」按鈕文字"
+  },
+  "wifiTransferTitle": "WiFi 傳書",
+  "@wifiTransferTitle": {
+    "description": "WiFi 傳書畫面 AppBar 標題"
+  },
+  "wifiTransferInstructionText": "在同一個 WiFi 下，用瀏覽器打開以下網址：",
+  "@wifiTransferInstructionText": {
+    "description": "顯示網址/QR Code 前的操作說明文字"
+  },
+  "wifiTransferActiveCountText": "{count, plural, =1{正在傳輸中（1 個檔案）…} other{正在傳輸中（{count} 個檔案）…}}",
+  "@wifiTransferActiveCountText": {
+    "description": "傳輸中橫幅文字，{count} 為目前進行中的傳輸檔案數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wifiTransferUnavailableText": "請連線至 WiFi 或開啟手機熱點",
+  "@wifiTransferUnavailableText": {
+    "description": "偵測不到可用網路時的提示文字"
+  },
+  "wifiTransferManualOverrideButton": "我確定目前是用手機熱點",
+  "@wifiTransferManualOverrideButton": {
+    "description": "手動覆寫偵測結果的按鈕文字"
+  },
+  "wifiTransferNoInterfacesText": "找不到任何可用網路介面",
+  "@wifiTransferNoInterfacesText": {
+    "description": "手動覆寫候選清單為空時的提示文字"
+  },
+  "downloadQueueTitle": "下載佇列",
+  "@downloadQueueTitle": {
+    "description": "「來源」畫面常駐下載佇列區塊的分區標題"
+  },
+  "downloadQueueCancelTooltip": "取消",
+  "@downloadQueueCancelTooltip": {
+    "description": "下載中項目的「取消」圖示按鈕無障礙提示文字"
+  },
+  "downloadQueueRetryTooltip": "重試",
+  "@downloadQueueRetryTooltip": {
+    "description": "失敗/已取消項目的「重試」圖示按鈕無障礙提示文字"
+  },
+  "downloadQueueDismissTooltip": "從清單移除",
+  "@downloadQueueDismissTooltip": {
+    "description": "已結束項目（完成/重複已略過）的「從清單移除」圖示按鈕無障礙提示文字"
+  },
+  "downloadQueueStatusPending": "待機",
+  "@downloadQueueStatusPending": {
+    "description": "項目狀態標籤：排隊中尚未開始下載"
+  },
+  "downloadQueueStatusDownloading": "下載中",
+  "@downloadQueueStatusDownloading": {
+    "description": "項目狀態標籤：正在下載且尚無位元組進度回報時顯示（有進度時改顯示百分比數字，數字本身不需翻譯）"
+  },
+  "downloadQueueStatusCheckingDuplicate": "比對中",
+  "@downloadQueueStatusCheckingDuplicate": {
+    "description": "項目狀態標籤：下載完成後正在比對是否與既有書籍重複"
+  },
+  "downloadQueueStatusDone": "完成",
+  "@downloadQueueStatusDone": {
+    "description": "項目狀態標籤：下載並匯入成功"
+  },
+  "downloadQueueStatusDuplicateSkipped": "重複已略過",
+  "@downloadQueueStatusDuplicateSkipped": {
+    "description": "項目狀態標籤：偵測到重複且使用者選擇不建立新副本"
+  },
+  "downloadQueueStatusFailed": "失敗",
+  "@downloadQueueStatusFailed": {
+    "description": "項目狀態標籤：下載或匯入過程發生非取消性錯誤"
+  },
+  "downloadQueueStatusCancelled": "已取消",
+  "@downloadQueueStatusCancelled": {
+    "description": "項目狀態標籤：使用者主動取消下載"
+  },
+  "downloadQueueDuplicateConfirmMessage": "偵測到「{name}」與本機已有的一本書內容相同，仍要建立新的一份嗎？",
+  "@downloadQueueDuplicateConfirmMessage": {
+    "description": "下載佇列指紋比對命中重複時的確認訊息（審查意見 review-issue-6.md I-1：原為 download_queue_controller.dart 內硬編碼中文，改由 main.dart 呼叫端在地化組裝）",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sourcesHomeTitle": "來源",
+  "@sourcesHomeTitle": {
+    "description": "「來源」聚合頁 AppBar 標題"
+  },
+  "sourcesHomeLibraryTooltip": "書架",
+  "@sourcesHomeLibraryTooltip": {
+    "description": "AppBar「書架」導覽按鈕的無障礙提示文字"
+  },
+  "sourcesHomeSettingsTooltip": "設定",
+  "@sourcesHomeSettingsTooltip": {
+    "description": "AppBar「設定」導覽按鈕的無障礙提示文字"
+  },
+  "sourcesHomeLocalSection": "本機",
+  "@sourcesHomeLocalSection": {
+    "description": "「本機」分區標題"
+  },
+  "sourcesHomePickFilesTitle": "選擇檔案（可多選）",
+  "@sourcesHomePickFilesTitle": {
+    "description": "「選擇檔案」入口列標題"
+  },
+  "sourcesHomePickFolderTitle": "選擇資料夾",
+  "@sourcesHomePickFolderTitle": {
+    "description": "「選擇資料夾」入口列標題"
+  },
+  "sourcesHomeWifiTransferTile": "WiFi 傳書",
+  "@sourcesHomeWifiTransferTile": {
+    "description": "「WiFi 傳書」入口列標題"
+  },
+  "sourcesHomeConnectedServicesSection": "已連結服務",
+  "@sourcesHomeConnectedServicesSection": {
+    "description": "「已連結服務」分區標題"
+  },
+  "sourcesHomeCloudNotLinkedSubtitle": "尚未連結，請至設定畫面連結帳戶",
+  "@sourcesHomeCloudNotLinkedSubtitle": {
+    "description": "Google Drive／OneDrive 入口列未連結時的副標題"
+  },
+  "sourcesHomeRemoteLibraryTitle": "遠端書庫（OPDS）",
+  "@sourcesHomeRemoteLibraryTitle": {
+    "description": "「遠端書庫」入口列標題，OPDS 為技術協定縮寫不翻譯"
+  },
+  "sourcesHomeRemoteLibraryNotConfiguredSubtitle": "尚未設定遠端書庫伺服器",
+  "@sourcesHomeRemoteLibraryNotConfiguredSubtitle": {
+    "description": "「遠端書庫」入口列尚未設定站點時的副標題"
+  },
+  "libraryImportFolderDialogTitle": "匯入資料夾",
+  "@libraryImportFolderDialogTitle": {
+    "description": "「是否依資料夾名稱自動建立分類」確認對話框標題"
+  },
+  "libraryImportFolderAutoGroupLabel": "依資料夾名稱自動建立分類",
+  "@libraryImportFolderAutoGroupLabel": {
+    "description": "自動建立分類勾選項的標題文字"
+  },
+  "libraryImportFolderConfirmButton": "匯入",
+  "@libraryImportFolderConfirmButton": {
+    "description": "匯入資料夾確認對話框的確認按鈕文字"
+  },
+  "libraryImportResultBothMessage": "{importedCount, plural, =1{已匯入 1 本} other{已匯入 {importedCount} 本}}，{skippedCount, plural, =1{1 本已存在，已跳過} other{{skippedCount} 本已存在，已跳過}}",
+  "@libraryImportResultBothMessage": {
+    "description": "匯入完成時，成功匯入與跳過重複兩者皆大於 0 的合併提示，{importedCount}／{skippedCount} 各自獨立處理單複數",
+    "placeholders": {
+      "importedCount": {
+        "type": "int"
+      },
+      "skippedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryImportResultImportedOnlyMessage": "{importedCount, plural, =1{已匯入 1 本書} other{已匯入 {importedCount} 本書}}",
+  "@libraryImportResultImportedOnlyMessage": {
+    "description": "匯入完成時，僅有成功匯入（無跳過重複）的提示",
+    "placeholders": {
+      "importedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryImportResultSkippedOnlyMessage": "{skippedCount, plural, =1{1 本已存在，已跳過} other{{skippedCount} 本已存在，已跳過}}",
+  "@libraryImportResultSkippedOnlyMessage": {
+    "description": "匯入完成時，僅有跳過重複（無成功匯入）的提示",
+    "placeholders": {
+      "skippedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "layoutPresetBookPickerTitleMulti": "選擇書籍（可複選）",
+  "@layoutPresetBookPickerTitleMulti": {
+    "description": "複選模式的 AppBar 標題"
+  },
+  "layoutPresetBookPickerTitleSingle": "選擇書籍",
+  "@layoutPresetBookPickerTitleSingle": {
+    "description": "單選模式的 AppBar 標題"
+  },
+  "layoutPresetBookPickerSearchHint": "搜尋書名或作者",
+  "@layoutPresetBookPickerSearchHint": {
+    "description": "搜尋輸入框的 hintText"
+  },
+  "layoutPresetBookPickerEmptyBooks": "沒有可選擇的流式 EPUB 書籍",
+  "@layoutPresetBookPickerEmptyBooks": {
+    "description": "傳入的 books 清單為空時的提示文字"
+  },
+  "layoutPresetBookPickerNoMatch": "找不到符合的書籍",
+  "@layoutPresetBookPickerNoMatch": {
+    "description": "搜尋結果為空時的提示文字"
+  },
+  "layoutPresetNameDialogTitle": "為預設集命名",
+  "@layoutPresetNameDialogTitle": {
+    "description": "版面設定預設集命名輸入 Dialog 標題"
+  },
+  "layoutPresetNameDialogEmptyError": "名稱不可為空",
+  "@layoutPresetNameDialogEmptyError": {
+    "description": "trim 後名稱為空字串時的驗證錯誤文字"
+  },
+  "layoutPresetNameDialogSaveButton": "儲存",
+  "@layoutPresetNameDialogSaveButton": {
+    "description": "命名對話框的「儲存」按鈕文字"
   }
 }

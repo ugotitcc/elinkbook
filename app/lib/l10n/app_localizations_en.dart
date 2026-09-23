@@ -1598,4 +1598,359 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutScreenUnavailableText => 'Unavailable';
+
+  @override
+  String get remoteServerListTitle => 'Remote Library';
+
+  @override
+  String get remoteServerListAddTooltip => 'Add Server';
+
+  @override
+  String get remoteServerListEmptyState =>
+      'No remote library servers added yet';
+
+  @override
+  String get remoteServerListEditTooltip => 'Edit';
+
+  @override
+  String get remoteServerListDeleteTooltip => 'Delete';
+
+  @override
+  String get remoteServerListDeleteConfirmTitle => 'Delete Server';
+
+  @override
+  String get remoteServerListDeleteConfirmButton => 'Delete';
+
+  @override
+  String remoteServerListDeleteConfirmMessage(String name) {
+    return 'Delete server \"$name\"? This cannot be undone.';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedTitle => 'Cannot Delete Server';
+
+  @override
+  String remoteServerListDeleteBlockedMessage(int count, String titles) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'This server still has $count books that only have a cloud record and have not been downloaded:',
+      one:
+          'This server still has 1 book that only has a cloud record and has not been downloaded:',
+    );
+    return '$_temp0\n$titles\n\nPlease remove these books from your library, or download them again before deleting the server.';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedConfirmButton => 'Got It';
+
+  @override
+  String get remoteServerListDeleteFailedMessage =>
+      'Failed to delete server. Please try again later.';
+
+  @override
+  String get remoteServerFormTitleAdd => 'Add Server';
+
+  @override
+  String get remoteServerFormTitleEdit => 'Edit Server';
+
+  @override
+  String get remoteServerFormNameLabel => 'Server Name';
+
+  @override
+  String get remoteServerFormBaseUrlLabel => 'Server URL';
+
+  @override
+  String get remoteServerFormTypeOpds => 'Standard OPDS';
+
+  @override
+  String get remoteServerFormTypeCalibreServer =>
+      'Native Calibre Content Server';
+
+  @override
+  String get remoteServerFormUsernameLabel =>
+      'Username (leave blank for anonymous connection)';
+
+  @override
+  String get remoteServerFormPasswordLabelEditing =>
+      'Password (leave blank to keep the existing password; clearing the username above also clears the password)';
+
+  @override
+  String get remoteServerFormPasswordLabel => 'Password';
+
+  @override
+  String get remoteServerFormPasswordShowTooltip => 'Show Password';
+
+  @override
+  String get remoteServerFormPasswordHideTooltip => 'Hide Password';
+
+  @override
+  String get remoteServerFormAllowInsecureLabel =>
+      'Allow insecure connection (self-signed certificate / plain HTTP)';
+
+  @override
+  String get remoteServerFormValidationMissingFields =>
+      'Please fill in the server name and URL';
+
+  @override
+  String get remoteServerFormValidationInvalidUrl =>
+      'Please enter a valid server URL (must start with http:// or https://)';
+
+  @override
+  String get remoteServerFormSaveFailedMessage =>
+      'Failed to save. Please try again later.';
+
+  @override
+  String get remoteServerFormTestSuccess => 'Connection successful';
+
+  @override
+  String get remoteServerFormTestFailed =>
+      'Connection failed. Please check the URL/credentials/certificate settings.';
+
+  @override
+  String get remoteServerFormTestConnectionButton => 'Test Connection';
+
+  @override
+  String get remoteServerFormSaveButton => 'Save';
+
+  @override
+  String formatSelectionDialogTitle(String title) {
+    return 'Select Format: $title';
+  }
+
+  @override
+  String get formatSelectionDialogUnsupportedFormat => 'Unsupported format';
+
+  @override
+  String get cloudDuplicateDialogTitle => 'Duplicate Book';
+
+  @override
+  String get cloudDuplicateDialogConfirmButton => 'Create Anyway';
+
+  @override
+  String get remoteCatalogLoadFailedMessage =>
+      'Failed to load. Please check your network connection or server settings.';
+
+  @override
+  String get remoteCatalogDownloadSelectedTooltip => 'Download Selected';
+
+  @override
+  String remoteCatalogDuplicateConfirmMessage(String title) {
+    return '\"$title\" has already been imported before. Create a new copy anyway?';
+  }
+
+  @override
+  String remoteCatalogQueuedMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files',
+      one: '1 file',
+    );
+    return 'Added $_temp0 to the download queue. Check progress on the \"Sources\" screen.';
+  }
+
+  @override
+  String get remoteCatalogEinkPrevPageButton => 'Previous Page';
+
+  @override
+  String get remoteCatalogEinkNextPageButton => 'Next Page';
+
+  @override
+  String get remoteCatalogLoadMoreButton => 'Load More';
+
+  @override
+  String get remoteCatalogDuplicateDialogTitle => 'Duplicate Book';
+
+  @override
+  String get remoteCatalogDuplicateDialogConfirmButton => 'Create Anyway';
+
+  @override
+  String get wifiTransferLeaveConfirmTitle => 'Files are still transferring';
+
+  @override
+  String get wifiTransferLeaveConfirmMessage =>
+      'Leaving will interrupt the connection. Are you sure you want to leave?';
+
+  @override
+  String get wifiTransferLeaveConfirmButton => 'Leave Anyway';
+
+  @override
+  String get wifiTransferTitle => 'WiFi Book Transfer';
+
+  @override
+  String get wifiTransferInstructionText =>
+      'On the same WiFi network, open the following URL in a browser:';
+
+  @override
+  String wifiTransferActiveCountText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Transferring ($count files)…',
+      one: 'Transferring (1 file)…',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get wifiTransferUnavailableText =>
+      'Please connect to WiFi or turn on your mobile hotspot';
+
+  @override
+  String get wifiTransferManualOverrideButton =>
+      'I\'m sure I\'m using a mobile hotspot';
+
+  @override
+  String get wifiTransferNoInterfacesText =>
+      'No available network interfaces found';
+
+  @override
+  String get downloadQueueTitle => 'Download Queue';
+
+  @override
+  String get downloadQueueCancelTooltip => 'Cancel';
+
+  @override
+  String get downloadQueueRetryTooltip => 'Retry';
+
+  @override
+  String get downloadQueueDismissTooltip => 'Remove from List';
+
+  @override
+  String get downloadQueueStatusPending => 'Pending';
+
+  @override
+  String get downloadQueueStatusDownloading => 'Downloading';
+
+  @override
+  String get downloadQueueStatusCheckingDuplicate => 'Checking';
+
+  @override
+  String get downloadQueueStatusDone => 'Done';
+
+  @override
+  String get downloadQueueStatusDuplicateSkipped => 'Duplicate Skipped';
+
+  @override
+  String get downloadQueueStatusFailed => 'Failed';
+
+  @override
+  String get downloadQueueStatusCancelled => 'Cancelled';
+
+  @override
+  String downloadQueueDuplicateConfirmMessage(String name) {
+    return 'Detected that \"$name\" has the same content as an existing book on this device. Create a new copy anyway?';
+  }
+
+  @override
+  String get sourcesHomeTitle => 'Sources';
+
+  @override
+  String get sourcesHomeLibraryTooltip => 'Library';
+
+  @override
+  String get sourcesHomeSettingsTooltip => 'Settings';
+
+  @override
+  String get sourcesHomeLocalSection => 'Local';
+
+  @override
+  String get sourcesHomePickFilesTitle => 'Choose Files (multiple selection)';
+
+  @override
+  String get sourcesHomePickFolderTitle => 'Choose Folder';
+
+  @override
+  String get sourcesHomeWifiTransferTile => 'WiFi Book Transfer';
+
+  @override
+  String get sourcesHomeConnectedServicesSection => 'Connected Services';
+
+  @override
+  String get sourcesHomeCloudNotLinkedSubtitle =>
+      'Not linked yet. Please link your account in Settings.';
+
+  @override
+  String get sourcesHomeRemoteLibraryTitle => 'Remote Library (OPDS)';
+
+  @override
+  String get sourcesHomeRemoteLibraryNotConfiguredSubtitle =>
+      'No remote library server configured yet';
+
+  @override
+  String get libraryImportFolderDialogTitle => 'Import Folder';
+
+  @override
+  String get libraryImportFolderAutoGroupLabel =>
+      'Automatically create category by folder name';
+
+  @override
+  String get libraryImportFolderConfirmButton => 'Import';
+
+  @override
+  String libraryImportResultBothMessage(int importedCount, int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      importedCount,
+      locale: localeName,
+      other: 'Imported $importedCount books',
+      one: 'Imported 1 book',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount already exist and were skipped',
+      one: '1 already exists and was skipped',
+    );
+    return '$_temp0, $_temp1';
+  }
+
+  @override
+  String libraryImportResultImportedOnlyMessage(int importedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      importedCount,
+      locale: localeName,
+      other: 'Imported $importedCount books',
+      one: 'Imported 1 book',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryImportResultSkippedOnlyMessage(int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount already exist and were skipped',
+      one: '1 already exists and was skipped',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get layoutPresetBookPickerTitleMulti =>
+      'Select Books (multiple selection)';
+
+  @override
+  String get layoutPresetBookPickerTitleSingle => 'Select Book';
+
+  @override
+  String get layoutPresetBookPickerSearchHint => 'Search by title or author';
+
+  @override
+  String get layoutPresetBookPickerEmptyBooks =>
+      'No reflowable EPUB books available to select';
+
+  @override
+  String get layoutPresetBookPickerNoMatch => 'No matching books found';
+
+  @override
+  String get layoutPresetNameDialogTitle => 'Name the Preset';
+
+  @override
+  String get layoutPresetNameDialogEmptyError => 'Name cannot be empty';
+
+  @override
+  String get layoutPresetNameDialogSaveButton => 'Save';
 }

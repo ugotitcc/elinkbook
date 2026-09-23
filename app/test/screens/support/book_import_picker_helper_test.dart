@@ -5,6 +5,7 @@ import 'package:elinkbook/screens/support/book_import_picker_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 
 import '../../support/fake_book_import_service.dart';
 
@@ -228,6 +229,9 @@ void main() {
       bool? result;
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -257,6 +261,9 @@ void main() {
       bool? result;
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -273,7 +280,9 @@ void main() {
       await tester.tap(find.text('打開對話框'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('library_import_folder_auto_group_checkbox')));
+      await tester.tap(
+        find.byKey(const Key('library_import_folder_auto_group_checkbox')),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('library_import_folder_confirm')));
@@ -286,6 +295,9 @@ void main() {
       bool? result = true;
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -313,13 +325,19 @@ void main() {
     testWidgets('兩者皆為 0 時不顯示任何 SnackBar', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
                 onPressed: () {
                   showImportResultSnackBar(
                     context,
-                    const ImportResult(importedBooks: [], skippedDuplicateCount: 0),
+                    const ImportResult(
+                      importedBooks: [],
+                      skippedDuplicateCount: 0,
+                    ),
                   );
                 },
                 child: const Text('Show SnackBar'),
@@ -338,6 +356,9 @@ void main() {
     testWidgets('僅有成功匯入時顯示「已匯入 N 本書」', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -345,10 +366,7 @@ void main() {
                   showImportResultSnackBar(
                     context,
                     ImportResult(
-                      importedBooks: [
-                        _testBook('1'),
-                        _testBook('2'),
-                      ],
+                      importedBooks: [_testBook('1'), _testBook('2')],
                       skippedDuplicateCount: 0,
                     ),
                   );
@@ -369,6 +387,9 @@ void main() {
     testWidgets('有成功且有跳過時顯示合併訊息', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -397,6 +418,9 @@ void main() {
     testWidgets('僅有跳過時顯示「N 本已存在，已跳過」', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -420,6 +444,96 @@ void main() {
       await tester.pump();
 
       expect(find.text('5 本已存在，已跳過'), findsOneWidget);
+    });
+  });
+
+  group('英文介面下的在地化驗證', () {
+    testWidgets('confirmAutoGroupByFolderName 顯示英文標題與按鈕', (tester) async {
+      bool? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () async {
+                  result = await confirmAutoGroupByFolderName(context);
+                },
+                child: const Text('open dialog'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open dialog'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Import Folder'), findsOneWidget);
+      expect(
+        find.text('Automatically create category by folder name'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('library_import_folder_confirm')));
+      await tester.pumpAndSettle();
+      expect(result, isTrue);
+    });
+
+    testWidgets('showImportResultSnackBar 匯入/跳過本數各自為 1 與多本時單複數皆正確', (
+      tester,
+    ) async {
+      Future<void> pumpAndShow(ImportResult result) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => showImportResultSnackBar(context, result),
+                  child: const Text('Show SnackBar'),
+                ),
+              ),
+            ),
+          ),
+        );
+        ScaffoldMessenger.of(
+          tester.element(find.byType(Scaffold)),
+        ).clearSnackBars();
+        await tester.pump();
+        await tester.tap(find.text('Show SnackBar'));
+        await tester.pump();
+      }
+
+      await pumpAndShow(
+        ImportResult(importedBooks: [_testBook('1')], skippedDuplicateCount: 0),
+      );
+      expect(find.text('Imported 1 book'), findsOneWidget);
+
+      await pumpAndShow(
+        ImportResult(
+          importedBooks: [_testBook('1'), _testBook('2')],
+          skippedDuplicateCount: 0,
+        ),
+      );
+      expect(find.text('Imported 2 books'), findsOneWidget);
+
+      await pumpAndShow(
+        const ImportResult(importedBooks: [], skippedDuplicateCount: 1),
+      );
+      expect(find.text('1 already exists and was skipped'), findsOneWidget);
+
+      await pumpAndShow(
+        ImportResult(importedBooks: [_testBook('1')], skippedDuplicateCount: 3),
+      );
+      expect(
+        find.text('Imported 1 book, 3 already exist and were skipped'),
+        findsOneWidget,
+      );
     });
   });
 }

@@ -173,7 +173,14 @@
 
 ## Issue 6：其餘管理類彈窗與畫面字串抽取＋測試遷移
 
-**Status:** ready-for-agent
+**Status:** completed
+
+**實際執行範圍修正記錄（認領時 grep 盤點＋`/superpowers:requesting-code-review` review-plan-issue-6.md Important #4 複審補記）**：
+- 移出 `adaptive_shell_scaffold.dart`——通讀全檔（169 行）確認純三目的地 `IndexedStack` 組裝/依賴透傳 widget，`grep -nP '[\x{4e00}-\x{9fff}]'` 命中的全部 10 處皆為文件註解，零使用者可見字面字串。
+- 新增 `format_selection_dialog.dart`——`issues.md` Issue 3 段落「實際執行範圍修正記錄」已註明「實際屬 Issue 6 範圍，唯一呼叫端為 `remote_catalog_screen.dart`」，本 Issue 收斂處理。
+- 新增（計畫審查 Important #4 補記歸屬）`cloud_duplicate_confirm_dialog.dart`／`widgets/download_queue_panel.dart`——全域掃描 `app/lib/screens/` 發現的兩個孤兒檔案，`issues.md` 全 Epic 45 任何 Issue 皆未列入，本 Issue 收斂處理（唯一呼叫端分別為 `main.dart`／`cloud_browser_screen.dart` 與本 Issue 範圍內的 `sources_home_screen.dart`）。
+- 路徑修正：`book_import_picker_helper.dart` 實際路徑為 `app/lib/screens/support/book_import_picker_helper.dart`（非原文「`support/book_import_picker_helper.dart`」暗示的 `app/lib/support/`）。
+- 新增（`reviews/review-issue-6.md` Important #1 補記歸屬）`app/lib/downloads/download_queue_controller.dart`／`app/lib/main.dart`：常駐下載佇列偵測到內容重複時的確認彈窗訊息，原為 `download_queue_controller.dart` 內建硬編碼正體中文（`onDuplicateConfirm` 回呼直接收整句訊息），改為回呼只傳 `job.name`、由持有 `context` 的 `main.dart` 呼叫端以新增的 `downloadQueueDuplicateConfirmMessage` key 在地化組裝，修正該彈窗在英文／簡體介面下「標題與按鈕已翻譯、內文卻仍是正體中文」的缺陷。
 
 **依賴：** Issue 0。
 

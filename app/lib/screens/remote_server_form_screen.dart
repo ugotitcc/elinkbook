@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
+import '../l10n/app_localizations.dart';
 import '../remote/opds_client.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
@@ -103,9 +104,11 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
     final success =
         await widget.createOpdsClient().testConnection(_buildProfile(), password: password);
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _testing = false;
-      _testResultText = success ? '連線成功' : '連線失敗，請檢查網址/帳密/憑證設定';
+      _testResultText =
+          success ? l10n.remoteServerFormTestSuccess : l10n.remoteServerFormTestFailed;
     });
   }
 
@@ -119,12 +122,13 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
   }
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_nameController.text.trim().isEmpty || _baseUrlController.text.trim().isEmpty) {
-      setState(() => _validationError = '請填寫站點名稱與網址');
+      setState(() => _validationError = l10n.remoteServerFormValidationMissingFields);
       return;
     }
     if (!_isValidBaseUrl(_baseUrlController.text.trim())) {
-      setState(() => _validationError = '請輸入有效的伺服器網址（需以 http:// 或 https:// 開頭）');
+      setState(() => _validationError = l10n.remoteServerFormValidationInvalidUrl);
       return;
     }
     setState(() {
@@ -147,7 +151,7 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _validationError = '儲存失敗，請稍後再試';
+        _validationError = AppLocalizations.of(context)!.remoteServerFormSaveFailedMessage;
       });
       return;
     }
@@ -157,8 +161,11 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? '編輯站點' : '新增站點')),
+      appBar: AppBar(
+        title: Text(_isEditing ? l10n.remoteServerFormTitleEdit : l10n.remoteServerFormTitleAdd),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -167,13 +174,13 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
             TextField(
               key: const Key('remote_server_form_name_field'),
               controller: _nameController,
-              decoration: const InputDecoration(labelText: '站點名稱'),
+              decoration: InputDecoration(labelText: l10n.remoteServerFormNameLabel),
             ),
             const SizedBox(height: 8),
             TextField(
               key: const Key('remote_server_form_base_url_field'),
               controller: _baseUrlController,
-              decoration: const InputDecoration(labelText: '伺服器網址'),
+              decoration: InputDecoration(labelText: l10n.remoteServerFormBaseUrlLabel),
             ),
             const SizedBox(height: 8),
             DropdownButton<RemoteServerType>(
@@ -182,17 +189,19 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
               onChanged: (value) {
                 if (value != null) setState(() => _type = value);
               },
-              items: const [
+              items: [
                 DropdownMenuItem(
                   value: RemoteServerType.opds,
-                  child: Text('標準 OPDS'),
+                  child: Text(l10n.remoteServerFormTypeOpds),
                 ),
                 DropdownMenuItem(
                   value: RemoteServerType.calibreServer,
-                  child: Text('原生 Calibre Content Server'),
+                  child: Text(l10n.remoteServerFormTypeCalibreServer),
                 ),
-                DropdownMenuItem(
+                const DropdownMenuItem(
                   value: RemoteServerType.calibreWeb,
+                  // 「Calibre-Web」為伺服器軟體專有品牌名，不翻譯
+                  // （design.md 排除範圍，比照 Google Drive／OneDrive）。
                   child: Text('Calibre-Web'),
                 ),
               ],
@@ -201,7 +210,7 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
             TextField(
               key: const Key('remote_server_form_username_field'),
               controller: _usernameController,
-              decoration: const InputDecoration(labelText: '帳號（留空代表匿名連線）'),
+              decoration: InputDecoration(labelText: l10n.remoteServerFormUsernameLabel),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -212,19 +221,21 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
               enableSuggestions: false,
               decoration: InputDecoration(
                 labelText: _isEditing
-                    ? '密碼（留空＝沿用既有密碼；清空上方帳號欄位則一併清除密碼）'
-                    : '密碼',
+                    ? l10n.remoteServerFormPasswordLabelEditing
+                    : l10n.remoteServerFormPasswordLabel,
                 suffixIcon: IconButton(
                   key: const Key('remote_server_form_password_visibility_toggle'),
                   icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                  tooltip: _obscurePassword ? '顯示密碼' : '隱藏密碼',
+                  tooltip: _obscurePassword
+                      ? l10n.remoteServerFormPasswordShowTooltip
+                      : l10n.remoteServerFormPasswordHideTooltip,
                   onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
             ),
             SwitchListTile(
               key: const Key('remote_server_form_allow_insecure_switch'),
-              title: const Text('允許不安全連線（自簽憑證／純 HTTP）'),
+              title: Text(l10n.remoteServerFormAllowInsecureLabel),
               value: _allowInsecure,
               onChanged: (value) => setState(() => _allowInsecure = value),
             ),
@@ -257,13 +268,13 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('測試連線'),
+                      : Text(l10n.remoteServerFormTestConnectionButton),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
                   key: const Key('remote_server_form_save_button'),
                   onPressed: _saving ? null : _save,
-                  child: const Text('儲存'),
+                  child: Text(l10n.remoteServerFormSaveButton),
                 ),
               ],
             ),

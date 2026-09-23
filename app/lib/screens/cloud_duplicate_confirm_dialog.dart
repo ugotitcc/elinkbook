@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 /// 重複匯入確認彈窗（epic-29-cloud-import Issue 5，完整比照
 /// `remote_catalog_screen.dart` 的 `_showDuplicateConfirmDialog` 既有
 /// 設計）：選檔前置（Layer 1，[CloudBrowserScreen]）與下載後指紋比對
@@ -13,22 +15,23 @@ Future<bool> showCloudDuplicateConfirmDialog(
   BuildContext context,
   String message,
 ) async {
+  final l10n = AppLocalizations.of(context)!;
   final result = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
       key: const Key('cloud_duplicate_dialog'),
-      title: const Text('重複的書籍'),
+      title: Text(l10n.cloudDuplicateDialogTitle),
       content: Text(message),
       actions: [
         TextButton(
           key: const Key('cloud_duplicate_dialog_cancel'),
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('取消'),
+          child: Text(l10n.cancel),
         ),
         TextButton(
           key: const Key('cloud_duplicate_dialog_confirm'),
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('仍要建立'),
+          child: Text(l10n.cloudDuplicateDialogConfirmButton),
         ),
       ],
     ),

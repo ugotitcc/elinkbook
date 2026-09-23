@@ -1549,6 +1549,340 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aboutScreenUnavailableText => '無法取得';
+
+  @override
+  String get remoteServerListTitle => '遠端書庫';
+
+  @override
+  String get remoteServerListAddTooltip => '新增站點';
+
+  @override
+  String get remoteServerListEmptyState => '尚未新增任何遠端書庫站點';
+
+  @override
+  String get remoteServerListEditTooltip => '編輯';
+
+  @override
+  String get remoteServerListDeleteTooltip => '刪除';
+
+  @override
+  String get remoteServerListDeleteConfirmTitle => '刪除站點';
+
+  @override
+  String get remoteServerListDeleteConfirmButton => '刪除';
+
+  @override
+  String remoteServerListDeleteConfirmMessage(String name) {
+    return '確定要刪除站點「$name」嗎？此動作無法復原。';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedTitle => '無法刪除站點';
+
+  @override
+  String remoteServerListDeleteBlockedMessage(int count, String titles) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '這個站點還有 $count 本書僅有雲端紀錄、尚未下載：',
+      one: '這個站點還有 1 本書僅有雲端紀錄、尚未下載：',
+    );
+    return '$_temp0\n$titles\n\n請先於書架移除這些書籍，或重新下載後再刪除站點。';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedConfirmButton => '了解';
+
+  @override
+  String get remoteServerListDeleteFailedMessage => '刪除站點失敗，請稍後再試';
+
+  @override
+  String get remoteServerFormTitleAdd => '新增站點';
+
+  @override
+  String get remoteServerFormTitleEdit => '編輯站點';
+
+  @override
+  String get remoteServerFormNameLabel => '站點名稱';
+
+  @override
+  String get remoteServerFormBaseUrlLabel => '伺服器網址';
+
+  @override
+  String get remoteServerFormTypeOpds => '標準 OPDS';
+
+  @override
+  String get remoteServerFormTypeCalibreServer => '原生 Calibre Content Server';
+
+  @override
+  String get remoteServerFormUsernameLabel => '帳號（留空代表匿名連線）';
+
+  @override
+  String get remoteServerFormPasswordLabelEditing =>
+      '密碼（留空＝沿用既有密碼；清空上方帳號欄位則一併清除密碼）';
+
+  @override
+  String get remoteServerFormPasswordLabel => '密碼';
+
+  @override
+  String get remoteServerFormPasswordShowTooltip => '顯示密碼';
+
+  @override
+  String get remoteServerFormPasswordHideTooltip => '隱藏密碼';
+
+  @override
+  String get remoteServerFormAllowInsecureLabel => '允許不安全連線（自簽憑證／純 HTTP）';
+
+  @override
+  String get remoteServerFormValidationMissingFields => '請填寫站點名稱與網址';
+
+  @override
+  String get remoteServerFormValidationInvalidUrl =>
+      '請輸入有效的伺服器網址（需以 http:// 或 https:// 開頭）';
+
+  @override
+  String get remoteServerFormSaveFailedMessage => '儲存失敗，請稍後再試';
+
+  @override
+  String get remoteServerFormTestSuccess => '連線成功';
+
+  @override
+  String get remoteServerFormTestFailed => '連線失敗，請檢查網址/帳密/憑證設定';
+
+  @override
+  String get remoteServerFormTestConnectionButton => '測試連線';
+
+  @override
+  String get remoteServerFormSaveButton => '儲存';
+
+  @override
+  String formatSelectionDialogTitle(String title) {
+    return '選擇格式：$title';
+  }
+
+  @override
+  String get formatSelectionDialogUnsupportedFormat => '不支援的格式';
+
+  @override
+  String get cloudDuplicateDialogTitle => '重複的書籍';
+
+  @override
+  String get cloudDuplicateDialogConfirmButton => '仍要建立';
+
+  @override
+  String get remoteCatalogLoadFailedMessage => '載入失敗，請檢查網路連線或站點設定';
+
+  @override
+  String get remoteCatalogDownloadSelectedTooltip => '下載已選取';
+
+  @override
+  String remoteCatalogDuplicateConfirmMessage(String title) {
+    return '「$title」之前匯入過了，仍要建立新的一份嗎？';
+  }
+
+  @override
+  String remoteCatalogQueuedMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 個檔案',
+      one: '1 個檔案',
+    );
+    return '已加入下載佇列（$_temp0），可至「來源」畫面查看進度';
+  }
+
+  @override
+  String get remoteCatalogEinkPrevPageButton => '上一頁';
+
+  @override
+  String get remoteCatalogEinkNextPageButton => '下一頁';
+
+  @override
+  String get remoteCatalogLoadMoreButton => '載入更多';
+
+  @override
+  String get remoteCatalogDuplicateDialogTitle => '重複的書籍';
+
+  @override
+  String get remoteCatalogDuplicateDialogConfirmButton => '仍要建立';
+
+  @override
+  String get wifiTransferLeaveConfirmTitle => '目前尚有檔案正在傳輸';
+
+  @override
+  String get wifiTransferLeaveConfirmMessage => '離開將中斷連線，是否確定離開？';
+
+  @override
+  String get wifiTransferLeaveConfirmButton => '確定離開';
+
+  @override
+  String get wifiTransferTitle => 'WiFi 傳書';
+
+  @override
+  String get wifiTransferInstructionText => '在同一個 WiFi 下，用瀏覽器打開以下網址：';
+
+  @override
+  String wifiTransferActiveCountText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '正在傳輸中（$count 個檔案）…',
+      one: '正在傳輸中（1 個檔案）…',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get wifiTransferUnavailableText => '請連線至 WiFi 或開啟手機熱點';
+
+  @override
+  String get wifiTransferManualOverrideButton => '我確定目前是用手機熱點';
+
+  @override
+  String get wifiTransferNoInterfacesText => '找不到任何可用網路介面';
+
+  @override
+  String get downloadQueueTitle => '下載佇列';
+
+  @override
+  String get downloadQueueCancelTooltip => '取消';
+
+  @override
+  String get downloadQueueRetryTooltip => '重試';
+
+  @override
+  String get downloadQueueDismissTooltip => '從清單移除';
+
+  @override
+  String get downloadQueueStatusPending => '待機';
+
+  @override
+  String get downloadQueueStatusDownloading => '下載中';
+
+  @override
+  String get downloadQueueStatusCheckingDuplicate => '比對中';
+
+  @override
+  String get downloadQueueStatusDone => '完成';
+
+  @override
+  String get downloadQueueStatusDuplicateSkipped => '重複已略過';
+
+  @override
+  String get downloadQueueStatusFailed => '失敗';
+
+  @override
+  String get downloadQueueStatusCancelled => '已取消';
+
+  @override
+  String downloadQueueDuplicateConfirmMessage(String name) {
+    return '偵測到「$name」與本機已有的一本書內容相同，仍要建立新的一份嗎？';
+  }
+
+  @override
+  String get sourcesHomeTitle => '來源';
+
+  @override
+  String get sourcesHomeLibraryTooltip => '書架';
+
+  @override
+  String get sourcesHomeSettingsTooltip => '設定';
+
+  @override
+  String get sourcesHomeLocalSection => '本機';
+
+  @override
+  String get sourcesHomePickFilesTitle => '選擇檔案（可多選）';
+
+  @override
+  String get sourcesHomePickFolderTitle => '選擇資料夾';
+
+  @override
+  String get sourcesHomeWifiTransferTile => 'WiFi 傳書';
+
+  @override
+  String get sourcesHomeConnectedServicesSection => '已連結服務';
+
+  @override
+  String get sourcesHomeCloudNotLinkedSubtitle => '尚未連結，請至設定畫面連結帳戶';
+
+  @override
+  String get sourcesHomeRemoteLibraryTitle => '遠端書庫（OPDS）';
+
+  @override
+  String get sourcesHomeRemoteLibraryNotConfiguredSubtitle => '尚未設定遠端書庫伺服器';
+
+  @override
+  String get libraryImportFolderDialogTitle => '匯入資料夾';
+
+  @override
+  String get libraryImportFolderAutoGroupLabel => '依資料夾名稱自動建立分類';
+
+  @override
+  String get libraryImportFolderConfirmButton => '匯入';
+
+  @override
+  String libraryImportResultBothMessage(int importedCount, int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      importedCount,
+      locale: localeName,
+      other: '已匯入 $importedCount 本',
+      one: '已匯入 1 本',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 本已存在，已跳過',
+      one: '1 本已存在，已跳過',
+    );
+    return '$_temp0，$_temp1';
+  }
+
+  @override
+  String libraryImportResultImportedOnlyMessage(int importedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      importedCount,
+      locale: localeName,
+      other: '已匯入 $importedCount 本書',
+      one: '已匯入 1 本書',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryImportResultSkippedOnlyMessage(int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 本已存在，已跳過',
+      one: '1 本已存在，已跳過',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get layoutPresetBookPickerTitleMulti => '選擇書籍（可複選）';
+
+  @override
+  String get layoutPresetBookPickerTitleSingle => '選擇書籍';
+
+  @override
+  String get layoutPresetBookPickerSearchHint => '搜尋書名或作者';
+
+  @override
+  String get layoutPresetBookPickerEmptyBooks => '沒有可選擇的流式 EPUB 書籍';
+
+  @override
+  String get layoutPresetBookPickerNoMatch => '找不到符合的書籍';
+
+  @override
+  String get layoutPresetNameDialogTitle => '為預設集命名';
+
+  @override
+  String get layoutPresetNameDialogEmptyError => '名稱不可為空';
+
+  @override
+  String get layoutPresetNameDialogSaveButton => '儲存';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -3096,6 +3430,340 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get aboutScreenUnavailableText => '无法取得';
+
+  @override
+  String get remoteServerListTitle => '远程书库';
+
+  @override
+  String get remoteServerListAddTooltip => '新增站点';
+
+  @override
+  String get remoteServerListEmptyState => '尚未新增任何远程书库站点';
+
+  @override
+  String get remoteServerListEditTooltip => '编辑';
+
+  @override
+  String get remoteServerListDeleteTooltip => '删除';
+
+  @override
+  String get remoteServerListDeleteConfirmTitle => '删除站点';
+
+  @override
+  String get remoteServerListDeleteConfirmButton => '删除';
+
+  @override
+  String remoteServerListDeleteConfirmMessage(String name) {
+    return '确定要删除站点「$name」吗？此动作无法复原。';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedTitle => '无法删除站点';
+
+  @override
+  String remoteServerListDeleteBlockedMessage(int count, String titles) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '这个站点还有 $count 本书仅有云端记录、尚未下载：',
+      one: '这个站点还有 1 本书仅有云端记录、尚未下载：',
+    );
+    return '$_temp0\n$titles\n\n请先于书架移除这些书籍，或重新下载后再删除站点。';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedConfirmButton => '了解';
+
+  @override
+  String get remoteServerListDeleteFailedMessage => '删除站点失败，请稍后再试';
+
+  @override
+  String get remoteServerFormTitleAdd => '新增站点';
+
+  @override
+  String get remoteServerFormTitleEdit => '编辑站点';
+
+  @override
+  String get remoteServerFormNameLabel => '站点名称';
+
+  @override
+  String get remoteServerFormBaseUrlLabel => '服务器网址';
+
+  @override
+  String get remoteServerFormTypeOpds => '标准 OPDS';
+
+  @override
+  String get remoteServerFormTypeCalibreServer => '原生 Calibre Content Server';
+
+  @override
+  String get remoteServerFormUsernameLabel => '账号（留空代表匿名连线）';
+
+  @override
+  String get remoteServerFormPasswordLabelEditing =>
+      '密码（留空＝沿用既有密码；清空上方账号栏位则一并清除密码）';
+
+  @override
+  String get remoteServerFormPasswordLabel => '密码';
+
+  @override
+  String get remoteServerFormPasswordShowTooltip => '显示密码';
+
+  @override
+  String get remoteServerFormPasswordHideTooltip => '隐藏密码';
+
+  @override
+  String get remoteServerFormAllowInsecureLabel => '允许不安全连线（自签凭证／纯 HTTP）';
+
+  @override
+  String get remoteServerFormValidationMissingFields => '请填写站点名称与网址';
+
+  @override
+  String get remoteServerFormValidationInvalidUrl =>
+      '请输入有效的服务器网址（需以 http:// 或 https:// 开头）';
+
+  @override
+  String get remoteServerFormSaveFailedMessage => '储存失败，请稍后再试';
+
+  @override
+  String get remoteServerFormTestSuccess => '连线成功';
+
+  @override
+  String get remoteServerFormTestFailed => '连线失败，请检查网址/账密/凭证设定';
+
+  @override
+  String get remoteServerFormTestConnectionButton => '测试连线';
+
+  @override
+  String get remoteServerFormSaveButton => '储存';
+
+  @override
+  String formatSelectionDialogTitle(String title) {
+    return '选择格式：$title';
+  }
+
+  @override
+  String get formatSelectionDialogUnsupportedFormat => '不支持的格式';
+
+  @override
+  String get cloudDuplicateDialogTitle => '重复的书籍';
+
+  @override
+  String get cloudDuplicateDialogConfirmButton => '仍要建立';
+
+  @override
+  String get remoteCatalogLoadFailedMessage => '载入失败，请检查网络连线或站点设定';
+
+  @override
+  String get remoteCatalogDownloadSelectedTooltip => '下载已选取';
+
+  @override
+  String remoteCatalogDuplicateConfirmMessage(String title) {
+    return '「$title」之前汇入过了，仍要建立新的一份吗？';
+  }
+
+  @override
+  String remoteCatalogQueuedMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个档案',
+      one: '1 个档案',
+    );
+    return '已加入下载队列（$_temp0），可至「来源」画面查看进度';
+  }
+
+  @override
+  String get remoteCatalogEinkPrevPageButton => '上一页';
+
+  @override
+  String get remoteCatalogEinkNextPageButton => '下一页';
+
+  @override
+  String get remoteCatalogLoadMoreButton => '载入更多';
+
+  @override
+  String get remoteCatalogDuplicateDialogTitle => '重复的书籍';
+
+  @override
+  String get remoteCatalogDuplicateDialogConfirmButton => '仍要建立';
+
+  @override
+  String get wifiTransferLeaveConfirmTitle => '目前尚有档案正在传输';
+
+  @override
+  String get wifiTransferLeaveConfirmMessage => '离开将中断连线，是否确定离开？';
+
+  @override
+  String get wifiTransferLeaveConfirmButton => '确定离开';
+
+  @override
+  String get wifiTransferTitle => 'WiFi 传书';
+
+  @override
+  String get wifiTransferInstructionText => '在同一个 WiFi 下，用浏览器打开以下网址：';
+
+  @override
+  String wifiTransferActiveCountText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '正在传输中（$count 个档案）…',
+      one: '正在传输中（1 个档案）…',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get wifiTransferUnavailableText => '请连线至 WiFi 或开启手机热点';
+
+  @override
+  String get wifiTransferManualOverrideButton => '我确定目前是用手机热点';
+
+  @override
+  String get wifiTransferNoInterfacesText => '找不到任何可用网络介面';
+
+  @override
+  String get downloadQueueTitle => '下载队列';
+
+  @override
+  String get downloadQueueCancelTooltip => '取消';
+
+  @override
+  String get downloadQueueRetryTooltip => '重试';
+
+  @override
+  String get downloadQueueDismissTooltip => '从清单移除';
+
+  @override
+  String get downloadQueueStatusPending => '待机';
+
+  @override
+  String get downloadQueueStatusDownloading => '下载中';
+
+  @override
+  String get downloadQueueStatusCheckingDuplicate => '比对中';
+
+  @override
+  String get downloadQueueStatusDone => '完成';
+
+  @override
+  String get downloadQueueStatusDuplicateSkipped => '重复已略过';
+
+  @override
+  String get downloadQueueStatusFailed => '失败';
+
+  @override
+  String get downloadQueueStatusCancelled => '已取消';
+
+  @override
+  String downloadQueueDuplicateConfirmMessage(String name) {
+    return '侦测到「$name」与本机已有的一本书内容相同，仍要建立新的一份吗？';
+  }
+
+  @override
+  String get sourcesHomeTitle => '来源';
+
+  @override
+  String get sourcesHomeLibraryTooltip => '书架';
+
+  @override
+  String get sourcesHomeSettingsTooltip => '设定';
+
+  @override
+  String get sourcesHomeLocalSection => '本机';
+
+  @override
+  String get sourcesHomePickFilesTitle => '选择档案（可多选）';
+
+  @override
+  String get sourcesHomePickFolderTitle => '选择资料夹';
+
+  @override
+  String get sourcesHomeWifiTransferTile => 'WiFi 传书';
+
+  @override
+  String get sourcesHomeConnectedServicesSection => '已连结服务';
+
+  @override
+  String get sourcesHomeCloudNotLinkedSubtitle => '尚未连结，请至设定画面连结账户';
+
+  @override
+  String get sourcesHomeRemoteLibraryTitle => '远程书库（OPDS）';
+
+  @override
+  String get sourcesHomeRemoteLibraryNotConfiguredSubtitle => '尚未设定远程书库服务器';
+
+  @override
+  String get libraryImportFolderDialogTitle => '汇入资料夹';
+
+  @override
+  String get libraryImportFolderAutoGroupLabel => '依资料夹名称自动建立分类';
+
+  @override
+  String get libraryImportFolderConfirmButton => '汇入';
+
+  @override
+  String libraryImportResultBothMessage(int importedCount, int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      importedCount,
+      locale: localeName,
+      other: '已汇入 $importedCount 本',
+      one: '已汇入 1 本',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 本已存在，已跳过',
+      one: '1 本已存在，已跳过',
+    );
+    return '$_temp0，$_temp1';
+  }
+
+  @override
+  String libraryImportResultImportedOnlyMessage(int importedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      importedCount,
+      locale: localeName,
+      other: '已汇入 $importedCount 本书',
+      one: '已汇入 1 本书',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryImportResultSkippedOnlyMessage(int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 本已存在，已跳过',
+      one: '1 本已存在，已跳过',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get layoutPresetBookPickerTitleMulti => '选择书籍（可复选）';
+
+  @override
+  String get layoutPresetBookPickerTitleSingle => '选择书籍';
+
+  @override
+  String get layoutPresetBookPickerSearchHint => '搜索书名或作者';
+
+  @override
+  String get layoutPresetBookPickerEmptyBooks => '没有可选择的流式 EPUB 书籍';
+
+  @override
+  String get layoutPresetBookPickerNoMatch => '找不到符合的书籍';
+
+  @override
+  String get layoutPresetNameDialogTitle => '为预设集命名';
+
+  @override
+  String get layoutPresetNameDialogEmptyError => '名称不可为空';
+
+  @override
+  String get layoutPresetNameDialogSaveButton => '储存';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -4643,4 +5311,338 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get aboutScreenUnavailableText => '無法取得';
+
+  @override
+  String get remoteServerListTitle => '遠端書庫';
+
+  @override
+  String get remoteServerListAddTooltip => '新增站點';
+
+  @override
+  String get remoteServerListEmptyState => '尚未新增任何遠端書庫站點';
+
+  @override
+  String get remoteServerListEditTooltip => '編輯';
+
+  @override
+  String get remoteServerListDeleteTooltip => '刪除';
+
+  @override
+  String get remoteServerListDeleteConfirmTitle => '刪除站點';
+
+  @override
+  String get remoteServerListDeleteConfirmButton => '刪除';
+
+  @override
+  String remoteServerListDeleteConfirmMessage(String name) {
+    return '確定要刪除站點「$name」嗎？此動作無法復原。';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedTitle => '無法刪除站點';
+
+  @override
+  String remoteServerListDeleteBlockedMessage(int count, String titles) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '這個站點還有 $count 本書僅有雲端紀錄、尚未下載：',
+      one: '這個站點還有 1 本書僅有雲端紀錄、尚未下載：',
+    );
+    return '$_temp0\n$titles\n\n請先於書架移除這些書籍，或重新下載後再刪除站點。';
+  }
+
+  @override
+  String get remoteServerListDeleteBlockedConfirmButton => '了解';
+
+  @override
+  String get remoteServerListDeleteFailedMessage => '刪除站點失敗，請稍後再試';
+
+  @override
+  String get remoteServerFormTitleAdd => '新增站點';
+
+  @override
+  String get remoteServerFormTitleEdit => '編輯站點';
+
+  @override
+  String get remoteServerFormNameLabel => '站點名稱';
+
+  @override
+  String get remoteServerFormBaseUrlLabel => '伺服器網址';
+
+  @override
+  String get remoteServerFormTypeOpds => '標準 OPDS';
+
+  @override
+  String get remoteServerFormTypeCalibreServer => '原生 Calibre Content Server';
+
+  @override
+  String get remoteServerFormUsernameLabel => '帳號（留空代表匿名連線）';
+
+  @override
+  String get remoteServerFormPasswordLabelEditing =>
+      '密碼（留空＝沿用既有密碼；清空上方帳號欄位則一併清除密碼）';
+
+  @override
+  String get remoteServerFormPasswordLabel => '密碼';
+
+  @override
+  String get remoteServerFormPasswordShowTooltip => '顯示密碼';
+
+  @override
+  String get remoteServerFormPasswordHideTooltip => '隱藏密碼';
+
+  @override
+  String get remoteServerFormAllowInsecureLabel => '允許不安全連線（自簽憑證／純 HTTP）';
+
+  @override
+  String get remoteServerFormValidationMissingFields => '請填寫站點名稱與網址';
+
+  @override
+  String get remoteServerFormValidationInvalidUrl =>
+      '請輸入有效的伺服器網址（需以 http:// 或 https:// 開頭）';
+
+  @override
+  String get remoteServerFormSaveFailedMessage => '儲存失敗，請稍後再試';
+
+  @override
+  String get remoteServerFormTestSuccess => '連線成功';
+
+  @override
+  String get remoteServerFormTestFailed => '連線失敗，請檢查網址/帳密/憑證設定';
+
+  @override
+  String get remoteServerFormTestConnectionButton => '測試連線';
+
+  @override
+  String get remoteServerFormSaveButton => '儲存';
+
+  @override
+  String formatSelectionDialogTitle(String title) {
+    return '選擇格式：$title';
+  }
+
+  @override
+  String get formatSelectionDialogUnsupportedFormat => '不支援的格式';
+
+  @override
+  String get cloudDuplicateDialogTitle => '重複的書籍';
+
+  @override
+  String get cloudDuplicateDialogConfirmButton => '仍要建立';
+
+  @override
+  String get remoteCatalogLoadFailedMessage => '載入失敗，請檢查網路連線或站點設定';
+
+  @override
+  String get remoteCatalogDownloadSelectedTooltip => '下載已選取';
+
+  @override
+  String remoteCatalogDuplicateConfirmMessage(String title) {
+    return '「$title」之前匯入過了，仍要建立新的一份嗎？';
+  }
+
+  @override
+  String remoteCatalogQueuedMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 個檔案',
+      one: '1 個檔案',
+    );
+    return '已加入下載佇列（$_temp0），可至「來源」畫面查看進度';
+  }
+
+  @override
+  String get remoteCatalogEinkPrevPageButton => '上一頁';
+
+  @override
+  String get remoteCatalogEinkNextPageButton => '下一頁';
+
+  @override
+  String get remoteCatalogLoadMoreButton => '載入更多';
+
+  @override
+  String get remoteCatalogDuplicateDialogTitle => '重複的書籍';
+
+  @override
+  String get remoteCatalogDuplicateDialogConfirmButton => '仍要建立';
+
+  @override
+  String get wifiTransferLeaveConfirmTitle => '目前尚有檔案正在傳輸';
+
+  @override
+  String get wifiTransferLeaveConfirmMessage => '離開將中斷連線，是否確定離開？';
+
+  @override
+  String get wifiTransferLeaveConfirmButton => '確定離開';
+
+  @override
+  String get wifiTransferTitle => 'WiFi 傳書';
+
+  @override
+  String get wifiTransferInstructionText => '在同一個 WiFi 下，用瀏覽器打開以下網址：';
+
+  @override
+  String wifiTransferActiveCountText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '正在傳輸中（$count 個檔案）…',
+      one: '正在傳輸中（1 個檔案）…',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get wifiTransferUnavailableText => '請連線至 WiFi 或開啟手機熱點';
+
+  @override
+  String get wifiTransferManualOverrideButton => '我確定目前是用手機熱點';
+
+  @override
+  String get wifiTransferNoInterfacesText => '找不到任何可用網路介面';
+
+  @override
+  String get downloadQueueTitle => '下載佇列';
+
+  @override
+  String get downloadQueueCancelTooltip => '取消';
+
+  @override
+  String get downloadQueueRetryTooltip => '重試';
+
+  @override
+  String get downloadQueueDismissTooltip => '從清單移除';
+
+  @override
+  String get downloadQueueStatusPending => '待機';
+
+  @override
+  String get downloadQueueStatusDownloading => '下載中';
+
+  @override
+  String get downloadQueueStatusCheckingDuplicate => '比對中';
+
+  @override
+  String get downloadQueueStatusDone => '完成';
+
+  @override
+  String get downloadQueueStatusDuplicateSkipped => '重複已略過';
+
+  @override
+  String get downloadQueueStatusFailed => '失敗';
+
+  @override
+  String get downloadQueueStatusCancelled => '已取消';
+
+  @override
+  String downloadQueueDuplicateConfirmMessage(String name) {
+    return '偵測到「$name」與本機已有的一本書內容相同，仍要建立新的一份嗎？';
+  }
+
+  @override
+  String get sourcesHomeTitle => '來源';
+
+  @override
+  String get sourcesHomeLibraryTooltip => '書架';
+
+  @override
+  String get sourcesHomeSettingsTooltip => '設定';
+
+  @override
+  String get sourcesHomeLocalSection => '本機';
+
+  @override
+  String get sourcesHomePickFilesTitle => '選擇檔案（可多選）';
+
+  @override
+  String get sourcesHomePickFolderTitle => '選擇資料夾';
+
+  @override
+  String get sourcesHomeWifiTransferTile => 'WiFi 傳書';
+
+  @override
+  String get sourcesHomeConnectedServicesSection => '已連結服務';
+
+  @override
+  String get sourcesHomeCloudNotLinkedSubtitle => '尚未連結，請至設定畫面連結帳戶';
+
+  @override
+  String get sourcesHomeRemoteLibraryTitle => '遠端書庫（OPDS）';
+
+  @override
+  String get sourcesHomeRemoteLibraryNotConfiguredSubtitle => '尚未設定遠端書庫伺服器';
+
+  @override
+  String get libraryImportFolderDialogTitle => '匯入資料夾';
+
+  @override
+  String get libraryImportFolderAutoGroupLabel => '依資料夾名稱自動建立分類';
+
+  @override
+  String get libraryImportFolderConfirmButton => '匯入';
+
+  @override
+  String libraryImportResultBothMessage(int importedCount, int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      importedCount,
+      locale: localeName,
+      other: '已匯入 $importedCount 本',
+      one: '已匯入 1 本',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 本已存在，已跳過',
+      one: '1 本已存在，已跳過',
+    );
+    return '$_temp0，$_temp1';
+  }
+
+  @override
+  String libraryImportResultImportedOnlyMessage(int importedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      importedCount,
+      locale: localeName,
+      other: '已匯入 $importedCount 本書',
+      one: '已匯入 1 本書',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryImportResultSkippedOnlyMessage(int skippedCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      skippedCount,
+      locale: localeName,
+      other: '$skippedCount 本已存在，已跳過',
+      one: '1 本已存在，已跳過',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get layoutPresetBookPickerTitleMulti => '選擇書籍（可複選）';
+
+  @override
+  String get layoutPresetBookPickerTitleSingle => '選擇書籍';
+
+  @override
+  String get layoutPresetBookPickerSearchHint => '搜尋書名或作者';
+
+  @override
+  String get layoutPresetBookPickerEmptyBooks => '沒有可選擇的流式 EPUB 書籍';
+
+  @override
+  String get layoutPresetBookPickerNoMatch => '找不到符合的書籍';
+
+  @override
+  String get layoutPresetNameDialogTitle => '為預設集命名';
+
+  @override
+  String get layoutPresetNameDialogEmptyError => '名稱不可為空';
+
+  @override
+  String get layoutPresetNameDialogSaveButton => '儲存';
 }

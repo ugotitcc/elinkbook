@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../cloud_import/cloud_storage_client.dart';
 import '../downloads/download_queue_controller.dart';
+import '../l10n/app_localizations.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
@@ -155,6 +156,7 @@ class SourcesHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final googleDriveClient = cloudAccountDependencies.googleDriveStorageClient;
     final oneDriveClient = cloudAccountDependencies.oneDriveStorageClient;
     final googleDriveEnabled =
@@ -178,32 +180,32 @@ class SourcesHomeScreen extends StatelessWidget {
         wifiTransferDependencies?.checkNetworkAvailability != null;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('來源'),
+        title: Text(l10n.sourcesHomeTitle),
         actions: [
           IconButton(
             key: const Key('sources_library_button'),
             icon: const Icon(Icons.grid_view),
-            tooltip: '書架',
+            tooltip: l10n.sourcesHomeLibraryTooltip,
             onPressed: onNavigateToLibrary,
           ),
           IconButton(
             key: const Key('sources_settings_button'),
             icon: const Icon(Icons.settings),
-            tooltip: '設定',
+            tooltip: l10n.sourcesHomeSettingsTooltip,
             onPressed: onNavigateToSettings,
           ),
         ],
       ),
       body: ListView(
         children: [
-          const EBSectionHeader(title: '本機'),
+          EBSectionHeader(title: l10n.sourcesHomeLocalSection),
           EBFieldCard(
             padding: EdgeInsets.zero,
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: ListTile(
               key: const Key('sources_pick_files_button'),
               leading: const Icon(Icons.description),
-              title: const Text('選擇檔案（可多選）'),
+              title: Text(l10n.sourcesHomePickFilesTitle),
               onTap: () => _handlePickFiles(context),
             ),
           ),
@@ -213,7 +215,7 @@ class SourcesHomeScreen extends StatelessWidget {
             child: ListTile(
               key: const Key('sources_pick_folder_button'),
               leading: const Icon(Icons.folder),
-              title: const Text('選擇資料夾'),
+              title: Text(l10n.sourcesHomePickFolderTitle),
               onTap: () => _handlePickFolder(context),
             ),
           ),
@@ -224,11 +226,11 @@ class SourcesHomeScreen extends StatelessWidget {
               child: ListTile(
                 key: const Key('sources_wifi_transfer_tile'),
                 leading: const Icon(Icons.wifi),
-                title: const Text('WiFi 傳書'),
+                title: Text(l10n.sourcesHomeWifiTransferTile),
                 onTap: () => _openWifiTransfer(context),
               ),
             ),
-          const EBSectionHeader(title: '已連結服務'),
+          EBSectionHeader(title: l10n.sourcesHomeConnectedServicesSection),
           EBFieldCard(
             padding: EdgeInsets.zero,
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -238,7 +240,7 @@ class SourcesHomeScreen extends StatelessWidget {
               title: const Text('Google Drive'),
               subtitle: googleDriveEnabled
                   ? null
-                  : const Text('尚未連結，請至設定畫面連結帳戶'),
+                  : Text(l10n.sourcesHomeCloudNotLinkedSubtitle),
               enabled: googleDriveEnabled,
               onTap: googleDriveEnabled
                   ? () => _openGoogleDriveBrowser(context, googleDriveClient)
@@ -252,7 +254,7 @@ class SourcesHomeScreen extends StatelessWidget {
               key: const Key('sources_onedrive_tile'),
               leading: const Icon(Icons.cloud_outlined),
               title: const Text('OneDrive'),
-              subtitle: oneDriveEnabled ? null : const Text('尚未連結，請至設定畫面連結帳戶'),
+              subtitle: oneDriveEnabled ? null : Text(l10n.sourcesHomeCloudNotLinkedSubtitle),
               enabled: oneDriveEnabled,
               onTap: oneDriveEnabled
                   ? () => _openOneDriveBrowser(context, oneDriveClient)
@@ -265,8 +267,8 @@ class SourcesHomeScreen extends StatelessWidget {
             child: ListTile(
               key: const Key('sources_remote_library_tile'),
               leading: const Icon(Icons.dns),
-              title: const Text('遠端書庫（OPDS）'),
-              subtitle: remoteEnabled ? null : const Text('尚未設定遠端書庫伺服器'),
+              title: Text(l10n.sourcesHomeRemoteLibraryTitle),
+              subtitle: remoteEnabled ? null : Text(l10n.sourcesHomeRemoteLibraryNotConfiguredSubtitle),
               enabled: remoteEnabled,
               onTap: remoteEnabled ? () => _openRemoteLibrary(context) : null,
             ),

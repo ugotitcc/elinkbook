@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../reader/layout_preset.dart';
 
 /// 版面設定預設集命名輸入 Dialog（epic-28-reader-settings-enhancements
@@ -49,7 +50,7 @@ class _LayoutPresetNameDialogState extends State<_LayoutPresetNameDialog> {
   void _handleSave() {
     final name = validateLayoutPresetName(_controller.text);
     if (name == null) {
-      setState(() => _errorText = '名稱不可為空');
+      setState(() => _errorText = AppLocalizations.of(context)!.layoutPresetNameDialogEmptyError);
       return;
     }
     Navigator.of(context).pop(name);
@@ -57,8 +58,9 @@ class _LayoutPresetNameDialogState extends State<_LayoutPresetNameDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('為預設集命名'),
+      title: Text(l10n.layoutPresetNameDialogTitle),
       content: TextField(
         key: const Key('layout_preset_name_dialog_field'),
         controller: _controller,
@@ -69,12 +71,12 @@ class _LayoutPresetNameDialogState extends State<_LayoutPresetNameDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+          child: Text(l10n.cancel),
         ),
         TextButton(
           key: const Key('layout_preset_name_dialog_confirm'),
           onPressed: _handleSave,
-          child: const Text('儲存'),
+          child: Text(l10n.layoutPresetNameDialogSaveButton),
         ),
       ],
     );

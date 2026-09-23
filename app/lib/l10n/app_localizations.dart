@@ -2794,6 +2794,546 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'無法取得'**
   String get aboutScreenUnavailableText;
+
+  /// 遠端書庫站點清單畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'遠端書庫'**
+  String get remoteServerListTitle;
+
+  /// AppBar「新增站點」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'新增站點'**
+  String get remoteServerListAddTooltip;
+
+  /// 尚未新增任何站點時的空狀態文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未新增任何遠端書庫站點'**
+  String get remoteServerListEmptyState;
+
+  /// 站點列項目「編輯」圖示按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'編輯'**
+  String get remoteServerListEditTooltip;
+
+  /// 站點列項目「刪除」圖示按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get remoteServerListDeleteTooltip;
+
+  /// 刪除站點確認對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除站點'**
+  String get remoteServerListDeleteConfirmTitle;
+
+  /// 刪除站點確認對話框的動作按鈕文字（審查意見 review-issue-6.md M-1：原與圖示按鈕的無障礙提示 remoteServerListDeleteTooltip 共用同一個 key，拆為獨立 key 避免兩處字義各自演進時互相牽制）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get remoteServerListDeleteConfirmButton;
+
+  /// 刪除站點確認訊息，{name} 為使用者自訂的站點名稱（不翻譯）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定要刪除站點「{name}」嗎？此動作無法復原。'**
+  String remoteServerListDeleteConfirmMessage(String name);
+
+  /// 站點仍有僅雲端紀錄書籍、刪除被擋下時的示警對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法刪除站點'**
+  String get remoteServerListDeleteBlockedTitle;
+
+  /// 刪除被擋下時的示警訊息，{count} 為僅雲端紀錄書籍本數，{titles} 為呼叫端已組好的書名清單文字（每行一本，前綴「．」，不含末尾換行）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{count, plural, =1{這個站點還有 1 本書僅有雲端紀錄、尚未下載：} other{這個站點還有 {count} 本書僅有雲端紀錄、尚未下載：}}\n{titles}\n\n請先於書架移除這些書籍，或重新下載後再刪除站點。'**
+  String remoteServerListDeleteBlockedMessage(int count, String titles);
+
+  /// 示警對話框的確認按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'了解'**
+  String get remoteServerListDeleteBlockedConfirmButton;
+
+  /// 刪除防護例外以外的其餘刪除失敗時顯示的 SnackBar 訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除站點失敗，請稍後再試'**
+  String get remoteServerListDeleteFailedMessage;
+
+  /// 新增模式的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'新增站點'**
+  String get remoteServerFormTitleAdd;
+
+  /// 編輯模式的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'編輯站點'**
+  String get remoteServerFormTitleEdit;
+
+  /// 站點名稱輸入框的 labelText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'站點名稱'**
+  String get remoteServerFormNameLabel;
+
+  /// 伺服器網址輸入框的 labelText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'伺服器網址'**
+  String get remoteServerFormBaseUrlLabel;
+
+  /// 伺服器類型下拉選單選項：標準 OPDS
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'標準 OPDS'**
+  String get remoteServerFormTypeOpds;
+
+  /// 伺服器類型下拉選單選項：原生 Calibre Content Server
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'原生 Calibre Content Server'**
+  String get remoteServerFormTypeCalibreServer;
+
+  /// 帳號輸入框的 labelText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'帳號（留空代表匿名連線）'**
+  String get remoteServerFormUsernameLabel;
+
+  /// 編輯模式下密碼輸入框的 labelText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'密碼（留空＝沿用既有密碼；清空上方帳號欄位則一併清除密碼）'**
+  String get remoteServerFormPasswordLabelEditing;
+
+  /// 新增模式下密碼輸入框的 labelText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'密碼'**
+  String get remoteServerFormPasswordLabel;
+
+  /// 密碼顯示/隱藏切換圖示，目前為隱藏狀態時的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'顯示密碼'**
+  String get remoteServerFormPasswordShowTooltip;
+
+  /// 密碼顯示/隱藏切換圖示，目前為顯示狀態時的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'隱藏密碼'**
+  String get remoteServerFormPasswordHideTooltip;
+
+  /// 允許不安全連線開關的標題文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'允許不安全連線（自簽憑證／純 HTTP）'**
+  String get remoteServerFormAllowInsecureLabel;
+
+  /// 站點名稱或網址為空時的驗證錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'請填寫站點名稱與網址'**
+  String get remoteServerFormValidationMissingFields;
+
+  /// 網址格式不合法時的驗證錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'請輸入有效的伺服器網址（需以 http:// 或 https:// 開頭）'**
+  String get remoteServerFormValidationInvalidUrl;
+
+  /// SQLite／secure storage 寫入失敗時的錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'儲存失敗，請稍後再試'**
+  String get remoteServerFormSaveFailedMessage;
+
+  /// 測試連線成功時顯示的文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'連線成功'**
+  String get remoteServerFormTestSuccess;
+
+  /// 測試連線失敗時顯示的文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'連線失敗，請檢查網址/帳密/憑證設定'**
+  String get remoteServerFormTestFailed;
+
+  /// 「測試連線」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'測試連線'**
+  String get remoteServerFormTestConnectionButton;
+
+  /// 「儲存」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'儲存'**
+  String get remoteServerFormSaveButton;
+
+  /// 格式選擇對話框標題，{title} 為書目標題（使用者資料，不翻譯）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選擇格式：{title}'**
+  String formatSelectionDialogTitle(String title);
+
+  /// 格式選項本身不受支援（format 為 null）時顯示的文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'不支援的格式'**
+  String get formatSelectionDialogUnsupportedFormat;
+
+  /// 雲端匯入重複匯入確認彈窗標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重複的書籍'**
+  String get cloudDuplicateDialogTitle;
+
+  /// 重複匯入確認彈窗的確認按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'仍要建立'**
+  String get cloudDuplicateDialogConfirmButton;
+
+  /// 載入 Feed 失敗時的錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'載入失敗，請檢查網路連線或站點設定'**
+  String get remoteCatalogLoadFailedMessage;
+
+  /// AppBar「下載已選取」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下載已選取'**
+  String get remoteCatalogDownloadSelectedTooltip;
+
+  /// 偵測到重複匯入時的確認訊息，{title} 為書目標題（使用者資料，不翻譯）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'「{title}」之前匯入過了，仍要建立新的一份嗎？'**
+  String remoteCatalogDuplicateConfirmMessage(String title);
+
+  /// 開始下載後的 SnackBar 訊息，{count} 為加入佇列的檔案數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已加入下載佇列（{count, plural, =1{1 個檔案} other{{count} 個檔案}}），可至「來源」畫面查看進度'**
+  String remoteCatalogQueuedMessage(int count);
+
+  /// E-Ink 離散換頁模式的「上一頁」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上一頁'**
+  String get remoteCatalogEinkPrevPageButton;
+
+  /// E-Ink 離散換頁模式的「下一頁」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下一頁'**
+  String get remoteCatalogEinkNextPageButton;
+
+  /// 非 E-Ink 模式連續捲動載入的「載入更多」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'載入更多'**
+  String get remoteCatalogLoadMoreButton;
+
+  /// 重複匯入確認彈窗標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重複的書籍'**
+  String get remoteCatalogDuplicateDialogTitle;
+
+  /// 重複匯入確認彈窗的確認按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'仍要建立'**
+  String get remoteCatalogDuplicateDialogConfirmButton;
+
+  /// 離開畫面前的傳輸中示警對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'目前尚有檔案正在傳輸'**
+  String get wifiTransferLeaveConfirmTitle;
+
+  /// 離開畫面前的傳輸中示警對話框訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'離開將中斷連線，是否確定離開？'**
+  String get wifiTransferLeaveConfirmMessage;
+
+  /// 示警對話框的「確定離開」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定離開'**
+  String get wifiTransferLeaveConfirmButton;
+
+  /// WiFi 傳書畫面 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'WiFi 傳書'**
+  String get wifiTransferTitle;
+
+  /// 顯示網址/QR Code 前的操作說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'在同一個 WiFi 下，用瀏覽器打開以下網址：'**
+  String get wifiTransferInstructionText;
+
+  /// 傳輸中橫幅文字，{count} 為目前進行中的傳輸檔案數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{count, plural, =1{正在傳輸中（1 個檔案）…} other{正在傳輸中（{count} 個檔案）…}}'**
+  String wifiTransferActiveCountText(int count);
+
+  /// 偵測不到可用網路時的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'請連線至 WiFi 或開啟手機熱點'**
+  String get wifiTransferUnavailableText;
+
+  /// 手動覆寫偵測結果的按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'我確定目前是用手機熱點'**
+  String get wifiTransferManualOverrideButton;
+
+  /// 手動覆寫候選清單為空時的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'找不到任何可用網路介面'**
+  String get wifiTransferNoInterfacesText;
+
+  /// 「來源」畫面常駐下載佇列區塊的分區標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下載佇列'**
+  String get downloadQueueTitle;
+
+  /// 下載中項目的「取消」圖示按鈕無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'取消'**
+  String get downloadQueueCancelTooltip;
+
+  /// 失敗/已取消項目的「重試」圖示按鈕無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重試'**
+  String get downloadQueueRetryTooltip;
+
+  /// 已結束項目（完成/重複已略過）的「從清單移除」圖示按鈕無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'從清單移除'**
+  String get downloadQueueDismissTooltip;
+
+  /// 項目狀態標籤：排隊中尚未開始下載
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'待機'**
+  String get downloadQueueStatusPending;
+
+  /// 項目狀態標籤：正在下載且尚無位元組進度回報時顯示（有進度時改顯示百分比數字，數字本身不需翻譯）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下載中'**
+  String get downloadQueueStatusDownloading;
+
+  /// 項目狀態標籤：下載完成後正在比對是否與既有書籍重複
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'比對中'**
+  String get downloadQueueStatusCheckingDuplicate;
+
+  /// 項目狀態標籤：下載並匯入成功
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'完成'**
+  String get downloadQueueStatusDone;
+
+  /// 項目狀態標籤：偵測到重複且使用者選擇不建立新副本
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重複已略過'**
+  String get downloadQueueStatusDuplicateSkipped;
+
+  /// 項目狀態標籤：下載或匯入過程發生非取消性錯誤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'失敗'**
+  String get downloadQueueStatusFailed;
+
+  /// 項目狀態標籤：使用者主動取消下載
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已取消'**
+  String get downloadQueueStatusCancelled;
+
+  /// 下載佇列指紋比對命中重複時的確認訊息（審查意見 review-issue-6.md I-1：原為 download_queue_controller.dart 內硬編碼中文，改由 main.dart 呼叫端在地化組裝）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'偵測到「{name}」與本機已有的一本書內容相同，仍要建立新的一份嗎？'**
+  String downloadQueueDuplicateConfirmMessage(String name);
+
+  /// 「來源」聚合頁 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'來源'**
+  String get sourcesHomeTitle;
+
+  /// AppBar「書架」導覽按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'書架'**
+  String get sourcesHomeLibraryTooltip;
+
+  /// AppBar「設定」導覽按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'設定'**
+  String get sourcesHomeSettingsTooltip;
+
+  /// 「本機」分區標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'本機'**
+  String get sourcesHomeLocalSection;
+
+  /// 「選擇檔案」入口列標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選擇檔案（可多選）'**
+  String get sourcesHomePickFilesTitle;
+
+  /// 「選擇資料夾」入口列標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選擇資料夾'**
+  String get sourcesHomePickFolderTitle;
+
+  /// 「WiFi 傳書」入口列標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'WiFi 傳書'**
+  String get sourcesHomeWifiTransferTile;
+
+  /// 「已連結服務」分區標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已連結服務'**
+  String get sourcesHomeConnectedServicesSection;
+
+  /// Google Drive／OneDrive 入口列未連結時的副標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未連結，請至設定畫面連結帳戶'**
+  String get sourcesHomeCloudNotLinkedSubtitle;
+
+  /// 「遠端書庫」入口列標題，OPDS 為技術協定縮寫不翻譯
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'遠端書庫（OPDS）'**
+  String get sourcesHomeRemoteLibraryTitle;
+
+  /// 「遠端書庫」入口列尚未設定站點時的副標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未設定遠端書庫伺服器'**
+  String get sourcesHomeRemoteLibraryNotConfiguredSubtitle;
+
+  /// 「是否依資料夾名稱自動建立分類」確認對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'匯入資料夾'**
+  String get libraryImportFolderDialogTitle;
+
+  /// 自動建立分類勾選項的標題文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'依資料夾名稱自動建立分類'**
+  String get libraryImportFolderAutoGroupLabel;
+
+  /// 匯入資料夾確認對話框的確認按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'匯入'**
+  String get libraryImportFolderConfirmButton;
+
+  /// 匯入完成時，成功匯入與跳過重複兩者皆大於 0 的合併提示，{importedCount}／{skippedCount} 各自獨立處理單複數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{importedCount, plural, =1{已匯入 1 本} other{已匯入 {importedCount} 本}}，{skippedCount, plural, =1{1 本已存在，已跳過} other{{skippedCount} 本已存在，已跳過}}'**
+  String libraryImportResultBothMessage(int importedCount, int skippedCount);
+
+  /// 匯入完成時，僅有成功匯入（無跳過重複）的提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{importedCount, plural, =1{已匯入 1 本書} other{已匯入 {importedCount} 本書}}'**
+  String libraryImportResultImportedOnlyMessage(int importedCount);
+
+  /// 匯入完成時，僅有跳過重複（無成功匯入）的提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{skippedCount, plural, =1{1 本已存在，已跳過} other{{skippedCount} 本已存在，已跳過}}'**
+  String libraryImportResultSkippedOnlyMessage(int skippedCount);
+
+  /// 複選模式的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選擇書籍（可複選）'**
+  String get layoutPresetBookPickerTitleMulti;
+
+  /// 單選模式的 AppBar 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選擇書籍'**
+  String get layoutPresetBookPickerTitleSingle;
+
+  /// 搜尋輸入框的 hintText
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'搜尋書名或作者'**
+  String get layoutPresetBookPickerSearchHint;
+
+  /// 傳入的 books 清單為空時的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'沒有可選擇的流式 EPUB 書籍'**
+  String get layoutPresetBookPickerEmptyBooks;
+
+  /// 搜尋結果為空時的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'找不到符合的書籍'**
+  String get layoutPresetBookPickerNoMatch;
+
+  /// 版面設定預設集命名輸入 Dialog 標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'為預設集命名'**
+  String get layoutPresetNameDialogTitle;
+
+  /// trim 後名稱為空字串時的驗證錯誤文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'名稱不可為空'**
+  String get layoutPresetNameDialogEmptyError;
+
+  /// 命名對話框的「儲存」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'儲存'**
+  String get layoutPresetNameDialogSaveButton;
 }
 
 class _AppLocalizationsDelegate
