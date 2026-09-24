@@ -86,4 +86,6 @@ Harness `scenario-writing-mode-autodetect.mjs` 7 案例在修改前全部紅燈�
 
 - 附帶發現：診斷日誌中出現兩筆「openBook 失敗: ResizeObserver loop completed with undelivered notifications」，其中一筆發生在使用者手動覆寫（不會預掃）的情況，確認與本 Epic 無關，是 `globalErrorCaptureJs` 既有的誤報，已登錄為 Backlog `epic-47-resize-observer-false-error`。
 
-下一步：發 PR。
+**2026-09-25 PR #273 已合併進 `main`**（merge commit `9600d5fd`）。本 Epic 只有 Issue 1，全數完成。
+
+下一步：依 SDD 流程歸檔。
