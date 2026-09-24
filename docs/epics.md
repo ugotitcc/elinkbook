@@ -54,7 +54,7 @@
 | 44 | `epic-43-reader-architecture-hardening` 閱讀器模組架構深化機會（`reader_screen.dart`/`library_screen.dart` 熱點盤點） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 45 | `epic-44-wifi-book-transfer` WiFi 傳書（同區網雙向搬書，免對方裝 App） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 46 | `epic-45-interface-i18n` 多語系介面（正體中文／簡體中文／英文，FR-49） | 🟡 開發中 (Active) | 全數完成，待歸檔 |
-| 47 | `epic-46-writing-mode-autodetect` （缺陷）排版方向自動偵測只看書本第一個 CSS（FR-06 補強） | 🟡 開發中 (Active) | `plans/plan-issue-1.md` 已完成審查修訂，待實作 |
+| 47 | `epic-46-writing-mode-autodetect` （缺陷）排版方向自動偵測只看書本第一個 CSS（FR-06 補強） | 🟡 開發中 (Active) | Issue 1 已完成，待真機驗證 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。
