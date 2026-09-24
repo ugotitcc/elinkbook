@@ -1,7 +1,7 @@
 # `epic-46-writing-mode-autodetect` （缺陷）排版方向自動偵測只看書本第一個 CSS
 
-**狀態：** 🟡 開發中 (Active)
-**存放路徑：** `docs/epics/epic-46-writing-mode-autodetect/`
+**狀態：** 🟢 已歸檔 (Archived)
+**存放路徑：** `docs/archive/2026-09-25-epic-46-writing-mode-autodetect/`
 **關聯 PRD 章節：** FR-06、FR-10
 
 ## 背景
@@ -88,4 +88,4 @@ Harness `scenario-writing-mode-autodetect.mjs` 7 案例在修改前全部紅燈�
 
 **2026-09-25 PR #273 已合併進 `main`**（merge commit `9600d5fd`）。本 Epic 只有 Issue 1，全數完成。
 
-下一步：依 SDD 流程歸檔。
+**2026-09-25 歸檔**至 `docs/archive/2026-09-25-epic-46-writing-mode-autodetect/`。
