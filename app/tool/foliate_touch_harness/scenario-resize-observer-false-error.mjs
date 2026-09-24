@@ -17,11 +17,18 @@ import { launchHarnessPage, harnessEvents, resetHarnessEvents, report } from './
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const BRIDGE_DART = path.resolve(__dirname, '../../lib/reader/foliate_native_bridge.dart')
 
-/** 從 Dart 原始碼抽出 `const globalErrorCaptureJs = '''…''';` 的 JS 內容。 */
+/**
+ * 從 Dart 原始碼抽出 `const globalErrorCaptureJs = '''…''';` 的 JS 內容。
+ * 抽出的是原始碼字面，沒有還原 Dart 跳脫（`\$`、`\\`、`\'`）與字串插值；內容一旦
+ * 出現 `\` 或 `$`，注入的腳本就可能與真機執行期字串不一致，故直接中止（程式審查 M-2）。
+ */
 async function loadGlobalErrorCaptureJs() {
   const dart = await readFile(BRIDGE_DART, 'utf8')
   const m = dart.match(/const globalErrorCaptureJs = '''([\s\S]*?)''';/)
   if (!m) throw new Error('在 foliate_native_bridge.dart 找不到 globalErrorCaptureJs')
+  if (/[\\$]/.test(m[1])) {
+    throw new Error('globalErrorCaptureJs 含有 \\ 或 $，原始碼字面可能與 Dart 執行期字串不同，須改寫抽取邏輯')
+  }
   return m[1]
 }
 
@@ -80,8 +87,10 @@ async function main() {
           if (String(e.message).includes('ResizeObserver')) window.__epic47RoFired = true
         })
       })
-      // 案例 A：載入完成前（DOMContentLoaded，main.js 還在開書）就觸發 ResizeObserver loop。
+      // 案例 A：開書流程早期（DOMContentLoaded）就觸發 ResizeObserver loop，並記錄當下是否
+      // 已收到 onPageRendered，作為「確實在開書完成前觸發」的前提檢查（程式審查 M-3）。
       await p.evaluateOnNewDocument(`document.addEventListener('DOMContentLoaded', () => {
+        window.__epic47RenderedAtTrigger = window.__harnessEvents.some((e) => e.name === 'onPageRendered');
         (${triggerResizeObserverLoop.toString()})()
       })`)
     },
@@ -93,6 +102,9 @@ async function main() {
     const roReportsA = onErrorMessages(eventsA).filter((m) => m.includes('ResizeObserver'))
     report('前提：開書期間確實觸發了 ResizeObserver loop（避免空轉通過）', roFiredDuringLoad === true,
       `fired=${roFiredDuringLoad}`)
+    const renderedAtTrigger = await page.evaluate(() => window.__epic47RenderedAtTrigger)
+    report('前提：觸發當下尚未收到 onPageRendered（確實在開書完成前）', renderedAtTrigger === false,
+      `renderedAtTrigger=${renderedAtTrigger}`)
     report('A 開書期間的 ResizeObserver 警告不應回報 onError', roReportsA.length === 0,
       `onError=${JSON.stringify(roReportsA)}`)
 
@@ -121,6 +133,16 @@ async function main() {
     const reportsD = onErrorMessages(await harnessEvents(page))
     report('D 未處理的 Promise rejection 仍須回報 onError', reportsD.some((m) => m.includes('epic47-real-rejection')),
       `onError=${JSON.stringify(reportsD)}`)
+
+    // 案例 E：正向對照——真正的例外即使訊息以「ResizeObserver loop」開頭，也須回報
+    // （過濾條件須同時要求「沒有 Error 物件」與「訊息開頭錨定」，程式審查 M-1）
+    await resetHarnessEvents(page)
+    await runAsPageScript(page, "setTimeout(() => { throw new Error('ResizeObserver loop epic47-real-error') }, 0)")
+    await sleep(200)
+    const reportsE = onErrorMessages(await harnessEvents(page))
+    report('E 訊息含「ResizeObserver loop」的真正例外仍須回報 onError',
+      reportsE.some((m) => m.includes('ResizeObserver loop epic47-real-error')),
+      `onError=${JSON.stringify(reportsE)}`)
   } finally {
     await browser.close()
   }

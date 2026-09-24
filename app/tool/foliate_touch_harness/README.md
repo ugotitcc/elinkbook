@@ -41,5 +41,5 @@ node run-all.mjs
   「章節載入後比對 column-width、不一致就 `renderer.render()`」防護時本場景會 FAIL（已驗證 6/6）。
   這個場景涵蓋的是「時序競爭」本身；真機上的實際觸發來源是開書時 `applyPreferences()` 於首章尚未載完就執行。
 - `scenario-writing-mode-autodetect.mjs`：排版方向自動偵測全書預掃（epic-46）。「採用書籍排版」模式下開書前預掃全書（OPF `primary-writing-mode`、外部 CSS、XHTML 內嵌樣式）判定直橫排，10 案例涵蓋 `-webkit-` 前綴、`tb-rl` 舊式別名、內嵌 `style` 屬性（含單引號）、manifest 缺檔 CSS，以及註解／正文文字／非法值 `tb-lr` 反例；全書任一處宣告直排即為直排。
-- `scenario-resize-observer-false-error.mjs`：全域 JS 錯誤捕捉不得把 Chromium 良性的「ResizeObserver loop」警告誤報為 `onError`（epic-47）。直接從 `foliate_native_bridge.dart` 抽出 `globalErrorCaptureJs` 注入頁面，於開書期間與開書後各觸發一次真實的 ResizeObserver loop，斷言沒有 `onError`；另以頁面內真正的未捕捉例外、未處理的 Promise rejection 作為正向對照，確認仍會回報。移除過濾時 A、B 兩案例會 FAIL。
+- `scenario-resize-observer-false-error.mjs`：全域 JS 錯誤捕捉不得把 Chromium 良性的「ResizeObserver loop」警告誤報為 `onError`（epic-47）。直接從 `foliate_native_bridge.dart` 抽出 `globalErrorCaptureJs` 注入頁面，於開書流程早期（DOMContentLoaded，尚未收到 `onPageRendered`）與開書後各觸發一次真實的 ResizeObserver loop，斷言沒有 `onError`；另以頁面內真正的未捕捉例外、未處理的 Promise rejection，以及訊息以「ResizeObserver loop」開頭的真正例外作為正向對照，確認仍會回報。移除過濾時 A、B 會 FAIL；過濾條件放寬為任意位置比對時 E 會 FAIL。
 
