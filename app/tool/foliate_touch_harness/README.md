@@ -34,3 +34,10 @@ node run-all.mjs
 - `scenario-issue11-hittest-existing-highlight.mjs`：`hitTest` 命中判斷。
 - `scenario-cross-mechanism-tap-boundary.mjs`：選取保護與快速點擊分類
   的跨機制邊界情境。
+- `scenario-disable-publisher-styles.mjs`：「停用書本 CSS」開關對書本自帶版面 CSS 的清除。
+- `scenario-preload-stale-layout.mjs`：預讀章節套用過時排版（時序競爭）。直排單欄下，翻到下一章偶爾變成
+  上下兩半的雙欄（真機 AiPaper Reader C 回報）的回歸場景：以記憶體組出的 5 章 EPUB，精準延遲「下一個建立的
+  iframe」的 load，並在延遲期間改變欄數，斷言所有章節文件的 `column-width` 一致。移除 `main.js` 的
+  「章節載入後比對 column-width、不一致就 `renderer.render()`」防護時本場景會 FAIL（已驗證 6/6）。
+  這個場景涵蓋的是「時序競爭」本身；真機上的實際觸發來源是開書時 `applyPreferences()` 於首章尚未載完就執行。
+

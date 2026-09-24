@@ -8,8 +8,12 @@ import 'package:elinkbook/screens/reader_console_log_screen.dart';
 void main() {
   final List<ClipboardData> copiedData = [];
 
+  // ReaderConsoleLog 每筆自帶時間戳；固定時鐘讓顯示與複製的字串可預期。
+  const ts = '14:39:51.123';
+
   setUp(() {
     ReaderConsoleLog.clear();
+    ReaderConsoleLog.clock = () => DateTime(2026, 9, 24, 14, 39, 51, 123);
     copiedData.clear();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, (call) async {
@@ -21,6 +25,7 @@ void main() {
   });
 
   tearDown(() {
+    ReaderConsoleLog.clock = DateTime.now;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, null);
   });
@@ -53,8 +58,8 @@ void main() {
     );
 
     expect(find.byKey(const Key('reader_console_log_list')), findsOneWidget);
-    expect(find.text('[ERROR] 第一筆訊息'), findsOneWidget);
-    expect(find.text('[LOG] 第二筆訊息'), findsOneWidget);
+    expect(find.text('$ts [ERROR] 第一筆訊息'), findsOneWidget);
+    expect(find.text('$ts [LOG] 第二筆訊息'), findsOneWidget);
   });
 
   testWidgets('點擊清空按鈕後，清單清空並顯示空狀態', (tester) async {
@@ -96,7 +101,8 @@ void main() {
     await tester.pump();
 
     expect(copiedData, hasLength(1));
-    expect(copiedData.single.text, '[ERROR] 第一筆訊息\n[LOG] 第二筆訊息');
+    expect(copiedData.single.text,
+        '$ts [ERROR] 第一筆訊息\n$ts [LOG] 第二筆訊息');
     expect(find.text('已複製全部記錄到剪貼簿'), findsOneWidget);
   });
 

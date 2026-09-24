@@ -10,6 +10,7 @@
 import puppeteer from 'puppeteer'
 import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
+import zlib from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -34,7 +35,19 @@ async function listFilesRecursive(dir, base = dir) {
  * fixture EPUB 的 headless 頁面。呼叫端用完須自行
  * `await browser.close()`。
  */
-export async function launchHarnessPage({ fixtureFileName, fixtureBuffer, writingMode = 'horizontal' }) {
+export async function launchHarnessPage({
+  fixtureFileName,
+  fixtureBuffer,
+  writingMode = 'horizontal',
+  // 以下三個為選用，皆向後相容（既有場景不傳等於原行為）：
+  // prefs：與預設 initialPrefs 合併（後者被覆蓋），例如直排單欄的字級／邊距設定。
+  prefs = {},
+  // viewport：覆蓋預設 800x1200（例如用真機尺寸 376x752 重現版面問題）。
+  viewport = { width: 800, height: 1200 },
+  // beforeNavigate(page)：在頁面導覽（page.goto）之前呼叫，讓場景註冊
+  // evaluateOnNewDocument 等需要早於 main.js 執行的注入（例如延遲 iframe load）。
+  beforeNavigate = null,
+}) {
   const relFiles = await listFilesRecursive(FOLIATE_DIR)
   const fileMap = new Map()
   for (const rel of relFiles) fileMap.set(rel, await readFile(path.join(FOLIATE_DIR, rel)))
@@ -75,9 +88,11 @@ export async function launchHarnessPage({ fixtureFileName, fixtureBuffer, writin
     paragraphSpacing: 1.0, marginTop: 32, marginBottom: 16,
     marginLeft: 24, marginRight: 24,
     pageTurnMode: 'paginated', columnMode: 'auto', columnSize: 720,
+    ...prefs,
   }
   const openUrl = `${ORIGIN}/index.html?prefs=${encodeURIComponent(JSON.stringify(initialPrefs))}&fontFaceCss=&initialCfi=`
-  await page.setViewport({ width: 800, height: 1200, hasTouch: true })
+  await page.setViewport({ ...viewport, hasTouch: true })
+  if (beforeNavigate) await beforeNavigate(page)
   await page.goto(openUrl, { waitUntil: 'load' })
   await page.waitForFunction(
     () => window.__harnessEvents.some((e) => e.name === 'onPageRendered'),
@@ -95,6 +110,62 @@ export async function launchHarnessPage({ fixtureFileName, fixtureBuffer, writin
 
   const client = await page.createCDPSession()
   return { browser, page, client, pageErrors }
+}
+
+// ---- 最小 STORE-only ZIP 產生器（僅供測試 fixture 使用，不需要任何
+// 額外套件；EPUB 的 mimetype 依規範必須用 STORE 不壓縮，其餘檔案圖
+// 方便一併用 STORE，合法且足夠小）。----
+export function buildStoredZip(files) {
+  const localParts = []
+  const centralParts = []
+  let offset = 0
+  for (const { name, data } of files) {
+    const nameBuf = Buffer.from(name, 'utf8')
+    const crc = zlib.crc32(data) >>> 0
+    const local = Buffer.alloc(30)
+    local.writeUInt32LE(0x04034b50, 0)
+    local.writeUInt16LE(20, 4)
+    local.writeUInt16LE(0, 6)
+    local.writeUInt16LE(0, 8)
+    local.writeUInt16LE(0, 10)
+    local.writeUInt16LE(0, 12)
+    local.writeUInt32LE(crc, 14)
+    local.writeUInt32LE(data.length, 18)
+    local.writeUInt32LE(data.length, 22)
+    local.writeUInt16LE(nameBuf.length, 26)
+    local.writeUInt16LE(0, 28)
+    localParts.push(local, nameBuf, data)
+
+    const central = Buffer.alloc(46)
+    central.writeUInt32LE(0x02014b50, 0)
+    central.writeUInt16LE(20, 4)
+    central.writeUInt16LE(20, 6)
+    central.writeUInt16LE(0, 8)
+    central.writeUInt16LE(0, 10)
+    central.writeUInt16LE(0, 12)
+    central.writeUInt16LE(0, 14)
+    central.writeUInt32LE(crc, 16)
+    central.writeUInt32LE(data.length, 20)
+    central.writeUInt32LE(data.length, 24)
+    central.writeUInt16LE(nameBuf.length, 28)
+    central.writeUInt16LE(0, 30)
+    central.writeUInt16LE(0, 32)
+    central.writeUInt16LE(0, 34)
+    central.writeUInt16LE(0, 36)
+    central.writeUInt32LE(0, 38)
+    central.writeUInt32LE(offset, 42)
+    centralParts.push(central, nameBuf)
+
+    offset += local.length + nameBuf.length + data.length
+  }
+  const centralBuf = Buffer.concat(centralParts)
+  const eocd = Buffer.alloc(22)
+  eocd.writeUInt32LE(0x06054b50, 0)
+  eocd.writeUInt16LE(files.length, 8)
+  eocd.writeUInt16LE(files.length, 10)
+  eocd.writeUInt32LE(centralBuf.length, 12)
+  eocd.writeUInt32LE(offset, 16)
+  return Buffer.concat([...localParts, centralBuf, eocd])
 }
 
 /** 找目前可視 iframe 內第一段長度 > minLength 的文字節點，回傳其 CFI、
