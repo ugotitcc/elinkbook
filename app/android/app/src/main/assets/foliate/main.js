@@ -1059,7 +1059,11 @@ async function openBook() {
     // 預掃結果不會被用到，同樣略過（epic-46 程式審查 M-2）。
     // 預掃失敗時維持 null，回退到下方 transformTarget 延遲判讀，不影響開書。
     if (!isIndexMode && !initialPrefs.writingMode) {
+      // TODO(epic-46 Task 4)：暫時性計時，真機量完預掃耗時後移除。
+      // 需在「設定」開啟 Console Log 攔截，才會出現在診斷日誌中。
+      const prescanStartMs = performance.now()
       detectedBookWritingMode = await detectBookWritingMode(book).catch(() => null)
+      console.log(`[epic-46 預掃計時] ${(performance.now() - prescanStartMs).toFixed(1)}ms → ${detectedBookWritingMode}`)
     }
     // 雙向 writing-mode CSS 覆蓋 + FR-06 回退偵測（epic-46）：預掃已在上方
     // 完成全書判定，這裡只在 detectedBookWritingMode 仍為 null（KF8 等沒有
