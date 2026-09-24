@@ -313,8 +313,20 @@ if (typeof WeakRef === 'undefined') {
 /// 注入，重用既有的 `onError` JS↔Dart bridge channel（見
 /// `_onWebViewCreated` 的 'onError' handler），不需要新增任何 Dart 端
 /// 接線或新的 channel。
+///
+/// epic-47：Chromium 的「ResizeObserver loop completed with undelivered
+/// notifications」（舊版為「ResizeObserver loop limit exceeded」）只是告知
+/// 一輪 resize callback 沒能在同一 frame 內處理完，不是錯誤，但同樣會派送到
+/// `window.onerror`。不過濾的話會被轉成 `onError`：閱讀器載入中觸發時會把
+/// 正常開啟的書誤判為開啟失敗，全文索引準備完成前觸發時會讓該書索引失敗。
+/// 判定條件同時要求兩件事，避免把真正的錯誤一起吞掉（epic-47 程式審查 M-1）：
+/// 訊息以共同前綴 `ResizeObserver loop` 開頭（涵蓋新舊兩種訊息；真正的未捕捉
+/// 例外一律帶 `Uncaught ` 前綴），而且沒有附帶 Error 物件（良性警告的
+/// `error` 是 null）。WebView 仍會把這個警告鏡射成 console `[ERROR]`，
+/// 診斷線索不會消失。
 const globalErrorCaptureJs = '''
 window.onerror = function (message, source, lineno, colno, error) {
+  if (!error && String(message).indexOf('ResizeObserver loop') === 0) return;
   if (window.flutter_inappwebview) {
     window.flutter_inappwebview.callHandler('onError', 'JS Error: ' + message + ' (' + source + ':' + lineno + ')');
   }
