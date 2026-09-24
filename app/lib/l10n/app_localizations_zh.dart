@@ -1954,6 +1954,136 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get remoteCatalogUnknownBookTitle => '未知書名';
+
+  @override
+  String get wifiPageTitle => 'elinkBook WiFi 傳書';
+
+  @override
+  String get wifiPageUploadHeading => '上傳書籍';
+
+  @override
+  String get wifiPageDropzoneText => '拖放檔案到此處，或';
+
+  @override
+  String get wifiPageChooseFile => '選擇檔案';
+
+  @override
+  String get wifiPageDownloadHeading => '下載書籍';
+
+  @override
+  String get wifiPageSearchPlaceholder => '搜尋書名…';
+
+  @override
+  String get wifiPageSelectPage => '全選目前頁';
+
+  @override
+  String get wifiPageClearSelection => '清除勾選';
+
+  @override
+  String wifiPageSelectedCount(String count) {
+    return '已勾選 $count 本';
+  }
+
+  @override
+  String get wifiPageLoading => '載入中…';
+
+  @override
+  String get wifiPagePrevPage => '上一頁';
+
+  @override
+  String get wifiPageNextPage => '下一頁';
+
+  @override
+  String wifiPagePageInfo(String page, String total) {
+    return '第 $page / $total 頁';
+  }
+
+  @override
+  String get wifiPageDownloadSelected => '下載已勾選書籍';
+
+  @override
+  String get wifiPageNoBooks => '目前沒有可下載的書籍';
+
+  @override
+  String get wifiPageNoMatch => '查無符合條件的書籍';
+
+  @override
+  String get wifiPageLoadFailed => '無法載入書籍清單';
+
+  @override
+  String wifiPageTotalBooks(String count) {
+    return '共 $count 本書籍';
+  }
+
+  @override
+  String wifiPageMatchStats(String matched, String total) {
+    return '符合 $matched 本 / 共 $total 本';
+  }
+
+  @override
+  String get wifiPageSelectAtLeastOne => '請至少勾選一本書';
+
+  @override
+  String get wifiPageDownloading => '下載中…';
+
+  @override
+  String wifiPageDownloadTriggered(String count) {
+    return '已觸發全部下載（共 $count 本）';
+  }
+
+  @override
+  String get wifiPageOutcomeImported => '已匯入';
+
+  @override
+  String get wifiPageOutcomeDuplicateSkipped => '已存在，已略過';
+
+  @override
+  String get wifiPageOutcomeUnsupportedFormat => '格式不支援';
+
+  @override
+  String get wifiPageOutcomeFailed => '匯入失敗';
+
+  @override
+  String wifiPageUploadResultLine(String name, String outcome) {
+    return '$name：$outcome';
+  }
+
+  @override
+  String get wifiPageUnknownFileName => '(未知檔名)';
+
+  @override
+  String get wifiPageUploadPreparing => '準備上傳…';
+
+  @override
+  String get wifiPageUploading => '正在上傳…';
+
+  @override
+  String wifiPageUploadingPercent(String percent) {
+    return '正在上傳… ($percent%)';
+  }
+
+  @override
+  String get wifiPageUploadProcessing => '上傳完成，手機端處理與匯入中，請稍候…';
+
+  @override
+  String get wifiPageUnknownSize => '未知';
+
+  @override
+  String wifiPageUploadFailedServer(String status) {
+    return '上傳失敗：伺服器回應錯誤 ($status)';
+  }
+
+  @override
+  String get wifiPageUploadFailedParse => '上傳失敗：無法解析伺服器回應';
+
+  @override
+  String get wifiPageUploadFailedNetwork => '上傳失敗：網路錯誤';
+
+  @override
+  String get wifiPageUploadAborted => '上傳已中斷';
+
+  @override
+  String get wifiPageUploadTimeout => '上傳逾時';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -3906,6 +4036,136 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get remoteCatalogUnknownBookTitle => '未知书名';
+
+  @override
+  String get wifiPageTitle => 'elinkBook WiFi 传书';
+
+  @override
+  String get wifiPageUploadHeading => '上传书籍';
+
+  @override
+  String get wifiPageDropzoneText => '拖放文件到此处，或';
+
+  @override
+  String get wifiPageChooseFile => '选择文件';
+
+  @override
+  String get wifiPageDownloadHeading => '下载书籍';
+
+  @override
+  String get wifiPageSearchPlaceholder => '搜索书名…';
+
+  @override
+  String get wifiPageSelectPage => '全选当前页';
+
+  @override
+  String get wifiPageClearSelection => '清除勾选';
+
+  @override
+  String wifiPageSelectedCount(String count) {
+    return '已勾选 $count 本';
+  }
+
+  @override
+  String get wifiPageLoading => '加载中…';
+
+  @override
+  String get wifiPagePrevPage => '上一页';
+
+  @override
+  String get wifiPageNextPage => '下一页';
+
+  @override
+  String wifiPagePageInfo(String page, String total) {
+    return '第 $page / $total 页';
+  }
+
+  @override
+  String get wifiPageDownloadSelected => '下载已勾选书籍';
+
+  @override
+  String get wifiPageNoBooks => '当前没有可下载的书籍';
+
+  @override
+  String get wifiPageNoMatch => '没有符合条件的书籍';
+
+  @override
+  String get wifiPageLoadFailed => '无法加载书籍列表';
+
+  @override
+  String wifiPageTotalBooks(String count) {
+    return '共 $count 本书籍';
+  }
+
+  @override
+  String wifiPageMatchStats(String matched, String total) {
+    return '符合 $matched 本 / 共 $total 本';
+  }
+
+  @override
+  String get wifiPageSelectAtLeastOne => '请至少勾选一本书';
+
+  @override
+  String get wifiPageDownloading => '下载中…';
+
+  @override
+  String wifiPageDownloadTriggered(String count) {
+    return '已触发全部下载（共 $count 本）';
+  }
+
+  @override
+  String get wifiPageOutcomeImported => '已导入';
+
+  @override
+  String get wifiPageOutcomeDuplicateSkipped => '已存在，已跳过';
+
+  @override
+  String get wifiPageOutcomeUnsupportedFormat => '格式不支持';
+
+  @override
+  String get wifiPageOutcomeFailed => '导入失败';
+
+  @override
+  String wifiPageUploadResultLine(String name, String outcome) {
+    return '$name：$outcome';
+  }
+
+  @override
+  String get wifiPageUnknownFileName => '(未知文件名)';
+
+  @override
+  String get wifiPageUploadPreparing => '准备上传…';
+
+  @override
+  String get wifiPageUploading => '正在上传…';
+
+  @override
+  String wifiPageUploadingPercent(String percent) {
+    return '正在上传… ($percent%)';
+  }
+
+  @override
+  String get wifiPageUploadProcessing => '上传完成，手机端正在处理并导入，请稍候…';
+
+  @override
+  String get wifiPageUnknownSize => '未知';
+
+  @override
+  String wifiPageUploadFailedServer(String status) {
+    return '上传失败：服务器响应错误 ($status)';
+  }
+
+  @override
+  String get wifiPageUploadFailedParse => '上传失败：无法解析服务器响应';
+
+  @override
+  String get wifiPageUploadFailedNetwork => '上传失败：网络错误';
+
+  @override
+  String get wifiPageUploadAborted => '上传已中断';
+
+  @override
+  String get wifiPageUploadTimeout => '上传超时';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -5858,4 +6118,134 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get remoteCatalogUnknownBookTitle => '未知書名';
+
+  @override
+  String get wifiPageTitle => 'elinkBook WiFi 傳書';
+
+  @override
+  String get wifiPageUploadHeading => '上傳書籍';
+
+  @override
+  String get wifiPageDropzoneText => '拖放檔案到此處，或';
+
+  @override
+  String get wifiPageChooseFile => '選擇檔案';
+
+  @override
+  String get wifiPageDownloadHeading => '下載書籍';
+
+  @override
+  String get wifiPageSearchPlaceholder => '搜尋書名…';
+
+  @override
+  String get wifiPageSelectPage => '全選目前頁';
+
+  @override
+  String get wifiPageClearSelection => '清除勾選';
+
+  @override
+  String wifiPageSelectedCount(String count) {
+    return '已勾選 $count 本';
+  }
+
+  @override
+  String get wifiPageLoading => '載入中…';
+
+  @override
+  String get wifiPagePrevPage => '上一頁';
+
+  @override
+  String get wifiPageNextPage => '下一頁';
+
+  @override
+  String wifiPagePageInfo(String page, String total) {
+    return '第 $page / $total 頁';
+  }
+
+  @override
+  String get wifiPageDownloadSelected => '下載已勾選書籍';
+
+  @override
+  String get wifiPageNoBooks => '目前沒有可下載的書籍';
+
+  @override
+  String get wifiPageNoMatch => '查無符合條件的書籍';
+
+  @override
+  String get wifiPageLoadFailed => '無法載入書籍清單';
+
+  @override
+  String wifiPageTotalBooks(String count) {
+    return '共 $count 本書籍';
+  }
+
+  @override
+  String wifiPageMatchStats(String matched, String total) {
+    return '符合 $matched 本 / 共 $total 本';
+  }
+
+  @override
+  String get wifiPageSelectAtLeastOne => '請至少勾選一本書';
+
+  @override
+  String get wifiPageDownloading => '下載中…';
+
+  @override
+  String wifiPageDownloadTriggered(String count) {
+    return '已觸發全部下載（共 $count 本）';
+  }
+
+  @override
+  String get wifiPageOutcomeImported => '已匯入';
+
+  @override
+  String get wifiPageOutcomeDuplicateSkipped => '已存在，已略過';
+
+  @override
+  String get wifiPageOutcomeUnsupportedFormat => '格式不支援';
+
+  @override
+  String get wifiPageOutcomeFailed => '匯入失敗';
+
+  @override
+  String wifiPageUploadResultLine(String name, String outcome) {
+    return '$name：$outcome';
+  }
+
+  @override
+  String get wifiPageUnknownFileName => '(未知檔名)';
+
+  @override
+  String get wifiPageUploadPreparing => '準備上傳…';
+
+  @override
+  String get wifiPageUploading => '正在上傳…';
+
+  @override
+  String wifiPageUploadingPercent(String percent) {
+    return '正在上傳… ($percent%)';
+  }
+
+  @override
+  String get wifiPageUploadProcessing => '上傳完成，手機端處理與匯入中，請稍候…';
+
+  @override
+  String get wifiPageUnknownSize => '未知';
+
+  @override
+  String wifiPageUploadFailedServer(String status) {
+    return '上傳失敗：伺服器回應錯誤 ($status)';
+  }
+
+  @override
+  String get wifiPageUploadFailedParse => '上傳失敗：無法解析伺服器回應';
+
+  @override
+  String get wifiPageUploadFailedNetwork => '上傳失敗：網路錯誤';
+
+  @override
+  String get wifiPageUploadAborted => '上傳已中斷';
+
+  @override
+  String get wifiPageUploadTimeout => '上傳逾時';
 }

@@ -2606,5 +2606,206 @@
   "remoteCatalogUnknownBookTitle": "未知書名",
   "@remoteCatalogUnknownBookTitle": {
     "description": "遠端 OPDS 目錄的書目缺少標題時的預設書名（由畫面層傳給解析器）"
+  },
+  "wifiPageTitle": "elinkBook WiFi 傳書",
+  "@wifiPageTitle": {
+    "description": "WiFi 傳書網頁（電腦瀏覽器開啟）的頁面標題與 h1"
+  },
+  "wifiPageUploadHeading": "上傳書籍",
+  "@wifiPageUploadHeading": {
+    "description": "WiFi 傳書網頁「上傳書籍」區塊標題"
+  },
+  "wifiPageDropzoneText": "拖放檔案到此處，或",
+  "@wifiPageDropzoneText": {
+    "description": "WiFi 傳書網頁拖放區文字，後面接「選擇檔案」連結"
+  },
+  "wifiPageChooseFile": "選擇檔案",
+  "@wifiPageChooseFile": {
+    "description": "WiFi 傳書網頁拖放區內開啟檔案選擇器的連結文字"
+  },
+  "wifiPageDownloadHeading": "下載書籍",
+  "@wifiPageDownloadHeading": {
+    "description": "WiFi 傳書網頁「下載書籍」區塊標題"
+  },
+  "wifiPageSearchPlaceholder": "搜尋書名…",
+  "@wifiPageSearchPlaceholder": {
+    "description": "WiFi 傳書網頁書名搜尋框的提示文字"
+  },
+  "wifiPageSelectPage": "全選目前頁",
+  "@wifiPageSelectPage": {
+    "description": "WiFi 傳書網頁按鈕：勾選目前頁的全部書籍"
+  },
+  "wifiPageClearSelection": "清除勾選",
+  "@wifiPageClearSelection": {
+    "description": "WiFi 傳書網頁按鈕：清除所有勾選"
+  },
+  "wifiPageSelectedCount": "已勾選 {count} 本",
+  "@wifiPageSelectedCount": {
+    "description": "WiFi 傳書網頁已勾選數量；{count} 為數量（以字串傳入，由網頁端代入）",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "wifiPageLoading": "載入中…",
+  "@wifiPageLoading": {
+    "description": "WiFi 傳書網頁書籍清單載入中的提示"
+  },
+  "wifiPagePrevPage": "上一頁",
+  "@wifiPagePrevPage": {
+    "description": "WiFi 傳書網頁分頁按鈕：上一頁"
+  },
+  "wifiPageNextPage": "下一頁",
+  "@wifiPageNextPage": {
+    "description": "WiFi 傳書網頁分頁按鈕：下一頁"
+  },
+  "wifiPagePageInfo": "第 {page} / {total} 頁",
+  "@wifiPagePageInfo": {
+    "description": "WiFi 傳書網頁目前頁碼；{page}、{total} 以字串傳入，由網頁端代入",
+    "placeholders": {
+      "page": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "wifiPageDownloadSelected": "下載已勾選書籍",
+  "@wifiPageDownloadSelected": {
+    "description": "WiFi 傳書網頁按鈕：下載已勾選的書籍"
+  },
+  "wifiPageNoBooks": "目前沒有可下載的書籍",
+  "@wifiPageNoBooks": {
+    "description": "WiFi 傳書網頁：手機端沒有任何可下載書籍時的提示"
+  },
+  "wifiPageNoMatch": "查無符合條件的書籍",
+  "@wifiPageNoMatch": {
+    "description": "WiFi 傳書網頁：搜尋後沒有符合的書籍時的提示"
+  },
+  "wifiPageLoadFailed": "無法載入書籍清單",
+  "@wifiPageLoadFailed": {
+    "description": "WiFi 傳書網頁：書籍清單載入失敗的提示"
+  },
+  "wifiPageTotalBooks": "共 {count} 本書籍",
+  "@wifiPageTotalBooks": {
+    "description": "WiFi 傳書網頁書籍總數；{count} 以字串傳入，由網頁端代入",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "wifiPageMatchStats": "符合 {matched} 本 / 共 {total} 本",
+  "@wifiPageMatchStats": {
+    "description": "WiFi 傳書網頁搜尋結果統計；{matched} 為符合數、{total} 為總數，皆以字串傳入",
+    "placeholders": {
+      "matched": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "wifiPageSelectAtLeastOne": "請至少勾選一本書",
+  "@wifiPageSelectAtLeastOne": {
+    "description": "WiFi 傳書網頁：未勾選任何書籍就按下載時的提示"
+  },
+  "wifiPageDownloading": "下載中…",
+  "@wifiPageDownloading": {
+    "description": "WiFi 傳書網頁：批次下載進行中的狀態文字"
+  },
+  "wifiPageDownloadTriggered": "已觸發全部下載（共 {count} 本）",
+  "@wifiPageDownloadTriggered": {
+    "description": "WiFi 傳書網頁：已觸發全部下載；{count} 為本數，以字串傳入",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "wifiPageOutcomeImported": "已匯入",
+  "@wifiPageOutcomeImported": {
+    "description": "WiFi 傳書網頁上傳結果：已匯入"
+  },
+  "wifiPageOutcomeDuplicateSkipped": "已存在，已略過",
+  "@wifiPageOutcomeDuplicateSkipped": {
+    "description": "WiFi 傳書網頁上傳結果：書籍已存在而略過"
+  },
+  "wifiPageOutcomeUnsupportedFormat": "格式不支援",
+  "@wifiPageOutcomeUnsupportedFormat": {
+    "description": "WiFi 傳書網頁上傳結果：檔案格式不支援"
+  },
+  "wifiPageOutcomeFailed": "匯入失敗",
+  "@wifiPageOutcomeFailed": {
+    "description": "WiFi 傳書網頁上傳結果：匯入失敗"
+  },
+  "wifiPageUploadResultLine": "{name}：{outcome}",
+  "@wifiPageUploadResultLine": {
+    "description": "WiFi 傳書網頁上傳結果列；{name} 為檔名、{outcome} 為結果文字，皆以字串傳入",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "outcome": {
+        "type": "String"
+      }
+    }
+  },
+  "wifiPageUnknownFileName": "(未知檔名)",
+  "@wifiPageUnknownFileName": {
+    "description": "WiFi 傳書網頁：上傳的檔案缺少檔名時顯示的名稱"
+  },
+  "wifiPageUploadPreparing": "準備上傳…",
+  "@wifiPageUploadPreparing": {
+    "description": "WiFi 傳書網頁：開始上傳前的準備狀態"
+  },
+  "wifiPageUploading": "正在上傳…",
+  "@wifiPageUploading": {
+    "description": "WiFi 傳書網頁：上傳進行中（無法得知進度百分比時）"
+  },
+  "wifiPageUploadingPercent": "正在上傳… ({percent}%)",
+  "@wifiPageUploadingPercent": {
+    "description": "WiFi 傳書網頁：上傳進行中並附進度；{percent} 為百分比數字，以字串傳入",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "wifiPageUploadProcessing": "上傳完成，手機端處理與匯入中，請稍候…",
+  "@wifiPageUploadProcessing": {
+    "description": "WiFi 傳書網頁：位元組已傳完，手機端處理與匯入中"
+  },
+  "wifiPageUnknownSize": "未知",
+  "@wifiPageUnknownSize": {
+    "description": "WiFi 傳書網頁：無法得知檔案總大小時的容量顯示"
+  },
+  "wifiPageUploadFailedServer": "上傳失敗：伺服器回應錯誤 ({status})",
+  "@wifiPageUploadFailedServer": {
+    "description": "WiFi 傳書網頁：伺服器回應錯誤狀態碼；{status} 為 HTTP 狀態碼，以字串傳入",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "wifiPageUploadFailedParse": "上傳失敗：無法解析伺服器回應",
+  "@wifiPageUploadFailedParse": {
+    "description": "WiFi 傳書網頁：伺服器回應無法解析"
+  },
+  "wifiPageUploadFailedNetwork": "上傳失敗：網路錯誤",
+  "@wifiPageUploadFailedNetwork": {
+    "description": "WiFi 傳書網頁：網路錯誤導致上傳失敗"
+  },
+  "wifiPageUploadAborted": "上傳已中斷",
+  "@wifiPageUploadAborted": {
+    "description": "WiFi 傳書網頁：上傳被中斷"
+  },
+  "wifiPageUploadTimeout": "上傳逾時",
+  "@wifiPageUploadTimeout": {
+    "description": "WiFi 傳書網頁：上傳逾時"
   }
 }

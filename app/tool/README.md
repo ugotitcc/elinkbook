@@ -74,6 +74,7 @@ node app/tool/check_l10n_hardcoded_strings.js --test-dir <目錄>
 - 參數運算式含 `??` 的 fallback（`label: x ?? '中文'`）——這是**刻意保留的逃逸口**，
   用於「無 `AppLocalizations` 時回退為固定字面值」的合法情境（例如
   `eb_sheet_shell.dart` 的「關閉」）；代價是硬編碼的 `?? '中文'` 也不會被抓。
+- `assets/wifi_transfer/index.html`（電腦瀏覽器上的傳書網頁）不在掃描範圍；它的「無中文字面值」由 `test/wifi_transfer/wifi_transfer_page_test.dart` 守住。
 - model 層字串與名稱不符合上述規則的參數。Issue 10 人工盤點時發現並已修正的例子：
   `Bookmark.defaultName()`、`TtsVoice` 的顯示名稱、OPDS 解析失敗的預設標題、`main.dart` 的
   通知頻道名稱——這類遺漏腳本仍抓不到，日後同類仍需靠 code review。

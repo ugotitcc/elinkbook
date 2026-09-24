@@ -280,6 +280,7 @@ Future<void> pumpLocalizedWidget(
 - **稽核範圍新增第二項檢查**：`app/test/**/*.dart` 內每個 `MaterialApp(`／`MaterialApp.router(` 必須在最外層參數帶 `locale`／`localizationsDelegates`／`supportedLocales`（缺 `locale:` 時 flutter_test 預設 en_US，日後在該測試加中文斷言會靜默失敗；缺委派則觸發 `AppLocalizations.of(context)!` 的 Null check）。刻意保留裸 `MaterialApp` 的測試（`eb_sheet_shell_test.dart` 的 fallback 案例）以「檔案＋數量」白名單放行。上方排除清單的「`app/test/**`」僅指測試 fixture／mock 資料中的中文字串不在稽核範圍，不含此項檢查。
 - **位置規則放寬**：由「字面值必須直接緊接關鍵字」改為「字面值位於文字參數的參數運算式內」（涵蓋三元運算式與字串串接；含 `??` 的 fallback 刻意放行），參數名由固定清單改為「完整名稱＋`Label`／`Title`／`Text`／`Tooltip`／`Message`／`Hint`／`Subtitle` 後綴」規則（涵蓋自訂 Widget 參數）。
 - **§7 位置標籤的延後事項已處理**：§7 提到 `Bookmark.defaultName` 是否也需要 l10n 化「留待該函式所屬模組一併檢視」，已於 Issue 10 處理——`Bookmark.defaultName(context, l10n)` 依介面語言輸出；書籤名稱是建立當下語言的快照，之後切換介面語言不會改變已建立的書籤。
+- **傳書網頁多語系（原 D 類第 9 處，使用者裁定併入）**：WiFi 傳書網頁（`assets/wifi_transfer/index.html`）由 App 內建 HTTP Server 提供、顯示於電腦瀏覽器，不在 Flutter Widget 樹內，故語言依 `Accept-Language` 決定（沿用 `resolveMaterialAppLocale`，與 App 內語言設定脫鉤），字串走 ARB（`wifiPage*`），由伺服器把字典內嵌於頁面；`index.html` 不得含中文字面值（由 `wifi_transfer_page_test.dart` 守住，稽核腳本僅掃 `app/lib/**/*.dart`，不涵蓋此檔）。伺服器不產生使用者可見文字：缺檔名回傳 `null` 由網頁顯示。
 
 ## 10. 下一步
 

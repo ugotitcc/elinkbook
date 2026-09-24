@@ -2025,4 +2025,136 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get remoteCatalogUnknownBookTitle => 'Unknown title';
+
+  @override
+  String get wifiPageTitle => 'elinkBook WiFi Transfer';
+
+  @override
+  String get wifiPageUploadHeading => 'Upload books';
+
+  @override
+  String get wifiPageDropzoneText => 'Drag and drop files here, or';
+
+  @override
+  String get wifiPageChooseFile => 'choose files';
+
+  @override
+  String get wifiPageDownloadHeading => 'Download books';
+
+  @override
+  String get wifiPageSearchPlaceholder => 'Search titles…';
+
+  @override
+  String get wifiPageSelectPage => 'Select this page';
+
+  @override
+  String get wifiPageClearSelection => 'Clear selection';
+
+  @override
+  String wifiPageSelectedCount(String count) {
+    return 'Selected: $count';
+  }
+
+  @override
+  String get wifiPageLoading => 'Loading…';
+
+  @override
+  String get wifiPagePrevPage => 'Previous';
+
+  @override
+  String get wifiPageNextPage => 'Next';
+
+  @override
+  String wifiPagePageInfo(String page, String total) {
+    return 'Page $page / $total';
+  }
+
+  @override
+  String get wifiPageDownloadSelected => 'Download selected books';
+
+  @override
+  String get wifiPageNoBooks => 'No books available for download';
+
+  @override
+  String get wifiPageNoMatch => 'No matching books';
+
+  @override
+  String get wifiPageLoadFailed => 'Unable to load the book list';
+
+  @override
+  String wifiPageTotalBooks(String count) {
+    return 'Total books: $count';
+  }
+
+  @override
+  String wifiPageMatchStats(String matched, String total) {
+    return 'Matches: $matched / $total';
+  }
+
+  @override
+  String get wifiPageSelectAtLeastOne => 'Select at least one book';
+
+  @override
+  String get wifiPageDownloading => 'Downloading…';
+
+  @override
+  String wifiPageDownloadTriggered(String count) {
+    return 'All downloads started (total: $count)';
+  }
+
+  @override
+  String get wifiPageOutcomeImported => 'Imported';
+
+  @override
+  String get wifiPageOutcomeDuplicateSkipped => 'Already exists, skipped';
+
+  @override
+  String get wifiPageOutcomeUnsupportedFormat => 'Unsupported format';
+
+  @override
+  String get wifiPageOutcomeFailed => 'Import failed';
+
+  @override
+  String wifiPageUploadResultLine(String name, String outcome) {
+    return '$name: $outcome';
+  }
+
+  @override
+  String get wifiPageUnknownFileName => '(unknown file name)';
+
+  @override
+  String get wifiPageUploadPreparing => 'Preparing upload…';
+
+  @override
+  String get wifiPageUploading => 'Uploading…';
+
+  @override
+  String wifiPageUploadingPercent(String percent) {
+    return 'Uploading… ($percent%)';
+  }
+
+  @override
+  String get wifiPageUploadProcessing =>
+      'Upload complete. The phone is processing and importing, please wait…';
+
+  @override
+  String get wifiPageUnknownSize => 'unknown';
+
+  @override
+  String wifiPageUploadFailedServer(String status) {
+    return 'Upload failed: server error ($status)';
+  }
+
+  @override
+  String get wifiPageUploadFailedParse =>
+      'Upload failed: unable to parse the server response';
+
+  @override
+  String get wifiPageUploadFailedNetwork => 'Upload failed: network error';
+
+  @override
+  String get wifiPageUploadAborted => 'Upload aborted';
+
+  @override
+  String get wifiPageUploadTimeout => 'Upload timed out';
 }

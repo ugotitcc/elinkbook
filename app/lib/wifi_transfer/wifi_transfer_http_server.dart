@@ -12,6 +12,7 @@ import 'package:shelf_multipart/shelf_multipart.dart';
 
 import '../library/models/library_enums.dart';
 import '../remote/opds_client.dart' show fileExtensionFor;
+import 'wifi_transfer_page.dart';
 import 'wifi_transfer_service.dart';
 
 /// 「來源」畫面 WiFi 傳書入口啟動的本機 HTTP Server 薄殼層
@@ -140,13 +141,20 @@ class WifiTransferHttpServer {
     // 更新後，PC 端瀏覽器快取了舊版 HTML/JS（此頁面每次由 App 當下的
     // asset bundle 即時提供，不該被瀏覽器快取）。
     if (request.method == 'GET' && (path == '' || path == 'index.html')) {
-      final html =
+      final template =
           await rootBundle.loadString('assets/wifi_transfer/index.html');
+      // 顯示面是電腦瀏覽器：語言依 Accept-Language 決定（見 wifi_transfer_page.dart），
+      // 因此同一網址的內容隨請求標頭而異，以 vary 明確標示。
+      final html = renderWifiTransferPage(
+        template,
+        resolveWifiPageLocale(request.headers['accept-language']),
+      );
       return shelf.Response.ok(
         html,
         headers: {
           'content-type': 'text/html; charset=utf-8',
           'cache-control': 'no-cache',
+          'vary': 'Accept-Language',
         },
       );
     }
@@ -274,7 +282,7 @@ class WifiTransferHttpServer {
         },
       );
     }
-    final results = <Map<String, String>>[];
+    final results = <Map<String, String?>>[];
     // 【`/receiving-code-review` 審查修正，review-plan-issue-3.md I-4】
     // 這裡攔截的是 shelf_multipart 解析器本身在 part 與 part 之間中斷（例如
     // 客戶端在兩個檔案之間斷線，錯誤發生在 await for 還沒產生下一個 data
@@ -299,8 +307,10 @@ class WifiTransferHttpServer {
             // 在此時斷線）：忽略，讓迴圈能繼續處理下一個 part（若解析器
             // 仍能定位邊界的話），不因單一 part 的清理失敗中斷整批上傳。
           }
+          // 缺檔名時回傳 null，由網頁端依瀏覽器語言顯示「未知檔名」
+          // （伺服器不產生使用者可見文字）。
           results.add({
-            'originalFileName': filename ?? '(未知檔名)',
+            'originalFileName': filename,
             'outcome': UploadOutcome.unsupportedFormat.name,
           });
           continue;
