@@ -52,7 +52,7 @@
 | 42 | `epic-41-search-architecture-hardening` 全文檢索模組架構深化機會（epic-10-search 開發後盤點） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 43 | `epic-42-text-conversion` 簡繁轉換（FR-48） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 44 | `epic-43-reader-architecture-hardening` 閱讀器模組架構深化機會（`reader_screen.dart`/`library_screen.dart` 熱點盤點） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
-| 45 | `epic-44-wifi-book-transfer` WiFi 傳書（同區網雙向搬書，免對方裝 App） | 🟡 開發中 (Active) | Issue 0-4（PR #257-#260）全數完成並合併，待歸檔 |
+| 45 | `epic-44-wifi-book-transfer` WiFi 傳書（同區網雙向搬書，免對方裝 App） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 46 | `epic-45-interface-i18n` 多語系介面（正體中文／簡體中文／英文，FR-49） | 🟡 開發中 (Active) | 全數完成，待歸檔 |
 
 **狀態燈號定義**：

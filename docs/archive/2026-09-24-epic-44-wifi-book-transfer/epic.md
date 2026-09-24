@@ -1,7 +1,7 @@
 # `epic-44-wifi-book-transfer` WiFi 傳書
 
-**狀態：** 🟡 開發中 (Active)
-**存放路徑：** `docs/epics/epic-44-wifi-book-transfer/`
+**狀態：** 🟢 已歸檔 (Archived)
+**存放路徑：** `docs/archive/2026-09-24-epic-44-wifi-book-transfer/`
 **關聯 PRD 章節：** 無直接對應 FR（延伸 FR-02 檔案匯入，新增裝置間直接搬移書籍的能力）
 
 ## 開發記錄
