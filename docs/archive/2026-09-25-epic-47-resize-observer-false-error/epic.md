@@ -1,7 +1,7 @@
 # `epic-47-resize-observer-false-error` （缺陷）全域 JS 錯誤捕捉把良性 ResizeObserver 警告誤報為開書失敗
 
-**狀態：** 🟡 開發中 (Active)
-**存放路徑：** `docs/epics/epic-47-resize-observer-false-error/`
+**狀態：** 🟢 已歸檔 (Archived)
+**存放路徑：** `docs/archive/2026-09-25-epic-47-resize-observer-false-error/`
 **關聯 PRD 章節：** 無直接對應 FR（診斷與開書流程的穩定性）
 
 ## 背景
@@ -39,4 +39,4 @@
 
 **2026-09-25 PR #274 已合併進 `main`**（merge commit `5706eb17`）。修正已全數完成。
 
-下一步：依 SDD 流程歸檔。
+**2026-09-25 歸檔**至 `docs/archive/2026-09-25-epic-47-resize-observer-false-error/`（reviews 依慣例不進版控）。
