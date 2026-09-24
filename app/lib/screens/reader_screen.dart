@@ -1335,6 +1335,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final repository = widget.bookmarksRepository;
     final positionInfo = _epubPositionInfo;
     if (repository == null || positionInfo == null) return;
+    // 書籤預設名稱是建立當下語言的快照；在 await 之前取得 l10n
+    final l10n = AppLocalizations.of(context)!;
     await bookmark_toggle.toggleBookmark(
       repository: repository,
       bookId: widget.bookId,
@@ -1343,10 +1345,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       build: () => Bookmark(
         id: const Uuid().v4(),
         bookId: widget.bookId,
-        name: Bookmark.defaultName(BookmarkPositionContext(
-          epubLocatorJson: positionInfo.locatorJson,
-          progression: positionInfo.progression,
-        )),
+        name: Bookmark.defaultName(
+          BookmarkPositionContext(
+            epubLocatorJson: positionInfo.locatorJson,
+            progression: positionInfo.progression,
+          ),
+          l10n,
+        ),
         epubLocatorJson: positionInfo.locatorJson,
         progression: positionInfo.progression,
       ),
@@ -1362,6 +1367,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final repository = widget.bookmarksRepository;
     final pageIndex = _pdfPageInfo?.pageIndex;
     if (repository == null || pageIndex == null) return;
+    final l10n = AppLocalizations.of(context)!;
     await bookmark_toggle.toggleBookmark(
       repository: repository,
       bookId: widget.bookId,
@@ -1369,7 +1375,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       build: () => Bookmark(
         id: const Uuid().v4(),
         bookId: widget.bookId,
-        name: Bookmark.defaultName(BookmarkPositionContext(pdfPageIndex: pageIndex)),
+        name: Bookmark.defaultName(BookmarkPositionContext(pdfPageIndex: pageIndex), l10n),
         pdfPageIndex: pageIndex,
       ),
     );
@@ -2727,7 +2733,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 for (final voice in voices)
                   RadioListTile<String>(
                     key: Key('reader_tts_voice_option_${voice.id}'),
-                    title: Text(voice.displayName),
+                    title: Text(localizeTtsVoiceName(voice, AppLocalizations.of(context)!)),
                     value: voice.id,
                   ),
               ],

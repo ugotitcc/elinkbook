@@ -2000,4 +2000,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String markdownExportAnnotationHeading(String label, String position) {
     return '### 📌 $label (Position: $position)';
   }
+
+  @override
+  String bookmarkDefaultNamePdfPage(int page) {
+    return 'Page $page';
+  }
+
+  @override
+  String bookmarkDefaultNamePercent(int percent) {
+    return 'At $percent%';
+  }
+
+  @override
+  String get bookmarkDefaultNameFallback => 'Bookmark';
+
+  @override
+  String get ttsNotificationChannelName => 'Reading aloud';
+
+  @override
+  String get ttsVoiceSystemDefault => 'System default voice';
+
+  @override
+  String get remoteCatalogUnnamedCategory => 'Untitled category';
+
+  @override
+  String get remoteCatalogUnknownBookTitle => 'Unknown title';
 }

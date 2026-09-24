@@ -127,3 +127,19 @@ bool _listEquals<T>(List<T> a, List<T> b) {
   }
   return true;
 }
+
+/// 解析 OPDS Feed 時，來源缺少 `<title>` 所使用的後備標題（epic-45-interface-i18n
+/// Issue 10）。解析器本身不依賴 `BuildContext`／`AppLocalizations`，由呼叫端
+/// （畫面層）依目前介面語言建構後，隨每次 `OpdsClient.fetchFeed()` 傳入。
+///
+/// 刻意沒有提供預設值：若有預設（例如正體中文），任何忘記傳入的呼叫端都會靜默顯示
+/// 寫死的中文；必填參數讓遺漏在編譯期就被抓到。
+class OpdsFallbackTitles {
+  /// 書目條目缺 `<title>` 時的書名。
+  final String unknownBook;
+
+  /// 分類導覽連結缺標題時的名稱。
+  final String unnamedCategory;
+
+  const OpdsFallbackTitles({required this.unknownBook, required this.unnamedCategory});
+}

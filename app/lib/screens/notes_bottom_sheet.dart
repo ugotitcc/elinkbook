@@ -307,6 +307,8 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   }
 
   Future<void> _toggleBookmark() async {
+    // 在任何 await 之前取得，避免跨非同步間隔使用 BuildContext
+    final l10n = AppLocalizations.of(context)!;
     final existing = _bookmarkAtCurrentPosition;
     if (existing != null) {
       await widget.bookmarksRepository.delete(existing.id);
@@ -314,7 +316,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
       await widget.bookmarksRepository.insert(Bookmark(
         id: const Uuid().v4(),
         bookId: widget.bookId,
-        name: Bookmark.defaultName(widget.currentPosition),
+        name: Bookmark.defaultName(widget.currentPosition, l10n),
         epubLocatorJson: widget.currentPosition.epubLocatorJson,
         progression: widget.currentPosition.progression,
         pdfPageIndex: widget.currentPosition.pdfPageIndex,

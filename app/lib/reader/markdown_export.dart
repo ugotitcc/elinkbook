@@ -56,7 +56,7 @@ String generateMarkdownExport({
           ? _highlightStyleLabel(highlight.style, l10n)
           : l10n.readerNotesSheetNoteLabel;
       buffer.writeln(
-        l10n.markdownExportAnnotationHeading(label, _positionLabel(item)),
+        l10n.markdownExportAnnotationHeading(label, _positionLabel(item, l10n)),
       );
       final note = item.note;
       if (note != null) {
@@ -104,15 +104,19 @@ String _highlightStyleLabel(HighlightStyle style, AppLocalizations l10n) {
 /// 一致，直接透傳即可，不重新實作換算邏輯。`chapterTitle` 刻意留空：
 /// 逐筆劃線/備註即時反查所在章節需要額外貫穿 `TocEntry` 清單，超出本工單
 /// 範疇，`Bookmark.defaultName` 對 `chapterTitle == null` 已有既定、已測試
-/// 的百分比／頁碼回退行為（見 `bookmark.dart`）。[Bookmark.defaultName] 本身
-/// 的輸出文字不在 Issue 8 翻譯範圍內（spec.md §7），故此函式不需要 [l10n]。
-String _positionLabel(AnnotationListItem item) {
+/// 的百分比／頁碼回退行為（見 `bookmark.dart`）。位置標籤文字依 [l10n] 產生
+/// （epic-45-interface-i18n Issue 10：[Bookmark.defaultName] 已本地化，取代
+/// 原 spec.md §7 的排除）。
+String _positionLabel(AnnotationListItem item, AppLocalizations l10n) {
   final pdfPageIndex = item.highlight?.pdfPageIndex ?? item.note?.pdfPageIndex;
   final progression = item.highlight?.progression ?? item.note?.progression;
-  return Bookmark.defaultName(BookmarkPositionContext(
-    pdfPageIndex: pdfPageIndex,
-    progression: progression,
-  ));
+  return Bookmark.defaultName(
+    BookmarkPositionContext(
+      pdfPageIndex: pdfPageIndex,
+      progression: progression,
+    ),
+    l10n,
+  );
 }
 
 /// 依目前介面語言格式化導出時間（epic-45-interface-i18n Issue 8，

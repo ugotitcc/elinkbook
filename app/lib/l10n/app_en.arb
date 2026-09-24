@@ -549,5 +549,12 @@
   "markdownExportNoBookmarks": "*(No bookmarks yet)*",
   "markdownExportAnnotationsSection": "## ✏️ Highlights & Notes ({count})",
   "markdownExportNoAnnotations": "*(No highlights or notes yet)*",
-  "markdownExportAnnotationHeading": "### 📌 {label} (Position: {position})"
+  "markdownExportAnnotationHeading": "### 📌 {label} (Position: {position})",
+  "bookmarkDefaultNamePdfPage": "Page {page}",
+  "bookmarkDefaultNamePercent": "At {percent}%",
+  "bookmarkDefaultNameFallback": "Bookmark",
+  "ttsNotificationChannelName": "Reading aloud",
+  "ttsVoiceSystemDefault": "System default voice",
+  "remoteCatalogUnnamedCategory": "Untitled category",
+  "remoteCatalogUnknownBookTitle": "Unknown title"
 }

@@ -2568,5 +2568,43 @@
         "type": "String"
       }
     }
+  },
+  "bookmarkDefaultNamePdfPage": "第 {page} 頁",
+  "@bookmarkDefaultNamePdfPage": {
+    "description": "新增書籤時的預設名稱（PDF），{page} 為頁碼（1-based）",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "bookmarkDefaultNamePercent": "{percent}% 處",
+  "@bookmarkDefaultNamePercent": {
+    "description": "新增書籤時的預設名稱（無章節名稱時），{percent} 為全書進度百分比（0–100）；同時用於 Markdown 匯出的位置標籤",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bookmarkDefaultNameFallback": "書籤",
+  "@bookmarkDefaultNameFallback": {
+    "description": "新增書籤時，章節名稱與進度皆無法取得時的通用預設名稱"
+  },
+  "ttsNotificationChannelName": "朗讀播放中",
+  "@ttsNotificationChannelName": {
+    "description": "Android 朗讀（TTS）前景服務的通知頻道名稱，顯示於系統的通知設定。頻道於啟動時建立，語言以啟動當下為準（無 BuildContext，見 startup_localizations.dart）"
+  },
+  "ttsVoiceSystemDefault": "系統預設語音",
+  "@ttsVoiceSystemDefault": {
+    "description": "朗讀語音清單中內建的「系統預設語音」選項顯示名稱（TtsVoice.systemDefault，依語音 id 判斷後轉譯）"
+  },
+  "remoteCatalogUnnamedCategory": "未命名分類",
+  "@remoteCatalogUnnamedCategory": {
+    "description": "遠端 OPDS 目錄的分類導覽連結缺少標題時的預設名稱（由畫面層傳給解析器）"
+  },
+  "remoteCatalogUnknownBookTitle": "未知書名",
+  "@remoteCatalogUnknownBookTitle": {
+    "description": "遠端 OPDS 目錄的書目缺少標題時的預設書名（由畫面層傳給解析器）"
   }
 }

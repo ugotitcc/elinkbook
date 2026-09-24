@@ -1391,6 +1391,26 @@ void main() {
     // 產生的檔案型態）驗證欄位持久化與檔案存活。
   });
 
+  // 每個語言各自一個測試：同一個 testWidgets 內連續 pumpWidget 會沿用同一個 State
+  // （不會重跑 initState，也就不會使用新的 client）。
+  for (final (locale, unknownBook, unnamedCategory) in [
+    (const Locale('zh', 'TW'), '未知書名', '未命名分類'),
+    (const Locale('zh', 'CN'), '未知书名', '未命名分类'),
+    (const Locale('en'), 'Unknown title', 'Untitled category'),
+  ]) {
+    testWidgets('$locale 介面下，把依語言的 OPDS 後備標題傳給 OpdsClient.fetchFeed',
+        (tester) async {
+      final opdsClient = FakeOpdsClient(
+        feeds: {server.baseUrl: const OpdsFeed(title: 'root', entries: [])},
+      );
+      await pumpScreen(tester, opdsClient: opdsClient, locale: locale);
+
+      expect(opdsClient.fetchFeedFallbackTitles, hasLength(1));
+      expect(opdsClient.fetchFeedFallbackTitles.single.unknownBook, unknownBook);
+      expect(opdsClient.fetchFeedFallbackTitles.single.unnamedCategory, unnamedCategory);
+    });
+  }
+
   testWidgets('英文介面下按鈕與下載佇列訊息正確顯示（含 ICU plural）', (tester) async {
     final opdsClient = FakeOpdsClient(
       feeds: {

@@ -3406,6 +3406,48 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'### 📌 {label}（位置：{position}）'**
   String markdownExportAnnotationHeading(String label, String position);
+
+  /// 新增書籤時的預設名稱（PDF），{page} 為頁碼（1-based）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'第 {page} 頁'**
+  String bookmarkDefaultNamePdfPage(int page);
+
+  /// 新增書籤時的預設名稱（無章節名稱時），{percent} 為全書進度百分比（0–100）；同時用於 Markdown 匯出的位置標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{percent}% 處'**
+  String bookmarkDefaultNamePercent(int percent);
+
+  /// 新增書籤時，章節名稱與進度皆無法取得時的通用預設名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'書籤'**
+  String get bookmarkDefaultNameFallback;
+
+  /// Android 朗讀（TTS）前景服務的通知頻道名稱，顯示於系統的通知設定。頻道於啟動時建立，語言以啟動當下為準（無 BuildContext，見 startup_localizations.dart）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'朗讀播放中'**
+  String get ttsNotificationChannelName;
+
+  /// 朗讀語音清單中內建的「系統預設語音」選項顯示名稱（TtsVoice.systemDefault，依語音 id 判斷後轉譯）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'系統預設語音'**
+  String get ttsVoiceSystemDefault;
+
+  /// 遠端 OPDS 目錄的分類導覽連結缺少標題時的預設名稱（由畫面層傳給解析器）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'未命名分類'**
+  String get remoteCatalogUnnamedCategory;
+
+  /// 遠端 OPDS 目錄的書目缺少標題時的預設書名（由畫面層傳給解析器）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'未知書名'**
+  String get remoteCatalogUnknownBookTitle;
 }
 
 class _AppLocalizationsDelegate

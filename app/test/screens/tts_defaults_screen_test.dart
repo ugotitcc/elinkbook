@@ -279,6 +279,34 @@ void main() {
     expect(tester.widget<IconButton>(decrementFinder).onPressed, isNull);
   });
 
+  testWidgets('簡體中文與英文介面下，語音清單的內建「系統預設語音」依語言顯示', (tester) async {
+    for (final (locale, expected) in [
+      (const Locale('zh', 'CN'), '系统默认语音'),
+      (const Locale('en'), 'System default voice'),
+    ]) {
+      await tester.pumpWidget(MaterialApp(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: TtsDefaultsScreen(
+          prefsManager: FakeReaderPrefsManager(),
+          ttsProvider: FakeTtsProvider(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(Key('tts_defaults_voice_${TtsVoice.systemDefault.id}')),
+          matching: find.text(expected),
+        ),
+        findsOneWidget,
+        reason: '$locale 介面下應顯示「$expected」',
+      );
+      expect(find.text('系統預設語音'), findsNothing);
+    }
+  });
+
   testWidgets('英文介面下標題與分區標題正確以英文渲染', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(

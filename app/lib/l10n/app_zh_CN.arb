@@ -549,5 +549,12 @@
   "markdownExportNoBookmarks": "*(尚未加入书签)*",
   "markdownExportAnnotationsSection": "## ✏️ 划线与个人备注 ({count})",
   "markdownExportNoAnnotations": "*(尚未加入任何划线或备注)*",
-  "markdownExportAnnotationHeading": "### 📌 {label}（位置：{position}）"
+  "markdownExportAnnotationHeading": "### 📌 {label}（位置：{position}）",
+  "bookmarkDefaultNamePdfPage": "第 {page} 页",
+  "bookmarkDefaultNamePercent": "{percent}% 处",
+  "bookmarkDefaultNameFallback": "书签",
+  "ttsNotificationChannelName": "朗读播放中",
+  "ttsVoiceSystemDefault": "系统默认语音",
+  "remoteCatalogUnnamedCategory": "未命名分类",
+  "remoteCatalogUnknownBookTitle": "未知书名"
 }

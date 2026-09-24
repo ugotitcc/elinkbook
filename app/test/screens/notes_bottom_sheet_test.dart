@@ -223,6 +223,41 @@ void main() {
     expect(find.text('已加入此頁書籤'), findsOneWidget);
   });
 
+  testWidgets(
+      '英文介面下新增書籤，預設名稱以英文固化寫入 repository'
+      '（epic-45-interface-i18n Issue 10：書籤名稱是建立當下語言的快照）', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      locale: const Locale('en'),
+      currentPosition: const BookmarkPositionContext(pdfPageIndex: 4),
+    );
+
+    await tester.tap(find.byKey(const Key('notes_sheet_bookmark_toggle')));
+    await tester.pump();
+
+    expect(find.text('Page 5'), findsOneWidget);
+    final saved = await repository.listByBook('b1');
+    expect(saved.single.name, 'Page 5');
+  });
+
+  testWidgets('簡體中文介面下新增書籤，無章節名稱時預設名稱為「N% 处」', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      locale: const Locale('zh', 'CN'),
+      currentPosition: const BookmarkPositionContext(progression: 0.42),
+    );
+
+    await tester.tap(find.byKey(const Key('notes_sheet_bookmark_toggle')));
+    await tester.pump();
+
+    final saved = await repository.listByBook('b1');
+    expect(saved.single.name, '42% 处');
+  });
+
   testWidgets('已有書籤時再次點擊 toggle 按鈕，移除該筆書籤', (tester) async {
     final repository = FakeBookmarksRepository();
     await repository.insert(

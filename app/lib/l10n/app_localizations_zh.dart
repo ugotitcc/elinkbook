@@ -1929,6 +1929,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String markdownExportAnnotationHeading(String label, String position) {
     return '### 📌 $label（位置：$position）';
   }
+
+  @override
+  String bookmarkDefaultNamePdfPage(int page) {
+    return '第 $page 頁';
+  }
+
+  @override
+  String bookmarkDefaultNamePercent(int percent) {
+    return '$percent% 處';
+  }
+
+  @override
+  String get bookmarkDefaultNameFallback => '書籤';
+
+  @override
+  String get ttsNotificationChannelName => '朗讀播放中';
+
+  @override
+  String get ttsVoiceSystemDefault => '系統預設語音';
+
+  @override
+  String get remoteCatalogUnnamedCategory => '未命名分類';
+
+  @override
+  String get remoteCatalogUnknownBookTitle => '未知書名';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -3856,6 +3881,31 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String markdownExportAnnotationHeading(String label, String position) {
     return '### 📌 $label（位置：$position）';
   }
+
+  @override
+  String bookmarkDefaultNamePdfPage(int page) {
+    return '第 $page 页';
+  }
+
+  @override
+  String bookmarkDefaultNamePercent(int percent) {
+    return '$percent% 处';
+  }
+
+  @override
+  String get bookmarkDefaultNameFallback => '书签';
+
+  @override
+  String get ttsNotificationChannelName => '朗读播放中';
+
+  @override
+  String get ttsVoiceSystemDefault => '系统默认语音';
+
+  @override
+  String get remoteCatalogUnnamedCategory => '未命名分类';
+
+  @override
+  String get remoteCatalogUnknownBookTitle => '未知书名';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -5783,4 +5833,29 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String markdownExportAnnotationHeading(String label, String position) {
     return '### 📌 $label（位置：$position）';
   }
+
+  @override
+  String bookmarkDefaultNamePdfPage(int page) {
+    return '第 $page 頁';
+  }
+
+  @override
+  String bookmarkDefaultNamePercent(int percent) {
+    return '$percent% 處';
+  }
+
+  @override
+  String get bookmarkDefaultNameFallback => '書籤';
+
+  @override
+  String get ttsNotificationChannelName => '朗讀播放中';
+
+  @override
+  String get ttsVoiceSystemDefault => '系統預設語音';
+
+  @override
+  String get remoteCatalogUnnamedCategory => '未命名分類';
+
+  @override
+  String get remoteCatalogUnknownBookTitle => '未知書名';
 }

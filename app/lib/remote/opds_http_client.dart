@@ -29,7 +29,12 @@ class OpdsHttpClient implements OpdsClient {
   @override
   Future<bool> testConnection(RemoteServerProfile server, {String? password}) async {
     try {
-      await fetchFeed(server, password: password);
+      // 只關心「能否成功取得並解析」，標題內容不會被使用，後備標題給空字串即可
+      await fetchFeed(
+        server,
+        password: password,
+        fallbackTitles: const OpdsFallbackTitles(unknownBook: '', unnamedCategory: ''),
+      );
       return true;
     } catch (_) {
       return false;
@@ -41,6 +46,7 @@ class OpdsHttpClient implements OpdsClient {
     RemoteServerProfile server, {
     String? password,
     String? feedUrl,
+    required OpdsFallbackTitles fallbackTitles,
   }) async {
     final url = feedUrl ?? server.baseUrl;
     _visitedFeedUrls.add(url);
@@ -52,7 +58,11 @@ class OpdsHttpClient implements OpdsClient {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw HttpException('OPDS 伺服器回應 ${response.statusCode}', uri: Uri.parse(url));
       }
-      final parsed = _parser.parse(response.body, Uri.parse(url));
+      final parsed = _parser.parse(
+        response.body,
+        Uri.parse(url),
+        fallbackTitles: fallbackTitles,
+      );
       // 分頁循環防護：若 nextUrl 指回已造訪過的 URL（部分不規範伺服器的
       // 已知行為），視為分頁結束，不繼續請求，避免無限遞迴。
       final nextUrl = parsed.nextUrl != null && _visitedFeedUrls.contains(parsed.nextUrl)

@@ -549,5 +549,12 @@
   "markdownExportNoBookmarks": "*(尚未加入書籤)*",
   "markdownExportAnnotationsSection": "## ✏️ 劃線與個人備註 ({count})",
   "markdownExportNoAnnotations": "*(尚未加入任何劃線或備註)*",
-  "markdownExportAnnotationHeading": "### 📌 {label}（位置：{position}）"
+  "markdownExportAnnotationHeading": "### 📌 {label}（位置：{position}）",
+  "bookmarkDefaultNamePdfPage": "第 {page} 頁",
+  "bookmarkDefaultNamePercent": "{percent}% 處",
+  "bookmarkDefaultNameFallback": "書籤",
+  "ttsNotificationChannelName": "朗讀播放中",
+  "ttsVoiceSystemDefault": "系統預設語音",
+  "remoteCatalogUnnamedCategory": "未命名分類",
+  "remoteCatalogUnknownBookTitle": "未知書名"
 }
