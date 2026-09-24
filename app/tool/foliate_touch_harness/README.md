@@ -40,4 +40,5 @@ node run-all.mjs
   iframe」的 load，並在延遲期間改變欄數，斷言所有章節文件的 `column-width` 一致。移除 `main.js` 的
   「章節載入後比對 column-width、不一致就 `renderer.render()`」防護時本場景會 FAIL（已驗證 6/6）。
   這個場景涵蓋的是「時序競爭」本身；真機上的實際觸發來源是開書時 `applyPreferences()` 於首章尚未載完就執行。
-- `scenario-writing-mode-autodetect.mjs`：排版方向自動偵測全書預掃（epic-46）。「採用書籍排版」模式下開書前預掃全書（OPF `primary-writing-mode`、外部 CSS、XHTML 內嵌樣式）判定直橫排，7 案例涵蓋 `-webkit-` 前綴、`tb-rl` 舊式別名、內嵌 `style` 屬性（含單引號）與註解反例；全書任一處宣告直排即為直排。
+- `scenario-writing-mode-autodetect.mjs`：排版方向自動偵測全書預掃（epic-46）。「採用書籍排版」模式下開書前預掃全書（OPF `primary-writing-mode`、外部 CSS、XHTML 內嵌樣式）判定直橫排，10 案例涵蓋 `-webkit-` 前綴、`tb-rl` 舊式別名、內嵌 `style` 屬性（含單引號）、manifest 缺檔 CSS，以及註解／正文文字／非法值 `tb-lr` 反例；全書任一處宣告直排即為直排。
+

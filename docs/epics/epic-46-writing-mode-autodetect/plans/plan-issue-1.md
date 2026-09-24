@@ -40,7 +40,7 @@ openBook()
 ## Global Constraints
 
 - **不修改釘定的 vendor 檔案**（`epub.js`／`paginator.js`／`view.js` 等，ADR 0011）。只使用它們的公開欄位：`book.resources.manifest`（`{href, mediaType, ...}`，`epub.js:781`）、`book.resources.spine`／`getItemByID()`、`book.resources.opf`（XMLDocument）、`book.loadText(href)`。
-- **使用者手動覆寫優先**：`initialPrefs.writingMode` 有值時，偵測結果不影響實際套用的方向（既有的 `??` 順序不變）。但預掃仍然照常執行，理由是保持邏輯單純；成本見「需人類確認的設計決定」第 2 點。
+- **使用者手動覆寫優先**：`initialPrefs.writingMode` 有值時，偵測結果不影響實際套用的方向（既有的 `??` 順序不變），**而且略過預掃**（程式審查 M-2 修訂，見「需人類確認的設計決定」第 2 點）。
 - **索引模式（`isIndexMode`）略過預掃**：全文索引會對每本書開一次 headless WebView，但索引不需要排版方向，不應增加成本。
 - 預掃失敗（例外）時一律吞掉並退回 `null`，也就是回到既有的延遲偵測，**不得讓開書失敗**。
 - 不引入新的較新 ES API：只用 `for…of`、`RegExp.test`、`String.replace`，**不用** `matchAll`／`replaceAll`（見 `_esCompatPolyfillJs` 與 `app/tool/check_foliate_es_compat.js`）。
@@ -50,7 +50,7 @@ openBook()
 ## 需人類確認的設計決定
 
 1. **XHTML 內嵌樣式只在 CSS 和 metadata 都沒命中時才掃描，而且上限是 spine 的前 `N = 20` 個文件。** 掃描外部 CSS 很便宜（通常只有 1～5 個幾 KB 的檔案），但 XHTML 是全書正文，數百章的書全部解壓會明顯拖慢開書。內嵌樣式的直排宣告通常出現在最前面幾章（封面／扉頁／第一章都會套用），20 是經驗值。調整方式：修改 Task 2 的常數 `INLINE_STYLE_SCAN_LIMIT` 即可；如果決定完全不掃 XHTML，就刪掉 Task 2 的第 3 段和 Task 1 的場景 C。
-2. **使用者已手動覆寫時仍照常預掃。** 替代做法是 `initialPrefs.writingMode` 有值就跳過預掃，可以省下這段成本。但這樣一來，使用者從「強制橫排」切回「採用書籍排版」時沒有偵測值可用。目前 Dart 端切回時不會重新開書，而是透過 `_autoDetectedWritingMode` 取得值，這個值就是開書當下的偵測結果。所以**必須照常預掃**，否則切回「採用書籍排版」會拿到錯誤值。本點只是記錄這項限制，不需要選擇。
+2. **使用者已手動覆寫時略過預掃**（2026-09-25 程式審查 M-2 修訂，推翻原本「仍照常預掃」的決定）。原本的理由是「切回採用書籍排版時需要偵測值」，但查證後不成立：`main.js` 的 `onPageRendered` 回傳 `initialPrefs.writingMode ?? detectedBookWritingMode`，有覆寫時永遠回傳覆寫值，Dart 端 `_autoDetectedWritingMode` 存的也是覆寫值，預掃結果從未傳到 Dart。因此照常預掃純屬多餘成本，改為 `!isIndexMode && !initialPrefs.writingMode` 時才預掃。「覆寫狀態下切回採用書籍排版，拿到的是覆寫值」是既有行為，不在本 Issue 範圍。
 3. **Regex 的邊界字元維持原本的 `[^-]`**，不另外收緊成 `[^-\w]`。目的是只擴充前綴和數值，不改變既有的匹配語意（外科手術式修改）。前綴與數值的取捨依「偵測結果要跟 WebView 實際渲染一致」判斷（見審查修訂 M-3）：支援 `-epub-`／`-webkit-`／`tb-rl`／`tb`，不支援 `-ms-`。
 
 ## 檔案結構
@@ -69,7 +69,7 @@ openBook()
 
 **Files：** 新增 `app/tool/foliate_touch_harness/scenario-writing-mode-autodetect.mjs`
 
-- [ ] **Step 1：撰寫場景。** 比照 `scenario-preload-stale-layout.mjs` 的寫法，用 `buildStoredZip` 在記憶體中組出 EPUB（不提交二進位 fixture）。共用一個 `buildEpub({ opfMeta, cssFiles, chapters })` 產生器，開書時固定傳入 `writingMode: null`（**不能省略**：`launchHarnessPage` 的預設值是 `'horizontal'`，傳 `null` 才能模擬「採用書籍排版」，也就是 `initialPrefs.writingMode ?? detected` 會走到偵測值）。每個案例只需要檢查 `harnessEvents(page)` 中第一個 `onPageRendered` 的 `args[0]`。
+- [x] **Step 1：撰寫場景。** 比照 `scenario-preload-stale-layout.mjs` 的寫法，用 `buildStoredZip` 在記憶體中組出 EPUB（不提交二進位 fixture）。共用一個 `buildEpub({ opfMeta, cssFiles, chapters })` 產生器，開書時固定傳入 `writingMode: null`（**不能省略**：`launchHarnessPage` 的預設值是 `'horizontal'`，傳 `null` 才能模擬「採用書籍排版」，也就是 `initialPrefs.writingMode ?? detected` 會走到偵測值）。每個案例只需要檢查 `harnessEvents(page)` 中第一個 `onPageRendered` 的 `args[0]`。
 
   | 案例 | 構造 | 預期 | 修改前 |
   |---|---|---|---|
@@ -83,7 +83,7 @@ openBook()
 
   場景 A 另外輸出**診斷用數值**（`report` 的 detail 欄位，不作為 PASS 條件）：第一個章節 iframe 裡 `documentElement`、`body`、`.main` 三者的 `getComputedStyle().writingMode`，以及 `renderer.getContents()[0].doc.documentElement.style.columnWidth`。這是用來驗證 Discovery 的推測：「html／body 被強制成 `horizontal-tb`，但 `.main` 仍然是 `vertical-rl`，所以 Paginator 用橫排的欄寬去排直排內容」。修改前後的數值都要記錄到 `epic.md`。
 
-- [ ] **Step 2：確認紅燈。**
+- [x] **Step 2：確認紅燈。**
 
   ```bash
   cd app/tool/foliate_touch_harness && node scenario-writing-mode-autodetect.mjs
@@ -91,7 +91,7 @@ openBook()
 
   預期：A、B、C、C-2、D、D-2、E 全部 FAIL，且 A 的診斷數值有印出來。注意兩種失敗的原因不同：A～D-2 是舊程式**漏判**（回報 `horizontal`）；E 則是舊程式沒有去除 CSS 註解，把註解裡的宣告**誤判**成 `vertical`。如果 A 回報 `vertical`，代表對 Regex 或 transformTarget 時序的理解有誤，**停下來回報，不要繼續**。
 
-- [ ] **Step 3：把場景 A 的修改前診斷數值寫進 `epic.md`**，作為「後果已重現」的證據。
+- [x] **Step 3：把場景 A 的修改前診斷數值寫進 `epic.md`**，作為「後果已重現」的證據。
 
 ---
 
@@ -99,7 +99,7 @@ openBook()
 
 **Files：** 修改 `app/android/app/src/main/assets/foliate/main.js`
 
-- [ ] **Step 1：擴充 Regex，並新增判讀 helper**（替換 `main.js:99-104`，註解同步改寫）：
+- [x] **Step 1：擴充 Regex，並新增判讀 helper**（替換 `main.js:99-104`，註解同步改寫）：
 
   ```js
   // 判斷一段 CSS 文字是否宣告了直排（epic-17 Issue 4，FR-06；epic-46 擴充）。
@@ -118,9 +118,9 @@ openBook()
   }
   ```
 
-- [ ] **Step 2：修改 `detectedBookWritingMode` 宣告處的註解**（`main.js:106-109`），改為說明「開書前由 `detectBookWritingMode()` 預掃全書定案；只有書本沒有 EPUB manifest 時（KF8 等）才由 transformTarget 延遲判讀第一個 CSS」。
+- [x] **Step 2：修改 `detectedBookWritingMode` 宣告處的註解**（`main.js:106-109`），改為說明「開書前由 `detectBookWritingMode()` 預掃全書定案；只有書本沒有 EPUB manifest 時（KF8 等）才由 transformTarget 延遲判讀第一個 CSS」。
 
-- [ ] **Step 3：新增 `detectBookWritingMode(book)`**（放在 `openBook()` 之前）：
+- [x] **Step 3：新增 `detectBookWritingMode(book)`**（放在 `openBook()` 之前）：
 
   ```js
   // epic-46：XHTML 內嵌樣式掃描上限（見 plan-issue-1.md「需人類確認的設計決定」#1）。
@@ -180,7 +180,7 @@ openBook()
 
   > 實作者注意：`book.loadText` 是 `EPUB` 類別的實例欄位（`epub.js:1165`）。如果實際在 harness 裡取不到，改從 `book.sections` 找對應的 `loadText`（`epub.js:1220`，但只有 spine 項目有），並把查證結果寫進本計畫。這一步查證完成前不要繼續 Step 4。
 
-- [ ] **Step 4：在 `openBook()` 接線。** 在 `makeBook()` 之後、`book.transformTarget?.addEventListener` 之前加入：
+- [x] **Step 4：在 `openBook()` 接線。** 在 `makeBook()` 之後、`book.transformTarget?.addEventListener` 之前加入：
 
   ```js
   // epic-46：開書前預掃全書定案「偵測排版方向」，不再依賴「第一個被載入的
@@ -193,7 +193,7 @@ openBook()
 
   同時把 transformTarget 監聽器內的 `WRITING_MODE_DECLARATION_RE.test(css)` 改為 `declaresVerticalWritingMode(css)`，並把它上方的註解改為「回退路徑」語意。`if (detectedBookWritingMode === null)` 這個條件維持不變：預掃有結果時就不會再進這一段。
 
-- [ ] **Step 5：跑場景，確認綠燈。**
+- [x] **Step 5：跑場景，確認綠燈。**
 
   ```bash
   cd app/tool/foliate_touch_harness && node scenario-writing-mode-autodetect.mjs
@@ -201,9 +201,9 @@ openBook()
 
   預期：A～E（含 C-2、D-2）全部 PASS。場景 A 的診斷數值應該變成 html／body／`.main` 三者都是 `vertical-rl`。把修改後的數值補進 `epic.md`，和 Task 1 Step 3 的數值並列。
 
-- [ ] **Step 6：變異驗證。** 暫時把 Step 4 的預掃呼叫註解掉，重跑場景：A、B、C、C-2、D、D-2 應該回到 FAIL（E 會因為 Step 1 的去註解邏輯仍然 PASS，這是預期結果）。確認後還原。
+- [x] **Step 6：變異驗證。** 暫時把 Step 4 的預掃呼叫註解掉，重跑場景：A、B、C、C-2、D、D-2 應該回到 FAIL（E 會因為 Step 1 的去註解邏輯仍然 PASS，這是預期結果）。確認後還原。
 
-- [ ] **Step 7：全部回歸與 ES 相容性檢查。**
+- [x] **Step 7：全部回歸與 ES 相容性檢查。**
 
   ```bash
   cd app/tool/foliate_touch_harness && node run-all.mjs
@@ -212,7 +212,7 @@ openBook()
 
   預期：`整體結果：全部 PASS`；ES 相容性掃描沒有新增警告。
 
-- [ ] **Step 8：Commit。**
+- [x] **Step 8：Commit。**
 
   ```bash
   git add app/android/app/src/main/assets/foliate/main.js app/tool/foliate_touch_harness/scenario-writing-mode-autodetect.mjs
@@ -225,10 +225,10 @@ openBook()
 
 **Files：** `app/tool/foliate_touch_harness/README.md`、`docs/prd.md`、`docs/epics.md`
 
-- [ ] **Step 1：README 場景清單**新增 `scenario-writing-mode-autodetect.mjs` 一行，格式比照 `scenario-preload-stale-layout.mjs`（`README.md:38`）。
-- [ ] **Step 2：PRD FR-06**（`docs/prd.md:114`）措辭改為：「開啟 ePub3 時，依書本 CSS（含 `-epub-`／`-webkit-` 前綴與內嵌樣式）或 OPF `primary-writing-mode` 中繼資料是否宣告直排，自動判斷排版方向（全書任一處宣告直排即為直排，否則為橫排）；不做語言猜測。」KF8 那段括號原文保留。並在 frontmatter 的 `changes` 追加一筆 2026-09-24 紀錄。
-- [ ] **Step 3：`docs/epics.md` 第 47 列**：備註更新為「Issue 1 已完成」（標題用詞與 Active 狀態已在 Discovery 階段更新）。
-- [ ] **Step 4：Commit。**
+- [x] **Step 1：README 場景清單**新增 `scenario-writing-mode-autodetect.mjs` 一行，格式比照 `scenario-preload-stale-layout.mjs`（`README.md:38`）。
+- [x] **Step 2：PRD FR-06**（`docs/prd.md:114`）措辭改為：「開啟 ePub3 時，依書本 CSS（含 `-epub-`／`-webkit-` 前綴與內嵌樣式）或 OPF `primary-writing-mode` 中繼資料是否宣告直排，自動判斷排版方向（全書任一處宣告直排即為直排，否則為橫排）；不做語言猜測。」KF8 那段括號原文保留。並在 frontmatter 的 `changes` 追加一筆 2026-09-24 紀錄。
+- [x] **Step 3：`docs/epics.md` 第 47 列**：備註更新為「Issue 1 已完成」（標題用詞與 Active 狀態已在 Discovery 階段更新）。
+- [x] **Step 4：Commit。**
 
 ---
 

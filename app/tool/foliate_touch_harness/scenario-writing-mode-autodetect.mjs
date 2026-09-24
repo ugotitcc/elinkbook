@@ -1,7 +1,7 @@
 // Epic 46 排版方向自動偵測全書預掃回歸場景
 //
 // 開書時「採用書籍排版」（writingMode: null）應依全書任一處直排宣告判定為 vertical，
-// 而非僅看第一個 CSS。7 個案例涵蓋外部 CSS、內嵌樣式、OPF metadata 與反例。
+// 而非僅看第一個 CSS。10 個案例涵蓋外部 CSS、內嵌樣式、OPF metadata、manifest 缺檔與反例。
 
 import { launchHarnessPage, buildStoredZip, harnessEvents, report } from './lib/harness.mjs'
 
@@ -10,15 +10,19 @@ import { launchHarnessPage, buildStoredZip, harnessEvents, report } from './lib/
  * @param {Object} opts
  * @param {string|null} opts.opfMeta - 插入 <metadata> 內的原始 XML 字串（例如 <meta ...>），無則 null
  * @param {Array<{name:string, content:string}>} opts.cssFiles - 額外 CSS 檔案（放在 OEBPS/ 下）
+ * @param {string[]} [opts.missingCssNames] - 只列在 manifest（排在 cssFiles 之前）、zip 內沒有實體檔案的 CSS
  * @param {Array<{title:string, headExtra:string, bodyInner:string, cssHrefs:string[]}>} opts.chapters
  */
-function buildEpub({ opfMeta, cssFiles, chapters }) {
+function buildEpub({ opfMeta, cssFiles, missingCssNames = [], chapters }) {
   const containerXml = `<?xml version="1.0" encoding="UTF-8"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
   <rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>
 </container>
 `
-  const manifestCssItems = cssFiles.map((f, i) => `    <item id="css${i}" href="${f.name}" media-type="text/css"/>`).join('\n')
+  const manifestCssItems = [
+    ...missingCssNames.map((name, i) => `    <item id="missing${i}" href="${name}" media-type="text/css"/>`),
+    ...cssFiles.map((f, i) => `    <item id="css${i}" href="${f.name}" media-type="text/css"/>`),
+  ].join('\n')
   const chapterItems = chapters.map((_, i) => `    <item id="c${i + 1}" href="c${i + 1}.xhtml" media-type="application/xhtml+xml"/>`).join('\n')
   const contentOpf = `<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="pub-id">
@@ -208,6 +212,44 @@ async function main() {
     ],
   })
 
+  // ---- 案例 F：manifest 列了但 zip 內缺檔的 CSS 排在直排 CSS 之前（程式審查 I-1）----
+  // 缺檔時 book.loadText() 同步回傳 null；預掃須只跳過該項，而非整個中斷退回「第一個 CSS」。
+  const epubF = buildEpub({
+    opfMeta: null,
+    missingCssNames: ['missing.css'],
+    cssFiles: [
+      { name: 'base.css', content: 'body{margin:0}' },
+      { name: 'v.css', content: 'html{writing-mode:vertical-rl}' },
+    ],
+    chapters: [
+      { title: '第1章', headExtra: '', cssHrefs: ['base.css'], bodyInner: '<p>第一章橫排樣式的測試內容，用來讓文件有足夠文字可以排版與分頁，長度超過門檻。</p>' },
+      { title: '第2章', headExtra: '', cssHrefs: ['v.css'], bodyInner: '<p>第二章直排樣式的測試內容，驗證 manifest 缺檔時預掃仍能偵測到直排宣告。</p>' },
+    ],
+  })
+
+  // ---- 案例 G：反例 — 正文文字「style = "…"」不算內嵌樣式（程式審查 M-3）----
+  const epubG = buildEpub({
+    opfMeta: null,
+    cssFiles: [],
+    chapters: [
+      {
+        title: '第1章',
+        headExtra: '',
+        cssHrefs: [],
+        bodyInner: '<p>正文提到 CSS 寫法 style = "writing-mode:vertical-rl" 只是文字，不是樣式，應維持橫排，長度足夠。</p>',
+      },
+    ],
+  })
+
+  // ---- 案例 H：反例 — 非法值 tb-lr 不算直排（程式審查 M-4）----
+  const epubH = buildEpub({
+    opfMeta: null,
+    cssFiles: [{ name: 'base.css', content: 'html{writing-mode:tb-lr}' }],
+    chapters: [
+      { title: '第1章', headExtra: '', cssHrefs: ['base.css'], bodyInner: '<p>非法值 tb-lr 測試內容，Chromium 不認這個值，書本實際呈現橫排，長度足夠。</p>' },
+    ],
+  })
+
   const cases = [
     { name: 'A 第二個CSS＋-webkit-＋內層元素', buffer: epubA, expected: 'vertical' },
     { name: 'B 直排CSS只被後面章節引用', buffer: epubB, expected: 'vertical' },
@@ -216,6 +258,9 @@ async function main() {
     { name: 'D OPF name=primary-writing-mode', buffer: epubD, expected: 'vertical' },
     { name: 'D-2 OPF property=primary-writing-mode', buffer: epubD2, expected: 'vertical' },
     { name: 'E 反例：註解與橫排', buffer: epubE, expected: 'horizontal' },
+    { name: 'F manifest缺檔CSS排在直排CSS之前', buffer: epubF, expected: 'vertical' },
+    { name: 'G 反例：正文文字 style = "…"', buffer: epubG, expected: 'horizontal' },
+    { name: 'H 反例：非法值 tb-lr', buffer: epubH, expected: 'horizontal' },
   ]
 
   for (const c of cases) {

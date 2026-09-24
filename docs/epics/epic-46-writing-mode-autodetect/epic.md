@@ -37,7 +37,9 @@
 - I-2：採納問題本身，但不採用審查建議的 Regex。建議的 `[^"']*` 會漏判「雙引號內含單引號」的 `style` 屬性，已實測重現；改為依引號種類分成兩個分支。
 - M-3：維持不支援 `-ms-`。判準更正為「偵測結果要跟 Chromium WebView 實際渲染一致」：`tb-rl` 在 Chromium 有效，`-ms-` 沒有作用。
 
-Harness 案例由 5 個增為 7 個（新增 C-2、D-2），細節見計畫的「審查修訂紀錄」。**2026-09-24 Task 1 — 排版方向自動偵測改為全書預掃（紅燈已重現）**
+Harness 案例由 5 個增為 7 個（新增 C-2、D-2），細節見計畫的「審查修訂紀錄」。
+
+**2026-09-24 Task 1 — 排版方向自動偵測改為全書預掃（紅燈已重現）**
 
 Harness `scenario-writing-mode-autodetect.mjs` 7 案例在修改前全部紅燈（符合預期）：
 
@@ -47,8 +49,28 @@ Harness `scenario-writing-mode-autodetect.mjs` 7 案例在修改前全部紅燈�
 診斷數值（案例 A，第二個 CSS `+ -webkit-` + 內層元素對應《蘇東坡新傳》）：
 
 - **修改前**：`html=horizontal-tb body=horizontal-tb .main=vertical-rl columnWidth=528px`
-  - 解讀：`html/body` 被覆蓋成橫排，但 `.main` 仍為 `vertical-rl`，Paginator 用橫排的欄寬（528px）去排直排內容，形成「橫排欄寬排直排內容」的錯位。
+  - 解讀：`html/body` 被覆蓋成橫排，但內層 `.main` 仍為 `vertical-rl`，外層與內層的排版方向不一致，也就是「橫排外框包直排內容」的錯位。
 - **修改後**：`html=vertical-rl body=vertical-rl .main=vertical-rl columnWidth=528px`
-  - 解讀：三者皆為 `vertical-rl`，Paginator 已在第一次渲染前以直排的欄寬／方向排版，不再出現「橫排欄寬排直排內容」的錯位。
+  - 解讀：三者皆為 `vertical-rl`，外層與內層方向一致。
+- 註：修改前後 `columnWidth` 都是 528px，這個數值本身看不出差異，真正的差別在 `html`／`body` 的 writing-mode（2026-09-25 程式審查 M-1 更正原本「以橫排欄寬排直排內容」的解讀）。
 
-下一步：執行 Task 2（實作 `detectBookWritingMode()` 並接線到 `openBook()`）。
+**2026-09-24 Task 2～3 — 實作 `detectBookWritingMode()`、文件同步**（commit `04369a18`、`4dc8f1ff`）
+
+以下結果為 2026-09-25 程式審查時在暫存 worktree 實測：
+
+- Step 5：場景 7/7 PASS。
+- Step 6 變異驗證：把 `openBook()` 的預掃呼叫註解掉後，A～D-2 共 6 案例回到 FAIL，E 仍 PASS，與計畫預期一致。
+- Step 7：`run-all.mjs` 全部 PASS；`check_foliate_es_compat.js` 乾淨。
+
+**2026-09-25 程式審查修訂**（`reviews/review-code-issue-1.md`，修正後可合併，0 Critical／2 Important／5 Minor，全數採納）
+
+- I-1：`book.loadText()` 遇到 manifest 有列、zip 內缺檔的項目時會同步回傳 `null`，導致 `.catch` 丟 TypeError、整個預掃中斷。新增 `safeLoadText()` 包進 Promise 鏈，單項失敗只跳過該項；新增案例 F。
+- I-2：本紀錄格式與「下一步」更正。
+- M-1：上方診斷數值解讀更正。
+- M-2：使用者手動覆寫時略過預掃（預掃結果在覆寫時從未傳到 Dart，屬多餘成本）；計畫「需人類確認的設計決定」#2 同步更正。
+- M-3：內嵌 `style` 屬性限定出現在標籤內，正文文字「style = "…"」不再被誤判；新增反例 G。
+- M-4：Regex 數值結尾由 `\b` 改為 `(?![\w-])`，非法值 `tb-lr` 不再誤中 `tb`；新增反例 H。
+- M-5：harness README 補回檔尾空行、場景說明更新為 10 案例；計畫 Task 1～3 checkbox 勾選。
+- 驗證：以修訂前的 `main.js` 跑新場景，F／G／H 三案例 FAIL；修訂後 10/10 PASS。`run-all.mjs` 全部 PASS、`check_foliate_es_compat.js` 乾淨。另以臨時探針確認覆寫為 `horizontal`／`vertical` 時開書正常，且 `onPageRendered` 回報覆寫值。
+
+下一步：Task 4 真機驗證（人類）。
