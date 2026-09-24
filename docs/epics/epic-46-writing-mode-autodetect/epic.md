@@ -37,4 +37,18 @@
 - I-2：採納問題本身，但不採用審查建議的 Regex。建議的 `[^"']*` 會漏判「雙引號內含單引號」的 `style` 屬性，已實測重現；改為依引號種類分成兩個分支。
 - M-3：維持不支援 `-ms-`。判準更正為「偵測結果要跟 Chromium WebView 實際渲染一致」：`tb-rl` 在 Chromium 有效，`-ms-` 沒有作用。
 
-Harness 案例由 5 個增為 7 個（新增 C-2、D-2），細節見計畫的「審查修訂紀錄」。下一步：執行 Task 1。
+Harness 案例由 5 個增為 7 個（新增 C-2、D-2），細節見計畫的「審查修訂紀錄」。**2026-09-24 Task 1 — 排版方向自動偵測改為全書預掃（紅燈已重現）**
+
+Harness `scenario-writing-mode-autodetect.mjs` 7 案例在修改前全部紅燈（符合預期）：
+
+- A～D-2：舊程式漏判（回報 `horizontal`，預期 `vertical`）
+- E：舊程式誤判（註解內的 `writing-mode: vertical-rl` 被當成有效宣告，回報 `vertical`，預期 `horizontal`）
+
+診斷數值（案例 A，第二個 CSS `+ -webkit-` + 內層元素對應《蘇東坡新傳》）：
+
+- **修改前**：`html=horizontal-tb body=horizontal-tb .main=vertical-rl columnWidth=528px`
+  - 解讀：`html/body` 被覆蓋成橫排，但 `.main` 仍為 `vertical-rl`，Paginator 用橫排的欄寬（528px）去排直排內容，形成「橫排欄寬排直排內容」的錯位。
+- **修改後**：`html=vertical-rl body=vertical-rl .main=vertical-rl columnWidth=528px`
+  - 解讀：三者皆為 `vertical-rl`，Paginator 已在第一次渲染前以直排的欄寬／方向排版，不再出現「橫排欄寬排直排內容」的錯位。
+
+下一步：執行 Task 2（實作 `detectBookWritingMode()` 並接線到 `openBook()`）。
