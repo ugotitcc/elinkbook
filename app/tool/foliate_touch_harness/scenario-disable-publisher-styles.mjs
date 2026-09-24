@@ -12,64 +12,7 @@
 // 一個帶有明顯 margin-top/padding 的 `.content` 容器包裹段落文字，
 // 精確重現「書本自帶版面配置 CSS」這個 bug pattern，不需要另外提交一份
 // 二進位 fixture 檔案。
-import { launchHarnessPage, report } from './lib/harness.mjs'
-import zlib from 'node:zlib'
-
-// ---- 最小 STORE-only ZIP 產生器（僅供測試 fixture 使用，不需要任何
-// 額外套件；EPUB 的 mimetype 依規範必須用 STORE 不壓縮，其餘檔案圖
-// 方便一併用 STORE，合法且足夠小）。----
-function buildStoredZip(files) {
-  const localParts = []
-  const centralParts = []
-  let offset = 0
-  for (const { name, data } of files) {
-    const nameBuf = Buffer.from(name, 'utf8')
-    const crc = zlib.crc32(data) >>> 0
-    const local = Buffer.alloc(30)
-    local.writeUInt32LE(0x04034b50, 0)
-    local.writeUInt16LE(20, 4)
-    local.writeUInt16LE(0, 6)
-    local.writeUInt16LE(0, 8)
-    local.writeUInt16LE(0, 10)
-    local.writeUInt16LE(0, 12)
-    local.writeUInt32LE(crc, 14)
-    local.writeUInt32LE(data.length, 18)
-    local.writeUInt32LE(data.length, 22)
-    local.writeUInt16LE(nameBuf.length, 26)
-    local.writeUInt16LE(0, 28)
-    localParts.push(local, nameBuf, data)
-
-    const central = Buffer.alloc(46)
-    central.writeUInt32LE(0x02014b50, 0)
-    central.writeUInt16LE(20, 4)
-    central.writeUInt16LE(20, 6)
-    central.writeUInt16LE(0, 8)
-    central.writeUInt16LE(0, 10)
-    central.writeUInt16LE(0, 12)
-    central.writeUInt16LE(0, 14)
-    central.writeUInt32LE(crc, 16)
-    central.writeUInt32LE(data.length, 20)
-    central.writeUInt32LE(data.length, 24)
-    central.writeUInt16LE(nameBuf.length, 28)
-    central.writeUInt16LE(0, 30)
-    central.writeUInt16LE(0, 32)
-    central.writeUInt16LE(0, 34)
-    central.writeUInt16LE(0, 36)
-    central.writeUInt32LE(0, 38)
-    central.writeUInt32LE(offset, 42)
-    centralParts.push(central, nameBuf)
-
-    offset += local.length + nameBuf.length + data.length
-  }
-  const centralBuf = Buffer.concat(centralParts)
-  const eocd = Buffer.alloc(22)
-  eocd.writeUInt32LE(0x06054b50, 0)
-  eocd.writeUInt16LE(files.length, 8)
-  eocd.writeUInt16LE(files.length, 10)
-  eocd.writeUInt32LE(centralBuf.length, 12)
-  eocd.writeUInt32LE(offset, 16)
-  return Buffer.concat([...localParts, centralBuf, eocd])
-}
+import { launchHarnessPage, buildStoredZip, report } from './lib/harness.mjs'
 
 function buildFixtureEpub() {
   const containerXml = `<?xml version="1.0" encoding="UTF-8"?>
