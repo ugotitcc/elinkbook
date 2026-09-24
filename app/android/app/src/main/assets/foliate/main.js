@@ -96,16 +96,26 @@ const initialCfi = params.get('initialCfi') || ''
 // 錯誤來源，見 plan-issue-1.md Global Constraints）。
 const isIndexMode = params.get('mode') === 'index'
 
-// 判斷書本第一個 section 的 CSS 是否已宣告 writing-mode（epic-17
-// Issue 4，FR-06）。同時涵蓋標準屬性與 EPUB 專屬的 -epub- 前綴寫法；只
-// 檢查值是否為 vertical-rl/vertical-lr——horizontal-tb 或其他非直排值視為
-// 「未宣告直排」，交由後續判斷邏輯處理。
+// 判斷一段 CSS 文字是否宣告了直排（epic-17 Issue 4，FR-06；epic-46 擴充）。
+// 判準：偵測結果要跟 WebView（Chromium）實際的渲染方式一致——
+// 標準屬性和 -epub-／-webkit- 前綴都有效；數值除了 vertical-rl/vertical-lr，
+// Chromium 也把舊式的 tb-rl/tb 當成別名渲染成直排，所以一併涵蓋。
+// -ms-writing-mode 在 Chromium 上沒有作用（書本實際呈現橫排），
+// 所以刻意不認。horizontal-tb 或其他數值都視為「未宣告直排」。
+// 數值結尾用 (?![\w-]) 而非 \b：\b 會讓 `tb` 誤中非法值 `tb-lr` 的前綴
+// （epic-46 程式審查 M-4）。
 const WRITING_MODE_DECLARATION_RE =
-  /(?:^|[^-])(?:-epub-)?writing-mode\s*:\s*vertical-(?:rl|lr)/i
+  /(?:^|[^-])(?:-epub-|-webkit-)?writing-mode\s*:\s*(?:vertical-(?:rl|lr)|tb(?:-rl)?)(?![\w-])/i
 
-// FR-06 偵測結果，null 代表尚未偵測到任何 CSS 資源（理論上開書流程中
-// 第一個 CSS 資源解析時就會賦值一次，之後維持不變——只需要書本「第一個」
-// section 的判斷結果，見 issues.md Issue 4 描述）。
+// CSS 註解內的宣告不算數（例如被作者註解掉的 writing-mode）。註解換成
+// 一個空白而不是直接刪除，避免前後的 token 黏在一起。
+function declaresVerticalWritingMode(cssText) {
+  return WRITING_MODE_DECLARATION_RE.test(String(cssText).replace(/\/\*[\s\S]*?\*\//g, ' '))
+}
+
+// FR-06 偵測結果：開書前由 detectBookWritingMode() 預掃全書定案；只有
+// 書本沒有 EPUB manifest 時（KF8 等）才由下方 transformTarget 延遲判讀第一個
+// CSS（回退路徑），見 plans/plan-issue-1.md。
 let detectedBookWritingMode = null
 
 // 目前生效的排版方向（epic-17 Issue 8）：與 detectedBookWritingMode
@@ -974,19 +984,91 @@ class TouchIntentClassifier {
   }
 }
 
+// epic-46：XHTML 內嵌樣式掃描上限（見 plan-issue-1.md「需人類確認的設計決定」#1）。
+const INLINE_STYLE_SCAN_LIMIT = 20
+
+// book.loadText() 遇到 manifest 有列、zip 內卻沒有的檔案時會「同步」回傳
+// null 而非 Promise（view.js 的 load 包裝），直接接 .catch() 會丟 TypeError
+// 讓整個預掃中斷。統一包進 Promise 鏈，單項失敗只跳過該項（epic-46 程式審查 I-1）。
+function safeLoadText(book, href) {
+  return Promise.resolve().then(() => book.loadText(href)).catch(() => null)
+}
+
+/**
+ * 開書前預掃整本書，判定「偵測排版方向」（CONTEXT.md）：任一處宣告直排
+ * 即為 'vertical'，否則為 'horizontal'。結果與閱讀位置無關。
+ * 書本沒有 EPUB manifest（KF8 等）時回傳 null，交由 transformTarget
+ * 延遲判讀的既有回退路徑處理。
+ * 刻意不採用 page-progression-direction：阿拉伯文等由右至左的橫排書籍
+ * 同樣是 rtl（見 epic-46 epic.md）。
+ */
+async function detectBookWritingMode(book) {
+  const resources = book.resources
+  if (!resources?.manifest) return null
+
+  // 有兩種寫法：Kindle 慣例的 <meta name="…" content="…"/>，以及部分工具
+  // 輸出的 <meta property="…">值</meta>（值放在文字節點）。
+  const metaEl = resources.opf?.querySelector(
+    'meta[name="primary-writing-mode"], meta[property="primary-writing-mode"]',
+  )
+  const meta = metaEl?.getAttribute('content') || metaEl?.textContent
+  if (meta && /^\s*vertical/i.test(meta)) return 'vertical'
+
+  for (const item of resources.manifest) {
+    if (item.mediaType?.toLowerCase() !== 'text/css') continue
+    const css = await safeLoadText(book, item.href)
+    if (css && declaresVerticalWritingMode(css)) return 'vertical'
+  }
+
+  // style 屬性值依引號種類分成兩個分支，並限定不能跨越同種引號：
+  // 避免遇到未閉合的引號時一路回溯到文件結尾；同時讓雙引號內含單引號
+  // 的值（例如 font-family:'Noto Serif'）也能完整取到。
+  // style 屬性限定出現在標籤內（`<` 開頭、不跨越 `>`），避免正文文字
+  // 「style = "…"」被誤當成樣式（epic-46 程式審查 M-3）。
+  const INLINE_STYLE_RE = /<style[^>]*>([\s\S]*?)<\/style>|<[a-z][^>]*?\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/gi
+  let scanned = 0
+  for (const { idref } of resources.spine) {
+    if (scanned >= INLINE_STYLE_SCAN_LIMIT) break
+    const item = resources.getItemByID(idref)
+    if (!item) continue
+    // 只掃 XHTML／HTML；spine 裡的 SVG 等其他項目不佔掃描上限。
+    const type = item.mediaType?.toLowerCase()
+    if (type !== 'application/xhtml+xml' && type !== 'text/html') continue
+    scanned++
+    const xhtml = await safeLoadText(book, item.href)
+    if (!xhtml) continue
+    INLINE_STYLE_RE.lastIndex = 0
+    let m
+    while ((m = INLINE_STYLE_RE.exec(xhtml)) !== null) {
+      const styleText = m[1] ?? m[2] ?? m[3] ?? ''
+      if (declaresVerticalWritingMode(styleText)) return 'vertical'
+    }
+  }
+  return 'horizontal'
+}
+
 async function openBook() {
   try {
     const book = await makeBook(
       `https://appassets.androidplatform.net/book/${params.get('bookFileName') || 'current.epub'}`,
     )
-    // 雙向 writing-mode CSS 覆蓋 + FR-06 偵測：在每個 CSS 資源文字被解析前
-    // 攔截——比照 Issue 1 Spike 已驗證的時序（見 Global Constraints），
-    // 保證於 Paginator 第一次計算方向/分欄之前就已生效。
+    // epic-46：開書前預掃全書定案「偵測排版方向」，不再依賴「第一個被載入的
+    // CSS」（該 CSS 會隨閱讀位置改變）。索引模式不需要排版方向，略過；
+    // 使用者已手動覆寫（initialPrefs.writingMode 有值）時，下方 relocate 的
+    // `initialPrefs.writingMode ?? detectedBookWritingMode` 永遠取覆寫值，
+    // 預掃結果不會被用到，同樣略過（epic-46 程式審查 M-2）。
+    // 預掃失敗時維持 null，回退到下方 transformTarget 延遲判讀，不影響開書。
+    if (!isIndexMode && !initialPrefs.writingMode) {
+      detectedBookWritingMode = await detectBookWritingMode(book).catch(() => null)
+    }
+    // 雙向 writing-mode CSS 覆蓋 + FR-06 回退偵測（epic-46）：預掃已在上方
+    // 完成全書判定，這裡只在 detectedBookWritingMode 仍為 null（KF8 等沒有
+    // EPUB manifest 的書籍）時才判讀第一個 CSS，作為回退路徑。
     book.transformTarget?.addEventListener('data', (e) => {
       if (e.detail.type !== 'text/css') return
       e.detail.data = Promise.resolve(e.detail.data).then((css) => {
         if (detectedBookWritingMode === null) {
-          detectedBookWritingMode = WRITING_MODE_DECLARATION_RE.test(css)
+          detectedBookWritingMode = declaresVerticalWritingMode(css)
             ? 'vertical'
             : 'horizontal'
         }
