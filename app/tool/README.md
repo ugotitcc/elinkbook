@@ -4,10 +4,17 @@
 
 ## `check_l10n_hardcoded_strings.js`
 
-掃描 `app/lib/**/*.dart`，找出「Widget 字串參數位置」上**含中文字元且未經
-`AppLocalizations` 包裝**的字串字面值（`Text('確定')`、`title: '設定'`、
-`tooltip:`／`label:`／`hintText:` 等），防止畫面遺漏在地化與日後新增畫面忘記
-包裝（`epic-45-interface-i18n` Issue 10，規則契約見該 Epic `spec.md` §9）。
+兩項檢查（`epic-45-interface-i18n` Issue 10，規則契約見該 Epic `spec.md` §9）：
+
+1. **字串稽核**：掃描 `app/lib/**/*.dart`，找出「Widget 字串參數位置」上**含中文字元且未經
+   `AppLocalizations` 包裝**的字串字面值（`Text('確定')`、`title: '設定'`、
+   `tooltip:`／`label:`／`hintText:` 等），防止畫面遺漏在地化與日後新增畫面忘記包裝。
+2. **測試端稽核**：掃描 `app/test/**/*.dart`，確認每個 `MaterialApp(`／`MaterialApp.router(`
+   的最外層參數都帶 `locale`／`localizationsDelegates`／`supportedLocales`。缺 `locale:`
+   時 flutter_test 預設為 en_US，日後若在該測試加中文斷言會靜默失敗；缺委派則會在
+   `AppLocalizations.of(context)!` 觸發 Null check。優先改用 `pumpLocalizedWidget()`。
+   刻意保留裸 `MaterialApp` 的測試（`eb_sheet_shell_test.dart` 驗證無 `AppLocalizations` 時的
+   fallback）以「檔案＋數量」記在腳本的 `TEST_BARE_APP_ALLOW`，數量不符即報警。
 
 ### 何時該執行
 
@@ -21,13 +28,16 @@
 不需要 `npm install`，只用 Node.js 內建模組：
 
 ```bash
-node app/tool/check_l10n_hardcoded_strings.js
-# 測試／驗收時可指定其他目錄：
+node app/tool/check_l10n_hardcoded_strings.js            # 兩項檢查都做
+# 測試／驗收時可指定其他目錄（只給其中一個旗標時只做對應那項檢查）：
 node app/tool/check_l10n_hardcoded_strings.js --lib-dir <目錄>
+node app/tool/check_l10n_hardcoded_strings.js --test-dir <目錄>
 ```
 
-- 結束碼 `0`：乾淨。
-- 結束碼 `1`：至少一處未包裝，會印出 `lib/<檔案>:<行號>  <字串>`。
+- 結束碼 `0`：乾淨，並印出實際掃描的檔案數（`PASS：掃描 N 個檔案…`、`PASS：掃描 N 個測試檔…`）。
+- 結束碼 `1`：至少一處違規，會印出 `lib/<檔案>:<行號>  <字串>` 或 `test/<檔案>:<行號>  缺少 locale…`。
+- 結束碼 `2`：設定錯誤——`--lib-dir` 缺參數、目錄不存在，或目錄內沒有任何可掃描的
+  `.dart` 檔。這**不代表乾淨**，避免掃錯目錄被誤當成通過。
 
 單元測試：`node app/tool/test_check_l10n_hardcoded_strings.mjs`。
 
@@ -44,18 +54,33 @@ node app/tool/check_l10n_hardcoded_strings.js --lib-dir <目錄>
 
 ### 已知限制
 
-只偵測 spec §9 定義的「Widget 字串參數位置」：`Text(`／`SelectableText(` 的第
-一個位置參數，以及 `tooltip`／`label`／`title`／`subtitle`／`text`／
-`labelText`／`hintText`／`helperText`／`errorText`／`counterText`／
-`prefixText`／`suffixText`／`content`／`message`／`semanticLabel`／
-`semanticsLabel` 等具名參數後**直接緊接**的字串字面值（含 Dart 相鄰字串串接）。
+只偵測 spec §9 定義的「Widget 字串參數位置」。判定方式是找出字面值所在的
+**參數運算式**（往回掃到同一層的 `,`／`;` 或尚未配對的 `(`／`[`／`{`），再看
+這個參數是不是「文字參數」：
+
+- `Text(`／`SelectableText(` 的第一個位置參數；
+- 具名參數，名稱為 `label`／`title`／`subtitle`／`text`／`tooltip`／`message`／
+  `content`／`hint`，或**以 `Label`／`Title`／`Text`／`Tooltip`／`Message`／
+  `Hint`／`Subtitle` 結尾**（自訂 Widget 的 `deleteButtonLabel`、`hintText`、
+  `semanticsLabel` 等都算；`labelStyle`／`contentPadding` 這類非文字參數不算）。
+
+因此參數運算式內的**三元運算式與字串串接**（`tooltip: c ? '收藏' : '已收藏'`、
+`Text('a' + '中')`、Dart 相鄰字串串接）都會被抓到；巢狀呼叫的引數
+（`label: bar('中')`）、函式主體、相鄰的其他參數則不算。
+
 **掃不到**：
 
 - `record`／位置參數中的字串（例如 `(ColumnMode.single, 'single', icon, '單欄')`）。
-- `?? '中文'` fallback，以及 model 層字串（例如 `TtsVoice.displayName`、
-  `Bookmark.defaultName()`、OPDS 解析失敗的預設標題）。
+- 參數運算式含 `??` 的 fallback（`label: x ?? '中文'`）——這是**刻意保留的逃逸口**，
+  用於「無 `AppLocalizations` 時回退為固定字面值」的合法情境（例如
+  `eb_sheet_shell.dart` 的「關閉」）；代價是硬編碼的 `?? '中文'` 也不會被抓。
+- model 層字串與名稱不符合上述規則的參數。Issue 10 人工盤點時發現並已修正的例子：
+  `Bookmark.defaultName()`、`TtsVoice` 的顯示名稱、OPDS 解析失敗的預設標題、`main.dart` 的
+  通知頻道名稱——這類遺漏腳本仍抓不到，日後同類仍需靠 code review。
 - 例外訊息、`assert`、`debugPrint` 等開發者診斷字串（設計上刻意不涵蓋，見
   `design.md`「Console Log／診斷內容翻譯」）。
+- 字串插值 `${ … }` **內部**含註解（`/* ' */`、`// }`）時，掃描器的字串／註解狀態可能
+  錯位；實務上不會這樣寫（`app/lib` 0 例），僅備忘。
 
 這類遺漏仍需靠 code review 與人工盤點；本腳本只保證「最常見的 Widget 字串參數
 位置」不會再漏。
