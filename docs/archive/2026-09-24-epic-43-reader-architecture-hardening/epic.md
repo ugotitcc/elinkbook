@@ -1,7 +1,7 @@
 # `epic-43-reader-architecture-hardening` 閱讀器模組架構深化機會（`reader_screen.dart`/`library_screen.dart` 熱點盤點）
 
-**狀態：** 🟡 開發中 (Active)
-**存放路徑：** `docs/epics/epic-43-reader-architecture-hardening/`
+**狀態：** 🟢 已歸檔 (Archived)
+**存放路徑：** `docs/archive/2026-09-24-epic-43-reader-architecture-hardening/`
 **關聯 PRD 章節：** 無直接對應（架構深化，源自 `/improve-codebase-architecture` 盤點，不新增產品功能）
 
 ## 開發記錄
