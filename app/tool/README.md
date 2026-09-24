@@ -2,6 +2,64 @@
 
 開發輔助腳本，不屬於 App 本身，不會被打包進 APK。
 
+## `check_l10n_hardcoded_strings.js`
+
+掃描 `app/lib/**/*.dart`，找出「Widget 字串參數位置」上**含中文字元且未經
+`AppLocalizations` 包裝**的字串字面值（`Text('確定')`、`title: '設定'`、
+`tooltip:`／`label:`／`hintText:` 等），防止畫面遺漏在地化與日後新增畫面忘記
+包裝（`epic-45-interface-i18n` Issue 10，規則契約見該 Epic `spec.md` §9）。
+
+### 何時該執行
+
+- **新增或修改任何畫面字串（Widget 樹內的文字）的 Issue，提交前**跑一次。
+- 目前**沒有接進 CI**（這個 repo 尚未設定任何 CI pipeline，與
+  `check_foliate_es_compat.js` 現況一致）。之後若要接進 CI，直接把下面的執行
+  指令包進 workflow 步驟即可。
+
+### 執行方式
+
+不需要 `npm install`，只用 Node.js 內建模組：
+
+```bash
+node app/tool/check_l10n_hardcoded_strings.js
+# 測試／驗收時可指定其他目錄：
+node app/tool/check_l10n_hardcoded_strings.js --lib-dir <目錄>
+```
+
+- 結束碼 `0`：乾淨。
+- 結束碼 `1`：至少一處未包裝，會印出 `lib/<檔案>:<行號>  <字串>`。
+
+單元測試：`node app/tool/test_check_l10n_hardcoded_strings.mjs`。
+
+### 找到問題時怎麼修
+
+1. 在 `app/lib/l10n/app_zh_TW.arb`（模板，含 `@` 描述）與 `app_zh_CN.arb`／
+   `app_en.arb`／`app_zh.arb` 新增對應 key（四份 key 集合必須一致），執行
+   `cd app && flutter gen-l10n`。
+2. 該處改用 `AppLocalizations.of(context)!.<key>`，並補上 zh_CN／en 兩個
+   locale 的 widget test。
+3. 若確屬合法例外（不需翻譯的專有名詞、資料、刻意的 fallback），在該行或上一
+   行加 `// l10n-ignore: <理由>`（**必須寫理由**，空標記無效）；整檔例外或專有
+   名詞值則加進腳本的 `SKIP_FILES`／`ALLOWED_LITERAL_VALUES` 並註明理由。
+
+### 已知限制
+
+只偵測 spec §9 定義的「Widget 字串參數位置」：`Text(`／`SelectableText(` 的第
+一個位置參數，以及 `tooltip`／`label`／`title`／`subtitle`／`text`／
+`labelText`／`hintText`／`helperText`／`errorText`／`counterText`／
+`prefixText`／`suffixText`／`content`／`message`／`semanticLabel`／
+`semanticsLabel` 等具名參數後**直接緊接**的字串字面值（含 Dart 相鄰字串串接）。
+**掃不到**：
+
+- `record`／位置參數中的字串（例如 `(ColumnMode.single, 'single', icon, '單欄')`）。
+- `?? '中文'` fallback，以及 model 層字串（例如 `TtsVoice.displayName`、
+  `Bookmark.defaultName()`、OPDS 解析失敗的預設標題）。
+- 例外訊息、`assert`、`debugPrint` 等開發者診斷字串（設計上刻意不涵蓋，見
+  `design.md`「Console Log／診斷內容翻譯」）。
+
+這類遺漏仍需靠 code review 與人工盤點；本腳本只保證「最常見的 Widget 字串參數
+位置」不會再漏。
+
 ## `check_foliate_es_compat.js`
 
 靜態掃描 `app/android/app/src/main/assets/foliate/`（`readest/foliate-js`

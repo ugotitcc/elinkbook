@@ -276,9 +276,11 @@
 
 ## Issue 10：防遺漏稽核腳本
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** 建議排最後執行（可歸納 Issue 0-9 實作過程中發現的合法硬編碼中文字面值案例，作為排除清單的實證基礎），技術上僅依賴 Issue 0（有 ARB/AppLocalizations 基礎設施即可開始）。
+
+**實際執行範圍修正記錄（2026-09-24 認領時對 `app/lib/` 實跑掃描盤點）**：以字串感知掃描盤點 `app/lib/`（排除 `l10n/`）共 38 個檔案 14,992 個含中文字面值，其中 `reader/text_conversion_dict.dart` 占 14,894 個（整檔略過），其餘 37 個檔案 98 個字面值分類為：A 真漏網 3（本 Issue 修正）、B 合法 23、C 開發者診斷 63、D 使用者可見但不在 Widget 字串參數位置 9（見 `epic.md` 最終稽核結果，另案處理）。規則維持 `spec.md` §9 的「Widget 字串參數位置」而未擴大；排除機制實作為 `SKIP_FILES`（`text_conversion_dict.dart`、`book_group.dart`）＋`ALLOWED_LITERAL_VALUES`（5 款內建字型品牌名）＋行內 `// l10n-ignore: <理由>`；**不接入 CI**（repo 無任何 CI 設定），改由 `CLAUDE.md`「常用指令」、`AGENTS.md`「Commands」與 `app/tool/README.md` 記載執行時機。稽核實跑報出 1 處真陽性 `reader_settings_sheet.dart:671`「字型」標籤（新增 ARB key `readerSettingsFontFamilyLabel`，四份 ARB 549→550），並人工盤點另發現同檔 `:590-591`「單欄」×2 漏換（既有 key `readerSettingsColumnSingleLabel`），一併修正。
 
 **背景：** `spec.md` §9 已定案介面。
 

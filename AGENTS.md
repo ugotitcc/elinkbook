@@ -94,6 +94,7 @@ Integration test 斷言模式：等待 loading indicator 消失且無 error text
 flutter test                                    # 所有 unit tests
 flutter test test/screens/reader_screen_test.dart  # 單一測試檔
 flutter analyze                                 # 靜態分析，提交前必須乾淨
+node tool/check_l10n_hardcoded_strings.js       # 新增/修改畫面字串後、提交前：偵測未經 AppLocalizations 包裝的硬編碼中文字串
 flutter test integration_test/reader_screen_test.dart -d <device-id>  # 整合測試
 flutter build apk --debug                       # 建置 debug APK
 
