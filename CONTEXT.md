@@ -16,6 +16,14 @@ _Avoid_: E-Ink 主題
 單一書籍專屬的版面設定值（字型、行距、邊距、對齊、排版方向覆寫、螢幕方向覆寫、翻頁模式覆寫等），儲存於 `book_reader_prefs` 表（與 `books` 表 1:1，以 `book_id` 為外鍵）。
 _Avoid_: 單書設定、閱讀器設定
 
+**排版方向（Writing Mode）**：
+書籍內文的走向，二選一：直排（vertical-RL，由右至左翻頁）或橫排（horizontal-TB）。實際生效值依序由「排版方向覆寫」（使用者在版面設定手動選「強制直排／強制橫排」）→「偵測排版方向」→ 預設橫排決定；版面設定中的「採用書籍排版」即代表不覆寫、交給偵測結果。對應 PRD FR-06／FR-10。
+_Avoid_: 書寫方向、閱讀方向、文字方向
+
+**偵測排版方向（Detected Writing Mode）**：
+「採用書籍排版」時，從書本內容推導出的排版方向：全書任一處宣告直排（CSS 檔、XHTML 內嵌樣式、或 OPF 的 `primary-writing-mode` 中繼資料）即判定為直排，否則為橫排；同一本書每次開啟結果必須相同，不隨閱讀位置改變。不做語言猜測，也不以 `page-progression-direction` 作為依據（阿拉伯文等由右至左橫排書籍同樣是 rtl）。誤判時以「排版方向覆寫」修正，不持久化。
+_Avoid_: 自動方向、書籍預設方向
+
 **全域預設值（Global Default）**：
 跨書籍生效的系統層級預設值（例如螢幕方向、翻頁模式、音量鍵翻頁開關、全螢幕顯示開關），對應 PRD FR-36/FR-37/FR-38/FR-42；單書版面偏好設定可覆寫，未覆寫時回退至此值。以 `shared_preferences` 存放。已全數接上設定畫面 UI：`NavZoneSettingsScreen`（熱區三欄位）、`TtsDefaultsScreen`（朗讀語音/語速）、`ReadingDefaultsScreen`（見下方「閱讀預設值」詞條）、`SettingsScaffold`（Console Log 攔截開關）。
 _Avoid_: 系統設定、全域設定（兩者在 PRD 中另指 `epic-14` 的獨立系統設定畫面本身，容易與「全域預設值」這個資料層概念混淆）
