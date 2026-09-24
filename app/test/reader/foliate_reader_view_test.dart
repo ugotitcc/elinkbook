@@ -1223,22 +1223,27 @@ void main() {
   });
 
   group('handleFoliateConsoleMessage', () {
+    // ReaderConsoleLog 每筆自帶時間戳；固定時鐘讓字串可預期。
+    const ts = '14:39:51.123';
     setUp(() {
       ReaderConsoleLog.clear();
+      ReaderConsoleLog.clock = () => DateTime(2026, 9, 24, 14, 39, 51, 123);
     });
+    tearDown(() => ReaderConsoleLog.clock = DateTime.now);
 
     test('把 messageLevel 與 message 組成單行文字附加到 ReaderConsoleLog', () {
       handleFoliateConsoleMessage('測試訊息', 'LOG', consoleLogEnabled: true);
 
       expect(ReaderConsoleLog.entries.value, hasLength(1));
-      expect(ReaderConsoleLog.entries.value.single, '[LOG] 測試訊息');
+      expect(ReaderConsoleLog.entries.value.single, '$ts [LOG] 測試訊息');
     });
 
     test('可連續呼叫多次，依序附加不覆蓋既有訊息', () {
       handleFoliateConsoleMessage('第一筆', 'LOG', consoleLogEnabled: true);
       handleFoliateConsoleMessage('第二筆', 'ERROR', consoleLogEnabled: true);
 
-      expect(ReaderConsoleLog.entries.value, ['[LOG] 第一筆', '[ERROR] 第二筆']);
+      expect(ReaderConsoleLog.entries.value,
+          ['$ts [LOG] 第一筆', '$ts [ERROR] 第二筆']);
     });
 
     test('consoleLogEnabled 為 false 時，LOG／WARNING 等非 ERROR 等級不寫入', () {
@@ -1252,7 +1257,7 @@ void main() {
         () {
       handleFoliateConsoleMessage('例外訊息', 'ERROR', consoleLogEnabled: false);
 
-      expect(ReaderConsoleLog.entries.value, ['[ERROR] 例外訊息']);
+      expect(ReaderConsoleLog.entries.value, ['$ts [ERROR] 例外訊息']);
     });
 
     test('consoleLogEnabled 為 false 時，ERROR 與 LOG 混合呼叫，只有 ERROR 被記錄',
@@ -1261,7 +1266,7 @@ void main() {
       handleFoliateConsoleMessage('例外訊息', 'ERROR', consoleLogEnabled: false);
       handleFoliateConsoleMessage('警告訊息', 'WARNING', consoleLogEnabled: false);
 
-      expect(ReaderConsoleLog.entries.value, ['[ERROR] 例外訊息']);
+      expect(ReaderConsoleLog.entries.value, ['$ts [ERROR] 例外訊息']);
     });
   });
 

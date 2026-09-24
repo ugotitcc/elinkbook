@@ -1476,6 +1476,41 @@ async function openBook() {
       'flow',
       initialPrefs.pageTurnMode === 'scroll' ? 'scrolled' : 'paginated',
     )
+    // 【預讀章節套用過時排版的防護】/diagnose（2026-09-24，真機 AiPaper Reader C
+    // 回報：直排單欄設定下，翻到下一章偶爾變成上下兩半的雙欄，離開再進入即恢復）。
+    // 根因（真機日誌＋Puppeteer 延遲載入重現，見 tmp/diag-column-harness/race.mjs）：
+    // paginator.js 預讀相鄰章節時，在 `await view.load()` 之前就捕捉了 `#lastLayout`
+    // （`const cachedLayout = this.#lastLayout`）；載入期間若主要章節的排版改變
+    // （開書時的暫態、`applyPreferences()`、視窗尺寸變化都可能），預讀章節載完後仍套用
+    // 過時的 columnWidth，且之後沒有任何機制修正——直排文件套到橫排算出的 columnWidth
+    // （≈330）便在 752px 高的容器內排成 2 欄，翻到該章就看到雙欄。
+    // paginator.js 是釘定的 vendored 檔案（ADR 0011／0013 不修改），故在這裡防護：
+    // 每個章節載入完成（paginator 派發 create-overlayer）後，比對目前所有章節文件實際
+    // 套用的 column-width，只要不一致就呼叫 renderer.render()（公開方法，會以最新排版
+    // 重排所有章節）。全部一致時完全不動作，正常閱讀零成本；連續不一致最多重排 3 次，
+    // 避免異常情況下無限重排。FXL 沒有 column-width 機制，直接略過。
+    if (!view.isFixedLayout && typeof view.renderer.getContents === 'function') {
+      let reconcileTimer = null
+      let reconcileRuns = 0
+      const reconcileSectionLayouts = () => {
+        reconcileTimer = null
+        const widths = view.renderer.getContents()
+          .map((c) => parseFloat(c.doc?.documentElement?.style?.columnWidth))
+          .filter((w) => Number.isFinite(w))
+        const consistent = widths.length < 2 || widths.every((w) => Math.abs(w - widths[0]) <= 1)
+        if (consistent) {
+          reconcileRuns = 0
+          return
+        }
+        if (reconcileRuns >= 3) return
+        reconcileRuns++
+        view.renderer.render()
+      }
+      view.renderer.addEventListener('create-overlayer', () => {
+        if (reconcileTimer) clearTimeout(reconcileTimer)
+        reconcileTimer = setTimeout(reconcileSectionLayouts, 0)
+      })
+    }
     // Issue 9：裝置旋轉/視窗尺寸變化時重新呼叫 applyPreferences()。
     // 根因（見 ADR 0012「已知限制」段）：「雙欄」欄數模式的
     // max-inline-size（targetSize = Math.ceil(hostSize / 2)，見上方

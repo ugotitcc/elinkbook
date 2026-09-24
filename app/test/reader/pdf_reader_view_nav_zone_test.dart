@@ -276,7 +276,8 @@ void main() {
 
     expect(
       ReaderConsoleLog.entries.value.any((line) =>
-          line.startsWith('[DEBUG-e26i3] up qualified=true fired=true') &&
+          // 每筆日誌開頭自帶 HH:mm:ss.SSS 時間戳，故以 contains 判斷。
+          line.contains('[DEBUG-e26i3] up qualified=true fired=true') &&
           line.endsWith('zone=4')),
       isTrue,
     );
