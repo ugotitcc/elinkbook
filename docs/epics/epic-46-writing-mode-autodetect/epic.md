@@ -73,4 +73,17 @@ Harness `scenario-writing-mode-autodetect.mjs` 7 案例在修改前全部紅燈�
 - M-5：harness README 補回檔尾空行、場景說明更新為 10 案例；計畫 Task 1～3 checkbox 勾選。
 - 驗證：以修訂前的 `main.js` 跑新場景，F／G／H 三案例 FAIL；修訂後 10/10 PASS。`run-all.mjs` 全部 PASS、`check_foliate_es_compat.js` 乾淨。另以臨時探針確認覆寫為 `horizontal`／`vertical` 時開書正常，且 `onPageRendered` 回報覆寫值。
 
-下一步：Task 4 真機驗證（人類）。
+**2026-09-25 Task 4 — 真機驗證通過**（AiPaper Reader C，Android 16，WebView Chrome 152）
+
+- Step 1～3：人類確認全部通過。《蘇東坡新傳》在「採用書籍排版」下為直排，版面、分欄與翻頁方向正常；從書本中段關閉後重開仍為直排；橫排 EPUB 與 TXT 合成書沒有誤判。
+- Step 4：暫時在 `openBook()` 的預掃前後加上 `performance.now()` 計時（commit `2e96a3be`），量完後已移除。預掃耗時如下，最壞約 250ms，相對於 E-Ink 裝置建立 WebView 到開始預掃的 0.8～3.8 秒佔比不大，維持 `INLINE_STYLE_SCAN_LIMIT = 20`：
+
+| 書籍 | 預掃耗時 | 判定 |
+|---|---|---|
+| 《蘇東坡新傳》（直排 EPUB，掃到 CSS 即提早結束） | 66.1ms | vertical |
+| 《飢餓遊戲Ⅰ 飢餓遊戲》（TXT 合成書，約 355KB） | 40.4ms | horizontal |
+| 《AI世代的創意教養》（橫排 EPUB，需掃完全部 CSS 與前 20 章） | 249.6ms | horizontal |
+
+- 附帶發現：診斷日誌中出現兩筆「openBook 失敗: ResizeObserver loop completed with undelivered notifications」，其中一筆發生在使用者手動覆寫（不會預掃）的情況，確認與本 Epic 無關，是 `globalErrorCaptureJs` 既有的誤報，已登錄為 Backlog `epic-47-resize-observer-false-error`。
+
+下一步：發 PR。
