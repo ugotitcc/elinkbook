@@ -953,6 +953,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readerSettingsUseBookFontLabel => 'Use book\'s built-in font';
 
   @override
+  String get readerSettingsFontFamilyLabel => 'Font';
+
+  @override
   String get readerSettingsColumnCountLabel => 'Columns';
 
   @override

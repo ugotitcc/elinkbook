@@ -2248,6 +2248,65 @@ void main() {
     expect(find.text('Display'), findsOneWidget);
     expect(find.text('Presets'), findsOneWidget);
   });
+
+  testWidgets('正體中文介面下字型標籤與欄數「單欄」選項正確渲染', (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+
+    expect(find.text('字型'), findsOneWidget);
+
+    await switchToTab(tester, '呈現');
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('reader_settings_column_mode_single')),
+        matching: find.text('單欄'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('簡體中文介面下字型標籤與欄數「单栏」選項正確以簡體渲染', (tester) async {
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      _noopOnChanged,
+      locale: const Locale('zh', 'CN'),
+    );
+
+    expect(find.text('字体'), findsOneWidget);
+    expect(find.text('字型'), findsNothing);
+
+    await switchToTab(tester, '呈现');
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('reader_settings_column_mode_single')),
+        matching: find.text('单栏'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('單欄'), findsNothing);
+  });
+
+  testWidgets('英文介面下字型標籤與欄數「Single」選項正確以英文渲染', (tester) async {
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      _noopOnChanged,
+      locale: const Locale('en'),
+    );
+
+    expect(find.text('Font'), findsOneWidget);
+    expect(find.text('字型'), findsNothing);
+
+    await switchToTab(tester, 'Display');
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('reader_settings_column_mode_single')),
+        matching: find.text('Single'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('單欄'), findsNothing);
+  });
 }
 
 Future<void> _pumpSheet(

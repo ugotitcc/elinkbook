@@ -1247,6 +1247,10 @@
   "@readerSettingsUseBookFontLabel": {
     "description": "字型下拉選單「使用書本內建字型」選項（不指定自訂字型）"
   },
+  "readerSettingsFontFamilyLabel": "字型",
+  "@readerSettingsFontFamilyLabel": {
+    "description": "版面設定「文字」分頁中字型下拉選單左側的標籤"
+  },
   "readerSettingsColumnCountLabel": "欄數",
   "@readerSettingsColumnCountLabel": {
     "description": "呈現分頁「欄數」選項群組小標題"

@@ -1708,6 +1708,12 @@ abstract class AppLocalizations {
   /// **'使用書本內建字型'**
   String get readerSettingsUseBookFontLabel;
 
+  /// 版面設定「文字」分頁中字型下拉選單左側的標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字型'**
+  String get readerSettingsFontFamilyLabel;
+
   /// 呈現分頁「欄數」選項群組小標題
   ///
   /// In zh_TW, this message translates to:

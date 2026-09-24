@@ -268,6 +268,7 @@
   "readerSettingsResetToBookStyleTooltip": "恢復本書原樣式",
   "readerSettingsNotOverriddenTooltip": "跟隨本書原樣式，尚未調整",
   "readerSettingsUseBookFontLabel": "使用書本內建字型",
+  "readerSettingsFontFamilyLabel": "字型",
   "readerSettingsColumnCountLabel": "欄數",
   "readerSettingsColumnAutoLabel": "自動",
   "readerSettingsColumnSingleLabel": "單欄",

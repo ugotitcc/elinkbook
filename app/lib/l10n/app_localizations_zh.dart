@@ -929,6 +929,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get readerSettingsUseBookFontLabel => '使用書本內建字型';
 
   @override
+  String get readerSettingsFontFamilyLabel => '字型';
+
+  @override
   String get readerSettingsColumnCountLabel => '欄數';
 
   @override
@@ -2853,6 +2856,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get readerSettingsUseBookFontLabel => '使用书本内建字体';
 
   @override
+  String get readerSettingsFontFamilyLabel => '字体';
+
+  @override
   String get readerSettingsColumnCountLabel => '栏数';
 
   @override
@@ -4775,6 +4781,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerSettingsUseBookFontLabel => '使用書本內建字型';
+
+  @override
+  String get readerSettingsFontFamilyLabel => '字型';
 
   @override
   String get readerSettingsColumnCountLabel => '欄數';

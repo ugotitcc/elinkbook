@@ -583,13 +583,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             items:
                 [
                   (ColumnMode.auto, 'auto', Icons.auto_awesome, l10n.readerSettingsColumnAutoLabel, l10n.readerSettingsColumnAutoLabel),
-                  (
-                    ColumnMode.single,
-                    'single',
-                    Icons.crop_portrait,
-                    '單欄',
-                    '單欄',
-                  ),
+                  (ColumnMode.single, 'single', Icons.crop_portrait, l10n.readerSettingsColumnSingleLabel, l10n.readerSettingsColumnSingleLabel),
                   (ColumnMode.double, 'double', Icons.book, l10n.readerSettingsColumnDoubleLabel, l10n.readerSettingsColumnDoubleLabel),
                 ].map((option) {
                   final (mode, keySuffix, icon, tooltip, label) = option;
@@ -668,7 +662,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return EBFieldCard(
       child: Row(
         children: [
-          const Text('字型', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(l10n.readerSettingsFontFamilyLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(width: 12),
           // DropdownButton 內部以 IndexedStack 疊放「所有」選項來決定自身寬度
           // （不只是目前選中的值），字型名稱過長（尤其使用者自訂字型）時會把
