@@ -1,3 +1,5 @@
+import '../l10n/app_localizations.dart';
+
 /// 語音朗讀（TTS）的語音來源抽象（epic-34-tts-readalong Issue 2，
 /// spec.md「Implementation Decisions」）。三種實作對應不同 Phase：
 /// [SystemTtsProvider]（Phase 1，本 Issue）、雲端 API（Phase 2）、端側
@@ -32,6 +34,8 @@ class TtsVoice {
 
   const TtsVoice({required this.id, required this.displayName});
 
+  /// 內建的系統預設語音。[displayName] 只是模型層的固定後備值（相等性比對與非 UI 情境使用），
+  /// **畫面顯示一律經 [localizeTtsVoiceName]**，依介面語言轉譯（epic-45-interface-i18n Issue 10）。
   static const systemDefault = TtsVoice(
     id: 'system-default',
     displayName: '系統預設語音',
@@ -44,6 +48,12 @@ class TtsVoice {
   @override
   int get hashCode => Object.hash(id, displayName);
 }
+
+/// 表現層顯示名稱：內建的系統預設語音（以 [TtsVoice.id] 判斷，不看 displayName）依目前介面
+/// 語言轉譯；其他語音（例如雲端 Provider 回傳的語音）名稱是供應商資料，原樣顯示。
+/// 比照 `localizeGroupName()` 的既有模式（epic-45-interface-i18n Issue 2）。
+String localizeTtsVoiceName(TtsVoice voice, AppLocalizations l10n) =>
+    voice.id == TtsVoice.systemDefault.id ? l10n.ttsVoiceSystemDefault : voice.displayName;
 
 /// [TtsProvider.synthesize] 的合成結果。[wordTimings] 為字級時間戳記，
 /// Phase 1 系統語音不提供，恆為空清單（見 [TtsWordTiming]）。

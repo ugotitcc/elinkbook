@@ -81,7 +81,15 @@ abstract class OpdsClient {
   /// 時載入指定的分類/分頁 Feed（通常來自前一次呼叫回傳的
   /// [OpdsFeed.nextUrl]/[OpdsNavigationLink.href]）。回傳的
   /// [OpdsFeed] 內所有 URL 皆保證為絕對路徑。
-  Future<OpdsFeed> fetchFeed(RemoteServerProfile server, {String? password, String? feedUrl});
+  ///
+  /// [fallbackTitles] 為來源缺 `<title>` 時的後備標題，必填、由畫面層依介面語言傳入
+  /// （epic-45-interface-i18n Issue 10）。
+  Future<OpdsFeed> fetchFeed(
+    RemoteServerProfile server, {
+    String? password,
+    String? feedUrl,
+    required OpdsFallbackTitles fallbackTitles,
+  });
 
   /// 下載 [acquisition] 指定的檔案到 [destinationPath]。[onProgress] 於
   /// 每個資料區塊到達時回呼 `(received, total)`，`total` 為 0 代表伺服器

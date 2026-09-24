@@ -99,7 +99,7 @@ class _TtsDefaultsScreenState extends State<TtsDefaultsScreen> {
                         for (final voice in _voices)
                           RadioListTile<String>(
                             key: Key('tts_defaults_voice_${voice.id}'),
-                            title: Text(voice.displayName),
+                            title: Text(localizeTtsVoiceName(voice, AppLocalizations.of(context)!)),
                             value: voice.id,
                           ),
                       ],

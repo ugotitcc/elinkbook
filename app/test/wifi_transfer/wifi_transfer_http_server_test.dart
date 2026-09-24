@@ -44,8 +44,12 @@ Future<_Resp> _sendRealRequest(
   }
 }
 
-Future<_Resp> _realGet(String url) =>
-    _sendRealRequest(url, openRequest: (client, uri) => client.getUrl(uri));
+Future<_Resp> _realGet(String url, {Map<String, String> headers = const {}}) =>
+    _sendRealRequest(url, openRequest: (client, uri) async {
+      final req = await client.getUrl(uri);
+      headers.forEach(req.headers.set);
+      return req;
+    });
 
 Future<_Resp> _realPost(String url) =>
     _sendRealRequest(url, openRequest: (client, uri) => client.postUrl(uri));
@@ -78,7 +82,7 @@ Future<_BytesResp> _realGetBytes(String url) async {
 
 Future<_Resp> _realMultipartUpload(
   String url,
-  List<({String filename, List<int> bytes})> files,
+  List<({String? filename, List<int> bytes})> files,
 ) async {
   final request = http.MultipartRequest('POST', Uri.parse(url));
   for (final file in files) {
@@ -127,7 +131,32 @@ void main() {
       expect(response.statusCode, 200);
       expect(response.headers['content-type'], contains('text/html'));
       expect(response.headers['cache-control'], 'no-cache');
-      expect(response.body, contains('elinkBook WiFi 傳書'));
+      expect(response.headers['vary'], 'Accept-Language');
+      // 沒有 Accept-Language 時 fallback 正體中文（與 App 一致）。
+      expect(response.body, contains('"pageTitle":"elinkBook WiFi 傳書"'));
+      expect(response.body, contains('<html lang="zh-Hant">'));
+    });
+
+    test('GET /：依 Accept-Language 注入對應語言的字典與 <html lang>（Issue 10）',
+        () async {
+      final url = 'http://127.0.0.1:${httpServer.port}/';
+      final en = await _realGet(url, headers: {'accept-language': 'en-US,en;q=0.9'});
+      expect(en.body, contains('<html lang="en">'));
+      expect(en.body, contains('"pageTitle":"elinkBook WiFi Transfer"'));
+      expect(en.body, isNot(contains('WiFi 傳書')));
+
+      final zhCn = await _realGet(url, headers: {'accept-language': 'zh-CN,zh;q=0.9'});
+      expect(zhCn.body, contains('<html lang="zh-Hans">'));
+      expect(zhCn.body, contains('"pageTitle":"elinkBook WiFi 传书"'));
+
+      // 首選語言本 App 不支援時，依次要偏好（en）而非直接 fallback 正體中文。
+      final fr = await _realGet(url, headers: {'accept-language': 'fr-FR,en;q=0.8'});
+      expect(fr.body, contains('<html lang="en">'));
+
+      // 佔位符必須全部被替換掉。
+      for (final body in [en.body, zhCn.body, fr.body]) {
+        expect(body, isNot(contains('__WIFI_PAGE_')));
+      }
     });
 
     test('GET /：HTML 結構中 #upload-section 位於 #download-section 之前（Issue 4 佈局重排）',
@@ -177,7 +206,7 @@ void main() {
       final response =
           await _realGet('http://127.0.0.1:${httpServer.port}/index.html');
       expect(response.statusCode, 200);
-      expect(response.body, contains('elinkBook WiFi 傳書'));
+      expect(response.body, contains('"pageTitle":"elinkBook WiFi 傳書"'));
     });
 
     test('GET /api/books 回傳 JSON 陣列，欄位對應正確且僅列出 isDownloaded 書籍',
@@ -840,6 +869,33 @@ void main() {
       expect(response.statusCode, 200);
       final results = jsonDecode(response.body) as List<dynamic>;
       expect(results.single['originalFileName'], '文件.docx');
+      expect(results.single['outcome'], 'unsupportedFormat');
+      expect(importService.lastImportCall, isNull);
+    });
+
+    test('上傳的 part 缺少檔名：originalFileName 為 null（由網頁端依語言顯示），'
+        'outcome 為 unsupportedFormat', () async {
+      final importService = FakeBookImportService();
+      final wifiServer = WifiTransferHttpServer(
+        service: WifiTransferService(
+          libraryRepository: FakeLibraryRepository(),
+          importService: importService,
+          computeFingerprint: FakeFingerprintComputer().call,
+          materializeContentUri: (uri) async => null,
+          deleteFile: (path) async {},
+        ),
+      );
+      final server = await wifiServer.start(ipAddress: '127.0.0.1', port: 0);
+      addTearDown(() => wifiServer.stop(server));
+
+      final response = await _realMultipartUpload(
+        'http://127.0.0.1:${server.port}/api/upload',
+        [(filename: null, bytes: [1, 2, 3])],
+      );
+
+      expect(response.statusCode, 200);
+      final results = jsonDecode(response.body) as List<dynamic>;
+      expect(results.single['originalFileName'], isNull);
       expect(results.single['outcome'], 'unsupportedFormat');
       expect(importService.lastImportCall, isNull);
     });

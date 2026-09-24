@@ -1708,6 +1708,12 @@ abstract class AppLocalizations {
   /// **'使用書本內建字型'**
   String get readerSettingsUseBookFontLabel;
 
+  /// 版面設定「文字」分頁中字型下拉選單左側的標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字型'**
+  String get readerSettingsFontFamilyLabel;
+
   /// 呈現分頁「欄數」選項群組小標題
   ///
   /// In zh_TW, this message translates to:
@@ -3400,6 +3406,276 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'### 📌 {label}（位置：{position}）'**
   String markdownExportAnnotationHeading(String label, String position);
+
+  /// 新增書籤時的預設名稱（PDF），{page} 為頁碼（1-based）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'第 {page} 頁'**
+  String bookmarkDefaultNamePdfPage(int page);
+
+  /// 新增書籤時的預設名稱（無章節名稱時），{percent} 為全書進度百分比（0–100）；同時用於 Markdown 匯出的位置標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{percent}% 處'**
+  String bookmarkDefaultNamePercent(int percent);
+
+  /// 新增書籤時，章節名稱與進度皆無法取得時的通用預設名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'書籤'**
+  String get bookmarkDefaultNameFallback;
+
+  /// Android 朗讀（TTS）前景服務的通知頻道名稱，顯示於系統的通知設定。頻道於啟動時建立，語言以啟動當下為準（無 BuildContext，見 startup_localizations.dart）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'朗讀播放中'**
+  String get ttsNotificationChannelName;
+
+  /// 朗讀語音清單中內建的「系統預設語音」選項顯示名稱（TtsVoice.systemDefault，依語音 id 判斷後轉譯）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'系統預設語音'**
+  String get ttsVoiceSystemDefault;
+
+  /// 遠端 OPDS 目錄的分類導覽連結缺少標題時的預設名稱（由畫面層傳給解析器）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'未命名分類'**
+  String get remoteCatalogUnnamedCategory;
+
+  /// 遠端 OPDS 目錄的書目缺少標題時的預設書名（由畫面層傳給解析器）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'未知書名'**
+  String get remoteCatalogUnknownBookTitle;
+
+  /// WiFi 傳書網頁（電腦瀏覽器開啟）的頁面標題與 h1
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'elinkBook WiFi 傳書'**
+  String get wifiPageTitle;
+
+  /// WiFi 傳書網頁「上傳書籍」區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上傳書籍'**
+  String get wifiPageUploadHeading;
+
+  /// WiFi 傳書網頁拖放區文字，後面接「選擇檔案」連結
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'拖放檔案到此處，或'**
+  String get wifiPageDropzoneText;
+
+  /// WiFi 傳書網頁拖放區內開啟檔案選擇器的連結文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選擇檔案'**
+  String get wifiPageChooseFile;
+
+  /// WiFi 傳書網頁「下載書籍」區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下載書籍'**
+  String get wifiPageDownloadHeading;
+
+  /// WiFi 傳書網頁書名搜尋框的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'搜尋書名…'**
+  String get wifiPageSearchPlaceholder;
+
+  /// WiFi 傳書網頁按鈕：勾選目前頁的全部書籍
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'全選目前頁'**
+  String get wifiPageSelectPage;
+
+  /// WiFi 傳書網頁按鈕：清除所有勾選
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'清除勾選'**
+  String get wifiPageClearSelection;
+
+  /// WiFi 傳書網頁已勾選數量；{count} 為數量（以字串傳入，由網頁端代入）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已勾選 {count} 本'**
+  String wifiPageSelectedCount(String count);
+
+  /// WiFi 傳書網頁書籍清單載入中的提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'載入中…'**
+  String get wifiPageLoading;
+
+  /// WiFi 傳書網頁分頁按鈕：上一頁
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上一頁'**
+  String get wifiPagePrevPage;
+
+  /// WiFi 傳書網頁分頁按鈕：下一頁
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下一頁'**
+  String get wifiPageNextPage;
+
+  /// WiFi 傳書網頁目前頁碼；{page}、{total} 以字串傳入，由網頁端代入
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'第 {page} / {total} 頁'**
+  String wifiPagePageInfo(String page, String total);
+
+  /// WiFi 傳書網頁按鈕：下載已勾選的書籍
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下載已勾選書籍'**
+  String get wifiPageDownloadSelected;
+
+  /// WiFi 傳書網頁：手機端沒有任何可下載書籍時的提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'目前沒有可下載的書籍'**
+  String get wifiPageNoBooks;
+
+  /// WiFi 傳書網頁：搜尋後沒有符合的書籍時的提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'查無符合條件的書籍'**
+  String get wifiPageNoMatch;
+
+  /// WiFi 傳書網頁：書籍清單載入失敗的提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法載入書籍清單'**
+  String get wifiPageLoadFailed;
+
+  /// WiFi 傳書網頁書籍總數；{count} 以字串傳入，由網頁端代入
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'共 {count} 本書籍'**
+  String wifiPageTotalBooks(String count);
+
+  /// WiFi 傳書網頁搜尋結果統計；{matched} 為符合數、{total} 為總數，皆以字串傳入
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'符合 {matched} 本 / 共 {total} 本'**
+  String wifiPageMatchStats(String matched, String total);
+
+  /// WiFi 傳書網頁：未勾選任何書籍就按下載時的提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'請至少勾選一本書'**
+  String get wifiPageSelectAtLeastOne;
+
+  /// WiFi 傳書網頁：批次下載進行中的狀態文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下載中…'**
+  String get wifiPageDownloading;
+
+  /// WiFi 傳書網頁：已觸發全部下載；{count} 為本數，以字串傳入
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已觸發全部下載（共 {count} 本）'**
+  String wifiPageDownloadTriggered(String count);
+
+  /// WiFi 傳書網頁上傳結果：已匯入
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已匯入'**
+  String get wifiPageOutcomeImported;
+
+  /// WiFi 傳書網頁上傳結果：書籍已存在而略過
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已存在，已略過'**
+  String get wifiPageOutcomeDuplicateSkipped;
+
+  /// WiFi 傳書網頁上傳結果：檔案格式不支援
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'格式不支援'**
+  String get wifiPageOutcomeUnsupportedFormat;
+
+  /// WiFi 傳書網頁上傳結果：匯入失敗
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'匯入失敗'**
+  String get wifiPageOutcomeFailed;
+
+  /// WiFi 傳書網頁上傳結果列；{name} 為檔名、{outcome} 為結果文字，皆以字串傳入
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{name}：{outcome}'**
+  String wifiPageUploadResultLine(String name, String outcome);
+
+  /// WiFi 傳書網頁：上傳的檔案缺少檔名時顯示的名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'(未知檔名)'**
+  String get wifiPageUnknownFileName;
+
+  /// WiFi 傳書網頁：開始上傳前的準備狀態
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'準備上傳…'**
+  String get wifiPageUploadPreparing;
+
+  /// WiFi 傳書網頁：上傳進行中（無法得知進度百分比時）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'正在上傳…'**
+  String get wifiPageUploading;
+
+  /// WiFi 傳書網頁：上傳進行中並附進度；{percent} 為百分比數字，以字串傳入
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'正在上傳… ({percent}%)'**
+  String wifiPageUploadingPercent(String percent);
+
+  /// WiFi 傳書網頁：位元組已傳完，手機端處理與匯入中
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上傳完成，手機端處理與匯入中，請稍候…'**
+  String get wifiPageUploadProcessing;
+
+  /// WiFi 傳書網頁：無法得知檔案總大小時的容量顯示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'未知'**
+  String get wifiPageUnknownSize;
+
+  /// WiFi 傳書網頁：伺服器回應錯誤狀態碼；{status} 為 HTTP 狀態碼，以字串傳入
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上傳失敗：伺服器回應錯誤 ({status})'**
+  String wifiPageUploadFailedServer(String status);
+
+  /// WiFi 傳書網頁：伺服器回應無法解析
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上傳失敗：無法解析伺服器回應'**
+  String get wifiPageUploadFailedParse;
+
+  /// WiFi 傳書網頁：網路錯誤導致上傳失敗
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上傳失敗：網路錯誤'**
+  String get wifiPageUploadFailedNetwork;
+
+  /// WiFi 傳書網頁：上傳被中斷
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上傳已中斷'**
+  String get wifiPageUploadAborted;
+
+  /// WiFi 傳書網頁：上傳逾時
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上傳逾時'**
+  String get wifiPageUploadTimeout;
 }
 
 class _AppLocalizationsDelegate

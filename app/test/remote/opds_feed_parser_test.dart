@@ -3,6 +3,10 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/remote/opds_feed_parser.dart';
 import 'package:elinkbook/remote/opds_types.dart';
 
+// 解析器缺 <title> 時的後備標題由呼叫端依介面語言傳入（epic-45-interface-i18n Issue 10）
+const _zhFallback = OpdsFallbackTitles(unknownBook: '未知書名', unnamedCategory: '未命名分類');
+const _enFallback = OpdsFallbackTitles(unknownBook: 'Unknown title', unnamedCategory: 'Untitled category');
+
 const _sampleFeedXml = '''<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>家用 NAS 書庫</title>
@@ -45,14 +49,14 @@ void main() {
   });
 
   test('解析 feed 標題與分頁 next 連結，相對路徑轉為絕對 URL', () {
-    final feed = parser.parse(_sampleFeedXml, feedUri);
+    final feed = parser.parse(_sampleFeedXml, feedUri, fallbackTitles: _zhFallback);
     expect(feed.title, '家用 NAS 書庫');
     expect(feed.nextUrl, 'http://192.168.1.100:8080/opds/page2');
     expect(feed.prevUrl, isNull);
   });
 
   test('分類導覽條目（subsection）被歸類到 navigationLinks，href 轉為絕對 URL', () {
-    final feed = parser.parse(_sampleFeedXml, feedUri);
+    final feed = parser.parse(_sampleFeedXml, feedUri, fallbackTitles: _zhFallback);
     expect(feed.navigationLinks, [
       const OpdsNavigationLink(
         title: '作者分類',
@@ -62,7 +66,7 @@ void main() {
   });
 
   test('書目條目正確解析 id/title/author/縮圖（相對路徑轉絕對）', () {
-    final feed = parser.parse(_sampleFeedXml, feedUri);
+    final feed = parser.parse(_sampleFeedXml, feedUri, fallbackTitles: _zhFallback);
     final book = feed.entries.firstWhere((e) => e.remoteBookId == 'urn:calibre:book-1');
     expect(book.title, '紅樓夢');
     expect(book.author, '曹雪芹');
@@ -70,7 +74,7 @@ void main() {
   });
 
   test('同一書目多個 acquisition 連結皆被解析，相對與絕對路徑皆正確保留/轉換', () {
-    final feed = parser.parse(_sampleFeedXml, feedUri);
+    final feed = parser.parse(_sampleFeedXml, feedUri, fallbackTitles: _zhFallback);
     final book = feed.entries.firstWhere((e) => e.remoteBookId == 'urn:calibre:book-1');
     expect(book.acquisitions, [
       const OpdsAcquisition(
@@ -87,7 +91,7 @@ void main() {
   });
 
   test('不支援的 MIME type 時 format 為 null', () {
-    final feed = parser.parse(_sampleFeedXml, feedUri);
+    final feed = parser.parse(_sampleFeedXml, feedUri, fallbackTitles: _zhFallback);
     final book = feed.entries.firstWhere((e) => e.remoteBookId == 'urn:calibre:book-2');
     expect(book.acquisitions.single.format, isNull);
   });
@@ -103,7 +107,7 @@ void main() {
           href="download/4.epub?token=abc123"/>
   </entry>
 </feed>''';
-    final feed = parser.parse(xml, feedUri);
+    final feed = parser.parse(xml, feedUri, fallbackTitles: _zhFallback);
     final book = feed.entries.single;
     expect(book.acquisitions.single.format, BookFileFormat.epub);
     expect(book.acquisitions.single.href,
@@ -121,7 +125,7 @@ void main() {
           href="download/5.mobi"/>
   </entry>
 </feed>''';
-    final feed = parser.parse(xml, feedUri);
+    final feed = parser.parse(xml, feedUri, fallbackTitles: _zhFallback);
     expect(feed.entries.single.acquisitions.single.format, isNull);
   });
 
@@ -137,7 +141,7 @@ void main() {
           href=" download/6.epub "/>
   </entry>
 </feed>''';
-    final feed = parser.parse(xml, feedUri);
+    final feed = parser.parse(xml, feedUri, fallbackTitles: _zhFallback);
     final book = feed.entries.single;
     expect(book.thumbnailUrl, 'http://192.168.1.100:8080/opds/cover/6.jpg');
     expect(book.acquisitions.single.href, 'http://192.168.1.100:8080/opds/download/6.epub');
@@ -153,14 +157,53 @@ void main() {
           href="download/no-title.epub"/>
   </entry>
 </feed>''';
-    final feed = parser.parse(xml, feedUri);
+    final feed = parser.parse(xml, feedUri, fallbackTitles: _zhFallback);
     final book = feed.entries.single;
     expect(book.title, '未知書名');
     expect(book.author, isNull);
   });
 
+  test('缺少 <title> 時使用呼叫端傳入的後備標題（依介面語言），不寫死在解析器內', () {
+    const xml = '''<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>缺標題測試</title>
+  <link rel="subsection" href="/opds/root-cat"/>
+  <entry>
+    <id>urn:no-title-cat</id>
+    <link rel="subsection" href="/opds/entry-cat"/>
+  </entry>
+  <entry>
+    <id>urn:calibre:book-no-title</id>
+    <link rel="http://opds-spec.org/acquisition" type="application/epub+zip"
+          href="download/no-title.epub"/>
+  </entry>
+</feed>''';
+    final feed = parser.parse(xml, feedUri, fallbackTitles: _enFallback);
+    expect(feed.navigationLinks.map((l) => l.title), everyElement('Untitled category'));
+    expect(feed.navigationLinks, hasLength(2));
+    expect(feed.entries.single.title, 'Unknown title');
+  });
+
+  test('書目缺 <title> 也缺 <id> 時，remoteBookId 為固定識別字，不隨後備標題的語言改變', () {
+    // remoteBookId 是持久化的去重鍵（見 RemoteDownloadJob.id），若跟著介面語言變動，
+    // 同一本書切換語言後會被當成不同的書。
+    const xml = '''<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>缺標題與 id</title>
+  <entry>
+    <link rel="http://opds-spec.org/acquisition" type="application/epub+zip"
+          href="download/x.epub"/>
+  </entry>
+</feed>''';
+    final zh = parser.parse(xml, feedUri, fallbackTitles: _zhFallback).entries.single;
+    final en = parser.parse(xml, feedUri, fallbackTitles: _enFallback).entries.single;
+    expect(en.remoteBookId, zh.remoteBookId);
+    expect(zh.title, '未知書名');
+    expect(en.title, 'Unknown title');
+  });
+
   test('缺少 length 屬性時 sizeBytes 為 null，不拋出例外', () {
-    final feed = parser.parse(_sampleFeedXml, feedUri);
+    final feed = parser.parse(_sampleFeedXml, feedUri, fallbackTitles: _zhFallback);
     final book = feed.entries.firstWhere((e) => e.remoteBookId == 'urn:calibre:book-3');
     expect(book.acquisitions.single.sizeBytes, isNull);
   });
@@ -175,7 +218,7 @@ void main() {
   <link rel="subsection" href="/opds?library_id=Lib&amp;sort=authors" title="依作者"/>
   <link rel="search" title="Search" href="/opds/search/{searchTerms}?library_id=Lib"/>
 </feed>''';
-    final feed = parser.parse(xml, feedUri);
+    final feed = parser.parse(xml, feedUri, fallbackTitles: _zhFallback);
     expect(feed.navigationLinks, hasLength(2));
     expect(feed.navigationLinks[0].title, '書本在您的書庫');
     expect(feed.navigationLinks[0].href, contains('/opds?library_id=Lib'));
@@ -204,7 +247,7 @@ void main() {
           type="application/atom+xml;type=feed;profile=opds-catalog;kind=navigation"/>
   </entry>
 </feed>''';
-    final feed = parser.parse(xml, feedUri);
+    final feed = parser.parse(xml, feedUri, fallbackTitles: _zhFallback);
     expect(feed.navigationLinks, hasLength(2));
     expect(feed.navigationLinks[0].title, '由 最新');
     expect(feed.navigationLinks[0].href, contains('/opds/navcatalog/newest'));
@@ -231,7 +274,7 @@ void main() {
           type="application/atom+xml;type=feed;profile=opds-catalog;kind=navigation"/>
   </entry>
 </feed>''';
-    final feed = parser.parse(xml, feedUri);
+    final feed = parser.parse(xml, feedUri, fallbackTitles: _zhFallback);
     expect(feed.navigationLinks, hasLength(1));
     expect(feed.navigationLinks.single.title, '由 最新');
     expect(feed.navigationLinks.single.href, contains('/opds/navcatalog/newest?library_id=Library'),
@@ -252,7 +295,7 @@ void main() {
     <link href="/opds/navcatalog/tags?library_id=Library"/>
   </entry>
 </feed>''';
-    final feed = parser.parse(xml, feedUri);
+    final feed = parser.parse(xml, feedUri, fallbackTitles: _zhFallback);
     expect(feed.navigationLinks, hasLength(1));
     expect(feed.navigationLinks.single.href, contains('/opds/navcatalog/tags'));
   });
@@ -262,7 +305,7 @@ void main() {
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>空書庫</title>
 </feed>''';
-    final feed = parser.parse(xml, feedUri);
+    final feed = parser.parse(xml, feedUri, fallbackTitles: _zhFallback);
     expect(feed.nextUrl, isNull);
     expect(feed.entries, isEmpty);
     expect(feed.navigationLinks, isEmpty);

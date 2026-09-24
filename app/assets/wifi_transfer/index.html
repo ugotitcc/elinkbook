@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="__WIFI_PAGE_LANG__">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>elinkBook WiFi 傳書</title>
+<title data-i18n="pageTitle"></title>
 <style>
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -97,12 +97,12 @@
 </style>
 </head>
 <body>
-  <h1>elinkBook WiFi 傳書</h1>
+  <h1 data-i18n="pageTitle"></h1>
   <section id="upload-section">
-    <h2>上傳書籍</h2>
+    <h2 data-i18n="uploadHeading"></h2>
     <div id="upload-dropzone">
-      拖放檔案到此處，或
-      <label for="upload-file-input">選擇檔案</label>
+      <span data-i18n="dropzoneText"></span>
+      <label for="upload-file-input" data-i18n="chooseFile"></label>
     </div>
     <input id="upload-file-input" type="file" multiple style="display: none;">
     <progress id="upload-progress" value="0" max="100"></progress>
@@ -115,26 +115,43 @@
     <ul id="upload-result-list"></ul>
   </section>
   <section id="download-section">
-    <h2>下載書籍</h2>
-    <input id="download-search-input" type="text" placeholder="搜尋書名…">
+    <h2 data-i18n="downloadHeading"></h2>
+    <input id="download-search-input" type="text" data-i18n-placeholder="searchPlaceholder">
     <div id="download-search-stats" style="font-size: 12px; color: #666; margin-bottom: 8px;"></div>
     <div class="toolbar">
-      <button id="download-select-page-button" type="button">全選目前頁</button>
-      <button id="download-clear-selection-button" type="button">清除勾選</button>
-      <span id="download-selection-count" style="color: #666;">已勾選 0 本</span>
+      <button id="download-select-page-button" type="button" data-i18n="selectPage"></button>
+      <button id="download-clear-selection-button" type="button" data-i18n="clearSelection"></button>
+      <span id="download-selection-count" style="color: #666;"></span>
     </div>
-    <div id="download-list" class="placeholder">載入中…</div>
+    <div id="download-list" class="placeholder" data-i18n="loading"></div>
     <div id="download-pagination" class="pagination" style="display: none;">
-      <button id="download-prev-page-button" type="button">上一頁</button>
-      <span id="download-page-info">第 1 / 1 頁</span>
-      <button id="download-next-page-button" type="button">下一頁</button>
+      <button id="download-prev-page-button" type="button" data-i18n="prevPage"></button>
+      <span id="download-page-info"></span>
+      <button id="download-next-page-button" type="button" data-i18n="nextPage"></button>
     </div>
     <div style="margin-top: 12px;">
-      <button id="download-selected-button" type="button">下載已勾選書籍</button>
+      <button id="download-selected-button" type="button" data-i18n="downloadSelected"></button>
       <p id="download-status" class="placeholder" style="margin: 6px 0 0;"></p>
     </div>
   </section>
   <script>
+    // 字典由 App 內建 HTTP Server 依瀏覽器 Accept-Language 挑語言後注入
+    // （wifi_transfer_page.dart）。帶參數的訊息以 {名稱} 標記，t() 單趟代入。
+    const I18N = __WIFI_PAGE_I18N__;
+    function t(key, params) {
+      const template = I18N[key];
+      if (!params) return template;
+      return template.replace(/\{(\w+)\}/g, (match, name) =>
+        Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match
+      );
+    }
+    for (const el of document.querySelectorAll('[data-i18n]')) {
+      el.textContent = t(el.dataset.i18n);
+    }
+    for (const el of document.querySelectorAll('[data-i18n-placeholder]')) {
+      el.placeholder = t(el.dataset.i18nPlaceholder);
+    }
+
     function formatBytes(bytes) {
       if (bytes == null) return '';
       if (bytes < 1024) return ' (' + bytes + ' B)';
@@ -150,7 +167,7 @@
 
     function updateSelectionCount() {
       const countEl = document.getElementById('download-selection-count');
-      countEl.textContent = '已勾選 ' + selectedBookIds.size + ' 本';
+      countEl.textContent = t('selectedCount', { count: selectedBookIds.size });
     }
 
     function renderPage() {
@@ -161,7 +178,7 @@
       const pageInfo = document.getElementById('download-page-info');
 
       if (filteredBooks.length === 0) {
-        listEl.textContent = allBooks.length === 0 ? '目前沒有可下載的書籍' : '查無符合條件的書籍';
+        listEl.textContent = allBooks.length === 0 ? t('noBooks') : t('noMatch');
         listEl.className = 'placeholder';
         paginationEl.style.display = 'none';
         updateSelectionCount();
@@ -205,7 +222,7 @@
         paginationEl.style.display = 'flex';
         prevBtn.disabled = (currentPage === 1);
         nextBtn.disabled = (currentPage === totalPages);
-        pageInfo.textContent = '第 ' + currentPage + ' / ' + totalPages + ' 頁';
+        pageInfo.textContent = t('pageInfo', { page: currentPage, total: totalPages });
       } else {
         paginationEl.style.display = 'none';
       }
@@ -219,12 +236,12 @@
 
       if (!query) {
         filteredBooks = allBooks.slice();
-        statsEl.textContent = allBooks.length > 0 ? '共 ' + allBooks.length + ' 本書籍' : '';
+        statsEl.textContent = allBooks.length > 0 ? t('totalBooks', { count: allBooks.length }) : '';
       } else {
         filteredBooks = allBooks.filter((book) =>
           (book.title || '').toLowerCase().includes(query)
         );
-        statsEl.textContent = '符合 ' + filteredBooks.length + ' 本 / 共 ' + allBooks.length + ' 本';
+        statsEl.textContent = t('matchStats', { matched: filteredBooks.length, total: allBooks.length });
       }
       currentPage = 1;
       renderPage();
@@ -245,7 +262,7 @@
         }
         applyFilter();
       } catch (err) {
-        listEl.textContent = '無法載入書籍清單';
+        listEl.textContent = t('loadFailed');
         listEl.className = 'placeholder';
       }
     }
@@ -301,11 +318,11 @@
       const statusEl = document.getElementById('download-status');
       const button = document.getElementById('download-selected-button');
       if (selectedBookIds.size === 0) {
-        statusEl.textContent = '請至少勾選一本書';
+        statusEl.textContent = t('selectAtLeastOne');
         return;
       }
       button.disabled = true;
-      statusEl.textContent = '下載中…';
+      statusEl.textContent = t('downloading');
       try {
         // 【`/receiving-code-review` 審查修正 M-2】建立不可變陣列快照，避免下載期間被「清除勾選」異動
         const bookIds = [...selectedBookIds];
@@ -318,7 +335,7 @@
           document.body.removeChild(link);
           await new Promise((resolve) => setTimeout(resolve, 300));
         }
-        statusEl.textContent = '已觸發全部下載（共 ' + bookIds.length + ' 本）';
+        statusEl.textContent = t('downloadTriggered', { count: bookIds.length });
       } finally {
         button.disabled = false;
       }
@@ -328,14 +345,15 @@
       .getElementById('download-selected-button')
       .addEventListener('click', downloadSelectedBooks);
 
+    updateSelectionCount();
     loadDownloadableBooks();
 
     // 對應 UploadOutcome 四個值（wifi_transfer_service.dart）的顯示文案。
     const UPLOAD_OUTCOME_LABELS = {
-      imported: '已匯入',
-      duplicateSkipped: '已存在，已略過',
-      unsupportedFormat: '格式不支援',
-      failed: '匯入失敗',
+      imported: t('outcomeImported'),
+      duplicateSkipped: t('outcomeDuplicateSkipped'),
+      unsupportedFormat: t('outcomeUnsupportedFormat'),
+      failed: t('outcomeFailed'),
     };
 
     // 【`/receiving-code-review` 審查修正 I-2】無括號短格式容量顯示，供上傳進度列使用
@@ -372,7 +390,7 @@
       progressEl.value = 0;
       statusContainer.style.display = 'block';
       statusSpinner.style.display = 'none';
-      statusText.textContent = '準備上傳…';
+      statusText.textContent = t('uploadPreparing');
       bytesText.textContent = '';
       resultListEl.innerHTML = '';
 
@@ -383,18 +401,18 @@
           const percent = (event.loaded / event.total) * 100;
           progressEl.value = percent;
           if (event.loaded < event.total) {
-            statusText.textContent = '正在上傳… (' + Math.round(percent) + '%)';
+            statusText.textContent = t('uploadingPercent', { percent: Math.round(percent) });
             bytesText.textContent = formatBytesShort(event.loaded) + ' / ' + formatBytesShort(event.total);
           } else {
             // 上傳位元組已傳輸完畢，進入手機端計算指紋與匯入階段
             statusSpinner.style.display = 'inline-block';
-            statusText.textContent = '上傳完成，手機端處理與匯入中，請稍候…';
+            statusText.textContent = t('uploadProcessing');
             bytesText.textContent = formatBytesShort(event.total);
           }
         } else {
           // 【`/receiving-code-review` 審查修正 I-3】降級處理：無法預知總量時顯示已傳量與不確定進度條
-          statusText.textContent = '正在上傳…';
-          bytesText.textContent = formatBytesShort(event.loaded) + ' / 未知';
+          statusText.textContent = t('uploading');
+          bytesText.textContent = formatBytesShort(event.loaded) + ' / ' + t('unknownSize');
           progressEl.removeAttribute('value');
         }
       };
@@ -402,7 +420,7 @@
       // 【`/receiving-code-review` 審查修正 M-4】上傳位元組完畢時兜底切換至轉圈與處理中提示，避免 onprogress 節流遺漏
       xhr.upload.onload = () => {
         statusSpinner.style.display = 'inline-block';
-        statusText.textContent = '上傳完成，手機端處理與匯入中，請稍候…';
+        statusText.textContent = t('uploadProcessing');
       };
 
       const cleanup = () => {
@@ -424,7 +442,10 @@
               for (const result of results) {
                 const li = document.createElement('li');
                 const label = UPLOAD_OUTCOME_LABELS[result.outcome] || result.outcome;
-                li.textContent = result.originalFileName + '：' + label;
+                li.textContent = t('uploadResultLine', {
+                  name: result.originalFileName || t('unknownFileName'),
+                  outcome: label,
+                });
                 resultListEl.appendChild(li);
                 if (result.outcome === 'imported') hasImported = true;
               }
@@ -434,15 +455,16 @@
           } catch (err) {}
         }
         const li = document.createElement('li');
-        li.textContent = '上傳失敗：' +
-          (xhr.status ? `伺服器回應錯誤 (${xhr.status})` : '無法解析伺服器回應');
+        li.textContent = xhr.status
+          ? t('uploadFailedServer', { status: xhr.status })
+          : t('uploadFailedParse');
         resultListEl.appendChild(li);
       };
 
       xhr.onerror = () => {
         cleanup();
         const li = document.createElement('li');
-        li.textContent = '上傳失敗：網路錯誤';
+        li.textContent = t('uploadFailedNetwork');
         resultListEl.appendChild(li);
       };
 
@@ -450,13 +472,13 @@
       xhr.onabort = () => {
         cleanup();
         const li = document.createElement('li');
-        li.textContent = '上傳已中斷';
+        li.textContent = t('uploadAborted');
         resultListEl.appendChild(li);
       };
       xhr.ontimeout = () => {
         cleanup();
         const li = document.createElement('li');
-        li.textContent = '上傳逾時';
+        li.textContent = t('uploadTimeout');
         resultListEl.appendChild(li);
       };
       xhr.send(formData);

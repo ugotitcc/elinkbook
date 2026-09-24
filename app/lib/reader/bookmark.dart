@@ -1,3 +1,4 @@
+import '../l10n/app_localizations.dart';
 import 'bookmark_position_context.dart';
 
 /// 單一書籤（epic-6-annotations Issue 1，spec.md「書籤模組」）：標記書中
@@ -70,9 +71,14 @@ class Bookmark {
   /// 正確處理的既存行為，本次修正的是文件描述本身的錯誤，不是程式邏輯）。
   /// 章節名稱／進度皆無法取得時（理論上只會發生在目錄與定位皆尚未就緒的
   /// 極短窗口）回退為通用的「書籤」字樣，不拋出例外。
-  static String defaultName(BookmarkPositionContext context) {
+  ///
+  /// 文字依 [l10n]（介面語言）產生（epic-45-interface-i18n Issue 10，取代原
+  /// spec.md §7 的排除）。**書籤名稱是建立當下的快照**：一旦寫入資料庫就是
+  /// 使用者資料（可重新命名），不會隨之後切換介面語言而改變；切換語言前建立的
+  /// 書籤維持原語言。章節名稱本身是書籍資料，不翻譯。
+  static String defaultName(BookmarkPositionContext context, AppLocalizations l10n) {
     if (context.pdfPageIndex != null) {
-      return '第 ${context.pdfPageIndex! + 1} 頁';
+      return l10n.bookmarkDefaultNamePdfPage(context.pdfPageIndex! + 1);
     }
     final chapterTitle = context.chapterTitle;
     final progression = context.progression;
@@ -84,9 +90,9 @@ class Bookmark {
       return chapterTitle;
     }
     if (percent != null) {
-      return '$percent% 處';
+      return l10n.bookmarkDefaultNamePercent(percent);
     }
-    return '書籤';
+    return l10n.bookmarkDefaultNameFallback;
   }
 
   @override

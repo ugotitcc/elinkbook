@@ -1,8 +1,14 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/bookmark.dart';
 import 'package:elinkbook/reader/bookmark_position_context.dart';
 
 void main() {
+  // defaultName 依介面語言輸出（epic-45-interface-i18n Issue 10，取代原 spec.md §7 的排除）；
+  // 純 Dart 單元測試沒有 BuildContext，以 lookupAppLocalizations() 取得（比照 markdown_export_test）。
+  final l10n = lookupAppLocalizations(const Locale('zh', 'TW'));
+
   test('toMap／fromMap round-trip 保留所有欄位（含 id）', () {
     const bookmark = Bookmark(
       id: 'bm1',
@@ -51,7 +57,7 @@ void main() {
 
   test('defaultName：PDF 用「第 N 頁」（1-indexed 顯示）', () {
     const context = BookmarkPositionContext(pdfPageIndex: 11);
-    expect(Bookmark.defaultName(context), '第 12 頁');
+    expect(Bookmark.defaultName(context, l10n), '第 12 頁');
   });
 
   test(
@@ -63,7 +69,7 @@ void main() {
       '結構（_tocEntries 對固定版面永遠不預取），故實際只會走 progression'
       '這條路徑', () {
     const context = BookmarkPositionContext(progression: 0.42);
-    expect(Bookmark.defaultName(context), '42% 處');
+    expect(Bookmark.defaultName(context, l10n), '42% 處');
   });
 
   test('defaultName：EPUB 有章節名稱與進度時，組合成「章節 (百分比%)」', () {
@@ -71,22 +77,42 @@ void main() {
       chapterTitle: '第二章',
       progression: 0.353,
     );
-    expect(Bookmark.defaultName(context), '第二章 (35%)');
+    expect(Bookmark.defaultName(context, l10n), '第二章 (35%)');
   });
 
   test('defaultName：EPUB 只有章節名稱、無進度時，僅顯示章節名稱', () {
     const context = BookmarkPositionContext(chapterTitle: '第二章');
-    expect(Bookmark.defaultName(context), '第二章');
+    expect(Bookmark.defaultName(context, l10n), '第二章');
   });
 
   test('defaultName：EPUB 只有進度、無章節名稱時，顯示「百分比% 處」', () {
     const context = BookmarkPositionContext(progression: 0.5);
-    expect(Bookmark.defaultName(context), '50% 處');
+    expect(Bookmark.defaultName(context, l10n), '50% 處');
   });
 
   test('defaultName：章節名稱與進度皆無法取得時，回退為「書籤」', () {
     const context = BookmarkPositionContext();
-    expect(Bookmark.defaultName(context), '書籤');
+    expect(Bookmark.defaultName(context, l10n), '書籤');
+  });
+
+  test('defaultName：簡體中文與英文介面下依語言輸出（章節名稱本身是書籍資料，不翻譯）', () {
+    final cn = lookupAppLocalizations(const Locale('zh', 'CN'));
+    final en = lookupAppLocalizations(const Locale('en'));
+    const pdf = BookmarkPositionContext(pdfPageIndex: 11);
+    const percentOnly = BookmarkPositionContext(progression: 0.42);
+    const chapterAndPercent =
+        BookmarkPositionContext(chapterTitle: 'Chapter 2', progression: 0.353);
+    const none = BookmarkPositionContext();
+
+    expect(Bookmark.defaultName(pdf, cn), '第 12 页');
+    expect(Bookmark.defaultName(pdf, en), 'Page 12');
+    expect(Bookmark.defaultName(percentOnly, cn), '42% 处');
+    expect(Bookmark.defaultName(percentOnly, en), 'At 42%');
+    expect(Bookmark.defaultName(none, cn), '书签');
+    expect(Bookmark.defaultName(none, en), 'Bookmark');
+    // 「章節 (百分比%)」與「僅章節名稱」不含任何需翻譯的文字，各語言一致
+    expect(Bookmark.defaultName(chapterAndPercent, en), 'Chapter 2 (35%)');
+    expect(Bookmark.defaultName(chapterAndPercent, cn), 'Chapter 2 (35%)');
   });
 
   test('兩個欄位值完全相同的 Bookmark 視為相等', () {

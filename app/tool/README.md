@@ -2,6 +2,90 @@
 
 開發輔助腳本，不屬於 App 本身，不會被打包進 APK。
 
+## `check_l10n_hardcoded_strings.js`
+
+兩項檢查（`epic-45-interface-i18n` Issue 10，規則契約見該 Epic `spec.md` §9）：
+
+1. **字串稽核**：掃描 `app/lib/**/*.dart`，找出「Widget 字串參數位置」上**含中文字元且未經
+   `AppLocalizations` 包裝**的字串字面值（`Text('確定')`、`title: '設定'`、
+   `tooltip:`／`label:`／`hintText:` 等），防止畫面遺漏在地化與日後新增畫面忘記包裝。
+2. **測試端稽核**：掃描 `app/test/**/*.dart`，確認每個 `MaterialApp(`／`MaterialApp.router(`
+   的最外層參數都帶 `locale`／`localizationsDelegates`／`supportedLocales`。缺 `locale:`
+   時 flutter_test 預設為 en_US，日後若在該測試加中文斷言會靜默失敗；缺委派則會在
+   `AppLocalizations.of(context)!` 觸發 Null check。優先改用 `pumpLocalizedWidget()`。
+   刻意保留裸 `MaterialApp` 的測試（`eb_sheet_shell_test.dart` 驗證無 `AppLocalizations` 時的
+   fallback）以「檔案＋數量」記在腳本的 `TEST_BARE_APP_ALLOW`，數量不符即報警。
+
+### 何時該執行
+
+- **新增或修改任何畫面字串（Widget 樹內的文字）的 Issue，提交前**跑一次。
+- 目前**沒有接進 CI**（這個 repo 尚未設定任何 CI pipeline，與
+  `check_foliate_es_compat.js` 現況一致）。之後若要接進 CI，直接把下面的執行
+  指令包進 workflow 步驟即可。
+
+### 執行方式
+
+不需要 `npm install`，只用 Node.js 內建模組：
+
+```bash
+node app/tool/check_l10n_hardcoded_strings.js            # 兩項檢查都做
+# 測試／驗收時可指定其他目錄（只給其中一個旗標時只做對應那項檢查）：
+node app/tool/check_l10n_hardcoded_strings.js --lib-dir <目錄>
+node app/tool/check_l10n_hardcoded_strings.js --test-dir <目錄>
+```
+
+- 結束碼 `0`：乾淨，並印出實際掃描的檔案數（`PASS：掃描 N 個檔案…`、`PASS：掃描 N 個測試檔…`）。
+- 結束碼 `1`：至少一處違規，會印出 `lib/<檔案>:<行號>  <字串>` 或 `test/<檔案>:<行號>  缺少 locale…`。
+- 結束碼 `2`：設定錯誤——`--lib-dir` 缺參數、目錄不存在，或目錄內沒有任何可掃描的
+  `.dart` 檔。這**不代表乾淨**，避免掃錯目錄被誤當成通過。
+
+單元測試：`node app/tool/test_check_l10n_hardcoded_strings.mjs`。
+
+### 找到問題時怎麼修
+
+1. 在 `app/lib/l10n/app_zh_TW.arb`（模板，含 `@` 描述）與 `app_zh_CN.arb`／
+   `app_en.arb`／`app_zh.arb` 新增對應 key（四份 key 集合必須一致），執行
+   `cd app && flutter gen-l10n`。
+2. 該處改用 `AppLocalizations.of(context)!.<key>`，並補上 zh_CN／en 兩個
+   locale 的 widget test。
+3. 若確屬合法例外（不需翻譯的專有名詞、資料、刻意的 fallback），在該行或上一
+   行加 `// l10n-ignore: <理由>`（**必須寫理由**，空標記無效）；整檔例外或專有
+   名詞值則加進腳本的 `SKIP_FILES`／`ALLOWED_LITERAL_VALUES` 並註明理由。
+
+### 已知限制
+
+只偵測 spec §9 定義的「Widget 字串參數位置」。判定方式是找出字面值所在的
+**參數運算式**（往回掃到同一層的 `,`／`;` 或尚未配對的 `(`／`[`／`{`），再看
+這個參數是不是「文字參數」：
+
+- `Text(`／`SelectableText(` 的第一個位置參數；
+- 具名參數，名稱為 `label`／`title`／`subtitle`／`text`／`tooltip`／`message`／
+  `content`／`hint`，或**以 `Label`／`Title`／`Text`／`Tooltip`／`Message`／
+  `Hint`／`Subtitle` 結尾**（自訂 Widget 的 `deleteButtonLabel`、`hintText`、
+  `semanticsLabel` 等都算；`labelStyle`／`contentPadding` 這類非文字參數不算）。
+
+因此參數運算式內的**三元運算式與字串串接**（`tooltip: c ? '收藏' : '已收藏'`、
+`Text('a' + '中')`、Dart 相鄰字串串接）都會被抓到；巢狀呼叫的引數
+（`label: bar('中')`）、函式主體、相鄰的其他參數則不算。
+
+**掃不到**：
+
+- `record`／位置參數中的字串（例如 `(ColumnMode.single, 'single', icon, '單欄')`）。
+- 參數運算式含 `??` 的 fallback（`label: x ?? '中文'`）——這是**刻意保留的逃逸口**，
+  用於「無 `AppLocalizations` 時回退為固定字面值」的合法情境（例如
+  `eb_sheet_shell.dart` 的「關閉」）；代價是硬編碼的 `?? '中文'` 也不會被抓。
+- `assets/wifi_transfer/index.html`（電腦瀏覽器上的傳書網頁）不在掃描範圍；它的「無中文字面值」由 `test/wifi_transfer/wifi_transfer_page_test.dart` 守住。
+- model 層字串與名稱不符合上述規則的參數。Issue 10 人工盤點時發現並已修正的例子：
+  `Bookmark.defaultName()`、`TtsVoice` 的顯示名稱、OPDS 解析失敗的預設標題、`main.dart` 的
+  通知頻道名稱——這類遺漏腳本仍抓不到，日後同類仍需靠 code review。
+- 例外訊息、`assert`、`debugPrint` 等開發者診斷字串（設計上刻意不涵蓋，見
+  `design.md`「Console Log／診斷內容翻譯」）。
+- 字串插值 `${ … }` **內部**含註解（`/* ' */`、`// }`）時，掃描器的字串／註解狀態可能
+  錯位；實務上不會這樣寫（`app/lib` 0 例），僅備忘。
+
+這類遺漏仍需靠 code review 與人工盤點；本腳本只保證「最常見的 Widget 字串參數
+位置」不會再漏。
+
 ## `check_foliate_es_compat.js`
 
 靜態掃描 `app/android/app/src/main/assets/foliate/`（`readest/foliate-js`

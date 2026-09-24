@@ -10,14 +10,22 @@ import 'opds_types.dart';
 /// 採納——標準 OPDS Feed 的 `href` 常為相對路徑，呼叫端拿到的 [OpdsFeed]
 /// 保證不含相對路徑，不需要也不應該自行處理。
 ///
-/// 解析失敗容錯：缺失 `<title>` 時退回「未知書名」／「未命名分類」，
+/// 解析失敗容錯：缺失 `<title>` 時退回呼叫端傳入的 [OpdsFallbackTitles]（依介面語言），
 /// 缺失作者時 `author` 為 `null`，格式不規範的欄位跳過不拋例外——維持
 /// 既有匯入流程「降級但不中斷」的一貫風格（比照
 /// `book_import_service_impl.dart` 對外部詮釋資料缺失的既有處理慣例）。
+/// 書目既無 `<id>` 也無 `<title>` 時的固定識別字。這是**識別字**（持久化的去重鍵），
+/// 不是顯示文字：沿用舊版的值以維持既有紀錄的去重行為，不可本地化、也不可隨語言改變。
+const _kUnidentifiedBookId = '未知書名';
+
 class OpdsFeedParser {
   const OpdsFeedParser();
 
-  OpdsFeed parse(String xmlString, Uri feedUri) {
+  OpdsFeed parse(
+    String xmlString,
+    Uri feedUri, {
+    required OpdsFallbackTitles fallbackTitles,
+  }) {
     final document = XmlDocument.parse(xmlString);
     final feed = document.rootElement;
 
@@ -35,7 +43,7 @@ class OpdsFeedParser {
       // Calibre 等伺服器的根 OPDS feed 會把分類導覽連結直接放在
       // <feed> 根層級的 <link rel="subsection"> 裡（而非 <entry> 內）。
       if (rel == 'subsection') {
-        final title = link.getAttribute('title') ?? '未命名分類';
+        final title = link.getAttribute('title') ?? fallbackTitles.unnamedCategory;
         navigationLinks.add(OpdsNavigationLink(
           title: title,
           href: _resolve(feedUri, href),
@@ -53,7 +61,7 @@ class OpdsFeedParser {
           .toList();
 
       if (acquisitionLinks.isNotEmpty) {
-        entries.add(_parseBookEntry(entry, entryLinks, acquisitionLinks, feedUri));
+        entries.add(_parseBookEntry(entry, entryLinks, acquisitionLinks, feedUri, fallbackTitles));
         continue;
       }
 
@@ -84,7 +92,7 @@ class OpdsFeedParser {
       final navHref = navLink?.getAttribute('href');
       if (navHref != null) {
         navigationLinks.add(OpdsNavigationLink(
-          title: _firstText(entry, 'title') ?? '未命名分類',
+          title: _firstText(entry, 'title') ?? fallbackTitles.unnamedCategory,
           href: _resolve(feedUri, navHref),
         ));
       }
@@ -104,11 +112,15 @@ class OpdsFeedParser {
     List<XmlElement> entryLinks,
     List<XmlElement> acquisitionLinks,
     Uri feedUri,
+    OpdsFallbackTitles fallbackTitles,
   ) {
-    final entryTitle = _firstText(entry, 'title') ?? '未知書名';
+    final rawTitle = _firstText(entry, 'title');
+    final entryTitle = rawTitle ?? fallbackTitles.unknownBook;
     final authorElement = _firstWhereOrNull(entry.findElements('author'), (_) => true);
     final author = authorElement == null ? null : _firstText(authorElement, 'name');
-    final remoteBookId = _firstText(entry, 'id') ?? entryTitle;
+    // remoteBookId 是持久化的去重鍵，不可隨介面語言（後備標題）改變：缺 id 時退回原始標題，
+    // 連標題也沒有才用固定識別字。
+    final remoteBookId = _firstText(entry, 'id') ?? rawTitle ?? _kUnidentifiedBookId;
 
     final thumbnailLink = _firstWhereOrNull(entryLinks, (l) {
       final rel = l.getAttribute('rel') ?? '';

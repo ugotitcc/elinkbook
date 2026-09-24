@@ -37,6 +37,9 @@ class FakeOpdsClient implements OpdsClient {
   // 是否正確沿用既有密碼」。
   final List<String?> testConnectionPasswords = [];
   final List<String?> fetchFeedCalls = [];
+  // 與 fetchFeedCalls 同索引對應，供測試驗證畫面層是否依介面語言傳入後備標題
+  // （epic-45-interface-i18n Issue 10）。
+  final List<OpdsFallbackTitles> fetchFeedFallbackTitles = [];
   final List<String> downloadBookCalls = [];
   // 〔審查 review-plan-issue-6.md Finding 2 採納〕與 downloadBookCalls
   // 同索引對應，供 remote_book_downloader_test.dart 驗證
@@ -53,8 +56,14 @@ class FakeOpdsClient implements OpdsClient {
   }
 
   @override
-  Future<OpdsFeed> fetchFeed(RemoteServerProfile server, {String? password, String? feedUrl}) async {
+  Future<OpdsFeed> fetchFeed(
+    RemoteServerProfile server, {
+    String? password,
+    String? feedUrl,
+    required OpdsFallbackTitles fallbackTitles,
+  }) async {
     fetchFeedCalls.add(feedUrl);
+    fetchFeedFallbackTitles.add(fallbackTitles);
     final key = feedUrl ?? server.baseUrl;
     final feed = _feeds[key];
     if (feed == null) {

@@ -62,6 +62,7 @@ import 'search/search_repository.dart';
 import 'l10n/app_locale.dart';
 import 'l10n/app_locale_preferences.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/startup_localizations.dart';
 import 'theme/app_theme_preferences.dart';
 
 /// [LibraryScreen.isMobileDataConnection] 生產環境實作
@@ -172,11 +173,18 @@ Future<void> main() async {
   // plans/plan-issue-7.md Global Constraints），建構出的單一 handler
   // 由 ReaderScreen 於每次開書時呼叫 attachController()／
   // detachController() 綁定/解綁目前的 TtsController。
+  // 通知頻道名稱（顯示於系統的通知設定）：此時尚無 BuildContext，改用啟動階段解析的
+  // AppLocalizations（使用者覆寫語言優先，否則跟隨裝置語言）。頻道只在此處建立一次，
+  // 語言以啟動當下為準（epic-45-interface-i18n Issue 10）。
+  final startupL10n = resolveStartupLocalizations(
+    localeOverride: initialLocaleOverride,
+    deviceLocales: WidgetsBinding.instance.platformDispatcher.locales,
+  );
   final ttsAudioHandler = await AudioService.init(
     builder: () => TtsAudioHandler(),
-    config: const AudioServiceConfig(
+    config: AudioServiceConfig(
       androidNotificationChannelId: 'cc.ugotit.elinkbook.tts_channel',
-      androidNotificationChannelName: '朗讀播放中',
+      androidNotificationChannelName: startupL10n.ttsNotificationChannelName,
       // Android 12 起背景重啟前景服務有限制（見 audio_service 官方
       // README「Android setup」段落說明），保持 false（暫停時服務維持
       // 前景狀態，不釋放通知），避免使用者暫停朗讀後、App 進一步被系統

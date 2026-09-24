@@ -186,9 +186,9 @@ void main() {
       expect(result, contains('## 🔖 Bookmarks (1)'));
       expect(result, contains('*   第二章 (35%)'));
       expect(result, contains('## ✏️ Highlights & Notes (1)'));
-      // Bookmark.defaultName() 本身不在本 Issue 翻譯範圍（spec.md §7），
-      // 「20% 處」在英文介面下仍是既有中文——這是刻意行為，不是遺漏。
-      expect(result, contains('### 📌 Highlighter (Yellow) (Position: 20% 處)'));
+      // 位置標籤由 Bookmark.defaultName(context, l10n) 依介面語言產生
+      // （epic-45-interface-i18n Issue 10，原 spec.md §7 的排除已取消）。
+      expect(result, contains('### 📌 Highlighter (Yellow) (Position: At 20%)'));
     });
 
     test('英文介面下，作者缺省與書籤/劃線備註皆為空時，回退文字與空狀態文字皆正確切換', () {
@@ -244,10 +244,10 @@ void main() {
       expect(result, contains('## 🔖 书签清单 (1)'));
       expect(result, contains('*   第二章 (35%)'));
       expect(result, contains('## ✏️ 划线与个人备注 (1)'));
-      // Bookmark.defaultName() 本身不在本 Issue 翻譯範圍（spec.md §7），
-      // 是寫死在 bookmark.dart 的繁體字面值，zh_CN 介面下仍是「處」而非
-      // 簡體「处」——這是刻意行為，不是遺漏（比照上方英文測試同一原則）。
-      expect(result, contains('### 📌 备注（位置：60% 處）'));
+      // 位置標籤由 Bookmark.defaultName(context, l10n) 依介面語言產生，
+      // zh_CN 介面下為簡體「处」（epic-45-interface-i18n Issue 10，
+      // 原 spec.md §7 的排除已取消）。
+      expect(result, contains('### 📌 备注（位置：60% 处）'));
       expect(result, contains('> 单纯心得'));
     });
   });

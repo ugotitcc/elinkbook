@@ -112,6 +112,16 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
     super.dispose();
   }
 
+  /// 依目前介面語言建構 OPDS 解析的後備標題（epic-45-interface-i18n Issue 10）。
+  /// 呼叫時需已可讀取 Localizations（不可在 initState 的同步階段呼叫）。
+  OpdsFallbackTitles _fallbackTitles() {
+    final l10n = AppLocalizations.of(context)!;
+    return OpdsFallbackTitles(
+      unknownBook: l10n.remoteCatalogUnknownBookTitle,
+      unnamedCategory: l10n.remoteCatalogUnnamedCategory,
+    );
+  }
+
   bool _isSelectable(OpdsEntry entry) => entry.acquisitions.any((a) => a.format != null);
 
   Future<void> _load() async {
@@ -120,11 +130,16 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
       _loadError = false;
     });
     _password = await widget.repository.loadPassword(widget.server.id);
+    // _load() 由 initState 觸發，同步階段尚不可讀取 Localizations；此處已越過第一個 await，
+    // 需確認仍掛載後才取得介面語言。
+    if (!mounted) return;
+    final fallbackTitles = _fallbackTitles();
     try {
       final feed = await _client.fetchFeed(
         widget.server,
         password: _password,
         feedUrl: widget.feedUrl,
+        fallbackTitles: fallbackTitles,
       );
       if (!mounted) return;
       setState(() {
@@ -151,8 +166,14 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
     final nextUrl = _nextUrl;
     if (nextUrl == null || _loadingMore) return;
     setState(() => _loadingMore = true);
+    final fallbackTitles = _fallbackTitles();
     try {
-      final feed = await _client.fetchFeed(widget.server, password: _password, feedUrl: nextUrl);
+      final feed = await _client.fetchFeed(
+        widget.server,
+        password: _password,
+        feedUrl: nextUrl,
+        fallbackTitles: fallbackTitles,
+      );
       if (!mounted) return;
       setState(() {
         _navigationLinks.addAll(feed.navigationLinks);
@@ -177,8 +198,14 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
   /// 換頁清空更符合直覺。
   Future<void> _goToPage(String pageUrl) async {
     setState(() => _loadingMore = true);
+    final fallbackTitles = _fallbackTitles();
     try {
-      final feed = await _client.fetchFeed(widget.server, password: _password, feedUrl: pageUrl);
+      final feed = await _client.fetchFeed(
+        widget.server,
+        password: _password,
+        feedUrl: pageUrl,
+        fallbackTitles: fallbackTitles,
+      );
       if (!mounted) return;
       setState(() {
         _navigationLinks
