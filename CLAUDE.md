@@ -20,8 +20,8 @@ flutter test test/screens/reader_screen_test.dart
 # 提交前必須乾淨（"No issues found!"）
 flutter analyze
 
-# 新增/修改畫面字串後，提交前跑一次：偵測 Widget 字串參數位置上未經 AppLocalizations
-# 包裝的硬編碼中文字串（純 Node，免安裝；見 app/tool/README.md）
+# 新增/修改畫面字串或測試後，提交前跑一次：偵測 Widget 字串參數位置上未經 AppLocalizations
+# 包裝的硬編碼中文字串，以及 test/ 內缺 locale 的 MaterialApp（純 Node，免安裝；見 app/tool/README.md）
 node tool/check_l10n_hardcoded_strings.js
 
 flutter devices
