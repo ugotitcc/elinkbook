@@ -85,3 +85,11 @@
 - 實作時另外發現：在 Windows 上，fetch 的連線還在關閉時呼叫 `process.exit()` 會觸發 libuv 斷言而崩潰（新測試「全部已發布」重現了這個狀況）。`upload.mjs`、`verify_remote.mjs` 改為設定 `process.exitCode`，讓程式自然結束。
 
 **2026-09-25 Issue 1 合併**：PR #276（`epic-49/issue-1-fonts-cdn` → `main`）已合併。下一步：Issue 2（由人類執行 `deploy-wizard.sh` 部署，開始前先綁定付款方式）、Issue 3（App 端下載管線與字型管理畫面，可以和 Issue 2 平行進行）。
+
+**2026-09-25 Issue 3 完成**（`plans/plan-issue-3.md`，7 個 Task 全數執行完畢）：
+
+- 新增 `app/lib/reader/font_download_catalog.dart`：`kFontDownloadBaseUrl`（本 Issue 用 `https://elinkbook-fonts.invalid/`，Issue 4 換正式網址）、`FontDownloadSpec`、`fontDownloadSpecOf()`（exhaustive switch，停用 3 款沿用 `[字型停用]` 註解，數值與 `spec.md` 一致）。
+- 新增 `app/lib/reader/downloadable_font_store.dart`：`DownloadableFontStore`（`prepare`／`installedFonts`／`download`／`delete`／`directory`）、`FontDownloadException`（`network`／`httpStatus`／`integrity`／`storage`／`cancelled`）、`FontDownloadCancellationToken`。下載先寫 `.part`、SHA-256 相符才改名（Windows 先刪舊檔）；進度為 0～100 整數、只在變大時回報；重疊下載拋 `StateError`。
+- 字型管理畫面：注入 `downloadableFontStore`（可選，未注入時維持既有行為）後內建字型列呈現未下載／下載中／已下載／失敗四種狀態，下載互斥（AppBar 上傳不停用），刪除用專屬內文 `fontManagementDownloadableDeleteConfirmMessage`（不動書籍偏好）；`formatFontFileSize()` 純函式；`test/support/fake_downloadable_font_store.dart`（Issue 4 沿用）。
+- 依賴注入：`main.dart` 建構 store（`downloaded-fonts/`，啟動呼叫 `prepare()`，失敗不擋啟動）→ `ElinkBookApp` → `LibraryReaderFeatureRepositories` → `AdaptiveShellScaffold` → `SettingsScaffold` → `FontManagementScreen`。
+- 測試：`font_download_catalog_test.dart`（3/3）、`downloadable_font_store_test.dart`（21/21，含進度節流、取消、中途斷線、StateError；變異檢查各一項符合預期，另有一項記錄於執行紀錄）、`font_management_screen_test.dart`（26/26，含變異檢查）、`settings_scaffold_test.dart`（新增注入測試）。完整套件 `flutter test`：2847 通過、1 跳過（`All tests passed!`）；`flutter analyze` 乾淨；l10n 稽核兩行 PASS。
