@@ -116,3 +116,5 @@
 - M-6：HTTP 非 200，或取消／逾時後才收到回應時，都會取消訂閱回應內容；新增測試。
 - M-7：`FakeDownloadableFontStore.fail()` 改為接受任意例外，並新增 `deleteError`。
 - 驗證：異動的 4 個測試檔共 104 個測試通過；`flutter analyze` 乾淨；l10n 檢查通過；完整 `flutter test` 2857 個測試全數通過。
+
+**2026-09-25 Issue 3 合併**：PR #278（`epic-49/issue-3-downloadable-font-store` → `main`）已合併。下一步：Issue 4（閱讀器套用已下載字型、`kFontDownloadBaseUrl` 改為正式 Worker 網址、閱讀設定下拉選單只列已下載字型、字型目錄一致性測試），需先撰寫 `plans/plan-issue-4.md`；之後是 Issue 5 真機驗證。
