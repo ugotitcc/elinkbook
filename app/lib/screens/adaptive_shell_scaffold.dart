@@ -142,6 +142,8 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
               onLocaleChanged: widget.localeDependencies.onLocaleChanged,
               customFontsRepository:
                   widget.readerFeatureRepositories.customFontsRepository,
+              downloadableFontStore:
+                  widget.readerFeatureRepositories.downloadableFontStore,
               syncAccountRepository:
                   widget.syncDependencies.syncAccountRepository,
               syncClient: widget.syncDependencies.syncClient,

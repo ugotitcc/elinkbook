@@ -7,6 +7,7 @@ import '../cloud_import/onedrive_oauth_client.dart';
 import '../reader/book_reader_prefs_repository.dart';
 import '../reader/bookmarks_repository.dart';
 import '../reader/custom_fonts_repository.dart';
+import '../reader/downloadable_font_store.dart';
 import '../reader/highlights_repository.dart';
 import '../reader/layout_preset_repository.dart';
 import '../reader/notes_repository.dart';
@@ -38,6 +39,10 @@ class LibraryReaderFeatureRepositories {
   final HighlightsRepository? highlightsRepository;
   final NotesRepository? notesRepository;
   final CustomFontsRepository? customFontsRepository;
+
+  /// epic-49：可下載字型的下載與保管。本 Issue 只傳給設定頁的字型管理畫面，
+  /// Issue 4 會再傳給 ReaderScreen。
+  final DownloadableFontStore? downloadableFontStore;
   final LayoutPresetRepository? layoutPresetRepository;
   final BookReaderPrefsRepository? bookReaderPrefsRepository;
   final TtsProvider? ttsProvider;
@@ -64,6 +69,7 @@ class LibraryReaderFeatureRepositories {
     this.highlightsRepository,
     this.notesRepository,
     this.customFontsRepository,
+    this.downloadableFontStore,
     this.layoutPresetRepository,
     this.bookReaderPrefsRepository,
     this.ttsProvider,
