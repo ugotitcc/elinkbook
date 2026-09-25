@@ -6,10 +6,9 @@ void main() {
     const expected = {
       AppFont.sourceHanSans: 'SourceHanSansTC',
       AppFont.sourceHanSerif: 'SourceHanSerifTC',
-      AppFont.guanKiapTsingKhai: 'GuanKiapTsingKhai',
-      AppFont.taiwanPearl: 'TaiwanPearl',
-      AppFont.genRyuMinTW: 'GenRyuMinTW',
     };
+    // epic-48：內建字型目前只保留思源黑體／思源宋體，其餘 3 款已停用。
+    expect(AppFont.values, [AppFont.sourceHanSans, AppFont.sourceHanSerif]);
     for (final font in AppFont.values) {
       expect(font.familyName, expected[font]);
     }

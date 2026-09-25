@@ -26,10 +26,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingsLanguageZhTW => 'Traditional Chinese';
+  String get settingsLanguageZhTW => '正體中文';
 
   @override
-  String get settingsLanguageZhCN => 'Simplified Chinese';
+  String get settingsLanguageZhCN => '简体中文';
 
   @override
   String get settingsLanguageEn => 'English';
@@ -1484,6 +1484,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fontManagementTitle => 'Font Management';
+
+  @override
+  String get fontNameSourceHanSans => 'Source Han Sans';
+
+  @override
+  String get fontNameSourceHanSerif => 'Source Han Serif';
 
   @override
   String get fontManagementUploadTooltip => 'Upload font';

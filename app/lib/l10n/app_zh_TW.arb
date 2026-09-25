@@ -27,11 +27,11 @@
   },
   "settingsLanguageZhTW": "正體中文",
   "@settingsLanguageZhTW": {
-    "description": "語言選項：正體中文"
+    "description": "語言選項：正體中文（語言本身的固有名稱，各語系一律相同，不翻譯）"
   },
-  "settingsLanguageZhCN": "簡體中文",
+  "settingsLanguageZhCN": "简体中文",
   "@settingsLanguageZhCN": {
-    "description": "語言選項：簡體中文"
+    "description": "語言選項：簡體中文（語言本身的固有名稱，各語系一律寫成「简体中文」，不翻譯）"
   },
   "settingsLanguageEn": "English",
   "@settingsLanguageEn": {
@@ -1946,6 +1946,14 @@
   "fontManagementTitle": "字型管理",
   "@fontManagementTitle": {
     "description": "字型管理畫面 AppBar 標題"
+  },
+  "fontNameSourceHanSans": "思源黑體",
+  "@fontNameSourceHanSans": {
+    "description": "內建字型名稱：思源黑體（字型管理清單與閱讀設定的字型下拉選單）"
+  },
+  "fontNameSourceHanSerif": "思源宋體",
+  "@fontNameSourceHanSerif": {
+    "description": "內建字型名稱：思源宋體（字型管理清單與閱讀設定的字型下拉選單）"
   },
   "fontManagementUploadTooltip": "上傳字型",
   "@fontManagementUploadTooltip": {

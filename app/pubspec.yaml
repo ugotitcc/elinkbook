@@ -223,11 +223,13 @@ flutter:
     - test/fixtures/sample.md
     - test/fixtures/sample.ttf
     - assets/wifi_transfer/index.html
-    - assets/fonts/GuanKiapTsingKhai.ttf
-    # 開發期暫停用（建置速度優化，其餘 4 款字型檔約 134MB）：檔案暫存於
-    # tmp/fonts/（見 tmp/fonts/README.md 的恢復步驟），正式建置前需恢復。
+    # epic-48：內建字型一律不打包進 APK，改由 epic-49「可下載字型」在使用者
+    # 點下載後才取得。下載功能完成前，選思源黑體／宋體會由系統字型補位。
     # - assets/fonts/SourceHanSansTC-VF.ttf
     # - assets/fonts/SourceHanSerifTC-VF.ttf
+    # [字型停用] 其餘 3 款同時從字型清單隱藏（見 lib/reader/app_font.dart 的恢復說明）。
+    # 原俠正楷字型檔仍在 assets/fonts/；其他字型檔可從 commit eddcc85e 的上一版取回。
+    # - assets/fonts/GuanKiapTsingKhai.ttf
     # - assets/fonts/TaiwanPearl-Regular.ttf
     # - assets/fonts/GenRyuMinTW-Regular.ttf
 

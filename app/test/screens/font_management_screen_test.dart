@@ -14,9 +14,10 @@ void main() {
     repository = FakeCustomFontsRepository();
   });
 
-  Future<void> pumpScreen(WidgetTester tester) async {
+  Future<void> pumpScreen(WidgetTester tester,
+      {Locale locale = const Locale('zh', 'TW')}) async {
     await tester.pumpWidget(MaterialApp(
-      locale: const Locale('zh', 'TW'),
+      locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: FontManagementScreen(repository: repository),
@@ -24,17 +25,34 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('顯示標題與 5 款內建字型（無操作按鈕）', (tester) async {
+  testWidgets('顯示標題與 2 款內建字型（無操作按鈕），已停用的 3 款不顯示（epic-48）',
+      (tester) async {
     await pumpScreen(tester);
 
     expect(find.text('字型管理'), findsOneWidget);
     expect(find.text('思源黑體'), findsOneWidget);
     expect(find.text('思源宋體'), findsOneWidget);
-    expect(find.text('原俠正楷'), findsOneWidget);
-    expect(find.text('台灣圓體'), findsOneWidget);
-    expect(find.text('源流明體'), findsOneWidget);
+    expect(find.text('原俠正楷'), findsNothing);
+    expect(find.text('台灣圓體'), findsNothing);
+    expect(find.text('源流明體'), findsNothing);
     expect(find.byKey(const Key('font_management_upload_button')),
         findsOneWidget);
+  });
+
+  testWidgets('英文介面下內建字型名稱以英文顯示（epic-48）', (tester) async {
+    await pumpScreen(tester, locale: const Locale('en'));
+
+    expect(find.text('Source Han Sans'), findsOneWidget);
+    expect(find.text('Source Han Serif'), findsOneWidget);
+    expect(find.text('思源黑體'), findsNothing);
+    expect(find.text('思源宋體'), findsNothing);
+  });
+
+  testWidgets('簡體中文介面下內建字型名稱以簡體顯示（epic-48）', (tester) async {
+    await pumpScreen(tester, locale: const Locale('zh', 'CN'));
+
+    expect(find.text('思源黑体'), findsOneWidget);
+    expect(find.text('思源宋体'), findsOneWidget);
   });
 
   testWidgets('顯示已存在的自訂字型，含重新命名與刪除按鈕', (tester) async {
