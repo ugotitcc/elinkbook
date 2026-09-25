@@ -102,7 +102,7 @@ Issue 3 ─────────────────────┘
 
 ## Issue 4：閱讀器套用已下載字型
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 1（字型清單）、Issue 2（正式網址）、Issue 3（store）。
 

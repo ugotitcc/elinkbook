@@ -79,7 +79,7 @@
 - Consumes：`fontDownloadSpecOf(AppFont) → FontDownloadSpec`（`publishPath`、`sizeBytes`、`sha256`）；`../fonts-cdn/fonts.json` 的格式為 `{ "fonts": [ { "id", "file", "path", "bytes", "sha256" } ] }`，其中 `id` 等於 `AppFont` 的列舉名。
 - Produces：`kFontDownloadBaseUrl == 'https://elinkbook-fonts.huthief.workers.dev/'`。
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 在 `test/reader/font_download_catalog_test.dart` 開頭加上 import：
 
@@ -117,12 +117,12 @@ import 'dart:io';
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`flutter test test/reader/font_download_catalog_test.dart`
 Expected：「基底網址是正式的下載服務」失敗（host 是 `elinkbook-fonts.invalid`）；一致性測試通過（數值本來就一致，這個測試是防止日後只改其中一邊）。
 
-- [ ] **Step 3：改基底網址**
+- [x] **Step 3：改基底網址**
 
 `lib/reader/font_download_catalog.dart` 把常數與註解換成：
 
@@ -135,12 +135,12 @@ Expected：「基底網址是正式的下載服務」失敗（host 是 `elinkboo
 const String kFontDownloadBaseUrl = 'https://elinkbook-fonts.huthief.workers.dev/';
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run：`flutter test test/reader/font_download_catalog_test.dart test/reader/downloadable_font_store_test.dart`
 Expected：全數通過（store 測試都注入自己的 `baseUri`，不受影響）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add lib/reader/font_download_catalog.dart test/reader/font_download_catalog_test.dart
@@ -162,7 +162,7 @@ git commit -m "feat(fonts): 下載網址改為正式 Worker，新增字型目錄
   - `String buildFontFaceCss({Set<AppFont> installedFonts = const {}, List<CustomFont> customFonts = const []})`
   - `loadFlutterFontAsset()` **刪除**。
 
-- [ ] **Step 1：改寫測試（先讓它失敗）**
+- [x] **Step 1：改寫測試（先讓它失敗）**
 
 `test/reader/foliate_native_bridge_test.dart`：
 
@@ -242,12 +242,12 @@ git commit -m "feat(fonts): 下載網址改為正式 Worker，新增字型目錄
    ```
    （`rootBundle` 來自已經 import 的 `package:flutter/services.dart`。）
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`flutter test test/reader/foliate_native_bridge_test.dart`
 Expected：編譯失敗：`buildFontFaceCss` 沒有 `installedFonts` 參數、找不到 `kDownloadedFontsPathPrefix`。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `lib/reader/foliate_native_bridge.dart`：
 
@@ -308,7 +308,7 @@ Expected：編譯失敗：`buildFontFaceCss` 沒有 `installedFonts` 參數、�
 
 這一段整個刪除，前後其他程式不變。
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run：`flutter test test/reader/foliate_native_bridge_test.dart test/reader/foliate_reader_view_test.dart`
 Expected：全數通過。
@@ -316,7 +316,7 @@ Expected：全數通過。
 Run：`flutter analyze`
 Expected：`No issues found!`（特別確認沒有未使用的 import）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add lib/reader/foliate_native_bridge.dart lib/reader/foliate_reader_view.dart test/reader/foliate_native_bridge_test.dart
@@ -335,7 +335,7 @@ git commit -m "feat(fonts): @font-face 只替已下載字型輸出並指向 /dow
 - Consumes：Task 2 的 `buildFontFaceCss({installedFonts, customFonts})`、`kDownloadedFontsPathPrefix`。
 - Produces：`FoliateReaderView` 新增兩個可選參數 `Set<AppFont> installedFonts = const {}`、`String? downloadedFontsDirectory`（Task 5 使用）。
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 在 `test/reader/foliate_reader_view_test.dart` 加上 import `package:elinkbook/reader/app_font.dart`，並在 `main()` 內新增一個 group（放在檔案最後一個 group 之後、`tearDownAll` 之前）：
 
@@ -409,12 +409,12 @@ git commit -m "feat(fonts): @font-face 只替已下載字型輸出並指向 /dow
 
 （`_noop`、`_noopError` 是這個測試檔既有的頂層函式；`/fake/cache/dir` 來自檔案開頭 `setUpAll` 覆寫的 `cacheBookForServing`。）
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`flutter test test/reader/foliate_reader_view_test.dart --plain-name "已下載字型"`
 Expected：編譯失敗：`FoliateReaderView` 沒有 `installedFonts`／`downloadedFontsDirectory` 參數。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `lib/reader/foliate_reader_view.dart`：
 
@@ -455,12 +455,12 @@ Expected：編譯失敗：`FoliateReaderView` 沒有 `installedFonts`／`downloa
                ],
    ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run：`flutter test test/reader/foliate_reader_view_test.dart`
 Expected：全數通過（含既有測試，零回歸）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add lib/reader/foliate_reader_view.dart test/reader/foliate_reader_view_test.dart
@@ -483,7 +483,7 @@ git commit -m "feat(reader): FoliateReaderView 以原生處理器串流已下載
   - 在地化字串 `readerSettingsDownloadMoreFontsHint`。
   - 提示文字的 Key 為 `reader_settings_download_fonts_hint`。
 
-- [ ] **Step 1：新增在地化字串**
+- [x] **Step 1：新增在地化字串**
 
 `app_zh_TW.arb`，在 `"@readerSettingsFontFamilyLabel": {…},` 這個區塊之後加上：
 ```json
@@ -508,7 +508,7 @@ git commit -m "feat(reader): FoliateReaderView 以原生處理器串流已下載
 Run：`flutter gen-l10n`
 Expected：沒有錯誤；`grep -n "readerSettingsDownloadMoreFontsHint" lib/l10n/app_localizations_en.dart` 有結果。
 
-- [ ] **Step 2：寫失敗的測試**
+- [x] **Step 2：寫失敗的測試**
 
 `test/screens/reader_settings_sheet_test.dart`：
 
@@ -583,12 +583,12 @@ Expected：沒有錯誤；`grep -n "readerSettingsDownloadMoreFontsHint" lib/l10
    });
    ```
 
-- [ ] **Step 3：執行測試確認失敗**
+- [x] **Step 3：執行測試確認失敗**
 
 Run：`flutter test test/screens/reader_settings_sheet_test.dart`
 Expected：編譯失敗：`ReaderSettingsSheet` 沒有 `installedFonts` 參數。
 
-- [ ] **Step 4：實作**
+- [x] **Step 4：實作**
 
 `lib/screens/reader_settings_sheet.dart`：
 
@@ -675,7 +675,7 @@ Expected：編譯失敗：`ReaderSettingsSheet` 沒有 `installedFonts` 參數�
    }
    ```
 
-- [ ] **Step 5：執行測試確認通過**
+- [x] **Step 5：執行測試確認通過**
 
 Run：`flutter test test/screens/reader_settings_sheet_test.dart`
 Expected：全數通過（既有測試透過 `_pumpSheet` 的預設值維持「內建字型已下載」的前提；檔案中直接建構 `ReaderSettingsSheet` 的其他測試不驗證內建字型選項，不受影響）。
@@ -683,7 +683,7 @@ Expected：全數通過（既有測試透過 `_pumpSheet` 的預設值維持「�
 Run：`flutter analyze`，Expected：`No issues found!`
 Run：`node tool/check_l10n_hardcoded_strings.js`，Expected：兩行 PASS。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add lib/l10n lib/screens/reader_settings_sheet.dart test/screens/reader_settings_sheet_test.dart
@@ -718,7 +718,7 @@ git commit -m "feat(reader): 閱讀設定字型選單只列出已下載的內建
   - `LibraryReaderFeatureRepositories.downloadableFontStore`（Issue 3 已新增）。
 - Produces：`ReaderScreen` 新增可選參數 `DownloadableFontStore? downloadableFontStore`。
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 1. `test/screens/reader_screen_test.dart` 加上 import：
    ```dart
@@ -834,12 +834,12 @@ git commit -m "feat(reader): 閱讀設定字型選單只列出已下載的內建
      expect(screen.downloadableFontStore, same(downloadableFontStore));
      ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`flutter test test/screens/reader_screen_test.dart --plain-name "已下載字型" test/screens/reader_screen_route_test.dart`
 Expected：編譯失敗：`ReaderScreen` 沒有 `downloadableFontStore` 參數。
 
-- [ ] **Step 3：實作 `ReaderScreen`**
+- [x] **Step 3：實作 `ReaderScreen`**
 
 `lib/screens/reader_screen.dart`：
 
@@ -906,21 +906,21 @@ Expected：編譯失敗：`ReaderScreen` 沒有 `downloadableFontStore` 參數�
     ```
     從閱讀器進入搜尋時（`fromReader: true`），搜尋畫面目前只會 `pop` 回跳轉目標，用不到 store。但同一處已經傳遞其他所有依賴，補上這一行可以維持一致，日後搜尋畫面改變導覽行為時也不會漏掉（計畫審查 I-2）。
 
-- [ ] **Step 4：實作 `reader_screen_route.dart`**
+- [x] **Step 4：實作 `reader_screen_route.dart`**
 
 在 `customFontsRepository: features.customFontsRepository,` 之後加上：
 ```dart
     downloadableFontStore: features.downloadableFontStore,
 ```
 
-- [ ] **Step 5：執行測試確認通過**
+- [x] **Step 5：執行測試確認通過**
 
 Run：`flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_route_test.dart`
 Expected：全數通過（含既有測試，零回歸）。
 
 變異檢查：暫時把第 3 步第 8 點的 `&& _downloadedFontsLoaded` 拿掉，再執行 `flutter test test/screens/reader_screen_test.dart --plain-name "已下載字型"`。Expected：第一個測試失敗（閘門完成前就找到 `FoliateReaderView`）。確認後**改回來**，重新執行一次，確認全部通過。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart lib/screens/reader_screen_route.dart test/screens/reader_screen_test.dart test/screens/reader_screen_route_test.dart
@@ -934,7 +934,7 @@ git commit -m "feat(reader): ReaderScreen 讀完已下載字型才建構閱讀�
 **Files:**
 - Modify: `docs/epics/epic-49-downloadable-fonts/issues.md`（Issue 4 的 `**Status:**`）、`docs/epics/epic-49-downloadable-fonts/epic.md`、`docs/epics.md`（第 50 列備註）
 
-- [ ] **Step 1：確認沒有殘留的舊字型服務程式與文件描述**
+- [x] **Step 1：確認沒有殘留的舊字型服務程式與文件描述**
 
 在 repo 根目錄執行。這裡用 `git grep`：Git Bash 和 PowerShell 都能直接執行（計畫審查 M-1）。它只搜尋已追蹤的檔案，不過 Task 1～5 都已經 commit，不影響結果。
 
@@ -948,7 +948,7 @@ Expected：`app/lib` 沒有任何結果。`app/test` 只剩兩處：
 
 `CLAUDE.md` 沒有結果，所以不需要修改。如果有結果，把描述改成「已下載字型由 `FoliateReaderView` 的 `InternalStoragePathHandler`（`/downloaded-fonts/`）串流」。
 
-- [ ] **Step 2：完整測試與檢查**
+- [x] **Step 2：完整測試與檢查**
 
 在 `app/` 執行：
 
@@ -963,7 +963,7 @@ Expected：
 - `flutter analyze`：`No issues found!`
 - l10n 檢查：兩行都是 `PASS`
 
-- [ ] **Step 3：更新進度**
+- [x] **Step 3：更新進度**
 
 - `issues.md`：Issue 4 的 `**Status:**` 改為 `completed`。
 - `epic.md`：追加一段「Issue 4 完成」記錄，內容包括：
@@ -974,7 +974,7 @@ Expected：
   - 和 issues.md 刻意不同的兩點（見本計畫開頭）
 - `docs/epics.md` 第 50 列備註改為「Issue 1～4 已完成，待 Issue 5 真機驗證」。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add docs/epics.md docs/epics/epic-49-downloadable-fonts/issues.md docs/epics/epic-49-downloadable-fonts/epic.md docs/epics/epic-49-downloadable-fonts/plans/plan-issue-4.md
