@@ -37,6 +37,7 @@ ReaderScreen buildReaderScreen({
     isFixedLayout: book.isFixedLayout,
     libraryRepository: libraryRepository,
     customFontsRepository: features.customFontsRepository,
+    downloadableFontStore: features.downloadableFontStore,
     layoutPresetRepository: features.layoutPresetRepository,
     bookReaderPrefsRepository: features.bookReaderPrefsRepository,
     syncCheckpointTrigger: sync.syncCheckpointTrigger,
