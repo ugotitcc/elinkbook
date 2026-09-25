@@ -1,23 +1,35 @@
+import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
+import 'package:elinkbook/reader/font_download_catalog.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('buildFontFaceCss 只產生思源黑體／思源宋體 2 款內建字型的 @font-face 宣告（epic-48）', () {
+  test('沒有已下載的內建字型時，不輸出任何內建字型規則（epic-49 Issue 4）', () {
     final css = buildFontFaceCss();
-    expect(css, contains(
-      "@font-face { font-family: 'SourceHanSansTC'; "
-      "src: url('https://appassets.androidplatform.net/assets/fonts/SourceHanSansTC-VF.ttf'); }",
-    ));
-    expect(css, contains(
-      "@font-face { font-family: 'SourceHanSerifTC'; "
-      "src: url('https://appassets.androidplatform.net/assets/fonts/SourceHanSerifTC-VF.ttf'); }",
-    ));
-    expect(css, isNot(contains('GuanKiapTsingKhai')));
-    expect('@font-face'.allMatches(css).length, 2);
+    expect('@font-face'.allMatches(css).length, 0);
+    expect(css, isNot(contains('/assets/fonts/')));
+  });
+
+  test('只下載思源黑體時，只輸出一條規則，網址指向 /downloaded-fonts/v1/…', () {
+    final css = buildFontFaceCss(installedFonts: {AppFont.sourceHanSans});
+    expect(css,
+        "@font-face { font-family: 'SourceHanSansTC'; "
+        "src: url('https://appassets.androidplatform.net/downloaded-fonts/v1/SourceHanSansTC-VF.ttf'); }");
+    expect(css, isNot(contains('SourceHanSerifTC')));
+  });
+
+  test('網址等於前綴加上字型目錄的 publishPath，和 store 存檔路徑一致（審查重點 3）', () {
+    final css = buildFontFaceCss(installedFonts: AppFont.values.toSet());
+    expect('@font-face'.allMatches(css).length, AppFont.values.length);
+    for (final font in AppFont.values) {
+      expect(css, contains(
+          "src: url('https://appassets.androidplatform.net$kDownloadedFontsPathPrefix"
+          "${fontDownloadSpecOf(font).publishPath}')"));
+    }
   });
 
   test('buildFontFaceCss 帶入 customFonts 時，額外輸出自訂字型的 @font-face 宣告',
@@ -35,8 +47,28 @@ void main() {
       "@font-face { font-family: 'MyCustomFamily'; "
       "src: url('https://appassets.androidplatform.net/assets/custom-fonts/MyCustomFamily'); }",
     ));
-    // 內建 2 款字型仍照舊輸出，不受影響。
-    expect('@font-face'.allMatches(css).length, 3);
+    // 沒有傳入已下載字型，所以只有自訂字型這一條規則。
+    expect('@font-face'.allMatches(css).length, 1);
+  });
+
+  test('已下載字型與自訂字型同時存在時，兩者的規則都輸出，自訂字型規則不受影響', () {
+    final css = buildFontFaceCss(
+      installedFonts: {AppFont.sourceHanSerif},
+      customFonts: const [
+        CustomFont(
+          id: 1,
+          displayName: '我的字型',
+          familyName: 'MyCustomFamily',
+          fontUri: 'content://example/font1',
+        ),
+      ],
+    );
+    expect('@font-face'.allMatches(css).length, 2);
+    expect(css, contains('/downloaded-fonts/v1/SourceHanSerifTC-VF.ttf'));
+    expect(css, contains(
+      "@font-face { font-family: 'MyCustomFamily'; "
+      "src: url('https://appassets.androidplatform.net/assets/custom-fonts/MyCustomFamily'); }",
+    ));
   });
 
   test('buildFontFaceCss 的自訂字型虛擬路徑對 family name 做 URL 編碼', () {
@@ -52,11 +84,6 @@ void main() {
     expect(css, contains(
       "src: url('https://appassets.androidplatform.net/assets/custom-fonts/My%20Custom%20Family'); }",
     ));
-  });
-
-  test('buildFontFaceCss 未帶 customFonts 參數時（既有零參數呼叫）行為不變', () {
-    final css = buildFontFaceCss();
-    expect('@font-face'.allMatches(css).length, 2);
   });
 
   test('loadCustomFontBytes 呼叫 elinkbook/reader_resources 的 readCustomFontBytes',
@@ -114,13 +141,6 @@ void main() {
     expect(calledMethods, ['attachReaderView', 'detachReaderView']);
   });
 
-  test('loadFlutterFontAsset 透過 rootBundle 讀取 Flutter 字型 asset', () async {
-    // epic-48 起內建字型一款都不打包，改用測試 fixture 驗證讀取行為本身。
-    final bytes = await loadFlutterFontAsset('test/fixtures/sample.ttf');
-    expect(bytes, isNotNull);
-    expect(bytes!.isNotEmpty, isTrue);
-  });
-
   test('內建字型一律不打包進 App（pubspec 未宣告，改由 epic-49 下載提供）', () async {
     for (final path in const [
       'assets/fonts/SourceHanSansTC-VF.ttf',
@@ -129,7 +149,7 @@ void main() {
       'assets/fonts/TaiwanPearl-Regular.ttf',
       'assets/fonts/GenRyuMinTW-Regular.ttf',
     ]) {
-      expect(await loadFlutterFontAsset(path), isNull, reason: path);
+      await expectLater(() => rootBundle.load(path), throwsA(anything), reason: path);
     }
   });
 

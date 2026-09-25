@@ -746,13 +746,6 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
           path.endsWith('.js') ? 'text/javascript' : 'text/html';
       return WebResourceResponse(contentType: contentType, data: bytes);
     }
-    const fontsPrefix = '/assets/fonts/';
-    if (path.startsWith(fontsPrefix)) {
-      final relative = 'assets/fonts/${path.substring(fontsPrefix.length)}';
-      final bytes = await loadFlutterFontAsset(relative);
-      if (bytes == null) return null;
-      return WebResourceResponse(contentType: 'font/ttf', data: bytes);
-    }
     final customFontUri = resolveCustomFontUri(path, widget.customFonts);
     if (customFontUri != null) {
       final bytes = await loadCustomFontBytes(customFontUri);
