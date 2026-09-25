@@ -150,3 +150,5 @@
 - M-3 採納：`reader_screen_test.dart` 的 `fake_downloadable_font_store.dart` import 移到其他 `../support/` import 旁邊。
 - M-4 採納：閘門測試的自訂字型 fake 改用 `loadGate` 控制，先放行自訂字型、斷言閱讀器仍未建構，再放行已下載字型，明確建立「自訂字型已載入完成」這個前提。
 - 驗證：`reader_screen_test.dart` 242 個測試通過；`flutter analyze` 乾淨；l10n 檢查兩行 PASS。
+
+**2026-09-26 Issue 4 合併**：PR #279（`epic-49/issue-4-reader-downloaded-fonts` → `main`）已合併。下一步：Issue 6（偏好指向未下載的內建字型時閱讀器改用書本字型），需先撰寫 `plans/plan-issue-6.md`，建議在 Issue 5 前完成；之後是 Issue 5 真機驗證（8 項，人類操作）。
