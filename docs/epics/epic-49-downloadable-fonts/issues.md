@@ -41,7 +41,7 @@ Issue 3 ─────────────────────┘
 
 ## Issue 2：部署字型下載服務（人類操作）
 
-**Status:** ready-for-human
+**Status:** completed
 
 **依賴：** Issue 1。
 
