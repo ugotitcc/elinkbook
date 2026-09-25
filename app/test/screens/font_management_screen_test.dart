@@ -3,9 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/l10n/app_localizations_en.dart';
 import 'package:elinkbook/l10n/app_localizations_zh.dart';
+import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/custom_font.dart';
+import 'package:elinkbook/reader/downloadable_font_store.dart';
 import 'package:elinkbook/screens/font_management_screen.dart';
 import '../support/fake_custom_fonts_repository.dart';
+import '../support/fake_downloadable_font_store.dart';
 
 void main() {
   late FakeCustomFontsRepository repository;
@@ -15,12 +18,14 @@ void main() {
   });
 
   Future<void> pumpScreen(WidgetTester tester,
-      {Locale locale = const Locale('zh', 'TW')}) async {
+      {Locale locale = const Locale('zh', 'TW'),
+      DownloadableFontStore? store}) async {
     await tester.pumpWidget(MaterialApp(
       locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: FontManagementScreen(repository: repository),
+      home: FontManagementScreen(
+          repository: repository, downloadableFontStore: store),
     ));
     await tester.pumpAndSettle();
   }
@@ -223,5 +228,190 @@ void main() {
     expect(outcome.toInsertIndexes, [1]); // 只有 MyOwnFamily 要寫入
     expect(outcome.addedCount, 1);
     expect(outcome.skippedCount, 1); // SourceHanSansTC 被判定為已存在（內建字型）而跳過
+  });
+
+  group('可下載字型（epic-49）', () {
+    late FakeDownloadableFontStore store;
+
+    setUp(() => store = FakeDownloadableFontStore());
+
+    IconButton button(WidgetTester tester, String key) =>
+        tester.widget<IconButton>(find.byKey(Key(key)));
+
+    Finder subtitleOf(AppFont font, String text) => find.descendant(
+        of: find.byKey(Key('font_management_builtin_${font.name}')),
+        matching: find.text(text));
+
+    Future<void> startDownload(WidgetTester tester, AppFont font) async {
+      await tester.tap(find.byKey(Key('font_management_download_${font.name}')));
+      await tester.pump();
+    }
+
+    testWidgets('formatFontFileSize 以 MB 顯示到小數點後一位', (tester) async {
+      expect(formatFontFileSize(36034016), '34.4 MB');
+      expect(formatFontFileSize(59898316), '57.1 MB');
+    });
+
+    testWidgets('沒有注入 store 時，內建字型只顯示名稱，沒有下載按鈕', (tester) async {
+      await pumpScreen(tester);
+
+      expect(find.text('思源黑體'), findsOneWidget);
+      expect(find.byKey(const Key('font_management_download_sourceHanSans')), findsNothing);
+    });
+
+    testWidgets('未下載：標題是字型名稱，副標題是大小與「未下載」，下載按鈕可按', (tester) async {
+      await pumpScreen(tester, store: store);
+
+      expect(find.text('思源黑體'), findsOneWidget);
+      expect(subtitleOf(AppFont.sourceHanSans, '34.4 MB · 未下載'), findsOneWidget);
+      expect(subtitleOf(AppFont.sourceHanSerif, '57.1 MB · 未下載'), findsOneWidget);
+      expect(button(tester, 'font_management_download_sourceHanSans').onPressed, isNotNull);
+    });
+
+    testWidgets('已下載：副標題是大小與「已下載」，顯示刪除按鈕', (tester) async {
+      store.installed.add(AppFont.sourceHanSerif);
+      await pumpScreen(tester, store: store);
+
+      expect(subtitleOf(AppFont.sourceHanSerif, '57.1 MB · 已下載'), findsOneWidget);
+      expect(find.byKey(const Key('font_management_delete_builtin_sourceHanSerif')), findsOneWidget);
+      expect(find.byKey(const Key('font_management_download_sourceHanSerif')), findsNothing);
+    });
+
+    testWidgets('下載中：顯示進度與取消；其他列的下載、刪除停用；AppBar 上傳仍可按', (tester) async {
+      store.installed.add(AppFont.sourceHanSerif);
+      await pumpScreen(tester, store: store);
+
+      await startDownload(tester, AppFont.sourceHanSans);
+      store.activeDownload!.progress(42);
+      await tester.pump();
+
+      expect(find.text('思源黑體'), findsOneWidget);
+      expect(subtitleOf(AppFont.sourceHanSans, '42%'), findsOneWidget);
+      expect(
+          tester.widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator)).value,
+          0.42);
+      expect(find.byKey(const Key('font_management_cancel_download_sourceHanSans')), findsOneWidget);
+      expect(button(tester, 'font_management_delete_builtin_sourceHanSerif').onPressed, isNull);
+      expect(button(tester, 'font_management_upload_button').onPressed, isNotNull);
+    });
+
+    testWidgets('下載成功後變成已下載，其他列的按鈕恢復可按', (tester) async {
+      await pumpScreen(tester, store: store);
+
+      await startDownload(tester, AppFont.sourceHanSans);
+      expect(button(tester, 'font_management_download_sourceHanSerif').onPressed, isNull);
+      store.activeDownload!.succeed();
+      await tester.pumpAndSettle();
+
+      expect(subtitleOf(AppFont.sourceHanSans, '34.4 MB · 已下載'), findsOneWidget);
+      expect(button(tester, 'font_management_download_sourceHanSerif').onPressed, isNotNull);
+    });
+
+    testWidgets('按取消會取消下載，store 回報 cancelled 後回到未下載且不顯示錯誤', (tester) async {
+      await pumpScreen(tester, store: store);
+
+      await startDownload(tester, AppFont.sourceHanSans);
+      await tester.tap(find.byKey(const Key('font_management_cancel_download_sourceHanSans')));
+      await tester.pump();
+      expect(store.activeDownload!.cancellationToken!.isCancelled, isTrue);
+
+      store.activeDownload!
+          .fail(const FontDownloadException(FontDownloadFailure.cancelled));
+      await tester.pumpAndSettle();
+
+      expect(subtitleOf(AppFont.sourceHanSans, '34.4 MB · 未下載'), findsOneWidget);
+      expect(find.byKey(const Key('font_management_retry_sourceHanSans')), findsNothing);
+    });
+
+    testWidgets('下載失敗：標題仍是字型名稱，副標題是大小與錯誤訊息，可以重試', (tester) async {
+      await pumpScreen(tester, store: store);
+
+      await startDownload(tester, AppFont.sourceHanSans);
+      store.activeDownload!
+          .fail(const FontDownloadException(FontDownloadFailure.network));
+      await tester.pumpAndSettle();
+
+      expect(find.text('思源黑體'), findsOneWidget);
+      expect(subtitleOf(AppFont.sourceHanSans, '34.4 MB · 無法連線，請檢查網路後重試'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('font_management_retry_sourceHanSans')));
+      await tester.pump();
+      expect(store.activeDownload!.font, AppFont.sourceHanSans);
+      expect(find.byKey(const Key('font_management_cancel_download_sourceHanSans')), findsOneWidget);
+    });
+
+    testWidgets('各種失敗原因顯示對應訊息（HTTP 狀態碼、檔案損毀、無法儲存）', (tester) async {
+      await pumpScreen(tester, store: store);
+      const cases = {
+        FontDownloadException(FontDownloadFailure.httpStatus, statusCode: 503):
+            '34.4 MB · 伺服器錯誤（503），請稍後重試',
+        FontDownloadException(FontDownloadFailure.integrity): '34.4 MB · 檔案不完整或已損毀，請重試',
+        FontDownloadException(FontDownloadFailure.storage): '34.4 MB · 無法儲存檔案，請確認儲存空間是否足夠',
+      };
+      for (final entry in cases.entries) {
+        final retry = find.byKey(const Key('font_management_retry_sourceHanSans'));
+        await tester.tap(retry.evaluate().isEmpty
+            ? find.byKey(const Key('font_management_download_sourceHanSans'))
+            : retry);
+        await tester.pump();
+        store.activeDownload!.fail(entry.key);
+        await tester.pumpAndSettle();
+        expect(subtitleOf(AppFont.sourceHanSans, entry.value), findsOneWidget);
+      }
+    });
+
+    testWidgets('另一款字型下載中時，失敗列的重試停用', (tester) async {
+      await pumpScreen(tester, store: store);
+      await startDownload(tester, AppFont.sourceHanSans);
+      store.activeDownload!
+          .fail(const FontDownloadException(FontDownloadFailure.network));
+      await tester.pumpAndSettle();
+
+      await startDownload(tester, AppFont.sourceHanSerif);
+
+      expect(button(tester, 'font_management_retry_sourceHanSans').onPressed, isNull);
+    });
+
+    testWidgets('刪除確認對話框使用可下載字型專屬內文；取消不刪、確認才刪', (tester) async {
+      store.installed.add(AppFont.sourceHanSans);
+      await pumpScreen(tester, store: store);
+
+      await tester.tap(find.byKey(const Key('font_management_delete_builtin_sourceHanSans')));
+      await tester.pumpAndSettle();
+      expect(find.text('確定要刪除「思源黑體」嗎？'), findsOneWidget);
+      expect(find.text('刪除後可以隨時重新下載。使用這款字型的書會暫時改用書本或系統字型，重新下載後自動恢復。'),
+          findsOneWidget);
+      await tester.tap(find.byKey(const Key('font_management_delete_cancel')));
+      await tester.pumpAndSettle();
+      expect(store.deleted, isEmpty);
+
+      await tester.tap(find.byKey(const Key('font_management_delete_builtin_sourceHanSans')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('font_management_delete_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(store.deleted, [AppFont.sourceHanSans]);
+      expect(subtitleOf(AppFont.sourceHanSans, '34.4 MB · 未下載'), findsOneWidget);
+    });
+
+    testWidgets('離開畫面時取消進行中的下載；之後下載才結束也不拋例外', (tester) async {
+      await pumpScreen(tester, store: store);
+      await startDownload(tester, AppFont.sourceHanSans);
+
+      await tester.pumpWidget(const SizedBox());
+      expect(store.activeDownload!.cancellationToken!.isCancelled, isTrue);
+
+      store.activeDownload!
+          .fail(const FontDownloadException(FontDownloadFailure.cancelled));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('英文介面：字型名稱與狀態以英文顯示', (tester) async {
+      await pumpScreen(tester, store: store, locale: const Locale('en'));
+
+      expect(find.text('Source Han Sans'), findsOneWidget);
+      expect(subtitleOf(AppFont.sourceHanSans, '34.4 MB · Not downloaded'), findsOneWidget);
+    });
   });
 }
