@@ -1,0 +1,9 @@
+{
+  "fonts": [
+    { "id": "sourceHanSans", "file": "fonts/SourceHanSansTC-VF.ttf", "path": "v1/SourceHanSansTC-VF.ttf", "bytes": 36034016, "sha256": "1a273a56aa47250c7af95e461ee0c8236c60d7141e14a37bd18baccb1e851b19" },
+    { "id": "sourceHanSerif", "file": "fonts/SourceHanSerifTC-VF.ttf", "path": "v1/SourceHanSerifTC-VF.ttf", "bytes": 59898316, "sha256": "71354ed752104c8a3cbcff18943c6110d179d01cc6eaaf1aff7ea14c4a447879" },
+    { "id": "guanKiapTsingKhai", "file": "fonts/GuanKiapTsingKhai.ttf", "path": "v1/GuanKiapTsingKhai.ttf", "bytes": 14675776, "sha256": "758632243c499e431fd0c847f5e8c431acf59a9b41a26237a819466139994d38" },
+    { "id": "taiwanPearl", "file": "fonts/TaiwanPearl-Regular.ttf", "path": "v1/TaiwanPearl-Regular.ttf", "bytes": 21704488, "sha256": "51b3c9a4ab1b6b45dcdad7c5ae93386aea399fd3dabb85d2ac41110dc57f211d" },
+    { "id": "genRyuMinTW", "file": "fonts/GenRyuMinTW-Regular.ttf", "path": "v1/GenRyuMinTW-Regular.ttf", "bytes": 15976964, "sha256": "9178c199d633075b8bb91902216c3e1bc977a11fde12471a2c9a250434402927" }
+  ]
+}

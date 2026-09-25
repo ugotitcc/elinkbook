@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "elinkBook 可下載字型服務（epic-49）；無任何 npm 依賴"
+}

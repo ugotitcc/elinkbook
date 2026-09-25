@@ -1,0 +1,10 @@
+# epic-49 Issue 1：elinkBook 可下載字型服務的 Worker 設定。
+# 部署：在 fonts-cdn/ 執行 npx wrangler@4 deploy（部署步驟見 deploy-wizard.sh）。
+name = "elinkbook-fonts"
+main = "worker/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[[r2_buckets]]
+binding = "FONTS"
+bucket_name = "elinkbook-fonts"

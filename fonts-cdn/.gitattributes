@@ -1,0 +1,4 @@
+# 部署 wizard 在 Windows 上也要保持 LF，否則 Git Bash 執行會出現 \r: command not found
+*.sh text eol=lf
+# 字型原檔一律視為二進位，不做換行轉換
+*.ttf binary
