@@ -25,6 +25,8 @@ docs/epics/epic-15-storage-permission/reviews/
 app/config/cloud_oauth.json
 tmp/
 **/node_modules/
+# epic-49：wrangler 執行時自動產生的本機暫存資料夾
+fonts-cdn/.wrangler/
 app/android/.kotlin/sessions/
 agent/skills/
 .sisyphus/run-continuation/
