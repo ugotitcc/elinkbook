@@ -142,3 +142,11 @@
 - 完整 `flutter test`：2872 通過、1 跳過（`All tests passed!`，EXIT:0）；`flutter analyze`：`No issues found!`；l10n 檢查：兩行 PASS。
 - 變異檢查：暫時拿掉 `&& _downloadedFontsLoaded`，第一個已下載字型測試失敗（閘門完成前就建構閱讀器），改回後全數通過。
 - 和 issues.md 刻意不同的兩點（計畫開頭，審查 I-2 採納後剩兩點）：內建字型檔名不再另外維護（刪除 `_fontFileName()`，CSS 網址直接用字型目錄 `publishPath`）；`CLAUDE.md` 沒有描述舊攔截的段落，不需修改（Task 6 已用 `git grep` 確認）。
+
+**2026-09-26 Issue 4 程式審查修訂**（`reviews/review-issue-4.md`：可合併，0 Critical／0 Important／4 Minor；人類裁定如下）
+
+- M-1 登錄為新工單 Issue 6：偏好指向未下載的內建字型時，選單顯示「使用書本字型」，但閱讀器仍注入原偏好值，實際由系統預設字型蓋掉書本字型。Issue 6 改為在 `ReaderScreen` 渲染時傳 `null`，不改寫偏好。
+- M-2 列入 Issue 5 第 8 項：androidx.webkit 1.12 的副檔名表沒有 `ttf`，在最舊的目標裝置確認 `/downloaded-fonts/` 請求回應 200、記錄實際 `Content-Type`，並確認字型有套用。
+- M-3 採納：`reader_screen_test.dart` 的 `fake_downloadable_font_store.dart` import 移到其他 `../support/` import 旁邊。
+- M-4 採納：閘門測試的自訂字型 fake 改用 `loadGate` 控制，先放行自訂字型、斷言閱讀器仍未建構，再放行已下載字型，明確建立「自訂字型已載入完成」這個前提。
+- 驗證：`reader_screen_test.dart` 242 個測試通過；`flutter analyze` 乾淨；l10n 檢查兩行 PASS。

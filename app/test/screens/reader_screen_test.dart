@@ -9,7 +9,6 @@ import 'package:flutter_inappwebview_platform_interface/flutter_inappwebview_pla
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/downloadable_font_store.dart';
-import '../support/fake_downloadable_font_store.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
@@ -23,6 +22,7 @@ import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import '../support/pump_until_pdf_ready.dart';
+import '../support/fake_downloadable_font_store.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
 import 'package:elinkbook/reader/toc_entry.dart';
@@ -6598,9 +6598,18 @@ void main() {
       final store = FakeDownloadableFontStore()
         ..installed.add(AppFont.sourceHanSerif)
         ..installedFontsGate = Completer<void>();
+      // 自訂字型也用閘門控制，才能明確建立「自訂字型先載入完成」這個前提（審查 M-4）
+      final customFonts = FakeCustomFontsRepository()..loadGate = Completer<void>();
 
-      await pumpReader(tester,
-          store: store, customFontsRepository: FakeCustomFontsRepository());
+      await pumpReader(tester, store: store, customFontsRepository: customFonts);
+
+      expect(find.byType(FoliateReaderView), findsNothing);
+
+      // 自訂字型先載入完成；已下載字型仍未讀完，閱讀器仍不應建構
+      customFonts.loadGate!.complete();
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
       expect(find.byType(FoliateReaderView), findsNothing);
       expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
