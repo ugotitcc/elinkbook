@@ -269,6 +269,7 @@
   "readerSettingsNotOverriddenTooltip": "Following book's original style, not yet adjusted",
   "readerSettingsUseBookFontLabel": "Use book's built-in font",
   "readerSettingsFontFamilyLabel": "Font",
+  "readerSettingsDownloadMoreFontsHint": "Download more fonts in Font Management",
   "readerSettingsColumnCountLabel": "Columns",
   "readerSettingsColumnAutoLabel": "Auto",
   "readerSettingsColumnSingleLabel": "Single",

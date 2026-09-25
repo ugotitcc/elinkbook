@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
+import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/screens/widgets/reader_option_tile.dart';
@@ -1111,6 +1112,67 @@ void main() {
     final dropdown = tester.widget<DropdownButton<String?>>(
         find.byKey(const Key('reader_settings_font_family')));
     expect(dropdown.value, isNull);
+  });
+
+  group('只列出已下載的內建字型（epic-49 Issue 4）', () {
+    testWidgets('只下載思源黑體時，選單只有思源黑體，沒有思源宋體', (tester) async {
+      await _pumpSheet(tester, const BookReaderPrefs(), (_) {},
+          installedFonts: {AppFont.sourceHanSans});
+
+      await tester.tap(find.byKey(const Key('reader_settings_font_family')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('思源黑體'), findsWidgets);
+      expect(find.text('思源宋體'), findsNothing);
+    });
+
+    testWidgets('一款內建字型都沒下載時，選單下方顯示提示（即使有自訂字型）', (tester) async {
+      await _pumpSheet(
+        tester,
+        const BookReaderPrefs(),
+        (_) {},
+        installedFonts: const {},
+        customFonts: const [
+          CustomFont(
+            id: 1,
+            displayName: '我的自訂字型',
+            familyName: 'MyCustomFamily',
+            fontUri: 'content://example/font1',
+          ),
+        ],
+      );
+
+      final hint = find.byKey(const Key('reader_settings_download_fonts_hint'));
+      expect(hint, findsOneWidget);
+      expect(tester.widget<Text>(hint).data, '到「字型管理」下載更多字型');
+    });
+
+    testWidgets('有已下載的內建字型時，不顯示提示', (tester) async {
+      await _pumpSheet(tester, const BookReaderPrefs(), (_) {},
+          installedFonts: {AppFont.sourceHanSerif});
+
+      expect(find.byKey(const Key('reader_settings_download_fonts_hint')), findsNothing);
+    });
+
+    testWidgets('偏好值指向未下載的內建字型時，面板正常開啟並顯示「使用書本字型」（審查重點 5）',
+        (tester) async {
+      await _pumpSheet(tester, const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'), (_) {},
+          installedFonts: {AppFont.sourceHanSans});
+
+      expect(tester.takeException(), isNull);
+      final dropdown = tester.widget<DropdownButton<String?>>(
+          find.byKey(const Key('reader_settings_font_family')));
+      expect(dropdown.value, isNull);
+    });
+
+    testWidgets('英文介面的提示文字', (tester) async {
+      await _pumpSheet(tester, const BookReaderPrefs(), (_) {},
+          installedFonts: const {}, locale: const Locale('en'));
+
+      expect(
+          tester.widget<Text>(find.byKey(const Key('reader_settings_download_fonts_hint'))).data,
+          'Download more fonts in Font Management');
+    });
   });
 
   testWidgets('字型選單合併顯示內建 2 款與傳入的自訂字型清單', (tester) async {
@@ -2339,6 +2401,7 @@ Future<void> _pumpSheet(
   BookReaderPrefs prefs,
   ValueChanged<BookReaderPrefs> onChanged, {
   List<CustomFont> customFonts = const [],
+  Set<AppFont>? installedFonts,
   String bookId = 'b1',
   List<LayoutPreset> layoutPresets = const [],
   void Function(BookReaderPrefs)? onSaveAsPreset,
@@ -2367,6 +2430,9 @@ Future<void> _pumpSheet(
         prefs: prefs,
         onChanged: onChanged,
         customFonts: customFonts,
+        // 既有測試的前提都是「內建字型已經可用」，沿用這個前提：沒指定時視為全部已下載。
+        // 驗證「只列出已下載字型」的新測試會明確傳入集合。
+        installedFonts: installedFonts ?? AppFont.values.toSet(),
         bookId: bookId,
         layoutPresets: layoutPresets,
         isEinkMode: isEinkMode,
