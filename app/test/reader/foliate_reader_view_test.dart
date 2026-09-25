@@ -15,6 +15,7 @@ import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/zone_action.dart';
+import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
 import '../support/fake_inappwebview_platform.dart';
@@ -2152,6 +2153,81 @@ void main() {
       final message = resolveFoliateOpenBookErrorMessage(['boom'], l10n);
 
       expect(message, 'Failed to load book');
+    });
+  });
+
+  group('已下載字型（epic-49 Issue 4）', () {
+    // 前面的 `mounted guard / dispose race` group 會覆寫 cacheBookForServing
+    // 為失敗／永不完成版本且不還原，這裡每次測試前恢復成功版本，否則完整
+    // 套件執行時閱讀器建不出 InAppWebView（單獨執行時 setUpAll 的版本仍在）。
+    setUp(() {
+      cacheBookForServing = (filePath, instanceId) async {
+        return '/fake/cache/dir/current.epub';
+      };
+    });
+
+    Future<InAppWebView> pumpView(
+      WidgetTester tester, {
+      Set<AppFont> installedFonts = const {},
+      String? downloadedFontsDirectory,
+    }) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: FoliateReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+            installedFonts: installedFonts,
+            downloadedFontsDirectory: downloadedFontsDirectory,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      return tester.widget<InAppWebView>(find.byType(InAppWebView));
+    }
+
+    Map<String, String> handlerDirectories(InAppWebView webView) => {
+          for (final handler in webView.platform.params.initialSettings!
+              .webViewAssetLoader!.pathHandlers!
+              .whereType<InternalStoragePathHandler>())
+            handler.path: handler.directory,
+        };
+
+    String fontFaceCssOf(InAppWebView webView) =>
+        webView.platform.params.initialUrlRequest!.url!.queryParameters['fontFaceCss']!;
+
+    testWidgets('沒有傳入存放目錄時，只註冊 /book/ 處理器，初始網址不含下載字型規則（審查重點 4）',
+        (tester) async {
+      final webView = await pumpView(tester);
+
+      expect(handlerDirectories(webView).keys, ['/book/']);
+      expect(fontFaceCssOf(webView), isNot(contains('/downloaded-fonts/')));
+    });
+
+    testWidgets('傳入存放目錄時，註冊 /downloaded-fonts/ 處理器指向該目錄', (tester) async {
+      final webView = await pumpView(tester,
+          installedFonts: {AppFont.sourceHanSerif},
+          downloadedFontsDirectory: '/data/app/downloaded-fonts');
+
+      expect(handlerDirectories(webView), {
+        '/book/': '/fake/cache/dir',
+        '/downloaded-fonts/': '/data/app/downloaded-fonts',
+      });
+    });
+
+    testWidgets('初始網址的 @font-face 只包含傳入的已下載字型', (tester) async {
+      final webView = await pumpView(tester,
+          installedFonts: {AppFont.sourceHanSerif},
+          downloadedFontsDirectory: '/data/app/downloaded-fonts');
+
+      final css = fontFaceCssOf(webView);
+      expect(css, contains('/downloaded-fonts/v1/SourceHanSerifTC-VF.ttf'));
+      expect(css, isNot(contains('SourceHanSansTC')));
     });
   });
 
