@@ -228,7 +228,7 @@ flutter:
     # - assets/fonts/SourceHanSansTC-VF.ttf
     # - assets/fonts/SourceHanSerifTC-VF.ttf
     # [字型停用] 其餘 3 款同時從字型清單隱藏（見 lib/reader/app_font.dart 的恢復說明）。
-    # 原俠正楷字型檔仍在 assets/fonts/；其他字型檔可從 commit eddcc85e 的上一版取回。
+    # 5 款字型原檔都放在 repo 根目錄的 fonts-cdn/fonts/（epic-49），不再放在 assets/fonts/。
     # - assets/fonts/GuanKiapTsingKhai.ttf
     # - assets/fonts/TaiwanPearl-Regular.ttf
     # - assets/fonts/GenRyuMinTW-Regular.ttf
