@@ -152,3 +152,11 @@
 - 驗證：`reader_screen_test.dart` 242 個測試通過；`flutter analyze` 乾淨；l10n 檢查兩行 PASS。
 
 **2026-09-26 Issue 4 合併**：PR #279（`epic-49/issue-4-reader-downloaded-fonts` → `main`）已合併。下一步：Issue 6（偏好指向未下載的內建字型時閱讀器改用書本字型），需先撰寫 `plans/plan-issue-6.md`，建議在 Issue 5 前完成；之後是 Issue 5 真機驗證（8 項，人類操作）。
+
+**2026-09-26 撰寫 Issue 6 實作計畫**（`/writing-plans`）：`plans/plan-issue-6.md`，共 2 個 Task：`ReaderScreen` 新增 `_renderedFontFamily()` 並以測試驅動實作、整體驗證與進度記錄。工單要求寫進計畫的決定：沒有傳入 `downloadableFontStore` 時照原值傳遞（只出現在測試與舊呼叫端，與 Issue 4「沒有 store 時行為不變」一致）；有 store 但讀取失敗時改傳 `null`（`@font-face` 本來就不會輸出）。epic-48 停用的 3 款字型名稱不在 `AppFont.values`，依工單「不認得的名稱行為不變」照原值傳。
+
+**2026-09-26 Issue 6 計畫審查修訂**（`reviews/review-plan-issue-6.md`：Approved with Recommendations，0 Critical／0 Important；摘要寫 2 項 Minor，內文實際列出 3 項）
+
+- M-1 採納：`_renderedFontFamily()` 第一行改為 `fontFamily == null` 時也直接回傳。效能差異可忽略，採納是為了讓最常見的「使用書本字型」情境一眼可讀。Task 1 Step 5 的變異檢查改為只拿掉「沒有 store」的判斷。
+- M-2 採納：新增測試「偏好為 null（使用書本字型）時，閱讀器收到 null」，group 共 8 個測試；它在修改前就會通過，紅燈預期改為 3 個失敗、5 個通過，其餘數字（250、2880）同步更新。
+- M-3 採納：新 group 的插入位置改為約 `:6671`（Issue 4 審查修訂 M-4 使行號後移，已實際確認）。
