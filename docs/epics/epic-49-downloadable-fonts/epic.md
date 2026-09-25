@@ -118,3 +118,35 @@
 - 驗證：異動的 4 個測試檔共 104 個測試通過；`flutter analyze` 乾淨；l10n 檢查通過；完整 `flutter test` 2857 個測試全數通過。
 
 **2026-09-25 Issue 3 合併**：PR #278（`epic-49/issue-3-downloadable-font-store` → `main`）已合併。下一步：Issue 4（閱讀器套用已下載字型、`kFontDownloadBaseUrl` 改為正式 Worker 網址、閱讀設定下拉選單只列已下載字型、字型目錄一致性測試），需先撰寫 `plans/plan-issue-4.md`；之後是 Issue 5 真機驗證。
+
+**2026-09-25 撰寫 Issue 4 實作計畫**（`/writing-plans`）：`plans/plan-issue-4.md`，共 6 個 Task：正式網址與字型目錄一致性測試、`buildFontFaceCss` 只替已下載字型輸出、`FoliateReaderView` 註冊 `/downloaded-fonts/` 處理器、閱讀設定只列出已下載字型與提示、`ReaderScreen` 延後建構、整體驗證。計畫中刻意與 issues.md 不同的三點：
+
+- 刪除 `_fontFileName()`，CSS 網址改用字型目錄的 `publishPath`，確保 CSS 網址和 store 存檔路徑一致；新增共用常數 `kDownloadedFontsPathPrefix`。
+- `ReaderScreen` 內部搜尋畫面用的 `LibraryReaderFeatureRepositories` 不傳 store：從閱讀器進入搜尋時只會 `pop` 回跳轉目標，不會建構新的閱讀器。
+- `CLAUDE.md` 沒有描述舊字型服務方式的段落（已用 grep 確認），不需要修改。
+
+**2026-09-25 Issue 4 計畫審查修訂**（`reviews/review-plan-issue-4.md`：Approved with Recommendations，0 Critical／2 Important／1 Minor）
+
+- I-1 不採納：審查建議讀取 `fonts-cdn/fonts.json` 時，加上「以 repo 根目錄為工作目錄」的回退路徑。`flutter test` 的工作目錄固定是 package 根目錄（`app/`），從 IDE 點選執行也一樣。專案裡已經有 9 個測試檔用 `File('test/fixtures/…')` 讀取檔案，依賴的也是同一個前提。只在這一個測試加回退路徑，和其他測試不一致，也沒有實際效益。
+- I-2 採納：Task 5 在 `_openBookSearch` 的 `LibraryReaderFeatureRepositories` 補上 `downloadableFontStore`，和同一處其他依賴保持一致。撰寫計畫時列為「刻意不同」的「搜尋畫面不傳 store」因此取消，刻意不同的地方剩兩點。
+- M-1 採納：Task 6 的殘留檢查改用 `git grep`，Git Bash 與 PowerShell 都能直接執行。
+
+**2026-09-26 Issue 4 完成**（分支 `epic-49/issue-4-reader-downloaded-fonts`，5 個實作提交，待 PR 合併與 Issue 5 真機驗證）
+
+- Task 1：`kFontDownloadBaseUrl` 改為正式 Worker `https://elinkbook-fonts.huthief.workers.dev/`；新增基底網址斷言與字型目錄／`fonts-cdn/fonts.json` 一致性測試。
+- Task 2：`buildFontFaceCss({installedFonts, customFonts})` 只替已下載字型輸出 `@font-face`，網址為前綴 `kDownloadedFontsPathPrefix` 加上字型目錄 `publishPath`；刪除 `_fontFileName()` 與 `loadFlutterFontAsset()`，移除 `foliate_reader_view.dart` 的 `/assets/fonts/` 攔截。測試改寫並把打包斷言改為閉包形式 `() => rootBundle.load(path)`（原寫法會在 Future 建構時同步拋出、matcher 來不及捕捉）。
+- Task 3：`FoliateReaderView` 新增可選參數 `installedFonts`／`downloadedFontsDirectory`，有目錄時才註冊 `/downloaded-fonts/` 的 `InternalStoragePathHandler`，初始網址的 `fontFaceCss` 只含已下載字型。新測試的 group 加 `setUp` 恢復成功的 `cacheBookForServing`，避免被前面的 `mounted guard` 失敗 mock 污染（完整套件才會觸發）。
+- Task 4：新增在地化字串 `readerSettingsDownloadMoreFontsHint`（4 個 ARB，`flutter gen-l10n` 重新產生）；`ReaderSettingsSheet` 新增 `installedFonts`，只列出已下載字型，一款都沒有時顯示提示，偏好指向未下載字型時顯示「使用書本字型」。
+- Task 5：`ReaderScreen` 新增 `downloadableFontStore`，`_downloadedFontsLoaded` 與 `_customFontsLoaded` 同時 gating 才建構 Foliate 閱讀器；已下載集合與目錄傳給閱讀器，集合傳給設定面板；`reader_screen_route.dart` 與 `_openBookSearch` 一併傳遞。
+- 新增測試約 15 個（Task 1 +2、Task 2 淨+1、Task 3 +3、Task 4 +5、Task 5 +4），另配合新簽名改寫既有測試（`_pumpSheet` 預設視為全部已下載，既有呼叫端零修改）。
+- 完整 `flutter test`：2872 通過、1 跳過（`All tests passed!`，EXIT:0）；`flutter analyze`：`No issues found!`；l10n 檢查：兩行 PASS。
+- 變異檢查：暫時拿掉 `&& _downloadedFontsLoaded`，第一個已下載字型測試失敗（閘門完成前就建構閱讀器），改回後全數通過。
+- 和 issues.md 刻意不同的兩點（計畫開頭，審查 I-2 採納後剩兩點）：內建字型檔名不再另外維護（刪除 `_fontFileName()`，CSS 網址直接用字型目錄 `publishPath`）；`CLAUDE.md` 沒有描述舊攔截的段落，不需修改（Task 6 已用 `git grep` 確認）。
+
+**2026-09-26 Issue 4 程式審查修訂**（`reviews/review-issue-4.md`：可合併，0 Critical／0 Important／4 Minor；人類裁定如下）
+
+- M-1 登錄為新工單 Issue 6：偏好指向未下載的內建字型時，選單顯示「使用書本字型」，但閱讀器仍注入原偏好值，實際由系統預設字型蓋掉書本字型。Issue 6 改為在 `ReaderScreen` 渲染時傳 `null`，不改寫偏好。
+- M-2 列入 Issue 5 第 8 項：androidx.webkit 1.12 的副檔名表沒有 `ttf`，在最舊的目標裝置確認 `/downloaded-fonts/` 請求回應 200、記錄實際 `Content-Type`，並確認字型有套用。
+- M-3 採納：`reader_screen_test.dart` 的 `fake_downloadable_font_store.dart` import 移到其他 `../support/` import 旁邊。
+- M-4 採納：閘門測試的自訂字型 fake 改用 `loadGate` 控制，先放行自訂字型、斷言閱讀器仍未建構，再放行已下載字型，明確建立「自訂字型已載入完成」這個前提。
+- 驗證：`reader_screen_test.dart` 242 個測試通過；`flutter analyze` 乾淨；l10n 檢查兩行 PASS。

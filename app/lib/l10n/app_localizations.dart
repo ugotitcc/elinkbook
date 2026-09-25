@@ -1714,6 +1714,12 @@ abstract class AppLocalizations {
   /// **'字型'**
   String get readerSettingsFontFamilyLabel;
 
+  /// 閱讀設定字型下拉選單下方的提示：一款內建字型都還沒下載時顯示（epic-49）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'到「字型管理」下載更多字型'**
+  String get readerSettingsDownloadMoreFontsHint;
+
   /// 呈現分頁「欄數」選項群組小標題
   ///
   /// In zh_TW, this message translates to:

@@ -956,6 +956,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readerSettingsFontFamilyLabel => 'Font';
 
   @override
+  String get readerSettingsDownloadMoreFontsHint =>
+      'Download more fonts in Font Management';
+
+  @override
   String get readerSettingsColumnCountLabel => 'Columns';
 
   @override

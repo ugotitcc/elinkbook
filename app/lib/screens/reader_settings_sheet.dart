@@ -32,6 +32,9 @@ class ReaderSettingsSheet extends StatefulWidget {
   final BookReaderPrefs prefs;
   final ValueChanged<BookReaderPrefs> onChanged;
   final List<CustomFont> customFonts;
+  /// 已下載的內建字型（epic-49）。字型選單只列出這些內建字型，
+  /// 選了一定有效果；一款都沒有時在選單下方提示去字型管理下載。
+  final Set<AppFont> installedFonts;
   final String bookId;
   final List<LayoutPreset> layoutPresets;
   final void Function(BookReaderPrefs currentDraft) onSaveAsPreset;
@@ -55,6 +58,7 @@ class ReaderSettingsSheet extends StatefulWidget {
     required this.prefs,
     required this.onChanged,
     this.customFonts = const [],
+    this.installedFonts = const {},
     required this.bookId,
     this.layoutPresets = const [],
     required this.onSaveAsPreset,
@@ -659,55 +663,72 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   Widget _buildFontFamilyDropdown() {
     final l10n = AppLocalizations.of(context)!;
+    // 依 AppFont.values 的順序列出，不受集合迭代順序影響
+    final builtInFonts =
+        AppFont.values.where(widget.installedFonts.contains).toList();
     return EBFieldCard(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.readerSettingsFontFamilyLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(width: 12),
-          // DropdownButton 內部以 IndexedStack 疊放「所有」選項來決定自身寬度
-          // （不只是目前選中的值），字型名稱過長（尤其使用者自訂字型）時會把
-          // 整顆 Row 撐爆版。isExpanded:true 讓寬度改吃 Expanded 給的可用空間，
-          // 搭配 Text 的 overflow: ellipsis 讓過長名稱改為截斷顯示，而非溢位。
-          Expanded(
-            child: DropdownButton<String?>(
-              key: const Key('reader_settings_font_family'),
-              isExpanded: true,
-              // epic-48：偏好設定可能存著已停用的內建字型（例如原俠正楷），
-              // 該值不在選項中時 DropdownButton 會 assert 失敗，改顯示為
-              // 「使用書本字型」。只影響顯示，不改寫偏好設定，字型恢復後
-              // 舊設定自然生效。
-              value: {
-                ...AppFont.values.map((f) => f.familyName),
-                ...widget.customFonts.map((f) => f.familyName),
-              }.contains(_fontFamily)
-                  ? _fontFamily
-                  : null,
-              items: [
-                DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text(l10n.readerSettingsUseBookFontLabel, overflow: TextOverflow.ellipsis),
+          Row(
+            children: [
+              Text(l10n.readerSettingsFontFamilyLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(width: 12),
+              // DropdownButton 內部以 IndexedStack 疊放「所有」選項來決定自身寬度
+              // （不只是目前選中的值），字型名稱過長（尤其使用者自訂字型）時會把
+              // 整顆 Row 撐爆版。isExpanded:true 讓寬度改吃 Expanded 給的可用空間，
+              // 搭配 Text 的 overflow: ellipsis 讓過長名稱改為截斷顯示，而非溢位。
+              Expanded(
+                child: DropdownButton<String?>(
+                  key: const Key('reader_settings_font_family'),
+                  isExpanded: true,
+                  // 偏好設定可能指向已停用（epic-48）或尚未下載／已刪除（epic-49）的
+                  // 內建字型，該值不在選項中時 DropdownButton 會 assert 失敗，改顯示為
+                  // 「使用書本字型」。只影響顯示，不改寫偏好設定，字型下載後舊設定
+                  // 自然生效。
+                  value: {
+                    ...builtInFonts.map((f) => f.familyName),
+                    ...widget.customFonts.map((f) => f.familyName),
+                  }.contains(_fontFamily)
+                      ? _fontFamily
+                      : null,
+                  items: [
+                    DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text(l10n.readerSettingsUseBookFontLabel, overflow: TextOverflow.ellipsis),
+                    ),
+                    ...builtInFonts.map(
+                      (font) => DropdownMenuItem<String?>(
+                        value: font.familyName,
+                        child: Text(font.displayName(l10n),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ),
+                    ...widget.customFonts.map(
+                      (font) => DropdownMenuItem<String?>(
+                        value: font.familyName,
+                        child: Text(font.displayName,
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() {
+                    _fontFamily = value;
+                    _notifyChanged();
+                  }),
                 ),
-                ...AppFont.values.map(
-                  (font) => DropdownMenuItem<String?>(
-                    value: font.familyName,
-                    child: Text(font.displayName(l10n),
-                        overflow: TextOverflow.ellipsis),
-                  ),
-                ),
-                ...widget.customFonts.map(
-                  (font) => DropdownMenuItem<String?>(
-                    value: font.familyName,
-                    child: Text(font.displayName,
-                        overflow: TextOverflow.ellipsis),
-                  ),
-                ),
-              ],
-              onChanged: (value) => setState(() {
-                _fontFamily = value;
-                _notifyChanged();
-              }),
-            ),
+              ),
+            ],
           ),
+          if (builtInFonts.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                l10n.readerSettingsDownloadMoreFontsHint,
+                key: const Key('reader_settings_download_fonts_hint'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
         ],
       ),
     );

@@ -16,6 +16,7 @@ import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import '../support/fake_book_reader_prefs_repository.dart';
 import '../support/fake_bookmarks_repository.dart';
 import '../support/fake_custom_fonts_repository.dart';
+import '../support/fake_downloadable_font_store.dart';
 import '../support/fake_highlights_repository.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_notes_repository.dart';
@@ -63,7 +64,7 @@ void main() {
     });
 
     test(
-        '欄位對帳：features 12 個欄位＋book／sync／isEinkMode 皆給非空值，'
+        '欄位對帳：features 13 個欄位＋book／sync／isEinkMode 皆給非空值，'
         '逐一斷言正確帶入 ReaderScreen，不遺漏任何一個具名參數', () {
       final book = _testBook();
       final prefsManager = FakeReaderPrefsManager();
@@ -72,6 +73,7 @@ void main() {
       final highlightsRepository = FakeHighlightsRepository();
       final notesRepository = FakeNotesRepository();
       final customFontsRepository = FakeCustomFontsRepository();
+      final downloadableFontStore = FakeDownloadableFontStore();
       final layoutPresetRepository =
           LayoutPresetRepository(dbRepository.database);
       final bookReaderPrefsRepository = FakeBookReaderPrefsRepository();
@@ -89,6 +91,7 @@ void main() {
         highlightsRepository: highlightsRepository,
         notesRepository: notesRepository,
         customFontsRepository: customFontsRepository,
+        downloadableFontStore: downloadableFontStore,
         layoutPresetRepository: layoutPresetRepository,
         bookReaderPrefsRepository: bookReaderPrefsRepository,
         ttsProvider: ttsProvider,
@@ -123,6 +126,7 @@ void main() {
       expect(screen.highlightsRepository, same(highlightsRepository));
       expect(screen.notesRepository, same(notesRepository));
       expect(screen.customFontsRepository, same(customFontsRepository));
+      expect(screen.downloadableFontStore, same(downloadableFontStore));
       expect(screen.layoutPresetRepository, same(layoutPresetRepository));
       expect(
           screen.bookReaderPrefsRepository, same(bookReaderPrefsRepository));

@@ -1,6 +1,6 @@
 # Epic 49 — 可下載字型：工單清單 (Issues)
 
-依 `spec.md` 拆成 5 個工單。Issue 1、3 可以平行開發（App 端先以 `MockClient` 驗證，不需要線上服務，兩者也沒有共用檔案）；Issue 2 是人類操作的部署，完成後才能把真正的網址填進 App；Issue 4 需要 Issue 1 的字型清單、Issue 2 的網址、Issue 3 的 store，負責閱讀器套用與「字型目錄一致性測試」；Issue 5 是最後的真機驗證。
+依 `spec.md` 拆成 5 個工單。Issue 1、3 可以平行開發（App 端先以 `MockClient` 驗證，不需要線上服務，兩者也沒有共用檔案）；Issue 2 是人類操作的部署，完成後才能把真正的網址填進 App；Issue 4 需要 Issue 1 的字型清單、Issue 2 的網址、Issue 3 的 store，負責閱讀器套用與「字型目錄一致性測試」；Issue 5 是最後的真機驗證。Issue 6 是 Issue 4 程式審查 M-1 追加的工單（未下載字型時閱讀器改用書本字型），依賴 Issue 4，建議在 Issue 5 之前完成。
 
 **相依順序**：Issue 1（服務程式）→ Issue 2（部署，人類）；Issue 3（下載與字型管理畫面）與 Issue 1 平行 → Issue 4（閱讀器套用）依賴 1、2、3 → Issue 5（真機驗證，人類）依賴 4。
 
@@ -102,7 +102,7 @@ Issue 3 ─────────────────────┘
 
 ## Issue 4：閱讀器套用已下載字型
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 1（字型清單）、Issue 2（正式網址）、Issue 3（store）。
 
@@ -151,7 +151,37 @@ Issue 3 ─────────────────────┘
 5. 刪除思源宋體，確認該書閱讀設定顯示「使用書本字型」；重新下載後自動恢復為思源宋體。
 6. 翻頁數十頁，確認沒有因字型載入造成明顯卡頓。
 7. 下載思源宋體到一半時，從多工畫面把 App 滑掉；重新開啟 App 後，確認該字型仍是「未下載」，而且可以正常重新下載。
+8. （Issue 4 程式審查 M-2）在最舊的目標裝置（Android 11 或電子紙閱讀器）上，以 `chrome://inspect` 的 Network 面板確認 `/downloaded-fonts/v1/*.ttf` 請求回應 200，並記錄實際的 `Content-Type`（androidx.webkit 1.12 的副檔名表沒有 `ttf`，會交給系統判斷，舊版系統可能不是 `font/ttf`）；同時確認字型確實有套用（同第 3 項）。若字型沒有套用，回報後另開工單處理。
 
-**驗收標準：** 以上 7 項全部通過，結果記錄到 `epic.md`。
+**驗收標準：** 以上 8 項全部通過，結果記錄到 `epic.md`。
+
+**Blocked by：** Issue 4。
+
+---
+
+## Issue 6：偏好指向未下載的內建字型時，閱讀器改用書本字型（Issue 4 程式審查 M-1）
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 4。
+
+**背景：** 書籍偏好的字型是某款內建字型（例如 `SourceHanSerifTC`），但這款字型還沒下載或已被刪除時：
+- 閱讀設定的字型選單顯示「使用書本字型」（Issue 4 的設計）。
+- 但 `ReaderScreen` 仍把原本的偏好值傳給 `FoliateReaderView`（`reader_screen.dart` 建構閱讀器處的 `fontFamily: resolved.fontFamily`），`main.js` 會注入 `font-family: '<偏好值>' !important`。因為沒有對應的 `@font-face`，WebView 改用系統預設字型，把書本 CSS 宣告的字型蓋掉。
+
+結果是畫面和選單說的不一致。規格使用者故事 24 允許「由書本或系統字型補位」，所以不算違規，但升級後還沒下載字型的使用者都會遇到，對內嵌字型的書影響最明顯。
+
+**What to build：**
+- `ReaderScreen` 傳給 `FoliateReaderView` 的 `fontFamily`：值是某個 `AppFont` 的 family name，但不在 `_installedFonts` 裡時，改傳 `null`（使用書本字型）。
+- 只影響渲染，**不改寫**書籍偏好；重新下載該字型後自動恢復，和選單「只影響顯示」的語意一致。
+- 自訂字型（`CustomFont`）與未知的 family name 行為不變。
+
+**單元測試要求：**
+- 偏好為未下載的內建字型時，`FoliateReaderView` 收到的 `fontFamily` 是 `null`；偏好值本身沒有被改寫。
+- 偏好為已下載的內建字型時，照原值傳遞。
+- 偏好為自訂字型時，照原值傳遞。
+- 沒有傳入 `downloadableFontStore`（已下載集合為空）時的行為需明確決定並寫進計畫（沒有 store 的情境只出現在測試與舊呼叫端）。
+
+**驗收標準：** 異動檔案的測試通過；`flutter analyze` 乾淨。完成後 Issue 5 第 5 項「刪除思源宋體」時，畫面應同時改回書本字型。
 
 **Blocked by：** Issue 4。

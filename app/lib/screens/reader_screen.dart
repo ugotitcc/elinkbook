@@ -17,8 +17,10 @@ import '../reader/bookmark_position_context.dart';
 import '../reader/bookmark_toggle.dart' as bookmark_toggle;
 import '../reader/bookmarks_repository.dart';
 import '../reader/book_reader_prefs.dart';
+import '../reader/app_font.dart';
 import '../reader/custom_font.dart';
 import '../reader/custom_fonts_repository.dart';
+import '../reader/downloadable_font_store.dart';
 import '../reader/epub_decoration.dart';
 import '../reader/epub_position_info.dart';
 import '../reader/epub_selection_info.dart';
@@ -163,6 +165,11 @@ class ReaderScreen extends StatefulWidget {
   /// 顯示內建 5 款，行為等同本 Issue 之前，零回歸。
   final CustomFontsRepository? customFontsRepository;
 
+  /// 可下載字型的存放與查詢（epic-49 Issue 4）。刻意為可選參數，比照
+  /// [customFontsRepository] 既有慣例：未提供時已下載字型視為空集合、開書不等待，
+  /// 行為和本 Issue 之前相同（既有測試不必修改）。
+  final DownloadableFontStore? downloadableFontStore;
+
   /// 版面設定預設集的資料存取層（epic-28-reader-settings-enhancements
   /// Issue 3）。刻意為可選參數——比照 [customFontsRepository] 既有慣例，
   /// 未提供時預設集相關按鈕點擊無效果（callback 內提早 return），行為
@@ -246,6 +253,7 @@ class ReaderScreen extends StatefulWidget {
     this.isFixedLayout,
     this.libraryRepository,
     this.customFontsRepository,
+    this.downloadableFontStore,
     this.layoutPresetRepository,
     this.bookReaderPrefsRepository,
     this.syncCheckpointTrigger,
@@ -383,6 +391,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 產生的自訂字型 @font-face 宣告）在清單查詢完成前就已計算定案、之後
   // 永遠不會重新產生的競態（見本計畫 Global Constraints）。
   late bool _customFontsLoaded = widget.customFontsRepository == null;
+  // 已下載的內建字型（epic-49 Issue 4），開書時載入一次。閱讀期間不會改變：
+  // 字型管理畫面不在閱讀器內，下載或刪除都要離開閱讀器。
+  Set<AppFont> _installedFonts = const {};
+  // 已下載字型清單是否已讀完，用法比照 _customFontsLoaded：FoliateReaderView 的
+  // 初始網址（內含 @font-face）是 late final，提早建構就再也不會套用下載的字型
+  // （規格審查 C-1）。未提供 store 時一開始就是 true；讀取失敗也設為 true，不阻擋開書。
+  late bool _downloadedFontsLoaded = widget.downloadableFontStore == null;
   BookReaderPrefs _prefs = BookReaderPrefs.empty;
   LoadedPrefs? _loaded;
   ResolvedPreferences? _resolved;
@@ -548,6 +563,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
     _loadCustomFonts();
+    _loadDownloadedFonts();
     _loadLayoutPresets();
     final syncCheckpointTrigger = widget.syncCheckpointTrigger;
     if (syncCheckpointTrigger != null) {
@@ -912,6 +928,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             prefs: _prefs,
             onChanged: _handlePrefsChanged,
             customFonts: _customFonts,
+            installedFonts: _installedFonts,
             bookId: widget.bookId,
             layoutPresets: _layoutPresets,
             isEinkMode: widget.isEinkMode,
@@ -1289,6 +1306,23 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       debugPrint('Failed to load custom fonts: $e');
       if (!mounted) return;
       setState(() => _customFontsLoaded = true);
+    }
+  }
+
+  Future<void> _loadDownloadedFonts() async {
+    final store = widget.downloadableFontStore;
+    if (store == null) return;
+    try {
+      final fonts = await store.installedFonts();
+      if (!mounted) return;
+      setState(() {
+        _installedFonts = fonts;
+        _downloadedFontsLoaded = true;
+      });
+    } catch (e) {
+      debugPrint('Failed to load downloaded fonts: $e');
+      if (!mounted) return;
+      setState(() => _downloadedFontsLoaded = true);
     }
   }
 
@@ -1810,6 +1844,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             highlightsRepository: widget.highlightsRepository,
             notesRepository: widget.notesRepository,
             customFontsRepository: widget.customFontsRepository,
+            downloadableFontStore: widget.downloadableFontStore,
             layoutPresetRepository: widget.layoutPresetRepository,
             bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
             ttsProvider: widget.ttsProvider,
@@ -2802,7 +2837,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           children: [
             if (_resolved != null &&
                 (!isFoliateFormat(format) ||
-                    (_dispatchedIsFixedLayout != null && _customFontsLoaded)))
+                    (_dispatchedIsFixedLayout != null &&
+                        _customFontsLoaded &&
+                        _downloadedFontsLoaded)))
               _buildNativeView(format, isLandscape),
             // epic-27-reader-device-compat Issue 3：原生渲染畫面（InAppWebView／
             // pdfrx 繪圖表面）在真正收到第一次繪製結果前，緩衝區預設顯示黑色
@@ -3294,6 +3331,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           textConversion: textConversionMode,
           isLandscape: isLandscape,
           customFonts: _customFonts,
+          installedFonts: _installedFonts,
+          downloadedFontsDirectory: widget.downloadableFontStore?.directory,
           navZoneActions: resolved.navZoneActions,
           onZoneAction: _handleZoneAction,
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,

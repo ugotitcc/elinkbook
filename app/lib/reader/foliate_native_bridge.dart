@@ -1,13 +1,14 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/services.dart' show MethodChannel, rootBundle;
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'app_font.dart';
 import 'custom_font.dart';
 import 'foliate_bridge_codec.dart';
+import 'font_download_catalog.dart';
 
 const _readerResourcesChannel = MethodChannel('elinkbook/reader_resources');
 
@@ -25,44 +26,32 @@ const _readerResourcesCacheChannel =
 /// 是兩個各自獨立、但指向同一條原生通道的物件實例，皆可正常運作。
 const _volumeKeyChannel = MethodChannel('elinkbook/volume_key');
 
-/// 各 [AppFont] 列舉值對應的字型檔名（`app/assets/fonts/` 底下的實際檔
-/// 名，`pubspec.yaml` 已宣告）。審查修正（DRY）：家族名稱字串不再於本
-/// 檔案重複硬編碼一份，改重用 `app_font.dart` 既有的
-/// `AppFontFamilyName.familyName`——本函式只保留「檔名」這一半確實找不到
-/// 其他集中定義處的映射，且用 `switch` 而非 `Map<String, String>` 是刻意
-/// 選擇：新增 [AppFont] 列舉值時，`switch` 缺少對應分支會直接編譯錯誤
-/// （dart 的 exhaustiveness 檢查），比純字串 key 的 map 更難悄悄遺漏。
-String _fontFileName(AppFont font) {
-  switch (font) {
-    case AppFont.sourceHanSans:
-      return 'SourceHanSansTC-VF.ttf';
-    case AppFont.sourceHanSerif:
-      return 'SourceHanSerifTC-VF.ttf';
-    // [字型停用] case AppFont.guanKiapTsingKhai:
-    // [字型停用]   return 'GuanKiapTsingKhai.ttf';
-    // [字型停用] case AppFont.taiwanPearl:
-    // [字型停用]   return 'TaiwanPearl-Regular.ttf';
-    // [字型停用] case AppFont.genRyuMinTW:
-    // [字型停用]   return 'GenRyuMinTW-Regular.ttf';
-  }
-}
+/// WebView 內已下載字型的虛擬路徑前綴（epic-49）。[FoliateReaderView] 用它註冊
+/// `InternalStoragePathHandler`，[buildFontFaceCss] 用它組出 `@font-face` 網址，
+/// 兩邊共用同一個常數，避免路徑不一致。
+const String kDownloadedFontsPathPrefix = '/downloaded-fonts/';
 
-/// 產生固定的 5 款內建字型 @font-face 宣告（FR-09），取代原本 Kotlin
-/// `FoliateEpubReaderView.kt buildFontFaceCss()`。字型檔案本身是 Flutter
-/// assets（`pubspec.yaml` 已宣告，見 [loadFlutterFontAsset]），故不需要
-/// 透過 `FlutterInjector` 查找 Android AssetManager 的 lookup key——直接
-/// 用固定虛擬路徑 `https://appassets.androidplatform.net/assets/fonts/...`，
-/// 由 `InAppWebView.shouldInterceptRequest`（`foliate_epub_reader_view.dart`）
-/// 攔截後呼叫 [loadFlutterFontAsset] 提供位元組。家族名稱字串直接取自
-/// `AppFontFamilyName.familyName`（見 [_fontFileName] 註解），與
-/// `app/lib/reader/app_font.dart` 保持單一事實來源，不重複維護。
-String buildFontFaceCss({List<CustomFont> customFonts = const []}) {
+/// 產生 `@font-face` 宣告（FR-09）。
+///
+/// 內建字型只替 [installedFonts]（已下載）輸出規則：未下載的字型不輸出，
+/// 避免 WebView 發出注定失敗的請求。網址是 `/downloaded-fonts/` 加上字型目錄的
+/// 發布路徑（例如 `v1/SourceHanSansTC-VF.ttf`），和 `DownloadableFontStore`
+/// 在存放目錄底下的相對路徑相同，由原生 `InternalStoragePathHandler` 直接串流
+/// （epic-49，ADR 0035）。家族名稱取自 `AppFontFamilyName.familyName`。
+///
+/// 自訂字型（[customFonts]）的規則不變：由 `shouldInterceptRequest` 讀取
+/// `content://` 位元組提供（ADR 0021）。
+String buildFontFaceCss({
+  Set<AppFont> installedFonts = const {},
+  List<CustomFont> customFonts = const [],
+}) {
   final rules = <String>[];
+  // 依 AppFont.values 的順序輸出，結果不受集合的迭代順序影響
   for (final font in AppFont.values) {
-    final familyName = font.familyName;
-    final fileName = _fontFileName(font);
-    rules.add("@font-face { font-family: '$familyName'; "
-        "src: url('https://appassets.androidplatform.net/assets/fonts/$fileName'); }");
+    if (!installedFonts.contains(font)) continue;
+    final publishPath = fontDownloadSpecOf(font).publishPath;
+    rules.add("@font-face { font-family: '${font.familyName}'; "
+        "src: url('https://appassets.androidplatform.net$kDownloadedFontsPathPrefix$publishPath'); }");
   }
   for (final font in customFonts) {
     final encodedFamilyName = Uri.encodeComponent(font.familyName);
@@ -95,18 +84,6 @@ Future<void> attachReaderView() =>
 /// `_FoliateEpubReaderViewState.dispose()`。
 Future<void> detachReaderView() =>
     _volumeKeyChannel.invokeMethod('detachReaderView');
-
-/// 讀取 Flutter 已宣告的字型 asset（`pubspec.yaml` `assets:` 清單），供
-/// `InAppWebView.shouldInterceptRequest` 服務 [buildFontFaceCss] 產生的
-/// `@font-face src` 請求。
-Future<Uint8List?> loadFlutterFontAsset(String assetPath) async {
-  try {
-    final data = await rootBundle.load(assetPath);
-    return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-  } catch (_) {
-    return null;
-  }
-}
 
 /// 讀取自訂字型的位元組（`content://` URI，ADR 0021 決策：不落地快取），
 /// 透過原生 `ReaderResourceChannel` 的 `readCustomFontBytes` 一次性讀取，

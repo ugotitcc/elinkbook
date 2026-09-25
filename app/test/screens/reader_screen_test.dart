@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_inappwebview_platform_interface/flutter_inappwebview_platform_interface.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
+import 'package:elinkbook/reader/app_font.dart';
+import 'package:elinkbook/reader/downloadable_font_store.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
@@ -20,6 +22,7 @@ import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import '../support/pump_until_pdf_ready.dart';
+import '../support/fake_downloadable_font_store.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
 import 'package:elinkbook/reader/toc_entry.dart';
@@ -6563,6 +6566,109 @@ void main() {
       expect(find.byType(FoliateReaderView), findsOneWidget);
     },
   );
+
+  group('已下載字型（epic-49 Issue 4）', () {
+    Future<void> pumpReader(WidgetTester tester,
+        {DownloadableFontStore? store,
+        FakeCustomFontsRepository? customFontsRepository}) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+            customFontsRepository: customFontsRepository,
+            downloadableFontStore: store,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+    }
+
+    testWidgets(
+        '已下載字型讀完前不建構 FoliateReaderView（自訂字型已載入完成也一樣）；'
+        '讀完後才建構，並收到正確的已下載字型與存放目錄（規格審查 C-1、審查重點 1、3）',
+        (tester) async {
+      final store = FakeDownloadableFontStore()
+        ..installed.add(AppFont.sourceHanSerif)
+        ..installedFontsGate = Completer<void>();
+      // 自訂字型也用閘門控制，才能明確建立「自訂字型先載入完成」這個前提（審查 M-4）
+      final customFonts = FakeCustomFontsRepository()..loadGate = Completer<void>();
+
+      await pumpReader(tester, store: store, customFontsRepository: customFonts);
+
+      expect(find.byType(FoliateReaderView), findsNothing);
+
+      // 自訂字型先載入完成；已下載字型仍未讀完，閱讀器仍不應建構
+      customFonts.loadGate!.complete();
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      expect(find.byType(FoliateReaderView), findsNothing);
+      expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
+
+      store.installedFontsGate!.complete();
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      expect(view.installedFonts, {AppFont.sourceHanSerif});
+      expect(view.downloadedFontsDirectory, store.directory);
+    });
+
+    testWidgets('沒有傳入 store 時開書不等待，已下載字型為空、不註冊存放目錄（工單審查 M-1）',
+        (tester) async {
+      await pumpReader(tester);
+
+      final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      expect(view.installedFonts, isEmpty);
+      expect(view.downloadedFontsDirectory, isNull);
+    });
+
+    testWidgets('installedFonts() 失敗時仍建構閱讀器，已下載字型為空集合（審查重點 2）',
+        (tester) async {
+      final store = FakeDownloadableFontStore()
+        ..installedFontsGate = Completer<void>();
+
+      await pumpReader(tester, store: store);
+      store.installedFontsGate!.completeError(StateError('denied'));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      expect(view.installedFonts, isEmpty);
+    });
+
+    testWidgets('開啟版面設定時，已下載字型集合傳給 ReaderSettingsSheet', (tester) async {
+      final store = FakeDownloadableFontStore()..installed.add(AppFont.sourceHanSans);
+      await pumpReader(tester, store: store);
+
+      tester.widget<FoliateReaderView>(find.byType(FoliateReaderView))
+          .onLayoutResolved
+          ?.call(const EpubLayoutInfo(
+            isFixedLayout: false,
+            writingMode: WritingMode.horizontal,
+          ));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final sheet = tester.widget<ReaderSettingsSheet>(find.byType(ReaderSettingsSheet));
+      expect(sheet.installedFonts, {AppFont.sourceHanSans});
+    });
+  });
 
   testWidgets(
     '開書逾時（epic-18-reader-device-qa Issue 33，epic-27-reader-device-compat '

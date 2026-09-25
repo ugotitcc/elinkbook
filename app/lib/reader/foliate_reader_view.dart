@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../l10n/app_localizations.dart';
+import 'app_font.dart';
 import 'column_mode.dart';
 import 'custom_font.dart';
 import 'dual_page_mode.dart';
@@ -294,6 +295,15 @@ class FoliateReaderView extends StatefulWidget {
   final Color? textColor;
   final Color? backgroundColor;
   final List<CustomFont> customFonts;
+  /// 已下載的內建字型（epic-49）。只替這些字型輸出 `@font-face`；開書時決定，
+  /// 之後不會重算（見 `_FoliateReaderViewState._initialIndexUri`），所以
+  /// `ReaderScreen` 必須等清單讀完才建構本 widget。
+  final Set<AppFont> installedFonts;
+
+  /// 已下載字型的存放目錄（`DownloadableFontStore.directory`）。不為 null 時才註冊
+  /// `/downloaded-fonts/` 的 `InternalStoragePathHandler`，由原生端直接串流字型檔，
+  /// 不經過 Dart（ADR 0035）。
+  final String? downloadedFontsDirectory;
   final List<ZoneAction> navZoneActions;
   final ValueChanged<ZoneAction>? onZoneAction;
   final bool showNavZoneDebugOverlay;
@@ -345,6 +355,8 @@ class FoliateReaderView extends StatefulWidget {
     this.backgroundColor,
     this.isLandscape = false,
     this.customFonts = const [],
+    this.installedFonts = const {},
+    this.downloadedFontsDirectory,
     this.navZoneActions = const [
       ZoneAction.none, ZoneAction.none, ZoneAction.none,
       ZoneAction.none, ZoneAction.none, ZoneAction.none,
@@ -576,7 +588,10 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
   Uri _buildIndexUri() {
     final params = <String, String>{
       'prefs': jsonEncode(buildFoliatePreferencesMap(widget)),
-      'fontFaceCss': buildFontFaceCss(customFonts: widget.customFonts),
+      'fontFaceCss': buildFontFaceCss(
+        installedFonts: widget.installedFonts,
+        customFonts: widget.customFonts,
+      ),
       // epic-11-multi-format-reader Issue 3：讓 main.js 的 fetch URL 反映
       // 真實副檔名（見 foliate_native_bridge.dart cacheFileExtension()
       // 文件註解——CBZ 需要 view.js 的 isCBZ() 對檔名做副檔名判斷）。
@@ -746,13 +761,6 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
           path.endsWith('.js') ? 'text/javascript' : 'text/html';
       return WebResourceResponse(contentType: contentType, data: bytes);
     }
-    const fontsPrefix = '/assets/fonts/';
-    if (path.startsWith(fontsPrefix)) {
-      final relative = 'assets/fonts/${path.substring(fontsPrefix.length)}';
-      final bytes = await loadFlutterFontAsset(relative);
-      if (bytes == null) return null;
-      return WebResourceResponse(contentType: 'font/ttf', data: bytes);
-    }
     final customFontUri = resolveCustomFontUri(path, widget.customFonts);
     if (customFontUri != null) {
       final bytes = await loadCustomFontBytes(customFontUri);
@@ -808,6 +816,10 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
               pathHandlers: [
                 InternalStoragePathHandler(
                     path: '/book/', directory: _bookCacheDir!),
+                if (widget.downloadedFontsDirectory != null)
+                  InternalStoragePathHandler(
+                      path: kDownloadedFontsPathPrefix,
+                      directory: widget.downloadedFontsDirectory!),
               ],
             ),
           ),

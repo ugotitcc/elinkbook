@@ -2,10 +2,10 @@ import 'app_font.dart';
 
 /// 字型下載服務的基底網址（epic-49，見 docs/adr/0035-downloadable-fonts-via-r2-worker.md）。
 ///
-/// Issue 3 先用 RFC 2606 保留網域 `.invalid`（保證連不上，避免開發中誤連任何真實主機），
-/// Issue 4 換成 Issue 2 部署後的 Cloudflare Worker `workers.dev` 網址。
+/// Issue 2 部署的 Cloudflare Worker（`workers.dev` 網址）。日後改用自訂網域時，
+/// 舊網址仍會保留，已安裝的舊版 App 不受影響。
 /// 必須以斜線結尾，[Uri.resolve] 才會把發布路徑接在後面而不是取代最後一段。
-const String kFontDownloadBaseUrl = 'https://elinkbook-fonts.invalid/';
+const String kFontDownloadBaseUrl = 'https://elinkbook-fonts.huthief.workers.dev/';
 
 /// 一款可下載字型的發布資訊。數值必須和 repo 根目錄 `fonts-cdn/fonts.json` 一致
 /// （Issue 4 有 Dart 測試比對）；已發布的路徑永遠不覆蓋，改版時改用新的版本路徑。
