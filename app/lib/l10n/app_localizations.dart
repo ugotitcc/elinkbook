@@ -2723,6 +2723,66 @@ abstract class AppLocalizations {
   /// **'{usageCount, plural, =1{目前有 1 本書使用此字型，刪除後將自動改用預設字型} other{目前有 {usageCount} 本書使用此字型，刪除後將自動改用預設字型}}'**
   String fontManagementDeleteConfirmMessage(int usageCount);
 
+  /// 字型管理：內建字型尚未下載的狀態文字，接在檔案大小後面（epic-49）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'未下載'**
+  String get fontManagementStatusNotDownloaded;
+
+  /// 字型管理：內建字型已下載的狀態文字，接在檔案大小後面（epic-49）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已下載'**
+  String get fontManagementStatusDownloaded;
+
+  /// 字型管理：下載內建字型按鈕的提示文字（epic-49）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下載'**
+  String get fontManagementDownloadTooltip;
+
+  /// 字型管理：取消進行中下載按鈕的提示文字（epic-49）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'取消下載'**
+  String get fontManagementCancelDownloadTooltip;
+
+  /// 字型管理：下載失敗後重試按鈕的提示文字（epic-49）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重試'**
+  String get fontManagementRetryTooltip;
+
+  /// 刪除已下載內建字型的確認內文。刻意不沿用自訂字型的 fontManagementDeleteConfirmMessage：可下載字型刪除時不清除書籍偏好（ADR 0035）（epic-49）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除後可以隨時重新下載。使用這款字型的書會暫時改用書本或系統字型，重新下載後自動恢復。'**
+  String get fontManagementDownloadableDeleteConfirmMessage;
+
+  /// 字型下載失敗：網路連線失敗或中途斷線（epic-49）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法連線，請檢查網路後重試'**
+  String get fontDownloadErrorNetwork;
+
+  /// 字型下載失敗：伺服器回傳非 200 狀態碼，{statusCode} 為 HTTP 狀態碼（epic-49）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'伺服器錯誤（{statusCode}），請稍後重試'**
+  String fontDownloadErrorHttp(int statusCode);
+
+  /// 字型下載失敗：下載內容的 SHA-256 與預期不符（epic-49）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'檔案不完整或已損毀，請重試'**
+  String get fontDownloadErrorIntegrity;
+
+  /// 字型下載失敗：寫入檔案失敗，例如儲存空間不足（epic-49）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法儲存檔案，請確認儲存空間是否足夠'**
+  String get fontDownloadErrorStorage;
+
   /// 批次上傳字型結果訊息：同時有新增與跳過的情境，{addedCount}／{skippedCount} 各自獨立處理單複數
   ///
   /// In zh_TW, this message translates to:

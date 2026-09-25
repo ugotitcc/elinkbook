@@ -1531,6 +1531,42 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get fontManagementStatusNotDownloaded => 'Not downloaded';
+
+  @override
+  String get fontManagementStatusDownloaded => 'Downloaded';
+
+  @override
+  String get fontManagementDownloadTooltip => 'Download';
+
+  @override
+  String get fontManagementCancelDownloadTooltip => 'Cancel download';
+
+  @override
+  String get fontManagementRetryTooltip => 'Retry';
+
+  @override
+  String get fontManagementDownloadableDeleteConfirmMessage =>
+      'You can download it again at any time. Books that use this font will use the book\'s font or the system font until it\'s downloaded again.';
+
+  @override
+  String get fontDownloadErrorNetwork =>
+      'Can\'t connect. Check your network and try again.';
+
+  @override
+  String fontDownloadErrorHttp(int statusCode) {
+    return 'Server error ($statusCode). Try again later.';
+  }
+
+  @override
+  String get fontDownloadErrorIntegrity =>
+      'The file is incomplete or corrupted. Try again.';
+
+  @override
+  String get fontDownloadErrorStorage =>
+      'Couldn\'t save the file. Check that there\'s enough storage space.';
+
+  @override
   String fontManagementUploadBothMessage(int addedCount, int skippedCount) {
     String _temp0 = intl.Intl.pluralLogic(
       addedCount,

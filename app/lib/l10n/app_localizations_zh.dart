@@ -1481,6 +1481,39 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get fontManagementStatusNotDownloaded => '未下載';
+
+  @override
+  String get fontManagementStatusDownloaded => '已下載';
+
+  @override
+  String get fontManagementDownloadTooltip => '下載';
+
+  @override
+  String get fontManagementCancelDownloadTooltip => '取消下載';
+
+  @override
+  String get fontManagementRetryTooltip => '重試';
+
+  @override
+  String get fontManagementDownloadableDeleteConfirmMessage =>
+      '刪除後可以隨時重新下載。使用這款字型的書會暫時改用書本或系統字型，重新下載後自動恢復。';
+
+  @override
+  String get fontDownloadErrorNetwork => '無法連線，請檢查網路後重試';
+
+  @override
+  String fontDownloadErrorHttp(int statusCode) {
+    return '伺服器錯誤（$statusCode），請稍後重試';
+  }
+
+  @override
+  String get fontDownloadErrorIntegrity => '檔案不完整或已損毀，請重試';
+
+  @override
+  String get fontDownloadErrorStorage => '無法儲存檔案，請確認儲存空間是否足夠';
+
+  @override
   String fontManagementUploadBothMessage(int addedCount, int skippedCount) {
     String _temp0 = intl.Intl.pluralLogic(
       addedCount,
@@ -3569,6 +3602,39 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   }
 
   @override
+  String get fontManagementStatusNotDownloaded => '未下载';
+
+  @override
+  String get fontManagementStatusDownloaded => '已下载';
+
+  @override
+  String get fontManagementDownloadTooltip => '下载';
+
+  @override
+  String get fontManagementCancelDownloadTooltip => '取消下载';
+
+  @override
+  String get fontManagementRetryTooltip => '重试';
+
+  @override
+  String get fontManagementDownloadableDeleteConfirmMessage =>
+      '删除后可以随时重新下载。使用这款字体的书会暂时改用书本或系统字体，重新下载后自动恢复。';
+
+  @override
+  String get fontDownloadErrorNetwork => '无法连接，请检查网络后重试';
+
+  @override
+  String fontDownloadErrorHttp(int statusCode) {
+    return '服务器错误（$statusCode），请稍后重试';
+  }
+
+  @override
+  String get fontDownloadErrorIntegrity => '文件不完整或已损坏，请重试';
+
+  @override
+  String get fontDownloadErrorStorage => '无法保存文件，请确认存储空间是否足够';
+
+  @override
   String fontManagementUploadBothMessage(int addedCount, int skippedCount) {
     String _temp0 = intl.Intl.pluralLogic(
       addedCount,
@@ -5655,6 +5721,39 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
     );
     return '$_temp0';
   }
+
+  @override
+  String get fontManagementStatusNotDownloaded => '未下載';
+
+  @override
+  String get fontManagementStatusDownloaded => '已下載';
+
+  @override
+  String get fontManagementDownloadTooltip => '下載';
+
+  @override
+  String get fontManagementCancelDownloadTooltip => '取消下載';
+
+  @override
+  String get fontManagementRetryTooltip => '重試';
+
+  @override
+  String get fontManagementDownloadableDeleteConfirmMessage =>
+      '刪除後可以隨時重新下載。使用這款字型的書會暫時改用書本或系統字型，重新下載後自動恢復。';
+
+  @override
+  String get fontDownloadErrorNetwork => '無法連線，請檢查網路後重試';
+
+  @override
+  String fontDownloadErrorHttp(int statusCode) {
+    return '伺服器錯誤（$statusCode），請稍後重試';
+  }
+
+  @override
+  String get fontDownloadErrorIntegrity => '檔案不完整或已損毀，請重試';
+
+  @override
+  String get fontDownloadErrorStorage => '無法儲存檔案，請確認儲存空間是否足夠';
 
   @override
   String fontManagementUploadBothMessage(int addedCount, int skippedCount) {
