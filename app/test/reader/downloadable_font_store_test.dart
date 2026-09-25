@@ -249,4 +249,92 @@ void main() {
       expect(await filesIn(fontsDir), ['v1/A.ttf']);
     });
   });
+
+  group('進度、取消、重疊下載、中途斷線', () {
+    test('大量小區塊時，進度回呼不超過 101 次、嚴格遞增、最後是 100', () async {
+      final store = storeWith(serving({'/v1/A.ttf': fontBytesA}, chunkSize: 10));
+      final reported = <int>[];
+
+      await store.download(AppFont.sourceHanSans, onProgress: reported.add);
+
+      expect(reported.length, lessThanOrEqualTo(101));
+      for (var i = 1; i < reported.length; i++) {
+        expect(reported[i], greaterThan(reported[i - 1]));
+      }
+      expect(reported.last, 100);
+    });
+
+    test('伺服器沒回傳 Content-Length 時，用字型目錄中的大小計算進度', () async {
+      final store = storeWith(
+          serving({'/v1/A.ttf': fontBytesA}, contentLengthOf: (_) => null));
+      final reported = <int>[];
+
+      await store.download(AppFont.sourceHanSans, onProgress: reported.add);
+
+      expect(reported, contains(50));
+      expect(reported.last, 100);
+    });
+
+    test('Content-Length 比實際小時，進度不超過 100 且嚴格遞增，下載仍以雜湊判定成功', () async {
+      final store = storeWith(serving({'/v1/A.ttf': fontBytesA},
+          contentLengthOf: (bytes) => bytes.length ~/ 2));
+      final reported = <int>[];
+
+      await store.download(AppFont.sourceHanSans, onProgress: reported.add);
+
+      expect(reported.every((percent) => percent <= 100), isTrue);
+      for (var i = 1; i < reported.length; i++) {
+        expect(reported[i], greaterThan(reported[i - 1]));
+      }
+      expect(await store.installedFonts(), {AppFont.sourceHanSans});
+    });
+
+    test('取消 → cancelled，且沒有留下任何檔案', () async {
+      final store = storeWith(serving({'/v1/A.ttf': fontBytesA}));
+      final token = FontDownloadCancellationToken();
+
+      await expectLater(
+        store.download(AppFont.sourceHanSans,
+            cancellationToken: token,
+            onProgress: (percent) {
+              if (percent >= 10) token.cancel();
+            }),
+        throwsA(isA<FontDownloadException>()
+            .having((e) => e.reason, 'reason', FontDownloadFailure.cancelled)),
+      );
+      expect(await filesIn(fontsDir), isEmpty);
+    });
+
+    test('串流中途斷線 → network，且沒有留下任何檔案', () async {
+      Stream<List<int>> brokenStream() async* {
+        yield fontBytesA.sublist(0, 30000);
+        throw http.ClientException('connection reset');
+      }
+      final store = storeWith(MockClient.streaming((request, _) async =>
+          http.StreamedResponse(brokenStream(), 200, contentLength: fontBytesA.length)));
+
+      await expectLater(
+        store.download(AppFont.sourceHanSans),
+        throwsA(isA<FontDownloadException>()
+            .having((e) => e.reason, 'reason', FontDownloadFailure.network)),
+      );
+      expect(await filesIn(fontsDir), isEmpty);
+    });
+
+    test('下載進行中再呼叫 download 拋出 StateError，進行中那一筆照常完成', () async {
+      final controller = StreamController<List<int>>();
+      final store = storeWith(MockClient.streaming((request, _) async =>
+          http.StreamedResponse(controller.stream, 200, contentLength: fontBytesA.length)));
+
+      final first = store.download(AppFont.sourceHanSans);
+      await expectLater(
+          store.download(AppFont.sourceHanSerif), throwsA(isA<StateError>()));
+
+      controller.add(fontBytesA);
+      await controller.close();
+      await first;
+
+      expect(await store.installedFonts(), {AppFont.sourceHanSans});
+    });
+  });
 }
