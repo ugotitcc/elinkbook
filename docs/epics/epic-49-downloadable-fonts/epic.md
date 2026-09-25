@@ -45,3 +45,24 @@
 - 工單 M-1 採納：Issue 4 明列「沒有傳入 store 時開書行為不變」的測試。
 - 工單 M-2 採納：Issue 2 加上「開始前準備：先綁付款方式」。
 - 另外把 spec 中的審查編號加上來源（設計審查／規格審查／工單審查），避免三份報告的 I-1、M-1 混淆；Issue 5 新增「下載到一半滑掉 App」與「電子紙裝置下載時沒有閃爍」兩項真機驗證。
+
+**2026-09-25 撰寫實作計畫**（`/writing-plans`）：`plans/plan-issue-1.md`（5 個 Task：字型原檔與清單、Worker、上傳與驗證腳本、部署 wizard、整體驗證）、`plans/plan-issue-3.md`（7 個 Task：字型目錄、store 核心、store 進度／取消／重疊防護、在地化字串、字型管理畫面、依賴注入、整體驗證）。兩份計畫刻意與 spec 不同的地方都寫在計畫開頭：
+
+- 錯誤原因代碼 `http` 在程式中命名為 `FontDownloadFailure.httpStatus`，避免和 `package:http` 的匯入前綴撞名。
+- 檔案大小格式（「34.4 MB」）三種語系寫法相同，做成純函式 `formatFontFileSize()`，不另開在地化字串。
+- Worker 接受任何 `v<N>/` 版本路徑（不只 `v1/`），字型改版時不必重新部署 Worker；路徑穿越與編碼字元一律 404。
+- 授權檔由 GitHub API 取得各字型 repo 的授權檔；repo 名稱無法確認時，執行者必須停下來回報，不可自行撰寫授權文字。
+
+**2026-09-25 Issue 1 計畫審查修訂**（`reviews/review-plan-issue-1.md`：Changes Requested，1 Critical／2 Important／2 Minor）
+
+- C-1 採納（已實際查核）：`ButTaiwan/gktk` 不存在，原俠正楷的 repo 是 `tonyhuan/GuanKiapTsingKhai`；源流明體、台灣圓體的授權檔名為 `SIL_Open_Font_License_1.1.txt`，GitHub `/license` API 認不出來。改為直接下載四個已確認可用的 raw 網址。原俠正楷的 repo 沒有附授權檔，改用 OFL 官方全文（openfontlicense.org），開頭的著作權聲明取自字型檔 `name` table 的 nameID 0，保留名稱取自其 README，不自行撰寫。上一段「授權檔由 GitHub API 取得」的做法作廢。
+- I-1 採納：改用 `git restore --source=eddcc85e^ --worktree` 直接把字型寫到磁碟，不經 shell 重導向；已實測 SHA-256 正確，且不動 index。全域限制新增「shell 指令一律在 Git Bash 執行」。
+- I-2 採納：`upload.mjs` 的 HEAD 前置檢查加上 `try…catch`，連不上時列入問題清單；`test_scripts.mjs` 新增「伺服器已關閉時結束碼 1、訊息友善」的測試。
+- M-1 採納：本機 `core.autocrlf=true`，所以新增 `fonts-cdn/.gitattributes`（`*.sh text eol=lf`、`*.ttf binary`），整體驗證時用 `git ls-files --eol` 確認 wizard 是 LF。
+- M-2 採納（做法不同於報告建議）：計畫的指令本來就在 Git Bash 執行，不改成 Node 單行指令；改用 `git ls-files app/assets/fonts | wc -l`，檢查的是版控內容，而不是本機可能殘留的空目錄。
+
+**2026-09-25 Issue 3 計畫審查修訂**（`reviews/review-plan-issue-3.md`：Approved with Recommendations，0 Critical／2 Important／1 Minor）
+
+- I-1 採納：`prepare()` 刪除單一 `.part` 失敗（`FileSystemException`）時略過，繼續清理其他暫存檔。留下的 `.part` 不影響「已下載」的判斷，下載開始前 `_preparePartFile()` 也會再刪一次。檔案被占用的情況在測試環境中無法穩定重現，所以不另外寫測試。
+- I-2 不需修改：計畫已經寫了。全域限制規定改完 ARB 要執行 `flutter gen-l10n`，並提交產生的檔案；Task 4 Step 3 就是 `flutter gen-l10n`，還會用 grep 確認新字串已經產生。Task 6 沒有改 ARB，不需要重新產生。
+- M-1 採納：`formatFontFileSize()` 的註解補上「以 1024 × 1024 為 1 MB（實際是 MiB）」。
