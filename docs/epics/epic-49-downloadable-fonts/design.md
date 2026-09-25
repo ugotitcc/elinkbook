@@ -47,14 +47,16 @@ Cloudflare R2 bucket（字型原檔）
 
 ## 需要調整的既有程式（Architecting 階段細化）
 
-- `foliate_reader_view.dart` 的 `/assets/fonts/` 請求攔截：改為從 App 私有目錄讀取已下載的字型檔。
-- `buildFontFaceCss()`：只為已下載的字型輸出 `@font-face`（或維持全部輸出、找不到檔案時回傳 null，於 spec 決定）。
+> **Architecting 階段更新**：以下是 Discovery 當時的初步構想，最終做法以 `spec.md` 為準。其中字型檔服務方式已經改變：Architecting 盤點時發現現行做法是由 Dart 把整個字型檔讀進記憶體，再經 platform channel 傳給 WebView，思源宋體（57MB）不適合這樣做，所以改為新增原生 `InternalStoragePathHandler`（`/downloaded-fonts/`）直接串流，**完全移除** Dart 攔截 `/assets/fonts/` 的分支（見 ADR 0035）。
+
+- ~~`foliate_reader_view.dart` 的 `/assets/fonts/` 請求攔截：改為從 App 私有目錄讀取已下載的字型檔。~~ → 改由原生 `InternalStoragePathHandler` 串流，Dart 攔截分支移除（見上方說明）。
+- `buildFontFaceCss()`：只為已下載的字型輸出 `@font-face`（或維持全部輸出、找不到檔案時回傳 null，於 spec 決定）。→ spec 定案：只替已下載的字型輸出。
 - 字型管理畫面、閱讀設定下拉選單：依下載狀態顯示。
-- `app/assets/fonts/GuanKiapTsingKhai.ttf`：移到部署用目錄，或從 repo 移除。
+- `app/assets/fonts/GuanKiapTsingKhai.ttf`：移到部署用目錄，或從 repo 移除。→ spec 定案：移到 `fonts-cdn/fonts/`。
 
 ## 文件
 
-- ADR（Q18）：Architecting 階段撰寫 `docs/adr/0024-downloadable-fonts-via-r2-worker.md`，說明為何不打包、為何用 R2＋Worker 而不是 Pages 或自訂網域，以及和 ADR 0021 的差異。
+- ADR（Q18）：Architecting 階段撰寫 `docs/adr/0035-downloadable-fonts-via-r2-worker.md`（原寫 0024，該編號已被使用），說明為何不打包、為何用 R2＋Worker 而不是 Pages 或自訂網域，以及和 ADR 0021 的差異。
 - PRD FR-09、`CLAUDE.md`（Q19）：已在 `epic-48` 改為「可下載字型」的描述。
 
 ## 流程
