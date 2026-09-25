@@ -83,3 +83,5 @@
 - M-5 採納：wizard 補上 `npx` 詢問是否安裝、以及 wrangler 詢問是否註冊 `workers.dev` 子網域時的回答說明。
 - M-6、M-7 不修改：M-6 在正常情況不會誤判；M-7 的授權檔照上游原檔保留，著作權資訊也已經寫在字型檔本身。
 - 實作時另外發現：在 Windows 上，fetch 的連線還在關閉時呼叫 `process.exit()` 會觸發 libuv 斷言而崩潰（新測試「全部已發布」重現了這個狀況）。`upload.mjs`、`verify_remote.mjs` 改為設定 `process.exitCode`，讓程式自然結束。
+
+**2026-09-25 Issue 1 合併**：PR #276（`epic-49/issue-1-fonts-cdn` → `main`）已合併。下一步：Issue 2（由人類執行 `deploy-wizard.sh` 部署，開始前先綁定付款方式）、Issue 3（App 端下載管線與字型管理畫面，可以和 Issue 2 平行進行）。
