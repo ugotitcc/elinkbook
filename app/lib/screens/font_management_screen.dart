@@ -7,15 +7,23 @@ import '../library/library_repository.dart';
 import '../reader/app_font.dart';
 import '../reader/custom_font.dart';
 import '../reader/custom_fonts_repository.dart';
+import '../reader/downloadable_font_store.dart';
+import '../reader/font_download_catalog.dart';
 import '../reader/font_name_parser.dart';
 
 /// 字型管理畫面（epic-14-system-settings FR-35，spec.md「字型管理模組」）：
-/// 顯示內建字型（唯讀）＋使用者上傳的自訂字型（可重新命名／刪除），
-/// 支援批次上傳 `.ttf`/`.otf`。
+/// 顯示內建字型＋使用者上傳的自訂字型（可重新命名／刪除），支援批次上傳 `.ttf`/`.otf`。
+/// epic-49 起內建字型改為可下載字型：注入 [downloadableFontStore] 時，每款內建字型
+/// 可以下載、取消、重試、刪除；沒有注入時只顯示名稱（維持既有行為）。
 class FontManagementScreen extends StatefulWidget {
   final CustomFontsRepository repository;
+  final DownloadableFontStore? downloadableFontStore;
 
-  const FontManagementScreen({super.key, required this.repository});
+  const FontManagementScreen({
+    super.key,
+    required this.repository,
+    this.downloadableFontStore,
+  });
 
   @override
   State<FontManagementScreen> createState() => _FontManagementScreenState();
@@ -33,14 +41,32 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
   // 若有前一個實例先 dispose，並在 [dispose] 一併清理。
   TextEditingController? _renameController;
 
+  // ── 可下載字型（epic-49）──
+  Set<AppFont> _installedFonts = {};
+
+  /// 已下載清單是否已載入。載入前不知道哪些字型已下載，只顯示大小並停用按鈕，
+  /// 避免把已下載的字型誤顯示成「未下載」而被重新下載（程式審查 M-5）。
+  bool _installedFontsLoaded = false;
+
+  /// 正在下載的字型；同一時間最多一款（下載中時其他內建字型的按鈕全部停用）。
+  AppFont? _downloadingFont;
+  int _downloadPercent = 0;
+  FontDownloadCancellationToken? _downloadToken;
+
+  /// 最近一次下載失敗的字型與原因；重新下載或下載成功時清除。取消不算失敗。
+  final Map<AppFont, FontDownloadException> _downloadFailures = {};
+
   @override
   void initState() {
     super.initState();
     _loadFonts();
+    _loadInstalledFonts();
   }
 
   @override
   void dispose() {
+    // 不做背景下載：離開畫面就取消（spec「字型管理畫面」、design.md Q9）
+    _downloadToken?.cancel();
     _renameController?.dispose();
     super.dispose();
   }
@@ -52,6 +78,23 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
       setState(() => _customFonts = fonts);
     } catch (e) {
       debugPrint('Failed to load custom fonts: $e');
+    }
+  }
+
+  Future<void> _loadInstalledFonts() async {
+    final store = widget.downloadableFontStore;
+    if (store == null) return;
+    try {
+      final installed = await store.installedFonts();
+      if (!mounted) return;
+      setState(() {
+        _installedFonts = installed;
+        _installedFontsLoaded = true;
+      });
+    } catch (e) {
+      debugPrint('Failed to load downloaded fonts: $e');
+      // 讀取失敗時視為沒有已下載的字型，讓使用者仍然可以下載
+      if (mounted) setState(() => _installedFontsLoaded = true);
     }
   }
 
@@ -82,8 +125,7 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
             child: Text(l10n.fontManagementBuiltInSectionLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
-          for (final font in AppFont.values)
-            ListTile(title: Text(font.displayName(l10n))),
+          for (final font in AppFont.values) _buildBuiltInFontTile(font, l10n),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
             child: Text(l10n.fontManagementCustomSectionLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -117,6 +159,174 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
         ],
       ),
     );
+  }
+
+  /// 內建字型的一列：標題固定是字型名稱，副標題依狀態顯示大小、進度或錯誤訊息
+  /// （規格審查 M-2：任何狀態都看得出是哪一款字型）。
+  Widget _buildBuiltInFontTile(AppFont font, AppLocalizations l10n) {
+    final title = Text(font.displayName(l10n));
+    if (widget.downloadableFontStore == null) return ListTile(title: title);
+
+    final key = Key('font_management_builtin_${font.name}');
+    final size = formatFontFileSize(fontDownloadSpecOf(font).sizeBytes);
+    if (!_installedFontsLoaded) {
+      return ListTile(key: key, title: title, subtitle: Text(size));
+    }
+
+    // 任何字型下載中時，其他所有內建字型的下載／重試／刪除都停用（規格審查 I-2）
+    final isBusy = _downloadingFont != null;
+
+    if (_downloadingFont == font) {
+      return ListTile(
+        key: key,
+        title: title,
+        subtitle: Row(
+          children: [
+            Expanded(child: LinearProgressIndicator(value: _downloadPercent / 100)),
+            const SizedBox(width: 8),
+            Text('$_downloadPercent%'),
+          ],
+        ),
+        trailing: IconButton(
+          key: Key('font_management_cancel_download_${font.name}'),
+          icon: const Icon(Icons.close),
+          tooltip: l10n.fontManagementCancelDownloadTooltip,
+          onPressed: () => _downloadToken?.cancel(),
+        ),
+      );
+    }
+
+    if (_installedFonts.contains(font)) {
+      return ListTile(
+        key: key,
+        title: title,
+        subtitle: Text('$size · ${l10n.fontManagementStatusDownloaded}'),
+        trailing: IconButton(
+          key: Key('font_management_delete_builtin_${font.name}'),
+          icon: const Icon(Icons.delete),
+          tooltip: l10n.fontManagementDeleteTooltip,
+          onPressed: isBusy ? null : () => _deleteDownloadedFont(font),
+        ),
+      );
+    }
+
+    final failure = _downloadFailures[font];
+    if (failure != null) {
+      return ListTile(
+        key: key,
+        title: title,
+        subtitle: Text('$size · ${_downloadFailureMessage(failure, l10n)}'),
+        trailing: IconButton(
+          key: Key('font_management_retry_${font.name}'),
+          icon: const Icon(Icons.refresh),
+          tooltip: l10n.fontManagementRetryTooltip,
+          onPressed: isBusy ? null : () => _downloadFont(font),
+        ),
+      );
+    }
+
+    return ListTile(
+      key: key,
+      title: title,
+      subtitle: Text('$size · ${l10n.fontManagementStatusNotDownloaded}'),
+      trailing: IconButton(
+        key: Key('font_management_download_${font.name}'),
+        icon: const Icon(Icons.download),
+        tooltip: l10n.fontManagementDownloadTooltip,
+        onPressed: isBusy ? null : () => _downloadFont(font),
+      ),
+    );
+  }
+
+  String _downloadFailureMessage(FontDownloadException error, AppLocalizations l10n) {
+    switch (error.reason) {
+      case FontDownloadFailure.network:
+        return l10n.fontDownloadErrorNetwork;
+      case FontDownloadFailure.httpStatus:
+        return l10n.fontDownloadErrorHttp(error.statusCode ?? 0);
+      case FontDownloadFailure.integrity:
+        return l10n.fontDownloadErrorIntegrity;
+      case FontDownloadFailure.storage:
+        return l10n.fontDownloadErrorStorage;
+      case FontDownloadFailure.cancelled:
+        // 取消不會記錄成失敗（見 _downloadFont），這裡只是讓 switch 完整
+        return '';
+    }
+  }
+
+  Future<void> _downloadFont(AppFont font) async {
+    final token = FontDownloadCancellationToken();
+    setState(() {
+      _downloadingFont = font;
+      _downloadPercent = 0;
+      _downloadToken = token;
+      _downloadFailures.remove(font);
+    });
+    try {
+      await widget.downloadableFontStore!.download(
+        font,
+        cancellationToken: token,
+        // store 已經節流成「整數百分比變大才回報」，這裡每次回報都重繪即可
+        onProgress: (percent) {
+          if (mounted) setState(() => _downloadPercent = percent);
+        },
+      );
+      if (!mounted) return;
+      setState(() => _installedFonts = {..._installedFonts, font});
+    } on FontDownloadException catch (error) {
+      if (!mounted || error.reason == FontDownloadFailure.cancelled) return;
+      setState(() => _downloadFailures[font] = error);
+    } catch (error) {
+      // store 應該只拋出 FontDownloadException；萬一出現其他例外，仍顯示錯誤並允許重試，
+      // 不讓使用者看到「進度條閃一下就回到原狀」而沒有任何提示（程式審查 I-1）
+      debugPrint('Unexpected font download error: $error');
+      if (!mounted || token.isCancelled) return;
+      setState(() => _downloadFailures[font] =
+          const FontDownloadException(FontDownloadFailure.network));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _downloadingFont = null;
+          _downloadToken = null;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteDownloadedFont(AppFont font) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.fontManagementDeleteConfirmTitle(font.displayName(l10n))),
+        // 刻意不用 fontManagementDeleteConfirmMessage：可下載字型刪除時不清除書籍偏好
+        // （ADR 0035），也不查詢使用中的書籍數量（規格審查 I-4）
+        content: Text(l10n.fontManagementDownloadableDeleteConfirmMessage),
+        actions: [
+          TextButton(
+            key: const Key('font_management_delete_cancel'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            key: const Key('font_management_delete_confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.fontManagementDeleteTooltip),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await widget.downloadableFontStore!.delete(font);
+    } catch (error) {
+      // 刪除失敗（例如檔案被占用）：重新讀取已下載清單，讓畫面顯示實際的檔案狀態（程式審查 M-3）
+      debugPrint('Failed to delete downloaded font: $error');
+      await _loadInstalledFonts();
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _installedFonts = {..._installedFonts}..remove(font));
   }
 
   Future<void> _pickAndUploadFonts() async {
@@ -318,4 +528,10 @@ String _stripExtension(String fileName) {
   final dotIndex = fileName.lastIndexOf('.');
   return dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
 }
+
+/// 字型檔大小的顯示格式，例如 36034016 → `34.4 MB`。以 1024 × 1024 為 1 MB
+/// （實際是 MiB，但沿用一般人熟悉的「MB」標示），數值對齊 spec 字型目錄。
+/// MB 在三種語系寫法相同，所以不另外做在地化字串（epic-49）。
+String formatFontFileSize(int bytes) =>
+    '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 

@@ -57,7 +57,7 @@ Issue 3 ─────────────────────┘
 
 ## Issue 3：下載與字型管理畫面（`DownloadableFontStore`＋字型管理 UI）
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** 無（以 `MockClient` 開發，下載服務的基底網址先用暫定常數，Issue 4 再換成正式網址；不讀取 `fonts-cdn/`，和 Issue 1 沒有檔案相依）。
 

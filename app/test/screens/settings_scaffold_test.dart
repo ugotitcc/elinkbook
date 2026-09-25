@@ -21,6 +21,7 @@ import '../support/fake_cloud_account_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/pump_localized_widget.dart';
 import '../support/fake_custom_fonts_repository.dart';
+import '../support/fake_downloadable_font_store.dart';
 import '../support/fake_full_text_search_settings_repository.dart';
 
 const _appInfoChannel = MethodChannel('elinkbook/app_info');
@@ -1249,6 +1250,24 @@ void main() {
     expect(semantics.label, contains('Dark'));
 
     handle.dispose();
+  });
+
+  testWidgets('字型管理入口把 downloadableFontStore 傳給字型管理畫面（epic-49）', (tester) async {
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        prefsManager: FakeReaderPrefsManager(),
+        customFontsRepository: FakeCustomFontsRepository(),
+        downloadableFontStore: FakeDownloadableFontStore(),
+      ),
+    );
+
+    final entry = find.byKey(const Key('settings_font_management_button'));
+    await tester.ensureVisible(entry);
+    await tester.tap(entry);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('font_management_download_sourceHanSans')), findsOneWidget);
   });
 }
 

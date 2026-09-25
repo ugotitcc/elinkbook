@@ -79,7 +79,7 @@
   FontDownloadSpec fontDownloadSpecOf(AppFont font);
   ```
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 ```dart
 import 'package:elinkbook/reader/app_font.dart';
@@ -118,12 +118,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`flutter test test/reader/font_download_catalog_test.dart`
 Expected：編譯失敗，找不到 `font_download_catalog.dart`。
 
-- [ ] **Step 3：實作字型目錄**
+- [x] **Step 3：實作字型目錄**
 
 `lib/reader/font_download_catalog.dart`：
 
@@ -193,12 +193,12 @@ FontDownloadSpec fontDownloadSpecOf(AppFont font) {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run：`flutter test test/reader/font_download_catalog_test.dart`
 Expected：3 個測試全數通過。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add lib/reader/font_download_catalog.dart test/reader/font_download_catalog_test.dart
@@ -235,7 +235,7 @@ git commit -m "feat(fonts): 新增可下載字型目錄（epic-49 Issue 3）"
   }
   ```
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 `test/reader/downloadable_font_store_test.dart`（Task 3 會在同一檔案追加測試）：
 
@@ -494,12 +494,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`flutter test test/reader/downloadable_font_store_test.dart`
 Expected：編譯失敗，找不到 `downloadable_font_store.dart`。
 
-- [ ] **Step 3：實作 store**
+- [x] **Step 3：實作 store**
 
 `lib/reader/downloadable_font_store.dart`：
 
@@ -715,12 +715,12 @@ class _DigestSink implements Sink<Digest> {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run：`flutter test test/reader/downloadable_font_store_test.dart`
 Expected：全數通過。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add lib/reader/downloadable_font_store.dart test/reader/downloadable_font_store_test.dart
@@ -739,7 +739,7 @@ git commit -m "feat(fonts): 新增 DownloadableFontStore 下載、驗證與啟�
 - Consumes：Task 2 的全部公開介面。
 - Produces：無新介面；本 Task 以測試鎖定 `download()` 的進度、取消、重疊呼叫行為。
 
-- [ ] **Step 1：追加測試**
+- [x] **Step 1：追加測試**
 
 在 `main()` 內、最後一個 `group` 之後加上：
 
@@ -833,16 +833,16 @@ git commit -m "feat(fonts): 新增 DownloadableFontStore 下載、驗證與啟�
   });
 ```
 
-- [ ] **Step 2：執行測試**
+- [x] **Step 2：執行測試**
 
 Run：`flutter test test/reader/downloadable_font_store_test.dart`
 Expected：全數通過。Task 2 的實作已經涵蓋這些行為；**若有任何一個失敗**，代表 Task 2 的實作與規格不符，依失敗訊息修正 `downloadable_font_store.dart`（不要修改測試的期望值），再執行一次直到全數通過。
 
-- [ ] **Step 3：驗證測試真的能抓到錯誤（mutation check）**
+- [x] **Step 3：驗證測試真的能抓到錯誤（mutation check）**
 
 暫時把 `download()` 中的 `if (percent > lastPercent)` 改成 `if (true)`，執行 Step 2 的指令，確認「進度回呼不超過 101 次」的測試失敗；再暫時把 `if (_downloading)` 那一段整段註解掉，確認「StateError」的測試失敗。兩處都改回原樣，再執行一次確認全數通過。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add test/reader/downloadable_font_store_test.dart lib/reader/downloadable_font_store.dart
@@ -861,7 +861,7 @@ git commit -m "test(fonts): 鎖定下載進度節流、取消、重疊下載與�
 - Produces（`AppLocalizations` 的新 getter／方法）：
   `fontManagementStatusNotDownloaded`、`fontManagementStatusDownloaded`、`fontManagementDownloadTooltip`、`fontManagementCancelDownloadTooltip`、`fontManagementRetryTooltip`、`fontManagementDownloadableDeleteConfirmMessage`、`fontDownloadErrorNetwork`、`fontDownloadErrorHttp(int statusCode)`、`fontDownloadErrorIntegrity`、`fontDownloadErrorStorage`。
 
-- [ ] **Step 1：在 `app_zh_TW.arb`（範本）新增字串**
+- [x] **Step 1：在 `app_zh_TW.arb`（範本）新增字串**
 
 在 `"@fontManagementDeleteConfirmMessage": { … }` 區塊結束的 `},` 後面插入（注意 JSON 逗號）：
 
@@ -913,7 +913,7 @@ git commit -m "test(fonts): 鎖定下載進度節流、取消、重疊下載與�
   },
 ```
 
-- [ ] **Step 2：在其他三個 ARB 檔新增字串**
+- [x] **Step 2：在其他三個 ARB 檔新增字串**
 
 在各檔 `"fontManagementDeleteConfirmMessage": …` 那一行後面插入（這三個檔案沒有 `@` 描述）。
 
@@ -962,18 +962,18 @@ git commit -m "test(fonts): 鎖定下載進度節流、取消、重疊下載與�
   "fontDownloadErrorStorage": "Couldn't save the file. Check that there's enough storage space.",
 ```
 
-- [ ] **Step 3：產生在地化程式碼**
+- [x] **Step 3：產生在地化程式碼**
 
 Run：`flutter gen-l10n`
 Expected：沒有錯誤（會印出「To use the command line arguments, delete the l10n.yaml file…」提示，屬正常）。
 確認：`grep -n "fontDownloadErrorHttp" lib/l10n/app_localizations_en.dart` 有結果。
 
-- [ ] **Step 4：靜態分析**
+- [x] **Step 4：靜態分析**
 
 Run：`flutter analyze`
 Expected：`No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add lib/l10n
@@ -1008,7 +1008,7 @@ git commit -m "feat(l10n): 新增可下載字型的狀態、按鈕與錯誤訊�
     }
     ```
 
-- [ ] **Step 1：建立假的 store**
+- [x] **Step 1：建立假的 store**
 
 `test/support/fake_downloadable_font_store.dart`：
 
@@ -1078,7 +1078,7 @@ class FakeFontDownload {
 }
 ```
 
-- [ ] **Step 2：寫失敗的 widget 測試**
+- [x] **Step 2：寫失敗的 widget 測試**
 
 在 `test/screens/font_management_screen_test.dart`：
 
@@ -1296,12 +1296,12 @@ import '../support/fake_downloadable_font_store.dart';
   });
 ```
 
-- [ ] **Step 3：執行測試確認失敗**
+- [x] **Step 3：執行測試確認失敗**
 
 Run：`flutter test test/screens/font_management_screen_test.dart`
 Expected：編譯失敗：`FontManagementScreen` 沒有 `downloadableFontStore` 參數、找不到 `formatFontFileSize`。
 
-- [ ] **Step 4：修改 `font_management_screen.dart`**
+- [x] **Step 4：修改 `font_management_screen.dart`**
 
 1. 補上匯入：
 
@@ -1557,21 +1557,21 @@ String formatFontFileSize(int bytes) =>
 
 9. 上傳自訂字型時的家族名稱衝突檢查（`_pickAndUploadFonts` 內的 `AppFont.values.map(...)` 那段）**不修改**。
 
-- [ ] **Step 5：執行測試確認通過**
+- [x] **Step 5：執行測試確認通過**
 
 Run：`flutter test test/screens/font_management_screen_test.dart`
 Expected：全數通過（含既有測試）。
 
-- [ ] **Step 6：驗證測試真的能抓到錯誤（mutation check）**
+- [x] **Step 6：驗證測試真的能抓到錯誤（mutation check）**
 
 暫時把 `_buildBuiltInFontTile` 中「已下載」那一段刪除按鈕的 `onPressed: isBusy ? null : …` 改成永遠可按（`onPressed: () => _deleteDownloadedFont(font)`），執行 Step 5，確認「下載中…其他列的下載、刪除停用」測試失敗；改回原樣後再執行一次確認通過。
 
-- [ ] **Step 7：l10n 稽核**
+- [x] **Step 7：l10n 稽核**
 
 Run：`node tool/check_l10n_hardcoded_strings.js`
 Expected：兩行 `PASS`。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add lib/screens/font_management_screen.dart test/screens/font_management_screen_test.dart test/support/fake_downloadable_font_store.dart
@@ -1593,7 +1593,7 @@ git commit -m "feat(fonts): 字型管理畫面支援下載、取消、重試與�
   - `LibraryReaderFeatureRepositories({..., DownloadableFontStore? downloadableFontStore})`，欄位 `final DownloadableFontStore? downloadableFontStore;`
   - `SettingsScaffold({..., DownloadableFontStore? downloadableFontStore})`
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 在 `test/screens/settings_scaffold_test.dart` 補上匯入（已有的就略過）：
 
@@ -1624,12 +1624,12 @@ import '../support/fake_downloadable_font_store.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`flutter test test/screens/settings_scaffold_test.dart`
 Expected：編譯失敗，`SettingsScaffold` 沒有 `downloadableFontStore` 參數。
 
-- [ ] **Step 3：`settings_scaffold.dart` 新增參數並傳下去**
+- [x] **Step 3：`settings_scaffold.dart` 新增參數並傳下去**
 
 - 匯入：`import '../reader/downloadable_font_store.dart';`
 - 欄位（放在 `final CustomFontsRepository? customFontsRepository;` 之後）：
@@ -1649,7 +1649,7 @@ Expected：編譯失敗，`SettingsScaffold` 沒有 `downloadableFontStore` 參�
                           ),
 ```
 
-- [ ] **Step 4：`library_screen_dependencies.dart` 新增欄位**
+- [x] **Step 4：`library_screen_dependencies.dart` 新增欄位**
 
 在 `LibraryReaderFeatureRepositories`：
 - 匯入：`import '../reader/downloadable_font_store.dart';`
@@ -1663,7 +1663,7 @@ Expected：編譯失敗，`SettingsScaffold` 沒有 `downloadableFontStore` 參�
 
 - 建構子（放在 `this.customFontsRepository,` 之後）：`this.downloadableFontStore,`
 
-- [ ] **Step 5：`adaptive_shell_scaffold.dart` 傳給 `SettingsScaffold`**
+- [x] **Step 5：`adaptive_shell_scaffold.dart` 傳給 `SettingsScaffold`**
 
 在 `SettingsScaffold(` 的參數中，`customFontsRepository: …` 之後加上：
 
@@ -1672,7 +1672,7 @@ Expected：編譯失敗，`SettingsScaffold` 沒有 `downloadableFontStore` 參�
                   widget.readerFeatureRepositories.downloadableFontStore,
 ```
 
-- [ ] **Step 6：`main.dart` 建構 store、啟動準備、傳給 `ElinkBookApp`**
+- [x] **Step 6：`main.dart` 建構 store、啟動準備、傳給 `ElinkBookApp`**
 
 - 匯入：
   ```dart
@@ -1701,17 +1701,17 @@ Expected：編譯失敗，`SettingsScaffold` 沒有 `downloadableFontStore` 參�
 - `ElinkBookApp` 類別：欄位 `final DownloadableFontStore? downloadableFontStore;`（放在 `customFontsRepository` 欄位之後）、建構子 `this.downloadableFontStore,`（放在 `this.customFontsRepository,` 之後）。
 - `LibraryReaderFeatureRepositories(` 的參數中，`customFontsRepository: widget.customFontsRepository,` 之後加上 `downloadableFontStore: widget.downloadableFontStore,`
 
-- [ ] **Step 7：執行測試確認通過**
+- [x] **Step 7：執行測試確認通過**
 
 Run：`flutter test test/screens/settings_scaffold_test.dart test/screens/font_management_screen_test.dart`
 Expected：全數通過。
 
-- [ ] **Step 8：靜態分析**
+- [x] **Step 8：靜態分析**
 
 Run：`flutter analyze`
 Expected：`No issues found!`
 
-- [ ] **Step 9：Commit**
+- [x] **Step 9：Commit**
 
 ```bash
 git add lib/main.dart lib/screens/library_screen_dependencies.dart lib/screens/adaptive_shell_scaffold.dart lib/screens/settings_scaffold.dart test/screens/settings_scaffold_test.dart
@@ -1725,7 +1725,7 @@ git commit -m "feat(fonts): 由 main.dart 建構 DownloadableFontStore 並傳到
 **Files:**
 - Modify: `docs/epics/epic-49-downloadable-fonts/issues.md`（Issue 3 的 `Status`）、`docs/epics/epic-49-downloadable-fonts/epic.md`、`docs/epics.md`（第 50 列備註）
 
-- [ ] **Step 1：本 Issue 所有異動測試**
+- [x] **Step 1：本 Issue 所有異動測試**
 
 ```bash
 flutter test test/reader/font_download_catalog_test.dart test/reader/downloadable_font_store_test.dart test/screens/font_management_screen_test.dart test/screens/settings_scaffold_test.dart
@@ -1733,7 +1733,7 @@ flutter test test/reader/font_download_catalog_test.dart test/reader/downloadabl
 
 Expected：全數通過。
 
-- [ ] **Step 2：靜態分析與 l10n 稽核**
+- [x] **Step 2：靜態分析與 l10n 稽核**
 
 ```bash
 flutter analyze
@@ -1742,18 +1742,18 @@ node tool/check_l10n_hardcoded_strings.js
 
 Expected：`No issues found!`；兩行 `PASS`。
 
-- [ ] **Step 3：完整測試套件（本計畫唯一一次）**
+- [x] **Step 3：完整測試套件（本計畫唯一一次）**
 
 Run：`flutter test`
 Expected：`All tests passed!`（約 5 分鐘）。有失敗時，先確認是否為本 Issue 造成；是的話修正後只重跑失敗的測試檔，再重跑一次完整套件。
 
-- [ ] **Step 4：更新進度**
+- [x] **Step 4：更新進度**
 
 - `issues.md` Issue 3 的 `**Status:**` 改為 `completed`。
 - `epic.md` 追加「Issue 3 完成」記錄：新增的模組、測試數量、完整套件結果與 commit。
 - `docs/epics.md` 第 50 列備註改為最後完成的 Issue 編號（例如「Issue 3 已完成」；若 Issue 1 也已完成，寫「Issue 1、3 已完成」）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add docs/epics.md docs/epics/epic-49-downloadable-fonts/issues.md docs/epics/epic-49-downloadable-fonts/epic.md

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:audio_service/audio_service.dart';
@@ -25,6 +26,7 @@ import 'library/sqlite_library_repository.dart';
 import 'reader/book_reader_prefs_repository.dart';
 import 'reader/bookmarks_repository.dart';
 import 'reader/custom_fonts_repository.dart';
+import 'reader/downloadable_font_store.dart';
 import 'reader/highlights_repository.dart';
 import 'reader/layout_preset_repository.dart';
 import 'reader/notes_repository.dart';
@@ -113,6 +115,19 @@ Future<void> main() async {
   final highlightsRepository = HighlightsRepository(repository.database);
   final notesRepository = NotesRepository(repository.database);
   final customFontsRepository = CustomFontsRepository(repository.database);
+  // epic-49：內建字型改為可下載字型，存在 App 支援目錄（非使用者可見、清除快取不會被刪）。
+  // prepare() 建立存放目錄並清掉上次被系統終止時殘留的 .part 暫存檔；
+  // 失敗只影響字型下載功能，不能擋住 App 啟動。
+  final downloadableFontStore = DownloadableFontStore(
+    httpClient: http.Client(),
+    directory: Directory(
+        p.join((await getApplicationSupportDirectory()).path, 'downloaded-fonts')),
+  );
+  try {
+    await downloadableFontStore.prepare();
+  } catch (e) {
+    debugPrint('Failed to prepare downloaded fonts directory: $e');
+  }
   final layoutPresetRepository = LayoutPresetRepository(repository.database);
   // epic-10-search Issue 1：背景全文檢索索引引擎。本工單只負責讓引擎
   // 能運作，「啟用全文檢索」開關與批次回填既有書庫是 Issue 3 的範圍——
@@ -273,6 +288,7 @@ Future<void> main() async {
       highlightsRepository: highlightsRepository,
       notesRepository: notesRepository,
       customFontsRepository: customFontsRepository,
+      downloadableFontStore: downloadableFontStore,
       layoutPresetRepository: layoutPresetRepository,
       bookReaderPrefsRepository: prefsRepository,
       ttsProvider: ttsProvider,
@@ -319,6 +335,7 @@ class ElinkBookApp extends StatefulWidget {
   final HighlightsRepository? highlightsRepository;
   final NotesRepository? notesRepository;
   final CustomFontsRepository? customFontsRepository;
+  final DownloadableFontStore? downloadableFontStore;
   final LayoutPresetRepository? layoutPresetRepository;
   final BookReaderPrefsRepository? bookReaderPrefsRepository;
   final TtsProvider? ttsProvider;
@@ -369,6 +386,7 @@ class ElinkBookApp extends StatefulWidget {
     this.highlightsRepository,
     this.notesRepository,
     this.customFontsRepository,
+    this.downloadableFontStore,
     this.layoutPresetRepository,
     this.bookReaderPrefsRepository,
     this.ttsProvider,
@@ -479,6 +497,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
           highlightsRepository: widget.highlightsRepository,
           notesRepository: widget.notesRepository,
           customFontsRepository: widget.customFontsRepository,
+          downloadableFontStore: widget.downloadableFontStore,
           layoutPresetRepository: widget.layoutPresetRepository,
           bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
           ttsProvider: widget.ttsProvider,

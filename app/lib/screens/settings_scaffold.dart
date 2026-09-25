@@ -6,6 +6,7 @@ import '../cloud_import/onedrive_oauth_client.dart';
 import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
 import '../reader/custom_fonts_repository.dart';
+import '../reader/downloadable_font_store.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/tts_provider.dart';
 import '../search/full_text_search_settings_repository.dart';
@@ -48,6 +49,9 @@ class SettingsScaffold extends StatefulWidget {
   final AppLocale? currentLocaleOverride;
   final ValueChanged<AppLocale?>? onLocaleChanged;
   final CustomFontsRepository? customFontsRepository;
+
+  /// epic-49：可下載字型的下載與保管；null 時字型管理畫面的內建字型只顯示名稱。
+  final DownloadableFontStore? downloadableFontStore;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
 
@@ -75,6 +79,7 @@ class SettingsScaffold extends StatefulWidget {
     this.currentLocaleOverride,
     this.onLocaleChanged,
     this.customFontsRepository,
+    this.downloadableFontStore,
     this.syncAccountRepository,
     this.syncClient,
     this.onManualSync,
@@ -264,6 +269,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                         MaterialPageRoute(
                           builder: (context) => FontManagementScreen(
                             repository: widget.customFontsRepository!,
+                            downloadableFontStore: widget.downloadableFontStore,
                           ),
                         ),
                       );
