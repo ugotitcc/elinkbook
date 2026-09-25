@@ -86,6 +86,15 @@
 
 **2026-09-25 Issue 1 合併**：PR #276（`epic-49/issue-1-fonts-cdn` → `main`）已合併。下一步：Issue 2（由人類執行 `deploy-wizard.sh` 部署，開始前先綁定付款方式）、Issue 3（App 端下載管線與字型管理畫面，可以和 Issue 2 平行進行）。
 
+**2026-09-25 Issue 2 部署完成**：由人類執行 `deploy-wizard.sh`，建立 R2 bucket `elinkbook-fonts`、部署 Worker、上傳 5 個字型檔。
+
+- Worker 網址（Issue 4 填入 App 的下載服務基底網址常數）：`https://elinkbook-fonts.huthief.workers.dev`
+- 線上驗證：`verify_remote.mjs` 回報 `PASS`，5 個字型線上內容與清單一致。
+- 工單審查 M-4：`curl -I https://elinkbook-fonts.huthief.workers.dev/v1/GuanKiapTsingKhai.ttf` 回應 `200 OK`，帶有 `Content-Type: font/ttf` 與 `Content-Length: 14675776`。
+- 上傳時發現：在 Windows 上，wrangler 上傳第 3 個字型時偶發崩潰（結束碼 `3221226505`，即 `0xC0000409`），檔案沒有寫入 R2。同一條指令重跑就成功，之後重跑 wizard 時已上傳的字型自動略過，符合 Issue 1 的「中斷後可重跑補傳」設計。
+
+**2026-09-25 Issue 2 合併**：PR #277（`epic-49/issue-2-deploy` → `main`）已合併。另外補一個 commit 到 `main`，把 wrangler 本機暫存資料夾 `fonts-cdn/.wrangler/` 加進 `.gitignore`。下一步：Issue 3（App 端下載管線與字型管理畫面）；Issue 4 等 Issue 3 完成後才能開始。
+
 **2026-09-25 Issue 3 完成**（`plans/plan-issue-3.md`，7 個 Task 全數執行完畢）：
 
 - 新增 `app/lib/reader/font_download_catalog.dart`：`kFontDownloadBaseUrl`（本 Issue 用 `https://elinkbook-fonts.invalid/`，Issue 4 換正式網址）、`FontDownloadSpec`、`fontDownloadSpecOf()`（exhaustive switch，停用 3 款沿用 `[字型停用]` 註解，數值與 `spec.md` 一致）。
