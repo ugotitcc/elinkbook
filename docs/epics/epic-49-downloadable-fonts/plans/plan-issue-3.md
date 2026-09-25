@@ -1,6 +1,6 @@
 # Issue 3：下載與字型管理畫面（`DownloadableFontStore`＋字型管理 UI）實作計畫
 
-> **給執行者（agentic worker）：** 必須使用子技能 superpowers:subagent-driven-development（建議）或 superpowers:executing-plans，逐一執行本計畫的 Task。步驟使用核取方塊（`- [x]`），完成一個就改成 `- [x]`。
+> **給執行者（agentic worker）：** 必須使用子技能 superpowers:subagent-driven-development（建議）或 superpowers:executing-plans，逐一執行本計畫的 Task。步驟使用核取方塊（`- [ ]`），完成一個就改成 `- [x]`。
 
 **目標：** 讓使用者在「字型管理」畫面下載、取消、重試、刪除內建字型。下載的檔案經過 SHA-256 驗證後存在 App 支援目錄；本 Issue 還不處理閱讀器套用（Issue 4）。
 

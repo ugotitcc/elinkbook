@@ -52,6 +52,13 @@ http.Client serving(
   });
 }
 
+/// 斷言 download 以指定原因的 FontDownloadException 失敗。
+Matcher failsWith(FontDownloadFailure reason, {int? statusCode}) => throwsA(
+      isA<FontDownloadException>()
+          .having((e) => e.reason, 'reason', reason)
+          .having((e) => e.statusCode, 'statusCode', statusCode),
+    );
+
 void main() {
   late Directory root;
   late Directory fontsDir;
@@ -65,11 +72,14 @@ void main() {
     if (await root.exists()) await root.delete(recursive: true);
   });
 
-  DownloadableFontStore storeWith(http.Client client) => DownloadableFontStore(
+  DownloadableFontStore storeWith(http.Client client,
+          {Duration idleTimeout = const Duration(seconds: 30)}) =>
+      DownloadableFontStore(
         httpClient: client,
         directory: fontsDir,
         baseUri: Uri.parse('https://fonts.test/'),
         specOf: testSpecOf,
+        idleTimeout: idleTimeout,
       );
 
   /// 存放目錄底下所有檔案的相對路徑（用 / 分隔），方便斷言「沒有留下任何檔案」。
@@ -125,12 +135,6 @@ void main() {
   });
 
   group('download 失敗', () {
-    Matcher failsWith(FontDownloadFailure reason, {int? statusCode}) => throwsA(
-          isA<FontDownloadException>()
-              .having((e) => e.reason, 'reason', reason)
-              .having((e) => e.statusCode, 'statusCode', statusCode),
-        );
-
     test('SHA-256 不符 → integrity，且沒有留下任何檔案', () async {
       final corrupted = List<int>.from(fontBytesA)..[0] ^= 0xff;
       final store = storeWith(serving({'/v1/A.ttf': corrupted}));
@@ -322,19 +326,156 @@ void main() {
     });
 
     test('下載進行中再呼叫 download 拋出 StateError，進行中那一筆照常完成', () async {
-      final controller = StreamController<List<int>>();
-      final store = storeWith(MockClient.streaming((request, _) async =>
-          http.StreamedResponse(controller.stream, 200, contentLength: fontBytesA.length)));
+      // 每次請求都給新的串流：如果拿掉重疊防護，第二次呼叫會真的送出請求，
+      // 而不是因為「串流已被訂閱」這個同樣是 StateError 的錯誤碰巧通過（程式審查 M-1）
+      final controllers = <StreamController<List<int>>>[];
+      final firstRequestArrived = Completer<void>();
+      final store = storeWith(MockClient.streaming((request, _) async {
+        final controller = StreamController<List<int>>();
+        controllers.add(controller);
+        if (!firstRequestArrived.isCompleted) firstRequestArrived.complete();
+        return http.StreamedResponse(controller.stream, 200, contentLength: fontBytesA.length);
+      }));
 
       final first = store.download(AppFont.sourceHanSans);
       await expectLater(
-          store.download(AppFont.sourceHanSerif), throwsA(isA<StateError>()));
+        store.download(AppFont.sourceHanSerif),
+        throwsA(isA<StateError>()
+            .having((e) => e.message, 'message', contains('已有字型下載進行中'))),
+      );
+      await firstRequestArrived.future;
+      await pumpEventQueue();
+      expect(controllers, hasLength(1));
 
-      controller.add(fontBytesA);
-      await controller.close();
+      controllers.single.add(fontBytesA);
+      await controllers.single.close();
       await first;
 
       expect(await store.installedFonts(), {AppFont.sourceHanSans});
+    });
+  });
+
+  group('例外轉換、閒置逾時、立即取消（程式審查 I-1、I-2、M-6）', () {
+    test('送出請求時 TLS 握手失敗（HandshakeException）→ network', () async {
+      final store = storeWith(MockClient.streaming(
+          (request, _) async => throw const HandshakeException('bad certificate')));
+
+      await expectLater(store.download(AppFont.sourceHanSans),
+          failsWith(FontDownloadFailure.network));
+      expect(await filesIn(fontsDir), isEmpty);
+    });
+
+    test('串流途中出現 TlsException → network，且沒有留下任何檔案', () async {
+      Stream<List<int>> brokenStream() async* {
+        yield fontBytesA.sublist(0, 30000);
+        throw const TlsException('connection closed');
+      }
+      final store = storeWith(MockClient.streaming((request, _) async =>
+          http.StreamedResponse(brokenStream(), 200, contentLength: fontBytesA.length)));
+
+      await expectLater(store.download(AppFont.sourceHanSans),
+          failsWith(FontDownloadFailure.network));
+      expect(await filesIn(fontsDir), isEmpty);
+    });
+
+    test('伺服器一直不回應 → 閒置逾時後 network，之後可以再下載', () async {
+      var attempts = 0;
+      final store = storeWith(
+        MockClient.streaming((request, _) async {
+          attempts++;
+          if (attempts == 1) return Completer<http.StreamedResponse>().future;
+          return http.StreamedResponse(chunked(fontBytesA), 200, contentLength: fontBytesA.length);
+        }),
+        idleTimeout: const Duration(milliseconds: 100),
+      );
+
+      await expectLater(store.download(AppFont.sourceHanSans),
+          failsWith(FontDownloadFailure.network));
+      await store.download(AppFont.sourceHanSans);
+
+      expect(await store.installedFonts(), {AppFont.sourceHanSans});
+    });
+
+    test('收到部分資料後連線停住 → 閒置逾時後 network，沒有留下任何檔案，之後可以再下載', () async {
+      var attempts = 0;
+      final store = storeWith(
+        MockClient.streaming((request, _) async {
+          attempts++;
+          if (attempts == 1) {
+            final stalled = StreamController<List<int>>()..add(fontBytesA.sublist(0, 30000));
+            return http.StreamedResponse(stalled.stream, 200, contentLength: fontBytesA.length);
+          }
+          return http.StreamedResponse(chunked(fontBytesA), 200, contentLength: fontBytesA.length);
+        }),
+        idleTimeout: const Duration(milliseconds: 100),
+      );
+
+      await expectLater(store.download(AppFont.sourceHanSans),
+          failsWith(FontDownloadFailure.network));
+      expect(await filesIn(fontsDir), isEmpty);
+
+      await store.download(AppFont.sourceHanSans);
+      expect(await store.installedFonts(), {AppFont.sourceHanSans});
+    });
+
+    test('連線停住時按取消 → 立即 cancelled（不必等下一個資料區塊），沒有留下任何檔案', () async {
+      final stalled = StreamController<List<int>>();
+      final store = storeWith(MockClient.streaming((request, _) async =>
+          http.StreamedResponse(stalled.stream, 200, contentLength: fontBytesA.length)));
+      final token = FontDownloadCancellationToken();
+      final firstProgress = Completer<void>();
+
+      final download = store.download(AppFont.sourceHanSans,
+          cancellationToken: token, onProgress: (_) {
+        if (!firstProgress.isCompleted) firstProgress.complete();
+      });
+      stalled.add(fontBytesA.sublist(0, 30000));
+      // 收到第一段資料後連線停住（之後不再有資料區塊），此時才按取消
+      await firstProgress.future;
+
+      token.cancel();
+
+      await expectLater(download, failsWith(FontDownloadFailure.cancelled));
+      expect(await filesIn(fontsDir), isEmpty);
+    });
+
+    test('還在等伺服器回應時按取消 → 立即 cancelled，之後可以再下載', () async {
+      var attempts = 0;
+      final store = storeWith(MockClient.streaming((request, _) async {
+        attempts++;
+        if (attempts == 1) return Completer<http.StreamedResponse>().future;
+        return http.StreamedResponse(chunked(fontBytesA), 200, contentLength: fontBytesA.length);
+      }));
+      final token = FontDownloadCancellationToken();
+
+      final download = store.download(AppFont.sourceHanSans, cancellationToken: token);
+      // 等請求真的送出（前面有建立暫存檔的檔案 I/O），伺服器還沒回應時才按取消
+      while (attempts == 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      token.cancel();
+
+      await expectLater(download, failsWith(FontDownloadFailure.cancelled));
+      await store.download(AppFont.sourceHanSans);
+      expect(await store.installedFonts(), {AppFont.sourceHanSans});
+    });
+
+    test('HTTP 非 200 時會取消訂閱回應內容，讓連線可以回收', () async {
+      var listened = false;
+      var cancelled = false;
+      final body = StreamController<List<int>>(
+        onListen: () => listened = true,
+        onCancel: () => cancelled = true,
+      );
+      final store = storeWith(MockClient.streaming(
+          (request, _) async => http.StreamedResponse(body.stream, 503)));
+
+      await expectLater(store.download(AppFont.sourceHanSans),
+          failsWith(FontDownloadFailure.httpStatus, statusCode: 503));
+      await pumpEventQueue();
+
+      expect(listened, isTrue);
+      expect(cancelled, isTrue);
     });
   });
 }

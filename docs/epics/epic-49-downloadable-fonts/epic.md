@@ -93,3 +93,17 @@
 - 字型管理畫面：注入 `downloadableFontStore`（可選，未注入時維持既有行為）後內建字型列呈現未下載／下載中／已下載／失敗四種狀態，下載互斥（AppBar 上傳不停用），刪除用專屬內文 `fontManagementDownloadableDeleteConfirmMessage`（不動書籍偏好）；`formatFontFileSize()` 純函式；`test/support/fake_downloadable_font_store.dart`（Issue 4 沿用）。
 - 依賴注入：`main.dart` 建構 store（`downloaded-fonts/`，啟動呼叫 `prepare()`，失敗不擋啟動）→ `ElinkBookApp` → `LibraryReaderFeatureRepositories` → `AdaptiveShellScaffold` → `SettingsScaffold` → `FontManagementScreen`。
 - 測試：`font_download_catalog_test.dart`（3/3）、`downloadable_font_store_test.dart`（21/21，含進度節流、取消、中途斷線、StateError；變異檢查各一項符合預期，另有一項記錄於執行紀錄）、`font_management_screen_test.dart`（26/26，含變異檢查）、`settings_scaffold_test.dart`（新增注入測試）。完整套件 `flutter test`：2847 通過、1 跳過（`All tests passed!`）；`flutter analyze` 乾淨；l10n 稽核兩行 PASS。
+
+**2026-09-25 Issue 3 程式審查修訂**（`reviews/review-issue-3.md`：修正後可合併，0 Critical／3 Important／7 Minor；人類裁定 I-2 閒置逾時 30 秒，其餘依審查意見修訂）
+
+- I-1：store 把下載過程中的所有例外統一轉成 `FontDownloadException`：已取消的一律回報 cancelled，TLS 失敗、連線中斷、逾時和其他未預期例外回報 network。畫面另外加一層兜底，萬一收到其他例外，仍顯示網路錯誤並允許重試。新增測試：送出時 `HandshakeException`、串流途中 `TlsException`；畫面遇到 `StateError` 時顯示錯誤。
+- I-2：`DownloadableFontStore` 新增 `idleTimeout`（預設 30 秒）。等待伺服器回應，或兩個資料區塊之間超過這個時間，就視為網路失敗；這不是整個下載的時間上限。`FontDownloadCancellationToken` 新增 `whenCancelled`，取消會立即中斷等待回應與串流，不必等下一個資料區塊；同時以 `http.AbortableRequest` 的 `abortTrigger` 中止連線。新增 4 個測試（伺服器不回應、串流停住、停住時取消、等待回應時取消），變異檢查確認「立即取消」的測試有效。
+- I-3：`finally` 第一行就重設 `_downloading`，刪除 `.part` 失敗時略過。刪除失敗在測試環境中無法穩定重現，所以沒有加測試。
+- M-1：重疊下載測試改為每次請求回傳新的串流，並斷言錯誤訊息內容和只送出一次請求；變異檢查（拿掉防護）確認測試會失敗。
+- M-2：每寫入 1 MB 就 `flush()` 一次，寫檔錯誤能及早發現，也有背壓。
+- M-3：刪除已下載字型失敗時攔下錯誤並重新讀取已下載清單；新增測試。
+- M-4：計畫檔第 3 行的說明文字改回 `- [ ]`。
+- M-5：已下載清單載入完成前只顯示大小、不顯示操作按鈕；讀取失敗時視為沒有已下載的字型。新增測試。
+- M-6：HTTP 非 200，或取消／逾時後才收到回應時，都會取消訂閱回應內容；新增測試。
+- M-7：`FakeDownloadableFontStore.fail()` 改為接受任意例外，並新增 `deleteError`。
+- 驗證：異動的 4 個測試檔共 104 個測試通過；`flutter analyze` 乾淨；l10n 檢查通過；完整 `flutter test` 2857 個測試全數通過。

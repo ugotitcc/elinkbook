@@ -44,6 +44,10 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
   // ── 可下載字型（epic-49）──
   Set<AppFont> _installedFonts = {};
 
+  /// 已下載清單是否已載入。載入前不知道哪些字型已下載，只顯示大小並停用按鈕，
+  /// 避免把已下載的字型誤顯示成「未下載」而被重新下載（程式審查 M-5）。
+  bool _installedFontsLoaded = false;
+
   /// 正在下載的字型；同一時間最多一款（下載中時其他內建字型的按鈕全部停用）。
   AppFont? _downloadingFont;
   int _downloadPercent = 0;
@@ -83,9 +87,14 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
     try {
       final installed = await store.installedFonts();
       if (!mounted) return;
-      setState(() => _installedFonts = installed);
+      setState(() {
+        _installedFonts = installed;
+        _installedFontsLoaded = true;
+      });
     } catch (e) {
       debugPrint('Failed to load downloaded fonts: $e');
+      // 讀取失敗時視為沒有已下載的字型，讓使用者仍然可以下載
+      if (mounted) setState(() => _installedFontsLoaded = true);
     }
   }
 
@@ -160,6 +169,10 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
 
     final key = Key('font_management_builtin_${font.name}');
     final size = formatFontFileSize(fontDownloadSpecOf(font).sizeBytes);
+    if (!_installedFontsLoaded) {
+      return ListTile(key: key, title: title, subtitle: Text(size));
+    }
+
     // 任何字型下載中時，其他所有內建字型的下載／重試／刪除都停用（規格審查 I-2）
     final isBusy = _downloadingFont != null;
 
@@ -263,6 +276,13 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
     } on FontDownloadException catch (error) {
       if (!mounted || error.reason == FontDownloadFailure.cancelled) return;
       setState(() => _downloadFailures[font] = error);
+    } catch (error) {
+      // store 應該只拋出 FontDownloadException；萬一出現其他例外，仍顯示錯誤並允許重試，
+      // 不讓使用者看到「進度條閃一下就回到原狀」而沒有任何提示（程式審查 I-1）
+      debugPrint('Unexpected font download error: $error');
+      if (!mounted || token.isCancelled) return;
+      setState(() => _downloadFailures[font] =
+          const FontDownloadException(FontDownloadFailure.network));
     } finally {
       if (mounted) {
         setState(() {
@@ -297,7 +317,14 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
       ),
     );
     if (confirmed != true) return;
-    await widget.downloadableFontStore!.delete(font);
+    try {
+      await widget.downloadableFontStore!.delete(font);
+    } catch (error) {
+      // 刪除失敗（例如檔案被占用）：重新讀取已下載清單，讓畫面顯示實際的檔案狀態（程式審查 M-3）
+      debugPrint('Failed to delete downloaded font: $error');
+      await _loadInstalledFonts();
+      return;
+    }
     if (!mounted) return;
     setState(() => _installedFonts = {..._installedFonts}..remove(font));
   }

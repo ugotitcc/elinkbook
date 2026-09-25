@@ -15,6 +15,9 @@ class FakeDownloadableFontStore implements DownloadableFontStore {
   /// 最近一次 [download] 呼叫；沒有呼叫過時為 null。
   FakeFontDownload? activeDownload;
 
+  /// 若非 null，[delete] 會拋出這個例外（模擬檔案被占用等刪除失敗）。
+  Object? deleteError;
+
   /// 若非 null，[installedFonts] 會先等待它完成才回傳，供測試控制載入完成的時機
   /// （Issue 4 驗證 ReaderScreen 在已下載字型載入完成前延後建構閱讀器）。
   Completer<void>? installedFontsGate;
@@ -33,6 +36,7 @@ class FakeDownloadableFontStore implements DownloadableFontStore {
 
   @override
   Future<void> delete(AppFont font) async {
+    if (deleteError != null) throw deleteError!;
     installed.remove(font);
     deleted.add(font);
   }
@@ -59,5 +63,7 @@ class FakeFontDownload {
 
   void progress(int percent) => _onProgress?.call(percent);
   void succeed() => _completer.complete();
-  void fail(FontDownloadException error) => _completer.completeError(error);
+
+  /// 以任意例外結束下載；通常是 [FontDownloadException]，也可以模擬未預期的例外。
+  void fail(Object error) => _completer.completeError(error);
 }

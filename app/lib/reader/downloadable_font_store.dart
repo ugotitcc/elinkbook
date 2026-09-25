@@ -26,12 +26,23 @@ class FontDownloadException implements Exception {
       'FontDownloadException(${reason.name}${statusCode == null ? '' : ', HTTP $statusCode'})';
 }
 
-/// 取消下載用的旗標。store 每收到一個資料區塊就檢查一次（比照雲端下載的既有做法）。
+/// 取消下載用的旗標。取消會立即中斷下載，不必等下一個資料區塊（連線停住時也有效，
+/// 程式審查 I-2）。
 class FontDownloadCancellationToken {
-  bool _cancelled = false;
-  bool get isCancelled => _cancelled;
-  void cancel() => _cancelled = true;
+  final Completer<void> _cancelled = Completer<void>();
+  bool get isCancelled => _cancelled.isCompleted;
+
+  /// 取消時完成。
+  Future<void> get whenCancelled => _cancelled.future;
+
+  void cancel() {
+    if (!_cancelled.isCompleted) _cancelled.complete();
+  }
 }
+
+/// 寫檔時每累積這麼多 bytes 就等資料寫入一次：寫入錯誤（例如磁碟已滿）能及早發現，
+/// 磁碟比網路慢時也不會把資料都堆在記憶體裡（程式審查 M-2）。
+const int _flushIntervalBytes = 1024 * 1024;
 
 /// 可下載字型的下載與保管（epic-49，見 docs/adr/0035-downloadable-fonts-via-r2-worker.md）。
 ///
@@ -43,15 +54,21 @@ class DownloadableFontStore {
     required Directory directory,
     Uri? baseUri,
     FontDownloadSpec Function(AppFont font) specOf = fontDownloadSpecOf,
+    Duration idleTimeout = const Duration(seconds: 30),
   })  : _httpClient = httpClient,
         _directory = directory,
         _baseUri = baseUri ?? Uri.parse(kFontDownloadBaseUrl),
-        _specOf = specOf;
+        _specOf = specOf,
+        _idleTimeout = idleTimeout;
 
   final http.Client _httpClient;
   final Directory _directory;
   final Uri _baseUri;
   final FontDownloadSpec Function(AppFont font) _specOf;
+
+  /// 等伺服器回應、或兩個資料區塊之間，超過這段時間沒有進展就視為網路失敗
+  /// （程式審查 I-2）。不是整個下載的時間上限，網路慢但持續有資料時不會誤判。
+  final Duration _idleTimeout;
 
   /// 同一時間只允許一個下載（spec「字型管理畫面」與規格審查 I-2）。
   bool _downloading = false;
@@ -111,11 +128,18 @@ class DownloadableFontStore {
     final spec = _specOf(font);
     final target = _fileFor(font);
     final part = _partFileFor(font);
+    // 取消或失敗時中止 HTTP 連線（真實的 IOClient 會關閉 socket）
+    final abort = Completer<void>();
+    unawaited(cancellationToken?.whenCancelled.then((_) {
+      if (!abort.isCompleted) abort.complete();
+    }));
     IOSink? sink;
     try {
       await _preparePartFile(part);
-      final response = await _send(spec);
+      final response = await _send(spec, abort.future, cancellationToken);
       if (response.statusCode != 200) {
+        // 丟棄回應內容，讓連線可以回收（程式審查 M-6）
+        unawaited(response.stream.listen(null, onError: (_) {}).cancel());
         throw FontDownloadException(FontDownloadFailure.httpStatus,
             statusCode: response.statusCode);
       }
@@ -124,16 +148,19 @@ class DownloadableFontStore {
       final digestSink = _DigestSink();
       final hasher = sha256.startChunkedConversion(digestSink);
       var received = 0;
+      var unflushed = 0;
       var lastPercent = -1;
       try {
         sink = part.openWrite();
-        await for (final chunk in response.stream) {
-          if (cancellationToken?.isCancelled ?? false) {
-            throw const FontDownloadException(FontDownloadFailure.cancelled);
-          }
+        await for (final chunk in _chunksOf(response, cancellationToken)) {
           sink.add(chunk);
           hasher.add(chunk);
           received += chunk.length;
+          unflushed += chunk.length;
+          if (unflushed >= _flushIntervalBytes) {
+            await sink.flush();
+            unflushed = 0;
+          }
           final percent = total > 0 ? (received * 100 ~/ total).clamp(0, 100) : 0;
           if (percent > lastPercent) {
             lastPercent = percent;
@@ -142,12 +169,10 @@ class DownloadableFontStore {
         }
         await sink.close();
         sink = null;
-      } on SocketException {
-        throw const FontDownloadException(FontDownloadFailure.network);
-      } on http.ClientException {
-        throw const FontDownloadException(FontDownloadFailure.network);
       } on FileSystemException {
         throw const FontDownloadException(FontDownloadFailure.storage);
+      } on Object catch (error) {
+        throw _asDownloadException(error, cancellationToken);
       }
 
       hasher.close();
@@ -157,13 +182,19 @@ class DownloadableFontStore {
       if (lastPercent < 100) onProgress?.call(100);
       await _promote(part, target);
     } finally {
+      // 先重設旗標：後面的清理就算出錯，也不會讓之後的下載永遠被擋住（程式審查 I-3）
+      _downloading = false;
+      if (!abort.isCompleted) abort.complete();
       try {
         await sink?.close();
       } catch (_) {
         // 寫入已經失敗時 close 會再拋一次同樣的錯誤；原本的例外已經往上拋，這裡忽略
       }
-      if (await part.exists()) await part.delete();
-      _downloading = false;
+      try {
+        if (await part.exists()) await part.delete();
+      } on FileSystemException {
+        // 盡力清理：刪不掉的暫存檔不影響「已下載」判斷，下次下載前也會先刪除
+      }
     }
   }
 
@@ -176,14 +207,83 @@ class DownloadableFontStore {
     }
   }
 
-  Future<http.StreamedResponse> _send(FontDownloadSpec spec) async {
+  /// 送出請求並等待回應標頭。取消時立即結束（不等伺服器），超過閒置逾時視為網路失敗。
+  Future<http.StreamedResponse> _send(
+    FontDownloadSpec spec,
+    Future<void> abortTrigger,
+    FontDownloadCancellationToken? cancellationToken,
+  ) async {
+    final request = http.AbortableRequest('GET', _baseUri.resolve(spec.publishPath),
+        abortTrigger: abortTrigger);
+    final result = Completer<http.StreamedResponse>();
+    final timer = Timer(_idleTimeout, () {
+      if (!result.isCompleted) result.completeError(TimeoutException(null, _idleTimeout));
+    });
+    unawaited(_httpClient.send(request).then((response) {
+      if (result.isCompleted) {
+        // 已經取消或逾時才收到回應：丟棄內容，讓連線可以回收
+        unawaited(response.stream.listen(null, onError: (_) {}).cancel());
+      } else {
+        result.complete(response);
+      }
+    }, onError: (Object error, StackTrace stackTrace) {
+      if (!result.isCompleted) result.completeError(error, stackTrace);
+    }));
+    unawaited(cancellationToken?.whenCancelled.then((_) {
+      if (!result.isCompleted) {
+        result.completeError(const FontDownloadException(FontDownloadFailure.cancelled));
+      }
+    }));
     try {
-      return await _httpClient.send(http.Request('GET', _baseUri.resolve(spec.publishPath)));
-    } on SocketException {
-      throw const FontDownloadException(FontDownloadFailure.network);
-    } on http.ClientException {
-      throw const FontDownloadException(FontDownloadFailure.network);
+      return await result.future;
+    } on Object catch (error) {
+      throw _asDownloadException(error, cancellationToken);
+    } finally {
+      timer.cancel();
     }
+  }
+
+  /// 回應內容的資料區塊。兩個區塊之間超過閒置逾時就拋出 [TimeoutException]；
+  /// 取消時立即拋出 cancelled，不必等下一個資料區塊。
+  Stream<List<int>> _chunksOf(
+    http.StreamedResponse response,
+    FontDownloadCancellationToken? cancellationToken,
+  ) {
+    late final StreamController<List<int>> controller;
+    StreamSubscription<List<int>>? source;
+    controller = StreamController<List<int>>(
+      onListen: () {
+        source = response.stream.timeout(_idleTimeout).listen(
+              controller.add,
+              onError: controller.addError,
+              onDone: controller.close,
+            );
+        unawaited(cancellationToken?.whenCancelled.then((_) {
+          if (!controller.isClosed) {
+            controller.addError(const FontDownloadException(FontDownloadFailure.cancelled));
+          }
+        }));
+      },
+      onPause: () => source?.pause(),
+      onResume: () => source?.resume(),
+      onCancel: () => source?.cancel(),
+    );
+    return controller.stream;
+  }
+
+  /// 把下載過程中的例外統一轉成 [FontDownloadException]（spec：失敗只以這個型別回報）。
+  /// 已取消時一律視為 cancelled（中止連線本身也會拋出例外）。TLS 失敗、連線中斷、
+  /// 逾時都屬於網路問題（程式審查 I-1）；其他未預期的例外同樣以網路失敗回報，
+  /// 讓畫面能顯示錯誤並允許重試，不會變成沒有任何提示的未捕捉錯誤。
+  FontDownloadException _asDownloadException(
+    Object error,
+    FontDownloadCancellationToken? cancellationToken,
+  ) {
+    if (cancellationToken?.isCancelled ?? false) {
+      return const FontDownloadException(FontDownloadFailure.cancelled);
+    }
+    if (error is FontDownloadException) return error;
+    return const FontDownloadException(FontDownloadFailure.network);
   }
 
   /// 把驗證通過的暫存檔改名為正式檔案。Windows 上 rename 不能覆蓋既有檔案，所以先刪除舊檔。

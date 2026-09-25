@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
@@ -405,6 +408,49 @@ void main() {
           .fail(const FontDownloadException(FontDownloadFailure.cancelled));
       await tester.pump();
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('已下載清單載入完成前，只顯示大小、沒有操作按鈕，不會誤顯示成「未下載」（程式審查 M-5）',
+        (tester) async {
+      store.installed.add(AppFont.sourceHanSans);
+      store.installedFontsGate = Completer<void>();
+      await pumpScreen(tester, store: store);
+
+      expect(subtitleOf(AppFont.sourceHanSans, '34.4 MB'), findsOneWidget);
+      expect(find.byKey(const Key('font_management_download_sourceHanSans')), findsNothing);
+
+      store.installedFontsGate!.complete();
+      await tester.pumpAndSettle();
+
+      expect(subtitleOf(AppFont.sourceHanSans, '34.4 MB · 已下載'), findsOneWidget);
+      expect(button(tester, 'font_management_download_sourceHanSerif').onPressed, isNotNull);
+    });
+
+    testWidgets('store 拋出 FontDownloadException 以外的例外時，顯示網路錯誤並可重試（程式審查 I-1）',
+        (tester) async {
+      await pumpScreen(tester, store: store);
+
+      await startDownload(tester, AppFont.sourceHanSans);
+      store.activeDownload!.fail(StateError('unexpected'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(subtitleOf(AppFont.sourceHanSans, '34.4 MB · 無法連線，請檢查網路後重試'), findsOneWidget);
+      expect(button(tester, 'font_management_retry_sourceHanSans').onPressed, isNotNull);
+    });
+
+    testWidgets('刪除失敗時不拋出未捕捉的例外，畫面依實際檔案狀態顯示（程式審查 M-3）', (tester) async {
+      store.installed.add(AppFont.sourceHanSans);
+      store.deleteError = const FileSystemException('file in use');
+      await pumpScreen(tester, store: store);
+
+      await tester.tap(find.byKey(const Key('font_management_delete_builtin_sourceHanSans')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('font_management_delete_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(subtitleOf(AppFont.sourceHanSans, '34.4 MB · 已下載'), findsOneWidget);
     });
 
     testWidgets('英文介面：字型名稱與狀態以英文顯示', (tester) async {
