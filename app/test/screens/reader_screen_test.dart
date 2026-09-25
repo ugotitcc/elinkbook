@@ -6670,6 +6670,137 @@ void main() {
     });
   });
 
+  group('未下載字型改用書本字型（epic-49 Issue 6）', () {
+    Future<void> pumpReader(WidgetTester tester,
+        {DownloadableFontStore? store,
+        FakeCustomFontsRepository? customFontsRepository}) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+            customFontsRepository: customFontsRepository,
+            downloadableFontStore: store,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+    }
+
+    FoliateReaderView readerView(WidgetTester tester) =>
+        tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+
+    testWidgets('偏好為未下載的內建字型時，閱讀器收到 null，偏好本身不改寫', (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'));
+      final store = FakeDownloadableFontStore()..installed.add(AppFont.sourceHanSans);
+
+      await pumpReader(tester, store: store);
+
+      expect(readerView(tester).fontFamily, isNull);
+      expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'SourceHanSerifTC');
+    });
+
+    testWidgets('偏好為 null（使用書本字型）時，閱讀器收到 null（計畫審查 M-2）',
+        (tester) async {
+      await prefsManager.saveBookPrefs('b1', const BookReaderPrefs());
+      final store = FakeDownloadableFontStore()..installed.add(AppFont.sourceHanSerif);
+
+      await pumpReader(tester, store: store);
+
+      expect(readerView(tester).fontFamily, isNull);
+    });
+
+    testWidgets('偏好為已下載的內建字型時，照原值傳遞', (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'));
+      final store = FakeDownloadableFontStore()..installed.add(AppFont.sourceHanSerif);
+
+      await pumpReader(tester, store: store);
+
+      expect(readerView(tester).fontFamily, 'SourceHanSerifTC');
+    });
+
+    testWidgets('installedFonts() 失敗時，內建字型偏好改傳 null（審查重點 1）', (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'));
+      final store = FakeDownloadableFontStore()
+        ..installed.add(AppFont.sourceHanSerif)
+        ..installedFontsGate = Completer<void>();
+
+      await pumpReader(tester, store: store);
+      store.installedFontsGate!.completeError(StateError('denied'));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(readerView(tester).fontFamily, isNull);
+    });
+
+    testWidgets('閱讀中改選已下載字型，閱讀器立即收到新字型（審查重點 2）', (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'));
+      final store = FakeDownloadableFontStore()..installed.add(AppFont.sourceHanSans);
+      await pumpReader(tester, store: store);
+      expect(readerView(tester).fontFamily, isNull);
+
+      // 開啟版面設定（比照 Issue 4「已下載字型集合傳給 ReaderSettingsSheet」測試）
+      readerView(tester).onLayoutResolved?.call(const EpubLayoutInfo(
+            isFixedLayout: false,
+            writingMode: WritingMode.horizontal,
+          ));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final sheet = tester.widget<ReaderSettingsSheet>(find.byType(ReaderSettingsSheet));
+      sheet.onChanged(sheet.prefs.copyWith(fontFamily: 'SourceHanSansTC'));
+      await tester.pump();
+
+      expect(readerView(tester).fontFamily, 'SourceHanSansTC');
+    });
+
+    testWidgets('自訂字型照原值傳遞，即使沒有任何已下載的內建字型（審查重點 3）',
+        (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'KingHwa_OldSong'));
+
+      await pumpReader(tester,
+          store: FakeDownloadableFontStore(),
+          customFontsRepository: FakeCustomFontsRepository());
+
+      expect(readerView(tester).fontFamily, 'KingHwa_OldSong');
+    });
+
+    testWidgets('不認得的字型名稱（含 epic-48 停用字型）照原值傳遞（審查重點 4）',
+        (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'GuanKiapTsingKhai'));
+
+      await pumpReader(tester, store: FakeDownloadableFontStore());
+
+      expect(readerView(tester).fontFamily, 'GuanKiapTsingKhai');
+    });
+
+    testWidgets('沒有 store 時照原值傳遞，行為與 Issue 4 相同（審查重點 5）', (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'));
+
+      await pumpReader(tester);
+
+      expect(readerView(tester).fontFamily, 'SourceHanSerifTC');
+    });
+  });
+
   testWidgets(
     '開書逾時（epic-18-reader-device-qa Issue 33，epic-27-reader-device-compat '
     'Issue 2 調整為 30 秒）：30 秒內未收到 onPageRendered，'
