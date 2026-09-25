@@ -10,7 +10,7 @@ import '../reader/custom_fonts_repository.dart';
 import '../reader/font_name_parser.dart';
 
 /// 字型管理畫面（epic-14-system-settings FR-35，spec.md「字型管理模組」）：
-/// 顯示內建 5 款字型（唯讀）＋使用者上傳的自訂字型（可重新命名／刪除），
+/// 顯示內建字型（唯讀）＋使用者上傳的自訂字型（可重新命名／刪除），
 /// 支援批次上傳 `.ttf`/`.otf`。
 class FontManagementScreen extends StatefulWidget {
   final CustomFontsRepository repository;
@@ -55,21 +55,6 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
     }
   }
 
-  String _builtInDisplayName(AppFont font) {
-    switch (font) {
-      case AppFont.sourceHanSans:
-        return '思源黑體';
-      case AppFont.sourceHanSerif:
-        return '思源宋體';
-      case AppFont.guanKiapTsingKhai:
-        return '原俠正楷';
-      case AppFont.taiwanPearl:
-        return '台灣圓體';
-      case AppFont.genRyuMinTW:
-        return '源流明體';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -98,7 +83,7 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
             child: Text(l10n.fontManagementBuiltInSectionLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
           for (final font in AppFont.values)
-            ListTile(title: Text(_builtInDisplayName(font))),
+            ListTile(title: Text(font.displayName(l10n))),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
             child: Text(l10n.fontManagementCustomSectionLabel, style: const TextStyle(fontWeight: FontWeight.bold)),

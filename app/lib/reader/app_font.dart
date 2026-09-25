@@ -1,12 +1,20 @@
-/// App 內建的 5 款字型（FR-09）。皆為本地 asset 字型（`app/assets/fonts/`），
-/// 非系統字型；自訂字型上傳/管理屬 `epic-14-system-settings`（FR-35），
-/// 本 epic 僅從此固定清單中選擇。
+import '../l10n/app_localizations.dart';
+
+/// App 內建字型（FR-09）。自訂字型上傳/管理屬 `epic-14-system-settings`
+/// （FR-35），本 enum 僅定義固定的內建清單。
+///
+/// epic-48 起字型檔一律不打包進 APK（見 `pubspec.yaml`），改由 epic-49
+/// 「可下載字型」提供；下載功能完成前，WebView 找不到字型檔時會由系統字型補位。
+///
+/// [字型停用] epic-48：清單只保留思源黑體／思源宋體，其餘 3 款先註解停用
+/// （不顯示在字型選單）。恢復時搜尋 `[字型停用]` 標記，把註解掉的 enum 值
+/// 與 switch 分支一併解除註解即可。
 enum AppFont {
   sourceHanSans, // 思源黑體 SourceHanSansTC-VF.ttf
   sourceHanSerif, // 思源宋體 SourceHanSerifTC-VF.ttf
-  guanKiapTsingKhai, // 原俠正楷 GuanKiapTsingKhai.ttf
-  taiwanPearl, // 台灣圓體 TaiwanPearl-Regular.ttf
-  genRyuMinTW, // 源流明體 GenRyuMinTW-Regular.ttf
+  // [字型停用] guanKiapTsingKhai, // 原俠正楷 GuanKiapTsingKhai.ttf
+  // [字型停用] taiwanPearl, // 台灣圓體 TaiwanPearl-Regular.ttf
+  // [字型停用] genRyuMinTW, // 源流明體 GenRyuMinTW-Regular.ttf
 }
 
 /// [AppFont] 對應的實際字型家族名稱字串。此值透過 method channel 的
@@ -22,12 +30,23 @@ extension AppFontFamilyName on AppFont {
         return 'SourceHanSansTC';
       case AppFont.sourceHanSerif:
         return 'SourceHanSerifTC';
-      case AppFont.guanKiapTsingKhai:
-        return 'GuanKiapTsingKhai';
-      case AppFont.taiwanPearl:
-        return 'TaiwanPearl';
-      case AppFont.genRyuMinTW:
-        return 'GenRyuMinTW';
+      // [字型停用] case AppFont.guanKiapTsingKhai:
+      // [字型停用]   return 'GuanKiapTsingKhai';
+      // [字型停用] case AppFont.taiwanPearl:
+      // [字型停用]   return 'TaiwanPearl';
+      // [字型停用] case AppFont.genRyuMinTW:
+      // [字型停用]   return 'GenRyuMinTW';
+    }
+  }
+
+  /// 依目前介面語系顯示的字型名稱（epic-48：原本字型管理畫面與閱讀設定
+  /// 下拉選單各自硬寫中文名稱，英文介面下仍顯示中文，收斂到這裡共用）。
+  String displayName(AppLocalizations l10n) {
+    switch (this) {
+      case AppFont.sourceHanSans:
+        return l10n.fontNameSourceHanSans;
+      case AppFont.sourceHanSerif:
+        return l10n.fontNameSourceHanSerif;
     }
   }
 }

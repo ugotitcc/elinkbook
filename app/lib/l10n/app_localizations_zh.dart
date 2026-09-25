@@ -29,7 +29,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLanguageZhTW => '正體中文';
 
   @override
-  String get settingsLanguageZhCN => '簡體中文';
+  String get settingsLanguageZhCN => '简体中文';
 
   @override
   String get settingsLanguageEn => 'English';
@@ -1438,6 +1438,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fontManagementTitle => '字型管理';
 
   @override
+  String get fontNameSourceHanSans => '思源黑體';
+
+  @override
+  String get fontNameSourceHanSerif => '思源宋體';
+
+  @override
   String get fontManagementUploadTooltip => '上傳字型';
 
   @override
@@ -2108,7 +2114,7 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   }
 
   @override
-  String get settingsLanguageZhTW => '正体中文';
+  String get settingsLanguageZhTW => '正體中文';
 
   @override
   String get settingsLanguageZhCN => '简体中文';
@@ -3520,6 +3526,12 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get fontManagementTitle => '字体管理';
 
   @override
+  String get fontNameSourceHanSans => '思源黑体';
+
+  @override
+  String get fontNameSourceHanSerif => '思源宋体';
+
+  @override
   String get fontManagementUploadTooltip => '上传字体';
 
   @override
@@ -4193,7 +4205,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsLanguageZhTW => '正體中文';
 
   @override
-  String get settingsLanguageZhCN => '簡體中文';
+  String get settingsLanguageZhCN => '简体中文';
 
   @override
   String get settingsLanguageEn => 'English';
@@ -5600,6 +5612,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get fontManagementTitle => '字型管理';
+
+  @override
+  String get fontNameSourceHanSans => '思源黑體';
+
+  @override
+  String get fontNameSourceHanSerif => '思源宋體';
 
   @override
   String get fontManagementUploadTooltip => '上傳字型';

@@ -38,12 +38,12 @@ String _fontFileName(AppFont font) {
       return 'SourceHanSansTC-VF.ttf';
     case AppFont.sourceHanSerif:
       return 'SourceHanSerifTC-VF.ttf';
-    case AppFont.guanKiapTsingKhai:
-      return 'GuanKiapTsingKhai.ttf';
-    case AppFont.taiwanPearl:
-      return 'TaiwanPearl-Regular.ttf';
-    case AppFont.genRyuMinTW:
-      return 'GenRyuMinTW-Regular.ttf';
+    // [字型停用] case AppFont.guanKiapTsingKhai:
+    // [字型停用]   return 'GuanKiapTsingKhai.ttf';
+    // [字型停用] case AppFont.taiwanPearl:
+    // [字型停用]   return 'TaiwanPearl-Regular.ttf';
+    // [字型停用] case AppFont.genRyuMinTW:
+    // [字型停用]   return 'GenRyuMinTW-Regular.ttf';
   }
 }
 

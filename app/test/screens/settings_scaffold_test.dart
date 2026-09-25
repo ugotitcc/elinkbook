@@ -1001,7 +1001,8 @@ void main() {
 
       expect(find.byKey(const Key('settings_language_button')), findsOneWidget);
       expect(find.text('語言'), findsOneWidget);
-      expect(find.text('簡體中文'), findsOneWidget);
+      // epic-48：語言名稱一律以該語言本身的寫法顯示（endonym），不隨介面語系翻譯。
+      expect(find.text('简体中文'), findsOneWidget);
     });
 
     testWidgets(
@@ -1016,6 +1017,34 @@ void main() {
       );
 
       expect(find.text('跟隨系統（English）'), findsOneWidget);
+    });
+
+    testWidgets('英文介面下語言選項仍顯示「正體中文」「简体中文」「English」（epic-48）',
+        (tester) async {
+      await pumpLocalizedWidget(
+        tester,
+        SettingsScaffold(
+          prefsManager: FakeReaderPrefsManager(),
+          currentLocaleOverride: AppLocale.zhTW,
+        ),
+        locale: const Locale('en'),
+      );
+
+      // 設定頁「Language」列的副標題
+      expect(find.text('正體中文'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('settings_language_button')));
+      await tester.pumpAndSettle();
+
+      Finder optionText(String key, String text) => find.descendant(
+            of: find.byKey(Key(key)),
+            matching: find.text(text),
+          );
+      expect(optionText('settings_language_option_zh_tw', '正體中文'), findsOneWidget);
+      expect(optionText('settings_language_option_zh_cn', '简体中文'), findsOneWidget);
+      expect(optionText('settings_language_option_en', 'English'), findsOneWidget);
+      expect(find.text('Traditional Chinese'), findsNothing);
+      expect(find.text('Simplified Chinese'), findsNothing);
     });
 
     testWidgets('點擊「語言」開啟選擇器，4 個選項存在，目前選中項目正確反映 currentLocaleOverride',

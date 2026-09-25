@@ -130,16 +130,16 @@ abstract class AppLocalizations {
   /// **'跟隨系統（{language}）'**
   String settingsLanguageFollowSystemSubtitle(String language);
 
-  /// 語言選項：正體中文
+  /// 語言選項：正體中文（語言本身的固有名稱，各語系一律相同，不翻譯）
   ///
   /// In zh_TW, this message translates to:
   /// **'正體中文'**
   String get settingsLanguageZhTW;
 
-  /// 語言選項：簡體中文
+  /// 語言選項：簡體中文（語言本身的固有名稱，各語系一律寫成「简体中文」，不翻譯）
   ///
   /// In zh_TW, this message translates to:
-  /// **'簡體中文'**
+  /// **'简体中文'**
   String get settingsLanguageZhCN;
 
   /// 語言選項：英文（語言本身的固有名稱，不翻譯）
@@ -2656,6 +2656,18 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'字型管理'**
   String get fontManagementTitle;
+
+  /// 內建字型名稱：思源黑體（字型管理清單與閱讀設定的字型下拉選單）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'思源黑體'**
+  String get fontNameSourceHanSans;
+
+  /// 內建字型名稱：思源宋體（字型管理清單與閱讀設定的字型下拉選單）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'思源宋體'**
+  String get fontNameSourceHanSerif;
 
   /// AppBar「上傳字型」按鈕的無障礙提示文字
   ///

@@ -672,7 +672,16 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             child: DropdownButton<String?>(
               key: const Key('reader_settings_font_family'),
               isExpanded: true,
-              value: _fontFamily,
+              // epic-48：偏好設定可能存著已停用的內建字型（例如原俠正楷），
+              // 該值不在選項中時 DropdownButton 會 assert 失敗，改顯示為
+              // 「使用書本字型」。只影響顯示，不改寫偏好設定，字型恢復後
+              // 舊設定自然生效。
+              value: {
+                ...AppFont.values.map((f) => f.familyName),
+                ...widget.customFonts.map((f) => f.familyName),
+              }.contains(_fontFamily)
+                  ? _fontFamily
+                  : null,
               items: [
                 DropdownMenuItem<String?>(
                   value: null,
@@ -681,7 +690,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                 ...AppFont.values.map(
                   (font) => DropdownMenuItem<String?>(
                     value: font.familyName,
-                    child: Text(_fontDisplayName(font),
+                    child: Text(font.displayName(l10n),
                         overflow: TextOverflow.ellipsis),
                   ),
                 ),
@@ -702,21 +711,6 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ],
       ),
     );
-  }
-
-  String _fontDisplayName(AppFont font) {
-    switch (font) {
-      case AppFont.sourceHanSans:
-        return '思源黑體';
-      case AppFont.sourceHanSerif:
-        return '思源宋體';
-      case AppFont.guanKiapTsingKhai:
-        return '原俠正楷';
-      case AppFont.taiwanPearl:
-        return '台灣圓體';
-      case AppFont.genRyuMinTW:
-        return '源流明體';
-    }
   }
 
   Widget _buildOverrideBadge(String text, {Key? key}) {
