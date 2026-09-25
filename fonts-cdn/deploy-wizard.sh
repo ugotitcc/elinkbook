@@ -28,6 +28,7 @@ confirm "R2 已啟用？"
 
 step 3 "登入 wrangler"
 echo "接下來會開啟瀏覽器進行 Cloudflare 授權，不需要建立 API Token。"
+echo "若詢問 Need to install the following packages: wrangler@4 Ok to proceed?，輸入 y。"
 npx wrangler@4 login
 npx wrangler@4 whoami
 
@@ -39,6 +40,8 @@ else
 fi
 
 step 5 "部署 Worker"
+echo "第一次部署時，wrangler 若詢問是否註冊 workers.dev 子網域，請選擇同意並取一個名稱，"
+echo "這個名稱會成為字型下載網址的一部分（https://elinkbook-fonts.<子網域>.workers.dev），之後不容易更改。"
 npx wrangler@4 deploy
 echo
 echo "請從上方輸出找到 https://elinkbook-fonts.<你的子網域>.workers.dev 這個網址。"
@@ -47,8 +50,9 @@ read -r -p "貼上 Worker 網址：" WORKER_URL
 WORKER_URL="${WORKER_URL%/}"
 
 step 6 "上傳字型（先 dry-run 檢查，再正式上傳）"
+echo "若上傳到一半失敗，排除問題後重跑本 wizard 即可：已上傳且內容一致的字型會自動略過。"
 node scripts/upload.mjs --bucket "$BUCKET" --base-url "$WORKER_URL" --dry-run
-confirm "以上 5 條上傳指令正確？"
+confirm "以上上傳指令正確？（第一次部署應為 5 條）"
 node scripts/upload.mjs --bucket "$BUCKET" --base-url "$WORKER_URL"
 
 step 7 "線上驗證"

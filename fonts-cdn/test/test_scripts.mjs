@@ -65,16 +65,56 @@ function run(script, args) {
   assert.equal(result.code, 0, result.stderr)
   assert.match(result.stdout, /r2 object put test-bucket\/v1\/A\.ttf/)
   assert.match(result.stdout, /r2 object put test-bucket\/v1\/B\.ttf/)
+  // 上傳指令用相對於清單目錄的路徑，repo 放在含空白的目錄下也不會被拆成兩個參數
+  assert.match(result.stdout, /--file fonts\/A\.ttf /)
 }
 
-// upload：任一 key 已存在 → 結束碼 1，且不列出任何上傳指令（整批中止，不是略過）
+// upload：遠端已有內容與清單一致的 A（上次上傳到一半中斷）→ 略過 A，只列出 B，結束碼 0
 {
   const manifest = await makeFixture()
-  const { server, baseUrl } = await startServer({ 'v1/B.ttf': FONT_B })
+  const { server, baseUrl } = await startServer({ 'v1/A.ttf': FONT_A })
+  const result = await run('upload.mjs', ['--bucket', 'test-bucket', '--base-url', baseUrl, '--manifest', manifest, '--dry-run'])
+  server.close()
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /v1\/A\.ttf 已發布且內容一致，略過/)
+  assert.doesNotMatch(result.stdout, /r2 object put test-bucket\/v1\/A\.ttf/)
+  assert.match(result.stdout, /r2 object put test-bucket\/v1\/B\.ttf/)
+}
+
+// upload：全部都已發布且內容一致 → 結束碼 0，不列出任何上傳指令
+{
+  const manifest = await makeFixture()
+  const { server, baseUrl } = await startServer({ 'v1/A.ttf': FONT_A, 'v1/B.ttf': FONT_B })
+  const result = await run('upload.mjs', ['--bucket', 'test-bucket', '--base-url', baseUrl, '--manifest', manifest, '--dry-run'])
+  server.close()
+  assert.equal(result.code, 0, result.stderr)
+  assert.doesNotMatch(result.stdout, /r2 object put/)
+  assert.match(result.stdout, /全部字型都已發布/)
+}
+
+// upload：遠端已有同一個 key 但內容不同 → 結束碼 1，且不列出任何上傳指令（整批中止，不覆蓋）
+{
+  const manifest = await makeFixture()
+  const different = Buffer.from(FONT_B)
+  different[0] ^= 0xff
+  const { server, baseUrl } = await startServer({ 'v1/B.ttf': different })
   const result = await run('upload.mjs', ['--bucket', 'test-bucket', '--base-url', baseUrl, '--manifest', manifest, '--dry-run'])
   server.close()
   assert.equal(result.code, 1)
-  assert.match(result.stderr, /v1\/B\.ttf 已存在/)
+  assert.match(result.stderr, /v1\/B\.ttf 已存在但內容與清單不符/)
+  assert.doesNotMatch(result.stdout, /r2 object put/)
+}
+
+// upload：本機字型檔不存在 → 結束碼 1、列出友善訊息，不是未捕獲例外的堆疊
+{
+  const manifest = await makeFixture({ b: { file: 'fonts/missing.ttf' } })
+  const { server, baseUrl } = await startServer({})
+  const result = await run('upload.mjs', ['--bucket', 'test-bucket', '--base-url', baseUrl, '--manifest', manifest, '--dry-run'])
+  server.close()
+  assert.equal(result.code, 1)
+  assert.match(result.stderr, /b：無法讀取本機檔案 fonts\/missing\.ttf/)
+  assert.match(result.stderr, /前置檢查失敗/)
+  assert.doesNotMatch(result.stderr, /triggerUncaughtException/)
   assert.doesNotMatch(result.stdout, /r2 object put/)
 }
 

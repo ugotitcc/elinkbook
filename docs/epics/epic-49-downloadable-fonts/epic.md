@@ -72,3 +72,14 @@
 - 新增 `fonts-cdn/`：5 款字型原檔（`SourceHanSansTC-VF.ttf`、`SourceHanSerifTC-VF.ttf`、`GuanKiapTsingKhai.ttf`、`TaiwanPearl-Regular.ttf`、`GenRyuMinTW-Regular.ttf`，大小與 SHA-256 皆與 `spec.md` 一致）與 5 個 SIL OFL 授權檔、字型清單 `fonts.json`（單一事實來源）、Worker（`GET`／`HEAD /v<N>/<檔名>.ttf`，`HEAD` 只用 `bucket.head()`）、上傳腳本（含 `--dry-run` 與整批中止的前置檢查）、線上驗證腳本、部署 wizard（`deploy-wizard.sh`）、`README.md`。
 - 三支 Node 測試全數通過：`check_manifest.mjs`（5/5 一致）、`test_worker.mjs`（GET／HEAD 200 與標頭、404、405、路徑穿越 404、HEAD 不呼叫 `get()`）、`test_scripts.mjs`（dry-run 列指令、key 已存在整批中止、雜湊不符中止、連線失敗友善訊息、線上驗證含竄改偵測）。
 - `app/assets/fonts/` 版控中已無字型檔；`pubspec.yaml` 註解已更新；`foliate_native_bridge_test.dart`（14/14）與 `app_font_test.dart`（1/1）仍通過。
+
+**2026-09-25 Issue 1 程式審查修訂**（`reviews/review-issue-1.md`：修正後可合併，0 Critical／1 Important／7 Minor）
+
+- I-1（計畫層級缺口，人類裁定採方案 A）：上傳到一半失敗後，已上傳的 key 會讓每次重跑都卡在前置檢查。`upload.mjs` 改成：key 已存在時下載比對大小與 SHA-256，一致就略過，不一致仍然整批中止（永不覆蓋的原則不變）。新增 3 個測試（已存在且內容一致→略過、全部已發布→不列出指令、已存在但內容不同→中止），並做過變異檢查。wizard 與 README 補上「中斷後直接重跑」的說明；計畫審查重點 #5 加註修訂。串流雜湊抽成 `lib.mjs` 的 `digestOfResponse()`，與 `verify_remote.mjs` 共用。
+- M-1 採納：上傳指令改用相對於清單目錄的 `--file` 路徑（`cwd` 設為清單目錄），Windows 上改傳整行指令字串，避免含空白路徑被拆開，也不再出現 DEP0190 警告。
+- M-2 採納：本機字型檔讀不到時列入前置檢查問題清單，不再印出例外堆疊；新增測試。
+- M-3 採納（只改文件）：README 註明 `--base-url` 必須是正在服務該 bucket 的 Worker 網址。
+- M-4 列入 Issue 2 驗收：用 `curl -I` 確認 HEAD 回應帶有 `content-length`。
+- M-5 採納：wizard 補上 `npx` 詢問是否安裝、以及 wrangler 詢問是否註冊 `workers.dev` 子網域時的回答說明。
+- M-6、M-7 不修改：M-6 在正常情況不會誤判；M-7 的授權檔照上游原檔保留，著作權資訊也已經寫在字型檔本身。
+- 實作時另外發現：在 Windows 上，fetch 的連線還在關閉時呼叫 `process.exit()` 會觸發 libuv 斷言而崩潰（新測試「全部已發布」重現了這個狀況）。`upload.mjs`、`verify_remote.mjs` 改為設定 `process.exitCode`，讓程式自然結束。

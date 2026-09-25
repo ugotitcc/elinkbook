@@ -49,7 +49,7 @@ Issue 3 ─────────────────────┘
 
 **What to do：** 執行 Issue 1 的部署 wizard：建立 R2 bucket、部署 Worker、上傳 5 個字型檔、執行線上驗證腳本。
 
-**驗收標準：** 線上驗證腳本對 5 個檔案全部通過；把 Worker 的 `workers.dev` 網址記錄到 `epic.md`，供 Issue 4 填入 App 常數。
+**驗收標準：** 線上驗證腳本對 5 個檔案全部通過；`curl -I <Worker 網址>/v1/GuanKiapTsingKhai.ttf` 的回應帶有 `content-length: 14675776`（確認 Workers 執行環境下 HEAD 仍保留 `Content-Length`，本機單元測試無法驗證這點，Issue 1 程式審查 M-4）；把 Worker 的 `workers.dev` 網址記錄到 `epic.md`，供 Issue 4 填入 App 常數。
 
 **Blocked by：** Issue 1。
 

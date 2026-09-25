@@ -25,6 +25,17 @@ export function sha256OfFile(filePath) {
   })
 }
 
+// 以串流計算 HTTP 回應 body 的大小與 SHA-256（不把 57MB 整個讀進記憶體）。
+export async function digestOfResponse(response) {
+  const hash = createHash('sha256')
+  let size = 0
+  for await (const chunk of response.body) {
+    hash.update(chunk)
+    size += chunk.length
+  }
+  return { size, sha256: hash.digest('hex') }
+}
+
 // 讀取 --name value 形式的命令列參數；找不到時回傳 fallback。
 export function argValue(args, name, fallback = undefined) {
   const index = args.indexOf(name)
