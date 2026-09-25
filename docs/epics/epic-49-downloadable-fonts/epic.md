@@ -118,3 +118,15 @@
 - 驗證：異動的 4 個測試檔共 104 個測試通過；`flutter analyze` 乾淨；l10n 檢查通過；完整 `flutter test` 2857 個測試全數通過。
 
 **2026-09-25 Issue 3 合併**：PR #278（`epic-49/issue-3-downloadable-font-store` → `main`）已合併。下一步：Issue 4（閱讀器套用已下載字型、`kFontDownloadBaseUrl` 改為正式 Worker 網址、閱讀設定下拉選單只列已下載字型、字型目錄一致性測試），需先撰寫 `plans/plan-issue-4.md`；之後是 Issue 5 真機驗證。
+
+**2026-09-25 撰寫 Issue 4 實作計畫**（`/writing-plans`）：`plans/plan-issue-4.md`，共 6 個 Task：正式網址與字型目錄一致性測試、`buildFontFaceCss` 只替已下載字型輸出、`FoliateReaderView` 註冊 `/downloaded-fonts/` 處理器、閱讀設定只列出已下載字型與提示、`ReaderScreen` 延後建構、整體驗證。計畫中刻意與 issues.md 不同的三點：
+
+- 刪除 `_fontFileName()`，CSS 網址改用字型目錄的 `publishPath`，確保 CSS 網址和 store 存檔路徑一致；新增共用常數 `kDownloadedFontsPathPrefix`。
+- `ReaderScreen` 內部搜尋畫面用的 `LibraryReaderFeatureRepositories` 不傳 store：從閱讀器進入搜尋時只會 `pop` 回跳轉目標，不會建構新的閱讀器。
+- `CLAUDE.md` 沒有描述舊字型服務方式的段落（已用 grep 確認），不需要修改。
+
+**2026-09-25 Issue 4 計畫審查修訂**（`reviews/review-plan-issue-4.md`：Approved with Recommendations，0 Critical／2 Important／1 Minor）
+
+- I-1 不採納：審查建議讀取 `fonts-cdn/fonts.json` 時，加上「以 repo 根目錄為工作目錄」的回退路徑。`flutter test` 的工作目錄固定是 package 根目錄（`app/`），從 IDE 點選執行也一樣。專案裡已經有 9 個測試檔用 `File('test/fixtures/…')` 讀取檔案，依賴的也是同一個前提。只在這一個測試加回退路徑，和其他測試不一致，也沒有實際效益。
+- I-2 採納：Task 5 在 `_openBookSearch` 的 `LibraryReaderFeatureRepositories` 補上 `downloadableFontStore`，和同一處其他依賴保持一致。撰寫計畫時列為「刻意不同」的「搜尋畫面不傳 store」因此取消，刻意不同的地方剩兩點。
+- M-1 採納：Task 6 的殘留檢查改用 `git grep`，Git Bash 與 PowerShell 都能直接執行。
