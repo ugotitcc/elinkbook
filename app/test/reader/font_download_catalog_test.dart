@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/font_download_catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,5 +33,30 @@ void main() {
   test('基底網址以斜線結尾，讓 Uri.resolve 能正確接上發布路徑', () {
     expect(kFontDownloadBaseUrl, endsWith('/'));
     expect(Uri.parse(kFontDownloadBaseUrl).resolve('v1/A.ttf').path, '/v1/A.ttf');
+  });
+
+  test('基底網址是正式的下載服務（https，不是開發用的 .invalid 保留網域）（epic-49 Issue 4）', () {
+    final uri = Uri.parse(kFontDownloadBaseUrl);
+    expect(uri.scheme, 'https');
+    expect(uri.host, isNot(endsWith('.invalid')));
+    expect(uri.host, 'elinkbook-fonts.huthief.workers.dev');
+  });
+
+  test('字型目錄與 fonts-cdn/fonts.json 的路徑、大小、SHA-256 完全一致（工單審查 I-1）', () {
+    // flutter test 的工作目錄是 app/，字型清單在 repo 根目錄的 fonts-cdn/
+    final manifest = jsonDecode(File('../fonts-cdn/fonts.json').readAsStringSync())
+        as Map<String, dynamic>;
+    final entries = {
+      for (final entry in (manifest['fonts'] as List).cast<Map<String, dynamic>>())
+        entry['id'] as String: entry,
+    };
+    for (final font in AppFont.values) {
+      final entry = entries[font.name];
+      expect(entry, isNotNull, reason: '${font.name} 不在 fonts-cdn/fonts.json 中');
+      final spec = fontDownloadSpecOf(font);
+      expect(spec.publishPath, entry!['path'], reason: font.name);
+      expect(spec.sizeBytes, entry['bytes'], reason: font.name);
+      expect(spec.sha256, entry['sha256'], reason: font.name);
+    }
   });
 }
