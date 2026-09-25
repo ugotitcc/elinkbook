@@ -92,3 +92,5 @@
 - 線上驗證：`verify_remote.mjs` 回報 `PASS`，5 個字型線上內容與清單一致。
 - 工單審查 M-4：`curl -I https://elinkbook-fonts.huthief.workers.dev/v1/GuanKiapTsingKhai.ttf` 回應 `200 OK`，帶有 `Content-Type: font/ttf` 與 `Content-Length: 14675776`。
 - 上傳時發現：在 Windows 上，wrangler 上傳第 3 個字型時偶發崩潰（結束碼 `3221226505`，即 `0xC0000409`），檔案沒有寫入 R2。同一條指令重跑就成功，之後重跑 wizard 時已上傳的字型自動略過，符合 Issue 1 的「中斷後可重跑補傳」設計。
+
+**2026-09-25 Issue 2 合併**：PR #277（`epic-49/issue-2-deploy` → `main`）已合併。另外補一個 commit 到 `main`，把 wrangler 本機暫存資料夾 `fonts-cdn/.wrangler/` 加進 `.gitignore`。下一步：Issue 3（App 端下載管線與字型管理畫面）；Issue 4 等 Issue 3 完成後才能開始。
