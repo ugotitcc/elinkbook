@@ -82,7 +82,7 @@ fonts-cdn/
   ```
 - Produces：`scripts/lib.mjs` 匯出 `readManifest(manifestPath) → { fonts: [...] , baseDir }` 與 `sha256OfFile(filePath) → Promise<string>`（小寫十六進位）。
 
-- [ ] **Step 1：還原與移動字型原檔**
+- [x] **Step 1：還原與移動字型原檔**
 
 在 repo 根目錄執行（Git Bash）。字型檔由 `git restore` 直接寫到磁碟，**不要**改成 `git show … > 檔案`：在 PowerShell 下 `>` 可能重新編碼二進位輸出，把字型檔弄壞。`git restore --worktree` 只寫工作目錄、不動 index：
 
@@ -108,7 +108,7 @@ ls -l fonts-cdn/fonts
 *.ttf binary
 ```
 
-- [ ] **Step 2：取得授權檔**
+- [x] **Step 2：取得授權檔**
 
 四款字型的上游 repo 有附授權檔，直接下載 raw 檔案（以下網址已於 2026-09-25 逐一確認可下載，且都含「Open Font License」字樣）。不要改用 GitHub `/license` API：源流明體、台灣圓體的授權檔名是 `SIL_Open_Font_License_1.1.txt`，GitHub 認不出來，API 會回 404。
 
@@ -146,7 +146,7 @@ grep -l "Open Font License" *.txt
 
 預期：`grep` 列出 5 個檔案。**若任何一個 `curl` 失敗（404 等）**，停下來回報人類，附上字型名稱與失敗的網址。不要自行猜測其他 repo 或分支，也不要自己撰寫授權條款。
 
-- [ ] **Step 3：建立 `package.json` 與 `fonts.json`**
+- [x] **Step 3：建立 `package.json` 與 `fonts.json`**
 
 `fonts-cdn/package.json`：
 
@@ -172,7 +172,7 @@ grep -l "Open Font License" *.txt
 }
 ```
 
-- [ ] **Step 4：寫共用函式 `scripts/lib.mjs`**
+- [x] **Step 4：寫共用函式 `scripts/lib.mjs`**
 
 ```js
 // epic-49 Issue 1：fonts-cdn 腳本共用函式。只用 Node 內建模組。
@@ -209,7 +209,7 @@ export function argValue(args, name, fallback = undefined) {
 }
 ```
 
-- [ ] **Step 5：寫自我檢查腳本 `scripts/check_manifest.mjs`**
+- [x] **Step 5：寫自我檢查腳本 `scripts/check_manifest.mjs`**
 
 ```js
 // epic-49 Issue 1：比對 fonts/ 內實際檔案的大小與 SHA-256 是否和 fonts.json 一致。
@@ -247,17 +247,17 @@ if (failed > 0) {
 console.log(`PASS：${fonts.length} 個字型與清單一致`)
 ```
 
-- [ ] **Step 6：執行自我檢查**
+- [x] **Step 6：執行自我檢查**
 
 Run：`node fonts-cdn/scripts/check_manifest.mjs`
 Expected：5 行 `OK`，最後一行 `PASS：5 個字型與清單一致`，結束碼 0。
 
-- [ ] **Step 7：確認自我檢查能抓到錯誤**
+- [x] **Step 7：確認自我檢查能抓到錯誤**
 
 暫時把 `fonts.json` 中 `genRyuMinTW` 的 `sha256` 最後一個字元改掉，執行 Step 6 的指令。
 Expected：`FAIL genRyuMinTW…`，結束碼 1。改回原值並再執行一次，確認回到 PASS。
 
-- [ ] **Step 8：更新 `app/pubspec.yaml` 的字型註解**
+- [x] **Step 8：更新 `app/pubspec.yaml` 的字型註解**
 
 把字型區塊中這兩行：
 
@@ -273,12 +273,12 @@ Expected：`FAIL genRyuMinTW…`，結束碼 1。改回原值並再執行一次�
     # 5 款字型原檔都放在 repo 根目錄的 fonts-cdn/fonts/（epic-49），不再放在 assets/fonts/。
 ```
 
-- [ ] **Step 9：確認 App 端測試不受影響**
+- [x] **Step 9：確認 App 端測試不受影響**
 
 Run（在 `app/`）：`flutter test test/reader/foliate_native_bridge_test.dart`
 Expected：全數通過（該測試本來就斷言 5 款字型 asset 都讀不到）。
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add fonts-cdn/.gitattributes fonts-cdn/package.json fonts-cdn/fonts.json fonts-cdn/scripts/lib.mjs fonts-cdn/scripts/check_manifest.mjs fonts-cdn/fonts app/pubspec.yaml
@@ -297,7 +297,7 @@ git commit -m "feat(fonts-cdn): 新增字型原檔、授權檔與字型清單（
 - Consumes：R2 binding `env.FONTS`，只用到 `get(key)` → `R2ObjectBody | null`（有 `size`、`httpEtag`、`body`）與 `head(key)` → `R2Object | null`（有 `size`、`httpEtag`）。
 - Produces：`worker/index.js` 預設匯出 `{ fetch(request, env) }`。
 
-- [ ] **Step 1：寫失敗的測試 `test/test_worker.mjs`**
+- [x] **Step 1：寫失敗的測試 `test/test_worker.mjs`**
 
 ```js
 // epic-49 Issue 1：Worker 的純 Node 單元測試。以假的 R2 binding 呼叫 fetch。
@@ -393,12 +393,12 @@ for (const method of ['POST', 'PUT', 'DELETE', 'PATCH']) {
 console.log('PASS：test_worker.mjs 全數通過')
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`node fonts-cdn/test/test_worker.mjs`
 Expected：失敗，錯誤為找不到模組 `../worker/index.js`。
 
-- [ ] **Step 3：寫 Worker `worker/index.js`**
+- [x] **Step 3：寫 Worker `worker/index.js`**
 
 ```js
 // epic-49 Issue 1：elinkBook 可下載字型服務（見 docs/adr/0035-downloadable-fonts-via-r2-worker.md）。
@@ -442,12 +442,12 @@ export default {
 
 注意：`new URL()` 會把 `/v1/../A.ttf` 正規化成 `/A.ttf`、把 `%2e%2e` 也正規化，所以這兩種都會因為不符合 `FONT_PATH` 而回 404；`%2F` 因為含 `%` 字元而不符合。
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run：`node fonts-cdn/test/test_worker.mjs`
 Expected：`PASS：test_worker.mjs 全數通過`，結束碼 0。
 
-- [ ] **Step 5：寫 `wrangler.toml`**
+- [x] **Step 5：寫 `wrangler.toml`**
 
 ```toml
 # epic-49 Issue 1：elinkBook 可下載字型服務的 Worker 設定。
@@ -462,7 +462,7 @@ binding = "FONTS"
 bucket_name = "elinkbook-fonts"
 ```
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add fonts-cdn/worker/index.js fonts-cdn/wrangler.toml fonts-cdn/test/test_worker.mjs
@@ -482,7 +482,7 @@ git commit -m "feat(fonts-cdn): 新增字型下載 Worker 與單元測試（epic
   - `node fonts-cdn/scripts/upload.mjs --bucket <bucket> --base-url <Worker 網址> [--manifest <路徑>] [--dry-run]`：結束碼 0 = 全部上傳（或 dry-run 列出指令）；1 = 前置檢查失敗、未上傳任何檔案。
   - `node fonts-cdn/scripts/verify_remote.mjs --base-url <Worker 網址> [--manifest <路徑>]`：結束碼 0 = 全部一致；1 = 有不一致。
 
-- [ ] **Step 1：寫失敗的測試 `test/test_scripts.mjs`**
+- [x] **Step 1：寫失敗的測試 `test/test_scripts.mjs`**
 
 測試用本機 HTTP 伺服器模擬 Worker，用極小的假字型與暫存清單，不需要網路與真實字型。
 
@@ -625,12 +625,12 @@ function run(script, args) {
 console.log('PASS：test_scripts.mjs 全數通過')
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`node fonts-cdn/test/test_scripts.mjs`
 Expected：第一個斷言失敗（結束碼不是 0，因為 `upload.mjs` 不存在）。
 
-- [ ] **Step 3：寫 `scripts/upload.mjs`**
+- [x] **Step 3：寫 `scripts/upload.mjs`**
 
 ```js
 // epic-49 Issue 1：把字型上傳到 R2。已發布的 key 永遠不覆蓋（見 ADR 0035）。
@@ -693,7 +693,7 @@ for (const font of fonts) {
 console.log(dryRun ? 'dry-run：以上為將執行的上傳指令' : `完成：已上傳 ${fonts.length} 個字型`)
 ```
 
-- [ ] **Step 4：寫 `scripts/verify_remote.mjs`**
+- [x] **Step 4：寫 `scripts/verify_remote.mjs`**
 
 ```js
 // epic-49 Issue 1：逐一下載線上字型，比對大小與 SHA-256 是否和清單一致。
@@ -747,12 +747,12 @@ if (failed > 0) {
 console.log(`PASS：${fonts.length} 個字型線上內容與清單一致`)
 ```
 
-- [ ] **Step 5：執行測試確認通過**
+- [x] **Step 5：執行測試確認通過**
 
 Run：`node fonts-cdn/test/test_scripts.mjs`
 Expected：`PASS：test_scripts.mjs 全數通過`，結束碼 0。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add fonts-cdn/scripts/upload.mjs fonts-cdn/scripts/verify_remote.mjs fonts-cdn/test/test_scripts.mjs
@@ -770,7 +770,7 @@ git commit -m "feat(fonts-cdn): 新增上傳與線上驗證腳本（epic-49 Issu
 - Consumes：Task 2 的 `wrangler.toml`（Worker 與 bucket 名稱）、Task 3 的 `upload.mjs`／`verify_remote.mjs`。
 - Produces：`bash fonts-cdn/deploy-wizard.sh`，最後印出 Worker 網址，供人類記錄到 `epic.md`（Issue 2）。
 
-- [ ] **Step 1：寫 `deploy-wizard.sh`**
+- [x] **Step 1：寫 `deploy-wizard.sh`**
 
 ```bash
 #!/usr/bin/env bash
@@ -836,12 +836,12 @@ echo
 echo "  $WORKER_URL"
 ```
 
-- [ ] **Step 2：語法檢查**
+- [x] **Step 2：語法檢查**
 
 Run：`bash -n fonts-cdn/deploy-wizard.sh`
 Expected：沒有任何輸出，結束碼 0。
 
-- [ ] **Step 3：寫 `README.md`**
+- [x] **Step 3：寫 `README.md`**
 
 ````markdown
 # `fonts-cdn/`：elinkBook 可下載字型服務
@@ -880,7 +880,7 @@ bash fonts-cdn/deploy-wizard.sh                               # 第一次部署
 R2 免費額度：儲存 10GB、每月 1,000 萬次讀取、下載流量不收費；Worker 免費額度：每天 10 萬次請求。目前 5 款字型合計約 140MB，遠低於上限。啟用 R2 必須綁定付款方式。
 ````
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add fonts-cdn/deploy-wizard.sh fonts-cdn/README.md
@@ -894,7 +894,7 @@ git commit -m "docs(fonts-cdn): 新增部署 wizard 與 README（epic-49 Issue 1
 **Files:**
 - Modify: `docs/epics/epic-49-downloadable-fonts/issues.md`（Issue 1 的 `Status`）、`docs/epics/epic-49-downloadable-fonts/epic.md`、`docs/epics.md`（第 50 列備註）
 
-- [ ] **Step 1：跑完 Issue 1 所有檢查**
+- [x] **Step 1：跑完 Issue 1 所有檢查**
 
 ```bash
 node fonts-cdn/scripts/check_manifest.mjs
@@ -907,18 +907,18 @@ git ls-files --eol fonts-cdn/deploy-wizard.sh   # 應顯示 i/lf w/lf
 
 Expected：三支 Node 腳本都印出 `PASS`；`git ls-files` 那行為 `0`；wizard 在 index 與工作目錄都是 LF。
 
-- [ ] **Step 2：確認 App 端涉及字型 asset 的測試仍通過**
+- [x] **Step 2：確認 App 端涉及字型 asset 的測試仍通過**
 
 Run（在 `app/`）：`flutter test test/reader/foliate_native_bridge_test.dart test/reader/app_font_test.dart`
 Expected：全數通過。
 
-- [ ] **Step 3：更新進度**
+- [x] **Step 3：更新進度**
 
 - `issues.md` Issue 1 的 `**Status:**` 改為 `completed`。
 - `epic.md` 追加一段「Issue 1 完成」記錄：列出新增的目錄與三支測試的結果。
 - `docs/epics.md` 第 50 列備註改為「Issue 1 已完成」。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add docs/epics.md docs/epics/epic-49-downloadable-fonts/issues.md docs/epics/epic-49-downloadable-fonts/epic.md

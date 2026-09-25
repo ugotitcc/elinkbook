@@ -14,7 +14,7 @@ Issue 3 ─────────────────────┘
 
 ## Issue 1：字型下載服務程式（`fonts-cdn/`：Worker、字型清單、上傳與驗證腳本、部署 wizard）
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** 無，可立即開始。
 

@@ -66,3 +66,9 @@
 - I-1 採納：`prepare()` 刪除單一 `.part` 失敗（`FileSystemException`）時略過，繼續清理其他暫存檔。留下的 `.part` 不影響「已下載」的判斷，下載開始前 `_preparePartFile()` 也會再刪一次。檔案被占用的情況在測試環境中無法穩定重現，所以不另外寫測試。
 - I-2 不需修改：計畫已經寫了。全域限制規定改完 ARB 要執行 `flutter gen-l10n`，並提交產生的檔案；Task 4 Step 3 就是 `flutter gen-l10n`，還會用 grep 確認新字串已經產生。Task 6 沒有改 ARB，不需要重新產生。
 - M-1 採納：`formatFontFileSize()` 的註解補上「以 1024 × 1024 為 1 MB（實際是 MiB）」。
+
+**2026-09-25 Issue 1 完成**（`plans/plan-issue-1.md`，5 個 Task 全數執行完畢）：
+
+- 新增 `fonts-cdn/`：5 款字型原檔（`SourceHanSansTC-VF.ttf`、`SourceHanSerifTC-VF.ttf`、`GuanKiapTsingKhai.ttf`、`TaiwanPearl-Regular.ttf`、`GenRyuMinTW-Regular.ttf`，大小與 SHA-256 皆與 `spec.md` 一致）與 5 個 SIL OFL 授權檔、字型清單 `fonts.json`（單一事實來源）、Worker（`GET`／`HEAD /v<N>/<檔名>.ttf`，`HEAD` 只用 `bucket.head()`）、上傳腳本（含 `--dry-run` 與整批中止的前置檢查）、線上驗證腳本、部署 wizard（`deploy-wizard.sh`）、`README.md`。
+- 三支 Node 測試全數通過：`check_manifest.mjs`（5/5 一致）、`test_worker.mjs`（GET／HEAD 200 與標頭、404、405、路徑穿越 404、HEAD 不呼叫 `get()`）、`test_scripts.mjs`（dry-run 列指令、key 已存在整批中止、雜湊不符中止、連線失敗友善訊息、線上驗證含竄改偵測）。
+- `app/assets/fonts/` 版控中已無字型檔；`pubspec.yaml` 註解已更新；`foliate_native_bridge_test.dart`（14/14）與 `app_font_test.dart`（1/1）仍通過。
