@@ -2765,6 +2765,12 @@ abstract class AppLocalizations {
   /// **'刪除後可以隨時重新下載。使用這款字型的書會暫時改用書本或系統字型，重新下載後自動恢復。'**
   String get fontManagementDownloadableDeleteConfirmMessage;
 
+  /// 字型管理：系統 WebView 太舊（Chromium 106 以前拒絕超過 30MB 的網頁字型），有內建字型被隱藏時顯示在「內建字型」標題下（epic-49 Issue 7）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'這台裝置的系統 WebView 版本太舊，部分內建字型無法使用，已從清單隱藏。更新「Android System WebView」後即可下載。'**
+  String get fontManagementBuiltInUnsupportedHint;
+
   /// 字型下載失敗：網路連線失敗或中途斷線（epic-49）
   ///
   /// In zh_TW, this message translates to:

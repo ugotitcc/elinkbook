@@ -443,6 +443,7 @@
   "fontManagementCancelDownloadTooltip": "取消下载",
   "fontManagementRetryTooltip": "重试",
   "fontManagementDownloadableDeleteConfirmMessage": "删除后可以随时重新下载。使用这款字体的书会暂时改用书本或系统字体，重新下载后自动恢复。",
+  "fontManagementBuiltInUnsupportedHint": "这台设备的系统 WebView 版本太旧，部分内建字体无法使用，已从列表隐藏。更新「Android System WebView」后即可下载。",
   "fontDownloadErrorNetwork": "无法连接，请检查网络后重试",
   "fontDownloadErrorHttp": "服务器错误（{statusCode}），请稍后重试",
   "fontDownloadErrorIntegrity": "文件不完整或已损坏，请重试",

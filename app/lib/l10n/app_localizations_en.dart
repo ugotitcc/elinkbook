@@ -1554,6 +1554,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'You can download it again at any time. Books that use this font will use the book\'s font or the system font until it\'s downloaded again.';
 
   @override
+  String get fontManagementBuiltInUnsupportedHint =>
+      'This device\'s system WebView is too old for some built-in fonts, so they are hidden. Update Android System WebView to download them.';
+
+  @override
   String get fontDownloadErrorNetwork =>
       'Can\'t connect. Check your network and try again.';
 

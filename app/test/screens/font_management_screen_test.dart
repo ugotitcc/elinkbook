@@ -453,6 +453,44 @@ void main() {
       expect(subtitleOf(AppFont.sourceHanSans, '34.4 MB · 已下載'), findsOneWidget);
     });
 
+    testWidgets('WebView 載得動全部字型時，不顯示隱藏提示（Issue 7）', (tester) async {
+      await pumpScreen(tester, store: store);
+
+      expect(find.byKey(const Key('font_management_builtin_unsupported_hint')), findsNothing);
+    });
+
+    testWidgets('WebView 太舊、一款都載不動：不列出內建字型，顯示提示（Issue 7）', (tester) async {
+      store.supported = [];
+      await pumpScreen(tester, store: store);
+
+      expect(find.text('思源黑體'), findsNothing);
+      expect(find.text('思源宋體'), findsNothing);
+      expect(find.byKey(const Key('font_management_builtin_unsupported_hint')), findsOneWidget);
+      expect(
+        find.text('這台裝置的系統 WebView 版本太舊，部分內建字型無法使用，已從清單隱藏。更新「Android System WebView」後即可下載。'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('只有部分字型載不動：只列出載得動的，並顯示提示（Issue 7）', (tester) async {
+      store.supported = [AppFont.sourceHanSerif];
+      await pumpScreen(tester, store: store);
+
+      expect(find.text('思源黑體'), findsNothing);
+      expect(find.text('思源宋體'), findsOneWidget);
+      expect(find.byKey(const Key('font_management_builtin_unsupported_hint')), findsOneWidget);
+    });
+
+    testWidgets('英文介面：隱藏提示以英文顯示（Issue 7）', (tester) async {
+      store.supported = [];
+      await pumpScreen(tester, store: store, locale: const Locale('en'));
+
+      expect(
+        find.text("This device's system WebView is too old for some built-in fonts, so they are hidden. Update Android System WebView to download them."),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('英文介面：字型名稱與狀態以英文顯示', (tester) async {
       await pumpScreen(tester, store: store, locale: const Locale('en'));
 
