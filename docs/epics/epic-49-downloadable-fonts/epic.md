@@ -173,3 +173,5 @@
 - M-1 合併前修正：「自訂字型照原值傳遞」測試原本用空的自訂字型清單，`'KingHwa_OldSong'` 其實和「不認得的名稱」走同一條路徑。改為先在 `FakeCustomFontsRepository` 插入同名的 `CustomFont`，讓前提和測試名稱一致。
 - M-2 補單元測試並列入 Issue 5：`foliate_reader_view_test.dart` 新增「fontFamily 由有值變成 null：`foliatePreferencesChanged` 回傳 true，且新偏好不含 `fontFamily` 鍵」；`main.js` 整包取代覆蓋 CSS 的部分單元測試驗證不到，列入 Issue 5 第 9 項真機驗證（改選「使用書本字型」後畫面立即回到書本字型、旋轉後仍正確），Issue 5 驗收標準改為 9 項。
 - 驗證：`reader_screen_test.dart`＋`foliate_reader_view_test.dart` 共 367 個測試通過；`flutter analyze` 乾淨；l10n 檢查兩行 PASS。
+
+**2026-09-26 Issue 6 合併**：PR #280（`epic-49/issue-6-uninstalled-font-fallback` → `main`）已合併。epic-49 所有 agent 工單（Issue 1、3、4、6）與人類部署（Issue 2）皆已完成，只剩 Issue 5 真機驗證（9 項，人類操作）；通過後即可歸檔。
