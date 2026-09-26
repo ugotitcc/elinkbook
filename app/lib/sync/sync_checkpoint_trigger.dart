@@ -12,18 +12,38 @@
 /// 週期性 `Timer`）都只需要「呼叫一次 checkpoint」這個動作，注入函式
 /// 讓 widget test 可以用簡單的假 callback 驗證觸發時機，不需要牽動真實
 /// 資料庫／PocketBase 用戶端。
+///
+/// 登入過期提示（epic-50-sync-token-refresh）：checkpoint 後若
+/// [isSessionExpired] 成立（token 在這次 checkpoint 中因過期被清除），呼叫
+/// [onSessionExpired] 提示使用者重新登入。只掛在這三個自動觸發點上——手動
+/// 同步由 `SyncSettingsScreen` 自己在畫面內提示，不經過本類別，不會重複
+/// 提示。過期後已是未登入，後續觸發在登入閘門就會略過，因此每次過期只會
+/// 提示一次。
 class SyncCheckpointTrigger {
   final Future<bool> Function() _isLoggedIn;
   final Future<void> Function() _runCheckpoint;
+  final Future<bool> Function()? _isSessionExpired;
+  final void Function()? _onSessionExpired;
 
   SyncCheckpointTrigger({
     required Future<bool> Function() isLoggedIn,
     required Future<void> Function() runCheckpoint,
+    Future<bool> Function()? isSessionExpired,
+    void Function()? onSessionExpired,
   })  : _isLoggedIn = isLoggedIn,
-        _runCheckpoint = runCheckpoint;
+        _runCheckpoint = runCheckpoint,
+        _isSessionExpired = isSessionExpired,
+        _onSessionExpired = onSessionExpired;
 
   Future<void> trigger() async {
     if (!await _isLoggedIn()) return;
     await _runCheckpoint();
+    final isSessionExpired = _isSessionExpired;
+    final onSessionExpired = _onSessionExpired;
+    if (isSessionExpired != null &&
+        onSessionExpired != null &&
+        await isSessionExpired()) {
+      onSessionExpired();
+    }
   }
 }

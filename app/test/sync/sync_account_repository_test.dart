@@ -123,4 +123,53 @@ void main() {
     expect(await repo.isLoggedIn(), false);
     expect(await repo.loadBaseUrl(), 'http://127.0.0.1:8090');
   });
+
+  test('saveAuthToken 只替換 token，userId／email 不變（epic-50：authRefresh 換發新 token 後存回）',
+      () async {
+    final repo = SyncAccountRepository();
+    await repo.saveCredentials(
+      authToken: 'token-abc',
+      userId: 'user-123',
+      email: 'reader@example.com',
+    );
+
+    await repo.saveAuthToken('token-new');
+
+    expect(await repo.loadAuthToken(), 'token-new');
+    expect(await repo.loadUserId(), 'user-123');
+    expect(await repo.loadEmail(), 'reader@example.com');
+  });
+
+  test('clearAuthToken 只清除 token、保留 email（epic-50：token 過期時視為未登入，但保留 email 供登入表單預填）',
+      () async {
+    final repo = SyncAccountRepository();
+    await repo.saveCredentials(
+      authToken: 'token-abc',
+      userId: 'user-123',
+      email: 'reader@example.com',
+    );
+
+    await repo.clearAuthToken();
+
+    expect(await repo.loadAuthToken(), isNull);
+    expect(await repo.isLoggedIn(), false);
+    expect(await repo.loadEmail(), 'reader@example.com');
+  });
+
+  test('isSessionExpired：token 被清除但 email 仍在才算過期；已登入或主動登出都不算（epic-50）',
+      () async {
+    final repo = SyncAccountRepository();
+    await repo.saveCredentials(
+      authToken: 'token-abc',
+      userId: 'user-123',
+      email: 'reader@example.com',
+    );
+    expect(await repo.isSessionExpired(), false, reason: '已登入');
+
+    await repo.clearAuthToken();
+    expect(await repo.isSessionExpired(), true, reason: 'token 過期被清除');
+
+    await repo.clearCredentials();
+    expect(await repo.isSessionExpired(), false, reason: '使用者主動登出');
+  });
 }

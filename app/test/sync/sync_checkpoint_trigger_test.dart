@@ -47,4 +47,38 @@ void main() {
     await trigger.trigger();
     expect(runCheckpointCallCount, 1, reason: '第二次呼叫時已登入，應正常觸發');
   });
+
+  group('登入過期提示（epic-50-sync-token-refresh）', () {
+    test('checkpoint 期間 token 過期被清除：呼叫 onSessionExpired 一次', () async {
+      var loggedIn = true;
+      var sessionExpiredCallCount = 0;
+      final trigger = SyncCheckpointTrigger(
+        isLoggedIn: () async => loggedIn,
+        // 模擬 SyncEngine 的 authRefresh 收到 401、清除 token。
+        runCheckpoint: () async => loggedIn = false,
+        isSessionExpired: () async => !loggedIn,
+        onSessionExpired: () => sessionExpiredCallCount++,
+      );
+
+      await trigger.trigger();
+      expect(sessionExpiredCallCount, 1);
+
+      await trigger.trigger();
+      expect(sessionExpiredCallCount, 1, reason: '過期後已是未登入，後續觸發直接略過，不重複提示');
+    });
+
+    test('checkpoint 後仍在登入狀態：不呼叫 onSessionExpired', () async {
+      var sessionExpiredCallCount = 0;
+      final trigger = SyncCheckpointTrigger(
+        isLoggedIn: () async => true,
+        runCheckpoint: () async {},
+        isSessionExpired: () async => false,
+        onSessionExpired: () => sessionExpiredCallCount++,
+      );
+
+      await trigger.trigger();
+
+      expect(sessionExpiredCallCount, 0);
+    });
+  });
 }

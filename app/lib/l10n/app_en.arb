@@ -412,6 +412,8 @@
   "syncSettingsNeverSynced": "Never synced",
   "syncSettingsLastSyncedAt": "Last synced: {formatted}",
   "syncSettingsConnectionFailedMessage": "Connection failed. Please check the server URL and your credentials.",
+  "syncSettingsSessionExpiredMessage": "Your session has expired. Please enter your password to sign in again.",
+  "syncSessionExpiredToast": "Your sync session has expired. Sign in again under Settings → Sync.",
   "syncSettingsLoggedInAs": "Signed in as: {email}",
   "syncSettingsManualSyncButton": "Sync Now",
   "syncSettingsLogoutButton": "Sign Out",

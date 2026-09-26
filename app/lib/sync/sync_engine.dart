@@ -89,11 +89,27 @@ class SyncEngine {
 
   Future<bool> _runCheckpointBody() async {
     final baseUrl = await _accountRepository.loadBaseUrl();
-    final authToken = await _accountRepository.loadAuthToken();
+    final storedAuthToken = await _accountRepository.loadAuthToken();
     final userId = await _accountRepository.loadUserId();
-    if (authToken == null || userId == null || baseUrl.isEmpty) return false;
+    if (storedAuthToken == null || userId == null || baseUrl.isEmpty) return false;
 
     final pb = _clientFactory(baseUrl);
+    final String? authToken;
+    try {
+      authToken = await _refreshAuthToken(pb, storedAuthToken);
+    } on ClientException catch (e) {
+      // 401：token 已過期或失效，續期不可能成功，只能請使用者重新登入。
+      // 只清 token、保留 email，讓同步設定畫面顯示「登入已過期」並預填
+      // email（見 SyncAccountRepository.clearAuthToken）。其他錯誤（斷網、
+      // 伺服器 5xx）維持登入，下次 checkpoint 自然重試。
+      // 請求進行中使用者已重新登入（token 已換）時不清除，避免清掉新 token。
+      if (e.statusCode == 401 &&
+          await _accountRepository.loadAuthToken() == storedAuthToken) {
+        await _accountRepository.clearAuthToken();
+      }
+      return false;
+    }
+    if (authToken == null) return false;
     final headers = {'Authorization': authToken};
     final lastPushCompletedAt = await _metadataRepository.loadLastPushCompletedAt();
 
@@ -209,6 +225,23 @@ class SyncEngine {
 
     await _purgeTombstones();
     return true;
+  }
+
+  /// epic-50-sync-token-refresh：PocketBase token 有效期從登入（或上次
+  /// 續期）起算，過期後所有請求都回 401。每次 checkpoint 開頭先用目前的
+  /// token 呼叫 `authRefresh` 換一張新的並存回——只要在有效期內同步過一次，
+  /// token 就會持續續期，不需要登出再登入。
+  ///
+  /// 回傳 `null` 代表續期請求進行中帳號已變動（使用者登出或重新登入，
+  /// 儲存的 token 已不是這次拿去續期的那張）：不寫回新 token（否則登出後
+  /// 會變成「有 token 但沒有 email／userId」的半登入狀態），本輪同步放棄。
+  Future<String?> _refreshAuthToken(PocketBase pb, String authToken) async {
+    final authData = await pb
+        .collection('users')
+        .authRefresh(headers: {'Authorization': authToken});
+    if (await _accountRepository.loadAuthToken() != authToken) return null;
+    await _accountRepository.saveAuthToken(authData.token);
+    return authData.token;
   }
 
   /// 記憶體風險註記（審查意見 Important #2，與 `_downloadAndMerge()` 的

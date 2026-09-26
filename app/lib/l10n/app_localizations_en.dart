@@ -1444,6 +1444,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Connection failed. Please check the server URL and your credentials.';
 
   @override
+  String get syncSettingsSessionExpiredMessage =>
+      'Your session has expired. Please enter your password to sign in again.';
+
+  @override
+  String get syncSessionExpiredToast =>
+      'Your sync session has expired. Sign in again under Settings → Sync.';
+
+  @override
   String syncSettingsLoggedInAs(String email) {
     return 'Signed in as: $email';
   }

@@ -16,11 +16,14 @@ import 'package:elinkbook/reader/bookmarks_repository.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlights_repository.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
+import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/sync/sync_engine.dart';
 import 'package:elinkbook/sync/sync_metadata_repository.dart';
 import 'package:elinkbook/sync/sync_models.dart';
 import 'package:elinkbook/sync/sync_reading_position.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
+
+import 'pocketbase_test_helpers.dart';
 
 Book _testBook(
   String id, {
@@ -83,7 +86,7 @@ void main() {
   test('未登入時 runCheckpoint 直接早退，不發出任何網路請求', () async {
     await accountRepository.clearCredentials();
     var requestSent = false;
-    final mockClient = MockClient((request) async {
+    final mockClient = mockPocketBase((request) async {
       requestSent = true;
       return http.Response('{}', 200);
     });
@@ -107,7 +110,7 @@ void main() {
   test('併發鎖：兩次幾乎同時呼叫 runCheckpoint()，第二次在第一次仍執行中時直接放棄，不會兩次都真的送出網路請求',
       () async {
     var requestCount = 0;
-    final mockClient = MockClient((request) async {
+    final mockClient = mockPocketBase((request) async {
       requestCount++;
       return http.Response(
         jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
@@ -156,9 +159,9 @@ void main() {
     );
 
     Map<String, dynamic>? capturedRequest;
-    final mockClient = MockClient((request) async {
+    final mockClient = mockPocketBase((request) async {
       if (request.url.path == '/api/batch') {
-        expect(request.headers['Authorization'], 'test-token');
+        expect(request.headers['Authorization'], refreshedTestToken);
         capturedRequest = jsonDecode(request.body) as Map<String, dynamic>;
         final subRequests = capturedRequest!['requests'] as List;
         expect(subRequests, hasLength(1));
@@ -227,7 +230,7 @@ void main() {
       const Highlight(id: 'h1', bookId: 'b2', style: HighlightStyle.underline, pdfPageIndex: 3),
     );
 
-    final mockClient = MockClient((request) async {
+    final mockClient = mockPocketBase((request) async {
       if (request.url.path == '/api/batch') {
         return http.Response(
           jsonEncode([
@@ -265,7 +268,7 @@ void main() {
       const Bookmark(id: 'bm3', bookId: 'b3', name: 'X', progression: 0.1),
     );
 
-    final mockClient = MockClient((request) async {
+    final mockClient = mockPocketBase((request) async {
       return http.Response(
         jsonEncode({'message': 'Something went wrong.'}),
         500,
@@ -293,7 +296,7 @@ void main() {
   test('下載端把遠端新增的書籤正確合併進本機（書籍已匯入、指紋對得上）', () async {
     await libraryRepository.insertBook(_testBook('b4', contentFingerprint: 'fp-4'));
 
-    final mockClient = MockClient((request) async {
+    final mockClient = mockPocketBase((request) async {
       if (request.method == 'GET' &&
           request.url.path == '/api/collections/sync_bookmarks/records') {
         return http.Response(
@@ -356,7 +359,7 @@ void main() {
 
   test('下載端遇到 book_fingerprint 查無對應本機書籍時，暫緩合併、寫入待處理佇列，不建立空殼書籍',
       () async {
-    final mockClient = MockClient((request) async {
+    final mockClient = mockPocketBase((request) async {
       if (request.method == 'GET' &&
           request.url.path == '/api/collections/sync_bookmarks/records') {
         return http.Response(
@@ -418,7 +421,7 @@ void main() {
     // 為 null」與「查無對應本機書籍」皆回傳 resolved: false，呼叫端必須
     // 分開處理——這筆遠端紀錄刻意省略 book_fingerprint 欄位，模擬防禦性
     // 情境（例如未來 schema 例外資料）。
-    final mockClient = MockClient((request) async {
+    final mockClient = mockPocketBase((request) async {
       if (request.method == 'GET' &&
           request.url.path == '/api/collections/sync_bookmarks/records') {
         return http.Response(
@@ -488,7 +491,7 @@ void main() {
     );
     await libraryRepository.insertBook(_testBook('b5', contentFingerprint: 'fp-later'));
 
-    final mockClient = MockClient((request) async {
+    final mockClient = mockPocketBase((request) async {
       if (request.url.path == '/api/batch') {
         return http.Response(jsonEncode([]), 200,
             headers: {'content-type': 'application/json'});
@@ -531,7 +534,7 @@ void main() {
       whereArgs: ['bm-old'],
     );
 
-    final mockClient = MockClient((request) async {
+    final mockClient = mockPocketBase((request) async {
       if (request.url.path == '/api/batch') {
         // 推送階段會把軟刪除的 bm-old（updated_at 舊值、lastPushCompletedAt
         // 為 null 所以算 dirty）送進 batch，mock 回應長度需與操作筆數一致。
@@ -587,7 +590,7 @@ void main() {
       whereArgs: ['bm-should-survive'],
     );
 
-    final mockClient = MockClient((request) async {
+    final mockClient = mockPocketBase((request) async {
       if (request.url.path == '/api/batch') {
         return http.Response(
           jsonEncode([
@@ -640,7 +643,7 @@ void main() {
       ));
 
       Map<String, dynamic>? capturedBody;
-      final mockClient = MockClient((request) async {
+      final mockClient = mockPocketBase((request) async {
         if (request.method == 'GET' &&
             request.url.path == '/api/collections/sync_reading_positions/records') {
           return http.Response(
@@ -715,7 +718,7 @@ void main() {
       ));
 
       String? capturedSort;
-      final mockClient = MockClient((request) async {
+      final mockClient = mockPocketBase((request) async {
         if (request.method == 'GET' &&
             request.url.path == '/api/collections/sync_reading_positions/records' &&
             request.url.queryParameters.containsKey('filter')) {
@@ -760,7 +763,7 @@ void main() {
       await libraryRepository.insertBook(_testBook('b21', contentFingerprint: 'fp-21'));
 
       var pushSideFilterQueried = false;
-      final mockClient = MockClient((request) async {
+      final mockClient = mockPocketBase((request) async {
         if (request.url.path == '/api/collections/sync_reading_positions/records' &&
             request.url.queryParameters['filter'] != null) {
           pushSideFilterQueried = true;
@@ -799,7 +802,7 @@ void main() {
       ));
 
       var readingPositionPushed = false;
-      final mockClient = MockClient((request) async {
+      final mockClient = mockPocketBase((request) async {
         if (request.url.path == '/api/collections/sync_reading_positions/records') {
           final requestedPerPage =
               int.tryParse(request.url.queryParameters['perPage'] ?? '') ?? 1;
@@ -878,7 +881,7 @@ void main() {
 
       Map<String, dynamic>? capturedBody;
       String? capturedUrl;
-      final mockClient = MockClient((request) async {
+      final mockClient = mockPocketBase((request) async {
         if (request.url.path == '/api/collections/sync_reading_positions/records') {
           final requestedPerPage =
               int.tryParse(request.url.queryParameters['perPage'] ?? '') ?? 1;
@@ -969,7 +972,7 @@ void main() {
       ));
 
       var readingPositionPushed = false;
-      final mockClient = MockClient((request) async {
+      final mockClient = mockPocketBase((request) async {
         if (request.url.path == '/api/collections/sync_reading_positions/records') {
           final requestedPerPage =
               int.tryParse(request.url.queryParameters['perPage'] ?? '') ?? 1;
@@ -1039,7 +1042,7 @@ void main() {
         progress: 0.3,
       ));
 
-      final mockClient = MockClient((request) async {
+      final mockClient = mockPocketBase((request) async {
         if (request.url.path == '/api/collections/sync_reading_positions/records') {
           return http.Response(
             jsonEncode({'items': [], 'page': 1, 'perPage': 1, 'totalItems': 0}),
@@ -1082,7 +1085,7 @@ void main() {
         // 位置，不會進入 _syncReadingPositions() 的推送階段查詢。
       ));
 
-      final mockClient = MockClient((request) async {
+      final mockClient = mockPocketBase((request) async {
         if (request.method == 'GET' &&
             request.url.path == '/api/collections/sync_reading_positions/records') {
           return http.Response(
@@ -1145,7 +1148,7 @@ void main() {
         const Bookmark(id: 'bm-b27', bookId: 'b27', name: 'X', progression: 0.1),
       );
 
-      final mockClient = MockClient((request) async {
+      final mockClient = mockPocketBase((request) async {
         if (request.url.path == '/api/batch') {
           return http.Response(
             jsonEncode([
@@ -1185,4 +1188,149 @@ void main() {
       expect(await metadataRepository.loadReadingPositionsCursor(), isNull);
     });
   });
+
+  group('auth token 續期與過期（epic-50-sync-token-refresh）', () {
+    SyncEngine buildEngine(http.Client client) => SyncEngine(
+          db: libraryRepository.database,
+          accountRepository: accountRepository,
+          metadataRepository: metadataRepository,
+          clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => client),
+        );
+
+    test('登入後每天同步一次，經過超過 token 有效期仍持續成功（不需登出再登入）', () async {
+      final server = _ExpiringTokenPocketBase();
+      final syncClient = SyncClient(
+        accountRepository: accountRepository,
+        clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => server.client),
+      );
+      final engine = buildEngine(server.client);
+
+      expect(await syncClient.testConnection('http://127.0.0.1:8090', 'reader@example.com', 'pw'),
+          isTrue);
+      for (var day = 1; day <= 14; day++) {
+        server.nowSec += 86400;
+        expect(await engine.runCheckpoint(), isTrue,
+            reason: '第 $day 天：token 有效期 5 天，每次 checkpoint 都應先續期，不應過期');
+      }
+    });
+
+    test('authRefresh 成功時，新 token 存回帳號儲存庫', () async {
+      final engine = buildEngine(mockPocketBase((request) async => _emptyListResponse()));
+
+      expect(await engine.runCheckpoint(), isTrue);
+      expect(await accountRepository.loadAuthToken(), refreshedTestToken);
+    });
+
+    test('authRefresh 回 401（token 已過期）：回傳 false、清除 token 但保留 email，且不再送出其他請求',
+        () async {
+      final requestedPaths = <String>[];
+      final engine = buildEngine(MockClient((request) async {
+        requestedPaths.add(request.url.path);
+        return http.Response(
+          jsonEncode({'status': 401, 'message': 'The request requires valid record authorization token.', 'data': {}}),
+          401,
+          headers: {'content-type': 'application/json'},
+        );
+      }));
+
+      expect(await engine.runCheckpoint(), isFalse);
+      expect(requestedPaths, ['/api/collections/users/auth-refresh']);
+      expect(await accountRepository.isLoggedIn(), isFalse);
+      expect(await accountRepository.loadEmail(), 'reader@example.com');
+    });
+
+    test('續期請求進行中使用者登出：續期回應不會把 token 寫回，本輪同步放棄', () async {
+      final engine = buildEngine(mockPocketBase(
+        (request) async => throw StateError('登出後不應再送出其他同步請求'),
+        // 模擬續期請求在路上時，使用者按下「登出」。
+        onAuthRefresh: accountRepository.clearCredentials,
+      ));
+
+      expect(await engine.runCheckpoint(), isFalse);
+      expect(await accountRepository.loadAuthToken(), isNull,
+          reason: '寫回 token 會變成「有 token 但沒有 email／userId」的半登入狀態');
+    });
+
+    test('舊 token 的續期請求進行中使用者重新登入：舊請求回 401 不會清掉新登入的 token', () async {
+      final engine = buildEngine(MockClient((request) async {
+        // 模擬舊請求在路上時，使用者重新登入拿到新 token。
+        await accountRepository.saveCredentials(
+          authToken: 'new-login-token',
+          userId: 'user-1',
+          email: 'reader@example.com',
+        );
+        return http.Response(
+          jsonEncode({'status': 401, 'message': 'The request requires valid record authorization token.', 'data': {}}),
+          401,
+          headers: {'content-type': 'application/json'},
+        );
+      }));
+
+      expect(await engine.runCheckpoint(), isFalse);
+      expect(await accountRepository.loadAuthToken(), 'new-login-token');
+    });
+
+    test('authRefresh 遇到非 401 錯誤（例如伺服器 500）：回傳 false，但維持登入狀態', () async {
+      final engine = buildEngine(MockClient((request) async {
+        return http.Response(
+          jsonEncode({'status': 500, 'message': 'Something went wrong.', 'data': {}}),
+          500,
+          headers: {'content-type': 'application/json'},
+        );
+      }));
+
+      expect(await engine.runCheckpoint(), isFalse);
+      expect(await accountRepository.loadAuthToken(), 'test-token');
+    });
+  });
+}
+
+http.Response _emptyListResponse() => http.Response(
+      jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0, 'totalPages': 0}),
+      200,
+      headers: {'content-type': 'application/json'},
+    );
+
+/// 模擬會讓 token 過期的 PocketBase（epic-50-sync-token-refresh）：
+/// `auth-with-password`／`auth-refresh` 發出有效期 [tokenDurationSec] 的新
+/// token（使用者回報環境 users collection 的 Auth token duration 為
+/// 432000 秒＝5 天），過期或未知的 token 對任何 API 一律回 401。
+class _ExpiringTokenPocketBase {
+  static const tokenDurationSec = 432000;
+  int nowSec = 1000000;
+  final Map<String, int> _tokenExpiresAt = {};
+  int _issued = 0;
+
+  late final MockClient client = MockClient((request) async {
+    final path = request.url.path;
+    if (path.endsWith('/auth-with-password')) return _issueToken();
+
+    final token = request.headers['Authorization'];
+    final expiresAt = token == null ? null : _tokenExpiresAt[token];
+    if (expiresAt == null || expiresAt <= nowSec) {
+      return http.Response(
+        jsonEncode({'status': 401, 'message': 'The request requires valid record authorization token.', 'data': {}}),
+        401,
+        headers: {'content-type': 'application/json'},
+      );
+    }
+    if (path.endsWith('/auth-refresh')) return _issueToken();
+    if (path == '/api/batch') {
+      return http.Response(jsonEncode([]), 200, headers: {'content-type': 'application/json'});
+    }
+    return _emptyListResponse();
+  });
+
+  http.Response _issueToken() {
+    final token = 'token-${_issued++}';
+    _tokenExpiresAt[token] = nowSec + tokenDurationSec;
+    return http.Response(
+      jsonEncode({
+        'token': token,
+        'record': {'id': 'user-1'},
+      }),
+      200,
+      headers: {'content-type': 'application/json'},
+    );
+  }
 }

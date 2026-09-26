@@ -412,6 +412,8 @@
   "syncSettingsNeverSynced": "尚未同步过",
   "syncSettingsLastSyncedAt": "最后同步：{formatted}",
   "syncSettingsConnectionFailedMessage": "连线失败，请确认服务器网址与账号密码是否正确",
+  "syncSettingsSessionExpiredMessage": "登录已过期，请重新输入密码登录",
+  "syncSessionExpiredToast": "同步登录已过期，请至「设置 → 同步」重新登录",
   "syncSettingsLoggedInAs": "已登入：{email}",
   "syncSettingsManualSyncButton": "立即同步",
   "syncSettingsLogoutButton": "登出",

@@ -233,7 +233,7 @@ OTS parsing error: Web font size more than 30MB
 
 **Status:** completed
 
-**進度（2026-09-26）：** 實作與測試已完成，真機確認待人類補測。完整 `flutter test` 2914 通過、1 跳過、0 失敗（`epic-50-wifi-transfer-test-fix` 的 WiFi 測試本次通過，見 epic.md）；`flutter analyze`乾淨；l10n 檢查兩行 PASS；debug APK 已建置。真機 6 步（手機 9491G ×3、電子紙 WAVE ×3）已通過；電子紙第 4 步第一次因啟動時讀 WebView 版本逾時而列出 5 款，改為沿用上次記住的版本後通過（見 epic.md）。
+**進度（2026-09-26）：** 實作與測試已完成，真機確認待人類補測。完整 `flutter test` 2914 通過、1 跳過、0 失敗（`epic-51-wifi-transfer-test-fix` 的 WiFi 測試本次通過，見 epic.md）；`flutter analyze`乾淨；l10n 檢查兩行 PASS；debug APK 已建置。真機 6 步（手機 9491G ×3、電子紙 WAVE ×3）已通過；電子紙第 4 步第一次因啟動時讀 WebView 版本逾時而列出 5 款，改為沿用上次記住的版本後通過（見 epic.md）。
 
 **依賴：** Issue 7。
 
@@ -258,7 +258,7 @@ OTS parsing error: Web font size more than 30MB
 - 閱讀設定：已下載的新字型出現在選單，選用後 `FoliateReaderView` 收到正確的 `fontFamily`。
 - 既有測試裡寫死「只有 2 款」的斷言，依新行為更新，並在計畫中列出。
 
-**驗收標準：** 異動檔案的測試通過；完整 `flutter test` 除 `epic-50-wifi-transfer-test-fix` 的既有失敗外全部通過；`flutter analyze` 乾淨；l10n 檢查通過。真機確認：
+**驗收標準：** 異動檔案的測試通過；完整 `flutter test` 除 `epic-51-wifi-transfer-test-fix` 的既有失敗外全部通過；`flutter analyze` 乾淨；l10n 檢查通過。真機確認：
 - 手機（WebView 154）：5 款都能下載，選用後畫面字型正確。
 - 電子紙（WebView 91）：只列出 3 款新字型，下載後畫面字型正確（確認 Issue 7 依大小判斷真的生效），`adb logcat` 沒有 `OTS parsing error`。
 

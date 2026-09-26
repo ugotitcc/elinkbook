@@ -42,7 +42,7 @@ AppFont enum（解除 [字型停用]）
 
    簡體中文：原侠正楷、台湾圆体、源流明体。
 2. **enum 順序沿用註解裡的順序**：思源黑體、思源宋體、原俠正楷、台灣圓體、源流明體。字型管理與閱讀設定依這個順序列出。
-3. **會壞的既有測試，依新行為更新**（規劃時暫時解除註解並執行完整 `flutter test` 找到的 4 個；第 5 個失敗是 `epic-50-wifi-transfer-test-fix` 的既有問題）：
+3. **會壞的既有測試，依新行為更新**（規劃時暫時解除註解並執行完整 `flutter test` 找到的 4 個；第 5 個失敗是 `epic-51-wifi-transfer-test-fix` 的既有問題）：
    | 測試 | 失敗原因 | 處理 |
    |---|---|---|
    | `test/reader/app_font_test.dart`「每個 AppFont 都有對應的家族名稱字串…」 | 寫死只有 2 款 | 改成 5 款 |
@@ -681,7 +681,7 @@ flutter test
 flutter analyze
 node tool/check_l10n_hardcoded_strings.js
 ```
-預期：只有 1 個失敗，是 `test/wifi_transfer/wifi_transfer_http_server_test.dart`「下載期間 activeTransfersNotifier 維持在 1…」（`epic-50-wifi-transfer-test-fix` 的既有問題）。其他全部通過；`No issues found!`；l10n 檢查兩行 PASS。出現任何其他失敗都要先修。
+預期：只有 1 個失敗，是 `test/wifi_transfer/wifi_transfer_http_server_test.dart`「下載期間 activeTransfersNotifier 維持在 1…」（`epic-51-wifi-transfer-test-fix` 的既有問題）。其他全部通過；`No issues found!`；l10n 檢查兩行 PASS。出現任何其他失敗都要先修。
 
 - [x] **Step 2：更新 CLAUDE.md 與 PRD**
 

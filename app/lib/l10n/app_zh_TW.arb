@@ -1885,6 +1885,14 @@
   "@syncSettingsConnectionFailedMessage": {
     "description": "登入/連線測試失敗時顯示的錯誤文字"
   },
+  "syncSettingsSessionExpiredMessage": "登入已過期，請重新輸入密碼登入",
+  "@syncSettingsSessionExpiredMessage": {
+    "description": "同步 token 已過期、被自動登出時，登入表單上方顯示的提示文字"
+  },
+  "syncSessionExpiredToast": "同步登入已過期，請至「設定 → 同步」重新登入",
+  "@syncSessionExpiredToast": {
+    "description": "自動同步時發現登入已過期，在目前畫面顯示一次的 Toast 提示"
+  },
   "syncSettingsLoggedInAs": "已登入：{email}",
   "@syncSettingsLoggedInAs": {
     "description": "已登入狀態顯示目前登入帳號的 email，{email} 為使用者資料不翻譯",
