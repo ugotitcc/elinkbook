@@ -22,6 +22,12 @@ class FakeDownloadableFontStore implements DownloadableFontStore {
   /// （Issue 4 驗證 ReaderScreen 在已下載字型載入完成前延後建構閱讀器）。
   Completer<void>? installedFontsGate;
 
+  /// [supportedFonts] 回傳的字型；測試可以改成部分或空清單，模擬舊版系統 WebView（Issue 7）。
+  List<AppFont> supported = List.of(AppFont.values);
+
+  @override
+  List<AppFont> get supportedFonts => supported;
+
   @override
   String get directory => '/fake/downloaded-fonts';
 
@@ -31,7 +37,8 @@ class FakeDownloadableFontStore implements DownloadableFontStore {
   @override
   Future<Set<AppFont>> installedFonts() async {
     if (installedFontsGate != null) await installedFontsGate!.future;
-    return {...installed};
+    // 比照真的 store：不在 supportedFonts 裡的字型，檔案存在也不算已下載（Issue 7）
+    return installed.where(supported.contains).toSet();
   }
 
   @override

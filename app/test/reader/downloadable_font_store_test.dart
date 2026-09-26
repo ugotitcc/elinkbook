@@ -478,4 +478,56 @@ void main() {
       expect(cancelled, isTrue);
     });
   });
+
+  group('WebView 太舊時只公開載得動的字型（Issue 7）', () {
+    /// 思源黑體標成 40MB（舊 WebView 載不動）、思源宋體維持 50,000 bytes（載得動），
+    /// 驗證判斷是依每款字型的大小，不是一律全擋。
+    FontDownloadSpec mixedSpecOf(AppFont font) => font == AppFont.sourceHanSans
+        ? FontDownloadSpec(
+            publishPath: specA.publishPath, sizeBytes: 40 * 1024 * 1024, sha256: specA.sha256)
+        : specB;
+
+    DownloadableFontStore storeFor(int? webViewMajorVersion) => DownloadableFontStore(
+          httpClient: serving({}),
+          directory: fontsDir,
+          baseUri: Uri.parse('https://fonts.test/'),
+          specOf: mixedSpecOf,
+          webViewMajorVersion: webViewMajorVersion,
+        );
+
+    Future<void> placeInstalledFiles() async {
+      await fileFor(specA.publishPath).create(recursive: true);
+      await fileFor(specB.publishPath).create(recursive: true);
+    }
+
+    test('舊 WebView（91）：supportedFonts 不含超過 30MB 的字型', () {
+      expect(storeFor(91).supportedFonts, [AppFont.sourceHanSerif]);
+    });
+
+    test('新 WebView（154）與讀不到版本（null）：supportedFonts 是全部字型', () {
+      expect(storeFor(154).supportedFonts, AppFont.values);
+      expect(storeFor(null).supportedFonts, AppFont.values);
+    });
+
+    test('沒有傳 webViewMajorVersion 時行為和以前一樣（全部支援）', () {
+      expect(storeWith(serving({})).supportedFonts, AppFont.values);
+    });
+
+    test('舊 WebView：檔案存在也不列為已下載', () async {
+      await placeInstalledFiles();
+      expect(await storeFor(91).installedFonts(), {AppFont.sourceHanSerif});
+    });
+
+    test('舊 WebView：prepare 刪除載不動的已下載檔案，保留載得動的', () async {
+      await placeInstalledFiles();
+      await storeFor(91).prepare();
+      expect(await filesIn(fontsDir), [specB.publishPath]);
+    });
+
+    test('讀不到版本（null）：prepare 不刪任何正式檔案', () async {
+      await placeInstalledFiles();
+      await storeFor(null).prepare();
+      expect((await filesIn(fontsDir))..sort(), [specA.publishPath, specB.publishPath]);
+    });
+  });
 }
