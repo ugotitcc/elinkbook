@@ -40,6 +40,17 @@ DownloadableFontStore(webViewMajorVersion: …)
 2. **讀不到版本時，視同支援（行為和現在一樣）。** 讀不到的原因多半是平台呼叫失敗，不代表 WebView 舊。視同不支援會讓新裝置也看不到字型，傷害比較大；視同支援最壞只是回到今天的狀況（字型下載了但套不上）。讀取另外加 3 秒逾時，避免卡住 App 啟動。
 3. **舊 WebView 裝置上已下載、但載不動的字型檔，在 App 啟動時由 `prepare()` 自動刪除，不另外提供刪除入口。** 這些檔案在這台裝置上永遠用不到，思源宋體還佔 57 MB。只有「讀得到版本、而且確定太舊」時才刪，讀不到版本時不刪（決定 2）。刪檔不碰書籍偏好；WebView 升級後重新下載，偏好會自動生效。
 4. **字型管理畫面有字型被隱藏時，在「內建字型」標題下顯示一行提示**，說明原因與解法。不然舊裝置上會看到一個空的「內建字型」區塊，不知道發生什麼事。
+5. **`download()` 不另外檢查字型是否支援，只在說明註解寫明**（計畫審查 M-3）。唯一的呼叫端是字型管理畫面，它只列出 `supportedFonts`；萬一被直接呼叫，下次啟動時 `prepare()` 也會刪掉檔案。
+
+## 計畫審查修訂
+
+依 `reviews/review-plan-issue-7.md`（Ready to implement: With fixes，0 Critical／2 Important／3 Minor）：
+
+- I-1 採納：Fake 的 `installedFonts()` 也依 `supported` 過濾，和真的 store 行為一致（Task 2 Step 7）。
+- I-2 採納：`reader_screen_test.dart` 補上工單要求的兩個測試（閱讀設定不列出、閱讀器收到 `null` 且偏好不改寫）。先寫測試、看它在 Fake 還沒過濾時失敗，再加過濾讓它通過（Task 2 Step 5～8）。真正的過濾邏輯由 store 測試驗證；這兩個測試守住「閱讀器只透過 `installedFonts()` 取得字型」這條約定。
+- M-1 採納：Task 4 Step 1 改成直接執行，不重導到 `/tmp`。
+- M-2 採納：提示文字的 padding 改成 `EdgeInsets.fromLTRB(16, 4, 16, 8)`。
+- M-3 採用報告的第二個做法：不加檢查，只在 `download()` 的說明註解寫明（決定 5）。
 
 ## 全域限制
 
@@ -74,7 +85,8 @@ DownloadableFontStore(webViewMajorVersion: …)
 | `app/test/reader/webview_font_support_test.dart` | 建立 | 上面三個函式的測試 |
 | `app/lib/reader/downloadable_font_store.dart` | 修改 | 新增 `webViewMajorVersion` 參數、`supportedFonts`；`installedFonts()` 過濾；`prepare()` 刪除載不動的檔案 |
 | `app/test/reader/downloadable_font_store_test.dart` | 修改 | 新增 `supportedFonts`／過濾／`prepare` 測試 |
-| `app/test/support/fake_downloadable_font_store.dart` | 修改 | 實作 `supportedFonts` |
+| `app/test/support/fake_downloadable_font_store.dart` | 修改 | 實作 `supportedFonts`；`installedFonts()` 依 `supported` 過濾 |
+| `app/test/screens/reader_screen_test.dart` | 修改 | 舊 WebView 時閱讀設定不列出、閱讀器收到 `null`（計畫審查 I-2） |
 | `app/lib/screens/font_management_screen.dart` | 修改 | 改列 `supportedFonts`；有字型被隱藏時顯示提示 |
 | `app/test/screens/font_management_screen_test.dart` | 修改 | 隱藏與提示的測試 |
 | `app/lib/l10n/app_zh_TW.arb`、`app_zh.arb`、`app_zh_CN.arb`、`app_en.arb` | 修改 | 新增 `fontManagementBuiltInUnsupportedHint` |
@@ -296,6 +308,7 @@ git commit -m "feat(fonts): 新增 WebView 字型大小支援判斷（epic-49 Is
 - Modify: `app/lib/reader/downloadable_font_store.dart`（建構子 52-62 行、`prepare()` 86-99 行、`installedFonts()` 101-107 行）
 - Modify: `app/test/support/fake_downloadable_font_store.dart`
 - Test: `app/test/reader/downloadable_font_store_test.dart`
+- Test: `app/test/screens/reader_screen_test.dart`（`group('未下載字型改用書本字型（epic-49 Issue 6）'`，約 6673 行）
 
 **Interfaces:**
 - Consumes：Task 1 的 `webViewCanLoadFont({required int? webViewMajorVersion, required int fontSizeBytes})`。
@@ -304,6 +317,7 @@ git commit -m "feat(fonts): 新增 WebView 字型大小支援判斷（epic-49 Is
   - `List<AppFont> get supportedFonts`（依 `AppFont.values` 順序）
   - `installedFonts()` 只回傳 `supportedFonts` 裡已下載的字型
   - `prepare()` 另外刪除不在 `supportedFonts` 裡、但已存在的正式字型檔
+  - Fake：`List<AppFont> supported` 欄位（預設全部字型），`installedFonts()` 只回傳 `installed` 與 `supported` 的交集
 
 - [ ] **Step 1：寫失敗的測試**
 
@@ -441,9 +455,22 @@ import 'webview_font_support.dart';
   }
 ```
 
-- [ ] **Step 4：更新 Fake**
+6. `download()` 的說明註解（115-117 行）最後補一句（計畫審查 M-3）：
+```dart
+  /// 不檢查 [font] 是否在 [supportedFonts] 裡：唯一的呼叫端（字型管理畫面）只列出
+  /// supportedFonts；萬一下載了載不動的字型，下次啟動時 [prepare] 會刪掉（Issue 7）。
+```
 
-`app/test/support/fake_downloadable_font_store.dart`，在 `Completer<void>? installedFontsGate;` 那段之後加上：
+- [ ] **Step 4：執行 store 測試，確認通過**
+
+```bash
+flutter test test/reader/downloadable_font_store_test.dart
+```
+預期：`All tests passed!`。
+
+- [ ] **Step 5：Fake 加上 `supported`，並寫閱讀器的失敗測試**（計畫審查 I-2）
+
+`app/test/support/fake_downloadable_font_store.dart`，在 `Completer<void>? installedFontsGate;` 那段之後加上（`installedFonts()` 先不改，下一步要看測試失敗）：
 ```dart
   /// [supportedFonts] 回傳的字型；測試可以改成部分或空清單，模擬舊版系統 WebView（Issue 7）。
   List<AppFont> supported = List.of(AppFont.values);
@@ -452,18 +479,72 @@ import 'webview_font_support.dart';
   List<AppFont> get supportedFonts => supported;
 ```
 
-- [ ] **Step 5：執行測試，確認通過**
+`app/test/screens/reader_screen_test.dart` 的 `group('未下載字型改用書本字型（epic-49 Issue 6）', () {` 群組內、最後一個 `testWidgets` 之後（群組結尾的 `});` 之前）加入。`pumpReader`、`readerView`、`prefsManager` 都是這個群組或檔案既有的 helper：
+```dart
+    testWidgets('舊 WebView 裝置上已下載的字型：閱讀設定選單不列出（Issue 7）', (tester) async {
+      final store = FakeDownloadableFontStore()
+        ..installed.add(AppFont.sourceHanSerif)
+        ..supported = []; // 模擬舊 WebView 載不動
+      await pumpReader(tester, store: store);
+
+      readerView(tester).onLayoutResolved?.call(const EpubLayoutInfo(
+            isFixedLayout: false,
+            writingMode: WritingMode.horizontal,
+          ));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final sheet = tester.widget<ReaderSettingsSheet>(find.byType(ReaderSettingsSheet));
+      expect(sheet.installedFonts, isEmpty);
+    });
+
+    testWidgets('舊 WebView 裝置上已下載的字型：閱讀器收到 null，偏好不改寫（Issue 7）', (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'));
+      final store = FakeDownloadableFontStore()
+        ..installed.add(AppFont.sourceHanSerif)
+        ..supported = []; // 模擬舊 WebView 載不動
+
+      await pumpReader(tester, store: store);
+
+      expect(readerView(tester).fontFamily, isNull);
+      expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'SourceHanSerifTC');
+    });
+```
+
+- [ ] **Step 6：執行閱讀器測試，確認兩個新測試失敗**
+
+```bash
+flutter test test/screens/reader_screen_test.dart --plain-name "Issue 7"
+```
+預期：2 個測試 FAIL。第一個期望空集合、實際含 `AppFont.sourceHanSerif`；第二個期望 `null`、實際是 `'SourceHanSerifTC'`。原因是 Fake 的 `installedFonts()` 還沒依 `supported` 過濾。
+
+- [ ] **Step 7：Fake 的 `installedFonts()` 依 `supported` 過濾**（計畫審查 I-1）
+
+`app/test/support/fake_downloadable_font_store.dart` 的 `installedFonts()` 改成：
+```dart
+  @override
+  Future<Set<AppFont>> installedFonts() async {
+    if (installedFontsGate != null) await installedFontsGate!.future;
+    // 比照真的 store：不在 supportedFonts 裡的字型，檔案存在也不算已下載（Issue 7）
+    return installed.where(supported.contains).toSet();
+  }
+```
+
+- [ ] **Step 8：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/downloadable_font_store_test.dart test/screens/font_management_screen_test.dart test/screens/reader_screen_test.dart
 ```
-預期：`All tests passed!`。後兩個檔案使用 Fake，用來確認 Fake 加了 getter 之後既有測試零回歸。
+預期：`All tests passed!`。後兩個檔案使用 Fake，同時確認 Fake 改動後既有測試零回歸（`supported` 預設是全部字型，過濾對既有測試沒有影響）。
 
-- [ ] **Step 6：analyze 並提交**
+- [ ] **Step 9：analyze 並提交**
 
 ```bash
 flutter analyze
-git add lib/reader/downloadable_font_store.dart test/reader/downloadable_font_store_test.dart test/support/fake_downloadable_font_store.dart
+git add lib/reader/downloadable_font_store.dart test/reader/downloadable_font_store_test.dart test/support/fake_downloadable_font_store.dart test/screens/reader_screen_test.dart
 git commit -m "feat(fonts): 字型 store 只公開 WebView 載得動的字型，啟動時刪除載不動的檔案（epic-49 Issue 7）"
 ```
 預期：`No issues found!`。
@@ -579,7 +660,7 @@ git status --short lib/l10n
           // Issue 7：只列出系統 WebView 載得動的內建字型；沒有 store 時照舊列出全部
           if (builtInFonts.length < AppFont.values.length)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: Text(
                 l10n.fontManagementBuiltInUnsupportedHint,
                 key: const Key('font_management_builtin_unsupported_hint'),
@@ -654,7 +735,7 @@ git commit -m "feat(fonts): 字型管理只列出 WebView 載得動的內建字�
 
 在 `app/`：
 ```bash
-flutter test > /tmp/issue7-full-test.log 2>&1; tail -3 /tmp/issue7-full-test.log
+flutter test
 flutter analyze
 node tool/check_l10n_hardcoded_strings.js
 ```

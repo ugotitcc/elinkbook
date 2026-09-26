@@ -236,3 +236,11 @@
 **2026-09-26 開立 Issue 7**：人類決定第 8 項的修正方向為「偵測到系統 WebView 太舊時，不列出思源黑體、思源宋體」，新增 `issues.md` Issue 7（`needs-triage`）。Issue 5 維持 `ready-for-human`，Issue 7 完成後在電子紙重做第 8 項。
 
 **2026-09-26 Issue 5 驗證記錄合併**：PR #281（`epic-49/issue-5-device-qa` → `main`）已合併，內容為 Issue 5 真機驗證結果與新增的 Issue 7。下一步：Issue 7（系統 WebView 太舊時不列出可下載字型），需先分流並撰寫 `plans/plan-issue-7.md`；完成後在電子紙重做 Issue 5 第 8 項，通過後即可歸檔。
+
+**2026-09-26 Issue 7 計畫審查修訂**（`reviews/review-plan-issue-7.md`：Ready to implement: With fixes，0 Critical／2 Important／3 Minor）
+
+- I-1 採納：Fake 的 `installedFonts()` 也依 `supported` 過濾，和真的 store 一致。
+- I-2 採納：`reader_screen_test.dart` 補上工單要求的兩個測試（閱讀設定不列出、閱讀器收到 `null` 且偏好不改寫），並安排成先在 Fake 未過濾時看它失敗，再加過濾。
+- M-1 採納：完整測試改成直接執行 `flutter test`。
+- M-2 採納：提示文字 padding 改為 `EdgeInsets.fromLTRB(16, 4, 16, 8)`。
+- M-3 採用報告的替代做法：`download()` 不加檢查，只在說明註解寫明唯一呼叫端只列出 `supportedFonts`，萬一下載了也會在下次啟動時被 `prepare()` 刪除。
