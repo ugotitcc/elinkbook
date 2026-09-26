@@ -109,6 +109,8 @@ DownloadableFontStore(webViewMajorVersion: …)
   - `Future<int?> readWebViewMajorVersion({Future<String?> Function()? readVersionName, Duration timeout = const Duration(seconds: 3)})`
   - 常數 `kWebViewLargeFontMinMajorVersion = 107`、`kLegacyWebFontSizeLimitBytes = 30 * 1024 * 1024`、`kWebFontSizeLimitBytes = 128 * 1024 * 1024`
 
+> **程式審查修訂（`review-issue-7.md` I-1，人類裁定採方案 a）**：`parseWebViewMajorVersion(versionName)` 改為 `parseChromeMajorVersion(userAgent)`，從 User-Agent 的 `Chrome/NN` 取主版本號；`readWebViewMajorVersion` 的注入參數改名 `readUserAgent`，預設呼叫 `InAppWebViewController.getDefaultUserAgent()`。理由：部分廠商 WebView（例如華為 `com.huawei.webview`）的 `versionName` 不是 Chromium 版本編號。下方 Task 1 的程式碼區塊保留原始版本，以程式碼為準。
+
 - [ ] **Step 1：建立分支**
 
 在 repo 根目錄：

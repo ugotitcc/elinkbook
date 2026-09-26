@@ -5,23 +5,33 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('parseWebViewMajorVersion', () {
-    test('取出主版本號', () {
-      expect(parseWebViewMajorVersion('91.0.4472.114'), 91);
-      expect(parseWebViewMajorVersion('154.0.8037.49'), 154);
+  group('parseChromeMajorVersion', () {
+    test('從 WebView 的 User-Agent 取出 Chrome 主版本號', () {
+      expect(
+        parseChromeMajorVersion(
+            'Mozilla/5.0 (Linux; Android 11; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Version/4.0 Chrome/91.0.4472.114 Mobile Safari/537.36'),
+        91,
+      );
+      expect(parseChromeMajorVersion('... Chrome/154.0.8037.49 Mobile Safari/537.36'), 154);
     });
 
-    test('只有主版本、前後有空白也能解析', () {
-      expect(parseWebViewMajorVersion('107'), 107);
-      expect(parseWebViewMajorVersion('  106.0.5249.126 '), 106);
+    test('廠商 WebView 的套件版本編號不影響判斷：只看 UA 裡的 Chrome/NN（審查 I-1）', () {
+      // 例如 com.huawei.webview 的 versionName 可能是 12.x，但核心是 Chromium 99
+      expect(
+        parseChromeMajorVersion(
+            'Mozilla/5.0 (Linux; Android 10; XYZ; HMSCore 6.0; wv) AppleWebKit/537.36 '
+            '(KHTML, like Gecko) Version/4.0 Chrome/99.0.4844.88 HuaweiBrowser/12.1.0 '
+            'Mobile Safari/537.36'),
+        99,
+      );
     });
 
-    test('null、空字串、非數字開頭 → null', () {
-      expect(parseWebViewMajorVersion(null), isNull);
-      expect(parseWebViewMajorVersion(''), isNull);
-      expect(parseWebViewMajorVersion('   '), isNull);
-      expect(parseWebViewMajorVersion('Chrome/91.0'), isNull);
-      expect(parseWebViewMajorVersion('abc'), isNull);
+    test('null、空字串、沒有 Chrome/NN → null', () {
+      expect(parseChromeMajorVersion(null), isNull);
+      expect(parseChromeMajorVersion(''), isNull);
+      expect(parseChromeMajorVersion('91.0.4472.114'), isNull);
+      expect(parseChromeMajorVersion('Mozilla/5.0 (Linux; Android 11) Chrome/ Mobile'), isNull);
     });
   });
 
@@ -57,18 +67,18 @@ void main() {
   });
 
   group('readWebViewMajorVersion', () {
-    test('回傳平台版本字串的主版本號', () async {
-      expect(await readWebViewMajorVersion(readVersionName: () async => '91.0.4472.114'), 91);
+    test('回傳平台 User-Agent 裡的 Chrome 主版本號', () async {
+      expect(await readWebViewMajorVersion(readUserAgent: () async => 'Mozilla/5.0 (Linux; Android 11; wv) Chrome/91.0.4472.114 Mobile'), 91);
     });
 
-    test('平台回傳 null → null', () async {
-      expect(await readWebViewMajorVersion(readVersionName: () async => null), isNull);
+    test('平台回傳沒有 Chrome/NN 的 User-Agent → null', () async {
+      expect(await readWebViewMajorVersion(readUserAgent: () async => 'Mozilla/5.0'), isNull);
     });
 
     test('平台呼叫拋例外（例如 MissingPluginException）→ null，不往外拋', () async {
       expect(
         await readWebViewMajorVersion(
-            readVersionName: () async => throw MissingPluginException('no impl')),
+            readUserAgent: () async => throw MissingPluginException('no impl')),
         isNull,
       );
     });
@@ -77,7 +87,7 @@ void main() {
       final never = Completer<String?>();
       expect(
         await readWebViewMajorVersion(
-          readVersionName: () => never.future,
+          readUserAgent: () => never.future,
           timeout: const Duration(milliseconds: 20),
         ),
         isNull,

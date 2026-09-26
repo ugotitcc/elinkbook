@@ -19,11 +19,15 @@ const int kLegacyWebFontSizeLimitBytes = 30 * 1024 * 1024;
 /// WebView 107 起的網頁字型上限。
 const int kWebFontSizeLimitBytes = 128 * 1024 * 1024;
 
-/// 從 WebView 版本字串（例如 `91.0.4472.114`）取出主版本號；無法解析時回傳 null。
-int? parseWebViewMajorVersion(String? versionName) {
-  if (versionName == null) return null;
-  final match = RegExp(r'^\d+').firstMatch(versionName.trim());
-  return match == null ? null : int.parse(match.group(0)!);
+/// 從 WebView 的預設 User-Agent 取出 `Chrome/NN` 的 Chromium 主版本號；找不到時回傳 null。
+///
+/// 刻意不用 WebView 套件的 versionName：部分廠商 WebView（例如沒有 Google 服務的
+/// 華為裝置上的 com.huawei.webview）用自己的版本編號，第一段不是 Chromium 版本，
+/// 會把新 WebView 誤判成舊的（程式審查 I-1）。UA 的 Chrome/NN 才是真正的核心版本。
+int? parseChromeMajorVersion(String? userAgent) {
+  if (userAgent == null) return null;
+  final match = RegExp(r'Chrome/(\d+)').firstMatch(userAgent);
+  return match == null ? null : int.parse(match.group(1)!);
 }
 
 /// 這個 WebView 能不能載入 [fontSizeBytes] 大小的字型。
@@ -42,16 +46,16 @@ bool webViewCanLoadFont({
   return fontSizeBytes <= limit;
 }
 
-/// 讀取系統 WebView 的主版本號。任何失敗（沒有平台實作、例外、逾時）都回傳 null，
-/// 不往外拋：這在 App 啟動時呼叫，不能擋住啟動。[readVersionName] 只供測試注入。
+/// 從系統 WebView 的預設 User-Agent 讀取 Chromium 主版本號。任何失敗（沒有平台實作、
+/// 例外、逾時）都回傳 null，不往外拋：這在 App 啟動時呼叫，不能擋住啟動。
+/// [readUserAgent] 只供測試注入。
 Future<int?> readWebViewMajorVersion({
-  Future<String?> Function()? readVersionName,
+  Future<String?> Function()? readUserAgent,
   Duration timeout = const Duration(seconds: 3),
 }) async {
-  final read = readVersionName ??
-      () async => (await InAppWebViewController.getCurrentWebViewPackage())?.versionName;
+  final read = readUserAgent ?? InAppWebViewController.getDefaultUserAgent;
   try {
-    return parseWebViewMajorVersion(await read().timeout(timeout));
+    return parseChromeMajorVersion(await read().timeout(timeout));
   } catch (e) {
     debugPrint('Failed to read WebView version: $e');
     return null;

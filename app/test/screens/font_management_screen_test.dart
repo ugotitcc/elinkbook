@@ -467,7 +467,7 @@ void main() {
       expect(find.text('思源宋體'), findsNothing);
       expect(find.byKey(const Key('font_management_builtin_unsupported_hint')), findsOneWidget);
       expect(
-        find.text('這台裝置的系統 WebView 版本太舊，部分內建字型無法使用，已從清單隱藏。更新「Android System WebView」後即可下載。'),
+        find.text('這台裝置的系統 WebView 版本太舊，部分內建字型無法使用，已從清單隱藏。更新「Android System WebView」並重新開啟 App 後即可下載。'),
         findsOneWidget,
       );
     });
@@ -486,7 +486,7 @@ void main() {
       await pumpScreen(tester, store: store, locale: const Locale('en'));
 
       expect(
-        find.text("This device's system WebView is too old for some built-in fonts, so they are hidden. Update Android System WebView to download them."),
+        find.text("This device's system WebView is too old for some built-in fonts, so they are hidden. Update Android System WebView and reopen the app to download them."),
         findsOneWidget,
       );
     });

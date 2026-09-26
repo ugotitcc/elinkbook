@@ -443,7 +443,7 @@
   "fontManagementCancelDownloadTooltip": "Cancel download",
   "fontManagementRetryTooltip": "Retry",
   "fontManagementDownloadableDeleteConfirmMessage": "You can download it again at any time. Books that use this font will use the book's font or the system font until it's downloaded again.",
-  "fontManagementBuiltInUnsupportedHint": "This device's system WebView is too old for some built-in fonts, so they are hidden. Update Android System WebView to download them.",
+  "fontManagementBuiltInUnsupportedHint": "This device's system WebView is too old for some built-in fonts, so they are hidden. Update Android System WebView and reopen the app to download them.",
   "fontDownloadErrorNetwork": "Can't connect. Check your network and try again.",
   "fontDownloadErrorHttp": "Server error ({statusCode}). Try again later.",
   "fontDownloadErrorIntegrity": "The file is incomplete or corrupted. Try again.",

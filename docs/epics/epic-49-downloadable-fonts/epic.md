@@ -244,3 +244,11 @@
 - M-1 採納：完整測試改成直接執行 `flutter test`。
 - M-2 採納：提示文字 padding 改為 `EdgeInsets.fromLTRB(16, 4, 16, 8)`。
 - M-3 採用報告的替代做法：`download()` 不加檢查，只在說明註解寫明唯一呼叫端只列出 `supportedFonts`，萬一下載了也會在下次啟動時被 `prepare()` 刪除。
+
+**2026-09-26 Issue 7 程式審查修訂**（`reviews/review-issue-7.md`：修正後合併，0 Critical／1 Important／3 Minor；人類裁定 I-1 採方案 a、Minor 全部修正）
+
+- I-1 採方案 a：改從 WebView 預設 User-Agent 的 `Chrome/NN` 取 Chromium 主版本號（`parseChromeMajorVersion`，預設讀取 `InAppWebViewController.getDefaultUserAgent()`），不再解析 WebView 套件的 `versionName`。避免華為 `com.huawei.webview` 這類用廠商版本編號的 WebView 被誤判成舊版，導致字型被隱藏、已下載的檔案在啟動時被刪。新增「廠商 UA（`HuaweiBrowser/12.1.0` 但 `Chrome/99`）取 99」測試；`issues.md` Issue 7 與計畫 Task 1 加註修訂。
+- M-1：提示文字補上「並重新開啟 App」（版本只在啟動時讀一次），4 個 ARB 與 2 個字串斷言一起改。
+- M-2：`main()` 一開始就發出讀取 WebView 版本的呼叫，和資料庫等初始化並行，建構字型 store 時才 await；改讀 User-Agent 需要初始化 WebView，這樣不會多一段序列等待。
+- M-3：不補測試，由 Task 4 Step 3 電子紙第 1、2 步（看不到字型、字型檔已刪除）驗證 `main.dart` 的接線。
+- 驗證：`webview_font_support_test.dart`、`downloadable_font_store_test.dart`、`font_management_screen_test.dart` 共 79 個測試通過；`flutter analyze` 乾淨；l10n 檢查兩行 PASS。

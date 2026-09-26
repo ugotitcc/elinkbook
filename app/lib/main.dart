@@ -81,6 +81,9 @@ Future<bool> _isMobileDataConnection() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // epic-49 Issue 7：讀 WebView 版本需要初始化 WebView（首次約數十～數百毫秒），
+  // 先起跑、和下方資料庫等初始化並行，建構字型 store 時才 await（程式審查 M-2）。
+  final webViewMajorVersionFuture = readWebViewMajorVersion();
   // epic-40-bundled-sqlite（ADR 0028）：改用 sqlite3 Native Assets 建置
   // 掛鉤自帶編譯、保證含 FTS5 的 sqlite3，取代依賴 Android 系統內建
   // SQLite（部分裝置系統版本缺 FTS5 模組，見 epic-10-search Issue 6）。
@@ -121,7 +124,7 @@ Future<void> main() async {
   // 失敗只影響字型下載功能，不能擋住 App 啟動。
   // epic-49 Issue 7：Chromium 106 以前的系統 WebView 拒絕超過 30MB 的網頁字型，
   // store 依版本只公開載得動的字型。讀不到版本時回傳 null（最多等 3 秒），視同支援。
-  final webViewMajorVersion = await readWebViewMajorVersion();
+  final webViewMajorVersion = await webViewMajorVersionFuture;
   final downloadableFontStore = DownloadableFontStore(
     httpClient: http.Client(),
     directory: Directory(
