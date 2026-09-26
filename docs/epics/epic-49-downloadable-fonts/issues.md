@@ -191,7 +191,7 @@ Issue 3 ─────────────────────┘
 
 ## Issue 7：系統 WebView 太舊時不列出可下載字型（Issue 5 第 8 項失敗）
 
-**Status:** needs-triage
+**Status:** completed
 
 **依賴：** Issue 4。
 

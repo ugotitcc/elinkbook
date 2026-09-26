@@ -111,7 +111,7 @@ DownloadableFontStore(webViewMajorVersion: …)
 
 > **程式審查修訂（`review-issue-7.md` I-1，人類裁定採方案 a）**：`parseWebViewMajorVersion(versionName)` 改為 `parseChromeMajorVersion(userAgent)`，從 User-Agent 的 `Chrome/NN` 取主版本號；`readWebViewMajorVersion` 的注入參數改名 `readUserAgent`，預設呼叫 `InAppWebViewController.getDefaultUserAgent()`。理由：部分廠商 WebView（例如華為 `com.huawei.webview`）的 `versionName` 不是 Chromium 版本編號。下方 Task 1 的程式碼區塊保留原始版本，以程式碼為準。
 
-- [ ] **Step 1：建立分支**
+- [x] **Step 1：建立分支**
 
 在 repo 根目錄：
 ```bash
@@ -119,7 +119,7 @@ git switch main && git pull --ff-only origin main
 git switch -c epic-49/issue-7-legacy-webview-fonts
 ```
 
-- [ ] **Step 2：寫失敗的測試**
+- [x] **Step 2：寫失敗的測試**
 
 建立 `app/test/reader/webview_font_support_test.dart`：
 
@@ -213,14 +213,14 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：執行測試，確認失敗**
+- [x] **Step 3：執行測試，確認失敗**
 
 ```bash
 flutter test test/reader/webview_font_support_test.dart
 ```
 預期：FAIL，編譯錯誤 `Error when reading 'lib/reader/webview_font_support.dart'`（檔案還不存在）。
 
-- [ ] **Step 4：寫實作**
+- [x] **Step 4：寫實作**
 
 建立 `app/lib/reader/webview_font_support.dart`：
 
@@ -286,14 +286,14 @@ Future<int?> readWebViewMajorVersion({
 }
 ```
 
-- [ ] **Step 5：執行測試，確認通過**
+- [x] **Step 5：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/webview_font_support_test.dart
 ```
 預期：`All tests passed!`（12 個測試）。
 
-- [ ] **Step 6：analyze 並提交**
+- [x] **Step 6：analyze 並提交**
 
 ```bash
 flutter analyze
@@ -321,7 +321,7 @@ git commit -m "feat(fonts): 新增 WebView 字型大小支援判斷（epic-49 Is
   - `prepare()` 另外刪除不在 `supportedFonts` 裡、但已存在的正式字型檔
   - Fake：`List<AppFont> supported` 欄位（預設全部字型），`installedFonts()` 只回傳 `installed` 與 `supported` 的交集
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 在 `app/test/reader/downloadable_font_store_test.dart` 最後一個 `group` 之後、`main()` 結尾的 `}` 之前，加入：
 
@@ -381,14 +381,14 @@ git commit -m "feat(fonts): 新增 WebView 字型大小支援判斷（epic-49 Is
 
 `fileFor`、`filesIn`、`storeWith`、`serving`、`specA`、`specB` 都是這個測試檔既有的 helper（見檔案開頭與 `main()` 內 85-97 行）。
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 flutter test test/reader/downloadable_font_store_test.dart
 ```
 預期：FAIL，編譯錯誤 `No named parameter with the name 'webViewMajorVersion'` 與 `The getter 'supportedFonts' isn't defined`。
 
-- [ ] **Step 3：寫實作**
+- [x] **Step 3：寫實作**
 
 在 `app/lib/reader/downloadable_font_store.dart`：
 
@@ -463,14 +463,14 @@ import 'webview_font_support.dart';
   /// supportedFonts；萬一下載了載不動的字型，下次啟動時 [prepare] 會刪掉（Issue 7）。
 ```
 
-- [ ] **Step 4：執行 store 測試，確認通過**
+- [x] **Step 4：執行 store 測試，確認通過**
 
 ```bash
 flutter test test/reader/downloadable_font_store_test.dart
 ```
 預期：`All tests passed!`。
 
-- [ ] **Step 5：Fake 加上 `supported`，並寫閱讀器的失敗測試**（計畫審查 I-2）
+- [x] **Step 5：Fake 加上 `supported`，並寫閱讀器的失敗測試**（計畫審查 I-2）
 
 `app/test/support/fake_downloadable_font_store.dart`，在 `Completer<void>? installedFontsGate;` 那段之後加上（`installedFonts()` 先不改，下一步要看測試失敗）：
 ```dart
@@ -516,14 +516,14 @@ flutter test test/reader/downloadable_font_store_test.dart
     });
 ```
 
-- [ ] **Step 6：執行閱讀器測試，確認兩個新測試失敗**
+- [x] **Step 6：執行閱讀器測試，確認兩個新測試失敗**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart --plain-name "Issue 7"
 ```
 預期：2 個測試 FAIL。第一個期望空集合、實際含 `AppFont.sourceHanSerif`；第二個期望 `null`、實際是 `'SourceHanSerifTC'`。原因是 Fake 的 `installedFonts()` 還沒依 `supported` 過濾。
 
-- [ ] **Step 7：Fake 的 `installedFonts()` 依 `supported` 過濾**（計畫審查 I-1）
+- [x] **Step 7：Fake 的 `installedFonts()` 依 `supported` 過濾**（計畫審查 I-1）
 
 `app/test/support/fake_downloadable_font_store.dart` 的 `installedFonts()` 改成：
 ```dart
@@ -535,14 +535,14 @@ flutter test test/screens/reader_screen_test.dart --plain-name "Issue 7"
   }
 ```
 
-- [ ] **Step 8：執行測試，確認通過**
+- [x] **Step 8：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/downloadable_font_store_test.dart test/screens/font_management_screen_test.dart test/screens/reader_screen_test.dart
 ```
 預期：`All tests passed!`。後兩個檔案使用 Fake，同時確認 Fake 改動後既有測試零回歸（`supported` 預設是全部字型，過濾對既有測試沒有影響）。
 
-- [ ] **Step 9：analyze 並提交**
+- [x] **Step 9：analyze 並提交**
 
 ```bash
 flutter analyze
@@ -566,7 +566,7 @@ git commit -m "feat(fonts): 字型 store 只公開 WebView 載得動的字型，
 - Consumes：Task 2 的 `DownloadableFontStore.supportedFonts`、建構參數 `webViewMajorVersion`；Task 1 的 `readWebViewMajorVersion()`；Fake 的 `supported` 欄位。
 - Produces：l10n key `fontManagementBuiltInUnsupportedHint`；Widget key `font_management_builtin_unsupported_hint`。
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 在 `app/test/screens/font_management_screen_test.dart` 的 `group('可下載字型（epic-49）', () {` 裡，`testWidgets('英文介面：字型名稱與狀態以英文顯示'` 之前加入：
 
@@ -610,14 +610,14 @@ git commit -m "feat(fonts): 字型 store 只公開 WebView 載得動的字型，
     });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 flutter test test/screens/font_management_screen_test.dart
 ```
 預期：後三個新測試 FAIL（找得到「思源黑體」、找不到提示 key）；第一個新測試 PASS（目前本來就沒有這個提示，這是回歸保護，不是新行為）。
 
-- [ ] **Step 3：新增介面字串**
+- [x] **Step 3：新增介面字串**
 
 四個 arb 都在 `fontManagementDownloadableDeleteConfirmMessage` 那一項之後加入新項目。
 
@@ -651,7 +651,7 @@ git status --short lib/l10n
 ```
 預期：4 個 arb 與 `app_localizations.dart`、`app_localizations_en.dart`、`app_localizations_zh.dart` 顯示為已修改。
 
-- [ ] **Step 4：修改字型管理畫面**
+- [x] **Step 4：修改字型管理畫面**
 
 `app/lib/screens/font_management_screen.dart` 的 `build()`，把：
 ```dart
@@ -676,14 +676,14 @@ git status --short lib/l10n
     final builtInFonts = widget.downloadableFontStore?.supportedFonts ?? AppFont.values;
 ```
 
-- [ ] **Step 5：執行測試，確認通過**
+- [x] **Step 5：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/font_management_screen_test.dart
 ```
 預期：`All tests passed!`。
 
-- [ ] **Step 6：啟動時讀取 WebView 版本**
+- [x] **Step 6：啟動時讀取 WebView 版本**
 
 `app/lib/main.dart`：
 
@@ -713,7 +713,7 @@ import 'reader/webview_font_support.dart';
   );
 ```
 
-- [ ] **Step 7：analyze、l10n 檢查並提交**
+- [x] **Step 7：analyze、l10n 檢查並提交**
 
 ```bash
 flutter analyze
@@ -733,7 +733,7 @@ git commit -m "feat(fonts): 字型管理只列出 WebView 載得動的內建字�
 - Modify: `docs/epics.md`
 - Modify: `docs/epics/epic-49-downloadable-fonts/plans/plan-issue-7.md`（勾選步驟）
 
-- [ ] **Step 1：完整測試與靜態檢查**
+- [x] **Step 1：完整測試與靜態檢查**
 
 在 `app/`：
 ```bash
@@ -743,14 +743,14 @@ node tool/check_l10n_hardcoded_strings.js
 ```
 預期：`All tests passed!`；`No issues found!`；l10n 檢查沒有回報問題。
 
-- [ ] **Step 2：建置 debug APK**
+- [x] **Step 2：建置 debug APK**
 
 ```bash
 flutter build apk --debug
 ```
 預期：`√ Built build\app\outputs\flutter-apk\app-debug.apk`。
 
-- [ ] **Step 3：真機確認（人類操作）**
+- [x] **Step 3：真機確認（人類操作）**
 
 需要 Issue 5 用過的兩台裝置。兩台的 adb 傳輸都很慢（約 20 KB/s），APK 建議用 USB 檔案傳輸複製到裝置「Download」資料夾後在裝置上安裝（同簽章覆蓋更新，資料保留）。
 
@@ -769,7 +769,7 @@ flutter build apk --debug
 
 回報每一步「通過／失敗＋一句觀察」。
 
-- [ ] **Step 4：記錄進度**
+- [x] **Step 4：記錄進度**
 
 依 Step 1、3 的實際結果：
 
@@ -778,7 +778,7 @@ flutter build apk --debug
 3. 真機確認都通過時，`epic.md` 同一段加一句：Issue 5 第 8 項依 Issue 7 的驗收方式在電子紙重驗通過，由人類決定 Issue 5 是否改為 `completed`。有失敗時照實記錄，不改 Issue 5 狀態。
 4. `docs/epics.md` epic-49 那一列備註改成：`Issue 7 已完成，待 PR 合併與 Issue 5 重驗結案`。
 
-- [ ] **Step 5：勾選本計畫並提交**
+- [x] **Step 5：勾選本計畫並提交**
 
 在 repo 根目錄：
 ```bash
