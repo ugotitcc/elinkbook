@@ -289,3 +289,5 @@
 - 修正（人類選方案 1）：新增 `readWebViewMajorVersionWithCache()`。讀到版本就存進 SharedPreferences（key `webview_major_version`），讀不到時沿用上次的值；從沒讀到過才是 null。副作用：WebView 升級後若剛好讀不到，會暫時沿用舊版本，下次讀到就更新。新增 4 個測試，`webview_font_support_test.dart` 16 個全過；`flutter analyze` 乾淨；l10n 檢查兩行 PASS。
 - 真機確認：人類回報修正後的 APK 通過，含重新安裝後第一次開 App 只列 3 款。
 - Issue 8 改為 `completed`，發 PR。
+
+**2026-09-26 Issue 8 PR 合併**：PR #283（`epic-49/issue-8-restore-fonts` → `main`）已合併，內容為 3 款字型恢復、WebView 版本逾時修正與真機確認記錄。epic-49 全部工單完成，下一步：歸檔。
