@@ -160,3 +160,10 @@
 - M-1 採納：`_renderedFontFamily()` 第一行改為 `fontFamily == null` 時也直接回傳。效能差異可忽略，採納是為了讓最常見的「使用書本字型」情境一眼可讀。Task 1 Step 5 的變異檢查改為只拿掉「沒有 store」的判斷。
 - M-2 採納：新增測試「偏好為 null（使用書本字型）時，閱讀器收到 null」，group 共 8 個測試；它在修改前就會通過，紅燈預期改為 3 個失敗、5 個通過，其餘數字（250、2880）同步更新。
 - M-3 採納：新 group 的插入位置改為約 `:6671`（Issue 4 審查修訂 M-4 使行號後移，已實際確認）。
+
+**2026-09-26 Issue 6 完成**（分支 `epic-49/issue-6-uninstalled-font-fallback`，待 PR 合併）
+
+- `ReaderScreen` 新增 `_renderedFontFamily()`：有 store 且偏好指向未下載的內建字型時，傳給 `FoliateReaderView` 的 `fontFamily` 改為 `null`（書本字型）；不改寫偏好。沒有 store 時照原值傳（計畫決定）；讀取已下載字型失敗時也改傳 `null`；自訂字型與不認得的名稱照原值傳。
+- 新增 8 個測試（`reader_screen_test.dart` group「未下載字型改用書本字型（epic-49 Issue 6）」）。
+- 變異檢查：拿掉「沒有 store」的判斷後，僅「沒有 store 時照原值傳遞」失敗（`Expected: 'SourceHanSerifTC'  Actual: <null>`），改回後 8 個全部通過。
+- 完整 `flutter test`：2880 通過、1 跳過；`flutter analyze`：`No issues found!`；l10n 檢查：兩行 PASS。

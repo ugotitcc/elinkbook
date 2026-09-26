@@ -81,7 +81,7 @@
   - 測試用：`FakeDownloadableFontStore`（`installed`、`installedFontsGate`）、`FakeCustomFontsRepository`、`FakeReaderPrefsManager`（`saveBookPrefs()`、`bookPrefsByBookId`）；`prefsManager` 是檔案頂層 `setUp` 建立的共用實例（`:171`）。
 - Produces：`String? _renderedFontFamily(String? fontFamily)`（私有，僅供本檔使用）。
 
-- [ ] **Step 1：寫測試**
+- [x] **Step 1：寫測試**
 
 在 `test/screens/reader_screen_test.dart` 的 group「已下載字型（epic-49 Issue 4）」結束的 `});` 之後，新增下面整個 group。它有自己的 `pumpReader`，和上一個 group 的寫法相同（刻意不共用，兩個 group 各自獨立閱讀）。
 
@@ -220,7 +220,7 @@
 
 注意：`EpubLayoutInfo`、`WritingMode`、`ReaderSettingsSheet`、`BookReaderPrefs`、`AppFont`、`DownloadableFontStore`、`FakeDownloadableFontStore`、`FakeCustomFontsRepository` 在這個測試檔都已經 import（Issue 4 的 group 已在用），不需要新增 import。若 `flutter analyze` 回報缺少 import，照它指出的檔案補上，放在同類 import 旁邊（`package:` 與 `package:` 放一起，`../support/` 與 `../support/` 放一起）。
 
-- [ ] **Step 2：執行測試，確認紅燈**
+- [x] **Step 2：執行測試，確認紅燈**
 
 執行：`flutter test test/screens/reader_screen_test.dart --plain-name "未下載字型改用書本字型"`
 
@@ -230,7 +230,7 @@
 
 如果失敗數不是 3，或失敗原因不是上面這個 `Actual: 'SourceHanSerifTC'`，先停下來查原因，不要進入 Step 3。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 在 `lib/screens/reader_screen.dart` 的 `_loadDownloadedFonts()` 方法結束之後新增：
 
@@ -268,19 +268,19 @@
 
 `reader_screen.dart` 只有這一處把 `fontFamily` 傳給閱讀器（可用 `git grep -n "fontFamily: resolved" -- lib/screens/reader_screen.dart` 確認只有一筆）。
 
-- [ ] **Step 4：執行測試，確認綠燈**
+- [x] **Step 4：執行測試，確認綠燈**
 
 執行：`flutter test test/screens/reader_screen_test.dart --plain-name "未下載字型改用書本字型"`
 
 預期：8 個全部通過。
 
-- [ ] **Step 5：變異檢查**
+- [x] **Step 5：變異檢查**
 
 暫時把 `_renderedFontFamily()` 第一行的條件改成只剩 `if (fontFamily == null) return fontFamily;`（拿掉「沒有 store」的判斷），再跑 Step 4 的指令。
 
 預期：只有「沒有 store 時照原值傳遞…」失敗（`Expected: 'SourceHanSerifTC'  Actual: <null>`）。確認後**改回**，再跑一次 Step 4，確認 8 個全部通過。把結果（哪個測試失敗）記下來，Task 2 寫進 `epic.md`。
 
-- [ ] **Step 6：跑整個測試檔與靜態檢查**
+- [x] **Step 6：跑整個測試檔與靜態檢查**
 
 執行：
 ```bash
@@ -290,7 +290,7 @@ flutter analyze
 
 預期：`reader_screen_test.dart` 全部通過（Issue 4 合併時是 242 個，加上本 Issue 8 個，共 250 個）；`flutter analyze` 顯示 `No issues found!`。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart test/screens/reader_screen_test.dart ../docs/epics/epic-49-downloadable-fonts/plans/plan-issue-6.md
@@ -313,13 +313,13 @@ commit 訊息結尾加上 `Co-Authored-By` 署名行（依當次工作階段的 
 - Consumes：Task 1 的變異檢查結果與測試數字。
 - Produces：無。
 
-- [ ] **Step 1：完整測試**
+- [x] **Step 1：完整測試**
 
 執行：`flutter test`
 
 預期：`All tests passed!`。通過數約為 2872＋8＝2880（Issue 4 合併前為 2872 通過、1 跳過；實際數字以輸出為準，照實記錄）。
 
-- [ ] **Step 2：靜態檢查與 l10n 檢查**
+- [x] **Step 2：靜態檢查與 l10n 檢查**
 
 執行：
 ```bash
@@ -329,7 +329,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 預期：`No issues found!`；l10n 檢查兩行都是 `PASS`（本 Issue 沒有新增字串，只是確認沒有破壞）。
 
-- [ ] **Step 3：更新文件**
+- [x] **Step 3：更新文件**
 
 1. `issues.md` 的 Issue 6：`**Status:** ready-for-agent` 改成 `**Status:** completed`。
 2. `epic.md` 的「開發記錄」最後新增一段，格式比照既有的「Issue 4 完成」段落：
@@ -345,7 +345,7 @@ node tool/check_l10n_hardcoded_strings.js
 3. `docs/epics.md` epic-49 那一列的備註改成：`Issue 1～4、6 已完成，待 Issue 5 真機驗證`。
 4. 本計畫檔所有已完成的步驟改成 `- [x]`。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add ../docs/epics.md ../docs/epics/epic-49-downloadable-fonts/issues.md ../docs/epics/epic-49-downloadable-fonts/epic.md ../docs/epics/epic-49-downloadable-fonts/plans/plan-issue-6.md

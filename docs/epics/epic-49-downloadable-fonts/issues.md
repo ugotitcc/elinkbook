@@ -161,7 +161,7 @@ Issue 3 ─────────────────────┘
 
 ## Issue 6：偏好指向未下載的內建字型時，閱讀器改用書本字型（Issue 4 程式審查 M-1）
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 4。
 
