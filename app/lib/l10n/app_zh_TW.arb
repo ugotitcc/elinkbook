@@ -1959,6 +1959,18 @@
   "@fontNameSourceHanSerif": {
     "description": "內建字型名稱：思源宋體（字型管理清單與閱讀設定的字型下拉選單）"
   },
+  "fontNameGuanKiapTsingKhai": "原俠正楷",
+  "@fontNameGuanKiapTsingKhai": {
+    "description": "內建字型名稱：原俠正楷（字型管理清單與閱讀設定的字型下拉選單，epic-49 Issue 8）"
+  },
+  "fontNameTaiwanPearl": "台灣圓體",
+  "@fontNameTaiwanPearl": {
+    "description": "內建字型名稱：台灣圓體（字型管理清單與閱讀設定的字型下拉選單，epic-49 Issue 8）"
+  },
+  "fontNameGenRyuMinTW": "源流明體",
+  "@fontNameGenRyuMinTW": {
+    "description": "內建字型名稱：源流明體（字型管理清單與閱讀設定的字型下拉選單，epic-49 Issue 8）"
+  },
   "fontManagementUploadTooltip": "上傳字型",
   "@fontManagementUploadTooltip": {
     "description": "AppBar「上傳字型」按鈕的無障礙提示文字"

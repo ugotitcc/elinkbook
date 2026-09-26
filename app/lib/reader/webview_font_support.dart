@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// 系統 WebView 能載入的網頁字型大小（epic-49 Issue 7）。
 ///
@@ -59,5 +60,32 @@ Future<int?> readWebViewMajorVersion({
   } catch (e) {
     debugPrint('Failed to read WebView version: $e');
     return null;
+  }
+}
+
+/// 記住上次讀到的 WebView 主版本號用的 SharedPreferences key。
+const String kWebViewMajorVersionPrefsKey = 'webview_major_version';
+
+/// 讀 WebView 主版本號；讀到就記住，讀不到時改用上次記住的值（epic-49 Issue 8 真機發現）。
+///
+/// 電子紙裝置剛安裝完 APK 第一次開 App 時，讀版本會超過 3 秒逾時，回傳 null，
+/// 結果舊 WebView 也列出所有字型。記住上次的值後，只有「從沒成功讀到過」才會是 null。
+/// WebView 升級後若剛好讀不到，會暫時沿用舊版本（字型被多藏一次），下次讀到就更新。
+/// [readFresh] 只供測試注入。
+Future<int?> readWebViewMajorVersionWithCache({
+  Future<int?> Function()? readFresh,
+}) async {
+  final fresh = await (readFresh ?? readWebViewMajorVersion)();
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    if (fresh != null) {
+      await prefs.setInt(kWebViewMajorVersionPrefsKey, fresh);
+      return fresh;
+    }
+    return prefs.getInt(kWebViewMajorVersionPrefsKey);
+  } catch (e) {
+    // 存取偏好設定失敗不能擋住啟動，直接用這次讀到的值
+    debugPrint('Failed to access cached WebView version: $e');
+    return fresh;
   }
 }

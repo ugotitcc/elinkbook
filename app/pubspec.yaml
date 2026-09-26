@@ -224,14 +224,7 @@ flutter:
     - test/fixtures/sample.ttf
     - assets/wifi_transfer/index.html
     # epic-48：內建字型一律不打包進 APK，改由 epic-49「可下載字型」在使用者
-    # 點下載後才取得。下載功能完成前，選思源黑體／宋體會由系統字型補位。
-    # - assets/fonts/SourceHanSansTC-VF.ttf
-    # - assets/fonts/SourceHanSerifTC-VF.ttf
-    # [字型停用] 其餘 3 款同時從字型清單隱藏（見 lib/reader/app_font.dart 的恢復說明）。
-    # 5 款字型原檔都放在 repo 根目錄的 fonts-cdn/fonts/（epic-49），不再放在 assets/fonts/。
-    # - assets/fonts/GuanKiapTsingKhai.ttf
-    # - assets/fonts/TaiwanPearl-Regular.ttf
-    # - assets/fonts/GenRyuMinTW-Regular.ttf
+    # 點下載後才取得（ADR 0035）。5 款字型原檔放在 repo 根目錄的 fonts-cdn/fonts/。
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

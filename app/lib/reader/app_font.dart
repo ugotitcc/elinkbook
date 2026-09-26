@@ -6,15 +6,13 @@ import '../l10n/app_localizations.dart';
 /// epic-48 起字型檔一律不打包進 APK（見 `pubspec.yaml`），改由 epic-49
 /// 「可下載字型」提供；下載功能完成前，WebView 找不到字型檔時會由系統字型補位。
 ///
-/// [字型停用] epic-48：清單只保留思源黑體／思源宋體，其餘 3 款先註解停用
-/// （不顯示在字型選單）。恢復時搜尋 `[字型停用]` 標記，把註解掉的 enum 值
-/// 與 switch 分支一併解除註解即可。
+/// epic-48 曾停用原俠正楷、台灣圓體、源流明體，epic-49 Issue 8 恢復為可下載字型。
 enum AppFont {
   sourceHanSans, // 思源黑體 SourceHanSansTC-VF.ttf
   sourceHanSerif, // 思源宋體 SourceHanSerifTC-VF.ttf
-  // [字型停用] guanKiapTsingKhai, // 原俠正楷 GuanKiapTsingKhai.ttf
-  // [字型停用] taiwanPearl, // 台灣圓體 TaiwanPearl-Regular.ttf
-  // [字型停用] genRyuMinTW, // 源流明體 GenRyuMinTW-Regular.ttf
+  guanKiapTsingKhai, // 原俠正楷 GuanKiapTsingKhai.ttf
+  taiwanPearl, // 台灣圓體 TaiwanPearl-Regular.ttf
+  genRyuMinTW, // 源流明體 GenRyuMinTW-Regular.ttf
 }
 
 /// [AppFont] 對應的實際字型家族名稱字串。此值透過 method channel 的
@@ -30,12 +28,12 @@ extension AppFontFamilyName on AppFont {
         return 'SourceHanSansTC';
       case AppFont.sourceHanSerif:
         return 'SourceHanSerifTC';
-      // [字型停用] case AppFont.guanKiapTsingKhai:
-      // [字型停用]   return 'GuanKiapTsingKhai';
-      // [字型停用] case AppFont.taiwanPearl:
-      // [字型停用]   return 'TaiwanPearl';
-      // [字型停用] case AppFont.genRyuMinTW:
-      // [字型停用]   return 'GenRyuMinTW';
+      case AppFont.guanKiapTsingKhai:
+        return 'GuanKiapTsingKhai';
+      case AppFont.taiwanPearl:
+        return 'TaiwanPearl';
+      case AppFont.genRyuMinTW:
+        return 'GenRyuMinTW';
     }
   }
 
@@ -47,6 +45,12 @@ extension AppFontFamilyName on AppFont {
         return l10n.fontNameSourceHanSans;
       case AppFont.sourceHanSerif:
         return l10n.fontNameSourceHanSerif;
+      case AppFont.guanKiapTsingKhai:
+        return l10n.fontNameGuanKiapTsingKhai;
+      case AppFont.taiwanPearl:
+        return l10n.fontNameTaiwanPearl;
+      case AppFont.genRyuMinTW:
+        return l10n.fontNameGenRyuMinTW;
     }
   }
 }

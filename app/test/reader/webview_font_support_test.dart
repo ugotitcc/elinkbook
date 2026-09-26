@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:elinkbook/reader/webview_font_support.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('parseChromeMajorVersion', () {
@@ -92,6 +93,32 @@ void main() {
         ),
         isNull,
       );
+    });
+  });
+
+  group('readWebViewMajorVersionWithCache（Issue 8 真機發現）', () {
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    test('讀到版本 → 回傳並記住', () async {
+      expect(await readWebViewMajorVersionWithCache(readFresh: () async => 91), 91);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt(kWebViewMajorVersionPrefsKey), 91);
+    });
+
+    test('讀不到版本（例如剛安裝完第一次開，逾時）→ 改用上次記住的值', () async {
+      SharedPreferences.setMockInitialValues({kWebViewMajorVersionPrefsKey: 91});
+      expect(await readWebViewMajorVersionWithCache(readFresh: () async => null), 91);
+    });
+
+    test('讀不到版本，也沒有記住的值 → null（視同支援，Issue 7 決定 2）', () async {
+      expect(await readWebViewMajorVersionWithCache(readFresh: () async => null), isNull);
+    });
+
+    test('WebView 升級後讀到新版本 → 蓋掉舊值', () async {
+      SharedPreferences.setMockInitialValues({kWebViewMajorVersionPrefsKey: 91});
+      expect(await readWebViewMajorVersionWithCache(readFresh: () async => 154), 154);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt(kWebViewMajorVersionPrefsKey), 154);
     });
   });
 }

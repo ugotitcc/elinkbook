@@ -2675,6 +2675,24 @@ abstract class AppLocalizations {
   /// **'思源宋體'**
   String get fontNameSourceHanSerif;
 
+  /// 內建字型名稱：原俠正楷（字型管理清單與閱讀設定的字型下拉選單，epic-49 Issue 8）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'原俠正楷'**
+  String get fontNameGuanKiapTsingKhai;
+
+  /// 內建字型名稱：台灣圓體（字型管理清單與閱讀設定的字型下拉選單，epic-49 Issue 8）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'台灣圓體'**
+  String get fontNameTaiwanPearl;
+
+  /// 內建字型名稱：源流明體（字型管理清單與閱讀設定的字型下拉選單，epic-49 Issue 8）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'源流明體'**
+  String get fontNameGenRyuMinTW;
+
   /// AppBar「上傳字型」按鈕的無障礙提示文字
   ///
   /// In zh_TW, this message translates to:
