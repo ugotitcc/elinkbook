@@ -1496,6 +1496,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fontNameSourceHanSerif => 'Source Han Serif';
 
   @override
+  String get fontNameGuanKiapTsingKhai => 'GuanKiapTsingKhai';
+
+  @override
+  String get fontNameTaiwanPearl => 'TaiwanPearl';
+
+  @override
+  String get fontNameGenRyuMinTW => 'GenRyuMin TW';
+
+  @override
   String get fontManagementUploadTooltip => 'Upload font';
 
   @override

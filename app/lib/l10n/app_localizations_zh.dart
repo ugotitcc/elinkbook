@@ -1447,6 +1447,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fontNameSourceHanSerif => '思源宋體';
 
   @override
+  String get fontNameGuanKiapTsingKhai => '原俠正楷';
+
+  @override
+  String get fontNameTaiwanPearl => '台灣圓體';
+
+  @override
+  String get fontNameGenRyuMinTW => '源流明體';
+
+  @override
   String get fontManagementUploadTooltip => '上傳字型';
 
   @override
@@ -3575,6 +3584,15 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get fontNameSourceHanSerif => '思源宋体';
 
   @override
+  String get fontNameGuanKiapTsingKhai => '原侠正楷';
+
+  @override
+  String get fontNameTaiwanPearl => '台湾圆体';
+
+  @override
+  String get fontNameGenRyuMinTW => '源流明体';
+
+  @override
   String get fontManagementUploadTooltip => '上传字体';
 
   @override
@@ -5701,6 +5719,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get fontNameSourceHanSerif => '思源宋體';
+
+  @override
+  String get fontNameGuanKiapTsingKhai => '原俠正楷';
+
+  @override
+  String get fontNameTaiwanPearl => '台灣圓體';
+
+  @override
+  String get fontNameGenRyuMinTW => '源流明體';
 
   @override
   String get fontManagementUploadTooltip => '上傳字型';

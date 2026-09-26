@@ -41,23 +41,23 @@ FontDownloadSpec fontDownloadSpecOf(AppFont font) {
         sizeBytes: 59898316,
         sha256: '71354ed752104c8a3cbcff18943c6110d179d01cc6eaaf1aff7ea14c4a447879',
       );
-    // [字型停用] case AppFont.guanKiapTsingKhai:
-    // [字型停用]   return const FontDownloadSpec(
-    // [字型停用]     publishPath: 'v1/GuanKiapTsingKhai.ttf',
-    // [字型停用]     sizeBytes: 14675776,
-    // [字型停用]     sha256: '758632243c499e431fd0c847f5e8c431acf59a9b41a26237a819466139994d38',
-    // [字型停用]   );
-    // [字型停用] case AppFont.taiwanPearl:
-    // [字型停用]   return const FontDownloadSpec(
-    // [字型停用]     publishPath: 'v1/TaiwanPearl-Regular.ttf',
-    // [字型停用]     sizeBytes: 21704488,
-    // [字型停用]     sha256: '51b3c9a4ab1b6b45dcdad7c5ae93386aea399fd3dabb85d2ac41110dc57f211d',
-    // [字型停用]   );
-    // [字型停用] case AppFont.genRyuMinTW:
-    // [字型停用]   return const FontDownloadSpec(
-    // [字型停用]     publishPath: 'v1/GenRyuMinTW-Regular.ttf',
-    // [字型停用]     sizeBytes: 15976964,
-    // [字型停用]     sha256: '9178c199d633075b8bb91902216c3e1bc977a11fde12471a2c9a250434402927',
-    // [字型停用]   );
+    case AppFont.guanKiapTsingKhai:
+      return const FontDownloadSpec(
+        publishPath: 'v1/GuanKiapTsingKhai.ttf',
+        sizeBytes: 14675776,
+        sha256: '758632243c499e431fd0c847f5e8c431acf59a9b41a26237a819466139994d38',
+      );
+    case AppFont.taiwanPearl:
+      return const FontDownloadSpec(
+        publishPath: 'v1/TaiwanPearl-Regular.ttf',
+        sizeBytes: 21704488,
+        sha256: '51b3c9a4ab1b6b45dcdad7c5ae93386aea399fd3dabb85d2ac41110dc57f211d',
+      );
+    case AppFont.genRyuMinTW:
+      return const FontDownloadSpec(
+        publishPath: 'v1/GenRyuMinTW-Regular.ttf',
+        sizeBytes: 15976964,
+        sha256: '9178c199d633075b8bb91902216c3e1bc977a11fde12471a2c9a250434402927',
+      );
   }
 }

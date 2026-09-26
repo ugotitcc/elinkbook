@@ -1089,7 +1089,7 @@ void main() {
             '不再像舊版 ListView(shrinkWrap: true) 那樣依內容量縮小');
   });
 
-  testWidgets('英文介面下字型選單的內建字型名稱以英文顯示，已停用字型不列出（epic-48）',
+  testWidgets('英文介面下字型選單的內建字型名稱以英文顯示（epic-48，epic-49 Issue 8）',
       (tester) async {
     await _pumpSheet(tester, const BookReaderPrefs(), (_) {},
         locale: const Locale('en'));
@@ -1099,14 +1099,17 @@ void main() {
 
     expect(find.text('Source Han Sans'), findsWidgets);
     expect(find.text('Source Han Serif'), findsWidgets);
+    expect(find.text('GuanKiapTsingKhai'), findsWidgets);
+    expect(find.text('TaiwanPearl'), findsWidgets);
+    expect(find.text('GenRyuMin TW'), findsWidgets);
     expect(find.text('思源黑體'), findsNothing);
-    expect(find.text('原俠正楷'), findsNothing);
   });
 
-  testWidgets('偏好設定存著已停用的字型時，面板正常開啟且下拉選單顯示「使用書本字型」（epic-48）',
+  testWidgets('偏好設定存著不認得的字型名稱時，面板正常開啟且下拉選單顯示「使用書本字型」（epic-48）',
       (tester) async {
+    // epic-49 Issue 8 恢復原俠正楷後，改用真的不存在的名稱，保留「不認得也不會壞」的意圖
     await _pumpSheet(
-        tester, const BookReaderPrefs(fontFamily: 'GuanKiapTsingKhai'), (_) {});
+        tester, const BookReaderPrefs(fontFamily: 'NoSuchFont'), (_) {});
 
     expect(tester.takeException(), isNull);
     final dropdown = tester.widget<DropdownButton<String?>>(

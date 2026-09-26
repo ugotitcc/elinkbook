@@ -33,16 +33,16 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('顯示標題與 2 款內建字型（無操作按鈕），已停用的 3 款不顯示（epic-48）',
+  testWidgets('沒有 store 時顯示標題與 5 款內建字型（無操作按鈕）（epic-48，epic-49 Issue 8）',
       (tester) async {
     await pumpScreen(tester);
 
     expect(find.text('字型管理'), findsOneWidget);
     expect(find.text('思源黑體'), findsOneWidget);
     expect(find.text('思源宋體'), findsOneWidget);
-    expect(find.text('原俠正楷'), findsNothing);
-    expect(find.text('台灣圓體'), findsNothing);
-    expect(find.text('源流明體'), findsNothing);
+    expect(find.text('原俠正楷'), findsOneWidget);
+    expect(find.text('台灣圓體'), findsOneWidget);
+    expect(find.text('源流明體'), findsOneWidget);
     expect(find.byKey(const Key('font_management_upload_button')),
         findsOneWidget);
   });

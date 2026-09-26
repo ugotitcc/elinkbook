@@ -500,8 +500,11 @@ void main() {
       await fileFor(specB.publishPath).create(recursive: true);
     }
 
+    /// mixedSpecOf 只把思源黑體標成 40MB，其他字型都是 50,000 bytes
+    final allButSans = AppFont.values.where((f) => f != AppFont.sourceHanSans).toList();
+
     test('舊 WebView（91）：supportedFonts 不含超過 30MB 的字型', () {
-      expect(storeFor(91).supportedFonts, [AppFont.sourceHanSerif]);
+      expect(storeFor(91).supportedFonts, allButSans);
     });
 
     test('新 WebView（154）與讀不到版本（null）：supportedFonts 是全部字型', () {
@@ -515,7 +518,7 @@ void main() {
 
     test('舊 WebView：檔案存在也不列為已下載', () async {
       await placeInstalledFiles();
-      expect(await storeFor(91).installedFonts(), {AppFont.sourceHanSerif});
+      expect(await storeFor(91).installedFonts(), allButSans.toSet());
     });
 
     test('舊 WebView：prepare 刪除載不動的已下載檔案，保留載得動的', () async {
@@ -528,6 +531,17 @@ void main() {
       await placeInstalledFiles();
       await storeFor(null).prepare();
       expect((await filesIn(fontsDir))..sort(), [specA.publishPath, specB.publishPath]);
+    });
+
+    test('正式字型目錄＋舊 WebView（91）：只公開新恢復的 3 款（Issue 8）', () {
+      final store = DownloadableFontStore(
+        httpClient: serving({}),
+        directory: fontsDir,
+        baseUri: Uri.parse('https://fonts.test/'),
+        webViewMajorVersion: 91,
+      );
+      expect(store.supportedFonts,
+          [AppFont.guanKiapTsingKhai, AppFont.taiwanPearl, AppFont.genRyuMinTW]);
     });
   });
 }
