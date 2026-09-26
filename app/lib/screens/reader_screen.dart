@@ -1326,6 +1326,24 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
   }
 
+  /// 實際交給閱讀器渲染的字型家族名稱（epic-49 Issue 6，Issue 4 程式審查 M-1）。
+  ///
+  /// 偏好指向還沒下載（或已刪除）的內建字型時改傳 null，讓書本字型生效，和設定
+  /// 面板顯示的「使用書本字型」一致；否則 main.js 會注入一個沒有 @font-face 的
+  /// 字型名稱，由系統預設字型蓋掉書本字型。只影響渲染、不改寫偏好，字型下載後
+  /// 重新開書自然恢復。
+  ///
+  /// - 沒有傳入 store（測試與舊呼叫端）：照原值傳，維持 Issue 4 之前的行為。
+  /// - 讀取已下載字型失敗：_installedFonts 為空，@font-face 也不會輸出，同樣改傳 null。
+  /// - 自訂字型與不認得的名稱（含 epic-48 停用的字型）：照原值傳。
+  String? _renderedFontFamily(String? fontFamily) {
+    // 沒有 store，或偏好本來就是「使用書本字型」：照原值傳（計畫審查 M-1）
+    if (widget.downloadableFontStore == null || fontFamily == null) return fontFamily;
+    final isBuiltIn = AppFont.values.any((f) => f.familyName == fontFamily);
+    final isInstalled = _installedFonts.any((f) => f.familyName == fontFamily);
+    return isBuiltIn && !isInstalled ? null : fontFamily;
+  }
+
   Future<void> _loadLayoutPresets() async {
     final repository = widget.layoutPresetRepository;
     if (repository == null) return;
@@ -3309,7 +3327,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           onLayoutResolved: _handleFoliateLayoutResolved,
           writingMode: resolved.writingMode,
           pageTurnMode: resolved.pageTurnMode,
-          fontFamily: resolved.fontFamily,
+          fontFamily: _renderedFontFamily(resolved.fontFamily),
           fontSize: resolved.fontSize,
           fontWeight: resolved.fontWeight,
           lineHeight: resolved.lineHeight,
