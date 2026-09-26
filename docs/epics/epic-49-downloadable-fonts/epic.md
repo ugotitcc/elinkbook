@@ -175,3 +175,15 @@
 - 驗證：`reader_screen_test.dart`＋`foliate_reader_view_test.dart` 共 367 個測試通過；`flutter analyze` 乾淨；l10n 檢查兩行 PASS。
 
 **2026-09-26 Issue 6 合併**：PR #280（`epic-49/issue-6-uninstalled-font-fallback` → `main`）已合併。epic-49 所有 agent 工單（Issue 1、3、4、6）與人類部署（Issue 2）皆已完成，只剩 Issue 5 真機驗證（9 項，人類操作）；通過後即可歸檔。
+
+**2026-09-26 撰寫 Issue 5 實作計畫**（`/writing-plans`）：`plans/plan-issue-5.md`，寫成人類操作的驗證手冊，共 4 個 Task：準備 APK 與驗證書（agent）、一般手機（人類，第 1～7、9 項）、電子紙閱讀器（人類，第 2 項電子紙部分、第 6 項；第 8 項在兩台中較舊的那台做）、記錄結果（agent）。查證後定下的做法：只有 debug APK 能用 `chrome://inspect`（Android 對 debuggable App 自動開啟 WebView 遠端除錯，本專案沒有另外呼叫 `setWebContentsDebuggingEnabled`），效能相關項目改用 release APK；兩者都以 debug key 簽章，可用 `adb install -r` 互相覆蓋並保留資料，計畫禁止 `adb uninstall`。現有 fixture 都沒有在 CSS 宣告字型，所以另做一本驗證書（中文 `serif`、英文 `monospace`），讓 Rendered Fonts 分得出書本字型、思源宋體、系統預設字型三種狀態。
+
+**2026-09-26 Issue 5 計畫審查修訂**（`reviews/review-plan-issue-5.md`：Approved with Recommendations，0 Critical／2 Important／5 Minor）
+
+- I-1 採納：Git Bash 會把 `/sdcard/...` 改寫成 Windows 路徑。`adb push` 的目的地改寫成 `//sdcard/Download/`；`adb shell` 帶裝置端絕對路徑時加 `MSYS_NO_PATHCONV=1`（`push` 不用這個前綴，因為來源 `~/...` 仍需要轉成 Windows 路徑）。另補上 `adb` 不在 PATH 時的處理（本機 Git Bash 實測確實找不到 `adb`）。
+- I-2 採納（做法不同於報告建議）：報告建議推送 `sample_long_chinese_vertical.epub`，但實際檢查它只有約 2,900 字、大約 7 頁，不夠翻 30 頁。改為在驗證書加入第 2 章「翻頁測試」（80 段、約 3.5 萬字），第 6 項直接用它，不另外推送其他書。
+- M-1 採納：Task 1 結束時與 Task 4 開始前都明確回到 repo 根目錄，Task 4 另外確認目前分支。
+- M-2 採納：Task 4 新增可選的清理步驟（裝置端驗證書、本機 `~/elinkbook-qa`；書庫裡的驗證書需在 App 內手動移除）。
+- M-3 採納：WebView 版本改用 `dumpsys webviewupdate` 查詢，不必猜套件名稱。
+- M-4 採納：結果表第 6 項拆成手機、電子紙兩列。
+- M-5 採納：Step 10 補一句說明，第 7 項改用思源黑體是因為思源宋體在 Step 9 已經下載完成。
