@@ -231,9 +231,9 @@ OTS parsing error: Web font size more than 30MB
 
 ## Issue 8：恢復原俠正楷、台灣圓體、源流明體三款可下載字型
 
-**Status:** ready-for-human
+**Status:** completed
 
-**進度（2026-09-26）：** 實作與測試已完成，真機確認待人類補測。完整 `flutter test` 2914 通過、1 跳過、0 失敗（`epic-50-wifi-transfer-test-fix` 的 WiFi 測試本次通過，見 epic.md）；`flutter analyze`乾淨；l10n 檢查兩行 PASS；debug APK 已建置。真機 6 步（手機 9491G ×3、電子紙 WAVE ×3）待測，結果出來後再改 `completed` 並發 PR。
+**進度（2026-09-26）：** 實作與測試已完成，真機確認待人類補測。完整 `flutter test` 2914 通過、1 跳過、0 失敗（`epic-50-wifi-transfer-test-fix` 的 WiFi 測試本次通過，見 epic.md）；`flutter analyze`乾淨；l10n 檢查兩行 PASS；debug APK 已建置。真機 6 步（手機 9491G ×3、電子紙 WAVE ×3）已通過；電子紙第 4 步第一次因啟動時讀 WebView 版本逾時而列出 5 款，改為沿用上次記住的版本後通過（見 epic.md）。
 
 **依賴：** Issue 7。
 

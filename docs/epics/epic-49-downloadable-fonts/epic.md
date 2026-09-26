@@ -281,3 +281,11 @@
 - 計畫決定 4：不動 Worker、R2、`fonts-cdn/`；`font_download_catalog_test` 一致性測試自動比對 5 款通過。
 - 完整測試：`flutter test` 2914 通過、1 跳過、0 失敗。注意：`epic-50-wifi-transfer-test-fix` 的 WiFi 測試（`wifi_transfer_http_server_test.dart`「下載期間 activeTransfersNotifier…」）本次全套與單獨執行都通過——該失敗具時序不穩定性，仍由 epic-50 處理。`flutter analyze`：`No issues found!`；l10n 檢查兩行 PASS；debug APK 建置成功。
 - 真機確認：人類選擇稍後補測。待測 6 步——手機（5 款列出無提示、下載 3 款、驗證書套圓體）、電子紙（只列 3 款＋Issue 7 提示、下載原俠正楷、驗證書套楷體且 logcat 無 OTS 錯誤）。結果出來後 Issue 8 改 `completed` 並發 PR。
+
+**2026-09-26 Issue 8 真機確認與修正**（分支 `epic-49/issue-8-restore-fonts`，commit `15da0cad`）
+
+- 電子紙第 4 步第一次失敗：字型管理列出全部 5 款，思源黑體、思源宋體也出現。
+- 原因：剛安裝完 APK 第一次開 App 時，讀 WebView 版本超過 3 秒逾時，回傳 null，被視同新版 WebView（Issue 7 決定 2）。重開 App 後只列 3 款、有提示，證實是啟動逾時，不是判斷邏輯錯。
+- 修正（人類選方案 1）：新增 `readWebViewMajorVersionWithCache()`。讀到版本就存進 SharedPreferences（key `webview_major_version`），讀不到時沿用上次的值；從沒讀到過才是 null。副作用：WebView 升級後若剛好讀不到，會暫時沿用舊版本，下次讀到就更新。新增 4 個測試，`webview_font_support_test.dart` 16 個全過；`flutter analyze` 乾淨；l10n 檢查兩行 PASS。
+- 真機確認：人類回報修正後的 APK 通過，含重新安裝後第一次開 App 只列 3 款。
+- Issue 8 改為 `completed`，發 PR。

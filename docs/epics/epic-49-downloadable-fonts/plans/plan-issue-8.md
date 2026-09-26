@@ -717,7 +717,7 @@ flutter build apk --debug
 ```
 預期：`√ Built build\app\outputs\flutter-apk\app-debug.apk`。
 
-- [ ] **Step 4：真機確認（人類操作）**
+- [x] **Step 4：真機確認（人類操作）**
 
 需要 Issue 7 用過的兩台裝置。APK 用 USB 檔案傳輸複製到裝置「Download」資料夾後在裝置上安裝（同簽章覆蓋更新，資料保留）。
 
