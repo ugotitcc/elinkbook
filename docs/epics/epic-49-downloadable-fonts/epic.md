@@ -232,3 +232,5 @@
 - 驗證書的 `mimetype` 必須是 ZIP 第一個項目；計畫的 7-Zip 兩次加入會重新排序，改用 Python `zipfile` 依序打包。
 
 第 8 項失敗，Issue 5 維持 `ready-for-human`，`docs/epics.md` 不更新。修正工單由人類決定。
+
+**2026-09-26 開立 Issue 7**：人類決定第 8 項的修正方向為「偵測到系統 WebView 太舊時，不列出思源黑體、思源宋體」，新增 `issues.md` Issue 7（`needs-triage`）。Issue 5 維持 `ready-for-human`，Issue 7 完成後在電子紙重做第 8 項。

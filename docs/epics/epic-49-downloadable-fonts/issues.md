@@ -186,3 +186,42 @@ Issue 3 ─────────────────────┘
 **驗收標準：** 異動檔案的測試通過；`flutter analyze` 乾淨。完成後 Issue 5 第 5 項「刪除思源宋體」時，畫面應同時改回書本字型。
 
 **Blocked by：** Issue 4。
+
+---
+
+## Issue 7：系統 WebView 太舊時不列出可下載字型（Issue 5 第 8 項失敗）
+
+**Status:** needs-triage
+
+**依賴：** Issue 4。
+
+**背景：** Issue 5 第 8 項在電子紙閱讀器（Android 12、WebView 91.0.4472.114）失敗。選「思源宋體」後，畫面退回系統字型，`adb logcat` 的 WebView console 訊息為：
+
+```
+Failed to decode downloaded font: https://appassets.androidplatform.net/downloaded-fonts/v1/SourceHanSerifTC-VF.ttf
+OTS parsing error: Web font size more than 30MB
+```
+
+舊版 WebView 拒絕超過 30 MB 的網頁字型。思源宋體 57.1 MB、思源黑體 34.4 MB 都超過，所以這類裝置上兩款字型下載後都無法使用。手機 WebView 154.0.8037.49 正常。詳見 `epic.md`「2026-09-26 Issue 5 真機驗證」。
+
+人類決定的修正方向：偵測到系統 WebView 太舊時，不列出這兩款字型。
+
+**What to build：**
+- 取得系統 WebView 版本：`InAppWebViewController.getCurrentWebViewPackage()`（`flutter_inappwebview_platform_interface` 1.3.0 已提供，底層為 `WebViewCompat.getCurrentWebViewPackage`），解析 `versionName` 的主版本號。
+- 決定門檻版本：查 Chromium 原始碼歷史，找出放寬「Web font size more than 30MB」限制的版本，寫進計畫並附來源。目前已知：91 不行、154 可以。查不到確切版本時，計畫需寫明採用的保守門檻與理由。
+- 系統 WebView 低於門檻時：
+  - 字型管理畫面不列出思源黑體、思源宋體。
+  - 閱讀設定的字型選單不列出這兩款，即使裝置上已經有下載好的檔案。
+  - 閱讀器視同這兩款「未下載」，偏好指向它們時改用書本字型（沿用 Issue 6 的 `_renderedFontFamily()` 行為），**不改寫**偏好。
+- 讀不到 WebView 版本或解析失敗時的行為，計畫需明確決定並寫明理由。
+- 計畫需決定：舊 WebView 裝置上已經下載的字型檔要不要提供刪除入口（檔案仍佔用儲存空間，思源宋體約 57 MB）。
+
+**單元測試要求：**
+- 版本字串解析：`91.0.4472.114`、`154.0.8037.49`、空字串、格式錯誤的字串。
+- 低於門檻時：字型管理畫面不顯示兩款字型；閱讀設定選單不列出兩款字型（即使已下載）；`FoliateReaderView` 收到的 `fontFamily` 是 `null`，偏好值沒有被改寫。
+- 達到門檻時：行為與現在相同（零回歸）。
+- 讀不到版本時：符合計畫決定的行為。
+
+**驗收標準：** 異動檔案的測試通過；`flutter analyze` 乾淨；l10n 檢查通過。完成後在電子紙閱讀器（WebView 91）重做 Issue 5 第 8 項：字型管理與閱讀設定都不出現這兩款字型，已選思源宋體的書改用書本字型。
+
+**Blocked by：** Issue 4。
