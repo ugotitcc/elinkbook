@@ -37,3 +37,7 @@
 - M-1（續期與登出／重新登入的競態）：`_refreshAuthToken()` 在續期回應後重新讀取 token，已不是這次拿去續期的那張就不寫回、本輪放棄；401 路徑也同樣確認後才清除，避免清掉新登入的 token。新增兩個測試，修正前都 FAIL。
 - M-2（自動同步時過期要打開同步設定才會知道）：使用者選擇「一次性 Toast」。`SyncAccountRepository.isSessionExpired()`（沒有 token 但有 email）；`SyncCheckpointTrigger` 新增可選的 `isSessionExpired`／`onSessionExpired`，自動 checkpoint 後偵測到過期就呼叫一次。過期後登入閘門會略過後續觸發，因此每次過期只提示一次；手動同步不經過 trigger，不會跟畫面內提示重複。`main.dart` 比照衝突對話框透過 `navigatorKey` 顯示 SnackBar（`syncSessionExpiredToast`）。這段接線位於 `main()` 內，沒有測試接縫，與既有 `onReadingPositionConflict` 橋接相同。
 - M-3（每次 checkpoint 多一次請求）：不處理。
+
+**2026-09-27 真機測試**
+
+- 使用者在真機完成測試，結果通過。準備發 PR。
