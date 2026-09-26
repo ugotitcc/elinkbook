@@ -234,3 +234,5 @@
 第 8 項失敗，Issue 5 維持 `ready-for-human`，`docs/epics.md` 不更新。修正工單由人類決定。
 
 **2026-09-26 開立 Issue 7**：人類決定第 8 項的修正方向為「偵測到系統 WebView 太舊時，不列出思源黑體、思源宋體」，新增 `issues.md` Issue 7（`needs-triage`）。Issue 5 維持 `ready-for-human`，Issue 7 完成後在電子紙重做第 8 項。
+
+**2026-09-26 Issue 5 驗證記錄合併**：PR #281（`epic-49/issue-5-device-qa` → `main`）已合併，內容為 Issue 5 真機驗證結果與新增的 Issue 7。下一步：Issue 7（系統 WebView 太舊時不列出可下載字型），需先分流並撰寫 `plans/plan-issue-7.md`；完成後在電子紙重做 Issue 5 第 8 項，通過後即可歸檔。
