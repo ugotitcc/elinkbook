@@ -244,3 +244,26 @@
 - M-1 採納：完整測試改成直接執行 `flutter test`。
 - M-2 採納：提示文字 padding 改為 `EdgeInsets.fromLTRB(16, 4, 16, 8)`。
 - M-3 採用報告的替代做法：`download()` 不加檢查，只在說明註解寫明唯一呼叫端只列出 `supportedFonts`，萬一下載了也會在下次啟動時被 `prepare()` 刪除。
+
+**2026-09-26 Issue 7 程式審查修訂**（`reviews/review-issue-7.md`：修正後合併，0 Critical／1 Important／3 Minor；人類裁定 I-1 採方案 a、Minor 全部修正）
+
+- I-1 採方案 a：改從 WebView 預設 User-Agent 的 `Chrome/NN` 取 Chromium 主版本號（`parseChromeMajorVersion`，預設讀取 `InAppWebViewController.getDefaultUserAgent()`），不再解析 WebView 套件的 `versionName`。避免華為 `com.huawei.webview` 這類用廠商版本編號的 WebView 被誤判成舊版，導致字型被隱藏、已下載的檔案在啟動時被刪。新增「廠商 UA（`HuaweiBrowser/12.1.0` 但 `Chrome/99`）取 99」測試；`issues.md` Issue 7 與計畫 Task 1 加註修訂。
+- M-1：提示文字補上「並重新開啟 App」（版本只在啟動時讀一次），4 個 ARB 與 2 個字串斷言一起改。
+- M-2：`main()` 一開始就發出讀取 WebView 版本的呼叫，和資料庫等初始化並行，建構字型 store 時才 await；改讀 User-Agent 需要初始化 WebView，這樣不會多一段序列等待。
+- M-3：不補測試，由 Task 4 Step 3 電子紙第 1、2 步（看不到字型、字型檔已刪除）驗證 `main.dart` 的接線。
+- 驗證：`webview_font_support_test.dart`、`downloadable_font_store_test.dart`、`font_management_screen_test.dart` 共 79 個測試通過；`flutter analyze` 乾淨；l10n 檢查兩行 PASS。
+
+**2026-09-26 Issue 7 完成**（分支 `epic-49/issue-7-legacy-webview-fonts`，待 PR 合併）
+
+- 門檻版本：Chromium commit `3c603c19be`（Cr-Commit-Position #1040311）把網頁字型上限由 30 MB 放寬為 128 MB，落在 M107。M106 以前拒絕超過 30 MB 的字型（「大於」才拒絕，等於上限可載入）。
+- 決定 1：依字型大小判斷，不寫死字型名稱。日後恢復 21.7 MB 以下的字型時，舊 WebView 也會自動列出。
+- 決定 2：讀不到 WebView 版本時視同支援，行為和 Issue 7 之前一樣；讀取有 3 秒逾時。
+- 決定 3：確定 WebView 太舊時，`prepare()` 在啟動時刪除載不動的已下載字型檔，不改書籍偏好。
+- 決定 4：字型管理有字型被隱藏時，在「內建字型」標題下顯示提示與解法。
+- 完整測試：`flutter test` 2904 通過、1 失敗。失敗的是 `test/wifi_transfer/wifi_transfer_http_server_test.dart`「下載期間 activeTransfersNotifier 維持在 1…」（Expected 1、Actual 0）。本分支沒有改動 WiFi 傳書檔案，`main`（`f2d1c6d5`）上單獨執行同一檔案也失敗，屬既有問題，需另立工單。`flutter analyze`：`No issues found!`；l10n 檢查兩行 PASS。
+- 真機確認（debug APK，同簽章覆蓋安裝）全部通過：
+  - 電子紙 WAVE（WebView 91.0.4472.114）：字型管理只顯示提示、沒有思源黑體與思源宋體；自訂字型照常列出。啟動前 `files/downloaded-fonts/v1` 有 `SourceHanSerifTC-VF.ttf`（59,898,316 bytes），啟動後目錄已空。驗證書的閱讀設定沒有思源宋體，顯示「使用書本字型」，英文段落為等寬字型。
+  - 手機 9491G（WebView 154.0.8037.49）：字型管理沒有提示，兩款字型都是「已下載」；啟動後兩個字型檔都保留。驗證書仍是思源宋體（沿用 Issue 5 的偏好）。
+- Issue 5 第 8 項依 Issue 7 的驗收方式在電子紙重驗通過，由人類決定 Issue 5 是否改為 `completed`。
+
+**2026-09-26 Issue 5 結案**：人類決定依 Issue 7 真機重驗結果，把 Issue 5 改為 `completed`。epic-49 全部工單完成，待 PR 合併後歸檔。完整測試發現的 WiFi 傳書測試失敗，另開 `docs/epics.md` 第 51 列 `epic-50-wifi-transfer-test-fix`（Backlog）處理；在 `6bfcc7d1` 之前的 commit 也失敗，與 epic-49 無關。

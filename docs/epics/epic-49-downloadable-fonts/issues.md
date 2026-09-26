@@ -139,7 +139,7 @@ Issue 3 ─────────────────────┘
 
 ## Issue 5：真機驗證（人類操作）
 
-**Status:** ready-for-human
+**Status:** completed
 
 **依賴：** Issue 4。
 
@@ -191,7 +191,7 @@ Issue 3 ─────────────────────┘
 
 ## Issue 7：系統 WebView 太舊時不列出可下載字型（Issue 5 第 8 項失敗）
 
-**Status:** needs-triage
+**Status:** completed
 
 **依賴：** Issue 4。
 
@@ -208,6 +208,7 @@ OTS parsing error: Web font size more than 30MB
 
 **What to build：**
 - 取得系統 WebView 版本：`InAppWebViewController.getCurrentWebViewPackage()`（`flutter_inappwebview_platform_interface` 1.3.0 已提供，底層為 `WebViewCompat.getCurrentWebViewPackage`），解析 `versionName` 的主版本號。
+  > **程式審查修訂（`review-issue-7.md` I-1，人類裁定採方案 a）**：部分廠商 WebView 的 `versionName` 不是 Chromium 版本編號，會把新 WebView 誤判成舊的。改讀 `InAppWebViewController.getDefaultUserAgent()`，從 User-Agent 的 `Chrome/NN` 取 Chromium 主版本號；找不到時同樣視為讀不到版本。
 - 決定門檻版本：查 Chromium 原始碼歷史，找出放寬「Web font size more than 30MB」限制的版本，寫進計畫並附來源。目前已知：91 不行、154 可以。查不到確切版本時，計畫需寫明採用的保守門檻與理由。
 - 系統 WebView 低於門檻時：
   - 字型管理畫面不列出思源黑體、思源宋體。

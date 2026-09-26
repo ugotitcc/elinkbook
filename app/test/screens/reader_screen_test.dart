@@ -6805,6 +6805,38 @@ void main() {
 
       expect(readerView(tester).fontFamily, 'SourceHanSerifTC');
     });
+
+    testWidgets('舊 WebView 裝置上已下載的字型：閱讀設定選單不列出（Issue 7）', (tester) async {
+      final store = FakeDownloadableFontStore()
+        ..installed.add(AppFont.sourceHanSerif)
+        ..supported = []; // 模擬舊 WebView 載不動
+      await pumpReader(tester, store: store);
+
+      readerView(tester).onLayoutResolved?.call(const EpubLayoutInfo(
+            isFixedLayout: false,
+            writingMode: WritingMode.horizontal,
+          ));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final sheet = tester.widget<ReaderSettingsSheet>(find.byType(ReaderSettingsSheet));
+      expect(sheet.installedFonts, isEmpty);
+    });
+
+    testWidgets('舊 WebView 裝置上已下載的字型：閱讀器收到 null，偏好不改寫（Issue 7）', (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'));
+      final store = FakeDownloadableFontStore()
+        ..installed.add(AppFont.sourceHanSerif)
+        ..supported = []; // 模擬舊 WebView 載不動
+
+      await pumpReader(tester, store: store);
+
+      expect(readerView(tester).fontFamily, isNull);
+      expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'SourceHanSerifTC');
+    });
   });
 
   testWidgets(

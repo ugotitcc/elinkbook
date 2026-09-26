@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 
 import 'app_font.dart';
 import 'font_download_catalog.dart';
+import 'webview_font_support.dart';
 
 /// 字型下載失敗的原因（epic-49，spec.md「可下載字型儲存」）。UI 依原因顯示在地化訊息，
 /// 本模組不產生任何使用者可見的文字（比照 ADR 0034 的精神）。
@@ -55,11 +56,13 @@ class DownloadableFontStore {
     Uri? baseUri,
     FontDownloadSpec Function(AppFont font) specOf = fontDownloadSpecOf,
     Duration idleTimeout = const Duration(seconds: 30),
+    int? webViewMajorVersion,
   })  : _httpClient = httpClient,
         _directory = directory,
         _baseUri = baseUri ?? Uri.parse(kFontDownloadBaseUrl),
         _specOf = specOf,
-        _idleTimeout = idleTimeout;
+        _idleTimeout = idleTimeout,
+        _webViewMajorVersion = webViewMajorVersion;
 
   final http.Client _httpClient;
   final Directory _directory;
@@ -69,6 +72,19 @@ class DownloadableFontStore {
   /// 等伺服器回應、或兩個資料區塊之間，超過這段時間沒有進展就視為網路失敗
   /// （程式審查 I-2）。不是整個下載的時間上限，網路慢但持續有資料時不會誤判。
   final Duration _idleTimeout;
+
+  /// 系統 WebView 主版本號；null 代表讀不到，視同支援全部字型（Issue 7 計畫決定 2）。
+  final int? _webViewMajorVersion;
+
+  /// 這台裝置的系統 WebView 載得動的內建字型，依 [AppFont.values] 順序（Issue 7）。
+  /// 舊版 WebView 拒絕超過 30MB 的網頁字型，這些字型不列出、不視為已下載。
+  List<AppFont> get supportedFonts => [
+        for (final font in AppFont.values)
+          if (webViewCanLoadFont(
+              webViewMajorVersion: _webViewMajorVersion,
+              fontSizeBytes: _specOf(font).sizeBytes))
+            font,
+      ];
 
   /// 同一時間只允許一個下載（spec「字型管理畫面」與規格審查 I-2）。
   bool _downloading = false;
@@ -96,11 +112,23 @@ class DownloadableFontStore {
         }
       }
     }
+    // Issue 7：WebView 載不動的字型，檔案留著也用不到，刪掉釋放空間（思源宋體約 57MB）。
+    // 不修改任何書籍偏好；WebView 升級後重新下載，偏好會自動生效。讀不到 WebView 版本時
+    // supportedFonts 是全部字型，這裡不會刪任何檔案。
+    final supported = supportedFonts;
+    for (final font in AppFont.values) {
+      if (supported.contains(font)) continue;
+      try {
+        await delete(font);
+      } on FileSystemException {
+        // 盡力清理：刪不掉不影響判斷，installedFonts() 本來就不會列出它
+      }
+    }
   }
 
   Future<Set<AppFont>> installedFonts() async {
     final installed = <AppFont>{};
-    for (final font in AppFont.values) {
+    for (final font in supportedFonts) {
       if (await _fileFor(font).exists()) installed.add(font);
     }
     return installed;
@@ -115,6 +143,8 @@ class DownloadableFontStore {
   /// 下載 [font]。[onProgress] 收到 0～100 的整數百分比，只在數值變大時才呼叫
   /// （電子紙裝置重繪代價高，設計審查 I-3）。失敗一律拋出 [FontDownloadException]，
   /// 並且不留下暫存檔、不影響既有的正式檔案。已有下載進行中時拋出 [StateError]。
+  /// 不檢查 [font] 是否在 [supportedFonts] 裡：唯一的呼叫端（字型管理畫面）只列出
+  /// supportedFonts；萬一下載了載不動的字型，下次啟動時 [prepare] 會刪掉（Issue 7）。
   Future<void> download(
     AppFont font, {
     void Function(int percent)? onProgress,
