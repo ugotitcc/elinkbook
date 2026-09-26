@@ -265,3 +265,5 @@
   - 電子紙 WAVE（WebView 91.0.4472.114）：字型管理只顯示提示、沒有思源黑體與思源宋體；自訂字型照常列出。啟動前 `files/downloaded-fonts/v1` 有 `SourceHanSerifTC-VF.ttf`（59,898,316 bytes），啟動後目錄已空。驗證書的閱讀設定沒有思源宋體，顯示「使用書本字型」，英文段落為等寬字型。
   - 手機 9491G（WebView 154.0.8037.49）：字型管理沒有提示，兩款字型都是「已下載」；啟動後兩個字型檔都保留。驗證書仍是思源宋體（沿用 Issue 5 的偏好）。
 - Issue 5 第 8 項依 Issue 7 的驗收方式在電子紙重驗通過，由人類決定 Issue 5 是否改為 `completed`。
+
+**2026-09-26 Issue 5 結案**：人類決定依 Issue 7 真機重驗結果，把 Issue 5 改為 `completed`。epic-49 全部工單完成，待 PR 合併後歸檔。完整測試發現的 WiFi 傳書測試失敗，另開 `docs/epics.md` 第 51 列 `epic-50-wifi-transfer-test-fix`（Backlog）處理；在 `6bfcc7d1` 之前的 commit 也失敗，與 epic-49 無關。

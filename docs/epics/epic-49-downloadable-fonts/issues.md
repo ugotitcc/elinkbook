@@ -139,7 +139,7 @@ Issue 3 ─────────────────────┘
 
 ## Issue 5：真機驗證（人類操作）
 
-**Status:** ready-for-human
+**Status:** completed
 
 **依賴：** Issue 4。
 
