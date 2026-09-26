@@ -1504,6 +1504,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fontNameSourceHanSerif => 'Source Han Serif';
 
   @override
+  String get fontNameGuanKiapTsingKhai => 'GuanKiapTsingKhai';
+
+  @override
+  String get fontNameTaiwanPearl => 'TaiwanPearl';
+
+  @override
+  String get fontNameGenRyuMinTW => 'GenRyuMin TW';
+
+  @override
   String get fontManagementUploadTooltip => 'Upload font';
 
   @override
@@ -1560,6 +1569,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get fontManagementDownloadableDeleteConfirmMessage =>
       'You can download it again at any time. Books that use this font will use the book\'s font or the system font until it\'s downloaded again.';
+
+  @override
+  String get fontManagementBuiltInUnsupportedHint =>
+      'This device\'s system WebView is too old for some built-in fonts, so they are hidden. Update Android System WebView and reopen the app to download them.';
 
   @override
   String get fontDownloadErrorNetwork =>

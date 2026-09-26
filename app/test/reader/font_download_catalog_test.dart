@@ -18,6 +18,25 @@ void main() {
     expect(serif.sizeBytes, 59898316);
     expect(serif.sha256,
         '71354ed752104c8a3cbcff18943c6110d179d01cc6eaaf1aff7ea14c4a447879');
+
+    // epic-49 Issue 8：恢復的 3 款
+    final guanKiap = fontDownloadSpecOf(AppFont.guanKiapTsingKhai);
+    expect(guanKiap.publishPath, 'v1/GuanKiapTsingKhai.ttf');
+    expect(guanKiap.sizeBytes, 14675776);
+    expect(guanKiap.sha256,
+        '758632243c499e431fd0c847f5e8c431acf59a9b41a26237a819466139994d38');
+
+    final pearl = fontDownloadSpecOf(AppFont.taiwanPearl);
+    expect(pearl.publishPath, 'v1/TaiwanPearl-Regular.ttf');
+    expect(pearl.sizeBytes, 21704488);
+    expect(pearl.sha256,
+        '51b3c9a4ab1b6b45dcdad7c5ae93386aea399fd3dabb85d2ac41110dc57f211d');
+
+    final genRyu = fontDownloadSpecOf(AppFont.genRyuMinTW);
+    expect(genRyu.publishPath, 'v1/GenRyuMinTW-Regular.ttf');
+    expect(genRyu.sizeBytes, 15976964);
+    expect(genRyu.sha256,
+        '9178c199d633075b8bb91902216c3e1bc977a11fde12471a2c9a250434402927');
   });
 
   test('每款字型的發布路徑互不相同，格式為 v<N>/<檔名>.ttf，雜湊為 64 字元小寫十六進位', () {

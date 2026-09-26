@@ -187,3 +187,107 @@
 - M-3 採納：WebView 版本改用 `dumpsys webviewupdate` 查詢，不必猜套件名稱。
 - M-4 採納：結果表第 6 項拆成手機、電子紙兩列。
 - M-5 採納：Step 10 補一句說明，第 7 項改用思源黑體是因為思源宋體在 Step 9 已經下載完成。
+
+**2026-09-26 Issue 5 真機驗證**（分支 `epic-49/issue-5-device-qa`）
+
+| 裝置 | 型號 | Android | WebView |
+|---|---|---|---|
+| 一般手機（Wi-Fi 平板） | 9491G（Hera_Vis_WIFI） | 15 | 154.0.8037.49 |
+| 電子紙閱讀器 | Allwinner WAVE（E70P24） | 12 | `com.android.webview` 91.0.4472.114 |
+
+| # | 項目 | 裝置 | 結果 | 觀察 |
+|---|---|---|---|---|
+| 1 | 字型管理列出未下載與大小 | 手機 | 通過 | 兩款皆顯示「未下載」，34.4 MB／57.1 MB，兩列都有「下載」按鈕 |
+| 2 | 下載進度、取消、完成 | 手機 | 通過 | 進度持續增加；取消後回到「未下載」且無錯誤；完成後變「已下載」；下載中其他列按鈕停用 |
+| 2 | 電子紙下載時無明顯閃爍或卡頓 | 電子紙 | 通過 | release APK，無整頁閃爍、無殘影、操作不卡 |
+| 3 | 閱讀器套用思源宋體（橫排／直排） | 手機 | 通過 | 橫排、直排的中文段與 `p.mono` 皆為 `思源宋體 VF`（自訂字型），computed `font-family` 為 `SourceHanSerifTC`；直排標點方向正常 |
+| 4 | 飛航模式重新開書字型正確 | 手機 | 通過 | 關閉 Wi-Fi（此機型無行動網路）後重開 App，三段皆為 `思源宋體 VF` |
+| 5 | 刪除後退回書本字型、重新下載後恢復 | 手機 | 第一次失敗，重測通過 | 見下方說明 |
+| 6 | 翻頁無明顯卡頓（橫排／直排） | 手機 | 通過 | release APK，第 2 章連翻 30 頁以上，順暢 |
+| 6 | 翻頁無明顯卡頓、無額外刷新 | 電子紙 | 通過 | release APK，順暢；但此裝置實際渲染的是系統字型（見第 8 項），不代表思源宋體在電子紙上的翻頁效能 |
+| 7 | 下載中途滑掉 App 後為未下載、可重新下載 | 手機 | 通過 | 重開後「未下載」；資料夾內無 `SourceHanSansTC-VF.ttf` 與 `.part`；重新下載完成，36,034,016 bytes |
+| 8 | 最舊裝置字型請求 200、字型有套用 | 電子紙 | **失敗** | Content-Type：無法取得（此裝置 WebView 無遠端除錯）。字型未套用，原因見下方 |
+| 9 | 改回使用書本字型後立即回到書本字型、旋轉後仍正確 | 手機 | 通過 | `p.mono` 為 `Droid Sans Mono`、中文為 `Noto Serif CJK TC`，無任何 `SourceHanSerifTC` 規則；轉成直向後不變 |
+
+**第 8 項失敗：舊版 WebView 拒絕超過 30 MB 的網頁字型**
+
+- 現象：電子紙選「思源宋體」後，英文段由等寬變成比例字寬（書本 `monospace` 被覆蓋），但中英文字形都是系統無襯線字型，不是思源宋體；5 分鐘後重截仍相同。字型檔 `SourceHanSerifTC-VF.ttf`（59,898,316 bytes）確實在 `files/downloaded-fonts/v1/`。
+- 原因：`adb logcat` 的 WebView console 訊息為 `Failed to decode downloaded font: https://appassets.androidplatform.net/downloaded-fonts/v1/SourceHanSerifTC-VF.ttf` 與 `OTS parsing error: Web font size more than 30MB`。WebView 91 的字型檢查（OTS）拒絕超過 30 MB 的網頁字型。思源宋體 57.1 MB、思源黑體 34.4 MB 都超過，所以這類裝置上兩款可下載字型都無法使用；手機的 WebView 154 沒有這個問題。
+- 重現步驟：在 WebView 91 的裝置下載思源宋體 → 開任一本書 → 字型選「思源宋體」 → `adb logcat -d | grep OTS`。
+- 修正方向待人類決定是否另開工單。
+
+**第 5 項：第一次失敗、隔離重測通過、原因不明**
+
+- 第一次：從第 4 項（飛航模式）接著做。刪除思源宋體 → 開書（正確退回書本字型，提示正常）→ 重新下載 → 開書，選單顯示「使用書本字型」、畫面也是書本字型。複製 `library.db` 查詢，這本書 `book_reader_prefs.font_family` 已是 `NULL`；第 4 項重開 App 時它仍是 `SourceHanSerifTC`。期間 App 曾重啟一次（行程編號 28718 → 29000），原因不明。人類確認過程中沒有點字型選單或其他設定。
+- 隔離重測：重選思源宋體後逐步查 `library.db`，刪除字型、開書、開閱讀設定（不操作）後 `font_family` 都維持 `SourceHanSerifTC`；重新下載後開書，選單自動顯示「思源宋體」，畫面為 `思源宋體 VF`。
+- 查過的程式路徑：會把 `font_family` 改成 `NULL` 的只有閱讀設定選「使用書本字型」、刪除同名自訂字型（`custom_fonts` 為空，排除）、套用版面預設集／複製到其他書籍（未操作）；刪除下載字型（`_deleteDownloadedFont`）不碰偏好；同步不包含閱讀偏好。
+- 未重現的差異：從飛航模式離線狀態接續、中途 App 重啟。人類決定記為「第一次失敗、重測通過、原因不明」。
+
+**驗證方法與計畫不同之處**
+
+- 手機 WebView 的 DevTools 連線每個指令延遲約 6 秒，Chrome DevTools 前端會逾時斷線。改用 `adb forward` 加 Chrome DevTools Protocol 腳本直接查 `CSS.getPlatformFontsForNode`（與 Rendered Fonts 相同）和 `CSS.getMatchedStylesForNode`（與 Styles 分頁相同）。
+- Rendered Fonts 顯示字型檔內建名稱 `思源宋體 VF`，不是計畫寫的 `SourceHanSerifTC`；後者是 App 在 `@font-face` 取的別名，兩者是同一個檔案。
+- 電子紙 WebView 沒有遠端除錯通道，第 8 項用計畫的截圖退路，再以 `adb logcat` 找到原因。
+- 兩台裝置的 `adb` 傳輸約 20 KB/s，release APK 改用 USB 檔案傳輸複製後在裝置上安裝（同簽章覆蓋更新，資料保留）。
+- 驗證書的 `mimetype` 必須是 ZIP 第一個項目；計畫的 7-Zip 兩次加入會重新排序，改用 Python `zipfile` 依序打包。
+
+第 8 項失敗，Issue 5 維持 `ready-for-human`，`docs/epics.md` 不更新。修正工單由人類決定。
+
+**2026-09-26 開立 Issue 7**：人類決定第 8 項的修正方向為「偵測到系統 WebView 太舊時，不列出思源黑體、思源宋體」，新增 `issues.md` Issue 7（`needs-triage`）。Issue 5 維持 `ready-for-human`，Issue 7 完成後在電子紙重做第 8 項。
+
+**2026-09-26 Issue 5 驗證記錄合併**：PR #281（`epic-49/issue-5-device-qa` → `main`）已合併，內容為 Issue 5 真機驗證結果與新增的 Issue 7。下一步：Issue 7（系統 WebView 太舊時不列出可下載字型），需先分流並撰寫 `plans/plan-issue-7.md`；完成後在電子紙重做 Issue 5 第 8 項，通過後即可歸檔。
+
+**2026-09-26 Issue 7 計畫審查修訂**（`reviews/review-plan-issue-7.md`：Ready to implement: With fixes，0 Critical／2 Important／3 Minor）
+
+- I-1 採納：Fake 的 `installedFonts()` 也依 `supported` 過濾，和真的 store 一致。
+- I-2 採納：`reader_screen_test.dart` 補上工單要求的兩個測試（閱讀設定不列出、閱讀器收到 `null` 且偏好不改寫），並安排成先在 Fake 未過濾時看它失敗，再加過濾。
+- M-1 採納：完整測試改成直接執行 `flutter test`。
+- M-2 採納：提示文字 padding 改為 `EdgeInsets.fromLTRB(16, 4, 16, 8)`。
+- M-3 採用報告的替代做法：`download()` 不加檢查，只在說明註解寫明唯一呼叫端只列出 `supportedFonts`，萬一下載了也會在下次啟動時被 `prepare()` 刪除。
+
+**2026-09-26 Issue 7 程式審查修訂**（`reviews/review-issue-7.md`：修正後合併，0 Critical／1 Important／3 Minor；人類裁定 I-1 採方案 a、Minor 全部修正）
+
+- I-1 採方案 a：改從 WebView 預設 User-Agent 的 `Chrome/NN` 取 Chromium 主版本號（`parseChromeMajorVersion`，預設讀取 `InAppWebViewController.getDefaultUserAgent()`），不再解析 WebView 套件的 `versionName`。避免華為 `com.huawei.webview` 這類用廠商版本編號的 WebView 被誤判成舊版，導致字型被隱藏、已下載的檔案在啟動時被刪。新增「廠商 UA（`HuaweiBrowser/12.1.0` 但 `Chrome/99`）取 99」測試；`issues.md` Issue 7 與計畫 Task 1 加註修訂。
+- M-1：提示文字補上「並重新開啟 App」（版本只在啟動時讀一次），4 個 ARB 與 2 個字串斷言一起改。
+- M-2：`main()` 一開始就發出讀取 WebView 版本的呼叫，和資料庫等初始化並行，建構字型 store 時才 await；改讀 User-Agent 需要初始化 WebView，這樣不會多一段序列等待。
+- M-3：不補測試，由 Task 4 Step 3 電子紙第 1、2 步（看不到字型、字型檔已刪除）驗證 `main.dart` 的接線。
+- 驗證：`webview_font_support_test.dart`、`downloadable_font_store_test.dart`、`font_management_screen_test.dart` 共 79 個測試通過；`flutter analyze` 乾淨；l10n 檢查兩行 PASS。
+
+**2026-09-26 Issue 7 完成**（分支 `epic-49/issue-7-legacy-webview-fonts`，待 PR 合併）
+
+- 門檻版本：Chromium commit `3c603c19be`（Cr-Commit-Position #1040311）把網頁字型上限由 30 MB 放寬為 128 MB，落在 M107。M106 以前拒絕超過 30 MB 的字型（「大於」才拒絕，等於上限可載入）。
+- 決定 1：依字型大小判斷，不寫死字型名稱。日後恢復 21.7 MB 以下的字型時，舊 WebView 也會自動列出。
+- 決定 2：讀不到 WebView 版本時視同支援，行為和 Issue 7 之前一樣；讀取有 3 秒逾時。
+- 決定 3：確定 WebView 太舊時，`prepare()` 在啟動時刪除載不動的已下載字型檔，不改書籍偏好。
+- 決定 4：字型管理有字型被隱藏時，在「內建字型」標題下顯示提示與解法。
+- 完整測試：`flutter test` 2904 通過、1 失敗。失敗的是 `test/wifi_transfer/wifi_transfer_http_server_test.dart`「下載期間 activeTransfersNotifier 維持在 1…」（Expected 1、Actual 0）。本分支沒有改動 WiFi 傳書檔案，`main`（`f2d1c6d5`）上單獨執行同一檔案也失敗，屬既有問題，需另立工單。`flutter analyze`：`No issues found!`；l10n 檢查兩行 PASS。
+- 真機確認（debug APK，同簽章覆蓋安裝）全部通過：
+  - 電子紙 WAVE（WebView 91.0.4472.114）：字型管理只顯示提示、沒有思源黑體與思源宋體；自訂字型照常列出。啟動前 `files/downloaded-fonts/v1` 有 `SourceHanSerifTC-VF.ttf`（59,898,316 bytes），啟動後目錄已空。驗證書的閱讀設定沒有思源宋體，顯示「使用書本字型」，英文段落為等寬字型。
+  - 手機 9491G（WebView 154.0.8037.49）：字型管理沒有提示，兩款字型都是「已下載」；啟動後兩個字型檔都保留。驗證書仍是思源宋體（沿用 Issue 5 的偏好）。
+- Issue 5 第 8 項依 Issue 7 的驗收方式在電子紙重驗通過，由人類決定 Issue 5 是否改為 `completed`。
+
+**2026-09-26 Issue 5 結案**：人類決定依 Issue 7 真機重驗結果，把 Issue 5 改為 `completed`。epic-49 全部工單完成，待 PR 合併後歸檔。完整測試發現的 WiFi 傳書測試失敗，另開 `docs/epics.md` 第 51 列 `epic-50-wifi-transfer-test-fix`（Backlog）處理；在 `6bfcc7d1` 之前的 commit 也失敗，與 epic-49 無關。
+
+**2026-09-26 Issue 7 PR 合併**：PR #282（`epic-49/issue-7-legacy-webview-fonts` → `main`）已合併，內容為 Issue 7 實作、真機確認記錄、Issue 5 結案與 `epic-50-wifi-transfer-test-fix` 缺陷工單。epic-49 全部工單完成，下一步：歸檔。
+
+**2026-09-26 追加 Issue 8**：人類發現字型管理只看得到 2 款字型，詢問原俠正楷等 3 款。原因是這 3 款仍為 epic-48 的 `[字型停用]`，本 Epic `spec.md` 列為範圍外，但字型檔已上傳 R2。人類決定在歸檔前追加 Issue 8「恢復 3 款可下載字型」（`needs-triage`），完成後再歸檔。3 款都小於 30 MB，WebView 91 也載得動，可順便在電子紙驗證 Issue 7 的依大小判斷。
+
+**2026-09-26 Issue 8 實作完成，真機待補測**（分支 `epic-49/issue-8-restore-fonts`，待真機確認後發 PR）
+
+- 工單疑問查核結果：`legacyToFamilyName` 的 3 筆對照與恢復後的 `familyName` 完全一致，不用改；`app/assets/fonts/` 已不存在，不用刪；除 `displayName()` 外無其他 exhaustive switch 要補（暫時解除註解後 `flutter analyze` 乾淨）。
+- 計畫決定 1：英文顯示名取字型檔 `name` table 英文家族名去技術後綴——`GuanKiapTsingKhai`、`TaiwanPearl`、`GenRyuMin TW`；簡中：原侠正楷、台湾圆体、源流明体。
+- 計畫決定 2：enum 順序沿用註解順序（黑、宋、原俠、圓體、源流），字型管理與閱讀設定依此列出。
+- 計畫決定 3：7 處既有測試依新行為更新（4 個寫死 2 款／`mixedSpecOf` 期望／2 個「不認得名稱」改 `NoSuchFont`／字型管理 5 款斷言／英文選單標題與斷言）。
+- 計畫決定 4：不動 Worker、R2、`fonts-cdn/`；`font_download_catalog_test` 一致性測試自動比對 5 款通過。
+- 完整測試：`flutter test` 2914 通過、1 跳過、0 失敗。注意：`epic-50-wifi-transfer-test-fix` 的 WiFi 測試（`wifi_transfer_http_server_test.dart`「下載期間 activeTransfersNotifier…」）本次全套與單獨執行都通過——該失敗具時序不穩定性，仍由 epic-50 處理。`flutter analyze`：`No issues found!`；l10n 檢查兩行 PASS；debug APK 建置成功。
+- 真機確認：人類選擇稍後補測。待測 6 步——手機（5 款列出無提示、下載 3 款、驗證書套圓體）、電子紙（只列 3 款＋Issue 7 提示、下載原俠正楷、驗證書套楷體且 logcat 無 OTS 錯誤）。結果出來後 Issue 8 改 `completed` 並發 PR。
+
+**2026-09-26 Issue 8 真機確認與修正**（分支 `epic-49/issue-8-restore-fonts`，commit `15da0cad`）
+
+- 電子紙第 4 步第一次失敗：字型管理列出全部 5 款，思源黑體、思源宋體也出現。
+- 原因：剛安裝完 APK 第一次開 App 時，讀 WebView 版本超過 3 秒逾時，回傳 null，被視同新版 WebView（Issue 7 決定 2）。重開 App 後只列 3 款、有提示，證實是啟動逾時，不是判斷邏輯錯。
+- 修正（人類選方案 1）：新增 `readWebViewMajorVersionWithCache()`。讀到版本就存進 SharedPreferences（key `webview_major_version`），讀不到時沿用上次的值；從沒讀到過才是 null。副作用：WebView 升級後若剛好讀不到，會暫時沿用舊版本，下次讀到就更新。新增 4 個測試，`webview_font_support_test.dart` 16 個全過；`flutter analyze` 乾淨；l10n 檢查兩行 PASS。
+- 真機確認：人類回報修正後的 APK 通過，含重新安裝後第一次開 App 只列 3 款。
+- Issue 8 改為 `completed`，發 PR。
+
+**2026-09-26 Issue 8 PR 合併**：PR #283（`epic-49/issue-8-restore-fonts` → `main`）已合併，內容為 3 款字型恢復、WebView 版本逾時修正與真機確認記錄。epic-49 全部工單完成，下一步：歸檔。

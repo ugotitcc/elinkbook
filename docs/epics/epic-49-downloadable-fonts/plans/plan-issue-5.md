@@ -75,7 +75,7 @@ Task 4 記錄結果、更新進度、發 PR（agent，依人類回報的結果�
 **Interfaces:**
 - Produces：`app/build/app/outputs/flutter-apk/app-debug.apk`、`app/build/app/outputs/flutter-apk/app-release.apk`、`~/elinkbook-qa/epic-49-font-check.epub`，Task 2、3 使用。
 
-- [ ] **Step 1：建立分支並建置兩種 APK**
+- [x] **Step 1：建立分支並建置兩種 APK**
 
 在 repo 根目錄：
 ```bash
@@ -88,7 +88,7 @@ ls -la build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk
 ```
 預期：兩個 APK 都存在。不需要帶 `--dart-define-from-file=config/cloud_oauth.json`（本 Issue 不測雲端登入）。
 
-- [ ] **Step 2：寫驗證書的原始檔**
+- [x] **Step 2：寫驗證書的原始檔**
 
 這本書的用途：書本 CSS 讓中文段落用 `serif`、英文段落用 `monospace`。在 DevTools 的 Rendered Fonts 裡，三種狀態看得出差別：
 
@@ -180,7 +180,7 @@ ls -R "$Q"
 ```
 預期：`grep -c` 輸出 `80`；列出 `mimetype`、`META-INF/container.xml`、`OEBPS/` 下 5 個檔案（`content.opf`、`nav.xhtml`、`style.css`、`chapter1.xhtml`、`chapter2.xhtml`）。
 
-- [ ] **Step 3：打包成 EPUB**
+- [x] **Step 3：打包成 EPUB**
 
 EPUB 規定 `mimetype` 必須是壓縮檔的第一個項目而且不壓縮，所以分兩次加入：
 ```bash
@@ -199,7 +199,7 @@ cd "$Q"
 cd /c/Users/fycdc/AI/elinkBook
 ```
 
-- [ ] **Step 4：告訴人類準備好了**
+- [x] **Step 4：告訴人類準備好了**
 
 回報三個檔案的完整路徑（兩個 APK、一本 EPUB），並提醒人類：Task 2 需要一台一般 Android 手機、Task 3 需要一台電子紙閱讀器，兩台都要開啟「開發人員選項 → USB 偵錯」，電腦要裝桌面版 Chrome。
 
@@ -213,7 +213,7 @@ cd /c/Users/fycdc/AI/elinkBook
 
 以下指令在 repo 根目錄的 Git Bash 執行，`<id>` 換成 `adb devices` 顯示的手機序號。
 
-- [ ] **Step 1：記錄裝置資訊並安裝 debug APK**
+- [x] **Step 1：記錄裝置資訊並安裝 debug APK**
 
 ```bash
 adb devices
@@ -225,27 +225,27 @@ adb -s <id> push ~/elinkbook-qa/epic-49-font-check.epub //sdcard/Download/
 ```
 記下：型號、Android 版本、WebView 版本。`dumpsys webviewupdate` 會直接列出系統目前使用的 WebView 套件與版本，不必猜套件名稱（計畫審查 M-3）；如果這行沒有輸出，改看完整的 `adb -s <id> shell dumpsys webviewupdate`。
 
-- [ ] **Step 2：確認起點是「未下載」（第 1 項前置）**
+- [x] **Step 2：確認起點是「未下載」（第 1 項前置）**
 
 ```bash
 adb -s <id> shell run-as cc.ugotit.elinkbook ls -la files/downloaded-fonts/v1
 ```
 預期：目錄是空的，或回報「No such file or directory」。如果看到 `.ttf` 檔，先開 App → 設定 → 字型管理，把已下載的字型刪掉，再跑一次確認。
 
-- [ ] **Step 3：第 1 項——字型管理畫面**
+- [x] **Step 3：第 1 項——字型管理畫面**
 
 開 App → 設定 → 字型管理。
 
 預期：思源黑體顯示「未下載」與 **34.4 MB**；思源宋體顯示「未下載」與 **57.1 MB**；兩列都有「下載」按鈕。
 
-- [ ] **Step 4：第 2 項——下載、取消、完成**
+- [x] **Step 4：第 2 項——下載、取消、完成**
 
 1. 按思源宋體的「下載」，看進度百分比有持續增加；在 30% 左右按「取消下載」。預期：回到「未下載」，而且沒有錯誤訊息。
 2. 用 Step 2 的 `run-as` 指令確認目錄裡沒有 `SourceHanSerifTC-VF.ttf`，也沒有殘留的 `.part` 檔。
 3. 再按一次「下載」並等它完成。預期：進度走到 100%，變成「已下載」，出現「刪除」按鈕；`run-as` 列出 `SourceHanSerifTC-VF.ttf`，大小 59898316。
 4. 下載期間觀察其他列的「下載」按鈕是停用的（一次只能下載一款）。
 
-- [ ] **Step 5：第 3 項——閱讀器套用思源宋體（橫排）**
+- [x] **Step 5：第 3 項——閱讀器套用思源宋體（橫排）**
 
 1. 回書庫，用書庫的匯入功能從「下載」資料夾選 `epic-49-font-check.epub`，開啟這本書。
 2. 開閱讀設定 → 字型選單。預期：內建字型只列出「思源宋體」（思源黑體還沒下載，不應出現）；另外有「使用書本字型」，以及裝置上原本就有的自訂字型（如果有的話）。選單下方**不**顯示「到『字型管理』下載更多字型」提示。
@@ -255,11 +255,11 @@ adb -s <id> shell run-as cc.ugotit.elinkbook ls -la files/downloaded-fonts/v1
 6. 切到 Computed 分頁，捲到最下面的「Rendered Fonts」。預期：顯示 `SourceHanSerifTC`，不是 `Noto Serif CJK`／`Noto Sans CJK`。
 7. 再選英文等寬的 `<p class="mono">`，預期同樣是 `SourceHanSerifTC`（閱讀器覆蓋了書本的 `monospace`）。
 
-- [ ] **Step 6：第 3 項——直排**
+- [x] **Step 6：第 3 項——直排**
 
 閱讀設定把排版方向切成直排，重做 Step 5 的第 5～6 小步。預期：仍是 `SourceHanSerifTC`，直排標點方向正常。檢查完切回橫排。
 
-- [ ] **Step 7：第 9 項——改回「使用書本字型」**
+- [x] **Step 7：第 9 項——改回「使用書本字型」**
 
 1. DevTools 保持連線。閱讀設定 → 字型選單改選「使用書本字型」。
 2. 選取 `<p class="mono">`，看 Rendered Fonts。預期：變成等寬字型（例如 `Cutive Mono`、`Droid Sans Mono`），**不是** `SourceHanSerifTC`，也不是 `Roboto` 這類一般無襯線字型。
@@ -268,14 +268,14 @@ adb -s <id> shell run-as cc.ugotit.elinkbook ls -la files/downloaded-fonts/v1
 5. 旋轉手機一次（螢幕方向沒有鎖定時），再重做第 2 小步。預期：仍是等寬字型。
 6. 做完把字型改回「思源宋體」。
 
-- [ ] **Step 8：第 4 項——飛航模式**
+- [x] **Step 8：第 4 項——飛航模式**
 
 1. 退出閱讀器，把 App 從多工畫面滑掉。
 2. 手機開飛航模式（Wi-Fi 也關掉）。
 3. 重開 App、開同一本書。預期：開書正常，畫面字型和 Step 5 一樣是思源宋體（可以用 DevTools 再確認一次 Rendered Fonts）。
 4. 關閉飛航模式。
 
-- [ ] **Step 9：第 5 項——刪除後退回書本字型、重新下載後恢復**
+- [x] **Step 9：第 5 項——刪除後退回書本字型、重新下載後恢復**
 
 1. 退出閱讀器 → 設定 → 字型管理 → 刪除思源宋體。預期：確認對話框內文是「刪除後可以隨時重新下載。使用這款字型的書會暫時改用書本或系統字型，重新下載後自動恢復。」確認後變回「未下載」。
 2. 開同一本書 → 閱讀設定。預期：字型選單顯示「使用書本字型」，選單下方出現「到『字型管理』下載更多字型」提示。
@@ -283,7 +283,7 @@ adb -s <id> shell run-as cc.ugotit.elinkbook ls -la files/downloaded-fonts/v1
 4. 退出 → 字型管理 → 重新下載思源宋體。
 5. 再開同一本書。預期：字型選單自動顯示「思源宋體」，Rendered Fonts 是 `SourceHanSerifTC`，**不需要**重新選字型。
 
-- [ ] **Step 10：第 7 項——下載中途滑掉 App**
+- [x] **Step 10：第 7 項——下載中途滑掉 App**
 
 issues.md 第 7 項寫的是思源宋體，這裡刻意改用思源黑體：思源宋體在 Step 9 已經下載完成，改用思源黑體就不必先刪除，而且能順便驗證目錄裡的另一款字型（計畫審查 M-5）。
 
@@ -292,7 +292,7 @@ issues.md 第 7 項寫的是思源宋體，這裡刻意改用思源黑體：思�
 3. `run-as` 列出目錄，預期：沒有 `SourceHanSansTC-VF.ttf`，也沒有 `SourceHanSansTC-VF.ttf.part`（App 啟動時的 `prepare()` 會清掉）。
 4. 再下載一次思源黑體。預期：能正常完成，變成「已下載」。
 
-- [ ] **Step 11：第 6 項——翻頁效能（release APK）**
+- [x] **Step 11：第 6 項——翻頁效能（release APK）**
 
 1. 安裝 release APK（資料保留）：
    ```bash
@@ -302,7 +302,7 @@ issues.md 第 7 項寫的是思源宋體，這裡刻意改用思源黑體：思�
 3. 從第 2 章開頭連續翻 30 頁以上，橫排、直排各一次。預期：翻頁速度和選「使用書本字型」時沒有明顯差別，不會出現某幾頁先顯示系統字型再跳成思源宋體的閃動。
 4. 記下主觀感受（順暢／偶爾卡頓／明顯卡頓）與卡頓發生的位置。
 
-- [ ] **Step 12：整理手機結果**
+- [x] **Step 12：整理手機結果**
 
 把第 1、2、3、4、5、6、7、9 項逐項寫成「通過／失敗＋一句觀察」，連同 Step 1 的裝置資訊交給 Task 4。任何一項失敗時，附上截圖或 DevTools 畫面，並寫下重現步驟。
 
@@ -314,11 +314,11 @@ issues.md 第 7 項寫的是思源宋體，這裡刻意改用思源黑體：思�
 - Consumes：Task 1 的兩個 APK 與驗證書。
 - Produces：第 2 項（電子紙部分）、第 6 項、第 8 項的結果，交給 Task 4。
 
-- [ ] **Step 1：記錄裝置資訊**
+- [x] **Step 1：記錄裝置資訊**
 
 照 Task 2 Step 1 的前 4 條指令（`adb devices`、兩條 `getprop`、`dumpsys webviewupdate`）記下型號、Android 版本、WebView 版本。比較兩台裝置：**Android 版本或 WebView 版本較舊的那台，負責第 8 項**。如果手機比較舊，第 8 項改在手機上做（debug APK），做法同本 Task Step 4。
 
-- [ ] **Step 2：第 2 項電子紙部分——下載時的畫面（release APK）**
+- [x] **Step 2：第 2 項電子紙部分——下載時的畫面（release APK）**
 
 1. 安裝 release APK 並推送驗證書：
    ```bash
@@ -330,11 +330,11 @@ issues.md 第 7 項寫的是思源宋體，這裡刻意改用思源黑體：思�
 3. 觀察整個下載過程。預期：進度數字更新時沒有整頁閃爍、沒有殘影堆積，其他操作（捲動清單、返回）不會卡住。進度最多更新 101 次（0～100%，只在數字變大時更新）。
 4. 下載完成後變成「已下載」。
 
-- [ ] **Step 3：第 6 項——翻頁效能（release APK）**
+- [x] **Step 3：第 6 項——翻頁效能（release APK）**
 
 照 Task 2 Step 11 的第 2～4 小步，在電子紙上做一次。額外觀察：翻頁時有沒有因為字型載入多出一次刷新。
 
-- [ ] **Step 4：第 8 項——最舊裝置的字型請求與 Content-Type（debug APK）**
+- [x] **Step 4：第 8 項——最舊裝置的字型請求與 Content-Type（debug APK）**
 
 在 Step 1 判定為「較舊」的那台裝置上做。
 
@@ -353,7 +353,7 @@ issues.md 第 7 項寫的是思源宋體，這裡刻意改用思源黑體：思�
 - 在結果註明「此裝置無法連上 DevTools」。
 - 改用肉眼比對：同一頁分別選「使用書本字型」和「思源宋體」各截一張圖，英文等寬段落的字形應該明顯不同（等寬 vs. 思源宋體的比例字寬）。字形有變就算「字型有套用」；Content-Type 記為「無法取得」。
 
-- [ ] **Step 5：整理電子紙結果**
+- [x] **Step 5：整理電子紙結果**
 
 把第 2 項（電子紙部分）、第 6 項、第 8 項寫成「通過／失敗＋一句觀察」，第 8 項附上 Content-Type 實際值，連同裝置資訊交給 Task 4。
 
@@ -372,7 +372,7 @@ issues.md 第 7 項寫的是思源宋體，這裡刻意改用思源黑體：思�
 
 本 Task 的指令都在 repo 根目錄執行；開始前先 `cd /c/Users/fycdc/AI/elinkBook`，並用 `git branch --show-current` 確認在 `epic-49/issue-5-device-qa`（計畫審查 M-1）。
 
-- [ ] **Step 1：寫入 `epic.md`**
+- [x] **Step 1：寫入 `epic.md`**
 
 在「開發記錄」最後新增一段，格式如下，角括號內照人類回報的內容填寫，不可自行推測：
 
@@ -399,7 +399,7 @@ issues.md 第 7 項寫的是思源宋體，這裡刻意改用思源黑體：思�
 | 9 | 改回使用書本字型後立即回到書本字型、旋轉後仍正確 | 手機 | <通過／失敗> | <Rendered Fonts 結果> |
 ```
 
-- [ ] **Step 2：依結果更新狀態**
+- [x] **Step 2：依結果更新狀態**
 
 **9 項全部通過時：**
 1. `issues.md` 的 Issue 5：`**Status:** ready-for-human` 改成 `**Status:** completed`。
@@ -411,7 +411,7 @@ issues.md 第 7 項寫的是思源宋體，這裡刻意改用思源黑體：思�
 2. `epic.md` 在表格下方列出失敗的項目、現象與重現步驟。
 3. 回報人類，由人類決定要在 `issues.md` 新增哪個修正工單（不可自行新增）。
 
-- [ ] **Step 3：勾選本計畫已完成的步驟並提交**
+- [x] **Step 3：勾選本計畫已完成的步驟並提交**
 
 ```bash
 git add docs/epics.md docs/epics/epic-49-downloadable-fonts/epic.md docs/epics/epic-49-downloadable-fonts/issues.md docs/epics/epic-49-downloadable-fonts/plans/plan-issue-5.md

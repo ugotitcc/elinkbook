@@ -37,6 +37,7 @@ import 'reader/system_tts_provider.dart';
 import 'reader/tts_audio_focus_source.dart';
 import 'reader/tts_audio_handler.dart';
 import 'reader/tts_provider.dart';
+import 'reader/webview_font_support.dart';
 import 'remote/opds_client.dart';
 import 'remote/opds_http_client.dart';
 import 'remote/remote_server_repository.dart';
@@ -80,6 +81,10 @@ Future<bool> _isMobileDataConnection() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // epic-49 Issue 7：讀 WebView 版本需要初始化 WebView（首次約數十～數百毫秒），
+  // 先起跑、和下方資料庫等初始化並行，建構字型 store 時才 await（程式審查 M-2）。
+  // Issue 8 真機發現：剛安裝完第一次開時可能逾時，讀不到就用上次記住的版本。
+  final webViewMajorVersionFuture = readWebViewMajorVersionWithCache();
   // epic-40-bundled-sqlite（ADR 0028）：改用 sqlite3 Native Assets 建置
   // 掛鉤自帶編譯、保證含 FTS5 的 sqlite3，取代依賴 Android 系統內建
   // SQLite（部分裝置系統版本缺 FTS5 模組，見 epic-10-search Issue 6）。
@@ -118,10 +123,15 @@ Future<void> main() async {
   // epic-49：內建字型改為可下載字型，存在 App 支援目錄（非使用者可見、清除快取不會被刪）。
   // prepare() 建立存放目錄並清掉上次被系統終止時殘留的 .part 暫存檔；
   // 失敗只影響字型下載功能，不能擋住 App 啟動。
+  // epic-49 Issue 7：Chromium 106 以前的系統 WebView 拒絕超過 30MB 的網頁字型，
+  // store 依版本只公開載得動的字型。讀不到版本時（最多等 3 秒）改用上次記住的值；
+  // 從沒讀到過才是 null，視同支援。
+  final webViewMajorVersion = await webViewMajorVersionFuture;
   final downloadableFontStore = DownloadableFontStore(
     httpClient: http.Client(),
     directory: Directory(
         p.join((await getApplicationSupportDirectory()).path, 'downloaded-fonts')),
+    webViewMajorVersion: webViewMajorVersion,
   );
   try {
     await downloadableFontStore.prepare();

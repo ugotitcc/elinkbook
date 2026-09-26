@@ -101,6 +101,7 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final builtInFonts = widget.downloadableFontStore?.supportedFonts ?? AppFont.values;
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.fontManagementTitle),
@@ -125,7 +126,17 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
             child: Text(l10n.fontManagementBuiltInSectionLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
-          for (final font in AppFont.values) _buildBuiltInFontTile(font, l10n),
+          // Issue 7：只列出系統 WebView 載得動的內建字型；沒有 store 時照舊列出全部
+          if (builtInFonts.length < AppFont.values.length)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Text(
+                l10n.fontManagementBuiltInUnsupportedHint,
+                key: const Key('font_management_builtin_unsupported_hint'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          for (final font in builtInFonts) _buildBuiltInFontTile(font, l10n),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
             child: Text(l10n.fontManagementCustomSectionLabel, style: const TextStyle(fontWeight: FontWeight.bold)),

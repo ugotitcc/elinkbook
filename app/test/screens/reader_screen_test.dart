@@ -6787,14 +6787,14 @@ void main() {
       expect(readerView(tester).fontFamily, 'KingHwa_OldSong');
     });
 
-    testWidgets('不認得的字型名稱（含 epic-48 停用字型）照原值傳遞（審查重點 4）',
-        (tester) async {
+    testWidgets('不認得的字型名稱照原值傳遞（審查重點 4）', (tester) async {
+      // epic-49 Issue 8 恢復原俠正楷後，改用真的不存在的名稱，保留原本的意圖
       await prefsManager.saveBookPrefs(
-          'b1', const BookReaderPrefs(fontFamily: 'GuanKiapTsingKhai'));
+          'b1', const BookReaderPrefs(fontFamily: 'NoSuchFont'));
 
       await pumpReader(tester, store: FakeDownloadableFontStore());
 
-      expect(readerView(tester).fontFamily, 'GuanKiapTsingKhai');
+      expect(readerView(tester).fontFamily, 'NoSuchFont');
     });
 
     testWidgets('沒有 store 時照原值傳遞，行為與 Issue 4 相同（審查重點 5）', (tester) async {
@@ -6804,6 +6804,59 @@ void main() {
       await pumpReader(tester);
 
       expect(readerView(tester).fontFamily, 'SourceHanSerifTC');
+    });
+
+    testWidgets('舊 WebView 裝置上已下載的字型：閱讀設定選單不列出（Issue 7）', (tester) async {
+      final store = FakeDownloadableFontStore()
+        ..installed.add(AppFont.sourceHanSerif)
+        ..supported = []; // 模擬舊 WebView 載不動
+      await pumpReader(tester, store: store);
+
+      readerView(tester).onLayoutResolved?.call(const EpubLayoutInfo(
+            isFixedLayout: false,
+            writingMode: WritingMode.horizontal,
+          ));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final sheet = tester.widget<ReaderSettingsSheet>(find.byType(ReaderSettingsSheet));
+      expect(sheet.installedFonts, isEmpty);
+    });
+
+    testWidgets('舊 WebView 裝置上已下載的字型：閱讀器收到 null，偏好不改寫（Issue 7）', (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'));
+      final store = FakeDownloadableFontStore()
+        ..installed.add(AppFont.sourceHanSerif)
+        ..supported = []; // 模擬舊 WebView 載不動
+
+      await pumpReader(tester, store: store);
+
+      expect(readerView(tester).fontFamily, isNull);
+      expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'SourceHanSerifTC');
+    });
+
+    testWidgets('epic-48 以前選的原俠正楷，沒下載時閱讀器收到 null，偏好不改寫（Issue 8）',
+        (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'GuanKiapTsingKhai'));
+
+      await pumpReader(tester, store: FakeDownloadableFontStore());
+
+      expect(readerView(tester).fontFamily, isNull);
+      expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'GuanKiapTsingKhai');
+    });
+
+    testWidgets('epic-48 以前選的原俠正楷，下載後照原值傳遞（Issue 8）', (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'GuanKiapTsingKhai'));
+      final store = FakeDownloadableFontStore()..installed.add(AppFont.guanKiapTsingKhai);
+
+      await pumpReader(tester, store: store);
+
+      expect(readerView(tester).fontFamily, 'GuanKiapTsingKhai');
     });
   });
 

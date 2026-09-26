@@ -139,7 +139,7 @@ Issue 3 ─────────────────────┘
 
 ## Issue 5：真機驗證（人類操作）
 
-**Status:** ready-for-human
+**Status:** completed
 
 **依賴：** Issue 4。
 
@@ -186,3 +186,80 @@ Issue 3 ─────────────────────┘
 **驗收標準：** 異動檔案的測試通過；`flutter analyze` 乾淨。完成後 Issue 5 第 5 項「刪除思源宋體」時，畫面應同時改回書本字型。
 
 **Blocked by：** Issue 4。
+
+---
+
+## Issue 7：系統 WebView 太舊時不列出可下載字型（Issue 5 第 8 項失敗）
+
+**Status:** completed
+
+**依賴：** Issue 4。
+
+**背景：** Issue 5 第 8 項在電子紙閱讀器（Android 12、WebView 91.0.4472.114）失敗。選「思源宋體」後，畫面退回系統字型，`adb logcat` 的 WebView console 訊息為：
+
+```
+Failed to decode downloaded font: https://appassets.androidplatform.net/downloaded-fonts/v1/SourceHanSerifTC-VF.ttf
+OTS parsing error: Web font size more than 30MB
+```
+
+舊版 WebView 拒絕超過 30 MB 的網頁字型。思源宋體 57.1 MB、思源黑體 34.4 MB 都超過，所以這類裝置上兩款字型下載後都無法使用。手機 WebView 154.0.8037.49 正常。詳見 `epic.md`「2026-09-26 Issue 5 真機驗證」。
+
+人類決定的修正方向：偵測到系統 WebView 太舊時，不列出這兩款字型。
+
+**What to build：**
+- 取得系統 WebView 版本：`InAppWebViewController.getCurrentWebViewPackage()`（`flutter_inappwebview_platform_interface` 1.3.0 已提供，底層為 `WebViewCompat.getCurrentWebViewPackage`），解析 `versionName` 的主版本號。
+  > **程式審查修訂（`review-issue-7.md` I-1，人類裁定採方案 a）**：部分廠商 WebView 的 `versionName` 不是 Chromium 版本編號，會把新 WebView 誤判成舊的。改讀 `InAppWebViewController.getDefaultUserAgent()`，從 User-Agent 的 `Chrome/NN` 取 Chromium 主版本號；找不到時同樣視為讀不到版本。
+- 決定門檻版本：查 Chromium 原始碼歷史，找出放寬「Web font size more than 30MB」限制的版本，寫進計畫並附來源。目前已知：91 不行、154 可以。查不到確切版本時，計畫需寫明採用的保守門檻與理由。
+- 系統 WebView 低於門檻時：
+  - 字型管理畫面不列出思源黑體、思源宋體。
+  - 閱讀設定的字型選單不列出這兩款，即使裝置上已經有下載好的檔案。
+  - 閱讀器視同這兩款「未下載」，偏好指向它們時改用書本字型（沿用 Issue 6 的 `_renderedFontFamily()` 行為），**不改寫**偏好。
+- 讀不到 WebView 版本或解析失敗時的行為，計畫需明確決定並寫明理由。
+- 計畫需決定：舊 WebView 裝置上已經下載的字型檔要不要提供刪除入口（檔案仍佔用儲存空間，思源宋體約 57 MB）。
+
+**單元測試要求：**
+- 版本字串解析：`91.0.4472.114`、`154.0.8037.49`、空字串、格式錯誤的字串。
+- 低於門檻時：字型管理畫面不顯示兩款字型；閱讀設定選單不列出兩款字型（即使已下載）；`FoliateReaderView` 收到的 `fontFamily` 是 `null`，偏好值沒有被改寫。
+- 達到門檻時：行為與現在相同（零回歸）。
+- 讀不到版本時：符合計畫決定的行為。
+
+**驗收標準：** 異動檔案的測試通過；`flutter analyze` 乾淨；l10n 檢查通過。完成後在電子紙閱讀器（WebView 91）重做 Issue 5 第 8 項：字型管理與閱讀設定都不出現這兩款字型，已選思源宋體的書改用書本字型。
+
+**Blocked by：** Issue 4。
+
+---
+
+## Issue 8：恢復原俠正楷、台灣圓體、源流明體三款可下載字型
+
+**Status:** completed
+
+**進度（2026-09-26）：** 實作與測試已完成，真機確認待人類補測。完整 `flutter test` 2914 通過、1 跳過、0 失敗（`epic-50-wifi-transfer-test-fix` 的 WiFi 測試本次通過，見 epic.md）；`flutter analyze`乾淨；l10n 檢查兩行 PASS；debug APK 已建置。真機 6 步（手機 9491G ×3、電子紙 WAVE ×3）已通過；電子紙第 4 步第一次因啟動時讀 WebView 版本逾時而列出 5 款，改為沿用上次記住的版本後通過（見 epic.md）。
+
+**依賴：** Issue 7。
+
+**背景：** epic-48 把原俠正楷、台灣圓體、源流明體以 `[字型停用]` 註解停用。本 Epic 的 `spec.md` 把「恢復這 3 款」列為範圍外，只先把字型檔上傳到 R2（Issue 2 已上傳，`verify_remote.mjs` 回報 `PASS`）。Issue 7 完成後，人類決定在歸檔前追加本工單，把 3 款字型恢復為可下載字型（`spec.md` 使用者故事 34）。
+
+3 款字型都小於 30 MB（14,675,776／21,704,488／15,976,964 bytes），依 Issue 7 的判斷，WebView 91 的電子紙也載得動。
+
+**What to build：**
+- 解除 `[字型停用]` 標記，恢復 3 個 enum 值與所有 switch 分支：
+  - `app/lib/reader/app_font.dart`：enum 值、`familyName`（`GuanKiapTsingKhai`／`TaiwanPearl`／`GenRyuMinTW`）、說明註解。
+  - `app/lib/reader/font_download_catalog.dart`：`fontDownloadSpecOf()` 的 3 筆下載資訊（數值已與 `spec.md` 一致，不重新計算）。
+  - `app/pubspec.yaml` 第 230 行附近的 `[字型停用]` 註解，改成反映現況。
+- `displayName()` 補上 3 款，新增 3 個 l10n key，4 個 arb 都要加（`app_zh_TW.arb` 含 `@` 說明）。英文名稱由計畫決定並寫明來源（例如字型檔 `name` table 的英文家族名）。
+- 確認 `sqlite_library_repository.dart` 約 804 行的舊偏好對照（`'guanKiapTsingKhai': 'GuanKiapTsingKhai'` 等）與恢復後的 `familyName` 一致；不一致時計畫需決定怎麼處理。
+- 確認 `app/assets/fonts/` 是否還有原俠正楷原檔（epic-48 留下的）。APK 不能打包任何字型檔（ADR 0035），計畫需決定是否刪除該檔案。
+- 不改 Worker、R2、`fonts-cdn/`：檔案已上傳，發布路徑維持 `v1/`。
+
+**單元測試要求：**
+- `font_download_catalog_test.dart`：字型目錄一致性測試涵蓋 5 款，與 `fonts-cdn/fonts.json` 的大小、SHA-256、發布路徑一致。
+- `AppFont.values` 為 5 款，依 enum 順序；`familyName`、`displayName()` 三語系都正確。
+- 字型管理畫面：5 款都列出（WebView 107 以上）；WebView 91 時只列出 3 款新恢復的字型，思源黑體、思源宋體隱藏並顯示 Issue 7 的提示。
+- 閱讀設定：已下載的新字型出現在選單，選用後 `FoliateReaderView` 收到正確的 `fontFamily`。
+- 既有測試裡寫死「只有 2 款」的斷言，依新行為更新，並在計畫中列出。
+
+**驗收標準：** 異動檔案的測試通過；完整 `flutter test` 除 `epic-50-wifi-transfer-test-fix` 的既有失敗外全部通過；`flutter analyze` 乾淨；l10n 檢查通過。真機確認：
+- 手機（WebView 154）：5 款都能下載，選用後畫面字型正確。
+- 電子紙（WebView 91）：只列出 3 款新字型，下載後畫面字型正確（確認 Issue 7 依大小判斷真的生效），`adb logcat` 沒有 `OTS parsing error`。
+
+**Blocked by：** Issue 7（已完成）。

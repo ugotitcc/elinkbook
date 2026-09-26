@@ -1453,6 +1453,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fontNameSourceHanSerif => '思源宋體';
 
   @override
+  String get fontNameGuanKiapTsingKhai => '原俠正楷';
+
+  @override
+  String get fontNameTaiwanPearl => '台灣圓體';
+
+  @override
+  String get fontNameGenRyuMinTW => '源流明體';
+
+  @override
   String get fontManagementUploadTooltip => '上傳字型';
 
   @override
@@ -1507,6 +1516,10 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get fontManagementDownloadableDeleteConfirmMessage =>
       '刪除後可以隨時重新下載。使用這款字型的書會暫時改用書本或系統字型，重新下載後自動恢復。';
+
+  @override
+  String get fontManagementBuiltInUnsupportedHint =>
+      '這台裝置的系統 WebView 版本太舊，部分內建字型無法使用，已從清單隱藏。更新「Android System WebView」並重新開啟 App 後即可下載。';
 
   @override
   String get fontDownloadErrorNetwork => '無法連線，請檢查網路後重試';
@@ -3583,6 +3596,15 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get fontNameSourceHanSerif => '思源宋体';
 
   @override
+  String get fontNameGuanKiapTsingKhai => '原侠正楷';
+
+  @override
+  String get fontNameTaiwanPearl => '台湾圆体';
+
+  @override
+  String get fontNameGenRyuMinTW => '源流明体';
+
+  @override
   String get fontManagementUploadTooltip => '上传字体';
 
   @override
@@ -3637,6 +3659,10 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   @override
   String get fontManagementDownloadableDeleteConfirmMessage =>
       '删除后可以随时重新下载。使用这款字体的书会暂时改用书本或系统字体，重新下载后自动恢复。';
+
+  @override
+  String get fontManagementBuiltInUnsupportedHint =>
+      '这台设备的系统 WebView 版本太旧，部分内建字体无法使用，已从列表隐藏。更新「Android System WebView」并重新打开 App 后即可下载。';
 
   @override
   String get fontDownloadErrorNetwork => '无法连接，请检查网络后重试';
@@ -5713,6 +5739,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get fontNameSourceHanSerif => '思源宋體';
 
   @override
+  String get fontNameGuanKiapTsingKhai => '原俠正楷';
+
+  @override
+  String get fontNameTaiwanPearl => '台灣圓體';
+
+  @override
+  String get fontNameGenRyuMinTW => '源流明體';
+
+  @override
   String get fontManagementUploadTooltip => '上傳字型';
 
   @override
@@ -5767,6 +5802,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get fontManagementDownloadableDeleteConfirmMessage =>
       '刪除後可以隨時重新下載。使用這款字型的書會暫時改用書本或系統字型，重新下載後自動恢復。';
+
+  @override
+  String get fontManagementBuiltInUnsupportedHint =>
+      '這台裝置的系統 WebView 版本太舊，部分內建字型無法使用，已從清單隱藏。更新「Android System WebView」並重新開啟 App 後即可下載。';
 
   @override
   String get fontDownloadErrorNetwork => '無法連線，請檢查網路後重試';
