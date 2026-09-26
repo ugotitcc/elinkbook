@@ -226,3 +226,38 @@ OTS parsing error: Web font size more than 30MB
 **驗收標準：** 異動檔案的測試通過；`flutter analyze` 乾淨；l10n 檢查通過。完成後在電子紙閱讀器（WebView 91）重做 Issue 5 第 8 項：字型管理與閱讀設定都不出現這兩款字型，已選思源宋體的書改用書本字型。
 
 **Blocked by：** Issue 4。
+
+---
+
+## Issue 8：恢復原俠正楷、台灣圓體、源流明體三款可下載字型
+
+**Status:** needs-triage
+
+**依賴：** Issue 7。
+
+**背景：** epic-48 把原俠正楷、台灣圓體、源流明體以 `[字型停用]` 註解停用。本 Epic 的 `spec.md` 把「恢復這 3 款」列為範圍外，只先把字型檔上傳到 R2（Issue 2 已上傳，`verify_remote.mjs` 回報 `PASS`）。Issue 7 完成後，人類決定在歸檔前追加本工單，把 3 款字型恢復為可下載字型（`spec.md` 使用者故事 34）。
+
+3 款字型都小於 30 MB（14,675,776／21,704,488／15,976,964 bytes），依 Issue 7 的判斷，WebView 91 的電子紙也載得動。
+
+**What to build：**
+- 解除 `[字型停用]` 標記，恢復 3 個 enum 值與所有 switch 分支：
+  - `app/lib/reader/app_font.dart`：enum 值、`familyName`（`GuanKiapTsingKhai`／`TaiwanPearl`／`GenRyuMinTW`）、說明註解。
+  - `app/lib/reader/font_download_catalog.dart`：`fontDownloadSpecOf()` 的 3 筆下載資訊（數值已與 `spec.md` 一致，不重新計算）。
+  - `app/pubspec.yaml` 第 230 行附近的 `[字型停用]` 註解，改成反映現況。
+- `displayName()` 補上 3 款，新增 3 個 l10n key，4 個 arb 都要加（`app_zh_TW.arb` 含 `@` 說明）。英文名稱由計畫決定並寫明來源（例如字型檔 `name` table 的英文家族名）。
+- 確認 `sqlite_library_repository.dart` 約 804 行的舊偏好對照（`'guanKiapTsingKhai': 'GuanKiapTsingKhai'` 等）與恢復後的 `familyName` 一致；不一致時計畫需決定怎麼處理。
+- 確認 `app/assets/fonts/` 是否還有原俠正楷原檔（epic-48 留下的）。APK 不能打包任何字型檔（ADR 0035），計畫需決定是否刪除該檔案。
+- 不改 Worker、R2、`fonts-cdn/`：檔案已上傳，發布路徑維持 `v1/`。
+
+**單元測試要求：**
+- `font_download_catalog_test.dart`：字型目錄一致性測試涵蓋 5 款，與 `fonts-cdn/fonts.json` 的大小、SHA-256、發布路徑一致。
+- `AppFont.values` 為 5 款，依 enum 順序；`familyName`、`displayName()` 三語系都正確。
+- 字型管理畫面：5 款都列出（WebView 107 以上）；WebView 91 時只列出 3 款新恢復的字型，思源黑體、思源宋體隱藏並顯示 Issue 7 的提示。
+- 閱讀設定：已下載的新字型出現在選單，選用後 `FoliateReaderView` 收到正確的 `fontFamily`。
+- 既有測試裡寫死「只有 2 款」的斷言，依新行為更新，並在計畫中列出。
+
+**驗收標準：** 異動檔案的測試通過；完整 `flutter test` 除 `epic-50-wifi-transfer-test-fix` 的既有失敗外全部通過；`flutter analyze` 乾淨；l10n 檢查通過。真機確認：
+- 手機（WebView 154）：5 款都能下載，選用後畫面字型正確。
+- 電子紙（WebView 91）：只列出 3 款新字型，下載後畫面字型正確（確認 Issue 7 依大小判斷真的生效），`adb logcat` 沒有 `OTS parsing error`。
+
+**Blocked by：** Issue 7（已完成）。

@@ -269,3 +269,5 @@
 **2026-09-26 Issue 5 結案**：人類決定依 Issue 7 真機重驗結果，把 Issue 5 改為 `completed`。epic-49 全部工單完成，待 PR 合併後歸檔。完整測試發現的 WiFi 傳書測試失敗，另開 `docs/epics.md` 第 51 列 `epic-50-wifi-transfer-test-fix`（Backlog）處理；在 `6bfcc7d1` 之前的 commit 也失敗，與 epic-49 無關。
 
 **2026-09-26 Issue 7 PR 合併**：PR #282（`epic-49/issue-7-legacy-webview-fonts` → `main`）已合併，內容為 Issue 7 實作、真機確認記錄、Issue 5 結案與 `epic-50-wifi-transfer-test-fix` 缺陷工單。epic-49 全部工單完成，下一步：歸檔。
+
+**2026-09-26 追加 Issue 8**：人類發現字型管理只看得到 2 款字型，詢問原俠正楷等 3 款。原因是這 3 款仍為 epic-48 的 `[字型停用]`，本 Epic `spec.md` 列為範圍外，但字型檔已上傳 R2。人類決定在歸檔前追加 Issue 8「恢復 3 款可下載字型」（`needs-triage`），完成後再歸檔。3 款都小於 30 MB，WebView 91 也載得動，可順便在電子紙驗證 Issue 7 的依大小判斷。
