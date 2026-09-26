@@ -267,3 +267,5 @@
 - Issue 5 第 8 項依 Issue 7 的驗收方式在電子紙重驗通過，由人類決定 Issue 5 是否改為 `completed`。
 
 **2026-09-26 Issue 5 結案**：人類決定依 Issue 7 真機重驗結果，把 Issue 5 改為 `completed`。epic-49 全部工單完成，待 PR 合併後歸檔。完整測試發現的 WiFi 傳書測試失敗，另開 `docs/epics.md` 第 51 列 `epic-50-wifi-transfer-test-fix`（Backlog）處理；在 `6bfcc7d1` 之前的 commit 也失敗，與 epic-49 無關。
+
+**2026-09-26 Issue 7 PR 合併**：PR #282（`epic-49/issue-7-legacy-webview-fonts` → `main`）已合併，內容為 Issue 7 實作、真機確認記錄、Issue 5 結案與 `epic-50-wifi-transfer-test-fix` 缺陷工單。epic-49 全部工單完成，下一步：歸檔。
