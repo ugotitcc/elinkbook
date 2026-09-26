@@ -6837,6 +6837,27 @@ void main() {
       expect(readerView(tester).fontFamily, isNull);
       expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'SourceHanSerifTC');
     });
+
+    testWidgets('epic-48 以前選的原俠正楷，沒下載時閱讀器收到 null，偏好不改寫（Issue 8）',
+        (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'GuanKiapTsingKhai'));
+
+      await pumpReader(tester, store: FakeDownloadableFontStore());
+
+      expect(readerView(tester).fontFamily, isNull);
+      expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'GuanKiapTsingKhai');
+    });
+
+    testWidgets('epic-48 以前選的原俠正楷，下載後照原值傳遞（Issue 8）', (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'GuanKiapTsingKhai'));
+      final store = FakeDownloadableFontStore()..installed.add(AppFont.guanKiapTsingKhai);
+
+      await pumpReader(tester, store: store);
+
+      expect(readerView(tester).fontFamily, 'GuanKiapTsingKhai');
+    });
   });
 
   testWidgets(

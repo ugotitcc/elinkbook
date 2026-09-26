@@ -1129,6 +1129,28 @@ void main() {
       expect(find.text('思源宋體'), findsNothing);
     });
 
+    testWidgets('只下載台灣圓體時，選單只有台灣圓體（Issue 8）', (tester) async {
+      await _pumpSheet(tester, const BookReaderPrefs(), (_) {},
+          installedFonts: {AppFont.taiwanPearl});
+
+      await tester.tap(find.byKey(const Key('reader_settings_font_family')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('台灣圓體'), findsWidgets);
+      expect(find.text('原俠正楷'), findsNothing);
+      expect(find.text('思源黑體'), findsNothing);
+    });
+
+    testWidgets('偏好為已下載的原俠正楷時，選單顯示原俠正楷（Issue 8）', (tester) async {
+      await _pumpSheet(
+          tester, const BookReaderPrefs(fontFamily: 'GuanKiapTsingKhai'), (_) {},
+          installedFonts: {AppFont.guanKiapTsingKhai});
+
+      final dropdown = tester.widget<DropdownButton<String?>>(
+          find.byKey(const Key('reader_settings_font_family')));
+      expect(dropdown.value, 'GuanKiapTsingKhai');
+    });
+
     testWidgets('一款內建字型都沒下載時，選單下方顯示提示（即使有自訂字型）', (tester) async {
       await _pumpSheet(
         tester,

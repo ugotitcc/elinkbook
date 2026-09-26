@@ -491,6 +491,54 @@ void main() {
       );
     });
 
+    testWidgets('5 款內建字型依序列出，大小正確（Issue 8）', (tester) async {
+      // 預設測試畫面 800x600 放不下 5 列＋自訂字型區塊，加高避免 ListView 沒建出後面幾列
+      tester.view.physicalSize = const Size(2400, 6000);
+      addTearDown(tester.view.resetPhysicalSize);
+      await pumpScreen(tester, store: store);
+
+      expect(subtitleOf(AppFont.sourceHanSans, '34.4 MB · 未下載'), findsOneWidget);
+      expect(subtitleOf(AppFont.sourceHanSerif, '57.1 MB · 未下載'), findsOneWidget);
+      expect(subtitleOf(AppFont.guanKiapTsingKhai, '14.0 MB · 未下載'), findsOneWidget);
+      expect(subtitleOf(AppFont.taiwanPearl, '20.7 MB · 未下載'), findsOneWidget);
+      expect(subtitleOf(AppFont.genRyuMinTW, '15.2 MB · 未下載'), findsOneWidget);
+      expect(find.text('原俠正楷'), findsOneWidget);
+      expect(find.text('台灣圓體'), findsOneWidget);
+      expect(find.text('源流明體'), findsOneWidget);
+
+      // 順序：依 AppFont.values
+      final tops = [
+        for (final font in AppFont.values)
+          tester.getTopLeft(find.byKey(Key('font_management_builtin_${font.name}'))).dy,
+      ];
+      expect(tops, List.of(tops)..sort());
+      expect(find.byKey(const Key('font_management_builtin_unsupported_hint')), findsNothing);
+    });
+
+    testWidgets('舊 WebView 只載得動新恢復的 3 款：只列出這 3 款，並顯示提示（Issue 8）',
+        (tester) async {
+      store.supported = [AppFont.guanKiapTsingKhai, AppFont.taiwanPearl, AppFont.genRyuMinTW];
+      await pumpScreen(tester, store: store);
+
+      expect(find.text('思源黑體'), findsNothing);
+      expect(find.text('思源宋體'), findsNothing);
+      expect(find.text('原俠正楷'), findsOneWidget);
+      expect(find.text('台灣圓體'), findsOneWidget);
+      expect(find.text('源流明體'), findsOneWidget);
+      expect(find.byKey(const Key('font_management_builtin_unsupported_hint')), findsOneWidget);
+    });
+
+    testWidgets('英文介面：新恢復的 3 款字型名稱以英文顯示（Issue 8）', (tester) async {
+      tester.view.physicalSize = const Size(2400, 6000);
+      addTearDown(tester.view.resetPhysicalSize);
+      await pumpScreen(tester, store: store, locale: const Locale('en'));
+
+      expect(find.text('GuanKiapTsingKhai'), findsOneWidget);
+      expect(find.text('TaiwanPearl'), findsOneWidget);
+      expect(find.text('GenRyuMin TW'), findsOneWidget);
+      expect(subtitleOf(AppFont.taiwanPearl, '20.7 MB · Not downloaded'), findsOneWidget);
+    });
+
     testWidgets('英文介面：字型名稱與狀態以英文顯示', (tester) async {
       await pumpScreen(tester, store: store, locale: const Locale('en'));
 
