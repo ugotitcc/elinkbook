@@ -271,3 +271,13 @@
 **2026-09-26 Issue 7 PR 合併**：PR #282（`epic-49/issue-7-legacy-webview-fonts` → `main`）已合併，內容為 Issue 7 實作、真機確認記錄、Issue 5 結案與 `epic-50-wifi-transfer-test-fix` 缺陷工單。epic-49 全部工單完成，下一步：歸檔。
 
 **2026-09-26 追加 Issue 8**：人類發現字型管理只看得到 2 款字型，詢問原俠正楷等 3 款。原因是這 3 款仍為 epic-48 的 `[字型停用]`，本 Epic `spec.md` 列為範圍外，但字型檔已上傳 R2。人類決定在歸檔前追加 Issue 8「恢復 3 款可下載字型」（`needs-triage`），完成後再歸檔。3 款都小於 30 MB，WebView 91 也載得動，可順便在電子紙驗證 Issue 7 的依大小判斷。
+
+**2026-09-26 Issue 8 實作完成，真機待補測**（分支 `epic-49/issue-8-restore-fonts`，待真機確認後發 PR）
+
+- 工單疑問查核結果：`legacyToFamilyName` 的 3 筆對照與恢復後的 `familyName` 完全一致，不用改；`app/assets/fonts/` 已不存在，不用刪；除 `displayName()` 外無其他 exhaustive switch 要補（暫時解除註解後 `flutter analyze` 乾淨）。
+- 計畫決定 1：英文顯示名取字型檔 `name` table 英文家族名去技術後綴——`GuanKiapTsingKhai`、`TaiwanPearl`、`GenRyuMin TW`；簡中：原侠正楷、台湾圆体、源流明体。
+- 計畫決定 2：enum 順序沿用註解順序（黑、宋、原俠、圓體、源流），字型管理與閱讀設定依此列出。
+- 計畫決定 3：7 處既有測試依新行為更新（4 個寫死 2 款／`mixedSpecOf` 期望／2 個「不認得名稱」改 `NoSuchFont`／字型管理 5 款斷言／英文選單標題與斷言）。
+- 計畫決定 4：不動 Worker、R2、`fonts-cdn/`；`font_download_catalog_test` 一致性測試自動比對 5 款通過。
+- 完整測試：`flutter test` 2914 通過、1 跳過、0 失敗。注意：`epic-50-wifi-transfer-test-fix` 的 WiFi 測試（`wifi_transfer_http_server_test.dart`「下載期間 activeTransfersNotifier…」）本次全套與單獨執行都通過——該失敗具時序不穩定性，仍由 epic-50 處理。`flutter analyze`：`No issues found!`；l10n 檢查兩行 PASS；debug APK 建置成功。
+- 真機確認：人類選擇稍後補測。待測 6 步——手機（5 款列出無提示、下載 3 款、驗證書套圓體）、電子紙（只列 3 款＋Issue 7 提示、下載原俠正楷、驗證書套楷體且 logcat 無 OTS 錯誤）。結果出來後 Issue 8 改 `completed` 並發 PR。

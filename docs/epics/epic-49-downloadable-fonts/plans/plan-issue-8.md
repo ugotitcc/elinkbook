@@ -120,7 +120,7 @@ AppFont enum（解除 [字型停用]）
   - `familyName`：`'GuanKiapTsingKhai'`、`'TaiwanPearl'`、`'GenRyuMinTW'`
   - l10n getter：`fontNameGuanKiapTsingKhai`、`fontNameTaiwanPearl`、`fontNameGenRyuMinTW`
 
-- [ ] **Step 1：建立分支**
+- [x] **Step 1：建立分支**
 
 在 repo 根目錄：
 ```bash
@@ -128,7 +128,7 @@ git switch main && git pull --ff-only origin main
 git switch -c epic-49/issue-8-restore-fonts
 ```
 
-- [ ] **Step 2：寫失敗的測試**
+- [x] **Step 2：寫失敗的測試**
 
 把 `app/test/reader/app_font_test.dart` 整個換成：
 
@@ -356,7 +356,7 @@ void main() {
   });
 ```
 
-- [ ] **Step 3：執行測試，確認失敗**
+- [x] **Step 3：執行測試，確認失敗**
 
 ```bash
 flutter test test/reader/app_font_test.dart test/reader/font_download_catalog_test.dart test/reader/downloadable_font_store_test.dart
@@ -365,7 +365,7 @@ flutter test test/reader/app_font_test.dart test/reader/font_download_catalog_te
 
 （`reader_settings_sheet_test.dart`、`reader_screen_test.dart`、`font_management_screen_test.dart` 的改名／改斷言測試在恢復前後都會通過，它們是為了不讓 Step 4 弄壞而先改，Step 6 一起執行。）
 
-- [ ] **Step 4：寫實作**
+- [x] **Step 4：寫實作**
 
 1. `app/lib/reader/app_font.dart`：
 
@@ -497,21 +497,21 @@ git status --short lib/l10n
 ```
 預期：4 個 arb 與 `app_localizations.dart`、`app_localizations_en.dart`、`app_localizations_zh.dart` 顯示為已修改。
 
-- [ ] **Step 5：確認沒有殘留的停用標記**
+- [x] **Step 5：確認沒有殘留的停用標記**
 
 ```bash
 git grep -n "字型停用" -- lib pubspec.yaml
 ```
 預期：沒有輸出（結束碼 1）。
 
-- [ ] **Step 6：執行測試，確認通過**
+- [x] **Step 6：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/app_font_test.dart test/reader/font_download_catalog_test.dart test/reader/downloadable_font_store_test.dart test/screens/reader_settings_sheet_test.dart test/screens/reader_screen_test.dart
 ```
 預期：`All tests passed!`。`font_download_catalog_test.dart` 的「與 fonts-cdn/fonts.json 完全一致」測試現在會比對 5 款。
 
-- [ ] **Step 7：analyze、l10n 檢查並提交**
+- [x] **Step 7：analyze、l10n 檢查並提交**
 
 ```bash
 flutter analyze
@@ -536,7 +536,7 @@ git commit -m "feat(fonts): 恢復原俠正楷、台灣圓體、源流明體為�
 
 > **這個 Task 的新增測試第一次執行就會通過，這是預期的。** 畫面都走訪 `AppFont.values`，Task 1 恢復 enum 後行為就已經生效，沒有新的正式程式碼要寫。這些測試守住「畫面不能改成寫死字型清單」，並涵蓋審查重點 2、3、4。Task 1 已在 Step 2 更新了既有測試的過時斷言（`font_management_screen_test.dart` 與 `reader_settings_sheet_test.dart`），這裡只新增測試。
 
-- [ ] **Step 1：寫字型管理畫面的測試**
+- [x] **Step 1：寫字型管理畫面的測試**
 
 在 `app/test/screens/font_management_screen_test.dart` 的 `group('可下載字型（epic-49）', () {` 裡，`testWidgets('英文介面：字型名稱與狀態以英文顯示'` 之前加入：
 
@@ -590,7 +590,7 @@ git commit -m "feat(fonts): 恢復原俠正楷、台灣圓體、源流明體為�
     });
 ```
 
-- [ ] **Step 2：寫閱讀設定的測試**
+- [x] **Step 2：寫閱讀設定的測試**
 
 在 `app/test/screens/reader_settings_sheet_test.dart` 的 `group('只列出已下載的內建字型（epic-49 Issue 4）', () {` 裡，第一個 `testWidgets` 之後加入：
 
@@ -618,7 +618,7 @@ git commit -m "feat(fonts): 恢復原俠正楷、台灣圓體、源流明體為�
     });
 ```
 
-- [ ] **Step 3：寫閱讀器的測試**（審查重點 2）
+- [x] **Step 3：寫閱讀器的測試**（審查重點 2）
 
 在 `app/test/screens/reader_screen_test.dart` 的 `group('未下載字型改用書本字型（epic-49 Issue 6）', () {` 群組內、最後一個 `testWidgets` 之後（群組結尾的 `});` 之前）加入：
 
@@ -645,14 +645,14 @@ git commit -m "feat(fonts): 恢復原俠正楷、台灣圓體、源流明體為�
     });
 ```
 
-- [ ] **Step 4：執行測試**
+- [x] **Step 4：執行測試**
 
 ```bash
 flutter test test/screens/font_management_screen_test.dart test/screens/reader_settings_sheet_test.dart test/screens/reader_screen_test.dart
 ```
 預期：`All tests passed!`（原因見本 Task 開頭的說明）。
 
-- [ ] **Step 5：analyze 並提交**
+- [x] **Step 5：analyze 並提交**
 
 ```bash
 flutter analyze
@@ -673,7 +673,7 @@ git commit -m "test(fonts): 字型管理、閱讀設定、閱讀器涵蓋恢復�
 - Modify: `docs/epics.md`
 - Modify: `docs/epics/epic-49-downloadable-fonts/plans/plan-issue-8.md`（勾選步驟）
 
-- [ ] **Step 1：完整測試與靜態檢查**
+- [x] **Step 1：完整測試與靜態檢查**
 
 在 `app/`：
 ```bash
@@ -683,7 +683,7 @@ node tool/check_l10n_hardcoded_strings.js
 ```
 預期：只有 1 個失敗，是 `test/wifi_transfer/wifi_transfer_http_server_test.dart`「下載期間 activeTransfersNotifier 維持在 1…」（`epic-50-wifi-transfer-test-fix` 的既有問題）。其他全部通過；`No issues found!`；l10n 檢查兩行 PASS。出現任何其他失敗都要先修。
 
-- [ ] **Step 2：更新 CLAUDE.md 與 PRD**
+- [x] **Step 2：更新 CLAUDE.md 與 PRD**
 
 `CLAUDE.md` 第 92 行，把
 ```
@@ -710,7 +710,7 @@ git grep -n "暫時自清單隱藏" -- CLAUDE.md docs/prd.md
 ```
 預期：只剩 `docs/prd.md` 舊的 `editHistory` 那一筆（2026-09-25，歷史記錄不改）。
 
-- [ ] **Step 3：建置 debug APK**
+- [x] **Step 3：建置 debug APK**
 
 ```bash
 flutter build apk --debug
@@ -737,7 +737,7 @@ flutter build apk --debug
 
 回報每一步「通過／失敗＋一句觀察」。
 
-- [ ] **Step 5：記錄進度**
+- [x] **Step 5：記錄進度**
 
 依 Step 1、4 的實際結果：
 
@@ -747,7 +747,7 @@ flutter build apk --debug
 
 真機有失敗時照實記錄，Issue 8 維持 `ready-for-human`，由人類決定修正方式。
 
-- [ ] **Step 6：勾選本計畫並提交**
+- [x] **Step 6：勾選本計畫並提交**
 
 在 repo 根目錄：
 ```bash
