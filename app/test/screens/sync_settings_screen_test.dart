@@ -356,6 +356,64 @@ void main() {
           reason: '失敗時不應更新最後同步時間顯示。');
     });
 
+    testWidgets('點擊「立即同步」時 token 已過期（同步引擎清除 token）：切回登入表單、預填 email、顯示「登入已過期」（epic-50）',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SyncSettingsScreen(
+          accountRepository: accountRepository,
+          syncClient: neverCalledClient(),
+          // 模擬 SyncEngine.runCheckpoint() 的 authRefresh 收到 401：
+          // 清除 token（保留 email）並回傳 false。
+          onManualSync: () async {
+            await accountRepository.clearAuthToken();
+            return false;
+          },
+          loadLastSyncedAt: () async => null,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('sync_settings_manual_sync_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('sync_settings_password_field')), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byKey(const Key('sync_settings_email_field'))).controller!.text,
+        'reader@example.com',
+      );
+      expect(find.text('登入已過期，請重新輸入密碼登入'), findsOneWidget);
+      expect(find.text('同步失敗，請確認網路連線'), findsNothing,
+          reason: '已明確是登入過期，不應再顯示籠統的網路錯誤提示。');
+    });
+
+    testWidgets('開啟畫面時 token 已被自動同步清除但 email 仍在：顯示登入表單、預填 email、顯示「登入已過期」（epic-50）',
+        (tester) async {
+      await accountRepository.clearAuthToken();
+
+      await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SyncSettingsScreen(
+          accountRepository: accountRepository,
+          syncClient: neverCalledClient(),
+          onManualSync: throwingManualSync(),
+          loadLastSyncedAt: () async => null,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('sync_settings_password_field')), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byKey(const Key('sync_settings_email_field'))).controller!.text,
+        'reader@example.com',
+      );
+      expect(find.text('登入已過期，請重新輸入密碼登入'), findsOneWidget);
+    });
+
     testWidgets('英文介面下已登入畫面文字正確以英文渲染，最後同步時間為英文日期格式',
         (tester) async {
       await accountRepository.saveCredentials(

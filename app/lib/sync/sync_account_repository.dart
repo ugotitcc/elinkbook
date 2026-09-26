@@ -67,6 +67,12 @@ class SyncAccountRepository {
   /// （讀取失敗時 [loadAuthToken] 已回退為 `null`，同樣視為未登入）。
   Future<bool> isLoggedIn() async => await loadAuthToken() != null;
 
+  /// 登入已過期（epic-50-sync-token-refresh）：token 被 `SyncEngine` 清除
+  /// 但 email 還在（見 [clearAuthToken]）。使用者主動登出會連 email 一併
+  /// 清除（[clearCredentials]），不算過期。
+  Future<bool> isSessionExpired() async =>
+      !await isLoggedIn() && await loadEmail() != null;
+
   Future<void> saveCredentials({
     required String authToken,
     required String userId,
@@ -76,6 +82,18 @@ class SyncAccountRepository {
     await _secureStorage.write(key: _userIdKey, value: userId);
     await _secureStorage.write(key: _emailKey, value: email);
   }
+
+  /// 只替換 token（epic-50-sync-token-refresh）：`SyncEngine` 每次
+  /// checkpoint 開頭呼叫 `authRefresh` 換發新 token 後存回，userId／email
+  /// 不變。
+  Future<void> saveAuthToken(String authToken) =>
+      _secureStorage.write(key: _authTokenKey, value: authToken);
+
+  /// 只清除 token、保留 email（epic-50-sync-token-refresh）：token 已過期
+  /// 或失效時視為未登入，但保留 email，讓同步設定畫面能分辨「登入已過期」
+  /// 與「使用者主動登出」（後者走 [clearCredentials]，email 一併清除），
+  /// 並預填登入表單。
+  Future<void> clearAuthToken() => _secureStorage.delete(key: _authTokenKey);
 
   /// 只清除同步憑證（FR-30），不影響任何本機資料（design.md 決策 9）。
   Future<void> clearCredentials() async {

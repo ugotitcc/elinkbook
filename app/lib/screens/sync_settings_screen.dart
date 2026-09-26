@@ -74,6 +74,21 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       _lastSyncedAtMillis = lastSyncedAtMillis;
       _loading = false;
     });
+    // 沒有 token 但 email 還在：代表自動同步時 token 已過期而被清除
+    // （使用者主動登出會連 email 一起清除），提示重新登入。
+    if (!isLoggedIn && email != null) _showSessionExpired(email);
+  }
+
+  /// epic-50-sync-token-refresh：token 過期時 `SyncEngine` 只清除 token、
+  /// 保留 email（見 `SyncAccountRepository.clearAuthToken`）。切回登入
+  /// 表單、預填 email，並提示「登入已過期」。
+  void _showSessionExpired(String email) {
+    setState(() {
+      _isLoggedIn = false;
+      _loggedInEmail = null;
+      _emailController.text = email;
+      _errorText = AppLocalizations.of(context)!.syncSettingsSessionExpiredMessage;
+    });
   }
 
   /// 「立即同步」按鈕（2026-09-08 `/grill-with-docs` 使用者需求）：直接
@@ -94,6 +109,15 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       });
     } else {
       setState(() => _syncing = false);
+      // 同步引擎在 token 過期時會清除 token（epic-50），此時改提示重新登入，
+      // 不顯示籠統的網路錯誤。
+      if (!await widget.accountRepository.isLoggedIn()) {
+        final email = await widget.accountRepository.loadEmail();
+        if (!mounted) return;
+        _showSessionExpired(email ?? '');
+        return;
+      }
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.syncSettingsSyncFailedMessage)),
       );

@@ -1395,6 +1395,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get syncSettingsConnectionFailedMessage => '連線失敗，請確認伺服器網址與帳號密碼是否正確';
 
   @override
+  String get syncSettingsSessionExpiredMessage => '登入已過期，請重新輸入密碼登入';
+
+  @override
+  String get syncSessionExpiredToast => '同步登入已過期，請至「設定 → 同步」重新登入';
+
+  @override
   String syncSettingsLoggedInAs(String email) {
     return '已登入：$email';
   }
@@ -3519,6 +3525,12 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get syncSettingsConnectionFailedMessage => '连线失败，请确认服务器网址与账号密码是否正确';
 
   @override
+  String get syncSettingsSessionExpiredMessage => '登录已过期，请重新输入密码登录';
+
+  @override
+  String get syncSessionExpiredToast => '同步登录已过期，请至「设置 → 同步」重新登录';
+
+  @override
   String syncSettingsLoggedInAs(String email) {
     return '已登入：$email';
   }
@@ -5641,6 +5653,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get syncSettingsConnectionFailedMessage => '連線失敗，請確認伺服器網址與帳號密碼是否正確';
+
+  @override
+  String get syncSettingsSessionExpiredMessage => '登入已過期，請重新輸入密碼登入';
+
+  @override
+  String get syncSessionExpiredToast => '同步登入已過期，請至「設定 → 同步」重新登入';
 
   @override
   String syncSettingsLoggedInAs(String email) {

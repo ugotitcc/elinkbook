@@ -2579,6 +2579,18 @@ abstract class AppLocalizations {
   /// **'連線失敗，請確認伺服器網址與帳號密碼是否正確'**
   String get syncSettingsConnectionFailedMessage;
 
+  /// 同步 token 已過期、被自動登出時，登入表單上方顯示的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'登入已過期，請重新輸入密碼登入'**
+  String get syncSettingsSessionExpiredMessage;
+
+  /// 自動同步時發現登入已過期，在目前畫面顯示一次的 Toast 提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'同步登入已過期，請至「設定 → 同步」重新登入'**
+  String get syncSessionExpiredToast;
+
   /// 已登入狀態顯示目前登入帳號的 email，{email} 為使用者資料不翻譯
   ///
   /// In zh_TW, this message translates to:
