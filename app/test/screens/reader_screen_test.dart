@@ -6773,10 +6773,16 @@ void main() {
         (tester) async {
       await prefsManager.saveBookPrefs(
           'b1', const BookReaderPrefs(fontFamily: 'KingHwa_OldSong'));
+      // 自訂字型清單真的有這一筆，前提才和測試名稱一致（程式審查 M-1）
+      final customFonts = FakeCustomFontsRepository();
+      await customFonts.insert(const CustomFont(
+        displayName: '京華老宋體',
+        familyName: 'KingHwa_OldSong',
+        fontUri: 'content://example/kinghwa',
+      ));
 
       await pumpReader(tester,
-          store: FakeDownloadableFontStore(),
-          customFontsRepository: FakeCustomFontsRepository());
+          store: FakeDownloadableFontStore(), customFontsRepository: customFonts);
 
       expect(readerView(tester).fontFamily, 'KingHwa_OldSong');
     });

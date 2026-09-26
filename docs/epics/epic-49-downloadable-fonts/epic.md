@@ -167,3 +167,9 @@
 - 新增 8 個測試（`reader_screen_test.dart` group「未下載字型改用書本字型（epic-49 Issue 6）」）。
 - 變異檢查：拿掉「沒有 store」的判斷後，僅「沒有 store 時照原值傳遞」失敗（`Expected: 'SourceHanSerifTC'  Actual: <null>`），改回後 8 個全部通過。
 - 完整 `flutter test`：2880 通過、1 跳過；`flutter analyze`：`No issues found!`；l10n 檢查：兩行 PASS。
+
+**2026-09-26 Issue 6 程式審查修訂**（`reviews/review-issue-6.md`：可合併，0 Critical／0 Important／2 Minor；人類裁定如下）
+
+- M-1 合併前修正：「自訂字型照原值傳遞」測試原本用空的自訂字型清單，`'KingHwa_OldSong'` 其實和「不認得的名稱」走同一條路徑。改為先在 `FakeCustomFontsRepository` 插入同名的 `CustomFont`，讓前提和測試名稱一致。
+- M-2 補單元測試並列入 Issue 5：`foliate_reader_view_test.dart` 新增「fontFamily 由有值變成 null：`foliatePreferencesChanged` 回傳 true，且新偏好不含 `fontFamily` 鍵」；`main.js` 整包取代覆蓋 CSS 的部分單元測試驗證不到，列入 Issue 5 第 9 項真機驗證（改選「使用書本字型」後畫面立即回到書本字型、旋轉後仍正確），Issue 5 驗收標準改為 9 項。
+- 驗證：`reader_screen_test.dart`＋`foliate_reader_view_test.dart` 共 367 個測試通過；`flutter analyze` 乾淨；l10n 檢查兩行 PASS。

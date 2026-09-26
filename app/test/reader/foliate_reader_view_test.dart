@@ -394,6 +394,25 @@ void main() {
       expect(foliatePreferencesChanged(oldView, newView), isTrue);
     });
 
+    test('fontFamily 由有值變成 null：回傳 true，且新偏好不含 fontFamily 鍵（epic-49 Issue 6 程式審查 M-2）',
+        () {
+      // Issue 6 讓未下載的內建字型改傳 null；main.js 每次整包取代覆蓋 CSS，
+      // 所以只要重新套用偏好且不帶 fontFamily，舊的 font-family 覆蓋就會消失。
+      const oldView = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        fontFamily: 'SourceHanSerifTC',
+      );
+      const newView = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isTrue);
+      expect(buildFoliatePreferencesMap(newView).containsKey('fontFamily'), isFalse);
+    });
+
     test('textConversion 變動回傳 true', () {
       const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
