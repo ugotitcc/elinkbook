@@ -77,3 +77,5 @@
 '`。
 - 測試：新增 5 個、修改 2 個既有測試的預期訊息，`test_bump_version.mjs` 共 32 個全數通過；7 個先失敗（紅燈）再通過。
 - 完整 `flutter test`：2930 通過、1 略過、1 失敗；失敗的是 `wifi_transfer_http_server_test.dart` 第 570 行，即已登記的 `epic-51-wifi-transfer-test-fix`，本 Issue 沒有改 Dart 程式碼。
+
+**2026-09-27 PR #288 合併**：Issue 3 已合併進 `main`。epic-52 的 3 個 Issue 全數完成，待歸檔；接下來可照 `docs/research/google_play_release_sop.md` 開始上架。
