@@ -30,3 +30,8 @@
 - 發布者決定：隱私權政策不寫刪除資料的處理天數。
 
 **2026-09-27 PR #285 合併**：SOP、`design.md`、`issues.md` 與審查修訂已合併進 `main`。3 個 Issue 都還沒開始。
+
+**2026-09-27 `plan-issue-1.md` 審查修訂**（`reviews/review-plan-issue-1.md`，2 Critical／4 Important／4 Minor）
+
+- 採納：C-2（刪除 `<TEST_JKS>` 佔位符，測試金鑰改用固定完整路徑）、I-1（改用 UTF-8 Reader 讀 `key.properties`）、I-2（警告改用 `logger.quiet`，Flutter 非 verbose 模式會帶 `-q` 呼叫 Gradle）、I-3（第二次建置前先刪除舊 `.aab`）、I-4（改比對 `CN=`）、M-1（`storeFile`、`keyAlias` 去掉尾端空白，密碼不處理）、M-2（`isFile`）、M-3（`project.file`、`project.logger`）、M-4（新增情境 B2：整行不存在）。
+- 不採納：C-1。計畫的執行者依 `CLAUDE.md` 預設是 Claude Code，它的 Bash 工具就是 Git Bash，已確認 `grep`、`bash` 都可用。只有人類指定 Antigravity 時才會在 PowerShell 環境執行，因此改在「全域限制」寫明用 `C:\Program Files\Git\bin\bash.exe` 包起來執行，不把整份計畫改寫成 PowerShell。
