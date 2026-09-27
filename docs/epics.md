@@ -60,7 +60,7 @@
 | 50 | `epic-49-downloadable-fonts` 可下載字型（內建字型改由 Cloudflare R2＋Worker 下載，FR-09） | 🟡 開發中 (Active) | 全數完成（Issue 8 PR #283 已合併），待歸檔 |
 | 51 | `epic-51-wifi-transfer-test-fix` （缺陷）WiFi 傳書「下載期間傳輸計數」測試失敗 | ⚪ 未開始 (Backlog) | `app/test/wifi_transfer/wifi_transfer_http_server_test.dart` 第 570 行「GET /api/books/<id>/download 下載期間 activeTransfersNotifier 維持在 1…」單獨執行即失敗（Expected 1、Actual 0）。`6bfcc7d1`（epic-45 Issue 10）之前已失敗，2026-09-26 於 epic-49 Issue 7 完整測試發現；需先確認是測試時序問題，還是下載許可真的在串流傳完前就被釋放 |
 | 52 | `epic-50-sync-token-refresh` （缺陷）同步 token 過期後無法同步，須登出再登入才恢復 | 🟡 開發中 (Active) | 全數完成（PR #284 已合併），待歸檔 |
-| 53 | `epic-52-play-release` 上架 Google Play 的前置工作（release 簽章、隱私權政策補同步服務、版本號腳本） | 🟡 開發中 (Active) | Issue 1 已完成（PR #286 已合併） |
+| 53 | `epic-52-play-release` 上架 Google Play 的前置工作（release 簽章、隱私權政策補同步服務、版本號腳本） | 🟡 開發中 (Active) | Issue 2 已完成（PR #287 已合併） |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。

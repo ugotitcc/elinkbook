@@ -58,3 +58,4 @@
 - `site/privacy.html` 與 `site/index.html` 內嵌政策做相同修改：第一節排除使用者自架的同步伺服器；第二節修正雲端硬碟描述與傳輸加密說明，新增「閱讀同步服務」；第三節改成符合事實的寫法；第六節補上同步資料的刪除方式；修訂日期改為 2026 年 9 月 27 日；`privacy.html` 的 `og:url` 改成 `https://www.ugotit.cc/privacy`。
 - 以腳本比對，兩份政策內文一致；`ul`、`p`、`h3` 標籤都成對。
 
+**2026-09-27 PR #287 合併**：Issue 2 已合併並部署，`https://www.ugotit.cc/privacy` 已顯示「閱讀同步服務」與新的修訂日期。剩 Issue 3。

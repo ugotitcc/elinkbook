@@ -42,7 +42,7 @@ Issue 3（版本號）──┘
 
 ## Issue 2：隱私權政策補上閱讀同步服務
 
-**Status:** in-review（待發布者確認文字，並部署到 Cloudflare Pages）
+**Status:** completed
 
 **依賴：** 無。
 
