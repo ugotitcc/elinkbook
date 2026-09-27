@@ -1,6 +1,7 @@
 import groovy.json.JsonSlurper
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -47,6 +48,38 @@ val googleOAuthScheme =
     "com.googleusercontent.apps." + rawGoogleOAuthClientId.replace(".apps.googleusercontent.com", "")
 val oneDriveOAuthScheme = "msal$rawOneDriveOAuthClientId"
 
+// epic-52-play-release Issue 1：release 建置的上傳金鑰設定。
+//
+// 讀取 app/android/key.properties（rootProject 是 app/android/）。這個檔案
+// 含密碼，已由 app/android/.gitignore 排除，不進版控；樣板見
+// key.properties.example。三種情況：
+// 1. 檔案不存在：release 退回 debug 簽章並印出警告，讓沒有金鑰的環境
+//    （例如只跑測試）仍能執行 `flutter run --release`。
+// 2. 檔案存在但欄位缺少或空白：直接讓建置失敗。這代表發布者想正式簽章
+//    卻設定錯了，不能默默改用 debug 簽章，否則上傳到 Play 才會被拒收。
+// 3. 檔案存在且欄位齊全：release 用上傳金鑰簽章（見下方 signingConfigs）。
+//
+// 用 UTF-8 Reader 讀檔：Properties.load(InputStream) 固定用 ISO-8859-1 解碼，
+// 路徑含中文時會變成亂碼。
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties: Properties? = if (keystorePropertiesFile.isFile) {
+    Properties().apply { keystorePropertiesFile.reader(Charsets.UTF_8).use { load(it) } }
+} else null
+
+if (keystoreProperties != null) {
+    // 只有空白的值也當成缺少，避免拿空白字串當密碼。
+    val missingKeys = listOf("storePassword", "keyPassword", "keyAlias", "storeFile")
+        .filter { keystoreProperties.getProperty(it).isNullOrBlank() }
+    if (missingKeys.isNotEmpty()) {
+        throw GradleException(
+            "release 簽章設定不完整：${keystorePropertiesFile.absolutePath} 缺少欄位 " +
+                "${missingKeys.joinToString("、")}。" +
+                "這個檔案存在時，4 個欄位都必須填寫。" +
+                "請參考 key.properties.example 補齊欄位；不打算正式簽章時，直接刪除這個檔案。"
+        )
+    }
+}
+
 android {
     namespace = "cc.ugotit.elinkbook"
     compileSdk = flutter.compileSdkVersion
@@ -66,6 +99,29 @@ android {
 
     buildFeatures {
         buildConfig = true
+    }
+
+    signingConfigs {
+        if (keystoreProperties != null) {
+            create("release") {
+                // project.file() 以 app/android/app/ 為基準解析相對路徑，所以
+                // key.properties 的 storeFile 規定寫絕對路徑。
+                // Properties 只會去掉值前面的空白，後面的空白要自己去掉。
+                // 密碼不做 trim，因為空白可能是密碼的一部分。
+                val uploadKeystore = project.file(keystoreProperties.getProperty("storeFile").trim())
+                if (!uploadKeystore.exists()) {
+                    throw GradleException(
+                        "找不到上傳金鑰檔：${uploadKeystore.absolutePath}。" +
+                            "key.properties 的 storeFile 指向的檔案不存在。" +
+                            "請改成金鑰檔的絕對路徑，並使用正斜線 /（例如 C:/Users/huthief/.android-keys/elinkbook-upload.jks）。"
+                    )
+                }
+                storeFile = uploadKeystore
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias").trim()
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     defaultConfig {
@@ -92,9 +148,18 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystoreProperties != null) {
+                signingConfigs.getByName("release")
+            } else {
+                // 用 quiet 層級：flutter build 在非 verbose 模式會帶 -q 呼叫 Gradle，
+                // warn 層級的訊息會被隱藏，quiet 層級才看得到。
+                project.logger.quiet(
+                    "警告：找不到 ${keystorePropertiesFile.absolutePath}，release 建置改用 debug 金鑰簽章。" +
+                        "這個版本不能上傳到 Google Play。" +
+                        "要正式發布時，請依 docs/research/google_play_release_sop.md 第 1.3 節建立 key.properties。"
+                )
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

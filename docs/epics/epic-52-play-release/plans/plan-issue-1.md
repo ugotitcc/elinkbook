@@ -44,7 +44,7 @@
 
 這個 Issue 改的是 Gradle 設定，沒有單元測試框架可用。每個情境改用 `./gradlew :app:signingReport` 驗證：它會跑完整的設定階段，並列出每個 variant 用哪個金鑰檔，比完整建置快很多。
 
-- [ ] **Step 1：開分支並準備測試金鑰**
+- [x] **Step 1：開分支並準備測試金鑰**
 
 ```bash
 git switch main && git pull
@@ -62,7 +62,7 @@ keytool -genkeypair -v -keystore "C:/Users/huthief/AppData/Local/Temp/epic52-key
 
 後面所有步驟都直接寫這個完整路徑，不用變數。原因是每次執行指令都是新的 shell，變數不會保留。
 
-- [ ] **Step 2：記錄修改前的行為（紅燈）**
+- [x] **Step 2：記錄修改前的行為（紅燈）**
 
 確認 `app/android/key.properties` 不存在：
 
@@ -92,7 +92,7 @@ cd app/android && ./gradlew :app:signingReport 2>&1 | grep -A4 "Variant: release
 rm app/android/key.properties
 ```
 
-- [ ] **Step 3：新增 import 與讀檔區塊**
+- [x] **Step 3：新增 import 與讀檔區塊**
 
 在 `app/android/app/build.gradle.kts` 第 3 行 `import java.util.Date` 之後加入：
 
@@ -137,7 +137,7 @@ if (keystoreProperties != null) {
 }
 ```
 
-- [ ] **Step 4：新增 `signingConfigs` 並改寫 `buildTypes`**
+- [x] **Step 4：新增 `signingConfigs` 並改寫 `buildTypes`**
 
 在 `android {` 區塊內、`defaultConfig {` 之前加入：
 
@@ -200,7 +200,7 @@ if (keystoreProperties != null) {
     }
 ```
 
-- [ ] **Step 5：建立 `key.properties.example`**
+- [x] **Step 5：建立 `key.properties.example`**
 
 建立 `app/android/key.properties.example`：
 
@@ -222,7 +222,7 @@ keyAlias=upload
 storeFile=C:/Users/huthief/.android-keys/elinkbook-upload.jks
 ```
 
-- [ ] **Step 6：逐一確認 5 個情境（綠燈）**
+- [x] **Step 6：逐一確認 5 個情境（綠燈）**
 
 每個情境結束都要刪除 `app/android/key.properties`。
 
@@ -292,7 +292,7 @@ cd app/android && ./gradlew :app:signingReport 2>&1 | grep -A4 "Variant: release
 
 預期：`Store:` 指向 `test-upload.jks`，`Alias: upload`；輸出沒有「警告：找不到」。**這個檔案留著給 Task 2 用，先不要刪除。**
 
-- [ ] **Step 7：確認 git 狀態**
+- [x] **Step 7：確認 git 狀態**
 
 ```bash
 git check-ignore -v app/android/key.properties
@@ -305,7 +305,7 @@ git status --short
 - 第二個指令沒有輸出，`exit=1`（example 檔沒有被忽略）。
 - `git status` 只列出 `app/android/app/build.gradle.kts` 和 `app/android/key.properties.example`，沒有 `key.properties`。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/android/app/build.gradle.kts app/android/key.properties.example
