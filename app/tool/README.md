@@ -109,10 +109,12 @@ node tool/bump_version.js --yes    # 不詢問：versionCode 加 1、versionName
 node tool/bump_version.js --pubspec <路徑> --log <路徑>
 ```
 
-- 「加 1」的基準是 `pubspec.yaml` 和對照表最後一筆中較大的 versionCode。
+- 「加 1」的基準是 `pubspec.yaml` 和對照表裡**最大的** versionCode 中較大的那個。
+  對照表最後一列不一定最大（例如把較舊的版本推到正式版），所以不能只看最後一列。
 - 第一次上架（對照表沒有紀錄）時回答 `n`，保留 `1.0.0+1`。
 - 結束碼 `0`：成功。`1`：輸入中斷，沒有修改任何檔案。`2`：設定錯誤（找不到檔案、
-  `version:` 格式錯誤、不認得的參數），沒有修改任何檔案。
+  路徑不是檔案、`version:` 格式錯誤、不認得的參數），沒有修改任何檔案；或是寫檔時
+  發生未預期的錯誤，此時可能只更新了一個檔案，要用 `git status` 確認。
 - 不在 git repo 裡或沒有安裝 git 時，commit 欄位填 `unknown` 並印出警告。
 
 ### 測試

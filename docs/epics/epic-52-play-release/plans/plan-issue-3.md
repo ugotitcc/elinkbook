@@ -168,8 +168,7 @@ test('lastLogEntry：CRLF 對照表也能解析', () => {
 })
 
 test('parseLogEntries：說明欄裡有 | 時不截斷', () => {
-  const text = LOG_HEADER + '| 1.0.2 | 3 | 2026-10-12 | 內部測試 | abc1234 | 修正 A | B 問題 |
-'
+  const text = LOG_HEADER + '| 1.0.2 | 3 | 2026-10-12 | 內部測試 | abc1234 | 修正 A | B 問題 |\n'
   assert.equal(lastLogEntry(text).note, '修正 A | B 問題')
 })
 

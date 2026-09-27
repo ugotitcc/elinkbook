@@ -12,7 +12,8 @@
 //   node tool/bump_version.js --yes           # 不詢問：versionCode 加 1、versionName 不變
 //   node tool/bump_version.js --pubspec <路徑> --log <路徑>   # 指定檔案（測試／驗收用）
 //
-// 結束碼 0：成功；1：輸入中斷，沒有修改任何檔案；2：設定錯誤，沒有修改任何檔案。
+// 結束碼 0：成功；1：輸入中斷，沒有修改任何檔案；2：設定錯誤，沒有修改任何檔案，
+// 或是寫檔時發生未預期的錯誤（此時可能只更新了一個檔案，要用 git status 確認）。
 
 const fs = require('fs');
 const path = require('path');
@@ -72,22 +73,30 @@ function lastLogEntry(text) {
   return entries.length > 0 ? entries[entries.length - 1] : null;
 }
 
+// versionCode 最大的一列（相同時取後面那列）。最後一列不一定最大：
+// Play 允許把較舊的內部測試版推到正式版，SOP 2.9 會在最後手動加一列較小的號碼。
+// 檢查新 versionCode 與「加 1」都要以這一列為準，才不會接受已經上傳過的號碼。
+function maxLogEntry(text) {
+  return parseLogEntries(text).reduce((max, entry) => (max === null || entry.code >= max.code ? entry : max), null);
+}
+
 function isValidVersionName(s) {
   return VERSION_NAME.test(s);
 }
 
-// 「加 1」的基準取 pubspec 與對照表最後一筆較大者，
+// 「加 1」的基準取 pubspec 與對照表最大的 versionCode 較大者，
 // 這樣 pubspec 落後對照表時，回答「加 1」也一定合法，不會卡在重問迴圈。
-function nextVersionCode(pubspecCode, last) {
-  return Math.max(pubspecCode, last ? last.code : 0) + 1;
+// max 是 maxLogEntry() 的結果。
+function nextVersionCode(pubspecCode, max) {
+  return Math.max(pubspecCode, max ? max.code : 0) + 1;
 }
 
-function checkVersionCode(code, last) {
+function checkVersionCode(code, max) {
   if (!Number.isInteger(code) || code < 1) {
     return `versionCode 必須是正整數，目前是 ${code}。`;
   }
-  if (last && code <= last.code) {
-    return `Play 不收重複或變小的 versionCode，對照表最後一筆是 ${last.code}（${last.name}，${last.date}）。請回答 y 讓腳本加 1。`;
+  if (max && code <= max.code) {
+    return `Play 不收重複或變小的 versionCode，對照表裡最大的 versionCode 是 ${max.code}（${max.name}，${max.date}）。請回答 y 讓腳本加 1。`;
   }
   return null;
 }
@@ -126,7 +135,8 @@ function parseArgs(argv) {
       opts.yes = true;
     } else if (arg === '--pubspec' || arg === '--log') {
       const value = argv[++i];
-      if (!value) throw new Error(`${arg} 後面要接檔案路徑。`);
+      // 值以 -- 開頭，代表漏寫路徑、直接接了下一個旗標。
+      if (!value || value.startsWith('--')) throw new Error(`${arg} 後面要接檔案路徑。`);
       opts[arg.slice(2)] = value;
     } else {
       throw new Error(`不認得的參數「${arg}」。可用的參數：--yes、--pubspec <路徑>、--log <路徑>。`);
@@ -138,6 +148,9 @@ function parseArgs(argv) {
 function readRequired(filePath, label) {
   if (!fs.existsSync(filePath)) {
     throw new Error(`找不到 ${label}：${filePath}。請確認檔案存在，或用參數指定正確路徑。`);
+  }
+  if (!fs.statSync(filePath).isFile()) {
+    throw new Error(`${label} 的路徑不是檔案：${filePath}。請改成指向檔案的路徑。`);
   }
   return fs.readFileSync(filePath, 'utf8');
 }
@@ -161,9 +174,13 @@ async function main(argv, { input = process.stdin, output = process.stdout, erro
   }
 
   const last = lastLogEntry(logText);
-  const next = nextVersionCode(current.code, last);
+  const max = maxLogEntry(logText);
+  const next = nextVersionCode(current.code, max);
   say(`目前版本：${current.name}+${current.code}`);
   say(last ? `對照表最後一筆：${last.name}+${last.code}（${last.track}，${last.date}）` : '對照表最後一筆：尚無紀錄');
+  if (max && max.code !== last.code) {
+    say(`對照表最大的 versionCode：${max.name}+${max.code}（${max.track}，${max.date}）`);
+  }
 
   let code;
   let name;
@@ -191,7 +208,7 @@ async function main(argv, { input = process.stdin, output = process.stdout, erro
           say('請輸入 y 或 n。');
           continue;
         }
-        const error = checkVersionCode(code, last);
+        const error = checkVersionCode(code, max);
         if (error) {
           say(error);
           code = undefined;
@@ -248,6 +265,7 @@ module.exports = {
   replacePubspecVersion,
   parseLogEntries,
   lastLogEntry,
+  maxLogEntry,
   isValidVersionName,
   nextVersionCode,
   checkVersionCode,

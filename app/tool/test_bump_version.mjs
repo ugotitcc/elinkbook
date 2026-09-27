@@ -17,6 +17,7 @@ const {
   replacePubspecVersion,
   parseLogEntries,
   lastLogEntry,
+  maxLogEntry,
   isValidVersionName,
   nextVersionCode,
   checkVersionCode,
@@ -115,11 +116,34 @@ test('checkVersionCode：對照表沒有紀錄時，正整數都接受', () => {
   assert.match(checkVersionCode(0, null), /正整數/)
 })
 
-test('checkVersionCode：必須大於最後一筆', () => {
-  const last = { name: '1.0.1', code: 5, date: '2026-10-10' }
-  assert.equal(checkVersionCode(6, last), null)
-  assert.match(checkVersionCode(5, last), /最後一筆是 5/)
-  assert.match(checkVersionCode(4, last), /最後一筆是 5/)
+test('checkVersionCode：必須大於對照表最大的 versionCode', () => {
+  const max = { name: '1.0.1', code: 5, date: '2026-10-10' }
+  assert.equal(checkVersionCode(6, max), null)
+  assert.match(checkVersionCode(5, max), /最大的 versionCode 是 5/)
+  assert.match(checkVersionCode(4, max), /最大的 versionCode 是 5/)
+})
+
+// review-issue-3.md I-1：把較舊的版本推到正式版後，最後一列不是最大的 versionCode
+const LOG_OLDER_PROMOTED =
+  LOG_HEADER +
+  '| 1.0.1 | 5 | 2026-10-10 | 內部測試 | aaa1111 |  |\n' +
+  '| 1.0.0 | 4 | 2026-10-11 | 正式版 | bbb2222 |  |\n'
+
+test('maxLogEntry：回傳 versionCode 最大的一列，不一定是最後一列', () => {
+  assert.equal(maxLogEntry(LOG_HEADER), null)
+  assert.equal(lastLogEntry(LOG_OLDER_PROMOTED).code, 4)
+  assert.deepEqual(maxLogEntry(LOG_OLDER_PROMOTED), {
+    name: '1.0.1',
+    code: 5,
+    date: '2026-10-10',
+    track: '內部測試',
+    commit: 'aaa1111',
+    note: '',
+  })
+})
+
+test('maxLogEntry：同一個 versionCode 有兩列時，回傳後面那列', () => {
+  assert.equal(maxLogEntry(LOG_TWO_ROWS).track, '正式版')
 })
 
 test('formatDate：本地時間 YYYY-MM-DD，月和日補零', () => {
@@ -211,7 +235,7 @@ test('端到端 回答 n 但數字不夠大：印出原因並重問，改答 y �
   const { run, read } = setup(t, 'version: 1.0.1+5\n', LOG_LAST_5)
   const r = run([], 'n\ny\n1.1.0\n')
   assert.equal(r.status, 0, r.stderr)
-  assert.match(r.stdout, /最後一筆是 5/)
+  assert.match(r.stdout, /最大的 versionCode 是 5/)
   assert.equal(read().pubspec, 'version: 1.1.0+6\n')
   assert.equal(lastLogEntry(read().log).name, '1.1.0')
 })
@@ -262,4 +286,34 @@ test('端到端 不認得的旗標：結束碼 2', (t) => {
   const r = run(['--force'])
   assert.equal(r.status, 2)
   assert.match(r.stderr, /--force/)
+})
+
+test('端到端 最後一列是較舊的正式版：回答 n 保留已用過的 5 會被擋下，改答 y 得到 6', (t) => {
+  // review-issue-3.md I-1：5 已經上傳過，之後才把較舊的 4 推到正式版
+  const { run, read } = setup(t, 'version: 1.0.1+5\n', LOG_OLDER_PROMOTED)
+  const r = run([], 'n\ny\n\n')
+  assert.equal(r.status, 0, r.stderr)
+  assert.match(r.stdout, /最大的 versionCode 是 5/)
+  assert.equal(read().pubspec, 'version: 1.0.1+6\n')
+  assert.equal(lastLogEntry(read().log).code, 6)
+})
+
+test('端到端 對照表路徑是資料夾：結束碼 2，中文錯誤訊息', (t) => {
+  // review-issue-3.md M-2
+  const { dir, run } = setup(t, 'version: 1.0.1+5\n', undefined)
+  fs.mkdirSync(path.join(dir, 'release-log.md'))
+  const r = run(['--yes'])
+  assert.equal(r.status, 2)
+  assert.match(r.stderr, /不是檔案/)
+  assert.doesNotMatch(r.stderr, /EISDIR/)
+  // read() 會去讀對照表路徑（現在是資料夾），這裡只讀 pubspec
+  assert.equal(fs.readFileSync(path.join(dir, 'pubspec.yaml'), 'utf8'), 'version: 1.0.1+5\n')
+})
+
+test('端到端 --pubspec 後面緊接另一個旗標：結束碼 2，提示要接檔案路徑', (t) => {
+  // review-issue-3.md M-3
+  const { run } = setup(t, 'version: 1.0.1+5\n', LOG_LAST_5)
+  const r = run(['--pubspec', '--yes'])
+  assert.equal(r.status, 2)
+  assert.match(r.stderr, /--pubspec 後面要接檔案路徑/)
 })

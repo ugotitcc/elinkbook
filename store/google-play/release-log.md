@@ -8,6 +8,7 @@
 - 日期格式：`YYYY-MM-DD`。
 - commit：執行 `bump_version.js` 當下的 HEAD，也就是這一版程式碼的最後一個 commit。git tag 指向之後的版本號 commit，兩者相差一個 commit。
 - **表格必須放在檔案最後**。腳本會把新紀錄加在檔案結尾。
+- 腳本以表格裡**最大的** versionCode 檢查新號碼，不是最後一列。把較舊的版本推到正式版時，最後一列會比較小，這是正常的。
 
 | versionName | versionCode | 日期 | 軌道 | commit | 說明 |
 |---|---|---|---|---|---|

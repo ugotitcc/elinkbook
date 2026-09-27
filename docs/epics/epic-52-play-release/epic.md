@@ -67,3 +67,13 @@
 
 **2026-09-27 Issue 3 完成**：新增 `app/tool/bump_version.js`、`app/tool/test_bump_version.mjs`（27 個測試）與 `store/google-play/release-log.md`，並在 `app/tool/README.md` 說明用法。「加 1」的基準改為 `pubspec.yaml` 與對照表最後一筆的較大者（原規格會造成無限重問）。已用 `app/pubspec.yaml` 的複本演練第一次上架與 `--yes` 兩種流程，真實檔案未被修改。
 
+**2026-09-27 Issue 3 程式審查修訂**（`reviews/review-issue-3.md`，0 Critical／1 Important／4 Minor，發布者選擇 5 條全修）
+
+- I-1：檢查新 versionCode 與「加 1」改用對照表裡**最大的** versionCode（新增 `maxLogEntry`），不再只看最後一列。把較舊的版本推到正式版時，最後一列會比較小，原本會接受已經上傳過的號碼。畫面在最後一列不是最大時，多印一行「對照表最大的 versionCode」。
+- M-1：檔頭註解與 README 的結束碼 2 補上「寫檔失敗，可能只更新了一個檔案」。
+- M-2：`readRequired` 改用 `statSync().isFile()`，路徑是資料夾時顯示中文錯誤，不再出現 `EISDIR`。
+- M-3：`--pubspec`／`--log` 後面緊接 `--` 開頭的參數時，提示「後面要接檔案路徑」。
+- M-4：計畫第 171～172 行 M-1 測試片段的斷行錯誤已修正。這個錯誤是撰寫計畫時用腳本插入測試造成的，實作時已在測試檔寫成正確的 `'
+'`。
+- 測試：新增 5 個、修改 2 個既有測試的預期訊息，`test_bump_version.mjs` 共 32 個全數通過；7 個先失敗（紅燈）再通過。
+- 完整 `flutter test`：2930 通過、1 略過、1 失敗；失敗的是 `wifi_transfer_http_server_test.dart` 第 570 行，即已登記的 `epic-51-wifi-transfer-test-fix`，本 Issue 沒有改 Dart 程式碼。
