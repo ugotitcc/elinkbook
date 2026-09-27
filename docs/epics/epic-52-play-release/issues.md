@@ -74,9 +74,13 @@ Issue 3（版本號）──┘
 
 ## Issue 3：版本號腳本與版本對照表
 
-**Status:** open
+**Status:** completed
 
 **依賴：** 無。
+
+> **實作時的修正**：
+> 1. 「versionCode 加 1」的基準改成「`pubspec.yaml` 與對照表，兩者較大的再加 1」。原本以 `pubspec.yaml` 為基準時，如果它落後對照表，回答 y 或 n 都不合法，會無限重問。因此 `--yes` 也不再需要「加 1 後仍不大於最後一筆」的錯誤分支。詳見 `plans/plan-issue-3.md`。
+> 2. 檢查新 versionCode 與「加 1」都改用對照表裡**最大的** versionCode，不是「最後一筆」。把較舊的版本推到正式版時，最後一列會比較小，只看最後一列會接受已經上傳過的號碼（`reviews/review-issue-3.md` I-1）。
 
 **What to build：**
 - `app/tool/bump_version.js`：純 Node，不用 npm install。在 `app/` 目錄下執行 `node tool/bump_version.js`，流程如下：
