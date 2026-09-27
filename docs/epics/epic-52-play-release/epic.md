@@ -49,3 +49,5 @@
 - M-4：沒有 `key.properties` 時，只有 task graph 含 release 任務（例如 `bundleRelease`）才印出警告，debug 建置不再印出。
 - `key.properties.example` 補上「密碼裡的反斜線寫成兩個」與「用 UTF-8 存檔」。
 - 驗證：4 條修改前都重現（紅燈），修改後都通過；原本的情境 A、B、D 重跑結果不變。警告觸發用 `./gradlew -m`（dry run）確認：`assembleDebug` 印 0 次、`bundleRelease` 印 1 次。
+
+**2026-09-27 PR #286 合併**：Issue 1 已合併進 `main`。Issue 2、Issue 3 還沒開始。
