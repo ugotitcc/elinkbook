@@ -59,3 +59,9 @@
 - 以腳本比對，兩份政策內文一致；`ul`、`p`、`h3` 標籤都成對。
 
 **2026-09-27 PR #287 合併**：Issue 2 已合併並部署，`https://www.ugotit.cc/privacy` 已顯示「閱讀同步服務」與新的修訂日期。剩 Issue 3。
+
+**2026-09-27 `plan-issue-3.md` 審查修訂**（`reviews/review-plan-issue-3.md`，1 Critical／4 Important／4 Minor）
+
+- 採納：I-1（建立對照表前先 `mkdir -p store/google-play`）、I-2（演練改用 repo 內被忽略的 `app/build/bump-rehearsal/`，不再修改真實檔案再 `git checkout` 還原）、I-3（端到端測試設定 `GIT_CEILING_DIRECTORIES`，避免暫存資料夾剛好在某個 repo 底下）、I-4（CLI 入口補 `.catch`，寫檔失敗時提醒用 `git status` 確認；結束碼 2 的定義同步擴充）、M-1（說明欄含 `|` 時接回，並補 1 個單元測試，測試總數改為 27）、M-2（`t.after` 刪除暫存資料夾）、M-3（錯誤訊息標籤一致）、M-4（不用「第 53 列」描述 `docs/epics.md` 的位置）。
+- 部分採納：C-1。與 Issue 1 相同，不把指令改寫成 PowerShell，只在「全域限制」補上只有 PowerShell 時用 Git Bash 包起來執行的方式；`flutter test` 的紀錄檔改放 `app/build/`，不用 `/tmp`。
+
