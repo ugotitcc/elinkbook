@@ -12,7 +12,7 @@ Issue 3（版本號）──┘
 
 ## Issue 1：release 建置改用上傳金鑰簽章
 
-**Status:** open
+**Status:** completed
 
 **依賴：** 無。
 

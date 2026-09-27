@@ -1,0 +1,17 @@
+# release 上傳金鑰設定樣板（epic-52-play-release Issue 1）。
+#
+# 使用方式：複製成同一個資料夾的 key.properties，再填入真正的值。
+# key.properties 含密碼，已由 app/android/.gitignore 排除，絕對不能進版控。
+# 詳細步驟見 docs/research/google_play_release_sop.md 第 1.2、1.3 節。
+#
+# 規則：
+# - 4 個欄位都要填。檔案存在但缺欄位時，建置會直接失敗。
+# - storeFile 要寫絕對路徑，並使用正斜線 /。
+#   .properties 格式會把反斜線 \ 當成跳脫字元，寫 C:\Users\... 會讀錯。
+# - 密碼裡有反斜線 \ 時，要寫成兩個 \\。
+# - 用 UTF-8 存檔。
+# - 不打算正式簽章時，不要建立 key.properties；release 會自動改用 debug 金鑰。
+storePassword=<store password>
+keyPassword=<key password>
+keyAlias=upload
+storeFile=C:/Users/huthief/.android-keys/elinkbook-upload.jks

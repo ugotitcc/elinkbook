@@ -1,6 +1,7 @@
 import groovy.json.JsonSlurper
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -47,6 +48,51 @@ val googleOAuthScheme =
     "com.googleusercontent.apps." + rawGoogleOAuthClientId.replace(".apps.googleusercontent.com", "")
 val oneDriveOAuthScheme = "msal$rawOneDriveOAuthClientId"
 
+// epic-52-play-release Issue 1：release 建置的上傳金鑰設定。
+//
+// 讀取 app/android/key.properties（rootProject 是 app/android/）。這個檔案
+// 含密碼，已由 app/android/.gitignore 排除，不進版控；樣板見
+// key.properties.example。三種情況：
+// 1. 檔案不存在：release 退回 debug 簽章並印出警告，讓沒有金鑰的環境
+//    （例如只跑測試）仍能執行 `flutter run --release`。
+// 2. 檔案存在但欄位缺少或空白：直接讓建置失敗。這代表發布者想正式簽章
+//    卻設定錯了，不能默默改用 debug 簽章，否則上傳到 Play 才會被拒收。
+// 3. 檔案存在且欄位齊全：release 用上傳金鑰簽章（見下方 signingConfigs）。
+//
+// 用 UTF-8 讀檔：Properties.load(InputStream) 固定用 ISO-8859-1 解碼，
+// 路徑含中文時會變成亂碼。檔案開頭的 BOM 要先去掉，否則第一個欄位名稱
+// 會多一個看不見的字元，被誤判成缺少（舊版記事本存 UTF-8 時會加 BOM）。
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties: Properties? = if (keystorePropertiesFile.isFile) {
+    val keystorePropertiesText = keystorePropertiesFile.readText(Charsets.UTF_8).removePrefix("﻿")
+    try {
+        Properties().apply { load(keystorePropertiesText.reader()) }
+    } catch (e: IllegalArgumentException) {
+        // 值裡出現小寫 \u 又不是合法的 \uXXXX 時，Java 會丟出
+        // Malformed \uxxxx encoding。換成指出檔案的訊息；不帶出檔案內容，
+        // 避免密碼出現在建置紀錄裡。
+        throw GradleException(
+            "無法讀取 ${keystorePropertiesFile.absolutePath}：檔案裡有不合法的 \\u 跳脫字元。" +
+                ".properties 格式會把反斜線 \\ 當成跳脫字元，路徑裡的 \\u 會被當成 unicode 編碼。" +
+                "請把路徑改用正斜線 /；密碼裡的反斜線要寫成 \\\\。"
+        )
+    }
+} else null
+
+if (keystoreProperties != null) {
+    // 只有空白的值也當成缺少，避免拿空白字串當密碼。
+    val missingKeys = listOf("storePassword", "keyPassword", "keyAlias", "storeFile")
+        .filter { keystoreProperties.getProperty(it).isNullOrBlank() }
+    if (missingKeys.isNotEmpty()) {
+        throw GradleException(
+            "release 簽章設定不完整：${keystorePropertiesFile.absolutePath} 缺少欄位 " +
+                "${missingKeys.joinToString("、")}。" +
+                "這個檔案存在時，4 個欄位都必須填寫。" +
+                "請參考 key.properties.example 補齊欄位；不打算正式簽章時，直接刪除這個檔案。"
+        )
+    }
+}
+
 android {
     namespace = "cc.ugotit.elinkbook"
     compileSdk = flutter.compileSdkVersion
@@ -66,6 +112,30 @@ android {
 
     buildFeatures {
         buildConfig = true
+    }
+
+    signingConfigs {
+        if (keystoreProperties != null) {
+            create("release") {
+                // project.file() 以 app/android/app/ 為基準解析相對路徑，所以
+                // key.properties 的 storeFile 規定寫絕對路徑。
+                // Properties 只會去掉值前面的空白，後面的空白要自己去掉。
+                // 密碼不做 trim，因為空白可能是密碼的一部分。
+                val uploadKeystore = project.file(keystoreProperties.getProperty("storeFile").trim())
+                // 用 isFile 而不是 exists()：storeFile 誤指向資料夾時也要在這裡擋下。
+                if (!uploadKeystore.isFile) {
+                    throw GradleException(
+                        "找不到上傳金鑰檔：${uploadKeystore.absolutePath}。" +
+                            "key.properties 的 storeFile 指向的檔案不存在。" +
+                            "請改成金鑰檔的絕對路徑，並使用正斜線 /（例如 C:/Users/huthief/.android-keys/elinkbook-upload.jks）。"
+                    )
+                }
+                storeFile = uploadKeystore
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias").trim()
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     defaultConfig {
@@ -92,9 +162,27 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystoreProperties != null) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+        }
+    }
+}
+
+// 沒有 key.properties 時，只有這次真的要建置 release（例如 bundleRelease、
+// assembleRelease）才印出警告；debug 建置不印，避免警告變成每次都出現的雜訊。
+// 用 quiet 層級：flutter build 在非 verbose 模式會帶 -q 呼叫 Gradle，
+// warn 層級的訊息會被隱藏，quiet 層級才看得到。
+if (keystoreProperties == null) {
+    gradle.taskGraph.whenReady {
+        if (allTasks.any { it.project == project && it.name.contains("Release") }) {
+            project.logger.quiet(
+                "警告：找不到 ${keystorePropertiesFile.absolutePath}，release 建置改用 debug 金鑰簽章。" +
+                    "這個版本不能上傳到 Google Play。" +
+                    "要正式發布時，請依 docs/research/google_play_release_sop.md 第 1.3 節建立 key.properties。"
+            )
         }
     }
 }
