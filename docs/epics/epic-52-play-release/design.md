@@ -37,6 +37,10 @@
 | Q23 | 版本號提醒 | `node app/tool/bump_version.js` 互動式腳本 | 會主動詢問，也會一起更新對照表 |
 | Q24 | 版本對照表 | `store/google-play/release-log.md` | 只跟 Play 發布有關，跟素材放一起 |
 | — | git tag | 每次上傳後打 `v<versionName>+<versionCode>` | 看 tag 就知道 Play 版本對應哪個 commit |
+| Q25 | Google Drive／OneDrive 在政策裡的描述 | 「備份同步」改成「匯入書籍」 | 實際只用唯讀權限匯入，要跟資料安全性表單一致 |
+| Q26 | 政策第三節的不實承諾 | 改成符合事實的寫法 | 本機資料庫沒有加密、一人維運沒有保密協議，寫了做不到的事反而是風險 |
+| Q27 | 同步伺服器由誰提供 | 使用者自架，ugotit.cc 不提供 | `SyncAccountRepository.defaultBaseUrl` 是空字串；政策、SOP 2.2／2.3、Issue 2 都照此修正 |
+| Q28 | Issue 2 的流程 | 不寫 `plan-issue-2.md`，由發布者直接審閱新舊文字 | 只有法律文字，只有發布者能判斷寫得對不對 |
 
 ## 不在範圍內
 
