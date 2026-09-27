@@ -65,3 +65,5 @@
 - 採納：I-1（建立對照表前先 `mkdir -p store/google-play`）、I-2（演練改用 repo 內被忽略的 `app/build/bump-rehearsal/`，不再修改真實檔案再 `git checkout` 還原）、I-3（端到端測試設定 `GIT_CEILING_DIRECTORIES`，避免暫存資料夾剛好在某個 repo 底下）、I-4（CLI 入口補 `.catch`，寫檔失敗時提醒用 `git status` 確認；結束碼 2 的定義同步擴充）、M-1（說明欄含 `|` 時接回，並補 1 個單元測試，測試總數改為 27）、M-2（`t.after` 刪除暫存資料夾）、M-3（錯誤訊息標籤一致）、M-4（不用「第 53 列」描述 `docs/epics.md` 的位置）。
 - 部分採納：C-1。與 Issue 1 相同，不把指令改寫成 PowerShell，只在「全域限制」補上只有 PowerShell 時用 Git Bash 包起來執行的方式；`flutter test` 的紀錄檔改放 `app/build/`，不用 `/tmp`。
 
+**2026-09-27 Issue 3 完成**：新增 `app/tool/bump_version.js`、`app/tool/test_bump_version.mjs`（27 個測試）與 `store/google-play/release-log.md`，並在 `app/tool/README.md` 說明用法。「加 1」的基準改為 `pubspec.yaml` 與對照表最後一筆的較大者（原規格會造成無限重問）。已用 `app/pubspec.yaml` 的複本演練第一次上架與 `--yes` 兩種流程，真實檔案未被修改。
+

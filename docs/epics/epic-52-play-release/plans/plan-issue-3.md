@@ -68,14 +68,14 @@ Task 3 會把第 1、2 點回寫到 `issues.md`。
   - `getHeadCommit(run?: (cmd: string) => string | Buffer) → string`（失敗時回傳 `'unknown'`）
   - `appendLogEntry(text: string, entry: { name, code, date, track, commit, note }) → string`
 
-- [ ] **Step 1：開分支**
+- [x] **Step 1：開分支**
 
 ```bash
 git switch main && git pull
 git switch -c epic-52/issue-3-bump-version
 ```
 
-- [ ] **Step 2：寫失敗的單元測試**
+- [x] **Step 2：寫失敗的單元測試**
 
 建立 `app/tool/test_bump_version.mjs`：
 
@@ -234,7 +234,7 @@ test('appendLogEntry：CRLF 檔案用 CRLF；檔尾沒有換行時先補一個',
 })
 ```
 
-- [ ] **Step 3：確認測試失敗**
+- [x] **Step 3：確認測試失敗**
 
 ```bash
 node app/tool/test_bump_version.mjs
@@ -242,7 +242,7 @@ node app/tool/test_bump_version.mjs
 
 Expected：失敗，錯誤是找不到 `./bump_version.js`（`ERR_MODULE_NOT_FOUND`）。
 
-- [ ] **Step 4：實作純函式**
+- [x] **Step 4：實作純函式**
 
 建立 `app/tool/bump_version.js`：
 
@@ -383,7 +383,7 @@ module.exports = {
 
 `fs`、`readline`、`DEFAULT_PUBSPEC`、`DEFAULT_LOG` 在 Task 2 的 `main()` 才會用到，先宣告沒關係。
 
-- [ ] **Step 5：確認測試通過**
+- [x] **Step 5：確認測試通過**
 
 ```bash
 node app/tool/test_bump_version.mjs
@@ -391,7 +391,7 @@ node app/tool/test_bump_version.mjs
 
 Expected：`# pass 18`、`# fail 0`，結束碼 `0`。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/tool/bump_version.js app/tool/test_bump_version.mjs
@@ -411,7 +411,7 @@ git commit -m "feat(tool): bump_version.js 版本號解析與對照表純函式�
 - Consumes：Task 1 的全部純函式。
 - Produces：CLI `node app/tool/bump_version.js [--yes] [--pubspec <路徑>] [--log <路徑>]`，結束碼 `0`／`1`／`2`。
 
-- [ ] **Step 1：寫失敗的端到端測試**
+- [x] **Step 1：寫失敗的端到端測試**
 
 在 `app/tool/test_bump_version.mjs` 最上方的 import 區加入：
 
@@ -536,7 +536,7 @@ test('端到端 不認得的旗標：結束碼 2', (t) => {
 })
 ```
 
-- [ ] **Step 2：確認新測試失敗**
+- [x] **Step 2：確認新測試失敗**
 
 ```bash
 node app/tool/test_bump_version.mjs
@@ -544,7 +544,7 @@ node app/tool/test_bump_version.mjs
 
 Expected：Task 1 的 18 個測試通過，9 個端到端測試失敗（腳本還沒有 `main()`，執行後什麼都不做、結束碼 `0`，檔案沒有被改）。
 
-- [ ] **Step 3：實作 `parseArgs` 與 `main`**
+- [x] **Step 3：實作 `parseArgs` 與 `main`**
 
 在 `app/tool/bump_version.js` 的 `module.exports = {` 之前加入：
 
@@ -711,7 +711,7 @@ if (require.main === module) {
 
 `defaultRun` 在 Task 1 已宣告，`main()` 另外傳入帶 `cwd` 的執行函式，讓 `--pubspec` 指到其他資料夾時，commit 取的是那個資料夾所在 repo 的 HEAD。
 
-- [ ] **Step 4：確認全部測試通過**
+- [x] **Step 4：確認全部測試通過**
 
 ```bash
 node app/tool/test_bump_version.mjs
@@ -719,7 +719,7 @@ node app/tool/test_bump_version.mjs
 
 Expected：`# pass 27`、`# fail 0`，結束碼 `0`。
 
-- [ ] **Step 5：建立版本對照表**
+- [x] **Step 5：建立版本對照表**
 
 repo 裡還沒有 `store/` 資料夾，先建立：
 
@@ -753,7 +753,7 @@ node -e "const b=require('./app/tool/bump_version.js');const t=require('fs').rea
 
 Expected：印出 `null`。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/tool/bump_version.js app/tool/test_bump_version.mjs store/google-play/release-log.md
@@ -774,7 +774,7 @@ git commit -m "feat(tool): bump_version.js 互動流程與版本對照表（epic
 - Consumes：Task 2 的 CLI。
 - Produces：無。
 
-- [ ] **Step 1：用真實檔案的複本演練一次**
+- [x] **Step 1：用真實檔案的複本演練一次**
 
 ```bash
 T=$(cygpath -m "$(mktemp -d)")
@@ -801,7 +801,7 @@ git status --short app/pubspec.yaml store/google-play/release-log.md
 
 Expected：沒有輸出。
 
-- [ ] **Step 2：在 repo 內確認 commit 欄位**
+- [x] **Step 2：在 repo 內確認 commit 欄位**
 
 把複本放在 `app/build/bump-rehearsal/`。這個資料夾在 repo 裡面（`app/.gitignore` 忽略了 `/build/`），所以腳本取得的是這個 repo 的 HEAD，而且完全不會碰到真正的 `app/pubspec.yaml` 和對照表。
 
@@ -818,7 +818,7 @@ git status --short
 
 Expected：對照表最後一行的 commit 欄位等於 `git rev-parse --short HEAD` 的輸出；最後的 `git status` 沒有輸出（真實檔案沒有被改）。
 
-- [ ] **Step 3：更新 `app/tool/README.md`**
+- [x] **Step 3：更新 `app/tool/README.md`**
 
 在 `## \`check_foliate_es_compat.js\`` 那一節之前插入：
 
@@ -860,7 +860,7 @@ node app/tool/test_bump_version.mjs
 
 ````
 
-- [ ] **Step 4：更新 Issue 3 規格與進度文件**
+- [x] **Step 4：更新 Issue 3 規格與進度文件**
 
 `docs/epics/epic-52-play-release/issues.md` Issue 3：
 - `**Status:** open` 改成 `**Status:** completed`。
@@ -882,7 +882,7 @@ node app/tool/test_bump_version.mjs
 
 `YYYY-MM-DD` 換成當天日期。
 
-- [ ] **Step 5：跑一次完整測試**
+- [x] **Step 5：跑一次完整測試**
 
 ```bash
 node app/tool/test_bump_version.mjs
@@ -893,7 +893,7 @@ tail -3 app/build/flutter-test-issue3.log
 
 Expected：`test_bump_version.mjs` 27 個全數通過。完整 `flutter test` 只允許 `wifi_transfer_http_server_test.dart` 第 570 行失敗（已登記的 `epic-51-wifi-transfer-test-fix`）；出現其他失敗就停下來查。這個 Issue 沒有改 Dart 程式碼，全套測試是計畫最後一個 Task 的例行確認。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/tool/README.md docs/epics.md docs/epics/epic-52-play-release

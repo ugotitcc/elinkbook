@@ -86,6 +86,41 @@ node app/tool/check_l10n_hardcoded_strings.js --test-dir <目錄>
 這類遺漏仍需靠 code review 與人工盤點；本腳本只保證「最常見的 Widget 字串參數
 位置」不會再漏。
 
+## `bump_version.js`
+
+建置要上傳到 Google Play 的 `.aab` 之前，用它更新版本號並記錄到版本對照表
+（epic-52-play-release Issue 3）。它會顯示目前版本和 `store/google-play/release-log.md`
+最後一筆，詢問 versionCode 要不要加 1、versionName 要不要改，再寫回
+`app/pubspec.yaml`（只改 `version:` 那一行，保留原本的換行符號），並在對照表加一筆
+「內部測試」紀錄。完整發布流程見 `docs/research/google_play_release_sop.md`。
+
+### 何時該執行
+
+- 每次要上傳新版本到 Google Play 之前（SOP 第 2.5、3 節）。
+
+### 執行方式
+
+```bash
+cd app
+node tool/bump_version.js          # 互動式
+node tool/bump_version.js --yes    # 不詢問：versionCode 加 1、versionName 不變
+
+# 測試／驗收時可指定其他檔案：
+node tool/bump_version.js --pubspec <路徑> --log <路徑>
+```
+
+- 「加 1」的基準是 `pubspec.yaml` 和對照表最後一筆中較大的 versionCode。
+- 第一次上架（對照表沒有紀錄）時回答 `n`，保留 `1.0.0+1`。
+- 結束碼 `0`：成功。`1`：輸入中斷，沒有修改任何檔案。`2`：設定錯誤（找不到檔案、
+  `version:` 格式錯誤、不認得的參數），沒有修改任何檔案。
+- 不在 git repo 裡或沒有安裝 git 時，commit 欄位填 `unknown` 並印出警告。
+
+### 測試
+
+```bash
+node app/tool/test_bump_version.mjs
+```
+
 ## `check_foliate_es_compat.js`
 
 靜態掃描 `app/android/app/src/main/assets/foliate/`（`readest/foliate-js`
