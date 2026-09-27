@@ -118,6 +118,131 @@ function appendLogEntry(text, entry) {
   return base + row + nl;
 }
 
+function parseArgs(argv) {
+  const opts = { yes: false, pubspec: DEFAULT_PUBSPEC, log: DEFAULT_LOG };
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--yes') {
+      opts.yes = true;
+    } else if (arg === '--pubspec' || arg === '--log') {
+      const value = argv[++i];
+      if (!value) throw new Error(`${arg} 後面要接檔案路徑。`);
+      opts[arg.slice(2)] = value;
+    } else {
+      throw new Error(`不認得的參數「${arg}」。可用的參數：--yes、--pubspec <路徑>、--log <路徑>。`);
+    }
+  }
+  return opts;
+}
+
+function readRequired(filePath, label) {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`找不到 ${label}：${filePath}。請確認檔案存在，或用參數指定正確路徑。`);
+  }
+  return fs.readFileSync(filePath, 'utf8');
+}
+
+async function main(argv, { input = process.stdin, output = process.stdout, errorOutput = process.stderr } = {}) {
+  const say = (msg) => output.write(msg + '\n');
+  const fail = (msg) => errorOutput.write(msg + '\n');
+
+  let opts;
+  let pubspecText;
+  let logText;
+  let current;
+  try {
+    opts = parseArgs(argv);
+    pubspecText = readRequired(opts.pubspec, 'pubspec.yaml');
+    logText = readRequired(opts.log, '版本對照表');
+    current = parsePubspecVersion(pubspecText);
+  } catch (e) {
+    fail(`沒有修改任何檔案。${e.message}`);
+    return 2;
+  }
+
+  const last = lastLogEntry(logText);
+  const next = nextVersionCode(current.code, last);
+  say(`目前版本：${current.name}+${current.code}`);
+  say(last ? `對照表最後一筆：${last.name}+${last.code}（${last.track}，${last.date}）` : '對照表最後一筆：尚無紀錄');
+
+  let code;
+  let name;
+  if (opts.yes) {
+    code = next;
+    name = current.name;
+  } else {
+    // 用非同步迭代逐行讀取：stdin 提早結束（EOF）時 next() 會回傳 done，不會卡住。
+    const rl = readline.createInterface({ input, terminal: false });
+    const lines = rl[Symbol.asyncIterator]();
+    const ask = async (question) => {
+      output.write(question);
+      const { value, done } = await lines.next();
+      if (done) return null;
+      return value.trim();
+    };
+    try {
+      for (;;) {
+        const answer = await ask(`versionCode 要加 1 嗎？（${current.code} → ${next}）[Y/n] `);
+        if (answer === null) break;
+        const a = answer.toLowerCase();
+        if (a === '' || a === 'y' || a === 'yes') code = next;
+        else if (a === 'n' || a === 'no') code = current.code;
+        else {
+          say('請輸入 y 或 n。');
+          continue;
+        }
+        const error = checkVersionCode(code, last);
+        if (error) {
+          say(error);
+          code = undefined;
+          continue;
+        }
+        break;
+      }
+      if (code !== undefined) {
+        for (;;) {
+          const answer = await ask(`versionName（目前 ${current.name}，直接 Enter 表示不改）：`);
+          if (answer === null) break;
+          if (answer === '') {
+            name = current.name;
+            break;
+          }
+          if (isValidVersionName(answer)) {
+            name = answer;
+            break;
+          }
+          say('versionName 格式要是「數字.數字.數字」，例如 1.0.1。');
+        }
+      }
+    } finally {
+      rl.close();
+    }
+    if (code === undefined || name === undefined) {
+      output.write('\n');
+      fail('輸入中斷，沒有修改任何檔案。');
+      return 1;
+    }
+  }
+
+  const commit = getHeadCommit((cmd) =>
+    execSync(cmd, { cwd: path.dirname(path.resolve(opts.pubspec)), stdio: ['ignore', 'pipe', 'ignore'] })
+  );
+  if (commit === 'unknown') {
+    fail('警告：無法執行 git rev-parse，對照表的 commit 欄位填 unknown。');
+  }
+
+  const entry = { name, code, date: formatDate(new Date()), track: '內部測試', commit, note: '' };
+  fs.writeFileSync(opts.pubspec, replacePubspecVersion(pubspecText, name, code));
+  fs.writeFileSync(opts.log, appendLogEntry(logText, entry));
+
+  say(`已更新 pubspec.yaml：version: ${name}+${code}`);
+  say(`已在對照表加一筆：${name}+${code}（內部測試，${entry.date}，commit ${commit}）`);
+  say('下一步（在 app/ 目錄下）：');
+  say('  git add pubspec.yaml ../store/google-play/release-log.md');
+  say(`  git commit -m "chore(release): ${name}+${code}"`);
+  return 0;
+}
+
 module.exports = {
   parsePubspecVersion,
   replacePubspecVersion,
@@ -129,4 +254,21 @@ module.exports = {
   formatDate,
   getHeadCommit,
   appendLogEntry,
+  parseArgs,
+  main,
 };
+
+if (require.main === module) {
+  // 用 exitCode 而不是 process.exit()：輸出接到管線時，process.exit() 可能在寫完前就結束。
+  main(process.argv.slice(2))
+    .then((code) => {
+      process.exitCode = code;
+    })
+    .catch((err) => {
+      // 寫檔時的權限不足、檔案被鎖定等未預期錯誤。
+      process.stderr.write(
+        `發生未預期的錯誤：${err.message}。pubspec.yaml 或對照表可能只更新了一個，請用 git status 確認。\n`
+      );
+      process.exitCode = 2;
+    });
+}

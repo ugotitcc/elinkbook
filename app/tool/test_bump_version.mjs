@@ -5,6 +5,11 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { spawnSync } from 'node:child_process'
 import bump from './bump_version.js'
 
 const {
@@ -148,4 +153,113 @@ test('appendLogEntry：CRLF 檔案用 CRLF；檔尾沒有換行時先補一個',
   assert.ok(appendLogEntry(crlf, entry).endsWith('|  |\r\n'))
   const noTrailing = LOG_HEADER.trimEnd()
   assert.equal(appendLogEntry(noTrailing, entry), noTrailing + '\n| 1.0.0 | 1 | 2026-10-01 | 內部測試 | unknown |  |\n')
+})
+
+// ---- 端到端：在暫存資料夾實際執行腳本 ----
+// 暫存資料夾不是 git repo，所以 commit 欄位會是 unknown（Review Focus 3）。
+
+const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'bump_version.js')
+
+// GIT_CEILING_DIRECTORIES 讓 git 不會往暫存資料夾的上層找 repo，
+// 即使系統暫存資料夾剛好在某個 git repo 底下，commit 欄位也固定是 unknown。
+// t.after 在每個測試結束後刪除暫存資料夾。
+function setup(t, pubspec, log) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bump-version-'))
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }))
+  const pubspecPath = path.join(dir, 'pubspec.yaml')
+  const logPath = path.join(dir, 'release-log.md')
+  fs.writeFileSync(pubspecPath, pubspec)
+  if (log !== undefined) fs.writeFileSync(logPath, log)
+  const run = (args, input = '') =>
+    spawnSync(process.execPath, [SCRIPT, '--pubspec', pubspecPath, '--log', logPath, ...args], {
+      input,
+      encoding: 'utf8',
+      cwd: dir,
+      env: { ...process.env, GIT_CEILING_DIRECTORIES: os.tmpdir() },
+    })
+  const read = () => ({
+    pubspec: fs.readFileSync(pubspecPath, 'utf8'),
+    log: fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : null,
+  })
+  return { dir, run, read }
+}
+
+const PUBSPEC_CRLF = 'name: app\r\n# version: 註解\r\nversion: 1.0.1+5\r\ndependencies:\r\n'
+const LOG_LAST_5 = LOG_HEADER + '| 1.0.1 | 5 | 2026-10-10 | 內部測試 | abc1234 |  |\n'
+const TODAY = formatDate(new Date())
+
+test('端到端 --yes：versionCode 加 1，保留 CRLF，對照表加一筆', (t) => {
+  const { run, read } = setup(t, PUBSPEC_CRLF, LOG_LAST_5)
+  const r = run(['--yes'])
+  assert.equal(r.status, 0, r.stderr)
+  assert.equal(read().pubspec, PUBSPEC_CRLF.replace('1.0.1+5', '1.0.1+6'))
+  assert.equal(read().log, LOG_LAST_5 + `| 1.0.1 | 6 | ${TODAY} | 內部測試 | unknown |  |\n`)
+  assert.match(r.stdout + r.stderr, /unknown/)
+})
+
+test('端到端 第一次上架：對照表沒有紀錄，回答 n 保留 1.0.0+1', (t) => {
+  const pubspec = 'name: app\nversion: 1.0.0+1\n'
+  const { run, read } = setup(t, pubspec, LOG_HEADER)
+  const r = run([], 'n\n\n')
+  assert.equal(r.status, 0, r.stderr)
+  assert.equal(read().pubspec, pubspec)
+  assert.equal(lastLogEntry(read().log).code, 1)
+  assert.equal(lastLogEntry(read().log).name, '1.0.0')
+})
+
+test('端到端 回答 n 但數字不夠大：印出原因並重問，改答 y 後成功', (t) => {
+  const { run, read } = setup(t, 'version: 1.0.1+5\n', LOG_LAST_5)
+  const r = run([], 'n\ny\n1.1.0\n')
+  assert.equal(r.status, 0, r.stderr)
+  assert.match(r.stdout, /最後一筆是 5/)
+  assert.equal(read().pubspec, 'version: 1.1.0+6\n')
+  assert.equal(lastLogEntry(read().log).name, '1.1.0')
+})
+
+test('端到端 pubspec 落後對照表：回答 y 得到最後一筆加 1', (t) => {
+  const { run, read } = setup(t, 'version: 1.0.1+3\n', LOG_LAST_5)
+  const r = run([], 'y\n\n')
+  assert.equal(r.status, 0, r.stderr)
+  assert.equal(read().pubspec, 'version: 1.0.1+6\n')
+})
+
+test('端到端 非預期輸入：大小寫、空白、錯誤格式都會重問', (t) => {
+  const { run, read } = setup(t, 'version: 1.0.1+5\n', LOG_LAST_5)
+  const r = run([], 'maybe\n  Y  \n1.0\n1.2.0\n')
+  assert.equal(r.status, 0, r.stderr)
+  assert.match(r.stdout, /請輸入 y 或 n/)
+  assert.match(r.stdout, /數字\.數字\.數字/)
+  assert.equal(read().pubspec, 'version: 1.2.0+6\n')
+})
+
+test('端到端 EOF：輸入中斷時結束碼 1，兩個檔案都不變', (t) => {
+  const { run, read } = setup(t, PUBSPEC_CRLF, LOG_LAST_5)
+  const r = run([], '')
+  assert.equal(r.status, 1)
+  assert.equal(read().pubspec, PUBSPEC_CRLF)
+  assert.equal(read().log, LOG_LAST_5)
+})
+
+test('端到端 找不到對照表：結束碼 2，pubspec 不變', (t) => {
+  const { run, read } = setup(t, PUBSPEC_CRLF, undefined)
+  const r = run(['--yes'])
+  assert.equal(r.status, 2)
+  assert.match(r.stderr, /找不到/)
+  assert.equal(read().pubspec, PUBSPEC_CRLF)
+})
+
+test('端到端 pubspec 版本格式錯誤：結束碼 2，檔案都不變', (t) => {
+  const { run, read } = setup(t, 'version: 1.0\n', LOG_LAST_5)
+  const r = run(['--yes'])
+  assert.equal(r.status, 2)
+  assert.match(r.stderr, /格式不對/)
+  assert.equal(read().pubspec, 'version: 1.0\n')
+  assert.equal(read().log, LOG_LAST_5)
+})
+
+test('端到端 不認得的旗標：結束碼 2', (t) => {
+  const { run } = setup(t, 'version: 1.0.1+5\n', LOG_LAST_5)
+  const r = run(['--force'])
+  assert.equal(r.status, 2)
+  assert.match(r.stderr, /--force/)
 })
