@@ -324,7 +324,7 @@ git commit -m "feat(android): release 建置改用 key.properties 上傳金鑰�
 - Consumes：Task 1 的 `release` 簽章設定；Task 1 情境 D 留下的 `app/android/key.properties`。
 - Produces：無。
 
-- [ ] **Step 1：用測試金鑰建置 `.aab` 並確認簽章**
+- [x] **Step 1：用測試金鑰建置 `.aab` 並確認簽章**
 
 ```bash
 cd app
@@ -335,7 +335,7 @@ cd ..
 
 預期：建置成功；輸出包含 `CN=Epic52 Test, O=elinkBook Test, C=TW`。這裡比對 `CN=`，不比對 `Owner`／`擁有者`，因為那個標籤會隨 JDK 語系改變。
 
-- [ ] **Step 2：刪除 `key.properties`，確認退回 debug 簽章**
+- [x] **Step 2：刪除 `key.properties`，確認退回 debug 簽章**
 
 ```bash
 rm app/android/key.properties
@@ -356,7 +356,7 @@ cd ..
 
 如果看不到警告：在 `flutter build appbundle` 後面加 `-v` 重跑一次。有 `-v` 才看得到，代表 `logger.quiet` 仍被 Flutter 過濾，記進 `epic.md`，但不算失敗，因為 Task 1 情境 A 已經用 Gradle 直接確認過警告。
 
-- [ ] **Step 3：分析與測試**
+- [x] **Step 3：分析與測試**
 
 ```bash
 cd app
@@ -367,7 +367,7 @@ cd ..
 
 預期：`flutter analyze` 顯示 `No issues found!`；`flutter test` 全部通過。這個 Issue 沒有改 Dart 程式碼，全套測試是計畫最後一個 Task 的例行確認。
 
-- [ ] **Step 4：刪除測試金鑰**
+- [x] **Step 4：刪除測試金鑰**
 
 ```bash
 rm -rf "C:/Users/huthief/AppData/Local/Temp/epic52-keys" /tmp/epic52-b.log /tmp/epic52-b2.log /tmp/epic52-c.log
@@ -376,7 +376,7 @@ ls app/android/key.properties
 
 預期：最後一行印出 `No such file or directory`。
 
-- [ ] **Step 5：更新進度文件**
+- [x] **Step 5：更新進度文件**
 
 `docs/epics/epic-52-play-release/issues.md` Issue 1 的 `**Status:** open` 改成 `**Status:** completed`。
 
@@ -389,7 +389,7 @@ ls app/android/key.properties
 
 `YYYY-MM-DD` 換成當天日期。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add docs/epics/epic-52-play-release/issues.md docs/epics/epic-52-play-release/epic.md
