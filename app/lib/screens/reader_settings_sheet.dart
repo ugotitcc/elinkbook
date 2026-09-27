@@ -240,77 +240,101 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return SafeArea(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.readerSettingsTitle,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                IconButton(
-                  key: const Key('reader_settings_close_button'),
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: DefaultTabController(
-              length: 4,
-              child: Column(
+      child: ConstrainedBox(
+        // 面板最高到螢幕 85%（DESIGN.md#L235 抽屜高度上限），內容不夠高時
+        // 就縮到內容高度，不再撐滿整個螢幕。
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+              child: Row(
                 children: [
-                  TabBar(
-                    key: const Key('reader_settings_tab_bar'),
-                    tabs: [
-                      Tab(
-                        key: const Key('reader_settings_tab_text_content'),
-                        text: l10n.readerSettingsTabText,
-                      ),
-                      Tab(
-                          key: const Key('reader_settings_tab_boundary'),
-                          text: l10n.readerSettingsTabBoundary),
-                      Tab(
-                        key: const Key('reader_settings_tab_presentation'),
-                        text: l10n.readerSettingsTabPresentation,
-                      ),
-                      Tab(
-                        key: const Key('reader_settings_tab_preferences'),
-                        text: l10n.readerSettingsTabPreferences,
-                      ),
-                    ],
-                  ),
                   Expanded(
-                    child: TabBarView(
-                      // 【不可逆的技術決策】必須為 NeverScrollableScrollPhysics，
-                      // 只能點擊 TabBar 切換——「文字」／「邊界」頁籤內
-                      // 各有數個橫向拖曳型 Slider，TabBarView 底層 PageView 的
-                      // 預設水平滑動手勢會與這些 Slider 搶手勢競技場，導致調整
-                      // 滑桿時意外切換頁籤。**注意**：這與被借鏡的既有先例
-                      // TocBottomSheet（app/lib/screens/toc_bottom_sheet.dart）
-                      // 不同——該處頁籤內容是章節清單/縮圖格/搜尋結果，沒有
-                      // 橫向拖曳型控制項，不需要這道防護，不可為了「跟先例一致」
-                      // 而移除本行（epic-28-reader-settings-enhancements Issue 5
-                      // 審查發現，詳見 design.md「2026-08-15 追加」審查回應）。
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        _buildTextContentTab(),
-                        _buildBoundaryTab(),
-                        _buildPresentationTab(),
-                        _buildPreferencesTab(),
-                      ],
+                    child: Text(
+                      l10n.readerSettingsTitle,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
+                  ),
+                  IconButton(
+                    key: const Key('reader_settings_close_button'),
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            Flexible(
+              child: DefaultTabController(
+                length: 4,
+                // 切換分頁不要有任何滑動動畫，點了就直接切過去（2026-09-28
+                // 使用者需求；E-Ink 上動畫會殘影）。
+                animationDuration: Duration.zero,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TabBar(
+                      key: const Key('reader_settings_tab_bar'),
+                      tabs: [
+                        Tab(
+                          key: const Key('reader_settings_tab_text_content'),
+                          text: l10n.readerSettingsTabText,
+                        ),
+                        Tab(
+                          key: const Key('reader_settings_tab_boundary'),
+                          text: l10n.readerSettingsTabBoundary,
+                        ),
+                        Tab(
+                          key: const Key('reader_settings_tab_presentation'),
+                          text: l10n.readerSettingsTabPresentation,
+                        ),
+                        Tab(
+                          key: const Key('reader_settings_tab_preferences'),
+                          text: l10n.readerSettingsTabPreferences,
+                        ),
+                      ],
+                    ),
+                    Flexible(
+                      // 【不可逆的技術決策】分頁內容用 IndexedStack，不用 TabBarView：
+                      // 1. 高度：TabBarView 一定撐滿父層給的高度，加上呼叫端
+                      //    isScrollControlled: true，面板會永遠佔滿整個螢幕，短分頁下面
+                      //    一大片空白（2026-09-28 真機回報）。IndexedStack 取「最高那個
+                      //    分頁」的高度，切分頁時面板高度不變，E-Ink 上不會多閃一次。
+                      // 2. 手勢：「文字」／「邊界」頁籤內有橫向拖曳的 Slider，TabBarView
+                      //    底層 PageView 的水平滑動會跟它們搶手勢，調滑桿時意外切頁籤
+                      //    （epic-28-reader-settings-enhancements Issue 5）。IndexedStack
+                      //    沒有滑動手勢，只能點 TabBar 切換。不可改回可滑動的 TabBarView。
+                      // 各分頁的 ListView 是 shrinkWrap，內容超過可用高度（上限見上方
+                      // maxHeight）時仍可在分頁內捲動。
+                      child: Builder(
+                        builder: (context) {
+                          final tabController = DefaultTabController.of(
+                            context,
+                          );
+                          return AnimatedBuilder(
+                            animation: tabController,
+                            builder: (context, _) => IndexedStack(
+                              index: tabController.index,
+                              children: [
+                                _buildTextContentTab(),
+                                _buildBoundaryTab(),
+                                _buildPresentationTab(),
+                                _buildPreferencesTab(),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -327,6 +351,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     final l10n = AppLocalizations.of(context)!;
     return ListView(
       key: const Key('reader_settings_tab_text_content_list'),
+      shrinkWrap: true,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
         _buildFontFamilyDropdown(),
@@ -450,6 +475,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     final l10n = AppLocalizations.of(context)!;
     return ListView(
       key: const Key('reader_settings_tab_boundary_list'),
+      shrinkWrap: true,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
         _buildSliderRow(
@@ -536,6 +562,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     final l10n = AppLocalizations.of(context)!;
     return ListView(
       key: const Key('reader_settings_tab_presentation_list'),
+      shrinkWrap: true,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
         EBFieldCard(
@@ -569,6 +596,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   Widget _buildPreferencesTab() {
     return ListView(
       key: const Key('reader_settings_tab_preferences_list'),
+      shrinkWrap: true,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [_buildLayoutPresetSection()],
     );
