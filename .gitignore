@@ -57,3 +57,6 @@ docs/archive/2026-08-02-epic-14-system-settings/reviews/
 docs/archive/2026-08-02-epic-20-fxl-foliate-migration/reviews/
 docs/archive/2026-09-25-epic-46-writing-mode-autodetect/reviews/
 package-lock.json
+
+# Google Play 商店示範影片檔案太大，不進版控（網址記在 store/google-play/zh-TW/listing.md）
+store/google-play/**/*.mp4
