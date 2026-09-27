@@ -172,4 +172,57 @@ void main() {
     expect(find.byTooltip('Layout'), findsOneWidget);
     expect(find.byTooltip('Read aloud'), findsOneWidget);
   });
+
+  // 真機回報（2026-09-28，Mobiscribe）：E-Ink 模式下底部列是黑底白字
+  // （backgroundColor=onSurface／iconColor=surface），但跳頁列裡的
+  // Slider／頁碼文字／跳頁輸入框沿用全域主題的黑色前景，黑畫在黑上幾乎
+  // 看不到。footer 內的前景色必須改跟 iconColor 走。
+  testWidgets('E-Ink 模式：跳頁列的滑桿、頁碼文字、輸入框都改用 iconColor',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: ReaderChromeBottomBar(
+          bookTitle: '書',
+          pageProgressText: '23 / 28 · 82%',
+          footer: Row(
+            children: [
+              const Text('23/28'),
+              const SizedBox(width: 56, child: TextField()),
+              Expanded(
+                child: Slider(value: 23, min: 1, max: 28, onChanged: (_) {}),
+              ),
+            ],
+          ),
+          onTocTap: () {},
+          isBookmarked: false,
+          onBookmarkTap: () {},
+          onAnnotationsTap: () {},
+          onLayoutTap: () {},
+          onTtsTap: null,
+          backgroundColor: Colors.black,
+          iconColor: Colors.white,
+          isEinkMode: true,
+        ),
+      ),
+    ));
+
+    final sliderContext = tester.element(find.byType(Slider));
+    final sliderTheme = SliderTheme.of(sliderContext);
+    expect(sliderTheme.activeTrackColor, Colors.white);
+    expect(sliderTheme.thumbColor, Colors.white);
+    // 未讀部分也要跟黑底有明顯對比，且不可用半透明（電子紙灰階抖動問題）。
+    expect(sliderTheme.inactiveTrackColor, isNot(Colors.black));
+    expect(sliderTheme.inactiveTrackColor!.a, 1.0);
+
+    final pageText = tester.widget<RichText>(
+      find.descendant(of: find.text('23/28'), matching: find.byType(RichText)),
+    );
+    expect(pageText.text.style?.color, Colors.white);
+
+    final editable = tester.widget<EditableText>(find.byType(EditableText));
+    expect(editable.style.color, Colors.white);
+  });
 }

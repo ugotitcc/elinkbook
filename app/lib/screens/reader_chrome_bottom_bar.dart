@@ -50,6 +50,47 @@ class ReaderChromeBottomBar extends StatelessWidget {
     this.isEinkMode = false,
   });
 
+  /// E-Ink 模式下本列是「反白」配色（黑底白字：`backgroundColor` 是
+  /// `onSurface`、`iconColor` 是 `surface`，見 `reader_screen.dart`
+  /// `_themedFabBackgroundColor`）。呼叫端傳進來的 [footer]（跳頁列的
+  /// 頁碼文字／輸入框／Slider）卻沿用全域主題的黑色前景，黑畫在黑上幾乎
+  /// 看不到（2026-09-28 Mobiscribe 真機回報）。這裡把 footer 子樹的前景色
+  /// 統一改成 [iconColor]。Slider 未讀部分用不透明的 [Colors.grey]，
+  /// 不用 alpha 半透明——電子紙灰階抖動下半透明色會糊掉（理由同
+  /// `reader_screen.dart` `_themedTtsDisabledIconColor`）。
+  Widget _einkForeground(BuildContext context, Widget child) {
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        // TextField 的文字色取自 textTheme（建主題時就已寫死顏色），
+        // 底線／游標則取自 colorScheme，兩邊都要換。
+        textTheme: theme.textTheme.apply(
+          bodyColor: iconColor,
+          displayColor: iconColor,
+        ),
+        colorScheme: theme.colorScheme.copyWith(
+          primary: iconColor,
+          onSurface: iconColor,
+          onSurfaceVariant: iconColor,
+        ),
+        sliderTheme: theme.sliderTheme.copyWith(
+          activeTrackColor: iconColor,
+          thumbColor: iconColor,
+          inactiveTrackColor: Colors.grey,
+          activeTickMarkColor: iconColor,
+          inactiveTickMarkColor: Colors.grey,
+          valueIndicatorColor: iconColor,
+          valueIndicatorTextStyle: TextStyle(color: backgroundColor),
+        ),
+      ),
+      // 一般 Text 吃的是 DefaultTextStyle，不會跟著上面 colorScheme 變。
+      child: DefaultTextStyle.merge(
+        style: TextStyle(color: iconColor),
+        child: child,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -115,7 +156,10 @@ class ReaderChromeBottomBar extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: borderColor, width: 1)),
             ),
-            child: SizedBox(height: 56, child: footer),
+            child: SizedBox(
+              height: 56,
+              child: isEinkMode ? _einkForeground(context, footer) : footer,
+            ),
           ),
           DecoratedBox(
             decoration: BoxDecoration(
