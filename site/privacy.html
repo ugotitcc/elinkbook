@@ -13,7 +13,7 @@
   <meta property="og:title" content="隱私權保護政策 - elinkBook (易閱書) APP">
   <meta property="og:description" content="elinkBook 應用程式隱私權保護政策公開宣告，遵守各項資安法規與 Google Play 規範。">
   <meta property="og:image" content="./assets/appicon_v2.jpg">
-  <meta property="og:url" content="https://www.ugotit.cc/elinkbook/privacy.html">
+  <meta property="og:url" content="https://www.ugotit.cc/privacy">
 
   <link rel="icon" type="image/jpeg" href="./assets/appicon_v2.jpg">
   <link rel="apple-touch-icon" href="./assets/appicon_v2.jpg">
@@ -65,7 +65,7 @@
           <span class="legal-badge-pill">官方公開宣告</span>
           <h1>應用程式隱私權保護政策</h1>
           <div class="legal-meta">
-            發布單位：ugotit.cc · 適用產品：elinkBook (易閱書) APP · 最後修訂日期：2026 年 8 月 20 日
+            發布單位：ugotit.cc · 適用產品：elinkBook (易閱書) APP · 最後修訂日期：2026 年 9 月 27 日
           </div>
         </div>
         <div class="legal-actions">
@@ -88,7 +88,7 @@
 
         <h2>一、隱私權保護政策的適用範圍</h2>
         <p>
-          本政策內容涵蓋本 APP 如何處理您在安裝、啟動、使用本 APP 及其相關延伸服務時所產生的各項資訊與授權。本政策不適用於本 APP 以外的第三方連結網站，亦不適用於非本 APP 所委託或參與管理的第三方人員或服務提供商（例如：第三方雲端硬碟服務商 Google Drive、OneDrive 或使用者自建之 Calibre/OPDS 伺服器）。
+          本政策內容涵蓋本 APP 如何處理您在安裝、啟動、使用本 APP 及其相關延伸服務時所產生的各項資訊與授權。本政策不適用於本 APP 以外的第三方連結網站，亦不適用於非本 APP 所委託或參與管理的第三方人員或服務提供商（例如：第三方雲端硬碟服務商 Google Drive、OneDrive 或使用者自建之 Calibre/OPDS 伺服器與閱讀同步伺服器）。
         </p>
 
         <h2>二、個人資料與應用程式存取權限之蒐集、處理及利用</h2>
@@ -104,29 +104,40 @@
 
         <h3>2. 網路連線與雲端服務授權 (Network & Cloud Storage)</h3>
         <ul>
-          <li><strong>雲端同步與遠端書庫</strong>：當您主動啟用 Google Drive、OneDrive 備份同步或連線至個人 Calibre/OPDS 遠端書庫時，本 APP 透過標準 OAuth 2.0 協議取得傳輸權限。</li>
+          <li><strong>雲端硬碟匯入與遠端書庫</strong>：當您主動從 Google Drive、OneDrive 匯入書籍時，本 APP 透過標準 OAuth 2.0 協議取得唯讀存取權限，用來列出檔案清單並下載您選擇的書籍，不會修改或上傳您雲端硬碟上的任何內容。連線至個人 Calibre/OPDS 遠端書庫時，本 APP 使用您自行輸入的伺服器位址與帳號資訊。</li>
           <li><strong>WiFi 區網傳書</strong>：當您啟用本機傳輸服務時，本 APP 僅在您所連線之本機區域網路（Wi-Fi 或個人熱點）啟動微型 HTTP 傳輸服務，供您透過瀏覽器傳輸書籍。所有檔案傳輸均僅在您的本機區域網路內部進行點對點通訊，絕不上傳至任何外部伺服器或第三方雲端。</li>
-          <li><strong>資料傳輸安全</strong>：本 APP 僅傳輸您指定同步之書籍元數據或檔案，所有網路通訊均經過 TLS/HTTPS 加密傳輸，且絕不會將您的雲端授權憑證回傳至任何未經授權的第三方主機。</li>
+          <li><strong>資料傳輸安全</strong>：本 APP 與 Google Drive、OneDrive 之間的連線均經過 TLS/HTTPS 加密。連線至您自行設定的伺服器（Calibre/OPDS 書庫、閱讀同步伺服器）時，是否加密取決於該伺服器位址：使用 HTTPS 位址時會加密，使用 HTTP 位址時不會加密。本 APP 絕不會將您的雲端授權憑證傳送至任何第三方主機。</li>
         </ul>
 
-        <h3>3. 本機離線簡繁轉換與資料隱私 (Text Conversion)</h3>
+        <h3>3. 閱讀同步服務 (Reading Sync，選用功能)</h3>
+        <p>
+          閱讀同步為選用功能，預設關閉。只有在您自行輸入同步伺服器位址並登入後才會啟用。同步伺服器是您自行架設或指定的 PocketBase 伺服器，<strong>ugotit.cc 不提供、也不經營同步伺服器，不會收到您的同步資料</strong>。
+        </p>
+        <ul>
+          <li><strong>會上傳到您的同步伺服器的資料</strong>：電子郵件地址（登入用）、書籍資訊（書名、檔案格式、用來辨識同一本書的內容指紋）、閱讀位置與閱讀進度、書籤、劃線（包含您劃線的書本原文）、備註內容。</li>
+          <li><strong>不會上傳的資料</strong>：電子書檔案本身不會上傳。</li>
+          <li><strong>帳號密碼</strong>：密碼只在登入時傳送給您的同步伺服器，本 APP 不會把密碼儲存在裝置上，只保存登入後由伺服器發給的登入權杖（token）。</li>
+          <li><strong>停用方式</strong>：您可隨時在 APP 的同步設定中登出，登出後本 APP 即停止上傳。</li>
+        </ul>
+
+        <h3>4. 本機離線簡繁轉換與資料隱私 (Text Conversion)</h3>
         <p>
           本 APP 提供之雙向簡繁轉換功能均以內建之 OpenCC 離線字詞字典於本機端執行即時渲染轉換，不會將您的書籍內文、字彙偏好或閱讀紀錄上傳至網路，全面落實離線純淨安全。
         </p>
 
-        <h3>4. 意見反應與客服支援 (Support & Contact)</h3>
+        <h3>5. 意見反應與客服支援 (Support & Contact)</h3>
         <p>
           當您透過本 APP 或 ugotit.cc 官方網站使用意見反饋、問題回報或客服聯繫服務時，我們會依需求請您提供聯絡電子郵件 (E-mail) 與問題描述，此資訊僅用於回覆您的諮詢與協助排查技術問題。
         </p>
 
         <h2>三、資料安全與保護措施</h2>
         <p>
-          本 APP 及伺服器端均設有嚴密的資訊安全防護措施：
+          本 APP 以下列方式保護您的資料：
         </p>
         <ul>
-          <li>本機資料庫採用安全加密與沙盒隔離機制，防止未授權應用程式讀取您的閱讀資料。</li>
-          <li>主機端均配置有防火牆、防毒與存取控制系統，僅有經過授權之專業維運人員方得接觸相關必要資料，相關人員均簽署嚴格之保密協議。</li>
-          <li>如因業務需要委託第三方協力廠商提供服務時，本 APP 亦嚴格要求其遵守保密義務與安全規範。</li>
+          <li>您的閱讀資料儲存在 Android 系統配置給本 APP 的私有儲存空間（沙盒）中，其他 APP 無法讀取。</li>
+          <li>本 APP 不經營收集使用者閱讀資料的伺服器。閱讀同步資料只會傳送到您自行設定的伺服器，該伺服器的安全防護由您或該伺服器的管理者負責。</li>
+          <li>透過意見反應或客服信箱提供給 ugotit.cc 的電子郵件地址與問題描述，僅用於回覆您的諮詢，不會用於其他用途。</li>
         </ul>
 
         <h2>四、對外相關連結之聲明</h2>
@@ -154,6 +165,7 @@
           <li>您可隨時在 APP 內手動刪除單本書籍或一鍵清除所有閱讀紀錄。</li>
           <li>移除本 APP 將一併自動刪除該 APP 於系統沙盒中所儲存之全部暫存檔與偏好設定。</li>
           <li>若需撤銷雲端存取權限，您可隨時於 APP 設定中登出雲端帳號，或直接於 Google/Microsoft 帳號後台撤銷授權。</li>
+          <li>閱讀同步資料儲存在您自行設定的同步伺服器上，ugotit.cc 並未持有這些資料。如需刪除，請由您或該伺服器的管理者直接在伺服器上刪除您的帳號與同步資料。操作上需要協助時，歡迎寫信至 app@ugotit.cc。</li>
         </ul>
 
         <h2>七、隱私權保護政策之修訂</h2>
