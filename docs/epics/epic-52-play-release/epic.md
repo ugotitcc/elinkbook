@@ -28,3 +28,5 @@
 - 不採納：I-4。朗讀通知由 `audio_service` 建立，屬於媒體工作階段通知，Android 13 的通知權限規定豁免這類通知。
 - 不採納：M-2。`applicationId` 的 TODO 註解與簽章無關，不在本 Epic 範圍。
 - 發布者決定：隱私權政策不寫刪除資料的處理天數。
+
+**2026-09-27 PR #285 合併**：SOP、`design.md`、`issues.md` 與審查修訂已合併進 `main`。3 個 Issue 都還沒開始。
