@@ -2027,6 +2027,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (!mounted || result == null) return;
     switch (result) {
       case BookRelinkSuccess(:final updatedBook):
+        // 程式審查 M-1：先選錯、再選對時，收掉上一次的失敗提示，避免重新
+        // 開書時畫面還掛著「內容不同」之類的錯誤訊息。
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         _reopenWithFilePath(updatedBook.filePath);
       case BookRelinkFailure(:final reason):
         final l10n = AppLocalizations.of(context)!;

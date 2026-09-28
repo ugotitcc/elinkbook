@@ -1640,6 +1640,40 @@ void main() {
       expect((metadataCall.arguments as Map)['uri'], newEpubUri);
     });
 
+    test('EPUB 匯入時沒取得 identifier（資料庫存的是 SHA-256），重新連結時讀得到 '
+        'identifier：以 SHA-256 再比對一次，判定為同一本書（程式審查 M-3）', () async {
+      await seedBook(
+        format: BookFileFormat.epub,
+        filePath: oldEpubUri,
+        contentFingerprint: 'sha-same',
+      );
+      mockRelinkChannel(epubIdentifier: 'urn:uuid:now-readable');
+
+      final result = await service.relinkBook('b1', newEpubUri);
+
+      expect(result, isA<BookRelinkSuccess>());
+      // 原本的指紋保留，不改成 identifier，避免與其他裝置的同步比對不一致。
+      expect((await repository.findBookById('b1'))!.contentFingerprint,
+          'sha-same');
+    });
+
+    test('EPUB identifier 與 SHA-256 都和原書指紋不同時，仍回傳 contentMismatch '
+        '（程式審查 M-3）', () async {
+      await seedBook(
+        format: BookFileFormat.epub,
+        filePath: oldEpubUri,
+        contentFingerprint: 'urn:uuid:original-book',
+      );
+      mockRelinkChannel(
+          epubIdentifier: 'urn:uuid:another-book', sha256: 'sha-another-book');
+
+      final result = await service.relinkBook('b1', newEpubUri);
+
+      expect((result as BookRelinkFailure).reason,
+          BookRelinkFailureReason.contentMismatch);
+      await expectUntouched('b1', oldEpubUri);
+    });
+
     test('選取的 URI 等於原書自己的 filePath（撤銷後重新授權同一個檔案）時，'
         '不判定為 alreadyInLibrary，正常完成', () async {
       await seedBook();

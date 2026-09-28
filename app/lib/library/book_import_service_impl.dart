@@ -188,17 +188,6 @@ class BookImportServiceImpl implements BookImportService {
     );
   }
 
-  /// 【診斷修正——真機回報「同一本書可以重複匯入」】圖書庫既有書籍的
-  /// `filePath` 集合，供匯入前判斷來源 URI 是否重複。比對依據是「來源檔案
-  /// URI/路徑是否相同」，不比對書名/作者（避免同名但內容不同的書被誤判為
-  /// 重複）——對大多數情況成立：`filePath` 只有在持久化 URI 權限授權失敗、
-  /// 或原始 URI 沒有可辨識副檔名時才會落地成本機複本（每次落地會產生新的
-  /// 隨機檔名），故此防護對「使用者重新選取同一份原始檔案」這個實際回報的
-  /// 情境有效；對「先前已落地成本機複本、之後又重新選取同一份原始檔案」
-  /// 這種較罕見的邊界情況無效（本機複本檔名與原始 URI 不同，比對不到），
-  /// 屬已知、可接受的限制。這個集合在同一次批次匯入呼叫（`importFiles`／
-  /// `importFolder`）期間會持續更新，故同一批次內重複選取同一個 URI 兩次
-  /// 也會被正確擋下第二次。
   /// epic-15-storage-permission Issue 2：可能維持 `content://` 的格式。
   /// TXT／MD 匯入時已合成 EPUB 並落地、CBZ 匯入時已重建並落地，
   /// `filePath` 指向落地檔；若換成原始檔 URI，閱讀器會把原始檔當合成結果
@@ -239,13 +228,34 @@ class BookImportServiceImpl implements BookImportService {
 
       // 4. 利用選擇器核發的暫時讀取授權計算指紋——此時尚未持久化授權，
       //    選錯檔案不會白白消耗系統的持久化授權配額。
-      final fingerprint = await _computeRelinkFingerprint(newUri, format!);
+      //    算法必須與第一次匯入完全一致：EPUB 先取 OPF identifier（取不到才
+      //    退回 SHA-256），其餘格式直接取 SHA-256。若跳過 extractMetadata，
+      //    EPUB 會算出 SHA-256，和資料庫裡存的 identifier 永遠對不上。
+      final epubIdentifier = format == BookFileFormat.epub
+          ? await _readEpubIdentifier(newUri)
+          : null;
+      final fingerprint = await computeBookContentFingerprint(
+        newUri,
+        format!,
+        epubIdentifier: epubIdentifier,
+      );
 
       // 5. 比對指紋；原書沒有指紋時略過，稍後補寫。
       final originalFingerprint = book.contentFingerprint;
       if (originalFingerprint != null && originalFingerprint != fingerprint) {
-        return const BookRelinkFailure(
-            BookRelinkFailureReason.contentMismatch);
+        // 程式審查 M-3：匯入當下若 extractMetadata 失敗，資料庫存的是整檔
+        // SHA-256；這次讀得到 identifier 就會永遠對不上，同一本書只能刪除
+        // 重新匯入。指紋是以 identifier 算出時，再以 SHA-256 比對一次。
+        // 反過來（資料庫存 identifier、這次讀不到）無從補救，仍回傳
+        // contentMismatch，屬已知限制。
+        final usedIdentifier = fingerprint == epubIdentifier?.trim();
+        final sha256 = usedIdentifier
+            ? await computeBookContentFingerprint(newUri, format)
+            : null;
+        if (sha256 != originalFingerprint) {
+          return const BookRelinkFailure(
+              BookRelinkFailureReason.contentMismatch);
+        }
       }
 
       // 6. 確認是同一本書後才持久化授權或落地複本（規則與第一次匯入共用）。
@@ -256,6 +266,9 @@ class BookImportServiceImpl implements BookImportService {
       }
 
       // 7. 原地更新：只改 filePath 與補寫的指紋，其餘欄位沿用最新記錄。
+      //    已知限制（程式審查 M-4）：這一步寫入失敗時，第 6 步已持久化的
+      //    授權與落地複本不會回收——原生端沒有釋放授權的方法；複本檔名
+      //    固定為 `<bookId>.<格式>`，重試時會直接覆寫，不會越積越多。
       final updated = book.copyWith(
         filePath: resolvedPath,
         contentFingerprint: originalFingerprint ?? fingerprint,
@@ -270,35 +283,33 @@ class BookImportServiceImpl implements BookImportService {
     }
   }
 
-  /// epic-15-storage-permission Issue 2：計算重新選取檔案的內容指紋，算法
-  /// 必須與第一次匯入完全一致——EPUB 先以 `extractMetadata` 取 OPF
-  /// identifier（取不到才退回 SHA-256），其餘格式直接取 SHA-256。若跳過
-  /// `extractMetadata`，EPUB 會算出 SHA-256，和資料庫裡存的 identifier
-  /// 永遠對不上，所有 EPUB 都會被誤判為不同的書。
-  Future<String> _computeRelinkFingerprint(
-    String uri,
-    BookFileFormat format,
-  ) async {
-    String? epubIdentifier;
-    if (format == BookFileFormat.epub) {
-      try {
-        final metadata =
-            await kBookMetadataChannel.invokeMapMethod<String, Object?>(
-          'extractMetadata',
-          {'uri': uri, 'format': format.name},
-        );
-        epubIdentifier = metadata?['identifier'] as String?;
-      } on PlatformException {
-        // 比照匯入：詮釋資料提取失敗時退回整檔 SHA-256。
-      }
+  /// epic-15-storage-permission Issue 2：以 `extractMetadata` 讀取重新選取的
+  /// EPUB 的 OPF identifier，供指紋計算使用。提取失敗時回傳 null，比照匯入
+  /// 退回整檔 SHA-256。
+  Future<String?> _readEpubIdentifier(String uri) async {
+    try {
+      final metadata =
+          await kBookMetadataChannel.invokeMapMethod<String, Object?>(
+        'extractMetadata',
+        {'uri': uri, 'format': BookFileFormat.epub.name},
+      );
+      return metadata?['identifier'] as String?;
+    } on PlatformException {
+      return null;
     }
-    return computeBookContentFingerprint(
-      uri,
-      format,
-      epubIdentifier: epubIdentifier,
-    );
   }
 
+  /// 【診斷修正——真機回報「同一本書可以重複匯入」】圖書庫既有書籍的
+  /// `filePath` 集合，供匯入前判斷來源 URI 是否重複。比對依據是「來源檔案
+  /// URI/路徑是否相同」，不比對書名/作者（避免同名但內容不同的書被誤判為
+  /// 重複）——對大多數情況成立：`filePath` 只有在持久化 URI 權限授權失敗、
+  /// 或原始 URI 沒有可辨識副檔名時才會落地成本機複本（每次落地會產生新的
+  /// 隨機檔名），故此防護對「使用者重新選取同一份原始檔案」這個實際回報的
+  /// 情境有效；對「先前已落地成本機複本、之後又重新選取同一份原始檔案」
+  /// 這種較罕見的邊界情況無效（本機複本檔名與原始 URI 不同，比對不到），
+  /// 屬已知、可接受的限制。這個集合在同一次批次匯入呼叫（`importFiles`／
+  /// `importFolder`）期間會持續更新，故同一批次內重複選取同一個 URI 兩次
+  /// 也會被正確擋下第二次。
   Future<Set<String>> _existingFilePaths() async {
     final books = await _repository.listBooks();
     return books.map((b) => b.filePath).toSet();

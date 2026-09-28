@@ -12276,8 +12276,6 @@ void main() {
 
     testWidgets('選擇器取消：不顯示 SnackBar、不呼叫 relinkBook、按鈕恢復可用、'
         '錯誤視圖維持原樣', (tester) async {
-      final repository = FakeLibraryRepository(
-          initialBooks: [_relinkTestBook(filePath: oldUri)]);
       final service = FakeBookImportService();
       await _pumpContentUriReader(tester,
           prefsManager: prefsManager,
@@ -12297,7 +12295,8 @@ void main() {
           isNotNull);
       expect(errorText(tester),
           '找不到原始檔案，可能已被移動、改名或刪除。請先確認檔案仍在裝置中，再重新選取。');
-      expect((await repository.findBookById('b_probe'))!.filePath, oldUri);
+      // 程式審查 M-2：ReaderScreen 本身不寫資料庫，「記錄不變」由
+      // book_import_service_test.dart 的 relinkBook 失敗案例驗證。
     });
 
     for (final entry in {
@@ -12306,10 +12305,8 @@ void main() {
       BookRelinkFailureReason.alreadyInLibrary: '這個檔案已經是書庫中的另一本書',
       BookRelinkFailureReason.failed: '重新連結失敗，請再試一次',
     }.entries) {
-      testWidgets('${entry.key}：錯誤視圖維持原樣並顯示對應 SnackBar，記錄不變',
+      testWidgets('${entry.key}：錯誤視圖維持原樣並顯示對應 SnackBar，不重新開書',
           (tester) async {
-        final repository = FakeLibraryRepository(
-            initialBooks: [_relinkTestBook(filePath: oldUri)]);
         final cacheCalls = _overrideCacheBookForServing();
         final service = FakeBookImportService()
           ..relinkResult = BookRelinkFailure(entry.key);
@@ -12330,9 +12327,41 @@ void main() {
         expect(errorText(tester), 'App 對這個檔案的存取權限已失效，請重新選取檔案。');
         expect(find.byKey(relinkButton), findsOneWidget);
         expect(cacheCalls.length, cacheCallsBefore, reason: '失敗時不可重新開書');
-        expect((await repository.findBookById('b_probe'))!.filePath, oldUri);
+        // 程式審查 M-2：ReaderScreen 本身不寫資料庫，「記錄不變」由
+        // book_import_service_test.dart 的 relinkBook 失敗案例驗證。
       });
     }
+
+    testWidgets('先選錯再選對：重新開書時收掉上一次的失敗提示（程式審查 M-1）',
+        (tester) async {
+      _overrideCacheBookForServing();
+      final service = FakeBookImportService()
+        ..relinkResult = const BookRelinkFailure(
+            BookRelinkFailureReason.contentMismatch);
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: service,
+          pickSingleBookFile: _FakeSingleBookFilePicker(
+              (uri: newUri, displayName: 'book.epub')).call);
+      await failAndShowError(tester);
+
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('選取的檔案與原書內容不同，請選取同一本書'), findsOneWidget);
+
+      service.relinkResult =
+          BookRelinkSuccess(_relinkTestBook(filePath: newUri));
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+      await tester.pump();
+      // 等 SnackBar 的收合動畫跑完。
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byKey(const Key('reader_error_text')), findsNothing);
+      expect(find.text('選取的檔案與原書內容不同，請選取同一本書'), findsNothing);
+    });
 
     testWidgets('relinkBook 拋出例外：視為 failed，顯示 SnackBar 且按鈕恢復可用'
         '（Review Focus 4）', (tester) async {
