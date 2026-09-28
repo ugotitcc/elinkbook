@@ -2132,6 +2132,18 @@ abstract class AppLocalizations {
   /// **'無法載入書籍'**
   String get readerFailedToLoadBookMessage;
 
+  /// epic-15 Issue 1：開書失敗且存取探測結果為權限已撤銷（SecurityException）時的錯誤說明
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'App 對這個檔案的存取權限已失效，請重新選取檔案。'**
+  String get readerStoragePermissionRevokedMessage;
+
+  /// epic-15 Issue 1：開書失敗且存取探測結果為檔案不存在（FileNotFoundException）時的錯誤說明
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'找不到原始檔案，可能已被移動、改名或刪除。請先確認檔案仍在裝置中，再重新選取。'**
+  String get readerStorageFileNotFoundMessage;
+
   /// TTS 睡眠定時器選單的分鐘數選項文字，{minutes} 為分鐘數（固定選項 15/30/45/60，恆大於 1，不需要 ICU plural）
   ///
   /// In zh_TW, this message translates to:

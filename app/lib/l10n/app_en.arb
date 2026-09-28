@@ -338,6 +338,8 @@
   "readerTtsVoicePickerTitle": "Voice",
   "readerUnsupportedFormatMessage": "Unsupported file format",
   "readerFailedToLoadBookMessage": "Failed to load book",
+  "readerStoragePermissionRevokedMessage": "The app's access to this file has expired. Please select the file again.",
+  "readerStorageFileNotFoundMessage": "The original file could not be found. It may have been moved, renamed, or deleted. Make sure the file is still on the device, then select it again.",
   "readerTtsSleepTimerOptionMinutes": "{minutes} min",
   "readerTtsSleepTimerNoLimitLabel": "No limit",
   "settingsScaffoldTitle": "Settings",

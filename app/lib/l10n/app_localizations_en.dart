@@ -1195,6 +1195,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readerFailedToLoadBookMessage => 'Failed to load book';
 
   @override
+  String get readerStoragePermissionRevokedMessage =>
+      'The app\'s access to this file has expired. Please select the file again.';
+
+  @override
+  String get readerStorageFileNotFoundMessage =>
+      'The original file could not be found. It may have been moved, renamed, or deleted. Make sure the file is still on the device, then select it again.';
+
+  @override
   String readerTtsSleepTimerOptionMinutes(int minutes) {
     return '$minutes min';
   }

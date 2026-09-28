@@ -55,6 +55,8 @@ import '../reader/pdf_toc_item.dart';
 import '../reader/pdf_toc_navigator.dart';
 import '../reader/pdf_selection_info.dart';
 import '../reader/reading_position.dart';
+import '../reader/foliate_native_bridge.dart'
+    show StorageAccessProbeResult, probeStorageAccess;
 import '../reader/reader_console_log.dart';
 import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
@@ -371,6 +373,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // Issue 2 會在 Re-link 成功時重新賦值，本 Issue 暫無寫入點，故保留非 final。
   // ignore: prefer_final_fields
   late String _activeFilePath = widget.filePath;
+  /// epic-15-storage-permission Issue 1：開書失敗後的存取探測結果。
+  /// 錯誤視圖依它分流顯示說明文字；Issue 2 依它決定是否顯示「重新選取
+  /// 檔案」按鈕。只有 `content://` 書籍的 onError 會探測，其餘情況維持
+  /// null（顯示原本的錯誤訊息）。
+  StorageAccessProbeResult? _probeResult;
+
+  /// epic-15-storage-permission Issue 1：探測進行中。期間忽略後續
+  /// onError 與開書逾時——底層視圖此時仍在樹上，可能連續回報多次錯誤。
+  bool _isProbingAccess = false;
   // 自動偵測結果（來自 onLayoutResolved），唯讀、不持久化，每次開書重新
   // 偵測（見 docs/epics/epic-3-fonts-layout/design.md「架構異動：新增
   // book_reader_prefs 資料表」）。
@@ -1937,10 +1948,41 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void _handleError(String message) {
     if (!mounted) return;
     if (_state != _RenderState.loading) return;
+    // epic-15-storage-permission Issue 1：探測進行中再收到的錯誤一律忽略。
+    if (_isProbingAccess) return;
     _openBookTimeoutTimer?.cancel();
+    if (_activeFilePath.startsWith('content://')) {
+      // 維持載入指示器，探測完才切到錯誤視圖，避免 E-Ink 畫面先閃出通用
+      // 錯誤再換成分類說明。
+      _isProbingAccess = true;
+      _probeAccessAndShowError(message);
+      return;
+    }
     setState(() {
       _state = _RenderState.error;
       _errorMessage = message;
+    });
+  }
+
+  /// epic-15-storage-permission Issue 1：探測 [_activeFilePath] 的可讀性，
+  /// 完成後切到錯誤視圖。結果回來時若 State 已 dispose，或開書其實已經
+  /// 成功（狀態不再是載入中），就直接捨棄結果。
+  Future<void> _probeAccessAndShowError(String message) async {
+    StorageAccessProbeResult result;
+    try {
+      result = await probeStorageAccess(_activeFilePath);
+    } catch (_) {
+      // 逾時計時器在第一次錯誤時已取消；探測函式（含測試注入的替身）若
+      // 拋出例外而沒有切到錯誤視圖，閱讀器會永遠停在載入中（審查 I-1）。
+      result = StorageAccessProbeResult.unknownError;
+    }
+    if (!mounted) return;
+    _isProbingAccess = false;
+    if (_state != _RenderState.loading) return;
+    setState(() {
+      _state = _RenderState.error;
+      _errorMessage = message;
+      _probeResult = result;
     });
   }
 
@@ -1951,6 +1993,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void _handleOpenBookTimeout() {
     if (!mounted) return;
     if (_state != _RenderState.loading) return;
+    // epic-15-storage-permission Issue 1：探測進行中由探測結果決定錯誤畫面。
+    if (_isProbingAccess) return;
     setState(() {
       _state = _RenderState.error;
       _errorMessage = AppLocalizations.of(context)!.readerOpenBookTimeoutMessage;
@@ -2858,9 +2902,23 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       return Stack(
         children: [
           Center(
-            child: Text(
-              _errorMessage ?? l10n.readerFailedToLoadBookMessage,
-              key: const Key('reader_error_text'),
+            // epic-15-storage-permission Issue 1：新的分類說明是多行長文字
+            // （英文約 140 字元），加上水平間距並置中，避免貼齊螢幕兩側
+            // （審查 M-1）。
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                // 依存取探測結果分流。
+                switch (_probeResult) {
+                  StorageAccessProbeResult.permissionRevoked =>
+                    l10n.readerStoragePermissionRevokedMessage,
+                  StorageAccessProbeResult.fileNotFound =>
+                    l10n.readerStorageFileNotFoundMessage,
+                  _ => _errorMessage ?? l10n.readerFailedToLoadBookMessage,
+                },
+                key: const Key('reader_error_text'),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
           if (!_cropEditModeActive) _buildChromeTopBar(format),

@@ -1162,6 +1162,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get readerFailedToLoadBookMessage => '無法載入書籍';
 
   @override
+  String get readerStoragePermissionRevokedMessage =>
+      'App 對這個檔案的存取權限已失效，請重新選取檔案。';
+
+  @override
+  String get readerStorageFileNotFoundMessage =>
+      '找不到原始檔案，可能已被移動、改名或刪除。請先確認檔案仍在裝置中，再重新選取。';
+
+  @override
   String readerTtsSleepTimerOptionMinutes(int minutes) {
     return '$minutes 分鐘';
   }
@@ -3305,6 +3313,14 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get readerFailedToLoadBookMessage => '无法载入书籍';
 
   @override
+  String get readerStoragePermissionRevokedMessage =>
+      'App 对这个文件的访问权限已失效，请重新选择文件。';
+
+  @override
+  String get readerStorageFileNotFoundMessage =>
+      '找不到原始文件，可能已被移动、重命名或删除。请先确认文件仍在设备中，再重新选择。';
+
+  @override
   String readerTtsSleepTimerOptionMinutes(int minutes) {
     return '$minutes 分钟';
   }
@@ -5446,6 +5462,14 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerFailedToLoadBookMessage => '無法載入書籍';
+
+  @override
+  String get readerStoragePermissionRevokedMessage =>
+      'App 對這個檔案的存取權限已失效，請重新選取檔案。';
+
+  @override
+  String get readerStorageFileNotFoundMessage =>
+      '找不到原始檔案，可能已被移動、改名或刪除。請先確認檔案仍在裝置中，再重新選取。';
 
   @override
   String readerTtsSleepTimerOptionMinutes(int minutes) {
