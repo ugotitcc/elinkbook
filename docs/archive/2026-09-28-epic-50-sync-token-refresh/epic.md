@@ -1,7 +1,7 @@
 # `epic-50-sync-token-refresh` （缺陷）同步 token 過期後無法同步，須登出再登入才恢復
 
-**狀態：** 🟡 開發中 (Active)
-**存放路徑：** `docs/epics/epic-50-sync-token-refresh/`
+**狀態：** 🟢 已歸檔 (Archived)
+**存放路徑：** `docs/archive/2026-09-28-epic-50-sync-token-refresh/`
 **關聯 PRD 章節：** 同步（PocketBase）；關聯 ADR 0019、已歸檔 `epic-8-sync`
 
 ## 背景
