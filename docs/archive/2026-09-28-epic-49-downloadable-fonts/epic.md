@@ -1,7 +1,7 @@
 # `epic-49-downloadable-fonts` 可下載字型
 
-**狀態：** 🟡 開發中 (Active)
-**存放路徑：** `docs/epics/epic-49-downloadable-fonts/`
+**狀態：** 🟢 已歸檔 (Archived)
+**存放路徑：** `docs/archive/2026-09-28-epic-49-downloadable-fonts/`
 **關聯 PRD 章節：** FR-09（內建字型）、FR-35（全域字型管理）
 
 ## 背景
