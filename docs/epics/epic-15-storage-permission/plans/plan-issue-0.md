@@ -68,7 +68,7 @@
 - Consumes: 既有 `BookImportService`（`app/lib/library/book_import_service.dart`）
 - Produces: `LibraryReaderFeatureRepositories.bookImportService`，型別 `BookImportService?`，建構子具名參數 `this.bookImportService`，預設 null
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 在 `library_screen_dependencies_test.dart` 的 `main()` 內，緊接在既有測試「LibraryReaderFeatureRepositories 原樣持有六個注入的依賴…」之後新增：
 
@@ -91,12 +91,12 @@
 import '../support/fake_book_import_service.dart';
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test test/screens/library_screen_dependencies_test.dart`
 Expected: 編譯錯誤，訊息為 `The getter 'bookImportService' isn't defined` 或 `No named parameter with the name 'bookImportService'`。
 
-- [ ] **Step 3：最小實作**
+- [x] **Step 3：最小實作**
 
 `library_screen_dependencies.dart` import 區，依字母順序插在 `../cloud_import/...` 之後、`../reader/...` 之前：
 
@@ -121,12 +121,12 @@ import '../library/book_import_service.dart';
     this.bookImportService,
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/screens/library_screen_dependencies_test.dart`
 Expected: All tests passed.
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add lib/screens/library_screen_dependencies.dart test/screens/library_screen_dependencies_test.dart
@@ -146,7 +146,7 @@ git commit -m "refactor(library): LibraryReaderFeatureRepositories 新增 bookIm
 - Consumes: Task 1 的 `LibraryReaderFeatureRepositories.bookImportService`（`BookImportService?`）
 - Produces: `ReaderScreen.bookImportService`（`final BookImportService?`，建構子具名參數，預設 null）。Task 3 與 Issue 2 會讀取它。
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 在 `reader_screen_route_test.dart` 的 `group('buildReaderScreen', ...)` 內，既有「欄位對帳」測試之後新增兩個測試：
 
@@ -212,12 +212,12 @@ import '../support/fake_book_import_service.dart';
 
 上面新增的兩個獨立測試照樣保留：一個驗證單獨注入時會轉交，一個驗證未注入時預設為 null。
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test test/screens/reader_screen_route_test.dart`
 Expected: 編譯錯誤 `The getter 'bookImportService' isn't defined for the type 'ReaderScreen'`。
 
-- [ ] **Step 3：最小實作**
+- [x] **Step 3：最小實作**
 
 `reader_screen.dart` import 區，在 `import '../library/library_repository.dart';` 之前新增（若尚未 import）：
 
@@ -248,12 +248,12 @@ import '../library/book_import_service.dart';
     bookImportService: features.bookImportService,
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/screens/reader_screen_route_test.dart`
 Expected: All tests passed（含既有的「欄位對帳」測試）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart lib/screens/reader_screen_route.dart test/screens/reader_screen_route_test.dart
@@ -273,7 +273,7 @@ git commit -m "refactor(reader): ReaderScreen 新增 bookImportService 參數並
 - Consumes: Task 1 的 bundle 欄位、Task 2 的 `ReaderScreen.bookImportService`
 - Produces: 無新介面。完成後，所有開啟閱讀器的路徑都能帶著匯入服務。
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 在 `reader_screen_test.dart` 中，找到既有測試「isFullTextSearchAvailable: false 時，推入的 BookSearchScreen 正確帶入 false（不落回預設值 true）」，在同一個 group 內緊接其後新增：
 
@@ -319,12 +319,12 @@ git commit -m "refactor(reader): ReaderScreen 新增 bookImportService 參數並
 import '../support/fake_book_import_service.dart';
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "bookImportService 會轉送給推入的 BookSearchScreen"`
 Expected: FAIL。`Expected: same instance as <Instance of 'FakeBookImportService'>  Actual: <null>`。
 
-- [ ] **Step 3：最小實作**
+- [x] **Step 3：最小實作**
 
 `reader_screen.dart` 的 `_openBookSearch` 內，`LibraryReaderFeatureRepositories(...)` 參數列的 `isFullTextSearchAvailable: widget.isFullTextSearchAvailable,` 之後新增：
 
@@ -344,12 +344,12 @@ Expected: FAIL。`Expected: same instance as <Instance of 'FakeBookImportService
           bookImportService: widget.importService,
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "BookSearchScreen"`
 Expected: 所有名稱含 `BookSearchScreen` 的測試通過，包含新測試與既有的 `isFullTextSearchAvailable` 轉送測試。
 
-- [ ] **Step 5：確認 `main.dart` 有填入（Review Focus #2）**
+- [x] **Step 5：確認 `main.dart` 有填入（Review Focus #2）**
 
 Run: `grep -n "bookImportService: widget.importService" lib/main.dart`
 Expected: 恰好 1 行輸出。
@@ -357,7 +357,7 @@ Expected: 恰好 1 行輸出。
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart lib/main.dart test/screens/reader_screen_test.dart
@@ -379,12 +379,12 @@ git commit -m "refactor(reader): 閱讀器開單書搜尋時轉送 bookImportSer
 
 這個 Task 是純重構，沒有新的外部行為可以先寫失敗測試。驗證方式改為：改動前先確認相關測試全綠，改動後再跑同一組測試，並用 grep 斷言沒有漏改。
 
-- [ ] **Step 1：改動前先跑一次基準**
+- [x] **Step 1：改動前先跑一次基準**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: All tests passed。記下通過的測試數量，Step 5 會拿來比對。
 
-- [ ] **Step 2：新增欄位**
+- [x] **Step 2：新增欄位**
 
 在 `_ReaderScreenState` 的 `String? _errorMessage;` 之後新增：
 
@@ -405,7 +405,7 @@ Expected: All tests passed。記下通過的測試數量，Step 5 會拿來比�
   late String _activeFilePath = widget.filePath;
 ```
 
-- [ ] **Step 3：取代 15 處 `widget.filePath`**
+- [x] **Step 3：取代 15 處 `widget.filePath`**
 
 先列出目前所有位置：
 
@@ -422,7 +422,7 @@ Expected: 15 行（Step 2 新增的欄位初始化是第 16 處，不要改它�
 
   這兩個閱讀視圖的 `key: _foliateEpubReaderViewKey`／`key: _pdfReaderViewKey` **保持不動**。
 
-- [ ] **Step 4：用 grep 斷言沒有漏改（Review Focus #3）**
+- [x] **Step 4：用 grep 斷言沒有漏改（Review Focus #3）**
 
 Run: `grep -n "widget.filePath" lib/screens/reader_screen.dart`
 Expected: 恰好 1 行，就是 `late String _activeFilePath = widget.filePath;`。
@@ -433,7 +433,7 @@ Expected: 2 行，閱讀視圖的 GlobalKey 仍在。
 Run: `grep -n "ValueKey(_activeFilePath)\|KeyedSubtree" lib/screens/reader_screen.dart`
 Expected: 沒有輸出。
 
-- [ ] **Step 5：執行受影響測試，確認行為不變**
+- [x] **Step 5：執行受影響測試，確認行為不變**
 
 Run: `flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_route_test.dart test/screens/library_search_screen_test.dart test/screens/book_search_screen_test.dart test/screens/library_screen_test.dart`
 Expected: All tests passed。這 5 個是 issues.md Issue 0 列出的畫面測試，涵蓋所有經由 bundle 開啟閱讀器的路徑。
@@ -443,14 +443,14 @@ Step 1 的基準是在 Task 4 開始前跑的，那時 Task 3 新增的測試已
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart
 git commit -m "refactor(reader): ReaderScreen State 改讀 _activeFilePath 取代 widget.filePath（epic-15 Issue 0）"
 ```
 
-- [ ] **Step 7：完整測試（issues.md Issue 0 明訂：本 Issue 大範圍改動 `ReaderScreen`）**
+- [x] **Step 7：完整測試（issues.md Issue 0 明訂：本 Issue 大範圍改動 `ReaderScreen`）**
 
 Run: `flutter test`
 Expected: All tests passed（全專案約 1,800 個測試、約 5 分鐘）。若有失敗，先確認是否為 `docs/archive/*epic-37-test-suite-flakiness*` 記錄的既有不穩定測試：單獨重跑該檔案確認，並在 `epic.md` 記錄，不要為了讓它通過而修改本 Issue 範圍外的程式碼。
@@ -458,7 +458,7 @@ Expected: All tests passed（全專案約 1,800 個測試、約 5 分鐘）。�
 Run: `node tool/check_l10n_hardcoded_strings.js`
 Expected: 無新增違規（本 Issue 不新增字串，這一步只是確認沒有意外）。
 
-- [ ] **Step 8：更新進度文件並 commit**
+- [x] **Step 8：更新進度文件並 commit**
 
 - 把 `docs/epics/epic-15-storage-permission/issues.md` Issue 0 的 `**Status:** ready-for-agent` 改為 `**Status:** completed`。
 - 在 `docs/epics/epic-15-storage-permission/epic.md` 的「目前狀態」之前，新增一段 Issue 0 完成記錄，內容包含：完成日期、4 個 commit、完整 `flutter test` 的結果與執行時的 commit。

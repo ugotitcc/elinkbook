@@ -51,6 +51,17 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
   - I-4：ARB 為四份（含 `app_zh.arb`），改完執行 `flutter gen-l10n`。
   - Minor：探測結果以型別化欄位保存、明訂 widget Key 與選擇器 typedef、補 `library_screen_dependencies_test.dart`。
 
+## Issue 0 完成記錄（2026-09-28）
+
+分支 `epic-15/issue-0`，共 4 個 commit（依 `plans/plan-issue-0.md` 逐 Task 提交）：
+
+1. `681363ff` — `refactor(library): LibraryReaderFeatureRepositories 新增 bookImportService 欄位`
+2. `65ca731d` — `refactor(reader): ReaderScreen 新增 bookImportService 參數並由 buildReaderScreen 轉交`
+3. `f4ea11a6` — `refactor(reader): 閱讀器開單書搜尋時轉送 bookImportService，main.dart 填入實例`
+4. `24b81d90` — `refactor(reader): ReaderScreen State 改讀 _activeFilePath 取代 widget.filePath`
+
+完整 `flutter test`（執行時 commit `24b81d90`）：2941 通過、1 跳過、1 失敗。唯一的失敗是 `test/wifi_transfer/wifi_transfer_http_server_test.dart` 的 `activeTransfersNotifier` 案例，與本 Issue 範圍無關——已在乾淨的 BASE（`a06e7c20`）重現同樣失敗，確認為既有問題，未為此修改範圍外程式碼。`flutter analyze` 乾淨（`No issues found!`），`node tool/check_l10n_hardcoded_strings.js` 通過（本 Issue 不新增字串）。
+
 ## 目前狀態
 
 Scrum Master 完成（`issues.md`）。下一步：認領 Issue 0，撰寫 `plans/plan-issue-0.md`。

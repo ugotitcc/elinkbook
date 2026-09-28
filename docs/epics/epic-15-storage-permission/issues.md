@@ -11,7 +11,7 @@ Issue 0（prefactor）──> Issue 1（失效分類提示）──┬──> Is
 
 ## Issue 0：閱讀器改用「目前生效的檔案路徑」，匯入服務併入依賴 bundle（prefactor）
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** 無。
 
