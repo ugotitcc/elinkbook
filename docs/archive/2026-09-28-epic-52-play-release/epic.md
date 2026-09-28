@@ -1,7 +1,7 @@
 # `epic-52-play-release` 上架 Google Play 的前置工作
 
-**狀態：** 🟡 開發中 (Active)
-**存放路徑：** `docs/epics/epic-52-play-release/`
+**狀態：** 🟢 已歸檔 (Archived)
+**存放路徑：** `docs/archive/2026-09-28-epic-52-play-release/`
 **關聯文件：** `docs/research/google_play_release_sop.md`、`docs/research/cloud_storage_oauth_setup_guide.md`
 
 ## 背景
