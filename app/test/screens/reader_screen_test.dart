@@ -7374,11 +7374,11 @@ void main() {
     expect(dimmingBarrierFinder, findsNothing);
   });
 
-  testWidgets('淺色主題下開啟版面設定 Bottom Sheet，遮罩維持 Flutter 既有預設值'
-      '（不受深色主題專用修法影響，回歸保證；epic-38-reader-chrome-tts-'
-      'redesign Issue 1 審查修正：原測試觸發點 reader_foliate_progress_button'
-      '已隨進度 Bottom Sheet 一併移除，改用仍存在的 reader_chrome_layout_button，'
-      '驗證意圖不變——淺色主題不套用深色主題那套透明遮罩特例）', (tester) async {
+  testWidgets('淺色主題下開啟版面設定 Bottom Sheet，遮罩同樣透明，看得到閱讀內容'
+      '（2026-09-28 真機回報：面板改為不撐滿螢幕後，上方露出的 54% 黑遮罩'
+      '在 E-Ink 上抖動成一片黑，看不到正在調整的內文。版面設定三個面板'
+      '改為一律透明遮罩，讓使用者即時預覽；取代原本「淺色主題維持 Flutter'
+      '預設 black54」的回歸保證）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('zh', 'TW'),
@@ -7413,12 +7413,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    final barrier = tester.widget<ModalBarrier>(
-      find.byWidgetPredicate(
-        (widget) => widget is ModalBarrier && widget.color != null,
-      ),
+    final dimmingBarrierFinder = find.byWidgetPredicate(
+      (widget) =>
+          widget is ModalBarrier && widget.color != null && widget.color!.a > 0,
     );
-    expect(barrier.color, Colors.black54);
+    expect(dimmingBarrierFinder, findsNothing);
   });
 
   testWidgets('深色主題下流式 EPUB「返回」浮動按鈕底色/圖示色跟隨 Theme.of(context)'
