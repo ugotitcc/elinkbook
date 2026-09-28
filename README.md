@@ -1,37 +1,73 @@
 # elinkBook（全能跨平台電子書閱讀器）
 
+<img src="assets/appicon_v2.jpg" alt="elinkBook App 圖示" width="120">
+
 跨平台電子書閱讀器，核心差異化在於**繁體中文直排（Vertical Writing）排版的正確與高品質支援**——包含標點符號正確位置（破折號、引號）、避頭尾換行規則——並提供深度排版客製化與無縫跨裝置同步。
 
 ## 核心特色
 
-- **直排排版**：符合正體中文標準排版規範的直排/橫排一鍵切換
-- **內建商用授權字型**：原俠正楷、台灣圓體、源流明體（另含思源黑體、思源宋體作為開源基礎字型），皆可離線渲染
-- **深度版面客製化**：行距、段落間距、四邊獨立邊距、換頁效果、主題（深色/羊皮紙）、螢幕方向鎖定等
-- **書籤、劃線與備註**：獨立管理、單筆與批次刪除、統一清單、Markdown 導出
-- **跨裝置雲端同步**：閱讀進度、劃線、備註、書籤自動同步（後端採用 PocketBase）
-- **全文檢索**：書名、作者、書內全文快速檢索
-- **閱讀統計**：每日閱讀時長熱點圖
+- **排版方向**：依書本 CSS／中繼資料自動偵測直排或橫排，也可手動強制直排／強制橫排；直排時標點轉向置中、遵守避頭尾規則
+- **深度版面客製化**：字體大小、字重、字距、行距、段落間距、四邊獨立邊距、文字對齊、翻頁模式（點擊翻頁／滾動翻頁）、螢幕方向鎖定、停用書本 CSS；每個數值型設定都有 +/- 微調按鈕，並支援版面設定預設集
+- **可下載字型**：思源黑體、思源宋體，以及商用授權字型原俠正楷、台灣圓體、源流明體；字型檔不打包進安裝檔，由使用者在字型管理下載後離線渲染，也可以上傳自訂字型
+- **主題與 E-Ink 高對比模式**：預設（淺色）、深色、羊皮紙三種主題，加上可與任一主題同時開啟的 E-Ink 高對比模式（減少過渡動畫、避免殘影）
+- **PDF 專業增強**：影像濾鏡（對比度、亮度、加粗）、智慧／手動裁切、Page-fit／Fit Width／1:1 顯示模式、橫向雙頁並列
+- **書籤、劃線與備註**：劃線支援多色與螢光筆，統一側邊欄檢視，支援單筆與批次刪除、Markdown 導出
+- **目錄、頁碼與全文檢索**：跨格式通用目錄、書內搜尋；書庫全文檢索可查書名、作者與書內內容
+- **語音朗讀（TTS）**：朗讀時同步高亮目前唸到的句子
+- **簡繁轉換**：閱讀時轉換書籍內容文字
+- **圖書庫管理**：格狀／列表檢視、分類（可依資料夾名稱自動分類）、多種排序、批次操作
+- **多元匯入來源**：本機檔案／資料夾、Google Drive、OneDrive（不依賴 Google Play Services）、Calibre 遠端書架、WiFi 傳書（同一個區網雙向傳書，對方不必安裝 App）
+- **跨裝置雲端同步**：閱讀位置、劃線、備註、書籤自動同步（後端採用 PocketBase）；雲端位置與本機不一致時，先詢問使用者才跳轉
+- **導覽與操作**：可自訂的 3×3 九宮格點擊熱區（直排時左右鏡像）、音量鍵翻頁、全螢幕模式
+- **多語系介面**：正體中文、簡體中文、英文
 
 ## 支援格式
 
-- ePub3（流式與定樣式 FXL）
-- KF8 / AZW3
+- ePub3（流式與固定版面 FXL）
+- KF8／AZW3
 - CBZ（漫畫壓縮檔）
-- TXT（自動編碼偵測，含繁體中文常見的 Big5）
+- TXT（自動偵測編碼，含 UTF-8／UTF-16／Big5／GBK，並自動抽取章節）
+- Markdown
 - PDF
-- Markdown（開發中）
 
 ## 目前狀態
 
-App 殼層為 Flutter，手機優先、Android 先於 iOS（iOS 尚未啟動）。EPUB／KF8／CBZ／TXT 皆透過 `readest/foliate-js`（釘定版本，`flutter_inappwebview` 內執行）統一渲染，不再使用 Readium；PDF 改用 `pdfrx`（PDFium 透過 `dart:ffi` 直接呼叫），不再使用平台原生 API，詳見 [`CLAUDE.md`](CLAUDE.md) 與 `docs/adr/`。程式碼位於 [`app/`](app/)。
+App 殼層為 Flutter，手機優先，Android 先於 iOS（最低支援 Android 11）。EPUB／KF8／CBZ／TXT／MD 統一由 `readest/foliate-js`（釘定版本，在 `flutter_inappwebview` 內執行）渲染；TXT 與 MD 匯入時會先合成為 EPUB3 結構。PDF 使用 `pdfrx`（透過 `dart:ffi` 直接呼叫 PDFium）。各項技術決策請見 [`docs/adr/`](docs/adr/)。
 
-圖書庫管理、直排/橫排排版、字型與版面客製化、書籤/劃線/備註、跨裝置雲端同步（PocketBase）已完成並可正常使用；全文檢索與閱讀統計熱點圖尚未開始開發；iOS 移植、社群分享等留待後續。完整、即時的 Epic/Issue 進度請一律以 [`docs/epics.md`](docs/epics.md) 為準——本檔案僅描述現況大致樣貌，不逐一列舉每個 Epic 的完成細節。
+上方「核心特色」列出的功能皆已完成。**尚未開始**：閱讀統計（每日閱讀時長熱點圖）、社群分享、iOS 移植。
 
-完整需求請見 [`docs/prd.md`](docs/prd.md)；給 Claude Code 的開發指引請見 [`CLAUDE.md`](CLAUDE.md)。
+完整、即時的 Epic／Issue 進度一律以 [`docs/epics.md`](docs/epics.md) 為準，本檔案只描述現況的大致樣貌。完整需求請見 [`docs/prd.md`](docs/prd.md)，領域用語請見 [`CONTEXT.md`](CONTEXT.md)。
+
+## 開發快速上手
+
+所有指令都在 `app/` 目錄下執行：
+
+```bash
+flutter pub get
+flutter analyze        # 提交前必須是 "No issues found!"
+flutter test
+flutter run
+```
+
+- 需要測試 Google Drive／OneDrive 的真實 OAuth 登入時，請參考 `app/config/cloud_oauth.example.json` 建立 `cloud_oauth.json`（不進版控），並加上 `--dart-define-from-file=config/cloud_oauth.json` 執行。
+- 整合測試（`app/integration_test/`）必須在真實裝置或模擬器上執行；其他檢查工具請見 [`app/tool/README.md`](app/tool/README.md)。
+- 架構說明、測試分層與開發流程（SDD）請見 [`CLAUDE.md`](CLAUDE.md)，UI 設計規範請見 [`DESIGN.md`](DESIGN.md)。
+
+## 目錄導覽
+
+| 路徑 | 內容 |
+|---|---|
+| [`app/`](app/) | Flutter App 主程式 |
+| [`docker/`](docker/) | PocketBase 同步後端（部署方式見 [`docker/README.md`](docker/README.md)） |
+| [`fonts-cdn/`](fonts-cdn/) | 可下載字型的 Cloudflare R2＋Worker（部署方式見 [`fonts-cdn/README.md`](fonts-cdn/README.md)） |
+| [`site/`](site/) | 產品官網、隱私權政策與服務條款 |
+| [`store/`](store/) | Google Play 商店上架素材 |
+| [`prototype/`](prototype/) | UI/UX 原型（權威版本為 `elinkbook_theme_prototype.html`） |
+| [`docs/`](docs/) | PRD、Epic 看板與各 Epic 文件、ADR、研究報告 |
 
 ## 範圍外（Non-Goals）
 
 - 不支援解除 DRM（如 Adobe DRM）
-- 不提供電子書商店（採購/租閱）
-- 不支援 PDF 內容編輯（文字/圖片修改）
+- 不提供電子書商店（採購／租閱）
+- 不支援 PDF 內容編輯（文字／圖片修改）
 - 不含完整社交平台功能，僅支援單向分享
