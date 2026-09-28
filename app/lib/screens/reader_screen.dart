@@ -35,6 +35,7 @@ import '../reader/tts_provider.dart';
 import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
+import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../reader/highlight.dart';
 import '../reader/highlight_style.dart';
@@ -239,6 +240,13 @@ class ReaderScreen extends StatefulWidget {
   /// 既有預設值，維持既有測試呼叫端零回歸。
   final bool isFullTextSearchAvailable;
 
+  /// epic-15-storage-permission Issue 0：書籍匯入服務，由
+  /// `LibraryReaderFeatureRepositories.bookImportService` 經
+  /// `buildReaderScreen` 轉交。供 Issue 2「檔案存取失效時重新連結書籍」
+  /// 使用；`null` 時不提供重新連結功能（比照 [libraryRepository] 等既有
+  /// 選用依賴的慣例，既有測試呼叫端零回歸）。
+  final BookImportService? bookImportService;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -265,6 +273,7 @@ class ReaderScreen extends StatefulWidget {
     this.initialJumpTarget,
     this.searchRepository,
     this.isFullTextSearchAvailable = true,
+    this.bookImportService,
   });
 
   @override
