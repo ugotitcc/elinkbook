@@ -308,7 +308,7 @@ Future<StorageAccessProbeResult> probeStorageAccessViaChannel(
 - [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/reader/foliate_native_bridge_test.dart`
-Expected: All tests passed，包含新增的 12 個與既有測試。
+Expected: All tests passed，包含新增的 13 個與既有測試（4 個代碼迴圈案例＋9 個單獨案例；原寫 12 個為計數錯誤，程式審查 M-3 更正）。
 
 Run: `flutter analyze`
 Expected: `No issues found!`

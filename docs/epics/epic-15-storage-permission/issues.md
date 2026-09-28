@@ -156,6 +156,8 @@ Issue 0（prefactor）──> Issue 1（失效分類提示）──┬──> Is
   - 以 `findBookById` 取得的最新記錄為基礎：測試替身中預先寫入的閱讀位置，在 Re-link 後仍然保留。
 - `ReaderScreen` widget test（注入假的探測、假的選擇器、記憶體版 repository 與匯入服務測試替身）：
   - `permissionRevoked`／`fileNotFound` 顯示按鈕；`readable`／`unknownError` 不顯示；bundle 中沒有匯入服務時不顯示。
+  - **補 Issue 1 程式審查 M-1**：在測試內暫時讓 `cacheBookForServing` 回傳 null（其餘測試維持全檔的成功覆寫），確認「`FoliateReaderView` 讀取失敗 → `onError` → 探測」這條完整鏈路會呼叫探測一次並顯示對應說明。Issue 1 的測試是直接呼叫 `onError`，沒有覆蓋這一段。
+  - **補 Issue 1 程式審查 M-2**：新增一個 `content://…/book.pdf` 的 `permissionRevoked` 案例，確認 PDF 書也會觸發探測並顯示重新選取按鈕。
   - 選取成功後，repository 中該書的 `filePath` 已更新、`id` 不變，畫面回到載入中，而且假 `cacheBookForServing` 被**再呼叫一次**，收到的是新路徑。這個案例同時證明閱讀視圖確實重新建立，所以不需要 `ValueKey`。
   - Re-link 回傳落地複本路徑時，重新開書使用的是該本機路徑。
   - 重新開書後再次卡住時，30 秒開書逾時仍會觸發。
