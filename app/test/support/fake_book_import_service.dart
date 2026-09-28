@@ -28,6 +28,20 @@ class ImportCallRecord {
   });
 }
 
+/// 記錄一次 [BookImportService.relinkBook] 的呼叫參數
+/// （epic-15-storage-permission Issue 2）。
+class RelinkCallRecord {
+  final String bookId;
+  final String newUri;
+  final String? displayName;
+
+  const RelinkCallRecord({
+    required this.bookId,
+    required this.newUri,
+    this.displayName,
+  });
+}
+
 /// 供 widget test 使用的 [BookImportService] 假實作。預設立即回傳空清單；
 /// 若設定 [pendingCompleter]，`importFiles`/`importFolder` 改為等待該
 /// completer 完成才回傳（或拋出例外，取決於呼叫 `complete`/`completeError`），
@@ -81,5 +95,37 @@ class FakeBookImportService implements BookImportService {
     final completer = pendingCompleter;
     if (completer != null) return completer.future;
     return Future.value(const ImportResult(importedBooks: []));
+  }
+
+  /// epic-15-storage-permission Issue 2：[relinkBook] 的回傳值，預設為
+  /// `failed`。測試可改成 [BookRelinkSuccess] 或其他失敗原因。
+  BookRelinkResult relinkResult =
+      const BookRelinkFailure(BookRelinkFailureReason.failed);
+
+  /// 設定時 [relinkBook] 改為等待此 completer，讓測試控制「處理中」的時間點。
+  Completer<BookRelinkResult>? relinkCompleter;
+
+  /// 設定時 [relinkBook] 回傳 `Future.error(relinkError)`，模擬服務拋出例外。
+  Object? relinkError;
+
+  /// 每次 [relinkBook] 的呼叫參數，依呼叫順序排列。
+  final List<RelinkCallRecord> relinkCalls = [];
+
+  @override
+  Future<BookRelinkResult> relinkBook(
+    String bookId,
+    String newUri, {
+    String? displayName,
+  }) {
+    relinkCalls.add(RelinkCallRecord(
+      bookId: bookId,
+      newUri: newUri,
+      displayName: displayName,
+    ));
+    final error = relinkError;
+    if (error != null) return Future.error(error);
+    final completer = relinkCompleter;
+    if (completer != null) return completer.future;
+    return Future.value(relinkResult);
   }
 }

@@ -66,6 +66,15 @@ class _ThrowingImportService implements BookImportService {
     bool autoGroupByFolderName = true,
   }) =>
       Future.value(const ImportResult(importedBooks: []));
+
+  // epic-15-storage-permission Issue 2：介面新增方法，本測試不使用。
+  @override
+  Future<BookRelinkResult> relinkBook(
+    String bookId,
+    String newUri, {
+    String? displayName,
+  }) =>
+      Future.value(const BookRelinkFailure(BookRelinkFailureReason.failed));
 }
 
 void main() {
