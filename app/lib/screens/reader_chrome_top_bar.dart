@@ -66,8 +66,13 @@ class ReaderChromeTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 標題是空字串就等於沒有頁首內容可畫（2026-09-12 起 reader_screen
+    // 傳入的 chapterTitle 恆為空，頁首文字改由閱讀畫面另外顯示）。只看
+    // isHeaderVisible 會在「顯示頁首開＋工具列收合」時留下一條空白色帶
+    // （2026-09-28 真機回報）。
+    final showTitle = isHeaderVisible && chapterTitle.isNotEmpty;
     // 三組皆不需要顯示時整個不佔版面（全沉浸體驗）。
-    if (!isHeaderVisible && !isToolbarVisible && !showTtsIndicator) {
+    if (!showTitle && !isToolbarVisible && !showTtsIndicator) {
       return const SizedBox.shrink();
     }
     final l10n = AppLocalizations.of(context)!;
@@ -107,7 +112,7 @@ class ReaderChromeTopBar extends StatelessWidget {
                   onPressed: onBack,
                 ),
               Expanded(
-                child: isHeaderVisible
+                child: showTitle
                     ? Text(
                         key: const Key('reader_chrome_title'),
                         chapterTitle,

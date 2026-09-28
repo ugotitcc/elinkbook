@@ -225,7 +225,11 @@ void main() {
 
   group('書架搜尋（2026-09-08 /grill-with-docs 使用者需求，比照 '
       'prototype/elinkbook_theme_prototype.html 常駐搜尋列設計）', () {
-    testWidgets('AppBar 下方顯示常駐搜尋列', (tester) async {
+    // 2026-09-28 使用者需求：取代原「AppBar 下方常駐搜尋列」——搜尋列改收
+    // 在標題列的 🔍 按鈕，點了才在標題列展開，不佔書架內容區高度（讓
+    // Mobiscribe Wave 排得下兩列封面）。
+    testWidgets('搜尋列預設收合在標題列 🔍 按鈕，點了在標題列展開，點 ✕ 清空並收合',
+        (tester) async {
       final book = _testBook(id: '1', title: '紅樓夢');
       await pumpLocalizedWidget(
       tester,
@@ -237,7 +241,29 @@ void main() {
     );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('library_search_field')), findsOneWidget);
+      final field = find.byKey(const Key('library_search_field'));
+      final toggle = find.byKey(const Key('library_search_toggle_button'));
+      expect(field, findsNothing);
+      expect(
+        find.descendant(of: find.byType(AppBar), matching: toggle),
+        findsOneWidget,
+      );
+
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: find.byType(AppBar), matching: field),
+        findsOneWidget,
+      );
+
+      await tester.enterText(field, '紅');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_search_close_button')));
+      await tester.pumpAndSettle();
+      expect(field, findsNothing);
+      expect(toggle, findsOneWidget);
+      // 收合時一併清空關鍵字，書架恢復完整清單。
+      expect(find.byKey(const Key('book_item_1')), findsOneWidget);
     });
 
     testWidgets('輸入搜尋字串後，僅顯示書名或作者符合的書籍（不分大小寫），且不再顯示分類拼貼格',
@@ -260,6 +286,8 @@ void main() {
       // 搜尋前：分類拼貼格存在。
       expect(find.byKey(const Key('group_tile_古典文學')), findsOneWidget);
       expect(find.byKey(const Key('group_tile_科幻')), findsOneWidget);
+
+      await _openLibrarySearchField(tester);
 
       await tester.enterText(
         find.byKey(const Key('library_search_field')),
@@ -290,12 +318,16 @@ void main() {
     );
       await tester.pumpAndSettle();
 
+      await _openLibrarySearchField(tester);
+
       await tester.enterText(
         find.byKey(const Key('library_search_field')),
         'dune',
       );
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('group_tile_古典文學')), findsNothing);
+
+      await _openLibrarySearchField(tester);
 
       await tester.enterText(find.byKey(const Key('library_search_field')), '');
       await tester.pumpAndSettle();
@@ -325,6 +357,8 @@ void main() {
       expect(find.byKey(const Key('book_item_2')), findsNothing,
           reason: '尚未搜尋前，鑽入「古典文學」分類看不到「科幻」分類的書籍。');
 
+      await _openLibrarySearchField(tester);
+
       await tester.enterText(
         find.byKey(const Key('library_search_field')),
         'dune',
@@ -349,6 +383,8 @@ void main() {
 
       expect(find.byKey(const Key('library_search_clear_button')), findsNothing);
 
+      await _openLibrarySearchField(tester);
+
       await tester.enterText(find.byKey(const Key('library_search_field')), '紅');
       await tester.pumpAndSettle();
 
@@ -369,6 +405,8 @@ void main() {
           ),
     );
       await tester.pumpAndSettle();
+
+      await _openLibrarySearchField(tester);
 
       await tester.enterText(find.byKey(const Key('library_search_field')), 'dune');
       await tester.pumpAndSettle();
@@ -474,7 +512,8 @@ void main() {
                 .gridDelegate
             as SliverGridDelegateWithFixedCrossAxisCount;
     expect(delegate.crossAxisSpacing, 8);
-    expect(delegate.mainAxisSpacing, 12);
+    // 2026-09-28：列間距 12 → 4（讓 Mobiscribe Wave 排得下兩列封面）。
+    expect(delegate.mainAxisSpacing, 4);
   });
 
   testWidgets('從閱讀器返回書架時，重新載入書籍清單，避免後續操作以過期資料覆寫最新進度', (tester) async {
@@ -656,8 +695,9 @@ void main() {
         of: find.byKey(const Key('library_continue_reading_row')),
         matching: find.text('國電腦'),
       ),
-      findsNWidgets(2),
-      reason: 'BookCover 退回文字縮略與 _ContinueReadingRow 標題文字各顯示一次，比照既有測試慣例',
+      findsOneWidget,
+      reason: '2026-09-28 繼續閱讀列縮圖縮成 30x42 後，BookCover 佔位圖太小、'
+          '依其既有門檻不顯示書名縮略，只剩 _ContinueReadingRow 標題文字一處',
     );
   });
 
@@ -4178,15 +4218,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('library_continue_reading_row')), findsOneWidget);
-    // Issue 9：無 coverPath 時 BookCover 退回 CoverPlaceholder 內建書名縮略
-    // 文字，與 _ContinueReadingRow 本身的標題文字各自顯示一次「最近閱讀的
-    // 書」，兩者皆是核准設計、非回歸，預期恰好 2 個匹配。
+    // 2026-09-28 繼續閱讀列縮圖縮成 30x42 後，無 coverPath 時的
+    // CoverPlaceholder 太小、依其既有門檻不顯示書名縮略（原本 Issue 9 預期
+    // 縮略＋標題共 2 個匹配），只剩 _ContinueReadingRow 標題文字一處。
     expect(
       find.descendant(
         of: find.byKey(const Key('library_continue_reading_row')),
         matching: find.text('最近閱讀的書'),
       ),
-      findsNWidgets(2),
+      findsOneWidget,
       reason: '應顯示 lastReadTime 最新的那一本，而不是任何一本有讀過的書',
     );
     expect(
@@ -4230,6 +4270,88 @@ void main() {
       findsNothing,
       reason: '繼續閱讀列是頂層書架的常駐列，下鑽檢視分類時不應出現',
     );
+  });
+
+  // 2026-09-28 使用者需求（Mobiscribe Wave 要排兩列封面）：繼續閱讀列
+  // 壓矮——進度 % 併到「繼續閱讀」字眼後面，從三行字變兩行；書架每列之間
+  // 的間隙縮小。
+  testWidgets('繼續閱讀列：進度併在「繼續閱讀」後面，整列高度不超過 56',
+      (tester) async {
+    final book = _testBook(
+      id: 'recent',
+      title: '最近閱讀的書',
+      lastReadTime: DateTime(2026, 9, 1),
+    ).copyWith(progress: 0.45);
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+    );
+    await tester.pumpAndSettle();
+
+    final row = find.byKey(const Key('library_continue_reading_row'));
+    expect(
+      find.descendant(of: row, matching: find.text('繼續閱讀 · 45%')),
+      findsOneWidget,
+    );
+    expect(tester.getSize(row).height, lessThanOrEqualTo(56));
+  });
+
+  testWidgets('書架格狀檢視每列之間的間隙為 4', (tester) async {
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+          repository: FakeLibraryRepository(
+              initialBooks: [_testBook(id: '1', title: '紅樓夢')]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+    );
+    await tester.pumpAndSettle();
+
+    final grid =
+        tester.widget<GridView>(find.byKey(const Key('library_grid_view')));
+    final delegate =
+        grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+    expect(delegate.mainAxisSpacing, 4);
+    // 2026-09-28：寬高比 0.62 → 0.64，每格略矮，配合搜尋列收進標題列湊出兩列。
+    expect(delegate.childAspectRatio, 0.64);
+  });
+
+  // 2026-09-28 使用者需求：書架封面右上角「⋮」圓形按鈕太大，縮小為原本
+  // 的一半。原本實際渲染是 48（Material 3 自動補足觸控區），看得到的圓
+  // 改為 24；觸控區維持 48，不因為變小而更難點到。
+  testWidgets('書架封面右上角「⋮」圓形按鈕看得到的圓為 24，觸控區維持 48',
+      (tester) async {
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+          repository: FakeLibraryRepository(
+              initialBooks: [_testBook(id: '1', title: '紅樓夢')]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+    );
+    await tester.pumpAndSettle();
+
+    final circle = find.byKey(const Key('book_action_menu_circle_1'));
+    expect(tester.getSize(circle), const Size(24, 24));
+    expect(
+      tester.getSize(find.byKey(const Key('book_action_menu_1'))),
+      const Size(48, 48),
+    );
+    // 小圓貼齊觸控區右上角，位置跟原本一樣靠封面角落，不往內縮。
+    expect(
+      tester.getTopRight(circle),
+      tester.getTopRight(find.byKey(const Key('book_action_menu_1'))),
+    );
+    // 按了仍然要能打開動作選單。
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+    expect(find.byType(BookActionSheet), findsOneWidget);
   });
 
   testWidgets('多選模式進行中，繼續閱讀列不可點擊（review-plan-issue-3.md M-3：避免無勾選指示反饋卻誤觸切換選取狀態）', (
@@ -4674,6 +4796,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await _openLibrarySearchField(tester);
+
     await tester.enterText(
       find.byKey(const Key('library_search_field')),
       '紅樓',
@@ -4693,6 +4817,38 @@ void main() {
           .controller!
           .text,
       '紅樓',
+    );
+  });
+
+  // 2026-09-28 使用者需求：「搜尋書本內容」點了是跳到另一個畫面，不需要在
+  // 書架內容區佔一整列。改成標題列上的圖示按鈕、放在排序按鈕左邊，讓書架
+  // 多出一列的高度（Mobiscribe Wave 可以排兩列封面）。
+  testWidgets('「搜尋書本內容」入口在書架標題列、排序按鈕左邊，不再佔書架內容區',
+      (tester) async {
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+          repository: FakeLibraryRepository(
+              initialBooks: [_testBook(id: '1', title: '紅樓夢')]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            searchRepository: FakeSearchRepository(),
+          ),
+        ),
+    );
+    await tester.pumpAndSettle();
+
+    final entry = find.byKey(const Key('library_content_search_entry_button'));
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: entry),
+      findsOneWidget,
+    );
+    final sortButton = find.byKey(const Key('library_sort_view_button'));
+    expect(tester.getCenter(entry).dx, lessThan(tester.getCenter(sortButton).dx));
+    expect(
+      tester.getCenter(entry).dy,
+      moreOrLessEquals(tester.getCenter(sortButton).dy),
     );
   });
 
@@ -4735,12 +4891,11 @@ void main() {
     await tester.longPress(find.byKey(const Key('book_item_1')));
     await tester.pumpAndSettle();
 
-    await tester.tap(
+    // 2026-09-28：入口移到一般標題列，多選模式換成選取工具列，入口直接不出現。
+    expect(
       find.byKey(const Key('library_content_search_entry_button')),
+      findsNothing,
     );
-    await tester.pumpAndSettle();
-
-    expect(find.byType(LibrarySearchScreen), findsNothing);
   });
 
   testWidgets(
@@ -4968,3 +5123,12 @@ Book _testBook({
   );
 }
 
+/// 2026-09-28：書架搜尋列改收在標題列 🔍 按鈕，輸入前要先展開。已展開時
+/// 不再點（再點會變成 ✕ 收合）。
+Future<void> _openLibrarySearchField(WidgetTester tester) async {
+  if (find.byKey(const Key('library_search_field')).evaluate().isNotEmpty) {
+    return;
+  }
+  await tester.tap(find.byKey(const Key('library_search_toggle_button')));
+  await tester.pumpAndSettle();
+}

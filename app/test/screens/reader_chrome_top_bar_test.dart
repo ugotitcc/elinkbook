@@ -138,6 +138,26 @@ void main() {
     },
   );
 
+  // 真機回報（2026-09-28）：「顯示頁首」開＋工具列收合時，頂部仍留一條
+  // 空白色帶。原因是 2026-09-12 起 reader_screen 傳入的 chapterTitle 恆為
+  // 空字串（頁首文字改由 _buildFoliateHeaderText 另外顯示），但本元件只看
+  // isHeaderVisible 就決定要畫整條。標題是空的就等於沒有頁首可顯示。
+  testWidgets(
+    'isHeaderVisible: true 但標題為空、工具列收合、無 TTS 時，整列不佔版面',
+    (tester) async {
+      await tester.pumpWidget(
+        buildTopBar(
+          chapterTitle: '',
+          isHeaderVisible: true,
+          isToolbarVisible: false,
+          showTtsIndicator: false,
+        ),
+      );
+      final size = tester.getSize(find.byType(ReaderChromeTopBar));
+      expect(size.height, 0);
+    },
+  );
+
   testWidgets('isToolbarVisible: false 時，showTtsIndicator 仍能顯示小喇叭圖示', (
     tester,
   ) async {

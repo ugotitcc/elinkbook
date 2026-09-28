@@ -50,7 +50,8 @@ import 'widgets/reader_option_tile.dart';
 /// （epic-36 Issue 7；`review-plan-issue-7.md` C-2 已確認 `childAspectRatio`
 /// 涵蓋整個 cell，不是只有封面部分，命名從 `_kCoverAspectRatio` 正名為
 /// `_kCellAspectRatio`）。
-const _kCellAspectRatio = 0.62;
+// 2026-09-28：0.62 → 0.64，每格略矮，讓 Mobiscribe Wave 書架排得下兩列。
+const _kCellAspectRatio = 0.64;
 
 /// 圖書庫主畫面：讀取 [LibraryRepository] 的真實資料，取代
 /// epic-0-skeleton 遺留的固定範例書籍清單佔位版本（見
@@ -129,6 +130,9 @@ class _LibraryScreenState extends State<LibraryScreen>
   /// 非空時忽略目前分類瀏覽狀態（`_activeGroupFilter`），視為全庫搜尋。
   final _searchController = TextEditingController();
   String _searchQuery = '';
+  // 書架搜尋列是否在標題列展開（2026-09-28：搜尋列收進標題列 🔍 按鈕，
+  // 不再常駐佔用書架內容區高度）。
+  bool _searchExpanded = false;
 
   /// 書架分頁狀態的唯一負責者（epic-36 Issue 6，架構回顧衍生）：取代原本
   /// 散落在 `build()`／`didChangeMetrics()`／排序/分類切換/換頁按鈕共 7
@@ -805,27 +809,49 @@ class _LibraryScreenState extends State<LibraryScreen>
         .toList();
   }
 
+  /// 展開後放在 AppBar 的 title 位置，取代「書架」標題。
   Widget _buildSearchField() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-      child: TextField(
-        key: const Key('library_search_field'),
-        controller: _searchController,
-        onChanged: _onSearchChanged,
-        decoration: InputDecoration(
-          prefixIcon: const Icon(Icons.search),
-          hintText: AppLocalizations.of(context)!.librarySearchHint,
-          isDense: true,
-          border: const OutlineInputBorder(),
-          suffixIcon: _searchQuery.isEmpty
-              ? null
-              : IconButton(
-                  key: const Key('library_search_clear_button'),
-                  icon: const Icon(Icons.clear),
-                  onPressed: _onSearchCleared,
-                ),
-        ),
+    return TextField(
+      key: const Key('library_search_field'),
+      controller: _searchController,
+      onChanged: _onSearchChanged,
+      autofocus: true,
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.search),
+        hintText: AppLocalizations.of(context)!.librarySearchHint,
+        isDense: true,
+        border: const OutlineInputBorder(),
+        suffixIcon: _searchQuery.isEmpty
+            ? null
+            : IconButton(
+                key: const Key('library_search_clear_button'),
+                icon: const Icon(Icons.clear),
+                onPressed: _onSearchCleared,
+              ),
       ),
+    );
+  }
+
+  /// 標題列上的搜尋列開關：收合時是 🔍，展開時是 ✕（清空關鍵字並收合，
+  /// 書架恢復完整清單）。
+  Widget _buildSearchToggleButton() {
+    final l10n = AppLocalizations.of(context)!;
+    if (!_searchExpanded) {
+      return IconButton(
+        key: const Key('library_search_toggle_button'),
+        icon: const Icon(Icons.search),
+        tooltip: l10n.librarySearchHint,
+        onPressed: () => setState(() => _searchExpanded = true),
+      );
+    }
+    return IconButton(
+      key: const Key('library_search_close_button'),
+      icon: const Icon(Icons.close),
+      tooltip: l10n.close,
+      onPressed: () {
+        _onSearchCleared();
+        setState(() => _searchExpanded = false);
+      },
     );
   }
 
@@ -862,31 +888,19 @@ class _LibraryScreenState extends State<LibraryScreen>
         .then((_) => _bookListController.loadBooks());
   }
 
-  Widget _buildContentSearchEntryBanner() {
-    // 【審查修正 M-2】多選模式下停用入口——長按書籍進入批次選取後，點擊
-    // 入口若仍會跳轉畫面，會意外中斷選取操作，比照 _ContinueReadingRow／
-    // _GroupGridTile 等元件在選取模式下一律停用互動的既有慣例。
+  /// 「搜尋書本內容」入口：書架標題列上、排序按鈕左邊的圖示按鈕。
+  /// 點了是跳到 `LibrarySearchScreen` 另外輸入，不需要在書架內容區佔一
+  /// 整列（2026-09-28 使用者需求：讓出高度，Mobiscribe Wave 可排兩列封面）。
+  /// 只放在一般標題列；多選模式換成選取工具列，入口自然不出現，維持
+  /// 【審查修正 M-2】「選取中不可跳轉畫面」的原意。
+  Widget _buildContentSearchEntryButton() {
     final hasSearchRepository =
         widget.readerFeatureRepositories.searchRepository != null;
-    final available = hasSearchRepository && !_inSelectionMode;
-    return InkWell(
+    return IconButton(
       key: const Key('library_content_search_entry_button'),
-      onTap: available ? _openLibrarySearchScreen : null,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        child: Row(
-          children: [
-            const Icon(Icons.travel_explore, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                AppLocalizations.of(context)!.libraryContentSearchEntryLabel,
-              ),
-            ),
-            const Icon(Icons.chevron_right, size: 18),
-          ],
-        ),
-      ),
+      icon: const Icon(Icons.travel_explore),
+      tooltip: AppLocalizations.of(context)!.libraryContentSearchEntryLabel,
+      onPressed: hasSearchRepository ? _openLibrarySearchScreen : null,
     );
   }
 
@@ -915,8 +929,6 @@ class _LibraryScreenState extends State<LibraryScreen>
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
-                  _buildSearchField(),
-                  _buildContentSearchEntryBanner(),
                   Expanded(
                     child: searchResults != null
                         ? (searchResults.isEmpty
@@ -951,8 +963,12 @@ class _LibraryScreenState extends State<LibraryScreen>
               tooltip: l10n.libraryBackButtonTooltip,
               onPressed: _exitGroupFilteredView,
             ),
-      title: Text(_activeGroupFilter ?? l10n.libraryShelfTitle),
+      title: _searchExpanded
+          ? _buildSearchField()
+          : Text(_activeGroupFilter ?? l10n.libraryShelfTitle),
       actions: [
+        _buildSearchToggleButton(),
+        _buildContentSearchEntryButton(),
         PopupMenuButton<void>(
           key: const Key('library_sort_view_button'),
           icon: const Icon(Icons.sort),
@@ -1215,7 +1231,8 @@ class _LibraryScreenState extends State<LibraryScreen>
               // GridView 自身 padding，會在邊界高度裁切底列內容）。
               const gridPadding = 8.0;
               const gridSpacing = 8.0;
-              const rowSpacing = 12.0;
+              // 2026-09-28：12 → 4，縮小書架每列之間的空白。
+              const rowSpacing = 4.0;
               final cellWidth =
                   (constraints.maxWidth -
                       2 * gridPadding -
@@ -1576,26 +1593,34 @@ class _BookGridTile extends StatelessWidget {
                     alignment: Alignment.topRight,
                     child: Padding(
                       padding: const EdgeInsets.all(4),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: tokens.badgeScrim,
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          key: Key('book_action_menu_${book.id}'),
-                          icon: const Icon(
+                      // 2026-09-28：看得到的圓縮為原本的一半（48 → 24，原本
+                      // Material 3 自動補足觸控區，實際渲染是 48）；IconButton
+                      // 本身維持 48 觸控區，只把圓畫小，不會變得更難點到。
+                      child: IconButton(
+                        key: Key('book_action_menu_${book.id}'),
+                        icon: Container(
+                          key: Key('book_action_menu_circle_${book.id}'),
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: tokens.badgeScrim,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
                             Icons.more_vert,
                             color: Colors.white,
+                            size: 14,
                           ),
-                          iconSize: 18,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
-                          tooltip: AppLocalizations.of(context)!.libraryBookMenuTooltip,
-                          onPressed: onMenuTap,
                         ),
+                        padding: EdgeInsets.zero,
+                        // 小圓貼齊右上角，維持原本靠封面角落的位置。
+                        alignment: Alignment.topRight,
+                        constraints: const BoxConstraints(
+                          minWidth: 48,
+                          minHeight: 48,
+                        ),
+                        tooltip: AppLocalizations.of(context)!.libraryBookMenuTooltip,
+                        onPressed: onMenuTap,
                       ),
                     ),
                   ),
@@ -1739,13 +1764,16 @@ class _ContinueReadingRow extends StatelessWidget {
     return InkWell(
       key: const Key('library_continue_reading_row'),
       onTap: onTap,
+      // 2026-09-28 壓矮本列（讓 Mobiscribe Wave 書架排得下兩列封面）：
+      // 進度 % 併到「繼續閱讀」字眼後面，三行字改兩行，縮圖與上下內距
+      // 跟著縮小。
       child: Padding(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Row(
           children: [
             SizedBox(
-              width: 40,
-              height: 56,
+              width: 30,
+              height: 42,
               child: BookCover(book: book, textConversion: textConversion),
             ),
             const SizedBox(width: 12),
@@ -1755,7 +1783,8 @@ class _ContinueReadingRow extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    AppLocalizations.of(context)!.libraryContinueReadingLabel,
+                    '${AppLocalizations.of(context)!.libraryContinueReadingLabel}'
+                    ' · ${_progressText(book)}',
                     style: const TextStyle(fontSize: 12),
                   ),
                   Text(
@@ -1763,10 +1792,6 @@ class _ContinueReadingRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    _progressText(book),
-                    style: const TextStyle(fontSize: 12),
                   ),
                 ],
               ),

@@ -899,15 +899,22 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 遮罩；淺色/羊皮紙/E-Ink 皆為 `Brightness.light`，維持 Flutter 既有
   /// 預設值不變。本專案所有 Bottom Sheet 呼叫點皆應改用此方法，不直接
   /// 呼叫 `showModalBottomSheet`。
+  ///
+  /// [transparentBarrier] 為 `true` 時不論主題一律不加遮罩：版面設定三個
+  /// 面板（EPUB／PDF／FXL）用，讓使用者邊調整邊看到上方內文即時變化。
+  /// 面板改為不撐滿螢幕後，上方露出的 54% 黑遮罩在 E-Ink 上會抖動成一片
+  /// 黑，完全看不到內文（2026-09-28 真機回報）。
   Future<T?> _showThemedModalBottomSheet<T>({
     required WidgetBuilder builder,
     bool enableDrag = true,
+    bool transparentBarrier = false,
   }) {
     return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
       enableDrag: enableDrag,
-      barrierColor: Theme.of(context).brightness == Brightness.dark
+      barrierColor: transparentBarrier ||
+              Theme.of(context).brightness == Brightness.dark
           ? Colors.transparent
           : null,
       builder: builder,
@@ -917,6 +924,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void _openLayoutSettings() {
     StateSetter? setSheetState;
     _showThemedModalBottomSheet<void>(
+      transparentBarrier: true,
       // Bottom Sheet 預設的下滑關閉手勢（enableDrag: true）與 Slider 的
       // 水平拖曳手勢在混合角度滑動時容易被手勢競技場誤判，導致使用者
       // 調整滑桿時選單意外關閉；停用後仍可點擊背景遮罩關閉。
@@ -957,6 +965,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   void _openPdfSettings() {
     _showThemedModalBottomSheet<void>(
+      transparentBarrier: true,
       enableDrag: false,
       builder: (_) => PdfSettingsSheet(
         prefs: _prefs,
@@ -969,6 +978,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   void _openFxlSettings() {
     _showThemedModalBottomSheet<void>(
+      transparentBarrier: true,
       builder: (_) => FxlSettingsSheet(
         prefs: _prefs,
         onChanged: _handlePrefsChanged,

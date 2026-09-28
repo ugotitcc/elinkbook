@@ -1066,29 +1066,6 @@ void main() {
         reason: '關閉列在 Column 頂端、ListView 之外，捲動內部 ListView 不應移動它的位置');
   });
 
-  testWidgets(
-      '改用 Tab 化版面後，Bottom Sheet 一律撐到近全螢幕高度（不再依內容量縮小）'
-      '（epic-28-reader-settings-enhancements Issue 5：刻意的設計變更，比照 '
-      'TocBottomSheet 既有先例，讓 Expanded(TabBarView) 有界高度可用，取代舊版 '
-      '「內容小於可用高度時緊湊包裹」的 shrink-wrap 行為）',
-      (tester) async {
-    tester.view.physicalSize = const Size(800, 3000);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
-
-    await _pumpModalSheet(tester, BookReaderPrefs.empty, (_) {});
-
-    final sheetHeight = tester.getSize(find.byType(ReaderSettingsSheet)).height;
-    expect(sheetHeight, greaterThan(2500),
-        reason:
-            '改用 DefaultTabController + Expanded(TabBarView) 後，Sheet 應撐滿 '
-            'showModalBottomSheet(isScrollControlled: true) 提供的近全高上限，'
-            '不再像舊版 ListView(shrinkWrap: true) 那樣依內容量縮小');
-  });
-
   testWidgets('英文介面下字型選單的內建字型名稱以英文顯示（epic-48，epic-49 Issue 8）',
       (tester) async {
     await _pumpSheet(tester, const BookReaderPrefs(), (_) {},
@@ -2418,6 +2395,80 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('單欄'), findsNothing);
+  });
+
+  // 真機回報（2026-09-28）：版面設定面板永遠撐滿整個螢幕，內容較短的
+  // 分頁下方一大片空白。面板高度應等於「最高那個分頁的內容高度」，切換
+  // 分頁時高度不變，且不超過螢幕 85%。用真實呼叫端的開法
+  // （showModalBottomSheet + isScrollControlled: true）驗證。
+  // 使用者需求（2026-09-28）：四個分頁切換時不要有任何捲動／滑動動畫，
+  // 點下去就直接切過去（E-Ink 上動畫會殘影）。點一下、只 pump 一個 frame，
+  // 分頁與底線指示器就必須已經切完（不檢查點擊水波紋，那不是捲動）。
+  testWidgets('切換分頁沒有動畫：點一下只 pump 一個 frame 就切完', (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+    final tabController = DefaultTabController.of(
+      tester.element(find.byKey(const Key('reader_settings_font_size_slider'))),
+    );
+
+    for (final (label, index) in [('邊界', 1), ('呈現', 2), ('預設集', 3), ('文字', 0)]) {
+      await tester.tap(find.widgetWithText(Tab, label));
+      await tester.pump();
+      expect(tabController.index, index, reason: label);
+      expect(tabController.animation!.value, index.toDouble(), reason: label);
+    }
+  });
+
+  testWidgets('版面設定面板高度跟最高分頁一樣，不撐滿螢幕，切分頁高度不變',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => ReaderSettingsSheet(
+                prefs: BookReaderPrefs.empty,
+                onChanged: _noopOnChanged,
+                customFonts: const [],
+                installedFonts: AppFont.values.toSet(),
+                bookId: 'b1',
+                layoutPresets: const [],
+                isEinkMode: false,
+                onSaveAsPreset: _noopSaveAsPreset,
+                onApplyPreset: _noopApplyPreset,
+                onApplyFromBook: _noopApplyFromBook,
+                onRequestBookPicker: _noopRequestBookPicker,
+                onDeletePreset: _noopDeletePreset,
+              ),
+            ),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final sheet = find.byType(ReaderSettingsSheet);
+    final textTabHeight = tester.getSize(sheet).height;
+    expect(textTabHeight, lessThan(1400 * 0.85 + 0.01));
+    // 最高的分頁內容約 700 多，面板不該再撐到接近 1400。
+    expect(textTabHeight, lessThan(1000));
+
+    for (final tab in ['邊界', '呈現', '預設集']) {
+      await switchToTab(tester, tab);
+      expect(tester.getSize(sheet).height, textTabHeight, reason: tab);
+    }
   });
 }
 
