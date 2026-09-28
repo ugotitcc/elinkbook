@@ -94,15 +94,34 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 
 ## Issue 2 完成記錄（2026-09-29）
 
-分支 `epic-15/issue-2`，共 2 個 commit（依 `plans/plan-issue-2.md` 逐 Task 提交）：
+分支 `epic-15/issue-2` 的 commit（依 `plans/plan-issue-2.md` 逐 Task 提交，之後依程式審查修正）：
 
 1. `d32936f2` — `feat(library): BookImportService 新增 relinkBook 原地重新連結書籍（epic-15 Issue 2）`
 2. `03a2f919` — `feat(reader): 錯誤畫面重新選取檔案並原地重新開書（epic-15 Issue 2）`
+3. `fd708d8e` — `fix(reader): 依程式審查處理 Issue 2 Minor 意見（epic-15 Issue 2）`
+4. `ad3483a6` — `docs(epic-15): 新增 Issue 2 實作計畫（含計畫審查與程式審查修訂）`
 
-完整 `flutter test`（執行時 commit `03a2f919`，`--concurrency=1`）：3001 通過、1 跳過、0 失敗。`flutter analyze` 乾淨（`No issues found!`），`node tool/check_l10n_hardcoded_strings.js` 通過。
+- **計畫審查**（`reviews/review-plan-issue-2.md`，0 Critical／0 Important／4 Minor）：
+  - 採納 M-1：失敗 SnackBar 先收掉舊的再顯示。
+  - 採納 M-4：選檔後先確認 `mounted`。
+  - 不採納 M-2：`_isProbingAccess` 必定已是 false。
+  - 不採納 M-3：`file.path` 是 file_picker 的快取暫存檔，不能當成書的檔案路徑。
+  - 使用者決定保留 EPUB／PDF／AZW3 格式限制，以及「EPUB 版面偵測重新觸發」這段防禦。
+- **程式審查**（`reviews/review-issue-2.md`，0 Critical／0 Important／4 Minor），使用者決定全部依建議處理：
+  - M-1：Re-link 成功時收掉上一次的失敗提示。
+  - M-2：移除 widget test 中永遠會通過的「記錄不變」斷言。
+  - M-3：EPUB identifier 指紋不符時，退回 SHA-256 再比對一次。
+  - M-4：記為已知限制。
+  - 另外把 `_existingFilePaths` 被擠開的說明註解搬回原位。
+- **已知限制**：
+  - 資料庫存的是 EPUB identifier、重新連結時卻讀不到 identifier，仍會判定為內容不同（程式審查 M-3 的反方向，無從補救）。
+  - `updateBook` 寫入失敗時，已持久化的授權與落地複本不會回收（程式審查 M-4）。原生端沒有釋放授權的方法；複本檔名固定，重試時會覆寫。
+  - 同一個檔案以不同 URI 形式出現時，「已在書庫中」檢查抓不到，例如資料夾匯入的 tree URI 和單檔選取的 document URI。這沿用既有匯入的重複偵測方式。
 
-真機驗證（Task 3）待補：實作環境無 Android 實體裝置（`flutter devices` 僅見 Windows／Chrome／Edge），撤銷授權後重新選取、選錯檔案、返回書架三個情境需以真機手動執行。
+完整 `flutter test`（執行時 commit `ad3483a6`，`--concurrency=1`）：3004 通過、1 跳過、0 失敗。`flutter analyze` 乾淨（`No issues found!`），`node tool/check_l10n_hardcoded_strings.js` 通過。
+
+真機驗證（Task 3）待補：實作環境沒有 Android 實體裝置（`flutter devices` 只看得到 Windows／Chrome／Edge）。撤銷授權後重新選取、選錯檔案、返回書架三個情境，需要用真機手動執行。
 
 ## 目前狀態
 
-Issue 2 已完成、待 PR 合併；真機驗證待補。下一步 Issue 3（與 Issue 2 無依賴，可平行）。
+Issue 2 程式、自動化測試、程式審查皆已完成，**待真機驗證**（`issues.md` 狀態為 `ready-for-human`），驗證通過後再改為 `completed` 並發 PR。下一步 Issue 3（與 Issue 2 無依賴，可平行）。

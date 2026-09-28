@@ -26,7 +26,7 @@
 | 16 | `epic-11-multi-format-reader` 多格式閱讀擴充（KF8/CBZ/TXT/MD） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 17 | `epic-12-social` 社群分享 | ⚪ 未開始 (Backlog) | P3，最低優先 |
 | 18 | `epic-13-ios` iOS 移植 | ⚪ 未開始 (Backlog) | 待 Android 版本（epic-0/2/3/4/5）穩定後啟動 |
-| 19 | `epic-15-storage-permission` 儲存權限失效偵測與復原 | 🟡 開發中 (Active) | Issue 2 已完成 |
+| 19 | `epic-15-storage-permission` 儲存權限失效偵測與復原 | 🟡 開發中 (Active) | Issue 2 待真機驗證 |
 | 20 | `epic-4-pdf-enhance` （技術債）加粗濾鏡裝置矩陣複驗 | ⚪ 未開始 (Backlog) | 原始風險針對舊原生 `PdfImageProcessor.kt`（已於 `epic-24-pdf-engine-rebuild` 移除），新架構（`pdfrx`/`app/lib/reader/pdf_image_filters.dart` 的 `dilateBgraPixels()`＋Isolate）風險前提已不同，非正式觀察舊 Android 上的卡頓/崩潰現象在新架構下未再重現；正式真機複驗對準專案政策底線 Android 11／API 30（非原 API 24-30 全區間），待取得 Android 11 裝置（候選：iReader Ocean 4 Plus）後執行，不阻塞 |
 | 21 | `epic-21-pdf-import-cover-fix` PDF 匯入封面產生管線卡住修復（技術債） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 22 | `epic-18-reader-device-qa` 真機 UI 精修（版面設定/工具列/書架/直排邊距） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
