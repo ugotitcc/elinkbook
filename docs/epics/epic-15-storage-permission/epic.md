@@ -68,7 +68,7 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 - **根因**：伺服器在 `wrapStreamWithCleanup` 的 `controller.done` 之後才釋放許可；背壓下最後的 done 事件要等 socket 寫出、訂閱恢復後才送達，與用戶端讀完回應是兩個獨立 I/O 事件，先後不固定。暫時性探針實測 5 輪皆在讀完後第 2 個事件循環歸零（0～5 ms）——許可確實會釋放，伺服器行為正確，是測試的時序假設錯誤（與 epic-51 同一類）。
 - **修正**：新增測試輔助函式 `_waitForActiveTransfers()`，以監聽 `activeTransfersNotifier` 等待歸零（5 秒逾時即 `fail`，逾時代表許可真的沒釋放），取代「等一個 tick」。正式程式碼不動。
 - **驗證**：修正前穩定失敗（main 與本分支皆然）；修正後該檔連跑 3 次 `+42: All tests passed!`；`flutter analyze` 乾淨。
-- 同檔另一處相同寫法（小檔案下載後 `Duration.zero` 再斷言為 0）目前通過，未一併修改，留待若再失敗時比照處理。
+- 程式審查（`reviews/review-issue-0-wifi-test-fix.md`，0 Critical／0 Important／3 Minor）後：同檔另一處相同寫法（3 位元組下載後只等 `Duration.zero` 就斷言歸零，當時仍通過）一併改用 `_waitForActiveTransfers()`（M-3）；註解不再寫死「第 2 個事件循環」實測值（M-2）；等待後的 `expect(..., 0)` 刻意保留以表達斷言意圖（M-1）。該檔連跑 3 次 `+42: All tests passed!`。
 
 ## 目前狀態
 

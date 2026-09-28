@@ -565,7 +565,7 @@ void main() {
 
       expect(response.statusCode, 200);
       expect(response.bodyBytes, [1, 2, 3]);
-      await Future<void>.delayed(Duration.zero);
+      await _waitForActiveTransfers(wifiServer.activeTransfersNotifier, 0);
       expect(wifiServer.activeTransfersNotifier.value, 0);
     });
 
@@ -612,8 +612,8 @@ void main() {
 
       // epic-15 Issue 0：用戶端讀完回應，和伺服器端串流 done 事件送達
       // （wrapStreamWithCleanup 在 controller.done 之後才釋放許可）是兩個
-      // 獨立的 I/O 事件，先後不固定；實測釋放落在讀完後第 2 個事件循環，
-      // 原本只等一個 Duration.zero 會穩定失敗。改為等待通知值歸零，不猜
+      // 獨立的 I/O 事件，先後不固定，許可常在讀完後再過一兩個事件循環才
+      // 釋放；原本只等一個 Duration.zero 會穩定失敗。改為等待通知值歸零，不猜
       // 要等幾個 tick；逾時代表許可真的沒被釋放。
       await _waitForActiveTransfers(wifiServer.activeTransfersNotifier, 0);
 
