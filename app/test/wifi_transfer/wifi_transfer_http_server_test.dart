@@ -547,7 +547,18 @@ void main() {
         '下載期間 activeTransfersNotifier 維持在 1，直到用戶端讀完整個回應串流'
         '（許可涵蓋整個串流生命週期，非僅至 Response 建構完成——Task 3/7 的'
         '設計修正）', () async {
-      final book = bookWith(id: 'b1', filePath: 'test/fixtures/sample.pdf');
+      // epic-51：原本下載 591 位元組的 test/fixtures/sample.pdf，整個檔案
+      // 一次就塞進作業系統的 socket 緩衝區，伺服器在用戶端收到回應標頭前
+      // 就已送完並釋放許可，本斷言因此必定失敗（伺服器行為本身正確）。改用
+      // 產生的 16MB 檔案，遠大於 socket 緩衝區，確保用戶端還沒讀完時伺服器
+      // 一定還在傳（實測 1MB 即可，留數倍餘裕給緩衝區較大的作業系統）。
+      final bigFile = File(
+          '${Directory.systemTemp.path}/wifi_transfer_download_permit_test.bin');
+      await bigFile.writeAsBytes(List<int>.filled(16 * 1024 * 1024, 7));
+      addTearDown(() async {
+        if (await bigFile.exists()) await bigFile.delete();
+      });
+      final book = bookWith(id: 'b1', filePath: bigFile.path);
       final wifiServer = WifiTransferHttpServer(
         service: WifiTransferService(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
