@@ -1,7 +1,7 @@
 # `epic-48-font-and-language-labels` （缺陷）內建字型清單精簡、不打包字型檔，字型名稱與語言選項的語系顯示修正
 
-**狀態：** 🟡 開發中 (Active)
-**存放路徑：** `docs/epics/epic-48-font-and-language-labels/`
+**狀態：** 🟢 已歸檔 (Archived)
+**存放路徑：** `docs/archive/2026-09-28-epic-48-font-and-language-labels/`
 **關聯 PRD 章節：** FR-09（內建字型）、FR-49（多語系介面）
 
 ## 背景

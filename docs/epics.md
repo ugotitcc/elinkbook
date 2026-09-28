@@ -56,7 +56,7 @@
 | 46 | `epic-45-interface-i18n` 多語系介面（正體中文／簡體中文／英文，FR-49） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 47 | `epic-46-writing-mode-autodetect` （缺陷）排版方向自動偵測只看書本第一個 CSS（FR-06 補強） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 48 | `epic-47-resize-observer-false-error` （缺陷）全域 JS 錯誤捕捉把良性 ResizeObserver 警告誤報為開書失敗 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
-| 49 | `epic-48-font-and-language-labels` （缺陷）內建字型清單精簡、不打包字型檔，字型名稱與語言選項的語系顯示修正 | 🟡 開發中 (Active) | 全數完成，待歸檔 |
+| 49 | `epic-48-font-and-language-labels` （缺陷）內建字型清單精簡、不打包字型檔，字型名稱與語言選項的語系顯示修正 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 50 | `epic-49-downloadable-fonts` 可下載字型（內建字型改由 Cloudflare R2＋Worker 下載，FR-09） | 🟡 開發中 (Active) | 全數完成（Issue 8 PR #283 已合併），待歸檔 |
 | 51 | `epic-51-wifi-transfer-test-fix` （缺陷）WiFi 傳書「下載期間傳輸計數」測試失敗 | 🟢 已歸檔 (Archived) | 已完成（PR #290），單檔測試修正，無獨立 Epic 目錄。根因是測試假設不成立、伺服器行為正確：591 位元組 fixture 一次塞進 socket 緩衝區，標頭到達前伺服器已送完並釋放許可；測試改用產生的 16MB 檔案 |
 | 52 | `epic-50-sync-token-refresh` （缺陷）同步 token 過期後無法同步，須登出再登入才恢復 | 🟡 開發中 (Active) | 全數完成（PR #284 已合併），待歸檔 |
