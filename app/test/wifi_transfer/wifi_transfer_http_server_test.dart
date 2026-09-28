@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -16,6 +17,31 @@ import '../support/fake_book_import_service.dart';
 import '../support/fake_fingerprint_computer.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_path_provider_platform.dart';
+
+/// 等待 [notifier] 的值變成 [target]；超過 [timeout] 仍未達到就讓測試
+/// 失敗。用於許可釋放這類「一定會發生、但落在哪個事件循環不固定」的
+/// 非同步結果（epic-15 Issue 0）。
+Future<void> _waitForActiveTransfers(
+  ValueListenable<int> notifier,
+  int target, {
+  Duration timeout = const Duration(seconds: 5),
+}) async {
+  if (notifier.value == target) return;
+  final reached = Completer<void>();
+  void listener() {
+    if (notifier.value == target && !reached.isCompleted) reached.complete();
+  }
+
+  notifier.addListener(listener);
+  try {
+    await reached.future.timeout(timeout);
+  } on TimeoutException {
+    fail('activeTransfersNotifier 在 $timeout 內未變成 $target'
+        '（目前為 ${notifier.value}），許可可能沒有被釋放');
+  } finally {
+    notifier.removeListener(listener);
+  }
+}
 
 class _Resp {
   final int statusCode;
@@ -583,7 +609,13 @@ void main() {
               '完成的當下就釋放');
 
       await response.drain<void>();
-      await Future<void>.delayed(Duration.zero);
+
+      // epic-15 Issue 0：用戶端讀完回應，和伺服器端串流 done 事件送達
+      // （wrapStreamWithCleanup 在 controller.done 之後才釋放許可）是兩個
+      // 獨立的 I/O 事件，先後不固定；實測釋放落在讀完後第 2 個事件循環，
+      // 原本只等一個 Duration.zero 會穩定失敗。改為等待通知值歸零，不猜
+      // 要等幾個 tick；逾時代表許可真的沒被釋放。
+      await _waitForActiveTransfers(wifiServer.activeTransfersNotifier, 0);
 
       expect(wifiServer.activeTransfersNotifier.value, 0);
     });

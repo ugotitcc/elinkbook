@@ -62,6 +62,14 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 
 完整 `flutter test`（執行時 commit `24b81d90`）：2941 通過、1 跳過、1 失敗。唯一的失敗是 `test/wifi_transfer/wifi_transfer_http_server_test.dart` 的 `activeTransfersNotifier` 案例，與本 Issue 範圍無關——已在乾淨的 BASE（`a06e7c20`）重現同樣失敗，確認為既有問題，未為此修改範圍外程式碼。`flutter analyze` 乾淨（`No issues found!`），`node tool/check_l10n_hardcoded_strings.js` 通過（本 Issue 不新增字串）。
 
+**2026-09-28 Issue 0 附帶修正：WiFi 傳書下載許可測試（缺陷，直接 TDD）**。Issue 0 完整 `flutter test` 唯一的失敗 `wifi_transfer_http_server_test.dart`「下載期間 activeTransfersNotifier 維持在 1…」（epic-51 以 PR #290 修過的同一個測試），經程式審查 M-4 確認在 `main`（`a06e7c20`）單獨執行同樣穩定失敗、與 Issue 0 無關；使用者決定在本 Issue 記錄並修正。
+
+- **症狀**：失敗的是最後一個斷言——用戶端 `drain()` 讀完後只等一個 `Duration.zero` 就斷言許可數為 0，實際仍是 1。
+- **根因**：伺服器在 `wrapStreamWithCleanup` 的 `controller.done` 之後才釋放許可；背壓下最後的 done 事件要等 socket 寫出、訂閱恢復後才送達，與用戶端讀完回應是兩個獨立 I/O 事件，先後不固定。暫時性探針實測 5 輪皆在讀完後第 2 個事件循環歸零（0～5 ms）——許可確實會釋放，伺服器行為正確，是測試的時序假設錯誤（與 epic-51 同一類）。
+- **修正**：新增測試輔助函式 `_waitForActiveTransfers()`，以監聽 `activeTransfersNotifier` 等待歸零（5 秒逾時即 `fail`，逾時代表許可真的沒釋放），取代「等一個 tick」。正式程式碼不動。
+- **驗證**：修正前穩定失敗（main 與本分支皆然）；修正後該檔連跑 3 次 `+42: All tests passed!`；`flutter analyze` 乾淨。
+- 同檔另一處相同寫法（小檔案下載後 `Duration.zero` 再斷言為 0）目前通過，未一併修改，留待若再失敗時比照處理。
+
 ## 目前狀態
 
 Issue 0 完成（分支 `epic-15/issue-0`，程式審查通過：0 Critical／0 Important／4 Minor，Minor 已處理），待 PR 合併。下一步：認領 Issue 1，撰寫 `plans/plan-issue-1.md`。
