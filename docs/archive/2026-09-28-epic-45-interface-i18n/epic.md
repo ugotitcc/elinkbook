@@ -1,7 +1,7 @@
 # `epic-45-interface-i18n` 多語系介面
 
-**狀態：** 🟡 開發中 (Active)
-**存放路徑：** `docs/epics/epic-45-interface-i18n/`
+**狀態：** 🟢 已歸檔 (Archived)
+**存放路徑：** `docs/archive/2026-09-28-epic-45-interface-i18n/`
 **關聯 PRD 章節：** FR-49
 
 ## 開發記錄

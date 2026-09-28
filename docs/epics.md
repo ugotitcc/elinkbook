@@ -53,7 +53,7 @@
 | 43 | `epic-42-text-conversion` 簡繁轉換（FR-48） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 44 | `epic-43-reader-architecture-hardening` 閱讀器模組架構深化機會（`reader_screen.dart`/`library_screen.dart` 熱點盤點） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 45 | `epic-44-wifi-book-transfer` WiFi 傳書（同區網雙向搬書，免對方裝 App） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
-| 46 | `epic-45-interface-i18n` 多語系介面（正體中文／簡體中文／英文，FR-49） | 🟡 開發中 (Active) | 全數完成，待歸檔 |
+| 46 | `epic-45-interface-i18n` 多語系介面（正體中文／簡體中文／英文，FR-49） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 47 | `epic-46-writing-mode-autodetect` （缺陷）排版方向自動偵測只看書本第一個 CSS（FR-06 補強） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 48 | `epic-47-resize-observer-false-error` （缺陷）全域 JS 錯誤捕捉把良性 ResizeObserver 警告誤報為開書失敗 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 49 | `epic-48-font-and-language-labels` （缺陷）內建字型清單精簡、不打包字型檔，字型名稱與語言選項的語系顯示修正 | 🟡 開發中 (Active) | 全數完成，待歸檔 |
