@@ -15,6 +15,7 @@ import '../support/fake_bookmarks_repository.dart';
 import '../support/fake_highlights_repository.dart';
 import '../support/fake_notes_repository.dart';
 import '../support/fake_custom_fonts_repository.dart';
+import '../support/fake_book_import_service.dart';
 import '../support/fake_book_reader_prefs_repository.dart';
 import '../support/fake_cloud_account_repository.dart';
 import '../support/fake_cloud_storage_client.dart';
@@ -60,6 +61,17 @@ void main() {
     expect(dependencies.customFontsRepository, same(customFontsRepository));
     expect(dependencies.layoutPresetRepository, same(layoutPresetRepository));
     expect(dependencies.bookReaderPrefsRepository, same(bookReaderPrefsRepository));
+  });
+
+  test('LibraryReaderFeatureRepositories.bookImportService 預設為 null，'
+      '傳入時原樣持有同一個實例（epic-15-storage-permission Issue 0）', () {
+    const empty = LibraryReaderFeatureRepositories();
+    expect(empty.bookImportService, isNull);
+
+    final importService = FakeBookImportService();
+    final dependencies =
+        LibraryReaderFeatureRepositories(bookImportService: importService);
+    expect(dependencies.bookImportService, same(importService));
   });
 
   test('LibrarySyncDependencies 原樣持有三個注入的依賴，未提供時預設皆為 null', () {
