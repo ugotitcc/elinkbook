@@ -8,6 +8,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.StandardMethodCodec
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.InputStream
 
@@ -38,6 +39,13 @@ import java.io.InputStream
  *    直接以 `PdfDocument.openFile()` 開啟該路徑。使用串流複製取代
  *    `readBytes()` 避免大型 PDF 佔用雙倍記憶體（epic-24 Issue 2）。
  *    暫存檔在 Dart 端 `dispose()` 時清理。
+ *
+ * 5. `probeUriAccess`（epic-15-storage-permission Issue 1）：探測
+ *    `content://` URI 是否仍可讀取——開啟輸入串流後立即關閉、不讀取
+ *    內容，依例外類型回傳 `readable`／`permissionRevoked`／`fileNotFound`／
+ *    `unknownError` 四個代碼字串之一（原生端不回傳使用者可見文字，由
+ *    Dart 端在地化，比照 ADR 0034）。只在閱讀器開書失敗後呼叫一次；
+ *    透過背景任務佇列通道呼叫，避免有缺陷的文件提供者卡住主執行緒。
  *
  * 取代原本 `FoliateEpubReaderView.kt` 的 `WebViewAssetLoader`／
  * `BookPathHandler`——本類別只負責「給定路徑/URI，回傳位元組或快取路徑」，
@@ -206,6 +214,36 @@ class ReaderResourceChannel(
                     null
                 }
                 result.success(tmpPath)
+            }
+            // epic-15-storage-permission Issue 1：見 class doc 第 5 點。
+            // 既有 cacheBookForServing／readContentUriAll／readCustomFontBytes
+            // 仍維持「失敗回傳 null」契約，不受本方法影響。
+            "probeUriAccess" -> {
+                val uriString = call.argument<String>("uri")
+                if (uriString == null) {
+                    result.success("unknownError")
+                    return
+                }
+                val code = try {
+                    // use 區塊確保串流與底層 FileDescriptor 在任何情況下都會釋放（審查 M-2）
+                    context.contentResolver.openInputStream(Uri.parse(uriString))?.use {
+                        "readable"
+                    } ?: run {
+                        Log.w("ReaderResourceChannel", "probeUriAccess: null stream for uri: $uriString")
+                        "fileNotFound"
+                    }
+                } catch (e: SecurityException) {
+                    // 警告等級：部分 ROM 會過濾 Debug 等級 logcat（epic-7 Issue 1 既有教訓）
+                    Log.w("ReaderResourceChannel", "probeUriAccess: permission revoked for uri: $uriString", e)
+                    "permissionRevoked"
+                } catch (e: FileNotFoundException) {
+                    Log.w("ReaderResourceChannel", "probeUriAccess: file not found for uri: $uriString", e)
+                    "fileNotFound"
+                } catch (e: Exception) {
+                    Log.w("ReaderResourceChannel", "probeUriAccess: unknown error for uri: $uriString", e)
+                    "unknownError"
+                }
+                result.success(code)
             }
             else -> result.notImplemented()
         }
