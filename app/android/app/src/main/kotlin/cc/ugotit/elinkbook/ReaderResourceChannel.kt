@@ -2,6 +2,7 @@ package cc.ugotit.elinkbook
 
 import android.content.Context
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.util.Log
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -232,20 +233,45 @@ class ReaderResourceChannel(
                         Log.w("ReaderResourceChannel", "probeUriAccess: null stream for uri: $uriString")
                         "fileNotFound"
                     }
-                } catch (e: SecurityException) {
-                    // 警告等級：部分 ROM 會過濾 Debug 等級 logcat（epic-7 Issue 1 既有教訓）
-                    Log.w("ReaderResourceChannel", "probeUriAccess: permission revoked for uri: $uriString", e)
-                    "permissionRevoked"
-                } catch (e: FileNotFoundException) {
-                    Log.w("ReaderResourceChannel", "probeUriAccess: file not found for uri: $uriString", e)
-                    "fileNotFound"
                 } catch (e: Exception) {
-                    Log.w("ReaderResourceChannel", "probeUriAccess: unknown error for uri: $uriString", e)
-                    "unknownError"
+                    // 警告等級：部分 ROM 會過濾 Debug 等級 logcat（epic-7 Issue 1 既有教訓）
+                    val classified = classifyProbeUriException(e) { probeTreeRootAccess(Uri.parse(uriString)) }
+                    Log.w("ReaderResourceChannel", "probeUriAccess: $classified for uri: $uriString", e)
+                    classified
                 }
                 result.success(code)
             }
             else -> result.notImplemented()
+        }
+    }
+
+    /**
+     * 探測 tree URI 所屬的「匯入資料夾」本身是否仍可讀取（epic-15 Issue 1，
+     * 見 [classifyProbeUriException]）。查詢資料夾根文件的 document id，
+     * 查得到一列就算讀得到。不是 tree URI 時直接回傳 `unknownError`。
+     */
+    private fun probeTreeRootAccess(uri: Uri): String {
+        if (!DocumentsContract.isTreeUri(uri)) return "unknownError"
+        return try {
+            val rootUri = DocumentsContract.buildDocumentUriUsingTree(
+                uri,
+                DocumentsContract.getTreeDocumentId(uri),
+            )
+            context.contentResolver.query(
+                rootUri,
+                arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID),
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) "readable" else "unknownError"
+            } ?: "unknownError"
+        } catch (e: SecurityException) {
+            Log.w("ReaderResourceChannel", "probeTreeRootAccess: permission revoked for uri: $uri", e)
+            "permissionRevoked"
+        } catch (e: Exception) {
+            Log.w("ReaderResourceChannel", "probeTreeRootAccess: unknown error for uri: $uri", e)
+            "unknownError"
         }
     }
 
@@ -260,3 +286,28 @@ class ReaderResourceChannel(
         // 目前 readContentUriAll 不維護 session 狀態，無需清理。
     }
 }
+
+/**
+ * 把 `probeUriAccess` 開啟串流時拋出的例外歸類成代碼字串（epic-15 Issue 1）。
+ *
+ * 資料夾匯入的 tree URI（`.../tree/.../document/...`）指向的檔案被刪除時，
+ * ExternalStorageProvider 會在它自己的程序丟出
+ * `IllegalArgumentException("Failed to determine if ... is child of ...")`。
+ * 例外跨程序傳回來時只剩種類與訊息文字，cause 是 null（真機 logcat 實測），
+ * 看不出是不是檔案不見了。所以遇到 [IllegalArgumentException] 時，改呼叫
+ * [probeTreeRoot] 問「匯入的資料夾本身讀得到嗎」：
+ * - 資料夾讀得到、書讀不到 → `fileNotFound`
+ * - 資料夾權限被收回 → `permissionRevoked`
+ * - 其他（不是 tree URI、資料夾也讀不到）→ `unknownError`
+ */
+internal fun classifyProbeUriException(e: Throwable, probeTreeRoot: () -> String): String =
+    when (e) {
+        is SecurityException -> "permissionRevoked"
+        is FileNotFoundException -> "fileNotFound"
+        is IllegalArgumentException -> when (probeTreeRoot()) {
+            "readable" -> "fileNotFound"
+            "permissionRevoked" -> "permissionRevoked"
+            else -> "unknownError"
+        }
+        else -> "unknownError"
+    }
