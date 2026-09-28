@@ -20,8 +20,20 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 - **影響範圍**：SAF 檔案匯入與資料夾匯入兩條路徑皆可能受影響；經審查核對程式碼確認，單檔匯入已有 `_copyToLocalStorage` 落地複本退路防禦（`takePersistableUriPermission` 失敗時自動觸發），資料夾匯入的子檔案因共用 Tree URI 授權、刻意跳過此退路，是實際風險較高的路徑。
 - **排除方向**：`MANAGE_EXTERNAL_STORAGE`（Android 11+ 全域儲存權限，All Files Access）——App 已規劃上架 Google Play，此權限對「電子書閱讀器」類別的審核風險高，且仍須維持非商城（側載）安裝路徑正常運作，兩個約束疊加使此方向不可行。詳見 [ADR 0029](../../adr/0029-storage-permission-saf-resilience-over-manage-external-storage.md)。
 - **候選補強方向**：不新增權限，改為強化既有 SAF 路線的容錯——**開書當下（非定期背景輪詢）**以 `contentResolver.openInputStream()` 按需探測並精確區分 `SecurityException`（權限失效）／`FileNotFoundException`（檔案不存在），失效時導向重新選取，並將新 URI 原地更新回既有書籍記錄（Re-link，保全 `book.id` 與所有劃線/筆記/書籤/進度）。原案曾規劃以 `ContentResolver.getPersistedUriPermissions()` 查表偵測，經 [Epic 與 Design 審查](./reviews/review-epic-and-design.md) 確認此 API 對資料夾匯入書籍的 Document URI 必定誤判、且無法反映檔案真實可讀性，已修正為上述按需探測方案；「定期於背景檢查」亦已排除，因違反 E-Ink 裝置低功耗待機原則。詳見 [design.md](./design.md)。
-- **後續**：本 Epic 目前停留在 Discovery 完成階段。是否排入 Issue 拆分、實際開發，待有具體重現案例或使用者回報後再評估，不強制排期。
+- **後續**：Discovery 當下決定待有具體重現案例再評估是否排入開發；2026-09-28 使用者決定直接進入 Architecting（見下方）。
+
+## Architecting 結論（2026-09-28 `/to-spec`）
+
+`spec.md` 已產出（Status: `ready-for-agent`），自此為本 Epic 的唯一事實來源。與 design.md 的主要差異與新增決策：
+
+- **失敗後探測取代例外全面透傳**：design §3 原規劃把原生讀取方法全面改成 `result.error`，但 `cacheBookForServing`／`readContentUriAll` 有 5 個呼叫端（兩個閱讀器、兩個全文索引器、WiFi 傳書）都靠「回傳 null」判斷失敗。改為新增單一原生「存取探測」方法，只在 `ReaderScreen` 開書失敗且 `filePath` 為 `content://` 時探測一次；既有讀取契約不變。
+- **受影響範圍收斂**：TXT／MD／CBZ／雲端／Calibre／WiFi 傳書／單檔匯入落地複本的書，`filePath` 都是 App 私有路徑，不在範圍內；實際風險集中在 `filePath` 仍為 `content://` 的 EPUB／PDF／AZW3。
+- **Re-link 放進 `BookImportService`**：共用既有格式判斷、持久化授權與落地複本退路；以書籍 id 為輸入，寫入前自行讀取最新記錄，避免整列覆寫把閱讀位置蓋回舊值。
+- **內容指紋不一致一律拒絕連結**（保護劃線／書籤 CFI 與全文索引）；原書沒有指紋時略過比對並補寫。
+- **字型納入本 Epic**：進入字型管理時探測自訂字型，失效者標示並可重新連結（字型家族名稱須相同）。
+- 不新增 ADR（取捨可輕易反轉）。
+- **規格審查修訂（同日）**：依 `reviews/review-spec.md`（3 Critical／7 Important／3 Minor）全數處理：EPUB 指紋比對明訂先取 OPF identifier、Re-link 改為先驗證後持久化授權、回傳型別改 sealed class、探測防重入與重新開書復位（以路徑作為視圖 `ValueKey`）、匯入服務併入 `LibraryReaderFeatureRepositories` bundle、探測改走背景佇列通道＋3 秒逾時、字型探測狀態以 id 保存、列出 ARB key。修訂明細見 spec.md「Further Notes」。
 
 ## 目前狀態
 
-Discovery 完成，`design.md` 已產出並依 [審查報告](./reviews/review-epic-and-design.md) 修訂。尚未進入 Architecting（`spec.md`）／Issue 拆分（`issues.md`）。
+Architecting 完成（`spec.md`）。下一步：Scrum Master 階段撰寫 `issues.md`（建議切片見 spec.md「Further Notes」）。
