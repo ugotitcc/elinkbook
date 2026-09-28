@@ -4321,6 +4321,39 @@ void main() {
     expect(delegate.childAspectRatio, 0.64);
   });
 
+  // 2026-09-28 使用者需求：書架封面右上角「⋮」圓形按鈕太大，縮小為原本
+  // 的一半。原本實際渲染是 48（Material 3 自動補足觸控區），看得到的圓
+  // 改為 24；觸控區維持 48，不因為變小而更難點到。
+  testWidgets('書架封面右上角「⋮」圓形按鈕看得到的圓為 24，觸控區維持 48',
+      (tester) async {
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+          repository: FakeLibraryRepository(
+              initialBooks: [_testBook(id: '1', title: '紅樓夢')]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+    );
+    await tester.pumpAndSettle();
+
+    final circle = find.byKey(const Key('book_action_menu_circle_1'));
+    expect(tester.getSize(circle), const Size(24, 24));
+    expect(
+      tester.getSize(find.byKey(const Key('book_action_menu_1'))),
+      const Size(48, 48),
+    );
+    // 小圓貼齊觸控區右上角，位置跟原本一樣靠封面角落，不往內縮。
+    expect(
+      tester.getTopRight(circle),
+      tester.getTopRight(find.byKey(const Key('book_action_menu_1'))),
+    );
+    // 按了仍然要能打開動作選單。
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+    expect(find.byType(BookActionSheet), findsOneWidget);
+  });
+
   testWidgets('多選模式進行中，繼續閱讀列不可點擊（review-plan-issue-3.md M-3：避免無勾選指示反饋卻誤觸切換選取狀態）', (
     tester,
   ) async {

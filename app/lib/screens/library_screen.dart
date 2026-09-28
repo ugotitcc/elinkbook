@@ -1593,26 +1593,34 @@ class _BookGridTile extends StatelessWidget {
                     alignment: Alignment.topRight,
                     child: Padding(
                       padding: const EdgeInsets.all(4),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: tokens.badgeScrim,
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          key: Key('book_action_menu_${book.id}'),
-                          icon: const Icon(
+                      // 2026-09-28：看得到的圓縮為原本的一半（48 → 24，原本
+                      // Material 3 自動補足觸控區，實際渲染是 48）；IconButton
+                      // 本身維持 48 觸控區，只把圓畫小，不會變得更難點到。
+                      child: IconButton(
+                        key: Key('book_action_menu_${book.id}'),
+                        icon: Container(
+                          key: Key('book_action_menu_circle_${book.id}'),
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: tokens.badgeScrim,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
                             Icons.more_vert,
                             color: Colors.white,
+                            size: 14,
                           ),
-                          iconSize: 18,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
-                          tooltip: AppLocalizations.of(context)!.libraryBookMenuTooltip,
-                          onPressed: onMenuTap,
                         ),
+                        padding: EdgeInsets.zero,
+                        // 小圓貼齊右上角，維持原本靠封面角落的位置。
+                        alignment: Alignment.topRight,
+                        constraints: const BoxConstraints(
+                          minWidth: 48,
+                          minHeight: 48,
+                        ),
+                        tooltip: AppLocalizations.of(context)!.libraryBookMenuTooltip,
+                        onPressed: onMenuTap,
                       ),
                     ),
                   ),
