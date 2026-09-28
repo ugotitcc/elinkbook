@@ -64,4 +64,4 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 
 ## 目前狀態
 
-Scrum Master 完成（`issues.md`）。下一步：認領 Issue 0，撰寫 `plans/plan-issue-0.md`。
+Issue 0 完成（分支 `epic-15/issue-0`，程式審查通過：0 Critical／0 Important／4 Minor，Minor 已處理），待 PR 合併。下一步：認領 Issue 1，撰寫 `plans/plan-issue-1.md`。

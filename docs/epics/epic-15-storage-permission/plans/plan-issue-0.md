@@ -391,7 +391,7 @@ Expected: All tests passed。記下通過的測試數量，Step 5 會拿來比�
 ```dart
   /// epic-15-storage-permission Issue 0：目前生效的書籍檔案路徑（`content://`
   /// URI 或本機路徑，見 ADR 0002）。初始值為建構參數 [ReaderScreen.filePath]；
-  /// State 內一律讀取本欄位，不再直接讀 `widget.filePath`，讓 Issue 2 在
+  /// State 內一律讀取本欄位，不再直接讀建構參數，讓 Issue 2 在
   /// 「重新連結」成功後能原地換成新路徑並重新開書。
   ///
   /// 使用 `late` 惰性初始化：第一次讀取發生在 `initState()` 的
@@ -399,7 +399,7 @@ Expected: All tests passed。記下通過的測試數量，Step 5 會拿來比�
   /// 或延後到 `build()`（非 null 時該方法提早 return），兩者 `widget` 皆已
   /// 可用。
   ///
-  /// 刻意不在 `didUpdateWidget` 跟隨 `widget.filePath` 變動：閱讀器一律由
+  /// 刻意不在 `didUpdateWidget` 跟隨建構參數 `filePath` 的變動：閱讀器一律由
   /// `MaterialPageRoute` 建立一次，沒有任何呼叫端會以不同 `filePath` 重建
   /// 同一個 `ReaderScreen`。
   late String _activeFilePath = widget.filePath;
