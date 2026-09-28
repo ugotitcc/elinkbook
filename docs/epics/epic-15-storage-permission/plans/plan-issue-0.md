@@ -35,7 +35,11 @@
 1. **閱讀器 → 單書搜尋 → 閱讀器** 這條路徑遺失匯入服務：`ReaderScreen._openBookSearch` 是手動逐欄重建 bundle，最容易漏掉新欄位。由 Task 3 的 widget test 釘住。
 2. **`main.dart` 沒填入**：所有單元測試都會通過，但正式 App 中 `bookImportService` 永遠是 null，Issue 2 的按鈕永遠不會出現。Task 3 以 grep 檢查，並在程式碼旁註明用途。
 3. **有漏網的 `widget.filePath`**：15 處只要漏改一處，Issue 2 重新開書時就會有部分邏輯（例如 EPUB 版面偵測、書籤／劃線定位的 `Book` 組裝）仍用舊路徑。Task 4 以 grep 斷言 State 內只剩初始化那一處。
-4. **`_activeFilePath` 的初始化時機**：它會在 `initState()` 呼叫 `_resolveEpubEngineDispatch()` 時第一次被讀取。必須用 `late String _activeFilePath = widget.filePath;`（惰性初始化，第一次讀取時 `widget` 已可用），不可以在欄位宣告處直接讀 `widget`。由既有的 `reader_screen_test.dart`（EPUB 版面偵測相關案例）覆蓋。
+4. **`_activeFilePath` 的初始化時機**：第一次被讀取的時機有兩種情況：
+   - `widget.isFixedLayout == null` 時，在 `initState()` 呼叫 `_resolveEpubEngineDispatch()` 時讀取。
+   - `widget.isFixedLayout` 不是 null 時，該方法會提早 return，第一次讀取延後到 `build()` 的第一行。
+
+   兩種情況下 `widget` 都已經可用。必須用 `late String _activeFilePath = widget.filePath;`（惰性初始化），不可以在欄位宣告處直接讀 `widget`。這一點由既有的 `reader_screen_test.dart` 覆蓋，因為它同時有 `isFixedLayout` 為 null 與不為 null 的案例。
 5. **父層以不同 `filePath` 重建同一個 `ReaderScreen`**：改造後 State 不再跟隨 `widget.filePath` 變動。現況沒有任何呼叫端會這樣做（閱讀器一律由 `MaterialPageRoute` 建立一次，`ReaderScreen` 也沒有 `didUpdateWidget`），因此行為不變。Task 4 在欄位註解寫明這個前提，不另外加 `didUpdateWidget`（YAGNI）。
 
 ---
@@ -184,6 +188,29 @@ import 區補上：
 ```dart
 import '../support/fake_book_import_service.dart';
 ```
+
+同時更新既有的「欄位對帳」測試。它是 `epic-41` 建立的對帳點，承諾「features 每個欄位都給非空值、逐一斷言」，新增欄位時必須同步：
+
+1. 測試名稱中的 `'欄位對帳：features 13 個欄位＋book／sync／isEinkMode 皆給非空值，'` 改為 `'欄位對帳：features 14 個欄位＋book／sync／isEinkMode 皆給非空值，'`。
+2. 在 `final searchRepository = FakeSearchRepository();` 之後新增：
+
+   ```dart
+      final importService = FakeBookImportService();
+   ```
+
+3. 在 `features = LibraryReaderFeatureRepositories(...)` 參數列的 `isFullTextSearchAvailable: false,` 之後新增：
+
+   ```dart
+        bookImportService: importService,
+   ```
+
+4. 在該測試既有 `expect(...)` 斷言區段的最後一行之後新增：
+
+   ```dart
+      expect(screen.bookImportService, same(importService));
+   ```
+
+上面新增的兩個獨立測試照樣保留：一個驗證單獨注入時會轉交，一個驗證未注入時預設為 null。
 
 - [ ] **Step 2：執行測試，確認失敗**
 
@@ -367,8 +394,10 @@ Expected: All tests passed。記下通過的測試數量，Step 5 會拿來比�
   /// State 內一律讀取本欄位，不再直接讀 `widget.filePath`，讓 Issue 2 在
   /// 「重新連結」成功後能原地換成新路徑並重新開書。
   ///
-  /// 使用 `late` 惰性初始化：第一次讀取發生在 `initState()` 呼叫
-  /// `_resolveEpubEngineDispatch()` 時，此時 `widget` 已可用。
+  /// 使用 `late` 惰性初始化：第一次讀取發生在 `initState()` 的
+  /// `_resolveEpubEngineDispatch()`（`widget.isFixedLayout` 為 null 時），
+  /// 或延後到 `build()`（非 null 時該方法提早 return），兩者 `widget` 皆已
+  /// 可用。
   ///
   /// 刻意不在 `didUpdateWidget` 跟隨 `widget.filePath` 變動：閱讀器一律由
   /// `MaterialPageRoute` 建立一次，沒有任何呼叫端會以不同 `filePath` 重建
@@ -406,8 +435,10 @@ Expected: 沒有輸出。
 
 - [ ] **Step 5：執行受影響測試，確認行為不變**
 
-Run: `flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_route_test.dart`
-Expected: All tests passed，`reader_screen_test.dart` 的通過數量是 Step 1 基準加上 Task 3 新增的 1 個。
+Run: `flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_route_test.dart test/screens/library_search_screen_test.dart test/screens/book_search_screen_test.dart test/screens/library_screen_test.dart`
+Expected: All tests passed。這 5 個是 issues.md Issue 0 列出的畫面測試，涵蓋所有經由 bundle 開啟閱讀器的路徑。
+
+Step 1 的基準是在 Task 4 開始前跑的，那時 Task 3 新增的測試已經在裡面。所以 `reader_screen_test.dart` 的通過數量應該和 Step 1 **相同**，不多不少；數量不同就代表本 Task 改變了行為。
 
 Run: `flutter analyze`
 Expected: `No issues found!`
