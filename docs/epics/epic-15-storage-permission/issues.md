@@ -39,7 +39,7 @@ Issue 0（prefactor）──> Issue 1（失效分類提示）──┬──> Is
 
 ## Issue 1：開書失敗時分辨「權限失效／找不到檔案」並顯示對應說明
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 0。
 

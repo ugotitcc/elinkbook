@@ -64,7 +64,7 @@
 
 ### Task 0：建立工作分支（worktree）
 
-- [ ] **Step 1：建立 worktree**
+- [x] **Step 1：建立 worktree**
 
 在儲存庫根目錄執行：
 
@@ -95,7 +95,7 @@ git worktree add .worktrees/epic-15-issue-1 -b epic-15/issue-1 main
   Future<StorageAccessProbeResult> probeStorageAccessViaChannel(String uri, {Duration timeout});
   ```
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 在 `foliate_native_bridge_test.dart` 的 `main()` 內，既有 `group('cacheFileExtension', ...)` 之前新增：
 
@@ -212,12 +212,12 @@ import 'package:elinkbook/reader/reader_console_log.dart';
 
 （`package:flutter/services.dart` 已經 import，`PlatformException`、`MethodChannel`、`MethodCall` 都可以直接使用。）
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test test/reader/foliate_native_bridge_test.dart`
 Expected: 編譯錯誤，訊息為 `Undefined name 'StorageAccessProbeResult'`、`The function 'probeStorageAccessViaChannel' isn't defined`。
 
-- [ ] **Step 3：最小實作**
+- [x] **Step 3：最小實作**
 
 `foliate_native_bridge.dart` import 區調整為：
 
@@ -305,7 +305,7 @@ Future<StorageAccessProbeResult> probeStorageAccessViaChannel(
 
 說明：`asNameMap()[null]` 回傳 null，所以原生回傳 null 也會落到 `unknownError`。
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/reader/foliate_native_bridge_test.dart`
 Expected: All tests passed，包含新增的 12 個與既有測試。
@@ -313,7 +313,7 @@ Expected: All tests passed，包含新增的 12 個與既有測試。
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add lib/reader/foliate_native_bridge.dart test/reader/foliate_native_bridge_test.dart
@@ -333,7 +333,7 @@ git commit -m "feat(reader): 新增 content:// 存取探測 probeStorageAccess�
 
 原生方法沒有 Dart 端自動化測試（`flutter test` 碰不到 `ContentResolver`），以編譯驗證加上 Task 4 的真機驗證取代。
 
-- [ ] **Step 1：新增 import**
+- [x] **Step 1：新增 import**
 
 在 `import java.io.FileOutputStream` 之前新增：
 
@@ -341,7 +341,7 @@ git commit -m "feat(reader): 新增 content:// 存取探測 probeStorageAccess�
 import java.io.FileNotFoundException
 ```
 
-- [ ] **Step 2：class doc 補第 5 點**
+- [x] **Step 2：class doc 補第 5 點**
 
 在 class doc 第 4 點（`readContentUriAll`）那段結尾、`取代原本 FoliateEpubReaderView.kt` 那段之前插入：
 
@@ -355,7 +355,7 @@ import java.io.FileNotFoundException
  *
 ```
 
-- [ ] **Step 3：新增 `when` 分支**
+- [x] **Step 3：新增 `when` 分支**
 
 在 `onMethodCall` 的 `"readContentUriAll" -> { ... }` 分支之後、`else -> result.notImplemented()` 之前新增：
 
@@ -392,12 +392,12 @@ import java.io.FileNotFoundException
             }
 ```
 
-- [ ] **Step 4：編譯驗證**
+- [x] **Step 4：編譯驗證**
 
 Run: `flutter build apk --debug`
 Expected: `✓ Built build/app/outputs/flutter-apk/app-debug.apk`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add android/app/src/main/kotlin/cc/ugotit/elinkbook/ReaderResourceChannel.kt
@@ -426,7 +426,7 @@ git commit -m "feat(android): ReaderResourceChannel 新增 probeUriAccess 存取
   - `_ReaderScreenState._isProbingAccess`（`bool`）。
   - l10n getter `readerStoragePermissionRevokedMessage`、`readerStorageFileNotFoundMessage`。
 
-- [ ] **Step 1：新增 ARB key 並產生程式碼**
+- [x] **Step 1：新增 ARB key 並產生程式碼**
 
 四份 ARB 都在 `"readerFailedToLoadBookMessage"` 那個 key 之後插入（範本檔在它的 `"@readerFailedToLoadBookMessage": {...}` 區塊之後）。
 
@@ -467,7 +467,7 @@ git commit -m "feat(android): ReaderResourceChannel 新增 probeUriAccess 存取
 Run: `flutter gen-l10n`
 Expected: 沒有錯誤輸出。`git status` 看得到 `lib/l10n/app_localizations.dart`、`app_localizations_zh.dart`、`app_localizations_en.dart` 被修改。
 
-- [ ] **Step 2：寫失敗的測試**
+- [x] **Step 2：寫失敗的測試**
 
 在 `reader_screen_test.dart` 頂端 `main()` 之前新增測試輔助函式：
 
@@ -704,7 +704,7 @@ Future<int Function()> _pumpContentUriReader(
 
 若 `reader_screen_test.dart` 頂端尚未 import `dart:async`，補上 `import 'dart:async';`（`Completer` 需要）。`probeStorageAccess`、`StorageAccessProbeResult` 來自既有的 `import 'package:elinkbook/reader/foliate_native_bridge.dart';`，不必另外 import。
 
-- [ ] **Step 3：執行測試，確認失敗**
+- [x] **Step 3：執行測試，確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "開書失敗的存取探測"`
 Expected: FAIL。
@@ -712,7 +712,7 @@ Expected: FAIL。
 - 「只探測一次」案例：`probeCalls()` 為 0，而且畫面已經是錯誤視圖。
 - 「非 content://」「開書逾時」「readable／unknownError」幾個案例在實作前就可能通過，這是預期中的正向對照。
 
-- [ ] **Step 4：實作**
+- [x] **Step 4：實作**
 
 `reader_screen.dart` import 區，在 `import '../reader/reader_console_log.dart';` 之前新增：
 
@@ -825,7 +825,7 @@ State 欄位區，在 `late String _activeFilePath = widget.filePath;` 之後新
 
 這個改動會套用到所有錯誤訊息（包含既有的通用錯誤與開書逾時），只影響排版，不影響文字內容。
 
-- [ ] **Step 5：執行測試，確認通過**
+- [x] **Step 5：執行測試，確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "開書失敗的存取探測"`
 Expected: 11 個測試全部通過。
@@ -839,7 +839,7 @@ Expected: `No issues found!`
 Run: `node tool/check_l10n_hardcoded_strings.js`
 Expected: 沒有新增違規。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart test/screens/reader_screen_test.dart lib/l10n/
@@ -885,7 +885,7 @@ Run: `flutter devices`，確認裝置 ID 後執行 `flutter run -d <device-id>`�
 
 ### Task 5：完整測試與進度文件
 
-- [ ] **Step 1：完整測試**
+- [x] **Step 1：完整測試**
 
 Run: `flutter test`
 Expected: All tests passed。若有失敗，先單獨重跑該檔案，確認是不是本 Issue 造成的；和本 Issue 無關的失敗要如實記錄在 `epic.md`，不要為了讓它通過而修改範圍外的程式碼。
@@ -896,7 +896,7 @@ Expected: `No issues found!`
 Run: `node tool/check_l10n_hardcoded_strings.js`
 Expected: 通過。
 
-- [ ] **Step 2：更新進度文件**
+- [x] **Step 2：更新進度文件**
 
 - `docs/epics/epic-15-storage-permission/issues.md`：Issue 1 的 `**Status:** ready-for-agent` 改為 `**Status:** completed`。
 - `docs/epics/epic-15-storage-permission/epic.md`：在「目前狀態」之前新增 Issue 1 完成記錄，內容包含 commit 清單、完整 `flutter test` 結果與執行時的 commit、真機驗證摘要。把「目前狀態」改為「Issue 1 完成，待 PR 合併；下一步 Issue 2／Issue 3（可平行）」。

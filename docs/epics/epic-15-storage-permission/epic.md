@@ -70,6 +70,18 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 - **驗證**：修正前穩定失敗（main 與本分支皆然）；修正後該檔連跑 3 次 `+42: All tests passed!`；`flutter analyze` 乾淨。
 - 程式審查（`reviews/review-issue-0-wifi-test-fix.md`，0 Critical／0 Important／3 Minor）後：同檔另一處相同寫法（3 位元組下載後只等 `Duration.zero` 就斷言歸零，當時仍通過）一併改用 `_waitForActiveTransfers()`（M-3）；註解不再寫死「第 2 個事件循環」實測值（M-2）；等待後的 `expect(..., 0)` 刻意保留以表達斷言意圖（M-1）。該檔連跑 3 次 `+42: All tests passed!`。
 
+## Issue 1 完成記錄（2026-09-28）
+
+分支 `epic-15/issue-1`，共 3 個 commit（依 `plans/plan-issue-1.md` 逐 Task 提交）：
+
+1. `eacad404` — `feat(reader): 新增 content:// 存取探測 probeStorageAccess（epic-15 Issue 1）`
+2. `60e5831b` — `feat(android): ReaderResourceChannel 新增 probeUriAccess 存取探測（epic-15 Issue 1）`
+3. `98c94d32` — `feat(reader): 開書失敗時探測 content:// 存取狀態並分流錯誤說明（epic-15 Issue 1）`
+
+完整 `flutter test`（執行時 commit `98c94d32`）：2966 通過、1 跳過、0 失敗。`flutter analyze` 乾淨（`No issues found!`），`node tool/check_l10n_hardcoded_strings.js` 通過。
+
+真機驗證（Task 4）尚未執行：實作環境無 Android 實體裝置（`flutter devices` 僅見 Edge web），Step 2～5（資料夾匯入 EPUB／PDF、撤銷授權、刪除原始檔案）待人類持裝置操作後補記錄。
+
 ## 目前狀態
 
-Issue 0 完成（分支 `epic-15/issue-0`，程式審查通過：0 Critical／0 Important／4 Minor，Minor 已處理），待 PR 合併。下一步：認領 Issue 1，撰寫 `plans/plan-issue-1.md`。
+Issue 1 完成，待 PR 合併；下一步 Issue 2／Issue 3（可平行）。
