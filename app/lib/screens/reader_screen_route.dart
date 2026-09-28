@@ -48,6 +48,7 @@ ReaderScreen buildReaderScreen({
     readerActivityTracker: features.readerActivityTracker,
     searchRepository: features.searchRepository,
     isFullTextSearchAvailable: features.isFullTextSearchAvailable,
+    bookImportService: features.bookImportService,
     initialJumpTarget: initialJumpTarget,
   );
 }

@@ -13,6 +13,7 @@ import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/reader_screen_route.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 
+import '../support/fake_book_import_service.dart';
 import '../support/fake_book_reader_prefs_repository.dart';
 import '../support/fake_bookmarks_repository.dart';
 import '../support/fake_custom_fonts_repository.dart';
@@ -64,7 +65,7 @@ void main() {
     });
 
     test(
-        '欄位對帳：features 13 個欄位＋book／sync／isEinkMode 皆給非空值，'
+        '欄位對帳：features 14 個欄位＋book／sync／isEinkMode 皆給非空值，'
         '逐一斷言正確帶入 ReaderScreen，不遺漏任何一個具名參數', () {
       final book = _testBook();
       final prefsManager = FakeReaderPrefsManager();
@@ -82,6 +83,7 @@ void main() {
       final ttsAudioFocusSource = FakeTtsAudioFocusSource();
       final readerActivityTracker = ReaderActivityTracker();
       final searchRepository = FakeSearchRepository();
+      final importService = FakeBookImportService();
       final syncCheckpointTrigger = SyncCheckpointTrigger(
         isLoggedIn: () async => false,
         runCheckpoint: () async {},
@@ -100,6 +102,7 @@ void main() {
         readerActivityTracker: readerActivityTracker,
         searchRepository: searchRepository,
         isFullTextSearchAvailable: false,
+        bookImportService: importService,
       );
       final sync = LibrarySyncDependencies(
         syncCheckpointTrigger: syncCheckpointTrigger,
@@ -137,8 +140,40 @@ void main() {
       expect(screen.searchRepository, same(searchRepository));
       expect(screen.syncCheckpointTrigger, same(syncCheckpointTrigger));
       expect(screen.isFullTextSearchAvailable, false);
+      expect(screen.bookImportService, same(importService));
       expect(screen.isEinkMode, true);
       expect(screen.initialJumpTarget, isNull);
+    });
+
+    test('bundle 帶 bookImportService 時，原樣轉交給 ReaderScreen'
+        '（epic-15-storage-permission Issue 0）', () {
+      final importService = FakeBookImportService();
+      final screen = buildReaderScreen(
+        book: _testBook(),
+        prefsManager: FakeReaderPrefsManager(),
+        features: LibraryReaderFeatureRepositories(
+          bookImportService: importService,
+        ),
+        sync: const LibrarySyncDependencies(),
+        libraryRepository: FakeLibraryRepository(),
+        isEinkMode: false,
+      );
+
+      expect(screen.bookImportService, same(importService));
+    });
+
+    test('bundle 未帶 bookImportService 時，ReaderScreen.bookImportService 為 null',
+        () {
+      final screen = buildReaderScreen(
+        book: _testBook(),
+        prefsManager: FakeReaderPrefsManager(),
+        features: const LibraryReaderFeatureRepositories(),
+        sync: const LibrarySyncDependencies(),
+        libraryRepository: FakeLibraryRepository(),
+        isEinkMode: false,
+      );
+
+      expect(screen.bookImportService, isNull);
     });
 
     test('initialJumpTarget 有值時正確帶入 ReaderScreen', () {

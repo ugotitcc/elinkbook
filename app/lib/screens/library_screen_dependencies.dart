@@ -4,6 +4,7 @@ import '../cloud_import/cloud_account_repository.dart';
 import '../cloud_import/cloud_storage_client.dart';
 import '../cloud_import/google_drive_oauth_client.dart';
 import '../cloud_import/onedrive_oauth_client.dart';
+import '../library/book_import_service.dart';
 import '../reader/book_reader_prefs_repository.dart';
 import '../reader/bookmarks_repository.dart';
 import '../reader/custom_fonts_repository.dart';
@@ -64,6 +65,13 @@ class LibraryReaderFeatureRepositories {
   /// （不導覽至 `LibrarySearchScreen`）。
   final SearchRepository? searchRepository;
 
+  /// epic-15-storage-permission Issue 0：書籍匯入服務，供閱讀器在檔案存取
+  /// 失效時「重新連結」書籍使用（Issue 2 才會實際使用）。放進本 bundle
+  /// 而非各畫面各自新增建構參數，是因為本 bundle 已貫穿所有開啟閱讀器的
+  /// 路徑（書架、全庫搜尋、單書搜尋、閱讀器→單書搜尋→閱讀器）。`null`
+  /// 時閱讀器不提供重新連結功能。
+  final BookImportService? bookImportService;
+
   const LibraryReaderFeatureRepositories({
     this.bookmarksRepository,
     this.highlightsRepository,
@@ -79,6 +87,7 @@ class LibraryReaderFeatureRepositories {
     this.fullTextSearchSettingsRepository,
     this.isFullTextSearchAvailable = true,
     this.searchRepository,
+    this.bookImportService,
   });
 }
 

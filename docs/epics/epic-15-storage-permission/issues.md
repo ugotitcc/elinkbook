@@ -11,7 +11,7 @@ Issue 0（prefactor）──> Issue 1（失效分類提示）──┬──> Is
 
 ## Issue 0：閱讀器改用「目前生效的檔案路徑」，匯入服務併入依賴 bundle（prefactor）
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** 無。
 
@@ -135,6 +135,7 @@ Issue 0（prefactor）──> Issue 1（失效分類提示）──┬──> Is
 - **處理中狀態**：
   - 從按下按鈕到 Re-link 回傳為止，按鈕停用並顯示進度指示器；在 finally 區段恢復。
   - 顯示 SnackBar 或重新開書前，先確認 State 仍然 mounted。
+- **移除 Issue 0 的暫時性 lint 豁免**：Issue 0 因 `_activeFilePath` 尚無寫入點，加了 `// ignore: prefer_final_fields` 與一行說明註解；本 Issue 加上寫入點後一併移除這兩行，並確認 `flutter analyze` 仍乾淨。
 - **成功後重新開書**（閱讀視圖維持原本的 GlobalKey，不加 `ValueKey`，見 Issue 0）：在同一次 `setState` 內完成以下動作：
   - 把目前生效的檔案路徑更新為 `updatedBook.filePath`。
   - 狀態改回載入中，並清除錯誤訊息與探測結果。

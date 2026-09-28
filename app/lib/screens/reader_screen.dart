@@ -35,6 +35,7 @@ import '../reader/tts_provider.dart';
 import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
+import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../reader/highlight.dart';
 import '../reader/highlight_style.dart';
@@ -239,6 +240,13 @@ class ReaderScreen extends StatefulWidget {
   /// 既有預設值，維持既有測試呼叫端零回歸。
   final bool isFullTextSearchAvailable;
 
+  /// epic-15-storage-permission Issue 0：書籍匯入服務，由
+  /// `LibraryReaderFeatureRepositories.bookImportService` 經
+  /// `buildReaderScreen` 轉交。供 Issue 2「檔案存取失效時重新連結書籍」
+  /// 使用；`null` 時不提供重新連結功能（比照 [libraryRepository] 等既有
+  /// 選用依賴的慣例，既有測試呼叫端零回歸）。
+  final BookImportService? bookImportService;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -265,6 +273,7 @@ class ReaderScreen extends StatefulWidget {
     this.initialJumpTarget,
     this.searchRepository,
     this.isFullTextSearchAvailable = true,
+    this.bookImportService,
   });
 
   @override
@@ -346,6 +355,22 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   _RenderState _state = _RenderState.loading;
   String? _errorMessage;
+  /// epic-15-storage-permission Issue 0：目前生效的書籍檔案路徑（`content://`
+  /// URI 或本機路徑，見 ADR 0002）。初始值為建構參數 [ReaderScreen.filePath]；
+  /// State 內一律讀取本欄位，不再直接讀建構參數，讓 Issue 2 在
+  /// 「重新連結」成功後能原地換成新路徑並重新開書。
+  ///
+  /// 使用 `late` 惰性初始化：第一次讀取發生在 `initState()` 的
+  /// `_resolveEpubEngineDispatch()`（`widget.isFixedLayout` 為 null 時），
+  /// 或延後到 `build()`（非 null 時該方法提早 return），兩者 `widget` 皆已
+  /// 可用。
+  ///
+  /// 刻意不在 `didUpdateWidget` 跟隨建構參數 `filePath` 的變動：閱讀器一律由
+  /// `MaterialPageRoute` 建立一次，沒有任何呼叫端會以不同 `filePath` 重建
+  /// 同一個 `ReaderScreen`。
+  // Issue 2 會在 Re-link 成功時重新賦值，本 Issue 暫無寫入點，故保留非 final。
+  // ignore: prefer_final_fields
+  late String _activeFilePath = widget.filePath;
   // 自動偵測結果（來自 onLayoutResolved），唯讀、不持久化，每次開書重新
   // 偵測（見 docs/epics/epic-3-fonts-layout/design.md「架構異動：新增
   // book_reader_prefs 資料表」）。
@@ -614,7 +639,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       }
       return;
     }
-    final format = detectBookFormat(widget.filePath);
+    final format = detectBookFormat(_activeFilePath);
     if (format == BookFormat.azw3) {
       // KF8 目前沒有對應 EPUB detectAndCacheEpubLayout() 的執行期重新偵測
       // 手段（容器格式不同，不能沿用 EPUB 的 OPF/CSS 解析器）。isFixedLayout
@@ -671,7 +696,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       return;
     }
     repository
-        .detectAndCacheEpubLayout(widget.bookId, widget.filePath)
+        .detectAndCacheEpubLayout(widget.bookId, _activeFilePath)
         .then((result) {
       if (!mounted) return;
       setState(() => _dispatchedIsFixedLayout = result);
@@ -749,7 +774,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 目標本身。initialJumpTarget 為 null（一般開書）時這個判斷恆為
     // false，行為完全不變。
     if (widget.initialJumpTarget != null && !_hasRelocatedSinceOpen) return;
-    final format = detectBookFormat(widget.filePath);
+    final format = detectBookFormat(_activeFilePath);
     switch (format) {
       case BookFormat.pdf:
         final info = _pdfPageInfo;
@@ -984,7 +1009,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         onChanged: _handlePrefsChanged,
         isEinkMode: widget.isEinkMode,
         showTextConversion:
-            detectBookFormat(widget.filePath) != BookFormat.cbz,
+            detectBookFormat(_activeFilePath) != BookFormat.cbz,
       ),
     );
   }
@@ -1674,7 +1699,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // Task 10 Step 7）刻意不同——PDF 沒有對應的版面解析回呼，本方法
     // （onPageRendered）是 PDF 開書成功的既有訊號，兩種格式共用同一個
     // _annotationsLoaded 旗標（單一書籍只會是其中一種格式，不會重複觸發）。
-    if (detectBookFormat(widget.filePath) == BookFormat.pdf &&
+    if (detectBookFormat(_activeFilePath) == BookFormat.pdf &&
         !_annotationsLoaded &&
         widget.highlightsRepository != null &&
         widget.notesRepository != null) {
@@ -1686,7 +1711,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 短時間內重複觸發）。與 EPUB 的 _tocLoaded 觸發點
     // （_handleFoliateLayoutResolved）刻意不同——PDF 同樣沒有版面解析
     // 回呼，onPageRendered 是 PDF 開書成功的唯一既有訊號。
-    if (detectBookFormat(widget.filePath) == BookFormat.pdf && !_pdfTocLoaded) {
+    if (detectBookFormat(_activeFilePath) == BookFormat.pdf && !_pdfTocLoaded) {
       _pdfTocLoaded = true;
       PdfReaderView.loadTableOfContents(_pdfReaderViewKey).then((items) {
         if (!mounted) return;
@@ -1720,7 +1745,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (jumpTarget == null) return;
     _searchJumpHighlightTriggered = true;
     final highlightShown = jumpTarget.applyTo(
-      format: detectBookFormat(widget.filePath),
+      format: detectBookFormat(_activeFilePath),
       pdfKey: _pdfReaderViewKey,
       foliateKey: _foliateEpubReaderViewKey,
       shouldNavigate: false,
@@ -1753,7 +1778,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_searchJumpHighlightTimer == null) return;
     _searchJumpHighlightTimer?.cancel();
     _searchJumpHighlightTimer = null;
-    final format = detectBookFormat(widget.filePath);
+    final format = detectBookFormat(_activeFilePath);
     if (format == BookFormat.pdf) {
       PdfReaderView.clearTemporaryHighlight(_pdfReaderViewKey);
     } else if (isFoliateFormat(format)) {
@@ -1776,7 +1801,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 只決定要不要額外疊加高亮／啟動自動清除計時器。
   void _handleReaderSearchJumpTarget(ReaderJumpTarget jumpTarget) {
     final highlightShown = jumpTarget.applyTo(
-      format: detectBookFormat(widget.filePath),
+      format: detectBookFormat(_activeFilePath),
       pdfKey: _pdfReaderViewKey,
       foliateKey: _foliateEpubReaderViewKey,
       shouldNavigate: true,
@@ -1824,14 +1849,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// `null`，呼叫端據此停用搜尋入口，語意對齊既有「不支援的檔案格式」
   /// 畫面分支。
   Book? _buildSearchableBook() {
-    final fileFormat = _toBookFileFormat(detectBookFormat(widget.filePath));
+    final fileFormat = _toBookFileFormat(detectBookFormat(_activeFilePath));
     if (fileFormat == null) return null;
     return Book(
       id: widget.bookId,
       title: _displayBookTitle,
       author: _displayBookAuthor,
       format: fileFormat,
-      filePath: widget.filePath,
+      filePath: _activeFilePath,
       source: BookSource.local,
       progress: widget.bookProgress,
       isFixedLayout: _isFixedLayout,
@@ -1881,6 +1906,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             readerActivityTracker: widget.readerActivityTracker,
             searchRepository: searchRepository,
             isFullTextSearchAvailable: widget.isFullTextSearchAvailable,
+            // epic-15-storage-permission Issue 0：這裡是手動逐欄重建
+            // bundle，新欄位必須一併轉送，否則「閱讀器→單書搜尋→閱讀器」
+            // 開啟的閱讀器會遺失匯入服務、無法重新連結失效書籍。
+            bookImportService: widget.bookImportService,
           ),
           syncDependencies: LibrarySyncDependencies(
             syncCheckpointTrigger: widget.syncCheckpointTrigger,
@@ -2317,7 +2346,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
-    final format = detectBookFormat(widget.filePath);
+    final format = detectBookFormat(_activeFilePath);
     // 方向偵測（spec.md「方向偵測契約」）：在 build() 中統一偵測，格式無關
     // 共用，不寫死在 PDF 專屬程式碼路徑裡——EPUB 分支（Issue 6）之後會消費
     // 同一個 isLandscape 值。
@@ -3331,7 +3360,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // 時讀取它，見 Issue 3 main.js 註解）。
         return FoliateReaderView(
           key: _foliateEpubReaderViewKey,
-          filePath: widget.filePath,
+          filePath: _activeFilePath,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
           onLayoutResolved: _handleFoliateLayoutResolved,
@@ -3420,7 +3449,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // 皆已補回。
         return PdfReaderView(
           key: _pdfReaderViewKey,
-          filePath: widget.filePath,
+          filePath: _activeFilePath,
           // epic-10-search Issue 5：理由同上方 FoliateReaderView 分支。
           initialPageIndex: widget.initialJumpTarget?.pdfPageIndex ??
               _initialPosition?.pdfPageIndex,
@@ -3501,7 +3530,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 清除兩者較早發生者。無條件呼叫——_clearSearchJumpHighlight()
     // 內部已對「目前根本沒有顯示中的高亮」做早退保護，重複呼叫安全。
     _clearSearchJumpHighlight();
-    final format = detectBookFormat(widget.filePath);
+    final format = detectBookFormat(_activeFilePath);
     switch (action) {
       case ZoneAction.previousPage:
         if (_state == _RenderState.loading) return;

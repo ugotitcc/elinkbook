@@ -68,6 +68,7 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/screens/book_search_screen.dart';
 import 'package:elinkbook/search/search_repository.dart';
+import '../support/fake_book_import_service.dart';
 import '../support/fake_search_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/layout_preset.dart';
@@ -11139,6 +11140,40 @@ void main() {
       final pushed =
           tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
       expect(pushed.readerFeatureRepositories.isFullTextSearchAvailable, isFalse);
+    });
+
+    testWidgets(
+        'bookImportService 會轉送給推入的 BookSearchScreen'
+        '（epic-15-storage-permission Issue 0：閱讀器→單書搜尋→閱讀器路徑不遺失）',
+        (tester) async {
+      final importService = FakeBookImportService();
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_import_service',
+            prefsManager: FakeReaderPrefsManager(),
+            searchRepository: FakeSearchRepository(),
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: importService,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pumpAndSettle();
+
+      final pushed =
+          tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
+      expect(pushed.readerFeatureRepositories.bookImportService,
+          same(importService));
     });
 
     testWidgets('searchRepository 為 null 時，點擊搜尋按鈕顯示不可用提示，不導覽',
