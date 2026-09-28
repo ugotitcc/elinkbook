@@ -1890,6 +1890,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             readerActivityTracker: widget.readerActivityTracker,
             searchRepository: searchRepository,
             isFullTextSearchAvailable: widget.isFullTextSearchAvailable,
+            // epic-15-storage-permission Issue 0：這裡是手動逐欄重建
+            // bundle，新欄位必須一併轉送，否則「閱讀器→單書搜尋→閱讀器」
+            // 開啟的閱讀器會遺失匯入服務、無法重新連結失效書籍。
+            bookImportService: widget.bookImportService,
           ),
           syncDependencies: LibrarySyncDependencies(
             syncCheckpointTrigger: widget.syncCheckpointTrigger,

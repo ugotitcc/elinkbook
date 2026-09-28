@@ -528,6 +528,10 @@ class _ElinkBookAppState extends State<ElinkBookApp>
               widget.fullTextSearchSettingsRepository,
           isFullTextSearchAvailable: widget.isFullTextSearchAvailable,
           searchRepository: widget.searchRepository,
+          // epic-15-storage-permission Issue 0：閱讀器在檔案存取失效時
+          // 重新連結書籍需要匯入服務（Issue 2 使用），與上方
+          // importService 參數是同一個實例。
+          bookImportService: widget.importService,
         ),
         syncDependencies: LibrarySyncDependencies(
           syncAccountRepository: widget.syncAccountRepository,
