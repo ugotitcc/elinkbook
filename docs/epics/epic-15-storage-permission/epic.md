@@ -80,8 +80,18 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 
 完整 `flutter test`（執行時 commit `98c94d32`）：2966 通過、1 跳過、0 失敗。`flutter analyze` 乾淨（`No issues found!`），`node tool/check_l10n_hardcoded_strings.js` 通過。
 
-真機驗證（Task 4）尚未執行：實作環境無 Android 實體裝置（`flutter devices` 僅見 Edge web），Step 2～5（資料夾匯入 EPUB／PDF、撤銷授權、刪除原始檔案）待人類持裝置操作後補記錄。
+真機驗證（Task 4）當時未執行：實作環境無 Android 實體裝置（`flutter devices` 僅見 Edge web）。
+
+**2026-09-28 真機驗證與修正（`/diagnose`）**。真機 `3CEF42ECD491687`：資料夾匯入的 PDF（`Download/TEST/黃仁勳傳_天下出版.pdf`）從資料夾刪除後開書，畫面顯示通用的「無法載入書籍」，而非「找不到檔案」說明。
+
+- **症狀**：logcat 顯示 `probeUriAccess: unknown error`，例外為 `IllegalArgumentException: Failed to determine if ... is child of ...: java.io.FileNotFoundException: Missing file for ...`。
+- **根因**：tree URI 的檔案被刪除時，ExternalStorageProvider 在自己的程序丟出 `IllegalArgumentException`；經 `DatabaseUtils.readExceptionFromParcel` 跨程序傳回時只剩例外種類與訊息，`cause` 為 `null`。原本只依例外類型分類，因此落入 `unknownError`。第一版修正「沿 cause 鏈尋找 `FileNotFoundException`」經真機證實無效（cause 已遺失），已捨棄。
+- **修正**（`c64c8764`）：新增 `classifyProbeUriException()`；遇到 `IllegalArgumentException` 時呼叫 `probeTreeRootAccess()` 查詢匯入資料夾根文件——資料夾讀得到、書讀不到判定 `fileNotFound`；資料夾權限被收回判定 `permissionRevoked`；其他（非 tree URI、資料夾也讀不到）維持 `unknownError`。不依賴例外訊息文字。
+- **驗證**：Kotlin 單元測試 `ProbeUriAccessClassifierTest` 6 個通過（依真機例外形狀建構，`cause` 為 `null`）；同一真機重測，logcat 顯示 `probeUriAccess: fileNotFound`，畫面顯示「找不到檔案」說明。完整 `flutter test`（commit `c64c8764`）：2966 通過、1 跳過；`flutter analyze` 乾淨。
+- **仍未在真機驗證的情境**：撤銷資料夾授權（`permissionRevoked`）、資料夾匯入 EPUB、單檔匯入的檔案被刪除。
+
+以 PR #293 合併進 `main`（`43e00ef0`）。
 
 ## 目前狀態
 
-Issue 1 完成，待 PR 合併；下一步 Issue 2／Issue 3（可平行）。
+Issue 1 已合併（PR #293）；下一步 Issue 2／Issue 3（可平行）。
