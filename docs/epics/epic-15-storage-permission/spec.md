@@ -134,7 +134,11 @@ Status: ready-for-agent
     1. 把目前生效的檔案路徑更新為 `BookRelinkSuccess.updatedBook.filePath`。這可能是新的 `content://` URI，也可能是落地複本的本機路徑。
     2. 狀態改回載入中，清除錯誤訊息與探測結果。
     3. 重新啟動 30 秒開書逾時計時器。
-  - `FoliateReaderView`／`PdfReaderView` 以目前生效的檔案路徑作為 `ValueKey`。錯誤視圖本來就把閱讀視圖整個移出樹，所以回到載入中時一定會建立全新的視圖實例，重新走一次快取與開書流程。加上 Key 是防禦性保證，不依賴這個隱含行為。
+  - `FoliateReaderView`／`PdfReaderView` **維持原本的 GlobalKey**，不改成 `ValueKey`，也不外包 `KeyedSubtree`。
+    - `ReaderScreen` 有二十多處透過這兩個 GlobalKey 呼叫翻頁、跳頁、目錄、劃線裝飾、朗讀高亮。
+    - 外包 `KeyedSubtree` 也無效：同一幀內 GlobalKey 換位置時，Flutter 會搬移既有的 Element 與 State，不會建立新實例。
+    - 能拿到全新視圖實例的真正保證是：Re-link 只能從錯誤視圖觸發，而錯誤視圖會把閱讀視圖整個移出樹。回到載入中時一定會重新建立視圖，重新走一次快取與開書流程。
+    - 這個保證由 widget test 釘住：重新開書時，快取函式會以新路徑再被呼叫一次。
   - 不需要重跑的部分：
     - 偏好設定、閱讀位置、字型、版面預設集：以 `bookId` 載入，Re-link 不改 `bookId`，而且開書失敗期間沒有閱讀行為。
     - 版面分派（固定版面／流式的判斷）：Re-link 保證格式不變、內容相同。但若 EPUB 的版面偵測在失敗前尚未完成（結果仍是 null），要以新路徑重新觸發一次偵測，否則會永遠停在等待。
@@ -147,7 +151,16 @@ Status: ready-for-agent
   - 比起逐一改搜尋畫面的建構子，這個做法少改兩個畫面的簽章，也不會漏掉「從閱讀器進單書搜尋再開書」這條路徑。
   - `LibraryRepository` 在 `buildReaderScreen` 已經是必填參數，不需改動。
   - 匯入服務為 null 時（例如既有測試），不顯示重新選取按鈕，只顯示分類後的說明文字。
-- 單檔選擇器包成可注入的函式型別，由 `ReaderScreen` 的選用建構參數注入，預設走 `FilePicker`，讓 widget test 不必觸碰平台實作。回傳值是選取的 URI 與真實檔名，取消時回傳 null。
+- 單檔選擇器包成可注入的函式型別，由 `ReaderScreen` 的選用建構參數注入，預設走 `FilePicker`，讓 widget test 不必觸碰平台實作：
+
+  ```dart
+  typedef SingleBookFilePicker =
+      Future<({String uri, String? displayName})?> Function(List<String> allowedExtensions);
+  ```
+
+  - `allowedExtensions` 依原書格式傳入。
+  - 使用者取消時回傳 null，此時什麼都不做，不顯示任何 SnackBar。
+- 重新選取按鈕的 Key 是 `Key('reader_storage_relink_button')`。
 - 返回書架後，書架依既有的「從閱讀器返回即重新載入書單」行為反映更新後的記錄，本 Epic 不另外處理書架。
 
 ### Re-link 服務（擴充 `BookImportService`）
@@ -232,7 +245,7 @@ Status: ready-for-agent
 
 ### 介面文案與在地化
 
-- 所有新增的使用者可見字串都走 `AppLocalizations`，同步補齊正體中文、簡體中文、英文三份 ARB，人工翻譯。ARB key 如下（正體中文文案為定稿方向，實作時可微調措辭，但 key 名稱以此為準）：
+- 所有新增的使用者可見字串都走 `AppLocalizations`，同步補齊四份 ARB（`app_zh_TW.arb` 範本、`app_zh.arb` 中文退路、`app_zh_CN.arb`、`app_en.arb`），簡體中文與英文人工翻譯；改完執行 `flutter gen-l10n` 並提交生成的程式碼。ARB key 如下（正體中文文案為定稿方向，實作時可微調措辭，但 key 名稱以此為準）：
 
   | ARB key | 正體中文文案 |
   |---|---|
@@ -313,7 +326,7 @@ Status: ready-for-agent
   - C-3：回傳型別改為 sealed class。
   - I-1（改用不同做法）：審查建議逐一在兩個搜尋畫面的建構子新增參數。改為把匯入服務放進既有的 `LibraryReaderFeatureRepositories` bundle：改動更少，而且涵蓋審查未提到的「閱讀器 → 單書搜尋 → 閱讀器」路徑。
   - I-2：探測防重入與 mounted 檢查。
-  - I-3（改用不同做法）：審查建議逐一重置 State。改為以目前生效的檔案路徑作為閱讀視圖的 `ValueKey`，並列出最小的復位清單，版面分派只在偵測尚未完成時才重跑。
+  - I-3（改用不同做法）：審查建議逐一重置 State。改為列出最小的復位清單（原本另加的「閱讀視圖改用 `ValueKey`」已在工單審查 C-1 撤回，見 epic.md），版面分派只在偵測尚未完成時才重跑。
   - I-4：明訂跨端契約與 Dart 型別。
   - I-5：Re-link 處理中停用按鈕並顯示進度。
   - I-6：這是本 spec 的事實錯誤（`findBookById` 早已存在），已更正。

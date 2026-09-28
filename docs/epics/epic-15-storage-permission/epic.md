@@ -32,8 +32,25 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 - **內容指紋不一致一律拒絕連結**（保護劃線／書籤 CFI 與全文索引）；原書沒有指紋時略過比對並補寫。
 - **字型納入本 Epic**：進入字型管理時探測自訂字型，失效者標示並可重新連結（字型家族名稱須相同）。
 - 不新增 ADR（取捨可輕易反轉）。
-- **規格審查修訂（同日）**：依 `reviews/review-spec.md`（3 Critical／7 Important／3 Minor）全數處理：EPUB 指紋比對明訂先取 OPF identifier、Re-link 改為先驗證後持久化授權、回傳型別改 sealed class、探測防重入與重新開書復位（以路徑作為視圖 `ValueKey`）、匯入服務併入 `LibraryReaderFeatureRepositories` bundle、探測改走背景佇列通道＋3 秒逾時、字型探測狀態以 id 保存、列出 ARB key。修訂明細見 spec.md「Further Notes」。
+- **規格審查修訂（同日）**：依 `reviews/review-spec.md`（3 Critical／7 Important／3 Minor）全數處理：EPUB 指紋比對明訂先取 OPF identifier、Re-link 改為先驗證後持久化授權、回傳型別改 sealed class、探測防重入與重新開書復位（當時另加「以路徑作為視圖 `ValueKey`」，後於工單審查 C-1 撤回）、匯入服務併入 `LibraryReaderFeatureRepositories` bundle、探測改走背景佇列通道＋3 秒逾時、字型探測狀態以 id 保存、列出 ARB key。修訂明細見 spec.md「Further Notes」。
+
+## Scrum Master 結論（2026-09-28 `/to-tickets`）
+
+`issues.md` 已產出，拆成 4 個垂直切片（皆為 `ready-for-agent`）。spec.md 原建議的 4 片偏向按層切（原生／服務／UI），改為每片可獨立展示：
+
+- **Issue 0**（prefactor，不改行為）：`ReaderScreen` 改用「目前生效的檔案路徑」（閱讀視圖維持原 GlobalKey）；匯入服務併入 `LibraryReaderFeatureRepositories` bundle。
+- **Issue 1**（Blocked by 0）：原生探測＋`ReaderScreen` 錯誤視圖分辨權限失效／找不到檔案（不含按鈕）＋真機驗證。放在 Issue 0 之後是為了避免同時改 `ReaderScreen` 衝突，非邏輯依賴。
+- **Issue 2**（Blocked by 1）：`BookImportService.relinkBook`＋錯誤視圖重新選取按鈕＋成功後重新開書。使用者決定服務層與 UI 維持一片，不拆。
+- **Issue 3**（Blocked by 1，可與 Issue 2 平行）：字型管理失效標示與重新連結。
+
+- **工單審查修訂（同日）**：依 `reviews/review-issues.md`（1 Critical／4 Important／4 Minor）處理。
+  - C-1 撤回「閱讀視圖改用 `ValueKey`」：會破壞既有 GlobalKey 控制鏈。審查建議改外包 `KeyedSubtree`，但這也無效，因為同一幀內 GlobalKey 換位置時 Flutter 會搬移既有 State。改為保留 GlobalKey，依賴「錯誤視圖把閱讀視圖移出樹」保證會建立新實例，並以測試釘住，spec.md 同步更正。
+  - I-1：重複檢查排除原書自己。
+  - I-2：取消選檔不顯示 SnackBar。
+  - I-3：`FakeBookImportService`／`_ThrowingImportService` 同步實作 `relinkBook`。
+  - I-4：ARB 為四份（含 `app_zh.arb`），改完執行 `flutter gen-l10n`。
+  - Minor：探測結果以型別化欄位保存、明訂 widget Key 與選擇器 typedef、補 `library_screen_dependencies_test.dart`。
 
 ## 目前狀態
 
-Architecting 完成（`spec.md`）。下一步：Scrum Master 階段撰寫 `issues.md`（建議切片見 spec.md「Further Notes」）。
+Scrum Master 完成（`issues.md`）。下一步：認領 Issue 0，撰寫 `plans/plan-issue-0.md`。
