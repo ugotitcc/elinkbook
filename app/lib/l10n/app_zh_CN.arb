@@ -338,6 +338,8 @@
   "readerTtsVoicePickerTitle": "朗读语音",
   "readerUnsupportedFormatMessage": "不支持的文件格式",
   "readerFailedToLoadBookMessage": "无法载入书籍",
+  "readerStoragePermissionRevokedMessage": "App 对这个文件的访问权限已失效，请重新选择文件。",
+  "readerStorageFileNotFoundMessage": "找不到原始文件，可能已被移动、重命名或删除。请先确认文件仍在设备中，再重新选择。",
   "readerTtsSleepTimerOptionMinutes": "{minutes} 分钟",
   "readerTtsSleepTimerNoLimitLabel": "不限时",
   "settingsScaffoldTitle": "设定",

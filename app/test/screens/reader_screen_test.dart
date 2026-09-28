@@ -152,6 +152,42 @@ Book _searchResultPlaceholderBook({BookFileFormat format = BookFileFormat.pdf}) 
   );
 }
 
+/// epic-15-storage-permission Issue 1：以 content:// EPUB 開啟 ReaderScreen，
+/// 並覆寫 [probeStorageAccess]。回傳探測呼叫次數的讀取器。
+Future<int Function()> _pumpContentUriReader(
+  WidgetTester tester, {
+  required FakeReaderPrefsManager prefsManager,
+  required Future<StorageAccessProbeResult> Function(String uri) probe,
+  String filePath = 'content://com.example.provider/book.epub',
+}) async {
+  var probeCalls = 0;
+  final original = probeStorageAccess;
+  probeStorageAccess = (uri) {
+    probeCalls++;
+    return probe(uri);
+  };
+  addTearDown(() => probeStorageAccess = original);
+
+  await tester.pumpWidget(
+    MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+      home: ReaderScreen(
+        filePath: filePath,
+        bookId: 'b_probe',
+        prefsManager: prefsManager,
+        isFixedLayout: false,
+      ),
+    ),
+  );
+  await tester.pump();
+  await tester.runAsync(() => Future.delayed(Duration.zero));
+  await tester.pump();
+  return () => probeCalls;
+}
+
 void main() {
   late FakeReaderPrefsManager prefsManager;
   // 保存原始實作， tearDownAll 時還原
@@ -11698,6 +11734,193 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.text('Unsupported file format'), findsOneWidget);
+  });
+
+  group('開書失敗的存取探測（epic-15-storage-permission Issue 1）', () {
+    testWidgets('permissionRevoked：顯示權限失效說明', (tester) async {
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked);
+
+      tester.widget<FoliateReaderView>(find.byType(FoliateReaderView))
+          .onError('boom');
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        tester.widget<Text>(find.byKey(const Key('reader_error_text'))).data,
+        'App 對這個檔案的存取權限已失效，請重新選取檔案。',
+      );
+    });
+
+    testWidgets('fileNotFound：顯示找不到檔案說明', (tester) async {
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.fileNotFound);
+
+      tester.widget<FoliateReaderView>(find.byType(FoliateReaderView))
+          .onError('boom');
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        tester.widget<Text>(find.byKey(const Key('reader_error_text'))).data,
+        '找不到原始檔案，可能已被移動、改名或刪除。請先確認檔案仍在裝置中，再重新選取。',
+      );
+    });
+
+    for (final result in [
+      StorageAccessProbeResult.readable,
+      StorageAccessProbeResult.unknownError,
+    ]) {
+      testWidgets('$result：維持原本的錯誤訊息', (tester) async {
+        await _pumpContentUriReader(tester,
+            prefsManager: prefsManager, probe: (_) async => result);
+
+        tester.widget<FoliateReaderView>(find.byType(FoliateReaderView))
+            .onError('原始錯誤訊息');
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          tester.widget<Text>(find.byKey(const Key('reader_error_text'))).data,
+          '原始錯誤訊息',
+        );
+      });
+    }
+
+    testWidgets('非 content:// 的書不呼叫探測，直接顯示原本的錯誤訊息',
+        (tester) async {
+      final probeCalls = await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          filePath: 'test/fixtures/sample.epub',
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked);
+
+      tester.widget<FoliateReaderView>(find.byType(FoliateReaderView))
+          .onError('原始錯誤訊息');
+      await tester.pump();
+
+      expect(probeCalls(), 0);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('reader_error_text'))).data,
+        '原始錯誤訊息',
+      );
+    });
+
+    testWidgets('開書逾時不呼叫探測', (tester) async {
+      final probeCalls = await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked);
+
+      await tester.pump(const Duration(seconds: 30));
+
+      expect(probeCalls(), 0);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('reader_error_text'))).data,
+        '開書逾時，可能是系統 WebView 版本過舊或檔案異常',
+      );
+    });
+
+    testWidgets('探測未完成時連續兩次 onError 只探測一次，期間維持載入指示器',
+        (tester) async {
+      final pending = Completer<StorageAccessProbeResult>();
+      final probeCalls = await _pumpContentUriReader(tester,
+          prefsManager: prefsManager, probe: (_) => pending.future);
+
+      final view =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      view.onError('第一次');
+      view.onError('第二次');
+      await tester.pump();
+
+      expect(probeCalls(), 1);
+      expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
+      expect(find.byKey(const Key('reader_error_text')), findsNothing);
+
+      pending.complete(StorageAccessProbeResult.fileNotFound);
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_error_text')), findsOneWidget);
+      expect(find.byKey(const Key('reader_loading_indicator')), findsNothing);
+    });
+
+    testWidgets('探測未完成時推進超過開書逾時，仍維持載入指示器、不顯示逾時訊息',
+        (tester) async {
+      final pending = Completer<StorageAccessProbeResult>();
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager, probe: (_) => pending.future);
+
+      tester.widget<FoliateReaderView>(find.byType(FoliateReaderView))
+          .onError('boom');
+      await tester.pump(const Duration(seconds: 31));
+
+      expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
+      expect(find.byKey(const Key('reader_error_text')), findsNothing);
+
+      pending.complete(StorageAccessProbeResult.permissionRevoked);
+      await tester.pump();
+      await tester.pump();
+      expect(
+        tester.widget<Text>(find.byKey(const Key('reader_error_text'))).data,
+        'App 對這個檔案的存取權限已失效，請重新選取檔案。',
+      );
+    });
+
+    testWidgets('探測未完成時 onPageRendered 先到，探測結果回來不覆蓋成錯誤畫面',
+        (tester) async {
+      final pending = Completer<StorageAccessProbeResult>();
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager, probe: (_) => pending.future);
+
+      final view =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      view.onError('boom');
+      await tester.pump();
+      view.onPageRendered();
+      await tester.pump();
+
+      pending.complete(StorageAccessProbeResult.permissionRevoked);
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_error_text')), findsNothing);
+      expect(find.byType(FoliateReaderView), findsOneWidget);
+    });
+
+    testWidgets('探測函式本身拋出例外：退回原本的錯誤訊息，不停在載入中（審查 I-1）',
+        (tester) async {
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => throw StateError('probe 爆掉'));
+
+      tester.widget<FoliateReaderView>(find.byType(FoliateReaderView))
+          .onError('原始錯誤訊息');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_loading_indicator')), findsNothing);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('reader_error_text'))).data,
+        '原始錯誤訊息',
+      );
+    });
+
+    testWidgets('探測未完成時離開閱讀器，結果回來後不拋例外', (tester) async {
+      final pending = Completer<StorageAccessProbeResult>();
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager, probe: (_) => pending.future);
+
+      tester.widget<FoliateReaderView>(find.byType(FoliateReaderView))
+          .onError('boom');
+      await tester.pump();
+
+      await tester.pumpWidget(const SizedBox());
+      pending.complete(StorageAccessProbeResult.permissionRevoked);
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
   });
 
   tearDownAll(() {
