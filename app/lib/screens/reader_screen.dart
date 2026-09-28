@@ -74,6 +74,8 @@ import '../search/search_repository.dart';
 import '../sync/sync_checkpoint_trigger.dart';
 import '../theme/elink_tokens.dart';
 import 'annotation_toolbar.dart';
+import 'support/book_import_picker_helper.dart'
+    show SingleBookFilePicker, pickSingleBookFileViaFilePicker;
 import 'note_edit_dialog.dart';
 import 'notes_bottom_sheet.dart';
 import 'book_search_screen.dart';
@@ -249,6 +251,11 @@ class ReaderScreen extends StatefulWidget {
   /// 選用依賴的慣例，既有測試呼叫端零回歸）。
   final BookImportService? bookImportService;
 
+  /// epic-15-storage-permission Issue 2：「重新選取檔案」使用的單檔選擇器；
+  /// `null` 時使用 [pickSingleBookFileViaFilePicker]。供 widget test 注入，
+  /// 不必觸碰平台實作。
+  final SingleBookFilePicker? pickSingleBookFile;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -276,6 +283,7 @@ class ReaderScreen extends StatefulWidget {
     this.searchRepository,
     this.isFullTextSearchAvailable = true,
     this.bookImportService,
+    this.pickSingleBookFile,
   });
 
   @override
@@ -370,8 +378,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 刻意不在 `didUpdateWidget` 跟隨建構參數 `filePath` 的變動：閱讀器一律由
   /// `MaterialPageRoute` 建立一次，沒有任何呼叫端會以不同 `filePath` 重建
   /// 同一個 `ReaderScreen`。
-  // Issue 2 會在 Re-link 成功時重新賦值，本 Issue 暫無寫入點，故保留非 final。
-  // ignore: prefer_final_fields
   late String _activeFilePath = widget.filePath;
   /// epic-15-storage-permission Issue 1：開書失敗後的存取探測結果。
   /// 錯誤視圖依它分流顯示說明文字；Issue 2 依它決定是否顯示「重新選取
@@ -382,6 +388,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// epic-15-storage-permission Issue 1：探測進行中。期間忽略後續
   /// onError 與開書逾時——底層視圖此時仍在樹上，可能連續回報多次錯誤。
   bool _isProbingAccess = false;
+
+  /// epic-15-storage-permission Issue 2：「重新選取檔案」處理中（從按下按鈕
+  /// 到 relinkBook 回傳為止）。期間按鈕停用並顯示進度，避免大檔案計算
+  /// 指紋時使用者重複開啟選擇器或平行發動多次 Re-link。
+  bool _isRelinking = false;
   // 自動偵測結果（來自 onLayoutResolved），唯讀、不持久化，每次開書重新
   // 偵測（見 docs/epics/epic-3-fonts-layout/design.md「架構異動：新增
   // book_reader_prefs 資料表」）。
@@ -2001,6 +2012,89 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     });
   }
 
+  /// epic-15-storage-permission Issue 2：「重新選取檔案」按鈕的處理函式。
+  /// 取消選檔時什麼都不做（不顯示 SnackBar）；成功時原地重新開書；失敗時
+  /// 以 SnackBar 說明原因，錯誤視圖維持原樣可再試一次。
+  Future<void> _handleRelinkPressed() async {
+    if (_isRelinking) return;
+    setState(() => _isRelinking = true);
+    final BookRelinkResult? result;
+    try {
+      result = await _pickAndRelink();
+    } finally {
+      if (mounted) setState(() => _isRelinking = false);
+    }
+    if (!mounted || result == null) return;
+    switch (result) {
+      case BookRelinkSuccess(:final updatedBook):
+        _reopenWithFilePath(updatedBook.filePath);
+      case BookRelinkFailure(:final reason):
+        final l10n = AppLocalizations.of(context)!;
+        final message = switch (reason) {
+          BookRelinkFailureReason.formatMismatch =>
+            l10n.readerStorageRelinkFormatMismatch,
+          BookRelinkFailureReason.contentMismatch =>
+            l10n.readerStorageRelinkContentMismatch,
+          BookRelinkFailureReason.alreadyInLibrary =>
+            l10n.readerStorageRelinkAlreadyInLibrary,
+          BookRelinkFailureReason.failed => l10n.readerStorageRelinkFailed,
+        };
+        // 先收掉上一則：連續選錯檔案時，新結果不必排在前一則（預設 4 秒）
+        // 之後才出現，否則使用者會以為第二次嘗試沒有反應（計畫審查 M-1）。
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  /// 開啟單檔選擇器（副檔名限定為原書格式）並呼叫 relinkBook。使用者取消
+  /// 時回傳 null。保證不拋出例外：選擇器或服務的任何例外都視為 failed，
+  /// 否則按鈕狀態雖會在 finally 恢復，使用者卻得不到任何回饋。
+  Future<BookRelinkResult?> _pickAndRelink() async {
+    final importService = widget.bookImportService;
+    if (importService == null) return null;
+    try {
+      final picker = widget.pickSingleBookFile ?? pickSingleBookFileViaFilePicker;
+      // 只有 EPUB／PDF／AZW3 會走到這裡，BookFormat 名稱即副檔名。
+      final picked = await picker([detectBookFormat(_activeFilePath).name]);
+      // 選檔期間使用者可能已離開閱讀器：不再發動 relinkBook，避免白做
+      // 整檔 SHA-256 與持久化授權（計畫審查 M-4）。
+      if (!mounted || picked == null) return null;
+      return await importService.relinkBook(
+        widget.bookId,
+        picked.uri,
+        displayName: picked.displayName,
+      );
+    } catch (_) {
+      return const BookRelinkFailure(BookRelinkFailureReason.failed);
+    }
+  }
+
+  /// epic-15-storage-permission Issue 2：Re-link 成功後以 [filePath] 在同一個
+  /// 畫面重新開書（spec.md「重新開書的復位清單」）。閱讀視圖維持原本的
+  /// GlobalKey：錯誤視圖已把它整個移出樹，回到載入中時一定會建立新實例，
+  /// 以新路徑重新走一次快取與開書流程。偏好設定、閱讀位置、字型以
+  /// bookId 載入，Re-link 不改 bookId，不需要重跑。
+  void _reopenWithFilePath(String filePath) {
+    setState(() {
+      _activeFilePath = filePath;
+      _state = _RenderState.loading;
+      _errorMessage = null;
+      _probeResult = null;
+      _openBookTimeoutTimer?.cancel();
+      _openBookTimeoutTimer = Timer(
+        const Duration(seconds: 30),
+        _handleOpenBookTimeout,
+      );
+    });
+    // EPUB 版面偵測若在失敗前尚未完成（仍是 null），以新路徑重新觸發一次，
+    // 否則 _buildBody 的 gating 條件會讓閱讀視圖永遠停在等待。
+    if (_dispatchedIsFixedLayout == null &&
+        detectBookFormat(filePath) == BookFormat.epub) {
+      _resolveEpubEngineDispatch();
+    }
+  }
+
   /// `FoliateReaderView` 專屬的 onLayoutResolved 處理。
   /// 【已知、可接受的行為】把自動偵測結果寫回 [_autoDetectedWritingMode]
   /// 後，若當下沒有 writingModeOverride，[_resolved] 的 writingMode 會從 null
@@ -2907,17 +3001,46 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // （審查 M-1）。
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                // 依存取探測結果分流。
-                switch (_probeResult) {
-                  StorageAccessProbeResult.permissionRevoked =>
-                    l10n.readerStoragePermissionRevokedMessage,
-                  StorageAccessProbeResult.fileNotFound =>
-                    l10n.readerStorageFileNotFoundMessage,
-                  _ => _errorMessage ?? l10n.readerFailedToLoadBookMessage,
-                },
-                key: const Key('reader_error_text'),
-                textAlign: TextAlign.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    // 依存取探測結果分流。
+                    switch (_probeResult) {
+                      StorageAccessProbeResult.permissionRevoked =>
+                        l10n.readerStoragePermissionRevokedMessage,
+                      StorageAccessProbeResult.fileNotFound =>
+                        l10n.readerStorageFileNotFoundMessage,
+                      _ => _errorMessage ?? l10n.readerFailedToLoadBookMessage,
+                    },
+                    key: const Key('reader_error_text'),
+                    textAlign: TextAlign.center,
+                  ),
+                  // epic-15-storage-permission Issue 2：權限失效／找不到檔案
+                  // 且有匯入服務時才提供重新選取。用 OutlinedButton：E-Ink
+                  // 高對比模式只有黑白兩色，純填色或純文字按鈕的輪廓容易和
+                  // 背景融在一起。
+                  if (widget.bookImportService != null &&
+                      (_probeResult ==
+                              StorageAccessProbeResult.permissionRevoked ||
+                          _probeResult ==
+                              StorageAccessProbeResult.fileNotFound)) ...[
+                    const SizedBox(height: 24),
+                    OutlinedButton(
+                      key: const Key('reader_storage_relink_button'),
+                      onPressed: _isRelinking ? null : _handleRelinkPressed,
+                      child: _isRelinking
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(
+                                key: Key('reader_storage_relink_progress'),
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(l10n.readerStorageRelinkButton),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
