@@ -33,6 +33,7 @@ import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/reader_activity_tracker.dart';
 import 'package:elinkbook/screens/reader_chrome_bottom_bar.dart';
+import 'package:elinkbook/screens/reader_chrome_top_bar.dart';
 import 'package:elinkbook/screens/tts_panel.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
@@ -738,10 +739,9 @@ void main() {
       );
       await tester.pump();
 
-      final titleText = tester.widget<Text>(
-        find.byKey(const Key('reader_chrome_title')),
-      );
-      expect(titleText.data, '');
+      // 2026-09-28：標題為空字串時頂部列不再畫出空的標題元件（避免
+      // 「顯示頁首開＋工具列收合」時留下空白色帶）。
+      expect(find.byKey(const Key('reader_chrome_title')), findsNothing);
     });
 
     testWidgets('PDF：頂部列標題為空字串，不顯示書名', (tester) async {
@@ -761,10 +761,9 @@ void main() {
       );
       await tester.pump();
 
-      final titleText = tester.widget<Text>(
-        find.byKey(const Key('reader_chrome_title')),
-      );
-      expect(titleText.data, '');
+      // 2026-09-28：標題為空字串時頂部列不再畫出空的標題元件（避免
+      // 「顯示頁首開＋工具列收合」時留下空白色帶）。
+      expect(find.byKey(const Key('reader_chrome_title')), findsNothing);
     });
   });
 
@@ -2482,10 +2481,12 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('reader_footer')), findsNothing);
-    // 頁尾關閉不影響頁首（預設開啟）——驗證兩者互相獨立。
+    // 頁尾關閉不影響頁首（預設開啟）——驗證兩者互相獨立。頂部列標題
+    // 恆為空字串、不再畫出（2026-09-28），改驗證傳給頂部列的頁首開關。
     expect(
-      find.byKey(const Key('reader_chrome_title')),
-      findsOneWidget,
+      tester.widget<ReaderChromeTopBar>(find.byType(ReaderChromeTopBar))
+          .isHeaderVisible,
+      isTrue,
     );
   });
 
@@ -2562,9 +2563,12 @@ void main() {
     await tester.pump();
     await tester.pump();
 
+    // 頂部列標題恆為空字串、不再畫出（2026-09-28），改驗證傳給頂部列的
+    // 頁首開關。
     expect(
-      find.byKey(const Key('reader_chrome_title')),
-      findsOneWidget,
+      tester.widget<ReaderChromeTopBar>(find.byType(ReaderChromeTopBar))
+          .isHeaderVisible,
+      isTrue,
     );
     expect(find.byKey(const Key('reader_footer')), findsNothing);
   });
@@ -3382,8 +3386,10 @@ void main() {
       findsNothing,
       reason: '工具列隨書籤跳轉造成的沉浸模式收合而隱藏',
     );
+    // 2026-09-28：頁首文字實際由 reader_foliate_header_text 顯示（頂部列
+    // 標題恆為空、不再畫出）。
     expect(
-      find.byKey(const Key('reader_chrome_title')),
+      find.byKey(const Key('reader_foliate_header_text')),
       findsOneWidget,
       reason: '頁首（標題文字）不受沉浸模式收合影響',
     );
