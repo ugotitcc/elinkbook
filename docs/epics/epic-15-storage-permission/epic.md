@@ -92,6 +92,17 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 
 以 PR #293 合併進 `main`（`43e00ef0`）。
 
+## Issue 2 完成記錄（2026-09-29）
+
+分支 `epic-15/issue-2`，共 2 個 commit（依 `plans/plan-issue-2.md` 逐 Task 提交）：
+
+1. `d32936f2` — `feat(library): BookImportService 新增 relinkBook 原地重新連結書籍（epic-15 Issue 2）`
+2. `03a2f919` — `feat(reader): 錯誤畫面重新選取檔案並原地重新開書（epic-15 Issue 2）`
+
+完整 `flutter test`（執行時 commit `03a2f919`，`--concurrency=1`）：3001 通過、1 跳過、0 失敗。`flutter analyze` 乾淨（`No issues found!`），`node tool/check_l10n_hardcoded_strings.js` 通過。
+
+真機驗證（Task 3）待補：實作環境無 Android 實體裝置（`flutter devices` 僅見 Windows／Chrome／Edge），撤銷授權後重新選取、選錯檔案、返回書架三個情境需以真機手動執行。
+
 ## 目前狀態
 
-Issue 1 已合併（PR #293）；下一步 Issue 2／Issue 3（可平行）。
+Issue 2 已完成、待 PR 合併；真機驗證待補。下一步 Issue 3（與 Issue 2 無依賴，可平行）。
