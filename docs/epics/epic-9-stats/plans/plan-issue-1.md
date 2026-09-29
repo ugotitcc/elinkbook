@@ -66,7 +66,7 @@
   - `statsDayTotal(data, dateKey): number`、`statsGrandTotal(data): number`
   - 常數 `STATS_WINDOW_DAYS = 365`、`STATS_MOCK_BOOKS`
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 建立 `prototype/tests/stats_logic.test.js`：
 
@@ -164,12 +164,12 @@ test('假資料：決定性、情境正確', () => {
 });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `node --test prototype/tests/`
 Expected: FAIL，訊息含「找不到 STATS-LOGIC 區塊」（HTML 尚未加入該區塊）。
 
-- [ ] **Step 3: 插入純邏輯區塊**
+- [x] **Step 3: 插入純邏輯區塊**
 
 用 Edit 工具修改 `prototype/elinkbook_theme_prototype.html`。`old_string`（唯一）：
 
@@ -298,12 +298,12 @@ function statsGrandTotal(data) {
     let currentView = 'library';
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `node --test prototype/tests/`
 Expected: 7 個測試全部 PASS，`fail 0`。
 
-- [ ] **Step 5: 語法檢查所有內嵌腳本**
+- [x] **Step 5: 語法檢查所有內嵌腳本**
 
 Run:
 ```bash
@@ -311,7 +311,7 @@ node -e "const h=require('fs').readFileSync('prototype/elinkbook_theme_prototype
 ```
 Expected: 印出 `ok 3`（tailwind 設定、純邏輯、主腳本）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add prototype/tests/stats_logic.test.js prototype/elinkbook_theme_prototype.html

@@ -898,6 +898,119 @@
   </main>
 
   <script>
+/* STATS-LOGIC-START */
+// ============ 閱讀統計：純邏輯（無 DOM 依賴；node 測試會擷取此區塊執行） ============
+const STATS_WINDOW_DAYS = 365;
+
+// 五級分級：0 無紀錄；1 未滿 15 分；2 未滿 30 分；3 未滿 60 分；4 六十分以上
+function statsLevelForSeconds(sec) {
+  if (sec <= 0) return 0;
+  if (sec < 15 * 60) return 1;
+  if (sec < 30 * 60) return 2;
+  if (sec < 60 * 60) return 3;
+  return 4;
+}
+
+// 時數顯示：「X 小時 Y 分鐘」或「Y 分鐘」；有紀錄但不滿 1 分鐘者顯示「1 分鐘」（避免顯示 0 分鐘）
+function statsFormatDuration(sec) {
+  let minutes = Math.floor(sec / 60);
+  if (sec > 0 && minutes === 0) minutes = 1;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return hours > 0 ? `${hours} 小時 ${rest} 分鐘` : `${rest} 分鐘`;
+}
+
+// 本地日期 → YYYY-MM-DD
+function statsDateKey(d) {
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+function statsAddDays(d, n) {
+  const r = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+// 建立貢獻圖網格：涵蓋「今天往前 365 天」，一週從週一開始（row 0 = 週一，row 6 = 週日）。
+// 範圍外（第一週週一之前、最後一週今天之後）的格子為 null（畫成透明佔位、不可點擊）。
+function statsBuildHeatmapGrid(today) {
+  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const start = statsAddDays(t, -(STATS_WINDOW_DAYS - 1));
+  const startMonday = statsAddDays(start, -((start.getDay() + 6) % 7));
+  const spanDays = Math.round((t - startMonday) / 86400000) + 1;
+  const weekCount = Math.ceil(spanDays / 7);
+  const weeks = [];
+  for (let w = 0; w < weekCount; w++) {
+    const col = [];
+    for (let row = 0; row < 7; row++) {
+      const day = statsAddDays(startMonday, w * 7 + row);
+      col.push(day < start || day > t ? null : { date: statsDateKey(day), row });
+    }
+    weeks.push(col);
+  }
+  // 月份標籤：某週第一個有效格子的月份與前一個標籤不同時標出；
+  // 第一個標籤若與第二個標籤相距不到 2 週（會重疊）則捨棄第一個
+  const monthLabels = [];
+  let lastMonth = -1;
+  weeks.forEach((col, w) => {
+    const first = col.find(c => c);
+    if (!first) return;
+    const month = Number(first.date.slice(5, 7));
+    if (month !== lastMonth) {
+      monthLabels.push({ weekIndex: w, month });
+      lastMonth = month;
+    }
+  });
+  if (monthLabels.length >= 2 && monthLabels[1].weekIndex - monthLabels[0].weekIndex < 2) {
+    monthLabels.shift();
+  }
+  return { weeks, monthLabels };
+}
+
+// 假資料（固定亂數種子，重複載入結果一致）。scenario：
+// normal 一般；todayEmpty 今天無紀錄；empty 全空（清除後）；heavy 每天都讀超過一小時
+const STATS_MOCK_BOOKS = ['紅樓夢', '人間詞話', 'The Pragmatic Programmer', '三體', '歷史的研究',
+  '海邊的卡夫卡' /* 示範「已刪除的書」：實際 App 以書名快照顯示，畫面與一般書無差別 */];
+
+function statsMockData(today, scenario) {
+  const data = {};
+  if (scenario === 'empty') return data;
+  let seed = 20260929;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  for (let i = 0; i < STATS_WINDOW_DAYS; i++) {
+    const key = statsDateKey(statsAddDays(today, -i));
+    if (scenario === 'heavy') {
+      data[key] = [{ bookId: 'b0', title: STATS_MOCK_BOOKS[0], seconds: (65 + Math.floor(rnd() * 90)) * 60 }];
+      continue;
+    }
+    const isToday = i === 0;
+    if (!isToday && rnd() > 0.55) continue;
+    const count = 1 + Math.floor(rnd() * 3);
+    const books = [];
+    for (let b = 0; b < count; b++) {
+      const idx = Math.floor(rnd() * STATS_MOCK_BOOKS.length);
+      if (books.some(x => x.bookId === `b${idx}`)) continue;
+      books.push({ bookId: `b${idx}`, title: STATS_MOCK_BOOKS[idx], seconds: (5 + Math.floor(rnd() * 66)) * 60 });
+    }
+    books.sort((a, b) => b.seconds - a.seconds);
+    data[key] = books;
+  }
+  if (scenario === 'todayEmpty') delete data[statsDateKey(today)];
+  return data;
+}
+
+function statsDayTotal(data, key) {
+  return (data[key] || []).reduce((s, b) => s + b.seconds, 0);
+}
+function statsGrandTotal(data) {
+  return Object.keys(data).reduce((s, k) => s + statsDayTotal(data, k), 0);
+}
+/* STATS-LOGIC-END */
+  </script>
+
+  <script>
     let currentView = 'library';
     let currentOrientation = 'portrait';
     let libraryPage = 1;
