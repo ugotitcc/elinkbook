@@ -1,6 +1,6 @@
 # Epic 9 Issue 2：資料層——每日閱讀統計儲存 — 實作計畫
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 新增每日閱讀統計的本機儲存：SQLite schema v27 的 `daily_reading_stats` 表、`ReadingStatsRepository` 抽象介面與 SQLite 實作、共用測試替身 `FakeReadingStatsRepository`，以及清除完成事件 `onCleared`。
 
@@ -75,7 +75,7 @@
   - `void runReadingStatsRepositoryContract(String label, Future<ReadingStatsRepository> Function() create)`
   - `class FakeReadingStatsRepository implements ReadingStatsRepository`（建構子選用參數 `Map<String, List<DailyBookReadingStat>> initialStats`）
 
-- [ ] **Step 1: 建立資料模型與抽象介面**
+- [x] **Step 1: 建立資料模型與抽象介面**
 
 建立 `app/lib/stats/daily_book_reading_stat.dart`：
 
@@ -166,7 +166,7 @@ abstract class ReadingStatsRepository {
 Run: `flutter analyze lib/stats`
 Expected: `No issues found!`
 
-- [ ] **Step 2: 寫共用契約測試與替身的測試檔（此時替身還不存在）**
+- [x] **Step 2: 寫共用契約測試與替身的測試檔（此時替身還不存在）**
 
 建立 `app/test/stats/reading_stats_repository_contract.dart`（共用契約，不是獨立測試檔）：
 
@@ -443,12 +443,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 3: 執行測試確認失敗**
+- [x] **Step 3: 執行測試確認失敗**
 
 Run: `flutter test test/support/fake_reading_stats_repository_test.dart`
 Expected: 編譯失敗，訊息含 `fake_reading_stats_repository.dart` 找不到（`Target of URI doesn't exist`）。
 
-- [ ] **Step 4: 實作測試替身**
+- [x] **Step 4: 實作測試替身**
 
 建立 `app/test/support/fake_reading_stats_repository.dart`：
 
@@ -547,12 +547,12 @@ class FakeReadingStatsRepository implements ReadingStatsRepository {
 }
 ```
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/support/fake_reading_stats_repository_test.dart`
 Expected: `All tests passed!`，共 19 個測試（契約 17 個＋替身輔助 2 個）。
 
-- [ ] **Step 6: 靜態分析並提交**
+- [x] **Step 6: 靜態分析並提交**
 
 Run: `flutter analyze lib/stats test/stats test/support`
 Expected: `No issues found!`
@@ -575,7 +575,7 @@ git commit -m "feat(stats): epic-9 Issue 2 閱讀統計資料模型、介面、�
 - Consumes: 無（本 Task 只用原生 SQL 驗證資料表，不依賴 Task 3 的類別）。
 - Produces: 資料表 `daily_reading_stats`（欄位與索引見 Global Constraints）；`SqliteLibraryRepository.open()` 開出的資料庫 `version` 為 27。
 
-- [ ] **Step 1: 寫 schema 測試，並更新既有的版本號斷言**
+- [x] **Step 1: 寫 schema 測試，並更新既有的版本號斷言**
 
 建立 `app/test/stats/daily_reading_stats_schema_test.dart`：
 
@@ -722,12 +722,12 @@ void main() {
 
 （原本是 `version 26` 與 `getVersion(), 26`，只改這兩處。）
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/stats/daily_reading_stats_schema_test.dart test/library/sqlite_library_repository_test.dart`
 Expected: FAIL：`daily_reading_stats_schema_test` 三個案例都失敗（版本仍是 26、資料表不存在）；`sqlite_library_repository_test` 最後一個案例失敗（`Expected: <27> Actual: <26>`）。
 
-- [ ] **Step 3: 修改 `sqlite_library_repository.dart`（共四處）**
+- [x] **Step 3: 修改 `sqlite_library_repository.dart`（共四處）**
 
 注意：工作目錄的 `.dart` 檔案是 CRLF（`core.autocrlf=true`）。用 Edit 工具時若多行 `old_string` 比對失敗，改成逐行編輯。
 
@@ -821,12 +821,12 @@ Expected: FAIL：`daily_reading_stats_schema_test` 三個案例都失敗（版�
   /// 每本書的全文檢索索引進度狀態，含背景排程的續跑游標
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/stats/daily_reading_stats_schema_test.dart test/library/sqlite_library_repository_test.dart`
 Expected: `All tests passed!`（schema 3 個＋既有 `sqlite_library_repository_test` 全部通過，沒有回歸）。
 
-- [ ] **Step 5: 靜態分析並提交**
+- [x] **Step 5: 靜態分析並提交**
 
 Run: `flutter analyze lib/library/sqlite_library_repository.dart test/stats test/library/sqlite_library_repository_test.dart`
 Expected: `No issues found!`
@@ -848,7 +848,7 @@ git commit -m "feat(stats): epic-9 Issue 2 SQLite schema 升為 v27，新增 dai
 - Consumes: Task 1 的 `ReadingStatsRepository`、`DailyBookReadingStat`、`runReadingStatsRepositoryContract`；Task 2 的資料表。
 - Produces: `class SqliteReadingStatsRepository implements ReadingStatsRepository`，建構子 `SqliteReadingStatsRepository({required Database database})`（`Database` 來自 `package:sqflite/sqflite.dart`，正式環境傳入 `SqliteLibraryRepository.database`）。Issue 4 在 `main.dart` 用它建立實例。
 
-- [ ] **Step 1: 寫 SQLite 實作的測試（呼叫共用契約，此時實作還不存在）**
+- [x] **Step 1: 寫 SQLite 實作的測試（呼叫共用契約，此時實作還不存在）**
 
 建立 `app/test/stats/sqlite_reading_stats_repository_test.dart`：
 
@@ -939,12 +939,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/stats/sqlite_reading_stats_repository_test.dart`
 Expected: 編譯失敗，訊息含 `sqlite_reading_stats_repository.dart` 找不到（`Target of URI doesn't exist`）。
 
-- [ ] **Step 3: 實作 SQLite repository**
+- [x] **Step 3: 實作 SQLite repository**
 
 建立 `app/lib/stats/sqlite_reading_stats_repository.dart`：
 
@@ -1044,24 +1044,24 @@ class SqliteReadingStatsRepository implements ReadingStatsRepository {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/stats test/support/fake_reading_stats_repository_test.dart`
 Expected: `All tests passed!`，共 41 個測試（SQLite 契約 17＋專屬 2、schema 3、替身契約 17＋輔助 2）。
 
-- [ ] **Step 5: 靜態分析**
+- [x] **Step 5: 靜態分析**
 
 Run: `flutter analyze lib/stats lib/library/sqlite_library_repository.dart test/stats test/support`
 Expected: `No issues found!`
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add lib/stats/sqlite_reading_stats_repository.dart test/stats/sqlite_reading_stats_repository_test.dart
 git commit -m "feat(stats): epic-9 Issue 2 SqliteReadingStatsRepository，通過共用契約測試"
 ```
 
-- [ ] **Step 7: 完整測試（這是整張計畫的最後一個 Task）**
+- [x] **Step 7: 完整測試（這是整張計畫的最後一個 Task）**
 
 Run: `flutter test`
 Expected: 全部通過（全專案約 1,800 個以上案例，約需 5 分鐘）。失敗時先確認是否為本 Issue 造成：本 Issue 只動 `sqlite_library_repository.dart` 的 schema 版本與新增資料表，任何與資料庫版本號有關的既有測試都可能受影響。
