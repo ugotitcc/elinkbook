@@ -84,6 +84,32 @@ Discovery 前已核實的事實：
 
 **給後續 Issue 的提醒：** Issue 4 需在 `main.dart` 以 `SqliteReadingStatsRepository(database: repository.database)` 建立實例，放進 `LibraryReaderFeatureRepositories`；Issue 3 的 tracker 訂閱的是 `ReadingStatsRepository.onCleared`。
 
+## Issue 3 完成記錄（`ReadingStatsTracker`，2026-09-29，PR #298 已合併）
+
+**做了什麼：** 新增 `app/lib/stats/reading_stats_tracker.dart`：每本書一個的會話級純 Dart 計時器（不 import Flutter，時鐘可注入）。三態狀態機、回溯採計、暫態時間不落地、30 秒寫入兼閒置看門狗、背景與 TTS 規則、時鐘防護、跨午夜切分、寫入串接與失敗重試、`onCleared` 歸零、`flushAndClose()`／`dispose()`。**尚未接進 `ReaderScreen`（Issue 4），使用者看不到行為變化。**
+
+**計畫補充的決定（spec 未明說）：**
+- **倒撥跨日**：記住「已見過的最晚日期」，早於它的日期一律不寫入。時鐘快轉後又校正回來，或向西跨時區，該次開書其後的秒數會被丟棄（下次開書重置）。審查 Minor 1，**決定維持現狀**。
+- TTS 開始播放本身算一次活動（含開書後尚無活動時的回溯）。
+- 進背景且 TTS 未播放時，連「開書後尚無活動」的回溯也一併作廢。
+- 背景且 TTS 未播放時，`recordActivity()` 一律忽略（審查 Minor 2 修訂）；TTS 開始播放走內部 `_activity()`，背景中由通知欄開始播放仍算活動。
+- 測試多拆一個檔：`reading_stats_tracker_background_test.dart`，與 `reading_stats_tracker_test.dart` 共用 `reading_stats_tracker_harness.dart`。
+
+**驗證結果：**
+- `flutter analyze` 乾淨；tracker 測試 48 個全過。
+- 完整 `flutter test`（分支 HEAD `d5f9afbb`）：3107 通過、1 略過（既有測試，未追查原因）、0 失敗。
+- 程式審查（`reviews/review-issue-3.md`，不進版控）：With fixes，Critical 0、Important 0、Minor 5；Minor 2、3、4 已修，Minor 1 維持現狀，Minor 5 為給 Issue 4 的提醒。審查時存活的 6 個突變（24、21、26、28、25、29）現在全被抓到；計畫的 8 個突變在修訂後重跑仍全被抓到。
+
+**已知限制（不修）：**
+- **清除當下在途的寫入**：`clearAllStats()` 在資料庫刪除完成後才發 `onCleared`；已送進資料庫佇列的那一批（至多 30 秒）仍會落地。tracker 無法取消已送出的寫入，只保證清除後新累積的秒數不受影響。
+- **寫入失敗後無重試機會（審查 Minor 5）**：tracker 已 idle 或已關閉時，失敗的那批沒有「下一次」。
+
+**給 Issue 4 的提醒：**
+- 退出閱讀器時 `await`（或至少 `unawaited`）`flushAndClose()`，再 `dispose()`；不要只呼叫 `dispose()`，它不寫入。
+- 由 `ReaderScreen` 把 `paused`／`resumed` 轉成 `onEnteredBackground()`／`onReturnedToForeground()`，TTS 狀態轉成 `onTtsPlayingChanged(bool)`。tracker 已自行忽略「背景且 TTS 未播放」時的 `recordActivity()`，但仍應避免在背景送事件。
+- tracker 的寫入回呼失敗只記診斷日誌（`dart:developer`），不會拋出，不會影響閱讀。
+- 寫入回呼簽章為 `(date, bookId, bookTitle, seconds)`，與 `ReadingStatsRepository.addReadingSeconds` 的具名參數不同，需自行轉接。
+
 ## 目前狀態
 
-Discovery、Architecting（`spec.md`）、Scrum Master（`issues.md`，5 張，含審查修訂）皆完成。Issue 1（原型）、Issue 2（資料層）已完成，待開發 Issue 3～5：Issue 3 可立即開始；Issue 4 依賴 Issue 2、3；Issue 5 依賴 Issue 1、2。
+Discovery、Architecting（`spec.md`）、Scrum Master（`issues.md`，5 張，含審查修訂）皆完成。Issue 1（原型）、Issue 2（資料層）、Issue 3（tracker）已完成，待開發 Issue 4、5：Issue 4 依賴 Issue 2、3（皆已完成，可立即開始）；Issue 5 依賴 Issue 1、2（皆已完成，可立即開始）。

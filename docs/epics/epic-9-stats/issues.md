@@ -76,7 +76,7 @@ Issue 3（Tracker）────┘
 
 ## Issue 3：`ReadingStatsTracker`——純 Dart 計時器
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **Blocked by：** 無（可以馬上開始；只依賴寫入回呼與 `onCleared` 的 Stream，不需要真實 repository）。
 
