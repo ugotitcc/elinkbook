@@ -11,6 +11,11 @@ const _base = ElinkTokens(
   coverPlaceholder: Color(0xFF666666),
   badgeScrim: Color(0xFF777777),
   ttsActiveHighlight: Color(0xFF888888),
+  heatmapLevel0: Color(0xFF999999),
+  heatmapLevel1: Color(0xFFAAAAAA),
+  heatmapLevel2: Color(0xFFBBBBBB),
+  heatmapLevel3: Color(0xFFCCCCCC),
+  heatmapLevel4: Color(0xFFDDDDDD),
   isEink: false,
   reducedMotion: false,
   discretePaging: false,
@@ -25,6 +30,11 @@ void _expectAllFieldsEqual(ElinkTokens a, ElinkTokens b) {
   expect(a.coverPlaceholder, b.coverPlaceholder);
   expect(a.badgeScrim, b.badgeScrim);
   expect(a.ttsActiveHighlight, b.ttsActiveHighlight);
+  expect(a.heatmapLevel0, b.heatmapLevel0);
+  expect(a.heatmapLevel1, b.heatmapLevel1);
+  expect(a.heatmapLevel2, b.heatmapLevel2);
+  expect(a.heatmapLevel3, b.heatmapLevel3);
+  expect(a.heatmapLevel4, b.heatmapLevel4);
   expect(a.isEink, b.isEink);
   expect(a.reducedMotion, b.reducedMotion);
   expect(a.discretePaging, b.discretePaging);
