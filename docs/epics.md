@@ -20,7 +20,7 @@
 | 10 | `epic-17-epub-render-migration` EPUB 渲染引擎遷移評估 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 11 | `epic-8-sync` 雲端同步 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 12 | `epic-14-system-settings` 系統設定 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
-| 13 | `epic-9-stats` 閱讀統計 | 🟡 開發中 (Active) | Discovery、Architecting、拆 Issue 完成（5 張，含審查修訂），待開發 |
+| 13 | `epic-9-stats` 閱讀統計 | 🟡 開發中 (Active) | Discovery、Architecting、Issue 1 已完成 |
 | 14 | `epic-10-search` 全文檢索 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 15 | `epic-40-bundled-sqlite` 自帶編譯進 FTS5 的 SQLite（取代系統內建版本） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 16 | `epic-11-multi-format-reader` 多格式閱讀擴充（KF8/CBZ/TXT/MD） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
