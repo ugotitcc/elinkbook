@@ -141,13 +141,17 @@ Future<void> disposeStatsReader(WidgetTester tester) async {
 }
 
 /// 模擬 Foliate 回報第 [n] 個位置（onLocatorChanged）。
-void reportLocator(WidgetTester tester, int n) {
+///
+/// [fraction] 是 locatorJson 內的進度小數；重排時 Foliate 會讓它在同一個
+/// cfi 下微幅抖動（真機日誌實證），預設 0.1 讓既有測試維持原狀。
+void reportLocator(WidgetTester tester, int n, {double fraction = 0.1}) {
   tester
       .widget<FoliateReaderView>(find.byType(FoliateReaderView))
       .onLocatorChanged
       ?.call(
         EpubPositionInfo(
-          locatorJson: '{"cfi":"epubcfi(/6/$n)","index":0,"fraction":0.1}',
+          locatorJson:
+              '{"cfi":"epubcfi(/6/$n)","index":0,"fraction":$fraction}',
           progression: 0.1,
           locationIndex: n,
           locationTotal: 100,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -829,6 +830,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       ),
       onCleared: repository.onCleared,
     );
+  }
+
+  /// 取 locatorJson 中代表「位置」的部分（cfi＋index），忽略會因重排而抖動的
+  /// fraction。解析失敗時退回整段字串，行為等同過去的完整比較。
+  static String _locatorPositionKey(String locatorJson) {
+    try {
+      final map = jsonDecode(locatorJson);
+      if (map is Map) return '${map['cfi']}|${map['index']}';
+    } catch (_) {}
+    return locatorJson;
   }
 
   /// 回報一次閱讀活動（翻頁、捲動、長按劃線）。單純點擊叫出工具列不呼叫。
@@ -3679,8 +3690,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               // （上面 previousPosition 為 null 的情況）；位置與上一次相同的
               // 重複回報，是 Foliate 在開書後套用樣式重排、或圖片／字型載入後
               // 重新對齊錨點所派發的，不是使用者操作。位置真正改變（翻頁、
-              // 捲動、跳轉）才算。
-              if (previousPosition.locatorJson != info.locatorJson) {
+              // 捲動、跳轉）才算。只比 cfi 與 index、忽略 fraction：真機日誌
+              // 實證重排時同一 cfi 的 fraction 會來回微幅抖動。
+              if (_locatorPositionKey(previousPosition.locatorJson) !=
+                  _locatorPositionKey(info.locatorJson)) {
                 _recordReadingActivity();
               }
             }
