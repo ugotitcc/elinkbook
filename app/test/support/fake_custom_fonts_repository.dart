@@ -52,6 +52,19 @@ class FakeCustomFontsRepository implements CustomFontsRepository {
   }
 
   @override
+  Future<void> updateUri(int id, String fontUri) async {
+    final index = _storage.indexWhere((f) => f.id == id);
+    if (index == -1) return;
+    final old = _storage[index];
+    _storage[index] = CustomFont(
+      id: old.id,
+      displayName: old.displayName,
+      familyName: old.familyName,
+      fontUri: fontUri,
+    );
+  }
+
+  @override
   Future<int> countBooksUsing(String familyName) async {
     return usageCounts[familyName] ?? 0;
   }

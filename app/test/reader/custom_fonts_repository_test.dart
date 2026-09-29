@@ -119,6 +119,29 @@ void main() {
       expect(renamed.fontUri, 'content://example/r');
     });
 
+    test('updateUri 只更新指定字型的 URI，顯示名稱與家族名稱不變，其他字型不受影響', () async {
+      final targetId = await repository.insert(const CustomFont(
+        displayName: '目標字型',
+        familyName: 'TargetFamily',
+        fontUri: 'content://old/target',
+      ));
+      await repository.insert(const CustomFont(
+        displayName: '其他字型',
+        familyName: 'OtherFamily',
+        fontUri: 'content://old/other',
+      ));
+
+      await repository.updateUri(targetId, 'content://new/target');
+
+      final all = await repository.listAll();
+      final target = all.firstWhere((f) => f.id == targetId);
+      expect(target.fontUri, 'content://new/target');
+      expect(target.displayName, '目標字型');
+      expect(target.familyName, 'TargetFamily');
+      final other = all.firstWhere((f) => f.id != targetId);
+      expect(other.fontUri, 'content://old/other');
+    });
+
     test('countBooksUsing 正確統計 book_reader_prefs 使用中筆數', () async {
       await libraryRepository.insertBook(_book('b1'));
       await libraryRepository.insertBook(_book('b2'));

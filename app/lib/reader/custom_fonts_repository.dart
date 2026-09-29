@@ -41,6 +41,18 @@ class CustomFontsRepository {
     );
   }
 
+  /// 只更新該字型的 `font_uri`（epic-15-storage-permission Issue 3：字型檔案
+  /// 授權失效後重新連結）。單一 UPDATE 敘述，不需要交易；顯示名稱、家族名稱
+  /// 都不動，所以以家族名稱引用這款字型的書籍偏好不需要遷移。
+  Future<void> updateUri(int id, String fontUri) {
+    return _db.update(
+      'custom_fonts',
+      {'font_uri': fontUri},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   /// 統計 `book_reader_prefs` 中目前使用中 [familyName] 的書籍數量，供刪除
   /// 前的確認對話框文案使用。
   Future<int> countBooksUsing(String familyName) async {
