@@ -359,6 +359,21 @@ class ReaderScreen extends StatefulWidget {
     }
   }
 
+  /// 供測試直接回報「TTS 是否正在播放」給閱讀統計計時器
+  /// （epic-9-stats Issue 4）：`flutter_test` 環境下 `TtsController` 永遠停在
+  /// idle（見 [openSleepTimerPickerForTest] 的同類說明），無法經
+  /// `_onTtsStatusChanged` 自然觸發，比照該入口新增。[key] 對應的 State
+  /// 若尚未掛載，靜默忽略。
+  static void reportTtsPlayingForTest(
+    GlobalKey<State<ReaderScreen>> key,
+    bool isPlaying,
+  ) {
+    final state = key.currentState;
+    if (state is _ReaderScreenState) {
+      state._forwardTtsPlaying(isPlaying);
+    }
+  }
+
   /// 供真機整合測試讀取目前書籍目錄（epic-11-multi-format-reader
   /// Issue 4），比照既有 [triggerZoneAction] 強型別 static helper 模式。
   /// [key] 對應的 State 若尚未掛載，回傳空清單。
@@ -617,11 +632,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 正確推進（見 Task 4 測試對 `pumpUntilPdfReady` 與 Timer 互動的註解）。
   late Zone _creationZone;
 
+  /// 本次開書的閱讀統計計時器（epic-9-stats Issue 4）；兩個統計參數皆未提供
+  /// 時為 `null`（完全不計時）。本 State 只負責轉送事件，不含任何計時邏輯。
+  ReadingStatsTracker? _readingStatsTracker;
+
   @override
   void initState() {
     super.initState();
     _creationZone = Zone.current;
     widget.readerActivityTracker?.markReaderOpened();
+    _readingStatsTracker = _createReadingStatsTracker();
     WidgetsBinding.instance.addObserver(this);
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
@@ -744,6 +764,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   @override
   void dispose() {
     widget.readerActivityTracker?.markReaderClosed();
+    // 退出閱讀器：結算閱讀統計尾段並寫入（epic-9-stats Issue 4）。不 await
+    // ——dispose() 是同步方法，比照下方 _writeCurrentPosition() 的既有慣例；
+    // 寫入失敗由 tracker 內部吞下並記診斷日誌，不影響離開閱讀器。
+    final statsTracker = _readingStatsTracker;
+    if (statsTracker != null) unawaited(statsTracker.flushAndClose());
     _syncCheckpointTimer?.cancel();
     _openBookTimeoutTimer?.cancel();
     _searchJumpHighlightTimer?.cancel();
@@ -782,6 +807,37 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     super.dispose();
   }
 
+  /// 建立本次開書的閱讀統計計時器（epic-9-stats Issue 4）：有注入的
+  /// [ReaderScreen.readingStatsTracker] 直接使用；否則有
+  /// [ReaderScreen.readingStatsRepository] 就以本書 id、書名（原始書名，
+  /// 不經簡繁轉換；未提供時退回 id）與 repository 的寫入方法、`onCleared`
+  /// 建立；兩者皆無回傳 `null`（不計時）。
+  ReadingStatsTracker? _createReadingStatsTracker() {
+    final injected = widget.readingStatsTracker;
+    if (injected != null) return injected;
+    final repository = widget.readingStatsRepository;
+    if (repository == null) return null;
+    return ReadingStatsTracker(
+      bookId: widget.bookId,
+      bookTitle: widget.bookTitle ?? widget.bookId,
+      onFlush: (date, bookId, bookTitle, seconds) =>
+          repository.addReadingSeconds(
+        date: date,
+        bookId: bookId,
+        bookTitle: bookTitle,
+        seconds: seconds,
+      ),
+      onCleared: repository.onCleared,
+    );
+  }
+
+  /// 回報一次閱讀活動（翻頁、捲動、長按劃線）。單純點擊叫出工具列不呼叫。
+  void _recordReadingActivity() => _readingStatsTracker?.recordActivity();
+
+  /// 回報 TTS 是否正在播放。tracker 對重複回報相同狀態是冪等的。
+  void _forwardTtsPlaying(bool isPlaying) =>
+      _readingStatsTracker?.onTtsPlayingChanged(isPlaying);
+
   /// App 進入背景時觸發一次位置寫入（spec.md「本機閱讀位置記憶」寫入
   /// 時機之二）。只在 [AppLifecycleState.paused]（真正進入背景）觸發，
   /// 不含 [AppLifecycleState.inactive]（如系統對話框短暫遮蓋等過渡狀態）
@@ -789,8 +845,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
+      _readingStatsTracker?.onEnteredBackground();
       _writeCurrentPosition();
     } else if (state == AppLifecycleState.resumed) {
+      _readingStatsTracker?.onReturnedToForeground();
       // App 從背景恢復時，Android 系統列可能已被 OS 自動重新顯示，
       // _lastAppliedFullscreen 等值節流防護會誤判不需重套用，故強制清空
       // 快取後無條件重新呼叫一次（epic-19 Issue 1 review Critical 2）。
@@ -2929,6 +2987,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 自然播完」與「使用者按下停止」兩種轉為 idle 的途徑，避免朗讀已經
   /// 停止/播完後，定時器仍在背景倒數的視覺落差。
   void _onTtsStatusChanged() {
+    _forwardTtsPlaying(_ttsController?.status == TtsPlaybackStatus.playing);
     final isActive = _isTtsActive;
     if (_wasTtsActive && !isActive) {
       _cancelTtsSleepTimer();
