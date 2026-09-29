@@ -173,4 +173,4 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 
 ## 目前狀態
 
-Issue 3 程式、審查修訂與真機驗證皆已完成（見上方「Issue 3 真機驗證」），待 `issues.md` Status 改回 `completed`、再合併 PR；Issue 0～3 全數完成後待歸檔。
+Issue 0～3 全數完成並已合併進 `main`（Issue 3 為 PR #295），待歸檔。
