@@ -63,6 +63,19 @@ void main() {
       });
     });
 
+    test('退出時距最後一次活動剛好 120 秒：尾段仍計入', () {
+      fakeAsync((async) {
+        final h = TrackerHarness(async);
+        h.tracker.recordActivity();
+        h.elapseSeconds(10);
+        h.tracker.recordActivity(); // 確認 10 秒
+        h.elapseSeconds(120); // 第 130 秒（第 120 秒的看門狗觸發時只距 110 秒）
+        h.closeAndSettle();
+        expect(h.total(), 130);
+        h.dispose();
+      });
+    });
+
     test('退出時距最後一次活動已超過門檻：尾段整段丟棄', () {
       fakeAsync((async) {
         final h = TrackerHarness(async);
@@ -88,6 +101,18 @@ void main() {
         final attempts = h.flushAttempts;
         h.elapseSeconds(600);
         expect(h.flushAttempts, attempts);
+        h.dispose();
+      });
+    });
+
+    test('看門狗在距最後一次活動剛好 120 秒時轉為閒置並取消計時器', () {
+      fakeAsync((async) {
+        final h = TrackerHarness(async);
+        h.tracker.recordActivity();
+        h.elapseSeconds(90);
+        expect(async.pendingTimers, isNotEmpty);
+        h.elapseSeconds(30); // 第 120 秒：剛好達門檻
+        expect(async.pendingTimers, isEmpty);
         h.dispose();
       });
     });
@@ -386,6 +411,29 @@ void main() {
         h.dispose();
       });
     });
+
+    test('多日期緩衝：在途批次失敗又遇清除，清除後的秒數不會被寫兩次', () {
+      fakeAsync((async) {
+        final h = TrackerHarness(async, startTime: DateTime(2026, 9, 29, 23, 59, 50));
+        h.tracker.recordActivity();
+        h.elapseSeconds(20);
+        h.tracker.recordActivity(); // 確認：9/29 10 秒、9/30 10 秒
+        final gate = Completer<void>();
+        h.flushGate = gate;
+        h.elapseSeconds(10); // 第 30 秒：開始寫 9/29，卡在資料庫
+        h.cleared.add(null); // 清除：緩衝丟棄
+        h.elapseSeconds(5);
+        h.tracker.recordActivity(); // 清除後在 9/30 確認 5 秒
+        h.flushGate = null;
+        h.failNextFlush = true; // 在途的 9/29 寫入失敗
+        gate.complete();
+        async.flushMicrotasks();
+        h.closeAndSettle();
+        expect(h.total('2026-09-30'), 5);
+        expect(h.writes.length, 1);
+        h.dispose();
+      });
+    });
   });
 
   group('生命週期', () {
@@ -401,6 +449,7 @@ void main() {
         final count = h.writes.length;
         h.tracker.dispose();
         h.tracker.recordActivity();
+        expect(async.pendingTimers, isEmpty); // 關閉後的活動不得重新建立計時器
         expect(h.closeAndSettle(), isTrue); // 重複呼叫也安全
         h.elapseSeconds(600);
         expect(h.writes.length, count);
@@ -419,6 +468,25 @@ void main() {
         expect(async.pendingTimers, isEmpty);
         h.elapseSeconds(600);
         expect(h.flushAttempts, 0);
+        h.dispose();
+      });
+    });
+
+    test('dispose 取消 onCleared 訂閱，不再持有監聽', () {
+      fakeAsync((async) {
+        final h = TrackerHarness(async);
+        expect(h.cleared.hasListener, isTrue);
+        h.tracker.dispose();
+        expect(h.cleared.hasListener, isFalse);
+        h.dispose();
+      });
+    });
+
+    test('flushAndClose 也會取消 onCleared 訂閱', () {
+      fakeAsync((async) {
+        final h = TrackerHarness(async);
+        expect(h.closeAndSettle(), isTrue);
+        expect(h.cleared.hasListener, isFalse);
         h.dispose();
       });
     });

@@ -84,8 +84,15 @@ class ReadingStatsTracker {
   bool _inBackground = false;
 
   /// 翻頁、捲動、長按劃線等閱讀活動。
+  /// App 在背景且 TTS 未播放時，收到的事件（例如暫停後才到達的頁面回報）一律忽略。
   void recordActivity() {
-    if (_closed) return;
+    if (_closed || (_inBackground && !_ttsPlaying)) return;
+    _activity();
+  }
+
+  /// 活動的實際處理。TTS 開始播放本身也算活動，走這裡而不是 [recordActivity]
+  /// （開始播放當下 [_ttsPlaying] 尚為 false，背景中由通知欄開始播放不能被忽略）。
+  void _activity() {
     final now = _now();
     if (_state != _TrackerState.idle) {
       final gap = now.difference(_anchor);
@@ -121,7 +128,7 @@ class ReadingStatsTracker {
   void onTtsPlayingChanged(bool isPlaying) {
     if (_closed || isPlaying == _ttsPlaying) return;
     if (isPlaying) {
-      recordActivity();
+      _activity();
       _ttsPlaying = true;
       return;
     }
@@ -266,6 +273,9 @@ class ReadingStatsTracker {
     final epoch = _clearEpoch;
     final dates = _confirmed.keys.toList()..sort();
     for (final date in dates) {
+      // 前一個日期寫入期間發生清除（含寫入失敗的情況）：緩衝已是清除後的新內容，
+      // 不屬於這一輪的快照，留給下一輪處理。
+      if (epoch != _clearEpoch) return;
       final whole = (_confirmed[date] ?? Duration.zero).inSeconds;
       if (whole <= 0) continue;
       try {

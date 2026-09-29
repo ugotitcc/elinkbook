@@ -39,6 +39,44 @@ void main() {
       });
     });
 
+    test('背景中的雜散活動事件不採計：回前景後的第一次活動也不回溯背景空檔', () {
+      fakeAsync((async) {
+        final h = TrackerHarness(async);
+        h.tracker.recordActivity();
+        h.elapseSeconds(30);
+        h.tracker.recordActivity(); // 確認 30 秒
+        h.elapseSeconds(20);
+        h.tracker.onEnteredBackground(); // 共 50 秒
+        h.elapseSeconds(10);
+        h.tracker.recordActivity(); // 暫停後才到達的雜散事件（例如頁面遲報的捲動結束）
+        h.elapseSeconds(100);
+        h.tracker.onReturnedToForeground();
+        h.tracker.recordActivity(); // 使用者回來翻頁：背景的 110 秒不能算進去
+        h.elapseSeconds(10);
+        h.closeAndSettle();
+        expect(h.total(), 60);
+        expect(async.pendingTimers, isEmpty);
+        h.dispose();
+      });
+    });
+
+    test('背景中開始播放 TTS（通知欄、耳機）仍算活動並持續計時', () {
+      fakeAsync((async) {
+        final h = TrackerHarness(async);
+        h.tracker.recordActivity();
+        h.elapseSeconds(20);
+        h.tracker.onEnteredBackground(); // 20 秒
+        h.elapseSeconds(10);
+        h.tracker.onTtsPlayingChanged(true); // 從這裡起算，不回溯前 10 秒
+        h.elapseSeconds(30);
+        h.tracker.onTtsPlayingChanged(false);
+        async.flushMicrotasks();
+        expect(h.total(), 50);
+        expect(async.pendingTimers, isEmpty);
+        h.dispose();
+      });
+    });
+
     test('開書後尚無活動就進背景：不採計任何時間', () {
       fakeAsync((async) {
         final h = TrackerHarness(async);
@@ -88,6 +126,27 @@ void main() {
         h.tracker.onTtsPlayingChanged(false); // 前景停止
         h.closeAndSettle();
         expect(h.total(), 100);
+        h.dispose();
+      });
+    });
+  });
+
+  group('回到前景後的 TTS', () {
+    test('背景播放後回前景再停止：不會被當成背景停止而轉為閒置，之後的尾段仍計入', () {
+      fakeAsync((async) {
+        final h = TrackerHarness(async);
+        h.tracker.recordActivity();
+        h.tracker.onTtsPlayingChanged(true);
+        h.elapseSeconds(10);
+        h.tracker.onEnteredBackground();
+        h.elapseSeconds(40);
+        h.tracker.onReturnedToForeground();
+        h.elapseSeconds(10);
+        h.tracker.onTtsPlayingChanged(false); // 前景停止：確認 60 秒，仍在計時中
+        h.elapseSeconds(60);
+        h.tracker.recordActivity(); // 停止後 60 秒的閱讀被這次活動確認
+        h.closeAndSettle();
+        expect(h.total(), 120);
         h.dispose();
       });
     });

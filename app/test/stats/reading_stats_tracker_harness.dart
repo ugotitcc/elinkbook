@@ -46,6 +46,9 @@ class TrackerHarness {
   /// 非 null 時，寫入回呼拋出它。
   Object? flushError;
 
+  /// 為 true 時，下一次寫入回呼失敗一次後自動恢復（模擬資料庫暫時性錯誤）。
+  bool failNextFlush = false;
+
   /// 非 null 時，寫入回呼會先等它完成（模擬很慢的資料庫）。
   Completer<void>? flushGate;
 
@@ -67,6 +70,10 @@ class TrackerHarness {
     flushAttempts++;
     final gate = flushGate;
     if (gate != null) await gate.future;
+    if (failNextFlush) {
+      failNextFlush = false;
+      throw StateError('暫時性寫入失敗');
+    }
     final error = flushError;
     if (error != null) throw error;
     writes.add(FlushCall(date, bookId, bookTitle, seconds));
