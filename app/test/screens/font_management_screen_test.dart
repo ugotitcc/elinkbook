@@ -2,33 +2,74 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/l10n/app_localizations_en.dart';
 import 'package:elinkbook/l10n/app_localizations_zh.dart';
+import 'package:elinkbook/library/library_repository.dart' show kBookMetadataChannel;
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/downloadable_font_store.dart';
+import 'package:elinkbook/reader/foliate_native_bridge.dart'
+    show ProbeStorageAccess, StorageAccessProbeResult, probeStorageAccess;
 import 'package:elinkbook/screens/font_management_screen.dart';
 import '../support/fake_custom_fonts_repository.dart';
 import '../support/fake_downloadable_font_store.dart';
 
 void main() {
   late FakeCustomFontsRepository repository;
+  // epic-15 Issue 3：假的存取探測與授權持久化（預設一律 readable）
+  late ProbeStorageAccess originalProbe;
+  late Map<String, StorageAccessProbeResult> probeByUri;
+  late List<String> probedUris;
+  late List<String> persistedUris;
+  // 真實字型檔（家族名稱為 KingHwa_OldSong），供重新連結測試解析家族名稱
+  final sampleFontBytes = File('test/fixtures/sample.ttf').readAsBytesSync();
 
   setUp(() {
     repository = FakeCustomFontsRepository();
+    originalProbe = probeStorageAccess;
+    probeByUri = {};
+    probedUris = [];
+    persistedUris = [];
+    probeStorageAccess = (uri) async {
+      probedUris.add(uri);
+      return probeByUri[uri] ?? StorageAccessProbeResult.readable;
+    };
   });
+
+  tearDown(() {
+    probeStorageAccess = originalProbe;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(kBookMetadataChannel, null);
+  });
+
+  /// 攔截 `takePersistableUriPermission`，記錄收到的 URI；[throws] 時模擬
+  /// 文件提供者不核發可持久化授權。
+  void mockPersistPermission({bool throws = false}) {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(kBookMetadataChannel, (call) async {
+      if (call.method == 'takePersistableUriPermission') {
+        persistedUris.add((call.arguments as Map)['uri'] as String);
+        if (throws) throw PlatformException(code: 'denied');
+      }
+      return null;
+    });
+  }
 
   Future<void> pumpScreen(WidgetTester tester,
       {Locale locale = const Locale('zh', 'TW'),
-      DownloadableFontStore? store}) async {
+      DownloadableFontStore? store,
+      SingleFontFilePicker? pickSingleFontFile}) async {
     await tester.pumpWidget(MaterialApp(
       locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: FontManagementScreen(
-          repository: repository, downloadableFontStore: store),
+          repository: repository,
+          downloadableFontStore: store,
+          pickSingleFontFile: pickSingleFontFile),
     ));
     await tester.pumpAndSettle();
   }
@@ -544,6 +585,283 @@ void main() {
 
       expect(find.text('Source Han Sans'), findsOneWidget);
       expect(subtitleOf(AppFont.sourceHanSans, '34.4 MB · Not downloaded'), findsOneWidget);
+    });
+  });
+
+  group('儲存權限失效標示與重新連結（epic-15 Issue 3）', () {
+    Finder badge(int id) =>
+        find.byKey(Key('font_management_inaccessible_badge_$id'));
+    Finder relink(int id) =>
+        find.byKey(Key('font_management_relink_button_$id'));
+
+    Future<int> insertFont(String name, String family, String uri) =>
+        repository.insert(CustomFont(
+            displayName: name, familyName: family, fontUri: uri));
+
+    /// 預設 800×600 放不下 5 列內建字型＋帶副標題與按鈕的自訂字型列，
+    /// ListView 不會建出後面幾列；本 group 統一加高視窗（比照既有
+    /// 「5 款內建字型依序列出」測試的作法）。
+    Future<void> pumpTall(WidgetTester tester,
+        {Locale locale = const Locale('zh', 'TW'),
+        SingleFontFilePicker? pickSingleFontFile}) {
+      tester.view.physicalSize = const Size(2400, 6000);
+      addTearDown(tester.view.resetPhysicalSize);
+      return pumpScreen(tester,
+          locale: locale, pickSingleFontFile: pickSingleFontFile);
+    }
+
+    testWidgets('只有探測結果不是 readable 的字型顯示標示與重新連結動作', (tester) async {
+      final okId = await insertFont('A 正常', 'FamA', 'content://x/a');
+      final revokedId = await insertFont('B 失效', 'FamB', 'content://x/b');
+      final missingId = await insertFont('C 遺失', 'FamC', 'content://x/c');
+      final unknownId = await insertFont('D 未知', 'FamD', 'content://x/d');
+      probeByUri['content://x/b'] = StorageAccessProbeResult.permissionRevoked;
+      probeByUri['content://x/c'] = StorageAccessProbeResult.fileNotFound;
+      probeByUri['content://x/d'] = StorageAccessProbeResult.unknownError;
+
+      await pumpTall(tester);
+
+      expect(badge(okId), findsNothing);
+      expect(relink(okId), findsNothing);
+      for (final id in [revokedId, missingId, unknownId]) {
+        expect(badge(id), findsOneWidget);
+        expect(relink(id), findsOneWidget);
+      }
+      expect(find.text('檔案無法讀取'), findsNWidgets(3));
+      expect(find.text('重新連結字型檔案'), findsNWidgets(3));
+    });
+
+    testWidgets('探測不阻塞清單顯示：探測完成前先顯示清單，完成後才出現標示', (tester) async {
+      final gate = Completer<StorageAccessProbeResult>();
+      probeStorageAccess = (uri) => gate.future;
+      final id = await insertFont('慢探測字型', 'SlowFam', 'content://x/slow');
+
+      await pumpTall(tester);
+
+      expect(find.text('慢探測字型'), findsOneWidget);
+      expect(badge(id), findsNothing);
+
+      gate.complete(StorageAccessProbeResult.permissionRevoked);
+      await tester.pumpAndSettle();
+
+      expect(badge(id), findsOneWidget);
+    });
+
+    testWidgets('重新連結成功：選到同家族字型後 URI 已更新、標示消失、授權已持久化', (tester) async {
+      mockPersistPermission();
+      final id = await insertFont('舊字型', 'KingHwa_OldSong', 'content://old/font');
+      probeByUri['content://old/font'] =
+          StorageAccessProbeResult.permissionRevoked;
+      await pumpTall(
+        tester,
+        pickSingleFontFile: () async =>
+            (uri: 'content://new/font', name: 'KingHwa.ttf', bytes: sampleFontBytes),
+      );
+      expect(badge(id), findsOneWidget);
+
+      await tester.tap(relink(id));
+      await tester.pumpAndSettle();
+
+      final font = (await repository.listAll()).single;
+      expect(font.fontUri, 'content://new/font');
+      expect(font.displayName, '舊字型');
+      expect(font.familyName, 'KingHwa_OldSong');
+      expect(persistedUris, ['content://new/font']);
+      expect(badge(id), findsNothing);
+      expect(relink(id), findsNothing);
+    });
+
+    testWidgets('持久化授權失敗不中止：仍然更新 URI（比照 ADR 0021）', (tester) async {
+      mockPersistPermission(throws: true);
+      final id = await insertFont('舊字型', 'KingHwa_OldSong', 'content://old/font');
+      probeByUri['content://old/font'] = StorageAccessProbeResult.fileNotFound;
+      await pumpTall(
+        tester,
+        pickSingleFontFile: () async =>
+            (uri: 'content://new/font', name: 'KingHwa.ttf', bytes: sampleFontBytes),
+      );
+
+      await tester.tap(relink(id));
+      await tester.pumpAndSettle();
+
+      expect((await repository.listAll()).single.fontUri, 'content://new/font');
+      expect(badge(id), findsNothing);
+    });
+
+    testWidgets('選到不同家族的字型：SnackBar 拒絕、記錄不變、不持久化授權、標示仍在', (tester) async {
+      mockPersistPermission();
+      final id = await insertFont('舊字型', 'KingHwa_OldSong', 'content://old/font');
+      probeByUri['content://old/font'] =
+          StorageAccessProbeResult.permissionRevoked;
+      await pumpTall(
+        tester,
+        // 只有 3 個位元組，解析不出家族名稱，退回檔名「OtherFamily」，與原字型不同
+        pickSingleFontFile: () async => (
+          uri: 'content://new/other',
+          name: 'OtherFamily.ttf',
+          bytes: sampleFontBytes.sublist(0, 3),
+        ),
+      );
+
+      await tester.tap(relink(id));
+      await tester.pumpAndSettle();
+
+      expect(find.text('選取的字型與原字型的家族名稱不同'), findsOneWidget);
+      expect((await repository.listAll()).single.fontUri, 'content://old/font');
+      expect(persistedUris, isEmpty);
+      expect(badge(id), findsOneWidget);
+    });
+
+    testWidgets('選擇器取消：沒有任何變化、沒有 SnackBar、按鈕恢復可用', (tester) async {
+      mockPersistPermission();
+      final id = await insertFont('舊字型', 'KingHwa_OldSong', 'content://old/font');
+      probeByUri['content://old/font'] =
+          StorageAccessProbeResult.permissionRevoked;
+      await pumpTall(tester, pickSingleFontFile: () async => null);
+
+      await tester.tap(relink(id));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsNothing);
+      expect((await repository.listAll()).single.fontUri, 'content://old/font');
+      expect(persistedUris, isEmpty);
+      expect(badge(id), findsOneWidget);
+      expect(tester.widget<OutlinedButton>(relink(id)).onPressed, isNotNull);
+    });
+
+    testWidgets('處理中：該列動作停用並顯示進度，連點只開一次選擇器，結束後恢復', (tester) async {
+      final gate = Completer<void>();
+      var pickCalls = 0;
+      final id = await insertFont('舊字型', 'KingHwa_OldSong', 'content://old/font');
+      probeByUri['content://old/font'] =
+          StorageAccessProbeResult.permissionRevoked;
+      await pumpTall(tester, pickSingleFontFile: () async {
+        pickCalls++;
+        await gate.future;
+        return null;
+      });
+
+      await tester.tap(relink(id));
+      await tester.pump();
+      await tester.tap(relink(id), warnIfMissed: false);
+      await tester.pump();
+
+      expect(pickCalls, 1);
+      expect(tester.widget<OutlinedButton>(relink(id)).onPressed, isNull);
+      expect(find.byKey(Key('font_management_relink_progress_$id')),
+          findsOneWidget);
+      expect(
+          tester
+              .widget<IconButton>(
+                  find.byKey(Key('font_management_delete_button_$id')))
+              .onPressed,
+          isNull);
+      expect(
+          tester
+              .widget<IconButton>(
+                  find.byKey(Key('font_management_rename_button_$id')))
+              .onPressed,
+          isNull);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<OutlinedButton>(relink(id)).onPressed, isNotNull);
+      expect(find.byKey(Key('font_management_relink_progress_$id')),
+          findsNothing);
+    });
+
+    testWidgets('探測未完成時刪除某個字型：結果回來後不錯位、不拋例外', (tester) async {
+      final gates = {
+        'content://x/a': Completer<StorageAccessProbeResult>(),
+        'content://x/b': Completer<StorageAccessProbeResult>(),
+      };
+      probeStorageAccess = (uri) => gates[uri]!.future;
+      final idA = await insertFont('A 字型', 'FamA', 'content://x/a');
+      final idB = await insertFont('B 字型', 'FamB', 'content://x/b');
+      await pumpTall(tester);
+
+      await tester.tap(find.byKey(Key('font_management_delete_button_$idA')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('font_management_delete_confirm')));
+      await tester.pumpAndSettle();
+      expect(find.text('A 字型'), findsNothing);
+
+      gates['content://x/a']!.complete(StorageAccessProbeResult.permissionRevoked);
+      gates['content://x/b']!.complete(StorageAccessProbeResult.fileNotFound);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(badge(idA), findsNothing);
+      expect(badge(idB), findsOneWidget);
+      expect(find.text('檔案無法讀取'), findsOneWidget);
+    });
+
+    testWidgets('選檔期間離開畫面：選擇器回來後不持久化授權、不改記錄', (tester) async {
+      mockPersistPermission();
+      final gate = Completer<void>();
+      final id = await insertFont('舊字型', 'KingHwa_OldSong', 'content://old/font');
+      probeByUri['content://old/font'] =
+          StorageAccessProbeResult.permissionRevoked;
+      await pumpTall(tester, pickSingleFontFile: () async {
+        await gate.future;
+        // 即使選到同家族字型，畫面已離開就不該再處理
+        return (
+          uri: 'content://new/font',
+          name: 'KingHwa.ttf',
+          bytes: sampleFontBytes,
+        );
+      });
+
+      await tester.tap(relink(id));
+      await tester.pump();
+      await tester.pumpWidget(const SizedBox());
+      gate.complete();
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(persistedUris, isEmpty);
+      expect((await repository.listAll()).single.fontUri, 'content://old/font');
+    });
+
+    testWidgets('離開畫面後探測才回來：不拋例外', (tester) async {
+      final gate = Completer<StorageAccessProbeResult>();
+      probeStorageAccess = (uri) => gate.future;
+      await insertFont('A 字型', 'FamA', 'content://x/a');
+      await pumpTall(tester);
+
+      await tester.pumpWidget(const SizedBox());
+      gate.complete(StorageAccessProbeResult.permissionRevoked);
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('改名讓清單重新載入：已探測過的字型不重複探測', (tester) async {
+      final id = await insertFont('舊名稱', 'FamRename', 'content://x/rename');
+      await pumpTall(tester);
+      expect(probedUris, ['content://x/rename']);
+
+      await tester.tap(find.byKey(Key('font_management_rename_button_$id')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+          find.byKey(const Key('font_management_rename_field')), '新名稱');
+      await tester.tap(find.byKey(const Key('font_management_rename_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('新名稱'), findsOneWidget);
+      expect(probedUris, ['content://x/rename']);
+    });
+
+    testWidgets('英文介面：標籤與動作以英文顯示', (tester) async {
+      final id = await insertFont('Font', 'FamEn', 'content://x/en');
+      probeByUri['content://x/en'] = StorageAccessProbeResult.permissionRevoked;
+
+      await pumpTall(tester, locale: const Locale('en'));
+
+      expect(badge(id), findsOneWidget);
+      expect(find.text('File unreadable'), findsOneWidget);
+      expect(find.text('Relink font file'), findsOneWidget);
     });
   });
 }

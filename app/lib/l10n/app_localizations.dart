@@ -2885,6 +2885,24 @@ abstract class AppLocalizations {
   /// **'{skippedCount, plural, =1{1 款字型已存在，已跳過} other{{skippedCount} 款字型已存在，已跳過}}'**
   String fontManagementUploadSkippedOnlyMessage(int skippedCount);
 
+  /// epic-15 Issue 3：字型管理中，自訂字型檔案讀不到時，列上顯示的文字標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'檔案無法讀取'**
+  String get fontManagementFileInaccessibleBadge;
+
+  /// epic-15 Issue 3：字型管理中，檔案讀不到的自訂字型列上的重新連結按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重新連結字型檔案'**
+  String get fontManagementRelinkAction;
+
+  /// epic-15 Issue 3：重新連結時，選取的字型家族名稱與原字型不同而被拒絕的 SnackBar
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選取的字型與原字型的家族名稱不同'**
+  String get fontManagementFamilyMismatchMessage;
+
   /// 閱讀器 Console Log 畫面 AppBar 標題
   ///
   /// In zh_TW, this message translates to:

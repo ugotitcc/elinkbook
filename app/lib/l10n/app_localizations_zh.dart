@@ -1598,6 +1598,15 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get fontManagementFileInaccessibleBadge => '檔案無法讀取';
+
+  @override
+  String get fontManagementRelinkAction => '重新連結字型檔案';
+
+  @override
+  String get fontManagementFamilyMismatchMessage => '選取的字型與原字型的家族名稱不同';
+
+  @override
   String get readerConsoleLogTitle => '閱讀器 Console Log';
 
   @override
@@ -3764,6 +3773,15 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   }
 
   @override
+  String get fontManagementFileInaccessibleBadge => '文件无法读取';
+
+  @override
+  String get fontManagementRelinkAction => '重新链接字体文件';
+
+  @override
+  String get fontManagementFamilyMismatchMessage => '所选字体与原字体的家族名称不同';
+
+  @override
   String get readerConsoleLogTitle => '阅读器 Console Log';
 
   @override
@@ -5928,6 +5946,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
     );
     return '$_temp0';
   }
+
+  @override
+  String get fontManagementFileInaccessibleBadge => '檔案無法讀取';
+
+  @override
+  String get fontManagementRelinkAction => '重新連結字型檔案';
+
+  @override
+  String get fontManagementFamilyMismatchMessage => '選取的字型與原字型的家族名稱不同';
 
   @override
   String get readerConsoleLogTitle => '閱讀器 Console Log';
