@@ -73,6 +73,21 @@ test('月份標籤：週序遞增且不重疊', () => {
   assert.ok(monthLabels.length >= 11);
 });
 
+test('月份標籤：第一個標籤與第二個相距不到 2 週時捨棄第一個', () => {
+  // 今天 2026-09-28：範圍第一週只有 9 月的日子（2025-09-30 起），
+  // 但下一週（weekIndex 1）就換成 10 月，兩個標籤相距 1 週會重疊 → 捨棄 9 月標籤
+  const { monthLabels } = api.statsBuildHeatmapGrid(D(2026, 9, 28));
+  assert.deepStrictEqual(monthLabels[0], { weekIndex: 1, month: 10 });
+  assert.ok(!monthLabels.some(l => l.month === 9 && l.weekIndex === 0));
+});
+
+test('月份標籤：第一個標籤與第二個相距足夠時保留', () => {
+  // 今天 2026-09-01：第一週為 9 月（weekIndex 0），10 月標籤在 weekIndex 5，相距足夠 → 保留
+  const { monthLabels } = api.statsBuildHeatmapGrid(D(2026, 9, 1));
+  assert.deepStrictEqual(monthLabels[0], { weekIndex: 0, month: 9 });
+  assert.deepStrictEqual(monthLabels[1], { weekIndex: 5, month: 10 });
+});
+
 test('假資料：決定性、情境正確', () => {
   const today = D(2026, 9, 29);
   const key = api.statsDateKey(today);
