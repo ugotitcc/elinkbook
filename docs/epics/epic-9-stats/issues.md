@@ -19,7 +19,7 @@ Issue 3（Tracker）────┘
 
 ## Issue 1：原型 HTML——閱讀統計畫面與貢獻圖
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **Blocked by：** 無（可以馬上開始）。
 
