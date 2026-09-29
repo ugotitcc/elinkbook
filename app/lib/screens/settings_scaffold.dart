@@ -11,6 +11,7 @@ import '../reader/reader_prefs_manager.dart';
 import '../reader/tts_provider.dart';
 import '../search/full_text_search_settings_repository.dart';
 import '../search/full_text_search_toggles_controller.dart';
+import '../stats/reading_stats_repository.dart';
 import '../sync/sync_account_repository.dart';
 import '../sync/sync_client.dart';
 import '../theme/app_theme.dart';
@@ -22,6 +23,7 @@ import 'full_text_search_confirm_dialog.dart';
 import 'nav_zone_settings_screen.dart';
 import 'reader_console_log_screen.dart';
 import 'reading_defaults_screen.dart';
+import 'reading_stats_screen.dart';
 import 'sync_settings_screen.dart';
 import 'tts_defaults_screen.dart';
 import 'widgets/eb_field_card.dart';
@@ -69,6 +71,9 @@ class SettingsScaffold extends StatefulWidget {
   final FullTextSearchSettingsRepository? fullTextSearchSettingsRepository;
   final bool isFullTextSearchAvailable;
 
+  /// epic-9-stats Issue 5：閱讀統計 repository；null 時設定頁不顯示「閱讀統計」項目。
+  final ReadingStatsRepository? readingStatsRepository;
+
   const SettingsScaffold({
     super.key,
     required this.prefsManager,
@@ -92,6 +97,7 @@ class SettingsScaffold extends StatefulWidget {
     this.ttsProvider,
     this.fullTextSearchSettingsRepository,
     this.isFullTextSearchAvailable = true,
+    this.readingStatsRepository,
   });
 
   @override
@@ -327,6 +333,23 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
               },
             ),
           ),
+          if (widget.readingStatsRepository != null)
+            _SettingsCard(
+              child: ListTile(
+                key: const Key('settings_reading_stats_button'),
+                title: Text(l10n.statsScreenTitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ReadingStatsScreen(
+                        repository: widget.readingStatsRepository!,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           if (!widget.isFullTextSearchAvailable)
             _SettingsCard(
               child: ListTile(
