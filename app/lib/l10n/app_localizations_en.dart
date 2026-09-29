@@ -1658,6 +1658,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get fontManagementFileInaccessibleBadge => 'File unreadable';
+
+  @override
+  String get fontManagementRelinkAction => 'Relink font file';
+
+  @override
+  String get fontManagementFamilyMismatchMessage =>
+      'The selected font\'s family name doesn\'t match the original font';
+
+  @override
   String get readerConsoleLogTitle => 'Reader Console Log';
 
   @override

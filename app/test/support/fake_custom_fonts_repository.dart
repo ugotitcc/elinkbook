@@ -51,6 +51,24 @@ class FakeCustomFontsRepository implements CustomFontsRepository {
     _storage[index] = _storage[index].copyWith(displayName: newDisplayName);
   }
 
+  /// 測試用：非 null 時 [updateUri] 會拋出它，模擬資料庫寫入失敗
+  /// （epic-15-storage-permission Issue 3 程式審查 M-1）。
+  Object? updateUriError;
+
+  @override
+  Future<void> updateUri(int id, String fontUri) async {
+    if (updateUriError != null) throw updateUriError!;
+    final index = _storage.indexWhere((f) => f.id == id);
+    if (index == -1) return;
+    final old = _storage[index];
+    _storage[index] = CustomFont(
+      id: old.id,
+      displayName: old.displayName,
+      familyName: old.familyName,
+      fontUri: fontUri,
+    );
+  }
+
   @override
   Future<int> countBooksUsing(String familyName) async {
     return usageCounts[familyName] ?? 0;

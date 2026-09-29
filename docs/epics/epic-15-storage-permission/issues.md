@@ -178,7 +178,7 @@ Issue 0（prefactor）──> Issue 1（失效分類提示）──┬──> Is
 
 ## Issue 3：字型管理標示讀不到的自訂字型，並可重新連結
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 1（只用到 `probeStorageAccess`，與 Issue 2 無關，可平行開發）。
 

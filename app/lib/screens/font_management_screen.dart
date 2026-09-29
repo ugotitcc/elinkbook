@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +12,36 @@ import '../reader/custom_fonts_repository.dart';
 import '../reader/downloadable_font_store.dart';
 import '../reader/font_download_catalog.dart';
 import '../reader/font_name_parser.dart';
+import '../reader/foliate_native_bridge.dart'
+    show StorageAccessProbeResult, probeStorageAccess;
+
+/// 單檔字型選擇器（epic-15-storage-permission Issue 3：重新連結用）。
+/// 回傳選取的 URI、檔名與位元組（位元組用來解析字型家族名稱）；使用者取消
+/// 時回傳 `null`。做成可注入的函式型別，讓 widget test 不必觸碰平台實作。
+typedef SingleFontFilePicker =
+    Future<({String uri, String name, Uint8List bytes})?> Function();
+
+/// [SingleFontFilePicker] 的預設實作：`FilePicker` 單選 ttf／otf。`uri` 是
+/// `PlatformFile.identifier`（Android 上為 `content://` URI）；`identifier` 或
+/// 位元組為 null（非 Android 平台）視為取消。選擇器拋出例外時比照
+/// [pickSingleBookFileViaFilePicker] 視為取消。
+Future<({String uri, String name, Uint8List bytes})?>
+    pickSingleFontFileViaFilePicker() async {
+  try {
+    final picked = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['ttf', 'otf'],
+      withData: true,
+    );
+    final file = picked?.files.firstOrNull;
+    final uri = file?.identifier;
+    final bytes = file?.bytes;
+    if (file == null || uri == null || bytes == null) return null;
+    return (uri: uri, name: file.name, bytes: bytes);
+  } catch (_) {
+    return null;
+  }
+}
 
 /// 字型管理畫面（epic-14-system-settings FR-35，spec.md「字型管理模組」）：
 /// 顯示內建字型＋使用者上傳的自訂字型（可重新命名／刪除），支援批次上傳 `.ttf`/`.otf`。
@@ -19,10 +51,15 @@ class FontManagementScreen extends StatefulWidget {
   final CustomFontsRepository repository;
   final DownloadableFontStore? downloadableFontStore;
 
+  /// 重新連結用的單檔選擇器（epic-15-storage-permission Issue 3）。`null` 時
+  /// 使用 [pickSingleFontFileViaFilePicker]，供 widget test 注入。
+  final SingleFontFilePicker? pickSingleFontFile;
+
   const FontManagementScreen({
     super.key,
     required this.repository,
     this.downloadableFontStore,
+    this.pickSingleFontFile,
   });
 
   @override
@@ -32,6 +69,17 @@ class FontManagementScreen extends StatefulWidget {
 class _FontManagementScreenState extends State<FontManagementScreen> {
   List<CustomFont> _customFonts = [];
   bool _isUploading = false;
+
+  // ── 儲存權限失效標示（epic-15-storage-permission Issue 3）──
+  /// 字型資料庫主鍵 → 存取探測結果。用 id 而非清單索引：探測期間使用者可能
+  /// 刪除或重新命名字型讓清單改變，用 id 對應才不會錯位。
+  final Map<int, StorageAccessProbeResult> _probeResults = {};
+
+  /// 已經發出探測的字型 id；清單重新載入時不重複探測。
+  final Set<int> _probeRequestedIds = {};
+
+  /// 重新連結處理中的字型 id：該列的動作停用，避免連點重複開選擇器。
+  final Set<int> _relinkingIds = {};
   // 重新命名對話框使用的 TextEditingController，交由本 State 生命週期保管
   // （比照 notes_bottom_sheet.dart 既有先例）：不在 showDialog 呼叫結束後
   // 立即 dispose——showDialog 回傳的 Future 在 Navigator.pop() 當下就完成，
@@ -76,9 +124,26 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
       final fonts = await widget.repository.listAll();
       if (!mounted) return;
       setState(() => _customFonts = fonts);
+      _probeNewFonts(fonts);
     } catch (e) {
       debugPrint('Failed to load custom fonts: $e');
     }
+  }
+
+  /// 對尚未探測過的自訂字型各自發出存取探測（不 await，不阻塞清單顯示）。
+  void _probeNewFonts(List<CustomFont> fonts) {
+    for (final font in fonts) {
+      final id = font.id;
+      if (id == null || !_probeRequestedIds.add(id)) continue;
+      unawaited(_probeFont(id, font.fontUri));
+    }
+  }
+
+  Future<void> _probeFont(int id, String uri) async {
+    final result = await probeStorageAccess(uri);
+    // 探測期間可能已離開畫面，或該字型已被刪除：結果直接捨棄
+    if (!mounted || !_customFonts.any((f) => f.id == id)) return;
+    setState(() => _probeResults[id] = result);
   }
 
   Future<void> _loadInstalledFonts() async {
@@ -146,27 +211,69 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(l10n.fontManagementNoCustomFontsHint),
             ),
-          for (final font in _customFonts)
-            ListTile(
-              title: Text(font.displayName),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    key: Key('font_management_rename_button_${font.id}'),
-                    icon: const Icon(Icons.edit),
-                    tooltip: l10n.fontManagementRenameTooltip,
-                    onPressed: () => _renameFont(font),
-                  ),
-                  IconButton(
-                    key: Key('font_management_delete_button_${font.id}'),
-                    icon: const Icon(Icons.delete),
-                    tooltip: l10n.fontManagementDeleteTooltip,
-                    onPressed: () => _deleteFont(font),
-                  ),
-                ],
-              ),
-            ),
+          for (final font in _customFonts) _buildCustomFontTile(font, l10n),
+        ],
+      ),
+    );
+  }
+
+  /// 自訂字型的一列。探測結果不是 `readable` 時，在副標題顯示文字標籤與
+  /// 外框的重新連結按鈕（epic-15-storage-permission Issue 3）：標籤是文字而非
+  /// 只靠顏色，按鈕用 OutlinedButton，E-Ink 高對比模式下才看得清楚。
+  Widget _buildCustomFontTile(CustomFont font, AppLocalizations l10n) {
+    final id = font.id;
+    final probe = id == null ? null : _probeResults[id];
+    final isInaccessible =
+        probe != null && probe != StorageAccessProbeResult.readable;
+    final isRelinking = id != null && _relinkingIds.contains(id);
+    return ListTile(
+      title: Text(font.displayName),
+      subtitle: isInaccessible
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.fontManagementFileInaccessibleBadge,
+                  key: Key('font_management_inaccessible_badge_$id'),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                OutlinedButton(
+                  key: Key('font_management_relink_button_$id'),
+                  onPressed: isRelinking ? null : () => _relinkFont(font),
+                  child: isRelinking
+                      ? SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(
+                            key: Key('font_management_relink_progress_$id'),
+                            strokeWidth: 2,
+                            // 讀屏軟體才知道這個進度圈在做什麼（程式審查 M-3）
+                            semanticsLabel: l10n.fontManagementRelinkAction,
+                          ),
+                        )
+                      : Text(l10n.fontManagementRelinkAction),
+                ),
+              ],
+            )
+          : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            key: Key('font_management_rename_button_${font.id}'),
+            icon: const Icon(Icons.edit),
+            tooltip: l10n.fontManagementRenameTooltip,
+            onPressed: isRelinking ? null : () => _renameFont(font),
+          ),
+          IconButton(
+            key: Key('font_management_delete_button_${font.id}'),
+            icon: const Icon(Icons.delete),
+            tooltip: l10n.fontManagementDeleteTooltip,
+            onPressed: isRelinking ? null : () => _deleteFont(font),
+          ),
         ],
       ),
     );
@@ -412,6 +519,58 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
       ));
     } finally {
       if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  /// 重新連結字型檔案（epic-15-storage-permission Issue 3）：選檔 → 比對家族
+  /// 名稱 → 持久化授權（盡力而為）→ 更新 URI。家族名稱不同就拒絕，不持久化
+  /// 授權、不改記錄。單書版面偏好以家族名稱引用字型，所以更新 URI 後所有使用
+  /// 這款字型的書自動恢復，不需要遷移。
+  Future<void> _relinkFont(CustomFont font) async {
+    final id = font.id;
+    if (id == null || _relinkingIds.contains(id)) return;
+    setState(() => _relinkingIds.add(id));
+    try {
+      final picker = widget.pickSingleFontFile ?? pickSingleFontFileViaFilePicker;
+      final picked = await picker();
+      // 選檔期間使用者可能已離開畫面：不再解析、不持久化授權、不寫資料庫
+      if (picked == null || !mounted) return;
+
+      // 家族名稱解析規則與批次上傳一致：解析失敗退回檔名（去副檔名）
+      final pickedFamily =
+          parseFontFamilyName(picked.bytes) ?? _stripExtension(picked.name);
+      if (pickedFamily != font.familyName) {
+        if (!mounted) return;
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+            content: Text(l10n.fontManagementFamilyMismatchMessage),
+          ));
+        return;
+      }
+
+      try {
+        await kBookMetadataChannel.invokeMethod<void>(
+            'takePersistableUriPermission', {'uri': picked.uri});
+      } on PlatformException {
+        // 比照批次上傳與 ADR 0021：字型檔不做落地複本退路，授權盡力而為，
+        // 失敗不中止重新連結。
+      }
+      try {
+        await widget.repository.updateUri(id, picked.uri);
+      } catch (e) {
+        // 資料庫寫入失敗（機率很低）：記錄後結束，記錄與標示維持原樣，
+        // 按鈕由 finally 恢復，使用者可以再試一次（epic-15-storage-permission
+        // Issue 3 程式審查 M-1）。
+        debugPrint('Failed to relink custom font: $e');
+        return;
+      }
+      if (!mounted) return;
+      setState(() => _probeResults[id] = StorageAccessProbeResult.readable);
+      await _loadFonts();
+    } finally {
+      if (mounted) setState(() => _relinkingIds.remove(id));
     }
   }
 

@@ -2132,6 +2132,18 @@
       }
     }
   },
+  "fontManagementFileInaccessibleBadge": "檔案無法讀取",
+  "@fontManagementFileInaccessibleBadge": {
+    "description": "epic-15 Issue 3：字型管理中，自訂字型檔案讀不到時，列上顯示的文字標籤"
+  },
+  "fontManagementRelinkAction": "重新連結字型檔案",
+  "@fontManagementRelinkAction": {
+    "description": "epic-15 Issue 3：字型管理中，檔案讀不到的自訂字型列上的重新連結按鈕文字"
+  },
+  "fontManagementFamilyMismatchMessage": "選取的字型與原字型的家族名稱不同",
+  "@fontManagementFamilyMismatchMessage": {
+    "description": "epic-15 Issue 3：重新連結時，選取的字型家族名稱與原字型不同而被拒絕的 SnackBar"
+  },
   "readerConsoleLogTitle": "閱讀器 Console Log",
   "@readerConsoleLogTitle": {
     "description": "閱讀器 Console Log 畫面 AppBar 標題"

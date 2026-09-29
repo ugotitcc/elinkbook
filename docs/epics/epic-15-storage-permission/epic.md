@@ -134,6 +134,43 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 
 以 PR #294 合併進 `main`（`ed315bf6`）。
 
+## Issue 3 完成記錄（2026-09-29）
+
+分支 `epic-15/issue-3` 的 commit（依 `plans/plan-issue-3.md` 逐 Task 提交）：
+
+1. `15f0aaa4` — `feat(fonts): CustomFontsRepository 新增 updateUri（epic-15 Issue 3）`
+2. `01320b48` — `feat(fonts): 字型管理標示讀不到的自訂字型並可重新連結（epic-15 Issue 3）`
+3. `848be908` — `docs(epic-15): 記錄 Issue 3 完成`
+4. 程式審查修訂（M-1、M-3、M-5 與 Status 調整，見下方「程式審查」）— `fix(fonts): 依程式審查處理 Issue 3 Minor 意見`
+
+- **計畫審查**（`plans/plan-issue-3.md` 引述 `reviews/review-plan-issue-3.md`，0 Critical／0 Important／6 Minor）：
+  - 不採納 M-1：選擇器 `identifier` 為 null 不改用 `file.path`（那是快取暫存檔，且閱讀器讀不到本機路徑）。
+  - 採納 M-2：`_relinkFont` 選檔回來後加 `!mounted` 檢查，新增「選檔期間離開畫面」測試。
+  - 採納 M-3：新測試 group 統一用 `pumpTall` 加高視窗。
+  - 採納 M-4：「改名不重複探測」測試用 `insertFont` 回傳的 id 組 Key。
+  - 不採納 M-5：`_deleteFont` 成功後不清探測狀態（id 不重用＋已有守衛）。
+  - 採納 M-6：「處理中」測試補重新命名按鈕停用的斷言。
+- **程式審查**（`reviews/review-issue-3.md`，0 Critical／0 Important／5 Minor）：
+  - 採納 M-1：`_relinkFont` 的 `updateUri` 包 `try/catch`，寫入失敗時 `debugPrint` 後結束，記錄與標示維持原樣、按鈕由 `finally` 恢復；新增測試（Fake 新增 `updateUriError`）。
+  - 不採納 M-2：`withData: true` 讀整檔進記憶體，審查本身建議不改；既有批次上傳是同樣做法。
+  - 採納 M-3：重新連結進度圈加 `semanticsLabel`（沿用 `fontManagementRelinkAction`，不新增 ARB key）。
+  - 不採納 M-4：`unknownError` 也標示是計畫與 spec 的刻意取捨，維持現狀，真機驗證時觀察誤標頻率。
+  - 採納 M-5：上方 commit 清單改成實際 hash。`issues.md` 的 Status 維持 `completed`，真機驗證仍待補，是否改回進行中由人類決定。
+- **偏離計畫之處**：計畫 Task 0 要求新建 worktree `.worktrees/epic-15-issue-3`，但分支 `epic-15/issue-3` 已存在並正被工作目錄使用（git 不允許同一分支檢出兩次），故在原目錄專用分支上原地開發。
+- **測試**：`font_management_screen_test.dart` 49/49 通過（含新增 13 個案例，其中 1 個為程式審查 M-1）；`custom_fonts_repository_test.dart` 等 4 個相關檔案 65/65 通過。
+
+完整 `flutter test`（執行時 commit `01320b48`）：3017 通過、1 跳過、0 失敗。`flutter analyze` 乾淨（`No issues found!`），`node tool/check_l10n_hardcoded_strings.js` 通過。
+
+**Issue 3 真機驗證（2026-09-29，使用者執行，`/diagnose` 協助確認 log）**：裝置 OPPO Pad Air（`OPD2102`，序號 `bfa4e772`）。測試字型 `BailuKai-Medium.ttf`，URI 為 `content://com.android.externalstorage.documents/document/primary%3AFonts%2FBailuKai-Medium.ttf`（依路徑定位）。
+
+- **Step 2**：上傳字型並在閱讀器套用，符合預期。
+- **Step 3**：用檔案管理員把原檔從 `Fonts/` 搬到 `Fonts/fesf/`。
+  - 字型管理：logcat 顯示 `probeUriAccess: fileNotFound`；該字型出現「檔案無法讀取」標示與「重新連結字型檔案」按鈕，符合預期。
+  - 閱讀器：logcat 顯示 `Failed to read custom font bytes`（`FileNotFoundException: Missing file`）；畫面不出聲改用預設字型，符合預期。
+  - 閱讀器的字型選單仍列出這款字型，屬預期行為（本 Issue 不改閱讀器）。使用者一開始把這點誤當成問題回報，經 `/diagnose` 確認不是 bug，沒有改程式。
+- **Step 4**：選錯家族被拒且標示仍在；選回 `Fonts/fesf/BailuKai-Medium.ttf` 後標示消失；閱讀器恢復顯示該字型；重開 App 後標示仍無。全部符合預期。
+- **仍未在真機驗證的情境**：`permissionRevoked`（理由見 Issue 2 記錄）；`unknownError` 誤標頻率（程式審查 M-4）本次未特別觀察。
+
 ## 目前狀態
 
-Issue 2 已合併（PR #294）；下一步 Issue 3（字型管理標示讀不到的自訂字型，並可重新連結）。
+Issue 3 程式、審查修訂與真機驗證皆已完成（見上方「Issue 3 真機驗證」），待 `issues.md` Status 改回 `completed`、再合併 PR；Issue 0～3 全數完成後待歸檔。
