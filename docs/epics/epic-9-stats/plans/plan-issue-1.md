@@ -876,7 +876,7 @@ git commit -m "feat(prototype): epic-9 Issue 1 清除全部統計確認流程與
 - [ ] 在統計畫面中切換 E-Ink 開／關，以及切換 Light／Dark／Sepia：方格顏色即時跟著變，沒有殘留舊色。
 - [ ] 側欄「今天無紀錄」「全空」「重度」三情境各進入一次，版面正常。
 
-- [ ] **Step 3: 最終自動化檢查**
+- [x] **Step 3: 最終自動化檢查**
 
 Run:
 ```bash
@@ -886,7 +886,7 @@ git status --short prototype/
 ```
 Expected: 測試全過、`ok 3`；`git status --short prototype/` 沒有未提交變更，且本 Issue 的 commit 只動到 `elinkbook_theme_prototype.html` 與新增的 `tests/stats_logic.test.js`（沒有動其他原型檔）。
 
-- [ ] **Step 4: 在 `epic.md` 記錄定案值與驗證結果**
+- [x] **Step 4: 在 `epic.md` 記錄定案值與驗證結果**
 
 在 `docs/epics/epic-9-stats/epic.md` 的「目前狀態」之前新增一節，內容如下（驗證結果照實填寫，未通過的項目要寫出來）：
 
@@ -917,7 +917,7 @@ Expected: 測試全過、`ok 3`；`git status --short prototype/` 沒有未提�
 **待人類確認：** 色階配色、E-Ink 紋理樣式、「不滿 1 分鐘顯示 1 分鐘」規則。確認前 Issue 5 不開始。
 ```
 
-- [ ] **Step 5: Commit，並交給人類確認**
+- [x] **Step 5: Commit，並交給人類確認**
 
 ```bash
 git add docs/epics/epic-9-stats/epic.md
