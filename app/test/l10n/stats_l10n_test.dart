@@ -10,7 +10,8 @@ void main() {
     expect(l10n.statsHoursMinutesFormat(1, 5), '1 小時 5 分鐘');
     expect(l10n.statsMinutesFormat(7), '7 分鐘');
     expect(l10n.statsDailyDetailsTitle('2026/9/29'), '2026/9/29 閱讀明細');
-    expect(l10n.statsNoDataOnDate, '當日無閱讀記錄');
+    expect(l10n.statsNoDataOnDate, '當日無閱讀紀錄');
+    expect(l10n.statsLoadFailed, '無法載入閱讀統計');
     expect(l10n.statsLegendLess, '較少');
     expect(l10n.statsLegendMore, '較多');
     expect(l10n.statsClearAllTitle, '清除全部統計');

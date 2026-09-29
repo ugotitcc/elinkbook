@@ -39,6 +39,9 @@ class _ReadingStatsScreenState extends State<ReadingStatsScreen> {
   late final String _todayKey;
 
   bool _loading = true;
+
+  /// 讀取資料失敗：顯示錯誤文字取代載入中圖示（成功載入後會清回 false）。
+  bool _loadFailed = false;
   bool _didScrollToEnd = false;
   Map<String, int> _dailyTotals = const {};
   int _totalSeconds = 0;
@@ -78,12 +81,25 @@ class _ReadingStatsScreenState extends State<ReadingStatsScreen> {
     final detailId = ++_detailRequestId;
     final repository = widget.repository;
     final date = selecting ?? _selectedDate;
-    final totals = await repository.getDailyTotals(
-      startDate: _grid.startDate,
-      endDate: _grid.endDate,
-    );
-    final total = await repository.getTotalReadingSeconds();
-    final details = await repository.getBookStatsForDate(date);
+    final Map<String, int> totals;
+    final int total;
+    final List<DailyBookReadingStat> details;
+    try {
+      totals = await repository.getDailyTotals(
+        startDate: _grid.startDate,
+        endDate: _grid.endDate,
+      );
+      total = await repository.getTotalReadingSeconds();
+      details = await repository.getBookStatsForDate(date);
+    } catch (_) {
+      // 讀取失敗不可讓畫面永遠停在載入中；同樣只有最新一次載入才能更新畫面
+      if (!mounted || loadId != _loadRequestId) return;
+      setState(() {
+        _loadFailed = true;
+        _loading = false;
+      });
+      return;
+    }
     // 有更新的整體載入發出就整批丟棄；否則總計一律套用，
     // 選取日／詳情則僅在期間沒被使用者點選覆蓋時才套用
     if (!mounted || loadId != _loadRequestId) return;
@@ -91,6 +107,7 @@ class _ReadingStatsScreenState extends State<ReadingStatsScreen> {
       _dailyTotals = totals;
       _totalSeconds = total;
       _loading = false;
+      _loadFailed = false;
       if (detailId == _detailRequestId) {
         _selectedDate = date;
         _details = details;
@@ -185,7 +202,14 @@ class _ReadingStatsScreenState extends State<ReadingStatsScreen> {
                 key: Key('reading_stats_loading'),
               ),
             )
-          : ListView(
+          : _loadFailed
+              ? Center(
+                  child: Text(
+                    l10n.statsLoadFailed,
+                    key: const Key('reading_stats_error_text'),
+                  ),
+                )
+              : ListView(
               padding: const EdgeInsets.all(12),
               children: [
                 _buildTotalCard(context, l10n),

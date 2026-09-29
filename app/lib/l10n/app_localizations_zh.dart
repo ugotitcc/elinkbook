@@ -2200,7 +2200,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get statsNoDataOnDate => '當日無閱讀記錄';
+  String get statsNoDataOnDate => '當日無閱讀紀錄';
+
+  @override
+  String get statsLoadFailed => '無法載入閱讀統計';
 
   @override
   String get statsLegendLess => '較少';
@@ -4426,6 +4429,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get statsNoDataOnDate => '当日无阅读记录';
 
   @override
+  String get statsLoadFailed => '无法载入阅读统计';
+
+  @override
   String get statsLegendLess => '较少';
 
   @override
@@ -6646,7 +6652,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get statsNoDataOnDate => '當日無閱讀記錄';
+  String get statsNoDataOnDate => '當日無閱讀紀錄';
+
+  @override
+  String get statsLoadFailed => '無法載入閱讀統計';
 
   @override
   String get statsLegendLess => '較少';

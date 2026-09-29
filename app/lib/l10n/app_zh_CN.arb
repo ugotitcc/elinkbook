@@ -630,6 +630,7 @@
   "statsMinutesFormat": "{minutes} 分钟",
   "statsDailyDetailsTitle": "{date} 阅读明细",
   "statsNoDataOnDate": "当日无阅读记录",
+  "statsLoadFailed": "无法载入阅读统计",
   "statsLegendLess": "较少",
   "statsLegendMore": "较多",
   "statsClearAllTitle": "清除全部统计",

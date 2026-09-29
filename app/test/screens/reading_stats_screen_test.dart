@@ -99,6 +99,16 @@ class _GatedRepository implements ReadingStatsRepository {
   Stream<void> get onCleared => inner.onCleared;
 }
 
+/// 讀取貢獻圖各日總計時丟例外，模擬資料庫讀取失敗。
+class _FailingRepository extends FakeReadingStatsRepository {
+  @override
+  Future<Map<String, int>> getDailyTotals({
+    required String startDate,
+    required String endDate,
+  }) =>
+      Future.error(StateError('讀取失敗'));
+}
+
 void main() {
   testWidgets('載入完成後顯示貢獻圖；預設選中今天，今天沒有紀錄顯示說明', (tester) async {
     await _pumpScreen(tester, FakeReadingStatsRepository());
@@ -234,6 +244,33 @@ void main() {
           matching: find.text('book-42')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('讀取資料失敗：顯示錯誤文字，不會永遠停在載入中', (tester) async {
+    await _pumpScreen(tester, _FailingRepository());
+
+    expect(_byKey('reading_stats_loading'), findsNothing);
+    expect(_byKey('reading_stats_error_text'), findsOneWidget);
+    expect(find.text('無法載入閱讀統計'), findsOneWidget);
+    expect(_byKey('reading_stats_heatmap'), findsNothing);
+  });
+
+  testWidgets('方格的無障礙標籤同時帶有日期與當日閱讀時數', (tester) async {
+    final repo = FakeReadingStatsRepository(initialStats: {
+      '2026-09-28': [_stat('a', 'A', 3900)],
+    });
+    await _pumpScreen(tester, repo);
+
+    final handle = tester.ensureSemantics();
+    expect(
+      tester.getSemantics(_cell('2026-09-28')).label,
+      '2026-09-28 1 小時 5 分鐘',
+    );
+    expect(
+      tester.getSemantics(_cell('2026-09-27')).label,
+      '2026-09-27 0 分鐘',
+    );
+    handle.dispose();
   });
 
   testWidgets('快速連點兩個方格：先點的查詢較晚回來，不會蓋掉後點的結果', (tester) async {
@@ -439,7 +476,7 @@ void main() {
       await _pumpScreen(tester, FakeReadingStatsRepository());
       expect(find.text('閱讀統計'), findsOneWidget);
       expect(find.text('累計閱讀時數'), findsOneWidget);
-      expect(find.text('當日無閱讀記錄'), findsOneWidget);
+      expect(find.text('當日無閱讀紀錄'), findsOneWidget);
       expect(find.text('清除全部統計'), findsOneWidget);
     });
 

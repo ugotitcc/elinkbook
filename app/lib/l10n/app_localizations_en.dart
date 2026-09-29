@@ -2287,6 +2287,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsNoDataOnDate => 'No reading on this day';
 
   @override
+  String get statsLoadFailed => 'Unable to load reading stats';
+
+  @override
   String get statsLegendLess => 'Less';
 
   @override

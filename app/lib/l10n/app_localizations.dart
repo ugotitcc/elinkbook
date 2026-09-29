@@ -3884,8 +3884,14 @@ abstract class AppLocalizations {
   /// 當日詳情卡片在該日沒有任何閱讀紀錄時顯示的說明文字
   ///
   /// In zh_TW, this message translates to:
-  /// **'當日無閱讀記錄'**
+  /// **'當日無閱讀紀錄'**
   String get statsNoDataOnDate;
+
+  /// 閱讀統計畫面讀取資料失敗時顯示的固定錯誤文字（取代載入中圖示，避免永遠停在 spinner）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法載入閱讀統計'**
+  String get statsLoadFailed;
 
   /// 貢獻圖圖例左端文字（色階較淺＝閱讀較少）
   ///

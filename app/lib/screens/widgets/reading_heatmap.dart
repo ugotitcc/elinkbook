@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../stats/heatmap_grid.dart';
+import '../../stats/reading_duration_format.dart';
 import '../../theme/elink_tokens.dart';
 
 /// 方格邊長／間距／週欄間距（取自 epic.md Issue 1 原型定案值）。
@@ -236,6 +237,9 @@ class ReadingHeatmap extends StatelessWidget {
                                           )
                                         : _HeatmapCell(
                                             date: cellEntry.value!,
+                                            seconds: dailyTotals[
+                                                    cellEntry.value!] ??
+                                                0,
                                             painter: HeatmapCellPainter.of(
                                               theme,
                                               heatmapLevelForSeconds(
@@ -294,8 +298,12 @@ class _HeatmapCell extends StatelessWidget {
   final bool selected;
   final ValueChanged<String> onTap;
 
+  /// 當日閱讀秒數，只用於無障礙標籤（讓螢幕閱讀器直接唸出時數）。
+  final int seconds;
+
   const _HeatmapCell({
     required this.date,
+    required this.seconds,
     required this.painter,
     required this.selected,
     required this.onTap,
@@ -308,7 +316,8 @@ class _HeatmapCell extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: () => onTap(date),
       child: Semantics(
-        label: date,
+        label:
+            '$date ${formatReadingDuration(AppLocalizations.of(context)!, seconds)}',
         button: true,
         selected: selected,
         child: CustomPaint(

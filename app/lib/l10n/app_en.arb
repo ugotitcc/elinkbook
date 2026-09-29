@@ -630,6 +630,7 @@
   "statsMinutesFormat": "{minutes} min",
   "statsDailyDetailsTitle": "Reading on {date}",
   "statsNoDataOnDate": "No reading on this day",
+  "statsLoadFailed": "Unable to load reading stats",
   "statsLegendLess": "Less",
   "statsLegendMore": "More",
   "statsClearAllTitle": "Clear All Stats",
