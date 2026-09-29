@@ -52,7 +52,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   }) async {
     final db = await openDatabase(
       path,
-      version: 26,
+      version: 27,
       singleInstance: singleInstance,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
@@ -139,6 +139,7 @@ class SqliteLibraryRepository implements LibraryRepository {
         await _createBookContentIndexTable(db);
         // 【epic-10-search Issue 6】同上，改用會優雅降級的版本。
         await _createBookContentFtsTableIfSupported(db);
+        await _createDailyReadingStatsTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -426,6 +427,12 @@ class SqliteLibraryRepository implements LibraryRepository {
           if (existing.isEmpty) {
             await _createBookContentFtsTableIfSupported(db);
           }
+        }
+        if (oldVersion < 27) {
+          // epic-9-stats Issue 2：每日閱讀統計，全新獨立表（非既有表新增
+          // 欄位），比照 bookmarks（oldVersion < 8）／custom_fonts
+          // （oldVersion < 16）既有原則，無條件建立即可。
+          await _createDailyReadingStatsTable(db);
         }
       },
       onOpen: (db) async {
@@ -895,6 +902,27 @@ class SqliteLibraryRepository implements LibraryRepository {
         prefs_json TEXT NOT NULL
       )
     ''');
+  }
+
+  /// 每日閱讀統計（epic-9-stats Issue 2，見 spec.md「資料表（schema v27）」）。
+  ///
+  /// **刻意不宣告任何外鍵**：連線全程開著 PRAGMA foreign_keys = ON，若
+  /// book_id 參照 books(id)，RESTRICT 會讓刪書失敗、CASCADE 會抹掉「書被
+  /// 刪除後仍保留時數」的歷史。book_id 只是弱關聯的文字欄位，書名快照
+  /// （book_title）讓已刪除的書仍能顯示名稱。
+  static Future<void> _createDailyReadingStatsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE daily_reading_stats (
+        date TEXT NOT NULL,
+        book_id TEXT NOT NULL,
+        book_title TEXT NOT NULL,
+        reading_seconds INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL,
+        PRIMARY KEY (date, book_id)
+      )
+    ''');
+    await db.execute(
+        'CREATE INDEX idx_daily_reading_stats_date ON daily_reading_stats(date)');
   }
 
   /// 每本書的全文檢索索引進度狀態，含背景排程的續跑游標
