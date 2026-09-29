@@ -65,6 +65,25 @@ Discovery 前已核實的事實：
 
 **人類確認（2026-09-29）：** 色階配色、E-Ink 紋理樣式、「不滿 1 分鐘顯示 1 分鐘」規則皆已目視確認定案，Issue 5 可以開始。
 
+## Issue 2 完成記錄（資料層，2026-09-29，PR #297 已合併）
+
+**做了什麼：** 新增每日閱讀統計的本機儲存。SQLite schema 升為 v27，新增 `daily_reading_stats` 表（主鍵 `(date, book_id)`、日期索引，**刻意不設外鍵**）；新增 `app/lib/stats/` 的 `DailyBookReadingStat`、`ReadingStatsRepository` 抽象介面與 `SqliteReadingStatsRepository`；新增共用測試替身 `FakeReadingStatsRepository`（`app/test/support/`）。**尚未接進 `main.dart`／`ReaderScreen`（Issue 4），使用者看不到行為變化。**
+
+**計畫補充的決定（spec 未明說）：**
+- `addReadingSeconds` 的 `seconds <= 0` 不做任何事（統計只增不減）。
+- `getBookStatsForDate` 秒數相同時依書名、再依書籍 id 由小到大。
+- `getDailyTotals` 的鍵依日期由早到晚（SQL `ORDER BY date ASC`；Fake 排序保證），避免兩種實作遍歷順序不一致。
+- Fake 提供 `addReadingSecondsError`，供 Issue 4 驗證「寫入失敗不影響閱讀」。
+
+**驗證結果：**
+- `flutter analyze` 乾淨；資料層測試（`test/stats`＋替身測試）41 個全過；Fake 與 SQLite 共用同一組 17 個契約測試。
+- 完整 `flutter test`（分支 HEAD `709d8f4b`）：3059 通過、1 略過（既有測試，未追查原因）、0 失敗。
+- 程式審查（`reviews/review-issue-2.md`，不進版控）：Ready to merge，Critical 0、Important 0、Minor 2；審查者以四種突變（加外鍵、拿掉排序、累加改覆寫、多發一次事件）確認測試有效。
+
+**已知限制（Minor 1，決定不修）：** 「`onCleared` 事件送達時資料已清空」的測試，抓不到「先發事件、後刪除」的順序寫反：刪除已先排進資料庫佇列，監聽者之後的查詢必然排在它後面。現行實作順序正確。
+
+**給後續 Issue 的提醒：** Issue 4 需在 `main.dart` 以 `SqliteReadingStatsRepository(database: repository.database)` 建立實例，放進 `LibraryReaderFeatureRepositories`；Issue 3 的 tracker 訂閱的是 `ReadingStatsRepository.onCleared`。
+
 ## 目前狀態
 
-Discovery、Architecting（`spec.md`）、Scrum Master（`issues.md`，5 張，含審查修訂）皆完成。Issue 1（原型）已完成並經人類確認，待開發 Issue 2～5。
+Discovery、Architecting（`spec.md`）、Scrum Master（`issues.md`，5 張，含審查修訂）皆完成。Issue 1（原型）、Issue 2（資料層）已完成，待開發 Issue 3～5：Issue 3 可立即開始；Issue 4 依賴 Issue 2、3；Issue 5 依賴 Issue 1、2。
