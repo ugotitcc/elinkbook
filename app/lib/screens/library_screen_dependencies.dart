@@ -18,6 +18,7 @@ import '../reader/tts_audio_handler.dart';
 import '../reader/reader_activity_tracker.dart';
 import '../search/full_text_search_settings_repository.dart';
 import '../search/search_repository.dart';
+import '../stats/reading_stats_repository.dart';
 import '../remote/opds_client.dart';
 import '../remote/remote_server_repository.dart';
 import '../remote/remote_thumbnail_cache.dart';
@@ -72,6 +73,12 @@ class LibraryReaderFeatureRepositories {
   /// 時閱讀器不提供重新連結功能。
   final BookImportService? bookImportService;
 
+  /// epic-9-stats Issue 4：每日閱讀統計的存取層。`ReaderScreen` 據此為每次
+  /// 開書建立會話級計時器；`null` 時閱讀器不計時（行為與未啟用統計相同）。
+  /// 放進本 bundle 的理由同 [bookImportService]：本 bundle 已貫穿所有開啟
+  /// 閱讀器的路徑。
+  final ReadingStatsRepository? readingStatsRepository;
+
   const LibraryReaderFeatureRepositories({
     this.bookmarksRepository,
     this.highlightsRepository,
@@ -88,6 +95,7 @@ class LibraryReaderFeatureRepositories {
     this.isFullTextSearchAvailable = true,
     this.searchRepository,
     this.bookImportService,
+    this.readingStatsRepository,
   });
 }
 

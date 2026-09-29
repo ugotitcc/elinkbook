@@ -71,6 +71,8 @@ import '../reader/writing_mode.dart';
 import '../reader/reader_activity_tracker.dart';
 import '../reader/zone_action.dart';
 import '../search/search_repository.dart';
+import '../stats/reading_stats_repository.dart';
+import '../stats/reading_stats_tracker.dart';
 import '../sync/sync_checkpoint_trigger.dart';
 import '../theme/elink_tokens.dart';
 import 'annotation_toolbar.dart';
@@ -256,6 +258,18 @@ class ReaderScreen extends StatefulWidget {
   /// 不必觸碰平台實作。
   final SingleBookFilePicker? pickSingleBookFile;
 
+  /// epic-9-stats Issue 4：每日閱讀統計的存取層（由
+  /// `LibraryReaderFeatureRepositories.readingStatsRepository` 經
+  /// `buildReaderScreen` 轉交）。未提供 [readingStatsTracker] 時，以本書的
+  /// id、書名與這個 repository 建立會話級計時器；兩者皆為 `null` 則完全不
+  /// 計時，行為與現況相同。
+  final ReadingStatsRepository? readingStatsRepository;
+
+  /// epic-9-stats Issue 4：直接注入的計時器（測試用）。優先於
+  /// [readingStatsRepository]。**由 [ReaderScreen] 擁有**：離開閱讀器時
+  /// 由它呼叫 `flushAndClose()` 結算並關閉，呼叫端不需要（也不應）另外釋放。
+  final ReadingStatsTracker? readingStatsTracker;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -284,6 +298,8 @@ class ReaderScreen extends StatefulWidget {
     this.isFullTextSearchAvailable = true,
     this.bookImportService,
     this.pickSingleBookFile,
+    this.readingStatsRepository,
+    this.readingStatsTracker,
   });
 
   @override
@@ -1932,6 +1948,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // bundle，新欄位必須一併轉送，否則「閱讀器→單書搜尋→閱讀器」
             // 開啟的閱讀器會遺失匯入服務、無法重新連結失效書籍。
             bookImportService: widget.bookImportService,
+            // epic-9-stats Issue 4：同上，手動逐欄重建 bundle 的新欄位必須
+            // 一併轉送，否則「閱讀器→單書搜尋→閱讀器」開啟的閱讀器不計時。
+            readingStatsRepository: widget.readingStatsRepository,
           ),
           syncDependencies: LibrarySyncDependencies(
             syncCheckpointTrigger: widget.syncCheckpointTrigger,

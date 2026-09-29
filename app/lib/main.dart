@@ -62,6 +62,8 @@ import 'search/foliate_content_indexer.dart';
 import 'search/full_text_search_settings_repository.dart';
 import 'search/pdf_content_indexer.dart';
 import 'search/search_repository.dart';
+import 'stats/reading_stats_repository.dart';
+import 'stats/sqlite_reading_stats_repository.dart';
 import 'l10n/app_locale.dart';
 import 'l10n/app_locale_preferences.dart';
 import 'l10n/app_localizations.dart';
@@ -162,6 +164,11 @@ Future<void> main() async {
   // epic-10-search Issue 4：全庫搜尋資料存取層，直接對同一個 Database
   // 連線下 SQL（比照 fullTextSearchSettingsRepository 既有慣例）。
   final searchRepository = SqliteSearchRepository(
+    database: repository.database,
+  );
+  // epic-9-stats Issue 4：每日閱讀統計，同一個 Database 連線（不設外鍵，
+  // 見 Issue 2）；經 LibraryReaderFeatureRepositories 貫穿所有開書路徑。
+  final readingStatsRepository = SqliteReadingStatsRepository(
     database: repository.database,
   );
   // epic-10-search Issue 2：新書匯入（含 CBZ 標記 unsupported）需要
@@ -341,6 +348,7 @@ Future<void> main() async {
       fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
       isFullTextSearchAvailable: repository.isFullTextSearchAvailable,
       searchRepository: searchRepository,
+      readingStatsRepository: readingStatsRepository,
     ),
   );
 }
@@ -392,6 +400,10 @@ class ElinkBookApp extends StatefulWidget {
   final bool isFullTextSearchAvailable;
   final SearchRepository? searchRepository;
 
+  /// epic-9-stats Issue 4：每日閱讀統計的存取層，放進
+  /// `LibraryReaderFeatureRepositories` 轉交給閱讀器。
+  final ReadingStatsRepository? readingStatsRepository;
+
   /// WiFi 傳書入口的網路先決條件偵測（epic-44-wifi-book-transfer
   /// Issue 1），生產環境傳入 `checkNetworkAvailability`（`network_availability.dart`
   /// 頂層函式）。
@@ -435,6 +447,7 @@ class ElinkBookApp extends StatefulWidget {
     this.fullTextSearchSettingsRepository,
     this.isFullTextSearchAvailable = true,
     this.searchRepository,
+    this.readingStatsRepository,
     this.checkNetworkAvailability,
     this.initialLocaleOverride,
     AppLocalePreferences? localePreferences,
@@ -528,6 +541,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
               widget.fullTextSearchSettingsRepository,
           isFullTextSearchAvailable: widget.isFullTextSearchAvailable,
           searchRepository: widget.searchRepository,
+          readingStatsRepository: widget.readingStatsRepository,
           // epic-15-storage-permission Issue 0：閱讀器在檔案存取失效時
           // 重新連結書籍需要匯入服務（Issue 2 使用），與上方
           // importService 參數是同一個實例。

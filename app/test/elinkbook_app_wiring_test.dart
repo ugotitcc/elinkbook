@@ -24,6 +24,7 @@ import 'support/fake_library_repository.dart';
 import 'support/fake_notes_repository.dart';
 import 'support/fake_opds_client.dart';
 import 'support/fake_reader_prefs_manager.dart';
+import 'support/fake_reading_stats_repository.dart';
 import 'support/fake_remote_server_repository.dart';
 import 'support/fake_remote_thumbnail_cache.dart';
 import 'support/fake_tts_provider.dart';
@@ -91,6 +92,7 @@ void main() {
     final thumbnailCache = FakeRemoteThumbnailCache();
     Future<bool> isMobileDataConnection() async => false;
     final ttsProvider = FakeTtsProvider();
+    final readingStatsRepository = FakeReadingStatsRepository();
 
     await tester.pumpWidget(
       ElinkBookApp(
@@ -117,6 +119,7 @@ void main() {
         thumbnailCache: thumbnailCache,
         isMobileDataConnection: isMobileDataConnection,
         ttsProvider: ttsProvider,
+        readingStatsRepository: readingStatsRepository,
         initialTheme: AppTheme.dark,
         initialEinkMode: true,
       ),
@@ -144,6 +147,8 @@ void main() {
         same(bookReaderPrefsRepository));
     expect(libraryScreen.readerFeatureRepositories.ttsProvider,
         same(ttsProvider));
+    expect(libraryScreen.readerFeatureRepositories.readingStatsRepository,
+        same(readingStatsRepository));
 
     expect(libraryScreen.syncDependencies.syncAccountRepository,
         same(syncAccountRepository));

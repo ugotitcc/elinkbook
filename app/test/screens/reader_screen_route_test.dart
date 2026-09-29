@@ -22,6 +22,7 @@ import '../support/fake_highlights_repository.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_notes_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
+import '../support/fake_reading_stats_repository.dart';
 import '../support/fake_search_repository.dart';
 import '../support/fake_tts_audio_focus_source.dart';
 import '../support/fake_tts_provider.dart';
@@ -174,6 +175,39 @@ void main() {
       );
 
       expect(screen.bookImportService, isNull);
+    });
+
+    test('bundle 帶 readingStatsRepository 時，原樣轉交給 ReaderScreen'
+        '（epic-9-stats Issue 4），readingStatsTracker 不由 bundle 提供', () {
+      final statsRepository = FakeReadingStatsRepository();
+      final screen = buildReaderScreen(
+        book: _testBook(),
+        prefsManager: FakeReaderPrefsManager(),
+        features: LibraryReaderFeatureRepositories(
+          readingStatsRepository: statsRepository,
+        ),
+        sync: const LibrarySyncDependencies(),
+        libraryRepository: FakeLibraryRepository(),
+        isEinkMode: false,
+      );
+
+      expect(screen.readingStatsRepository, same(statsRepository));
+      expect(screen.readingStatsTracker, isNull);
+    });
+
+    test('bundle 未帶 readingStatsRepository 時，ReaderScreen 的兩個統計參數皆為 null',
+        () {
+      final screen = buildReaderScreen(
+        book: _testBook(),
+        prefsManager: FakeReaderPrefsManager(),
+        features: const LibraryReaderFeatureRepositories(),
+        sync: const LibrarySyncDependencies(),
+        libraryRepository: FakeLibraryRepository(),
+        isEinkMode: false,
+      );
+
+      expect(screen.readingStatsRepository, isNull);
+      expect(screen.readingStatsTracker, isNull);
     });
 
     test('initialJumpTarget 有值時正確帶入 ReaderScreen', () {

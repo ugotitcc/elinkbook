@@ -22,6 +22,7 @@ import '../support/fake_cloud_storage_client.dart';
 import '../support/fake_remote_server_repository.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_thumbnail_cache.dart';
+import '../support/fake_reading_stats_repository.dart';
 
 void main() {
   setUpAll(() {
@@ -61,6 +62,17 @@ void main() {
     expect(dependencies.customFontsRepository, same(customFontsRepository));
     expect(dependencies.layoutPresetRepository, same(layoutPresetRepository));
     expect(dependencies.bookReaderPrefsRepository, same(bookReaderPrefsRepository));
+  });
+
+  test('LibraryReaderFeatureRepositories.readingStatsRepository 預設為 null，'
+      '傳入時原樣持有同一個實例（epic-9-stats Issue 4）', () {
+    const empty = LibraryReaderFeatureRepositories();
+    expect(empty.readingStatsRepository, isNull);
+
+    final statsRepository = FakeReadingStatsRepository();
+    final dependencies = LibraryReaderFeatureRepositories(
+        readingStatsRepository: statsRepository);
+    expect(dependencies.readingStatsRepository, same(statsRepository));
   });
 
   test('LibraryReaderFeatureRepositories.bookImportService 預設為 null，'
