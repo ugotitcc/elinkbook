@@ -2928,5 +2928,79 @@
   "wifiPageUploadTimeout": "上傳逾時",
   "@wifiPageUploadTimeout": {
     "description": "WiFi 傳書網頁：上傳逾時"
+  },
+  "statsScreenTitle": "閱讀統計",
+  "@statsScreenTitle": {
+    "description": "閱讀統計畫面標題，同時作為設定頁「閱讀統計」入口的標籤"
+  },
+  "statsTotalDuration": "累計閱讀時數",
+  "@statsTotalDuration": {
+    "description": "閱讀統計畫面「累計總時數」卡片的標題"
+  },
+  "statsHoursMinutesFormat": "{hours} 小時 {minutes} 分鐘",
+  "@statsHoursMinutesFormat": {
+    "description": "時數顯示（滿 1 小時）：{hours} 為小時數、{minutes} 為剩餘分鐘數（0–59）",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "statsMinutesFormat": "{minutes} 分鐘",
+  "@statsMinutesFormat": {
+    "description": "時數顯示（未滿 1 小時）：{minutes} 為分鐘數",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "statsDailyDetailsTitle": "{date} 閱讀明細",
+  "@statsDailyDetailsTitle": {
+    "description": "當日詳情卡片標題，{date} 為已依目前介面語言格式化的日期字串（DateFormat.yMd(locale) 的結果）",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "statsNoDataOnDate": "當日無閱讀記錄",
+  "@statsNoDataOnDate": {
+    "description": "當日詳情卡片在該日沒有任何閱讀紀錄時顯示的說明文字"
+  },
+  "statsLegendLess": "較少",
+  "@statsLegendLess": {
+    "description": "貢獻圖圖例左端文字（色階較淺＝閱讀較少）"
+  },
+  "statsLegendMore": "較多",
+  "@statsLegendMore": {
+    "description": "貢獻圖圖例右端文字（色階較深＝閱讀較多）"
+  },
+  "statsClearAllTitle": "清除全部統計",
+  "@statsClearAllTitle": {
+    "description": "「清除全部統計」按鈕文字，同時是確認對話框的標題與確認鈕文字（DESIGN.md §9.2：確認鈕需標明具體後果）"
+  },
+  "statsClearAllConfirmMessage": "確定要清除所有閱讀統計嗎？此動作無法復原。",
+  "@statsClearAllConfirmMessage": {
+    "description": "清除全部統計確認對話框的內文"
+  },
+  "statsClearAllSuccess": "已清除全部閱讀統計",
+  "@statsClearAllSuccess": {
+    "description": "清除全部統計成功後的提示訊息（SnackBar）"
+  },
+  "statsWeekdayMon": "一",
+  "@statsWeekdayMon": {
+    "description": "貢獻圖左側星期標籤欄：星期一（週一列）"
+  },
+  "statsWeekdayWed": "三",
+  "@statsWeekdayWed": {
+    "description": "貢獻圖左側星期標籤欄：星期三（週三列）"
+  },
+  "statsWeekdayFri": "五",
+  "@statsWeekdayFri": {
+    "description": "貢獻圖左側星期標籤欄：星期五（週五列）"
   }
 }

@@ -623,5 +623,19 @@
   "wifiPageUploadFailedParse": "Upload failed: unable to parse the server response",
   "wifiPageUploadFailedNetwork": "Upload failed: network error",
   "wifiPageUploadAborted": "Upload aborted",
-  "wifiPageUploadTimeout": "Upload timed out"
+  "wifiPageUploadTimeout": "Upload timed out",
+  "statsScreenTitle": "Reading Stats",
+  "statsTotalDuration": "Total Reading Time",
+  "statsHoursMinutesFormat": "{hours} hr {minutes} min",
+  "statsMinutesFormat": "{minutes} min",
+  "statsDailyDetailsTitle": "Reading on {date}",
+  "statsNoDataOnDate": "No reading on this day",
+  "statsLegendLess": "Less",
+  "statsLegendMore": "More",
+  "statsClearAllTitle": "Clear All Stats",
+  "statsClearAllConfirmMessage": "Clear all reading stats? This cannot be undone.",
+  "statsClearAllSuccess": "All reading stats cleared",
+  "statsWeekdayMon": "Mon",
+  "statsWeekdayWed": "Wed",
+  "statsWeekdayFri": "Fri"
 }

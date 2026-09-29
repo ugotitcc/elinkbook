@@ -2177,6 +2177,54 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get wifiPageUploadTimeout => '上傳逾時';
+
+  @override
+  String get statsScreenTitle => '閱讀統計';
+
+  @override
+  String get statsTotalDuration => '累計閱讀時數';
+
+  @override
+  String statsHoursMinutesFormat(int hours, int minutes) {
+    return '$hours 小時 $minutes 分鐘';
+  }
+
+  @override
+  String statsMinutesFormat(int minutes) {
+    return '$minutes 分鐘';
+  }
+
+  @override
+  String statsDailyDetailsTitle(String date) {
+    return '$date 閱讀明細';
+  }
+
+  @override
+  String get statsNoDataOnDate => '當日無閱讀記錄';
+
+  @override
+  String get statsLegendLess => '較少';
+
+  @override
+  String get statsLegendMore => '較多';
+
+  @override
+  String get statsClearAllTitle => '清除全部統計';
+
+  @override
+  String get statsClearAllConfirmMessage => '確定要清除所有閱讀統計嗎？此動作無法復原。';
+
+  @override
+  String get statsClearAllSuccess => '已清除全部閱讀統計';
+
+  @override
+  String get statsWeekdayMon => '一';
+
+  @override
+  String get statsWeekdayWed => '三';
+
+  @override
+  String get statsWeekdayFri => '五';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -4352,6 +4400,54 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get wifiPageUploadTimeout => '上传超时';
+
+  @override
+  String get statsScreenTitle => '阅读统计';
+
+  @override
+  String get statsTotalDuration => '累计阅读时长';
+
+  @override
+  String statsHoursMinutesFormat(int hours, int minutes) {
+    return '$hours 小时 $minutes 分钟';
+  }
+
+  @override
+  String statsMinutesFormat(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String statsDailyDetailsTitle(String date) {
+    return '$date 阅读明细';
+  }
+
+  @override
+  String get statsNoDataOnDate => '当日无阅读记录';
+
+  @override
+  String get statsLegendLess => '较少';
+
+  @override
+  String get statsLegendMore => '较多';
+
+  @override
+  String get statsClearAllTitle => '清除全部统计';
+
+  @override
+  String get statsClearAllConfirmMessage => '确定要清除所有阅读统计吗？此操作无法撤销。';
+
+  @override
+  String get statsClearAllSuccess => '已清除全部阅读统计';
+
+  @override
+  String get statsWeekdayMon => '一';
+
+  @override
+  String get statsWeekdayWed => '三';
+
+  @override
+  String get statsWeekdayFri => '五';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -6527,4 +6623,52 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get wifiPageUploadTimeout => '上傳逾時';
+
+  @override
+  String get statsScreenTitle => '閱讀統計';
+
+  @override
+  String get statsTotalDuration => '累計閱讀時數';
+
+  @override
+  String statsHoursMinutesFormat(int hours, int minutes) {
+    return '$hours 小時 $minutes 分鐘';
+  }
+
+  @override
+  String statsMinutesFormat(int minutes) {
+    return '$minutes 分鐘';
+  }
+
+  @override
+  String statsDailyDetailsTitle(String date) {
+    return '$date 閱讀明細';
+  }
+
+  @override
+  String get statsNoDataOnDate => '當日無閱讀記錄';
+
+  @override
+  String get statsLegendLess => '較少';
+
+  @override
+  String get statsLegendMore => '較多';
+
+  @override
+  String get statsClearAllTitle => '清除全部統計';
+
+  @override
+  String get statsClearAllConfirmMessage => '確定要清除所有閱讀統計嗎？此動作無法復原。';
+
+  @override
+  String get statsClearAllSuccess => '已清除全部閱讀統計';
+
+  @override
+  String get statsWeekdayMon => '一';
+
+  @override
+  String get statsWeekdayWed => '三';
+
+  @override
+  String get statsWeekdayFri => '五';
 }

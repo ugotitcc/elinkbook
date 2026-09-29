@@ -623,5 +623,19 @@
   "wifiPageUploadFailedParse": "上傳失敗：無法解析伺服器回應",
   "wifiPageUploadFailedNetwork": "上傳失敗：網路錯誤",
   "wifiPageUploadAborted": "上傳已中斷",
-  "wifiPageUploadTimeout": "上傳逾時"
+  "wifiPageUploadTimeout": "上傳逾時",
+  "statsScreenTitle": "閱讀統計",
+  "statsTotalDuration": "累計閱讀時數",
+  "statsHoursMinutesFormat": "{hours} 小時 {minutes} 分鐘",
+  "statsMinutesFormat": "{minutes} 分鐘",
+  "statsDailyDetailsTitle": "{date} 閱讀明細",
+  "statsNoDataOnDate": "當日無閱讀記錄",
+  "statsLegendLess": "較少",
+  "statsLegendMore": "較多",
+  "statsClearAllTitle": "清除全部統計",
+  "statsClearAllConfirmMessage": "確定要清除所有閱讀統計嗎？此動作無法復原。",
+  "statsClearAllSuccess": "已清除全部閱讀統計",
+  "statsWeekdayMon": "一",
+  "statsWeekdayWed": "三",
+  "statsWeekdayFri": "五"
 }
