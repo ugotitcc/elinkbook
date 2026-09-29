@@ -161,8 +161,16 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 
 完整 `flutter test`（執行時 commit `01320b48`）：3017 通過、1 跳過、0 失敗。`flutter analyze` 乾淨（`No issues found!`），`node tool/check_l10n_hardcoded_strings.js` 通過。
 
-**Issue 3 真機驗證：待補**。實作環境無 Android 實體裝置（`flutter devices` 僅見 Windows／Chrome／Edge），計畫 Task 3 的 Step 1（安裝 debug 版）之後全部待人類在真機執行：上傳字型 → 搬走原檔 → 確認「檔案無法讀取」標示 → 選錯家族被拒 → 選回原檔標示消失 → 重開 App 標示仍無。
+**Issue 3 真機驗證（2026-09-29，使用者執行，`/diagnose` 協助確認 log）**：裝置 OPPO Pad Air（`OPD2102`，序號 `bfa4e772`）。測試字型 `BailuKai-Medium.ttf`，URI 為 `content://com.android.externalstorage.documents/document/primary%3AFonts%2FBailuKai-Medium.ttf`（依路徑定位）。
+
+- **Step 2**：上傳字型並在閱讀器套用，符合預期。
+- **Step 3**：用檔案管理員把原檔從 `Fonts/` 搬到 `Fonts/fesf/`。
+  - 字型管理：logcat 顯示 `probeUriAccess: fileNotFound`；該字型出現「檔案無法讀取」標示與「重新連結字型檔案」按鈕，符合預期。
+  - 閱讀器：logcat 顯示 `Failed to read custom font bytes`（`FileNotFoundException: Missing file`）；畫面不出聲改用預設字型，符合預期。
+  - 閱讀器的字型選單仍列出這款字型，屬預期行為（本 Issue 不改閱讀器）。使用者一開始把這點誤當成問題回報，經 `/diagnose` 確認不是 bug，沒有改程式。
+- **Step 4**：選錯家族被拒且標示仍在；選回 `Fonts/fesf/BailuKai-Medium.ttf` 後標示消失；閱讀器恢復顯示該字型；重開 App 後標示仍無。全部符合預期。
+- **仍未在真機驗證的情境**：`permissionRevoked`（理由見 Issue 2 記錄）；`unknownError` 誤標頻率（程式審查 M-4）本次未特別觀察。
 
 ## 目前狀態
 
-Issue 3 程式與審查修訂已完成，Status 為 `ready-for-human`：待人類在真機執行 Task 3 驗證（見上方「Issue 3 真機驗證：待補」），驗證通過後改回 `completed`、再合併 PR；Issue 0～3 全數完成後待歸檔。
+Issue 3 程式、審查修訂與真機驗證皆已完成（見上方「Issue 3 真機驗證」），待 `issues.md` Status 改回 `completed`、再合併 PR；Issue 0～3 全數完成後待歸檔。
