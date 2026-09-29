@@ -45,7 +45,7 @@ Issue 3（Tracker）────┘
 
 ## Issue 2：資料層——每日閱讀統計儲存
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **Blocked by：** 無（可以馬上開始）。
 
