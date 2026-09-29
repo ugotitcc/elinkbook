@@ -126,6 +126,20 @@ Discovery 前已核實的事實：
 - **測試 3（背景朗讀 1 分鐘）：通過。** 新書累計 79 秒，包含背景那段。
 - **已知取捨：** 捲動模式下若 `cfi` 範圍不隨捲動改變、只有 `fraction` 變，該次捲動不算活動。未在真機驗證捲動模式。
 
+## Issue 5 完成記錄（統計畫面，2026-09-29，PR 待建立）
+
+**做了什麼：** 設定頁「閱讀統計」入口（`SettingsScaffold.readingStatsRepository`，null 時隱藏，由 `AdaptiveShellScaffold` 從 bundle 轉交）；`ReadingStatsScreen`（累計總時數、近 365 天貢獻圖、下方固定詳情卡片、底部清除全部＋確認對話框）；`ReadingHeatmap`（左側固定星期欄、右側水平捲動預設最右、月份標籤、五級 `CustomPaint` 方格、E-Ink 紋理＋選取外框疊加層、圖例）；`lib/stats/` 純邏輯（分級、週一起始網格、時數格式化）；`ElinkTokens.heatmapLevel0..4` 四套主題色值（取自 Issue 1 定案表）；14 個字串鍵進 4 份 ARB（含 gen-l10n 產出檔入版控）。
+
+**計畫補充的決定（沿用 `plans/plan-issue-5.md`「已知取捨與偏離」，另加實作裁決 2 項）：**
+- 透明佔位 Key 由全域單一改為 `heatmap_placeholder_<week>_<row>` 座標唯一鍵（末週 5 佔位同 Column 會觸發 duplicate-keys 斷言；測試以前綴 predicate 定位）。
+- Task 4 測試 helper 結尾 `pump()` 改 `pumpAndSettle()`（同 testWidgets 內換主題重 pump 時，MaterialApp AnimatedTheme 需 200ms 才切換完成，否則讀到舊主題）。
+
+**驗證結果：** `flutter analyze` 乾淨；`check_l10n_hardcoded_strings.js` 雙 PASS；完整 `flutter test` **3201 通過、1 跳過、0 失敗**（Issue 4 基準 3134＋本 Issue 新增 67，跳過數不變）；突變驗證 7/7 皆使對應測試失敗（已還原）。提交：`060b5cf9`（i18n）、`7b8b5b92`（Token）、`97fa4d9b`（純邏輯）、`24c14d8f`（貢獻圖元件）、`4f23b854`（統計畫面）、`b8b5784e`（設定頁入口）。
+
+**真機確認：未驗證**（本機無 Android 裝置，僅 Edge web）。待真機補：E-Ink 第 3 級（`#525252` 底疊黑色交叉線）對比是否可辨（若不理想，依計畫改原型白底做法，只動 `HeatmapCellPainter.paint()`）、星期欄與捲動預設位置、清除流程、Light／Dark／Sepia 目視。
+
+**已知限制：** 資料只在進入畫面與清除後載入（畫面開著時不即時更新、跨午夜不重算，下次進入更新）；清除失敗不特別處理（單句 `DELETE`，與同畫面其他資料庫呼叫一致）。
+
 ## 目前狀態
 
-Discovery、Architecting（`spec.md`）、Scrum Master（`issues.md`，5 張，含審查修訂）皆完成。Issue 1（原型）、Issue 2（資料層）、Issue 3（tracker）、Issue 4（`ReaderScreen` 接入）已完成，待開發 Issue 5（統計畫面，依賴 Issue 1、2，皆已完成，可立即開始）。
+Discovery、Architecting（`spec.md`）、Scrum Master（`issues.md`，5 張，含審查修訂）皆完成。Issue 1（原型）、Issue 2（資料層）、Issue 3（tracker）、Issue 4（`ReaderScreen` 接入）、Issue 5（統計畫面）**五張全數完成，待歸檔**。

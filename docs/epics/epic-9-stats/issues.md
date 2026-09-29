@@ -138,7 +138,7 @@ Issue 3（Tracker）────┘
 
 ## Issue 5：統計畫面——貢獻圖、詳情、主題 Token 與 i18n
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **Blocked by：** Issue 1（原型定案並經人類確認）、Issue 2。
 
