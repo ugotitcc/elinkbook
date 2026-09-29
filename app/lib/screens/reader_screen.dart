@@ -2242,7 +2242,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 結果；此防呆保證不會意外對 FXL 觸發劃線 UI（見 plan-issue-2.md
   /// Global Constraints「FXL 排除」）。
   void _handleSelectionChanged(EpubSelectionInfo info) {
-    if (!mounted || _isFixedLayout) return;
+    if (!mounted) return;
+    _recordReadingActivity(); // 長按選取（劃線）算閱讀活動
+    if (_isFixedLayout) return;
     setState(() {
       _currentSelection = info;
       _pendingHighlightIdForSelection = null;
@@ -2339,6 +2341,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             null) {
       return;
     }
+    // 放在退化選取守衛之後：沒命中既有標註的零面積長按（例如翻頁時手指多停留
+    // 一下）是無效操作，不算閱讀活動；有效的拖曳框選或點選既有標註才算。
+    _recordReadingActivity();
     setState(() {
       _currentPdfSelection = info;
       _pendingPdfHighlightIdForSelection = null;
@@ -3667,7 +3672,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             if (!mounted) return;
             // 【spec.md §6 2026-09-11 修訂】見上方 _hasRelocatedSinceOpen
             // 欄位文件註解：賦值前非 null，代表這不是開書後第一次回報。
-            if (_epubPositionInfo != null) _hasRelocatedSinceOpen = true;
+            if (_epubPositionInfo != null) {
+              _hasRelocatedSinceOpen = true;
+              // 開書後第一次回報是初始定位，不算閱讀活動（epic-9-stats）。
+              _recordReadingActivity();
+            }
             setState(() => _epubPositionInfo = info);
             // 手動導覽自動暫停並清除舊高亮（epic-34-tts-readalong
             // Issue 4）：直接用既有的 nullable _ttsController 欄位（不用
@@ -3740,7 +3749,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             if (!mounted) return;
             // 【spec.md §6 2026-09-11 修訂】理由同上方 onLocatorChanged
             // 分支。
-            if (_pdfPageInfo != null) _hasRelocatedSinceOpen = true;
+            if (_pdfPageInfo != null) {
+              _hasRelocatedSinceOpen = true;
+              _recordReadingActivity();
+            }
             setState(() => _pdfPageInfo = info);
           },
         );
@@ -3796,6 +3808,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     switch (action) {
       case ZoneAction.previousPage:
         if (_state == _RenderState.loading) return;
+        _recordReadingActivity();
         if (format == BookFormat.pdf) {
           // Epic 26 Issue 3 暫時性真機診斷插樁：量測熱區判定觸發換頁的
           // 時間點，與 TapZoneDetector／長按框選插樁交叉比對，確認是否
@@ -3821,6 +3834,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         break;
       case ZoneAction.nextPage:
         if (_state == _RenderState.loading) return;
+        _recordReadingActivity();
         if (format == BookFormat.pdf) {
           // Epic 26 Issue 3 暫時性真機診斷插樁：見上方 previousPage
           // 分支註解，同理。
