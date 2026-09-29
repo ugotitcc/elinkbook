@@ -17,6 +17,41 @@ class ImportResult {
   });
 }
 
+/// epic-15-storage-permission Issue 2：[BookImportService.relinkBook] 的結果。
+/// 用 sealed class 而非純列舉：成功時呼叫端需要知道最終生效的檔案路徑
+/// （可能是落地複本的本機路徑，不一定是選取的 URI），必須帶出更新後的
+/// [Book]。
+sealed class BookRelinkResult {
+  const BookRelinkResult();
+}
+
+/// 重新連結成功；[updatedBook] 是已寫入資料庫的最新記錄。
+final class BookRelinkSuccess extends BookRelinkResult {
+  final Book updatedBook;
+  const BookRelinkSuccess(this.updatedBook);
+}
+
+/// 重新連結失敗的原因（使用者可見文字由呼叫端在地化）。
+enum BookRelinkFailureReason {
+  /// 選取的檔案格式與原書不同。
+  formatMismatch,
+
+  /// 內容指紋不同：選到的不是同一本書。
+  contentMismatch,
+
+  /// 選取的檔案已經是書庫中另一本書的來源。
+  alreadyInLibrary,
+
+  /// 讀取或寫入失敗，也包含找不到該 id 的書籍記錄、不支援重新連結的格式。
+  failed,
+}
+
+/// 重新連結失敗；原本的書籍記錄完全不動。
+final class BookRelinkFailure extends BookRelinkResult {
+  final BookRelinkFailureReason reason;
+  const BookRelinkFailure(this.reason);
+}
+
 /// 圖書庫匯入服務的抽象介面（見 docs/epics/epic-1-library/spec.md
 /// 「BookImportService」章節，為唯一事實來源）。
 abstract class BookImportService {
@@ -51,5 +86,17 @@ abstract class BookImportService {
   Future<ImportResult> importFolder(
     String folderUri, {
     bool autoGroupByFolderName = true,
+  });
+
+  /// epic-15-storage-permission Issue 2：把書籍 [bookId] 的檔案位置原地換成
+  /// 使用者重新選取的 [newUri]（[displayName] 為選擇器提供的真實檔名，
+  /// 供 URI 不含副檔名時判斷格式）。先驗證格式、重複、內容指紋，全部通過
+  /// 後才持久化授權或落地複本，最後以 `updateBook` 原地更新——`id`、
+  /// 閱讀位置、劃線、書籤全部保留。任何驗證失敗都不修改記錄、不持久化
+  /// 授權、不留下檔案。處理順序見 epic-15 spec.md「Re-link 服務」。
+  Future<BookRelinkResult> relinkBook(
+    String bookId,
+    String newUri, {
+    String? displayName,
   });
 }

@@ -100,7 +100,7 @@ Issue 0（prefactor）──> Issue 1（失效分類提示）──┬──> Is
 
 ## Issue 2：在閱讀器錯誤畫面重新選取檔案，書籍原地重新連結並繼續閱讀
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 1。
 

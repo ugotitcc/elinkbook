@@ -188,6 +188,117 @@ class BookImportServiceImpl implements BookImportService {
     );
   }
 
+  /// epic-15-storage-permission Issue 2：可能維持 `content://` 的格式。
+  /// TXT／MD 匯入時已合成 EPUB 並落地、CBZ 匯入時已重建並落地，
+  /// `filePath` 指向落地檔；若換成原始檔 URI，閱讀器會把原始檔當合成結果
+  /// 開啟，整本書壞掉（spec.md「受影響範圍」）。
+  static const _relinkableFormats = {
+    BookFileFormat.epub,
+    BookFileFormat.pdf,
+    BookFileFormat.azw3,
+  };
+
+  @override
+  Future<BookRelinkResult> relinkBook(
+    String bookId,
+    String newUri, {
+    String? displayName,
+  }) async {
+    try {
+      // 1. 讀取最新記錄：由服務自行讀取而非由呼叫端傳入 Book 快照，避免
+      //    updateBook 整列覆寫時把閱讀位置等欄位蓋回舊值。
+      final book = await _repository.findBookById(bookId);
+      if (book == null || !_relinkableFormats.contains(book.format)) {
+        return const BookRelinkFailure(BookRelinkFailureReason.failed);
+      }
+
+      // 2. 格式必須與原書相同（規則與第一次匯入共用）。
+      final format = _detectImportFormat(newUri, displayName);
+      if (format != book.format) {
+        return const BookRelinkFailure(BookRelinkFailureReason.formatMismatch);
+      }
+
+      // 3. 新 URI 不可是另一本書的來源；等於原書自己的 filePath 則放行
+      //    （撤銷授權後重新選取同一個檔案，是本功能的主要情境）。
+      final books = await _repository.listBooks();
+      if (books.any((b) => b.id != book.id && b.filePath == newUri)) {
+        return const BookRelinkFailure(
+            BookRelinkFailureReason.alreadyInLibrary);
+      }
+
+      // 4. 利用選擇器核發的暫時讀取授權計算指紋——此時尚未持久化授權，
+      //    選錯檔案不會白白消耗系統的持久化授權配額。
+      //    算法必須與第一次匯入完全一致：EPUB 先取 OPF identifier（取不到才
+      //    退回 SHA-256），其餘格式直接取 SHA-256。若跳過 extractMetadata，
+      //    EPUB 會算出 SHA-256，和資料庫裡存的 identifier 永遠對不上。
+      final epubIdentifier = format == BookFileFormat.epub
+          ? await _readEpubIdentifier(newUri)
+          : null;
+      final fingerprint = await computeBookContentFingerprint(
+        newUri,
+        format!,
+        epubIdentifier: epubIdentifier,
+      );
+
+      // 5. 比對指紋；原書沒有指紋時略過，稍後補寫。
+      final originalFingerprint = book.contentFingerprint;
+      if (originalFingerprint != null && originalFingerprint != fingerprint) {
+        // 程式審查 M-3：匯入當下若 extractMetadata 失敗，資料庫存的是整檔
+        // SHA-256；這次讀得到 identifier 就會永遠對不上，同一本書只能刪除
+        // 重新匯入。指紋是以 identifier 算出時，再以 SHA-256 比對一次。
+        // 反過來（資料庫存 identifier、這次讀不到）無從補救，仍回傳
+        // contentMismatch，屬已知限制。
+        final usedIdentifier = fingerprint == epubIdentifier?.trim();
+        final sha256 = usedIdentifier
+            ? await computeBookContentFingerprint(newUri, format)
+            : null;
+        if (sha256 != originalFingerprint) {
+          return const BookRelinkFailure(
+              BookRelinkFailureReason.contentMismatch);
+        }
+      }
+
+      // 6. 確認是同一本書後才持久化授權或落地複本（規則與第一次匯入共用）。
+      final resolvedPath =
+          await _persistPermissionOrLandCopy(newUri, book.id, format);
+      if (resolvedPath == null) {
+        return const BookRelinkFailure(BookRelinkFailureReason.failed);
+      }
+
+      // 7. 原地更新：只改 filePath 與補寫的指紋，其餘欄位沿用最新記錄。
+      //    已知限制（程式審查 M-4）：這一步寫入失敗時，第 6 步已持久化的
+      //    授權與落地複本不會回收——原生端沒有釋放授權的方法；複本檔名
+      //    固定為 `<bookId>.<格式>`，重試時會直接覆寫，不會越積越多。
+      final updated = book.copyWith(
+        filePath: resolvedPath,
+        contentFingerprint: originalFingerprint ?? fingerprint,
+      );
+      await _repository.updateBook(updated);
+      return BookRelinkSuccess(updated);
+    } catch (_) {
+      // 指紋計算失敗（computeSha256 回傳 null 會拋出 StateError）、資料庫
+      // 讀寫失敗等，一律視為 failed：本方法保證不拋出例外，呼叫端只需
+      // 依結果顯示對應 SnackBar。
+      return const BookRelinkFailure(BookRelinkFailureReason.failed);
+    }
+  }
+
+  /// epic-15-storage-permission Issue 2：以 `extractMetadata` 讀取重新選取的
+  /// EPUB 的 OPF identifier，供指紋計算使用。提取失敗時回傳 null，比照匯入
+  /// 退回整檔 SHA-256。
+  Future<String?> _readEpubIdentifier(String uri) async {
+    try {
+      final metadata =
+          await kBookMetadataChannel.invokeMapMethod<String, Object?>(
+        'extractMetadata',
+        {'uri': uri, 'format': BookFileFormat.epub.name},
+      );
+      return metadata?['identifier'] as String?;
+    } on PlatformException {
+      return null;
+    }
+  }
+
   /// 【診斷修正——真機回報「同一本書可以重複匯入」】圖書庫既有書籍的
   /// `filePath` 集合，供匯入前判斷來源 URI 是否重複。比對依據是「來源檔案
   /// URI/路徑是否相同」，不比對書名/作者（避免同名但內容不同的書被誤判為
@@ -215,56 +326,19 @@ class BookImportServiceImpl implements BookImportService {
     String? remoteDownloadUrl,
     String? cloudFileId,
   }) async {
-    // 優先用呼叫端提供的真實檔名（例如 file_picker 的 PlatformFile.name）
-    // 判斷格式，URI 本身當退路。部分文件提供者（例如媒體庫文件提供者
-    // com.android.providers.media.documents，使用者透過系統選擇器的
-    // 「最近」／媒體索引視圖選檔時常見）回傳的 URI 只帶不透明數字文件 ID
-    // （例如 .../document/document%3A1000001716），完全不含檔名／副檔名
-    // ——只看 URI 判斷格式在這種情況下必定回傳 null，導致整個檔案在最前面
-    // 就被靜默跳過（真機驗證發現的實際症狀：選檔正確返回、匯入沒有拋出
-    // 任何例外，但書架永遠是空的）。資料夾匯入（importFolder）目前仍只有
-    // URI 可用（DocumentFile 的 uri 路徑對 externalstorage 這類本機提供者
-    // 通常仍保留可辨識檔名），沒有另外提供 displayName 時退回原本行為。
-    final format =
-        (displayName != null ? detectBookFileFormat(displayName) : null) ??
-            detectBookFileFormat(uri);
+    final format = _detectImportFormat(uri, displayName);
     if (format == null) return null;
 
     final id = '${DateTime.now().microsecondsSinceEpoch}-${uri.hashCode}';
 
-    // 只對 content:// scheme 持久化權限（file_picker 在 Android 上一定回傳
-    // content:// URI；此判斷主要防禦測試/除錯情境誤傳純路徑）。部分文件
-    // 提供者（例如媒體庫文件提供者 com.android.providers.media.documents，
-    // 相對於標準的外部儲存文件提供者）在某些裝置/Android 版本上不保證核發
-    // 可持久化授權，`takePersistableUriPermission` 會拋出 PlatformException；
-    // 此時不能直接放棄匯入（先前版本的行為——真機驗證發現這會讓匯入功能
-    // 在部分裝置上整個無法使用），改為退而求其次：把檔案內容複製一份到
-    // App 私有儲存空間，改用這份本機複本的真實檔案路徑，不再依賴來源
-    // content:// URI 在下次啟動後是否還能讀取——複製失敗才視為這個檔案
-    // 匯入失敗並略過。資料夾批次匯入（importFolder）的子檔案 URI 共用
-    // 資料夾層級已取得的權限，呼叫時傳入 takePermission: false 跳過這一步。
+    // 持久化授權／落地複本規則見 _persistPermissionOrLandCopy。資料夾批次
+    // 匯入（importFolder）的子檔案 URI 共用資料夾層級已取得的權限，呼叫時
+    // 傳入 takePermission: false 跳過這一步。
     var resolvedUri = uri;
-    if (takePermission && uri.startsWith('content://')) {
-      var permissionGranted = true;
-      try {
-        await kBookMetadataChannel.invokeMethod<void>(
-          'takePersistableUriPermission',
-          {'uri': uri},
-        );
-      } on PlatformException {
-        permissionGranted = false;
-      }
-      // 即使權限持久化成功，若來源 URI 本身不含可辨識副檔名（例如媒體庫
-      // 文件提供者的不透明數字 ID），ReaderScreen 開啟時仍是依 filePath
-      // 的副檔名判斷格式（detectBookFormat，與這裡的 format 判斷各自獨立
-      // 運作）——filePath 若維持原始 URI，開啟時會判定為不支援的格式。
-      // 因此只要 URI 本身沒有可辨識副檔名，就一律複製一份到本機、以正確
-      // 副檔名命名，讓匯入與開啟兩處的格式判斷全程一致。
-      if (!permissionGranted || detectBookFileFormat(uri) == null) {
-        final localPath = await _copyToLocalStorage(uri, id, format);
-        if (localPath == null) return null;
-        resolvedUri = localPath;
-      }
+    if (takePermission) {
+      final persisted = await _persistPermissionOrLandCopy(uri, id, format);
+      if (persisted == null) return null;
+      resolvedUri = persisted;
     }
 
     final fallbackTitle = titleFromFileName(displayName ?? uri);
@@ -461,6 +535,63 @@ class BookImportServiceImpl implements BookImportService {
       // 「重建索引」補上，不應讓整筆匯入被視為失敗。
     }
     return insertedBook;
+  }
+
+  /// 判斷匯入／重新連結檔案的格式：優先用呼叫端提供的真實檔名，URI 當退路。
+  /// 部分文件提供者（例如媒體庫文件提供者 com.android.providers.media.documents，
+  /// 使用者透過系統選擇器的「最近」／媒體索引視圖選檔時常見）回傳的 URI
+  /// 只帶不透明數字文件 ID（例如 .../document/document%3A1000001716），
+  /// 完全不含檔名／副檔名——只看 URI 判斷格式在這種情況下必定回傳 null
+  /// （真機驗證發現的實際症狀：選檔正確返回、匯入沒有拋出任何例外，但
+  /// 書架永遠是空的）。資料夾匯入（importFolder）目前仍只有 URI 可用
+  /// （DocumentFile 的 uri 路徑對 externalstorage 這類本機提供者通常仍
+  /// 保留可辨識檔名），沒有另外提供 displayName 時退回只看 URI。
+  /// epic-15-storage-permission Issue 2 起由 [relinkBook] 共用。
+  BookFileFormat? _detectImportFormat(String uri, String? displayName) =>
+      (displayName != null ? detectBookFileFormat(displayName) : null) ??
+          detectBookFileFormat(uri);
+
+  /// 對 `content://` URI 持久化讀取授權，回傳最終要寫進 `Book.filePath` 的
+  /// 路徑；非 `content://` 輸入原樣回傳。
+  ///
+  /// 只對 content:// scheme 持久化權限（file_picker 在 Android 上一定回傳
+  /// content:// URI；此判斷主要防禦測試/除錯情境誤傳純路徑）。部分文件
+  /// 提供者（例如媒體庫文件提供者 com.android.providers.media.documents，
+  /// 相對於標準的外部儲存文件提供者）在某些裝置/Android 版本上不保證核發
+  /// 可持久化授權，`takePersistableUriPermission` 會拋出 PlatformException；
+  /// 此時不能直接放棄（先前版本的行為——真機驗證發現這會讓匯入功能在部分
+  /// 裝置上整個無法使用），改為退而求其次：把檔案內容複製一份到 App 私有
+  /// 儲存空間，改用這份本機複本的真實檔案路徑，不再依賴來源 content:// URI
+  /// 在下次啟動後是否還能讀取——複製也失敗才回傳 null。
+  ///
+  /// 即使權限持久化成功，若來源 URI 本身不含可辨識副檔名（例如媒體庫文件
+  /// 提供者的不透明數字 ID），ReaderScreen 開啟時仍是依 filePath 的副檔名
+  /// 判斷格式（detectBookFormat，與匯入時的格式判斷各自獨立運作）——
+  /// filePath 若維持原始 URI，開啟時會判定為不支援的格式。因此只要 URI
+  /// 本身沒有可辨識副檔名，就一律複製一份到本機、以正確副檔名命名，讓
+  /// 匯入與開啟兩處的格式判斷全程一致。
+  ///
+  /// epic-15-storage-permission Issue 2 起由 [relinkBook] 共用，確保重新
+  /// 連結與第一次匯入的行為一致。
+  Future<String?> _persistPermissionOrLandCopy(
+    String uri,
+    String id,
+    BookFileFormat format,
+  ) async {
+    if (!uri.startsWith('content://')) return uri;
+    var permissionGranted = true;
+    try {
+      await kBookMetadataChannel.invokeMethod<void>(
+        'takePersistableUriPermission',
+        {'uri': uri},
+      );
+    } on PlatformException {
+      permissionGranted = false;
+    }
+    if (!permissionGranted || detectBookFileFormat(uri) == null) {
+      return _copyToLocalStorage(uri, id, format);
+    }
+    return uri;
   }
 
   /// [takePersistableUriPermission] 失敗時的退路：把 [uri] 的內容複製一份到

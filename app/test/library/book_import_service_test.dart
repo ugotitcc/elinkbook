@@ -6,11 +6,14 @@ import 'dart:ui' as ui;
 import 'package:archive/archive.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/book_content_fingerprint.dart';
+import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
+import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
@@ -1528,6 +1531,302 @@ void main() {
       final book = result.importedBooks.single;
       expect(book.source, BookSource.local);
       expect(book.cloudFileId, isNull);
+    });
+  });
+
+  group('relinkBook（epic-15-storage-permission Issue 2）', () {
+    const oldPdfUri = 'content://example/old/book.pdf';
+    const newPdfUri = 'content://example/new/book.pdf';
+    const oldEpubUri = 'content://example/old/book.epub';
+    const newEpubUri = 'content://example/new/book.epub';
+
+    late List<MethodCall> calls;
+
+    /// 模擬原生端：extractMetadata 回傳 [epubIdentifier]、computeSha256 回傳
+    /// [sha256]（null 模擬計算失敗）、持久化授權依 [failPermission] 成功或失敗、
+    /// 落地複本依 [failCopy] 成功或失敗。所有呼叫記錄在 [calls]。
+    void mockRelinkChannel({
+      String? epubIdentifier,
+      String? sha256 = 'sha-same',
+      bool failPermission = false,
+      bool failCopy = false,
+    }) {
+      calls = [];
+      mockChannel((call) async {
+        calls.add(call);
+        switch (call.method) {
+          case 'extractMetadata':
+            return {'title': '新選取的檔案', 'identifier': epubIdentifier};
+          case 'computeSha256':
+            return sha256;
+          case 'takePersistableUriPermission':
+            if (failPermission) {
+              throw PlatformException(code: 'permission_failed');
+            }
+            return null;
+          case 'copyContentUriToFile':
+            if (failCopy) throw PlatformException(code: 'copy_failed');
+            return null;
+        }
+        return null;
+      });
+    }
+
+    bool wasCalled(String method) => calls.any((c) => c.method == method);
+
+    Future<Book> seedBook({
+      String id = 'b1',
+      BookFileFormat format = BookFileFormat.pdf,
+      String filePath = oldPdfUri,
+      String? contentFingerprint = 'sha-same',
+    }) {
+      final time = DateTime.fromMillisecondsSinceEpoch(1000);
+      return repository.insertBook(Book(
+        id: id,
+        title: '原書 $id',
+        author: '原作者',
+        format: format,
+        filePath: filePath,
+        source: BookSource.local,
+        coverPath: '/covers/$id.png',
+        contentFingerprint: contentFingerprint,
+        createTime: time,
+        lastReadTime: time,
+      ));
+    }
+
+    /// 驗證前 5 步失敗時的共同保證：沒有持久化授權、沒有落地複本、
+    /// 記錄的 filePath 維持原值。
+    Future<void> expectUntouched(String bookId, String originalPath) async {
+      expect(wasCalled('takePersistableUriPermission'), isFalse);
+      expect(wasCalled('copyContentUriToFile'), isFalse);
+      expect(importedBooksDir.listSync(), isEmpty);
+      expect((await repository.findBookById(bookId))!.filePath, originalPath);
+    }
+
+    test('PDF 指紋相同：持久化新 URI 授權後原地更新 filePath，id 不變', () async {
+      await seedBook();
+      mockRelinkChannel();
+
+      final result = await service.relinkBook('b1', newPdfUri,
+          displayName: 'book.pdf');
+
+      expect(result, isA<BookRelinkSuccess>());
+      final updated = (result as BookRelinkSuccess).updatedBook;
+      expect(updated.id, 'b1');
+      expect(updated.filePath, newPdfUri);
+      expect((await repository.findBookById('b1'))!.filePath, newPdfUri);
+      final permissionCall =
+          calls.singleWhere((c) => c.method == 'takePersistableUriPermission');
+      expect((permissionCall.arguments as Map)['uri'], newPdfUri);
+    });
+
+    test('EPUB 以 extractMetadata 取得的 OPF identifier 比對，與資料庫中的 '
+        'identifier 相同時判定為同一本書（回歸：不可改算 SHA-256）', () async {
+      await seedBook(
+        format: BookFileFormat.epub,
+        filePath: oldEpubUri,
+        contentFingerprint: 'urn:uuid:same-book',
+      );
+      mockRelinkChannel(
+          epubIdentifier: 'urn:uuid:same-book', sha256: 'sha-would-mismatch');
+
+      final result = await service.relinkBook('b1', newEpubUri);
+
+      expect(result, isA<BookRelinkSuccess>());
+      expect(wasCalled('computeSha256'), isFalse);
+      final metadataCall =
+          calls.singleWhere((c) => c.method == 'extractMetadata');
+      expect((metadataCall.arguments as Map)['uri'], newEpubUri);
+    });
+
+    test('EPUB 匯入時沒取得 identifier（資料庫存的是 SHA-256），重新連結時讀得到 '
+        'identifier：以 SHA-256 再比對一次，判定為同一本書（程式審查 M-3）', () async {
+      await seedBook(
+        format: BookFileFormat.epub,
+        filePath: oldEpubUri,
+        contentFingerprint: 'sha-same',
+      );
+      mockRelinkChannel(epubIdentifier: 'urn:uuid:now-readable');
+
+      final result = await service.relinkBook('b1', newEpubUri);
+
+      expect(result, isA<BookRelinkSuccess>());
+      // 原本的指紋保留，不改成 identifier，避免與其他裝置的同步比對不一致。
+      expect((await repository.findBookById('b1'))!.contentFingerprint,
+          'sha-same');
+    });
+
+    test('EPUB identifier 與 SHA-256 都和原書指紋不同時，仍回傳 contentMismatch '
+        '（程式審查 M-3）', () async {
+      await seedBook(
+        format: BookFileFormat.epub,
+        filePath: oldEpubUri,
+        contentFingerprint: 'urn:uuid:original-book',
+      );
+      mockRelinkChannel(
+          epubIdentifier: 'urn:uuid:another-book', sha256: 'sha-another-book');
+
+      final result = await service.relinkBook('b1', newEpubUri);
+
+      expect((result as BookRelinkFailure).reason,
+          BookRelinkFailureReason.contentMismatch);
+      await expectUntouched('b1', oldEpubUri);
+    });
+
+    test('選取的 URI 等於原書自己的 filePath（撤銷後重新授權同一個檔案）時，'
+        '不判定為 alreadyInLibrary，正常完成', () async {
+      await seedBook();
+      mockRelinkChannel();
+
+      final result = await service.relinkBook('b1', oldPdfUri);
+
+      expect(result, isA<BookRelinkSuccess>());
+      expect((result as BookRelinkSuccess).updatedBook.filePath, oldPdfUri);
+      expect(wasCalled('takePersistableUriPermission'), isTrue);
+    });
+
+    test('格式不同回傳 formatMismatch，不持久化、不落地、不改記錄', () async {
+      await seedBook(format: BookFileFormat.epub, filePath: oldEpubUri);
+      mockRelinkChannel();
+
+      final result = await service.relinkBook('b1', newPdfUri);
+
+      expect((result as BookRelinkFailure).reason,
+          BookRelinkFailureReason.formatMismatch);
+      await expectUntouched('b1', oldEpubUri);
+    });
+
+    test('新 URI 已是另一本書的來源時回傳 alreadyInLibrary，不持久化、不落地、'
+        '不改記錄', () async {
+      await seedBook();
+      await seedBook(id: 'b2', filePath: newPdfUri);
+      mockRelinkChannel();
+
+      final result = await service.relinkBook('b1', newPdfUri);
+
+      expect((result as BookRelinkFailure).reason,
+          BookRelinkFailureReason.alreadyInLibrary);
+      await expectUntouched('b1', oldPdfUri);
+    });
+
+    test('內容指紋不同回傳 contentMismatch，不持久化、不落地、不改記錄', () async {
+      await seedBook(contentFingerprint: 'sha-original');
+      mockRelinkChannel(sha256: 'sha-another-book');
+
+      final result = await service.relinkBook('b1', newPdfUri);
+
+      expect((result as BookRelinkFailure).reason,
+          BookRelinkFailureReason.contentMismatch);
+      await expectUntouched('b1', oldPdfUri);
+    });
+
+    test('找不到書籍 id 時回傳 failed', () async {
+      mockRelinkChannel();
+
+      final result = await service.relinkBook('no-such-book', newPdfUri);
+
+      expect((result as BookRelinkFailure).reason,
+          BookRelinkFailureReason.failed);
+      expect(calls, isEmpty);
+    });
+
+    test('指紋計算失敗（computeSha256 回傳 null）時回傳 failed，不持久化、'
+        '不落地、不改記錄', () async {
+      await seedBook();
+      mockRelinkChannel(sha256: null);
+
+      final result = await service.relinkBook('b1', newPdfUri);
+
+      expect((result as BookRelinkFailure).reason,
+          BookRelinkFailureReason.failed);
+      await expectUntouched('b1', oldPdfUri);
+    });
+
+    test('TXT 書籍（filePath 是匯入時合成的落地檔）不支援重新連結，回傳 failed '
+        '且不呼叫任何原生方法', () async {
+      final localTxt = p.join(importedBooksDir.path, 'synth.txt');
+      await seedBook(format: BookFileFormat.txt, filePath: localTxt);
+      mockRelinkChannel();
+
+      final result = await service.relinkBook(
+          'b1', 'content://example/new/book.txt');
+
+      expect((result as BookRelinkFailure).reason,
+          BookRelinkFailureReason.failed);
+      expect(calls, isEmpty);
+      expect((await repository.findBookById('b1'))!.filePath, localTxt);
+    });
+
+    test('原書沒有指紋時略過比對，並把新算出的指紋寫回', () async {
+      await seedBook(contentFingerprint: null);
+      mockRelinkChannel(sha256: 'sha-new');
+
+      final result = await service.relinkBook('b1', newPdfUri);
+
+      expect(result, isA<BookRelinkSuccess>());
+      expect((await repository.findBookById('b1'))!.contentFingerprint,
+          'sha-new');
+    });
+
+    test('驗證通過後持久化授權失敗：改存落地複本，回傳帶本機路徑的成功結果',
+        () async {
+      await seedBook();
+      mockRelinkChannel(failPermission: true);
+
+      final result = await service.relinkBook('b1', newPdfUri);
+
+      final expectedPath = p.join(importedBooksDir.path, 'b1.pdf');
+      expect((result as BookRelinkSuccess).updatedBook.filePath, expectedPath);
+      expect((await repository.findBookById('b1'))!.filePath, expectedPath);
+      final copyCall = calls.singleWhere((c) => c.method == 'copyContentUriToFile');
+      expect((copyCall.arguments as Map)['uri'], newPdfUri);
+      expect((copyCall.arguments as Map)['destinationPath'], expectedPath);
+    });
+
+    test('URI 不含副檔名（媒體庫不透明 ID）時以 displayName 判斷格式，並改存'
+        '落地複本', () async {
+      await seedBook();
+      mockRelinkChannel();
+      const opaqueUri =
+          'content://com.android.providers.media.documents/document/document%3A42';
+
+      final result = await service.relinkBook('b1', opaqueUri,
+          displayName: '原書.pdf');
+
+      expect((result as BookRelinkSuccess).updatedBook.filePath,
+          p.join(importedBooksDir.path, 'b1.pdf'));
+      expect(wasCalled('copyContentUriToFile'), isTrue);
+    });
+
+    test('持久化授權與落地複本都失敗時回傳 failed，記錄不變', () async {
+      await seedBook();
+      mockRelinkChannel(failPermission: true, failCopy: true);
+
+      final result = await service.relinkBook('b1', newPdfUri);
+
+      expect((result as BookRelinkFailure).reason,
+          BookRelinkFailureReason.failed);
+      expect((await repository.findBookById('b1'))!.filePath, oldPdfUri);
+    });
+
+    test('以 findBookById 的最新記錄為基礎：閱讀位置、書名、封面、作者全部保留',
+        () async {
+      final seeded = await seedBook();
+      // 模擬匯入之後使用者讀過這本書，閱讀位置寫回資料庫。
+      await repository.updateBook(
+          seeded.copyWith(progress: 0.42, pdfPageIndex: 17));
+      mockRelinkChannel();
+
+      await service.relinkBook('b1', newPdfUri);
+
+      final stored = (await repository.findBookById('b1'))!;
+      expect(stored.filePath, newPdfUri);
+      expect(stored.progress, 0.42);
+      expect(stored.pdfPageIndex, 17);
+      expect(stored.title, '原書 b1');
+      expect(stored.author, '原作者');
+      expect(stored.coverPath, '/covers/b1.png');
     });
   });
 }

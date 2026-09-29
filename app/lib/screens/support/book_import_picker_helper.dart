@@ -116,3 +116,30 @@ void showImportResultSnackBar(BuildContext context, ImportResult result) {
       : l10n.libraryImportResultSkippedOnlyMessage(skippedCount);
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
+
+/// epic-15-storage-permission Issue 2：單檔選擇器。[allowedExtensions] 依
+/// 原書格式傳入（例如 EPUB 傳 `['epub']`）；使用者取消時回傳 `null`。包成
+/// 可注入的函式型別，讓 `ReaderScreen` 的 widget test 不必觸碰平台實作。
+typedef SingleBookFilePicker = Future<({String uri, String? displayName})?>
+    Function(List<String> allowedExtensions);
+
+/// [SingleBookFilePicker] 的預設實作：`FilePicker` 單選。`uri` 是
+/// `PlatformFile.identifier`（Android 上為 `content://` URI），`displayName`
+/// 是真實檔名，供 URI 不含副檔名時判斷格式。選擇器拋出例外時比照
+/// [pickAndImportFiles] 既有行為視為取消，回傳 `null`。
+Future<({String uri, String? displayName})?> pickSingleBookFileViaFilePicker(
+  List<String> allowedExtensions,
+) async {
+  try {
+    final picked = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: allowedExtensions,
+    );
+    final file = picked?.files.firstOrNull;
+    final uri = file?.identifier;
+    if (file == null || uri == null) return null;
+    return (uri: uri, displayName: file.name);
+  } catch (_) {
+    return null;
+  }
+}

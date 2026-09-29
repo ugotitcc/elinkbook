@@ -2144,6 +2144,36 @@ abstract class AppLocalizations {
   /// **'找不到原始檔案，可能已被移動、改名或刪除。請先確認檔案仍在裝置中，再重新選取。'**
   String get readerStorageFileNotFoundMessage;
 
+  /// epic-15 Issue 2：存取權限失效或找不到檔案時，錯誤畫面上重新選取書籍檔案的按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重新選取檔案'**
+  String get readerStorageRelinkButton;
+
+  /// epic-15 Issue 2：重新選取的檔案格式與原書不同（例如原書 EPUB 卻選了 PDF）時的 SnackBar
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選取的檔案格式與原書不同'**
+  String get readerStorageRelinkFormatMismatch;
+
+  /// epic-15 Issue 2：重新選取的檔案內容指紋與原書不同（選到另一本書）時的 SnackBar
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選取的檔案與原書內容不同，請選取同一本書'**
+  String get readerStorageRelinkContentMismatch;
+
+  /// epic-15 Issue 2：重新選取的檔案已是書庫中另一本書的來源時的 SnackBar
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'這個檔案已經是書庫中的另一本書'**
+  String get readerStorageRelinkAlreadyInLibrary;
+
+  /// epic-15 Issue 2：重新連結因讀取或寫入失敗等其他原因失敗時的 SnackBar
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重新連結失敗，請再試一次'**
+  String get readerStorageRelinkFailed;
+
   /// TTS 睡眠定時器選單的分鐘數選項文字，{minutes} 為分鐘數（固定選項 15/30/45/60，恆大於 1，不需要 ICU plural）
   ///
   /// In zh_TW, this message translates to:

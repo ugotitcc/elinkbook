@@ -65,6 +65,11 @@ import 'package:elinkbook/reader/pdf_crop_frame_overlay.dart';
 import 'package:elinkbook/reader/bookmark.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/library/book_import_service.dart';
+import 'package:elinkbook/library/book_import_service_impl.dart';
+import 'package:elinkbook/library/library_repository.dart'
+    show kBookMetadataChannel;
+import 'package:elinkbook/screens/support/book_import_picker_helper.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/screens/book_search_screen.dart';
 import 'package:elinkbook/search/search_repository.dart';
@@ -159,6 +164,10 @@ Future<int Function()> _pumpContentUriReader(
   required FakeReaderPrefsManager prefsManager,
   required Future<StorageAccessProbeResult> Function(String uri) probe,
   String filePath = 'content://com.example.provider/book.epub',
+  // epic-15-storage-permission Issue 2
+  String bookId = 'b_probe',
+  BookImportService? bookImportService,
+  SingleBookFilePicker? pickSingleBookFile,
 }) async {
   var probeCalls = 0;
   final original = probeStorageAccess;
@@ -176,9 +185,11 @@ Future<int Function()> _pumpContentUriReader(
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: ReaderScreen(
         filePath: filePath,
-        bookId: 'b_probe',
+        bookId: bookId,
         prefsManager: prefsManager,
         isFixedLayout: false,
+        bookImportService: bookImportService,
+        pickSingleBookFile: pickSingleBookFile,
       ),
     ),
   );
@@ -186,6 +197,74 @@ Future<int Function()> _pumpContentUriReader(
   await tester.runAsync(() => Future.delayed(Duration.zero));
   await tester.pump();
   return () => probeCalls;
+}
+
+/// epic-15-storage-permission Issue 2：反覆 pump 直到 [condition] 成立或達到
+/// 上限。閱讀器載入中有無限動畫，不能用 pumpAndSettle。
+Future<void> _pumpUntil(
+  WidgetTester tester,
+  bool Function() condition, {
+  int maxPumps = 50,
+}) async {
+  for (var i = 0; i < maxPumps && !condition(); i++) {
+    await tester.pump(const Duration(milliseconds: 10));
+  }
+}
+
+/// epic-15-storage-permission Issue 2：暫時覆寫 [cacheBookForServing]，依序
+/// 記錄收到的路徑。[failPaths] 內的路徑回傳 null（模擬開書失敗，
+/// FoliateReaderView 會呼叫 onError）；[hangPaths] 內的路徑永不完成（模擬
+/// 開書卡住）；其餘回傳假快取路徑。測試結束時還原全檔 setUpAll 的覆寫。
+List<String> _overrideCacheBookForServing({
+  Set<String> failPaths = const {},
+  Set<String> hangPaths = const {},
+}) {
+  final calls = <String>[];
+  final original = cacheBookForServing;
+  cacheBookForServing = (filePath, instanceId) {
+    calls.add(filePath);
+    if (failPaths.contains(filePath)) return Future.value(null);
+    if (hangPaths.contains(filePath)) return Completer<String?>().future;
+    return Future.value('/fake/cache/dir/current.epub');
+  };
+  addTearDown(() => cacheBookForServing = original);
+  return calls;
+}
+
+/// epic-15-storage-permission Issue 2：假的單檔選擇器，記錄每次收到的
+/// allowedExtensions。[pending] 非 null 時等它完成，否則立即回傳 [result]
+/// （null 代表使用者取消）。
+class _FakeSingleBookFilePicker {
+  _FakeSingleBookFilePicker(this.result);
+
+  final ({String uri, String? displayName})? result;
+  Completer<({String uri, String? displayName})?>? pending;
+  final List<List<String>> calls = [];
+
+  Future<({String uri, String? displayName})?> call(
+      List<String> allowedExtensions) {
+    calls.add(allowedExtensions);
+    return pending?.future ?? Future.value(result);
+  }
+}
+
+/// epic-15-storage-permission Issue 2：Re-link widget test 用的書籍記錄。
+Book _relinkTestBook({
+  String id = 'b_probe',
+  BookFileFormat format = BookFileFormat.epub,
+  required String filePath,
+  String? contentFingerprint,
+}) {
+  return Book(
+    id: id,
+    title: '重新連結測試書',
+    format: format,
+    filePath: filePath,
+    source: BookSource.local,
+    contentFingerprint: contentFingerprint,
+    createTime: DateTime.fromMillisecondsSinceEpoch(0),
+    lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
+  );
 }
 
 void main() {
@@ -11919,6 +11998,434 @@ void main() {
       pending.complete(StorageAccessProbeResult.permissionRevoked);
       await tester.pump();
 
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('重新選取檔案（epic-15-storage-permission Issue 2）', () {
+    const relinkButton = Key('reader_storage_relink_button');
+    const relinkProgress = Key('reader_storage_relink_progress');
+    const oldUri = 'content://com.example.provider/book.epub';
+    const newUri = 'content://com.example.provider/moved/book.epub';
+
+    /// 觸發一次開書失敗並等到錯誤視圖出現（以 onError seam 觸發，
+    /// 與 Issue 1 測試相同）。
+    Future<void> failAndShowError(WidgetTester tester) async {
+      tester
+          .widget<FoliateReaderView>(find.byType(FoliateReaderView))
+          .onError('boom');
+      await _pumpUntil(tester,
+          () => find.byKey(const Key('reader_error_text')).evaluate().isNotEmpty);
+    }
+
+    String errorText(WidgetTester tester) => tester
+        .widget<Text>(find.byKey(const Key('reader_error_text')))
+        .data!;
+
+    // ── 按鈕顯示條件 ──
+
+    for (final result in [
+      StorageAccessProbeResult.permissionRevoked,
+      StorageAccessProbeResult.fileNotFound,
+    ]) {
+      testWidgets('$result 且有匯入服務：顯示有外框的重新選取按鈕', (tester) async {
+        await _pumpContentUriReader(tester,
+            prefsManager: prefsManager,
+            probe: (_) async => result,
+            bookImportService: FakeBookImportService());
+        await failAndShowError(tester);
+
+        expect(find.byKey(relinkButton), findsOneWidget);
+        expect(tester.widget(find.byKey(relinkButton)), isA<OutlinedButton>());
+        expect(
+          find.descendant(
+              of: find.byKey(relinkButton), matching: find.text('重新選取檔案')),
+          findsOneWidget,
+        );
+      });
+    }
+
+    for (final result in [
+      StorageAccessProbeResult.readable,
+      StorageAccessProbeResult.unknownError,
+    ]) {
+      testWidgets('$result：不顯示重新選取按鈕', (tester) async {
+        await _pumpContentUriReader(tester,
+            prefsManager: prefsManager,
+            probe: (_) async => result,
+            bookImportService: FakeBookImportService());
+        await failAndShowError(tester);
+
+        expect(find.byKey(relinkButton), findsNothing);
+      });
+    }
+
+    testWidgets('沒有匯入服務時只顯示分類說明，不顯示按鈕', (tester) async {
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked);
+      await failAndShowError(tester);
+
+      expect(errorText(tester), 'App 對這個檔案的存取權限已失效，請重新選取檔案。');
+      expect(find.byKey(relinkButton), findsNothing);
+    });
+
+    testWidgets('補 Issue 1 審查 M-1：cacheBookForServing 回傳 null → '
+        'FoliateReaderView onError → 探測一次並顯示說明與按鈕', (tester) async {
+      _overrideCacheBookForServing(failPaths: {oldUri});
+      final probeCalls = await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: FakeBookImportService());
+      await _pumpUntil(
+          tester, () => find.byKey(relinkButton).evaluate().isNotEmpty);
+
+      expect(probeCalls(), 1);
+      expect(errorText(tester), 'App 對這個檔案的存取權限已失效，請重新選取檔案。');
+      expect(find.byKey(relinkButton), findsOneWidget);
+    });
+
+    testWidgets('補 Issue 1 審查 M-2：content:// PDF 開書失敗同樣探測並顯示按鈕',
+        (tester) async {
+      // PdfReaderView 以 readContentUriAll 取得暫存檔；回傳 null 會拋出
+      // StateError → onError。
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      const resourceChannel = MethodChannel('elinkbook/reader_resources_cache');
+      messenger.setMockMethodCallHandler(resourceChannel, (call) async => null);
+      addTearDown(
+          () => messenger.setMockMethodCallHandler(resourceChannel, null));
+
+      final probeCalls = await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          filePath: 'content://com.example.provider/book.pdf',
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: FakeBookImportService());
+      await _pumpUntil(
+          tester, () => find.byKey(relinkButton).evaluate().isNotEmpty);
+
+      expect(probeCalls(), 1);
+      expect(find.byKey(relinkButton), findsOneWidget);
+    });
+
+    // ── 重新連結流程 ──
+
+    testWidgets('選取成功：記錄原地更新、id 不變，回到載入中並以新路徑重新開書'
+        '（真實 BookImportServiceImpl＋記憶體 repository）', (tester) async {
+      final cacheCalls = _overrideCacheBookForServing(failPaths: {oldUri});
+      final repository = FakeLibraryRepository(initialBooks: [
+        _relinkTestBook(filePath: oldUri, contentFingerprint: 'urn:uuid:same'),
+      ]);
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(kBookMetadataChannel, (call) async {
+        if (call.method == 'extractMetadata') {
+          return {'identifier': 'urn:uuid:same'};
+        }
+        return null; // takePersistableUriPermission 成功
+      });
+      addTearDown(
+          () => messenger.setMockMethodCallHandler(kBookMetadataChannel, null));
+      final picker =
+          _FakeSingleBookFilePicker((uri: newUri, displayName: 'book.epub'));
+
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: BookImportServiceImpl(repository: repository),
+          pickSingleBookFile: picker.call);
+      await _pumpUntil(
+          tester, () => find.byKey(relinkButton).evaluate().isNotEmpty);
+
+      await tester.tap(find.byKey(relinkButton));
+      await _pumpUntil(tester, () => cacheCalls.length == 2);
+
+      expect(picker.calls, [
+        ['epub']
+      ]);
+      final stored = await repository.findBookById('b_probe');
+      expect(stored!.filePath, newUri);
+      expect(stored.id, 'b_probe');
+      // 閱讀視圖重新建立：快取函式以新路徑再被呼叫一次（不需要 ValueKey）。
+      expect(cacheCalls, [oldUri, newUri]);
+      expect(find.byKey(const Key('reader_error_text')), findsNothing);
+      expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
+    });
+
+    testWidgets('Re-link 回傳落地複本路徑時，重新開書使用該本機路徑', (tester) async {
+      const localCopy = '/data/user/0/app/imported_books/b_probe.epub';
+      final cacheCalls = _overrideCacheBookForServing(failPaths: {oldUri});
+      final service = FakeBookImportService()
+        ..relinkResult = BookRelinkSuccess(
+            _relinkTestBook(filePath: localCopy));
+
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.fileNotFound,
+          bookImportService: service,
+          pickSingleBookFile: _FakeSingleBookFilePicker(
+              (uri: newUri, displayName: 'book.epub')).call);
+      await _pumpUntil(
+          tester, () => find.byKey(relinkButton).evaluate().isNotEmpty);
+
+      await tester.tap(find.byKey(relinkButton));
+      await _pumpUntil(tester, () => cacheCalls.length == 2);
+
+      expect(service.relinkCalls.single.bookId, 'b_probe');
+      expect(service.relinkCalls.single.newUri, newUri);
+      expect(service.relinkCalls.single.displayName, 'book.epub');
+      expect(cacheCalls.last, localCopy);
+    });
+
+    testWidgets('重新開書後再次卡住時，30 秒開書逾時仍會觸發', (tester) async {
+      _overrideCacheBookForServing(failPaths: {oldUri}, hangPaths: {newUri});
+      final service = FakeBookImportService()
+        ..relinkResult = BookRelinkSuccess(_relinkTestBook(filePath: newUri));
+
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: service,
+          pickSingleBookFile: _FakeSingleBookFilePicker(
+              (uri: newUri, displayName: 'book.epub')).call);
+      await _pumpUntil(
+          tester, () => find.byKey(relinkButton).evaluate().isNotEmpty);
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+      await tester.pump();
+
+      await tester.pump(const Duration(seconds: 29));
+      expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 2));
+      expect(errorText(tester), '開書逾時，可能是系統 WebView 版本過舊或檔案異常');
+      expect(find.byKey(relinkButton), findsNothing);
+    });
+
+    testWidgets('重新開書後再次失敗：重新探測一次並再次顯示按鈕（Review Focus 2）',
+        (tester) async {
+      _overrideCacheBookForServing(failPaths: {oldUri, newUri});
+      final service = FakeBookImportService()
+        ..relinkResult = BookRelinkSuccess(_relinkTestBook(filePath: newUri));
+
+      final probeCalls = await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: service,
+          pickSingleBookFile: _FakeSingleBookFilePicker(
+              (uri: newUri, displayName: 'book.epub')).call);
+      await _pumpUntil(
+          tester, () => find.byKey(relinkButton).evaluate().isNotEmpty);
+      await tester.tap(find.byKey(relinkButton));
+      await _pumpUntil(tester, () => probeCalls() == 2);
+      await _pumpUntil(
+          tester, () => find.byKey(relinkButton).evaluate().isNotEmpty);
+
+      expect(probeCalls(), 2);
+      expect(find.byKey(relinkButton), findsOneWidget);
+    });
+
+    testWidgets('處理中按鈕停用並顯示進度，結束後恢復', (tester) async {
+      final service = FakeBookImportService()
+        ..relinkCompleter = Completer<BookRelinkResult>();
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: service,
+          pickSingleBookFile: _FakeSingleBookFilePicker(
+              (uri: newUri, displayName: 'book.epub')).call);
+      await failAndShowError(tester);
+
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+
+      expect(
+          tester.widget<OutlinedButton>(find.byKey(relinkButton)).onPressed,
+          isNull);
+      expect(find.byKey(relinkProgress), findsOneWidget);
+
+      service.relinkCompleter!
+          .complete(const BookRelinkFailure(BookRelinkFailureReason.failed));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+          tester.widget<OutlinedButton>(find.byKey(relinkButton)).onPressed,
+          isNotNull);
+      expect(find.byKey(relinkProgress), findsNothing);
+    });
+
+    testWidgets('快速連點兩次只開一次選擇器（Review Focus 1）', (tester) async {
+      final picker =
+          _FakeSingleBookFilePicker((uri: newUri, displayName: 'book.epub'))
+            ..pending = Completer();
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: FakeBookImportService(),
+          pickSingleBookFile: picker.call);
+      await failAndShowError(tester);
+
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+      await tester.tap(find.byKey(relinkButton), warnIfMissed: false);
+      await tester.pump();
+
+      expect(picker.calls, hasLength(1));
+    });
+
+    testWidgets('選擇器取消：不顯示 SnackBar、不呼叫 relinkBook、按鈕恢復可用、'
+        '錯誤視圖維持原樣', (tester) async {
+      final service = FakeBookImportService();
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.fileNotFound,
+          bookImportService: service,
+          pickSingleBookFile: _FakeSingleBookFilePicker(null).call);
+      await failAndShowError(tester);
+
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+      await tester.pump();
+
+      expect(service.relinkCalls, isEmpty);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(
+          tester.widget<OutlinedButton>(find.byKey(relinkButton)).onPressed,
+          isNotNull);
+      expect(errorText(tester),
+          '找不到原始檔案，可能已被移動、改名或刪除。請先確認檔案仍在裝置中，再重新選取。');
+      // 程式審查 M-2：ReaderScreen 本身不寫資料庫，「記錄不變」由
+      // book_import_service_test.dart 的 relinkBook 失敗案例驗證。
+    });
+
+    for (final entry in {
+      BookRelinkFailureReason.formatMismatch: '選取的檔案格式與原書不同',
+      BookRelinkFailureReason.contentMismatch: '選取的檔案與原書內容不同，請選取同一本書',
+      BookRelinkFailureReason.alreadyInLibrary: '這個檔案已經是書庫中的另一本書',
+      BookRelinkFailureReason.failed: '重新連結失敗，請再試一次',
+    }.entries) {
+      testWidgets('${entry.key}：錯誤視圖維持原樣並顯示對應 SnackBar，不重新開書',
+          (tester) async {
+        final cacheCalls = _overrideCacheBookForServing();
+        final service = FakeBookImportService()
+          ..relinkResult = BookRelinkFailure(entry.key);
+        await _pumpContentUriReader(tester,
+            prefsManager: prefsManager,
+            probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+            bookImportService: service,
+            pickSingleBookFile: _FakeSingleBookFilePicker(
+                (uri: newUri, displayName: 'book.epub')).call);
+        await failAndShowError(tester);
+        final cacheCallsBefore = cacheCalls.length;
+
+        await tester.tap(find.byKey(relinkButton));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text(entry.value), findsOneWidget);
+        expect(errorText(tester), 'App 對這個檔案的存取權限已失效，請重新選取檔案。');
+        expect(find.byKey(relinkButton), findsOneWidget);
+        expect(cacheCalls.length, cacheCallsBefore, reason: '失敗時不可重新開書');
+        // 程式審查 M-2：ReaderScreen 本身不寫資料庫，「記錄不變」由
+        // book_import_service_test.dart 的 relinkBook 失敗案例驗證。
+      });
+    }
+
+    testWidgets('先選錯再選對：重新開書時收掉上一次的失敗提示（程式審查 M-1）',
+        (tester) async {
+      _overrideCacheBookForServing();
+      final service = FakeBookImportService()
+        ..relinkResult = const BookRelinkFailure(
+            BookRelinkFailureReason.contentMismatch);
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: service,
+          pickSingleBookFile: _FakeSingleBookFilePicker(
+              (uri: newUri, displayName: 'book.epub')).call);
+      await failAndShowError(tester);
+
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('選取的檔案與原書內容不同，請選取同一本書'), findsOneWidget);
+
+      service.relinkResult =
+          BookRelinkSuccess(_relinkTestBook(filePath: newUri));
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+      await tester.pump();
+      // 等 SnackBar 的收合動畫跑完。
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byKey(const Key('reader_error_text')), findsNothing);
+      expect(find.text('選取的檔案與原書內容不同，請選取同一本書'), findsNothing);
+    });
+
+    testWidgets('relinkBook 拋出例外：視為 failed，顯示 SnackBar 且按鈕恢復可用'
+        '（Review Focus 4）', (tester) async {
+      final service = FakeBookImportService()..relinkError = StateError('爆掉');
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: service,
+          pickSingleBookFile: _FakeSingleBookFilePicker(
+              (uri: newUri, displayName: 'book.epub')).call);
+      await failAndShowError(tester);
+
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('重新連結失敗，請再試一次'), findsOneWidget);
+      expect(
+          tester.widget<OutlinedButton>(find.byKey(relinkButton)).onPressed,
+          isNotNull);
+    });
+
+    testWidgets('Re-link 處理中離開閱讀器，結果回來後不拋例外（Review Focus 3）',
+        (tester) async {
+      final service = FakeBookImportService()
+        ..relinkCompleter = Completer<BookRelinkResult>();
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: service,
+          pickSingleBookFile: _FakeSingleBookFilePicker(
+              (uri: newUri, displayName: 'book.epub')).call);
+      await failAndShowError(tester);
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+
+      await tester.pumpWidget(const SizedBox());
+      service.relinkCompleter!
+          .complete(BookRelinkSuccess(_relinkTestBook(filePath: newUri)));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('選檔期間離開閱讀器：選擇器回傳後不呼叫 relinkBook、不拋例外'
+        '（計畫審查 M-4）', (tester) async {
+      final service = FakeBookImportService();
+      final picker =
+          _FakeSingleBookFilePicker((uri: newUri, displayName: 'book.epub'))
+            ..pending = Completer();
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: service,
+          pickSingleBookFile: picker.call);
+      await failAndShowError(tester);
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+
+      await tester.pumpWidget(const SizedBox());
+      picker.pending!.complete((uri: newUri, displayName: 'book.epub'));
+      await tester.pump();
+
+      expect(service.relinkCalls, isEmpty);
       expect(tester.takeException(), isNull);
     });
   });

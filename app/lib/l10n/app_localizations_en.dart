@@ -1203,6 +1203,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'The original file could not be found. It may have been moved, renamed, or deleted. Make sure the file is still on the device, then select it again.';
 
   @override
+  String get readerStorageRelinkButton => 'Select file again';
+
+  @override
+  String get readerStorageRelinkFormatMismatch =>
+      'The selected file\'s format doesn\'t match the original book.';
+
+  @override
+  String get readerStorageRelinkContentMismatch =>
+      'The selected file isn\'t the same book. Please select the original book\'s file.';
+
+  @override
+  String get readerStorageRelinkAlreadyInLibrary =>
+      'This file is already another book in your library.';
+
+  @override
+  String get readerStorageRelinkFailed =>
+      'Couldn\'t relink the file. Please try again.';
+
+  @override
   String readerTtsSleepTimerOptionMinutes(int minutes) {
     return '$minutes min';
   }

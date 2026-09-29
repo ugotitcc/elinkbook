@@ -92,6 +92,46 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 
 以 PR #293 合併進 `main`（`43e00ef0`）。
 
+## Issue 2 完成記錄（2026-09-29）
+
+分支 `epic-15/issue-2` 的 commit（依 `plans/plan-issue-2.md` 逐 Task 提交，之後依程式審查修正）：
+
+1. `d32936f2` — `feat(library): BookImportService 新增 relinkBook 原地重新連結書籍（epic-15 Issue 2）`
+2. `03a2f919` — `feat(reader): 錯誤畫面重新選取檔案並原地重新開書（epic-15 Issue 2）`
+3. `fd708d8e` — `fix(reader): 依程式審查處理 Issue 2 Minor 意見（epic-15 Issue 2）`
+4. `ad3483a6` — `docs(epic-15): 新增 Issue 2 實作計畫（含計畫審查與程式審查修訂）`
+
+- **計畫審查**（`reviews/review-plan-issue-2.md`，0 Critical／0 Important／4 Minor）：
+  - 採納 M-1：失敗 SnackBar 先收掉舊的再顯示。
+  - 採納 M-4：選檔後先確認 `mounted`。
+  - 不採納 M-2：`_isProbingAccess` 必定已是 false。
+  - 不採納 M-3：`file.path` 是 file_picker 的快取暫存檔，不能當成書的檔案路徑。
+  - 使用者決定保留 EPUB／PDF／AZW3 格式限制，以及「EPUB 版面偵測重新觸發」這段防禦。
+- **程式審查**（`reviews/review-issue-2.md`，0 Critical／0 Important／4 Minor），使用者決定全部依建議處理：
+  - M-1：Re-link 成功時收掉上一次的失敗提示。
+  - M-2：移除 widget test 中永遠會通過的「記錄不變」斷言。
+  - M-3：EPUB identifier 指紋不符時，退回 SHA-256 再比對一次。
+  - M-4：記為已知限制。
+  - 另外把 `_existingFilePaths` 被擠開的說明註解搬回原位。
+- **已知限制**：
+  - 資料庫存的是 EPUB identifier、重新連結時卻讀不到 identifier，仍會判定為內容不同（程式審查 M-3 的反方向，無從補救）。
+  - `updateBook` 寫入失敗時，已持久化的授權與落地複本不會回收（程式審查 M-4）。原生端沒有釋放授權的方法；複本檔名固定，重試時會覆寫。
+  - 同一個檔案以不同 URI 形式出現時，「已在書庫中」檢查抓不到，例如資料夾匯入的 tree URI 和單檔選取的 document URI。這沿用既有匯入的重複偵測方式。
+
+完整 `flutter test`（執行時 commit `ad3483a6`，`--concurrency=1`）：3004 通過、1 跳過、0 失敗。`flutter analyze` 乾淨（`No issues found!`），`node tool/check_l10n_hardcoded_strings.js` 通過。
+
+**Issue 2 真機驗證（2026-09-29，使用者執行）**：使用者回報「測試通過」，裝置型號與是否也測了 PDF 未記錄。
+
+- **驗證方式的更正**：計畫原本要求「在系統設定或以 adb 撤銷授權」，這個前提是錯的。App 靠的是 SAF 持久化 URI 授權，它不在安裝時要求、不會出現在系統設定的權限頁面，沒有 root 的裝置也無法撤銷。因此 `permissionRevoked` 的真機情境無法主動重現，改用「搬移原始檔案」觸發 `fileNotFound`。兩者出現同一個「重新選取檔案」按鈕，也走同一條重新連結流程，只差錯誤說明文字；說明文字的分流由 widget test 驗證。計畫 Task 3 已同步更正。Issue 1 的驗證步驟有同樣的錯誤前提，所以 Issue 1 記錄中「撤銷資料夾授權」這個情境也無法用這個方式補驗。
+- **執行的情境**（依計畫 Task 3，使用者回報全部符合預期）：
+  1. 以資料夾匯入 EPUB，讀到中間，加一條劃線、一個書籤。
+  2. 把原檔搬到另一個資料夾後開書：顯示「找不到原始檔案」說明與按鈕。
+  3. 選另一本 EPUB：被拒絕，顯示「內容不同」提示。
+  4. 選回原書的新位置：直接開書，閱讀位置、劃線、書籤都保留。
+  5. 返回書架：分類、封面、書名不變。
+  6. 重開 App 後再開同一本書：正常開啟。
+- **仍未在真機驗證的情境**：`permissionRevoked`（理由見上）；PDF 的重新連結（使用者未說明是否有測）。
+
 ## 目前狀態
 
-Issue 1 已合併（PR #293）；下一步 Issue 2／Issue 3（可平行）。
+Issue 2 程式、自動化測試、程式審查、真機驗證皆已完成，待 PR 合併。下一步 Issue 3（與 Issue 2 無依賴，可平行）。

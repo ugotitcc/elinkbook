@@ -1170,6 +1170,21 @@ class AppLocalizationsZh extends AppLocalizations {
       '找不到原始檔案，可能已被移動、改名或刪除。請先確認檔案仍在裝置中，再重新選取。';
 
   @override
+  String get readerStorageRelinkButton => '重新選取檔案';
+
+  @override
+  String get readerStorageRelinkFormatMismatch => '選取的檔案格式與原書不同';
+
+  @override
+  String get readerStorageRelinkContentMismatch => '選取的檔案與原書內容不同，請選取同一本書';
+
+  @override
+  String get readerStorageRelinkAlreadyInLibrary => '這個檔案已經是書庫中的另一本書';
+
+  @override
+  String get readerStorageRelinkFailed => '重新連結失敗，請再試一次';
+
+  @override
   String readerTtsSleepTimerOptionMinutes(int minutes) {
     return '$minutes 分鐘';
   }
@@ -3321,6 +3336,21 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
       '找不到原始文件，可能已被移动、重命名或删除。请先确认文件仍在设备中，再重新选择。';
 
   @override
+  String get readerStorageRelinkButton => '重新选择文件';
+
+  @override
+  String get readerStorageRelinkFormatMismatch => '选择的文件格式与原书不同';
+
+  @override
+  String get readerStorageRelinkContentMismatch => '选择的文件与原书内容不同，请选择同一本书';
+
+  @override
+  String get readerStorageRelinkAlreadyInLibrary => '这个文件已经是书库中的另一本书';
+
+  @override
+  String get readerStorageRelinkFailed => '重新链接失败，请再试一次';
+
+  @override
   String readerTtsSleepTimerOptionMinutes(int minutes) {
     return '$minutes 分钟';
   }
@@ -5470,6 +5500,21 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get readerStorageFileNotFoundMessage =>
       '找不到原始檔案，可能已被移動、改名或刪除。請先確認檔案仍在裝置中，再重新選取。';
+
+  @override
+  String get readerStorageRelinkButton => '重新選取檔案';
+
+  @override
+  String get readerStorageRelinkFormatMismatch => '選取的檔案格式與原書不同';
+
+  @override
+  String get readerStorageRelinkContentMismatch => '選取的檔案與原書內容不同，請選取同一本書';
+
+  @override
+  String get readerStorageRelinkAlreadyInLibrary => '這個檔案已經是書庫中的另一本書';
+
+  @override
+  String get readerStorageRelinkFailed => '重新連結失敗，請再試一次';
 
   @override
   String readerTtsSleepTimerOptionMinutes(int minutes) {
