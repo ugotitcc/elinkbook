@@ -4574,10 +4574,10 @@ void main() {
               'isFullTextSearchAvailable 仍須為 true');
     });
 
-    test('全新安裝（onCreate 直接建到 version 26）：isFullTextSearchAvailable 為 true，'
+    test('全新安裝（onCreate 直接建到 version 27）：isFullTextSearchAvailable 為 true，'
         '行為與現行版本一致（零回歸）', () async {
       expect(repository.isFullTextSearchAvailable, isTrue);
-      expect(await repository.database.getVersion(), 26);
+      expect(await repository.database.getVersion(), 27);
     });
   });
 }
