@@ -332,7 +332,7 @@ git commit -m "feat(prototype): epic-9 Issue 1 貢獻圖純邏輯區塊與 node 
   - DOM id：`view-stats`、`stats-total`、`stats-heatmap`（水平捲動容器）、`stats-heatmap-inner`、`stats-detail-card`、`stats-clear-btn`、`stats-clear-dialog`、`nav-stats`、`stats-scn-normal`／`stats-scn-todayEmpty`／`stats-scn-empty`／`stats-scn-heavy`。
   - JS：`enterStatsView()`（本 Task 先放空函式，Task 3 取代）。
 
-- [ ] **Step 1: 四組主題加入色階變數**
+- [x] **Step 1: 四組主題加入色階變數**
 
 用 Edit 工具，四處各改一次（`old_string` 皆唯一）。
 
@@ -399,7 +399,7 @@ E-Ink：
       --heat-4: #000000;
 ```
 
-- [ ] **Step 2: 新增貢獻圖 CSS**
+- [x] **Step 2: 新增貢獻圖 CSS**
 
 Edit：`old_string`
 ```
@@ -455,7 +455,7 @@ Edit：`old_string`
   </style>
 ```
 
-- [ ] **Step 3: 新增畫面 markup**
+- [x] **Step 3: 新增畫面 markup**
 
 Edit：`old_string`（唯一）
 ```
@@ -533,7 +533,7 @@ Edit：`old_string`（唯一）
       <!-- 模擬系統通知浮層 -->
 ```
 
-- [ ] **Step 4: 設定頁加入「閱讀統計」入口**
+- [x] **Step 4: 設定頁加入「閱讀統計」入口**
 
 Edit：`old_string`（唯一）
 ```
@@ -557,7 +557,7 @@ Edit：`old_string`（唯一）
             </div>
 ```
 
-- [ ] **Step 5: 側欄加入畫面按鈕與情境選擇器**
+- [x] **Step 5: 側欄加入畫面按鈕與情境選擇器**
 
 Edit（畫面按鈕）：`old_string`（唯一）
 ```
@@ -592,7 +592,7 @@ Edit（情境選擇器）：`old_string`（唯一）
     <!-- 寬度模擬控制 -->
 ```
 
-- [ ] **Step 6: `switchView` 加入 stats**
+- [x] **Step 6: `switchView` 加入 stats**
 
 Edit：`old_string`
 ```
@@ -612,7 +612,7 @@ Edit：`old_string`
       if (viewName === 'stats') enterStatsView(); // 進入統計畫面時才建立內容（隱藏時無法量測捲動寬度）
 ```
 
-- [ ] **Step 7: 暫時的空函式（Task 3 取代）**
+- [x] **Step 7: 暫時的空函式（Task 3 取代）**
 
 Edit：`old_string`（唯一）
 ```
@@ -630,7 +630,7 @@ Edit：`old_string`（唯一）
     // ============ 初始化 ============
 ```
 
-- [ ] **Step 8: 驗證**
+- [x] **Step 8: 驗證**
 
 Run:
 ```bash
@@ -641,7 +641,7 @@ Expected: 測試 7 個通過；腳本語法檢查印出 `ok 3`。
 
 手動：用瀏覽器開啟 `prototype/elinkbook_theme_prototype.html`，點「設定」→「閱讀統計」列，應切到一個有標題「閱讀統計」與返回鈕的空白畫面（內容在 Task 3 才出現）；返回鈕回到設定頁；側欄「閱讀統計（貢獻圖）」按鈕可切換並高亮。
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add prototype/elinkbook_theme_prototype.html

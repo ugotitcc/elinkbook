@@ -46,6 +46,12 @@
       --color-outline: #cbdfe9;
       --color-primary: #0284c7;
       --color-on-primary: #ffffff;
+      /* 貢獻圖五級色階（epic-9-stats）：0 無紀錄 → 4 六十分以上 */
+      --heat-0: #eaf1f5;
+      --heat-1: #bae6fd;
+      --heat-2: #7dd3fc;
+      --heat-3: #38bdf8;
+      --heat-4: #0284c7;
     }
     #emulator-screen[data-theme="dark"] {
       --color-surface: #1d1d22;
@@ -53,6 +59,11 @@
       --color-outline: #2c2c34;
       --color-primary: #38bdf8;
       --color-on-primary: #141416;
+      --heat-0: #2c2c34;
+      --heat-1: #0c4a6e;
+      --heat-2: #0369a1;
+      --heat-3: #0ea5e9;
+      --heat-4: #7dd3fc;
     }
     #emulator-screen[data-theme="sepia"] {
       --color-surface: #faf3e3;
@@ -60,6 +71,11 @@
       --color-outline: #e6dfcb;
       --color-primary: #b8362d;
       --color-on-primary: #ffffff;
+      --heat-0: #e6dfcb;
+      --heat-1: #efd3c4;
+      --heat-2: #dea08e;
+      --heat-3: #c85f4f;
+      --heat-4: #b8362d;
     }
     /* E-Ink 開啟：無條件強制純黑白，不管底下選的是哪個主題（放最後，優先蓋過上面三組） */
     #emulator-screen[data-eink="on"] {
@@ -68,6 +84,12 @@
       --color-outline: #000000;
       --color-primary: #000000;
       --color-on-primary: #ffffff;
+      /* E-Ink：階梯灰階；級別另由下方紋理輔助，不只靠灰階深淺區分 */
+      --heat-0: #ffffff;
+      --heat-1: #d4d4d4;
+      --heat-2: #a3a3a3;
+      --heat-3: #525252;
+      --heat-4: #000000;
     }
 
     /* 既有畫面全部是用 Tailwind 寫死的 bg-white/text-black/border-black/bg-black/
@@ -83,6 +105,49 @@
     #emulator-screen.border-white, #emulator-screen .border-white { border-color: var(--color-on-primary) !important; }
     #emulator-screen .active\:bg-black:active { background-color: var(--color-primary) !important; }
     #emulator-screen .active\:text-white:active { color: var(--color-on-primary) !important; }
+
+    /* ============================================================
+       閱讀統計貢獻圖（epic-9-stats）
+       ============================================================ */
+    .heat-cell { width: 16px; height: 16px; border-radius: 2px; flex-shrink: 0; padding: 0; background-color: var(--heat-0); }
+    .heat-l1 { background-color: var(--heat-1); }
+    .heat-l2 { background-color: var(--heat-2); }
+    .heat-l3 { background-color: var(--heat-3); }
+    .heat-l4 { background-color: var(--heat-4); }
+    /* 範圍外的透明佔位格：不畫、不可點 */
+    .heat-cell.heat-empty { background: transparent; pointer-events: none; }
+    /* 被選中的方格：高對比外框 */
+    .heat-cell.selected { position: relative; z-index: 10; outline: 2px solid var(--color-on-surface); outline-offset: 1px; }
+    /* 捲動容器會裁掉超出內容區的外框：預設選中的「今天」在最右下角，外框右側與下側會被切掉。
+       左、右、下留 4px 內距（外框最寬外擴 4px）；上方不加，避免與左側星期欄的垂直對齊位移 */
+    #stats-heatmap-inner { padding: 0 4px 4px 4px; }
+    /* 破壞性主按鈕的按壓態：以主題色反相（不用 opacity，E-Ink 下半透明會產生灰階殘影） */
+    #emulator-screen .stats-danger-btn:active {
+      background-color: var(--color-surface) !important;
+      color: var(--color-on-surface) !important;
+    }
+    /* E-Ink：方格改硬邊框；1～3 級用紋理（網點／斜線／交叉線），4 級實心，0 級留白 */
+    #emulator-screen[data-eink="on"] .heat-cell:not(.heat-empty) { border: 1px solid #000; border-radius: 0; }
+    #emulator-screen[data-eink="on"] .heat-l0 { background-color: #fff; }
+    #emulator-screen[data-eink="on"] .heat-l1 {
+      background-color: #fff;
+      background-image: radial-gradient(#000 1px, transparent 1.2px);
+      background-size: 4px 4px;
+    }
+    #emulator-screen[data-eink="on"] .heat-l2 {
+      background-color: #fff;
+      background-image: repeating-linear-gradient(45deg, #000 0 1px, #fff 1px 4px);
+    }
+    #emulator-screen[data-eink="on"] .heat-l3 {
+      background-color: #fff;
+      background-image:
+        repeating-linear-gradient(45deg, #000 0 1.5px, transparent 1.5px 4px),
+        repeating-linear-gradient(-45deg, #000 0 1.5px, transparent 1.5px 4px);
+    }
+    #emulator-screen[data-eink="on"] .heat-l4 { background-color: #000; }
+    #emulator-screen[data-eink="on"] .heat-cell.selected { outline-width: 3px; }
+    /* E-Ink 的對話框遮罩改不透明白底，避免半透明灰階造成殘影 */
+    #emulator-screen[data-eink="on"] #stats-clear-dialog { background-color: #ffffff; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col md:flex-row font-sans">
@@ -133,6 +198,20 @@
         <button onclick="switchView('settings')" id="nav-settings" class="w-full text-left px-3 py-2 rounded text-sm font-semibold border-2 border-zinc-700 text-zinc-300 hover:border-zinc-500">
           設定（四分區）
         </button>
+        <button onclick="switchView('stats')" id="nav-stats" class="w-full text-left px-3 py-2 rounded text-sm font-semibold border-2 border-zinc-700 text-zinc-300 hover:border-zinc-500">
+          閱讀統計（貢獻圖）
+        </button>
+      </div>
+    </div>
+
+    <!-- 閱讀統計假資料情境（epic-9-stats） -->
+    <div class="space-y-2">
+      <label class="text-xs font-bold text-zinc-300 tracking-wider uppercase">閱讀統計假資料</label>
+      <div class="grid grid-cols-1 gap-1.5">
+        <button onclick="setStatsScenario('normal')" id="stats-scn-normal" class="text-left px-3 py-2 text-xs font-bold border-2 border-white text-white">一般（今天有讀、疏密不均）</button>
+        <button onclick="setStatsScenario('todayEmpty')" id="stats-scn-todayEmpty" class="text-left px-3 py-2 text-xs font-bold border border-zinc-700 text-zinc-400">今天無紀錄</button>
+        <button onclick="setStatsScenario('empty')" id="stats-scn-empty" class="text-left px-3 py-2 text-xs font-bold border border-zinc-700 text-zinc-400">全空（清除後）</button>
+        <button onclick="setStatsScenario('heavy')" id="stats-scn-heavy" class="text-left px-3 py-2 text-xs font-bold border border-zinc-700 text-zinc-400">重度（每天都超過 60 分）</button>
       </div>
     </div>
 
@@ -860,6 +939,13 @@
               </div>
               <span class="text-lg font-bold">›</span>
             </div>
+            <div onclick="switchView('stats')" class="border-[1.5px] border-black rounded-md h-16 flex items-center px-4 justify-between cursor-pointer active:bg-black active:text-white">
+              <div>
+                <div class="text-sm font-black">閱讀統計</div>
+                <div class="text-[10px] opacity-75 mt-0.5">近 365 天的閱讀時數與貢獻圖</div>
+              </div>
+              <span class="text-lg font-bold">›</span>
+            </div>
           </div>
 
           <!-- 同步與帳號 -->
@@ -887,6 +973,73 @@
           </div>
         </div>
 
+      </div>
+
+      <!-- 畫面 F：閱讀統計（epic-9-stats）。由設定頁「閱讀統計」進入 -->
+      <div id="view-stats" class="hidden flex-grow flex flex-col h-full bg-white text-black">
+        <div class="h-[56px] border-b-2 border-black flex items-center px-4 gap-2 flex-shrink-0 bg-white">
+          <button onclick="switchView('settings')" class="w-11 h-11 border-[1.5px] border-black rounded-md flex items-center justify-center text-base font-bold active:bg-black active:text-white">‹</button>
+          <span class="text-xl font-black">閱讀統計</span>
+        </div>
+
+        <div class="flex-grow overflow-y-auto no-scrollbar bg-white p-3 flex flex-col gap-3">
+          <!-- 累計總時數 -->
+          <div class="border-[1.5px] border-black rounded-md p-3">
+            <div class="text-[10px] opacity-75">累計閱讀時數</div>
+            <div id="stats-total" class="text-2xl font-black">0 分鐘</div>
+          </div>
+
+          <!-- 貢獻圖：左側固定星期欄＋右側水平捲動 -->
+          <div class="border-[1.5px] border-black rounded-md p-3">
+            <div class="flex">
+              <!-- 星期標籤欄：不隨捲動移動。頂端 17px 對齊月份列（14px 高＋3px 間距） -->
+              <div class="flex-shrink-0 pr-1 text-[10px]" style="width:18px">
+                <div style="height:17px"></div>
+                <div class="flex flex-col" style="gap:3px">
+                  <div style="height:16px;line-height:16px">一</div>
+                  <div style="height:16px"></div>
+                  <div style="height:16px;line-height:16px">三</div>
+                  <div style="height:16px"></div>
+                  <div style="height:16px;line-height:16px">五</div>
+                  <div style="height:16px"></div>
+                  <div style="height:16px"></div>
+                </div>
+              </div>
+              <!-- 方格與月份標籤：水平捲動容器，載入後捲到最右側 -->
+              <div id="stats-heatmap" class="overflow-x-auto no-scrollbar flex-1 min-w-0">
+                <div id="stats-heatmap-inner" class="inline-block"></div>
+              </div>
+            </div>
+            <!-- 圖例 -->
+            <div class="flex items-center justify-end gap-1 mt-2 text-[10px]">
+              <span>較少</span>
+              <div class="heat-cell heat-l0"></div>
+              <div class="heat-cell heat-l1"></div>
+              <div class="heat-cell heat-l2"></div>
+              <div class="heat-cell heat-l3"></div>
+              <div class="heat-cell heat-l4"></div>
+              <span>較多</span>
+            </div>
+          </div>
+
+          <!-- 當日詳情：固定卡片，不使用 Tooltip -->
+          <div id="stats-detail-card" class="border-[1.5px] border-black rounded-md p-3"></div>
+
+          <!-- 清除全部統計 -->
+          <button id="stats-clear-btn" onclick="openStatsClearDialog()" class="w-full h-12 border-[1.5px] border-black rounded-md text-sm font-black active:bg-black active:text-white flex-shrink-0">清除全部統計</button>
+        </div>
+
+        <!-- 清除確認對話框 -->
+        <div id="stats-clear-dialog" class="hidden absolute inset-0 z-40 flex items-center justify-center bg-black/60 p-6">
+          <div class="w-full bg-white text-black border-2 border-black rounded-md p-4 flex flex-col gap-4">
+            <div class="text-base font-black">清除全部統計</div>
+            <div class="text-sm leading-relaxed">確定要清除所有閱讀統計嗎？此動作無法復原。</div>
+            <div class="flex gap-2">
+              <button onclick="closeStatsClearDialog()" class="flex-1 h-11 border-[1.5px] border-black rounded-md text-sm font-black active:bg-black active:text-white">取消</button>
+              <button onclick="confirmStatsClear()" class="stats-danger-btn flex-1 h-11 bg-black text-white border-[1.5px] border-black rounded-md text-sm font-black">清除</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 模擬系統通知浮層 -->
@@ -1086,11 +1239,12 @@ function statsGrandTotal(data) {
     function switchView(viewName) {
       currentView = viewName;
 
-      const views = ['library', 'reader', 'layout', 'source', 'settings'];
+      const views = ['library', 'reader', 'layout', 'source', 'settings', 'stats'];
       views.forEach(v => {
         document.getElementById(`view-${v}`).classList.add('hidden');
       });
       document.getElementById(`view-${viewName}`).classList.remove('hidden');
+      if (viewName === 'stats') enterStatsView(); // 進入統計畫面時才建立內容（隱藏時無法量測捲動寬度）
 
       // 控制面板按鈕高亮
       views.forEach(v => {
@@ -1537,6 +1691,13 @@ function statsGrandTotal(data) {
         toast.classList.add('hidden');
       }, 1800);
     }
+
+    // ============ 閱讀統計畫面（epic-9-stats） ============
+    function enterStatsView() {}
+    function setStatsScenario(s) {}
+    function openStatsClearDialog() {}
+    function closeStatsClearDialog() {}
+    function confirmStatsClear() {}
 
     // ============ 初始化 ============
     bindAllBookCards();
