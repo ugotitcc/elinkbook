@@ -110,7 +110,14 @@ Discovery 前已核實的事實：
 - tracker 的寫入回呼失敗只記診斷日誌（`dart:developer`），不會拋出，不會影響閱讀。
 - 寫入回呼簽章為 `(date, bookId, bookTitle, seconds)`，與 `ReadingStatsRepository.addReadingSeconds` 的具名參數不同，需自行轉接。
 
-## Issue 4 真機確認記錄（2026-09-29，`plan-issue-4.md` Task 4 Step 6）
+## Issue 4 完成記錄（`ReaderScreen` 接入計時，2026-09-29，PR #299 已合併）
+
+**做了什麼：** 統計 repository 注入鏈路（`main.dart` → bundle → `buildReaderScreen` → `ReaderScreen`）；`ReaderScreen` 建立 `ReadingStatsTracker`，轉送 paused／resumed、TTS 播放狀態，退出時 `flushAndClose()` 結算；轉送閱讀活動（Foliate／PDF 位置回報、熱區翻頁、長按選取）。開書後第一次回報、同位置重複回報不算活動。**使用者仍看不到統計畫面（Issue 5）。**
+
+- 程式審查已依報告修訂；完整 `flutter test` 3134 通過、1 跳過、0 失敗。
+- 真機確認發現並修正 `fraction` 抖動問題，詳見下節。
+
+### Issue 4 真機確認記錄（2026-09-29，`plan-issue-4.md` Task 4 Step 6）
 
 裝置：`bfa4e772`（debug 版），以 `run-as` 匯出 `library.db` 查 `daily_reading_stats`。
 
@@ -121,4 +128,4 @@ Discovery 前已核實的事實：
 
 ## 目前狀態
 
-Discovery、Architecting（`spec.md`）、Scrum Master（`issues.md`，5 張，含審查修訂）皆完成。Issue 1（原型）、Issue 2（資料層）、Issue 3（tracker）已完成，待開發 Issue 4、5：Issue 4 依賴 Issue 2、3（皆已完成，可立即開始）；Issue 5 依賴 Issue 1、2（皆已完成，可立即開始）。
+Discovery、Architecting（`spec.md`）、Scrum Master（`issues.md`，5 張，含審查修訂）皆完成。Issue 1（原型）、Issue 2（資料層）、Issue 3（tracker）、Issue 4（`ReaderScreen` 接入）已完成，待開發 Issue 5（統計畫面，依賴 Issue 1、2，皆已完成，可立即開始）。
