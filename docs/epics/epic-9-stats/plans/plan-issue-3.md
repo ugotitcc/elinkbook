@@ -70,7 +70,7 @@
   - `class ReadingStatsTracker`：`recordActivity()`、`Future<void> flushAndClose()`、`void dispose()`（Task 2 再加入 `onEnteredBackground()`、`onReturnedToForeground()`、`onTtsPlayingChanged(bool)`）
   - 測試工具 `TrackerHarness(FakeAsync async, {DateTime? startTime})`：`tracker`、`writes`（`List<FlushCall>`）、`flushAttempts`、`flushError`、`flushGate`、`cleared`（`StreamController<void>`）、`elapse(Duration)`、`elapseSeconds(int)`、`jumpTo(DateTime)`、`total([String? date])`、`closeAndSettle()`、`dispose()`
 
-- [ ] **Step 1: 建立測試工具與測試**
+- [x] **Step 1: 建立測試工具與測試**
 
 建立 `app/test/stats/reading_stats_tracker_harness.dart`：
 
@@ -608,12 +608,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/stats/reading_stats_tracker_test.dart`
 Expected: 編譯失敗，`Target of URI doesn't exist: 'package:elinkbook/stats/reading_stats_tracker.dart'`。
 
-- [ ] **Step 3: 實作計時核心**
+- [x] **Step 3: 實作計時核心**
 
 建立 `app/lib/stats/reading_stats_tracker.dart`：
 
@@ -850,17 +850,17 @@ class ReadingStatsTracker {
 }
 ```
 
-- [ ] **Step 4: 執行測試，確認全部通過**
+- [x] **Step 4: 執行測試，確認全部通過**
 
 Run: `flutter test test/stats/reading_stats_tracker_test.dart`
 Expected: 全部通過（All tests passed）。
 
-- [ ] **Step 5: 靜態分析**
+- [x] **Step 5: 靜態分析**
 
 Run: `flutter analyze lib/stats test/stats`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/stats/reading_stats_tracker.dart app/test/stats/reading_stats_tracker_harness.dart app/test/stats/reading_stats_tracker_test.dart
@@ -879,7 +879,7 @@ git commit -m "feat(stats): epic-9 Issue 3 ReadingStatsTracker 計時核心（�
 - Consumes: Task 1 的 `ReadingStatsTracker`（私有的 `_state`、`_anchor`、`_confirmSpan`、`_setAnchor`、`_goIdle`、`_flush`、`_settleTail`、`_onTick`）與 `TrackerHarness`。
 - Produces（Issue 4 依賴）：`void onEnteredBackground()`、`void onReturnedToForeground()`、`void onTtsPlayingChanged(bool isPlaying)`。
 
-- [ ] **Step 1: 撰寫背景與 TTS 測試**
+- [x] **Step 1: 撰寫背景與 TTS 測試**
 
 建立 `app/test/stats/reading_stats_tracker_background_test.dart`：
 
@@ -1079,12 +1079,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/stats/reading_stats_tracker_background_test.dart`
 Expected: 編譯失敗，`The method 'onEnteredBackground' isn't defined for the type 'ReadingStatsTracker'`（`onReturnedToForeground`、`onTtsPlayingChanged` 同理）。
 
-- [ ] **Step 3: 實作背景與 TTS**
+- [x] **Step 3: 實作背景與 TTS**
 
 修改 `app/lib/stats/reading_stats_tracker.dart`，共四處。
 
@@ -1244,17 +1244,17 @@ Expected: 編譯失敗，`The method 'onEnteredBackground' isn't defined for the
     unawaited(_flush());
 ```
 
-- [ ] **Step 4: 執行兩個 tracker 測試檔，確認全部通過**
+- [x] **Step 4: 執行兩個 tracker 測試檔，確認全部通過**
 
 Run: `flutter test test/stats/reading_stats_tracker_test.dart test/stats/reading_stats_tracker_background_test.dart`
 Expected: 全部通過（Task 1 的測試不受影響）。
 
-- [ ] **Step 5: 靜態分析**
+- [x] **Step 5: 靜態分析**
 
 Run: `flutter analyze lib/stats test/stats`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/stats/reading_stats_tracker.dart app/test/stats/reading_stats_tracker_background_test.dart
@@ -1268,22 +1268,22 @@ git commit -m "feat(stats): epic-9 Issue 3 ReadingStatsTracker 背景與 TTS 規
 **Files:**
 - 無新增或修改（只驗證；若失敗才回頭修對應 Task）。
 
-- [ ] **Step 1: 確認 tracker 沒有依賴 Flutter**
+- [x] **Step 1: 確認 tracker 沒有依賴 Flutter**
 
 Run: `grep -n "package:flutter" lib/stats/reading_stats_tracker.dart`
 Expected: 無任何輸出（結束碼 1）。
 
-- [ ] **Step 2: 靜態分析（整個專案）**
+- [x] **Step 2: 靜態分析（整個專案）**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3: 完整測試**
+- [x] **Step 3: 完整測試**
 
 Run: `flutter test`
 Expected: 全部通過、0 失敗（既有 1 個略過為已知既有測試）。記下通過／略過數與分支 HEAD，供 PR 說明使用。
 
-- [ ] **Step 4: 突變驗證（證明測試抓得到錯）**
+- [x] **Step 4: 突變驗證（證明測試抓得到錯）**
 
 逐一在 `reading_stats_tracker.dart` 套用下列修改，執行 `flutter test test/stats/reading_stats_tracker_test.dart test/stats/reading_stats_tracker_background_test.dart`，**必須出現失敗**；確認後以 `git checkout -- lib/stats/reading_stats_tracker.dart` 還原，再做下一個：
 
@@ -1300,6 +1300,6 @@ Expected: 8 個突變各至少有一個測試失敗。
 
 說明：`onTtsPlayingChanged()` 開頭「重複回報相同狀態就提早返回」的保護是純防禦——拿掉後行為完全相同（重複的 `true` 再走一次 `recordActivity()`，但錨點剛被定時器推進過，確認量一樣），所以「重複回報 playing=true」那個測試是行為鎖定，**不會**被突變抓到，這是預期的，不要為了讓它被抓到而改測試。
 
-- [ ] **Step 5: 回報**
+- [x] **Step 5: 回報**
 
 在最終回報列出：tracker 兩個測試檔的通過數、完整 `flutter test` 結果（含 HEAD）、8 個突變的驗證結果。
