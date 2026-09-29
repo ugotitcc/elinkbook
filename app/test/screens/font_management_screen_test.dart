@@ -688,6 +688,29 @@ void main() {
       expect(badge(id), findsNothing);
     });
 
+    testWidgets('updateUri 寫入失敗：不拋出未捕捉例外、記錄不變、標示仍在、按鈕恢復可用（程式審查 M-1）',
+        (tester) async {
+      mockPersistPermission();
+      repository.updateUriError = StateError('disk full');
+      final id = await insertFont('舊字型', 'KingHwa_OldSong', 'content://old/font');
+      probeByUri['content://old/font'] =
+          StorageAccessProbeResult.permissionRevoked;
+      await pumpTall(
+        tester,
+        pickSingleFontFile: () async =>
+            (uri: 'content://new/font', name: 'KingHwa.ttf', bytes: sampleFontBytes),
+      );
+
+      await tester.tap(relink(id));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      repository.updateUriError = null;
+      expect((await repository.listAll()).single.fontUri, 'content://old/font');
+      expect(badge(id), findsOneWidget);
+      expect(tester.widget<OutlinedButton>(relink(id)).onPressed, isNotNull);
+    });
+
     testWidgets('選到不同家族的字型：SnackBar 拒絕、記錄不變、不持久化授權、標示仍在', (tester) async {
       mockPersistPermission();
       final id = await insertFont('舊字型', 'KingHwa_OldSong', 'content://old/font');

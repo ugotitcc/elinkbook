@@ -250,6 +250,8 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
                           child: CircularProgressIndicator(
                             key: Key('font_management_relink_progress_$id'),
                             strokeWidth: 2,
+                            // 讀屏軟體才知道這個進度圈在做什麼（程式審查 M-3）
+                            semanticsLabel: l10n.fontManagementRelinkAction,
                           ),
                         )
                       : Text(l10n.fontManagementRelinkAction),
@@ -555,7 +557,15 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
         // 比照批次上傳與 ADR 0021：字型檔不做落地複本退路，授權盡力而為，
         // 失敗不中止重新連結。
       }
-      await widget.repository.updateUri(id, picked.uri);
+      try {
+        await widget.repository.updateUri(id, picked.uri);
+      } catch (e) {
+        // 資料庫寫入失敗（機率很低）：記錄後結束，記錄與標示維持原樣，
+        // 按鈕由 finally 恢復，使用者可以再試一次（epic-15-storage-permission
+        // Issue 3 程式審查 M-1）。
+        debugPrint('Failed to relink custom font: $e');
+        return;
+      }
       if (!mounted) return;
       setState(() => _probeResults[id] = StorageAccessProbeResult.readable);
       await _loadFonts();
