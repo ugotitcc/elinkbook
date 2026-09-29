@@ -1776,9 +1776,21 @@ function statsGrandTotal(data) {
         `<div class="text-xs font-black mb-1">${statsSelectedKey} 閱讀明細</div>${body}`;
     }
 
-    function openStatsClearDialog() {}
-    function closeStatsClearDialog() {}
-    function confirmStatsClear() {}
+    // 清除全部統計：必經確認對話框；確認後畫面回到空白狀態
+    function openStatsClearDialog() {
+      document.getElementById('stats-clear-dialog').classList.remove('hidden');
+    }
+    function closeStatsClearDialog() {
+      document.getElementById('stats-clear-dialog').classList.add('hidden');
+    }
+    function confirmStatsClear() {
+      statsScenario = 'empty';
+      statsData = {};
+      highlightStatsScenario();
+      closeStatsClearDialog();
+      renderStats();
+      showNotification('已清除全部閱讀統計');
+    }
 
     // ============ 初始化 ============
     bindAllBookCards();

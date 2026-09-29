@@ -800,7 +800,7 @@ git commit -m "feat(prototype): epic-9 Issue 1 貢獻圖渲染、詳情卡片與
 - Consumes: Task 3 的 `statsData`、`statsScenario`、`renderStats()`、`highlightStatsScenario()`、`showNotification()`（既有）。
 - Produces: `openStatsClearDialog()`、`closeStatsClearDialog()`、`confirmStatsClear()`。
 
-- [ ] **Step 1: 實作對話框流程**
+- [x] **Step 1: 實作對話框流程**
 
 Edit：`old_string`
 ```
@@ -827,7 +827,7 @@ Edit：`old_string`
     }
 ```
 
-- [ ] **Step 2: 語法與測試**
+- [x] **Step 2: 語法與測試**
 
 Run:
 ```bash
@@ -836,15 +836,15 @@ node -e "const h=require('fs').readFileSync('prototype/elinkbook_theme_prototype
 ```
 Expected: 7 通過；`ok 3`。
 
-- [ ] **Step 3: 手動驗證**
+- [x] **Step 3: 手動驗證**
 
-- [ ] 點「清除全部統計」：出現對話框，文字為「確定要清除所有閱讀統計嗎？此動作無法復原。」，有「取消」「清除」兩顆按鈕；背景畫面被遮住。
-- [ ] 點「取消」：對話框關閉，資料完全不變。
+- [x] 點「清除全部統計」：出現對話框，文字為「確定要清除所有閱讀統計嗎？此動作無法復原。」，有「取消」「清除」兩顆按鈕；背景畫面被遮住。
+- [x] 點「取消」：對話框關閉，資料完全不變。
 - [ ] 按住「清除」按鈕不放：按鈕反相（底色與文字互換），四種主題組合都看得出按壓態。
-- [ ] 點「清除」：對話框關閉、顯示通知「已清除全部閱讀統計」；累計總時數為「0 分鐘」；所有方格為 0 級；今天仍被選中，卡片顯示「當日無閱讀記錄」；側欄情境高亮變成「全空」。
-- [ ] 清除後切離再回來（設定 → 閱讀統計）：仍為全空（情境已切為全空）。切換側欄情境為「一般」可復原假資料。
+- [x] 點「清除」：對話框關閉、顯示通知「已清除全部閱讀統計」；累計總時數為「0 分鐘」；所有方格為 0 級；今天仍被選中，卡片顯示「當日無閱讀記錄」；側欄情境高亮變成「全空」。
+- [x] 清除後切離再回來（設定 → 閱讀統計）：仍為全空（情境已切為全空）。切換側欄情境為「一般」可復原假資料。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add prototype/elinkbook_theme_prototype.html
