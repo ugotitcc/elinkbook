@@ -3672,10 +3672,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             if (!mounted) return;
             // 【spec.md §6 2026-09-11 修訂】見上方 _hasRelocatedSinceOpen
             // 欄位文件註解：賦值前非 null，代表這不是開書後第一次回報。
-            if (_epubPositionInfo != null) {
+            final previousPosition = _epubPositionInfo;
+            if (previousPosition != null) {
               _hasRelocatedSinceOpen = true;
-              // 開書後第一次回報是初始定位，不算閱讀活動（epic-9-stats）。
-              _recordReadingActivity();
+              // 不算閱讀活動的回報（epic-9-stats）：開書後第一次回報是初始定位
+              // （上面 previousPosition 為 null 的情況）；位置與上一次相同的
+              // 重複回報，是 Foliate 在開書後套用樣式重排、或圖片／字型載入後
+              // 重新對齊錨點所派發的，不是使用者操作。位置真正改變（翻頁、
+              // 捲動、跳轉）才算。
+              if (previousPosition.locatorJson != info.locatorJson) {
+                _recordReadingActivity();
+              }
             }
             setState(() => _epubPositionInfo = info);
             // 手動導覽自動暫停並清除舊高亮（epic-34-tts-readalong

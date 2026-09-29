@@ -58,6 +58,71 @@ void main() {
     expect(await repository.getTotalReadingSeconds(), 0);
   });
 
+  testWidgets('同一位置的重複回報（重排、圖片或字型載入造成）不算閱讀活動', (tester) async {
+    final repository = FakeReadingStatsRepository();
+    await pumpStatsReader(tester, readingStatsRepository: repository);
+
+    reportLocator(tester, 1); // 初始定位
+    await tester.pump(const Duration(milliseconds: 300));
+    reportLocator(tester, 1); // 套用樣式重排後，Foliate 對同一位置再回報一次
+    await tester.pump(const Duration(seconds: 90)); // 使用者沒有任何操作
+    await disposeStatsReader(tester);
+
+    expect(await repository.getTotalReadingSeconds(), 0);
+  });
+
+  testWidgets('位置回報之間夾著同一位置的重複回報：位置真正改變的那一次仍算活動',
+      (tester) async {
+    final repository = FakeReadingStatsRepository();
+    await pumpStatsReader(tester, readingStatsRepository: repository);
+
+    reportLocator(tester, 1); // 初始定位
+    await tester.pump(const Duration(milliseconds: 300));
+    reportLocator(tester, 1); // 同一位置：不算
+    await tester.pump(const Duration(seconds: 10));
+    reportLocator(tester, 2); // 翻頁：算，回溯開書後約 10 秒
+    await tester.pump(const Duration(seconds: 20));
+    await disposeStatsReader(tester);
+
+    // 開書到翻頁共 10.3 秒（回溯採計），翻頁後 20 秒，合計 30.3 秒，取整數秒為 30。
+    expect(await repository.getTotalReadingSeconds(), 30);
+  });
+
+  testWidgets('清除全部統計後，閱讀器仍在計時的 tracker 不會把清除前的秒數寫回',
+      (tester) async {
+    final repository = FakeReadingStatsRepository();
+    await pumpStatsReader(tester, readingStatsRepository: repository);
+
+    reportLocator(tester, 1);
+    await tester.pump(const Duration(seconds: 10));
+    reportLocator(tester, 2); // 確認 10 秒（尚未被 30 秒定時器寫入）
+    await repository.clearAllStats(); // 使用者在統計畫面清除全部
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 40)); // 第 30 秒的定時寫入不應寫回 10 秒
+    await disposeStatsReader(tester); // 尾段：清除後的 40 秒
+
+    expect(await repository.getTotalReadingSeconds(), 40);
+  });
+
+  testWidgets('未提供書名時，統計以 bookId 作為書名快照', (tester) async {
+    final repository = FakeReadingStatsRepository();
+    await pumpStatsReader(
+      tester,
+      bookTitle: null,
+      readingStatsRepository: repository,
+    );
+
+    reportLocator(tester, 1);
+    await tester.pump(const Duration(seconds: 10));
+    reportLocator(tester, 2);
+    await tester.pump(const Duration(seconds: 20));
+    await disposeStatsReader(tester);
+
+    final stats = await repository.getBookStatsForDate(statsToday());
+    expect(stats, hasLength(1));
+    expect(stats.single.bookTitle, kStatsTestBookId);
+  });
+
   // 上一頁與下一頁各測一次：兩個方向各自有一行轉送，合在一起測會互相掩護。
   for (final action in [ZoneAction.nextPage, ZoneAction.previousPage]) {
     testWidgets('熱區 ${action.name} 算閱讀活動（回溯開書後 10 秒，再加翻頁後 20 秒）',

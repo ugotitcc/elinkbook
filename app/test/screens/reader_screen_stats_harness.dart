@@ -96,6 +96,7 @@ MaterialApp _app(Widget home) => MaterialApp(
 Future<void> pumpStatsReader(
   WidgetTester tester, {
   String filePath = 'test/fixtures/sample.epub',
+  String? bookTitle = kStatsTestBookTitle,
   ReadingStatsRepository? readingStatsRepository,
   ReadingStatsTracker? readingStatsTracker,
   SearchRepository? searchRepository,
@@ -109,7 +110,7 @@ Future<void> pumpStatsReader(
         key: readerKey,
         filePath: filePath,
         bookId: kStatsTestBookId,
-        bookTitle: kStatsTestBookTitle,
+        bookTitle: bookTitle,
         prefsManager: FakeReaderPrefsManager(),
         isFixedLayout: filePath.endsWith('.epub') ? false : null,
         readingStatsRepository: readingStatsRepository,
