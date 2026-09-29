@@ -134,6 +134,28 @@ App 匯入書籍與字型檔案一律不複製檔案，直接以 SAF（Storage A
 
 以 PR #294 合併進 `main`（`ed315bf6`）。
 
+## Issue 3 完成記錄（2026-09-29）
+
+分支 `epic-15/issue-3` 的 commit（依 `plans/plan-issue-3.md` 逐 Task 提交）：
+
+1. `15f0aaa4` — `feat(fonts): CustomFontsRepository 新增 updateUri（epic-15 Issue 3）`
+2. `01320b48` — `feat(fonts): 字型管理標示讀不到的自訂字型並可重新連結（epic-15 Issue 3）`
+3. （本文件更新，見下一個 commit）— `docs(epic-15): 記錄 Issue 3 完成`
+
+- **計畫審查**（`plans/plan-issue-3.md` 引述 `reviews/review-plan-issue-3.md`，0 Critical／0 Important／6 Minor）：
+  - 不採納 M-1：選擇器 `identifier` 為 null 不改用 `file.path`（那是快取暫存檔，且閱讀器讀不到本機路徑）。
+  - 採納 M-2：`_relinkFont` 選檔回來後加 `!mounted` 檢查，新增「選檔期間離開畫面」測試。
+  - 採納 M-3：新測試 group 統一用 `pumpTall` 加高視窗。
+  - 採納 M-4：「改名不重複探測」測試用 `insertFont` 回傳的 id 組 Key。
+  - 不採納 M-5：`_deleteFont` 成功後不清探測狀態（id 不重用＋已有守衛）。
+  - 採納 M-6：「處理中」測試補重新命名按鈕停用的斷言。
+- **偏離計畫之處**：計畫 Task 0 要求新建 worktree `.worktrees/epic-15-issue-3`，但分支 `epic-15/issue-3` 已存在並正被工作目錄使用（git 不允許同一分支檢出兩次），故在原目錄專用分支上原地開發。
+- **測試**：`font_management_screen_test.dart` 48/48 通過（含新增 12 個案例）；`custom_fonts_repository_test.dart` 等 4 個相關檔案 65/65 通過。
+
+完整 `flutter test`（執行時 commit `01320b48`）：3017 通過、1 跳過、0 失敗。`flutter analyze` 乾淨（`No issues found!`），`node tool/check_l10n_hardcoded_strings.js` 通過。
+
+**Issue 3 真機驗證：待補**。實作環境無 Android 實體裝置（`flutter devices` 僅見 Windows／Chrome／Edge），計畫 Task 3 的 Step 1（安裝 debug 版）之後全部待人類在真機執行：上傳字型 → 搬走原檔 → 確認「檔案無法讀取」標示 → 選錯家族被拒 → 選回原檔標示消失 → 重開 App 標示仍無。
+
 ## 目前狀態
 
-Issue 2 已合併（PR #294）；下一步 Issue 3（字型管理標示讀不到的自訂字型，並可重新連結）。
+Issue 3 已完成、待 PR 合併；Issue 0～3 全數完成，待歸檔。
