@@ -86,7 +86,7 @@
   - `ElinkBookApp.readingStatsRepository`（`ReadingStatsRepository?`）
   - 測試 harness：`registerReaderStatsTestEnvironment()`、`pumpStatsReader(tester, {filePath, readingStatsRepository, readingStatsTracker, searchRepository, libraryRepository, readerKey, markRendered})`、`disposeStatsReader(tester)`、`reportLocator(tester, n)`、`moveAppToBackground(tester)`、`moveAppToForeground(tester)`、`statsToday()`、常數 `kStatsTestBookId`、`kStatsTestBookTitle`
 
-- [ ] **Step 1: 撰寫失敗的測試**
+- [x] **Step 1: 撰寫失敗的測試**
 
 建立 `app/test/screens/reader_screen_stats_harness.dart`：
 
@@ -481,12 +481,12 @@ import 'support/fake_reading_stats_repository.dart';
         same(readingStatsRepository));
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/library_screen_dependencies_test.dart test/screens/reader_screen_route_test.dart test/elinkbook_app_wiring_test.dart test/screens/reader_screen_stats_test.dart`
 Expected: 編譯失敗，`The named parameter 'readingStatsRepository' isn't defined`（以及 `ReaderScreen` 沒有 `readingStatsTracker` 等）。
 
-- [ ] **Step 3: 實作注入鏈路**
+- [x] **Step 3: 實作注入鏈路**
 
 修改 `app/lib/screens/library_screen_dependencies.dart`：
 
@@ -752,17 +752,17 @@ import 'l10n/app_locale.dart';
           readingStatsRepository: widget.readingStatsRepository,
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/screens/library_screen_dependencies_test.dart test/screens/reader_screen_route_test.dart test/elinkbook_app_wiring_test.dart test/screens/reader_screen_stats_test.dart`
 Expected: 全部通過。
 
-- [ ] **Step 5: 靜態分析**
+- [x] **Step 5: 靜態分析**
 
 Run: `flutter analyze lib/screens lib/main.dart test/screens test/elinkbook_app_wiring_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/screens/library_screen_dependencies.dart lib/screens/reader_screen_route.dart lib/screens/reader_screen.dart lib/main.dart test/screens/reader_screen_stats_harness.dart test/screens/reader_screen_stats_test.dart test/screens/library_screen_dependencies_test.dart test/screens/reader_screen_route_test.dart test/elinkbook_app_wiring_test.dart
@@ -781,7 +781,7 @@ git commit -m "feat(stats): epic-9 Issue 4 閱讀統計 repository 注入鏈路�
 - Consumes: Task 1 的 `ReaderScreen.readingStatsRepository`／`readingStatsTracker`、harness；`ReadingStatsTracker`（`recordActivity()`、`onEnteredBackground()`、`onReturnedToForeground()`、`onTtsPlayingChanged(bool)`、`flushAndClose()`）。
 - Produces（Task 3 依賴）：`ReaderScreen` 內的 `_readingStatsTracker`（`ReadingStatsTracker?`）與 `_recordReadingActivity()`；靜態測試入口 `ReaderScreen.reportTtsPlayingForTest(GlobalKey<State<ReaderScreen>> key, bool isPlaying)`。
 
-- [ ] **Step 1: 撰寫失敗的測試**
+- [x] **Step 1: 撰寫失敗的測試**
 
 建立 `app/test/screens/reader_screen_stats_lifecycle_test.dart`：
 
@@ -901,12 +901,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/reader_screen_stats_lifecycle_test.dart`
 Expected: 編譯失敗，`The method 'reportTtsPlayingForTest' isn't defined for the type 'ReaderScreen'`。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 修改 `app/lib/screens/reader_screen.dart`，共六處（下列 (a)～(f)）。
 
@@ -1085,17 +1085,17 @@ Expected: 編譯失敗，`The method 'reportTtsPlayingForTest' isn't defined for
     final isActive = _isTtsActive;
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/screens/reader_screen_stats_lifecycle_test.dart test/screens/reader_screen_stats_test.dart`
 Expected: 全部通過。
 
-- [ ] **Step 5: 靜態分析**
+- [x] **Step 5: 靜態分析**
 
 Run: `flutter analyze lib/screens/reader_screen.dart test/screens`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart test/screens/reader_screen_stats_lifecycle_test.dart
@@ -1114,7 +1114,7 @@ git commit -m "feat(stats): epic-9 Issue 4 ReaderScreen 建立計時器並轉送
 - Consumes: Task 2 的 `_recordReadingActivity()`、harness、`FakeReadingStatsRepository`（`addReadingSecondsError`、`getBookStatsForDate`、`getTotalReadingSeconds`）。
 - Produces: 無（本 Task 只接線活動來源）。
 
-- [ ] **Step 1: 撰寫失敗的測試**
+- [x] **Step 1: 撰寫失敗的測試**
 
 建立 `app/test/screens/reader_screen_stats_activity_test.dart`：
 
@@ -1361,12 +1361,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/reader_screen_stats_activity_test.dart`
 Expected: 編譯通過；除「開書後立即退出」「第一次位置回報不算」「menu 不算」「寫入失敗」這幾個「預期為 0」的測試外，其餘（僅 repository 進背景、熱區翻頁、Foliate 選取、PDF 翻頁、PDF 框選、同時注入）失敗——因為活動尚未接線，`Expected: <30> Actual: <0>`。
 
-- [ ] **Step 3: 實作活動接線**
+- [x] **Step 3: 實作活動接線**
 
 修改 `app/lib/screens/reader_screen.dart`，共六處（下列 (a)～(f)）。
 
@@ -1484,17 +1484,17 @@ Expected: 編譯通過；除「開書後立即退出」「第一次位置回報�
       _currentPdfSelection = info;
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/screens/reader_screen_stats_activity_test.dart test/screens/reader_screen_stats_lifecycle_test.dart test/screens/reader_screen_stats_test.dart`
 Expected: 全部通過。
 
-- [ ] **Step 5: 靜態分析**
+- [x] **Step 5: 靜態分析**
 
 Run: `flutter analyze lib/screens/reader_screen.dart test/screens`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart test/screens/reader_screen_stats_activity_test.dart
@@ -1508,17 +1508,17 @@ git commit -m "feat(stats): epic-9 Issue 4 ReaderScreen 轉送閱讀活動（位
 **Files:**
 - 無新增或修改（只驗證；失敗才回頭修對應 Task）。
 
-- [ ] **Step 1: 既有相關測試零回歸**
+- [x] **Step 1: 既有相關測試零回歸**
 
 Run: `flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_route_test.dart test/screens/library_screen_dependencies_test.dart test/screens/library_search_screen_test.dart test/screens/book_search_screen_test.dart test/screens/library_screen_test.dart test/elinkbook_app_wiring_test.dart`
 Expected: 全部通過。
 
-- [ ] **Step 2: 確認 `ReaderScreen` 沒有計時邏輯**
+- [x] **Step 2: 確認 `ReaderScreen` 沒有計時邏輯**
 
 Run: `grep -nE "Timer\(|Timer\.periodic|DateTime\.now\(\)|Stopwatch" lib/screens/reader_screen.dart | grep -in "stats\|統計"`
 Expected: 無任何輸出（統計相關的行不含計時器或時間讀取）。
 
-- [ ] **Step 3: 靜態分析與字串檢查**
+- [x] **Step 3: 靜態分析與字串檢查**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
@@ -1526,12 +1526,12 @@ Expected: `No issues found!`
 Run: `node tool/check_l10n_hardcoded_strings.js`
 Expected: 通過（本 Issue 沒有新增使用者可見字串）。
 
-- [ ] **Step 4: 完整測試**
+- [x] **Step 4: 完整測試**
 
 Run: `flutter test`
 Expected: 全部通過、0 失敗（既有 1 個略過為已知既有測試）。記下通過／略過數與分支 HEAD，供 PR 說明使用。
 
-- [ ] **Step 5: 突變驗證（證明測試抓得到錯）**
+- [x] **Step 5: 突變驗證（證明測試抓得到錯）**
 
 逐一在 `lib/screens/reader_screen.dart`（或指定檔案）套用下列修改，執行 `flutter test test/screens/reader_screen_stats_lifecycle_test.dart test/screens/reader_screen_stats_activity_test.dart test/screens/reader_screen_stats_test.dart test/screens/reader_screen_route_test.dart`，**必須出現失敗**；確認後 `git checkout -- <檔案>` 還原，再做下一個：
 
@@ -1561,6 +1561,6 @@ Expected: 1～15 各至少有一個測試失敗；16 存活是預期的。
 2. 開書後翻頁數次、停留約 1 分鐘再退出。預期：當日該書累計約 1 分鐘上下。
 3. 開始朗讀後切到背景，等 1 分鐘再暫停朗讀。預期：時數包含背景朗讀的 1 分鐘。
 
-- [ ] **Step 7: 回報**
+- [x] **Step 7: 回報**
 
 在最終回報列出：三個新 ReaderScreen 測試檔與四個既有測試檔的通過數、完整 `flutter test` 結果（含 HEAD）、16 個突變的驗證結果，以及 Step 6 是否已做。
