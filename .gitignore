@@ -60,3 +60,6 @@ package-lock.json
 
 # Google Play 商店示範影片檔案太大，不進版控（網址記在 store/google-play/zh-TW/listing.md）
 store/google-play/**/*.mp4
+
+# epic-9-stats 審查報告不進版控
+docs/epics/epic-9-stats/reviews/
