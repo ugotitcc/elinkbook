@@ -325,6 +325,59 @@ void main() {
       expect(_byKey('reading_stats_detail_empty'), findsOneWidget);
     });
 
+    testWidgets('E-Ink 下對話框無淡入動畫：一次 pump 就完全顯示；一般主題則有淡入',
+        (tester) async {
+      double dialogOpacity() => tester
+          .widgetList<FadeTransition>(find.ancestor(
+            of: _byKey('reading_stats_clear_all_dialog'),
+            matching: find.byType(FadeTransition),
+          ))
+          .map((f) => f.opacity.value)
+          .reduce((a, b) => a < b ? a : b);
+
+      await _pumpScreen(tester, seeded(), isEinkMode: true);
+      await tester.tap(_byKey('reading_stats_clear_all_button'));
+      await tester.pump();
+      expect(dialogOpacity(), 1.0);
+      await tester.tap(_byKey('reading_stats_clear_all_cancel_button'));
+      await tester.pumpAndSettle();
+
+      // 對照組：一般主題同樣只 pump 一次時仍在淡入途中，證明上面的斷言有鑑別力
+      await _pumpScreen(tester, seeded());
+      await tester.tap(_byKey('reading_stats_clear_all_button'));
+      await tester.pump();
+      expect(dialogOpacity(), lessThan(1.0));
+    });
+
+    testWidgets('清除進行中點了別的方格：累計時數與貢獻圖仍要刷新成清除後的狀態',
+        (tester) async {
+      final inner = FakeReadingStatsRepository(initialStats: {
+        '2026-09-28': [_stat('a', 'A', 600)],
+        '2026-09-29': [_stat('a', 'A', 1800)],
+      });
+      final repo = _GatedRepository(inner);
+      await _pumpScreen(tester, repo);
+      expect(_textOf(tester, 'reading_stats_total_text'), '40 分鐘');
+
+      repo.gates['2026-09-29'] = Completer<void>(); // 卡住清除後重載的詳情查詢
+      await tester.tap(_byKey('reading_stats_clear_all_button'));
+      await tester.pumpAndSettle();
+      await tester.tap(_byKey('reading_stats_clear_all_confirm_button'));
+      await tester.pumpAndSettle(); // 資料已清空，重載卡在詳情查詢
+
+      await tester.tap(_cell('2026-09-28')); // 重載未完成前使用者點了別的方格
+      await tester.pumpAndSettle();
+      repo.gates['2026-09-29']!.complete();
+      await tester.pumpAndSettle();
+
+      expect(_textOf(tester, 'reading_stats_total_text'), '0 分鐘');
+      expect(_painterOf(tester, '2026-09-29').level, 0);
+      expect(_painterOf(tester, '2026-09-28').level, 0);
+      // 使用者後來點的方格維持選取，不被清除流程搶回今天
+      expect(tester.getTopLeft(_byKey('heatmap_selection_outline')),
+          tester.getTopLeft(_cell('2026-09-28')));
+    });
+
     testWidgets('E-Ink 下對話框可正常開啟與確認', (tester) async {
       final repo = seeded();
       await _pumpScreen(tester, repo, isEinkMode: true);

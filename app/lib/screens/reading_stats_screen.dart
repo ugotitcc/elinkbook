@@ -50,6 +50,11 @@ class _ReadingStatsScreenState extends State<ReadingStatsScreen> {
   /// 詳情查詢的請求序號：快速連點時，只有最後一次發出的查詢結果會被採用。
   int _detailRequestId = 0;
 
+  /// 整體載入（[_loadAll]）的請求序號，與 [_detailRequestId] 分開：清除後重載
+  /// 期間使用者點了方格，只能讓重載的「選取日／詳情」被丟棄，不能連累累計
+  /// 時數與貢獻圖各日總計（資料已清空，一定要套用）。
+  int _loadRequestId = 0;
+
   @override
   void initState() {
     super.initState();
@@ -69,7 +74,8 @@ class _ReadingStatsScreenState extends State<ReadingStatsScreen> {
   /// 載入貢獻圖各日總計、累計總時數與詳情。詳情預設載入目前選取日；
   /// 傳入 [selecting] 則改載入該日並一併切換選取（清除後用它回到今天）。
   Future<void> _loadAll({String? selecting}) async {
-    final requestId = ++_detailRequestId;
+    final loadId = ++_loadRequestId;
+    final detailId = ++_detailRequestId;
     final repository = widget.repository;
     final date = selecting ?? _selectedDate;
     final totals = await repository.getDailyTotals(
@@ -78,13 +84,17 @@ class _ReadingStatsScreenState extends State<ReadingStatsScreen> {
     );
     final total = await repository.getTotalReadingSeconds();
     final details = await repository.getBookStatsForDate(date);
-    if (!mounted || requestId != _detailRequestId) return;
+    // 有更新的整體載入發出就整批丟棄；否則總計一律套用，
+    // 選取日／詳情則僅在期間沒被使用者點選覆蓋時才套用
+    if (!mounted || loadId != _loadRequestId) return;
     setState(() {
       _dailyTotals = totals;
       _totalSeconds = total;
-      _selectedDate = date;
-      _details = details;
       _loading = false;
+      if (detailId == _detailRequestId) {
+        _selectedDate = date;
+        _details = details;
+      }
     });
     _scrollToEndOnce();
   }

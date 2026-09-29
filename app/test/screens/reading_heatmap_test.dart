@@ -159,6 +159,31 @@ void main() {
     expect(find.byKey(const Key('heatmap_selection_outline')), findsNothing);
   });
 
+  testWidgets('選取外框在捲動範圍內留有 4dp 以上的餘裕（外框外擴不被裁掉）', (tester) async {
+    Rect scrollRect() =>
+        tester.getRect(find.byKey(const Key('reading_stats_heatmap')));
+    Rect outlineRect() =>
+        tester.getRect(find.byKey(const Key('heatmap_selection_outline')));
+
+    // 最下列（週日）：下緣要有留白
+    var c = await _pump(tester, isEink: true, selected: '2026-09-27');
+    c.jumpTo(c.position.maxScrollExtent);
+    await tester.pump();
+    expect(scrollRect().bottom - outlineRect().bottom, greaterThanOrEqualTo(4));
+
+    // 最左欄（網格第一天）：捲到最左時左緣要有留白
+    c = await _pump(tester, isEink: true, selected: _grid.startDate);
+    c.jumpTo(0);
+    await tester.pump();
+    expect(outlineRect().left - scrollRect().left, greaterThanOrEqualTo(4));
+
+    // 最右欄（今天）：捲到最右時右緣要有留白
+    c = await _pump(tester, isEink: true, selected: _grid.endDate);
+    c.jumpTo(c.position.maxScrollExtent);
+    await tester.pump();
+    expect(scrollRect().right - outlineRect().right, greaterThanOrEqualTo(4));
+  });
+
   testWidgets('點方格回呼該日期；透明佔位不可點', (tester) async {
     final tapped = <String>[];
     final controller = await _pump(tester, onSelect: tapped.add);
@@ -210,6 +235,22 @@ void main() {
           find.descendant(of: _cell(d), matching: find.byType(CustomPaint)));
       expect(renderOf('2026-09-22'), paints..circle());
       expect(renderOf('2026-09-23'), paints..line());
+    });
+
+    testWidgets('紋理（網點／斜線／交叉線）繪製前先裁切在方格內縮 1px 的範圍', (tester) async {
+      await _pump(tester, isEink: true, totals: {
+        '2026-09-22': 1, // 第 1 級：網點
+        '2026-09-23': 900, // 第 2 級：斜線
+        '2026-09-24': 1800, // 第 3 級：交叉線
+      });
+      // 斜線端點本來就會超出方格；沒有 clipRect 就會畫進格間縫隙與鄰格
+      const clip =
+          Rect.fromLTWH(1, 1, kHeatmapCellSize - 2, kHeatmapCellSize - 2);
+      RenderObject renderOf(String d) => tester.renderObject(
+          find.descendant(of: _cell(d), matching: find.byType(CustomPaint)));
+      expect(renderOf('2026-09-22'), paints..clipRect(rect: clip)..circle());
+      expect(renderOf('2026-09-23'), paints..clipRect(rect: clip)..line());
+      expect(renderOf('2026-09-24'), paints..clipRect(rect: clip)..line());
     });
 
     testWidgets('非 E-Ink 主題不畫紋理，底色取自 Token', (tester) async {
