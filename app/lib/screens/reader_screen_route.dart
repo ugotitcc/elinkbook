@@ -49,6 +49,7 @@ ReaderScreen buildReaderScreen({
     searchRepository: features.searchRepository,
     isFullTextSearchAvailable: features.isFullTextSearchAvailable,
     bookImportService: features.bookImportService,
+    readingStatsRepository: features.readingStatsRepository,
     initialJumpTarget: initialJumpTarget,
   );
 }

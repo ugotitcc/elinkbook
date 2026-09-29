@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -71,6 +72,8 @@ import '../reader/writing_mode.dart';
 import '../reader/reader_activity_tracker.dart';
 import '../reader/zone_action.dart';
 import '../search/search_repository.dart';
+import '../stats/reading_stats_repository.dart';
+import '../stats/reading_stats_tracker.dart';
 import '../sync/sync_checkpoint_trigger.dart';
 import '../theme/elink_tokens.dart';
 import 'annotation_toolbar.dart';
@@ -256,6 +259,18 @@ class ReaderScreen extends StatefulWidget {
   /// 不必觸碰平台實作。
   final SingleBookFilePicker? pickSingleBookFile;
 
+  /// epic-9-stats Issue 4：每日閱讀統計的存取層（由
+  /// `LibraryReaderFeatureRepositories.readingStatsRepository` 經
+  /// `buildReaderScreen` 轉交）。未提供 [readingStatsTracker] 時，以本書的
+  /// id、書名與這個 repository 建立會話級計時器；兩者皆為 `null` 則完全不
+  /// 計時，行為與現況相同。
+  final ReadingStatsRepository? readingStatsRepository;
+
+  /// epic-9-stats Issue 4：直接注入的計時器（測試用）。優先於
+  /// [readingStatsRepository]。**由 [ReaderScreen] 擁有**：離開閱讀器時
+  /// 由它呼叫 `flushAndClose()` 結算並關閉，呼叫端不需要（也不應）另外釋放。
+  final ReadingStatsTracker? readingStatsTracker;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -284,6 +299,8 @@ class ReaderScreen extends StatefulWidget {
     this.isFullTextSearchAvailable = true,
     this.bookImportService,
     this.pickSingleBookFile,
+    this.readingStatsRepository,
+    this.readingStatsTracker,
   });
 
   @override
@@ -340,6 +357,21 @@ class ReaderScreen extends StatefulWidget {
     final state = key.currentState;
     if (state is _ReaderScreenState) {
       state._openSleepTimerPicker();
+    }
+  }
+
+  /// 供測試直接回報「TTS 是否正在播放」給閱讀統計計時器
+  /// （epic-9-stats Issue 4）：`flutter_test` 環境下 `TtsController` 永遠停在
+  /// idle（見 [openSleepTimerPickerForTest] 的同類說明），無法經
+  /// `_onTtsStatusChanged` 自然觸發，比照該入口新增。[key] 對應的 State
+  /// 若尚未掛載，靜默忽略。
+  static void reportTtsPlayingForTest(
+    GlobalKey<State<ReaderScreen>> key,
+    bool isPlaying,
+  ) {
+    final state = key.currentState;
+    if (state is _ReaderScreenState) {
+      state._forwardTtsPlaying(isPlaying);
     }
   }
 
@@ -601,11 +633,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 正確推進（見 Task 4 測試對 `pumpUntilPdfReady` 與 Timer 互動的註解）。
   late Zone _creationZone;
 
+  /// 本次開書的閱讀統計計時器（epic-9-stats Issue 4）；兩個統計參數皆未提供
+  /// 時為 `null`（完全不計時）。本 State 只負責轉送事件，不含任何計時邏輯。
+  ReadingStatsTracker? _readingStatsTracker;
+
   @override
   void initState() {
     super.initState();
     _creationZone = Zone.current;
     widget.readerActivityTracker?.markReaderOpened();
+    _readingStatsTracker = _createReadingStatsTracker();
     WidgetsBinding.instance.addObserver(this);
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
@@ -728,6 +765,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   @override
   void dispose() {
     widget.readerActivityTracker?.markReaderClosed();
+    // 退出閱讀器：結算閱讀統計尾段並寫入（epic-9-stats Issue 4）。不 await
+    // ——dispose() 是同步方法，比照下方 _writeCurrentPosition() 的既有慣例；
+    // 寫入失敗由 tracker 內部吞下並記診斷日誌，不影響離開閱讀器。
+    final statsTracker = _readingStatsTracker;
+    if (statsTracker != null) unawaited(statsTracker.flushAndClose());
     _syncCheckpointTimer?.cancel();
     _openBookTimeoutTimer?.cancel();
     _searchJumpHighlightTimer?.cancel();
@@ -766,6 +808,47 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     super.dispose();
   }
 
+  /// 建立本次開書的閱讀統計計時器（epic-9-stats Issue 4）：有注入的
+  /// [ReaderScreen.readingStatsTracker] 直接使用；否則有
+  /// [ReaderScreen.readingStatsRepository] 就以本書 id、書名（原始書名，
+  /// 不經簡繁轉換；未提供時退回 id）與 repository 的寫入方法、`onCleared`
+  /// 建立；兩者皆無回傳 `null`（不計時）。
+  ReadingStatsTracker? _createReadingStatsTracker() {
+    final injected = widget.readingStatsTracker;
+    if (injected != null) return injected;
+    final repository = widget.readingStatsRepository;
+    if (repository == null) return null;
+    return ReadingStatsTracker(
+      bookId: widget.bookId,
+      bookTitle: widget.bookTitle ?? widget.bookId,
+      onFlush: (date, bookId, bookTitle, seconds) =>
+          repository.addReadingSeconds(
+        date: date,
+        bookId: bookId,
+        bookTitle: bookTitle,
+        seconds: seconds,
+      ),
+      onCleared: repository.onCleared,
+    );
+  }
+
+  /// 取 locatorJson 中代表「位置」的部分（cfi＋index），忽略會因重排而抖動的
+  /// fraction。解析失敗時退回整段字串，行為等同過去的完整比較。
+  static String _locatorPositionKey(String locatorJson) {
+    try {
+      final map = jsonDecode(locatorJson);
+      if (map is Map) return '${map['cfi']}|${map['index']}';
+    } catch (_) {}
+    return locatorJson;
+  }
+
+  /// 回報一次閱讀活動（翻頁、捲動、長按劃線）。單純點擊叫出工具列不呼叫。
+  void _recordReadingActivity() => _readingStatsTracker?.recordActivity();
+
+  /// 回報 TTS 是否正在播放。tracker 對重複回報相同狀態是冪等的。
+  void _forwardTtsPlaying(bool isPlaying) =>
+      _readingStatsTracker?.onTtsPlayingChanged(isPlaying);
+
   /// App 進入背景時觸發一次位置寫入（spec.md「本機閱讀位置記憶」寫入
   /// 時機之二）。只在 [AppLifecycleState.paused]（真正進入背景）觸發，
   /// 不含 [AppLifecycleState.inactive]（如系統對話框短暫遮蓋等過渡狀態）
@@ -773,8 +856,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
+      _readingStatsTracker?.onEnteredBackground();
       _writeCurrentPosition();
     } else if (state == AppLifecycleState.resumed) {
+      _readingStatsTracker?.onReturnedToForeground();
       // App 從背景恢復時，Android 系統列可能已被 OS 自動重新顯示，
       // _lastAppliedFullscreen 等值節流防護會誤判不需重套用，故強制清空
       // 快取後無條件重新呼叫一次（epic-19 Issue 1 review Critical 2）。
@@ -1932,6 +2017,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // bundle，新欄位必須一併轉送，否則「閱讀器→單書搜尋→閱讀器」
             // 開啟的閱讀器會遺失匯入服務、無法重新連結失效書籍。
             bookImportService: widget.bookImportService,
+            // epic-9-stats Issue 4：同上，手動逐欄重建 bundle 的新欄位必須
+            // 一併轉送，否則「閱讀器→單書搜尋→閱讀器」開啟的閱讀器不計時。
+            readingStatsRepository: widget.readingStatsRepository,
           ),
           syncDependencies: LibrarySyncDependencies(
             syncCheckpointTrigger: widget.syncCheckpointTrigger,
@@ -2165,7 +2253,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 結果；此防呆保證不會意外對 FXL 觸發劃線 UI（見 plan-issue-2.md
   /// Global Constraints「FXL 排除」）。
   void _handleSelectionChanged(EpubSelectionInfo info) {
-    if (!mounted || _isFixedLayout) return;
+    if (!mounted) return;
+    _recordReadingActivity(); // 長按選取（劃線）算閱讀活動
+    if (_isFixedLayout) return;
     setState(() {
       _currentSelection = info;
       _pendingHighlightIdForSelection = null;
@@ -2262,6 +2352,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             null) {
       return;
     }
+    // 放在退化選取守衛之後：沒命中既有標註的零面積長按（例如翻頁時手指多停留
+    // 一下）是無效操作，不算閱讀活動；有效的拖曳框選或點選既有標註才算。
+    _recordReadingActivity();
     setState(() {
       _currentPdfSelection = info;
       _pendingPdfHighlightIdForSelection = null;
@@ -2910,6 +3003,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 自然播完」與「使用者按下停止」兩種轉為 idle 的途徑，避免朗讀已經
   /// 停止/播完後，定時器仍在背景倒數的視覺落差。
   void _onTtsStatusChanged() {
+    _forwardTtsPlaying(_ttsController?.status == TtsPlaybackStatus.playing);
     final isActive = _isTtsActive;
     if (_wasTtsActive && !isActive) {
       _cancelTtsSleepTimer();
@@ -3589,7 +3683,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             if (!mounted) return;
             // 【spec.md §6 2026-09-11 修訂】見上方 _hasRelocatedSinceOpen
             // 欄位文件註解：賦值前非 null，代表這不是開書後第一次回報。
-            if (_epubPositionInfo != null) _hasRelocatedSinceOpen = true;
+            final previousPosition = _epubPositionInfo;
+            if (previousPosition != null) {
+              _hasRelocatedSinceOpen = true;
+              // 不算閱讀活動的回報（epic-9-stats）：開書後第一次回報是初始定位
+              // （上面 previousPosition 為 null 的情況）；位置與上一次相同的
+              // 重複回報，是 Foliate 在開書後套用樣式重排、或圖片／字型載入後
+              // 重新對齊錨點所派發的，不是使用者操作。位置真正改變（翻頁、
+              // 捲動、跳轉）才算。只比 cfi 與 index、忽略 fraction：真機日誌
+              // 實證重排時同一 cfi 的 fraction 會來回微幅抖動。
+              if (_locatorPositionKey(previousPosition.locatorJson) !=
+                  _locatorPositionKey(info.locatorJson)) {
+                _recordReadingActivity();
+              }
+            }
             setState(() => _epubPositionInfo = info);
             // 手動導覽自動暫停並清除舊高亮（epic-34-tts-readalong
             // Issue 4）：直接用既有的 nullable _ttsController 欄位（不用
@@ -3662,7 +3769,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             if (!mounted) return;
             // 【spec.md §6 2026-09-11 修訂】理由同上方 onLocatorChanged
             // 分支。
-            if (_pdfPageInfo != null) _hasRelocatedSinceOpen = true;
+            if (_pdfPageInfo != null) {
+              _hasRelocatedSinceOpen = true;
+              _recordReadingActivity();
+            }
             setState(() => _pdfPageInfo = info);
           },
         );
@@ -3718,6 +3828,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     switch (action) {
       case ZoneAction.previousPage:
         if (_state == _RenderState.loading) return;
+        _recordReadingActivity();
         if (format == BookFormat.pdf) {
           // Epic 26 Issue 3 暫時性真機診斷插樁：量測熱區判定觸發換頁的
           // 時間點，與 TapZoneDetector／長按框選插樁交叉比對，確認是否
@@ -3743,6 +3854,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         break;
       case ZoneAction.nextPage:
         if (_state == _RenderState.loading) return;
+        _recordReadingActivity();
         if (format == BookFormat.pdf) {
           // Epic 26 Issue 3 暫時性真機診斷插樁：見上方 previousPage
           // 分支註解，同理。

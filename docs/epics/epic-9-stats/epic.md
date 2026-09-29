@@ -110,6 +110,15 @@ Discovery 前已核實的事實：
 - tracker 的寫入回呼失敗只記診斷日誌（`dart:developer`），不會拋出，不會影響閱讀。
 - 寫入回呼簽章為 `(date, bookId, bookTitle, seconds)`，與 `ReadingStatsRepository.addReadingSeconds` 的具名參數不同，需自行轉接。
 
+## Issue 4 真機確認記錄（2026-09-29，`plan-issue-4.md` Task 4 Step 6）
+
+裝置：`bfa4e772`（debug 版），以 `run-as` 匯出 `library.db` 查 `daily_reading_stats`。
+
+- **測試 1（開書不動 30 秒）：首次失敗，修後通過。** 首次開書不動仍記了 42 秒。日誌顯示重排時同一 `cfi` 的 `fraction` 在 0.0064／0.0080 間來回抖動，字串整段比較把它當成翻頁。修法：`reader_screen.dart` 的 `_locatorPositionKey()` 只比 `cfi` 與 `index`（解析失敗退回整段字串），並新增測試「同一 cfi 只有進度小數抖動不算閱讀活動」。修後重測，該書時數不變。
+- **測試 2（翻頁閱讀約 1 分鐘）：通過。** 修後重測兩本書各約 1 分鐘，各增加 58、57 秒。
+- **測試 3（背景朗讀 1 分鐘）：通過。** 新書累計 79 秒，包含背景那段。
+- **已知取捨：** 捲動模式下若 `cfi` 範圍不隨捲動改變、只有 `fraction` 變，該次捲動不算活動。未在真機驗證捲動模式。
+
 ## 目前狀態
 
 Discovery、Architecting（`spec.md`）、Scrum Master（`issues.md`，5 張，含審查修訂）皆完成。Issue 1（原型）、Issue 2（資料層）、Issue 3（tracker）已完成，待開發 Issue 4、5：Issue 4 依賴 Issue 2、3（皆已完成，可立即開始）；Issue 5 依賴 Issue 1、2（皆已完成，可立即開始）。
