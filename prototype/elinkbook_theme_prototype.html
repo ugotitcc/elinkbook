@@ -1693,8 +1693,89 @@ function statsGrandTotal(data) {
     }
 
     // ============ 閱讀統計畫面（epic-9-stats） ============
-    function enterStatsView() {}
-    function setStatsScenario(s) {}
+    let statsScenario = 'normal';
+    let statsData = {};
+    let statsToday = new Date();
+    let statsSelectedKey = null;
+    const STATS_CELL = 16;
+    const STATS_GAP = 3;
+    const STATS_SCENARIOS = ['normal', 'todayEmpty', 'empty', 'heavy'];
+
+    // 高亮側欄目前選中的假資料情境
+    function highlightStatsScenario() {
+      STATS_SCENARIOS.forEach(k => {
+        const btn = document.getElementById(`stats-scn-${k}`);
+        const active = k === statsScenario;
+        btn.className = 'text-left px-3 py-2 text-xs font-bold border-2 ' +
+          (active ? 'border-white text-white' : 'border-zinc-700 text-zinc-400');
+      });
+    }
+
+    function setStatsScenario(s) {
+      statsScenario = s;
+      highlightStatsScenario();
+      if (currentView === 'stats') enterStatsView(); // 統計畫面開著就立即重畫
+    }
+
+    // 進入統計畫面：重新取得「今天」、產生假資料、預設選中今天、捲到最右側
+    function enterStatsView() {
+      statsToday = new Date();
+      statsData = statsMockData(statsToday, statsScenario);
+      statsSelectedKey = statsDateKey(statsToday);
+      renderStats();
+      const sc = document.getElementById('stats-heatmap');
+      sc.scrollLeft = sc.scrollWidth; // 預設捲到最右側（今天所在的一週）
+    }
+
+    function renderStats() {
+      document.getElementById('stats-total').textContent = statsFormatDuration(statsGrandTotal(statsData));
+      renderStatsHeatmap();
+      renderStatsDetail();
+    }
+
+    function renderStatsHeatmap() {
+      const { weeks, monthLabels } = statsBuildHeatmapGrid(statsToday);
+      const pitch = STATS_CELL + STATS_GAP;
+      const months = monthLabels.map(m =>
+        `<span class="absolute text-[10px] leading-[14px] whitespace-nowrap" style="left:${m.weekIndex * pitch}px">${m.month} 月</span>`
+      ).join('');
+      const cols = weeks.map(col => {
+        const cells = col.map(c => {
+          if (!c) return '<div class="heat-cell heat-empty"></div>'; // 透明佔位，不可點擊
+          const lv = statsLevelForSeconds(statsDayTotal(statsData, c.date));
+          const sel = c.date === statsSelectedKey ? ' selected' : '';
+          return `<button type="button" data-date="${c.date}" aria-label="${c.date}" onclick="selectStatsDate('${c.date}')" class="heat-cell heat-l${lv}${sel}"></button>`;
+        }).join('');
+        return `<div class="flex flex-col" style="gap:${STATS_GAP}px">${cells}</div>`;
+      }).join('');
+      document.getElementById('stats-heatmap-inner').innerHTML =
+        `<div class="relative mb-[3px]" style="height:14px;width:${weeks.length * pitch}px">${months}</div>` +
+        `<div class="flex" style="gap:${STATS_GAP}px">${cols}</div>`;
+    }
+
+    // 點選方格：只移動外框並更新詳情卡片，不重畫整張圖（保留捲動位置）
+    function selectStatsDate(key) {
+      statsSelectedKey = key;
+      document.querySelectorAll('#stats-heatmap .heat-cell.selected').forEach(el => el.classList.remove('selected'));
+      const target = document.querySelector(`#stats-heatmap .heat-cell[data-date="${key}"]`);
+      if (target) target.classList.add('selected');
+      renderStatsDetail();
+    }
+
+    // 詳情卡片：固定在貢獻圖下方；各書依時數由多到少；無紀錄顯示說明
+    function renderStatsDetail() {
+      const list = (statsData[statsSelectedKey] || []).slice().sort((a, b) => b.seconds - a.seconds);
+      const body = list.length === 0
+        ? '<div class="text-xs opacity-75 py-2">當日無閱讀記錄</div>'
+        : list.map(b =>
+            `<div class="flex items-center justify-between gap-2 py-1.5 border-b border-black">` +
+            `<span class="text-sm font-bold break-words min-w-0 flex-1">${b.title}</span>` +
+            `<span class="text-xs font-black flex-shrink-0">${statsFormatDuration(b.seconds)}</span></div>`
+          ).join('');
+      document.getElementById('stats-detail-card').innerHTML =
+        `<div class="text-xs font-black mb-1">${statsSelectedKey} 閱讀明細</div>${body}`;
+    }
+
     function openStatsClearDialog() {}
     function closeStatsClearDialog() {}
     function confirmStatsClear() {}

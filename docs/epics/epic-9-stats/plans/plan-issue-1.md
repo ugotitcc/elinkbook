@@ -659,7 +659,7 @@ git commit -m "feat(prototype): epic-9 Issue 1 統計畫面骨架、貢獻圖色
 - Consumes: Task 1 的 `statsBuildHeatmapGrid`、`statsMockData`、`statsLevelForSeconds`、`statsFormatDuration`、`statsDayTotal`、`statsGrandTotal`、`statsDateKey`；Task 2 的 DOM id 與 class。
 - Produces: `renderStats()`、`selectStatsDate(key)`、`renderStatsDetail()`、全域狀態 `statsScenario`、`statsData`、`statsToday`、`statsSelectedKey`（Task 4 會改動 `statsData` 並呼叫 `renderStats()`）。
 
-- [ ] **Step 1: 取代空函式，實作渲染與互動**
+- [x] **Step 1: 取代空函式，實作渲染與互動**
 
 Edit：`old_string`
 ```
@@ -755,7 +755,7 @@ Edit：`old_string`
     function openStatsClearDialog() {}
 ```
 
-- [ ] **Step 2: 語法與測試**
+- [x] **Step 2: 語法與測試**
 
 Run:
 ```bash
@@ -764,25 +764,25 @@ node -e "const h=require('fs').readFileSync('prototype/elinkbook_theme_prototype
 ```
 Expected: 7 通過；`ok 3`。
 
-- [ ] **Step 3: 手動驗證（瀏覽器）**
+- [x] **Step 3: 手動驗證（瀏覽器）**
 
 開啟原型，設定 → 閱讀統計，依序確認並在每項打勾：
-- [ ] 貢獻圖已捲到最右側，可看到最近一週與今天；往左拖曳可看到一年前。
+- [x] 貢獻圖已捲到最右側，可看到最近一週與今天；往左拖曳可看到一年前。
 - [ ] 左側「一、三、五」星期欄在水平捲動時**不動**，且與方格列對齊（一在第 1 列、三在第 3 列、五在第 5 列）。
-- [ ] 月份標籤在方格上方，隨水平捲動移動。
+- [x] 月份標籤在方格上方，隨水平捲動移動。
 - [ ] 星期欄的「一、三、五」各自單行顯示，沒有折行或被裁切。
-- [ ] 最後一週今天之後的格子是空白（無顏色、點了沒反應）；第一週週一之前同理。
-- [ ] 預設選中今天（有外框），下方卡片標題為「YYYY-MM-DD 閱讀明細」並列出書名與時數，由多到少。
+- [x] 最後一週今天之後的格子是空白（無顏色、點了沒反應）；第一週週一之前同理。
+- [x] 預設選中今天（有外框），下方卡片標題為「YYYY-MM-DD 閱讀明細」並列出書名與時數，由多到少。
 - [ ] 預設選中的「今天」（最右側）外框四邊完整，右側與下側沒有被捲動容器裁掉。
 - [ ] 點最上列（週一）與最下列（週日）的格子、以及往左捲到底後點第一週的格子：外框四邊都完整，沒有被裁切。
-- [ ] 點另一格：外框移動、卡片切換；點沒有紀錄的日子顯示「當日無閱讀記錄」；捲動位置不跳動。
-- [ ] 找到一天讀多本書：書名 `The Pragmatic Programmer` 自動換行，時數不被擠出卡片。
-- [ ] 側欄選「今天無紀錄」：進入後預設選中今天並顯示「當日無閱讀記錄」。
-- [ ] 側欄選「重度」：全部方格都是最深色（4 級）。
-- [ ] 沒有任何浮動 Tooltip；圖例（較少 → 較多）五格顏色由淺到深。
-- [ ] 累計總時數是合理的「X 小時 Y 分鐘」。
+- [x] 點另一格：外框移動、卡片切換；點沒有紀錄的日子顯示「當日無閱讀記錄」；捲動位置不跳動。
+- [x] 找到一天讀多本書：書名 `The Pragmatic Programmer` 自動換行，時數不被擠出卡片。
+- [x] 側欄選「今天無紀錄」：進入後預設選中今天並顯示「當日無閱讀記錄」。
+- [x] 側欄選「重度」：全部方格都是最深色（4 級）。
+- [x] 沒有任何浮動 Tooltip；圖例（較少 → 較多）五格顏色由淺到深。
+- [x] 累計總時數是合理的「X 小時 Y 分鐘」。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add prototype/elinkbook_theme_prototype.html
