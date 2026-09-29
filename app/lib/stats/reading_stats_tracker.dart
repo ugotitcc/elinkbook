@@ -77,6 +77,12 @@ class ReadingStatsTracker {
 
   bool _closed = false;
 
+  /// TTS 是否正在播放（由 ReaderScreen 轉譯後回報）。
+  bool _ttsPlaying = false;
+
+  /// App 是否在背景（由 ReaderScreen 轉譯 paused／resumed 後回報）。
+  bool _inBackground = false;
+
   /// 翻頁、捲動、長按劃線等閱讀活動。
   void recordActivity() {
     if (_closed) return;
@@ -91,6 +97,40 @@ class ReadingStatsTracker {
     _state = _TrackerState.active;
     _setAnchor(now);
     _ensureTimer();
+  }
+
+  /// App 進入背景（paused）。TTS 未播放：立即結算並寫入，結束這一段；
+  /// TTS 播放中：不結束，進入背景計時，直到 TTS 停止。
+  void onEnteredBackground() {
+    if (_closed) return;
+    _inBackground = true;
+    if (_ttsPlaying) return;
+    _settleTail(_now());
+    _goIdle();
+    unawaited(_flush());
+  }
+
+  /// App 回到前景（resumed）。TTS 仍在播放時無縫延續，不需要任何結算。
+  void onReturnedToForeground() {
+    if (_closed) return;
+    _inBackground = false;
+  }
+
+  /// TTS 播放狀態變化。開始播放本身算一次活動；停止時先把播放期間確認完；
+  /// 若此時 App 在背景，結束這一段並寫入。重複回報相同狀態不做任何事。
+  void onTtsPlayingChanged(bool isPlaying) {
+    if (_closed || isPlaying == _ttsPlaying) return;
+    if (isPlaying) {
+      recordActivity();
+      _ttsPlaying = true;
+      return;
+    }
+    if (_state == _TrackerState.active) _confirmThrough(_now());
+    _ttsPlaying = false;
+    if (_inBackground) {
+      _goIdle();
+      unawaited(_flush());
+    }
   }
 
   /// 退出閱讀器：結算尾段、寫入已確認的秒數並釋放資源。
@@ -145,14 +185,32 @@ class ReadingStatsTracker {
     _confirmed[date] = (_confirmed[date] ?? Duration.zero) + amount;
   }
 
-  /// 結算尾段：只有計時中、且距錨點未超過門檻時才確認。
+  /// 結算尾段：TTS 播放中，朗讀本身就是連續活動，直接確認到現在；
+  /// 否則只有距錨點未超過門檻時才確認。
   /// 剛開書尚無活動（unverified）或已閒置（idle）時直接返回，計 0 秒。
   void _settleTail(DateTime now) {
     if (_state != _TrackerState.active) return;
+    if (_ttsPlaying) {
+      _confirmThrough(now);
+      return;
+    }
     final gap = now.difference(_anchor);
     if (!gap.isNegative && gap <= kReadingIdleThreshold) {
       _confirmSpan(_anchor, now);
     }
+  }
+
+  /// TTS 播放中：把「錨點 → 現在」確認進緩衝並前移錨點。
+  /// 單次計量不超過閒置門檻（擋時鐘快轉）；倒撥則不計並重新起算。
+  void _confirmThrough(DateTime now) {
+    final gap = now.difference(_anchor);
+    if (gap.isNegative) {
+      _setAnchor(now);
+      return;
+    }
+    final counted = gap > kReadingIdleThreshold ? kReadingIdleThreshold : gap;
+    _confirmSpan(now.subtract(counted), now);
+    _setAnchor(now);
   }
 
   void _ensureTimer() {
@@ -169,11 +227,15 @@ class ReadingStatsTracker {
   void _onTick() {
     final now = _now();
     if (_state == _TrackerState.active) {
-      final gap = now.difference(_anchor);
-      if (gap.isNegative) {
-        _setAnchor(now); // 倒撥：重新起算
-      } else if (gap >= kReadingIdleThreshold) {
-        _goIdle(); // 已閒置：丟棄暫態、取消計時器
+      if (_ttsPlaying) {
+        _confirmThrough(now); // TTS 播放中沒有活動事件：由定時器持續確認
+      } else {
+        final gap = now.difference(_anchor);
+        if (gap.isNegative) {
+          _setAnchor(now); // 倒撥：重新起算
+        } else if (gap >= kReadingIdleThreshold) {
+          _goIdle(); // 已閒置：丟棄暫態、取消計時器
+        }
       }
     }
     unawaited(_flush());
