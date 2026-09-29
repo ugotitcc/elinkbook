@@ -11,7 +11,7 @@
 ### 1.1 系統需求
 - **Synology NAS**：DSM 7.0 或以上版本。
 - **套件**：已於 DSM 套件中心安裝 **Container Manager**（即 DSM 7 版本的 Docker）。
-- **PocketBase 版本**：必須 **≥ v0.23**（elinkBook checkpoint 同步引擎依賴 Batch API `/api/batch`）。本 SOP 示範使用 **v0.39.10**（自架時亦可使用當時最新穩定版）。
+- **PocketBase 版本**：必須 **≥ v0.23**（elinkBook checkpoint 同步引擎依賴 Batch API `/api/batch`）。本 SOP 示範使用 **v0.40.04**（自架時亦可使用當時最新穩定版）。
 
 ### 1.2 目錄結構規劃 (File Station)
 建議在 Synology 預設的 `docker` 共用資料夾下建立專用目錄 `/volume1/docker/elinkbook-pocketbase`：
@@ -62,7 +62,7 @@
 #### 檔案 A: `Dockerfile`
 ```dockerfile
 FROM alpine:3.20
-ARG PB_VERSION=0.39.10
+ARG PB_VERSION=0.40.04
 
 RUN apk add --no-cache unzip ca-certificates wget
 
@@ -237,9 +237,127 @@ PocketBase 的所有資料庫與設定皆儲存於 `pb_data/data.db`。透過 DS
 
 ---
 
-## 7. 驗收測試與常見陷阱 (Troubleshooting)
+## 7. 步驟六：PocketBase 版本升級（更版）與回滾 SOP
 
-### 7.1 CLI 連線驗收測試
+當 PocketBase 官方發布新版本（例如由 `v0.39.10` 升級至 `v0.40.04` 或更後續版本）時，請依照下列標準維運流程進行平滑升級。
+
+> [!IMPORTANT]
+> **資料安全第一原則**：PocketBase 啟動時會自動針對 SQLite 資料庫執行 schema 與系統遷移。在執行版本升級前，**務必先停用容器並對 `pb_data` 進行完整冷備份**，避免新版本遷移後若需降版造成資料庫不相容。
+
+### 7.1 升級前安全停機與冷備份（不可省略）
+
+1. **停止專案容器**：
+   - 開啟 Synology **Container Manager**。
+   - 點擊左側 **專案 (Project)**，在 `elinkbook-pocketbase` 上點擊滑鼠右鍵，選擇 **停止**。
+   - 確認容器狀態已轉為「已停止」（確保 SQLite 連線已安全釋放，無交易進行）。
+2. **建立資料庫冷備份**：
+   - **方式 A（File Station 複製）**：
+     - 開啟 **File Station**，進入 `/docker/elinkbook-pocketbase/`。
+     - 選取 `pb_data` 資料夾，按右鍵選 **複製到/移動到... → 複製到**，在同一目錄下建立副本並重新命名為 `pb_data_backup_v0.39.10`。
+   - **方式 B（SSH 命令列打包）**：
+     ```bash
+     cd /volume1/docker/elinkbook-pocketbase
+     tar -czvf pb_data_backup_v0.39.10.tar.gz pb_data/
+     ```
+
+### 7.2 修改版本號（更新 Dockerfile）
+
+開啟 File Station 文字編輯器或透過 SSH 修改 `/volume1/docker/elinkbook-pocketbase/Dockerfile`：
+
+將版本變數改為目標新版號（以升級至 `0.40.04` 為例）：
+```dockerfile
+# 原設定：
+# ARG PB_VERSION=0.39.10
+
+# 修改為新版號：
+ARG PB_VERSION=0.40.04
+```
+儲存並關閉 `Dockerfile`。
+
+### 7.3 方式一：透過 Synology Container Manager UI 重新建置（推薦）
+
+1. 回到 **Container Manager → 專案 (Project)**。
+2. 選取 `elinkbook-pocketbase` 專案。
+3. 觸發重新建置：
+   - 點選專案上方的 **操作 (Action) → 建置 (Build)** 或在設定中重新套用。
+   - 若 Container Manager 版本有「重建 (Rebuild)」選項，直接點選並確認勾選「重建映像檔」。
+   - 若為手動乾淨重建流程：
+     1. 前往 **映像檔 (Image)**，刪除舊有的 `elinkbook-pocketbase_pocketbase` 或無標記映像檔（避免舊層快取殘留）。
+     2. 回到 **專案 (Project)**，選取 `elinkbook-pocketbase`，點擊 **操作 → 啟動**（Container Manager 偵測到 Dockerfile 變更會自動重新觸發 `docker build` 並下載新版 PocketBase zip）。
+4. 觀察建置與啟動日誌，確認終端輸出 `pocketbase_0.40.04_linux_amd64.zip` 下載解壓縮完成，且狀態轉為綠色「執行中 (Running)」。
+
+### 7.4 方式二：透過 SSH 終端機快速重新建置
+
+若具備 NAS SSH 存取權限，使用命令列升級更為迅速且能即時觀察建置進度：
+
+```bash
+# 1. 進入專案目錄
+cd /volume1/docker/elinkbook-pocketbase
+
+# 2. 停用當前容器（若尚未在 GUI 停止）
+docker compose down
+
+# 3. 忽略快取強制重新建置映像檔（下載新版 PocketBase 執行檔）
+docker compose build --no-cache
+
+# 4. 背景啟動全新容器
+docker compose up -d
+
+# 5. 觀察啟動記錄與是否有錯誤
+docker compose logs -f
+```
+
+### 7.5 升級後完整驗收檢查清單（Checklist）
+
+容器重新啟動後，請逐項檢查以下 6 大重點，確保服務與相容性正常：
+
+- [ ] **1. 版本號確認**：
+  - 瀏覽器登入 Admin 後台 `https://pocketbase.yourdomain.com/_/`。
+  - 檢視後台左下角或右上角資訊，確認目前顯示版本已更新為 `v0.40.04`。
+- [ ] **2. Health Check API 測試**：
+  - 執行 `curl -i https://pocketbase.yourdomain.com/api/health`，確認回傳 `HTTP/2 200 OK` 且帶有 `{"code":200,"message":"API is healthy."}`。
+- [ ] **3. 關鍵 Batch API 啟用狀態檢查**：
+  - 前往 **Settings → Application**。
+  - 確認 **Batch API** 仍維持 **Enabled**，且 Max batch requests **≥ 100**（防止升級覆寫預設值）。
+- [ ] **4. 4 個同步 Collection 結構與資料完整性**：
+  - 進入 **Collections**，確認 `sync_reading_positions`、`sync_bookmarks`、`sync_highlights`、`sync_notes` 4 個 Collection 依然存在。
+  - 確認筆數與欄位沒有遺失，API Rules 仍為 `user = @request.auth.id`。
+- [ ] **5. 排程 Hook 運作與相容性檢查**：
+  - 檢視容器 Logs（Container Manager → 容器 → 詳細資訊 → 日誌）：
+    `docker logs elinkbook-pocketbase`
+  - 確認未出現 `JavaScript syntax error` 或 `cron error`，表示 `purge_tombstones.pb.js` 在新版 JS VM 下執行正常。
+- [ ] **6. elinkBook App 真機同步測試**：
+  - 開啟手機 elinkBook App，進行手動觸發同步。
+  - 確認可正常送出閱讀進度與劃線，無 `400 Validation Error` 或連線超時。
+
+### 7.6 異常復原：快速回滾（Rollback）SOP
+
+若新版本啟動失敗、出現重大相容性錯誤或資料庫損毀，請依下列步驟無痛降版復原：
+
+1. **停止現有故障容器**：
+   ```bash
+   # SSH 執行或在 Container Manager 停止專案
+   docker compose down
+   ```
+2. **還原資料庫目錄**：
+   - 將當前已受影響的 `pb_data` 改名或備份：
+     `mv pb_data pb_data_failed`
+   - 將 7.1 備份的乾淨目錄還原回 `pb_data`：
+     `cp -r pb_data_backup_v0.39.10 pb_data`
+     （若為 tar 備份則解壓縮：`tar -xzvf pb_data_backup_v0.39.10.tar.gz`）
+3. **還原 Dockerfile 版本號**：
+   - 將 `Dockerfile` 中的 `ARG PB_VERSION` 改回原先穩定運作的舊版本（例如 `0.39.10`）。
+4. **重新建置舊版映像檔並啟動**：
+   ```bash
+   docker compose build --no-cache && docker compose up -d
+   ```
+5. 確認舊版容器正常上線，服務與資料庫恢復正常運作。
+
+---
+
+## 8. 步驟七：驗收測試與常見陷阱 (Troubleshooting)
+
+### 8.1 CLI 連線驗收測試
 在個人電腦或 NAS 終端機執行以下命令，測試 API 存取與使用者註冊：
 
 ```bash
@@ -257,7 +375,7 @@ curl -X POST https://pocketbase.yourdomain.com/api/batch \
   -d '{"requests":[]}'
 ```
 
-### 7.2 常見陷阱與排查對照表
+### 8.2 常見陷阱與排查對照表
 
 | 症狀 / 錯誤訊息 | 可能原因 | 排除方法 |
 |---|---|---|
@@ -269,6 +387,6 @@ curl -X POST https://pocketbase.yourdomain.com/api/batch \
 
 ---
 
-## 8. 相關參考文件
+## 9. 相關參考文件
 - [`docs/archive/2026-08-05-epic-8-sync/pocketbase-self-hosting.md`](../archive/2026-08-05-epic-8-sync/pocketbase-self-hosting.md)：PocketBase 原始架設說明與開發環境規格
 - [`docs/archive/2026-08-05-epic-8-sync/spec.md`](../archive/2026-08-05-epic-8-sync/spec.md)：elinkBook 雲端同步 Protocol 與 Collection 欄位定義
