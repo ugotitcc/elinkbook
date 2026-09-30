@@ -194,6 +194,10 @@ _Avoid_: WiFi 匯入（過於片面，這功能同時涵蓋匯入與匯出兩個
 `epic-8-sync` 的批次同步觸發機制，三種事件之一發生即觸發一次批次同步（把期間累積的所有本機異動一次送出）：App 背景化、書籍切換（離開閱讀器）、閱讀中每 5 分鐘的閒置計時器（避免長時間不背景化/不切書時另一裝置看不到最新異動）。與「逐筆即時同步」（每次異動立刻各自觸發一次網路請求）相對，見 ADR 0020。批次上傳透過 PocketBase 內建 **Batch API**（`/api/batch`，要求伺服器版本 ≥ 0.23）一次 HTTP 請求送出，交易性（全部成功或全部失敗）；下載遠端異動不批次，4 個 collection 各自查詢一次即可（量體小不需優化）。
 _Avoid_: 自動同步、背景同步（皆未點出「批次觸發」這個關鍵特性）
 
+**登入過期（Session Expired）**：
+同步 token 續期遭伺服器拒絕（401），App 清除 token 但保留 email 的狀態；與使用者主動登出（連 email 一併清除）不同。同步引擎於當次 checkpoint 直接回報此結果；持久化的「先前是否過期」由帳號儲存庫判定。
+_Avoid_: 登出、token 失效（前者是使用者主動行為，後者未點出「保留 email 以便預填」這個特性）
+
 **用戶端識別碼（`client_id`）**：
 `epic-8-sync` 引入，`bookmarks`／`highlights`／`notes` 三表的本機主鍵格式由 `INTEGER PRIMARY KEY AUTOINCREMENT` 改為 `TEXT PRIMARY KEY`（UUID），**本機 id 與同步識別碼合一**（不另外疊加一個 `sync_id` 欄位）。PocketBase 端對應 collection 額外開一個 `client_id` 欄位存放同一個 UUID 值，PocketBase 內建的 `id` 欄位純粹是其內部管理用途，App 完全不讀取/比對它——避免依賴特定 PocketBase 版本對自訂 `id` 格式的支援程度。`notes` 依附劃線時存的是該劃線的 `client_id`（而非本機整數 `highlight_id` 的舊概念，該概念已隨此變更取消）。**`books.id` 不受影響、維持原格式**——書籍的跨裝置身份比對用途已由「書籍內容指紋」承擔，兩者是不同機制（2026-08-02 `epic-8-sync` Architecting 階段定案）。
 _Avoid_: sync_id（已否決的雙 id 設計，本機 id 現在就是同步用的那個 id，不是另外疊加的欄位）、UUID（過於籠統，未點出「本機主鍵與同步識別碼合一」這個關鍵設計）

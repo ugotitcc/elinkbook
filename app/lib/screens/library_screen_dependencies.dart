@@ -23,6 +23,7 @@ import '../remote/opds_client.dart';
 import '../remote/remote_server_repository.dart';
 import '../remote/remote_thumbnail_cache.dart';
 import '../sync/sync_account_repository.dart';
+import '../sync/sync_checkpoint_result.dart';
 import '../sync/sync_checkpoint_trigger.dart';
 import '../sync/sync_client.dart';
 import '../l10n/app_locale.dart';
@@ -113,7 +114,7 @@ class LibrarySyncDependencies {
   /// 環境時曾實測遭遇 `pumpAndSettle timed out`——比照 `LibraryScreen`
   /// 本身以抽象 `LibraryRepository`＋`FakeLibraryRepository` 讓 widget test
   /// 脫離真實 sqflite 的既有慣例）。
-  final Future<bool> Function()? onManualSync;
+  final Future<SyncCheckpointResult> Function()? onManualSync;
   final Future<int?> Function()? loadLastSyncedAt;
 
   const LibrarySyncDependencies({

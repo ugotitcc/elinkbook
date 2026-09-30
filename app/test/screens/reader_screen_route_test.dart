@@ -11,6 +11,7 @@ import 'package:elinkbook/reader/reader_jump_target.dart';
 import 'package:elinkbook/reader/tts_audio_handler.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/reader_screen_route.dart';
+import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 
 import '../support/fake_book_import_service.dart';
@@ -86,8 +87,7 @@ void main() {
       final searchRepository = FakeSearchRepository();
       final importService = FakeBookImportService();
       final syncCheckpointTrigger = SyncCheckpointTrigger(
-        isLoggedIn: () async => false,
-        runCheckpoint: () async {},
+        runCheckpoint: () async => SyncCheckpointResult.notLoggedIn,
       );
       final features = LibraryReaderFeatureRepositories(
         bookmarksRepository: bookmarksRepository,

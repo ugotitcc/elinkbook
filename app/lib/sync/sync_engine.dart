@@ -6,6 +6,7 @@ import '../library/book_content_fingerprint.dart';
 import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
 import 'sync_account_repository.dart';
+import 'sync_checkpoint_result.dart';
 import 'sync_client.dart';
 import 'sync_merge.dart';
 import 'sync_metadata_repository.dart';
@@ -72,13 +73,14 @@ class SyncEngine {
   /// 呼叫所代表的本機異動，下一次任何 checkpoint 自然會涵蓋到。
   bool _isSyncing = false;
 
-  /// 回傳值供手動同步入口（`SyncSettingsScreen`「立即同步」按鈕，
-  /// 2026-09-08 `/grill-with-docs` 使用者需求）判斷這次呼叫是否真的完成
-  /// 一輪成功的 checkpoint，藉此決定要不要提示使用者同步失敗；三種既有
-  /// 自動觸發來源（`sync_checkpoint_trigger.dart`）不需要這個回傳值，
-  /// 沿用既有「失敗就靜默、下次觸發自然重試」精神，忽略即可。
-  Future<bool> runCheckpoint() async {
-    if (_isSyncing) return false;
+  /// 回傳 [SyncCheckpointResult]（epic-53-sync-checkpoint-result）：呼叫端
+  /// 依結果決定要不要提示，不必再事後讀儲存狀態反推原因。手動同步入口
+  /// （`SyncSettingsScreen`「立即同步」按鈕，2026-09-08 `/grill-with-docs`
+  /// 使用者需求）與自動觸發來源（`sync_checkpoint_trigger.dart`）對各結果
+  /// 的處理方式不同，見各自的說明；自動觸發沿用既有「失敗就靜默、下次
+  /// 觸發自然重試」精神。
+  Future<SyncCheckpointResult> runCheckpoint() async {
+    if (_isSyncing) return SyncCheckpointResult.alreadyRunning;
     _isSyncing = true;
     try {
       return await _runCheckpointBody();
@@ -87,11 +89,17 @@ class SyncEngine {
     }
   }
 
-  Future<bool> _runCheckpointBody() async {
-    final baseUrl = await _accountRepository.loadBaseUrl();
+  Future<SyncCheckpointResult> _runCheckpointBody() async {
+    // 先只讀 token：沒有 token 才是「未登入」（多數未啟用同步的使用者每次
+    // 觸發都會走到這裡，不必多讀其餘欄位）。
     final storedAuthToken = await _accountRepository.loadAuthToken();
+    if (storedAuthToken == null) return SyncCheckpointResult.notLoggedIn;
+    // 有 token 代表使用者確實登入過；userId／baseUrl 缺失（例如 secure
+    // storage 短暫讀取失敗，各 load 方法會吞掉例外回傳 null）是異常，回報
+    // failed 而非 notLoggedIn，避免手動同步靜默（epic-53 審查 I-1）。
+    final baseUrl = await _accountRepository.loadBaseUrl();
     final userId = await _accountRepository.loadUserId();
-    if (storedAuthToken == null || userId == null || baseUrl.isEmpty) return false;
+    if (userId == null || baseUrl.isEmpty) return SyncCheckpointResult.failed;
 
     final pb = _clientFactory(baseUrl);
     final String? authToken;
@@ -102,14 +110,18 @@ class SyncEngine {
       // 只清 token、保留 email，讓同步設定畫面顯示「登入已過期」並預填
       // email（見 SyncAccountRepository.clearAuthToken）。其他錯誤（斷網、
       // 伺服器 5xx）維持登入，下次 checkpoint 自然重試。
-      // 請求進行中使用者已重新登入（token 已換）時不清除，避免清掉新 token。
-      if (e.statusCode == 401 &&
-          await _accountRepository.loadAuthToken() == storedAuthToken) {
-        await _accountRepository.clearAuthToken();
+      // 請求進行中使用者已重新登入（token 已換）時不清除，避免清掉新 token；
+      // 此時帳號已變動，視為未登入（不提示過期）。
+      if (e.statusCode == 401) {
+        if (await _accountRepository.loadAuthToken() == storedAuthToken) {
+          await _accountRepository.clearAuthToken();
+          return SyncCheckpointResult.sessionExpired;
+        }
+        return SyncCheckpointResult.notLoggedIn;
       }
-      return false;
+      return SyncCheckpointResult.failed;
     }
-    if (authToken == null) return false;
+    if (authToken == null) return SyncCheckpointResult.notLoggedIn;
     final headers = {'Authorization': authToken};
     final lastPushCompletedAt = await _metadataRepository.loadLastPushCompletedAt();
 
@@ -151,7 +163,7 @@ class SyncEngine {
         await _sendPushBatch(pb, headers, batch);
       }
     } on ClientException {
-      return false;
+      return SyncCheckpointResult.failed;
     }
 
     final notDirtyUpdatedAt = DateTime.now().millisecondsSinceEpoch;
@@ -179,7 +191,7 @@ class SyncEngine {
         excludeFingerprints: dirtyReadingPositionFingerprints,
       );
     } on ClientException {
-      return false;
+      return SyncCheckpointResult.failed;
     }
 
     await _metadataRepository.saveLastPushCompletedAt(notDirtyUpdatedAt);
@@ -224,7 +236,7 @@ class SyncEngine {
     }
 
     await _purgeTombstones();
-    return true;
+    return SyncCheckpointResult.synced;
   }
 
   /// epic-50-sync-token-refresh：PocketBase token 有效期從登入（或上次

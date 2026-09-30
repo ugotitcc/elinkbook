@@ -16,6 +16,7 @@ import 'package:elinkbook/reader/bookmarks_repository.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlights_repository.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
+import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/sync/sync_engine.dart';
 import 'package:elinkbook/sync/sync_metadata_repository.dart';
@@ -101,10 +102,53 @@ void main() {
     final result = await engine.runCheckpoint();
 
     expect(requestSent, isFalse);
-    expect(result, isFalse,
-        reason: 'runCheckpoint() 回傳值供手動同步按鈕判斷是否要提示失敗'
-            '（epic-8-sync 手動同步功能，2026-09-08 /grill-with-docs）——'
-            '未登入時沒有真的執行同步，應回傳 false。');
+    expect(result, SyncCheckpointResult.notLoggedIn,
+        reason: '未登入時沒有真的執行同步，應回報 notLoggedIn（epic-53）。');
+  });
+
+  test('token 存在但 userId 缺失（例如 secure storage 讀取失敗）：回報 failed 而非 notLoggedIn，不發出任何網路請求（epic-53 審查 I-1）',
+      () async {
+    // 只留下 token：userId／email 皆為 null。
+    await accountRepository.clearCredentials();
+    await accountRepository.saveAuthToken('test-token');
+    var requestSent = false;
+    final mockClient = mockPocketBase((request) async {
+      requestSent = true;
+      return http.Response('{}', 200);
+    });
+    final engine = SyncEngine(
+      db: libraryRepository.database,
+      accountRepository: accountRepository,
+      metadataRepository: metadataRepository,
+      clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+    );
+
+    final result = await engine.runCheckpoint();
+
+    expect(requestSent, isFalse);
+    expect(result, SyncCheckpointResult.failed,
+        reason: '已有 token 代表使用者確實登入過，憑證不完整是異常，'
+            '不能歸為未登入而讓手動同步靜默。');
+  });
+
+  test('token 存在但 baseUrl 為空：回報 failed，不發出任何網路請求（epic-53 審查 I-1）', () async {
+    await accountRepository.saveBaseUrl('');
+    var requestSent = false;
+    final mockClient = mockPocketBase((request) async {
+      requestSent = true;
+      return http.Response('{}', 200);
+    });
+    final engine = SyncEngine(
+      db: libraryRepository.database,
+      accountRepository: accountRepository,
+      metadataRepository: metadataRepository,
+      clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+    );
+
+    final result = await engine.runCheckpoint();
+
+    expect(requestSent, isFalse);
+    expect(result, SyncCheckpointResult.failed);
   });
 
   test('併發鎖：兩次幾乎同時呼叫 runCheckpoint()，第二次在第一次仍執行中時直接放棄，不會兩次都真的送出網路請求',
@@ -133,11 +177,9 @@ void main() {
     final results = await Future.wait([first, second]);
     final requestCountAfterConcurrentCalls = requestCount;
 
-    expect(results, [true, false],
-        reason: 'runCheckpoint() 回傳值供手動同步按鈕判斷是否要提示失敗'
-            '（epic-8-sync 手動同步功能，2026-09-08 /grill-with-docs）——'
-            '併發鎖生效時被放棄的那次呼叫應回傳 false，先取得鎖、真的執行'
-            '完成的那次回傳 true。');
+    expect(results, [SyncCheckpointResult.synced, SyncCheckpointResult.alreadyRunning],
+        reason: '併發鎖生效時被放棄的那次呼叫應回報 alreadyRunning，先取得鎖、'
+            '真的執行完成的那次回報 synced。');
 
     // 鎖應已釋放：接著單獨呼叫一次，取得「一次完整 checkpoint」實際會發出
     // 的請求數作為基準，用來跟上面併發呼叫的結果比較——若鎖沒生效，併發
@@ -196,10 +238,8 @@ void main() {
     );
 
     final result = await engine.runCheckpoint();
-    expect(result, isTrue,
-        reason: 'runCheckpoint() 回傳值供手動同步按鈕判斷是否要提示失敗'
-            '（epic-8-sync 手動同步功能，2026-09-08 /grill-with-docs）——'
-            '整個 checkpoint（推送＋下載＋合併）成功完成時應回傳 true。');
+    expect(result, SyncCheckpointResult.synced,
+        reason: '整個 checkpoint（推送＋下載＋合併）成功完成時應回報 synced。');
 
     final pushBody =
         (capturedRequest!['requests'] as List).single['body'] as Map<String, dynamic>;
@@ -287,10 +327,8 @@ void main() {
 
     expect(await metadataRepository.loadLastPushCompletedAt(), isNull);
     expect(await metadataRepository.loadRemoteIds(SyncCollection.bookmarks), isEmpty);
-    expect(result, isFalse,
-        reason: 'runCheckpoint() 回傳值供手動同步按鈕判斷是否要提示失敗'
-            '（epic-8-sync 手動同步功能，2026-09-08 /grill-with-docs）——'
-            '推送階段遇到 HTTP 錯誤時應回傳 false。');
+    expect(result, SyncCheckpointResult.failed,
+        reason: '推送階段遇到 HTTP 錯誤時應回報 failed。');
   });
 
   test('下載端把遠端新增的書籤正確合併進本機（書籍已匯入、指紋對得上）', () async {
@@ -1209,7 +1247,7 @@ void main() {
           isTrue);
       for (var day = 1; day <= 14; day++) {
         server.nowSec += 86400;
-        expect(await engine.runCheckpoint(), isTrue,
+        expect(await engine.runCheckpoint(), SyncCheckpointResult.synced,
             reason: '第 $day 天：token 有效期 5 天，每次 checkpoint 都應先續期，不應過期');
       }
     });
@@ -1217,11 +1255,11 @@ void main() {
     test('authRefresh 成功時，新 token 存回帳號儲存庫', () async {
       final engine = buildEngine(mockPocketBase((request) async => _emptyListResponse()));
 
-      expect(await engine.runCheckpoint(), isTrue);
+      expect(await engine.runCheckpoint(), SyncCheckpointResult.synced);
       expect(await accountRepository.loadAuthToken(), refreshedTestToken);
     });
 
-    test('authRefresh 回 401（token 已過期）：回傳 false、清除 token 但保留 email，且不再送出其他請求',
+    test('authRefresh 回 401（token 已過期）：回報 sessionExpired、清除 token 但保留 email，且不再送出其他請求',
         () async {
       final requestedPaths = <String>[];
       final engine = buildEngine(MockClient((request) async {
@@ -1233,7 +1271,7 @@ void main() {
         );
       }));
 
-      expect(await engine.runCheckpoint(), isFalse);
+      expect(await engine.runCheckpoint(), SyncCheckpointResult.sessionExpired);
       expect(requestedPaths, ['/api/collections/users/auth-refresh']);
       expect(await accountRepository.isLoggedIn(), isFalse);
       expect(await accountRepository.loadEmail(), 'reader@example.com');
@@ -1246,7 +1284,8 @@ void main() {
         onAuthRefresh: accountRepository.clearCredentials,
       ));
 
-      expect(await engine.runCheckpoint(), isFalse);
+      expect(await engine.runCheckpoint(), SyncCheckpointResult.notLoggedIn,
+          reason: '帳號中途變動視為未登入，不算過期也不算失敗（epic-53）');
       expect(await accountRepository.loadAuthToken(), isNull,
           reason: '寫回 token 會變成「有 token 但沒有 email／userId」的半登入狀態');
     });
@@ -1266,11 +1305,11 @@ void main() {
         );
       }));
 
-      expect(await engine.runCheckpoint(), isFalse);
+      expect(await engine.runCheckpoint(), SyncCheckpointResult.notLoggedIn);
       expect(await accountRepository.loadAuthToken(), 'new-login-token');
     });
 
-    test('authRefresh 遇到非 401 錯誤（例如伺服器 500）：回傳 false，但維持登入狀態', () async {
+    test('authRefresh 遇到非 401 錯誤（例如伺服器 500）：回報 failed，但維持登入狀態', () async {
       final engine = buildEngine(MockClient((request) async {
         return http.Response(
           jsonEncode({'status': 500, 'message': 'Something went wrong.', 'data': {}}),
@@ -1279,7 +1318,7 @@ void main() {
         );
       }));
 
-      expect(await engine.runCheckpoint(), isFalse);
+      expect(await engine.runCheckpoint(), SyncCheckpointResult.failed);
       expect(await accountRepository.loadAuthToken(), 'test-token');
     });
   });
