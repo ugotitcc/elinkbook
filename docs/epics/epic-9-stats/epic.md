@@ -126,7 +126,7 @@ Discovery 前已核實的事實：
 - **測試 3（背景朗讀 1 分鐘）：通過。** 新書累計 79 秒，包含背景那段。
 - **已知取捨：** 捲動模式下若 `cfi` 範圍不隨捲動改變、只有 `fraction` 變，該次捲動不算活動。未在真機驗證捲動模式。
 
-## Issue 5 完成記錄（統計畫面，2026-09-29，PR 待建立）
+## Issue 5 完成記錄（統計畫面，2026-09-29，PR #300 已合併）
 
 **做了什麼：** 設定頁「閱讀統計」入口（`SettingsScaffold.readingStatsRepository`，null 時隱藏，由 `AdaptiveShellScaffold` 從 bundle 轉交）；`ReadingStatsScreen`（累計總時數、近 365 天貢獻圖、下方固定詳情卡片、底部清除全部＋確認對話框）；`ReadingHeatmap`（左側固定星期欄、右側水平捲動預設最右、月份標籤、五級 `CustomPaint` 方格、E-Ink 紋理＋選取外框疊加層、圖例）；`lib/stats/` 純邏輯（分級、週一起始網格、時數格式化）；`ElinkTokens.heatmapLevel0..4` 四套主題色值（取自 Issue 1 定案表）；14 個字串鍵進 4 份 ARB（含 gen-l10n 產出檔入版控）。
 
@@ -135,6 +135,8 @@ Discovery 前已核實的事實：
 - Task 4 測試 helper 結尾 `pump()` 改 `pumpAndSettle()`（同 testWidgets 內換主題重 pump 時，MaterialApp AnimatedTheme 需 200ms 才切換完成，否則讀到舊主題）。
 
 **驗證結果：** `flutter analyze` 乾淨；`check_l10n_hardcoded_strings.js` 雙 PASS；完整 `flutter test` **3201 通過、1 跳過、0 失敗**（Issue 4 基準 3134＋本 Issue 新增 67，跳過數不變）；突變驗證 7/7 皆使對應測試失敗（已還原）。提交：`060b5cf9`（i18n）、`7b8b5b92`（Token）、`97fa4d9b`（純邏輯）、`24c14d8f`（貢獻圖元件）、`4f23b854`（統計畫面）、`b8b5784e`（設定頁入口）。
+
+**程式審查修訂（2026-09-30，`c4838713`、`c2a5a79d`）：** 審查 0 Critical、2 Important、5 Minor，全數已修。I-2：拆分 `_loadRequestId` 與 `_detailRequestId`，清除重載期間點方格不再讓累計時數與貢獻圖停留在清除前；M-3：讀取失敗顯示 `statsLoadFailed`（新增第 15 個字串鍵，4 份 ARB）而非永遠停在 spinner；M-4：方格無障礙標籤加上當日時數；M-5：`statsNoDataOnDate` 統一為「紀錄」；I-1／M-1／M-2 補測試鎖住 E-Ink 紋理 `clipRect`、選取外框留白、E-Ink 對話框無淡入。新增測試皆以突變驗證。修訂後完整 `flutter test` **3207 通過、1 跳過、0 失敗**。
 
 **真機確認：未驗證**（本機無 Android 裝置，僅 Edge web）。待真機補：E-Ink 第 3 級（`#525252` 底疊黑色交叉線）對比是否可辨（若不理想，依計畫改原型白底做法，只動 `HeatmapCellPainter.paint()`）、星期欄與捲動預設位置、清除流程、Light／Dark／Sepia 目視。
 
