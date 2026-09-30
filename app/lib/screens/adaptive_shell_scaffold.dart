@@ -162,6 +162,8 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
                   .readerFeatureRepositories.fullTextSearchSettingsRepository,
               isFullTextSearchAvailable:
                   widget.readerFeatureRepositories.isFullTextSearchAvailable,
+              readingStatsRepository:
+                  widget.readerFeatureRepositories.readingStatsRepository,
             ),
           ],
         ),

@@ -3850,6 +3850,96 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'上傳逾時'**
   String get wifiPageUploadTimeout;
+
+  /// 閱讀統計畫面標題，同時作為設定頁「閱讀統計」入口的標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'閱讀統計'**
+  String get statsScreenTitle;
+
+  /// 閱讀統計畫面「累計總時數」卡片的標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'累計閱讀時數'**
+  String get statsTotalDuration;
+
+  /// 時數顯示（滿 1 小時）：{hours} 為小時數、{minutes} 為剩餘分鐘數（0–59）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{hours} 小時 {minutes} 分鐘'**
+  String statsHoursMinutesFormat(int hours, int minutes);
+
+  /// 時數顯示（未滿 1 小時）：{minutes} 為分鐘數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{minutes} 分鐘'**
+  String statsMinutesFormat(int minutes);
+
+  /// 當日詳情卡片標題，{date} 為已依目前介面語言格式化的日期字串（DateFormat.yMd(locale) 的結果）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{date} 閱讀明細'**
+  String statsDailyDetailsTitle(String date);
+
+  /// 當日詳情卡片在該日沒有任何閱讀紀錄時顯示的說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'當日無閱讀紀錄'**
+  String get statsNoDataOnDate;
+
+  /// 閱讀統計畫面讀取資料失敗時顯示的固定錯誤文字（取代載入中圖示，避免永遠停在 spinner）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法載入閱讀統計'**
+  String get statsLoadFailed;
+
+  /// 貢獻圖圖例左端文字（色階較淺＝閱讀較少）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'較少'**
+  String get statsLegendLess;
+
+  /// 貢獻圖圖例右端文字（色階較深＝閱讀較多）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'較多'**
+  String get statsLegendMore;
+
+  /// 「清除全部統計」按鈕文字，同時是確認對話框的標題與確認鈕文字（DESIGN.md §9.2：確認鈕需標明具體後果）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'清除全部統計'**
+  String get statsClearAllTitle;
+
+  /// 清除全部統計確認對話框的內文
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定要清除所有閱讀統計嗎？此動作無法復原。'**
+  String get statsClearAllConfirmMessage;
+
+  /// 清除全部統計成功後的提示訊息（SnackBar）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已清除全部閱讀統計'**
+  String get statsClearAllSuccess;
+
+  /// 貢獻圖左側星期標籤欄：星期一（週一列）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'一'**
+  String get statsWeekdayMon;
+
+  /// 貢獻圖左側星期標籤欄：星期三（週三列）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'三'**
+  String get statsWeekdayWed;
+
+  /// 貢獻圖左側星期標籤欄：星期五（週五列）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'五'**
+  String get statsWeekdayFri;
 }
 
 class _AppLocalizationsDelegate

@@ -18,6 +18,16 @@ class ElinkTokens extends ThemeExtension<ElinkTokens> {
   final Color badgeScrim;
   final Color ttsActiveHighlight;
 
+  /// 閱讀統計貢獻圖五級色階（epic-9-stats Issue 5，色值取自 `epic.md`
+  /// Issue 1 原型定案表）：0 無紀錄、1 未滿 15 分、2 未滿 30 分、
+  /// 3 未滿 60 分、4 六十分以上。E-Ink 下為階梯灰階；`Color` 無法表達紋理，
+  /// 網點／斜線由貢獻圖元件自己的繪製邏輯疊加（見 `reading_heatmap.dart`）。
+  final Color heatmapLevel0;
+  final Color heatmapLevel1;
+  final Color heatmapLevel2;
+  final Color heatmapLevel3;
+  final Color heatmapLevel4;
+
   /// 是否為 E-Ink 高對比模式。
   final bool isEink;
 
@@ -36,6 +46,11 @@ class ElinkTokens extends ThemeExtension<ElinkTokens> {
     required this.coverPlaceholder,
     required this.badgeScrim,
     required this.ttsActiveHighlight,
+    required this.heatmapLevel0,
+    required this.heatmapLevel1,
+    required this.heatmapLevel2,
+    required this.heatmapLevel3,
+    required this.heatmapLevel4,
     required this.isEink,
     required this.reducedMotion,
     required this.discretePaging,
@@ -51,6 +66,11 @@ class ElinkTokens extends ThemeExtension<ElinkTokens> {
     Color? coverPlaceholder,
     Color? badgeScrim,
     Color? ttsActiveHighlight,
+    Color? heatmapLevel0,
+    Color? heatmapLevel1,
+    Color? heatmapLevel2,
+    Color? heatmapLevel3,
+    Color? heatmapLevel4,
     bool? isEink,
     bool? reducedMotion,
     bool? discretePaging,
@@ -64,6 +84,11 @@ class ElinkTokens extends ThemeExtension<ElinkTokens> {
       coverPlaceholder: coverPlaceholder ?? this.coverPlaceholder,
       badgeScrim: badgeScrim ?? this.badgeScrim,
       ttsActiveHighlight: ttsActiveHighlight ?? this.ttsActiveHighlight,
+      heatmapLevel0: heatmapLevel0 ?? this.heatmapLevel0,
+      heatmapLevel1: heatmapLevel1 ?? this.heatmapLevel1,
+      heatmapLevel2: heatmapLevel2 ?? this.heatmapLevel2,
+      heatmapLevel3: heatmapLevel3 ?? this.heatmapLevel3,
+      heatmapLevel4: heatmapLevel4 ?? this.heatmapLevel4,
       isEink: isEink ?? this.isEink,
       reducedMotion: reducedMotion ?? this.reducedMotion,
       discretePaging: discretePaging ?? this.discretePaging,
@@ -84,10 +109,24 @@ class ElinkTokens extends ThemeExtension<ElinkTokens> {
       badgeScrim: Color.lerp(badgeScrim, other.badgeScrim, t)!,
       ttsActiveHighlight:
           Color.lerp(ttsActiveHighlight, other.ttsActiveHighlight, t)!,
+      heatmapLevel0: Color.lerp(heatmapLevel0, other.heatmapLevel0, t)!,
+      heatmapLevel1: Color.lerp(heatmapLevel1, other.heatmapLevel1, t)!,
+      heatmapLevel2: Color.lerp(heatmapLevel2, other.heatmapLevel2, t)!,
+      heatmapLevel3: Color.lerp(heatmapLevel3, other.heatmapLevel3, t)!,
+      heatmapLevel4: Color.lerp(heatmapLevel4, other.heatmapLevel4, t)!,
       // bool 欄位沒有漸變意義，t < 0.5 取自己、t >= 0.5 取對方（離散跳變）。
       isEink: t < 0.5 ? isEink : other.isEink,
       reducedMotion: t < 0.5 ? reducedMotion : other.reducedMotion,
       discretePaging: t < 0.5 ? discretePaging : other.discretePaging,
     );
   }
+
+  /// 依貢獻圖級別（0–4）取對應色階；超出範圍拋 [RangeError]。
+  Color heatmapLevelColor(int level) => [
+        heatmapLevel0,
+        heatmapLevel1,
+        heatmapLevel2,
+        heatmapLevel3,
+        heatmapLevel4,
+      ][level];
 }

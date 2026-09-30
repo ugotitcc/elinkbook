@@ -2261,4 +2261,56 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wifiPageUploadTimeout => 'Upload timed out';
+
+  @override
+  String get statsScreenTitle => 'Reading Stats';
+
+  @override
+  String get statsTotalDuration => 'Total Reading Time';
+
+  @override
+  String statsHoursMinutesFormat(int hours, int minutes) {
+    return '$hours hr $minutes min';
+  }
+
+  @override
+  String statsMinutesFormat(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String statsDailyDetailsTitle(String date) {
+    return 'Reading on $date';
+  }
+
+  @override
+  String get statsNoDataOnDate => 'No reading on this day';
+
+  @override
+  String get statsLoadFailed => 'Unable to load reading stats';
+
+  @override
+  String get statsLegendLess => 'Less';
+
+  @override
+  String get statsLegendMore => 'More';
+
+  @override
+  String get statsClearAllTitle => 'Clear All Stats';
+
+  @override
+  String get statsClearAllConfirmMessage =>
+      'Clear all reading stats? This cannot be undone.';
+
+  @override
+  String get statsClearAllSuccess => 'All reading stats cleared';
+
+  @override
+  String get statsWeekdayMon => 'Mon';
+
+  @override
+  String get statsWeekdayWed => 'Wed';
+
+  @override
+  String get statsWeekdayFri => 'Fri';
 }
