@@ -36,3 +36,4 @@
 - M-4：不需動作。
 - 「未評判」5 項：均維持不處理；「`FontManagementScreen` 自己持有 `_installedFonts`」是否列為後續待辦由使用者決定。
 - 驗證：`flutter analyze` No issues found；上述 7 個檔修訂後重跑 622/622 通過。
+- 全套 `flutter test`：3221 個通過（1 個略過）；`flutter analyze` 乾淨；`check_l10n_hardcoded_strings.js` PASS。準備發 PR。
