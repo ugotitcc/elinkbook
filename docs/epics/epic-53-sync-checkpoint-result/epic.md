@@ -49,3 +49,7 @@
 - **M-1**：`_manualSync` 說明文字改為列出各結果的處理；`SyncCheckpointResult` 註解同步更新。
 - 驗證：`flutter analyze` 乾淨；同一批異動測試檔共 171 個通過（含新增 2 個）。全套 `flutter test` 尚未執行（發 PR 前）。
 - 全套 `flutter test`：3211 個通過（1 個略過），`flutter analyze` 乾淨。準備發 PR。
+
+**2026-09-30 PR 合併**
+
+- PR #301（`epic-53/sync-checkpoint-result` → `main`）已合併。修正全數完成，待歸檔。

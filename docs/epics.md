@@ -61,7 +61,7 @@
 | 51 | `epic-51-wifi-transfer-test-fix` （缺陷）WiFi 傳書「下載期間傳輸計數」測試失敗 | 🟢 已歸檔 (Archived) | 已完成（PR #290），單檔測試修正，無獨立 Epic 目錄。根因是測試假設不成立、伺服器行為正確：591 位元組 fixture 一次塞進 socket 緩衝區，標頭到達前伺服器已送完並釋放許可；測試改用產生的 16MB 檔案 |
 | 52 | `epic-50-sync-token-refresh` （缺陷）同步 token 過期後無法同步，須登出再登入才恢復 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 53 | `epic-52-play-release` 上架 Google Play 的前置工作（release 簽章、隱私權政策補同步服務、版本號腳本） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
-| 54 | `epic-53-sync-checkpoint-result` （重構＋缺陷）同步 checkpoint 直接回報結果（含登入過期），消除呼叫端反推儲存狀態，並修正中途登出時顯示空白 email | 🟡 開發中 (Active) | 進行中，路徑 `docs/epics/epic-53-sync-checkpoint-result/` |
+| 54 | `epic-53-sync-checkpoint-result` （重構＋缺陷）同步 checkpoint 直接回報結果（含登入過期），消除呼叫端反推儲存狀態，並修正中途登出時顯示空白 email | 🟡 開發中 (Active) | 全數完成，待歸檔 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。
