@@ -1,0 +1,26 @@
+# `epic-54-architecture-optimization` 架構優化
+
+**狀態：** 🟡 開發中 (Active)
+**存放路徑：** `docs/epics/epic-54-architecture-optimization/`
+**關聯 PRD 章節：** 無（純內部架構重構，不改變使用者可見功能，除 Issue 1 的一處刻意行為調整）
+**關聯 ADR：** 0007、0035
+
+## 背景
+
+2026-09-30 `/improve-codebase-architecture` 檢視 epic-45／48／49／50／52／15 產出 7 個深化候選（報告 HTML 存於暫存目錄，不進版控）。候選 1 已由 `epic-53-sync-checkpoint-result` 完成並合併。使用者要求後續架構優化不要每一項各開一個 Epic，**集中在本 Epic，每個候選當作一張 Issue**（見 `issues.md`）。
+
+## Issue 1 設計決策（`/grill-with-docs` 定案）
+
+| 決策 | 結論 |
+|---|---|
+| module 範圍 | `AvailableFonts` 只做純推導，不做 I/O，不含 `@font-face` CSS |
+| 不認得的名稱、沒有 store | 統一為 `effectiveFamily() == null`（行為調整：原本渲染端照原值傳，與下拉選單不一致） |
+| `ReaderScreen` 狀態 | 4 個欄位換成單一 `AvailableFonts?`，`null` 代表載入中 |
+| 命名 | 類別 `AvailableFonts`，檔案 `app/lib/reader/available_fonts.dart`，`CONTEXT.md` 詞條「可用字型」 |
+| 既有 interface | `ReaderSettingsSheet` 改吃 `AvailableFonts`；`FoliateReaderView`／`buildFontFaceCss` 不改 |
+| 測試 | 規則類搬到純測試；接線類留在 widget 層 |
+| 載入失敗 | 任一邊失敗該邊視為空集合，仍組出 `AvailableFonts` |
+
+## 開發記錄
+
+**2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
