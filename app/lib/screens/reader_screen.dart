@@ -19,6 +19,7 @@ import '../reader/bookmark_toggle.dart' as bookmark_toggle;
 import '../reader/bookmarks_repository.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/app_font.dart';
+import '../reader/available_fonts.dart';
 import '../reader/custom_font.dart';
 import '../reader/custom_fonts_repository.dart';
 import '../reader/downloadable_font_store.dart';
@@ -1067,8 +1068,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           return ReaderSettingsSheet(
             prefs: _prefs,
             onChanged: _handlePrefsChanged,
-            customFonts: _customFonts,
-            installedFonts: _installedFonts,
+            availableFonts: AvailableFonts(
+              installedBuiltIn: _installedFonts,
+              customFonts: _customFonts,
+            ),
             bookId: widget.bookId,
             layoutPresets: _layoutPresets,
             isEinkMode: widget.isEinkMode,

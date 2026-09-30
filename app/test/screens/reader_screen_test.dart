@@ -6789,7 +6789,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       final sheet = tester.widget<ReaderSettingsSheet>(find.byType(ReaderSettingsSheet));
-      expect(sheet.installedFonts, {AppFont.sourceHanSans});
+      expect(sheet.availableFonts.installedBuiltIn, {AppFont.sourceHanSans});
     });
   });
 
@@ -6945,7 +6945,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       final sheet = tester.widget<ReaderSettingsSheet>(find.byType(ReaderSettingsSheet));
-      expect(sheet.installedFonts, isEmpty);
+      expect(sheet.availableFonts.installedBuiltIn, isEmpty);
     });
 
     testWidgets('舊 WebView 裝置上已下載的字型：閱讀器收到 null，偏好不改寫（Issue 7）', (tester) async {

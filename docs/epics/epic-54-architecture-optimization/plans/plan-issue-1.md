@@ -366,7 +366,7 @@ EOF
 - Consumes：Task 1 的 `AvailableFonts`（`builtInFonts`、`customFonts`、`effectiveFamily()`）。
 - Produces：`ReaderSettingsSheet({..., AvailableFonts availableFonts = AvailableFonts.empty, ...})`，欄位 `final AvailableFonts availableFonts;`。舊的 `customFonts`／`installedFonts` 兩個參數**移除**。
 
-- [ ] **Step 1：先改測試（讓它們因為參數不存在而編譯失敗）**
+- [x] **Step 1：先改測試（讓它們因為參數不存在而編譯失敗）**
 
 `app/test/screens/reader_settings_sheet_test.dart`：
 
@@ -428,12 +428,12 @@ helper 自己的參數（`customFonts`、`installedFonts`）與所有呼叫它�
 
 `app/test/screens/reader_screen_test.dart`：把兩處 `sheet.installedFonts` 改為 `sheet.availableFonts.installedBuiltIn`（約 `:6790` `expect(sheet.installedFonts, {AppFont.sourceHanSans});`、約 `:6948` `expect(sheet.installedFonts, isEmpty);`）。
 
-- [ ] **Step 2：確認失敗**
+- [x] **Step 2：確認失敗**
 
 Run：`flutter test test/screens/reader_settings_sheet_test.dart`
 Expected：編譯失敗，訊息含 `No named parameter with the name 'availableFonts'`。
 
-- [ ] **Step 3：修改 `ReaderSettingsSheet`**
+- [x] **Step 3：修改 `ReaderSettingsSheet`**
 
 `app/lib/screens/reader_settings_sheet.dart`：
 
@@ -509,7 +509,7 @@ Expected：編譯失敗，訊息含 `No named parameter with the name 'available
 
 (d) import：新增 `import '../reader/available_fonts.dart';`。若 `flutter analyze` 回報 `custom_font.dart` 未使用，就移除該 import；`app_font.dart` 同理（`font.displayName(l10n)` 需要 extension，通常仍會用到）。
 
-- [ ] **Step 4：暫時性接線 `ReaderScreen`**
+- [x] **Step 4：暫時性接線 `ReaderScreen`**
 
 `app/lib/screens/reader_screen.dart` 約 `:1070-1071`：把
 ```dart
@@ -525,7 +525,7 @@ Expected：編譯失敗，訊息含 `No named parameter with the name 'available
 ```
 並新增 `import '../reader/available_fonts.dart';`。（這是 Task 3 之前的過渡寫法，Task 3 會換成單一欄位。）
 
-- [ ] **Step 5：確認通過**
+- [x] **Step 5：確認通過**
 
 Run：
 ```bash
@@ -535,7 +535,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "epic-49"
 ```
 Expected：`No issues found!`；兩批測試 `All tests passed!`（第三批先確認接線沒斷；名稱過濾若沒有命中，改跑 `--plain-name "已下載字型"`）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib app/test
