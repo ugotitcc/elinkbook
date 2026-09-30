@@ -176,7 +176,7 @@ class AvailableFonts {
 }
 ```
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 建立 `app/test/reader/available_fonts_test.dart`：
 
@@ -277,12 +277,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 Run（在 `app/` 目錄）：`flutter test test/reader/available_fonts_test.dart`
 Expected：編譯失敗，訊息含 `Target of URI doesn't exist: 'package:elinkbook/reader/available_fonts.dart'`。
 
-- [ ] **Step 3：寫最小實作**
+- [x] **Step 3：寫最小實作**
 
 建立 `app/lib/reader/available_fonts.dart`：
 
@@ -336,12 +336,12 @@ class AvailableFonts {
 }
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 Run：`flutter test test/reader/available_fonts_test.dart`
 Expected：`All tests passed!`（11 個測試）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/reader/available_fonts.dart app/test/reader/available_fonts_test.dart
