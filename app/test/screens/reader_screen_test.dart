@@ -60,6 +60,7 @@ import 'package:elinkbook/reader/pdf_selection_info.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/note.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
+import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/reader/pdf_crop_frame_overlay.dart';
 import 'package:elinkbook/reader/bookmark.dart';
@@ -6382,9 +6383,9 @@ void main() {
   testWidgets('離開 ReaderScreen（書籍切換）觸發一次 checkpoint', (tester) async {
     var triggerCallCount = 0;
     final syncCheckpointTrigger = SyncCheckpointTrigger(
-      isLoggedIn: () async => true,
       runCheckpoint: () async {
         triggerCallCount++;
+        return SyncCheckpointResult.synced;
       },
     );
 
@@ -6475,9 +6476,9 @@ void main() {
   testWidgets('閱讀中每 5 分鐘計時器觸發 checkpoint，離開畫面後計時器停止', (tester) async {
     var triggerCallCount = 0;
     final syncCheckpointTrigger = SyncCheckpointTrigger(
-      isLoggedIn: () async => true,
       runCheckpoint: () async {
         triggerCallCount++;
+        return SyncCheckpointResult.synced;
       },
     );
 

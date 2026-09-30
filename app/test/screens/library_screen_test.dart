@@ -49,6 +49,7 @@ import 'package:share_plus_platform_interface/share_plus_platform_interface.dart
 import '../support/fake_path_provider_platform.dart';
 import '../support/fake_share_platform.dart';
 import '../support/fake_custom_fonts_repository.dart';
+import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/reader/bookmark.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
@@ -3082,8 +3083,7 @@ void main() {
         filePath: 'content://example/1.txt',
       );
       final syncCheckpointTrigger = SyncCheckpointTrigger(
-        isLoggedIn: () async => false,
-        runCheckpoint: () async {},
+        runCheckpoint: () async => SyncCheckpointResult.notLoggedIn,
       );
 
       await pumpLocalizedWidget(

@@ -13,6 +13,7 @@ import '../search/full_text_search_settings_repository.dart';
 import '../search/full_text_search_toggles_controller.dart';
 import '../stats/reading_stats_repository.dart';
 import '../sync/sync_account_repository.dart';
+import '../sync/sync_checkpoint_result.dart';
 import '../sync/sync_client.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_theme_data.dart';
@@ -60,7 +61,7 @@ class SettingsScaffold extends StatefulWidget {
   /// 「立即同步」按鈕與最後同步時間顯示（2026-09-08 `/grill-with-docs`
   /// 使用者需求），見 `SyncSettingsScreen`／`LibrarySyncDependencies` 的
   /// 欄位說明。
-  final Future<bool> Function()? onManualSync;
+  final Future<SyncCheckpointResult> Function()? onManualSync;
   final Future<int?> Function()? loadLastSyncedAt;
   final CloudAccountRepository? cloudAccountRepository;
   final GoogleDriveOAuthClient? googleDriveOAuthClient;

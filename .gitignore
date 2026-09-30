@@ -63,3 +63,4 @@ store/google-play/**/*.mp4
 
 # epic-9-stats 審查報告不進版控
 docs/epics/epic-9-stats/reviews/
+docs/epics/epic-53-sync-checkpoint-result/reviews/

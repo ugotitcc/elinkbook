@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../l10n/app_localizations.dart';
 import '../sync/sync_account_repository.dart';
+import '../sync/sync_checkpoint_result.dart';
 import '../sync/sync_client.dart';
 
 /// Settings「同步」子頁面（spec.md「Settings『同步』子頁面」）：未登入時
@@ -17,7 +18,7 @@ class SyncSettingsScreen extends StatefulWidget {
   /// callback 而非直接依賴整個 `SyncEngine`，見 `LibrarySyncDependencies`
   /// 的欄位說明（widget test 可注入輕量假 closure，不需要真正的
   /// sqflite `Database`）。
-  final Future<bool> Function() onManualSync;
+  final Future<SyncCheckpointResult> Function() onManualSync;
   /// 重用 [SyncMetadataRepository.loadLastPushCompletedAt]，同上理由收窄。
   final Future<int?> Function() loadLastSyncedAt;
 
@@ -65,6 +66,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     final baseUrl = await widget.accountRepository.loadBaseUrl();
     final isLoggedIn = await widget.accountRepository.isLoggedIn();
     final email = await widget.accountRepository.loadEmail();
+    final isSessionExpired = await widget.accountRepository.isSessionExpired();
     final lastSyncedAtMillis = await widget.loadLastSyncedAt();
     if (!mounted) return;
     setState(() {
@@ -74,9 +76,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       _lastSyncedAtMillis = lastSyncedAtMillis;
       _loading = false;
     });
-    // 沒有 token 但 email 還在：代表自動同步時 token 已過期而被清除
-    // （使用者主動登出會連 email 一起清除），提示重新登入。
-    if (!isLoggedIn && email != null) _showSessionExpired(email);
+    // 先前（例如背景自動同步時）token 已過期而被清除，提示重新登入；
+    // 「token 空＋email 有」的判定只在 [SyncAccountRepository.isSessionExpired]。
+    if (isSessionExpired && email != null) _showSessionExpired(email);
   }
 
   /// epic-50-sync-token-refresh：token 過期時 `SyncEngine` 只清除 token、
@@ -92,35 +94,41 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   }
 
   /// 「立即同步」按鈕（2026-09-08 `/grill-with-docs` 使用者需求）：直接
-  /// 重用既有 [SyncEngine.runCheckpoint]（增量同步，不做全量重推）。失敗
-  /// 時提示 SnackBar——手動觸發是使用者主動要求「現在就同步」，跟三種
-  /// 既有自動觸發來源（背景化／切書／閒置 5 分鐘）刻意靜默失敗的精神不同
-  /// （見 `SyncEngine.runCheckpoint` doc）。
+  /// 重用既有 [SyncEngine.runCheckpoint]（增量同步，不做全量重推），依
+  /// [SyncCheckpointResult] 分流（epic-53）：`synced` 更新最後同步時間；
+  /// `sessionExpired` 切回登入表單；`failed` 顯示 SnackBar——手動觸發是
+  /// 使用者主動要求「現在就同步」，跟三種既有自動觸發來源（背景化／切書／
+  /// 閒置 5 分鐘）刻意靜默失敗的精神不同；`alreadyRunning`／`notLoggedIn`
+  /// 不算失敗，靜默（見 `SyncEngine.runCheckpoint` doc）。
   Future<void> _manualSync() async {
     setState(() => _syncing = true);
-    final success = await widget.onManualSync();
+    final result = await widget.onManualSync();
     if (!mounted) return;
-    if (success) {
-      final lastSyncedAtMillis = await widget.loadLastSyncedAt();
-      if (!mounted) return;
-      setState(() {
-        _syncing = false;
-        _lastSyncedAtMillis = lastSyncedAtMillis;
-      });
-    } else {
-      setState(() => _syncing = false);
-      // 同步引擎在 token 過期時會清除 token（epic-50），此時改提示重新登入，
-      // 不顯示籠統的網路錯誤。
-      if (!await widget.accountRepository.isLoggedIn()) {
+    switch (result) {
+      case SyncCheckpointResult.synced:
+        final lastSyncedAtMillis = await widget.loadLastSyncedAt();
+        if (!mounted) return;
+        setState(() {
+          _syncing = false;
+          _lastSyncedAtMillis = lastSyncedAtMillis;
+        });
+      case SyncCheckpointResult.sessionExpired:
+        // 引擎已清除 token（epic-50）、保留 email；改提示重新登入，
+        // 不顯示籠統的網路錯誤（epic-53：結果由引擎直接回報，不再反推）。
+        setState(() => _syncing = false);
         final email = await widget.accountRepository.loadEmail();
         if (!mounted) return;
-        _showSessionExpired(email ?? '');
-        return;
-      }
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.syncSettingsSyncFailedMessage)),
-      );
+        if (email != null) _showSessionExpired(email);
+      case SyncCheckpointResult.failed:
+        setState(() => _syncing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.syncSettingsSyncFailedMessage)),
+        );
+      case SyncCheckpointResult.alreadyRunning:
+      case SyncCheckpointResult.notLoggedIn:
+        // 另一輪同步進行中，或同步期間使用者已登出／換帳號：不算失敗，
+        // 不提示（epic-53 設計決策）。
+        setState(() => _syncing = false);
     }
   }
 

@@ -50,6 +50,7 @@ import 'screens/cloud_duplicate_confirm_dialog.dart';
 import 'screens/library_screen_dependencies.dart';
 import 'screens/reading_position_conflict_dialog.dart';
 import 'sync/sync_account_repository.dart';
+import 'sync/sync_checkpoint_result.dart';
 import 'sync/sync_checkpoint_trigger.dart';
 import 'sync/sync_client.dart';
 import 'sync/sync_engine.dart';
@@ -251,11 +252,9 @@ Future<void> main() async {
     },
   );
   final syncCheckpointTrigger = SyncCheckpointTrigger(
-    isLoggedIn: syncAccountRepository.isLoggedIn,
     runCheckpoint: syncEngine.runCheckpoint,
     // epic-50-sync-token-refresh：自動同步時登入過期，比照上方衝突對話框
     // 透過 navigatorKey 取得目前畫面的 context，顯示一次性 Toast。
-    isSessionExpired: syncAccountRepository.isSessionExpired,
     onSessionExpired: () {
       final context = navigatorKey.currentContext;
       if (context == null) return;
@@ -377,7 +376,7 @@ class ElinkBookApp extends StatefulWidget {
   /// 「立即同步」按鈕與最後同步時間顯示（2026-09-08 `/grill-with-docs`
   /// 使用者需求），見 `SyncSettingsScreen`／`LibrarySyncDependencies` 的
   /// 欄位說明。
-  final Future<bool> Function()? onManualSync;
+  final Future<SyncCheckpointResult> Function()? onManualSync;
   final Future<int?> Function()? loadLastSyncedAt;
   final CloudAccountRepository? cloudAccountRepository;
   final GoogleDriveOAuthClient? googleDriveOAuthClient;

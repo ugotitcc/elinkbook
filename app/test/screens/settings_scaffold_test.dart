@@ -10,6 +10,7 @@ import 'package:elinkbook/cloud_import/google_drive_oauth_client.dart';
 import 'package:elinkbook/cloud_import/onedrive_oauth_client.dart';
 import 'package:elinkbook/l10n/app_locale.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
+import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/screens/widgets/eb_section_header.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_client.dart';
@@ -195,7 +196,7 @@ void main() {
           prefsManager: FakeReaderPrefsManager(),
           syncAccountRepository: accountRepository,
           syncClient: SyncClient(accountRepository: accountRepository),
-          onManualSync: () async => true,
+          onManualSync: () async => SyncCheckpointResult.synced,
           loadLastSyncedAt: () async => null,
         ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/main.dart';
+import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 
 import 'support/fake_book_import_service.dart';
@@ -17,9 +18,9 @@ void main() {
       (tester) async {
     var triggerCallCount = 0;
     final syncCheckpointTrigger = SyncCheckpointTrigger(
-      isLoggedIn: () async => true,
       runCheckpoint: () async {
         triggerCallCount++;
+        return SyncCheckpointResult.synced;
       },
     );
 
@@ -42,9 +43,9 @@ void main() {
   testWidgets('App 恢復前景（AppLifecycleState.resumed）不觸發 checkpoint', (tester) async {
     var triggerCallCount = 0;
     final syncCheckpointTrigger = SyncCheckpointTrigger(
-      isLoggedIn: () async => true,
       runCheckpoint: () async {
         triggerCallCount++;
+        return SyncCheckpointResult.synced;
       },
     );
 
@@ -67,9 +68,9 @@ void main() {
   testWidgets('App 短暫過渡（AppLifecycleState.inactive）不觸發 checkpoint', (tester) async {
     var triggerCallCount = 0;
     final syncCheckpointTrigger = SyncCheckpointTrigger(
-      isLoggedIn: () async => true,
       runCheckpoint: () async {
         triggerCallCount++;
+        return SyncCheckpointResult.synced;
       },
     );
 

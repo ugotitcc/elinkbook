@@ -4,6 +4,7 @@ import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_client.dart';
+import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/cloud_import/google_drive_oauth_client.dart';
 import 'package:elinkbook/cloud_import/onedrive_oauth_client.dart';
@@ -90,8 +91,7 @@ void main() {
     final syncAccountRepository = SyncAccountRepository();
     final syncClient = SyncClient(accountRepository: syncAccountRepository);
     final syncCheckpointTrigger = SyncCheckpointTrigger(
-      isLoggedIn: () async => false,
-      runCheckpoint: () async {},
+      runCheckpoint: () async => SyncCheckpointResult.notLoggedIn,
     );
 
     const empty = LibrarySyncDependencies();

@@ -8,6 +8,7 @@ import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/remote/opds_client.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
+import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/theme/app_theme.dart';
@@ -76,8 +77,7 @@ void main() {
     final syncAccountRepository = SyncAccountRepository();
     final syncClient = SyncClient(accountRepository: syncAccountRepository);
     final syncCheckpointTrigger = SyncCheckpointTrigger(
-      isLoggedIn: () async => false,
-      runCheckpoint: () async {},
+      runCheckpoint: () async => SyncCheckpointResult.notLoggedIn,
     );
     final cloudAccountRepository = FakeCloudAccountRepository();
     final googleDriveOAuthClient =
