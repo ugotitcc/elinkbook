@@ -558,7 +558,7 @@ EOF
 - Consumes：Task 1 的 `AvailableFonts`、Task 2 的 `ReaderSettingsSheet(availableFonts:)`。
 - Produces：`ReaderScreen` 對外行為不變（公開建構參數不動，ADR 0007）；`FoliateReaderView.fontFamily` 的值改由 `AvailableFonts.effectiveFamily()` 決定（行為調整：不認得的名稱與沒有 store 時為 `null`）。
 
-- [ ] **Step 1：先改測試（RED）**
+- [x] **Step 1：先改測試（RED）**
 
 在 `app/test/screens/reader_screen_test.dart`，「未下載字型改用書本字型（epic-49 Issue 6）」`group` 內（`pumpReader`、`readerView` helper 所在處）：
 
@@ -636,12 +636,12 @@ EOF
     });
 ```
 
-- [ ] **Step 2：確認 RED**
+- [x] **Step 2：確認 RED**
 
 Run：`flutter test test/screens/reader_screen_test.dart --plain-name "不認得的字型名稱改傳 null"`
 Expected：FAIL（`Expected: null  Actual: 'NoSuchFont'`）。兩個新增接線測試此時可能已通過（現行實作恰好滿足），這是預期的：它們是護欄，在重構後也必須維持綠燈。
 
-- [ ] **Step 3：修改 `ReaderScreen` 欄位**
+- [x] **Step 3：修改 `ReaderScreen` 欄位**
 
 `app/lib/screens/reader_screen.dart`：
 
@@ -665,7 +665,7 @@ Expected：FAIL（`Expected: null  Actual: 'NoSuchFont'`）。兩個新增接線
           : null;
 ```
 
-- [ ] **Step 4：合併載入方法、刪除 `_renderedFontFamily`**
+- [x] **Step 4：合併載入方法、刪除 `_renderedFontFamily`**
 
 (a) `initState`（約 `:649-650`）：把
 ```dart
@@ -722,7 +722,7 @@ Expected：FAIL（`Expected: null  Actual: 'NoSuchFont'`）。兩個新增接線
   }
 ```
 
-- [ ] **Step 5：改三個使用點**
+- [x] **Step 5：改三個使用點**
 
 (a) 設定面板（Task 2 的過渡寫法，約 `:1070-1073`）：把
 ```dart
@@ -767,12 +767,12 @@ Expected：FAIL（`Expected: null  Actual: 'NoSuchFont'`）。兩個新增接線
           installedFonts: fonts.installedBuiltIn,
 ```
 
-- [ ] **Step 6：確認沒有遺留舊名稱**
+- [x] **Step 6：確認沒有遺留舊名稱**
 
 Run：`grep -n "_customFonts\b\|_customFontsLoaded\|_downloadedFontsLoaded\|_installedFonts\|_renderedFontFamily" app/lib/screens/reader_screen.dart`
 Expected：**沒有輸出**。若 `flutter analyze` 回報 `unused import`，移除該 import。
 
-- [ ] **Step 7：確認 GREEN**
+- [x] **Step 7：確認 GREEN**
 
 Run：
 ```bash
@@ -784,7 +784,7 @@ Expected：`No issues found!`；三批 `All tests passed!`。`reader_screen_test
 
 若 `reader_screen_test.dart` 有其他測試因為「首幀多等一個 microtask」而失敗（兩個來源都提供時，`_availableFonts` 需要等 `Future.wait`），先確認失敗的測試是否在 pump 前後少了 `await tester.runAsync(() => Future.delayed(Duration.zero))`；既有字型測試用的 `pumpReader` helper 已包含這個寫法，可比照。**不可**為了讓測試通過而放寬 gating 條件。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib app/test

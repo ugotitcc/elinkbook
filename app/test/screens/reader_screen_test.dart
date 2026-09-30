@@ -6820,6 +6820,36 @@ void main() {
     FoliateReaderView readerView(WidgetTester tester) =>
         tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
 
+    testWidgets('自訂字型讀取失敗時，已下載的內建字型仍照原值傳遞（epic-54 Review Focus 1）',
+        (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'));
+      final store = FakeDownloadableFontStore()..installed.add(AppFont.sourceHanSerif);
+      final customFonts = FakeCustomFontsRepository()..loadGate = Completer<void>();
+
+      await pumpReader(tester, store: store, customFontsRepository: customFonts);
+      customFonts.loadGate!.completeError(StateError('denied'));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(readerView(tester).fontFamily, 'SourceHanSerifTC');
+    });
+
+    testWidgets('字型載入中離開閱讀畫面，載入完成後不拋出例外（epic-54 Review Focus 4）',
+        (tester) async {
+      final store = FakeDownloadableFontStore()..installedFontsGate = Completer<void>();
+
+      await pumpReader(tester, store: store);
+      await tester.pumpWidget(const SizedBox());
+      store.installedFontsGate!.complete();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('偏好為未下載的內建字型時，閱讀器收到 null，偏好本身不改寫', (tester) async {
       await prefsManager.saveBookPrefs(
           'b1', const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'));
@@ -6831,15 +6861,6 @@ void main() {
       expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'SourceHanSerifTC');
     });
 
-    testWidgets('偏好為 null（使用書本字型）時，閱讀器收到 null（計畫審查 M-2）',
-        (tester) async {
-      await prefsManager.saveBookPrefs('b1', const BookReaderPrefs());
-      final store = FakeDownloadableFontStore()..installed.add(AppFont.sourceHanSerif);
-
-      await pumpReader(tester, store: store);
-
-      expect(readerView(tester).fontFamily, isNull);
-    });
 
     testWidgets('偏好為已下載的內建字型時，照原值傳遞', (tester) async {
       await prefsManager.saveBookPrefs(
@@ -6910,23 +6931,27 @@ void main() {
       expect(readerView(tester).fontFamily, 'KingHwa_OldSong');
     });
 
-    testWidgets('不認得的字型名稱照原值傳遞（審查重點 4）', (tester) async {
+    testWidgets('不認得的字型名稱改傳 null，偏好不改寫（epic-54 Issue 1：與設定面板顯示一致）',
+        (tester) async {
       // epic-49 Issue 8 恢復原俠正楷後，改用真的不存在的名稱，保留原本的意圖
       await prefsManager.saveBookPrefs(
           'b1', const BookReaderPrefs(fontFamily: 'NoSuchFont'));
 
       await pumpReader(tester, store: FakeDownloadableFontStore());
 
-      expect(readerView(tester).fontFamily, 'NoSuchFont');
+      expect(readerView(tester).fontFamily, isNull);
+      expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'NoSuchFont');
     });
 
-    testWidgets('沒有 store 時照原值傳遞，行為與 Issue 4 相同（審查重點 5）', (tester) async {
+    testWidgets('沒有 store 時改傳 null，偏好不改寫（epic-54 Issue 1：與設定面板顯示一致）',
+        (tester) async {
       await prefsManager.saveBookPrefs(
           'b1', const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'));
 
-      await pumpReader(tester);
+      await pumpReader(tester); // downloadableFontStore 預設為 null
 
-      expect(readerView(tester).fontFamily, 'SourceHanSerifTC');
+      expect(readerView(tester).fontFamily, isNull);
+      expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'SourceHanSerifTC');
     });
 
     testWidgets('舊 WebView 裝置上已下載的字型：閱讀設定選單不列出（Issue 7）', (tester) async {
@@ -6961,26 +6986,7 @@ void main() {
       expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'SourceHanSerifTC');
     });
 
-    testWidgets('epic-48 以前選的原俠正楷，沒下載時閱讀器收到 null，偏好不改寫（Issue 8）',
-        (tester) async {
-      await prefsManager.saveBookPrefs(
-          'b1', const BookReaderPrefs(fontFamily: 'GuanKiapTsingKhai'));
 
-      await pumpReader(tester, store: FakeDownloadableFontStore());
-
-      expect(readerView(tester).fontFamily, isNull);
-      expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'GuanKiapTsingKhai');
-    });
-
-    testWidgets('epic-48 以前選的原俠正楷，下載後照原值傳遞（Issue 8）', (tester) async {
-      await prefsManager.saveBookPrefs(
-          'b1', const BookReaderPrefs(fontFamily: 'GuanKiapTsingKhai'));
-      final store = FakeDownloadableFontStore()..installed.add(AppFont.guanKiapTsingKhai);
-
-      await pumpReader(tester, store: store);
-
-      expect(readerView(tester).fontFamily, 'GuanKiapTsingKhai');
-    });
   });
 
   testWidgets(
