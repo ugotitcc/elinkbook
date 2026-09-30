@@ -19,6 +19,7 @@ import '../reader/bookmark_toggle.dart' as bookmark_toggle;
 import '../reader/bookmarks_repository.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/app_font.dart';
+import '../reader/available_fonts.dart';
 import '../reader/custom_font.dart';
 import '../reader/custom_fonts_repository.dart';
 import '../reader/downloadable_font_store.dart';
@@ -169,13 +170,14 @@ class ReaderScreen extends StatefulWidget {
   final LibraryRepository? libraryRepository;
 
   /// 自訂字型清單的資料存取層（epic-14-system-settings Issue 2）。刻意為
-  /// 可選參數——比照 [bookmarksRepository] 既有慣例，未提供時字型選單僅
-  /// 顯示內建 5 款，行為等同本 Issue 之前，零回歸。
+  /// 可選參數——比照 [bookmarksRepository] 既有慣例，未提供時自訂字型
+  /// 視為空清單（可用字型只剩已下載的內建字型）。
   final CustomFontsRepository? customFontsRepository;
 
   /// 可下載字型的存放與查詢（epic-49 Issue 4）。刻意為可選參數，比照
   /// [customFontsRepository] 既有慣例：未提供時已下載字型視為空集合、開書不等待，
-  /// 行為和本 Issue 之前相同（既有測試不必修改）。
+  /// 偏好為內建字型時會視為未下載而退回書本字型（epic-54 Issue 1，與設定面板
+  /// 顯示一致，偏好本身不改寫），自訂字型不受影響。
   final DownloadableFontStore? downloadableFontStore;
 
   /// 版面設定預設集的資料存取層（epic-28-reader-settings-enhancements
@@ -455,28 +457,21 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 時機見 _handleLayoutResolved（初次開書）／_openNotesSheet（Bottom
   // Sheet 關閉後重新整理，使用者可能在分頁裡新增/刪除書籤）。
   List<Bookmark> _fxlBookmarks = [];
-  // 自訂字型清單快取（epic-14-system-settings Issue 2），開書時載入一次，
-  // 比照既有 _fxlBookmarks／_highlights 等一次性載入快取模式。
-  List<CustomFont> _customFonts = [];
   // 版面設定預設集清單快取（epic-28-reader-settings-enhancements
-  // Issue 3），開書時載入一次，比照既有 _customFonts 一次性載入快取模式；
+  // Issue 3），開書時載入一次，比照既有一次性載入快取模式；
   // 另存/覆蓋/刪除完成後重新載入。
   List<LayoutPreset> _layoutPresets = [];
-  // 自訂字型清單是否已完成載入判斷（epic-14-system-settings Issue 3）：
-  // 未提供 customFontsRepository 時直接視為已完成（沒有東西要等，零回歸）；
-  // 提供時初始為 false，_loadCustomFonts() 完成（不論成功或失敗）後才設為
-  // true。_buildBody 的 EPUB gating 條件依此延後 FoliateReaderView 的
-  // 建構時機，避免 late final _initialIndexUri（內含 buildFontFaceCss()
-  // 產生的自訂字型 @font-face 宣告）在清單查詢完成前就已計算定案、之後
-  // 永遠不會重新產生的競態（見本計畫 Global Constraints）。
-  late bool _customFontsLoaded = widget.customFontsRepository == null;
-  // 已下載的內建字型（epic-49 Issue 4），開書時載入一次。閱讀期間不會改變：
-  // 字型管理畫面不在閱讀器內，下載或刪除都要離開閱讀器。
-  Set<AppFont> _installedFonts = const {};
-  // 已下載字型清單是否已讀完，用法比照 _customFontsLoaded：FoliateReaderView 的
-  // 初始網址（內含 @font-face）是 late final，提早建構就再也不會套用下載的字型
-  // （規格審查 C-1）。未提供 store 時一開始就是 true；讀取失敗也設為 true，不阻擋開書。
-  late bool _downloadedFontsLoaded = widget.downloadableFontStore == null;
+  // 可用字型（epic-54 Issue 1，見 CONTEXT.md「可用字型」）：已下載的內建字型加自訂
+  // 字型，開書時各載入一次，閱讀期間不會改變（字型管理畫面不在閱讀器內，下載或
+  // 刪除都要離開閱讀器）。兩邊都讀完（任一邊失敗視為空集合）才組出，在那之前為
+  // null。FoliateReaderView 的初始網址（內含 @font-face）是 late final，提早建構
+  // 就再也不會套用字型，所以 _buildBody 在 null 時延後建構閱讀器（取代原本的
+  // 兩個載入旗標）。兩個來源都沒提供
+  // （測試與舊呼叫端）時沒有東西要等，一開始就是 empty。
+  late AvailableFonts? _availableFonts =
+      widget.customFontsRepository == null && widget.downloadableFontStore == null
+          ? AvailableFonts.empty
+          : null;
   BookReaderPrefs _prefs = BookReaderPrefs.empty;
   LoadedPrefs? _loaded;
   ResolvedPreferences? _resolved;
@@ -646,8 +641,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     WidgetsBinding.instance.addObserver(this);
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
-    _loadCustomFonts();
-    _loadDownloadedFonts();
+    _loadAvailableFonts();
     _loadLayoutPresets();
     final syncCheckpointTrigger = widget.syncCheckpointTrigger;
     if (syncCheckpointTrigger != null) {
@@ -1067,8 +1061,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           return ReaderSettingsSheet(
             prefs: _prefs,
             onChanged: _handlePrefsChanged,
-            customFonts: _customFonts,
-            installedFonts: _installedFonts,
+            availableFonts: _availableFonts ?? AvailableFonts.empty,
             bookId: widget.bookId,
             layoutPresets: _layoutPresets,
             isEinkMode: widget.isEinkMode,
@@ -1434,56 +1427,45 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
   }
 
-  Future<void> _loadCustomFonts() async {
-    final repository = widget.customFontsRepository;
-    if (repository == null) return;
-    try {
-      final fonts = await repository.listAll();
-      if (!mounted) return;
-      setState(() {
-        _customFonts = fonts;
-        _customFontsLoaded = true;
-      });
-    } catch (e) {
-      debugPrint('Failed to load custom fonts: $e');
-      if (!mounted) return;
-      setState(() => _customFontsLoaded = true);
-    }
+  /// 載入可用字型（epic-54 Issue 1）：已下載的內建字型與自訂字型各自讀取、各自
+  /// 處理失敗（視為空集合，不阻擋開書），兩邊都完成才一次組出 [AvailableFonts]。
+  Future<void> _loadAvailableFonts() async {
+    if (_availableFonts != null) return;
+    // Dart 3 record 的 .wait：強型別，不依賴陣列下標與強制轉型（審查 M-1）。
+    // 兩個方法各自 catch，不會拋出例外，所以不會出現 ParallelWaitError。
+    final (installedBuiltIn, customFonts) = await (
+      _loadInstalledBuiltInFonts(),
+      _loadCustomFonts(),
+    ).wait;
+    if (!mounted) return;
+    setState(() {
+      _availableFonts = AvailableFonts(
+        installedBuiltIn: installedBuiltIn,
+        customFonts: customFonts,
+      );
+    });
   }
 
-  Future<void> _loadDownloadedFonts() async {
+  Future<Set<AppFont>> _loadInstalledBuiltInFonts() async {
     final store = widget.downloadableFontStore;
-    if (store == null) return;
+    if (store == null) return const {};
     try {
-      final fonts = await store.installedFonts();
-      if (!mounted) return;
-      setState(() {
-        _installedFonts = fonts;
-        _downloadedFontsLoaded = true;
-      });
+      return await store.installedFonts();
     } catch (e) {
       debugPrint('Failed to load downloaded fonts: $e');
-      if (!mounted) return;
-      setState(() => _downloadedFontsLoaded = true);
+      return const {};
     }
   }
 
-  /// 實際交給閱讀器渲染的字型家族名稱（epic-49 Issue 6，Issue 4 程式審查 M-1）。
-  ///
-  /// 偏好指向還沒下載（或已刪除）的內建字型時改傳 null，讓書本字型生效，和設定
-  /// 面板顯示的「使用書本字型」一致；否則 main.js 會注入一個沒有 @font-face 的
-  /// 字型名稱，由系統預設字型蓋掉書本字型。只影響渲染、不改寫偏好，字型下載後
-  /// 重新開書自然恢復。
-  ///
-  /// - 沒有傳入 store（測試與舊呼叫端）：照原值傳，維持 Issue 4 之前的行為。
-  /// - 讀取已下載字型失敗：_installedFonts 為空，@font-face 也不會輸出，同樣改傳 null。
-  /// - 自訂字型與不認得的名稱（含 epic-48 停用的字型）：照原值傳。
-  String? _renderedFontFamily(String? fontFamily) {
-    // 沒有 store，或偏好本來就是「使用書本字型」：照原值傳（計畫審查 M-1）
-    if (widget.downloadableFontStore == null || fontFamily == null) return fontFamily;
-    final isBuiltIn = AppFont.values.any((f) => f.familyName == fontFamily);
-    final isInstalled = _installedFonts.any((f) => f.familyName == fontFamily);
-    return isBuiltIn && !isInstalled ? null : fontFamily;
+  Future<List<CustomFont>> _loadCustomFonts() async {
+    final repository = widget.customFontsRepository;
+    if (repository == null) return const [];
+    try {
+      return await repository.listAll();
+    } catch (e) {
+      debugPrint('Failed to load custom fonts: $e');
+      return const [];
+    }
   }
 
   Future<void> _loadLayoutPresets() async {
@@ -3173,8 +3155,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             if (_resolved != null &&
                 (!isFoliateFormat(format) ||
                     (_dispatchedIsFixedLayout != null &&
-                        _customFontsLoaded &&
-                        _downloadedFontsLoaded)))
+                        _availableFonts != null)))
               _buildNativeView(format, isLandscape),
             // epic-27-reader-device-compat Issue 3：原生渲染畫面（InAppWebView／
             // pdfrx 繪圖表面）在真正收到第一次繪製結果前，緩衝區預設顯示黑色
@@ -3620,6 +3601,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   Widget _buildNativeView(BookFormat format, bool isLandscape) {
     final resolved = _resolved!;
+    final fonts = _availableFonts ?? AvailableFonts.empty;
     // epic-42-text-conversion Issue 2：_resolved 非 null 時 _loaded 恆非
     // null（兩者在 initState()／_handlePrefsChanged() 內永遠同時賦值，見
     // resolve_text_conversion.dart 呼叫端查證）。
@@ -3644,7 +3626,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           onLayoutResolved: _handleFoliateLayoutResolved,
           writingMode: resolved.writingMode,
           pageTurnMode: resolved.pageTurnMode,
-          fontFamily: _renderedFontFamily(resolved.fontFamily),
+          fontFamily: fonts.effectiveFamily(resolved.fontFamily),
           fontSize: resolved.fontSize,
           fontWeight: resolved.fontWeight,
           lineHeight: resolved.lineHeight,
@@ -3665,8 +3647,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           dualPageMode: resolved.dualPageMode,
           textConversion: textConversionMode,
           isLandscape: isLandscape,
-          customFonts: _customFonts,
-          installedFonts: _installedFonts,
+          customFonts: fonts.customFonts,
+          installedFonts: fonts.installedBuiltIn,
           downloadedFontsDirectory: widget.downloadableFontStore?.directory,
           navZoneActions: resolved.navZoneActions,
           onZoneAction: _handleZoneAction,

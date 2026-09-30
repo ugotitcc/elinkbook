@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/app_font.dart';
+import 'package:elinkbook/reader/available_fonts.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/screens/widgets/reader_option_tile.dart';
@@ -1246,14 +1247,16 @@ void main() {
           prefs: const BookReaderPrefs(),
           onChanged: _noopOnChanged,
           bookId: 'b1',
-          customFonts: const [
-            CustomFont(
-              id: 1,
-              displayName: '這是一個非常非常非常長的自訂字型顯示名稱範例測試用',
-              familyName: 'CustomLongFontName',
-              fontUri: 'content://example/font1',
-            ),
-          ],
+          availableFonts: const AvailableFonts(
+            customFonts: [
+              CustomFont(
+                id: 1,
+                displayName: '這是一個非常非常非常長的自訂字型顯示名稱範例測試用',
+                familyName: 'CustomLongFontName',
+                fontUri: 'content://example/font1',
+              ),
+            ],
+          ),
           layoutPresets: const [],
           isEinkMode: false,
           onSaveAsPreset: _noopSaveAsPreset,
@@ -2439,8 +2442,7 @@ void main() {
               builder: (_) => ReaderSettingsSheet(
                 prefs: BookReaderPrefs.empty,
                 onChanged: _noopOnChanged,
-                customFonts: const [],
-                installedFonts: AppFont.values.toSet(),
+                availableFonts: AvailableFonts(installedBuiltIn: AppFont.values.toSet()),
                 bookId: 'b1',
                 layoutPresets: const [],
                 isEinkMode: false,
@@ -2505,10 +2507,12 @@ Future<void> _pumpSheet(
       body: ReaderSettingsSheet(
         prefs: prefs,
         onChanged: onChanged,
-        customFonts: customFonts,
         // 既有測試的前提都是「內建字型已經可用」，沿用這個前提：沒指定時視為全部已下載。
         // 驗證「只列出已下載字型」的新測試會明確傳入集合。
-        installedFonts: installedFonts ?? AppFont.values.toSet(),
+        availableFonts: AvailableFonts(
+          installedBuiltIn: installedFonts ?? AppFont.values.toSet(),
+          customFonts: customFonts,
+        ),
         bookId: bookId,
         layoutPresets: layoutPresets,
         isEinkMode: isEinkMode,
