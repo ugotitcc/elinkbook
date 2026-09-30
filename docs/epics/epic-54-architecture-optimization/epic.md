@@ -24,3 +24,5 @@
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
+
+**2026-09-30 Issue 1 實作完成**：新增 `AvailableFonts` 純值物件（`app/lib/reader/available_fonts.dart`）；`ReaderSettingsSheet` 參數 2→1（`customFonts`／`installedFonts`→`availableFonts`）；`ReaderScreen` 4 個欄位→單一 `AvailableFonts?`（`null`＝載入中），刪除 `_renderedFontFamily`，載入改為 record `.wait` 並行、各自 catch（任一邊失敗視為空集合）。行為調整：偏好為不認得的名稱或沒有 store 時，渲染端改傳 `null`，與設定面板顯示一致（偏好本身不改寫）。測試：純測試 11 個（`available_fonts_test.dart`）；`reader_screen_test` 翻轉 2、刪除 3、新增 2（「一邊載入失敗」「載入中離開畫面」）。驗證：`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS；7 個相關測試檔 622/622 通過。

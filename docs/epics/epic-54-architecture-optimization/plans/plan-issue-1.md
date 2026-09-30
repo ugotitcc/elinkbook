@@ -813,7 +813,7 @@ EOF
 - Consumes：Task 0～3 的全部成果。
 - Produces：一個可送審、可發 PR 的分支。
 
-- [ ] **Step 1：靜態檢查**
+- [x] **Step 1：靜態檢查**
 
 Run（在 `app/`）：
 ```bash
@@ -822,18 +822,18 @@ node tool/check_l10n_hardcoded_strings.js
 ```
 Expected：`No issues found!`；兩行 `PASS`。
 
-- [ ] **Step 2：跑異動觸及的測試檔（不跑全套）**
+- [x] **Step 2：跑異動觸及的測試檔（不跑全套）**
 
 ```bash
 flutter test test/reader/available_fonts_test.dart test/reader/foliate_native_bridge_test.dart test/reader/foliate_reader_view_test.dart test/screens/reader_settings_sheet_test.dart test/screens/reader_screen_test.dart test/screens/font_management_screen_test.dart test/reader/downloadable_font_store_test.dart
 ```
 Expected：`All tests passed!`。（`foliate_*`、`font_management_*`、`downloadable_font_store_*` 沒有被改動，跑它們是為了確認「不動的東西」真的沒被牽動。）
 
-- [ ] **Step 3：更新記錄**
+- [x] **Step 3：更新記錄**
 
 在 `epic.md` 的「開發記錄」新增一段，內容為：實作摘要（新增 `AvailableFonts`；`ReaderSettingsSheet` 參數 2→1；`ReaderScreen` 4 個欄位→1 個；刪除 `_renderedFontFamily`）、行為調整（不認得的名稱與沒有 store → `null`）、測試變動（純測試 11 個；`reader_screen_test` 翻轉 2、刪除 3、新增 2）、驗證結果（實際跑出的通過數與 analyze 結果，**不可預先填寫**）。`issues.md` 的 Issue 1 狀態改為「🟡 實作完成，待審查」；`docs/epics.md` 第 55 列備註改為「Issue 1 實作完成，待審查」。
 
-- [ ] **Step 4：Commit 記錄**
+- [x] **Step 4：Commit 記錄**
 
 ```bash
 git add docs

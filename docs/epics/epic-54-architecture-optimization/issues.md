@@ -2,7 +2,7 @@
 
 | # | 標題 | 強度 | 狀態 |
 |---|---|---|---|
-| 1 | 可用字型：收攏「偏好字型現在能不能用」規則（`AvailableFonts`） | Strong | 🟡 進行中（`plans/plan-issue-1.md`） |
+| 1 | 可用字型：收攏「偏好字型現在能不能用」規則（`AvailableFonts`） | Strong | 🟡 實作完成，待審查 |
 | 2 | 同步與雲端匯入的「憑證失效」訊號形狀對齊（同步端已由 epic-53 對齊，僅需確認是否還有落差） | Worth exploring | ⚪ 待辦，尚未設計 |
 | 3 | 字型重新連結搬出 Widget，與書籍重新連結（`relinkBook`）對齊；`takePersistableUriPermission` 授權策略集中 | Worth exploring | ⚪ 待辦，尚未設計 |
 | 4 | 儲存權限探測移出 `foliate_native_bridge.dart`，改為獨立於閱讀器引擎的 module | Worth exploring | ⚪ 待辦，尚未設計 |
