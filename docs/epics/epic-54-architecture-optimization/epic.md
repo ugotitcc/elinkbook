@@ -25,4 +25,14 @@
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
 
-**2026-09-30 Issue 1 實作完成**：新增 `AvailableFonts` 純值物件（`app/lib/reader/available_fonts.dart`）；`ReaderSettingsSheet` 參數 2→1（`customFonts`／`installedFonts`→`availableFonts`）；`ReaderScreen` 4 個欄位→單一 `AvailableFonts?`（`null`＝載入中），刪除 `_renderedFontFamily`，載入改為 record `.wait` 並行、各自 catch（任一邊失敗視為空集合）。行為調整：偏好為不認得的名稱或沒有 store 時，渲染端改傳 `null`，與設定面板顯示一致（偏好本身不改寫）。測試：純測試 11 個（`available_fonts_test.dart`）；`reader_screen_test` 翻轉 2、刪除 3、新增 2（「一邊載入失敗」「載入中離開畫面」）。驗證：`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS；7 個相關測試檔 622/622 通過。
+**2026-09-30 Issue 1 實作完成**：新增 `AvailableFonts` 純值物件（`app/lib/reader/available_fonts.dart`）；`ReaderSettingsSheet` 參數 2→1（`customFonts`／`installedFonts`→`availableFonts`）；`ReaderScreen` 4 個欄位→單一 `AvailableFonts?`（`null`＝載入中），刪除 `_renderedFontFamily`，載入改為 record `.wait` 並行、各自 catch（任一邊失敗視為空集合）。行為調整：偏好為不認得的名稱或沒有 store 時，渲染端改傳 `null`，與設定面板顯示一致（偏好本身不改寫）。測試：純測試 11 個（`available_fonts_test.dart`）；`reader_screen_test` 翻轉 2、刪除 3、新增 2（「一邊載入失敗」「載入中離開畫面」）。驗證：`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS；7 個相關測試檔 622/622 通過（`available_fonts_test` 11、`foliate_native_bridge_test` 28、`foliate_reader_view_test` 117、`reader_settings_sheet_test` 95、`font_management_screen_test` 49、`downloadable_font_store_test` 35、`reader_screen_test` 287；尚未跑完整 `flutter test`）。
+
+**2026-09-30 程式審查與修訂**
+
+- 審查報告：`reviews/review-code-issue-1.md`（不進版控），0 Critical／0 Important／4 Minor，結論 With fixes。
+- M-1：`ReaderScreen` 兩個建構參數（`customFontsRepository`、`downloadableFontStore`）的 doc comment 改為符合新行為（沒有 store 時內建字型偏好退回書本字型）。
+- M-2：`reader_screen_test.dart` 字型區塊刪除 2 處多餘空行；`reader_settings_sheet_test.dart` 過長自訂字型名稱測試的 `CustomFont(...)` 縮排修正。
+- M-3：上方驗證數字補上 7 個檔名與各自數量；reviewer 只得 587 是因為被指定的清單少了第 7 個檔 `downloadable_font_store_test.dart`（35 個），622 可重現。
+- M-4：不需動作。
+- 「未評判」5 項：均維持不處理；「`FontManagementScreen` 自己持有 `_installedFonts`」是否列為後續待辦由使用者決定。
+- 驗證：`flutter analyze` No issues found；上述 7 個檔修訂後重跑 622/622 通過。

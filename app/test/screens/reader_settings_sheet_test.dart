@@ -1252,9 +1252,9 @@ void main() {
               CustomFont(
                 id: 1,
                 displayName: '這是一個非常非常非常長的自訂字型顯示名稱範例測試用',
-              familyName: 'CustomLongFontName',
-              fontUri: 'content://example/font1',
-            ),
+                familyName: 'CustomLongFontName',
+                fontUri: 'content://example/font1',
+              ),
             ],
           ),
           layoutPresets: const [],

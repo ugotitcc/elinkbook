@@ -170,13 +170,14 @@ class ReaderScreen extends StatefulWidget {
   final LibraryRepository? libraryRepository;
 
   /// 自訂字型清單的資料存取層（epic-14-system-settings Issue 2）。刻意為
-  /// 可選參數——比照 [bookmarksRepository] 既有慣例，未提供時字型選單僅
-  /// 顯示內建 5 款，行為等同本 Issue 之前，零回歸。
+  /// 可選參數——比照 [bookmarksRepository] 既有慣例，未提供時自訂字型
+  /// 視為空清單（可用字型只剩已下載的內建字型）。
   final CustomFontsRepository? customFontsRepository;
 
   /// 可下載字型的存放與查詢（epic-49 Issue 4）。刻意為可選參數，比照
   /// [customFontsRepository] 既有慣例：未提供時已下載字型視為空集合、開書不等待，
-  /// 行為和本 Issue 之前相同（既有測試不必修改）。
+  /// 偏好為內建字型時會視為未下載而退回書本字型（epic-54 Issue 1，與設定面板
+  /// 顯示一致，偏好本身不改寫），自訂字型不受影響。
   final DownloadableFontStore? downloadableFontStore;
 
   /// 版面設定預設集的資料存取層（epic-28-reader-settings-enhancements

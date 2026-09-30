@@ -6861,7 +6861,6 @@ void main() {
       expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'SourceHanSerifTC');
     });
 
-
     testWidgets('偏好為已下載的內建字型時，照原值傳遞', (tester) async {
       await prefsManager.saveBookPrefs(
           'b1', const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'));
@@ -6985,7 +6984,6 @@ void main() {
       expect(readerView(tester).fontFamily, isNull);
       expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'SourceHanSerifTC');
     });
-
 
   });
 
