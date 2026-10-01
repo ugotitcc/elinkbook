@@ -57,7 +57,7 @@
 - Consumes：無。
 - Produces：後續 Task 都在 worktree 的分支 `epic-54/issue-4-storage-access-probe` 上進行與提交。
 
-- [ ] **Step 1：在 `main` 提交計畫，並把 Issue 4 標為進行中**
+- [x] **Step 1：在 `main` 提交計畫，並把 Issue 4 標為進行中**
 
 先把 `docs/epics/epic-54-architecture-optimization/issues.md` 的 Issue 4 狀態從「🟡 已設計，待寫計畫」改為「🟡 進行中（`plans/plan-issue-4.md`）」（與 Issue 1 的做法一致：進入計畫執行就標進行中），再提交：
 
