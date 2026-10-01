@@ -72,7 +72,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 Expected：`git status --short` 在 add 之前只有這兩個檔案。
 
-- [ ] **Step 2：推送 `main`（對外動作，須先取得使用者確認）**
+- [ ] **Step 2：推送 `main`（對外動作，須先取得使用者確認，已暫緩）**
 
 **執行前先向使用者確認，不得自動推送。** 確認後：
 
@@ -82,7 +82,7 @@ git push origin main
 
 若 push 被拒絕（遠端有他人新 commit），**不要強制推送**：先 `git pull --no-rebase --no-edit`（merge 而非 rebase，避免改寫 worktree 分支的基底），再重新 `git push origin main`。
 
-- [ ] **Step 3：建立 worktree 與分支**
+- [x] **Step 3：建立 worktree 與分支**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook
