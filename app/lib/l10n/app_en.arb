@@ -561,6 +561,7 @@
   "libraryImportResultBothMessage": "{importedCount, plural, =1{Imported 1 book} other{Imported {importedCount} books}}, {skippedCount, plural, =1{1 already exists and was skipped} other{{skippedCount} already exist and were skipped}}",
   "libraryImportResultImportedOnlyMessage": "{importedCount, plural, =1{Imported 1 book} other{Imported {importedCount} books}}",
   "libraryImportResultSkippedOnlyMessage": "{skippedCount, plural, =1{1 already exists and was skipped} other{{skippedCount} already exist and were skipped}}",
+  "libraryImportFolderFailedMessage": "Couldn't read this folder. Make sure access is allowed, then try again.",
   "layoutPresetBookPickerTitleMulti": "Select Books (multiple selection)",
   "layoutPresetBookPickerTitleSingle": "Select Book",
   "layoutPresetBookPickerSearchHint": "Search by title or author",

@@ -1,6 +1,17 @@
 import 'models/book.dart';
 import 'models/library_enums.dart';
 
+/// 一次匯入「整體失敗」的原因（目前只有資料夾匯入會失敗）。單檔匯入失敗仍是
+/// 該檔被略過、不影響其他檔案，不屬於這裡。
+enum ImportFailure {
+  /// 無法取得資料夾的持久化授權（見 CONTEXT.md「持久化授權」），沒有授權就
+  /// 無法列舉內容。
+  folderAccessDenied,
+
+  /// 已有授權，但列舉資料夾內容失敗（原生端拋例外或沒有回傳內容）。
+  folderListingFailed,
+}
+
 /// 一次匯入呼叫（[BookImportService.importFiles]／[importFolder]）的結果：
 /// 成功寫入的書籍清單，以及因來源 URI 與圖書庫既有書籍重複而被跳過的檔案數
 /// 量（【診斷修正】見 book_import_service_impl.dart「_importSingleFile 前的
@@ -11,9 +22,14 @@ class ImportResult {
   final List<Book> importedBooks;
   final int skippedDuplicateCount;
 
+  /// 非 null 代表整次匯入失敗（此時 [importedBooks] 為空）。「資料夾裡本來
+  /// 就沒有可匯入的書」不是失敗，維持 null。
+  final ImportFailure? failure;
+
   const ImportResult({
     required this.importedBooks,
     this.skippedDuplicateCount = 0,
+    this.failure,
   });
 }
 

@@ -101,7 +101,16 @@ Future<bool?> confirmAutoGroupByFolderName(BuildContext context) {
 /// 匯入完成後顯示單一合併提示：成功匯入本數與（若有）因來源 URI 與既有
 /// 書籍重複而被跳過的本數。兩者皆為 0 時不顯示任何提示（原
 /// `_LibraryScreenState._showImportResultSnackBar()`，逐字搬遷）。
+/// 整體失敗（[ImportResult.failure] 非 null，epic-54 Issue 3）時只顯示失敗訊息。
 void showImportResultSnackBar(BuildContext context, ImportResult result) {
+  // 整體失敗（目前只有資料夾匯入）：只顯示失敗訊息，不混入成功／跳過計數。
+  if (result.failure != null) {
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.libraryImportFolderFailedMessage)),
+    );
+    return;
+  }
   final importedCount = result.importedBooks.length;
   final skippedCount = result.skippedDuplicateCount;
   if (importedCount <= 0 && skippedCount <= 0) return;

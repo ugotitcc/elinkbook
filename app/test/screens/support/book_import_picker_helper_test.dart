@@ -322,6 +322,47 @@ void main() {
   });
 
   group('showImportResultSnackBar', () {
+    testWidgets('failure 不為 null：只顯示資料夾讀取失敗訊息（epic-54 Issue 3）', (tester) async {
+      for (final failure in ImportFailure.values) {
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('zh', 'TW'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => showImportResultSnackBar(
+                    context,
+                    ImportResult(
+                      importedBooks: const [],
+                      failure: failure,
+                    ),
+                  ),
+                  child: const Text('Show SnackBar'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Show SnackBar'));
+        await tester.pump();
+
+        expect(find.text('無法讀取這個資料夾，請確認已授權存取後再試一次'), findsOneWidget,
+            reason: '$failure');
+        expect(find.textContaining('已匯入'), findsNothing);
+        expect(find.textContaining('已跳過'), findsNothing);
+
+        ScaffoldMessenger.of(tester.element(find.byType(Scaffold)))
+            .clearSnackBars();
+        await tester.pumpAndSettle();
+      }
+    });
+
+    // 「failure 為 null 且兩者皆為 0 不顯示」不另加測試：既有的
+    // 『兩者皆為 0 時不顯示任何 SnackBar』傳入的 ImportResult 預設 failure 即為
+    // null，已涵蓋（計畫審查 I-4）。
     testWidgets('兩者皆為 0 時不顯示任何 SnackBar', (tester) async {
       await tester.pumpWidget(
         MaterialApp(

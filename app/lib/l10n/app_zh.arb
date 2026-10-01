@@ -561,6 +561,7 @@
   "libraryImportResultBothMessage": "{importedCount, plural, =1{已匯入 1 本} other{已匯入 {importedCount} 本}}，{skippedCount, plural, =1{1 本已存在，已跳過} other{{skippedCount} 本已存在，已跳過}}",
   "libraryImportResultImportedOnlyMessage": "{importedCount, plural, =1{已匯入 1 本書} other{已匯入 {importedCount} 本書}}",
   "libraryImportResultSkippedOnlyMessage": "{skippedCount, plural, =1{1 本已存在，已跳過} other{{skippedCount} 本已存在，已跳過}}",
+  "libraryImportFolderFailedMessage": "無法讀取這個資料夾，請確認已授權存取後再試一次",
   "layoutPresetBookPickerTitleMulti": "選擇書籍（可複選）",
   "layoutPresetBookPickerTitleSingle": "選擇書籍",
   "layoutPresetBookPickerSearchHint": "搜尋書名或作者",

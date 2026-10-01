@@ -150,4 +150,30 @@ void main() {
     expect(parseFontFamilyName(Uint8List.fromList([1, 2, 3])), isNull);
     expect(parseFontFamilyName(Uint8List(0)), isNull);
   });
+
+  group('stripFontFileExtension', () {
+    test('去掉最後一段副檔名', () {
+      expect(stripFontFileExtension('KingHwa.ttf'), 'KingHwa');
+      expect(stripFontFileExtension('My.Font.Name.otf'), 'My.Font.Name');
+    });
+
+    test('沒有副檔名或只有開頭的點時原樣回傳', () {
+      expect(stripFontFileExtension('NoExtension'), 'NoExtension');
+      expect(stripFontFileExtension('.hidden'), '.hidden');
+    });
+  });
+
+  group('resolveFontFamilyName', () {
+    test('解析得到家族名稱時採用解析結果，不管檔名', () {
+      final bytes = File('test/fixtures/sample.ttf').readAsBytesSync();
+
+      expect(resolveFontFamilyName(bytes, 'whatever.ttf'), 'KingHwa_OldSong');
+    });
+
+    test('解析失敗（位元組不足以構成合法字型）時退回檔名去副檔名', () {
+      final junk = Uint8List.fromList([1, 2, 3]);
+
+      expect(resolveFontFamilyName(junk, 'OtherFamily.ttf'), 'OtherFamily');
+    });
+  });
 }
