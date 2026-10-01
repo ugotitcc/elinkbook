@@ -36,6 +36,22 @@
 | 範圍排除 | `font_management_screen` 的探測與重新連結屬 Issue 3；`_pickAndRelink` 在 `importService == null` 回傳 `null` 的到不了路徑不處理 |
 | 測試 | 狀態轉移與競態 guard 搬到純測試 `open_book_flow_test.dart`（計時用替身）；`reader_screen_test` 只留接線類，重疊舊測試遷移後刪除並於記錄列出對應；補「relink 後再失敗會重新探測」 |
 
+## Issue 3 設計決策（`/grill-with-docs` 定案）
+
+| 決策 | 結論 |
+|---|---|
+| 範圍 | 字型重新連結搬出 Widget、與書籍 `relinkBook` 對齊、授權呼叫集中；批次上傳只把授權那段與家族名稱解析換成共用呼叫，其餘不動 |
+| 字型重新連結 module | `CustomFontRelinker`（`app/lib/reader/custom_font_relinker.dart`），`relink(font, picked) → FontRelinkResult`，密封類別 `FontRelinkSuccess`／`FontRelinkFamilyMismatch`／`FontRelinkFailed`；內部做家族名稱解析、比對、授權（盡力而為）、`updateUri`。選檔器、SnackBar、`_relinkingIds` 按鈕停用、探測標示更新與重新載入留在 `FontManagementScreen` |
+| 授權集中 | `app/lib/storage/storage_permission.dart`：`Future<bool> persistReadAccess(String uri)`，`PlatformException` 轉成 `false`，內部用既有 `kBookMetadataChannel`。只集中「呼叫與例外轉換」，四處失敗處置仍由各呼叫端決定（書籍複製、資料夾中止、字型忽略×2） |
+| 家族名稱規則 | 抽出 `resolveFontFamilyName(bytes, fileName)` 放進 `font_name_parser.dart`，上傳與重新連結共用；`_stripExtension` 因 `displayName` 仍需要而保留 |
+| 行為調整 ①（字型） | `FontRelinkFailed` 也顯示 SnackBar，重用 `readerStorageRelinkFailed`，不改鍵名、不動 ARB |
+| 行為調整 ②（資料夾匯入） | `ImportResult` 新增 `failure`（`folderAccessDenied`／`folderListingFailed`），涵蓋授權失敗、列舉失敗、列舉為 null 三條路徑；`showImportResultSnackBar` 在 `failure` 不為 null 時只顯示一則共用訊息（新增 1 個 ARB 鍵，同步四份 ARB） |
+| 其他假設 | `FontRelinkFamilyMismatch` 時不呼叫授權、不改記錄（維持現狀） |
+| 不納入 | 資料夾裡合法地沒有可匯入的書（不是失敗）；`pickAndImportFolder`／`pickAndImportFiles` 的「選擇器例外一律靜默」；批次上傳時資料庫寫入失敗的回饋 |
+| 詞條與 ADR | `CONTEXT.md` 新增「持久化授權」；不寫 ADR（差異已由 ADR 0021、0029 說明） |
+| 與 Issue 4 | 新目錄 `app/lib/storage/`，Issue 4 之後把探測搬進同一目錄（`storage_access_probe.dart`），兩者互不依賴 |
+| 測試 | 純測試：`CustomFontRelinker`（家族不符時不呼叫授權也不改記錄、授權失敗仍繼續、`updateUri` 拋例外回傳 failed、呼叫順序）、`resolveFontFamilyName`、`persistReadAccess`、`importFolder` 三條失敗路徑；`font_management_screen_test` 只留接線類，規則類遷出後刪除並於記錄列出對應；新增「字型重新連結失敗顯示 SnackBar」「資料夾匯入失敗顯示 SnackBar」 |
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
