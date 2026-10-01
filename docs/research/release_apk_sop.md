@@ -15,6 +15,7 @@ Google Play 上架（`.aab`）見 `docs/research/google_play_release_sop.md`。�
 | 產物 | release APK，依 ABI 拆開（`--split-per-abi`） |
 | 簽章金鑰 | 發佈金鑰（release key），只簽 APK |
 | 散布位置 | GitHub Releases（只放 Release 的 repo，原始碼不公開） |
+| GitHub repo | `huthief/elinkbook`（公開） |
 | 下載入口 | 官網 `site/index.html` 的「下載 Android APK」按鈕 |
 | F-Droid | 尚未啟動，見第 5 節 |
 | 版本號 | 與 Play 共用 `app/pubspec.yaml` 的 `version` |
@@ -115,10 +116,9 @@ debug 金鑰
 
 ### 1.5 建立 GitHub Release 專用 repo
 
-1. 在 GitHub 建立一個 repo，名稱待定，下面用 `<owner>/<repo>` 代稱。
+1. 在 GitHub 建立 repo `huthief/elinkbook`（已建立）。
 2. 設為公開（Public）。私有 repo 的 Release 無法讓未登入的人下載。
 3. 只放 README，不放原始碼。
-4. 把 `<owner>/<repo>` 記在這份 SOP 的第 0 節，補上「GitHub repo」一列。
 
 ---
 
@@ -273,12 +273,12 @@ APK 與 Play 版共用同一個 tag，因為是同一份程式碼。
 用指令（在 `app/build/release-apk/` 下執行）：
 
 ```bash
-gh release create "v1.0.1+2" --repo <owner>/<repo> --title "elinkBook 1.0.1" --notes "更新內容見下方。商店版與 APK 版無法互相覆蓋安裝。" elinkbook-*.apk SHA256SUMS.txt
+gh release create "v1.0.1+2" --repo huthief/elinkbook --title "elinkBook 1.0.1" --notes "更新內容見下方。商店版與 APK 版無法互相覆蓋安裝。" elinkbook-*.apk SHA256SUMS.txt
 ```
 
 或用網頁：
 
-1. 打開 `https://github.com/<owner>/<repo>/releases/new`。
+1. 打開 `https://github.com/huthief/elinkbook/releases/new`。
 2. Tag 輸入 `v1.0.1+2`，選「Create new tag」。
 3. 標題寫 `elinkBook 1.0.1`。
 4. 說明欄寫：更新內容、最低系統版本（Android 11）、**商店版與 APK 版無法互相覆蓋安裝**、`SHA256SUMS.txt` 的內容。
@@ -309,7 +309,7 @@ gh release create "v1.0.1+2" --repo <owner>/<repo> --title "elinkBook 1.0.1" --n
 把 `href` 改成：
 
 ```html
-<a href="https://github.com/<owner>/<repo>/releases/latest" class="btn-download-app" target="_blank" rel="noopener noreferrer">
+<a href="https://github.com/huthief/elinkbook/releases/latest" class="btn-download-app" target="_blank" rel="noopener noreferrer">
 ```
 
 用 `releases/latest` 的好處：之後發新版，按鈕連結不用再改。
@@ -328,7 +328,7 @@ gh release create "v1.0.1+2" --repo <owner>/<repo> --title "elinkBook 1.0.1" --n
 
 ### 4.4 頁尾連結
 
-首頁頁尾「開源專案與回饋」目前連到 `https://github.com`（佔位，約第 987 行）。要改成 `https://github.com/<owner>/<repo>`，或改成正確的回饋入口。
+首頁頁尾「開源專案與回饋」目前連到 `https://github.com`（佔位，約第 987 行）。`huthief/elinkbook` 只放 Release、不放原始碼，不能當「開源專案」。要改成正確的回饋入口，或改掉文字。
 
 ### 4.5 部署
 
