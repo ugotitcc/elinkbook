@@ -11,7 +11,7 @@
 ### 1.1 系統需求
 - **Synology NAS**：DSM 7.0 或以上版本。
 - **套件**：已於 DSM 套件中心安裝 **Container Manager**（即 DSM 7 版本的 Docker）。
-- **PocketBase 版本**：必須 **≥ v0.23**（elinkBook checkpoint 同步引擎依賴 Batch API `/api/batch`）。本 SOP 示範使用 **v0.40.04**（自架時亦可使用當時最新穩定版）。
+- **PocketBase 版本**：必須 **≥ v0.23**（elinkBook checkpoint 同步引擎依賴 Batch API `/api/batch`）。本 SOP 示範使用 **v0.40.4**（自架時亦可使用當時最新穩定版）。
 
 ### 1.2 目錄結構規劃 (File Station)
 建議在 Synology 預設的 `docker` 共用資料夾下建立專用目錄 `/volume1/docker/elinkbook-pocketbase`：
@@ -62,7 +62,7 @@
 #### 檔案 A: `Dockerfile`
 ```dockerfile
 FROM alpine:3.20
-ARG PB_VERSION=0.40.04
+ARG PB_VERSION=0.40.4
 
 RUN apk add --no-cache unzip ca-certificates wget
 
@@ -239,7 +239,7 @@ PocketBase 的所有資料庫與設定皆儲存於 `pb_data/data.db`。透過 DS
 
 ## 7. 步驟六：PocketBase 版本升級（更版）與回滾 SOP
 
-當 PocketBase 官方發布新版本（例如由 `v0.39.10` 升級至 `v0.40.04` 或更後續版本）時，請依照下列標準維運流程進行平滑升級。
+當 PocketBase 官方發布新版本（例如由 `v0.39.10` 升級至 `v0.40.4` 或更後續版本）時，請依照下列標準維運流程進行平滑升級。
 
 > [!IMPORTANT]
 > **資料安全第一原則**：PocketBase 啟動時會自動針對 SQLite 資料庫執行 schema 與系統遷移。在執行版本升級前，**務必先停用容器並對 `pb_data` 進行完整冷備份**，避免新版本遷移後若需降版造成資料庫不相容。
@@ -264,13 +264,13 @@ PocketBase 的所有資料庫與設定皆儲存於 `pb_data/data.db`。透過 DS
 
 開啟 File Station 文字編輯器或透過 SSH 修改 `/volume1/docker/elinkbook-pocketbase/Dockerfile`：
 
-將版本變數改為目標新版號（以升級至 `0.40.04` 為例）：
+將版本變數改為目標新版號（以升級至 `0.40.4` 為例）：
 ```dockerfile
 # 原設定：
 # ARG PB_VERSION=0.39.10
 
 # 修改為新版號：
-ARG PB_VERSION=0.40.04
+ARG PB_VERSION=0.40.4
 ```
 儲存並關閉 `Dockerfile`。
 
@@ -284,7 +284,7 @@ ARG PB_VERSION=0.40.04
    - 若為手動乾淨重建流程：
      1. 前往 **映像檔 (Image)**，刪除舊有的 `elinkbook-pocketbase_pocketbase` 或無標記映像檔（避免舊層快取殘留）。
      2. 回到 **專案 (Project)**，選取 `elinkbook-pocketbase`，點擊 **操作 → 啟動**（Container Manager 偵測到 Dockerfile 變更會自動重新觸發 `docker build` 並下載新版 PocketBase zip）。
-4. 觀察建置與啟動日誌，確認終端輸出 `pocketbase_0.40.04_linux_amd64.zip` 下載解壓縮完成，且狀態轉為綠色「執行中 (Running)」。
+4. 觀察建置與啟動日誌，確認終端輸出 `pocketbase_0.40.4_linux_amd64.zip` 下載解壓縮完成，且狀態轉為綠色「執行中 (Running)」。
 
 ### 7.4 方式二：透過 SSH 終端機快速重新建置
 
@@ -313,7 +313,7 @@ docker compose logs -f
 
 - [ ] **1. 版本號確認**：
   - 瀏覽器登入 Admin 後台 `https://pocketbase.yourdomain.com/_/`。
-  - 檢視後台左下角或右上角資訊，確認目前顯示版本已更新為 `v0.40.04`。
+  - 檢視後台左下角或右上角資訊，確認目前顯示版本已更新為 `v0.40.4`。
 - [ ] **2. Health Check API 測試**：
   - 執行 `curl -i https://pocketbase.yourdomain.com/api/health`，確認回傳 `HTTP/2 200 OK` 且帶有 `{"code":200,"message":"API is healthy."}`。
 - [ ] **3. 關鍵 Batch API 啟用狀態檢查**：
@@ -388,5 +388,6 @@ curl -X POST https://pocketbase.yourdomain.com/api/batch \
 ---
 
 ## 9. 相關參考文件
+- [`docs/research/oracle_cloud_pocketbase_sop.md`](oracle_cloud_pocketbase_sop.md)：Oracle Cloud Free Tier 雲端主機與 Traefik SSL 部署手冊
 - [`docs/archive/2026-08-05-epic-8-sync/pocketbase-self-hosting.md`](../archive/2026-08-05-epic-8-sync/pocketbase-self-hosting.md)：PocketBase 原始架設說明與開發環境規格
 - [`docs/archive/2026-08-05-epic-8-sync/spec.md`](../archive/2026-08-05-epic-8-sync/spec.md)：elinkBook 雲端同步 Protocol 與 Collection 欄位定義
