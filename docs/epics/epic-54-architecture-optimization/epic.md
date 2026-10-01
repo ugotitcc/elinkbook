@@ -21,6 +21,21 @@
 | 測試 | 規則類搬到純測試；接線類留在 widget 層 |
 | 載入失敗 | 任一邊失敗該邊視為空集合，仍組出 `AvailableFonts` |
 
+## Issue 5 設計決策（`/grill-with-docs` 定案）
+
+| 決策 | 結論 |
+|---|---|
+| 命名 | 類別 `OpenBookFlow`，檔案 `app/lib/reader/open_book_flow.dart`，`CONTEXT.md` 詞條「開書流程」 |
+| 範圍 | 控制器：持有狀態並編排探測與 relink；`l10n`、SnackBar、選檔器、引擎分派（`_resolveEpubEngineDispatch` 重跑）留在 `ReaderScreen` |
+| 狀態 | 密封類別 `Loading`／`Probing`／`Rendered`／`Failed(message, probeResult)`／`Relinking`；`Relinking` 期間的視圖錯誤與逾時一律忽略 |
+| 通知方式 | 繼承 `ChangeNotifier`，Widget 加 listener 並 `setState`；`dispose()` 取消計時器、捨棄之後才回來的探測結果 |
+| 逾時 | module 持有 30 秒計時器，計時來源注入；成功、失敗取消，重開重啟 |
+| 注入的依賴 | 探測函式、relink 函式、計時來源；不直接 import `foliate_native_bridge`，與 Issue 4 互不依賴 |
+| `relink(picked)` 回傳 | `reopened(newPath)`／`failed(reason)`／`cancelled`；例外一律轉 `failed` |
+| 行為調整（唯一一處） | `content://` 書籍開書逾時也做存取探測，與「視圖回報錯誤」路徑一致 |
+| 範圍排除 | `font_management_screen` 的探測與重新連結屬 Issue 3；`_pickAndRelink` 在 `importService == null` 回傳 `null` 的到不了路徑不處理 |
+| 測試 | 狀態轉移與競態 guard 搬到純測試 `open_book_flow_test.dart`（計時用替身）；`reader_screen_test` 只留接線類，重疊舊測試遷移後刪除並於記錄列出對應；補「relink 後再失敗會重新探測」 |
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
