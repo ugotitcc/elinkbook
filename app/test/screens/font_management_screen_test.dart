@@ -671,24 +671,8 @@ void main() {
       expect(relink(id), findsNothing);
     });
 
-    testWidgets('持久化授權失敗不中止：仍然更新 URI（比照 ADR 0021）', (tester) async {
-      mockPersistPermission(throws: true);
-      final id = await insertFont('舊字型', 'KingHwa_OldSong', 'content://old/font');
-      probeByUri['content://old/font'] = StorageAccessProbeResult.fileNotFound;
-      await pumpTall(
-        tester,
-        pickSingleFontFile: () async =>
-            (uri: 'content://new/font', name: 'KingHwa.ttf', bytes: sampleFontBytes),
-      );
-
-      await tester.tap(relink(id));
-      await tester.pumpAndSettle();
-
-      expect((await repository.listAll()).single.fontUri, 'content://new/font');
-      expect(badge(id), findsNothing);
-    });
-
-    testWidgets('updateUri 寫入失敗：不拋出未捕捉例外、記錄不變、標示仍在、按鈕恢復可用（程式審查 M-1）',
+    testWidgets(
+        'updateUri 寫入失敗：不拋出未捕捉例外、顯示失敗 SnackBar、記錄不變、標示仍在、按鈕恢復可用（程式審查 M-1；epic-54 Issue 3）',
         (tester) async {
       mockPersistPermission();
       repository.updateUriError = StateError('disk full');
@@ -705,6 +689,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
+      expect(find.text('重新連結失敗，請再試一次'), findsOneWidget);
       repository.updateUriError = null;
       expect((await repository.listAll()).single.fontUri, 'content://old/font');
       expect(badge(id), findsOneWidget);

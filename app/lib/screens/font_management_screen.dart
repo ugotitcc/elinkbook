@@ -5,15 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
-import '../library/library_repository.dart';
 import '../reader/app_font.dart';
 import '../reader/custom_font.dart';
+import '../reader/custom_font_relinker.dart';
 import '../reader/custom_fonts_repository.dart';
 import '../reader/downloadable_font_store.dart';
 import '../reader/font_download_catalog.dart';
 import '../reader/font_name_parser.dart';
 import '../reader/foliate_native_bridge.dart'
     show StorageAccessProbeResult, probeStorageAccess;
+import '../storage/storage_permission.dart';
 
 /// 單檔字型選擇器（epic-15-storage-permission Issue 3：重新連結用）。
 /// 回傳選取的 URI、檔名與位元組（位元組用來解析字型家族名稱）；使用者取消
@@ -80,6 +81,10 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
 
   /// 重新連結處理中的字型 id：該列的動作停用，避免連點重複開選擇器。
   final Set<int> _relinkingIds = {};
+
+  /// 字型重新連結規則（家族名稱比對、授權、更新 URI）；畫面只負責選檔與顯示。
+  late final CustomFontRelinker _relinker =
+      CustomFontRelinker(repository: widget.repository);
   // 重新命名對話框使用的 TextEditingController，交由本 State 生命週期保管
   // （比照 notes_bottom_sheet.dart 既有先例）：不在 showDialog 呼叫結束後
   // 立即 dispose——showDialog 回傳的 Future 在 Navigator.pop() 當下就完成，
@@ -467,8 +472,7 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
     try {
       final parsedFamilyNames = <String>[];
       for (final file in validFiles) {
-        final parsed = parseFontFamilyName(file.bytes!);
-        parsedFamilyNames.add(parsed ?? _stripExtension(file.name));
+        parsedFamilyNames.add(resolveFontFamilyName(file.bytes!, file.name));
       }
 
       // 內建 5 款字型的 family name 不存在於 custom_fonts 表（該表只存自訂
@@ -492,16 +496,12 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
       for (final index in outcome.toInsertIndexes) {
         final file = validFiles[index];
         final uri = file.identifier!;
-        try {
-          await kBookMetadataChannel
-              .invokeMethod<void>('takePersistableUriPermission', {'uri': uri});
-        } on PlatformException {
-          // 部分文件提供者不保證核發可持久化授權（比照書籍匯入既有慣例，
-          // book_import_service_impl.dart:201-207）；字型檔案本身刻意不做
-          // 落地複本退路（ADR 0021），僅盡力而為，不因此中止整批上傳。
-        }
+        // 部分文件提供者不保證核發持久化授權（見 CONTEXT.md「持久化授權」）；
+        // 字型檔案刻意不做落地複本退路（ADR 0021），僅盡力而為，結果忽略，
+        // 不因此中止整批上傳。
+        await persistReadAccess(uri);
         await widget.repository.insert(CustomFont(
-          displayName: _stripExtension(file.name),
+          displayName: stripFontFileExtension(file.name),
           familyName: parsedFamilyNames[index],
           fontUri: uri,
         ));
@@ -522,10 +522,9 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
     }
   }
 
-  /// 重新連結字型檔案（epic-15-storage-permission Issue 3）：選檔 → 比對家族
-  /// 名稱 → 持久化授權（盡力而為）→ 更新 URI。家族名稱不同就拒絕，不持久化
-  /// 授權、不改記錄。單書版面偏好以家族名稱引用字型，所以更新 URI 後所有使用
-  /// 這款字型的書自動恢復，不需要遷移。
+  /// 重新連結字型檔案（epic-15-storage-permission Issue 3；規則自
+  /// epic-54 Issue 3 起收在 [CustomFontRelinker]）：選檔 → 交給 relinker →
+  /// 依結果顯示。成功時更新探測標示並重新載入清單。
   Future<void> _relinkFont(CustomFont font) async {
     final id = font.id;
     if (id == null || _relinkingIds.contains(id)) return;
@@ -536,42 +535,31 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
       // 選檔期間使用者可能已離開畫面：不再解析、不持久化授權、不寫資料庫
       if (picked == null || !mounted) return;
 
-      // 家族名稱解析規則與批次上傳一致：解析失敗退回檔名（去副檔名）
-      final pickedFamily =
-          parseFontFamilyName(picked.bytes) ?? _stripExtension(picked.name);
-      if (pickedFamily != font.familyName) {
-        if (!mounted) return;
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(
-            content: Text(l10n.fontManagementFamilyMismatchMessage),
-          ));
-        return;
-      }
-
-      try {
-        await kBookMetadataChannel.invokeMethod<void>(
-            'takePersistableUriPermission', {'uri': picked.uri});
-      } on PlatformException {
-        // 比照批次上傳與 ADR 0021：字型檔不做落地複本退路，授權盡力而為，
-        // 失敗不中止重新連結。
-      }
-      try {
-        await widget.repository.updateUri(id, picked.uri);
-      } catch (e) {
-        // 資料庫寫入失敗（機率很低）：記錄後結束，記錄與標示維持原樣，
-        // 按鈕由 finally 恢復，使用者可以再試一次（epic-15-storage-permission
-        // Issue 3 程式審查 M-1）。
-        debugPrint('Failed to relink custom font: $e');
-        return;
-      }
+      final result = await _relinker.relink(font, picked);
       if (!mounted) return;
-      setState(() => _probeResults[id] = StorageAccessProbeResult.readable);
-      await _loadFonts();
+      switch (result) {
+        case FontRelinkSuccess():
+          setState(() => _probeResults[id] = StorageAccessProbeResult.readable);
+          await _loadFonts();
+        case FontRelinkFamilyMismatch():
+          _showRelinkSnackBar(
+              AppLocalizations.of(context)!.fontManagementFamilyMismatchMessage);
+        case FontRelinkFailed():
+          // epic-54 Issue 3：過去只 debugPrint，使用者看不到；改與書籍重新連結
+          // 一致，重用既有文字。
+          _showRelinkSnackBar(
+              AppLocalizations.of(context)!.readerStorageRelinkFailed);
+      }
     } finally {
       if (mounted) setState(() => _relinkingIds.remove(id));
     }
+  }
+
+  /// 先收掉上一則再顯示，連續失敗時新結果不必排在前一則之後。
+  void _showRelinkSnackBar(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _renameFont(CustomFont font) async {
@@ -690,13 +678,6 @@ String buildUploadResultMessage({
     return l10n.fontManagementUploadAddedOnlyMessage(addedCount);
   }
   return l10n.fontManagementUploadSkippedOnlyMessage(skippedCount);
-}
-
-/// 字型檔名去除副檔名，供 [parseFontFamilyName] 回傳 `null`（解析失敗）時
-/// 的顯示名稱與 family name 退回依據。
-String _stripExtension(String fileName) {
-  final dotIndex = fileName.lastIndexOf('.');
-  return dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
 }
 
 /// 字型檔大小的顯示格式，例如 36034016 → `34.4 MB`。以 1024 × 1024 為 1 MB
