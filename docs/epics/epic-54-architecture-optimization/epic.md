@@ -65,6 +65,21 @@
 | 詞條與 ADR | `CONTEXT.md` 新增「存取探測」；不寫 ADR（只是搬家，沒有新取捨） |
 | 行為變動 | 無，純搬家 |
 
+## Issue 2 設計決策（`/grill-with-docs` 定案）
+
+| 決策 | 結論 |
+|---|---|
+| 範圍 | 確認同步端與雲端匯入端的落差後實際修正：①離線被當成登入失效 ②API 401 被當成一般錯誤 ③下載佇列吞掉登入失效。同步端（epic-53 已對齊）不動 |
+| 形狀 | 兩邊各自保留：同步端用回傳值（`SyncCheckpointResult.sessionExpired`），雲端端用例外（`CloudAuthRequiredException`，因 `listFolder`／`downloadFile` 本來就回傳資料）；`CloudStorageClient` 介面不改 |
+| 詞條 | 不統一。「登入過期」維持專指同步帳號；新增「雲端授權失效」，兩詞條互相註明差異（同步端會清 token 留 email，雲端端不改任何儲存狀態） |
+| 分類規則 | 新增 `cloud_import/cloud_auth_classifier.dart`，兩個 OAuth client 與兩個 storage client 共用，**不**合併兩個 OAuth client。換發 token 端點回 400／401 → 授權失效；網路例外、5xx、429 → 暫時性。Drive／Graph API 回 401 → 授權失效，其他非 200 → 一般例外 |
+| `ensureValidAccessToken` | 簽章不變（`Future<String?>`）。`null` 專指需重新連結（未連結或被撤銷）；暫時性情況改為拋出一般例外，呼叫端本來就歸為網路錯誤 |
+| 下載佇列 | `QueuedDownloadJob` 新增 `bool isAuthFailure(Object error)`（預設 `false`），`CloudDownloadJob` 覆寫為 `error is CloudAuthRequiredException`；`DownloadQueueItem` 新增 `needsReauth`，狀態仍為 `failed`。控制器維持來源無關，OPDS 不受影響；重試成功時重設旗標 |
+| 使用者介面 | 面板對 `needsReauth` 項目顯示「需重新連結帳號」取代「失敗」（新增 1 個 ARB 鍵，四份同步），保留重試鈕。瀏覽畫面維持文字、不加按鈕；兩處都不加「前往重新連結」按鈕（需牽動 `CloudAccountSettingsScreen` 的依賴建構，另立後續 Issue） |
+| 行為調整 | ①離線瀏覽雲端不再顯示「請重新連結」，改顯示網路錯誤 ②API 401 顯示重新連結而非網路錯誤 ③下載佇列失敗項目標示需重新連結 |
+| 測試 | 純測試：分類規則；兩個 OAuth client 各補斷網拋一般例外；兩個 storage client 各補 API 401；`download_queue_controller_test` 補 `needsReauth` 設定與重設；`cloud_download_job` 的 `isAuthFailure`。widget：面板新文字、瀏覽畫面離線顯示網路錯誤而非 reauth（翻轉現有行為）。被取代的舊測試刪除並於記錄列出對應 |
+| ADR | 不寫（沒有難以回頭的取捨） |
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
