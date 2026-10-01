@@ -58,3 +58,11 @@
 - PR #302（`epic-54/issue-1-available-fonts` → `main`）已合併。Issue 1 完成。Issue 2～6 尚未設計，動手前各自須先 `/grill-with-docs`；本 Epic 維持開發中，待所有 Issue 完成或決定收尾後再歸檔。
 
 **2026-10-01 Issue 5 實作完成**：新增 `OpenBookFlow`（`app/lib/reader/open_book_flow.dart`，`ChangeNotifier`＋密封類別狀態 `Loading`／`Probing`／`Rendered`／`Failed`／`Relinking`）；`ReaderScreen` 刪除 `_RenderState` 與 6 個狀態欄位（`_state`、`_errorMessage`、`_probeResult`、`_isProbingAccess`、`_isRelinking`、`_openBookTimeoutTimer`），`_activeFilePath` 改為 flow 的 getter。細部調整（與設計表的差異）：`Failed` 存 `source`／`viewMessage`／`probeResult` 而非 `message`；`relink()` 接收選檔 callback 而非已選好的檔案，使選檔期間仍有狀態可停用按鈕。行為調整：`content://` 書籍開書逾時也做存取探測。測試：純測試 34 個（`open_book_flow_test.dart`）；`reader_screen_test` 283 個（遷出 7 個、翻轉 1 個為 3 個、新增 1 個、另更新「重新開書後再次卡住時」期望為新行為）。「relink 後再失敗會重新探測」既有 widget 測試已涵蓋，不另補。驗證：相關 4 檔 394/394 通過；全套 `flutter test` 3251 通過、1 略過；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS。自審報告見 `reviews/review-code-issue-5.md`（不進版控），0 Critical／0 Important／3 Minor（defer）。待發 PR。
+
+**2026-10-01 程式審查與修訂**（報告 `reviews/review-code-issue-5.md`，不進版控；獨立審查員，0 Critical／0 Important／5 Minor，結論 Ready to merge）
+
+- M-1（行為差異，不改程式，記錄於此與 PR 描述）：`onRendered` 重複呼叫不再 `setState`（只有第一次重繪）；失敗後晚到的 `onRendered` 不再把錯誤畫面翻回已渲染。前者是無害的效能收斂，後者因失敗時閱讀視圖已被移出樹，實務上不會發生，且符合「失敗後不復活」語意。
+- M-2：`_FakeTimer` 新增 `forceFire()`（無視取消狀態直接呼叫 callback），補 4 個測試直接驗證 `_onTimeout` 的狀態 guard（Rendered 後、Failed 後、dispose 後）與「重複 `start()` 先取消舊計時器」。變異驗證：暫時拿掉 `_onTimeout` 的 guard，3 個新測試如預期失敗，已還原。原兩個空轉測試保留（仍驗證視圖錯誤部分）。
+- M-3：`app_zh_TW.arb` 的 `readerFailedToLoadBookMessage` 描述改為指向 `OpenBookFailed.viewMessage`；以 `flutter gen-l10n` 重新產生，`app_localizations.dart` 只有該行描述變動。
+- M-4：`OpenBookFlow` 類別註解補上指向 epic-27 `bugfix-repro.md` 與 epic-18 Issue 33 的追溯路徑。
+- M-5：`isFailed` 改為 `failure != null` 推導，消除兩個 getter 各自維護的不變式風險。

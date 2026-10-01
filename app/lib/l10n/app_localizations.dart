@@ -2126,7 +2126,7 @@ abstract class AppLocalizations {
   /// **'不支援的檔案格式'**
   String get readerUnsupportedFormatMessage;
 
-  /// 開書失敗且 _errorMessage 為 null 時的回退錯誤文字
+  /// 開書失敗且視圖沒有回報錯誤訊息（OpenBookFailed.viewMessage 為 null）時的回退錯誤文字
   ///
   /// In zh_TW, this message translates to:
   /// **'無法載入書籍'**

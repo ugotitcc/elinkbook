@@ -24,6 +24,14 @@ class _FakeTimer implements Timer {
     _callback();
   }
 
+  /// 模擬「計時器剛好在 cancel 之前已把 callback 排進事件佇列」：無視取消狀態
+  /// 直接呼叫 callback，用來驗證 [OpenBookFlow] 自己的狀態 guard，而不是只
+  /// 靠 cancel() 擋住。
+  void forceFire() {
+    fired = true;
+    _callback();
+  }
+
   @override
   void cancel() => cancelled = true;
 
@@ -138,6 +146,37 @@ void main() {
 
       expect(flow.state, isA<OpenBookRendered>());
       expect(probeCalls, isEmpty);
+    });
+
+    test('Rendered 之後即使逾時 callback 仍被呼叫，狀態也不變（guard 本身）', () async {
+      final flow = buildFlow()..start();
+      flow.onRendered();
+
+      timers.single.forceFire();
+      await settle();
+
+      expect(flow.state, isA<OpenBookRendered>());
+      expect(probeCalls, isEmpty);
+    });
+
+    test('Failed 之後即使逾時 callback 仍被呼叫，不覆蓋失敗來源', () async {
+      final flow = buildFlow(filePath: '/data/books/a.epub')..start();
+      flow.onViewError('boom');
+      final before = flow.state;
+
+      timers.single.forceFire();
+
+      expect(flow.state, same(before));
+    });
+
+    test('重複呼叫 start：先取消舊計時器再建立新的', () {
+      final flow = buildFlow()..start();
+
+      flow.start();
+
+      expect(timers, hasLength(2));
+      expect(timers.first.cancelled, isTrue);
+      expect(timers.last.cancelled, isFalse);
     });
   });
 
@@ -306,6 +345,19 @@ void main() {
       flow.onViewError('晚到');
       flow.onRendered();
       flow.dispose();
+    });
+
+    test('dispose 後即使逾時 callback 仍被呼叫：不探測、不通知', () async {
+      final flow = buildFlow()..start();
+      var notifications = 0;
+      flow.addListener(() => notifications++);
+
+      flow.dispose();
+      timers.single.forceFire();
+      await settle();
+
+      expect(probeCalls, isEmpty);
+      expect(notifications, 0);
     });
   });
 

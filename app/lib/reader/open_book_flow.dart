@@ -137,6 +137,10 @@ typedef OpenBookTimerFactory = Timer Function(
 /// 持有從載入、失敗探測、逾時，到重新連結後重新開書的整段狀態與規則；
 /// `ReaderScreen` 只負責把視圖事件餵進來、依狀態畫畫面。`l10n` 文字、
 /// SnackBar、選檔器與 EPUB 引擎分派仍屬 `ReaderScreen`。
+///
+/// 開書逾時哨兵的由來（iReader Ocean 4 Plus 永遠停在載入指示器、慢速裝置
+/// 30 秒調整）見 `docs/epics/epic-27-reader-device-compat/reviews/
+/// bugfix-repro.md` 與 epic-18-reader-device-qa Issue 33。
 class OpenBookFlow extends ChangeNotifier {
   OpenBookFlow({
     required String filePath,
@@ -169,8 +173,9 @@ class OpenBookFlow extends ChangeNotifier {
 
   bool get isRendered => _state is OpenBookRendered;
 
-  /// 失敗或重新連結處理中：畫面顯示錯誤視圖。
-  bool get isFailed => _state is OpenBookFailed || _state is OpenBookRelinking;
+  /// 失敗或重新連結處理中：畫面顯示錯誤視圖。由 [failure] 推導，兩者永遠
+  /// 同步（`ReaderScreen` 在 `isFailed` 為真時以 `failure!` 取值）。
+  bool get isFailed => failure != null;
 
   /// 目前的失敗資訊；非失敗狀態為 null。
   OpenBookFailed? get failure => switch (_state) {
