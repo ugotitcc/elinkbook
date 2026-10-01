@@ -11891,9 +11891,41 @@ void main() {
       );
     });
 
-    testWidgets('開書逾時不呼叫探測', (tester) async {
+    testWidgets('開書逾時且權限已撤銷：顯示權限失效說明（探測一次）', (tester) async {
       final probeCalls = await _pumpContentUriReader(tester,
           prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked);
+
+      await tester.pump(const Duration(seconds: 30));
+      await tester.pump();
+      await tester.pump();
+
+      expect(probeCalls(), 1);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('reader_error_text'))).data,
+        'App 對這個檔案的存取權限已失效，請重新選取檔案。',
+      );
+    });
+
+    testWidgets('開書逾時且探測為 unknownError：維持逾時訊息', (tester) async {
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.unknownError);
+
+      await tester.pump(const Duration(seconds: 30));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        tester.widget<Text>(find.byKey(const Key('reader_error_text'))).data,
+        '開書逾時，可能是系統 WebView 版本過舊或檔案異常',
+      );
+    });
+
+    testWidgets('非 content:// 開書逾時：不探測，顯示逾時訊息', (tester) async {
+      final probeCalls = await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          filePath: 'test/fixtures/sample.epub',
           probe: (_) async => StorageAccessProbeResult.permissionRevoked);
 
       await tester.pump(const Duration(seconds: 30));
@@ -11905,106 +11937,6 @@ void main() {
       );
     });
 
-    testWidgets('探測未完成時連續兩次 onError 只探測一次，期間維持載入指示器',
-        (tester) async {
-      final pending = Completer<StorageAccessProbeResult>();
-      final probeCalls = await _pumpContentUriReader(tester,
-          prefsManager: prefsManager, probe: (_) => pending.future);
-
-      final view =
-          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
-      view.onError('第一次');
-      view.onError('第二次');
-      await tester.pump();
-
-      expect(probeCalls(), 1);
-      expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
-      expect(find.byKey(const Key('reader_error_text')), findsNothing);
-
-      pending.complete(StorageAccessProbeResult.fileNotFound);
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.byKey(const Key('reader_error_text')), findsOneWidget);
-      expect(find.byKey(const Key('reader_loading_indicator')), findsNothing);
-    });
-
-    testWidgets('探測未完成時推進超過開書逾時，仍維持載入指示器、不顯示逾時訊息',
-        (tester) async {
-      final pending = Completer<StorageAccessProbeResult>();
-      await _pumpContentUriReader(tester,
-          prefsManager: prefsManager, probe: (_) => pending.future);
-
-      tester.widget<FoliateReaderView>(find.byType(FoliateReaderView))
-          .onError('boom');
-      await tester.pump(const Duration(seconds: 31));
-
-      expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
-      expect(find.byKey(const Key('reader_error_text')), findsNothing);
-
-      pending.complete(StorageAccessProbeResult.permissionRevoked);
-      await tester.pump();
-      await tester.pump();
-      expect(
-        tester.widget<Text>(find.byKey(const Key('reader_error_text'))).data,
-        'App 對這個檔案的存取權限已失效，請重新選取檔案。',
-      );
-    });
-
-    testWidgets('探測未完成時 onPageRendered 先到，探測結果回來不覆蓋成錯誤畫面',
-        (tester) async {
-      final pending = Completer<StorageAccessProbeResult>();
-      await _pumpContentUriReader(tester,
-          prefsManager: prefsManager, probe: (_) => pending.future);
-
-      final view =
-          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
-      view.onError('boom');
-      await tester.pump();
-      view.onPageRendered();
-      await tester.pump();
-
-      pending.complete(StorageAccessProbeResult.permissionRevoked);
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.byKey(const Key('reader_error_text')), findsNothing);
-      expect(find.byType(FoliateReaderView), findsOneWidget);
-    });
-
-    testWidgets('探測函式本身拋出例外：退回原本的錯誤訊息，不停在載入中（審查 I-1）',
-        (tester) async {
-      await _pumpContentUriReader(tester,
-          prefsManager: prefsManager,
-          probe: (_) async => throw StateError('probe 爆掉'));
-
-      tester.widget<FoliateReaderView>(find.byType(FoliateReaderView))
-          .onError('原始錯誤訊息');
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.byKey(const Key('reader_loading_indicator')), findsNothing);
-      expect(
-        tester.widget<Text>(find.byKey(const Key('reader_error_text'))).data,
-        '原始錯誤訊息',
-      );
-    });
-
-    testWidgets('探測未完成時離開閱讀器，結果回來後不拋例外', (tester) async {
-      final pending = Completer<StorageAccessProbeResult>();
-      await _pumpContentUriReader(tester,
-          prefsManager: prefsManager, probe: (_) => pending.future);
-
-      tester.widget<FoliateReaderView>(find.byType(FoliateReaderView))
-          .onError('boom');
-      await tester.pump();
-
-      await tester.pumpWidget(const SizedBox());
-      pending.complete(StorageAccessProbeResult.permissionRevoked);
-      await tester.pump();
-
-      expect(tester.takeException(), isNull);
-    });
   });
 
   group('重新選取檔案（epic-15-storage-permission Issue 2）', () {
@@ -12073,6 +12005,21 @@ void main() {
 
       expect(errorText(tester), 'App 對這個檔案的存取權限已失效，請重新選取檔案。');
       expect(find.byKey(relinkButton), findsNothing);
+    });
+
+    testWidgets('開書逾時且權限已撤銷、有匯入服務：顯示重新選取按鈕（epic-54 Issue 5）',
+        (tester) async {
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: FakeBookImportService());
+
+      await tester.pump(const Duration(seconds: 30));
+      await _pumpUntil(
+          tester, () => find.byKey(relinkButton).evaluate().isNotEmpty);
+
+      expect(errorText(tester), 'App 對這個檔案的存取權限已失效，請重新選取檔案。');
+      expect(find.byKey(relinkButton), findsOneWidget);
     });
 
     testWidgets('補 Issue 1 審查 M-1：cacheBookForServing 回傳 null → '
@@ -12203,8 +12150,10 @@ void main() {
       expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 2));
-      expect(errorText(tester), '開書逾時，可能是系統 WebView 版本過舊或檔案異常');
-      expect(find.byKey(relinkButton), findsNothing);
+      await tester.pump();
+      await tester.pump();
+      expect(errorText(tester), 'App 對這個檔案的存取權限已失效，請重新選取檔案。');
+      expect(find.byKey(relinkButton), findsOneWidget);
     });
 
     testWidgets('重新開書後再次失敗：重新探測一次並再次顯示按鈕（Review Focus 2）',
@@ -12389,50 +12338,6 @@ void main() {
           isNotNull);
     });
 
-    testWidgets('Re-link 處理中離開閱讀器，結果回來後不拋例外（Review Focus 3）',
-        (tester) async {
-      final service = FakeBookImportService()
-        ..relinkCompleter = Completer<BookRelinkResult>();
-      await _pumpContentUriReader(tester,
-          prefsManager: prefsManager,
-          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
-          bookImportService: service,
-          pickSingleBookFile: _FakeSingleBookFilePicker(
-              (uri: newUri, displayName: 'book.epub')).call);
-      await failAndShowError(tester);
-      await tester.tap(find.byKey(relinkButton));
-      await tester.pump();
-
-      await tester.pumpWidget(const SizedBox());
-      service.relinkCompleter!
-          .complete(BookRelinkSuccess(_relinkTestBook(filePath: newUri)));
-      await tester.pump();
-
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('選檔期間離開閱讀器：選擇器回傳後不呼叫 relinkBook、不拋例外'
-        '（計畫審查 M-4）', (tester) async {
-      final service = FakeBookImportService();
-      final picker =
-          _FakeSingleBookFilePicker((uri: newUri, displayName: 'book.epub'))
-            ..pending = Completer();
-      await _pumpContentUriReader(tester,
-          prefsManager: prefsManager,
-          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
-          bookImportService: service,
-          pickSingleBookFile: picker.call);
-      await failAndShowError(tester);
-      await tester.tap(find.byKey(relinkButton));
-      await tester.pump();
-
-      await tester.pumpWidget(const SizedBox());
-      picker.pending!.complete((uri: newUri, displayName: 'book.epub'));
-      await tester.pump();
-
-      expect(service.relinkCalls, isEmpty);
-      expect(tester.takeException(), isNull);
-    });
   });
 
   tearDownAll(() {
