@@ -328,7 +328,7 @@ gh release create "v1.0.1+2" --repo huthief/elinkbook --title "elinkBook 1.0.1" 
 
 ### 4.4 頁尾連結
 
-首頁頁尾「開源專案與回饋」目前連到 `https://github.com`（佔位，約第 987 行）。`huthief/elinkbook` 只放 Release、不放原始碼，不能當「開源專案」。要改成正確的回饋入口，或改掉文字。
+首頁頁尾的「開源專案與回饋」連結已於 2026-10-01 移除（原本連到佔位的 `https://github.com`）。`huthief/elinkbook` 只放 Release、不放原始碼，不能當「開源專案」。日後要加回饋入口，請另行決定。
 
 ### 4.5 部署
 
