@@ -98,4 +98,4 @@
 - M-3（不處理）：訊息「請確認已授權存取」對「已有授權但列舉失敗」稍偏。設計決策本來就選擇兩種失敗共用一則。
 - M-4（不處理）：`storage/storage_permission.dart` 為取得 channel 常數而 import `library_repository.dart`，依賴方向不理想。把常數搬家會動到許多檔案，不屬於本 Issue，可在 Issue 4 一併評估。
 - 實作者自審另列兩項 defer，亦未處理：測試輔助 `mockPersistPermission` 的 `throws` 參數已無人傳 true；`_relinker` 以 `late final` 綁定初建的 repository，實務上到不了。
-- 驗證：修訂後 `flutter analyze` No issues found；`custom_font_relinker_test`、`book_import_service_test`、`font_management_screen_test`、`book_import_picker_helper_test` 共 159 通過。全套 `flutter test` 為修訂前 3275 通過（兩項修訂只動註解順序與 `try` 範圍，未新增或刪除測試）。
+- 驗證：修訂後 `flutter analyze` No issues found；`custom_font_relinker_test`、`book_import_service_test`、`font_management_screen_test`、`book_import_picker_helper_test` 共 159 通過。修訂後重跑全套 `flutter test`：3275 通過、1 略過、0 失敗（兩項修訂只動註解順序與 `try` 範圍，未新增或刪除測試）。待發 PR。
