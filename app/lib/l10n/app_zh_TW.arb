@@ -1564,7 +1564,7 @@
   },
   "readerFailedToLoadBookMessage": "無法載入書籍",
   "@readerFailedToLoadBookMessage": {
-    "description": "開書失敗且 _errorMessage 為 null 時的回退錯誤文字"
+    "description": "開書失敗且視圖沒有回報錯誤訊息（OpenBookFailed.viewMessage 為 null）時的回退錯誤文字"
   },
   "readerStoragePermissionRevokedMessage": "App 對這個檔案的存取權限已失效，請重新選取檔案。",
   "@readerStoragePermissionRevokedMessage": {
