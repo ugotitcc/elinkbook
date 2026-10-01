@@ -65,3 +65,6 @@ store/google-play/**/*.mp4
 docs/epics/epic-9-stats/reviews/
 docs/epics/epic-53-sync-checkpoint-result/reviews/
 docs/epics/epic-54-architecture-optimization/reviews/
+
+# 本機環境變數（樣板見 docker/.env.example）
+docker/.env
