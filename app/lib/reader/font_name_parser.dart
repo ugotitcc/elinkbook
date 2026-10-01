@@ -104,3 +104,16 @@ String _decodeUtf16Be(List<int> bytes) {
   }
   return String.fromCharCodes(units);
 }
+
+/// 字型檔名去除副檔名。供 [resolveFontFamilyName] 退回依據，也供上傳時產生
+/// 預設顯示名稱使用。沒有副檔名、或點在最開頭（例如 `.hidden`）時原樣回傳。
+String stripFontFileExtension(String fileName) {
+  final dotIndex = fileName.lastIndexOf('.');
+  return dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
+}
+
+/// 決定字型檔案的家族名稱：優先採用 [parseFontFamilyName] 解析出的實際家族
+/// 名稱，解析失敗退回檔名去副檔名。批次上傳與重新連結**必須共用這一條規則**
+/// ——否則同一個檔案在兩條路徑可能得出不同家族名稱，重新連結就會誤判不符。
+String resolveFontFamilyName(Uint8List bytes, String fileName) =>
+    parseFontFamilyName(bytes) ?? stripFontFileExtension(fileName);
