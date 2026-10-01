@@ -7,13 +7,29 @@ import 'models/library_enums.dart';
 /// 重複偵測」說明——判定依據是來源 URI/路徑是否與現有書籍的 filePath 相同，
 /// 不比對書名/作者）。呼叫端（`LibraryScreen`）用 [skippedDuplicateCount]
 /// 決定是否顯示「N 本已存在，已跳過」提示。
+/// 一次匯入「整體失敗」的原因（目前只有資料夾匯入會失敗）。單檔匯入失敗仍是
+/// 該檔被略過、不影響其他檔案，不屬於這裡。
+enum ImportFailure {
+  /// 無法取得資料夾的持久化授權（見 CONTEXT.md「持久化授權」），沒有授權就
+  /// 無法列舉內容。
+  folderAccessDenied,
+
+  /// 已有授權，但列舉資料夾內容失敗（原生端拋例外或沒有回傳內容）。
+  folderListingFailed,
+}
+
 class ImportResult {
   final List<Book> importedBooks;
   final int skippedDuplicateCount;
 
+  /// 非 null 代表整次匯入失敗（此時 [importedBooks] 為空）。「資料夾裡本來
+  /// 就沒有可匯入的書」不是失敗，維持 null。
+  final ImportFailure? failure;
+
   const ImportResult({
     required this.importedBooks,
     this.skippedDuplicateCount = 0,
+    this.failure,
   });
 }
 
