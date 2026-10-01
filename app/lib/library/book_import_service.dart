@@ -1,12 +1,6 @@
 import 'models/book.dart';
 import 'models/library_enums.dart';
 
-/// 一次匯入呼叫（[BookImportService.importFiles]／[importFolder]）的結果：
-/// 成功寫入的書籍清單，以及因來源 URI 與圖書庫既有書籍重複而被跳過的檔案數
-/// 量（【診斷修正】見 book_import_service_impl.dart「_importSingleFile 前的
-/// 重複偵測」說明——判定依據是來源 URI/路徑是否與現有書籍的 filePath 相同，
-/// 不比對書名/作者）。呼叫端（`LibraryScreen`）用 [skippedDuplicateCount]
-/// 決定是否顯示「N 本已存在，已跳過」提示。
 /// 一次匯入「整體失敗」的原因（目前只有資料夾匯入會失敗）。單檔匯入失敗仍是
 /// 該檔被略過、不影響其他檔案，不屬於這裡。
 enum ImportFailure {
@@ -18,6 +12,12 @@ enum ImportFailure {
   folderListingFailed,
 }
 
+/// 一次匯入呼叫（[BookImportService.importFiles]／[importFolder]）的結果：
+/// 成功寫入的書籍清單，以及因來源 URI 與圖書庫既有書籍重複而被跳過的檔案數
+/// 量（【診斷修正】見 book_import_service_impl.dart「_importSingleFile 前的
+/// 重複偵測」說明——判定依據是來源 URI/路徑是否與現有書籍的 filePath 相同，
+/// 不比對書名/作者）。呼叫端（`LibraryScreen`）用 [skippedDuplicateCount]
+/// 決定是否顯示「N 本已存在，已跳過」提示。
 class ImportResult {
   final List<Book> importedBooks;
   final int skippedDuplicateCount;

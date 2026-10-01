@@ -65,14 +65,14 @@ class CustomFontRelinker {
     final id = font.id;
     if (id == null) return const FontRelinkFailed();
 
-    // 家族名稱解析規則與批次上傳共用（resolveFontFamilyName）。
-    final pickedFamily = resolveFontFamilyName(picked.bytes, picked.name);
-    if (pickedFamily != font.familyName) {
-      // 不符一律拒絕：選錯檔案不該白白消耗系統的持久化授權配額，更不能改記錄。
-      return const FontRelinkFamilyMismatch();
-    }
-
     try {
+      // 家族名稱解析規則與批次上傳共用（resolveFontFamilyName）。
+      final pickedFamily = resolveFontFamilyName(picked.bytes, picked.name);
+      if (pickedFamily != font.familyName) {
+        // 不符一律拒絕：選錯檔案不該白白消耗系統的持久化授權配額，更不能改記錄。
+        return const FontRelinkFamilyMismatch();
+      }
+
       // 字型檔不做落地複本退路（ADR 0021），授權盡力而為：被拒絕（false）
       // 不中止重新連結。
       await persistAccess(picked.uri);
@@ -80,7 +80,7 @@ class CustomFontRelinker {
       return const FontRelinkSuccess();
     } catch (e) {
       // 資料庫寫入失敗（機率很低）等：記錄後回傳 failed，記錄與標示維持原樣，
-      // 使用者可以再試一次。
+      // 使用者可以再試一次。解析家族名稱也在 try 內，讓「保證不拋出例外」成真。
       debugPrint('Failed to relink custom font: $e');
       return const FontRelinkFailed();
     }
