@@ -126,3 +126,10 @@
 - M-1（不處理）：`reader_screen.dart` 的新 import 夾在 `reader/` 的 import 群組中間，純風格；計畫本來就指定原位替換。
 - M-2（不處理）：channel 在橋接檔與新檔各宣告一次，是計畫接受的取捨（`MethodChannel` 只是依名稱指向同一條原生通道的代理），新檔註解已說明。
 - 全套 `flutter test` 審查員未重跑；發 PR 前由實作者重跑：第一次 3275 通過、1 略過、**1 失敗**（`test/downloads/download_queue_controller_test.dart`「偵測到重複且 onDuplicateConfirm 回傳 false 時，標記為略過且不呼叫 import」，預期 `duplicateSkipped`、實際 `checkingDuplicate`）；本分支未動 `lib/downloads`／`test/downloads`，該檔單獨連跑 5 次全過，不改任何程式直接重跑全套則 **3276 通過、1 略過、0 失敗**。判斷為既有的不穩定測試（只用固定輪數的 `pumpEventQueue()` 等非同步鏈，整套並行負載高時可能來不及），與本 Issue 無關，不在本 Issue 處理；若之後重複出現，應另立工單把等待改為條件式。
+
+**2026-10-02 PR 合併（Issue 4）**
+
+- PR #305（`epic-54/issue-4-storage-access-probe` → `main`）已合併，合併 commit `e8cbd95b`。Issue 4 完成。全套 `flutter test` 3276 通過、1 略過。
+- 待真機確認：無（純搬家，無行為變動）。
+- 附帶：`test/downloads/download_queue_controller_test.dart` 在整套並行時偶發失敗（只用固定輪數的 `pumpEventQueue()` 等非同步鏈），與本 Epic 無關，未處理；若重複出現，應另立工單把等待改為條件式。
+- 後續：Issue 2、6 尚未設計，動手前各自須先 `/grill-with-docs`。Issue 2 設計時可利用 Issue 3、4 建立的 `app/lib/storage/` 目錄與「持久化授權」「存取探測」詞條；本 Epic 其餘 Issue 完成後再決定是否歸檔。
