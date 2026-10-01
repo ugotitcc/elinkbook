@@ -11,7 +11,7 @@ import 'package:elinkbook/library/library_repository.dart' show kBookMetadataCha
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/downloadable_font_store.dart';
-import 'package:elinkbook/reader/foliate_native_bridge.dart'
+import 'package:elinkbook/storage/storage_access_probe.dart'
     show ProbeStorageAccess, StorageAccessProbeResult, probeStorageAccess;
 import 'package:elinkbook/screens/font_management_screen.dart';
 import '../support/fake_custom_fonts_repository.dart';

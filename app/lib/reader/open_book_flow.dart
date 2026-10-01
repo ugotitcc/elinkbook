@@ -8,7 +8,7 @@ import '../library/book_import_service.dart'
         BookRelinkFailureReason,
         BookRelinkResult,
         BookRelinkSuccess;
-import 'foliate_native_bridge.dart' show StorageAccessProbeResult;
+import '../storage/storage_access_probe.dart' show StorageAccessProbeResult;
 
 /// 開書失敗的來源。畫面依它與探測結果決定顯示哪一段說明文字
 /// （文字屬於 l10n，本模組不持有）。

@@ -57,7 +57,7 @@ import '../reader/pdf_toc_item.dart';
 import '../reader/pdf_toc_navigator.dart';
 import '../reader/pdf_selection_info.dart';
 import '../reader/reading_position.dart';
-import '../reader/foliate_native_bridge.dart'
+import '../storage/storage_access_probe.dart'
     show StorageAccessProbeResult, probeStorageAccess;
 import '../reader/open_book_flow.dart';
 import '../reader/reader_console_log.dart';
