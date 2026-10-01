@@ -66,3 +66,9 @@
 - M-3：`app_zh_TW.arb` 的 `readerFailedToLoadBookMessage` 描述改為指向 `OpenBookFailed.viewMessage`；以 `flutter gen-l10n` 重新產生，`app_localizations.dart` 只有該行描述變動。
 - M-4：`OpenBookFlow` 類別註解補上指向 epic-27 `bugfix-repro.md` 與 epic-18 Issue 33 的追溯路徑。
 - M-5：`isFailed` 改為 `failure != null` 推導，消除兩個 getter 各自維護的不變式風險。
+
+**2026-10-01 PR 合併**
+
+- PR #303（`epic-54/issue-5-open-book-flow` → `main`）已合併，合併 commit `707645e5`。Issue 5 完成。審查修訂後全套 `flutter test` 3255 通過、1 略過。
+- 待真機確認（PR 描述已列）：`onPageRendered` 在 Foliate WebView／pdfrx 的實際觸發頻率，以及慢速裝置上逾時多一次探測的延遲。
+- 後續：Issue 2、3、4、6 尚未設計，動手前各自須先 `/grill-with-docs`。Issue 3 做時評估字型重新連結是否與 `OpenBookFlow` 共用「探測後分類」；Issue 4 把探測移出 `foliate_native_bridge.dart` 時，`open_book_flow.dart` 內對 `StorageAccessProbeResult` 的 import 需改一行。
