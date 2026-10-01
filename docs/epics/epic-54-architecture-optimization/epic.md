@@ -125,4 +125,4 @@
 
 - M-1（不處理）：`reader_screen.dart` 的新 import 夾在 `reader/` 的 import 群組中間，純風格；計畫本來就指定原位替換。
 - M-2（不處理）：channel 在橋接檔與新檔各宣告一次，是計畫接受的取捨（`MethodChannel` 只是依名稱指向同一條原生通道的代理），新檔註解已說明。
-- 全套 `flutter test` 審查員未重跑；發 PR 前由實作者重跑（見下方驗證）。
+- 全套 `flutter test` 審查員未重跑；發 PR 前由實作者重跑：第一次 3275 通過、1 略過、**1 失敗**（`test/downloads/download_queue_controller_test.dart`「偵測到重複且 onDuplicateConfirm 回傳 false 時，標記為略過且不呼叫 import」，預期 `duplicateSkipped`、實際 `checkingDuplicate`）；本分支未動 `lib/downloads`／`test/downloads`，該檔單獨連跑 5 次全過，不改任何程式直接重跑全套則 **3276 通過、1 略過、0 失敗**。判斷為既有的不穩定測試（只用固定輪數的 `pumpEventQueue()` 等非同步鏈，整套並行負載高時可能來不及），與本 Issue 無關，不在本 Issue 處理；若之後重複出現，應另立工單把等待改為條件式。
