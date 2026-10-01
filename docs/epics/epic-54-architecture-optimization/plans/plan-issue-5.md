@@ -134,7 +134,7 @@ class OpenBookFlow extends ChangeNotifier {
 }
 ```
 
-- [ ] **Step 1：寫失敗的純測試**
+- [x] **Step 1：寫失敗的純測試**
 
 建立 `app/test/reader/open_book_flow_test.dart`：
 
@@ -681,12 +681,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`cd app && flutter test test/reader/open_book_flow_test.dart`
 Expected：編譯失敗，`Target of URI doesn't exist: 'package:elinkbook/reader/open_book_flow.dart'`。
 
-- [ ] **Step 3：寫最小實作**
+- [x] **Step 3：寫最小實作**
 
 建立 `app/lib/reader/open_book_flow.dart`：
 
@@ -1005,12 +1005,12 @@ class OpenBookFlow extends ChangeNotifier {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run：`cd app && flutter test test/reader/open_book_flow_test.dart`
 Expected：全部 PASS（`dispose()` 已設計為可重複呼叫，所以 `addTearDown(flow.dispose)` 與測試內明確 dispose 並存不會拋錯）。
 
-- [ ] **Step 5：analyze 並提交**
+- [x] **Step 5：analyze 並提交**
 
 ```bash
 cd app && flutter analyze
@@ -1034,7 +1034,7 @@ Expected：`No issues found!`。
 - Consumes：Task 1 的 `OpenBookFlow` 全部公開成員、`OpenBookFailed`、`OpenBookRelinking`、`OpenBookRelinkOutcome` 家族、`OpenBookPickedFile`。
 - Produces：`ReaderScreen` 對外行為不變（僅逾時探測一處調整）。
 
-- [ ] **Step 1：新增 import**
+- [x] **Step 1：新增 import**
 
 在 `reader_screen.dart` 既有 `import '../reader/...'` 區塊（第 61 行 `show StorageAccessProbeResult, probeStorageAccess;` 附近）加：
 
@@ -1044,7 +1044,7 @@ import '../reader/open_book_flow.dart';
 
 `StorageAccessProbeResult, probeStorageAccess` 的 import 保留（`probeStorageAccess` 由 initState 的探測 lambda 使用；`StorageAccessProbeResult` 由錯誤視圖的 `switch` 使用）。
 
-- [ ] **Step 2：刪除舊狀態、改 `_activeFilePath`**
+- [x] **Step 2：刪除舊狀態、改 `_activeFilePath`**
 
 Grep 定位後修改：
 
@@ -1068,7 +1068,7 @@ Grep 定位後修改：
    late final OpenBookFlow _openBookFlow;
    ```
 
-- [ ] **Step 3：`initState` 建立 flow、啟動計時**
+- [x] **Step 3：`initState` 建立 flow、啟動計時**
 
 在 `initState()` 的 `_creationZone = Zone.current;` 之後（`widget.readerActivityTracker?.markReaderOpened();` 之前）加：
 
@@ -1100,7 +1100,7 @@ Grep 定位後修改：
     _openBookFlow.start();
 ```
 
-- [ ] **Step 4：`dispose` 與 listener**
+- [x] **Step 4：`dispose` 與 listener**
 
 `dispose()` 內把 `_openBookTimeoutTimer?.cancel();` 換成：
 
@@ -1119,7 +1119,7 @@ Grep 定位後修改：
   }
 ```
 
-- [ ] **Step 5：改 `_handlePageRendered`**
+- [x] **Step 5：改 `_handlePageRendered`**
 
 把
 ```dart
@@ -1133,7 +1133,7 @@ Grep 定位後修改：
     _openBookFlow.onRendered();
 ```
 
-- [ ] **Step 6：改寫失敗與重新連結處理函式**
+- [x] **Step 6：改寫失敗與重新連結處理函式**
 
 把 `_handleError`、`_probeAccessAndShowError`、`_handleOpenBookTimeout`、`_handleRelinkPressed`、`_pickAndRelink`、`_reopenWithFilePath` 六個方法（約 2018–2169 行，含各自 doc comment）整段換成下列內容：
 
@@ -1197,7 +1197,7 @@ Grep 定位後修改：
 
 注意：`BookRelinkFailureReason` 由 `reader_screen.dart` 既有的 `book_import_service.dart` import 提供，不需新增；`BookRelinkResult`／`BookRelinkSuccess`／`BookRelinkFailure` 若因此不再被 `reader_screen.dart` 使用，且該 import 有 `show` 清單，依 `flutter analyze` 的 `unused_shown_name` 警告移除多餘名稱。
 
-- [ ] **Step 7：改寫錯誤視圖**
+- [x] **Step 7：改寫錯誤視圖**
 
 Grep `if (_state == _RenderState.error) {` 定位（約 3069 行）。
 
@@ -1224,7 +1224,7 @@ Grep `if (_state == _RenderState.error) {` 定位（約 3069 行）。
    ```
 3. 按鈕條件的 `_probeResult` 兩處換成 `failure.probeResult`；`_isRelinking` 兩處（按鈕的 `onPressed` 與 `child`）換成 `isRelinking`。
 
-- [ ] **Step 8：其餘 `_state` 判斷**
+- [x] **Step 8：其餘 `_state` 判斷**
 
 Grep `_state == _RenderState|_state != _RenderState` 逐處替換（行號為現況）：
 
@@ -1236,7 +1236,7 @@ Grep `_state == _RenderState|_state != _RenderState` 逐處替換（行號為現
 | 約 3782 的 doc comment | `` `_state == _RenderState.loading` `` | `` `_openBookFlow.isLoading` `` |
 | 約 3166 的行內註解 | `// _state == loading 時顯示——…` | `// _openBookFlow.isLoading 時顯示——…` |
 
-- [ ] **Step 9：確認沒有殘留引用並 analyze**
+- [x] **Step 9：確認沒有殘留引用並 analyze**
 
 ```bash
 cd app
@@ -1246,13 +1246,13 @@ flutter analyze
 
 Expected：grep 無輸出（若只剩 doc comment 內的歷史描述，改寫為新名稱）；`No issues found!`。
 
-- [ ] **Step 10：跑相關 widget 測試**
+- [x] **Step 10：跑相關 widget 測試**
 
 Run：`flutter test test/screens/reader_screen_test.dart`
 
 Expected：全部 PASS，**唯一例外**是「開書逾時不呼叫探測」會 FAIL（`probeCalls()` 變 1）——這是預期的行為調整，Task 3 處理。若有其他失敗，先確認是否為接線疏漏（常見原因：`_activeFilePath` 在 `initState` 之前被讀取、`isLoading` 漏換）。
 
-- [ ] **Step 11：提交**
+- [x] **Step 11：提交**
 
 ```bash
 git add lib/screens/reader_screen.dart
@@ -1289,7 +1289,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 注意：最後一個測試名稱在原始碼中是跨兩行的相鄰字串字面值（`'…不拋例外'` 換行 `'（計畫審查 M-4）'`），整句 Grep 會找不到；一律用上表「Grep 定位關鍵字」欄的短字串。
 
-- [ ] **Step 1：翻轉「開書逾時不呼叫探測」**
+- [x] **Step 1：翻轉「開書逾時不呼叫探測」**
 
 Grep `開書逾時不呼叫探測` 定位，整個測試換成以下三個（第一個是翻轉後的原測試，後兩個是新增的接線測試）：
 
@@ -1341,7 +1341,7 @@ Grep `開書逾時不呼叫探測` 定位，整個測試換成以下三個（第
     });
 ```
 
-- [ ] **Step 2：在「重新選取檔案」群組新增「逾時也提供重新選取」測試**
+- [x] **Step 2：在「重新選取檔案」群組新增「逾時也提供重新選取」測試**
 
 在 `group('重新選取檔案（epic-15-storage-permission Issue 2）'` 的「沒有匯入服務時只顯示分類說明，不顯示按鈕」測試之後加：
 
@@ -1362,11 +1362,11 @@ Grep `開書逾時不呼叫探測` 定位，整個測試換成以下三個（第
     });
 ```
 
-- [ ] **Step 3：刪除 7 個已遷移的測試**
+- [x] **Step 3：刪除 7 個已遷移的測試**
 
 依上方對照表，用 Grep 以測試名稱定位，逐一刪除整個 `testWidgets(...)` 區塊（含緊鄰的空行）。刪除後 `Completer` 在該檔仍被其他測試使用（如「處理中按鈕停用」），不會變成未使用 import；`flutter analyze` 會確認。
 
-- [ ] **Step 4：執行並提交**
+- [x] **Step 4：執行並提交**
 
 ```bash
 cd app
@@ -1397,7 +1397,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1–3 的實際測試數字。
 - Produces：可發 PR 的分支。
 
-- [ ] **Step 1：程式審查前先跑相關測試檔**
+- [x] **Step 1：程式審查前先跑相關測試檔**
 
 ```bash
 cd app
@@ -1406,11 +1406,11 @@ flutter test test/reader/open_book_flow_test.dart test/screens/reader_screen_tes
 
 Expected：全部 PASS（`foliate_native_bridge_test`、`font_management_screen_test` 確認 `probeStorageAccess` 未被動到）。
 
-- [ ] **Step 2：請求程式審查**
+- [x] **Step 2：請求程式審查**
 
 使用 `superpowers:requesting-code-review`。審查報告存於 `docs/epics/epic-54-architecture-optimization/reviews/review-code-issue-5.md`（不進版控）；審查者只出報告，不直接改程式；依報告修訂前須先由使用者決定。
 
-- [ ] **Step 3：全套測試（整張計畫的最後一個 Task，CLAUDE.md 規定此時跑一次）**
+- [x] **Step 3：全套測試（整張計畫的最後一個 Task，CLAUDE.md 規定此時跑一次）**
 
 ```bash
 cd app
@@ -1421,7 +1421,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 Expected：全部 PASS（基準：Issue 1 合併時為 3221 個通過、1 個略過；本 Issue 預期淨增 34 個純測試（`for` 迴圈展開後）、widget 淨減 4 個，淨增約 +30，實際以執行結果為準）；`No issues found!`；兩行 PASS。
 
-- [ ] **Step 4：寫開發記錄**
+- [x] **Step 4：寫開發記錄**
 
 在 `epic.md`「開發記錄」末尾新增（數字以實際結果為準）：
 
@@ -1431,7 +1431,7 @@ Expected：全部 PASS（基準：Issue 1 合併時為 3221 個通過、1 個略
 
 並把 `issues.md` Issue 5 狀態改為「🟡 進行中（`plans/plan-issue-5.md`）」、`epics.md` 第 65 列改為「Issue 1 已合併（PR #302）；Issue 5 實作完成待發 PR；Issue 2、3、4、6 待設計」。
 
-- [ ] **Step 5：提交並準備發 PR**
+- [x] **Step 5：提交並準備發 PR**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook
