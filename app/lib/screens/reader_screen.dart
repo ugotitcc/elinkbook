@@ -59,6 +59,7 @@ import '../reader/pdf_selection_info.dart';
 import '../reader/reading_position.dart';
 import '../reader/foliate_native_bridge.dart'
     show StorageAccessProbeResult, probeStorageAccess;
+import '../reader/open_book_flow.dart';
 import '../reader/reader_console_log.dart';
 import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
@@ -389,44 +390,21 @@ class ReaderScreen extends StatefulWidget {
   }
 }
 
-enum _RenderState { loading, rendered, error }
-
 class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver {
   // ── PDF 內文搜尋狀態（epic-24 Issue 6）──
   final _pdfSearchStateNotifier = ValueNotifier<PdfSearchState>(const PdfSearchState.initial());
   List<PdfSearchMatch> _pdfSearchMatches = const [];
   int _pdfSearchRequestId = 0;
 
-  _RenderState _state = _RenderState.loading;
-  String? _errorMessage;
-  /// epic-15-storage-permission Issue 0：目前生效的書籍檔案路徑（`content://`
-  /// URI 或本機路徑，見 ADR 0002）。初始值為建構參數 [ReaderScreen.filePath]；
-  /// State 內一律讀取本欄位，不再直接讀建構參數，讓 Issue 2 在
-  /// 「重新連結」成功後能原地換成新路徑並重新開書。
-  ///
-  /// 使用 `late` 惰性初始化：第一次讀取發生在 `initState()` 的
-  /// `_resolveEpubEngineDispatch()`（`widget.isFixedLayout` 為 null 時），
-  /// 或延後到 `build()`（非 null 時該方法提早 return），兩者 `widget` 皆已
-  /// 可用。
-  ///
+  /// 目前實際開啟的檔案路徑；「重新連結」成功後由 [_openBookFlow] 換成新路徑。
   /// 刻意不在 `didUpdateWidget` 跟隨建構參數 `filePath` 的變動：閱讀器一律由
   /// `MaterialPageRoute` 建立一次，沒有任何呼叫端會以不同 `filePath` 重建
   /// 同一個 `ReaderScreen`。
-  late String _activeFilePath = widget.filePath;
-  /// epic-15-storage-permission Issue 1：開書失敗後的存取探測結果。
-  /// 錯誤視圖依它分流顯示說明文字；Issue 2 依它決定是否顯示「重新選取
-  /// 檔案」按鈕。只有 `content://` 書籍的 onError 會探測，其餘情況維持
-  /// null（顯示原本的錯誤訊息）。
-  StorageAccessProbeResult? _probeResult;
+  String get _activeFilePath => _openBookFlow.filePath;
 
-  /// epic-15-storage-permission Issue 1：探測進行中。期間忽略後續
-  /// onError 與開書逾時——底層視圖此時仍在樹上，可能連續回報多次錯誤。
-  bool _isProbingAccess = false;
-
-  /// epic-15-storage-permission Issue 2：「重新選取檔案」處理中（從按下按鈕
-  /// 到 relinkBook 回傳為止）。期間按鈕停用並顯示進度，避免大檔案計算
-  /// 指紋時使用者重複開啟選擇器或平行發動多次 Re-link。
-  bool _isRelinking = false;
+  /// 開書流程（見 CONTEXT.md「開書流程」）。在 `initState` 最前面建立，
+  /// 因為 [_activeFilePath] 在其後的 `_resolveEpubEngineDispatch()` 就會讀取。
+  late final OpenBookFlow _openBookFlow;
   // 自動偵測結果（來自 onLayoutResolved），唯讀、不持久化，每次開書重新
   // 偵測（見 docs/epics/epic-3-fonts-layout/design.md「架構異動：新增
   // book_reader_prefs 資料表」）。
@@ -592,22 +570,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // syncCheckpointTrigger 時完全不建立（見 initState），零額外開銷。
   Timer? _syncCheckpointTimer;
 
-  /// 開書載入逾時哨兵（epic-18-reader-device-qa Issue 33，真機使用回報：
-  /// iReader Ocean 4 Plus 開啟書籍時畫面永遠停在載入指示器，5 個推測根因
-  /// 皆無真機診斷資料佐證）。單次 Timer，_handlePageRendered()／
-  /// _handleError() 觸發時皆會取消（不論成功或失敗都不需要再等）；
-  /// 30 秒後若仍是 loading 狀態，代表底層渲染引擎（PdfRenderer／
-  /// FoliateReaderView 的 WebView）從未回報任何結果，主動切換為錯誤
-  /// 畫面，避免使用者永遠面對轉圈圈、投訴無門（見上方 Issue 33 的
-  /// _globalErrorCaptureJs 診斷能力補強說明——這是「連 JS 例外都沒有拋出」
-  /// 這種更極端情況的最後一道防線）。原始值為 12 秒（epic-18-reader-device-qa
-  /// Issue 33 的原始分析報告建議值，非嚴謹量測結果）；
-  /// epic-27-reader-device-compat Issue 2 依 Mobiscribe WAVE 真機回報
-  /// 「慢速裝置＋大型 EPUB 組合下 12 秒容易誤判逾時、需反覆重試才能開書
-  /// 成功」調整為 30 秒（2026-08-13 使用者於診斷對話中確認此目標值，完整
-  /// 診斷見 docs/epics/epic-27-reader-device-compat/reviews/bugfix-repro.md）。
-  Timer? _openBookTimeoutTimer;
-
   /// 搜尋跳轉暫態高亮 3 秒生命週期計時器（epic-10-search Issue 5，
   /// spec.md §6）。非 `null` 代表目前有顯示中的暫態高亮，
   /// [_handleZoneAction] 於任何翻頁/點擊動作發生時會提前呼叫
@@ -636,6 +598,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void initState() {
     super.initState();
     _creationZone = Zone.current;
+    final importService = widget.bookImportService;
+    _openBookFlow = OpenBookFlow(
+      filePath: widget.filePath,
+      // 讀取頂層可覆寫變數的當下值，widget test 才能以覆寫注入假探測。
+      probe: (uri) => probeStorageAccess(uri),
+      relinkBook: importService == null
+          ? null
+          : (uri, displayName) => importService.relinkBook(
+                widget.bookId,
+                uri,
+                displayName: displayName,
+              ),
+    )..addListener(_onOpenBookFlowChanged);
     widget.readerActivityTracker?.markReaderOpened();
     _readingStatsTracker = _createReadingStatsTracker();
     WidgetsBinding.instance.addObserver(this);
@@ -650,10 +625,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         (_) => syncCheckpointTrigger.trigger(),
       );
     }
-    _openBookTimeoutTimer = Timer(
-      const Duration(seconds: 30),
-      _handleOpenBookTimeout,
-    );
+    _openBookFlow.start();
     widget.prefsManager.load(widget.bookId).then((loaded) {
       if (!mounted) return;
       setState(() {
@@ -756,6 +728,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     });
   }
 
+  /// [_openBookFlow] 狀態變動時重繪。
+  void _onOpenBookFlowChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
     widget.readerActivityTracker?.markReaderClosed();
@@ -765,7 +742,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final statsTracker = _readingStatsTracker;
     if (statsTracker != null) unawaited(statsTracker.flushAndClose());
     _syncCheckpointTimer?.cancel();
-    _openBookTimeoutTimer?.cancel();
+    _openBookFlow
+      ..removeListener(_onOpenBookFlowChanged)
+      ..dispose();
     _searchJumpHighlightTimer?.cancel();
     _ttsSleepTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -1781,8 +1760,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   void _handlePageRendered() {
     if (!mounted) return;
-    _openBookTimeoutTimer?.cancel();
-    setState(() => _state = _RenderState.rendered);
+    _openBookFlow.onRendered();
     // epic-6-annotations Issue 3：PDF 書籍開啟成功後載入既有劃線/備註並
     // 送給原生端渲染。與 EPUB 的觸發點（_handleLayoutResolved，見 Issue 2
     // Task 10 Step 7）刻意不同——PDF 沒有對應的版面解析回呼，本方法
@@ -2016,92 +1994,35 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   /// 【/diagnose：真機回報旋轉螢幕後畫面被錯誤文字取代，無法繼續閱讀】
-  /// 只在 `_state == loading` 時才轉為錯誤畫面——書籍已成功渲染
-  /// （`_state == rendered`）後才發生的 `onError` 不應覆蓋掉已顯示的
-  /// 內容。根因：epic-18-reader-device-qa Issue 33 新增的全域
-  /// `window.onerror`／`window.onunhandledrejection` 補捉會轉發「任何」
-  /// 未被攔截的 JS 例外，包含瀏覽器層級的良性警告（例如 foliate-js 的
-  /// paginator 在螢幕旋轉、ResizeObserver 重新觀察內容尺寸時，Chromium
-  /// 觸發的「ResizeObserver loop completed with undelivered
-  /// notifications」——這只是瀏覽器告知一輪 resize callback 沒能在同一
-  /// frame 內處理完畢，不代表書籍真的開啟失敗）；這個 guard 與既有的
-  /// `_handleOpenBookTimeout()` 採用同一種防禦模式。
+  /// 只在載入中才轉為錯誤畫面——書籍已成功渲染後才發生的 `onError` 不應覆蓋
+  /// 掉已顯示的內容（例如旋轉螢幕時 Chromium 的 ResizeObserver 良性警告）。
+  /// 這個 guard 與探測、逾時、重新連結的規則都收在 [OpenBookFlow]。
   void _handleError(String message) {
     if (!mounted) return;
-    if (_state != _RenderState.loading) return;
-    // epic-15-storage-permission Issue 1：探測進行中再收到的錯誤一律忽略。
-    if (_isProbingAccess) return;
-    _openBookTimeoutTimer?.cancel();
-    if (_activeFilePath.startsWith('content://')) {
-      // 維持載入指示器，探測完才切到錯誤視圖，避免 E-Ink 畫面先閃出通用
-      // 錯誤再換成分類說明。
-      _isProbingAccess = true;
-      _probeAccessAndShowError(message);
-      return;
-    }
-    setState(() {
-      _state = _RenderState.error;
-      _errorMessage = message;
-    });
+    _openBookFlow.onViewError(message);
   }
 
-  /// epic-15-storage-permission Issue 1：探測 [_activeFilePath] 的可讀性，
-  /// 完成後切到錯誤視圖。結果回來時若 State 已 dispose，或開書其實已經
-  /// 成功（狀態不再是載入中），就直接捨棄結果。
-  Future<void> _probeAccessAndShowError(String message) async {
-    StorageAccessProbeResult result;
-    try {
-      result = await probeStorageAccess(_activeFilePath);
-    } catch (_) {
-      // 逾時計時器在第一次錯誤時已取消；探測函式（含測試注入的替身）若
-      // 拋出例外而沒有切到錯誤視圖，閱讀器會永遠停在載入中（審查 I-1）。
-      result = StorageAccessProbeResult.unknownError;
-    }
-    if (!mounted) return;
-    _isProbingAccess = false;
-    if (_state != _RenderState.loading) return;
-    setState(() {
-      _state = _RenderState.error;
-      _errorMessage = message;
-      _probeResult = result;
-    });
-  }
-
-  /// epic-18-reader-device-qa Issue 33：見上方 `_openBookTimeoutTimer` 註解。
-  /// 判斷 `_state == loading` 才動作——理論上 `_handlePageRendered()`／
-  /// `_handleError()` 都會取消這個 Timer，這裡是雙重防禦，避免任何未預期
-  /// 的競態把已經成功渲染或已經顯示其他錯誤訊息的畫面覆蓋掉。
-  void _handleOpenBookTimeout() {
-    if (!mounted) return;
-    if (_state != _RenderState.loading) return;
-    // epic-15-storage-permission Issue 1：探測進行中由探測結果決定錯誤畫面。
-    if (_isProbingAccess) return;
-    setState(() {
-      _state = _RenderState.error;
-      _errorMessage = AppLocalizations.of(context)!.readerOpenBookTimeoutMessage;
-    });
-  }
-
-  /// epic-15-storage-permission Issue 2：「重新選取檔案」按鈕的處理函式。
-  /// 取消選檔時什麼都不做（不顯示 SnackBar）；成功時原地重新開書；失敗時
-  /// 以 SnackBar 說明原因，錯誤視圖維持原樣可再試一次。
+  /// 「重新選取檔案」按鈕的處理函式。取消選檔時什麼都不做（不顯示
+  /// SnackBar）；成功時原地重新開書；失敗時以 SnackBar 說明原因，錯誤視圖
+  /// 維持原樣可再試一次。
   Future<void> _handleRelinkPressed() async {
-    if (_isRelinking) return;
-    setState(() => _isRelinking = true);
-    final BookRelinkResult? result;
-    try {
-      result = await _pickAndRelink();
-    } finally {
-      if (mounted) setState(() => _isRelinking = false);
-    }
-    if (!mounted || result == null) return;
-    switch (result) {
-      case BookRelinkSuccess(:final updatedBook):
-        // 程式審查 M-1：先選錯、再選對時，收掉上一次的失敗提示，避免重新
-        // 開書時畫面還掛著「內容不同」之類的錯誤訊息。
+    final outcome = await _openBookFlow.relink(_pickBookFileForRelink);
+    if (!mounted) return;
+    switch (outcome) {
+      case OpenBookRelinkCancelled():
+        return;
+      case OpenBookRelinkReopened(:final newPath):
+        // 先選錯、再選對時，收掉上一次的失敗提示，避免重新開書時畫面還掛著
+        // 「內容不同」之類的錯誤訊息。
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        _reopenWithFilePath(updatedBook.filePath);
-      case BookRelinkFailure(:final reason):
+        // EPUB 版面偵測若在失敗前尚未完成（仍是 null），以新路徑重新觸發一次，
+        // 否則 _buildBody 的 gating 條件會讓閱讀視圖永遠停在等待。偏好設定、
+        // 閱讀位置、字型以 bookId 載入，重新連結不改 bookId，不需要重跑。
+        if (_dispatchedIsFixedLayout == null &&
+            detectBookFormat(newPath) == BookFormat.epub) {
+          _resolveEpubEngineDispatch();
+        }
+      case OpenBookRelinkFailed(:final reason):
         final l10n = AppLocalizations.of(context)!;
         final message = switch (reason) {
           BookRelinkFailureReason.formatMismatch =>
@@ -2113,59 +2034,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           BookRelinkFailureReason.failed => l10n.readerStorageRelinkFailed,
         };
         // 先收掉上一則：連續選錯檔案時，新結果不必排在前一則（預設 4 秒）
-        // 之後才出現，否則使用者會以為第二次嘗試沒有反應（計畫審查 M-1）。
+        // 之後才出現，否則使用者會以為第二次嘗試沒有反應。
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
-  /// 開啟單檔選擇器（副檔名限定為原書格式）並呼叫 relinkBook。使用者取消
-  /// 時回傳 null。保證不拋出例外：選擇器或服務的任何例外都視為 failed，
-  /// 否則按鈕狀態雖會在 finally 恢復，使用者卻得不到任何回饋。
-  Future<BookRelinkResult?> _pickAndRelink() async {
-    final importService = widget.bookImportService;
-    if (importService == null) return null;
-    try {
-      final picker = widget.pickSingleBookFile ?? pickSingleBookFileViaFilePicker;
-      // 只有 EPUB／PDF／AZW3 會走到這裡，BookFormat 名稱即副檔名。
-      final picked = await picker([detectBookFormat(_activeFilePath).name]);
-      // 選檔期間使用者可能已離開閱讀器：不再發動 relinkBook，避免白做
-      // 整檔 SHA-256 與持久化授權（計畫審查 M-4）。
-      if (!mounted || picked == null) return null;
-      return await importService.relinkBook(
-        widget.bookId,
-        picked.uri,
-        displayName: picked.displayName,
-      );
-    } catch (_) {
-      return const BookRelinkFailure(BookRelinkFailureReason.failed);
-    }
-  }
-
-  /// epic-15-storage-permission Issue 2：Re-link 成功後以 [filePath] 在同一個
-  /// 畫面重新開書（spec.md「重新開書的復位清單」）。閱讀視圖維持原本的
-  /// GlobalKey：錯誤視圖已把它整個移出樹，回到載入中時一定會建立新實例，
-  /// 以新路徑重新走一次快取與開書流程。偏好設定、閱讀位置、字型以
-  /// bookId 載入，Re-link 不改 bookId，不需要重跑。
-  void _reopenWithFilePath(String filePath) {
-    setState(() {
-      _activeFilePath = filePath;
-      _state = _RenderState.loading;
-      _errorMessage = null;
-      _probeResult = null;
-      _openBookTimeoutTimer?.cancel();
-      _openBookTimeoutTimer = Timer(
-        const Duration(seconds: 30),
-        _handleOpenBookTimeout,
-      );
-    });
-    // EPUB 版面偵測若在失敗前尚未完成（仍是 null），以新路徑重新觸發一次，
-    // 否則 _buildBody 的 gating 條件會讓閱讀視圖永遠停在等待。
-    if (_dispatchedIsFixedLayout == null &&
-        detectBookFormat(filePath) == BookFormat.epub) {
-      _resolveEpubEngineDispatch();
-    }
+  /// 開啟單檔選擇器（副檔名限定為原書格式），交給 [OpenBookFlow.relink]。
+  /// 使用者取消時回傳 null。
+  Future<OpenBookPickedFile?> _pickBookFileForRelink() {
+    final picker = widget.pickSingleBookFile ?? pickSingleBookFileViaFilePicker;
+    // 只有 EPUB／PDF／AZW3 會走到這裡，BookFormat 名稱即副檔名。
+    return picker([detectBookFormat(_activeFilePath).name]);
   }
 
   /// `FoliateReaderView` 專屬的 onLayoutResolved 處理。
@@ -3066,7 +2947,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         ],
       );
     }
-    if (_state == _RenderState.error) {
+    if (_openBookFlow.isFailed) {
+      final failure = _openBookFlow.failure!;
+      final isRelinking = _openBookFlow.state is OpenBookRelinking;
       // 渲染失敗時直接以錯誤文字取代原生視圖（而非疊加在 Stack 上層），讓
       // 已失敗的 EpubReaderView/PdfReaderView 提早從 widget tree 移除、
       // 觸發其 dispose() 清理原生資源，不讓一個已知失敗的 PlatformView
@@ -3085,12 +2968,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 children: [
                   Text(
                     // 依存取探測結果分流。
-                    switch (_probeResult) {
+                    switch (failure.probeResult) {
                       StorageAccessProbeResult.permissionRevoked =>
                         l10n.readerStoragePermissionRevokedMessage,
                       StorageAccessProbeResult.fileNotFound =>
                         l10n.readerStorageFileNotFoundMessage,
-                      _ => _errorMessage ?? l10n.readerFailedToLoadBookMessage,
+                      _ => switch (failure.source) {
+                          OpenBookFailureSource.timeout =>
+                            l10n.readerOpenBookTimeoutMessage,
+                          OpenBookFailureSource.viewError =>
+                            failure.viewMessage ??
+                                l10n.readerFailedToLoadBookMessage,
+                        },
                     },
                     key: const Key('reader_error_text'),
                     textAlign: TextAlign.center,
@@ -3100,15 +2989,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   // 高對比模式只有黑白兩色，純填色或純文字按鈕的輪廓容易和
                   // 背景融在一起。
                   if (widget.bookImportService != null &&
-                      (_probeResult ==
+                      (failure.probeResult ==
                               StorageAccessProbeResult.permissionRevoked ||
-                          _probeResult ==
+                          failure.probeResult ==
                               StorageAccessProbeResult.fileNotFound)) ...[
                     const SizedBox(height: 24),
                     OutlinedButton(
                       key: const Key('reader_storage_relink_button'),
-                      onPressed: _isRelinking ? null : _handleRelinkPressed,
-                      child: _isRelinking
+                      onPressed: isRelinking ? null : _handleRelinkPressed,
+                      child: isRelinking
                           ? const SizedBox.square(
                               dimension: 20,
                               child: CircularProgressIndicator(
@@ -3163,7 +3052,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // 不透明遮罩必須疊在 _buildNativeView 之上（Stack 依 children 清單
             // 順序繪製，後面的 child 疊在前面之上）才能真正蓋住原生視圖輸出的
             // 黑色緩衝區，故放在 _buildNativeView 這個 if 區塊之後；僅在
-            // _state == loading 時顯示——一旦渲染完成立即移除，避免永久蓋住
+            // _openBookFlow.isLoading 時顯示——一旦渲染完成立即移除，避免永久蓋住
             // 已渲染完成的書籍內容或阻擋觸控手勢（見 plans/plan-issue-3.md
             // 「設計決策」1，初版計畫誤放在 _buildNativeView 之下、且恆常顯示，
             // 已於審查發現並修正）。
@@ -3176,7 +3065,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // 熱區——previousPage/nextPage 在 loading 期間仍受
             // _handleZoneAction 既有的邏輯防呆保護（Issue 1），不依賴這層
             // 遮罩擋觸控才成立。
-            if (_state == _RenderState.loading)
+            if (_openBookFlow.isLoading)
               Positioned.fill(
                 child: IgnorePointer(
                   child: ColoredBox(
@@ -3239,11 +3128,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       ? null
                       : _togglePdfBookmark,
                   onAnnotationsTap: widget.bookmarksRepository == null ||
-                          _state != _RenderState.rendered
+                          !_openBookFlow.isRendered
                       ? null
                       : () => _openNotesSheet(BookFormat.pdf, initialTabIndex: 1),
                   onLayoutTap:
-                      _state == _RenderState.rendered ? _openPdfSettings : null,
+                      _openBookFlow.isRendered ? _openPdfSettings : null,
                   onTtsTap: null, // PDF 目前結構性沒有 TTS 底層能力
                   backgroundColor: _themedFabBackgroundColor,
                   iconColor: _themedFabIconColor,
@@ -3343,7 +3232,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   onCancel: () => setState(() => _cropEditModeActive = false),
                 ),
               ),
-            if (_state == _RenderState.loading)
+            if (_openBookFlow.isLoading)
               const Center(
                 key: Key('reader_loading_indicator'),
                 child: CircularProgressIndicator(),
@@ -3779,7 +3668,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// `down` 一律下一頁。全域音量鍵開關關閉時（`_resolved?.volumeKeyEnabled
   /// == false`，epic-14-system-settings Issue 4）忽略此次觸發。
   /// **epic-27-reader-device-compat Issue 1**：`previousPage`/`nextPage`
-  /// 於 `_state == _RenderState.loading`（書籍仍在載入中）時直接忽略，
+  /// 於 `_openBookFlow.isLoading`（書籍仍在載入中）時直接忽略，
   /// 避免 EPUB 端 `window.previousPage`/`nextPage` 賦值早於 `view.renderer`
   /// 真正建立的空窗期被觸控命中而拋出 JS 例外、被 `_handleError()` 誤判
   /// 為崩潰畫面（見 `reviews/bugfix-repro.md` Issue 1）。`menu` 動作不受
@@ -3809,7 +3698,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final format = detectBookFormat(_activeFilePath);
     switch (action) {
       case ZoneAction.previousPage:
-        if (_state == _RenderState.loading) return;
+        if (_openBookFlow.isLoading) return;
         _recordReadingActivity();
         if (format == BookFormat.pdf) {
           // Epic 26 Issue 3 暫時性真機診斷插樁：量測熱區判定觸發換頁的
@@ -3835,7 +3724,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         }
         break;
       case ZoneAction.nextPage:
-        if (_state == _RenderState.loading) return;
+        if (_openBookFlow.isLoading) return;
         _recordReadingActivity();
         if (format == BookFormat.pdf) {
           // Epic 26 Issue 3 暫時性真機診斷插樁：見上方 previousPage
