@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
-import 'package:elinkbook/reader/foliate_native_bridge.dart'
+import 'package:elinkbook/storage/storage_access_probe.dart'
     show StorageAccessProbeResult;
 import 'package:elinkbook/reader/open_book_flow.dart';
 import 'package:flutter_test/flutter_test.dart';

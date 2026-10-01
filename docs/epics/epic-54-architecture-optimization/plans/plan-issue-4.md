@@ -116,7 +116,7 @@ ProbeStorageAccess probeStorageAccess = probeStorageAccessViaChannel;
 Future<StorageAccessProbeResult> probeStorageAccessViaChannel(String uri, {Duration timeout = kStorageAccessProbeTimeout});
 ```
 
-- [ ] **Step 1：寫失敗的測試（把現有探測測試群組搬過來）**
+- [x] **Step 1：寫失敗的測試（把現有探測測試群組搬過來）**
 
 建立 `app/test/storage/storage_access_probe_test.dart`，內容是 `app/test/reader/foliate_native_bridge_test.dart` 第 202–301 行的 `group('probeStorageAccessViaChannel（…）'` 原樣搬過來，只換 import 與檔頭：
 
@@ -240,12 +240,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`flutter test test/storage/storage_access_probe_test.dart`
 Expected：編譯失敗，`Target of URI doesn't exist: 'package:elinkbook/storage/storage_access_probe.dart'`。
 
-- [ ] **Step 3：寫實作（逐字搬自橋接檔，只改 channel 宣告與註解中的引用）**
+- [x] **Step 3：寫實作（逐字搬自橋接檔，只改 channel 宣告與註解中的引用）**
 
 建立 `app/lib/storage/storage_access_probe.dart`：
 
@@ -325,7 +325,7 @@ Future<StorageAccessProbeResult> probeStorageAccessViaChannel(
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過，並確認沒有循環依賴**
+- [x] **Step 4：執行測試確認通過，並確認沒有循環依賴**
 
 ```bash
 flutter test test/storage/storage_access_probe_test.dart
@@ -334,7 +334,7 @@ grep -n "^import" lib/reader/reader_console_log.dart
 
 Expected：14 個測試 PASS（4 個結果對應＋9 個其餘＋1 個逾時常數）；`reader_console_log.dart` 只 import `package:flutter/foundation.dart`，沒有 `storage/`（Review Focus 5 的循環依賴檢查）。
 
-- [ ] **Step 5：analyze 並提交**
+- [x] **Step 5：analyze 並提交**
 
 ```bash
 flutter analyze
@@ -361,7 +361,7 @@ Expected：`No issues found!`。
 - Consumes：Task 1 的 5 個符號（新位置 `package:elinkbook/storage/storage_access_probe.dart`）。
 - Produces：橋接檔不再含任何探測符號。
 
-- [ ] **Step 1：切換 3 個 lib 檔的 import**
+- [x] **Step 1：切換 3 個 lib 檔的 import**
 
 1. `app/lib/screens/reader_screen.dart`，把
 ```dart
@@ -390,7 +390,7 @@ import '../storage/storage_access_probe.dart'
 import '../storage/storage_access_probe.dart' show StorageAccessProbeResult;
 ```
 
-- [ ] **Step 2：切換 3 個測試檔的 import**
+- [x] **Step 2：切換 3 個測試檔的 import**
 
 1. `app/test/screens/font_management_screen_test.dart`，把
 ```dart
@@ -419,7 +419,7 @@ import 'package:elinkbook/storage/storage_access_probe.dart'
 import 'package:elinkbook/storage/storage_access_probe.dart';
 ```
 
-- [ ] **Step 3：刪除橋接檔的探測區塊**
+- [x] **Step 3：刪除橋接檔的探測區塊**
 
 用 Node 腳本（不依賴換行字元）刪除 `foliate_native_bridge.dart` 中從探測列舉的 doc comment 起、到下一個函式 `loadCustomFontBytes` 的 doc comment 之前的整段：
 
@@ -439,7 +439,7 @@ console.log("removed",end-start,"chars");
 
 Expected：印出 `removed N chars`（約 2,000–2,500）。
 
-- [ ] **Step 4：刪除橋接測試的探測群組**
+- [x] **Step 4：刪除橋接測試的探測群組**
 
 ```bash
 node -e '
@@ -457,7 +457,7 @@ console.log("removed",end-start,"chars");
 
 Expected：印出 `removed N chars`（約 3,500–4,000）。
 
-- [ ] **Step 5：清理孤兒 import 並確認沒有殘留**
+- [x] **Step 5：清理孤兒 import 並確認沒有殘留**
 
 ```bash
 flutter analyze
@@ -476,7 +476,7 @@ grep -rn "foliate_native_bridge" lib --include="*.dart" | grep -i "probe\|探測
 
 若有，把註解改指向 `storage/storage_access_probe.dart`（只改註解文字）。
 
-- [ ] **Step 6：執行觸及的測試檔**
+- [x] **Step 6：執行觸及的測試檔**
 
 ```bash
 flutter test test/storage test/reader/foliate_native_bridge_test.dart test/reader/open_book_flow_test.dart test/screens/font_management_screen_test.dart test/screens/reader_screen_test.dart
@@ -484,7 +484,7 @@ flutter test test/storage test/reader/foliate_native_bridge_test.dart test/reade
 
 Expected：全部 PASS。其中兩個畫面測試的探測相關案例（`font_management_screen_test` 的「儲存權限失效標示與重新連結」群組、`reader_screen_test` 的「開書失敗的存取探測」與「重新選取檔案」群組）必須維持綠燈，這是 Review Focus 1 的驗證；若這些測試出現「走了真實 channel、結果變 unknownError」的失敗，代表某處 import 搬錯了，回頭檢查 Step 1、2。
 
-- [ ] **Step 7：提交**
+- [x] **Step 7：提交**
 
 ```bash
 node tool/check_l10n_hardcoded_strings.js
@@ -512,11 +512,11 @@ Expected：`check_l10n_hardcoded_strings.js` 兩行 PASS。
 - Consumes：Task 1–2 的實際測試數字。
 - Produces：可發 PR 的分支。
 
-- [ ] **Step 1：請求程式審查**
+- [x] **Step 1：請求程式審查**
 
 使用 `superpowers:requesting-code-review`，審查範圍為本分支相對 Task 0 提交計畫之後的 commit 範圍。審查重點請明確寫給審查員：(a) 純搬家無行為差異（對照 `main` 的橋接檔，新檔逐字相同，只有 channel 宣告與註解不同）；(b) 5 個符號在 `lib/`、`test/` 沒有殘留舊定義；(c) 新檔 channel 名稱 `elinkbook/reader_resources_cache` 與方法名 `probeUriAccess` 與原生 `ReaderResourceChannel.kt` 一致；(d) 沒有循環依賴（`storage/` → `reader/reader_console_log.dart`，後者不 import `storage/`）；(e) 孤兒 import 是否清乾淨。審查報告存於 `docs/epics/epic-54-architecture-optimization/reviews/review-code-issue-4.md`（gitignore，不進版控）；審查者只出報告、不直接改程式；依報告修訂前須先由使用者決定。審查摘要要寫進 `epic.md`。
 
-- [ ] **Step 2：全套測試（整張計畫最後一個 Task，CLAUDE.md 規定此時跑一次）**
+- [x] **Step 2：全套測試（整張計畫最後一個 Task，CLAUDE.md 規定此時跑一次）**
 
 ```bash
 flutter test
@@ -526,7 +526,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 全套約 6 分鐘，請用 `run_in_background`。Expected：`All tests passed!`；`No issues found!`；兩行 PASS。基準：Issue 3 合併後為 3275 通過、1 略過；本 Issue 是純搬家，13 個測試只是換檔案，另新增 1 個逾時常數測試，所以預期 **3276 通過、1 略過**（只多 1 個）。
 
-- [ ] **Step 3：寫開發記錄**
+- [x] **Step 3：寫開發記錄**
 
 在 `epic.md`「開發記錄」末尾新增（數字以實際結果為準）：
 

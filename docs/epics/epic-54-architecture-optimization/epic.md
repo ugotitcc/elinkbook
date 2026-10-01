@@ -118,3 +118,11 @@
 - PR #304（`epic-54/issue-3-font-relink-permission` → `main`）已合併，合併 commit `ab8aa403`。Issue 3 完成。全套 `flutter test` 3275 通過、1 略過。
 - 待真機確認（PR 描述已列）：媒體庫等不核發持久化授權的文件提供者，在字型上傳、字型重新連結、資料夾匯入三處的實際行為。
 - 後續：Issue 2、4、6 尚未設計，動手前各自須先 `/grill-with-docs`。Issue 4 把探測搬出 `foliate_native_bridge.dart` 時，依設計放進 `app/lib/storage/`（與 `storage_permission.dart` 同目錄），並順手評估審查 M-4：`storage_permission.dart` 為取得 channel 常數而 import `library_repository.dart` 的依賴方向。
+
+**2026-10-01 Issue 4 實作完成**：新增 `app/lib/storage/storage_access_probe.dart`，把 `StorageAccessProbeResult`、`ProbeStorageAccess`、`kStorageAccessProbeTimeout`、`probeStorageAccess`、`probeStorageAccessViaChannel` 從 `foliate_native_bridge.dart` 搬出（名稱不變、不留 re-export）；新檔自己宣告私有 `MethodChannel('elinkbook/reader_resources_cache')`，原生端與 channel 名稱不動。`reader_screen`／`font_management_screen`／`open_book_flow` 與 4 個測試檔改 import；探測測試群組（13 個）自 `foliate_native_bridge_test` 搬到 `test/storage/storage_access_probe_test.dart`，另新增 1 個釘住逾時 3 秒的測試。純搬家，無行為變動；`ReaderScreen` 對 `foliate_native_bridge.dart` 的引用歸零（它對橋接檔唯一的 import 就是探測）；M-4（`kBookMetadataChannel` 位置）依設計不處理；書籍與字型對探測結果的解讀差異依設計不統一。驗證：全套 `flutter test` 3276 通過、1 略過（Issue 3 合併後基準 3275＋1 個新增測試）；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS。程式審查結果見下方「程式審查」。待發 PR。
+
+**2026-10-02 程式審查**（獨立審查員，範圍 `934fcd9c..3f3962bb`；審查報告在 `reviews/` 不進版控，以下為摘要。0 Critical／0 Important／2 Minor，結論 Ready to merge。審查員實跑：`flutter analyze` 乾淨、觸及的測試檔群 401 通過（`storage_access_probe_test` 14 通過）、`check_l10n_hardcoded_strings.js` PASS；5 個符號與 `main` 的橋接檔逐字相同（僅 channel 宣告與註解不同），channel `elinkbook/reader_resources_cache` 與方法 `probeUriAccess` 和 `ReaderResourceChannel.kt` 一致；三個 lib 檔與四個測試檔都指向新檔的同一個頂層變數，注入覆寫有效；`lib/`、`test/` 無舊定義、re-export 或孤兒 import，`ReaderScreen` 對橋接檔的依賴歸零，無循環依賴；橋接測試搬走恰好 13 個案例，無其他覆蓋損失）
+
+- M-1（不處理）：`reader_screen.dart` 的新 import 夾在 `reader/` 的 import 群組中間，純風格；計畫本來就指定原位替換。
+- M-2（不處理）：channel 在橋接檔與新檔各宣告一次，是計畫接受的取捨（`MethodChannel` 只是依名稱指向同一條原生通道的代理），新檔註解已說明。
+- 全套 `flutter test` 審查員未重跑；發 PR 前由實作者重跑：第一次 3275 通過、1 略過、**1 失敗**（`test/downloads/download_queue_controller_test.dart`「偵測到重複且 onDuplicateConfirm 回傳 false 時，標記為略過且不呼叫 import」，預期 `duplicateSkipped`、實際 `checkingDuplicate`）；本分支未動 `lib/downloads`／`test/downloads`，該檔單獨連跑 5 次全過，不改任何程式直接重跑全套則 **3276 通過、1 略過、0 失敗**。判斷為既有的不穩定測試（只用固定輪數的 `pumpEventQueue()` 等非同步鏈，整套並行負載高時可能來不及），與本 Issue 無關，不在本 Issue 處理；若之後重複出現，應另立工單把等待改為條件式。

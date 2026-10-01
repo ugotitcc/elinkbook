@@ -12,7 +12,7 @@ import '../reader/custom_fonts_repository.dart';
 import '../reader/downloadable_font_store.dart';
 import '../reader/font_download_catalog.dart';
 import '../reader/font_name_parser.dart';
-import '../reader/foliate_native_bridge.dart'
+import '../storage/storage_access_probe.dart'
     show StorageAccessProbeResult, probeStorageAccess;
 import '../storage/storage_permission.dart';
 
