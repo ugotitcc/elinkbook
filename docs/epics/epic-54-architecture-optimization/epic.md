@@ -99,3 +99,9 @@
 - M-4（不處理）：`storage/storage_permission.dart` 為取得 channel 常數而 import `library_repository.dart`，依賴方向不理想。把常數搬家會動到許多檔案，不屬於本 Issue，可在 Issue 4 一併評估。
 - 實作者自審另列兩項 defer，亦未處理：測試輔助 `mockPersistPermission` 的 `throws` 參數已無人傳 true；`_relinker` 以 `late final` 綁定初建的 repository，實務上到不了。
 - 驗證：修訂後 `flutter analyze` No issues found；`custom_font_relinker_test`、`book_import_service_test`、`font_management_screen_test`、`book_import_picker_helper_test` 共 159 通過。修訂後重跑全套 `flutter test`：3275 通過、1 略過、0 失敗（兩項修訂只動註解順序與 `try` 範圍，未新增或刪除測試）。待發 PR。
+
+**2026-10-01 PR 合併（Issue 3）**
+
+- PR #304（`epic-54/issue-3-font-relink-permission` → `main`）已合併，合併 commit `ab8aa403`。Issue 3 完成。全套 `flutter test` 3275 通過、1 略過。
+- 待真機確認（PR 描述已列）：媒體庫等不核發持久化授權的文件提供者，在字型上傳、字型重新連結、資料夾匯入三處的實際行為。
+- 後續：Issue 2、4、6 尚未設計，動手前各自須先 `/grill-with-docs`。Issue 4 把探測搬出 `foliate_native_bridge.dart` 時，依設計放進 `app/lib/storage/`（與 `storage_permission.dart` 同目錄），並順手評估審查 M-4：`storage_permission.dart` 為取得 channel 常數而 import `library_repository.dart` 的依賴方向。

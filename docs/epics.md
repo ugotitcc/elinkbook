@@ -62,7 +62,7 @@
 | 52 | `epic-50-sync-token-refresh` （缺陷）同步 token 過期後無法同步，須登出再登入才恢復 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 53 | `epic-52-play-release` 上架 Google Play 的前置工作（release 簽章、隱私權政策補同步服務、版本號腳本） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 54 | `epic-53-sync-checkpoint-result` （重構＋缺陷）同步 checkpoint 直接回報結果（含登入過期），消除呼叫端反推儲存狀態，並修正中途登出時顯示空白 email | 🟡 開發中 (Active) | 全數完成，待歸檔 |
-| 55 | `epic-54-architecture-optimization` 架構優化（集中所有架構深化候選，每個候選一張 Issue） | 🟡 開發中 (Active) | Issue 1 已合併（PR #302）；Issue 5 已合併（PR #303）；Issue 3 實作完成待發 PR；Issue 2、4、6 待設計 |
+| 55 | `epic-54-architecture-optimization` 架構優化（集中所有架構深化候選，每個候選一張 Issue） | 🟡 開發中 (Active) | Issue 1 已合併（PR #302）；Issue 5 已合併（PR #303）；Issue 3 已合併（PR #304）；Issue 2、4、6 待設計 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。
