@@ -88,3 +88,14 @@
 - PR #303（`epic-54/issue-5-open-book-flow` → `main`）已合併，合併 commit `707645e5`。Issue 5 完成。審查修訂後全套 `flutter test` 3255 通過、1 略過。
 - 待真機確認（PR 描述已列）：`onPageRendered` 在 Foliate WebView／pdfrx 的實際觸發頻率，以及慢速裝置上逾時多一次探測的延遲。
 - 後續：Issue 2、3、4、6 尚未設計，動手前各自須先 `/grill-with-docs`。Issue 3 做時評估字型重新連結是否與 `OpenBookFlow` 共用「探測後分類」；Issue 4 把探測移出 `foliate_native_bridge.dart` 時，`open_book_flow.dart` 內對 `StorageAccessProbeResult` 的 import 需改一行。
+
+**2026-10-01 Issue 3 實作完成**：新增 `persistReadAccess`（`app/lib/storage/storage_permission.dart`，集中 4 處 `takePersistableUriPermission` 呼叫，失敗處置仍由各呼叫端決定）、`CustomFontRelinker`（`app/lib/reader/custom_font_relinker.dart`，密封類別 `FontRelinkResult` 與 `BookRelinkResult` 並列）、`resolveFontFamilyName`／`stripFontFileExtension`（`font_name_parser.dart`，上傳與重新連結共用同一條家族名稱規則）；`ImportResult` 新增 `failure`。與設計表的差異：`_stripExtension` 改為公開的 `stripFontFileExtension` 並移入 `font_name_parser.dart`，避免兩份實作。行為調整：① 字型重新連結失敗顯示 SnackBar（重用 `readerStorageRelinkFailed`）；② 資料夾匯入三條失敗路徑回報 `failure` 並顯示新訊息 `libraryImportFolderFailedMessage`（4 份 ARB）。測試：新增純測試 21 個（`storage_permission_test` 3、`font_name_parser_test` 4、`custom_font_relinker_test` 8、`book_import_service_test` 5、`book_import_picker_helper_test` 1）；`font_management_screen_test` 刪 1 個規則類（授權失敗仍更新 URI，改由 relinker 純測試涵蓋）、`updateUri` 失敗測試補 SnackBar 斷言。驗證：觸及檔 219/219 通過；全套 `flutter test` 3275 通過、1 略過（Issue 5 基準 3255＋20＝21 新增−1 刪除）；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS。程式審查結果見下方「程式審查與修訂」。待發 PR。
+
+**2026-10-01 程式審查與修訂**（獨立審查員，範圍 `560cdcf5..10ec1ca6`；審查報告在 `reviews/` 不進版控，以下為摘要。0 Critical／0 Important／4 Minor，結論 Ready to merge。審查員實跑：`flutter analyze` 乾淨、受影響 6 個測試檔 174 通過、`check_l10n_hardcoded_strings.js` PASS、`flutter gen-l10n` 後工作樹乾淨；對照 `main` 逐項比對 `_relinkFont`、批次上傳、`_persistPermissionOrLandCopy`、`relinkBook` 皆無行為差異；Dart `lib/` 只剩 `storage_permission.dart` 一處實際呼叫 `takePersistableUriPermission`）
+
+- M-1（已修）：`book_import_service.dart` 的 `ImportResult` 說明註解被新增的 `ImportFailure` 區塊接在後面，兩段 `///` 合併成同一份註解掛到 enum 上；`ImportFailure` 移到說明之前，註解回到 `ImportResult` 上。
+- M-2（已修）：`CustomFontRelinker.relink` 的「保證不拋出例外」註解與 `try` 範圍不一致（`resolveFontFamilyName` 在 `try` 外）；整段移進 `try`，並在註解說明。
+- M-3（不處理）：訊息「請確認已授權存取」對「已有授權但列舉失敗」稍偏。設計決策本來就選擇兩種失敗共用一則。
+- M-4（不處理）：`storage/storage_permission.dart` 為取得 channel 常數而 import `library_repository.dart`，依賴方向不理想。把常數搬家會動到許多檔案，不屬於本 Issue，可在 Issue 4 一併評估。
+- 實作者自審另列兩項 defer，亦未處理：測試輔助 `mockPersistPermission` 的 `throws` 參數已無人傳 true；`_relinker` 以 `late final` 綁定初建的 repository，實務上到不了。
+- 驗證：修訂後 `flutter analyze` No issues found；`custom_font_relinker_test`、`book_import_service_test`、`font_management_screen_test`、`book_import_picker_helper_test` 共 159 通過。修訂後重跑全套 `flutter test`：3275 通過、1 略過、0 失敗（兩項修訂只動註解順序與 `try` 範圍，未新增或刪除測試）。待發 PR。

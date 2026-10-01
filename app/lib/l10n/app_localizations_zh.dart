@@ -1956,6 +1956,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get libraryImportFolderFailedMessage => '無法讀取這個資料夾，請確認已授權存取後再試一次';
+
+  @override
   String get layoutPresetBookPickerTitleMulti => '選擇書籍（可複選）';
 
   @override
@@ -4182,6 +4185,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   }
 
   @override
+  String get libraryImportFolderFailedMessage => '无法读取这个文件夹，请确认已授权访问后再试一次';
+
+  @override
   String get layoutPresetBookPickerTitleMulti => '选择书籍（可复选）';
 
   @override
@@ -6406,6 +6412,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
     );
     return '$_temp0';
   }
+
+  @override
+  String get libraryImportFolderFailedMessage => '無法讀取這個資料夾，請確認已授權存取後再試一次';
 
   @override
   String get layoutPresetBookPickerTitleMulti => '選擇書籍（可複選）';

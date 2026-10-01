@@ -497,6 +497,89 @@ void main() {
     expect(books.single.groupName, BookGroup.uncategorized);
   });
 
+  group('importFolder 失敗回報（epic-54 Issue 3）', () {
+    /// 目前的群組名稱清單（資料庫建立時預設就有系統保留分類「未分類」）。
+    Future<List<String>> groupNames() async =>
+        (await repository.listGroups()).map((g) => g.name).toList();
+
+    test('持久化授權失敗：回傳 folderAccessDenied、沒有匯入任何書、不嘗試列舉（Review Focus 2）',
+        () async {
+      final groupsBefore = await groupNames();
+      var listCalled = false;
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') {
+          throw PlatformException(code: 'denied');
+        }
+        if (call.method == 'listFolderContents') listCalled = true;
+        return null;
+      });
+
+      final result = await service.importFolder('content://example/tree/folder');
+
+      expect(result.failure, ImportFailure.folderAccessDenied);
+      expect(result.importedBooks, isEmpty);
+      expect(listCalled, isFalse, reason: '沒有授權就不該嘗試列舉');
+      expect(await groupNames(), groupsBefore);
+    });
+
+    test('列舉資料夾內容拋出 PlatformException：回傳 folderListingFailed、群組不變', () async {
+      final groupsBefore = await groupNames();
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'listFolderContents') {
+          throw PlatformException(code: 'listing_failed');
+        }
+        return null;
+      });
+
+      final result = await service.importFolder('content://example/tree/folder');
+
+      expect(result.failure, ImportFailure.folderListingFailed);
+      expect(result.importedBooks, isEmpty);
+      expect(await groupNames(), groupsBefore);
+    });
+
+    test('列舉結果為 null：回傳 folderListingFailed', () async {
+      mockChannel((call) async => null);
+
+      final result = await service.importFolder('content://example/tree/folder');
+
+      expect(result.failure, ImportFailure.folderListingFailed);
+    });
+
+    test('正常匯入：failure 維持 null', () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'listFolderContents') {
+          return {
+            'folderName': '歷史小說',
+            'fileUris': ['content://example/tree/folder/document/book1.epub'],
+          };
+        }
+        return {'title': null, 'author': null, 'coverBytes': null};
+      });
+
+      final result = await service.importFolder('content://example/tree/folder');
+
+      expect(result.failure, isNull);
+    });
+
+    test('資料夾裡沒有可匯入的書（合法的空結果）：不是失敗，failure 為 null', () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'listFolderContents') {
+          return {'folderName': '空資料夾', 'fileUris': <String>[]};
+        }
+        return null;
+      });
+
+      final result = await service.importFolder('content://example/tree/folder');
+
+      expect(result.failure, isNull);
+      expect(result.importedBooks, isEmpty);
+    });
+  });
+
   group('重複匯入偵測（診斷修正：同一本書可以重複匯入）', () {
     test('來源 URI 與圖書庫既有書籍相同時，跳過不新增，並回報 skippedDuplicateCount',
         () async {

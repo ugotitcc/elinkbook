@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../search/full_text_search_settings_repository.dart';
+import '../storage/storage_permission.dart';
 import '../theme/app_theme_preferences.dart';
 import 'book_content_fingerprint.dart';
 import 'book_import_service.dart';
@@ -133,13 +134,12 @@ class BookImportServiceImpl implements BookImportService {
     String folderUri, {
     bool autoGroupByFolderName = true,
   }) async {
-    try {
-      await kBookMetadataChannel.invokeMethod<void>(
-        'takePersistableUriPermission',
-        {'uri': folderUri},
+    // 資料夾沒有持久化授權就無法列舉：整次匯入失敗，並讓畫面告知使用者原因。
+    if (!await persistReadAccess(folderUri)) {
+      return const ImportResult(
+        importedBooks: [],
+        failure: ImportFailure.folderAccessDenied,
       );
-    } on PlatformException {
-      return const ImportResult(importedBooks: []);
     }
 
     Map<Object?, Object?>? contents;
@@ -149,9 +149,17 @@ class BookImportServiceImpl implements BookImportService {
         {'uri': folderUri},
       );
     } on PlatformException {
-      return const ImportResult(importedBooks: []);
+      return const ImportResult(
+        importedBooks: [],
+        failure: ImportFailure.folderListingFailed,
+      );
     }
-    if (contents == null) return const ImportResult(importedBooks: []);
+    if (contents == null) {
+      return const ImportResult(
+        importedBooks: [],
+        failure: ImportFailure.folderListingFailed,
+      );
+    }
 
     final folderName = contents['folderName'] as String?;
     final fileUris =
@@ -579,15 +587,7 @@ class BookImportServiceImpl implements BookImportService {
     BookFileFormat format,
   ) async {
     if (!uri.startsWith('content://')) return uri;
-    var permissionGranted = true;
-    try {
-      await kBookMetadataChannel.invokeMethod<void>(
-        'takePersistableUriPermission',
-        {'uri': uri},
-      );
-    } on PlatformException {
-      permissionGranted = false;
-    }
+    final permissionGranted = await persistReadAccess(uri);
     if (!permissionGranted || detectBookFileFormat(uri) == null) {
       return _copyToLocalStorage(uri, id, format);
     }

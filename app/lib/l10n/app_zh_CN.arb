@@ -561,6 +561,7 @@
   "libraryImportResultBothMessage": "{importedCount, plural, =1{已汇入 1 本} other{已汇入 {importedCount} 本}}，{skippedCount, plural, =1{1 本已存在，已跳过} other{{skippedCount} 本已存在，已跳过}}",
   "libraryImportResultImportedOnlyMessage": "{importedCount, plural, =1{已汇入 1 本书} other{已汇入 {importedCount} 本书}}",
   "libraryImportResultSkippedOnlyMessage": "{skippedCount, plural, =1{1 本已存在，已跳过} other{{skippedCount} 本已存在，已跳过}}",
+  "libraryImportFolderFailedMessage": "无法读取这个文件夹，请确认已授权访问后再试一次",
   "layoutPresetBookPickerTitleMulti": "选择书籍（可复选）",
   "layoutPresetBookPickerTitleSingle": "选择书籍",
   "layoutPresetBookPickerSearchHint": "搜索书名或作者",

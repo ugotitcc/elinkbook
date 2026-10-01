@@ -2036,6 +2036,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get libraryImportFolderFailedMessage =>
+      'Couldn\'t read this folder. Make sure access is allowed, then try again.';
+
+  @override
   String get layoutPresetBookPickerTitleMulti =>
       'Select Books (multiple selection)';
 
