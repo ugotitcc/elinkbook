@@ -52,6 +52,19 @@
 | 與 Issue 4 | 新目錄 `app/lib/storage/`，Issue 4 之後把探測搬進同一目錄（`storage_access_probe.dart`），兩者互不依賴 |
 | 測試 | 純測試：`CustomFontRelinker`（家族不符時不呼叫授權也不改記錄、授權失敗仍繼續、`updateUri` 拋例外回傳 failed、呼叫順序）、`resolveFontFamilyName`、`persistReadAccess`、`importFolder` 三條失敗路徑；`font_management_screen_test` 只留接線類，規則類遷出後刪除並於記錄列出對應；新增「字型重新連結失敗顯示 SnackBar」「資料夾匯入失敗顯示 SnackBar」 |
 
+## Issue 4 設計決策（`/grill-with-docs` 定案）
+
+| 決策 | 結論 |
+|---|---|
+| 範圍 | 只搬 Dart 端：`StorageAccessProbeResult`、`ProbeStorageAccess`、`kStorageAccessProbeTimeout`、頂層變數 `probeStorageAccess`、`probeStorageAccessViaChannel` 整組搬到 `app/lib/storage/storage_access_probe.dart`，**名稱全部不變**；原生 `probeUriAccess`（`ReaderResourceChannel.kt`）與 channel 名稱 `elinkbook/reader_resources_cache` 不動 |
+| 相容與測試 | 乾淨搬家，橋接檔不留 re-export；8 個檔案的 import 一次改完（`reader_screen`、`font_management_screen`、`open_book_flow` 與 4 個測試檔）；`foliate_native_bridge_test` 的探測群組整組搬到 `test/storage/storage_access_probe_test.dart`；畫面測試與 `open_book_flow_test` 只改 import |
+| channel 宣告 | 新檔自己宣告私有 `MethodChannel('elinkbook/reader_resources_cache')`（`MethodChannel` 只是依名稱指向同一條原生通道的代理，橋接檔內 `_volumeKeyChannel` 同樣做法）；橋接檔的 `cacheBookForServing`／`readContentUriAll` 維持用它自己那一份；測試以 channel 名稱註冊 mock，寫法不變 |
+| M-4（Issue 3 審查遺留） | 不處理：`storage_permission.dart` 繼續 import `library_repository.dart` 取得 `kBookMetadataChannel`；那只是 channel 名稱常數，搬它要動 14 個無關檔案（lib 8＋test 6） |
+| 診斷日誌 | 探測函式內繼續寫 `ReaderConsoleLog`，新檔 import `reader/reader_console_log.dart`（無依賴的純工具類別，不屬於 Foliate 引擎） |
+| 解讀規則差異 | 不統一、不抽取：書籍只在 `permissionRevoked`／`fileNotFound` 顯示重新選取；字型在 `!= readable`（含 `unknownError`）就顯示標示與重新連結。兩者情境不同（書籍的 `unknownError` 可能是檔案損毀，重新連結救不了；字型沒有其他處置途徑）。之後若要統一另外處理 |
+| 詞條與 ADR | `CONTEXT.md` 新增「存取探測」；不寫 ADR（只是搬家，沒有新取捨） |
+| 行為變動 | 無，純搬家 |
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
