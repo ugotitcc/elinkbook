@@ -8,6 +8,8 @@
 
 最後修訂：2026-09-27
 
+要發佈官網下載用的 APK，見 `docs/research/release_apk_sop.md`。APK 用另一把「發佈金鑰」，不要用這份 SOP 的上傳金鑰簽 APK。
+
 ---
 
 ## 0. 基本資料
