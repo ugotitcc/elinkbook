@@ -70,7 +70,7 @@
 - Consumes：無。
 - Produces：後續 Task 都在 worktree 的分支 `epic-54/issue-3-font-relink-permission` 上進行與提交。
 
-- [ ] **Step 1：在 `main` 提交計畫**
+- [x] **Step 1：在 `main` 提交計畫**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook
@@ -83,7 +83,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 Expected：`git status --short` 在 add 之前只有該計畫檔（若有其他未提交異動，先釐清來源，不要一併提交）。
 
-- [ ] **Step 2：建立 worktree 與分支**
+- [x] **Step 2：建立 worktree 與分支**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook
@@ -112,7 +112,7 @@ Expected：`Preparing worktree (new branch 'epic-54/issue-3-font-relink-permissi
 Future<bool> persistReadAccess(String uri);
 ```
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 建立 `app/test/storage/storage_permission_test.dart`：
 
@@ -162,12 +162,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`flutter test test/storage/storage_permission_test.dart`
 Expected：編譯失敗，`Target of URI doesn't exist: 'package:elinkbook/storage/storage_permission.dart'`。
 
-- [ ] **Step 3：寫最小實作**
+- [x] **Step 3：寫最小實作**
 
 建立 `app/lib/storage/storage_permission.dart`：
 
@@ -199,12 +199,12 @@ Future<bool> persistReadAccess(String uri) async {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run：`flutter test test/storage/storage_permission_test.dart`
 Expected：3 個測試 PASS。
 
-- [ ] **Step 5：analyze 並提交**
+- [x] **Step 5：analyze 並提交**
 
 ```bash
 flutter analyze
@@ -233,7 +233,7 @@ String stripFontFileExtension(String fileName);
 String resolveFontFamilyName(Uint8List bytes, String fileName);
 ```
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 Read `app/test/reader/font_name_parser_test.dart` 檔尾，在 `main()` 的結尾 `}` 之前新增（若 `dart:io`、`dart:typed_data`、`font_name_parser.dart` 的 import 已存在則不重複加）：
 
@@ -265,12 +265,12 @@ Read `app/test/reader/font_name_parser_test.dart` 檔尾，在 `main()` 的結�
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`flutter test test/reader/font_name_parser_test.dart`
 Expected：編譯失敗，`The function 'stripFontFileExtension' isn't defined`。
 
-- [ ] **Step 3：寫最小實作**
+- [x] **Step 3：寫最小實作**
 
 在 `app/lib/reader/font_name_parser.dart` 檔尾新增：
 
@@ -289,12 +289,12 @@ String resolveFontFamilyName(Uint8List bytes, String fileName) =>
     parseFontFamilyName(bytes) ?? stripFontFileExtension(fileName);
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run：`flutter test test/reader/font_name_parser_test.dart`
 Expected：全部 PASS（含既有測試）。
 
-- [ ] **Step 5：analyze 並提交**
+- [x] **Step 5：analyze 並提交**
 
 ```bash
 flutter analyze
@@ -332,7 +332,7 @@ class CustomFontRelinker {
 }
 ```
 
-- [ ] **Step 1：寫失敗的純測試**
+- [x] **Step 1：寫失敗的純測試**
 
 建立 `app/test/reader/custom_font_relinker_test.dart`：
 
@@ -493,12 +493,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`flutter test test/reader/custom_font_relinker_test.dart`
 Expected：編譯失敗，`Target of URI doesn't exist: 'package:elinkbook/reader/custom_font_relinker.dart'`。
 
-- [ ] **Step 3：寫最小實作**
+- [x] **Step 3：寫最小實作**
 
 建立 `app/lib/reader/custom_font_relinker.dart`：
 
@@ -595,12 +595,12 @@ class CustomFontRelinker {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run：`flutter test test/reader/custom_font_relinker_test.dart`
 Expected：8 個測試 PASS。
 
-- [ ] **Step 5：analyze 並提交**
+- [x] **Step 5：analyze 並提交**
 
 ```bash
 flutter analyze
@@ -622,7 +622,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1 的 `persistReadAccess`、Task 2 的 `resolveFontFamilyName`／`stripFontFileExtension`、Task 3 的 `CustomFontRelinker`／`FontRelinkResult` 家族。
 - Produces：`FontManagementScreen` 對外行為不變，僅「重新連結失敗」多一則 SnackBar。
 
-- [ ] **Step 1：先改測試（失敗的測試先行）**
+- [x] **Step 1：先改測試（失敗的測試先行）**
 
 在 `app/test/screens/font_management_screen_test.dart`：
 
@@ -657,12 +657,12 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 2. 刪除整個 `testWidgets('持久化授權失敗不中止：仍然更新 URI（比照 ADR 0021）'` 區塊（規則已由 `custom_font_relinker_test.dart`「授權回傳 false…仍更新 URI」涵蓋）。
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`flutter test test/screens/font_management_screen_test.dart --plain-name "updateUri 寫入失敗"`
 Expected：FAIL（找不到 `重新連結失敗，請再試一次`，目前失敗時沒有 SnackBar）。
 
-- [ ] **Step 3：改 import 與欄位**
+- [x] **Step 3：改 import 與欄位**
 
 在 `app/lib/screens/font_management_screen.dart`：
 
@@ -682,7 +682,7 @@ import '../storage/storage_permission.dart';
       CustomFontRelinker(repository: widget.repository);
 ```
 
-- [ ] **Step 4：改寫 `_relinkFont`**
+- [x] **Step 4：改寫 `_relinkFont`**
 
 把整個 `_relinkFont` 方法（含其上方 doc comment，約第 525–575 行）換成：
 
@@ -728,7 +728,7 @@ import '../storage/storage_permission.dart';
   }
 ```
 
-- [ ] **Step 5：改上傳流程用共用函式**
+- [x] **Step 5：改上傳流程用共用函式**
 
 在 `_pickAndUploadFonts` 內：
 
@@ -765,17 +765,17 @@ import '../storage/storage_permission.dart';
 
 4. 刪除檔尾私有函式 `_stripExtension`（含其 doc comment，約第 695–700 行）。
 
-- [ ] **Step 6：清理未使用的 import 並 analyze**
+- [x] **Step 6：清理未使用的 import 並 analyze**
 
 Run：`flutter analyze`
 Expected：若出現 `unused_import`（常見是 `../library/library_repository.dart`，因 `kBookMetadataChannel` 已不被此檔使用；`dart:ui`／`services.dart` 仍因 `Uint8List` 保留），逐一移除；最後 `No issues found!`。
 
-- [ ] **Step 7：執行測試**
+- [x] **Step 7：執行測試**
 
 Run：`flutter test test/screens/font_management_screen_test.dart test/reader/custom_font_relinker_test.dart`
 Expected：全部 PASS（包含「重新連結成功」「選到不同家族的字型」「選檔期間離開畫面」「處理中連點只開一次選擇器」等既有 widget 測試，證明接線沒斷）。
 
-- [ ] **Step 8：提交**
+- [x] **Step 8：提交**
 
 ```bash
 git add lib/screens/font_management_screen.dart test/screens/font_management_screen_test.dart
@@ -811,7 +811,7 @@ class ImportResult {
 }
 ```
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 在 `app/test/library/book_import_service_test.dart`，緊接在 `test('autoGroupByFolderName=false 時，匯入書籍歸入預設「未分類」'…` 之後、`group('重複匯入偵測…` 之前新增：
 
@@ -902,12 +902,12 @@ class ImportResult {
 
 若 `PlatformException` 在該測試檔尚未 import，檔頭加 `import 'package:flutter/services.dart';`（多半已存在，因為 `MethodCall` 已被使用）。
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run：`flutter test test/library/book_import_service_test.dart --plain-name "importFolder 失敗回報"`
 Expected：編譯失敗，`Undefined name 'ImportFailure'`（或 `The getter 'failure' isn't defined for the class 'ImportResult'`）。
 
-- [ ] **Step 3：新增 `ImportFailure` 與 `ImportResult.failure`**
+- [x] **Step 3：新增 `ImportFailure` 與 `ImportResult.failure`**
 
 在 `app/lib/library/book_import_service.dart`，把
 
@@ -953,7 +953,7 @@ class ImportResult {
 }
 ```
 
-- [ ] **Step 4：`importFolder` 與 `_persistPermissionOrLandCopy` 改用 `persistReadAccess`**
+- [x] **Step 4：`importFolder` 與 `_persistPermissionOrLandCopy` 改用 `persistReadAccess`**
 
 在 `app/lib/library/book_import_service_impl.dart`：
 
@@ -1036,7 +1036,7 @@ class ImportResult {
     if (!permissionGranted || detectBookFileFormat(uri) == null) {
 ```
 
-- [ ] **Step 5：analyze 並跑測試**
+- [x] **Step 5：analyze 並跑測試**
 
 ```bash
 flutter analyze
@@ -1045,7 +1045,7 @@ flutter test test/library/book_import_service_test.dart
 
 Expected：`No issues found!`（若 `PlatformException` 的 import 仍被 `listFolderContents` 的 catch 使用，則不會有 unused import）；全部 PASS，包含既有「持久化失敗改複製」測試（`copyContentUriToFile` 相關，Review Focus 3）與新增 5 個。
 
-- [ ] **Step 6：確認「授權失敗仍走複製退路」的既有測試仍綠燈（Review Focus 3）**
+- [x] **Step 6：確認「授權失敗仍走複製退路」的既有測試仍綠燈（Review Focus 3）**
 
 不需要新增測試，既有測試已涵蓋匯入與重新連結兩條路徑（計畫審查 M-3 已查證）：
 - 匯入：`book_import_service_test.dart` 內以 `copyContentUriToFile` 為關鍵字的既有測試（約第 182、226、310、341 行）。
@@ -1054,7 +1054,7 @@ Expected：`No issues found!`（若 `PlatformException` 的 import 仍被 `listF
 Run：`flutter test test/library/book_import_service_test.dart --plain-name "持久化授權"`
 Expected：上述測試 PASS；再跑整個檔案 `flutter test test/library/book_import_service_test.dart` 全部 PASS。
 
-- [ ] **Step 7：提交**
+- [x] **Step 7：提交**
 
 ```bash
 git add lib/library/book_import_service.dart lib/library/book_import_service_impl.dart test/library/book_import_service_test.dart
@@ -1077,7 +1077,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 5 的 `ImportResult.failure`／`ImportFailure`。
 - Produces：`AppLocalizations.libraryImportFolderFailedMessage`（`String get`）。
 
-- [ ] **Step 1：寫失敗的 widget 測試**
+- [x] **Step 1：寫失敗的 widget 測試**
 
 在 `app/test/screens/support/book_import_picker_helper_test.dart` 的 `group('showImportResultSnackBar'` 內、第一個 `testWidgets('兩者皆為 0 時不顯示任何 SnackBar'` 之前新增（沿用該 group 既有的 pump 寫法）：
 
@@ -1127,7 +1127,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 （`ImportFailure` 由已 import 的 `book_import_service.dart` 提供。）
 
-- [ ] **Step 2：新增 ARB 鍵**
+- [x] **Step 2：新增 ARB 鍵**
 
 四份 ARB 都在 `libraryImportResultSkippedOnlyMessage` 之後新增 `libraryImportFolderFailedMessage`。
 
@@ -1172,7 +1172,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
   "libraryImportFolderFailedMessage": "Couldn't read this folder. Make sure access is allowed, then try again.",
 ```
 
-- [ ] **Step 3：重新產生 l10n 並確認只有預期的差異**
+- [x] **Step 3：重新產生 l10n 並確認只有預期的差異**
 
 ```bash
 flutter gen-l10n
@@ -1181,7 +1181,7 @@ git diff --stat -- lib/l10n
 
 Expected：`app_localizations.dart`、`app_localizations_zh.dart`、`app_localizations_en.dart` 與四份 ARB 都只新增該鍵相關行，沒有其他連動差異。若出現無關差異，先釐清（可能是 Flutter 版本不同造成格式變動），不要提交無關變動。
 
-- [ ] **Step 4：改 `showImportResultSnackBar`**
+- [x] **Step 4：改 `showImportResultSnackBar`**
 
 在 `app/lib/screens/support/book_import_picker_helper.dart`，把函式開頭
 
@@ -1207,7 +1207,7 @@ void showImportResultSnackBar(BuildContext context, ImportResult result) {
 
 doc comment 中「兩者皆為 0 時不顯示任何提示」那句之後補：`整體失敗（[ImportResult.failure] 非 null，epic-54 Issue 3）時只顯示失敗訊息。`
 
-- [ ] **Step 5：執行測試與檢查**
+- [x] **Step 5：執行測試與檢查**
 
 ```bash
 flutter analyze
@@ -1217,7 +1217,7 @@ flutter test test/screens/support/book_import_picker_helper_test.dart test/l10n
 
 Expected：`No issues found!`；兩行 PASS；全部 PASS（`test/l10n` 的 `app_localizations_generated_test` 等會確認四份語系鍵一致）。
 
-- [ ] **Step 6：提交**
+- [x] **Step 6：提交**
 
 ```bash
 git add lib/l10n lib/screens/support/book_import_picker_helper.dart test/screens/support/book_import_picker_helper_test.dart
@@ -1239,7 +1239,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1–6 的實際測試數字。
 - Produces：可發 PR 的分支。
 
-- [ ] **Step 1：跑本 Issue 觸及的測試檔**
+- [x] **Step 1：跑本 Issue 觸及的測試檔**
 
 ```bash
 flutter test test/storage test/reader/font_name_parser_test.dart test/reader/custom_font_relinker_test.dart test/screens/font_management_screen_test.dart test/library/book_import_service_test.dart test/screens/support/book_import_picker_helper_test.dart test/l10n
@@ -1247,11 +1247,11 @@ flutter test test/storage test/reader/font_name_parser_test.dart test/reader/cus
 
 Expected：全部 PASS。
 
-- [ ] **Step 2：請求程式審查**
+- [x] **Step 2：請求程式審查**
 
 使用 `superpowers:requesting-code-review`，審查範圍為本分支相對 Task 0 提交計畫之後的 commit 範圍。審查報告存於 `docs/epics/epic-54-architecture-optimization/reviews/review-code-issue-3.md`（gitignore，不進版控）；審查者只出報告、不直接改程式；依報告修訂前須先由使用者決定。審查摘要要寫進 `epic.md`（見 Step 4），不能只留在報告裡。
 
-- [ ] **Step 3：全套測試（整張計畫最後一個 Task，CLAUDE.md 規定此時跑一次）**
+- [x] **Step 3：全套測試（整張計畫最後一個 Task，CLAUDE.md 規定此時跑一次）**
 
 ```bash
 flutter test
@@ -1261,7 +1261,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 全套約 6 分鐘，請用 `run_in_background`。Expected：`All tests passed!`；`No issues found!`；兩行 PASS。基準：Issue 5 合併後為 3255 通過、1 略過。
 
-- [ ] **Step 4：寫開發記錄**
+- [x] **Step 4：寫開發記錄**
 
 在 `epic.md`「開發記錄」末尾新增（數字以實際結果為準）：
 
@@ -1271,7 +1271,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 並把 `issues.md` Issue 3 狀態改為「🟡 進行中（`plans/plan-issue-3.md`）」、`docs/epics.md` 第 65 行（表格編號 55）改為「…Issue 3 實作完成待發 PR…」。
 
-- [ ] **Step 5：提交並準備發 PR**
+- [x] **Step 5：提交並準備發 PR**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook/.worktrees/epic-54-issue-3-font-relink-permission
