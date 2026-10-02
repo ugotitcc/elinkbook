@@ -102,6 +102,13 @@ void main() {
         ['[zh] 與 zh_TW 文字不同的鍵：b'],
       );
     });
+
+    test('zh 缺鍵：不在此重複回報（交給 keySetViolations）', () {
+      expect(
+        zhMirrorViolations({'a': '取消', 'b': '確定'}, {'a': '取消'}),
+        isEmpty,
+      );
+    });
   });
 
   group('enUntranslatedViolations', () {

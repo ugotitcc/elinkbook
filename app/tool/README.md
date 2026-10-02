@@ -52,11 +52,13 @@ node app/tool/check_l10n_hardcoded_strings.js --test-dir <目錄>
    行加 `// l10n-ignore: <理由>`（**必須寫理由**，空標記無效）；整檔例外或專有
    名詞值則加進腳本的 `SKIP_FILES`／`ALLOWED_LITERAL_VALUES` 並註明理由。
 
-4. ARB 本身的一致性（四份鍵集合與 `{placeholder}` 名稱一致、`app_zh.arb` 與
-   `app_zh_TW.arb` 逐字相同、`app_en.arb` 沒有漏翻）由
-   `app/test/l10n/arb_consistency_test.dart` 守衛，隨 `flutter test` 執行，不需另外跑腳本。
-   若 `en` 的值**刻意**與 zh_TW 相同或含中文（例如語言自稱），把鍵與理由加進該測試的
-   `_enAllowlist`；項目不再命中時測試會要求移除。
+### ARB 一致性守衛
+
+ARB 本身的一致性（四份鍵集合與 `{placeholder}` 名稱一致、`app_zh.arb` 與
+`app_zh_TW.arb` 逐字相同、`app_en.arb` 沒有漏翻）由
+`app/test/l10n/arb_consistency_test.dart` 守衛，隨 `flutter test` 執行，不需另外跑腳本。
+若 `en` 的值**刻意**與 zh_TW 相同或含中文（例如語言自稱），把鍵與理由加進該測試的
+`_enAllowlist`；項目不再命中時測試會要求移除。
 
 ### 已知限制
 

@@ -190,3 +190,13 @@
 - 驗證：`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS；全套 `flutter test` 3335 通過、1 略過、0 失敗（Issue 2 合併基準 3310＋helpers 21＋守衛 4）。
 - 行為變動：無。待真機確認：無。
 - 文件：`app/tool/README.md`「找到問題時怎麼修」第 1 步加註守衛測試，並新增第 4 步說明 `_enAllowlist` 用法。待程式審查與發 PR。
+
+**2026-10-02 Issue 6 程式審查與修訂**（獨立審查員，範圍 `42ce8cd3..b31b5c47`；審查報告在 `reviews/review-code-issue-6.md`，不進版控，以下為摘要。0 Critical／0 Important／5 Minor，結論 Ready to merge。審查員實跑：`flutter analyze` 乾淨、`check_l10n_hardcoded_strings.js` PASS、兩個測試檔 25 個全過、`app/lib` 零異動、相對路徑 `lib/l10n/...` 在 `flutter test` 下成立；七個公開函式簽章、違規訊息字串、白名單三筆與計畫逐字一致；Review Focus 五條皆有有效測試。審查員未對 ARB 副本實際執行變異，改以推理並附對照表）
+
+- M-1（已修）：補合成測試「zh 缺鍵：不在此重複回報（交給 `keySetViolations`）」。變異驗證：暫時拿掉 `zhMirrorViolations` 的 `zh.containsKey(k)`，新測試如預期失敗，已還原。helpers 測試由 21 個增為 22 個，Issue 6 新增測試合計 26 個。
+- M-2（不處理）：中文字元判定只含 `一-鿿`，不含全形標點與假名；這是計畫固定的規則，非實作偏離。
+- M-3（不處理）：`placeholderViolations` 只比名稱集合，不比數量或型別；名稱集合即設計決策。
+- M-4（不處理）：測試檔有超長行、未跑 `dart format`，純風格。
+- M-5（已修）：`app/tool/README.md` 新增的「第 4 點」不屬於「找到問題時怎麼修」的步驟，改為獨立小節「ARB 一致性守衛」，並去掉第 3、4 點間多餘的空行。
+- 審查員「未判斷」5 條均維持不處理。
+- 驗證：修訂後 `flutter analyze` No issues found；`test/l10n/arb_consistency_helpers_test.dart` 與 `arb_consistency_test.dart` 共 26 個全數通過。上方「實作完成」記載的全套 3335 通過是補測試前的數字，補 1 個測試後預期 3336；PR 前依慣例再跑一次全套確認。待發 PR。
