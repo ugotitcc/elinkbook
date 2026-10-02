@@ -238,3 +238,16 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 與計畫的差異（2 項，均記於執行 ledger）：(1) `initialProgress` 取值由 `loaded.readingPosition?.progress` 改為 `.progress`（`LoadedPrefs.readingPosition` 為非空型別，`?.` 觸發 analyze 警告；行為等價）；(2) 另更新計畫未列的 5 處過時註解（`main.dart`、`app_lifecycle_sync_test.dart` 各 1 處，`reader_screen_test.dart` 3 處），純文字，不斷言與程式零變動。
 - 驗證：全套 `flutter test` 3369 通過、1 略過、0 失敗；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS。
 - 行為變動：無（純重構）。待真機確認：無。待程式審查與發 PR。
+
+**2026-10-02 Issue 7 程式審查與修訂**（獨立審查員，範圍 `e005a4de..4ba13a59`；審查報告在 `reviews/review-code-issue-7.md`，不進版控，以下為摘要。0 Critical／0 Important／3 Minor，結論 Ready to merge。審查員實跑：三個異動測試檔 305 案例通過、`flutter analyze` 乾淨、`_hasRelocatedSinceOpen`／`_writeCurrentPosition` 零命中；未獨立重現全套測試）
+
+- M-1（已修）：`onLocatorChanged` 內「賦值前非 null」註解已不貼切，改為說明第一次／第二次回報的區分由 `ReadingPositionSaver` 處理。
+- M-2（不處理）：saver 未建立時回報被 `?.` 靜默丟棄，無測試鎖定。目前不變式成立（`_resolved` 與 saver 同一個 `setState`），既有接線案例會在漏存時失敗；留待 Issue 8 收進會話 module 時一併考慮。
+- M-3（**記錄為待處理缺陷，見下**）：重複回報同位置仍使「已重新定位」旗標成立。
+
+**待處理缺陷（Issue 9，由 Issue 7 審查 M-3 發現，尚未修正）**
+
+- 現象（依程式碼與既有註解推論，**尚未在真機重現**）：帶跳轉目標（搜尋結果、書籤）開書時，`ReadingPositionSaver` 以「該格式第二次回報」判定使用者已離開跳轉目標。但 Foliate 在開書後套用樣式重排、或圖片／字型載入後重新對齊錨點時，會派發「位置相同」的重複回報（`reader_screen.dart` 閱讀活動判定的註解已實證：同一 cfi 的 fraction 會來回微幅抖動）。這會讓旗標提早成立，使用者什麼都沒做就離開時，跳轉落點被存成新進度，覆蓋原本讀到一半的位置——正是這條規則要防止的情況。
+- 這是修改前就存在的行為（Issue 7 只搬動、未改變）；PDF 路徑不受影響（頁碼回報不會無故重複）。
+- 修正方向：旗標只在「位置真的改變」時成立，可沿用閱讀活動判定已有的「只比 cfi 與 index、忽略 fraction」的位置鍵比較。該比較目前在 `ReaderScreen`（`_locatorPositionKey`），預計 Issue 8 搬進會話 module，建議 Issue 8 之後再處理，避免兩個 Issue 同時動同一段邏輯。
+- 動手前須先決定：要不要先用真機日誌確認重複回報確實發生在帶跳轉目標的開書流程；測試以 `ReadingPositionSaver` 單元測試（同位置重複回報不算重新定位）直接守住。

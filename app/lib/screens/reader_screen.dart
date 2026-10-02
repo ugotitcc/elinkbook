@@ -3488,8 +3488,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           dualPageDirection: resolved.dualPageDirection,
           onLocatorChanged: (info) {
             if (!mounted) return;
-            // 位置儲存規則已搬到 ReadingPositionSaver（見其文件註解）：
-            // 賦值前非 null，代表這不是開書後第一次回報。
+            // 位置儲存規則已搬到 ReadingPositionSaver（見其文件註解），含
+            // 「第一次／第二次回報」的區分。
             _positionSaver?.onEpubLocated(info);
             final previousPosition = _epubPositionInfo;
             if (previousPosition != null) {
