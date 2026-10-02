@@ -1867,6 +1867,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get downloadQueueStatusFailed => '失敗';
 
   @override
+  String get downloadQueueStatusNeedsReauth => '需重新連結帳號';
+
+  @override
   String get downloadQueueStatusCancelled => '已取消';
 
   @override
@@ -4096,6 +4099,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get downloadQueueStatusFailed => '失败';
 
   @override
+  String get downloadQueueStatusNeedsReauth => '需重新连接账号';
+
+  @override
   String get downloadQueueStatusCancelled => '已取消';
 
   @override
@@ -6323,6 +6329,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get downloadQueueStatusFailed => '失敗';
+
+  @override
+  String get downloadQueueStatusNeedsReauth => '需重新連結帳號';
 
   @override
   String get downloadQueueStatusCancelled => '已取消';

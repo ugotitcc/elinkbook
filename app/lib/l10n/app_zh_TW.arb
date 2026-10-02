@@ -2481,6 +2481,10 @@
   "@downloadQueueStatusFailed": {
     "description": "項目狀態標籤：下載或匯入過程發生非取消性錯誤"
   },
+  "downloadQueueStatusNeedsReauth": "需重新連結帳號",
+  "@downloadQueueStatusNeedsReauth": {
+    "description": "項目狀態標籤：下載失敗的原因是雲端匯入來源帳號授權失效（見 CONTEXT.md「雲端授權失效」），使用者需到設定重新連結帳號後按重試"
+  },
   "downloadQueueStatusCancelled": "已取消",
   "@downloadQueueStatusCancelled": {
     "description": "項目狀態標籤：使用者主動取消下載"

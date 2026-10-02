@@ -176,7 +176,9 @@ class _QueueItemRow extends StatelessWidget {
       case DownloadItemStatus.duplicateSkipped:
         return l10n.downloadQueueStatusDuplicateSkipped;
       case DownloadItemStatus.failed:
-        return l10n.downloadQueueStatusFailed;
+        return item.needsReauth
+            ? l10n.downloadQueueStatusNeedsReauth
+            : l10n.downloadQueueStatusFailed;
       case DownloadItemStatus.cancelled:
         return l10n.downloadQueueStatusCancelled;
     }
