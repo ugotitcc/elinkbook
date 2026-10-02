@@ -10,7 +10,7 @@ Issue 1（機制＋5 項程式元件）──> Issue 2（5 款字型）
 
 ## Issue 1：登錄機制與 5 項程式元件授權
 
-**Status:** not-started
+**Status:** done
 
 **依賴：** 無。
 
