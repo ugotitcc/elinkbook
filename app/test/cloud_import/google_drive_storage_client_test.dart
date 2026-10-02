@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -135,11 +136,83 @@ void main() {
     expect(callCount, 1);
   });
 
-  test('HTTP 非 200 回應時拋出例外', () async {
-    final mockClient = MockClient((request) async => http.Response('', 403));
-    final client =
-        GoogleDriveStorageClient(oauthClient: oauthClient, httpClient: mockClient);
+  group('非 200 回應的分類（epic-54 Issue 2）', () {
+    GoogleDriveStorageClient clientReturning(int status) =>
+        GoogleDriveStorageClient(
+          oauthClient: oauthClient,
+          httpClient: MockClient((request) async => http.Response('', status)),
+        );
 
-    expect(client.listFolder(), throwsException);
+    final entry = const CloudFileEntry(
+      id: 'file-1',
+      name: 'a.epub',
+      isFolder: false,
+      format: BookFileFormat.epub,
+    );
+
+    test('listFolder 回 401：拋出 CloudAuthRequiredException', () async {
+      await expectLater(
+        clientReturning(401).listFolder(),
+        throwsA(isA<CloudAuthRequiredException>()),
+      );
+    });
+
+    test('downloadFile 回 401：拋出 CloudAuthRequiredException，且不留目的檔', () async {
+      final dir = Directory.systemTemp.createTempSync('gdrive_401_test');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final path = '${dir.path}/out.epub';
+
+      await expectLater(
+        clientReturning(401).downloadFile(entry, path),
+        throwsA(isA<CloudAuthRequiredException>()),
+      );
+      expect(File(path).existsSync(), isFalse);
+    });
+
+    test('fetchThumbnail 回 401：拋出 CloudAuthRequiredException', () async {
+      await expectLater(
+        clientReturning(401).fetchThumbnail('https://example.com/t'),
+        throwsA(isA<CloudAuthRequiredException>()),
+      );
+    });
+
+    for (final code in [403, 500]) {
+      test('listFolder 回 $code：拋出一般例外，不是 CloudAuthRequiredException',
+          () async {
+        await expectLater(
+          clientReturning(code).listFolder(),
+          throwsA(
+            predicate((e) => e is Exception && e is! CloudAuthRequiredException),
+          ),
+        );
+      });
+    }
+
+    test('換發 token 時斷網：listFolder 拋出的不是 CloudAuthRequiredException', () async {
+      final expiringRepository = FakeCloudAccountRepository();
+      await expiringRepository.link(
+        CloudProvider.googleDrive,
+        CloudAccountTokens(
+          accessToken: 'expiring-token',
+          refreshToken: 'refresh-1',
+          email: 'reader@example.com',
+          expiresAt: DateTime.now().add(const Duration(seconds: 10)),
+        ),
+      );
+      final offlineOauth = GoogleDriveOAuthClient(
+        accountRepository: expiringRepository,
+        httpClient: MockClient(
+          (request) async => throw const SocketException('offline'),
+        ),
+      );
+      final client = GoogleDriveStorageClient(oauthClient: offlineOauth);
+
+      await expectLater(
+        client.listFolder(),
+        throwsA(
+          predicate((e) => e is Exception && e is! CloudAuthRequiredException),
+        ),
+      );
+    });
   });
 }

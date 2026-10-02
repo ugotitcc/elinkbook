@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import 'cloud_storage_client.dart';
+import 'cloud_auth_classifier.dart';
 import 'google_drive_oauth_client.dart';
 
 /// [CloudStorageClient] 的 Google Drive API v3 實作（spec.md「雲端瀏覽與
@@ -14,6 +15,7 @@ import 'google_drive_oauth_client.dart';
 /// `OpdsHttpClient`／`GoogleDriveOAuthClient` 既有慣例）。每次呼叫皆先
 /// 經 [GoogleDriveOAuthClient.ensureValidAccessToken] 取得（必要時靜默
 /// 續期後的）access token，`null` 時拋出 [CloudAuthRequiredException]。
+/// API 回 401 同樣拋出 [CloudAuthRequiredException]（見 `cloud_auth_classifier.dart`）。
 class GoogleDriveStorageClient implements CloudStorageClient {
   GoogleDriveStorageClient({
     required GoogleDriveOAuthClient oauthClient,
@@ -62,7 +64,7 @@ class GoogleDriveStorageClient implements CloudStorageClient {
       final response =
           await _httpClient.get(uri, headers: {'Authorization': 'Bearer $token'});
       if (response.statusCode != 200) {
-        throw Exception('Google Drive 目錄讀取失敗（HTTP ${response.statusCode}）');
+        throwCloudApiStatusError('Google Drive 目錄讀取失敗', response.statusCode);
       }
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       final files = json['files'] as List<dynamic>? ?? const [];
@@ -114,7 +116,7 @@ class GoogleDriveStorageClient implements CloudStorageClient {
         ..headers['Authorization'] = 'Bearer $token';
       final response = await _httpClient.send(request);
       if (response.statusCode != 200) {
-        throw Exception('Google Drive 下載失敗（HTTP ${response.statusCode}）');
+        throwCloudApiStatusError('Google Drive 下載失敗', response.statusCode);
       }
       final total = response.contentLength ?? 0;
       var received = 0;
@@ -147,7 +149,7 @@ class GoogleDriveStorageClient implements CloudStorageClient {
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode != 200) {
-      throw Exception('縮圖載入失敗（HTTP ${response.statusCode}）');
+      throwCloudApiStatusError('縮圖載入失敗', response.statusCode);
     }
     return response.bodyBytes;
   }
