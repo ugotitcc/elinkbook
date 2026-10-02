@@ -29,7 +29,7 @@ APK 內還有 5 項不是 Dart 套件的元件，授權不會出現在頁面上�
   - `README.md`、`CLAUDE.md`、`docs/prd.md` 的「商用授權字型」改為「SIL OFL 開源字型」。
   - ADR 0011、0013、0018 補上指向 ADR 0024、0025 的註記。
 
-**2026-10-02 Issue 1 完成**
+**2026-10-02 Issue 1 已合併（PR #308）**
 
 - 新增 `registerThirdPartyLicenses` 與 5 項程式元件授權（foliate-js、zip.js、fflate、OpenCC、Readium kotlin-toolkit），`main.dart` 啟動時登錄；真機驗收通過。
 - 計畫審查採納 5 項、不採納 1 項（為 `ThirdPartyLicense` 補 `==`／`hashCode`，屬投機彈性）。
