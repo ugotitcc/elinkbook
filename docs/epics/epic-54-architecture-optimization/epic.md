@@ -96,6 +96,29 @@
 | 文件 | `app/tool/README.md`「找到問題時怎麼修」第 1 步加一行指向新測試；`CLAUDE.md` 不動（不是新指令）；`CONTEXT.md` 不新增詞條；不寫 ADR |
 | 行為變動 | 無（僅新增測試，不改任何 App 程式碼與 ARB） |
 
+## Issue 7、8 設計決策（`/improve-codebase-architecture` 第二次檢視後 `/grilling` 定案，2026-10-02）
+
+來源：第二次架構檢視的候選 1（閱讀會話生命週期）與候選 2（位置寫入規則）；報告存暫存目錄，不進版控。檢視另有三個候選未排入：LibraryScreen 依賴 bundle、重新連結概念跨檔案、睡眠定時器放在畫面層，皆為 Worth exploring，需要時再開 Issue。
+
+**事實修正（探索子代理回報，已核對）**
+- 位置只在「進入背景」與「dispose」兩處寫入；`onLocatorChanged` 只判斷是否算閱讀活動，不寫位置也不觸發 Checkpoint。
+- `SyncEngine` 不使用 `ReadingPositionRepository`，直接對 `books` 表讀寫相同欄位，`position_updated_at` 的維護邏輯因此有兩份。**不在本批 Issue 範圍**，需要時另立。
+- `dispose` 實際順序：統計 flush → … → 寫位置 → 觸發 Checkpoint；僅「寫位置須在觸發 Checkpoint 之前」有註解說明的依賴，且兩者皆不 await。
+- `reader_screen.dart:400` 註解：刻意不在 `didUpdateWidget` 跟隨 `filePath`，所以一個 State 恆為一本書。
+
+**定案**
+1. 拆成兩張 Issue。Issue 7（位置 module）先做，Issue 8（會話 module）後做並呼叫它。
+2. 會話 module 擁有 5 分鐘 Checkpoint Timer；sync 觸發器為注入依賴，測試以 fake 取代（沿用現有 `SyncCheckpointTrigger`）。
+3. 會話邊界 = 一個 `ReaderScreen` State 的生命週期。
+4. 會話搬走：統計 tracker 建立與收尾、Timer、`markReaderOpened`／`markReaderClosed`、前後景切換時的位置寫入與統計通知、dispose 收尾順序。留在畫面：音量鍵 channel、螢幕方向與 system UI、TTS 與 audio focus dispose、搜尋高亮 timer、睡眠定時器。
+5. 「這次 relocate 算不算閱讀活動」（Foliate 比對 cfi＋index 的 key、PDF 一律算）歸會話 module，不歸 `ReadingStatsTracker`。
+6. **純重構、零行為變化**：連同「`paused` 不觸發 Checkpoint」「先 flush 統計再寫位置」「位置寫入不 await」都逐字保留，寫進 module 文件。要改順序另開缺陷 Issue。
+7. 不新增 `ReaderScreen` 建構參數（目前 27 個）；由內部以既有的注入點組裝。
+8. 測試：replace, don't layer。只遷移「生命週期與位置規則」案例（`reader_screen_test.dart` 約 600、2260–2300、6386–6560 行附近與 `reader_screen_stats_*`），純 UI 案例留在 widget 測試。每個 Task 只跑異動到的測試檔，全套只在最後一個 Task 與發 PR 前各一次。
+9. 流程：兩張 Issue 都寫 `plan-issue-N.md`。
+
+CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需新 ADR（可逆、不違反既有 ADR）。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。

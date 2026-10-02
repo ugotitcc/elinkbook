@@ -8,5 +8,7 @@
 | 4 | 儲存權限探測移出 `foliate_native_bridge.dart`，改為獨立於閱讀器引擎的 module | Worth exploring | 🟢 已合併（PR #305） |
 | 5 | 抽出 `ReaderScreen` 的「開書失敗、探測、重連、重開」狀態機（`OpenBookFlow`） | Worth exploring | 🟢 已合併（PR #303） |
 | 6 | 為四份 ARB 鍵一致性加自動守衛（鍵集合比對＋「刻意相同」白名單） | Worth exploring | 🟢 已合併（PR #307） |
+| 7 | 位置寫入規則（「寫不寫、寫什麼」）搬出 `ReaderScreen`，成為可獨立測試的 module；先做，直接 TDD＋寫 plan | Strong | ⚪ 未開始（設計已定案，見 `epic.md`） |
+| 8 | 抽出「閱讀會話」生命週期協調（統計、前後景、位置寫入呼叫、Checkpoint Timer）；依賴 Issue 7，後做，寫 plan | Strong | ⚪ 未開始（設計已定案，見 `epic.md`） |
 
 Issue 2～6 只列標題，動手前須各自 `/grill-with-docs` 設計；候選來源與證據見 2026-09-30 架構檢視報告。
