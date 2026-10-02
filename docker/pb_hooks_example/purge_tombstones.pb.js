@@ -1,7 +1,7 @@
 /// @file purge_tombstones.pb.js
 /// 定期清理 sync_bookmarks/sync_highlights/sync_notes 三個 collection
 /// 中超過 30 天的軟刪除紀錄（deleted_at 為毫秒時間戳記，與本機 App 端
-/// 透傳的值同單位，見 docs/epics/epic-8-sync/spec.md「墓碑清理」）。
+/// 透傳的值同單位，見 docs/sync-protocol.md「墓碑清理」）。
 /// 使用方式：把本檔案複製到 PocketBase 執行檔同層的 pb_hooks/ 目錄下
 /// （沒有這個目錄就自己建立一個），重啟 PocketBase 即會自動載入。
 ///
@@ -9,8 +9,7 @@
 /// 的 number 欄位沒有「可為 NULL」這個選項，從未被軟刪除的正常紀錄，
 /// `deleted_at` 實際存的是數字 0、不是 SQL NULL，`!= null` 對這些正常
 /// 紀錄永遠成立、會被誤判成「超過 30 天的墓碑」整批刪除（已用真實
-/// PocketBase 實例重現並驗證此修正，見
-/// tmp/epic-8/plan-issue-7-implementation-review.md Critical 1）。
+/// PocketBase 實例重現並驗證此修正）。
 
 cronAdd("purgeOldTombstones", "0 3 * * *", () => {
   const collections = ["sync_bookmarks", "sync_highlights", "sync_notes"];

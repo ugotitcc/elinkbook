@@ -2,7 +2,7 @@
 
 本 SOP 教學指導如何在 **Synology DSM 7** 的 **Container Manager（容器總管）** 上建置並營運 [PocketBase](https://pocketbase.io/) 後端服務，專供 **elinkBook** 電子書閱讀器之雲端同步功能（閱讀進度、書籤、劃線、畫線備註）使用。
 
-本文件整合了 [`docs/archive/2026-08-05-epic-8-sync/pocketbase-self-hosting.md`](../archive/2026-08-05-epic-8-sync/pocketbase-self-hosting.md) 的服務規範、Collection Schema 與自動化腳本，針對 Synology NAS 環境進行專屬步驟拆解。
+本文件整合了 [`docker/README.md`](../../docker/README.md) 的服務規範，以及 [`docs/sync-protocol.md`](../sync-protocol.md) 的 Collection Schema 與自動化腳本，針對 Synology NAS 環境進行專屬步驟拆解。
 
 ---
 
@@ -43,12 +43,12 @@
   - `pb_hooks`
 
 ### 2.2 複製 Migration 與 Hook 腳本
-將本專案內 [`docs/archive/2026-08-05-epic-8-sync/`](../archive/2026-08-05-epic-8-sync/) 隨附的範例腳本複製至 NAS 對應目錄：
+將本專案 [`docker/`](../../docker/) 目錄內的範例腳本複製至 NAS 對應目錄：
 
 1. **Schema 遷移腳本（複製至 `/volume1/docker/elinkbook-pocketbase/pb_migrations/`）**：
-   - `pb_migrations_example/1785715200_create_sync_collections.js`
-   - `pb_migrations_example/1785801600_add_created_updated_autodate_fields.js`
-   - `pb_migrations_example/1785801700_add_reading_positions_unique_index.js`
+   - `pb_migrations/1785715200_create_sync_collections.js`
+   - `pb_migrations/1785801600_add_created_updated_autodate_fields.js`
+   - `pb_migrations/1785801700_add_reading_positions_unique_index.js`
    
    > **注意**：全新部署請務必將上述三支 Migration 檔案**同時複製**進去，以確保 `created`/`updated` 系統欄位與 unique index 完整套用。
 
@@ -389,5 +389,5 @@ curl -X POST https://pocketbase.yourdomain.com/api/batch \
 
 ## 9. 相關參考文件
 - [`docs/research/oracle_cloud_pocketbase_sop.md`](oracle_cloud_pocketbase_sop.md)：Oracle Cloud Free Tier 雲端主機與 Traefik SSL 部署手冊
-- [`docs/archive/2026-08-05-epic-8-sync/pocketbase-self-hosting.md`](../archive/2026-08-05-epic-8-sync/pocketbase-self-hosting.md)：PocketBase 原始架設說明與開發環境規格
-- [`docs/archive/2026-08-05-epic-8-sync/spec.md`](../archive/2026-08-05-epic-8-sync/spec.md)：elinkBook 雲端同步 Protocol 與 Collection 欄位定義
+- [`docker/README.md`](../../docker/README.md)：PocketBase 容器化部署說明與環境變數
+- [`docs/sync-protocol.md`](../sync-protocol.md)：elinkBook 雲端同步 Protocol 與 Collection 欄位定義

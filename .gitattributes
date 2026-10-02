@@ -1,2 +1,4 @@
 *.pdf binary
 *.epub binary
+# 發佈腳本需用 LF 換行，否則在 Git Bash 會因 CRLF 執行失敗
+scripts/*.sh text eol=lf

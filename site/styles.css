@@ -38,7 +38,6 @@
   /* 字體族群 */
   --font-serif: "Noto Serif TC", "Songti TC", "Source Han Serif TC", "PMingLiU", serif;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif;
-  --font-kai: "Kaiti TC", "STKaiti", "DFKai-SB", "BiauKai", "Noto Serif TC", serif;
 
   /* 圓角與陰影 */
   --radius-sm: 8px;
@@ -1350,6 +1349,31 @@ img {
   background: var(--color-primary);
   color: #ffffff;
   transform: scale(1.05);
+}
+
+/* 簡繁轉換圖示：與 App 設定頁相同的「简→繁」帶邊框標籤 */
+.conv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 6px;
+  border: 1.5px solid currentColor;
+  border-radius: 5px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.feature-card-link {
+  display: inline-block;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.feature-card-link:hover {
+  text-decoration: underline;
 }
 
 .feature-card-title {
