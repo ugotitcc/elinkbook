@@ -476,6 +476,7 @@
   "aboutScreenBuildTimeLabel": "編譯時間",
   "aboutScreenWebViewVersionLabel": "系統 WebView 版本",
   "aboutScreenViewLicensesButton": "開源授權清單",
+  "aboutScreenLicensesLegalese": "本 App 使用下列開源元件，各元件的版權與授權條款如下。",
   "aboutScreenLoadingText": "讀取中...",
   "aboutScreenFailedToLoadVersionMessage": "無法取得版本號",
   "aboutScreenUnavailableText": "無法取得",

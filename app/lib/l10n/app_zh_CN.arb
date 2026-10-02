@@ -476,6 +476,7 @@
   "aboutScreenBuildTimeLabel": "编译时间",
   "aboutScreenWebViewVersionLabel": "系统 WebView 版本",
   "aboutScreenViewLicensesButton": "开源授权清单",
+  "aboutScreenLicensesLegalese": "本 App 使用下列开源组件，各组件的版权与授权条款如下。",
   "aboutScreenLoadingText": "读取中...",
   "aboutScreenFailedToLoadVersionMessage": "无法取得版本号",
   "aboutScreenUnavailableText": "无法取得",

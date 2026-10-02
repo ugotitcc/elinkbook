@@ -1637,6 +1637,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aboutScreenViewLicensesButton => '開源授權清單';
 
   @override
+  String get aboutScreenLicensesLegalese => '本 App 使用下列開源元件，各元件的版權與授權條款如下。';
+
+  @override
   String get aboutScreenLoadingText => '讀取中...';
 
   @override
@@ -3869,6 +3872,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get aboutScreenViewLicensesButton => '开源授权清单';
 
   @override
+  String get aboutScreenLicensesLegalese => '本 App 使用下列开源组件，各组件的版权与授权条款如下。';
+
+  @override
   String get aboutScreenLoadingText => '读取中...';
 
   @override
@@ -6099,6 +6105,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get aboutScreenViewLicensesButton => '開源授權清單';
+
+  @override
+  String get aboutScreenLicensesLegalese => '本 App 使用下列開源元件，各元件的版權與授權條款如下。';
 
   @override
   String get aboutScreenLoadingText => '讀取中...';

@@ -1698,6 +1698,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutScreenViewLicensesButton => 'Open Source Licenses';
 
   @override
+  String get aboutScreenLicensesLegalese =>
+      'This app uses the open-source components listed below. Their copyright notices and license terms follow.';
+
+  @override
   String get aboutScreenLoadingText => 'Loading...';
 
   @override

@@ -127,6 +127,7 @@ class _AboutScreenState extends State<AboutScreen> {
                 context: context,
                 applicationName: 'elinkBook',
                 applicationVersion: _versionForLicensePage,
+                applicationLegalese: l10n.aboutScreenLicensesLegalese,
               );
             },
           ),

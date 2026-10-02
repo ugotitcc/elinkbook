@@ -2184,6 +2184,10 @@
   "@aboutScreenViewLicensesButton": {
     "description": "「開源授權清單」項目標題（點擊開啟 Flutter 內建授權清單頁）"
   },
+  "aboutScreenLicensesLegalese": "本 App 使用下列開源元件，各元件的版權與授權條款如下。",
+  "@aboutScreenLicensesLegalese": {
+    "description": "授權頁頁首的說明文字（說明下列清單是 App 使用的開源元件）"
+  },
   "aboutScreenLoadingText": "讀取中...",
   "@aboutScreenLoadingText": {
     "description": "版本號/編譯時間/WebView 版本非同步載入完成前的暫時顯示文字"

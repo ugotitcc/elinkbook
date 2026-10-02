@@ -2963,6 +2963,12 @@ abstract class AppLocalizations {
   /// **'開源授權清單'**
   String get aboutScreenViewLicensesButton;
 
+  /// 授權頁頁首的說明文字（說明下列清單是 App 使用的開源元件）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'本 App 使用下列開源元件，各元件的版權與授權條款如下。'**
+  String get aboutScreenLicensesLegalese;
+
   /// 版本號/編譯時間/WebView 版本非同步載入完成前的暫時顯示文字
   ///
   /// In zh_TW, this message translates to:
