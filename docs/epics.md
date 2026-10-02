@@ -62,7 +62,7 @@
 | 52 | `epic-50-sync-token-refresh` （缺陷）同步 token 過期後無法同步，須登出再登入才恢復 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 53 | `epic-52-play-release` 上架 Google Play 的前置工作（release 簽章、隱私權政策補同步服務、版本號腳本） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 54 | `epic-53-sync-checkpoint-result` （重構＋缺陷）同步 checkpoint 直接回報結果（含登入過期），消除呼叫端反推儲存狀態，並修正中途登出時顯示空白 email | 🟡 開發中 (Active) | 全數完成，待歸檔 |
-| 55 | `epic-54-architecture-optimization` 架構優化（集中所有架構深化候選，每個候選一張 Issue） | 🟡 開發中 (Active) | Issue 1 已合併（PR #302）；Issue 5 已合併（PR #303）；Issue 3 已合併（PR #304）；Issue 4 已合併（PR #305）；Issue 2 已合併（PR #306）；Issue 6 已合併（PR #307）；Issue 1～6 全數完成；Issue 7 實作完成待程式審查；Issue 8 未開始 |
+| 55 | `epic-54-architecture-optimization` 架構優化（集中所有架構深化候選，每個候選一張 Issue） | 🟡 開發中 (Active) | Issue 1 已合併（PR #302）；Issue 5 已合併（PR #303）；Issue 3 已合併（PR #304）；Issue 4 已合併（PR #305）；Issue 2 已合併（PR #306）；Issue 6 已合併（PR #307）；Issue 1～6 全數完成；Issue 7 已合併（PR #310）；Issue 8 未開始；Issue 9（缺陷）待處理 |
 | 56 | `epic-55-third-party-licenses` App 授權頁登錄第三方授權（5 項程式元件＋5 款可下載字型的開源授權） | 🟡 開發中 (Active) | 全數完成，待歸檔 |
 
 **狀態燈號定義**：

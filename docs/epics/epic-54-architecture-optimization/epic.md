@@ -251,3 +251,9 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 這是修改前就存在的行為（Issue 7 只搬動、未改變）；PDF 路徑不受影響（頁碼回報不會無故重複）。
 - 修正方向：旗標只在「位置真的改變」時成立，可沿用閱讀活動判定已有的「只比 cfi 與 index、忽略 fraction」的位置鍵比較。該比較目前在 `ReaderScreen`（`_locatorPositionKey`），預計 Issue 8 搬進會話 module，建議 Issue 8 之後再處理，避免兩個 Issue 同時動同一段邏輯。
 - 動手前須先決定：要不要先用真機日誌確認重複回報確實發生在帶跳轉目標的開書流程；測試以 `ReadingPositionSaver` 單元測試（同位置重複回報不算重新定位）直接守住。
+
+**2026-10-02 PR 合併（Issue 7）**
+
+- PR #310（`epic-54/issue-7-position-saver` → `main`）已合併，合併 commit `e07cb604`。Issue 7 完成。全套 `flutter test` 3369 通過、1 略過、0 失敗（發 PR 前在最終 commit `32691768` 上重跑）。
+- 待真機確認：無（純重構）。
+- 後續：Issue 8（閱讀會話）尚未寫 `plan-issue-8.md`，動手前先寫計畫並審查；Issue 9（缺陷）建議在 Issue 8 之後處理，且動手前先決定是否以真機日誌確認重複回報確實發生。本 Epic 其餘 Issue 完成後再決定是否歸檔。
