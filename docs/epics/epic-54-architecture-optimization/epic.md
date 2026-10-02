@@ -151,3 +151,12 @@
 
 **2026-10-02 Issue 2 實作完成**：雲端匯入端正確區分「雲端授權失效」與暫時性錯誤。新增 `app/lib/cloud_import/cloud_auth_classifier.dart`（`isRefreshTokenRejected`：換發 token 端點回 400／401 視為授權被撤銷；`throwCloudApiStatusError`：資料 API 回 401 拋 `CloudAuthRequiredException`，其餘非 200 拋一般例外），兩個 OAuth client 與兩個 storage client 共用（兩個 OAuth client 本身刻意不合併）。`ensureValidAccessToken` 簽章不變，`null` 專指需重新連結（未連結或換發被拒）；斷網與 429／5xx 改為往上拋，由呼叫端歸為一般網路錯誤；刻意不主動 `unlink`。`QueuedDownloadJob` 新增抽象方法 `isAuthFailure`（`CloudDownloadJob` 回傳 `error is CloudAuthRequiredException`，`RemoteDownloadJob` 回傳 `false`），`DownloadQueueItem` 新增 `needsReauth`（預設 false，重試先重設；已取消的工作不設旗標）；面板對 `needsReauth` 項目顯示「需重新連結帳號」（新 ARB 鍵 `downloadQueueStatusNeedsReauth`，四份同步＋`flutter gen-l10n`），保留重試鈕，不加「前往重新連結」按鈕。與設計表的兩處差異（見 `plans/plan-issue-2.md` 開頭）：① `isAuthFailure` 改為抽象方法（`implements` 不繼承本體，預設值無從生效）；② 瀏覽畫面 widget 測試不翻轉（`CloudBrowserScreen` 未動），改在 storage client 測試驗證斷網不拋 `CloudAuthRequiredException`。測試：新增 35 個（分類規則 5、兩 OAuth client 各 5、兩 storage client 各 6、控制器 4、`cloud_download_job_test` 1、面板 3）；刪除 2 個（Google／OneDrive storage client 的 `HTTP 非 200 回應時拋出例外` 各 1 個，被 group 內的 403 案例取代）。驗證：`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS；全套 `flutter test` 3309 通過、1 略過、0 失敗。待發 PR。
 - 待真機確認：真實 Google／OneDrive 帳號被撤銷授權後，瀏覽顯示「請重新連結」、下載佇列顯示「需重新連結帳號」，以及飛航模式下瀏覽顯示網路錯誤而非重新連結。
+
+**2026-10-02 Issue 2 程式審查與修訂**（獨立審查員，範圍 `50d3d79b..71141c07`；審查報告在 `reviews/review-code-issue-2.md`，不進版控，以下為摘要。0 Critical／0 Important／4 Minor，結論 Ready to merge。審查員實跑：`flutter analyze` 乾淨、`check_l10n_hardcoded_strings.js` PASS、`test/cloud_import` 整個目錄與佇列控制器、面板、瀏覽畫面測試通過；grep 確認所有 `ensureValidAccessToken` 呼叫點與 `QueuedDownloadJob` 實作者都已處理；ARB 四份與生成檔以讀檔比對一致）
+
+- M-1（不處理）：兩個 storage client 新增 import 的排序，純風格。
+- M-2（已修）：補控制器測試「授權失效後重試又遇一般失敗：仍是 failed，但 `needsReauth` 重設為 false」。控制器測試由 4 個增為 5 個，Issue 2 新增測試合計 36 個。
+- M-3（不處理）：storage client 非 401 的下載與縮圖路徑沒有直接測試；三個方法共用 `throwCloudApiStatusError`，規則已由分類測試與 `listFolder` 的 403／500 測試涵蓋。
+- M-4（不處理）：token 端點的 400 一律視為授權撤銷，這是設計表定案的假設（`invalid_request` 等其他 400 也會被當成需重新連結，實務上罕見）。
+- 審查員「未判斷」5 項（真機上服務端實際回應碼、面板無前往設定的導引等）均維持不處理，導引按鈕已在設計決策中排除。
+- 驗證：修訂後 `flutter analyze` No issues found；`download_queue_controller_test` 14 個全數通過。上方「實作完成」記載的全套 3309 通過是補測試前的數字，補 1 個測試後預期 3310；PR 前依慣例再跑一次全套確認。

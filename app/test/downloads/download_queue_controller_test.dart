@@ -295,6 +295,26 @@ void main() {
       expect(item.status, DownloadItemStatus.done);
       expect(item.needsReauth, isFalse);
     });
+
+    test('授權失效後重試又遇一般失敗：仍是 failed，但 needsReauth 重設為 false', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = FakeQueuedDownloadJob(
+        id: 'book-1',
+        downloadError: StateError('auth'),
+        authFailurePredicate: (e) => e is StateError,
+      );
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+      expect(controller.items.single.needsReauth, isTrue);
+
+      // 使用者重新連結後重試，這次是斷網之類的一般失敗，不該還顯示需重新連結。
+      job.downloadError = Exception('network down');
+      await controller.retry('book-1');
+
+      final item = controller.items.single;
+      expect(item.status, DownloadItemStatus.failed);
+      expect(item.needsReauth, isFalse);
+    });
   });
 
   test('dismiss() 移除項目', () async {
