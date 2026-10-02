@@ -274,3 +274,9 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - M-2（不處理）：兩行超過 80 欄，純格式；跑格式化可能連帶改到不相關的行，不值得。
 - M-3（已修）：「注入 tracker 優先」案例的斷言由 `containsAll` 改為精確比對 `log == ['activity', 'flush']`，鑑別力更強。
 - 審查員補充：Issue 9 因這次重構更容易修——位置回報都經過 `ReadingSession.onEpubLocated`，session 已有 `_lastEpubInfo` 與 `_locatorPositionKey`，改動點集中在 `reading_session.dart` 與 `reading_position_saver.dart`。
+
+**2026-10-03 PR 合併（Issue 8）**
+
+- PR #311（`epic-54/issue-8-reading-session` → `main`）已合併，合併 commit `fd98ef3e`。Issue 8 完成。全套 `flutter test` 3391 通過、1 略過、0 失敗（發 PR 前在最終 commit `78abd39a` 上跑）。
+- 待真機確認：無（純重構）。
+- 後續：Issue 1～8 全數完成；Issue 9（缺陷，Foliate 同位置重複回報使跳轉保護提早失效，尚未在真機重現）仍待處理，審查員指出這次重構讓它更容易修，改動點集中在 `reading_session.dart` 與 `reading_position_saver.dart`。是否先處理 Issue 9 再歸檔 Epic 54，由使用者決定。
