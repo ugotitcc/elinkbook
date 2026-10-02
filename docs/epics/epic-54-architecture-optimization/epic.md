@@ -200,3 +200,10 @@
 - M-5（已修）：`app/tool/README.md` 新增的「第 4 點」不屬於「找到問題時怎麼修」的步驟，改為獨立小節「ARB 一致性守衛」，並去掉第 3、4 點間多餘的空行。
 - 審查員「未判斷」5 條均維持不處理。
 - 驗證：修訂後 `flutter analyze` No issues found；`test/l10n/arb_consistency_helpers_test.dart` 與 `arb_consistency_test.dart` 共 26 個全數通過。上方「實作完成」記載的全套 3335 通過是補測試前的數字，補 1 個測試後重跑全套：3336 通過、1 略過、0 失敗。待發 PR。
+
+**2026-10-02 PR 合併（Issue 6）**
+
+- PR #307（`epic-54/issue-6-arb-guard` → `main`）已合併，合併 commit `f7d5230b`。Issue 6 完成。全套 `flutter test` 3336 通過、1 略過。合併前曾與 `origin/main` 在 `docs/epics.md` 衝突（Epic 54 那列的 Issue 6 進度，對上 Epic 55 新增的第 56 列），兩邊皆保留，無程式碼衝突。
+- 待真機確認：無（僅新增測試）。
+- 已知限制（寫在 `app/tool/README.md` 與 `arb_consistency_helpers.dart`）：ICU `select`／`plural` 的單字分支（如 `=0{None}`）會被誤判成 placeholder，避開寫法是寫成含空格的片語；`zh_CN` 與 zh_TW 相同的字串不檢查。
+- **Epic 54 的 6 個 Issue 全數完成並合併**（#302、#306、#304、#305、#303、#307）。是否歸檔由使用者決定；歸檔時依 sdd-workflow 慣例，`.gitignore` 的 reviews 規則改指向 archive 路徑，不刪除。
