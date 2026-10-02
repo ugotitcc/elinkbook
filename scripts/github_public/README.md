@@ -2,7 +2,7 @@
 
 這個 repo 放 elinkBook 的 Android APK 發行檔、雲端同步後端的部署檔，以及同步功能的說明文件。
 
-- 下載：請到 [Releases](../../releases/latest)
+- 下載：請到 [Releases](https://github.com/huthief/elinkbook/releases/latest)
 - 官網：https://www.ugotit.cc/
 - 隱私權政策：https://www.ugotit.cc/privacy
 - 聯絡：app@ugotit.cc

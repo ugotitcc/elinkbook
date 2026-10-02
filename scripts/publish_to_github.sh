@@ -29,10 +29,24 @@ DOC_FILES=(
 )
 
 # ---- 1. 準備公開 repo 的 clone ------------------------------------------------
-if [ ! -d "$DEST/.git" ]; then
+# 防呆：DEST 不能是本 repo 本身，否則下方的 rm -rf 會刪掉私有的 docs/ 與 docker/
+DEST_ABS="$(cd "$DEST" 2>/dev/null && pwd || true)"
+if [ "$DEST_ABS" = "$SRC" ]; then
+  echo "[錯誤] DEST 不能指向目前來源 repo（$SRC）。" >&2
+  exit 1
+fi
+
+# .git 在 worktree 或 submodule 下是檔案而不是目錄，所以用 -e
+if [ ! -e "$DEST/.git" ]; then
   echo "[準備] 第一次執行，clone 到 $DEST"
   git clone "$REMOTE_URL" "$DEST"
 else
+  # 防呆：已存在的目錄必須是公開 repo 的 clone，否則中止
+  dest_remote="$(git -C "$DEST" remote get-url origin 2>/dev/null || true)"
+  if ! echo "$dest_remote" | grep -qiE 'github\.com[:/]huthief/elinkbook(\.git)?/?$'; then
+    echo "[錯誤] $DEST 的 origin（$dest_remote）不是 $REMOTE_URL，中止以防誤刪。" >&2
+    exit 1
+  fi
   if [ -n "$(git -C "$DEST" status --porcelain)" ]; then
     echo "[錯誤] $DEST 有未提交的修改。請先處理後再執行。" >&2
     exit 1
@@ -41,12 +55,23 @@ else
   git -C "$DEST" pull --ff-only
 fi
 
+# 防呆：commit 會永久記錄作者信箱，不能是內部網域
+commit_email="$(git -C "$DEST" config user.email || true)"
+if echo "$commit_email" | grep -qiE 'jigong'; then
+  echo "[攔截] git user.email 含內部網域（$commit_email）。" >&2
+  echo "請先設定公開用信箱，例如：git -C \"$DEST\" config user.email app@ugotit.cc" >&2
+  exit 1
+fi
+
 # ---- 2. 清掉由本腳本管理的路徑，再重新複製（讓來源刪掉的檔案也會同步刪除）-----
 rm -rf "$DEST/docker" "$DEST/docs"
 mkdir -p "$DEST/docker" "$DEST/docs/research"
 
 for f in "${DOCKER_FILES[@]}"; do cp "$SRC/docker/$f" "$DEST/docker/$f"; done
-for d in "${DOCKER_DIRS[@]}"; do cp -r "$SRC/docker/$d" "$DEST/docker/$d"; done
+for d in "${DOCKER_DIRS[@]}"; do
+  mkdir -p "$DEST/docker/$d"
+  cp "$SRC/docker/$d/"*.js "$DEST/docker/$d/"
+done
 for f in "${DOC_FILES[@]}"; do cp "$SRC/$f" "$DEST/$f"; done
 cp "$SRC/scripts/github_public/README.md" "$DEST/README.md"
 cp "$SRC/scripts/github_public/LICENSE" "$DEST/LICENSE"
@@ -56,7 +81,13 @@ fail=0
 for p in "docker/.env" "docker/pb_hooks" "docker/docs"; do
   if [ -e "$DEST/$p" ]; then echo "[攔截] 不該公開的路徑存在：$p" >&2; fail=1; fi
 done
-hits="$(grep -rIlE 'jigong|superpowers' "$DEST" --exclude-dir=.git || true)"
+env_hits="$(find "$DEST" -path "$DEST/.git" -prune -o \( -name '.env*' ! -name '.env.example' -o -name 'pb_data' \) -print)"
+if [ -n "$env_hits" ]; then
+  echo "[攔截] 存在環境變數檔或資料目錄：" >&2
+  echo "$env_hits" >&2
+  fail=1
+fi
+hits="$(grep -rIliE 'jigong|superpowers' "$DEST" --exclude-dir=.git || true)"
 if [ -n "$hits" ]; then
   echo "[攔截] 以下檔案含有 jigong 或 superpowers 字樣：" >&2
   echo "$hits" >&2
@@ -76,6 +107,11 @@ fi
 git -C "$DEST" commit -q -m "docs: 同步後端部署檔與文件更新"
 git -C "$DEST" show --stat --format='%h %s' HEAD
 echo
-echo "[完成] 已在 $DEST commit，尚未 push。"
+branch="$(git -C "$DEST" rev-parse --abbrev-ref HEAD)"
+ahead="$(git -C "$DEST" rev-list --count '@{u}..HEAD' 2>/dev/null || echo '?')"
+echo "[完成] 已在 $DEST 的 $branch 分支 commit，尚未 push。"
+if [ "$ahead" != "1" ]; then
+  echo "[提醒] 目前有 $ahead 筆 commit 尚未 push，可能含先前執行留下的 commit。"
+fi
 echo "檢視完整差異：git -C \"$DEST\" show HEAD"
 echo "確認無誤後再 push：git -C \"$DEST\" push"
