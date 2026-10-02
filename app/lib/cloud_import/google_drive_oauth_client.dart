@@ -6,6 +6,7 @@ import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:http/http.dart' as http;
 
 import 'cloud_account_repository.dart';
+import 'cloud_auth_classifier.dart';
 import 'cloud_oauth_config.dart';
 import 'cloud_provider.dart';
 
@@ -125,11 +126,12 @@ class GoogleDriveOAuthClient {
   Future<void> unlink() => _accountRepository.unlink(CloudProvider.googleDrive);
 
   /// 回傳目前有效的 access token；已過期或 60 秒內即將過期時，先用
-  /// refresh token 靜默換發新的並更新儲存值。換發失敗（通常代表授權已被
-  /// 撤銷）回傳 `null`，呼叫端視為「需要重新登入」——刻意不主動呼叫
-  /// [unlink]，保留使用者手動決定是否解除連結的空間（`spec.md`「帳號
-  /// 模組」）。未連結時（[CloudAccountRepository.loadTokens] 回傳 `null`）
-  /// 同樣回傳 `null`，不發出任何網路請求。
+  /// refresh token 靜默換發新的並更新儲存值。回傳 `null` 專指「需要重新
+  /// 連結」：未連結（[CloudAccountRepository.loadTokens] 回傳 `null`，不發
+  /// 出任何網路請求），或換發被伺服器拒絕（400／401，通常代表授權已被撤
+  /// 銷，見 [isRefreshTokenRejected]）。斷網與其他暫時性失敗（429、5xx）
+  /// 改為拋出例外，由呼叫端歸為一般網路錯誤。刻意不主動呼叫 [unlink]，
+  /// 保留使用者手動決定是否解除連結的空間（`spec.md`「帳號模組」）。
   Future<String?> ensureValidAccessToken() async {
     final tokens = await _accountRepository.loadTokens(CloudProvider.googleDrive);
     if (tokens == null) return null;
@@ -138,20 +140,20 @@ class GoogleDriveOAuthClient {
         tokens.expiresAt.isBefore(DateTime.now().add(const Duration(seconds: 60)));
     if (!expiringSoon) return tokens.accessToken;
 
-    http.Response response;
-    try {
-      response = await _httpClient.post(
-        Uri.parse(_tokenEndpoint),
-        body: _tokenRequestBody({
-          'refresh_token': tokens.refreshToken,
-          'client_id': CloudOAuthConfig.googleClientId,
-          'grant_type': 'refresh_token',
-        }),
-      );
-    } catch (_) {
-      return null;
+    // 網路例外不攔截，直接往上拋：斷網是暫時性的，不能當成「授權已被
+    // 撤銷」而要求使用者重新連結（CONTEXT.md「雲端授權失效」）。
+    final response = await _httpClient.post(
+      Uri.parse(_tokenEndpoint),
+      body: _tokenRequestBody({
+        'refresh_token': tokens.refreshToken,
+        'client_id': CloudOAuthConfig.googleClientId,
+        'grant_type': 'refresh_token',
+      }),
+    );
+    if (isRefreshTokenRejected(response.statusCode)) return null;
+    if (response.statusCode != 200) {
+      throw Exception('Google Drive 授權續期失敗（HTTP ${response.statusCode}）');
     }
-    if (response.statusCode != 200) return null;
 
     String? newAccessToken;
     String? newRefreshToken;
