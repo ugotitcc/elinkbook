@@ -51,8 +51,11 @@ else
     echo "[錯誤] $DEST 有未提交的修改。請先處理後再執行。" >&2
     exit 1
   fi
-  echo "[準備] 更新 $DEST"
-  git -C "$DEST" pull --ff-only
+  # 全新的空 repo 還沒有任何 commit，沒東西可以 pull
+  if git -C "$DEST" rev-parse --verify -q HEAD >/dev/null; then
+    echo "[準備] 更新 $DEST"
+    git -C "$DEST" pull --ff-only
+  fi
 fi
 
 # 防呆：commit 會永久記錄作者信箱，不能是內部網域
@@ -110,7 +113,7 @@ echo
 branch="$(git -C "$DEST" rev-parse --abbrev-ref HEAD)"
 ahead="$(git -C "$DEST" rev-list --count '@{u}..HEAD' 2>/dev/null || echo '?')"
 echo "[完成] 已在 $DEST 的 $branch 分支 commit，尚未 push。"
-if [ "$ahead" != "1" ]; then
+if [ "$ahead" != "1" ] && [ "$ahead" != "?" ]; then
   echo "[提醒] 目前有 $ahead 筆 commit 尚未 push，可能含先前執行留下的 commit。"
 fi
 echo "檢視完整差異：git -C \"$DEST\" show HEAD"
