@@ -69,3 +69,5 @@ docs/epics/epic-55-third-party-licenses/reviews/
 
 # 本機環境變數（樣板見 docker/.env.example）
 docker/.env
+app/config/cloud_oauth.release.json
+app/config/cloud_oauth.debug.json

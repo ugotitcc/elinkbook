@@ -124,7 +124,7 @@ Google 要求發起 OAuth 驗證前必須設定同意畫面：
        - 複製輸出中的 `SHA1:` 指紋（例如 `AA:BB:CC:DD:...`）並貼入 Console。
      - 點擊「**建立 (Create)**」。
      - > [!IMPORTANT]
-       > Android 類型為**公開客戶端**（Google 不核發也不接受 Client Secret）。但 Android 類型需要通過 **Google Play Console 的應用程式擁有權驗證**（連結 SHA-1 憑證與發布商身份）。這道驗證與 OAuth 同意畫面的「測試使用者」白名單是兩件獨立的事、無法用白名單繞過。若在未完成 Play Console 驗證的開發階段，登入可能會被 Google 阻擋。
+       > Android 類型為**公開客戶端**（Google 不核發也不接受 Client Secret）。建立時，Console 會顯示「驗證應用程式擁有權 (選用)」。套件不在 Google Play 上時，Google 會提示「無法驗證擁有權」。此項為選用，**側載 APK（例如 GitHub 公開下載）可直接略過、照常建立**。登入靠「套件名稱＋SHA-1」比對，與擁有權驗證無關。
    - **選項 B（電腦應用程式／桌面應用程式類型，開發測試推薦）**：
      - 若希望在開發測試期間快速進行真機除錯，**強烈建議建立此類型憑證**。
      - 應用程式類型選擇「**桌面應用程式 (Desktop App)**」（或部分語系顯示為「**電腦應用程式**」）。
@@ -335,7 +335,7 @@ flowchart TD
 | 錯誤現象 | 可能原因 | 解決方法 |
 | :--- | :--- | :--- |
 | **`403: access_denied` / `此應用程式未通過驗證` 且無法點擊繼續** | 測試帳號未加入 OAuth 同意畫面的測試使用者清單。 | 前往 Google Cloud Console $\rightarrow$ OAuth 同意畫面 $\rightarrow$「測試使用者」新增該 Google 帳號。 |
-| **Android 憑證登入時遭 Google 阻擋（應用程式擁有權驗證未通過）** | Android 類型憑證需要 Google Play Console 發布商憑證連結驗證，且無法透過測試白名單繞過。 | 開發除錯期間請改用**電腦應用程式（Desktop）**類型憑證，並在 `cloud_oauth.json` 填入對應的 `GOOGLE_OAUTH_CLIENT_SECRET`。 |
+| **Android 憑證登入時遭 Google 阻擋** | 最常見原因：APK 的簽章 SHA-1 與憑證登錄的 SHA-1 不同（例如 `key.properties` 指向了上傳金鑰，或在跑 debug 版）。 | 用 `keytool -printcert -jarfile <APK 路徑>` 取得 APK 的 SHA1，與憑證登錄值比對（見 2.3 的 C）。仍無法解決時，可暫改用**電腦應用程式（Desktop）**類型憑證，並在 `cloud_oauth.json` 填入對應的 `GOOGLE_OAUTH_CLIENT_SECRET`。 |
 | **`400: redirect_uri_mismatch`** | 執行時未帶入設定檔或 `cloud_oauth.json` 內的 Client ID 有誤。 | 確認執行時有加上 `--dart-define-from-file=config/cloud_oauth.json`，且 JSON 內的 Client ID 與 Google Cloud Console 一致。 |
 | **`401: unauthorized_client` / `invalid_client`（授權碼交換或 Token 自動換發失敗）** | 使用電腦應用程式類型憑證，但 `GOOGLE_OAUTH_CLIENT_SECRET` 留空或密鑰值不正確。 | 前往 Google Cloud Console 憑證頁面複製正確的用戶端密鑰，並貼入 `cloud_oauth.json` 的 `GOOGLE_OAUTH_CLIENT_SECRET`。 |
 | **登入成功但瀏覽器卡住未跳回 App** | Gradle 建置時未抓到真實的 `cloud_oauth.json`。 | 確認 `app/config/cloud_oauth.json` 存在於正確路徑（`app/config/`），並重新執行 `flutter clean` 後再重新建置。 |
@@ -363,8 +363,93 @@ flowchart TD
      ```bash
      cd app
      flutter build apk --release --dart-define-from-file=config/cloud_oauth.json
+     flutter build appbundle --release --dart-define-from-file=config/cloud_oauth.json
      ```
-2. **Google OAuth 應用程式驗證 (Google App Verification)**：
+2. **Release 使用者要能登入 Google Drive：必做設定**
+
+   > [!IMPORTANT]
+   > 只需修改 Google Cloud Console 與 `cloud_oauth.json`，不需修改 Dart 程式碼與 `AndroidManifest.xml`。
+
+   **2.1 擋住 release 使用者的 3 個原因**
+
+   | 原因 | 現象 | 解法 |
+   | :--- | :--- | :--- |
+   | 同意畫面仍是「測試中」 | 只有「測試使用者」（上限 100 人）能登入，Refresh Token 7 天失效 | 推到「正式發布 (In production)」 |
+   | `drive.readonly` 是受限範圍 | 未通過 Google 驗證時，使用者會看到「未驗證」警告 | 送出 Google 應用程式驗證（見第 3 點） |
+   | 憑證類型或簽章指紋不符 | Android 憑證的 SHA-1 與手機上實際安裝的簽章不同，登入被擋 | 依 2.2 登錄正確的 SHA-1 |
+
+   **2.2 採用 Android 類型憑證（正式發布推薦）**
+
+   1. 在 Console 建立「Android」類型憑證，套件名稱填 `cc.ugotit.elinkbook`。
+   2. 登錄「實際安裝在使用者手機上的簽章」的 SHA-1。專案有兩把金鑰，依發布方式二選一（見 [ADR 0036](../adr/0036-apk-release-key-separate-from-upload-key.md)）：
+      - GitHub 公開下載的 APK：使用**發佈金鑰**（`elinkbook-release.jks`，alias `release`）的 SHA-1（取得方式見 2.3 的 A）。
+      - 走 Google Play：使用 Play Console 的「應用程式簽署金鑰憑證」SHA-1（取得方式見 2.3 的 B）。
+   3. 上傳金鑰（`elinkbook-upload.jks`）只用來上傳 Google Play，**任何情況都不要把它的 SHA-1 登錄到 OAuth 憑證**。Google 收到 AAB 後會用 Play 簽署金鑰重簽，使用者手機上不會是上傳金鑰的簽章。
+   4. 一個 Android 憑證只能填一個 SHA-1。要同時支援兩種發布方式，建立兩個 Android 憑證（套件名稱相同、SHA-1 不同）。
+   5. 兩個憑證的 Client ID 不同，但一次建置只能帶一份 `cloud_oauth.json`。打 GitHub APK 時，填「發佈金鑰」那個憑證的 Client ID；打 Google Play 的 AAB 時，填「Play 簽署金鑰」那個憑證的 Client ID。兩種建置各用一份設定檔，不要混用。
+   6. 在該憑證的進階設定，勾選「啟用自訂 URI 配置 (Enable custom URI scheme)」。沒勾會出現 `redirect_uri_mismatch`。
+   7. `cloud_oauth.json` 的 `GOOGLE_OAUTH_CLIENT_SECRET` 設為 `""`。
+   8. 換用新的 Client ID 後，執行 `flutter clean` 再重新建置。Gradle 會重新推導 Redirect Scheme。
+
+   > [!WARNING]
+   > 不建議用電腦（Desktop）類型憑證發布正式版。Client Secret 會被打包進 APK，任何人解開 APK 都能取得。
+
+   **2.3 取得 SHA-1**
+
+   **A. 發佈金鑰的 SHA-1**（GitHub 公開下載的 APK 用這個；金鑰建立方式見 [`release_apk_sop.md`](release_apk_sop.md)）：
+
+   ```powershell
+   keytool -list -v -keystore "C:/Users/huthief/.android-keys/elinkbook-release.jks" -alias release
+   ```
+
+   - 輸入 store password（存於密碼管理器）。
+   - 在輸出中找 `SHA1:` 那一行，複製整串。
+   - 打包前，確認 `app/android/key.properties` 的 `storeFile` 指向 `elinkbook-release.jks`、`keyAlias` 是 `release`。指向上傳金鑰時，APK 的簽章會和登錄的 SHA-1 不符。
+
+   **B. Play 簽署金鑰的 SHA-1**（走 Google Play 時用這個）：
+
+   1. 開啟 Play Console，選擇 elinkBook。
+   2. 進入「測試和發布」→「應用程式完整性」。
+   3. 開啟「應用程式簽署」分頁。
+   4. 複製「應用程式簽署金鑰憑證」的 SHA-1。
+
+   **C. 確認打包出的 APK 用哪把金鑰簽**（發布前必做）：
+
+   ```powershell
+   keytool -printcert -jarfile app/build/app/outputs/flutter-apk/app-release.apk
+   ```
+
+   輸出的 SHA1 應該等於 A（發佈金鑰）。不等於時，表示建置用了別把金鑰，Google 登入會失敗。
+
+   **2.4 驗證完成前的過渡做法**
+
+   - 送出驗證後、Google 核准前，使用者會看到「Google 尚未驗證這個應用程式」。
+   - 告知使用者點「進階」→「前往 elinkBook (不安全)」即可繼續。
+   - 此期間的未驗證使用者上限為 100 人。
+
+   **2.5 發布前實測清單**
+
+   **GitHub 公開下載的 APK：**
+
+   1. 確認 `key.properties` 指向發佈金鑰（見 2.3 的 A）。
+   2. 執行 `flutter clean`，再執行 `flutter build apk --release --dart-define-from-file=config/cloud_oauth.json`。
+   3. 用 2.3 的 C 確認 APK 的 SHA1 等於發佈金鑰的 SHA1。
+   4. 用 `adb install` 安裝（不要用 `flutter run`）。
+   5. 用「不在測試使用者名單」的 Google 帳號連結 Google Drive。
+   6. 確認能列出並下載一本書。
+
+   **Google Play：**
+
+   1. 用 `flutter build appbundle --release --dart-define-from-file=config/cloud_oauth.json` 打包。
+   2. 上傳到 Play 內部測試軌，從 Play 安裝。
+   3. 重複上面第 5、6 步。
+
+   **2.6 後續選項（另立 Issue）**
+
+   - 把 `drive.readonly` 換成 `drive.file`，搭配 Google Picker 讓使用者自選檔案。
+   - 此範圍不屬於受限範圍，可跳過 CASA 評估。
+   - 需修改 `google_drive_oauth_client.dart` 與匯入流程，使用者操作也會改變。
+3. **Google OAuth 應用程式驗證 (Google App Verification)**：
    - 由於使用了受限範圍 `drive.readonly`，將 OAuth 同意畫面從「測試中」推至「正式發布 (In production)」時，Google 會要求提交應用程式驗證。
    - 需準備：
      - 公開的**隱私權政策 (Privacy Policy) 網址**。
