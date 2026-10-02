@@ -230,7 +230,12 @@ function buildOverrideCss(prefs) {
     rules.push(`${selector} { line-height: ${effectiveLineHeight} !important; }`)
   }
   if (typeof prefs.paragraphSpacing === 'number') {
-    rules.push(`p { margin-bottom: ${prefs.paragraphSpacing}em !important; }`)
+    // /diagnose（2026-10-02，蘇東坡新傳直排內文下方大片留白）：不可用物理屬性
+    // margin-bottom——直排（vertical-rl）下 bottom 位於「行的結尾端」，會把每一行
+    // 的可用行長縮短 paragraphSpacing em（段距調到約 3em 就少約 3 個字），而真正的
+    // 段落間距（直排為 left）卻沒有套用。改用邏輯屬性 margin-block-end：橫排＝bottom，
+    // 直排 vertical-rl＝left。見 foliate_touch_harness/scenario-vertical-paragraph-spacing.mjs。
+    rules.push(`p { margin-block-end: ${prefs.paragraphSpacing}em !important; }`)
   }
   if (typeof prefs.letterSpacing === 'number') {
     // epic-28-reader-settings-enhancements Issue 1：letter-spacing 作用於
@@ -1116,51 +1121,6 @@ async function openBook() {
     // view.isFixedLayout 分流只填其中一組頁碼欄位，另一組明確傳 null
     // （取代原本 pageIndex/totalPages 兩個欄位在不同格式下語意不一致的
     // 舊寫法）。
-    // [DEBUG-bb01] 暫時診斷：內文下方留白——relocate 後輸出版面關鍵數值
-    view.addEventListener('relocate', () => setTimeout(() => {
-      try {
-        const r = view.renderer
-        const host = r.getBoundingClientRect()
-        const top = r.shadowRoot.getElementById('top')
-        const cs = getComputedStyle(top)
-        const cont = r.shadowRoot.getElementById('container')
-        const cr = cont.getBoundingClientRect()
-        const info = {
-          dpr: window.devicePixelRatio, inner: [innerWidth, innerHeight],
-          host: [host.width, host.height], container: [cr.top, cr.width, cr.height],
-          rows: cs.gridTemplateRows, colCount: cs.getPropertyValue('--_column-count'),
-          maxInline: cs.getPropertyValue('--_max-inline-size'), maxH: cs.getPropertyValue('--_max-height'),
-          mt: cs.getPropertyValue('--_margin-top'), mb: cs.getPropertyValue('--_margin-bottom'),
-          attrs: ['margin-top', 'margin-bottom', 'max-inline-size', 'max-column-count', 'flow'].map((a) => a + '=' + r.getAttribute(a)).join(' '),
-        }
-        for (const iframe of cont.querySelectorAll('iframe')) {
-          const ir = iframe.getBoundingClientRect()
-          if (ir.bottom < 0 || ir.top > host.height || ir.right < 0 || ir.left > host.width) continue
-          const doc = iframe.contentDocument
-          if (!doc?.body) continue
-          const ds = doc.defaultView.getComputedStyle(doc.documentElement)
-          let minY = 1e9, maxY = -1
-          const tw = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT)
-          while (tw.nextNode()) {
-            if (!tw.currentNode.textContent.trim()) continue
-            const rg = doc.createRange(); rg.selectNodeContents(tw.currentNode)
-            for (const rc of rg.getClientRects()) {
-              const t = rc.top + ir.top, b = rc.bottom + ir.top
-              if (rc.height < 2 || t >= host.height || b <= 0 || rc.left + ir.left > host.width || rc.right + ir.left < 0) continue
-              minY = Math.min(minY, t); maxY = Math.max(maxY, b)
-            }
-          }
-          info.iframe = {
-            rect: [ir.left, ir.top, ir.width, ir.height].map(Math.round), idx: iframe.__idx,
-            colW: ds.columnWidth, colCount: ds.columnCount, gap: ds.columnGap, h: ds.height, maxH: ds.maxHeight,
-            pad: [ds.paddingTop, ds.paddingBottom], textY: [Math.round(minY), Math.round(maxY)],
-            mainMargin: doc.querySelector('.main') ? getComputedStyle(doc.querySelector('.main')).margin : null,
-          }
-          break
-        }
-        console.log('[DEBUG-bb01] ' + JSON.stringify(info))
-      } catch (err) { console.log('[DEBUG-bb01] error ' + err) }
-    }, 400))
     view.addEventListener('relocate', (e) => {
       const { cfi, section, fraction, location } = e.detail
       // locatorJson 內嵌的 index 是章節/spine index，非頁碼——沿用既有
