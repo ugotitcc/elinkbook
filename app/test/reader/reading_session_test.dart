@@ -348,7 +348,9 @@ void main() {
         session.close(BookFormat.pdf);
         async.flushMicrotasks();
 
-        expect(log, containsAll(['activity', 'flush']));
+        // 注入的 tracker 收到全部事件（若 session 另外建了 repository 版 tracker
+        // 而忽略注入者，這裡會缺事件）；repository 完全沒有被寫入。
+        expect(log, ['activity', 'flush']);
         expect(_resolve(async, repository.getTotalReadingSeconds()), 0);
       });
     });

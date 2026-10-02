@@ -267,3 +267,10 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 行為變動：無（純重構）。
 - **需要知道的事**：`dispose` 內畫面自己的收尾與 session 收尾的相對順序改變——原本五步（markReaderClosed／統計 flush／取消 Timer／儲存位置／觸發 Checkpoint）與畫面自己的收尾穿插，現在一次 `_session.close(...)` 在 `dispose` 開頭執行，儲存位置與觸發 Checkpoint 早於畫面自己的收尾。已逐項核對畫面自己的收尾（`_openBookFlow`、`_searchJumpHighlightTimer`、睡眠定時器、`removeObserver`、音量鍵 channel、`_pdfSearchStateNotifier`、`_ttsAudioFocusCoordinator`、`ttsAudioHandler.detachController`、`_ttsController.removeListener`／`dispose`）都不讀取 session 管理的任何狀態，且 `_ttsController.dispose()` 之前已先 `removeListener(_onTtsStatusChanged)`，不會在 session 關閉後又回報 TTS 狀態；可觀察行為相同。若之後發現任何相依，視為缺陷另立工單。
 - 待真機確認：無（純重構）。待程式審查與發 PR。
+
+**2026-10-03 Issue 8 程式審查與修訂**（獨立審查員，範圍 `5628fa0a..25226502`；審查報告在 `reviews/review-code-issue-8.md`，不進版控，以下為摘要。0 Critical／0 Important／3 Minor，結論 Ready to merge。審查員實跑：七個異動測試檔 351 案例通過、`flutter analyze` 乾淨、舊欄位名零殘留；未獨立重現全套測試、未做變異驗證。對照修改前版本逐項核對：session 內部五步順序一致、`dispose` 內畫面自己的收尾內容與相對順序未動且不讀 session 狀態、`paused` 不觸發 Checkpoint、活動判定與 `_locatorPositionKey` 逐字搬移，結論為無可觀察行為差異）
+
+- M-1（不處理）：`late final _session` 若在 `initState` 賦值前失敗，`dispose` 會多拋 `LateInitializationError`。與既有 `_openBookFlow` 同風險且幾乎不可達，依「不為不可能情境加防護」不動。
+- M-2（不處理）：兩行超過 80 欄，純格式；跑格式化可能連帶改到不相關的行，不值得。
+- M-3（已修）：「注入 tracker 優先」案例的斷言由 `containsAll` 改為精確比對 `log == ['activity', 'flush']`，鑑別力更強。
+- 審查員補充：Issue 9 因這次重構更容易修——位置回報都經過 `ReadingSession.onEpubLocated`，session 已有 `_lastEpubInfo` 與 `_locatorPositionKey`，改動點集中在 `reading_session.dart` 與 `reading_position_saver.dart`。
