@@ -2,7 +2,7 @@
 
 ## 狀態
 
-已採納
+已採納。**本 ADR 的「`readest/foliate-js` 釘定版本本身不修改」限制，已由 [ADR 0024](0024-flowable-pagination-density-calibration-reopen-adr-0011.md)（`paginator.js`／`view.js`／`progress.js`）與 [ADR 0025](0025-fixed-layout-relative-module-specifier-reopen-adr-0011.md)（`fixed-layout.js`）列出例外；其餘 vendored 檔案仍與上游逐位元組相同。**
 
 ## 背景
 
