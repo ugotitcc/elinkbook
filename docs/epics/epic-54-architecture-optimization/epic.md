@@ -80,6 +80,22 @@
 | 測試 | 純測試：分類規則；兩個 OAuth client 各補斷網拋一般例外；兩個 storage client 各補 API 401；`download_queue_controller_test` 補 `needsReauth` 設定與重設；`cloud_download_job` 的 `isAuthFailure`。widget：面板新文字、瀏覽畫面離線顯示網路錯誤而非 reauth（翻轉現有行為）。被取代的舊測試刪除並於記錄列出對應 |
 | ADR | 不寫（沒有難以回頭的取捨） |
 
+## Issue 6 設計決策（`/grill-with-docs` 定案）
+
+| 決策 | 結論 |
+|---|---|
+| 動機 | 現況沒有漂移（四份各 641 鍵，鍵集合與 placeholder 全數一致），這張是預防：`l10n.yaml` 沒設 `untranslated-messages-file`，非 template 的 ARB 漏鍵不會編譯失敗，使用者會靜默看到 zh_TW 的字；既有 `check_l10n_hardcoded_strings.js` 只管 Widget 內硬編碼中文，不看 ARB 本身 |
+| 形式 | Dart 測試 `app/test/l10n/arb_consistency_test.dart`，用 `dart:io` 讀四份 JSON，隨 `flutter test` 執行（repo 沒有 CI，Node 腳本只能靠提交前手動跑，風險與現在「記得四份同步」相同） |
+| 檢查項目 | A. `zh`、`en`、`zh_CN` 對 `zh_TW` 不得缺鍵、不得多鍵；B. 每鍵 placeholder 名稱集合一致；C. `en` 與 zh_TW 字串相同、或 `en` 值含中文字元，視為漏翻，除非列入白名單。略過 `@@locale` 與所有 `@key` |
+| 不檢查 | `zh_CN` 與 zh_TW 相同（現況 78 個多為兩岸寫法一致的詞，白名單會變 78 行噪音，且擋不住「漏翻成簡體」，需繁簡字典才判得出，超出範圍）；模板每鍵須有 `@` 描述（現況 641/641，gen-l10n 不因缺 `@` 出錯，YAGNI） |
+| `app_zh.arb` 定位 | 強制 `zh` 每個鍵與 `zh_TW` 逐字相同。它存在只因 Flutter 3.41 gen-l10n 在有國別代碼的 locale 時必須有 base locale，沒有獨立翻譯理由；若將來要讓它分歧，改測試是明確決定而非意外 |
+| placeholder 抽取 | 四份字串各自用 `{s*(w+)s*(?:,|})` 抽名稱集合互相比對（對稱、不依賴 `@` 中繼資料）。已驗證此規則在 641 鍵上與 template 的 `@key.placeholders` 宣告零差異。已知限制：將來若加 `select` 語法，分支內單字 `{He}` 會被誤判，屆時測試報錯再調整，不提前處理 |
+| 白名單 | 測試檔內 `const Map<String, String>`（鍵 → 理由），目前 3 筆：`settingsLanguageZhTW`／`settingsLanguageZhCN`／`settingsLanguageEn`（語言自稱，不翻譯）。白名單項目若不再命中（字串已不同、鍵已刪）測試同樣失敗，逼人清掉過期項目 |
+| 守衛自身驗證 | 偵測邏輯寫成純函式放 `app/test/l10n/arb_consistency_helpers.dart`，用小型合成資料各寫一個測試證明每條規則會失敗（缺鍵、多鍵、placeholder 少一個、en 漏翻、en 含中文、zh 偏離、白名單過期，約 8 個）；真實檔案測試呼叫同一組函式 |
+| 失敗訊息 | 一次列出所有違規鍵（如 `[en] 缺鍵：a, b`），不是遇到第一個就停 |
+| 文件 | `app/tool/README.md`「找到問題時怎麼修」第 1 步加一行指向新測試；`CLAUDE.md` 不動（不是新指令）；`CONTEXT.md` 不新增詞條；不寫 ADR |
+| 行為變動 | 無（僅新增測試，不改任何 App 程式碼與 ARB） |
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
