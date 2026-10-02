@@ -182,3 +182,11 @@
 - PR #306（`epic-54/issue-2-cloud-reauth` → `main`）已合併，合併 commit `f6f76873`。Issue 2 完成。全套 `flutter test` 3310 通過、1 略過。
 - 待真機確認：真實 Google／OneDrive 帳號被撤銷授權後，瀏覽顯示「請重新連結」、下載佇列顯示「需重新連結帳號」；飛航模式下瀏覽顯示網路錯誤而非重新連結。
 - 後續：Issue 6 尚未設計，動手前須先 `/grill-with-docs`；本 Epic 其餘 Issue 完成後再決定是否歸檔。另有兩項已排除、可另立工單的項目：在佇列面板或瀏覽畫面加「前往重新連結」按鈕（需牽動 `CloudAccountSettingsScreen` 的依賴建構）、合併 Google 與 OneDrive 兩個重複的 OAuth client。
+
+**2026-10-02 Issue 6 實作完成**：新增 ARB 一致性守衛，只加測試、不改 App 程式碼與 ARB。
+
+- 新增三個測試檔：`app/test/l10n/arb_consistency_helpers.dart`（偵測純函式：`messagesOf`、`loadArbMessages`、`placeholderNames`、`keySetViolations`、`placeholderViolations`、`zhMirrorViolations`、`enUntranslatedViolations`）、`arb_consistency_helpers_test.dart`（合成資料測試 21 個）、`arb_consistency_test.dart`（讀真實四份 ARB 的守衛測試 4 個，持有 `_enAllowlist` 3 筆語言自稱）。
+- 變異驗證（改壞真實檔→確認守衛失敗→還原，四種皆如預期）：刪 `en` 的 `cancel` 報 `[en] 缺鍵：cancel`；`en.cancel` 設成與 zh_TW 相同報疑似漏翻；拿掉 `zh_CN` 的 `settingsLanguageFollowSystemSubtitle` 的 placeholder 報 placeholder 不一致；`zh.cancel` 加字尾報 `[zh] 與 zh_TW 文字不同的鍵：cancel`。全部還原後守衛 4/4 通過。
+- 驗證：`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS；全套 `flutter test` 3335 通過、1 略過、0 失敗（Issue 2 合併基準 3310＋helpers 21＋守衛 4）。
+- 行為變動：無。待真機確認：無。
+- 文件：`app/tool/README.md`「找到問題時怎麼修」第 1 步加註守衛測試，並新增第 4 步說明 `_enAllowlist` 用法。待程式審查與發 PR。

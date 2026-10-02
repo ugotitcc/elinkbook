@@ -60,7 +60,7 @@
 - Consumes：無。
 - Produces：後續 Task 都在 worktree 的分支 `epic-54/issue-6-arb-guard` 上進行與提交。
 
-- [ ] **Step 1：在 `main` 提交計畫，並把 Issue 6 標為進行中**
+- [x] **Step 1：在 `main` 提交計畫，並把 Issue 6 標為進行中**
 
 先把 `docs/epics/epic-54-architecture-optimization/issues.md` 的 Issue 6 狀態改為「🟡 進行中（`plans/plan-issue-6.md`）」，並把 `docs/epics.md` Epic 54 那列的「Issue 6 已設計，待寫計畫」改為「Issue 6 進行中」，再提交：
 
@@ -85,7 +85,7 @@ git push origin main
 
 若 push 被拒絕，**不要強制推送**：先 `git pull --no-rebase --no-edit`，再重新 `git push origin main`。
 
-- [ ] **Step 3：建立 worktree 與分支**
+- [x] **Step 3：建立 worktree 與分支**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook
@@ -132,7 +132,7 @@ List<String> enUntranslatedViolations(Map<String, String> base, Map<String, Stri
 - `[en] 疑似漏翻（與 zh_TW 相同或含中文字元）：<鍵, 鍵>`
 - `[en] 白名單已過期（不再與 zh_TW 相同、也不含中文字元，或鍵已不存在）：<鍵, 鍵>`
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 建立 `app/test/l10n/arb_consistency_helpers_test.dart`：
 
@@ -294,12 +294,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 Run: `flutter test test/l10n/arb_consistency_helpers_test.dart`
 Expected：編譯失敗，`arb_consistency_helpers.dart` 不存在。
 
-- [ ] **Step 3：實作偵測函式**
+- [x] **Step 3：實作偵測函式**
 
 建立 `app/test/l10n/arb_consistency_helpers.dart`：
 
@@ -423,12 +423,12 @@ List<String> enUntranslatedViolations(
 }
 ```
 
-- [ ] **Step 4：跑測試確認通過**
+- [x] **Step 4：跑測試確認通過**
 
 Run: `flutter test test/l10n/arb_consistency_helpers_test.dart`
 Expected：全部通過（共 21 個測試）。
 
-- [ ] **Step 5：分析並提交**
+- [x] **Step 5：分析並提交**
 
 ```bash
 flutter analyze
@@ -451,7 +451,7 @@ Expected：`No issues found!`
 - Consumes：Task 1 的 `loadArbMessages`、`keySetViolations`、`placeholderViolations`、`zhMirrorViolations`、`enUntranslatedViolations`（簽章見 Task 1）。
 - Produces：無（終點）。
 
-- [ ] **Step 1：寫測試**
+- [x] **Step 1：寫測試**
 
 建立 `app/test/l10n/arb_consistency_test.dart`：
 
@@ -508,12 +508,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：跑測試確認通過**
+- [x] **Step 2：跑測試確認通過**
 
 Run: `flutter test test/l10n/arb_consistency_test.dart`
 Expected：4 個測試通過。**若有任何一個失敗，代表真實 ARB 已有漂移**：停下來，把失敗訊息原樣回報給使用者，不要修改 ARB 或放寬規則。
 
-- [ ] **Step 3：分析並提交**
+- [x] **Step 3：分析並提交**
 
 ```bash
 flutter analyze
@@ -537,7 +537,7 @@ Expected：`No issues found!`
 - Consumes：Task 1、2 全部完成。
 - Produces：可發 PR 的分支。
 
-- [ ] **Step 1：變異驗證（對真實檔案暫時改壞，確認守衛會失敗，再還原）**
+- [x] **Step 1：變異驗證（對真實檔案暫時改壞，確認守衛會失敗，再還原）**
 
 每次改壞後跑 `flutter test test/l10n/arb_consistency_test.dart`，預期對應的測試失敗、訊息指出被改的鍵；確認後立刻 `git checkout -- lib/l10n/<檔名>` 還原。四種變異（在 `app/` 下執行）：
 
@@ -565,7 +565,7 @@ git checkout -- lib/l10n/app_zh.arb
 
 全部還原後確認：`git status --short` 無輸出，`flutter test test/l10n/arb_consistency_test.dart` 4 個全數通過。把四種變異各自是否如預期失敗記在開發記錄。
 
-- [ ] **Step 2：更新 `tool/README.md`**
+- [x] **Step 2：更新 `tool/README.md`**
 
 用 Edit 工具，兩處單行替換（定位字串不含換行）：
 
@@ -580,7 +580,7 @@ git checkout -- lib/l10n/app_zh.arb
    `_enAllowlist`；項目不再命中時測試會要求移除。
 ```
 
-- [ ] **Step 3：分析、l10n 守衛、全套測試**
+- [x] **Step 3：分析、l10n 守衛、全套測試**
 
 ```bash
 flutter analyze
@@ -589,7 +589,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 Expected：`No issues found!`；腳本兩行 PASS。再跑完整測試（`run_in_background`，約 6 分鐘）：`flutter test`。Expected：全部通過、1 略過。若 `test/downloads/download_queue_controller_test.dart` 出現固定輪數 `pumpEventQueue()` 造成的偶發失敗（Issue 4 已記錄的既有不穩定測試），單獨重跑該檔確認，再重跑全套，並在記錄中註明。
 
-- [ ] **Step 4：更新開發記錄並提交**
+- [x] **Step 4：更新開發記錄並提交**
 
 在 `epic.md` 開發記錄末尾新增「Issue 6 實作完成」段落，寫明：新增三個測試檔與測試數量（helpers 21 個、守衛 4 個）；變異驗證四種結果；驗證結果（`flutter analyze`、`check_l10n_hardcoded_strings.js`、全套測試數字）；行為變動：無；待真機確認：無。`issues.md` 與 `docs/epics.md` 的 Issue 6 標為「待發 PR」。
 
