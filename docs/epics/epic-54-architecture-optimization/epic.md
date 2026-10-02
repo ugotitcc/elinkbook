@@ -160,3 +160,9 @@
 - M-4（不處理）：token 端點的 400 一律視為授權撤銷，這是設計表定案的假設（`invalid_request` 等其他 400 也會被當成需重新連結，實務上罕見）。
 - 審查員「未判斷」5 項（真機上服務端實際回應碼、面板無前往設定的導引等）均維持不處理，導引按鈕已在設計決策中排除。
 - 驗證：修訂後 `flutter analyze` No issues found；`download_queue_controller_test` 14 個全數通過。上方「實作完成」記載的全套 3309 通過是補測試前的數字，補 1 個測試後重跑全套：3310 通過、1 略過、0 失敗。
+
+**2026-10-02 PR 合併（Issue 2）**
+
+- PR #306（`epic-54/issue-2-cloud-reauth` → `main`）已合併，合併 commit `f6f76873`。Issue 2 完成。全套 `flutter test` 3310 通過、1 略過。
+- 待真機確認：真實 Google／OneDrive 帳號被撤銷授權後，瀏覽顯示「請重新連結」、下載佇列顯示「需重新連結帳號」；飛航模式下瀏覽顯示網路錯誤而非重新連結。
+- 後續：Issue 6 尚未設計，動手前須先 `/grill-with-docs`；本 Epic 其餘 Issue 完成後再決定是否歸檔。另有兩項已排除、可另立工單的項目：在佇列面板或瀏覽畫面加「前往重新連結」按鈕（需牽動 `CloudAccountSettingsScreen` 的依賴建構）、合併 Google 與 OneDrive 兩個重複的 OAuth client。
