@@ -49,6 +49,9 @@ class _FakeQueuedDownloadJob implements QueuedDownloadJob {
 
   @override
   Future<void> import(String permanentPath) async {}
+
+  @override
+  bool isAuthFailure(Object error) => false;
 }
 
 void main() {

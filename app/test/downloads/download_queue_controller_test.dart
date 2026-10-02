@@ -19,6 +19,7 @@ class FakeQueuedDownloadJob implements QueuedDownloadJob {
     this.hasDuplicateResult = false,
     this.downloadError,
     this.pendingCompleter,
+    this.authFailurePredicate,
   });
 
   @override
@@ -33,6 +34,12 @@ class FakeQueuedDownloadJob implements QueuedDownloadJob {
   /// 非 final：部分測試需要模擬「第一次下載失敗、重試後成功」。
   Object? downloadError;
   final Completer<void>? pendingCompleter;
+
+  /// 判斷哪些例外算「授權失效」；預設 null 代表一律不是。
+  bool Function(Object error)? authFailurePredicate;
+
+  @override
+  bool isAuthFailure(Object error) => authFailurePredicate?.call(error) ?? false;
 
   bool _cancelled = false;
   int downloadCalls = 0;
@@ -219,6 +226,75 @@ void main() {
 
     expect(job.downloadCalls, 2);
     expect(controller.items.single.status, DownloadItemStatus.done);
+  });
+
+  group('授權失效標示（epic-54 Issue 2）', () {
+    test('download() 拋出的例外被 isAuthFailure 判為真：failed 且 needsReauth', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = FakeQueuedDownloadJob(
+        id: 'book-1',
+        downloadError: StateError('auth'),
+        authFailurePredicate: (e) => e is StateError,
+      );
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+
+      final item = controller.items.single;
+      expect(item.status, DownloadItemStatus.failed);
+      expect(item.needsReauth, isTrue);
+    });
+
+    test('isAuthFailure 為假的失敗（例如 OPDS 下載）：failed 但 needsReauth 為 false', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = FakeQueuedDownloadJob(id: 'book-1', downloadError: StateError('x'));
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+
+      final item = controller.items.single;
+      expect(item.status, DownloadItemStatus.failed);
+      expect(item.needsReauth, isFalse);
+    });
+
+    test('已被使用者取消的工作：即使 isAuthFailure 為真，也是 cancelled 且 needsReauth 為 false', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final completer = Completer<void>();
+      final job = FakeQueuedDownloadJob(
+        id: 'book-1',
+        pendingCompleter: completer,
+        authFailurePredicate: (_) => true,
+      );
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+      controller.cancel('book-1');
+      completer.complete();
+      await pumpEventQueue();
+
+      final item = controller.items.single;
+      expect(item.status, DownloadItemStatus.cancelled);
+      expect(item.needsReauth, isFalse);
+    });
+
+    test('授權失效後重試成功：needsReauth 重設為 false', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = FakeQueuedDownloadJob(
+        id: 'book-1',
+        downloadError: StateError('auth'),
+        authFailurePredicate: (e) => e is StateError,
+      );
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+      expect(controller.items.single.needsReauth, isTrue);
+
+      job.downloadError = null;
+      await controller.retry('book-1');
+
+      final item = controller.items.single;
+      expect(item.status, DownloadItemStatus.done);
+      expect(item.needsReauth, isFalse);
+    });
   });
 
   test('dismiss() 移除項目', () async {

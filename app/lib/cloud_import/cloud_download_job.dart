@@ -83,4 +83,7 @@ class CloudDownloadJob implements QueuedDownloadJob {
       cloudFileIds: {permanentPath: entry.id},
     );
   }
+
+  @override
+  bool isAuthFailure(Object error) => error is CloudAuthRequiredException;
 }
