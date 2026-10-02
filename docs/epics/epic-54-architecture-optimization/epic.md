@@ -80,6 +80,22 @@
 | 測試 | 純測試：分類規則；兩個 OAuth client 各補斷網拋一般例外；兩個 storage client 各補 API 401；`download_queue_controller_test` 補 `needsReauth` 設定與重設；`cloud_download_job` 的 `isAuthFailure`。widget：面板新文字、瀏覽畫面離線顯示網路錯誤而非 reauth（翻轉現有行為）。被取代的舊測試刪除並於記錄列出對應 |
 | ADR | 不寫（沒有難以回頭的取捨） |
 
+## Issue 6 設計決策（`/grill-with-docs` 定案）
+
+| 決策 | 結論 |
+|---|---|
+| 動機 | 現況沒有漂移（四份各 641 鍵，鍵集合與 placeholder 全數一致），這張是預防：`l10n.yaml` 沒設 `untranslated-messages-file`，非 template 的 ARB 漏鍵不會編譯失敗，使用者會靜默看到 zh_TW 的字；既有 `check_l10n_hardcoded_strings.js` 只管 Widget 內硬編碼中文，不看 ARB 本身 |
+| 形式 | Dart 測試 `app/test/l10n/arb_consistency_test.dart`，用 `dart:io` 讀四份 JSON，隨 `flutter test` 執行（repo 沒有 CI，Node 腳本只能靠提交前手動跑，風險與現在「記得四份同步」相同） |
+| 檢查項目 | A. `zh`、`en`、`zh_CN` 對 `zh_TW` 不得缺鍵、不得多鍵；B. 每鍵 placeholder 名稱集合一致；C. `en` 與 zh_TW 字串相同、或 `en` 值含中文字元，視為漏翻，除非列入白名單。略過 `@@locale` 與所有 `@key` |
+| 不檢查 | `zh_CN` 與 zh_TW 相同（現況 78 個多為兩岸寫法一致的詞，白名單會變 78 行噪音，且擋不住「漏翻成簡體」，需繁簡字典才判得出，超出範圍）；模板每鍵須有 `@` 描述（現況 641/641，gen-l10n 不因缺 `@` 出錯，YAGNI） |
+| `app_zh.arb` 定位 | 強制 `zh` 每個鍵與 `zh_TW` 逐字相同。它存在只因 Flutter 3.41 gen-l10n 在有國別代碼的 locale 時必須有 base locale，沒有獨立翻譯理由；若將來要讓它分歧，改測試是明確決定而非意外 |
+| placeholder 抽取 | 四份字串各自用 `{s*(w+)s*(?:,|})` 抽名稱集合互相比對（對稱、不依賴 `@` 中繼資料）。已驗證此規則在 641 鍵上與 template 的 `@key.placeholders` 宣告零差異。已知限制：將來若加 `select` 語法，分支內單字 `{He}` 會被誤判，屆時測試報錯再調整，不提前處理 |
+| 白名單 | 測試檔內 `const Map<String, String>`（鍵 → 理由），目前 3 筆：`settingsLanguageZhTW`／`settingsLanguageZhCN`／`settingsLanguageEn`（語言自稱，不翻譯）。白名單項目若不再命中（字串已不同、鍵已刪）測試同樣失敗，逼人清掉過期項目 |
+| 守衛自身驗證 | 偵測邏輯寫成純函式放 `app/test/l10n/arb_consistency_helpers.dart`，用小型合成資料各寫一個測試證明每條規則會失敗（缺鍵、多鍵、placeholder 少一個、en 漏翻、en 含中文、zh 偏離、白名單過期，約 8 個）；真實檔案測試呼叫同一組函式 |
+| 失敗訊息 | 一次列出所有違規鍵（如 `[en] 缺鍵：a, b`），不是遇到第一個就停 |
+| 文件 | `app/tool/README.md`「找到問題時怎麼修」第 1 步加一行指向新測試；`CLAUDE.md` 不動（不是新指令）；`CONTEXT.md` 不新增詞條；不寫 ADR |
+| 行為變動 | 無（僅新增測試，不改任何 App 程式碼與 ARB） |
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -166,3 +182,21 @@
 - PR #306（`epic-54/issue-2-cloud-reauth` → `main`）已合併，合併 commit `f6f76873`。Issue 2 完成。全套 `flutter test` 3310 通過、1 略過。
 - 待真機確認：真實 Google／OneDrive 帳號被撤銷授權後，瀏覽顯示「請重新連結」、下載佇列顯示「需重新連結帳號」；飛航模式下瀏覽顯示網路錯誤而非重新連結。
 - 後續：Issue 6 尚未設計，動手前須先 `/grill-with-docs`；本 Epic 其餘 Issue 完成後再決定是否歸檔。另有兩項已排除、可另立工單的項目：在佇列面板或瀏覽畫面加「前往重新連結」按鈕（需牽動 `CloudAccountSettingsScreen` 的依賴建構）、合併 Google 與 OneDrive 兩個重複的 OAuth client。
+
+**2026-10-02 Issue 6 實作完成**：新增 ARB 一致性守衛，只加測試、不改 App 程式碼與 ARB。
+
+- 新增三個測試檔：`app/test/l10n/arb_consistency_helpers.dart`（偵測純函式：`messagesOf`、`loadArbMessages`、`placeholderNames`、`keySetViolations`、`placeholderViolations`、`zhMirrorViolations`、`enUntranslatedViolations`）、`arb_consistency_helpers_test.dart`（合成資料測試 21 個）、`arb_consistency_test.dart`（讀真實四份 ARB 的守衛測試 4 個，持有 `_enAllowlist` 3 筆語言自稱）。
+- 變異驗證（改壞真實檔→確認守衛失敗→還原，四種皆如預期）：刪 `en` 的 `cancel` 報 `[en] 缺鍵：cancel`；`en.cancel` 設成與 zh_TW 相同報疑似漏翻；拿掉 `zh_CN` 的 `settingsLanguageFollowSystemSubtitle` 的 placeholder 報 placeholder 不一致；`zh.cancel` 加字尾報 `[zh] 與 zh_TW 文字不同的鍵：cancel`。全部還原後守衛 4/4 通過。
+- 驗證：`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS；全套 `flutter test` 3335 通過、1 略過、0 失敗（Issue 2 合併基準 3310＋helpers 21＋守衛 4）。
+- 行為變動：無。待真機確認：無。
+- 文件：`app/tool/README.md`「找到問題時怎麼修」第 1 步加註守衛測試，並新增第 4 步說明 `_enAllowlist` 用法。待程式審查與發 PR。
+
+**2026-10-02 Issue 6 程式審查與修訂**（獨立審查員，範圍 `42ce8cd3..b31b5c47`；審查報告在 `reviews/review-code-issue-6.md`，不進版控，以下為摘要。0 Critical／0 Important／5 Minor，結論 Ready to merge。審查員實跑：`flutter analyze` 乾淨、`check_l10n_hardcoded_strings.js` PASS、兩個測試檔 25 個全過、`app/lib` 零異動、相對路徑 `lib/l10n/...` 在 `flutter test` 下成立；七個公開函式簽章、違規訊息字串、白名單三筆與計畫逐字一致；Review Focus 五條皆有有效測試。審查員未對 ARB 副本實際執行變異，改以推理並附對照表）
+
+- M-1（已修）：補合成測試「zh 缺鍵：不在此重複回報（交給 `keySetViolations`）」。變異驗證：暫時拿掉 `zhMirrorViolations` 的 `zh.containsKey(k)`，新測試如預期失敗，已還原。helpers 測試由 21 個增為 22 個，Issue 6 新增測試合計 26 個。
+- M-2（不處理）：中文字元判定只含 `一-鿿`，不含全形標點與假名；這是計畫固定的規則，非實作偏離。
+- M-3（不處理）：`placeholderViolations` 只比名稱集合，不比數量或型別；名稱集合即設計決策。
+- M-4（不處理）：測試檔有超長行、未跑 `dart format`，純風格。
+- M-5（已修）：`app/tool/README.md` 新增的「第 4 點」不屬於「找到問題時怎麼修」的步驟，改為獨立小節「ARB 一致性守衛」，並去掉第 3、4 點間多餘的空行。
+- 審查員「未判斷」5 條均維持不處理。
+- 驗證：修訂後 `flutter analyze` No issues found；`test/l10n/arb_consistency_helpers_test.dart` 與 `arb_consistency_test.dart` 共 26 個全數通過。上方「實作完成」記載的全套 3335 通過是補測試前的數字，補 1 個測試後重跑全套：3336 通過、1 略過、0 失敗。待發 PR。
