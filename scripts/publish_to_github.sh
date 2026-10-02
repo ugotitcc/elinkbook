@@ -51,8 +51,8 @@ else
     echo "[錯誤] $DEST 有未提交的修改。請先處理後再執行。" >&2
     exit 1
   fi
-  # 全新的空 repo 還沒有任何 commit，沒東西可以 pull
-  if git -C "$DEST" rev-parse --verify -q HEAD >/dev/null; then
+  # 遠端還是空的（沒有 origin/main）時，沒東西可以 pull
+  if git -C "$DEST" rev-parse --verify -q origin/main >/dev/null; then
     echo "[準備] 更新 $DEST"
     git -C "$DEST" pull --ff-only
   fi
@@ -90,9 +90,9 @@ if [ -n "$env_hits" ]; then
   echo "$env_hits" >&2
   fail=1
 fi
-hits="$(grep -rIliE 'jigong|superpowers' "$DEST" --exclude-dir=.git || true)"
+hits="$(grep -rIliE 'jigong|superpowers|huthief|Hu Yen-Chuan|gmail' "$DEST" --exclude-dir=.git || true)"
 if [ -n "$hits" ]; then
-  echo "[攔截] 以下檔案含有 jigong 或 superpowers 字樣：" >&2
+  echo "[攔截] 以下檔案含有內部網域、內部工具名稱或個人識別字樣：" >&2
   echo "$hits" >&2
   fail=1
 fi
