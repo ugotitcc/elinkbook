@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 把「可公開」的檔案複製到公開 repo（huthief/elinkbook）的本機 clone，並在 clone 內 commit。
+# 把「可公開」的檔案複製到公開 repo（ugotitcc/elinkbook）的本機 clone，並在 clone 內 commit。
 # 本腳本只做到 commit，不會 push。push 前請先檢視 diff。
 #
 # 用法：scripts/publish_to_github.sh [公開 repo 的本機 clone 路徑]
@@ -10,7 +10,7 @@ set -euo pipefail
 
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 DEST="${1:-$(dirname "$SRC")/elinkbook-public}"
-REMOTE_URL="https://github.com/huthief/elinkbook.git"
+REMOTE_URL="https://github.com/ugotitcc/elinkbook.git"
 
 # ---- 白名單（相對於本 repo 根目錄）-------------------------------------------
 DOCKER_FILES=(
@@ -43,7 +43,7 @@ if [ ! -e "$DEST/.git" ]; then
 else
   # 防呆：已存在的目錄必須是公開 repo 的 clone，否則中止
   dest_remote="$(git -C "$DEST" remote get-url origin 2>/dev/null || true)"
-  if ! echo "$dest_remote" | grep -qiE 'github\.com[:/]huthief/elinkbook(\.git)?/?$'; then
+  if ! echo "$dest_remote" | grep -qiE 'github\.com[:/]ugotitcc/elinkbook(\.git)?/?$'; then
     echo "[錯誤] $DEST 的 origin（$dest_remote）不是 $REMOTE_URL，中止以防誤刪。" >&2
     exit 1
   fi
