@@ -57,6 +57,7 @@ import '../reader/pdf_toc_item.dart';
 import '../reader/pdf_toc_navigator.dart';
 import '../reader/pdf_selection_info.dart';
 import '../reader/reading_position.dart';
+import '../reader/reading_position_saver.dart';
 import '../storage/storage_access_probe.dart'
     show StorageAccessProbeResult, probeStorageAccess;
 import '../reader/open_book_flow.dart';
@@ -522,18 +523,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 不變——僅用於 _buildNativeView() 建構 EpubReaderView/PdfReaderView
   // 時傳入 initialLocatorJson/initialPageIndex 這兩個一次性開書起始值。
   ReadingPosition? _initialPosition;
-  /// 【spec.md §6 2026-09-11 修訂】只在 `widget.initialJumpTarget` 非
-  /// `null` 時才有意義：`_pdfPageInfo`/`_epubPositionInfo` 開書後第一次
-  /// 被 `onPageChanged`/`onLocatorChanged` 賦值時（賦值前仍是 `null`）
-  /// 代表 `initialJumpTarget` 套用後的初始定位回報，不算使用者主動
-  /// 導覽；這兩個回呼**第二次（或之後）**被呼叫時（賦值前已非 `null`）
-  /// ——不論觸發來源是翻頁熱區、音量鍵、目錄/書籤跳轉、或書內搜尋，皆會
-  /// 走同一組回呼報告新位置，這個判斷天然涵蓋所有導覽方式——才代表使用
-  /// 者確實已經離開了跳轉目標本身，設為 `true`。單向轉換
-  /// （`false → true`），一旦設定就不會再變回 `false`。
-  /// [_writeCurrentPosition] 用這個旗標決定是否要跳過寫入、保留資料庫
-  /// 既有進度。
-  bool _hasRelocatedSinceOpen = false;
+  // 與 [_initialPosition] 同時在偏好載入完成時建立；閱讀視圖只在 `_resolved`
+  // 非 null 後才建構，所以回呼內正常情況下已存在；回呼與 `dispose`／`paused`
+  // 一律以 `?.` 呼叫，與 `_loaded` 尚未載入時的其他早退路徑保持一致，不使用 `!`。
+  ReadingPositionSaver? _positionSaver;
   // 用於呼叫 PdfReaderView.jumpToPage(key, pageIndex) 這個強型別 static
   // helper（審查修正，見 Task 2 Step 4——不使用 as dynamic 跨 State 私有
   // 邊界呼叫，避免 release 混淆／tree-shaking 風險）。
@@ -632,6 +625,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         _prefs = loaded.bookPrefs;
         _loaded = loaded;
         _initialPosition = loaded.readingPosition;
+        _positionSaver = ReadingPositionSaver(
+          bookId: widget.bookId,
+          prefsManager: widget.prefsManager,
+          hasJumpTarget: widget.initialJumpTarget != null,
+          initialProgress: loaded.readingPosition.progress,
+        );
         _resolved = widget.prefsManager.resolve(
           loaded,
           autoDetectedWritingMode: _autoDetectedWritingMode,
@@ -737,7 +736,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void dispose() {
     widget.readerActivityTracker?.markReaderClosed();
     // 退出閱讀器：結算閱讀統計尾段並寫入（epic-9-stats Issue 4）。不 await
-    // ——dispose() 是同步方法，比照下方 _writeCurrentPosition() 的既有慣例；
+    // ——dispose() 是同步方法，比照下方 ReadingPositionSaver.save 的既有慣例；
     // 寫入失敗由 tracker 內部吞下並記診斷日誌，不影響離開閱讀器。
     final statsTracker = _readingStatsTracker;
     if (statsTracker != null) unawaited(statsTracker.flushAndClose());
@@ -758,16 +757,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 時機之一）。不 await——dispose() 是同步方法，且這是離開畫面前的
     // 最後一次呼叫，不需要等待其完成，比照既有 _handlePrefsChanged 不
     // await saveBookPrefs 的既有慣例。
-    _writeCurrentPosition();
+    _positionSaver?.save(detectBookFormat(_activeFilePath));
     // epic-8-sync Issue 6（spec.md「同步引擎」checkpoint 觸發來源之
     // 「書籍切換」）：離開閱讀畫面視為一次書籍切換，觸發一次 checkpoint。
-    // 排在 _writeCurrentPosition() 之後，讓剛寫入的最新閱讀位置有較高
+    // 排在 ReadingPositionSaver.save 之後，讓剛寫入的最新閱讀位置有較高
     // 機率被這次 checkpoint 一併判定為待推送——但兩者皆是 fire-and-
     // forget（不 await），呼叫順序並不「保證」上一行的 SQLite 寫入已經
     // 真正落地；即使極端情況下寫入尚未完成，也只是延後到下一次任何
     // checkpoint 才會被推送，不會遺失資料（審查意見 Important #1，
     // 2026-08-04 `/superpowers:requesting-code-review`）。不 await，理由
-    // 同上一行 _writeCurrentPosition()，dispose() 是同步方法；未登入或
+    // 同上一行 ReadingPositionSaver.save，dispose() 是同步方法；未登入或
     // 已有 checkpoint 執行中時 SyncCheckpointTrigger.trigger() 內部會
     // 直接放棄，不會拋出例外。
     widget.syncCheckpointTrigger?.trigger();
@@ -830,7 +829,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _readingStatsTracker?.onEnteredBackground();
-      _writeCurrentPosition();
+      _positionSaver?.save(detectBookFormat(_activeFilePath));
     } else if (state == AppLifecycleState.resumed) {
       _readingStatsTracker?.onReturnedToForeground();
       // App 從背景恢復時，Android 系統列可能已被 OS 自動重新顯示，
@@ -839,69 +838,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _lastAppliedFullscreen = null;
       _applySystemUiMode();
       _ttsController?.resyncHighlight();
-    }
-  }
-
-  /// 依目前格式讀取對應的持續追蹤狀態（PDF: [_pdfPageInfo]，EPUB:
-  /// [_epubPositionInfo]），組成 [ReadingPosition] 後透過 prefsManager
-  /// 寫入。尚未收到任何位置回報（例如書籍尚未成功開啟）時靜默不寫入，
-  /// 避免用「無資料」覆蓋掉資料庫中既有的正確記錄。
-  void _writeCurrentPosition() {
-    // 【spec.md §6 2026-09-11 修訂，review-plan-issue-5.md I-2】使用者
-    // 跳轉後尚未產生任何後續重定位事件（見 _hasRelocatedSinceOpen 欄位
-    // 文件註解），保留資料庫既有的 lastPosition、不覆寫——避免使用者只是
-    // 查看一下搜尋結果、隨即離開，卻把原本讀到一半的進度覆蓋成搜尋跳轉
-    // 目標本身。initialJumpTarget 為 null（一般開書）時這個判斷恆為
-    // false，行為完全不變。
-    if (widget.initialJumpTarget != null && !_hasRelocatedSinceOpen) return;
-    final format = detectBookFormat(_activeFilePath);
-    switch (format) {
-      case BookFormat.pdf:
-        final info = _pdfPageInfo;
-        if (info == null) return;
-        widget.prefsManager.saveReadingPosition(
-          widget.bookId,
-          ReadingPosition(
-            pdfPageIndex: info.pageIndex,
-            progress: info.totalPages > 0
-                ? (info.pageIndex + 1) / info.totalPages
-                : 0,
-          ),
-        );
-        break;
-      case BookFormat.epub:
-      case BookFormat.azw3:
-      case BookFormat.cbz:
-      case BookFormat.txt:
-      case BookFormat.md:
-        final info = _epubPositionInfo;
-        if (info == null) return;
-        // progression 為 null 時（例如 Readium 對某些定位尚未完全解析版面
-        // 的早期定位、或 FXL 固定版面的定位），不覆寫進度，改用既有值——
-        // 避免把已讀大半的書的進度靜默倒退回 0%（見 C2 審查修正 I2）。
-        final progression = info.progression;
-        if (progression == null) {
-          final existingProgress = _initialPosition?.progress;
-          if (existingProgress == null) return;
-          widget.prefsManager.saveReadingPosition(
-            widget.bookId,
-            ReadingPosition(
-              epubLocatorJson: info.locatorJson,
-              progress: existingProgress,
-            ),
-          );
-        } else {
-          widget.prefsManager.saveReadingPosition(
-            widget.bookId,
-            ReadingPosition(
-              epubLocatorJson: info.locatorJson,
-              progress: progression,
-            ),
-          );
-        }
-        break;
-      case BookFormat.unknown:
-        return;
     }
   }
 
@@ -3552,11 +3488,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           dualPageDirection: resolved.dualPageDirection,
           onLocatorChanged: (info) {
             if (!mounted) return;
-            // 【spec.md §6 2026-09-11 修訂】見上方 _hasRelocatedSinceOpen
-            // 欄位文件註解：賦值前非 null，代表這不是開書後第一次回報。
+            // 位置儲存規則已搬到 ReadingPositionSaver（見其文件註解），含
+            // 「第一次／第二次回報」的區分。
+            _positionSaver?.onEpubLocated(info);
             final previousPosition = _epubPositionInfo;
             if (previousPosition != null) {
-              _hasRelocatedSinceOpen = true;
               // 不算閱讀活動的回報（epic-9-stats）：開書後第一次回報是初始定位
               // （上面 previousPosition 為 null 的情況）；位置與上一次相同的
               // 重複回報，是 Foliate 在開書後套用樣式重排、或圖片／字型載入後
@@ -3638,10 +3574,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
           onPageChanged: (info) {
             if (!mounted) return;
-            // 【spec.md §6 2026-09-11 修訂】理由同上方 onLocatorChanged
-            // 分支。
+            // 位置儲存規則已搬到 ReadingPositionSaver（見其文件註解），理由同
+            // 上方 onLocatorChanged 分支。
+            _positionSaver?.onPdfPageChanged(info);
             if (_pdfPageInfo != null) {
-              _hasRelocatedSinceOpen = true;
               _recordReadingActivity();
             }
             setState(() => _pdfPageInfo = info);

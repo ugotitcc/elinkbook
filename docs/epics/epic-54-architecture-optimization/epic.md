@@ -96,6 +96,29 @@
 | 文件 | `app/tool/README.md`「找到問題時怎麼修」第 1 步加一行指向新測試；`CLAUDE.md` 不動（不是新指令）；`CONTEXT.md` 不新增詞條；不寫 ADR |
 | 行為變動 | 無（僅新增測試，不改任何 App 程式碼與 ARB） |
 
+## Issue 7、8 設計決策（`/improve-codebase-architecture` 第二次檢視後 `/grilling` 定案，2026-10-02）
+
+來源：第二次架構檢視的候選 1（閱讀會話生命週期）與候選 2（位置寫入規則）；報告存暫存目錄，不進版控。檢視另有三個候選未排入：LibraryScreen 依賴 bundle、重新連結概念跨檔案、睡眠定時器放在畫面層，皆為 Worth exploring，需要時再開 Issue。
+
+**事實修正（探索子代理回報，已核對）**
+- 位置只在「進入背景」與「dispose」兩處寫入；`onLocatorChanged` 只判斷是否算閱讀活動，不寫位置也不觸發 Checkpoint。
+- `SyncEngine` 不使用 `ReadingPositionRepository`，直接對 `books` 表讀寫相同欄位，`position_updated_at` 的維護邏輯因此有兩份。**不在本批 Issue 範圍**，需要時另立。
+- `dispose` 實際順序：統計 flush → … → 寫位置 → 觸發 Checkpoint；僅「寫位置須在觸發 Checkpoint 之前」有註解說明的依賴，且兩者皆不 await。
+- `reader_screen.dart:400` 註解：刻意不在 `didUpdateWidget` 跟隨 `filePath`，所以一個 State 恆為一本書。
+
+**定案**
+1. 拆成兩張 Issue。Issue 7（位置 module）先做，Issue 8（會話 module）後做並呼叫它。
+2. 會話 module 擁有 5 分鐘 Checkpoint Timer；sync 觸發器為注入依賴，測試以 fake 取代（沿用現有 `SyncCheckpointTrigger`）。
+3. 會話邊界 = 一個 `ReaderScreen` State 的生命週期。
+4. 會話搬走：統計 tracker 建立與收尾、Timer、`markReaderOpened`／`markReaderClosed`、前後景切換時的位置寫入與統計通知、dispose 收尾順序。留在畫面：音量鍵 channel、螢幕方向與 system UI、TTS 與 audio focus dispose、搜尋高亮 timer、睡眠定時器。
+5. 「這次 relocate 算不算閱讀活動」（Foliate 比對 cfi＋index 的 key、PDF 一律算）歸會話 module，不歸 `ReadingStatsTracker`。
+6. **純重構、零行為變化**：連同「`paused` 不觸發 Checkpoint」「先 flush 統計再寫位置」「位置寫入不 await」都逐字保留，寫進 module 文件。要改順序另開缺陷 Issue。
+7. 不新增 `ReaderScreen` 建構參數（目前 27 個）；由內部以既有的注入點組裝。
+8. 測試：replace, don't layer。只遷移「生命週期與位置規則」案例（`reader_screen_test.dart` 約 600、2260–2300、6386–6560 行附近與 `reader_screen_stats_*`），純 UI 案例留在 widget 測試。每個 Task 只跑異動到的測試檔，全套只在最後一個 Task 與發 PR 前各一次。
+9. 流程：兩張 Issue 都寫 `plan-issue-N.md`。
+
+CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需新 ADR（可逆、不違反既有 ADR）。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -207,3 +230,24 @@
 - 待真機確認：無（僅新增測試）。
 - 已知限制（寫在 `app/tool/README.md` 與 `arb_consistency_helpers.dart`）：ICU `select`／`plural` 的單字分支（如 `=0{None}`）會被誤判成 placeholder，避開寫法是寫成含空格的片語；`zh_CN` 與 zh_TW 相同的字串不檢查。
 - **Epic 54 的 6 個 Issue 全數完成並合併**（#302、#306、#304、#305、#303、#307）。是否歸檔由使用者決定；歸檔時依 sdd-workflow 慣例，`.gitignore` 的 reviews 規則改指向 archive 路徑，不刪除。
+
+**2026-10-02 Issue 7 實作完成**（分支 `epic-54/issue-7-position-saver`，worktree 內 Native 直接開發，未使用 subagent。計畫見 `plans/plan-issue-7.md`）
+
+- 新增 `app/lib/reader/reading_position_saver.dart`（`ReadingPositionSaver`：持有最新一筆 PDF／Foliate 位置回報與各格式「開書後是否已重新定位」旗標，依格式決定要不要儲存、存什麼）；`ReaderScreen` 刪除 `_writeCurrentPosition` 與 `_hasRelocatedSinceOpen`，改為在回呼中轉發位置回報、在 dispose／paused 呼叫 saver（呼叫順序不變）。
+- 被刪除的 widget 案例：無（盤點 `reader_screen_test.dart` 12 處引用，皆為接線或開書位置選擇，全數保留）；新增 16 個單元測試（`test/reader/reading_position_saver_test.dart`，規則表逐條涵蓋，含總頁數為 0、progression 為 null 回退、跳轉後首次回報不儲存等過去完全沒有測試的規則）與 2 個接線測試（paused 觸發儲存、Foliate `onLocatorChanged` 轉發，皆先在舊程式碼上確認通過）。
+- 與計畫的差異（2 項，均記於執行 ledger）：(1) `initialProgress` 取值由 `loaded.readingPosition?.progress` 改為 `.progress`（`LoadedPrefs.readingPosition` 為非空型別，`?.` 觸發 analyze 警告；行為等價）；(2) 另更新計畫未列的 5 處過時註解（`main.dart`、`app_lifecycle_sync_test.dart` 各 1 處，`reader_screen_test.dart` 3 處），純文字，不斷言與程式零變動。
+- 驗證：全套 `flutter test` 3369 通過、1 略過、0 失敗；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS。
+- 行為變動：無（純重構）。待真機確認：無。待程式審查與發 PR。
+
+**2026-10-02 Issue 7 程式審查與修訂**（獨立審查員，範圍 `e005a4de..4ba13a59`；審查報告在 `reviews/review-code-issue-7.md`，不進版控，以下為摘要。0 Critical／0 Important／3 Minor，結論 Ready to merge。審查員實跑：三個異動測試檔 305 案例通過、`flutter analyze` 乾淨、`_hasRelocatedSinceOpen`／`_writeCurrentPosition` 零命中；未獨立重現全套測試）
+
+- M-1（已修）：`onLocatorChanged` 內「賦值前非 null」註解已不貼切，改為說明第一次／第二次回報的區分由 `ReadingPositionSaver` 處理。
+- M-2（不處理）：saver 未建立時回報被 `?.` 靜默丟棄，無測試鎖定。目前不變式成立（`_resolved` 與 saver 同一個 `setState`），既有接線案例會在漏存時失敗；留待 Issue 8 收進會話 module 時一併考慮。
+- M-3（**記錄為待處理缺陷，見下**）：重複回報同位置仍使「已重新定位」旗標成立。
+
+**待處理缺陷（Issue 9，由 Issue 7 審查 M-3 發現，尚未修正）**
+
+- 現象（依程式碼與既有註解推論，**尚未在真機重現**）：帶跳轉目標（搜尋結果、書籤）開書時，`ReadingPositionSaver` 以「該格式第二次回報」判定使用者已離開跳轉目標。但 Foliate 在開書後套用樣式重排、或圖片／字型載入後重新對齊錨點時，會派發「位置相同」的重複回報（`reader_screen.dart` 閱讀活動判定的註解已實證：同一 cfi 的 fraction 會來回微幅抖動）。這會讓旗標提早成立，使用者什麼都沒做就離開時，跳轉落點被存成新進度，覆蓋原本讀到一半的位置——正是這條規則要防止的情況。
+- 這是修改前就存在的行為（Issue 7 只搬動、未改變）；PDF 路徑不受影響（頁碼回報不會無故重複）。
+- 修正方向：旗標只在「位置真的改變」時成立，可沿用閱讀活動判定已有的「只比 cfi 與 index、忽略 fraction」的位置鍵比較。該比較目前在 `ReaderScreen`（`_locatorPositionKey`），預計 Issue 8 搬進會話 module，建議 Issue 8 之後再處理，避免兩個 Issue 同時動同一段邏輯。
+- 動手前須先決定：要不要先用真機日誌確認重複回報確實發生在帶跳轉目標的開書流程；測試以 `ReadingPositionSaver` 單元測試（同位置重複回報不算重新定位）直接守住。

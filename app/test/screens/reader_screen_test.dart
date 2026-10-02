@@ -510,11 +510,11 @@ void main() {
 
       final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
       // 第一次回報：抵達 initialJumpTarget 指定的頁碼（開書當下的初始
-      // 定位回報，_hasRelocatedSinceOpen 仍應維持 false）。
+      // 定位回報，saver 內該格式的「已重新定位」仍應維持 false）。
       pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 2, totalPages: 5));
       await tester.pump();
       // 第二次回報：使用者從跳轉目標（頁碼 2）繼續往後翻到頁碼 3——這才
-      // 是「後續重定位事件」，_hasRelocatedSinceOpen 應轉為 true（比照
+      // 是「後續重定位事件」，saver 內該格式的「已重新定位」應轉為 true（比照
       // 既有 PDF 測試直接呼叫 onPageChanged 的既有慣例，不需要真的等待
       // pdfrx 完整載入）。
       pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 3, totalPages: 5));
@@ -596,8 +596,8 @@ void main() {
       expect(
         prefsManager.savedReadingPositionCalls,
         isEmpty,
-        reason: '使用者跳轉後沒有任何後續重定位事件，_writeCurrentPosition() '
-            '應在最前面就直接 return，完全不呼叫 saveReadingPosition——不能'
+        reason: '使用者跳轉後沒有任何後續重定位事件，ReadingPositionSaver.save '
+            '應直接返回而不呼叫 saveReadingPosition——不能'
             '把搜尋跳轉目標（頁碼 2）誤存成新進度，覆蓋掉跳轉前的舊進度'
             '（頁碼 49）。',
       );
@@ -2308,6 +2308,91 @@ void main() {
       expect(prefsManager.savedReadingPositionCalls, isEmpty);
     },
   );
+
+  testWidgets('PDF 收到 onPageChanged 後進入背景（paused），正確寫入 ReadingPosition（epic-54 Issue 7 接線）', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_paused_test',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageChanged?.call(
+      const PdfPageInfo(pageIndex: 3, totalPages: 10),
+    );
+    await tester.pump();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+
+    expect(prefsManager.savedReadingPositionCalls, hasLength(1));
+    expect(prefsManager.savedReadingPositionCalls.single.value.pdfPageIndex, 3);
+  });
+
+  testWidgets('Foliate 接線：onLocatorChanged 第一次回報後 paused 不儲存，第二次回報後才儲存（epic-54 Issue 7）', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_epub_wiring',
+          prefsManager: prefsManager,
+          initialJumpTarget: const ReaderJumpTarget(cfi: 'epubcfi(/jump)'),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
+    );
+    epubView.onLocatorChanged?.call(
+      const EpubPositionInfo(
+        locatorJson: '{"cfi":"a"}',
+        progression: 0.2,
+      ),
+    );
+    await tester.pump();
+    // 只有第一次回報：跳轉後尚未重新定位，以 paused 觸發一次儲存，
+    // 期望 savedReadingPositionCalls 為空。
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(prefsManager.savedReadingPositionCalls, isEmpty);
+    // 第二次回報後才儲存。
+    epubView.onLocatorChanged?.call(
+      const EpubPositionInfo(
+        locatorJson: '{"cfi":"b"}',
+        progression: 0.3,
+      ),
+    );
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(
+      prefsManager.savedReadingPositionCalls.single.value.epubLocatorJson,
+      '{"cfi":"b"}',
+    );
+  });
 
   testWidgets('PDF 頁尾行為不受本工單影響（既有回歸驗證）', (tester) async {
     await tester.pumpWidget(

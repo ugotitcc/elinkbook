@@ -486,7 +486,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
   /// 「App 生命週期監聽」）：只在 [AppLifecycleState.paused]（真正進入
   /// 背景）觸發，不含 [AppLifecycleState.inactive]（系統對話框短暫遮蓋等
   /// 過渡狀態）——比照 `reader_screen.dart` 既有
-  /// `didChangeAppLifecycleState` 對 `_writeCurrentPosition()` 的同一條
+  /// `didChangeAppLifecycleState` 對 `ReadingPositionSaver.save` 的同一條
   /// 判斷準則。不 await，理由同 `reader_screen.dart` 既有慣例。
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
