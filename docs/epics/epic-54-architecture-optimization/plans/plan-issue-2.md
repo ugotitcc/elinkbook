@@ -72,7 +72,7 @@
 - Consumes：無。
 - Produces：後續 Task 都在 worktree 的分支 `epic-54/issue-2-cloud-reauth` 上進行與提交。
 
-- [ ] **Step 1：在 `main` 提交計畫與設計文件，並把 Issue 2 標為進行中**
+- [x] **Step 1：在 `main` 提交計畫與設計文件，並把 Issue 2 標為進行中**
 
 先把 `docs/epics/epic-54-architecture-optimization/issues.md` 的 Issue 2 狀態改為「🟡 進行中（`plans/plan-issue-2.md`）」，再提交：
 
@@ -97,7 +97,7 @@ git push origin main
 
 若 push 被拒絕，**不要強制推送**：先 `git pull --no-rebase --no-edit`，再重新 `git push origin main`。
 
-- [ ] **Step 3：建立 worktree 與分支**
+- [x] **Step 3：建立 worktree 與分支**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook
@@ -131,7 +131,7 @@ bool isRefreshTokenRejected(int statusCode);
 Never throwCloudApiStatusError(String message, int statusCode);
 ```
 
-- [ ] **Step 1：寫失敗的分類規則測試**
+- [x] **Step 1：寫失敗的分類規則測試**
 
 建立 `app/test/cloud_import/cloud_auth_classifier_test.dart`：
 
@@ -186,12 +186,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 Run: `flutter test test/cloud_import/cloud_auth_classifier_test.dart`
 Expected：編譯失敗，`cloud_auth_classifier.dart` 不存在。
 
-- [ ] **Step 3：實作分類規則**
+- [x] **Step 3：實作分類規則**
 
 建立 `app/lib/cloud_import/cloud_auth_classifier.dart`：
 
@@ -218,12 +218,12 @@ Never throwCloudApiStatusError(String message, int statusCode) {
 }
 ```
 
-- [ ] **Step 4：跑測試確認通過**
+- [x] **Step 4：跑測試確認通過**
 
 Run: `flutter test test/cloud_import/cloud_auth_classifier_test.dart`
 Expected：5 個測試通過。
 
-- [ ] **Step 5：寫失敗的 OAuth client 測試（Google）**
+- [x] **Step 5：寫失敗的 OAuth client 測試（Google）**
 
 在 `app/test/cloud_import/google_drive_oauth_client_test.dart` 第 107 行（`回傳 null` 的撤銷測試結尾 `});`）之後、`group(` 之前插入。需要在檔案最上方補 `import 'dart:io';`（用於 `SocketException`）。
 
@@ -279,12 +279,12 @@ Expected：5 個測試通過。
   });
 ```
 
-- [ ] **Step 6：跑測試確認失敗**
+- [x] **Step 6：跑測試確認失敗**
 
 Run: `flutter test test/cloud_import/google_drive_oauth_client_test.dart`
 Expected：新增的「斷網」與「429／500／503」共 4 個測試失敗（目前都回 `null`）；「401」測試通過（目前非 200 一律回 `null`）；既有測試仍通過。
 
-- [ ] **Step 7：改 `GoogleDriveOAuthClient.ensureValidAccessToken`**
+- [x] **Step 7：改 `GoogleDriveOAuthClient.ensureValidAccessToken`**
 
 在 `google_drive_oauth_client.dart` 頂端補 `import 'cloud_auth_classifier.dart';`。把第 141–154 行：
 
@@ -336,12 +336,12 @@ Expected：新增的「斷網」與「429／500／503」共 4 個測試失敗（
   /// 保留使用者手動決定是否解除連結的空間（`spec.md`「帳號模組」）。
 ```
 
-- [ ] **Step 8：跑 Google OAuth 測試確認通過**
+- [x] **Step 8：跑 Google OAuth 測試確認通過**
 
 Run: `flutter test test/cloud_import/google_drive_oauth_client_test.dart`
 Expected：全部通過（既有測試含「400 invalid_grant → null」仍綠）。
 
-- [ ] **Step 9：OneDrive 同樣處理（先測試、後實作）**
+- [x] **Step 9：OneDrive 同樣處理（先測試、後實作）**
 
 在 `app/test/cloud_import/onedrive_oauth_client_test.dart` 補 `import 'dart:io';`，並在最後一個測試（第 139 行 `});`）之後、檔尾 `}` 之前插入與 Step 5 相同的 `group`，把 `CloudProvider.googleDrive` 改為 `CloudProvider.oneDrive`、`GoogleDriveOAuthClient` 改為 `OneDriveOAuthClient`、`Future<GoogleDriveOAuthClient> clientWith` 改為 `Future<OneDriveOAuthClient> clientWith`。
 
@@ -386,7 +386,7 @@ doc comment（第 117–121 行）同 Step 7 的語意改寫（把 `GoogleDriveO
 Run: `flutter test test/cloud_import/onedrive_oauth_client_test.dart`
 Expected：全部通過。
 
-- [ ] **Step 10：分析並提交**
+- [x] **Step 10：分析並提交**
 
 ```bash
 flutter analyze
@@ -411,7 +411,7 @@ Expected：`No issues found!`
 - Consumes：Task 1 的 `throwCloudApiStatusError(String message, int statusCode)`。
 - Produces：無新介面；行為是 `listFolder`／`downloadFile`／`fetchThumbnail` 遇 401 拋 `CloudAuthRequiredException`，遇其他非 200 拋一般例外。
 
-- [ ] **Step 1：寫失敗的 Google storage client 測試**
+- [x] **Step 1：寫失敗的 Google storage client 測試**
 
 在 `google_drive_storage_client_test.dart` 補 `import 'dart:io';`，並把最後一個測試（第 138–144 行 `HTTP 非 200 回應時拋出例外`）替換為下列 group（原測試的 403 案例已被涵蓋，刪除並於開發記錄列出對應）：
 
@@ -497,12 +497,12 @@ Expected：`No issues found!`
   });
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 Run: `flutter test test/cloud_import/google_drive_storage_client_test.dart`
 Expected：3 個 401 測試失敗（目前拋一般 `Exception`）；其餘通過。
 
-- [ ] **Step 3：改 `GoogleDriveStorageClient`**
+- [x] **Step 3：改 `GoogleDriveStorageClient`**
 
 頂端補 `import 'cloud_auth_classifier.dart';`。三處改法：
 
@@ -544,12 +544,12 @@ Expected：3 個 401 測試失敗（目前拋一般 `Exception`）；其餘通�
 
 類別 doc comment 第 15–16 行補一句：「API 回 401 同樣拋出 [CloudAuthRequiredException]（見 `cloud_auth_classifier.dart`）。」
 
-- [ ] **Step 4：跑 Google storage 測試確認通過**
+- [x] **Step 4：跑 Google storage 測試確認通過**
 
 Run: `flutter test test/cloud_import/google_drive_storage_client_test.dart`
 Expected：全部通過（`downloadFile` 的 catch 區塊會在 401 時刪除目的檔，「不留目的檔」斷言成立）。
 
-- [ ] **Step 5：OneDrive 同樣處理**
+- [x] **Step 5：OneDrive 同樣處理**
 
 在 `onedrive_storage_client_test.dart` 補 `import 'dart:io';`，把第 196 行起的 `HTTP 非 200 回應時拋出例外` 測試替換為與 Step 1 相同的 group：`GoogleDriveStorageClient` → `OneDriveStorageClient`、`GoogleDriveOAuthClient` → `OneDriveOAuthClient`、`CloudProvider.googleDrive` → `CloudProvider.oneDrive`、暫存目錄名稱改 `onedrive_401_test`。
 
@@ -585,7 +585,7 @@ Expected：3 個 401 測試失敗。
 Run: `flutter test test/cloud_import/onedrive_storage_client_test.dart`
 Expected：全部通過。
 
-- [ ] **Step 6：分析並提交**
+- [x] **Step 6：分析並提交**
 
 ```bash
 flutter analyze
@@ -627,7 +627,7 @@ class DownloadQueueItem {
 }
 ```
 
-- [ ] **Step 1：寫失敗的控制器測試**
+- [x] **Step 1：寫失敗的控制器測試**
 
 在 `download_queue_controller_test.dart` 的 `FakeQueuedDownloadJob` 加上：建構子參數 `this.authFailurePredicate`、欄位與方法：
 
@@ -712,12 +712,12 @@ class DownloadQueueItem {
   });
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 Run: `flutter test test/downloads/download_queue_controller_test.dart`
 Expected：編譯失敗（`needsReauth` 與 `isAuthFailure` 不存在）。
 
-- [ ] **Step 3：實作控制器與介面**
+- [x] **Step 3：實作控制器與介面**
 
 在 `download_queue_controller.dart`：
 
@@ -762,7 +762,7 @@ Expected：編譯失敗（`needsReauth` 與 `isAuthFailure` 不存在）。
     }
 ```
 
-- [ ] **Step 4：實作兩個 job**
+- [x] **Step 4：實作兩個 job**
 
 `cloud_download_job.dart` 在 `import` 方法之後加（`CloudAuthRequiredException` 已由 `cloud_storage_client.dart` 的 import 取得）：
 
@@ -780,7 +780,7 @@ Expected：編譯失敗（`needsReauth` 與 `isAuthFailure` 不存在）。
   bool isAuthFailure(Object error) => false;
 ```
 
-- [ ] **Step 5：補面板測試假物件的方法（使其編譯）**
+- [x] **Step 5：補面板測試假物件的方法（使其編譯）**
 
 這裡先填 `false` 只是讓 Task 3 能獨立通過編譯與測試；Task 4 Step 1 會刻意把它改成 `error is _AuthFailure`，這是兩步切分，不是遺漏。
 
@@ -791,7 +791,7 @@ Expected：編譯失敗（`needsReauth` 與 `isAuthFailure` 不存在）。
   bool isAuthFailure(Object error) => false;
 ```
 
-- [ ] **Step 6：寫 `CloudDownloadJob.isAuthFailure` 測試**
+- [x] **Step 6：寫 `CloudDownloadJob.isAuthFailure` 測試**
 
 建立 `app/test/cloud_import/cloud_download_job_test.dart`：
 
@@ -831,12 +831,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 7：跑測試確認通過**
+- [x] **Step 7：跑測試確認通過**
 
 Run: `flutter test test/downloads/download_queue_controller_test.dart test/cloud_import/cloud_download_job_test.dart test/screens/widgets/download_queue_panel_test.dart`
 Expected：全部通過。
 
-- [ ] **Step 8：分析並提交**
+- [x] **Step 8：分析並提交**
 
 ```bash
 flutter analyze
@@ -862,7 +862,7 @@ Expected：`No issues found!`
 - Consumes：Task 3 的 `DownloadQueueItem.needsReauth`、`QueuedDownloadJob.isAuthFailure`。
 - Produces：`AppLocalizations.downloadQueueStatusNeedsReauth`（`String` getter）。
 
-- [ ] **Step 1：寫失敗的面板測試**
+- [x] **Step 1：寫失敗的面板測試**
 
 在 `download_queue_panel_test.dart` 的 `_FakeQueuedDownloadJob`：把 `isAuthFailure` 改為 `bool isAuthFailure(Object error) => error is _AuthFailure;`，在類別後加 `class _AuthFailure implements Exception {}`，並在 `completeDownload()` 之後加：
 
@@ -924,12 +924,12 @@ Expected：`No issues found!`
   });
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 Run: `flutter test test/screens/widgets/download_queue_panel_test.dart`
 Expected：「需重新連結帳號」兩個測試失敗（目前顯示「失敗」）。
 
-- [ ] **Step 3：新增四份 ARB 的鍵**
+- [x] **Step 3：新增四份 ARB 的鍵**
 
 `app_zh_TW.arb`（template，需 `@` 描述），緊接 `downloadQueueStatusFailed` 區塊（第 2483 行 `},`）之後：
 
@@ -947,12 +947,12 @@ Expected：「需重新連結帳號」兩個測試失敗（目前顯示「失敗
 ```
 （`app_zh_CN.arb`：`"需重新连接账号"`，用字對齊該檔既有的「连接」「账」（檔內沒有「帐」）；`app_en.arb`：`"Account needs reconnecting"`。）
 
-- [ ] **Step 4：重新產生 l10n**
+- [x] **Step 4：重新產生 l10n**
 
 Run: `flutter gen-l10n`
 Expected：無錯誤；`git status` 顯示 `app/lib/l10n/app_localizations*.dart` 有變動（只新增該鍵）。
 
-- [ ] **Step 5：改面板**
+- [x] **Step 5：改面板**
 
 `download_queue_panel.dart` 的 `_statusLabel`：
 
@@ -968,7 +968,7 @@ Expected：無錯誤；`git status` 顯示 `app/lib/l10n/app_localizations*.dart
             : l10n.downloadQueueStatusFailed;
 ```
 
-- [ ] **Step 6：跑測試與守衛**
+- [x] **Step 6：跑測試與守衛**
 
 ```bash
 flutter test test/screens/widgets/download_queue_panel_test.dart
@@ -976,7 +976,7 @@ node tool/check_l10n_hardcoded_strings.js
 ```
 Expected：面板測試全部通過；腳本兩行 PASS。
 
-- [ ] **Step 7：分析並提交**
+- [x] **Step 7：分析並提交**
 
 ```bash
 flutter analyze
@@ -999,20 +999,20 @@ Expected：`No issues found!`
 - Consumes：Task 1–4 全部完成。
 - Produces：可發 PR 的分支。
 
-- [ ] **Step 1：確認 `lib/` 沒有殘留舊的「一律回 null」路徑**
+- [x] **Step 1：確認 `lib/` 沒有殘留舊的「一律回 null」路徑**
 
 用 Grep 在 `app/lib/cloud_import/` 搜尋 `HTTP \$\{response.statusCode\}`，預期只剩 `cloud_auth_classifier.dart` 與兩個 OAuth client 的「授權續期失敗」兩處；搜尋 `catch (_) {\n      return null;` 於兩個 OAuth client 的換發段，預期已不存在（`_fetchEmail` 與 200 回應解析失敗的 `return null` 是刻意保留的，不在範圍內）。
 
-- [ ] **Step 2：跑完整 `flutter test`**
+- [x] **Step 2：跑完整 `flutter test`**
 
 Run（`run_in_background`，約 6 分鐘）: `flutter test`
 Expected：全部通過、1 略過。若 `test/downloads/download_queue_controller_test.dart` 出現固定輪數 `pumpEventQueue()` 造成的偶發失敗（Issue 4 已記錄的既有不穩定測試），單獨重跑該檔確認，再重跑全套，並在記錄中註明。
 
-- [ ] **Step 3：更新開發記錄**
+- [x] **Step 3：更新開發記錄**
 
 在 `epic.md` 開發記錄末尾新增「Issue 2 實作完成」段落，寫明：與設計表的兩處差異（見本計畫開頭）；測試數量（新增、刪除並對應：Google／OneDrive storage client 的 `HTTP 非 200 回應時拋出例外` 各 1 個被 group 內的 403 案例取代）；驗證結果（`flutter analyze`、`check_l10n_hardcoded_strings.js`、全套測試數字）；待真機確認項目：真實 Google／OneDrive 帳號被撤銷授權後，瀏覽顯示「請重新連結」、下載佇列顯示「需重新連結帳號」，以及飛航模式下瀏覽顯示網路錯誤而非重新連結。`issues.md` 與 `docs/epics.md` 的 Issue 2 標為「待發 PR」。
 
-- [ ] **Step 4：提交並請求程式審查**
+- [x] **Step 4：提交並請求程式審查**
 
 ```bash
 git add ../docs
