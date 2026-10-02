@@ -199,4 +199,4 @@
 - M-4（不處理）：測試檔有超長行、未跑 `dart format`，純風格。
 - M-5（已修）：`app/tool/README.md` 新增的「第 4 點」不屬於「找到問題時怎麼修」的步驟，改為獨立小節「ARB 一致性守衛」，並去掉第 3、4 點間多餘的空行。
 - 審查員「未判斷」5 條均維持不處理。
-- 驗證：修訂後 `flutter analyze` No issues found；`test/l10n/arb_consistency_helpers_test.dart` 與 `arb_consistency_test.dart` 共 26 個全數通過。上方「實作完成」記載的全套 3335 通過是補測試前的數字，補 1 個測試後預期 3336；PR 前依慣例再跑一次全套確認。待發 PR。
+- 驗證：修訂後 `flutter analyze` No issues found；`test/l10n/arb_consistency_helpers_test.dart` 與 `arb_consistency_test.dart` 共 26 個全數通過。上方「實作完成」記載的全套 3335 通過是補測試前的數字，補 1 個測試後重跑全套：3336 通過、1 略過、0 失敗。待發 PR。
