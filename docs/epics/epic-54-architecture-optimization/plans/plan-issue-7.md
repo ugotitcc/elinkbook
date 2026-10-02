@@ -57,7 +57,7 @@
 - Consumes：無。
 - Produces：分支 `epic-54/issue-7-position-saver`，後續 Task 都在這個 worktree 的 `app/` 下執行。
 
-- [ ] **Step 1：在 `main` 提交計畫**
+- [x] **Step 1：在 `main` 提交計畫**（已於 e005a4de 完成）
 
 先把 `issues.md` 第 7 列狀態由「⚪ 未開始」改為「🟡 進行中（計畫已寫）」，然後：
 
@@ -69,7 +69,7 @@ git commit -m "docs(epic-54): Issue 7 實作計畫
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 2：建立 worktree 並安裝依賴**
+- [x] **Step 2：建立 worktree 並安裝依賴**（`Got dependencies!`）
 
 ```bash
 git worktree add .worktrees/epic-54-issue-7-position-saver -b epic-54/issue-7-position-saver
@@ -78,7 +78,7 @@ cd .worktrees/epic-54-issue-7-position-saver/app && flutter pub get
 
 預期：`Got dependencies!`。
 
-- [ ] **Step 3：確認基準測試通過**
+- [x] **Step 3：確認基準測試通過**（283 通過）
 
 ```bash
 flutter test test/screens/reader_screen_test.dart
@@ -127,7 +127,7 @@ class ReadingPositionSaver {
 
 「已重新定位」＝該格式的第二次（含）以後回報（第一次回報是開書後套用跳轉目標的初始定位），PDF 與 Foliate 各有自己的旗標。現有程式是兩種格式共用一個旗標，但一個畫面只會收到一種格式的回報，所以可觀察行為相同（見 Architecture 的「旗標拆分的說明」）。表中 #1 與 #2 的先後在實作上不影響結果（`unknown` 格式不會有回報），故不再逐字保留原本「旗標檢查在格式分派之前」的寫法。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**（編譯失敗，`reading_position_saver.dart` 不存在，符合預期）
 
 建立 `app/test/reader/reading_position_saver_test.dart`：
 
@@ -306,7 +306,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 ```bash
 flutter test test/reader/reading_position_saver_test.dart
@@ -314,7 +314,7 @@ flutter test test/reader/reading_position_saver_test.dart
 
 預期：編譯失敗，`reading_position_saver.dart` 不存在。
 
-- [ ] **Step 3：寫最小實作**
+- [x] **Step 3：寫最小實作**
 
 建立 `app/lib/reader/reading_position_saver.dart`：
 
@@ -411,7 +411,7 @@ class ReadingPositionSaver {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**（16/16 通過；analyze 無問題）
 
 ```bash
 flutter test test/reader/reading_position_saver_test.dart
@@ -420,7 +420,7 @@ flutter analyze lib/reader/reading_position_saver.dart test/reader/reading_posit
 
 預期：全數通過；analyze 無問題。
 
-- [ ] **Step 5：提交**
+- [x] **Step 5：提交**（2ea9317e）
 
 ```bash
 git add lib/reader/reading_position_saver.dart test/reader/reading_position_saver_test.dart
@@ -441,7 +441,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1 的 `ReadingPositionSaver`。
 - Produces：無（後續 Issue 8 會把 saver 的建立與呼叫進一步收進會話 module）。
 
-- [ ] **Step 1：確認既有 widget 測試分類（已盤點，執行前核對即可）**
+- [x] **Step 1：確認既有 widget 測試分類（已盤點，執行前核對即可）**（12 處引用皆為接線／開書位置選擇，不刪任何案例）
 
 ```bash
 grep -n "savedReadingPositionCalls|readingPositionByBookId" test/screens/reader_screen_test.dart
@@ -463,7 +463,7 @@ grep -n "savedReadingPositionCalls|readingPositionByBookId" test/screens/reader_
 
 **缺口**：`paused` 觸發儲存沒有專屬測試（`paused` 只出現在 stats harness）；Foliate 路徑（`onLocatorChanged` → saver）沒有任何接線測試。Step 2 補這兩個。
 
-- [ ] **Step 2：補兩個接線測試，先在**未改動**的程式碼上確認通過（建立行為基準）**
+- [x] **Step 2：補兩個接線測試，先在**未改動**的程式碼上確認通過（建立行為基準）**（paused 與 Foliate 接線皆在舊程式碼上通過）
 
 **(a) `paused` 觸發儲存**：比照 2233 行的 PDF 案例（同樣的 `MaterialApp` 與 `ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_paused_test', prefsManager: prefsManager)` 建構），取得 `PdfReaderView` 後呼叫 `pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 3, totalPages: 10))`，再：
 
@@ -502,7 +502,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "Foliate 接線"
 
 （測試名稱請依此兩個關鍵字命名：(a) 含「paused」、(b) 含「Foliate 接線」。）
 
-- [ ] **Step 3：改 `ReaderScreen`**
+- [x] **Step 3：改 `ReaderScreen`**（另修計畫未列的 5 處過時註解，見 ledger Ruling 2）
 
 1. 刪除 `_hasRelocatedSinceOpen` 欄位及其文件註解（規則說明已搬到 saver）。
 2. 新增欄位 `ReadingPositionSaver? _positionSaver;`（放在 `_initialPosition` 旁），註解說明：與 `_initialPosition` 同時在偏好載入完成時建立；閱讀視圖只在 `_resolved` 非 null 後才建構，所以回呼內正常情況下已存在；回呼與 `dispose`／`paused` 一律以 `?.` 呼叫，與 `_loaded` 尚未載入時的其他早退路徑保持一致，不使用 `!`。
@@ -522,7 +522,7 @@ _positionSaver = ReadingPositionSaver(
 6. 刪除 `_writeCurrentPosition()` 整個方法；`dispose` 與 `paused` 兩處改為 `_positionSaver?.save(detectBookFormat(_activeFilePath));`。**位置與順序不變**（dispose 內仍在 `trigger()` 之前；`paused` 仍在 `stats.onEnteredBackground()` 之後）。
 7. 順手確認 `ReadingPosition`、`BookFormat` 等 import 是否仍被使用；只移除「因本次改動變成未使用」的 import。附近過時註解（例如 dispose 內提到 `_writeCurrentPosition()` 的兩處、`initState` 內相關註解）改為提到 `ReadingPositionSaver.save`，不改其他文字。
 
-- [ ] **Step 4：執行異動觸及的測試**
+- [x] **Step 4：執行異動觸及的測試**（329/329 通過，reader_screen 285＝283＋2；analyze 乾淨）
 
 ```bash
 flutter test test/reader/reading_position_saver_test.dart test/screens/reader_screen_test.dart test/screens/reader_screen_stats_lifecycle_test.dart test/screens/reader_screen_stats_activity_test.dart test/screens/reader_screen_stats_test.dart test/app_lifecycle_sync_test.dart
@@ -531,12 +531,12 @@ flutter analyze
 
 預期：全數通過（`reader_screen_test.dart` 通過數 = Task 0 基準 + 2）；analyze "No issues found!"。
 
-- [ ] **Step 5：行為不變的手動核對**
+- [x] **Step 5：行為不變的手動核對**（dispose/paused 順序不變；殘留引用歸零）
 
 - `git diff` 中 `dispose` 與 `paused` 兩個方法內的呼叫順序與 Task 0 前相同（只有被呼叫的對象從 `_writeCurrentPosition()` 變成 `_positionSaver?.save(...)`）。
 - `rg "_hasRelocatedSinceOpen|_writeCurrentPosition" lib test` 不應再有任何命中（含註解）。
 
-- [ ] **Step 6：提交**
+- [x] **Step 6：提交**
 
 ```bash
 git add lib/screens/reader_screen.dart test/screens/reader_screen_test.dart
@@ -554,7 +554,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 **Files：**
 - Modify：`docs/epics/epic-54-architecture-optimization/epic.md`（開發記錄）、`issues.md`（第 7 列狀態）、`docs/epics.md`（第 55 列備註）
 
-- [ ] **Step 1：全套測試（最後一次，背景執行）**
+- [x] **Step 1：全套測試（最後一次，背景執行）**（3369 通過、1 略過、0 失敗）
 
 ```bash
 flutter test
@@ -562,7 +562,7 @@ flutter test
 
 用 `run_in_background`，約 6 分鐘。預期 0 失敗；記下通過數與 1 略過。
 
-- [ ] **Step 2：靜態檢查**
+- [x] **Step 2：靜態檢查**（"No issues found!" 與兩行 PASS）
 
 ```bash
 flutter analyze
@@ -571,11 +571,11 @@ node tool/check_l10n_hardcoded_strings.js
 
 預期："No issues found!" 與兩行 PASS。
 
-- [ ] **Step 3：更新文件**
+- [x] **Step 3：更新文件**
 
 `epic.md` 開發記錄新增「Issue 7 實作完成」：新增檔案、被刪除的 widget 案例與取代它們的單元測試、驗證數字、行為變動「無」、待真機確認「無」（純重構，行為由既有 widget 測試守住）。`issues.md` 第 7 列改為「🟡 待程式審查」。`docs/epics.md` 第 55 列備註只更新最後處理的 Issue 編號，保持一句話。
 
-- [ ] **Step 4：提交並停下**
+- [x] **Step 4：提交並停下**
 
 ```bash
 # 此時工作目錄是 worktree 的 app/，../docs 即 worktree 根目錄的 docs

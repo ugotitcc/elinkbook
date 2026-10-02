@@ -230,3 +230,11 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 待真機確認：無（僅新增測試）。
 - 已知限制（寫在 `app/tool/README.md` 與 `arb_consistency_helpers.dart`）：ICU `select`／`plural` 的單字分支（如 `=0{None}`）會被誤判成 placeholder，避開寫法是寫成含空格的片語；`zh_CN` 與 zh_TW 相同的字串不檢查。
 - **Epic 54 的 6 個 Issue 全數完成並合併**（#302、#306、#304、#305、#303、#307）。是否歸檔由使用者決定；歸檔時依 sdd-workflow 慣例，`.gitignore` 的 reviews 規則改指向 archive 路徑，不刪除。
+
+**2026-10-02 Issue 7 實作完成**（分支 `epic-54/issue-7-position-saver`，worktree 內 Native 直接開發，未使用 subagent。計畫見 `plans/plan-issue-7.md`）
+
+- 新增 `app/lib/reader/reading_position_saver.dart`（`ReadingPositionSaver`：持有最新一筆 PDF／Foliate 位置回報與各格式「開書後是否已重新定位」旗標，依格式決定要不要儲存、存什麼）；`ReaderScreen` 刪除 `_writeCurrentPosition` 與 `_hasRelocatedSinceOpen`，改為在回呼中轉發位置回報、在 dispose／paused 呼叫 saver（呼叫順序不變）。
+- 被刪除的 widget 案例：無（盤點 `reader_screen_test.dart` 12 處引用，皆為接線或開書位置選擇，全數保留）；新增 16 個單元測試（`test/reader/reading_position_saver_test.dart`，規則表逐條涵蓋，含總頁數為 0、progression 為 null 回退、跳轉後首次回報不儲存等過去完全沒有測試的規則）與 2 個接線測試（paused 觸發儲存、Foliate `onLocatorChanged` 轉發，皆先在舊程式碼上確認通過）。
+- 與計畫的差異（2 項，均記於執行 ledger）：(1) `initialProgress` 取值由 `loaded.readingPosition?.progress` 改為 `.progress`（`LoadedPrefs.readingPosition` 為非空型別，`?.` 觸發 analyze 警告；行為等價）；(2) 另更新計畫未列的 5 處過時註解（`main.dart`、`app_lifecycle_sync_test.dart` 各 1 處，`reader_screen_test.dart` 3 處），純文字，不斷言與程式零變動。
+- 驗證：全套 `flutter test` 3369 通過、1 略過、0 失敗；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS。
+- 行為變動：無（純重構）。待真機確認：無。待程式審查與發 PR。
