@@ -257,3 +257,13 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - PR #310（`epic-54/issue-7-position-saver` → `main`）已合併，合併 commit `e07cb604`。Issue 7 完成。全套 `flutter test` 3369 通過、1 略過、0 失敗（發 PR 前在最終 commit `32691768` 上重跑）。
 - 待真機確認：無（純重構）。
 - 後續：Issue 8（閱讀會話）尚未寫 `plan-issue-8.md`，動手前先寫計畫並審查；Issue 9（缺陷）建議在 Issue 8 之後處理，且動手前先決定是否以真機日誌確認重複回報確實發生。本 Epic 其餘 Issue 完成後再決定是否歸檔。
+
+**2026-10-02 Issue 8 實作完成**（分支 `epic-54/issue-8-reading-session`，worktree 內 Native 直接開發，未使用 subagent。計畫見 `plans/plan-issue-8.md`）
+
+- 新增 `app/lib/reader/reading_session.dart`（`ReadingSession`：開關、前後景、位置回報、活動判定、Checkpoint Timer、離開收尾順序 `markReaderClosed` → 統計 `flushAndClose` → 取消 Timer → 儲存位置 → 觸發 Checkpoint；`paused` 只做統計 `onEnteredBackground` → 儲存位置，不觸發 Checkpoint；位置寫入與統計 flush 皆不 await）；`ReaderScreen` 刪除 `_readingStatsTracker`、`_createReadingStatsTracker`、`_syncCheckpointTimer`、`_positionSaver`、`_locatorPositionKey`、`_recordReadingActivity`、`_forwardTtsPlaying`，改為 `late final ReadingSession _session` 並只轉發事件（`_epubPositionInfo`／`_pdfPageInfo` 保留，仍驅動頁尾 UI）。
+- 被刪除的 widget 案例（2 個，皆有單元測試取代並先經變異驗證守得住）：「同一位置的重複回報不算閱讀活動」→「同 cfi 與 index 的重複回報不算活動」；「同一 cfi 只有進度小數抖動不算閱讀活動」→「同 cfi 只有 fraction 抖動不算活動」。其餘 widget 案例（首次回報、夾雜重複回報的正向、PDF、統計建立／清除／寫入失敗／注入優先、paused／resumed／離開／TTS、checkpoint 週期與離開觸發、readerActivityTracker、位置儲存接線）全數保留。
+- 與計畫的差異：無（行號表逐項相符；`ReadingStatsTracker` import 因 widget 參數型別仍需而保留，只刪了 `dart:convert`）。
+- 驗證：全套 `flutter test` 3391 通過、1 略過、0 失敗（Issue 7 合併基準 3369＋`reading_session_test.dart` 新案例 24−2 個刪除）；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS。
+- 行為變動：無（純重構）。
+- **需要知道的事**：`dispose` 內畫面自己的收尾與 session 收尾的相對順序改變——原本五步（markReaderClosed／統計 flush／取消 Timer／儲存位置／觸發 Checkpoint）與畫面自己的收尾穿插，現在一次 `_session.close(...)` 在 `dispose` 開頭執行，儲存位置與觸發 Checkpoint 早於畫面自己的收尾。已逐項核對畫面自己的收尾（`_openBookFlow`、`_searchJumpHighlightTimer`、睡眠定時器、`removeObserver`、音量鍵 channel、`_pdfSearchStateNotifier`、`_ttsAudioFocusCoordinator`、`ttsAudioHandler.detachController`、`_ttsController.removeListener`／`dispose`）都不讀取 session 管理的任何狀態，且 `_ttsController.dispose()` 之前已先 `removeListener(_onTtsStatusChanged)`，不會在 session 關閉後又回報 TTS 狀態；可觀察行為相同。若之後發現任何相依，視為缺陷另立工單。
+- 待真機確認：無（純重構）。待程式審查與發 PR。

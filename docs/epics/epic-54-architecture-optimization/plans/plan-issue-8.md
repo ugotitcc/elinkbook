@@ -56,7 +56,7 @@
 - Consumes：無。
 - Produces：分支 `epic-54/issue-8-reading-session`，後續 Task 都在這個 worktree 的 `app/` 下執行。
 
-- [ ] **Step 1：在 `main` 提交計畫**
+- [x] **Step 1：在 `main` 提交計畫**
 
 先把 `issues.md` 第 8 列狀態由「⚪ 未開始…」改為「🟡 進行中（計畫已寫）」，然後：
 
@@ -68,7 +68,7 @@ git commit -m "docs(epic-54): Issue 8 實作計畫
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 2：建立 worktree 並安裝依賴**
+- [x] **Step 2：建立 worktree 並安裝依賴**
 
 ```bash
 git worktree add .worktrees/epic-54-issue-8-reading-session -b epic-54/issue-8-reading-session
@@ -77,7 +77,7 @@ cd .worktrees/epic-54-issue-8-reading-session/app && flutter pub get
 
 預期：`Got dependencies!`。
 
-- [ ] **Step 3：確認基準測試通過並記下數字**
+- [x] **Step 3：確認基準測試通過並記下數字**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_stats_lifecycle_test.dart test/screens/reader_screen_stats_activity_test.dart test/screens/reader_screen_stats_test.dart test/app_lifecycle_sync_test.dart test/reader/reading_position_saver_test.dart
@@ -138,7 +138,7 @@ class ReadingSession {
 
 統計 tracker 的取得：有 `statsTracker` 直接用；否則有 `statsRepository` 就以 `bookId`、`bookTitle ?? bookId`、repository 的 `addReadingSeconds` 與 `onCleared` 建立；兩者皆無則為 null（所有統計呼叫都是無動作）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 建立 `app/test/reader/reading_session_test.dart`：
 
@@ -525,7 +525,7 @@ void main() {
 
 > 最後一個「偏好載入前收到的位置回報」案例是在記錄現況：現有 `ReaderScreen` 的回呼只有在 `_positionSaver` 已建立後才轉發（`?.`），所以載入前的回報會被丟棄；`ReadingSession` 以「saver 尚未建立就不轉發」保持同樣行為。這與 Issue 7 審查 Minor 2 相同，維持現狀，不在本 Issue 改。
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 ```bash
 flutter test test/reader/reading_session_test.dart
@@ -533,7 +533,7 @@ flutter test test/reader/reading_session_test.dart
 
 預期：編譯失敗，`reading_session.dart` 不存在。
 
-- [ ] **Step 3：寫最小實作**
+- [x] **Step 3：寫最小實作**
 
 建立 `app/lib/reader/reading_session.dart`：
 
@@ -708,7 +708,7 @@ class ReadingSession {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 ```bash
 flutter test test/reader/reading_session_test.dart
@@ -717,7 +717,7 @@ flutter analyze lib/reader/reading_session.dart test/reader/reading_session_test
 
 預期：全數通過；analyze 無問題。
 
-- [ ] **Step 5：提交 Task 1 成果**
+- [x] **Step 5：提交 Task 1 成果**
 
 ```bash
 git add lib/reader/reading_session.dart test/reader/reading_session_test.dart
@@ -726,7 +726,7 @@ git commit -m "feat(reader): 新增 ReadingSession，收攏閱讀會話生命週
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 6：變異驗證（守衛真的守得住）**
+- [x] **Step 6：變異驗證（守衛真的守得住）**
 
 暫時改壞 `reading_session.dart` 三處，各跑一次 `flutter test test/reader/reading_session_test.dart`，確認對應案例失敗；每次驗證完用 `git checkout -- lib/reader/reading_session.dart` 還原（Step 5 已提交，所以還原到的是完整實作；**不要用 `git stash`**，worktree 共用 stash）：
 
@@ -767,7 +767,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1 的 `ReadingSession`。
 - Produces：無。
 
-- [ ] **Step 1：盤點既有 widget 測試（已盤點，執行前核對）**
+- [x] **Step 1：盤點既有 widget 測試（已盤點，執行前核對）**
 
 審查前（2026-10-02）逐一比對與生命週期、活動判定有關的 widget 案例，結論：**只有 2 個純規則案例被 Task 1 單元測試完全取代，可刪；其餘全部是接線案例，保留。**
 
@@ -787,7 +787,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 刪除前先確認 Task 1 對應的兩個單元案例存在且通過，並已完成 Task 1 Step 6 的變異驗證（證明單元測試真的守得住）。
 
-- [ ] **Step 2：改 `ReaderScreen`**
+- [x] **Step 2：改 `ReaderScreen`**
 
 1. **import**：新增 `import '../reader/reading_session.dart';`（依該檔既有 import 風格）。
 2. **欄位**：刪除 `_positionSaver`、`_syncCheckpointTimer`、`_readingStatsTracker` 三個欄位與其文件註解，在原 `_readingStatsTracker` 位置新增：
@@ -845,11 +845,11 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 9. **`onPageChanged`**（PDF）：把 `_positionSaver?.onPdfPageChanged(info);` 與 `if (_pdfPageInfo != null) {...}` 換成 `_session.onPdfPageChanged(info);`，`setState(() => _pdfPageInfo = info);` 保留。
 10. **清理自己造成的殘留**：跑 `flutter analyze`，只移除「因本次改動變成未使用」的 import（預期可能有 `dart:convert`、`ReadingStatsTracker`、`ReadingPositionSaver`，以 analyze 為準）；附近提到舊欄位名（例如「`_positionSaver`」「`_readingStatsTracker`」「`_syncCheckpointTimer`」）的註解改為提到 `ReadingSession`，不改其他文字。
 
-- [ ] **Step 3：刪除 Step 1 判定可刪的 2 個 widget 案例**
+- [x] **Step 3：刪除 Step 1 判定可刪的 2 個 widget 案例**
 
 只刪 `reader_screen_stats_activity_test.dart` 的「同一位置的重複回報…」與「同一 cfi 只有進度小數抖動…」兩個 `testWidgets`；刪除後確認檔案內不再有因此變成未使用的 import 或 helper（有才移除）。
 
-- [ ] **Step 4：執行異動觸及的測試**
+- [x] **Step 4：執行異動觸及的測試**
 
 ```bash
 flutter test test/reader/reading_session_test.dart test/reader/reading_position_saver_test.dart test/screens/reader_screen_test.dart test/screens/reader_screen_stats_lifecycle_test.dart test/screens/reader_screen_stats_activity_test.dart test/screens/reader_screen_stats_test.dart test/app_lifecycle_sync_test.dart
@@ -858,13 +858,13 @@ flutter analyze
 
 預期：全數通過（`reader_screen_stats_activity_test.dart` 少 2 個案例，其餘與 Task 0 基準一致，另加上 `reading_session_test.dart` 的新案例）；analyze "No issues found!"。
 
-- [ ] **Step 5：行為不變的手動核對**
+- [x] **Step 5：行為不變的手動核對**
 
 - `rg "_readingStatsTracker|_createReadingStatsTracker|_syncCheckpointTimer|_positionSaver|_locatorPositionKey|_recordReadingActivity|_forwardTtsPlaying" lib test` 不應再有任何命中（含註解）。
 - `git diff` 中確認 `dispose` 裡畫面自己的收尾（`_openBookFlow`…螢幕方向、全螢幕）內容與相對順序與修改前完全相同，只有 session 相關五步被合併到開頭。
 - 逐一確認這些畫面自己的收尾都不讀取 session 管理的狀態（`_openBookFlow.dispose`、搜尋高亮 timer、睡眠定時器、`removeObserver`、音量鍵 channel、`_pdfSearchStateNotifier`、`_ttsAudioFocusCoordinator`、`ttsAudioHandler.detachController`、`_ttsController.removeListener`／`dispose`）；`_ttsController.dispose()` 之前已先 `removeListener(_onTtsStatusChanged)`，所以不會在 session 關閉後又回報 TTS 狀態。若發現任何相依，停下來回報。
 
-- [ ] **Step 6：提交**
+- [x] **Step 6：提交**
 
 ```bash
 git add lib/screens/reader_screen.dart test/screens/reader_screen_stats_activity_test.dart
@@ -884,7 +884,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 **Files：**
 - Modify：`docs/epics/epic-54-architecture-optimization/epic.md`（開發記錄）、`issues.md`（第 8 列狀態）、`docs/epics.md`（第 55 列備註）
 
-- [ ] **Step 1：全套測試（最後一次，背景執行，必須在 `app/` 目錄）**
+- [x] **Step 1：全套測試（最後一次，背景執行，必須在 `app/` 目錄）**
 
 ```bash
 cd <worktree>/app && flutter test
@@ -892,7 +892,7 @@ cd <worktree>/app && flutter test
 
 用 `run_in_background`，約 6 分鐘。預期 0 失敗；確認輸出最後是 `All tests passed!`（不是 `Test directory "test" not found.`），記下通過數與 1 略過。通過數預期 = Issue 7 合併基準 3369 + `reading_session_test.dart` 新案例數 − 2。
 
-- [ ] **Step 2：靜態檢查**
+- [x] **Step 2：靜態檢查**
 
 ```bash
 flutter analyze
@@ -901,11 +901,11 @@ node tool/check_l10n_hardcoded_strings.js
 
 預期："No issues found!" 與兩行 PASS。
 
-- [ ] **Step 3：更新文件**
+- [x] **Step 3：更新文件**
 
 `epic.md` 開發記錄新增「Issue 8 實作完成」：新增檔案、被刪除的 2 個 widget 案例與取代它們的單元測試、驗證數字、與計畫的差異（若有）、行為變動「無」、待真機確認「無」。**同時記錄一項需要使用者知道的事**：`dispose` 內畫面自己的收尾與 session 收尾的相對順序改變（見 Global Constraints），以及 Step 5 核對的結論。`issues.md` 第 8 列改為「🟡 待程式審查」。`docs/epics.md` 第 55 列備註只更新最後處理的 Issue 編號，保持一句話。
 
-- [ ] **Step 4：提交並停下**
+- [x] **Step 4：提交並停下**
 
 ```bash
 cd .. && git add docs/epics/epic-54-architecture-optimization docs/epics.md
