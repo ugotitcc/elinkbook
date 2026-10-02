@@ -23,6 +23,7 @@ import 'library/book_import_service.dart';
 import 'library/book_import_service_impl.dart';
 import 'library/library_repository.dart';
 import 'library/sqlite_library_repository.dart';
+import 'licenses/third_party_licenses.dart';
 import 'reader/book_reader_prefs_repository.dart';
 import 'reader/bookmarks_repository.dart';
 import 'reader/custom_fonts_repository.dart';
@@ -84,6 +85,8 @@ Future<bool> _isMobileDataConnection() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // epic-55：登錄非 Dart 套件元件（foliate-js 等）的授權，授權頁才會列出。
+  registerThirdPartyLicenses();
   // epic-49 Issue 7：讀 WebView 版本需要初始化 WebView（首次約數十～數百毫秒），
   // 先起跑、和下方資料庫等初始化並行，建構字型 store 時才 await（程式審查 M-2）。
   // Issue 8 真機發現：剛安裝完第一次開時可能逾時，讀不到就用上次記住的版本。
