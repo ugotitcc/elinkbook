@@ -230,7 +230,12 @@ function buildOverrideCss(prefs) {
     rules.push(`${selector} { line-height: ${effectiveLineHeight} !important; }`)
   }
   if (typeof prefs.paragraphSpacing === 'number') {
-    rules.push(`p { margin-bottom: ${prefs.paragraphSpacing}em !important; }`)
+    // /diagnose（2026-10-02，蘇東坡新傳直排內文下方大片留白）：不可用物理屬性
+    // margin-bottom——直排（vertical-rl）下 bottom 位於「行的結尾端」，會把每一行
+    // 的可用行長縮短 paragraphSpacing em（段距調到約 3em 就少約 3 個字），而真正的
+    // 段落間距（直排為 left）卻沒有套用。改用邏輯屬性 margin-block-end：橫排＝bottom，
+    // 直排 vertical-rl＝left。見 foliate_touch_harness/scenario-vertical-paragraph-spacing.mjs。
+    rules.push(`p { margin-block-end: ${prefs.paragraphSpacing}em !important; }`)
   }
   if (typeof prefs.letterSpacing === 'number') {
     // epic-28-reader-settings-enhancements Issue 1：letter-spacing 作用於
