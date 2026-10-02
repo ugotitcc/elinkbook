@@ -35,7 +35,7 @@ APK 內還有 5 項不是 Dart 套件的元件，授權不會出現在頁面上�
 - 計畫審查採納 5 項、不採納 1 項（為 `ThirdPartyLicense` 補 `==`／`hashCode`，屬投機彈性）。
 - 規格外追加：授權頁以 `applicationLegalese` 顯示「本 App 使用下列開源元件…」說明（新增 ARB 鍵 `aboutScreenLicensesLegalese`），避免「Powered by Flutter」讓人誤以為清單全是 Flutter 元件。
 
-**2026-10-02 Issue 2 完成**
+**2026-10-02 Issue 2 已合併（PR #309）**
 
 - 5 款可下載字型（思源黑體、思源宋體、原俠正楷、台灣圓體、源流明體）的 SIL OFL 1.1 授權登錄進授權頁，與字型是否已下載無關；授權頁共 10 項，真機驗收通過。
 - 計畫審查：採納 M-2、M-3，M-1 部分採納（只加 `caseSensitive: false`；審查建議的 `^s*Copyright` 會命中原檔 OFL 條款本文的 `Copyright Holder` 行，故不採）。
