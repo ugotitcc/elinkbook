@@ -159,4 +159,4 @@
 - M-3（不處理）：storage client 非 401 的下載與縮圖路徑沒有直接測試；三個方法共用 `throwCloudApiStatusError`，規則已由分類測試與 `listFolder` 的 403／500 測試涵蓋。
 - M-4（不處理）：token 端點的 400 一律視為授權撤銷，這是設計表定案的假設（`invalid_request` 等其他 400 也會被當成需重新連結，實務上罕見）。
 - 審查員「未判斷」5 項（真機上服務端實際回應碼、面板無前往設定的導引等）均維持不處理，導引按鈕已在設計決策中排除。
-- 驗證：修訂後 `flutter analyze` No issues found；`download_queue_controller_test` 14 個全數通過。上方「實作完成」記載的全套 3309 通過是補測試前的數字，補 1 個測試後預期 3310；PR 前依慣例再跑一次全套確認。
+- 驗證：修訂後 `flutter analyze` No issues found；`download_queue_controller_test` 14 個全數通過。上方「實作完成」記載的全套 3309 通過是補測試前的數字，補 1 個測試後重跑全套：3310 通過、1 略過、0 失敗。
