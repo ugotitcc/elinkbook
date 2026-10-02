@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  pocketbase:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PB_VERSION: ${PB_VERSION:-0.40.4}
+    container_name: ${CONTAINER_NAME:-elinkbook-pocketbase}
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8090}:8090"
+    volumes:
+      - ${DATA_PATH:-./pb_data}:/pb/pb_data
+      - ${HOOKS_PATH:-./pb_hooks}:/pb/pb_hooks
+      - ${MIGRATIONS_PATH:-./pb_migrations}:/pb/pb_migrations
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8090/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
