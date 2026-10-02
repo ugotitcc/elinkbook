@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        PB_VERSION: ${PB_VERSION:-0.39.10}
+        PB_VERSION: ${PB_VERSION:-0.40.4}
     container_name: ${CONTAINER_NAME:-elinkbook-pocketbase}
     volumes:
       - ${DATA_PATH:-./pb_data}:/pb/pb_data

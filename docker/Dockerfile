@@ -1,7 +1,7 @@
-# 依據 SOP (docs/epics/epic-8-sync/pocketbase-self-hosting.md) 建置之 PocketBase 容器化映像
+# 依據 docker/README.md 部署說明與 docs/sync-protocol.md 建置之 PocketBase 容器化映像
 FROM alpine:3.22
 
-# PocketBase 版本變數 (預設 0.39.10，需 >= 0.23 支援 Batch API)
+# PocketBase 版本變數 (預設 0.40.4，需 >= 0.23 支援 Batch API)
 ARG PB_VERSION=0.40.4
 
 # 安裝基本套件並下載指定版本 PocketBase 二進位檔
