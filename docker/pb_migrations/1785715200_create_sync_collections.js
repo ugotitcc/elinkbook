@@ -1,9 +1,9 @@
 /// @file 1785715200_create_sync_collections.js
-/// 批次建立 epic-8-sync 所需的 4 個 collection（sync_reading_positions／
+/// 批次建立雲端同步所需的 4 個 collection（sync_reading_positions／
 /// sync_bookmarks／sync_highlights／sync_notes），取代
-/// docs/epics/epic-8-sync/pocketbase-self-hosting.md「建立 Collection」
-/// 章節逐一手動點 Admin UI 的做法——欄位/型別/必填/API Rules 皆與該
-/// 文件的欄位表逐項對應，兩者需保持同步（若日後修改其中一邊，另一邊
+/// docs/sync-protocol.md「PocketBase Collection Schema」逐一手動點
+/// Admin UI 的做法——欄位/型別/必填/API Rules 皆與該文件的欄位表逐項
+/// 對應，兩者需保持同步（若日後修改其中一邊，另一邊
 /// 也要跟著更新）。
 ///
 /// 使用方式：把本檔案複製到 PocketBase 執行檔同層的 pb_migrations/
@@ -15,11 +15,10 @@
 ///
 /// PocketBase 內建的 `id` 系統欄位每個 collection 皆自動具備，不需要在
 /// 這裡另外定義。**`created`／`updated` 則相反，必須明確宣告**：
-/// 2026-08-04 epic-8-sync Issue 5 真機整合測試時發現，PocketBase
+/// 真機整合測試時發現，PocketBase
 /// v0.23 改版後，`created`／`updated` 改為需要在 schema 明確宣告
 /// `autodate` 型別欄位才會存在，不再是每個 base collection 自動內建
-/// （這點與 pocketbase-self-hosting.md 原本「不需要額外新增」的說明
-/// 相反，該文件已一併修正）——本檔案原始版本沒有宣告這兩個欄位，
+/// ——本檔案原始版本沒有宣告這兩個欄位，
 /// 導致 `sync_reading_positions`／`sync_bookmarks`／`sync_highlights`／
 /// `sync_notes` 這 4 個 collection 的紀錄實際上完全沒有 `created`／
 /// `updated` 欄位，讓依賴這兩個欄位做衝突比對／下載游標的邏輯
@@ -31,7 +30,7 @@ migrate((app) => {
 
   // 4 個 collection 皆用同一個 user relation 欄位（必填、指向內建
   // users、Single）與同一組 API Rules（見
-  // pocketbase-self-hosting.md「容易誤解的地方」：這條規則只驗證送進來
+  // docs/sync-protocol.md「同步流程」：這條規則只驗證送進來
   // 的 user 欄位值，App 端呼叫 Create／Batch API 時仍必須自己在 payload
   // 明確帶上 "user": "<目前登入者 user id>"，不會自動代入）。
   const userField = () => ({

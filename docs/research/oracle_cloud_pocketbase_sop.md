@@ -2,7 +2,7 @@
 
 本手冊指導如何在 **Oracle Cloud Infrastructure (OCI) Always Free（永久免費層）** 上，從零申請帳號、建立雲端虛擬機 (Compute VM)、設定網路與防火牆、到使用 **Docker + Docker Compose + Traefik 反向代理（自動 Let's Encrypt SSL）** 完整部署 [PocketBase](https://pocketbase.io/) 後端服務，專供 **elinkBook** 電子書閱讀器之雲端同步功能（閱讀位置、書籤、劃線、畫線備註）使用。
 
-本手冊整合了專案現有架構標準（[`docs/research/synology_dsm7_pocketbase_sop.md`](synology_dsm7_pocketbase_sop.md) 與 [`docs/archive/2026-08-05-epic-8-sync/pocketbase-self-hosting.md`](../archive/2026-08-05-epic-8-sync/pocketbase-self-hosting.md)），針對 Oracle Cloud 雲端環境與公網 HTTPS 需求提供完整端到端教學。
+本手冊整合了專案現有架構標準（[`docs/research/synology_dsm7_pocketbase_sop.md`](synology_dsm7_pocketbase_sop.md) 與 [`docker/README.md`](../../docker/README.md)；Collection 欄位與同步流程見 [`docs/sync-protocol.md`](../sync-protocol.md)），針對 Oracle Cloud 雲端環境與公網 HTTPS 需求提供完整端到端教學。
 
 ---
 
@@ -314,14 +314,14 @@ Migration 與 Hook 以 repo 為唯一來源，本手冊**不內嵌全文**，避
 | repo 路徑 | VM 目標路徑 |
 |---|---|
 | `docker/pb_migrations/*.js`（3 支） | `/opt/elinkbook-pocketbase/pb_migrations/` |
-| `docker/pb_hooks/purge_tombstones.pb.js` | `/opt/elinkbook-pocketbase/pb_hooks/` |
+| `docker/pb_hooks_example/purge_tombstones.pb.js` | `/opt/elinkbook-pocketbase/pb_hooks/` |
 
 在**你的電腦**（repo 根目錄）執行，把檔案複製到 VM：
 
 ```bash
 scp -i ~/.ssh/oci_elinkbook.key docker/pb_migrations/*.js   ubuntu@<您的_OCI_公網_IP>:/opt/elinkbook-pocketbase/pb_migrations/
 
-scp -i ~/.ssh/oci_elinkbook.key docker/pb_hooks/purge_tombstones.pb.js   ubuntu@<您的_OCI_公網_IP>:/opt/elinkbook-pocketbase/pb_hooks/
+scp -i ~/.ssh/oci_elinkbook.key docker/pb_hooks_example/purge_tombstones.pb.js   ubuntu@<您的_OCI_公網_IP>:/opt/elinkbook-pocketbase/pb_hooks/
 ```
 
 在 **VM** 上確認檔案都到了：
@@ -333,7 +333,7 @@ ls /opt/elinkbook-pocketbase/pb_migrations /opt/elinkbook-pocketbase/pb_hooks
 預期看到 3 支 migration 與 1 支 hook（檔名見 7.1 的目錄結構）。
 
 > **注意**：
-> - 不要用 `docker/pb_hooks_example/`，那是範例目錄。部署用 `docker/pb_hooks/`。
+> - 來源檔在 `docker/pb_hooks_example/`，複製到 VM 後放在 `pb_hooks/` 目錄，PocketBase 才會載入。
 > - 清理 hook 的排程 `0 3 * * *` 以 **UTC** 計算，等於台灣時間 11:00。
 > - 每次執行最多清除 500 筆。
 > - `deleted_at` 是毫秒時間戳記（number），沒刪除時為 `0`。這與 App 端一致，不要改成文字欄位。
@@ -681,6 +681,7 @@ chmod +x /opt/elinkbook-pocketbase/backup.sh
 
 ## 11. 相關參考文件
 - [`docs/research/synology_dsm7_pocketbase_sop.md`](synology_dsm7_pocketbase_sop.md)：Synology DSM 7 NAS 部署 SOP（可對照 Collection Schema）
-- [`docs/archive/2026-08-05-epic-8-sync/pocketbase-self-hosting.md`](../archive/2026-08-05-epic-8-sync/pocketbase-self-hosting.md)：PocketBase 原始自架手冊與 API 規格
+- [`docker/README.md`](../../docker/README.md)：PocketBase 容器化部署說明與環境變數
+- [`docs/sync-protocol.md`](../sync-protocol.md)：elinkBook 雲端同步 Protocol 與 Collection 欄位定義
 - [PocketBase 官方文件](https://pocketbase.io/docs/)
 - [Traefik 官方 Docker 整合文件](https://doc.traefik.io/traefik/user-guides/docker-compose/basic-example/)

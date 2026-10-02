@@ -75,7 +75,7 @@ flutter build apk --release --dart-define-from-file=config/cloud_oauth.json
 
 ## 這是什麼產品
 
-elinkBook（全能跨平台電子書閱讀器）是一款跨平台電子書閱讀器，核心差異化在於正確、高品質支援**直排（Vertical Writing）繁體中文排版**——包含正確的標點符號位置（破折號、引號）與避頭尾（換行規則）——並提供深度排版客製化與無縫跨裝置同步。
+elinkBook（易閱書）是一款跨平台電子書閱讀器，核心差異化在於正確、高品質支援**直排（Vertical Writing）繁體中文排版**——包含正確的標點符號位置（破折號、引號）與避頭尾（換行規則）——並提供深度排版客製化與無縫跨裝置同步。
 
 完整需求請見 `docs/prd.md`。實作前需要知道的重點：
 

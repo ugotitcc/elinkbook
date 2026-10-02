@@ -56,7 +56,7 @@ editHistory:
   - date: '2026-02-13'
 ---
 
-# 產品需求文件 (PRD)：全能跨平台電子書閱讀器
+# 產品需求文件 (PRD)：elinkBook（易閱書）
 
 ## 1. 執行摘要 (Executive Summary)
 

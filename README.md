@@ -1,4 +1,4 @@
-# elinkBook（全能跨平台電子書閱讀器）
+# elinkBook（易閱書）
 
 <img src="assets/appicon_v2.jpg" alt="elinkBook App 圖示" width="120">
 
@@ -30,14 +30,6 @@
 - Markdown
 - PDF
 
-## 目前狀態
-
-App 殼層為 Flutter，手機優先，Android 先於 iOS（最低支援 Android 11）。EPUB／KF8／CBZ／TXT／MD 統一由 `readest/foliate-js`（釘定版本，在 `flutter_inappwebview` 內執行）渲染；TXT 與 MD 匯入時會先合成為 EPUB3 結構。PDF 使用 `pdfrx`（透過 `dart:ffi` 直接呼叫 PDFium）。各項技術決策請見 [`docs/adr/`](docs/adr/)。
-
-上方「核心特色」列出的功能皆已完成。**尚未開始**：閱讀統計（每日閱讀時長熱點圖）、社群分享、iOS 移植。
-
-完整、即時的 Epic／Issue 進度一律以 [`docs/epics.md`](docs/epics.md) 為準，本檔案只描述現況的大致樣貌。完整需求請見 [`docs/prd.md`](docs/prd.md)，領域用語請見 [`CONTEXT.md`](CONTEXT.md)。
-
 ## 開發快速上手
 
 所有指令都在 `app/` 目錄下執行：
@@ -52,6 +44,7 @@ flutter run
 - 需要測試 Google Drive／OneDrive 的真實 OAuth 登入時，請參考 `app/config/cloud_oauth.example.json` 建立 `cloud_oauth.json`（不進版控），並加上 `--dart-define-from-file=config/cloud_oauth.json` 執行。
 - 整合測試（`app/integration_test/`）必須在真實裝置或模擬器上執行；其他檢查工具請見 [`app/tool/README.md`](app/tool/README.md)。
 - 架構說明、測試分層與開發流程（SDD）請見 [`CLAUDE.md`](CLAUDE.md)，UI 設計規範請見 [`DESIGN.md`](DESIGN.md)。
+- 完整需求請見 [`docs/prd.md`](docs/prd.md)，Epic／Issue 進度請見 [`docs/epics.md`](docs/epics.md)，技術決策請見 [`docs/adr/`](docs/adr/)，領域用語請見 [`CONTEXT.md`](CONTEXT.md)。
 
 ## 目錄導覽
 
