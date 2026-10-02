@@ -266,6 +266,26 @@ void main() {
       expect(prefs.savedReadingPositionCalls, isEmpty);
     });
 
+    test('有跳轉目標：Foliate 同位置重複回報（fraction 抖動）就離開，不儲存', () {
+      final session = build(hasJumpTarget: true)..start();
+      session.onPrefsLoaded(initialProgress: 0.5);
+      session.onEpubLocated(_loc('j', fraction: 0.20));
+      session.onEpubLocated(_loc('j', fraction: 0.21));
+      session.onEpubLocated(_loc('j', fraction: 0.20));
+      session.close(BookFormat.epub);
+      expect(prefs.savedReadingPositionCalls, isEmpty);
+    });
+
+    test('有跳轉目標：Foliate cfi 真的改變後離開，儲存最新位置', () {
+      final session = build(hasJumpTarget: true)..start();
+      session.onPrefsLoaded(initialProgress: 0.5);
+      session.onEpubLocated(_loc('j', fraction: 0.20));
+      session.onEpubLocated(_loc('k', fraction: 0.30));
+      session.close(BookFormat.epub);
+      expect(prefs.savedReadingPositionCalls.single.value.epubLocatorJson,
+          contains('"cfi":"k"'));
+    });
+
     test('偏好載入前收到的位置回報不會讓位置儲存器之後誤存', () {
       final session = build()..start();
       session.onPdfPageChanged(const PdfPageInfo(pageIndex: 4, totalPages: 5));

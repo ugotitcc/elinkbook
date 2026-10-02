@@ -280,3 +280,11 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - PR #311（`epic-54/issue-8-reading-session` → `main`）已合併，合併 commit `fd98ef3e`。Issue 8 完成。全套 `flutter test` 3391 通過、1 略過、0 失敗（發 PR 前在最終 commit `78abd39a` 上跑）。
 - 待真機確認：無（純重構）。
 - 後續：Issue 1～8 全數完成；Issue 9（缺陷，Foliate 同位置重複回報使跳轉保護提早失效，尚未在真機重現）仍待處理，審查員指出這次重構讓它更容易修，改動點集中在 `reading_session.dart` 與 `reading_position_saver.dart`。是否先處理 Issue 9 再歸檔 Epic 54，由使用者決定。
+
+**2026-10-03 Issue 9 實作完成**（分支 `epic-54/issue-9-relocate-dedup`，worktree 內 Native 直接開發，未使用 subagent。計畫見 `plans/plan-issue-9.md`，計畫審查 I-1／M-1／M-2／M-3 皆已採納）
+
+- 修法：`ReadingSession` 私有的位置鍵提升為 `EpubPositionInfo.positionKey`（cfi＋index，忽略 fraction，解析失敗退回整段字串），session 的閱讀活動判定與 `ReadingPositionSaver` 的「已重新定位」旗標共用同一條規則。saver 只有在 `hasJumpTarget` 且旗標尚未成立時才比對，位置鍵與上一筆不同才設旗標；`_epubInfo` 恆常更新。PDF 路徑與 `ReaderScreen` 未動。
+- 新增測試 16 個：`epub_position_info_test.dart` 7、saver 7（同位置重複回報、完全相同字串、index 改變、夾雜真移動、A→B→A、無法解析、一般開書）、session 層端到端 2。變異驗證：把比較改回舊行為（永遠 true），恰好 3 個案例失敗，還原後通過。
+- 驗證：全套 `flutter test` 3407 通過、1 略過、0 失敗（Issue 8 基準 3391＋16）；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS。
+- 行為變動：旗標成立條件變嚴格，僅影響「帶跳轉目標的 Foliate 開書」；活動判定行為零變化（既有 session 案例未修改而通過）。`CONTEXT.md`「位置儲存規則」已補上「真正移動」定義。
+- 待真機確認（可選）：從搜尋結果開書後不操作直接離開，確認原進度未被跳轉落點覆蓋。待程式審查與發 PR。

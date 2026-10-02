@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import '../stats/reading_stats_repository.dart';
 import '../stats/reading_stats_tracker.dart';
@@ -85,13 +84,11 @@ class ReadingSession {
   /// 開書後第一次回報是初始定位；位置相同的重複回報是 Foliate 開書後套用樣式
   /// 重排、或圖片／字型載入後重新對齊錨點所派發的，不是使用者操作。只比 cfi
   /// 與 index、忽略 fraction——真機日誌實證重排時同一 cfi 的 fraction 會來回
-  /// 微幅抖動。
+  /// 微幅抖動（比較規則見 `EpubPositionInfo.positionKey`，與位置儲存器共用）。
   void onEpubLocated(EpubPositionInfo info) {
     _positionSaver?.onEpubLocated(info);
     final previous = _lastEpubInfo;
-    if (previous != null &&
-        _locatorPositionKey(previous.locatorJson) !=
-            _locatorPositionKey(info.locatorJson)) {
+    if (previous != null && previous.positionKey != info.positionKey) {
       _stats?.recordActivity();
     }
     _lastEpubInfo = info;
@@ -154,15 +151,5 @@ class ReadingSession {
       ),
       onCleared: repository.onCleared,
     );
-  }
-
-  /// 取 locatorJson 中代表「位置」的部分（cfi＋index），忽略會因重排而抖動的
-  /// fraction。解析失敗時退回整段字串。
-  static String _locatorPositionKey(String locatorJson) {
-    try {
-      final map = jsonDecode(locatorJson);
-      if (map is Map) return '${map['cfi']}|${map['index']}';
-    } catch (_) {}
-    return locatorJson;
   }
 }
