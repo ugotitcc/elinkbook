@@ -476,6 +476,7 @@
   "aboutScreenBuildTimeLabel": "Build Time",
   "aboutScreenWebViewVersionLabel": "System WebView Version",
   "aboutScreenViewLicensesButton": "Open Source Licenses",
+  "aboutScreenLicensesLegalese": "This app uses the open-source components listed below. Their copyright notices and license terms follow.",
   "aboutScreenLoadingText": "Loading...",
   "aboutScreenFailedToLoadVersionMessage": "Failed to get version",
   "aboutScreenUnavailableText": "Unavailable",

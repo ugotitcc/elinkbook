@@ -223,6 +223,7 @@ flutter:
     - test/fixtures/sample.md
     - test/fixtures/sample.ttf
     - assets/wifi_transfer/index.html
+    - assets/licenses/
     # epic-48：內建字型一律不打包進 APK，改由 epic-49「可下載字型」在使用者
     # 點下載後才取得（ADR 0035）。5 款字型原檔放在 repo 根目錄的 fonts-cdn/fonts/。
 

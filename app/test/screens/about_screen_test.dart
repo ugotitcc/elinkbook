@@ -107,6 +107,46 @@ void main() {
     expect(find.text('Open Source Licenses'), findsOneWidget);
   });
 
+  testWidgets('點開授權頁：頁首顯示依語系的開源元件說明（zh_TW）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const AboutScreen(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('about_screen_view_licenses_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('本 App 使用下列開源元件，各元件的版權與授權條款如下。'), findsOneWidget);
+  });
+
+  testWidgets('點開授權頁：頁首顯示依語系的開源元件說明（en）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const AboutScreen(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('about_screen_view_licenses_button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'This app uses the open-source components listed below. '
+        'Their copyright notices and license terms follow.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('英文介面下 getBuildTime 呼叫失敗時降級顯示英文 Unavailable',
       (tester) async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
