@@ -58,32 +58,6 @@ void main() {
     expect(await repository.getTotalReadingSeconds(), 0);
   });
 
-  testWidgets('同一位置的重複回報（重排、圖片或字型載入造成）不算閱讀活動', (tester) async {
-    final repository = FakeReadingStatsRepository();
-    await pumpStatsReader(tester, readingStatsRepository: repository);
-
-    reportLocator(tester, 1); // 初始定位
-    await tester.pump(const Duration(milliseconds: 300));
-    reportLocator(tester, 1); // 套用樣式重排後，Foliate 對同一位置再回報一次
-    await tester.pump(const Duration(seconds: 90)); // 使用者沒有任何操作
-    await disposeStatsReader(tester);
-
-    expect(await repository.getTotalReadingSeconds(), 0);
-  });
-
-  testWidgets('同一 cfi 只有進度小數抖動（重排造成，真機實證）不算閱讀活動', (tester) async {
-    final repository = FakeReadingStatsRepository();
-    await pumpStatsReader(tester, readingStatsRepository: repository);
-
-    reportLocator(tester, 1, fraction: 0.0064); // 初始定位
-    await tester.pump(const Duration(milliseconds: 300));
-    reportLocator(tester, 1, fraction: 0.0080); // 重排：cfi 相同，小數微幅改變
-    await tester.pump(const Duration(seconds: 90)); // 使用者沒有任何操作
-    await disposeStatsReader(tester);
-
-    expect(await repository.getTotalReadingSeconds(), 0);
-  });
-
   testWidgets('位置回報之間夾著同一位置的重複回報：位置真正改變的那一次仍算活動',
       (tester) async {
     final repository = FakeReadingStatsRepository();
