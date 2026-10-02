@@ -34,5 +34,19 @@ APK 內含以下開源元件，版權與授權如下：
 | [readest/foliate-js](https://github.com/readest/foliate-js) | MIT | Copyright (c) 2022 John Factotum |
 | [zip.js](https://github.com/gildas-lormeau/zip.js) | BSD-3-Clause | Copyright (c) 2023, Gildas Lormeau |
 | [fflate](https://github.com/101arrowz/fflate) | MIT | Copyright (c) 2026 Arjun Barrett |
+| [OpenCC](https://github.com/BYVoid/OpenCC)（簡繁字元對照表） | Apache-2.0 | BYVoid/OpenCC 專案貢獻者 |
+| [Readium kotlin-toolkit](https://github.com/readium/kotlin-toolkit) | BSD-3-Clause | Copyright (c) 2017, Readium |
 
 其餘 Flutter 與 Dart 套件的授權，請見 App 內「關於」頁的開源授權清單。
+
+## 可下載字型
+
+字型檔不包含在 APK 內，由使用者在 App 的字型管理下載。5 款皆為 SIL Open Font License 1.1（OFL），可商用、可再散布。
+
+| 字型 | 授權 | 版權 |
+|---|---|---|
+| 思源黑體（Source Han Sans） | SIL OFL 1.1 | Copyright 2014-2025 Adobe |
+| 思源宋體（Source Han Serif） | SIL OFL 1.1 | Copyright 2017-2022 Adobe |
+| 原俠正楷（GuanKiapTsingKhai） | SIL OFL 1.1 | Copyright 2022-2025 Tony Huang |
+| 源流明體（GenRyuMin） | SIL OFL 1.1 | Copyright 2014-2019 Adobe（衍生自思源宋體） |
+| 台灣圓體（TaiwanPearl） | SIL OFL 1.1 | 上游授權檔未載明版權人 |
