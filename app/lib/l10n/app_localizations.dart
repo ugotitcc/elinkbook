@@ -3359,6 +3359,12 @@ abstract class AppLocalizations {
   /// **'失敗'**
   String get downloadQueueStatusFailed;
 
+  /// 項目狀態標籤：下載失敗的原因是雲端匯入來源帳號授權失效（見 CONTEXT.md「雲端授權失效」），使用者需到設定重新連結帳號後按重試
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'需重新連結帳號'**
+  String get downloadQueueStatusNeedsReauth;
+
   /// 項目狀態標籤：使用者主動取消下載
   ///
   /// In zh_TW, this message translates to:

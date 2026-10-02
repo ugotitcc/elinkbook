@@ -542,6 +542,7 @@
   "downloadQueueStatusDone": "完成",
   "downloadQueueStatusDuplicateSkipped": "重复已略过",
   "downloadQueueStatusFailed": "失败",
+  "downloadQueueStatusNeedsReauth": "需重新连接账号",
   "downloadQueueStatusCancelled": "已取消",
   "downloadQueueDuplicateConfirmMessage": "侦测到「{name}」与本机已有的一本书内容相同，仍要建立新的一份吗？",
   "sourcesHomeTitle": "来源",

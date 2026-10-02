@@ -38,6 +38,10 @@ class _FakeQueuedDownloadJob implements QueuedDownloadJob {
     if (!_downloadCompleter.isCompleted) _downloadCompleter.complete('/tmp/fake');
   }
 
+  void failDownload(Object error) {
+    if (!_downloadCompleter.isCompleted) _downloadCompleter.completeError(error);
+  }
+
   @override
   Future<String> computeFingerprint(String tempPath) async => 'fingerprint-$id';
 
@@ -49,7 +53,12 @@ class _FakeQueuedDownloadJob implements QueuedDownloadJob {
 
   @override
   Future<void> import(String permanentPath) async {}
+
+  @override
+  bool isAuthFailure(Object error) => error is _AuthFailure;
 }
+
+class _AuthFailure implements Exception {}
 
 void main() {
   Future<void> pumpPanel(
@@ -112,6 +121,54 @@ void main() {
       find.byKey(const Key('sources_download_queue_dismiss_book-2')),
     );
     expect(dismissButton.tooltip, '從清單移除');
+  });
+
+  testWidgets('授權失效造成的失敗顯示「需重新連結帳號」並保留重試鈕', (tester) async {
+    final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+    final job = _FakeQueuedDownloadJob(id: 'book-4', name: '測試書籍4');
+    await pumpPanel(tester, controller);
+
+    controller.enqueueJobs([job]);
+    await tester.pump();
+    job.failDownload(_AuthFailure());
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('需重新連結帳號'), findsOneWidget);
+    expect(find.text('失敗'), findsNothing);
+    expect(
+      find.byKey(const Key('sources_download_queue_retry_book-4')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('一般失敗仍顯示「失敗」，不顯示需重新連結', (tester) async {
+    final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+    final job = _FakeQueuedDownloadJob(id: 'book-5', name: '測試書籍5');
+    await pumpPanel(tester, controller);
+
+    controller.enqueueJobs([job]);
+    await tester.pump();
+    job.failDownload(StateError('network'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('失敗'), findsOneWidget);
+    expect(find.text('需重新連結帳號'), findsNothing);
+  });
+
+  testWidgets('英文介面下授權失效顯示對應英文', (tester) async {
+    final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+    final job = _FakeQueuedDownloadJob(id: 'book-6', name: 'Test Book');
+    await pumpPanel(tester, controller, locale: const Locale('en'));
+
+    controller.enqueueJobs([job]);
+    await tester.pump();
+    job.failDownload(_AuthFailure());
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Account needs reconnecting'), findsOneWidget);
   });
 
   testWidgets('英文介面下標題與狀態標籤正確顯示', (tester) async {

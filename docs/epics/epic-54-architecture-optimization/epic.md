@@ -65,6 +65,21 @@
 | 詞條與 ADR | `CONTEXT.md` 新增「存取探測」；不寫 ADR（只是搬家，沒有新取捨） |
 | 行為變動 | 無，純搬家 |
 
+## Issue 2 設計決策（`/grill-with-docs` 定案）
+
+| 決策 | 結論 |
+|---|---|
+| 範圍 | 確認同步端與雲端匯入端的落差後實際修正：①離線被當成登入失效 ②API 401 被當成一般錯誤 ③下載佇列吞掉登入失效。同步端（epic-53 已對齊）不動 |
+| 形狀 | 兩邊各自保留：同步端用回傳值（`SyncCheckpointResult.sessionExpired`），雲端端用例外（`CloudAuthRequiredException`，因 `listFolder`／`downloadFile` 本來就回傳資料）；`CloudStorageClient` 介面不改 |
+| 詞條 | 不統一。「登入過期」維持專指同步帳號；新增「雲端授權失效」，兩詞條互相註明差異（同步端會清 token 留 email，雲端端不改任何儲存狀態） |
+| 分類規則 | 新增 `cloud_import/cloud_auth_classifier.dart`，兩個 OAuth client 與兩個 storage client 共用，**不**合併兩個 OAuth client。換發 token 端點回 400／401 → 授權失效；網路例外、5xx、429 → 暫時性。Drive／Graph API 回 401 → 授權失效，其他非 200 → 一般例外 |
+| `ensureValidAccessToken` | 簽章不變（`Future<String?>`）。`null` 專指需重新連結（未連結或被撤銷）；暫時性情況改為拋出一般例外，呼叫端本來就歸為網路錯誤 |
+| 下載佇列 | `QueuedDownloadJob` 新增 `bool isAuthFailure(Object error)`（預設 `false`），`CloudDownloadJob` 覆寫為 `error is CloudAuthRequiredException`；`DownloadQueueItem` 新增 `needsReauth`，狀態仍為 `failed`。控制器維持來源無關，OPDS 不受影響；重試成功時重設旗標 |
+| 使用者介面 | 面板對 `needsReauth` 項目顯示「需重新連結帳號」取代「失敗」（新增 1 個 ARB 鍵，四份同步），保留重試鈕。瀏覽畫面維持文字、不加按鈕；兩處都不加「前往重新連結」按鈕（需牽動 `CloudAccountSettingsScreen` 的依賴建構，另立後續 Issue） |
+| 行為調整 | ①離線瀏覽雲端不再顯示「請重新連結」，改顯示網路錯誤 ②API 401 顯示重新連結而非網路錯誤 ③下載佇列失敗項目標示需重新連結 |
+| 測試 | 純測試：分類規則；兩個 OAuth client 各補斷網拋一般例外；兩個 storage client 各補 API 401；`download_queue_controller_test` 補 `needsReauth` 設定與重設；`cloud_download_job` 的 `isAuthFailure`。widget：面板新文字、瀏覽畫面離線顯示網路錯誤而非 reauth（翻轉現有行為）。被取代的舊測試刪除並於記錄列出對應 |
+| ADR | 不寫（沒有難以回頭的取捨） |
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -132,4 +147,16 @@
 - PR #305（`epic-54/issue-4-storage-access-probe` → `main`）已合併，合併 commit `e8cbd95b`。Issue 4 完成。全套 `flutter test` 3276 通過、1 略過。
 - 待真機確認：無（純搬家，無行為變動）。
 - 附帶：`test/downloads/download_queue_controller_test.dart` 在整套並行時偶發失敗（只用固定輪數的 `pumpEventQueue()` 等非同步鏈），與本 Epic 無關，未處理；若重複出現，應另立工單把等待改為條件式。
-- 後續：Issue 2、6 尚未設計，動手前各自須先 `/grill-with-docs`。Issue 2 設計時可利用 Issue 3、4 建立的 `app/lib/storage/` 目錄與「持久化授權」「存取探測」詞條；本 Epic 其餘 Issue 完成後再決定是否歸檔。
+- 後續：Issue 6 尚未設計，動手前須先 `/grill-with-docs`；本 Epic 其餘 Issue 完成後再決定是否歸檔。
+
+**2026-10-02 Issue 2 實作完成**：雲端匯入端正確區分「雲端授權失效」與暫時性錯誤。新增 `app/lib/cloud_import/cloud_auth_classifier.dart`（`isRefreshTokenRejected`：換發 token 端點回 400／401 視為授權被撤銷；`throwCloudApiStatusError`：資料 API 回 401 拋 `CloudAuthRequiredException`，其餘非 200 拋一般例外），兩個 OAuth client 與兩個 storage client 共用（兩個 OAuth client 本身刻意不合併）。`ensureValidAccessToken` 簽章不變，`null` 專指需重新連結（未連結或換發被拒）；斷網與 429／5xx 改為往上拋，由呼叫端歸為一般網路錯誤；刻意不主動 `unlink`。`QueuedDownloadJob` 新增抽象方法 `isAuthFailure`（`CloudDownloadJob` 回傳 `error is CloudAuthRequiredException`，`RemoteDownloadJob` 回傳 `false`），`DownloadQueueItem` 新增 `needsReauth`（預設 false，重試先重設；已取消的工作不設旗標）；面板對 `needsReauth` 項目顯示「需重新連結帳號」（新 ARB 鍵 `downloadQueueStatusNeedsReauth`，四份同步＋`flutter gen-l10n`），保留重試鈕，不加「前往重新連結」按鈕。與設計表的兩處差異（見 `plans/plan-issue-2.md` 開頭）：① `isAuthFailure` 改為抽象方法（`implements` 不繼承本體，預設值無從生效）；② 瀏覽畫面 widget 測試不翻轉（`CloudBrowserScreen` 未動），改在 storage client 測試驗證斷網不拋 `CloudAuthRequiredException`。測試：新增 35 個（分類規則 5、兩 OAuth client 各 5、兩 storage client 各 6、控制器 4、`cloud_download_job_test` 1、面板 3）；刪除 2 個（Google／OneDrive storage client 的 `HTTP 非 200 回應時拋出例外` 各 1 個，被 group 內的 403 案例取代）。驗證：`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS；全套 `flutter test` 3309 通過、1 略過、0 失敗。待發 PR。
+- 待真機確認：真實 Google／OneDrive 帳號被撤銷授權後，瀏覽顯示「請重新連結」、下載佇列顯示「需重新連結帳號」，以及飛航模式下瀏覽顯示網路錯誤而非重新連結。
+
+**2026-10-02 Issue 2 程式審查與修訂**（獨立審查員，範圍 `50d3d79b..71141c07`；審查報告在 `reviews/review-code-issue-2.md`，不進版控，以下為摘要。0 Critical／0 Important／4 Minor，結論 Ready to merge。審查員實跑：`flutter analyze` 乾淨、`check_l10n_hardcoded_strings.js` PASS、`test/cloud_import` 整個目錄與佇列控制器、面板、瀏覽畫面測試通過；grep 確認所有 `ensureValidAccessToken` 呼叫點與 `QueuedDownloadJob` 實作者都已處理；ARB 四份與生成檔以讀檔比對一致）
+
+- M-1（不處理）：兩個 storage client 新增 import 的排序，純風格。
+- M-2（已修）：補控制器測試「授權失效後重試又遇一般失敗：仍是 failed，但 `needsReauth` 重設為 false」。控制器測試由 4 個增為 5 個，Issue 2 新增測試合計 36 個。
+- M-3（不處理）：storage client 非 401 的下載與縮圖路徑沒有直接測試；三個方法共用 `throwCloudApiStatusError`，規則已由分類測試與 `listFolder` 的 403／500 測試涵蓋。
+- M-4（不處理）：token 端點的 400 一律視為授權撤銷，這是設計表定案的假設（`invalid_request` 等其他 400 也會被當成需重新連結，實務上罕見）。
+- 審查員「未判斷」5 項（真機上服務端實際回應碼、面板無前往設定的導引等）均維持不處理，導引按鈕已在設計決策中排除。
+- 驗證：修訂後 `flutter analyze` No issues found；`download_queue_controller_test` 14 個全數通過。上方「實作完成」記載的全套 3309 通過是補測試前的數字，補 1 個測試後重跑全套：3310 通過、1 略過、0 失敗。

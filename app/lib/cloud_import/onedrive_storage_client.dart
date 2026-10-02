@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import 'cloud_storage_client.dart';
+import 'cloud_auth_classifier.dart';
 import 'onedrive_oauth_client.dart';
 
 /// [CloudStorageClient] 的 Microsoft Graph API v1.0 實作（`issues.md`
@@ -55,7 +56,7 @@ class OneDriveStorageClient implements CloudStorageClient {
       final response =
           await _httpClient.get(nextUri!, headers: {'Authorization': 'Bearer $token'});
       if (response.statusCode != 200) {
-        throw Exception('OneDrive 目錄讀取失敗（HTTP ${response.statusCode}）');
+        throwCloudApiStatusError('OneDrive 目錄讀取失敗', response.statusCode);
       }
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       final items = json['value'] as List<dynamic>? ?? const [];
@@ -114,7 +115,7 @@ class OneDriveStorageClient implements CloudStorageClient {
         ..headers['Authorization'] = 'Bearer $token';
       final response = await _httpClient.send(request);
       if (response.statusCode != 200) {
-        throw Exception('OneDrive 下載失敗（HTTP ${response.statusCode}）');
+        throwCloudApiStatusError('OneDrive 下載失敗', response.statusCode);
       }
       final total = response.contentLength ?? 0;
       var received = 0;
@@ -147,7 +148,7 @@ class OneDriveStorageClient implements CloudStorageClient {
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode != 200) {
-      throw Exception('縮圖載入失敗（HTTP ${response.statusCode}）');
+      throwCloudApiStatusError('縮圖載入失敗', response.statusCode);
     }
     return response.bodyBytes;
   }

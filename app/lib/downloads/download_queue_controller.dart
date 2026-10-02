@@ -24,11 +24,17 @@ class DownloadQueueItem {
   /// 0.0–1.0；`null` 代表尚未開始或這次下載沒有回報總位元組數。
   double? progress;
 
+  /// 狀態為 [DownloadItemStatus.failed] 且失敗原因是「雲端授權失效」（見
+  /// `CONTEXT.md`）時為 true，供面板顯示「需重新連結帳號」；其餘一律
+  /// false。重試時會先重設。
+  bool needsReauth;
+
   DownloadQueueItem({
     required this.id,
     required this.name,
     this.status = DownloadItemStatus.pending,
     this.progress,
+    this.needsReauth = false,
   });
 }
 
@@ -67,6 +73,11 @@ abstract class QueuedDownloadJob {
 
   /// 匯入圖書庫（單一項目）。
   Future<void> import(String permanentPath);
+
+  /// [download] 等階段拋出的 [error] 是否代表「需要使用者重新連結帳號」
+  /// （雲端授權失效，見 `CONTEXT.md`）。控制器不認得個別來源的例外型別，
+  /// 由各來源自己判斷；不涉及帳號的來源（例如 OPDS 遠端書庫）回傳 `false`。
+  bool isAuthFailure(Object error);
 }
 
 /// 視覺還原（Visual Accuracy Mode，`docs/research/uiux/VISUAL_ANALYSIS.md`）
@@ -145,6 +156,7 @@ class DownloadQueueController extends ChangeNotifier {
     if (job == null || item == null) return;
 
     item.status = DownloadItemStatus.downloading;
+    item.needsReauth = false;
     item.progress = null;
     notifyListeners();
     String? tempPath;
@@ -177,11 +189,14 @@ class DownloadQueueController extends ChangeNotifier {
       item.status = DownloadItemStatus.done;
       item.progress = 1.0;
       notifyListeners();
-    } catch (_) {
+    } catch (e) {
       if (tempPath != null) await _deleteIfExists(tempPath);
-      item.status = job.isCancelled
-          ? DownloadItemStatus.cancelled
-          : DownloadItemStatus.failed;
+      if (job.isCancelled) {
+        item.status = DownloadItemStatus.cancelled;
+      } else {
+        item.status = DownloadItemStatus.failed;
+        item.needsReauth = job.isAuthFailure(e);
+      }
       notifyListeners();
     }
   }

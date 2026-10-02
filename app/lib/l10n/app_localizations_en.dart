@@ -1944,6 +1944,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadQueueStatusFailed => 'Failed';
 
   @override
+  String get downloadQueueStatusNeedsReauth => 'Account needs reconnecting';
+
+  @override
   String get downloadQueueStatusCancelled => 'Cancelled';
 
   @override

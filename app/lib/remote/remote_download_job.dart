@@ -93,4 +93,9 @@ class RemoteDownloadJob implements QueuedDownloadJob {
       remoteDownloadUrls: {permanentPath: acquisition.href},
     );
   }
+
+  /// OPDS 遠端書庫用 HTTP Basic Auth 或匿名，沒有「重新連結帳號」的概念
+  /// （與雲端匯入的 OAuth 不同，見 `CONTEXT.md`「遠端書庫」）。
+  @override
+  bool isAuthFailure(Object error) => false;
 }

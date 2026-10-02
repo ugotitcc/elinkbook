@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -136,5 +137,55 @@ void main() {
     );
 
     expect(await client.ensureValidAccessToken(), isNull);
+  });
+
+  group('換發失敗的分類（epic-54 Issue 2）', () {
+    Future<OneDriveOAuthClient> clientWith(MockClient mockClient) async {
+      await accountRepository.link(
+        CloudProvider.oneDrive,
+        CloudAccountTokens(
+          accessToken: 'expiring-token',
+          refreshToken: 'refresh-1',
+          email: 'reader@example.com',
+          expiresAt: DateTime.now().add(const Duration(seconds: 10)),
+        ),
+      );
+      return OneDriveOAuthClient(
+        accountRepository: accountRepository,
+        httpClient: mockClient,
+      );
+    }
+
+    test('換發時斷網：往上拋出例外，不回傳 null（不能當成要重新連結）', () async {
+      final client = await clientWith(
+        MockClient((request) async => throw const SocketException('offline')),
+      );
+
+      await expectLater(
+        client.ensureValidAccessToken(),
+        throwsA(isA<SocketException>()),
+      );
+    });
+
+    test('換發回 401：視為授權已被撤銷，回傳 null', () async {
+      final client = await clientWith(
+        MockClient((request) async => http.Response('', 401)),
+      );
+
+      expect(await client.ensureValidAccessToken(), isNull);
+    });
+
+    for (final code in [429, 500, 503]) {
+      test('換發回 $code：屬暫時性，拋出例外而非回傳 null', () async {
+        final client = await clientWith(
+          MockClient((request) async => http.Response('', code)),
+        );
+
+        await expectLater(
+          client.ensureValidAccessToken(),
+          throwsA(isA<Exception>()),
+        );
+      });
+    }
   });
 }

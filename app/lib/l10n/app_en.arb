@@ -542,6 +542,7 @@
   "downloadQueueStatusDone": "Done",
   "downloadQueueStatusDuplicateSkipped": "Duplicate Skipped",
   "downloadQueueStatusFailed": "Failed",
+  "downloadQueueStatusNeedsReauth": "Account needs reconnecting",
   "downloadQueueStatusCancelled": "Cancelled",
   "downloadQueueDuplicateConfirmMessage": "Detected that \"{name}\" has the same content as an existing book on this device. Create a new copy anyway?",
   "sourcesHomeTitle": "Sources",

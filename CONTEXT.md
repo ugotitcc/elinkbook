@@ -196,7 +196,11 @@ _Avoid_: 自動同步、背景同步（皆未點出「批次觸發」這個關�
 
 **登入過期（Session Expired）**：
 同步 token 續期遭伺服器拒絕（401），App 清除 token 但保留 email 的狀態；與使用者主動登出（連 email 一併清除）不同。同步引擎於當次 checkpoint 直接回報此結果；持久化的「先前是否過期」由帳號儲存庫判定。
-_Avoid_: 登出、token 失效（前者是使用者主動行為，後者未點出「保留 email 以便預填」這個特性）
+_Avoid_: 登出、token 失效（前者是使用者主動行為，後者未點出「保留 email 以便預填」這個特性）。**與「雲端授權失效」不同**：本詞條只指同步帳號，且會改變儲存狀態。
+
+**雲端授權失效（Cloud Reauth Required，`epic-54-architecture-optimization` Issue 2）**：
+雲端匯入來源帳號的 refresh token 被服務商撤銷（換發時 token 端點回 400／401），或雲端硬碟 API 對請求回 401，使當次請求無法繼續、需要使用者重新連結帳號。**不改變任何儲存狀態**：不清 token、不解除連結，是否解除連結仍由使用者手動決定。斷網、5xx、429 屬暫時性錯誤，不算雲端授權失效，維持一般網路錯誤訊息。與「登入過期」不同：後者是同步帳號的持久狀態轉換（清 token、留 email），本詞條只是單次請求的判斷結果。
+_Avoid_: 登入過期（專指同步帳號）、未登入（沒連結帳號是另一種狀態，雖然目前兩者在程式裡都表現為需要重新連結）
 
 **用戶端識別碼（`client_id`）**：
 `epic-8-sync` 引入，`bookmarks`／`highlights`／`notes` 三表的本機主鍵格式由 `INTEGER PRIMARY KEY AUTOINCREMENT` 改為 `TEXT PRIMARY KEY`（UUID），**本機 id 與同步識別碼合一**（不另外疊加一個 `sync_id` 欄位）。PocketBase 端對應 collection 額外開一個 `client_id` 欄位存放同一個 UUID 值，PocketBase 內建的 `id` 欄位純粹是其內部管理用途，App 完全不讀取/比對它——避免依賴特定 PocketBase 版本對自訂 `id` 格式的支援程度。`notes` 依附劃線時存的是該劃線的 `client_id`（而非本機整數 `highlight_id` 的舊概念，該概念已隨此變更取消）。**`books.id` 不受影響、維持原格式**——書籍的跨裝置身份比對用途已由「書籍內容指紋」承擔，兩者是不同機制（2026-08-02 `epic-8-sync` Architecting 階段定案）。
