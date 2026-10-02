@@ -34,3 +34,10 @@ APK 內還有 5 項不是 Dart 套件的元件，授權不會出現在頁面上�
 - 新增 `registerThirdPartyLicenses` 與 5 項程式元件授權（foliate-js、zip.js、fflate、OpenCC、Readium kotlin-toolkit），`main.dart` 啟動時登錄；真機驗收通過。
 - 計畫審查採納 5 項、不採納 1 項（為 `ThirdPartyLicense` 補 `==`／`hashCode`，屬投機彈性）。
 - 規格外追加：授權頁以 `applicationLegalese` 顯示「本 App 使用下列開源元件…」說明（新增 ARB 鍵 `aboutScreenLicensesLegalese`），避免「Powered by Flutter」讓人誤以為清單全是 Flutter 元件。
+
+**2026-10-02 Issue 2 完成**
+
+- 5 款可下載字型（思源黑體、思源宋體、原俠正楷、台灣圓體、源流明體）的 SIL OFL 1.1 授權登錄進授權頁，與字型是否已下載無關；授權頁共 10 項，真機驗收通過。
+- 計畫審查：採納 M-2、M-3，M-1 部分採納（只加 `caseSensitive: false`；審查建議的 `^s*Copyright` 會命中原檔 OFL 條款本文的 `Copyright Holder` 行，故不採）。
+- 設計修訂（Q4）：台灣圓體上游授權檔仍無版權行、不補寫版權人與年份；依其 README「著作權與授權」段，在授權全文之後附加一段來源說明（改作自 Adobe／Google 的思源黑體，並取用小杉圓體部分中文字），標明非 OFL 條款的一部分。`design.md` Q4 與 `spec.md` 已同步修訂。
+- 一致性測試比對 asset 與 `fonts-cdn` 原檔時先正規化行尾（git 索引為 LF、Windows 工作目錄為 CRLF）。

@@ -47,11 +47,11 @@ void registerThirdPartyLicenses({AssetBundle? bundle});
 | 台灣圓體 | SIL OFL 1.1 | `assets/licenses/font-taiwan-pearl.txt` |
 | 源流明體 | SIL OFL 1.1 | `assets/licenses/font-gen-ryu-min.txt` |
 
-字型的 5 份由 `fonts-cdn/fonts/licenses/` 逐位元組複製。其餘 5 份取自上游 LICENSE。
+字型的 5 份由 `fonts-cdn/fonts/licenses/` 複製；其中台灣圓體在授權全文之後附加一段 README 來源說明，其餘 4 份逐位元組相同。其餘 5 份取自上游 LICENSE。
 
 ## 測試
 
 - 登錄後，`LicenseRegistry.licenses` 能讀到 10 筆，每筆的 `packages` 與上表一致。
 - 每筆授權全文非空。
-- 字型的 5 份 asset，與 `fonts-cdn/fonts/licenses/` 內對應檔案內容完全相同。
+- 4 份字型 asset 與 `fonts-cdn/fonts/licenses/` 內對應檔案內容完全相同；台灣圓體 asset 以原檔全文開頭並附來源說明。
 - 某個 asset 讀不到時，其他 9 筆仍然登錄成功。

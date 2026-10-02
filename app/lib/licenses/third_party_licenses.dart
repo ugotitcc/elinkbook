@@ -16,7 +16,7 @@ class ThirdPartyLicense {
 
 /// 要登錄的授權清單。
 ///
-/// 這些元件不是 Dart 套件，Flutter 不會自動收集它們的授權，
+/// 這些元件（含 5 款可下載字型）不是 Dart 套件，Flutter 不會自動收集它們的授權，
 /// 但各授權都要求散布時保留版權與授權聲明。
 const List<ThirdPartyLicense> kThirdPartyLicenses = [
   // foliate-js 與其內附的 zip.js、fflate：位於 android/app/src/main/assets/foliate/
@@ -41,6 +41,30 @@ const List<ThirdPartyLicense> kThirdPartyLicenses = [
   ThirdPartyLicense(
     packageName: 'Readium kotlin-toolkit',
     assetPath: 'assets/licenses/readium-kotlin-toolkit.txt',
+  ),
+  // 5 款可下載字型（SIL OFL 1.1）：字型檔不在 APK 內，由使用者在字型管理下載；
+  // 但授權是靜態資訊，與是否已下載無關，永遠顯示（epic-55 design Q5）。
+  // 台灣圓體的上游授權檔沒有版權行，原文照顯示、不補寫；asset 末尾另附
+  // README 的來源說明（design Q4 修訂版）。
+  ThirdPartyLicense(
+    packageName: '思源黑體',
+    assetPath: 'assets/licenses/font-source-han-sans.txt',
+  ),
+  ThirdPartyLicense(
+    packageName: '思源宋體',
+    assetPath: 'assets/licenses/font-source-han-serif.txt',
+  ),
+  ThirdPartyLicense(
+    packageName: '原俠正楷',
+    assetPath: 'assets/licenses/font-guan-kiap-tsing-khai.txt',
+  ),
+  ThirdPartyLicense(
+    packageName: '台灣圓體',
+    assetPath: 'assets/licenses/font-taiwan-pearl.txt',
+  ),
+  ThirdPartyLicense(
+    packageName: '源流明體',
+    assetPath: 'assets/licenses/font-gen-ryu-min.txt',
   ),
 ];
 

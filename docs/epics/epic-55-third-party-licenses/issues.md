@@ -34,7 +34,7 @@ Issue 1（機制＋5 項程式元件）──> Issue 2（5 款字型）
 
 ## Issue 2：登錄 5 款可下載字型的授權
 
-**Status:** not-started
+**Status:** done
 
 **依賴：** Issue 1。
 
