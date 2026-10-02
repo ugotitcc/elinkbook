@@ -632,7 +632,6 @@
     // 字型循環切換
     const fontFamilies = [
       { name: '思源宋體', family: 'var(--font-serif)' },
-      { name: '思源楷體', family: 'var(--font-kai)' },
       { name: '思源黑體', family: 'var(--font-sans)' }
     ];
     let fontIndex = 0;
