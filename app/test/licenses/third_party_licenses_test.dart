@@ -48,13 +48,18 @@ void main() {
   });
 
   group('kThirdPartyLicenses 清單', () {
-    test('Issue 1 範圍：5 項程式元件，順序與名稱符合 spec', () {
+    test('10 項：5 項程式元件加 5 款字型，順序與名稱符合 spec', () {
       expect(kThirdPartyLicenses.map((l) => l.packageName).toList(), [
         'foliate-js',
         'zip.js',
         'fflate',
         'OpenCC',
         'Readium kotlin-toolkit',
+        '思源黑體',
+        '思源宋體',
+        '原俠正楷',
+        '台灣圓體',
+        '源流明體',
       ]);
     });
 
@@ -67,7 +72,7 @@ void main() {
   });
 
   group('registerThirdPartyLicenses', () {
-    test('以真實 rootBundle 登錄：5 筆、packages 與清單一致、全文含上游版權關鍵字', () async {
+    test('以真實 rootBundle 登錄：10 筆、packages 與清單一致、全文含上游版權關鍵字', () async {
       registerThirdPartyLicenses();
 
       final entries = await _readAllLicenses();
@@ -86,12 +91,51 @@ void main() {
       expect(textByPackage['fflate'], contains('Arjun Barrett'));
       expect(textByPackage['OpenCC'], contains('Apache License'));
       expect(textByPackage['Readium kotlin-toolkit'], contains('Readium'));
+      // 5 款字型：皆為 SIL OFL 1.1，並含各自上游的版權關鍵字
+      for (final font in ['思源黑體', '思源宋體', '原俠正楷', '台灣圓體', '源流明體']) {
+        expect(
+          textByPackage[font],
+          contains('SIL Open Font License'),
+          reason: '$font 授權全文應含 OFL 條款',
+        );
+      }
+      expect(textByPackage['思源黑體'], contains('Adobe'));
+      expect(textByPackage['思源宋體'], contains('Adobe'));
+      expect(textByPackage['源流明體'], contains('Adobe'));
+      expect(textByPackage['原俠正楷'], contains('Tony Huang'));
+      // 中文 Reserved Font Name 要能正確讀出（UTF-8）
+      expect(textByPackage['原俠正楷'], contains('原俠'));
       for (final text in textByPackage.values) {
         expect(text.trim(), isNotEmpty);
       }
     });
 
-    test('某個 asset 讀不到時，其他 4 筆仍登錄成功', () async {
+    test('台灣圓體：原檔沒有版權行，不補寫版權人／年份；僅附 README 來源說明', () async {
+      registerThirdPartyLicenses();
+
+      final entries = await _readAllLicenses();
+      final text = entries
+          .firstWhere((e) => e.packages.single == '台灣圓體')
+          .paragraphs
+          .map((p) => p.text)
+          .join('\n');
+
+      expect(text, contains('SIL Open Font License'));
+      expect(text, contains('改造Adobe和Google所開發、發表的「思源黑體」字型'));
+      // 沒有「Copyright 2022」或「Copyright (c) 2022」這種「版權年份＋持有人」行。
+      // 注意不能檢查「以 Copyright 開頭」：OFL 條款本文的「Copyright Holder...」
+      // 本來就會換行後出現在行首。
+      expect(
+        RegExp(
+          r'^\s*Copyright\s+(\(c\)\s*)?\d{4}',
+          multiLine: true,
+          caseSensitive: false,
+        ).hasMatch(text),
+        isFalse,
+      );
+    });
+
+    test('某個 asset 讀不到時，其他筆仍登錄成功', () async {
       final texts = {
         for (final l in kThirdPartyLicenses)
           l.assetPath: '${l.packageName} 授權全文',
@@ -100,12 +144,13 @@ void main() {
       registerThirdPartyLicenses(bundle: _FakeBundle(texts));
 
       final entries = await _readAllLicenses();
-      expect(entries.map((e) => e.packages.single).toList(), [
-        'foliate-js',
-        'fflate',
-        'OpenCC',
-        'Readium kotlin-toolkit',
-      ]);
+      expect(
+        entries.map((e) => e.packages.single).toList(),
+        kThirdPartyLicenses
+            .map((l) => l.packageName)
+            .where((n) => n != 'zip.js')
+            .toList(),
+      );
     });
 
     test('某個 asset 丟出非 FlutterError 的任意例外，也只略過該筆', () async {
@@ -122,7 +167,7 @@ void main() {
       );
 
       final entries = await _readAllLicenses();
-      expect(entries.length, 4);
+      expect(entries.length, kThirdPartyLicenses.length - 1);
       expect(
         entries.map((e) => e.packages.single),
         isNot(contains('foliate-js')),
@@ -139,7 +184,7 @@ void main() {
       registerThirdPartyLicenses(bundle: _FakeBundle(texts));
 
       final entries = await _readAllLicenses();
-      expect(entries.length, 4);
+      expect(entries.length, kThirdPartyLicenses.length - 1);
       expect(entries.map((e) => e.packages.single), isNot(contains('fflate')));
     });
 
