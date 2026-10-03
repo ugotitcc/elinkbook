@@ -97,3 +97,11 @@ PDF 新增「翻頁模式」：**逐頁**（一次只顯示一頁，鄰頁不可
 
 - 已採納並修進計畫：I-1（`_applyFitZoom` 補版面為空與頁碼超界的防呆）、I-3（`goToPosition` 的水平對齊說明改為依 `pdfrx` 的文件層級 `underflowAnchor`，不自行算置中；Page-fit 在可視範圍較寬時的左右留白位置列為待真機確認，逐頁置中留給 Issue 4）、M-1（`didUpdateWidget` 補縮放與 reanchor 同時發生的時序註解）、M-2（測試補 fixture 尺寸前提說明）。
 - 部分採納：I-2 報告建議 `_unitRectFor` 對超界頁碼回傳 `Rect.zero` 並多層範圍檢查。查證後不採納：`PdfSpreadLayout.spreadIndexOf` 已對超界 clamp、空陣列回 0（原始碼註解寫明呼叫端不需自行防呆）；且回傳 `Rect.zero` 經 `fitZoomForUnit` 加邊距後會算出 16×16 的內容而得到上限縮放 8 倍，比拋例外更糟。改採「spread 版面頁數與 `pdfrx` 目前版面不一致（雙頁／裁切切換的暫態）時退回該頁矩形」，頁碼超界一律由呼叫端（delegate 的 `_zoomFor`、`_applyFitZoom`）提前返回。
+
+**2026-10-03 Issue 1 實作完成**（分支 `epic-56/issue-1-fit-mode`；計畫見 `plans/plan-issue-1.md`）
+
+- 做法：新增純 Dart `pdf_paginated_rules.dart`（規則 1 縮放基準／對齊、規則 2 頁內捲動範圍；Issue 4～6 擴充）；`PdfFitSizeDelegate` 繼承 `pdfrx` 公開的 `PdfViewerSizeDelegateLegacy`，只覆寫最小縮放與開書初始縮放，其餘行為沿用；`PdfReaderView` 新增可為空的 `pdfFitMode`（`null`＝完全不干預，沿用 `pdfrx` 現行預設），`ReaderScreen` 一律傳入解析後的值；執行期切換經 `invalidate`＋兩層 postFrameCallback 以 `goToPosition` 重套新基準。
+- 測試：新增 38 例（規則 19＋delegate 9＋widget 8＋reader_screen 2），既有測試一字未改；主線全套基準 3407 通過＋1 略過，分支全套 3445 通過＋1 略過（＋38、0 失敗）；`flutter analyze` 乾淨，l10n 硬編碼字串檢查 PASS。
+- 與計畫的差異（Task 2 Ruling）：`onLayoutInitialized` 在同步 `setZoom` 之外，另排 `scheduleMicrotask` 以 `goToPosition`（單元含邊距左上＋基準縮放）重新定位。原因：`pdfrx` 在 delegate 之後同步 `_goToPage` 把初始頁帶進視野，其縮放取「錨定矩形 fit 值」與「目前縮放」較小者——計畫「翻頁不會破壞基準」的假設只在基準小於等於該 fit（Page-fit／Fit Width）時成立；真實比例 1.0 會被縮到 Fit Width（實測 0.637）。microtask 保證排在那次 `_goToPage` 之後、下一幀繪製前完成。若真機開書閃爍，再改為只在基準大於錨定 fit 時延遲套用。
+- 需要知道的事：(1) 修改前 `pdfrx` 預設實際是 Fit Width 起始而非 Page-fit，現在產品預設（`ReaderScreen` 傳 Page-fit）會讓所有 PDF 開書變成整頁放進螢幕，是刻意的行為變更；(2) Fit 基準只在開書與切換 Fit 模式時套用，雙頁／裁切切換時沿用 `pdfrx`「保留縮放並夾最小縮放」行為（本 Issue 範圍外，Issue 4 處理）。
+- 待真機確認：三種 Fit 模式在實機的初始畫面與旋轉後的表現；Page-fit 在可視範圍較寬時的左右留白位置（目前以 `pdfrx` 行為為準）。

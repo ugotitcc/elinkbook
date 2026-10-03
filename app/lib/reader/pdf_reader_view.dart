@@ -14,6 +14,7 @@ import 'pdf_annotation_decoration.dart';
 import 'pdf_page_info.dart';
 import 'pdf_page_turn_animation.dart';
 import 'pdf_image_filters.dart';
+import 'pdf_paginated_rules.dart';
 import 'pdf_filter_debounce.dart';
 import 'pdf_fit_mode.dart';
 import 'pdf_fit_size_delegate.dart';
@@ -560,6 +561,15 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   void didUpdateWidget(covariant PdfReaderView oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    // Fit 模式切換（epic-56 Issue 1）：pdfrx 更換 sizeDelegateProvider 只會重建
+    // delegate，不會重算最小縮放也不會重新套用縮放，須明確處理。
+    // 與下方雙頁／裁切變更的 reanchor 同時發生時，兩者都排兩層 postFrameCallback，
+    // 依註冊順序先執行本處的縮放、再執行 reanchor 的跳頁；goToPage 的縮放上限是
+    // 目前縮放，所以跳頁不會把剛設好的基準放大。
+    if (oldWidget.pdfFitMode != widget.pdfFitMode) {
+      _scheduleRefit();
+    }
+
     // 加粗強度 debounce：300ms 沉澱後才更新 _committedBoldStrength。
     if (oldWidget.pdfBoldStrength != widget.pdfBoldStrength) {
       _boldDebouncer.schedule(() {
@@ -626,6 +636,43 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     _pendingReanchorPageIndex = null;
     if (pageIndex == null || !mounted || !_controller.isReady) return;
     _jumpToPage(pageIndex); // 走既有的單/雙頁分派邏輯。
+  }
+
+  /// 讓 pdfrx 重新排版（重算最小縮放），再於後續幀把縮放設為新模式的基準。
+  /// 未就緒時不需處理：文件開完後 delegate 會依最新的 [PdfReaderView.pdfFitMode]
+  /// 套用初始縮放。兩層 postFrameCallback 的原因同 [didUpdateWidget] 中
+  /// reanchor 的說明（invalidate 的重排要等到下一幀才完成）。
+  void _scheduleRefit() {
+    if (!_controller.isReady) return;
+    _controller.invalidate();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _applyFitZoom());
+    });
+  }
+
+  /// 把目前頁（雙頁為目前 spread）以新 Fit 模式的基準縮放顯示；使用者先前
+  /// 手動放大的縮放會被重設為基準。以 goToPosition 設定，不受舊最小縮放夾制。
+  void _applyFitZoom() {
+    final mode = widget.pdfFitMode;
+    if (mode == null || !mounted || !_controller.isReady) return;
+    final layout = _controller.layout;
+    final pageNumber = _controller.pageNumber ?? 1;
+    // 與 delegate 的 _zoomFor 同樣防呆：版面為空或頁碼超界時不處理，避免重排
+    // 尚未完成的暫態拋出 RangeError。
+    if (pageNumber < 1 || pageNumber > layout.pageLayouts.length) return;
+    final unit = _unitRectFor(layout, pageNumber);
+    final zoom = fitZoomForUnit(
+      mode: mode,
+      unitRect: unit,
+      pageMargin: _pdfPageMargin,
+      viewSize: _controller.viewSize,
+      maxZoom: kPdfFitMaxZoom,
+    );
+    if (zoom == null) return;
+    unawaited(_controller.goToPosition(
+      documentOffset: unit.inflate(_pdfPageMargin).topLeft,
+      zoom: zoom,
+    ));
   }
 
   @override

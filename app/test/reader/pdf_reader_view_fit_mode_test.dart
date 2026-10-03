@@ -157,6 +157,58 @@ void main() {
         _viewSize.width / cropped.width, _viewSize.height / cropped.height);
     expect(c.currentZoom, closeTo(expected, 0.001));
   });
+
+  testWidgets('執行期由 Page-fit 切到 Fit Width：縮放與最小縮放改為 Fit Width 的基準', (tester) async {
+    final page = await _pageSize(tester, 'test/fixtures/sample.pdf', 0);
+    final fitWidth = _viewSize.width / (page.width + _margin * 2);
+
+    var rendered = 0;
+    await tester.pumpWidget(_app(_view(
+        onRendered: () => rendered++, fit: PdfFitMode.pageFit)));
+    await pumpUntilPdfReady(tester, condition: () => rendered != 0);
+    await pumpUntilPdfReady(tester, maxIterations: 5);
+    final c = _controllerOf(tester);
+    // 前提：切換前確實不同。這依賴 sample.pdf（約 612x792）在 400x400 下
+    // Page-fit 受高度限制（≈0.495）、Fit Width 受寬度限制（≈0.637）；更換
+    // fixture 時需重新確認兩者仍有鑑別力。
+    expect(c.currentZoom, lessThan(fitWidth - 0.01));
+
+    await tester.pumpWidget(_app(_view(
+        onRendered: () => rendered++, fit: PdfFitMode.fitWidth)));
+    await pumpUntilPdfReady(
+      tester,
+      condition: () => (c.currentZoom - fitWidth).abs() < 0.001,
+    );
+    expect(c.currentZoom, closeTo(fitWidth, 0.001));
+    expect(c.minScale, closeTo(fitWidth, 0.001));
+  });
+
+  testWidgets('使用者手動放大後切換 Fit 模式：縮放回到新模式的基準（Review Focus 3）',
+      (tester) async {
+    final page = await _pageSize(tester, 'test/fixtures/sample.pdf', 0);
+    final pageFit = _minOf(_viewSize.width / (page.width + _margin * 2),
+        _viewSize.height / (page.height + _margin * 2));
+
+    var rendered = 0;
+    await tester.pumpWidget(_app(_view(
+        onRendered: () => rendered++, fit: PdfFitMode.fitWidth)));
+    await pumpUntilPdfReady(tester, condition: () => rendered != 0);
+    await pumpUntilPdfReady(tester, maxIterations: 5);
+    final c = _controllerOf(tester);
+
+    // 使用者手動放大到 3 倍。
+    await c.setZoom(Offset.zero, 3.0, duration: Duration.zero);
+    await tester.pump();
+    expect(c.currentZoom, closeTo(3.0, 0.001));
+
+    await tester.pumpWidget(_app(_view(
+        onRendered: () => rendered++, fit: PdfFitMode.pageFit)));
+    await pumpUntilPdfReady(
+      tester,
+      condition: () => (c.currentZoom - pageFit).abs() < 0.001,
+    );
+    expect(c.currentZoom, closeTo(pageFit, 0.001));
+  });
 }
 
 double _minOf(double a, double b) => a < b ? a : b;
