@@ -33,4 +33,5 @@
 - 修正：`library_screen.dart` `_LayoutOverrideDialog._save()` 補 `textConversionOverride: existing.textConversionOverride`。
 - 核對其他整列重建處：`fxl_settings_sheet` 已帶 `textConversionOverride`；`pdf_settings_sheet` 的 `_notifyChanged` 為局部更新（PDF 面板不含該欄位），不屬本缺陷，未更動。
 - 驗證：全套 `flutter test` 3472 通過、1 略過、0 失敗；`flutter analyze` 乾淨；l10n 硬編碼字串雙檢查 PASS。
-- 未做：泛用「整列重建不得清空任何欄位」測試（`epic-56` 審查建議），範圍較大，不在本缺陷內；若要做另立 Issue。
+- 程式審查：完成獨立審查（`reviews/review-code.md`），結論 **Ready to merge**（Critical: 0, Important: 0, Minor: 1）。
+- 未做：泛用「整列重建不得清空任何欄位」測試（`epic-56` 與 `epic-57` 審查建議），範圍較大，不在本缺陷內；若要做另立 Issue。
