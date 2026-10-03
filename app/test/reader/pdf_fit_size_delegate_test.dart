@@ -164,4 +164,58 @@ void main() {
       expect(a, isNot(b));
     });
   });
+
+  group('嚴格最小縮放（逐頁模式，epic-56 Issue 4）', () {
+    PdfViewerSizeDelegate strict(PdfFitMode mode) => PdfFitSizeDelegateProvider(
+          fitMode: mode,
+          unitRectOf: _unitRectOf,
+          pageMargin: 8,
+          strictMinScale: true,
+        ).create();
+
+    test('最小縮放＝單元基準本身：Fit Width 為 400/616', () {
+      expect(_metrics(strict(PdfFitMode.fitWidth)).minScale,
+          closeTo(400 / 616, 1e-9));
+    });
+
+    test('Page-fit 與真實比例同理', () {
+      expect(_metrics(strict(PdfFitMode.pageFit)).minScale,
+          closeTo(400 / 816, 1e-9));
+      expect(_metrics(strict(PdfFitMode.actualSize)).minScale, 1.0);
+    });
+
+    test('比非嚴格模式更嚴格：非嚴格取 min(pdfrx 最小縮放, 基準)，嚴格不會比它小', () {
+      final loose = _metrics(_delegate(PdfFitMode.fitWidth)).minScale;
+      final tight = _metrics(strict(PdfFitMode.fitWidth)).minScale;
+      expect(tight, greaterThanOrEqualTo(loose));
+      expect(tight, closeTo(400 / 616, 1e-9));
+    });
+
+    test('可視尺寸為 0：退回 pdfrx 原本的指標，不丟例外', () {
+      expect(
+        () => _metrics(strict(PdfFitMode.fitWidth), view: Size.zero),
+        returnsNormally,
+      );
+    });
+
+    test('provider 相等性包含 strictMinScale', () {
+      final a = PdfFitSizeDelegateProvider(
+          fitMode: PdfFitMode.pageFit,
+          unitRectOf: _unitRectOf,
+          pageMargin: 8,
+          strictMinScale: true);
+      final b = PdfFitSizeDelegateProvider(
+          fitMode: PdfFitMode.pageFit,
+          unitRectOf: _unitRectOf,
+          pageMargin: 8);
+      final c = PdfFitSizeDelegateProvider(
+          fitMode: PdfFitMode.pageFit,
+          unitRectOf: _unitRectOf,
+          pageMargin: 8,
+          strictMinScale: true);
+      expect(a, isNot(b));
+      expect(a, c);
+      expect(a.hashCode, c.hashCode);
+    });
+  });
 }
