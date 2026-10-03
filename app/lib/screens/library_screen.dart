@@ -1993,6 +1993,7 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
       dualPageCoverAlone: existing.dualPageCoverAlone,
       dualPageDirection: existing.dualPageDirection,
       pdfPageTurnAnimation: existing.pdfPageTurnAnimation,
+      pdfPageTurnMode: existing.pdfPageTurnMode,
       showHeader: existing.showHeader,
       showFooter: existing.showFooter,
       columnMode: existing.columnMode,

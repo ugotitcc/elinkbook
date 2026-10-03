@@ -90,6 +90,7 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
         dualPageCoverAlone: widget.prefs.dualPageCoverAlone,
         dualPageDirection: _dualPageDirection,
         pdfPageTurnAnimation: widget.prefs.pdfPageTurnAnimation,
+        pdfPageTurnMode: widget.prefs.pdfPageTurnMode,
         showHeader: _showHeader,
         showFooter: _showFooter,
         columnMode: widget.prefs.columnMode,

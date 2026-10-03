@@ -1516,6 +1516,36 @@ abstract class AppLocalizations {
   /// **'右翻'**
   String get readerPdfDirectionRtlLabel;
 
+  /// PDF 顯示分頁「翻頁模式」（逐頁／連續捲動）選項群組小標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'翻頁模式'**
+  String get readerPdfPageTurnModeLabel;
+
+  /// PDF 翻頁模式「逐頁」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'逐頁：一次只顯示一頁，換頁瞬間切換'**
+  String get readerPdfPageTurnModePaginatedTooltip;
+
+  /// PDF 翻頁模式「逐頁」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'逐頁'**
+  String get readerPdfPageTurnModePaginatedLabel;
+
+  /// PDF 翻頁模式「連續捲動」選項 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'連續捲動：頁面上下相連，可自由捲動'**
+  String get readerPdfPageTurnModeScrollTooltip;
+
+  /// PDF 翻頁模式「連續捲動」選項短標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'連續捲動'**
+  String get readerPdfPageTurnModeScrollLabel;
+
   /// PDF 顯示分頁「換頁動畫」選項群組小標題
   ///
   /// In zh_TW, this message translates to:

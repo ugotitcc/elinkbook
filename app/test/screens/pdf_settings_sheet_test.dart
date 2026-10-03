@@ -7,6 +7,7 @@ import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
+import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
@@ -440,6 +441,14 @@ void main() {
       (prefs) => notified = prefs,
     );
 
+    // 翻頁模式群組新增後顯示分頁變高，開關被擠出可視區，先捲動到可見（epic-56 Issue 2）。
+    await tester.dragUntilVisible(
+      find.byKey(const Key('pdf_settings_dual_page_cover_alone')),
+      find.byKey(const Key('pdf_settings_display_scroll')),
+      const Offset(0, -100),
+    );
+    await tester.pumpAndSettle();
+
     await tester.tap(
       find.byKey(const Key('pdf_settings_dual_page_cover_alone')),
     );
@@ -653,8 +662,96 @@ void main() {
     expect(find.byType(PdfSettingsSheet), findsNothing);
   });
 
-  testWidgets('換頁動畫兩個選項皆存在', (tester) async {
+  testWidgets('翻頁模式：未覆寫（null）時顯示為逐頁，且不顯示「換頁動畫」選項', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+    expect(find.byKey(const Key('pdf_settings_page_turn_mode_paginated')),
+        findsOneWidget);
+    expect(find.byKey(const Key('pdf_settings_page_turn_mode_scroll')),
+        findsOneWidget);
+    expect(find.byKey(const Key('pdf_settings_page_turn_animation_slide')),
+        findsNothing);
+    expect(find.byKey(const Key('pdf_settings_page_turn_animation_none')),
+        findsNothing);
+  });
+  testWidgets('點擊「連續捲動」後，onChanged 帶入 pdfPageTurnMode=scroll 且「換頁動畫」選項出現',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (p) => notified = p);
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_page_turn_mode_scroll')));
+    await tester.pump();
+    expect(notified?.pdfPageTurnMode, PdfPageTurnMode.scroll);
+    await tester.dragUntilVisible(
+      find.byKey(const Key('pdf_settings_page_turn_animation_slide')),
+      find.byKey(const Key('pdf_settings_display_scroll')),
+      const Offset(0, -100),
+    );
+    expect(find.byKey(const Key('pdf_settings_page_turn_animation_slide')),
+        findsOneWidget);
+  });
+  testWidgets('點擊「逐頁」後，onChanged 帶入 pdfPageTurnMode=paginated 且「換頁動畫」選項隱藏',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(pdfPageTurnMode: PdfPageTurnMode.scroll),
+      (p) => notified = p,
+    );
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_page_turn_mode_paginated')));
+    await tester.pump();
+    expect(notified?.pdfPageTurnMode, PdfPageTurnMode.paginated);
+    expect(find.byKey(const Key('pdf_settings_page_turn_animation_slide')),
+        findsNothing);
+  });
+  testWidgets('隱藏不清除：換頁動畫＝無，切到逐頁再切回連續捲動後，動畫值仍為無並隨 onChanged 帶出',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(
+        pdfPageTurnMode: PdfPageTurnMode.scroll,
+        pdfPageTurnAnimation: PdfPageTurnAnimation.none,
+      ),
+      (p) => notified = p,
+    );
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_page_turn_mode_paginated')));
+    await tester.pump();
+    expect(notified?.pdfPageTurnAnimation, PdfPageTurnAnimation.none,
+        reason: '隱藏時動畫值仍須帶回，不可清成 null 或 slide');
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_page_turn_mode_scroll')));
+    await tester.pump();
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_dual_page_mode_always')));
+    await tester.pump();
+    expect(notified?.pdfPageTurnMode, PdfPageTurnMode.scroll);
+    expect(notified?.pdfPageTurnAnimation, PdfPageTurnAnimation.none,
+        reason: '切回連續捲動後使用者先前的動畫選擇必須還在');
+  });
+  testWidgets('已持久化 pdfPageTurnMode＝scroll 時，調整濾鏡分頁不會清空翻頁模式（回歸檢查）',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(pdfPageTurnMode: PdfPageTurnMode.scroll),
+      (p) => notified = p,
+    );
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_contrast_increment')));
+    await tester.pump();
+    expect(notified?.pdfPageTurnMode, PdfPageTurnMode.scroll,
+        reason: '關鍵斷言：未被清空');
+  });
+  testWidgets('英文介面下翻頁模式小標題正確以英文渲染', (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {},
+        locale: const Locale('en'));
+    expect(find.text('Page-turn mode'), findsOneWidget);
+  });
+  testWidgets('換頁動畫兩個選項皆存在', (tester) async {
+    await _pumpSheet(tester, const BookReaderPrefs(pdfPageTurnMode: PdfPageTurnMode.scroll), (_) {});
 
     // 捲動到換頁動畫選項可見（需要更多捲動量）
     await tester.dragUntilVisible(
@@ -680,7 +777,7 @@ void main() {
     BookReaderPrefs? notified;
     await _pumpSheet(
       tester,
-      BookReaderPrefs.empty,
+      const BookReaderPrefs(pdfPageTurnMode: PdfPageTurnMode.scroll),
       (prefs) => notified = prefs,
     );
 
@@ -706,7 +803,7 @@ void main() {
     BookReaderPrefs? notified;
     await _pumpSheet(
       tester,
-      const BookReaderPrefs(pdfPageTurnAnimation: PdfPageTurnAnimation.none),
+      const BookReaderPrefs(pdfPageTurnMode: PdfPageTurnMode.scroll, pdfPageTurnAnimation: PdfPageTurnAnimation.none),
       (prefs) => notified = prefs,
     );
 
@@ -907,7 +1004,7 @@ void main() {
 
   testWidgets('換頁動畫群組改用 EBOptionChipGroup 後，2 個選項皆顯示短標籤'
       '（epic-39-layout-settings-redesign Issue 5）', (tester) async {
-    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+    await _pumpSheet(tester, const BookReaderPrefs(pdfPageTurnMode: PdfPageTurnMode.scroll), (_) {});
 
     for (final item in [('slide', '滑動'), ('none', '無')]) {
       final (suffix, label) = item;

@@ -11,6 +11,7 @@ import 'page_turn_mode.dart';
 import 'pdf_crop_mode.dart';
 import 'pdf_fit_mode.dart';
 import 'pdf_page_turn_animation.dart';
+import 'pdf_page_turn_mode.dart';
 import 'reader_prefs_manager.dart';
 import 'reading_position.dart';
 import 'reading_position_repository.dart';
@@ -220,6 +221,7 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       dualPageDirection: book.dualPageDirection ?? DualPageDirection.rtl,
       pdfPageTurnAnimation:
           book.pdfPageTurnAnimation ?? PdfPageTurnAnimation.slide,
+      pdfPageTurnMode: book.pdfPageTurnMode ?? PdfPageTurnMode.paginated,
       showHeader: book.showHeader ?? global.reading.showHeader,
       showFooter: book.showFooter ?? global.reading.showFooter,
       navZoneActions: resolveZoneActions(

@@ -6,6 +6,7 @@ import 'package:elinkbook/reader/nav_zone_mode.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
+import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 import 'package:elinkbook/reader/resolved_preferences.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
 
@@ -49,6 +50,7 @@ void main() {
     expect(resolved.dualPageDirection, DualPageDirection.ltr);
     expect(resolved.navZoneActions, rightFlipZoneTemplate);
     expect(resolved.showNavZoneDebugOverlay, isFalse);
+    expect(resolved.pdfPageTurnMode, PdfPageTurnMode.paginated);
   });
 
   test('volumeKeyEnabled 未傳入時預設 true', () {

@@ -833,6 +833,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get readerPdfDirectionRtlLabel => '右翻';
 
   @override
+  String get readerPdfPageTurnModeLabel => '翻頁模式';
+
+  @override
+  String get readerPdfPageTurnModePaginatedTooltip => '逐頁：一次只顯示一頁，換頁瞬間切換';
+
+  @override
+  String get readerPdfPageTurnModePaginatedLabel => '逐頁';
+
+  @override
+  String get readerPdfPageTurnModeScrollTooltip => '連續捲動：頁面上下相連，可自由捲動';
+
+  @override
+  String get readerPdfPageTurnModeScrollLabel => '連續捲動';
+
+  @override
   String get readerPdfPageTurnAnimationLabel => '換頁動畫';
 
   @override
@@ -3068,6 +3083,21 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get readerPdfDirectionRtlLabel => '右翻';
 
   @override
+  String get readerPdfPageTurnModeLabel => '翻页模式';
+
+  @override
+  String get readerPdfPageTurnModePaginatedTooltip => '逐页：一次只显示一页，换页瞬间切换';
+
+  @override
+  String get readerPdfPageTurnModePaginatedLabel => '逐页';
+
+  @override
+  String get readerPdfPageTurnModeScrollTooltip => '连续滚动：页面上下相连，可自由滚动';
+
+  @override
+  String get readerPdfPageTurnModeScrollLabel => '连续滚动';
+
+  @override
   String get readerPdfPageTurnAnimationLabel => '换页动画';
 
   @override
@@ -5301,6 +5331,21 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerPdfDirectionRtlLabel => '右翻';
+
+  @override
+  String get readerPdfPageTurnModeLabel => '翻頁模式';
+
+  @override
+  String get readerPdfPageTurnModePaginatedTooltip => '逐頁：一次只顯示一頁，換頁瞬間切換';
+
+  @override
+  String get readerPdfPageTurnModePaginatedLabel => '逐頁';
+
+  @override
+  String get readerPdfPageTurnModeScrollTooltip => '連續捲動：頁面上下相連，可自由捲動';
+
+  @override
+  String get readerPdfPageTurnModeScrollLabel => '連續捲動';
 
   @override
   String get readerPdfPageTurnAnimationLabel => '換頁動畫';

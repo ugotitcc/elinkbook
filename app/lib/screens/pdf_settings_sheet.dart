@@ -7,6 +7,7 @@ import '../reader/dual_page_mode.dart';
 import '../reader/pdf_fit_mode.dart';
 import '../reader/pdf_crop_mode.dart';
 import '../reader/pdf_page_turn_animation.dart';
+import '../reader/pdf_page_turn_mode.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_option_chip_group.dart';
 import 'widgets/eb_stepper.dart';
@@ -55,6 +56,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   late bool _dualPageCoverAlone;
   late DualPageDirection _dualPageDirection;
   late PdfPageTurnAnimation _pageTurnAnimation;
+  late PdfPageTurnMode _pageTurnMode;
   late bool _showFooter;
   late bool _fullscreen;
 
@@ -73,6 +75,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
         widget.prefs.dualPageDirection ?? DualPageDirection.rtl;
     _pageTurnAnimation =
         widget.prefs.pdfPageTurnAnimation ?? PdfPageTurnAnimation.slide;
+    _pageTurnMode = widget.prefs.pdfPageTurnMode ?? PdfPageTurnMode.paginated;
     _showFooter = widget.prefs.showFooter ?? true;
     _fullscreen = widget.prefs.fullscreen ?? false;
   }
@@ -100,6 +103,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
         dualPageCoverAlone: _dualPageCoverAlone,
         dualPageDirection: _dualPageDirection,
         pdfPageTurnAnimation: _pageTurnAnimation,
+        pdfPageTurnMode: _pageTurnMode,
         showFooter: _showFooter,
         fullscreen: _fullscreen,
       ),
@@ -223,6 +227,22 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
         l10n.readerPdfDirectionRtlLabel,
       ),
     ];
+    final pageTurnModeOptions = [
+      (
+        PdfPageTurnMode.paginated,
+        'paginated',
+        Icons.looks_one,
+        l10n.readerPdfPageTurnModePaginatedTooltip,
+        l10n.readerPdfPageTurnModePaginatedLabel,
+      ),
+      (
+        PdfPageTurnMode.scroll,
+        'scroll',
+        Icons.swap_vert,
+        l10n.readerPdfPageTurnModeScrollTooltip,
+        l10n.readerPdfPageTurnModeScrollLabel,
+      ),
+    ];
     final pageTurnAnimationOptions = [
       (PdfPageTurnAnimation.slide, 'slide', Icons.swipe, l10n.readerPdfPageTurnAnimationSlide, l10n.readerPdfPageTurnAnimationSlide),
       (PdfPageTurnAnimation.none, 'none', Icons.flash_on, l10n.readerPdfPageTurnAnimationNone, l10n.readerPdfPageTurnAnimationNone),
@@ -250,6 +270,26 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               groupValue: _fitMode,
               onSelected: (v) => setState(() {
                 _fitMode = v;
+                _notifyChanged();
+              }),
+            ),
+            const SizedBox(height: 16),
+            Text(l10n.readerPdfPageTurnModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            EBOptionChipGroup<PdfPageTurnMode>(
+              items: pageTurnModeOptions.map((option) {
+                final (mode, keySuffix, icon, tooltip, label) = option;
+                return EBOptionChipItem<PdfPageTurnMode>(
+                  itemKey: Key('pdf_settings_page_turn_mode_$keySuffix'),
+                  value: mode,
+                  icon: icon,
+                  label: label,
+                  tooltip: tooltip,
+                );
+              }).toList(),
+              groupValue: _pageTurnMode,
+              onSelected: (v) => setState(() {
+                _pageTurnMode = v;
                 _notifyChanged();
               }),
             ),
@@ -330,26 +370,28 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                 _notifyChanged();
               }),
             ),
-            const SizedBox(height: 16),
-            Text(l10n.readerPdfPageTurnAnimationLabel, style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            EBOptionChipGroup<PdfPageTurnAnimation>(
-              items: pageTurnAnimationOptions.map((option) {
-                final (animation, keySuffix, icon, tooltip, label) = option;
-                return EBOptionChipItem<PdfPageTurnAnimation>(
-                  itemKey: Key('pdf_settings_page_turn_animation_$keySuffix'),
-                  value: animation,
-                  icon: icon,
-                  label: label,
-                  tooltip: tooltip,
-                );
-              }).toList(),
-              groupValue: _pageTurnAnimation,
-              onSelected: (v) => setState(() {
-                _pageTurnAnimation = v;
-                _notifyChanged();
-              }),
-            ),
+            if (_pageTurnMode == PdfPageTurnMode.scroll) ...[
+              const SizedBox(height: 16),
+              Text(l10n.readerPdfPageTurnAnimationLabel, style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              EBOptionChipGroup<PdfPageTurnAnimation>(
+                items: pageTurnAnimationOptions.map((option) {
+                  final (animation, keySuffix, icon, tooltip, label) = option;
+                  return EBOptionChipItem<PdfPageTurnAnimation>(
+                    itemKey: Key('pdf_settings_page_turn_animation_$keySuffix'),
+                    value: animation,
+                    icon: icon,
+                    label: label,
+                    tooltip: tooltip,
+                  );
+                }).toList(),
+                groupValue: _pageTurnAnimation,
+                onSelected: (v) => setState(() {
+                  _pageTurnAnimation = v;
+                  _notifyChanged();
+                }),
+              ),
+            ],
           ],
         ),
       ),

@@ -1119,6 +1119,26 @@
   "@readerPdfDirectionRtlLabel": {
     "description": "PDF 頁面方向「右到左」選項短標籤"
   },
+  "readerPdfPageTurnModeLabel": "翻頁模式",
+  "@readerPdfPageTurnModeLabel": {
+    "description": "PDF 顯示分頁「翻頁模式」（逐頁／連續捲動）選項群組小標題"
+  },
+  "readerPdfPageTurnModePaginatedTooltip": "逐頁：一次只顯示一頁，換頁瞬間切換",
+  "@readerPdfPageTurnModePaginatedTooltip": {
+    "description": "PDF 翻頁模式「逐頁」選項 tooltip"
+  },
+  "readerPdfPageTurnModePaginatedLabel": "逐頁",
+  "@readerPdfPageTurnModePaginatedLabel": {
+    "description": "PDF 翻頁模式「逐頁」選項短標籤"
+  },
+  "readerPdfPageTurnModeScrollTooltip": "連續捲動：頁面上下相連，可自由捲動",
+  "@readerPdfPageTurnModeScrollTooltip": {
+    "description": "PDF 翻頁模式「連續捲動」選項 tooltip"
+  },
+  "readerPdfPageTurnModeScrollLabel": "連續捲動",
+  "@readerPdfPageTurnModeScrollLabel": {
+    "description": "PDF 翻頁模式「連續捲動」選項短標籤"
+  },
   "readerPdfPageTurnAnimationLabel": "換頁動畫",
   "@readerPdfPageTurnAnimationLabel": {
     "description": "PDF 顯示分頁「換頁動畫」選項群組小標題"

@@ -7,6 +7,7 @@ import 'pdf_crop_mode.dart';
 import 'pdf_crop_rect.dart';
 import 'pdf_fit_mode.dart';
 import 'pdf_page_turn_animation.dart';
+import 'pdf_page_turn_mode.dart';
 import 'screen_orientation_setting.dart';
 import 'text_conversion_mode.dart';
 import 'writing_mode.dart';
@@ -71,6 +72,9 @@ class BookReaderPrefs {
   /// （預設，200ms 滑動動畫，即現行既有行為）。
   final PdfPageTurnAnimation? pdfPageTurnAnimation;
 
+  /// PDF 翻頁模式（epic-56 Issue 2）。null=逐頁（預設）。
+  final PdfPageTurnMode? pdfPageTurnMode;
+
   final bool? showHeader; // null=true（預設顯示頁首，僅 EPUB 有效，見 spec.md「頁首/頁尾顯示切換」）
   final bool? showFooter; // null=true（預設顯示頁尾，EPUB／PDF 皆有效）
 
@@ -115,6 +119,7 @@ class BookReaderPrefs {
     this.dualPageCoverAlone,
     this.dualPageDirection,
     this.pdfPageTurnAnimation,
+    this.pdfPageTurnMode,
     this.showHeader,
     this.showFooter,
     this.columnMode,
@@ -157,6 +162,7 @@ class BookReaderPrefs {
           dualPageCoverAlone == null ? null : (dualPageCoverAlone! ? 1 : 0),
       'dual_page_direction': dualPageDirection?.name,
       'pdf_page_turn_animation': pdfPageTurnAnimation?.name,
+      'pdf_page_turn_mode': pdfPageTurnMode?.name,
       'show_header': showHeader == null ? null : (showHeader! ? 1 : 0),
       'show_footer': showFooter == null ? null : (showFooter! ? 1 : 0),
       'column_mode': columnMode?.name,
@@ -213,6 +219,8 @@ class BookReaderPrefs {
           DualPageDirection.values, map['dual_page_direction'] as String?),
       pdfPageTurnAnimation: enumByNameOrNull(
           PdfPageTurnAnimation.values, map['pdf_page_turn_animation'] as String?),
+      pdfPageTurnMode: enumByNameOrNull(
+          PdfPageTurnMode.values, map['pdf_page_turn_mode'] as String?),
       showHeader:
           map['show_header'] == null ? null : (map['show_header'] as int) == 1,
       showFooter:
@@ -257,6 +265,7 @@ class BookReaderPrefs {
       other.dualPageCoverAlone == dualPageCoverAlone &&
       other.dualPageDirection == dualPageDirection &&
       other.pdfPageTurnAnimation == pdfPageTurnAnimation &&
+      other.pdfPageTurnMode == pdfPageTurnMode &&
       other.showHeader == showHeader &&
       other.showFooter == showFooter &&
       other.columnMode == columnMode &&
@@ -266,6 +275,7 @@ class BookReaderPrefs {
 
   @override
   int get hashCode => Object.hashAll([
+        pdfPageTurnMode,
         fontFamily,
         fontSize,
         fontWeight,
@@ -332,6 +342,7 @@ class BookReaderPrefs {
     bool? dualPageCoverAlone,
     DualPageDirection? dualPageDirection,
     PdfPageTurnAnimation? pdfPageTurnAnimation,
+    PdfPageTurnMode? pdfPageTurnMode,
     bool? showHeader,
     bool? showFooter,
     ColumnMode? columnMode,
@@ -367,6 +378,7 @@ class BookReaderPrefs {
       dualPageCoverAlone: dualPageCoverAlone ?? this.dualPageCoverAlone,
       dualPageDirection: dualPageDirection ?? this.dualPageDirection,
       pdfPageTurnAnimation: pdfPageTurnAnimation ?? this.pdfPageTurnAnimation,
+      pdfPageTurnMode: pdfPageTurnMode ?? this.pdfPageTurnMode,
       showHeader: showHeader ?? this.showHeader,
       showFooter: showFooter ?? this.showFooter,
       columnMode: columnMode ?? this.columnMode,
@@ -378,7 +390,7 @@ class BookReaderPrefs {
   }
 
   /// 只保留 [ReaderSettingsSheet]（流式 EPUB 版面設定）實際呈現的 21 個
-  /// 欄位，其餘 11 個欄位（`pageMargins`、7 個 `pdf*`、3 個 `dualPage*`）
+  /// 欄位，其餘 12 個欄位（`pageMargins`、8 個 `pdf*`、3 個 `dualPage*`）
   /// 一律強制設為 `null`，**不論來源物件實際內容為何**——epic-28-reader-
   /// settings-enhancements Issue 3「欄位污染防護」，見 spec.md「資料
   /// 模型」。「另存為預設集」與「書籍設定複製」寫入 `LayoutPreset.prefs`

@@ -7,6 +7,7 @@ import 'pdf_crop_mode.dart';
 import 'pdf_crop_rect.dart';
 import 'pdf_fit_mode.dart';
 import 'pdf_page_turn_animation.dart';
+import 'pdf_page_turn_mode.dart';
 import 'screen_orientation_setting.dart';
 import 'writing_mode.dart';
 import 'zone_action.dart';
@@ -67,6 +68,10 @@ class ResolvedPreferences {
   /// （預設維持現行 200ms 滑動動畫）。
   final PdfPageTurnAnimation pdfPageTurnAnimation;
 
+  /// PDF 翻頁模式（epic-56 Issue 2）：恆非 null，resolve() 內
+  /// book.pdfPageTurnMode ?? PdfPageTurnMode.paginated（無全域預設層）。
+  final PdfPageTurnMode pdfPageTurnMode;
+
   final bool showHeader;
   final bool showFooter;
 
@@ -118,6 +123,7 @@ class ResolvedPreferences {
     required this.dualPageCoverAlone,
     required this.dualPageDirection,
     this.pdfPageTurnAnimation = PdfPageTurnAnimation.slide,
+    this.pdfPageTurnMode = PdfPageTurnMode.paginated,
     required this.showHeader,
     required this.showFooter,
     required this.navZoneActions,

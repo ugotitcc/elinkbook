@@ -54,6 +54,7 @@ import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/reader/bookmark.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
+import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/book_action_sheet.dart';
 import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
@@ -4699,6 +4700,39 @@ void main() {
 
   // ─── Task 5：_LayoutOverrideDialog ─────────────────────────────
 
+  testWidgets('版面覆寫：儲存後既有的 PDF 翻頁模式原樣保留（epic-56 Issue 2 回歸）',
+      (tester) async {
+    final book = _testBook(id: '1', title: '書A');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+    final bookReaderPrefsRepository = FakeBookReaderPrefsRepository();
+    await bookReaderPrefsRepository.save(
+      '1',
+      const BookReaderPrefs(pdfPageTurnMode: PdfPageTurnMode.scroll),
+    );
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: repository,
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          bookReaderPrefsRepository: bookReaderPrefsRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_action_layout_override')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('layout_override_page_turn_mode_scroll')));
+    await tester.tap(find.byKey(const Key('layout_override_save_button')));
+    await tester.pumpAndSettle();
+    final saved = await bookReaderPrefsRepository.load('1');
+    expect(saved.pageTurnModeOverride, PageTurnMode.scroll);
+    expect(saved.pdfPageTurnMode, PdfPageTurnMode.scroll,
+        reason: '關鍵斷言：版面覆寫整列重建不可把 PDF 翻頁模式清成 null');
+  });
   testWidgets('bookReaderPrefsRepository 未提供時，「版面覆寫」選項不顯示', (tester) async {
     final book = _testBook(id: '1', title: '書A');
     await pumpLocalizedWidget(

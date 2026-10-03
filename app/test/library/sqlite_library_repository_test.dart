@@ -2542,6 +2542,189 @@ void main() {
     expect(row['text_conversion_override'], 'toTraditional');
   });
 
+  test('全新安裝的 book_reader_prefs 表包含 pdf_page_turn_mode 欄位（version 28 起 onCreate 已含括）',
+      () async {
+    await repository.insertBook(_book('b_page_turn_mode'));
+    await repository.database.insert('book_reader_prefs', {
+      'book_id': 'b_page_turn_mode',
+      'pdf_page_turn_mode': 'scroll',
+    });
+    final row = (await repository.database.query('book_reader_prefs',
+            where: 'book_id = ?', whereArgs: ['b_page_turn_mode']))
+        .single;
+    expect(row['pdf_page_turn_mode'], 'scroll');
+  });
+  test('既有 version 27 裝置升級到 version 28，book_reader_prefs 新增 pdf_page_turn_mode 欄位，既有 PDF 偏好完整保留',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v27_to_v28_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 27,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              is_fixed_layout INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL,
+              content_fingerprint TEXT,
+              position_updated_at INTEGER,
+              position_synced_server_updated_at TEXT
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_family TEXT,
+              font_size REAL,
+              font_weight REAL,
+              line_height REAL,
+              paragraph_spacing REAL,
+              page_margins REAL,
+              text_align TEXT,
+              publisher_styles INTEGER,
+              writing_mode_override TEXT,
+              page_turn_mode_override TEXT,
+              screen_orientation_override TEXT,
+              pdf_fit_mode TEXT,
+              pdf_contrast REAL,
+              pdf_brightness REAL,
+              pdf_bold_strength REAL,
+              pdf_crop_mode TEXT,
+              pdf_crop_rect TEXT,
+              dual_page_mode TEXT,
+              dual_page_cover_alone INTEGER,
+              dual_page_direction TEXT,
+              show_header INTEGER,
+              show_footer INTEGER,
+              column_mode TEXT,
+              column_size REAL,
+              margin_top REAL,
+              margin_bottom REAL,
+              margin_left REAL,
+              margin_right REAL,
+              fullscreen INTEGER,
+              letter_spacing REAL,
+              pdf_page_turn_animation TEXT,
+              text_conversion_override TEXT
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有 PDF',
+      'format': 'pdf',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.insert('book_reader_prefs', {
+      'book_id': 'b1',
+      'pdf_fit_mode': 'fitWidth',
+      'pdf_contrast': 20.0,
+      'dual_page_mode': 'always',
+      'pdf_page_turn_animation': 'none',
+      'text_conversion_override': 'toTraditional',
+    });
+    await oldDb.close();
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+    final row = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(row['pdf_fit_mode'], 'fitWidth');
+    expect(row['pdf_contrast'], 20.0);
+    expect(row['dual_page_mode'], 'always');
+    expect(row['pdf_page_turn_animation'], 'none');
+    expect(row['text_conversion_override'], 'toTraditional');
+    expect(row['pdf_page_turn_mode'], isNull);
+    await upgraded.database.update(
+      'book_reader_prefs',
+      {'pdf_page_turn_mode': 'scroll'},
+      where: 'book_id = ?',
+      whereArgs: ['b1'],
+    );
+    final updated = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(updated['pdf_page_turn_mode'], 'scroll');
+  });
+  test(
+      '既有 version 1 裝置（無 book_reader_prefs 表）跳級升級到 version 28，'
+      'book_reader_prefs 表正確建立含 pdf_page_turn_mode，且不拋出 duplicate column name 例外',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v1_to_v28_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 1,
+        onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '最早期書籍',
+      'format': 'pdf',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.close();
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+    await upgraded.database.insert('book_reader_prefs', {
+      'book_id': 'b1',
+      'pdf_page_turn_mode': 'paginated',
+    });
+    final row = (await upgraded.database.query('book_reader_prefs',
+            where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(row['pdf_page_turn_mode'], 'paginated');
+  });
   test('全新安裝的 custom_fonts 表可用（version 16 起 onCreate 已含括）', () async {
     await repository.database.insert('custom_fonts', {
       'display_name': '我的字型',
@@ -4574,10 +4757,10 @@ void main() {
               'isFullTextSearchAvailable 仍須為 true');
     });
 
-    test('全新安裝（onCreate 直接建到 version 27）：isFullTextSearchAvailable 為 true，'
+    test('全新安裝（onCreate 直接建到 version 28）：isFullTextSearchAvailable 為 true，'
         '行為與現行版本一致（零回歸）', () async {
       expect(repository.isFullTextSearchAvailable, isTrue);
-      expect(await repository.database.getVersion(), 27);
+      expect(await repository.database.getVersion(), 28);
     });
   });
 }
