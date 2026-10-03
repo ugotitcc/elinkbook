@@ -1,6 +1,6 @@
 # `epic-57-layout-override-save-drops-fields` （缺陷）書架「版面覆寫」儲存時整列重建漏帶 `textConversionOverride`，會清掉該書的簡繁轉換覆寫
 
-**狀態：** 🟡 開發中 (Active)（已修正，待合併）
+**狀態：** 🟡 開發中 (Active)（已合併，待歸檔）
 **存放路徑：** `docs/epics/epic-57-layout-override-save-drops-fields/`
 **關聯 PRD 章節：** FR-48 簡繁轉換；關聯已歸檔 `epic-42-text-conversion`
 
@@ -35,3 +35,8 @@
 - 驗證：全套 `flutter test` 3472 通過、1 略過、0 失敗；`flutter analyze` 乾淨；l10n 硬編碼字串雙檢查 PASS。
 - 程式審查：完成獨立審查（`reviews/review-code.md`），結論 **Ready to merge**（Critical: 0, Important: 0, Minor: 1）。
 - 未做：泛用「整列重建不得清空任何欄位」測試（`epic-56` 與 `epic-57` 審查建議），範圍較大，不在本缺陷內；若要做另立 Issue。
+
+**2026-10-03 程式審查與 PR 合併**
+
+- 程式審查：`reviews/review-code.md`，0 Critical／0 Important／1 Minor，結論可合併。M-1（單欄位抽測無法防止未來再漏欄位）不在本缺陷處理，已登錄為 `epic-54-architecture-optimization` Issue 10。
+- PR #315（`epic-57/layout-override-save` → `main`）已合併，合併 commit `a8481f2c`。修正全數完成，待歸檔。
