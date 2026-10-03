@@ -92,3 +92,8 @@ PDF 新增「翻頁模式」：**逐頁**（一次只顯示一頁，鄰頁不可
 
 - 已採納並修進 `issues.md`：I-1（Issue 5 補 `onReadingActivity` 回呼接線合約，`ReadingSession` 由 `ReaderScreen` 私有持有、`PdfReaderView` 不得自行引用）、I-2（Issue 4 明訂暫態降級：長頁的相對步進先一律整頁換頁，頁內步進與上一頁落底端留待 Issue 5）、M-1（發版限制統一為「1～6 全數完成才可發布」）、M-2（逐頁下所有導覽動畫時長強制為零）、M-3（Issue 6 手勢時間戳用 `clock.now()`）。
 - 部分採納：I-3 採納「補參數與縮放機制」——`pdfrx` 2.4.7 確有 `sizeDelegateProvider`（不可與已棄用的 `minScale`、`calculateInitialZoom` 並用），Issue 1 改為透過它提供初始與最小縮放；但報告建議的 `pdfFitMode` 非空預設為 Page-fit 不採納，改為可為空、`null` 表示沿用 `pdfrx` 現有預設，理由是 widget 層預設要保守以保護既有大量 `PdfReaderView` 測試（與 `pdfPageTurnMode` 同一原則），產品預設一律由 `ReaderScreen` 傳入。
+
+**2026-10-03 Issue 1 計畫審查與修訂**（審查報告在 `reviews/review-plan-issue-1.md`，不進版控；0 Critical／3 Important／3 Minor；計畫見 `plans/plan-issue-1.md`）
+
+- 已採納並修進計畫：I-1（`_applyFitZoom` 補版面為空與頁碼超界的防呆）、I-3（`goToPosition` 的水平對齊說明改為依 `pdfrx` 的文件層級 `underflowAnchor`，不自行算置中；Page-fit 在可視範圍較寬時的左右留白位置列為待真機確認，逐頁置中留給 Issue 4）、M-1（`didUpdateWidget` 補縮放與 reanchor 同時發生的時序註解）、M-2（測試補 fixture 尺寸前提說明）。
+- 部分採納：I-2 報告建議 `_unitRectFor` 對超界頁碼回傳 `Rect.zero` 並多層範圍檢查。查證後不採納：`PdfSpreadLayout.spreadIndexOf` 已對超界 clamp、空陣列回 0（原始碼註解寫明呼叫端不需自行防呆）；且回傳 `Rect.zero` 經 `fitZoomForUnit` 加邊距後會算出 16×16 的內容而得到上限縮放 8 倍，比拋例外更糟。改採「spread 版面頁數與 `pdfrx` 目前版面不一致（雙頁／裁切切換的暫態）時退回該頁矩形」，頁碼超界一律由呼叫端（delegate 的 `_zoomFor`、`_applyFitZoom`）提前返回。
