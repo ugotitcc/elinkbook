@@ -855,6 +855,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readerPdfDirectionRtlLabel => 'RTL';
 
   @override
+  String get readerPdfPageTurnModeLabel => 'Page-turn mode';
+
+  @override
+  String get readerPdfPageTurnModePaginatedTooltip =>
+      'Paged: one page at a time, instant page switch';
+
+  @override
+  String get readerPdfPageTurnModePaginatedLabel => 'Paged';
+
+  @override
+  String get readerPdfPageTurnModeScrollTooltip =>
+      'Continuous scroll: pages are connected, scroll freely';
+
+  @override
+  String get readerPdfPageTurnModeScrollLabel => 'Scroll';
+
+  @override
   String get readerPdfPageTurnAnimationLabel => 'Page-turn animation';
 
   @override
