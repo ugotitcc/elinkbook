@@ -3468,6 +3468,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           dualPageCoverAlone: resolved.dualPageCoverAlone,
           dualPageDirection: resolved.dualPageDirection,
           pdfPageTurnAnimation: resolved.pdfPageTurnAnimation,
+          pdfFitMode: resolved.pdfFitMode,
           isLandscape: isLandscape,
           pdfContrast: resolved.pdfContrast,
           pdfBrightness: resolved.pdfBrightness,

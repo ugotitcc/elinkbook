@@ -23,7 +23,7 @@
 - **語言**：文件、註解、測試名稱一律正體中文（zh-TW）；程式碼命名維持英文慣例。
 - **零回歸**：`pdfFitMode` 為 `null`（widget 層預設）時，`PdfReaderView` 的行為必須與修改前完全相同；既有 `pdf_reader_view_*` 測試不得為了通過而修改。
 - **只動連續捲動路徑**：逐頁幾何、翻頁模式偏好、頁內步進、滑動翻頁都不在本 Issue（見 `issues.md` Issue 2～6）。
-- **規則 1（縮放基準）**：Page-fit＝寬高兩個維度各自的比例取較小者；Fit Width＝可視寬度除以內容寬度；真實比例＝固定 1.0（1 PDF point＝1 邏輯像素）；使用者可在基準之上放大、不可縮到基準以下。連續捲動時基準以「開書當下（或切換 Fit 模式、視窗尺寸改變當下）的目前頁尺寸」換算，捲動途中不隨頁面重算。內容尺寸一律含 `pdfrx` 頁邊距（各邊加 `margin`）。
+- **規則 1（縮放基準）**：Page-fit＝寬高兩個維度各自的比例取較小者；Fit Width＝可視寬度除以內容寬度；真實比例＝固定 1.0（1 PDF point＝1 邏輯像素）；（連續捲動不強制不可縮到基準以下，見 spec 規則 1 與 epic.md 審查記錄 I-3）。連續捲動時基準以「開書當下（或切換 Fit 模式、視窗尺寸改變當下）的目前頁尺寸」換算，捲動途中不隨頁面重算。內容尺寸一律含 `pdfrx` 頁邊距（各邊加 `margin`）。
 - **規則 2（頁內捲動範圍）**：縱向最大捲動量＝max(0，縮放後內容高度－可視高度)。
 - **單元**：未開雙頁模式＝一頁（裁切時為裁切後矩形）；開雙頁模式＝一個 spread 的合併矩形。
 - **測試範圍**（CLAUDE.md）：單一 Task 只跑異動觸及的測試檔；完整 `flutter test`（無參數）只在最後一個 Task 跑一次（約 6 分鐘，用 `run_in_background`，**必須在 `app/` 目錄下執行**）。
@@ -68,7 +68,7 @@
 - Consumes：無。
 - Produces：分支 `epic-56/issue-1-fit-mode`，後續 Task 都在這個 worktree 的 `app/` 下執行。
 
-- [ ] **Step 1：在 `main` 提交計畫**
+- [x] **Step 1：在 `main` 提交計畫**
 
 先把 `issues.md` Issue 1 的 `**Status:** ready-for-agent` 改為 `**Status:** in-progress`，然後（在儲存庫根目錄，不需要 `cd`）：
 
@@ -79,7 +79,7 @@ git commit -m "docs(epic-56): Issue 1 實作計畫
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 2：建立 worktree 並安裝依賴**
+- [x] **Step 2：建立 worktree 並安裝依賴**
 
 ```bash
 git worktree add .worktrees/epic-56-issue-1-fit-mode -b epic-56/issue-1-fit-mode
@@ -88,7 +88,7 @@ cd .worktrees/epic-56-issue-1-fit-mode/app && flutter pub get
 
 預期：`Got dependencies!`。
 
-- [ ] **Step 3：確認基準測試通過並記下數字**
+- [x] **Step 3：確認基準測試通過並記下數字**
 
 ```bash
 flutter test test/reader/pdf_reader_view_*_test.dart test/screens/reader_screen_test.dart test/screens/pdf_settings_sheet_test.dart
@@ -117,7 +117,7 @@ double? fitZoomForUnit({required PdfFitMode mode, required Rect unitRect, requir
 
 `fitOrigin` 回傳「縮放後的內容左上角在可視區域座標系的位置」：Issue 4 的逐頁置中會用它；本 Issue 只用測試鎖定規則 1 的對齊語意，不在產品程式碼中呼叫。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 建立 `app/test/reader/pdf_paginated_rules_test.dart`：
 
@@ -337,12 +337,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認失敗**
+- [x] **Step 2：確認失敗**
 
 Run：`flutter test test/reader/pdf_paginated_rules_test.dart`
 Expected：編譯失敗，`Error: Method not found: 'fitBaseScale'`（檔案不存在）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 建立 `app/lib/reader/pdf_paginated_rules.dart`：
 
@@ -434,12 +434,12 @@ double? fitZoomForUnit({
 }
 ```
 
-- [ ] **Step 4：確認通過**
+- [x] **Step 4：確認通過**
 
 Run：`flutter test test/reader/pdf_paginated_rules_test.dart`
 Expected：19 個全數 PASS（fitBaseScale 6、maxVerticalScroll 3、fitOrigin 4、fitZoomForUnit 6）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/reader/pdf_paginated_rules.dart app/test/reader/pdf_paginated_rules_test.dart
@@ -480,7 +480,7 @@ Rect _unitRectFor(PdfPageLayout layout, int pageNumber); // State 方法
 static const double _pdfPageMargin = 8.0;     // State 常數，同時傳給 PdfViewerParams.margin
 ```
 
-- [ ] **Step 1：寫 delegate 的失敗測試**
+- [x] **Step 1：寫 delegate 的失敗測試**
 
 建立 `app/test/reader/pdf_fit_size_delegate_test.dart`：
 
@@ -608,12 +608,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認失敗**
+- [x] **Step 2：確認失敗**
 
 Run：`flutter test test/reader/pdf_fit_size_delegate_test.dart`
 Expected：編譯失敗，找不到 `pdf_fit_size_delegate.dart`。
 
-- [ ] **Step 3：實作 delegate**
+- [x] **Step 3：實作 delegate**
 
 建立 `app/lib/reader/pdf_fit_size_delegate.dart`：
 
@@ -781,12 +781,12 @@ class PdfFitSizeDelegate extends PdfViewerSizeDelegateLegacy {
 
 注意：`calculateMetrics` 的參數 `pageMargin` 會遮蔽欄位 `this.pageMargin`，這是 pdfrx 介面簽章所致；方法內改用 `super.calculateMetrics` 傳入的參數，`_zoomFor` 使用的是欄位（建構時傳入的相同值），兩者必須相等（見 provider 註解）。
 
-- [ ] **Step 4：確認 delegate 測試通過**
+- [x] **Step 4：確認 delegate 測試通過**
 
 Run：`flutter test test/reader/pdf_fit_size_delegate_test.dart`
 Expected：9 個全數 PASS。
 
-- [ ] **Step 5：寫 widget 接線的失敗測試**
+- [x] **Step 5：寫 widget 接線的失敗測試**
 
 建立 `app/test/reader/pdf_reader_view_fit_mode_test.dart`：
 
@@ -955,12 +955,12 @@ void main() {
 double _minOf(double a, double b) => a < b ? a : b;
 ```
 
-- [ ] **Step 6：確認失敗**
+- [x] **Step 6：確認失敗**
 
 Run：`flutter test test/reader/pdf_reader_view_fit_mode_test.dart`
 Expected：編譯失敗，`No named parameter with the name 'pdfFitMode'`。
 
-- [ ] **Step 7：`PdfReaderView` 接線**
+- [x] **Step 7：`PdfReaderView` 接線**
 
 `app/lib/reader/pdf_reader_view.dart`：
 
@@ -1021,18 +1021,18 @@ import 'pdf_fit_size_delegate.dart';
               ),
 ```
 
-- [ ] **Step 8：確認 widget 測試通過**
+- [x] **Step 8：確認 widget 測試通過**
 
 Run：`flutter test test/reader/pdf_reader_view_fit_mode_test.dart`
 Expected：6 個全數 PASS。
 若 Page-fit／Fit Width 案例的縮放與預期不符，先確認 delegate 的 `calculateMetrics` 是否被呼叫（在 `_zoomFor` 暫時 `debugPrint`）、`pageNumber` 是否為 null；**不要**調整測試數值去遷就實作。
 
-- [ ] **Step 9：確認既有 PDF 測試零回歸**
+- [x] **Step 9：確認既有 PDF 測試零回歸**
 
 Run：`flutter test test/reader/pdf_reader_view_*_test.dart`
 Expected：全數 PASS（含 Task 0 記下的既有案例，未修改任何一個）。
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add app/lib/reader/pdf_fit_size_delegate.dart app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_fit_size_delegate_test.dart app/test/reader/pdf_reader_view_fit_mode_test.dart
@@ -1056,7 +1056,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1 的 `fitZoomForUnit`；Task 2 的 `kPdfFitMaxZoom`、`_unitRectFor`、`_pdfPageMargin`。
 - Produces：無（最後一個 Task）。
 
-- [ ] **Step 1：寫執行期切換的失敗測試**
+- [x] **Step 1：寫執行期切換的失敗測試**
 
 在 `pdf_reader_view_fit_mode_test.dart` 的 `main()` 內、最後一個 `testWidgets` 之後加入（並在檔案頂端 import 區補 `package:flutter/gestures.dart` 不需要；這兩個案例直接重建 widget 樹）：
 
@@ -1114,12 +1114,12 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
   });
 ```
 
-- [ ] **Step 2：確認失敗**
+- [x] **Step 2：確認失敗**
 
 Run：`flutter test test/reader/pdf_reader_view_fit_mode_test.dart`
 Expected：兩個新案例 FAIL（縮放仍停在切換前的值）；前面 6 個仍 PASS。
 
-- [ ] **Step 3：實作執行期重套**
+- [x] **Step 3：實作執行期重套**
 
 `pdf_reader_view.dart`：
 
@@ -1182,13 +1182,13 @@ Expected：兩個新案例 FAIL（縮放仍停在切換前的值）；前面 6 �
 
 說明：`fitZoomForUnit` 收「不含邊距的單元矩形」並自行加邊距；`goToPosition` 的位置取含邊距矩形的左上角，目的是精確定位單元在連續長條中的起點（含頁首邊距）。水平方向不要自行計算置中偏移：`goToPosition` 內部會先 `_adjustBoundaryMargins` 再夾到邊界，文件寬度（含邊距）縮放後小於可視寬度時，水平對齊交給 `PdfViewerParams.underflowAnchor`（文件層級的設定，不是單元層級）。因此 Page-fit 在可視範圍較寬時的左右留白位置以 `pdfrx` 行為為準，逐頁置中是 Issue 4 的事；待真機確認這個留白位置是否可接受。
 
-- [ ] **Step 4：確認通過**
+- [x] **Step 4：確認通過**
 
 Run：`flutter test test/reader/pdf_reader_view_fit_mode_test.dart`
 Expected：8 個全數 PASS。
 若「手動放大後切換」失敗而「Page-fit 切 Fit Width」通過：先確認兩層 postFrameCallback 後 `isReady` 仍為 true；若 `goToPosition` 被邊界夾制導致縮放不符，保持測試不動，回報後以 `_controller.setZoom` 搭配 `goToPosition` 嘗試，並把原因記入 `epic.md`。
 
-- [ ] **Step 5：`ReaderScreen` 接線的失敗測試**
+- [x] **Step 5：`ReaderScreen` 接線的失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart` 的「PDF 收到 onPageChanged 後進入背景（paused）…」案例**之前**加入（檔頭 import 區補 `import 'package:elinkbook/reader/pdf_fit_mode.dart';`；`BookReaderPrefs` 已被該檔 import）：
 
@@ -1247,7 +1247,7 @@ Expected：8 個全數 PASS。
 Run：`flutter test test/screens/reader_screen_test.dart --plain-name "epic-56 Issue 1"`
 Expected：2 個 FAIL（`pdfFitMode` 為 `null`，因為 `ReaderScreen` 還沒傳）。
 
-- [ ] **Step 6：`ReaderScreen` 傳入解析後的 Fit 模式**
+- [x] **Step 6：`ReaderScreen` 傳入解析後的 Fit 模式**
 
 `app/lib/screens/reader_screen.dart` 的 `PdfReaderView(` 呼叫內，在 `pdfPageTurnAnimation: resolved.pdfPageTurnAnimation,` 之後加入一行：
 
@@ -1255,12 +1255,12 @@ Expected：2 個 FAIL（`pdfFitMode` 為 `null`，因為 `ReaderScreen` 還沒�
           pdfFitMode: resolved.pdfFitMode,
 ```
 
-- [ ] **Step 7：確認接線測試與相關測試通過**
+- [x] **Step 7：確認接線測試與相關測試通過**
 
 Run：`flutter test test/screens/reader_screen_test.dart test/reader/pdf_reader_view_fit_mode_test.dart`
 Expected：全數 PASS（reader_screen_test 既有案例加 2 個新案例）。
 
-- [ ] **Step 8：靜態檢查**
+- [x] **Step 8：靜態檢查**
 
 ```bash
 flutter analyze
@@ -1269,11 +1269,11 @@ node tool/check_l10n_hardcoded_strings.js
 
 Expected：`No issues found!`；兩行 PASS。
 
-- [ ] **Step 9：全套測試（唯一一次）**
+- [x] **Step 9：全套測試（唯一一次）**
 
 `flutter test` 以 `run_in_background` 在 `app/` 目錄下執行。預期：全數通過，數量為本 Issue 開始前主線基準（Task 0 之後、以 `flutter test` 全套實測的數字）＋ 新增案例（規則 19 ＋ delegate 9 ＋ widget 8 ＋ reader_screen 2 ＝ 38）、1 略過、0 失敗。若失敗，先用 `systematic-debugging` 找原因，不得修改既有測試以求通過。
 
-- [ ] **Step 10：更新文件並提交**
+- [x] **Step 10：更新文件並提交**
 
 - `epic.md`：在最後新增「**日期 Issue 1 實作完成**」段，記錄：做法（Legacy delegate 子類別覆寫最小／初始縮放，`pdfFitMode` 為 null 時不干預）、新增測試數、驗證結果、與計畫的差異（若有）、以及兩項**需要知道的事**：(1) 修改前 pdfrx 預設實際是 Fit Width 起始而非 Page-fit，現在預設（ReaderScreen 傳 Page-fit）會讓所有 PDF 開書時變成整頁放進螢幕，是刻意的行為變更；(2) Fit 基準只在開書與切換 Fit 模式時套用，雙頁／裁切切換時沿用 pdfrx 的「保留縮放並夾最小縮放」行為（本 Issue 範圍外）。待真機確認：三種 Fit 模式在實機的初始畫面與旋轉後的表現。
 - `issues.md`：Issue 1 的 `**Status:**` 改為 `done`（待程式審查與發 PR 前先標為 `in-review` 亦可，依先前 Epic 慣例）。

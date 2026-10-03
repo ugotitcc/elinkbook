@@ -16,15 +16,15 @@ Issue 1、2、3 互相獨立，可平行；Issue 4 依賴前三者；Issue 5、6
 
 ## Issue 1：Fit 模式接上渲染（連續捲動路徑）
 
-**Status:** ready-for-agent
+**Status:** in-review
 
 **依賴：** 無。
 
 **What to build：**
 - 建立純 Dart 的「逐頁導覽規則」模組，先只放規則 1（縮放基準）與規則 2（頁內捲動範圍），輸入是單元內容尺寸、可視尺寸、Fit 模式。Issue 4、5、6 會擴充這個模組。
-- `PdfReaderView` 讀取 `pdfFitMode`（Page-fit／Fit Width／真實比例）決定縮放基準，在**既有連續捲動**路徑下生效。連續捲動時基準以開書當下（或切換 Fit 模式、視窗尺寸改變當下）的目前頁尺寸換算，捲動途中不重算；使用者可在基準之上放大、不可縮到基準以下。
+- `PdfReaderView` 讀取 `pdfFitMode`（Page-fit／Fit Width／真實比例）決定縮放基準，在**既有連續捲動**路徑下生效。連續捲動時基準以開書當下（或切換 Fit 模式、視窗尺寸改變當下）的目前頁尺寸換算，捲動途中不重算；最小縮放維持 pdfrx 原本的行為（與目前單元基準取較小者，只會更寬鬆），不強制「不可縮到基準以下」（使用者決定，見 epic.md 程式審查記錄 I-3）。Fit 模式啟用時，跳頁、翻頁、換 spread 都以目標單元的 Fit 基準縮放定位（不用 pdfrx 的 goToPage／goToArea，它們會把真實比例縮成頁寬、把 Fit Width 改成整個 spread 放進螢幕）。
 - `PdfReaderView` 新增 `pdfFitMode` 參數，型別為可為空：`null` 表示不干預、沿用 `pdfrx` 現有的預設縮放行為（保護既有大量 widget 測試的基準，與 `pdfPageTurnMode` 的「widget 層預設保守、產品預設由 `ReaderScreen` 傳入」同一做法）；`ReaderScreen` 一律傳入解析後的 Fit 模式（目前設定面板只存檔、渲染端沒讀）。
-- 縮放基準與「不可縮到基準以下」透過 `pdfrx` 的 `sizeDelegateProvider`（提供初始縮放與最小縮放；它不能與已棄用的 `minScale`、`calculateInitialZoom` 等參數並用）交給 `pdfrx`，不要另外在 controller 上疊一層縮放，避免與 `InteractiveViewer` 衝突。
+- 初始縮放與（較寬鬆的）最小縮放透過 `pdfrx` 的 `sizeDelegateProvider`（提供初始縮放與最小縮放；它不能與已棄用的 `minScale`、`calculateInitialZoom` 等參數並用）交給 `pdfrx`，不要另外在 controller 上疊一層縮放，避免與 `InteractiveViewer` 衝突。
 - 與雙頁模式、裁切模式相容：單元內容尺寸取 spread 矩形或裁切後矩形。
 
 **測試要求：**

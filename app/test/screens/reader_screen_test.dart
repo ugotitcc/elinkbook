@@ -14,6 +14,7 @@ import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
+import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
@@ -2308,6 +2309,56 @@ void main() {
       expect(prefsManager.savedReadingPositionCalls, isEmpty);
     },
   );
+
+  testWidgets('PDF：尚未存過 Fit 模式時，PdfReaderView 的 pdfFitMode 為 Page-fit（epic-56 Issue 1）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_fit_default',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.pdfFitMode, PdfFitMode.pageFit);
+  });
+
+  testWidgets('PDF：該書存過的 Fit 模式會傳給 PdfReaderView（epic-56 Issue 1）', (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_fit_saved',
+      const BookReaderPrefs(pdfFitMode: PdfFitMode.fitWidth),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_fit_saved',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.pdfFitMode, PdfFitMode.fitWidth);
+  });
 
   testWidgets('PDF 收到 onPageChanged 後進入背景（paused），正確寫入 ReadingPosition（epic-54 Issue 7 接線）', (
     tester,
