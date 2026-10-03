@@ -547,11 +547,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// （_jumpToPage/_nextPage/_previousPage/_goToSpread）共用單一定義來源。
   /// pdfrx 的 goToPage()/goToArea() 對 Duration.zero 有專門的同步捷徑（見
   /// pdfrx-2.4.7 pdf_viewer.dart `_goTo()` 的 `if (duration == Duration.zero)`
-  /// 分支），瞬間跳頁不會跑動畫 ticker。
-  Duration get _pageTurnDuration => widget.pdfPageTurnAnimation ==
-          PdfPageTurnAnimation.none
-      ? Duration.zero
-      : const Duration(milliseconds: 200);
+  /// 分支），瞬間跳頁不會跑動畫 ticker。逐頁（epic-56）一律零時長，忽略
+  /// [PdfReaderView.pdfPageTurnAnimation]。
+  Duration get _pageTurnDuration =>
+      (_paginated || widget.pdfPageTurnAnimation == PdfPageTurnAnimation.none)
+          ? Duration.zero
+          : const Duration(milliseconds: 200);
 
   bool get _cropEnabled =>
       widget.pdfCropMode != PdfCropMode.none && widget.pdfCropRect != null;
@@ -794,20 +795,33 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         oldWidget.dualPageDirection != widget.dualPageDirection ||
         oldWidget.isLandscape != widget.isLandscape ||
         oldWidget.pdfCropMode != widget.pdfCropMode ||
-        oldWidget.pdfCropRect != widget.pdfCropRect;
+        oldWidget.pdfCropRect != widget.pdfCropRect ||
+        oldWidget.pdfPageTurnMode != widget.pdfPageTurnMode;
     if (!changed) return;
 
     // 切換前的錨點頁必須先記下來：relayout 後 pdfrx 會依自己的邏輯推一
     // 個目前頁，未必落在原本的 spread 上。
-    final anchorBefore = _controller.isReady
-        ? (_controller.pageNumber ?? 1) - 1
-        : (widget.initialPageIndex ?? 0);
+    // 切換前若是逐頁，錨點頁以 _pagedAnchorPage 為準（單一事實來源）：
+    // controller.pageNumber 由 pdfrx 在矩陣變動後才更新，可能晚一幀。
+    final anchorBefore =
+        oldWidget.pdfPageTurnMode == PdfPageTurnMode.paginated
+            ? _pagedAnchorPage
+            : (_controller.isReady
+                ? (_controller.pageNumber ?? 1) - 1
+                : (widget.initialPageIndex ?? 0));
 
     if (!_dualPageEnabled) {
       _spreadLayout = null; // 停用雙頁後不得再用舊的 spread 矩形導航。
     }
     _cachedLayoutKey = null;
     _cachedPdfLayout = null;
+    _pagedCacheKey = null;
+    _pagedPdfLayout = null;
+    _paged = null; // 版面重算前不使用舊的逐頁版面導航。
+    if (_paginated) {
+      // 切換前的錨點頁就是逐頁的目前單元錨點（reanchor 之後會重新對齊到單元）。
+      _pagedAnchorPage = anchorBefore;
+    }
     _pendingReanchorPageIndex = anchorBefore;
 
     // 【與 isReady 防呆同等重要】invalidate() 內部是 `_state._invalidate()`
@@ -864,6 +878,11 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// 把目前頁（雙頁為目前 spread）以新 Fit 模式的基準縮放顯示；使用者先前
   /// 手動放大的縮放會被重設為基準。以 goToPosition 設定，不受舊最小縮放夾制。
   void _applyFitZoom() {
+    if (_paginated) {
+      final unit = _currentPagedUnit();
+      if (mounted && _controller.isReady && unit != null) _goToPagedUnit(unit);
+      return;
+    }
     final mode = widget.pdfFitMode;
     if (mode == null || !mounted || !_controller.isReady) return;
     final layout = _controller.layout;
@@ -921,6 +940,17 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (widget.cropEditModeActive) return;
     if (!_controller.isReady) return;
     if (pageIndex < 0 || pageIndex >= _controller.pageCount) return;
+    if (_paginated) {
+      // 以 _paginated（而非 _pagedActive）阻絕一切向連續捲動路徑的穿透：版面重算的暫態
+      // （_paged 暫為 null）不得把逐頁使用者導向 goToPage／goToArea 的動畫路徑（I-2）。
+      // 先記錄錨點頁：版面就緒後 normalizeMatrix 與頁碼推算都以它為準。
+      // 規則 6：目錄、書籤、頁碼輸入、縮圖、全文搜尋面板、朗讀換頁、搜尋跳轉都經由這裡，
+      // 一律落在目標單元（spread 取所屬單元）頂端、基準縮放，瞬間完成。
+      _pagedAnchorPage = pageIndex;
+      final paged = _paged;
+      if (paged != null) _goToPagedUnit(paged.pageToUnit[pageIndex]);
+      return;
+    }
     final layout = _activeSpreadLayout;
     if (layout == null) {
       _goToSinglePage(pageIndex + 1);
@@ -932,6 +962,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   void _nextPage() {
     if (widget.cropEditModeActive) return;
     if (!_controller.isReady) return;
+    if (_paginated) {
+      // 同 _jumpToPage：逐頁一律不穿透到連續捲動路徑；版面暫態（_paged 為 null）時
+      // _stepPagedUnit 內部直接無動作（I-2）。
+      _stepPagedUnit(forward: true);
+      return;
+    }
     final layout = _activeSpreadLayout;
     if (layout == null) {
       final current = _controller.pageNumber ?? 1; // Issue 1 原邏輯。
@@ -948,6 +984,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   void _previousPage() {
     if (widget.cropEditModeActive) return;
     if (!_controller.isReady) return;
+    if (_paginated) {
+      _stepPagedUnit(forward: false);
+      return;
+    }
     final layout = _activeSpreadLayout;
     if (layout == null) {
       final current = _controller.pageNumber ?? 1; // Issue 1 原邏輯。
@@ -959,6 +999,22 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     final prev = layout.previousSpreadAnchor(currentIndex);
     if (prev == null) return; // 已在封面 spread。
     _goToSpread(layout.spreadIndexOf(prev), layout);
+  }
+
+  /// 逐頁的相對步進（熱區、音量鍵）。Issue 4 只有 Page-fit 子集：直接換到相鄰單元、
+  /// 落在新單元頂端；單元縱向溢出時也一樣（暫態降級，頁內逐屏步進與「上一頁落在
+  /// 上一單元底端」見 Issue 5）。第一／最後單元再往外＝無動作。
+  void _stepPagedUnit({required bool forward}) {
+    final paged = _paged;
+    final current = _currentPagedUnit();
+    if (paged == null || current == null) return;
+    final target = pagedAdjacentUnit(
+      currentUnit: current,
+      unitCount: paged.unitCount,
+      forward: forward,
+    );
+    if (target == null) return;
+    _goToPagedUnit(target);
   }
 
   void _handlePageChanged(int? pageNumber) {
@@ -1361,6 +1417,18 @@ class _PdfReaderViewState extends State<PdfReaderView> {
           ));
         },
         onPageChanged: _handlePageChanged,
+        // 逐頁：視窗尺寸改變（旋轉、摺疊）後維持同一單元、依新尺寸重算基準、偏移回到
+        // 頂端（spec「導覽入口對應」）。Issue 3 spike：旋轉後 pdfrx 保留原縮放與位置、
+        // 不會自動重新 Page-fit，所以必須在這裡明確重新定位。
+        onViewSizeChanged: (viewSize, oldViewSize, controller) {
+          // 開書初次排版 pdfrx 也會以 oldViewSize == null 呼叫；初始定位已由
+          // onViewerReady 完成，這裡只處理執行期尺寸改變（I-1）。
+          if (!_pagedActive || oldViewSize == null || oldViewSize == viewSize) {
+            return;
+          }
+          final unit = _currentPagedUnit();
+          if (unit != null) _goToPagedUnit(unit);
+        },
       ),
     );
     final colorFilter = _colorFilter;

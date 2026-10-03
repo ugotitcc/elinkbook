@@ -256,4 +256,208 @@ void main() {
       expect(_visiblePages(c), [1]);
     });
   });
+
+  group('瞬間換頁導覽（規則 3／4 Page-fit 子集、規則 6）', () {
+    testWidgets('nextPage／previousPage：瞬間換到相鄰單元（預設滑動動畫也不播放）', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final c = await h.open(tester, h.app()); // animation 預設為 slide
+      expect(_visiblePages(c), [1]);
+
+      PdfReaderView.nextPage(h.key);
+      // 刻意不 pump：Duration.zero 的 goToPosition 同步完成，沒有任何動畫幀。
+      expect(_visiblePages(c), [2]);
+
+      PdfReaderView.previousPage(h.key);
+      expect(_visiblePages(c), [1]);
+    });
+
+    testWidgets('第一個單元往前、最後一個單元往後：無動作（Review Focus 5）', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final c = await h.open(tester, h.app());
+
+      PdfReaderView.previousPage(h.key);
+      expect(_visiblePages(c), [1]);
+
+      for (var i = 0; i < 6; i++) {
+        PdfReaderView.nextPage(h.key); // 5 頁文件：第 5 次之後已在最後一頁
+      }
+      expect(_visiblePages(c), [5]);
+    });
+
+    testWidgets('單頁文件：下一頁與上一頁都無動作、不拋例外', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(file: 'test/fixtures/sample.pdf'));
+      PdfReaderView.nextPage(h.key);
+      PdfReaderView.previousPage(h.key);
+      expect(_visiblePages(c), [1]);
+    });
+
+    testWidgets('3×3 熱區的下一頁／上一頁動作：瞬間換頁', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final actions = List<ZoneAction>.filled(9, ZoneAction.none);
+      actions[2] = ZoneAction.nextPage;
+      actions[0] = ZoneAction.previousPage;
+      void onZone(ZoneAction a) {
+        if (a == ZoneAction.nextPage) PdfReaderView.nextPage(h.key);
+        if (a == ZoneAction.previousPage) PdfReaderView.previousPage(h.key);
+      }
+
+      final c = await h.open(
+          tester, h.app(navZoneActions: actions, onZoneAction: onZone));
+      await tester.tap(find.byKey(const Key('pdf_reader_nav_zone_2')));
+      await tester.pump();
+      expect(_visiblePages(c), [2]);
+
+      await tester.tap(find.byKey(const Key('pdf_reader_nav_zone_0')));
+      await tester.pump();
+      expect(_visiblePages(c), [1]);
+      // 等待 PdfViewer 內部 DoubleTapGestureRecognizer 的定時器過期。
+      await tester.pump(const Duration(milliseconds: 400));
+    });
+
+    testWidgets('雙頁模式：下一頁換到下一個 spread，頁碼回報錨點頁', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final c = await h.open(
+        tester,
+        h.app(
+          file: 'test/fixtures/sample_dual_page.pdf',
+          dualMode: DualPageMode.always,
+        ),
+      );
+      expect(_visiblePages(c), [1, 2]);
+      PdfReaderView.nextPage(h.key);
+      expect(_visiblePages(c), [3, 4]);
+      await pumpUntilPdfReady(tester,
+          condition: () => h.pages.isNotEmpty && h.pages.last == 2,
+          maxIterations: 10);
+      expect(h.pages.last, 2);
+    });
+
+    testWidgets('頁碼回報：單頁逐頁換頁後為新頁碼（index）', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      await h.open(tester, h.app());
+      PdfReaderView.nextPage(h.key);
+      await pumpUntilPdfReady(tester,
+          condition: () => h.pages.isNotEmpty && h.pages.last == 1,
+          maxIterations: 10);
+      expect(h.pages.last, 1);
+    });
+
+    testWidgets('jumpToPage：落在目標單元頂端、基準縮放，不繼承先前的偏移與縮放', (tester) async {
+      _setSurface(tester, const Size(400, 400));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      final base = 400 / (612 + _margin * 2);
+
+      PdfReaderView.jumpToPage(h.key, 2);
+      expect(_visiblePages(c), [3]);
+      final top3 = c.layout.pageLayouts[2].top - _margin;
+      expect(c.visibleRect.top, closeTo(top3, 1e-3));
+      expect(c.currentZoom, closeTo(base, 1e-3));
+
+      // 放大並在頁內往下平移後再次絕對跳轉：回到新單元頂端與基準縮放。
+      await c.setZoom(c.centerPosition, 2.0, duration: Duration.zero);
+      await c.goToPosition(
+        documentOffset: Offset(0, top3 + 300),
+        zoom: 2.0,
+        duration: Duration.zero,
+      );
+      PdfReaderView.jumpToPage(h.key, 3);
+      expect(_visiblePages(c), [4]);
+      expect(c.visibleRect.top,
+          closeTo(c.layout.pageLayouts[3].top - _margin, 1e-3));
+      expect(c.currentZoom, closeTo(base, 1e-3));
+    });
+  });
+
+  group('視窗尺寸改變與模式切換（Review Focus 2、3）', () {
+    testWidgets('旋轉／視窗尺寸改變：停在同一單元，縮放重算為新基準', (tester) async {
+      _setSurface(tester, const Size(400, 400));
+      final h = _Harness();
+      final c = await h.open(tester, h.app());
+      PdfReaderView.jumpToPage(h.key, 2);
+      expect(_visiblePages(c), [3]);
+
+      tester.view.physicalSize = const Size(300, 900);
+      await pumpUntilPdfReady(tester, maxIterations: 8);
+
+      expect(_visiblePages(c), [3]);
+      final base = 300 / (612 + _margin * 2); // 寬度受限
+      expect(c.currentZoom, closeTo(base, 1e-3));
+      final box = c.layout.pageLayouts[2].inflate(_margin);
+      expect(c.visibleRect.center.dy, closeTo(box.center.dy, 0.5));
+    });
+
+    testWidgets('逐頁→連續捲動→逐頁：停在原本那一頁', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final c = await h.open(tester, h.app());
+      PdfReaderView.jumpToPage(h.key, 2);
+      expect(_visiblePages(c), [3]);
+
+      await tester.pumpWidget(h.app(turnMode: PdfPageTurnMode.scroll));
+      await pumpUntilPdfReady(tester, maxIterations: 8);
+      expect(c.pageNumber, 3);
+
+      await tester.pumpWidget(h.app());
+      await pumpUntilPdfReady(tester, maxIterations: 8);
+      expect(_visiblePages(c), [3]);
+    });
+
+    testWidgets('逐頁下切換 Fit 模式：縮放改為新模式的基準', (tester) async {
+      _setSurface(tester, const Size(400, 400));
+      final h = _Harness();
+      final c = await h.open(tester, h.app());
+      expect(c.currentZoom, closeTo(400 / (792 + _margin * 2), 1e-3));
+
+      await tester.pumpWidget(h.app(fit: PdfFitMode.fitWidth));
+      final fitWidth = 400 / (612 + _margin * 2);
+      await pumpUntilPdfReady(tester,
+          condition: () => (c.currentZoom - fitWidth).abs() < 1e-3,
+          maxIterations: 10);
+      expect(c.currentZoom, closeTo(fitWidth, 1e-3));
+      expect(_visiblePages(c), [1]);
+    });
+
+    testWidgets('逐頁下切換雙頁模式：仍停在原頁所屬的 spread', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final c = await h.open(
+          tester, h.app(file: 'test/fixtures/sample_dual_page.pdf'));
+      PdfReaderView.jumpToPage(h.key, 3);
+      expect(_visiblePages(c), [4]);
+
+      await tester.pumpWidget(h.app(
+        file: 'test/fixtures/sample_dual_page.pdf',
+        dualMode: DualPageMode.always,
+      ));
+      await pumpUntilPdfReady(tester, maxIterations: 8);
+      expect(_visiblePages(c), [3, 4]);
+    });
+  });
+
+  group('雙頁＋封面獨立：翻頁縮放不跳動（C-1）', () {
+    testWidgets('封面翻到內頁 spread：縮放基準相同', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final c = await h.open(
+        tester,
+        h.app(
+          file: 'test/fixtures/sample_dual_page.pdf',
+          dualMode: DualPageMode.always,
+          coverAlone: true,
+        ),
+      );
+      final coverZoom = c.currentZoom;
+      PdfReaderView.nextPage(h.key);
+      expect(_visiblePages(c), [2, 3]);
+      expect(c.currentZoom, closeTo(coverZoom, 1e-6));
+    });
+  });
 }
