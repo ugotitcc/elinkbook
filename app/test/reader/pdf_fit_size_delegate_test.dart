@@ -134,7 +134,7 @@ void main() {
       return _metrics(legacy, view: view, pageNumber: pageNumber);
     }
 
-    test('可視尺寸為 0：沿用 pdfrx 的最小縮放，不是 0 或無限大', () {
+    test('可視尺寸為 0：退回 pdfrx 原本的指標，不丟例外', () {
       final actual = _metrics(_delegate(PdfFitMode.fitWidth), view: Size.zero);
       expect(actual.minScale, legacyMetrics(Size.zero, 1).minScale);
     });

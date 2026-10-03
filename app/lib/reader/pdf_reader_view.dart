@@ -317,12 +317,11 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// [PdfFitSizeDelegateProvider]，tear-off 具備穩定的 == 語意。
   Rect _unitRectFor(PdfPageLayout layout, int pageNumber) {
     final spread = _dualPageEnabled ? _spreadLayout : null;
-    // spread 版面與 pdfrx 目前版面的頁數不一致（切換雙頁／裁切的暫態，spread
-    // 尚未重算）時不採用，退回該頁矩形。spreadIndexOf 本身對超界與空陣列都
-    // 會 clamp／回 0，不需要再自行防呆。
-    if (spread == null || spread.pageToSpread.length != layout.pageLayouts.length) {
-      return layout.pageLayouts[pageNumber - 1];
-    }
+    if (spread == null) return layout.pageLayouts[pageNumber - 1];
+    // _spreadLayout 由 _layoutSpreadPages 在 pdfrx 每次排版時更新，而 pdfrx 在
+    // 同一次 _updateLayout 中先排版、再算縮放指標，所以此處讀到的 spread 與
+    // 傳入的 layout 一致。spreadIndexOf 對超界與空陣列會 clamp／回 0，不需要
+    // 再自行防呆。
     return spread.spreadRects[spread.spreadIndexOf(pageNumber - 1)];
   }
 
@@ -656,10 +655,15 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     final mode = widget.pdfFitMode;
     if (mode == null || !mounted || !_controller.isReady) return;
     final layout = _controller.layout;
-    final pageNumber = _controller.pageNumber ?? 1;
-    // 與 delegate 的 _zoomFor 同樣防呆：版面為空或頁碼超界時不處理，避免重排
-    // 尚未完成的暫態拋出 RangeError。
-    if (pageNumber < 1 || pageNumber > layout.pageLayouts.length) return;
+    final pageNumber = _controller.pageNumber;
+    // 與 delegate 的 _zoomFor 同樣防呆：頁碼暫時推算不出來（null）、版面為空或
+    // 頁碼超界時不處理，避免重排尚未完成的暫態拋出 RangeError，或把使用者帶
+    // 到第 1 頁。
+    if (pageNumber == null ||
+        pageNumber < 1 ||
+        pageNumber > layout.pageLayouts.length) {
+      return;
+    }
     final unit = _unitRectFor(layout, pageNumber);
     final zoom = fitZoomForUnit(
       mode: mode,

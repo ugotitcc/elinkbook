@@ -161,6 +161,14 @@ void main() {
     final expected = _minOf(
         _viewSize.width / cropped.width, _viewSize.height / cropped.height);
     expect(c.currentZoom, closeTo(expected, 0.001));
+
+    // 鑑別力：裁切後的頁面比整頁小，Page-fit 的縮放必須明顯大於「未裁切」的
+    // Page-fit；若裁切版面沒被採用，期望值會退化成整頁而讓上面的比較照樣通過，
+    // 這個斷言才抓得到。
+    final full = await _pageSize(tester, 'test/fixtures/sample.pdf', 0);
+    final uncropped = _minOf(_viewSize.width / (full.width + _margin * 2),
+        _viewSize.height / (full.height + _margin * 2));
+    expect(c.currentZoom, greaterThan(uncropped + 0.05));
   });
 
   testWidgets('執行期由 Page-fit 切到 Fit Width：縮放改為 Fit Width 的基準', (tester) async {
