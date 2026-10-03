@@ -1,0 +1,162 @@
+import 'package:elinkbook/l10n/app_localizations.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/pdf_crop_mode.dart';
+import 'package:elinkbook/reader/pdf_crop_rect.dart';
+import 'package:elinkbook/reader/pdf_fit_mode.dart';
+import 'package:elinkbook/reader/pdf_reader_view.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:pdfrx/pdfrx.dart';
+
+import '../support/pump_until_pdf_ready.dart';
+
+const _viewSize = Size(400, 400);
+const _margin = 8.0;
+
+/// 用 400x400 的固定可視範圍，讓 Page-fit（高度受限）與 Fit Width 的值不同。
+Widget _app(PdfReaderView child) => MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Center(
+        child: SizedBox(
+          width: _viewSize.width,
+          height: _viewSize.height,
+          child: child,
+        ),
+      ),
+    );
+
+PdfReaderView _view({
+  required void Function() onRendered,
+  PdfFitMode? fit,
+  String file = 'test/fixtures/sample.pdf',
+  DualPageMode dualMode = DualPageMode.never,
+  bool coverAlone = true,
+  PdfCropMode cropMode = PdfCropMode.none,
+  PdfCropRect? cropRect,
+}) =>
+    PdfReaderView(
+      key: const ValueKey('fit_view'),
+      filePath: file,
+      onPageRendered: onRendered,
+      onError: (_) {},
+      pdfFitMode: fit,
+      dualPageMode: dualMode,
+      dualPageCoverAlone: coverAlone,
+      pdfCropMode: cropMode,
+      pdfCropRect: cropRect,
+    );
+
+PdfViewerController _controllerOf(WidgetTester tester) =>
+    tester.widget<PdfViewer>(find.byType(PdfViewer)).controller!;
+
+Future<Size> _pageSize(WidgetTester tester, String path, int index) async {
+  final size = await tester.runAsync(() async {
+    final doc = await PdfDocument.openFile(path);
+    final page = doc.pages[index];
+    final s = Size(page.width, page.height);
+    await doc.dispose();
+    return s;
+  });
+  return size!;
+}
+
+Future<PdfViewerController> _open(
+  WidgetTester tester, {
+  PdfFitMode? fit,
+  String file = 'test/fixtures/sample.pdf',
+  DualPageMode dualMode = DualPageMode.never,
+  bool coverAlone = true,
+  PdfCropMode cropMode = PdfCropMode.none,
+  PdfCropRect? cropRect,
+}) async {
+  var rendered = 0;
+  await tester.pumpWidget(_app(_view(
+    onRendered: () => rendered++,
+    fit: fit,
+    file: file,
+    dualMode: dualMode,
+    coverAlone: coverAlone,
+    cropMode: cropMode,
+    cropRect: cropRect,
+  )));
+  await pumpUntilPdfReady(tester, condition: () => rendered != 0);
+  // 初始縮放在版面初始化後才套用，再多等幾輪讓它落定。
+  await pumpUntilPdfReady(tester, maxIterations: 5);
+  return _controllerOf(tester);
+}
+
+void main() {
+  setUp(() => pdfrxInitialize());
+
+  testWidgets('不傳 pdfFitMode：沿用 pdfrx 預設（初始縮放＝coverScale），零回歸（Review Focus 5）',
+      (tester) async {
+    final c = await _open(tester);
+    expect(c.currentZoom, closeTo(c.coverScale, 0.001));
+  });
+
+  testWidgets('Page-fit：整頁（含頁邊距）完整放進可視範圍，最小縮放同值', (tester) async {
+    final page = await _pageSize(tester, 'test/fixtures/sample.pdf', 0);
+    final expected = _minOf(_viewSize.width / (page.width + _margin * 2),
+        _viewSize.height / (page.height + _margin * 2));
+    final c = await _open(tester, fit: PdfFitMode.pageFit);
+    expect(c.currentZoom, closeTo(expected, 0.001));
+    expect(c.minScale, closeTo(expected, 0.001));
+  });
+
+  testWidgets('Fit Width：頁寬（含頁邊距）滿版，且與 Page-fit 的值不同', (tester) async {
+    final page = await _pageSize(tester, 'test/fixtures/sample.pdf', 0);
+    final fitWidth = _viewSize.width / (page.width + _margin * 2);
+    final pageFit = _minOf(fitWidth,
+        _viewSize.height / (page.height + _margin * 2));
+    // 前提：這份 fixture 在 400x400 下兩種模式要有鑑別力。
+    expect(fitWidth - pageFit, greaterThan(0.01));
+
+    final c = await _open(tester, fit: PdfFitMode.fitWidth);
+    expect(c.currentZoom, closeTo(fitWidth, 0.001));
+    expect(c.minScale, closeTo(fitWidth, 0.001));
+  });
+
+  testWidgets('真實比例：縮放 1.0，最小縮放也是 1.0', (tester) async {
+    final c = await _open(tester, fit: PdfFitMode.actualSize);
+    expect(c.currentZoom, closeTo(1.0, 0.001));
+    expect(c.minScale, closeTo(1.0, 0.001));
+  });
+
+  testWidgets('雙頁模式：以 spread 合併矩形（含邊距）算基準（Review Focus 4）', (tester) async {
+    final c = await _open(
+      tester,
+      fit: PdfFitMode.pageFit,
+      file: 'test/fixtures/sample_dual_page.pdf',
+      dualMode: DualPageMode.always,
+      coverAlone: false,
+    );
+    final spread = c.layout.pageLayouts[0].expandToInclude(c.layout.pageLayouts[1]);
+    final inflated = spread.inflate(_margin);
+    final expected = _minOf(
+        _viewSize.width / inflated.width, _viewSize.height / inflated.height);
+    expect(c.currentZoom, closeTo(expected, 0.001));
+    // 合併矩形比單頁寬：基準必須比「只看第一頁」的 Page-fit 小。
+    final single = c.layout.pageLayouts[0].inflate(_margin);
+    final singleFit = _minOf(
+        _viewSize.width / single.width, _viewSize.height / single.height);
+    expect(c.currentZoom, lessThan(singleFit));
+  });
+
+  testWidgets('手動裁切：以裁切後的頁面矩形（含邊距）算基準（Review Focus 4）', (tester) async {
+    final c = await _open(
+      tester,
+      fit: PdfFitMode.pageFit,
+      cropMode: PdfCropMode.manual,
+      cropRect:
+          const PdfCropRect(left: 0.25, top: 0.1, right: 0.75, bottom: 0.9),
+    );
+    final cropped = c.layout.pageLayouts[0].inflate(_margin);
+    final expected = _minOf(
+        _viewSize.width / cropped.width, _viewSize.height / cropped.height);
+    expect(c.currentZoom, closeTo(expected, 0.001));
+  });
+}
+
+double _minOf(double a, double b) => a < b ? a : b;

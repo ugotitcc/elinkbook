@@ -15,6 +15,8 @@ import 'pdf_page_info.dart';
 import 'pdf_page_turn_animation.dart';
 import 'pdf_image_filters.dart';
 import 'pdf_filter_debounce.dart';
+import 'pdf_fit_mode.dart';
+import 'pdf_fit_size_delegate.dart';
 import 'pdf_crop_mode.dart';
 import 'pdf_crop_rect.dart';
 import 'pdf_toc_item.dart';
@@ -64,6 +66,11 @@ class PdfReaderView extends StatefulWidget {
   /// 未傳此參數的既有呼叫端行為不變）。
   final PdfPageTurnAnimation pdfPageTurnAnimation;
 
+  /// Fit 模式（Page-fit／Fit Width／真實比例，epic-56 Issue 1）。`null`＝
+  /// 不干預，沿用 pdfrx 現有的預設縮放行為（widget 層預設保守，保護既有
+  /// 測試；產品預設由 `ReaderScreen` 傳入解析後的值，比照 `dualPageMode`）。
+  final PdfFitMode? pdfFitMode;
+
   // ── epic-24-pdf-engine-rebuild Issue 3 新增 ──
   /// 對比度 -100..100、亮度 -100..100，皆預設 0（無調整）。
   final double pdfContrast;
@@ -110,6 +117,7 @@ class PdfReaderView extends StatefulWidget {
     this.dualPageDirection = DualPageDirection.rtl,
     this.isLandscape = false,
     this.pdfPageTurnAnimation = PdfPageTurnAnimation.slide,
+    this.pdfFitMode,
     this.pdfContrast = 0,
     this.pdfBrightness = 0,
     this.pdfBoldStrength = 0,
@@ -298,6 +306,24 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   ({int pageCount, bool coverAlone, DualPageDirection direction, double margin})?
       _cachedLayoutKey;
   PdfPageLayout? _cachedPdfLayout;
+
+  /// pdfrx 頁邊距。同時傳給 `PdfViewerParams.margin` 與 Fit 縮放計算，兩處
+  /// 必須同值（pdfrx 預設即為 8.0）。
+  static const double _pdfPageMargin = 8.0;
+
+  /// Fit 縮放的「單元」矩形：雙頁模式為頁面所屬 spread 的合併矩形，否則為
+  /// 該頁（裁切時 pdfrx 版面本身已是裁切後尺寸）。以 State 方法 tear-off 傳給
+  /// [PdfFitSizeDelegateProvider]，tear-off 具備穩定的 == 語意。
+  Rect _unitRectFor(PdfPageLayout layout, int pageNumber) {
+    final spread = _dualPageEnabled ? _spreadLayout : null;
+    // spread 版面與 pdfrx 目前版面的頁數不一致（切換雙頁／裁切的暫態，spread
+    // 尚未重算）時不採用，退回該頁矩形。spreadIndexOf 本身對超界與空陣列都
+    // 會 clamp／回 0，不需要再自行防呆。
+    if (spread == null || spread.pageToSpread.length != layout.pageLayouts.length) {
+      return layout.pageLayouts[pageNumber - 1];
+    }
+    return spread.spreadRects[spread.spreadIndexOf(pageNumber - 1)];
+  }
 
   bool get _dualPageEnabled =>
       widget.pdfCropMode == PdfCropMode.none &&
@@ -992,6 +1018,14 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       controller: _controller,
       initialPageNumber: (widget.initialPageIndex ?? 0) + 1,
       params: PdfViewerParams(
+        margin: _pdfPageMargin,
+        sizeDelegateProvider: widget.pdfFitMode == null
+            ? null
+            : PdfFitSizeDelegateProvider(
+                fitMode: widget.pdfFitMode!,
+                unitRectOf: _unitRectFor,
+                pageMargin: _pdfPageMargin,
+              ),
         layoutPages: _cropEnabled
             ? _layoutCroppedPages
             : (_dualPageEnabled ? _layoutSpreadPages : null),
