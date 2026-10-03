@@ -64,7 +64,7 @@
 | 54 | `epic-53-sync-checkpoint-result` （重構＋缺陷）同步 checkpoint 直接回報結果（含登入過期），消除呼叫端反推儲存狀態，並修正中途登出時顯示空白 email | 🟡 開發中 (Active) | 全數完成，待歸檔 |
 | 55 | `epic-54-architecture-optimization` 架構優化（集中所有架構深化候選，每個候選一張 Issue） | 🟡 開發中 (Active) | Issue 1 已合併（PR #302）；Issue 5 已合併（PR #303）；Issue 3 已合併（PR #304）；Issue 4 已合併（PR #305）；Issue 2 已合併（PR #306）；Issue 6 已合併（PR #307）；Issue 7 已合併（PR #310）；Issue 8 已合併（PR #311）；Issue 1～8 全數完成；Issue 9 已合併（PR #312）；Issue 1～9 全數完成，待歸檔 |
 | 56 | `epic-55-third-party-licenses` App 授權頁登錄第三方授權（5 項程式元件＋5 款可下載字型的開源授權） | 🟡 開發中 (Active) | 全數完成，待歸檔 |
-| 57 | `epic-56-pdf-paginated-reading` PDF 逐頁閱讀（新增「換頁模式」逐頁／連續捲動，一次只顯示整頁、瞬間換頁；並接上三種 Fit 模式） | 🟡 開發中 (Active) | Discovery 已完成，待拆 Issue |
+| 57 | `epic-56-pdf-paginated-reading` PDF 逐頁閱讀（新增「翻頁模式」逐頁／連續捲動，一次只顯示整頁、瞬間換頁；並接上三種 Fit 模式） | 🟡 開發中 (Active) | Discovery 已完成，待拆 Issue |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。

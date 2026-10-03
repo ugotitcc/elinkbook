@@ -18,16 +18,16 @@
 
 ## 目標
 
-PDF 新增「換頁模式」：**逐頁**（一次只顯示一頁，鄰頁不可見，瞬間切換）與**連續捲動**（現況）。逐頁為預設。同時把三種 Fit 模式真正接上渲染。
+PDF 新增「翻頁模式」：**逐頁**（一次只顯示一頁，鄰頁不可見，瞬間切換）與**連續捲動**（現況）。逐頁為預設。同時把三種 Fit 模式真正接上渲染。
 
 ## 設計決策（`/grill-with-docs` 定案）
 
 | 決策 | 結論 |
 |---|---|
-| 設定形態 | 新增「換頁模式」二選一：逐頁／連續捲動；EPUB 與 PDF 共用「換頁模式」一詞（詞條見 `CONTEXT.md`） |
+| 設定形態 | 新增「翻頁模式」二選一：逐頁／連續捲動；EPUB 與 PDF 共用「翻頁模式」一詞（詞條見 `CONTEXT.md`） |
 | 持久化與預設 | 只放 PDF 設定面板，單書持久化於 `book_reader_prefs`，無全域預設層；沒存過一律視為逐頁（既有 PDF 升級後也變逐頁，閱讀位置照舊） |
 | 資料庫 | `book_reader_prefs` 每個偏好是一個欄位（如 `pdf_fit_mode TEXT`），所以須：SQLite schema 由 v27 升到 v28、`_onUpgrade` 新增 `ALTER TABLE book_reader_prefs ADD COLUMN pdf_page_turn_mode TEXT`（比照 `pdf_page_turn_animation` 的追加方式）、初始建表 DDL 補欄位、`BookReaderPrefs` 的 `toMap`／`fromMap`／`copyWith`／`==`／`hashCode`、`ResolvedPreferences.resolve()`，以及所有重建 `BookReaderPrefs` 的呼叫點（`library_screen.dart`、`fxl_settings_sheet.dart`、`pdf_settings_sheet.dart`）都要帶上新欄位；升級路徑需有遷移測試 |
-| 設定面板 | 「換頁模式」放在 `PdfSettingsSheet` 的「顯示」分頁（與 Fit 模式、PDF 翻頁動畫同一分頁，現有三分頁為顯示／濾鏡／裁切）；選逐頁時隱藏「PDF 翻頁動畫」；新增字串須進四份 ARB 並通過 `check_l10n_hardcoded_strings.js` |
+| 設定面板 | 「翻頁模式」放在 `PdfSettingsSheet` 的「顯示」分頁（與 Fit 模式、PDF 翻頁動畫同一分頁，現有三分頁為顯示／濾鏡／裁切）；選逐頁時隱藏「PDF 翻頁動畫」；新增字串須進四份 ARB 並通過 `check_l10n_hardcoded_strings.js` |
 | 逐頁幾何隔離 | 逐頁模式的 `layoutPages` 必須把各頁（或 spread）在座標上拉開，間距大於任何合理可視範圍，使相鄰頁不可能同時落入可視矩形；再用 `normalizeMatrix` 把平移鎖在目前這頁。具體間距（固定大值 vs 依 view 尺寸）與兩個風險由第一個 spike 驗證：大座標下的浮點精度（數千頁 × 大間距）、`pdfrx` 在 view 尺寸改變（旋轉、摺疊）時是否重算 layout。雙頁 spread 與裁切版面用同一套隔離規則 |
 | 轉場 | 逐頁下瞬間切換、無過渡動畫；「PDF 翻頁動畫」設定只在連續捲動下顯示 |
 | 絕對跳轉 | 目錄、書籤、頁碼跳頁、底列進度：瞬間抵達目標頁（spread），視窗對齊該頁頂端，不繼承上一頁的頁內捲動偏移。**例外**：搜尋跳轉帶有高亮矩形時，視窗自動定位到包含該矩形的垂直區間，確保 3 秒暫態高亮看得到（頁面比螢幕高時） |
@@ -42,13 +42,13 @@ PDF 新增「換頁模式」：**逐頁**（一次只顯示一頁，鄰頁不可
 | E-Ink | 只保證逐頁換頁是單次重繪（無中間幀）；黑白閃爍清屏屬裝置相關能力，另立工單 |
 | 對外介面 | `PdfReaderView` 新增 `pdfPageTurnMode`（`PdfPageTurnMode.paginated／scroll`）；widget 層預設連續捲動，產品預設的逐頁由 `reader_screen.dart` 明確傳入（比照 `dualPageMode`），避免既有 `PdfReaderView` widget 測試因預設改變而失效 |
 | 測試 | 可視範圍、頁高於螢幕時的步進與換頁判定，抽成不依賴 Widget 的純 Dart 模組做單元測試；widget 層只留接線案例 |
-| 詞彙 | `CONTEXT.md` 新增「換頁模式」詞條（Avoid：分頁模式、翻頁模式）；「智慧自動裁切」詞條的「逐頁各自計算」改為「每頁各自計算」以免與新值「逐頁」混淆 |
+| 詞彙 | `CONTEXT.md` 新增「翻頁模式」詞條（Avoid：分頁模式、翻頁模式）；「智慧自動裁切」詞條的「逐頁各自計算」改為「每頁各自計算」以免與新值「逐頁」混淆 |
 
 ## 範圍外
 
 - E-Ink 整頁黑白閃爍清屏（另立工單，需真機調校）。
 - 頁內捲動位置的儲存與同步。
-- PDF 以外格式（EPUB 的換頁模式維持現狀）。
+- PDF 以外格式（EPUB 的翻頁模式維持現狀）。
 - PDF Page Label、手寫標註（既有已知限制，不變）。
 
 ## 風險與待真機確認
@@ -76,5 +76,5 @@ PDF 新增「換頁模式」：**逐頁**（一次只顯示一頁，鄰頁不可
 - 已採納並修進本文件：C-1（逐頁必須在 `layoutPages` 做幾何隔離，已用 `pdfrx` 原始碼查證）、C-2（導覽語意拆成絕對跳轉／相對步進／水平滑動）、I-1（SQLite v28 與遷移，已查證 `book_reader_prefs` 為一偏好一欄位）、I-2（頁內拖曳回報閱讀活動）、I-3（搜尋跳轉高亮自動定位）、I-4（拆分方向由 4 項改為 5 項）、M-1（ARB 納入設定面板決策列）。
 - 部分採納：M-2 採納「放在設定面板並隱藏翻頁動畫」，但報告所稱「Tab 2 版面與導覽」不實——`PdfSettingsSheet` 實際三分頁為顯示／濾鏡／裁切，Fit 模式與翻頁動畫都在「顯示」分頁，故放「顯示」。
 - 不採納：報告提到 `LayoutPreset` 需納入新欄位——查無 PDF 偏好欄位進入該結構，不列入工作項；M-3 序號：看板第 N 列對應 `epic-(N-1)` 是既有慣例（第 56 列為 epic-55），無需更動。
-- 審查延伸發現（待使用者決定）：`CONTEXT.md` 新詞條以「換頁模式」為正式詞並把「翻頁模式」列為 Avoid，但既有 EPUB 版面覆寫對話框的 ARB 字串（`libraryLayoutOverridePageTurnModeLabel`）寫的是「翻頁模式」，`page_turn_mode.dart` 註解則寫「換頁模式」。詞彙表與使用者實際看到的 UI 用語不一致，需決定統一用哪一個。
+- 審查延伸發現（已決定）：Discovery 時詞彙表曾以「換頁模式」為正式詞，但既有 EPUB 版面覆寫對話框的 ARB 字串與 `CONTEXT.md` 全域預設詞條都用「翻頁模式」。使用者決定統一為「**翻頁模式**」（與現有 UI 一致，不動既有畫面）：`CONTEXT.md` 詞條改名並把「換頁模式」列為 Avoid，本文件與 `docs/epics.md` 同步改寫；`page_turn_mode.dart` 的類別註解仍寫「換頁模式」，日後動到該檔時順手對齊。
 - 水平滑動在長頁上的行為（直接跨頁、落新頁頂端）是依審查建議補上的規格，與先前 Q3(d)／Q6(b) 的決定相容但屬新增細節，Issue 拆分時請使用者確認。
