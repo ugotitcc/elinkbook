@@ -1,6 +1,6 @@
 # `epic-56-pdf-paginated-reading` PDF 逐頁閱讀
 
-**狀態：** 🟡 開發中 (Active)（Discovery、SPEC、Issue 拆分已完成，待逐 Issue 寫計畫）
+**狀態：** 🟡 開發中 (Active)（Issue 1 已合併，其餘待寫計畫）
 **存放路徑：** `docs/epics/epic-56-pdf-paginated-reading/`
 **關聯 PRD 章節：** PDF 閱讀（預設 page-fit、影像濾鏡、裁切）、互動模式（E-Ink 減少過渡動畫、3×3 熱區、音量鍵翻頁）
 **關聯 ADR：** 0022（PDF 引擎改用 `pdfrx`）
@@ -113,3 +113,9 @@ PDF 新增「翻頁模式」：**逐頁**（一次只顯示一頁，鄰頁不可
 - I-3（使用者決定選 B，放寬規格）：`pdfrx` 每次矩陣變動都用目前頁重算最小縮放，原實作取「目前單元基準」，捲到尺寸不同的頁面時最小縮放可能大於目前縮放，雙指縮放會彈跳。決定不凍結基準，改為最小縮放＝min(pdfrx 原本的最小縮放, 目前單元基準)——只會比 pdfrx 原本更寬鬆；`spec.md` 規則 1 與 `issues.md` Issue 1 已同步改為「連續捲動不強制不可縮到基準以下，逐頁模式才強制」。代價：Fit Width／真實比例下旋轉螢幕時沿用 pdfrx 的「保留目前縮放」，不會自動套用新基準（只有 Page-fit 會跟隨）；Issue 4 的逐頁模式需要「每個單元各自的最小縮放」，屆時 delegate 再加模式旗標。
 - Minor 已全數修正（使用者決定）：M-1 裁切測試加上與未裁切 Page-fit 的比較（變異驗證：暫時關掉裁切版面時新斷言失敗、舊斷言仍通過）；M-2 delegate 測試名稱改為「退回 pdfrx 原本的指標，不丟例外」；M-3 移除永遠不會成立的頁數比對，註解改寫為 `_spreadLayout` 與 pdfrx 排版同步更新的真正保證；M-4 `_applyFitZoom` 在頁碼為 null 時直接返回，不再跳到第 1 頁。
 - 驗證：修正後（含 Minor）`pdf_paginated_rules`／`pdf_fit_size_delegate`／`pdf_reader_view_*`／`reader_screen_test` 共 407 個通過、`flutter analyze` 乾淨、兩個 l10n 檢查 PASS；全套 `flutter test` 3450 通過、1 略過、0 失敗（在最終實作 commit 上跑）。
+
+**2026-10-03 PR 合併（Issue 1）**
+
+- PR #313（`epic-56/issue-1-fit-mode` → `main`）已合併，合併 commit `b92582c9`。Issue 1 完成。全套 `flutter test` 3450 通過、1 略過、0 失敗（發 PR 前在最終實作 commit 上跑）。
+- 待真機確認：三種 Fit 模式在直向與橫向（雙頁 auto）下開書、翻頁、跳目錄後縮放是否維持；旋轉後的表現（Fit Width／真實比例沿用 pdfrx 保留縮放，不自動套新基準）；Page-fit 在可視範圍較寬時的左右留白位置。
+- 後續：Issue 2（偏好＋設定面板＋SQLite v28）與 Issue 3（幾何 spike，需真機）互相獨立，可平行；Issue 4 依賴 1、2、3。Issue 4 的逐頁模式需要「每個單元各自的最小縮放」，屆時 `PdfFitSizeDelegate` 要加模式旗標。
