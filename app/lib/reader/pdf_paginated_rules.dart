@@ -83,3 +83,228 @@ double? fitZoomForUnit({
   if (!base.isFinite || base <= 0) return null;
   return math.min(base, maxZoom);
 }
+
+// ── epic-56 Issue 4：逐頁幾何隔離、單元視窗夾制、相對步進 ──
+
+/// 逐頁單元之間，在「可視矩形縱向超出量」之上額外保留的間距（文件座標，pt）。
+/// 見 spec.md「幾何隔離」間距公式（Issue 3 spike 實測決定）。
+const double kPaginatedGapPadding = 50.0;
+
+/// 與 pdfrx 預設單頁版面相同的堆疊版面：頁面水平置中，由 [margin] 起依
+/// 「頁高 + margin」往下累加；文件寬為最寬頁加兩側 margin。逐頁模式在沒有
+/// 雙頁與裁切時以它當作隔離前的基礎版面。
+({List<Rect> rects, Size documentSize}) stackPageRects({
+  required List<Size> pageSizes,
+  required double margin,
+}) {
+  final width = pageSizes.fold<double>(0.0, (w, s) => math.max(w, s.width)) + margin * 2;
+  final rects = <Rect>[];
+  var y = margin;
+  for (final size in pageSizes) {
+    rects.add(Rect.fromLTWH((width - size.width) / 2, y, size.width, size.height));
+    y += size.height + margin;
+  }
+  return (rects: rects, documentSize: Size(width, y));
+}
+
+/// 單元在基準縮放下，可視矩形縱向超出單元方框的最大量（文件座標）：
+/// `max(0, (視窗高 ÷ 基準縮放 − 單元高) ÷ 2)`。[contentSize] 為單元含頁邊距的
+/// 方框尺寸。基準以 [maxZoom] 夾住（與 `fitZoomForUnit` 一致）；算不出有效
+/// 基準時回傳 0。
+double paginatedUnitOverflow({
+  required PdfFitMode mode,
+  required Size contentSize,
+  required Size viewSize,
+  required double maxZoom,
+}) {
+  final base = fitBaseScale(mode: mode, contentSize: contentSize, viewSize: viewSize);
+  if (!base.isFinite || base <= 0) return 0.0;
+  final zoom = math.min(base, maxZoom);
+  return math.max(0.0, (viewSize.height / zoom - contentSize.height) / 2);
+}
+
+/// [isolatePaginatedUnits] 的結果。
+class PaginatedLayout {
+  const PaginatedLayout({
+    required this.pageRects,
+    required this.unitRects,
+    required this.pageToUnit,
+    required this.unitAnchorPages,
+    required this.documentSize,
+  });
+
+  /// 隔離後各頁矩形（pdfrx 版面座標，index i ＝第 i+1 頁）。
+  final List<Rect> pageRects;
+
+  /// 各單元矩形：單元內頁面矩形的聯集，不含頁邊距。
+  final List<Rect> unitRects;
+
+  /// 頁索引（0-based）→ 單元索引。
+  final List<int> pageToUnit;
+
+  /// 單元索引 → 錨點頁索引（0-based，單元內最小頁索引）。
+  final List<int> unitAnchorPages;
+
+  final Size documentSize;
+
+  int get unitCount => unitRects.length;
+}
+
+/// 逐頁的幾何隔離（spec.md「幾何隔離」）：把既有版面（單頁堆疊、spread、裁切）
+/// 的各單元在縱向拉開，使任何可達的可視矩形只與目前單元相交。
+///
+/// [pageToUnit] 為各頁所屬單元索引，必須由 0 起單調不減且每個單元至少一頁
+/// （spread 版面與單頁版面都滿足）。單元方框＝單元矩形加 [margin]；相鄰方框
+/// 間距＝`max(超出量(前), 超出量(後)) + kPaginatedGapPadding`。第一個單元不動，
+/// 單元內頁面的相對位置不變，橫向位置不變。[viewSize] 任一邊為 0（尚未量測）
+/// 時不移動任何頁面。
+PaginatedLayout isolatePaginatedUnits({
+  required List<Rect> pageRects,
+  required List<int> pageToUnit,
+  List<Rect>? baseUnitRects,
+  required Size documentSize,
+  required double margin,
+  required PdfFitMode mode,
+  required Size viewSize,
+  required double maxZoom,
+}) {
+  final unitCount = pageToUnit.isEmpty ? 0 : pageToUnit.last + 1;
+  final unions = List<Rect?>.filled(unitCount, null);
+  final anchors = List<int>.filled(unitCount, 0);
+  for (var i = 0; i < pageRects.length; i++) {
+    final u = pageToUnit[i];
+    final current = unions[u];
+    if (current == null) {
+      unions[u] = pageRects[i];
+      anchors[u] = i;
+    } else {
+      unions[u] = current.expandToInclude(pageRects[i]);
+    }
+  }
+  // 單元矩形優先取呼叫端傳入的 baseUnitRects（C-1：雙頁的 spreadRects 寬度已正規化為
+  // 文件內容寬，單頁封面才不會因為聯集較窄而得到不同的縮放基準）；未傳時才用聯集。
+  final units = (baseUnitRects != null && baseUnitRects.length == unitCount)
+      ? List<Rect>.of(baseUnitRects)
+      : [for (final r in unions) r!];
+
+  if (unitCount == 0 ||
+      !viewSize.isFinite ||
+      viewSize.width <= 0 ||
+      viewSize.height <= 0) {
+    return PaginatedLayout(
+      pageRects: pageRects,
+      unitRects: units,
+      pageToUnit: pageToUnit,
+      unitAnchorPages: anchors,
+      documentSize: documentSize,
+    );
+  }
+
+  final overflows = [
+    for (final u in units)
+      paginatedUnitOverflow(
+        mode: mode,
+        contentSize: u.inflate(margin).size,
+        viewSize: viewSize,
+        maxZoom: maxZoom,
+      ),
+  ];
+  final shifts = List<double>.filled(unitCount, 0.0);
+  var previousBottom = units.first.inflate(margin).bottom;
+  for (var u = 1; u < unitCount; u++) {
+    final box = units[u].inflate(margin);
+    final gap = math.max(overflows[u - 1], overflows[u]) + kPaginatedGapPadding;
+    final newTop = previousBottom + gap;
+    shifts[u] = newTop - box.top;
+    previousBottom = newTop + box.height;
+  }
+
+  return PaginatedLayout(
+    pageRects: [
+      for (var i = 0; i < pageRects.length; i++)
+        pageRects[i].shift(Offset(0, shifts[pageToUnit[i]])),
+    ],
+    unitRects: [
+      for (var u = 0; u < unitCount; u++) units[u].shift(Offset(0, shifts[u])),
+    ],
+    pageToUnit: pageToUnit,
+    unitAnchorPages: anchors,
+    documentSize: Size(documentSize.width, previousBottom),
+  );
+}
+
+/// [clampPagedViewport] 的結果。
+class PagedViewport {
+  const PagedViewport({required this.zoom, required this.topLeft});
+
+  /// 最終縮放（已夾在 [baseZoom, maxZoom]）。
+  final double zoom;
+
+  /// 可視矩形左上角（文件座標；pdfrx `goToPosition(documentOffset:)` 的語意）。
+  final Offset topLeft;
+}
+
+/// 逐頁的視窗夾制（規則 1、2、6）：把縮放夾在 `[baseZoom, maxZoom]`，並把可視
+/// 矩形鎖在 [unitContent]（單元含頁邊距的方框，文件座標）內。
+///
+/// - 某維度的單元方框不比可視範圍大：置中（可視左上角在該軸可為負）。
+/// - 某維度溢出：[candidateTopLeft] 夾在「單元起點～單元終點 − 可視長度」；
+///   [candidateTopLeft] 為 null（跳轉）時取起點——縱向頂端、橫向依 [direction]
+///   的閱讀起始側（左到右靠左、右到左靠右）。
+PagedViewport clampPagedViewport({
+  required Rect unitContent,
+  required Size viewSize,
+  required double baseZoom,
+  required double maxZoom,
+  required double zoom,
+  Offset? candidateTopLeft,
+  required DualPageDirection direction,
+}) {
+  final z = math.min(math.max(zoom, baseZoom), maxZoom);
+  final x = _pagedAxis(
+    start: unitContent.left,
+    end: unitContent.right,
+    visible: viewSize.width / z,
+    candidate: candidateTopLeft?.dx,
+    startAtEnd: direction == DualPageDirection.rtl,
+  );
+  final y = _pagedAxis(
+    start: unitContent.top,
+    end: unitContent.bottom,
+    visible: viewSize.height / z,
+    candidate: candidateTopLeft?.dy,
+    startAtEnd: false,
+  );
+  return PagedViewport(zoom: z, topLeft: Offset(x, y));
+}
+
+double _pagedAxis({
+  required double start,
+  required double end,
+  required double visible,
+  required double? candidate,
+  required bool startAtEnd,
+}) {
+  final extent = end - start;
+  // 1e-6 容許浮點誤差：Fit Width 的基準會讓可視寬度恰好等於單元寬度，
+  // 不應因為最後一位小數而在「置中」與「溢出」之間來回。
+  if (extent <= visible + 1e-6) return start + extent / 2 - visible / 2;
+  final min = start;
+  final max = end - visible;
+  // candidate 非有限（NaN／無限大）時視同沒有候選位置，避免污染矩陣。
+  if (candidate == null || !candidate.isFinite) return startAtEnd ? max : min;
+  return math.min(math.max(candidate, min), max);
+}
+
+/// 規則 3、4 的 Page-fit 子集（Issue 4）：相對步進時的目標單元。第一個單元往前、
+/// 最後一個單元往後、或沒有單元時回傳 null（無動作）。Issue 5 會在這之前加入
+/// 頁內逐屏步進，再回頭呼叫本函式決定換單元。
+int? pagedAdjacentUnit({
+  required int currentUnit,
+  required int unitCount,
+  required bool forward,
+}) {
+  final target = forward ? currentUnit + 1 : currentUnit - 1;
+  if (target < 0 || target >= unitCount) return null;
+  return target;
+}
