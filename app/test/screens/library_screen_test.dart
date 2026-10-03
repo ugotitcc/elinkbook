@@ -4733,6 +4733,38 @@ void main() {
     expect(saved.pdfPageTurnMode, PdfPageTurnMode.scroll,
         reason: '關鍵斷言：版面覆寫整列重建不可把 PDF 翻頁模式清成 null');
   });
+  testWidgets('版面覆寫：儲存後既有的簡繁轉換覆寫原樣保留（epic-57 回歸）', (tester) async {
+    final book = _testBook(id: '1', title: '書A');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+    final bookReaderPrefsRepository = FakeBookReaderPrefsRepository();
+    await bookReaderPrefsRepository.save(
+      '1',
+      const BookReaderPrefs(textConversionOverride: TextConversionMode.toTraditional),
+    );
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: repository,
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          bookReaderPrefsRepository: bookReaderPrefsRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_action_layout_override')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('layout_override_page_turn_mode_scroll')));
+    await tester.tap(find.byKey(const Key('layout_override_save_button')));
+    await tester.pumpAndSettle();
+    final saved = await bookReaderPrefsRepository.load('1');
+    expect(saved.pageTurnModeOverride, PageTurnMode.scroll);
+    expect(saved.textConversionOverride, TextConversionMode.toTraditional,
+        reason: '關鍵斷言：版面覆寫整列重建不可把簡繁轉換覆寫清成 null');
+  });
   testWidgets('bookReaderPrefsRepository 未提供時，「版面覆寫」選項不顯示', (tester) async {
     final book = _testBook(id: '1', title: '書A');
     await pumpLocalizedWidget(

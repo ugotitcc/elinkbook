@@ -40,7 +40,7 @@ Issue 1、2、3 互相獨立，可平行；Issue 4 依賴前三者；Issue 5、6
 
 ## Issue 2：PDF 翻頁模式偏好、設定面板與 SQLite v28
 
-**Status:** in-review
+**Status:** done（PR #314）
 
 **依賴：** 無。
 

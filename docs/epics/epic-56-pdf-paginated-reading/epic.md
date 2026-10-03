@@ -1,6 +1,6 @@
 # `epic-56-pdf-paginated-reading` PDF 逐頁閱讀
 
-**狀態：** 🟡 開發中 (Active)（Issue 1 已合併，其餘待寫計畫）
+**狀態：** 🟡 開發中 (Active)（Issue 1、2 已合併，其餘待寫計畫）
 **存放路徑：** `docs/epics/epic-56-pdf-paginated-reading/`
 **關聯 PRD 章節：** PDF 閱讀（預設 page-fit、影像濾鏡、裁切）、互動模式（E-Ink 減少過渡動畫、3×3 熱區、音量鍵翻頁）
 **關聯 ADR：** 0022（PDF 引擎改用 `pdfrx`）
@@ -129,3 +129,4 @@ PDF 新增「翻頁模式」：**逐頁**（一次只顯示一頁，鄰頁不可
 - 提醒：本 Issue 合併後設定面板會出現「翻頁模式」，但選逐頁尚無作用，須待 Issue 4（逐頁幾何與瞬間換頁）；Epic 56 的 Issue 1～6 須同一個版本一起發布，中途不可切出發行版。
 - 待真機確認：PDF 設定面板「顯示」分頁在小螢幕／E-Ink 下新增一列 chip 後是否仍可捲到最底（面板已用 `SingleChildScrollView`，widget 測試已證無 overflow）；選逐頁時「換頁動畫」是否確實消失、切回連續捲動時原值是否保留。
 - 發現但未處理：`library_screen.dart` 書架版面覆寫 `_save` 整列重建時漏帶 `textConversionOverride`（既有缺陷，與本 Issue 無關，會把簡繁轉換覆寫清成 null），由使用者決定是否另開工單。
+- PR #314（`epic-56/issue-2-page-turn-mode` → `main`）已合併，合併 commit `f3bc7b3f`。Issue 2 完成。程式審查：0 Critical／0 Important／3 Minor，結論可合併。上一項既有缺陷已另立 `epic-57-layout-override-save-drops-fields` 處理。

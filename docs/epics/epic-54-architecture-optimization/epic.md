@@ -299,3 +299,8 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - PR #312（`epic-54/issue-9-relocate-dedup` → `main`）已合併，合併 commit `11461dd3`。Issue 9 完成。全套 `flutter test` 3407 通過、1 略過、0 失敗（發 PR 前在最終實作 commit 上跑）。
 - 待真機確認：從搜尋結果開書後不操作直接離開，確認原進度未被跳轉落點覆蓋；若仍復現，依日誌另立工單放寬位置鍵比較（見程式審查 M-1）。
 - **Epic 54 的 9 個 Issue 全數完成並合併。** 是否歸檔由使用者決定；歸檔時依 sdd-workflow 慣例，`.gitignore` 的 reviews 規則改指向 archive 路徑，不刪除。
+
+**2026-10-03 新增 Issue 10**
+
+- 來源：`epic-57-layout-override-save-drops-fields` 程式審查 M-1。書架版面覆寫 `_save()` 整列重建 `BookReaderPrefs`，欄位皆為 nullable，漏帶欄位編譯器不會報錯；epic-56、epic-57 已各自出現一次漏帶。登錄為本 Epic 的 Issue 10，依既定做法不另開 Epic。
+- 內容與設計決策待動手前 `/grill-with-docs` 定案；Epic 暫不歸檔。

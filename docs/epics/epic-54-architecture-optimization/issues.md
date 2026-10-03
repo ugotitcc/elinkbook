@@ -11,5 +11,6 @@
 | 7 | 位置寫入規則（「寫不寫、寫什麼」）搬出 `ReaderScreen`，成為可獨立測試的 module；先做，直接 TDD＋寫 plan | Strong | 🟢 已合併（PR #310） |
 | 8 | 抽出「閱讀會話」生命週期協調（統計、前後景、位置寫入呼叫、Checkpoint Timer）；依賴 Issue 7，後做，寫 plan | Strong | 🟢 已合併（PR #311） |
 | 9 | （缺陷，待確認）帶跳轉目標開書時，Foliate 重排產生的「同位置重複回報」讓跳轉保護提早失效，離開時可能把跳轉落點存成新進度；由 Issue 7 程式審查 Minor 3 發現，Issue 7 為零行為變化故未修 | — | 🟢 已合併（PR #312） |
+| 10 | 版面覆寫等「整列重建 `BookReaderPrefs`」處加全欄位保留守衛（種子填滿 33 欄位，儲存後除被覆寫欄位外須原樣相等）；來源：epic-57 程式審查 M-1。選配：`copyWith` 支援明確傳 null（Sentinel）以根除整列重建 | Worth exploring | ⚪ 待規劃 |
 
 Issue 2～6 只列標題，動手前須各自 `/grill-with-docs` 設計；候選來源與證據見 2026-09-30 架構檢視報告。
