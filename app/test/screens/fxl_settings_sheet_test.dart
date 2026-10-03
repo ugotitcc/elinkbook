@@ -4,6 +4,8 @@ import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
+import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
@@ -498,6 +500,34 @@ void main() {
     );
   });
 
+  testWidgets('已持久化 pdfPageTurnMode／pdfPageTurnAnimation 時，調整雙頁模式不會清空這兩個欄位（回歸檢查）',
+      (tester) async {
+    BookReaderPrefs? changed;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: const BookReaderPrefs(
+              pdfPageTurnMode: PdfPageTurnMode.scroll,
+              pdfPageTurnAnimation: PdfPageTurnAnimation.none,
+            ),
+            onChanged: (prefs) => changed = prefs,
+            isEinkMode: false,
+          ),
+        ),
+      ),
+    );
+    await tester
+        .tap(find.byKey(const Key('fxl_settings_dual_page_mode_always')));
+    await tester.pump();
+    expect(changed?.dualPageMode, DualPageMode.always);
+    expect(changed?.pdfPageTurnMode, PdfPageTurnMode.scroll,
+        reason: '關鍵斷言：整列重建時不可把翻頁模式清成 null');
+    expect(changed?.pdfPageTurnAnimation, PdfPageTurnAnimation.none);
+  });
   testWidgets('點擊「轉換為繁體」圖示後，onChanged 帶入 TextConversionMode.toTraditional，其餘欄位維持原值',
       (tester) async {
     BookReaderPrefs? changed;
