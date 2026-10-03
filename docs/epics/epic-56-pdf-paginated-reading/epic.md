@@ -1,6 +1,6 @@
 # `epic-56-pdf-paginated-reading` PDF 逐頁閱讀
 
-**狀態：** 🟡 開發中 (Active)（Issue 1、2 已合併，其餘待寫計畫）
+**狀態：** 🟡 開發中 (Active)（Issue 1～3 已合併，Issue 4 開發完成待合併，其餘待寫計畫）
 **存放路徑：** `docs/epics/epic-56-pdf-paginated-reading/`
 **關聯 PRD 章節：** PDF 閱讀（預設 page-fit、影像濾鏡、裁切）、互動模式（E-Ink 減少過渡動畫、3×3 熱區、音量鍵翻頁）
 **關聯 ADR：** 0022（PDF 引擎改用 `pdfrx`）
@@ -236,3 +236,12 @@ gap=100000  n=10000  y=1.01e+9  ULP(z=1/4/8)=6.40e+1 / 2.56e+2 / 5.12e+2
 
 - PR #316（`epic-56/issue-3-spike-results` → `main`）已合併，合併 commit `88ec1998`。Issue 3 完成。純文件變更，未執行 `flutter test`。實驗分支 `worktree-epic-56-issue-3-spike`（最後 commit `034ee78d`）留在本機，不推送、不合併。
 - 後續：Issue 4（逐頁幾何隔離與瞬間換頁）依賴 1、2、3，三者皆已合併，可開始寫計畫，並以 `spec.md` 幾何隔離段落的新結論為依據。Issue 4 要注意：旋轉後視窗不會自動重新 pageFit；實驗畫面跳到單元後縮放為 1.0 而非 pageFit 基準（原因未查證），須以測試確認；窄長手機、第 50 頁旋轉、摺疊裝置未測。
+
+**2026-10-03 Issue 4 實作完成**（分支 `epic-56/issue-4-paginated-geometry`；計畫見 `plans/plan-issue-4.md`，Native 內聯執行、未用 subagent）
+
+- 做法：純 Dart `pdf_paginated_rules.dart` 新增 `isolatePaginatedUnits`（間距＝max(兩側縱向超出量)＋50，量的是「單元矩形加頁邊距」方框之間，比只量頁面矩形更保守）、`clampPagedViewport`（同一個夾制函式同時服務跳轉與 `normalizeMatrix`）、`pagedAdjacentUnit`、`stackPageRects`。`PdfFitSizeDelegate` 新增 `strictMinScale`（最小縮放＝單元基準，且不介入初始定位與版面更新）。`PdfReaderView` 逐頁時提供自己的 `layoutPages`／`normalizeMatrix`／`calculateCurrentPageNumber`，以 `_pagedAnchorPage` 為目前單元的單一事實來源；所有導覽走 `goToPosition(duration: Duration.zero)`；初始定位由 `onViewerReady`、視窗尺寸改變由 `onViewSizeChanged` 負責；快取外擴保留預設 1.0。產品預設逐頁：`ReaderScreen` 自 Issue 2 起已傳入解析後偏好，渲染端落地後自動生效，`ReaderScreen` 未改。
+- 計畫審查（`reviews/review-plan-issue-4.md`）已採納：C-1（單元矩形取 `spreadRects`，單頁封面才與雙頁 spread 同基準）、I-1、I-2、I-3、M-2、M-3、M-4；M-1 部分採納。
+- 測試：新增規則 26＋delegate 5＋widget 25；全套 `flutter test` 3528 通過、1 略過、0 失敗；`flutter analyze` 乾淨，l10n 雙檢查 PASS。
+- 與計畫的差異（Ruling）：(1) Task 3 的封面測試用到 Task 4 才有的 `nextPage`，翻頁斷言移到 Task 4；(2) `didUpdateWidget` 的 `anchorBefore` 在舊模式為逐頁時取 `_pagedAnchorPage`（`controller.pageNumber` 於矩陣變動後才更新，可能晚一幀）。
+- 待真機確認：窄長手機與摺疊裝置的鄰頁隔離、旋轉後重新 Page-fit 的觀感、E-Ink 上瞬間換頁是否單次重繪、快取外擴 1.0 下連續快速換頁的白紙現象、第 50 頁以後旋轉、雙頁＋裁切組合。
+- 提醒：長頁仍無頁內逐屏步進（Issue 5）、也沒有滑動翻頁（Issue 6），須待全部完成才可發版。
