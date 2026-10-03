@@ -119,3 +119,13 @@ PDF 新增「翻頁模式」：**逐頁**（一次只顯示一頁，鄰頁不可
 - PR #313（`epic-56/issue-1-fit-mode` → `main`）已合併，合併 commit `b92582c9`。Issue 1 完成。全套 `flutter test` 3450 通過、1 略過、0 失敗（發 PR 前在最終實作 commit 上跑）。
 - 待真機確認：三種 Fit 模式在直向與橫向（雙頁 auto）下開書、翻頁、跳目錄後縮放是否維持；旋轉後的表現（Fit Width／真實比例沿用 pdfrx 保留縮放，不自動套新基準）；Page-fit 在可視範圍較寬時的左右留白位置。
 - 後續：Issue 2（偏好＋設定面板＋SQLite v28）與 Issue 3（幾何 spike，需真機）互相獨立，可平行；Issue 4 依賴 1、2、3。Issue 4 的逐頁模式需要「每個單元各自的最小縮放」，屆時 `PdfFitSizeDelegate` 要加模式旗標。
+
+**2026-10-03 Issue 2 實作完成**（分支 `epic-56/issue-2-page-turn-mode`；計畫見 `plans/plan-issue-2.md`，Native 內聯執行、未用 subagent）
+
+- 做法：新增 `PdfPageTurnMode { paginated, scroll }`；`BookReaderPrefs.pdfPageTurnMode`（可為空，`null`＝逐頁，`toMap` 鍵 `pdf_page_turn_mode`，`fromMap` 經 `enumByNameOrNull` 使未知名稱降級為 `null`）；`ResolvedPreferences.pdfPageTurnMode`（非空，建構子預設 `paginated`，`resolve()` 取「單書值，否則逐頁」，無全域預設層）；`book_reader_prefs` 表加 `pdf_page_turn_mode TEXT`，schema 27→28（建表 DDL 同步，`onUpgrade` 的 `else` 分支內 `if (oldVersion < 28)` 追加，比照 `pdf_page_turn_animation` 既有慣例以避開 v1 跳級 `duplicate column name`）；書架版面覆寫、固定版面設定面板、PDF 設定面板三處整列重建皆帶上新欄位；`PdfSettingsSheet`「顯示」分頁在 Fit 模式之後、雙頁模式之前新增翻頁模式二選一 chip（`EBOptionChipGroup<PdfPageTurnMode>`，鍵 `pdf_settings_page_turn_mode_{paginated,scroll}`），選逐頁時隱藏「換頁動畫」（條件 `...[` 包裹，隱藏不清除其值）；四份 ARB 新增 `readerPdfPageTurnMode*` 5 鍵並 `flutter gen-l10n`；`PdfReaderView.pdfPageTurnMode`（widget 層預設連續捲動，保護既有測試，widget 內不讀取），`ReaderScreen` 傳入 `resolved.pdfPageTurnMode`。本 Issue 不改變任何渲染行為。
+- 提交清單：`1bc14ce4` 偏好欄位與解析（Task 1）、`fdb1b11a` schema 27→28（Task 2）、`10900142` 書架＋固定版面重建保留（Task 3）、`3f6caccf` 設定面板＋ARB（Task 4）、`ff627e1b` `PdfReaderView` 參數與接線（Task 5）。
+- 測試：新增 21 例（偏好模型 4＋解析 1、SQLite 遷移 3＋倉儲讀寫 2、書架 1＋固定版面 1、面板 6、`PdfReaderView` 預設 1＋`ReaderScreen` 接線 2）；全套 `flutter test` 3471 通過、1 略過、0 失敗（2026-10-03，在最終實作 commit 上跑；Issue 1 合併基準 3450＋21＝3471，吻合）；`flutter analyze` 乾淨，l10n 硬編碼字串雙檢查 PASS。每個 Task 皆做突變檢查（改壞後確認變紅再還原）。
+- 與計畫的差異（Ruling）：(1) Task 1 Step 5「全部 PASS」預期不成立——`reader_prefs_manager_test` 的 DB-backed 測試因 `toMap` 先加鍵而需 Task 2 schema，純 Dart 全綠後先行，schema 落地後全綠，已記入 SDD ledger；(2) Task 4 計畫 Step 2 只列 4 個需改測試，實作發現第 5 個既有測試「關閉封面獨立開關後」因新增 chip 列把開關擠出 800×600 可視區而 tap 落空，加 `dragUntilVisible` 捲入可視區（顯示分頁本就有 `SingleChildScrollView`，非行為回歸）；(3) 面板條件顯示採直接多行 Edit（做法 B），一次成功，無需 Node 腳本。
+- 提醒：本 Issue 合併後設定面板會出現「翻頁模式」，但選逐頁尚無作用，須待 Issue 4（逐頁幾何與瞬間換頁）；Epic 56 的 Issue 1～6 須同一個版本一起發布，中途不可切出發行版。
+- 待真機確認：PDF 設定面板「顯示」分頁在小螢幕／E-Ink 下新增一列 chip 後是否仍可捲到最底（面板已用 `SingleChildScrollView`，widget 測試已證無 overflow）；選逐頁時「換頁動畫」是否確實消失、切回連續捲動時原值是否保留。
+- 發現但未處理：`library_screen.dart` 書架版面覆寫 `_save` 整列重建時漏帶 `textConversionOverride`（既有缺陷，與本 Issue 無關，會把簡繁轉換覆寫清成 null），由使用者決定是否另開工單。

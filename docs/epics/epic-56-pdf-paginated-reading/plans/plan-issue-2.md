@@ -96,7 +96,7 @@ cd .worktrees/epic-56-issue-2-page-turn-mode/app && flutter pub get
   - `BookReaderPrefs.pdfPageTurnMode`（`PdfPageTurnMode?`）、`copyWith({PdfPageTurnMode? pdfPageTurnMode})`、`toMap` 鍵 `'pdf_page_turn_mode'`
   - `ResolvedPreferences.pdfPageTurnMode`（`PdfPageTurnMode`，建構子預設 `paginated`）
 
-- [ ] **Step 1：寫失敗的測試（`book_reader_prefs_test.dart`）**
+- [x] **Step 1：寫失敗的測試（`book_reader_prefs_test.dart`）**
 
 在檔案 import 區加：
 
@@ -156,7 +156,7 @@ import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 - 在輸入物件 `pdfPageTurnAnimation: PdfPageTurnAnimation.slide,`（該測試內，緊接 `);` 之前那一行）後加一行 `pdfPageTurnMode: PdfPageTurnMode.scroll,`。
 - 在 `expect(filtered.pdfPageTurnAnimation, isNull);` 後加一行 `expect(filtered.pdfPageTurnMode, isNull);`，並把其上方註解 `// 11 個強制清空欄位。` 改為 `// 12 個強制清空欄位。`。
 
-- [ ] **Step 2：寫失敗的測試（`reader_prefs_manager_test.dart`）**
+- [x] **Step 2：寫失敗的測試（`reader_prefs_manager_test.dart`）**
 
 加 import `package:elinkbook/reader/pdf_page_turn_mode.dart`。在 `resolve()` 群組內、單行錨點 `    test('單書覆寫存在時，優先套用單書覆寫，忽略全域預設', () {` 之前插入：
 
@@ -182,12 +182,12 @@ import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 - `book_reader_prefs_test.dart` 的既有測試 `fromMap 對未知的列舉名稱字串安全降級為 null，不拋出例外（…）`：在輸入 map 的鏈式指派中，`..['pdf_page_turn_animation'] = 'not_a_real_enum_value'` 之後加一行 `..['pdf_page_turn_mode'] = 'not_a_real_enum_value'`，並在 `expect(restored.pdfPageTurnAnimation, isNull);` 之後加 `expect(restored.pdfPageTurnMode, isNull);`。
 - `resolved_preferences_test.dart`：加 import `package:elinkbook/reader/pdf_page_turn_mode.dart`；在第一個測試 `建構後各欄位保留傳入值，columnMode 預設 auto、columnSize 預設 720.0` 的末尾（最後一個 `expect` 之後）加 `expect(resolved.pdfPageTurnMode, PdfPageTurnMode.paginated);`，直接守住建構子預設值（Ruling 2）。
 
-- [ ] **Step 3：執行確認失敗**
+- [x] **Step 3：執行確認失敗**
 
 Run: `flutter test test/reader/book_reader_prefs_test.dart test/reader/reader_prefs_manager_test.dart test/reader/resolved_preferences_test.dart`
 Expected: 編譯失敗（找不到 `pdf_page_turn_mode.dart`／`pdfPageTurnMode`）。
 
-- [ ] **Step 4：實作**
+- [x] **Step 4：實作**
 
 建立 `app/lib/reader/pdf_page_turn_mode.dart`：
 
@@ -232,12 +232,12 @@ enum PdfPageTurnMode { paginated, scroll }
 
 `reader_prefs_manager_impl.dart`：加 `import 'pdf_page_turn_mode.dart';`；在 `          book.pdfPageTurnAnimation ?? PdfPageTurnAnimation.slide,` 後加 `      pdfPageTurnMode: book.pdfPageTurnMode ?? PdfPageTurnMode.paginated,`。
 
-- [ ] **Step 5：執行確認通過**
+- [x] **Step 5：執行確認通過**
 
 Run: `flutter test test/reader/book_reader_prefs_test.dart test/reader/reader_prefs_manager_test.dart test/reader/resolved_preferences_test.dart`
 Expected: 全部 PASS。
 
-- [ ] **Step 6：突變檢查（確認測試真的守得住）**
+- [x] **Step 6：突變檢查（確認測試真的守得住）**
 
 逐一暫時改壞後執行 Step 5 的指令，確認對應測試**變紅**，再還原：
 - 在 `==` 拿掉 `other.pdfPageTurnMode == pdfPageTurnMode &&` → 「相等」測試失敗。
@@ -245,7 +245,7 @@ Expected: 全部 PASS。
 - `copyWith` 本體拿掉 `?? this.pdfPageTurnMode` → copyWith 保留測試失敗。
 - `resolve` 把 `?? PdfPageTurnMode.paginated` 改成 `?? PdfPageTurnMode.scroll` → 解析測試失敗。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/reader/pdf_page_turn_mode.dart app/lib/reader/book_reader_prefs.dart app/lib/reader/resolved_preferences.dart app/lib/reader/reader_prefs_manager_impl.dart app/test/reader/book_reader_prefs_test.dart app/test/reader/reader_prefs_manager_test.dart app/test/reader/resolved_preferences_test.dart
@@ -266,7 +266,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1 的 `BookReaderPrefs.pdfPageTurnMode`／`toMap` 鍵 `pdf_page_turn_mode`。
 - Produces：`book_reader_prefs.pdf_page_turn_mode TEXT`（可為空）；`getVersion() == 28`。
 
-- [ ] **Step 1：寫失敗的測試——新建資料庫與升級（`sqlite_library_repository_test.dart`）**
+- [x] **Step 1：寫失敗的測試——新建資料庫與升級（`sqlite_library_repository_test.dart`）**
 
 在單行錨點 `  test('全新安裝的 custom_fonts 表可用（version 16 起 onCreate 已含括）', () async {` 之前插入下面三個測試（檔案已有 `p`、`Directory`、`databaseFactory`、`OpenDatabaseOptions` 等 import，比照既有 v25→26 測試）：
 
@@ -468,7 +468,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 ```
 
-- [ ] **Step 2：寫失敗的測試——經偏好倉儲讀寫（`book_reader_prefs_repository_test.dart`）**
+- [x] **Step 2：寫失敗的測試——經偏好倉儲讀寫（`book_reader_prefs_repository_test.dart`）**
 
 加 import `package:elinkbook/reader/pdf_page_turn_mode.dart`。在單行錨點 `  test('save 寫入雙頁欄位後，load 讀回相同的值', () async {` 之前插入：
 
@@ -496,18 +496,18 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 ```
 
-- [ ] **Step 3：更新釘死版本號的既有測試**
+- [x] **Step 3：更新釘死版本號的既有測試**
 
 - `test/library/sqlite_library_repository_test.dart`：把
   `    test('全新安裝（onCreate 直接建到 version 27）：isFullTextSearchAvailable 為 true，'` 的 `27` 改 `28`，並把 `expect(await repository.database.getVersion(), 27);` 改為 `28`。
 - `test/stats/daily_reading_stats_schema_test.dart`：把測試名稱 `'全新安裝：version 27，資料表與日期索引存在，主鍵為（date, book_id）'` 的 `27` 改 `28`；兩處 `expect(await …getVersion(), 27);`（行 36、108）都改 `28`。第 108 行所在測試（v26→v27）仍會一路升到目前版本，所以是 `28`；在該行上方加註解 `// 升級一路走到目前最新版本（28），不是只升到 27`。
 
-- [ ] **Step 4：執行確認失敗**
+- [x] **Step 4：執行確認失敗**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart test/reader/book_reader_prefs_repository_test.dart test/stats/daily_reading_stats_schema_test.dart`
 Expected: FAIL（新欄位不存在：`no such column: pdf_page_turn_mode`／版本仍 27）。
 
-- [ ] **Step 5：實作**
+- [x] **Step 5：實作**
 
 `sqlite_library_repository.dart`（單行錨點 Edit）：
 1. `      version: 27,` → `      version: 28,`。
@@ -540,18 +540,18 @@ Expected: FAIL（新欄位不存在：`no such column: pdf_page_turn_mode`／版
      }
    ```
 
-- [ ] **Step 6：執行確認通過**
+- [x] **Step 6：執行確認通過**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart test/reader/book_reader_prefs_repository_test.dart test/stats/daily_reading_stats_schema_test.dart`
 Expected: 全部 PASS。
 
-- [ ] **Step 7：突變檢查**
+- [x] **Step 7：突變檢查**
 
 - 把 `onUpgrade` 的 `if (oldVersion < 28)` 區塊暫時移到 `else` 分支**外面**（無條件執行）→ v1 跳級測試應因 `duplicate column name` 失敗；還原。
 - 拿掉建表 DDL 的新欄位 → 「全新安裝」測試失敗；還原。
 - 拿掉 `onUpgrade` 的呼叫 → v27→v28 測試失敗；還原。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart app/test/reader/book_reader_prefs_repository_test.dart app/test/stats/daily_reading_stats_schema_test.dart
@@ -571,7 +571,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 **Interfaces:**
 - Consumes：`BookReaderPrefs.pdfPageTurnMode`（Task 1）。
 
-- [ ] **Step 1：寫失敗的測試（`fxl_settings_sheet_test.dart`）**
+- [x] **Step 1：寫失敗的測試（`fxl_settings_sheet_test.dart`）**
 
 加 import `package:elinkbook/reader/pdf_page_turn_mode.dart` 與 `package:elinkbook/reader/pdf_page_turn_animation.dart`。在單行錨點 `  testWidgets('點擊「轉換為繁體」圖示後，onChanged 帶入 TextConversionMode.toTraditional，其餘欄位維持原值',` 之前插入：
 
@@ -609,7 +609,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 ```
 
-- [ ] **Step 2：寫失敗的測試（`library_screen_test.dart`）**
+- [x] **Step 2：寫失敗的測試（`library_screen_test.dart`）**
 
 加 import `package:elinkbook/reader/pdf_page_turn_mode.dart`。在單行錨點 `  testWidgets('bookReaderPrefsRepository 未提供時，「版面覆寫」選項不顯示', (tester) async {` 之前插入（結構比照其後的既有版面覆寫核心回歸測試）：
 
@@ -653,26 +653,26 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 ```
 
-- [ ] **Step 3：執行確認失敗**
+- [x] **Step 3：執行確認失敗**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart test/screens/library_screen_test.dart --plain-name "pdfPageTurnMode" ; flutter test test/screens/library_screen_test.dart --plain-name "PDF 翻頁模式原樣保留"`
 Expected: 兩個新測試 FAIL（`changed?.pdfPageTurnMode` 為 `null`，預期 `scroll`）。
 
-- [ ] **Step 4：實作**
+- [x] **Step 4：實作**
 
 - `library_screen.dart`：在 `      pdfPageTurnAnimation: existing.pdfPageTurnAnimation,` 後加 `      pdfPageTurnMode: existing.pdfPageTurnMode,`。（同一建構子漏帶 `textConversionOverride` 是既有缺陷，**本 Issue 不處理**，見「已決定事項」第 4 點。）
 - `fxl_settings_sheet.dart`：在 `        pdfPageTurnAnimation: widget.prefs.pdfPageTurnAnimation,` 後加 `        pdfPageTurnMode: widget.prefs.pdfPageTurnMode,`。
 
-- [ ] **Step 5：執行確認通過**
+- [x] **Step 5：執行確認通過**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart test/screens/library_screen_test.dart`
 Expected: 全部 PASS。
 
-- [ ] **Step 6：突變檢查**
+- [x] **Step 6：突變檢查**
 
 把 Step 4 兩行各自暫時註解掉，確認對應的新測試變紅，再還原。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/lib/screens/fxl_settings_sheet.dart app/test/screens/library_screen_test.dart app/test/screens/fxl_settings_sheet_test.dart
@@ -693,7 +693,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：`PdfPageTurnMode`、`BookReaderPrefs.pdfPageTurnMode`（Task 1）。
 - Produces：鍵 `pdf_settings_page_turn_mode_paginated`／`pdf_settings_page_turn_mode_scroll`；`AppLocalizations` 的 `readerPdfPageTurnModeLabel`、`readerPdfPageTurnModePaginatedTooltip`、`readerPdfPageTurnModePaginatedLabel`、`readerPdfPageTurnModeScrollTooltip`、`readerPdfPageTurnModeScrollLabel`。
 
-- [ ] **Step 1：新增 ARB 鍵（四份）並產生 l10n**
+- [x] **Step 1：新增 ARB 鍵（四份）並產生 l10n**
 
 每份 ARB 都在單行錨點 `  "readerPdfPageTurnAnimationLabel": …,` **之前**插入（該行 zh_TW 為 `"換頁動畫"`、en 為 `"Page-turn animation"`）。
 
@@ -755,7 +755,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 Run: `flutter gen-l10n`
 Expected: 無錯誤；`git status` 顯示 `lib/l10n/app_localizations*.dart` 有變動。再跑 `flutter test test/l10n/` 應 PASS（鍵集合一致、zh 鏡像、en 無漏翻）。
 
-- [ ] **Step 2：改既有測試——動畫選項需指定連續捲動（`pdf_settings_sheet_test.dart`）**
+- [x] **Step 2：改既有測試——動畫選項需指定連續捲動（`pdf_settings_sheet_test.dart`）**
 
 加 import `package:elinkbook/reader/pdf_page_turn_mode.dart`。
 
@@ -767,7 +767,7 @@ Expected: 無錯誤；`git status` 顯示 `lib/l10n/app_localizations*.dart` 有
 
 （這四個測試在實作前仍通過——因為動畫選項目前一律顯示——所以此步驟沒有紅燈；紅燈由 Step 3 的新測試提供。實作後若漏改任何一個，`dragUntilVisible` 會因找不到元件而逾時失敗。）
 
-- [ ] **Step 3：寫失敗的新測試（同檔，在單行錨點 `  testWidgets('換頁動畫兩個選項皆存在', (tester) async {` 之前插入）**
+- [x] **Step 3：寫失敗的新測試（同檔，在單行錨點 `  testWidgets('換頁動畫兩個選項皆存在', (tester) async {` 之前插入）**
 
 ```dart
   testWidgets('翻頁模式：未覆寫（null）時顯示為逐頁，且不顯示「換頁動畫」選項', (tester) async {
@@ -877,19 +877,19 @@ Expected: 無錯誤；`git status` 顯示 `lib/l10n/app_localizations*.dart` 有
 
 ```
 
-- [ ] **Step 4：執行確認失敗**
+- [x] **Step 4：執行確認失敗**
 
 Run: `flutter test test/screens/pdf_settings_sheet_test.dart`
 Expected: 新測試 FAIL（找不到 `pdf_settings_page_turn_mode_*`）。
 
-- [ ] **Step 5：實作——`pdf_settings_sheet.dart` 狀態與 `onChanged`（單行錨點 Edit）**
+- [x] **Step 5：實作——`pdf_settings_sheet.dart` 狀態與 `onChanged`（單行錨點 Edit）**
 
 1. 在 `import '../reader/pdf_page_turn_animation.dart';` 後加 `import '../reader/pdf_page_turn_mode.dart';`。
 2. 在 `  late PdfPageTurnAnimation _pageTurnAnimation;` 後加 `  late PdfPageTurnMode _pageTurnMode;`。
 3. `initState`：在 `        widget.prefs.pdfPageTurnAnimation ?? PdfPageTurnAnimation.slide;` 後加 `    _pageTurnMode = widget.prefs.pdfPageTurnMode ?? PdfPageTurnMode.paginated;`。
 4. `_notifyChanged`：在 `        pdfPageTurnAnimation: _pageTurnAnimation,` 後加 `        pdfPageTurnMode: _pageTurnMode,`。
 
-- [ ] **Step 6：實作——選項清單與翻頁模式 chip 群組**
+- [x] **Step 6：實作——選項清單與翻頁模式 chip 群組**
 
 在 `_buildDisplayTab` 內、`    final pageTurnAnimationOptions = [` 之前加：
 
@@ -938,7 +938,7 @@ Expected: 新測試 FAIL（找不到 `pdf_settings_page_turn_mode_*`）。
             Text(l10n.readerDualPageModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
 ```
 
-- [ ] **Step 7：實作——「換頁動畫」條件顯示（整段多行取代，用 Node 腳本）**
+- [x] **Step 7：實作——「換頁動畫」條件顯示（整段多行取代，用 Node 腳本）**
 
 做法二選一：
 
@@ -978,19 +978,19 @@ console.log('OK');
 
 執行後 `Read` 該區段確認語法與縮排（`...[` 內是原本 5 個 widget：間距、小標題、間距、`EBOptionChipGroup`），並跑 `dart format` **不要**（會重排整檔），只確認 `flutter analyze` 乾淨。
 
-- [ ] **Step 8：執行確認通過**
+- [x] **Step 8：執行確認通過**
 
 Run: `flutter test test/screens/pdf_settings_sheet_test.dart test/l10n/`
 Expected: 全部 PASS。
 
-- [ ] **Step 9：突變檢查與靜態檢查**
+- [x] **Step 9：突變檢查與靜態檢查**
 
 - 把 `_notifyChanged` 的 `pdfPageTurnMode: _pageTurnMode,` 暫時刪掉 → 「回歸檢查（濾鏡）」「點擊連續捲動」測試應失敗；還原。
 - 把條件 `_pageTurnMode == PdfPageTurnMode.scroll` 暫時改成 `true` → 「未覆寫時隱藏動畫」測試應失敗；還原。
 - 把 `_pageTurnAnimation` 在條件隱藏時重設為 `slide`（模擬「隱藏就清除」的錯誤實作）→ 「隱藏不清除」測試應失敗；還原。
 - Run: `node tool/check_l10n_hardcoded_strings.js` → 無新增違規；`flutter analyze` → `No issues found!`。
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add app/lib/l10n app/lib/screens/pdf_settings_sheet.dart app/test/screens/pdf_settings_sheet_test.dart
@@ -1011,7 +1011,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：`ResolvedPreferences.pdfPageTurnMode`（Task 1）。
 - Produces：`PdfReaderView.pdfPageTurnMode`（`PdfPageTurnMode`，widget 層預設 `scroll`）。Issue 4 起才會讀取。
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 `pdf_reader_view_test.dart`：加 import `package:elinkbook/reader/pdf_page_turn_mode.dart`。在 `main()` 內單行錨點 `  setUp(() => pdfrxInitialize());` 之後插入：
 
@@ -1085,12 +1085,12 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 ```
 
-- [ ] **Step 2：執行確認失敗**
+- [x] **Step 2：執行確認失敗**
 
 Run: `flutter test test/reader/pdf_reader_view_test.dart --plain-name "widget 層預設翻頁模式" ; flutter test test/screens/reader_screen_test.dart --plain-name "翻頁模式"`
 Expected: 編譯失敗（`pdfPageTurnMode` 不存在）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `pdf_reader_view.dart`：
 1. 加 `import 'pdf_page_turn_mode.dart';`（緊接 `import 'pdf_page_turn_animation.dart';` 之後）。
@@ -1107,17 +1107,17 @@ Expected: 編譯失敗（`pdfPageTurnMode` 不存在）。
 
 `reader_screen.dart`：在 `          pdfPageTurnAnimation: resolved.pdfPageTurnAnimation,` 後加 `          pdfPageTurnMode: resolved.pdfPageTurnMode,`。
 
-- [ ] **Step 4：執行確認通過（含零回歸）**
+- [x] **Step 4：執行確認通過（含零回歸）**
 
 Run: `flutter test test/reader/pdf_reader_view_test.dart test/reader/pdf_reader_view_fit_mode_test.dart test/screens/reader_screen_test.dart`
 Expected: 全部 PASS，且**未修改**任何既有 `pdf_reader_view_*` 測試。
 
-- [ ] **Step 5：突變檢查**
+- [x] **Step 5：突變檢查**
 
 - 把 `ReaderScreen` 的新參數行暫時註解 → 兩個 `reader_screen_test` 新測試中的 `scroll` 案例失敗；還原。
 - 把 widget 層預設改成 `paginated` → widget 預設測試失敗；還原。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/lib/screens/reader_screen.dart app/test/reader/pdf_reader_view_test.dart app/test/screens/reader_screen_test.dart
@@ -1133,16 +1133,16 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 **Files:**
 - Modify: `docs/epics/epic-56-pdf-paginated-reading/epic.md`、`docs/epics/epic-56-pdf-paginated-reading/issues.md`
 
-- [ ] **Step 1：靜態檢查**
+- [x] **Step 1：靜態檢查**
 
 Run（在 `app/`）：`flutter analyze` → `No issues found!`；`node tool/check_l10n_hardcoded_strings.js` → 無違規。
 
-- [ ] **Step 2：完整測試（只在此跑一次）**
+- [x] **Step 2：完整測試（只在此跑一次）**
 
 Run（`run_in_background`，在 `app/`）：`flutter test`
 Expected: 全數 PASS（約 6 分鐘）。若失敗，先判斷是否為本 Issue 造成（尤其是釘死 schema 版本號或預設偏好下尋找換頁動畫選項的測試），逐一修到綠；與本 Issue 無關的既有失敗要在回報中點名。
 
-- [ ] **Step 3：真機／手動確認清單寫入 `epic.md`**
+- [x] **Step 3：真機／手動確認清單寫入 `epic.md`**
 
 在 `epic.md` 新增「Issue 2 開發記錄」段落，內容至少包含：
 - 完成項目與提交清單、全套測試結果（通過數、日期）。
@@ -1150,11 +1150,11 @@ Expected: 全數 PASS（約 6 分鐘）。若失敗，先判斷是否為本 Issu
 - 提醒：本 Issue 合併後選逐頁尚無作用，須待 Issue 4。
 - 發現但未處理：`library_screen.dart` 書架版面覆寫 `_save` 漏帶 `textConversionOverride`（既有缺陷）。
 
-- [ ] **Step 4：更新 `issues.md` 狀態**
+- [x] **Step 4：更新 `issues.md` 狀態**
 
 把 Issue 2 的 `**Status:** ready-for-agent` 改為 `**Status:** in-review`（PR 合併後由人類流程改為 `done（PR #N）`）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add docs/epics/epic-56-pdf-paginated-reading/epic.md docs/epics/epic-56-pdf-paginated-reading/issues.md docs/epics/epic-56-pdf-paginated-reading/plans/plan-issue-2.md
