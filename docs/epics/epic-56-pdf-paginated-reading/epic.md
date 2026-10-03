@@ -14,7 +14,7 @@
 - `PdfReaderView` 底層是 `pdfrx` 的 `PdfViewer`，預設把所有頁面直向疊成連續捲動，所以鄰頁會露出。
 - 換頁是 `goToPage()`／`goToArea()` 帶動畫捲過去（既有「PDF 翻頁動畫」設定：滑動／無，只控制動畫時長），這是「往上滑」感覺的來源。
 - 設定面板有「Fit 模式」（Page-fit／Fit Width／真實比例），也會單書存檔，但 `pdf_reader_view.dart` 完全沒有讀取 `pdfFitMode`，目前實際行為只是 `pdfrx` 預設，並非詞彙表所述的「Page-fit 整頁完整顯示」。
-- `pdfrx` 2.4.7 提供 `normalizeMatrix`、`panAxis` 掛鉤，可以把可視範圍限制在目前這一頁（或 spread），不需換掉底層引擎。
+- `pdfrx` 2.4.7 提供 `normalizeMatrix`、`panAxis` 掛鉤，可以限制平移範圍；但 `pdfrx` 會把「所有與可視矩形（含快取範圍）相交的頁面」都繪製出來（`pdf_viewer.dart` 約 1502 行的 `rect.intersect(cacheTargetRect)`）。Page-fit 下頁面在螢幕的另一個維度會有留白，連續排列時留白處必然露出鄰頁，所以**單靠 `normalizeMatrix` 無法達成「鄰頁不可見」**，必須在 `layoutPages` 做幾何隔離（見設計決策；計畫審查 C-1 查證成立）。
 
 ## 目標
 
@@ -26,8 +26,14 @@ PDF 新增「換頁模式」：**逐頁**（一次只顯示一頁，鄰頁不可
 |---|---|
 | 設定形態 | 新增「換頁模式」二選一：逐頁／連續捲動；EPUB 與 PDF 共用「換頁模式」一詞（詞條見 `CONTEXT.md`） |
 | 持久化與預設 | 只放 PDF 設定面板，單書持久化於 `book_reader_prefs`，無全域預設層；沒存過一律視為逐頁（既有 PDF 升級後也變逐頁，閱讀位置照舊） |
+| 資料庫 | `book_reader_prefs` 每個偏好是一個欄位（如 `pdf_fit_mode TEXT`），所以須：SQLite schema 由 v27 升到 v28、`_onUpgrade` 新增 `ALTER TABLE book_reader_prefs ADD COLUMN pdf_page_turn_mode TEXT`（比照 `pdf_page_turn_animation` 的追加方式）、初始建表 DDL 補欄位、`BookReaderPrefs` 的 `toMap`／`fromMap`／`copyWith`／`==`／`hashCode`、`ResolvedPreferences.resolve()`，以及所有重建 `BookReaderPrefs` 的呼叫點（`library_screen.dart`、`fxl_settings_sheet.dart`、`pdf_settings_sheet.dart`）都要帶上新欄位；升級路徑需有遷移測試 |
+| 設定面板 | 「換頁模式」放在 `PdfSettingsSheet` 的「顯示」分頁（與 Fit 模式、PDF 翻頁動畫同一分頁，現有三分頁為顯示／濾鏡／裁切）；選逐頁時隱藏「PDF 翻頁動畫」；新增字串須進四份 ARB 並通過 `check_l10n_hardcoded_strings.js` |
+| 逐頁幾何隔離 | 逐頁模式的 `layoutPages` 必須把各頁（或 spread）在座標上拉開，間距大於任何合理可視範圍，使相鄰頁不可能同時落入可視矩形；再用 `normalizeMatrix` 把平移鎖在目前這頁。具體間距（固定大值 vs 依 view 尺寸）與兩個風險由第一個 spike 驗證：大座標下的浮點精度（數千頁 × 大間距）、`pdfrx` 在 view 尺寸改變（旋轉、摺疊）時是否重算 layout。雙頁 spread 與裁切版面用同一套隔離規則 |
 | 轉場 | 逐頁下瞬間切換、無過渡動畫；「PDF 翻頁動畫」設定只在連續捲動下顯示 |
-| 翻頁入口 | 熱區、音量鍵、目錄、書籤、搜尋跳轉皆為瞬間到某頁；未放大時水平滑動翻頁（方向依雙頁方向鏡像）；放大後（橫向可平移）滑動改為平移 |
+| 絕對跳轉 | 目錄、書籤、頁碼跳頁、底列進度：瞬間抵達目標頁（spread），視窗對齊該頁頂端，不繼承上一頁的頁內捲動偏移。**例外**：搜尋跳轉帶有高亮矩形時，視窗自動定位到包含該矩形的垂直區間，確保 3 秒暫態高亮看得到（頁面比螢幕高時） |
+| 相對步進 | 3×3 熱區與音量鍵的「下一頁／上一頁」：頁面比螢幕高且未到頁底時先頁內步進一個螢幕高度（見下一列），到頁底後才瞬間換頁；單頁（Page-fit）時直接瞬間換頁 |
+| 水平滑動 | 純粹的跨頁手勢：直接換頁並對齊新頁頂端（方向依雙頁方向鏡像），不做頁內步進；只在頁面沒有橫向溢出時生效（Page-fit、Fit Width），真實比例橫向可平移時滑動改為平移；頁內垂直移動一律交給垂直拖曳 |
+| 閱讀統計 | 頁內垂直拖曳超過門檻（約 20dp）算一次閱讀活動並回報 `ReadingSession.recordActivity()`；否則長頁上專注閱讀、頁碼不變，統計會誤判閒置而凍結計時（現有 PDF 活動只來自頁碼變化、熱區與長按） |
 | 框選衝突 | 長按拖曳框選優先，滑動翻頁只在沒有框選拖曳進行中、且為快速水平滑動時觸發（沿用 `_selectionDrag` 守衛） |
 | Fit 模式 | 本 Epic 一併接上三種：Page-fit、Fit Width、真實比例 |
 | 頁面比螢幕高 | 「下一頁」先往下捲一個螢幕高度（保留少量重疊），捲到頁底後才換到下一頁；「上一頁」對稱，換到上一頁時落在該頁頂端 |
@@ -54,11 +60,21 @@ PDF 新增「換頁模式」：**逐頁**（一次只顯示一頁，鄰頁不可
 
 ## 建議拆分方向（尚未成為 `issues.md`，需另行 Scrum Master 階段確認）
 
-1. 純 Dart 規則模組：目前頁／spread 的有效範圍、Fit 模式的縮放基準、頁高於螢幕時的步進與換頁判定（單元測試先行）。
-2. `PdfPageTurnMode` 與 `book_reader_prefs`／設定面板（含「PDF 翻頁動畫」只在連續捲動顯示、預設逐頁）。
-3. `PdfReaderView` 逐頁渲染：限制可視範圍、瞬間換頁、熱區／音量鍵／跳轉接線、Fit 模式接上。
-4. 水平滑動翻頁與框選衝突處理、真機確認。
+計畫審查 I-4 認為原「逐頁渲染＋Fit 模式」單一 Issue 太大，已拆開：
+
+1. **Fit 模式接上**：先在既有連續捲動路徑下，讓 `pdfFitMode`（Page-fit／Fit Width／真實比例）真正驅動 `PdfReaderView` 的縮放基準。
+2. **偏好與設定面板**：`PdfPageTurnMode`、`book_reader_prefs` 新欄位與 SQLite v28 遷移、設定面板（顯示分頁）、ARB、預設逐頁（此時逐頁尚無渲染，產品預設先不切換）。
+3. **逐頁幾何與瞬間換頁（含 spike）**：先驗證幾何隔離的兩個風險，再做 `layoutPages` 隔離、`normalizeMatrix` 鎖定、Page-fit 下瞬間換頁、絕對跳轉與熱區／音量鍵接線、產品預設切到逐頁。
+4. **長頁步進與跨頁接續**：頁面比螢幕高時的頁內步進、到頁底換頁、換上一頁落頂端、搜尋跳轉高亮自動定位、頁內拖曳活動回報。
+5. **水平滑動翻頁與框選衝突**：滑動翻頁、與長按框選／縮放平移的衝突處理、真機確認。
+純 Dart 規則模組（可視範圍、頁高於螢幕時的步進與換頁判定）在 3、4 內先寫、單元測試先行。
 
 ## 開發記錄
 
-（尚無）
+**2026-10-03 Epic 設計審查與修訂**（審查報告在 `reviews/review-epic.md`，不進版控；2 Critical／4 Important／3 Minor）
+
+- 已採納並修進本文件：C-1（逐頁必須在 `layoutPages` 做幾何隔離，已用 `pdfrx` 原始碼查證）、C-2（導覽語意拆成絕對跳轉／相對步進／水平滑動）、I-1（SQLite v28 與遷移，已查證 `book_reader_prefs` 為一偏好一欄位）、I-2（頁內拖曳回報閱讀活動）、I-3（搜尋跳轉高亮自動定位）、I-4（拆分方向由 4 項改為 5 項）、M-1（ARB 納入設定面板決策列）。
+- 部分採納：M-2 採納「放在設定面板並隱藏翻頁動畫」，但報告所稱「Tab 2 版面與導覽」不實——`PdfSettingsSheet` 實際三分頁為顯示／濾鏡／裁切，Fit 模式與翻頁動畫都在「顯示」分頁，故放「顯示」。
+- 不採納：報告提到 `LayoutPreset` 需納入新欄位——查無 PDF 偏好欄位進入該結構，不列入工作項；M-3 序號：看板第 N 列對應 `epic-(N-1)` 是既有慣例（第 56 列為 epic-55），無需更動。
+- 審查延伸發現（待使用者決定）：`CONTEXT.md` 新詞條以「換頁模式」為正式詞並把「翻頁模式」列為 Avoid，但既有 EPUB 版面覆寫對話框的 ARB 字串（`libraryLayoutOverridePageTurnModeLabel`）寫的是「翻頁模式」，`page_turn_mode.dart` 註解則寫「換頁模式」。詞彙表與使用者實際看到的 UI 用語不一致，需決定統一用哪一個。
+- 水平滑動在長頁上的行為（直接跨頁、落新頁頂端）是依審查建議補上的規格，與先前 Q3(d)／Q6(b) 的決定相容但屬新增細節，Issue 拆分時請使用者確認。
