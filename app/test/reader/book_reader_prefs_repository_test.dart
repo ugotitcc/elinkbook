@@ -11,6 +11,7 @@ import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
+import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 
 void main() {
   setUpAll(() {
@@ -73,6 +74,23 @@ void main() {
     expect(await repository.load('b1'), prefs);
   });
 
+  test('save 寫入翻頁模式後，load 讀回相同的值（逐頁、連續捲動各一）', () async {
+    for (final mode in PdfPageTurnMode.values) {
+      await repository.save('b1', BookReaderPrefs(pdfPageTurnMode: mode));
+      expect((await repository.load('b1')).pdfPageTurnMode, mode);
+    }
+  });
+  test('資料庫存有無法辨識的翻頁模式名稱（例如未來版本寫入的值）時，load 不拋例外且降級為 null，其餘欄位不受影響',
+      () async {
+    await libraryRepository.database.insert('book_reader_prefs', {
+      'book_id': 'b1',
+      'font_size': 18.0,
+      'pdf_page_turn_mode': 'curl_from_the_future',
+    });
+    final prefs = await repository.load('b1');
+    expect(prefs.pdfPageTurnMode, isNull);
+    expect(prefs.fontSize, 18.0);
+  });
   test('save 寫入雙頁欄位後，load 讀回相同的值', () async {
     const prefs = BookReaderPrefs(
       dualPageMode: DualPageMode.always,

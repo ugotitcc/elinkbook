@@ -27,13 +27,13 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  test('全新安裝：version 27，資料表與日期索引存在，主鍵為（date, book_id）', () async {
+  test('全新安裝：version 28，資料表與日期索引存在，主鍵為（date, book_id）', () async {
     final library = await SqliteLibraryRepository.open(inMemoryDatabasePath,
         singleInstance: false);
     addTearDown(library.close);
     final db = library.database;
 
-    expect(await db.getVersion(), 27);
+    expect(await db.getVersion(), 28);
 
     final tables = await db.rawQuery(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='daily_reading_stats'");
@@ -105,7 +105,8 @@ void main() {
     final upgraded = await SqliteLibraryRepository.open(dbPath);
     addTearDown(() => upgraded.close());
 
-    expect(await upgraded.database.getVersion(), 27);
+    // 升級一路走到目前最新版本（28），不是只升到 27
+    expect(await upgraded.database.getVersion(), 28);
     final legacy = await upgraded.database.query('books');
     expect(legacy.single['id'], 'legacy-book', reason: '升級不得動到既有資料');
     expect(await upgraded.database.query('daily_reading_stats'), isEmpty);
