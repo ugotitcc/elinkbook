@@ -6,6 +6,7 @@ import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
+import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
@@ -65,6 +66,20 @@ void main() {
       expect(resolved.fullscreen, isFalse);
       expect(resolved.volumeKeyEnabled, isTrue);
       expect(resolved.consoleLogEnabled, isFalse);
+    });
+
+    test('翻頁模式：未覆寫時為逐頁；單書覆寫為連續捲動時採用單書值', () {
+      final defaults = manager.resolve(LoadedPrefs(
+        bookPrefs: BookReaderPrefs.empty,
+        globalPrefs: const GlobalReaderPrefs.initial(),
+      ));
+      expect(defaults.pdfPageTurnMode, PdfPageTurnMode.paginated);
+
+      final scroll = manager.resolve(LoadedPrefs(
+        bookPrefs: const BookReaderPrefs(pdfPageTurnMode: PdfPageTurnMode.scroll),
+        globalPrefs: const GlobalReaderPrefs.initial(),
+      ));
+      expect(scroll.pdfPageTurnMode, PdfPageTurnMode.scroll);
     });
 
     test('單書覆寫存在時，優先套用單書覆寫，忽略全域預設', () {

@@ -10,6 +10,7 @@ import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
+import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 
@@ -282,6 +283,45 @@ void main() {
     expect(a, isNot(b));
   });
 
+  test('翻頁模式欄位：empty 為 null；相同值相等且雜湊一致；不同值（含 null 對非 null）不相等', () {
+    expect(BookReaderPrefs.empty.pdfPageTurnMode, isNull);
+    const a = BookReaderPrefs(pdfPageTurnMode: PdfPageTurnMode.scroll);
+    const b = BookReaderPrefs(pdfPageTurnMode: PdfPageTurnMode.scroll);
+    const c = BookReaderPrefs(pdfPageTurnMode: PdfPageTurnMode.paginated);
+    expect(a, b);
+    expect(a.hashCode, b.hashCode);
+    expect(a, isNot(c));
+    expect(a, isNot(BookReaderPrefs.empty));
+  });
+  test('翻頁模式欄位的 toMap／fromMap round-trip：兩個值與 null 皆正確保留', () {
+    for (final mode in PdfPageTurnMode.values) {
+      final prefs = BookReaderPrefs(pdfPageTurnMode: mode);
+      final map = prefs.toMap('book-mode');
+      expect(map['pdf_page_turn_mode'], mode.name);
+      expect(BookReaderPrefs.fromMap(map), prefs);
+    }
+    final nullMap = BookReaderPrefs.empty.toMap('book-mode');
+    expect(nullMap['pdf_page_turn_mode'], isNull);
+    expect(BookReaderPrefs.fromMap(nullMap).pdfPageTurnMode, isNull);
+  });
+  test('fromMap 遇到無法辨識的翻頁模式名稱（例如未來版本新增的值）時降級為 null，不拋例外', () {
+    final map = BookReaderPrefs.empty.toMap('book-mode')
+      ..['pdf_page_turn_mode'] = 'curl_from_the_future';
+    expect(BookReaderPrefs.fromMap(map).pdfPageTurnMode, isNull);
+  });
+  test('copyWith 更新 pdfPageTurnMode 時其餘欄位保留；沒傳時保留原值', () {
+    const original = BookReaderPrefs(
+      pdfFitMode: PdfFitMode.fitWidth,
+      pdfPageTurnAnimation: PdfPageTurnAnimation.none,
+      pdfPageTurnMode: PdfPageTurnMode.paginated,
+    );
+    final updated = original.copyWith(pdfPageTurnMode: PdfPageTurnMode.scroll);
+    expect(updated.pdfPageTurnMode, PdfPageTurnMode.scroll);
+    expect(updated.pdfFitMode, PdfFitMode.fitWidth);
+    expect(updated.pdfPageTurnAnimation, PdfPageTurnAnimation.none);
+    expect(original.copyWith(pdfFitMode: PdfFitMode.pageFit).pdfPageTurnMode,
+        PdfPageTurnMode.paginated);
+  });
   test('換頁動畫欄位的 toMap／fromMap round-trip 保留欄位值，null 亦正確 round-trip',
       () {
     const withNone =
@@ -561,6 +601,7 @@ void main() {
       ..['dual_page_direction'] = 'not_a_real_enum_value'
       ..['column_mode'] = 'not_a_real_enum_value'
       ..['pdf_page_turn_animation'] = 'not_a_real_enum_value'
+      ..['pdf_page_turn_mode'] = 'not_a_real_enum_value'
       ..['text_conversion_override'] = 'not_a_real_enum_value';
 
     final restored = BookReaderPrefs.fromMap(map);
@@ -575,10 +616,11 @@ void main() {
     expect(restored.dualPageDirection, isNull);
     expect(restored.columnMode, isNull);
     expect(restored.pdfPageTurnAnimation, isNull);
+    expect(restored.pdfPageTurnMode, isNull);
     expect(restored.textConversionOverride, isNull);
   });
 
-  test('reflowableEpubFields() 過濾掉 PDF／雙頁／pageMargins 共 11 個欄位，其餘 21 個流式 EPUB 欄位保留（epic-28 Issue 3 欄位污染防護）',
+  test('reflowableEpubFields() 過濾掉 PDF／雙頁／pageMargins 共 12 個欄位，其餘 21 個流式 EPUB 欄位保留（epic-28 Issue 3 欄位污染防護）',
       () {
     const prefs = BookReaderPrefs(
       fontFamily: 'SourceHanSansTC',
@@ -613,6 +655,7 @@ void main() {
       dualPageCoverAlone: false,
       dualPageDirection: DualPageDirection.ltr,
       pdfPageTurnAnimation: PdfPageTurnAnimation.slide,
+      pdfPageTurnMode: PdfPageTurnMode.scroll,
     );
 
     final filtered = prefs.reflowableEpubFields();
@@ -640,7 +683,7 @@ void main() {
     expect(filtered.columnSize, 800);
     expect(filtered.textConversionOverride, TextConversionMode.toTraditional);
 
-    // 11 個強制清空欄位。
+    // 12 個強制清空欄位。
     expect(filtered.pageMargins, isNull);
     expect(filtered.pdfFitMode, isNull);
     expect(filtered.pdfContrast, isNull);
@@ -652,6 +695,7 @@ void main() {
     expect(filtered.dualPageCoverAlone, isNull);
     expect(filtered.dualPageDirection, isNull);
     expect(filtered.pdfPageTurnAnimation, isNull);
+    expect(filtered.pdfPageTurnMode, isNull);
   });
 
   test('reflowableEpubFields() 對全部欄位皆為 null 的輸入，回傳值仍全部為 null（不引入非預期的預設值）',
