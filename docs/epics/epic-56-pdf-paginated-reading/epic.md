@@ -1,6 +1,6 @@
 # `epic-56-pdf-paginated-reading` PDF 逐頁閱讀
 
-**狀態：** 🟡 開發中 (Active)（Issue 1～3 已合併，Issue 4 開發完成待合併，其餘待寫計畫）
+**狀態：** 🟡 開發中 (Active)（Issue 1～4 已合併，Issue 5、6 待寫計畫）
 **存放路徑：** `docs/epics/epic-56-pdf-paginated-reading/`
 **關聯 PRD 章節：** PDF 閱讀（預設 page-fit、影像濾鏡、裁切）、互動模式（E-Ink 減少過渡動畫、3×3 熱區、音量鍵翻頁）
 **關聯 ADR：** 0022（PDF 引擎改用 `pdfrx`）
@@ -246,3 +246,8 @@ gap=100000  n=10000  y=1.01e+9  ULP(z=1/4/8)=6.40e+1 / 2.56e+2 / 5.12e+2
 - 待真機確認：窄長手機與摺疊裝置的鄰頁隔離、旋轉後重新 Page-fit 的觀感、E-Ink 上瞬間換頁是否單次重繪、快取外擴 1.0 下連續快速換頁的白紙現象、第 50 頁以後旋轉、雙頁＋裁切組合。
 - 提醒：長頁仍無頁內逐屏步進（Issue 5）、也沒有滑動翻頁（Issue 6），須待全部完成才可發版。
 - 最終審查（獨立審查員，範圍 `aa1a0a69..c5a6d978`）：0 Critical／2 Important／6 Minor，結論有條件可合併。I-1（軟鍵盤使視窗高度改變會把縮放與頁內位置重設到頂端；改為只有高度改變時保留縮放與頁內相對位置）與 I-2（pdfrx 內建 PageUp／PageDown／Space／Home／End 在逐頁下被夾回而失效；改以 `onKey` 接管為單元導覽）已修，各有先紅後綠的測試；全套 `flutter test` 3530 通過、1 略過、0 失敗。延後的 Minor：版面重算到重新定位前 1～2 幀用舊矩陣（E-Ink 可能多一次錯誤刷新）；`onViewerReady` 回報 pdfrx 頁碼而非單元錨點頁；InteractiveViewer 最小縮放落後一次版面更新；版面暫態期間的跳頁只記錄錨點、不補跳；裁切案例未斷言縮放基準、手勢路徑與「旋轉＋isLandscape＋auto 雙頁」組合沒有測試；`pdfPageTurnMode` 註解過時、一處排版擠在同一行。
+
+**2026-10-04 PR 合併（Issue 4）**
+
+- PR #317（`epic-56/issue-4-paginated-geometry` → `main`）已合併，合併 commit `6c2a864c`。Issue 4 完成。全套 `flutter test` 3530 通過、1 略過、0 失敗（發 PR 前在最終實作 commit 上跑）。
+- 後續：Issue 5（長頁步進、帶高亮跳轉、閱讀活動回報）與 Issue 6（左右滑動翻頁與框選衝突）皆依賴 Issue 4、彼此獨立，可開始寫計畫。Issue 5 可一併考量 Issue 4 最終審查延後的 Minor（版面重算到重新定位前的暫態幀、`onViewerReady` 回報錨點頁、最小縮放落後一次版面更新）。Epic 56 須 Issue 1～6 全數完成才可發版。

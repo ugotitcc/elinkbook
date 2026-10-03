@@ -85,7 +85,7 @@ Issue 1、2、3 互相獨立，可平行；Issue 4 依賴前三者；Issue 5、6
 
 ## Issue 4：逐頁幾何隔離與瞬間換頁
 
-**Status:** in-progress
+**Status:** done（PR #317）
 
 **依賴：** Issue 1、2、3。
 
