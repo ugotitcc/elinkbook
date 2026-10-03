@@ -87,3 +87,8 @@ PDF 新增「翻頁模式」：**逐頁**（一次只顯示一頁，鄰頁不可
 - 已決定（I-1）：使用者選擇改為「相對步進換到上一頁時落在上一單元底端」，與往下的逐屏步進對稱；`spec.md` 規則 4、使用者故事 19 與測試範例已修改，上方設計決策表同步更新。滑動翻頁與絕對跳轉仍落頂端。
 
 **2026-10-03 Scrum Master 階段**：`issues.md` 拆成 6 個 Issue（1 Fit 模式接上、2 偏好＋設定面板＋SQLite v28、3 幾何 spike〔需真機〕、4 逐頁幾何＋瞬間換頁、5 長頁步進＋高亮跳轉＋活動回報、6 滑動翻頁＋框選衝突）。依賴：1、2、3 可平行，4 依賴前三者，5、6 依賴 4。Issue 1～6 須同一版本發布（Issue 2 合併後設定面板即出現尚無作用的選項，直到 Issue 4）。
+
+**2026-10-03 Issue 拆分審查與修訂**（審查報告在 `reviews/review-issues.md`，不進版控；0 Critical／3 Important／3 Minor；40 則使用者故事與 10 條規則經矩陣核對無遺漏）
+
+- 已採納並修進 `issues.md`：I-1（Issue 5 補 `onReadingActivity` 回呼接線合約，`ReadingSession` 由 `ReaderScreen` 私有持有、`PdfReaderView` 不得自行引用）、I-2（Issue 4 明訂暫態降級：長頁的相對步進先一律整頁換頁，頁內步進與上一頁落底端留待 Issue 5）、M-1（發版限制統一為「1～6 全數完成才可發布」）、M-2（逐頁下所有導覽動畫時長強制為零）、M-3（Issue 6 手勢時間戳用 `clock.now()`）。
+- 部分採納：I-3 採納「補參數與縮放機制」——`pdfrx` 2.4.7 確有 `sizeDelegateProvider`（不可與已棄用的 `minScale`、`calculateInitialZoom` 並用），Issue 1 改為透過它提供初始與最小縮放；但報告建議的 `pdfFitMode` 非空預設為 Page-fit 不採納，改為可為空、`null` 表示沿用 `pdfrx` 現有預設，理由是 widget 層預設要保守以保護既有大量 `PdfReaderView` 測試（與 `pdfPageTurnMode` 同一原則），產品預設一律由 `ReaderScreen` 傳入。
