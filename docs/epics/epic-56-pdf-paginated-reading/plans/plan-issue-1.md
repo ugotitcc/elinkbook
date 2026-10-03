@@ -68,7 +68,7 @@
 - Consumes：無。
 - Produces：分支 `epic-56/issue-1-fit-mode`，後續 Task 都在這個 worktree 的 `app/` 下執行。
 
-- [ ] **Step 1：在 `main` 提交計畫**
+- [x] **Step 1：在 `main` 提交計畫**
 
 先把 `issues.md` Issue 1 的 `**Status:** ready-for-agent` 改為 `**Status:** in-progress`，然後（在儲存庫根目錄，不需要 `cd`）：
 
