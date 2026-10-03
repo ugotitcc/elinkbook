@@ -25,6 +25,7 @@ class PdfFitSizeDelegateProvider extends PdfViewerSizeDelegateProvider {
     required this.fitMode,
     required this.unitRectOf,
     required this.pageMargin,
+    this.strictMinScale = false,
   });
 
   final PdfFitMode fitMode;
@@ -33,11 +34,16 @@ class PdfFitSizeDelegateProvider extends PdfViewerSizeDelegateProvider {
   /// 必須與 `PdfViewerParams.margin` 相同。
   final double pageMargin;
 
+  /// 逐頁模式（epic-56 Issue 4）傳 true：最小縮放＝單元基準，且不介入初始定位與
+  /// 版面更新後的重新定位（由 `PdfReaderView` 負責）。
+  final bool strictMinScale;
+
   @override
   PdfViewerSizeDelegate create() => PdfFitSizeDelegate(
         fitMode: fitMode,
         unitRectOf: unitRectOf,
         pageMargin: pageMargin,
+        strictMinScale: strictMinScale,
       );
 
   @override
@@ -46,10 +52,12 @@ class PdfFitSizeDelegateProvider extends PdfViewerSizeDelegateProvider {
       other is PdfFitSizeDelegateProvider &&
           fitMode == other.fitMode &&
           unitRectOf == other.unitRectOf &&
-          pageMargin == other.pageMargin;
+          pageMargin == other.pageMargin &&
+          strictMinScale == other.strictMinScale;
 
   @override
-  int get hashCode => Object.hash(fitMode, unitRectOf, pageMargin);
+  int get hashCode =>
+      Object.hash(fitMode, unitRectOf, pageMargin, strictMinScale);
 }
 
 /// 繼承 pdfrx 公開的 Legacy delegate，只覆寫兩處：
@@ -62,11 +70,18 @@ class PdfFitSizeDelegateProvider extends PdfViewerSizeDelegateProvider {
 /// 旋轉／版面變更時保留閱讀位置等行為沿用 Legacy：只有 Page-fit（基準等於
 /// pdfrx 原本的最小縮放）會在旋轉後跟著新基準走，Fit Width／真實比例沿用
 /// pdfrx 的「保留目前縮放」行為。
+///
+/// [strictMinScale] 為 true（逐頁模式）時：最小縮放直接取單元基準（使用者不可縮到
+/// 基準以下，每個單元各自的基準），並且完全不介入 [onLayoutInitialized]／
+/// [onLayoutUpdate]——逐頁的初始定位與視窗尺寸改變後的重新定位需要「依單元置中、
+/// 依閱讀方向決定起始側」，由 `PdfReaderView` 以 `goToPosition` 負責；若讓 pdfrx
+/// 預設行為先跑，只會被 widget 的定位覆蓋，還可能多一次閃爍。
 class PdfFitSizeDelegate extends PdfViewerSizeDelegateLegacy {
   PdfFitSizeDelegate({
     required this.fitMode,
     required this.unitRectOf,
     required this.pageMargin,
+    this.strictMinScale = false,
   }) : super(
           maxScale: kPdfFitMaxZoom,
           minScale: 0.1,
@@ -78,6 +93,7 @@ class PdfFitSizeDelegate extends PdfViewerSizeDelegateLegacy {
   final PdfFitMode fitMode;
   final PdfFitUnitRect unitRectOf;
   final double pageMargin;
+  final bool strictMinScale;
 
   PdfViewerController? _fitController;
 
@@ -128,7 +144,7 @@ class PdfFitSizeDelegate extends PdfViewerSizeDelegateLegacy {
     final zoom = _zoomFor(layout, pageNumber, viewSize);
     if (zoom == null) return metrics;
     return PdfViewerLayoutMetrics(
-      minScale: math.min(metrics.minScale, zoom),
+      minScale: strictMinScale ? zoom : math.min(metrics.minScale, zoom),
       maxScale: metrics.maxScale,
       coverScale: metrics.coverScale,
       alternativeFitScale: metrics.alternativeFitScale,
@@ -144,6 +160,8 @@ class PdfFitSizeDelegate extends PdfViewerSizeDelegateLegacy {
     required PdfPageLayout layout,
     required PdfDocument document,
   }) {
+    // 逐頁模式：初始縮放與定位由 PdfReaderView 在 onViewerReady 負責。
+    if (strictMinScale) return;
     final controller = _fitController;
     final zoom = _zoomFor(layout, initialPageNumber, state.viewSize);
     if (controller == null || zoom == null) {
@@ -173,5 +191,28 @@ class PdfFitSizeDelegate extends PdfViewerSizeDelegateLegacy {
       if (c == null || !c.isReady) return;
       unawaited(c.goToPosition(documentOffset: unitTopLeft, zoom: zoom));
     });
+  }
+
+  @override
+  void onLayoutUpdate({
+    required PdfViewerLayoutSnapshot oldState,
+    required PdfViewerLayoutSnapshot newState,
+    required double currentZoom,
+    required Rect oldVisibleRect,
+    required int? anchorPageNumber,
+    required bool isLayoutChanged,
+    required bool isViewSizeChanged,
+  }) {
+    // 逐頁模式：版面或視窗尺寸改變後，由 PdfReaderView 回到目前單元的基準位置。
+    if (strictMinScale) return;
+    super.onLayoutUpdate(
+      oldState: oldState,
+      newState: newState,
+      currentZoom: currentZoom,
+      oldVisibleRect: oldVisibleRect,
+      anchorPageNumber: anchorPageNumber,
+      isLayoutChanged: isLayoutChanged,
+      isViewSizeChanged: isViewSizeChanged,
+    );
   }
 }
