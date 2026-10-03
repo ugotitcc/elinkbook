@@ -66,6 +66,7 @@ docs/epics/epic-9-stats/reviews/
 docs/epics/epic-53-sync-checkpoint-result/reviews/
 docs/epics/epic-54-architecture-optimization/reviews/
 docs/epics/epic-55-third-party-licenses/reviews/
+docs/epics/epic-56-pdf-paginated-reading/reviews/
 
 # 本機環境變數（樣板見 docker/.env.example）
 docker/.env
