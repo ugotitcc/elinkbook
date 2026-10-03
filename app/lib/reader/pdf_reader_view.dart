@@ -324,7 +324,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// 該頁（裁切時 pdfrx 版面本身已是裁切後尺寸）。以 State 方法 tear-off 傳給
   /// [PdfFitSizeDelegateProvider]，tear-off 具備穩定的 == 語意。
   Rect _unitRectFor(PdfPageLayout layout, int pageNumber) {
-    final spread = _dualPageEnabled ? _spreadLayout : null;
+    final paged = _paginated ? _paged : null;
+    if (paged != null && paged.pageToUnit.length == layout.pageLayouts.length) {
+      return paged.unitRects[paged.pageToUnit[pageNumber - 1]];
+    }    final spread = _dualPageEnabled ? _spreadLayout : null;
     if (spread == null) return layout.pageLayouts[pageNumber - 1];
     // _spreadLayout 由 _layoutSpreadPages 在 pdfrx 每次排版時更新，而 pdfrx 在
     // 同一次 _updateLayout 中先排版、再算縮放指標，所以此處讀到的 spread 與
@@ -332,6 +335,206 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     // 再自行防呆。
     return spread.spreadRects[spread.spreadIndexOf(pageNumber - 1)];
   }
+
+  // ── epic-56 Issue 4：逐頁（paginated）──
+
+  bool get _paginated => widget.pdfPageTurnMode == PdfPageTurnMode.paginated;
+
+  /// 逐頁一律需要 Fit 模式；widget 層沒傳（null）時以 Page-fit 運作。產品端由
+  /// `ReaderScreen` 一律傳入解析後的值。
+  PdfFitMode get _effectiveFitMode => widget.pdfFitMode ?? PdfFitMode.pageFit;
+
+  /// 外層 `LayoutBuilder` 記下的可視尺寸。pdfrx 的 `layoutPages` 閉包拿不到視窗
+  /// 尺寸，而逐頁間距依視窗尺寸計算（Issue 3 spike：同一輪內閉包讀到的尺寸與
+  /// 控制器一致）。
+  Size _viewSize = Size.zero;
+
+  /// 目前單元的錨點頁（0-based）。逐頁下「目前顯示哪個單元」的單一事實來源：
+  /// 導覽時先更新它再 `goToPosition`；`calculateCurrentPageNumber`、
+  /// `normalizeMatrix`、Fit 基準都以它為準，與可視矩形的頁內偏移無關（規則 10）。
+  int _pagedAnchorPage = 0;
+
+  /// 最近一次逐頁版面（含單元矩形與頁→單元對照），由 [_layoutPaginatedPages]
+  /// 寫入（純快取，不 setState）。
+  PaginatedLayout? _paged;
+  ({
+    int pageCount,
+    bool dual,
+    bool coverAlone,
+    DualPageDirection direction,
+    double margin,
+    PdfCropRect? crop,
+    PdfFitMode fit,
+    Size viewSize,
+  })? _pagedCacheKey;
+  PdfPageLayout? _pagedPdfLayout;
+
+  bool get _pagedActive => _paginated && _paged != null;
+
+  /// 目前單元索引；尚無版面（或空文件）時回傳 null。
+  int? _currentPagedUnit() {
+    final paged = _paged;
+    if (paged == null || paged.pageToUnit.isEmpty) return null;
+    return paged.pageToUnit[_pagedAnchorPage.clamp(0, paged.pageToUnit.length - 1)];
+  }
+
+  /// 逐頁版面：先取既有版面（裁切／雙頁／單頁堆疊），再依 spec「幾何隔離」把各單元
+  /// 縱向拉開。以完整輸入當 memo 鍵（比照 [_layoutSpreadPages]），輸入不變時回傳
+  /// 同一個 [PdfPageLayout] 實例；pdfrx 每次 LayoutBuilder 重建都會呼叫它，不能
+  /// 每次都重算整份文件。
+  PdfPageLayout _layoutPaginatedPages(List<PdfPage> pages, PdfViewerParams params) {
+    final key = (
+      pageCount: pages.length,
+      dual: _dualPageEnabled,
+      coverAlone: widget.dualPageCoverAlone,
+      direction: widget.dualPageDirection,
+      margin: params.margin,
+      crop: _cropEnabled ? widget.pdfCropRect : null,
+      fit: _effectiveFitMode,
+      viewSize: _viewSize,
+    );
+    final cached = _pagedPdfLayout;
+    if (_pagedCacheKey == key && cached != null) return cached;
+
+    final List<Rect> baseRects;
+    final List<Rect> baseUnits;
+    final List<int> pageToUnit;
+    final Size baseSize;
+    if (_cropEnabled) {
+      final base = _layoutCroppedPages(pages, params);
+      baseRects = base.pageLayouts;
+      baseUnits = base.pageLayouts; // 裁切：每頁一個單元，單元矩形即裁切後頁面矩形
+      baseSize = base.documentSize;
+      pageToUnit = [for (var i = 0; i < pages.length; i++) i];
+    } else if (_dualPageEnabled) {
+      final base = _layoutSpreadPages(pages, params); // 同時更新 _spreadLayout
+      baseRects = base.pageLayouts;
+      // 單元矩形必須取 spreadRects（寬度已正規化為文件內容寬）：單頁 spread（封面獨立、
+      // 收尾單頁）才會與雙頁 spread 有同一個縮放基準，翻頁時頁面大小不跳動（C-1）。
+      baseUnits = _spreadLayout!.spreadRects;
+      baseSize = base.documentSize;
+      pageToUnit = _spreadLayout!.pageToSpread;
+    } else {
+      final stacked = stackPageRects(
+        pageSizes: [for (final p in pages) Size(p.width, p.height)],
+        margin: params.margin,
+      );
+      baseRects = stacked.rects;
+      baseUnits = stacked.rects;
+      baseSize = stacked.documentSize;
+      pageToUnit = [for (var i = 0; i < pages.length; i++) i];
+    }
+
+    final paged = isolatePaginatedUnits(
+      pageRects: baseRects,
+      pageToUnit: pageToUnit,
+      baseUnitRects: baseUnits,
+      documentSize: baseSize,
+      margin: params.margin,
+      mode: _effectiveFitMode,
+      viewSize: _viewSize,
+      maxZoom: kPdfFitMaxZoom,
+    );
+    _paged = paged;
+    _pagedCacheKey = key;
+    return _pagedPdfLayout = PdfPageLayout(
+      pageLayouts: paged.pageRects,
+      documentSize: paged.documentSize,
+    );
+  }
+
+  /// 逐頁的頁碼：目前單元的錨點頁（1-indexed），與可視矩形無關（規則 10）。
+  int? _calculatePagedPageNumber(
+    Rect visibleRect,
+    List<Rect> pageRects,
+    PdfViewerController controller,
+  ) {
+    final paged = _paged;
+    final unit = _currentPagedUnit();
+    if (paged == null || unit == null || paged.pageRects.length != pageRects.length) {
+      return controller.pageNumber;
+    }
+    return paged.unitAnchorPages[unit] + 1;
+  }
+
+  /// 單元的 Fit 基準縮放（含頁邊距、夾在上限內）。
+  double? _pagedBaseZoom(Rect unitRect, Size viewSize) => fitZoomForUnit(
+        mode: _effectiveFitMode,
+        unitRect: unitRect,
+        pageMargin: _pdfPageMargin,
+        viewSize: viewSize,
+        maxZoom: kPdfFitMaxZoom,
+      );
+
+  /// pdfrx 的 `normalizeMatrix`：逐頁下把縮放夾在單元基準之上、把平移鎖在目前單元
+  /// 內（含置中與溢出規則）。矩陣由候選的縮放與可視左上角重新組出（見計畫「查證
+  /// 過的 pdfrx 事實」）。尚無版面、版面頁數與 pdfrx 不一致（切換的暫態）、或
+  /// 候選矩陣不可用時原樣放行。
+  Matrix4 _normalizePagedMatrix(
+    Matrix4 matrix,
+    Size viewSize,
+    PdfPageLayout layout,
+    PdfViewerController? controller,
+  ) {
+    final paged = _paged;
+    final unit = _currentPagedUnit();
+    if (paged == null ||
+        unit == null ||
+        paged.pageRects.length != layout.pageLayouts.length) {
+      return matrix;
+    }
+    final unitRect = paged.unitRects[unit];
+    final base = _pagedBaseZoom(unitRect, viewSize);
+    final zoom = matrix.storage[0];
+    if (base == null || !zoom.isFinite || zoom <= 0) return matrix;
+    final viewport = clampPagedViewport(
+      unitContent: unitRect.inflate(_pdfPageMargin),
+      viewSize: viewSize,
+      baseZoom: base,
+      maxZoom: kPdfFitMaxZoom,
+      zoom: zoom,
+      candidateTopLeft: Offset(-matrix.storage[12] / zoom, -matrix.storage[13] / zoom),
+      direction: widget.dualPageDirection,
+    );
+    return _matrixForViewport(viewport);
+  }
+
+  /// 與 pdfrx `goToPosition` 相同的矩陣組法：縮放 [PagedViewport.zoom]、可視左上角
+  /// 為 [PagedViewport.topLeft]。
+  Matrix4 _matrixForViewport(PagedViewport v) => Matrix4.identity()
+    ..setEntry(0, 0, v.zoom)
+    ..setEntry(1, 1, v.zoom)
+    ..setEntry(2, 2, v.zoom)
+    ..setTranslationRaw(-v.topLeft.dx * v.zoom, -v.topLeft.dy * v.zoom, 0);
+
+  /// 把 [unit] 帶到可視範圍：更新錨點頁、落在單元頂端（橫向依閱讀起始側）、基準縮放，
+  /// 一律瞬間完成（`Duration.zero`），不繼承先前的頁內偏移與縮放（規則 6）。
+  void _goToPagedUnit(int unit) {
+    final paged = _paged;
+    if (paged == null || unit < 0 || unit >= paged.unitCount) return;
+    // 以外層 LayoutBuilder 記下的 _viewSize 為唯一來源：controller.viewSize 內部是
+    // `_state._viewSize!`，版面尚未量測時會拋 null-check 例外（I-3）。
+    final viewSize = _viewSize;
+    if (!viewSize.isFinite || viewSize.width <= 0 || viewSize.height <= 0) return;
+    final unitRect = paged.unitRects[unit];
+    final base = _pagedBaseZoom(unitRect, viewSize);
+    if (base == null) return;
+    _pagedAnchorPage = paged.unitAnchorPages[unit];
+    final viewport = clampPagedViewport(
+      unitContent: unitRect.inflate(_pdfPageMargin),
+      viewSize: viewSize,
+      baseZoom: base,
+      maxZoom: kPdfFitMaxZoom,
+      zoom: base,
+      direction: widget.dualPageDirection,
+    );
+    unawaited(_controller.goToPosition(
+      documentOffset: viewport.topLeft,
+      zoom: viewport.zoom,
+      duration: Duration.zero,
+    ));
+  }
+
 
   bool get _dualPageEnabled =>
       widget.pdfCropMode == PdfCropMode.none &&
@@ -518,6 +721,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   void initState() {
     super.initState();
     _committedBoldStrength = widget.pdfBoldStrength;
+    _pagedAnchorPage = widget.initialPageIndex ?? 0;
     _openDocument();
   }
 
@@ -1114,18 +1318,23 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       initialPageNumber: (widget.initialPageIndex ?? 0) + 1,
       params: PdfViewerParams(
         margin: _pdfPageMargin,
-        sizeDelegateProvider: widget.pdfFitMode == null
+        sizeDelegateProvider: (widget.pdfFitMode == null && !_paginated)
             ? null
             : PdfFitSizeDelegateProvider(
-                fitMode: widget.pdfFitMode!,
+                fitMode: _effectiveFitMode,
                 unitRectOf: _unitRectFor,
                 pageMargin: _pdfPageMargin,
+                strictMinScale: _paginated,
               ),
-        layoutPages: _cropEnabled
-            ? _layoutCroppedPages
-            : (_dualPageEnabled ? _layoutSpreadPages : null),
-        calculateCurrentPageNumber:
-            _dualPageEnabled ? _calculateSpreadAnchorPageNumber : null,
+        layoutPages: _paginated
+            ? _layoutPaginatedPages
+            : (_cropEnabled
+                ? _layoutCroppedPages
+                : (_dualPageEnabled ? _layoutSpreadPages : null)),
+        calculateCurrentPageNumber: _paginated
+            ? _calculatePagedPageNumber
+            : (_dualPageEnabled ? _calculateSpreadAnchorPageNumber : null),
+        normalizeMatrix: _paginated ? _normalizePagedMatrix : null,
         pageOverlaysBuilder: _buildProcessedOverlay,
         // Epic 24 Issue 9：pdfrx 的 PdfViewer 內部用 Listener（不參與手勢
         // 競技場）驅動平移/縮放，與 _buildSelectionGestureLayer 的長按
@@ -1137,6 +1346,11 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         panEnabled: _selectionDrag == null,
         scaleEnabled: _selectionDrag == null,
         onViewerReady: (doc, controller) {
+          // 逐頁：delegate 嚴格模式不介入初始定位，由此把初始單元帶到起點。
+          if (_pagedActive) {
+            final unit = _currentPagedUnit();
+            if (unit != null) _goToPagedUnit(unit);
+          }
           if (!_renderedNotified) {
             _renderedNotified = true;
             widget.onPageRendered();
@@ -1164,7 +1378,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
               _activePointerCount = (_activePointerCount - 1).clamp(0, 999),
           onPointerCancel: (_) =>
               _activePointerCount = (_activePointerCount - 1).clamp(0, 999),
-          child: colorFiltered,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              _viewSize = constraints.biggest;
+              return colorFiltered;
+            },
+          ),
         ),
         // epic-24-pdf-engine-rebuild Issue 8：3×3 導覽熱區，比照
         // FoliateEpubReaderView 既有的 _ZoneOverlay 版面（Column of Row of
