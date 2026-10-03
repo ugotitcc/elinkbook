@@ -34,19 +34,65 @@ PdfViewerLayoutMetrics _metrics(
     );
 
 void main() {
-  group('最小縮放＝該 Fit 模式的基準（不可縮到基準以下）', () {
-    test('Page-fit：min(400/616, 400/816)', () {
+  // 最小縮放只會比 pdfrx 原本更寬鬆、不會更嚴格：取 pdfrx 原本的最小縮放與
+  // 「目前單元的 Fit 基準」兩者較小者。使用者在連續捲動時可縮得比 Fit Width／
+  // 真實比例小，但絕不會出現「最小縮放比目前縮放還大」而在雙指縮放時彈跳。
+  PdfViewerLayoutMetrics legacyMetrics(
+    Size view,
+    int? pageNumber, {
+    PdfPageLayout? layout,
+  }) {
+    final legacy = PdfViewerSizeDelegateLegacy(
+      maxScale: kPdfFitMaxZoom,
+      minScale: 0.1,
+      useAlternativeFitScaleAsMinScale: true,
+      onePassRenderingScaleThreshold: 200 / 72,
+      calculateInitialZoom: null,
+    );
+    return _metrics(legacy, view: view, pageNumber: pageNumber, layout: layout);
+  }
+
+  group('最小縮放＝min(pdfrx 原本的最小縮放, 目前單元的 Fit 基準)', () {
+    test('Page-fit：基準 400/816 與 pdfrx 原本的相同', () {
       expect(_metrics(_delegate(PdfFitMode.pageFit)).minScale,
           closeTo(400 / 816, 1e-9));
     });
 
-    test('Fit Width：400/616', () {
-      expect(_metrics(_delegate(PdfFitMode.fitWidth)).minScale,
-          closeTo(400 / 616, 1e-9));
+    test('Fit Width：基準 400/616 比 pdfrx 原本的大，最小縮放維持 pdfrx 原本的', () {
+      final minScale = _metrics(_delegate(PdfFitMode.fitWidth)).minScale;
+      expect(minScale, legacyMetrics(const Size(400, 400), 1).minScale);
+      expect(minScale, lessThan(400 / 616));
     });
 
-    test('真實比例：1.0', () {
-      expect(_metrics(_delegate(PdfFitMode.actualSize)).minScale, 1.0);
+    test('真實比例：基準 1.0 比 pdfrx 原本的大，最小縮放維持 pdfrx 原本的', () {
+      final minScale = _metrics(_delegate(PdfFitMode.actualSize)).minScale;
+      expect(minScale, legacyMetrics(const Size(400, 400), 1).minScale);
+      expect(minScale, lessThan(1.0));
+    });
+
+    test('雙頁 spread 單元：基準（整個 spread）比 pdfrx 原本以單頁算的小，採用較小的基準', () {
+      final spreadLayout = PdfPageLayout(
+        pageLayouts: [
+          const Rect.fromLTWH(8, 8, 600, 800),
+          const Rect.fromLTWH(616, 8, 600, 800),
+        ],
+        documentSize: const Size(1224, 816),
+      );
+      Rect spreadOf(PdfPageLayout l, int pageNumber) =>
+          l.pageLayouts[0].expandToInclude(l.pageLayouts[1]);
+      final delegate = PdfFitSizeDelegateProvider(
+        fitMode: PdfFitMode.pageFit,
+        unitRectOf: spreadOf,
+        pageMargin: 8,
+      ).create();
+      const view = Size(400, 800);
+
+      final actual = _metrics(delegate, view: view, layout: spreadLayout);
+      final legacyMin =
+          legacyMetrics(view, 1, layout: spreadLayout).minScale;
+      // 合併矩形 1208x800，含邊距 1224x816：min(400/1224, 800/816)
+      expect(actual.minScale, closeTo(400 / 1224, 1e-9));
+      expect(actual.minScale, lessThan(legacyMin));
     });
 
     test('基準超過 pdfrx 上限時夾在上限', () {

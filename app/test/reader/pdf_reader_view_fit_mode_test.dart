@@ -115,13 +115,14 @@ void main() {
 
     final c = await _open(tester, fit: PdfFitMode.fitWidth);
     expect(c.currentZoom, closeTo(fitWidth, 0.001));
-    expect(c.minScale, closeTo(fitWidth, 0.001));
+    // 最小縮放只會比 pdfrx 原本更寬鬆：不大於基準（見 delegate 說明）。
+    expect(c.minScale, lessThanOrEqualTo(fitWidth + 0.001));
   });
 
-  testWidgets('真實比例：縮放 1.0，最小縮放也是 1.0', (tester) async {
+  testWidgets('真實比例：縮放 1.0，最小縮放不大於 1.0', (tester) async {
     final c = await _open(tester, fit: PdfFitMode.actualSize);
     expect(c.currentZoom, closeTo(1.0, 0.001));
-    expect(c.minScale, closeTo(1.0, 0.001));
+    expect(c.minScale, lessThanOrEqualTo(1.0 + 0.001));
   });
 
   testWidgets('雙頁模式：以 spread 合併矩形（含邊距）算基準（Review Focus 4）', (tester) async {
@@ -158,7 +159,7 @@ void main() {
     expect(c.currentZoom, closeTo(expected, 0.001));
   });
 
-  testWidgets('執行期由 Page-fit 切到 Fit Width：縮放與最小縮放改為 Fit Width 的基準', (tester) async {
+  testWidgets('執行期由 Page-fit 切到 Fit Width：縮放改為 Fit Width 的基準', (tester) async {
     final page = await _pageSize(tester, 'test/fixtures/sample.pdf', 0);
     final fitWidth = _viewSize.width / (page.width + _margin * 2);
 
@@ -180,7 +181,7 @@ void main() {
       condition: () => (c.currentZoom - fitWidth).abs() < 0.001,
     );
     expect(c.currentZoom, closeTo(fitWidth, 0.001));
-    expect(c.minScale, closeTo(fitWidth, 0.001));
+    expect(c.minScale, lessThanOrEqualTo(fitWidth + 0.001));
   });
 
   testWidgets('使用者手動放大後切換 Fit 模式：縮放回到新模式的基準（Review Focus 3）',

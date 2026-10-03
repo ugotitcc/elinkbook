@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/painting.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -13,7 +14,7 @@ const double kPdfFitMaxZoom = 8.0;
 /// 合併矩形）。矩形為 pdfrx 版面座標，不含頁邊距。
 typedef PdfFitUnitRect = Rect Function(PdfPageLayout layout, int pageNumber);
 
-/// 讓 Fit 模式（Page-fit／Fit Width／真實比例）決定 pdfrx 的初始縮放與最小
+/// 讓 Fit 模式（Page-fit／Fit Width／真實比例）決定 pdfrx 的初始縮放與（較寬鬆的）最小
 /// 縮放（epic-56 Issue 1）。
 ///
 /// 提供者必須有穩定的相等性：pdfrx 在 `didUpdateWidget` 以 `!=` 比較新舊
@@ -52,11 +53,15 @@ class PdfFitSizeDelegateProvider extends PdfViewerSizeDelegateProvider {
 }
 
 /// 繼承 pdfrx 公開的 Legacy delegate，只覆寫兩處：
-/// 1. 最小縮放＝目前頁（或 spread）的 Fit 基準，使用者可放大、不可縮到基準以下；
+/// 1. 最小縮放＝min(pdfrx 原本的最小縮放, 目前頁／spread 的 Fit 基準)。只會比
+///    pdfrx 原本更寬鬆、不會更嚴格：連續捲動下 Fit 模式決定開書與切換當下的
+///    縮放，使用者仍可縮得比 Fit Width／真實比例小；但最小縮放不會比目前縮放
+///    大（最小縮放會隨目前頁重算，若取 Fit 基準本身，捲到尺寸不同的頁面時會
+///    出現雙指縮放突然彈跳，見 epic-56 Issue 1 程式審查 I-3）；
 /// 2. 開書初始縮放＝初始頁的 Fit 基準。
-/// 旋轉／版面變更時保留閱讀位置等行為沿用 Legacy（其
-/// `onLayoutUpdate` 在「目前縮放等於舊最小縮放」時會跟著新最小縮放走，所以
-/// 停在基準的使用者旋轉螢幕後會自動套用新基準）。
+/// 旋轉／版面變更時保留閱讀位置等行為沿用 Legacy：只有 Page-fit（基準等於
+/// pdfrx 原本的最小縮放）會在旋轉後跟著新基準走，Fit Width／真實比例沿用
+/// pdfrx 的「保留目前縮放」行為。
 class PdfFitSizeDelegate extends PdfViewerSizeDelegateLegacy {
   PdfFitSizeDelegate({
     required this.fitMode,
@@ -123,7 +128,7 @@ class PdfFitSizeDelegate extends PdfViewerSizeDelegateLegacy {
     final zoom = _zoomFor(layout, pageNumber, viewSize);
     if (zoom == null) return metrics;
     return PdfViewerLayoutMetrics(
-      minScale: zoom,
+      minScale: math.min(metrics.minScale, zoom),
       maxScale: metrics.maxScale,
       coverScale: metrics.coverScale,
       alternativeFitScale: metrics.alternativeFitScale,
