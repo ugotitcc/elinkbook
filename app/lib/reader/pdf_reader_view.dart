@@ -369,6 +369,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   })? _pagedCacheKey;
   PdfPageLayout? _pagedPdfLayout;
 
+  /// 版面變更前的逐頁版面：視窗只有高度改變（軟鍵盤）時，用它換算「頁內相對位置」，
+  /// 在新版面中保留（最終審查 I-1）。
+  PaginatedLayout? _prevPaged;
+
   bool get _pagedActive => _paginated && _paged != null;
 
   /// 目前單元索引；尚無版面（或空文件）時回傳 null。
@@ -435,6 +439,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       viewSize: _viewSize,
       maxZoom: kPdfFitMaxZoom,
     );
+    _prevPaged = _paged;
     _paged = paged;
     _pagedCacheKey = key;
     return _pagedPdfLayout = PdfPageLayout(
@@ -1017,6 +1022,28 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     _goToPagedUnit(target);
   }
 
+  bool? _onPagedKey(
+    PdfViewerKeyHandlerParams params,
+    LogicalKeyboardKey key,
+    bool isRealKeyPress,
+  ) {
+    if (widget.cropEditModeActive || !_controller.isReady) return null;
+    if (key == LogicalKeyboardKey.pageDown) {
+      _stepPagedUnit(forward: true);
+    } else if (key == LogicalKeyboardKey.pageUp) {
+      _stepPagedUnit(forward: false);
+    } else if (key == LogicalKeyboardKey.space) {
+      _stepPagedUnit(forward: !HardwareKeyboard.instance.isShiftPressed);
+    } else if (key == LogicalKeyboardKey.home) {
+      _jumpToPage(0);
+    } else if (key == LogicalKeyboardKey.end) {
+      _jumpToPage(_controller.pageCount - 1);
+    } else {
+      return null;
+    }
+    return true;
+  }
+
   void _handlePageChanged(int? pageNumber) {
     if (pageNumber == null || !_controller.isReady) return;
     widget.onPageChanged?.call(PdfPageInfo(
@@ -1427,8 +1454,31 @@ class _PdfReaderViewState extends State<PdfReaderView> {
             return;
           }
           final unit = _currentPagedUnit();
-          if (unit != null) _goToPagedUnit(unit);
+          if (unit == null) return;
+          // 只有高度改變（例如軟鍵盤彈出／收起）：保留縮放與頁內相對位置，不跳回頂端
+          // （最終審查 I-1）；寬度改變（旋轉、摺疊）才依 spec 回到單元頂端與基準縮放。
+          final prev = _prevPaged;
+          final now = _paged;
+          if (viewSize.width == oldViewSize.width &&
+              prev != null &&
+              now != null &&
+              prev.unitCount == now.unitCount) {
+            final oldBox = prev.unitRects[unit].inflate(_pdfPageMargin);
+            final newBox = now.unitRects[unit].inflate(_pdfPageMargin);
+            final visible = controller.visibleRect;
+            unawaited(controller.goToPosition(
+              documentOffset: newBox.topLeft + (visible.topLeft - oldBox.topLeft),
+              zoom: controller.currentZoom,
+              duration: Duration.zero,
+            ));
+            return;
+          }
+          _goToPagedUnit(unit);
         },
+        // 逐頁：pdfrx 內建的 PageUp／PageDown／Space／Home／End 會走 goToPage（100ms
+        // 動畫、不認單元），被 normalizeMatrix 夾回後畫面不動卻送出錯誤頁碼（最終審查
+        // I-2）。改以單元為單位接管；其他鍵（方向鍵等）沿用 pdfrx，仍受單元鎖定。
+        onKey: _paginated ? _onPagedKey : null,
       ),
     );
     final colorFilter = _colorFilter;

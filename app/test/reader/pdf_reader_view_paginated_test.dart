@@ -9,6 +9,7 @@ import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
 
@@ -458,6 +459,47 @@ void main() {
       PdfReaderView.nextPage(h.key);
       expect(_visiblePages(c), [2, 3]);
       expect(c.currentZoom, closeTo(coverZoom, 1e-6));
+    });
+  });
+
+  group('審查修復（最終審查 I-1、I-2）', () {
+    testWidgets('只有高度改變（例如軟鍵盤）：保留頁內位置與縮放，不重設到頂端（I-1）',
+        (tester) async {
+      _setSurface(tester, const Size(400, 400));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      PdfReaderView.jumpToPage(h.key, 2);
+      final unitTop = c.layout.pageLayouts[2].top - _margin;
+      await c.goToPosition(
+        documentOffset: Offset(0, unitTop + 150),
+        zoom: c.currentZoom,
+        duration: Duration.zero,
+      );
+      expect(c.visibleRect.top, closeTo(unitTop + 150, 1e-3));
+
+      tester.view.physicalSize = const Size(400, 350);
+      await pumpUntilPdfReady(tester, maxIterations: 8);
+
+      expect(_visiblePages(c), [3]);
+      expect(c.visibleRect.top, closeTo(unitTop + 150, 1e-2));
+      expect(c.currentZoom, closeTo(400 / (612 + _margin * 2), 1e-3));
+    });
+
+    testWidgets('實體鍵 PageDown／PageUp／End／Home：以單元為單位瞬間換頁（I-2）', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final c = await h.open(tester, h.app());
+      await tester.tap(find.byType(PdfViewer));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+      expect(_visiblePages(c), [2]);
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
+      expect(_visiblePages(c), [1]);
+      await tester.sendKeyEvent(LogicalKeyboardKey.end);
+      expect(_visiblePages(c), [5]);
+      await tester.sendKeyEvent(LogicalKeyboardKey.home);
+      expect(_visiblePages(c), [1]);
     });
   });
 }
