@@ -153,7 +153,90 @@ void main() {
     });
   });
 
+  group('有跳轉目標：Foliate 同位置重複回報（epic-54 Issue 9）', () {
+    test('同位置重複回報（fraction 抖動）不算重新定位，離開不儲存', () {
+      final saver = buildSaver(hasJumpTarget: true);
+      saver.onEpubLocated(const EpubPositionInfo(
+          locatorJson: '{"cfi":"j","index":1,"fraction":0.20}', progression: 0.2));
+      saver.onEpubLocated(const EpubPositionInfo(
+          locatorJson: '{"cfi":"j","index":1,"fraction":0.21}', progression: 0.21));
+      saver.onEpubLocated(const EpubPositionInfo(
+          locatorJson: '{"cfi":"j","index":1,"fraction":0.20}', progression: 0.2));
+      saver.save(BookFormat.epub);
+      expect(prefs.savedReadingPositionCalls, isEmpty);
+    });
+
+    test('locatorJson 完全相同的重複回報也不算重新定位', () {
+      final saver = buildSaver(hasJumpTarget: true);
+      const info = EpubPositionInfo(locatorJson: 'opaque', progression: 0.2);
+      saver.onEpubLocated(info);
+      saver.onEpubLocated(info);
+      saver.save(BookFormat.epub);
+      expect(prefs.savedReadingPositionCalls, isEmpty);
+    });
+
+    test('cfi 相同但 index 不同算已移動，儲存', () {
+      final saver = buildSaver(hasJumpTarget: true);
+      saver.onEpubLocated(const EpubPositionInfo(
+          locatorJson: '{"cfi":"j","index":1}', progression: 0.2));
+      saver.onEpubLocated(const EpubPositionInfo(
+          locatorJson: '{"cfi":"j","index":2}', progression: 0.3));
+      saver.save(BookFormat.epub);
+      expect(prefs.savedReadingPositionCalls, hasLength(1));
+    });
+
+    test('重複回報夾雜真移動，儲存最後一筆的定位點與進度', () {
+      final saver = buildSaver(hasJumpTarget: true);
+      saver.onEpubLocated(const EpubPositionInfo(
+          locatorJson: '{"cfi":"j","index":1,"fraction":0.20}', progression: 0.2));
+      saver.onEpubLocated(const EpubPositionInfo(
+          locatorJson: '{"cfi":"k","index":1,"fraction":0.30}', progression: 0.3));
+      saver.onEpubLocated(const EpubPositionInfo(
+          locatorJson: '{"cfi":"k","index":1,"fraction":0.31}', progression: 0.31));
+      saver.save(BookFormat.epub);
+      expect(
+        prefs.savedReadingPositionCalls.single.value,
+        const ReadingPosition(
+          epubLocatorJson: '{"cfi":"k","index":1,"fraction":0.31}',
+          progress: 0.31,
+        ),
+      );
+    });
+
+    test('A→B→A 仍算已移動（旗標單向）', () {
+      final saver = buildSaver(hasJumpTarget: true);
+      saver.onEpubLocated(const EpubPositionInfo(
+          locatorJson: '{"cfi":"a","index":0}', progression: 0.1));
+      saver.onEpubLocated(const EpubPositionInfo(
+          locatorJson: '{"cfi":"b","index":0}', progression: 0.2));
+      saver.onEpubLocated(const EpubPositionInfo(
+          locatorJson: '{"cfi":"a","index":0}', progression: 0.1));
+      saver.save(BookFormat.epub);
+      expect(prefs.savedReadingPositionCalls, hasLength(1));
+    });
+
+    test('locatorJson 無法解析時退回整段字串比較（不同才算移動）', () {
+      final saver = buildSaver(hasJumpTarget: true);
+      saver.onEpubLocated(const EpubPositionInfo(locatorJson: 'p1', progression: 0.1));
+      saver.onEpubLocated(const EpubPositionInfo(locatorJson: 'p1', progression: 0.1));
+      saver.save(BookFormat.epub);
+      expect(prefs.savedReadingPositionCalls, isEmpty);
+
+      saver.onEpubLocated(const EpubPositionInfo(locatorJson: 'p2', progression: 0.2));
+      saver.save(BookFormat.epub);
+      expect(prefs.savedReadingPositionCalls, hasLength(1));
+    });
+  });
+
   group('沒有跳轉目標（一般開書）', () {
+    test('Foliate：第一次回報就可以儲存，不受重複回報規則影響', () {
+      final saver = buildSaver();
+      saver.onEpubLocated(const EpubPositionInfo(
+          locatorJson: '{"cfi":"a","index":0}', progression: 0.4));
+      saver.save(BookFormat.epub);
+      expect(prefs.savedReadingPositionCalls, hasLength(1));
+    });
+
     test('第一次回報就可以儲存', () {
       final saver = buildSaver();
       saver.onPdfPageChanged(const PdfPageInfo(pageIndex: 0, totalPages: 5));

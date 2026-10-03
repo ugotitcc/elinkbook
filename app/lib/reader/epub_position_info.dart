@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// [FoliateReaderView] 目前定位變動時（開書完成、翻頁、跳轉）一次性回報
 /// 的位置資訊（epic-5-toc-pagination Issue 2）。原生 Readium 路徑
 /// `EpubReaderView` 已於 epic-18-reader-device-qa Issue 5 移除，本類別現在
@@ -64,6 +66,17 @@ class EpubPositionInfo {
   /// 流式格式）才退回估計刻度。
   int? get displayPageIndex => visualPageIndex ?? locationIndex;
   int? get displayTotalPages => visualTotalPages ?? locationTotal;
+
+  /// 代表「位置」的比較鍵：取 [locatorJson] 中的 cfi 與 index，忽略會因重排而
+  /// 來回微幅抖動的 fraction（真機日誌實證）。解析失敗或不是 JSON 物件時退回
+  /// 整段字串。用來判斷兩次回報是不是「同一個位置的重複回報」。
+  String get positionKey {
+    try {
+      final map = jsonDecode(locatorJson);
+      if (map is Map) return '${map['cfi']}|${map['index']}';
+    } catch (_) {}
+    return locatorJson;
+  }
 
   @override
   bool operator ==(Object other) =>
