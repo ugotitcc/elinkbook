@@ -564,8 +564,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     // Fit 模式切換（epic-56 Issue 1）：pdfrx 更換 sizeDelegateProvider 只會重建
     // delegate，不會重算最小縮放也不會重新套用縮放，須明確處理。
     // 與下方雙頁／裁切變更的 reanchor 同時發生時，兩者都排兩層 postFrameCallback，
-    // 依註冊順序先執行本處的縮放、再執行 reanchor 的跳頁；goToPage 的縮放上限是
-    // 目前縮放，所以跳頁不會把剛設好的基準放大。
+    // 依註冊順序先執行本處的縮放、再執行 reanchor 的跳頁；Fit 模式啟用時跳頁
+    // 一律以該單元的 Fit 基準縮放定位（見 _goToUnitAtFitZoom），不會改掉基準。
     if (oldWidget.pdfFitMode != widget.pdfFitMode) {
       _scheduleRefit();
     }
@@ -707,10 +707,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (pageIndex < 0 || pageIndex >= _controller.pageCount) return;
     final layout = _activeSpreadLayout;
     if (layout == null) {
-      _controller.goToPage(
-        pageNumber: pageIndex + 1, // Issue 1 原邏輯。
-        duration: _pageTurnDuration,
-      );
+      _goToSinglePage(pageIndex + 1);
       return;
     }
     _goToSpread(layout.spreadIndexOf(pageIndex), layout);
@@ -723,10 +720,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (layout == null) {
       final current = _controller.pageNumber ?? 1; // Issue 1 原邏輯。
       if (current >= _controller.pageCount) return;
-      _controller.goToPage(
-        pageNumber: current + 1,
-        duration: _pageTurnDuration,
-      );
+      _goToSinglePage(current + 1);
       return;
     }
     final currentIndex = (_controller.pageNumber ?? 1) - 1;
@@ -742,10 +736,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (layout == null) {
       final current = _controller.pageNumber ?? 1; // Issue 1 原邏輯。
       if (current <= 1) return;
-      _controller.goToPage(
-        pageNumber: current - 1,
-        duration: _pageTurnDuration,
-      );
+      _goToSinglePage(current - 1);
       return;
     }
     final currentIndex = (_controller.pageNumber ?? 1) - 1;
@@ -833,9 +824,54 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// 推導，維持單一事實來源。
   void _goToSpread(int spreadIndex, PdfSpreadLayout layout) {
     if (spreadIndex < 0 || spreadIndex >= layout.spreadCount) return;
+    if (widget.pdfFitMode != null) {
+      _goToUnitAtFitZoom(layout.spreadRects[spreadIndex]);
+      return;
+    }
     unawaited(_controller.goToArea(
       rect: layout.spreadRects[spreadIndex],
       anchor: PdfPageAnchor.all,
+      duration: _pageTurnDuration,
+    ));
+  }
+
+  /// 單頁模式的導航。[PdfReaderView.pdfFitMode] 為 null 時走 pdfrx 原本的
+  /// goToPage（零回歸）；否則以該頁的 Fit 基準縮放定位（見
+  /// [_goToUnitAtFitZoom]）。
+  void _goToSinglePage(int pageNumber) {
+    if (widget.pdfFitMode == null) {
+      _controller.goToPage(
+        pageNumber: pageNumber,
+        duration: _pageTurnDuration,
+      );
+      return;
+    }
+    final rects = _controller.layout.pageLayouts;
+    if (pageNumber < 1 || pageNumber > rects.length) return;
+    _goToUnitAtFitZoom(rects[pageNumber - 1]);
+  }
+
+  /// Fit 模式啟用時的導航（epic-56 Issue 1 程式審查 I-1／I-2）：把單元
+  /// （一頁或一個 spread）以 Fit 基準縮放帶到可視範圍起點，換頁後縮放回到
+  /// 基準。不用 pdfrx 的 goToPage／goToArea：goToPage 的縮放取「目前縮放」與
+  /// 「頁寬 fit」較小者（真實比例 1.0 遇到比螢幕寬的頁會被縮成頁寬），
+  /// goToArea(anchor: all) 一律把整個矩形放進螢幕（Fit Width 與真實比例會
+  /// 失效）。goToPosition 不會設定頁碼，頁碼仍由 pdfrx 依可視範圍推導
+  /// （雙頁為 [_calculateSpreadAnchorPageNumber]），維持單一事實來源。
+  void _goToUnitAtFitZoom(Rect unitRect) {
+    final mode = widget.pdfFitMode;
+    if (mode == null) return;
+    final zoom = fitZoomForUnit(
+      mode: mode,
+      unitRect: unitRect,
+      pageMargin: _pdfPageMargin,
+      viewSize: _controller.viewSize,
+      maxZoom: kPdfFitMaxZoom,
+    );
+    if (zoom == null) return;
+    unawaited(_controller.goToPosition(
+      documentOffset: unitRect.inflate(_pdfPageMargin).topLeft,
+      zoom: zoom,
       duration: _pageTurnDuration,
     ));
   }
