@@ -1,6 +1,6 @@
 # `epic-57-layout-override-save-drops-fields` （缺陷）書架「版面覆寫」儲存時整列重建漏帶 `textConversionOverride`，會清掉該書的簡繁轉換覆寫
 
-**狀態：** 🟡 開發中 (Active)（尚未開始處理）
+**狀態：** 🟡 開發中 (Active)（已修正，待合併）
 **存放路徑：** `docs/epics/epic-57-layout-override-save-drops-fields/`
 **關聯 PRD 章節：** FR-48 簡繁轉換；關聯已歸檔 `epic-42-text-conversion`
 
@@ -25,3 +25,12 @@
 ## 開發記錄
 
 **2026-10-03** 登錄工單。尚未診斷與修正。
+
+**2026-10-03 修正（直接 TDD）**
+
+- 處理方式：使用者選直接 TDD，不寫 `plan-issue-N.md`；保留程式審查。
+- 紅燈：`library_screen_test.dart` 新增「版面覆寫：儲存後既有的簡繁轉換覆寫原樣保留（epic-57 回歸）」，修正前 FAIL（`textConversionOverride` 變 null）。
+- 修正：`library_screen.dart` `_LayoutOverrideDialog._save()` 補 `textConversionOverride: existing.textConversionOverride`。
+- 核對其他整列重建處：`fxl_settings_sheet` 已帶 `textConversionOverride`；`pdf_settings_sheet` 的 `_notifyChanged` 為局部更新（PDF 面板不含該欄位），不屬本缺陷，未更動。
+- 驗證：全套 `flutter test` 3472 通過、1 略過、0 失敗；`flutter analyze` 乾淨；l10n 硬編碼字串雙檢查 PASS。
+- 未做：泛用「整列重建不得清空任何欄位」測試（`epic-56` 審查建議），範圍較大，不在本缺陷內；若要做另立 Issue。

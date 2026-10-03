@@ -1999,6 +1999,7 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
       columnMode: existing.columnMode,
       columnSize: existing.columnSize,
       fullscreen: existing.fullscreen,
+      textConversionOverride: existing.textConversionOverride,
     );
     await widget.repository.save(widget.bookId, updated);
     if (!mounted) return;
