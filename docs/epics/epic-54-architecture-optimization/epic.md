@@ -288,3 +288,8 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 驗證：全套 `flutter test` 3407 通過、1 略過、0 失敗（Issue 8 基準 3391＋16）；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS。
 - 行為變動：旗標成立條件變嚴格，僅影響「帶跳轉目標的 Foliate 開書」；活動判定行為零變化（既有 session 案例未修改而通過）。`CONTEXT.md`「位置儲存規則」已補上「真正移動」定義。
 - 待真機確認（可選）：從搜尋結果開書後不操作直接離開，確認原進度未被跳轉落點覆蓋。待程式審查與發 PR。
+
+**2026-10-03 Issue 9 程式審查**（範圍 `814f1e5e..93a2798f`；審查報告在 `reviews/review-code-issue-9.md`，不進版控，以下為摘要。0 Critical／0 Important／2 Minor，結論 Ready to merge。審查員實跑：異動測試檔與相關畫面測試 356 案例通過、`flutter analyze` 乾淨、`_locatorPositionKey` 零殘留；未重跑全套、未獨立做變異驗證）
+
+- M-1（不處理，待真機確認）：修正只擋「cfi 與 index 皆相同」的重複回報；若重排後回報的 cfi 字串與開書落點不同，旗標仍會提早成立。證據只涵蓋 fraction 抖動，為計畫已揭露的前提。合併後須實測：從搜尋結果開書、不操作直接離開，確認原進度未被覆蓋；若仍復現，依日誌另立工單放寬比較。
+- M-2（不處理）：`CONTEXT.md` 「真正移動」括號偏長，純行文。
