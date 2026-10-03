@@ -67,7 +67,7 @@ Issue 1、2、3 互相獨立，可平行；Issue 4 依賴前三者；Issue 5、6
 
 ## Issue 3：幾何隔離與快取外擴 spike（需真機）
 
-**Status:** ready-for-human
+**Status:** in-review
 
 **依賴：** 無。
 
