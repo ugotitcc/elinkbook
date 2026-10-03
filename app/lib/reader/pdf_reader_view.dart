@@ -13,6 +13,7 @@ import 'pdf_spread_layout.dart';
 import 'pdf_annotation_decoration.dart';
 import 'pdf_page_info.dart';
 import 'pdf_page_turn_animation.dart';
+import 'pdf_page_turn_mode.dart';
 import 'pdf_image_filters.dart';
 import 'pdf_paginated_rules.dart';
 import 'pdf_filter_debounce.dart';
@@ -67,6 +68,12 @@ class PdfReaderView extends StatefulWidget {
   /// 未傳此參數的既有呼叫端行為不變）。
   final PdfPageTurnAnimation pdfPageTurnAnimation;
 
+  /// PDF 翻頁模式（epic-56 Issue 2）。**widget 層預設刻意為連續捲動**（不是
+  /// 產品預設的逐頁）：保護既有大量 `PdfReaderView` 測試；產品預設由
+  /// `ReaderScreen` 以解析後的偏好明確傳入，比照 `dualPageMode`。**本 Issue
+  /// 尚未讀取此參數**，逐頁渲染在 Issue 4 實作。
+  final PdfPageTurnMode pdfPageTurnMode;
+
   /// Fit 模式（Page-fit／Fit Width／真實比例，epic-56 Issue 1）。`null`＝
   /// 不干預，沿用 pdfrx 現有的預設縮放行為（widget 層預設保守，保護既有
   /// 測試；產品預設由 `ReaderScreen` 傳入解析後的值，比照 `dualPageMode`）。
@@ -118,6 +125,7 @@ class PdfReaderView extends StatefulWidget {
     this.dualPageDirection = DualPageDirection.rtl,
     this.isLandscape = false,
     this.pdfPageTurnAnimation = PdfPageTurnAnimation.slide,
+    this.pdfPageTurnMode = PdfPageTurnMode.scroll,
     this.pdfFitMode,
     this.pdfContrast = 0,
     this.pdfBrightness = 0,

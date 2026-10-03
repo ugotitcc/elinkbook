@@ -14,6 +14,7 @@ import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
+import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
@@ -1124,6 +1125,58 @@ void main() {
       find.byType(FoliateReaderView),
     );
     expect(foliateView.dualPageMode, DualPageMode.auto);
+  });
+
+  testWidgets('開啟該書已持久化連續捲動翻頁模式後，PdfReaderView 的 pdfPageTurnMode 為 scroll', (
+    tester,
+  ) async {
+    await prefsManager.saveBookPrefs(
+      'b1',
+      const BookReaderPrefs(pdfPageTurnMode: PdfPageTurnMode.scroll),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.pdfPageTurnMode, PdfPageTurnMode.scroll);
+  });
+
+  testWidgets('尚未持久化翻頁模式時，PdfReaderView 的 pdfPageTurnMode 為 paginated（產品預設逐頁）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.pdfPageTurnMode, PdfPageTurnMode.paginated);
   });
 
   testWidgets('開啟該書已有的持久化換頁動畫偏好設定後，PdfReaderView 的 pdfPageTurnAnimation 正確載入', (

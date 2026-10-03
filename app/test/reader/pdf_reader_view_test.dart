@@ -7,6 +7,7 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
+import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/reader_console_log.dart';
 import '../support/pump_localized_widget.dart';
@@ -14,6 +15,16 @@ import '../support/pump_until_pdf_ready.dart';
 
 void main() {
   setUp(() => pdfrxInitialize());
+
+  test('widget 層預設翻頁模式為連續捲動（保護既有 PdfReaderView 測試；產品預設由 ReaderScreen 傳入）', () {
+    final view = PdfReaderView(
+      filePath: 'test/fixtures/sample.pdf',
+      onPageRendered: () {},
+      onError: (_) {},
+    );
+
+    expect(view.pdfPageTurnMode, PdfPageTurnMode.scroll);
+  });
 
   testWidgets('本機路徑開書成功，觸發 onPageRendered，不觸發 onError',
       (tester) async {
