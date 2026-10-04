@@ -1509,7 +1509,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final currentIndex = matches.isEmpty ? null : 0;
     PdfReaderView.setSearchHighlights(_pdfReaderViewKey, matches, currentIndex: currentIndex);
     if (currentIndex != null) {
-      PdfReaderView.jumpToPage(_pdfReaderViewKey, matches[currentIndex].pageIndex);
+      PdfReaderView.jumpToPageAtRect(
+        _pdfReaderViewKey,
+        matches[currentIndex].pageIndex,
+        matches[currentIndex].rect,
+      );
     }
     _pdfSearchStateNotifier.value = PdfSearchState(
       query: query,
@@ -1526,7 +1530,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final current = _pdfSearchStateNotifier.value.currentIndex ?? -1;
     final next = (current + delta) % _pdfSearchMatches.length;
     PdfReaderView.setSearchHighlights(_pdfReaderViewKey, _pdfSearchMatches, currentIndex: next);
-    PdfReaderView.jumpToPage(_pdfReaderViewKey, _pdfSearchMatches[next].pageIndex);
+    PdfReaderView.jumpToPageAtRect(
+      _pdfReaderViewKey,
+      _pdfSearchMatches[next].pageIndex,
+      _pdfSearchMatches[next].rect,
+    );
     _pdfSearchStateNotifier.value = _pdfSearchStateNotifier.value.copyWith(currentIndex: next);
   }
 

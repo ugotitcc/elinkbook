@@ -870,7 +870,7 @@ static void jumpToPageAtRect(GlobalKey<State<PdfReaderView>> key, int pageIndex,
 void _revealHighlight(int pageIndex, PercentRect rect);   // 逐頁：確保高亮在視窗內（規則 7）；連續捲動：無動作
 ```
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `pdf_reader_view_paginated_test.dart` 檔頭補 `import 'package:elinkbook/reader/percent_rect.dart';`，並在 `main()` 結尾追加：
 
@@ -1026,12 +1026,12 @@ void _revealHighlight(int pageIndex, PercentRect rect);   // 逐頁：確保高�
   });
 ```
 
-- [ ] **Step 2：確認失敗**
+- [x] **Step 2：確認失敗**
 
 Run：`flutter test test/reader/pdf_reader_view_paginated_test.dart`
 Expected：編譯失敗，`The method 'jumpToPageAtRect' isn't defined for the type 'PdfReaderView'`。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `app/lib/reader/pdf_reader_view.dart`：
 
@@ -1160,12 +1160,12 @@ Expected：全數 PASS（Task 2 後 34 例＋本 Task 9 例＝43）。
 2. `showTemporaryHighlight` 案例中 `pdf_reader_jump_highlight_1` 找不到：該 overlay 只在目標頁被繪製時存在；確認視窗已在第 2 頁。
 3. 雙頁案例失敗：確認用的是 `paged.pageRects[pageIndex]`（頁面矩形）而不是單元矩形。
 
-- [ ] **Step 5：確認既有搜尋與跳轉測試零回歸**
+- [x] **Step 5：確認既有搜尋與跳轉測試零回歸**
 
 Run：`flutter test test/reader/pdf_reader_view_jump_highlight_test.dart test/reader/pdf_reader_view_search_test.dart test/screens/reader_screen_test.dart`
 Expected：全數 PASS，未修改任何既有測試。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/lib/screens/reader_screen.dart app/test/reader/pdf_reader_view_paginated_test.dart

@@ -230,6 +230,22 @@ class PdfReaderView extends StatefulWidget {
     }
   }
 
+  /// 跳到第 [pageIndex] 頁（0-indexed）並讓 [rect]（頁面百分比座標，例如搜尋結果）看得到
+  /// （epic-56 Issue 5 規則 7）：逐頁下落在目標單元後，若高亮不在頂端對齊的視窗內，
+  /// 視窗自動帶到看得到高亮的位置；連續捲動下等同 [jumpToPage]。[key] 對應的 State 若
+  /// 尚未掛載，靜默忽略。
+  static void jumpToPageAtRect(
+    GlobalKey<State<PdfReaderView>> key,
+    int pageIndex,
+    PercentRect rect,
+  ) {
+    final state = key.currentState;
+    if (state is _PdfReaderViewState) {
+      state._jumpToPage(pageIndex);
+      state._revealHighlight(pageIndex, rect);
+    }
+  }
+
   /// 顯示搜尋跳轉的暫態高亮（epic-10-search Issue 5，spec.md §6）：
   /// [pageIndex] 為 0-indexed 目標頁碼，[rect] 為頁內精確座標。全程只會有
   /// 一個暫態高亮存在（與 [setSearchHighlights] 可能同時存在多筆符合
@@ -622,6 +638,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       _jumpHighlightPageIndex = pageIndex;
       _jumpHighlightRect = rect;
     });
+    // 規則 7：顯示暫態高亮時，逐頁下自動把視窗帶到看得到高亮的位置。
+    if (pageIndex != null && rect != null) _revealHighlight(pageIndex, rect);
   }
 
   /// 直接對 [_document] 逐頁呼叫 `loadStructuredText()`／`allMatches()`，
@@ -1051,6 +1069,46 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       case PagedStepKind.none:
         break;
     }
+  }
+
+  /// 規則 7：逐頁下確保 [rect]（第 [pageIndex] 頁的百分比座標）在視窗內——頂端已可見則維持
+  /// 頂端，否則垂直置中並夾範圍，高亮比可視高度高則上緣貼齊。目標頁不在目前單元時先換到
+  /// 該單元。非逐頁、版面尚未就緒、頁碼超界、或（裁切下）高亮完全在裁切範圍外時不動作。
+  void _revealHighlight(int pageIndex, PercentRect rect) {
+    final paged = _paged;
+    if (!_pagedActive || paged == null || !_controller.isReady) return;
+    if (pageIndex < 0 || pageIndex >= paged.pageRects.length) return;
+    final viewSize = _viewSize;
+    if (!viewSize.isFinite || viewSize.width <= 0 || viewSize.height <= 0) return;
+
+    final pageRelative = _cropEnabled
+        ? originalToCropRelativePercent(rect: rect, cropRect: widget.pdfCropRect)
+        : rect;
+    if (pageRelative == null) return;
+
+    final unit = paged.pageToUnit[pageIndex];
+    if (unit != _currentPagedUnit()) _goToPagedUnit(unit);
+
+    // 百分比 → 文件座標：以「頁面」矩形換算（雙頁時頁面在 spread 單元內）。
+    final page = paged.pageRects[pageIndex];
+    final highlight = Rect.fromLTRB(
+      page.left + pageRelative.left * page.width,
+      page.top + pageRelative.top * page.height,
+      page.left + pageRelative.right * page.width,
+      page.top + pageRelative.bottom * page.height,
+    );
+    final zoom = _controller.currentZoom;
+    final top = pagedTopForHighlight(
+      unitContent: paged.unitRects[unit].inflate(_pdfPageMargin),
+      highlight: highlight,
+      viewHeight: viewSize.height,
+      zoom: zoom,
+    );
+    unawaited(_controller.goToPosition(
+      documentOffset: Offset(_controller.visibleRect.left, top),
+      zoom: zoom,
+      duration: Duration.zero,
+    ));
   }
 
   bool? _onPagedKey(

@@ -7,7 +7,10 @@ import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
 import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
+import 'package:elinkbook/reader/percent_rect.dart';
 import 'package:elinkbook/reader/zone_action.dart';
+import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,6 +61,7 @@ class _Harness {
         locale: const Locale('zh', 'TW'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: PdfReaderView(
           key: key,
           filePath: file,
@@ -618,6 +622,156 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
       expect(_visiblePages(c), [1]);
       expect(offsetPx(c, 0), closeTo(180, 1e-3));
+    });
+  });
+
+  group('帶高亮的跳轉：視窗自動帶到看得到高亮的位置（規則 7，Review Focus 4）', () {
+    /// 高亮矩形（百分比）換成文件座標，與 PdfReaderView 的換算一致。
+    Rect docRect(PdfViewerController c, int pageIndex, PercentRect p) {
+      final page = c.layout.pageLayouts[pageIndex];
+      return Rect.fromLTRB(
+        page.left + p.left * page.width,
+        page.top + p.top * page.height,
+        page.left + p.right * page.width,
+        page.top + p.bottom * page.height,
+      );
+    }
+
+    void expectVisible(PdfViewerController c, Rect hl) {
+      final v = c.visibleRect;
+      expect(v.top, lessThanOrEqualTo(hl.top + 1e-3));
+      expect(v.bottom, greaterThanOrEqualTo(hl.bottom - 1e-3));
+    }
+
+    testWidgets('jumpToPageAtRect：高亮在頁面下半部 → 視窗帶到看得到高亮', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      const rect = PercentRect(left: 0.1, top: 0.8, right: 0.5, bottom: 0.85);
+
+      PdfReaderView.jumpToPageAtRect(h.key, 2, rect);
+      expect(_visiblePages(c), [3]);
+      expectVisible(c, docRect(c, 2, rect));
+    });
+
+    testWidgets('jumpToPageAtRect：高亮在頁面上半部、頂端已可見 → 維持頂端', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      const rect = PercentRect(left: 0.1, top: 0.05, right: 0.5, bottom: 0.08);
+
+      PdfReaderView.jumpToPageAtRect(h.key, 2, rect);
+      expect(c.visibleRect.top,
+          closeTo(c.layout.pageLayouts[2].top - _margin, 1e-3));
+    });
+
+    testWidgets('showTemporaryHighlight（開書與就地跳轉路徑）：同樣自動帶到高亮', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      const rect = PercentRect(left: 0.1, top: 0.9, right: 0.5, bottom: 0.95);
+
+      PdfReaderView.jumpToPage(h.key, 1); // applyTo(shouldNavigate: true) 先跳頁
+      PdfReaderView.showTemporaryHighlight(h.key, 1, rect);
+      await tester.pump();
+      expect(_visiblePages(c), [2]);
+      expectVisible(c, docRect(c, 1, rect));
+      expect(find.byKey(const Key('pdf_reader_jump_highlight_1')), findsOneWidget);
+    });
+
+    testWidgets('showTemporaryHighlight 的目標頁不是目前單元：先換到該單元再定位', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      const rect = PercentRect(left: 0.1, top: 0.9, right: 0.5, bottom: 0.95);
+
+      PdfReaderView.showTemporaryHighlight(h.key, 3, rect); // 目前在第 1 頁
+      await tester.pump();
+      expect(_visiblePages(c), [4]);
+      expectVisible(c, docRect(c, 3, rect));
+    });
+
+    testWidgets('高亮比可視高度還高：上緣貼齊可視上緣', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      // 可視文件高度 = 200 / 基準 ≈ 314；高亮高 0.6 * 792 ≈ 475 → 比可視高度高。
+      const rect = PercentRect(left: 0.1, top: 0.2, right: 0.5, bottom: 0.8);
+
+      PdfReaderView.jumpToPageAtRect(h.key, 1, rect);
+      expect(c.visibleRect.top,
+          closeTo(docRect(c, 1, rect).top, 1e-2));
+    });
+
+    testWidgets('裁切模式：以裁切後的頁面座標換算高亮', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+        tester,
+        h.app(
+          fit: PdfFitMode.fitWidth,
+          cropMode: PdfCropMode.manual,
+          cropRect:
+              const PdfCropRect(left: 0.0, top: 0.0, right: 1.0, bottom: 0.5),
+        ),
+      );
+      // 原頁面座標 top 0.4～0.45 落在裁切範圍（上半）內；裁切後的相對位置為 0.8～0.9。
+      const rect = PercentRect(left: 0.1, top: 0.4, right: 0.5, bottom: 0.45);
+      const relative = PercentRect(left: 0.1, top: 0.8, right: 0.5, bottom: 0.9);
+
+      PdfReaderView.jumpToPageAtRect(h.key, 1, rect);
+      expectVisible(c, docRect(c, 1, relative));
+    });
+
+    testWidgets('裁切模式：高亮完全落在裁切範圍外：不調整位置、不拋例外', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+        tester,
+        h.app(
+          fit: PdfFitMode.fitWidth,
+          cropMode: PdfCropMode.manual,
+          cropRect:
+              const PdfCropRect(left: 0.0, top: 0.0, right: 1.0, bottom: 0.5),
+        ),
+      );
+      const outside = PercentRect(left: 0.1, top: 0.8, right: 0.5, bottom: 0.9);
+      PdfReaderView.jumpToPageAtRect(h.key, 1, outside);
+      expect(_visiblePages(c), [2]);
+      expect(c.visibleRect.top,
+          closeTo(c.layout.pageLayouts[1].top - _margin, 1e-3));
+    });
+
+    testWidgets('雙頁 spread 內的第二頁：以該頁在 spread 內的位置換算', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+        tester,
+        h.app(
+          file: 'test/fixtures/sample_dual_page.pdf',
+          fit: PdfFitMode.fitWidth,
+          dualMode: DualPageMode.always,
+        ),
+      );
+      const rect = PercentRect(left: 0.1, top: 0.9, right: 0.5, bottom: 0.95);
+      PdfReaderView.jumpToPageAtRect(h.key, 1, rect); // 第 2 頁屬於 spread [1, 2]
+      expectVisible(c, docRect(c, 1, rect));
+    });
+
+    testWidgets('連續捲動：jumpToPageAtRect 退化為 jumpToPage，跳到目標頁且不拋例外（不套用逐頁高亮規則）', (tester) async {
+      _setSurface(tester, const Size(400, 400));
+      final h = _Harness();
+      await h.open(tester, h.app(turnMode: PdfPageTurnMode.scroll));
+      PdfReaderView.jumpToPageAtRect(
+        h.key,
+        2,
+        const PercentRect(left: 0.1, top: 0.8, right: 0.5, bottom: 0.85),
+      );
+      // 連續捲動走原本的 jumpToPage（含換頁動畫），等頁碼落定後確認確實跳到第 3 頁。
+      final c = h.controller(tester);
+      await pumpUntilPdfReady(tester,
+          condition: () => c.pageNumber == 3, maxIterations: 10);
+      expect(c.pageNumber, 3);
     });
   });
 }
