@@ -15,6 +15,7 @@ import '../reader/notes_repository.dart';
 import '../reader/tts_provider.dart';
 import '../reader/tts_audio_focus_source.dart';
 import '../reader/tts_audio_handler.dart';
+import '../reader/tts_audio_handler_startup.dart';
 import '../reader/reader_activity_tracker.dart';
 import '../search/full_text_search_settings_repository.dart';
 import '../search/search_repository.dart';
@@ -50,6 +51,9 @@ class LibraryReaderFeatureRepositories {
   final BookReaderPrefsRepository? bookReaderPrefsRepository;
   final TtsProvider? ttsProvider;
   final TtsAudioHandler? ttsAudioHandler;
+
+  /// epic-61 Issue 1：降級後進入閱讀器提示一次的狀態；`null` 時不提示。
+  final TtsDegradedNotice? ttsDegradedNotice;
   final TtsAudioFocusSource? ttsAudioFocusSource;
   final ReaderActivityTracker? readerActivityTracker;
 
@@ -90,6 +94,7 @@ class LibraryReaderFeatureRepositories {
     this.bookReaderPrefsRepository,
     this.ttsProvider,
     this.ttsAudioHandler,
+    this.ttsDegradedNotice,
     this.ttsAudioFocusSource,
     this.readerActivityTracker,
     this.fullTextSearchSettingsRepository,

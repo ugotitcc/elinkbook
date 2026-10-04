@@ -591,6 +591,7 @@
   "bookmarkDefaultNamePdfPage": "Page {page}",
   "bookmarkDefaultNamePercent": "At {percent}%",
   "bookmarkDefaultNameFallback": "Bookmark",
+  "ttsDegradedNotice": "No media notification or lock-screen controls this time. Reading aloud still works.",
   "ttsNotificationChannelName": "Reading aloud",
   "ttsVoiceSystemDefault": "System default voice",
   "remoteCatalogUnnamedCategory": "Untitled category",
