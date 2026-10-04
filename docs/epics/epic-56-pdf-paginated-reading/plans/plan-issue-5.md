@@ -1,6 +1,6 @@
 # Issue 5：長頁步進、帶高亮跳轉與閱讀活動回報 實作計畫
 
-> **給執行者：** 必要子技能：使用 `superpowers:subagent-driven-development`（建議）或 `superpowers:executing-plans` 逐 Task 執行本計畫。步驟使用 checkbox（`- [ ]`）語法追蹤進度；每完成一個 Step 就把它改為 `- [x]`。
+> **給執行者：** 必要子技能：使用 `superpowers:subagent-driven-development`（建議）或 `superpowers:executing-plans` 逐 Task 執行本計畫。步驟使用 checkbox（`- [x]`）語法追蹤進度；每完成一個 Step 就把它改為 `- [x]`。
 
 **Goal：** 逐頁模式下，單元縱向可捲動（Fit Width、真實比例、放大後、長寬比極高的頁）時，熱區與音量鍵能「先頁內逐屏步進、到底才換頁；往回對稱並落在上一單元底端」；搜尋結果帶高亮矩形時視窗自動帶到看得到高亮的位置；頁內垂直拖曳會回報閱讀活動，長頁上只用拖曳閱讀時閱讀時間不會凍結。
 
@@ -75,7 +75,7 @@
 - Consumes：無。
 - Produces：分支 `epic-56/issue-5-long-page-step`，後續 Task 都在這個 worktree 的 `app/` 下執行。
 
-- [ ] **Step 1：在 `main` 提交計畫**
+- [x] **Step 1：在 `main` 提交計畫**
 
 先把 `issues.md` Issue 5 的 `**Status:** ready-for-agent` 改為 `**Status:** in-progress`；`docs/epics.md` 第 57 列「Issue 5、6 待寫計畫」改為「Issue 5 開發中；Issue 6 待寫計畫」。然後（在儲存庫根目錄）：
 
@@ -86,7 +86,7 @@ git commit -m "docs(epic-56): Issue 5 實作計畫
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 2：建立 worktree 並安裝依賴**
+- [x] **Step 2：建立 worktree 並安裝依賴**
 
 ```bash
 git worktree add .worktrees/epic-56-issue-5-long-page-step -b epic-56/issue-5-long-page-step
@@ -100,7 +100,7 @@ flutter pub get
 
 預期：`Got dependencies!`。
 
-- [ ] **Step 3：確認基準測試通過並記下數字**
+- [x] **Step 3：確認基準測試通過並記下數字**
 
 ```bash
 flutter test test/reader/pdf_paginated_rules_test.dart test/reader/pdf_reader_view_paginated_test.dart test/screens/reader_screen_stats_activity_test.dart
@@ -162,7 +162,7 @@ class PagedDragActivityAccumulator {
 PagedViewport clampPagedViewport({..., bool startAtBottom = false});
 ```
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `pdf_paginated_rules_test.dart` 的 `main()` 結尾（最後一個 `group` 之後、`}` 之前）加入：
 
@@ -432,12 +432,12 @@ PagedViewport clampPagedViewport({..., bool startAtBottom = false});
   });
 ```
 
-- [ ] **Step 2：確認失敗**
+- [x] **Step 2：確認失敗**
 
 Run：`flutter test test/reader/pdf_paginated_rules_test.dart`
 Expected：編譯失敗，`Method not found: 'pagedRelativeStep'`（以及 `PagedStep`、`pagedTopForHighlight`、`PagedDragActivityAccumulator`、`No named parameter with the name 'startAtBottom'`）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `app/lib/reader/pdf_paginated_rules.dart`：
 
@@ -604,12 +604,12 @@ class PagedDragActivityAccumulator {
 }
 ```
 
-- [ ] **Step 4：確認通過**
+- [x] **Step 4：確認通過**
 
 Run：`flutter test test/reader/pdf_paginated_rules_test.dart`
 Expected：全數 PASS（原 45 例＋本 Task 新增 29 例＝74）。若 `pagedTopForHighlight` 的數字與預期差微小浮點誤差，只放寬 `closeTo` 容許值，**不要**改預期數字。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/reader/pdf_paginated_rules.dart app/test/reader/pdf_paginated_rules_test.dart
@@ -630,7 +630,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1 的 `pagedRelativeStep`、`PagedStep`／`PagedStepKind`、`clampPagedViewport(startAtBottom:)`；既有 `pagedAdjacentUnit`、`maxVerticalScroll`、`_paged`、`_viewSize`、`_currentPagedUnit()`、`_pdfPageMargin`。
 - Produces（Task 3 依賴）：`void _goToPagedUnit(int unit, {bool atBottom = false})`（Issue 4 既有呼叫端不改，預設落頂端）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `pdf_reader_view_paginated_test.dart` 的 `main()` 結尾追加（檔內已有 `_setSurface`、`_visiblePages`、`_Harness`、`_margin`）：
 
@@ -754,12 +754,12 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
   });
 ```
 
-- [ ] **Step 2：確認失敗**
+- [x] **Step 2：確認失敗**
 
 Run：`flutter test test/reader/pdf_reader_view_paginated_test.dart`
 Expected：本 Task 新增案例中，長頁相關的 6 例失敗（目前相對步進一律整頁換頁：`nextPage` 後 `_visiblePages` 變成 `[2]`）；「Page-fit 單元沒有溢出」案例已通過（Issue 4 行為）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `app/lib/reader/pdf_reader_view.dart`：
 
@@ -826,7 +826,7 @@ Expected：本 Task 新增案例中，長頁相關的 6 例失敗（目前相對
   }
 ```
 
-- [ ] **Step 4：確認通過**
+- [x] **Step 4：確認通過**
 
 Run：`flutter test test/reader/pdf_reader_view_paginated_test.dart`
 Expected：全數 PASS（原 27 例＋本 Task 7 例＝34）。
@@ -836,12 +836,12 @@ Expected：全數 PASS（原 27 例＋本 Task 7 例＝34）。
 2. 落底端後偏移不是最大捲動量：確認 `_goToPagedUnit` 把 `startAtBottom` 傳進 `clampPagedViewport`，且 `normalizeMatrix`（`_normalizePagedMatrix`）以候選位置原樣放行（候選值已在範圍內）。
 3. 放大後案例失敗：確認 `setZoom` 後 `goToPosition` 的縮放被 `normalizeMatrix` 保留（縮放大於基準合法）。
 
-- [ ] **Step 5：確認 Issue 4 既有案例與連續捲動零回歸**
+- [x] **Step 5：確認 Issue 4 既有案例與連續捲動零回歸**
 
 Run：`flutter test test/reader/pdf_reader_view_test.dart test/reader/pdf_reader_view_fit_mode_test.dart test/reader/pdf_reader_view_dual_page_test.dart test/reader/pdf_reader_view_nav_zone_test.dart`
 Expected：全數 PASS，未修改任何既有測試。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_paginated_test.dart
@@ -870,7 +870,7 @@ static void jumpToPageAtRect(GlobalKey<State<PdfReaderView>> key, int pageIndex,
 void _revealHighlight(int pageIndex, PercentRect rect);   // 逐頁：確保高亮在視窗內（規則 7）；連續捲動：無動作
 ```
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `pdf_reader_view_paginated_test.dart` 檔頭補 `import 'package:elinkbook/reader/percent_rect.dart';`，並在 `main()` 結尾追加：
 
@@ -1026,12 +1026,12 @@ void _revealHighlight(int pageIndex, PercentRect rect);   // 逐頁：確保高�
   });
 ```
 
-- [ ] **Step 2：確認失敗**
+- [x] **Step 2：確認失敗**
 
 Run：`flutter test test/reader/pdf_reader_view_paginated_test.dart`
 Expected：編譯失敗，`The method 'jumpToPageAtRect' isn't defined for the type 'PdfReaderView'`。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `app/lib/reader/pdf_reader_view.dart`：
 
@@ -1150,7 +1150,7 @@ Expected：編譯失敗，`The method 'jumpToPageAtRect' isn't defined for the t
 
 （`ReaderJumpTarget.applyTo` 不需改：`shouldNavigate: true` 先 `jumpToPage`，接著 `showTemporaryHighlight` 已會自動定位；開書當下 `shouldNavigate: false` 時單元已由 `initialPageIndex` 定位，同樣由 `showTemporaryHighlight` 定位。）
 
-- [ ] **Step 4：確認通過**
+- [x] **Step 4：確認通過**
 
 Run：`flutter test test/reader/pdf_reader_view_paginated_test.dart`
 Expected：全數 PASS（Task 2 後 34 例＋本 Task 9 例＝43）。
@@ -1160,12 +1160,12 @@ Expected：全數 PASS（Task 2 後 34 例＋本 Task 9 例＝43）。
 2. `showTemporaryHighlight` 案例中 `pdf_reader_jump_highlight_1` 找不到：該 overlay 只在目標頁被繪製時存在；確認視窗已在第 2 頁。
 3. 雙頁案例失敗：確認用的是 `paged.pageRects[pageIndex]`（頁面矩形）而不是單元矩形。
 
-- [ ] **Step 5：確認既有搜尋與跳轉測試零回歸**
+- [x] **Step 5：確認既有搜尋與跳轉測試零回歸**
 
 Run：`flutter test test/reader/pdf_reader_view_jump_highlight_test.dart test/reader/pdf_reader_view_search_test.dart test/screens/reader_screen_test.dart`
 Expected：全數 PASS，未修改任何既有測試。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/lib/screens/reader_screen.dart app/test/reader/pdf_reader_view_paginated_test.dart
@@ -1188,7 +1188,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1 的 `PagedDragActivityAccumulator`；既有 `_activePointerCount`、`_selectionDrag`、`_pagedActive`、`_currentPagedUnit()`。
 - Produces：`final VoidCallback? onReadingActivity;`（`PdfReaderView` 建構參數，預設 `null`，無參數回呼）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 (a) `pdf_reader_view_paginated_test.dart` 的 `_Harness`：加欄位與參數。`int activity = 0;` 加在 `final pages = <int>[];` 之後；`app(...)` 的參數列新增 `bool reportActivity = true,`，`PdfReaderView(...)` 內新增：
 
@@ -1304,12 +1304,12 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
   });
 ```
 
-- [ ] **Step 2：確認失敗**
+- [x] **Step 2：確認失敗**
 
 Run：`flutter test test/reader/pdf_reader_view_paginated_test.dart test/screens/reader_screen_stats_activity_test.dart`
 Expected：編譯失敗，`No named parameter with the name 'onReadingActivity'`。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `app/lib/reader/pdf_reader_view.dart`：
 
@@ -1358,7 +1358,7 @@ Expected：編譯失敗，`No named parameter with the name 'onReadingActivity'`
           onReadingActivity: () => _session.recordActivity(),
 ```
 
-- [ ] **Step 4：確認通過**
+- [x] **Step 4：確認通過**
 
 Run：`flutter test test/reader/pdf_reader_view_paginated_test.dart test/screens/reader_screen_stats_activity_test.dart`
 Expected：全數 PASS（widget 43＋7＝50；統計測試新增 1）。
@@ -1368,7 +1368,7 @@ Expected：全數 PASS（widget 43＋7＝50；統計測試新增 1）。
 2. 兩指案例回報了：確認 `_activePointerCount` 在第二指按下時為 2（`onPointerDown` 先遞增）。
 3. 「分兩段 12」回報 0 或 2：確認累積器餘數保留（`% threshold`）與 `reset()` 只在 `_activePointerCount == 1` 的 `onPointerDown` 呼叫。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/lib/screens/reader_screen.dart app/test/reader/pdf_reader_view_paginated_test.dart app/test/screens/reader_screen_stats_activity_test.dart
@@ -1388,7 +1388,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1～4 全部。
 - Produces：無（最後一個 Task）。
 
-- [ ] **Step 1：確認朗讀沒有 PDF 路徑、搜尋跳轉都已涵蓋**
+- [x] **Step 1：確認朗讀沒有 PDF 路徑、搜尋跳轉都已涵蓋**
 
 以下指令用 Git Bash 執行（PowerShell 沒有 `grep`；等價指令為 `Select-String -Path lib/screens/reader_screen.dart -Pattern "<模式>"`）：
 
@@ -1399,7 +1399,7 @@ grep -n "PdfReaderView.jumpToPage\|PdfReaderView.jumpToPageAtRect" lib/screens/r
 
 Expected：第一個找到 `onTtsTap: null` 那行（PDF 沒有朗讀，spec 的朗讀規則本 Issue 無需程式碼）；第二個中，搜尋結果相關的兩處（`_runPdfSearch`、`_goToPdfSearchMatch`）為 `jumpToPageAtRect`，其餘（目錄、書籤、縮圖、頁碼輸入、進度條）仍是 `jumpToPage`。若發現其他「帶高亮矩形」的 PDF 跳轉仍用 `jumpToPage`，停下來回報，不要自行處理。
 
-- [ ] **Step 2：跑經由 `ReaderScreen` 掛載 PDF 的既有測試**
+- [x] **Step 2：跑經由 `ReaderScreen` 掛載 PDF 的既有測試**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_stats_activity_test.dart test/reader/
@@ -1407,7 +1407,7 @@ flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_sta
 
 Expected：全數 PASS。
 
-- [ ] **Step 3：全專案靜態檢查與 l10n**
+- [x] **Step 3：全專案靜態檢查與 l10n**
 
 ```bash
 flutter analyze
@@ -1416,7 +1416,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 Expected：`No issues found!`；l10n 檢查 PASS（本 Issue 沒有新增字串）。
 
-- [ ] **Step 4：完整測試（只在這個時機跑一次）**
+- [x] **Step 4：完整測試（只在這個時機跑一次）**
 
 ```bash
 flutter test
@@ -1424,7 +1424,7 @@ flutter test
 
 用 `run_in_background` 執行（約 6 分鐘，必須在 `app/` 目錄下）。Expected：0 失敗；通過數＝Task 0 記下的基準＋本 Issue 新增案例（規則 29＋widget 23＋統計 1＝53），以實測為準。
 
-- [ ] **Step 5：更新文件**
+- [x] **Step 5：更新文件**
 
 `docs/epics/epic-56-pdf-paginated-reading/epic.md`：
 
@@ -1436,7 +1436,7 @@ flutter test
 
 不更新 `CLAUDE.md`（Epic 56 全部 Issue 完成、可發版時再一次補 `PdfReaderView` 功能描述）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add docs/epics/epic-56-pdf-paginated-reading/epic.md docs/epics/epic-56-pdf-paginated-reading/issues.md docs/epics.md

@@ -1509,7 +1509,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final currentIndex = matches.isEmpty ? null : 0;
     PdfReaderView.setSearchHighlights(_pdfReaderViewKey, matches, currentIndex: currentIndex);
     if (currentIndex != null) {
-      PdfReaderView.jumpToPage(_pdfReaderViewKey, matches[currentIndex].pageIndex);
+      PdfReaderView.jumpToPageAtRect(
+        _pdfReaderViewKey,
+        matches[currentIndex].pageIndex,
+        matches[currentIndex].rect,
+      );
     }
     _pdfSearchStateNotifier.value = PdfSearchState(
       query: query,
@@ -1526,7 +1530,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final current = _pdfSearchStateNotifier.value.currentIndex ?? -1;
     final next = (current + delta) % _pdfSearchMatches.length;
     PdfReaderView.setSearchHighlights(_pdfReaderViewKey, _pdfSearchMatches, currentIndex: next);
-    PdfReaderView.jumpToPage(_pdfReaderViewKey, _pdfSearchMatches[next].pageIndex);
+    PdfReaderView.jumpToPageAtRect(
+      _pdfReaderViewKey,
+      _pdfSearchMatches[next].pageIndex,
+      _pdfSearchMatches[next].rect,
+    );
     _pdfSearchStateNotifier.value = _pdfSearchStateNotifier.value.copyWith(currentIndex: next);
   }
 
@@ -3485,6 +3493,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           navZoneActions: resolved.navZoneActions,
           onZoneAction: _handleZoneAction,
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
+          // epic-56 Issue 5 規則 9：頁內垂直拖曳算閱讀活動（PdfReaderView 不持有 ReadingSession）。
+          onReadingActivity: () => _session.recordActivity(),
           onPageChanged: (info) {
             if (!mounted) return;
             // 位置儲存與閱讀活動判定都由閱讀會話處理（見 ReadingSession）。

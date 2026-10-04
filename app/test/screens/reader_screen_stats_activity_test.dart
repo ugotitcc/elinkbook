@@ -191,6 +191,25 @@ void main() {
     expect(await repository.getTotalReadingSeconds(), 30);
   });
 
+  testWidgets('PDF 頁內垂直拖曳回報的閱讀活動接到閱讀時間（長頁上只用拖曳閱讀不會凍結計時）',
+      (tester) async {
+    final repository = FakeReadingStatsRepository();
+    await pumpStatsReader(
+      tester,
+      filePath: 'test/fixtures/sample_multi_page.pdf',
+      readingStatsRepository: repository,
+    );
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.onReadingActivity, isNotNull);
+
+    await tester.pump(const Duration(seconds: 10));
+    pdfView.onReadingActivity?.call();
+    await tester.pump(const Duration(seconds: 20));
+    await disposeStatsReader(tester);
+
+    expect(await repository.getTotalReadingSeconds(), 30);
+  });
+
   testWidgets('PDF 長按框選算閱讀活動', (tester) async {
     final repository = FakeReadingStatsRepository();
     await pumpStatsReader(

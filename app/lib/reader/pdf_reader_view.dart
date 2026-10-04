@@ -51,6 +51,11 @@ class PdfReaderView extends StatefulWidget {
   final int? initialPageIndex;
   final ValueChanged<PdfPageInfo>? onPageChanged;
 
+  /// 逐頁下頁內垂直拖曳每累積 20 邏輯像素呼叫一次（無參數；epic-56 Issue 5 規則 9），
+  /// 讓長頁上只用拖曳閱讀、頁碼沒變的期間閱讀時間仍持續計算。`ReadingSession` 由
+  /// `ReaderScreen` 私有持有，本 widget 不引用它，只透過這個回呼通知。
+  final VoidCallback? onReadingActivity;
+
   // ── epic-24-pdf-engine-rebuild Issue 2 新增 ──
   /// 三態雙頁模式。**widget 層預設刻意為 [DualPageMode.never]**（不是
   /// 產品預設值 auto）：未傳此參數的既有呼叫端（Issue 1 既有測試）行為
@@ -120,6 +125,7 @@ class PdfReaderView extends StatefulWidget {
     required this.onError,
     this.initialPageIndex,
     this.onPageChanged,
+    this.onReadingActivity,
     this.dualPageMode = DualPageMode.never,
     this.dualPageCoverAlone = true,
     this.dualPageDirection = DualPageDirection.rtl,
@@ -227,6 +233,22 @@ class PdfReaderView extends StatefulWidget {
     final state = key.currentState;
     if (state is _PdfReaderViewState) {
       state._setSearchHighlights(matches, currentIndex);
+    }
+  }
+
+  /// 跳到第 [pageIndex] 頁（0-indexed）並讓 [rect]（頁面百分比座標，例如搜尋結果）看得到
+  /// （epic-56 Issue 5 規則 7）：逐頁下落在目標單元後，若高亮不在頂端對齊的視窗內，
+  /// 視窗自動帶到看得到高亮的位置；連續捲動下等同 [jumpToPage]。[key] 對應的 State 若
+  /// 尚未掛載，靜默忽略。
+  static void jumpToPageAtRect(
+    GlobalKey<State<PdfReaderView>> key,
+    int pageIndex,
+    PercentRect rect,
+  ) {
+    final state = key.currentState;
+    if (state is _PdfReaderViewState) {
+      state._jumpToPage(pageIndex);
+      state._revealHighlight(pageIndex, rect);
     }
   }
 
@@ -514,7 +536,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 
   /// 把 [unit] 帶到可視範圍：更新錨點頁、落在單元頂端（橫向依閱讀起始側）、基準縮放，
   /// 一律瞬間完成（`Duration.zero`），不繼承先前的頁內偏移與縮放（規則 6）。
-  void _goToPagedUnit(int unit) {
+  /// [atBottom] 為 true（相對步進往回換單元，規則 4）時落在單元底端；預設落頂端。
+  void _goToPagedUnit(int unit, {bool atBottom = false}) {
     final paged = _paged;
     if (paged == null || unit < 0 || unit >= paged.unitCount) return;
     // 以外層 LayoutBuilder 記下的 _viewSize 為唯一來源：controller.viewSize 內部是
@@ -532,6 +555,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       maxZoom: kPdfFitMaxZoom,
       zoom: base,
       direction: widget.dualPageDirection,
+      startAtBottom: atBottom,
     );
     unawaited(_controller.goToPosition(
       documentOffset: viewport.topLeft,
@@ -588,6 +612,9 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 
   int _activePointerCount = 0;
 
+  /// 規則 9：頁內垂直拖曳的閱讀活動累積器（換手勢、換單元歸零）。
+  final _dragActivity = PagedDragActivityAccumulator();
+
   List<PdfAnnotationDecoration> _annotations = const [];
 
   void _setAnnotations(List<PdfAnnotationDecoration> annotations) {
@@ -620,6 +647,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       _jumpHighlightPageIndex = pageIndex;
       _jumpHighlightRect = rect;
     });
+    // 規則 7：顯示暫態高亮時，逐頁下自動把視窗帶到看得到高亮的位置。
+    if (pageIndex != null && rect != null) _revealHighlight(pageIndex, rect);
   }
 
   /// 直接對 [_document] 逐頁呼叫 `loadStructuredText()`／`allMatches()`，
@@ -1006,20 +1035,105 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     _goToSpread(layout.spreadIndexOf(prev), layout);
   }
 
-  /// 逐頁的相對步進（熱區、音量鍵）。Issue 4 只有 Page-fit 子集：直接換到相鄰單元、
-  /// 落在新單元頂端；單元縱向溢出時也一樣（暫態降級，頁內逐屏步進與「上一頁落在
-  /// 上一單元底端」見 Issue 5）。第一／最後單元再往外＝無動作。
+  /// 逐頁的相對步進（熱區、音量鍵、PageUp／PageDown／Space，規則 3、4、5）：單元縱向
+  /// 還能捲就先頁內逐屏步進（步距＝可視高度減 10% 重疊），到頁底才換到下一個單元頂端；
+  /// 往回對稱，到頁頂後換到上一個單元的**底端**。單元沒有縱向溢出（例如 Page-fit）時
+  /// 直接整頁換頁。第一／最後單元再往外＝無動作。偏移與步距皆為螢幕像素。
   void _stepPagedUnit({required bool forward}) {
     final paged = _paged;
     final current = _currentPagedUnit();
     if (paged == null || current == null) return;
+    final viewSize = _viewSize;
+    if (!viewSize.isFinite || viewSize.width <= 0 || viewSize.height <= 0) return;
+
+    final box = paged.unitRects[current].inflate(_pdfPageMargin);
+    final zoom = _controller.currentZoom;
+    final visible = _controller.visibleRect;
     final target = pagedAdjacentUnit(
       currentUnit: current,
       unitCount: paged.unitCount,
       forward: forward,
     );
-    if (target == null) return;
-    _goToPagedUnit(target);
+    final step = pagedRelativeStep(
+      forward: forward,
+      scrollOffset: (visible.top - box.top) * zoom,
+      maxScroll: maxVerticalScroll(
+        contentSize: box.size,
+        scale: zoom,
+        viewSize: viewSize,
+      ),
+      viewHeight: viewSize.height,
+      hasAdjacentUnit: target != null,
+    );
+    switch (step.kind) {
+      case PagedStepKind.scroll:
+        // 只改縱向位置；橫向沿用目前位置，normalizeMatrix 會再夾回單元範圍。
+        unawaited(_controller.goToPosition(
+          documentOffset: Offset(visible.left, box.top + step.scrollOffset / zoom),
+          zoom: zoom,
+          duration: Duration.zero,
+        ));
+      case PagedStepKind.changeUnit:
+        _goToPagedUnit(target!, atBottom: step.landAtBottom);
+      case PagedStepKind.none:
+        break;
+    }
+  }
+
+  /// 目前縮放下，第 [unit] 個單元縱向是否還能捲動（內容高度大於視窗高度）。
+  bool _unitCanScrollVertically(int unit) {
+    final paged = _paged;
+    final viewSize = _viewSize;
+    if (paged == null || !_controller.isReady) return false;
+    if (!viewSize.isFinite || viewSize.width <= 0 || viewSize.height <= 0) {
+      return false;
+    }
+    return maxVerticalScroll(
+          contentSize: paged.unitRects[unit].inflate(_pdfPageMargin).size,
+          scale: _controller.currentZoom,
+          viewSize: viewSize,
+        ) >
+        0;
+  }
+
+  /// 規則 7：逐頁下確保 [rect]（第 [pageIndex] 頁的百分比座標）在視窗內——頂端已可見則維持
+  /// 頂端，否則垂直置中並夾範圍，高亮比可視高度高則上緣貼齊。目標頁不在目前單元時先換到
+  /// 該單元。非逐頁、版面尚未就緒、頁碼超界、或（裁切下）高亮完全在裁切範圍外時不動作。
+  void _revealHighlight(int pageIndex, PercentRect rect) {
+    final paged = _paged;
+    if (!_pagedActive || paged == null || !_controller.isReady) return;
+    if (pageIndex < 0 || pageIndex >= paged.pageRects.length) return;
+    final viewSize = _viewSize;
+    if (!viewSize.isFinite || viewSize.width <= 0 || viewSize.height <= 0) return;
+
+    final pageRelative = _cropEnabled
+        ? originalToCropRelativePercent(rect: rect, cropRect: widget.pdfCropRect)
+        : rect;
+    if (pageRelative == null) return;
+
+    final unit = paged.pageToUnit[pageIndex];
+    if (unit != _currentPagedUnit()) _goToPagedUnit(unit);
+
+    // 百分比 → 文件座標：以「頁面」矩形換算（雙頁時頁面在 spread 單元內）。
+    final page = paged.pageRects[pageIndex];
+    final highlight = Rect.fromLTRB(
+      page.left + pageRelative.left * page.width,
+      page.top + pageRelative.top * page.height,
+      page.left + pageRelative.right * page.width,
+      page.top + pageRelative.bottom * page.height,
+    );
+    final zoom = _controller.currentZoom;
+    final top = pagedTopForHighlight(
+      unitContent: paged.unitRects[unit].inflate(_pdfPageMargin),
+      highlight: highlight,
+      viewHeight: viewSize.height,
+      zoom: zoom,
+    );
+    unawaited(_controller.goToPosition(
+      documentOffset: Offset(_controller.visibleRect.left, top),
+      zoom: zoom,
+      duration: Duration.zero,
+    ));
   }
 
   bool? _onPagedKey(
@@ -1490,12 +1604,28 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         Listener(
           onPointerDown: (_) {
             _activePointerCount++;
+            _dragActivity.reset(); // 新手勢或手指數改變：歸零（M-4）
             if (_activePointerCount >= 2) _cancelSelectionDrag();
           },
-          onPointerUp: (_) =>
-              _activePointerCount = (_activePointerCount - 1).clamp(0, 999),
-          onPointerCancel: (_) =>
-              _activePointerCount = (_activePointerCount - 1).clamp(0, 999),
+          onPointerMove: (event) {
+            // 只算逐頁下「單指、非框選」的垂直位移；水平位移、兩指縮放、連續捲動都不算。
+            final report = widget.onReadingActivity;
+            if (report == null || !_pagedActive) return;
+            if (_activePointerCount != 1 || _selectionDrag != null) return;
+            final unit = _currentPagedUnit();
+            if (unit == null) return;
+            // 單元沒有縱向溢出（例如 Page-fit）時視窗不會動，不算閱讀活動（M-3）。
+            if (!_unitCanScrollVertically(unit)) return;
+            if (_dragActivity.add(event.delta.dy, unit: unit)) report();
+          },
+          onPointerUp: (_) {
+            _activePointerCount = (_activePointerCount - 1).clamp(0, 999);
+            _dragActivity.reset(); // 手指數改變：歸零（M-4）
+          },
+          onPointerCancel: (_) {
+            _activePointerCount = (_activePointerCount - 1).clamp(0, 999);
+            _dragActivity.reset();
+          },
           child: LayoutBuilder(
             builder: (context, constraints) {
               _viewSize = constraints.biggest;
