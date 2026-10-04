@@ -514,7 +514,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 
   /// 把 [unit] 帶到可視範圍：更新錨點頁、落在單元頂端（橫向依閱讀起始側）、基準縮放，
   /// 一律瞬間完成（`Duration.zero`），不繼承先前的頁內偏移與縮放（規則 6）。
-  void _goToPagedUnit(int unit) {
+  /// [atBottom] 為 true（相對步進往回換單元，規則 4）時落在單元底端；預設落頂端。
+  void _goToPagedUnit(int unit, {bool atBottom = false}) {
     final paged = _paged;
     if (paged == null || unit < 0 || unit >= paged.unitCount) return;
     // 以外層 LayoutBuilder 記下的 _viewSize 為唯一來源：controller.viewSize 內部是
@@ -532,6 +533,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       maxZoom: kPdfFitMaxZoom,
       zoom: base,
       direction: widget.dualPageDirection,
+      startAtBottom: atBottom,
     );
     unawaited(_controller.goToPosition(
       documentOffset: viewport.topLeft,
@@ -1006,20 +1008,49 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     _goToSpread(layout.spreadIndexOf(prev), layout);
   }
 
-  /// 逐頁的相對步進（熱區、音量鍵）。Issue 4 只有 Page-fit 子集：直接換到相鄰單元、
-  /// 落在新單元頂端；單元縱向溢出時也一樣（暫態降級，頁內逐屏步進與「上一頁落在
-  /// 上一單元底端」見 Issue 5）。第一／最後單元再往外＝無動作。
+  /// 逐頁的相對步進（熱區、音量鍵、PageUp／PageDown／Space，規則 3、4、5）：單元縱向
+  /// 還能捲就先頁內逐屏步進（步距＝可視高度減 10% 重疊），到頁底才換到下一個單元頂端；
+  /// 往回對稱，到頁頂後換到上一個單元的**底端**。單元沒有縱向溢出（例如 Page-fit）時
+  /// 直接整頁換頁。第一／最後單元再往外＝無動作。偏移與步距皆為螢幕像素。
   void _stepPagedUnit({required bool forward}) {
     final paged = _paged;
     final current = _currentPagedUnit();
     if (paged == null || current == null) return;
+    final viewSize = _viewSize;
+    if (!viewSize.isFinite || viewSize.width <= 0 || viewSize.height <= 0) return;
+
+    final box = paged.unitRects[current].inflate(_pdfPageMargin);
+    final zoom = _controller.currentZoom;
+    final visible = _controller.visibleRect;
     final target = pagedAdjacentUnit(
       currentUnit: current,
       unitCount: paged.unitCount,
       forward: forward,
     );
-    if (target == null) return;
-    _goToPagedUnit(target);
+    final step = pagedRelativeStep(
+      forward: forward,
+      scrollOffset: (visible.top - box.top) * zoom,
+      maxScroll: maxVerticalScroll(
+        contentSize: box.size,
+        scale: zoom,
+        viewSize: viewSize,
+      ),
+      viewHeight: viewSize.height,
+      hasAdjacentUnit: target != null,
+    );
+    switch (step.kind) {
+      case PagedStepKind.scroll:
+        // 只改縱向位置；橫向沿用目前位置，normalizeMatrix 會再夾回單元範圍。
+        unawaited(_controller.goToPosition(
+          documentOffset: Offset(visible.left, box.top + step.scrollOffset / zoom),
+          zoom: zoom,
+          duration: Duration.zero,
+        ));
+      case PagedStepKind.changeUnit:
+        _goToPagedUnit(target!, atBottom: step.landAtBottom);
+      case PagedStepKind.none:
+        break;
+    }
   }
 
   bool? _onPagedKey(

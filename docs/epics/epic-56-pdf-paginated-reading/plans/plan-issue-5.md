@@ -630,7 +630,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1 的 `pagedRelativeStep`、`PagedStep`／`PagedStepKind`、`clampPagedViewport(startAtBottom:)`；既有 `pagedAdjacentUnit`、`maxVerticalScroll`、`_paged`、`_viewSize`、`_currentPagedUnit()`、`_pdfPageMargin`。
 - Produces（Task 3 依賴）：`void _goToPagedUnit(int unit, {bool atBottom = false})`（Issue 4 既有呼叫端不改，預設落頂端）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `pdf_reader_view_paginated_test.dart` 的 `main()` 結尾追加（檔內已有 `_setSurface`、`_visiblePages`、`_Harness`、`_margin`）：
 
@@ -754,12 +754,12 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
   });
 ```
 
-- [ ] **Step 2：確認失敗**
+- [x] **Step 2：確認失敗**
 
 Run：`flutter test test/reader/pdf_reader_view_paginated_test.dart`
 Expected：本 Task 新增案例中，長頁相關的 6 例失敗（目前相對步進一律整頁換頁：`nextPage` 後 `_visiblePages` 變成 `[2]`）；「Page-fit 單元沒有溢出」案例已通過（Issue 4 行為）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `app/lib/reader/pdf_reader_view.dart`：
 
@@ -836,12 +836,12 @@ Expected：全數 PASS（原 27 例＋本 Task 7 例＝34）。
 2. 落底端後偏移不是最大捲動量：確認 `_goToPagedUnit` 把 `startAtBottom` 傳進 `clampPagedViewport`，且 `normalizeMatrix`（`_normalizePagedMatrix`）以候選位置原樣放行（候選值已在範圍內）。
 3. 放大後案例失敗：確認 `setZoom` 後 `goToPosition` 的縮放被 `normalizeMatrix` 保留（縮放大於基準合法）。
 
-- [ ] **Step 5：確認 Issue 4 既有案例與連續捲動零回歸**
+- [x] **Step 5：確認 Issue 4 既有案例與連續捲動零回歸**
 
 Run：`flutter test test/reader/pdf_reader_view_test.dart test/reader/pdf_reader_view_fit_mode_test.dart test/reader/pdf_reader_view_dual_page_test.dart test/reader/pdf_reader_view_nav_zone_test.dart`
 Expected：全數 PASS，未修改任何既有測試。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_paginated_test.dart

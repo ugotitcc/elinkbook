@@ -502,4 +502,122 @@ void main() {
       expect(_visiblePages(c), [1]);
     });
   });
+
+  group('長頁相對步進：先頁內逐屏、到底才換頁；往回對稱並落在上一單元底端（規則 3、4）', () {
+    // Fit Width、視窗 400x200、頁 612x792：基準 400/628，單元方框高 808，
+    // 縮放後內容高 808 * 基準，最大捲動量＝808 * 基準 − 200，步距＝200 * 0.9 = 180。
+    final base = 400 / (612 + _margin * 2);
+    final maxScroll = 808 * base - 200;
+
+    double offsetPx(PdfViewerController c, int unitIndex) {
+      final unitTop = c.layout.pageLayouts[unitIndex].top - _margin;
+      return (c.visibleRect.top - unitTop) * c.currentZoom;
+    }
+
+    testWidgets('下一頁：0 → 180 → 最大捲動量 → 換到第 2 頁頂端', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      expect(offsetPx(c, 0), closeTo(0, 1e-3));
+
+      PdfReaderView.nextPage(h.key);
+      expect(_visiblePages(c), [1]);
+      expect(offsetPx(c, 0), closeTo(180, 1e-3));
+
+      PdfReaderView.nextPage(h.key);
+      expect(_visiblePages(c), [1]);
+      expect(offsetPx(c, 0), closeTo(maxScroll, 1e-3));
+
+      PdfReaderView.nextPage(h.key);
+      expect(_visiblePages(c), [2]);
+      expect(offsetPx(c, 1), closeTo(0, 1e-3));
+      expect(c.currentZoom, closeTo(base, 1e-6));
+    });
+
+    testWidgets('上一頁：從第 2 頁頂端回到第 1 頁底端，再逐屏往上退，到頂端後第一頁無動作（Review Focus 1）',
+        (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      PdfReaderView.jumpToPage(h.key, 1); // 絕對跳轉：第 2 頁頂端
+      expect(offsetPx(c, 1), closeTo(0, 1e-3));
+
+      PdfReaderView.previousPage(h.key);
+      expect(_visiblePages(c), [1]);
+      expect(offsetPx(c, 0), closeTo(maxScroll, 1e-3)); // 落在底端
+
+      PdfReaderView.previousPage(h.key);
+      expect(offsetPx(c, 0), closeTo(maxScroll - 180, 1e-3));
+
+      PdfReaderView.previousPage(h.key);
+      expect(offsetPx(c, 0), closeTo(0, 1e-3)); // 下限 0
+
+      PdfReaderView.previousPage(h.key); // 第一個單元頂端再往前：無動作
+      expect(_visiblePages(c), [1]);
+      expect(offsetPx(c, 0), closeTo(0, 1e-3));
+    });
+
+    testWidgets('最後一頁到底後再按下一頁：無動作', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      PdfReaderView.jumpToPage(h.key, 4);
+      PdfReaderView.nextPage(h.key); // 0 → 180
+      PdfReaderView.nextPage(h.key); // → 最大捲動量
+      PdfReaderView.nextPage(h.key); // 已到底、沒有下一頁
+      expect(_visiblePages(c), [5]);
+      expect(offsetPx(c, 4), closeTo(maxScroll, 1e-3));
+    });
+
+    testWidgets('絕對跳轉仍落在頂端，不繼承底端位置（規則 4：落底端只適用相對步進）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      PdfReaderView.jumpToPage(h.key, 1);
+      PdfReaderView.previousPage(h.key); // 落在第 1 頁底端
+      PdfReaderView.jumpToPage(h.key, 0);
+      expect(offsetPx(c, 0), closeTo(0, 1e-3));
+    });
+
+    testWidgets('Page-fit 單元沒有溢出：仍是整頁換頁（Issue 4 行為不變，Review Focus 3）', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final c = await h.open(tester, h.app());
+      PdfReaderView.nextPage(h.key);
+      expect(_visiblePages(c), [2]);
+      PdfReaderView.previousPage(h.key);
+      expect(_visiblePages(c), [1]);
+    });
+
+    testWidgets('放大後單元縱向溢出：步距以目前縮放換算，仍先頁內步進（Review Focus 3）', (tester) async {
+      _setSurface(tester, const Size(400, 400));
+      final h = _Harness();
+      final c = await h.open(tester, h.app()); // Page-fit：整頁入鏡、沒有溢出
+      await c.setZoom(c.centerPosition, 2.0, duration: Duration.zero);
+      final unitTop = c.layout.pageLayouts[0].top - _margin;
+      await c.goToPosition(
+        documentOffset: Offset(c.visibleRect.left, unitTop),
+        zoom: 2.0,
+        duration: Duration.zero,
+      );
+      expect(offsetPx(c, 0), closeTo(0, 1e-3));
+
+      PdfReaderView.nextPage(h.key);
+      expect(_visiblePages(c), [1]);
+      expect(offsetPx(c, 0), closeTo(360, 1e-3)); // 400 * 0.9
+      expect(c.currentZoom, closeTo(2.0, 1e-6));
+    });
+
+    testWidgets('實體鍵 PageDown 與音量鍵共用同一套步進：長頁上先頁內捲動', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      await tester.tap(find.byType(PdfViewer));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+      expect(_visiblePages(c), [1]);
+      expect(offsetPx(c, 0), closeTo(180, 1e-3));
+    });
+  });
 }
