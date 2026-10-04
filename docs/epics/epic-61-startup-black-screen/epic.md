@@ -102,3 +102,8 @@
 - **M-4 不改，只記錄**：專案 `debugPrint` 多為英文，本次為中文，風格不一致，非缺陷。
 - 附帶推測（未驗證）：逾時後原生端若晚些才綁定完成，會留下沒人驅動的 service，是否有殘留通知等副作用無法驗證。
 - 驗證：`flutter analyze` 乾淨；`tts_audio_handler_startup_test`＋`elinkbook_app_wiring_test` 通過；l10n 雙檢查 PASS。全套 `flutter test` 於審查前已跑（3645 通過、1 略過、0 失敗），審查修訂只動註解、log 字串與文件。
+
+**2026-10-05 PR 合併**
+
+- PR #323（`epic-61/startup-no-black-screen` → `main`）已合併，合併 commit `e913749d`。實作、真機驗證與程式審查全數完成，待歸檔。
+- 留給後續的未解事項：(1) 綁定逾時的觸發條件仍未明（自然重現約 1／10）；(2) 失敗時仍有約 10 秒黑屏，需把 `AudioService.init` 改成不阻塞啟動才能消除；(3) 降級後使用者看不到提示。皆尚未另立 Epic。
