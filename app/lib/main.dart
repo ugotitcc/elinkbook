@@ -207,7 +207,8 @@ Future<void> main() async {
   );
   final ttsAudioFocusSource = AudioSessionFocusSource(ttsAudioSession);
   // AudioService.init() 全程式生命週期只能呼叫一次（見
-  // plans/plan-issue-7.md Global Constraints），建構出的單一 handler
+  // plans/plan-issue-7.md Global Constraints），失敗後也不可重試
+  // （見 initTtsAudioHandlerSafely 說明），建構出的單一 handler
   // 由 ReaderScreen 於每次開書時呼叫 attachController()／
   // detachController() 綁定/解綁目前的 TtsController。
   // 通知頻道名稱（顯示於系統的通知設定）：此時尚無 BuildContext，改用啟動階段解析的

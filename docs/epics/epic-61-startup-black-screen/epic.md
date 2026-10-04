@@ -93,3 +93,12 @@
 - 觸發條件仍未知（自然重現約 1／10，安裝後偶發）；本次只修「例外未接住 → 整個 App 黑屏」。
 - 失敗時 `AudioService.init` 仍要等滿約 10 秒才丟例外，降級後 App 仍會**黑屏約 10 秒**才出現（故障 manifest 情境下綁定立即失敗，沒有量到這 10 秒）。要消除需把初始化改成不阻塞啟動，另案。
 - 降級後本次執行朗讀不可用；使用者目前看不到任何提示（只有 debug log）。
+
+**2026-10-05 程式審查修訂**（`reviews/review-code.md`：0 Critical／0 Important／4 Minor，結論可合併）
+
+- **M-1 成立，已更正（含本檔先前的錯誤陳述）**：上文「朗讀降級為不可用」「降級後本次執行朗讀不可用」**不正確**。審查代理讀碼確認：`ttsAudioHandler` 為 null 時，朗讀按鈕仍可按、`TtsController` 照常建立並朗讀（建立不依賴 handler）；少掉的只有系統媒體通知、鎖屏控制、背景朗讀時的前景服務保護。降級後的實際影響比先前記載輕。已同步更正 `tts_audio_handler_startup.dart` 的說明註解與 `debugPrint` 訊息（改為「沒有媒體通知／鎖屏控制」）。（此點由審查代理確認，本人未獨立複驗。）
+- **M-2 成立，已補註解**：`main.dart` 註解補「失敗後也不可重試」；函式說明補充兩點——`AudioService.init` 以 `assert(_cacheManager == null)` 擋重複初始化（僅 debug 生效），失敗時 `_cacheManager` 已設定；此函式會接住所有例外（含 `builder` 內的程式錯誤），啟動路徑上寧可降級也不黑屏。目前只在 `main()` 呼叫一次，現況無風險。
+- **M-3 不改，只記錄**：測試的 `PlatformException(code: ...)` 字串其實是錯誤訊息文字，真實 code 可能不同（`catch` 不看 code，不影響結果）；未涵蓋「`init` 回傳之後才拋出的非同步錯誤」（`AudioService.init` 之後的 `_observe*` 若出錯屬 unhandled async error，不在本函式保護範圍，範圍外）。
+- **M-4 不改，只記錄**：專案 `debugPrint` 多為英文，本次為中文，風格不一致，非缺陷。
+- 附帶推測（未驗證）：逾時後原生端若晚些才綁定完成，會留下沒人驅動的 service，是否有殘留通知等副作用無法驗證。
+- 驗證：`flutter analyze` 乾淨；`tts_audio_handler_startup_test`＋`elinkbook_app_wiring_test` 通過；l10n 雙檢查 PASS。全套 `flutter test` 於審查前已跑（3645 通過、1 略過、0 失敗），審查修訂只動註解、log 字串與文件。
