@@ -51,6 +51,11 @@ class PdfReaderView extends StatefulWidget {
   final int? initialPageIndex;
   final ValueChanged<PdfPageInfo>? onPageChanged;
 
+  /// 逐頁下頁內垂直拖曳每累積 20 邏輯像素呼叫一次（無參數；epic-56 Issue 5 規則 9），
+  /// 讓長頁上只用拖曳閱讀、頁碼沒變的期間閱讀時間仍持續計算。`ReadingSession` 由
+  /// `ReaderScreen` 私有持有，本 widget 不引用它，只透過這個回呼通知。
+  final VoidCallback? onReadingActivity;
+
   // ── epic-24-pdf-engine-rebuild Issue 2 新增 ──
   /// 三態雙頁模式。**widget 層預設刻意為 [DualPageMode.never]**（不是
   /// 產品預設值 auto）：未傳此參數的既有呼叫端（Issue 1 既有測試）行為
@@ -120,6 +125,7 @@ class PdfReaderView extends StatefulWidget {
     required this.onError,
     this.initialPageIndex,
     this.onPageChanged,
+    this.onReadingActivity,
     this.dualPageMode = DualPageMode.never,
     this.dualPageCoverAlone = true,
     this.dualPageDirection = DualPageDirection.rtl,
@@ -605,6 +611,9 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   int _selectionDragGenerationId = 0;
 
   int _activePointerCount = 0;
+
+  /// 規則 9：頁內垂直拖曳的閱讀活動累積器（換手勢、換單元歸零）。
+  final _dragActivity = PagedDragActivityAccumulator();
 
   List<PdfAnnotationDecoration> _annotations = const [];
 
@@ -1579,7 +1588,17 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         Listener(
           onPointerDown: (_) {
             _activePointerCount++;
+            if (_activePointerCount == 1) _dragActivity.reset(); // 新手勢：歸零
             if (_activePointerCount >= 2) _cancelSelectionDrag();
+          },
+          onPointerMove: (event) {
+            // 只算逐頁下「單指、非框選」的垂直位移；水平位移、兩指縮放、連續捲動都不算。
+            final report = widget.onReadingActivity;
+            if (report == null || !_pagedActive) return;
+            if (_activePointerCount != 1 || _selectionDrag != null) return;
+            final unit = _currentPagedUnit();
+            if (unit == null) return;
+            if (_dragActivity.add(event.delta.dy, unit: unit)) report();
           },
           onPointerUp: (_) =>
               _activePointerCount = (_activePointerCount - 1).clamp(0, 999),

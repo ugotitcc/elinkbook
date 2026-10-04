@@ -43,6 +43,7 @@ class _Harness {
   final key = GlobalKey<State<PdfReaderView>>();
   int rendered = 0;
   final pages = <int>[];
+  int activity = 0;
 
   Widget app({
     String file = 'test/fixtures/sample_multi_page.pdf',
@@ -56,6 +57,7 @@ class _Harness {
     int? initialPageIndex,
     List<ZoneAction>? navZoneActions,
     void Function(ZoneAction)? onZoneAction,
+    bool reportActivity = true,
   }) =>
       MaterialApp(
         locale: const Locale('zh', 'TW'),
@@ -68,6 +70,7 @@ class _Harness {
           onPageRendered: () => rendered++,
           onError: (_) {},
           onPageChanged: (PdfPageInfo info) => pages.add(info.pageIndex),
+          onReadingActivity: reportActivity ? () => activity++ : null,
           initialPageIndex: initialPageIndex,
           pdfPageTurnMode: turnMode,
           pdfFitMode: fit,
@@ -772,6 +775,87 @@ void main() {
       await pumpUntilPdfReady(tester,
           condition: () => c.pageNumber == 3, maxIterations: 10);
       expect(c.pageNumber, 3);
+    });
+  });
+
+  group('頁內垂直拖曳回報閱讀活動（規則 9，Review Focus 5）', () {
+    Future<void> drag(
+      WidgetTester tester,
+      List<Offset> moves, {
+      Offset? start,
+    }) async {
+      final g = await tester.startGesture(
+          start ?? tester.getCenter(find.byType(PdfViewer)));
+      for (final m in moves) {
+        await g.moveBy(m);
+      }
+      await g.up();
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    testWidgets('逐頁：垂直拖曳 60 像素 → 回報至少一次', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      await drag(tester, [const Offset(0, -60)]);
+      expect(h.activity, greaterThanOrEqualTo(1));
+    });
+
+    testWidgets('同一手勢分兩段各 12 像素：累積 24 → 回報一次', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      await drag(tester, [const Offset(0, -12), const Offset(0, -12)]);
+      expect(h.activity, 1);
+    });
+
+    testWidgets('未達 20 像素不回報；兩次各 10 像素的分開手勢不累積（換手勢歸零）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      await drag(tester, [const Offset(0, -10)]);
+      await drag(tester, [const Offset(0, -10)]);
+      expect(h.activity, 0);
+    });
+
+    testWidgets('水平拖曳不回報', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      await drag(tester, [const Offset(-80, 0)]);
+      expect(h.activity, 0);
+    });
+
+    testWidgets('兩指同時按下（縮放）不回報', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      final center = tester.getCenter(find.byType(PdfViewer));
+      final g1 = await tester.startGesture(center);
+      final g2 = await tester.startGesture(center + const Offset(40, 0));
+      await g1.moveBy(const Offset(0, -60));
+      await g2.moveBy(const Offset(0, -60));
+      await g1.up();
+      await g2.up();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(h.activity, 0);
+    });
+
+    testWidgets('連續捲動模式不由 PdfReaderView 回報（由頁碼變化與既有路徑處理）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      await h.open(
+          tester, h.app(turnMode: PdfPageTurnMode.scroll, fit: PdfFitMode.fitWidth));
+      await drag(tester, [const Offset(0, -60)]);
+      expect(h.activity, 0);
+    });
+
+    testWidgets('未傳 onReadingActivity（既有呼叫端）：拖曳不拋例外', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      await h.open(tester, h.app(fit: PdfFitMode.fitWidth, reportActivity: false));
+      await drag(tester, [const Offset(0, -60)]);
+      expect(h.activity, 0);
     });
   });
 }

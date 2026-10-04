@@ -1188,7 +1188,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1 的 `PagedDragActivityAccumulator`；既有 `_activePointerCount`、`_selectionDrag`、`_pagedActive`、`_currentPagedUnit()`。
 - Produces：`final VoidCallback? onReadingActivity;`（`PdfReaderView` 建構參數，預設 `null`，無參數回呼）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 (a) `pdf_reader_view_paginated_test.dart` 的 `_Harness`：加欄位與參數。`int activity = 0;` 加在 `final pages = <int>[];` 之後；`app(...)` 的參數列新增 `bool reportActivity = true,`，`PdfReaderView(...)` 內新增：
 
@@ -1304,12 +1304,12 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
   });
 ```
 
-- [ ] **Step 2：確認失敗**
+- [x] **Step 2：確認失敗**
 
 Run：`flutter test test/reader/pdf_reader_view_paginated_test.dart test/screens/reader_screen_stats_activity_test.dart`
 Expected：編譯失敗，`No named parameter with the name 'onReadingActivity'`。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `app/lib/reader/pdf_reader_view.dart`：
 
@@ -1368,7 +1368,7 @@ Expected：全數 PASS（widget 43＋7＝50；統計測試新增 1）。
 2. 兩指案例回報了：確認 `_activePointerCount` 在第二指按下時為 2（`onPointerDown` 先遞增）。
 3. 「分兩段 12」回報 0 或 2：確認累積器餘數保留（`% threshold`）與 `reset()` 只在 `_activePointerCount == 1` 的 `onPointerDown` 呼叫。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/lib/screens/reader_screen.dart app/test/reader/pdf_reader_view_paginated_test.dart app/test/screens/reader_screen_stats_activity_test.dart

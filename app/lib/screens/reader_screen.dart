@@ -3493,6 +3493,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           navZoneActions: resolved.navZoneActions,
           onZoneAction: _handleZoneAction,
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
+          // epic-56 Issue 5 規則 9：頁內垂直拖曳算閱讀活動（PdfReaderView 不持有 ReadingSession）。
+          onReadingActivity: () => _session.recordActivity(),
           onPageChanged: (info) {
             if (!mounted) return;
             // 位置儲存與閱讀活動判定都由閱讀會話處理（見 ReadingSession）。
