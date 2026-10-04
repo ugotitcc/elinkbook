@@ -35,6 +35,10 @@
 2. **B：不反白，但在按鈕旁或下方顯示「目前：手動裁切」文字提示。** 不碰既有測試，多一行字串（4 個 arb）。
 3. **C：維持現狀，關閉此 Epic。**
 
+## 決定（2026-10-04，人類選 A）
+
+模式為 manual 時「手動」按鈕反白；點擊仍是進入重新框選（仍只呼叫 `onRequestManualCrop`，不呼叫 `onChanged`）。
+
 ## 處理方式
 
 缺陷修復，先以 `/diagnose` 建立可重現的回饋迴圈（widget test 優先），再直接 TDD，不寫 `plan-issue-N.md`；保留程式審查（報告存 `reviews/`，不進版控）。
@@ -42,3 +46,17 @@
 ## 開發記錄
 
 **2026-10-04** 登錄 Epic，根因尚未查。
+
+**2026-10-04 實作（直接 TDD）**
+
+- 紅燈：改寫 `app/test/screens/pdf_settings_sheet_test.dart`「裁切模式群組選中態機制」情境二，期望 `pdfCropMode == manual` 時「手動」為 primary 色、「不裁」「智慧」為 surface 色；新增「已是手動時再點仍觸發 `onRequestManualCrop` 且不呼叫 `onChanged`」。實跑：期望 primary、實際 surface。
+- 實作：`EBOptionChipItem` 新增 `highlightWhenCurrent`（預設 false，只對動作型項目有效）；`EBOptionChipGroup` 的 `forceUnselected` 改為 `isAction && !item.highlightWhenCurrent`；`PdfSettingsSheet` 的「手動」項目傳 `highlightWhenCurrent: true`。其他使用者不受影響（目前只有裁切分頁有動作型項目）。
+- 新增 `eb_option_chip_group_test.dart` 元件層案例。
+- **發現舊測試缺陷**：原情境二連續兩次 `pumpWidget` 同型別 widget，Flutter 重用舊 State，`_cropMode` 只在 `initState` 讀取而停在情境一的 autoDetect，所以舊情境二其實沒測到 manual（「手動」恆未選中，兩種情況都通過）。改為兩次之間先 `pumpWidget(SizedBox())` 清空。
+- 變異檢查：把 `highlightWhenCurrent: true` 改回 false → 1 個案例失敗；還原後全過。
+- 驗證：`flutter analyze` 乾淨；`eb_option_chip_group_test`＋`pdf_settings_sheet_test`＋`reader_screen_test` 共 358 項通過；l10n 雙檢查 PASS。全套 `flutter test` 與程式審查尚未執行（發 PR 前補）。
+
+**2026-10-04 電子紙真機驗證**（WAVE，`一本萬利`，已套用手動裁切）
+
+- 開「版面設定 → 裁切」：「手動」反白、「不裁」「智慧」未反白（修復前為三顆全不反白）。
+- 再點「手動」→ 進入框選（有提示、✓ 灰色）；按 ✕ 取消 → 重開裁切分頁，「手動」仍反白（按鈕底色取樣：不裁 255／智慧 255／手動 0）。

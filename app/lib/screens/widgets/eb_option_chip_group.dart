@@ -8,6 +8,10 @@ import 'reader_option_tile.dart';
 /// 點擊時只呼叫 [onTap]，不呼叫 [EBOptionChipGroup.onSelected]，且該
 /// chip 恆為未選中樣式（透過 [ReaderOptionTile.forceUnselected]，不參與
 /// groupValue 比對）。
+///
+/// [highlightWhenCurrent] 為 true 時，動作型項目在 `value == groupValue`
+/// 時改顯示選中樣式（epic-60：PDF 裁切分頁已是「手動」模式時，要讓使用者
+/// 看得出目前模式；點擊行為不變，仍只呼叫 [onTap]）。對非動作型項目無作用。
 class EBOptionChipItem<T> {
   final Key? itemKey;
   final T value;
@@ -16,6 +20,7 @@ class EBOptionChipItem<T> {
   final String label;
   final String tooltip;
   final VoidCallback? onTap;
+  final bool highlightWhenCurrent;
 
   const EBOptionChipItem({
     this.itemKey,
@@ -25,6 +30,7 @@ class EBOptionChipItem<T> {
     required this.label,
     required this.tooltip,
     this.onTap,
+    this.highlightWhenCurrent = false,
   }) : assert(icon != null || iconWidget != null, 'Must provide either icon or iconWidget');
 }
 
@@ -89,7 +95,7 @@ class EBOptionChipGroup<T> extends StatelessWidget {
               iconSize: iconSize,
               labelFontSize: labelFontSize,
               visualDensity: visualDensity,
-              forceUnselected: isAction,
+              forceUnselected: isAction && !item.highlightWhenCurrent,
               onSelected: (v) {
                 if (isAction) {
                   item.onTap!();

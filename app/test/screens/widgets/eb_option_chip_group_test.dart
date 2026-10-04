@@ -198,6 +198,65 @@ void main() {
     expect(actionDecoration.color, isNot(normalDecoration.color));
   });
 
+  testWidgets(
+      'highlightWhenCurrent=true 的動作型 chip：value == groupValue 時反白，'
+      '不相等時不反白，點擊仍只觸發 onTap（epic-60）', (tester) async {
+    var tapped = 0;
+    String? selected;
+
+    Widget build(String groupValue) => MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              child: EBOptionChipGroup<String>(
+                items: [
+                  const EBOptionChipItem<String>(
+                    itemKey: Key('chip_normal'),
+                    value: 'A',
+                    icon: Icons.crop_portrait,
+                    label: '甲',
+                    tooltip: '選項甲',
+                  ),
+                  EBOptionChipItem<String>(
+                    itemKey: const Key('chip_action'),
+                    value: 'M',
+                    icon: Icons.touch_app,
+                    label: '動作',
+                    tooltip: '動作項目',
+                    onTap: () => tapped++,
+                    highlightWhenCurrent: true,
+                  ),
+                ],
+                groupValue: groupValue,
+                onSelected: (v) => selected = v,
+              ),
+            ),
+          ),
+        );
+
+    Color? bg(String key) => (tester
+            .widget<Container>(find.byKey(Key(key)))
+            .decoration as BoxDecoration)
+        .color;
+
+    await tester.pumpWidget(build('M'));
+    final primary = Theme.of(tester.element(find.byKey(const Key('chip_action'))))
+        .colorScheme
+        .primary;
+    expect(bg('chip_action'), primary, reason: '目前值為 M，動作鈕應反白');
+    expect(bg('chip_normal'), isNot(primary));
+
+    await tester.tap(find.byKey(const Key('chip_action')));
+    expect(tapped, 1);
+    expect(selected, isNull, reason: '點擊仍只觸發 onTap，不呼叫 onSelected');
+
+    await tester.pumpWidget(build('A'));
+    expect(bg('chip_action'), isNot(primary), reason: '目前值不是 M 時不反白');
+  });
+
   testWidgets('T 為 nullable 型別（WritingMode?）且選項值含 null 時，選中比對正確',
       (tester) async {
     WritingMode? selected = WritingMode.horizontal;

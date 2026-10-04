@@ -506,6 +506,9 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                 label: l10n.readerPdfCropManualLabel,
                 tooltip: l10n.readerPdfCropManualTooltip,
                 onTap: () => widget.onRequestManualCrop(),
+                // epic-60：目前模式為 manual 時反白，否則三顆全不反白、
+                // 使用者看不出目前是手動裁切。點擊仍是重新框選。
+                highlightWhenCurrent: true,
               ),
             ],
             groupValue: _cropMode,
