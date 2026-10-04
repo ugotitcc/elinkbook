@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import 'pdf_crop_rect.dart';
 
 /// 四矩形色帶遮罩繪製器：以四個不重疊矩形（上/下/左/右）繪製外部半透明
@@ -47,10 +48,17 @@ class CropOverlayPainter extends CustomPainter {
       cropRect != oldDelegate.cropRect || canvasSize != oldDelegate.canvasSize;
 }
 
-/// 手動裁切框選 UI（epic-24-pdf-engine-rebuild Issue 3）：全螢幕疊加層，
-/// 顯示一個可拖曳右下角控制點縮放的矩形框，確認/取消由呼叫端
-/// （`ReaderScreen`）決定後續動作（本 widget 不直接持有 `PdfReaderView`
-/// 或持久化邏輯，維持既有單向資料流慣例，比照 `PdfSettingsSheet`）。
+/// 手動裁切框選 UI：全螢幕疊加層，使用者以手指直接拖拉出要保留的範圍
+/// （epic-58-pdf-crop-drag-select，取代 epic-24 Issue 3 的四角圓點縮放）。
+/// 確認/取消由呼叫端（`ReaderScreen`）決定後續動作（本 widget 不直接持有
+/// `PdfReaderView` 或持久化邏輯，維持既有單向資料流慣例，比照 `PdfSettingsSheet`）。
+///
+/// 互動規則：
+/// - 進入時不顯示框，只顯示提示文字；確認鈕停用。
+/// - 手指按下為一個角、拖到對角；放開後框固定。再拖拉一次就取代舊框，
+///   不提供移動／縮放既有框的控制點。
+/// - 任一邊小於 [_minSize]（比例）的選取視為無效（含輕點），保留上一個框。
+/// - 座標限制在畫布範圍內。
 ///
 /// 座標系統：內部以「相對於本 widget 佔滿的可用空間」的比例（0.0-1.0）
 /// 追蹤裁切框，與 [PdfCropRect] 語意一致——呼叫端須把本 widget 疊在與
@@ -58,12 +66,10 @@ class CropOverlayPainter extends CustomPainter {
 class PdfCropFrameOverlay extends StatefulWidget {
   const PdfCropFrameOverlay({
     super.key,
-    required this.initialRect,
     required this.onConfirm,
     required this.onCancel,
   });
 
-  final PdfCropRect initialRect;
   final ValueChanged<PdfCropRect> onConfirm;
   final VoidCallback onCancel;
 
@@ -74,124 +80,139 @@ class PdfCropFrameOverlay extends StatefulWidget {
 class _PdfCropFrameOverlayState extends State<PdfCropFrameOverlay> {
   static const _minSize = 0.05;
 
-  late double _left = widget.initialRect.left;
-  late double _top = widget.initialRect.top;
-  late double _right = widget.initialRect.right;
-  late double _bottom = widget.initialRect.bottom;
+  /// 已確定（手指放開且有效）的裁切框；null 代表尚未畫過
+  PdfCropRect? _rect;
 
-  /// 四個角落控制點共用的拖曳處理：[movesLeft]/[movesTop] 決定這次拖曳
-  /// 調整的是哪一組邊界（例如左上角控制點 movesLeft=true, movesTop=true，
-  /// 只動 `_left`/`_top`，`_right`/`_bottom` 維持不動當錨點）——這是
-  /// 【審查修正 Important 1】的核心：早期版本不論拖哪個控制點都只動
-  /// `_right`/`_bottom`，導致使用者永遠無法收窄 `top`/`left`。
-  void _dragHandle({
-    required Offset delta,
-    required Size size,
-    required bool movesLeft,
-    required bool movesTop,
-  }) {
+  /// 拖拉進行中的兩個對角點（比例座標）；非拖拉中為 null
+  Offset? _dragStart;
+  Offset? _dragCurrent;
+
+  /// 目前追蹤的那根手指；其餘手指一律忽略
+  int? _pointer;
+
+  /// 手指按下後是否真的移動過；輕點（沒移動）不繪製任何東西，
+  /// 避免 0x0 的框讓上下遮罩蓋滿整個畫面造成閃爍（E-Ink 會殘影）
+  bool get _moved => _dragStart != null && _dragCurrent != _dragStart;
+
+  /// 把像素座標轉成 0~1 比例並限制在畫布內
+  Offset _toRatio(Offset local, Size size) => Offset(
+        (local.dx / size.width).clamp(0.0, 1.0),
+        (local.dy / size.height).clamp(0.0, 1.0),
+      );
+
+  /// 由兩個對角點正規化出 left<right、top<bottom 的矩形
+  PdfCropRect _rectFrom(Offset a, Offset b) => PdfCropRect(
+        left: a.dx < b.dx ? a.dx : b.dx,
+        top: a.dy < b.dy ? a.dy : b.dy,
+        right: a.dx < b.dx ? b.dx : a.dx,
+        bottom: a.dy < b.dy ? b.dy : a.dy,
+      );
+
+  void _beginDrag(PointerDownEvent e, Size size) {
+    if (_pointer != null) return;
+    _pointer = e.pointer;
+    _dragStart = _dragCurrent = _toRatio(e.localPosition, size);
+  }
+
+  void _endDrag() {
+    _pointer = null;
+    final start = _dragStart;
+    final current = _dragCurrent;
     setState(() {
-      if (movesLeft) {
-        _left = (_left + delta.dx / size.width).clamp(0.0, _right - _minSize);
-      } else {
-        _right = (_right + delta.dx / size.width).clamp(_left + _minSize, 1.0);
+      if (start != null && current != null) {
+        final r = _rectFrom(start, current);
+        // 任一邊太小（含輕點）視為無效，保留上一個框
+        if (r.right - r.left >= _minSize && r.bottom - r.top >= _minSize) {
+          _rect = r;
+        }
       }
-      if (movesTop) {
-        _top = (_top + delta.dy / size.height).clamp(0.0, _bottom - _minSize);
-      } else {
-        _bottom = (_bottom + delta.dy / size.height).clamp(_top + _minSize, 1.0);
-      }
+      _dragStart = null;
+      _dragCurrent = null;
     });
   }
 
-  Widget _buildHandle({
-    required Key key,
-    required double cornerLeft,
-    required double cornerTop,
-    required Size size,
-    required bool movesLeft,
-    required bool movesTop,
-  }) {
-    return Positioned(
-      left: cornerLeft - 16,
-      top: cornerTop - 16,
-      child: GestureDetector(
-        key: key,
-        onPanUpdate: (details) => _dragHandle(
-          delta: details.delta,
-          size: size,
-          movesLeft: movesLeft,
-          movesTop: movesTop,
-        ),
-        child: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            border: Border.all(color: Colors.black, width: 1.5),
-            boxShadow: const [
-              BoxShadow(
-                  color: Colors.black38, blurRadius: 4, offset: Offset(0, 1)),
-            ],
-          ),
-        ),
-      ),
-    );
+  /// 拖拉被系統中斷（邊緣手勢、防誤觸等）：放棄這次選取，保留上一個框
+  void _cancelDrag() {
+    _pointer = null;
+    if (_dragStart == null) return;
+    setState(() {
+      _dragStart = null;
+      _dragCurrent = null;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest;
-        final frameRect = Rect.fromLTRB(
-          _left * size.width,
-          _top * size.height,
-          _right * size.width,
-          _bottom * size.height,
-        );
+        // 手指移動中顯示即時框，否則顯示已確定的框
+        final moved = _moved;
+        final shown = moved ? _rectFrom(_dragStart!, _dragCurrent!) : _rect;
+        final confirmEnabled = _rect != null;
         return Stack(
           children: [
-            // 半透明遮罩＋雙層高對比邊框：鋪滿整個可用畫布，以絕對座標繪製
+            // 整面指標層：直接處理原始指標事件，才能分辨「手指放開」與
+            // 「被系統中斷（cancel）」——後者須放棄這次選取而非提交
             Positioned.fill(
-              child: CustomPaint(
-                painter: CropOverlayPainter(
-                    cropRect: frameRect, canvasSize: size),
+              child: Listener(
+                key: const Key('pdf_crop_frame_gesture_layer'),
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (e) => _beginDrag(e, size),
+                onPointerMove: (e) {
+                  if (e.pointer != _pointer) return;
+                  setState(
+                      () => _dragCurrent = _toRatio(e.localPosition, size));
+                },
+                onPointerUp: (e) {
+                  if (e.pointer == _pointer) _endDrag();
+                },
+                onPointerCancel: (e) {
+                  if (e.pointer == _pointer) _cancelDrag();
+                },
               ),
             ),
-            _buildHandle(
-              key: const Key('pdf_crop_frame_handle_top_left'),
-              cornerLeft: frameRect.left,
-              cornerTop: frameRect.top,
-              size: size,
-              movesLeft: true,
-              movesTop: true,
-            ),
-            _buildHandle(
-              key: const Key('pdf_crop_frame_handle_top_right'),
-              cornerLeft: frameRect.right,
-              cornerTop: frameRect.top,
-              size: size,
-              movesLeft: false,
-              movesTop: true,
-            ),
-            _buildHandle(
-              key: const Key('pdf_crop_frame_handle_bottom_left'),
-              cornerLeft: frameRect.left,
-              cornerTop: frameRect.bottom,
-              size: size,
-              movesLeft: true,
-              movesTop: false,
-            ),
-            _buildHandle(
-              key: const Key('pdf_crop_frame_handle_bottom_right'),
-              cornerLeft: frameRect.right,
-              cornerTop: frameRect.bottom,
-              size: size,
-              movesLeft: false,
-              movesTop: false,
-            ),
+            // 半透明遮罩＋雙層高對比邊框：只在有框時繪製；不攔截手勢
+            if (shown != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: CropOverlayPainter(
+                      cropRect: Rect.fromLTRB(
+                        shown.left * size.width,
+                        shown.top * size.height,
+                        shown.right * size.width,
+                        shown.bottom * size.height,
+                      ),
+                      canvasSize: size,
+                    ),
+                  ),
+                ),
+              ),
+            if (_rect == null && !moved)
+              Positioned(
+                top: 64,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(
+                  child: Center(
+                    child: Material(
+                      key: const Key('pdf_crop_frame_hint'),
+                      color: const Color(0xFF2A2A2E),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
+                        child: Text(
+                          l10n.readerPdfCropDragHint,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             Positioned(
               bottom: 32,
               left: 0,
@@ -219,14 +240,16 @@ class _PdfCropFrameOverlayState extends State<PdfCropFrameOverlay> {
                     elevation: 6,
                     shape: const CircleBorder(
                         side: BorderSide(color: Colors.white, width: 1.5)),
-                    color: const Color(0xFF16A34A),
+                    // 尚未畫框時確認鈕停用（灰底、不可點）
+                    color: confirmEnabled
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFF6B6B70),
                     child: InkWell(
                       key: const Key('pdf_crop_frame_confirm'),
                       customBorder: const CircleBorder(),
-                      onTap: () => widget.onConfirm(
-                        PdfCropRect(
-                            left: _left, top: _top, right: _right, bottom: _bottom),
-                      ),
+                      onTap: confirmEnabled
+                          ? () => widget.onConfirm(_rect!)
+                          : null,
                       child: const Padding(
                         padding: EdgeInsets.all(14),
                         child: Icon(Icons.check, color: Colors.white, size: 28),

@@ -887,6 +887,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get readerPdfCropManualTooltip => '手動選區';
 
   @override
+  String get readerPdfCropDragHint => '拖拉選取要保留的範圍';
+
+  @override
   String get readerSettingsTitle => '⚙️ 版面設定';
 
   @override
@@ -3137,6 +3140,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get readerPdfCropManualTooltip => '手动选区';
 
   @override
+  String get readerPdfCropDragHint => '拖拉选取要保留的范围';
+
+  @override
   String get readerSettingsTitle => '⚙️ 版面设定';
 
   @override
@@ -5385,6 +5391,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerPdfCropManualTooltip => '手動選區';
+
+  @override
+  String get readerPdfCropDragHint => '拖拉選取要保留的範圍';
 
   @override
   String get readerSettingsTitle => '⚙️ 版面設定';

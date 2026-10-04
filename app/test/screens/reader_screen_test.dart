@@ -8049,6 +8049,14 @@ void main() {
 
       expect(find.byType(PdfCropFrameOverlay), findsOneWidget);
 
+      // epic-58：須先以手指拖拉出裁切範圍，確認鈕才會啟用
+      final overlayRect = tester.getRect(find.byType(PdfCropFrameOverlay));
+      await tester.dragFrom(
+        overlayRect.center - Offset(overlayRect.width * 0.3, overlayRect.height * 0.3),
+        Offset(overlayRect.width * 0.6, overlayRect.height * 0.6),
+      );
+      await tester.pump();
+
       await tester.tap(find.byKey(const Key('pdf_crop_frame_confirm')));
       await tester.pumpAndSettle();
 

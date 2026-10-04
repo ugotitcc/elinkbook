@@ -911,6 +911,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readerPdfCropManualTooltip => 'Manual selection';
 
   @override
+  String get readerPdfCropDragHint => 'Drag to select the area to keep';
+
+  @override
   String get readerSettingsTitle => '⚙️ Layout Settings';
 
   @override

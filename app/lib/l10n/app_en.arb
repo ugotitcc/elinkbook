@@ -254,6 +254,7 @@
   "readerPdfCropAutoLabel": "Smart",
   "readerPdfCropManualLabel": "Manual",
   "readerPdfCropManualTooltip": "Manual selection",
+  "readerPdfCropDragHint": "Drag to select the area to keep",
   "readerSettingsTitle": "⚙️ Layout Settings",
   "readerSettingsTabText": "Text",
   "readerSettingsTabBoundary": "Margins",

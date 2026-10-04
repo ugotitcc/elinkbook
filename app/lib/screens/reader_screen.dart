@@ -50,7 +50,6 @@ import '../reader/pdf_search_state.dart';
 import '../reader/pdf_page_info.dart';
 import '../reader/pdf_crop_frame_overlay.dart';
 import '../reader/pdf_crop_mode.dart';
-import '../reader/pdf_crop_rect.dart';
 import '../reader/pdf_reader_view.dart';
 import '../reader/pdf_toc_item.dart';
 import '../reader/pdf_toc_navigator.dart';
@@ -3090,8 +3089,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             if (_cropEditModeActive)
               Positioned.fill(
                 child: PdfCropFrameOverlay(
-                  initialRect: _prefs.pdfCropRect ??
-                      const PdfCropRect(left: 0, top: 0, right: 1, bottom: 1),
                   onConfirm: (rect) {
                     setState(() => _cropEditModeActive = false);
                     _handlePrefsChanged(

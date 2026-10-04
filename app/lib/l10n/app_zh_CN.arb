@@ -254,6 +254,7 @@
   "readerPdfCropAutoLabel": "智能",
   "readerPdfCropManualLabel": "手动",
   "readerPdfCropManualTooltip": "手动选区",
+  "readerPdfCropDragHint": "拖拉选取要保留的范围",
   "readerSettingsTitle": "⚙️ 版面设定",
   "readerSettingsTabText": "文字",
   "readerSettingsTabBoundary": "边界",
