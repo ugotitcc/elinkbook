@@ -73,3 +73,5 @@ docker/.env
 app/config/cloud_oauth.release.json
 app/config/cloud_oauth.debug.json
 docs/epics/epic-59-pdf-overlay-recompute-storm/reviews/
+docs/epics/epic-60-crop-mode-lost-after-cancel/reviews/
+docs/epics/epic-61-startup-black-screen/reviews/

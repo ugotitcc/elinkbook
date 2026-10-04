@@ -82,7 +82,12 @@
 - **未補**：`PdfReaderView` 接線層的 widget 測試。既有 `pdf_reader_view_filters_test` 的「多頁各自完成」案例會間接經過這條路徑（126 項通過），但沒有專測「翻走的頁被丟棄」。
 - 驗證：`flutter analyze` 乾淨；佇列＋濾鏡／逐頁／雙頁／基本測試共 126 項通過；l10n 雙檢查 PASS。
 
-**附帶觀察（不屬本缺陷，未處理）**
+**2026-10-04 PR 合併**
+
+- PR #321（`epic-59/pdf-overlay-recompute-storm` → `main`）已合併，合併 commit `b5425c56`。實作與真機驗證全數完成，待歸檔。
+- 附帶觀察兩項已各自登錄：`epic-60-crop-mode-lost-after-cancel`、`epic-61-startup-black-screen`。
+
+**附帶觀察（不屬本缺陷，已另立 Epic）**
 
 - 安裝新版後第一次啟動停在黑屏：`main()` 的 `AudioService.init`（`main.dart:219`）丟出 `PlatformException: Unable to bind to AudioService` 且未被接住，`runApp` 沒執行到。強制停止後重開即正常，推測是安裝後系統忙碌（同時有「Failed to read WebView version: TimeoutException」）造成的一次性失敗。但「啟動時一個未接住的例外就黑屏」本身是脆弱點，值得另立 Issue 評估是否要包 try/catch 讓 App 仍能進書架。
 - 在電子紙上驗證到 Epic 58 手動裁切的部分行為：進入後無框＋提示文字、✓ 灰色停用；手指拖拉出框後 ✓ 變綠；套用後全書統一裁切。尚未驗證：輕點不變暗／殘影、系統中斷放棄選取、起點偏移手感、雙頁並列。
