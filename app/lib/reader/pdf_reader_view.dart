@@ -636,6 +636,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   }
 
   void _trackSwipeMove() {
+    // 與 [_beginSwipeTracking]、[_finishSwipeTracking] 的手指數檢查重複是刻意的防禦層：
+    // 任何一處漏接，其他兩處仍能擋下多指手勢。
     if (_selectionDrag != null || _activePointerCount != 1) _swipeInvalid = true;
   }
 
@@ -672,7 +674,13 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       forward: intent == PagedSwipeIntent.next,
     );
     // 落新單元頂端、縮放回基準（規則 8）；已是第一／最後一個單元則無動作。
-    if (target != null) _goToPagedUnit(target);
+    if (target == null) return;
+    // 延後到本次事件分派結束後再換頁：外層 Listener 的 up 回呼早於 pdfrx 手勢辨識器的
+    // onScaleEnd（慣性動畫在那時才啟動），直接換頁會被慣性蓋掉落點（Issue 6 審查 I-1）。
+    // goToPosition 會先停掉慣性動畫，所以晚一步執行即可蓋過它。
+    scheduleMicrotask(() {
+      if (mounted) _goToPagedUnit(target);
+    });
   }
 
   List<PdfAnnotationDecoration> _annotations = const [];
@@ -1688,6 +1696,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
           onPointerCancel: (_) {
             _swipeStart = null;
             _swipeStartTime = null;
+            _swipeInvalid = false; // 取消後狀態完整重設，不依賴下一次按下才清
             _activePointerCount = (_activePointerCount - 1).clamp(0, 999);
             _dragActivity.reset();
           },

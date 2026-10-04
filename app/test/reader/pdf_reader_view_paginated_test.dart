@@ -1029,7 +1029,9 @@ void main() {
               direction: DualPageDirection.ltr,
               selectionEnabled: true));
       final g = await tester.startGesture(tester.getCenter(find.byType(PdfViewer)));
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      // 剛好等到長按觸發（500 毫秒）後立刻橫拖放開：手勢時長恰為 500 毫秒，仍在時長門檻內，
+      // 所以只有「移動途中鎖存框選」能擋下翻頁，不會被時長門檻順便擋掉（審查 M-1）。
+      await tester.pump(kLongPressTimeout);
       for (var i = 0; i < 4; i++) {
         await g.moveBy(const Offset(-30, 0));
       }
@@ -1037,6 +1039,42 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(_visiblePages(c), [1]);
+    });
+
+    testWidgets('取消手勢（pointer cancel）後，下一次單指滑動仍正常換頁（審查 M-4）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+          tester, h.app(fit: PdfFitMode.pageFit, direction: DualPageDirection.ltr));
+      final g = await tester.startGesture(tester.getCenter(find.byType(PdfViewer)));
+      await g.moveBy(const Offset(-120, 0));
+      await g.cancel();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_visiblePages(c), [1], reason: '取消的手勢不換頁');
+
+      await swipe(tester, const Offset(-120, 0));
+      expect(_visiblePages(c), [2]);
+    });
+
+    testWidgets('滑動不會同時觸發熱區動作（審查 M-4）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final actions = List<ZoneAction>.filled(9, ZoneAction.nextPage);
+      final fired = <ZoneAction>[];
+      final c = await h.open(
+        tester,
+        h.app(
+          fit: PdfFitMode.pageFit,
+          direction: DualPageDirection.ltr,
+          navZoneActions: actions,
+          onZoneAction: fired.add,
+        ),
+      );
+
+      await swipe(tester, const Offset(-120, 0));
+
+      expect(_visiblePages(c), [2], reason: '滑動換了一頁');
+      expect(fired, isEmpty, reason: '熱區動作不可同時觸發');
     });
 
     testWidgets('兩指同時移動（縮放）：不換頁（Review Focus 2）', (tester) async {
@@ -1124,6 +1162,26 @@ void main() {
       expect(_visiblePages(c), [3, 4]);
 
       await swipe(tester, const Offset(120, 0));
+      expect(_visiblePages(c), [1, 2]);
+    });
+
+    testWidgets('雙頁模式、右到左：向右滑下一個 spread、向左滑回上一個（審查 M-4）', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final c = await h.open(
+        tester,
+        h.app(
+          file: 'test/fixtures/sample_dual_page.pdf',
+          dualMode: DualPageMode.always,
+          direction: DualPageDirection.rtl,
+        ),
+      );
+      expect(_visiblePages(c), [1, 2]);
+
+      await swipe(tester, const Offset(120, 0));
+      expect(_visiblePages(c), [3, 4]);
+
+      await swipe(tester, const Offset(-120, 0));
       expect(_visiblePages(c), [1, 2]);
     });
   });
