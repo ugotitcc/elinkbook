@@ -17,6 +17,7 @@ import 'pdf_page_turn_mode.dart';
 import 'pdf_image_filters.dart';
 import 'pdf_paginated_rules.dart';
 import 'pdf_filter_debounce.dart';
+import 'pdf_overlay_job_queue.dart';
 import 'pdf_fit_mode.dart';
 import 'pdf_fit_size_delegate.dart';
 import 'pdf_crop_mode.dart';
@@ -594,6 +595,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   final _boldDebouncer =
       PdfFilterDebouncer(delay: const Duration(milliseconds: 300));
   bool _cropDetectionInFlight = false;
+
+  /// 覆蓋圖計算佇列（epic-59）：去重、一次一個、最新優先、過期丟棄，
+  /// 避免連翻時每頁重複發出整頁渲染而塞住 PDFium。
+  final _overlayJobQueue = PdfOverlayJobQueue();
 
   // ── Issue 4: 長按拖曳框選 ──
 
@@ -1432,10 +1437,16 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (_cropEnabled || _committedBoldStrength > 0) {
       final cacheKey = (crop: widget.pdfCropRect, bold: _committedBoldStrength);
       if (_overlayCacheKey[page.pageNumber] != cacheKey) {
-        unawaited(_recomputeOverlay(page, cacheKey, devicePixelRatio)
-            .catchError((e) {
-          debugPrint('pdf_reader_view: overlay recompute failed: $e');
-        }));
+        // 只登記，不直接計算：同頁同設定重複登記會被佇列去重（epic-59）。
+        _overlayJobQueue.enqueue(
+          page: page.pageNumber,
+          key: cacheKey,
+          stillWanted: () => _isOverlayJobStillWanted(page.pageNumber, cacheKey),
+          run: () => _recomputeOverlay(page, cacheKey, devicePixelRatio)
+              .catchError((e) {
+            debugPrint('pdf_reader_view: overlay recompute failed: $e');
+          }),
+        );
       } else {
         final image = _touchOverlayCache(page.pageNumber);
         if (image != null) widgets.add(RawImage(image: image, fit: BoxFit.fill));
@@ -1501,6 +1512,26 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     return widgets;
   }
 
+  /// 輪到計算時確認：元件仍在、設定沒變、而且這頁還在可視範圍內。
+  /// 使用者已翻走的頁面直接略過，不做渲染與 Isolate 運算（epic-59）。
+  bool _isOverlayJobStillWanted(
+    int pageNumber,
+    ({PdfCropRect? crop, double bold}) cacheKey,
+  ) {
+    if (!mounted) return false;
+    if ((crop: widget.pdfCropRect, bold: _committedBoldStrength) != cacheKey) {
+      return false;
+    }
+    if (!_controller.isReady) return true;
+    final pageLayouts = _controller.layout.pageLayouts;
+    final index = pageNumber - 1;
+    if (index < 0 || index >= pageLayouts.length) return false;
+    return pdfOverlayPageWanted(
+      pageRect: pageLayouts[index],
+      visibleRect: _controller.visibleRect,
+    );
+  }
+
   Future<void> _recomputeOverlay(
     PdfPage page,
     ({PdfCropRect? crop, double bold}) cacheKey,
@@ -1511,8 +1542,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       fullWidth: page.width * scale,
       fullHeight: page.height * scale,
     );
-    if (rendered == null || !mounted) return;
+    if (rendered == null) return;
     try {
+      // 渲染期間使用者可能已翻走：略過最重的像素運算（epic-59）。
+      // 已卸載（!mounted）時 _isOverlayJobStillWanted 回傳 false，
+      // 仍會經過 finally 釋放 rendered（審查 Minor 2）。
+      if (!_isOverlayJobStillWanted(page.pageNumber, cacheKey)) return;
       final processed = await _isolateProcessOverlayPixels(
         pixels: rendered.pixels,
         width: rendered.width,

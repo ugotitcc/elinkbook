@@ -72,4 +72,4 @@ docs/epics/epic-56-pdf-paginated-reading/reviews/
 docker/.env
 app/config/cloud_oauth.release.json
 app/config/cloud_oauth.debug.json
-docs/epics/epic-58-pdf-crop-drag-select/reviews/
+docs/epics/epic-59-pdf-overlay-recompute-storm/reviews/
