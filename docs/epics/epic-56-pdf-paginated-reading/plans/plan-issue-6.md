@@ -75,7 +75,7 @@
 - Consumes：無。
 - Produces：分支 `epic-56/issue-6-swipe-turn`，後續 Task 都在這個 worktree 的 `app/` 下執行。
 
-- [ ] **Step 1：在 `main` 提交計畫**
+- [x] **Step 1：在 `main` 提交計畫**
 
 先把 `issues.md` Issue 6 的 `**Status:** ready-for-agent` 改為 `**Status:** in-progress`；`docs/epics.md` 第 57 列「Issue 6 待寫計畫」改為「Issue 6 開發中」。然後（在儲存庫根目錄）：
 
@@ -86,7 +86,7 @@ git commit -m "docs(epic-56): Issue 6 實作計畫
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 2：建立 worktree 並安裝依賴**
+- [x] **Step 2：建立 worktree 並安裝依賴**
 
 ```bash
 git worktree add .worktrees/epic-56-issue-6-swipe-turn -b epic-56/issue-6-swipe-turn
@@ -100,7 +100,7 @@ flutter pub get
 
 預期：`Got dependencies!`。
 
-- [ ] **Step 3：確認基準測試通過並記下數字**
+- [x] **Step 3：確認基準測試通過並記下數字**
 
 ```bash
 flutter test test/reader/pdf_paginated_rules_test.dart test/reader/pdf_reader_view_paginated_test.dart
@@ -142,7 +142,7 @@ PagedSwipeIntent pagedSwipeIntent({
 });
 ```
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `pdf_paginated_rules_test.dart` 的 `main()` 結尾（最後一個 `group` 之後、`}` 之前）加入：
 
@@ -272,7 +272,7 @@ PagedSwipeIntent pagedSwipeIntent({
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 ```bash
 flutter test test/reader/pdf_paginated_rules_test.dart
@@ -280,7 +280,7 @@ flutter test test/reader/pdf_paginated_rules_test.dart
 
 預期：編譯失敗，`pagedHasHorizontalOverflow`、`pagedSwipeIntent`、`PagedSwipeIntent` 未定義。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 在 `pdf_paginated_rules.dart` 檔尾（`PagedDragActivityAccumulator` 之後）追加：
 
@@ -338,7 +338,7 @@ PagedSwipeIntent pagedSwipeIntent({
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 ```bash
 flutter test test/reader/pdf_paginated_rules_test.dart
@@ -346,7 +346,7 @@ flutter test test/reader/pdf_paginated_rules_test.dart
 
 預期：全數通過，新增 14 個案例（溢出 4＋滑動 10）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/reader/pdf_paginated_rules.dart app/test/reader/pdf_paginated_rules_test.dart
