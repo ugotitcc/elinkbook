@@ -1087,10 +1087,15 @@ void main() {
       reason: '手動選區項目在一般情境下應維持未選中樣式',
     );
 
-    // 情境二（原本的邊界情境）：groupValue 剛好等於 PdfCropMode.manual
-    // （例如使用者先前已完成一次手動裁切、_cropMode 已持久化為 manual），
-    // 「手動選區」項目仍必須維持未選中——若實作誤用 value == groupValue
-    // 判斷選中（而非依賴 forceUnselected），這裡就會變成選中態。
+    // 情境二（epic-60 改變設計）：groupValue 等於 PdfCropMode.manual
+    // （使用者先前已完成一次手動裁切、_cropMode 已持久化為 manual）時，
+    // 「手動選區」項目要反白，讓使用者看得出目前是手動模式；其餘兩個
+    // 一般選項維持未選中。原設計（恆未選中）導致三個按鈕全不反白。
+    //
+    // 先清空畫面再重建：同型別 widget 連續 pump 會重用舊 State，
+    // `_cropMode` 只在 initState 讀取，會停在情境一的 autoDetect。舊版情境二
+    // 因為「手動」恆未選中，即使實際沒測到 manual 也照樣通過（epic-60 發現）。
+    await tester.pumpWidget(const SizedBox());
     await _pumpSheet(
       tester,
       const BookReaderPrefs(pdfCropMode: PdfCropMode.manual),
@@ -1099,16 +1104,101 @@ void main() {
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
 
-    final manualContainerCase2 = tester.widget<Container>(
-      find.byKey(const Key('pdf_settings_crop_mode_manual')),
+    Color? colorOf(String suffix) => (tester
+            .widget<Container>(find.byKey(Key('pdf_settings_crop_mode_$suffix')))
+            .decoration as BoxDecoration)
+        .color;
+
+    expect(colorOf('manual'), colorScheme.primary,
+        reason: '目前模式為手動時，「手動」應顯示選中樣式（epic-60）');
+    expect(colorOf('none'), colorScheme.surface);
+    expect(colorOf('auto'), colorScheme.surface);
+  });
+
+  testWidgets('目前為手動裁切時點「不裁」：反白從「手動」移到「不裁」，'
+      '且 onChanged 帶入 pdfCropMode=none、保留原 pdfCropRect（epic-60 審查 M-2）',
+      (tester) async {
+    BookReaderPrefs? notified;
+    const rect = PdfCropRect(left: 0.1, top: 0.1, right: 0.9, bottom: 0.9);
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(
+        pdfCropMode: PdfCropMode.manual,
+        pdfCropRect: rect,
+      ),
+      (prefs) => notified = prefs,
     );
-    expect(
-      (manualContainerCase2.decoration as BoxDecoration).color,
-      colorScheme.surface,
-      reason:
-          'groupValue 剛好等於 PdfCropMode.manual 時，手動選區項目仍'
-          '應維持未選中樣式（forceUnselected 機制的關鍵驗證）',
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+
+    final primary = Theme.of(
+      tester.element(find.byKey(const Key('pdf_settings_crop_mode_none'))),
+    ).colorScheme.primary;
+    Color? colorOf(String suffix) => (tester
+            .widget<Container>(find.byKey(Key('pdf_settings_crop_mode_$suffix')))
+            .decoration as BoxDecoration)
+        .color;
+
+    expect(colorOf('manual'), primary, reason: '起始：手動反白');
+
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_none')));
+    await tester.pumpAndSettle();
+
+    expect(colorOf('none'), primary, reason: '反白移到「不裁」');
+    expect(colorOf('manual'), isNot(primary), reason: '「手動」不再反白');
+    expect(notified?.pdfCropMode, PdfCropMode.none);
+    expect(notified?.pdfCropRect, rect, reason: '裁切範圍保留，之後切回手動不必重畫');
+  });
+
+  testWidgets('E-Ink 主題下，目前為手動裁切時「手動」呈現黑底、其他兩顆白底'
+      '（epic-60 審查 M-3）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: buildEinkThemeData(),
+        home: Scaffold(
+          body: PdfSettingsSheet(
+            prefs: const BookReaderPrefs(pdfCropMode: PdfCropMode.manual),
+            onChanged: (_) {},
+            onRequestManualCrop: () {},
+            isEinkMode: true,
+          ),
+        ),
+      ),
     );
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+
+    Color? colorOf(String suffix) => (tester
+            .widget<Container>(find.byKey(Key('pdf_settings_crop_mode_$suffix')))
+            .decoration as BoxDecoration)
+        .color;
+
+    expect(colorOf('manual'), Colors.black);
+    expect(colorOf('none'), Colors.white);
+    expect(colorOf('auto'), Colors.white);
+  });
+
+  testWidgets('目前已是手動裁切時，再點「手動」仍觸發 onRequestManualCrop（可重新框選），'
+      '且不呼叫 onChanged（epic-60）', (tester) async {
+    var requestCount = 0;
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(pdfCropMode: PdfCropMode.manual),
+      (prefs) => notified = prefs,
+      onRequestManualCrop: () => requestCount++,
+    );
+
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+    await tester.pump();
+
+    expect(requestCount, 1);
+    expect(notified, isNull);
   });
 
   testWidgets('英文介面下分頁籤/Fit 模式/裁切模式文字正確以英文渲染', (tester) async {

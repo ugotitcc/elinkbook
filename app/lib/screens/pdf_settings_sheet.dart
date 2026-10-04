@@ -497,8 +497,9 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               // 審查修正 I4（review-issues.md）／I1（review-spec.md）：改用
               // EBOptionChipItem.onTap 承載，value 直接填入真實的
               // PdfCropMode.manual——EBOptionChipGroup 對 onTap != null 的
-              // 項目天生強制 forceUnselected: true，不需要再用 bool sentinel
+              // 項目預設強制 forceUnselected: true，不需要再用 bool sentinel
               // （value: true, groupValue: false）製造「恆不相等」的效果。
+              // epic-60：本項另傳 highlightWhenCurrent: true 作為例外，見下方。
               EBOptionChipItem<PdfCropMode>(
                 itemKey: const Key('pdf_settings_crop_mode_manual'),
                 value: PdfCropMode.manual,
@@ -506,6 +507,9 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                 label: l10n.readerPdfCropManualLabel,
                 tooltip: l10n.readerPdfCropManualTooltip,
                 onTap: () => widget.onRequestManualCrop(),
+                // epic-60：目前模式為 manual 時反白，否則三顆全不反白、
+                // 使用者看不出目前是手動裁切。點擊仍是重新框選。
+                highlightWhenCurrent: true,
               ),
             ],
             groupValue: _cropMode,
