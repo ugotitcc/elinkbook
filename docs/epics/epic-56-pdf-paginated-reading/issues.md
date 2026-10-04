@@ -111,7 +111,7 @@ Issue 1、2、3 互相獨立，可平行；Issue 4 依賴前三者；Issue 5、6
 
 ## Issue 5：長頁步進、帶高亮跳轉與閱讀活動回報
 
-**Status:** in-progress
+**Status:** done（PR #318）
 
 **依賴：** Issue 4。
 

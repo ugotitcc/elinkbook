@@ -1,6 +1,6 @@
 # `epic-56-pdf-paginated-reading` PDF 逐頁閱讀
 
-**狀態：** 🟡 開發中 (Active)（Issue 1～4 已合併，Issue 5 開發完成待合併，Issue 6 待寫計畫）
+**狀態：** 🟡 開發中 (Active)（Issue 1～5 已合併，Issue 6 待寫計畫）
 **存放路徑：** `docs/epics/epic-56-pdf-paginated-reading/`
 **關聯 PRD 章節：** PDF 閱讀（預設 page-fit、影像濾鏡、裁切）、互動模式（E-Ink 減少過渡動畫、3×3 熱區、音量鍵翻頁）
 **關聯 ADR：** 0022（PDF 引擎改用 `pdfrx`）
@@ -259,3 +259,10 @@ gap=100000  n=10000  y=1.01e+9  ULP(z=1/4/8)=6.40e+1 / 2.56e+2 / 5.12e+2
 - 與計畫的差異（Ruling）：`pdf_reader_view_paginated_test.dart` 的 `_Harness.app` 補 `theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false)`——暫態高亮 overlay builder 需 `ElinkTokens`，無 theme 時崩潰導致 key 找不到；純測試機制修正，預期值未動。
 - 待真機確認項目：10% 重疊量與步距手感、頁底／頁頂 1 像素容許、往回落底端的觀感、搜尋跳轉到長頁下半部時高亮是否可見（Fit Width 與放大後）、長頁上只用拖曳閱讀時閱讀時間是否持續計算（統計頁面比對）、20 像素活動門檻。
 - 提醒：Issue 6（左右滑動翻頁）仍待做，須 Issue 1～6 全數完成才可發版；Issue 4 最終審查延後的 Minor 仍未處理（見先前記錄）。
+
+**2026-10-04 PR 合併（Issue 5）**
+
+- PR #318（`epic-56/issue-5-long-page-step` → `main`）已合併，合併 commit `0a697ca9`。Issue 5 完成。
+- 程式審查（`reviews/review-issue-5.md`，該目錄被 `.gitignore` 排除、不進版控）：0 Critical／0 Important／5 Minor，結論可合併。已修 M-3（單元沒有縱向溢出時，垂直拖曳不回報閱讀活動）、M-4（手指按下／抬起／取消都重設拖曳累積器）；M-2 經測試證實開書當下呼叫 `showTemporaryHighlight` 本來就正常，只補回歸測試、未改程式。未處理：M-1（就地帶高亮時，已可見的高亮也會被重設位置）；M-5 已在最終 commit 重跑全套確認。
+- 全套 `flutter test` 3586 通過、1 略過、0 失敗（發 PR 前在最終 commit `36988421` 上跑）；`flutter analyze` 乾淨，l10n 雙檢查 PASS。
+- 後續：Issue 6（左右滑動翻頁與框選衝突）待寫計畫，Issue 5 的待真機確認項目沿用上方記錄；Epic 56 須 Issue 1～6 全數完成才可發版。
