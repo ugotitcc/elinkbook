@@ -70,3 +70,26 @@
 - 在 `main()` 以 try/catch 包住 `AudioService.init`，失敗時 `debugPrint` 並傳 `null`，朗讀降級為本次執行不可用，App 照常進書架。
 - 為了可測，抽出一個小函式（以 `Future<TtsAudioHandler> Function()` 注入）→ 單元測試「init 丟 `PlatformException` → 回傳 null、不丟例外；成功 → 回傳 handler」。`main()` 本身無法單元測試，這是刻意選的 seam。
 - **已知限制**：失敗時 `AudioService.init` 要等滿約 10 秒才丟例外，所以降級後 App 仍會在黑屏約 10 秒後才出現。要消除需把 init 改成不阻塞啟動，範圍較大，建議另案。
+
+**2026-10-05 實作（直接 TDD，人類選方案 1：接住例外、降級為無朗讀）**
+
+- 紅燈：新增 `app/test/reader/tts_audio_handler_startup_test.dart`（4 案例：成功回 handler、`PlatformException` 回 null、其他例外回 null、同步丟例外回 null）。編譯即失敗（函式不存在）。
+- 實作：新增 `app/lib/reader/tts_audio_handler_startup.dart` 的 `initTtsAudioHandlerSafely(init)`——try/catch 接住所有例外、`debugPrint` 後回傳 null；`main.dart` 改以它包住 `AudioService.init(...)`。`main()` 本身無法單元測試，故抽出小函式並以 `init` 注入作為測試 seam。
+- 變異檢查：移除 try/catch → 3 個失敗案例；還原後 4 項全過。（第一次變異腳本沒套用成功、顯示 0 失敗，已發現並以正規表示式重做，不採信第一次結果。）
+
+**真機驗證（可控重現）**：自然重現率僅約 10%，改用「暫時把 manifest 的 `<service>` 類別名改成不存在的 `AudioServiceBROKEN`」製造穩定綁定失敗（`adb shell pm disable` 因 `Shell cannot change component state` 被系統拒絕）。同一台電子紙（WAVE）：
+
+| 程式 | 結果 |
+|---|---|
+| 舊（修復前）＋故障 manifest | **黑屏**，截圖 36KB，`Unable to bind` 未處理例外 1 筆 |
+| 新（修復後）＋故障 manifest | **進入書架**，截圖 1.4MB，`TTS 音訊服務初始化失敗` log 1 筆、未處理例外 0 |
+
+故障 manifest 已還原（`BROKEN` 殘留 0、`git diff -- app/android` 為空），裝置已重裝正常版。
+
+**驗證**：`flutter analyze` 乾淨；全套 `flutter test` 3645 通過、1 略過、0 失敗；l10n 雙檢查 PASS。程式審查尚未執行。
+
+**未解決（如實記錄）**
+
+- 觸發條件仍未知（自然重現約 1／10，安裝後偶發）；本次只修「例外未接住 → 整個 App 黑屏」。
+- 失敗時 `AudioService.init` 仍要等滿約 10 秒才丟例外，降級後 App 仍會**黑屏約 10 秒**才出現（故障 manifest 情境下綁定立即失敗，沒有量到這 10 秒）。要消除需把初始化改成不阻塞啟動，另案。
+- 降級後本次執行朗讀不可用；使用者目前看不到任何提示（只有 debug log）。
