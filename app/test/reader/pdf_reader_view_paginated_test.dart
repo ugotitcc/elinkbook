@@ -4,6 +4,7 @@ import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
+import 'package:elinkbook/reader/pdf_image_filters.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
 import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
@@ -66,6 +67,9 @@ class _Harness {
     DualPageDirection direction = DualPageDirection.rtl,
     bool selectionEnabled = false,
     bool cropEditModeActive = false,
+    double pdfContrast = 0,
+    double pdfBrightness = 0,
+    double pdfBoldStrength = 0.0,
   }) =>
       MaterialApp(
         locale: const Locale('zh', 'TW'),
@@ -93,6 +97,9 @@ class _Harness {
           dualPageCoverAlone: coverAlone,
           pdfCropMode: cropMode,
           pdfCropRect: cropRect,
+          pdfContrast: pdfContrast,
+          pdfBrightness: pdfBrightness,
+          pdfBoldStrength: pdfBoldStrength,
           navZoneActions: navZoneActions ??
               List<ZoneAction>.filled(9, ZoneAction.none),
           onZoneAction: onZoneAction,
@@ -1183,6 +1190,50 @@ void main() {
 
       await swipe(tester, const Offset(-120, 0));
       expect(_visiblePages(c), [1, 2]);
+    });
+  });
+
+  // spec.md US 37：影像濾鏡（對比、亮度、加粗）在逐頁下照常生效。
+  group('影像濾鏡在逐頁模式下照常生效（US 37）', () {
+    testWidgets('對比／亮度非零：套用對應矩陣的 ColorFiltered，且鄰頁仍不可見', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final c = await h.open(
+        tester,
+        h.app(pdfContrast: 50, pdfBrightness: -20),
+      );
+
+      final filtered = tester.widget<ColorFiltered>(find.byType(ColorFiltered));
+      expect(
+        filtered.colorFilter,
+        ColorFilter.matrix(
+            contrastBrightnessColorMatrix(contrast: 50, brightness: -20)),
+      );
+      expect(_visiblePages(c), [1], reason: '開濾鏡不應破壞逐頁的幾何隔離');
+    });
+
+    testWidgets('濾鏡預設值：逐頁下不包 ColorFiltered（對照）', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      await h.open(tester, h.app());
+
+      expect(find.byType(ColorFiltered), findsNothing);
+    });
+
+    testWidgets('加粗開啟：逐頁下目前頁產生覆蓋圖，且仍只有單一單元可見', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final c = await h.open(tester, h.app(pdfBoldStrength: 1.0));
+
+      await pumpUntilPdfReady(
+        tester,
+        condition: () => find.byType(RawImage).evaluate().isNotEmpty,
+        delayBetweenPumps: const Duration(milliseconds: 50),
+      );
+      expect(find.byType(RawImage), findsWidgets,
+          reason: '逐頁下加粗覆蓋圖應照常算出並顯示');
+      expect(_visiblePages(c), [1]);
+      expect(tester.takeException(), isNull);
     });
   });
 }
