@@ -615,6 +615,66 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// 規則 9：頁內垂直拖曳的閱讀活動累積器（換手勢、換單元歸零）。
   final _dragActivity = PagedDragActivityAccumulator();
 
+  // ── epic-56 Issue 6：逐頁左右滑動翻頁（規則 8）──
+
+  /// 本次單指手勢的按下位置與時間（`clock.now()`，讓 FakeAsync 能推進）。
+  Offset? _swipeStart;
+  DateTime? _swipeStartTime;
+
+  /// 本次手勢是否已不可能是滑動翻頁：出現第二指，或移動途中偵測到框選。放開時才讀
+  /// `_selectionDrag` 不夠——框選偵測器在較深的節點，可能已先把它清回 null。
+  bool _swipeInvalid = false;
+
+  void _beginSwipeTracking(PointerDownEvent event) {
+    if (_activePointerCount == 1) {
+      _swipeStart = event.position;
+      _swipeStartTime = clock.now();
+      _swipeInvalid = false;
+    } else {
+      _swipeInvalid = true; // 第二指以上是縮放或平移，不是滑動翻頁
+    }
+  }
+
+  void _trackSwipeMove() {
+    if (_selectionDrag != null || _activePointerCount != 1) _swipeInvalid = true;
+  }
+
+  /// 最後一指放開（呼叫時 [_activePointerCount] 仍為 1）：判定是否為滑動翻頁。
+  void _finishSwipeTracking(Offset end) {
+    final start = _swipeStart;
+    final startTime = _swipeStartTime;
+    _swipeStart = null;
+    _swipeStartTime = null;
+    if (start == null || startTime == null || _swipeInvalid) return;
+    if (_activePointerCount != 1) return;
+    if (!_pagedActive || widget.cropEditModeActive || !_controller.isReady) return;
+    final paged = _paged;
+    final unit = _currentPagedUnit();
+    final viewSize = _viewSize;
+    if (paged == null || unit == null) return;
+    if (!viewSize.isFinite || viewSize.width <= 0 || viewSize.height <= 0) return;
+
+    final intent = pagedSwipeIntent(
+      delta: end - start,
+      duration: clock.now().difference(startTime),
+      hasHorizontalOverflow: pagedHasHorizontalOverflow(
+        contentSize: paged.unitRects[unit].inflate(_pdfPageMargin).size,
+        scale: _controller.currentZoom,
+        viewSize: viewSize,
+      ),
+      selectionDragActive: _selectionDrag != null,
+      direction: widget.dualPageDirection,
+    );
+    if (intent == PagedSwipeIntent.none) return;
+    final target = pagedAdjacentUnit(
+      currentUnit: unit,
+      unitCount: paged.unitCount,
+      forward: intent == PagedSwipeIntent.next,
+    );
+    // 落新單元頂端、縮放回基準（規則 8）；已是第一／最後一個單元則無動作。
+    if (target != null) _goToPagedUnit(target);
+  }
+
   List<PdfAnnotationDecoration> _annotations = const [];
 
   void _setAnnotations(List<PdfAnnotationDecoration> annotations) {
@@ -1602,12 +1662,14 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     return Stack(
       children: [
         Listener(
-          onPointerDown: (_) {
+          onPointerDown: (event) {
             _activePointerCount++;
             _dragActivity.reset(); // 新手勢或手指數改變：歸零（M-4）
+            _beginSwipeTracking(event);
             if (_activePointerCount >= 2) _cancelSelectionDrag();
           },
           onPointerMove: (event) {
+            _trackSwipeMove();
             // 只算逐頁下「單指、非框選」的垂直位移；水平位移、兩指縮放、連續捲動都不算。
             final report = widget.onReadingActivity;
             if (report == null || !_pagedActive) return;
@@ -1618,11 +1680,14 @@ class _PdfReaderViewState extends State<PdfReaderView> {
             if (!_unitCanScrollVertically(unit)) return;
             if (_dragActivity.add(event.delta.dy, unit: unit)) report();
           },
-          onPointerUp: (_) {
+          onPointerUp: (event) {
+            _finishSwipeTracking(event.position);
             _activePointerCount = (_activePointerCount - 1).clamp(0, 999);
             _dragActivity.reset(); // 手指數改變：歸零（M-4）
           },
           onPointerCancel: (_) {
+            _swipeStart = null;
+            _swipeStartTime = null;
             _activePointerCount = (_activePointerCount - 1).clamp(0, 999);
             _dragActivity.reset();
           },

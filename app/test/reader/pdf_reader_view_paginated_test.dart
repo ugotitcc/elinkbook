@@ -1,4 +1,5 @@
 import 'package:elinkbook/l10n/app_localizations.dart';
+import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
@@ -11,6 +12,7 @@ import 'package:elinkbook/reader/percent_rect.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,6 +63,9 @@ class _Harness {
     List<ZoneAction>? navZoneActions,
     void Function(ZoneAction)? onZoneAction,
     bool reportActivity = true,
+    DualPageDirection direction = DualPageDirection.rtl,
+    bool selectionEnabled = false,
+    bool cropEditModeActive = false,
   }) =>
       MaterialApp(
         locale: const Locale('zh', 'TW'),
@@ -82,6 +87,9 @@ class _Harness {
           pdfFitMode: fit,
           pdfPageTurnAnimation: animation,
           dualPageMode: dualMode,
+          dualPageDirection: direction,
+          onSelectionRectComputed: selectionEnabled ? (_) {} : null,
+          cropEditModeActive: cropEditModeActive,
           dualPageCoverAlone: coverAlone,
           pdfCropMode: cropMode,
           pdfCropRect: cropRect,
@@ -898,6 +906,225 @@ void main() {
       await h.open(tester, h.app(fit: PdfFitMode.fitWidth, reportActivity: false));
       await drag(tester, [const Offset(0, -60)]);
       expect(h.activity, 0);
+    });
+  });
+
+  group('左右滑動翻頁（規則 8，Review Focus 1～6）', () {
+    /// 單指從視窗中心分段移動 [total] 後停 [hold]（fake clock）再放開。分段是為了讓底層
+    /// 平移／縮放辨識器有足夠的移動事件；每次移動後 pump 一個 frame，讓手勢競技場有機會
+    /// 判定（否則首段位移被競技場吃掉、pdfrx 完全不平移，真實比例案例會因「沒有平移」而失敗）。
+    Future<void> swipe(
+      WidgetTester tester,
+      Offset total, {
+      Duration hold = const Duration(milliseconds: 100),
+      int steps = 5,
+    }) async {
+      final g = await tester.startGesture(tester.getCenter(find.byType(PdfViewer)));
+      for (var i = 0; i < steps; i++) {
+        await g.moveBy(total / steps.toDouble());
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await tester.pump(hold);
+      await g.up();
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    testWidgets('Page-fit、左到右：向左滑下一頁、向右滑回上一頁', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+          tester, h.app(fit: PdfFitMode.pageFit, direction: DualPageDirection.ltr));
+      expect(_visiblePages(c), [1]);
+
+      await swipe(tester, const Offset(-120, 0));
+      expect(_visiblePages(c), [2]);
+
+      await swipe(tester, const Offset(120, 0));
+      expect(_visiblePages(c), [1]);
+    });
+
+    testWidgets('右到左：方向鏡像，向右滑下一頁、向左滑回上一頁', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+          tester, h.app(fit: PdfFitMode.pageFit, direction: DualPageDirection.rtl));
+
+      await swipe(tester, const Offset(120, 0));
+      expect(_visiblePages(c), [2]);
+
+      await swipe(tester, const Offset(-120, 0));
+      expect(_visiblePages(c), [1]);
+    });
+
+    testWidgets('Fit Width 長頁：頁內已捲下去後滑動，落新單元頂端、縮放回基準（Review Focus 5）',
+        (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+          tester, h.app(fit: PdfFitMode.fitWidth, direction: DualPageDirection.ltr));
+      PdfReaderView.nextPage(h.key); // 頁內先捲一個螢幕
+      await tester.pump();
+      expect(c.visibleRect.top, greaterThan(c.layout.pageLayouts[0].top));
+
+      await swipe(tester, const Offset(-120, 0));
+
+      expect(_visiblePages(c), [2]);
+      expect(c.visibleRect.top, closeTo(c.layout.pageLayouts[1].top - _margin, 1e-3));
+      expect(c.currentZoom, closeTo(400 / (612 + _margin * 2), 1e-3));
+    });
+
+    testWidgets('第一個單元往前滑、最後一個單元往後滑：無動作', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+          tester, h.app(fit: PdfFitMode.pageFit, direction: DualPageDirection.ltr));
+
+      await swipe(tester, const Offset(120, 0)); // 向右滑＝上一個，已是第一個
+      expect(_visiblePages(c), [1]);
+
+      final last = c.pageCount;
+      PdfReaderView.jumpToPage(h.key, last - 1);
+      await tester.pump();
+      expect(_visiblePages(c), [last]);
+      await swipe(tester, const Offset(-120, 0)); // 向左滑＝下一個，已是最後一個
+      expect(_visiblePages(c), [last]);
+    });
+
+    testWidgets('距離不足 40、斜向、太慢（600 毫秒）：都不換頁（Review Focus 6）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+          tester, h.app(fit: PdfFitMode.pageFit, direction: DualPageDirection.ltr));
+
+      await swipe(tester, const Offset(-40, 0));
+      expect(_visiblePages(c), [1], reason: '距離不足');
+
+      await swipe(tester, const Offset(-100, -80));
+      expect(_visiblePages(c), [1], reason: '斜向（垂直超過水平的一半）');
+
+      await swipe(tester, const Offset(-120, 0), hold: const Duration(milliseconds: 600));
+      expect(_visiblePages(c), [1], reason: '太慢');
+    });
+
+    testWidgets('真實比例放大後橫向有溢出：滑動是平移、頁碼不變（Review Focus 3）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+          tester, h.app(fit: PdfFitMode.actualSize, direction: DualPageDirection.ltr));
+      final leftBefore = c.visibleRect.left;
+
+      await swipe(tester, const Offset(-100, 0));
+
+      expect(_visiblePages(c), [1]);
+      expect(c.visibleRect.left, greaterThan(leftBefore + 50)); // 往右平移了
+    });
+
+    testWidgets('長按框選進行中橫向拖曳：不換頁（Review Focus 1）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+          tester,
+          h.app(
+              fit: PdfFitMode.pageFit,
+              direction: DualPageDirection.ltr,
+              selectionEnabled: true));
+      final g = await tester.startGesture(tester.getCenter(find.byType(PdfViewer)));
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      for (var i = 0; i < 4; i++) {
+        await g.moveBy(const Offset(-30, 0));
+      }
+      await g.up();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(_visiblePages(c), [1]);
+    });
+
+    testWidgets('兩指同時移動（縮放）：不換頁（Review Focus 2）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+          tester, h.app(fit: PdfFitMode.pageFit, direction: DualPageDirection.ltr));
+      final center = tester.getCenter(find.byType(PdfViewer));
+      final g1 = await tester.startGesture(center);
+      final g2 = await tester.startGesture(center + const Offset(40, 0));
+      for (var i = 0; i < 4; i++) {
+        await g1.moveBy(const Offset(-30, 0));
+        await g2.moveBy(const Offset(-30, 0));
+      }
+      await g1.up();
+      await g2.up();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(_visiblePages(c), [1]);
+    });
+
+    testWidgets('兩指縮放後抬起一指，剩下的一指繼續快速橫移：仍不換頁（Review Focus 2）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+          tester, h.app(fit: PdfFitMode.pageFit, direction: DualPageDirection.ltr));
+      final center = tester.getCenter(find.byType(PdfViewer));
+      final g1 = await tester.startGesture(center);
+      final g2 = await tester.startGesture(center + const Offset(40, 0));
+      await g2.up(); // 回到單指
+      for (var i = 0; i < 4; i++) {
+        await g1.moveBy(const Offset(-30, 0));
+      }
+      await g1.up();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(_visiblePages(c), [1]);
+    });
+
+    testWidgets('連續捲動模式：橫向滑動不換頁（零回歸）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+          tester,
+          h.app(
+              turnMode: PdfPageTurnMode.scroll,
+              fit: PdfFitMode.fitWidth,
+              direction: DualPageDirection.ltr));
+      expect(c.pageNumber, 1);
+
+      await swipe(tester, const Offset(-120, 0));
+
+      expect(c.pageNumber, 1);
+    });
+
+    testWidgets('裁切編輯模式：滑動無效（維持既有導覽封鎖）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      final c = await h.open(
+          tester,
+          h.app(
+              fit: PdfFitMode.pageFit,
+              direction: DualPageDirection.ltr,
+              cropEditModeActive: true));
+
+      await swipe(tester, const Offset(-120, 0));
+
+      expect(_visiblePages(c), [1]);
+    });
+
+    testWidgets('雙頁模式：滑動以 spread 為單元（Review Focus 4）', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final c = await h.open(
+        tester,
+        h.app(
+          file: 'test/fixtures/sample_dual_page.pdf',
+          dualMode: DualPageMode.always,
+          direction: DualPageDirection.ltr,
+        ),
+      );
+      expect(_visiblePages(c), [1, 2]);
+
+      await swipe(tester, const Offset(-120, 0));
+      expect(_visiblePages(c), [3, 4]);
+
+      await swipe(tester, const Offset(120, 0));
+      expect(_visiblePages(c), [1, 2]);
     });
   });
 }

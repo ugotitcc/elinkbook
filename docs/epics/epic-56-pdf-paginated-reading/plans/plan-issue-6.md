@@ -367,7 +367,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1 的 `pagedSwipeIntent`、`pagedHasHorizontalOverflow`、`PagedSwipeIntent`；既有 `pagedAdjacentUnit`、`_goToPagedUnit`、`_currentPagedUnit`、`_paged`、`_viewSize`、`_controller`、`_selectionDrag`、`_activePointerCount`、`widget.dualPageDirection`、`widget.cropEditModeActive`。
 - Produces：無對外介面；`PdfReaderView` 行為新增「逐頁下單指快速橫向滑動換單元」。
 
-- [ ] **Step 1：補測試 harness 並寫失敗測試**
+- [x] **Step 1：補測試 harness 並寫失敗測試**
 
 在 `pdf_reader_view_paginated_test.dart`：
 
@@ -615,7 +615,7 @@ import 'package:flutter/gestures.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 ```bash
 flutter test test/reader/pdf_reader_view_paginated_test.dart --plain-name "左右滑動翻頁"
@@ -623,7 +623,7 @@ flutter test test/reader/pdf_reader_view_paginated_test.dart --plain-name "左�
 
 預期：「向左滑下一頁」「右到左」「Fit Width 長頁」「雙頁」等會失敗（頁碼沒變）；「第一個單元往前滑」「太慢」「兩指」「連續捲動」「裁切編輯」「框選」這幾個「不換頁」案例在實作前就會通過，屬正常，它們的作用是實作後的回歸守衛。若「真實比例放大後」案例在實作前就通過，代表平移本來就生效，也屬正常。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 在 `pdf_reader_view.dart`：
 
@@ -721,7 +721,7 @@ flutter test test/reader/pdf_reader_view_paginated_test.dart --plain-name "左�
 
 `_finishSwipeTracking` 必須在遞減 `_activePointerCount` 之前呼叫，因為它用 `_activePointerCount == 1` 確認「放開的是唯一一指」。
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 ```bash
 flutter test test/reader/pdf_reader_view_paginated_test.dart test/reader/pdf_paginated_rules_test.dart
@@ -733,7 +733,7 @@ flutter test test/reader/pdf_reader_view_paginated_test.dart test/reader/pdf_pag
 - 「Fit Width 長頁」落點不是頂端：代表放開後慣性動畫蓋掉了換頁。回報，並附 `c.visibleRect.top`。這是 pdfrx 行為與查證不符的情況，須停下來討論（可能的對策是改到下一個 frame 再換頁，但本計畫不預先決定）。
 - 既有案例（Issue 5 的拖曳活動、M-3／M-4）失敗：代表新增的一行呼叫影響了既有邏輯，回頭檢查插入位置。
 
-- [ ] **Step 5：確認異動觸及的其他測試**
+- [x] **Step 5：確認異動觸及的其他測試**
 
 ```bash
 flutter test test/reader/pdf_reader_view_selection_test.dart test/reader/pdf_reader_view_filters_test.dart test/screens/reader_screen_stats_activity_test.dart
@@ -741,7 +741,7 @@ flutter test test/reader/pdf_reader_view_selection_test.dart test/reader/pdf_rea
 
 預期：全數通過（外層 `Listener` 與框選、裁切編輯、閱讀活動接線相關）。
 
-- [ ] **Step 6：靜態檢查**
+- [x] **Step 6：靜態檢查**
 
 ```bash
 flutter analyze
@@ -750,7 +750,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 預期：`No issues found!`，l10n 兩項 PASS。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_paginated_test.dart
