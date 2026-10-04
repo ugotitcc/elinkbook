@@ -1,7 +1,7 @@
 # `epic-59-pdf-overlay-recompute-storm` （缺陷）PDF 開啟手動裁切／加粗後，翻頁產生「覆蓋圖計算風暴」，頁面長時間全白
 
-**狀態：** 🟡 開發中 (Active)
-**存放路徑：** `docs/epics/epic-59-pdf-overlay-recompute-storm/`
+**狀態：** 🟢 已歸檔 (Archived)
+**存放路徑：** `docs/archive/2026-10-05-epic-59-pdf-overlay-recompute-storm/`
 **關聯 PRD 章節：** PDF 影像濾鏡（加粗）、智慧／手動裁切；關聯已歸檔 `epic-24-pdf-engine-rebuild` Issue 3
 
 ## 背景

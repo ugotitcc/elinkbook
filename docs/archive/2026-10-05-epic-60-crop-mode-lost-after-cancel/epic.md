@@ -1,7 +1,7 @@
 # `epic-60-crop-mode-lost-after-cancel` （缺陷）PDF 手動裁切按 ✕ 取消後，裁切模式按鈕全部沒有反白
 
-**狀態：** 🟡 開發中 (Active)
-**存放路徑：** `docs/epics/epic-60-crop-mode-lost-after-cancel/`
+**狀態：** 🟢 已歸檔 (Archived)
+**存放路徑：** `docs/archive/2026-10-05-epic-60-crop-mode-lost-after-cancel/`
 **關聯 PRD 章節：** PDF 裁切（手動選區裁切）；來源：`epic-58-pdf-crop-drag-select` 電子紙真機驗證的附帶觀察
 
 ## 背景
