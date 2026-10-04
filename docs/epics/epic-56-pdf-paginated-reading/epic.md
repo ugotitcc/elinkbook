@@ -266,3 +266,12 @@ gap=100000  n=10000  y=1.01e+9  ULP(z=1/4/8)=6.40e+1 / 2.56e+2 / 5.12e+2
 - 程式審查（`reviews/review-issue-5.md`，該目錄被 `.gitignore` 排除、不進版控）：0 Critical／0 Important／5 Minor，結論可合併。已修 M-3（單元沒有縱向溢出時，垂直拖曳不回報閱讀活動）、M-4（手指按下／抬起／取消都重設拖曳累積器）；M-2 經測試證實開書當下呼叫 `showTemporaryHighlight` 本來就正常，只補回歸測試、未改程式。未處理：M-1（就地帶高亮時，已可見的高亮也會被重設位置）；M-5 已在最終 commit 重跑全套確認。
 - 全套 `flutter test` 3586 通過、1 略過、0 失敗（發 PR 前在最終 commit `36988421` 上跑）；`flutter analyze` 乾淨，l10n 雙檢查 PASS。
 - 後續：Issue 6（左右滑動翻頁與框選衝突）待寫計畫，Issue 5 的待真機確認項目沿用上方記錄；Epic 56 須 Issue 1～6 全數完成才可發版。
+
+**2026-10-04 Issue 6 實作完成**（分支 `epic-56/issue-6-swipe-turn`；計畫見 `plans/plan-issue-6.md`，Native 內聯執行、未用 subagent）
+
+- 做法：純 Dart `pdf_paginated_rules.dart` 新增 `pagedHasHorizontalOverflow`（超過 `kPagedEdgeTolerance` 才算溢出）與 `pagedSwipeIntent`（規則 8；常數 `kPagedSwipeMinDistance`＝56、`kPagedSwipeDominanceRatio`＝2、`kPagedSwipeMaxDurationMs`＝500，皆標初始值待真機校準）。`PdfReaderView` 沿用外層 `Listener`：按下記起點與 `clock.now()`、第二指或移動途中偵測到框選即作廢、最後一指放開時判定並以 `pagedAdjacentUnit`＋`_goToPagedUnit` 換單元（落頂端、基準縮放）；不新增對外參數，`ReaderScreen` 未改。
+- 測試：新增規則 13＋widget 12＝25；全套 `flutter test` 3611 通過、1 略過、0 失敗；`flutter analyze` 乾淨，l10n 雙檢查 PASS。
+- 與計畫的差異（Ruling）：(1) 計畫 Task 1 Step 4 寫「新增 14 個案例」，實際測試碼是 13 個（溢出 4＋滑動 9），以測試碼為準；(2) widget `swipe` helper 每次 `moveBy` 後加 `pump` 一個 frame——否則手勢競技場不判定、pdfrx 完全不平移（實測無 pump 時 `visibleRect.left` 恆 0.0，有 pump 後 −100 滑動產生約 80 平移），總手勢時長約 180 毫秒仍在 500 毫秒門檻內，判定邏輯走指針位置不受影響。
+- 全套第一次跑 3610 通過、1 略過、1 失敗（失敗案例名稱未留在輸出尾部、無法指認），原樣重跑 3611 通過、1 略過、0 失敗，未重現；觸及範圍（規則 87、逐頁 widget 65、框選／濾鏡／統計 52）多次重跑皆穩定通過，判定為環境偶發。
+- 待真機確認項目：滑動手感與 56／2 倍／500 毫秒三個門檻；與長按框選、縮放平移的實際衝突；放開手指後 pdfrx 慣性動畫是否蓋掉換頁結果；長頁上橫向滑動直接跨頁的觀感（spec 備註要求拆 Issue 時與使用者確認，本計畫依 `issues.md` 現行寫法實作）；E-Ink 上滑動換頁的單次重繪。若門檻需調整，另立小工單。
+- 提醒：Epic 56 的 Issue 1～6 至此全數開發完成，須同一版本一起發布；Issue 4 最終審查延後的 Minor 與 Issue 5 的 M-1 仍未處理（見先前記錄）。

@@ -770,7 +770,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1、2 的成果。
 - Produces：可發 PR 的狀態與開發記錄。
 
-- [ ] **Step 1：執行完整測試**
+- [x] **Step 1：執行完整測試**
 
 在 `app/` 目錄下（約 6 分鐘，用 `run_in_background`）：
 
@@ -780,7 +780,7 @@ flutter test
 
 預期：全數通過，無失敗。記下通過數與略過數。
 
-- [ ] **Step 2：靜態檢查**
+- [x] **Step 2：靜態檢查**
 
 ```bash
 flutter analyze
@@ -789,7 +789,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 預期：`No issues found!`，l10n 兩項 PASS。
 
-- [ ] **Step 3：更新 `epic.md` 開發記錄**
+- [x] **Step 3：更新 `epic.md` 開發記錄**
 
 在檔尾追加（數字以 Step 1 實際結果為準，不要照抄範例）：
 
@@ -805,7 +805,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 `issues.md` 的 Issue 6 `**Status:**` 在 PR 合併後才改為 `done（PR #號碼）`，本 Task 不改。
 
-- [ ] **Step 4：Commit 文件**
+- [x] **Step 4：Commit 文件**
 
 ```bash
 git add docs/epics/epic-56-pdf-paginated-reading/epic.md
@@ -814,6 +814,6 @@ git commit -m "docs(epic-56): Issue 6 左右滑動翻頁開發記錄
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 5：交付審查**
+- [x] **Step 5：交付審查**
 
 回報完成狀態，等待使用者指示：先做程式審查（審查者產出報告存於 `reviews/`，不直接改程式），審查處理完再發 PR。
