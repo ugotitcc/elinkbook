@@ -523,4 +523,268 @@ void main() {
       expect(pagedAdjacentUnit(currentUnit: 0, unitCount: 0, forward: true), isNull);
     });
   });
+
+  group('pagedRelativeStep：長頁相對步進（規則 3、4、5）', () {
+    // spec 範例：縮放後頁高 2000、可視高 800 → 最大捲動量 1200；重疊 80，步距 720。
+    PagedStep step({
+      required bool forward,
+      required double offset,
+      double maxScroll = 1200,
+      double view = 800,
+      bool adjacent = true,
+    }) =>
+        pagedRelativeStep(
+          forward: forward,
+          scrollOffset: offset,
+          maxScroll: maxScroll,
+          viewHeight: view,
+          hasAdjacentUnit: adjacent,
+        );
+
+    test('下一頁序列：0 → 720 → 1200（夾在最大捲動量）→ 換到下一個單元頂端', () {
+      var s = step(forward: true, offset: 0);
+      expect(s.kind, PagedStepKind.scroll);
+      expect(s.scrollOffset, closeTo(720, 1e-9));
+      s = step(forward: true, offset: 720);
+      expect(s.kind, PagedStepKind.scroll);
+      expect(s.scrollOffset, closeTo(1200, 1e-9));
+      s = step(forward: true, offset: 1200);
+      expect(s.kind, PagedStepKind.changeUnit);
+      expect(s.landAtBottom, isFalse);
+    });
+
+    test('上一頁序列：1200 → 480 → 0 → 換到上一個單元並落在底端', () {
+      var s = step(forward: false, offset: 1200);
+      expect(s.kind, PagedStepKind.scroll);
+      expect(s.scrollOffset, closeTo(480, 1e-9));
+      s = step(forward: false, offset: 480);
+      expect(s.kind, PagedStepKind.scroll);
+      expect(s.scrollOffset, closeTo(0, 1e-9));
+      s = step(forward: false, offset: 0);
+      expect(s.kind, PagedStepKind.changeUnit);
+      expect(s.landAtBottom, isTrue);
+    });
+
+    test('第一／最後單元：沒有相鄰單元時在頁邊「無動作」', () {
+      expect(step(forward: true, offset: 1200, adjacent: false).kind,
+          PagedStepKind.none);
+      expect(step(forward: false, offset: 0, adjacent: false).kind,
+          PagedStepKind.none);
+    });
+
+    test('沒有相鄰單元但頁內還能捲：照常頁內捲動', () {
+      expect(step(forward: true, offset: 0, adjacent: false).kind,
+          PagedStepKind.scroll);
+      expect(step(forward: false, offset: 1200, adjacent: false).kind,
+          PagedStepKind.scroll);
+    });
+
+    test('到頁底 1 像素容許（Review Focus 2）：1199.5 視為已到底，1198.9 仍捲到底', () {
+      expect(step(forward: true, offset: 1199.5).kind, PagedStepKind.changeUnit);
+      final s = step(forward: true, offset: 1198.9);
+      expect(s.kind, PagedStepKind.scroll);
+      expect(s.scrollOffset, closeTo(1200, 1e-9));
+    });
+
+    test('頁頂 1 像素容許：偏移 0.5 視為已在頂端', () {
+      expect(step(forward: false, offset: 0.5).kind, PagedStepKind.changeUnit);
+      final s = step(forward: false, offset: 1.5);
+      expect(s.kind, PagedStepKind.scroll);
+      expect(s.scrollOffset, closeTo(0, 1e-9));
+    });
+
+    test('單元沒有溢出（最大捲動量 0）：兩個方向都直接換單元，負偏移（置中）不誤判（Review Focus 3）', () {
+      var s = step(forward: true, offset: 0, maxScroll: 0);
+      expect(s.kind, PagedStepKind.changeUnit);
+      s = step(forward: true, offset: -150, maxScroll: 0);
+      expect(s.kind, PagedStepKind.changeUnit);
+      s = step(forward: false, offset: -150, maxScroll: 0);
+      expect(s.kind, PagedStepKind.changeUnit);
+      expect(s.landAtBottom, isTrue);
+    });
+
+    test('剛好等高（縮放後內容高度等於可視高度，最大捲動量 0）：直接換單元', () {
+      expect(step(forward: true, offset: 0, maxScroll: 0).kind,
+          PagedStepKind.changeUnit);
+    });
+
+    test('步距依可視高度算：可視 400 → 重疊 40、步距 360', () {
+      final s = step(forward: true, offset: 0, maxScroll: 1000, view: 400);
+      expect(s.scrollOffset, closeTo(360, 1e-9));
+    });
+  });
+
+  group('clampPagedViewport：落在單元底端（startAtBottom，規則 4）', () {
+    const view = Size(400, 800);
+
+    test('縱向溢出：沒有候選位置且 startAtBottom → 落在（單元底 − 可視高）', () {
+      // 單元方框 500x2000，基準 0.8：可視 500x1000 → 底端的可視頂端 y = 1000。
+      final v = clampPagedViewport(
+        unitContent: const Rect.fromLTWH(0, 0, 500, 2000),
+        viewSize: view,
+        baseZoom: 0.8,
+        maxZoom: 8,
+        zoom: 0.8,
+        direction: DualPageDirection.ltr,
+        startAtBottom: true,
+      );
+      expect(v.topLeft.dy, closeTo(1000, 1e-9));
+      expect(v.topLeft.dx, closeTo(0, 1e-9));
+    });
+
+    test('上一個單元不比螢幕高：落點仍是置中（等同 0，Review Focus 1）', () {
+      final v = clampPagedViewport(
+        unitContent: const Rect.fromLTWH(0, 0, 200, 100),
+        viewSize: view,
+        baseZoom: 2,
+        maxZoom: 8,
+        zoom: 2,
+        direction: DualPageDirection.ltr,
+        startAtBottom: true,
+      );
+      expect(v.topLeft.dy, closeTo(-150, 1e-9));
+    });
+
+    test('預設不落底端：行為與先前相同（落頂端）', () {
+      final v = clampPagedViewport(
+        unitContent: const Rect.fromLTWH(0, 0, 500, 2000),
+        viewSize: view,
+        baseZoom: 0.8,
+        maxZoom: 8,
+        zoom: 0.8,
+        direction: DualPageDirection.ltr,
+      );
+      expect(v.topLeft.dy, closeTo(0, 1e-9));
+    });
+
+    test('startAtBottom 不影響橫向起始側（右到左仍靠右）', () {
+      final v = clampPagedViewport(
+        unitContent: const Rect.fromLTWH(0, 0, 1000, 3000),
+        viewSize: view,
+        baseZoom: 1,
+        maxZoom: 8,
+        zoom: 1,
+        direction: DualPageDirection.rtl,
+        startAtBottom: true,
+      );
+      expect(v.topLeft.dx, closeTo(600, 1e-9));
+      expect(v.topLeft.dy, closeTo(2200, 1e-9));
+    });
+  });
+
+  group('pagedTopForHighlight：帶高亮的跳轉（規則 7）', () {
+    // 單元方框 500x2000，縮放 1，可視高 800 → 可視頂端範圍 0～1200。
+    const unit = Rect.fromLTWH(0, 0, 500, 2000);
+    double top(Rect highlight, {Rect content = unit, double view = 800}) =>
+        pagedTopForHighlight(
+          unitContent: content,
+          highlight: highlight,
+          viewHeight: view,
+          zoom: 1,
+        );
+
+    test('高亮在頂端對齊的視窗內完整可見：維持頂端', () {
+      expect(top(const Rect.fromLTWH(10, 100, 200, 30)), closeTo(0, 1e-9));
+    });
+
+    test('高亮剛好貼著視窗底緣（仍完整可見）：維持頂端', () {
+      expect(top(const Rect.fromLTWH(10, 770, 200, 30)), closeTo(0, 1e-9));
+    });
+
+    test('高亮貼著視窗底緣且有浮點誤差（bottom 800.00005）：仍視為完整可見，維持頂端', () {
+      expect(top(const Rect.fromLTRB(10, 770.00005, 210, 800.00005)),
+          closeTo(0, 1e-9));
+    });
+
+    test('高亮在視窗外：垂直置中（高亮中心 1015 − 400 = 615）', () {
+      expect(top(const Rect.fromLTWH(10, 1000, 200, 30)), closeTo(615, 1e-9));
+    });
+
+    test('高亮只有部分可見也視為不可見：垂直置中（中心 800 − 400 = 400）', () {
+      expect(top(const Rect.fromLTWH(10, 780, 200, 40)), closeTo(400, 1e-9));
+    });
+
+    test('高亮貼近頁底：置中後夾在最大捲動量（Review Focus 4）', () {
+      expect(top(const Rect.fromLTWH(10, 1950, 200, 30)), closeTo(1200, 1e-9));
+    });
+
+    test('高亮比可視高度還高：上緣貼齊可視上緣', () {
+      expect(top(const Rect.fromLTWH(10, 300, 200, 1000)), closeTo(300, 1e-9));
+    });
+
+    test('單元不在文件原點：以單元方框為準（偏移加上單元頂端）', () {
+      const shifted = Rect.fromLTWH(0, 5000, 500, 2000);
+      expect(top(const Rect.fromLTWH(10, 6000, 200, 30), content: shifted),
+          closeTo(5615 + 0, 1e-9)); // 中心 6015 − 400 = 5615，範圍 5000～6200
+      expect(top(const Rect.fromLTWH(10, 5100, 200, 30), content: shifted),
+          closeTo(5000, 1e-9));
+    });
+
+    test('單元沒有溢出（內容比可視範圍短）：置中，與夾制規則一致', () {
+      // 內容高 500、可視高 800：置中 → 頂端 = 中心 250 − 400 = −150。
+      expect(
+        top(const Rect.fromLTWH(10, 100, 200, 30),
+            content: const Rect.fromLTWH(0, 0, 500, 500)),
+        closeTo(-150, 1e-9),
+      );
+    });
+
+    test('縮放大於 1：可視高度以縮放換算（縮放 2 → 可視文件高度 400）', () {
+      // 單元方框 500x2000，縮放 2，可視 400 文件高度；高亮 y=600～630 在視窗外 → 置中 615 − 200 = 415。
+      expect(
+        pagedTopForHighlight(
+          unitContent: unit,
+          highlight: const Rect.fromLTWH(10, 600, 200, 30),
+          viewHeight: 800,
+          zoom: 2,
+        ),
+        closeTo(415, 1e-9),
+      );
+    });
+  });
+
+  group('PagedDragActivityAccumulator：頁內拖曳閱讀活動（規則 9）', () {
+    test('未達 20 像素不回報，達到就回報一次並保留餘數', () {
+      final a = PagedDragActivityAccumulator();
+      expect(a.add(19, unit: 0), isFalse);
+      expect(a.add(1, unit: 0), isTrue); // 累積 20
+      expect(a.add(15, unit: 0), isFalse);
+      expect(a.add(15, unit: 0), isTrue); // 累積 30 → 回報，餘 10
+      expect(a.add(9, unit: 0), isFalse); // 19
+      expect(a.add(1, unit: 0), isTrue); // 20
+    });
+
+    test('向上與向下的位移都累積（取絕對值）', () {
+      final a = PagedDragActivityAccumulator();
+      expect(a.add(-12, unit: 0), isFalse);
+      expect(a.add(12, unit: 0), isTrue);
+    });
+
+    test('換單元後歸零', () {
+      final a = PagedDragActivityAccumulator();
+      expect(a.add(15, unit: 0), isFalse);
+      expect(a.add(15, unit: 1), isFalse); // 換單元：從 0 重新累積，只有 15
+      expect(a.add(5, unit: 1), isTrue);
+    });
+
+    test('reset（換手勢）後歸零', () {
+      final a = PagedDragActivityAccumulator();
+      expect(a.add(15, unit: 0), isFalse);
+      a.reset();
+      expect(a.add(15, unit: 0), isFalse);
+    });
+
+    test('threshold 非正數：assert 失敗（避免取餘數除以零）', () {
+      expect(() => PagedDragActivityAccumulator(threshold: 0),
+          throwsAssertionError);
+    });
+
+    test('一次大位移只回報一次；非有限位移忽略（Review Focus 5）', () {
+      final a = PagedDragActivityAccumulator();
+      expect(a.add(100, unit: 0), isTrue);
+      expect(a.add(double.nan, unit: 0), isFalse);
+      expect(a.add(double.infinity, unit: 0), isFalse);
+      expect(a.add(19, unit: 0), isFalse);
+    });
+  });
 }

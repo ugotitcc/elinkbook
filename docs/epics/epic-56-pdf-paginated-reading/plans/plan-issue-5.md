@@ -1,6 +1,6 @@
 # Issue 5：長頁步進、帶高亮跳轉與閱讀活動回報 實作計畫
 
-> **給執行者：** 必要子技能：使用 `superpowers:subagent-driven-development`（建議）或 `superpowers:executing-plans` 逐 Task 執行本計畫。步驟使用 checkbox（`- [ ]`）語法追蹤進度；每完成一個 Step 就把它改為 `- [x]`。
+> **給執行者：** 必要子技能：使用 `superpowers:subagent-driven-development`（建議）或 `superpowers:executing-plans` 逐 Task 執行本計畫。步驟使用 checkbox（`- [x]`）語法追蹤進度；每完成一個 Step 就把它改為 `- [x]`。
 
 **Goal：** 逐頁模式下，單元縱向可捲動（Fit Width、真實比例、放大後、長寬比極高的頁）時，熱區與音量鍵能「先頁內逐屏步進、到底才換頁；往回對稱並落在上一單元底端」；搜尋結果帶高亮矩形時視窗自動帶到看得到高亮的位置；頁內垂直拖曳會回報閱讀活動，長頁上只用拖曳閱讀時閱讀時間不會凍結。
 
@@ -75,7 +75,7 @@
 - Consumes：無。
 - Produces：分支 `epic-56/issue-5-long-page-step`，後續 Task 都在這個 worktree 的 `app/` 下執行。
 
-- [ ] **Step 1：在 `main` 提交計畫**
+- [x] **Step 1：在 `main` 提交計畫**
 
 先把 `issues.md` Issue 5 的 `**Status:** ready-for-agent` 改為 `**Status:** in-progress`；`docs/epics.md` 第 57 列「Issue 5、6 待寫計畫」改為「Issue 5 開發中；Issue 6 待寫計畫」。然後（在儲存庫根目錄）：
 
@@ -86,7 +86,7 @@ git commit -m "docs(epic-56): Issue 5 實作計畫
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 2：建立 worktree 並安裝依賴**
+- [x] **Step 2：建立 worktree 並安裝依賴**
 
 ```bash
 git worktree add .worktrees/epic-56-issue-5-long-page-step -b epic-56/issue-5-long-page-step
@@ -100,7 +100,7 @@ flutter pub get
 
 預期：`Got dependencies!`。
 
-- [ ] **Step 3：確認基準測試通過並記下數字**
+- [x] **Step 3：確認基準測試通過並記下數字**
 
 ```bash
 flutter test test/reader/pdf_paginated_rules_test.dart test/reader/pdf_reader_view_paginated_test.dart test/screens/reader_screen_stats_activity_test.dart
@@ -162,7 +162,7 @@ class PagedDragActivityAccumulator {
 PagedViewport clampPagedViewport({..., bool startAtBottom = false});
 ```
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `pdf_paginated_rules_test.dart` 的 `main()` 結尾（最後一個 `group` 之後、`}` 之前）加入：
 
@@ -432,12 +432,12 @@ PagedViewport clampPagedViewport({..., bool startAtBottom = false});
   });
 ```
 
-- [ ] **Step 2：確認失敗**
+- [x] **Step 2：確認失敗**
 
 Run：`flutter test test/reader/pdf_paginated_rules_test.dart`
 Expected：編譯失敗，`Method not found: 'pagedRelativeStep'`（以及 `PagedStep`、`pagedTopForHighlight`、`PagedDragActivityAccumulator`、`No named parameter with the name 'startAtBottom'`）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `app/lib/reader/pdf_paginated_rules.dart`：
 
@@ -604,12 +604,12 @@ class PagedDragActivityAccumulator {
 }
 ```
 
-- [ ] **Step 4：確認通過**
+- [x] **Step 4：確認通過**
 
 Run：`flutter test test/reader/pdf_paginated_rules_test.dart`
 Expected：全數 PASS（原 45 例＋本 Task 新增 29 例＝74）。若 `pagedTopForHighlight` 的數字與預期差微小浮點誤差，只放寬 `closeTo` 容許值，**不要**改預期數字。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/reader/pdf_paginated_rules.dart app/test/reader/pdf_paginated_rules_test.dart
@@ -826,7 +826,7 @@ Expected：本 Task 新增案例中，長頁相關的 6 例失敗（目前相對
   }
 ```
 
-- [ ] **Step 4：確認通過**
+- [x] **Step 4：確認通過**
 
 Run：`flutter test test/reader/pdf_reader_view_paginated_test.dart`
 Expected：全數 PASS（原 27 例＋本 Task 7 例＝34）。
@@ -1150,7 +1150,7 @@ Expected：編譯失敗，`The method 'jumpToPageAtRect' isn't defined for the t
 
 （`ReaderJumpTarget.applyTo` 不需改：`shouldNavigate: true` 先 `jumpToPage`，接著 `showTemporaryHighlight` 已會自動定位；開書當下 `shouldNavigate: false` 時單元已由 `initialPageIndex` 定位，同樣由 `showTemporaryHighlight` 定位。）
 
-- [ ] **Step 4：確認通過**
+- [x] **Step 4：確認通過**
 
 Run：`flutter test test/reader/pdf_reader_view_paginated_test.dart`
 Expected：全數 PASS（Task 2 後 34 例＋本 Task 9 例＝43）。
@@ -1358,7 +1358,7 @@ Expected：編譯失敗，`No named parameter with the name 'onReadingActivity'`
           onReadingActivity: () => _session.recordActivity(),
 ```
 
-- [ ] **Step 4：確認通過**
+- [x] **Step 4：確認通過**
 
 Run：`flutter test test/reader/pdf_reader_view_paginated_test.dart test/screens/reader_screen_stats_activity_test.dart`
 Expected：全數 PASS（widget 43＋7＝50；統計測試新增 1）。

@@ -251,6 +251,7 @@ class PagedViewport {
 /// - 某維度溢出：[candidateTopLeft] 夾在「單元起點～單元終點 − 可視長度」；
 ///   [candidateTopLeft] 為 null（跳轉）時取起點——縱向頂端、橫向依 [direction]
 ///   的閱讀起始側（左到右靠左、右到左靠右）。
+/// [startAtBottom] 為 true 且沒有候選位置時，縱向落在單元底端（規則 4：相對步進往回換到上一個單元）；橫向起始側不受影響。
 PagedViewport clampPagedViewport({
   required Rect unitContent,
   required Size viewSize,
@@ -259,6 +260,7 @@ PagedViewport clampPagedViewport({
   required double zoom,
   Offset? candidateTopLeft,
   required DualPageDirection direction,
+  bool startAtBottom = false,
 }) {
   final z = math.min(math.max(zoom, baseZoom), maxZoom);
   final x = _pagedAxis(
@@ -273,7 +275,7 @@ PagedViewport clampPagedViewport({
     end: unitContent.bottom,
     visible: viewSize.height / z,
     candidate: candidateTopLeft?.dy,
-    startAtEnd: false,
+    startAtEnd: startAtBottom,
   );
   return PagedViewport(zoom: z, topLeft: Offset(x, y));
 }
@@ -307,4 +309,146 @@ int? pagedAdjacentUnit({
   final target = forward ? currentUnit + 1 : currentUnit - 1;
   if (target < 0 || target >= unitCount) return null;
   return target;
+}
+
+// ── epic-56 Issue 5：長頁步進、帶高亮跳轉、閱讀活動 ──
+
+/// 規則 5：相對步進時與上一個畫面保留的重疊量，佔可視高度的比例。
+/// 初始值，待真機校準。
+const double kPagedStepOverlapFraction = 0.10;
+
+/// 判定「已到頁底／已在頁頂」的容許誤差（邏輯像素）。spec 明定頁底 1 像素；
+/// 頁頂以相同值對稱處理，避免次像素偏移造成多出一次捲不到 1 像素的空按。
+const double kPagedEdgeTolerance = 1.0;
+
+/// 規則 9：頁內垂直拖曳每累積這麼多邏輯像素回報一次閱讀活動。初始值，待真機校準。
+const double kPagedActivityDragThreshold = 20.0;
+
+enum PagedStepKind { scroll, changeUnit, none }
+
+/// [pagedRelativeStep] 的結果。
+class PagedStep {
+  /// 頁內捲動，[offset] 為新的頁內偏移（螢幕像素）。
+  const PagedStep.scroll(double offset)
+      : kind = PagedStepKind.scroll,
+        scrollOffset = offset,
+        landAtBottom = false;
+
+  /// 換到相鄰單元；[landAtBottom] 為 true 時落在該單元底端，否則落在頂端。
+  const PagedStep.changeUnit({required this.landAtBottom})
+      : kind = PagedStepKind.changeUnit,
+        scrollOffset = 0;
+
+  /// 無動作（第一／最後單元再往外）。
+  const PagedStep.none()
+      : kind = PagedStepKind.none,
+        scrollOffset = 0,
+        landAtBottom = false;
+
+  final PagedStepKind kind;
+
+  /// 僅 [PagedStepKind.scroll] 有意義。
+  final double scrollOffset;
+
+  /// 僅 [PagedStepKind.changeUnit] 有意義。
+  final bool landAtBottom;
+}
+
+/// 規則 3、4、5：逐頁下熱區與音量鍵的相對步進。
+///
+/// [scrollOffset] 與 [maxScroll] 皆為螢幕像素（縮放後）：[scrollOffset] 是目前可視
+/// 頂端相對單元頂端的位移（單元置中時可為負），[maxScroll] 是該單元在目前縮放下的
+/// 最大縱向捲動量（沒有溢出為 0）。步距＝可視高度減去 [kPagedStepOverlapFraction]
+/// 的重疊量。
+///
+/// - 下一頁：還能往下捲（最大捲動量大於容許誤差，且偏移離頁底超過容許誤差）就頁內
+///   捲動，上限為最大捲動量；否則換到下一個單元頂端；沒有下一個單元則無動作。
+/// - 上一頁：偏移大於容許誤差就頁內往上捲，下限 0；否則換到上一個單元並落在底端；
+///   沒有上一個單元則無動作。
+PagedStep pagedRelativeStep({
+  required bool forward,
+  required double scrollOffset,
+  required double maxScroll,
+  required double viewHeight,
+  required bool hasAdjacentUnit,
+}) {
+  final distance = viewHeight - viewHeight * kPagedStepOverlapFraction;
+  if (forward) {
+    if (maxScroll > kPagedEdgeTolerance &&
+        scrollOffset < maxScroll - kPagedEdgeTolerance) {
+      return PagedStep.scroll(math.min(scrollOffset + distance, maxScroll));
+    }
+    return hasAdjacentUnit
+        ? const PagedStep.changeUnit(landAtBottom: false)
+        : const PagedStep.none();
+  }
+  if (scrollOffset > kPagedEdgeTolerance) {
+    return PagedStep.scroll(math.max(scrollOffset - distance, 0.0));
+  }
+  return hasAdjacentUnit
+      ? const PagedStep.changeUnit(landAtBottom: true)
+      : const PagedStep.none();
+}
+
+/// 規則 7：帶高亮矩形的跳轉。回傳「可視矩形頂端」（文件座標），讓 [highlight]
+/// 看得到。呼叫時視窗應已在該單元、縮放為 [zoom]。
+///
+/// - 單元沒有縱向溢出：置中（與 [clampPagedViewport] 一致）。
+/// - 高亮在頂端對齊的視窗內完整可見：維持頂端。
+/// - 高亮比可視高度還高：上緣貼齊可視上緣。
+/// - 其餘：高亮垂直置中。
+/// 結果夾在「單元頂端～單元底端 − 可視高度」之內。
+double pagedTopForHighlight({
+  required Rect unitContent,
+  required Rect highlight,
+  required double viewHeight,
+  required double zoom,
+}) {
+  final visibleHeight = viewHeight / zoom;
+  final extent = unitContent.height;
+  if (extent <= visibleHeight + 1e-6) {
+    return unitContent.top + extent / 2 - visibleHeight / 2;
+  }
+  final minTop = unitContent.top;
+  final maxTop = unitContent.bottom - visibleHeight;
+  double top;
+  // 1e-4 容許浮點誤差：高亮由百分比乘頁面尺寸換算、可視高度由除以縮放換算，貼著視窗
+  // 底緣時尾數可能差 1e-12；沒有容許值會把「其實完整可見」的高亮誤判成不可見而置中。
+  if (highlight.top >= minTop - 1e-4 &&
+      highlight.bottom <= minTop + visibleHeight + 1e-4) {
+    top = minTop;
+  } else if (highlight.height > visibleHeight) {
+    top = highlight.top;
+  } else {
+    top = highlight.center.dy - visibleHeight / 2;
+  }
+  return math.min(math.max(top, minTop), maxTop);
+}
+
+/// 規則 9：頁內垂直拖曳的閱讀活動累積器。累積絕對位移，每達 [threshold] 回報一次
+/// （[add] 回傳 true，餘數保留）；換單元或呼叫 [reset]（換手勢）後歸零。
+class PagedDragActivityAccumulator {
+  PagedDragActivityAccumulator({this.threshold = kPagedActivityDragThreshold})
+      : assert(threshold > 0, 'threshold 必須為正數');
+
+  final double threshold;
+  double _accumulated = 0;
+  int? _unit;
+
+  bool add(double dy, {required int unit}) {
+    if (!dy.isFinite) return false;
+    if (_unit != unit) {
+      _accumulated = 0;
+      _unit = unit;
+    }
+    _accumulated += dy.abs();
+    if (_accumulated < threshold) return false;
+    _accumulated = _accumulated % threshold;
+    return true;
+  }
+
+  void reset() {
+    _accumulated = 0;
+    _unit = null;
+  }
 }
