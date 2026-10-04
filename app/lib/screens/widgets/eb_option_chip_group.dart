@@ -6,8 +6,8 @@ import 'reader_option_tile.dart';
 /// spec.md §2）。[onTap] 非 null 時代表這是「動作型」項目（例如 PDF 裁切
 /// 分頁的「手動選區」：點擊只觸發外部動作、不代表選中一個可選值）——
 /// 點擊時只呼叫 [onTap]，不呼叫 [EBOptionChipGroup.onSelected]，且該
-/// chip 恆為未選中樣式（透過 [ReaderOptionTile.forceUnselected]，不參與
-/// groupValue 比對）。
+/// chip 預設為未選中樣式（透過 [ReaderOptionTile.forceUnselected]，不參與
+/// groupValue 比對；例外見 [highlightWhenCurrent]）。
 ///
 /// [highlightWhenCurrent] 為 true 時，動作型項目在 `value == groupValue`
 /// 時改顯示選中樣式（epic-60：PDF 裁切分頁已是「手動」模式時，要讓使用者

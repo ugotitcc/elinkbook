@@ -1115,6 +1115,72 @@ void main() {
     expect(colorOf('auto'), colorScheme.surface);
   });
 
+  testWidgets('目前為手動裁切時點「不裁」：反白從「手動」移到「不裁」，'
+      '且 onChanged 帶入 pdfCropMode=none、保留原 pdfCropRect（epic-60 審查 M-2）',
+      (tester) async {
+    BookReaderPrefs? notified;
+    const rect = PdfCropRect(left: 0.1, top: 0.1, right: 0.9, bottom: 0.9);
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(
+        pdfCropMode: PdfCropMode.manual,
+        pdfCropRect: rect,
+      ),
+      (prefs) => notified = prefs,
+    );
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+
+    final primary = Theme.of(
+      tester.element(find.byKey(const Key('pdf_settings_crop_mode_none'))),
+    ).colorScheme.primary;
+    Color? colorOf(String suffix) => (tester
+            .widget<Container>(find.byKey(Key('pdf_settings_crop_mode_$suffix')))
+            .decoration as BoxDecoration)
+        .color;
+
+    expect(colorOf('manual'), primary, reason: '起始：手動反白');
+
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_none')));
+    await tester.pumpAndSettle();
+
+    expect(colorOf('none'), primary, reason: '反白移到「不裁」');
+    expect(colorOf('manual'), isNot(primary), reason: '「手動」不再反白');
+    expect(notified?.pdfCropMode, PdfCropMode.none);
+    expect(notified?.pdfCropRect, rect, reason: '裁切範圍保留，之後切回手動不必重畫');
+  });
+
+  testWidgets('E-Ink 主題下，目前為手動裁切時「手動」呈現黑底、其他兩顆白底'
+      '（epic-60 審查 M-3）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: buildEinkThemeData(),
+        home: Scaffold(
+          body: PdfSettingsSheet(
+            prefs: const BookReaderPrefs(pdfCropMode: PdfCropMode.manual),
+            onChanged: (_) {},
+            onRequestManualCrop: () {},
+            isEinkMode: true,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+
+    Color? colorOf(String suffix) => (tester
+            .widget<Container>(find.byKey(Key('pdf_settings_crop_mode_$suffix')))
+            .decoration as BoxDecoration)
+        .color;
+
+    expect(colorOf('manual'), Colors.black);
+    expect(colorOf('none'), Colors.white);
+    expect(colorOf('auto'), Colors.white);
+  });
+
   testWidgets('目前已是手動裁切時，再點「手動」仍觸發 onRequestManualCrop（可重新框選），'
       '且不呼叫 onChanged（epic-60）', (tester) async {
     var requestCount = 0;

@@ -60,3 +60,12 @@
 
 - 開「版面設定 → 裁切」：「手動」反白、「不裁」「智慧」未反白（修復前為三顆全不反白）。
 - 再點「手動」→ 進入框選（有提示、✓ 灰色）；按 ✕ 取消 → 重開裁切分頁，「手動」仍反白（按鈕底色取樣：不裁 255／智慧 255／手動 0）。
+
+**2026-10-04 程式審查修訂**（`reviews/review-code.md`：0 Critical／0 Important／4 Minor，結論可合併）
+
+- **M-1 成立，已修**：`pdf_settings_sheet.dart` 區塊註解「天生強制」改為「預設強制」並註明 epic-60 例外；`EBOptionChipItem` class doc「恆為未選中」改為「預設為未選中（例外見 `highlightWhenCurrent`）」。
+- **M-2 成立，已補**：新增「manual 時點『不裁』→ 反白移轉、`onChanged` 帶 `pdfCropMode=none`、`pdfCropRect` 保留」案例。
+- **M-3 成立，已補**：新增 E-Ink 主題下「手動」黑底、其餘兩顆白底案例。
+- **M-4 不改程式，只記錄**：反白正確的前提是「點『手動』一定先 `Navigator.pop` 關閉面板」（`reader_screen.dart:848-851`），所以 `_cropMode` 只在 `initState` 讀取不會與畫面不同步。**日後若面板改成點擊後不關閉，反白會失準**，屆時需改為在 `didUpdateWidget` 同步 `_cropMode`。
+- 變異檢查：把 `highlightWhenCurrent: true` 改為 false → 3 個案例失敗（情境二、M-2、M-3）；還原後全過。
+- 驗證：`flutter analyze` 乾淨；`eb_option_chip_group_test`＋`pdf_settings_sheet_test`＋`reader_screen_test` 共 360 項通過；l10n 雙檢查 PASS。全套 `flutter test` 於審查前已跑（3639 通過、1 略過、0 失敗）；審查修訂只動註解與測試。
