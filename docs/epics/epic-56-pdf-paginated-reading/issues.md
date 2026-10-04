@@ -134,7 +134,7 @@ Issue 1、2、3 互相獨立，可平行；Issue 4 依賴前三者；Issue 5、6
 
 ## Issue 6：左右滑動翻頁與框選衝突處理
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 **依賴：** Issue 4。
 
