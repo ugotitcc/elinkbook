@@ -37,6 +37,7 @@ import 'reader/reading_position_repository.dart';
 import 'reader/system_tts_provider.dart';
 import 'reader/tts_audio_focus_source.dart';
 import 'reader/tts_audio_handler.dart';
+import 'reader/tts_audio_handler_startup.dart';
 import 'reader/tts_provider.dart';
 import 'reader/webview_font_support.dart';
 import 'remote/opds_client.dart';
@@ -206,7 +207,8 @@ Future<void> main() async {
   );
   final ttsAudioFocusSource = AudioSessionFocusSource(ttsAudioSession);
   // AudioService.init() 全程式生命週期只能呼叫一次（見
-  // plans/plan-issue-7.md Global Constraints），建構出的單一 handler
+  // plans/plan-issue-7.md Global Constraints），失敗後也不可重試
+  // （見 initTtsAudioHandlerSafely 說明），建構出的單一 handler
   // 由 ReaderScreen 於每次開書時呼叫 attachController()／
   // detachController() 綁定/解綁目前的 TtsController。
   // 通知頻道名稱（顯示於系統的通知設定）：此時尚無 BuildContext，改用啟動階段解析的
@@ -216,16 +218,21 @@ Future<void> main() async {
     localeOverride: initialLocaleOverride,
     deviceLocales: WidgetsBinding.instance.platformDispatcher.locales,
   );
-  final ttsAudioHandler = await AudioService.init(
-    builder: () => TtsAudioHandler(),
-    config: AudioServiceConfig(
-      androidNotificationChannelId: 'cc.ugotit.elinkbook.tts_channel',
-      androidNotificationChannelName: startupL10n.ttsNotificationChannelName,
-      // Android 12 起背景重啟前景服務有限制（見 audio_service 官方
-      // README「Android setup」段落說明），保持 false（暫停時服務維持
-      // 前景狀態，不釋放通知），避免使用者暫停朗讀後、App 進一步被系統
-      // 節流時無法重新啟動前景服務。
-      androidStopForegroundOnPause: false,
+  // epic-61：service 綁定逾時時 AudioService.init 會丟出例外；以
+  // initTtsAudioHandlerSafely 接住並降級為 null（朗讀本次不可用），
+  // 避免 main() 中斷、runApp 未執行而整個 App 黑屏。
+  final ttsAudioHandler = await initTtsAudioHandlerSafely(
+    () => AudioService.init(
+      builder: () => TtsAudioHandler(),
+      config: AudioServiceConfig(
+        androidNotificationChannelId: 'cc.ugotit.elinkbook.tts_channel',
+        androidNotificationChannelName: startupL10n.ttsNotificationChannelName,
+        // Android 12 起背景重啟前景服務有限制（見 audio_service 官方
+        // README「Android setup」段落說明），保持 false（暫停時服務維持
+        // 前景狀態，不釋放通知），避免使用者暫停朗讀後、App 進一步被系統
+        // 節流時無法重新啟動前景服務。
+        androidStopForegroundOnPause: false,
+      ),
     ),
   );
   final syncAccountRepository = SyncAccountRepository();
