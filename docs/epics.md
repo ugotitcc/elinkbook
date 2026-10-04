@@ -68,7 +68,7 @@
 | 58 | `epic-57-layout-override-save-drops-fields` （缺陷）書架「版面覆寫」儲存時整列重建漏帶 `textConversionOverride`，會清掉該書的簡繁轉換覆寫 | 🟡 開發中 (Active) | 已合併（PR #315），待歸檔 |
 | 59 | `epic-58-pdf-crop-drag-select` PDF 手動裁切改為手指拖拉直接框選（取代四角圓點） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 60 | `epic-59-pdf-overlay-recompute-storm` （缺陷）PDF 開啟手動裁切／加粗後翻頁產生覆蓋圖計算風暴，頁面長時間全白 | 🟡 開發中 (Active) | 已合併（PR #321），平板與電子紙真機驗證完成，待歸檔 |
-| 61 | `epic-60-crop-mode-lost-after-cancel` （缺陷）PDF 手動裁切按 ✕ 取消後，版面設定「裁切」分頁的模式按鈕全部沒有反白 | 🟡 開發中 (Active) | 已決定採 A（手動模式時「手動」反白）並實作，電子紙驗證與程式審查完成，待 PR |
+| 61 | `epic-60-crop-mode-lost-after-cancel` （缺陷）PDF 手動裁切按 ✕ 取消後，版面設定「裁切」分頁的模式按鈕全部沒有反白 | 🟡 開發中 (Active) | 已決定採 A（手動模式時「手動」反白）並實作，已合併（PR #322），電子紙驗證與程式審查完成，待歸檔 |
 | 62 | `epic-61-startup-black-screen` （缺陷）安裝新版後第一次啟動黑屏：`main()` 的 `AudioService.init` 例外未接住，`runApp` 未執行 | 🟡 開發中 (Active) | 已登錄，根因尚未查 |
 
 **狀態燈號定義**：

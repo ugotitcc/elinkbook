@@ -69,3 +69,7 @@
 - **M-4 不改程式，只記錄**：反白正確的前提是「點『手動』一定先 `Navigator.pop` 關閉面板」（`reader_screen.dart:848-851`），所以 `_cropMode` 只在 `initState` 讀取不會與畫面不同步。**日後若面板改成點擊後不關閉，反白會失準**，屆時需改為在 `didUpdateWidget` 同步 `_cropMode`。
 - 變異檢查：把 `highlightWhenCurrent: true` 改為 false → 3 個案例失敗（情境二、M-2、M-3）；還原後全過。
 - 驗證：`flutter analyze` 乾淨；`eb_option_chip_group_test`＋`pdf_settings_sheet_test`＋`reader_screen_test` 共 360 項通過；l10n 雙檢查 PASS。全套 `flutter test` 於審查前已跑（3639 通過、1 略過、0 失敗）；審查修訂只動註解與測試。
+
+**2026-10-04 PR 合併**
+
+- PR #322（`epic-60/crop-manual-highlight` → `main`）已合併，合併 commit `d4cc8e15`。實作、電子紙真機驗證與程式審查全數完成，待歸檔。
