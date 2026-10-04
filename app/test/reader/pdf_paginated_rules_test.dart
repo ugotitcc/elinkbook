@@ -787,4 +787,128 @@ void main() {
       expect(a.add(19, unit: 0), isFalse);
     });
   });
+
+  group('pagedHasHorizontalOverflow：橫向是否溢出（規則 8 前提）', () {
+    test('Fit Width：縮放後寬度恰等於可視寬度 → 沒有溢出（浮點誤差不算）', () {
+      expect(
+        pagedHasHorizontalOverflow(
+          contentSize: const Size(628, 808),
+          scale: 400 / 628,
+          viewSize: const Size(400, 200),
+        ),
+        isFalse,
+      );
+    });
+
+    test('真實比例：內容 628 寬放進 400 寬 → 有溢出', () {
+      expect(
+        pagedHasHorizontalOverflow(
+          contentSize: const Size(628, 808),
+          scale: 1.0,
+          viewSize: const Size(400, 200),
+        ),
+        isTrue,
+      );
+    });
+
+    test('Page-fit：內容比可視範圍窄 → 沒有溢出', () {
+      expect(
+        pagedHasHorizontalOverflow(
+          contentSize: const Size(628, 808),
+          scale: 0.2475,
+          viewSize: const Size(400, 200),
+        ),
+        isFalse,
+      );
+    });
+
+    test('溢出剛好 1 像素（401 放進 400）視為沒有；1.5 像素才算有', () {
+      expect(
+        pagedHasHorizontalOverflow(
+          contentSize: const Size(401, 100),
+          scale: 1.0,
+          viewSize: const Size(400, 200),
+        ),
+        isFalse,
+      );
+      expect(
+        pagedHasHorizontalOverflow(
+          contentSize: const Size(401.5, 100),
+          scale: 1.0,
+          viewSize: const Size(400, 200),
+        ),
+        isTrue,
+      );
+    });
+  });
+
+  group('pagedSwipeIntent：滑動判定（規則 8）', () {
+    PagedSwipeIntent intent(
+      Offset delta, {
+      Duration duration = const Duration(milliseconds: 200),
+      bool overflow = false,
+      bool selecting = false,
+      DualPageDirection direction = DualPageDirection.ltr,
+    }) =>
+        pagedSwipeIntent(
+          delta: delta,
+          duration: duration,
+          hasHorizontalOverflow: overflow,
+          selectionDragActive: selecting,
+          direction: direction,
+        );
+
+    test('距離門檻：56 剛好成立、55.9 不成立', () {
+      expect(intent(const Offset(-56, 0)), PagedSwipeIntent.next);
+      expect(intent(const Offset(-55.9, 0)), PagedSwipeIntent.none);
+    });
+
+    test('垂直 2 倍門檻：dx 恰為 dy 的 2 倍成立，再多一點垂直就不成立；dy 正負無關', () {
+      expect(intent(const Offset(-100, 50)), PagedSwipeIntent.next);
+      expect(intent(const Offset(-100, -50)), PagedSwipeIntent.next);
+      expect(intent(const Offset(-100, 50.1)), PagedSwipeIntent.none);
+    });
+
+    test('斜向（接近 45 度）與垂直為主：不成立', () {
+      expect(intent(const Offset(-80, 80)), PagedSwipeIntent.none);
+      expect(intent(const Offset(-10, 200)), PagedSwipeIntent.none);
+    });
+
+    test('時長門檻：500 毫秒成立、501 毫秒不成立、0 毫秒成立、負值不成立', () {
+      expect(intent(const Offset(-100, 0), duration: const Duration(milliseconds: 500)),
+          PagedSwipeIntent.next);
+      expect(intent(const Offset(-100, 0), duration: const Duration(milliseconds: 501)),
+          PagedSwipeIntent.none);
+      expect(intent(const Offset(-100, 0), duration: Duration.zero),
+          PagedSwipeIntent.next);
+      expect(intent(const Offset(-100, 0), duration: const Duration(milliseconds: -1)),
+          PagedSwipeIntent.none);
+    });
+
+    test('有橫向溢出：不成立（交給一般平移）', () {
+      expect(intent(const Offset(-100, 0), overflow: true), PagedSwipeIntent.none);
+    });
+
+    test('長按拖曳框選進行中：不成立', () {
+      expect(intent(const Offset(-100, 0), selecting: true), PagedSwipeIntent.none);
+    });
+
+    test('左到右：向左滑為下一個、向右滑為上一個', () {
+      expect(intent(const Offset(-100, 0)), PagedSwipeIntent.next);
+      expect(intent(const Offset(100, 0)), PagedSwipeIntent.previous);
+    });
+
+    test('右到左：方向鏡像，向右滑為下一個、向左滑為上一個', () {
+      expect(intent(const Offset(100, 0), direction: DualPageDirection.rtl),
+          PagedSwipeIntent.next);
+      expect(intent(const Offset(-100, 0), direction: DualPageDirection.rtl),
+          PagedSwipeIntent.previous);
+    });
+
+    test('沒有位移或位移非有限值：不成立', () {
+      expect(intent(Offset.zero), PagedSwipeIntent.none);
+      expect(intent(const Offset(double.nan, 0)), PagedSwipeIntent.none);
+      expect(intent(const Offset(double.infinity, 0)), PagedSwipeIntent.none);
+    });
+  });
 }

@@ -452,3 +452,54 @@ class PagedDragActivityAccumulator {
     _unit = null;
   }
 }
+
+// ── epic-56 Issue 6：左右滑動翻頁（規則 8）──
+
+/// 規則 8：滑動翻頁的最小水平位移（邏輯像素）。初始值，待真機校準。
+const double kPagedSwipeMinDistance = 56.0;
+
+/// 規則 8：水平位移須至少為垂直位移的幾倍。初始值，待真機校準。
+const double kPagedSwipeDominanceRatio = 2.0;
+
+/// 規則 8：手勢時長上限（毫秒）。初始值，待真機校準。
+const int kPagedSwipeMaxDurationMs = 500;
+
+/// 一次手勢的判定結果：不是滑動、換到下一個單元、換到上一個單元。
+enum PagedSwipeIntent { none, next, previous }
+
+/// 縮放後單元內容是否比可視寬度寬（橫向可平移）。Fit Width 的縮放後寬度理論上等於
+/// 可視寬度，浮點誤差不能算溢出，所以沿用 [kPagedEdgeTolerance]（1 像素）當容許值。
+bool pagedHasHorizontalOverflow({
+  required Size contentSize,
+  required double scale,
+  required Size viewSize,
+}) {
+  return contentSize.width * scale - viewSize.width > kPagedEdgeTolerance;
+}
+
+/// 規則 8：一次手勢是否為滑動翻頁。五個條件同時成立才回傳 [PagedSwipeIntent.next]
+/// 或 [PagedSwipeIntent.previous]：沒有橫向溢出、沒有框選進行中、時長不超過
+/// [kPagedSwipeMaxDurationMs]、水平位移至少 [kPagedSwipeMinDistance]、水平位移至少為
+/// 垂直位移的 [kPagedSwipeDominanceRatio] 倍。
+///
+/// 方向：左到右（[DualPageDirection.ltr]）向左滑為下一個；右到左（rtl）鏡像。
+PagedSwipeIntent pagedSwipeIntent({
+  required Offset delta,
+  required Duration duration,
+  required bool hasHorizontalOverflow,
+  required bool selectionDragActive,
+  required DualPageDirection direction,
+}) {
+  if (hasHorizontalOverflow || selectionDragActive) return PagedSwipeIntent.none;
+  if (duration.isNegative ||
+      duration > const Duration(milliseconds: kPagedSwipeMaxDurationMs)) {
+    return PagedSwipeIntent.none;
+  }
+  if (!delta.dx.isFinite || !delta.dy.isFinite) return PagedSwipeIntent.none;
+  final dx = delta.dx.abs();
+  final dy = delta.dy.abs();
+  if (dx < kPagedSwipeMinDistance) return PagedSwipeIntent.none;
+  if (dx < dy * kPagedSwipeDominanceRatio) return PagedSwipeIntent.none;
+  final towardNext = direction == DualPageDirection.rtl ? delta.dx > 0 : delta.dx < 0;
+  return towardNext ? PagedSwipeIntent.next : PagedSwipeIntent.previous;
+}
