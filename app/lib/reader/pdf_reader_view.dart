@@ -1080,6 +1080,22 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     }
   }
 
+  /// 目前縮放下，第 [unit] 個單元縱向是否還能捲動（內容高度大於視窗高度）。
+  bool _unitCanScrollVertically(int unit) {
+    final paged = _paged;
+    final viewSize = _viewSize;
+    if (paged == null || !_controller.isReady) return false;
+    if (!viewSize.isFinite || viewSize.width <= 0 || viewSize.height <= 0) {
+      return false;
+    }
+    return maxVerticalScroll(
+          contentSize: paged.unitRects[unit].inflate(_pdfPageMargin).size,
+          scale: _controller.currentZoom,
+          viewSize: viewSize,
+        ) >
+        0;
+  }
+
   /// 規則 7：逐頁下確保 [rect]（第 [pageIndex] 頁的百分比座標）在視窗內——頂端已可見則維持
   /// 頂端，否則垂直置中並夾範圍，高亮比可視高度高則上緣貼齊。目標頁不在目前單元時先換到
   /// 該單元。非逐頁、版面尚未就緒、頁碼超界、或（裁切下）高亮完全在裁切範圍外時不動作。
@@ -1588,7 +1604,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         Listener(
           onPointerDown: (_) {
             _activePointerCount++;
-            if (_activePointerCount == 1) _dragActivity.reset(); // 新手勢：歸零
+            _dragActivity.reset(); // 新手勢或手指數改變：歸零（M-4）
             if (_activePointerCount >= 2) _cancelSelectionDrag();
           },
           onPointerMove: (event) {
@@ -1598,12 +1614,18 @@ class _PdfReaderViewState extends State<PdfReaderView> {
             if (_activePointerCount != 1 || _selectionDrag != null) return;
             final unit = _currentPagedUnit();
             if (unit == null) return;
+            // 單元沒有縱向溢出（例如 Page-fit）時視窗不會動，不算閱讀活動（M-3）。
+            if (!_unitCanScrollVertically(unit)) return;
             if (_dragActivity.add(event.delta.dy, unit: unit)) report();
           },
-          onPointerUp: (_) =>
-              _activePointerCount = (_activePointerCount - 1).clamp(0, 999),
-          onPointerCancel: (_) =>
-              _activePointerCount = (_activePointerCount - 1).clamp(0, 999),
+          onPointerUp: (_) {
+            _activePointerCount = (_activePointerCount - 1).clamp(0, 999);
+            _dragActivity.reset(); // 手指數改變：歸零（M-4）
+          },
+          onPointerCancel: (_) {
+            _activePointerCount = (_activePointerCount - 1).clamp(0, 999);
+            _dragActivity.reset();
+          },
           child: LayoutBuilder(
             builder: (context, constraints) {
               _viewSize = constraints.biggest;

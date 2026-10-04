@@ -45,6 +45,9 @@ class _Harness {
   final pages = <int>[];
   int activity = 0;
 
+  /// 在 onPageRendered 當下執行的動作（模擬 ReaderScreen 開書後立刻帶高亮）。
+  VoidCallback? onRenderedHook;
+
   Widget app({
     String file = 'test/fixtures/sample_multi_page.pdf',
     PdfPageTurnMode turnMode = PdfPageTurnMode.paginated,
@@ -67,7 +70,10 @@ class _Harness {
         home: PdfReaderView(
           key: key,
           filePath: file,
-          onPageRendered: () => rendered++,
+          onPageRendered: () {
+            rendered++;
+            onRenderedHook?.call();
+          },
           onError: (_) {},
           onPageChanged: (PdfPageInfo info) => pages.add(info.pageIndex),
           onReadingActivity: reportActivity ? () => activity++ : null,
@@ -682,6 +688,19 @@ void main() {
       expect(find.byKey(const Key('pdf_reader_jump_highlight_1')), findsOneWidget);
     });
 
+    testWidgets('開書當下（onPageRendered 內）呼叫 showTemporaryHighlight：視窗仍帶到高亮（M-2）',
+        (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      const rect = PercentRect(left: 0.1, top: 0.9, right: 0.5, bottom: 0.95);
+      h.onRenderedHook =
+          () => PdfReaderView.showTemporaryHighlight(h.key, 0, rect);
+      final c = await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+
+      expect(_visiblePages(c), [1]);
+      expectVisible(c, docRect(c, 0, rect));
+    });
+
     testWidgets('showTemporaryHighlight 的目標頁不是目前單元：先換到該單元再定位', (tester) async {
       _setSurface(tester, const Size(400, 200));
       final h = _Harness();
@@ -837,6 +856,29 @@ void main() {
       await g2.moveBy(const Offset(0, -60));
       await g1.up();
       await g2.up();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(h.activity, 0);
+    });
+
+    testWidgets('Page-fit 單元沒有縱向溢出（視窗不會動）：垂直拖曳不回報（M-3）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      await h.open(tester, h.app(fit: PdfFitMode.pageFit));
+      await drag(tester, [const Offset(0, -60)]);
+      expect(h.activity, 0);
+    });
+
+    testWidgets('兩指縮放後抬起一指：縮放前的餘數不接續累積（M-4）', (tester) async {
+      _setSurface(tester, const Size(400, 200));
+      final h = _Harness();
+      await h.open(tester, h.app(fit: PdfFitMode.fitWidth));
+      final center = tester.getCenter(find.byType(PdfViewer));
+      final g1 = await tester.startGesture(center);
+      await g1.moveBy(const Offset(0, -12)); // 累積 12，未達 20
+      final g2 = await tester.startGesture(center + const Offset(40, 0));
+      await g2.up(); // 回到單指
+      await g1.moveBy(const Offset(0, -12)); // 若餘數保留會累積成 24 而回報
+      await g1.up();
       await tester.pump(const Duration(milliseconds: 400));
       expect(h.activity, 0);
     });
