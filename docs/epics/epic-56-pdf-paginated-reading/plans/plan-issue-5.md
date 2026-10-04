@@ -1388,7 +1388,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：Task 1～4 全部。
 - Produces：無（最後一個 Task）。
 
-- [ ] **Step 1：確認朗讀沒有 PDF 路徑、搜尋跳轉都已涵蓋**
+- [x] **Step 1：確認朗讀沒有 PDF 路徑、搜尋跳轉都已涵蓋**
 
 以下指令用 Git Bash 執行（PowerShell 沒有 `grep`；等價指令為 `Select-String -Path lib/screens/reader_screen.dart -Pattern "<模式>"`）：
 
@@ -1399,7 +1399,7 @@ grep -n "PdfReaderView.jumpToPage\|PdfReaderView.jumpToPageAtRect" lib/screens/r
 
 Expected：第一個找到 `onTtsTap: null` 那行（PDF 沒有朗讀，spec 的朗讀規則本 Issue 無需程式碼）；第二個中，搜尋結果相關的兩處（`_runPdfSearch`、`_goToPdfSearchMatch`）為 `jumpToPageAtRect`，其餘（目錄、書籤、縮圖、頁碼輸入、進度條）仍是 `jumpToPage`。若發現其他「帶高亮矩形」的 PDF 跳轉仍用 `jumpToPage`，停下來回報，不要自行處理。
 
-- [ ] **Step 2：跑經由 `ReaderScreen` 掛載 PDF 的既有測試**
+- [x] **Step 2：跑經由 `ReaderScreen` 掛載 PDF 的既有測試**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_stats_activity_test.dart test/reader/
@@ -1407,7 +1407,7 @@ flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_sta
 
 Expected：全數 PASS。
 
-- [ ] **Step 3：全專案靜態檢查與 l10n**
+- [x] **Step 3：全專案靜態檢查與 l10n**
 
 ```bash
 flutter analyze
@@ -1416,7 +1416,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 Expected：`No issues found!`；l10n 檢查 PASS（本 Issue 沒有新增字串）。
 
-- [ ] **Step 4：完整測試（只在這個時機跑一次）**
+- [x] **Step 4：完整測試（只在這個時機跑一次）**
 
 ```bash
 flutter test
@@ -1424,7 +1424,7 @@ flutter test
 
 用 `run_in_background` 執行（約 6 分鐘，必須在 `app/` 目錄下）。Expected：0 失敗；通過數＝Task 0 記下的基準＋本 Issue 新增案例（規則 29＋widget 23＋統計 1＝53），以實測為準。
 
-- [ ] **Step 5：更新文件**
+- [x] **Step 5：更新文件**
 
 `docs/epics/epic-56-pdf-paginated-reading/epic.md`：
 
@@ -1436,7 +1436,7 @@ flutter test
 
 不更新 `CLAUDE.md`（Epic 56 全部 Issue 完成、可發版時再一次補 `PdfReaderView` 功能描述）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add docs/epics/epic-56-pdf-paginated-reading/epic.md docs/epics/epic-56-pdf-paginated-reading/issues.md docs/epics.md

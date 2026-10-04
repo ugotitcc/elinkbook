@@ -1,6 +1,6 @@
 # `epic-56-pdf-paginated-reading` PDF 逐頁閱讀
 
-**狀態：** 🟡 開發中 (Active)（Issue 1～4 已合併，Issue 5、6 待寫計畫）
+**狀態：** 🟡 開發中 (Active)（Issue 1～4 已合併，Issue 5 開發完成待合併，Issue 6 待寫計畫）
 **存放路徑：** `docs/epics/epic-56-pdf-paginated-reading/`
 **關聯 PRD 章節：** PDF 閱讀（預設 page-fit、影像濾鏡、裁切）、互動模式（E-Ink 減少過渡動畫、3×3 熱區、音量鍵翻頁）
 **關聯 ADR：** 0022（PDF 引擎改用 `pdfrx`）
@@ -251,3 +251,11 @@ gap=100000  n=10000  y=1.01e+9  ULP(z=1/4/8)=6.40e+1 / 2.56e+2 / 5.12e+2
 
 - PR #317（`epic-56/issue-4-paginated-geometry` → `main`）已合併，合併 commit `6c2a864c`。Issue 4 完成。全套 `flutter test` 3530 通過、1 略過、0 失敗（發 PR 前在最終實作 commit 上跑）。
 - 後續：Issue 5（長頁步進、帶高亮跳轉、閱讀活動回報）與 Issue 6（左右滑動翻頁與框選衝突）皆依賴 Issue 4、彼此獨立，可開始寫計畫。Issue 5 可一併考量 Issue 4 最終審查延後的 Minor（版面重算到重新定位前的暫態幀、`onViewerReady` 回報錨點頁、最小縮放落後一次版面更新）。Epic 56 須 Issue 1～6 全數完成才可發版。
+
+**2026-10-04 Issue 5 實作完成**（分支 `epic-56/issue-5-long-page-step`；計畫見 `plans/plan-issue-5.md`，Native 內聯執行、未用 subagent）
+
+- 做法：純 Dart `pdf_paginated_rules.dart` 新增三組規則——`pagedRelativeStep`（規則 3、4、5：頁內逐屏步進／換單元／無動作，重疊量 `kPagedStepOverlapFraction`＝10%、頁底頁頂容許 `kPagedEdgeTolerance`＝1 像素）、`pagedTopForHighlight`（規則 7：頂端已可見維持頂端、否則垂直置中、高亮比可視高度高則上緣貼齊，貼底緣 1e-4 浮點容許）、`PagedDragActivityAccumulator`（規則 9：累積 20 像素回報一次，換手勢或換單元歸零）；`clampPagedViewport` 新增 `startAtBottom`。`PdfReaderView` 的 `_stepPagedUnit` 改讀目前視窗位置（螢幕像素偏移）做相對步進、`_goToPagedUnit` 新增 `atBottom` 落底端選項；`jumpToPageAtRect` 與 `showTemporaryHighlight` 共用 `_revealHighlight`（裁切下先經 `originalToCropRelativePercent` 換算、雙頁以頁面矩形而非單元矩形換算）；外層 `Listener.onPointerMove` 只算逐頁下單指非框選的垂直位移，經新增的 `onReadingActivity` 回呼接到 `ReaderScreen` 的 `_session.recordActivity()`（`ReadingSession` 不進 `PdfReaderView`）；PDF 內文搜尋兩處跳轉（`_runPdfSearch`、`_goToPdfSearchMatch`）改走 `jumpToPageAtRect`，目錄／書籤／縮圖／頁碼／進度條仍走 `jumpToPage`。PDF 沒有 TTS（`onTtsTap: null`），朗讀規則無需程式碼。
+- 測試：新增規則 29＋widget 23＋統計 1＝53；全套 `flutter test` 3583 通過、1 略過、0 失敗；`flutter analyze` 乾淨，l10n 雙檢查 PASS。
+- 與計畫的差異（Ruling）：`pdf_reader_view_paginated_test.dart` 的 `_Harness.app` 補 `theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false)`——暫態高亮 overlay builder 需 `ElinkTokens`，無 theme 時崩潰導致 key 找不到；純測試機制修正，預期值未動。
+- 待真機確認項目：10% 重疊量與步距手感、頁底／頁頂 1 像素容許、往回落底端的觀感、搜尋跳轉到長頁下半部時高亮是否可見（Fit Width 與放大後）、長頁上只用拖曳閱讀時閱讀時間是否持續計算（統計頁面比對）、20 像素活動門檻。
+- 提醒：Issue 6（左右滑動翻頁）仍待做，須 Issue 1～6 全數完成才可發版；Issue 4 最終審查延後的 Minor 仍未處理（見先前記錄）。
