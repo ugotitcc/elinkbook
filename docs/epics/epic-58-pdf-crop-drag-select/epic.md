@@ -40,3 +40,8 @@
 - **M-2 已補**：新增右上→左下、左下→右上的正規化測試。
 - 驗證：`flutter analyze` 乾淨；`pdf_crop_frame_overlay_test.dart` 15 項通過。
 - 全套 flutter test：3622 通過、1 略過、0 失敗（審查修訂後）。
+
+**2026-10-04 PR 合併**
+
+- PR #320（`epic-58/pdf-crop-drag-select` → `main`）已合併，合併 commit `07735f7a`。實作全數完成。
+- 待辦：真機驗證拖拉手感與 E-Ink 殘影；若有問題另立 Issue。驗證完成後歸檔。

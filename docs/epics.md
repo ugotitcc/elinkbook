@@ -66,7 +66,7 @@
 | 56 | `epic-55-third-party-licenses` App 授權頁登錄第三方授權（5 項程式元件＋5 款可下載字型的開源授權） | 🟡 開發中 (Active) | 全數完成，待歸檔 |
 | 57 | `epic-56-pdf-paginated-reading` PDF 逐頁閱讀（新增「翻頁模式」逐頁／連續捲動，一次只顯示整頁、瞬間換頁；並接上三種 Fit 模式） | 🟡 開發中 (Active) | Issue 1 已合併（PR #313）；Issue 2 已合併（PR #314）；Issue 3 已合併（PR #316）；Issue 4 已合併（PR #317）；Issue 5 已合併（PR #318）；Issue 6 已合併（PR #319）；Issue 1～6 全數完成，待真機驗證後同一版本發布 |
 | 58 | `epic-57-layout-override-save-drops-fields` （缺陷）書架「版面覆寫」儲存時整列重建漏帶 `textConversionOverride`，會清掉該書的簡繁轉換覆寫 | 🟡 開發中 (Active) | 已合併（PR #315），待歸檔 |
-| 59 | `epic-58-pdf-crop-drag-select` PDF 手動裁切改為手指拖拉直接框選（取代四角圓點） | 🟡 開發中 (Active) | 實作中 |
+| 59 | `epic-58-pdf-crop-drag-select` PDF 手動裁切改為手指拖拉直接框選（取代四角圓點） | 🟡 開發中 (Active) | 已合併（PR #320），待真機驗證手感／E-Ink 殘影後歸檔 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。
