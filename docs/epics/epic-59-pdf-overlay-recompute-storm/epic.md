@@ -72,6 +72,16 @@
 - 這同時解釋使用者「手機、平板、電子紙都會發生」：記憶體越小，越早從「白頁」惡化為「閃退」。
 - 未做：手機實機；「連續捲動」模式；加粗開啟時的同樣驗證。
 
+**2026-10-04 程式審查修訂**（`reviews/review-code.md`：0 Critical／1 Important／3 Minor，結論可合併）
+
+- **Important（測試缺口）成立，已補**：新增 4 個案例——「正回饋迴圈」（每個工作完成就寫快取並觸發全部頁面重繪，30 頁每頁仍只算 1 次）、執行中同頁同設定再登記不重複、執行中同頁換設定舊的結束後新的補跑、`maxConcurrent=2`。這些案例一寫就綠（描述既有行為，非先紅後綠）。改以**變異檢查**確認有效：只拿掉執行中去重 → 1 個案例失敗；完全移除去重 → 5 個失敗（含迴圈案例）；還原後 15 項全過。
+- **Minor 2 成立，已修**：`_recomputeOverlay` 的 `rendered != null` 但 `!mounted` 時，`return` 在 `try/finally` 之外，漏呼叫 `rendered.dispose()`。改為只在 `rendered == null` 時提早 return，其餘一律經 `finally` 釋放；卸載由 `_isOverlayJobStillWanted`（`!mounted` → false）涵蓋。這行是既有程式，但位於本次已修改的函式內，故一併修。
+- **Minor 1 不改**：`isReady == false` 時放行是刻意取捨（佇列只在 pdfrx 呼叫 overlay builder 時才被填入，此時控制器通常已就緒；多做一次渲染不會卡佇列）。
+- **Minor 3 不改**：推測性，電子紙與平板實測連翻 120 頁未見抖動；若日後真機回報再依資料調整 `_maxCachedOverlayImages`。
+- **殘餘風險不處理**：丟棄／渲染為 null 後不主動要求重繪，恢復依賴下一次重繪。真機未遇到；若遇到再另案。
+- **未補**：`PdfReaderView` 接線層的 widget 測試。既有 `pdf_reader_view_filters_test` 的「多頁各自完成」案例會間接經過這條路徑（126 項通過），但沒有專測「翻走的頁被丟棄」。
+- 驗證：`flutter analyze` 乾淨；佇列＋濾鏡／逐頁／雙頁／基本測試共 126 項通過；l10n 雙檢查 PASS。
+
 **附帶觀察（不屬本缺陷，未處理）**
 
 - 安裝新版後第一次啟動停在黑屏：`main()` 的 `AudioService.init`（`main.dart:219`）丟出 `PlatformException: Unable to bind to AudioService` 且未被接住，`runApp` 沒執行到。強制停止後重開即正常，推測是安裝後系統忙碌（同時有「Failed to read WebView version: TimeoutException」）造成的一次性失敗。但「啟動時一個未接住的例外就黑屏」本身是脆弱點，值得另立 Issue 評估是否要包 try/catch 讓 App 仍能進書架。

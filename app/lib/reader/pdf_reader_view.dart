@@ -1542,9 +1542,11 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       fullWidth: page.width * scale,
       fullHeight: page.height * scale,
     );
-    if (rendered == null || !mounted) return;
+    if (rendered == null) return;
     try {
       // 渲染期間使用者可能已翻走：略過最重的像素運算（epic-59）。
+      // 已卸載（!mounted）時 _isOverlayJobStillWanted 回傳 false，
+      // 仍會經過 finally 釋放 rendered（審查 Minor 2）。
       if (!_isOverlayJobStillWanted(page.pageNumber, cacheKey)) return;
       final processed = await _isolateProcessOverlayPixels(
         pixels: rendered.pixels,

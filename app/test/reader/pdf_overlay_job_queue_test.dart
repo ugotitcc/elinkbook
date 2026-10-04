@@ -20,6 +20,8 @@ class _FakeJob {
     return _finish.future;
   }
 
+  bool get isFinished => _finish.isCompleted;
+
   void finish() => _finish.complete();
 }
 
@@ -180,6 +182,99 @@ void main() {
       expect(perPage.length, 30);
       expect(perPage.values.every((n) => n == 1), isTrue,
           reason: '實測前：888 次開始／244 次完成');
+    });
+
+    test('正回饋迴圈：每個工作完成就寫快取並觸發全部頁面重繪，每頁仍只算一次', () async {
+      // 還原真正的缺陷形狀（審查 Important）：完成 → setState → 重繪 →
+      // 尚未完成的頁再登記。快取沒寫入的頁，每次重繪都會嘗試登記。
+      final queue = PdfOverlayJobQueue();
+      final cache = <int, String>{};
+      final runs = <int, int>{};
+      const key = 'k';
+      const pages = 30;
+
+      void redraw() {
+        for (var page = 1; page <= pages; page++) {
+          if (cache[page] == key) continue;
+          queue.enqueue(
+            page: page,
+            key: key,
+            stillWanted: () => true,
+            run: () async {
+              runs.update(page, (v) => v + 1, ifAbsent: () => 1);
+              await Future<void>.delayed(Duration.zero); // 模擬渲染耗時
+              cache[page] = key;
+              redraw(); // 模擬 setState 觸發全部可見頁重繪
+            },
+          );
+        }
+      }
+
+      for (var i = 0; i < 5; i++) {
+        redraw(); // 開書與連翻時的連續重繪
+      }
+      for (var i = 0; i < 200; i++) {
+        await _flush();
+      }
+
+      expect(cache.length, pages, reason: '所有頁最終都要算完，不能卡死');
+      expect(runs.values.every((n) => n == 1), isTrue,
+          reason: '實測前：連翻 30 頁開始 888 次、排隊 644 個');
+    });
+
+    test('執行中同頁同設定再登記，不會重複執行', () async {
+      final queue = PdfOverlayJobQueue();
+      final job = _FakeJob();
+
+      queue.enqueue(page: 3, key: 'k', stillWanted: () => true, run: job.run);
+      await _flush(); // 已開跑
+      for (var i = 0; i < 5; i++) {
+        queue.enqueue(page: 3, key: 'k', stillWanted: () => true, run: job.run);
+      }
+      await _flush();
+      job.finish();
+      await _flush();
+
+      expect(job.runCount, 1);
+    });
+
+    test('執行中同頁換設定：舊工作結束後，新設定會補跑', () async {
+      final queue = PdfOverlayJobQueue();
+      final oldJob = _FakeJob();
+      final newJob = _FakeJob();
+
+      queue.enqueue(page: 3, key: 'old', stillWanted: () => true, run: oldJob.run);
+      await _flush(); // 舊設定已開跑
+      queue.enqueue(page: 3, key: 'new', stillWanted: () => true, run: newJob.run);
+      await _flush();
+      expect(newJob.runCount, 0, reason: '舊工作未結束，同頁不可並行');
+
+      oldJob.finish();
+      await _flush();
+      expect(newJob.runCount, 1, reason: '新設定不可因舊工作而永遠沒機會算');
+      newJob.finish();
+    });
+
+    test('maxConcurrent=2 時同時最多跑兩個', () async {
+      final queue = PdfOverlayJobQueue(maxConcurrent: 2);
+      final jobs = List.generate(4, (_) => _FakeJob());
+
+      for (var i = 0; i < jobs.length; i++) {
+        queue.enqueue(
+            page: i + 1, key: 'k', stillWanted: () => true, run: jobs[i].run);
+      }
+      await _flush();
+      expect(jobs.where((j) => j.runCount == 1).length, 2);
+
+      for (final j in jobs) {
+        if (j.runCount == 1 && !j.isFinished) j.finish();
+      }
+      await _flush();
+      for (final j in jobs) {
+        if (j.runCount == 1 && !j.isFinished) j.finish();
+      }
+      await _flush();
+      expect(jobs.every((j) => j.runCount == 1), isTrue);
     });
   });
 
