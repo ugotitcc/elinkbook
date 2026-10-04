@@ -1191,6 +1191,10 @@
   "@readerPdfCropManualTooltip": {
     "description": "裁切模式「手動」選項 tooltip"
   },
+  "readerPdfCropDragHint": "拖拉選取要保留的範圍",
+  "@readerPdfCropDragHint": {
+    "description": "手動裁切編輯模式尚未畫框時的提示文字"
+  },
   "readerSettingsTitle": "⚙️ 版面設定",
   "@readerSettingsTitle": {
     "description": "EPUB 版面設定 Bottom Sheet 標題"

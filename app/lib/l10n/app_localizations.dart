@@ -1624,6 +1624,12 @@ abstract class AppLocalizations {
   /// **'手動選區'**
   String get readerPdfCropManualTooltip;
 
+  /// 手動裁切編輯模式尚未畫框時的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'拖拉選取要保留的範圍'**
+  String get readerPdfCropDragHint;
+
   /// EPUB 版面設定 Bottom Sheet 標題
   ///
   /// In zh_TW, this message translates to:

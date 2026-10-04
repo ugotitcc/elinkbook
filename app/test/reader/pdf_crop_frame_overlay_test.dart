@@ -5,203 +5,266 @@ import 'package:elinkbook/reader/pdf_crop_frame_overlay.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
 
 void main() {
-  // 注意：測試中不使用 initialRect 為精確 (0,0,1,1) 的全頁矩形——
-  // 四角控制點會落在 SizedBox 精確邊界上，Flutter 的
-  // Size.contains() 使用嚴格小於（<），邊界上的點會被視為
-  // 「不在盒子內」，導致 hit test 失敗、drag 手勢無法觸發。
-  // 若需測試全頁裁切場景，請使用接近邊界但不精確落上的值
-  // （例如 0.01 / 0.99）。
+  // 測試畫布固定為 800x1600、位於左上角，方便把像素座標換算成 0~1 比例
   Widget wrap(Widget child) => MaterialApp(
         locale: const Locale('zh', 'TW'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(body: SizedBox(width: 800, height: 1600, child: child)),
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(width: 800, height: 1600, child: child),
+          ),
+        ),
       );
 
-  testWidgets('顯示確認/取消按鈕，點擊確認時回傳目前框選矩形', (tester) async {
-    PdfCropRect? confirmed;
-    await tester.pumpWidget(
-      wrap(PdfCropFrameOverlay(
-        initialRect: const PdfCropRect(left: 0.1, top: 0.1, right: 0.9, bottom: 0.9),
-        onConfirm: (rect) => confirmed = rect,
-        onCancel: () {},
-      )),
-    );
+  Future<void> pumpOverlay(
+    WidgetTester tester, {
+    ValueChanged<PdfCropRect>? onConfirm,
+    VoidCallback? onCancel,
+  }) async {
+    await tester.pumpWidget(wrap(PdfCropFrameOverlay(
+      onConfirm: onConfirm ?? (_) {},
+      onCancel: onCancel ?? () {},
+    )));
+  }
 
-    expect(find.byKey(const Key('pdf_crop_frame_confirm')), findsOneWidget);
-    expect(find.byKey(const Key('pdf_crop_frame_cancel')), findsOneWidget);
+  // 以手指從 [from] 拖到 [to]，模擬使用者直接拖拉框選
+  Future<void> dragSelect(WidgetTester tester, Offset from, Offset to) async {
+    await tester.dragFrom(from, to - from);
+    await tester.pump();
+  }
 
-    await tester.tap(find.byKey(const Key('pdf_crop_frame_confirm')));
+  final confirmFinder = find.byKey(const Key('pdf_crop_frame_confirm'));
+
+  Future<PdfCropRect?> confirmAndGet(WidgetTester tester, List<PdfCropRect> out) async {
+    await tester.tap(confirmFinder);
+    await tester.pump();
+    return out.isEmpty ? null : out.last;
+  }
+
+  testWidgets('進入時不顯示框，只顯示提示文字；確認鈕停用', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    expect(find.byKey(const Key('pdf_crop_frame_hint')), findsOneWidget);
+    // 沒有任何四角控制點
+    expect(find.byKey(const Key('pdf_crop_frame_handle_top_left')), findsNothing);
+    expect(find.byKey(const Key('pdf_crop_frame_handle_bottom_right')), findsNothing);
+
+    await tester.tap(confirmFinder);
+    await tester.pump();
+    expect(confirmed, isEmpty, reason: '尚未畫框時確認鈕應停用');
+  });
+
+  testWidgets('手指拖拉後確認，回傳對應比例的矩形；提示文字消失', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    await dragSelect(tester, const Offset(80, 160), const Offset(720, 1440));
+
+    expect(find.byKey(const Key('pdf_crop_frame_hint')), findsNothing);
+    final rect = await confirmAndGet(tester, confirmed);
+    expect(rect, isNotNull);
+    expect(rect!.left, closeTo(0.1, 1e-6));
+    expect(rect.top, closeTo(0.1, 1e-6));
+    expect(rect.right, closeTo(0.9, 1e-6));
+    expect(rect.bottom, closeTo(0.9, 1e-6));
+  });
+
+  testWidgets('由右下往左上反向拖拉，矩形仍正規化為 left<right、top<bottom',
+      (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    await dragSelect(tester, const Offset(720, 1440), const Offset(80, 160));
+
+    final rect = await confirmAndGet(tester, confirmed);
+    expect(rect!.left, closeTo(0.1, 1e-6));
+    expect(rect.top, closeTo(0.1, 1e-6));
+    expect(rect.right, closeTo(0.9, 1e-6));
+    expect(rect.bottom, closeTo(0.9, 1e-6));
+  });
+
+  testWidgets('再拖拉一次會取代舊框（只能重畫）', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    await dragSelect(tester, const Offset(80, 160), const Offset(720, 1440));
+    await dragSelect(tester, const Offset(200, 400), const Offset(600, 1200));
+
+    final rect = await confirmAndGet(tester, confirmed);
+    expect(rect!.left, closeTo(0.25, 1e-6));
+    expect(rect.top, closeTo(0.25, 1e-6));
+    expect(rect.right, closeTo(0.75, 1e-6));
+    expect(rect.bottom, closeTo(0.75, 1e-6));
+  });
+
+  testWidgets('拖出畫布邊界時座標被限制在 0～1', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    await tester.dragFrom(const Offset(400, 800), const Offset(1000, 2000));
     await tester.pump();
 
-    expect(confirmed, const PdfCropRect(left: 0.1, top: 0.1, right: 0.9, bottom: 0.9));
+    final rect = await confirmAndGet(tester, confirmed);
+    expect(rect!.left, closeTo(0.5, 1e-6));
+    expect(rect.top, closeTo(0.5, 1e-6));
+    expect(rect.right, 1.0);
+    expect(rect.bottom, 1.0);
+  });
+
+  testWidgets('範圍太小（任一邊 < 0.05）視為無效：首次畫不出框、確認仍停用',
+      (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    // 寬 24px = 0.03 < 0.05
+    await dragSelect(tester, const Offset(100, 100), const Offset(124, 900));
+
+    expect(find.byKey(const Key('pdf_crop_frame_hint')), findsOneWidget);
+    await tester.tap(confirmFinder);
+    await tester.pump();
+    expect(confirmed, isEmpty);
+  });
+
+  testWidgets('已有框時再拖出太小的範圍，保留上一個框', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    await dragSelect(tester, const Offset(80, 160), const Offset(720, 1440));
+    await dragSelect(tester, const Offset(300, 300), const Offset(310, 900));
+
+    final rect = await confirmAndGet(tester, confirmed);
+    expect(rect!.left, closeTo(0.1, 1e-6));
+    expect(rect.right, closeTo(0.9, 1e-6));
+  });
+
+  testWidgets('輕點（沒有拖拉）不產生框', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    await tester.tapAt(const Offset(400, 800));
+    await tester.pump();
+
+    expect(find.byKey(const Key('pdf_crop_frame_hint')), findsOneWidget);
+    await tester.tap(confirmFinder);
+    await tester.pump();
+    expect(confirmed, isEmpty);
+  });
+
+  // 找出遮罩繪製層（CropOverlayPainter）；沒有框時不應存在
+  final maskFinder = find.byWidgetPredicate(
+      (w) => w is CustomPaint && w.painter is CropOverlayPainter);
+
+  testWidgets('手指按下但尚未拖動時不繪製遮罩（輕點不得讓全螢幕變暗，審查 I-1）',
+      (tester) async {
+    await pumpOverlay(tester);
+
+    final g = await tester.startGesture(const Offset(400, 800));
+    await tester.pump();
+    expect(maskFinder, findsNothing);
+    await g.up();
+    await tester.pump();
+    expect(maskFinder, findsNothing);
+  });
+
+  testWidgets('已有框時手指按下不會讓既有框消失（審查 I-1）', (tester) async {
+    await pumpOverlay(tester);
+    await dragSelect(tester, const Offset(80, 160), const Offset(720, 1440));
+    expect(maskFinder, findsOneWidget);
+
+    final g = await tester.startGesture(const Offset(400, 800));
+    await tester.pump();
+    final painter =
+        tester.widget<CustomPaint>(maskFinder).painter as CropOverlayPainter;
+    expect(painter.cropRect, const Rect.fromLTRB(80, 160, 720, 1440));
+    await g.up();
+  });
+
+  testWidgets('拖拉被系統中斷（cancel）時放棄這次選取，保留上一個框（審查 I-3）',
+      (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+    await dragSelect(tester, const Offset(80, 160), const Offset(720, 1440));
+
+    final g = await tester.startGesture(const Offset(200, 400));
+    await g.moveTo(const Offset(600, 1200));
+    await tester.pump();
+    await g.cancel();
+    await tester.pump();
+
+    final rect = await confirmAndGet(tester, confirmed);
+    expect(rect!.left, closeTo(0.1, 1e-6));
+    expect(rect.right, closeTo(0.9, 1e-6));
+  });
+
+  testWidgets('尚未畫框時從停用的確認鈕上拖拉，不會穿透畫出框（審查 I-2）',
+      (tester) async {
+    await pumpOverlay(tester);
+
+    final center = tester.getCenter(confirmFinder) + const Offset(-18, -18);
+    final g = await tester.startGesture(center);
+    await g.moveBy(const Offset(-200, -400));
+    await tester.pump();
+    await g.up();
+    await tester.pump();
+
+    expect(maskFinder, findsNothing);
+    expect(find.byKey(const Key('pdf_crop_frame_hint')), findsOneWidget);
+  });
+
+  testWidgets('右上→左下、左下→右上拖拉皆正規化（審查 M-2）', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    await dragSelect(tester, const Offset(720, 160), const Offset(80, 1440));
+    var rect = await confirmAndGet(tester, confirmed);
+    expect(rect!.left, closeTo(0.1, 1e-6));
+    expect(rect.top, closeTo(0.1, 1e-6));
+    expect(rect.right, closeTo(0.9, 1e-6));
+    expect(rect.bottom, closeTo(0.9, 1e-6));
+
+    await dragSelect(tester, const Offset(160, 1280), const Offset(640, 320));
+    rect = await confirmAndGet(tester, confirmed);
+    expect(rect!.left, closeTo(0.2, 1e-6));
+    expect(rect.top, closeTo(0.2, 1e-6));
+    expect(rect.right, closeTo(0.8, 1e-6));
+    expect(rect.bottom, closeTo(0.8, 1e-6));
   });
 
   testWidgets('點擊取消時觸發 onCancel、不觸發 onConfirm', (tester) async {
     var cancelled = false;
-    PdfCropRect? confirmed;
-    await tester.pumpWidget(
-      wrap(PdfCropFrameOverlay(
-        initialRect: const PdfCropRect(left: 0, top: 0, right: 1, bottom: 1),
-        onConfirm: (rect) => confirmed = rect,
-        onCancel: () => cancelled = true,
-      )),
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(
+      tester,
+      onConfirm: confirmed.add,
+      onCancel: () => cancelled = true,
     );
+    await dragSelect(tester, const Offset(80, 160), const Offset(720, 1440));
 
     await tester.tap(find.byKey(const Key('pdf_crop_frame_cancel')));
     await tester.pump();
 
     expect(cancelled, isTrue);
-    expect(confirmed, isNull);
+    expect(confirmed, isEmpty);
   });
 
-  testWidgets('拖曳右下角控制點縮小裁切框後確認，回傳的矩形右/下邊界變小',
+  testWidgets('包含 CustomPaint 遮罩層與帶背景之 FAB 樣式 Material 按鈕',
       (tester) async {
-    PdfCropRect? confirmed;
-    await tester.pumpWidget(
-      wrap(PdfCropFrameOverlay(
-        // 使用 0.01/0.99 而非精確 0/1，避免控制點落在容器邊界上
-        // 導致 hit test 失敗（見 main() 頂部說明）
-        initialRect: const PdfCropRect(left: 0.01, top: 0.01, right: 0.99, bottom: 0.99),
-        onConfirm: (rect) => confirmed = rect,
-        onCancel: () {},
-      )),
-    );
+    await pumpOverlay(tester);
+    await dragSelect(tester, const Offset(160, 320), const Offset(640, 1280));
 
-    final handle = find.byKey(const Key('pdf_crop_frame_handle_bottom_right'));
-    expect(handle, findsOneWidget);
-    await tester.drag(handle, const Offset(-100, -200));
-    await tester.pump();
-
-    await tester.tap(find.byKey(const Key('pdf_crop_frame_confirm')));
-    await tester.pump();
-
-    expect(confirmed, isNotNull);
-    expect(confirmed!.right, lessThan(0.99));
-    expect(confirmed!.bottom, lessThan(0.99));
-  });
-
-  testWidgets('裁切框不可拖曳縮小到零面積以下（最小尺寸防呆）', (tester) async {
-    PdfCropRect? confirmed;
-    await tester.pumpWidget(
-      wrap(PdfCropFrameOverlay(
-        initialRect: const PdfCropRect(left: 0.4, top: 0.4, right: 0.6, bottom: 0.6),
-        onConfirm: (rect) => confirmed = rect,
-        onCancel: () {},
-      )),
-    );
-
-    final handle = find.byKey(const Key('pdf_crop_frame_handle_bottom_right'));
-    await tester.drag(handle, const Offset(-1000, -1000));
-    await tester.pump();
-
-    await tester.tap(find.byKey(const Key('pdf_crop_frame_confirm')));
-    await tester.pump();
-
-    expect(confirmed!.right, greaterThan(confirmed!.left));
-    expect(confirmed!.bottom, greaterThan(confirmed!.top));
-  });
-
-  testWidgets(
-      '拖曳左上角控制點可獨立調整 top 與 left（Important 1 回歸測試：'
-      '不得只有右下角一個控制點）', (tester) async {
-    PdfCropRect? confirmed;
-    await tester.pumpWidget(
-      wrap(PdfCropFrameOverlay(
-        initialRect: const PdfCropRect(left: 0.01, top: 0.01, right: 0.99, bottom: 0.99),
-        onConfirm: (rect) => confirmed = rect,
-        onCancel: () {},
-      )),
-    );
-
-    final handle = find.byKey(const Key('pdf_crop_frame_handle_top_left'));
-    expect(handle, findsOneWidget);
-    await tester.drag(handle, const Offset(80, 120));
-    await tester.pump();
-
-    await tester.tap(find.byKey(const Key('pdf_crop_frame_confirm')));
-    await tester.pump();
-
-    expect(confirmed, isNotNull);
-    expect(confirmed!.left, greaterThan(0.01),
-        reason: '拖曳左上角控制點應能收窄 left 邊界');
-    expect(confirmed!.top, greaterThan(0.01),
-        reason: '拖曳左上角控制點應能收窄 top 邊界');
-    expect(confirmed!.right, 0.99);
-    expect(confirmed!.bottom, 0.99);
-  });
-
-  testWidgets('右上角／左下角控制點皆存在，且只調整各自對應的兩個邊界',
-      (tester) async {
-    PdfCropRect? confirmed;
-    await tester.pumpWidget(
-      wrap(PdfCropFrameOverlay(
-        initialRect: const PdfCropRect(left: 0.01, top: 0.01, right: 0.99, bottom: 0.99),
-        onConfirm: (rect) => confirmed = rect,
-        onCancel: () {},
-      )),
-    );
-
-    expect(find.byKey(const Key('pdf_crop_frame_handle_top_right')), findsOneWidget);
-    expect(find.byKey(const Key('pdf_crop_frame_handle_bottom_left')), findsOneWidget);
-
-    await tester.drag(
-      find.byKey(const Key('pdf_crop_frame_handle_top_right')),
-      const Offset(-80, 120),
-    );
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('pdf_crop_frame_confirm')));
-    await tester.pump();
-
-    expect(confirmed!.right, lessThan(0.99));
-    expect(confirmed!.top, greaterThan(0.01));
-    expect(confirmed!.left, 0.01);
-    expect(confirmed!.bottom, 0.99);
-  });
-
-  testWidgets(
-      'PdfCropFrameOverlay 包含 CustomPaint 遮罩層與帶背景之 Material 按鈕',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('zh', 'TW'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: SizedBox(
-            width: 800,
-            height: 1600,
-            child: PdfCropFrameOverlay(
-              initialRect: const PdfCropRect(
-                  left: 0.2, top: 0.2, right: 0.8, bottom: 0.8),
-              onConfirm: (_) {},
-              onCancel: () {},
-            ),
-          ),
-        ),
-      ),
-    );
-
-    // 驗證存在 CustomPaint 遮罩層（取代舊版 Positioned.fromRect + Container）
     expect(find.byType(CustomPaint), findsWidgets);
-    expect(find.byKey(const Key('pdf_crop_frame_confirm')), findsOneWidget);
+    expect(confirmFinder, findsOneWidget);
     expect(find.byKey(const Key('pdf_crop_frame_cancel')), findsOneWidget);
 
-    // 【重要】驗證確認按鈕被高對比 FAB 樣式 Material 包裹
-    // IconButton 內部雖有 Material 祖先，但 elevation 為 0——
-    // FAB 樣式的 Material elevation=6，以此區分兩者
-    final confirmMaterialFinder = find.ancestor(
-      of: find.byKey(const Key('pdf_crop_frame_confirm')),
-      matching: find.byType(Material),
-    );
-    final confirmMaterials = confirmMaterialFinder
+    // 確認按鈕被 elevation=6 的 FAB 樣式 Material 包裹（與 IconButton 內部 elevation 0 區分）
+    final materials = find
+        .ancestor(of: confirmFinder, matching: find.byType(Material))
         .evaluate()
         .map((e) => e.widget as Material)
         .toList();
-    expect(
-      confirmMaterials.any((m) => m.elevation == 6),
-      isTrue,
-      reason: '確認按鈕的 Material 祖先中應有 elevation=6 的 FAB 樣式容器',
-    );
+    expect(materials.any((m) => m.elevation == 6), isTrue);
   });
 }
