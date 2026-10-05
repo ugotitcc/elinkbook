@@ -204,11 +204,11 @@ class ReaderScreen extends StatefulWidget {
   /// 也會顯示明確停用狀態的按鈕（非隱藏，見 `issues.md` Issue 2 驗收
   /// 標準），因為 CBZ 是純圖像格式、沒有文字可朗讀。
   final TtsProvider? ttsProvider;
-  final TtsAudioHandler? ttsAudioHandler;
 
-  /// epic-61 Issue 1：TTS 音訊服務初始化失敗降級後，開書時提示一次（每次啟動
-  /// App 只提示一次）。`null`（既有呼叫端、測試）時不提示。
-  final TtsDegradedNotice? ttsDegradedNotice;
+  /// epic-61 Issue 2：啟動階段 TTS 音訊服務 holder（handler 是否就緒＋降級
+  /// 提示是否待顯示）。`null`（既有呼叫端、測試）時視為未提供：不 attach、
+  /// 不提示，行為與之前相同。
+  final TtsAudioHandlerHolder? ttsAudio;
   final TtsAudioFocusSource? ttsAudioFocusSource;
 
   /// E-Ink 高對比模式（epic-34-tts-readalong Issue 8）：App 層級主題設定
@@ -297,8 +297,7 @@ class ReaderScreen extends StatefulWidget {
     this.bookReaderPrefsRepository,
     this.syncCheckpointTrigger,
     this.ttsProvider,
-    this.ttsAudioHandler,
-    this.ttsDegradedNotice,
+    this.ttsAudio,
     this.ttsAudioFocusSource,
     this.isEinkMode = false,
     this.readerActivityTracker,
@@ -470,6 +469,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   EpubPositionInfo? _epubPositionInfo;
   TtsController? _ttsController;
   TtsAudioFocusCoordinator? _ttsAudioFocusCoordinator;
+  // epic-61 Issue 2：監聽中的 holder（晚到注入）。initState 加入 listener、
+  // dispose 移除；通知回呼內先判 mounted。
+  TtsAudioHandlerHolder? _listenedTtsAudio;
+  // 這個畫面實際 attach 過的 handler。dispose 只在它目前綁定的 controller
+  // 就是本畫面的 _ttsController 時才 detach（多畫面並存時，先關閉的畫面
+  // 不可拆掉存活畫面的綁定，見 detachController(only:)）。
+  TtsAudioHandler? _attachedAudioHandler;
   // 安全視窗跟隨翻頁節流（epic-34-tts-readalong Issue 11 真機驗收發現）：
   // 長段落（尤其直排、欄寬窄）朗讀進度快時，main.js 安全視窗檢查可能在
   // 極短時間內連續多次判定「需要翻頁」，若不加節流會連續多次呼叫
@@ -586,17 +592,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void initState() {
     super.initState();
     _creationZone = Zone.current;
-    // epic-61 Issue 1：降級後進入閱讀器提示一次。需等第一個 frame 之後才有
-    // 可用的 context／ScaffoldMessenger。
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || widget.ttsDegradedNotice?.consume() != true) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          key: const Key('reader_tts_degraded_snackbar'),
-          content: Text(AppLocalizations.of(context)!.ttsDegradedNotice),
-        ),
-      );
-    });
+    // epic-61 Issue 2：監聽 holder——handler 晚到時補 attach（見
+    // _onTtsAudioHolderChanged）；降級（已發生或晚到）時補提示一次。
+    _listenedTtsAudio = widget.ttsAudio;
+    _listenedTtsAudio?.addListener(_onTtsAudioHolderChanged);
+    _checkShowDegradedNotice();
     final importService = widget.bookImportService;
     _openBookFlow = OpenBookFlow(
       filePath: widget.filePath,
@@ -734,6 +734,49 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (mounted) setState(() {});
   }
 
+  /// holder 通知回呼（epic-61 Issue 2 晚到注入）：handler 晚到就補 attach，
+  /// 降級晚到就補提示。先判 `mounted`，避免 dispose 後對已卸載的 State
+  /// 呼叫 setState／ScaffoldMessenger（Review Focus 4）。
+  void _onTtsAudioHolderChanged() {
+    if (!mounted) return;
+    _maybeAttachTtsAudioHandler();
+    _checkShowDegradedNotice();
+  }
+
+  /// 只在「controller 存在、handler 非 null、尚未 attach 過這個 handler」
+  /// 時 attach，避免通知多次造成重複 attach。controller 尚未建立時直接
+  /// 返回——controller 建構處（`_ttsControllerOrNull`）會再呼叫本方法。
+  void _maybeAttachTtsAudioHandler() {
+    final controller = _ttsController;
+    final handler = widget.ttsAudio?.handler;
+    if (controller == null || handler == null) return;
+    // handler 一旦 ready 就不會再換（holder 狀態單向轉移），所以只需判斷
+    // 「已 attach 過就不再 attach」。
+    if (_attachedAudioHandler != null) return;
+    handler.attachController(controller, bookTitle: _displayBookTitle);
+    _attachedAudioHandler = handler;
+  }
+
+  /// 降級提示收斂成單一方法：內含 post-frame（需等 frame 之後才有可用的
+  /// context／ScaffoldMessenger），post-frame 內先判 `!mounted` 再
+  /// `consumeDegradedNotice()` 再顯示；`initState` 與 holder 通知回呼都
+  /// 呼叫它。`consume` 一次性保證兩畫面並存時只顯示一次。
+  void _checkShowDegradedNotice() {
+    // addPostFrameCallback 只是排隊、不會要求新的 frame：holder 通知（非同步、
+    // 任意時間）發生在畫面閒置時（WebView 靜止、電子紙少重繪），回呼要等到下一次
+    // 重繪才會執行，提示就不會「立即」出現。所以主動排程一個 frame（審查 I-1）。
+    WidgetsBinding.instance.ensureVisualUpdate();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.ttsAudio?.consumeDegradedNotice() != true) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: const Key('reader_tts_degraded_snackbar'),
+          content: Text(AppLocalizations.of(context)!.ttsDegradedNotice),
+        ),
+      );
+    });
+  }
+
   @override
   void dispose() {
     // 離開閱讀畫面：標記關閉、結算統計、取消 Checkpoint Timer、儲存位置、觸發
@@ -749,7 +792,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _volumeKeyChannel.setMethodCallHandler(null);
     _pdfSearchStateNotifier.dispose();
     _ttsAudioFocusCoordinator?.dispose();
-    widget.ttsAudioHandler?.detachController();
+    // epic-61 Issue 2：只在 handler 目前綁定的 controller 就是本畫面的
+    // _ttsController 時才 detach（多畫面並存時，先關閉的畫面不可拆掉存活
+    // 畫面的綁定）。從未 attach（_attachedAudioHandler 為 null）時不碰
+    // handler，避免誤傷別的畫面。
+    _listenedTtsAudio?.removeListener(_onTtsAudioHolderChanged);
+    _listenedTtsAudio = null;
+    final attachedAudioHandler = _attachedAudioHandler;
+    _attachedAudioHandler = null;
+    final ttsController = _ttsController;
+    if (ttsController != null && attachedAudioHandler != null) {
+      attachedAudioHandler.detachController(only: ttsController);
+    }
     _ttsController?.removeListener(_onTtsStatusChanged);
     _ttsController?.dispose();
     // 還原系統預設（允許自由旋轉），不論進入閱讀器時鎖定了哪個角度，比照
@@ -1853,10 +1907,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             layoutPresetRepository: widget.layoutPresetRepository,
             bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
             ttsProvider: widget.ttsProvider,
-            ttsAudioHandler: widget.ttsAudioHandler,
+            ttsAudio: widget.ttsAudio,
             ttsAudioFocusSource: widget.ttsAudioFocusSource,
-            // epic-61 Issue 1：同上，手動逐欄重建 bundle 的新欄位必須一併轉送。
-            ttsDegradedNotice: widget.ttsDegradedNotice,
+            // epic-61 Issue 2：同上，手動逐欄重建 bundle 的新欄位必須一併轉送。
             readerActivityTracker: widget.readerActivityTracker,
             searchRepository: searchRepository,
             isFullTextSearchAvailable: widget.isFullTextSearchAvailable,
@@ -3348,7 +3401,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
     _ttsController = controller;
     controller.addListener(_onTtsStatusChanged);
-    widget.ttsAudioHandler?.attachController(controller, bookTitle: _displayBookTitle);
+    _maybeAttachTtsAudioHandler();
     final focusSource = widget.ttsAudioFocusSource;
     if (focusSource != null) {
       _ttsAudioFocusCoordinator =

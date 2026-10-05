@@ -10824,7 +10824,7 @@ void main() {
             prefsManager: prefsManager,
             isFixedLayout: false,
             ttsProvider: ttsProvider,
-            ttsAudioHandler: ttsAudioHandler,
+            ttsAudio: TtsAudioHandlerHolder.ready(ttsAudioHandler),
             ttsAudioFocusSource: ttsAudioFocusSource,
           ),
         ),
@@ -10901,7 +10901,7 @@ void main() {
             prefsManager: prefsManager,
             isFixedLayout: false,
             ttsProvider: ttsProvider,
-            ttsAudioHandler: ttsAudioHandler,
+            ttsAudio: TtsAudioHandlerHolder.ready(ttsAudioHandler),
           ),
         ),
       );
@@ -11496,10 +11496,10 @@ void main() {
     });
 
     testWidgets(
-        'ttsDegradedNotice 會轉送給推入的 BookSearchScreen'
-        '（epic-61 Issue 1：手動重建 bundle 的新欄位必須一併轉送）',
+        'ttsAudio holder 會轉送給推入的 BookSearchScreen'
+        '（epic-61 Issue 2：手動重建 bundle 的新欄位必須一併轉送）',
         (tester) async {
-      final notice = TtsDegradedNotice(degraded: false);
+      final ttsAudio = TtsAudioHandlerHolder.unavailable();
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('zh', 'TW'),
@@ -11512,7 +11512,7 @@ void main() {
             prefsManager: FakeReaderPrefsManager(),
             searchRepository: FakeSearchRepository(),
             libraryRepository: FakeLibraryRepository(),
-            ttsDegradedNotice: notice,
+            ttsAudio: ttsAudio,
           ),
         ),
       );
@@ -11525,7 +11525,7 @@ void main() {
 
       final pushed =
           tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
-      expect(pushed.readerFeatureRepositories.ttsDegradedNotice, same(notice));
+      expect(pushed.readerFeatureRepositories.ttsAudio, same(ttsAudio));
     });
 
     testWidgets('searchRepository 為 null 時，點擊搜尋按鈕顯示不可用提示，不導覽',

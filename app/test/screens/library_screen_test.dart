@@ -38,6 +38,7 @@ import '../support/fake_highlights_repository.dart';
 import '../support/fake_notes_repository.dart';
 import '../support/fake_tts_provider.dart';
 import 'package:elinkbook/reader/tts_audio_handler.dart';
+import 'package:elinkbook/reader/tts_audio_handler_startup.dart';
 import '../support/fake_tts_audio_focus_source.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
@@ -2095,7 +2096,7 @@ void main() {
     },
   );
 
-  testWidgets('LibraryScreen 點開一本書後，ReaderScreen 收到的 ttsAudioHandler／'
+  testWidgets('LibraryScreen 點開一本書後，ReaderScreen 收到的 ttsAudio holder／'
       'ttsAudioFocusSource 正確貫穿（epic-34-tts-readalong Issue 7）', (
     tester,
   ) async {
@@ -2115,7 +2116,7 @@ void main() {
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
           readerFeatureRepositories: LibraryReaderFeatureRepositories(
-            ttsAudioHandler: ttsAudioHandler,
+            ttsAudio: TtsAudioHandlerHolder.ready(ttsAudioHandler),
             ttsAudioFocusSource: ttsAudioFocusSource,
           ),
         ),
@@ -2126,7 +2127,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
-    expect(readerScreen.ttsAudioHandler, same(ttsAudioHandler));
+    expect(readerScreen.ttsAudio?.handler, same(ttsAudioHandler));
     expect(readerScreen.ttsAudioFocusSource, same(ttsAudioFocusSource));
   });
 

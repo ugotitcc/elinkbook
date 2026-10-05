@@ -48,6 +48,8 @@
 
 ## Task 0：量測基準（暫時除錯程式碼，不提交）
 
+> **狀態（2026-10-05）：暫緩。** 電子紙暫時無法連線，修復前（`f153baa5`）的 A／B 對照尚未量，以下 checkbox 維持未勾。程式審查 I-2 指出缺這組對照會讓「B−A≈0」證明力不足，已列為後續項目 F4（`epic.md`）。
+
 冷啟動本來就有其他 `await` 的底噪（見「已知事實」），所以必須量兩組、看差距，不能只量單一組絕對值。
 
 - [ ] 暫時修改 `main.dart`（不提交）：在 `main()` 開頭記 `Stopwatch`；在 `runApp` 之後以 `addPostFrameCallback` 於首幀印出 `[T0-a4f2] first frame <ms>`（程式內計時，不靠截圖）。
@@ -60,7 +62,7 @@
 
 **檔案：** `lib/reader/tts_audio_handler_startup.dart`、`test/reader/tts_audio_handler_startup_test.dart`（新增案例）。
 
-- [ ] 介面草稿（`tts_audio_handler_startup.dart`）：
+- [x] 介面草稿（`tts_audio_handler_startup.dart`）：
 
   ```dart
   /// 啟動階段 TTS 音訊服務的狀態。
@@ -81,67 +83,77 @@
     Future<TtsAudioHandler> Function() init,
   );
   ```
-- [ ] 規範狀態語意（回應審查：`unavailable()` 不再模糊）：`pending`＝初始化中（或測試中「不關心 TTS」的預設），`failed`＝初始化已失敗，兩者 `handler` 都是 null，但只有 `failed` 會提示。三個建構子的意圖：
+- [x] 規範狀態語意（回應審查：`unavailable()` 不再模糊）：`pending`＝初始化中（或測試中「不關心 TTS」的預設），`failed`＝初始化已失敗，兩者 `handler` 都是 null，但只有 `failed` 會提示。三個建構子的意圖：
   - `TtsAudioHandlerHolder.ready(handler)`：handler 已就緒（`ready`），不降級。
   - `TtsAudioHandlerHolder.degraded()`：handler 為 null，初始化已失敗（`failed`）、提示待顯示。
   - `TtsAudioHandlerHolder.unavailable()`：handler 為 null，初始化中（`pending`），**不提示**（供只是需要傳一個依賴的一般測試最小改動使用，不會意外觸發提示）。
   - 背景啟動函式建立的 holder 初始為 `pending`，init 結束後才變成 `ready` 或 `failed`；狀態只會單向轉移，不會從 `failed` 或 `ready` 回到 `pending`。
-- [ ] 把 `test/reader/tts_degraded_notice_test.dart` 的案例（降級時 consume 第一次 true、之後 false；未降級恆 false）搬進 `tts_audio_handler_startup_test.dart`，改以 holder 的 `consumeDegradedNotice()` 表達。
-- [ ] 先寫測試（紅）：
+- [x] 把 `test/reader/tts_degraded_notice_test.dart` 的案例（降級時 consume 第一次 true、之後 false；未降級恆 false）搬進 `tts_audio_handler_startup_test.dart`，改以 holder 的 `consumeDegradedNotice()` 表達。
+- [x] 先寫測試（紅）：
   - `startTtsAudioHandlerInBackground` 在 init 尚未完成時就同步回傳，holder `handler == null`、尚未降級。
   - init 成功 → holder 有 handler、通知 listener 一次、不降級。
   - init 丟例外 → holder `handler == null`、通知一次、降級待提示。
   - init 永遠不完成 → 不丟例外、不阻塞。
   - `consumeDegradedNotice()`：降級後第一次 true、之後 false（沿用 Issue 1 語意）；未降級恆 false。
   - `ready(handler)`／`unavailable()` 建構的初始狀態。
-- [ ] 實作 `TtsAudioHandlerHolder`；保留 `TtsDegradedNotice` 直到 Task 2 換完，最後移除（避免兩套並存）。
-- [ ] 跑 `flutter test test/reader/tts_audio_handler_startup_test.dart`；變異檢查：讓 holder 失敗時不通知 → 對應案例失敗。
-- [ ] 提交（`feat(epic-61): 新增 TtsAudioHandlerHolder 與背景啟動函式`）。
+- [x] 實作 `TtsAudioHandlerHolder`；保留 `TtsDegradedNotice` 直到 Task 2 換完，最後移除（避免兩套並存）。
+- [x] 跑 `flutter test test/reader/tts_audio_handler_startup_test.dart`；變異檢查：讓 holder 失敗時不通知 → 對應案例失敗。
+- [x] 提交（`feat(epic-61): 新增 TtsAudioHandlerHolder 與背景啟動函式`）。
 
 ## Task 2：換掉往下傳的參數
 
 **檔案：** `main.dart`（`ElinkBookApp`）、`library_screen_dependencies.dart`、`reader_screen_route.dart`、`reader_screen.dart` 的建構子與手動重建 bundle 處（約第 1847 行，Issue 1 審查 I-1 的同一處）。
 
-- [ ] 把 `ttsAudioHandler` 與 `ttsDegradedNotice` 兩個欄位換成一個 `TtsAudioHandlerHolder? ttsAudio`；現有測試以 `ready(handler)`／`unavailable()` 最小改動更新。
-- [ ] 移除 `TtsDegradedNotice` 類別，並**刪除** `test/reader/tts_degraded_notice_test.dart`（案例已在 Task 1 搬到 `tts_audio_handler_startup_test.dart`）。
-- [ ] 串接測試（`reader_screen_route_test`、`elinkbook_app_wiring_test`、`reader_screen_test` 的單書搜尋轉送）改為驗證 holder 原樣轉交；變異檢查：拿掉任一轉送行 → 對應測試失敗。
-- [ ] 跑觸及的測試檔。
-- [ ] 提交（`refactor(epic-61): ttsAudioHandler／ttsDegradedNotice 合併為 holder 往下傳`）。
+- [x] 把 `ttsAudioHandler` 與 `ttsDegradedNotice` 兩個欄位換成一個 `TtsAudioHandlerHolder? ttsAudio`；現有測試以 `ready(handler)`／`unavailable()` 最小改動更新。
+- [x] 移除 `TtsDegradedNotice` 類別，並**刪除** `test/reader/tts_degraded_notice_test.dart`（案例已在 Task 1 搬到 `tts_audio_handler_startup_test.dart`）。
+- [x] 串接測試（`reader_screen_route_test`、`elinkbook_app_wiring_test`、`reader_screen_test` 的單書搜尋轉送）改為驗證 holder 原樣轉交；變異檢查：拿掉任一轉送行 → 對應測試失敗。
+- [x] 跑觸及的測試檔。
+- [x] 提交（`refactor(epic-61): ttsAudioHandler／ttsDegradedNotice 合併為 holder 往下傳`）。
 
 ## Task 3：`ReaderScreen` 晚到注入
 
 **檔案：** `reader_screen.dart`、`test/screens/reader_screen_tts_degraded_notice_test.dart`、新增 `test/screens/reader_screen_tts_late_handler_test.dart`。
 
-- [ ] 先寫測試（紅），用記錄呼叫的 `TtsAudioHandler` 子類別：
+- [x] 先寫測試（紅），用記錄呼叫的 `TtsAudioHandler` 子類別：
   - controller 已建立、handler 晚到 → `attachController` 被呼叫一次，書名正確。
   - handler 先到、後建 controller → 行為與現況相同。
   - dispose 後 holder 再通知 → 不例外、不 attach；dispose 時 `detachController` 被呼叫。
   - 閱讀器已開啟後才降級 → 立即顯示提示一次；之後重進不重複；未降級不顯示。
   - 既有 Issue 1 的 4 個案例（初始降級、重進不重複、未降級、未傳 holder）全數保留。
   - 兩個 `ReaderScreen` 並存（閱讀器→單書搜尋→回閱讀器）：先關後建立者不會把前者的綁定拆掉；先關先建立者會解綁；最終 handler 狀態與實際存活的畫面一致。
-  - controller 已在播放時 handler 晚到 → attach 後 `playbackState.playing` 為 true。
+  - controller 已在播放時 handler 晚到 → attach 後 `playbackState.playing` 為 true。（實際涵蓋範圍：flutter_test 下 `loadSegments` 恆回空清單，ReaderScreen 內的 controller 進不了 playing，所以只在 handler 層級驗證 attach 時同步；晚到 attach 的 ReaderScreen 路徑由「補 attach 一次」案例守住。）
   - 降級提示在兩個畫面並存時只顯示一次。
-- [ ] 實作：
+- [x] 實作：
   - `_ReaderScreenState` 記錄 `_attachedAudioHandler`；只在「controller 存在、handler 非 null、尚未 attach 過這個 handler」時 attach，避免通知多次造成重複 attach。
   - `dispose`：只在 handler 目前綁定的 controller 就是本畫面的 `_ttsController` 時才 detach。為此 `TtsAudioHandler` 新增 `detachController({TtsController? only})`（`only` 非 null 時，目前綁定的不是它就什麼都不做；不帶參數時行為與現在相同，既有 `tts_audio_handler_test` 不改）。
   - 降級提示收斂成單一方法 `_checkShowDegradedNotice()`：內含 `addPostFrameCallback`，post-frame 內先判 `!mounted` 再 `consumeDegradedNotice()` 再顯示；`initState` 與 holder 通知回呼都呼叫它。
   - `initState` 加 listener、`dispose` 移除。
-- [ ] 跑觸及的測試檔；變異檢查：拿掉晚到 attach → 對應案例失敗。
-- [ ] 提交（`feat(epic-61): ReaderScreen 支援 handler 晚到注入與多畫面並存`）。
+- [x] 跑觸及的測試檔；變異檢查：拿掉晚到 attach → 對應案例失敗。
+- [x] 提交（`feat(epic-61): ReaderScreen 支援 handler 晚到注入與多畫面並存`）。
 
 ## Task 4：`main()` 不再等待
 
-- [ ] `main.dart`：`final ttsAudio = startTtsAudioHandlerInBackground(() => AudioService.init(...));`，不 `await`，直接傳給 `ElinkBookApp`。更新註解（失敗後不可重試、晚到注入）。
-- [ ] `flutter analyze` 乾淨；`elinkbook_app_wiring_test` 通過。
-- [ ] 提交（`feat(epic-61): main() 不再等待 AudioService.init`）。
+- [x] `main.dart`：`final ttsAudio = startTtsAudioHandlerInBackground(() => AudioService.init(...));`，不 `await`，直接傳給 `ElinkBookApp`。更新註解（失敗後不可重試、晚到注入）。
+- [x] `flutter analyze` 乾淨；`elinkbook_app_wiring_test` 通過。
+- [x] 提交（`feat(epic-61): main() 不再等待 AudioService.init`）。
 
 ## Task 5：驗證、審查、PR
 
-- [ ] 完整 `flutter test`（`app/`，背景執行）。
-- [ ] 真機（電子紙）：重複 Task 0 的 A、B 兩組（同一份暫時除錯程式碼），驗收標準：**B − A 差距在 0.5 秒內**（修復前約 10 秒）；再用故障 manifest 驗證降級提示仍出現（在書架等 init 失敗後進閱讀器，提示出現一次）；正常版媒體通知照常。驗證完還原。
-- [ ] 同步更新 `issues.md` Issue 2 的狀態與測試要求（若實作時又有調整）。
-- [ ] 獨立程式審查（報告存 `reviews/`），依意見修訂，記錄進 `epic.md`。
+- [x] 完整 `flutter test`（`app/`，背景執行）。結果：3669 通過、1 略過、
+  1 失敗＝既有 `pdf_reader_view_filters_test` 加粗案例（全套負載下不穩，
+  單獨重跑通過，基準亦然，非回歸）。
+- [x] 真機（電子紙）：重複 Task 0 的 A、B 兩組（同一份暫時除錯程式碼），驗收標準：**B − A 差距在 0.5 秒內**（修復前約 10 秒）；再用故障 manifest 驗證降級提示仍出現（在書架等 init 失敗後進閱讀器，提示出現一次）；正常版媒體通知照常。驗證完還原。
+  - 實測：A＝14686／10408／10407ms，B＝14744／10409／10336ms，穩定值皆約
+    10.4 秒，B − A 約 0 毫秒。故障版進書架正常、失敗在背景接住、提示出現一次
+    （截圖）；正常版朗讀後媒體通知出現（Previous／Pause／Next）。暫時碼已還原，
+    `grep T0-a4f2／BROKEN` 無殘留，`git status` 乾淨（僅本 Issue 實作與文件改動）。
+- [x] 同步更新 `issues.md` Issue 2 的狀態與測試要求（若實作時又有調整）。
+  狀態改為「實作與真機驗收完成，待開 PR」；測試要求與實作一致，無需調整。
+- [x] 獨立程式審查（報告存 `reviews/`），依意見修訂，記錄進 `epic.md`。
+  人類禁 subagent，改為 self-review：`reviews/review-code-issue-2.md`
+ （0／0／3，無需修訂）；實作與驗收記錄已寫入 `epic.md`。
 - [ ] 推送、開 PR；合併後更新 `epics.md`、`issues.md`、`epic.md`。F2 仍在，epic-61 不歸檔，除非人類決定放棄 F2。
+  （推送／開 PR 需人類執行；暫時碼還原、`flutter analyze` 乾淨已確認。）
 
 ## 人類已決定（2026-10-05）
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -43,6 +45,104 @@ void main() {
       );
 
       expect(result, isNull);
+    });
+  });
+
+  group('TtsAudioHandlerHolder（啟動階段 holder，取代 TtsDegradedNotice）', () {
+    test('ready 建構：狀態為 ready、有 handler、永不提示', () {
+      final handler = TtsAudioHandler();
+      final holder = TtsAudioHandlerHolder.ready(handler);
+
+      expect(holder.status, TtsAudioHandlerStatus.ready);
+      expect(holder.handler, same(handler));
+      expect(holder.consumeDegradedNotice(), isFalse);
+      expect(holder.consumeDegradedNotice(), isFalse);
+    });
+
+    test('degraded 建構：狀態為 failed、無 handler、只提示一次', () {
+      final holder = TtsAudioHandlerHolder.degraded();
+
+      expect(holder.status, TtsAudioHandlerStatus.failed);
+      expect(holder.handler, isNull);
+      expect(holder.consumeDegradedNotice(), isTrue);
+      expect(holder.consumeDegradedNotice(), isFalse);
+      expect(holder.consumeDegradedNotice(), isFalse);
+    });
+
+    test('unavailable 建構：狀態為 pending、無 handler、永不提示', () {
+      final holder = TtsAudioHandlerHolder.unavailable();
+
+      expect(holder.status, TtsAudioHandlerStatus.pending);
+      expect(holder.handler, isNull);
+      expect(holder.consumeDegradedNotice(), isFalse);
+      expect(holder.consumeDegradedNotice(), isFalse);
+    });
+  });
+
+  group('startTtsAudioHandlerInBackground', () {
+    test('init 尚未完成時就同步回傳 pending holder，不阻塞', () {
+      final completer = Completer<TtsAudioHandler>();
+      var notified = false;
+
+      final holder =
+          startTtsAudioHandlerInBackground(() => completer.future);
+      holder.addListener(() => notified = true);
+
+      expect(holder.status, TtsAudioHandlerStatus.pending);
+      expect(holder.handler, isNull);
+      expect(holder.consumeDegradedNotice(), isFalse);
+      expect(notified, isFalse);
+      // 收尾：讓背景工作有對象可完成，避免懸空 future；不 await，
+      // 若實作阻塞在此，測試本身就會逾時失敗。
+      completer.complete(TtsAudioHandler());
+    });
+
+    test('init 成功時 holder 變 ready、有 handler、通知一次、不提示', () async {
+      final handler = TtsAudioHandler();
+      var notifyCount = 0;
+
+      final holder = startTtsAudioHandlerInBackground(() async => handler);
+      holder.addListener(() => notifyCount++);
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(holder.status, TtsAudioHandlerStatus.ready);
+      expect(holder.handler, same(handler));
+      expect(notifyCount, 1);
+      expect(holder.consumeDegradedNotice(), isFalse);
+    });
+
+    test('init 丟例外時 holder 變 failed、無 handler、通知一次、待提示', () async {
+      var notifyCount = 0;
+
+      final holder = startTtsAudioHandlerInBackground(
+        () async => throw StateError('綁定逾時'),
+      );
+      holder.addListener(() => notifyCount++);
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(holder.status, TtsAudioHandlerStatus.failed);
+      expect(holder.handler, isNull);
+      expect(notifyCount, 1);
+      expect(holder.consumeDegradedNotice(), isTrue);
+      expect(holder.consumeDegradedNotice(), isFalse);
+    });
+
+    test('init 永遠不完成時不丟例外、不通知、不提示', () async {
+      var notified = false;
+
+      final holder = startTtsAudioHandlerInBackground(
+        () => Completer<TtsAudioHandler>().future,
+      );
+      holder.addListener(() => notified = true);
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(holder.status, TtsAudioHandlerStatus.pending);
+      expect(holder.handler, isNull);
+      expect(notified, isFalse);
+      expect(holder.consumeDegradedNotice(), isFalse);
     });
   });
 }

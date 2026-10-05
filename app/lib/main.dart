@@ -218,10 +218,13 @@ Future<void> main() async {
     localeOverride: initialLocaleOverride,
     deviceLocales: WidgetsBinding.instance.platformDispatcher.locales,
   );
-  // epic-61：service 綁定逾時時 AudioService.init 會丟出例外；以
-  // initTtsAudioHandlerSafely 接住並降級為 null（朗讀本次不可用），
-  // 避免 main() 中斷、runApp 未執行而整個 App 黑屏。
-  final ttsAudioHandler = await initTtsAudioHandlerSafely(
+  // epic-61 Issue 2（F1）：AudioService.init 在 service 綁定逾時時約 10 秒
+  // 才丟例外，不可再阻塞啟動。同步取得 pending 狀態的 holder 後直接往下走、
+  // 先 runApp；init 在背景跑，完成後 holder 變成 ready 或 failed 並通知，
+  // ReaderScreen 監聽 holder 做晚到注入（handler 補 attachController、降級
+  // 補提示一次）。AudioService.init 全程式只呼叫一次、失敗後不可重試的限制
+  // 不變（見 startTtsAudioHandlerInBackground 說明）。
+  final ttsAudio = startTtsAudioHandlerInBackground(
     () => AudioService.init(
       builder: () => TtsAudioHandler(),
       config: AudioServiceConfig(
@@ -328,8 +331,7 @@ Future<void> main() async {
       layoutPresetRepository: layoutPresetRepository,
       bookReaderPrefsRepository: prefsRepository,
       ttsProvider: ttsProvider,
-      ttsAudioHandler: ttsAudioHandler,
-      ttsDegradedNotice: TtsDegradedNotice(degraded: ttsAudioHandler == null),
+      ttsAudio: ttsAudio,
       ttsAudioFocusSource: ttsAudioFocusSource,
       readerActivityTracker: readerActivityTracker,
       syncAccountRepository: syncAccountRepository,
@@ -377,10 +379,10 @@ class ElinkBookApp extends StatefulWidget {
   final LayoutPresetRepository? layoutPresetRepository;
   final BookReaderPrefsRepository? bookReaderPrefsRepository;
   final TtsProvider? ttsProvider;
-  final TtsAudioHandler? ttsAudioHandler;
 
-  /// epic-61 Issue 1：TTS 音訊服務降級後，進入閱讀器時提示一次的狀態。
-  final TtsDegradedNotice? ttsDegradedNotice;
+  /// epic-61 Issue 2：啟動階段 TTS 音訊服務 holder（handler 是否就緒＋降級
+  /// 提示是否待顯示）。`null`（既有呼叫端、測試）時視為未提供，不提示。
+  final TtsAudioHandlerHolder? ttsAudio;
   final TtsAudioFocusSource? ttsAudioFocusSource;
   final ReaderActivityTracker? readerActivityTracker;
   final SyncAccountRepository? syncAccountRepository;
@@ -435,8 +437,7 @@ class ElinkBookApp extends StatefulWidget {
     this.layoutPresetRepository,
     this.bookReaderPrefsRepository,
     this.ttsProvider,
-    this.ttsAudioHandler,
-    this.ttsDegradedNotice,
+    this.ttsAudio,
     this.ttsAudioFocusSource,
     this.readerActivityTracker,
     this.syncAccountRepository,
@@ -548,8 +549,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
           layoutPresetRepository: widget.layoutPresetRepository,
           bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
           ttsProvider: widget.ttsProvider,
-          ttsAudioHandler: widget.ttsAudioHandler,
-          ttsDegradedNotice: widget.ttsDegradedNotice,
+          ttsAudio: widget.ttsAudio,
           ttsAudioFocusSource: widget.ttsAudioFocusSource,
           readerActivityTracker: widget.readerActivityTracker,
           fullTextSearchSettingsRepository:
