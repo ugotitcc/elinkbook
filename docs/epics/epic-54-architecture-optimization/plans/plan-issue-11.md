@@ -1044,12 +1044,12 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 **Files：** Modify：`docs/adr/0037-…md`、`docs/epics/epic-54-architecture-optimization/{epic.md,issues.md}`、`docs/epics.md`
 
-- [ ] **Step 1：修訂 ADR 0037 兩處措辭**
+- [x] **Step 1：修訂 ADR 0037 兩處措辭**
 
 - §3：把「真正可能缺席的能力（TTS 引擎、全文檢索、WiFi 傳書）以明確的「不可用」adapter 或旗標表示」改為：全文檢索以 `isFullTextSearchAvailable` 旗標表示；WiFi 傳書於 Issue 13 處理；**TTS 不新增不可用 adapter**——正式環境恆提供 `SystemTtsProvider`，音訊服務不可用以 `TtsAudioHandlerHolder.unavailable()`／`.degraded()` 表示。
 - §6：把「只能在 `buildReaderScreen` 這一個呼叫點暫時組裝」改為「只能透過 `reader_screen_route.dart` 的單一轉換函式 `readerFeatureDependenciesFromLegacy` 暫時組裝，由尚未遷移的外層畫面呼叫，於最後一個外層畫面遷移完成時移除」。
 
-- [ ] **Step 2：更新 `epic.md`、`issues.md`、`docs/epics.md`**
+- [x] **Step 2：更新 `epic.md`、`issues.md`、`docs/epics.md`**
 
 `epic.md` 新增「Issue 11 實作完成」段落：分支名、Task 0 基準 N、最終通過數與算式、被刪缺席測試名稱清單、Task 4 需 `completeLegacyReaderFeatures()` 補齊的測試數、`readerSaveAsPresetUnavailableMessage` 孤兒鍵的記錄、Review Focus 逐條對應的測試名稱。`issues.md` Issue 11 狀態改為「🟡 實作完成，待程式審查」；`docs/epics.md` 備註「最後處理的 Issue」同步為「Issue 11 實作完成，待程式審查」。
 

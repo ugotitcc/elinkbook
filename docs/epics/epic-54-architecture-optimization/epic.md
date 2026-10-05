@@ -311,3 +311,15 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 設計經 grilling 定案，詳見 ADR 0037：依賴按使用者分四組、單一物件經建構子傳遞、non-null required、測試預設全 fake、逐畫面一刀切、不用 `InheritedWidget`。Issue 11 先做，完成後確認設計成立再做 12～14。
 - 工單審查（`reviews/review-issues-11-14.md`，2 Critical／4 Important／3 Minor）已逐項對照程式碼後採納並修訂 ADR 0037 與 Issues：`syncCheckpointTrigger` 同時放入閱讀器組與同步組（同一實例）、介面語言併入 `AppearanceDependencies`、`WifiTransferDependencies` 併入 `SourceDependencies`、`readingStatsTracker`／`pickSingleBookFile` 留作測試注入點、`buildReaderScreen` 暫時組裝僅限該處且於 Issue 12/13 移除、Issue 14 調為 Strong。原先整理分組時漏列這三項（`LibraryLocaleDependencies` 是第 6 個既有 bundle，非 5 個）。
 - 已知風險：測試改動量大（`ReaderScreen(` 約 267 處、`LibraryScreen(` 約 135 處、`SettingsScaffold(` 約 53 處）；Issue 11 開工前須核對 `ReaderScreen` 的 17 個依賴中是否有 `readingStatsTracker` 這類由畫面自行建構者。
+
+**2026-10-06 Issue 11 實作完成**（分支 `epic-54/issue-11-reader-deps`，worktree 內 Native 直接開發，未使用 subagent。計畫見 `plans/plan-issue-11.md`）
+
+- 內容：新增 `ReaderFeatureDependencies`（18 欄位，non-null required）；`ReaderScreen` 建構子 29→12 個參數（含 `super.key`）；`BookSearchScreen` 改收整組；開單書搜尋整組轉傳（同一實例）；舊 bundle 暫由 `readerFeatureDependenciesFromLegacy` 轉換（缺欄位丟 `StateError` 含欄位名，Issue 12/13 移除）；測試改用預設全 fake 工廠。
+- 驗證：Task 0 基準 512 全過；範圍測試 509 通過（算式：512 − 缺席 18（reader 17＋stats 1）− bundle 轉傳 6 ＋ 新增 21（工廠 5＋StateError 14＋sync 1＋完整轉換 1））；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS。
+- 被刪缺席測試（18，依前提 1，型別上不可達）：未提供 syncCheckpointTrigger／layoutPresetRepository 為 null／沒有傳入 store／searchRepository 為 null／libraryRepository 為 null／沒有匯入服務／未提供 bookmarksRepository（EPUB＋FXL）／未提供 highlights／notes（EPUB＋PDF）／未提供 ttsProvider（播放鍵、上下句/語速、Mini Player、safeWindow 回呼、小喇叭）／未提供 ttsAudioHandler／ttsAudioFocusSource／isFixedLayout:null 且未提供 libraryRepository／stats「閱讀器沒有 readingStatsRepository」；另刪 route 6 個 bundle 轉傳測試（「帶／未帶」已不可達）。
+- `completeLegacyReaderFeatures()` 補齊：library 15 例＋search 8 例＝23 個「點選書籍進入閱讀器」測試。
+- 孤兒鍵：`readerSaveAsPresetUnavailableMessage`（ARB 鍵保留未刪，待後續清理）。
+- Review Focus 對應：1→route 對帳 same 身分 18 欄位；2→雙向 same（`searchScreen.dependencies`／`ReaderScreen.dependencies`，offstage 路由查找用 `skipOffstage: false`）；3→StateError 15 例；4→B 類 4 例補主題＋volume_key 全域 mock（無同因 ≥5 例）；5→降級提示測試保留改寫；6→CBZ 停用按鈕測試保留。
+- 計畫外追加：`integration_test/` 21 檔 60 處同值機械遷移（提交門檻 bare analyze 乾淨所需；真機部分無法本地驗證，發 PR 時須跑裝置）。
+- ADR 0037 措辭已同步修訂（§3 TTS 不新增 adapter、§6 轉換函式三呼叫點）。待程式審查與發 PR。
+- 全量 `flutter test`（最終 commit 前）：3672 通過、1 略過、1 失敗——失敗為 `pdf_reader_view_filters_test` bold overlay debouncer 案例，在乾淨 main 上同樣失敗，既存缺陷與本 Issue 無關，不在本 Issue 修。
