@@ -69,7 +69,7 @@
 | 59 | `epic-58-pdf-crop-drag-select` PDF 手動裁切改為手指拖拉直接框選（取代四角圓點） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 60 | `epic-59-pdf-overlay-recompute-storm` （缺陷）PDF 開啟手動裁切／加粗後翻頁產生覆蓋圖計算風暴，頁面長時間全白 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 61 | `epic-60-crop-mode-lost-after-cancel` （缺陷）PDF 手動裁切按 ✕ 取消後，版面設定「裁切」分頁的模式按鈕全部沒有反白 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
-| 62 | `epic-61-startup-black-screen` （缺陷）安裝新版後第一次啟動黑屏：`main()` 的 `AudioService.init` 例外未接住，`runApp` 未執行 | 🟡 開發中 (Active) | Issue 1（F3 降級提示，PR #324）、Issue 2（F1 不阻塞啟動，PR #325）已合併；F2（觸發條件）已收手（未穩定重現，PR #326）；F4（首幀約 10.4 秒來源）已排除 `main()`、`runApp` 之後的來源未查，仍在此 Epic 處理，暫不歸檔 |
+| 62 | `epic-61-startup-black-screen` （缺陷）安裝新版後第一次啟動黑屏：`main()` 的 `AudioService.init` 例外未接住，`runApp` 未執行 | 🟡 開發中 (Active) | Issue 1（F3 降級提示，PR #324）、Issue 2（F1 不阻塞啟動，PR #325）已合併；F2（觸發條件）已收手（未穩定重現，PR #326）；F4（首幀約 10.4 秒）已查明是 debug 版加啟動逾時的量法假象，release 版約 1.7 秒；F1～F4 皆完成或收手，待人類決定歸檔 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。

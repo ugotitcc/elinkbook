@@ -222,17 +222,45 @@ F2（紅燈＝logcat 出現 `Unable to bind to AudioService`）：
 - 剩餘：F4（`runApp` 之後 `am start -W` 約 10.2 秒的來源）。Epic 61 不歸檔，除非人類決定放棄 F4。
 - 待處理：電子紙上仍是帶 `F2T` 計時 log 的 debug 版（功能正常），需手動複製安裝乾淨版；本機分支 `epic-61/f2-trigger-investigation` 已合併，可清理（需人類確認）。
 
+**2026-10-05 F4 release 量測（電子紙 WAVE，已確認原因）**
+
+debug 版一次冷啟動的時間線（以 `ActivityTaskManager: START` 為 0 秒）：
+
+| 相對時間 | 事件 |
+|---|---|
+| 0.0 秒 | `START` |
+| 約 5.1 秒 | Dart `main-enter` |
+| 約 8.0 秒 | `before-runApp` |
+| **10.0 秒** | `ActivityTaskManager: Launch timeout has expired` |
+| 約 17.8 秒 | `ViewRootImpl[MainActivity]`（首幀畫出） |
+
+- `am start -W` 每次約 10.2 秒，是系統啟動逾時（10 秒）到了才回傳，不是 App 畫好了。所以先前記錄的「首幀約 10.4 秒」**不是首幀時間**，數字固定也是這個原因。debug 版真正首幀更晚（這次約 17.8 秒）。
+- 行程啟動到 `main-enter` 約 3.6 秒，是 debug 版 JIT 的引擎與 Dart VM 啟動；`runApp` 之後主執行緒另有長時間卡住（`Skipped 131 frames`），原因未查，debug 版數字不代表真實。
+
+release 版（`flutter build apk --release`，用上傳金鑰簽章，裝置先解除安裝 debug 版，資料已清空；`flags` 無 `DEBUGGABLE`），冷啟動 3 次：
+
+| 次數 | `am start -W` | 備註 |
+|---|---|---|
+| 1（剛安裝後第一次） | 6386ms | 無 `Displayed` 行，首幀約 6.3 秒；原因未驗證（可能是安裝後系統最佳化） |
+| 2 | 1735ms | `Displayed +1s692ms` |
+| 3 | 1777ms | `Displayed +1s744ms` |
+
+- 3 次都沒有 `Launch timeout`、沒有 `Unable to bind`（紅燈 0／3）。
+- **結論**：使用者實際遇到的冷啟動約 1.7 秒（剛安裝後第一次約 6.4 秒），「10.4 秒首幀」只存在於 debug 版量測。F1 驗收的「B−A 約 0」仍只代表「注入的 10 秒延遲沒有疊加」。
+- **限制**：release 只量 3 次；沒有量修復前（`f153baa5`）的 release 對照，無法直接給出 F1 在 release 上縮短多少；「在閱讀器內等到失敗」的真機情境仍未驗。
+- 附帶：電子紙現在是 release 版，資料已清空。
+
 ## 後續項目（併入本 Epic，不另開 Epic）
 
 2026-10-05 人類決定：同一條問題線的後續工作不為每個小問題各開一個 Epic，併在本 Epic 以「後續項目」追蹤。
 
 | # | 項目 | 狀態 | 備註 |
 |---|---|---|---|
-| F1 | 失敗時約 10 秒黑屏：把 `AudioService.init` 改成不阻塞啟動（背景進行，完成後再注入 handler） | 已完成（Issue 2，PR #325）；真機修復前對照暫緩，見 F4 | B−A 約 0 毫秒，但缺修復前對照、A 組首幀約 10.4 秒來源未明（見 F4）；降級提示與媒體通知皆照常 |
+| F1 | 失敗時約 10 秒黑屏：把 `AudioService.init` 改成不阻塞啟動（背景進行，完成後再注入 handler） | 已完成（Issue 2，PR #325）；真機修復前對照暫緩，見 F4 | B−A 約 0 毫秒，但缺修復前對照；A 組「首幀約 10.4 秒」已查明是 debug 版加啟動逾時的量法假象（見 F4）；降級提示與媒體通知皆照常 |
 | F2 | 綁定逾時的觸發條件 | 已收手（未穩定重現，2026-10-05） | 約 5～10%，不限於剛安裝；CPU 滿載 0／4、IO 負載 0／20 皆無效；手法 A（內容有變的 APK 重裝）因 adb 太慢未做。F1 已讓逾時不再黑屏，風險低，見開發記錄 |
 | F3 | 降級後讓使用者知道（例如一次性提示） | 已完成（Issue 1，PR #324） | 進入閱讀器時 SnackBar、每次啟動一次；4 個 arb |
 
-| F4 | 正常冷啟動首幀約 10.4 秒的來源 | 部分完成：已排除 `main()`（見 2026-10-05 F2／F4 調查），`runApp` 之後的首幀來源未查 | 修復後 A 組（未注入）首幀就約 10.4 秒，與綁定逾時時間幾乎相同。要補量修復前（`f153baa5`）A／B 對照，並在 `main()` 各 `await` 前後暫時計時。可能 debug 建置本身慢，也可能與 AudioService 有關（兩者皆未驗證） |
+| F4 | 正常冷啟動首幀約 10.4 秒的來源 | 已完成（2026-10-05）：10.2 秒是 debug 版加啟動逾時的量法假象，release 版約 1.7 秒（見「F4 release 量測」記錄） | 原先懷疑與 AudioService 有關，已排除：`main()` 約 2.9 秒就到 `runApp`，且 `am start -W` 的 10.2 秒是系統啟動逾時。仍未補量修復前（`f153baa5`）的 release 對照 |
 
 F1、F3 已拆成 Issue，見 `issues.md`（F3＝Issue 1、F1＝Issue 2）；F2 是調查，不開 Issue，留在此表。
 
