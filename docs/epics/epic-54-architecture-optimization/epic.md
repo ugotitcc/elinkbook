@@ -346,3 +346,10 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 時序：須等 PR #327（Issue 11）合併後再做——33 個檔案中有 21 個與 Issue 11 的 integration 遷移重疊，避免合併衝突。
 - 流程建議：依「小型缺陷修正」慣例走直接 TDD（登錄於本 Epic，不寫 plan，保留程式審查）；但本案範圍較大（33 檔／104 處，且需真機驗證），若希望先寫 plan 請另行指定。
 - 附帶發現：手機連線在測試過程中多次中斷（USB 接觸問題），真機驗證前先確認 `adb devices -l` 穩定。
+
+**2026-10-06 PR 合併（Issue 11）**
+
+- PR #327（`epic-54/issue-11-reader-deps` → `main`）已合併，合併 commit `fdced956`。Issue 11 完成。
+- 合併後的後續：Issue 15（integration 測試補 `localizationsDelegates`）的時序前提（等 Issue 11 合併）已滿足，可處理；Issue 12 須合併 `LibrarySearchScreen` 的 `searchRepository` 來源並移除 `readerFeatureDependenciesFromLegacy` 的 `searchRepository` 覆寫參數（程式審查 M-1）；`readerSaveAsPresetUnavailableMessage` 孤兒 ARB 鍵排入 Issue 13 清理（M-5）。
+- Issue 11 的 integration 遷移（21 檔、約 60 處）合併時只有靜態檢查，尚無執行期驗證，須待 Issue 15 補完後在真機驗證。
+- 分支 worktree `.worktrees/epic-54-issue-11-reader-deps`（含 untracked 的 `.scratch/`）尚未清除。
