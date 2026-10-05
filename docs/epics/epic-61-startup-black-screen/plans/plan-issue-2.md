@@ -18,7 +18,7 @@
 - `main()` 在 `AudioService.init` 之前還有多個 `await`（`pdfrxFlutterInitialize`、讀偏好、開資料庫、`webViewMajorVersionFuture`〔最長等 3 秒〕、`downloadableFontStore.prepare()`、`AudioSession.configure` 等）。這些不在本 Issue 範圍，但表示「冷啟動到書架」的總時間有本來就存在的底噪，量測必須用對照組（見 Task 0）。
 - `ReaderScreen.dispose`（約第 752 行）目前**無條件** `widget.ttsAudioHandler?.detachController()`。`TtsAudioHandler` 是單一實例、`attachController` 會先 detach 前一個；閱讀器→單書搜尋→回閱讀器時會有兩個 `ReaderScreen` 同時存活。晚到注入讓「誰 attach、誰 detach」更容易交錯，見 Task 3 與 Review Focus 7。
 - **規格更新（取代 `issues.md` Issue 2 原文）**：因採參數合併，`elinkbook_app_wiring_test`、`reader_screen_route_test` 等串接測試須改為斷言 holder 貫穿，不再是「不改而通過」；`tts_audio_handler_startup_test` 則是新增案例、既有案例不改。`issues.md` 已同步修正。
-- 受影響的測試：`library_screen_test.dart`（4 處）、`reader_screen_route_test.dart`（3 處）、`reader_screen_test.dart`（9 處）傳 `ttsAudioHandler:`；Issue 1 的 4 個測試檔傳 `ttsDegradedNotice:`。
+- 受影響的測試（grep 的是「行數」，不是測試數）：`library_screen_test.dart`（4 行）、`reader_screen_route_test.dart`（3 行）、`reader_screen_test.dart`（9 行）傳 `ttsAudioHandler:`，合計 16 行，實際約 8 到 10 個測試、約 25 行要改；Issue 1 的測試檔（`tts_degraded_notice_test`、`reader_screen_tts_degraded_notice_test`、`reader_screen_route_test`、`elinkbook_app_wiring_test`、`reader_screen_test` 的單書搜尋轉送）傳 `ttsDegradedNotice:`。
 
 ## Global Constraints
 
@@ -28,6 +28,8 @@
 - **不吞掉錯誤**：`initTtsAudioHandlerSafely` 的行為（接住所有例外、`debugPrint`、回傳 null）不變，holder 只是它的外層。
 - **測試範圍**（CLAUDE.md）：單一 Task 只跑異動觸及的測試檔；完整 `flutter test`（無參數）只在最後跑一次，在 `app/` 目錄下用 `run_in_background`。已知 `pdf_reader_view_filters_test.dart`「各頁互不取消」在全套負載下會失敗（基準分支也是，見 `epic.md`），不算本 Issue 的回歸。
 - **提交前**：`flutter analyze` 乾淨；`node tool/check_l10n_hardcoded_strings.js`；本 Issue 不新增字串。
+- **分支**：`epic-61/non-blocking-audio-init`（從最新 `main` 開）。沿用本專案前幾個 Issue 的作法，在同一個工作目錄切分支，不另開 git worktree。
+- **Commit**：每個 Task 結尾提交一次（Task 0 的暫時除錯程式碼不提交）；訊息以 `feat(epic-61):`／`test(epic-61):`／`docs(epic-61):` 開頭；結尾帶 `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`。
 - **流程**：計畫先審查再動手；程式審查先出報告，存 `reviews/`（gitignore），審查者不直接改程式。
 - **真機驗證**（電子紙，需 `MSYS_NO_PATHCONV=1`）：用暫時的除錯程式碼製造可控的綁定逾時；驗證完必須還原（`git diff` 為空）。SnackBar 約 4 秒，需在裝置端連拍。
 
@@ -40,7 +42,7 @@
 3. **降級發生在閱讀器已開啟之後：提示永遠不出現，或出現兩次。** → Task 3 測晚到失敗立即提示一次，之後重進不重複。
 4. **`ReaderScreen` dispose 後 holder 才通知，對已卸載的 State 呼叫 `setState`／`ScaffoldMessenger`。** → listener 在 `dispose` 移除；回呼內先判 `mounted`。
 5. **init 永遠不回來（連逾時都沒有）。** → App 照常使用，handler 維持 null、不提示；Task 1 測。
-6. **改參數型別造成既有測試大量修改。** → 保留「直接傳 handler」的便利：holder 提供 `TtsAudioHandlerHolder.ready(handler)`／`.unavailable()` 建構，測試以最小改動換上。
+6. **改參數型別造成既有測試大量修改。** → 保留「直接傳 handler」的便利：holder 提供 `ready(handler)`／`degraded()`／`unavailable()` 三個建構子，測試以最小改動換上（語意見 Task 1）。
 7. **兩個 `ReaderScreen` 並存時，handler 被錯誤的畫面綁住或被先關閉的畫面解綁。** → Task 3：`ReaderScreen` 記錄自己 attach 的 handler 與 controller；`dispose` 只在「handler 目前綁的就是自己的 controller」時才 detach；測試兩個畫面並存、先關後建立者／先關先建立者，handler 最終狀態正確。
 8. **handler 晚到時使用者已在朗讀，系統通知狀態沒同步。** → Task 3 測 controller 已播放時晚到 attach，`playbackState.playing` 為 true。
 
@@ -58,11 +60,32 @@
 
 **檔案：** `lib/reader/tts_audio_handler_startup.dart`、`test/reader/tts_audio_handler_startup_test.dart`（新增案例）。
 
-- [ ] 規範建構子語意（三個命名建構子，測試與一般呼叫端依意圖選用）：
-  - `TtsAudioHandlerHolder.ready(handler)`：handler 已就緒，不降級。
-  - `TtsAudioHandlerHolder.degraded()`：handler 為 null，降級、提示待顯示。
-  - `TtsAudioHandlerHolder.unavailable()`：handler 為 null，**未降級、不提示**（供只是需要傳一個依賴的一般測試最小改動使用，不會意外觸發提示）。
-  - 背景啟動函式建立的 holder 初始為 `unavailable()` 狀態，init 結束後才變成 ready 或降級。
+- [ ] 介面草稿（`tts_audio_handler_startup.dart`）：
+
+  ```dart
+  /// 啟動階段 TTS 音訊服務的狀態。
+  enum TtsAudioHandlerStatus { pending, ready, failed }
+
+  class TtsAudioHandlerHolder extends ChangeNotifier {
+    TtsAudioHandlerHolder.ready(TtsAudioHandler handler);   // status = ready
+    TtsAudioHandlerHolder.degraded();                       // status = failed，提示待顯示
+    TtsAudioHandlerHolder.unavailable();                    // status = pending，不提示
+
+    TtsAudioHandlerStatus get status;
+    TtsAudioHandler? get handler;        // 只有 ready 時非 null
+    bool consumeDegradedNotice();        // 只有 failed 且尚未提示時回 true，並標記已提示
+  }
+
+  /// 同步回傳 holder（status = pending），背景跑 init，完成後改成 ready 或 failed 並通知。
+  TtsAudioHandlerHolder startTtsAudioHandlerInBackground(
+    Future<TtsAudioHandler> Function() init,
+  );
+  ```
+- [ ] 規範狀態語意（回應審查：`unavailable()` 不再模糊）：`pending`＝初始化中（或測試中「不關心 TTS」的預設），`failed`＝初始化已失敗，兩者 `handler` 都是 null，但只有 `failed` 會提示。三個建構子的意圖：
+  - `TtsAudioHandlerHolder.ready(handler)`：handler 已就緒（`ready`），不降級。
+  - `TtsAudioHandlerHolder.degraded()`：handler 為 null，初始化已失敗（`failed`）、提示待顯示。
+  - `TtsAudioHandlerHolder.unavailable()`：handler 為 null，初始化中（`pending`），**不提示**（供只是需要傳一個依賴的一般測試最小改動使用，不會意外觸發提示）。
+  - 背景啟動函式建立的 holder 初始為 `pending`，init 結束後才變成 `ready` 或 `failed`；狀態只會單向轉移，不會從 `failed` 或 `ready` 回到 `pending`。
 - [ ] 把 `test/reader/tts_degraded_notice_test.dart` 的案例（降級時 consume 第一次 true、之後 false；未降級恆 false）搬進 `tts_audio_handler_startup_test.dart`，改以 holder 的 `consumeDegradedNotice()` 表達。
 - [ ] 先寫測試（紅）：
   - `startTtsAudioHandlerInBackground` 在 init 尚未完成時就同步回傳，holder `handler == null`、尚未降級。
@@ -73,6 +96,7 @@
   - `ready(handler)`／`unavailable()` 建構的初始狀態。
 - [ ] 實作 `TtsAudioHandlerHolder`；保留 `TtsDegradedNotice` 直到 Task 2 換完，最後移除（避免兩套並存）。
 - [ ] 跑 `flutter test test/reader/tts_audio_handler_startup_test.dart`；變異檢查：讓 holder 失敗時不通知 → 對應案例失敗。
+- [ ] 提交（`feat(epic-61): 新增 TtsAudioHandlerHolder 與背景啟動函式`）。
 
 ## Task 2：換掉往下傳的參數
 
@@ -82,6 +106,7 @@
 - [ ] 移除 `TtsDegradedNotice` 類別，並**刪除** `test/reader/tts_degraded_notice_test.dart`（案例已在 Task 1 搬到 `tts_audio_handler_startup_test.dart`）。
 - [ ] 串接測試（`reader_screen_route_test`、`elinkbook_app_wiring_test`、`reader_screen_test` 的單書搜尋轉送）改為驗證 holder 原樣轉交；變異檢查：拿掉任一轉送行 → 對應測試失敗。
 - [ ] 跑觸及的測試檔。
+- [ ] 提交（`refactor(epic-61): ttsAudioHandler／ttsDegradedNotice 合併為 holder 往下傳`）。
 
 ## Task 3：`ReaderScreen` 晚到注入
 
@@ -102,11 +127,13 @@
   - 降級提示收斂成單一方法 `_checkShowDegradedNotice()`：內含 `addPostFrameCallback`，post-frame 內先判 `!mounted` 再 `consumeDegradedNotice()` 再顯示；`initState` 與 holder 通知回呼都呼叫它。
   - `initState` 加 listener、`dispose` 移除。
 - [ ] 跑觸及的測試檔；變異檢查：拿掉晚到 attach → 對應案例失敗。
+- [ ] 提交（`feat(epic-61): ReaderScreen 支援 handler 晚到注入與多畫面並存`）。
 
 ## Task 4：`main()` 不再等待
 
 - [ ] `main.dart`：`final ttsAudio = startTtsAudioHandlerInBackground(() => AudioService.init(...));`，不 `await`，直接傳給 `ElinkBookApp`。更新註解（失敗後不可重試、晚到注入）。
 - [ ] `flutter analyze` 乾淨；`elinkbook_app_wiring_test` 通過。
+- [ ] 提交（`feat(epic-61): main() 不再等待 AudioService.init`）。
 
 ## Task 5：驗證、審查、PR
 
@@ -118,13 +145,23 @@
 
 ## 人類已決定（2026-10-05）
 
-1. **參數合併**：把 `ttsAudioHandler` 與 `ttsDegradedNotice` 合成一個 `TtsAudioHandlerHolder`（要改約 16 處既有測試，換來只需同步一個物件）。
+1. **參數合併**：把 `ttsAudioHandler` 與 `ttsDegradedNotice` 合成一個 `TtsAudioHandlerHolder`（要改約 8 到 10 個既有測試，換來只需同步一個物件）。
 2. **閱讀器已開啟時才降級**：立即補顯示提示一次。
 
-## 計畫審查修訂記錄（2026-10-05，`reviews/review-plan-issue-2.md`）
+## 計畫審查修訂記錄（2026-10-05）
 
-- **已採納**：I-1（三個命名建構子，`unavailable()` 為不降級）、I-2（舊 notice 測試搬遷並在 Task 2 刪除）、I-3（規格更新註記並同步 `issues.md`）、M-1（`_attachedAudioHandler`）、M-2（單一 `_checkShowDegradedNotice()`）、M-4（晚到時已在播放的測試）。
-- **不採納 M-3**（holder 覆寫 `dispose` 防護）：holder 在 `main()` 建立、隨 App 存活，不會被 dispose；ReaderScreen 只移除自己的 listener，不 dispose holder。為不會發生的情況加防護屬過度設計，若日後 holder 有了 dispose 時機再處理。
-- **本人另外查證後加入**：Review Focus 7（`dispose` 無條件 detach 與多畫面並存，讀碼確認 `reader_screen.dart:752`）；Task 0 改為 A／B 兩組對照＋程式內計時（讀碼確認 `main()` 在 init 前有其他 `await`，單組絕對值有底噪）。
-- **備註**：本報告檔在我收到代理摘要之後被改寫過（檔案時間晚於代理完成），其嚴重度統計（0／3／4）與代理回報的摘要（1／6／5）不一致。以上述兩項為我自己讀碼查證的結果；其餘依現存檔案內容處理。
+審查報告有兩份：`reviews/review-plan-issue-2.md`（現存檔，原報告被改寫過，結論 0／3／4）與 `reviews/review-plan-issue-2v2.md`（依代理完成時的摘要重寫，結論 1／6／5，**原完整報告無法還原**）。人類指示以 v2 為準進行修訂；現存檔的建議若與 v2 不衝突也一併採納。
 
+**v2 的項目與處理：**
+
+- **C-1 多畫面並存**：已加 Review Focus 7、Task 3（`_attachedAudioHandler`、`detachController({only})`、多畫面測試）。
+- **Task 0 量測**：改為程式內計時＋A（正常）／B（注入 10 秒 init 延遲）兩組對照，驗收改為 B − A 在 0.5 秒內。
+- **holder 狀態語意**：新增 `TtsAudioHandlerStatus`（pending／ready／failed）與介面草稿，`unavailable()`＝pending、`degraded()`＝failed，單向轉移。
+- **降級提示時序**：單一方法 `_checkShowDegradedNotice()`（post-frame、先判 `mounted` 再 `consume`），兩畫面並存只顯示一次的測試。
+- **測試改動量**：更正為約 8 到 10 個測試、約 25 行（16 是 grep 行數）。
+- **`issues.md` 衝突**：計畫標明「取代原文」，`issues.md` 已同步。
+- **計畫格式**：補分支名、每個 Task 的提交步驟與 `Co-Authored-By`、holder 介面草稿；不另開 worktree，沿用既有慣例。
+
+**現存檔（0／3／4）的項目：** I-1、I-2、I-3、M-1、M-2、M-4 已採納（與上面重疊或補強）。**不採納 M-3**（holder 覆寫 `dispose` 防護）：holder 在 `main()` 建立、隨 App 存活，不會被 dispose；`ReaderScreen` 只移除自己的 listener。為不會發生的情況加防護屬過度設計，若日後 holder 有了 dispose 時機再處理。
+
+**驗證狀態**：「`dispose` 無條件 detach」（`reader_screen.dart:752`）與「`main()` 在 init 前有其他 `await`」已由本人讀碼確認；其餘為審查代理的讀碼判斷，未實機驗證。
