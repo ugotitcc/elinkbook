@@ -226,6 +226,31 @@ void main() {
       expect(find.byKey(_snackbarKey), findsNothing);
     });
 
+    testWidgets('通知後立即排程 frame，閒置畫面不必等外部重繪提示才出現（審查 I-1）',
+        (tester) async {
+      final completer = Completer<TtsAudioHandler>();
+      final holder =
+          startTtsAudioHandlerInBackground(() => completer.future);
+
+      await tester.pumpWidget(
+        _app(prefs: prefs, ttsAudio: holder, bookId: 'b_late_fail_frame'),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      // 先把畫面沖到閒置：沒有待處理的 frame，等同電子紙上靜止閱讀的情況。
+      await tester.pumpAndSettle();
+      expect(tester.binding.hasScheduledFrame, isFalse,
+          reason: '前置條件：畫面已閒置，否則下面的斷言沒有鑑別力');
+
+      completer.completeError(StateError('綁定逾時'));
+      // 只讓背景 Future 完成，不手動 pump——模擬真機上沒有外部觸發重繪。
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 20)));
+
+      expect(tester.binding.hasScheduledFrame, isTrue,
+          reason: 'post-frame 回呼不會自己要求 frame；必須主動排程，否則提示要等下一次重繪');
+    });
+
     testWidgets('晚到成功時不顯示提示', (tester) async {
       final completer = Completer<TtsAudioHandler>();
       final holder =
@@ -374,10 +399,66 @@ void main() {
       await tester.pump();
       expect(recording.mediaItem.value, isNull);
     });
+
+    testWidgets('降級提示在兩個畫面並存時只顯示一次', (tester) async {
+      final holder = TtsAudioHandlerHolder.degraded();
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ReaderScreen(
+                  filePath: 'test/fixtures/sample.epub',
+                  bookId: 'b_notice_first',
+                  prefsManager: prefs,
+                  isFixedLayout: false,
+                  ttsProvider: FakeTtsProvider(),
+                  ttsAudio: holder,
+                ),
+              ),
+              Expanded(
+                child: ReaderScreen(
+                  filePath: 'test/fixtures/sample.epub',
+                  bookId: 'b_notice_second',
+                  prefsManager: prefs,
+                  isFixedLayout: false,
+                  ttsProvider: FakeTtsProvider(),
+                  ttsAudio: holder,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+      // 兩個 Scaffold 共用同一個 ScaffoldMessenger，同一則 SnackBar 會在每個
+      // Scaffold 各畫一份，所以這裡用 findsWidgets，不以數量判斷「只提示一次」。
+      expect(find.byKey(_snackbarKey), findsWidgets);
+      expect(holder.consumeDegradedNotice(), isFalse,
+          reason: '提示已被其中一個畫面消耗，另一個畫面不可再拿到');
+
+      // ScaffoldMessenger 會把多則 SnackBar 排隊、一次只顯示一則；若兩個畫面都
+      // consume 到 true，第一則消失後第二則會接著出現，所以要等過兩個顯示週期。
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byKey(_snackbarKey), findsNothing,
+          reason: '只能有一個畫面拿到提示，不可有第二則排隊後出現');
+    });
   });
 
-  group('晚到 attach 的播放狀態同步', () {
-    test('controller 已在播放時晚到 attach → playbackState.playing 為 true',
+  // 注意：flutter_test 環境下 FoliateReaderView.loadTtsSegments() 恆回傳空清單，
+  // ReaderScreen 內的 TtsController 無法進入 playing，所以這裡只在 handler 層級驗證
+  // 「已在播放的 controller 被 attach 時，playbackState 會同步為 playing」。
+  // 晚到 attach 走 ReaderScreen 的路徑，由上面的「補 attach 一次」案例守住。
+  group('attach 時的播放狀態同步（handler 層級）', () {
+    test('controller 已在播放時 attach → playbackState.playing 為 true',
         () async {
       const segments = [
         TtsSegmentCfi(segmentId: '0', cfi: 'epubcfi(/6/4!/1:0)', text: '第一句。'),

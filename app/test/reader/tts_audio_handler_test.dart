@@ -93,6 +93,47 @@ void main() {
     expect(handler.playbackState.value.processingState, AudioProcessingState.idle);
   });
 
+  group('detachController({only})（epic-61 Issue 2：多畫面並存時只解自己的綁定）', () {
+    test('only 不是目前綁定的 controller → 什麼都不做，綁定與書名保留', () {
+      final handler = TtsAudioHandler();
+      final bound = buildRealController();
+      final other = buildRealController();
+      handler.attachController(bound, bookTitle: '綁定中的書');
+
+      handler.detachController(only: other);
+
+      expect(handler.mediaItem.value?.title, '綁定中的書');
+    });
+
+    test('only 就是目前綁定的 controller → 解綁並清空 mediaItem', () {
+      final handler = TtsAudioHandler();
+      final bound = buildRealController();
+      handler.attachController(bound, bookTitle: '綁定中的書');
+
+      handler.detachController(only: bound);
+
+      expect(handler.mediaItem.value, isNull);
+      expect(handler.playbackState.value.playing, isFalse);
+    });
+
+    test('未帶 only → 無條件解綁（既有行為不變）', () {
+      final handler = TtsAudioHandler();
+      handler.attachController(buildRealController(), bookTitle: '綁定中的書');
+
+      handler.detachController();
+
+      expect(handler.mediaItem.value, isNull);
+    });
+
+    test('尚未綁定任何 controller 時帶 only → 不例外、維持未綁定', () {
+      final handler = TtsAudioHandler();
+
+      handler.detachController(only: buildRealController());
+
+      expect(handler.mediaItem.value, isNull);
+    });
+  });
+
   test('attachController 兩次（換書），第二次會先解綁第一個 controller 的監聽', () async {
     final handler = TtsAudioHandler();
     final firstController = buildRealController();

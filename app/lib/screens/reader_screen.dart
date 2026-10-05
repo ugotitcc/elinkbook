@@ -750,11 +750,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final controller = _ttsController;
     final handler = widget.ttsAudio?.handler;
     if (controller == null || handler == null) return;
-    if (identical(_attachedAudioHandler, handler)) return;
-    final previous = _attachedAudioHandler;
-    if (previous != null && !identical(previous, handler)) {
-      previous.detachController(only: controller);
-    }
+    // handler 一旦 ready 就不會再換（holder 狀態單向轉移），所以只需判斷
+    // 「已 attach 過就不再 attach」。
+    if (_attachedAudioHandler != null) return;
     handler.attachController(controller, bookTitle: _displayBookTitle);
     _attachedAudioHandler = handler;
   }
@@ -764,6 +762,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// `consumeDegradedNotice()` 再顯示；`initState` 與 holder 通知回呼都
   /// 呼叫它。`consume` 一次性保證兩畫面並存時只顯示一次。
   void _checkShowDegradedNotice() {
+    // addPostFrameCallback 只是排隊、不會要求新的 frame：holder 通知（非同步、
+    // 任意時間）發生在畫面閒置時（WebView 靜止、電子紙少重繪），回呼要等到下一次
+    // 重繪才會執行，提示就不會「立即」出現。所以主動排程一個 frame（審查 I-1）。
+    WidgetsBinding.instance.ensureVisualUpdate();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || widget.ttsAudio?.consumeDegradedNotice() != true) return;
       ScaffoldMessenger.of(context).showSnackBar(

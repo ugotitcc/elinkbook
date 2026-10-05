@@ -159,8 +159,8 @@
 | A 正常版 | 14686／10408／10407（第 1 次含安裝後 dex 成本） |
 | B 注入 10 秒 init 延遲 | 14744／10409／10336 |
 
-- 穩定值皆約 10.4 秒（其他 `await` 的本來底噪），B − A 約 0 毫秒（驗收標準 0.5 秒內）。
-  修復前同樣情境要多等約 10 秒（見上文 10.2 秒 log）。
+- 穩定值皆約 10.4 秒，B − A 約 0 毫秒（驗收標準 0.5 秒內）。
+  **限制（獨立審查 I-2 指出，見下方審查修訂）**：沒有量「修復前」的 A／B 對照（Task 0 未做），「修復前要多等約 10 秒」只引用舊 log 的 10.2 秒；且 A 組（正常、未注入）首幀本身就是約 10.4 秒，與綁定逾時時間幾乎相同，來源**未查明**，不能直接當成「本來的底噪」。因此 B−A≈0 只能說「注入的 10 秒延遲沒有再疊加」，不能單獨證明黑屏已消除。
 - 故障 manifest（`AudioServiceBROKEN`）：正常進書架，綁定失敗在背景被接住
   （`TTS 音訊服務初始化失敗…PlatformException` log 1 筆、未處理例外 0、無黑屏）；
   進閱讀器出現「本次沒有媒體通知與鎖定畫面控制，朗讀仍可使用」一次（截圖確認）。
@@ -168,16 +168,29 @@
   同一進程無初始化失敗紀錄。裝置已留正常版。
 - 待辦：開 PR、合併後更新 `epics.md`／`issues.md`／本檔（需人類執行）。
 
+**2026-10-05 Issue 2 獨立程式審查修訂**（`reviews/review-code-issue-2.md`：0 Critical／2 Important／5 Minor，結論可合併，建議先處理 I-1、I-2）
+
+- **I-1 成立，已修（先紅後綠）**：晚到降級由 holder 通知觸發，`addPostFrameCallback` 只排隊、不會要求新 frame；閱讀器閒置（電子紙、WebView 靜止）時提示要等下一次重繪才出現。`_checkShowDegradedNotice` 改為先 `ensureVisualUpdate()`。新增測試：畫面沖到閒置後（斷言 `hasScheduledFrame` 為 false 作前置條件）讓 init 失敗、不手動 pump，斷言 `hasScheduledFrame` 為 true；拿掉修正時該測試失敗。**真機的「在閱讀器內等到失敗」情境仍未驗證**（裝置暫時無法連線）。
+- **I-2 成立，真機部分暫緩**：見上方驗收表的限制說明。補量修復前（`f153baa5`）的 A／B 對照、在 `main()` 各 `await` 前後計時找出 10.4 秒花在哪，都需要電子紙連線，暫緩；plan Task 0 的 checkbox 維持未勾。已新增後續項目 F4 追蹤。
+- **M-1 成立，已補**：新增「降級提示兩畫面並存只顯示一次」（直接斷言 `consumeDegradedNotice()` 之後為 false，並等過兩個 SnackBar 顯示週期確認沒有排隊的第二則；兩個 Scaffold 共用 ScaffoldMessenger 會各畫一份，所以不以 widget 數量判斷）、`detachController({only})` 的 4 個單元測試（拿掉守衛 → 2 個失敗）。「播放中晚到」案例原本只驗 handler 層級，flutter_test 環境下 `loadSegments` 恆回空清單，ReaderScreen 內的 controller 無法進入 playing，所以改名為「attach 時的播放狀態同步（handler 層級）」並加註釋，不假裝涵蓋 ReaderScreen 路徑。
+- **M-2 成立，已改**：`_maybeAttachTtsAudioHandler` 的 `previous != handler` 分支不可達（handler 一旦 ready 就不再換），簡化為「已 attach 過就返回」。
+- **M-3 成立，已改**：`initTtsAudioHandlerSafely` 的說明註解更新為經 holder 交給下游。
+- **M-4 只記錄**：多畫面並存時被搶走的綁定不會恢復，舊程式就是如此，非回歸。
+- **M-5 只記錄**：`ReaderScreen` 未處理 `didUpdateWidget`（換 holder 實例）；holder 只在 `main()` 建立一次，不會發生。
+- 驗證：`flutter analyze` 乾淨；觸及的測試全過（startup、late_handler、handler、degraded_notice、route、wiring）。
+
 ## 後續項目（併入本 Epic，不另開 Epic）
 
 2026-10-05 人類決定：同一條問題線的後續工作不為每個小問題各開一個 Epic，併在本 Epic 以「後續項目」追蹤。
 
 | # | 項目 | 狀態 | 備註 |
 |---|---|---|---|
-| F1 | 失敗時約 10 秒黑屏：把 `AudioService.init` 改成不阻塞啟動（背景進行，完成後再注入 handler） | 實作與真機驗收完成，待開 PR | B−A 約 0 毫秒（標準 0.5 秒內）；降級提示與媒體通知皆照常，見本檔 2026-10-05 記錄 |
+| F1 | 失敗時約 10 秒黑屏：把 `AudioService.init` 改成不阻塞啟動（背景進行，完成後再注入 handler） | 實作完成、審查修訂完成；真機對照暫緩，待開 PR | B−A 約 0 毫秒，但缺修復前對照、A 組首幀約 10.4 秒來源未明（見 F4）；降級提示與媒體通知皆照常 |
 | F2 | 綁定逾時的觸發條件 | 未開始 | 自然重現約 1／10，CPU 滿載無法重現；「安裝後系統忙」「廠商凍結機制」未證實 |
 | F3 | 降級後讓使用者知道（例如一次性提示） | 已完成（Issue 1，PR #324） | 進入閱讀器時 SnackBar、每次啟動一次；4 個 arb |
 
+| F4 | 正常冷啟動首幀約 10.4 秒的來源 | 未開始（需電子紙） | 修復後 A 組（未注入）首幀就約 10.4 秒，與綁定逾時時間幾乎相同。要補量修復前（`f153baa5`）A／B 對照，並在 `main()` 各 `await` 前後暫時計時。可能 debug 建置本身慢，也可能與 AudioService 有關（兩者皆未驗證） |
+
 F1、F3 已拆成 Issue，見 `issues.md`（F3＝Issue 1、F1＝Issue 2）；F2 是調查，不開 Issue，留在此表。
 
-本 Epic 的歸檔條件：F1～F3 完成，或人類明確決定放棄其中某項。
+本 Epic 的歸檔條件：F1～F4 完成，或人類明確決定放棄其中某項。

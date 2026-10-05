@@ -48,6 +48,8 @@
 
 ## Task 0：量測基準（暫時除錯程式碼，不提交）
 
+> **狀態（2026-10-05）：暫緩。** 電子紙暫時無法連線，修復前（`f153baa5`）的 A／B 對照尚未量，以下 checkbox 維持未勾。程式審查 I-2 指出缺這組對照會讓「B−A≈0」證明力不足，已列為後續項目 F4（`epic.md`）。
+
 冷啟動本來就有其他 `await` 的底噪（見「已知事實」），所以必須量兩組、看差距，不能只量單一組絕對值。
 
 - [ ] 暫時修改 `main.dart`（不提交）：在 `main()` 開頭記 `Stopwatch`；在 `runApp` 之後以 `addPostFrameCallback` 於首幀印出 `[T0-a4f2] first frame <ms>`（程式內計時，不靠截圖）。
@@ -119,7 +121,7 @@
   - 閱讀器已開啟後才降級 → 立即顯示提示一次；之後重進不重複；未降級不顯示。
   - 既有 Issue 1 的 4 個案例（初始降級、重進不重複、未降級、未傳 holder）全數保留。
   - 兩個 `ReaderScreen` 並存（閱讀器→單書搜尋→回閱讀器）：先關後建立者不會把前者的綁定拆掉；先關先建立者會解綁；最終 handler 狀態與實際存活的畫面一致。
-  - controller 已在播放時 handler 晚到 → attach 後 `playbackState.playing` 為 true。
+  - controller 已在播放時 handler 晚到 → attach 後 `playbackState.playing` 為 true。（實際涵蓋範圍：flutter_test 下 `loadSegments` 恆回空清單，ReaderScreen 內的 controller 進不了 playing，所以只在 handler 層級驗證 attach 時同步；晚到 attach 的 ReaderScreen 路徑由「補 attach 一次」案例守住。）
   - 降級提示在兩個畫面並存時只顯示一次。
 - [x] 實作：
   - `_ReaderScreenState` 記錄 `_attachedAudioHandler`；只在「controller 存在、handler 非 null、尚未 attach 過這個 handler」時 attach，避免通知多次造成重複 attach。

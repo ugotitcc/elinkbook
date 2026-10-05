@@ -8,8 +8,9 @@ import 'tts_audio_handler.dart';
 /// `PlatformException`，若沒有接住，`main()` 會在 `runApp` 之前中斷，整個
 /// App 黑屏且沒有任何錯誤提示。系統媒體通知／鎖屏控制只是附加功能，失敗時
 /// 降級為本次執行沒有這些控制即可——朗讀本身仍可用（`TtsController` 的建立
-/// 不依賴 handler）。下游（`ReaderScreen` 等）的 `ttsAudioHandler` 本來就是
-/// 可為 null 的型別，使用處皆為 `?.`。
+/// 不依賴 handler）。目前由 [startTtsAudioHandlerInBackground] 在背景呼叫本函式，
+/// 結果經 [TtsAudioHandlerHolder] 交給下游（`ReaderScreen` 等），下游只透過
+/// holder 讀取可為 null 的 handler。
 ///
 /// 注意：失敗後不可重試。`AudioService.init` 以 `assert(_cacheManager == null)`
 /// 擋重複初始化（僅 debug 生效），失敗時 `_cacheManager` 已被設定。
