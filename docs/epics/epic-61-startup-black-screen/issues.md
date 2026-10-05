@@ -37,7 +37,7 @@ Issue 2（F1 不阻塞啟動） 獨立，範圍大；建議在 Issue 1 之後做
 
 ## Issue 2：AudioService 初始化不阻塞啟動（F1）
 
-**Status:** 實作與真機驗收完成，待開 PR（分支 `epic-61/non-blocking-audio-init`）
+**Status:** done（PR #325；真機修復前對照暫緩，見 `epic.md` F4）
 
 **依賴：** 無（建議在 Issue 1 之後）。
 

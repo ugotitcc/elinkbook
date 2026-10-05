@@ -179,13 +179,20 @@
 - **M-5 只記錄**：`ReaderScreen` 未處理 `didUpdateWidget`（換 holder 實例）；holder 只在 `main()` 建立一次，不會發生。
 - 驗證：`flutter analyze` 乾淨；觸及的測試全過（startup、late_handler、handler、degraded_notice、route、wiring）。
 
+**2026-10-05 Issue 2 PR 合併**
+
+- PR #325（`epic-61/non-blocking-audio-init` → `main`）已合併，合併 commit `80553e70`。F1 完成。
+- 合併時的已知限制（PR 內已明寫）：沒有修復前的 A／B 對照；正常版首幀本身約 10.4 秒、來源未明；「在閱讀器內等到失敗」的真機情境未驗。都需要電子紙，已列為 F4。
+- 剩餘：F2（觸發條件，調查項目）、F4（首幀來源與修復前對照，需電子紙）。
+- 待處理：worktree `U:\MyDeveloper\AI\elinkBook-epic61-issue2` 與本機分支 `epic-61/non-blocking-audio-init`、`epic-61/tts-degraded-notice`、`epic-61/startup-no-black-screen` 已合併，可清理（需人類確認）。
+
 ## 後續項目（併入本 Epic，不另開 Epic）
 
 2026-10-05 人類決定：同一條問題線的後續工作不為每個小問題各開一個 Epic，併在本 Epic 以「後續項目」追蹤。
 
 | # | 項目 | 狀態 | 備註 |
 |---|---|---|---|
-| F1 | 失敗時約 10 秒黑屏：把 `AudioService.init` 改成不阻塞啟動（背景進行，完成後再注入 handler） | 實作完成、審查修訂完成；真機對照暫緩，待開 PR | B−A 約 0 毫秒，但缺修復前對照、A 組首幀約 10.4 秒來源未明（見 F4）；降級提示與媒體通知皆照常 |
+| F1 | 失敗時約 10 秒黑屏：把 `AudioService.init` 改成不阻塞啟動（背景進行，完成後再注入 handler） | 已完成（Issue 2，PR #325）；真機修復前對照暫緩，見 F4 | B−A 約 0 毫秒，但缺修復前對照、A 組首幀約 10.4 秒來源未明（見 F4）；降級提示與媒體通知皆照常 |
 | F2 | 綁定逾時的觸發條件 | 未開始 | 自然重現約 1／10，CPU 滿載無法重現；「安裝後系統忙」「廠商凍結機制」未證實 |
 | F3 | 降級後讓使用者知道（例如一次性提示） | 已完成（Issue 1，PR #324） | 進入閱讀器時 SnackBar、每次啟動一次；4 個 arb |
 
