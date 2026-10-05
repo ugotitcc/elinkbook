@@ -337,3 +337,12 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 真機 integration 結果（2026-10-06，OPD2102 `bfa4e772`，分支 `318584c8`）：`fxl_bookmarks_test` 0／1、`epub_toc_test` 0／1、`reading_position_test` 0／2、`foliate_cbz_test` 0／3、`reader_screen_test` 0／19——**全部失敗，0 通過**，皆為 `reader_screen.dart:2679` 的 `AppLocalizations.of(context)!` null check（測試的 `MaterialApp` 未設定 `localizationsDelegates`；`reading_position_test` 另有 1 個 `Bad state: No element` 為連帶結果）。base 版本 `_buildBody` 同一行與同樣缺 delegates 的測試寫法都存在，**確認為既存失敗**：在乾淨 `main`（`bdff826c`，無 Issue 11 改動）、同一台 OPD2102 上跑 `fxl_bookmarks_test`，同樣 0 通過／1 失敗，例外為 `_ReaderScreenState._buildBody` 的 `Null check operator used on a null value`（`reader_screen.dart:2878:46`，即 `AppLocalizations.of(context)!`；分支上同一行為 2679:46）。只對 `fxl_bookmarks_test` 做了 base 對照，其餘 4 個檔案的失敗原因與它一致（同一行 null check）但未逐一在 base 上跑；`integration_test/` 約 30 個檔案缺 `localizationsDelegates`，推測 integration 測試自加入介面多語系後即未維護。這批測試目前無法驗證 Issue 11：它們在第一步就失敗，沒有走到依賴組相關程式。
 
 另外記錄：以 debug 版安裝時，手機上原有 elinkBook（versionCode 2001）因 `INSTALL_FAILED_VERSION_DOWNGRADE` 被 Flutter 自動解除安裝，該裝置上的 App 資料已清除。
+
+**2026-10-06 新增 Issue 15（缺陷，測試基礎設施：integration 測試缺多語系設定）**
+
+- 來源：Issue 11 的真機 integration 驗證。5 個檔案 26 個測試全部失敗，原因皆為 `AppLocalizations.of(context)!` 取到 null；base 上同樣失敗，為既存問題。
+- 事實（2026-10-06 查證）：`integration_test/` 共 40 個檔案，33 個含 `MaterialApp(`、共 104 處，**33 個全部缺 `localizationsDelegates`**，沒有任何一個檔案有。`tool/check_l10n_hardcoded_strings.js` 只掃 `app/test/`（epic-45 Issue 0 建立 `pumpLocalizedWidget` 並加檢查時未涵蓋 `integration_test/`），所以這批測試自介面多語系導入後無聲壞掉，沒有任何機制發現。
+- 工單內容與驗收見 `issues.md` Issue 15：統一改用帶多語系的包裝、把檢查腳本擴大到 `integration_test/` 當回歸守衛、真機驗證並分類補完後暴露的其他失敗。
+- 時序：須等 PR #327（Issue 11）合併後再做——33 個檔案中有 21 個與 Issue 11 的 integration 遷移重疊，避免合併衝突。
+- 流程建議：依「小型缺陷修正」慣例走直接 TDD（登錄於本 Epic，不寫 plan，保留程式審查）；但本案範圍較大（33 檔／104 處，且需真機驗證），若希望先寫 plan 請另行指定。
+- 附帶發現：手機連線在測試過程中多次中斷（USB 接觸問題），真機驗證前先確認 `adb devices -l` 穩定。
