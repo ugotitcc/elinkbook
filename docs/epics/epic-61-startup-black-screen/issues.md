@@ -53,8 +53,9 @@ Issue 2（F1 不阻塞啟動） 獨立，範圍大；建議在 Issue 1 之後做
 **測試要求：**
 - 單元測試：init 延遲完成時，`runApp` 路徑不被阻擋；晚到的 handler 會被注入。
 - widget 測試：handler 由 null 變成非 null 後，`ReaderScreen` 會 attach；失敗維持 null 時行為與現況相同。
-- 既有 `elinkbook_app_wiring_test`、`tts_audio_handler_startup_test` 不改而通過。
+- 參數合併為 `TtsAudioHandlerHolder` 後，串接測試（`elinkbook_app_wiring_test`、`reader_screen_route_test` 等）改為斷言 holder 貫穿；`tts_audio_handler_startup_test` 既有案例不改、新增案例（見 `plans/plan-issue-2.md`）。
+- 多個 `ReaderScreen` 並存時，handler 綁定與解綁正確（`dispose` 只解自己的綁定）。
 
-**驗收標準：** 可控逾時情境下，電子紙冷啟動在 2 秒內進入書架（數值於量測後修正）；正常情境下媒體通知、鎖屏控制照常；全套 `flutter test` 通過。
+**驗收標準：** 電子紙以「程式內計時」量兩組（正常、注入 10 秒 init 延遲），首幀時間差距在 0.5 秒內（修復前約 10 秒）；正常情境下媒體通知、鎖屏控制照常；全套 `flutter test` 通過。
 
 **Blocked by：** 無。
