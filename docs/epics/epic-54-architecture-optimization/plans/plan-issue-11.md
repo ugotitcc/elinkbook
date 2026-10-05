@@ -66,7 +66,7 @@
 - Commit：本計畫檔與 `issues.md` 狀態更新（在 `main` 上，純文件）
 - 建立 worktree：`.worktrees/epic-54-issue-11-reader-deps`（`.worktrees/` 已 gitignore）
 
-- [ ] **Step 1：提交計畫（在 `main`）**
+- [x] **Step 1：提交計畫（在 `main`）**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook
@@ -76,14 +76,14 @@ git commit -m "docs(epic-54): Issue 11 實作計畫
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 2：建立 worktree 與分支**
+- [x] **Step 2：建立 worktree 與分支**
 
 ```bash
 git worktree add .worktrees/epic-54-issue-11-reader-deps -b epic-54/issue-11-reader-deps
 cd .worktrees/epic-54-issue-11-reader-deps/app && flutter pub get
 ```
 
-- [ ] **Step 3：記錄異動範圍的基準（零回歸對照用）**
+- [x] **Step 3：記錄異動範圍的基準（零回歸對照用）**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook/.worktrees/epic-54-issue-11-reader-deps/app
@@ -107,7 +107,7 @@ flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_rou
 **Interfaces：**
 - Produces：`class ReaderFeatureDependencies`（欄位見下）、`ReaderFeatureDependencies fakeReaderFeatureDependencies({...})`、`LibraryReaderFeatureRepositories completeLegacyReaderFeatures()`、`LibrarySyncDependencies completeLegacySyncDependencies()`。
 
-- [ ] **Step 1：確認 `LayoutPresetRepository` 的公開方法，才能寫 Fake**
+- [x] **Step 1：確認 `LayoutPresetRepository` 的公開方法，才能寫 Fake**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook/.worktrees/epic-54-issue-11-reader-deps/app
@@ -116,7 +116,7 @@ grep -n "^  Future<\|^  Stream<\|^  [A-Za-z<>?]* get " lib/reader/layout_preset_
 
 把列出的每個公開方法在 Fake 中實作一遍（記憶體 `List<LayoutPreset>`，行為比照真實類別文件註解：依 `id ASC` 排序）。Fake 以 `implements LayoutPresetRepository` 宣告，**不呼叫** `super` 的建構子（`LayoutPresetRepository` 是 `const LayoutPresetRepository(this._db)`，`implements` 不需要）。
 
-- [ ] **Step 2：寫失敗測試（工廠自身）**
+- [x] **Step 2：寫失敗測試（工廠自身）**
 
 建立 `test/support/fake_reader_feature_dependencies_test.dart`：
 
@@ -220,7 +220,7 @@ void main() {
 
 （`LibraryReaderFeatureRepositories`／`LibrarySyncDependencies` 在 `library_screen_dependencies.dart`；測試檔頂端已 import。）
 
-- [ ] **Step 3：跑測試確認失敗**
+- [x] **Step 3：跑測試確認失敗**
 
 ```bash
 flutter test test/support/fake_reader_feature_dependencies_test.dart
@@ -228,7 +228,7 @@ flutter test test/support/fake_reader_feature_dependencies_test.dart
 
 預期：編譯失敗（`reader_feature_dependencies.dart`、`fake_reader_feature_dependencies.dart` 不存在）。
 
-- [ ] **Step 4：實作 `ReaderFeatureDependencies`**
+- [x] **Step 4：實作 `ReaderFeatureDependencies`**
 
 建立 `app/lib/screens/reader_feature_dependencies.dart`：
 
@@ -312,11 +312,11 @@ class ReaderFeatureDependencies {
 }
 ```
 
-- [ ] **Step 5：實作 `FakeLayoutPresetRepository`**
+- [x] **Step 5：實作 `FakeLayoutPresetRepository`**
 
 建立 `app/test/support/fake_layout_preset_repository.dart`，依 Step 1 列出的公開方法逐一實作（記憶體清單）。檔案頂端註解說明：「`LayoutPresetRepository` 原本沒有 Fake，只能用 in-memory sqflite；工廠需要無 I/O 的預設值，故補上」。簽名必須與真實類別一致（用 `@override` 讓分析器檢查）。
 
-- [ ] **Step 6：實作工廠**
+- [x] **Step 6：實作工廠**
 
 建立 `app/test/support/fake_reader_feature_dependencies.dart`：
 
@@ -469,7 +469,7 @@ LibrarySyncDependencies completeLegacySyncDependencies({
 
 若某個 Fake 的建構子需要參數（Step 1 之外未逐一驗證），以 `reader_screen_route_test.dart:74-92` 的建構方式為準（該處已無參數建構 `FakeReaderPrefsManager()`、`FakeLibraryRepository()`、`FakeBookmarksRepository()`、`FakeHighlightsRepository()`、`FakeNotesRepository()`、`FakeCustomFontsRepository()`、`FakeDownloadableFontStore()`、`FakeBookReaderPrefsRepository()`、`FakeTtsProvider()`、`FakeTtsAudioFocusSource()`、`FakeSearchRepository()`、`FakeBookImportService()`）。`FakeReadingStatsRepository()` 若需要必填參數，補上最小值並在註解說明。
 
-- [ ] **Step 7：跑測試確認通過，並分析**
+- [x] **Step 7：跑測試確認通過，並分析**
 
 ```bash
 flutter test test/support/fake_reader_feature_dependencies_test.dart
@@ -478,7 +478,7 @@ flutter analyze lib/screens/reader_feature_dependencies.dart test/support
 
 預期：測試 5 個通過；analyze 無問題。
 
-- [ ] **Step 8：提交**
+- [x] **Step 8：提交**
 
 ```bash
 git add app/lib/screens/reader_feature_dependencies.dart app/test/support/fake_layout_preset_repository.dart app/test/support/fake_reader_feature_dependencies.dart app/test/support/fake_reader_feature_dependencies_test.dart
@@ -507,7 +507,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
   - `ReaderScreen({super.key, required filePath, required bookId, required ReaderFeatureDependencies dependencies, bookTitle, bookAuthor, bookProgress = 0.0, isFixedLayout, isEinkMode = false, initialJumpTarget, pickSingleBookFile, readingStatsTracker})`，公開欄位 `final ReaderFeatureDependencies dependencies`。
   - `BookSearchScreen({super.key, required Book book, initialQuery = '', required ReaderFeatureDependencies dependencies, isEinkMode = false, fromReader = false})`。
 
-- [ ] **Step 1：`reader_screen_route.dart`——轉換函式與新 `buildReaderScreen`**
+- [x] **Step 1：`reader_screen_route.dart`——轉換函式與新 `buildReaderScreen`**
 
 整檔改寫為（保留既有檔頭註解的歷史脈絡，但更新說明）：
 
@@ -594,7 +594,7 @@ ReaderScreen buildReaderScreen({
 }
 ```
 
-- [ ] **Step 2：`reader_screen.dart`——建構子與欄位**
+- [x] **Step 2：`reader_screen.dart`——建構子與欄位**
 
 1. 刪除 `reader_screen.dart:135-279` 之間 17 個依賴欄位宣告與其文件註解（`bookmarksRepository` … `readingStatsRepository`，以及 `prefsManager`、`libraryRepository`），僅保留：`filePath`、`bookId`、`bookTitle`、`bookAuthor`、`bookProgress`、`isFixedLayout`、`isEinkMode`、`initialJumpTarget`、`pickSingleBookFile`、`readingStatsTracker` 的宣告與註解；新增：
 
@@ -626,7 +626,7 @@ ReaderScreen buildReaderScreen({
 
 4. 加入 `import 'reader_feature_dependencies.dart';`，刪除因此不再使用的 import（以 `flutter analyze` 的 unused_import 為準）。
 
-- [ ] **Step 3：`reader_screen.dart`——把 `widget.X` 改為 `widget.dependencies.X` 並移除 null 分支**
+- [x] **Step 3：`reader_screen.dart`——把 `widget.X` 改為 `widget.dependencies.X` 並移除 null 分支**
 
 依下表逐一處理（行號為改動前的行號，僅供定位；改完一處就重新跑 `flutter analyze lib/screens/reader_screen.dart` 看剩餘錯誤，**不要憑行號盲改**）。通則：型別不再可為 null，所以 `x == null`／`x != null` 判斷、`?.`、`!`、`if (repository == null) return;` 全部移除；被移除分支內的行為（提示、提早 return）一併刪除。
 
@@ -651,7 +651,7 @@ ReaderScreen buildReaderScreen({
 
 `ReaderScreen` 內 `widget.prefsManager`（若有）→ `widget.dependencies.prefsManager`；其餘 `isEinkMode`、`bookTitle` 等不動。
 
-- [ ] **Step 4：`book_search_screen.dart`**
+- [x] **Step 4：`book_search_screen.dart`**
 
 欄位與建構子改為：
 
@@ -686,7 +686,7 @@ class BookSearchScreen extends StatefulWidget {
 
 移除不再使用的 import（`library_repository.dart`、`reader_prefs_manager.dart`、`search_repository.dart`、`library_screen_dependencies.dart`——以 analyzer 為準），加入 `reader_feature_dependencies.dart`。
 
-- [ ] **Step 5：三個呼叫點改呼叫轉換函式**
+- [x] **Step 5：三個呼叫點改呼叫轉換函式**
 
 `library_screen.dart:472`：
 
@@ -723,7 +723,7 @@ class BookSearchScreen extends StatefulWidget {
 
 `library_search_screen.dart` 的 `searchRepository: widget.searchRepository` 實參不再傳給 `BookSearchScreen`（改由 `dependencies.searchRepository` 取得，來自 `features.searchRepository`）。**注意**：`LibrarySearchScreen` 自己的 `searchRepository` 建構參數與 `features.searchRepository` 在舊測試中可能是兩個不同實例，Task 4 會處理對應測試。
 
-- [ ] **Step 6：分析 lib**
+- [x] **Step 6：分析 lib**
 
 ```bash
 flutter analyze lib
@@ -741,7 +741,7 @@ flutter analyze lib
 - Create（`.scratch/`，不提交）：`.scratch/codemod_reader_screen.js`
 - Modify：`test/screens/reader_screen_test.dart`、`reader_screen_route_test.dart`（不含 `buildReaderScreen` 區塊，Task 4 處理）、`reader_screen_stats_harness.dart`、`reader_screen_tts_degraded_notice_test.dart`、`reader_screen_tts_late_handler_test.dart`
 
-- [ ] **Step 1：寫 codemod 腳本**
+- [x] **Step 1：寫 codemod 腳本**
 
 存到 worktree 根目錄（`app/` 的上一層）的 `.scratch/codemod_reader_screen.js`（先建立 `.scratch/` 目錄）：
 
@@ -845,7 +845,7 @@ if (manual.length) { console.log('需手動處理：'); manual.forEach((x) => co
 
 （腳本會把 `const ReaderScreen(` 的 `const` 一併去掉——因為 `fakeReaderFeatureDependencies(...)` 不是常數。匯入插入位置不理想時，改由 `dart format`／手動調整，不影響行為。）
 
-- [ ] **Step 2：只對 `ReaderScreen(` 建構點執行（排除 `buildReaderScreen`）**
+- [x] **Step 2：只對 `ReaderScreen(` 建構點執行（排除 `buildReaderScreen`）**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook/.worktrees/epic-54-issue-11-reader-deps/app
@@ -857,7 +857,7 @@ node ../.scratch/codemod_reader_screen.js \
 
 預期：列出每檔改寫處數（合計應接近 267），以及「需手動處理」清單。若清單非空，逐一手改，改法同上（把移動的參數收進 `dependencies: fakeReaderFeatureDependencies(...)`）。
 
-- [ ] **Step 3：格式化並確認 diff 乾淨**
+- [x] **Step 3：格式化並確認 diff 乾淨**
 
 ```bash
 dart format test/screens/reader_screen_test.dart test/screens/reader_screen_stats_harness.dart test/screens/reader_screen_tts_degraded_notice_test.dart test/screens/reader_screen_tts_late_handler_test.dart test/screens/reader_screen_route_test.dart
@@ -866,7 +866,7 @@ git diff --stat
 
 注意：`dart format` 只對這幾個檔案執行；如果它大幅改動非 `ReaderScreen(` 區域（代表原檔不是 dart format 風格），改為還原格式化（`git checkout` 後重跑 codemod 而不格式化），不要產生無關 diff。
 
-- [ ] **Step 4：分析這些檔案，統計剩餘編譯錯誤**
+- [x] **Step 4：分析這些檔案，統計剩餘編譯錯誤**
 
 ```bash
 flutter analyze test/screens/reader_screen_test.dart test/screens/reader_screen_stats_harness.dart test/screens/reader_screen_tts_degraded_notice_test.dart test/screens/reader_screen_tts_late_handler_test.dart 2>&1 | tail -30
@@ -880,7 +880,7 @@ flutter analyze test/screens/reader_screen_test.dart test/screens/reader_screen_
 
 **Files：** Modify：`test/screens/reader_screen_route_test.dart`、`book_search_screen_test.dart`、`library_screen_test.dart`、`library_search_screen_test.dart`，以及 analyze 找到的其他檔案。
 
-- [ ] **Step 1：改寫 `buildReaderScreen` 欄位對帳測試（Review Focus 1）**
+- [x] **Step 1：改寫 `buildReaderScreen` 欄位對帳測試（Review Focus 1）**
 
 `reader_screen_route_test.dart` 的「欄位對帳」改為：用 `readerFeatureDependenciesFromLegacy` 組裝，斷言 `screen.dependencies` 的 18 個欄位逐一 `same(...)`，另外 `filePath`／`bookId`／`bookTitle`／`bookAuthor`／`bookProgress`／`isFixedLayout`／`isEinkMode`／`initialJumpTarget` 來自 `book`／參數。`syncCheckpointTrigger` 的來源是 `sync`，`libraryRepository`／`prefsManager` 來自參數。範例（取代原 `expect(screen.xxx, same(...))` 一整段）：
 
@@ -909,7 +909,7 @@ flutter analyze test/screens/reader_screen_test.dart test/screens/reader_screen_
 
 其中該測試原本的 `layoutPresetRepository` 用真實 in-memory sqflite，可改用 `FakeLayoutPresetRepository()`（`dbRepository` 若因此不再被任何測試使用，連同 `setUp`／`tearDown` 與 sqflite 匯入刪除）。
 
-- [ ] **Step 2：新增轉換函式的 `StateError` 測試（Review Focus 3）**
+- [x] **Step 2：新增轉換函式的 `StateError` 測試（Review Focus 3）**
 
 在同檔新增 group `readerFeatureDependenciesFromLegacy`，對 15 個舊 bundle nullable 欄位（`features` 14 個＋`sync.syncCheckpointTrigger` 1 個；`prefsManager`／`libraryRepository`／`isFullTextSearchAvailable` 不是 nullable，不在內）各測一次「該欄位為 null 時丟 `StateError`，訊息含欄位名」。用迴圈減少重複，每個案例以 `completeLegacyReaderFeatures()` 為底，再以 `LibraryReaderFeatureRepositories(...)` 逐欄置 null 的方式建構（因為欄位是 `final`，需列出完整建構；以下為其中一個案例的完整形態，其餘比照改變單一欄位為 null）：
 
@@ -950,7 +950,7 @@ flutter analyze test/screens/reader_screen_test.dart test/screens/reader_screen_
 
 同檔原有 **6 個** bundle 轉傳測試（`reader_screen_route_test.dart:150-239`：`bookImportService`、`readingStatsRepository`、`ttsAudio` 各「帶／未帶」一對）**全部刪除**——「未帶」狀態已不可達，「帶」已由欄位對帳涵蓋；若只刪 2 個，其餘 4 個直接存取 `screen.readingStatsRepository`／`screen.ttsAudio` 會編譯失敗。另外第 241、257 行的 2 個 `initialJumpTarget` 測試仍有效，改為以 `dependencies: fakeReaderFeatureDependencies()` 呼叫新簽名的 `buildReaderScreen`。
 
-- [ ] **Step 3：`BookSearchScreen` 測試與 Review Focus 2、5**
+- [x] **Step 3：`BookSearchScreen` 測試與 Review Focus 2、5**
 
 `book_search_screen_test.dart` 的 3 處 `LibraryReaderFeatureRepositories` 建構（約 298、399、597 行）及 `BookSearchScreen(` 建構點，改為 `dependencies: fakeReaderFeatureDependencies(searchRepository: ..., isFullTextSearchAvailable: ..., ...)`。新增兩個測試：
 
@@ -969,7 +969,7 @@ flutter analyze test/screens/reader_screen_test.dart test/screens/reader_screen_
 
 （`deps` 為該測試傳給 `ReaderScreen` 的 `fakeReaderFeatureDependencies(...)` 實例；若該測試目前是用 codemod 內嵌建構，先把它抽成區域變數 `final deps = fakeReaderFeatureDependencies(...)` 再傳入。）
 
-- [ ] **Step 4：`LibraryScreen`／`LibrarySearchScreen` 測試**
+- [x] **Step 4：`LibraryScreen`／`LibrarySearchScreen` 測試**
 
 先跑看有哪些失敗（預期是「點選書籍進入閱讀器」且使用空 bundle 的案例丟 `StateError`）：
 
@@ -979,7 +979,7 @@ flutter test test/screens/library_screen_test.dart test/screens/library_search_s
 
 對每個失敗案例：把該測試傳給 `LibraryScreen`／`LibrarySearchScreen` 的 `readerFeatureRepositories` 改為 `completeLegacyReaderFeatures()`、`syncDependencies` 改為 `completeLegacySyncDependencies()`（需要驗證特定欄位時，直接用具名參數覆寫，例如 `completeLegacyReaderFeatures(highlightsRepository: highlightsRepository, notesRepository: notesRepository)`，不要手寫整個 `LibraryReaderFeatureRepositories(...)`）。**只改失敗的案例，不改沒有失敗的**。同時，這兩個檔案中讀取 `tester.widget<ReaderScreen>(...).xxxRepository` 的斷言，改為 `.dependencies.xxxRepository`。記錄修改的案例數量，寫進 `epic.md`。
 
-- [ ] **Step 5：用 analyzer 收尾其餘檔案**
+- [x] **Step 5：用 analyzer 收尾其餘檔案**
 
 ```bash
 flutter analyze test 2>&1 | tail -50
@@ -993,13 +993,13 @@ flutter analyze test 2>&1 | tail -50
 
 `fakeReaderFeatureDependencies()` 的預設值讓許多原本不存在的功能（書籤、劃線、TTS、統計、同步觸發）現在都在，既有測試可能因此失敗。**依下列規則逐一歸類，不要為了通過而放寬斷言。**
 
-- [ ] **Step 1：先跑 `reader_screen_test.dart`，取得失敗清單**
+- [x] **Step 1：先跑 `reader_screen_test.dart`，取得失敗清單**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart 2>&1 | grep -E "^\s*\[E\]|\+[0-9]+ -[0-9]+|Some tests failed|All tests passed" | tail -60
 ```
 
-- [ ] **Step 2：對每個失敗案例歸類並處理**
+- [x] **Step 2：對每個失敗案例歸類並處理**
 
 | 類別 | 判斷 | 處理 |
 |---|---|---|
@@ -1007,7 +1007,7 @@ flutter test test/screens/reader_screen_test.dart 2>&1 | grep -E "^\s*\[E\]|\+[0
 | B. 預設 fake 帶來新 UI／新計時器 | 該測試原本沒提供某依賴，現在多出的 widget／計時器干擾斷言（例如 `findsOneWidget` 變 `findsNWidgets`、`Timer still pending`） | 只在**該測試**的 `fakeReaderFeatureDependencies(...)` 覆寫對應欄位為「靜默」fake（例如 `ttsAudio: TtsAudioHandlerHolder.unavailable()` 已是預設；統計計時器問題則傳 `readingStatsTracker` 測試注入點或在測試結尾 `await tester.pump(...)` 結算）。**不得修改工廠預設值去遷就個別測試**；若同一原因在 ≥5 個測試出現，停下來回報，再決定是否調整工廠預設 |
 | C. 真正的行為回歸 | 測試斷言的是仍然有效的行為，卻失敗 | 這是本重構的缺陷，回到 Task 2 修 lib，不改測試 |
 
-- [ ] **Step 3：跑所有異動範圍的測試**
+- [x] **Step 3：跑所有異動範圍的測試**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_route_test.dart test/screens/book_search_screen_test.dart test/screens/library_screen_test.dart test/screens/library_search_screen_test.dart test/screens/reader_screen_tts_degraded_notice_test.dart test/screens/reader_screen_tts_late_handler_test.dart test/screens/reader_screen_stats_test.dart test/screens/reader_screen_stats_lifecycle_test.dart test/screens/reader_screen_stats_activity_test.dart test/support/fake_reader_feature_dependencies_test.dart 2>&1 | tail -5
@@ -1015,7 +1015,7 @@ flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_rou
 
 預期：全過。通過數 = Task 0 基準 N − 被刪缺席測試數 − 刪除的 6 個 bundle 測試（`reader_screen_route_test.dart`） − 刪除的統計缺席測試（`reader_screen_stats_test.dart`）＋ 新增測試數（工廠 5 個、StateError 15 個、身分比對等）；把這個算式與實際數字寫進 `epic.md`。
 
-- [ ] **Step 4：分析與 l10n 檢查**
+- [x] **Step 4：分析與 l10n 檢查**
 
 ```bash
 flutter analyze
@@ -1024,7 +1024,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 預期：`No issues found!`、兩行 PASS。
 
-- [ ] **Step 5：提交（lib＋測試一次切換）**
+- [x] **Step 5：提交（lib＋測試一次切換）**
 
 ```bash
 git add app/lib app/test
@@ -1044,16 +1044,16 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 **Files：** Modify：`docs/adr/0037-…md`、`docs/epics/epic-54-architecture-optimization/{epic.md,issues.md}`、`docs/epics.md`
 
-- [ ] **Step 1：修訂 ADR 0037 兩處措辭**
+- [x] **Step 1：修訂 ADR 0037 兩處措辭**
 
 - §3：把「真正可能缺席的能力（TTS 引擎、全文檢索、WiFi 傳書）以明確的「不可用」adapter 或旗標表示」改為：全文檢索以 `isFullTextSearchAvailable` 旗標表示；WiFi 傳書於 Issue 13 處理；**TTS 不新增不可用 adapter**——正式環境恆提供 `SystemTtsProvider`，音訊服務不可用以 `TtsAudioHandlerHolder.unavailable()`／`.degraded()` 表示。
 - §6：把「只能在 `buildReaderScreen` 這一個呼叫點暫時組裝」改為「只能透過 `reader_screen_route.dart` 的單一轉換函式 `readerFeatureDependenciesFromLegacy` 暫時組裝，由尚未遷移的外層畫面呼叫，於最後一個外層畫面遷移完成時移除」。
 
-- [ ] **Step 2：更新 `epic.md`、`issues.md`、`docs/epics.md`**
+- [x] **Step 2：更新 `epic.md`、`issues.md`、`docs/epics.md`**
 
 `epic.md` 新增「Issue 11 實作完成」段落：分支名、Task 0 基準 N、最終通過數與算式、被刪缺席測試名稱清單、Task 4 需 `completeLegacyReaderFeatures()` 補齊的測試數、`readerSaveAsPresetUnavailableMessage` 孤兒鍵的記錄、Review Focus 逐條對應的測試名稱。`issues.md` Issue 11 狀態改為「🟡 實作完成，待程式審查」；`docs/epics.md` 備註「最後處理的 Issue」同步為「Issue 11 實作完成，待程式審查」。
 
-- [ ] **Step 3：完整測試（只在此處跑一次）**
+- [x] **Step 3：完整測試（只在此處跑一次）**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook/.worktrees/epic-54-issue-11-reader-deps/app
@@ -1062,7 +1062,7 @@ flutter test
 
 用 `run_in_background` 執行，約 6 分鐘。預期：0 失敗。
 
-- [ ] **Step 4：提交文件**
+- [x] **Step 4：提交文件**
 
 ```bash
 git add docs
@@ -1071,7 +1071,7 @@ git commit -m "docs(epic-54): Issue 11 實作記錄與 ADR 0037 措辭修訂
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 5：交給程式審查**
+- [x] **Step 5：交給程式審查**
 
 審查者先產出報告，存於 `docs/epics/epic-54-architecture-optimization/reviews/review-code-issue-11.md`（gitignore），不得直接改程式；審查完成後由人類決定發 PR 與合併。
 

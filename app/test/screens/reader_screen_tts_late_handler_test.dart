@@ -18,6 +18,7 @@ import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
 import '../support/fake_reader_prefs_manager.dart';
+import '../support/fake_reader_feature_dependencies.dart';
 import '../support/fake_inappwebview_platform.dart';
 import '../support/fake_tts_audio_player.dart';
 import '../support/fake_tts_provider.dart';
@@ -55,10 +56,12 @@ Widget _app({
       filePath: 'test/fixtures/sample.epub',
       bookId: bookId,
       bookTitle: bookTitle,
-      prefsManager: prefs,
       isFixedLayout: false,
-      ttsProvider: FakeTtsProvider(),
-      ttsAudio: ttsAudio,
+      dependencies: fakeReaderFeatureDependencies(
+        prefsManager: prefs,
+        ttsProvider: FakeTtsProvider(),
+        ttsAudio: ttsAudio,
+      ),
     ),
   );
 }
@@ -290,10 +293,12 @@ void main() {
                   filePath: 'test/fixtures/sample.epub',
                   bookId: 'b_first',
                   bookTitle: '第一本書',
-                  prefsManager: prefs,
                   isFixedLayout: false,
-                  ttsProvider: FakeTtsProvider(),
-                  ttsAudio: holder,
+                  dependencies: fakeReaderFeatureDependencies(
+                    prefsManager: prefs,
+                    ttsProvider: FakeTtsProvider(),
+                    ttsAudio: holder,
+                  ),
                 ),
               ),
               if (withSecond)
@@ -303,10 +308,12 @@ void main() {
                     filePath: 'test/fixtures/sample.epub',
                     bookId: 'b_second',
                     bookTitle: '第二本書',
-                    prefsManager: prefs,
                     isFixedLayout: false,
-                    ttsProvider: FakeTtsProvider(),
-                    ttsAudio: holder,
+                    dependencies: fakeReaderFeatureDependencies(
+                      prefsManager: prefs,
+                      ttsProvider: FakeTtsProvider(),
+                      ttsAudio: holder,
+                    ),
                   ),
                 ),
             ],
@@ -353,10 +360,12 @@ void main() {
                     filePath: 'test/fixtures/sample.epub',
                     bookId: 'b_first',
                     bookTitle: '第一本書',
-                    prefsManager: prefs,
                     isFixedLayout: false,
-                    ttsProvider: FakeTtsProvider(),
-                    ttsAudio: holder,
+                    dependencies: fakeReaderFeatureDependencies(
+                      prefsManager: prefs,
+                      ttsProvider: FakeTtsProvider(),
+                      ttsAudio: holder,
+                    ),
                   ),
                 ),
               Expanded(
@@ -365,10 +374,12 @@ void main() {
                   filePath: 'test/fixtures/sample.epub',
                   bookId: 'b_second',
                   bookTitle: '第二本書',
-                  prefsManager: prefs,
                   isFixedLayout: false,
-                  ttsProvider: FakeTtsProvider(),
-                  ttsAudio: holder,
+                  dependencies: fakeReaderFeatureDependencies(
+                    prefsManager: prefs,
+                    ttsProvider: FakeTtsProvider(),
+                    ttsAudio: holder,
+                  ),
                 ),
               ),
             ],
@@ -415,20 +426,24 @@ void main() {
                 child: ReaderScreen(
                   filePath: 'test/fixtures/sample.epub',
                   bookId: 'b_notice_first',
-                  prefsManager: prefs,
                   isFixedLayout: false,
-                  ttsProvider: FakeTtsProvider(),
-                  ttsAudio: holder,
+                  dependencies: fakeReaderFeatureDependencies(
+                    prefsManager: prefs,
+                    ttsProvider: FakeTtsProvider(),
+                    ttsAudio: holder,
+                  ),
                 ),
               ),
               Expanded(
                 child: ReaderScreen(
                   filePath: 'test/fixtures/sample.epub',
                   bookId: 'b_notice_second',
-                  prefsManager: prefs,
                   isFixedLayout: false,
-                  ttsProvider: FakeTtsProvider(),
-                  ttsAudio: holder,
+                  dependencies: fakeReaderFeatureDependencies(
+                    prefsManager: prefs,
+                    ttsProvider: FakeTtsProvider(),
+                    ttsAudio: holder,
+                  ),
                 ),
               ),
             ],

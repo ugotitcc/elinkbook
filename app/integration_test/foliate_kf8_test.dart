@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import '../test/support/fake_reader_feature_dependencies.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -112,8 +113,10 @@ void main() {
           home: ReaderScreen(
             filePath: book.filePath,
             bookId: book.id,
-            prefsManager: prefsManager,
-            libraryRepository: libraryRepository,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              libraryRepository: libraryRepository,
+            ),
           ),
         ),
       );

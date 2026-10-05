@@ -6,9 +6,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../library/models/book.dart';
 import '../library/models/library_enums.dart';
-import '../library/library_repository.dart';
 import '../reader/reader_jump_target.dart';
-import '../reader/reader_prefs_manager.dart';
 import '../reader/resolve_text_conversion.dart';
 import '../reader/text_conversion.dart';
 import '../reader/text_conversion_mode.dart';
@@ -16,7 +14,7 @@ import '../search/highlight_segments.dart';
 import '../search/search_query_variants.dart';
 import '../search/search_repository.dart';
 import 'library_paging.dart';
-import 'library_screen_dependencies.dart';
+import 'reader_feature_dependencies.dart';
 import 'reader_screen_route.dart';
 import 'widgets/paging_bar.dart';
 
@@ -26,11 +24,7 @@ import 'widgets/paging_bar.dart';
 class BookSearchScreen extends StatefulWidget {
   final Book book;
   final String initialQuery;
-  final SearchRepository searchRepository;
-  final ReaderPrefsManager prefsManager;
-  final LibraryRepository libraryRepository;
-  final LibraryReaderFeatureRepositories readerFeatureRepositories;
-  final LibrarySyncDependencies syncDependencies;
+  final ReaderFeatureDependencies dependencies;
   final bool isEinkMode;
 
   /// `true` 時代表從閱讀器開啟（Issue 8 接線），點選片段 pop 回傳
@@ -42,11 +36,7 @@ class BookSearchScreen extends StatefulWidget {
     super.key,
     required this.book,
     this.initialQuery = '',
-    required this.searchRepository,
-    required this.prefsManager,
-    required this.libraryRepository,
-    this.readerFeatureRepositories = const LibraryReaderFeatureRepositories(),
-    this.syncDependencies = const LibrarySyncDependencies(),
+    required this.dependencies,
     this.isEinkMode = false,
     this.fromReader = false,
   });
@@ -92,7 +82,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
   }
 
   Future<void> _initialize() async {
-    final loaded = await widget.prefsManager.load(widget.book.id);
+    final loaded = await widget.dependencies.prefsManager.load(widget.book.id);
     if (!mounted) return;
     setState(() {
       _contentTextConversion = loaded.globalPrefs.reading.textConversion;
@@ -102,7 +92,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
       );
     });
     // 裝置不支援全文檢索時跳過初始查詢，由 UI 呈現降級提示（review-plan-issue-7.md I-3）。
-    if (!widget.readerFeatureRepositories.isFullTextSearchAvailable) {
+    if (!widget.dependencies.isFullTextSearchAvailable) {
       return;
     }
     final initial = widget.initialQuery.trim();
@@ -128,7 +118,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
       setState(() => _result = null);
       return;
     }
-    if (!widget.readerFeatureRepositories.isFullTextSearchAvailable) {
+    if (!widget.dependencies.isFullTextSearchAvailable) {
       return;
     }
     _debounce = Timer(
@@ -138,9 +128,9 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
   }
 
   Future<void> _runSearch(String trimmedQuery) async {
-    if (!widget.readerFeatureRepositories.isFullTextSearchAvailable) return;
+    if (!widget.dependencies.isFullTextSearchAvailable) return;
     final requestId = ++_searchRequestId;
-    final result = await widget.searchRepository.searchContentInBook(
+    final result = await widget.dependencies.searchRepository.searchContentInBook(
       widget.book.id,
       trimmedQuery,
       sortByBookOrder: _sortByBookOrder,
@@ -181,10 +171,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
       MaterialPageRoute(
         builder: (_) => buildReaderScreen(
           book: widget.book,
-          prefsManager: widget.prefsManager,
-          features: widget.readerFeatureRepositories,
-          sync: widget.syncDependencies,
-          libraryRepository: widget.libraryRepository,
+          dependencies: widget.dependencies,
           isEinkMode: widget.isEinkMode,
           initialJumpTarget: jumpTarget,
         ),
@@ -240,7 +227,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
             ),
           ),
           // 不支援提示或工具列
-          if (!widget.readerFeatureRepositories.isFullTextSearchAvailable)
+          if (!widget.dependencies.isFullTextSearchAvailable)
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(l10n.fullTextSearchUnavailableMessage),

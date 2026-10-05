@@ -25,6 +25,7 @@ import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import '../support/pump_until_pdf_ready.dart';
 import '../support/fake_downloadable_font_store.dart';
+import '../support/fake_reader_feature_dependencies.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
 import 'package:elinkbook/reader/toc_entry.dart';
@@ -191,10 +192,12 @@ Future<int Function()> _pumpContentUriReader(
       home: ReaderScreen(
         filePath: filePath,
         bookId: bookId,
-        prefsManager: prefsManager,
         isFixedLayout: false,
-        bookImportService: bookImportService,
         pickSingleBookFile: pickSingleBookFile,
+        dependencies: fakeReaderFeatureDependencies(
+          prefsManager: prefsManager,
+          bookImportService: bookImportService,
+        ),
       ),
     ),
   );
@@ -302,6 +305,13 @@ void main() {
       const MethodChannel('elinkbook/fullscreen'),
       (call) async => null,
     );
+    // 同上：FoliateReaderView.dispose() 會無條件呼叫 detachReaderView
+    //（elinkbook/volume_key，非 awaited）。PopScope 測試的 addTearDown
+    // 會移除它自己的 volume_key mock；此處全域註冊避免競態洩漏。
+    binaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('elinkbook/volume_key'),
+      (call) async => null,
+    );
   });
 
   test('reader_screen 版面預設集錯誤訊息英文 ARB 驗證（{error} placeholder 移除後的固定文字）',
@@ -330,8 +340,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_jump_pdf_pos',
-            prefsManager: prefsManager,
             initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -362,8 +372,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_jump_epub_pos',
-            prefsManager: prefsManager,
             initialJumpTarget: const ReaderJumpTarget(cfi: 'epubcfi(/jump)'),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -403,7 +413,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_text_conversion',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -436,7 +446,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_text_conversion_fallback',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -470,7 +480,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_no_jump_pos',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -502,8 +512,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_jump_then_navigate',
-            prefsManager: prefsManager,
             initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -569,8 +579,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_jump_immediate_exit',
-            prefsManager: prefsManager,
             initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -623,15 +633,10 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample_multi_page.pdf',
-            bookId: 'b_jump_highlight_auto_clear',
-            prefsManager: FakeReaderPrefsManager(),
-            initialJumpTarget: const ReaderJumpTarget(
+          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_jump_highlight_auto_clear', initialJumpTarget: const ReaderJumpTarget(
               pdfPageIndex: 0,
               pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
-            ),
-          ),
+            ), dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager())),
         ),
       );
       await tester.pump();
@@ -675,16 +680,10 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            key: key,
-            filePath: 'test/fixtures/sample_multi_page.pdf',
-            bookId: 'b_jump_highlight_early_clear',
-            prefsManager: FakeReaderPrefsManager(),
-            initialJumpTarget: const ReaderJumpTarget(
+          home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_jump_highlight_early_clear', initialJumpTarget: const ReaderJumpTarget(
               pdfPageIndex: 0,
               pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
-            ),
-          ),
+            ), dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager())),
         ),
       );
       await tester.pump();
@@ -730,8 +729,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_jump_no_rect',
-            prefsManager: FakeReaderPrefsManager(),
             initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 0),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
           ),
         ),
       );
@@ -759,14 +758,8 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            key: key,
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_jump_epub_highlight',
-            prefsManager: FakeReaderPrefsManager(),
-            initialJumpTarget:
-                const ReaderJumpTarget(cfi: 'epubcfi(/6/2!/4/2)'),
-          ),
+          home: ReaderScreen(key: key, filePath: 'test/fixtures/sample.epub', bookId: 'b_jump_epub_highlight', initialJumpTarget:
+                const ReaderJumpTarget(cfi: 'epubcfi(/6/2!/4/2)'), dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager())),
         ),
       );
       await tester.pump();
@@ -801,7 +794,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_no_jump_no_highlight',
-            prefsManager: FakeReaderPrefsManager(),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
           ),
         ),
       );
@@ -833,7 +826,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.unknown',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -853,8 +846,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_chapter_title_fallback_epub',
-            prefsManager: prefsManager,
             bookTitle: '一本測試用書',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -875,8 +868,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
             bookId: 'b_chapter_title_fallback_pdf',
-            prefsManager: prefsManager,
             bookTitle: '另一本測試用書',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -898,7 +891,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -922,7 +915,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -956,9 +949,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_fixed_layout.epub',
             bookId: 'b1',
-            prefsManager: prefsManager,
             isFixedLayout: true,
-            libraryRepository: repository,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              libraryRepository: repository,
+            ),
           ),
         ),
       );
@@ -989,9 +984,11 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
           isFixedLayout: false,
-          libraryRepository: repository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
         ),
       ),
     );
@@ -1019,8 +1016,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
           isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1054,8 +1051,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
           isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1086,8 +1083,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
           isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1113,8 +1110,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
           isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1145,7 +1142,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1168,7 +1165,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1197,7 +1194,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1221,7 +1218,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
             bookId: 'b1',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -1246,8 +1243,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b1',
-            prefsManager: prefsManager,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -1303,8 +1300,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1363,8 +1360,10 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b1',
-            prefsManager: prefsManager,
-            libraryRepository: repository,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              libraryRepository: repository,
+            ),
           ),
         ),
       );
@@ -1390,8 +1389,10 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_fixed_layout.epub',
             bookId: 'b1',
-            prefsManager: prefsManager,
-            libraryRepository: repository,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              libraryRepository: repository,
+            ),
           ),
         ),
       );
@@ -1400,30 +1401,6 @@ void main() {
       await tester.pump();
 
       expect(repository.detectAndCacheEpubLayoutCalls, ['b1']);
-      expect(find.byType(FoliateReaderView), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'isFixedLayout: null 且未提供 libraryRepository 時，退回既有行為建構 EpubReaderView（零回歸）',
-    (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('zh', 'TW'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b1',
-            prefsManager: prefsManager,
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.runAsync(() => Future.delayed(Duration.zero));
-      await tester.pump();
-
       expect(find.byType(FoliateReaderView), findsOneWidget);
     },
   );
@@ -1442,8 +1419,10 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.azw3',
           bookId: 'b1',
-          prefsManager: prefsManager,
-          libraryRepository: repository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
         ),
       ),
     );
@@ -1475,8 +1454,10 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.cbz',
           bookId: 'b1',
-          prefsManager: prefsManager,
-          libraryRepository: repository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
         ),
       ),
     );
@@ -1504,8 +1485,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.cbz',
           bookId: 'b1',
-          prefsManager: prefsManager,
           isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1530,8 +1511,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.cbz',
           bookId: 'b1',
-          prefsManager: prefsManager,
           isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1567,8 +1548,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1595,8 +1576,10 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_synth.txt',
           bookId: 'b1',
-          prefsManager: prefsManager,
-          libraryRepository: repository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
         ),
       ),
     );
@@ -1621,8 +1604,10 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_synth.md',
           bookId: 'b1',
-          prefsManager: prefsManager,
-          libraryRepository: repository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
         ),
       ),
     );
@@ -1648,7 +1633,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1678,7 +1663,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1717,7 +1702,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1747,7 +1732,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1776,7 +1761,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1802,7 +1787,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1855,7 +1840,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b1',
-            prefsManager: manager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: manager),
           ),
         ),
       );
@@ -1899,7 +1884,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -1958,8 +1943,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_fixed_layout.epub',
             bookId: 'b_settings_dispatch_fxl',
-            prefsManager: prefsManager,
             isFixedLayout: true,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -1997,8 +1982,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_settings_dispatch_reflowable',
-            prefsManager: prefsManager,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -2033,7 +2018,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2093,7 +2078,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2138,8 +2123,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_fixed_layout.epub',
             bookId: 'b1',
-            prefsManager: prefsManager,
             isFixedLayout: true,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -2195,7 +2180,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2244,7 +2229,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_footer_test',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2297,7 +2282,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_dispose_test',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2344,7 +2329,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
             bookId: 'b_no_position',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -2375,7 +2360,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_fit_default',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2402,7 +2387,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_fit_saved',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2426,7 +2411,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_paused_test',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2459,8 +2444,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_epub_wiring',
-          prefsManager: prefsManager,
           initialJumpTarget: const ReaderJumpTarget(cfi: 'epubcfi(/jump)'),
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2509,7 +2494,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_pdf_regression',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2541,7 +2526,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_toc_initial',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2570,7 +2555,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_toc_pdf',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2600,7 +2585,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
           bookId: 'b_toc_fxl',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2637,7 +2622,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_toc_open',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -2684,7 +2669,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_toc_select',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2740,7 +2725,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_pdf_header',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2768,7 +2753,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_footer_off_epub',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2815,7 +2800,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_footer_off_pdf',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2851,7 +2836,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_header_on_footer_off',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2898,7 +2883,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_header_off_footer_on',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -2943,7 +2928,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_fixed_layout.epub',
             bookId: 'b_fxl_untouched',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -2980,33 +2965,6 @@ void main() {
 
   // --- Epic 6 Issue 1：書籤管理 + 統一「筆記」入口 ---
 
-  testWidgets('未提供 bookmarksRepository 時，📚 筆記按鈕為停用狀態（既有呼叫端不受影響）', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('zh', 'TW'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_no_bookmarks_repo',
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pump();
-
-    // ReaderChromeBottomBar 選單列書籤/劃線筆記/版面 3 顆恆常渲染，
-    // bookmarksRepository 缺席時只是 onPressed 為 null 顯示停用狀態
-    // （epic-38-reader-chrome-tts-redesign Issue 1，plan.md「計劃範圍
-    // 澄清」第 4 點），不再整格不渲染。
-    final finder = find.byKey(const Key('reader_chrome_annotations_button'));
-    expect(finder, findsOneWidget);
-    expect(tester.widget<IconButton>(finder).onPressed, isNull);
-  });
-
   testWidgets(
     'EPUB 提供 bookmarksRepository 後，📚 筆記按鈕存在，onLayoutResolved 前為停用狀態',
     (tester) async {
@@ -3020,8 +2978,10 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_notes_epub',
-            prefsManager: prefsManager,
-            bookmarksRepository: bookmarksRepository,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
           ),
         ),
       );
@@ -3045,8 +3005,10 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_notes_epub_no_locator_yet',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
       ),
     );
@@ -3082,8 +3044,10 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_notes_epub_open',
-            prefsManager: prefsManager,
-            bookmarksRepository: bookmarksRepository,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
           ),
         ),
       );
@@ -3133,8 +3097,10 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
             bookId: 'b_notes_pdf',
-            prefsManager: prefsManager,
-            bookmarksRepository: bookmarksRepository,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
           ),
         ),
       );
@@ -3155,30 +3121,6 @@ void main() {
   // --- Epic 6 Issue 2：EPUB 劃線/備註 ---
 
   testWidgets(
-    '未提供 highlightsRepository／notesRepository 時，EPUB 選取事件不顯示浮動工具列（既有呼叫端零回歸）',
-    (tester) async {
-      final bookmarksRepository = FakeBookmarksRepository();
-      await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('zh', 'TW'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b1',
-            prefsManager: FakeReaderPrefsManager(),
-            bookmarksRepository: bookmarksRepository,
-          ),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.byType(AnnotationToolbar), findsNothing);
-    },
-  );
-
-  testWidgets(
     '提供 highlightsRepository／notesRepository 後，ReaderScreen 建構不受影響、仍正常顯示（既有測試涵蓋常態載入行為）',
     (tester) async {
       final bookmarksRepository = FakeBookmarksRepository();
@@ -3194,10 +3136,12 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b1',
-            prefsManager: FakeReaderPrefsManager(),
-            bookmarksRepository: bookmarksRepository,
-            highlightsRepository: highlightsRepository,
-            notesRepository: notesRepository,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              bookmarksRepository: bookmarksRepository,
+              highlightsRepository: highlightsRepository,
+              notesRepository: notesRepository,
+            ),
           ),
         ),
       );
@@ -3236,10 +3180,12 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
             bookId: 'b1',
-            prefsManager: FakeReaderPrefsManager(),
-            bookmarksRepository: bookmarksRepository,
-            highlightsRepository: highlightsRepository,
-            notesRepository: notesRepository,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              bookmarksRepository: bookmarksRepository,
+              highlightsRepository: highlightsRepository,
+              notesRepository: notesRepository,
+            ),
           ),
         ),
       );
@@ -3253,75 +3199,7 @@ void main() {
     },
   );
 
-  testWidgets(
-    'PDF 書籍未提供 highlightsRepository／notesRepository 時建構不受影響（既有呼叫端零回歸）',
-    (tester) async {
-      final bookmarksRepository = FakeBookmarksRepository();
-      await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('zh', 'TW'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.pdf',
-            bookId: 'b1',
-            prefsManager: FakeReaderPrefsManager(),
-            bookmarksRepository: bookmarksRepository,
-          ),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.byType(AnnotationToolbar), findsNothing);
-    },
-  );
-
   // --- Epic 6 Issue 4：FXL 書籤支援 ---
-
-  testWidgets('FXL：未提供 bookmarksRepository 時，懸浮書籤/筆記按鈕皆為停用狀態（既有呼叫端零回歸）', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('zh', 'TW'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample_fixed_layout.epub',
-          bookId: 'b_fxl_no_repo',
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
-
-    final view = tester.widget<FoliateReaderView>(
-      find.byType(FoliateReaderView),
-    );
-    view.onLayoutResolved?.call(
-      const EpubLayoutInfo(
-        isFixedLayout: true,
-        writingMode: WritingMode.horizontal,
-      ),
-    );
-    await tester.pump();
-
-    // ReaderChromeBottomBar 選單列書籤/劃線筆記/版面 3 顆恆常渲染，
-    // bookmarksRepository 缺席時只是 onPressed 為 null 顯示停用狀態
-    // （epic-38-reader-chrome-tts-redesign Issue 1），不再整格不渲染。
-    final bookmarkFinder =
-        find.byKey(const Key('reader_chrome_bookmark_button'));
-    final annotationsFinder =
-        find.byKey(const Key('reader_chrome_annotations_button'));
-    expect(bookmarkFinder, findsOneWidget);
-    expect(annotationsFinder, findsOneWidget);
-    expect(tester.widget<IconButton>(bookmarkFinder).onPressed, isNull);
-    expect(tester.widget<IconButton>(annotationsFinder).onPressed, isNull);
-  });
 
   testWidgets('FXL：提供 bookmarksRepository 後，懸浮書籤按鈕存在，onLocatorChanged 前為停用狀態', (
     tester,
@@ -3336,8 +3214,10 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
           bookId: 'b_fxl_bookmark_disabled',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
       ),
     );
@@ -3383,8 +3263,10 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
           bookId: 'b_fxl_bookmark_toggle',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
       ),
     );
@@ -3472,8 +3354,10 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
           bookId: 'b_fxl_notes_sheet',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
       ),
     );
@@ -3554,8 +3438,10 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
           bookId: 'b_fxl_sync',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
       ),
     );
@@ -3633,8 +3519,10 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
           bookId: 'b_fxl_jump_collapse',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
       ),
     );
@@ -3720,9 +3608,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_chapter.epub',
             bookId: 'b_progress_export_epub',
-            prefsManager: prefsManager,
-            bookmarksRepository: bookmarksRepository,
             bookProgress: 0.1,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
           ),
         ),
       );
@@ -3776,9 +3666,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
             bookId: 'b_progress_export_pdf',
-            prefsManager: prefsManager,
-            bookmarksRepository: bookmarksRepository,
             bookProgress: 0.0,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
           ),
         ),
       );
@@ -3830,7 +3722,7 @@ void main() {
           key: key,
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -3869,7 +3761,7 @@ void main() {
             key: key,
             filePath: 'test/fixtures/sample.pdf',
             bookId: 'b1',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -3908,7 +3800,7 @@ void main() {
             key: key,
             filePath: 'test/fixtures/sample.pdf',
             bookId: 'b1',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -4015,7 +3907,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_multi_page.pdf',
           bookId: 'b1',
-          prefsManager: disabledPrefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: disabledPrefsManager),
         ),
       ),
     );
@@ -4065,6 +3957,7 @@ void main() {
         locale: const Locale('zh', 'TW'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -4075,7 +3968,7 @@ void main() {
                     builder: (_) => ReaderScreen(
                       filePath: 'test/fixtures/sample.pdf',
                       bookId: 'b1',
-                      prefsManager: prefsManager,
+                      dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
                     ),
                   ),
                 ),
@@ -4120,8 +4013,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b1',
-            prefsManager: prefsManager,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -4160,8 +4053,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -4207,8 +4100,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_toc_foliate_open',
-            prefsManager: prefsManager,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -4255,8 +4148,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_toc_foliate_jump',
-            prefsManager: prefsManager,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -4310,8 +4203,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_footer_foliate',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -4357,8 +4250,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_header_footer_margin_h',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -4434,8 +4327,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_footer_foliate_absent',
-            prefsManager: prefsManager,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -4468,8 +4361,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_footer_foliate_zero',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -4523,10 +4416,12 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_foliate_anno',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
           ),
         ),
       );
@@ -4584,10 +4479,12 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_fixed_layout.epub',
             bookId: 'b_fxl_anno',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
             isFixedLayout: true,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
           ),
         ),
       );
@@ -4626,10 +4523,12 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_foliate_select',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
           ),
         ),
       );
@@ -4690,10 +4589,12 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_select_edge',
-          prefsManager: prefsManager,
-          highlightsRepository: highlightsRepo,
-          notesRepository: notesRepo,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+          ),
         ),
       ),
     );
@@ -4751,10 +4652,12 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_close_toolbar',
-          prefsManager: prefsManager,
-          highlightsRepository: highlightsRepo,
-          notesRepository: notesRepo,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+          ),
         ),
       ),
     );
@@ -4819,10 +4722,12 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_merge1',
-          prefsManager: prefsManager,
-          highlightsRepository: highlightsRepo,
-          notesRepository: notesRepo,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+          ),
         ),
       ),
     );
@@ -4885,10 +4790,12 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_merge2',
-          prefsManager: prefsManager,
-          highlightsRepository: highlightsRepo,
-          notesRepository: notesRepo,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+          ),
         ),
       ),
     );
@@ -4946,10 +4853,12 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_merge3',
-          prefsManager: prefsManager,
-          highlightsRepository: highlightsRepo,
-          notesRepository: notesRepo,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+          ),
         ),
       ),
     );
@@ -5013,10 +4922,12 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_merge4',
-          prefsManager: prefsManager,
-          highlightsRepository: highlightsRepo,
-          notesRepository: notesRepo,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+          ),
         ),
       ),
     );
@@ -5074,9 +4985,11 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_chrome',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
       ),
     );
@@ -5144,8 +5057,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_settings_btn',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -5184,9 +5097,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_foliate_bookmark_btn',
-            prefsManager: prefsManager,
-            bookmarksRepository: bookmarksRepository,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
           ),
         ),
       );
@@ -5254,9 +5169,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_epic26_issue1',
-            prefsManager: prefsManager,
-            bookmarksRepository: bookmarksRepository,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
           ),
         ),
       );
@@ -5310,9 +5227,11 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_notes_btn',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
       ),
     );
@@ -5369,8 +5288,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_header',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -5422,8 +5341,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_foliate_header_immersive',
-            prefsManager: prefsManager,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -5485,8 +5404,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_header_v',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -5546,9 +5465,9 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_header_title',
-          prefsManager: prefsManager,
           isFixedLayout: false,
           bookTitle: '我的測試書名',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -5605,9 +5524,9 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_header_text_conversion',
-          prefsManager: prefsManager,
           isFixedLayout: false,
           bookTitle: '国电脑',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -5656,9 +5575,9 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_bottom_bar_text_conversion',
-          prefsManager: prefsManager,
           isFixedLayout: false,
           bookTitle: '国电脑',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -5689,8 +5608,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_pdf_bottom_bar_text_conversion',
-          prefsManager: prefsManager,
           bookTitle: '国电脑',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -5721,7 +5640,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_toc_text_conversion',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -5768,8 +5687,10 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_notes_text_conversion',
-          prefsManager: prefsManager,
-          bookmarksRepository: FakeBookmarksRepository(),
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: FakeBookmarksRepository(),
+          ),
         ),
       ),
     );
@@ -5818,8 +5739,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_header_off',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -5852,8 +5773,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_progress_h',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -5901,8 +5822,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_progress_immersive',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -5956,8 +5877,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_progress_v',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -6017,8 +5938,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_progress_off',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -6065,8 +5986,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_foliate_progress_sheet',
-            prefsManager: prefsManager,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -6116,8 +6037,8 @@ void main() {
             child: ReaderScreen(
               filePath: 'test/fixtures/sample.epub',
               bookId: 'b_foliate_progress_safearea',
-              prefsManager: prefsManager,
               isFixedLayout: false,
+              dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
             ),
           ),
         ),
@@ -6164,8 +6085,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_foliate_progress_safearea_null',
-            prefsManager: prefsManager,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -6206,8 +6127,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_foliate_margins',
-            prefsManager: prefsManager,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -6236,8 +6157,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_theme_color',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -6264,8 +6185,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_foliate_theme_color_light',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -6292,8 +6213,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
           bookId: 'b_foliate_theme_color_fxl',
-          prefsManager: prefsManager,
           isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -6336,7 +6257,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -6371,6 +6292,7 @@ void main() {
           locale: const Locale('zh', 'TW'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: Builder(
             builder: (context) => Scaffold(
               body: ElevatedButton(
@@ -6380,7 +6302,7 @@ void main() {
                     builder: (_) => ReaderScreen(
                       filePath: 'test/fixtures/sample.pdf',
                       bookId: 'b1',
-                      prefsManager: prefsManager,
+                      dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
                     ),
                   ),
                 ),
@@ -6442,7 +6364,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
             bookId: 'b_fullscreen_immersive_pdf',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -6480,8 +6402,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_fullscreen_immersive_epub',
-            prefsManager: prefsManager,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -6510,7 +6432,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
             bookId: 'b_fullscreen_off_pdf',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -6545,7 +6467,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
             bookId: 'b_fullscreen_toggle_back_pdf',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -6585,6 +6507,7 @@ void main() {
         locale: const Locale('zh', 'TW'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Builder(
           builder: (context) => Scaffold(
             body: ElevatedButton(
@@ -6594,8 +6517,10 @@ void main() {
                   builder: (_) => ReaderScreen(
                     filePath: 'test/fixtures/sample.pdf',
                     bookId: 'b1',
-                    prefsManager: prefsManager,
-                    syncCheckpointTrigger: syncCheckpointTrigger,
+                    dependencies: fakeReaderFeatureDependencies(
+                      prefsManager: prefsManager,
+                      syncCheckpointTrigger: syncCheckpointTrigger,
+                    ),
                   ),
                 ),
               ),
@@ -6622,48 +6547,6 @@ void main() {
     expect(triggerCallCount, 1);
   });
 
-  testWidgets('未提供 syncCheckpointTrigger 時，離開 ReaderScreen 不拋出例外（零回歸）', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('zh', 'TW'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: ElevatedButton(
-              key: const Key('open_reader'),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ReaderScreen(
-                    filePath: 'test/fixtures/sample.pdf',
-                    bookId: 'b1',
-                    prefsManager: prefsManager,
-                  ),
-                ),
-              ),
-              child: const Text('open'),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(find.byKey(const Key('open_reader')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
-    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
-    await tester.pump();
-
-    final navigatorState = tester.state<NavigatorState>(find.byType(Navigator));
-    navigatorState.maybePop();
-    await tester.pumpAndSettle();
-
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets('閱讀中每 5 分鐘計時器觸發 checkpoint，離開畫面後計時器停止', (tester) async {
     var triggerCallCount = 0;
     final syncCheckpointTrigger = SyncCheckpointTrigger(
@@ -6678,6 +6561,7 @@ void main() {
         locale: const Locale('zh', 'TW'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: Builder(
           builder: (context) => Scaffold(
             body: ElevatedButton(
@@ -6687,8 +6571,10 @@ void main() {
                   builder: (_) => ReaderScreen(
                     filePath: 'test/fixtures/sample.pdf',
                     bookId: 'b1',
-                    prefsManager: prefsManager,
-                    syncCheckpointTrigger: syncCheckpointTrigger,
+                    dependencies: fakeReaderFeatureDependencies(
+                      prefsManager: prefsManager,
+                      syncCheckpointTrigger: syncCheckpointTrigger,
+                    ),
                   ),
                 ),
               ),
@@ -6758,7 +6644,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
             bookId: 'b1',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -6793,8 +6679,10 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsManager: prefsManager,
-          customFontsRepository: customFontsRepository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            customFontsRepository: customFontsRepository,
+          ),
         ),
       ),
     );
@@ -6859,8 +6747,10 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b1',
-            prefsManager: prefsManager,
-            customFontsRepository: customFontsRepository,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              customFontsRepository: customFontsRepository,
+            ),
           ),
         ),
       );
@@ -6894,9 +6784,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b1',
-            prefsManager: prefsManager,
-            customFontsRepository: customFontsRepository,
-            downloadableFontStore: store,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              customFontsRepository: customFontsRepository,
+              downloadableFontStore: store,
+            ),
           ),
         ),
       );
@@ -6936,15 +6828,6 @@ void main() {
       final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
       expect(view.installedFonts, {AppFont.sourceHanSerif});
       expect(view.downloadedFontsDirectory, store.directory);
-    });
-
-    testWidgets('沒有傳入 store 時開書不等待，已下載字型為空、不註冊存放目錄（工單審查 M-1）',
-        (tester) async {
-      await pumpReader(tester);
-
-      final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
-      expect(view.installedFonts, isEmpty);
-      expect(view.downloadedFontsDirectory, isNull);
     });
 
     testWidgets('installedFonts() 失敗時仍建構閱讀器，已下載字型為空集合（審查重點 2）',
@@ -6997,9 +6880,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b1',
-            prefsManager: prefsManager,
-            customFontsRepository: customFontsRepository,
-            downloadableFontStore: store,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              customFontsRepository: customFontsRepository,
+              downloadableFontStore: store,
+            ),
           ),
         ),
       );
@@ -7192,7 +7077,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.pdf',
             bookId: 'b_open_timeout',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -7242,7 +7127,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_open_timeout_success',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7281,8 +7166,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_black_flash_epub_loading',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7368,7 +7253,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_black_flash_pdf_loading',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7400,7 +7285,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_black_flash_pdf_rendered',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7452,8 +7337,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_header_footer_no_bg',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7531,8 +7416,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_header_footer_dark',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7596,8 +7481,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
           bookId: 'b_header_footer_fxl',
-          prefsManager: prefsManager,
           isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7652,8 +7537,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_settings_sheet_dark_barrier',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7700,8 +7585,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_settings_sheet_light_barrier',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7743,8 +7628,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_fab_color_dark',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7788,8 +7673,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_fab_color_light',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7830,9 +7715,9 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_fab_color_eink',
-          prefsManager: prefsManager,
           isFixedLayout: false,
           isEinkMode: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7872,8 +7757,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_fixed_layout.epub',
           bookId: 'b_fab_color_fxl',
-          prefsManager: prefsManager,
           isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7913,8 +7798,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_fab_color_settings_dark',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -7957,8 +7842,8 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_error_after_render',
-          prefsManager: prefsManager,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -8026,7 +7911,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b1',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -8091,7 +7976,7 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b2',
-            prefsManager: prefsManager,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -8166,9 +8051,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b1',
-            prefsManager: FakeReaderPrefsManager(),
-            highlightsRepository: highlightsRepository,
-            notesRepository: FakeNotesRepository(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              highlightsRepository: highlightsRepository,
+              notesRepository: FakeNotesRepository(),
+            ),
           ),
         ),
       );
@@ -8247,9 +8134,11 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_multi_page.pdf',
           bookId: 'b_pdf_select_edge',
-          prefsManager: FakeReaderPrefsManager(),
-          highlightsRepository: FakeHighlightsRepository(),
-          notesRepository: FakeNotesRepository(),
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            highlightsRepository: FakeHighlightsRepository(),
+            notesRepository: FakeNotesRepository(),
+          ),
         ),
       ),
     );
@@ -8290,9 +8179,11 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_multi_page.pdf',
           bookId: 'b_pdf_close_toolbar',
-          prefsManager: FakeReaderPrefsManager(),
-          highlightsRepository: FakeHighlightsRepository(),
-          notesRepository: FakeNotesRepository(),
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            highlightsRepository: FakeHighlightsRepository(),
+            notesRepository: FakeNotesRepository(),
+          ),
         ),
       ),
     );
@@ -8336,9 +8227,11 @@ void main() {
           key: key,
           filePath: 'test/fixtures/sample_multi_page.pdf',
           bookId: 'b_pdf_page_turn_clears_selection',
-          prefsManager: FakeReaderPrefsManager(),
-          highlightsRepository: FakeHighlightsRepository(),
-          notesRepository: FakeNotesRepository(),
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            highlightsRepository: FakeHighlightsRepository(),
+            notesRepository: FakeNotesRepository(),
+          ),
         ),
       ),
     );
@@ -8416,9 +8309,11 @@ void main() {
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_pdf_loading_guard',
-            prefsManager: FakeReaderPrefsManager(),
-            highlightsRepository: FakeHighlightsRepository(),
-            notesRepository: FakeNotesRepository(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              highlightsRepository: FakeHighlightsRepository(),
+              notesRepository: FakeNotesRepository(),
+            ),
           ),
         ),
       );
@@ -8478,8 +8373,8 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_epub_loading_guard',
-            prefsManager: prefsManager,
             isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
           ),
         ),
       );
@@ -8515,9 +8410,11 @@ void main() {
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_pdf_rendered_no_regression',
-            prefsManager: FakeReaderPrefsManager(),
-            highlightsRepository: FakeHighlightsRepository(),
-            notesRepository: FakeNotesRepository(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              highlightsRepository: FakeHighlightsRepository(),
+              notesRepository: FakeNotesRepository(),
+            ),
           ),
         ),
       );
@@ -8573,9 +8470,11 @@ void main() {
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_pdf_page_turn_cancels_active_drag',
-            prefsManager: FakeReaderPrefsManager(),
-            highlightsRepository: FakeHighlightsRepository(),
-            notesRepository: FakeNotesRepository(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              highlightsRepository: FakeHighlightsRepository(),
+              notesRepository: FakeNotesRepository(),
+            ),
           ),
         ),
       );
@@ -8645,9 +8544,11 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample_multi_page.pdf',
           bookId: 'b1',
-          prefsManager: FakeReaderPrefsManager(),
-          highlightsRepository: FakeHighlightsRepository(),
-          notesRepository: FakeNotesRepository(),
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            highlightsRepository: FakeHighlightsRepository(),
+            notesRepository: FakeNotesRepository(),
+          ),
         ),
       ),
     );
@@ -8703,8 +8604,10 @@ void main() {
           key: key,
           filePath: 'test/fixtures/sample_multi_page.pdf',
           bookId: 'b1',
-          prefsManager: FakeReaderPrefsManager(),
-          bookmarksRepository: bookmarksRepository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
       ),
     );
@@ -8750,8 +8653,10 @@ void main() {
           key: key,
           filePath: 'test/fixtures/sample_multi_page.pdf',
           bookId: 'b1',
-          prefsManager: FakeReaderPrefsManager(),
-          bookmarksRepository: bookmarksRepository,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
       ),
     );
@@ -8796,7 +8701,7 @@ void main() {
           key: key,
           filePath: 'test/fixtures/sample_pdf_toc.pdf',
           bookId: 'b_pdf_toc',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -8838,7 +8743,7 @@ void main() {
           key: key,
           filePath: 'test/fixtures/sample_pdf_toc.pdf',
           bookId: 'b_pdf_toc_jump',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -8879,7 +8784,7 @@ void main() {
           key: key,
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_pdf_toc_empty',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -8914,7 +8819,7 @@ void main() {
           key: key,
           filePath: 'test/fixtures/sample_multi_page.pdf',
           bookId: 'b_pdf_search',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -8960,7 +8865,7 @@ void main() {
           key: key,
           filePath: 'test/fixtures/sample_multi_page.pdf',
           bookId: 'b_pdf_search_nav',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -9036,7 +8941,7 @@ void main() {
           key: key,
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b_pdf_search_empty',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -9079,7 +8984,7 @@ void main() {
           key: key,
           filePath: 'test/fixtures/sample_multi_page.pdf',
           bookId: 'b_pdf_thumbnails',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -9121,7 +9026,7 @@ void main() {
           key: key,
           filePath: 'test/fixtures/sample_multi_page.pdf',
           bookId: 'b_pdf_thumbnails_click',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );
@@ -9215,10 +9120,9 @@ void main() {
     // FAB 化路徑，非舊版 `reader_chrome_layout_button`）。
     Future<void> pumpReaderScreen(
       WidgetTester tester, {
-      // epic-27-reader-device-compat Issue 4：讓「另存為新預設集」的兩則
-      // 新測試可以分別模擬 layoutPresetRepository 為 null、或注入一個會
-      // 拋出例外的假 repository；其餘既有呼叫點沿用預設值，行為不變。
-      bool includeLayoutPresetRepository = true,
+      // epic-27-reader-device-compat Issue 4：讓「另存為新預設集」的寫入
+      // 失敗測試可以注入一個會拋出例外的假 repository；其餘既有呼叫點沿用
+      // 預設值，行為不變。
       LayoutPresetRepository? layoutPresetRepositoryOverride,
       // Epic 43 Issue 5：讓「套用預設集」/「套用來源書籍」的失敗路徑測試
       // 可以注入一個會拋出例外的假 BookReaderPrefsRepository；其餘既有
@@ -9233,8 +9137,7 @@ void main() {
       });
 
       final effectiveLayoutPresetRepository =
-          layoutPresetRepositoryOverride ??
-          (includeLayoutPresetRepository ? layoutPresetRepository : null);
+          layoutPresetRepositoryOverride ?? layoutPresetRepository;
 
       await tester.pumpWidget(
         MaterialApp(
@@ -9242,16 +9145,8 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b1',
-            prefsManager: prefsManager,
-            isFixedLayout: false,
-            libraryRepository: libraryRepository,
-            layoutPresetRepository: effectiveLayoutPresetRepository,
-            bookReaderPrefsRepository:
-                bookReaderPrefsRepositoryOverride ?? bookReaderPrefsRepository,
-          ),
+          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: libraryRepository, layoutPresetRepository: effectiveLayoutPresetRepository, bookReaderPrefsRepository:
+                bookReaderPrefsRepositoryOverride ?? bookReaderPrefsRepository)),
         ),
       );
       await tester.pump();
@@ -9359,36 +9254,6 @@ void main() {
       final all = await tester.runAsync(() => layoutPresetRepository.listAll());
       expect(all, hasLength(3));
       expect(all!.map((p) => p.name).toList(), ['D', 'B', 'C']);
-    });
-
-    testWidgets('另存為新預設集：layoutPresetRepository 為 null 時顯示提示，而非毫無反應', (
-      tester,
-    ) async {
-      await pumpReaderScreen(tester, includeLayoutPresetRepository: false);
-
-      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
-      await tester.pumpAndSettle();
-      await switchToTab(tester, '預設集');
-      await tester.ensureVisible(
-        find.byKey(const Key('reader_settings_save_as_preset')),
-      );
-      await tester.tap(find.byKey(const Key('reader_settings_save_as_preset')));
-      await tester.pump();
-
-      expect(
-        find.byKey(
-          const Key('reader_save_as_preset_repository_unavailable_snackbar'),
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('暫時無法儲存預設集'), findsOneWidget);
-      // 命名對話框不應該被誤開——確認「靜默失敗」已被提示取代，而不是
-      // 多開出一個對話框（兩者都算「有反應」，但語意不同，須分開鑑別）。
-      expect(
-        find.byKey(const Key('layout_preset_name_dialog_field')),
-        findsNothing,
-      );
-      expect(tester.takeException(), isNull);
     });
 
     testWidgets('另存為新預設集：寫入過程拋出例外時顯示提示，不被靜默吞掉', (tester) async {
@@ -9816,9 +9681,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_pdf_merge1',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
           ),
         ),
       );
@@ -9869,9 +9736,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_pdf_merge2',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
           ),
         ),
       );
@@ -9930,9 +9799,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_pdf_issue6_hit',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
           ),
         ),
       );
@@ -9989,9 +9860,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_pdf_issue6_miss',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
           ),
         ),
       );
@@ -10021,49 +9894,6 @@ void main() {
   });
 
   group('TTS 語音朗讀（epic-34-tts-readalong Issue 2）', () {
-    testWidgets('未提供 ttsProvider 時，不顯示 TTS 播放按鈕', (tester) async {
-      final highlightsRepo = FakeHighlightsRepository();
-      final notesRepo = FakeNotesRepository();
-
-      await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('zh', 'TW'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_tts_no_provider',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
-            isFixedLayout: false,
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.runAsync(() => Future.delayed(Duration.zero));
-      await tester.pump();
-
-      final foliateView = tester.widget<FoliateReaderView>(
-        find.byType(FoliateReaderView),
-      );
-      foliateView.onPageRendered();
-      foliateView.onLayoutResolved?.call(
-        const EpubLayoutInfo(
-          isFixedLayout: false,
-          writingMode: WritingMode.horizontal,
-        ),
-      );
-      await tester.pump();
-      await tester.pump();
-
-      expect(
-        find.byKey(const Key('reader_tts_play_pause_button')),
-        findsNothing,
-      );
-    });
-
     testWidgets('提供 ttsProvider 時，流式 EPUB 顯示 TTS 播放按鈕，點擊後不崩潰且維持在 ReaderChromeBottomBar（誠實測試邊界，見計劃範圍澄清第 2 點）', (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
       final notesRepo = FakeNotesRepository();
@@ -10078,11 +9908,13 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_tts_with_provider',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
             isFixedLayout: false,
-            ttsProvider: ttsProvider,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
           ),
         ),
       );
@@ -10131,9 +9963,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.cbz',
             bookId: 'b_tts_cbz',
-            prefsManager: prefsManager,
             isFixedLayout: true,
-            ttsProvider: ttsProvider,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: ttsProvider,
+            ),
           ),
         ),
       );
@@ -10181,9 +10015,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.cbz',
             bookId: 'b_tts_cbz_disabled_color',
-            prefsManager: prefsManager,
             isFixedLayout: true,
-            ttsProvider: ttsProvider,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: ttsProvider,
+            ),
           ),
         ),
       );
@@ -10257,11 +10093,13 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_tts_vertical',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
             isFixedLayout: false,
-            ttsProvider: ttsProvider,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
           ),
         ),
       );
@@ -10308,11 +10146,13 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: bookId,
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
             isFixedLayout: false,
-            ttsProvider: ttsProvider,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
           ),
         ),
       );
@@ -10372,11 +10212,13 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_tts_manual_nav',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
             isFixedLayout: false,
-            ttsProvider: ttsProvider,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
           ),
         ),
       );
@@ -10428,48 +10270,6 @@ void main() {
   });
 
   group('上一句/下一句/語速調整控制（epic-34-tts-readalong Issue 5）', () {
-    testWidgets('未提供 ttsProvider 時，不顯示上一句/下一句/語速按鈕', (tester) async {
-      final highlightsRepo = FakeHighlightsRepository();
-      final notesRepo = FakeNotesRepository();
-
-      await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('zh', 'TW'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_tts5_no_provider',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
-            isFixedLayout: false,
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.runAsync(() => Future.delayed(Duration.zero));
-      await tester.pump();
-
-      final foliateView = tester.widget<FoliateReaderView>(
-        find.byType(FoliateReaderView),
-      );
-      foliateView.onPageRendered();
-      foliateView.onLayoutResolved?.call(
-        const EpubLayoutInfo(
-          isFixedLayout: false,
-          writingMode: WritingMode.horizontal,
-        ),
-      );
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.byKey(const Key('reader_tts_previous_button')), findsNothing);
-      expect(find.byKey(const Key('reader_tts_next_button')), findsNothing);
-      expect(find.byKey(const Key('reader_tts_speed_button')), findsNothing);
-    });
-
     testWidgets('CBZ 格式提供 ttsProvider 時，上一句/下一句/語速按鈕皆不顯示（僅播放/暫停停用按鈕存在）', (
       tester,
     ) async {
@@ -10484,9 +10284,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.cbz',
             bookId: 'b_tts5_cbz',
-            prefsManager: prefsManager,
             isFixedLayout: true,
-            ttsProvider: ttsProvider,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: ttsProvider,
+            ),
           ),
         ),
       );
@@ -10537,11 +10339,13 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_tts5_buttons',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
             isFixedLayout: false,
-            ttsProvider: ttsProvider,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
           ),
         ),
       );
@@ -10590,11 +10394,13 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_tts5_tap',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
             isFixedLayout: false,
-            ttsProvider: ttsProvider,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
           ),
         ),
       );
@@ -10642,11 +10448,13 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_tts5_speed',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
             isFixedLayout: false,
-            ttsProvider: ttsProvider,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
           ),
         ),
       );
@@ -10694,11 +10502,13 @@ void main() {
             home: ReaderScreen(
               filePath: 'test/fixtures/sample.epub',
               bookId: 'b_mini_player_footer',
-              prefsManager: prefsManager,
-              highlightsRepository: highlightsRepo,
-              notesRepository: notesRepo,
               isFixedLayout: false,
-              ttsProvider: ttsProvider,
+              dependencies: fakeReaderFeatureDependencies(
+                prefsManager: prefsManager,
+                highlightsRepository: highlightsRepo,
+                notesRepository: notesRepo,
+                ttsProvider: ttsProvider,
+              ),
             ),
           ),
         );
@@ -10753,52 +10563,6 @@ void main() {
       },
     );
 
-    testWidgets('未提供 ttsProvider 時，Mini Player 四顆按鈕皆不顯示', (tester) async {
-      final highlightsRepo = FakeHighlightsRepository();
-      final notesRepo = FakeNotesRepository();
-
-      await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('zh', 'TW'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_mini_player_no_provider',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
-            isFixedLayout: false,
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.runAsync(() => Future.delayed(Duration.zero));
-      await tester.pump();
-
-      final foliateView = tester.widget<FoliateReaderView>(
-        find.byType(FoliateReaderView),
-      );
-      foliateView.onPageRendered();
-      foliateView.onLayoutResolved?.call(
-        const EpubLayoutInfo(
-          isFixedLayout: false,
-          writingMode: WritingMode.horizontal,
-        ),
-      );
-      await tester.pump();
-      await tester.pump();
-
-      expect(
-        find.byKey(const Key('reader_tts_play_pause_button')),
-        findsNothing,
-      );
-      expect(find.byKey(const Key('reader_tts_previous_button')), findsNothing);
-      expect(find.byKey(const Key('reader_tts_next_button')), findsNothing);
-      expect(find.byKey(const Key('reader_tts_speed_button')), findsNothing);
-    });
-
   });
 
   group('背景播放與系統整合（epic-34-tts-readalong Issue 7）', () {
@@ -10821,11 +10585,13 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_tts7_wiring',
-            prefsManager: prefsManager,
             isFixedLayout: false,
-            ttsProvider: ttsProvider,
-            ttsAudio: TtsAudioHandlerHolder.ready(ttsAudioHandler),
-            ttsAudioFocusSource: ttsAudioFocusSource,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: ttsProvider,
+              ttsAudio: TtsAudioHandlerHolder.ready(ttsAudioHandler),
+              ttsAudioFocusSource: ttsAudioFocusSource,
+            ),
           ),
         ),
       );
@@ -10898,10 +10664,12 @@ void main() {
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_tts_text_conversion',
             bookTitle: '国电脑',
-            prefsManager: prefsManager,
             isFixedLayout: false,
-            ttsProvider: ttsProvider,
-            ttsAudio: TtsAudioHandlerHolder.ready(ttsAudioHandler),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: ttsProvider,
+              ttsAudio: TtsAudioHandlerHolder.ready(ttsAudioHandler),
+            ),
           ),
         ),
       );
@@ -10928,55 +10696,6 @@ void main() {
       expect(ttsAudioHandler.mediaItem.value?.title, '國電腦');
     });
 
-    testWidgets('未提供 ttsAudioHandler／ttsAudioFocusSource 時，既有播放/暫停行為零回歸', (
-      tester,
-    ) async {
-      final ttsProvider = FakeTtsProvider();
-
-      await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('zh', 'TW'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_tts7_no_wiring',
-            prefsManager: prefsManager,
-            isFixedLayout: false,
-            ttsProvider: ttsProvider,
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.runAsync(() => Future.delayed(Duration.zero));
-      await tester.pump();
-
-      final foliateView = tester.widget<FoliateReaderView>(
-        find.byType(FoliateReaderView),
-      );
-      foliateView.onPageRendered();
-      foliateView.onLayoutResolved?.call(
-        const EpubLayoutInfo(
-          isFixedLayout: false,
-          writingMode: WritingMode.horizontal,
-        ),
-      );
-      await tester.pump();
-      await tester.pump();
-
-      // epic-38 Issue 2：同上，點擊不崩潰
-      final toggleFinder9b = find.byKey(const Key('reader_chrome_tts_button'));
-      await tester.tap(toggleFinder9b);
-      await tester.pump();
-      expect(tester.takeException(), isNull);
-      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
-      expect(find.byType(TtsPanel), findsNothing);
-
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-      await tester.pump();
-      expect(tester.takeException(), isNull);
-    });
   });
 
   group('安全視窗跟隨翻頁（epic-34-tts-readalong Issue 8）', () {
@@ -10994,10 +10713,12 @@ void main() {
             home: ReaderScreen(
               filePath: 'test/fixtures/sample.epub',
               bookId: 'b_tts8_safe_window',
-              prefsManager: prefsManager,
               isFixedLayout: false,
-              ttsProvider: ttsProvider,
               isEinkMode: true,
+              dependencies: fakeReaderFeatureDependencies(
+                prefsManager: prefsManager,
+                ttsProvider: ttsProvider,
+              ),
             ),
           ),
         );
@@ -11036,35 +10757,6 @@ void main() {
       },
     );
 
-    testWidgets(
-      '未提供 ttsProvider 時，onTtsHighlightOutOfSafeWindow 欄位為 null（未建構 TtsController）',
-      (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            locale: const Locale('zh', 'TW'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-            home: ReaderScreen(
-              filePath: 'test/fixtures/sample.epub',
-              bookId: 'b_tts8_no_provider',
-              prefsManager: prefsManager,
-              isFixedLayout: false,
-            ),
-          ),
-        );
-        await tester.pump();
-        await tester.runAsync(() => Future.delayed(Duration.zero));
-        await tester.pump();
-
-        final foliateView = tester.widget<FoliateReaderView>(
-          find.byType(FoliateReaderView),
-        );
-        foliateView.onTtsHighlightOutOfSafeWindow?.call('next');
-        await tester.pump();
-        expect(tester.takeException(), isNull);
-      },
-    );
   });
 
   group('睡眠定時器（epic-38-reader-chrome-tts-redesign Issue 2）', () {
@@ -11080,8 +10772,10 @@ void main() {
             key: key,
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_sleep_timer_select',
-            prefsManager: prefsManager,
-            ttsProvider: FakeTtsProvider(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: FakeTtsProvider(),
+            ),
           ),
         ),
       );
@@ -11130,8 +10824,10 @@ void main() {
             key: key,
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_sleep_timer_expire',
-            prefsManager: prefsManager,
-            ttsProvider: FakeTtsProvider(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: FakeTtsProvider(),
+            ),
           ),
         ),
       );
@@ -11177,8 +10873,10 @@ void main() {
             key: key,
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_sleep_timer_none',
-            prefsManager: prefsManager,
-            ttsProvider: FakeTtsProvider(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: FakeTtsProvider(),
+            ),
           ),
         ),
       );
@@ -11204,39 +10902,6 @@ void main() {
   });
 
   group('小喇叭圖示 showTtsIndicator（epic-38-reader-chrome-tts-redesign Issue 2）', () {
-    testWidgets('未提供 ttsProvider 時，小喇叭圖示恆不存在（_chromeVisible 任一值）',
-        (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('zh', 'TW'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_tts_indicator_no_provider',
-            prefsManager: prefsManager,
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.runAsync(() => Future.delayed(Duration.zero));
-      await tester.pump();
-
-      expect(
-        find.byKey(const Key('reader_chrome_tts_indicator_icon')),
-        findsNothing,
-      );
-
-      await tester.tap(find.byKey(const Key('nav_zone_1')));
-      await tester.pump();
-
-      expect(
-        find.byKey(const Key('reader_chrome_tts_indicator_icon')),
-        findsNothing,
-      );
-    });
-
     testWidgets('提供 ttsProvider 但從未按下「◗ 朗讀」（_ttsController 為 null）時，'
         '小喇叭圖示不存在', (tester) async {
       await tester.pumpWidget(
@@ -11248,8 +10913,10 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_tts_indicator_not_built',
-            prefsManager: prefsManager,
-            ttsProvider: FakeTtsProvider(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: FakeTtsProvider(),
+            ),
           ),
         ),
       );
@@ -11271,7 +10938,7 @@ void main() {
     testWidgets('_isTtsActive && !_chromeVisible 兩個條件皆成立時才顯示（誠實測試邊界：'
         'flutter_test 環境下 TtsController.status 永遠是 idle，_isTtsActive 永遠為'
         'false，這個組合本身無法在本檔案驗證，正確性由 _isTtsActive 定義本身'
-        '〔純欄位比對，無額外邏輯〕與上方兩個「不顯示」案例的互補覆蓋保證）',
+        '〔純欄位比對，無額外邏輯〕與上方「提供 ttsProvider 但從未按下朗讀」不顯示案例的互補覆蓋保證）',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -11282,8 +10949,10 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_tts_indicator_documented_gap',
-            prefsManager: prefsManager,
-            ttsProvider: FakeTtsProvider(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: FakeTtsProvider(),
+            ),
           ),
         ),
       );
@@ -11321,8 +10990,10 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'reader-activity-tracker-test-book',
-          prefsManager: FakeReaderPrefsManager(),
-          readerActivityTracker: tracker,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            readerActivityTracker: tracker,
+          ),
         ),
       ),
     );
@@ -11349,6 +11020,10 @@ void main() {
         (tester) async {
       final searchRepository = FakeSearchRepository();
       final libraryRepository = FakeLibraryRepository();
+      final deps = fakeReaderFeatureDependencies(
+        searchRepository: searchRepository,
+        libraryRepository: libraryRepository,
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -11356,14 +11031,7 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_search_entry',
-            bookTitle: '搜尋接線測試書',
-            prefsManager: FakeReaderPrefsManager(),
-            searchRepository: searchRepository,
-            libraryRepository: libraryRepository,
-          ),
+          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_search_entry', bookTitle: '搜尋接線測試書', dependencies: deps),
         ),
       );
       await tester.pump();
@@ -11381,10 +11049,8 @@ void main() {
       expect(pushed.book.id, 'b_search_entry');
       expect(pushed.book.title, '搜尋接線測試書');
       expect(pushed.book.format, BookFileFormat.epub);
-      expect(pushed.searchRepository, same(searchRepository));
-      expect(pushed.libraryRepository, same(libraryRepository));
-      expect(pushed.readerFeatureRepositories.isFullTextSearchAvailable, isTrue,
-          reason: 'ReaderScreen.isFullTextSearchAvailable 預設 true，未提供時應維持預設值');
+      expect(pushed.dependencies, same(deps),
+          reason: '閱讀器開單書搜尋時整組轉傳同一實例，不再逐欄重建');
     });
 
     testWidgets(
@@ -11411,9 +11077,11 @@ void main() {
             bookId: 'b_search_text_conversion',
             bookTitle: '国电脑',
             bookAuthor: '电脑作者',
-            prefsManager: localPrefsManager,
-            searchRepository: searchRepository,
-            libraryRepository: libraryRepository,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: localPrefsManager,
+              searchRepository: searchRepository,
+              libraryRepository: libraryRepository,
+            ),
           ),
         ),
       );
@@ -11442,10 +11110,12 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_search_fts_unavailable',
-            prefsManager: FakeReaderPrefsManager(),
-            searchRepository: FakeSearchRepository(),
-            libraryRepository: FakeLibraryRepository(),
-            isFullTextSearchAvailable: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: FakeSearchRepository(),
+              libraryRepository: FakeLibraryRepository(),
+              isFullTextSearchAvailable: false,
+            ),
           ),
         ),
       );
@@ -11458,7 +11128,7 @@ void main() {
 
       final pushed =
           tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
-      expect(pushed.readerFeatureRepositories.isFullTextSearchAvailable, isFalse);
+      expect(pushed.dependencies.isFullTextSearchAvailable, isFalse);
     });
 
     testWidgets(
@@ -11475,10 +11145,12 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_search_import_service',
-            prefsManager: FakeReaderPrefsManager(),
-            searchRepository: FakeSearchRepository(),
-            libraryRepository: FakeLibraryRepository(),
-            bookImportService: importService,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: FakeSearchRepository(),
+              libraryRepository: FakeLibraryRepository(),
+              bookImportService: importService,
+            ),
           ),
         ),
       );
@@ -11491,7 +11163,7 @@ void main() {
 
       final pushed =
           tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
-      expect(pushed.readerFeatureRepositories.bookImportService,
+      expect(pushed.dependencies.bookImportService,
           same(importService));
     });
 
@@ -11509,10 +11181,12 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_search_tts_degraded_notice',
-            prefsManager: FakeReaderPrefsManager(),
-            searchRepository: FakeSearchRepository(),
-            libraryRepository: FakeLibraryRepository(),
-            ttsAudio: ttsAudio,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: FakeSearchRepository(),
+              libraryRepository: FakeLibraryRepository(),
+              ttsAudio: ttsAudio,
+            ),
           ),
         ),
       );
@@ -11525,67 +11199,7 @@ void main() {
 
       final pushed =
           tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
-      expect(pushed.readerFeatureRepositories.ttsAudio, same(ttsAudio));
-    });
-
-    testWidgets('searchRepository 為 null 時，點擊搜尋按鈕顯示不可用提示，不導覽',
-        (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('zh', 'TW'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_search_unavailable_no_search_repo',
-            prefsManager: FakeReaderPrefsManager(),
-            libraryRepository: FakeLibraryRepository(),
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.runAsync(() => Future.delayed(Duration.zero));
-      await tester.pump();
-
-      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
-      await tester.pump();
-
-      expect(
-        find.byKey(const Key('reader_chrome_search_unavailable_snackbar')),
-        findsOneWidget,
-      );
-      expect(find.byType(BookSearchScreen), findsNothing);
-    });
-
-    testWidgets('libraryRepository 為 null 時，點擊搜尋按鈕顯示不可用提示，不導覽',
-        (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('zh', 'TW'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_search_unavailable_no_library_repo',
-            prefsManager: FakeReaderPrefsManager(),
-            searchRepository: FakeSearchRepository(),
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.runAsync(() => Future.delayed(Duration.zero));
-      await tester.pump();
-
-      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
-      await tester.pump();
-
-      expect(
-        find.byKey(const Key('reader_chrome_search_unavailable_snackbar')),
-        findsOneWidget,
-      );
-      expect(find.byType(BookSearchScreen), findsNothing);
+      expect(pushed.dependencies.ttsAudio, same(ttsAudio));
     });
 
     testWidgets(
@@ -11616,9 +11230,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_search_midsession_pdf',
-            prefsManager: FakeReaderPrefsManager(),
-            searchRepository: searchRepository,
-            libraryRepository: FakeLibraryRepository(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: searchRepository,
+              libraryRepository: FakeLibraryRepository(),
+            ),
           ),
         ),
       );
@@ -11691,9 +11307,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_search_midsession_pdf_no_rect',
-            prefsManager: FakeReaderPrefsManager(),
-            searchRepository: searchRepository,
-            libraryRepository: FakeLibraryRepository(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: searchRepository,
+              libraryRepository: FakeLibraryRepository(),
+            ),
           ),
         ),
       );
@@ -11758,9 +11376,11 @@ void main() {
             key: key,
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_search_midsession_pdf_early_clear',
-            prefsManager: FakeReaderPrefsManager(),
-            searchRepository: searchRepository,
-            libraryRepository: FakeLibraryRepository(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: searchRepository,
+              libraryRepository: FakeLibraryRepository(),
+            ),
           ),
         ),
       );
@@ -11829,9 +11449,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
             bookId: 'b_search_midsession_epub',
-            prefsManager: FakeReaderPrefsManager(),
-            searchRepository: searchRepository,
-            libraryRepository: FakeLibraryRepository(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: searchRepository,
+              libraryRepository: FakeLibraryRepository(),
+            ),
           ),
         ),
       );
@@ -11887,9 +11509,11 @@ void main() {
           home: ReaderScreen(
             filePath: 'test/fixtures/sample_multi_page.pdf',
             bookId: 'b_search_midsession_pop_null',
-            prefsManager: FakeReaderPrefsManager(),
-            searchRepository: searchRepository,
-            libraryRepository: FakeLibraryRepository(),
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: searchRepository,
+              libraryRepository: FakeLibraryRepository(),
+            ),
           ),
         ),
       );
@@ -11939,7 +11563,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_en_unknown_title',
-          prefsManager: FakeReaderPrefsManager(),
+          dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
         ),
       ),
     );
@@ -11961,7 +11585,7 @@ void main() {
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_zh_cn_settings',
           bookTitle: '書名',
-          prefsManager: FakeReaderPrefsManager(),
+          dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
         ),
       ),
     );
@@ -12001,7 +11625,7 @@ void main() {
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_en_toc',
           bookTitle: 'Title',
-          prefsManager: FakeReaderPrefsManager(),
+          dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
         ),
       ),
     );
@@ -12042,7 +11666,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.unknown',
           bookId: 'b_en_unsupported',
-          prefsManager: FakeReaderPrefsManager(),
+          dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
         ),
       ),
     );
@@ -12228,16 +11852,6 @@ void main() {
         expect(find.byKey(relinkButton), findsNothing);
       });
     }
-
-    testWidgets('沒有匯入服務時只顯示分類說明，不顯示按鈕', (tester) async {
-      await _pumpContentUriReader(tester,
-          prefsManager: prefsManager,
-          probe: (_) async => StorageAccessProbeResult.permissionRevoked);
-      await failAndShowError(tester);
-
-      expect(errorText(tester), 'App 對這個檔案的存取權限已失效，請重新選取檔案。');
-      expect(find.byKey(relinkButton), findsNothing);
-    });
 
     testWidgets('開書逾時且權限已撤銷、有匯入服務：顯示重新選取按鈕（epic-54 Issue 5）',
         (tester) async {

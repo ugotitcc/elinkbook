@@ -15,6 +15,7 @@ import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/notes_bottom_sheet.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import '../test/support/fake_reader_feature_dependencies.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -89,11 +90,13 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: 'b_markdown_export',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
           bookTitle: '匯出測試書',
           bookAuthor: '測試作者',
           bookProgress: 0.5,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
       ),
     );

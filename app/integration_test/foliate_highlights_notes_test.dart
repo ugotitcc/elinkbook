@@ -20,6 +20,7 @@ import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/notes_bottom_sheet.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import '../test/support/fake_reader_feature_dependencies.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -134,11 +135,13 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: 'b_foliate_highlights_epub',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
-          highlightsRepository: highlightsRepository,
-          notesRepository: notesRepository,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+            highlightsRepository: highlightsRepository,
+            notesRepository: notesRepository,
+          ),
         ),
       ),
     );
@@ -234,9 +237,11 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: 'b_text_conversion_cfi',
-          prefsManager: prefsManager,
-          highlightsRepository: highlightsRepository,
           isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepository,
+          ),
         ),
       ),
     );

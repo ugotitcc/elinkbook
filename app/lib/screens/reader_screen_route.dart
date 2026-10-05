@@ -3,53 +3,86 @@ import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../search/search_repository.dart';
 import 'library_screen_dependencies.dart';
+import 'reader_feature_dependencies.dart';
 import 'reader_screen.dart';
 
-/// 收斂 `library_screen.dart`／`library_search_screen.dart`／
-/// `book_search_screen.dart` 三處建構 `ReaderScreen` 的重複程式碼
-/// （epic-41-search-architecture-hardening Issue 1）。三個呼叫點原本各自
-/// 手抄約 20 個具名參數，只有 [book]／[libraryRepository]／[isEinkMode]／
-/// [initialJumpTarget] 這幾個欄位的來源不同，其餘全部來自
-/// [features]／[sync] 這兩個既有 bundle（`epic-26-architecture-hardening`
-/// Issue 7 產物）。回傳具體型別 [ReaderScreen]（不是 `Widget`），讓呼叫端
-/// 與測試都能不轉型直接存取欄位（`reviews/review-epic-and-issues.md` I-3）。
-/// 不改變 `ReaderScreen` 建構子本身的任何既有語意，純粹是組裝這一層。
-ReaderScreen buildReaderScreen({
-  required Book book,
+/// 【過渡用，Issue 12／13 移除】把尚未遷移的外層畫面（`LibraryScreen`、
+/// `LibrarySearchScreen`）持有的舊 bundle 組裝成新的 [ReaderFeatureDependencies]
+/// （ADR 0037 §6）。舊 bundle 欄位是 nullable，新組是 non-null：遇到 null 就丟
+/// [StateError]，訊息含欄位名——正式環境 `main.dart` 全部傳值，不會觸發；
+/// 測試需用 `completeLegacyReaderFeatures()` 補齊。
+///
+/// [searchRepository] 非 null 時優先於 `features.searchRepository`：
+/// `LibrarySearchScreen` 自己持有一份必填的 `searchRepository`，開單書搜尋時
+/// 沿用它（與遷移前行為一致），避免與 bundle 內的欄位分歧或因 bundle 缺欄位而
+/// 丟 [StateError]。Issue 12 合併這兩個欄位後移除此參數。
+ReaderFeatureDependencies readerFeatureDependenciesFromLegacy({
   required ReaderPrefsManager prefsManager,
   required LibraryReaderFeatureRepositories features,
   required LibrarySyncDependencies sync,
   required LibraryRepository libraryRepository,
+  SearchRepository? searchRepository,
+}) {
+  T need<T>(T? value, String name) {
+    if (value == null) {
+      throw StateError('ReaderFeatureDependencies 缺少 $name');
+    }
+    return value;
+  }
+
+  return ReaderFeatureDependencies(
+    prefsManager: prefsManager,
+    libraryRepository: libraryRepository,
+    bookImportService: need(features.bookImportService, 'bookImportService'),
+    bookmarksRepository:
+        need(features.bookmarksRepository, 'bookmarksRepository'),
+    highlightsRepository:
+        need(features.highlightsRepository, 'highlightsRepository'),
+    notesRepository: need(features.notesRepository, 'notesRepository'),
+    customFontsRepository:
+        need(features.customFontsRepository, 'customFontsRepository'),
+    downloadableFontStore:
+        need(features.downloadableFontStore, 'downloadableFontStore'),
+    layoutPresetRepository:
+        need(features.layoutPresetRepository, 'layoutPresetRepository'),
+    bookReaderPrefsRepository:
+        need(features.bookReaderPrefsRepository, 'bookReaderPrefsRepository'),
+    searchRepository:
+        searchRepository ?? need(features.searchRepository, 'searchRepository'),
+    isFullTextSearchAvailable: features.isFullTextSearchAvailable,
+    readingStatsRepository:
+        need(features.readingStatsRepository, 'readingStatsRepository'),
+    readerActivityTracker:
+        need(features.readerActivityTracker, 'readerActivityTracker'),
+    syncCheckpointTrigger:
+        need(sync.syncCheckpointTrigger, 'syncCheckpointTrigger'),
+    ttsProvider: need(features.ttsProvider, 'ttsProvider'),
+    ttsAudio: need(features.ttsAudio, 'ttsAudio'),
+    ttsAudioFocusSource:
+        need(features.ttsAudioFocusSource, 'ttsAudioFocusSource'),
+  );
+}
+
+/// 三處開書路徑（書架、全庫搜尋、單書搜尋）共用的 `ReaderScreen` 組裝點
+/// （epic-41 Issue 1）。書本欄位由 [book] 帶入，其餘依賴整組由 [dependencies]
+/// 帶入。回傳具體型別 [ReaderScreen]，讓呼叫端與測試不轉型直接存取欄位。
+ReaderScreen buildReaderScreen({
+  required Book book,
+  required ReaderFeatureDependencies dependencies,
   required bool isEinkMode,
   ReaderJumpTarget? initialJumpTarget,
 }) {
   return ReaderScreen(
     filePath: book.filePath,
     bookId: book.id,
-    prefsManager: prefsManager,
-    bookmarksRepository: features.bookmarksRepository,
-    highlightsRepository: features.highlightsRepository,
-    notesRepository: features.notesRepository,
+    dependencies: dependencies,
     bookTitle: book.title,
     bookAuthor: book.author,
     bookProgress: book.progress,
     isFixedLayout: book.isFixedLayout,
-    libraryRepository: libraryRepository,
-    customFontsRepository: features.customFontsRepository,
-    downloadableFontStore: features.downloadableFontStore,
-    layoutPresetRepository: features.layoutPresetRepository,
-    bookReaderPrefsRepository: features.bookReaderPrefsRepository,
-    syncCheckpointTrigger: sync.syncCheckpointTrigger,
-    ttsProvider: features.ttsProvider,
-    ttsAudio: features.ttsAudio,
-    ttsAudioFocusSource: features.ttsAudioFocusSource,
     isEinkMode: isEinkMode,
-    readerActivityTracker: features.readerActivityTracker,
-    searchRepository: features.searchRepository,
-    isFullTextSearchAvailable: features.isFullTextSearchAvailable,
-    bookImportService: features.bookImportService,
-    readingStatsRepository: features.readingStatsRepository,
     initialJumpTarget: initialJumpTarget,
   );
 }

@@ -311,3 +311,38 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 設計經 grilling 定案，詳見 ADR 0037：依賴按使用者分四組、單一物件經建構子傳遞、non-null required、測試預設全 fake、逐畫面一刀切、不用 `InheritedWidget`。Issue 11 先做，完成後確認設計成立再做 12～14。
 - 工單審查（`reviews/review-issues-11-14.md`，2 Critical／4 Important／3 Minor）已逐項對照程式碼後採納並修訂 ADR 0037 與 Issues：`syncCheckpointTrigger` 同時放入閱讀器組與同步組（同一實例）、介面語言併入 `AppearanceDependencies`、`WifiTransferDependencies` 併入 `SourceDependencies`、`readingStatsTracker`／`pickSingleBookFile` 留作測試注入點、`buildReaderScreen` 暫時組裝僅限該處且於 Issue 12/13 移除、Issue 14 調為 Strong。原先整理分組時漏列這三項（`LibraryLocaleDependencies` 是第 6 個既有 bundle，非 5 個）。
 - 已知風險：測試改動量大（`ReaderScreen(` 約 267 處、`LibraryScreen(` 約 135 處、`SettingsScaffold(` 約 53 處）；Issue 11 開工前須核對 `ReaderScreen` 的 17 個依賴中是否有 `readingStatsTracker` 這類由畫面自行建構者。
+
+**2026-10-06 Issue 11 實作完成**（分支 `epic-54/issue-11-reader-deps`，worktree 內 Native 直接開發，未使用 subagent。計畫見 `plans/plan-issue-11.md`）
+
+- 內容：新增 `ReaderFeatureDependencies`（18 欄位，non-null required）；`ReaderScreen` 建構子 29→12 個參數（含 `super.key`）；`BookSearchScreen` 改收整組；開單書搜尋整組轉傳（同一實例）；舊 bundle 暫由 `readerFeatureDependenciesFromLegacy` 轉換（缺欄位丟 `StateError` 含欄位名，Issue 12/13 移除）；測試改用預設全 fake 工廠。
+- 驗證：Task 0 基準 512 全過；範圍測試 509 通過（算式：512 − 缺席 18（reader 17＋stats 1）− bundle 轉傳 6 ＋ 新增 21（工廠 5＋StateError 14＋sync 1＋完整轉換 1））；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS。
+- 被刪缺席測試（18，依前提 1，型別上不可達）：未提供 syncCheckpointTrigger／layoutPresetRepository 為 null／沒有傳入 store／searchRepository 為 null／libraryRepository 為 null／沒有匯入服務／未提供 bookmarksRepository（EPUB＋FXL）／未提供 highlights／notes（EPUB＋PDF）／未提供 ttsProvider（播放鍵、上下句/語速、Mini Player、safeWindow 回呼、小喇叭）／未提供 ttsAudioHandler／ttsAudioFocusSource／isFixedLayout:null 且未提供 libraryRepository／stats「閱讀器沒有 readingStatsRepository」；另刪 route 6 個 bundle 轉傳測試（「帶／未帶」已不可達）。
+- `completeLegacyReaderFeatures()` 補齊：library 15 例＋search 8 例＝23 個「點選書籍進入閱讀器」測試。
+- 孤兒鍵：`readerSaveAsPresetUnavailableMessage`（ARB 鍵保留未刪，待後續清理）。
+- Review Focus 對應：1→route 對帳 same 身分 18 欄位；2→雙向 same（`searchScreen.dependencies`／`ReaderScreen.dependencies`，offstage 路由查找用 `skipOffstage: false`）；3→StateError 15 例；4→B 類 4 例補主題＋volume_key 全域 mock（無同因 ≥5 例）；5→降級提示測試保留改寫；6→CBZ 停用按鈕測試保留。
+- 計畫外追加：`integration_test/` 21 檔 60 處同值機械遷移（提交門檻 bare analyze 乾淨所需；真機部分無法本地驗證，發 PR 時須跑裝置）。
+- ADR 0037 措辭已同步修訂（§3 TTS 不新增 adapter、§6 轉換函式三呼叫點）。待程式審查與發 PR。
+- 全量 `flutter test`（最終 commit 前）：3672 通過、1 略過、1 失敗——失敗為 `pdf_reader_view_filters_test` bold overlay debouncer 案例，在乾淨 main 上同樣失敗，既存缺陷與本 Issue 無關，不在本 Issue 修。
+
+**2026-10-06 Issue 11 程式審查（獨立審查子代理）與修訂**（報告 `reviews/review-code-issue-11-independent.md`，不進版控；0 Critical／1 Important／5 Minor，Assessment：With fixes；子代理全量 `flutter test` 3672 通過／1 略過／1 失敗，同一個既有失敗案例，它未在乾淨 `main` 上重跑確認）
+
+- I-1（已修）：舊程式 `isFixedLayout == null` 且未傳 `libraryRepository` 時，EPUB 視為 FXL；此 fallback 已刪，預設 `FakeLibraryRepository` 偵測為 `false`。只有兩個 integration 測試真的載入 FXL 素材（`fxl_bookmarks_test`、`reader_screen_test` 的「定樣式範例 EPUB」），已明確傳 `isFixedLayout: true`（與正式環境一致：匯入的 FXL 書本帶 `isFixedLayout: true`）。其餘 integration 測試由「FXL 語意」變為「流式偵測」，更貼近正式環境，維持現狀。
+- M-1（已修）：`readerFeatureDependenciesFromLegacy` 新增可選 `searchRepository`，`LibrarySearchScreen` 開單書搜尋時沿用自己的參數（與遷移前行為一致），新增 2 個測試；Issue 12 須合併兩個來源並移除此參數（已記入 `issues.md` Issue 12）。
+- M-2（已修）：`reader_screen.dart` 6 處過時註解更新。
+- M-3（已修）：約 295 處 codemod 產生的超長單行展開為每引數一行。未整檔 `dart format`：base 版本這些檔案本來就不是 `dart format` 乾淨的，整檔格式化會混入無關改動。
+- M-4（已修）：`legacyWithNull` 14 個 `switch` case 收斂為單一 helper；vacuous 的 `isNotNull` 測試改為逐欄 `same(...)` 對帳。
+- M-5（記錄，未刪）：`readerSaveAsPresetUnavailableMessage` ARB 鍵已無使用端，排入 Issue 13 清理（`issues.md` 已註記）；`_ttsControllerOrNull` 命名維持不動（`null` 是「尚未按下朗讀」的合法狀態，審查亦判斷非必改）。
+- 驗證（修訂後）：範圍測試 511 通過（509＋M-1 新增 2），0 失敗；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS。integration 測試的真機結果見下兩則。
+- 既存失敗確認（2026-10-06）：在乾淨 `main`（`bdff826c`，工作區乾淨）單獨跑 `pdf_reader_view_filters_test`，15 通過、1 失敗，失敗案例為「bold overlay 同時有多頁需要加粗運算時，各頁互不取消」（`Expected: >= 2, Actual: 1`），與分支全量測試的同一失敗一致。**確認為既存失敗，與 Issue 11 無關，不在本 Issue 修。**
+- 真機 integration 結果（2026-10-06，OPD2102 `bfa4e772`，分支 `318584c8`）：`fxl_bookmarks_test` 0／1、`epub_toc_test` 0／1、`reading_position_test` 0／2、`foliate_cbz_test` 0／3、`reader_screen_test` 0／19——**全部失敗，0 通過**，皆為 `reader_screen.dart:2679` 的 `AppLocalizations.of(context)!` null check（測試的 `MaterialApp` 未設定 `localizationsDelegates`；`reading_position_test` 另有 1 個 `Bad state: No element` 為連帶結果）。base 版本 `_buildBody` 同一行與同樣缺 delegates 的測試寫法都存在，**確認為既存失敗**：在乾淨 `main`（`bdff826c`，無 Issue 11 改動）、同一台 OPD2102 上跑 `fxl_bookmarks_test`，同樣 0 通過／1 失敗，例外為 `_ReaderScreenState._buildBody` 的 `Null check operator used on a null value`（`reader_screen.dart:2878:46`，即 `AppLocalizations.of(context)!`；分支上同一行為 2679:46）。只對 `fxl_bookmarks_test` 做了 base 對照，其餘 4 個檔案的失敗原因與它一致（同一行 null check）但未逐一在 base 上跑；`integration_test/` 約 30 個檔案缺 `localizationsDelegates`，推測 integration 測試自加入介面多語系後即未維護。這批測試目前無法驗證 Issue 11：它們在第一步就失敗，沒有走到依賴組相關程式。
+
+另外記錄：以 debug 版安裝時，手機上原有 elinkBook（versionCode 2001）因 `INSTALL_FAILED_VERSION_DOWNGRADE` 被 Flutter 自動解除安裝，該裝置上的 App 資料已清除。
+
+**2026-10-06 新增 Issue 15（缺陷，測試基礎設施：integration 測試缺多語系設定）**
+
+- 來源：Issue 11 的真機 integration 驗證。5 個檔案 26 個測試全部失敗，原因皆為 `AppLocalizations.of(context)!` 取到 null；base 上同樣失敗，為既存問題。
+- 事實（2026-10-06 查證）：`integration_test/` 共 40 個檔案，33 個含 `MaterialApp(`、共 104 處，**33 個全部缺 `localizationsDelegates`**，沒有任何一個檔案有。`tool/check_l10n_hardcoded_strings.js` 只掃 `app/test/`（epic-45 Issue 0 建立 `pumpLocalizedWidget` 並加檢查時未涵蓋 `integration_test/`），所以這批測試自介面多語系導入後無聲壞掉，沒有任何機制發現。
+- 工單內容與驗收見 `issues.md` Issue 15：統一改用帶多語系的包裝、把檢查腳本擴大到 `integration_test/` 當回歸守衛、真機驗證並分類補完後暴露的其他失敗。
+- 時序：須等 PR #327（Issue 11）合併後再做——33 個檔案中有 21 個與 Issue 11 的 integration 遷移重疊，避免合併衝突。
+- 流程建議：依「小型缺陷修正」慣例走直接 TDD（登錄於本 Epic，不寫 plan，保留程式審查）；但本案範圍較大（33 檔／104 處，且需真機驗證），若希望先寫 plan 請另行指定。
+- 附帶發現：手機連線在測試過程中多次中斷（USB 接觸問題），真機驗證前先確認 `adb devices -l` 穩定。

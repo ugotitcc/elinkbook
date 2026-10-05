@@ -12,6 +12,7 @@ import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import '../test/support/fake_reader_feature_dependencies.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑
 /// （比照 foliate_kf8_test.dart／foliate_cbz_test.dart 既有 helper）。
@@ -84,9 +85,11 @@ void main() {
           home: ReaderScreen(
             filePath: book.filePath,
             bookId: book.id,
-            prefsManager: services.prefsManager,
-            libraryRepository: services.repository,
             isFixedLayout: book.isFixedLayout,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: services.prefsManager,
+              libraryRepository: services.repository,
+            ),
           ),
         ),
       );
@@ -123,9 +126,11 @@ void main() {
             key: readerKey,
             filePath: book.filePath,
             bookId: book.id,
-            prefsManager: services.prefsManager,
-            libraryRepository: services.repository,
             isFixedLayout: book.isFixedLayout,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: services.prefsManager,
+              libraryRepository: services.repository,
+            ),
           ),
         ),
       );
@@ -172,9 +177,11 @@ void main() {
           home: ReaderScreen(
             filePath: book.filePath,
             bookId: book.id,
-            prefsManager: services.prefsManager,
-            libraryRepository: services.repository,
             isFixedLayout: book.isFixedLayout,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: services.prefsManager,
+              libraryRepository: services.repository,
+            ),
           ),
         ),
       );

@@ -1,5 +1,6 @@
 // app/integration_test/orientation_repagination_test.dart
 import 'dart:io';
+import '../test/support/fake_reader_feature_dependencies.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -93,7 +94,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: 'b_repage_1',
-          prefsManager: prefsManager,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
         ),
       ),
     );

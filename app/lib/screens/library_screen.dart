@@ -471,10 +471,12 @@ class _LibraryScreenState extends State<LibraryScreen>
           MaterialPageRoute(
             builder: (_) => buildReaderScreen(
               book: book,
-              prefsManager: widget.prefsManager,
-              features: widget.readerFeatureRepositories,
-              sync: widget.syncDependencies,
-              libraryRepository: widget.repository,
+              dependencies: readerFeatureDependenciesFromLegacy(
+                prefsManager: widget.prefsManager,
+                features: widget.readerFeatureRepositories,
+                sync: widget.syncDependencies,
+                libraryRepository: widget.repository,
+              ),
               isEinkMode: widget.themeDependencies.isEinkMode,
             ),
           ),

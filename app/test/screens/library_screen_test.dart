@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' show sqrt;
+import '../support/fake_reader_feature_dependencies.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -537,6 +538,8 @@ void main() {
       LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
+          readerFeatureRepositories: completeLegacyReaderFeatures(),
+          syncDependencies: completeLegacySyncDependencies(),
           prefsManager: prefsManager,
         ),
     );
@@ -1332,6 +1335,8 @@ void main() {
       LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
+          readerFeatureRepositories: completeLegacyReaderFeatures(),
+          syncDependencies: completeLegacySyncDependencies(),
           prefsManager: prefsManager,
         ),
     );
@@ -2027,8 +2032,9 @@ void main() {
       LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
+            syncDependencies: completeLegacySyncDependencies(),
             prefsManager: prefsManager,
-            readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            readerFeatureRepositories: completeLegacyReaderFeatures(
               highlightsRepository: highlightsRepository,
               notesRepository: notesRepository,
             ),
@@ -2043,13 +2049,13 @@ void main() {
         find.byType(ReaderScreen),
       );
       expect(
-        readerScreen.highlightsRepository,
+        readerScreen.dependencies.highlightsRepository,
         same(highlightsRepository),
         reason:
             'LibraryScreen._openBook() 修正前，highlightsRepository 從未'
             '貫穿給 ReaderScreen，一律為 null（見 issues.md Issue 6 背景）',
       );
-      expect(readerScreen.notesRepository, same(notesRepository));
+      expect(readerScreen.dependencies.notesRepository, same(notesRepository));
     },
   );
 
@@ -2072,8 +2078,9 @@ void main() {
       LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
+            syncDependencies: completeLegacySyncDependencies(),
             prefsManager: prefsManager,
-            readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            readerFeatureRepositories: completeLegacyReaderFeatures(
               ttsProvider: ttsProvider,
             ),
           ),
@@ -2087,7 +2094,7 @@ void main() {
         find.byType(ReaderScreen),
       );
       expect(
-        readerScreen.ttsProvider,
+        readerScreen.dependencies.ttsProvider,
         same(ttsProvider),
         reason:
             'LibraryScreen._openBook() 修正前，ttsProvider 從未貫穿給 '
@@ -2114,8 +2121,9 @@ void main() {
       LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
+          syncDependencies: completeLegacySyncDependencies(),
           prefsManager: prefsManager,
-          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          readerFeatureRepositories: completeLegacyReaderFeatures(
             ttsAudio: TtsAudioHandlerHolder.ready(ttsAudioHandler),
             ttsAudioFocusSource: ttsAudioFocusSource,
           ),
@@ -2127,8 +2135,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
-    expect(readerScreen.ttsAudio?.handler, same(ttsAudioHandler));
-    expect(readerScreen.ttsAudioFocusSource, same(ttsAudioFocusSource));
+    expect(readerScreen.dependencies.ttsAudio.handler, same(ttsAudioHandler));
+    expect(readerScreen.dependencies.ttsAudioFocusSource, same(ttsAudioFocusSource));
   });
 
   testWidgets(
@@ -2149,8 +2157,9 @@ void main() {
       LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
+          syncDependencies: completeLegacySyncDependencies(),
           prefsManager: prefsManager,
-          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          readerFeatureRepositories: completeLegacyReaderFeatures(
             searchRepository: searchRepository,
             isFullTextSearchAvailable: false,
           ),
@@ -2162,8 +2171,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
-    expect(readerScreen.searchRepository, same(searchRepository));
-    expect(readerScreen.isFullTextSearchAvailable, isFalse);
+    expect(readerScreen.dependencies.searchRepository, same(searchRepository));
+    expect(readerScreen.dependencies.isFullTextSearchAvailable, isFalse);
   });
 
   testWidgets(
@@ -2186,6 +2195,8 @@ void main() {
       LibraryScreen(
             repository: repository,
             importService: FakeBookImportService(),
+            readerFeatureRepositories: completeLegacyReaderFeatures(),
+            syncDependencies: completeLegacySyncDependencies(),
             prefsManager: prefsManager,
           ),
     );
@@ -2198,7 +2209,7 @@ void main() {
         find.byType(ReaderScreen),
       );
       expect(readerScreen.isFixedLayout, isFalse);
-      expect(readerScreen.libraryRepository, same(repository));
+      expect(readerScreen.dependencies.libraryRepository, same(repository));
     },
   );
 
@@ -2233,8 +2244,9 @@ void main() {
       LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
+          syncDependencies: completeLegacySyncDependencies(),
           prefsManager: prefsManager,
-          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          readerFeatureRepositories: completeLegacyReaderFeatures(
             bookmarksRepository: bookmarksRepository,
             highlightsRepository: highlightsRepository,
             notesRepository: notesRepository,
@@ -2361,8 +2373,9 @@ void main() {
       LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
+          syncDependencies: completeLegacySyncDependencies(),
           prefsManager: prefsManager,
-          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          readerFeatureRepositories: completeLegacyReaderFeatures(
             bookmarksRepository: bookmarksRepository,
             highlightsRepository: highlightsRepository,
             notesRepository: notesRepository,
@@ -2995,8 +3008,9 @@ void main() {
       LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
+            syncDependencies: completeLegacySyncDependencies(),
             prefsManager: prefsManager,
-            readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            readerFeatureRepositories: completeLegacyReaderFeatures(
               customFontsRepository: customFontsRepository,
             ),
           ),
@@ -3010,7 +3024,7 @@ void main() {
         find.byType(ReaderScreen),
       );
       expect(
-        readerScreen.customFontsRepository,
+        readerScreen.dependencies.customFontsRepository,
         same(customFontsRepository),
         reason:
             'LibraryScreen._openBook() 未把 customFontsRepository 貫穿給 '
@@ -3043,8 +3057,9 @@ void main() {
       LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
+            syncDependencies: completeLegacySyncDependencies(),
             prefsManager: prefsManager,
-            readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            readerFeatureRepositories: completeLegacyReaderFeatures(
               layoutPresetRepository: layoutPresetRepository,
               bookReaderPrefsRepository: bookReaderPrefsRepository,
             ),
@@ -3059,14 +3074,14 @@ void main() {
         find.byType(ReaderScreen),
       );
       expect(
-        readerScreen.layoutPresetRepository,
+        readerScreen.dependencies.layoutPresetRepository,
         same(layoutPresetRepository),
         reason:
             'LibraryScreen._openBook() 未把 layoutPresetRepository 貫穿給 '
             'ReaderScreen，版面設定預設集功能將完全無法使用。',
       );
       expect(
-        readerScreen.bookReaderPrefsRepository,
+        readerScreen.dependencies.bookReaderPrefsRepository,
         same(bookReaderPrefsRepository),
         reason:
             'LibraryScreen._openBook() 未把 bookReaderPrefsRepository 貫穿給 '
@@ -3093,8 +3108,9 @@ void main() {
       LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
+            readerFeatureRepositories: completeLegacyReaderFeatures(),
             prefsManager: prefsManager,
-            syncDependencies: LibrarySyncDependencies(
+            syncDependencies: completeLegacySyncDependencies(
               syncCheckpointTrigger: syncCheckpointTrigger,
             ),
           ),
@@ -3108,7 +3124,7 @@ void main() {
         find.byType(ReaderScreen),
       );
       expect(
-        readerScreen.syncCheckpointTrigger,
+        readerScreen.dependencies.syncCheckpointTrigger,
         same(syncCheckpointTrigger),
         reason:
             'LibraryScreen._openBook() 未把 syncCheckpointTrigger 貫穿給 '
@@ -3142,6 +3158,8 @@ void main() {
       LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [older, newer]),
           importService: FakeBookImportService(),
+          readerFeatureRepositories: completeLegacyReaderFeatures(),
+          syncDependencies: completeLegacySyncDependencies(),
           prefsManager: fakeManager,
         ),
     );
@@ -3774,6 +3792,8 @@ void main() {
       LibraryScreen(
             repository: FakeLibraryRepository(initialBooks: [book]),
             importService: FakeBookImportService(),
+            readerFeatureRepositories: completeLegacyReaderFeatures(),
+            syncDependencies: completeLegacySyncDependencies(),
             prefsManager: prefsManager,
             themeDependencies: LibraryThemeDependencies(isEinkMode: true),
           ),
@@ -4214,6 +4234,8 @@ void main() {
           repository:
               FakeLibraryRepository(initialBooks: [older, newer, neverRead]),
           importService: FakeBookImportService(),
+          readerFeatureRepositories: completeLegacyReaderFeatures(),
+          syncDependencies: completeLegacySyncDependencies(),
           prefsManager: prefsManager,
         ),
     );
