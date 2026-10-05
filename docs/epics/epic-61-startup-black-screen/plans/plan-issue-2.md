@@ -112,7 +112,7 @@
 
 **檔案：** `reader_screen.dart`、`test/screens/reader_screen_tts_degraded_notice_test.dart`、新增 `test/screens/reader_screen_tts_late_handler_test.dart`。
 
-- [ ] 先寫測試（紅），用記錄呼叫的 `TtsAudioHandler` 子類別：
+- [x] 先寫測試（紅），用記錄呼叫的 `TtsAudioHandler` 子類別：
   - controller 已建立、handler 晚到 → `attachController` 被呼叫一次，書名正確。
   - handler 先到、後建 controller → 行為與現況相同。
   - dispose 後 holder 再通知 → 不例外、不 attach；dispose 時 `detachController` 被呼叫。
@@ -121,13 +121,13 @@
   - 兩個 `ReaderScreen` 並存（閱讀器→單書搜尋→回閱讀器）：先關後建立者不會把前者的綁定拆掉；先關先建立者會解綁；最終 handler 狀態與實際存活的畫面一致。
   - controller 已在播放時 handler 晚到 → attach 後 `playbackState.playing` 為 true。
   - 降級提示在兩個畫面並存時只顯示一次。
-- [ ] 實作：
+- [x] 實作：
   - `_ReaderScreenState` 記錄 `_attachedAudioHandler`；只在「controller 存在、handler 非 null、尚未 attach 過這個 handler」時 attach，避免通知多次造成重複 attach。
   - `dispose`：只在 handler 目前綁定的 controller 就是本畫面的 `_ttsController` 時才 detach。為此 `TtsAudioHandler` 新增 `detachController({TtsController? only})`（`only` 非 null 時，目前綁定的不是它就什麼都不做；不帶參數時行為與現在相同，既有 `tts_audio_handler_test` 不改）。
   - 降級提示收斂成單一方法 `_checkShowDegradedNotice()`：內含 `addPostFrameCallback`，post-frame 內先判 `!mounted` 再 `consumeDegradedNotice()` 再顯示；`initState` 與 holder 通知回呼都呼叫它。
   - `initState` 加 listener、`dispose` 移除。
-- [ ] 跑觸及的測試檔；變異檢查：拿掉晚到 attach → 對應案例失敗。
-- [ ] 提交（`feat(epic-61): ReaderScreen 支援 handler 晚到注入與多畫面並存`）。
+- [x] 跑觸及的測試檔；變異檢查：拿掉晚到 attach → 對應案例失敗。
+- [x] 提交（`feat(epic-61): ReaderScreen 支援 handler 晚到注入與多畫面並存`）。
 
 ## Task 4：`main()` 不再等待
 

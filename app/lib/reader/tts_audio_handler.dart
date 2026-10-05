@@ -29,7 +29,11 @@ class TtsAudioHandler extends BaseAudioHandler {
     _syncPlaybackState();
   }
 
-  void detachController() {
+  void detachController({TtsController? only}) {
+    // epic-61 Issue 2：多個 ReaderScreen 並存時（閱讀器→單書搜尋→回閱讀器），
+    // 先關閉的畫面不可解綁存活畫面的 controller。[only] 非 null 時，目前綁定
+    // 的不是它就什麼都不做；不帶參數時行為與之前相同。
+    if (only != null && !identical(_controller, only)) return;
     final controller = _controller;
     final listener = _statusListener;
     if (controller != null && listener != null) {
