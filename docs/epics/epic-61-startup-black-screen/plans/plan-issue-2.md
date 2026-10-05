@@ -131,9 +131,9 @@
 
 ## Task 4：`main()` 不再等待
 
-- [ ] `main.dart`：`final ttsAudio = startTtsAudioHandlerInBackground(() => AudioService.init(...));`，不 `await`，直接傳給 `ElinkBookApp`。更新註解（失敗後不可重試、晚到注入）。
-- [ ] `flutter analyze` 乾淨；`elinkbook_app_wiring_test` 通過。
-- [ ] 提交（`feat(epic-61): main() 不再等待 AudioService.init`）。
+- [x] `main.dart`：`final ttsAudio = startTtsAudioHandlerInBackground(() => AudioService.init(...));`，不 `await`，直接傳給 `ElinkBookApp`。更新註解（失敗後不可重試、晚到注入）。
+- [x] `flutter analyze` 乾淨；`elinkbook_app_wiring_test` 通過。
+- [x] 提交（`feat(epic-61): main() 不再等待 AudioService.init`）。
 
 ## Task 5：驗證、審查、PR
 

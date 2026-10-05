@@ -218,11 +218,13 @@ Future<void> main() async {
     localeOverride: initialLocaleOverride,
     deviceLocales: WidgetsBinding.instance.platformDispatcher.locales,
   );
-  // epic-61：service 綁定逾時時 AudioService.init 會丟出例外；以
-  // initTtsAudioHandlerSafely 接住並降級（朗讀本次沒有媒體通知／鎖屏控制），
-  // 避免 main() 中斷、runApp 未執行而整個 App 黑屏。結果包進 holder 往下傳
-  // （epic-61 Issue 2；Task 4 會再改成背景執行、不在此等待）。
-  final ttsAudioHandler = await initTtsAudioHandlerSafely(
+  // epic-61 Issue 2（F1）：AudioService.init 在 service 綁定逾時時約 10 秒
+  // 才丟例外，不可再阻塞啟動。同步取得 pending 狀態的 holder 後直接往下走、
+  // 先 runApp；init 在背景跑，完成後 holder 變成 ready 或 failed 並通知，
+  // ReaderScreen 監聽 holder 做晚到注入（handler 補 attachController、降級
+  // 補提示一次）。AudioService.init 全程式只呼叫一次、失敗後不可重試的限制
+  // 不變（見 startTtsAudioHandlerInBackground 說明）。
+  final ttsAudio = startTtsAudioHandlerInBackground(
     () => AudioService.init(
       builder: () => TtsAudioHandler(),
       config: AudioServiceConfig(
@@ -329,9 +331,7 @@ Future<void> main() async {
       layoutPresetRepository: layoutPresetRepository,
       bookReaderPrefsRepository: prefsRepository,
       ttsProvider: ttsProvider,
-      ttsAudio: ttsAudioHandler != null
-          ? TtsAudioHandlerHolder.ready(ttsAudioHandler)
-          : TtsAudioHandlerHolder.degraded(),
+      ttsAudio: ttsAudio,
       ttsAudioFocusSource: ttsAudioFocusSource,
       readerActivityTracker: readerActivityTracker,
       syncAccountRepository: syncAccountRepository,
