@@ -107,7 +107,20 @@ Future<void> pumpStatsReader(
 }) async {
   await tester.pumpWidget(
     _app(
-      ReaderScreen(key: readerKey, filePath: filePath, bookId: kStatsTestBookId, bookTitle: bookTitle, isFixedLayout: filePath.endsWith('.epub') ? false : null, readingStatsTracker: readingStatsTracker, dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), readingStatsRepository: readingStatsRepository, searchRepository: searchRepository, libraryRepository: libraryRepository)),
+      ReaderScreen(
+        key: readerKey,
+        filePath: filePath,
+        bookId: kStatsTestBookId,
+        bookTitle: bookTitle,
+        isFixedLayout: filePath.endsWith('.epub') ? false : null,
+        readingStatsTracker: readingStatsTracker,
+        dependencies: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+          readingStatsRepository: readingStatsRepository,
+          searchRepository: searchRepository,
+          libraryRepository: libraryRepository,
+        ),
+      ),
     ),
   );
   await tester.pump();

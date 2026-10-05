@@ -79,7 +79,14 @@ void main() {
     );
 
     await tester.pumpWidget(MaterialApp(
-      home: ReaderScreen(filePath: epubPath, bookId: 'b_custom_font', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, customFontsRepository: customFontsRepository)),
+      home: ReaderScreen(
+        filePath: epubPath,
+        bookId: 'b_custom_font',
+        dependencies: fakeReaderFeatureDependencies(
+          prefsManager: prefsManager,
+          customFontsRepository: customFontsRepository,
+        ),
+      ),
     ));
     await tester.pumpAndSettle(const Duration(seconds: 3));
 

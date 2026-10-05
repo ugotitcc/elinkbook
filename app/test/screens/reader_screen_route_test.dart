@@ -116,12 +116,13 @@ void main() {
       expect(dependencies.customFontsRepository, same(customFontsRepository));
       expect(dependencies.downloadableFontStore, same(downloadableFontStore));
       expect(dependencies.layoutPresetRepository, same(layoutPresetRepository));
-      expect(dependencies.bookReaderPrefsRepository,
-          same(bookReaderPrefsRepository));
+      expect(
+        dependencies.bookReaderPrefsRepository,
+        same(bookReaderPrefsRepository),
+      );
       expect(dependencies.searchRepository, same(searchRepository));
       expect(dependencies.isFullTextSearchAvailable, isFalse);
-      expect(dependencies.readingStatsRepository,
-          same(readingStatsRepository));
+      expect(dependencies.readingStatsRepository, same(readingStatsRepository));
       expect(dependencies.readerActivityTracker, same(readerActivityTracker));
       expect(dependencies.syncCheckpointTrigger, same(syncCheckpointTrigger));
       expect(dependencies.ttsProvider, same(ttsProvider));
@@ -159,248 +160,50 @@ void main() {
     // 以完整舊 bundle 為底，將單一欄位置 null，轉換必須丟 StateError 且訊息含欄位名。
     LibraryReaderFeatureRepositories legacyWithNull(String field) {
       final full = completeLegacyReaderFeatures();
-      switch (field) {
-        case 'bookmarksRepository':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: null,
-            highlightsRepository: full.highlightsRepository,
-            notesRepository: full.notesRepository,
-            customFontsRepository: full.customFontsRepository,
-            downloadableFontStore: full.downloadableFontStore,
-            layoutPresetRepository: full.layoutPresetRepository,
-            bookReaderPrefsRepository: full.bookReaderPrefsRepository,
-            ttsProvider: full.ttsProvider,
-            ttsAudio: full.ttsAudio,
-            ttsAudioFocusSource: full.ttsAudioFocusSource,
-            readerActivityTracker: full.readerActivityTracker,
-            searchRepository: full.searchRepository,
-            bookImportService: full.bookImportService,
-            readingStatsRepository: full.readingStatsRepository,
-          );
-        case 'highlightsRepository':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: full.bookmarksRepository,
-            highlightsRepository: null,
-            notesRepository: full.notesRepository,
-            customFontsRepository: full.customFontsRepository,
-            downloadableFontStore: full.downloadableFontStore,
-            layoutPresetRepository: full.layoutPresetRepository,
-            bookReaderPrefsRepository: full.bookReaderPrefsRepository,
-            ttsProvider: full.ttsProvider,
-            ttsAudio: full.ttsAudio,
-            ttsAudioFocusSource: full.ttsAudioFocusSource,
-            readerActivityTracker: full.readerActivityTracker,
-            searchRepository: full.searchRepository,
-            bookImportService: full.bookImportService,
-            readingStatsRepository: full.readingStatsRepository,
-          );
-        case 'notesRepository':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: full.bookmarksRepository,
-            highlightsRepository: full.highlightsRepository,
-            notesRepository: null,
-            customFontsRepository: full.customFontsRepository,
-            downloadableFontStore: full.downloadableFontStore,
-            layoutPresetRepository: full.layoutPresetRepository,
-            bookReaderPrefsRepository: full.bookReaderPrefsRepository,
-            ttsProvider: full.ttsProvider,
-            ttsAudio: full.ttsAudio,
-            ttsAudioFocusSource: full.ttsAudioFocusSource,
-            readerActivityTracker: full.readerActivityTracker,
-            searchRepository: full.searchRepository,
-            bookImportService: full.bookImportService,
-            readingStatsRepository: full.readingStatsRepository,
-          );
-        case 'customFontsRepository':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: full.bookmarksRepository,
-            highlightsRepository: full.highlightsRepository,
-            notesRepository: full.notesRepository,
-            customFontsRepository: null,
-            downloadableFontStore: full.downloadableFontStore,
-            layoutPresetRepository: full.layoutPresetRepository,
-            bookReaderPrefsRepository: full.bookReaderPrefsRepository,
-            ttsProvider: full.ttsProvider,
-            ttsAudio: full.ttsAudio,
-            ttsAudioFocusSource: full.ttsAudioFocusSource,
-            readerActivityTracker: full.readerActivityTracker,
-            searchRepository: full.searchRepository,
-            bookImportService: full.bookImportService,
-            readingStatsRepository: full.readingStatsRepository,
-          );
-        case 'downloadableFontStore':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: full.bookmarksRepository,
-            highlightsRepository: full.highlightsRepository,
-            notesRepository: full.notesRepository,
-            customFontsRepository: full.customFontsRepository,
-            downloadableFontStore: null,
-            layoutPresetRepository: full.layoutPresetRepository,
-            bookReaderPrefsRepository: full.bookReaderPrefsRepository,
-            ttsProvider: full.ttsProvider,
-            ttsAudio: full.ttsAudio,
-            ttsAudioFocusSource: full.ttsAudioFocusSource,
-            readerActivityTracker: full.readerActivityTracker,
-            searchRepository: full.searchRepository,
-            bookImportService: full.bookImportService,
-            readingStatsRepository: full.readingStatsRepository,
-          );
-        case 'layoutPresetRepository':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: full.bookmarksRepository,
-            highlightsRepository: full.highlightsRepository,
-            notesRepository: full.notesRepository,
-            customFontsRepository: full.customFontsRepository,
-            downloadableFontStore: full.downloadableFontStore,
-            layoutPresetRepository: null,
-            bookReaderPrefsRepository: full.bookReaderPrefsRepository,
-            ttsProvider: full.ttsProvider,
-            ttsAudio: full.ttsAudio,
-            ttsAudioFocusSource: full.ttsAudioFocusSource,
-            readerActivityTracker: full.readerActivityTracker,
-            searchRepository: full.searchRepository,
-            bookImportService: full.bookImportService,
-            readingStatsRepository: full.readingStatsRepository,
-          );
-        case 'bookReaderPrefsRepository':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: full.bookmarksRepository,
-            highlightsRepository: full.highlightsRepository,
-            notesRepository: full.notesRepository,
-            customFontsRepository: full.customFontsRepository,
-            downloadableFontStore: full.downloadableFontStore,
-            layoutPresetRepository: full.layoutPresetRepository,
-            bookReaderPrefsRepository: null,
-            ttsProvider: full.ttsProvider,
-            ttsAudio: full.ttsAudio,
-            ttsAudioFocusSource: full.ttsAudioFocusSource,
-            readerActivityTracker: full.readerActivityTracker,
-            searchRepository: full.searchRepository,
-            bookImportService: full.bookImportService,
-            readingStatsRepository: full.readingStatsRepository,
-          );
-        case 'ttsProvider':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: full.bookmarksRepository,
-            highlightsRepository: full.highlightsRepository,
-            notesRepository: full.notesRepository,
-            customFontsRepository: full.customFontsRepository,
-            downloadableFontStore: full.downloadableFontStore,
-            layoutPresetRepository: full.layoutPresetRepository,
-            bookReaderPrefsRepository: full.bookReaderPrefsRepository,
-            ttsProvider: null,
-            ttsAudio: full.ttsAudio,
-            ttsAudioFocusSource: full.ttsAudioFocusSource,
-            readerActivityTracker: full.readerActivityTracker,
-            searchRepository: full.searchRepository,
-            bookImportService: full.bookImportService,
-            readingStatsRepository: full.readingStatsRepository,
-          );
-        case 'ttsAudio':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: full.bookmarksRepository,
-            highlightsRepository: full.highlightsRepository,
-            notesRepository: full.notesRepository,
-            customFontsRepository: full.customFontsRepository,
-            downloadableFontStore: full.downloadableFontStore,
-            layoutPresetRepository: full.layoutPresetRepository,
-            bookReaderPrefsRepository: full.bookReaderPrefsRepository,
-            ttsProvider: full.ttsProvider,
-            ttsAudio: null,
-            ttsAudioFocusSource: full.ttsAudioFocusSource,
-            readerActivityTracker: full.readerActivityTracker,
-            searchRepository: full.searchRepository,
-            bookImportService: full.bookImportService,
-            readingStatsRepository: full.readingStatsRepository,
-          );
-        case 'ttsAudioFocusSource':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: full.bookmarksRepository,
-            highlightsRepository: full.highlightsRepository,
-            notesRepository: full.notesRepository,
-            customFontsRepository: full.customFontsRepository,
-            downloadableFontStore: full.downloadableFontStore,
-            layoutPresetRepository: full.layoutPresetRepository,
-            bookReaderPrefsRepository: full.bookReaderPrefsRepository,
-            ttsProvider: full.ttsProvider,
-            ttsAudio: full.ttsAudio,
-            ttsAudioFocusSource: null,
-            readerActivityTracker: full.readerActivityTracker,
-            searchRepository: full.searchRepository,
-            bookImportService: full.bookImportService,
-            readingStatsRepository: full.readingStatsRepository,
-          );
-        case 'readerActivityTracker':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: full.bookmarksRepository,
-            highlightsRepository: full.highlightsRepository,
-            notesRepository: full.notesRepository,
-            customFontsRepository: full.customFontsRepository,
-            downloadableFontStore: full.downloadableFontStore,
-            layoutPresetRepository: full.layoutPresetRepository,
-            bookReaderPrefsRepository: full.bookReaderPrefsRepository,
-            ttsProvider: full.ttsProvider,
-            ttsAudio: full.ttsAudio,
-            ttsAudioFocusSource: full.ttsAudioFocusSource,
-            readerActivityTracker: null,
-            searchRepository: full.searchRepository,
-            bookImportService: full.bookImportService,
-            readingStatsRepository: full.readingStatsRepository,
-          );
-        case 'searchRepository':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: full.bookmarksRepository,
-            highlightsRepository: full.highlightsRepository,
-            notesRepository: full.notesRepository,
-            customFontsRepository: full.customFontsRepository,
-            downloadableFontStore: full.downloadableFontStore,
-            layoutPresetRepository: full.layoutPresetRepository,
-            bookReaderPrefsRepository: full.bookReaderPrefsRepository,
-            ttsProvider: full.ttsProvider,
-            ttsAudio: full.ttsAudio,
-            ttsAudioFocusSource: full.ttsAudioFocusSource,
-            readerActivityTracker: full.readerActivityTracker,
-            searchRepository: null,
-            bookImportService: full.bookImportService,
-            readingStatsRepository: full.readingStatsRepository,
-          );
-        case 'bookImportService':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: full.bookmarksRepository,
-            highlightsRepository: full.highlightsRepository,
-            notesRepository: full.notesRepository,
-            customFontsRepository: full.customFontsRepository,
-            downloadableFontStore: full.downloadableFontStore,
-            layoutPresetRepository: full.layoutPresetRepository,
-            bookReaderPrefsRepository: full.bookReaderPrefsRepository,
-            ttsProvider: full.ttsProvider,
-            ttsAudio: full.ttsAudio,
-            ttsAudioFocusSource: full.ttsAudioFocusSource,
-            readerActivityTracker: full.readerActivityTracker,
-            searchRepository: full.searchRepository,
-            bookImportService: null,
-            readingStatsRepository: full.readingStatsRepository,
-          );
-        case 'readingStatsRepository':
-          return LibraryReaderFeatureRepositories(
-            bookmarksRepository: full.bookmarksRepository,
-            highlightsRepository: full.highlightsRepository,
-            notesRepository: full.notesRepository,
-            customFontsRepository: full.customFontsRepository,
-            downloadableFontStore: full.downloadableFontStore,
-            layoutPresetRepository: full.layoutPresetRepository,
-            bookReaderPrefsRepository: full.bookReaderPrefsRepository,
-            ttsProvider: full.ttsProvider,
-            ttsAudio: full.ttsAudio,
-            ttsAudioFocusSource: full.ttsAudioFocusSource,
-            readerActivityTracker: full.readerActivityTracker,
-            searchRepository: full.searchRepository,
-            bookImportService: full.bookImportService,
-            readingStatsRepository: null,
-          );
-        default:
-          throw ArgumentError('未知的欄位名：$field');
-      }
+      T? keep<T>(String name, T? value) => field == name ? null : value;
+      return LibraryReaderFeatureRepositories(
+        bookmarksRepository: keep(
+          'bookmarksRepository',
+          full.bookmarksRepository,
+        ),
+        highlightsRepository: keep(
+          'highlightsRepository',
+          full.highlightsRepository,
+        ),
+        notesRepository: keep('notesRepository', full.notesRepository),
+        customFontsRepository: keep(
+          'customFontsRepository',
+          full.customFontsRepository,
+        ),
+        downloadableFontStore: keep(
+          'downloadableFontStore',
+          full.downloadableFontStore,
+        ),
+        layoutPresetRepository: keep(
+          'layoutPresetRepository',
+          full.layoutPresetRepository,
+        ),
+        bookReaderPrefsRepository: keep(
+          'bookReaderPrefsRepository',
+          full.bookReaderPrefsRepository,
+        ),
+        ttsProvider: keep('ttsProvider', full.ttsProvider),
+        ttsAudio: keep('ttsAudio', full.ttsAudio),
+        ttsAudioFocusSource: keep(
+          'ttsAudioFocusSource',
+          full.ttsAudioFocusSource,
+        ),
+        readerActivityTracker: keep(
+          'readerActivityTracker',
+          full.readerActivityTracker,
+        ),
+        searchRepository: keep('searchRepository', full.searchRepository),
+        bookImportService: keep('bookImportService', full.bookImportService),
+        readingStatsRepository: keep(
+          'readingStatsRepository',
+          full.readingStatsRepository,
+        ),
+      );
     }
 
     const nullFields = [
@@ -429,11 +232,13 @@ void main() {
             sync: completeLegacySyncDependencies(),
             libraryRepository: FakeLibraryRepository(),
           ),
-          throwsA(isA<StateError>().having(
-            (e) => e.message,
-            'message',
-            contains(field),
-          )),
+          throwsA(
+            isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              contains(field),
+            ),
+          ),
         );
       });
     }
@@ -446,40 +251,116 @@ void main() {
           sync: const LibrarySyncDependencies(),
           libraryRepository: FakeLibraryRepository(),
         ),
-        throwsA(isA<StateError>().having(
-          (e) => e.message,
-          'message',
-          contains('syncCheckpointTrigger'),
-        )),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('syncCheckpointTrigger'),
+          ),
+        ),
       );
     });
 
-    test('舊 bundle 完整時轉換成功，18 個欄位皆非 null', () {
+    test('舊 bundle 完整時轉換成功，每個欄位原樣（同一實例）帶入', () {
+      final prefsManager = FakeReaderPrefsManager();
+      final libraryRepository = FakeLibraryRepository();
+      final features = completeLegacyReaderFeatures(
+        isFullTextSearchAvailable: false,
+      );
+      final sync = completeLegacySyncDependencies();
+
       final dependencies = readerFeatureDependenciesFromLegacy(
-        prefsManager: FakeReaderPrefsManager(),
-        features: completeLegacyReaderFeatures(),
-        sync: completeLegacySyncDependencies(),
-        libraryRepository: FakeLibraryRepository(),
+        prefsManager: prefsManager,
+        features: features,
+        sync: sync,
+        libraryRepository: libraryRepository,
       );
 
-      expect(dependencies.prefsManager, isNotNull);
-      expect(dependencies.libraryRepository, isNotNull);
-      expect(dependencies.bookImportService, isNotNull);
-      expect(dependencies.bookmarksRepository, isNotNull);
-      expect(dependencies.highlightsRepository, isNotNull);
-      expect(dependencies.notesRepository, isNotNull);
-      expect(dependencies.customFontsRepository, isNotNull);
-      expect(dependencies.downloadableFontStore, isNotNull);
-      expect(dependencies.layoutPresetRepository, isNotNull);
-      expect(dependencies.bookReaderPrefsRepository, isNotNull);
-      expect(dependencies.searchRepository, isNotNull);
-      expect(dependencies.readingStatsRepository, isNotNull);
-      expect(dependencies.readerActivityTracker, isNotNull);
-      expect(dependencies.syncCheckpointTrigger, isNotNull);
-      expect(dependencies.ttsProvider, isNotNull);
-      expect(dependencies.ttsAudio, isNotNull);
-      expect(dependencies.ttsAudioFocusSource, isNotNull);
-      expect(dependencies.isFullTextSearchAvailable, isTrue);
+      expect(dependencies.prefsManager, same(prefsManager));
+      expect(dependencies.libraryRepository, same(libraryRepository));
+      expect(
+        dependencies.syncCheckpointTrigger,
+        same(sync.syncCheckpointTrigger),
+      );
+      expect(dependencies.bookImportService, same(features.bookImportService));
+      expect(
+        dependencies.bookmarksRepository,
+        same(features.bookmarksRepository),
+      );
+      expect(
+        dependencies.highlightsRepository,
+        same(features.highlightsRepository),
+      );
+      expect(dependencies.notesRepository, same(features.notesRepository));
+      expect(
+        dependencies.customFontsRepository,
+        same(features.customFontsRepository),
+      );
+      expect(
+        dependencies.downloadableFontStore,
+        same(features.downloadableFontStore),
+      );
+      expect(
+        dependencies.layoutPresetRepository,
+        same(features.layoutPresetRepository),
+      );
+      expect(
+        dependencies.bookReaderPrefsRepository,
+        same(features.bookReaderPrefsRepository),
+      );
+      expect(dependencies.searchRepository, same(features.searchRepository));
+      expect(
+        dependencies.readingStatsRepository,
+        same(features.readingStatsRepository),
+      );
+      expect(
+        dependencies.readerActivityTracker,
+        same(features.readerActivityTracker),
+      );
+      expect(dependencies.ttsProvider, same(features.ttsProvider));
+      expect(dependencies.ttsAudio, same(features.ttsAudio));
+      expect(
+        dependencies.ttsAudioFocusSource,
+        same(features.ttsAudioFocusSource),
+      );
+      expect(dependencies.isFullTextSearchAvailable, isFalse);
     });
+
+    test(
+      '傳入 searchRepository 時優先於 bundle 內的欄位（LibrarySearchScreen 開單書搜尋沿用自己的）',
+      () {
+        final own = FakeSearchRepository();
+        final features = completeLegacyReaderFeatures();
+
+        final dependencies = readerFeatureDependenciesFromLegacy(
+          prefsManager: FakeReaderPrefsManager(),
+          features: features,
+          sync: completeLegacySyncDependencies(),
+          libraryRepository: FakeLibraryRepository(),
+          searchRepository: own,
+        );
+
+        expect(dependencies.searchRepository, same(own));
+        expect(
+          dependencies.searchRepository,
+          isNot(same(features.searchRepository)),
+        );
+      },
+    );
+
+    test(
+      '傳入 searchRepository 時，bundle 的 searchRepository 為 null 也不丟 StateError',
+      () {
+        final dependencies = readerFeatureDependenciesFromLegacy(
+          prefsManager: FakeReaderPrefsManager(),
+          features: legacyWithNull('searchRepository'),
+          sync: completeLegacySyncDependencies(),
+          libraryRepository: FakeLibraryRepository(),
+          searchRepository: FakeSearchRepository(),
+        );
+
+        expect(dependencies.searchRepository, isNotNull);
+      },
+    );
   });
 }

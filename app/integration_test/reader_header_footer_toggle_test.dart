@@ -67,7 +67,11 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_header_toggle_integration', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_header_toggle_integration',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
 
@@ -132,7 +136,11 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_header_off_integration', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_header_off_integration',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
 
@@ -195,7 +203,11 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_footer_off_integration', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_footer_off_integration',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
 
@@ -253,7 +265,11 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_pdf_footer_off_integration', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_pdf_footer_off_integration',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
 

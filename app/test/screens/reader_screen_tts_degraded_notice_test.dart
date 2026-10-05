@@ -21,7 +21,11 @@ Widget _app(FakeReaderPrefsManager prefs, {TtsAudioHandlerHolder? ttsAudio}) {
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-    home: ReaderScreen(filePath: 'test/fixtures/sample.unknown', bookId: 'b_tts_degraded', dependencies: fakeReaderFeatureDependencies(prefsManager: prefs, ttsAudio: ttsAudio)),
+    home: ReaderScreen(
+      filePath: 'test/fixtures/sample.unknown',
+      bookId: 'b_tts_degraded',
+      dependencies: fakeReaderFeatureDependencies(prefsManager: prefs, ttsAudio: ttsAudio),
+    ),
   );
 }
 

@@ -132,7 +132,17 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_foliate_highlights_epub', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository, highlightsRepository: highlightsRepository, notesRepository: notesRepository)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_foliate_highlights_epub',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+            highlightsRepository: highlightsRepository,
+            notesRepository: notesRepository,
+          ),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -224,7 +234,15 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_text_conversion_cfi', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepository)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_text_conversion_cfi',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepository,
+          ),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);

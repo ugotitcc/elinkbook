@@ -105,7 +105,12 @@ void main() {
     final key = GlobalKey<State<ReaderScreen>>();
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(key: key, filePath: samplePath, bookId: 'b_nav_zone_menu', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          key: key,
+          filePath: samplePath,
+          bookId: 'b_nav_zone_menu',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -158,7 +163,12 @@ void main() {
     final key = GlobalKey<State<ReaderScreen>>();
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(key: key, filePath: samplePath, bookId: 'b_nav_zone_pageturn', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          key: key,
+          filePath: samplePath,
+          bookId: 'b_nav_zone_pageturn',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);

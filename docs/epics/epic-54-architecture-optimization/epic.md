@@ -323,3 +323,13 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 計畫外追加：`integration_test/` 21 檔 60 處同值機械遷移（提交門檻 bare analyze 乾淨所需；真機部分無法本地驗證，發 PR 時須跑裝置）。
 - ADR 0037 措辭已同步修訂（§3 TTS 不新增 adapter、§6 轉換函式三呼叫點）。待程式審查與發 PR。
 - 全量 `flutter test`（最終 commit 前）：3672 通過、1 略過、1 失敗——失敗為 `pdf_reader_view_filters_test` bold overlay debouncer 案例，在乾淨 main 上同樣失敗，既存缺陷與本 Issue 無關，不在本 Issue 修。
+
+**2026-10-06 Issue 11 程式審查（獨立審查子代理）與修訂**（報告 `reviews/review-code-issue-11-independent.md`，不進版控；0 Critical／1 Important／5 Minor，Assessment：With fixes；子代理全量 `flutter test` 3672 通過／1 略過／1 失敗，同一個既有失敗案例，它未在乾淨 `main` 上重跑確認）
+
+- I-1（已修）：舊程式 `isFixedLayout == null` 且未傳 `libraryRepository` 時，EPUB 視為 FXL；此 fallback 已刪，預設 `FakeLibraryRepository` 偵測為 `false`。只有兩個 integration 測試真的載入 FXL 素材（`fxl_bookmarks_test`、`reader_screen_test` 的「定樣式範例 EPUB」），已明確傳 `isFixedLayout: true`（與正式環境一致：匯入的 FXL 書本帶 `isFixedLayout: true`）。其餘 integration 測試由「FXL 語意」變為「流式偵測」，更貼近正式環境，維持現狀。
+- M-1（已修）：`readerFeatureDependenciesFromLegacy` 新增可選 `searchRepository`，`LibrarySearchScreen` 開單書搜尋時沿用自己的參數（與遷移前行為一致），新增 2 個測試；Issue 12 須合併兩個來源並移除此參數（已記入 `issues.md` Issue 12）。
+- M-2（已修）：`reader_screen.dart` 6 處過時註解更新。
+- M-3（已修）：約 295 處 codemod 產生的超長單行展開為每引數一行。未整檔 `dart format`：base 版本這些檔案本來就不是 `dart format` 乾淨的，整檔格式化會混入無關改動。
+- M-4（已修）：`legacyWithNull` 14 個 `switch` case 收斂為單一 helper；vacuous 的 `isNotNull` 測試改為逐欄 `same(...)` 對帳。
+- M-5（記錄，未刪）：`readerSaveAsPresetUnavailableMessage` ARB 鍵已無使用端，排入 Issue 13 清理（`issues.md` 已註記）；`_ttsControllerOrNull` 命名維持不動（`null` 是「尚未按下朗讀」的合法狀態，審查亦判斷非必改）。
+- 驗證（修訂後）：範圍測試 511 通過（509＋M-1 新增 2），0 失敗；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` 兩行 PASS。integration 測試仍只做靜態檢查，**發 PR 前須在真機至少跑** `reader_screen_test`、`fxl_bookmarks_test`、`foliate_cbz_test`、`epub_toc_test`、`reading_position_test`。

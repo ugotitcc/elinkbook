@@ -412,6 +412,8 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
             features: widget.readerFeatureRepositories,
             sync: widget.syncDependencies,
             libraryRepository: widget.libraryRepository,
+            // 沿用本畫面自己的 searchRepository（與遷移前一致），不取 bundle 內的欄位。
+            searchRepository: widget.searchRepository,
           ),
           isEinkMode: widget.isEinkMode,
         ),

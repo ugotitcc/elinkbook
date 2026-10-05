@@ -74,7 +74,15 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: ReaderScreen(filePath: book.filePath, bookId: book.id, isFixedLayout: book.isFixedLayout, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: libraryRepository)),
+          home: ReaderScreen(
+            filePath: book.filePath,
+            bookId: book.id,
+            isFixedLayout: book.isFixedLayout,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              libraryRepository: libraryRepository,
+            ),
+          ),
         ),
       );
       await _pumpUntilLoaded(tester);
@@ -145,7 +153,16 @@ void main() {
       final readerKey = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
-          home: ReaderScreen(key: readerKey, filePath: book.filePath, bookId: book.id, isFixedLayout: book.isFixedLayout, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: libraryRepository)),
+          home: ReaderScreen(
+            key: readerKey,
+            filePath: book.filePath,
+            bookId: book.id,
+            isFixedLayout: book.isFixedLayout,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              libraryRepository: libraryRepository,
+            ),
+          ),
         ),
       );
       await _pumpUntilLoaded(tester);
@@ -228,7 +245,16 @@ void main() {
       final readerKey = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
-          home: ReaderScreen(key: readerKey, filePath: book.filePath, bookId: book.id, isFixedLayout: book.isFixedLayout, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: libraryRepository)),
+          home: ReaderScreen(
+            key: readerKey,
+            filePath: book.filePath,
+            bookId: book.id,
+            isFixedLayout: book.isFixedLayout,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              libraryRepository: libraryRepository,
+            ),
+          ),
         ),
       );
       await _pumpUntilLoaded(tester);

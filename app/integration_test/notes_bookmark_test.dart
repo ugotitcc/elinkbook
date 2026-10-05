@@ -89,7 +89,14 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_notes_epub', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_notes_epub',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -157,7 +164,14 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_notes_pdf', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_notes_pdf',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);

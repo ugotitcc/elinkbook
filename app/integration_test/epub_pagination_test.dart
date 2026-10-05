@@ -82,7 +82,11 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_epub_pagination', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_epub_pagination',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -127,7 +131,11 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_epub_pagination_jump', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_epub_pagination_jump',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);

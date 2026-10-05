@@ -72,7 +72,11 @@ void main() {
     // 第一次開書，跳到第 4 頁。
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_position_pdf', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_position_pdf',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -94,7 +98,11 @@ void main() {
     // 重新開啟同一本書，驗證自動回到第 4 頁（起始畫面即顯示，不需再跳頁）。
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_position_pdf', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_position_pdf',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -135,7 +143,11 @@ void main() {
     // 第一次開書，等待載入完成後翻頁。
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_position_epub', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_position_epub',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -162,7 +174,11 @@ void main() {
     // 重新開啟同一本書，驗證有 initialLocatorJson 被傳入（即回到離開前定位）。
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_position_epub', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_position_epub',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);

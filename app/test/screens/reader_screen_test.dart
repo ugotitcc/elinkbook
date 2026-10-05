@@ -189,7 +189,16 @@ Future<int Function()> _pumpContentUriReader(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-      home: ReaderScreen(filePath: filePath, bookId: bookId, isFixedLayout: false, pickSingleBookFile: pickSingleBookFile, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookImportService: bookImportService)),
+      home: ReaderScreen(
+        filePath: filePath,
+        bookId: bookId,
+        isFixedLayout: false,
+        pickSingleBookFile: pickSingleBookFile,
+        dependencies: fakeReaderFeatureDependencies(
+          prefsManager: prefsManager,
+          bookImportService: bookImportService,
+        ),
+      ),
     ),
   );
   await tester.pump();
@@ -328,7 +337,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_jump_pdf_pos', initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2), dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_pdf_pos',
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -355,7 +369,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_jump_epub_pos', initialJumpTarget: const ReaderJumpTarget(cfi: 'epubcfi(/jump)'), dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_jump_epub_pos',
+            initialJumpTarget: const ReaderJumpTarget(cfi: 'epubcfi(/jump)'),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -391,7 +410,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_text_conversion', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_text_conversion',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -420,7 +443,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_text_conversion_fallback', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_text_conversion_fallback',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -450,7 +477,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_no_jump_pos', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_no_jump_pos',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -478,7 +509,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_jump_then_navigate', initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2), dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_then_navigate',
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -540,7 +576,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_jump_immediate_exit', initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2), dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_immediate_exit',
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -685,7 +726,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_jump_no_rect', initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 0), dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager())),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_no_rect',
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 0),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
+          ),
         ),
       );
       await tester.pump();
@@ -745,7 +791,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_no_jump_no_highlight', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager())),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_no_jump_no_highlight',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
+          ),
         ),
       );
       await tester.pump();
@@ -773,7 +823,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.unknown', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.unknown',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
 
@@ -789,7 +843,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_chapter_title_fallback_epub', bookTitle: '一本測試用書', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_chapter_title_fallback_epub',
+            bookTitle: '一本測試用書',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -806,7 +865,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_chapter_title_fallback_pdf', bookTitle: '另一本測試用書', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_chapter_title_fallback_pdf',
+            bookTitle: '另一本測試用書',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -824,7 +888,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
 
@@ -844,7 +912,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
 
@@ -874,7 +946,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b1', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: repository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_fixed_layout.epub',
+            bookId: 'b1',
+            isFixedLayout: true,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              libraryRepository: repository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -901,7 +981,15 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: repository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -925,7 +1013,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -955,7 +1048,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -982,7 +1080,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1004,7 +1107,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1031,7 +1139,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1050,7 +1162,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1075,7 +1191,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1095,7 +1215,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -1116,7 +1240,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -1168,7 +1297,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1223,7 +1357,14 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: repository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              libraryRepository: repository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -1245,7 +1386,14 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: repository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_fixed_layout.epub',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              libraryRepository: repository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -1268,7 +1416,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.azw3', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: repository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.azw3',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -1296,7 +1451,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.cbz', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: repository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.cbz',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -1320,7 +1482,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.cbz', bookId: 'b1', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.cbz',
+          bookId: 'b1',
+          isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1341,7 +1508,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.cbz', bookId: 'b1', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.cbz',
+          bookId: 'b1',
+          isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1373,7 +1545,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1396,7 +1573,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_synth.txt', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: repository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_synth.txt',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -1417,7 +1601,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_synth.md', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: repository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_synth.md',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -1439,7 +1630,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1465,7 +1660,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1500,7 +1699,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1526,7 +1729,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1551,7 +1758,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1573,7 +1784,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1622,7 +1837,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: manager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: manager),
+          ),
         ),
       );
       // 等待 initState 的 async load 完成
@@ -1662,7 +1881,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1717,7 +1940,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b_settings_dispatch_fxl', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_fixed_layout.epub',
+            bookId: 'b_settings_dispatch_fxl',
+            isFixedLayout: true,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -1751,7 +1979,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_settings_dispatch_reflowable', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_settings_dispatch_reflowable',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -1782,7 +2015,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1838,7 +2075,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1879,7 +2120,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b1', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_fixed_layout.epub',
+            bookId: 'b1',
+            isFixedLayout: true,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -1931,7 +2177,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -1976,7 +2226,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_footer_test', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_footer_test',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2025,7 +2279,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_dispose_test', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_dispose_test',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2068,7 +2326,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_no_position', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_no_position',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -2095,7 +2357,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_fit_default', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_fit_default',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2118,7 +2384,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_fit_saved', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_fit_saved',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2138,7 +2408,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_paused_test', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_paused_test',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2167,7 +2441,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_epub_wiring', initialJumpTarget: const ReaderJumpTarget(cfi: 'epubcfi(/jump)'), dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_epub_wiring',
+          initialJumpTarget: const ReaderJumpTarget(cfi: 'epubcfi(/jump)'),
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2212,7 +2491,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_pdf_regression', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_pdf_regression',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2240,7 +2523,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_toc_initial', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_toc_initial',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2265,7 +2552,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_toc_pdf', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_toc_pdf',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2291,7 +2582,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b_toc_fxl', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_toc_fxl',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2324,7 +2619,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_toc_open', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_toc_open',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -2367,7 +2666,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_toc_select', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_toc_select',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2419,7 +2722,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_pdf_header', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_pdf_header',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2443,7 +2750,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_footer_off_epub', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_footer_off_epub',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2486,7 +2797,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_footer_off_pdf', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_footer_off_pdf',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2518,7 +2833,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_header_on_footer_off', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_header_on_footer_off',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2561,7 +2880,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_header_off_footer_on', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_header_off_footer_on',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -2602,7 +2925,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b_fxl_untouched', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_fixed_layout.epub',
+            bookId: 'b_fxl_untouched',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -2648,7 +2975,14 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_notes_epub', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_notes_epub',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -2668,7 +3002,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_notes_epub_no_locator_yet', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_notes_epub_no_locator_yet',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -2700,7 +3041,14 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_notes_epub_open', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_notes_epub_open',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -2746,7 +3094,14 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_notes_pdf', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_notes_pdf',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -2778,7 +3133,16 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), bookmarksRepository: bookmarksRepository, highlightsRepository: highlightsRepository, notesRepository: notesRepository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              bookmarksRepository: bookmarksRepository,
+              highlightsRepository: highlightsRepository,
+              notesRepository: notesRepository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -2813,7 +3177,16 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), bookmarksRepository: bookmarksRepository, highlightsRepository: highlightsRepository, notesRepository: notesRepository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              bookmarksRepository: bookmarksRepository,
+              highlightsRepository: highlightsRepository,
+              notesRepository: notesRepository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -2838,7 +3211,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b_fxl_bookmark_disabled', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fxl_bookmark_disabled',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -2880,7 +3260,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b_fxl_bookmark_toggle', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fxl_bookmark_toggle',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -2964,7 +3351,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b_fxl_notes_sheet', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fxl_notes_sheet',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -3041,7 +3435,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b_fxl_sync', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fxl_sync',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -3115,7 +3516,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b_fxl_jump_collapse', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fxl_jump_collapse',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -3197,7 +3605,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_chapter.epub', bookId: 'b_progress_export_epub', bookProgress: 0.1, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_chapter.epub',
+            bookId: 'b_progress_export_epub',
+            bookProgress: 0.1,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -3247,7 +3663,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_progress_export_pdf', bookProgress: 0.0, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_progress_export_pdf',
+            bookProgress: 0.0,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -3294,7 +3718,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(key: key, filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -3328,7 +3757,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(key: key, filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -3362,7 +3796,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(key: key, filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -3465,7 +3904,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: disabledPrefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: disabledPrefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -3522,7 +3965,11 @@ void main() {
                 key: const Key('open_reader'),
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+                    builder: (_) => ReaderScreen(
+                      filePath: 'test/fixtures/sample.pdf',
+                      bookId: 'b1',
+                      dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+                    ),
                   ),
                 ),
                 child: const Text('open'),
@@ -3563,7 +4010,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -3598,7 +4050,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -3640,7 +4097,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_toc_foliate_open', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_toc_foliate_open',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -3683,7 +4145,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_toc_foliate_jump', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_toc_foliate_jump',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -3733,7 +4200,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_footer_foliate', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_footer_foliate',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -3775,7 +4247,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_header_footer_margin_h', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_header_footer_margin_h',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -3847,7 +4324,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_footer_foliate_absent', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_footer_foliate_absent',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -3876,7 +4358,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_footer_foliate_zero', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_footer_foliate_zero',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -3926,7 +4413,16 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_anno', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_anno',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -3980,7 +4476,16 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b_fxl_anno', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_fixed_layout.epub',
+            bookId: 'b_fxl_anno',
+            isFixedLayout: true,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -4015,7 +4520,16 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_select', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_select',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -4072,7 +4586,16 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_select_edge', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_select_edge',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -4126,7 +4649,16 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_close_toolbar', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_close_toolbar',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -4187,7 +4719,16 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_merge1', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_merge1',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -4246,7 +4787,16 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_merge2', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_merge2',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -4300,7 +4850,16 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_merge3', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_merge3',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -4360,7 +4919,16 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_merge4', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_merge4',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -4414,7 +4982,15 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_chrome', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_chrome',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -4478,7 +5054,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_settings_btn', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_settings_btn',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -4513,7 +5094,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_bookmark_btn', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_bookmark_btn',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -4577,7 +5166,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_epic26_issue1', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_epic26_issue1',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -4627,7 +5224,15 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_notes_btn', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_notes_btn',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -4680,7 +5285,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_header', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_header',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -4728,7 +5338,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_header_immersive', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_header_immersive',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -4786,7 +5401,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_header_v', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_header_v',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -4842,7 +5462,13 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_header_title', isFixedLayout: false, bookTitle: '我的測試書名', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_header_title',
+          isFixedLayout: false,
+          bookTitle: '我的測試書名',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -4895,7 +5521,13 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_header_text_conversion', isFixedLayout: false, bookTitle: '国电脑', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_header_text_conversion',
+          isFixedLayout: false,
+          bookTitle: '国电脑',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -4940,7 +5572,13 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_bottom_bar_text_conversion', isFixedLayout: false, bookTitle: '国电脑', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_bottom_bar_text_conversion',
+          isFixedLayout: false,
+          bookTitle: '国电脑',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -4967,7 +5605,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_pdf_bottom_bar_text_conversion', bookTitle: '国电脑', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_pdf_bottom_bar_text_conversion',
+          bookTitle: '国电脑',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -4994,7 +5637,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_toc_text_conversion', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_toc_text_conversion',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -5037,7 +5684,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_notes_text_conversion', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: FakeBookmarksRepository())),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_notes_text_conversion',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: FakeBookmarksRepository(),
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -5082,7 +5736,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_header_off', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_header_off',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -5111,7 +5770,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_progress_h', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_progress_h',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -5155,7 +5819,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_progress_immersive', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_progress_immersive',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -5205,7 +5874,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_progress_v', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_progress_v',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -5261,7 +5935,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_progress_off', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_progress_off',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -5304,7 +5983,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_progress_sheet', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_progress_sheet',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -5350,7 +6034,12 @@ void main() {
             data: const MediaQueryData(
               viewPadding: EdgeInsets.only(bottom: 48),
             ),
-            child: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_progress_safearea', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+            child: ReaderScreen(
+              filePath: 'test/fixtures/sample.epub',
+              bookId: 'b_foliate_progress_safearea',
+              isFixedLayout: false,
+              dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+            ),
           ),
         ),
       );
@@ -5393,7 +6082,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_progress_safearea_null', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_progress_safearea_null',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -5430,7 +6124,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_margins', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_margins',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -5455,7 +6154,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_theme_color', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_theme_color',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -5478,7 +6182,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.light),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_foliate_theme_color_light', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_theme_color_light',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -5501,7 +6210,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b_foliate_theme_color_fxl', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_foliate_theme_color_fxl',
+          isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -5540,7 +6254,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -5581,7 +6299,11 @@ void main() {
                 key: const Key('open_reader'),
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+                    builder: (_) => ReaderScreen(
+                      filePath: 'test/fixtures/sample.pdf',
+                      bookId: 'b1',
+                      dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+                    ),
                   ),
                 ),
                 child: const Text('open'),
@@ -5639,7 +6361,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_fullscreen_immersive_pdf', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_fullscreen_immersive_pdf',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -5673,7 +6399,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_fullscreen_immersive_epub', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_fullscreen_immersive_epub',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -5698,7 +6429,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_fullscreen_off_pdf', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_fullscreen_off_pdf',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -5729,7 +6464,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_fullscreen_toggle_back_pdf', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_fullscreen_toggle_back_pdf',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -5775,7 +6514,14 @@ void main() {
               key: const Key('open_reader'),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, syncCheckpointTrigger: syncCheckpointTrigger)),
+                  builder: (_) => ReaderScreen(
+                    filePath: 'test/fixtures/sample.pdf',
+                    bookId: 'b1',
+                    dependencies: fakeReaderFeatureDependencies(
+                      prefsManager: prefsManager,
+                      syncCheckpointTrigger: syncCheckpointTrigger,
+                    ),
+                  ),
                 ),
               ),
               child: const Text('open'),
@@ -5822,7 +6568,14 @@ void main() {
               key: const Key('open_reader'),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, syncCheckpointTrigger: syncCheckpointTrigger)),
+                  builder: (_) => ReaderScreen(
+                    filePath: 'test/fixtures/sample.pdf',
+                    bookId: 'b1',
+                    dependencies: fakeReaderFeatureDependencies(
+                      prefsManager: prefsManager,
+                      syncCheckpointTrigger: syncCheckpointTrigger,
+                    ),
+                  ),
                 ),
               ),
               child: const Text('open'),
@@ -5888,7 +6641,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -5919,7 +6676,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, customFontsRepository: customFontsRepository)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            customFontsRepository: customFontsRepository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -5980,7 +6744,14 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, customFontsRepository: customFontsRepository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              customFontsRepository: customFontsRepository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -6010,7 +6781,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, customFontsRepository: customFontsRepository, downloadableFontStore: store)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              customFontsRepository: customFontsRepository,
+              downloadableFontStore: store,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -6098,7 +6877,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, customFontsRepository: customFontsRepository, downloadableFontStore: store)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              customFontsRepository: customFontsRepository,
+              downloadableFontStore: store,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -6287,7 +7074,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_open_timeout', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_open_timeout',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -6333,7 +7124,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_open_timeout_success', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_open_timeout_success',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6368,7 +7163,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_black_flash_epub_loading', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_black_flash_epub_loading',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6450,7 +7250,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_black_flash_pdf_loading', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_black_flash_pdf_loading',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6478,7 +7282,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf', bookId: 'b_black_flash_pdf_rendered', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_black_flash_pdf_rendered',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6526,7 +7334,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.light),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_header_footer_no_bg', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_header_footer_no_bg',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6600,7 +7413,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_header_footer_dark', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_header_footer_dark',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6660,7 +7478,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b_header_footer_fxl', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_header_footer_fxl',
+          isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6711,7 +7534,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_settings_sheet_dark_barrier', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_settings_sheet_dark_barrier',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6754,7 +7582,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.light),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_settings_sheet_light_barrier', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_settings_sheet_light_barrier',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6792,7 +7625,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_fab_color_dark', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_fab_color_dark',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6832,7 +7670,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.light),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_fab_color_light', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_fab_color_light',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6869,7 +7712,13 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: true),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_fab_color_eink', isFixedLayout: false, isEinkMode: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_fab_color_eink',
+          isFixedLayout: false,
+          isEinkMode: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6905,7 +7754,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_fixed_layout.epub', bookId: 'b_fab_color_fxl', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fab_color_fxl',
+          isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6941,7 +7795,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: buildThemeData(AppTheme.dark),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_fab_color_settings_dark', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_fab_color_settings_dark',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -6980,7 +7839,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_error_after_render', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_error_after_render',
+          isFixedLayout: false,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -7044,7 +7908,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -7105,7 +7973,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b2', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b2',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -7176,7 +8048,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), highlightsRepository: highlightsRepository, notesRepository: FakeNotesRepository())),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              highlightsRepository: highlightsRepository,
+              notesRepository: FakeNotesRepository(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -7251,7 +8131,15 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_select_edge', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), highlightsRepository: FakeHighlightsRepository(), notesRepository: FakeNotesRepository())),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_select_edge',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            highlightsRepository: FakeHighlightsRepository(),
+            notesRepository: FakeNotesRepository(),
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -7288,7 +8176,15 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_close_toolbar', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), highlightsRepository: FakeHighlightsRepository(), notesRepository: FakeNotesRepository())),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_close_toolbar',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            highlightsRepository: FakeHighlightsRepository(),
+            notesRepository: FakeNotesRepository(),
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -7327,7 +8223,16 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_page_turn_clears_selection', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), highlightsRepository: FakeHighlightsRepository(), notesRepository: FakeNotesRepository())),
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_page_turn_clears_selection',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            highlightsRepository: FakeHighlightsRepository(),
+            notesRepository: FakeNotesRepository(),
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -7400,7 +8305,16 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_loading_guard', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), highlightsRepository: FakeHighlightsRepository(), notesRepository: FakeNotesRepository())),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_pdf_loading_guard',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              highlightsRepository: FakeHighlightsRepository(),
+              notesRepository: FakeNotesRepository(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -7456,7 +8370,12 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_epub_loading_guard', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_epub_loading_guard',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
         ),
       );
       await tester.pump();
@@ -7487,7 +8406,16 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_rendered_no_regression', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), highlightsRepository: FakeHighlightsRepository(), notesRepository: FakeNotesRepository())),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_pdf_rendered_no_regression',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              highlightsRepository: FakeHighlightsRepository(),
+              notesRepository: FakeNotesRepository(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -7538,7 +8466,16 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_page_turn_cancels_active_drag', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), highlightsRepository: FakeHighlightsRepository(), notesRepository: FakeNotesRepository())),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_pdf_page_turn_cancels_active_drag',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              highlightsRepository: FakeHighlightsRepository(),
+              notesRepository: FakeNotesRepository(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -7604,7 +8541,15 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), highlightsRepository: FakeHighlightsRepository(), notesRepository: FakeNotesRepository())),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            highlightsRepository: FakeHighlightsRepository(),
+            notesRepository: FakeNotesRepository(),
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -7655,7 +8600,15 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -7696,7 +8649,15 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -7736,7 +8697,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_pdf_toc.pdf', bookId: 'b_pdf_toc', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_pdf_toc.pdf',
+          bookId: 'b_pdf_toc',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -7773,7 +8739,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_pdf_toc.pdf', bookId: 'b_pdf_toc_jump', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_pdf_toc.pdf',
+          bookId: 'b_pdf_toc_jump',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -7809,7 +8780,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(key: key, filePath: 'test/fixtures/sample.pdf', bookId: 'b_pdf_toc_empty', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_pdf_toc_empty',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -7839,7 +8815,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_search', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_search',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -7880,7 +8861,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_search_nav', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_search_nav',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -7951,7 +8937,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(key: key, filePath: 'test/fixtures/sample.pdf', bookId: 'b_pdf_search_empty', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_pdf_search_empty',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -7989,7 +8980,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_thumbnails', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_thumbnails',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -8026,7 +9022,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_thumbnails_click', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_thumbnails_click',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
       ),
     );
     await tester.pump();
@@ -8677,7 +9678,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_merge1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_pdf_merge1',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -8724,7 +9733,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_merge2', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_pdf_merge2',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -8779,7 +9796,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_issue6_hit', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_pdf_issue6_hit',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -8832,7 +9857,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_pdf_issue6_miss', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_pdf_issue6_miss',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -8872,7 +9905,17 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_tts_with_provider', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo, ttsProvider: ttsProvider)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_with_provider',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -8917,7 +9960,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.cbz', bookId: 'b_tts_cbz', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, ttsProvider: ttsProvider)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.cbz',
+            bookId: 'b_tts_cbz',
+            isFixedLayout: true,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: ttsProvider,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -8961,7 +10012,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.cbz', bookId: 'b_tts_cbz_disabled_color', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, ttsProvider: ttsProvider)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.cbz',
+            bookId: 'b_tts_cbz_disabled_color',
+            isFixedLayout: true,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: ttsProvider,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9031,7 +10090,17 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_tts_vertical', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo, ttsProvider: ttsProvider)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_vertical',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9074,7 +10143,17 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: bookId, isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo, ttsProvider: ttsProvider)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: bookId,
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9130,7 +10209,17 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_tts_manual_nav', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo, ttsProvider: ttsProvider)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_manual_nav',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9192,7 +10281,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.cbz', bookId: 'b_tts5_cbz', isFixedLayout: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, ttsProvider: ttsProvider)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.cbz',
+            bookId: 'b_tts5_cbz',
+            isFixedLayout: true,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: ttsProvider,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9239,7 +10336,17 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_tts5_buttons', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo, ttsProvider: ttsProvider)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts5_buttons',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9284,7 +10391,17 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_tts5_tap', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo, ttsProvider: ttsProvider)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts5_tap',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9328,7 +10445,17 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_tts5_speed', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo, ttsProvider: ttsProvider)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts5_speed',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+              ttsProvider: ttsProvider,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9372,7 +10499,17 @@ void main() {
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-            home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_mini_player_footer', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, highlightsRepository: highlightsRepo, notesRepository: notesRepo, ttsProvider: ttsProvider)),
+            home: ReaderScreen(
+              filePath: 'test/fixtures/sample.epub',
+              bookId: 'b_mini_player_footer',
+              isFixedLayout: false,
+              dependencies: fakeReaderFeatureDependencies(
+                prefsManager: prefsManager,
+                highlightsRepository: highlightsRepo,
+                notesRepository: notesRepo,
+                ttsProvider: ttsProvider,
+              ),
+            ),
           ),
         );
         await tester.pump();
@@ -9445,7 +10582,17 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_tts7_wiring', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, ttsProvider: ttsProvider, ttsAudio: TtsAudioHandlerHolder.ready(ttsAudioHandler), ttsAudioFocusSource: ttsAudioFocusSource)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts7_wiring',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: ttsProvider,
+              ttsAudio: TtsAudioHandlerHolder.ready(ttsAudioHandler),
+              ttsAudioFocusSource: ttsAudioFocusSource,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9513,7 +10660,17 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_tts_text_conversion', bookTitle: '国电脑', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, ttsProvider: ttsProvider, ttsAudio: TtsAudioHandlerHolder.ready(ttsAudioHandler))),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_text_conversion',
+            bookTitle: '国电脑',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: ttsProvider,
+              ttsAudio: TtsAudioHandlerHolder.ready(ttsAudioHandler),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9553,7 +10710,16 @@ void main() {
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-            home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_tts8_safe_window', isFixedLayout: false, isEinkMode: true, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, ttsProvider: ttsProvider)),
+            home: ReaderScreen(
+              filePath: 'test/fixtures/sample.epub',
+              bookId: 'b_tts8_safe_window',
+              isFixedLayout: false,
+              isEinkMode: true,
+              dependencies: fakeReaderFeatureDependencies(
+                prefsManager: prefsManager,
+                ttsProvider: ttsProvider,
+              ),
+            ),
           ),
         );
         await tester.pump();
@@ -9602,7 +10768,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(key: key, filePath: 'test/fixtures/sample.epub', bookId: 'b_sleep_timer_select', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, ttsProvider: FakeTtsProvider())),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_sleep_timer_select',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: FakeTtsProvider(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9646,7 +10820,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(key: key, filePath: 'test/fixtures/sample.epub', bookId: 'b_sleep_timer_expire', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, ttsProvider: FakeTtsProvider())),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_sleep_timer_expire',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: FakeTtsProvider(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9687,7 +10869,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(key: key, filePath: 'test/fixtures/sample.epub', bookId: 'b_sleep_timer_none', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, ttsProvider: FakeTtsProvider())),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_sleep_timer_none',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: FakeTtsProvider(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9720,7 +10910,14 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_tts_indicator_not_built', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, ttsProvider: FakeTtsProvider())),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_indicator_not_built',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: FakeTtsProvider(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9749,7 +10946,14 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_tts_indicator_documented_gap', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, ttsProvider: FakeTtsProvider())),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_indicator_documented_gap',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              ttsProvider: FakeTtsProvider(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9783,7 +10987,14 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'reader-activity-tracker-test-book', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), readerActivityTracker: tracker)),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'reader-activity-tracker-test-book',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            readerActivityTracker: tracker,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -9861,7 +11072,17 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_search_text_conversion', bookTitle: '国电脑', bookAuthor: '电脑作者', dependencies: fakeReaderFeatureDependencies(prefsManager: localPrefsManager, searchRepository: searchRepository, libraryRepository: libraryRepository)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_text_conversion',
+            bookTitle: '国电脑',
+            bookAuthor: '电脑作者',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: localPrefsManager,
+              searchRepository: searchRepository,
+              libraryRepository: libraryRepository,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9886,7 +11107,16 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_search_fts_unavailable', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), searchRepository: FakeSearchRepository(), libraryRepository: FakeLibraryRepository(), isFullTextSearchAvailable: false)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_fts_unavailable',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: FakeSearchRepository(),
+              libraryRepository: FakeLibraryRepository(),
+              isFullTextSearchAvailable: false,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9912,7 +11142,16 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_search_import_service', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), searchRepository: FakeSearchRepository(), libraryRepository: FakeLibraryRepository(), bookImportService: importService)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_import_service',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: FakeSearchRepository(),
+              libraryRepository: FakeLibraryRepository(),
+              bookImportService: importService,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9939,7 +11178,16 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_search_tts_degraded_notice', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), searchRepository: FakeSearchRepository(), libraryRepository: FakeLibraryRepository(), ttsAudio: ttsAudio)),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_tts_degraded_notice',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: FakeSearchRepository(),
+              libraryRepository: FakeLibraryRepository(),
+              ttsAudio: ttsAudio,
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -9979,7 +11227,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_search_midsession_pdf', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), searchRepository: searchRepository, libraryRepository: FakeLibraryRepository())),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_search_midsession_pdf',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: searchRepository,
+              libraryRepository: FakeLibraryRepository(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -10048,7 +11304,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_search_midsession_pdf_no_rect', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), searchRepository: searchRepository, libraryRepository: FakeLibraryRepository())),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_search_midsession_pdf_no_rect',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: searchRepository,
+              libraryRepository: FakeLibraryRepository(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -10108,7 +11372,16 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(key: key, filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_search_midsession_pdf_early_clear', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), searchRepository: searchRepository, libraryRepository: FakeLibraryRepository())),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_search_midsession_pdf_early_clear',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: searchRepository,
+              libraryRepository: FakeLibraryRepository(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -10173,7 +11446,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_search_midsession_epub', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), searchRepository: searchRepository, libraryRepository: FakeLibraryRepository())),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_midsession_epub',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: searchRepository,
+              libraryRepository: FakeLibraryRepository(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -10225,7 +11506,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(filePath: 'test/fixtures/sample_multi_page.pdf', bookId: 'b_search_midsession_pop_null', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), searchRepository: searchRepository, libraryRepository: FakeLibraryRepository())),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_search_midsession_pop_null',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: searchRepository,
+              libraryRepository: FakeLibraryRepository(),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -10271,7 +11560,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_en_unknown_title', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager())),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_en_unknown_title',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
+        ),
       ),
     );
     await tester.pump();
@@ -10288,7 +11581,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_zh_cn_settings', bookTitle: '書名', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager())),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_zh_cn_settings',
+          bookTitle: '書名',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
+        ),
       ),
     );
     await tester.pump();
@@ -10323,7 +11621,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_en_toc', bookTitle: 'Title', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager())),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_en_toc',
+          bookTitle: 'Title',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
+        ),
       ),
     );
     await tester.pump();
@@ -10360,7 +11663,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(filePath: 'test/fixtures/sample.unknown', bookId: 'b_en_unsupported', dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager())),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.unknown',
+          bookId: 'b_en_unsupported',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
+        ),
       ),
     );
     await tester.pump();

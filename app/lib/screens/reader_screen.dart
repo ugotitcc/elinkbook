@@ -105,7 +105,7 @@ const _fullscreenChannel = MethodChannel('elinkbook/fullscreen');
 
 /// 唯一的閱讀器顯示接縫（seam）：給定書籍檔案路徑，依偵測到的格式分派到
 /// 對應的原生渲染 widget，畫面上會渲染出該書第 1 頁。公開建構參數為
-/// [filePath]／[bookId]／[prefsManager]（`bookId`／`prefsManager` 由
+/// [filePath]／[bookId]／[dependencies]（`bookId`／`prefsManager` 由
 /// epic-3-fonts-layout Issue 3 新增，供讀寫單書版面偏好設定使用，見
 /// docs/adr/0007-reader-screen-book-id-contract.md）——載入中／錯誤狀態是
 /// 內部實作細節，透過固定的 `Key('reader_loading_indicator')`／
@@ -128,17 +128,18 @@ class ReaderScreen extends StatefulWidget {
   final ReaderFeatureDependencies dependencies;
 
   /// 供「導出為 Markdown」使用的書籍中繼資料（epic-6-annotations
-  /// Issue 5）。刻意為可選具名參數並附預設值——比照 [bookmarksRepository]
-  /// 既有慣例，避免既有大量測試呼叫端需要逐一補上這三個參數。
+  /// Issue 5）。刻意為可選具名參數並附預設值，避免既有大量測試呼叫端需要
+  /// 逐一補上這三個參數。
   final String? bookTitle;
   final String? bookAuthor;
   final double bookProgress;
 
   /// EPUB 是否為固定版面（FXL），對應 `Book.isFixedLayout`（epic-17
-  /// Issue 2）。`null` 代表既有書籍尚未判斷過——此時若提供
-  /// [libraryRepository]，會一次性呼叫 [LibraryRepository.detectAndCacheEpubLayout]
-  /// 判斷並回寫資料庫；若未提供 [libraryRepository]（例如既有測試呼叫端），
-  /// `_dispatchedIsFixedLayout` 直接沿用這個 `null` 值。EPUB 一律建構
+  /// Issue 2）。`null` 代表既有書籍尚未判斷過——此時會以
+  /// `dependencies.libraryRepository` 一次性呼叫
+  /// [LibraryRepository.detectAndCacheEpubLayout] 判斷並回寫資料庫（ADR 0037
+  /// 起 repository 恆在，不再有「未提供就視為 FXL」的退回行為；測試要走 FXL
+  /// 路徑須明確傳 `isFixedLayout: true`）。EPUB 一律建構
   /// [FoliateReaderView]（epic-20 Issue 2 起不再依此欄位分派 widget，
   /// 只驅動 FXL 專屬 UI/chrome 語意），非 EPUB 格式完全不受此欄位影響。
   final bool? isFixedLayout;
@@ -159,7 +160,7 @@ class ReaderScreen extends StatefulWidget {
   /// 資料庫既有 `lastPosition`），除此之外不影響任何後續行為——後續翻頁
   /// /checkpoint 寫入與一般開書完全同構，不新增任何「暫停進度儲存」旗標
   /// （見 `_maybeShowSearchJumpHighlight()` 文件註解的完整理由）。刻意為
-  /// 可選參數——比照 `readerActivityTracker` 既有慣例，未提供時零回歸。
+  /// 可選參數，未提供時即一般開書路徑。
   final ReaderJumpTarget? initialJumpTarget;
 
   /// epic-15-storage-permission Issue 2：「重新選取檔案」使用的單檔選擇器；
@@ -169,7 +170,7 @@ class ReaderScreen extends StatefulWidget {
   final SingleBookFilePicker? pickSingleBookFile;
 
   /// epic-9-stats Issue 4：直接注入的計時器（測試用）。優先於
-  /// [readingStatsRepository]。**由 [ReaderScreen] 擁有**：離開閱讀器時
+  /// `dependencies.readingStatsRepository`。**由 [ReaderScreen] 擁有**：離開閱讀器時
   /// 由它呼叫 `flushAndClose()` 結算並關閉，呼叫端不需要（也不應）另外釋放。
   /// 僅供測試注入（ADR 0037 例外）。
   final ReadingStatsTracker? readingStatsTracker;
@@ -518,11 +519,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// Issue 3 引入；epic-20 Issue 2 起不再決定要建構哪個 widget——EPUB 一律
   /// 建構 [FoliateReaderView]，本方法只決定單頁/雙頁等 UI/chrome 語意）。
   /// `widget.isFixedLayout` 非 null 時直接採用；為 null（既有書籍尚未
-  /// 判斷過）時，若提供 [ReaderScreen.libraryRepository]則非同步呼叫
+  /// 判斷過）時，以 `dependencies.libraryRepository` 非同步呼叫
   /// `detectAndCacheEpubLayout()` 判斷並回寫資料庫，期間 `_dispatchedIsFixedLayout`
-  /// 維持 null（畫面顯示載入中指示器，見 _buildBody 的 gating 條件）；未
-  /// 提供時同步退回既有行為（`_dispatchedIsFixedLayout` 視為 true），確保
-  /// 既有測試呼叫端零回歸。非 EPUB 格式完全不受影響（`_dispatchedIsFixedLayout`
+  /// 維持 null（畫面顯示載入中指示器，見 _buildBody 的 gating 條件）。
+  /// 非 EPUB 格式完全不受影響（`_dispatchedIsFixedLayout`
   /// 維持 null 但 `_buildBody` 的 gating 條件只在 format == epub 時才要求
   /// 它非 null）。
   void _resolveEpubEngineDispatch() {
@@ -1719,11 +1719,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   /// TopBar「搜尋內文」按鈕（`reader_chrome_search_button`）點擊處理
-  /// （epic-10-search Issue 8，spec.md §9.4）：`searchRepository`／
-  /// `libraryRepository`（`BookSearchScreen.libraryRepository` 為必填，
-  /// 但 [ReaderScreen.libraryRepository] 為可選）任一缺席，或本書格式無法
-  /// 辨識時，顯示不可用提示、不導覽；否則以 `fromReader: true` 推入
-  /// [BookSearchScreen]，等待其 pop 回傳的 [ReaderJumpTarget]。
+  /// （epic-10-search Issue 8，spec.md §9.4）：本書格式無法辨識時（
+  /// `_buildSearchableBook()` 回傳 null），顯示不可用提示、不導覽；否則以
+  /// `fromReader: true` 推入 [BookSearchScreen]（整組轉傳 [dependencies]），
+  /// 等待其 pop 回傳的 [ReaderJumpTarget]。
   Future<void> _openBookSearch() async {
     final book = _buildSearchableBook();
     if (book == null) {

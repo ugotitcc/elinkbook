@@ -52,7 +52,17 @@ Widget _app({
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-    home: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: bookId, bookTitle: bookTitle, isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefs, ttsProvider: FakeTtsProvider(), ttsAudio: ttsAudio)),
+    home: ReaderScreen(
+      filePath: 'test/fixtures/sample.epub',
+      bookId: bookId,
+      bookTitle: bookTitle,
+      isFixedLayout: false,
+      dependencies: fakeReaderFeatureDependencies(
+        prefsManager: prefs,
+        ttsProvider: FakeTtsProvider(),
+        ttsAudio: ttsAudio,
+      ),
+    ),
   );
 }
 
@@ -279,12 +289,32 @@ void main() {
             children: [
               Expanded(
                 key: const ValueKey('wrap_first'),
-                child: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_first', bookTitle: '第一本書', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefs, ttsProvider: FakeTtsProvider(), ttsAudio: holder)),
+                child: ReaderScreen(
+                  filePath: 'test/fixtures/sample.epub',
+                  bookId: 'b_first',
+                  bookTitle: '第一本書',
+                  isFixedLayout: false,
+                  dependencies: fakeReaderFeatureDependencies(
+                    prefsManager: prefs,
+                    ttsProvider: FakeTtsProvider(),
+                    ttsAudio: holder,
+                  ),
+                ),
               ),
               if (withSecond)
                 Expanded(
                   key: const ValueKey('wrap_second'),
-                  child: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_second', bookTitle: '第二本書', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefs, ttsProvider: FakeTtsProvider(), ttsAudio: holder)),
+                  child: ReaderScreen(
+                    filePath: 'test/fixtures/sample.epub',
+                    bookId: 'b_second',
+                    bookTitle: '第二本書',
+                    isFixedLayout: false,
+                    dependencies: fakeReaderFeatureDependencies(
+                      prefsManager: prefs,
+                      ttsProvider: FakeTtsProvider(),
+                      ttsAudio: holder,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -326,11 +356,31 @@ void main() {
               if (withFirst)
                 Expanded(
                   key: const ValueKey('wrap_first'),
-                  child: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_first', bookTitle: '第一本書', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefs, ttsProvider: FakeTtsProvider(), ttsAudio: holder)),
+                  child: ReaderScreen(
+                    filePath: 'test/fixtures/sample.epub',
+                    bookId: 'b_first',
+                    bookTitle: '第一本書',
+                    isFixedLayout: false,
+                    dependencies: fakeReaderFeatureDependencies(
+                      prefsManager: prefs,
+                      ttsProvider: FakeTtsProvider(),
+                      ttsAudio: holder,
+                    ),
+                  ),
                 ),
               Expanded(
                 key: const ValueKey('wrap_second'),
-                child: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_second', bookTitle: '第二本書', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefs, ttsProvider: FakeTtsProvider(), ttsAudio: holder)),
+                child: ReaderScreen(
+                  filePath: 'test/fixtures/sample.epub',
+                  bookId: 'b_second',
+                  bookTitle: '第二本書',
+                  isFixedLayout: false,
+                  dependencies: fakeReaderFeatureDependencies(
+                    prefsManager: prefs,
+                    ttsProvider: FakeTtsProvider(),
+                    ttsAudio: holder,
+                  ),
+                ),
               ),
             ],
           ),
@@ -373,10 +423,28 @@ void main() {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_notice_first', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefs, ttsProvider: FakeTtsProvider(), ttsAudio: holder)),
+                child: ReaderScreen(
+                  filePath: 'test/fixtures/sample.epub',
+                  bookId: 'b_notice_first',
+                  isFixedLayout: false,
+                  dependencies: fakeReaderFeatureDependencies(
+                    prefsManager: prefs,
+                    ttsProvider: FakeTtsProvider(),
+                    ttsAudio: holder,
+                  ),
+                ),
               ),
               Expanded(
-                child: ReaderScreen(filePath: 'test/fixtures/sample.epub', bookId: 'b_notice_second', isFixedLayout: false, dependencies: fakeReaderFeatureDependencies(prefsManager: prefs, ttsProvider: FakeTtsProvider(), ttsAudio: holder)),
+                child: ReaderScreen(
+                  filePath: 'test/fixtures/sample.epub',
+                  bookId: 'b_notice_second',
+                  isFixedLayout: false,
+                  dependencies: fakeReaderFeatureDependencies(
+                    prefsManager: prefs,
+                    ttsProvider: FakeTtsProvider(),
+                    ttsAudio: holder,
+                  ),
+                ),
               ),
             ],
           ),

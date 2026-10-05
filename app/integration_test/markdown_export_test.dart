@@ -87,7 +87,17 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_markdown_export', bookTitle: '匯出測試書', bookAuthor: '測試作者', bookProgress: 0.5, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_markdown_export',
+          bookTitle: '匯出測試書',
+          bookAuthor: '測試作者',
+          bookProgress: 0.5,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);

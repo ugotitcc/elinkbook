@@ -110,7 +110,14 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: ReaderScreen(filePath: book.filePath, bookId: book.id, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: libraryRepository)),
+          home: ReaderScreen(
+            filePath: book.filePath,
+            bookId: book.id,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              libraryRepository: libraryRepository,
+            ),
+          ),
         ),
       );
       await _pumpUntilLoaded(tester);

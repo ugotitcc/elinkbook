@@ -87,7 +87,15 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(filePath: samplePath, bookId: 'b_fxl_bookmarks', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, bookmarksRepository: bookmarksRepository)),
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_fxl_bookmarks',
+          isFixedLayout: true,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
       ),
     );
     await _pumpUntilLoaded(tester);
