@@ -132,13 +132,49 @@
 - 剩餘：Issue 2（F1，消除約 10 秒黑屏，需先寫 `plans/plan-issue-2.md` 並審查）、F2（觸發條件，調查項目，不開 Issue）。
 - 附帶記錄：`pdf_reader_view_filters_test.dart`「同時有多頁需要加粗運算時，各頁互不取消」在全套並行負載下會失敗（基準分支也失敗，單獨重跑通過），尚未處理、未立項。
 
+**2026-10-05 Issue 2（F1）實作**（分支 `epic-61/non-blocking-audio-init`，worktree 開發）
+
+- Task 1（`e86e6c5d`）：新增 `TtsAudioHandlerHolder`（pending／ready／failed，
+  單向轉移）與 `startTtsAudioHandlerInBackground`（同步回傳 pending holder，
+  背景跑 `initTtsAudioHandlerSafely`，完成後 ready／failed 並通知一次）；
+  `tts_audio_handler_startup_test.dart` 11 案例先紅後綠。
+- Task 2（`b392399d`）：`ttsAudioHandler`＋`ttsDegradedNotice` 合併為單一
+  `ttsAudio` holder 貫穿（main→bundle→route→ReaderScreen）；移除
+  `TtsDegradedNotice` 並刪除舊測試檔（案例已搬）；串接測試改斷言 holder 原樣轉交。
+- Task 3（`2cee6e58`）：`ReaderScreen` 監聽 holder（晚到補 attach、晚到降級補提示，
+  皆先判 `mounted`）；`dispose` 只在 handler 當下綁的就是自己 controller 時才
+  detach（`detachController({only})`，不帶參數行為不變）；新增
+  `reader_screen_tts_late_handler_test.dart` 8 案例（含雙畫面並存、播放中晚到）。
+- Task 4（`750f1968`）：`main()` 不再 `await`，holder 背景啟動直傳 `ElinkBookApp`。
+- 驗證：`flutter analyze` 乾淨；l10n 雙檢查 PASS；觸及檔 331/331 綠；全套
+  `flutter test` 3669 通過、1 略過、1 失敗＝既有加粗不穩案例（單獨重跑通過，
+  基準亦然，非回歸）。
+- 自查（人類禁 subagent，無獨立審查者）：`reviews/review-code-issue-2.md`，
+  0 Critical／0 Important／3 Minor（皆 deferred）。
+
+**2026-10-05 Issue 2 真機驗收（電子紙 WAVE，暫時碼事後已還原）**
+
+| 組 | 首幀毫秒（3 次冷啟動） |
+|---|---|
+| A 正常版 | 14686／10408／10407（第 1 次含安裝後 dex 成本） |
+| B 注入 10 秒 init 延遲 | 14744／10409／10336 |
+
+- 穩定值皆約 10.4 秒（其他 `await` 的本來底噪），B − A 約 0 毫秒（驗收標準 0.5 秒內）。
+  修復前同樣情境要多等約 10 秒（見上文 10.2 秒 log）。
+- 故障 manifest（`AudioServiceBROKEN`）：正常進書架，綁定失敗在背景被接住
+  （`TTS 音訊服務初始化失敗…PlatformException` log 1 筆、未處理例外 0、無黑屏）；
+  進閱讀器出現「本次沒有媒體通知與鎖定畫面控制，朗讀仍可使用」一次（截圖確認）。
+- 正常版：EPUB 朗讀播放後系統媒體通知出現（`tts_channel`，Previous／Pause／Next），
+  同一進程無初始化失敗紀錄。裝置已留正常版。
+- 待辦：開 PR、合併後更新 `epics.md`／`issues.md`／本檔（需人類執行）。
+
 ## 後續項目（併入本 Epic，不另開 Epic）
 
 2026-10-05 人類決定：同一條問題線的後續工作不為每個小問題各開一個 Epic，併在本 Epic 以「後續項目」追蹤。
 
 | # | 項目 | 狀態 | 備註 |
 |---|---|---|---|
-| F1 | 失敗時約 10 秒黑屏：把 `AudioService.init` 改成不阻塞啟動（背景進行，完成後再注入 handler） | 未開始 | 範圍較大：handler 已被 `LibraryScreen`／`ReaderScreen` 以建構子參數往下傳，需改為可晚到注入。需先量實際失敗時的黑屏時間（需可控的「綁定逾時」而非立即失敗的故障 manifest） |
+| F1 | 失敗時約 10 秒黑屏：把 `AudioService.init` 改成不阻塞啟動（背景進行，完成後再注入 handler） | 實作與真機驗收完成，待開 PR | B−A 約 0 毫秒（標準 0.5 秒內）；降級提示與媒體通知皆照常，見本檔 2026-10-05 記錄 |
 | F2 | 綁定逾時的觸發條件 | 未開始 | 自然重現約 1／10，CPU 滿載無法重現；「安裝後系統忙」「廠商凍結機制」未證實 |
 | F3 | 降級後讓使用者知道（例如一次性提示） | 已完成（Issue 1，PR #324） | 進入閱讀器時 SnackBar、每次啟動一次；4 個 arb |
 
