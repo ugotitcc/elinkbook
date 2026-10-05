@@ -309,4 +309,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 
 - 來源：2026-10-05 架構檢視候選 2（`/improve-codebase-architecture`）。同一類「bundle 逐欄轉送漏欄位」缺陷已出現三次（epic-26 Issue 7 審查、`computeFingerprint`、`ttsDegradedNotice`）；`ReaderScreen` 28 個參數中 17 個為 nullable 依賴，`reader_screen.dart` 在開單書搜尋時手動重建 bundle。
 - 設計經 grilling 定案，詳見 ADR 0037：依賴按使用者分四組、單一物件經建構子傳遞、non-null required、測試預設全 fake、逐畫面一刀切、不用 `InheritedWidget`。Issue 11 先做，完成後確認設計成立再做 12～14。
+- 工單審查（`reviews/review-issues-11-14.md`，2 Critical／4 Important／3 Minor）已逐項對照程式碼後採納並修訂 ADR 0037 與 Issues：`syncCheckpointTrigger` 同時放入閱讀器組與同步組（同一實例）、介面語言併入 `AppearanceDependencies`、`WifiTransferDependencies` 併入 `SourceDependencies`、`readingStatsTracker`／`pickSingleBookFile` 留作測試注入點、`buildReaderScreen` 暫時組裝僅限該處且於 Issue 12/13 移除、Issue 14 調為 Strong。原先整理分組時漏列這三項（`LibraryLocaleDependencies` 是第 6 個既有 bundle，非 5 個）。
 - 已知風險：測試改動量大（`ReaderScreen(` 約 267 處、`LibraryScreen(` 約 135 處、`SettingsScaffold(` 約 53 處）；Issue 11 開工前須核對 `ReaderScreen` 的 17 個依賴中是否有 `readingStatsTracker` 這類由畫面自行建構者。
