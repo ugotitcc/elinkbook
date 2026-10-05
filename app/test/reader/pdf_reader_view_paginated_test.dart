@@ -1225,9 +1225,12 @@ void main() {
       final h = _Harness();
       final c = await h.open(tester, h.app(pdfBoldStrength: 1.0));
 
+      // 加粗在背景 Isolate 運算；全套測試並行負載下比單檔慢很多，等待上限放寬
+      // （單檔約 1 秒完成，上限 200 輪只在負載下才會用到）。
       await pumpUntilPdfReady(
         tester,
         condition: () => find.byType(RawImage).evaluate().isNotEmpty,
+        maxIterations: 200,
         delayBetweenPumps: const Duration(milliseconds: 50),
       );
       expect(find.byType(RawImage), findsWidgets,

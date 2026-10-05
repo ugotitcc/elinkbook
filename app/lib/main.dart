@@ -329,6 +329,7 @@ Future<void> main() async {
       bookReaderPrefsRepository: prefsRepository,
       ttsProvider: ttsProvider,
       ttsAudioHandler: ttsAudioHandler,
+      ttsDegradedNotice: TtsDegradedNotice(degraded: ttsAudioHandler == null),
       ttsAudioFocusSource: ttsAudioFocusSource,
       readerActivityTracker: readerActivityTracker,
       syncAccountRepository: syncAccountRepository,
@@ -377,6 +378,9 @@ class ElinkBookApp extends StatefulWidget {
   final BookReaderPrefsRepository? bookReaderPrefsRepository;
   final TtsProvider? ttsProvider;
   final TtsAudioHandler? ttsAudioHandler;
+
+  /// epic-61 Issue 1：TTS 音訊服務降級後，進入閱讀器時提示一次的狀態。
+  final TtsDegradedNotice? ttsDegradedNotice;
   final TtsAudioFocusSource? ttsAudioFocusSource;
   final ReaderActivityTracker? readerActivityTracker;
   final SyncAccountRepository? syncAccountRepository;
@@ -432,6 +436,7 @@ class ElinkBookApp extends StatefulWidget {
     this.bookReaderPrefsRepository,
     this.ttsProvider,
     this.ttsAudioHandler,
+    this.ttsDegradedNotice,
     this.ttsAudioFocusSource,
     this.readerActivityTracker,
     this.syncAccountRepository,
@@ -544,6 +549,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
           bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
           ttsProvider: widget.ttsProvider,
           ttsAudioHandler: widget.ttsAudioHandler,
+          ttsDegradedNotice: widget.ttsDegradedNotice,
           ttsAudioFocusSource: widget.ttsAudioFocusSource,
           readerActivityTracker: widget.readerActivityTracker,
           fullTextSearchSettingsRepository:

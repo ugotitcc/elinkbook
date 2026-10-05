@@ -55,6 +55,7 @@ import '../support/fake_notes_repository.dart';
 import '../support/fake_tts_provider.dart';
 import 'package:elinkbook/reader/tts_audio_focus_source.dart';
 import 'package:elinkbook/reader/tts_audio_handler.dart';
+import 'package:elinkbook/reader/tts_audio_handler_startup.dart';
 
 import '../support/fake_tts_audio_focus_source.dart';
 import 'package:elinkbook/reader/epub_selection_info.dart';
@@ -11492,6 +11493,39 @@ void main() {
           tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
       expect(pushed.readerFeatureRepositories.bookImportService,
           same(importService));
+    });
+
+    testWidgets(
+        'ttsDegradedNotice 會轉送給推入的 BookSearchScreen'
+        '（epic-61 Issue 1：手動重建 bundle 的新欄位必須一併轉送）',
+        (tester) async {
+      final notice = TtsDegradedNotice(degraded: false);
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_tts_degraded_notice',
+            prefsManager: FakeReaderPrefsManager(),
+            searchRepository: FakeSearchRepository(),
+            libraryRepository: FakeLibraryRepository(),
+            ttsDegradedNotice: notice,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pumpAndSettle();
+
+      final pushed =
+          tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
+      expect(pushed.readerFeatureRepositories.ttsDegradedNotice, same(notice));
     });
 
     testWidgets('searchRepository 為 null 時，點擊搜尋按鈕顯示不可用提示，不導覽',

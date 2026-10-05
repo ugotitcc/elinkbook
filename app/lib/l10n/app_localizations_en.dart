@@ -2150,6 +2150,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookmarkDefaultNameFallback => 'Bookmark';
 
   @override
+  String get ttsDegradedNotice =>
+      'No media notification or lock-screen controls this time. Reading aloud still works.';
+
+  @override
   String get ttsNotificationChannelName => 'Reading aloud';
 
   @override

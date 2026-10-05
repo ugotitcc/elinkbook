@@ -43,6 +43,7 @@ ReaderScreen buildReaderScreen({
     syncCheckpointTrigger: sync.syncCheckpointTrigger,
     ttsProvider: features.ttsProvider,
     ttsAudioHandler: features.ttsAudioHandler,
+    ttsDegradedNotice: features.ttsDegradedNotice,
     ttsAudioFocusSource: features.ttsAudioFocusSource,
     isEinkMode: isEinkMode,
     readerActivityTracker: features.readerActivityTracker,

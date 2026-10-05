@@ -108,6 +108,24 @@
 - PR #323（`epic-61/startup-no-black-screen` → `main`）已合併，合併 commit `e913749d`。實作、真機驗證與程式審查全數完成，待歸檔。
 - 留給後續的未解事項：(1) 綁定逾時的觸發條件仍未明（自然重現約 1／10）；(2) 失敗時仍有約 10 秒黑屏，需把 `AudioService.init` 改成不阻塞啟動才能消除；(3) 降級後使用者看不到提示。皆尚未另立 Epic。
 
+**2026-10-05 Issue 1（F3）實作**（分支 `epic-61/tts-degraded-notice`）
+
+- 人類決定：進入閱讀器時顯示一次 SnackBar，每次啟動 App 只顯示一次。
+- 設計：新增 `TtsDegradedNotice`（`tts_audio_handler_startup.dart`），`consume()` 第一次回 true、之後 false。刻意用獨立旗標，不用「handler == null」判斷——測試與未接 TTS 的呼叫端本來就不傳 handler，不能誤報。由 `main.dart`（`degraded: ttsAudioHandler == null`）→ `LibraryReaderFeatureRepositories` → `buildReaderScreen` → `ReaderScreen`；`ReaderScreen.initState` 的 post-frame 顯示。
+- 字串：`ttsDegradedNotice`（4 個 arb）。
+- 測試：`tts_degraded_notice_test.dart`（2）、`reader_screen_tts_degraded_notice_test.dart`（4：顯示、重進不重複、未降級不顯示、未傳 notice 不顯示）。先紅（編譯失敗）後綠；變異檢查：`consume()` 不歸零 → 2 個失敗，還原後全過。
+- 驗證：`flutter analyze` 乾淨；l10n 兩項檢查 PASS；`elinkbook_app_wiring_test` 與 `test/l10n` 通過。
+- 全套 `flutter test`：3653 通過、1 略過、1 失敗。失敗的是既有的 `pdf_reader_view_filters_test.dart`「同時有多頁需要加粗運算時，各頁互不取消」——在**沒有本分支改動**的基準上也失敗（基準 1 個失敗），單獨重跑則通過，屬全套並行負載下加粗背景運算變慢的不穩定，與本 Issue 無關，未處理。另外，逐頁濾鏡新測試（epic-56 FU-1）的加粗那則同樣受負載影響，已把等待上限放寬到 200 輪。
+- **真機驗證（電子紙 WAVE）**：暫時把 manifest 的 `<service>` 改成 `AudioServiceBROKEN` 製造降級。故障版：進書架後再進閱讀器，畫面左下角出現「本次沒有媒體通知與鎖屏控制，朗讀仍可使用」，降級 log 1 筆。正常版：同樣操作沒有提示。故障 manifest 已還原（`BROKEN` 殘留 0、內容 diff 為空），裝置已重裝正常版。限制：SnackBar 約 4 秒，要在裝置端連拍才抓得到，第一次從電腦端截圖錯過。
+
+**2026-10-05 Issue 1 程式審查修訂**（`reviews/review-code-issue-1.md`：0 Critical／1 Important／4 Minor，結論可合併）
+
+- **I-1 成立，已修**：`reader_screen.dart` 手動重建 `LibraryReaderFeatureRepositories`（閱讀器→單書搜尋）漏轉送 `ttsDegradedNotice`（讀碼確認；目前無功能影響，但違反該處「新欄位必須一併轉送」的註解）。已補轉送，並補 3 處串接測試：`reader_screen_test.dart`（轉送給 `BookSearchScreen`，先紅後綠）、`reader_screen_route_test.dart`（`buildReaderScreen` 轉送／未帶為 null）、`elinkbook_app_wiring_test.dart`（`ElinkBookApp` → bundle）。變異檢查：拿掉 `reader_screen_route.dart` 與 `main.dart` 的轉送行 → 2 個失敗，還原後全過。
+- **M-1 成立，已改**：zh_TW、zh 的「鎖屏」改為「鎖定畫面」（台灣用語），重新產生 l10n；簡體 `锁屏` 不動。
+- **M-2、M-3 不改，只記錄**：SnackBar 在使用者 4 秒內離開閱讀器時會留到書架；與其他 SnackBar 排隊。皆為一次性、影響極低，且與閱讀器其他 SnackBar 同一模式。（審查標為推測，未驗證。）
+- **M-4 已處理**：`AndroidManifest.xml` 內容與原本無差異（只有換行字元），確認後以 `git checkout` 還原為乾淨。
+- 驗證：`flutter analyze` 乾淨；觸及的測試檔全過（`reader_screen_test` 整檔、route、wiring、notice、l10n）；l10n 檢查 PASS。全套 `flutter test` 於審查前已跑（3653 通過、1 個既有的加粗測試不穩），審查修訂只動 1 行轉送、文案與測試。
+
 ## 後續項目（併入本 Epic，不另開 Epic）
 
 2026-10-05 人類決定：同一條問題線的後續工作不為每個小問題各開一個 Epic，併在本 Epic 以「後續項目」追蹤。
@@ -116,7 +134,7 @@
 |---|---|---|---|
 | F1 | 失敗時約 10 秒黑屏：把 `AudioService.init` 改成不阻塞啟動（背景進行，完成後再注入 handler） | 未開始 | 範圍較大：handler 已被 `LibraryScreen`／`ReaderScreen` 以建構子參數往下傳，需改為可晚到注入。需先量實際失敗時的黑屏時間（需可控的「綁定逾時」而非立即失敗的故障 manifest） |
 | F2 | 綁定逾時的觸發條件 | 未開始 | 自然重現約 1／10，CPU 滿載無法重現；「安裝後系統忙」「廠商凍結機制」未證實 |
-| F3 | 降級後讓使用者知道（例如一次性提示） | 未開始 | 需要新增字串（4 個 arb） |
+| F3 | 降級後讓使用者知道（例如一次性提示） | 實作中（Issue 1） | 進入閱讀器時 SnackBar、每次啟動一次；4 個 arb |
 
 F1、F3 已拆成 Issue，見 `issues.md`（F3＝Issue 1、F1＝Issue 2）；F2 是調查，不開 Issue，留在此表。
 

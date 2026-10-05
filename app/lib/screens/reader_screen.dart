@@ -30,6 +30,7 @@ import '../reader/foliate_reader_view.dart';
 import '../reader/tts_audio_focus_coordinator.dart';
 import '../reader/tts_audio_focus_source.dart';
 import '../reader/tts_audio_handler.dart';
+import '../reader/tts_audio_handler_startup.dart';
 import '../reader/tts_audio_player.dart';
 import '../reader/tts_controller.dart';
 import '../reader/tts_provider.dart';
@@ -204,6 +205,10 @@ class ReaderScreen extends StatefulWidget {
   /// 標準），因為 CBZ 是純圖像格式、沒有文字可朗讀。
   final TtsProvider? ttsProvider;
   final TtsAudioHandler? ttsAudioHandler;
+
+  /// epic-61 Issue 1：TTS 音訊服務初始化失敗降級後，開書時提示一次（每次啟動
+  /// App 只提示一次）。`null`（既有呼叫端、測試）時不提示。
+  final TtsDegradedNotice? ttsDegradedNotice;
   final TtsAudioFocusSource? ttsAudioFocusSource;
 
   /// E-Ink 高對比模式（epic-34-tts-readalong Issue 8）：App 層級主題設定
@@ -293,6 +298,7 @@ class ReaderScreen extends StatefulWidget {
     this.syncCheckpointTrigger,
     this.ttsProvider,
     this.ttsAudioHandler,
+    this.ttsDegradedNotice,
     this.ttsAudioFocusSource,
     this.isEinkMode = false,
     this.readerActivityTracker,
@@ -580,6 +586,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void initState() {
     super.initState();
     _creationZone = Zone.current;
+    // epic-61 Issue 1：降級後進入閱讀器提示一次。需等第一個 frame 之後才有
+    // 可用的 context／ScaffoldMessenger。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.ttsDegradedNotice?.consume() != true) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: const Key('reader_tts_degraded_snackbar'),
+          content: Text(AppLocalizations.of(context)!.ttsDegradedNotice),
+        ),
+      );
+    });
     final importService = widget.bookImportService;
     _openBookFlow = OpenBookFlow(
       filePath: widget.filePath,
@@ -1838,6 +1855,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             ttsProvider: widget.ttsProvider,
             ttsAudioHandler: widget.ttsAudioHandler,
             ttsAudioFocusSource: widget.ttsAudioFocusSource,
+            // epic-61 Issue 1：同上，手動逐欄重建 bundle 的新欄位必須一併轉送。
+            ttsDegradedNotice: widget.ttsDegradedNotice,
             readerActivityTracker: widget.readerActivityTracker,
             searchRepository: searchRepository,
             isFullTextSearchAvailable: widget.isFullTextSearchAvailable,

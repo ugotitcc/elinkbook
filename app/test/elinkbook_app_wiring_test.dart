@@ -29,6 +29,7 @@ import 'support/fake_reading_stats_repository.dart';
 import 'support/fake_remote_server_repository.dart';
 import 'support/fake_remote_thumbnail_cache.dart';
 import 'support/fake_tts_provider.dart';
+import 'package:elinkbook/reader/tts_audio_handler_startup.dart';
 
 /// epic-26-architecture-hardening Issue 7 審查修正（review-issue-7.md
 /// Important #1）：Issue 7 把 `LibraryScreen` 27 個具名參數收斂為 5 個
@@ -93,6 +94,7 @@ void main() {
     Future<bool> isMobileDataConnection() async => false;
     final ttsProvider = FakeTtsProvider();
     final readingStatsRepository = FakeReadingStatsRepository();
+    final ttsDegradedNotice = TtsDegradedNotice(degraded: true);
 
     await tester.pumpWidget(
       ElinkBookApp(
@@ -119,6 +121,7 @@ void main() {
         thumbnailCache: thumbnailCache,
         isMobileDataConnection: isMobileDataConnection,
         ttsProvider: ttsProvider,
+        ttsDegradedNotice: ttsDegradedNotice,
         readingStatsRepository: readingStatsRepository,
         initialTheme: AppTheme.dark,
         initialEinkMode: true,
@@ -147,6 +150,8 @@ void main() {
         same(bookReaderPrefsRepository));
     expect(libraryScreen.readerFeatureRepositories.ttsProvider,
         same(ttsProvider));
+    expect(libraryScreen.readerFeatureRepositories.ttsDegradedNotice,
+        same(ttsDegradedNotice));
     expect(libraryScreen.readerFeatureRepositories.readingStatsRepository,
         same(readingStatsRepository));
 

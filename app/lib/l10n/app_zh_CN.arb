@@ -591,6 +591,7 @@
   "bookmarkDefaultNamePdfPage": "第 {page} 页",
   "bookmarkDefaultNamePercent": "{percent}% 处",
   "bookmarkDefaultNameFallback": "书签",
+  "ttsDegradedNotice": "本次没有媒体通知和锁屏控制，朗读仍可使用",
   "ttsNotificationChannelName": "朗读播放中",
   "ttsVoiceSystemDefault": "系统默认语音",
   "remoteCatalogUnnamedCategory": "未命名分类",
