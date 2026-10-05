@@ -1,7 +1,7 @@
 # `epic-61-startup-black-screen` （缺陷）安裝新版後第一次啟動黑屏：`AudioService.init` 例外未接住，`runApp` 未執行
 
-**狀態：** 🟡 開發中 (Active)
-**存放路徑：** `docs/epics/epic-61-startup-black-screen/`
+**狀態：** 🟢 已歸檔 (Archived)
+**存放路徑：** `docs/archive/2026-10-05-epic-61-startup-black-screen/`
 **關聯 PRD 章節：** 無（啟動穩定性）；來源：`epic-59-pdf-overlay-recompute-storm` 電子紙真機驗證的附帶觀察
 
 ## 背景
