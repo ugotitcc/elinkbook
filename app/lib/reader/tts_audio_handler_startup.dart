@@ -121,24 +121,3 @@ TtsAudioHandlerHolder startTtsAudioHandlerInBackground(
   });
   return holder;
 }
-
-/// 「TTS 音訊服務降級」提示的一次性狀態（epic-61 Issue 1）。
-///
-/// [degraded] 為 true 代表啟動時 [initTtsAudioHandlerSafely] 失敗、handler 為
-/// null。進入閱讀器時以 [consume] 取得是否要提示：第一次回傳 true，之後一律
-/// false，達成「每次啟動 App 只提示一次」。
-///
-/// 刻意用獨立旗標而不是「handler == null」判斷：測試與未接 TTS 的呼叫端本來
-/// 就不傳 handler，不能因此誤報降級。
-class TtsDegradedNotice {
-  TtsDegradedNotice({required bool degraded}) : _pending = degraded;
-
-  bool _pending;
-
-  /// 回傳是否應該現在提示，並標記為已提示。
-  bool consume() {
-    final shouldShow = _pending;
-    _pending = false;
-    return shouldShow;
-  }
-}

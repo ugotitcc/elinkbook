@@ -94,7 +94,7 @@ void main() {
     Future<bool> isMobileDataConnection() async => false;
     final ttsProvider = FakeTtsProvider();
     final readingStatsRepository = FakeReadingStatsRepository();
-    final ttsDegradedNotice = TtsDegradedNotice(degraded: true);
+    final ttsAudio = TtsAudioHandlerHolder.degraded();
 
     await tester.pumpWidget(
       ElinkBookApp(
@@ -121,7 +121,7 @@ void main() {
         thumbnailCache: thumbnailCache,
         isMobileDataConnection: isMobileDataConnection,
         ttsProvider: ttsProvider,
-        ttsDegradedNotice: ttsDegradedNotice,
+        ttsAudio: ttsAudio,
         readingStatsRepository: readingStatsRepository,
         initialTheme: AppTheme.dark,
         initialEinkMode: true,
@@ -150,8 +150,8 @@ void main() {
         same(bookReaderPrefsRepository));
     expect(libraryScreen.readerFeatureRepositories.ttsProvider,
         same(ttsProvider));
-    expect(libraryScreen.readerFeatureRepositories.ttsDegradedNotice,
-        same(ttsDegradedNotice));
+    expect(libraryScreen.readerFeatureRepositories.ttsAudio,
+        same(ttsAudio));
     expect(libraryScreen.readerFeatureRepositories.readingStatsRepository,
         same(readingStatsRepository));
 

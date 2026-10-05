@@ -82,7 +82,7 @@ void main() {
           LayoutPresetRepository(dbRepository.database);
       final bookReaderPrefsRepository = FakeBookReaderPrefsRepository();
       final ttsProvider = FakeTtsProvider();
-      final ttsAudioHandler = TtsAudioHandler();
+      final ttsAudio = TtsAudioHandlerHolder.ready(TtsAudioHandler());
       final ttsAudioFocusSource = FakeTtsAudioFocusSource();
       final readerActivityTracker = ReaderActivityTracker();
       final searchRepository = FakeSearchRepository();
@@ -99,7 +99,7 @@ void main() {
         layoutPresetRepository: layoutPresetRepository,
         bookReaderPrefsRepository: bookReaderPrefsRepository,
         ttsProvider: ttsProvider,
-        ttsAudioHandler: ttsAudioHandler,
+        ttsAudio: ttsAudio,
         ttsAudioFocusSource: ttsAudioFocusSource,
         readerActivityTracker: readerActivityTracker,
         searchRepository: searchRepository,
@@ -136,7 +136,7 @@ void main() {
       expect(
           screen.bookReaderPrefsRepository, same(bookReaderPrefsRepository));
       expect(screen.ttsProvider, same(ttsProvider));
-      expect(screen.ttsAudioHandler, same(ttsAudioHandler));
+      expect(screen.ttsAudio, same(ttsAudio));
       expect(screen.ttsAudioFocusSource, same(ttsAudioFocusSource));
       expect(screen.readerActivityTracker, same(readerActivityTracker));
       expect(screen.searchRepository, same(searchRepository));
@@ -211,21 +211,21 @@ void main() {
       expect(screen.readingStatsTracker, isNull);
     });
 
-    test('bundle 帶 ttsDegradedNotice 時，原樣轉交給 ReaderScreen（epic-61 Issue 1）', () {
-      final notice = TtsDegradedNotice(degraded: true);
+    test('bundle 帶 ttsAudio 時，原樣轉交給 ReaderScreen（epic-61 Issue 2）', () {
+      final ttsAudio = TtsAudioHandlerHolder.degraded();
       final screen = buildReaderScreen(
         book: _testBook(),
         prefsManager: FakeReaderPrefsManager(),
-        features: LibraryReaderFeatureRepositories(ttsDegradedNotice: notice),
+        features: LibraryReaderFeatureRepositories(ttsAudio: ttsAudio),
         sync: const LibrarySyncDependencies(),
         libraryRepository: FakeLibraryRepository(),
         isEinkMode: false,
       );
 
-      expect(screen.ttsDegradedNotice, same(notice));
+      expect(screen.ttsAudio, same(ttsAudio));
     });
 
-    test('bundle 未帶 ttsDegradedNotice 時，ReaderScreen.ttsDegradedNotice 為 null', () {
+    test('bundle 未帶 ttsAudio 時，ReaderScreen.ttsAudio 為 null', () {
       final screen = buildReaderScreen(
         book: _testBook(),
         prefsManager: FakeReaderPrefsManager(),
@@ -235,7 +235,7 @@ void main() {
         isEinkMode: false,
       );
 
-      expect(screen.ttsDegradedNotice, isNull);
+      expect(screen.ttsAudio, isNull);
     });
 
     test('initialJumpTarget 有值時正確帶入 ReaderScreen', () {

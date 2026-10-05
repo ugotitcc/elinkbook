@@ -29,7 +29,6 @@ import '../reader/foliate_bridge_codec.dart';
 import '../reader/foliate_reader_view.dart';
 import '../reader/tts_audio_focus_coordinator.dart';
 import '../reader/tts_audio_focus_source.dart';
-import '../reader/tts_audio_handler.dart';
 import '../reader/tts_audio_handler_startup.dart';
 import '../reader/tts_audio_player.dart';
 import '../reader/tts_controller.dart';
@@ -204,11 +203,11 @@ class ReaderScreen extends StatefulWidget {
   /// 也會顯示明確停用狀態的按鈕（非隱藏，見 `issues.md` Issue 2 驗收
   /// 標準），因為 CBZ 是純圖像格式、沒有文字可朗讀。
   final TtsProvider? ttsProvider;
-  final TtsAudioHandler? ttsAudioHandler;
 
-  /// epic-61 Issue 1：TTS 音訊服務初始化失敗降級後，開書時提示一次（每次啟動
-  /// App 只提示一次）。`null`（既有呼叫端、測試）時不提示。
-  final TtsDegradedNotice? ttsDegradedNotice;
+  /// epic-61 Issue 2：啟動階段 TTS 音訊服務 holder（handler 是否就緒＋降級
+  /// 提示是否待顯示）。`null`（既有呼叫端、測試）時視為未提供：不 attach、
+  /// 不提示，行為與之前相同。
+  final TtsAudioHandlerHolder? ttsAudio;
   final TtsAudioFocusSource? ttsAudioFocusSource;
 
   /// E-Ink 高對比模式（epic-34-tts-readalong Issue 8）：App 層級主題設定
@@ -297,8 +296,7 @@ class ReaderScreen extends StatefulWidget {
     this.bookReaderPrefsRepository,
     this.syncCheckpointTrigger,
     this.ttsProvider,
-    this.ttsAudioHandler,
-    this.ttsDegradedNotice,
+    this.ttsAudio,
     this.ttsAudioFocusSource,
     this.isEinkMode = false,
     this.readerActivityTracker,
@@ -589,7 +587,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // epic-61 Issue 1：降級後進入閱讀器提示一次。需等第一個 frame 之後才有
     // 可用的 context／ScaffoldMessenger。
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || widget.ttsDegradedNotice?.consume() != true) return;
+      if (!mounted || widget.ttsAudio?.consumeDegradedNotice() != true) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           key: const Key('reader_tts_degraded_snackbar'),
@@ -749,7 +747,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _volumeKeyChannel.setMethodCallHandler(null);
     _pdfSearchStateNotifier.dispose();
     _ttsAudioFocusCoordinator?.dispose();
-    widget.ttsAudioHandler?.detachController();
+    widget.ttsAudio?.handler?.detachController();
     _ttsController?.removeListener(_onTtsStatusChanged);
     _ttsController?.dispose();
     // 還原系統預設（允許自由旋轉），不論進入閱讀器時鎖定了哪個角度，比照
@@ -1853,10 +1851,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             layoutPresetRepository: widget.layoutPresetRepository,
             bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
             ttsProvider: widget.ttsProvider,
-            ttsAudioHandler: widget.ttsAudioHandler,
+            ttsAudio: widget.ttsAudio,
             ttsAudioFocusSource: widget.ttsAudioFocusSource,
-            // epic-61 Issue 1：同上，手動逐欄重建 bundle 的新欄位必須一併轉送。
-            ttsDegradedNotice: widget.ttsDegradedNotice,
+            // epic-61 Issue 2：同上，手動逐欄重建 bundle 的新欄位必須一併轉送。
             readerActivityTracker: widget.readerActivityTracker,
             searchRepository: searchRepository,
             isFullTextSearchAvailable: widget.isFullTextSearchAvailable,
@@ -3348,7 +3345,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
     _ttsController = controller;
     controller.addListener(_onTtsStatusChanged);
-    widget.ttsAudioHandler?.attachController(controller, bookTitle: _displayBookTitle);
+    widget.ttsAudio?.handler?.attachController(controller, bookTitle: _displayBookTitle);
     final focusSource = widget.ttsAudioFocusSource;
     if (focusSource != null) {
       _ttsAudioFocusCoordinator =

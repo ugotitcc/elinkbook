@@ -102,11 +102,11 @@
 
 **檔案：** `main.dart`（`ElinkBookApp`）、`library_screen_dependencies.dart`、`reader_screen_route.dart`、`reader_screen.dart` 的建構子與手動重建 bundle 處（約第 1847 行，Issue 1 審查 I-1 的同一處）。
 
-- [ ] 把 `ttsAudioHandler` 與 `ttsDegradedNotice` 兩個欄位換成一個 `TtsAudioHandlerHolder? ttsAudio`；現有測試以 `ready(handler)`／`unavailable()` 最小改動更新。
-- [ ] 移除 `TtsDegradedNotice` 類別，並**刪除** `test/reader/tts_degraded_notice_test.dart`（案例已在 Task 1 搬到 `tts_audio_handler_startup_test.dart`）。
-- [ ] 串接測試（`reader_screen_route_test`、`elinkbook_app_wiring_test`、`reader_screen_test` 的單書搜尋轉送）改為驗證 holder 原樣轉交；變異檢查：拿掉任一轉送行 → 對應測試失敗。
-- [ ] 跑觸及的測試檔。
-- [ ] 提交（`refactor(epic-61): ttsAudioHandler／ttsDegradedNotice 合併為 holder 往下傳`）。
+- [x] 把 `ttsAudioHandler` 與 `ttsDegradedNotice` 兩個欄位換成一個 `TtsAudioHandlerHolder? ttsAudio`；現有測試以 `ready(handler)`／`unavailable()` 最小改動更新。
+- [x] 移除 `TtsDegradedNotice` 類別，並**刪除** `test/reader/tts_degraded_notice_test.dart`（案例已在 Task 1 搬到 `tts_audio_handler_startup_test.dart`）。
+- [x] 串接測試（`reader_screen_route_test`、`elinkbook_app_wiring_test`、`reader_screen_test` 的單書搜尋轉送）改為驗證 holder 原樣轉交；變異檢查：拿掉任一轉送行 → 對應測試失敗。
+- [x] 跑觸及的測試檔。
+- [x] 提交（`refactor(epic-61): ttsAudioHandler／ttsDegradedNotice 合併為 holder 往下傳`）。
 
 ## Task 3：`ReaderScreen` 晚到注入
 

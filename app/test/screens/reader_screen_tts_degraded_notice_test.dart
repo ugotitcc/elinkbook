@@ -14,7 +14,7 @@ import '../support/fake_reader_prefs_manager.dart';
 // 用「不支援格式」分支即可：提示在 initState 之後觸發，與渲染路徑無關。
 const _snackbarKey = Key('reader_tts_degraded_snackbar');
 
-Widget _app(FakeReaderPrefsManager prefs, {TtsDegradedNotice? notice}) {
+Widget _app(FakeReaderPrefsManager prefs, {TtsAudioHandlerHolder? ttsAudio}) {
   return MaterialApp(
     locale: const Locale('zh', 'TW'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -24,7 +24,7 @@ Widget _app(FakeReaderPrefsManager prefs, {TtsDegradedNotice? notice}) {
       filePath: 'test/fixtures/sample.unknown',
       bookId: 'b_tts_degraded',
       prefsManager: prefs,
-      ttsDegradedNotice: notice,
+      ttsAudio: ttsAudio,
     ),
   );
 }
@@ -42,36 +42,38 @@ void main() {
   });
 
   testWidgets('降級時進入閱讀器顯示一次提示', (tester) async {
-    await tester.pumpWidget(_app(prefs, notice: TtsDegradedNotice(degraded: true)));
+    await tester.pumpWidget(
+        _app(prefs, ttsAudio: TtsAudioHandlerHolder.degraded()));
     await tester.pump();
 
     expect(find.byKey(_snackbarKey), findsOneWidget);
     expect(find.text('本次沒有媒體通知與鎖定畫面控制，朗讀仍可使用'), findsOneWidget);
   });
 
-  testWidgets('同一個 notice 已顯示過，再次進入閱讀器不重複顯示', (tester) async {
-    final notice = TtsDegradedNotice(degraded: true);
+  testWidgets('同一個 holder 已顯示過，再次進入閱讀器不重複顯示', (tester) async {
+    final ttsAudio = TtsAudioHandlerHolder.degraded();
 
-    await tester.pumpWidget(_app(prefs, notice: notice));
+    await tester.pumpWidget(_app(prefs, ttsAudio: ttsAudio));
     await tester.pump();
     expect(find.byKey(_snackbarKey), findsOneWidget);
 
     // 換掉整棵樹（等同離開再重新進入閱讀器），State 重新建立。
     await tester.pumpWidget(const SizedBox());
-    await tester.pumpWidget(_app(prefs, notice: notice));
+    await tester.pumpWidget(_app(prefs, ttsAudio: ttsAudio));
     await tester.pump();
 
     expect(find.byKey(_snackbarKey), findsNothing);
   });
 
   testWidgets('沒有降級時不顯示提示', (tester) async {
-    await tester.pumpWidget(_app(prefs, notice: TtsDegradedNotice(degraded: false)));
+    await tester.pumpWidget(
+        _app(prefs, ttsAudio: TtsAudioHandlerHolder.unavailable()));
     await tester.pump();
 
     expect(find.byKey(_snackbarKey), findsNothing);
   });
 
-  testWidgets('未傳 notice（既有呼叫端）時不顯示提示', (tester) async {
+  testWidgets('未傳 holder（既有呼叫端）時不顯示提示', (tester) async {
     await tester.pumpWidget(_app(prefs));
     await tester.pump();
 

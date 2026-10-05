@@ -219,8 +219,9 @@ Future<void> main() async {
     deviceLocales: WidgetsBinding.instance.platformDispatcher.locales,
   );
   // epic-61：service 綁定逾時時 AudioService.init 會丟出例外；以
-  // initTtsAudioHandlerSafely 接住並降級為 null（朗讀本次不可用），
-  // 避免 main() 中斷、runApp 未執行而整個 App 黑屏。
+  // initTtsAudioHandlerSafely 接住並降級（朗讀本次沒有媒體通知／鎖屏控制），
+  // 避免 main() 中斷、runApp 未執行而整個 App 黑屏。結果包進 holder 往下傳
+  // （epic-61 Issue 2；Task 4 會再改成背景執行、不在此等待）。
   final ttsAudioHandler = await initTtsAudioHandlerSafely(
     () => AudioService.init(
       builder: () => TtsAudioHandler(),
@@ -328,8 +329,9 @@ Future<void> main() async {
       layoutPresetRepository: layoutPresetRepository,
       bookReaderPrefsRepository: prefsRepository,
       ttsProvider: ttsProvider,
-      ttsAudioHandler: ttsAudioHandler,
-      ttsDegradedNotice: TtsDegradedNotice(degraded: ttsAudioHandler == null),
+      ttsAudio: ttsAudioHandler != null
+          ? TtsAudioHandlerHolder.ready(ttsAudioHandler)
+          : TtsAudioHandlerHolder.degraded(),
       ttsAudioFocusSource: ttsAudioFocusSource,
       readerActivityTracker: readerActivityTracker,
       syncAccountRepository: syncAccountRepository,
@@ -377,10 +379,10 @@ class ElinkBookApp extends StatefulWidget {
   final LayoutPresetRepository? layoutPresetRepository;
   final BookReaderPrefsRepository? bookReaderPrefsRepository;
   final TtsProvider? ttsProvider;
-  final TtsAudioHandler? ttsAudioHandler;
 
-  /// epic-61 Issue 1：TTS 音訊服務降級後，進入閱讀器時提示一次的狀態。
-  final TtsDegradedNotice? ttsDegradedNotice;
+  /// epic-61 Issue 2：啟動階段 TTS 音訊服務 holder（handler 是否就緒＋降級
+  /// 提示是否待顯示）。`null`（既有呼叫端、測試）時視為未提供，不提示。
+  final TtsAudioHandlerHolder? ttsAudio;
   final TtsAudioFocusSource? ttsAudioFocusSource;
   final ReaderActivityTracker? readerActivityTracker;
   final SyncAccountRepository? syncAccountRepository;
@@ -435,8 +437,7 @@ class ElinkBookApp extends StatefulWidget {
     this.layoutPresetRepository,
     this.bookReaderPrefsRepository,
     this.ttsProvider,
-    this.ttsAudioHandler,
-    this.ttsDegradedNotice,
+    this.ttsAudio,
     this.ttsAudioFocusSource,
     this.readerActivityTracker,
     this.syncAccountRepository,
@@ -548,8 +549,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
           layoutPresetRepository: widget.layoutPresetRepository,
           bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
           ttsProvider: widget.ttsProvider,
-          ttsAudioHandler: widget.ttsAudioHandler,
-          ttsDegradedNotice: widget.ttsDegradedNotice,
+          ttsAudio: widget.ttsAudio,
           ttsAudioFocusSource: widget.ttsAudioFocusSource,
           readerActivityTracker: widget.readerActivityTracker,
           fullTextSearchSettingsRepository:

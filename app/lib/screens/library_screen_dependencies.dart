@@ -14,7 +14,6 @@ import '../reader/layout_preset_repository.dart';
 import '../reader/notes_repository.dart';
 import '../reader/tts_provider.dart';
 import '../reader/tts_audio_focus_source.dart';
-import '../reader/tts_audio_handler.dart';
 import '../reader/tts_audio_handler_startup.dart';
 import '../reader/reader_activity_tracker.dart';
 import '../search/full_text_search_settings_repository.dart';
@@ -50,10 +49,10 @@ class LibraryReaderFeatureRepositories {
   final LayoutPresetRepository? layoutPresetRepository;
   final BookReaderPrefsRepository? bookReaderPrefsRepository;
   final TtsProvider? ttsProvider;
-  final TtsAudioHandler? ttsAudioHandler;
 
-  /// epic-61 Issue 1：降級後進入閱讀器提示一次的狀態；`null` 時不提示。
-  final TtsDegradedNotice? ttsDegradedNotice;
+  /// epic-61 Issue 2：啟動階段 TTS 音訊服務 holder（handler 是否就緒＋降級
+  /// 提示是否待顯示），取代分開傳遞的 `ttsAudioHandler` 與 `ttsDegradedNotice`。
+  final TtsAudioHandlerHolder? ttsAudio;
   final TtsAudioFocusSource? ttsAudioFocusSource;
   final ReaderActivityTracker? readerActivityTracker;
 
@@ -93,8 +92,7 @@ class LibraryReaderFeatureRepositories {
     this.layoutPresetRepository,
     this.bookReaderPrefsRepository,
     this.ttsProvider,
-    this.ttsAudioHandler,
-    this.ttsDegradedNotice,
+    this.ttsAudio,
     this.ttsAudioFocusSource,
     this.readerActivityTracker,
     this.fullTextSearchSettingsRepository,
