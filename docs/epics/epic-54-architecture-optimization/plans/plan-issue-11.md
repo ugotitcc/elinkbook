@@ -1053,7 +1053,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 `epic.md` 新增「Issue 11 實作完成」段落：分支名、Task 0 基準 N、最終通過數與算式、被刪缺席測試名稱清單、Task 4 需 `completeLegacyReaderFeatures()` 補齊的測試數、`readerSaveAsPresetUnavailableMessage` 孤兒鍵的記錄、Review Focus 逐條對應的測試名稱。`issues.md` Issue 11 狀態改為「🟡 實作完成，待程式審查」；`docs/epics.md` 備註「最後處理的 Issue」同步為「Issue 11 實作完成，待程式審查」。
 
-- [ ] **Step 3：完整測試（只在此處跑一次）**
+- [x] **Step 3：完整測試（只在此處跑一次）**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook/.worktrees/epic-54-issue-11-reader-deps/app
@@ -1062,7 +1062,7 @@ flutter test
 
 用 `run_in_background` 執行，約 6 分鐘。預期：0 失敗。
 
-- [ ] **Step 4：提交文件**
+- [x] **Step 4：提交文件**
 
 ```bash
 git add docs
@@ -1071,7 +1071,7 @@ git commit -m "docs(epic-54): Issue 11 實作記錄與 ADR 0037 措辭修訂
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 5：交給程式審查**
+- [x] **Step 5：交給程式審查**
 
 審查者先產出報告，存於 `docs/epics/epic-54-architecture-optimization/reviews/review-code-issue-11.md`（gitignore），不得直接改程式；審查完成後由人類決定發 PR 與合併。
 
