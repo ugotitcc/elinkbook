@@ -60,7 +60,7 @@
 
 **檔案：** `lib/reader/tts_audio_handler_startup.dart`、`test/reader/tts_audio_handler_startup_test.dart`（新增案例）。
 
-- [ ] 介面草稿（`tts_audio_handler_startup.dart`）：
+- [x] 介面草稿（`tts_audio_handler_startup.dart`）：
 
   ```dart
   /// 啟動階段 TTS 音訊服務的狀態。
@@ -81,22 +81,22 @@
     Future<TtsAudioHandler> Function() init,
   );
   ```
-- [ ] 規範狀態語意（回應審查：`unavailable()` 不再模糊）：`pending`＝初始化中（或測試中「不關心 TTS」的預設），`failed`＝初始化已失敗，兩者 `handler` 都是 null，但只有 `failed` 會提示。三個建構子的意圖：
+- [x] 規範狀態語意（回應審查：`unavailable()` 不再模糊）：`pending`＝初始化中（或測試中「不關心 TTS」的預設），`failed`＝初始化已失敗，兩者 `handler` 都是 null，但只有 `failed` 會提示。三個建構子的意圖：
   - `TtsAudioHandlerHolder.ready(handler)`：handler 已就緒（`ready`），不降級。
   - `TtsAudioHandlerHolder.degraded()`：handler 為 null，初始化已失敗（`failed`）、提示待顯示。
   - `TtsAudioHandlerHolder.unavailable()`：handler 為 null，初始化中（`pending`），**不提示**（供只是需要傳一個依賴的一般測試最小改動使用，不會意外觸發提示）。
   - 背景啟動函式建立的 holder 初始為 `pending`，init 結束後才變成 `ready` 或 `failed`；狀態只會單向轉移，不會從 `failed` 或 `ready` 回到 `pending`。
-- [ ] 把 `test/reader/tts_degraded_notice_test.dart` 的案例（降級時 consume 第一次 true、之後 false；未降級恆 false）搬進 `tts_audio_handler_startup_test.dart`，改以 holder 的 `consumeDegradedNotice()` 表達。
-- [ ] 先寫測試（紅）：
+- [x] 把 `test/reader/tts_degraded_notice_test.dart` 的案例（降級時 consume 第一次 true、之後 false；未降級恆 false）搬進 `tts_audio_handler_startup_test.dart`，改以 holder 的 `consumeDegradedNotice()` 表達。
+- [x] 先寫測試（紅）：
   - `startTtsAudioHandlerInBackground` 在 init 尚未完成時就同步回傳，holder `handler == null`、尚未降級。
   - init 成功 → holder 有 handler、通知 listener 一次、不降級。
   - init 丟例外 → holder `handler == null`、通知一次、降級待提示。
   - init 永遠不完成 → 不丟例外、不阻塞。
   - `consumeDegradedNotice()`：降級後第一次 true、之後 false（沿用 Issue 1 語意）；未降級恆 false。
   - `ready(handler)`／`unavailable()` 建構的初始狀態。
-- [ ] 實作 `TtsAudioHandlerHolder`；保留 `TtsDegradedNotice` 直到 Task 2 換完，最後移除（避免兩套並存）。
-- [ ] 跑 `flutter test test/reader/tts_audio_handler_startup_test.dart`；變異檢查：讓 holder 失敗時不通知 → 對應案例失敗。
-- [ ] 提交（`feat(epic-61): 新增 TtsAudioHandlerHolder 與背景啟動函式`）。
+- [x] 實作 `TtsAudioHandlerHolder`；保留 `TtsDegradedNotice` 直到 Task 2 換完，最後移除（避免兩套並存）。
+- [x] 跑 `flutter test test/reader/tts_audio_handler_startup_test.dart`；變異檢查：讓 holder 失敗時不通知 → 對應案例失敗。
+- [x] 提交（`feat(epic-61): 新增 TtsAudioHandlerHolder 與背景啟動函式`）。
 
 ## Task 2：換掉往下傳的參數
 

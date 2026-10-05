@@ -30,6 +30,98 @@ Future<TtsAudioHandler?> initTtsAudioHandlerSafely(
   }
 }
 
+/// 啟動階段 TTS 音訊服務的狀態（epic-61 Issue 2）。
+///
+/// [pending]＝初始化中（背景啟動函式剛回傳、init 尚未結束；測試中「不關心
+/// TTS」的預設也是它，不提示）；[ready]＝handler 已就緒；[failed]＝初始化已
+/// 失敗、降級提示待顯示。狀態只會單向轉移，不會從 [ready] 或 [failed] 回到
+/// [pending]。
+enum TtsAudioHandlerStatus { pending, ready, failed }
+
+/// 同時承載「handler 是否就緒」與「降級提示是否待顯示」的啟動階段 holder
+/// （epic-61 Issue 2），取代分開傳遞的 `ttsAudioHandler` 與
+/// `TtsDegradedNotice` 兩個參數——下游只需同步一個物件。
+///
+/// 三個建構子的意圖：
+/// - [TtsAudioHandlerHolder.ready]：handler 已就緒，不降級。
+/// - [TtsAudioHandlerHolder.degraded]：初始化已失敗（[failed]）、提示待顯示。
+/// - [TtsAudioHandlerHolder.unavailable]：初始化中（[pending]），不提示；
+///   供只是需要傳一個依賴的一般測試最小改動使用，不會意外觸發提示。
+class TtsAudioHandlerHolder extends ChangeNotifier {
+  TtsAudioHandlerHolder.ready(TtsAudioHandler handler)
+      : _status = TtsAudioHandlerStatus.ready,
+        _handler = handler,
+        _noticePending = false;
+
+  TtsAudioHandlerHolder.degraded()
+      : _status = TtsAudioHandlerStatus.failed,
+        _handler = null,
+        _noticePending = true;
+
+  TtsAudioHandlerHolder.unavailable()
+      : _status = TtsAudioHandlerStatus.pending,
+        _handler = null,
+        _noticePending = false;
+
+  TtsAudioHandlerHolder._pending()
+      : _status = TtsAudioHandlerStatus.pending,
+        _handler = null,
+        _noticePending = false;
+
+  TtsAudioHandlerStatus _status;
+  TtsAudioHandler? _handler;
+  bool _noticePending;
+
+  TtsAudioHandlerStatus get status => _status;
+
+  /// 只有 [status] 為 [TtsAudioHandlerStatus.ready] 時非 null。
+  TtsAudioHandler? get handler => _handler;
+
+  /// 只有 [status] 為 [TtsAudioHandlerStatus.failed] 且尚未提示時回傳 true，
+  /// 並標記為已提示（沿用 Issue 1 `TtsDegradedNotice.consume` 語意）。
+  bool consumeDegradedNotice() {
+    if (_status != TtsAudioHandlerStatus.failed || !_noticePending) {
+      return false;
+    }
+    _noticePending = false;
+    return true;
+  }
+
+  void _completeReady(TtsAudioHandler handler) {
+    if (_status != TtsAudioHandlerStatus.pending) return;
+    _handler = handler;
+    _status = TtsAudioHandlerStatus.ready;
+    notifyListeners();
+  }
+
+  void _completeFailed() {
+    if (_status != TtsAudioHandlerStatus.pending) return;
+    _status = TtsAudioHandlerStatus.failed;
+    _noticePending = true;
+    notifyListeners();
+  }
+}
+
+/// 同步回傳 [pending] 狀態的 holder，背景執行 [initTtsAudioHandlerSafely]
+/// （接住所有例外、失敗回傳 null 的語意不變），完成後把 holder 改成 [ready]
+/// 或 [failed] 並通知一次；init 永遠不回來時 holder 維持 [pending]、不提示。
+///
+/// [AudioService.init] 全程式只呼叫一次、失敗後不可重試的限制不變——背景
+/// 執行不改變這點，呼叫端仍只可呼叫一次本函式。
+TtsAudioHandlerHolder startTtsAudioHandlerInBackground(
+  Future<TtsAudioHandler> Function() init,
+) {
+  final holder = TtsAudioHandlerHolder._pending();
+  initTtsAudioHandlerSafely(init).then((handler) {
+    if (handler != null) {
+      holder._completeReady(handler);
+    } else {
+      holder._completeFailed();
+    }
+  });
+  return holder;
+}
+
 /// 「TTS 音訊服務降級」提示的一次性狀態（epic-61 Issue 1）。
 ///
 /// [degraded] 為 true 代表啟動時 [initTtsAudioHandlerSafely] 失敗、handler 為
