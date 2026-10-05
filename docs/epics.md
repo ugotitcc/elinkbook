@@ -69,7 +69,7 @@
 | 59 | `epic-58-pdf-crop-drag-select` PDF 手動裁切改為手指拖拉直接框選（取代四角圓點） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 60 | `epic-59-pdf-overlay-recompute-storm` （缺陷）PDF 開啟手動裁切／加粗後翻頁產生覆蓋圖計算風暴，頁面長時間全白 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 61 | `epic-60-crop-mode-lost-after-cancel` （缺陷）PDF 手動裁切按 ✕ 取消後，版面設定「裁切」分頁的模式按鈕全部沒有反白 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
-| 62 | `epic-61-startup-black-screen` （缺陷）安裝新版後第一次啟動黑屏：`main()` 的 `AudioService.init` 例外未接住，`runApp` 未執行 | 🟡 開發中 (Active) | 已合併（PR #323），真機驗證與程式審查完成；觸發條件仍未明、仍有約 10 秒黑屏（未另立 Epic）；後續項目（約 10 秒黑屏、觸發條件）仍在此 Epic 處理，暫不歸檔 |
+| 62 | `epic-61-startup-black-screen` （缺陷）安裝新版後第一次啟動黑屏：`main()` 的 `AudioService.init` 例外未接住，`runApp` 未執行 | 🟡 開發中 (Active) | Issue 1（F3 降級提示）已合併（PR #324）；Issue 2（F1 消除約 10 秒黑屏）未開始、F2（觸發條件）未明，仍在此 Epic 處理，暫不歸檔 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。

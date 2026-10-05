@@ -126,6 +126,12 @@
 - **M-4 已處理**：`AndroidManifest.xml` 內容與原本無差異（只有換行字元），確認後以 `git checkout` 還原為乾淨。
 - 驗證：`flutter analyze` 乾淨；觸及的測試檔全過（`reader_screen_test` 整檔、route、wiring、notice、l10n）；l10n 檢查 PASS。全套 `flutter test` 於審查前已跑（3653 通過、1 個既有的加粗測試不穩），審查修訂只動 1 行轉送、文案與測試。
 
+**2026-10-05 Issue 1 PR 合併**
+
+- PR #324（`epic-61/tts-degraded-notice` → `main`）已合併，合併 commit `ff19cc66`。F3 完成。
+- 剩餘：Issue 2（F1，消除約 10 秒黑屏，需先寫 `plans/plan-issue-2.md` 並審查）、F2（觸發條件，調查項目，不開 Issue）。
+- 附帶記錄：`pdf_reader_view_filters_test.dart`「同時有多頁需要加粗運算時，各頁互不取消」在全套並行負載下會失敗（基準分支也失敗，單獨重跑通過），尚未處理、未立項。
+
 ## 後續項目（併入本 Epic，不另開 Epic）
 
 2026-10-05 人類決定：同一條問題線的後續工作不為每個小問題各開一個 Epic，併在本 Epic 以「後續項目」追蹤。
@@ -134,7 +140,7 @@
 |---|---|---|---|
 | F1 | 失敗時約 10 秒黑屏：把 `AudioService.init` 改成不阻塞啟動（背景進行，完成後再注入 handler） | 未開始 | 範圍較大：handler 已被 `LibraryScreen`／`ReaderScreen` 以建構子參數往下傳，需改為可晚到注入。需先量實際失敗時的黑屏時間（需可控的「綁定逾時」而非立即失敗的故障 manifest） |
 | F2 | 綁定逾時的觸發條件 | 未開始 | 自然重現約 1／10，CPU 滿載無法重現；「安裝後系統忙」「廠商凍結機制」未證實 |
-| F3 | 降級後讓使用者知道（例如一次性提示） | 實作中（Issue 1） | 進入閱讀器時 SnackBar、每次啟動一次；4 個 arb |
+| F3 | 降級後讓使用者知道（例如一次性提示） | 已完成（Issue 1，PR #324） | 進入閱讀器時 SnackBar、每次啟動一次；4 個 arb |
 
 F1、F3 已拆成 Issue，見 `issues.md`（F3＝Issue 1、F1＝Issue 2）；F2 是調查，不開 Issue，留在此表。
 
