@@ -66,7 +66,7 @@
 - Commit：本計畫檔與 `issues.md` 狀態更新（在 `main` 上，純文件）
 - 建立 worktree：`.worktrees/epic-54-issue-11-reader-deps`（`.worktrees/` 已 gitignore）
 
-- [ ] **Step 1：提交計畫（在 `main`）**
+- [x] **Step 1：提交計畫（在 `main`）**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook
@@ -76,14 +76,14 @@ git commit -m "docs(epic-54): Issue 11 實作計畫
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 2：建立 worktree 與分支**
+- [x] **Step 2：建立 worktree 與分支**
 
 ```bash
 git worktree add .worktrees/epic-54-issue-11-reader-deps -b epic-54/issue-11-reader-deps
 cd .worktrees/epic-54-issue-11-reader-deps/app && flutter pub get
 ```
 
-- [ ] **Step 3：記錄異動範圍的基準（零回歸對照用）**
+- [x] **Step 3：記錄異動範圍的基準（零回歸對照用）**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook/.worktrees/epic-54-issue-11-reader-deps/app
@@ -107,7 +107,7 @@ flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_rou
 **Interfaces：**
 - Produces：`class ReaderFeatureDependencies`（欄位見下）、`ReaderFeatureDependencies fakeReaderFeatureDependencies({...})`、`LibraryReaderFeatureRepositories completeLegacyReaderFeatures()`、`LibrarySyncDependencies completeLegacySyncDependencies()`。
 
-- [ ] **Step 1：確認 `LayoutPresetRepository` 的公開方法，才能寫 Fake**
+- [x] **Step 1：確認 `LayoutPresetRepository` 的公開方法，才能寫 Fake**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook/.worktrees/epic-54-issue-11-reader-deps/app
@@ -116,7 +116,7 @@ grep -n "^  Future<\|^  Stream<\|^  [A-Za-z<>?]* get " lib/reader/layout_preset_
 
 把列出的每個公開方法在 Fake 中實作一遍（記憶體 `List<LayoutPreset>`，行為比照真實類別文件註解：依 `id ASC` 排序）。Fake 以 `implements LayoutPresetRepository` 宣告，**不呼叫** `super` 的建構子（`LayoutPresetRepository` 是 `const LayoutPresetRepository(this._db)`，`implements` 不需要）。
 
-- [ ] **Step 2：寫失敗測試（工廠自身）**
+- [x] **Step 2：寫失敗測試（工廠自身）**
 
 建立 `test/support/fake_reader_feature_dependencies_test.dart`：
 
@@ -220,7 +220,7 @@ void main() {
 
 （`LibraryReaderFeatureRepositories`／`LibrarySyncDependencies` 在 `library_screen_dependencies.dart`；測試檔頂端已 import。）
 
-- [ ] **Step 3：跑測試確認失敗**
+- [x] **Step 3：跑測試確認失敗**
 
 ```bash
 flutter test test/support/fake_reader_feature_dependencies_test.dart
@@ -228,7 +228,7 @@ flutter test test/support/fake_reader_feature_dependencies_test.dart
 
 預期：編譯失敗（`reader_feature_dependencies.dart`、`fake_reader_feature_dependencies.dart` 不存在）。
 
-- [ ] **Step 4：實作 `ReaderFeatureDependencies`**
+- [x] **Step 4：實作 `ReaderFeatureDependencies`**
 
 建立 `app/lib/screens/reader_feature_dependencies.dart`：
 
@@ -312,11 +312,11 @@ class ReaderFeatureDependencies {
 }
 ```
 
-- [ ] **Step 5：實作 `FakeLayoutPresetRepository`**
+- [x] **Step 5：實作 `FakeLayoutPresetRepository`**
 
 建立 `app/test/support/fake_layout_preset_repository.dart`，依 Step 1 列出的公開方法逐一實作（記憶體清單）。檔案頂端註解說明：「`LayoutPresetRepository` 原本沒有 Fake，只能用 in-memory sqflite；工廠需要無 I/O 的預設值，故補上」。簽名必須與真實類別一致（用 `@override` 讓分析器檢查）。
 
-- [ ] **Step 6：實作工廠**
+- [x] **Step 6：實作工廠**
 
 建立 `app/test/support/fake_reader_feature_dependencies.dart`：
 
@@ -469,7 +469,7 @@ LibrarySyncDependencies completeLegacySyncDependencies({
 
 若某個 Fake 的建構子需要參數（Step 1 之外未逐一驗證），以 `reader_screen_route_test.dart:74-92` 的建構方式為準（該處已無參數建構 `FakeReaderPrefsManager()`、`FakeLibraryRepository()`、`FakeBookmarksRepository()`、`FakeHighlightsRepository()`、`FakeNotesRepository()`、`FakeCustomFontsRepository()`、`FakeDownloadableFontStore()`、`FakeBookReaderPrefsRepository()`、`FakeTtsProvider()`、`FakeTtsAudioFocusSource()`、`FakeSearchRepository()`、`FakeBookImportService()`）。`FakeReadingStatsRepository()` 若需要必填參數，補上最小值並在註解說明。
 
-- [ ] **Step 7：跑測試確認通過，並分析**
+- [x] **Step 7：跑測試確認通過，並分析**
 
 ```bash
 flutter test test/support/fake_reader_feature_dependencies_test.dart
@@ -478,7 +478,7 @@ flutter analyze lib/screens/reader_feature_dependencies.dart test/support
 
 預期：測試 5 個通過；analyze 無問題。
 
-- [ ] **Step 8：提交**
+- [x] **Step 8：提交**
 
 ```bash
 git add app/lib/screens/reader_feature_dependencies.dart app/test/support/fake_layout_preset_repository.dart app/test/support/fake_reader_feature_dependencies.dart app/test/support/fake_reader_feature_dependencies_test.dart
