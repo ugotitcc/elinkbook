@@ -216,6 +216,12 @@ F2（紅燈＝logcat 出現 `Unable to bind to AudioService`）：
 - 手法 A（內容有變的 APK 重裝 20 次）未做，原因是 adb 傳檔太慢。
 - 人類決定收手。F1 已讓綁定逾時不再黑屏、F3 會提示，風險低。若日後再有自然黑屏回報，從這裡接續。
 
+**2026-10-05 F2／F4 調查 PR 合併**
+
+- PR #326（`epic-61/f2-trigger-investigation` → `main`）已合併，合併 commit `87b41306`。F2 收手；F4 部分完成。
+- 剩餘：F4（`runApp` 之後 `am start -W` 約 10.2 秒的來源）。Epic 61 不歸檔，除非人類決定放棄 F4。
+- 待處理：電子紙上仍是帶 `F2T` 計時 log 的 debug 版（功能正常），需手動複製安裝乾淨版；本機分支 `epic-61/f2-trigger-investigation` 已合併，可清理（需人類確認）。
+
 ## 後續項目（併入本 Epic，不另開 Epic）
 
 2026-10-05 人類決定：同一條問題線的後續工作不為每個小問題各開一個 Epic，併在本 Epic 以「後續項目」追蹤。
