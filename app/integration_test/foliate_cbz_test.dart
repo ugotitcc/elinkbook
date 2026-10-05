@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import '../test/support/fake_reader_feature_dependencies.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -73,13 +74,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: ReaderScreen(
-            filePath: book.filePath,
-            bookId: book.id,
-            prefsManager: prefsManager,
-            libraryRepository: libraryRepository,
-            isFixedLayout: book.isFixedLayout,
-          ),
+          home: ReaderScreen(filePath: book.filePath, bookId: book.id, isFixedLayout: book.isFixedLayout, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: libraryRepository)),
         ),
       );
       await _pumpUntilLoaded(tester);
@@ -150,14 +145,7 @@ void main() {
       final readerKey = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
-          home: ReaderScreen(
-            key: readerKey,
-            filePath: book.filePath,
-            bookId: book.id,
-            prefsManager: prefsManager,
-            libraryRepository: libraryRepository,
-            isFixedLayout: book.isFixedLayout,
-          ),
+          home: ReaderScreen(key: readerKey, filePath: book.filePath, bookId: book.id, isFixedLayout: book.isFixedLayout, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: libraryRepository)),
         ),
       );
       await _pumpUntilLoaded(tester);
@@ -240,14 +228,7 @@ void main() {
       final readerKey = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
-          home: ReaderScreen(
-            key: readerKey,
-            filePath: book.filePath,
-            bookId: book.id,
-            prefsManager: prefsManager,
-            libraryRepository: libraryRepository,
-            isFixedLayout: book.isFixedLayout,
-          ),
+          home: ReaderScreen(key: readerKey, filePath: book.filePath, bookId: book.id, isFixedLayout: book.isFixedLayout, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: libraryRepository)),
         ),
       );
       await _pumpUntilLoaded(tester);

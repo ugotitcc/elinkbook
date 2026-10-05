@@ -14,6 +14,7 @@ import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import '../test/support/fake_reader_feature_dependencies.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。原生
 /// 渲染引擎（PdfRenderer）需要真實的裝置檔案系統路徑，不能直接讀取
@@ -71,11 +72,7 @@ void main() {
     // 第一次開書，跳到第 4 頁。
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_position_pdf',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b_position_pdf', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -97,11 +94,7 @@ void main() {
     // 重新開啟同一本書，驗證自動回到第 4 頁（起始畫面即顯示，不需再跳頁）。
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_position_pdf',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b_position_pdf', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -142,11 +135,7 @@ void main() {
     // 第一次開書，等待載入完成後翻頁。
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_position_epub',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b_position_epub', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -173,11 +162,7 @@ void main() {
     // 重新開啟同一本書，驗證有 initialLocatorJson 被傳入（即回到離開前定位）。
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_position_epub',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b_position_epub', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
     await _pumpUntilLoaded(tester);

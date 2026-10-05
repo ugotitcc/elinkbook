@@ -29,27 +29,8 @@ void main() {
 
     final pushed =
         tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
-    expect(pushed.readerFeatureRepositories.readingStatsRepository,
+    expect(pushed.dependencies.readingStatsRepository,
         same(statsRepository));
-
-    await disposeStatsReader(tester);
-  });
-
-  testWidgets('閱讀器沒有 readingStatsRepository 時，單書搜尋 bundle 的欄位為 null',
-      (tester) async {
-    await pumpStatsReader(
-      tester,
-      searchRepository: FakeSearchRepository(),
-      libraryRepository: FakeLibraryRepository(),
-      markRendered: false,
-    );
-
-    await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
-    await tester.pumpAndSettle();
-
-    final pushed =
-        tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
-    expect(pushed.readerFeatureRepositories.readingStatsRepository, isNull);
 
     await disposeStatsReader(tester);
   });

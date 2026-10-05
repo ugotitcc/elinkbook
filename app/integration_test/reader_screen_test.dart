@@ -20,6 +20,7 @@ import 'package:elinkbook/reader/screen_orientation_setting.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
+import '../test/support/fake_reader_feature_dependencies.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。原生
 /// 渲染引擎（Readium／PdfRenderer）都需要真實的裝置檔案系統路徑，不能直接
@@ -122,11 +123,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b1',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -153,11 +150,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b1',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -184,11 +177,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b1',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -218,11 +207,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_settings_1',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b_settings_1', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -257,11 +242,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -292,11 +273,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -323,11 +300,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_writing_mode_override',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b_writing_mode_override', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -368,11 +341,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_page_turn_mode_override',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b_page_turn_mode_override', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -424,11 +393,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_orientation_default',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b_orientation_default', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -479,11 +444,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -531,11 +492,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -575,11 +532,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -608,11 +561,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -647,11 +596,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -690,11 +635,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -731,11 +672,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -771,11 +708,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -802,11 +735,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
     await _pumpUntil(
@@ -834,11 +763,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -884,11 +809,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -967,11 +888,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: bookId, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 

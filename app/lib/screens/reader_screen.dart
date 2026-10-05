@@ -15,20 +15,16 @@ import '../reader/book_format.dart';
 import '../reader/bookmark.dart';
 import '../reader/bookmark_position_context.dart';
 import '../reader/bookmark_toggle.dart' as bookmark_toggle;
-import '../reader/bookmarks_repository.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/app_font.dart';
 import '../reader/available_fonts.dart';
 import '../reader/custom_font.dart';
-import '../reader/custom_fonts_repository.dart';
-import '../reader/downloadable_font_store.dart';
 import '../reader/epub_decoration.dart';
 import '../reader/epub_position_info.dart';
 import '../reader/epub_selection_info.dart';
 import '../reader/foliate_bridge_codec.dart';
 import '../reader/foliate_reader_view.dart';
 import '../reader/tts_audio_focus_coordinator.dart';
-import '../reader/tts_audio_focus_source.dart';
 import '../reader/tts_audio_handler.dart';
 import '../reader/tts_audio_handler_startup.dart';
 import '../reader/tts_audio_player.dart';
@@ -41,9 +37,7 @@ import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../reader/highlight.dart';
 import '../reader/highlight_style.dart';
-import '../reader/highlights_repository.dart';
 import '../reader/note.dart';
-import '../reader/notes_repository.dart';
 import '../reader/pdf_annotation_decoration.dart';
 import '../reader/pdf_search_match.dart';
 import '../reader/pdf_search_state.dart';
@@ -71,12 +65,8 @@ import '../reader/text_conversion_mode.dart';
 import '../reader/resolved_preferences.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
-import '../reader/reader_activity_tracker.dart';
 import '../reader/zone_action.dart';
-import '../search/search_repository.dart';
-import '../stats/reading_stats_repository.dart';
 import '../stats/reading_stats_tracker.dart';
-import '../sync/sync_checkpoint_trigger.dart';
 import '../theme/elink_tokens.dart';
 import 'annotation_toolbar.dart';
 import 'support/book_import_picker_helper.dart'
@@ -85,15 +75,13 @@ import 'note_edit_dialog.dart';
 import 'notes_bottom_sheet.dart';
 import 'book_search_screen.dart';
 import 'fxl_settings_sheet.dart';
-import 'library_screen_dependencies.dart';
 import 'layout_preset_book_picker_screen.dart';
 import 'layout_preset_name_dialog.dart';
 import 'pdf_settings_sheet.dart';
-import '../reader/book_reader_prefs_repository.dart';
 import '../reader/layout_preset.dart';
-import '../reader/layout_preset_repository.dart';
 import '../reader/layout_preset_actions.dart' as layout_preset_actions;
 import 'reader_chrome_bottom_bar.dart';
+import 'reader_feature_dependencies.dart';
 import 'reader_footer.dart';
 import 'reader_settings_sheet.dart';
 import 'toc_bottom_sheet.dart';
@@ -134,20 +122,10 @@ const _fullscreenChannel = MethodChannel('elinkbook/fullscreen');
 class ReaderScreen extends StatefulWidget {
   final String filePath;
   final String bookId;
-  final ReaderPrefsManager prefsManager;
 
-  /// 書籤功能的資料存取層（epic-6-annotations Issue 1）。刻意為可選參數
-  /// （非 required）——未提供時 AppBar 不顯示「📚 筆記」按鈕，行為等同
-  /// 本 Issue 之前，讓既有大量測試呼叫端不需要逐一補上這個參數（見
-  /// plan-issue-1.md Global Constraints）。
-  final BookmarksRepository? bookmarksRepository;
-
-  /// 劃線／備註功能的資料存取層（epic-6-annotations Issue 2）。與
-  /// [bookmarksRepository] 同樣刻意為可選參數——未提供時 EPUB 選取事件
-  /// 不會顯示浮動工具列、`NotesBottomSheet`「✏️」分頁維持空狀態佔位符，
-  /// 行為等同本 Issue 之前，零回歸。
-  final HighlightsRepository? highlightsRepository;
-  final NotesRepository? notesRepository;
+  /// 閱讀器功能依賴組（ADR 0037）。整組由呼叫端提供，內部不再逐欄接收；
+  /// 開單書搜尋時整組轉傳給 [BookSearchScreen]。
+  final ReaderFeatureDependencies dependencies;
 
   /// 供「導出為 Markdown」使用的書籍中繼資料（epic-6-annotations
   /// Issue 5）。刻意為可選具名參數並附預設值——比照 [bookmarksRepository]
@@ -165,52 +143,6 @@ class ReaderScreen extends StatefulWidget {
   /// 只驅動 FXL 專屬 UI/chrome 語意），非 EPUB 格式完全不受此欄位影響。
   final bool? isFixedLayout;
 
-  /// 供 [isFixedLayout] 為 `null` 時呼叫 [LibraryRepository.detectAndCacheEpubLayout]
-  /// 使用。刻意為可選參數——比照 [bookmarksRepository] 既有慣例，避免既有
-  /// 大量測試呼叫端需要逐一補上這個參數。
-  final LibraryRepository? libraryRepository;
-
-  /// 自訂字型清單的資料存取層（epic-14-system-settings Issue 2）。刻意為
-  /// 可選參數——比照 [bookmarksRepository] 既有慣例，未提供時自訂字型
-  /// 視為空清單（可用字型只剩已下載的內建字型）。
-  final CustomFontsRepository? customFontsRepository;
-
-  /// 可下載字型的存放與查詢（epic-49 Issue 4）。刻意為可選參數，比照
-  /// [customFontsRepository] 既有慣例：未提供時已下載字型視為空集合、開書不等待，
-  /// 偏好為內建字型時會視為未下載而退回書本字型（epic-54 Issue 1，與設定面板
-  /// 顯示一致，偏好本身不改寫），自訂字型不受影響。
-  final DownloadableFontStore? downloadableFontStore;
-
-  /// 版面設定預設集的資料存取層（epic-28-reader-settings-enhancements
-  /// Issue 3）。刻意為可選參數——比照 [customFontsRepository] 既有慣例，
-  /// 未提供時預設集相關按鈕點擊無效果（callback 內提早 return），行為
-  /// 等同本 Issue 之前，零回歸。
-  final LayoutPresetRepository? layoutPresetRepository;
-
-  /// 供「書籍設定複製」（讀取來源書籍目前的版面偏好設定）與「套用預設集/
-  /// 複製設定到目前書籍以外的其他書籍」（批次寫入）使用，與 [prefsManager]
-  /// 底層共用同一個 `BookReaderPrefsRepository` 實例（見 main.dart 建構
-  /// 處）。刻意為可選參數，理由同 [layoutPresetRepository]。
-  final BookReaderPrefsRepository? bookReaderPrefsRepository;
-
-  /// Checkpoint 觸發器（epic-8-sync Issue 6）。刻意為可選參數——比照
-  /// [bookmarksRepository] 既有慣例，未提供時離開閱讀畫面／背景化／閒置
-  /// 計時器皆不觸發任何同步動作，行為等同本 Issue 之前，零回歸。
-  final SyncCheckpointTrigger? syncCheckpointTrigger;
-
-  /// 語音朗讀（TTS）的語音來源（epic-34-tts-readalong Issue 2）。刻意為
-  /// 可選參數——比照 [bookmarksRepository] 既有慣例，未提供時朗讀播放
-  /// 按鈕不顯示，行為等同本 Issue 之前，零回歸。CBZ 格式即使提供本參數
-  /// 也會顯示明確停用狀態的按鈕（非隱藏，見 `issues.md` Issue 2 驗收
-  /// 標準），因為 CBZ 是純圖像格式、沒有文字可朗讀。
-  final TtsProvider? ttsProvider;
-
-  /// epic-61 Issue 2：啟動階段 TTS 音訊服務 holder（handler 是否就緒＋降級
-  /// 提示是否待顯示）。`null`（既有呼叫端、測試）時視為未提供：不 attach、
-  /// 不提示，行為與之前相同。
-  final TtsAudioHandlerHolder? ttsAudio;
-  final TtsAudioFocusSource? ttsAudioFocusSource;
-
   /// E-Ink 高對比模式（epic-34-tts-readalong Issue 8）：App 層級主題設定
   /// （見 `main.dart`／`LibraryThemeDependencies.isEinkMode`），由
   /// [LibraryScreen._openBook] 貫穿傳入。目前唯一用途是朗讀高亮的視覺
@@ -222,12 +154,6 @@ class ReaderScreen extends StatefulWidget {
   /// 非 nullable＋預設值模式）。
   final bool isEinkMode;
 
-  /// 供背景全文檢索排程器（epic-10-search Issue 1）得知「目前有閱讀畫面
-  /// 開啟」而暫停處理，避免與使用者正在閱讀互搶資源。刻意為可選參數——
-  /// 比照 [bookmarksRepository] 既有慣例，未提供時零回歸（單純不通知任何
-  /// tracker，行為等同本 Issue 之前）。
-  final ReaderActivityTracker? readerActivityTracker;
-
   /// 全庫搜尋跳轉目標（epic-10-search Issue 5，spec.md §6）：非 `null`
   /// 時，開書當下傳給底層 View 的初始定位參數改用本欄位（優先權高於
   /// 資料庫既有 `lastPosition`），除此之外不影響任何後續行為——後續翻頁
@@ -236,77 +162,30 @@ class ReaderScreen extends StatefulWidget {
   /// 可選參數——比照 `readerActivityTracker` 既有慣例，未提供時零回歸。
   final ReaderJumpTarget? initialJumpTarget;
 
-  /// 全庫搜尋的資料存取層（epic-10-search Issue 8，spec.md §9.4）：供
-  /// TopBar「搜尋內文」按鈕開啟 [BookSearchScreen] 使用。刻意為可選
-  /// 參數——比照 [readerActivityTracker] 既有慣例，未提供時點擊搜尋按鈕
-  /// 顯示「搜尋功能暫時無法使用」提示、不導覽，行為等同本 Issue 之前，
-  /// 零回歸。
-  final SearchRepository? searchRepository;
-
-  /// 本裝置系統 SQLite 是否有 FTS5 模組可用（epic-10-search Issue 6／
-  /// Issue 8，spec.md §9.4）：由呼叫端從
-  /// `LibraryReaderFeatureRepositories.isFullTextSearchAvailable` 往下
-  /// 傳遞，供 [_openBookSearch] 建構 [BookSearchScreen] 的
-  /// `readerFeatureRepositories` 時一併帶入，讓無 FTS5 裝置從閱讀器進入
-  /// 單書搜尋時也能正確顯示「本裝置不支援全文檢索」優雅降級提示，而非
-  /// 靜默落回預設值 `true` 誤發無效 FTS 查詢。非 nullable，預設 `true`
-  /// ——比照 [LibraryReaderFeatureRepositories.isFullTextSearchAvailable]
-  /// 既有預設值，維持既有測試呼叫端零回歸。
-  final bool isFullTextSearchAvailable;
-
-  /// epic-15-storage-permission Issue 0：書籍匯入服務，由
-  /// `LibraryReaderFeatureRepositories.bookImportService` 經
-  /// `buildReaderScreen` 轉交。供 Issue 2「檔案存取失效時重新連結書籍」
-  /// 使用；`null` 時不提供重新連結功能（比照 [libraryRepository] 等既有
-  /// 選用依賴的慣例，既有測試呼叫端零回歸）。
-  final BookImportService? bookImportService;
-
   /// epic-15-storage-permission Issue 2：「重新選取檔案」使用的單檔選擇器；
   /// `null` 時使用 [pickSingleBookFileViaFilePicker]。供 widget test 注入，
   /// 不必觸碰平台實作。
+  /// 僅供測試注入（ADR 0037 例外）。
   final SingleBookFilePicker? pickSingleBookFile;
-
-  /// epic-9-stats Issue 4：每日閱讀統計的存取層（由
-  /// `LibraryReaderFeatureRepositories.readingStatsRepository` 經
-  /// `buildReaderScreen` 轉交）。未提供 [readingStatsTracker] 時，以本書的
-  /// id、書名與這個 repository 建立會話級計時器；兩者皆為 `null` 則完全不
-  /// 計時，行為與現況相同。
-  final ReadingStatsRepository? readingStatsRepository;
 
   /// epic-9-stats Issue 4：直接注入的計時器（測試用）。優先於
   /// [readingStatsRepository]。**由 [ReaderScreen] 擁有**：離開閱讀器時
   /// 由它呼叫 `flushAndClose()` 結算並關閉，呼叫端不需要（也不應）另外釋放。
+  /// 僅供測試注入（ADR 0037 例外）。
   final ReadingStatsTracker? readingStatsTracker;
 
   const ReaderScreen({
     super.key,
     required this.filePath,
     required this.bookId,
-    required this.prefsManager,
-    this.bookmarksRepository,
-    this.highlightsRepository,
-    this.notesRepository,
+    required this.dependencies,
     this.bookTitle,
     this.bookAuthor,
     this.bookProgress = 0.0,
     this.isFixedLayout,
-    this.libraryRepository,
-    this.customFontsRepository,
-    this.downloadableFontStore,
-    this.layoutPresetRepository,
-    this.bookReaderPrefsRepository,
-    this.syncCheckpointTrigger,
-    this.ttsProvider,
-    this.ttsAudio,
-    this.ttsAudioFocusSource,
     this.isEinkMode = false,
-    this.readerActivityTracker,
     this.initialJumpTarget,
-    this.searchRepository,
-    this.isFullTextSearchAvailable = true,
-    this.bookImportService,
     this.pickSingleBookFile,
-    this.readingStatsRepository,
     this.readingStatsTracker,
   });
 
@@ -450,10 +329,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 就再也不會套用字型，所以 _buildBody 在 null 時延後建構閱讀器（取代原本的
   // 兩個載入旗標）。兩個來源都沒提供
   // （測試與舊呼叫端）時沒有東西要等，一開始就是 empty。
-  late AvailableFonts? _availableFonts =
-      widget.customFontsRepository == null && widget.downloadableFontStore == null
-          ? AvailableFonts.empty
-          : null;
+  AvailableFonts? _availableFonts;
   BookReaderPrefs _prefs = BookReaderPrefs.empty;
   LoadedPrefs? _loaded;
   ResolvedPreferences? _resolved;
@@ -519,16 +395,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // null（同一次只會開啟一種格式的書籍）。
   PdfSelectionInfo? _currentPdfSelection;
   String? _pendingPdfHighlightIdForSelection;
-  // Epic 43 Issue 1：EPUB／PDF 共用的劃線/備註 CRUD 深模組，僅在兩個
-  // repository 皆非 null 時建構，否則為 null（呼叫端統一 guard）。
-  late final AnnotationSession? _annotationSession =
-      (widget.highlightsRepository != null && widget.notesRepository != null)
-          ? AnnotationSession(
-              highlightsRepository: widget.highlightsRepository!,
-              notesRepository: widget.notesRepository!,
-              bookId: widget.bookId,
-            )
-          : null;
+  // Epic 43 Issue 1：EPUB／PDF 共用的劃線/備註 CRUD 深模組。依賴恆由
+  // [ReaderFeatureDependencies] 提供，直接建構，不再有缺席分支。
+  late final AnnotationSession _annotationSession = AnnotationSession(
+    highlightsRepository: widget.dependencies.highlightsRepository,
+    notesRepository: widget.dependencies.notesRepository,
+    bookId: widget.bookId,
+  );
   // 開書時讀到的既有位置記錄（若有），只在 initState 賦值一次，之後
   // 不變——僅用於 _buildNativeView() 建構 EpubReaderView/PdfReaderView
   // 時傳入 initialLocatorJson/initialPageIndex 這兩個一次性開書起始值。
@@ -594,31 +467,29 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _creationZone = Zone.current;
     // epic-61 Issue 2：監聽 holder——handler 晚到時補 attach（見
     // _onTtsAudioHolderChanged）；降級（已發生或晚到）時補提示一次。
-    _listenedTtsAudio = widget.ttsAudio;
+    _listenedTtsAudio = widget.dependencies.ttsAudio;
     _listenedTtsAudio?.addListener(_onTtsAudioHolderChanged);
     _checkShowDegradedNotice();
-    final importService = widget.bookImportService;
+    final importService = widget.dependencies.bookImportService;
     _openBookFlow = OpenBookFlow(
       filePath: widget.filePath,
       // 讀取頂層可覆寫變數的當下值，widget test 才能以覆寫注入假探測。
       probe: (uri) => probeStorageAccess(uri),
-      relinkBook: importService == null
-          ? null
-          : (uri, displayName) => importService.relinkBook(
-                widget.bookId,
-                uri,
-                displayName: displayName,
-              ),
+      relinkBook: (uri, displayName) => importService.relinkBook(
+        widget.bookId,
+        uri,
+        displayName: displayName,
+      ),
     )..addListener(_onOpenBookFlowChanged);
     _session = ReadingSession(
       bookId: widget.bookId,
-      prefsManager: widget.prefsManager,
+      prefsManager: widget.dependencies.prefsManager,
       hasJumpTarget: widget.initialJumpTarget != null,
       bookTitle: widget.bookTitle,
       statsTracker: widget.readingStatsTracker,
-      statsRepository: widget.readingStatsRepository,
-      syncCheckpointTrigger: widget.syncCheckpointTrigger,
-      readerActivityTracker: widget.readerActivityTracker,
+      statsRepository: widget.dependencies.readingStatsRepository,
+      syncCheckpointTrigger: widget.dependencies.syncCheckpointTrigger,
+      readerActivityTracker: widget.dependencies.readerActivityTracker,
     )..start();
     WidgetsBinding.instance.addObserver(this);
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
@@ -626,14 +497,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _loadAvailableFonts();
     _loadLayoutPresets();
     _openBookFlow.start();
-    widget.prefsManager.load(widget.bookId).then((loaded) {
+    widget.dependencies.prefsManager.load(widget.bookId).then((loaded) {
       if (!mounted) return;
       setState(() {
         _prefs = loaded.bookPrefs;
         _loaded = loaded;
         _initialPosition = loaded.readingPosition;
         _session.onPrefsLoaded(initialProgress: loaded.readingPosition.progress);
-        _resolved = widget.prefsManager.resolve(
+        _resolved = widget.dependencies.prefsManager.resolve(
           loaded,
           autoDetectedWritingMode: _autoDetectedWritingMode,
         );
@@ -711,16 +582,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       return;
     }
     if (format != BookFormat.epub) return;
-    final repository = widget.libraryRepository;
-    if (repository == null) {
-      // 既有測試/呼叫端未提供 libraryRepository 時，退回 Issue 3 之前的
-      // 既有行為——_dispatchedIsFixedLayout 一律視為 true，零回歸（EPUB
-      // 一律建構 FoliateReaderView，此處只影響 FXL 專屬 UI/chrome
-      // 語意，不影響要建構哪個 widget；見
-      // docs/epics/epic-17-epub-render-migration/spec.md「已知限制」）。
-      _dispatchedIsFixedLayout = true;
-      return;
-    }
+    final repository = widget.dependencies.libraryRepository;
     repository
         .detectAndCacheEpubLayout(widget.bookId, _activeFilePath)
         .then((result) {
@@ -748,7 +610,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 返回——controller 建構處（`_ttsControllerOrNull`）會再呼叫本方法。
   void _maybeAttachTtsAudioHandler() {
     final controller = _ttsController;
-    final handler = widget.ttsAudio?.handler;
+    final handler = widget.dependencies.ttsAudio.handler;
     if (controller == null || handler == null) return;
     // handler 一旦 ready 就不會再換（holder 狀態單向轉移），所以只需判斷
     // 「已 attach 過就不再 attach」。
@@ -767,7 +629,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 重繪才會執行，提示就不會「立即」出現。所以主動排程一個 frame（審查 I-1）。
     WidgetsBinding.instance.ensureVisualUpdate();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || widget.ttsAudio?.consumeDegradedNotice() != true) return;
+      if (!mounted ||
+          widget.dependencies.ttsAudio.consumeDegradedNotice() != true) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           key: const Key('reader_tts_degraded_snackbar'),
@@ -900,13 +765,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           readingPosition: loaded.readingPosition,
         );
         _loaded = newLoaded;
-        _resolved = widget.prefsManager.resolve(
+        _resolved = widget.dependencies.prefsManager.resolve(
           newLoaded,
           autoDetectedWritingMode: _autoDetectedWritingMode,
         );
       }
     });
-    widget.prefsManager.saveBookPrefs(widget.bookId, prefs);
+    widget.dependencies.prefsManager.saveBookPrefs(widget.bookId, prefs);
     _applyScreenOrientation();
     _applySystemUiMode();
   }
@@ -1036,16 +901,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// debugPrint 供日後若再次收到回報時排查根因。
   Future<void> _handleSaveAsPreset(BookReaderPrefs currentDraft) async {
     final l10n = AppLocalizations.of(context)!;
-    final repository = widget.layoutPresetRepository;
-    if (repository == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          key: const Key('reader_save_as_preset_repository_unavailable_snackbar'),
-          content: Text(l10n.readerSaveAsPresetUnavailableMessage),
-        ),
-      );
-      return;
-    }
+    final repository = widget.dependencies.layoutPresetRepository;
     try {
       final name = await showLayoutPresetNameDialog(context);
       if (name == null || !mounted) return;
@@ -1176,8 +1032,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     BookReaderPrefs prefs,
     List<String> targetBookIds,
   ) async {
-    final repository = widget.bookReaderPrefsRepository;
-    if (repository == null || targetBookIds.isEmpty) return;
+    final repository = widget.dependencies.bookReaderPrefsRepository;
+    if (targetBookIds.isEmpty) return;
     try {
       if (!layout_preset_actions.layoutPresetTargetsCurrentBookOnly(
         targetBookIds,
@@ -1224,8 +1080,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     String sourceBookId, {
     required List<String> targetBookIds,
   }) async {
-    final repository = widget.bookReaderPrefsRepository;
-    if (repository == null || targetBookIds.isEmpty) return;
+    final repository = widget.dependencies.bookReaderPrefsRepository;
+    if (targetBookIds.isEmpty) return;
     try {
       final sourcePrefs =
           (await repository.load(sourceBookId)).reflowableEpubFields();
@@ -1249,8 +1105,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   Future<void> _handleDeletePreset(int id) async {
-    final repository = widget.layoutPresetRepository;
-    if (repository == null) return;
+    final repository = widget.dependencies.layoutPresetRepository;
     String presetName = '';
     for (final preset in _layoutPresets) {
       if (preset.id == id) {
@@ -1310,8 +1165,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   Future<List<String>?> _handleRequestBookPicker({
     required bool multiSelect,
   }) async {
-    final repository = widget.libraryRepository;
-    if (repository == null) return null;
+    final repository = widget.dependencies.libraryRepository;
     final books =
         await repository.listReflowableEpubBooks(excludeBookId: widget.bookId);
     if (!mounted) return null;
@@ -1326,8 +1180,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   Future<void> _loadFxlBookmarks() async {
-    final repository = widget.bookmarksRepository;
-    if (repository == null) return;
+    final repository = widget.dependencies.bookmarksRepository;
     try {
       final list = await repository.listByBook(widget.bookId);
       if (!mounted) return;
@@ -1357,8 +1210,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   Future<Set<AppFont>> _loadInstalledBuiltInFonts() async {
-    final store = widget.downloadableFontStore;
-    if (store == null) return const {};
+    final store = widget.dependencies.downloadableFontStore;
     try {
       return await store.installedFonts();
     } catch (e) {
@@ -1368,8 +1220,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   Future<List<CustomFont>> _loadCustomFonts() async {
-    final repository = widget.customFontsRepository;
-    if (repository == null) return const [];
+    final repository = widget.dependencies.customFontsRepository;
     try {
       return await repository.listAll();
     } catch (e) {
@@ -1379,8 +1230,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   Future<void> _loadLayoutPresets() async {
-    final repository = widget.layoutPresetRepository;
-    if (repository == null) return;
+    final repository = widget.dependencies.layoutPresetRepository;
     try {
       final presets = await repository.listAll();
       if (!mounted) return;
@@ -1418,9 +1268,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   Future<void> _toggleBookmark() async {
-    final repository = widget.bookmarksRepository;
+    final repository = widget.dependencies.bookmarksRepository;
     final positionInfo = _epubPositionInfo;
-    if (repository == null || positionInfo == null) return;
+    if (positionInfo == null) return;
     // 書籤預設名稱是建立當下語言的快照；在 await 之前取得 l10n
     final l10n = AppLocalizations.of(context)!;
     await bookmark_toggle.toggleBookmark(
@@ -1450,9 +1300,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// [ReaderScreen.togglePdfBookmark] 這個測試 seam 觸發，UI 尚無法直接
   /// 點擊呼叫。
   Future<void> _togglePdfBookmark() async {
-    final repository = widget.bookmarksRepository;
+    final repository = widget.dependencies.bookmarksRepository;
     final pageIndex = _pdfPageInfo?.pageIndex;
-    if (repository == null || pageIndex == null) return;
+    if (pageIndex == null) return;
     final l10n = AppLocalizations.of(context)!;
     await bookmark_toggle.toggleBookmark(
       repository: repository,
@@ -1613,8 +1463,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 備註」分頁（epic-38-reader-chrome-tts-redesign Issue 1，接上 Task 1
   /// 建立的 `NotesBottomSheet.initialTabIndex`）。
   void _openNotesSheet(BookFormat format, {int initialTabIndex = 0}) {
-    final repository = widget.bookmarksRepository;
-    if (repository == null) return;
+    final repository = widget.dependencies.bookmarksRepository;
     final currentPath = TocNavigator.findCurrentPath(
       _tocEntries,
       _epubPositionInfo?.progression,
@@ -1647,11 +1496,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // 非可調整的產品決策，epic-20 Issue 4 審查回應已查證確認）。
         highlightsRepository: (isFoliateFormat(format) && !_isFixedLayout) ||
                 format == BookFormat.pdf
-            ? widget.highlightsRepository
+            ? widget.dependencies.highlightsRepository
             : null,
         notesRepository: (isFoliateFormat(format) && !_isFixedLayout) ||
                 format == BookFormat.pdf
-            ? widget.notesRepository
+            ? widget.dependencies.notesRepository
             : null,
         onAnnotationSelected: (item) {
           Navigator.of(context).pop();
@@ -1706,9 +1555,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // （onPageRendered）是 PDF 開書成功的既有訊號，兩種格式共用同一個
     // _annotationsLoaded 旗標（單一書籍只會是其中一種格式，不會重複觸發）。
     if (detectBookFormat(_activeFilePath) == BookFormat.pdf &&
-        !_annotationsLoaded &&
-        widget.highlightsRepository != null &&
-        widget.notesRepository != null) {
+        !_annotationsLoaded) {
       _annotationsLoaded = true;
       _reloadPdfAnnotationsAndSync();
     }
@@ -1728,8 +1575,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // 使用者尚未手動 toggle／開過筆記面板前就能正確反映既有書籤狀態。
       // 借用既有 _pdfTocLoaded 旗標的去重保護（本區塊本來就只會在單一
       // PDF 開書流程中執行一次），不另外新增專屬旗標。
-      // _loadFxlBookmarks() 內部已對 widget.bookmarksRepository == null
-      // 做早退防呆，此處不需額外判斷。
+      // 書籤 repository 恆由 dependencies 提供，此處不需額外判斷。
       _loadFxlBookmarks();
     }
     // epic-10-search Issue 5：書籍成功渲染（含 PDF／Foliate，兩者皆走
@@ -1879,10 +1725,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 辨識時，顯示不可用提示、不導覽；否則以 `fromReader: true` 推入
   /// [BookSearchScreen]，等待其 pop 回傳的 [ReaderJumpTarget]。
   Future<void> _openBookSearch() async {
-    final searchRepository = widget.searchRepository;
-    final libraryRepository = widget.libraryRepository;
     final book = _buildSearchableBook();
-    if (searchRepository == null || libraryRepository == null || book == null) {
+    if (book == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           key: const Key('reader_chrome_search_unavailable_snackbar'),
@@ -1895,35 +1739,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       MaterialPageRoute(
         builder: (_) => BookSearchScreen(
           book: book,
-          searchRepository: searchRepository,
-          prefsManager: widget.prefsManager,
-          libraryRepository: libraryRepository,
-          readerFeatureRepositories: LibraryReaderFeatureRepositories(
-            bookmarksRepository: widget.bookmarksRepository,
-            highlightsRepository: widget.highlightsRepository,
-            notesRepository: widget.notesRepository,
-            customFontsRepository: widget.customFontsRepository,
-            downloadableFontStore: widget.downloadableFontStore,
-            layoutPresetRepository: widget.layoutPresetRepository,
-            bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
-            ttsProvider: widget.ttsProvider,
-            ttsAudio: widget.ttsAudio,
-            ttsAudioFocusSource: widget.ttsAudioFocusSource,
-            // epic-61 Issue 2：同上，手動逐欄重建 bundle 的新欄位必須一併轉送。
-            readerActivityTracker: widget.readerActivityTracker,
-            searchRepository: searchRepository,
-            isFullTextSearchAvailable: widget.isFullTextSearchAvailable,
-            // epic-15-storage-permission Issue 0：這裡是手動逐欄重建
-            // bundle，新欄位必須一併轉送，否則「閱讀器→單書搜尋→閱讀器」
-            // 開啟的閱讀器會遺失匯入服務、無法重新連結失效書籍。
-            bookImportService: widget.bookImportService,
-            // epic-9-stats Issue 4：同上，手動逐欄重建 bundle 的新欄位必須
-            // 一併轉送，否則「閱讀器→單書搜尋→閱讀器」開啟的閱讀器不計時。
-            readingStatsRepository: widget.readingStatsRepository,
-          ),
-          syncDependencies: LibrarySyncDependencies(
-            syncCheckpointTrigger: widget.syncCheckpointTrigger,
-          ),
+          dependencies: widget.dependencies,
           isEinkMode: widget.isEinkMode,
           fromReader: true,
         ),
@@ -2021,7 +1837,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _autoDetectedWritingMode = info.writingMode;
       final loaded = _loaded;
       if (loaded != null) {
-        _resolved = widget.prefsManager.resolve(
+        _resolved = widget.dependencies.prefsManager.resolve(
           loaded,
           autoDetectedWritingMode: info.writingMode,
         );
@@ -2037,9 +1853,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         });
       });
     }
-    if (!_annotationsLoaded &&
-        widget.highlightsRepository != null &&
-        widget.notesRepository != null) {
+    if (!_annotationsLoaded) {
       _annotationsLoaded = true;
       _reloadAnnotationsAndRefreshDecorations();
     }
@@ -2088,7 +1902,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   Future<void> _handleDeleteExistingAnnotation(AnnotationListItem item) async {
     final session = _annotationSession;
-    if (session == null) return;
     final snapshot = await session.deleteExisting(item);
     if (!mounted) return;
     setState(() {
@@ -2101,7 +1914,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   Future<void> _handlePdfDeleteExistingAnnotation(AnnotationListItem item) async {
     final session = _annotationSession;
-    if (session == null) return;
     final snapshot = await session.deleteExisting(item);
     if (!mounted) return;
     setState(() {
@@ -2175,7 +1987,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   Future<void> _handleHighlightStyleSelected(HighlightStyle style) async {
     final selection = _currentSelection;
     final session = _annotationSession;
-    if (selection == null || session == null) return;
+    if (selection == null) return;
     final result = await session.createHighlight(
       locator: AnnotationLocator.epub(
         locatorJson: selection.locatorJson,
@@ -2195,7 +2007,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   Future<void> _handleNotePressed() async {
     final selection = _currentSelection;
     final session = _annotationSession;
-    if (selection == null || session == null) return;
+    if (selection == null) return;
     final existing = resolveEpubExistingAnnotation(
       existingAnnotationId: selection.existingAnnotationId,
       highlights: _highlights,
@@ -2233,7 +2045,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 已載入過初始清單」，不是「是否曾呼叫過本方法」）。
   Future<void> _reloadAnnotationsAndRefreshDecorations() async {
     final session = _annotationSession;
-    if (session == null) return;
     final snapshot = await session.reload();
     if (!mounted) return;
     setState(() {
@@ -2274,7 +2085,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   Future<void> _handlePdfHighlightStyleSelected(HighlightStyle style) async {
     final selection = _currentPdfSelection;
     final session = _annotationSession;
-    if (selection == null || session == null) return;
+    if (selection == null) return;
     final result = await session.createHighlight(
       locator: AnnotationLocator.pdf(pageIndex: selection.pageIndex, rect: selection.rect),
       style: style,
@@ -2291,7 +2102,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   Future<void> _handlePdfNotePressed() async {
     final selection = _currentPdfSelection;
     final session = _annotationSession;
-    if (selection == null || session == null) return;
+    if (selection == null) return;
     final existing = resolvePdfExistingAnnotation(
       selection: selection,
       highlights: _highlights,
@@ -2326,7 +2137,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 其中一種格式的書籍，不會同時混用。
   Future<void> _reloadPdfAnnotationsAndSync() async {
     final session = _annotationSession;
-    if (session == null) return;
     final snapshot = await session.reload();
     if (!mounted) return;
     setState(() {
@@ -2623,12 +2433,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           : _buildFoliateEpubFooter(_epubPositionInfo!),
       onTocTap: _onTocTapFor(format),
       isBookmarked: _bookmarkAtCurrentPosition != null,
-      onBookmarkTap: widget.bookmarksRepository == null ||
-              _epubPositionInfo == null
-          ? null
-          : _toggleBookmark,
-      onAnnotationsTap: widget.bookmarksRepository == null ||
-              _autoDetectedWritingMode == null ||
+      onBookmarkTap:
+          _epubPositionInfo == null ? null : _toggleBookmark,
+      onAnnotationsTap: _autoDetectedWritingMode == null ||
               _epubPositionInfo == null
           ? null
           : () => _openNotesSheet(format, initialTabIndex: 1),
@@ -2659,12 +2466,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 沒有可衍生的真實狀態）。
   Widget _buildBottomChrome(BookFormat format) {
     if (format == BookFormat.cbz) {
-      if (widget.ttsProvider == null || !_cbzTtsPanelVisible) {
+      if (!_cbzTtsPanelVisible) {
         return _buildFoliateChromeBottomBar(
           format,
-          onTtsTap: widget.ttsProvider == null
-              ? null
-              : () => setState(() => _cbzTtsPanelVisible = true),
+          onTtsTap: () => setState(() => _cbzTtsPanelVisible = true),
         );
       }
       return TtsPanel(
@@ -2703,9 +2508,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (controller == null) {
       return _buildFoliateChromeBottomBar(
         format,
-        onTtsTap: widget.ttsProvider == null
-            ? null
-            : () => _ttsControllerOrNull!.play(),
+        onTtsTap: () => _ttsControllerOrNull!.play(),
       );
     }
     return AnimatedBuilder(
@@ -2833,8 +2636,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 引擎、`getAvailableVoices()` 回傳 10-30+ 個語音選項時，會在真機上
   /// 觸發 `RenderFlex overflowed` 溢位。
   Future<void> _openTtsVoicePicker(TtsController controller) async {
-    final provider = widget.ttsProvider;
-    if (provider == null) return;
+    final provider = widget.dependencies.ttsProvider;
     final voices = await provider.getAvailableVoices();
     if (!mounted || voices.isEmpty) return;
     return _showThemedModalBottomSheet<void>(
@@ -2928,11 +2730,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   // 且有匯入服務時才提供重新選取。用 OutlinedButton：E-Ink
                   // 高對比模式只有黑白兩色，純填色或純文字按鈕的輪廓容易和
                   // 背景融在一起。
-                  if (widget.bookImportService != null &&
-                      (failure.probeResult ==
-                              StorageAccessProbeResult.permissionRevoked ||
-                          failure.probeResult ==
-                              StorageAccessProbeResult.fileNotFound)) ...[
+                  if (failure.probeResult ==
+                          StorageAccessProbeResult.permissionRevoked ||
+                      failure.probeResult ==
+                          StorageAccessProbeResult.fileNotFound) ...[
                     const SizedBox(height: 24),
                     OutlinedButton(
                       key: const Key('reader_storage_relink_button'),
@@ -3063,12 +2864,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                         ),
                   onTocTap: _onTocTapFor(format),
                   isBookmarked: _pdfBookmarkAtCurrentPosition != null,
-                  onBookmarkTap: widget.bookmarksRepository == null ||
-                          _pdfPageInfo == null
-                      ? null
-                      : _togglePdfBookmark,
-                  onAnnotationsTap: widget.bookmarksRepository == null ||
-                          !_openBookFlow.isRendered
+                  onBookmarkTap:
+                      _pdfPageInfo == null ? null : _togglePdfBookmark,
+                  onAnnotationsTap: !_openBookFlow.isRendered
                       ? null
                       : () => _openNotesSheet(BookFormat.pdf, initialTabIndex: 1),
                   onLayoutTap:
@@ -3344,15 +3142,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// doc comment）；改用不透明實色 [Colors.grey]，避免重蹈相同問題。
   Color get _themedTtsDisabledIconColor => Colors.grey;
 
-  /// 首次存取時才建構 [TtsController]（[widget.ttsProvider] 為 `null` 時
-  /// 回傳 `null`，播放按鈕不顯示）。[loadSegments] 內部從
+  /// 首次存取時才建構 [TtsController]（TTS 依賴恆由 [ReaderFeatureDependencies]
+  /// 提供，不再有缺席分支）。[loadSegments] 內部從
   /// [_epubPositionInfo] 反推目前章節 index（`extractChapterIndex()`，
   /// 缺席時預設第 0 章，比照 `main.js` `section?.current ?? 0` 既有預設
   /// 行為），呼叫 [FoliateReaderView.loadTtsSegments]——完全不需要
   /// [TtsController] 知道 [FoliateReaderView] 或 [GlobalKey] 的存在。
   TtsController? get _ttsControllerOrNull {
-    final provider = widget.ttsProvider;
-    if (provider == null) return null;
+    final provider = widget.dependencies.ttsProvider;
     if (_ttsController != null) return _ttsController;
     final controller = TtsController(
       provider: provider,
@@ -3402,11 +3199,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _ttsController = controller;
     controller.addListener(_onTtsStatusChanged);
     _maybeAttachTtsAudioHandler();
-    final focusSource = widget.ttsAudioFocusSource;
-    if (focusSource != null) {
-      _ttsAudioFocusCoordinator =
-          TtsAudioFocusCoordinator(source: focusSource, controller: controller);
-    }
+    final focusSource = widget.dependencies.ttsAudioFocusSource;
+    _ttsAudioFocusCoordinator =
+        TtsAudioFocusCoordinator(source: focusSource, controller: controller);
     return controller;
   }
 
@@ -3476,7 +3271,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           isLandscape: isLandscape,
           customFonts: fonts.customFonts,
           installedFonts: fonts.installedBuiltIn,
-          downloadedFontsDirectory: widget.downloadableFontStore?.directory,
+          downloadedFontsDirectory:
+              widget.dependencies.downloadableFontStore.directory,
           navZoneActions: resolved.navZoneActions,
           onZoneAction: _handleZoneAction,
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,

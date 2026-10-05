@@ -8,7 +8,6 @@ import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/reader_jump_target.dart';
 import 'package:elinkbook/screens/book_search_screen.dart';
-import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/search/search_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
@@ -18,6 +17,7 @@ import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
 import '../support/fake_library_repository.dart';
+import '../support/fake_reader_feature_dependencies.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_search_repository.dart';
 
@@ -87,13 +87,7 @@ void main() {
       bookSearchDetailResult: _makeResult(),
     );
 
-    await tester.pumpWidget(_wrap(BookSearchScreen(
-      book: _testBook(),
-      initialQuery: '關鍵字',
-      searchRepository: searchRepo,
-      prefsManager: FakeReaderPrefsManager(),
-      libraryRepository: FakeLibraryRepository(),
-    )));
+    await tester.pumpWidget(_wrap(BookSearchScreen(book: _testBook(), initialQuery: '關鍵字', dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: FakeReaderPrefsManager(), libraryRepository: FakeLibraryRepository()))));
     await tester.pumpAndSettle();
 
     // 搜尋框帶入初始關鍵字
@@ -111,13 +105,7 @@ void main() {
       bookSearchDetailResult: _makeResult(),
     );
 
-    await tester.pumpWidget(_wrap(BookSearchScreen(
-      book: _testBook(),
-      initialQuery: '關鍵字',
-      searchRepository: searchRepo,
-      prefsManager: FakeReaderPrefsManager(),
-      libraryRepository: FakeLibraryRepository(),
-    )));
+    await tester.pumpWidget(_wrap(BookSearchScreen(book: _testBook(), initialQuery: '關鍵字', dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: FakeReaderPrefsManager(), libraryRepository: FakeLibraryRepository()))));
     await tester.pumpAndSettle();
 
     searchRepo.searchContentInBookCalls.clear();
@@ -141,13 +129,7 @@ void main() {
       bookSearchDetailResult: _makeResult(),
     );
 
-    await tester.pumpWidget(_wrap(BookSearchScreen(
-      book: _testBook(),
-      initialQuery: '初始詞',
-      searchRepository: searchRepo,
-      prefsManager: FakeReaderPrefsManager(),
-      libraryRepository: FakeLibraryRepository(),
-    )));
+    await tester.pumpWidget(_wrap(BookSearchScreen(book: _testBook(), initialQuery: '初始詞', dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: FakeReaderPrefsManager(), libraryRepository: FakeLibraryRepository()))));
     await tester.pumpAndSettle();
 
     // 輸入新關鍵字後在 debounce 期間清空
@@ -172,13 +154,7 @@ void main() {
       bookSearchDetailResult: _makeResult(),
     );
 
-    await tester.pumpWidget(_wrap(BookSearchScreen(
-      book: _testBook(),
-      initialQuery: '關鍵字',
-      searchRepository: searchRepo,
-      prefsManager: FakeReaderPrefsManager(),
-      libraryRepository: FakeLibraryRepository(),
-    )));
+    await tester.pumpWidget(_wrap(BookSearchScreen(book: _testBook(), initialQuery: '關鍵字', dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: FakeReaderPrefsManager(), libraryRepository: FakeLibraryRepository()))));
     await tester.pumpAndSettle();
 
     // 預設顯示「依書中順序」
@@ -202,13 +178,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(_wrap(BookSearchScreen(
-      book: _testBook(format: BookFileFormat.epub),
-      initialQuery: '關鍵字',
-      searchRepository: searchRepo,
-      prefsManager: FakeReaderPrefsManager(),
-      libraryRepository: FakeLibraryRepository(),
-    )));
+    await tester.pumpWidget(_wrap(BookSearchScreen(book: _testBook(format: BookFileFormat.epub), initialQuery: '關鍵字', dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: FakeReaderPrefsManager(), libraryRepository: FakeLibraryRepository()))));
     await tester.pumpAndSettle();
 
     expect(find.text('第 6 章'), findsOneWidget);
@@ -224,13 +194,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(_wrap(BookSearchScreen(
-      book: _testBook(format: BookFileFormat.pdf),
-      initialQuery: '關鍵字',
-      searchRepository: searchRepo,
-      prefsManager: FakeReaderPrefsManager(),
-      libraryRepository: FakeLibraryRepository(),
-    )));
+    await tester.pumpWidget(_wrap(BookSearchScreen(book: _testBook(format: BookFileFormat.pdf), initialQuery: '關鍵字', dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: FakeReaderPrefsManager(), libraryRepository: FakeLibraryRepository()))));
     await tester.pumpAndSettle();
 
     expect(find.text('第 11 頁'), findsOneWidget);
@@ -245,13 +209,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(_wrap(BookSearchScreen(
-      book: _testBook(),
-      initialQuery: '關鍵字',
-      searchRepository: searchRepo,
-      prefsManager: FakeReaderPrefsManager(),
-      libraryRepository: FakeLibraryRepository(),
-    )));
+    await tester.pumpWidget(_wrap(BookSearchScreen(book: _testBook(), initialQuery: '關鍵字', dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: FakeReaderPrefsManager(), libraryRepository: FakeLibraryRepository()))));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('僅顯示前'), findsOneWidget);
@@ -262,13 +220,7 @@ void main() {
       bookSearchDetailResult: _makeResult(matchCount: 1, totalMatches: 1),
     );
 
-    await tester.pumpWidget(_wrap(BookSearchScreen(
-      book: _testBook(),
-      initialQuery: '關鍵字',
-      searchRepository: searchRepo,
-      prefsManager: FakeReaderPrefsManager(),
-      libraryRepository: FakeLibraryRepository(),
-    )));
+    await tester.pumpWidget(_wrap(BookSearchScreen(book: _testBook(), initialQuery: '關鍵字', dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: FakeReaderPrefsManager(), libraryRepository: FakeLibraryRepository()))));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('book_search_snippet_0')));
@@ -278,36 +230,38 @@ void main() {
   });
 
   testWidgets(
-      'fromReader=false 時，推入的 ReaderScreen 收到的 searchRepository／'
-      'isFullTextSearchAvailable 正確貫穿（epic-10-search Issue 8）', (tester) async {
-    final readerSearchRepository = FakeSearchRepository();
+      'fromReader=false 時，推入的 ReaderScreen.dependencies 與 BookSearchScreen.dependencies'
+      ' 是同一實例（epic-10-search Issue 8）', (tester) async {
     final searchRepo = FakeSearchRepository(
       bookSearchDetailResult: _makeResult(matchCount: 1, totalMatches: 1),
+    );
+    final deps = fakeReaderFeatureDependencies(
+      searchRepository: searchRepo,
+      isFullTextSearchAvailable: true,
     );
 
     // isFullTextSearchAvailable: false 時 BookSearchScreen 本身不顯示片段清單
     //（顯示「不支援」提示），無法透過點擊片段驗證貫穿；此處改以 true 驗證
-    //「貫穿邏輯本身正確」（searchRepository 同實例、flag 正確帶入），false
+    //「貫穿邏輯本身正確」（整組同一實例轉傳），false
     // 情境的貫穿已由 LibraryScreen／LibrarySearchScreen 的同構測試覆蓋
     await tester.pumpWidget(_wrap(BookSearchScreen(
       book: _testBook(),
       initialQuery: '關鍵字',
-      searchRepository: searchRepo,
-      prefsManager: FakeReaderPrefsManager(),
-      libraryRepository: FakeLibraryRepository(),
-      readerFeatureRepositories: LibraryReaderFeatureRepositories(
-        searchRepository: readerSearchRepository,
-        isFullTextSearchAvailable: true,
-      ),
+      dependencies: deps,
     )));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('book_search_snippet_0')));
     await tester.pumpAndSettle();
 
+    final searchScreen = tester.widget<BookSearchScreen>(
+      find.byType(BookSearchScreen, skipOffstage: false),
+    );
+    expect(searchScreen.dependencies, same(deps));
     final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
-    expect(readerScreen.searchRepository, same(readerSearchRepository));
-    expect(readerScreen.isFullTextSearchAvailable, isTrue);
+    expect(readerScreen.dependencies, same(deps));
+    expect(readerScreen.dependencies.searchRepository, same(searchRepo));
+    expect(readerScreen.dependencies.isFullTextSearchAvailable, isTrue);
   });
 
   testWidgets('fromReader=true 時點擊片段透過 Navigator.pop 回傳 ReaderJumpTarget（review-plan-issue-7.md I-2）',
@@ -323,14 +277,7 @@ void main() {
         onPressed: () async {
           poppedTarget = await Navigator.of(context).push<ReaderJumpTarget>(
             MaterialPageRoute(
-              builder: (_) => BookSearchScreen(
-                book: _testBook(),
-                initialQuery: '關鍵字',
-                searchRepository: searchRepo,
-                prefsManager: FakeReaderPrefsManager(),
-                libraryRepository: FakeLibraryRepository(),
-                fromReader: true,
-              ),
+              builder: (_) => BookSearchScreen(book: _testBook(), initialQuery: '關鍵字', fromReader: true, dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: FakeReaderPrefsManager(), libraryRepository: FakeLibraryRepository())),
             ),
           );
         },
@@ -358,14 +305,7 @@ void main() {
       bookSearchDetailResult: _makeResult(matchCount: 15, totalMatches: 15),
     );
 
-    await tester.pumpWidget(_wrap(BookSearchScreen(
-      book: _testBook(),
-      initialQuery: '關鍵字',
-      searchRepository: searchRepo,
-      prefsManager: FakeReaderPrefsManager(),
-      libraryRepository: FakeLibraryRepository(),
-      isEinkMode: true,
-    )));
+    await tester.pumpWidget(_wrap(BookSearchScreen(book: _testBook(), initialQuery: '關鍵字', isEinkMode: true, dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: FakeReaderPrefsManager(), libraryRepository: FakeLibraryRepository()))));
     await tester.pumpAndSettle();
 
     expect(
@@ -393,10 +333,8 @@ void main() {
     await tester.pumpWidget(_wrap(BookSearchScreen(
       book: _testBook(),
       initialQuery: '關鍵字',
-      searchRepository: searchRepo,
-      prefsManager: FakeReaderPrefsManager(),
-      libraryRepository: FakeLibraryRepository(),
-      readerFeatureRepositories: const LibraryReaderFeatureRepositories(
+      dependencies: fakeReaderFeatureDependencies(
+        searchRepository: searchRepo,
         isFullTextSearchAvailable: false,
       ),
     )));
@@ -413,13 +351,7 @@ void main() {
       bookSearchDetailResult: _makeResult(matchCount: 1, totalMatches: 1),
     );
 
-    await tester.pumpWidget(_wrap(BookSearchScreen(
-      book: _testBook(),
-      initialQuery: '關鍵字',
-      searchRepository: searchRepo,
-      prefsManager: FakeReaderPrefsManager(),
-      libraryRepository: FakeLibraryRepository(),
-    )));
+    await tester.pumpWidget(_wrap(BookSearchScreen(book: _testBook(), initialQuery: '關鍵字', dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: FakeReaderPrefsManager(), libraryRepository: FakeLibraryRepository()))));
     await tester.pumpAndSettle();
 
     final snippetHeight =
@@ -475,13 +407,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(_wrap(BookSearchScreen(
-      book: _testBook(),
-      initialQuery: '国电脑',
-      searchRepository: searchRepo,
-      prefsManager: prefsManager,
-      libraryRepository: FakeLibraryRepository(),
-    )));
+    await tester.pumpWidget(_wrap(BookSearchScreen(book: _testBook(), initialQuery: '国电脑', dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: prefsManager, libraryRepository: FakeLibraryRepository()))));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('國電腦維修站'), findsOneWidget);
@@ -509,13 +435,7 @@ void main() {
     // 卻用簡體「电脑」搜尋——高亮比對必須改用能在文字中找到的變體
     // 「電腦」，而非直接用使用者輸入的「电脑」（否則 indexOf 找不到，
     // 完全不會產生任何高亮片段）。
-    await tester.pumpWidget(_wrap(BookSearchScreen(
-      book: _testBook(),
-      initialQuery: '电脑',
-      searchRepository: searchRepo,
-      prefsManager: FakeReaderPrefsManager(),
-      libraryRepository: FakeLibraryRepository(),
-    )));
+    await tester.pumpWidget(_wrap(BookSearchScreen(book: _testBook(), initialQuery: '电脑', dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: FakeReaderPrefsManager(), libraryRepository: FakeLibraryRepository()))));
     await tester.pumpAndSettle();
 
     final texts = tester.widgetList<Text>(
@@ -565,13 +485,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(_wrap(BookSearchScreen(
-      book: book,
-      initialQuery: '国电脑',
-      searchRepository: searchRepo,
-      prefsManager: prefsManager,
-      libraryRepository: FakeLibraryRepository(),
-    )));
+    await tester.pumpWidget(_wrap(BookSearchScreen(book: book, initialQuery: '国电脑', dependencies: fakeReaderFeatureDependencies(searchRepository: searchRepo, prefsManager: prefsManager, libraryRepository: FakeLibraryRepository()))));
     await tester.pumpAndSettle();
 
     // AppBar 標題（單書情境，該書覆寫值 toSimplified）維持簡體原文不變，
@@ -591,11 +505,9 @@ void main() {
         BookSearchScreen(
           book: book,
           initialQuery: '關鍵字',
-          searchRepository: searchRepository,
-          prefsManager: FakeReaderPrefsManager(),
-          libraryRepository: FakeLibraryRepository(),
-          readerFeatureRepositories: const LibraryReaderFeatureRepositories(),
-          syncDependencies: const LibrarySyncDependencies(),
+          dependencies: fakeReaderFeatureDependencies(
+            searchRepository: searchRepository,
+          ),
           isEinkMode: false,
         ),
         locale: const Locale('en'),

@@ -177,10 +177,12 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
       MaterialPageRoute(
         builder: (_) => buildReaderScreen(
           book: book,
-          prefsManager: widget.prefsManager,
-          features: widget.readerFeatureRepositories,
-          sync: widget.syncDependencies,
-          libraryRepository: widget.libraryRepository,
+          dependencies: readerFeatureDependenciesFromLegacy(
+            prefsManager: widget.prefsManager,
+            features: widget.readerFeatureRepositories,
+            sync: widget.syncDependencies,
+            libraryRepository: widget.libraryRepository,
+          ),
           isEinkMode: widget.isEinkMode,
           // epic-10-search Issue 5：只有內容匹配片段的點擊會帶入
           // jumpTarget（見下方 _buildContentGroupCard 呼叫端），書名/作者
@@ -405,11 +407,12 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
         builder: (_) => BookSearchScreen(
           book: book,
           initialQuery: _controller.text.trim(),
-          searchRepository: widget.searchRepository,
-          prefsManager: widget.prefsManager,
-          libraryRepository: widget.libraryRepository,
-          readerFeatureRepositories: widget.readerFeatureRepositories,
-          syncDependencies: widget.syncDependencies,
+          dependencies: readerFeatureDependenciesFromLegacy(
+            prefsManager: widget.prefsManager,
+            features: widget.readerFeatureRepositories,
+            sync: widget.syncDependencies,
+            libraryRepository: widget.libraryRepository,
+          ),
           isEinkMode: widget.isEinkMode,
         ),
       ),

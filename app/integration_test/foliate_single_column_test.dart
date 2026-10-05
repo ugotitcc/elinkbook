@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import '../test/support/fake_reader_feature_dependencies.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -194,11 +195,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_single_column_on_integration',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b_single_column_on_integration', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 

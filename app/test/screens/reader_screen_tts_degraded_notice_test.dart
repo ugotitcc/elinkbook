@@ -9,6 +9,7 @@ import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
 import '../support/fake_reader_prefs_manager.dart';
+import '../support/fake_reader_feature_dependencies.dart';
 
 // epic-61 Issue 1（F3）：TTS 音訊服務初始化失敗降級後，進入閱讀器時提示一次。
 // 用「不支援格式」分支即可：提示在 initState 之後觸發，與渲染路徑無關。
@@ -20,12 +21,7 @@ Widget _app(FakeReaderPrefsManager prefs, {TtsAudioHandlerHolder? ttsAudio}) {
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-    home: ReaderScreen(
-      filePath: 'test/fixtures/sample.unknown',
-      bookId: 'b_tts_degraded',
-      prefsManager: prefs,
-      ttsAudio: ttsAudio,
-    ),
+    home: ReaderScreen(filePath: 'test/fixtures/sample.unknown', bookId: 'b_tts_degraded', dependencies: fakeReaderFeatureDependencies(prefsManager: prefs, ttsAudio: ttsAudio)),
   );
 }
 

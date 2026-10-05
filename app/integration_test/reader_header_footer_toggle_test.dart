@@ -14,6 +14,7 @@ import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import '../test/support/fake_reader_feature_dependencies.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -66,11 +67,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_header_toggle_integration',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b_header_toggle_integration', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -135,11 +132,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_header_off_integration',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b_header_off_integration', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -202,11 +195,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_footer_off_integration',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b_footer_off_integration', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 
@@ -264,11 +253,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_pdf_footer_off_integration',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(filePath: samplePath, bookId: 'b_pdf_footer_off_integration', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
 

@@ -14,6 +14,7 @@ import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import '../test/support/fake_reader_feature_dependencies.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -104,12 +105,7 @@ void main() {
     final key = GlobalKey<State<ReaderScreen>>();
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          key: key,
-          filePath: samplePath,
-          bookId: 'b_nav_zone_menu',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(key: key, filePath: samplePath, bookId: 'b_nav_zone_menu', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -162,12 +158,7 @@ void main() {
     final key = GlobalKey<State<ReaderScreen>>();
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          key: key,
-          filePath: samplePath,
-          bookId: 'b_nav_zone_pageturn',
-          prefsManager: prefsManager,
-        ),
+        home: ReaderScreen(key: key, filePath: samplePath, bookId: 'b_nav_zone_pageturn', dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager)),
       ),
     );
     await _pumpUntilLoaded(tester);

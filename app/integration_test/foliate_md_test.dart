@@ -12,6 +12,7 @@ import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import '../test/support/fake_reader_feature_dependencies.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑
 /// （比照 foliate_kf8_test.dart／foliate_cbz_test.dart／foliate_txt_test.dart
@@ -68,14 +69,7 @@ void main() {
       final readerKey = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
-          home: ReaderScreen(
-            key: readerKey,
-            filePath: book.filePath,
-            bookId: book.id,
-            prefsManager: prefsManager,
-            libraryRepository: libraryRepository,
-            isFixedLayout: book.isFixedLayout,
-          ),
+          home: ReaderScreen(key: readerKey, filePath: book.filePath, bookId: book.id, isFixedLayout: book.isFixedLayout, dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager, libraryRepository: libraryRepository)),
         ),
       );
       await _pumpUntilLoaded(tester);

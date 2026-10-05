@@ -6,6 +6,7 @@ import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import '../support/fake_reader_feature_dependencies.dart';
 // ignore: unused_import
 import 'package:elinkbook/screens/full_text_search_confirm_dialog.dart';
 import 'package:elinkbook/screens/book_search_screen.dart';
@@ -467,6 +468,8 @@ void main() {
       wrap(LibrarySearchScreen(
         initialQuery: '書一',
         searchRepository: FakeSearchRepository(titleAuthorResults: [book]),
+        readerFeatureRepositories: completeLegacyReaderFeatures(),
+        syncDependencies: completeLegacySyncDependencies(),
         prefsManager: FakeReaderPrefsManager(),
         libraryRepository: FakeLibraryRepository(),
       )),
@@ -499,14 +502,10 @@ void main() {
             ),
           ],
         ),
+        syncDependencies: completeLegacySyncDependencies(),
         prefsManager: FakeReaderPrefsManager(),
         libraryRepository: FakeLibraryRepository(),
-        readerFeatureRepositories: LibraryReaderFeatureRepositories(
-          fullTextSearchSettingsRepository:
-              FakeFullTextSearchSettingsRepository(initialEnabled: {
-            ContentIndexCategory.pdf: true,
-            ContentIndexCategory.foliate: true,
-          }),
+        readerFeatureRepositories: completeLegacyReaderFeatures(
         ),
       )),
     );
@@ -540,14 +539,10 @@ void main() {
             ),
           ],
         ),
+        syncDependencies: completeLegacySyncDependencies(),
         prefsManager: FakeReaderPrefsManager(),
         libraryRepository: FakeLibraryRepository(),
-        readerFeatureRepositories: LibraryReaderFeatureRepositories(
-          fullTextSearchSettingsRepository:
-              FakeFullTextSearchSettingsRepository(initialEnabled: {
-            ContentIndexCategory.pdf: true,
-            ContentIndexCategory.foliate: true,
-          }),
+        readerFeatureRepositories: completeLegacyReaderFeatures(
         ),
       )),
     );
@@ -585,9 +580,10 @@ void main() {
             ),
           ],
         ),
+        syncDependencies: completeLegacySyncDependencies(),
         prefsManager: FakeReaderPrefsManager(),
         libraryRepository: FakeLibraryRepository(),
-        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+        readerFeatureRepositories: completeLegacyReaderFeatures(
           searchRepository: readerSearchRepository,
           isFullTextSearchAvailable: false,
         ),
@@ -603,8 +599,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
-    expect(readerScreen.searchRepository, same(readerSearchRepository));
-    expect(readerScreen.isFullTextSearchAvailable, isFalse);
+    expect(readerScreen.dependencies.searchRepository, same(readerSearchRepository));
+    expect(readerScreen.dependencies.isFullTextSearchAvailable, isFalse);
   });
 
   testWidgets(
@@ -628,14 +624,10 @@ void main() {
             ),
           ],
         ),
+        syncDependencies: completeLegacySyncDependencies(),
         prefsManager: FakeReaderPrefsManager(),
         libraryRepository: FakeLibraryRepository(),
-        readerFeatureRepositories: LibraryReaderFeatureRepositories(
-          fullTextSearchSettingsRepository:
-              FakeFullTextSearchSettingsRepository(initialEnabled: {
-            ContentIndexCategory.pdf: true,
-            ContentIndexCategory.foliate: true,
-          }),
+        readerFeatureRepositories: completeLegacyReaderFeatures(
         ),
       )),
     );
@@ -661,6 +653,8 @@ void main() {
       wrap(LibrarySearchScreen(
         initialQuery: '書一',
         searchRepository: FakeSearchRepository(titleAuthorResults: [book]),
+        readerFeatureRepositories: completeLegacyReaderFeatures(),
+        syncDependencies: completeLegacySyncDependencies(),
         prefsManager: FakeReaderPrefsManager(),
         libraryRepository: FakeLibraryRepository(),
       )),
@@ -682,6 +676,8 @@ void main() {
       wrap(LibrarySearchScreen(
         initialQuery: '書名',
         searchRepository: FakeSearchRepository(titleAuthorResults: [book]),
+        readerFeatureRepositories: completeLegacyReaderFeatures(),
+        syncDependencies: completeLegacySyncDependencies(),
         prefsManager: FakeReaderPrefsManager(),
         libraryRepository: FakeLibraryRepository(),
       )),
@@ -1055,9 +1051,10 @@ void main() {
       wrap(LibrarySearchScreen(
         initialQuery: '測試',
         searchRepository: searchRepository,
+        syncDependencies: completeLegacySyncDependencies(),
         prefsManager: FakeReaderPrefsManager(),
         libraryRepository: FakeLibraryRepository(),
-        readerFeatureRepositories: const LibraryReaderFeatureRepositories(
+        readerFeatureRepositories: completeLegacyReaderFeatures(
           isFullTextSearchAvailable: true,
         ),
       )),

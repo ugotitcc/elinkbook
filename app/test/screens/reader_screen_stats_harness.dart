@@ -19,6 +19,7 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../support/fake_inappwebview_platform.dart';
 import '../support/fake_reader_prefs_manager.dart';
+import '../support/fake_reader_feature_dependencies.dart';
 
 /// 三個 ReaderScreen 統計測試檔共用的常數與工具（epic-9-stats Issue 4）。
 const String kStatsTestBookId = 'stats-book';
@@ -106,18 +107,7 @@ Future<void> pumpStatsReader(
 }) async {
   await tester.pumpWidget(
     _app(
-      ReaderScreen(
-        key: readerKey,
-        filePath: filePath,
-        bookId: kStatsTestBookId,
-        bookTitle: bookTitle,
-        prefsManager: FakeReaderPrefsManager(),
-        isFixedLayout: filePath.endsWith('.epub') ? false : null,
-        readingStatsRepository: readingStatsRepository,
-        readingStatsTracker: readingStatsTracker,
-        searchRepository: searchRepository,
-        libraryRepository: libraryRepository,
-      ),
+      ReaderScreen(key: readerKey, filePath: filePath, bookId: kStatsTestBookId, bookTitle: bookTitle, isFixedLayout: filePath.endsWith('.epub') ? false : null, readingStatsTracker: readingStatsTracker, dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager(), readingStatsRepository: readingStatsRepository, searchRepository: searchRepository, libraryRepository: libraryRepository)),
     ),
   );
   await tester.pump();
