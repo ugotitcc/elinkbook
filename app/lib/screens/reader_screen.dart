@@ -1855,6 +1855,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             ttsProvider: widget.ttsProvider,
             ttsAudioHandler: widget.ttsAudioHandler,
             ttsAudioFocusSource: widget.ttsAudioFocusSource,
+            // epic-61 Issue 1：同上，手動逐欄重建 bundle 的新欄位必須一併轉送。
+            ttsDegradedNotice: widget.ttsDegradedNotice,
             readerActivityTracker: widget.readerActivityTracker,
             searchRepository: searchRepository,
             isFullTextSearchAvailable: widget.isFullTextSearchAvailable,

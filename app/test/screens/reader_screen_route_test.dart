@@ -9,6 +9,7 @@ import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/reader/reader_activity_tracker.dart';
 import 'package:elinkbook/reader/reader_jump_target.dart';
 import 'package:elinkbook/reader/tts_audio_handler.dart';
+import 'package:elinkbook/reader/tts_audio_handler_startup.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/reader_screen_route.dart';
 import 'package:elinkbook/sync/sync_checkpoint_result.dart';
@@ -208,6 +209,33 @@ void main() {
 
       expect(screen.readingStatsRepository, isNull);
       expect(screen.readingStatsTracker, isNull);
+    });
+
+    test('bundle 帶 ttsDegradedNotice 時，原樣轉交給 ReaderScreen（epic-61 Issue 1）', () {
+      final notice = TtsDegradedNotice(degraded: true);
+      final screen = buildReaderScreen(
+        book: _testBook(),
+        prefsManager: FakeReaderPrefsManager(),
+        features: LibraryReaderFeatureRepositories(ttsDegradedNotice: notice),
+        sync: const LibrarySyncDependencies(),
+        libraryRepository: FakeLibraryRepository(),
+        isEinkMode: false,
+      );
+
+      expect(screen.ttsDegradedNotice, same(notice));
+    });
+
+    test('bundle 未帶 ttsDegradedNotice 時，ReaderScreen.ttsDegradedNotice 為 null', () {
+      final screen = buildReaderScreen(
+        book: _testBook(),
+        prefsManager: FakeReaderPrefsManager(),
+        features: const LibraryReaderFeatureRepositories(),
+        sync: const LibrarySyncDependencies(),
+        libraryRepository: FakeLibraryRepository(),
+        isEinkMode: false,
+      );
+
+      expect(screen.ttsDegradedNotice, isNull);
     });
 
     test('initialJumpTarget 有值時正確帶入 ReaderScreen', () {

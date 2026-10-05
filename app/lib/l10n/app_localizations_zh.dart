@@ -2064,7 +2064,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get bookmarkDefaultNameFallback => '書籤';
 
   @override
-  String get ttsDegradedNotice => '本次沒有媒體通知與鎖屏控制，朗讀仍可使用';
+  String get ttsDegradedNotice => '本次沒有媒體通知與鎖定畫面控制，朗讀仍可使用';
 
   @override
   String get ttsNotificationChannelName => '朗讀播放中';
@@ -6576,7 +6576,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get bookmarkDefaultNameFallback => '書籤';
 
   @override
-  String get ttsDegradedNotice => '本次沒有媒體通知與鎖屏控制，朗讀仍可使用';
+  String get ttsDegradedNotice => '本次沒有媒體通知與鎖定畫面控制，朗讀仍可使用';
 
   @override
   String get ttsNotificationChannelName => '朗讀播放中';

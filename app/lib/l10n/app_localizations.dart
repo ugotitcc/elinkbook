@@ -3653,10 +3653,10 @@ abstract class AppLocalizations {
   /// **'書籤'**
   String get bookmarkDefaultNameFallback;
 
-  /// 朗讀（TTS）音訊服務啟動初始化失敗而降級後，進入閱讀器時顯示一次的 SnackBar 文字（每次啟動 App 只顯示一次，見 TtsDegradedNotice）。朗讀本身仍可用，少的是系統媒體通知、鎖屏控制與背景朗讀的前景服務保護
+  /// 朗讀（TTS）音訊服務啟動初始化失敗而降級後，進入閱讀器時顯示一次的 SnackBar 文字（每次啟動 App 只顯示一次，見 TtsDegradedNotice）。朗讀本身仍可用，少的是系統媒體通知、鎖定畫面控制與背景朗讀的前景服務保護
   ///
   /// In zh_TW, this message translates to:
-  /// **'本次沒有媒體通知與鎖屏控制，朗讀仍可使用'**
+  /// **'本次沒有媒體通知與鎖定畫面控制，朗讀仍可使用'**
   String get ttsDegradedNotice;
 
   /// Android 朗讀（TTS）前景服務的通知頻道名稱，顯示於系統的通知設定。頻道於啟動時建立，語言以啟動當下為準（無 BuildContext，見 startup_localizations.dart）

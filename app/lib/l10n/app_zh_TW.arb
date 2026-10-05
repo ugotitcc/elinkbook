@@ -2748,9 +2748,9 @@
   "@bookmarkDefaultNameFallback": {
     "description": "新增書籤時，章節名稱與進度皆無法取得時的通用預設名稱"
   },
-  "ttsDegradedNotice": "本次沒有媒體通知與鎖屏控制，朗讀仍可使用",
+  "ttsDegradedNotice": "本次沒有媒體通知與鎖定畫面控制，朗讀仍可使用",
   "@ttsDegradedNotice": {
-    "description": "朗讀（TTS）音訊服務啟動初始化失敗而降級後，進入閱讀器時顯示一次的 SnackBar 文字（每次啟動 App 只顯示一次，見 TtsDegradedNotice）。朗讀本身仍可用，少的是系統媒體通知、鎖屏控制與背景朗讀的前景服務保護"
+    "description": "朗讀（TTS）音訊服務啟動初始化失敗而降級後，進入閱讀器時顯示一次的 SnackBar 文字（每次啟動 App 只顯示一次，見 TtsDegradedNotice）。朗讀本身仍可用，少的是系統媒體通知、鎖定畫面控制與背景朗讀的前景服務保護"
   },
   "ttsNotificationChannelName": "朗讀播放中",
   "@ttsNotificationChannelName": {

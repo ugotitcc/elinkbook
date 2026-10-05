@@ -46,7 +46,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(_snackbarKey), findsOneWidget);
-    expect(find.text('本次沒有媒體通知與鎖屏控制，朗讀仍可使用'), findsOneWidget);
+    expect(find.text('本次沒有媒體通知與鎖定畫面控制，朗讀仍可使用'), findsOneWidget);
   });
 
   testWidgets('同一個 notice 已顯示過，再次進入閱讀器不重複顯示', (tester) async {

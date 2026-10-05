@@ -118,6 +118,14 @@
 - 全套 `flutter test`：3653 通過、1 略過、1 失敗。失敗的是既有的 `pdf_reader_view_filters_test.dart`「同時有多頁需要加粗運算時，各頁互不取消」——在**沒有本分支改動**的基準上也失敗（基準 1 個失敗），單獨重跑則通過，屬全套並行負載下加粗背景運算變慢的不穩定，與本 Issue 無關，未處理。另外，逐頁濾鏡新測試（epic-56 FU-1）的加粗那則同樣受負載影響，已把等待上限放寬到 200 輪。
 - **真機驗證（電子紙 WAVE）**：暫時把 manifest 的 `<service>` 改成 `AudioServiceBROKEN` 製造降級。故障版：進書架後再進閱讀器，畫面左下角出現「本次沒有媒體通知與鎖屏控制，朗讀仍可使用」，降級 log 1 筆。正常版：同樣操作沒有提示。故障 manifest 已還原（`BROKEN` 殘留 0、內容 diff 為空），裝置已重裝正常版。限制：SnackBar 約 4 秒，要在裝置端連拍才抓得到，第一次從電腦端截圖錯過。
 
+**2026-10-05 Issue 1 程式審查修訂**（`reviews/review-code-issue-1.md`：0 Critical／1 Important／4 Minor，結論可合併）
+
+- **I-1 成立，已修**：`reader_screen.dart` 手動重建 `LibraryReaderFeatureRepositories`（閱讀器→單書搜尋）漏轉送 `ttsDegradedNotice`（讀碼確認；目前無功能影響，但違反該處「新欄位必須一併轉送」的註解）。已補轉送，並補 3 處串接測試：`reader_screen_test.dart`（轉送給 `BookSearchScreen`，先紅後綠）、`reader_screen_route_test.dart`（`buildReaderScreen` 轉送／未帶為 null）、`elinkbook_app_wiring_test.dart`（`ElinkBookApp` → bundle）。變異檢查：拿掉 `reader_screen_route.dart` 與 `main.dart` 的轉送行 → 2 個失敗，還原後全過。
+- **M-1 成立，已改**：zh_TW、zh 的「鎖屏」改為「鎖定畫面」（台灣用語），重新產生 l10n；簡體 `锁屏` 不動。
+- **M-2、M-3 不改，只記錄**：SnackBar 在使用者 4 秒內離開閱讀器時會留到書架；與其他 SnackBar 排隊。皆為一次性、影響極低，且與閱讀器其他 SnackBar 同一模式。（審查標為推測，未驗證。）
+- **M-4 已處理**：`AndroidManifest.xml` 內容與原本無差異（只有換行字元），確認後以 `git checkout` 還原為乾淨。
+- 驗證：`flutter analyze` 乾淨；觸及的測試檔全過（`reader_screen_test` 整檔、route、wiring、notice、l10n）；l10n 檢查 PASS。全套 `flutter test` 於審查前已跑（3653 通過、1 個既有的加粗測試不穩），審查修訂只動 1 行轉送、文案與測試。
+
 ## 後續項目（併入本 Epic，不另開 Epic）
 
 2026-10-05 人類決定：同一條問題線的後續工作不為每個小問題各開一個 Epic，併在本 Epic 以「後續項目」追蹤。
