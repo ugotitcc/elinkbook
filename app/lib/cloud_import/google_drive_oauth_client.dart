@@ -12,6 +12,7 @@ import 'cloud_provider.dart';
 
 const _authorizationEndpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
 const _tokenEndpoint = 'https://oauth2.googleapis.com/token';
+const _revokeEndpoint = 'https://oauth2.googleapis.com/revoke';
 const _userInfoEndpoint = 'https://www.googleapis.com/oauth2/v2/userinfo';
 const _driveReadonlyScope = 'https://www.googleapis.com/auth/drive.readonly email openid profile';
 
@@ -123,7 +124,23 @@ class GoogleDriveOAuthClient {
     return true;
   }
 
-  Future<void> unlink() => _accountRepository.unlink(CloudProvider.googleDrive);
+  /// 解除連結：先盡力向 Google 撤銷 refresh token（讓授權在 Google 端也
+  /// 失效），再清除本機憑證。撤銷屬「盡力而為」：斷網或伺服器回應失敗都
+  /// 不能擋住使用者登出，因此任何錯誤皆吞掉，本機憑證一定會被清除。
+  Future<void> unlink() async {
+    final tokens = await _accountRepository.loadTokens(CloudProvider.googleDrive);
+    if (tokens != null) {
+      try {
+        await _httpClient.post(
+          Uri.parse(_revokeEndpoint),
+          body: {'token': tokens.refreshToken},
+        );
+      } catch (_) {
+        // 撤銷失敗不影響本機登出，見上方說明。
+      }
+    }
+    await _accountRepository.unlink(CloudProvider.googleDrive);
+  }
 
   /// 回傳目前有效的 access token；已過期或 60 秒內即將過期時，先用
   /// refresh token 靜默換發新的並更新儲存值。回傳 `null` 專指「需要重新
