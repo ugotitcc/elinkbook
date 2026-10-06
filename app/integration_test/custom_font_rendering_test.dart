@@ -82,13 +82,13 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       ReaderScreen(
-      filePath: epubPath,
-      bookId: 'b_custom_font',
-      dependencies: fakeReaderFeatureDependencies(
-        prefsManager: prefsManager,
-        customFontsRepository: customFontsRepository,
+        filePath: epubPath,
+        bookId: 'b_custom_font',
+        dependencies: fakeReaderFeatureDependencies(
+          prefsManager: prefsManager,
+          customFontsRepository: customFontsRepository,
+        ),
       ),
-    ),
     );
     await tester.pumpAndSettle(const Duration(seconds: 3));
 
