@@ -96,7 +96,7 @@
 - Commit：本計畫檔（在 `main`，純文件）
 - 建立 worktree：`.worktrees/epic-54-issue-17-integration-migrate`
 
-- [ ] **Step 1：提交計畫（在 `main`）**
+- [x] **Step 1：提交計畫（在 `main`）**
 
 ```bash
 git add docs/epics/epic-54-architecture-optimization/plans/plan-issue-17.md
@@ -105,7 +105,7 @@ git commit -m "docs(epic-54): Issue 17 實作計畫
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 2：建立 worktree 與分支**
+- [x] **Step 2：建立 worktree 與分支**
 
 ```bash
 git worktree add .worktrees/epic-54-issue-17-integration-migrate -b epic-54/issue-17-integration-migrate
@@ -115,7 +115,7 @@ cd .worktrees/epic-54-issue-17-integration-migrate/app && flutter pub get
 
 之後所有指令都在這個 worktree 的 `app/` 下執行。
 
-- [ ] **Step 3：確認裝置與 adb 延遲**
+- [x] **Step 3：確認裝置與 adb 延遲**
 
 ```bash
 export MSYS_NO_PATHCONV=1
@@ -125,7 +125,7 @@ time adb -s 3CEF42ECD491687 shell echo hi
 
 序號後面必須是 `device`。`echo hi` 超過 1 秒就執行 `adb kill-server && adb start-server`，重新授權後再量一次，直到小於 1 秒。**向使用者確認：** 可以清除 `TCL 14` 上既有的 `cc.ugotit.elinkbook` 資料嗎？得到明確回答前，不得執行任何 `flutter test integration_test/…`。
 
-- [ ] **Step 4：記錄基準**
+- [x] **Step 4：記錄基準**
 
 ```bash
 OUT=../.scratch/baseline; : > $OUT/summary.txt
@@ -154,7 +154,7 @@ cat $OUT/summary.txt
 
 **為什麼範本只能從 `Key(…)` 取：** 計畫審查實測，若對 `lib/` 內所有字串取範本，`"$_temp0"`（多語系產生檔）、`'${x}%'`、`'h${highlight?.id}_n${note?.id}'` 等會變成 `^.+$` 這類萬用正則，讓守衛對任何 key 都回報「存在」，永遠 PASS。`lib/` 內這類近乎萬用的範本（固定字元少於 4 個的）共 149 個（`l10n/` 84 個、其他目錄 65 個），所以只排除 `l10n/` 不夠。單元測試有專門的案例擋這個失敗模式。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 用 Write 工具建立 `app/tool/test_check_integration_keys.mjs`：
 
@@ -262,12 +262,12 @@ try {
 console.log('全部測試通過')
 ```
 
-- [ ] **Step 2：執行，確認失敗**
+- [x] **Step 2：執行，確認失敗**
 
 Run：`node tool/test_check_integration_keys.mjs`
 Expected：FAIL，`Cannot find module './check_integration_keys.js'`。
 
-- [ ] **Step 3：寫實作**
+- [x] **Step 3：寫實作**
 
 用 Write 工具建立 `app/tool/check_integration_keys.js`：
 
@@ -437,12 +437,12 @@ if (require.main === module) process.exit(main(process.argv.slice(2)));
 module.exports = { findStaleKeys, collectDartFiles };
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run：`node tool/test_check_integration_keys.mjs`
 Expected：印出「全部測試通過」。
 
-- [ ] **Step 5：對現況執行，確認抓得到已知的過期 key**
+- [x] **Step 5：對現況執行，確認抓得到已知的過期 key**
 
 Run：`node tool/check_integration_keys.js; echo "exit=$?"`
 Expected：`exit=1`，並**剛好**列出這 7 個 key、共 22 處引用（計畫審查時在 `main` `e978b5fe` 實測）：`reader_appbar_chapter_title`、`reader_appbar_static_title`、`reader_fixed_layout_back_button`、`reader_fixed_layout_notes_button`、`reader_foliate_progress_button`、`reader_pdf_notes_button`、`reader_pdf_settings_button`。
@@ -454,7 +454,7 @@ node tool/check_integration_keys.js | grep -o "Key('[a-z_]*')" | sort -u | wc -l
 
 **不得**列出 `nav_zone_*`、`reader_settings_*`、`pdf_settings_*`、`notes_sheet_annotation_delete_*`、`manual_import_*`（動態 key 或測試自建 widget，列出代表比對規則有錯，先修腳本）。**若輸出是 `PASS` 且 `exit=0`，代表守衛被癱瘓了**（計畫審查發現的 C-1 失敗模式），不得往下做，先檢查 `templates` 是不是混進了萬用範本。
 
-- [ ] **Step 6：更新 `README.md`**
+- [x] **Step 6：更新 `README.md`**
 
 在 `app/tool/README.md` 的 `check_l10n_hardcoded_strings.js` 段落之前，新增一段（用 Edit，定位字串用 `## \`check_l10n_hardcoded_strings.js\``）：
 
@@ -492,7 +492,7 @@ node tool/test_check_integration_keys.mjs   # 守衛本身的單元測試
 這類過期仍須靠真機執行才看得到。
 ```
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add tool/check_integration_keys.js tool/test_check_integration_keys.mjs tool/README.md
@@ -514,7 +514,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 **Interfaces：**
 - Produces：`String pageInfoText(WidgetTester tester)`：回傳 `reader_chrome_page_info_text` 的文字（找不到時丟 `TestFailure`，訊息說明工具列可能已收合）。
 
-- [ ] **Step 1：建立共用函式**
+- [x] **Step 1：建立共用函式**
 
 用 Write 工具建立 `app/test/support/reader_chrome_finders.dart`：
 
@@ -537,7 +537,7 @@ String pageInfoText(WidgetTester tester) {
 }
 ```
 
-- [ ] **Step 2：改 `reader_footer_test.dart`**
+- [x] **Step 2：改 `reader_footer_test.dart`**
 
 在 import 區加 `import '../test/support/reader_chrome_finders.dart';`（接在 `pump_localized_widget.dart` 那行之後）。把第 65～66 行：
 
@@ -555,7 +555,7 @@ String pageInfoText(WidgetTester tester) {
 
 同檔後面若還有 `進度 N% ｜ 第 x/y 頁` 斷言，用同樣方式換（先 `grep -n "進度 " integration_test/reader_footer_test.dart` 列出全部）。百分比算法是 `(current / total * 100).round()`：1/6→17、2/6→33、3/6→50、4/6→67、5/6→83、6/6→100。
 
-- [ ] **Step 3：改 `reading_position_test.dart`**
+- [x] **Step 3：改 `reading_position_test.dart`**
 
 加同樣的 import。把第 88 行 `expect(find.text('進度 67% ｜ 第 4/6 頁'), findsOneWidget);` 換成 `expect(pageInfoText(tester), '4 / 6 · 67%');`。把第 109～110 行：
 
@@ -571,7 +571,7 @@ String pageInfoText(WidgetTester tester) {
         reason: '重新開啟同一本書應自動回到離開前的頁碼');
 ```
 
-- [ ] **Step 4：改 `volume_key_test.dart`**
+- [x] **Step 4：改 `volume_key_test.dart`**
 
 這個檔案有**三種**過期參照，計畫審查實測列出（`grep -n "_pumpUntilTextFound\|AppBar\|第 [0-9]/" integration_test/volume_key_test.dart`）：第 36 行的 helper `_pumpUntilTextFound`、第 114／133／140 行的 `find.textContaining('第 N/')`、第 135 行的 `find.byType(AppBar)`。只改斷言、不改 helper，測試會卡在第 131 行逾時 15 秒。
 
@@ -610,7 +610,7 @@ Future<void> _pumpUntilPageInfoStartsWith(WidgetTester tester, String prefix) as
 
 第 135 行的 `reader_chrome_back_button` 只在工具列可見（`_chromeVisible` 為真）時存在，語意正好對應舊的「AppBar 還在＝沒進入沉浸模式」；Task 3 不需再處理這個檔案。
 
-- [ ] **Step 5：在真機執行並確認**
+- [x] **Step 5：在真機執行並確認**
 
 ```bash
 for n in reader_footer_test reading_position_test volume_key_test; do
@@ -622,7 +622,7 @@ Expected：三個檔案各自 `All tests passed!`。
 
 若失敗：看第一個例外。`找不到 reader_chrome_page_info_text` 代表工具列在該步驟已收合或位置資訊未載入（例如 `volume_key_test` 翻頁後）→ 依判定規則處理，**不得**把斷言改成 `findsNothing` 或刪掉。文字格式不符（例如 PDF 實際顯示不是 `4 / 6 · 67%`）→ 印出 `pageInfoText(tester)` 的實際值，對照 `reader_screen.dart:2283` 的公式；若程式與註解不符，停止回報。
 
-- [ ] **Step 6：斷言強度檢查與 Commit**
+- [x] **Step 6：斷言強度檢查與 Commit**
 
 列出「舊斷言 → 新斷言」逐條比對：舊的是「畫面含某段文字」，新的是「頁碼元件文字**完全等於**某值」，強度**提高**（`reading_position_test` 同時驗證百分比）；`volume_key_test` 的 `startsWith('N / ')` 與舊的 `textContaining('第 N/')` 等強。
 
@@ -644,13 +644,13 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 **背景：** 舊介面用 `Scaffold.appBar`，現在是 `ReaderChromeTopBar`（`Padding` 內的普通 widget）。**`showHeader`／`showFooter` 偏好的現行語意**（`reader_screen.dart` 約 2880、2899、2848 行）：`showHeader` 控制 Foliate 格式的角落頁首文字 `reader_foliate_header_text`；`showFooter` 只控制 Foliate 格式的角落進度文字 `reader_foliate_progress_text`。**PDF 的 `ReaderFooter`（`reader_footer`）與兩個偏好都無關**，只在 `format == BookFormat.pdf && _chromeVisible` 時隨底部工具列建構。因此 `reader_header_footer_toggle_test` 裡「`showFooter=false` 時 `reader_footer` 應 `findsNothing`」的斷言（第 221、282 行）在 PDF 上已不成立，且 Foliate 的 `reader_footer`（`_buildFoliateEpubFooter`）也是由底部工具列內的 `ReaderFooter` 提供、不受 `showFooter` 控制。這幾條是**行為改變**，要依判定規則第 3 條處理，不是換 key 就好。`ZoneAction.menu` 會切換 `_chromeVisible`（`reader_screen.dart:3463`）。工具列收合且沒有標題、沒有 TTS 圖示時，頂部列整個回傳 `SizedBox.shrink()`，所以 `reader_chrome_back_button` 消失。
 
-- [ ] **Step 1：列出所有要改的地方**
+- [x] **Step 1：列出所有要改的地方**
 
 ```bash
 grep -n "AppBar\|reader_appbar" integration_test/pdf_nav_zone_test.dart integration_test/reader_header_footer_toggle_test.dart
 ```
 
-- [ ] **Step 2：改 `pdf_nav_zone_test.dart`**
+- [x] **Step 2：改 `pdf_nav_zone_test.dart`**
 
 `find.byType(AppBar)` 的語意是「頂部工具列是否顯示」。換成 `find.byKey(const Key('reader_chrome_back_button'))`：`findsOneWidget` 與 `findsNothing` 的位置**照舊**。例如第 119、125 行：
 
@@ -662,7 +662,7 @@ grep -n "AppBar\|reader_appbar" integration_test/pdf_nav_zone_test.dart integrat
 
 若同檔有 `reason:` 提到 AppBar，把文字改成「頂部工具列」。
 
-- [ ] **Step 3：改 `reader_header_footer_toggle_test.dart`**
+- [x] **Step 3：改 `reader_header_footer_toggle_test.dart`**
 
 對照（先讀 `reader_screen.dart` 約 2880 行，確認 `reader_foliate_header_text` 的顯示條件）：
 
@@ -678,7 +678,7 @@ grep -n "AppBar\|reader_appbar" integration_test/pdf_nav_zone_test.dart integrat
 
 另外，`頁尾` 相關斷言（`reader_footer` `findsOneWidget`／`findsNothing`，第 95、162、221、282 行）的 key 仍存在，**不用改**，但要確認結果：`reader_footer` 現在位於底部工具列內，工具列收合時會消失。
 
-- [ ] **Step 4：在真機執行並確認**
+- [x] **Step 4：在真機執行並確認**
 
 ```bash
 for n in pdf_nav_zone_test reader_header_footer_toggle_test; do
@@ -688,7 +688,7 @@ done
 
 Expected：兩個檔案各自 `All tests passed!`。若 `reader_header_footer_toggle_test` 因 `reader_footer` 斷言失敗（`showFooter=false` 時預期 `findsNothing`，但現在 `reader_footer` 恆在底部工具列內），這是行為改變，依判定規則第 3 條停止回報，**不要**改成永遠成立的斷言。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 flutter analyze && node tool/check_l10n_hardcoded_strings.js && node tool/check_integration_keys.js | grep -c "reader_appbar"
@@ -707,7 +707,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 **Files：**
 - Modify：`app/integration_test/markdown_export_test.dart:114`、`epub_highlights_notes_test.dart`、`pdf_highlights_notes_test.dart`、`notes_bookmark_test.dart`、`fxl_bookmarks_test.dart`
 
-- [ ] **Step 1：`markdown_export_test.dart`（型別轉型）**
+- [x] **Step 1：`markdown_export_test.dart`（型別轉型）**
 
 `notes_sheet_export_markdown` 現在是 `IconButton`（`notes_bottom_sheet.dart:208`）。把第 113～116 行：
 
@@ -729,7 +729,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 斷言強度不變。
 
-- [ ] **Step 2：`pdf_highlights_notes_test.dart` 與 `notes_bookmark_test.dart`（舊 key）**
+- [x] **Step 2：`pdf_highlights_notes_test.dart` 與 `notes_bookmark_test.dart`（舊 key）**
 
 ```bash
 sed -i "s/'reader_pdf_notes_button'/'reader_chrome_annotations_button'/g" integration_test/pdf_highlights_notes_test.dart integration_test/notes_bookmark_test.dart
@@ -738,7 +738,7 @@ grep -n "reader_pdf_notes_button\|_pumpUntilNotesButtonEnabled" integration_test
 
 `pdf_highlights_notes_test` 的 `_pumpUntilNotesButtonEnabled`（第 45～60 行附近）是在等筆記按鈕「可點擊」。Issue 16 基準失敗原因就是它在找 `reader_pdf_notes_button`。換 key 後按鈕的啟用條件是 `_openBookFlow.isRendered`（`reader_screen.dart:2868`），PDF 載入完成即啟用。
 
-- [ ] **Step 3：`fxl_bookmarks_test.dart`（舊 key）**
+- [x] **Step 3：`fxl_bookmarks_test.dart`（舊 key）**
 
 ```bash
 sed -i -e "s/'reader_fixed_layout_notes_button'/'reader_chrome_annotations_button'/g" -e "s/'reader_fixed_layout_back_button'/'reader_chrome_back_button'/g" integration_test/fxl_bookmarks_test.dart
@@ -746,7 +746,7 @@ sed -i -e "s/'reader_fixed_layout_notes_button'/'reader_chrome_annotations_butto
 
 **注意 FXL 換頁會強制收合工具列**（`reader_screen.dart:1530`：書籤跳轉後 `_chromeVisible = false`）。若測試在跳轉後再找 `reader_chrome_*`，要先讓工具列重新出現。重新出現的方式用測試既有的 `ReaderScreen.triggerZoneAction(key, ZoneAction.menu)`（`pdf_nav_zone_test.dart` 已在用，需要 `ReaderScreen` 帶 `key: GlobalKey<ReaderScreenState>`）。**不要**去點畫面中央猜位置。
 
-- [ ] **Step 4：`notes_bookmark_test.dart` 與 `epub_highlights_notes_test.dart`（筆記面板分頁）**
+- [x] **Step 4：`notes_bookmark_test.dart` 與 `epub_highlights_notes_test.dart`（筆記面板分頁）**
 
 **事實（計畫審查指正，已對照 `reader_screen.dart:2440,2870`）：** 底部工具列的 `reader_chrome_annotations_button` 開面板時傳 `initialTabIndex: 1`，所以面板**開在「劃線與備註」分頁**；「書籤」分頁的內容（`notes_sheet_bookmark_toggle`、`notes_sheet_bookmark_list`）在切換之前不在 widget 樹內（`TabBarView` 只建構目前分頁）。
 
@@ -776,7 +776,7 @@ sed -i -e "s/'reader_fixed_layout_notes_button'/'reader_chrome_annotations_butto
 
 **診斷碼在 Step 6 提交前必須移除。**
 
-- [ ] **Step 5：在真機執行並確認**
+- [x] **Step 5：在真機執行並確認**
 
 ```bash
 for n in markdown_export_test pdf_highlights_notes_test notes_bookmark_test fxl_bookmarks_test epub_highlights_notes_test; do
@@ -786,7 +786,7 @@ done
 
 Expected：五個檔案全部 `All tests passed!`。每個失敗依「過期或真缺陷」判定規則處理，逐檔記錄「舊斷言、新斷言、強度變化」。同一個檔案換完 key 之後若又冒出下一個過期參照，繼續按規則換，直到該檔通過或遇到停止條件。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 grep -rn "診斷" integration_test/ | head   # 預期無輸出
@@ -804,7 +804,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 **Files：**
 - Modify：`app/integration_test/foliate_single_column_test.dart:223`、`reader_screen_test.dart`、`epub_pagination_test.dart`
 
-- [ ] **Step 1：`foliate_single_column_test.dart`（元件型別）**
+- [x] **Step 1：`foliate_single_column_test.dart`（元件型別）**
 
 設定面板的欄數選項現在是 `EBOptionChipGroup` 的 `EBOptionChipItem`，渲染成 `ReaderOptionTile`。`itemKey` 掛在帶 `BoxDecoration` 的 `Container` 上（`lib/screens/widgets/reader_option_tile.dart` 約 107～125 行，註解寫明這是為了讓測試可以 `tester.widget<Container>(find.byKey(...))` 直接取得），選取狀態的背景色在非 E-Ink 主題下是 `theme.colorScheme.primary`（第 51～53 行）。所以第 223 行的 `tester.widget<IconButton>(...)` 丟 `Bad state: No element`。**確切的修法**（同等強度：仍然精確比對「已選取等於主題 primary 色」）：
 
@@ -820,7 +820,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 另外該檔還有 `reader_settings_column_mode_auto` 等 key，動態 key，守衛會視為存在，不用改。
 
-- [ ] **Step 2：`reader_screen_test.dart`（13 個失敗）**
+- [x] **Step 2：`reader_screen_test.dart`（13 個失敗）**
 
 基準：`+6 -13`，主要失敗是 10 秒條件逾時（`_pumpUntil`，第 195 行）與 `database_closed` 連帶錯誤。這個檔案很大（約 1033 行），先依下列步驟縮小：
 
@@ -838,7 +838,7 @@ grep -B1 -A3 "^The following TestFailure\|^The following assertion" ../.scratch/
 
 這個檔案是本 Issue 工作量最大的一個，**分批提交**：每修好一組（例如 PDF 設定面板相關的測試）就跑一次該檔案、提交一次，commit 訊息註明修好哪幾個測試名稱。
 
-- [ ] **Step 3：`epub_pagination_test.dart`（`reader_foliate_progress_button` 已刪除）**
+- [x] **Step 3：`epub_pagination_test.dart`（`reader_foliate_progress_button` 已刪除）**
 
 基準失敗：`_pumpUntilProgressVisible` 等不到 `reader_foliate_progress_text`（第 47 行）。`reader_foliate_progress_text` 仍存在（`reader_screen.dart:3044`，角落浮動文字 `'$currentPage/$totalPages'`），但顯示條件要查：
 
@@ -849,7 +849,7 @@ sed -n 2870,2890p lib/screens/reader_screen.dart | cut -c1-130
 
 `reader_foliate_progress_button`（第 145 行 `tester.tap`）在 `lib/` 已不存在。舊流程是「點浮動進度按鈕 → 開 Bottom Sheet → 輸入框跳頁」，現在跳頁輸入框 `reader_footer_jump_input` 直接在底部工具列的 `reader_footer`。把「點按鈕開 Sheet」那一步**刪除**，直接 `enterText(find.byKey(Key('reader_footer_jump_input')), …)`，其餘斷言（跳頁後頁碼變更）保留。這是流程簡化而非斷言變弱，但仍要在 commit 訊息註明「刪除開 Sheet 步驟，原因：`reader_foliate_progress_button` 已不存在於 `lib/`，跳頁輸入框改在底部工具列的 `reader_footer`」，並用 `git log --oneline -S"reader_foliate_progress_button" -- lib` 找出移除它的 commit 一併寫上；若查不到取代依據，依判定規則第 3 條停止。
 
-- [ ] **Step 4：在真機執行並確認**
+- [x] **Step 4：在真機執行並確認**
 
 ```bash
 for n in foliate_single_column_test epub_pagination_test reader_screen_test; do
@@ -859,7 +859,7 @@ done
 
 Expected：`foliate_single_column_test`、`epub_pagination_test` 全過；`reader_screen_test` 全過，或剩下的失敗已依判定規則逐一記錄並回報。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 flutter analyze && node tool/check_l10n_hardcoded_strings.js
@@ -877,7 +877,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 **Files：** `app/integration_test/epub_toc_test.dart:140`、`epub_fxl_tap_zone_test.dart:98`、`foliate_toc_footer_test.dart:160`、`foliate_epub_reader_view_test.dart:206,455`
 
-- [ ] **Step 1：`epub_toc_test`——點目錄後「第一節」為何仍在**
+- [x] **Step 1：`epub_toc_test`——點目錄後「第一節」為何仍在**
 
 基準：第 140 行預期 `find.text('第一節')` `findsNothing`（目錄 Sheet 關閉後章節名不該再出現），實際仍有 1 個。先讀測試第 125～145 行，確認它在驗證什麼：
 
@@ -891,7 +891,7 @@ grep -n "reader_foliate_header_text\|findCurrentPath" lib/screens/reader_screen.
 - 位於已關閉的 Sheet 內（動畫未完成）→ 測試時序問題，補 `await tester.pumpAndSettle()`（這是等動畫完成，不是調大逾時）。
 - 位於頁首文字 → 設計上頁首顯示的是「目前章節」，`第一節` 若是跳轉前的章節，表示跳轉未生效 → 疑似真缺陷，**停止回報**。
 
-- [ ] **Step 2：`foliate_toc_footer_test`——493 與 490**
+- [x] **Step 2：`foliate_toc_footer_test`——493 與 490**
 
 基準：第 160 行 `displayTotalPages` 預期 493，實際 490，訊息「同一本書換頁不應改變 displayTotalPages」。**先重跑 3 次**，確認 490 是否穩定：
 
@@ -902,7 +902,7 @@ for i in 1 2 3; do flutter test integration_test/foliate_toc_footer_test.dart -d
 - 3 次皆 490、且測試其他地方曾以 493 為預期 → 頁數估計隨裝置字型／WebView 版本變動（Issue 16 規劃時觀察到是 `TCL 14`，WebView 154），查測試 493 當初是在哪個裝置定的（`git log -S493 -- integration_test/foliate_toc_footer_test.dart`）。**不得**把 493 直接改成 490；若頁數取決於裝置，改成「同一本書換頁前後 `displayTotalPages` 相等」這種不依賴絕對值的斷言（測試名稱本來就是這個語意），並回報使用者確認。
 - 結果不穩定（490、493 隨機）→ 疑似真缺陷（換頁時總頁數變動），**停止回報**。
 
-- [ ] **Step 3：`foliate_epub_reader_view_test`——錯誤訊息文字**
+- [x] **Step 3：`foliate_epub_reader_view_test`——錯誤訊息文字**
 
 基準：第 206 行預期錯誤訊息 `'無法快取書籍檔案'`，實際 `'無法載入書籍'`；第 455 行 `Expected: true Actual: false`。
 
@@ -913,11 +913,11 @@ git log --oneline -3 -S"無法快取書籍檔案" -- lib | cat
 
 若 `lib/` 內兩個字串都存在（對應不同錯誤路徑），確認該測試觸發的是哪條路徑，依實際路徑修正預期字串；若 `無法快取書籍檔案` 已從 `lib/` 移除，改為現行字串，commit 訊息註明移除的 commit。第 455 行先讀測試意圖再判斷，不得直接改成 `isFalse`。
 
-- [ ] **Step 4：`epub_fxl_tap_zone_test`——位置沒變**
+- [x] **Step 4：`epub_fxl_tap_zone_test`——位置沒變**
 
 基準：第 98 行預期點擊熱區後位置 JSON「不等於」`{"cfi":"epubcfi(/6/2)","index":0,"fraction":1}`，實際相等（沒換頁）。先讀測試第 70～100 行，確認點擊哪個熱區、預期翻頁方向；再查熱區 key `nav_zone_$index`（`foliate_reader_view.dart:877`）與 `kTapZoneSlop`、`kTapZoneDebounceMs`、`tapMaxDurationMs`（CLAUDE.md「不可逆的技術決策」）：真機上點擊時長是否超過 700 ms 被視為長按（TCL 14 載入慢時有可能）。**熱區點擊門檻是真機校準值，不得沿用或自行調整**，若懷疑是門檻問題 → 停止回報，建議另立校準工單。
 
-- [ ] **Step 5：Commit（只提交已查明且合理的修改）**
+- [x] **Step 5：Commit（只提交已查明且合理的修改）**
 
 ```bash
 grep -rn "診斷" integration_test/ | head   # 預期無輸出
@@ -936,7 +936,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 **Files：** `app/integration_test/library_screen_test.dart`
 
-- [ ] **Step 1：查 `book_item_…` 為何不在書架**
+- [x] **Step 1：查 `book_item_…` 為何不在書架**
 
 基準：第 124 行 `find.byKey(Key('book_item_${importedBook.id}'))` 找不到（Issue 16 已在 base `bdff826c` 同機確認同樣失敗）。測試流程是：用 `importService.importFiles([contentUri])` 匯入 → `pumpWidget(LibraryScreen)` → `pumpAndSettle` → 點書。先確認匯入結果與書架內容：
 
@@ -962,13 +962,13 @@ grep -n "book_item_" lib/screens/library_screen.dart | head -5
 
 計畫審查原本說有 3 處（第 128、225、309 行）。Issue 17 規劃時用 `grep -n "閱讀器" integration_test/library_screen_test.dart` 實測，**只有第 128 行是斷言**，第 111、204、294 行是註解（Issue 16 補的「進入閱讀器需要完整的閱讀器功能依賴」）。執行時再 grep 一次確認；若另外兩個測試有類似的「進入閱讀器」斷言（例如 `find.byType(ReaderScreen)`），那些不是過期，不要改。
 
-- [ ] **Step 2：在真機執行並確認**
+- [x] **Step 2：在真機執行並確認**
 
 ```bash
 flutter test integration_test/library_screen_test.dart -d 3CEF42ECD491687 2>&1 | grep -E "^[0-9:]+ \+[0-9]+( -[0-9]+)?:" | tail -n 1 | cut -c1-80
 ```
 
-- [ ] **Step 3：啟用守衛並確認全清**
+- [x] **Step 3：啟用守衛並確認全清**
 
 ```bash
 node tool/check_integration_keys.js; echo "exit=$?"
@@ -982,7 +982,7 @@ Expected：`PASS：…`、`exit=0`。若仍有項目，逐一處理（回到對�
 node tool/check_integration_keys.js
 ```
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add integration_test/library_screen_test.dart ../CLAUDE.md

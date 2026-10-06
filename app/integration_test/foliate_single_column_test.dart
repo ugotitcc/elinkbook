@@ -231,7 +231,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 欄數選項在「呈現」分頁：IndexedStack 非選中分頁是 offstage，預設
-    // finder 會跳過，須先切過去（同檔 вертикаль/捲動測試既有做法）。
+    // finder 會跳過，須先切過去。
     await tester.tap(find.byKey(const Key('reader_settings_tab_presentation')));
     await tester.pumpAndSettle();
 
