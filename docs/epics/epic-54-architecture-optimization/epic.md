@@ -445,3 +445,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - M-6：`app/tool/README.md`「已知限制」補兩點：`lib/` 內任何無 `$` 字串都算存在（刻意取捨）、測試端逐行比對（`Key(` 與字串分兩行會漏掉）。
 - **使用者決定的確認（2026-10-07）：** 審查指出「使用者決定」類聲明無法查證。M-1 的聲明經確認不成立（已改回更強的斷言）；`reader_header_footer_toggle_test` 刪除 2 個靜態標題測試，使用者確認是自己的決定，原因是舊 `AppBar` 靜態標題的需求在 Epic 38 之後已改變、用不到。
 - 驗證：`flutter analyze` 乾淨；守衛單元測試與守衛本身 PASS；`check_l10n_hardcoded_strings.js` 三項 PASS；`TCL 14` 上 `foliate_toc_footer_test` +3、`library_screen_test` +3、`reader_header_footer_toggle_test` 1/2（與先前一致）。未重跑完整 `flutter test`，上一次全套通過為 3685 通過、0 失敗（Issue 17 計畫最後一個 Task）。
+
+**2026-10-07 Issue 17 已合併（PR #331）。** 真機 integration（`TCL 14`）通過數 14／32 → 26／31；其餘 5 檔的判定與校準移至 Issue 18。過期 key 守衛 `app/tool/check_integration_keys.js` 已納入 `CLAUDE.md` 常用指令。
