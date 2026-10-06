@@ -408,3 +408,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - M-1：`FakeDownloadableFontStore.forPlatform` 改用固定目錄名 `cache/fake-fonts-integration`，多次呼叫共用同一目錄，不再累積暫存子目錄；新增單元測試先紅後綠。
 - M-2：補上 `systemTemp.parent` 與 `cache/` 的目錄結構假設註解。
 - 驗證：相關單元測試 41 個通過、`flutter analyze` 乾淨；`TCL 14` 上 `foliate_highlights_notes_test` 仍通過（+2）。
+
+**2026-10-06 Issue 16 已合併（PR #330）。** 真機 integration 通過數 0 → 14／32；其餘 18 檔的介面遷移移至 Issue 17。
