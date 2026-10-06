@@ -211,24 +211,44 @@ void main() {
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
+    // 版面按鈕要等原生端回報 writingMode 後才啟用（onLayoutTap 非 null），
+    // 啟用前點了也不會開面板（比照 _pumpUntilNotesButtonEnabled 既有模式）。
+    final layoutDeadline = DateTime.now().add(const Duration(seconds: 15));
+    while (true) {
+      final layoutFinder = find.byKey(const Key('reader_chrome_layout_button'));
+      if (layoutFinder.evaluate().isNotEmpty &&
+          tester.widget<IconButton>(layoutFinder).onPressed != null) {
+        break;
+      }
+      if (DateTime.now().isAfter(layoutDeadline)) {
+        fail('等待逾時：版面按鈕未轉為可點擊狀態');
+      }
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
     // 開啟版面設定面板
     await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
 
-    // 確認單欄按鈕反映為選取（color 精確等於主題 primary 色，比照
-    // ReaderSettingsSheet._buildColumnModeRow() 的
-    // `color: selected ? Theme.of(context).colorScheme.primary : null`
+    // 欄數選項在「呈現」分頁：IndexedStack 非選中分頁是 offstage，預設
+    // finder 會跳過，須先切過去（同檔 вертикаль/捲動測試既有做法）。
+    await tester.tap(find.byKey(const Key('reader_settings_tab_presentation')));
+    await tester.pumpAndSettle();
+
+    // 確認單欄按鈕反映為選取（背景色精確等於主題 primary 色，比照
+    // ReaderOptionTile 的 `backgroundColor = selected ? primary : surface`
     // 既有寫法，不只驗證「非 null」這種較弱的斷言）。
     final singleBtnFinder = find.byKey(const Key('reader_settings_column_mode_single'));
-    final singleBtn = tester.widget<IconButton>(singleBtnFinder);
+    final singleChip = tester.widget<Container>(singleBtnFinder);
     final primaryColor = Theme.of(tester.element(singleBtnFinder)).colorScheme.primary;
-    expect(singleBtn.color, primaryColor,
-        reason: '已持久化 columnMode=single 時單欄按鈕應反映為選取狀態（color 等於主題 primary 色）');
+    expect((singleChip.decoration as BoxDecoration).color, primaryColor,
+        reason: '已持久化 columnMode=single 時單欄按鈕應反映為選取狀態（背景色等於主題 primary 色）');
 
-    // 確認自動按鈕未選取（color 應為 null）
-    final autoBtn = tester.widget<IconButton>(
-        find.byKey(const Key('reader_settings_column_mode_auto')));
-    expect(autoBtn.color, isNull,
+    // 確認自動按鈕未選取（背景色應為 surface）
+    final autoBtnFinder = find.byKey(const Key('reader_settings_column_mode_auto'));
+    final autoChip = tester.widget<Container>(autoBtnFinder);
+    final surfaceColor = Theme.of(tester.element(autoBtnFinder)).colorScheme.surface;
+    expect((autoChip.decoration as BoxDecoration).color, surfaceColor,
         reason: 'columnMode=single 時自動按鈕應為未選取');
   });
 }
