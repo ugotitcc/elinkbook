@@ -77,3 +77,5 @@ docs/archive/2026-10-04-epic-58-pdf-crop-drag-select/reviews/
 docs/archive/2026-10-05-epic-59-pdf-overlay-recompute-storm/reviews/
 docs/archive/2026-10-05-epic-60-crop-mode-lost-after-cancel/reviews/
 docs/epics/epic-58-pdf-crop-drag-select/reviews/
+.scratch/
+app/test_driver/
