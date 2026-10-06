@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
+import '../test/support/pump_localized_widget.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。
 /// 比照 app/integration_test/foliate_epub_reader_view_test.dart 既有的
@@ -43,19 +43,18 @@ void main() {
     final completer = Completer<void>();
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: samplePath,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-          writingMode: WritingMode.vertical,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: samplePath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
+        writingMode: WritingMode.vertical,
       ),
     );
 
@@ -78,24 +77,23 @@ void main() {
     final completer = Completer<void>();
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: samplePath,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-          writingMode: WritingMode.vertical,
-          marginTop: 1.6667,
-          marginBottom: 1.6667,
-          marginLeft: 1.6667,
-          marginRight: 1.6667,
-          showFooter: false,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: samplePath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
+        writingMode: WritingMode.vertical,
+        marginTop: 1.6667,
+        marginBottom: 1.6667,
+        marginLeft: 1.6667,
+        marginRight: 1.6667,
+        showFooter: false,
       ),
     );
 
@@ -117,20 +115,19 @@ void main() {
     final completer = Completer<void>();
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: samplePath,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-          writingMode: WritingMode.horizontal,
-          showFooter: true,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: samplePath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
+        writingMode: WritingMode.horizontal,
+        showFooter: true,
       ),
     );
 

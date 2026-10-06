@@ -16,6 +16,7 @@ import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import '../test/support/pump_localized_widget.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑
 /// （比照 foliate_kf8_test.dart 既有 helper）。
@@ -72,16 +73,15 @@ void main() {
       final book = result.importedBooks.single;
       expect(book.isFixedLayout, isTrue);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ReaderScreen(
-            filePath: book.filePath,
-            bookId: book.id,
-            isFixedLayout: book.isFixedLayout,
-            dependencies: fakeReaderFeatureDependencies(
-              prefsManager: prefsManager,
-              libraryRepository: libraryRepository,
-            ),
+      await pumpLocalizedWidget(
+        tester,
+        ReaderScreen(
+          filePath: book.filePath,
+          bookId: book.id,
+          isFixedLayout: book.isFixedLayout,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: libraryRepository,
           ),
         ),
       );
@@ -151,17 +151,16 @@ void main() {
       );
 
       final readerKey = GlobalKey<State<ReaderScreen>>();
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ReaderScreen(
-            key: readerKey,
-            filePath: book.filePath,
-            bookId: book.id,
-            isFixedLayout: book.isFixedLayout,
-            dependencies: fakeReaderFeatureDependencies(
-              prefsManager: prefsManager,
-              libraryRepository: libraryRepository,
-            ),
+      await pumpLocalizedWidget(
+        tester,
+        ReaderScreen(
+          key: readerKey,
+          filePath: book.filePath,
+          bookId: book.id,
+          isFixedLayout: book.isFixedLayout,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: libraryRepository,
           ),
         ),
       );
@@ -185,7 +184,7 @@ void main() {
       // 「ReaderScreen」架構小節）——卸載畫面觸發 dispose() →
       // _writeCurrentPosition() 寫入，再從 prefsManager 讀回，是本專案
       // 既有測試手段下能取得「目前實際定位」的唯一管道。
-      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await pumpLocalizedWidget(tester, const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 500));
 
       final finalPosition = (await prefsManager.load(book.id)).readingPosition;
@@ -243,17 +242,16 @@ void main() {
       );
 
       final readerKey = GlobalKey<State<ReaderScreen>>();
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ReaderScreen(
-            key: readerKey,
-            filePath: book.filePath,
-            bookId: book.id,
-            isFixedLayout: book.isFixedLayout,
-            dependencies: fakeReaderFeatureDependencies(
-              prefsManager: prefsManager,
-              libraryRepository: libraryRepository,
-            ),
+      await pumpLocalizedWidget(
+        tester,
+        ReaderScreen(
+          key: readerKey,
+          filePath: book.filePath,
+          bookId: book.id,
+          isFixedLayout: book.isFixedLayout,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: libraryRepository,
           ),
         ),
       );
@@ -270,7 +268,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
-      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await pumpLocalizedWidget(tester, const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 500));
 
       final finalPosition = (await prefsManager.load(book.id)).readingPosition;

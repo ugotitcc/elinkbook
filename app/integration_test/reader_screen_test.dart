@@ -21,6 +21,7 @@ import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
+import '../test/support/pump_localized_widget.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。原生
 /// 渲染引擎（Readium／PdfRenderer）都需要真實的裝置檔案系統路徑，不能直接
@@ -121,13 +122,12 @@ void main() {
       if (await file.exists()) await file.delete();
     });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b1',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b1',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -152,13 +152,12 @@ void main() {
       if (await file.exists()) await file.delete();
     });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b1',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b1',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -183,14 +182,13 @@ void main() {
       if (await file.exists()) await file.delete();
     });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b1',
-          isFixedLayout: true,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b1',
+        isFixedLayout: true,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -218,13 +216,12 @@ void main() {
     });
     await libraryRepository.insertBook(_book('b_settings_1'));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_settings_1',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_settings_1',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -257,13 +254,12 @@ void main() {
     const bookId = 'b_settings_persist';
     await libraryRepository.insertBook(_book(bookId));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -285,20 +281,19 @@ void main() {
 
     // 關閉目前畫面，模擬使用者離開閱讀器（觸發 EpubReaderView.dispose()
     // 釋放原生資源），再重新開啟同一本書。
-    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await pumpLocalizedWidget(tester, const SizedBox.shrink());
     await tester.pumpAndSettle();
 
     final reloadedPrefs = (await prefsManager.load(bookId)).bookPrefs;
     expect(reloadedPrefs.fontSize, 1.0625,
         reason: '初始值為 null（顯示原型預設 16），點擊一次 + 按鈕後應存成倍率 1.0625 (17/16)');
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -323,13 +318,12 @@ void main() {
     });
     await libraryRepository.insertBook(_book('b_writing_mode_override'));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_writing_mode_override',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_writing_mode_override',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -368,13 +362,12 @@ void main() {
     });
     await libraryRepository.insertBook(_book('b_page_turn_mode_override'));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_page_turn_mode_override',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_page_turn_mode_override',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -424,13 +417,12 @@ void main() {
       if (await file.exists()) await file.delete();
     });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_orientation_default',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_orientation_default',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -479,13 +471,12 @@ void main() {
       if (await file.exists()) await file.delete();
     });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -531,13 +522,12 @@ void main() {
       if (await file.exists()) await file.delete();
     });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -551,7 +541,7 @@ void main() {
 
     // 離開畫面（觸發 ReaderScreen.dispose()），比照既有「關閉重開該書」
     // 測試模擬使用者離開閱讀器的既有手法。
-    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await pumpLocalizedWidget(tester, const SizedBox.shrink());
     await tester.pumpAndSettle();
 
     expect(
@@ -575,13 +565,12 @@ void main() {
     const bookId = 'b_pdf_settings_open';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -608,13 +597,12 @@ void main() {
     const bookId = 'b_pdf_fit_mode';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -647,13 +635,12 @@ void main() {
     const bookId = 'b_pdf_filters';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -690,13 +677,12 @@ void main() {
     const bookId = 'b_pdf_bold';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -731,13 +717,12 @@ void main() {
     const bookId = 'b_pdf_crop';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -771,13 +756,12 @@ void main() {
     const bookId = 'b_pdf_crop_persist';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -799,16 +783,15 @@ void main() {
 
     // 關閉重開，確認 initialPreferences 帶入已持久化的 cropRect，原生端
     // 不會因為是全新 PlatformView 實例就重新偵測一次。
-    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await pumpLocalizedWidget(tester, const SizedBox.shrink());
     await tester.pump();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
     await _pumpUntil(
@@ -834,13 +817,12 @@ void main() {
     const bookId = 'b_pdf_crop_manual_pause';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -884,13 +866,12 @@ void main() {
     const bookId = 'b_pdf_crop_manual_confirm';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -967,13 +948,12 @@ void main() {
     const bookId = 'b_pdf_crop_manual_readjust';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: bookId,
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: bookId,
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 

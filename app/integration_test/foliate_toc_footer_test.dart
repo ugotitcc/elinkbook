@@ -9,6 +9,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
+import '../test/support/pump_localized_widget.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -35,20 +36,19 @@ void main() {
     final key = GlobalKey<State<FoliateReaderView>>();
     EpubPositionInfo? lastPosition;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          key: key,
-          filePath: samplePath,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-          onLocatorChanged: (info) => lastPosition = info,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        key: key,
+        filePath: samplePath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
+        onLocatorChanged: (info) => lastPosition = info,
       ),
     );
 
@@ -128,20 +128,19 @@ void main() {
     final key = GlobalKey<State<FoliateReaderView>>();
     EpubPositionInfo? lastPosition;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          key: key,
-          filePath: samplePath,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-          onLocatorChanged: (info) => lastPosition = info,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        key: key,
+        filePath: samplePath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
+        onLocatorChanged: (info) => lastPosition = info,
       ),
     );
 
@@ -181,22 +180,21 @@ void main() {
         '{"href":"/OEBPS/chapter3.xhtml","type":"application/xhtml+xml",'
         '"locations":{"progression":0.6,"totalProgression":0.6}}';
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: samplePath,
-          initialLocatorJson: legacyLocatorJson,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-          onLocatorChanged: (info) {
-            firstPosition ??= info;
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: samplePath,
+        initialLocatorJson: legacyLocatorJson,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
+        onLocatorChanged: (info) {
+          firstPosition ??= info;
+        },
       ),
     );
 

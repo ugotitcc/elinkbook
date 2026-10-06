@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
+import '../test/support/pump_localized_widget.dart';
 
 /// Epic 20 Issue 5：EpubReaderView（Readium）刪除後，原本只在（已刪除的）
 /// epub_reader_view_test.dart 驗證的兩個場景（毀損檔案偵測、FXL
@@ -113,18 +114,17 @@ void main() {
     final completer = Completer<void>();
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: samplePath,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: samplePath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
       ),
     );
 
@@ -144,19 +144,18 @@ void main() {
     final missingPath =
         '${tempDir.path}/does_not_exist_${DateTime.now().millisecondsSinceEpoch}.epub';
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: missingPath,
-          onPageRendered: () {
-            rendered = true;
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: missingPath,
+        onPageRendered: () {
+          rendered = true;
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
       ),
     );
 
@@ -180,19 +179,18 @@ void main() {
     const outsidePath =
         '/data/local/tmp/foliate_path_traversal_probe_should_not_open.epub';
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: outsidePath,
-          onPageRendered: () {
-            rendered = true;
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: outsidePath,
+        onPageRendered: () {
+          rendered = true;
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
       ),
     );
 
@@ -222,18 +220,17 @@ void main() {
     final completer = Completer<EpubLayoutInfo>();
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: samplePath,
-          onPageRendered: () {},
-          onError: (message) {
-            errorMessage = message;
-          },
-          onLayoutResolved: (info) {
-            if (!completer.isCompleted) completer.complete(info);
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: samplePath,
+        onPageRendered: () {},
+        onError: (message) {
+          errorMessage = message;
+        },
+        onLayoutResolved: (info) {
+          if (!completer.isCompleted) completer.complete(info);
+        },
       ),
     );
 
@@ -258,18 +255,17 @@ void main() {
     final completer = Completer<EpubLayoutInfo>();
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: samplePath,
-          onPageRendered: () {},
-          onError: (message) {
-            errorMessage = message;
-          },
-          onLayoutResolved: (info) {
-            if (!completer.isCompleted) completer.complete(info);
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: samplePath,
+        onPageRendered: () {},
+        onError: (message) {
+          errorMessage = message;
+        },
+        onLayoutResolved: (info) {
+          if (!completer.isCompleted) completer.complete(info);
+        },
       ),
     );
 
@@ -293,17 +289,16 @@ void main() {
     final key = GlobalKey<State<FoliateReaderView>>();
     final completer = Completer<void>();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          key: key,
-          filePath: samplePath,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {},
-          writingMode: WritingMode.horizontal,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        key: key,
+        filePath: samplePath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {},
+        writingMode: WritingMode.horizontal,
       ),
     );
     await completer.future.timeout(const Duration(seconds: 10));
@@ -311,29 +306,27 @@ void main() {
 
     // 手動切換為直排：didUpdateWidget 偵測到變動送出 setPreferences，
     // 畫面應即時反映（不重新開書、不再次觸發 onPageRendered）。
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          key: key,
-          filePath: samplePath,
-          onPageRendered: () {},
-          onError: (message) {},
-          writingMode: WritingMode.vertical,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        key: key,
+        filePath: samplePath,
+        onPageRendered: () {},
+        onError: (message) {},
+        writingMode: WritingMode.vertical,
       ),
     );
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
     // 再切回橫排，確認雙向皆可逆。
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          key: key,
-          filePath: samplePath,
-          onPageRendered: () {},
-          onError: (message) {},
-          writingMode: WritingMode.horizontal,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        key: key,
+        filePath: samplePath,
+        onPageRendered: () {},
+        onError: (message) {},
+        writingMode: WritingMode.horizontal,
       ),
     );
     await tester.pumpAndSettle(const Duration(seconds: 2));
@@ -357,28 +350,27 @@ void main() {
     final completer = Completer<void>();
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: samplePath,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-          fontFamily: 'SourceHanSerifTC',
-          fontSize: 1.5,
-          fontWeight: 1.75,
-          lineHeight: 2.0,
-          paragraphSpacing: 1.5,
-          marginTop: 2.0,
-          marginBottom: 2.0,
-          marginLeft: 2.0,
-          marginRight: 2.0,
-          textAlign: EpubTextAlign.justify,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: samplePath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
+        fontFamily: 'SourceHanSerifTC',
+        fontSize: 1.5,
+        fontWeight: 1.75,
+        lineHeight: 2.0,
+        paragraphSpacing: 1.5,
+        marginTop: 2.0,
+        marginBottom: 2.0,
+        marginLeft: 2.0,
+        marginRight: 2.0,
+        textAlign: EpubTextAlign.justify,
       ),
     );
 
@@ -407,19 +399,18 @@ void main() {
     var rendered = false;
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: corruptedFile.path,
-          onPageRendered: () {
-            rendered = true;
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: corruptedFile.path,
+        onPageRendered: () {
+          rendered = true;
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
       ),
     );
 
@@ -442,19 +433,18 @@ void main() {
     final completer = Completer<void>();
     EpubLayoutInfo? layoutInfo;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: samplePath,
-          onPageRendered: () {},
-          onError: (message) {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onLayoutResolved: (info) {
-            layoutInfo = info;
-            if (!completer.isCompleted) completer.complete();
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: samplePath,
+        onPageRendered: () {},
+        onError: (message) {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onLayoutResolved: (info) {
+          layoutInfo = info;
+          if (!completer.isCompleted) completer.complete();
+        },
       ),
     );
 
@@ -481,18 +471,17 @@ void main() {
     final completer = Completer<void>();
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: samplePath,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: samplePath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
       ),
     );
 

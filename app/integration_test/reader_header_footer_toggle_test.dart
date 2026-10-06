@@ -15,6 +15,7 @@ import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
+import '../test/support/pump_localized_widget.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -65,13 +66,12 @@ void main() {
       lastReadTime: DateTime.now(),
     ));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_header_toggle_integration',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_header_toggle_integration',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -134,13 +134,12 @@ void main() {
       const BookReaderPrefs(showHeader: false),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_header_off_integration',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_header_off_integration',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -201,13 +200,12 @@ void main() {
       const BookReaderPrefs(showFooter: false),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_footer_off_integration',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_footer_off_integration',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 
@@ -263,13 +261,12 @@ void main() {
       const BookReaderPrefs(showFooter: false),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_pdf_footer_off_integration',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_pdf_footer_off_integration',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 

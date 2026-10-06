@@ -15,6 +15,7 @@ import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import '../test/support/pump_localized_widget.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
@@ -50,18 +51,17 @@ void main() {
     final completer = Completer<void>();
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: samplePath,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: samplePath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
       ),
     );
 
@@ -108,15 +108,14 @@ void main() {
       final book = result.importedBooks.single;
       expect(book.title, contains('Time Machine'));
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ReaderScreen(
-            filePath: book.filePath,
-            bookId: book.id,
-            dependencies: fakeReaderFeatureDependencies(
-              prefsManager: prefsManager,
-              libraryRepository: libraryRepository,
-            ),
+      await pumpLocalizedWidget(
+        tester,
+        ReaderScreen(
+          filePath: book.filePath,
+          bookId: book.id,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: libraryRepository,
           ),
         ),
       );

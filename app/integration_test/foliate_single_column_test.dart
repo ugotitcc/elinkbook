@@ -19,6 +19,7 @@ import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import '../test/support/pump_localized_widget.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -79,25 +80,24 @@ void main() {
     final loadCompleter = Completer<void>();
     String? error;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: FoliateReaderView(
-            key: readerKey,
-            filePath: samplePath,
-            writingMode: WritingMode.vertical,
-            columnMode: ColumnMode.single,
-            onPageRendered: () {
-              if (!loadCompleter.isCompleted) loadCompleter.complete();
-            },
-            onError: (msg) => error = msg,
-            onLocatorChanged: (info) {
-              final pageIndex = info.locationIndex;
-              if (pageIndex != null) {
-                pageIndexLog.add(pageIndex);
-              }
-            },
-          ),
+    await pumpLocalizedWidget(
+      tester,
+      Scaffold(
+        body: FoliateReaderView(
+          key: readerKey,
+          filePath: samplePath,
+          writingMode: WritingMode.vertical,
+          columnMode: ColumnMode.single,
+          onPageRendered: () {
+            if (!loadCompleter.isCompleted) loadCompleter.complete();
+          },
+          onError: (msg) => error = msg,
+          onLocatorChanged: (info) {
+            final pageIndex = info.locationIndex;
+            if (pageIndex != null) {
+              pageIndexLog.add(pageIndex);
+            }
+          },
         ),
       ),
     );
@@ -193,13 +193,12 @@ void main() {
       const BookReaderPrefs(columnMode: ColumnMode.single),
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_single_column_on_integration',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_single_column_on_integration',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
 

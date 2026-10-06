@@ -14,6 +14,7 @@ import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
+import '../test/support/pump_localized_widget.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -80,13 +81,12 @@ void main() {
       lastReadTime: DateTime.now(),
     ));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_epub_pagination',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_epub_pagination',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -129,13 +129,12 @@ void main() {
       lastReadTime: DateTime.now(),
     ));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_epub_pagination_jump',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_epub_pagination_jump',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
     await _pumpUntilLoaded(tester);

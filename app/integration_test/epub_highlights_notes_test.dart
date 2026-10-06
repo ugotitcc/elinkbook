@@ -21,6 +21,7 @@ import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/notes_bottom_sheet.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
+import '../test/support/pump_localized_widget.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -134,17 +135,16 @@ void main() {
       progression: 0.3,
     ));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_highlights_epub',
-          dependencies: fakeReaderFeatureDependencies(
-            prefsManager: prefsManager,
-            bookmarksRepository: bookmarksRepository,
-            highlightsRepository: highlightsRepository,
-            notesRepository: notesRepository,
-          ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_highlights_epub',
+        dependencies: fakeReaderFeatureDependencies(
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+          highlightsRepository: highlightsRepository,
+          notesRepository: notesRepository,
         ),
       ),
     );

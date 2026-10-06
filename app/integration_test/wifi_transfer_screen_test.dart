@@ -19,6 +19,7 @@ import 'package:elinkbook/wifi_transfer/network_availability.dart';
 import '../test/support/fake_book_import_service.dart';
 import '../test/support/fake_library_repository.dart';
 import '../test/support/fake_fingerprint_computer.dart';
+import '../test/support/pump_localized_widget.dart';
 
 const _metadataChannel = MethodChannel('elinkbook/book_metadata');
 
@@ -57,14 +58,13 @@ void main() {
   testWidgets(
       '真機：伺服器成功綁定 socket，GET / 可取得首頁 HTML（Issue 1 骨架驗證，'
       '裝置須已連上 WiFi 或已開啟手機熱點）', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: WifiTransferScreen(
-          libraryRepository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
-          computeFingerprint: FakeFingerprintComputer().call,
-          checkNetworkAvailability: checkNetworkAvailability,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      WifiTransferScreen(
+        libraryRepository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        computeFingerprint: FakeFingerprintComputer().call,
+        checkNetworkAvailability: checkNetworkAvailability,
       ),
     );
     await tester.pumpAndSettle(const Duration(seconds: 5));
@@ -103,14 +103,13 @@ void main() {
       lastReadTime: now,
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: WifiTransferScreen(
-          libraryRepository: FakeLibraryRepository(initialBooks: [book]),
-          importService: FakeBookImportService(),
-          computeFingerprint: FakeFingerprintComputer().call,
-          checkNetworkAvailability: checkNetworkAvailability,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      WifiTransferScreen(
+        libraryRepository: FakeLibraryRepository(initialBooks: [book]),
+        importService: FakeBookImportService(),
+        computeFingerprint: FakeFingerprintComputer().call,
+        checkNetworkAvailability: checkNetworkAvailability,
       ),
     );
     await tester.pumpAndSettle(const Duration(seconds: 5));
@@ -161,14 +160,13 @@ void main() {
       lastReadTime: now,
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: WifiTransferScreen(
-          libraryRepository: FakeLibraryRepository(initialBooks: [book]),
-          importService: FakeBookImportService(),
-          computeFingerprint: FakeFingerprintComputer().call,
-          checkNetworkAvailability: checkNetworkAvailability,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      WifiTransferScreen(
+        libraryRepository: FakeLibraryRepository(initialBooks: [book]),
+        importService: FakeBookImportService(),
+        computeFingerprint: FakeFingerprintComputer().call,
+        checkNetworkAvailability: checkNetworkAvailability,
       ),
     );
     await tester.pumpAndSettle(const Duration(seconds: 5));
@@ -224,14 +222,13 @@ void main() {
       lastReadTime: now,
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: WifiTransferScreen(
-          libraryRepository: FakeLibraryRepository(initialBooks: [book]),
-          importService: FakeBookImportService(),
-          computeFingerprint: FakeFingerprintComputer().call,
-          checkNetworkAvailability: checkNetworkAvailability,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      WifiTransferScreen(
+        libraryRepository: FakeLibraryRepository(initialBooks: [book]),
+        importService: FakeBookImportService(),
+        computeFingerprint: FakeFingerprintComputer().call,
+        checkNetworkAvailability: checkNetworkAvailability,
       ),
     );
     await tester.pumpAndSettle(const Duration(seconds: 5));
@@ -275,14 +272,13 @@ void main() {
       lastReadTime: now,
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: WifiTransferScreen(
-          libraryRepository: FakeLibraryRepository(initialBooks: [book]),
-          importService: FakeBookImportService(),
-          computeFingerprint: FakeFingerprintComputer().call,
-          checkNetworkAvailability: checkNetworkAvailability,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      WifiTransferScreen(
+        libraryRepository: FakeLibraryRepository(initialBooks: [book]),
+        importService: FakeBookImportService(),
+        computeFingerprint: FakeFingerprintComputer().call,
+        checkNetworkAvailability: checkNetworkAvailability,
       ),
     );
     await tester.pumpAndSettle(const Duration(seconds: 5));
@@ -330,14 +326,13 @@ void main() {
     addTearDown(() => repository.close());
     final importService = BookImportServiceImpl(repository: repository);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: WifiTransferScreen(
-          libraryRepository: repository,
-          importService: importService,
-          computeFingerprint: computeBookContentFingerprint,
-          checkNetworkAvailability: checkNetworkAvailability,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      WifiTransferScreen(
+        libraryRepository: repository,
+        importService: importService,
+        computeFingerprint: computeBookContentFingerprint,
+        checkNetworkAvailability: checkNetworkAvailability,
       ),
     );
     await tester.pumpAndSettle(const Duration(seconds: 5));
@@ -376,14 +371,13 @@ void main() {
     addTearDown(() => repository.close());
     final importService = BookImportServiceImpl(repository: repository);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: WifiTransferScreen(
-          libraryRepository: repository,
-          importService: importService,
-          computeFingerprint: computeBookContentFingerprint,
-          checkNetworkAvailability: checkNetworkAvailability,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      WifiTransferScreen(
+        libraryRepository: repository,
+        importService: importService,
+        computeFingerprint: computeBookContentFingerprint,
+        checkNetworkAvailability: checkNetworkAvailability,
       ),
     );
     await tester.pumpAndSettle(const Duration(seconds: 5));
@@ -426,14 +420,13 @@ void main() {
     addTearDown(() => repository.close());
     final importService = BookImportServiceImpl(repository: repository);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: WifiTransferScreen(
-          libraryRepository: repository,
-          importService: importService,
-          computeFingerprint: computeBookContentFingerprint,
-          checkNetworkAvailability: checkNetworkAvailability,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      WifiTransferScreen(
+        libraryRepository: repository,
+        importService: importService,
+        computeFingerprint: computeBookContentFingerprint,
+        checkNetworkAvailability: checkNetworkAvailability,
       ),
     );
     await tester.pumpAndSettle(const Duration(seconds: 5));
