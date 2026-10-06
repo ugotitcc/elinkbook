@@ -379,3 +379,24 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - C 類（Issue 11 回歸）：目前 0 個確認。未修改任何 `lib/` 或測試檔。
 
 **2026-10-06 Issue 15 已合併（PR #328）。** 真機驗證只完成 5/32 檔，其餘與根因調查移至 Issue 16。
+
+**2026-10-06 Issue 16 實作完成與真機驗證結果**（分支 `epic-54/issue-16-integration-device`，worktree 內 Native 直接開發。計畫見 `plans/plan-issue-16.md`，附錄 A 為診斷結論）
+
+- 裝置：`TCL 14`（序號 `3CEF42ECD491687`，Android 15，WebView 154）。前段在 `BooksPad` 嘗試，因下方「adb 服務」問題無法有效進行。
+- **根因（載入指示器一直轉圈）：** `ReaderFeatureDependencies` 預設的 `FakeDownloadableFontStore.directory` 是不存在的 `/fake/downloaded-fonts`。`ReaderScreen` 把它傳給 `FoliateReaderView.downloadedFontsDirectory`，Android 原生的 `WebViewAssetLoader.InternalStoragePathHandler` 在建立 WebView 時拒絕，丟 `PlatformException`，`InAppWebView` 從未掛載，30 秒後 `OpenBookFlow` 逾時。`BooksPad` 實驗：H1（等待太短）不成立（指示器 28 秒消失，但出現 `reader_error_text`）、H2（JS 錯誤）不成立、H3（WebView 未掛載）成立。base `bdff826c` 的字型 store 可為 null，沒有這個 handler。
+- **修法（只改 `app/test/support/`，未動 `lib/`）：** `FakeDownloadableFontStore` 新增 `directory` 參數與 `forPlatform()`。Android 上改用 `cache/` 底下真實存在的暫存目錄；其他平台維持原值。**踩到的錯：** 第一版用 `Directory.systemTemp`，在 Android 上是 `code_cache/`，`WebViewAssetLoader` 同樣禁用，TCL 14 驗證才發現，第二版改用其上一層的 `cache/`。commit `e6718ed4`、`2dd07925`。
+- **Issue 11 回歸（C 類，已修）：** `library_screen_test` 漏傳 `readerFeatureRepositories`／`syncDependencies`，真機丟 `StateError: ReaderFeatureDependencies 缺少 bookImportService`。補上後，失敗與 base 對照完全相同（找不到 `book_item_…`，既存，B 類）。commit `c8276045`。
+- **工具列 key 過期（D 類，部分已修）：** Epic 38 把按鈕搬到 `ReaderChromeBottomBar`，key 改名，單元測試已遷移，integration 測試漏了。已換：`reader_toc_button`→`reader_chrome_toc_button`、`reader_notes_button`→`reader_chrome_annotations_button`、`reader_layout_settings_button`→`reader_chrome_layout_button`、`reader_fixed_layout_bookmark_toggle_button`→`reader_chrome_bookmark_button`（8 檔 24 行，只換 key）。`foliate_highlights_notes_test` 因此通過。commit `4ae3d990`。
+- **adb 服務問題（環境，非程式）：** 舊的 adb 服務（`Services` 工作階段，pid 11908）讓每個 adb 指令多等 12～23 秒、推送只有約 0.1 MB/s，`BooksPad` 與 `TCL 14` 都一樣。`adb kill-server` 重啟後降到 0.1 秒、23.5 MB/s。`BooksPad` 後續的 ANR（`Application does not have a focused window`）是否同因未驗證。
+- **全量結果（`TCL 14`，32 檔，`flutter test integration_test/<檔> -d <序號>`）：** 通過 14，失敗 18。`manual_import_acceptance_test` 為人工驗收，未執行。
+
+| 類別 | 檔案 | 說明 |
+|---|---|---|
+| E 通過 | `content_uri_acceptance_test`、`custom_font_rendering_test`、`epub_dual_page_test`、`foliate_cbz_test`、`foliate_kf8_test`、`foliate_margin_test`、`foliate_md_test`、`foliate_stream_nav_zone_test`、`foliate_txt_test`、`orientation_repagination_test`、`pdf_reader_view_test`、`smoke_test`、`wifi_transfer_screen_test`、`foliate_highlights_notes_test` | 14 檔 |
+| D 過期介面／斷言 | `reader_footer_test`、`reading_position_test`、`volume_key_test`（找 `進度 67% ｜ 第 4/6 頁`、`第 1/` 等，頁尾現在只顯示 `4/6`）、`pdf_nav_zone_test`（找 `AppBar`）、`reader_header_footer_toggle_test`（找 `reader_appbar_chapter_title`，舊 AppBar 已刪）、`epub_highlights_notes_test`／`notes_bookmark_test`（`notes_sheet_*` key 不見）、`pdf_highlights_notes_test`（筆記按鈕逾時，尚未對照新 key）、`fxl_bookmarks_test`（`reader_fixed_layout_notes_button` 不見）、`markdown_export_test`（`TextButton` 變 `IconButton`） | 換 key 後往後多走幾步才暴露，已依分類表記錄，**未修** |
+| 待判斷（過期或真行為改變） | `epub_toc_test`（點目錄後預期「第一節」消失，實際仍在）、`epub_pagination_test`（浮動進度文字未出現）、`foliate_single_column_test`（`Bad state: No element`）、`reader_screen_test`（6 通過、13 失敗，多為 10 秒條件逾時）、`epub_fxl_tap_zone_test`、`foliate_toc_footer_test`（預期 493 頁實際 490，疑與裝置字型有關）、`foliate_epub_reader_view_test`（預期錯誤文字「無法快取書籍檔案」實際「無法載入書籍」） | 需逐檔對照介面與行為，**未修** |
+| B 既存 | `library_screen_test` | base 同機同樣失敗（找不到 `book_item_…`） |
+
+- `database_closed` 例外多為測試失敗後 teardown 的連帶錯誤，不計為獨立失敗。
+- **建議另立 Issue 17：** 把上表 D 類與待判斷類的 integration 測試遷移到 Epic 38 之後的介面（約 17 檔）。需要逐檔對照新介面與行為，部分須判斷「過期」還是「行為真的改變」，工作量大，不適合併入本 Issue。
+- 診斷方法備忘：真機 integration 測試先用 `adb shell echo hi` 量延遲；超過 1 秒先 `adb kill-server` 再重試。
