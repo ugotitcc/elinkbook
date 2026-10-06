@@ -157,8 +157,13 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
     expect(errorMessage, isNull, reason: '換頁後不應觸發 onError');
-    expect(lastPosition?.displayTotalPages, positionAfterOpen.displayTotalPages,
-        reason: '同一本書換頁不應改變 displayTotalPages');
+    // 流式 EPUB 的 displayTotalPages 是近似估計刻度（位元組數/1500＋已渲染
+    // section 密度校正，見 epub_position_info.dart），翻頁渲染更多內容後
+    // 估計值收斂屬設計行為（TCL 14 實測開書 493→換頁後 490，三次一致），
+    // 只驗證仍為有效正數（使用者決定：放寬為正數斷言）。
+    expect(lastPosition?.displayTotalPages, isNotNull);
+    expect(lastPosition!.displayTotalPages, greaterThan(0),
+        reason: '換頁後 displayTotalPages 應仍為有效正數');
   });
 
   testWidgets('舊格式（Readium Locator JSON）initialLocatorJson 優雅退回：不崩潰、從書本開頭開始',
