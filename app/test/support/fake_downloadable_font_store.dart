@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/downloadable_font_store.dart';
@@ -6,6 +7,35 @@ import 'package:elinkbook/reader/downloadable_font_store.dart';
 /// 測試用 Fake（epic-49）。下載不會自動完成，由測試透過 [activeDownload]
 /// 控制進度、成功或失敗，才能精確驗證畫面在每個階段的顯示。
 class FakeDownloadableFontStore implements DownloadableFontStore {
+  FakeDownloadableFontStore({this.directory = _defaultDirectory});
+
+  /// 依平台建立：Android 真機的 integration 測試會用真的 `InAppWebView`，原生端的
+  /// `WebViewAssetLoader.InternalStoragePathHandler` 會拒絕不存在、或位於禁用目錄
+  /// （`code_cache/`、`databases/` 等）底下的目錄並丟 `PlatformException`（epic-54 Issue 16）。
+  /// Android 的 `Directory.systemTemp` 指向 `code_cache/`（禁用），所以改用它的上一層
+  /// 底下的 `cache/`（允許），並建立真實存在的暫存子目錄；其他平台（桌面主機的
+  /// `flutter test`）維持假目錄。[isAndroid]、[systemTemp] 預設取目前平台，只在測試這個
+  /// 方法本身時才傳入。
+  ///
+  /// 目錄結構假設：Android App 的私有資料目錄是 `<dataDir>/code_cache`（即 `systemTemp`）
+  /// 與 `<dataDir>/cache`（即 `getCacheDir()`）並列，所以取 `systemTemp.parent` 再接
+  /// `cache`。目錄名固定（`fake-fonts-integration`），多次呼叫共用同一個空目錄，
+  /// 不會在真機快取目錄累積暫存子目錄；App 解除安裝時由系統清除。
+  factory FakeDownloadableFontStore.forPlatform({
+    bool? isAndroid,
+    Directory? systemTemp,
+  }) {
+    if (isAndroid ?? Platform.isAndroid) {
+      final fontsDir = Directory(
+        '${(systemTemp ?? Directory.systemTemp).parent.path}/cache/fake-fonts-integration',
+      )..createSync(recursive: true);
+      return FakeDownloadableFontStore(directory: fontsDir.path);
+    }
+    return FakeDownloadableFontStore();
+  }
+
+  static const String _defaultDirectory = '/fake/downloaded-fonts';
+
   /// 目前視為已下載的字型；測試可以直接預先設定。
   final Set<AppFont> installed = {};
 
@@ -29,7 +59,7 @@ class FakeDownloadableFontStore implements DownloadableFontStore {
   List<AppFont> get supportedFonts => supported;
 
   @override
-  String get directory => '/fake/downloaded-fonts';
+  final String directory;
 
   @override
   Future<void> prepare() async {}

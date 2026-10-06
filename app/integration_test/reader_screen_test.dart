@@ -61,7 +61,7 @@ bool _loadingIndicatorGone() =>
 /// 偵測已完成」的觀察點——取代 Issue 4 移除的 `reader_writing_mode_toggle`
 /// 讀取信號。
 bool _layoutSettingsButtonReady(WidgetTester tester) {
-  final finder = find.byKey(const Key('reader_layout_settings_button'));
+  final finder = find.byKey(const Key('reader_chrome_layout_button'));
   if (finder.evaluate().isEmpty) return false;
   return tester.widget<IconButton>(finder).onPressed != null;
 }
@@ -197,7 +197,7 @@ void main() {
       () =>
           _loadingIndicatorGone() &&
           find
-              .byKey(const Key('reader_layout_settings_button'))
+              .byKey(const Key('reader_chrome_layout_button'))
               .evaluate()
               .isEmpty,
       timeout: const Duration(seconds: 10),
@@ -231,7 +231,7 @@ void main() {
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
 
     await tester
@@ -269,7 +269,7 @@ void main() {
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
     await tester
         .tap(find.byKey(const Key('reader_settings_font_size_increment')));
@@ -333,7 +333,7 @@ void main() {
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
 
     final verticalButton = find.byKey(const Key('reader_settings_writing_mode_vertical'));
@@ -377,7 +377,7 @@ void main() {
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
 
     final scrollButton = find.byKey(const Key('reader_settings_page_turn_mode_scroll'));
