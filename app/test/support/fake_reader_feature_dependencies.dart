@@ -66,7 +66,7 @@ ReaderFeatureDependencies fakeReaderFeatureDependencies({
     customFontsRepository:
         customFontsRepository ?? FakeCustomFontsRepository(),
     downloadableFontStore:
-        downloadableFontStore ?? FakeDownloadableFontStore(),
+        downloadableFontStore ?? FakeDownloadableFontStore.forPlatform(),
     layoutPresetRepository:
         layoutPresetRepository ?? FakeLayoutPresetRepository(),
     bookReaderPrefsRepository:
@@ -118,7 +118,7 @@ LibraryReaderFeatureRepositories completeLegacyReaderFeatures({
     customFontsRepository:
         customFontsRepository ?? FakeCustomFontsRepository(),
     downloadableFontStore:
-        downloadableFontStore ?? FakeDownloadableFontStore(),
+        downloadableFontStore ?? FakeDownloadableFontStore.forPlatform(),
     layoutPresetRepository:
         layoutPresetRepository ?? FakeLayoutPresetRepository(),
     bookReaderPrefsRepository:

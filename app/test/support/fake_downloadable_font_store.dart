@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/downloadable_font_store.dart';
@@ -6,6 +7,24 @@ import 'package:elinkbook/reader/downloadable_font_store.dart';
 /// 測試用 Fake（epic-49）。下載不會自動完成，由測試透過 [activeDownload]
 /// 控制進度、成功或失敗，才能精確驗證畫面在每個階段的顯示。
 class FakeDownloadableFontStore implements DownloadableFontStore {
+  FakeDownloadableFontStore({this.directory = _defaultDirectory});
+
+  /// 依平台建立：Android 真機的 integration 測試會用真的 `InAppWebView`，原生端的
+  /// `WebViewAssetLoader.InternalStoragePathHandler` 會拒絕不存在的目錄並丟
+  /// `PlatformException`（epic-54 Issue 16），所以 Android 上改用真實存在的暫存目錄
+  /// （App 快取目錄，在允許範圍內）；其他平台（桌面主機的 `flutter test`）維持假目錄。
+  /// [isAndroid] 預設取目前平台，只在測試這個方法本身時才傳入。
+  factory FakeDownloadableFontStore.forPlatform({bool? isAndroid}) {
+    if (isAndroid ?? Platform.isAndroid) {
+      return FakeDownloadableFontStore(
+        directory: Directory.systemTemp.createTempSync('fake-fonts').path,
+      );
+    }
+    return FakeDownloadableFontStore();
+  }
+
+  static const String _defaultDirectory = '/fake/downloaded-fonts';
+
   /// 目前視為已下載的字型；測試可以直接預先設定。
   final Set<AppFont> installed = {};
 
@@ -29,7 +48,7 @@ class FakeDownloadableFontStore implements DownloadableFontStore {
   List<AppFont> get supportedFonts => supported;
 
   @override
-  String get directory => '/fake/downloaded-fonts';
+  final String directory;
 
   @override
   Future<void> prepare() async {}

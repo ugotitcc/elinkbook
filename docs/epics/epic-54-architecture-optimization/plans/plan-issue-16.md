@@ -593,3 +593,17 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - M-1：改用 `kill … || taskkill //F //PID`。M-2：更正為 33 − 6 = 27。M-3：批次腳本連續 2 次找不到裝置即中止。M-4：改用 PATH 上的 `adb`。
 
 **未採納：** 無。審查的 debug APK 大小估算（約 56 MB）取自 release APK，計畫已註明 debug 實際大小以 build 結果為準。
+
+## 附錄 A：Task 2 診斷結論與修復（2026-10-06）
+
+**診斷（`BooksPad`，`epub_toc_test`，詳見 `.scratch/it_results/diagnosis.txt`）：** H1、H2 不成立，H3 成立。根因是新的 H4：`ReaderFeatureDependencies` 預設的 `FakeDownloadableFontStore.directory` 是不存在的 `/fake/downloaded-fonts`，`ReaderScreen` 把它傳給 `FoliateReaderView.downloadedFontsDirectory`，Android 原生的 `WebViewAssetLoader.InternalStoragePathHandler` 在 WebView 建立時拒絕不存在的目錄並丟 `PlatformException`，`InAppWebView` 從未掛載，30 秒後 `OpenBookFlow` 逾時。base `bdff826c` 的 `downloadableFontStore` 可為 null，integration 測試不傳，不會建立該 handler。
+
+**決策（使用者選擇做法 1：只改測試端，不動 `lib/`）：**
+
+- `FakeDownloadableFontStore` 新增選用建構參數 `directory`，預設值維持 `/fake/downloaded-fonts`（單元測試行為不變）。
+- `fakeReaderFeatureDependencies` 與 `completeLegacyReaderFeatures` 的預設 store：在 Android 上（`Platform.isAndroid`，即真機 integration 測試）改傳一個**真實存在的暫存目錄**（`Directory.systemTemp.createTempSync`，即 App 快取目錄，在 `InternalStoragePathHandler` 允許範圍內）；其他平台（`flutter test` 於桌面主機）維持原值。
+- 與先前提議的差異：原本想逐檔改 21 個 integration 檔案，改為只改工廠的預設值，異動檔案從 21 個降為 3 個，且不會有 codemod 誤改。
+
+**Task 3（調整等待上限）取消：** H1 不成立，不需要調 10 秒。
+
+**驗證：** 重新建置安裝，不加任何診斷，直接跑 `epub_toc_test`，預期不再 `等待逾時：載入指示器未消失`。H4 修好之後，base 上同一檔案「同樣逾時」的原因仍未查明，Task 4 對照時需另行確認，不得沿用 Issue 15 的 B 類結論。
