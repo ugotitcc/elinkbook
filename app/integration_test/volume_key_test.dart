@@ -15,6 +15,7 @@ import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
 import '../test/support/pump_localized_widget.dart';
+import '../test/support/reader_chrome_finders.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -33,11 +34,17 @@ Future<void> _pumpUntilLoaded(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 2));
 }
 
-Future<void> _pumpUntilTextFound(WidgetTester tester, String textFragment) async {
+/// 等到頁碼元件（reader_chrome_page_info_text）的文字以 [prefix] 開頭，例如 '2 / '。
+Future<void> _pumpUntilPageInfoStartsWith(WidgetTester tester, String prefix) async {
   final deadline = DateTime.now().add(const Duration(seconds: 15));
-  while (find.textContaining(textFragment).evaluate().isEmpty) {
+  while (true) {
+    final finder = find.byKey(const Key('reader_chrome_page_info_text'));
+    if (finder.evaluate().isNotEmpty &&
+        (tester.widget<Text>(finder).data ?? '').startsWith(prefix)) {
+      return;
+    }
     if (DateTime.now().isAfter(deadline)) {
-      fail('等待逾時：畫面上未出現包含「$textFragment」的文字');
+      fail('等待逾時：頁碼文字未以「$prefix」開頭，目前為「${finder.evaluate().isEmpty ? '（元件不存在）' : pageInfoText(tester)}」');
     }
     await tester.pump(const Duration(milliseconds: 100));
   }
@@ -111,7 +118,7 @@ void main() {
     await _pumpUntilLoaded(tester);
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
-    expect(find.textContaining('第 1/'), findsOneWidget, reason: '初始應在第 1 頁');
+    expect(pageInfoText(tester), startsWith('1 / '), reason: '初始應在第 1 頁');
 
     const volumeKeyChannel = MethodChannel('elinkbook/volume_key');
     final binaryMessenger =
@@ -128,16 +135,16 @@ void main() {
     }
 
     await simulateVolumeKey('down');
-    await _pumpUntilTextFound(tester, '第 2/');
+    await _pumpUntilPageInfoStartsWith(tester, '2 / ');
 
-    expect(find.textContaining('第 2/'), findsOneWidget,
+    expect(pageInfoText(tester), startsWith('2 / '),
         reason: '模擬 onVolumeKey(down) 後應換到第 2 頁');
-    expect(find.byType(AppBar), findsOneWidget, reason: '音量鍵翻頁不應影響沉浸模式');
+    expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget, reason: '音量鍵翻頁不應影響沉浸模式（頂部工具列仍在）');
 
     await simulateVolumeKey('up');
-    await _pumpUntilTextFound(tester, '第 1/');
+    await _pumpUntilPageInfoStartsWith(tester, '1 / ');
 
-    expect(find.textContaining('第 1/'), findsOneWidget,
+    expect(pageInfoText(tester), startsWith('1 / '),
         reason: '模擬 onVolumeKey(up) 後應換回第 1 頁');
   });
 }
