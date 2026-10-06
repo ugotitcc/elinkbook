@@ -36,3 +36,8 @@
 - 處理方式：直接 TDD，不寫 `plan-issue-N.md`。
 - 紅燈：`google_drive_oauth_client_test.dart` 新增「unlink 向 Google 撤銷授權」4 個測試（正常撤銷、斷網、回 400、未連結），修正前撤銷請求未送出而 FAIL。
 - 驗證：`test/cloud_import` 與 `cloud_account_settings_screen_test.dart` 共 79 通過；`flutter analyze` 乾淨。僅跑受影響測試檔，未跑全套，未在真機實測撤銷。
+
+**2026-10-06 PR 合併**
+
+- PR #329（`epic-62/google-oauth-verification` → `main`）已合併，合併 commit `5a9e8f26`。
+- 尚待使用者執行的非程式待辦見上方清單（部署網站、更新 Console、重錄影片、回信 Google）。完成後歸檔。

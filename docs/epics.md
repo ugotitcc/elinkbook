@@ -70,7 +70,7 @@
 | 60 | `epic-59-pdf-overlay-recompute-storm` （缺陷）PDF 開啟手動裁切／加粗後翻頁產生覆蓋圖計算風暴，頁面長時間全白 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 61 | `epic-60-crop-mode-lost-after-cancel` （缺陷）PDF 手動裁切按 ✕ 取消後，版面設定「裁切」分頁的模式按鈕全部沒有反白 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 62 | `epic-61-startup-black-screen` （缺陷）安裝新版後第一次啟動黑屏：`main()` 的 `AudioService.init` 例外未接住，`runApp` 未執行 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
-| 63 | `epic-62-google-oauth-verification` Google OAuth 驗證回覆（隱私權政策補 Google 使用者資料與 Limited Use 聲明；Drive 登出時向 Google 撤銷 refresh token） | 🟡 開發中 (Active) | 程式與政策已完成，待部署網站、重錄 Demo 影片並回覆 Google 審查信 |
+| 63 | `epic-62-google-oauth-verification` Google OAuth 驗證回覆（隱私權政策補 Google 使用者資料與 Limited Use 聲明；Drive 登出時向 Google 撤銷 refresh token） | 🟡 開發中 (Active) | 已合併（PR #329）；待部署網站、重錄 Demo 影片並回覆 Google 審查信，完成後歸檔 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。
