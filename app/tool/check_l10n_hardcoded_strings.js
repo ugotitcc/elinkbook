@@ -1,14 +1,15 @@
 // epic-45-interface-i18n Issue 10：防遺漏稽核腳本。
 //
-// 兩項檢查（規則契約見 docs/epics/epic-45-interface-i18n/spec.md §9）：
+// 三項檢查（規則契約見 docs/epics/epic-45-interface-i18n/spec.md §9）：
 //   1. 掃描 app/lib/**/*.dart，找出「Widget 字串參數位置」上未經 AppLocalizations
 //      包裝、含中文字元的字串字面值，避免既有畫面遺漏、以及日後新增畫面忘記包裝。
 //   2. 掃描 app/test/**/*.dart，確認每個 MaterialApp 都帶 locale／localizationsDelegates／
 //      supportedLocales（Issue 9 審查 M-3；使用者裁定併入 Issue 10）。
+//   3. 掃描 app/integration_test/**/*.dart，規則同第 2 項，但沒有白名單（epic-54 Issue 15）。
 // 執行方式與慣例比照 check_foliate_es_compat.js（純 Node 內建模組、免 npm install）。
 //
 // 用法：
-//   node app/tool/check_l10n_hardcoded_strings.js                    # 兩項檢查
+//   node app/tool/check_l10n_hardcoded_strings.js                    # 三項檢查
 //   node app/tool/check_l10n_hardcoded_strings.js --lib-dir <目錄>   # 只做檢查 1（測試／驗收用）
 //   node app/tool/check_l10n_hardcoded_strings.js --test-dir <目錄>  # 只做檢查 2
 //   node app/tool/check_l10n_hardcoded_strings.js --integration-dir <目錄>  # 只做 integration_test 的 MaterialApp 檢查
@@ -422,7 +423,7 @@ function checkTest(testDir, label = 'test') {
 }
 
 /**
- * 沒給任何 --xxx-dir 時，兩項檢查都以預設目錄執行；
+ * 沒給任何 --xxx-dir 時，三項檢查都以預設目錄執行；
  * 只給其中一個旗標時，只執行該項檢查（測試／驗收用）。
  */
 function main(argv) {
@@ -433,13 +434,18 @@ function main(argv) {
   const anyFlag = libOpt !== undefined || testOpt !== undefined || integrationOpt !== undefined;
   const runLib = libOpt !== undefined || !anyFlag;
   const runTest = testOpt !== undefined || !anyFlag;
-  // Task 3 之前，無旗標的預設不含 integration_test（目前還有 104 處待修）
-  const runIntegration = integrationOpt !== undefined;
+  // 無旗標時三項都跑（含 integration_test；Issue 15 起 104 處已全數改用 pumpLocalizedWidget）
+  const runIntegration = integrationOpt !== undefined || !anyFlag;
   let exit = 0;
   // 結束碼取最大值：2（設定錯誤）優先於 1（有違規）優先於 0
   if (runLib) exit = Math.max(exit, checkLib(libOpt ?? path.resolve(__dirname, '..', 'lib')));
   if (runTest) exit = Math.max(exit, checkTest(testOpt ?? path.resolve(__dirname, '..', 'test')));
-  if (runIntegration) exit = Math.max(exit, checkTest(integrationOpt, 'integration_test'));
+  if (runIntegration) {
+    exit = Math.max(
+      exit,
+      checkTest(integrationOpt ?? path.resolve(__dirname, '..', 'integration_test'), 'integration_test'),
+    );
+  }
   return exit;
 }
 

@@ -358,4 +358,11 @@ try {
   fs.rmSync(tmp, { recursive: true, force: true })
 }
 
+// ---- 無旗標預設：lib、test、integration_test 三項都檢查（epic-54 Issue 15）----
+const defaultRun = spawnSync('node', [SCRIPT], { encoding: 'utf8' })
+assert.equal(defaultRun.status, 0, defaultRun.stderr)
+assert.match(defaultRun.stdout, /個檔案，未發現/)
+assert.match(defaultRun.stdout, /個測試檔，所有/)
+assert.match(defaultRun.stdout, /個 integration 測試檔，所有/)
+
 console.log('check_l10n_hardcoded_strings：全部測試通過')
