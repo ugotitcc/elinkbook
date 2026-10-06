@@ -121,11 +121,20 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(Key('book_item_${importedBook.id}')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+    // 書架啟動時會自動開啟最後閱讀的書（epic-18 Issue 29）：剛匯入的書
+    // lastReadTime 為現在，啟動即被自動推入閱讀器。先返回書架，再驗證
+    // 從書架點書進入閱讀器的流程。
+    if (find.byKey(const Key('reader_chrome_back_button')).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(const Key('reader_chrome_back_button')));
+      await tester.pumpAndSettle();
+    }
+    expect(find.byKey(Key('book_item_${importedBook.id}')), findsOneWidget);
+    await tester.tap(find.byKey(Key('book_item_${importedBook.id}')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('閱讀器'), findsOneWidget);
+    expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget,
+        reason: '點書後應進入閱讀器（頂部工具列出現）');
 
       // 先確認載入指示器真的存在，才能保證下面「等它消失」是有意義的等待，
       // 而不是 Key 被改名/移除後，condition 從一開始就成立、測試沒等待就
@@ -213,6 +222,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+
+    // 同首個測試：書架啟動自動開書時先返回書架。
+    if (find.byKey(const Key('reader_chrome_back_button')).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(const Key('reader_chrome_back_button')));
+      await tester.pumpAndSettle();
+    }
+    expect(find.byKey(Key('book_item_${importedBook.id}')), findsOneWidget);
 
     await tester.tap(find.byKey(Key('book_item_${importedBook.id}')));
     await tester.pump();
@@ -303,6 +319,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+
+      // 同首個測試：書架啟動自動開書時先返回書架。
+      if (find.byKey(const Key('reader_chrome_back_button')).evaluate().isNotEmpty) {
+        await tester.tap(find.byKey(const Key('reader_chrome_back_button')));
+        await tester.pumpAndSettle();
+      }
+      expect(find.byKey(Key('book_item_${importedBook.id}')), findsOneWidget);
 
       await tester.tap(find.byKey(Key('book_item_${importedBook.id}')));
       await tester.pump();

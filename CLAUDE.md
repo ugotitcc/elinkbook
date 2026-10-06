@@ -24,6 +24,10 @@ flutter analyze
 # 包裝的硬編碼中文字串，以及 test/ 內缺 locale 的 MaterialApp（純 Node，免安裝；見 app/tool/README.md）
 node tool/check_l10n_hardcoded_strings.js
 
+# 修改 lib/ 內任何 Key 或 integration_test/ 後，提交前跑一次：找出 integration 測試引用、
+# 但 lib/ 已不存在的 Key（純 Node，免安裝；見 app/tool/README.md）
+node tool/check_integration_keys.js
+
 flutter devices
 
 # 必須指定真實裝置/模擬器（見下方「兩層測試架構」，一般 flutter test 做不到這件事）
