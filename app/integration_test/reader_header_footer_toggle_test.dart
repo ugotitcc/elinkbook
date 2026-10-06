@@ -167,7 +167,7 @@ void main() {
     // showFooter=false → 頁尾不顯示。
     expect(find.byKey(const Key('reader_footer')), findsNothing,
         reason: 'showFooter=false 時頁尾不應顯示');
-    // 角落頁首文字只在工具列收合時顯示，先收合再驗證（showHeader 預設 true）。
+    // 角落頁首文字只在工具列收合時顯示，先收合再驗證（showHeader 已明確持久化為 true；全域預設其實是 false）。
     ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
     await tester.pump();
     // showHeader 明確持久化為 true（不受 showFooter=false 影響），頁首應顯示章節名稱文字。
