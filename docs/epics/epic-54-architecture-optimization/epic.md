@@ -358,4 +358,22 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 
 - 內容：檢查腳本新增 `--integration-dir`（Task 1；預設行為不變），33 檔 104 處 `tester.pumpWidget(MaterialApp(home: X))` 機械改寫為 `pumpLocalizedWidget(tester, X)`（Task 2；手動清單為空；`theme:` 僅在等於預設值時省略），無旗標預設納入 `integration_test/` 並更新 `tool/README.md`（Task 3）。
 - 驗證：`flutter analyze` No issues found；檢查腳本三行 PASS（lib 250 檔、test 283 檔、integration 40 檔）；檢查腳本單元測試通過；`flutter test` 全量 3674 通過、1 略過、1 失敗——唯一失敗為既存 `pdf_reader_view_filters_test`（bold overlay 多頁案例，已在乾淨 `main` 確認，與本 Issue 無關；本 Issue 只動 `integration_test/` 與 `tool/`）。
-- 真機驗證（Task 4）未在本分支執行，由使用者在另一台設備進行；分類結果待補。
+**2026-10-06 Issue 15 真機驗證結果（Task 4，部分完成）**
+
+- 裝置：`BooksPad`（Android 12，序號 `B78CW2508006423`，System WebView 91.0.4472.114）。原定的 `OPD2102`（`bfa4e772`）因 OPPO「透過 USB 安裝」驗證與 `flutter test` 自動安裝不相容而放棄。
+- **範圍：32 個檔案只跑了 5 個**（計畫的 5 個關鍵檔案）。其餘 27 個**未執行**。原因：`BooksPad` 的 `adb` 傳輸只有約 100 KB/s，228 MB 的測試 APK 無法由 Flutter 自動安裝，每個檔案都要由使用者用 MTP 手動安裝。
+- 執行方式（與計畫的 `flutter test` 不同，需知悉）：每個檔案先 `flutter build apk --debug --target=integration_test/<檔>.dart`，使用者手動安裝，再以 `flutter drive --use-application-binary` 搭配一個會吞掉 `install` 指令的 `adb` 替身執行。測試檔本身未改。替身與 `test_driver/` 都在 `.scratch/`／untracked，不進版控。
+- **Step 5 結果：5 個檔案的 `Null check operator` 皆為 0 次。** 先前卡在 `AppLocalizations.of(context)!` 的缺陷已修好，畫面以正體中文顯示。
+
+| 檔案 | 結果 | 例外摘要 | 分類 |
+|---|---|---|---|
+| `fxl_bookmarks_test` | `exit=1`（1 個失敗） | `等待逾時：載入指示器未消失`（`_pumpUntilLoaded`，第 32 行） | 待分類（同 `epub_toc_test` 症狀，未逐檔對照 base） |
+| `epub_toc_test` | `exit=1`（1 個失敗） | `等待逾時：載入指示器未消失` | **B**：base `bdff826c` 補多語系後同機同樣失敗 |
+| `reading_position_test` | `exit=1`（2 個失敗） | PDF 案例找不到文字 `進度 67% ｜ 第 4/6 頁`（第 88 行）；EPUB 案例為測試結束後的 `inTest is not true` 斷言 | 待分類（PDF 疑為 D 或跳頁未成功；EPUB 為連帶錯誤） |
+| `foliate_cbz_test` | `exit=1`（1 個失敗） | `等待逾時：載入指示器未消失` | 待分類（同上症狀） |
+| `reader_screen_test` | `exit=1`（1 個失敗） | `等待逾時（10 秒）：條件未成立`（渲染非空白內容） | 待分類 |
+
+- **B 類依據（`epub_toc_test`）：** 在 base 的 worktree 對該檔案手動補上 `pumpLocalizedWidget`，同裝置執行，結果與本分支完全相同（`等待逾時：載入指示器未消失`，`exit=1`）。故不是 Issue 11 的回歸。建議另立工單。
+- **輔助證據（非計畫要求的測試結果）：** 用同分支的一般 debug APK，`BooksPad`（WebView 91）與 `ViWoods Reader Air`（WebView 153.0.8010.36）都能正常開書閱讀。可排除「裝置 WebView 太舊」；問題只出在 integration 測試的執行情境，原因未查明。
+- **未完成：** 其餘 27 個檔案未執行；4 個症狀相同的檔案未逐檔對照 base；`reading_position_test` PDF 案例與 `reader_screen_test` 的根因未查。D 類（斷言文字與 locale 不符）尚無確認案例，`reading_position_test` PDF 案例有嫌疑，待使用者決定。
+- C 類（Issue 11 回歸）：目前 0 個確認。未修改任何 `lib/` 或測試檔。
