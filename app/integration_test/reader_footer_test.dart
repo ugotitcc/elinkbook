@@ -13,6 +13,7 @@ import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
 import '../test/support/pump_localized_widget.dart';
+import '../test/support/reader_chrome_finders.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -62,7 +63,7 @@ void main() {
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
-    expect(find.text('進度 17% ｜ 第 1/6 頁'), findsOneWidget,
+    expect(pageInfoText(tester), '1 / 6 · 17%',
         reason: 'sample_dual_page.pdf 共 6 頁');
 
     await tester.enterText(
@@ -70,7 +71,7 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
 
-    expect(find.text('進度 67% ｜ 第 4/6 頁'), findsOneWidget,
+    expect(pageInfoText(tester), '4 / 6 · 67%',
         reason: '輸入框跳頁後頁尾應更新為目標頁');
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
   });

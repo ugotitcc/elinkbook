@@ -66,12 +66,11 @@ bool _layoutSettingsButtonReady(WidgetTester tester) {
   return tester.widget<IconButton>(finder).onPressed != null;
 }
 
-/// PDF 版本的「⚙️版面」FAB 就緒判斷（epic-24-pdf-engine-rebuild Issue 8：
-/// PDF 不再使用 AppBar，改為 Key 為 `reader_pdf_settings_button` 的 FAB，
-/// `onPressed` 於 `_state == _RenderState.rendered` 前恆為 null，見
-/// reader_screen.dart 對應的 Positioned 區塊）。
+/// PDF 與 FXL 的「版面」按鈕（epic-38 Issue 1：統一走底部工具列的
+/// `reader_chrome_layout_button`，`onPressed` 於 `_openBookFlow.isRendered`
+/// 前恆為 null，見 reader_screen.dart 對應的 `onLayoutTap` 區塊）。
 bool _pdfSettingsButtonReady(WidgetTester tester) {
-  final finder = find.byKey(const Key('reader_pdf_settings_button'));
+  final finder = find.byKey(const Key('reader_chrome_layout_button'));
   if (finder.evaluate().isEmpty) return false;
   return tester.widget<IconButton>(finder).onPressed != null;
 }
@@ -336,9 +335,13 @@ void main() {
     await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
 
+    // 排版方向覆寫列在「呈現」分頁（IndexedStack 非 TabBarView，切分頁無動畫）。
+    await tester.tap(find.byKey(const Key('reader_settings_tab_presentation')));
+    await tester.pumpAndSettle();
+
     final verticalButton = find.byKey(const Key('reader_settings_writing_mode_vertical'));
     final sheetScrollable = find.descendant(
-      of: find.byType(ReaderSettingsSheet),
+      of: find.byKey(const Key('reader_settings_tab_presentation_list')),
       matching: find.byType(Scrollable),
     );
     await tester.scrollUntilVisible(verticalButton, 50.0, scrollable: sheetScrollable);
@@ -380,9 +383,13 @@ void main() {
     await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
 
+    // 翻頁模式覆寫列在「呈現」分頁。
+    await tester.tap(find.byKey(const Key('reader_settings_tab_presentation')));
+    await tester.pumpAndSettle();
+
     final scrollButton = find.byKey(const Key('reader_settings_page_turn_mode_scroll'));
     final sheetScrollable = find.descendant(
-      of: find.byType(ReaderSettingsSheet),
+      of: find.byKey(const Key('reader_settings_tab_presentation_list')),
       matching: find.byType(Scrollable),
     );
     await tester.scrollUntilVisible(scrollButton, 50.0, scrollable: sheetScrollable);
@@ -580,7 +587,7 @@ void main() {
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
 
     expect(find.byType(PdfSettingsSheet), findsOneWidget);
@@ -612,7 +619,7 @@ void main() {
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
 
     for (final keySuffix in ['fit_width', 'actual_size', 'page_fit']) {
@@ -650,7 +657,7 @@ void main() {
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
     await tester.pumpAndSettle();
@@ -692,7 +699,7 @@ void main() {
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
     await tester.pumpAndSettle();
@@ -732,7 +739,7 @@ void main() {
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
@@ -771,7 +778,7 @@ void main() {
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
@@ -832,7 +839,7 @@ void main() {
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
@@ -881,7 +888,7 @@ void main() {
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
@@ -963,7 +970,7 @@ void main() {
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();

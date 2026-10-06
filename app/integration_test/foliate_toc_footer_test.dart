@@ -157,8 +157,21 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
     expect(errorMessage, isNull, reason: '換頁後不應觸發 onError');
-    expect(lastPosition?.displayTotalPages, positionAfterOpen.displayTotalPages,
-        reason: '同一本書換頁不應改變 displayTotalPages');
+    // 流式 EPUB 的 displayTotalPages 是近似估計刻度（位元組數/1500＋已渲染
+    // section 密度校正，見 epub_position_info.dart），翻頁渲染更多內容後
+    // 估計值會微幅收斂，不是嚴格相等（TCL 14 實測開書 493→換頁後 490，約
+    // 0.6%，三次一致）。所以驗證「近似不變」：與開書時相差不超過 5%。這比
+    // 只檢查「大於 0」強得多：總頁數若被重算成另一個量級、或換頁後歸零，
+    // 都會被抓到；5% 約為實測漂移的 8 倍，留給不同裝置字型與 WebView 的餘裕。
+    final totalAfterOpen = positionAfterOpen.displayTotalPages;
+    final totalAfterTurn = lastPosition?.displayTotalPages;
+    expect(totalAfterOpen, isNotNull, reason: '開書後應已有 displayTotalPages');
+    expect(totalAfterTurn, isNotNull, reason: '換頁後應仍有 displayTotalPages');
+    expect(totalAfterOpen!, greaterThan(0));
+    final drift = (totalAfterTurn! - totalAfterOpen).abs() / totalAfterOpen;
+    expect(drift, lessThanOrEqualTo(0.05),
+        reason: '同一本書換頁後 displayTotalPages 只應因估計收斂而微幅變動'
+            '（開書 $totalAfterOpen、換頁後 $totalAfterTurn、漂移 ${(drift * 100).toStringAsFixed(1)}%）');
   });
 
   testWidgets('舊格式（Readium Locator JSON）initialLocatorJson 優雅退回：不崩潰、從書本開頭開始',

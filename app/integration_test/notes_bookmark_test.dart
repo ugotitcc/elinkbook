@@ -106,6 +106,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(NotesBottomSheet), findsOneWidget);
 
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_bookmarks')));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const Key('notes_sheet_bookmark_toggle')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('notes_sheet_bookmark_list')), findsOneWidget);
@@ -115,6 +118,9 @@ void main() {
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_bookmarks')));
     await tester.pumpAndSettle();
 
     final listFinder = find.byKey(const Key('notes_sheet_bookmark_list'));
@@ -176,10 +182,12 @@ void main() {
     await _pumpUntilLoaded(tester);
     await _pumpUntilNotesButtonEnabled(
       tester,
-      key: const Key('reader_pdf_notes_button'),
+      key: const Key('reader_chrome_annotations_button'),
     );
 
-    await tester.tap(find.byKey(const Key('reader_pdf_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_bookmarks')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_bookmark_toggle')));
     await tester.pumpAndSettle();

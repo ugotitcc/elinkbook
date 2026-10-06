@@ -16,6 +16,7 @@ import 'package:elinkbook/reader/zone_action.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
 import '../test/support/pump_localized_widget.dart';
+import '../test/support/reader_chrome_finders.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -34,17 +35,23 @@ Future<void> _pumpUntilLoaded(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 2));
 }
 
-/// 等待畫面上出現包含 [textFragment] 的文字，用於換頁後頁尾文字經由原生
-/// method channel 非同步回報更新（`onPageChanged`）才會出現，真機上的
-/// round-trip 耗時不固定，比照 [_pumpUntilLoaded] 既有的等待迴圈寫法，
-/// 而非賭一個固定秒數的 `tester.pump(Duration(seconds: 1))`（既有慣例見
+/// 等到頁碼元件（reader_chrome_page_info_text）的文字以 [prefix] 開頭，例如
+/// '2 / '，用於換頁後頁碼經由原生 method channel 非同步回報更新
+/// （`onPageChanged`）才會出現，真機上的 round-trip 耗時不固定，比照
+/// [_pumpUntilLoaded] 既有的等待迴圈寫法，而非賭一個固定秒數的
+/// `tester.pump(Duration(seconds: 1))`（既有慣例見
 /// `integration_test/pdf_dual_page_test.dart`／`reader_screen_test.dart`
 /// 換頁後一律呼叫 `tester.pumpAndSettle()`）。
-Future<void> _pumpUntilTextFound(WidgetTester tester, String textFragment) async {
+Future<void> _pumpUntilPageInfoStartsWith(WidgetTester tester, String prefix) async {
   final deadline = DateTime.now().add(const Duration(seconds: 15));
-  while (find.textContaining(textFragment).evaluate().isEmpty) {
+  while (true) {
+    final finder = find.byKey(const Key('reader_chrome_page_info_text'));
+    if (finder.evaluate().isNotEmpty &&
+        (tester.widget<Text>(finder).data ?? '').startsWith(prefix)) {
+      return;
+    }
     if (DateTime.now().isAfter(deadline)) {
-      fail('等待逾時：畫面上未出現包含「$textFragment」的文字');
+      fail('等待逾時：頁碼文字未以「$prefix」開頭，目前為「${finder.evaluate().isEmpty ? '（元件不存在）' : pageInfoText(tester)}」');
     }
     await tester.pump(const Duration(milliseconds: 100));
   }
@@ -75,7 +82,7 @@ Future<void> _pumpUntilTextFound(WidgetTester tester, String textFragment) async
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('triggerZoneAction(menu) 真機切換沉浸模式（AppBar／頁尾顯示/隱藏）',
+  testWidgets('triggerZoneAction(menu) 真機切換沉浸模式（頂部工具列／頁尾顯示/隱藏）',
       (tester) async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
@@ -116,17 +123,17 @@ void main() {
     await _pumpUntilLoaded(tester);
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
-    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget);
 
     ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
     await tester.pump();
 
-    expect(find.byType(AppBar), findsNothing);
+    expect(find.byKey(const Key('reader_chrome_back_button')), findsNothing);
 
     ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
     await tester.pump();
 
-    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget);
   });
 
   testWidgets('triggerZoneAction(nextPage/previousPage) 真機正確換頁，且不影響沉浸模式',
@@ -174,18 +181,18 @@ void main() {
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
-    expect(find.textContaining('第 1/'), findsOneWidget, reason: '初始應在第 1 頁');
+    expect(pageInfoText(tester), startsWith('1 / '), reason: '初始應在第 1 頁');
 
     ReaderScreen.triggerZoneAction(key, ZoneAction.nextPage);
-    await _pumpUntilTextFound(tester, '第 2/');
+    await _pumpUntilPageInfoStartsWith(tester, '2 / ');
 
-    expect(find.textContaining('第 2/'), findsOneWidget, reason: '呼叫 nextPage 後應換到第 2 頁');
-    expect(find.byType(AppBar), findsOneWidget, reason: '換頁不應影響沉浸模式（design.md 決策 #14）');
+    expect(pageInfoText(tester), startsWith('2 / '), reason: '呼叫 nextPage 後應換到第 2 頁');
+    expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget, reason: '換頁不應影響沉浸模式（design.md 決策 #14）');
 
     ReaderScreen.triggerZoneAction(key, ZoneAction.previousPage);
-    await _pumpUntilTextFound(tester, '第 1/');
+    await _pumpUntilPageInfoStartsWith(tester, '1 / ');
 
-    expect(find.textContaining('第 1/'), findsOneWidget, reason: '呼叫 previousPage 後應換回第 1 頁');
-    expect(find.byType(AppBar), findsOneWidget);
+    expect(pageInfoText(tester), startsWith('1 / '), reason: '呼叫 previousPage 後應換回第 1 頁');
+    expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget);
   });
 }

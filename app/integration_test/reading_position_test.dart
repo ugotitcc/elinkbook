@@ -16,6 +16,7 @@ import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
 import '../test/support/pump_localized_widget.dart';
+import '../test/support/reader_chrome_finders.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。原生
 /// 渲染引擎（PdfRenderer）需要真實的裝置檔案系統路徑，不能直接讀取
@@ -85,7 +86,7 @@ void main() {
         find.byKey(const Key('reader_footer_jump_input')), '4');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
-    expect(find.text('進度 67% ｜ 第 4/6 頁'), findsOneWidget);
+    expect(pageInfoText(tester), '4 / 6 · 67%');
 
     // 離開閱讀畫面（觸發 dispose），驗證資料庫已寫入。
     await pumpLocalizedWidget(tester, const SizedBox.shrink());
@@ -106,7 +107,7 @@ void main() {
     );
     await _pumpUntilLoaded(tester);
 
-    expect(find.text('進度 67% ｜ 第 4/6 頁'), findsOneWidget,
+    expect(pageInfoText(tester), '4 / 6 · 67%',
         reason: '重新開啟同一本書應自動回到離開前的頁碼');
   });
 

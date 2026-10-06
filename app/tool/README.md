@@ -2,6 +2,46 @@
 
 開發輔助腳本，不屬於 App 本身，不會被打包進 APK。
 
+## `check_integration_keys.js`
+
+找出 `app/integration_test/` 引用、但 `app/lib/` 已不存在的 `Key`。`integration_test/` 只能在真機執行，
+平常的 `flutter test` 不會跑，介面改版後測試仍引用舊 key 也不會有人發現（epic-54 Issue 16／17）。
+
+### 何時該執行
+
+改了 `lib/` 內任何 `Key(...)`、或新增／修改 `integration_test/` 之後，提交前執行。
+
+### 執行方式
+
+```bash
+cd app
+node tool/check_integration_keys.js
+node tool/test_check_integration_keys.mjs   # 守衛本身的單元測試
+```
+
+結束碼：0 乾淨；1 有過期 key；2 設定錯誤或掃到 0 個檔案（目錄指錯時不會被當成乾淨）。
+
+### 比對規則
+
+`Key('x')`（單、雙引號皆可）的 `x` 只要符合其一就算存在：等於 `lib/` 內某個不含 `$` 的字串字面值；
+符合 `lib/` 內某個 `Key(…)` 參數的範本（`nav_zone_$index` 這類動態 key，第一個 `$` 之前至少 4 個固定字元）；
+以 `keyPrefix: '…'` 加底線開頭；或是測試檔自己用 `key: Key('x')` 建立。掃描 `lib/` 時排除 `l10n/`。
+範本只從 `Key(…)` 取，不從所有字串取：否則 `"$_temp0"` 這類字串會變成萬用正則，讓守衛永遠通過。
+
+### 已知限制
+
+只檢查字串字面值的 `Key`；測試端含 `$` 的 key（迴圈變數組成，例如 `Key('pdf_settings_$keySuffix')`）無法靜態解析，跳過；
+`find.text(...)`、`find.byType(...)`、元件型別轉型（例如 `tester.widget<TextButton>`）不在範圍內，
+這類過期仍須靠真機執行才看得到。
+
+另外兩個會「漏報」的情況（Issue 17 程式審查 M-6，行為與上方比對規則一致，不是 bug，但要知道）：
+
+- `lib/` 內**任何**不含 `$` 的字串字面值都算「存在」，不限於 `Key(…)` 的參數，也包含註解裡的引號字串。
+  如果過期的 key 剛好等於 `lib/` 內某個無關字串（例如測試引用 `Key('client_id')`，而 `lib/` 有 `'client_id'` 這個字串），
+  守衛會判為存在。這是刻意取捨：`Key` 常由變數、`keyPrefix`、`itemKey:` 等多種寫法組成，只比對 `Key(…)` 會大量誤報。
+- 測試端比對是**逐行**進行：`Key(` 與字串分在兩行的寫法（`Key(\n  'x',\n)`）不會被檢查到。
+  `dart format` 把 key 拆成多行時要留意。
+
 ## `check_l10n_hardcoded_strings.js`
 
 三項檢查（`epic-45-interface-i18n` Issue 10，規則契約見該 Epic `spec.md` §9；第 3 項由 `epic-54` Issue 15 加入）：
