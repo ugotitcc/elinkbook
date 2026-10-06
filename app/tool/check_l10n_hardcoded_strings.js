@@ -11,6 +11,7 @@
 //   node app/tool/check_l10n_hardcoded_strings.js                    # 兩項檢查
 //   node app/tool/check_l10n_hardcoded_strings.js --lib-dir <目錄>   # 只做檢查 1（測試／驗收用）
 //   node app/tool/check_l10n_hardcoded_strings.js --test-dir <目錄>  # 只做檢查 2
+//   node app/tool/check_l10n_hardcoded_strings.js --integration-dir <目錄>  # 只做 integration_test 的 MaterialApp 檢查
 //   兩個旗標都給時兩項都做。
 //
 // 結束碼 0：乾淨；1：找到至少一處未包裝的硬編碼中文字串；
@@ -323,7 +324,7 @@ function findBareMaterialApps(src) {
  * 掃描整個 test 目錄。
  * @returns {{scanned:number, violations:{file:string, line:number, missing:string[], note?:string}[]}}
  */
-function scanTestDir(testDir) {
+function scanTestDir(testDir, allowMap = TEST_BARE_APP_ALLOW) {
   const files = [];
   walk(testDir, files);
   const violations = [];
@@ -332,7 +333,7 @@ function scanTestDir(testDir) {
     const rel = path.relative(testDir, file).split(path.sep).join('/');
     scanned++;
     const bare = findBareMaterialApps(fs.readFileSync(file, 'utf8'));
-    const allow = TEST_BARE_APP_ALLOW.get(rel);
+    const allow = allowMap.get(rel);
     if (allow) {
       if (bare.length !== allow.count) {
         violations.push({
@@ -388,26 +389,35 @@ function checkLib(libDir) {
   return 1;
 }
 
-function checkTest(testDir) {
+function checkTest(testDir, label = 'test') {
   if (!isDirectory(testDir)) {
     console.error(`掃描目錄不存在：${testDir}`);
     return 2;
   }
-  const { scanned, violations } = scanTestDir(testDir);
+  // integration_test 沒有刻意保留裸 MaterialApp 的案例，不套用 app/test 專屬白名單
+  const { scanned, violations } = scanTestDir(
+    testDir,
+    label === 'test' ? TEST_BARE_APP_ALLOW : new Map(),
+  );
   if (scanned === 0) {
     console.error(`在 ${testDir} 底下沒有找到任何 .dart 檔，無法稽核`);
     return 2;
   }
   if (violations.length === 0) {
-    console.log(`PASS：掃描 ${scanned} 個測試檔，所有 MaterialApp 皆帶 locale／localizationsDelegates／supportedLocales`);
+    const kind = label === 'test' ? '' : ` ${label.replace(/_test$/, '')} `;
+    console.log(`PASS：掃描 ${scanned} 個${kind}測試檔，所有 MaterialApp 皆帶 locale／localizationsDelegates／supportedLocales`);
     return 0;
   }
   console.error(`發現 ${violations.length} 處測試的 MaterialApp 缺少必要參數：`);
   for (const v of violations) {
-    console.error(`  test/${v.file}:${v.line}  ${v.note ?? `缺少 ${v.missing.join('／')}`}`);
+    console.error(`  ${label}/${v.file}:${v.line}  ${v.note ?? `缺少 ${v.missing.join('／')}`}`);
   }
   console.error('\n修法：改用 pumpLocalizedWidget()，或補上 locale: const Locale(\'zh\', \'TW\')／localizationsDelegates／supportedLocales；');
-  console.error('若確屬刻意的裸 MaterialApp（例如驗證無 AppLocalizations 的 fallback），加進腳本的 TEST_BARE_APP_ALLOW 並註明理由。');
+  if (label === 'test') {
+    console.error('若確屬刻意的裸 MaterialApp（例如驗證無 AppLocalizations 的 fallback），加進腳本的 TEST_BARE_APP_ALLOW 並註明理由。');
+  } else {
+    console.error(`${label} 不設白名單：所有 MaterialApp 都必須帶多語系設定（改用 pumpLocalizedWidget）。`);
+  }
   return 1;
 }
 
@@ -418,13 +428,18 @@ function checkTest(testDir) {
 function main(argv) {
   const libOpt = parseDirOption(argv, '--lib-dir');
   const testOpt = parseDirOption(argv, '--test-dir');
-  if (libOpt === null || testOpt === null) return 2;
-  const runLib = libOpt !== undefined || testOpt === undefined;
-  const runTest = testOpt !== undefined || libOpt === undefined;
+  const integrationOpt = parseDirOption(argv, '--integration-dir');
+  if (libOpt === null || testOpt === null || integrationOpt === null) return 2;
+  const anyFlag = libOpt !== undefined || testOpt !== undefined || integrationOpt !== undefined;
+  const runLib = libOpt !== undefined || !anyFlag;
+  const runTest = testOpt !== undefined || !anyFlag;
+  // Task 3 之前，無旗標的預設不含 integration_test（目前還有 104 處待修）
+  const runIntegration = integrationOpt !== undefined;
   let exit = 0;
   // 結束碼取最大值：2（設定錯誤）優先於 1（有違規）優先於 0
   if (runLib) exit = Math.max(exit, checkLib(libOpt ?? path.resolve(__dirname, '..', 'lib')));
   if (runTest) exit = Math.max(exit, checkTest(testOpt ?? path.resolve(__dirname, '..', 'test')));
+  if (runIntegration) exit = Math.max(exit, checkTest(integrationOpt, 'integration_test'));
   return exit;
 }
 
