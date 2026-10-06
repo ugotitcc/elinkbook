@@ -43,7 +43,7 @@ Future<void> _pumpUntilLoaded(WidgetTester tester) async {
 Future<void> _pumpUntilNotesButtonEnabled(WidgetTester tester) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
   while (true) {
-    final finder = find.byKey(const Key('reader_notes_button'));
+    final finder = find.byKey(const Key('reader_chrome_annotations_button'));
     if (finder.evaluate().isNotEmpty &&
         tester.widget<IconButton>(finder).onPressed != null) {
       return;
@@ -148,7 +148,7 @@ void main() {
     await _pumpUntilLoaded(tester);
     await _pumpUntilNotesButtonEnabled(tester);
 
-    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pumpAndSettle();
@@ -162,7 +162,7 @@ void main() {
     expect(find.byType(NotesBottomSheet), findsNothing);
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
-    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pumpAndSettle();
@@ -268,7 +268,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.close));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pumpAndSettle();

@@ -43,7 +43,7 @@ Future<void> _pumpUntilLoaded(WidgetTester tester) async {
 Future<void> _pumpUntilNotesButtonEnabled(WidgetTester tester) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
   while (true) {
-    final finder = find.byKey(const Key('reader_notes_button'));
+    final finder = find.byKey(const Key('reader_chrome_annotations_button'));
     if (finder.evaluate().isNotEmpty &&
         tester.widget<IconButton>(finder).onPressed != null) {
       return;
@@ -151,7 +151,7 @@ void main() {
     await _pumpUntilLoaded(tester);
     await _pumpUntilNotesButtonEnabled(tester);
 
-    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pumpAndSettle();
@@ -170,7 +170,7 @@ void main() {
     // 重新開啟，驗證編輯純備註（另一筆，非上面已跳轉刪除的合併項目）文字
     // 持久化生效：Dialog 儲存後清單即時反映新文字，且直接重新查詢
     // repository 確認資料庫確實已更新（不只是 widget tree 上的暫存狀態）。
-    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pumpAndSettle();
@@ -189,7 +189,7 @@ void main() {
     // 關閉 Bottom Sheet，重新開啟驗證單筆刪除（劃線+備註一併消失）持久化生效。
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pumpAndSettle();

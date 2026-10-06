@@ -38,7 +38,7 @@ Future<void> _pumpUntilLoaded(WidgetTester tester) async {
 Future<void> _pumpUntilFxlBookmarkToggleEnabled(WidgetTester tester) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
   while (true) {
-    final finder = find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button'));
+    final finder = find.byKey(const Key('reader_chrome_bookmark_button'));
     if (finder.evaluate().isNotEmpty &&
         tester.widget<IconButton>(finder).onPressed != null) {
       return;
@@ -102,7 +102,7 @@ void main() {
     await _pumpUntilFxlBookmarkToggleEnabled(tester);
 
     // 懸浮書籤 toggle：新增目前頁書籤。
-    await tester.tap(find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_bookmark_button')));
     await tester.pumpAndSettle();
 
     // 懸浮筆記按鈕：開啟 Bottom Sheet 確認書籤已持久化寫入資料庫。

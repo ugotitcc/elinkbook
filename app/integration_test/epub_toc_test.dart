@@ -50,7 +50,7 @@ Future<void> _pumpUntilFooterVisible(WidgetTester tester) async {
 Future<void> _pumpUntilTocButtonEnabled(WidgetTester tester) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
   while (true) {
-    final finder = find.byKey(const Key('reader_toc_button'));
+    final finder = find.byKey(const Key('reader_chrome_toc_button'));
     if (finder.evaluate().isNotEmpty &&
         tester.widget<IconButton>(finder).onPressed != null) {
       return;
@@ -130,7 +130,7 @@ void main() {
     // 開啟目錄，驗證頂層 3 章皆顯示、第二章巢狀子項預設收起（開書起始頁在
     // 第一章，第二章不在目前章節路徑內）。
     await _pumpUntilTocButtonEnabled(tester);
-    await tester.tap(find.byKey(const Key('reader_toc_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
     await tester.pumpAndSettle();
 
     expect(find.byType(TocBottomSheet), findsOneWidget);

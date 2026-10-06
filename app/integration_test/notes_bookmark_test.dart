@@ -37,7 +37,7 @@ Future<void> _pumpUntilLoaded(WidgetTester tester) async {
 
 Future<void> _pumpUntilNotesButtonEnabled(
   WidgetTester tester, {
-  Key key = const Key('reader_notes_button'),
+  Key key = const Key('reader_chrome_annotations_button'),
 }) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
   while (true) {
@@ -102,7 +102,7 @@ void main() {
     await _pumpUntilLoaded(tester);
     await _pumpUntilNotesButtonEnabled(tester);
 
-    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pumpAndSettle();
     expect(find.byType(NotesBottomSheet), findsOneWidget);
 
@@ -114,7 +114,7 @@ void main() {
     // 暫存狀態）。
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pumpAndSettle();
 
     final listFinder = find.byKey(const Key('notes_sheet_bookmark_list'));

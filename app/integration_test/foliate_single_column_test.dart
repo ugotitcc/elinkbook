@@ -212,7 +212,7 @@ void main() {
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
     // 開啟版面設定面板
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
 
     // 確認單欄按鈕反映為選取（color 精確等於主題 primary 色，比照
