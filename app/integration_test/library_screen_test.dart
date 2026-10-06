@@ -13,6 +13,7 @@ import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
+import '../test/support/fake_reader_feature_dependencies.dart';
 import '../test/support/pump_localized_widget.dart';
 
 const _metadataChannel = MethodChannel('elinkbook/book_metadata');
@@ -107,6 +108,11 @@ void main() {
         LibraryScreen(
           repository: repository,
           importService: importService,
+          // Issue 11 起進入閱讀器需要完整的閱讀器功能依賴（單元測試同樣傳這個）
+          readerFeatureRepositories: completeLegacyReaderFeatures(
+            bookImportService: importService,
+          ),
+          syncDependencies: completeLegacySyncDependencies(),
           prefsManager: ReaderPrefsManagerImpl(
             BookReaderPrefsRepository(repository.database),
             ReadingPositionRepository(repository.database),
@@ -142,9 +148,7 @@ void main() {
     },
   );
 
-  testWidgets('真實匯入一本流式 EPUB 後點開，由 FoliateReaderView 成功渲染出內容', (
-    tester,
-  ) async {
+  testWidgets('真實匯入一本流式 EPUB 後點開，由 FoliateReaderView 成功渲染出內容', (tester) async {
     final tempDir = await getTemporaryDirectory();
     final uniqueSuffix = DateTime.now().microsecondsSinceEpoch;
     final dbPath = p.join(
@@ -197,6 +201,11 @@ void main() {
       LibraryScreen(
         repository: repository,
         importService: importService,
+        // Issue 11 起進入閱讀器需要完整的閱讀器功能依賴（單元測試同樣傳這個）
+        readerFeatureRepositories: completeLegacyReaderFeatures(
+          bookImportService: importService,
+        ),
+        syncDependencies: completeLegacySyncDependencies(),
         prefsManager: ReaderPrefsManagerImpl(
           BookReaderPrefsRepository(repository.database),
           ReadingPositionRepository(repository.database),
@@ -282,6 +291,11 @@ void main() {
         LibraryScreen(
           repository: repository,
           importService: importService,
+          // Issue 11 起進入閱讀器需要完整的閱讀器功能依賴（單元測試同樣傳這個）
+          readerFeatureRepositories: completeLegacyReaderFeatures(
+            bookImportService: importService,
+          ),
+          syncDependencies: completeLegacySyncDependencies(),
           prefsManager: ReaderPrefsManagerImpl(
             BookReaderPrefsRepository(repository.database),
             ReadingPositionRepository(repository.database),
