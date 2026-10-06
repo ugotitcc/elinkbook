@@ -69,7 +69,7 @@
 - Commit：本計畫檔（在 `main`，純文件）
 - 建立 worktree：`.worktrees/epic-54-issue-16-integration-device`
 
-- [ ] **Step 1：提交計畫（在 `main`）**
+- [x] **Step 1：提交計畫（在 `main`）**
 
 ```bash
 git add docs/epics/epic-54-architecture-optimization/plans/plan-issue-16.md
@@ -78,7 +78,7 @@ git commit -m "docs(epic-54): Issue 16 實作計畫
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 2：建立 worktree，複製真機工具**
+- [x] **Step 2：建立 worktree，複製真機工具**
 
 ```bash
 git worktree add .worktrees/epic-54-issue-16-integration-device -b epic-54/issue-16-integration-device
@@ -91,7 +91,7 @@ cd .worktrees/epic-54-issue-16-integration-device/app && flutter pub get
 
 `test_driver/` 在 worktree 內是 untracked，**不要提交**。
 
-- [ ] **Step 3：向使用者確認裝置（必做）**
+- [x] **Step 3：向使用者確認裝置（必做）**
 
 問使用者：目標裝置序號（預設 `B78CW2508006423`，`BooksPad`）、是否接受清除該裝置上既有的 `cc.ugotit.elinkbook`。**得到明確回答前，不得執行任何 `flutter test`／`flutter drive`／`adb install`。** 然後確認連線穩定：
 
@@ -115,7 +115,7 @@ adb devices -l   # PATH 找不到 adb 時，改用 "$LOCALAPPDATA/Android/Sdk/pl
 
 **Files：** 只在 `.scratch/` 內寫腳本與記錄。
 
-- [ ] **Step 1：量測現況傳輸速度**
+- [x] **Step 1：量測現況傳輸速度**
 
 ```bash
 ADB=adb   # 本機 PATH 已有 adb（which adb 可確認）；找不到時才改用完整路徑 "$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe"
@@ -126,7 +126,7 @@ time "$ADB" -s B78CW2508006423 push .scratch/zero_20m.bin /data/local/tmp/zero_2
 
 記錄秒數，算出 MB/s。預期約 0.1～0.25 MB/s（審查實測 20 MB 約需 40 秒以上）。
 
-- [ ] **Step 2：依序試三個做法，每個只量一次**
+- [x] **Step 2：依序試三個做法，每個只量一次**
 
 1. **只打包單一 ABI ＋ `--no-streaming`（不需使用者操作，先做）：**
 
@@ -151,7 +151,7 @@ time "$ADB" -s B78CW2508006423 install --no-streaming -r -t build/app/outputs/fl
    拔掉 USB 線，對新的 `<IP>:5555` 序號重跑 Step 1，再重做做法 1 的 `install`。
 3. **換 USB 線與孔位**（使用者操作）：換一條線、直接插主機後方 USB 孔（不經 hub），重跑 Step 1。
 
-- [ ] **Step 3：選定做法並寫成腳本**
+- [x] **Step 3：選定做法並寫成腳本**
 
 選速度最快且不需人工的做法。若三個都不行，在 `epic.md` 記錄量測數字，並**停止回報使用者**：此時 Task 4 只能沿用 Issue 15 的 MTP 手動安裝，工時約 27 檔 × 5 分鐘，請使用者決定要不要做。
 
@@ -164,7 +164,7 @@ flutter test integration_test/epub_toc_test.dart -d <device-id> 2>&1 | tail -n 1
 
 預期：能自動安裝並執行到測試本體（結果仍可能是逾時失敗，這是 Task 2 要查的）。
 
-- [ ] **Step 4：記錄**
+- [x] **Step 4：記錄**
 
 在 `.scratch/it_results/transport.txt` 寫下三個做法的速度與選定結果。此檔不進版控，結論稍後寫進 `epic.md`。
 
@@ -177,7 +177,7 @@ flutter test integration_test/epub_toc_test.dart -d <device-id> 2>&1 | tail -n 1
 **Interfaces：**
 - Produces：一份寫進 `.scratch/it_results/diagnosis.txt` 的結論，格式為 `H1 成立／不成立`、`H2 成立／不成立`、`H3 成立／不成立`，各附證據一行。Task 3 依此分支。
 
-- [ ] **Step 1：實驗 A——把等待上限放寬並記錄實際耗時**
+- [x] **Step 1：實驗 A——把等待上限放寬並記錄實際耗時**
 
 只改 `epub_toc_test.dart` 的 `_pumpUntilLoaded`（第 28～35 行附近，內容與 `fxl_bookmarks_test.dart` 相同結構）。把 deadline 改成 90 秒，並在指示器消失時印出耗時：
 
@@ -219,7 +219,7 @@ grep -n "診斷A\|reader_error_text\|All tests passed\|Some tests failed" ../.sc
 - 出現 `90 秒後載入指示器仍在`：**H1 不成立**，繼續實驗 B。
 - 出現 `在 N ms 後消失`且 N ≤ 10000：結果與 Issue 15 矛盾，先重跑一次確認；仍矛盾就停止回報使用者。
 
-- [ ] **Step 2：實驗 B——擷取 WebView 與 Flutter 的 log**
+- [x] **Step 2：實驗 B——擷取 WebView 與 Flutter 的 log**
 
 在一個終端機先清 log 並開始擷取，再於另一個執行實驗 A 的指令（若 A 已成立，仍要做，用來排除 H2 同時存在）：
 
@@ -240,7 +240,7 @@ grep -n "Uncaught\|ReferenceError\|TypeError\|SyntaxError\|net::ERR\|Failed to l
 - 有 `Uncaught`／`ReferenceError`／`TypeError`／`net::ERR`：**H2 成立**，記錄前三行。
 - 完全沒有：H2 不成立。
 
-- [ ] **Step 3：實驗 C——確認 WebView 有沒有被掛載**
+- [x] **Step 3：實驗 C——確認 WebView 有沒有被掛載**
 
 在 `epub_toc_test.dart` 的 `_pumpUntilLoaded` 迴圈外、`pumpLocalizedWidget` 之後，臨時加一段（只印資訊，不改斷言）。先在檔案頂端加 `import 'package:flutter_inappwebview/flutter_inappwebview.dart';`，然後在 `_pumpUntilLoaded` 開頭：
 
@@ -263,7 +263,7 @@ grep -n "Uncaught\|ReferenceError\|TypeError\|SyntaxError\|net::ERR\|Failed to l
 - `InAppWebView 數量=0`，或尺寸的寬或高為 0：**H3 成立**。
 - 數量為 1 且尺寸正常（例如接近螢幕大小）：H3 不成立。
 
-- [ ] **Step 4：還原實驗用修改並寫結論**
+- [x] **Step 4：還原實驗用修改並寫結論**
 
 ```bash
 git checkout app/integration_test/epub_toc_test.dart
@@ -289,11 +289,11 @@ git checkout app/integration_test/epub_toc_test.dart
 **Interfaces：**
 - Produces：每個檔案「載入指示器附近」的等待上限，凡是原本在 10 秒以上、但小於 `T` 的，一律調成 `T` 秒（只升不降）。**不抽共用常數**：每個檔案的等待寫法各自內嵌，這個 Issue 只調數字，不改結構。
 
-- [ ] **Step 1：定案秒數**
+- [x] **Step 1：定案秒數**（取消：H4 成立，不需調等待上限，見附錄 A）
 
 秒數 = `max(30, ceil(N × 2 / 1000))`。理由：不低於正式 App 的 30 秒逾時（`OpenBookFlow` 預設），且對最慢實測值留 2 倍餘裕。把定案值記為 `T`，寫進 commit 訊息與 `epic.md`。
 
-- [ ] **Step 2：先看 22 個檔案的載入等待長什麼樣**
+- [x] **Step 2：先看 22 個檔案的載入等待長什麼樣**（取消：H4 成立，不需調等待上限，見附錄 A）
 
 計畫審查已盤點：22 個檔案的寫法**不一致**，不能只靠一條正則。
 
@@ -310,7 +310,7 @@ git checkout app/integration_test/epub_toc_test.dart
 grep -n -B4 -A4 "reader_loading_indicator\|_loadingIndicatorGone" integration_test/*.dart | grep "seconds:" | head -n 80
 ```
 
-- [ ] **Step 3：寫 codemod（預設只列清單，加 `--apply` 才寫檔）**
+- [x] **Step 3：寫 codemod（預設只列清單，加 `--apply` 才寫檔）**（取消：H4 成立，不需調等待上限，見附錄 A）
 
 做法：找出每個含 `reader_loading_indicator` 或 `_loadingIndicatorGone` 的行，只看它前後 4 行內的 `Duration(seconds: N)`；N 在 10 以上且小於 `T` 才改成 `T`。不碰 N < 10（例如 `seconds: 1`、`seconds: 2`）、也不碰 N ≥ `T`。這樣三種寫法都涵蓋，而且不會改到同檔其他不相干的等待。
 
@@ -363,7 +363,7 @@ for (const f of files) {
 console.log(`${apply ? '已改' : '將改'} ${total} 行；命中 0 處的檔案（必須人工處理）：${zero.length ? zero.join(', ') : '無'}`);
 ```
 
-- [ ] **Step 4：先 dry-run，並在三種寫法各一個檔案上試套用**
+- [x] **Step 4：先 dry-run，並在三種寫法各一個檔案上試套用**（取消：H4 成立，不需調等待上限，見附錄 A）
 
 ```bash
 # 1. 全部 22 個檔案 dry-run，逐行確認命中的是載入等待、不是別的
@@ -379,7 +379,7 @@ git diff integration_test/epub_toc_test.dart integration_test/reader_screen_test
 - `reader_footer_test` 是直接寫在 `testWidgets` 內的迴圈，確認有命中。
 - 若 diff 出現不是載入等待的行被改，調整 `WINDOW` 或改成逐檔人工處理，`git checkout` 還原後再試。
 
-- [ ] **Step 5：套用到全部 22 個檔案並確認**
+- [x] **Step 5：套用到全部 22 個檔案並確認**（取消：H4 成立，不需調等待上限，見附錄 A）
 
 ```bash
 node ../.scratch/codemod_loading_timeout.js --apply <T> $(grep -l "reader_loading_indicator" integration_test/*.dart)
@@ -390,7 +390,7 @@ git diff --stat | tail -n 1
 
 預期：`flutter analyze` 是 "No issues found!"；檢查腳本全 PASS。以 `T=60` dry-run 預演過：22 檔中 21 檔命中、共 28 行；其中 `reader_screen_test`（3 行）、`library_screen_test`（3 行）、`reader_header_footer_toggle_test`（4 行）命中較多，**必須逐行確認都是載入等待**，不是相鄰的其他等待。「命中 0 處的檔案」清單預期是 `custom_font_rendering_test`（它用 `pumpAndSettle(const Duration(seconds: 3))`，不是等指示器消失）。清單裡每個檔案都要**人工讀過**：判斷它的載入等待是否真的需要調整，把結論與理由寫進 commit 訊息。不得因為腳本沒報錯就當作已處理。
 
-- [ ] **Step 6：用被卡住的 5 個檔案驗證**
+- [x] **Step 6：用被卡住的 5 個檔案驗證**（取消：H4 成立，不需調等待上限，見附錄 A）
 
 ```bash
 for t in fxl_bookmarks_test epub_toc_test reading_position_test foliate_cbz_test reader_screen_test; do
@@ -402,7 +402,7 @@ cat ../.scratch/it_results/fix_summary.txt
 
 預期：`fxl_bookmarks_test`、`epub_toc_test`、`foliate_cbz_test` 不再出現 `等待逾時：載入指示器未消失`。若仍出現，**H1 的結論有誤**，還原修改並回 Task 2 重新診斷。`reading_position_test` 與 `reader_screen_test` 可能因其他原因仍失敗，這是 Task 4 的分類範圍。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**（取消：H4 成立，不需調等待上限，見附錄 A）
 
 ```bash
 git add app/integration_test/
@@ -422,7 +422,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 **Files：** 僅在判定為 C 類時修改 `lib/` 或測試；其餘只更新文件。
 
-- [ ] **Step 1：建立逐檔執行腳本**
+- [x] **Step 1：建立逐檔執行腳本**
 
 用 Write 工具建立 `.scratch/run_integration.sh`：
 
@@ -465,7 +465,7 @@ echo DONE >> "$OUT/summary.txt"
 grep -l "pumpLocalizedWidget" integration_test/*.dart | wc -l   # 預期 33
 ```
 
-- [ ] **Step 2：背景執行（預估 1 小時以上；手機保持接線、螢幕亮著）**
+- [x] **Step 2：背景執行（預估 1 小時以上；手機保持接線、螢幕亮著）**
 
 ```bash
 bash ../.scratch/run_integration.sh <device-id>
@@ -473,7 +473,7 @@ bash ../.scratch/run_integration.sh <device-id>
 
 用 `run_in_background` 執行，等完成通知，不要輪詢。
 
-- [ ] **Step 3：排除環境失敗**
+- [x] **Step 3：排除環境失敗**
 
 ```bash
 grep -l "not found\|log reader stopped\|INSTALL_FAILED\|Unable to start the app" ../.scratch/it_results/*.log
@@ -481,7 +481,7 @@ grep -l "not found\|log reader stopped\|INSTALL_FAILED\|Unable to start the app"
 
 列出的檔案是環境失敗，**不分類**。確認 `adb devices -l` 穩定後單獨重跑，直到沒有為止。
 
-- [ ] **Step 4：對每個失敗分類**
+- [x] **Step 4：對每個失敗分類**
 
 對 `summary.txt` 中 `exit` 非 0 的檔案，讀 `.log` 的第一個例外（`grep -n "EXCEPTION CAUGHT\|Expected\|Actual\|The following"`），依下表記錄「檔案、測試名、例外摘要」：
 
@@ -510,7 +510,7 @@ git worktree remove --force .worktrees/base-bdff826c
 
 第 2 步的 codemod 路徑以實際存在位置為準；找不到就先 `ls .scratch/`、`ls .worktrees/*/.scratch/` 確認。
 
-- [ ] **Step 5：補驗 Issue 15 留下的 5 個檔案**
+- [x] **Step 5：補驗 Issue 15 留下的 5 個檔案**
 
 這 5 個已在 Task 3 Step 6 跑過。對仍失敗的，分類方式同 Step 4：
 - `epub_toc_test`：已確認 B（Issue 15），只需確認調整等待上限後結果。
@@ -518,7 +518,7 @@ git worktree remove --force .worktrees/base-bdff826c
 - `reading_position_test` PDF 案例：找不到文字 `進度 67% ｜ 第 4/6 頁`。計畫審查已查到：頁尾現在顯示 `4/6`（`lib/screens/reader_footer.dart` 第 120 行，`Key('reader_footer_progress_text')`），`lib/` 內已沒有 `進度 67% ｜ 第 4/6 頁`，`reader_footer_test` 第 73 行有同樣的斷言。所以這很可能是 **D 類（過期斷言）**。仍須確認：用真機畫面或 `reader_footer_progress_text` 的實際文字證明「跳頁其實成功了、只是文字不同」，再歸 D；若實際頁碼也不是 4，才是 B／C。D 類只記錄，交使用者決定。
 - `reader_screen_test`：`等待逾時（10 秒）：條件未成立`（渲染非空白內容），第 139、203、231 行的 `timeout: const Duration(seconds: 10)` 是否也需依 Task 2 結果調整，由實驗 A 的數據決定；不得憑感覺改。
 
-- [ ] **Step 6：記錄結果**
+- [x] **Step 6：記錄結果**
 
 在 `epic.md` 新增「Issue 16 真機驗證結果」段落：裝置、日期、診斷結論（H1／H2／H3）、安裝做法與速度、32 個檔案各自的 `+N -M`、分類表（檔案、測試名、類別、例外摘要、base 對照結果）、B 類清單（建議另立工單）、D 類清單（待使用者決定）。C 類另列修復 commit。
 
@@ -528,7 +528,7 @@ git worktree remove --force .worktrees/base-bdff826c
 
 **Files：** `docs/epics/epic-54-architecture-optimization/{epic.md,issues.md}`、`docs/epics.md`
 
-- [ ] **Step 1：完整 `flutter test`（只在這裡跑一次）**
+- [x] **Step 1：完整 `flutter test`（只在這裡跑一次）**
 
 ```bash
 cd .worktrees/epic-54-issue-16-integration-device/app
@@ -537,7 +537,7 @@ flutter test > ../.scratch/it_results/full_test.log 2>&1
 
 用 `run_in_background`，約 6 分鐘。預期：只有既存的 `pdf_reader_view_filters_test`（bold overlay 多頁案例）失敗（Issue 15 已在乾淨 `main` 確認）。出現其他失敗就是本 Issue 造成，必須查。
 
-- [ ] **Step 2：`flutter analyze` 與檢查腳本**
+- [x] **Step 2：`flutter analyze` 與檢查腳本**
 
 ```bash
 flutter analyze
@@ -546,13 +546,13 @@ node tool/check_l10n_hardcoded_strings.js
 
 預期：No issues found!；三行 PASS。
 
-- [ ] **Step 3：更新文件**
+- [x] **Step 3：更新文件**
 
 - `issues.md` Issue 16 狀態改為「🟢 實作完成，待程式審查」（含 PR 後再改為已合併）。
 - `docs/epics.md` 備註只寫「Issue 16 已完成」，不寫歷程。
 - 若 H1 以外的根因讓 Task 3 停下，狀態改為「🟡 診斷完成，待計畫附錄」並寫明卡在哪。
 
-- [ ] **Step 4：Commit 文件並請求程式審查**
+- [x] **Step 4：Commit 文件並請求程式審查**
 
 ```bash
 git add docs/epics/epic-54-architecture-optimization/epic.md docs/epics/epic-54-architecture-optimization/issues.md docs/epics.md
@@ -607,3 +607,11 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 **Task 3（調整等待上限）取消：** H1 不成立，不需要調 10 秒。
 
 **驗證：** 重新建置安裝，不加任何診斷，直接跑 `epub_toc_test`，預期不再 `等待逾時：載入指示器未消失`。H4 修好之後，base 上同一檔案「同樣逾時」的原因仍未查明，Task 4 對照時需另行確認，不得沿用 Issue 15 的 B 類結論。
+
+**執行偏差（勾選時須知，2026-10-06 依程式審查補記）：**
+
+- **Task 1：** 做法 1（單一 ABI ＋ `--no-streaming`）可行（117 MB 約 18.6 分鐘），但真正的解法是重啟卡住的舊 adb 服務（指令 12～23 秒降到 0.1 秒、推送 0.1 → 23.5 MB/s），不在原計畫三個做法之內。
+- **Task 2：** 在 `BooksPad` 完成實驗 A／B／C，結論 H1、H2 不成立、H3 成立，並發現 H4（見上）。
+- **Task 3：** 取消。
+- **Task 4：** 改在 `TCL 14` 以 `flutter test` 直接跑 32 檔（不用 `adbshim`／`flutter drive`）。base 對照只對 `library_screen_test` 做（唯一可能屬 C 類的檔案）；D 類與「待判斷」類未做 base 對照，也未歸 B 類，原因是它們的失敗點與 Issue 11 無關，留給 Issue 17。
+- **Task 5 Step 4：** 程式審查報告為 `reviews/review-issue-16.md`（不進版控）。

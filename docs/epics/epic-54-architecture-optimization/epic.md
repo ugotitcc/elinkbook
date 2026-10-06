@@ -400,3 +400,11 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - `database_closed` 例外多為測試失敗後 teardown 的連帶錯誤，不計為獨立失敗。
 - **建議另立 Issue 17：** 把上表 D 類與待判斷類的 integration 測試遷移到 Epic 38 之後的介面（約 17 檔）。需要逐檔對照新介面與行為，部分須判斷「過期」還是「行為真的改變」，工作量大，不適合併入本 Issue。
 - 診斷方法備忘：真機 integration 測試先用 `adb shell echo hi` 量延遲；超過 1 秒先 `adb kill-server` 再重試。
+
+**2026-10-06 Issue 16 程式審查回應**（審查報告 `reviews/review-issue-16.md`：Critical 0、Important 2、Minor 2，結論 Ready to merge with fixes，皆已查證屬實並處理）
+
+- I-1：`plans/plan-issue-16.md` 的 28 個 Step 全部勾選；Task 3 勾選並註明「因 H4 取消」；附錄 A 補「執行偏差」，如實記錄與原計畫不同之處（Task 1 的真解法是重啟 adb 服務、Task 4 改在 `TCL 14` 用 `flutter test`、base 對照只做 `library_screen_test`）。
+- I-2：Issue 17 補上「換 key 後仍失敗的 7 個檔案為首要對象，須一次遷移完整」。
+- M-1：`FakeDownloadableFontStore.forPlatform` 改用固定目錄名 `cache/fake-fonts-integration`，多次呼叫共用同一目錄，不再累積暫存子目錄；新增單元測試先紅後綠。
+- M-2：補上 `systemTemp.parent` 與 `cache/` 的目錄結構假設註解。
+- 驗證：相關單元測試 41 個通過、`flutter analyze` 乾淨；`TCL 14` 上 `foliate_highlights_notes_test` 仍通過（+2）。

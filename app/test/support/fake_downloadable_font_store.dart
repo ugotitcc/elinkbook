@@ -16,17 +16,20 @@ class FakeDownloadableFontStore implements DownloadableFontStore {
   /// 底下的 `cache/`（允許），並建立真實存在的暫存子目錄；其他平台（桌面主機的
   /// `flutter test`）維持假目錄。[isAndroid]、[systemTemp] 預設取目前平台，只在測試這個
   /// 方法本身時才傳入。
+  ///
+  /// 目錄結構假設：Android App 的私有資料目錄是 `<dataDir>/code_cache`（即 `systemTemp`）
+  /// 與 `<dataDir>/cache`（即 `getCacheDir()`）並列，所以取 `systemTemp.parent` 再接
+  /// `cache`。目錄名固定（`fake-fonts-integration`），多次呼叫共用同一個空目錄，
+  /// 不會在真機快取目錄累積暫存子目錄；App 解除安裝時由系統清除。
   factory FakeDownloadableFontStore.forPlatform({
     bool? isAndroid,
     Directory? systemTemp,
   }) {
     if (isAndroid ?? Platform.isAndroid) {
-      final cacheRoot = Directory(
-        '${(systemTemp ?? Directory.systemTemp).parent.path}/cache',
+      final fontsDir = Directory(
+        '${(systemTemp ?? Directory.systemTemp).parent.path}/cache/fake-fonts-integration',
       )..createSync(recursive: true);
-      return FakeDownloadableFontStore(
-        directory: cacheRoot.createTempSync('fake-fonts').path,
-      );
+      return FakeDownloadableFontStore(directory: fontsDir.path);
     }
     return FakeDownloadableFontStore();
   }

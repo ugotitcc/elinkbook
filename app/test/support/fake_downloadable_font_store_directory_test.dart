@@ -39,6 +39,24 @@ void main() {
     expect(store.directory.contains('code_cache'), isFalse);
   });
 
+  test('forPlatform(isAndroid: true) 多次呼叫共用同一個目錄，不會累積暫存目錄', () {
+    final dataDir = Directory.systemTemp.createTempSync('fake-data');
+    addTearDown(() => dataDir.deleteSync(recursive: true));
+    final codeCache = Directory('${dataDir.path}/code_cache')..createSync();
+
+    final a = FakeDownloadableFontStore.forPlatform(
+      isAndroid: true,
+      systemTemp: codeCache,
+    );
+    final b = FakeDownloadableFontStore.forPlatform(
+      isAndroid: true,
+      systemTemp: codeCache,
+    );
+
+    expect(b.directory, a.directory);
+    expect(Directory('${dataDir.path}/cache').listSync(), hasLength(1));
+  });
+
   test('forPlatform(isAndroid: false) 維持假目錄，不在磁碟建立東西', () {
     final store = FakeDownloadableFontStore.forPlatform(isAndroid: false);
     expect(store.directory, '/fake/downloaded-fonts');
