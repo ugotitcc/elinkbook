@@ -107,6 +107,71 @@ void main() {
     expect(await client.ensureValidAccessToken(), isNull);
   });
 
+  group('unlink 向 Google 撤銷授權', () {
+    Future<void> linkTokens() => accountRepository.link(
+          CloudProvider.googleDrive,
+          CloudAccountTokens(
+            accessToken: 'access-1',
+            refreshToken: 'refresh-1',
+            email: 'reader@example.com',
+            expiresAt: DateTime.now().add(const Duration(hours: 1)),
+          ),
+        );
+
+    test('先以 refresh token 呼叫撤銷端點，再清除本機憑證', () async {
+      await linkTokens();
+      http.Request? revokeRequest;
+      final client = GoogleDriveOAuthClient(
+        accountRepository: accountRepository,
+        httpClient: MockClient((request) async {
+          revokeRequest = request;
+          return http.Response('', 200);
+        }),
+      );
+
+      await client.unlink();
+
+      expect(revokeRequest?.url.toString(), 'https://oauth2.googleapis.com/revoke');
+      expect(revokeRequest?.bodyFields['token'], 'refresh-1');
+      expect(await accountRepository.isLinked(CloudProvider.googleDrive), isFalse);
+    });
+
+    test('撤銷時斷網：仍清除本機憑證，不拋出例外', () async {
+      await linkTokens();
+      final client = GoogleDriveOAuthClient(
+        accountRepository: accountRepository,
+        httpClient: MockClient((request) async => throw const SocketException('offline')),
+      );
+
+      await client.unlink();
+
+      expect(await accountRepository.isLinked(CloudProvider.googleDrive), isFalse);
+    });
+
+    test('撤銷端點回非 200：仍清除本機憑證', () async {
+      await linkTokens();
+      final client = GoogleDriveOAuthClient(
+        accountRepository: accountRepository,
+        httpClient: MockClient((request) async => http.Response('', 400)),
+      );
+
+      await client.unlink();
+
+      expect(await accountRepository.isLinked(CloudProvider.googleDrive), isFalse);
+    });
+
+    test('未連結時不發出任何 HTTP 請求', () async {
+      final client = GoogleDriveOAuthClient(
+        accountRepository: accountRepository,
+        httpClient: MockClient((request) async {
+          fail('未連結不應該發出撤銷請求');
+        }),
+      );
+
+      await client.unlink();
+    });
+  });
+
   group('換發失敗的分類（epic-54 Issue 2）', () {
     Future<GoogleDriveOAuthClient> clientWith(MockClient mockClient) async {
       await accountRepository.link(
