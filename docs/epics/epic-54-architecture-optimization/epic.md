@@ -421,7 +421,7 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 |---|---|---|
 | `reader_footer_test`、`reading_position_test`、`volume_key_test` | 通過 | 頁尾文字改讀 `reader_chrome_page_info_text` 完全相等（提高）；音量鍵以前綴比對＋`reader_chrome_back_button` 存在判斷（等強） |
 | `pdf_nav_zone_test` | 通過 | `AppBar`→`reader_chrome_back_button`（等強）；另有計畫漏列的舊頁碼斷言一併遷移 |
-| `reader_header_footer_toggle_test` | 1/2 通過 | 章節名改讀收合後的 `reader_foliate_header_text`（等強，須先 `triggerZoneAction(menu)`）；靜態標題測試 2 個整組刪除（計畫 Task 3 的「刪掉這兩個測試」選項；使用者的決定紀錄待確認，見程式審查回應）；`showHeader=true` 的 static 不出現斷言刪除（計畫原定） |
+| `reader_header_footer_toggle_test` | 1/2 通過 | 章節名改讀收合後的 `reader_foliate_header_text`（等強，須先 `triggerZoneAction(menu)`）；靜態標題測試 2 個整組刪除（使用者決定，2026-10-07 確認：這兩個測試驗證舊 `AppBar` 的靜態標題「閱讀器」，Epic 38 之後需求已改變、用不到）；`showHeader=true` 的 static 不出現斷言刪除（計畫原定） |
 | `epub_highlights_notes_test`、`pdf_highlights_notes_test`、`notes_bookmark_test`、`markdown_export_test`、`fxl_bookmarks_test` | 通過 | `TextButton`→`IconButton`、`reader_pdf_notes_button`／`reader_fixed_layout_*`→現行工具列 key（等強）；書籤分頁先切換；刪除鍵改查真實筆記 id（字串 id，非數字 1） |
 | `foliate_single_column_test`、`epub_pagination_test` | 通過 | 欄數選項改讀 `Container` 背景色精確比對（等強，未選取為 `surface`）；開 Sheet 步驟刪除改走工具列頁尾（流程簡化，依據 `4ad5e4d8`）；浮動進度鍵在 `Container` 上，改讀後代 `Text` |
 | `reader_screen_test` | 13/19 通過 | 設定按鈕→`reader_chrome_layout_button`；直排／滾動列搬到「呈現」分頁，先切分頁再以分頁內 `Scrollable` 捲動（等強） |
@@ -443,5 +443,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - M-4：`reader_header_footer_toggle_test.dart` 的註解改為「showHeader 已明確持久化為 true；全域預設其實是 false」。
 - M-5：`library_screen_test.dart` 第一個測試新增區塊少縮排 2 格，已補齊；現在整檔相對計畫基準只刪 1 行（`find.text('閱讀器')`），沒有縮排噪音。
 - M-6：`app/tool/README.md`「已知限制」補兩點：`lib/` 內任何無 `$` 字串都算存在（刻意取捨）、測試端逐行比對（`Key(` 與字串分兩行會漏掉）。
-- **待使用者確認：** 審查指出「使用者決定」類聲明無法查證。M-1 的聲明經確認不成立（已改回）；`reader_header_footer_toggle_test` 刪除 2 個靜態標題測試是否為使用者決定，目前只有計畫 Task 3 的選項依據，`epic.md` 該列已改寫為「決定紀錄待確認」。
+- **使用者決定的確認（2026-10-07）：** 審查指出「使用者決定」類聲明無法查證。M-1 的聲明經確認不成立（已改回更強的斷言）；`reader_header_footer_toggle_test` 刪除 2 個靜態標題測試，使用者確認是自己的決定，原因是舊 `AppBar` 靜態標題的需求在 Epic 38 之後已改變、用不到。
 - 驗證：`flutter analyze` 乾淨；守衛單元測試與守衛本身 PASS；`check_l10n_hardcoded_strings.js` 三項 PASS；`TCL 14` 上 `foliate_toc_footer_test` +3、`library_screen_test` +3、`reader_header_footer_toggle_test` 1/2（與先前一致）。未重跑完整 `flutter test`，上一次全套通過為 3685 通過、0 失敗（Issue 17 計畫最後一個 Task）。
