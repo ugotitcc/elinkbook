@@ -997,7 +997,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 **Files：** `docs/epics/epic-54-architecture-optimization/{epic.md,issues.md}`、`docs/epics.md`
 
-- [ ] **Step 1：全量真機執行（32 檔）**
+- [x] **Step 1：全量真機執行（32 檔）**
 
 ```bash
 OUT=../.scratch/final; mkdir -p $OUT; : > $OUT/summary.txt
@@ -1011,7 +1011,7 @@ grep -vc "exit=0" $OUT/summary.txt; cat $OUT/summary.txt
 
 用 `run_in_background`（約 30～40 分鐘）。Expected：Issue 16 的 14 個通過檔案仍通過（無回歸）；本 Issue 的 18 個檔案通過，或剩下的失敗已逐一依判定規則記錄。
 
-- [ ] **Step 2：完整 `flutter test`（只在這裡跑一次）**
+- [x] **Step 2：完整 `flutter test`（只在這裡跑一次）**
 
 ```bash
 flutter test > ../.scratch/full_test.log 2>&1; echo "exit=$?"
@@ -1020,7 +1020,7 @@ grep -E "^[0-9:]+ \+[0-9]+ (~[0-9]+ )?-[0-9]+" ../.scratch/full_test.log | tail 
 
 Expected：只有既存的 `pdf_reader_view_filters_test`（bold overlay 多頁案例）失敗。出現其他失敗就是本 Issue 造成，必須查。
 
-- [ ] **Step 3：`flutter analyze`、檢查腳本、守衛**
+- [x] **Step 3：`flutter analyze`、檢查腳本、守衛**
 
 ```bash
 flutter analyze
@@ -1031,11 +1031,11 @@ node tool/test_check_integration_keys.mjs
 
 Expected：No issues found!；三項 PASS；守衛 `exit=0`；單元測試「全部測試通過」。
 
-- [ ] **Step 4：更新文件**
+- [x] **Step 4：更新文件**
 
 在 `epic.md` 新增「Issue 17 實作完成與真機驗證結果」段落：裝置與 WebView 版本、18 個檔案各自的結果（通過／仍失敗＋原因）、每個「舊斷言 → 新斷言」的強度變化（特別是 Task 3 刪除的斷言）、依判定規則**停止回報**的案例與使用者的決定、守衛腳本說明。`issues.md` Issue 17 狀態改為「🟡 實作完成，待程式審查」。`docs/epics.md` 備註只寫「Issue 17 已完成」。
 
-- [ ] **Step 5：Commit 文件並請求程式審查**
+- [x] **Step 5：Commit 文件並請求程式審查**
 
 ```bash
 git add ../docs/epics/epic-54-architecture-optimization/epic.md ../docs/epics/epic-54-architecture-optimization/issues.md ../docs/epics.md
