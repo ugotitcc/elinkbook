@@ -62,7 +62,7 @@
 - Commit：本計畫檔（在 `main` 上，純文件）
 - 建立 worktree：`.worktrees/epic-54-issue-15-integration-l10n`（`.worktrees/` 已 gitignore）
 
-- [ ] **Step 1：提交計畫（在 `main`）**
+- [x] **Step 1：提交計畫（在 `main`）**
 
 ```bash
 git add docs/epics/epic-54-architecture-optimization/plans/plan-issue-15.md
@@ -71,7 +71,7 @@ git commit -m "docs(epic-54): Issue 15 實作計畫
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 2：建立 worktree 與分支**
+- [x] **Step 2：建立 worktree 與分支**
 
 ```bash
 git worktree add .worktrees/epic-54-issue-15-integration-l10n -b epic-54/issue-15-integration-l10n
@@ -80,7 +80,7 @@ mkdir .worktrees/epic-54-issue-15-integration-l10n/.scratch
 
 之後所有指令都在 `.worktrees/epic-54-issue-15-integration-l10n/app/` 下執行，先 `flutter pub get`。
 
-- [ ] **Step 3：記錄基準**
+- [x] **Step 3：記錄基準**
 
 ```bash
 node tool/test_check_l10n_hardcoded_strings.mjs
@@ -101,7 +101,7 @@ grep -c "MaterialApp(" integration_test/*.dart | awk -F: '{s+=$2; if ($2>0) f++}
 **Interfaces：**
 - Produces：`scanTestDir(testDir, allowMap = TEST_BARE_APP_ALLOW)`；`checkTest(testDir, label = 'test')`；CLI 旗標 `--integration-dir <目錄>`（只給此旗標時只做 integration 那項檢查）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/tool/test_check_l10n_hardcoded_strings.mjs` 中，找到這一行（位於 `try { … }` 區塊末尾、`} finally {` 之前）：
 
@@ -154,7 +154,7 @@ grep -c "MaterialApp(" integration_test/*.dart | awk -F: '{s+=$2; if ($2>0) f++}
   assert.equal(cli('--integration-dir', itDir, '--lib-dir', emptyDir).status, 2)
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 ```bash
 node tool/test_check_l10n_hardcoded_strings.mjs
@@ -162,7 +162,7 @@ node tool/test_check_l10n_hardcoded_strings.mjs
 
 預期：失敗（`--integration-dir` 尚未被識別，`okIt.status` 不是 0，或 `scanTestDir` 第二參數被忽略）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 在 `app/tool/check_l10n_hardcoded_strings.js`：
 
@@ -279,7 +279,7 @@ function main(argv) {
 //   node app/tool/check_l10n_hardcoded_strings.js --integration-dir <目錄>  # 只做 integration_test 的 MaterialApp 檢查
 ```
 
-- [ ] **Step 4：跑測試確認通過**
+- [x] **Step 4：跑測試確認通過**
 
 ```bash
 node tool/test_check_l10n_hardcoded_strings.mjs
@@ -289,7 +289,7 @@ node tool/check_l10n_hardcoded_strings.js --integration-dir integration_test; ec
 
 預期：單元測試通過；第二行（無旗標）仍兩行 PASS，行為與 Task 0 基準相同；第三行**預期失敗**，`exit=1`，列出 104 處 `integration_test/<檔案>:<行號>  缺少 locale／localizationsDelegates／supportedLocales`（這是真實現況，用來確認守衛有效，Task 2 後才會變乾淨）。
 
-- [ ] **Step 5：提交**
+- [x] **Step 5：提交**
 
 ```bash
 git add tool/check_l10n_hardcoded_strings.js tool/test_check_l10n_hardcoded_strings.mjs
@@ -309,7 +309,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 **Interfaces：**
 - Consumes：`pumpLocalizedWidget(WidgetTester tester, Widget home, {Locale locale = const Locale('zh','TW'), AppTheme theme = AppTheme.light, bool isEinkMode = false, GlobalKey<NavigatorState>? navigatorKey, List<NavigatorObserver> navigatorObservers = const [], MediaQueryData? mediaQueryData})`（`test/support/pump_localized_widget.dart`，回傳 `Future<void>`，內部只做 `tester.pumpWidget`，與原寫法等價）。
 
-- [ ] **Step 1：寫 codemod**
+- [x] **Step 1：寫 codemod**
 
 用 Write 工具建立 `.scratch/codemod_integration_l10n.js`（worktree 根目錄下）：
 
@@ -414,7 +414,7 @@ console.log('合計改寫 ' + total + ' 處');
 if (manual.length) { console.log('需手動處理：'); manual.forEach((x) => console.log('  ' + x)); }
 ```
 
-- [ ] **Step 2：先在兩個代表性檔案試跑並人工審 diff**
+- [x] **Step 2：先在兩個代表性檔案試跑並人工審 diff**
 
 ```bash
 node ../.scratch/codemod_integration_l10n.js integration_test/smoke_test.dart integration_test/fxl_bookmarks_test.dart
@@ -423,7 +423,7 @@ git diff integration_test/smoke_test.dart integration_test/fxl_bookmarks_test.da
 
 審查要點：`smoke_test.dart`（含 `theme: resolveThemeData(…)` 與 `const MaterialApp`）— 結果應為 `pumpLocalizedWidget(tester, …)`，**`theme:` 已消失**且語意等價（預設值相同）；`fxl_bookmarks_test.dart`（多行、含 `isFixedLayout: true`）— 縮排正確、`await` 保留、`home` 內容原樣。兩個檔案各自多一行 `import '../test/support/pump_localized_widget.dart';`。**diff 不對就停下修腳本，不要硬往下跑。**
 
-- [ ] **Step 3：全量改寫其餘檔案**
+- [x] **Step 3：全量改寫其餘檔案**
 
 ```bash
 node ../.scratch/codemod_integration_l10n.js
@@ -431,7 +431,7 @@ node ../.scratch/codemod_integration_l10n.js
 
 不帶參數時腳本掃描 `integration_test/*.dart` 全部 40 個檔案（不含 `MaterialApp(` 的檔案與 Step 2 已改過的兩個檔案顯示 0 處，也不會被改寫）。預期：每檔列出改寫處數，合計加上 Step 2 的處數 = 104；「需手動處理」清單為空。若清單非空，逐處手動依同樣規則改（把 `MaterialApp(home: X)` 換成 `pumpLocalizedWidget(tester, X)`，theme 非預設值時保留成 `pumpLocalizedWidget(tester, X, theme: AppTheme.…, isEinkMode: …)` 並在 `epic.md` 記錄該處）。
 
-- [ ] **Step 4：驗證沒有殘留**
+- [x] **Step 4：驗證沒有殘留**
 
 ```bash
 grep -n "MaterialApp(" integration_test/*.dart | grep -v "^integration_test/[a-z_]*\.dart:[0-9]*:\s*//" ; echo "(上面為空表示 MaterialApp( 已全數移除；註解內的字樣可忽略)"
@@ -441,7 +441,7 @@ grep -n "tester.pumpWidget(" integration_test/*.dart | head -3; echo "(上面為
 
 預期：`MaterialApp(` 無殘留（`flutter_test_config.dart` 的註解文字不含 `MaterialApp(`）；`pumpLocalizedWidget` 共 104 處；沒有殘留的 `tester.pumpWidget(`。
 
-- [ ] **Step 5：用 analyzer 收尾**
+- [x] **Step 5：用 analyzer 收尾**
 
 ```bash
 flutter analyze 2>&1 | tail -20
@@ -449,7 +449,7 @@ flutter analyze 2>&1 | tail -20
 
 預期可能出現 `unused_import`（`app_theme.dart`、`app_theme_data.dart`，原本只為了 `resolveThemeData`／`AppTheme`）。逐一刪除報告中的未使用 import，直到 `No issues found!`。**只刪 analyzer 明確標示未使用的 import**，不要順手整理其他。
 
-- [ ] **Step 6：檢查腳本對 integration_test 通過**
+- [x] **Step 6：檢查腳本對 integration_test 通過**
 
 ```bash
 node tool/check_l10n_hardcoded_strings.js --integration-dir integration_test; echo "exit=$?"
@@ -457,7 +457,7 @@ node tool/check_l10n_hardcoded_strings.js --integration-dir integration_test; ec
 
 預期：`PASS：掃描 40 個 integration 測試檔，所有 MaterialApp 皆帶 locale／localizationsDelegates／supportedLocales`，`exit=0`（40 = `integration_test/` 全部檔案，含不含 `MaterialApp` 的 7 個）。
 
-- [ ] **Step 7：提交**
+- [x] **Step 7：提交**
 
 ```bash
 git add integration_test
@@ -479,7 +479,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Modify：`app/tool/test_check_l10n_hardcoded_strings.mjs`
 - Modify：`app/tool/README.md`
 
-- [ ] **Step 1：寫失敗測試（無旗標預設含 integration_test）**
+- [x] **Step 1：寫失敗測試（無旗標預設含 integration_test）**
 
 預設目錄是 `app/lib`、`app/test`、`app/integration_test`（以 `__dirname/..` 解析），所以「無旗標預設」是對**真實**專案目錄的整合檢查。在 `test_check_l10n_hardcoded_strings.mjs` 的 `try { … }` 區塊之後、`console.log('check_l10n_hardcoded_strings：全部測試通過')` 之前，新增：
 
@@ -493,7 +493,7 @@ assert.match(defaultRun.stdout, /個測試檔，所有/)
 assert.match(defaultRun.stdout, /個 integration 測試檔，所有/)
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 ```bash
 node tool/test_check_l10n_hardcoded_strings.mjs
@@ -501,7 +501,7 @@ node tool/test_check_l10n_hardcoded_strings.mjs
 
 預期：失敗於 `個 integration 測試檔，所有`（預設尚未掃 integration）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 在 `main` 中把
 
@@ -535,7 +535,7 @@ node tool/test_check_l10n_hardcoded_strings.mjs
 
 同時更新檔案頂端說明（第 6 行附近「掃描 app/test/**/*.dart」）：補上「與 `app/integration_test/**/*.dart`」。
 
-- [ ] **Step 4：更新 `app/tool/README.md`**
+- [x] **Step 4：更新 `app/tool/README.md`**
 
 把 `check_l10n_hardcoded_strings.js` 段落的「兩項檢查」改為「三項檢查」，新增第 3 點：
 
@@ -549,7 +549,7 @@ node tool/test_check_l10n_hardcoded_strings.mjs
 
 並在指令範例區補上 `--integration-dir <目錄>` 一行，結束碼與輸出範例補 `integration_test/<檔案>:<行號>  缺少 locale…`。
 
-- [ ] **Step 5：跑測試與全部檢查**
+- [x] **Step 5：跑測試與全部檢查**
 
 ```bash
 node tool/test_check_l10n_hardcoded_strings.mjs
@@ -558,7 +558,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 預期：單元測試通過；檢查腳本輸出**三行 PASS**（lib、test、integration）。
 
-- [ ] **Step 6：提交**
+- [x] **Step 6：提交**
 
 ```bash
 git add tool/check_l10n_hardcoded_strings.js tool/test_check_l10n_hardcoded_strings.mjs tool/README.md
@@ -573,7 +573,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 **Files：** 僅在判定為 C 類時修改 `lib/` 或測試；其餘只更新文件。
 
-- [ ] **Step 1：向使用者確認裝置（必做，不可略過）**
+- [x] **Step 1：向使用者確認裝置（必做，不可略過）**
 
 詢問使用者：目標裝置是哪一台（`adb devices -l` 的序號）、是否接受 Flutter 在簽章／版本不符時解除安裝該裝置上既有的 `cc.ugotit.elinkbook` 並清除資料。**得到明確回答前不得執行任何 `flutter test integration_test/…`。** 確認裝置穩定：
 
@@ -583,7 +583,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 必須看到序號後面標示 `device`（不是空白、`unauthorized`、`offline`）。
 
-- [ ] **Step 2：建立執行腳本並逐檔執行**
+- [x] **Step 2：建立執行腳本並逐檔執行**
 
 用 Write 工具建立 `.scratch/run_integration.sh`：
 
@@ -613,7 +613,7 @@ echo DONE >> "$OUT/summary.txt"
 bash ../.scratch/run_integration.sh <device-id>
 ```
 
-- [ ] **Step 3：先排除環境失敗**
+- [x] **Step 3：先排除環境失敗**
 
 ```bash
 grep -l "not found\|log reader stopped\|INSTALL_FAILED\|Unable to start the app" ../.scratch/it_results/*.log

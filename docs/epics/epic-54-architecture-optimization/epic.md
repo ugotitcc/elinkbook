@@ -353,3 +353,9 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 合併後的後續：Issue 15（integration 測試補 `localizationsDelegates`）的時序前提（等 Issue 11 合併）已滿足，可處理；Issue 12 須合併 `LibrarySearchScreen` 的 `searchRepository` 來源並移除 `readerFeatureDependenciesFromLegacy` 的 `searchRepository` 覆寫參數（程式審查 M-1）；`readerSaveAsPresetUnavailableMessage` 孤兒 ARB 鍵排入 Issue 13 清理（M-5）。
 - Issue 11 的 integration 遷移（21 檔、約 60 處）合併時只有靜態檢查，尚無執行期驗證，須待 Issue 15 補完後在真機驗證。
 - 分支 worktree `.worktrees/epic-54-issue-11-reader-deps`（含 untracked 的 `.scratch/`）尚未清除。
+
+**2026-10-06 Issue 15 實作完成（Task 0～3、Task 5；Task 4 真機驗證由使用者在另一台設備執行）**（分支 `epic-54/issue-15-integration-l10n`，worktree 內 Native 直接開發，未使用 subagent。計畫見 `plans/plan-issue-15.md`）
+
+- 內容：檢查腳本新增 `--integration-dir`（Task 1；預設行為不變），33 檔 104 處 `tester.pumpWidget(MaterialApp(home: X))` 機械改寫為 `pumpLocalizedWidget(tester, X)`（Task 2；手動清單為空；`theme:` 僅在等於預設值時省略），無旗標預設納入 `integration_test/` 並更新 `tool/README.md`（Task 3）。
+- 驗證：`flutter analyze` No issues found；檢查腳本三行 PASS（lib 250 檔、test 283 檔、integration 40 檔）；檢查腳本單元測試通過；`flutter test` 全量 3674 通過、1 略過、1 失敗——唯一失敗為既存 `pdf_reader_view_filters_test`（bold overlay 多頁案例，已在乾淨 `main` 確認，與本 Issue 無關；本 Issue 只動 `integration_test/` 與 `tool/`）。
+- 真機驗證（Task 4）未在本分支執行，由使用者在另一台設備進行；分類結果待補。
