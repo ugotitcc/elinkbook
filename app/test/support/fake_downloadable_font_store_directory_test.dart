@@ -17,10 +17,26 @@ void main() {
     expect(FakeDownloadableFontStore(directory: '/tmp/x').directory, '/tmp/x');
   });
 
-  test('forPlatform(isAndroid: true) 回傳真實存在的目錄', () {
-    final store = FakeDownloadableFontStore.forPlatform(isAndroid: true);
-    addTearDown(() => Directory(store.directory).deleteSync(recursive: true));
+  test('forPlatform(isAndroid: true) 回傳真實存在、且位於 cache/ 底下的目錄', () {
+    // Android 的 systemTemp 指向 code_cache/，是 WebViewAssetLoader 的禁用目錄；
+    // 允許的是同一層的 cache/。用假的 data 目錄模擬這個結構，不碰主機真實目錄。
+    final dataDir = Directory.systemTemp.createTempSync('fake-data');
+    addTearDown(() => dataDir.deleteSync(recursive: true));
+    final codeCache = Directory('${dataDir.path}/code_cache')..createSync();
+
+    final store = FakeDownloadableFontStore.forPlatform(
+      isAndroid: true,
+      systemTemp: codeCache,
+    );
+
     expect(Directory(store.directory).existsSync(), isTrue);
+    // 桌面主機是反斜線，統一成正斜線再比對
+    String norm(String path) => path.replaceAll(r'\', '/');
+    expect(
+      norm(store.directory).startsWith('${norm(dataDir.path)}/cache/'),
+      isTrue,
+    );
+    expect(store.directory.contains('code_cache'), isFalse);
   });
 
   test('forPlatform(isAndroid: false) 維持假目錄，不在磁碟建立東西', () {

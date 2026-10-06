@@ -601,7 +601,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 **決策（使用者選擇做法 1：只改測試端，不動 `lib/`）：**
 
 - `FakeDownloadableFontStore` 新增選用建構參數 `directory`，預設值維持 `/fake/downloaded-fonts`（單元測試行為不變）。
-- `fakeReaderFeatureDependencies` 與 `completeLegacyReaderFeatures` 的預設 store：在 Android 上（`Platform.isAndroid`，即真機 integration 測試）改傳一個**真實存在的暫存目錄**（`Directory.systemTemp.createTempSync`，即 App 快取目錄，在 `InternalStoragePathHandler` 允許範圍內）；其他平台（`flutter test` 於桌面主機）維持原值。
+- `fakeReaderFeatureDependencies` 與 `completeLegacyReaderFeatures` 的預設 store：在 Android 上（`Platform.isAndroid`，即真機 integration 測試）改傳一個**真實存在、且位於 `cache/` 底下的暫存目錄**；其他平台（`flutter test` 於桌面主機）維持原值。**更正（TCL 14 真機驗證後）：** 原本寫「`Directory.systemTemp` 即 App 快取目錄」是錯的。Android 上 `systemTemp` 指向 `code_cache/`，而 `WebViewAssetLoader.InternalStoragePathHandler` 禁用 `code_cache/`，同樣丟 `doesn't exist under an allowed app internal storage directory`。正確做法是用 `systemTemp` 的上一層底下的 `cache/`（`getCacheDir()`，允許）。
 - 與先前提議的差異：原本想逐檔改 21 個 integration 檔案，改為只改工廠的預設值，異動檔案從 21 個降為 3 個，且不會有 codemod 誤改。
 
 **Task 3（調整等待上限）取消：** H1 不成立，不需要調 10 秒。

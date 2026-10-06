@@ -10,14 +10,22 @@ class FakeDownloadableFontStore implements DownloadableFontStore {
   FakeDownloadableFontStore({this.directory = _defaultDirectory});
 
   /// 依平台建立：Android 真機的 integration 測試會用真的 `InAppWebView`，原生端的
-  /// `WebViewAssetLoader.InternalStoragePathHandler` 會拒絕不存在的目錄並丟
-  /// `PlatformException`（epic-54 Issue 16），所以 Android 上改用真實存在的暫存目錄
-  /// （App 快取目錄，在允許範圍內）；其他平台（桌面主機的 `flutter test`）維持假目錄。
-  /// [isAndroid] 預設取目前平台，只在測試這個方法本身時才傳入。
-  factory FakeDownloadableFontStore.forPlatform({bool? isAndroid}) {
+  /// `WebViewAssetLoader.InternalStoragePathHandler` 會拒絕不存在、或位於禁用目錄
+  /// （`code_cache/`、`databases/` 等）底下的目錄並丟 `PlatformException`（epic-54 Issue 16）。
+  /// Android 的 `Directory.systemTemp` 指向 `code_cache/`（禁用），所以改用它的上一層
+  /// 底下的 `cache/`（允許），並建立真實存在的暫存子目錄；其他平台（桌面主機的
+  /// `flutter test`）維持假目錄。[isAndroid]、[systemTemp] 預設取目前平台，只在測試這個
+  /// 方法本身時才傳入。
+  factory FakeDownloadableFontStore.forPlatform({
+    bool? isAndroid,
+    Directory? systemTemp,
+  }) {
     if (isAndroid ?? Platform.isAndroid) {
+      final cacheRoot = Directory(
+        '${(systemTemp ?? Directory.systemTemp).parent.path}/cache',
+      )..createSync(recursive: true);
       return FakeDownloadableFontStore(
-        directory: Directory.systemTemp.createTempSync('fake-fonts').path,
+        directory: cacheRoot.createTempSync('fake-fonts').path,
       );
     }
     return FakeDownloadableFontStore();
