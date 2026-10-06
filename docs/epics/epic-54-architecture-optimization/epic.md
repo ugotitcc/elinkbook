@@ -377,3 +377,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - **輔助證據（非計畫要求的測試結果）：** 用同分支的一般 debug APK，`BooksPad`（WebView 91）與 `ViWoods Reader Air`（WebView 153.0.8010.36）都能正常開書閱讀。可排除「裝置 WebView 太舊」；問題只出在 integration 測試的執行情境，原因未查明。
 - **未完成：** 其餘 27 個檔案未執行；4 個症狀相同的檔案未逐檔對照 base；`reading_position_test` PDF 案例與 `reader_screen_test` 的根因未查。D 類（斷言文字與 locale 不符）尚無確認案例，`reading_position_test` PDF 案例有嫌疑，待使用者決定。
 - C 類（Issue 11 回歸）：目前 0 個確認。未修改任何 `lib/` 或測試檔。
+
+**2026-10-06 Issue 15 已合併（PR #328）。** 真機驗證只完成 5/32 檔，其餘與根因調查移至 Issue 16。
