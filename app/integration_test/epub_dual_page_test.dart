@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
+import '../test/support/pump_localized_widget.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -32,19 +32,18 @@ void main() {
     final completer = Completer<void>();
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: samplePath,
-          dualPageMode: DualPageMode.always,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: samplePath,
+        dualPageMode: DualPageMode.always,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
       ),
     );
 
@@ -65,19 +64,18 @@ void main() {
     final completer = Completer<void>();
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          filePath: samplePath,
-          dualPageMode: DualPageMode.never,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        filePath: samplePath,
+        dualPageMode: DualPageMode.never,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
       ),
     );
 

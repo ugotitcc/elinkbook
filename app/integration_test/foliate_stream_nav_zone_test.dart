@@ -8,6 +8,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/zone_action.dart';
+import '../test/support/pump_localized_widget.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -48,45 +49,44 @@ void main() {
     final capturedActions = <ZoneAction>[];
     final key = GlobalKey<State<FoliateReaderView>>();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: FoliateReaderView(
-          key: key,
-          filePath: samplePath,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-          // 涵蓋 previousPage／menu／nextPage／none 四種動作，其中 index 3
-          // 為 none（比照 epub_fxl_tap_zone_test.dart 既有先例：無動作格
-          // 仍應攔截觸控，只是不做事）。
-          navZoneActions: const [
-            ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
-            ZoneAction.none, ZoneAction.menu, ZoneAction.none,
-            ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
-          ],
-          onZoneAction: (action) {
-            capturedActions.add(action);
-            // 模擬 ReaderScreen._handleZoneAction 的實際分派邏輯（本測試
-            // 直接建構 FoliateReaderView，不經過 ReaderScreen，故在此
-            // 手動呼叫，讓換頁動作真的送到原生端，而非只驗證回呼有沒有
-            // 被呼叫，比照 epub_fxl_tap_zone_test.dart 既有模式）。
-            switch (action) {
-              case ZoneAction.previousPage:
-                FoliateReaderView.previousPage(key);
-                break;
-              case ZoneAction.nextPage:
-                FoliateReaderView.nextPage(key);
-                break;
-              case ZoneAction.menu:
-              case ZoneAction.none:
-                break;
-            }
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        key: key,
+        filePath: samplePath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
+        // 涵蓋 previousPage／menu／nextPage／none 四種動作，其中 index 3
+        // 為 none（比照 epub_fxl_tap_zone_test.dart 既有先例：無動作格
+        // 仍應攔截觸控，只是不做事）。
+        navZoneActions: const [
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.none, ZoneAction.menu, ZoneAction.none,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+        ],
+        onZoneAction: (action) {
+          capturedActions.add(action);
+          // 模擬 ReaderScreen._handleZoneAction 的實際分派邏輯（本測試
+          // 直接建構 FoliateReaderView，不經過 ReaderScreen，故在此
+          // 手動呼叫，讓換頁動作真的送到原生端，而非只驗證回呼有沒有
+          // 被呼叫，比照 epub_fxl_tap_zone_test.dart 既有模式）。
+          switch (action) {
+            case ZoneAction.previousPage:
+              FoliateReaderView.previousPage(key);
+              break;
+            case ZoneAction.nextPage:
+              FoliateReaderView.nextPage(key);
+              break;
+            case ZoneAction.menu:
+            case ZoneAction.none:
+              break;
+          }
+        },
       ),
     );
 

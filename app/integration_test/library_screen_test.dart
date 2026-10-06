@@ -13,8 +13,7 @@ import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
-import 'package:elinkbook/theme/app_theme.dart';
-import 'package:elinkbook/theme/app_theme_data.dart';
+import '../test/support/pump_localized_widget.dart';
 
 const _metadataChannel = MethodChannel('elinkbook/book_metadata');
 
@@ -103,16 +102,14 @@ void main() {
       expect(imported, hasLength(1));
       final importedBook = imported.single;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
-            repository: repository,
-            importService: importService,
-            prefsManager: ReaderPrefsManagerImpl(
-              BookReaderPrefsRepository(repository.database),
-              ReadingPositionRepository(repository.database),
-            ),
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          repository: repository,
+          importService: importService,
+          prefsManager: ReaderPrefsManagerImpl(
+            BookReaderPrefsRepository(repository.database),
+            ReadingPositionRepository(repository.database),
           ),
         ),
       );
@@ -195,16 +192,14 @@ void main() {
       reason: 'sample.epub 應為流式素材，isFixedLayout 應由 Issue 2 判斷為 false',
     );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: repository,
-          importService: importService,
-          prefsManager: ReaderPrefsManagerImpl(
-            BookReaderPrefsRepository(repository.database),
-            ReadingPositionRepository(repository.database),
-          ),
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: repository,
+        importService: importService,
+        prefsManager: ReaderPrefsManagerImpl(
+          BookReaderPrefsRepository(repository.database),
+          ReadingPositionRepository(repository.database),
         ),
       ),
     );
@@ -282,16 +277,14 @@ void main() {
         reason: 'sample_fixed_layout.epub 應為 FXL 素材，isFixedLayout 應為 true',
       );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
-            repository: repository,
-            importService: importService,
-            prefsManager: ReaderPrefsManagerImpl(
-              BookReaderPrefsRepository(repository.database),
-              ReadingPositionRepository(repository.database),
-            ),
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          repository: repository,
+          importService: importService,
+          prefsManager: ReaderPrefsManagerImpl(
+            BookReaderPrefsRepository(repository.database),
+            ReadingPositionRepository(repository.database),
           ),
         ),
       );

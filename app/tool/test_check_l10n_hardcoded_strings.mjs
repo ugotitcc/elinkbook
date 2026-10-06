@@ -314,8 +314,55 @@ try {
   assert.match(emptyTest.stderr, /沒有找到任何 \.dart/)
   // 兩項檢查的結果取最嚴重者：設定錯誤（2）優先於違規（1）
   assert.equal(cli('--lib-dir', emptyDir, '--test-dir', testDir).status, 2)
+
+  // ---- integration_test 掃描（epic-54 Issue 15）：同一套規則，但不套用 app/test 專屬白名單 ----
+  const itDir = path.join(tmp, 'itdir')
+  const writeIt = (rel, content) => {
+    const full = path.join(itDir, rel)
+    fs.mkdirSync(path.dirname(full), { recursive: true })
+    fs.writeFileSync(full, content)
+  }
+  writeIt('ok_test.dart', FULL)
+  const okIt = cli('--integration-dir', itDir)
+  assert.equal(okIt.status, 0)
+  assert.match(okIt.stdout, /掃描 1 個 integration 測試檔/)
+  // 只給 --integration-dir 時不可順便掃預設的 lib／test
+  assert.doesNotMatch(okIt.stdout, /個檔案，未發現/)
+  assert.doesNotMatch(okIt.stdout, /個測試檔，所有/)
+
+  // 植入一個缺 locale 的裸 MaterialApp：必須被抓到，輸出帶 integration_test/ 前綴與行號
+  writeIt('bad_test.dart', dart('a();', 'tester.pumpWidget(MaterialApp(home: X()));'))
+  const badIt = cli('--integration-dir', itDir)
+  assert.equal(badIt.status, 1)
+  assert.match(badIt.stderr, /integration_test\/bad_test\.dart:2/)
+  assert.match(badIt.stderr, /locale/)
+  // integration_test 不設白名單：提示不可指向 TEST_BARE_APP_ALLOW；app/test 端仍保留白名單提示
+  assert.doesNotMatch(badIt.stderr, /TEST_BARE_APP_ALLOW/)
+  assert.match(badIt.stderr, /不設白名單/)
+  assert.match(cli('--test-dir', testDir).stderr, /TEST_BARE_APP_ALLOW/)
+  // scanTestDir 傳入空白名單時，與 app/test 同名的白名單檔案不得被放行
+  writeIt('screens/widgets/eb_sheet_shell_test.dart', 'MaterialApp(home: A());')
+  const noAllow = scanTestDir(itDir, new Map())
+  assert.ok(noAllow.violations.some((v) => v.file === 'screens/widgets/eb_sheet_shell_test.dart'))
+
+  // 設定錯誤：缺參數、目錄不存在、掃 0 個檔案都不可被當成乾淨
+  assert.equal(cli('--integration-dir').status, 2)
+  assert.equal(cli('--integration-dir', path.join(tmp, 'nope')).status, 2)
+  const emptyIt = cli('--integration-dir', emptyDir)
+  assert.equal(emptyIt.status, 2)
+  assert.match(emptyIt.stderr, /沒有找到任何 \.dart/)
+  // 多個旗標一起給時各自檢查，結束碼取最嚴重者
+  assert.equal(cli('--test-dir', testDir, '--integration-dir', itDir).status, 1)
+  assert.equal(cli('--integration-dir', itDir, '--lib-dir', emptyDir).status, 2)
 } finally {
   fs.rmSync(tmp, { recursive: true, force: true })
 }
+
+// ---- 無旗標預設：lib、test、integration_test 三項都檢查（epic-54 Issue 15）----
+const defaultRun = spawnSync('node', [SCRIPT], { encoding: 'utf8' })
+assert.equal(defaultRun.status, 0, defaultRun.stderr)
+assert.match(defaultRun.stdout, /個檔案，未發現/)
+assert.match(defaultRun.stdout, /個測試檔，所有/)
+assert.match(defaultRun.stdout, /個 integration 測試檔，所有/)
 
 console.log('check_l10n_hardcoded_strings：全部測試通過')

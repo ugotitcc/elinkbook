@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
+import '../test/support/pump_localized_widget.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。
 /// PdfRenderer 需要真實的裝置檔案系統路徑，不能直接讀取 Flutter asset。
@@ -31,18 +31,17 @@ void main() {
     final completer = Completer<void>();
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: PdfReaderView(
-          filePath: samplePath,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      PdfReaderView(
+        filePath: samplePath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
       ),
     );
 
@@ -61,19 +60,18 @@ void main() {
     final missingPath =
         '/data/local/tmp/does_not_exist_${DateTime.now().millisecondsSinceEpoch}.pdf';
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: PdfReaderView(
-          filePath: missingPath,
-          onPageRendered: () {
-            rendered = true;
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      PdfReaderView(
+        filePath: missingPath,
+        onPageRendered: () {
+          rendered = true;
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
       ),
     );
 
@@ -101,18 +99,17 @@ void main() {
     final completer = Completer<void>();
     String? errorMessage;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: PdfReaderView(
-          filePath: uriPath,
-          onPageRendered: () {
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      PdfReaderView(
+        filePath: uriPath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
       ),
     );
 
@@ -131,19 +128,18 @@ void main() {
     final missingUri =
         'content://cc.ugotit.elinkbook.does_not_exist/${DateTime.now().millisecondsSinceEpoch}.pdf';
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: PdfReaderView(
-          filePath: missingUri,
-          onPageRendered: () {
-            rendered = true;
-            if (!completer.isCompleted) completer.complete();
-          },
-          onError: (message) {
-            errorMessage = message;
-            if (!completer.isCompleted) completer.complete();
-          },
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      PdfReaderView(
+        filePath: missingUri,
+        onPageRendered: () {
+          rendered = true;
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
       ),
     );
 

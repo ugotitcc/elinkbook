@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
+import '../test/support/pump_localized_widget.dart';
 
 /// 手動驗收專用（對應 docs/epics/epic-1-library/issues.md Issue 4「手動
 /// 驗證」步驟）：本測試不做任何自動斷言，而是提供一個畫面，供開發者在真實
@@ -35,43 +36,42 @@ void main() {
 
     var resultText = '尚未匯入';
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: StatefulBuilder(
-              builder: (context, setState) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(resultText, key: const Key('manual_import_result')),
-                    ElevatedButton(
-                      key: const Key('manual_import_button'),
-                      onPressed: () async {
-                        final picked = await FilePicker.pickFiles(
-                          type: FileType.custom,
-                          allowedExtensions: ['epub', 'pdf', 'txt', 'azw3', 'cbz', 'md'],
-                        );
-                        if (picked == null || picked.files.isEmpty) return;
-                        final uris = picked.files
-                            .map((f) => f.identifier)
-                            .whereType<String>()
-                            .toList();
-                        final books = (await importService.importFiles(
-                          uris,
-                        )).importedBooks;
-                        setState(() {
-                          resultText = books.isEmpty
-                              ? '匯入失敗或無有效檔案'
-                              : '已匯入：${books.map((b) => b.title).join(', ')}';
-                        });
-                      },
-                      child: const Text('選擇並匯入'),
-                    ),
-                  ],
-                );
-              },
-            ),
+    await pumpLocalizedWidget(
+      tester,
+      Scaffold(
+        body: Center(
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(resultText, key: const Key('manual_import_result')),
+                  ElevatedButton(
+                    key: const Key('manual_import_button'),
+                    onPressed: () async {
+                      final picked = await FilePicker.pickFiles(
+                        type: FileType.custom,
+                        allowedExtensions: ['epub', 'pdf', 'txt', 'azw3', 'cbz', 'md'],
+                      );
+                      if (picked == null || picked.files.isEmpty) return;
+                      final uris = picked.files
+                          .map((f) => f.identifier)
+                          .whereType<String>()
+                          .toList();
+                      final books = (await importService.importFiles(
+                        uris,
+                      )).importedBooks;
+                      setState(() {
+                        resultText = books.isEmpty
+                            ? '匯入失敗或無有效檔案'
+                            : '已匯入：${books.map((b) => b.title).join(', ')}';
+                      });
+                    },
+                    child: const Text('選擇並匯入'),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

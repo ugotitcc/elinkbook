@@ -17,6 +17,7 @@ import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:flutter/material.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
+import '../test/support/pump_localized_widget.dart';
 
 const _metadataChannel = MethodChannel('elinkbook/book_metadata');
 
@@ -78,8 +79,9 @@ void main() {
       ReadingPositionRepository(repository.database),
     );
 
-    await tester.pumpWidget(MaterialApp(
-      home: ReaderScreen(
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
         filePath: epubPath,
         bookId: 'b_custom_font',
         dependencies: fakeReaderFeatureDependencies(
@@ -87,7 +89,7 @@ void main() {
           customFontsRepository: customFontsRepository,
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle(const Duration(seconds: 3));
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);

@@ -15,6 +15,7 @@ import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
+import '../test/support/pump_localized_widget.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。原生
 /// 渲染引擎（PdfRenderer）需要真實的裝置檔案系統路徑，不能直接讀取
@@ -70,13 +71,12 @@ void main() {
     ));
 
     // 第一次開書，跳到第 4 頁。
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_position_pdf',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_position_pdf',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -88,7 +88,7 @@ void main() {
     expect(find.text('進度 67% ｜ 第 4/6 頁'), findsOneWidget);
 
     // 離開閱讀畫面（觸發 dispose），驗證資料庫已寫入。
-    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await pumpLocalizedWidget(tester, const SizedBox.shrink());
     await tester.pump();
 
     final saved = await ReadingPositionRepository(libraryRepository.database)
@@ -96,13 +96,12 @@ void main() {
     expect(saved.pdfPageIndex, 3); // 0-indexed
 
     // 重新開啟同一本書，驗證自動回到第 4 頁（起始畫面即顯示，不需再跳頁）。
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_position_pdf',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_position_pdf',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -141,13 +140,12 @@ void main() {
     ));
 
     // 第一次開書，等待載入完成後翻頁。
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_position_epub',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_position_epub',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
     await _pumpUntilLoaded(tester);
@@ -162,7 +160,7 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
     // 離開閱讀畫面（觸發 dispose），驗證資料庫已寫入。
-    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await pumpLocalizedWidget(tester, const SizedBox.shrink());
     await tester.pump();
 
     final saved = await ReadingPositionRepository(libraryRepository.database)
@@ -172,13 +170,12 @@ void main() {
         reason: '離開後 epubLocatorJson 應已寫入資料庫');
 
     // 重新開啟同一本書，驗證有 initialLocatorJson 被傳入（即回到離開前定位）。
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_position_epub',
-          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_position_epub',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
       ),
     );
     await _pumpUntilLoaded(tester);

@@ -1,16 +1,18 @@
 // epic-45-interface-i18n Issue 10：防遺漏稽核腳本。
 //
-// 兩項檢查（規則契約見 docs/epics/epic-45-interface-i18n/spec.md §9）：
+// 三項檢查（規則契約見 docs/epics/epic-45-interface-i18n/spec.md §9）：
 //   1. 掃描 app/lib/**/*.dart，找出「Widget 字串參數位置」上未經 AppLocalizations
 //      包裝、含中文字元的字串字面值，避免既有畫面遺漏、以及日後新增畫面忘記包裝。
 //   2. 掃描 app/test/**/*.dart，確認每個 MaterialApp 都帶 locale／localizationsDelegates／
 //      supportedLocales（Issue 9 審查 M-3；使用者裁定併入 Issue 10）。
+//   3. 掃描 app/integration_test/**/*.dart，規則同第 2 項，但沒有白名單（epic-54 Issue 15）。
 // 執行方式與慣例比照 check_foliate_es_compat.js（純 Node 內建模組、免 npm install）。
 //
 // 用法：
-//   node app/tool/check_l10n_hardcoded_strings.js                    # 兩項檢查
+//   node app/tool/check_l10n_hardcoded_strings.js                    # 三項檢查
 //   node app/tool/check_l10n_hardcoded_strings.js --lib-dir <目錄>   # 只做檢查 1（測試／驗收用）
 //   node app/tool/check_l10n_hardcoded_strings.js --test-dir <目錄>  # 只做檢查 2
+//   node app/tool/check_l10n_hardcoded_strings.js --integration-dir <目錄>  # 只做 integration_test 的 MaterialApp 檢查
 //   兩個旗標都給時兩項都做。
 //
 // 結束碼 0：乾淨；1：找到至少一處未包裝的硬編碼中文字串；
@@ -323,7 +325,7 @@ function findBareMaterialApps(src) {
  * 掃描整個 test 目錄。
  * @returns {{scanned:number, violations:{file:string, line:number, missing:string[], note?:string}[]}}
  */
-function scanTestDir(testDir) {
+function scanTestDir(testDir, allowMap = TEST_BARE_APP_ALLOW) {
   const files = [];
   walk(testDir, files);
   const violations = [];
@@ -332,7 +334,7 @@ function scanTestDir(testDir) {
     const rel = path.relative(testDir, file).split(path.sep).join('/');
     scanned++;
     const bare = findBareMaterialApps(fs.readFileSync(file, 'utf8'));
-    const allow = TEST_BARE_APP_ALLOW.get(rel);
+    const allow = allowMap.get(rel);
     if (allow) {
       if (bare.length !== allow.count) {
         violations.push({
@@ -388,43 +390,62 @@ function checkLib(libDir) {
   return 1;
 }
 
-function checkTest(testDir) {
+function checkTest(testDir, label = 'test') {
   if (!isDirectory(testDir)) {
     console.error(`掃描目錄不存在：${testDir}`);
     return 2;
   }
-  const { scanned, violations } = scanTestDir(testDir);
+  // integration_test 沒有刻意保留裸 MaterialApp 的案例，不套用 app/test 專屬白名單
+  const { scanned, violations } = scanTestDir(
+    testDir,
+    label === 'test' ? TEST_BARE_APP_ALLOW : new Map(),
+  );
   if (scanned === 0) {
     console.error(`在 ${testDir} 底下沒有找到任何 .dart 檔，無法稽核`);
     return 2;
   }
   if (violations.length === 0) {
-    console.log(`PASS：掃描 ${scanned} 個測試檔，所有 MaterialApp 皆帶 locale／localizationsDelegates／supportedLocales`);
+    const kind = label === 'test' ? '' : ` ${label.replace(/_test$/, '')} `;
+    console.log(`PASS：掃描 ${scanned} 個${kind}測試檔，所有 MaterialApp 皆帶 locale／localizationsDelegates／supportedLocales`);
     return 0;
   }
   console.error(`發現 ${violations.length} 處測試的 MaterialApp 缺少必要參數：`);
   for (const v of violations) {
-    console.error(`  test/${v.file}:${v.line}  ${v.note ?? `缺少 ${v.missing.join('／')}`}`);
+    console.error(`  ${label}/${v.file}:${v.line}  ${v.note ?? `缺少 ${v.missing.join('／')}`}`);
   }
   console.error('\n修法：改用 pumpLocalizedWidget()，或補上 locale: const Locale(\'zh\', \'TW\')／localizationsDelegates／supportedLocales；');
-  console.error('若確屬刻意的裸 MaterialApp（例如驗證無 AppLocalizations 的 fallback），加進腳本的 TEST_BARE_APP_ALLOW 並註明理由。');
+  if (label === 'test') {
+    console.error('若確屬刻意的裸 MaterialApp（例如驗證無 AppLocalizations 的 fallback），加進腳本的 TEST_BARE_APP_ALLOW 並註明理由。');
+  } else {
+    console.error(`${label} 不設白名單：所有 MaterialApp 都必須帶多語系設定（改用 pumpLocalizedWidget）。`);
+  }
   return 1;
 }
 
 /**
- * 沒給任何 --xxx-dir 時，兩項檢查都以預設目錄執行；
+ * 沒給任何 --xxx-dir 時，三項檢查都以預設目錄執行；
  * 只給其中一個旗標時，只執行該項檢查（測試／驗收用）。
  */
 function main(argv) {
   const libOpt = parseDirOption(argv, '--lib-dir');
   const testOpt = parseDirOption(argv, '--test-dir');
-  if (libOpt === null || testOpt === null) return 2;
-  const runLib = libOpt !== undefined || testOpt === undefined;
-  const runTest = testOpt !== undefined || libOpt === undefined;
+  const integrationOpt = parseDirOption(argv, '--integration-dir');
+  if (libOpt === null || testOpt === null || integrationOpt === null) return 2;
+  const anyFlag = libOpt !== undefined || testOpt !== undefined || integrationOpt !== undefined;
+  const runLib = libOpt !== undefined || !anyFlag;
+  const runTest = testOpt !== undefined || !anyFlag;
+  // 無旗標時三項都跑（含 integration_test；Issue 15 起 104 處已全數改用 pumpLocalizedWidget）
+  const runIntegration = integrationOpt !== undefined || !anyFlag;
   let exit = 0;
   // 結束碼取最大值：2（設定錯誤）優先於 1（有違規）優先於 0
   if (runLib) exit = Math.max(exit, checkLib(libOpt ?? path.resolve(__dirname, '..', 'lib')));
   if (runTest) exit = Math.max(exit, checkTest(testOpt ?? path.resolve(__dirname, '..', 'test')));
+  if (runIntegration) {
+    exit = Math.max(
+      exit,
+      checkTest(integrationOpt ?? path.resolve(__dirname, '..', 'integration_test'), 'integration_test'),
+    );
+  }
   return exit;
 }
 

@@ -13,6 +13,7 @@ import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
+import '../test/support/pump_localized_widget.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑
 /// （比照 foliate_kf8_test.dart／foliate_cbz_test.dart 既有 helper）。
@@ -80,16 +81,15 @@ void main() {
       final book = result.importedBooks.single;
       expect(book.isFixedLayout, isFalse);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ReaderScreen(
-            filePath: book.filePath,
-            bookId: book.id,
-            isFixedLayout: book.isFixedLayout,
-            dependencies: fakeReaderFeatureDependencies(
-              prefsManager: services.prefsManager,
-              libraryRepository: services.repository,
-            ),
+      await pumpLocalizedWidget(
+        tester,
+        ReaderScreen(
+          filePath: book.filePath,
+          bookId: book.id,
+          isFixedLayout: book.isFixedLayout,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: services.prefsManager,
+            libraryRepository: services.repository,
           ),
         ),
       );
@@ -120,17 +120,16 @@ void main() {
       final book = result.importedBooks.single;
 
       final readerKey = GlobalKey<State<ReaderScreen>>();
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ReaderScreen(
-            key: readerKey,
-            filePath: book.filePath,
-            bookId: book.id,
-            isFixedLayout: book.isFixedLayout,
-            dependencies: fakeReaderFeatureDependencies(
-              prefsManager: services.prefsManager,
-              libraryRepository: services.repository,
-            ),
+      await pumpLocalizedWidget(
+        tester,
+        ReaderScreen(
+          key: readerKey,
+          filePath: book.filePath,
+          bookId: book.id,
+          isFixedLayout: book.isFixedLayout,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: services.prefsManager,
+            libraryRepository: services.repository,
           ),
         ),
       );
@@ -172,16 +171,15 @@ void main() {
       expect(result.importedBooks, hasLength(1));
       final book = result.importedBooks.single;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ReaderScreen(
-            filePath: book.filePath,
-            bookId: book.id,
-            isFixedLayout: book.isFixedLayout,
-            dependencies: fakeReaderFeatureDependencies(
-              prefsManager: services.prefsManager,
-              libraryRepository: services.repository,
-            ),
+      await pumpLocalizedWidget(
+        tester,
+        ReaderScreen(
+          filePath: book.filePath,
+          bookId: book.id,
+          isFixedLayout: book.isFixedLayout,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: services.prefsManager,
+            libraryRepository: services.repository,
           ),
         ),
       );

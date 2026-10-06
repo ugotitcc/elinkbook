@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -8,11 +7,10 @@ import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/library_screen.dart';
-import 'package:elinkbook/theme/app_theme.dart';
-import 'package:elinkbook/theme/app_theme_data.dart';
 
 import '../test/support/fake_book_import_service.dart';
 import '../test/support/fake_library_repository.dart';
+import '../test/support/pump_localized_widget.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -40,14 +38,12 @@ void main() {
 
   testWidgets('LibraryScreen 可在真實裝置/模擬器上渲染（integration_test 基礎設施驗證）',
       (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        repository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
       ),
     );
     await tester.pumpAndSettle();

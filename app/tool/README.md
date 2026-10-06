@@ -4,7 +4,7 @@
 
 ## `check_l10n_hardcoded_strings.js`
 
-兩項檢查（`epic-45-interface-i18n` Issue 10，規則契約見該 Epic `spec.md` §9）：
+三項檢查（`epic-45-interface-i18n` Issue 10，規則契約見該 Epic `spec.md` §9；第 3 項由 `epic-54` Issue 15 加入）：
 
 1. **字串稽核**：掃描 `app/lib/**/*.dart`，找出「Widget 字串參數位置」上**含中文字元且未經
    `AppLocalizations` 包裝**的字串字面值（`Text('確定')`、`title: '設定'`、
@@ -15,6 +15,11 @@
    `AppLocalizations.of(context)!` 觸發 Null check。優先改用 `pumpLocalizedWidget()`。
    刻意保留裸 `MaterialApp` 的測試（`eb_sheet_shell_test.dart` 驗證無 `AppLocalizations` 時的
    fallback）以「檔案＋數量」記在腳本的 `TEST_BARE_APP_ALLOW`，數量不符即報警。
+3. **integration 測試端稽核**：掃描 `app/integration_test/**/*.dart`，規則同第 2 項，但**沒有白名單**
+   （integration 測試沒有刻意保留裸 `MaterialApp` 的案例）。integration 測試在真機上執行，缺
+   `localizationsDelegates` 時 `AppLocalizations.of(context)!` 會 Null check 崩潰；這批測試曾因為
+   這項檢查只涵蓋 `app/test/` 而長期無聲壞掉（`epic-54` Issue 15）。一律用
+   `pumpLocalizedWidget(tester, home)`（`import '../test/support/pump_localized_widget.dart'`）。
 
 ### 何時該執行
 
@@ -28,14 +33,15 @@
 不需要 `npm install`，只用 Node.js 內建模組：
 
 ```bash
-node app/tool/check_l10n_hardcoded_strings.js            # 兩項檢查都做
+node app/tool/check_l10n_hardcoded_strings.js            # 三項檢查都做
 # 測試／驗收時可指定其他目錄（只給其中一個旗標時只做對應那項檢查）：
 node app/tool/check_l10n_hardcoded_strings.js --lib-dir <目錄>
 node app/tool/check_l10n_hardcoded_strings.js --test-dir <目錄>
+node app/tool/check_l10n_hardcoded_strings.js --integration-dir <目錄>
 ```
 
-- 結束碼 `0`：乾淨，並印出實際掃描的檔案數（`PASS：掃描 N 個檔案…`、`PASS：掃描 N 個測試檔…`）。
-- 結束碼 `1`：至少一處違規，會印出 `lib/<檔案>:<行號>  <字串>` 或 `test/<檔案>:<行號>  缺少 locale…`。
+- 結束碼 `0`：乾淨，並印出實際掃描的檔案數（`PASS：掃描 N 個檔案…`、`PASS：掃描 N 個測試檔…`、`PASS：掃描 N 個 integration 測試檔…`）。
+- 結束碼 `1`：至少一處違規，會印出 `lib/<檔案>:<行號>  <字串>`、`test/<檔案>:<行號>  缺少 locale…` 或 `integration_test/<檔案>:<行號>  缺少 locale…`。
 - 結束碼 `2`：設定錯誤——`--lib-dir` 缺參數、目錄不存在，或目錄內沒有任何可掃描的
   `.dart` 檔。這**不代表乾淨**，避免掃錯目錄被誤當成通過。
 
