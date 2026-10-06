@@ -111,7 +111,7 @@ void main() {
         find.byKey(const Key('notes_sheet_export_markdown'));
     expect(exportButtonFinder, findsOneWidget);
     expect(
-      tester.widget<TextButton>(exportButtonFinder).onPressed,
+      tester.widget<IconButton>(exportButtonFinder).onPressed,
       isNotNull,
     );
     expect(find.byKey(const Key('reader_error_text')), findsNothing);

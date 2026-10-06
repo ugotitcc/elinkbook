@@ -193,7 +193,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(Key('notes_sheet_annotation_delete_h${highlightId}_n1')));
+    final attachedNoteId = (await notesRepository.listByBook('b_highlights_epub'))
+        .firstWhere((n) => n.highlightId == highlightId)
+        .id;
+    await tester.tap(find.byKey(Key('notes_sheet_annotation_delete_h${highlightId}_n$attachedNoteId')));
     await tester.pumpAndSettle();
 
     expect(await highlightsRepository.listByBook('b_highlights_epub'), isEmpty);

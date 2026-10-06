@@ -44,7 +44,7 @@ Future<void> _pumpUntilLoaded(WidgetTester tester) async {
 Future<void> _pumpUntilNotesButtonEnabled(WidgetTester tester) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
   while (true) {
-    final finder = find.byKey(const Key('reader_pdf_notes_button'));
+    final finder = find.byKey(const Key('reader_chrome_annotations_button'));
     if (finder.evaluate().isNotEmpty &&
         tester.widget<IconButton>(finder).onPressed != null) {
       return;
@@ -159,7 +159,7 @@ void main() {
     await _pumpUntilLoaded(tester);
     await _pumpUntilNotesButtonEnabled(tester);
 
-    await tester.tap(find.byKey(const Key('reader_pdf_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pumpAndSettle();
@@ -176,11 +176,14 @@ void main() {
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
     // 重新開啟，驗證單筆刪除（劃線+備註一併消失）持久化生效。
-    await tester.tap(find.byKey(const Key('reader_pdf_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(Key('notes_sheet_annotation_delete_h${highlightId}_n1')));
+    final attachedNoteId = (await notesRepository.listByBook('b_highlights_pdf'))
+        .firstWhere((n) => n.highlightId == highlightId)
+        .id;
+    await tester.tap(find.byKey(Key('notes_sheet_annotation_delete_h${highlightId}_n$attachedNoteId')));
     await tester.pumpAndSettle();
 
     expect(await highlightsRepository.listByBook('b_highlights_pdf'), isEmpty);

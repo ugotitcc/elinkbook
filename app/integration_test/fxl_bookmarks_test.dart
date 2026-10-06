@@ -106,7 +106,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 懸浮筆記按鈕：開啟 Bottom Sheet 確認書籤已持久化寫入資料庫。
-    await tester.tap(find.byKey(const Key('reader_fixed_layout_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pumpAndSettle();
     expect(find.byType(NotesBottomSheet), findsOneWidget);
 
@@ -114,7 +114,9 @@ void main() {
     expect(bookmarks, hasLength(1));
     final bookmarkId = bookmarks.single.id;
 
-    // 重新命名。
+    // 重新命名（書籤分頁；面板預設停在「劃線與備註」分頁）。
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_bookmarks')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(Key('notes_sheet_bookmark_rename_$bookmarkId')));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -138,7 +140,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(NotesBottomSheet), findsNothing);
-    expect(find.byKey(const Key('reader_fixed_layout_back_button')), findsNothing);
+    expect(find.byKey(const Key('reader_chrome_back_button')), findsNothing);
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
   });
 }
