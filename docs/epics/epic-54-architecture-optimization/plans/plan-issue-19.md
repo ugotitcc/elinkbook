@@ -84,7 +84,7 @@ passed 的節點就把「目前累積路徑」更新為該節點；走訪完回�
 
 **Files:** 無程式修改。
 
-- [ ] **Step 1: 再確認三項事實**
+- [x] **Step 1: 再確認三項事實**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook/app
@@ -112,7 +112,7 @@ Expected：工作樹乾淨；`findCurrentPath` 仍為兩參數；`reader_screen.
 
 把使用者原話記入計畫「附錄 A」（Step 3 才補），不得改寫。
 
-- [ ] **Step 3: 建立分支**
+- [x] **Step 3: 建立分支**
 
 ```bash
 git switch -c epic-54/issue-19-toc-current-chapter
@@ -130,7 +130,7 @@ git switch -c epic-54/issue-19-toc-current-chapter
 - Consumes：`extractChapterIndex(String? locatorJson) -> int?`（`lib/reader/foliate_bridge_codec.dart`）、`TocEntry`（`title`／`locatorJson`／`progression`／`children`）。
 - Produces：`static List<TocEntry> findCurrentPath(List<TocEntry> entries, double? currentProgression, {int? currentSpineIndex})`——Task 2 的呼叫端使用這個簽章。回傳語意不變（根到目前章節的祖先路徑，含自身；無命中回空 `const []`）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 在 `test/reader/toc_navigator_test.dart` 檔尾 `}` 之前、既有 `group` 之後新增（需補 `import 'dart:convert';`）：
 
@@ -216,12 +216,12 @@ git switch -c epic-54/issue-19-toc-current-chapter
   });
 ```
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**
 
 Run：`flutter test test/reader/toc_navigator_test.dart`
 Expected：新 group 因 `currentSpineIndex` 命名參數不存在而編譯失敗（`No named parameter with the name 'currentSpineIndex'`）；既有 6 案暫時也無法執行（同檔編譯失敗）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 `lib/reader/toc_navigator.dart` 頂端新增 `import 'foliate_bridge_codec.dart';`，並把 `findCurrentPath` 改為：
 
@@ -299,16 +299,16 @@ Expected：新 group 因 `currentSpineIndex` 命名參數不存在而編譯失�
   }
 ```
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**
 
 Run：`flutter test test/reader/toc_navigator_test.dart`
 Expected：全部通過（既有 6 案＋新 9 案）。
 
-- [ ] **Step 5: 突變驗證（證明新測試會咬人）**
+- [x] **Step 5: 突變驗證（證明新測試會咬人）**
 
 暫時把 `_hasPassed` 內 `if (nodeIndex > currentSpineIndex) return false;` 改為 `return true;`，跑同一檔，Expected：「開書在第一章…0.554」等案失敗；還原後再跑一次確認全過。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 flutter analyze
@@ -329,7 +329,7 @@ git commit -m "fix(epic-54): Issue 19 findCurrentPath 改以 spine index 優先�
 - Consumes：Task 1 的 `TocNavigator.findCurrentPath(entries, progression, {currentSpineIndex})`；`extractChapterIndex(String?)`（`reader_screen.dart` 已 import `foliate_bridge_codec.dart`，3158 行已使用，若無則補 import）。
 - Produces：私有 helper `List<TocEntry> _currentEpubTocPath()`，四處共用。
 
-- [ ] **Step 1: 新增 helper，並替換四處呼叫**
+- [x] **Step 1: 新增 helper，並替換四處呼叫**
 
 在 `_openToc()` 正上方新增：
 
@@ -354,7 +354,7 @@ git commit -m "fix(epic-54): Issue 19 findCurrentPath 改以 spine index 優先�
 
 `_currentChapterTitle`（2272）原本是 `final currentPath = TocNavigator.findCurrentPath(_tocEntries, _epubPositionInfo?.progression);`，同樣換成 `_currentEpubTocPath()`。**注意：PDF 分支（`PdfTocNavigator`）一行都不要動。**
 
-- [ ] **Step 2: 靜態檢查與殘留搜尋**
+- [x] **Step 2: 靜態檢查與殘留搜尋**
 
 ```bash
 flutter analyze
@@ -363,7 +363,7 @@ grep -n "TocNavigator.findCurrentPath" lib/screens/reader_screen.dart
 
 Expected：analyze 乾淨；`grep` 只剩 `_currentEpubTocPath` 內那 1 處（`PdfTocNavigator` 的呼叫不含 `TocNavigator.` 前綴以外字串，若 grep 同時列出 `PdfTocNavigator.findCurrentPath` 兩處屬正常）。
 
-- [ ] **Step 3: 跑受影響的既有測試**
+- [x] **Step 3: 跑受影響的既有測試**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart test/screens/toc_bottom_sheet_test.dart test/reader/toc_navigator_test.dart
@@ -371,7 +371,7 @@ flutter test test/screens/reader_screen_test.dart test/screens/toc_bottom_sheet_
 
 Expected：全過。若 `reader_screen_test` 有案例因開書當下章節判定改變而失敗，**先判斷是測試過期還是新缺陷**，不得直接改斷言；回報使用者決定（全域 CLAUDE.md 第 8 條）。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart
@@ -389,7 +389,7 @@ git commit -m "fix(epic-54): Issue 19 ReaderScreen 目前章節判定傳入 spin
 **Interfaces:**
 - Consumes：Task 1／2 的行為（開書在第一章時，第二章預設收合）。
 
-- [ ] **Step 1: 先在**未收緊**的測試上於真機觀察修復效果（紅綠對照的「綠」前置）**
+- [x] **Step 1: 先在**未收緊**的測試上於真機觀察修復效果（紅綠對照的「綠」前置）**
 
 向使用者確認可清除 `TCL 14` 的 App 資料後：
 
@@ -404,7 +404,7 @@ flutter test integration_test/epub_toc_test.dart -d 3CEF42ECD491687
 
 Expected：通過（容錯分支此時應**不會**進入，因為第二章已不預設展開；可在分支內暫加 `debugPrint` 確認，確認後移除）。
 
-- [ ] **Step 2: 收緊測試（先改斷言、再確認有咬力）**
+- [x] **Step 2: 收緊測試（先改斷言、再確認有咬力）**
 
 把 131-139 行的「已知限制」註解與 `TODO(Issue 19)` 整段替換為：
 
@@ -428,7 +428,7 @@ Expected：通過（容錯分支此時應**不會**進入，因為第二章已�
 
 （保留其後「再收合」若原本有的步驟；若原檔沒有則不新增，維持最小改動。）
 
-- [ ] **Step 3: 補「跳轉後判定跟著更新」斷言（Review Focus 5）**
+- [x] **Step 3: 補「跳轉後判定跟著更新」斷言（Review Focus 5）**
 
 在「點選第三章、`_pumpUntilProgressChanged` 之後」、檔尾 `expect(find.byKey(Key('reader_error_text'))…)` 之前，新增：
 
@@ -454,7 +454,7 @@ Expected：通過（容錯分支此時應**不會**進入，因為第二章已�
 
 若 `tester.tap(find.text('第三章：結局'))` 後工具列已隱藏導致找不到 `reader_chrome_toc_button`，先沿用本檔既有的叫出工具列寫法（見檔內第一次開目錄前的步驟）；不要新增計時型等待。
 
-- [ ] **Step 4: 突變驗證（證明收緊後的測試會咬人）**
+- [x] **Step 4: 突變驗證（證明收緊後的測試會咬人）**
 
 暫時把 `_currentEpubTocPath()` 內 `currentSpineIndex: …` 那行註解掉（等同回到修復前），在 `TCL 14` 跑：
 
@@ -464,7 +464,7 @@ flutter test integration_test/epub_toc_test.dart -d 3CEF42ECD491687
 
 Expected：失敗於 `expect(find.text('第一節'), findsNothing, reason: '開書在第一章，第二章應預設收合')`；還原後再跑，Expected：通過（`+1`）。把兩次輸出摘要記入 `epic.md`。
 
-- [ ] **Step 5: 守衛腳本與提交**
+- [x] **Step 5: 守衛腳本與提交**
 
 ```bash
 node tool/check_integration_keys.js
@@ -485,11 +485,11 @@ Expected：三項皆乾淨／PASS。
 - Modify: `docs/epics/epic-54-architecture-optimization/epic.md`、`issues.md`（第 19 列狀態）、`docs/epics.md`（備註只寫「Issue 19 已完成」，不寫歷程）
 - Modify: 本計畫檔（勾選 Step、補附錄）
 
-- [ ] **Step 1: 完整 `flutter test`（只此一次，背景執行）**
+- [x] **Step 1: 完整 `flutter test`（只此一次，背景執行）**
 
 在 `app/` 下以 `run_in_background` 執行 `flutter test`。Expected：除 Issue 18 已記錄的既存失敗（`pdf_reader_view_filters` 加粗 debouncer，乾淨樹同樣失敗）外全過；若出現其他失敗，逐一判定是否為本 Issue 回歸。
 
-- [ ] **Step 2: 補 integration 回歸**
+- [x] **Step 2: 補 integration 回歸**
 
 在 `TCL 14` 另跑與章節判定相關的檔案，確認無回歸：
 
@@ -501,7 +501,7 @@ flutter test integration_test/reader_header_footer_toggle_test.dart -d 3CEF42ECD
 
 Expected：皆通過（`notes_bookmark_test` 涉及書籤章節名、`header_footer` 涉及頁首章節文字）。
 
-- [ ] **Step 3: 回寫文件**
+- [x] **Step 3: 回寫文件**
 
 - `epic.md`：新增「Issue 19 實作完成與真機驗證結果」段（根因、演算法取捨與使用者原話出處、突變驗證結果、斷言強度變化＝收緊）。
 - `issues.md` 第 19 列與 `docs/epics.md` 備註的狀態更新，只在 PR 合併後於 `main` 進行（見下方「分支與提交方式」）。
@@ -511,7 +511,7 @@ Expected：皆通過（`notes_bookmark_test` 涉及書籤章節名、`header_foo
   - PR 合併後：`git switch main && git pull`，再把 `issues.md` 第 19 列改 `🟢 已合併（PR #N）`、`docs/epics.md` 備註與 `epic.md` 的「Issue 19 已合併」一行，直接 commit＋push `main`（不開 PR）。
   - 不要在功能分支上用 stash／切分支來搬文件。`issues.md` 第 19 列在功能分支上先維持 `⚪ 待處理`，不提前改 `🟡`。
 
-- [ ] **Step 4: 發 PR 前確認並請求程式審查**
+- [x] **Step 4: 發 PR 前確認並請求程式審查**
 
 ```bash
 git log --oneline main..HEAD
@@ -525,6 +525,7 @@ flutter analyze
 ## 附錄 A：使用者決定紀錄（Task 0 Step 2 取得後填入原話）
 
 - Task 0 Step 2（演算法取捨，A／B／C）：使用者於 2026-10-07 對話回答原話：`B`（採本計畫方案：先比 spine index、同 spine 內才比 progression）。
+- Task 0 Step 2（本次執行確認）：使用者於 2026-10-07 對話回答原話：`B 本計畫方案`（先比 spine index，同 spine 內才比 progression）。
 
 ## Self-Review 結果
 
