@@ -451,10 +451,10 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-07 Issue 18 實作完成與真機驗證結果**（分支 `epic-54/issue-18-integration-triage`，worktree 內 Native 直接開發，無 subagent；使用者明確要求後續嚴禁 subagent。計畫見 `plans/plan-issue-18.md`）
 
 - 裝置：`TCL 14`（序號 `3CEF42ECD491687`，Android 15，WebView 154.0.8037.49）。以下結果僅宣稱此裝置通過。
-- **5 檔全部通過**：`epub_toc_test`（0→1 通過）、`foliate_epub_reader_view_test`（9/10→10/10）、`reader_header_footer_toggle_test`（1/2→4/4，含 2 新增案例）、`reader_screen_test`（13/19→整檔通過，含 4 改寫案例隔離驗證）、`epub_fxl_tap_zone_test`（0→1 通過）。`reader_screen_test` 另有 2 個整檔級聯噪音案例（字型大小、手勢暫停），隔離皆通過，不處置。
+- **5 檔通過（`reader_screen_test` 以隔離驗證為準，見該項說明）**：`epub_toc_test`（0→1 通過）、`foliate_epub_reader_view_test`（9/10→10/10）、`reader_header_footer_toggle_test`（1/2→4/4，含 2 新增案例）、`reader_screen_test`（改寫前整檔 13/19；4 個改寫案例隔離驗證通過；改寫後**未單獨重跑整檔**，僅在 38 檔全量迴圈中記為通過，未列入下方 4 項未通過）、`epub_fxl_tap_zone_test`（0→1 通過）。另有 2 個案例（字型大小、手勢暫停）曾在整檔順序下因 `database_closed` 級聯噪音失敗、隔離皆通過，不處置；整檔結果的最終確認待在 `TCL 14` 單獨重跑一次（Issue 18 程式審查 I-2）。
 - **判定與使用者決定**（2026-10-07 對話原話：`1. 丙, 2 乙, 3 OK 並補PDF 補同類案例, 5 甲`；Task 4：`4-a,c 皆為「是」, 4-b 甲`）：
   - (1) `epub_toc_test`（丙）：測試過期＋行為改變。真機證實開書 CFI 正確（第一章）但全書 fraction 回報 0.554（＝2×1763／6362，foliate 位元組估計含當前頁的 double-count），疊加頂層章節 progression 結構性 null，使第二章預設展開。測試改為狀態無關的收合→展開雙向驗證；強健性問題登記為 **Issue 19**。
-  - (2) `foliate…isFixedLayout`（乙）：產品缺陷（迴歸）。`8e760653` 明文契約「呼叫端已確定流式書」→ epic-20 起前提失效、`15f2a6eb` 的寫死未跟著修；`widget.isFixedLayout==null`＋實 FXL 經非同步偵測空窗被蓋成 false。修 `lib/`（`main.js` 轉發 `view.isFixedLayout`，Dart 新增 `parseFoliateLayoutResolved` 純函式），測試維持原斷言。
+  - (2) `foliate…isFixedLayout`（乙）：產品缺陷（迴歸）。`8e760653` 明文契約「呼叫端已確定流式書」→ epic-20 起前提失效、`15f2a6eb` 的寫死未跟著修；`widget.isFixedLayout==null`＋實 FXL 經非同步偵測空窗被蓋成 false。修 `lib/`（`main.js` 轉發 `view.isFixedLayout`，Dart 新增 `parseFoliateLayoutResolved` 純函式），測試維持原斷言。`widget.isFixedLayout` 三種情形的行為（程式審查 I-1，已有 widget 測試覆蓋，見 `test/screens/reader_screen_test.dart` 的「onLayoutResolved 回報 isFixedLayout=…」6 案例）：`true`＝強制 FXL 保護，原生回報 false 也不覆寫；`null`＝以原生回報值為準（修正目標）；`false`＝以原生回報值為準，此前永遠被蓋成 false，現在書實為 FXL 時 `_isFixedLayout` 會變 true，而 `_dispatchedIsFixedLayout` 仍為 false——兩者是不同概念（見 `reader_screen.dart` 約 434-437 註解），此分歧為預期行為。
   - (3) `header_footer`（OK＋PDF）：測試過期（失敗的是 EPUB，`issues.md` 原寫 PDF 已更正）。改寫為三條現行語意斷言＋`showFooter=true` 對照組＋PDF 同類案例（M-2）。
   - (4) `reader_screen_test`：(4-a) 測試過期（Epic 38 統一工具列），改斷言 FxlSettingsSheet；(4-b) 產品缺陷（甲）：智慧裁切後 `zoom=8.0`／pdfrx 原生 `min=8.0407`／`max=8.0`，delegate 透傳點火斷言，修箝位；(4-c) 測試過期（驅動已清退的原生 UI），改走手勢層畫框＋按 Key 確認，`manual→manual` 第二次矩形須不同（更強）。
   - (5) `tap_zone`（甲）：測試素材問題（單頁書）。新增 2 頁 FXL fixture，700ms 門檻不動。

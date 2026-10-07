@@ -392,6 +392,7 @@ flutter test    # run_in_background，約 5～6 分鐘
 
 1. **執行方式**：inline（executing-plans），worktree Native 直接開發；使用者明確要求後續嚴禁 subagent，故最終審查改用自審（效力較弱，已聲明）。
 2. **Task 2 widget 測試省略**：計畫要求補「`widget.isFixedLayout==null` 且實為 FXL 時 `_isFixedLayout` 不被蓋成 false」的 widget 測試；實際 bug 在 JS bridge handler（widget 測試繞過它），`_handleFoliateLayoutResolved` 本體未動，任何經 `onLayoutResolved` 的 widget 測試在新舊碼下結果相同，既有 `:1875` 已覆蓋下游語意，真機 pin 由 integration 測試承擔。
+   **（程式審查 I-1 後更正）** 上述省略理由只對「JS 是否轉發」成立，對「Dart 端收到 `info.isFixedLayout == true` 後的行為」不成立；已補 6 個 widget 測試（`widget.isFixedLayout` null／false／true × 原生回報 true／false，以版面按鈕開啟的 Sheet 觀察 `_isFixedLayout`），並以暫時拿掉 `widget.isFixedLayout != true` 保護條件做突變驗證：`widget=true、回報 false` 案例變紅，還原後全綠。
 3. **Task 3 Step 3 突變整檔同跑時對照組失敗**：證實為連帶污染（隔離單跑通過），非測試問題。
 4. **Task 5 Step 1～3 標不適用**：Step 0 確認單頁書即根因，校準調查依計畫略過，700ms 兩端皆未動。
 5. **一次背景任務跑錯目錄**：突變未實際套上即跑測試，兩次全綠僅為正常碼重複確認；已用顯式 `cd`＋`grep` 驗證重做。
@@ -399,7 +400,7 @@ flutter test    # run_in_background，約 5～6 分鐘
 7. **全量 integration 計數**：計畫寫 31 檔，實際 glob 跑出 39 檔（含 `flutter_test_config.dart` 誤跑 1 次，已排除）；38 實檔中 34 通過。`issues.md`/`docs/epics.md`/`epic.md` 的數字以本次實測為準。
 8. **既存失敗（非本 Issue，不處理）**：`test/reader/pdf_reader_view_filters_test.dart` 加粗 debouncer（stash 證實乾淨樹同樣失敗）、`book_metadata_channel_test`（乾淨樹同樣失敗）、`sync_*`（裝置對後端 100% 丟包）。
 9. **`epic.md:441` 未改**：Issue 17 審查 M-2 歷史紀錄敘述屬實，改寫等於竄改歷史；誤判風險由 `issues.md` 更正承擔（見 ledger Ruling）。
-10. **Task 6 Step 1 的 `reader_screen_test` 整檔**：改寫後未重跑整檔（4 案例隔離全綠；改寫前整檔 13/19、改寫後全量迴圈中本檔 PASS）。
+10. **Task 6 Step 1 的 `reader_screen_test` 整檔**：改寫後未單獨重跑整檔；證據為 4 個改寫案例隔離全綠、改寫前整檔 13/19、38 檔全量迴圈中本檔未列入未通過項。整檔結果待在 `TCL 14` 單獨重跑確認（程式審查 I-2），`epic.md` 已同步改寫。
 
 ## 附錄 B：計畫審查回應（`reviews/review-plan-issue-18.md`）
 
