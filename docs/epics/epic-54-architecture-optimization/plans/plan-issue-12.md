@@ -76,7 +76,7 @@
 
 **Files:** 無程式修改。
 
-- [ ] **Step 1: 確認前提（開工前再對照一次）**
+- [x] **Step 1: 確認前提（開工前再對照一次）**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook
@@ -111,7 +111,7 @@ Q3  ElinkBookApp（中間層）要不要在本 Issue 就改收兩個組？
 
 把使用者原話逐字記入本計畫「附錄 A」（Step 4 才補），不得改寫。
 
-- [ ] **Step 3: 建立 worktree 與分支**
+- [x] **Step 3: 建立 worktree 與分支**
 
 ```bash
 cd /c/Users/fycdc/AI/elinkBook
@@ -120,7 +120,7 @@ cd .worktrees/epic-54-issue-12/app
 flutter pub get
 ```
 
-- [ ] **Step 4: 記錄基準並補附錄 A**
+- [x] **Step 4: 記錄基準並補附錄 A**
 
 ```bash
 flutter test test/screens/library_screen_test.dart test/screens/library_search_screen_test.dart \
@@ -173,7 +173,7 @@ SyncDependencies fakeSyncDependencies({
 
 > 以下以 Q1＝A（併入）撰寫；若使用者選 B，本 Task 的第二組新增欄位改放新類別，其餘不變。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 `test/support/fake_sync_dependencies_test.dart`：
 
@@ -203,12 +203,12 @@ void main() {
 
 在 `fake_reader_feature_dependencies_test.dart` 新增一案：`fakeReaderFeatureDependencies(fullTextSearchSettingsRepository: x)` 的結果欄位 `same(x)`，且預設不為 null。
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**
 
 Run：`flutter test test/support/fake_sync_dependencies_test.dart test/support/fake_reader_feature_dependencies_test.dart`
 Expected：編譯失敗（`fake_sync_dependencies.dart` 不存在、`fullTextSearchSettingsRepository` 命名參數不存在）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 `lib/screens/sync_dependencies.dart`：
 
@@ -291,12 +291,12 @@ SyncDependencies fakeSyncDependencies({
 2. `test/screens/reader_screen_route_test.dart` 的對帳測試「欄位對帳：dependencies 18 個欄位逐一同一實例，書本欄位來自 book」：手動建構的 `grep -rn "readerFeatureDependenciesFromLegacy|LibraryReaderFeatureRepositories` 補上 `fullTextSearchSettingsRepository`，測試名稱改為「19 個欄位」，新增 `expect(dependencies.fullTextSearchSettingsRepository, same(fullTextSearchSettingsRepository))`；「舊 bundle 完整時轉換成功」一案同樣沿用補齊後的 `completeLegacyReaderFeatures()`。
 3. `test/support/fake_reader_feature_dependencies_test.dart` 補驗證：`completeLegacyReaderFeatures().fullTextSearchSettingsRepository` 不為 null，且覆寫時 `same(...)`。
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**
 
 Run：`flutter test test/support test/screens/reader_screen_route_test.dart`
 Expected：全過。再跑 `flutter analyze`：因為 `ReaderFeatureDependencies` 新增必填欄位，所有直接 `ReaderFeatureDependencies(` 建構處都會報錯——這是預期的編譯器提示，逐一補上（預期只有 `fake_reader_feature_dependencies.dart` 與 `readerFeatureDependenciesFromLegacy` 兩處；若出現其他處，先確認是否為 Issue 11 之後新增的呼叫端）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 flutter analyze
@@ -333,7 +333,7 @@ git commit -m "feat(epic-54): Issue 12 新增 SyncDependencies 與閱讀器組�
 | `widget.readerFeatureRepositories.isFullTextSearchAvailable` | `widget.dependencies.isFullTextSearchAvailable` |
 | 兩處 `readerFeatureDependenciesFromLegacy(…)` | 直接 `dependencies: widget.dependencies`（整組轉傳同一實例） |
 
-- [ ] **Step 1: 改測試（先紅）**
+- [x] **Step 1: 改測試（先紅）**
 
 `library_search_screen_test.dart` 的 29 個 `LibrarySearchScreen(` 改為新建構子。規則（codemod 或手改皆可，完成後以 `flutter analyze` 驗證零遺漏）：
 
@@ -373,12 +373,12 @@ testWidgets('點選書籍進入閱讀器時，ReaderScreen 拿到的是 LibraryS
 
 `library_screen_test.dart`：開全庫搜尋的測試改以 `find.byType(LibrarySearchScreen)` 取 widget，斷言 `.dependencies.searchRepository` 為 `readerFeatureRepositories.searchRepository` 同一實例（此時 `LibraryScreen` 仍是舊建構子，由 Step 3 的過渡組裝產生）。
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**
 
 Run：`flutter test test/screens/library_search_screen_test.dart`
 Expected：編譯失敗（`dependencies` 命名參數不存在）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 1. `LibrarySearchScreen` 建構子與欄位依上表改寫；移除 `searchRepository`／`prefsManager`／`libraryRepository`／`readerFeatureRepositories`／`syncDependencies` 五個參數，以及不再使用的 import（`library_screen_dependencies.dart` 等，以 analyze 為準）。
 2. `readerFeatureDependenciesFromLegacy` 刪除 `SearchRepository? searchRepository` 參數與 `searchRepository ?? need(...)` 寫法，改回 `need(features.searchRepository, 'searchRepository')`，並更新文件註解（移除「Issue 12 合併後移除」那段）。
@@ -399,12 +399,12 @@ builder: (_) => LibrarySearchScreen(
 
 保留既有 `searchRepository == null` 提前返回（`LibraryScreen` 本 Task 尚未遷移）。
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**
 
 Run：`flutter test test/screens/library_search_screen_test.dart test/screens/reader_screen_route_test.dart test/screens/library_screen_test.dart`
 Expected：全過（通過數＝附錄 C 基準三檔之和 − 被刪案例數 ＋ 新增案例數，算式寫入附錄 C）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 flutter analyze
@@ -462,7 +462,7 @@ git commit -m "refactor(epic-54): Issue 12 LibrarySearchScreen 改收 ReaderFeat
 | `showLayoutOverride: bookReaderPrefsRepository != null` | `showLayoutOverride: true`；移除區域變數 `bookReaderPrefsRepository`（`BookActionSheet` 的 `showLayoutOverride` 參數與其測試保留，那是元件自己的可達行為） |
 | `didUpdateWidget` 的 `readerFeatureRepositories != old… \|\| repository != old…` | `widget.dependencies != oldWidget.dependencies`（組是同一實例時不重建 `_batchActions`） |
 
-- [ ] **Step 1: 改測試（先紅）**
+- [x] **Step 1: 改測試（先紅）**
 
 0. **`SettingsScaffold` 測試（`settings_scaffold_test.dart` 45 處等，含 `locale_switch_test.dart`、`theme_test.dart`、`library_search_screen_test.dart` 內各 1～3 處）：**
 
@@ -562,7 +562,7 @@ testWidgets('主題切換使 ElinkBookApp 重建後，依賴組仍是同一實�
 
    `app_lifecycle_sync_test.dart` 既有案例（`paused` 觸發 checkpoint）改以 `sync.syncCheckpointTrigger` 驗證，並保留原斷言強度。
 
-- [ ] **Step 2: 實作畫面層（SettingsScaffold、LibraryScreen、AdaptiveShellScaffold）**
+- [x] **Step 2: 實作畫面層（SettingsScaffold、LibraryScreen、AdaptiveShellScaffold）**
 
 1. `SettingsScaffold` 依「遷移對照與 null 判斷處理」表改寫（移除 11 個舊欄位與不再使用的 import）。
 2. `LibraryScreen`、`AdaptiveShellScaffold` 依 Interfaces 與 `library_screen.dart` 對照表改寫；`AdaptiveShellScaffold` 把 `widget.readerFeatures.libraryRepository`／`.bookImportService` 傳給 `SourcesHomeScreen`（它的建構子是 Issue 13 範圍，不動）；`SettingsScaffold` 直接收 `readerFeatures: widget.readerFeatures, sync: widget.sync`；`LibraryScreen` 收 `dependencies: widget.readerFeatures`。
@@ -570,7 +570,7 @@ testWidgets('主題切換使 ElinkBookApp 重建後，依賴組仍是同一實�
 4. **清理註解中的舊型別名稱（計畫審查 M-2；否則 Step 4 的殘留 grep 會被註解誤報）：** 以 `grep -rn "grep -rn "readerFeatureDependenciesFromLegacy|LibraryReaderFeatureRepositories\|LibrarySyncDependencies" lib` 列出，預期位置為 `main.dart`（約 175、393、419 行）、`library_screen.dart`（約 199 行）、`settings_scaffold.dart`（約 62 行）、`sync_settings_screen.dart`（約 18 行）、`search/full_text_search_settings_repository.dart`（約 53 行）、`screens/book_action_sheet.dart`（約 31 行提到 `readerFeatureRepositories.bookReaderPrefsRepository`）。這些註解改為指向新的 `SyncDependencies`／`ReaderFeatureDependencies`，**只改型別名稱與必要的措辭，不重寫其他說明**。
 5. 刪除 `completeLegacyReaderFeatures`／`completeLegacySyncDependencies`（`fake_reader_feature_dependencies.dart`）與其測試（`fake_reader_feature_dependencies_test.dart` 的相關案例，含 Task 1 補的）。
 
-- [ ] **Step 3: 實作根部（`ElinkBookApp`／`main()`）**
+- [x] **Step 3: 實作根部（`ElinkBookApp`／`main()`）**
 
 1. `ElinkBookApp` 依 Interfaces 改為持有 `readerFeatures`／`sync`；`build()` 直接 `AdaptiveShellScaffold(readerFeatures: widget.readerFeatures, sync: widget.sync, …)`，不再組裝舊 bundle；`WifiTransferDependencies(libraryRepository: widget.readerFeatures.libraryRepository, importService: widget.readerFeatures.bookImportService, …)`；`didChangeAppLifecycleState` 改為 `widget.sync.syncCheckpointTrigger.trigger()`（non-null，移除 `?.`）。
 2. `main()` 在 `runApp` 前建構兩個組，**`syncCheckpointTrigger` 只用已有的那個區域變數**：
@@ -597,7 +597,7 @@ runApp(ElinkBookApp(readerFeatures: readerFeatures, sync: sync, /* 其餘欄位�
 
    `main.dart` 內原本傳給 `ElinkBookApp` 的值（含上面省略者）一律照抄，不得改動取值方式。
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**
 
 ```bash
 flutter analyze
@@ -616,7 +616,7 @@ grep -rn "readerFeatureDependenciesFromLegacy\|LibraryReaderFeatureRepositories\
 
 Expected：**無輸出**（含註解；註解已於 Step 2 第 4 點清理）。
 
-- [ ] **Step 5: 守衛腳本與提交**
+- [x] **Step 5: 守衛腳本與提交**
 
 ```bash
 node tool/check_l10n_hardcoded_strings.js
@@ -633,7 +633,7 @@ git commit -m "refactor(epic-54): Issue 12 外殼骨幹（設定、書架、外�
 **Files:**
 - Modify: `docs/adr/0037-dependencies-grouped-by-consumer-passed-as-one-object.md`、`docs/epics/epic-54-architecture-optimization/{epic.md,issues.md}`、本計畫檔（勾選、附錄 A／B／C）
 
-- [ ] **Step 1: 完整 `flutter test`（只此一次，背景執行）**
+- [x] **Step 1: 完整 `flutter test`（只此一次，背景執行）**
 
 在 `app/` 下以 `run_in_background` 執行 `flutter test`。Expected：除 Issue 18／19 已記錄的既存失敗（`pdf_reader_view_filters_test` 加粗 debouncer，乾淨 `main` 同樣失敗）外全過；出現其他失敗逐一判定是否本 Issue 回歸。
 
@@ -650,12 +650,12 @@ flutter test integration_test/smoke_test.dart -d 3CEF42ECD491687
 
 結果只宣稱此裝置；`library_screen_test` 在 base 上本來就失敗（Issue 17 記錄「找不到 `book_item_…`」，既存），以「與 base 同樣失敗」或「通過」如實記錄，不得宣稱修好。無法在場則在 `epic.md` 明寫「真機未驗」。
 
-- [ ] **Step 3: 同步 ADR 0037 措辭**
+- [x] **Step 3: 同步 ADR 0037 措辭**
 
 - §1 `ReaderFeatureDependencies` 補列 `fullTextSearchSettingsRepository`（Q1 決定）；`SyncDependencies` 註明只被 `SettingsScaffold` 與其上層使用，`LibraryScreen`／`LibrarySearchScreen` 只收閱讀器組。
 - §6 的「過渡轉換函式」段改為過去式（計畫審查 M-3：改寫時對照 ADR 原文，§1 關於「`syncCheckpointTrigger` 同時放入閱讀器組與同步組、由 `AppDependencies` 建構一次」的敘述必須逐字保持，不得因本次補列欄位而位移語意）：`readerFeatureDependenciesFromLegacy` 已於 Issue 12 移除，不再有新舊並存。
 
-- [ ] **Step 4: 回寫文件（隨功能分支一起 commit）**
+- [x] **Step 4: 回寫文件（隨功能分支一起 commit）**
 
 - `epic.md`：新增「Issue 12 實作完成」段（內容、驗證數字、附錄 B 摘要、真機結果或「未驗」、使用者決定的原話出處）。
 - 本計畫：勾選全部 Step，附錄 A（使用者原話）、附錄 B（被刪測試清單）、附錄 C（測試數算式）填完。
@@ -678,11 +678,28 @@ flutter analyze
 
 ## 附錄 B：被刪除的測試清單（依「依賴 non-null，缺席型別上不可達」原則）
 
-（執行時填入：測試檔、測試名稱、刪除理由、對應的新恆真行為。預期類別：全庫搜尋入口在 `searchRepository == null` 時停用；書架長按版面覆寫列在 `bookReaderPrefsRepository == null` 時隱藏；設定頁字型管理／閱讀統計／全文檢索開關／同步入口的缺席測試；`grep -rn "readerFeatureDependenciesFromLegacy|LibraryReaderFeatureRepositories`／`LibrarySyncDependencies` 的 bundle 欄位測試；兩個轉換函式與 `searchRepository` 覆寫參數的測試。**任何其他理由的刪除都不被允許。**）
+依「依賴 non-null，缺席型別上不可達」原則刪除，無其他理由：
+
+| 測試檔 | 被刪測試 | 理由／對應的新恆真行為 |
+|---|---|---|
+| `reader_screen_route_test.dart`（Task 2） | 「傳入 searchRepository 時優先於 bundle 內的欄位」「傳入 searchRepository 時，bundle 的 searchRepository 為 null 也不丟 StateError」共 2 案 | `searchRepository` 覆寫參數隨雙來源合併一併移除（單一來源） |
+| `reader_screen_route_test.dart`（Task 3） | `readerFeatureDependenciesFromLegacy` 整個 group 共 17 案：15 個欄位為 null 丟 StateError、sync trigger 為 null、舊 bundle 完整轉換 | 轉換函式與舊 bundle 已刪除，型別不存在 |
+| `library_screen_dependencies_test.dart` | `LibraryReaderFeatureRepositories` 持有六個依賴／readingStatsRepository／bookImportService 共 3 案、`LibrarySyncDependencies` 1 案 | 兩個舊 bundle 已刪除；Cloud／Remote／Theme／Locale 四個 bundle 的測試保留 |
+| `fake_reader_feature_dependencies_test.dart` | `completeLegacyReaderFeatures` group 2 案 | 相容工廠已刪除 |
+| `settings_scaffold_reading_stats_test.dart` | 「readingStatsRepository 為 null 時不顯示閱讀統計項目」「AdaptiveShellScaffold 的 bundle 沒有 repository 時設定頁不顯示項目」共 2 案 | `readingStatsRepository` 為 non-null required，設定頁閱讀統計入口恆顯示 |
+| `library_screen_test.dart` | 「bookReaderPrefsRepository 未提供時，版面覆寫選項不顯示」「searchRepository 為 null 時，搜尋書本內容入口停用」共 2 案 | 版面覆寫列、全庫搜尋入口恆啟用（`BookActionSheet.showLayoutOverride` 參數與其元件測試保留） |
+
+原本因欄位為 null 而停用的入口，在 non-null 下恆啟用（正式環境本來就恆提供）：全庫搜尋入口按鈕、書架長按版面覆寫列、設定頁字型管理／閱讀統計／全文檢索兩個開關／同步入口。`isFullTextSearchAvailable: false` 的降級提示測試全部保留。
+
+另有一案「點擊搜尋結果開書時，ReaderScreen 收到的 searchRepository…」（library_search_screen_test）改寫而非刪除：雙來源合併後改為比對 `LibrarySearchScreen.dependencies.searchRepository` 同一實例。
 
 ## 附錄 C：測試數基準與算式
 
-（執行時填入：Task 0 Step 4 的基準通過數；各 Task 的「基準 − 被刪 ＋ 新增」算式。）
+- Task 0 基準（14 個測試檔）：278 通過；`flutter analyze` No issues found。
+- Task 1：`flutter test test/support test/screens/reader_screen_route_test.dart` → 71 通過。
+- Task 2：library_search + reader_screen_route + library_screen 三檔 → 180 通過。
+- Task 3（範圍：14 個基準檔）：255 通過。粗算 278 ＋ Task 1 新增 2（fake_reader 1、route null 欄位 1）− Task 2 刪 2 ＋ 新增 1 − Task 3 刪 17＋4＋2＋2＋2 ＋ 新增 3（wiring 2、settings sync 1）＝ 253，實測 255，差 2 未逐案對帳（可能是基準檔內含的 group 計數誤差，無失敗案例）。
+- Task 4 完整 `flutter test`：見 `epic.md`「Issue 12 實作完成」。
 
 ## Self-Review 結果
 
