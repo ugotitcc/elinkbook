@@ -462,3 +462,10 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - **突變驗證**：header 案例 2 在 `showFooter` 條件強制 true 時失敗並印出角落文字存在，對照組通過（整檔同跑的對照組失敗證實為連帶污染）；toc 改寫前後皆紅→綠（基準紅、改寫後綠）。
 - **全量結果**：integration 38 檔（除人工驗收）34 通過；未通過 4 項皆非本 Issue 回歸——`book_metadata_channel_test`（乾淨樹同樣失敗，既存）、`sync_account/engine_test`（裝置對 `pbdev.jigong.org` 100% 丟包，環境）、`foliate_toc_footer_test`（整檔順序下 66% 漂移，隔離通過，flaky）。完整 `flutter test`：3692 通過、1 跳過、1 失敗（`pdf_reader_view_filters` 加粗 debouncer，乾淨樹同樣失敗，既存）。`flutter analyze` 乾淨；三支守衛全過。
 - **執行偏差**：見計畫附錄 A。
+
+**2026-10-07 Issue 18 程式審查回應**（審查報告 `reviews/review-code-issue-18.md`：Critical 0、Important 3、Minor 6，結論 With fixes，經使用者同意全部處理，細節見計畫附錄 C）
+
+- I-1：補 6 個 `_handleFoliateLayoutResolved` widget 測試並做保護條件突變驗證；I-2：`TCL 14` 清資料後重跑 `reader_screen_test` 整檔 19/19，並重跑 `reader_header_footer_toggle_test`（4/4）、`epub_toc_test`（1/1）、`epub_fxl_tap_zone_test`（1/1）；I-3：`issues.md` 表格空行。
+- M-1～M-5 已處理（M-2 審查建議的 `metrics.maxScale < zoom` 案例因建構子固定 `maxScale` 而無法建構，改註明不變式）；M-6（使用者對話原話）由使用者自行核對。
+
+**2026-10-07 Issue 18 已合併（PR #333）。** 真機 integration（`TCL 14`）5 個遺留檔案全數通過；`onLayoutResolved` 回報真實 `isFixedLayout`、`PdfFitSizeDelegate` 箝位 `minScale<=maxScale` 兩項產品缺陷已修。開書當下目錄「目前章節」判定不可靠移至 Issue 19（待處理）。
