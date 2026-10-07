@@ -1110,7 +1110,11 @@ async function openBook() {
       const resolvedWritingMode =
         initialPrefs.writingMode ?? detectedBookWritingMode ?? 'horizontal'
       window.applyPreferences({ ...initialPrefs, writingMode: resolvedWritingMode })
-      window.flutter_inappwebview.callHandler('onPageRendered', resolvedWritingMode)
+      // epic-54 Issue 18：同時回報 view.isFixedLayout，供 Dart 端
+      // parseFoliateLayoutResolved() 填入 EpubLayoutInfo.isFixedLayout
+      //（此前 Dart 端寫死 false 的契約前提已隨 epic-20 失效）。
+      window.flutter_inappwebview.callHandler(
+        'onPageRendered', resolvedWritingMode, !!view.isFixedLayout)
     }, { once: true })
     // 目前定位變動持續推播（epic-17 Issue 6）：與上方 { once: true } 的
     // FR-06/onPageRendered 監聽器各自獨立、互不影響，開書當下的第一次

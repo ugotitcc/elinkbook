@@ -670,14 +670,12 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       handlerName: FoliateBridgeHandlers.onPageRendered,
       callback: (args) {
         widget.onPageRendered();
-        final writingModeStr =
-            args.isNotEmpty ? args[0] as String : 'horizontal';
-        widget.onLayoutResolved?.call(EpubLayoutInfo(
-          isFixedLayout: false,
-          writingMode: writingModeStr == 'vertical'
-              ? WritingMode.vertical
-              : WritingMode.horizontal,
-        ));
+        // epic-54 Issue 18：回報 `main.js` 的真實 `view.isFixedLayout`
+        //（此前寫死 false 的契約前提已隨 epic-20 失效，見
+        // parseFoliateLayoutResolved 文件）。
+        widget.onLayoutResolved?.call(
+          parseFoliateLayoutResolved(args, isFixedLayoutHint: widget.isFixedLayoutHint),
+        );
       },
     );
     controller.addJavaScriptHandler(

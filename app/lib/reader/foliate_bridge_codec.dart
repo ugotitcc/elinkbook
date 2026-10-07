@@ -4,6 +4,7 @@ import 'epub_decoration.dart';
 import 'epub_position_info.dart';
 import 'toc_entry.dart';
 import 'tts_segment_cfi.dart';
+import 'writing_mode.dart';
 
 /// 從 `locatorJson` 取出章節/spine index
 int? extractChapterIndex(String? locatorJson) {
@@ -102,6 +103,29 @@ EpubPositionInfo parseLocatorChanged(List<dynamic> args) {
     locationTotal: (position['locationTotal'] as num?)?.toInt(),
     visualPageIndex: (position['visualPageIndex'] as num?)?.toInt(),
     visualTotalPages: (position['visualTotalPages'] as num?)?.toInt(),
+  );
+}
+
+/// 把 `main.js` `onPageRendered` handler 送出的 JS→Dart 橋接參數解析為
+/// [EpubLayoutInfo]（epic-54 Issue 18，取代原本寫死
+/// `EpubLayoutInfo(isFixedLayout: false, …)` 的匿名 closure 內聯邏輯）。
+/// [args] 第 0 個元素為排版方向字串（`'vertical'` 即直排，其餘視為橫排）；
+/// 第 1 個元素（epic-54 Issue 18 起 `main.js` 主動回報）為 `view.isFixedLayout`
+/// 布林值。舊版參數（無第 1 個元素，或其值非布林）時退回 [isFixedLayoutHint]
+/// （開書當下已知的值），仍無則為 `false`。任何形狀錯誤皆不拋出例外。
+EpubLayoutInfo parseFoliateLayoutResolved(
+  List<dynamic> args, {
+  bool? isFixedLayoutHint,
+}) {
+  final writingModeStr =
+      args.isNotEmpty && args[0] is String ? args[0] as String : 'horizontal';
+  final reported =
+      args.length > 1 && args[1] is bool ? args[1] as bool : null;
+  return EpubLayoutInfo(
+    isFixedLayout: reported ?? isFixedLayoutHint ?? false,
+    writingMode: writingModeStr == 'vertical'
+        ? WritingMode.vertical
+        : WritingMode.horizontal,
   );
 }
 

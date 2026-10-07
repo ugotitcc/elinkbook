@@ -1817,11 +1817,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// `!info.isFixedLayout`，因為 `FoliateReaderView.loadTableOfContents()`
   /// 對 FXL／流式書籍皆可正常運作。epic-20 Issue 2 起，本方法也會被 FXL
   /// 書籍呼叫（`_dispatchedIsFixedLayout == true` 時同樣建構
-  /// `FoliateReaderView`，不再是「恆為流式」）——但目前
-  /// `FoliateReaderView` 的 `onPageRendered` handler（見
-  /// `foliate_reader_view.dart`）尚未回傳真實的 `isFixedLayout`
-  /// 判斷結果，`info.isFixedLayout` 在這裡固定收到 `false`，故本方法內部
-  /// 目前不依賴 `info.isFixedLayout` 做任何分支。觸發
+  /// `FoliateReaderView`，不再是「恆為流式」）——epic-54 Issue 18 起
+  /// `FoliateReaderView` 的 `onPageRendered` handler 回傳真實的
+  /// `isFixedLayout`（`main.js` 轉發 `view.isFixedLayout`，見
+  /// `parseFoliateLayoutResolved`），故此處收到的 `info.isFixedLayout`
+  /// 可信；`widget.isFixedLayout == true`（強制 FXL）的保護維持不變。觸發
   /// `_reloadAnnotationsAndRefreshDecorations` 以載入劃線備註——`_sendDecorationsToNative()`
   /// 現已無條件使用 `FoliateReaderView.setDecorations`，FXL 書籍的
   /// 劃線/備註疊圖已生效（Issue 4 修正）。

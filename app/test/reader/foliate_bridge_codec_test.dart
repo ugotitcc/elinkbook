@@ -2,6 +2,7 @@ import 'package:elinkbook/reader/epub_decoration.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/reader/foliate_bridge_codec.dart';
 import 'package:elinkbook/reader/tts_segment_cfi.dart';
+import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -500,6 +501,43 @@ void main() {
       expect(seg.segmentId, '');
       expect(seg.cfi, '');
       expect(seg.text, '');
+    });
+  });
+
+  group('parseFoliateLayoutResolved（epic-54 Issue 18）', () {
+    test('JS 回報 true 時 isFixedLayout 為 true（FXL 書）', () {
+      final info = parseFoliateLayoutResolved(['horizontal', true]);
+      expect(info.isFixedLayout, isTrue);
+      expect(info.writingMode, WritingMode.horizontal);
+    });
+
+    test('JS 回報 false 時 isFixedLayout 為 false（流式書）', () {
+      final info = parseFoliateLayoutResolved(['vertical', false]);
+      expect(info.isFixedLayout, isFalse);
+      expect(info.writingMode, WritingMode.vertical);
+    });
+
+    test('舊版參數（無第二個元素）時退回 hint：hint 為 true 即為 true', () {
+      final info = parseFoliateLayoutResolved(
+        ['horizontal'],
+        isFixedLayoutHint: true,
+      );
+      expect(info.isFixedLayout, isTrue);
+      expect(info.writingMode, WritingMode.horizontal);
+    });
+
+    test('舊版參數且 hint 為 null 時退回 false（不拋出例外）', () {
+      final info = parseFoliateLayoutResolved([]);
+      expect(info.isFixedLayout, isFalse);
+      expect(info.writingMode, WritingMode.horizontal);
+    });
+
+    test('第二個元素非布林時退回 hint（不拋出例外）', () {
+      final info = parseFoliateLayoutResolved(
+        ['horizontal', 'yes'],
+        isFixedLayoutHint: true,
+      );
+      expect(info.isFixedLayout, isTrue);
     });
   });
 }
