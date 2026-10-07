@@ -1332,11 +1332,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     FoliateReaderView.jumpToLocator(_foliateEpubReaderViewKey, locatorJson);
   }
 
+  /// EPUB 目前章節路徑（epic-54 Issue 19）：同時傳入全書 progression 與
+  /// spine index，後者讓開書當下的判定不受 progression 偏高／頂層章節
+  /// progression 為 null 影響，見 `TocNavigator.findCurrentPath`。
+  /// 開書極早期尚未收到位置回報（`_epubPositionInfo == null`）時，兩個參數
+  /// 皆為 null，`findCurrentPath` 自然回傳空清單（不預設展開、不高亮）。
+  List<TocEntry> _currentEpubTocPath() => TocNavigator.findCurrentPath(
+        _tocEntries,
+        _epubPositionInfo?.progression,
+        currentSpineIndex: extractChapterIndex(_epubPositionInfo?.locatorJson),
+      );
+
   void _openToc() {
-    final currentPath = TocNavigator.findCurrentPath(
-      _tocEntries,
-      _epubPositionInfo?.progression,
-    );
+    final currentPath = _currentEpubTocPath();
     _showThemedModalBottomSheet<void>(
       builder: (_) => TocBottomSheet(
         format: BookFormat.epub,
@@ -1464,10 +1472,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 建立的 `NotesBottomSheet.initialTabIndex`）。
   void _openNotesSheet(BookFormat format, {int initialTabIndex = 0}) {
     final repository = widget.dependencies.bookmarksRepository;
-    final currentPath = TocNavigator.findCurrentPath(
-      _tocEntries,
-      _epubPositionInfo?.progression,
-    );
+    final currentPath = _currentEpubTocPath();
     final positionContext = BookmarkPositionContext(
       epubLocatorJson:
           isFoliateFormat(format) ? _epubPositionInfo?.locatorJson : null,
@@ -2268,8 +2273,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           ? _displayBookTitle
           : convertText(currentPath.last.title, _textConversionMode);
     }
-    final currentPath =
-        TocNavigator.findCurrentPath(_tocEntries, _epubPositionInfo?.progression);
+    final currentPath = _currentEpubTocPath();
     return currentPath.isEmpty
         ? _displayBookTitle
         : convertText(currentPath.last.title, _textConversionMode);
@@ -3005,10 +3009,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 函式——兩者一個要包 InkWell/onTap、一個刻意不包，硬拆共用反而增加
   /// 兩個呼叫端之間不必要的耦合。
   Widget _buildFoliateHeaderText() {
-    final currentPath = TocNavigator.findCurrentPath(
-      _tocEntries,
-      _epubPositionInfo?.progression,
-    );
+    final currentPath = _currentEpubTocPath();
     final chapterTitle = currentPath.isEmpty
         ? _displayBookTitle
         : convertText(currentPath.first.title, _textConversionMode);

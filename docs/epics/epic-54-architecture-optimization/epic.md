@@ -458,7 +458,7 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
   - (3) `header_footer`（OK＋PDF）：測試過期（失敗的是 EPUB，`issues.md` 原寫 PDF 已更正）。改寫為三條現行語意斷言＋`showFooter=true` 對照組＋PDF 同類案例（M-2）。
   - (4) `reader_screen_test`：(4-a) 測試過期（Epic 38 統一工具列），改斷言 FxlSettingsSheet；(4-b) 產品缺陷（甲）：智慧裁切後 `zoom=8.0`／pdfrx 原生 `min=8.0407`／`max=8.0`，delegate 透傳點火斷言，修箝位；(4-c) 測試過期（驅動已清退的原生 UI），改走手勢層畫框＋按 Key 確認，`manual→manual` 第二次矩形須不同（更強）。
   - (5) `tap_zone`（甲）：測試素材問題（單頁書）。新增 2 頁 FXL fixture，700ms 門檻不動。
-- **斷言強度變化**：無放寬。toc（覆蓋面不同：原斷言保護「開書預設收合」，新測試改為收合→展開雙向切換、不再保護初始狀態，Issue 19 修復時須改回，測試內有 TODO(Issue 19)）、header（三條＋對照組＋PDF 新增）、tap_zone（維持真的換頁）、reader_screen（Fxl 驗存在且正確；manual→manual 由相等改為不相等，更強）。
+- **斷言強度變化**：無放寬。toc（覆蓋面不同：原斷言保護「開書預設收合」，新測試改為收合→展開雙向切換、不再保護初始狀態，Issue 19 修復時須改回，測試內有 TODO(Issue 19)（已於 Issue 19 還原））、header（三條＋對照組＋PDF 新增）、tap_zone（維持真的換頁）、reader_screen（Fxl 驗存在且正確；manual→manual 由相等改為不相等，更強）。
 - **突變驗證**：header 案例 2 在 `showFooter` 條件強制 true 時失敗並印出角落文字存在，對照組通過（整檔同跑的對照組失敗證實為連帶污染）；toc 改寫前後皆紅→綠（基準紅、改寫後綠）。
 - **全量結果**：integration 38 檔（除人工驗收）34 通過；未通過 4 項皆非本 Issue 回歸——`book_metadata_channel_test`（乾淨樹同樣失敗，既存）、`sync_account/engine_test`（裝置對 `pbdev.jigong.org` 100% 丟包，環境）、`foliate_toc_footer_test`（整檔順序下 66% 漂移，隔離通過，flaky）。完整 `flutter test`：3692 通過、1 跳過、1 失敗（`pdf_reader_view_filters` 加粗 debouncer，乾淨樹同樣失敗，既存）。`flutter analyze` 乾淨；三支守衛全過。
 - **執行偏差**：見計畫附錄 A。
@@ -469,3 +469,17 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - M-1～M-5 已處理（M-2 審查建議的 `metrics.maxScale < zoom` 案例因建構子固定 `maxScale` 而無法建構，改註明不變式）；M-6（使用者對話原話）已由使用者確認無誤（2026-10-07）：`epic.md` Issue 18 結果段引用的「`1. 丙, 2 乙, 3 OK 並補PDF 補同類案例, 5 甲`」與「`4-a,c 皆為「是」, 4-b 甲`」屬實。
 
 **2026-10-07 Issue 18 已合併（PR #333）。** 真機 integration（`TCL 14`）5 個遺留檔案全數通過；`onLayoutResolved` 回報真實 `isFixedLayout`、`PdfFitSizeDelegate` 箝位 `minScale<=maxScale` 兩項產品缺陷已修。開書當下目錄「目前章節」判定不可靠移至 Issue 19（待處理）。
+
+**2026-10-07 Issue 19 實作完成與真機驗證結果**（分支 `epic-54/issue-19-toc-current-chapter`，worktree 內 Native 直接開發，無 subagent；使用者明確要求本案嚴禁 subagent。計畫見 `plans/plan-issue-19.md`）
+
+- 根因：`TocNavigator.findCurrentPath` 只用全書 progression 比對：(a) 無頁內錨點的頂層章節 `TocEntry.progression` 結構性為 `null`，永遠不會被選中；(b) 開書初始全書 fraction 偏高（foliate 位元組估計含當前頁 double-count，TCL 14 實測 0.554＝2×1763／6362），使後面章節的子節被誤判為已通過。
+- 演算法取捨與使用者決定（2026-10-07 對話原話：`B`；採計畫方案）：先比 spine index、同 spine 內才比 progression；同一 spine 內多錨點時，開書 progression 偏高可能多選到同章較後子節（不再跨章誤判），同章內精確須改 `main.js`（另案）。`findCurrentPath` 新增可選參數 `currentSpineIndex`，任一方缺 index 即退回舊規則；`ReaderScreen` 新增 `_currentEpubTocPath()` helper，四處呼叫共用；PDF 分支未動；`main.js`／vendor 未動。
+- 真機（`TCL 14`，序號 `3CEF42ECD491687`，Android 15。以下結果僅宣稱此裝置通過）：`epub_toc_test` 未收緊版通過（+1）；收緊版通過（+1，含新增「跳轉第三章後再開目錄」斷言：第二章維持收合、第三章 `ListTile.selected`）；突變（註解 `currentSpineIndex` 傳入）失敗於「開書在第一章，第二章應預設收合」（+0 -1），還原後通過（+1）。單元 `toc_navigator_test` 15/15（含新 9 案）；突變（`nodeIndex > currentSpineIndex` 改 `return true`）4 案失敗，還原後全過。
+- 斷言強度變化：收緊。`epub_toc_test` 移除 `TODO(Issue 19)` 與容錯分支，改回斷言開書第二章預設收合，並新增跳轉後判定斷言。
+- 全量與回歸（2026-10-08，`TCL 14` 序號 `3CEF42ECD491687`；僅宣稱此裝置通過）：完整 `flutter test` 3709 通過、1 跳過、1 失敗（`pdf_reader_view_filters_test` 加粗 debouncer，Issue 18 已記錄為乾淨樹同樣失敗的既存問題，與本 Issue 無關）；integration 回歸 `notes_bookmark_test` +2、`reader_header_footer_toggle_test` +4 皆通過；`flutter analyze` 乾淨；`check_integration_keys.js`／`check_l10n_hardcoded_strings.js` 全 PASS。
+
+**2026-10-08 Issue 19 程式審查回應**（審查報告 `reviews/review-code-issue-19.md`：Critical 0、Important 2、Minor 3）
+
+- I-1：使用者原話更正為 `B`（epic.md 與計畫附錄 A 兩處，先前誤記為 `B 本計畫方案`）。
+- I-2：補上上列完整 `flutter test` 與兩個 integration 檔的實測結果。
+- M-1：`_currentEpubTocPath()` 註解折行並補空行。M-2：新增單元測試釘住「`currentProgression` 為 null 但 spine 已知」的現行語意（`toc_navigator_test` 現 16 案）。M-3：真機突變當時未保留日誌，無法補檔，維持文字記載（不追溯杜撰）。
