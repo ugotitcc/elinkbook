@@ -483,3 +483,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - I-1：使用者原話更正為 `B`（epic.md 與計畫附錄 A 兩處，先前誤記為 `B 本計畫方案`）。
 - I-2：補上上列完整 `flutter test` 與兩個 integration 檔的實測結果。
 - M-1：`_currentEpubTocPath()` 註解折行並補空行。M-2：新增單元測試釘住「`currentProgression` 為 null 但 spine 已知」的現行語意（`toc_navigator_test` 現 16 案）。M-3：真機突變當時未保留日誌，無法補檔，維持文字記載（不追溯杜撰）。
+
+**2026-10-08 Issue 19 已合併（PR #334）。** EPUB 目錄「目前章節」改以 spine index 優先判定（`TocNavigator.findCurrentPath` 新增 `currentSpineIndex`），開書當下不再誤展開後面章節；`epub_toc_test` 已改回斷言開書預設收合。同一 spine 內多錨點的精確度須改 `main.js`，未列入，如需處理另立工單。
