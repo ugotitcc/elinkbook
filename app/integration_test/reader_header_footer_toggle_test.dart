@@ -32,7 +32,7 @@ Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
 /// （`_chromeVisible == false`）時螢幕邊角是否仍保留常駐頁首／頁尾文字；
 /// 工具列可見時，底部頁尾（EPUB 的 `_buildFoliateEpubFooter`、PDF 的
 /// `ReaderFooter`）恆顯示，與 `showFooter` 無關（epic-54 Issue 18 判定，
-/// 見 reviews/triage-issue-18.md §(3)）。
+/// 見 epic.md「Issue 18 實作完成與真機驗證結果」(3)）。
 ///
 /// 純 flutter test 環境下 EpubReaderView._channel 恆為 null（AndroidView
 /// 未真正建立），無法觸發 onPageRendered/onLayoutResolved 等原生回呼，
@@ -170,7 +170,16 @@ void main() {
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
     // 現行語意（epic-54 Issue 18 判定）：工具列可見時底部頁尾恆顯示，
-    // 與 showFooter 無關。
+    // 與 showFooter 無關。先輪詢等頁尾出現（位置資訊就緒，與對照組前置條件
+    // 一致），避免慢裝置上固定等待不足造成偶發失敗，也讓後面「收合後角落文字
+    // 不顯示」不會因 displayTotalPages 尚為 0 而空過。
+    final footerDeadline = DateTime.now().add(const Duration(seconds: 15));
+    while (find.byKey(const Key('reader_footer')).evaluate().isEmpty) {
+      if (DateTime.now().isAfter(footerDeadline)) {
+        fail('等待逾時：工具列底部頁尾未出現');
+      }
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     expect(find.byKey(const Key('reader_footer')), findsOneWidget,
         reason: 'showFooter=false 但工具列可見時，底部頁尾仍應顯示');
     // 角落頁首文字只在工具列收合時顯示，先收合再驗證（showHeader 已明確持久化為 true；全域預設其實是 false）。

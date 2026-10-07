@@ -235,7 +235,11 @@ void main() {
           strictMinScale: true,
         ).create();
 
-    test('嚴格模式有效頁：minScale<=maxScale', () {
+    // 說明：有效頁路徑的 zoom 已被 _zoomFor 以 kPdfFitMaxZoom 箝位（zoom <=
+    // maxScale），所以前後兩案（嚴格模式有效頁、非嚴格模式）是「不變式」守衛，
+    // 本身拿掉 _clampedMetrics 仍會通過；真正咬住箝位的是中間「pivot 頁無效時
+    // 透傳」案例（智慧重開崩潰路徑，已用拿掉箝位的突變驗證確認會紅）。
+    test('嚴格模式有效頁：minScale<=maxScale（不變式）', () {
       final m =
           _metrics(strictTiny(PdfFitMode.pageFit), layout: tinyLayout);
       expect(m.minScale, lessThanOrEqualTo(m.maxScale));
@@ -247,7 +251,7 @@ void main() {
       expect(m.minScale, lessThanOrEqualTo(m.maxScale));
     });
 
-    test('非嚴格模式小版面同理', () {
+    test('非嚴格模式小版面同理（不變式）', () {
       final m = _metrics(_delegate(PdfFitMode.pageFit), layout: tinyLayout);
       expect(m.minScale, lessThanOrEqualTo(m.maxScale));
     });

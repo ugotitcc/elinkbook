@@ -390,7 +390,7 @@ flutter test    # run_in_background，約 5～6 分鐘
 
 ## 附錄 A：執行偏差
 
-1. **執行方式**：inline（executing-plans），worktree Native 直接開發；使用者明確要求後續嚴禁 subagent，故最終審查改用自審（效力較弱，已聲明）。
+1. **執行方式**：inline（executing-plans），worktree Native 直接開發；使用者明確要求後續嚴禁 subagent，故最終審查改用自審（效力較弱，已聲明）。**後續更正**：之後使用者另以 `/requesting-code-review` 明確要求程式審查，審查由一個獨立 subagent 執行（報告 `reviews/review-code-issue-18.md`，不進版控），與上述「嚴禁 subagent」並存，以較晚的明確指令為準；實作與修訂仍為 Native。
 2. **Task 2 widget 測試省略**：計畫要求補「`widget.isFixedLayout==null` 且實為 FXL 時 `_isFixedLayout` 不被蓋成 false」的 widget 測試；實際 bug 在 JS bridge handler（widget 測試繞過它），`_handleFoliateLayoutResolved` 本體未動，任何經 `onLayoutResolved` 的 widget 測試在新舊碼下結果相同，既有 `:1875` 已覆蓋下游語意，真機 pin 由 integration 測試承擔。
    **（程式審查 I-1 後更正）** 上述省略理由只對「JS 是否轉發」成立，對「Dart 端收到 `info.isFixedLayout == true` 後的行為」不成立；已補 6 個 widget 測試（`widget.isFixedLayout` null／false／true × 原生回報 true／false，以版面按鈕開啟的 Sheet 觀察 `_isFixedLayout`），並以暫時拿掉 `widget.isFixedLayout != true` 保護條件做突變驗證：`widget=true、回報 false` 案例變紅，還原後全綠。
 3. **Task 3 Step 3 突變整檔同跑時對照組失敗**：證實為連帶污染（隔離單跑通過），非測試問題。
@@ -417,3 +417,17 @@ flutter test    # run_in_background，約 5～6 分鐘
 | M-3 worktree 指令 | 屬實，專案慣例為 `.worktrees/` | Task 0 Step 3 補指令 |
 | M-4 測試名稱同步 | 屬實 | Task 3 Step 4 補測試名稱與註解同步 |
 | 審查建議「提交前跑 `check_foliate_es_compat.js`」 | **不採納**：該腳本掃描釘定 vendor 的 ES 相容性，不涵蓋 `main.js` 的門檻值 | 改以 `grep` 確認兩端數值一致，並在計畫內註明原因 |
+
+## 附錄 C：程式審查回應（`reviews/review-code-issue-18.md`）
+
+審查結論 With fixes（Critical 0、Important 3、Minor 6），經使用者同意全部處理：
+
+- **I-1**：補 6 個 widget 測試（`widget.isFixedLayout` null／false／true × 原生回報 true／false），突變驗證拿掉 `widget.isFixedLayout != true` 保護條件會變紅；`epic.md` 補三種情形行為。
+- **I-2**：`epic.md`、附錄 A 第 10 項統一敘述，並在 `TCL 14` 重跑整檔後據實更新（結果見 `epic.md`）。
+- **I-3**：`issues.md` 表格空行已移除。
+- **M-1**：`epic_toc_test` 文字改為「覆蓋面不同」，測試內加 `TODO(Issue 19)`。
+- **M-2**：`pdf_fit_size_delegate_test` 的兩個不變式案例註明不保護箝位；審查建議的「`metrics.maxScale < zoom`」案例**無法建構**——`PdfFitSizeDelegate` 建構子把 `maxScale` 固定為 `kPdfFitMaxZoom`，沒有公開途徑傳入更小值，故不新增。
+- **M-3**：補兩個優先序案例（JS 回報優先於 hint，兩個方向）。
+- **M-4**：`reader_header_footer_toggle_test` 的 showFooter=false 案例也套用輪詢等待頁尾。
+- **M-5**：測試註解不再引用 gitignore 的 `triage-issue-18.md`，改指向 `epic.md`；本計畫內提到該報告處屬計畫步驟紀錄，該檔案為本機未版控文件，關鍵證據已留在 `epic.md`。
+- **M-6**：`epic.md` 引用的使用者對話原話，請使用者自行核對；若有誤修正文件而非測試。

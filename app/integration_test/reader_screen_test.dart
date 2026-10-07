@@ -179,7 +179,7 @@ void main() {
       (tester) async {
     // epic-54 Issue 18（使用者決定 2026-10-07）：Epic 38 起三格式版面按鈕
     // 統一顯示、僅回呼分派不同，舊斷言「最終不顯示」與設計直接矛盾，改為
-    // 驗存在且正確（見 reviews/triage-issue-18.md §(4-a)）。
+    // 驗存在且正確（見 epic.md「Issue 18 實作完成與真機驗證結果」(4-a)）。
     final samplePath = await _stageAssetAsFile(
         'test/fixtures/sample_fixed_layout.epub', 'sample_toggle_fixed.epub');
     addTearDown(() async {
@@ -913,7 +913,7 @@ void main() {
     //（`pdf_crop_frame_gesture_layer`）拖畫＋置中確認鈕
     //（`pdf_crop_frame_confirm`，無框時停用），已無「四角控制點」與右下角
     // 確認鈕（舊原生 CropOverlayView 概念，見
-    // reviews/triage-issue-18.md §(4-c)）。此處在手勢層上拖出 0.5×0.5 的框
+    // epic.md「Issue 18 實作完成與真機驗證結果」(4-c)）。此處在手勢層上拖出 0.5×0.5 的框
     //（任一邊須 ≥0.05 才有效），再按 Key 點確認。
     expect(find.byKey(const Key('pdf_crop_frame_gesture_layer')),
         findsOneWidget);
@@ -956,7 +956,7 @@ void main() {
     //（控制點概念已由 epic-58 取代），兩次畫出不同的框並確認，第二次的矩形
     // 應與第一次不同——比原「已知限制」版（只能斷言相等）更強，真正驗到
     // manual→manual 重新確認有確實寫入（見
-    // reviews/triage-issue-18.md §(4-c)）。
+    // epic.md「Issue 18 實作完成與真機驗證結果」(4-c)）。
     final samplePath = await _stageAssetAsFile(
         'test/fixtures/sample.pdf', 'sample_pdf_crop_manual_readjust.pdf');
     addTearDown(() async {

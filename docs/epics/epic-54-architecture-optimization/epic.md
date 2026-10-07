@@ -458,7 +458,7 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
   - (3) `header_footer`（OK＋PDF）：測試過期（失敗的是 EPUB，`issues.md` 原寫 PDF 已更正）。改寫為三條現行語意斷言＋`showFooter=true` 對照組＋PDF 同類案例（M-2）。
   - (4) `reader_screen_test`：(4-a) 測試過期（Epic 38 統一工具列），改斷言 FxlSettingsSheet；(4-b) 產品缺陷（甲）：智慧裁切後 `zoom=8.0`／pdfrx 原生 `min=8.0407`／`max=8.0`，delegate 透傳點火斷言，修箝位；(4-c) 測試過期（驅動已清退的原生 UI），改走手勢層畫框＋按 Key 確認，`manual→manual` 第二次矩形須不同（更強）。
   - (5) `tap_zone`（甲）：測試素材問題（單頁書）。新增 2 頁 FXL fixture，700ms 門檻不動。
-- **斷言強度變化**：無放寬。toc（收合→展開雙向不低於原單向）、header（三條＋對照組＋PDF 新增）、tap_zone（維持真的換頁）、reader_screen（Fxl 驗存在且正確；manual→manual 由相等改為不相等，更強）。
+- **斷言強度變化**：無放寬。toc（覆蓋面不同：原斷言保護「開書預設收合」，新測試改為收合→展開雙向切換、不再保護初始狀態，Issue 19 修復時須改回，測試內有 TODO(Issue 19)）、header（三條＋對照組＋PDF 新增）、tap_zone（維持真的換頁）、reader_screen（Fxl 驗存在且正確；manual→manual 由相等改為不相等，更強）。
 - **突變驗證**：header 案例 2 在 `showFooter` 條件強制 true 時失敗並印出角落文字存在，對照組通過（整檔同跑的對照組失敗證實為連帶污染）；toc 改寫前後皆紅→綠（基準紅、改寫後綠）。
 - **全量結果**：integration 38 檔（除人工驗收）34 通過；未通過 4 項皆非本 Issue 回歸——`book_metadata_channel_test`（乾淨樹同樣失敗，既存）、`sync_account/engine_test`（裝置對 `pbdev.jigong.org` 100% 丟包，環境）、`foliate_toc_footer_test`（整檔順序下 66% 漂移，隔離通過，flaky）。完整 `flutter test`：3692 通過、1 跳過、1 失敗（`pdf_reader_view_filters` 加粗 debouncer，乾淨樹同樣失敗，既存）。`flutter analyze` 乾淨；三支守衛全過。
 - **執行偏差**：見計畫附錄 A。

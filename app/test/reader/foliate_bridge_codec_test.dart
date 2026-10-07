@@ -532,6 +532,22 @@ void main() {
       expect(info.writingMode, WritingMode.horizontal);
     });
 
+    test('JS 回報 false 優先於 hint 為 true（真實回報優先於開書當下的提示）', () {
+      final info = parseFoliateLayoutResolved(
+        ['horizontal', false],
+        isFixedLayoutHint: true,
+      );
+      expect(info.isFixedLayout, isFalse);
+    });
+
+    test('JS 回報 true 優先於 hint 為 false（真實回報優先於開書當下的提示）', () {
+      final info = parseFoliateLayoutResolved(
+        ['horizontal', true],
+        isFixedLayoutHint: false,
+      );
+      expect(info.isFixedLayout, isTrue);
+    });
+
     test('第二個元素非布林時退回 hint（不拋出例外）', () {
       final info = parseFoliateLayoutResolved(
         ['horizontal', 'yes'],

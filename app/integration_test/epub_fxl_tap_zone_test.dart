@@ -28,7 +28,7 @@ void main() {
       (tester) async {
     // epic-54 Issue 18（使用者決定 2026-10-07，選項甲）：本測試驗證「真的換頁」，
     // 須使用 2 頁以上的 FXL 書；單頁書上 nextPage 無處可跳、locatorJson 天生不變
-    //（見 reviews/triage-issue-18.md §(5)），故改用 sample_fxl_multi_page.epub。
+    //（見 epic.md「Issue 18 實作完成與真機驗證結果」(5)），故改用 sample_fxl_multi_page.epub。
     final samplePath = await _stageAssetAsFile(
         'test/fixtures/sample_fxl_multi_page.epub', 'sample_fxl_tap_zone.epub');
     addTearDown(() async {
