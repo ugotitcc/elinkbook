@@ -52,6 +52,10 @@ ReaderFeatureDependencies readerFeatureDependenciesFromLegacy({
     searchRepository:
         searchRepository ?? need(features.searchRepository, 'searchRepository'),
     isFullTextSearchAvailable: features.isFullTextSearchAvailable,
+    fullTextSearchSettingsRepository: need(
+      features.fullTextSearchSettingsRepository,
+      'fullTextSearchSettingsRepository',
+    ),
     readingStatsRepository:
         need(features.readingStatsRepository, 'readingStatsRepository'),
     readerActivityTracker:

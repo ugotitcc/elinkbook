@@ -17,6 +17,7 @@ import '../support/fake_book_reader_prefs_repository.dart';
 import '../support/fake_bookmarks_repository.dart';
 import '../support/fake_custom_fonts_repository.dart';
 import '../support/fake_downloadable_font_store.dart';
+import '../support/fake_full_text_search_settings_repository.dart';
 import '../support/fake_highlights_repository.dart';
 import '../support/fake_layout_preset_repository.dart';
 import '../support/fake_library_repository.dart';
@@ -46,7 +47,7 @@ Book _testBook() {
 
 void main() {
   group('buildReaderScreen', () {
-    test('欄位對帳：dependencies 18 個欄位逐一同一實例，書本欄位來自 book', () {
+    test('欄位對帳：dependencies 19 個欄位逐一同一實例，書本欄位來自 book', () {
       final book = _testBook();
       final prefsManager = FakeReaderPrefsManager();
       final libraryRepository = FakeLibraryRepository();
@@ -64,6 +65,8 @@ void main() {
       final searchRepository = FakeSearchRepository();
       final importService = FakeBookImportService();
       final readingStatsRepository = FakeReadingStatsRepository();
+      final fullTextSearchSettingsRepository =
+          FakeFullTextSearchSettingsRepository();
       final syncCheckpointTrigger = SyncCheckpointTrigger(
         runCheckpoint: () async => SyncCheckpointResult.notLoggedIn,
       );
@@ -83,6 +86,7 @@ void main() {
         isFullTextSearchAvailable: false,
         bookImportService: importService,
         readingStatsRepository: readingStatsRepository,
+        fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
       );
       final sync = LibrarySyncDependencies(
         syncCheckpointTrigger: syncCheckpointTrigger,
@@ -123,6 +127,10 @@ void main() {
       expect(dependencies.searchRepository, same(searchRepository));
       expect(dependencies.isFullTextSearchAvailable, isFalse);
       expect(dependencies.readingStatsRepository, same(readingStatsRepository));
+      expect(
+        dependencies.fullTextSearchSettingsRepository,
+        same(fullTextSearchSettingsRepository),
+      );
       expect(dependencies.readerActivityTracker, same(readerActivityTracker));
       expect(dependencies.syncCheckpointTrigger, same(syncCheckpointTrigger));
       expect(dependencies.ttsProvider, same(ttsProvider));
@@ -203,6 +211,10 @@ void main() {
           'readingStatsRepository',
           full.readingStatsRepository,
         ),
+        fullTextSearchSettingsRepository: keep(
+          'fullTextSearchSettingsRepository',
+          full.fullTextSearchSettingsRepository,
+        ),
       );
     }
 
@@ -221,6 +233,7 @@ void main() {
       'searchRepository',
       'bookImportService',
       'readingStatsRepository',
+      'fullTextSearchSettingsRepository',
     ];
 
     for (final field in nullFields) {
@@ -312,6 +325,10 @@ void main() {
       expect(
         dependencies.readingStatsRepository,
         same(features.readingStatsRepository),
+      );
+      expect(
+        dependencies.fullTextSearchSettingsRepository,
+        same(features.fullTextSearchSettingsRepository),
       );
       expect(
         dependencies.readerActivityTracker,

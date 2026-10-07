@@ -3,11 +3,12 @@ import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_bookmarks_repository.dart';
+import 'fake_full_text_search_settings_repository.dart';
 import 'fake_reader_feature_dependencies.dart';
 
 void main() {
   group('fakeReaderFeatureDependencies', () {
-    test('不傳任何覆寫時，18 個欄位全部有預設 fake（非 null）', () {
+    test('不傳任何覆寫時，19 個欄位全部有預設 fake（非 null）', () {
       final deps = fakeReaderFeatureDependencies();
 
       expect(deps.prefsManager, isNotNull);
@@ -21,6 +22,7 @@ void main() {
       expect(deps.layoutPresetRepository, isNotNull);
       expect(deps.bookReaderPrefsRepository, isNotNull);
       expect(deps.searchRepository, isNotNull);
+      expect(deps.fullTextSearchSettingsRepository, isNotNull);
       expect(deps.readingStatsRepository, isNotNull);
       expect(deps.readerActivityTracker, isNotNull);
       expect(deps.syncCheckpointTrigger, isNotNull);
@@ -40,6 +42,16 @@ void main() {
 
       expect(deps.bookmarksRepository, same(bookmarks));
       expect(deps.isFullTextSearchAvailable, isFalse);
+    });
+
+    test('fullTextSearchSettingsRepository 覆寫原樣（同一實例）帶入', () {
+      final fts = FakeFullTextSearchSettingsRepository();
+
+      final deps = fakeReaderFeatureDependencies(
+        fullTextSearchSettingsRepository: fts,
+      );
+
+      expect(deps.fullTextSearchSettingsRepository, same(fts));
     });
 
     test('兩次呼叫不共用狀態（各自獨立的 fake 實例）', () {
@@ -88,6 +100,7 @@ void main() {
       expect(features.searchRepository, isNotNull);
       expect(features.bookImportService, isNotNull);
       expect(features.readingStatsRepository, isNotNull);
+      expect(features.fullTextSearchSettingsRepository, isNotNull);
       expect(sync.syncCheckpointTrigger, isNotNull);
     });
   });

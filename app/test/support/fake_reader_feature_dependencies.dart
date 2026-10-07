@@ -14,6 +14,7 @@ import 'package:elinkbook/reader/tts_audio_handler_startup.dart';
 import 'package:elinkbook/reader/tts_provider.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/reader_feature_dependencies.dart';
+import 'package:elinkbook/search/full_text_search_settings_repository.dart';
 import 'package:elinkbook/search/search_repository.dart';
 import 'package:elinkbook/stats/reading_stats_repository.dart';
 import 'package:elinkbook/sync/sync_checkpoint_result.dart';
@@ -24,6 +25,7 @@ import 'fake_book_reader_prefs_repository.dart';
 import 'fake_bookmarks_repository.dart';
 import 'fake_custom_fonts_repository.dart';
 import 'fake_downloadable_font_store.dart';
+import 'fake_full_text_search_settings_repository.dart';
 import 'fake_highlights_repository.dart';
 import 'fake_layout_preset_repository.dart';
 import 'fake_library_repository.dart';
@@ -49,6 +51,7 @@ ReaderFeatureDependencies fakeReaderFeatureDependencies({
   BookReaderPrefsRepository? bookReaderPrefsRepository,
   SearchRepository? searchRepository,
   bool isFullTextSearchAvailable = true,
+  FullTextSearchSettingsRepository? fullTextSearchSettingsRepository,
   ReadingStatsRepository? readingStatsRepository,
   ReaderActivityTracker? readerActivityTracker,
   SyncCheckpointTrigger? syncCheckpointTrigger,
@@ -73,6 +76,8 @@ ReaderFeatureDependencies fakeReaderFeatureDependencies({
         bookReaderPrefsRepository ?? FakeBookReaderPrefsRepository(),
     searchRepository: searchRepository ?? FakeSearchRepository(),
     isFullTextSearchAvailable: isFullTextSearchAvailable,
+    fullTextSearchSettingsRepository: fullTextSearchSettingsRepository ??
+        FakeFullTextSearchSettingsRepository(),
     readingStatsRepository:
         readingStatsRepository ?? FakeReadingStatsRepository(),
     readerActivityTracker: readerActivityTracker ?? ReaderActivityTracker(),
@@ -110,6 +115,7 @@ LibraryReaderFeatureRepositories completeLegacyReaderFeatures({
   SearchRepository? searchRepository,
   BookImportService? bookImportService,
   ReadingStatsRepository? readingStatsRepository,
+  FullTextSearchSettingsRepository? fullTextSearchSettingsRepository,
 }) {
   return LibraryReaderFeatureRepositories(
     bookmarksRepository: bookmarksRepository ?? FakeBookmarksRepository(),
@@ -132,6 +138,8 @@ LibraryReaderFeatureRepositories completeLegacyReaderFeatures({
     bookImportService: bookImportService ?? FakeBookImportService(),
     readingStatsRepository:
         readingStatsRepository ?? FakeReadingStatsRepository(),
+    fullTextSearchSettingsRepository: fullTextSearchSettingsRepository ??
+        FakeFullTextSearchSettingsRepository(),
   );
 }
 
