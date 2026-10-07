@@ -128,15 +128,9 @@ void main() {
             '';
 
     // 開啟目錄，驗證頂層 3 章皆顯示。
-    // 已知限制（epic-54 Issue 19）：開書當下全書 progression 估計偏高
-    //（小章節單頁時 foliate 位元組估計 double-count，見
-    // epic.md「Issue 18 實作完成與真機驗證結果」(1)），且頂層章節 TocEntry.progression
-    // 結構性為 null，使 findCurrentPath 落到第二章子節、第二章預設展開。
-    // 因此此處不斷言初始收合，而是先把狀態收斂到「收起」再驗證展開切換——
-    // 無論初始展開與否，收合→展開雙向切換本身都被驗證。注意覆蓋面與原斷言不同：
-    // 原斷言保護「開書預設收合」，新測試不再保護初始狀態（該缺陷由 Issue 19
-    // 處理，修復時須把本測試改回斷言初始收合）。
-    // TODO(Issue 19)：修復目前章節判定後，改回斷言「開書時第二章預設收合」。
+    // epic-54 Issue 19 修復後：目前章節改以 spine index 判定，開書在第一章時
+    // 第二章必須預設收合（保護「開書預設收合」，本測試曾於 Issue 18 為繞過
+    // 已知缺陷而放寬，現已改回）。
     await _pumpUntilTocButtonEnabled(tester);
     await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
     await tester.pumpAndSettle();
@@ -161,14 +155,9 @@ void main() {
       matching: find.byType(IconButton),
     );
     expect(expandButton, findsOneWidget);
-    // 若第二章已預設展開（Issue 19 已知限制），先收起再展開，確保後續斷言
-    // 與初始狀態無關、且雙向切換皆被驗證。
-    if (find.text('第一節').evaluate().isNotEmpty) {
-      await tester.tap(expandButton);
-      await tester.pump();
-      expect(find.text('第一節'), findsNothing);
-      expect(find.text('第二節'), findsNothing);
-    }
+    // 開書預設只展開目前章節（第一章）；第二章的子節此時不得出現。
+    expect(find.text('第一節'), findsNothing, reason: '開書在第一章，第二章應預設收合');
+    expect(find.text('第二節'), findsNothing);
     await tester.tap(expandButton);
     await tester.pump();
     expect(find.text('第一節'), findsOneWidget);
@@ -193,6 +182,23 @@ void main() {
             '';
     expect(finalProgressText, isNot(initialProgressText),
         reason: '跳轉到第三章後頁尾進度應與開書時的起始位置不同');
+    // 跳到第三章後再開目錄：目前章節應為第三章，第二章子節不得展開
+    // （驗證判定不只在開書當下正確，epic-54 Issue 19）。
+    await _pumpUntilTocButtonEnabled(tester);
+    await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
+    await tester.pumpAndSettle();
+    expect(find.byType(TocBottomSheet), findsOneWidget);
+    expect(find.text('第一節'), findsNothing, reason: '跳到第三章後第二章應維持收合');
+    expect(find.text('第二節'), findsNothing);
+    // 第三章應被標示為目前章節（TocBottomSheet 以 ListTile.selected 表示）。
+    final ch3Tile =
+        tester.widget<ListTile>(find.widgetWithText(ListTile, '第三章：結局'));
+    expect(ch3Tile.selected, isTrue, reason: '跳轉後第三章應標示為目前章節');
+
+    // 測試自行清理：關閉目錄，避免懸置的 Modal 影響 teardown 或後續案例。
+    await tester.tap(find.byKey(const Key('toc_bottom_sheet_close_button')));
+    await tester.pumpAndSettle();
+    expect(find.byType(TocBottomSheet), findsNothing, reason: '目錄驗證完成後應正常關閉');
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
   });
 }
