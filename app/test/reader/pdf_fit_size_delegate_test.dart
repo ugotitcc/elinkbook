@@ -218,4 +218,38 @@ void main() {
       expect(a.hashCode, c.hashCode);
     });
   });
+
+  group('裁切後小版面恆滿足 minScale<=maxScale（epic-54 Issue 18）', () {
+    // 智慧裁切後的版面：頁面只剩 20x20（裁切框內），400x400 視窗下 Fit 基準
+    // 遠超 kPdfFitMaxZoom；TCL 14 真機實測 pdfrx 原生 minScale=8.0407 >
+    // maxScale=8.0，透傳即觸發 InteractiveViewer 斷言崩潰。
+    final tinyLayout = PdfPageLayout(
+      pageLayouts: const [Rect.fromLTWH(8, 8, 20, 20)],
+      documentSize: const Size(36, 36),
+    );
+    PdfViewerSizeDelegate strictTiny(PdfFitMode mode) =>
+        PdfFitSizeDelegateProvider(
+          fitMode: mode,
+          unitRectOf: _unitRectOf,
+          pageMargin: 8,
+          strictMinScale: true,
+        ).create();
+
+    test('嚴格模式有效頁：minScale<=maxScale', () {
+      final m =
+          _metrics(strictTiny(PdfFitMode.pageFit), layout: tinyLayout);
+      expect(m.minScale, lessThanOrEqualTo(m.maxScale));
+    });
+
+    test('pivot 頁無效時透傳亦須滿足 minScale<=maxScale（智慧重開崩潰路徑）', () {
+      final m = _metrics(strictTiny(PdfFitMode.pageFit),
+          layout: tinyLayout, pageNumber: null);
+      expect(m.minScale, lessThanOrEqualTo(m.maxScale));
+    });
+
+    test('非嚴格模式小版面同理', () {
+      final m = _metrics(_delegate(PdfFitMode.pageFit), layout: tinyLayout);
+      expect(m.minScale, lessThanOrEqualTo(m.maxScale));
+    });
+  });
 }
