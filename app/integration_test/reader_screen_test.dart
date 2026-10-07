@@ -15,8 +15,10 @@ import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
+import 'package:elinkbook/reader/pdf_crop_frame_overlay.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
+import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
@@ -173,7 +175,11 @@ void main() {
             '但畫面顯示了錯誤');
   });
 
-  testWidgets('開啟定樣式範例 EPUB，⚙️版面按鈕最終不顯示', (tester) async {
+  testWidgets('開啟定樣式範例 EPUB，⚙️版面按鈕存在且點開後是 FxlSettingsSheet（非 ReaderSettingsSheet）',
+      (tester) async {
+    // epic-54 Issue 18（使用者決定 2026-10-07）：Epic 38 起三格式版面按鈕
+    // 統一顯示、僅回呼分派不同，舊斷言「最終不顯示」與設計直接矛盾，改為
+    // 驗存在且正確（見 epic.md「Issue 18 實作完成與真機驗證結果」(4-a)）。
     final samplePath = await _stageAssetAsFile(
         'test/fixtures/sample_fixed_layout.epub', 'sample_toggle_fixed.epub');
     addTearDown(() async {
@@ -198,11 +204,19 @@ void main() {
           find
               .byKey(const Key('reader_chrome_layout_button'))
               .evaluate()
-              .isEmpty,
+              .isNotEmpty,
       timeout: const Duration(seconds: 10),
     );
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FxlSettingsSheet), findsOneWidget,
+        reason: 'FXL 書籍的版面按鈕應開啟 FxlSettingsSheet');
+    expect(find.byType(ReaderSettingsSheet), findsNothing,
+        reason: 'FXL 書籍不應誤開流式書籍的 ReaderSettingsSheet');
   });
 
   testWidgets('開啟版面設定 Bottom Sheet，調整字型大小後畫面持續渲染成功、無 onError',
@@ -895,39 +909,40 @@ void main() {
     await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
     await tester.pump(const Duration(seconds: 1));
 
-    // 拖拉右下角控制點：從 PdfReaderView 區域內、預設初始裁切框（四周
-    // 10% 邊距，見 PdfReaderView.kt 的 enterCropEditMode()）的右下角附近
-    // 往左上方拖曳一段距離，縮小裁切框範圍。實際手勢座標依真機畫面尺寸
-    // 計算——若 tester.drag()/tester.timedDrag() 對疊加於 AndroidView 之
-    // 上的原生 CropOverlayView 無法正確傳遞觸控事件，改用
-    // `adb shell input touchscreen swipe`（座標依 `adb shell wm size`
-    // 查得的真機解析度換算），並在報告中誠實記錄實際採用的方式。
-    final pdfViewBox = tester.getRect(find.byType(PdfReaderView));
-    final approxBottomRightHandle = Offset(
-      pdfViewBox.left + pdfViewBox.width * 0.9,
-      pdfViewBox.top + pdfViewBox.height * 0.9,
+    // epic-54 Issue 18（使用者決定 2026-10-07）：現行框選是整面手勢層
+    //（`pdf_crop_frame_gesture_layer`）拖畫＋置中確認鈕
+    //（`pdf_crop_frame_confirm`，無框時停用），已無「四角控制點」與右下角
+    // 確認鈕（舊原生 CropOverlayView 概念，見
+    // epic.md「Issue 18 實作完成與真機驗證結果」(4-c)）。此處在手勢層上拖出 0.5×0.5 的框
+    //（任一邊須 ≥0.05 才有效），再按 Key 點確認。
+    expect(find.byKey(const Key('pdf_crop_frame_gesture_layer')),
+        findsOneWidget);
+    final gestureBox =
+        tester.getRect(find.byKey(const Key('pdf_crop_frame_gesture_layer')));
+    final dragStart = Offset(
+      gestureBox.left + gestureBox.width * 0.25,
+      gestureBox.top + gestureBox.height * 0.3,
     );
-    final dragGesture = await tester.startGesture(approxBottomRightHandle);
+    final dragGesture = await tester.startGesture(dragStart);
     await tester.pump(const Duration(milliseconds: 50));
-    await dragGesture.moveBy(const Offset(-80, -80));
+    await dragGesture.moveBy(Offset(
+      gestureBox.width * 0.5,
+      gestureBox.height * 0.5,
+    ));
     await tester.pump(const Duration(milliseconds: 50));
     await dragGesture.up();
     await tester.pump(const Duration(seconds: 1));
 
-    // 點擊確認按鈕：CropOverlayView 把它畫在固定右下角（見
-    // CONFIRM_BUTTON_MARGIN_DP/CONFIRM_BUTTON_RADIUS_DP 常數），螢幕座標
-    // 需依裝置 density 換算，實測時直接對 PdfReaderView 區域右下角附近
-    // 嘗試點擊即可命中（確認按鈕的視覺半徑遠大於一般手指誤差）。
-    final approxConfirmButton = Offset(
-      pdfViewBox.right - 40,
-      pdfViewBox.bottom - 40,
-    );
-    await tester.tapAt(approxConfirmButton);
+    await tester.tap(find.byKey(const Key('pdf_crop_frame_confirm')));
     await tester.pump(const Duration(seconds: 2));
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
-    expect(find.byType(PdfSettingsSheet), findsOneWidget,
-        reason: '確認框選後應重新開啟 PdfSettingsSheet 顯示套用結果');
+    // 現行 UX（epic-58）：確認後直接套用並回到閱讀畫面，不再重開
+    // PdfSettingsSheet（舊原生流程的行為；新流程見 onConfirm 實作）。
+    expect(find.byType(PdfCropFrameOverlay), findsNothing,
+        reason: '確認框選後應退出裁切互動模式');
+    expect(find.byType(PdfSettingsSheet), findsNothing,
+        reason: '現行確認後不重開 PdfSettingsSheet，直接套用回到閱讀畫面');
 
     final saved = (await prefsManager.load(bookId)).bookPrefs;
     expect(saved.pdfCropMode, PdfCropMode.manual);
@@ -935,17 +950,13 @@ void main() {
   });
 
   testWidgets(
-      'PDF 手動裁切重新進入互動模式並再次確認（manual→manual）流程不出錯，且'
-      '第二次確認結果持續正確持久化（回歸測試：原生端 cropRect 欄位過去只在'
-      'cropMode 變動時才更新，manual→manual 的重新確認不會觸發此更新，見'
-      'PdfReaderView.kt enterCropEditMode() 的修復。'
-      '已知限制：本測試在此真機／Flutter 版本組合下，`tester.startGesture`'
-      '／`dragFrom`／原始 PointerEvent 注入／adb 觸控注入皆無法讓'
-      'CropOverlayView 的控制點產生位移（詳細診斷見'
-      'task-6-fix-report.md），因此本測試無法驗證「兩次確認的矩形數值不同」，'
-      '只驗證 manual→manual 重新確認路徑本身不出錯、且結果持續正確持久化——'
-      '這仍是既有測試套件未涵蓋的新情境，既有的單輪手動裁切測試從未重新'
-      '進入過裁切互動模式）', (tester) async {
+      'PDF 手動裁切重新進入互動模式並再次確認（manual→manual），第二次確認'
+      '寫入新的矩形值且持續正確持久化', (tester) async {
+    // epic-54 Issue 18（使用者決定 2026-10-07）：現行框選是手勢層拖畫
+    //（控制點概念已由 epic-58 取代），兩次畫出不同的框並確認，第二次的矩形
+    // 應與第一次不同——比原「已知限制」版（只能斷言相等）更強，真正驗到
+    // manual→manual 重新確認有確實寫入（見
+    // epic.md「Issue 18 實作完成與真機驗證結果」(4-c)）。
     final samplePath = await _stageAssetAsFile(
         'test/fixtures/sample.pdf', 'sample_pdf_crop_manual_readjust.pdf');
     addTearDown(() async {
@@ -977,22 +988,33 @@ void main() {
     await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
     await tester.pump(const Duration(seconds: 2));
 
-    final pdfViewBox = tester.getRect(find.byType(PdfReaderView));
-    final approxConfirmButton = Offset(
-      pdfViewBox.right - 40,
-      pdfViewBox.bottom - 40,
-    );
+    // 第一次框選：在手勢層上拖出第一個框並按 Key 確認（none → manual）。
+    // 小工具：依比例在手勢層上拖畫出框。
+    Future<void> drawBox(double l, double t, double r, double b) async {
+      final box =
+          tester.getRect(find.byKey(const Key('pdf_crop_frame_gesture_layer')));
+      final gesture = await tester.startGesture(
+        Offset(box.left + box.width * l, box.top + box.height * t),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+      await gesture.moveBy(Offset(
+        box.width * (r - l),
+        box.height * (b - t),
+      ));
+      await tester.pump(const Duration(milliseconds: 50));
+      await gesture.up();
+      await tester.pump(const Duration(seconds: 1));
+    }
 
-    // 第一次框選：none → manual 的首次確認（本身不是本測試鎖定驗證的
-    // bug 情境，cropMode 有變動，既有 didUpdateWidget 機制本來就會正確
-    // 更新原生端狀態；此處只是必要的前置步驟，讓 cropMode 進入 manual，
-    // 為下方「manual → manual 重新確認」鋪路）。
-    await tester.tapAt(approxConfirmButton);
+    expect(find.byKey(const Key('pdf_crop_frame_gesture_layer')),
+        findsOneWidget);
+    await drawBox(0.2, 0.25, 0.65, 0.7);
+    await tester.tap(find.byKey(const Key('pdf_crop_frame_confirm')));
     await tester.pump(const Duration(seconds: 2));
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
-    expect(find.byType(PdfSettingsSheet), findsOneWidget,
-        reason: '第一次確認框選後應重新開啟 PdfSettingsSheet');
+    expect(find.byType(PdfCropFrameOverlay), findsNothing,
+        reason: '第一次確認框選後應退出裁切互動模式');
 
     final firstSaved = (await prefsManager.load(bookId)).bookPrefs;
     expect(firstSaved.pdfCropMode, PdfCropMode.manual);
@@ -1000,14 +1022,11 @@ void main() {
     expect(firstRect, isNotNull);
 
     // 重新進入手動裁切互動模式——這是本測試要驗證的核心情境：cropMode
-    // 在這次重新調整前後全程維持 manual、不曾變動，因此不會像
-    // none/autoDetect → manual 的首次框選那樣，透過
-    // PdfReaderView.dart 的 didUpdateWidget 偵測到 cropMode 變化、間接送出
-    // setPdfPreferences 更新原生端 cropRect 欄位（見
-    // reader_screen.dart _handleCropRectSelected／PdfReaderView.dart
-    // didUpdateWidget）。修復前，這種情境下原生端 cropRect 欄位完全不會
-    // 被更新；修復後，enterCropEditMode() 的 onConfirm 回呼本身會直接
-    // 更新原生端狀態。
+    // 在這次重新調整前後全程維持 manual。現行機制下 onConfirm 直接經
+    // _handlePrefsChanged 寫入 prefs（見 ReaderScreen 的 onConfirm 實作），
+    // 不依賴 cropMode 變動，因此第二次確認必須寫入新的矩形值。
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
@@ -1015,26 +1034,26 @@ void main() {
 
     expect(find.byType(PdfSettingsSheet), findsNothing,
         reason: '第二次點擊手動選區後應再次關閉 PdfSettingsSheet、進入裁切互動模式');
+    expect(find.byKey(const Key('pdf_crop_frame_gesture_layer')),
+        findsOneWidget);
 
-    await tester.tapAt(approxConfirmButton);
+    // 第二次畫出明顯不同的框並確認。
+    await drawBox(0.35, 0.4, 0.85, 0.9);
+    await tester.tap(find.byKey(const Key('pdf_crop_frame_confirm')));
     await tester.pump(const Duration(seconds: 2));
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
-    expect(find.byType(PdfSettingsSheet), findsOneWidget,
-        reason: '第二次確認框選後應再次重新開啟 PdfSettingsSheet');
+    expect(find.byType(PdfCropFrameOverlay), findsNothing,
+        reason: '第二次確認框選後應退出裁切互動模式');
 
     final secondSaved = (await prefsManager.load(bookId)).bookPrefs;
     expect(secondSaved.pdfCropMode, PdfCropMode.manual);
     final secondRect = secondSaved.pdfCropRect;
     expect(secondRect, isNotNull);
-    // 因本測試無法驅動 CropOverlayView 的控制點產生實際位移（見上方測試
-    // 名稱中的已知限制說明），第二次確認的矩形數值預期與第一次相同——
-    // 這裡仍斷言其「與第一次確認一致」，確保 manual→manual 重新確認路徑
-    // 至少不會意外把資料改壞（例如被清空、變成不同分頁的殘留值等）。
-    // 修復本身的即時渲染效果（原生端 cropRect 是否確實同步更新），已改用
-    // task-6-fix-report.md 記錄的原生端暫時性 Log.i 診斷輸出交叉核對，
-    // 詳見報告書「已知限制與替代驗證方式」章節。
-    expect(secondRect, equals(firstRect));
+    // 兩次畫出不同的框，第二次的矩形必須與第一次不同——證明 manual→manual
+    // 重新確認確實寫入新值（比舊版「只能斷言相等」更強）。
+    expect(secondRect, isNot(equals(firstRect)),
+        reason: '第二次確認應寫入新畫的框選矩形，而非沿用第一次的值');
   });
 
 }

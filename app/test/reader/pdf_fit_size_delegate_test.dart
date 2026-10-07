@@ -218,4 +218,42 @@ void main() {
       expect(a.hashCode, c.hashCode);
     });
   });
+
+  group('裁切後小版面恆滿足 minScale<=maxScale（epic-54 Issue 18）', () {
+    // 智慧裁切後的版面：頁面只剩 20x20（裁切框內），400x400 視窗下 Fit 基準
+    // 遠超 kPdfFitMaxZoom；TCL 14 真機實測 pdfrx 原生 minScale=8.0407 >
+    // maxScale=8.0，透傳即觸發 InteractiveViewer 斷言崩潰。
+    final tinyLayout = PdfPageLayout(
+      pageLayouts: const [Rect.fromLTWH(8, 8, 20, 20)],
+      documentSize: const Size(36, 36),
+    );
+    PdfViewerSizeDelegate strictTiny(PdfFitMode mode) =>
+        PdfFitSizeDelegateProvider(
+          fitMode: mode,
+          unitRectOf: _unitRectOf,
+          pageMargin: 8,
+          strictMinScale: true,
+        ).create();
+
+    // 說明：有效頁路徑的 zoom 已被 _zoomFor 以 kPdfFitMaxZoom 箝位（zoom <=
+    // maxScale），所以前後兩案（嚴格模式有效頁、非嚴格模式）是「不變式」守衛，
+    // 本身拿掉 _clampedMetrics 仍會通過；真正咬住箝位的是中間「pivot 頁無效時
+    // 透傳」案例（智慧重開崩潰路徑，已用拿掉箝位的突變驗證確認會紅）。
+    test('嚴格模式有效頁：minScale<=maxScale（不變式）', () {
+      final m =
+          _metrics(strictTiny(PdfFitMode.pageFit), layout: tinyLayout);
+      expect(m.minScale, lessThanOrEqualTo(m.maxScale));
+    });
+
+    test('pivot 頁無效時透傳亦須滿足 minScale<=maxScale（智慧重開崩潰路徑）', () {
+      final m = _metrics(strictTiny(PdfFitMode.pageFit),
+          layout: tinyLayout, pageNumber: null);
+      expect(m.minScale, lessThanOrEqualTo(m.maxScale));
+    });
+
+    test('非嚴格模式小版面同理（不變式）', () {
+      final m = _metrics(_delegate(PdfFitMode.pageFit), layout: tinyLayout);
+      expect(m.minScale, lessThanOrEqualTo(m.maxScale));
+    });
+  });
 }

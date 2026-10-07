@@ -207,6 +207,7 @@ flutter:
     - test/fixtures/sample_no_identifier.epub
     - test/fixtures/sample_horizontal.epub
     - test/fixtures/sample_fixed_layout.epub
+    - test/fixtures/sample_fxl_multi_page.epub
     - test/fixtures/sample_long_vertical.epub
     - test/fixtures/sample_forced_linebreak_vertical.epub
     - test/fixtures/sample_fxl_svg_cover.epub

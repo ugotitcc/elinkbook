@@ -1872,6 +1872,81 @@ void main() {
     },
   );
 
+  // epic-54 Issue 18 程式審查 I-1：onLayoutResolved 現在會回報真實的
+  // isFixedLayout，ReaderScreen._handleFoliateLayoutResolved 的賦值行為
+  // 因而在生產路徑上第一次被觸發。以下以「版面按鈕點開的是哪個 Sheet」觀察
+  // _isFixedLayout（onLayoutTap 依它分派），涵蓋 widget.isFixedLayout 三種
+  // 情形 × 原生回報兩種值：
+  //   - widget true：強制 FXL 保護，回報 false 也不覆寫；
+  //   - widget null／false：以原生回報值為準（false 情形此前在生產路徑上永遠
+  //     被蓋成 false，現在實際為 FXL 時會變 true——_isFixedLayout 與
+  //     _dispatchedIsFixedLayout 是不同概念，兩者分歧為預期行為）。
+  for (final entry in <({bool? widgetFlag, bool reported, bool expectFxl})>[
+    (widgetFlag: null, reported: true, expectFxl: true),
+    (widgetFlag: null, reported: false, expectFxl: false),
+    (widgetFlag: false, reported: true, expectFxl: true),
+    (widgetFlag: false, reported: false, expectFxl: false),
+    (widgetFlag: true, reported: true, expectFxl: true),
+    (widgetFlag: true, reported: false, expectFxl: true),
+  ]) {
+    testWidgets(
+      'onLayoutResolved 回報 isFixedLayout=${entry.reported}、'
+      'widget.isFixedLayout=${entry.widgetFlag} 時，版面按鈕開啟'
+      '${entry.expectFxl ? "FxlSettingsSheet" : "ReaderSettingsSheet"}',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('zh', 'TW'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+            home: ReaderScreen(
+              filePath: 'test/fixtures/sample_fixed_layout.epub',
+              bookId: 'b1',
+              isFixedLayout: entry.widgetFlag,
+              dependencies:
+                  fakeReaderFeatureDependencies(prefsManager: prefsManager),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(Duration.zero));
+        await tester.pump();
+
+        tester
+            .widget<FoliateReaderView>(find.byType(FoliateReaderView))
+            .onLayoutResolved
+            ?.call(
+              EpubLayoutInfo(
+                isFixedLayout: entry.reported,
+                writingMode: WritingMode.horizontal,
+              ),
+            );
+        await tester.pump();
+
+        await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(
+          find.byType(FxlSettingsSheet),
+          entry.expectFxl ? findsOneWidget : findsNothing,
+        );
+        expect(
+          find.byType(ReaderSettingsSheet),
+          entry.expectFxl ? findsNothing : findsOneWidget,
+        );
+      },
+    );
+  }
+
   testWidgets('EPUB 固定版面開書後，畫面右上角出現懸浮設定按鈕，點擊能開啟 FxlSettingsSheet', (
     tester,
   ) async {

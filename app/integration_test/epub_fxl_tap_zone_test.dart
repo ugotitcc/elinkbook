@@ -26,8 +26,11 @@ void main() {
       '固定版面 EPUB 開書後出現九宮格熱區，點擊各格觸發對應動作且真的換頁/'
       '「無動作」格仍攔截觸控不崩潰',
       (tester) async {
+    // epic-54 Issue 18（使用者決定 2026-10-07，選項甲）：本測試驗證「真的換頁」，
+    // 須使用 2 頁以上的 FXL 書；單頁書上 nextPage 無處可跳、locatorJson 天生不變
+    //（見 epic.md「Issue 18 實作完成與真機驗證結果」(5)），故改用 sample_fxl_multi_page.epub。
     final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample_fixed_layout.epub', 'sample_fxl_tap_zone.epub');
+        'test/fixtures/sample_fxl_multi_page.epub', 'sample_fxl_tap_zone.epub');
     addTearDown(() async {
       final file = File(samplePath);
       if (await file.exists()) await file.delete();

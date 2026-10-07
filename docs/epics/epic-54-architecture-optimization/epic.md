@@ -447,3 +447,18 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 驗證：`flutter analyze` 乾淨；守衛單元測試與守衛本身 PASS；`check_l10n_hardcoded_strings.js` 三項 PASS；`TCL 14` 上 `foliate_toc_footer_test` +3、`library_screen_test` +3、`reader_header_footer_toggle_test` 1/2（與先前一致）。未重跑完整 `flutter test`，上一次全套通過為 3685 通過、0 失敗（Issue 17 計畫最後一個 Task）。
 
 **2026-10-07 Issue 17 已合併（PR #331）。** 真機 integration（`TCL 14`）通過數 14／32 → 26／31；其餘 5 檔的判定與校準移至 Issue 18。過期 key 守衛 `app/tool/check_integration_keys.js` 已納入 `CLAUDE.md` 常用指令。
+
+**2026-10-07 Issue 18 實作完成與真機驗證結果**（分支 `epic-54/issue-18-integration-triage`，worktree 內 Native 直接開發，無 subagent；使用者明確要求後續嚴禁 subagent。計畫見 `plans/plan-issue-18.md`）
+
+- 裝置：`TCL 14`（序號 `3CEF42ECD491687`，Android 15，WebView 154.0.8037.49）。以下結果僅宣稱此裝置通過。
+- **5 檔全部通過**：`epub_toc_test`（0→1 通過）、`foliate_epub_reader_view_test`（9/10→10/10）、`reader_header_footer_toggle_test`（1/2→4/4，含 2 新增案例）、`reader_screen_test`（改寫前整檔 13/19→改寫後整檔 19/19）、`epub_fxl_tap_zone_test`（0→1 通過）。程式審查 I-2 後於 2026-10-07 清除 App 資料、在 `TCL 14` 單獨重跑 `reader_screen_test` 整檔，**19/19 全過**（先前記錄的字型大小、手勢暫停兩個「整檔級聯噪音」案例，在本次整檔順序下亦通過）；同日亦重跑本次審查回應異動到的 `reader_header_footer_toggle_test`（4/4）、`epub_toc_test`（1/1）、`epub_fxl_tap_zone_test`（1/1），皆通過。
+- **判定與使用者決定**（2026-10-07 對話原話：`1. 丙, 2 乙, 3 OK 並補PDF 補同類案例, 5 甲`；Task 4：`4-a,c 皆為「是」, 4-b 甲`）：
+  - (1) `epub_toc_test`（丙）：測試過期＋行為改變。真機證實開書 CFI 正確（第一章）但全書 fraction 回報 0.554（＝2×1763／6362，foliate 位元組估計含當前頁的 double-count），疊加頂層章節 progression 結構性 null，使第二章預設展開。測試改為狀態無關的收合→展開雙向驗證；強健性問題登記為 **Issue 19**。
+  - (2) `foliate…isFixedLayout`（乙）：產品缺陷（迴歸）。`8e760653` 明文契約「呼叫端已確定流式書」→ epic-20 起前提失效、`15f2a6eb` 的寫死未跟著修；`widget.isFixedLayout==null`＋實 FXL 經非同步偵測空窗被蓋成 false。修 `lib/`（`main.js` 轉發 `view.isFixedLayout`，Dart 新增 `parseFoliateLayoutResolved` 純函式），測試維持原斷言。`widget.isFixedLayout` 三種情形的行為（程式審查 I-1，已有 widget 測試覆蓋，見 `test/screens/reader_screen_test.dart` 的「onLayoutResolved 回報 isFixedLayout=…」6 案例）：`true`＝強制 FXL 保護，原生回報 false 也不覆寫；`null`＝以原生回報值為準（修正目標）；`false`＝以原生回報值為準，此前永遠被蓋成 false，現在書實為 FXL 時 `_isFixedLayout` 會變 true，而 `_dispatchedIsFixedLayout` 仍為 false——兩者是不同概念（見 `reader_screen.dart` 約 434-437 註解），此分歧為預期行為。
+  - (3) `header_footer`（OK＋PDF）：測試過期（失敗的是 EPUB，`issues.md` 原寫 PDF 已更正）。改寫為三條現行語意斷言＋`showFooter=true` 對照組＋PDF 同類案例（M-2）。
+  - (4) `reader_screen_test`：(4-a) 測試過期（Epic 38 統一工具列），改斷言 FxlSettingsSheet；(4-b) 產品缺陷（甲）：智慧裁切後 `zoom=8.0`／pdfrx 原生 `min=8.0407`／`max=8.0`，delegate 透傳點火斷言，修箝位；(4-c) 測試過期（驅動已清退的原生 UI），改走手勢層畫框＋按 Key 確認，`manual→manual` 第二次矩形須不同（更強）。
+  - (5) `tap_zone`（甲）：測試素材問題（單頁書）。新增 2 頁 FXL fixture，700ms 門檻不動。
+- **斷言強度變化**：無放寬。toc（覆蓋面不同：原斷言保護「開書預設收合」，新測試改為收合→展開雙向切換、不再保護初始狀態，Issue 19 修復時須改回，測試內有 TODO(Issue 19)）、header（三條＋對照組＋PDF 新增）、tap_zone（維持真的換頁）、reader_screen（Fxl 驗存在且正確；manual→manual 由相等改為不相等，更強）。
+- **突變驗證**：header 案例 2 在 `showFooter` 條件強制 true 時失敗並印出角落文字存在，對照組通過（整檔同跑的對照組失敗證實為連帶污染）；toc 改寫前後皆紅→綠（基準紅、改寫後綠）。
+- **全量結果**：integration 38 檔（除人工驗收）34 通過；未通過 4 項皆非本 Issue 回歸——`book_metadata_channel_test`（乾淨樹同樣失敗，既存）、`sync_account/engine_test`（裝置對 `pbdev.jigong.org` 100% 丟包，環境）、`foliate_toc_footer_test`（整檔順序下 66% 漂移，隔離通過，flaky）。完整 `flutter test`：3692 通過、1 跳過、1 失敗（`pdf_reader_view_filters` 加粗 debouncer，乾淨樹同樣失敗，既存）。`flutter analyze` 乾淨；三支守衛全過。
+- **執行偏差**：見計畫附錄 A。

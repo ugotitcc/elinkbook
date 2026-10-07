@@ -142,12 +142,26 @@ class PdfFitSizeDelegate extends PdfViewerSizeDelegateLegacy {
       boundaryMargin: boundaryMargin,
     );
     final zoom = _zoomFor(layout, pageNumber, viewSize);
-    if (zoom == null) return metrics;
-    return PdfViewerLayoutMetrics(
+    if (zoom == null) return _clampedMetrics(metrics);
+    return _clampedMetrics(PdfViewerLayoutMetrics(
       minScale: strictMinScale ? zoom : math.min(metrics.minScale, zoom),
       maxScale: metrics.maxScale,
       coverScale: metrics.coverScale,
       alternativeFitScale: metrics.alternativeFitScale,
+    ));
+  }
+
+  /// 回傳給 pdfrx 前統一保證 `minScale <= maxScale`（epic-54 Issue 18）。
+  /// pdfrx 的 `InteractiveViewer` 對此有斷言；智慧裁切後的小版面會讓 pdfrx
+  /// 原生 `minScale` 超過 `maxScale`（TCL 14 真機實測 8.0407 > 8.0），任一回傳
+  /// 路徑透傳即崩潰，故收斂到單一箝位點，不在各分支重複處理。
+  PdfViewerLayoutMetrics _clampedMetrics(PdfViewerLayoutMetrics m) {
+    if (m.minScale <= m.maxScale) return m;
+    return PdfViewerLayoutMetrics(
+      minScale: m.maxScale,
+      maxScale: m.maxScale,
+      coverScale: m.coverScale,
+      alternativeFitScale: m.alternativeFitScale,
     );
   }
 
