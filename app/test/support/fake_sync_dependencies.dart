@@ -17,7 +17,8 @@ SyncDependencies fakeSyncDependencies({
   return SyncDependencies(
     syncAccountRepository: account,
     syncClient: syncClient ?? SyncClient(accountRepository: account),
-    syncCheckpointTrigger: syncCheckpointTrigger ??
+    syncCheckpointTrigger:
+        syncCheckpointTrigger ??
         SyncCheckpointTrigger(
           runCheckpoint: () async => SyncCheckpointResult.notLoggedIn,
         ),

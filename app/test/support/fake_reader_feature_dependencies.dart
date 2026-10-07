@@ -12,7 +12,6 @@ import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/reader/tts_audio_focus_source.dart';
 import 'package:elinkbook/reader/tts_audio_handler_startup.dart';
 import 'package:elinkbook/reader/tts_provider.dart';
-import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/reader_feature_dependencies.dart';
 import 'package:elinkbook/search/full_text_search_settings_repository.dart';
 import 'package:elinkbook/search/search_repository.dart';
@@ -66,8 +65,7 @@ ReaderFeatureDependencies fakeReaderFeatureDependencies({
     bookmarksRepository: bookmarksRepository ?? FakeBookmarksRepository(),
     highlightsRepository: highlightsRepository ?? FakeHighlightsRepository(),
     notesRepository: notesRepository ?? FakeNotesRepository(),
-    customFontsRepository:
-        customFontsRepository ?? FakeCustomFontsRepository(),
+    customFontsRepository: customFontsRepository ?? FakeCustomFontsRepository(),
     downloadableFontStore:
         downloadableFontStore ?? FakeDownloadableFontStore.forPlatform(),
     layoutPresetRepository:
@@ -76,7 +74,8 @@ ReaderFeatureDependencies fakeReaderFeatureDependencies({
         bookReaderPrefsRepository ?? FakeBookReaderPrefsRepository(),
     searchRepository: searchRepository ?? FakeSearchRepository(),
     isFullTextSearchAvailable: isFullTextSearchAvailable,
-    fullTextSearchSettingsRepository: fullTextSearchSettingsRepository ??
+    fullTextSearchSettingsRepository:
+        fullTextSearchSettingsRepository ??
         FakeFullTextSearchSettingsRepository(),
     readingStatsRepository:
         readingStatsRepository ?? FakeReadingStatsRepository(),
@@ -90,66 +89,5 @@ ReaderFeatureDependencies fakeReaderFeatureDependencies({
 }
 
 SyncCheckpointTrigger _noopSyncCheckpointTrigger() => SyncCheckpointTrigger(
-      runCheckpoint: () async => SyncCheckpointResult.notLoggedIn,
-    );
-
-/// 供尚未遷移的 `LibraryScreen`／`LibrarySearchScreen` 系列測試使用：舊 bundle
-/// 欄位仍是 nullable，轉換成 non-null 的新組時遇到 null 會丟 `StateError`
-/// （見 `readerFeatureDependenciesFromLegacy`）。需要「點選書籍進入閱讀器」的
-/// 測試用這個補齊。**Issue 12／13 移除舊 bundle 時一併刪除。**
-/// 與 [fakeReaderFeatureDependencies] 同形：14 個 repository／service 欄位與
-/// `isFullTextSearchAvailable` 皆可選具名覆寫，測試只覆寫需要驗證貫穿的欄位。
-LibraryReaderFeatureRepositories completeLegacyReaderFeatures({
-  BookmarksRepository? bookmarksRepository,
-  HighlightsRepository? highlightsRepository,
-  NotesRepository? notesRepository,
-  CustomFontsRepository? customFontsRepository,
-  DownloadableFontStore? downloadableFontStore,
-  LayoutPresetRepository? layoutPresetRepository,
-  BookReaderPrefsRepository? bookReaderPrefsRepository,
-  TtsProvider? ttsProvider,
-  TtsAudioHandlerHolder? ttsAudio,
-  TtsAudioFocusSource? ttsAudioFocusSource,
-  ReaderActivityTracker? readerActivityTracker,
-  bool isFullTextSearchAvailable = true,
-  SearchRepository? searchRepository,
-  BookImportService? bookImportService,
-  ReadingStatsRepository? readingStatsRepository,
-  FullTextSearchSettingsRepository? fullTextSearchSettingsRepository,
-}) {
-  return LibraryReaderFeatureRepositories(
-    bookmarksRepository: bookmarksRepository ?? FakeBookmarksRepository(),
-    highlightsRepository: highlightsRepository ?? FakeHighlightsRepository(),
-    notesRepository: notesRepository ?? FakeNotesRepository(),
-    customFontsRepository:
-        customFontsRepository ?? FakeCustomFontsRepository(),
-    downloadableFontStore:
-        downloadableFontStore ?? FakeDownloadableFontStore.forPlatform(),
-    layoutPresetRepository:
-        layoutPresetRepository ?? FakeLayoutPresetRepository(),
-    bookReaderPrefsRepository:
-        bookReaderPrefsRepository ?? FakeBookReaderPrefsRepository(),
-    ttsProvider: ttsProvider ?? FakeTtsProvider(),
-    ttsAudio: ttsAudio ?? TtsAudioHandlerHolder.unavailable(),
-    ttsAudioFocusSource: ttsAudioFocusSource ?? FakeTtsAudioFocusSource(),
-    readerActivityTracker: readerActivityTracker ?? ReaderActivityTracker(),
-    isFullTextSearchAvailable: isFullTextSearchAvailable,
-    searchRepository: searchRepository ?? FakeSearchRepository(),
-    bookImportService: bookImportService ?? FakeBookImportService(),
-    readingStatsRepository:
-        readingStatsRepository ?? FakeReadingStatsRepository(),
-    fullTextSearchSettingsRepository: fullTextSearchSettingsRepository ??
-        FakeFullTextSearchSettingsRepository(),
-  );
-}
-
-/// 與 [completeLegacyReaderFeatures] 配對：帶有 `syncCheckpointTrigger` 的舊同步 bundle，
-/// 可覆寫 `syncCheckpointTrigger`。
-LibrarySyncDependencies completeLegacySyncDependencies({
-  SyncCheckpointTrigger? syncCheckpointTrigger,
-}) {
-  return LibrarySyncDependencies(
-    syncCheckpointTrigger:
-        syncCheckpointTrigger ?? _noopSyncCheckpointTrigger(),
-  );
-}
+  runCheckpoint: () async => SyncCheckpointResult.notLoggedIn,
+);

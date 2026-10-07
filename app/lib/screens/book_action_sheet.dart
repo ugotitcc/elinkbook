@@ -28,8 +28,8 @@ class BookActionSheet extends StatelessWidget {
   /// 按不了」）。
   final bool showRemoveCache;
 
-  /// `widget.readerFeatureRepositories.bookReaderPrefsRepository != null`
-  /// 時為 true；`false` 時「版面覆寫」選項整項不渲染，比照 [showRemoveCache]
+  /// 書架目前恆傳 true（`ReaderFeatureDependencies.bookReaderPrefsRepository`
+  /// 為 non-null）；`false` 時「版面覆寫」選項整項不渲染，比照 [showRemoveCache]
   /// 的不渲染慣例（`plans/plan-issue-4.md`「計劃範圍澄清」第 1 點：
   /// spec.md 原始建構子片段遺漏這個欄位，此為補充）。
   final bool showLayoutOverride;

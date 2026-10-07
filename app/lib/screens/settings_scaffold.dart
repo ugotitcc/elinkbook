@@ -5,16 +5,8 @@ import '../cloud_import/google_drive_oauth_client.dart';
 import '../cloud_import/onedrive_oauth_client.dart';
 import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
-import '../reader/custom_fonts_repository.dart';
-import '../reader/downloadable_font_store.dart';
-import '../reader/reader_prefs_manager.dart';
-import '../reader/tts_provider.dart';
 import '../search/full_text_search_settings_repository.dart';
 import '../search/full_text_search_toggles_controller.dart';
-import '../stats/reading_stats_repository.dart';
-import '../sync/sync_account_repository.dart';
-import '../sync/sync_checkpoint_result.dart';
-import '../sync/sync_client.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_theme_data.dart';
 import 'about_screen.dart';
@@ -22,9 +14,11 @@ import 'cloud_account_settings_screen.dart';
 import 'font_management_screen.dart';
 import 'full_text_search_confirm_dialog.dart';
 import 'nav_zone_settings_screen.dart';
+import 'reader_feature_dependencies.dart';
 import 'reader_console_log_screen.dart';
 import 'reading_defaults_screen.dart';
 import 'reading_stats_screen.dart';
+import 'sync_dependencies.dart';
 import 'sync_settings_screen.dart';
 import 'tts_defaults_screen.dart';
 import 'widgets/eb_field_card.dart';
@@ -40,7 +34,12 @@ import 'widgets/eb_sheet_shell.dart';
 /// 功能原樣搬移，本次（由 `SettingsScreen` 更名而來）只是重新分組，行為與
 /// 既有 Key 契約不變。
 class SettingsScaffold extends StatefulWidget {
-  final ReaderPrefsManager prefsManager;
+  /// 閱讀器功能依賴組（ADR 0037）：設定頁用到其中的 prefsManager、字型、TTS、
+  /// 閱讀統計與全文檢索設定。
+  final ReaderFeatureDependencies readerFeatures;
+
+  /// 同步依賴組（ADR 0037）：「同步」入口開啟 `SyncSettingsScreen` 時取用。
+  final SyncDependencies sync;
   final AppTheme currentTheme;
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
@@ -51,54 +50,27 @@ class SettingsScaffold extends StatefulWidget {
   /// 語意。
   final AppLocale? currentLocaleOverride;
   final ValueChanged<AppLocale?>? onLocaleChanged;
-  final CustomFontsRepository? customFontsRepository;
-
-  /// epic-49：可下載字型的下載與保管；null 時字型管理畫面的內建字型只顯示名稱。
-  final DownloadableFontStore? downloadableFontStore;
-  final SyncAccountRepository? syncAccountRepository;
-  final SyncClient? syncClient;
-
-  /// 「立即同步」按鈕與最後同步時間顯示（2026-09-08 `/grill-with-docs`
-  /// 使用者需求），見 `SyncSettingsScreen`／`LibrarySyncDependencies` 的
-  /// 欄位說明。
-  final Future<SyncCheckpointResult> Function()? onManualSync;
-  final Future<int?> Function()? loadLastSyncedAt;
   final CloudAccountRepository? cloudAccountRepository;
   final GoogleDriveOAuthClient? googleDriveOAuthClient;
   final OneDriveOAuthClient? oneDriveOAuthClient;
   final VoidCallback? onNavigateToLibrary;
   final VoidCallback? onNavigateToSource;
-  final TtsProvider? ttsProvider;
-  final FullTextSearchSettingsRepository? fullTextSearchSettingsRepository;
-  final bool isFullTextSearchAvailable;
-
-  /// epic-9-stats Issue 5：閱讀統計 repository；null 時設定頁不顯示「閱讀統計」項目。
-  final ReadingStatsRepository? readingStatsRepository;
 
   const SettingsScaffold({
     super.key,
-    required this.prefsManager,
+    required this.readerFeatures,
+    required this.sync,
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
     this.onThemeChanged,
     this.onEinkModeChanged,
     this.currentLocaleOverride,
     this.onLocaleChanged,
-    this.customFontsRepository,
-    this.downloadableFontStore,
-    this.syncAccountRepository,
-    this.syncClient,
-    this.onManualSync,
-    this.loadLastSyncedAt,
     this.cloudAccountRepository,
     this.googleDriveOAuthClient,
     this.oneDriveOAuthClient,
     this.onNavigateToLibrary,
     this.onNavigateToSource,
-    this.ttsProvider,
-    this.fullTextSearchSettingsRepository,
-    this.isFullTextSearchAvailable = true,
-    this.readingStatsRepository,
   });
 
   @override
@@ -123,7 +95,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
   void initState() {
     super.initState();
     _fullTextSearchTogglesController = FullTextSearchTogglesController(
-      widget.fullTextSearchSettingsRepository,
+      widget.readerFeatures.fullTextSearchSettingsRepository,
     );
     _loadConsoleLogEnabled();
     _loadFullTextSearchSettings();
@@ -138,29 +110,29 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
   @override
   void didUpdateWidget(covariant SettingsScaffold oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.fullTextSearchSettingsRepository !=
-        widget.fullTextSearchSettingsRepository) {
+    if (oldWidget.readerFeatures.fullTextSearchSettingsRepository !=
+        widget.readerFeatures.fullTextSearchSettingsRepository) {
       // 上層傳入了不同的 repository 實例（review-plan-issue-5.md I-1）：
       // 重新建構 controller 避免它繼續持有舊實例，與 build() 內
-      // 「重建索引」按鈕直接取用 widget.fullTextSearchSettingsRepository
+      // 「重建索引」按鈕直接取用 widget.readerFeatures.fullTextSearchSettingsRepository
       // （永遠讀最新實例）的行為分歧。
       _fullTextSearchTogglesController = FullTextSearchTogglesController(
-        widget.fullTextSearchSettingsRepository,
+        widget.readerFeatures.fullTextSearchSettingsRepository,
       );
     }
     _loadFullTextSearchSettings();
   }
 
   Future<void> _loadConsoleLogEnabled() async {
-    final prefs = await widget.prefsManager.loadGlobalPrefs();
+    final prefs = await widget.readerFeatures.prefsManager.loadGlobalPrefs();
     if (!mounted) return;
     setState(() => _consoleLogEnabled = prefs.consoleLogEnabled);
   }
 
   Future<void> _updateConsoleLogEnabled(bool value) async {
     setState(() => _consoleLogEnabled = value);
-    final prefs = await widget.prefsManager.loadGlobalPrefs();
-    await widget.prefsManager.saveGlobalPrefs(
+    final prefs = await widget.readerFeatures.prefsManager.loadGlobalPrefs();
+    await widget.readerFeatures.prefsManager.saveGlobalPrefs(
       prefs.copyWith(consoleLogEnabled: value),
     );
   }
@@ -269,18 +241,17 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
               key: const Key('settings_font_management_button'),
               title: Text(l10n.settingsFontManagementLabel),
               trailing: const Icon(Icons.chevron_right),
-              onTap: widget.customFontsRepository == null
-                  ? null
-                  : () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => FontManagementScreen(
-                            repository: widget.customFontsRepository!,
-                            downloadableFontStore: widget.downloadableFontStore,
-                          ),
-                        ),
-                      );
-                    },
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => FontManagementScreen(
+                      repository: widget.readerFeatures.customFontsRepository,
+                      downloadableFontStore:
+                          widget.readerFeatures.downloadableFontStore,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
           EBSectionHeader(title: l10n.settingsReadingSectionTitle),
@@ -293,7 +264,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => ReadingDefaultsScreen(
-                      prefsManager: widget.prefsManager,
+                      prefsManager: widget.readerFeatures.prefsManager,
                     ),
                   ),
                 );
@@ -309,7 +280,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => NavZoneSettingsScreen(
-                      prefsManager: widget.prefsManager,
+                      prefsManager: widget.readerFeatures.prefsManager,
                     ),
                   ),
                 );
@@ -325,8 +296,8 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => TtsDefaultsScreen(
-                      prefsManager: widget.prefsManager,
-                      ttsProvider: widget.ttsProvider,
+                      prefsManager: widget.readerFeatures.prefsManager,
+                      ttsProvider: widget.readerFeatures.ttsProvider,
                       isEinkMode: widget.isEinkMode,
                     ),
                   ),
@@ -334,24 +305,23 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
               },
             ),
           ),
-          if (widget.readingStatsRepository != null)
-            _SettingsCard(
-              child: ListTile(
-                key: const Key('settings_reading_stats_button'),
-                title: Text(l10n.statsScreenTitle),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => ReadingStatsScreen(
-                        repository: widget.readingStatsRepository!,
-                      ),
+          _SettingsCard(
+            child: ListTile(
+              key: const Key('settings_reading_stats_button'),
+              title: Text(l10n.statsScreenTitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => ReadingStatsScreen(
+                      repository: widget.readerFeatures.readingStatsRepository,
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
-          if (!widget.isFullTextSearchAvailable)
+          ),
+          if (!widget.readerFeatures.isFullTextSearchAvailable)
             _SettingsCard(
               child: ListTile(
                 key: const Key('settings_full_text_search_unavailable_hint'),
@@ -370,24 +340,24 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                   children: [
                     IconButton(
                       key: const Key(
-                          'settings_full_text_search_pdf_rebuild_button'),
+                        'settings_full_text_search_pdf_rebuild_button',
+                      ),
                       icon: const Icon(Icons.refresh),
                       tooltip: l10n.settingsFullTextSearchRebuildIndexTooltip,
-                      onPressed: !_fullTextSearchTogglesController
-                                  .pdfEnabled ||
-                              widget.fullTextSearchSettingsRepository == null
+                      onPressed: !_fullTextSearchTogglesController.pdfEnabled
                           ? null
-                          : () => widget.fullTextSearchSettingsRepository!
-                              .rebuildIndex(ContentIndexCategory.pdf),
+                          : () => widget
+                                .readerFeatures
+                                .fullTextSearchSettingsRepository
+                                .rebuildIndex(ContentIndexCategory.pdf),
                     ),
                     Switch(
                       key: const Key('settings_full_text_search_pdf_switch'),
                       value: _fullTextSearchTogglesController.pdfEnabled,
-                      onChanged: widget.fullTextSearchSettingsRepository ==
-                              null
-                          ? null
-                          : (value) => _handleFullTextSearchToggle(
-                              ContentIndexCategory.pdf, value),
+                      onChanged: (value) => _handleFullTextSearchToggle(
+                        ContentIndexCategory.pdf,
+                        value,
+                      ),
                     ),
                   ],
                 ),
@@ -402,25 +372,27 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                   children: [
                     IconButton(
                       key: const Key(
-                          'settings_full_text_search_foliate_rebuild_button'),
+                        'settings_full_text_search_foliate_rebuild_button',
+                      ),
                       icon: const Icon(Icons.refresh),
                       tooltip: l10n.settingsFullTextSearchRebuildIndexTooltip,
-                      onPressed: !_fullTextSearchTogglesController
-                                  .foliateEnabled ||
-                              widget.fullTextSearchSettingsRepository == null
+                      onPressed:
+                          !_fullTextSearchTogglesController.foliateEnabled
                           ? null
-                          : () => widget.fullTextSearchSettingsRepository!
-                              .rebuildIndex(ContentIndexCategory.foliate),
+                          : () => widget
+                                .readerFeatures
+                                .fullTextSearchSettingsRepository
+                                .rebuildIndex(ContentIndexCategory.foliate),
                     ),
                     Switch(
                       key: const Key(
-                          'settings_full_text_search_foliate_switch'),
+                        'settings_full_text_search_foliate_switch',
+                      ),
                       value: _fullTextSearchTogglesController.foliateEnabled,
-                      onChanged: widget.fullTextSearchSettingsRepository ==
-                              null
-                          ? null
-                          : (value) => _handleFullTextSearchToggle(
-                              ContentIndexCategory.foliate, value),
+                      onChanged: (value) => _handleFullTextSearchToggle(
+                        ContentIndexCategory.foliate,
+                        value,
+                      ),
                     ),
                   ],
                 ),
@@ -433,24 +405,18 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
               key: const Key('settings_sync_button'),
               title: Text(l10n.settingsSyncLabel),
               trailing: const Icon(Icons.chevron_right),
-              onTap:
-                  widget.syncAccountRepository == null ||
-                      widget.syncClient == null ||
-                      widget.onManualSync == null ||
-                      widget.loadLastSyncedAt == null
-                  ? null
-                  : () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => SyncSettingsScreen(
-                            accountRepository: widget.syncAccountRepository!,
-                            syncClient: widget.syncClient!,
-                            onManualSync: widget.onManualSync!,
-                            loadLastSyncedAt: widget.loadLastSyncedAt!,
-                          ),
-                        ),
-                      );
-                    },
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => SyncSettingsScreen(
+                      accountRepository: widget.sync.syncAccountRepository,
+                      syncClient: widget.sync.syncClient,
+                      onManualSync: widget.sync.onManualSync,
+                      loadLastSyncedAt: widget.sync.loadLastSyncedAt,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
           _SettingsCard(

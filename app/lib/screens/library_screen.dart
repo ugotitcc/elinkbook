@@ -5,11 +5,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../library/book_content_fingerprint.dart';
-import '../library/book_import_service.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/book_reader_prefs_repository.dart';
 import '../reader/page_turn_mode.dart';
-import '../reader/reader_prefs_manager.dart';
 import '../reader/text_conversion.dart';
 import '../reader/text_conversion_mode.dart';
 import '../reader/writing_mode.dart';
@@ -19,6 +17,7 @@ import '../remote/remote_server_profile.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import 'library_screen_dependencies.dart';
+import 'reader_feature_dependencies.dart';
 import 'book_grid_tile_metrics.dart';
 import 'library_book_list_controller.dart';
 import 'library_batch_actions.dart';
@@ -57,19 +56,9 @@ const _kCellAspectRatio = 0.64;
 /// epic-0-skeleton 遺留的固定範例書籍清單佔位版本（見
 /// docs/epics/epic-1-library/spec.md）。
 class LibraryScreen extends StatefulWidget {
-  final LibraryRepository repository;
-  final BookImportService importService;
-  final ReaderPrefsManager prefsManager;
-
-  /// 收斂原本 `bookmarksRepository`／`highlightsRepository`／
-  /// `notesRepository`／`customFontsRepository`／`layoutPresetRepository`／
-  /// `bookReaderPrefsRepository` 六個獨立參數（epic-26-architecture-hardening
-  /// Issue 7）。
-  final LibraryReaderFeatureRepositories readerFeatureRepositories;
-
-  /// 收斂原本 `syncAccountRepository`／`syncClient`／`syncCheckpointTrigger`
-  /// 三個獨立參數（epic-26-architecture-hardening Issue 7）。
-  final LibrarySyncDependencies syncDependencies;
+  /// 閱讀器功能依賴組（ADR 0037）：書架用到其中的 libraryRepository、prefsManager、
+  /// 全文檢索設定、版面覆寫 repository 等；開書與開全庫搜尋時整組轉傳同一個實例。
+  final ReaderFeatureDependencies dependencies;
 
   /// 收斂原本 `cloudAccountRepository`／`googleDriveOAuthClient`／
   /// `oneDriveOAuthClient`／`googleDriveStorageClient`／
@@ -92,11 +81,7 @@ class LibraryScreen extends StatefulWidget {
 
   const LibraryScreen({
     super.key,
-    required this.repository,
-    required this.importService,
-    required this.prefsManager,
-    this.readerFeatureRepositories = const LibraryReaderFeatureRepositories(),
-    this.syncDependencies = const LibrarySyncDependencies(),
+    required this.dependencies,
     this.cloudAccountDependencies = const LibraryCloudAccountDependencies(),
     this.remoteLibraryDependencies = const LibraryRemoteLibraryDependencies(),
     this.computeFingerprint,
@@ -167,12 +152,12 @@ class _LibraryScreenState extends State<LibraryScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _bookListController = LibraryBookListController(
-      repository: widget.repository,
+      repository: widget.dependencies.libraryRepository,
     )..addListener(_onBookListChanged);
     _batchActions = LibraryBatchActions(
-      repository: widget.repository,
+      repository: widget.dependencies.libraryRepository,
       fullTextSearchSettingsRepository:
-          widget.readerFeatureRepositories.fullTextSearchSettingsRepository,
+          widget.dependencies.fullTextSearchSettingsRepository,
     );
     widget.refreshSignal?.addListener(_onExternalRefreshRequested);
     _initialize();
@@ -196,16 +181,13 @@ class _LibraryScreenState extends State<LibraryScreen>
     }
     // 【review-plan-issue-2.md M-2】_batchActions 在 initState() 建構時
     // 捕捉了當下的 repository/fullTextSearchSettingsRepository 參考；
-    // LibraryReaderFeatureRepositories 沒有覆寫 ==（預設參考相等），上層
-    // 每次 build() 重新建構這個 bundle 時這裡幾乎都會判定為「已變更」而
-    // 重新建構 _batchActions——成本極低（純資料持有物件），不需要額外
-    // 優化，重點是不遺漏真正的替換情境。
-    if (widget.readerFeatureRepositories != oldWidget.readerFeatureRepositories ||
-        widget.repository != oldWidget.repository) {
+    // ReaderFeatureDependencies 沒有覆寫 ==（參考相等）；上層（main() 建一次）
+    // 傳同一個實例時不會重建 _batchActions，換了實例才重建。
+    if (widget.dependencies != oldWidget.dependencies) {
       _batchActions = LibraryBatchActions(
-        repository: widget.repository,
+        repository: widget.dependencies.libraryRepository,
         fullTextSearchSettingsRepository:
-            widget.readerFeatureRepositories.fullTextSearchSettingsRepository,
+            widget.dependencies.fullTextSearchSettingsRepository,
       );
     }
   }
@@ -286,7 +268,8 @@ class _LibraryScreenState extends State<LibraryScreen>
   /// 重新整理；此處書架已完整渲染過，不存在「初次繪製前」的閃爍疑慮，故
   /// 沿用既有「來源」分頁匯入新書後的 `unawaited` 既定模式）各觸發一次。
   Future<void> _reloadTextConversion() async {
-    final globalPrefs = await widget.prefsManager.loadGlobalPrefs();
+    final globalPrefs = await widget.dependencies.prefsManager
+        .loadGlobalPrefs();
     if (!mounted) return;
     setState(() => _textConversion = globalPrefs.reading.textConversion);
   }
@@ -297,10 +280,11 @@ class _LibraryScreenState extends State<LibraryScreen>
   /// 不會重複觸發開書。
   Future<void> _maybeOpenLastBookOnLaunch() async {
     if (_activeGroupFilter != null) return;
-    final globalPrefs = await widget.prefsManager.loadGlobalPrefs();
+    final globalPrefs = await widget.dependencies.prefsManager
+        .loadGlobalPrefs();
     if (!globalPrefs.reading.openLastBookOnLaunch) return;
     if (!mounted) return;
-    final books = await widget.repository.listBooks(
+    final books = await widget.dependencies.libraryRepository.listBooks(
       sortBy: LibrarySortBy.lastRead,
     );
     if (!mounted) return;
@@ -471,12 +455,7 @@ class _LibraryScreenState extends State<LibraryScreen>
           MaterialPageRoute(
             builder: (_) => buildReaderScreen(
               book: book,
-              dependencies: readerFeatureDependenciesFromLegacy(
-                prefsManager: widget.prefsManager,
-                features: widget.readerFeatureRepositories,
-                sync: widget.syncDependencies,
-                libraryRepository: widget.repository,
-              ),
+              dependencies: widget.dependencies,
               isEinkMode: widget.themeDependencies.isEinkMode,
             ),
           ),
@@ -543,7 +522,9 @@ class _LibraryScreenState extends State<LibraryScreen>
         remoteDownloadUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context)!.libraryRemoteDisabledMessage),
+          content: Text(
+            AppLocalizations.of(context)!.libraryRemoteDisabledMessage,
+          ),
         ),
       );
       return;
@@ -604,7 +585,7 @@ class _LibraryScreenState extends State<LibraryScreen>
         filePath: permanentPath,
         isDownloaded: true,
       );
-      await widget.repository.updateBook(updatedBook);
+      await widget.dependencies.libraryRepository.updateBook(updatedBook);
       // epic-10-search Issue 2（spec.md §7）：重新下載完成＝既有
       // content_index_status 列已因先前的「移除本機快取」被清空（見本
       // 計畫 Task 4），此處補上對應的 unsupported/pending 標記，讓這本
@@ -612,9 +593,8 @@ class _LibraryScreenState extends State<LibraryScreen>
       // 不應讓使用者眼中「檔案已下載成功」被誤判為失敗
       // （review-plan-issue-2.md M-1）。
       try {
-        await widget
-            .readerFeatureRepositories.fullTextSearchSettingsRepository
-            ?.handleBookAvailable(updatedBook);
+        await widget.dependencies.fullTextSearchSettingsRepository
+            .handleBookAvailable(updatedBook);
       } catch (_) {
         // 靜默略過——檔案下載與資料庫標記更新才是核心操作，索引狀態可
         // 日後透過「重建索引」補上。
@@ -634,7 +614,9 @@ class _LibraryScreenState extends State<LibraryScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context)!.libraryRedownloadFailedMessage),
+          content: Text(
+            AppLocalizations.of(context)!.libraryRedownloadFailedMessage,
+          ),
         ),
       );
     } finally {
@@ -646,7 +628,7 @@ class _LibraryScreenState extends State<LibraryScreen>
     await showDialog<void>(
       context: context,
       builder: (context) => LibraryGroupManagementDialog(
-        repository: widget.repository,
+        repository: widget.dependencies.libraryRepository,
         initialGroups: _bookListController.groups,
       ),
     );
@@ -680,8 +662,6 @@ class _LibraryScreenState extends State<LibraryScreen>
   Future<void> _openBookActionSheet(Book book) async {
     final showRemoveCache =
         book.source == BookSource.calibreOpds && book.isDownloaded;
-    final bookReaderPrefsRepository =
-        widget.readerFeatureRepositories.bookReaderPrefsRepository;
     final result = await EBSheetShell.show<BookAction>(
       context,
       title: convertText(book.title, _textConversion),
@@ -689,7 +669,7 @@ class _LibraryScreenState extends State<LibraryScreen>
       builder: (context) => BookActionSheet(
         book: book,
         showRemoveCache: showRemoveCache,
-        showLayoutOverride: bookReaderPrefsRepository != null,
+        showLayoutOverride: true,
       ),
     );
     if (!mounted || result == null) return;
@@ -699,7 +679,10 @@ class _LibraryScreenState extends State<LibraryScreen>
       case BookAction.move:
         _moveBookToGroup(book);
       case BookAction.layoutOverride:
-        _showLayoutOverrideDialog(book, bookReaderPrefsRepository!);
+        _showLayoutOverrideDialog(
+          book,
+          widget.dependencies.bookReaderPrefsRepository,
+        );
       case BookAction.removeCache:
         _removeBookCache(book);
       case BookAction.delete:
@@ -864,23 +847,13 @@ class _LibraryScreenState extends State<LibraryScreen>
 
   /// 「搜尋書本內容」入口（epic-10-search Issue 4，spec.md §5）：帶入目前
   /// 書架快速過濾欄位的關鍵字，導航至 `LibrarySearchScreen`。
-  /// `searchRepository` 為 `null` 時停用（`onTap: null`），比照
-  /// `SettingsScaffold` 既有「功能未啟用時 onTap 傳 null」慣例
-  /// （見 `settings_font_management_button`）。
   void _openLibrarySearchScreen() {
-    final searchRepository = widget.readerFeatureRepositories.searchRepository;
-    if (searchRepository == null) return;
     Navigator.of(context)
         .push(
           MaterialPageRoute(
             builder: (_) => LibrarySearchScreen(
               initialQuery: _searchQuery,
-              dependencies: readerFeatureDependenciesFromLegacy(
-                prefsManager: widget.prefsManager,
-                features: widget.readerFeatureRepositories,
-                sync: widget.syncDependencies,
-                libraryRepository: widget.repository,
-              ),
+              dependencies: widget.dependencies,
               isEinkMode: widget.themeDependencies.isEinkMode,
             ),
           ),
@@ -897,13 +870,11 @@ class _LibraryScreenState extends State<LibraryScreen>
   /// 只放在一般標題列；多選模式換成選取工具列，入口自然不出現，維持
   /// 【審查修正 M-2】「選取中不可跳轉畫面」的原意。
   Widget _buildContentSearchEntryButton() {
-    final hasSearchRepository =
-        widget.readerFeatureRepositories.searchRepository != null;
     return IconButton(
       key: const Key('library_content_search_entry_button'),
       icon: const Icon(Icons.travel_explore),
       tooltip: AppLocalizations.of(context)!.libraryContentSearchEntryLabel,
-      onPressed: hasSearchRepository ? _openLibrarySearchScreen : null,
+      onPressed: _openLibrarySearchScreen,
     );
   }
 
@@ -937,8 +908,9 @@ class _LibraryScreenState extends State<LibraryScreen>
                         ? (searchResults.isEmpty
                               ? Center(
                                   child: Text(
-                                    AppLocalizations.of(context)!
-                                        .libraryNoMatchingBooks,
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.libraryNoMatchingBooks,
                                   ),
                                 )
                               : _buildBookList(
@@ -1622,7 +1594,9 @@ class _BookGridTile extends StatelessWidget {
                           minWidth: 48,
                           minHeight: 48,
                         ),
-                        tooltip: AppLocalizations.of(context)!.libraryBookMenuTooltip,
+                        tooltip: AppLocalizations.of(
+                          context,
+                        )!.libraryBookMenuTooltip,
                         onPressed: onMenuTap,
                       ),
                     ),
@@ -1714,8 +1688,11 @@ class _BookListTile extends StatelessWidget {
       // maxLines/overflow（epic-36 Issue 7 追加修正——I-1）：書名/作者過長
       // 換行會撐高這一列，讓 libraryListRowHeight() 假設的固定列高失準，
       // 進而讓依此估算出的 pageSize 偏多、造成本頁部分項目被裁切。
-      title: Text(convertText(book.title, textConversion),
-          maxLines: 1, overflow: TextOverflow.ellipsis),
+      title: Text(
+        convertText(book.title, textConversion),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       subtitle: Text(
         convertText(book.author ?? '', textConversion),
         maxLines: 1,

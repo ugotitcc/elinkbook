@@ -7,7 +7,6 @@ import 'package:elinkbook/reader/reader_activity_tracker.dart';
 import 'package:elinkbook/reader/reader_jump_target.dart';
 import 'package:elinkbook/reader/tts_audio_handler.dart';
 import 'package:elinkbook/reader/tts_audio_handler_startup.dart';
-import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/reader_screen_route.dart';
 import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
@@ -70,7 +69,10 @@ void main() {
       final syncCheckpointTrigger = SyncCheckpointTrigger(
         runCheckpoint: () async => SyncCheckpointResult.notLoggedIn,
       );
-      final features = LibraryReaderFeatureRepositories(
+      final dependencies = fakeReaderFeatureDependencies(
+        prefsManager: prefsManager,
+        libraryRepository: libraryRepository,
+        bookImportService: importService,
         bookmarksRepository: bookmarksRepository,
         highlightsRepository: highlightsRepository,
         notesRepository: notesRepository,
@@ -78,24 +80,15 @@ void main() {
         downloadableFontStore: downloadableFontStore,
         layoutPresetRepository: layoutPresetRepository,
         bookReaderPrefsRepository: bookReaderPrefsRepository,
+        searchRepository: searchRepository,
+        isFullTextSearchAvailable: false,
+        fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
+        readingStatsRepository: readingStatsRepository,
+        readerActivityTracker: readerActivityTracker,
+        syncCheckpointTrigger: syncCheckpointTrigger,
         ttsProvider: ttsProvider,
         ttsAudio: ttsAudio,
         ttsAudioFocusSource: ttsAudioFocusSource,
-        readerActivityTracker: readerActivityTracker,
-        searchRepository: searchRepository,
-        isFullTextSearchAvailable: false,
-        bookImportService: importService,
-        readingStatsRepository: readingStatsRepository,
-        fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
-      );
-      final sync = LibrarySyncDependencies(
-        syncCheckpointTrigger: syncCheckpointTrigger,
-      );
-      final dependencies = readerFeatureDependenciesFromLegacy(
-        prefsManager: prefsManager,
-        features: features,
-        sync: sync,
-        libraryRepository: libraryRepository,
       );
 
       final screen = buildReaderScreen(
@@ -161,186 +154,6 @@ void main() {
       );
 
       expect(screen.initialJumpTarget, isNull);
-    });
-  });
-
-  group('readerFeatureDependenciesFromLegacy', () {
-    // 以完整舊 bundle 為底，將單一欄位置 null，轉換必須丟 StateError 且訊息含欄位名。
-    LibraryReaderFeatureRepositories legacyWithNull(String field) {
-      final full = completeLegacyReaderFeatures();
-      T? keep<T>(String name, T? value) => field == name ? null : value;
-      return LibraryReaderFeatureRepositories(
-        bookmarksRepository: keep(
-          'bookmarksRepository',
-          full.bookmarksRepository,
-        ),
-        highlightsRepository: keep(
-          'highlightsRepository',
-          full.highlightsRepository,
-        ),
-        notesRepository: keep('notesRepository', full.notesRepository),
-        customFontsRepository: keep(
-          'customFontsRepository',
-          full.customFontsRepository,
-        ),
-        downloadableFontStore: keep(
-          'downloadableFontStore',
-          full.downloadableFontStore,
-        ),
-        layoutPresetRepository: keep(
-          'layoutPresetRepository',
-          full.layoutPresetRepository,
-        ),
-        bookReaderPrefsRepository: keep(
-          'bookReaderPrefsRepository',
-          full.bookReaderPrefsRepository,
-        ),
-        ttsProvider: keep('ttsProvider', full.ttsProvider),
-        ttsAudio: keep('ttsAudio', full.ttsAudio),
-        ttsAudioFocusSource: keep(
-          'ttsAudioFocusSource',
-          full.ttsAudioFocusSource,
-        ),
-        readerActivityTracker: keep(
-          'readerActivityTracker',
-          full.readerActivityTracker,
-        ),
-        searchRepository: keep('searchRepository', full.searchRepository),
-        bookImportService: keep('bookImportService', full.bookImportService),
-        readingStatsRepository: keep(
-          'readingStatsRepository',
-          full.readingStatsRepository,
-        ),
-        fullTextSearchSettingsRepository: keep(
-          'fullTextSearchSettingsRepository',
-          full.fullTextSearchSettingsRepository,
-        ),
-      );
-    }
-
-    const nullFields = [
-      'bookmarksRepository',
-      'highlightsRepository',
-      'notesRepository',
-      'customFontsRepository',
-      'downloadableFontStore',
-      'layoutPresetRepository',
-      'bookReaderPrefsRepository',
-      'ttsProvider',
-      'ttsAudio',
-      'ttsAudioFocusSource',
-      'readerActivityTracker',
-      'searchRepository',
-      'bookImportService',
-      'readingStatsRepository',
-      'fullTextSearchSettingsRepository',
-    ];
-
-    for (final field in nullFields) {
-      test('$field 為 null 時丟 StateError，訊息含欄位名', () {
-        expect(
-          () => readerFeatureDependenciesFromLegacy(
-            prefsManager: FakeReaderPrefsManager(),
-            features: legacyWithNull(field),
-            sync: completeLegacySyncDependencies(),
-            libraryRepository: FakeLibraryRepository(),
-          ),
-          throwsA(
-            isA<StateError>().having(
-              (e) => e.message,
-              'message',
-              contains(field),
-            ),
-          ),
-        );
-      });
-    }
-
-    test('sync.syncCheckpointTrigger 為 null 時丟 StateError，訊息含欄位名', () {
-      expect(
-        () => readerFeatureDependenciesFromLegacy(
-          prefsManager: FakeReaderPrefsManager(),
-          features: completeLegacyReaderFeatures(),
-          sync: const LibrarySyncDependencies(),
-          libraryRepository: FakeLibraryRepository(),
-        ),
-        throwsA(
-          isA<StateError>().having(
-            (e) => e.message,
-            'message',
-            contains('syncCheckpointTrigger'),
-          ),
-        ),
-      );
-    });
-
-    test('舊 bundle 完整時轉換成功，每個欄位原樣（同一實例）帶入', () {
-      final prefsManager = FakeReaderPrefsManager();
-      final libraryRepository = FakeLibraryRepository();
-      final features = completeLegacyReaderFeatures(
-        isFullTextSearchAvailable: false,
-      );
-      final sync = completeLegacySyncDependencies();
-
-      final dependencies = readerFeatureDependenciesFromLegacy(
-        prefsManager: prefsManager,
-        features: features,
-        sync: sync,
-        libraryRepository: libraryRepository,
-      );
-
-      expect(dependencies.prefsManager, same(prefsManager));
-      expect(dependencies.libraryRepository, same(libraryRepository));
-      expect(
-        dependencies.syncCheckpointTrigger,
-        same(sync.syncCheckpointTrigger),
-      );
-      expect(dependencies.bookImportService, same(features.bookImportService));
-      expect(
-        dependencies.bookmarksRepository,
-        same(features.bookmarksRepository),
-      );
-      expect(
-        dependencies.highlightsRepository,
-        same(features.highlightsRepository),
-      );
-      expect(dependencies.notesRepository, same(features.notesRepository));
-      expect(
-        dependencies.customFontsRepository,
-        same(features.customFontsRepository),
-      );
-      expect(
-        dependencies.downloadableFontStore,
-        same(features.downloadableFontStore),
-      );
-      expect(
-        dependencies.layoutPresetRepository,
-        same(features.layoutPresetRepository),
-      );
-      expect(
-        dependencies.bookReaderPrefsRepository,
-        same(features.bookReaderPrefsRepository),
-      );
-      expect(dependencies.searchRepository, same(features.searchRepository));
-      expect(
-        dependencies.readingStatsRepository,
-        same(features.readingStatsRepository),
-      );
-      expect(
-        dependencies.fullTextSearchSettingsRepository,
-        same(features.fullTextSearchSettingsRepository),
-      );
-      expect(
-        dependencies.readerActivityTracker,
-        same(features.readerActivityTracker),
-      );
-      expect(dependencies.ttsProvider, same(features.ttsProvider));
-      expect(dependencies.ttsAudio, same(features.ttsAudio));
-      expect(
-        dependencies.ttsAudioFocusSource,
-        same(features.ttsAudioFocusSource),
-      );
-      expect(dependencies.isFullTextSearchAvailable, isFalse);
     });
   });
 }

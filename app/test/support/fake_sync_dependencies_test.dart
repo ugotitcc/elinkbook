@@ -7,8 +7,14 @@ void main() {
   test('fakeSyncDependencies 預設全部有值（non-null），且每次呼叫是新實例', () async {
     final a = fakeSyncDependencies();
     final b = fakeSyncDependencies();
-    expect(identical(a.syncCheckpointTrigger, b.syncCheckpointTrigger), isFalse);
-    expect(identical(a.syncAccountRepository, b.syncAccountRepository), isFalse);
+    expect(
+      identical(a.syncCheckpointTrigger, b.syncCheckpointTrigger),
+      isFalse,
+    );
+    expect(
+      identical(a.syncAccountRepository, b.syncAccountRepository),
+      isFalse,
+    );
     expect(await a.onManualSync(), SyncCheckpointResult.notLoggedIn);
     expect(await a.loadLastSyncedAt(), isNull);
   });

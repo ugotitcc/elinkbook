@@ -21,6 +21,8 @@ import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_custom_fonts_repository.dart';
 import '../support/fake_tts_provider.dart';
 import '../support/fake_full_text_search_settings_repository.dart';
+import '../support/fake_reader_feature_dependencies.dart';
+import '../support/fake_sync_dependencies.dart';
 
 void main() {
   late ReaderPrefsManager prefsManager;
@@ -32,9 +34,12 @@ void main() {
 
   Widget buildApp() {
     return AdaptiveShellScaffold(
-      repository: FakeLibraryRepository(),
-      importService: FakeBookImportService(),
-      prefsManager: prefsManager,
+      readerFeatures: fakeReaderFeatureDependencies(
+        libraryRepository: FakeLibraryRepository(),
+        bookImportService: FakeBookImportService(),
+        prefsManager: prefsManager,
+      ),
+      sync: fakeSyncDependencies(),
     );
   }
 
@@ -76,10 +81,13 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       AdaptiveShellScaffold(
-          repository: repository,
-          importService: FakeBookImportService(),
+        readerFeatures: fakeReaderFeatureDependencies(
+          libraryRepository: repository,
+          bookImportService: FakeBookImportService(),
           prefsManager: prefsManager,
         ),
+        sync: fakeSyncDependencies(),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -118,73 +126,95 @@ void main() {
     expect(tester.widget<IndexedStack>(find.byType(IndexedStack)).index, 0);
   });
 
-  testWidgets('SettingsScreen 收到 customFontsRepository/onEinkModeChanged 轉送（取代原 library_screen_test.dart 的 2 則測試）', (tester) async {
-    final customFontsRepository = FakeCustomFontsRepository();
-    bool? toggledValue;
-    await pumpLocalizedWidget(
-      tester,
-      AdaptiveShellScaffold(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-          readerFeatureRepositories: LibraryReaderFeatureRepositories(
-            customFontsRepository: customFontsRepository,
-          ),
+  testWidgets(
+    'SettingsScreen 收到 customFontsRepository/onEinkModeChanged 轉送（取代原 library_screen_test.dart 的 2 則測試）',
+    (tester) async {
+      final customFontsRepository = FakeCustomFontsRepository();
+      bool? toggledValue;
+      await pumpLocalizedWidget(
+        tester,
+        AdaptiveShellScaffold(
           themeDependencies: LibraryThemeDependencies(
             onEinkModeChanged: (val) => toggledValue = val,
           ),
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+            customFontsRepository: customFontsRepository,
+          ),
+          sync: fakeSyncDependencies(),
         ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('library_settings_button')));
-    await tester.pumpAndSettle();
-
-    final settingsScreen =
-        tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
-    expect(settingsScreen.customFontsRepository, customFontsRepository);
-    expect(settingsScreen.onEinkModeChanged, isNotNull);
-
-    await tester.tap(find.byKey(const Key('settings_eink_mode_switch')));
-    await tester.pumpAndSettle();
-
-    expect(toggledValue, isTrue);
-  });
-
-  testWidgets('上層 themeDependencies 更新後，已切換過去的 SettingsScreen 收到最新 isEinkMode（審查報告 C-1 回歸測試：子畫面不得在 initState 快取）', (tester) async {
-    Widget buildWithEink(bool isEinkMode) {
-      return AdaptiveShellScaffold(
-        repository: FakeLibraryRepository(),
-        importService: FakeBookImportService(),
-        prefsManager: prefsManager,
-        themeDependencies: LibraryThemeDependencies(isEinkMode: isEinkMode),
       );
-    }
+      await tester.pumpAndSettle();
 
-    await pumpLocalizedWidget(tester, buildWithEink(false), isEinkMode: false);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('library_settings_button')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_settings_button')));
+      await tester.pumpAndSettle();
 
-    var settingsScreen =
-        tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
-    expect(settingsScreen.isEinkMode, isFalse);
+      final settingsScreen = tester.widget<SettingsScaffold>(
+        find.byType(SettingsScaffold),
+      );
+      expect(
+        settingsScreen.readerFeatures.customFontsRepository,
+        same(customFontsRepository),
+      );
+      expect(settingsScreen.onEinkModeChanged, isNotNull);
 
-    // 重新 pumpWidget 同一個 AdaptiveShellScaffold（同一個 widget tree
-    // 位置），但 themeDependencies.isEinkMode 已改變——模擬使用者在別處
-    // 切換 E-Ink 模式後，main.dart 的 setState() 觸發整棵 widget tree
-    // 帶著新的 themeDependencies 重新 build()。
-    await pumpLocalizedWidget(tester, buildWithEink(true), isEinkMode: true);
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('settings_eink_mode_switch')));
+      await tester.pumpAndSettle();
 
-    settingsScreen = tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
-    expect(
-      settingsScreen.isEinkMode,
-      isTrue,
-      reason: '若 AdaptiveShellScaffold 把子畫面快取在 initState()，這裡會維持 false，'
-          '因為快取的 SettingsScreen 建構當下的 isEinkMode 已經是舊值',
-    );
-  });
+      expect(toggledValue, isTrue);
+    },
+  );
+
+  testWidgets(
+    '上層 themeDependencies 更新後，已切換過去的 SettingsScreen 收到最新 isEinkMode（審查報告 C-1 回歸測試：子畫面不得在 initState 快取）',
+    (tester) async {
+      Widget buildWithEink(bool isEinkMode) {
+        return AdaptiveShellScaffold(
+          themeDependencies: LibraryThemeDependencies(isEinkMode: isEinkMode),
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+          sync: fakeSyncDependencies(),
+        );
+      }
+
+      await pumpLocalizedWidget(
+        tester,
+        buildWithEink(false),
+        isEinkMode: false,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_settings_button')));
+      await tester.pumpAndSettle();
+
+      var settingsScreen = tester.widget<SettingsScaffold>(
+        find.byType(SettingsScaffold),
+      );
+      expect(settingsScreen.isEinkMode, isFalse);
+
+      // 重新 pumpWidget 同一個 AdaptiveShellScaffold（同一個 widget tree
+      // 位置），但 themeDependencies.isEinkMode 已改變——模擬使用者在別處
+      // 切換 E-Ink 模式後，main.dart 的 setState() 觸發整棵 widget tree
+      // 帶著新的 themeDependencies 重新 build()。
+      await pumpLocalizedWidget(tester, buildWithEink(true), isEinkMode: true);
+      await tester.pumpAndSettle();
+
+      settingsScreen = tester.widget<SettingsScaffold>(
+        find.byType(SettingsScaffold),
+      );
+      expect(
+        settingsScreen.isEinkMode,
+        isTrue,
+        reason:
+            '若 AdaptiveShellScaffold 把子畫面快取在 initState()，這裡會維持 false，'
+            '因為快取的 SettingsScreen 建構當下的 isEinkMode 已經是舊值',
+      );
+    },
+  );
 
   testWidgets('在設定分頁點擊「書架」圖示切回書架分頁', (tester) async {
     await pumpLocalizedWidget(tester, buildApp());
@@ -212,60 +242,70 @@ void main() {
     expect(tester.widget<IndexedStack>(find.byType(IndexedStack)).index, 1);
   });
 
-  testWidgets('SettingsScaffold 收到 readerFeatureRepositories.ttsProvider 轉送', (tester) async {
+  testWidgets('SettingsScaffold 收到 readerFeatures.ttsProvider 轉送', (
+    tester,
+  ) async {
     final ttsProvider = FakeTtsProvider();
     await pumpLocalizedWidget(
       tester,
       AdaptiveShellScaffold(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
+        readerFeatures: fakeReaderFeatureDependencies(
+          libraryRepository: FakeLibraryRepository(),
+          bookImportService: FakeBookImportService(),
           prefsManager: prefsManager,
-          readerFeatureRepositories:
-              LibraryReaderFeatureRepositories(ttsProvider: ttsProvider),
+          ttsProvider: ttsProvider,
         ),
+        sync: fakeSyncDependencies(),
+      ),
     );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('library_settings_button')));
     await tester.pumpAndSettle();
 
-    final settingsScaffold =
-        tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
-    expect(settingsScaffold.ttsProvider, ttsProvider);
+    final settingsScaffold = tester.widget<SettingsScaffold>(
+      find.byType(SettingsScaffold),
+    );
+    expect(settingsScaffold.readerFeatures.ttsProvider, same(ttsProvider));
   });
 
   testWidgets(
-      'SettingsScreen 收到 fullTextSearchSettingsRepository/isFullTextSearchAvailable 轉送',
-      (tester) async {
-    final fullTextSearchSettingsRepository =
-        FakeFullTextSearchSettingsRepository();
-    await pumpLocalizedWidget(
-      tester,
-      AdaptiveShellScaffold(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+    'SettingsScreen 收到 fullTextSearchSettingsRepository/isFullTextSearchAvailable 轉送',
+    (tester) async {
+      final fullTextSearchSettingsRepository =
+          FakeFullTextSearchSettingsRepository();
+      await pumpLocalizedWidget(
+        tester,
+        AdaptiveShellScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
             fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
             isFullTextSearchAvailable: false,
           ),
+          sync: fakeSyncDependencies(),
         ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('library_settings_button')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_settings_button')));
+      await tester.pumpAndSettle();
 
-    final settingsScreen =
-        tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
-    expect(
-      settingsScreen.fullTextSearchSettingsRepository,
-      fullTextSearchSettingsRepository,
-    );
-    expect(settingsScreen.isFullTextSearchAvailable, isFalse);
-  });
+      final settingsScreen = tester.widget<SettingsScaffold>(
+        find.byType(SettingsScaffold),
+      );
+      expect(
+        settingsScreen.readerFeatures.fullTextSearchSettingsRepository,
+        same(fullTextSearchSettingsRepository),
+      );
+      expect(settingsScreen.readerFeatures.isFullTextSearchAvailable, isFalse);
+    },
+  );
 
-  testWidgets('wifiTransferDependencies 正確原樣傳遞給 SourcesHomeScreen', (tester) async {
+  testWidgets('wifiTransferDependencies 正確原樣傳遞給 SourcesHomeScreen', (
+    tester,
+  ) async {
     final fingerprintComputer = FakeFingerprintComputer();
     final wifiDeps = WifiTransferDependencies(
       libraryRepository: FakeLibraryRepository(),
@@ -277,48 +317,58 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       AdaptiveShellScaffold(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
+        wifiTransferDependencies: wifiDeps,
+        readerFeatures: fakeReaderFeatureDependencies(
+          libraryRepository: FakeLibraryRepository(),
+          bookImportService: FakeBookImportService(),
           prefsManager: prefsManager,
-          wifiTransferDependencies: wifiDeps,
         ),
+        sync: fakeSyncDependencies(),
+      ),
     );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('library_source_button')));
     await tester.pumpAndSettle();
 
-    final sourcesHomeScreen =
-        tester.widget<SourcesHomeScreen>(find.byType(SourcesHomeScreen));
+    final sourcesHomeScreen = tester.widget<SourcesHomeScreen>(
+      find.byType(SourcesHomeScreen),
+    );
     expect(sourcesHomeScreen.wifiTransferDependencies, wifiDeps);
   });
 
-  testWidgets('SettingsScaffold 收到 localeDependencies.currentLocaleOverride／onLocaleChanged 轉送',
-      (tester) async {
-    AppLocale? received;
-    await pumpLocalizedWidget(
-      tester,
-      AdaptiveShellScaffold(
-        repository: FakeLibraryRepository(),
-        importService: FakeBookImportService(),
-        prefsManager: prefsManager,
-        localeDependencies: LibraryLocaleDependencies(
-          currentLocaleOverride: AppLocale.zhCN,
-          onLocaleChanged: (locale) => received = locale,
+  testWidgets(
+    'SettingsScaffold 收到 localeDependencies.currentLocaleOverride／onLocaleChanged 轉送',
+    (tester) async {
+      AppLocale? received;
+      await pumpLocalizedWidget(
+        tester,
+        AdaptiveShellScaffold(
+          localeDependencies: LibraryLocaleDependencies(
+            currentLocaleOverride: AppLocale.zhCN,
+            onLocaleChanged: (locale) => received = locale,
+          ),
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+          sync: fakeSyncDependencies(),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('library_settings_button')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_settings_button')));
+      await tester.pumpAndSettle();
 
-    final settingsScaffold =
-        tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
-    expect(settingsScaffold.currentLocaleOverride, AppLocale.zhCN);
-    expect(settingsScaffold.onLocaleChanged, isNotNull);
+      final settingsScaffold = tester.widget<SettingsScaffold>(
+        find.byType(SettingsScaffold),
+      );
+      expect(settingsScaffold.currentLocaleOverride, AppLocale.zhCN);
+      expect(settingsScaffold.onLocaleChanged, isNotNull);
 
-    settingsScaffold.onLocaleChanged!(AppLocale.en);
-    expect(received, AppLocale.en);
-  });
+      settingsScaffold.onLocaleChanged!(AppLocale.en);
+      expect(received, AppLocale.en);
+    },
+  );
 }

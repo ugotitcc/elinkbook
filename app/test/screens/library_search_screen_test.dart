@@ -27,6 +27,7 @@ import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_search_repository.dart';
 import '../support/pump_localized_widget.dart';
+import '../support/fake_sync_dependencies.dart';
 
 Book _testBook({
   required String id,
@@ -1034,8 +1035,11 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
-          prefsManager: FakeReaderPrefsManager(),
-          fullTextSearchSettingsRepository: repository,
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+            fullTextSearchSettingsRepository: repository,
+          ),
+          sync: fakeSyncDependencies(),
         ),
       );
       await tester.pumpAndSettle();

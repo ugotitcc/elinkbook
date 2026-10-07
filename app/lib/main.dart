@@ -19,9 +19,7 @@ import 'cloud_import/onedrive_storage_client.dart';
 import 'cloud_import/secure_storage_cloud_account_repository.dart';
 import 'downloads/download_queue_controller.dart';
 import 'library/book_content_fingerprint.dart';
-import 'library/book_import_service.dart';
 import 'library/book_import_service_impl.dart';
-import 'library/library_repository.dart';
 import 'library/sqlite_library_repository.dart';
 import 'licenses/third_party_licenses.dart';
 import 'reader/book_reader_prefs_repository.dart';
@@ -31,14 +29,12 @@ import 'reader/downloadable_font_store.dart';
 import 'reader/highlights_repository.dart';
 import 'reader/layout_preset_repository.dart';
 import 'reader/notes_repository.dart';
-import 'reader/reader_prefs_manager.dart';
 import 'reader/reader_prefs_manager_impl.dart';
 import 'reader/reading_position_repository.dart';
 import 'reader/system_tts_provider.dart';
 import 'reader/tts_audio_focus_source.dart';
 import 'reader/tts_audio_handler.dart';
 import 'reader/tts_audio_handler_startup.dart';
-import 'reader/tts_provider.dart';
 import 'reader/webview_font_support.dart';
 import 'remote/opds_client.dart';
 import 'remote/opds_http_client.dart';
@@ -50,9 +46,10 @@ import 'remote/sqlite_remote_server_repository.dart';
 import 'screens/adaptive_shell_scaffold.dart';
 import 'screens/cloud_duplicate_confirm_dialog.dart';
 import 'screens/library_screen_dependencies.dart';
+import 'screens/reader_feature_dependencies.dart';
 import 'screens/reading_position_conflict_dialog.dart';
+import 'screens/sync_dependencies.dart';
 import 'sync/sync_account_repository.dart';
-import 'sync/sync_checkpoint_result.dart';
 import 'sync/sync_checkpoint_trigger.dart';
 import 'sync/sync_client.dart';
 import 'sync/sync_engine.dart';
@@ -65,7 +62,6 @@ import 'search/foliate_content_indexer.dart';
 import 'search/full_text_search_settings_repository.dart';
 import 'search/pdf_content_indexer.dart';
 import 'search/search_repository.dart';
-import 'stats/reading_stats_repository.dart';
 import 'stats/sqlite_reading_stats_repository.dart';
 import 'l10n/app_locale.dart';
 import 'l10n/app_locale_preferences.dart';
@@ -137,7 +133,8 @@ Future<void> main() async {
   final downloadableFontStore = DownloadableFontStore(
     httpClient: http.Client(),
     directory: Directory(
-        p.join((await getApplicationSupportDirectory()).path, 'downloaded-fonts')),
+      p.join((await getApplicationSupportDirectory()).path, 'downloaded-fonts'),
+    ),
     webViewMajorVersion: webViewMajorVersion,
   );
   try {
@@ -163,16 +160,16 @@ Future<void> main() async {
   // plans/plan-issue-3.md Global Constraints。
   final fullTextSearchSettingsRepository =
       SqliteFullTextSearchSettingsRepository(
-    database: repository.database,
-    requestProcessing: contentIndexingScheduler.requestProcessing,
-  );
+        database: repository.database,
+        requestProcessing: contentIndexingScheduler.requestProcessing,
+      );
   // epic-10-search Issue 4：全庫搜尋資料存取層，直接對同一個 Database
   // 連線下 SQL（比照 fullTextSearchSettingsRepository 既有慣例）。
   final searchRepository = SqliteSearchRepository(
     database: repository.database,
   );
   // epic-9-stats Issue 4：每日閱讀統計，同一個 Database 連線（不設外鍵，
-  // 見 Issue 2）；經 LibraryReaderFeatureRepositories 貫穿所有開書路徑。
+  // 見 Issue 2）；經 ReaderFeatureDependencies 貫穿所有開書路徑。
   final readingStatsRepository = SqliteReadingStatsRepository(
     database: repository.database,
   );
@@ -272,7 +269,9 @@ Future<void> main() async {
       final context = navigatorKey.currentContext;
       if (context == null) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.syncSessionExpiredToast)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.syncSessionExpiredToast),
+        ),
       );
     },
   );
@@ -318,27 +317,40 @@ Future<void> main() async {
       );
     },
   );
+  // ADR 0037：依賴組由 main() 建構一次，ElinkBookApp 原樣往下傳（主題／語言切換
+  // 重建 App 時不會變成新實例）。syncCheckpointTrigger 同一實例放進兩組。
+  final readerFeatures = ReaderFeatureDependencies(
+    prefsManager: prefsManager,
+    libraryRepository: repository,
+    bookImportService: importService,
+    bookmarksRepository: bookmarksRepository,
+    highlightsRepository: highlightsRepository,
+    notesRepository: notesRepository,
+    customFontsRepository: customFontsRepository,
+    downloadableFontStore: downloadableFontStore,
+    layoutPresetRepository: layoutPresetRepository,
+    bookReaderPrefsRepository: prefsRepository,
+    searchRepository: searchRepository,
+    isFullTextSearchAvailable: repository.isFullTextSearchAvailable,
+    fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
+    readingStatsRepository: readingStatsRepository,
+    readerActivityTracker: readerActivityTracker,
+    syncCheckpointTrigger: syncCheckpointTrigger,
+    ttsProvider: ttsProvider,
+    ttsAudio: ttsAudio,
+    ttsAudioFocusSource: ttsAudioFocusSource,
+  );
+  final sync = SyncDependencies(
+    syncAccountRepository: syncAccountRepository,
+    syncClient: syncClient,
+    syncCheckpointTrigger: syncCheckpointTrigger,
+    onManualSync: syncEngine.runCheckpoint,
+    loadLastSyncedAt: syncMetadataRepository.loadLastPushCompletedAt,
+  );
   runApp(
     ElinkBookApp(
-      repository: repository,
-      importService: importService,
-      prefsManager: prefsManager,
-      bookmarksRepository: bookmarksRepository,
-      highlightsRepository: highlightsRepository,
-      notesRepository: notesRepository,
-      customFontsRepository: customFontsRepository,
-      downloadableFontStore: downloadableFontStore,
-      layoutPresetRepository: layoutPresetRepository,
-      bookReaderPrefsRepository: prefsRepository,
-      ttsProvider: ttsProvider,
-      ttsAudio: ttsAudio,
-      ttsAudioFocusSource: ttsAudioFocusSource,
-      readerActivityTracker: readerActivityTracker,
-      syncAccountRepository: syncAccountRepository,
-      syncClient: syncClient,
-      syncCheckpointTrigger: syncCheckpointTrigger,
-      onManualSync: syncEngine.runCheckpoint,
-      loadLastSyncedAt: syncMetadataRepository.loadLastPushCompletedAt,
+      readerFeatures: readerFeatures,
+      sync: sync,
       cloudAccountRepository: cloudAccountRepository,
       googleDriveOAuthClient: googleDriveOAuthClient,
       oneDriveOAuthClient: oneDriveOAuthClient,
@@ -357,10 +369,6 @@ Future<void> main() async {
       themePreferences: themePreferences,
       localePreferences: localePreferences,
       initialLocaleOverride: initialLocaleOverride,
-      fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
-      isFullTextSearchAvailable: repository.isFullTextSearchAvailable,
-      searchRepository: searchRepository,
-      readingStatsRepository: readingStatsRepository,
     ),
   );
 }
@@ -368,32 +376,10 @@ Future<void> main() async {
 /// elinkBook App 根元件。啟動時接受從 main 傳入之 [initialTheme] 與
 /// [initialEinkMode]（解決開機閃白屏與狀態競爭問題，見 review 意見）。
 class ElinkBookApp extends StatefulWidget {
-  final LibraryRepository repository;
-  final BookImportService importService;
-  final ReaderPrefsManager prefsManager;
-  final BookmarksRepository? bookmarksRepository;
-  final HighlightsRepository? highlightsRepository;
-  final NotesRepository? notesRepository;
-  final CustomFontsRepository? customFontsRepository;
-  final DownloadableFontStore? downloadableFontStore;
-  final LayoutPresetRepository? layoutPresetRepository;
-  final BookReaderPrefsRepository? bookReaderPrefsRepository;
-  final TtsProvider? ttsProvider;
-
-  /// epic-61 Issue 2：啟動階段 TTS 音訊服務 holder（handler 是否就緒＋降級
-  /// 提示是否待顯示）。`null`（既有呼叫端、測試）時視為未提供，不提示。
-  final TtsAudioHandlerHolder? ttsAudio;
-  final TtsAudioFocusSource? ttsAudioFocusSource;
-  final ReaderActivityTracker? readerActivityTracker;
-  final SyncAccountRepository? syncAccountRepository;
-  final SyncClient? syncClient;
-  final SyncCheckpointTrigger? syncCheckpointTrigger;
-
-  /// 「立即同步」按鈕與最後同步時間顯示（2026-09-08 `/grill-with-docs`
-  /// 使用者需求），見 `SyncSettingsScreen`／`LibrarySyncDependencies` 的
-  /// 欄位說明。
-  final Future<SyncCheckpointResult> Function()? onManualSync;
-  final Future<int?> Function()? loadLastSyncedAt;
+  /// 閱讀器功能依賴組與同步依賴組（ADR 0037）：由 `main()` 建構一次，原樣往下傳。
+  /// Issue 13 再收進 `AppDependencies`。
+  final ReaderFeatureDependencies readerFeatures;
+  final SyncDependencies sync;
   final CloudAccountRepository? cloudAccountRepository;
   final GoogleDriveOAuthClient? googleDriveOAuthClient;
   final OneDriveOAuthClient? oneDriveOAuthClient;
@@ -411,13 +397,6 @@ class ElinkBookApp extends StatefulWidget {
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
   final bool initialEinkMode;
-  final FullTextSearchSettingsRepository? fullTextSearchSettingsRepository;
-  final bool isFullTextSearchAvailable;
-  final SearchRepository? searchRepository;
-
-  /// epic-9-stats Issue 4：每日閱讀統計的存取層，放進
-  /// `LibraryReaderFeatureRepositories` 轉交給閱讀器。
-  final ReadingStatsRepository? readingStatsRepository;
 
   /// WiFi 傳書入口的網路先決條件偵測（epic-44-wifi-book-transfer
   /// Issue 1），生產環境傳入 `checkNetworkAvailability`（`network_availability.dart`
@@ -426,25 +405,8 @@ class ElinkBookApp extends StatefulWidget {
 
   ElinkBookApp({
     super.key,
-    required this.repository,
-    required this.importService,
-    required this.prefsManager,
-    this.bookmarksRepository,
-    this.highlightsRepository,
-    this.notesRepository,
-    this.customFontsRepository,
-    this.downloadableFontStore,
-    this.layoutPresetRepository,
-    this.bookReaderPrefsRepository,
-    this.ttsProvider,
-    this.ttsAudio,
-    this.ttsAudioFocusSource,
-    this.readerActivityTracker,
-    this.syncAccountRepository,
-    this.syncClient,
-    this.syncCheckpointTrigger,
-    this.onManualSync,
-    this.loadLastSyncedAt,
+    required this.readerFeatures,
+    required this.sync,
     this.cloudAccountRepository,
     this.googleDriveOAuthClient,
     this.oneDriveOAuthClient,
@@ -459,16 +421,12 @@ class ElinkBookApp extends StatefulWidget {
     this.navigatorKey,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
-    this.fullTextSearchSettingsRepository,
-    this.isFullTextSearchAvailable = true,
-    this.searchRepository,
-    this.readingStatsRepository,
     this.checkNetworkAvailability,
     this.initialLocaleOverride,
     AppLocalePreferences? localePreferences,
     AppThemePreferences? themePreferences,
-  })  : themePreferences = themePreferences ?? AppThemePreferences(),
-        localePreferences = localePreferences ?? AppLocalePreferences();
+  }) : themePreferences = themePreferences ?? AppThemePreferences(),
+       localePreferences = localePreferences ?? AppLocalePreferences();
 
   @override
   State<ElinkBookApp> createState() => _ElinkBookAppState();
@@ -504,7 +462,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      widget.syncCheckpointTrigger?.trigger();
+      widget.sync.syncCheckpointTrigger.trigger();
     }
   }
 
@@ -537,38 +495,8 @@ class _ElinkBookAppState extends State<ElinkBookApp>
       localeListResolutionCallback: (deviceLocales, supportedLocales) =>
           resolveMaterialAppLocale(deviceLocales),
       home: AdaptiveShellScaffold(
-        repository: widget.repository,
-        importService: widget.importService,
-        prefsManager: widget.prefsManager,
-        readerFeatureRepositories: LibraryReaderFeatureRepositories(
-          bookmarksRepository: widget.bookmarksRepository,
-          highlightsRepository: widget.highlightsRepository,
-          notesRepository: widget.notesRepository,
-          customFontsRepository: widget.customFontsRepository,
-          downloadableFontStore: widget.downloadableFontStore,
-          layoutPresetRepository: widget.layoutPresetRepository,
-          bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
-          ttsProvider: widget.ttsProvider,
-          ttsAudio: widget.ttsAudio,
-          ttsAudioFocusSource: widget.ttsAudioFocusSource,
-          readerActivityTracker: widget.readerActivityTracker,
-          fullTextSearchSettingsRepository:
-              widget.fullTextSearchSettingsRepository,
-          isFullTextSearchAvailable: widget.isFullTextSearchAvailable,
-          searchRepository: widget.searchRepository,
-          readingStatsRepository: widget.readingStatsRepository,
-          // epic-15-storage-permission Issue 0：閱讀器在檔案存取失效時
-          // 重新連結書籍需要匯入服務（Issue 2 使用），與上方
-          // importService 參數是同一個實例。
-          bookImportService: widget.importService,
-        ),
-        syncDependencies: LibrarySyncDependencies(
-          syncAccountRepository: widget.syncAccountRepository,
-          syncClient: widget.syncClient,
-          syncCheckpointTrigger: widget.syncCheckpointTrigger,
-          onManualSync: widget.onManualSync,
-          loadLastSyncedAt: widget.loadLastSyncedAt,
-        ),
+        readerFeatures: widget.readerFeatures,
+        sync: widget.sync,
         cloudAccountDependencies: LibraryCloudAccountDependencies(
           cloudAccountRepository: widget.cloudAccountRepository,
           googleDriveOAuthClient: widget.googleDriveOAuthClient,
@@ -595,8 +523,8 @@ class _ElinkBookAppState extends State<ElinkBookApp>
           onLocaleChanged: _handleLocaleChanged,
         ),
         wifiTransferDependencies: WifiTransferDependencies(
-          libraryRepository: widget.repository,
-          importService: widget.importService,
+          libraryRepository: widget.readerFeatures.libraryRepository,
+          importService: widget.readerFeatures.bookImportService,
           computeFingerprint: widget.computeFingerprint,
           checkNetworkAvailability: widget.checkNetworkAvailability,
         ),

@@ -1,5 +1,3 @@
-import 'package:elinkbook/sync/sync_checkpoint_result.dart';
-import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_bookmarks_repository.dart';
@@ -59,49 +57,6 @@ void main() {
       final b = fakeReaderFeatureDependencies();
 
       expect(a.bookmarksRepository, isNot(same(b.bookmarksRepository)));
-    });
-  });
-
-  group('completeLegacyReaderFeatures', () {
-    test('覆寫的欄位原樣（同一實例）帶入，其餘維持預設非 null', () {
-      final bookmarks = FakeBookmarksRepository();
-      final trigger = SyncCheckpointTrigger(
-        runCheckpoint: () async => SyncCheckpointResult.notLoggedIn,
-      );
-
-      final features = completeLegacyReaderFeatures(
-        bookmarksRepository: bookmarks,
-        isFullTextSearchAvailable: false,
-      );
-      final sync =
-          completeLegacySyncDependencies(syncCheckpointTrigger: trigger);
-
-      expect(features.bookmarksRepository, same(bookmarks));
-      expect(features.isFullTextSearchAvailable, isFalse);
-      expect(features.highlightsRepository, isNotNull);
-      expect(sync.syncCheckpointTrigger, same(trigger));
-    });
-
-    test('舊 bundle 的 15 個閱讀器欄位全部非 null，且 sync 帶有 syncCheckpointTrigger', () {
-      final features = completeLegacyReaderFeatures();
-      final sync = completeLegacySyncDependencies();
-
-      expect(features.bookmarksRepository, isNotNull);
-      expect(features.highlightsRepository, isNotNull);
-      expect(features.notesRepository, isNotNull);
-      expect(features.customFontsRepository, isNotNull);
-      expect(features.downloadableFontStore, isNotNull);
-      expect(features.layoutPresetRepository, isNotNull);
-      expect(features.bookReaderPrefsRepository, isNotNull);
-      expect(features.ttsProvider, isNotNull);
-      expect(features.ttsAudio, isNotNull);
-      expect(features.ttsAudioFocusSource, isNotNull);
-      expect(features.readerActivityTracker, isNotNull);
-      expect(features.searchRepository, isNotNull);
-      expect(features.bookImportService, isNotNull);
-      expect(features.readingStatsRepository, isNotNull);
-      expect(features.fullTextSearchSettingsRepository, isNotNull);
-      expect(sync.syncCheckpointTrigger, isNotNull);
     });
   });
 }
