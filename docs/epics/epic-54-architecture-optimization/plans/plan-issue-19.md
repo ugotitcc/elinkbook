@@ -525,7 +525,7 @@ flutter analyze
 ## 附錄 A：使用者決定紀錄（Task 0 Step 2 取得後填入原話）
 
 - Task 0 Step 2（演算法取捨，A／B／C）：使用者於 2026-10-07 對話回答原話：`B`（採本計畫方案：先比 spine index、同 spine 內才比 progression）。
-- Task 0 Step 2（本次執行確認）：使用者於 2026-10-07 對話回答原話：`B 本計畫方案`（先比 spine index，同 spine 內才比 progression）。
+- Task 0 Step 2（本次執行確認）：使用者於 2026-10-07 對話回答原話：`B`（採計畫方案：先比 spine index，同 spine 內才比 progression）。
 
 ## Self-Review 結果
 

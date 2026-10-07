@@ -120,6 +120,15 @@ void main() {
           reason: '頂層 progression 全為 null，舊規則下只有子節 0.30 <= 0.35 命中');
     });
 
+    test('currentProgression 為 null 但 spine 已知時，同 spine 內所有節點視為已通過（選到最深最後一筆）', () {
+      // 釘住現行語意：progression 缺值時無法比較錨點先後，保守取同 spine 最後一筆。
+      // 實務上 parseLocatorChanged 以 fraction ?? 0.0 預設，不會走到此分支。
+      expect(
+        TocNavigator.findCurrentPath(toc, null, currentSpineIndex: 1),
+        [c2, c2s2],
+      );
+    });
+
     test('currentProgression 與 currentSpineIndex 皆為 null 時回傳空清單', () {
       expect(TocNavigator.findCurrentPath(toc, null), isEmpty);
     });

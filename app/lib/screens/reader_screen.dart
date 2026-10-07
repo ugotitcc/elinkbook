@@ -1332,12 +1332,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     FoliateReaderView.jumpToLocator(_foliateEpubReaderViewKey, locatorJson);
   }
 
-  /// EPUB 目前章節路徑（epic-54 Issue 19）：同時傳入全書 progression 與 spine index，後者讓開書當下的判定不受 progression 偏高／頂層章節 progression 為 null 影響，見 `TocNavigator.findCurrentPath`。開書極早期尚未收到位置回報（`_epubPositionInfo == null`）時，兩個參數皆為 null，`findCurrentPath` 自然回傳空清單（不預設展開、不高亮）。
+  /// EPUB 目前章節路徑（epic-54 Issue 19）：同時傳入全書 progression 與
+  /// spine index，後者讓開書當下的判定不受 progression 偏高／頂層章節
+  /// progression 為 null 影響，見 `TocNavigator.findCurrentPath`。
+  /// 開書極早期尚未收到位置回報（`_epubPositionInfo == null`）時，兩個參數
+  /// 皆為 null，`findCurrentPath` 自然回傳空清單（不預設展開、不高亮）。
   List<TocEntry> _currentEpubTocPath() => TocNavigator.findCurrentPath(
         _tocEntries,
         _epubPositionInfo?.progression,
         currentSpineIndex: extractChapterIndex(_epubPositionInfo?.locatorJson),
       );
+
   void _openToc() {
     final currentPath = _currentEpubTocPath();
     _showThemedModalBottomSheet<void>(

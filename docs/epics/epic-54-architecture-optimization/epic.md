@@ -473,6 +473,13 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-07 Issue 19 實作完成與真機驗證結果**（分支 `epic-54/issue-19-toc-current-chapter`，worktree 內 Native 直接開發，無 subagent；使用者明確要求本案嚴禁 subagent。計畫見 `plans/plan-issue-19.md`）
 
 - 根因：`TocNavigator.findCurrentPath` 只用全書 progression 比對：(a) 無頁內錨點的頂層章節 `TocEntry.progression` 結構性為 `null`，永遠不會被選中；(b) 開書初始全書 fraction 偏高（foliate 位元組估計含當前頁 double-count，TCL 14 實測 0.554＝2×1763／6362），使後面章節的子節被誤判為已通過。
-- 演算法取捨與使用者決定（2026-10-07 對話原話：`B 本計畫方案`）：先比 spine index、同 spine 內才比 progression；同一 spine 內多錨點時，開書 progression 偏高可能多選到同章較後子節（不再跨章誤判），同章內精確須改 `main.js`（另案）。`findCurrentPath` 新增可選參數 `currentSpineIndex`，任一方缺 index 即退回舊規則；`ReaderScreen` 新增 `_currentEpubTocPath()` helper，四處呼叫共用；PDF 分支未動；`main.js`／vendor 未動。
+- 演算法取捨與使用者決定（2026-10-07 對話原話：`B`；採計畫方案）：先比 spine index、同 spine 內才比 progression；同一 spine 內多錨點時，開書 progression 偏高可能多選到同章較後子節（不再跨章誤判），同章內精確須改 `main.js`（另案）。`findCurrentPath` 新增可選參數 `currentSpineIndex`，任一方缺 index 即退回舊規則；`ReaderScreen` 新增 `_currentEpubTocPath()` helper，四處呼叫共用；PDF 分支未動；`main.js`／vendor 未動。
 - 真機（`TCL 14`，序號 `3CEF42ECD491687`，Android 15。以下結果僅宣稱此裝置通過）：`epub_toc_test` 未收緊版通過（+1）；收緊版通過（+1，含新增「跳轉第三章後再開目錄」斷言：第二章維持收合、第三章 `ListTile.selected`）；突變（註解 `currentSpineIndex` 傳入）失敗於「開書在第一章，第二章應預設收合」（+0 -1），還原後通過（+1）。單元 `toc_navigator_test` 15/15（含新 9 案）；突變（`nodeIndex > currentSpineIndex` 改 `return true`）4 案失敗，還原後全過。
 - 斷言強度變化：收緊。`epub_toc_test` 移除 `TODO(Issue 19)` 與容錯分支，改回斷言開書第二章預設收合，並新增跳轉後判定斷言。
+- 全量與回歸（2026-10-08，`TCL 14` 序號 `3CEF42ECD491687`；僅宣稱此裝置通過）：完整 `flutter test` 3709 通過、1 跳過、1 失敗（`pdf_reader_view_filters_test` 加粗 debouncer，Issue 18 已記錄為乾淨樹同樣失敗的既存問題，與本 Issue 無關）；integration 回歸 `notes_bookmark_test` +2、`reader_header_footer_toggle_test` +4 皆通過；`flutter analyze` 乾淨；`check_integration_keys.js`／`check_l10n_hardcoded_strings.js` 全 PASS。
+
+**2026-10-08 Issue 19 程式審查回應**（審查報告 `reviews/review-code-issue-19.md`：Critical 0、Important 2、Minor 3）
+
+- I-1：使用者原話更正為 `B`（epic.md 與計畫附錄 A 兩處，先前誤記為 `B 本計畫方案`）。
+- I-2：補上上列完整 `flutter test` 與兩個 integration 檔的實測結果。
+- M-1：`_currentEpubTocPath()` 註解折行並補空行。M-2：新增單元測試釘住「`currentProgression` 為 null 但 spine 已知」的現行語意（`toc_navigator_test` 現 16 案）。M-3：真機突變當時未保留日誌，無法補檔，維持文字記載（不追溯杜撰）。
