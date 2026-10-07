@@ -400,7 +400,7 @@ flutter test    # run_in_background，約 5～6 分鐘
 7. **全量 integration 計數**：計畫寫 31 檔，實際 glob 跑出 39 檔（含 `flutter_test_config.dart` 誤跑 1 次，已排除）；38 實檔中 34 通過。`issues.md`/`docs/epics.md`/`epic.md` 的數字以本次實測為準。
 8. **既存失敗（非本 Issue，不處理）**：`test/reader/pdf_reader_view_filters_test.dart` 加粗 debouncer（stash 證實乾淨樹同樣失敗）、`book_metadata_channel_test`（乾淨樹同樣失敗）、`sync_*`（裝置對後端 100% 丟包）。
 9. **`epic.md:441` 未改**：Issue 17 審查 M-2 歷史紀錄敘述屬實，改寫等於竄改歷史；誤判風險由 `issues.md` 更正承擔（見 ledger Ruling）。
-10. **Task 6 Step 1 的 `reader_screen_test` 整檔**：改寫後未單獨重跑整檔；證據為 4 個改寫案例隔離全綠、改寫前整檔 13/19、38 檔全量迴圈中本檔未列入未通過項。整檔結果待在 `TCL 14` 單獨重跑確認（程式審查 I-2），`epic.md` 已同步改寫。
+10. **Task 6 Step 1 的 `reader_screen_test` 整檔**：原先改寫後未單獨重跑整檔（程式審查 I-2 指出敘述自相矛盾）。**已更正**：2026-10-07 清除 App 資料後在 `TCL 14` 單獨重跑整檔，19/19 全過；`epic.md` 已據實更新。
 
 ## 附錄 B：計畫審查回應（`reviews/review-plan-issue-18.md`）
 
@@ -423,7 +423,7 @@ flutter test    # run_in_background，約 5～6 分鐘
 審查結論 With fixes（Critical 0、Important 3、Minor 6），經使用者同意全部處理：
 
 - **I-1**：補 6 個 widget 測試（`widget.isFixedLayout` null／false／true × 原生回報 true／false），突變驗證拿掉 `widget.isFixedLayout != true` 保護條件會變紅；`epic.md` 補三種情形行為。
-- **I-2**：`epic.md`、附錄 A 第 10 項統一敘述，並在 `TCL 14` 重跑整檔後據實更新（結果見 `epic.md`）。
+- **I-2**：已在 `TCL 14`（清除 App 資料後）單獨重跑 `reader_screen_test` 整檔，19/19 全過，並重跑 `reader_header_footer_toggle_test`（4/4）、`epub_toc_test`（1/1）、`epub_fxl_tap_zone_test`（1/1）皆通過；`epic.md` 與附錄 A 第 10 項已據實更新。
 - **I-3**：`issues.md` 表格空行已移除。
 - **M-1**：`epic_toc_test` 文字改為「覆蓋面不同」，測試內加 `TODO(Issue 19)`。
 - **M-2**：`pdf_fit_size_delegate_test` 的兩個不變式案例註明不保護箝位；審查建議的「`metrics.maxScale < zoom`」案例**無法建構**——`PdfFitSizeDelegate` 建構子把 `maxScale` 固定為 `kPdfFitMaxZoom`，沒有公開途徑傳入更小值，故不新增。
