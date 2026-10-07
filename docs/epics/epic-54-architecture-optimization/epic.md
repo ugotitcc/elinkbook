@@ -484,6 +484,6 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - I-2：補上上列完整 `flutter test` 與兩個 integration 檔的實測結果。
 - M-1：`_currentEpubTocPath()` 註解折行並補空行。M-2：新增單元測試釘住「`currentProgression` 為 null 但 spine 已知」的現行語意（`toc_navigator_test` 現 16 案）。M-3：真機突變當時未保留日誌，無法補檔，維持文字記載（不追溯杜撰）。
 
-**2026-10-08 Issue 19 已合併（PR #334）。** EPUB 目錄「目前章節」改以 spine index 優先判定（`TocNavigator.findCurrentPath` 新增 `currentSpineIndex`），開書當下不再誤展開後面章節；`epub_toc_test` 已改回斷言開書預設收合。同一 spine 內多錨點的精確度須改 `main.js`，曾登記為 Issue 20，經審查修訂後由使用者決定不處理（見下）。
+**2026-10-08 Issue 19 已合併（PR #334）。** EPUB 目錄「目前章節」改以 spine index 優先判定（`TocNavigator.findCurrentPath` 新增 `currentSpineIndex`），開書當下不再誤展開後面章節；`epub_toc_test` 已改回斷言開書預設收合。同一 spine 內多錨點的精確度須改 `main.js`，已登記為 Issue 20，經審查修訂後由使用者決定推動方案 B（見下）。
 
-**2026-10-08 Issue 20 關閉（wontfix）。** 登記後經 `reviews/review-issue-20.md` 查證：原修復方向（回報章節內 fraction）不可行，改為轉發 foliate `relocate` 的 `tocItem` 可達 DOM 級精確。使用者在「方案 B（轉發 tocItem）」與「方案 C（維持 Issue 19 取捨、關閉工單）」之間回答 `C`（2026-10-08 對話原話）。理由：主流一章一檔 EPUB 不受影響，單 spine 多錨點僅影響開書當下同章內高亮的準確度。工單列保留修復方向與約束，供日後重啟。
+**2026-10-08 Issue 20 決定推動（方案 B）。** 登記後經 `reviews/review-issue-20.md` 查證：原修復方向（回報章節內 fraction）不可行，改為轉發 foliate `relocate` 的 `tocItem` 可達 DOM 級精確。使用者在「方案 B（轉發 tocItem）」與「方案 C（維持 Issue 19 取捨、關閉工單）」之間，先回答 `C`，隨即更正為（2026-10-08 對話原話）：`打錯了，要選擇B才對，請修正`。最終決定為方案 B；曾短暫以 wontfix 關閉（commit `6cb1b767`），已還原為待處理。
