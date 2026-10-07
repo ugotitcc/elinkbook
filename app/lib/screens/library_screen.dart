@@ -875,11 +875,12 @@ class _LibraryScreenState extends State<LibraryScreen>
           MaterialPageRoute(
             builder: (_) => LibrarySearchScreen(
               initialQuery: _searchQuery,
-              searchRepository: searchRepository,
-              prefsManager: widget.prefsManager,
-              libraryRepository: widget.repository,
-              readerFeatureRepositories: widget.readerFeatureRepositories,
-              syncDependencies: widget.syncDependencies,
+              dependencies: readerFeatureDependenciesFromLegacy(
+                prefsManager: widget.prefsManager,
+                features: widget.readerFeatureRepositories,
+                sync: widget.syncDependencies,
+                libraryRepository: widget.repository,
+              ),
               isEinkMode: widget.themeDependencies.isEinkMode,
             ),
           ),

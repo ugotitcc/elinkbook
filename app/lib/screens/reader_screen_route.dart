@@ -3,27 +3,19 @@ import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
-import '../search/search_repository.dart';
 import 'library_screen_dependencies.dart';
 import 'reader_feature_dependencies.dart';
 import 'reader_screen.dart';
 
-/// 【過渡用，Issue 12／13 移除】把尚未遷移的外層畫面（`LibraryScreen`、
-/// `LibrarySearchScreen`）持有的舊 bundle 組裝成新的 [ReaderFeatureDependencies]
-/// （ADR 0037 §6）。舊 bundle 欄位是 nullable，新組是 non-null：遇到 null 就丟
-/// [StateError]，訊息含欄位名——正式環境 `main.dart` 全部傳值，不會觸發；
-/// 測試需用 `completeLegacyReaderFeatures()` 補齊。
-///
-/// [searchRepository] 非 null 時優先於 `features.searchRepository`：
-/// `LibrarySearchScreen` 自己持有一份必填的 `searchRepository`，開單書搜尋時
-/// 沿用它（與遷移前行為一致），避免與 bundle 內的欄位分歧或因 bundle 缺欄位而
-/// 丟 [StateError]。Issue 12 合併這兩個欄位後移除此參數。
+/// 【過渡用，Issue 12 移除】把尚未遷移的外層畫面（`LibraryScreen`）持有的舊 bundle
+/// 組裝成新的 [ReaderFeatureDependencies]（ADR 0037 §6）。舊 bundle 欄位是
+/// nullable，新組是 non-null：遇到 null 就丟 [StateError]，訊息含欄位名——正式環境
+/// `main.dart` 全部傳值，不會觸發；測試需用 `completeLegacyReaderFeatures()` 補齊。
 ReaderFeatureDependencies readerFeatureDependenciesFromLegacy({
   required ReaderPrefsManager prefsManager,
   required LibraryReaderFeatureRepositories features,
   required LibrarySyncDependencies sync,
   required LibraryRepository libraryRepository,
-  SearchRepository? searchRepository,
 }) {
   T need<T>(T? value, String name) {
     if (value == null) {
@@ -36,36 +28,55 @@ ReaderFeatureDependencies readerFeatureDependenciesFromLegacy({
     prefsManager: prefsManager,
     libraryRepository: libraryRepository,
     bookImportService: need(features.bookImportService, 'bookImportService'),
-    bookmarksRepository:
-        need(features.bookmarksRepository, 'bookmarksRepository'),
-    highlightsRepository:
-        need(features.highlightsRepository, 'highlightsRepository'),
+    bookmarksRepository: need(
+      features.bookmarksRepository,
+      'bookmarksRepository',
+    ),
+    highlightsRepository: need(
+      features.highlightsRepository,
+      'highlightsRepository',
+    ),
     notesRepository: need(features.notesRepository, 'notesRepository'),
-    customFontsRepository:
-        need(features.customFontsRepository, 'customFontsRepository'),
-    downloadableFontStore:
-        need(features.downloadableFontStore, 'downloadableFontStore'),
-    layoutPresetRepository:
-        need(features.layoutPresetRepository, 'layoutPresetRepository'),
-    bookReaderPrefsRepository:
-        need(features.bookReaderPrefsRepository, 'bookReaderPrefsRepository'),
-    searchRepository:
-        searchRepository ?? need(features.searchRepository, 'searchRepository'),
+    customFontsRepository: need(
+      features.customFontsRepository,
+      'customFontsRepository',
+    ),
+    downloadableFontStore: need(
+      features.downloadableFontStore,
+      'downloadableFontStore',
+    ),
+    layoutPresetRepository: need(
+      features.layoutPresetRepository,
+      'layoutPresetRepository',
+    ),
+    bookReaderPrefsRepository: need(
+      features.bookReaderPrefsRepository,
+      'bookReaderPrefsRepository',
+    ),
+    searchRepository: need(features.searchRepository, 'searchRepository'),
     isFullTextSearchAvailable: features.isFullTextSearchAvailable,
     fullTextSearchSettingsRepository: need(
       features.fullTextSearchSettingsRepository,
       'fullTextSearchSettingsRepository',
     ),
-    readingStatsRepository:
-        need(features.readingStatsRepository, 'readingStatsRepository'),
-    readerActivityTracker:
-        need(features.readerActivityTracker, 'readerActivityTracker'),
-    syncCheckpointTrigger:
-        need(sync.syncCheckpointTrigger, 'syncCheckpointTrigger'),
+    readingStatsRepository: need(
+      features.readingStatsRepository,
+      'readingStatsRepository',
+    ),
+    readerActivityTracker: need(
+      features.readerActivityTracker,
+      'readerActivityTracker',
+    ),
+    syncCheckpointTrigger: need(
+      sync.syncCheckpointTrigger,
+      'syncCheckpointTrigger',
+    ),
     ttsProvider: need(features.ttsProvider, 'ttsProvider'),
     ttsAudio: need(features.ttsAudio, 'ttsAudio'),
-    ttsAudioFocusSource:
-        need(features.ttsAudioFocusSource, 'ttsAudioFocusSource'),
+    ttsAudioFocusSource: need(
+      features.ttsAudioFocusSource,
+      'ttsAudioFocusSource',
+    ),
   );
 }
 

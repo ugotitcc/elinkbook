@@ -4871,6 +4871,7 @@ void main() {
   testWidgets(
       '點擊「搜尋書本內容」入口，帶同一組關鍵字導航至 LibrarySearchScreen（epic-10-search Issue 4）',
       (tester) async {
+    final contentSearchRepository = FakeSearchRepository();
     final book = _testBook(id: '1', title: '紅樓夢', author: '曹雪芹');
     await pumpLocalizedWidget(
       tester,
@@ -4878,9 +4879,10 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          readerFeatureRepositories: LibraryReaderFeatureRepositories(
-            searchRepository: FakeSearchRepository(),
+          readerFeatureRepositories: completeLegacyReaderFeatures(
+            searchRepository: contentSearchRepository,
           ),
+          syncDependencies: completeLegacySyncDependencies(),
         ),
     );
     await tester.pumpAndSettle();
@@ -4899,6 +4901,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(LibrarySearchScreen), findsOneWidget);
+    expect(
+      tester
+          .widget<LibrarySearchScreen>(find.byType(LibrarySearchScreen))
+          .dependencies
+          .searchRepository,
+      same(contentSearchRepository),
+    );
     expect(
       tester
           .widget<TextField>(

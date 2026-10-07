@@ -342,42 +342,5 @@ void main() {
       );
       expect(dependencies.isFullTextSearchAvailable, isFalse);
     });
-
-    test(
-      '傳入 searchRepository 時優先於 bundle 內的欄位（LibrarySearchScreen 開單書搜尋沿用自己的）',
-      () {
-        final own = FakeSearchRepository();
-        final features = completeLegacyReaderFeatures();
-
-        final dependencies = readerFeatureDependenciesFromLegacy(
-          prefsManager: FakeReaderPrefsManager(),
-          features: features,
-          sync: completeLegacySyncDependencies(),
-          libraryRepository: FakeLibraryRepository(),
-          searchRepository: own,
-        );
-
-        expect(dependencies.searchRepository, same(own));
-        expect(
-          dependencies.searchRepository,
-          isNot(same(features.searchRepository)),
-        );
-      },
-    );
-
-    test(
-      '傳入 searchRepository 時，bundle 的 searchRepository 為 null 也不丟 StateError',
-      () {
-        final dependencies = readerFeatureDependenciesFromLegacy(
-          prefsManager: FakeReaderPrefsManager(),
-          features: legacyWithNull('searchRepository'),
-          sync: completeLegacySyncDependencies(),
-          libraryRepository: FakeLibraryRepository(),
-          searchRepository: FakeSearchRepository(),
-        );
-
-        expect(dependencies.searchRepository, isNotNull);
-      },
-    );
   });
 }
