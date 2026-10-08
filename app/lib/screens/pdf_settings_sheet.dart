@@ -18,9 +18,9 @@ import 'widgets/eb_stepper.dart';
 /// 皆已完整實作。
 ///
 /// 純展示、無 I/O：每次選擇立即透過 [onChanged] 回報目前完整的
-/// [BookReaderPrefs]（`_notifyChanged` 只需重建目前已追蹤的本地狀態欄位
-/// ＋ 原樣帶回 [BookReaderPrefs.pdfCropRect]——因為同一本書不會同時是
-/// EPUB 又是 PDF，未追蹤的 EPUB 欄位維持 null 不影響實際使用情境）。
+/// [BookReaderPrefs]（`_notifyChanged` 以 [BookReaderPrefs.copyWith] 在
+/// [prefs] 基礎上只覆寫本面板追蹤的欄位，其餘欄位原樣保留——本面板送出的
+/// 欄位全是非 null，不需要「清回 null」的語意）。
 /// 「手動選區」選項點擊時透過 [onRequestManualCrop] 通知呼叫端
 /// （`PdfSettingsSheet` 本身不直接操作 `PdfReaderView`，維持既有單向資料
 /// 流，見 spec.md「模組」段落）；持久化由呼叫端（`ReaderScreen`）負責。
@@ -87,18 +87,18 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   }
 
   void _notifyChanged() {
+    // Issue 10：以 widget.prefs 為底、只覆寫本面板追蹤的欄位，其餘欄位（EPUB
+    // 版面、書架「版面覆寫」設的排版方向／翻頁方式等）原樣保留。本面板送出的
+    // 欄位全是非 null，不需要「清回 null」的語意，所以用 copyWith 即可。
+    // pdfCropRect 由原生端計算、經 ReaderScreen.onCropRectComputed 另一條路徑
+    // 寫入，本分頁不控制，copyWith 不傳即原樣保留。
     widget.onChanged(
-      BookReaderPrefs(
+      widget.prefs.copyWith(
         pdfFitMode: _fitMode,
         pdfContrast: _contrast,
         pdfBrightness: _brightness,
         pdfBoldStrength: _boldStrength / 100,
         pdfCropMode: _cropMode,
-        // pdfCropRect 由原生端計算、透過 ReaderScreen.onCropRectComputed
-        // 另一條路徑寫入，本分頁不直接控制，但必須原樣帶回（讀取目前的
-        // widget.prefs，不是本地狀態），否則使用者調整本分頁任何一個控制項
-        // 都會把已算好的裁切矩形靜默清空成 null。
-        pdfCropRect: widget.prefs.pdfCropRect,
         dualPageMode: _dualPageMode,
         dualPageCoverAlone: _dualPageCoverAlone,
         dualPageDirection: _dualPageDirection,

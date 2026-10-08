@@ -12,6 +12,8 @@ import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
+import '../support/full_book_reader_prefs.dart';
+
 void main() {
   testWidgets('三個分頁標籤皆存在', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
@@ -1212,6 +1214,49 @@ void main() {
     expect(find.text('Display'), findsOneWidget);
     expect(find.text('Filters'), findsOneWidget);
     expect(find.text('Crop'), findsOneWidget);
+  });
+
+  group('全欄位保留守衛（Issue 10）：種子 33 欄位，操作一個控制項後只有該欄位改變', () {
+    Future<BookReaderPrefs?> tapAndCapture(
+      WidgetTester tester,
+      String keyName,
+    ) async {
+      BookReaderPrefs? notified;
+      await _pumpSheet(
+        tester,
+        fullBookReaderPrefsSeed,
+        (prefs) => notified = prefs,
+      );
+      await tester.ensureVisible(find.byKey(Key(keyName)));
+      await tester.tap(find.byKey(Key(keyName)));
+      await tester.pump();
+      return notified;
+    }
+
+    testWidgets('切換全螢幕 → 只有 fullscreen 改變', (tester) async {
+      final notified = await tapAndCapture(tester, 'pdf_settings_fullscreen');
+      expect(notified, isNotNull);
+      expect(notified!.fullscreen, isFalse);
+      expectPrefsPreserved(notified, fullBookReaderPrefsSeed,
+          except: {'fullscreen'});
+    });
+
+    testWidgets('切換頁尾顯示 → 只有 show_footer 改變', (tester) async {
+      final notified = await tapAndCapture(tester, 'pdf_settings_show_footer');
+      expect(notified, isNotNull);
+      expect(notified!.showFooter, isFalse);
+      expectPrefsPreserved(notified, fullBookReaderPrefsSeed,
+          except: {'show_footer'});
+    });
+
+    testWidgets('切換封面獨立 → 只有 dual_page_cover_alone 改變', (tester) async {
+      final notified =
+          await tapAndCapture(tester, 'pdf_settings_dual_page_cover_alone');
+      expect(notified, isNotNull);
+      expect(notified!.dualPageCoverAlone, isTrue);
+      expectPrefsPreserved(notified, fullBookReaderPrefsSeed,
+          except: {'dual_page_cover_alone'});
+    });
   });
 }
 

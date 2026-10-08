@@ -485,7 +485,7 @@ git commit -m "test(epic-54): Issue 10 FxlSettingsSheet 全欄位保留守衛" -
 **Interfaces:**
 - Consumes: `fullBookReaderPrefsSeed`、`expectPrefsPreserved`、檔內既有 `_pumpSheet(tester, prefs, onChanged)`。
 
-- [ ] **Step 1：寫守衛測試**
+- [x] **Step 1：寫守衛測試**
 
 在 `main()` 結尾（最後一個 `}` 之前）新增：
 
@@ -534,7 +534,7 @@ git commit -m "test(epic-54): Issue 10 FxlSettingsSheet 全欄位保留守衛" -
   });
 ```
 
-- [ ] **Step 2：跑測試確認紅，並記錄被丟的欄位**
+- [x] **Step 2：跑測試確認紅，並記錄被丟的欄位**
 
 ```bash
 flutter test test/screens/pdf_settings_sheet_test.dart --plain-name "全欄位保留守衛"
@@ -542,7 +542,7 @@ flutter test test/screens/pdf_settings_sheet_test.dart --plain-name "全欄位�
 
 預期：3 個全紅，失敗訊息列出被清成 `null` 的欄位，應包含：`font_family`、`font_size`、`font_weight`、`line_height`、`paragraph_spacing`、`letter_spacing`、`page_margins`、4 個 `margin_*`、`text_align`、`publisher_styles`、`writing_mode_override`、`page_turn_mode_override`、`screen_orientation_override`、`show_header`、`column_mode`、`column_size`、`text_conversion_override`（共 20 個）。把實際輸出貼進附錄 C。**若實際沒有紅**，代表 S3 的描述有誤，停下回報，不要硬改。
 
-- [ ] **Step 3：（依 Q2）修正 `_notifyChanged()`**
+- [x] **Step 3：（依 Q2）修正 `_notifyChanged()`**
 
 若附錄 A Q2 答「不納入」：跳過本步驟，把 3 個守衛測試加上 `skip: 'Issue 10 Q2：PDF 面板丟欄位另立工單，見 issues.md 第 N 列'`（N 為新工單編號，先登錄再 skip；**不得無 skip 帶紅燈提交**），並在 `issues.md` 登錄新工單。
 
@@ -576,7 +576,7 @@ flutter test test/screens/pdf_settings_sheet_test.dart --plain-name "全欄位�
 
 同時把類別文件註解（約 `:20-23`）中「未追蹤的 EPUB 欄位維持 null 不影響實際使用情境」那句改為「其餘欄位以 `widget.prefs` 為底原樣保留」。
 
-- [ ] **Step 4：跑 PDF 面板全檔與依賴它的閱讀器測試**
+- [x] **Step 4：跑 PDF 面板全檔與依賴它的閱讀器測試**
 
 ```bash
 flutter test test/screens/pdf_settings_sheet_test.dart
@@ -585,7 +585,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "PDF"
 
 預期：全數通過。**既有測試若有因為「onChanged 帶出的 prefs 現在含其他欄位」而紅的**（例如以 `==` 比對整物件預期其他欄位為 null），逐一檢查：若測試的前提是「其他欄位為 null」且 `widget.prefs` 本來就是 `empty`，則不受影響；若真有受影響者，停下回報，不要改弱斷言。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 flutter analyze
@@ -764,7 +764,7 @@ git commit -m "docs(epic-54): Issue 10 實作完成紀錄" -m "Co-Authored-By: C
 | Task 0 基準（`book_reader_prefs`＋`fxl`＋`pdf`＋`reader_settings` 四檔通過數） | 審查者於 `main` 實測 232（執行者開工時仍須自測填入） |
 | Task 0 基準（`library_screen_test.dart --plain-name "版面覆寫"`） | 審查者於 `main` 實測 3（同上） |
 | 預期新增案例數 | 種子自檢 3＋S1 1＋S2 3＋S3 3＋S4 2 ＝ 12 |
-| Task 4 Step 2 PDF 守衛紅燈訊息（被丟欄位清單） | （待填） |
+| Task 4 Step 2 PDF 守衛紅燈訊息（被丟欄位清單） | 3 個守衛全紅，共 20 個欄位被清成 null：font_family、font_size、font_weight、line_height、paragraph_spacing、letter_spacing、page_margins、margin_top、margin_bottom、margin_left、margin_right、text_align、publisher_styles、writing_mode_override、page_turn_mode_override、screen_orientation_override、show_header、column_mode、column_size、text_conversion_override（與計畫預測完全一致） |
 | Task 6 Step 1 變異驗證 M1～M6 實際紅燈訊息 | （待填） |
 | Task 6 Step 3 完整 `flutter test` | （待填） |
 
