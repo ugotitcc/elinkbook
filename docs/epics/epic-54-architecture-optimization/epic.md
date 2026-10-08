@@ -1,4 +1,5 @@
 - **接線守衛（程式審查 Important，選方案 B）**：`foliate_toc_footer_test` 新增直接載入 `FoliateReaderView` 的 `testWidgets`，斷言橋接收到的值：目錄根節點 `tocId == 0`、子節為 `[1,2,3]`、開書後 `tocItemId` 不為 null、跳到第三節後 `tocItemId == 3`、`locatorJson` 不含 `tocItemId`。TCL 14 上通過（該檔 +4、與 `epub_toc_test` 合跑 +6）；突變驗證：移除 `main.js` 流式分支的 `tocItemId` → 失敗（`Expected: not null`），`tocId: item.id ?? null` 改 `||` → 失敗（`Expected: <0>, Actual: <null>`），皆已還原。
+- **使用者可見的行為變化（程式審查 Minor）**：「目前章節」判定改為 foliate 的 `tocItem`（同一 spine 內，畫面範圍內有多個錨點時取**最後一個**；範圍內無錨點則取最近通過者）。影響範圍不只目錄高亮，`_currentEpubTocPath()` 的 4 個呼叫端——目錄展開／高亮、頁首章節名、底部選單標題、書籤預設名稱——都會隨之改變。同頁含多個小節標題時（短小節），顯示的會是該頁最後一個小節，與舊規則（依 progression 比大小）可能不同；跨 spine 與單一錨點的結果不變。
 # `epic-54-architecture-optimization` 架構優化
 
 **狀態：** 🟡 開發中 (Active)

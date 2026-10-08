@@ -198,10 +198,16 @@ void main() {
     });
 
     test('currentTocItemId 為 null：行為與 Issue 19 相同', () {
+      // 明確斷言 Issue 19 規則的結果（同 spine 內依 progression：0.10、0.40
+      // 已通過、0.70 未通過 → 第二節），而非拿同一條路徑跟自己比。
       expect(
-        TocNavigator.findCurrentPath(toc, 0.55, currentSpineIndex: 0),
         TocNavigator.findCurrentPath(toc, 0.55,
             currentSpineIndex: 0, currentTocItemId: null),
+        [ch, s2],
+      );
+      expect(
+        TocNavigator.findCurrentPath(toc, 0.55, currentSpineIndex: 0),
+        [ch, s2],
       );
     });
 
