@@ -173,7 +173,7 @@ void main() {
 
     testWidgets(
         '同時有多頁需要加粗運算時，各頁互不取消（Critical 2 回歸測試：'
-        '不得共用單一 debouncer 排程逐頁運算）', (tester) async {
+        '各頁須各自登記計算，不得因後登記的頁面取消先前頁面）', (tester) async {
       var renderedCount = 0;
       final key = GlobalKey<State<PdfReaderView>>();
 
@@ -199,7 +199,9 @@ void main() {
       await pumpUntilPdfReady(
         tester,
         condition: () => find.byType(RawImage).evaluate().length >= 2,
-        maxIterations: 40,
+        // epic-59 起覆蓋圖計算走 PdfOverlayJobQueue（maxConcurrent = 1，一次算一頁），
+        // 第 2 頁要排在第 1 頁之後：40 輪不夠（實測約需 46～48 輪），放寬到 120 輪留餘裕。
+        maxIterations: 120,
         delayBetweenPumps: const Duration(milliseconds: 50),
       );
       await tester.pump();
@@ -207,9 +209,9 @@ void main() {
       expect(
         find.byType(RawImage).evaluate().length,
         greaterThanOrEqualTo(2),
-        reason: '若各頁的加粗運算共用同一個 debouncer 排程，後呼叫的頁面會取消先前'
-            '排程、只會剩下最後一頁算出覆蓋圖；這裡斷言至少 2 頁都完成運算，證明'
-            '各頁是獨立排程、互不取消',
+        reason: '若各頁的加粗運算共用同一個排程，後登記的頁面會取消先前的、只會剩下'
+            '最後一頁算出覆蓋圖；這裡斷言至少 2 頁最終都完成運算（佇列序列化，'
+            '第 2 頁較晚完成），證明各頁是獨立登記、互不取消',
       );
     });
   });
