@@ -987,7 +987,7 @@ flutter test integration_test/wifi_transfer_screen_test.dart -d 3CEF42ECD491687
 - 本計畫：勾選全部 Step，附錄 A（使用者原話）、附錄 B（被刪測試清單）、附錄 C（測試數算式）填完。
 - **不要**在功能分支上改 `issues.md` 第 13 列與 `docs/epics.md`：這兩處在 PR 合併後於 `main` 直接 commit＋push（`⚪ 待規劃` → `🟢 已合併（PR #N）`，備註只寫「Issue 13 已合併」）；合併後順便把第 13 列標題的「6 個舊 bundle」「`buildReaderScreen` 的暫時組裝」更正為事實。同時移除 `issues.md` 第 28 行「待清理（Issue 11 程式審查 M-5）」那段（已完成）。
 
-- [ ] **Step 6: 請求程式審查**
+- [x] **Step 6: 請求程式審查**（嚴禁 subagent，改為自審：`reviews/review-code-issue-13.md`；Critical 0／Important 1 已修／Minor 3；PR 由使用者發起合併）
 
 ```bash
 git log --oneline main..HEAD
