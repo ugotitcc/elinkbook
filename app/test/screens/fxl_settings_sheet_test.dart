@@ -10,6 +10,8 @@ import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
+import '../support/full_book_reader_prefs.dart';
+
 void main() {
   // 本檔案既有測試自 epic-19 Issue 1 起改用 `home: Scaffold(body: ...)` 包裹
   // （原本是 `home: FxlSettingsSheet(...)` 直接當 home）：新增的「全螢幕模式」
@@ -606,6 +608,66 @@ void main() {
 
     expect(find.text('Dual-page mode'), findsOneWidget);
     expect(find.text('Fullscreen mode'), findsOneWidget);
+  });
+
+  _fxlFullFieldGuardTests();
+}
+
+Future<BookReaderPrefs?> _tapAndCapture(
+  WidgetTester tester,
+  String keyName,
+) async {
+  BookReaderPrefs? changed;
+  await tester.pumpWidget(
+    MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: FxlSettingsSheet(
+            prefs: fullBookReaderPrefsSeed,
+            onChanged: (prefs) => changed = prefs,
+            isEinkMode: false,
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.ensureVisible(find.byKey(Key(keyName)));
+  await tester.tap(find.byKey(Key(keyName)));
+  await tester.pump();
+  return changed;
+}
+
+void _fxlFullFieldGuardTests() {
+  group('全欄位保留守衛（Issue 10）：種子 33 欄位，操作一個控制項後只有該欄位改變', () {
+    testWidgets('切換全螢幕 → 只有 fullscreen 改變', (tester) async {
+      final changed = await _tapAndCapture(tester, 'fxl_settings_fullscreen');
+      expect(changed, isNotNull);
+      expect(changed!.fullscreen, isFalse);
+      expectPrefsPreserved(changed, fullBookReaderPrefsSeed,
+          except: {'fullscreen'});
+    });
+
+    testWidgets('切換雙頁模式為「永遠單頁」→ 只有 dual_page_mode 改變', (tester) async {
+      final changed =
+          await _tapAndCapture(tester, 'fxl_settings_dual_page_mode_never');
+      expect(changed, isNotNull);
+      expect(changed!.dualPageMode, DualPageMode.never);
+      expectPrefsPreserved(changed, fullBookReaderPrefsSeed,
+          except: {'dual_page_mode'});
+    });
+
+    testWidgets('簡繁轉換選「使用全域預設」→ 只有 text_conversion_override 清成 null',
+        (tester) async {
+      final changed =
+          await _tapAndCapture(tester, 'fxl_settings_text_conversion_global');
+      expect(changed, isNotNull);
+      expect(changed!.textConversionOverride, isNull);
+      expectPrefsPreserved(changed, fullBookReaderPrefsSeed,
+          except: {'text_conversion_override'});
+    });
   });
 }
 

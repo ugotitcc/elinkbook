@@ -390,7 +390,7 @@ git commit -m "test(epic-54): Issue 10 書架版面覆寫儲存全欄位保留�
 **Interfaces:**
 - Consumes: `fullBookReaderPrefsSeed`、`expectPrefsPreserved`。
 
-- [ ] **Step 1：寫守衛測試**
+- [x] **Step 1：寫守衛測試**
 
 在檔尾新增（沿用檔內 `MaterialApp` 包裝寫法）：
 
@@ -458,7 +458,7 @@ void _fxlFullFieldGuardTests() {
 
 注意：`fxl_settings_sheet_test.dart` 現有的 `showHeader`／`showFooter` 開關預設值是 `false`，種子是 `true`，面板的本地狀態以 `?? false` 初始化——種子是非 null，所以初始值取種子值，不會被洗成預設。
 
-- [ ] **Step 2：跑測試**
+- [x] **Step 2：跑測試**
 
 ```bash
 flutter test test/screens/fxl_settings_sheet_test.dart
@@ -466,7 +466,7 @@ flutter test test/screens/fxl_settings_sheet_test.dart
 
 預期：全數通過（含新增 3 個）。若 `ensureVisible` 找不到 widget（面板內容超出預設視窗），把 `SingleChildScrollView` 外層改成 `tester.view.physicalSize = const Size(800, 2400)`（比照 `reader_settings_sheet_test.dart:2495-2500`，含 `addTearDown` 還原）。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 flutter analyze
