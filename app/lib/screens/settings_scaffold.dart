@@ -327,8 +327,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                   children: [
                     IconButton(
                       key: const Key(
-                        'settings_full_text_search_pdf_rebuild_button',
-                      ),
+                          'settings_full_text_search_pdf_rebuild_button'),
                       icon: const Icon(Icons.refresh),
                       tooltip: l10n.settingsFullTextSearchRebuildIndexTooltip,
                       onPressed: !_fullTextSearchTogglesController.pdfEnabled
@@ -359,8 +358,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                   children: [
                     IconButton(
                       key: const Key(
-                        'settings_full_text_search_foliate_rebuild_button',
-                      ),
+                          'settings_full_text_search_foliate_rebuild_button'),
                       icon: const Icon(Icons.refresh),
                       tooltip: l10n.settingsFullTextSearchRebuildIndexTooltip,
                       onPressed:
@@ -373,8 +371,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                     ),
                     Switch(
                       key: const Key(
-                        'settings_full_text_search_foliate_switch',
-                      ),
+                          'settings_full_text_search_foliate_switch'),
                       value: _fullTextSearchTogglesController.foliateEnabled,
                       onChanged: (value) => _handleFullTextSearchToggle(
                         ContentIndexCategory.foliate,

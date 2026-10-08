@@ -397,8 +397,8 @@ class ElinkBookApp extends StatefulWidget {
     this.initialLocaleOverride,
     AppLocalePreferences? localePreferences,
     AppThemePreferences? themePreferences,
-  }) : themePreferences = themePreferences ?? AppThemePreferences(),
-       localePreferences = localePreferences ?? AppLocalePreferences();
+  })  : themePreferences = themePreferences ?? AppThemePreferences(),
+        localePreferences = localePreferences ?? AppLocalePreferences();
 
   @override
   State<ElinkBookApp> createState() => _ElinkBookAppState();

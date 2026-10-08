@@ -506,9 +506,7 @@ class _LibraryScreenState extends State<LibraryScreen>
     if (remoteServerId == null || remoteDownloadUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.libraryRemoteDisabledMessage,
-          ),
+          content: Text(AppLocalizations.of(context)!.libraryRemoteDisabledMessage),
         ),
       );
       return;
