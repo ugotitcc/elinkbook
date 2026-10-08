@@ -522,9 +522,7 @@ class _LibraryScreenState extends State<LibraryScreen>
         remoteDownloadUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.libraryRemoteDisabledMessage,
-          ),
+          content: Text(AppLocalizations.of(context)!.libraryRemoteDisabledMessage),
         ),
       );
       return;
@@ -614,9 +612,7 @@ class _LibraryScreenState extends State<LibraryScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.libraryRedownloadFailedMessage,
-          ),
+          content: Text(AppLocalizations.of(context)!.libraryRedownloadFailedMessage),
         ),
       );
     } finally {
@@ -908,9 +904,8 @@ class _LibraryScreenState extends State<LibraryScreen>
                         ? (searchResults.isEmpty
                               ? Center(
                                   child: Text(
-                                    AppLocalizations.of(
-                                      context,
-                                    )!.libraryNoMatchingBooks,
+                                    AppLocalizations.of(context)!
+                                        .libraryNoMatchingBooks,
                                   ),
                                 )
                               : _buildBookList(
@@ -1594,9 +1589,7 @@ class _BookGridTile extends StatelessWidget {
                           minWidth: 48,
                           minHeight: 48,
                         ),
-                        tooltip: AppLocalizations.of(
-                          context,
-                        )!.libraryBookMenuTooltip,
+                        tooltip: AppLocalizations.of(context)!.libraryBookMenuTooltip,
                         onPressed: onMenuTap,
                       ),
                     ),
@@ -1688,11 +1681,8 @@ class _BookListTile extends StatelessWidget {
       // maxLines/overflow（epic-36 Issue 7 追加修正——I-1）：書名/作者過長
       // 換行會撐高這一列，讓 libraryListRowHeight() 假設的固定列高失準，
       // 進而讓依此估算出的 pageSize 偏多、造成本頁部分項目被裁切。
-      title: Text(
-        convertText(book.title, textConversion),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: Text(convertText(book.title, textConversion),
+          maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         convertText(book.author ?? '', textConversion),
         maxLines: 1,

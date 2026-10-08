@@ -698,7 +698,7 @@ flutter analyze
 - Task 0 基準（14 個測試檔）：278 通過；`flutter analyze` No issues found。
 - Task 1：`flutter test test/support test/screens/reader_screen_route_test.dart` → 71 通過。
 - Task 2：library_search + reader_screen_route + library_screen 三檔 → 180 通過。
-- Task 3（範圍：14 個基準檔）：255 通過。粗算 278 ＋ Task 1 新增 2（fake_reader 1、route null 欄位 1）− Task 2 刪 2 ＋ 新增 1 − Task 3 刪 17＋4＋2＋2＋2 ＋ 新增 3（wiring 2、settings sync 1）＝ 253，實測 255，差 2 未逐案對帳（可能是基準檔內含的 group 計數誤差，無失敗案例）。
+- Task 3（範圍：14 個基準檔）：255 通過。算式：基準 278 ＋ 新增 5（fake_reader 全文檢索覆寫 1、library_search 同一依賴組 1、wiring 2、settings 同步入口 1）− 被刪 28（route 轉換函式 group 18〔含 Task 2 刪的 2 案與 Task 1 補的 1 案後淨值〕、library_screen_dependencies 4、fake_reader 相容工廠 2、reading_stats 2、library_screen 2）＝ 255，與實測一致（審查 M-4 已對帳）。
 - Task 4 完整 `flutter test`：見 `epic.md`「Issue 12 實作完成」。
 
 ## Self-Review 結果

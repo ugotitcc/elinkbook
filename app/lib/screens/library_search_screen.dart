@@ -44,9 +44,8 @@ class LibrarySearchScreen extends StatefulWidget {
 }
 
 class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.initialQuery,
-  );
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initialQuery);
   final FocusNode _searchFocusNode = FocusNode();
   Timer? _debounce;
   int _searchRequestId = 0;
@@ -79,7 +78,10 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
   }
 
   Future<void> _initialize() async {
-    await Future.wait([_loadFullTextSearchSettings(), _loadTextConversion()]);
+    await Future.wait([
+      _loadFullTextSearchSettings(),
+      _loadTextConversion(),
+    ]);
     if (!mounted) return;
     final initial = widget.initialQuery.trim();
     if (initial.isNotEmpty) {
@@ -105,9 +107,8 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
   Future<void> _loadFullTextSearchSettings() async {
     final repository = widget.dependencies.fullTextSearchSettingsRepository;
     final pdfEnabled = await repository.isEnabled(ContentIndexCategory.pdf);
-    final foliateEnabled = await repository.isEnabled(
-      ContentIndexCategory.foliate,
-    );
+    final foliateEnabled =
+        await repository.isEnabled(ContentIndexCategory.foliate);
     if (!mounted) return;
     setState(() {
       _pdfEnabled = pdfEnabled;
@@ -239,8 +240,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
                     suffixIcon: hasText
                         ? IconButton(
                             key: const Key(
-                              'library_search_screen_clear_button',
-                            ),
+                                'library_search_screen_clear_button'),
                             icon: const Icon(Icons.close),
                             tooltip: l10n.searchClearTooltip,
                             onPressed: () {
@@ -310,11 +310,8 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
         height: 56,
         child: BookCover(book: book, textConversion: _textConversion),
       ),
-      title: Text(
-        convertText(book.title, _textConversion),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: Text(convertText(book.title, _textConversion),
+          maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         convertText(book.author ?? '', _textConversion),
         maxLines: 1,
@@ -336,10 +333,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
             leading: SizedBox(
               width: 40,
               height: 56,
-              child: BookCover(
-                book: group.book,
-                textConversion: _textConversion,
-              ),
+              child: BookCover(book: group.book, textConversion: _textConversion),
             ),
             title: Text(
               convertText(group.book.title, _textConversion),
@@ -354,11 +348,11 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
           ),
           for (var i = 0; i < group.matches.length; i++)
             ListTile(
-              key: Key('library_search_content_snippet_${group.book.id}_$i'),
-              dense: true,
-              title: Text(
-                convertText(group.matches[i].snippet, _textConversion),
+              key: Key(
+                'library_search_content_snippet_${group.book.id}_$i',
               ),
+              dense: true,
+              title: Text(convertText(group.matches[i].snippet, _textConversion)),
               onTap: () => _openBook(
                 group.book,
                 jumpTarget: ReaderJumpTarget.fromContentLocator(
@@ -556,16 +550,14 @@ class _FullTextSearchQuickSettingsPanelState
               children: [
                 IconButton(
                   key: const Key(
-                    'library_search_full_text_search_pdf_rebuild_button',
-                  ),
+                      'library_search_full_text_search_pdf_rebuild_button'),
                   icon: const Icon(Icons.refresh),
                   tooltip: l10n.librarySearchRebuildIndexTooltip,
                   onPressed:
                       !_controller.pdfEnabled || widget.repository == null
-                      ? null
-                      : () => widget.repository!.rebuildIndex(
-                          ContentIndexCategory.pdf,
-                        ),
+                          ? null
+                          : () => widget.repository!
+                              .rebuildIndex(ContentIndexCategory.pdf),
                 ),
                 Switch(
                   key: const Key('library_search_full_text_search_pdf_switch'),
@@ -573,7 +565,7 @@ class _FullTextSearchQuickSettingsPanelState
                   onChanged: widget.repository == null
                       ? null
                       : (value) =>
-                            _handleToggle(ContentIndexCategory.pdf, value),
+                          _handleToggle(ContentIndexCategory.pdf, value),
                 ),
               ],
             ),
@@ -586,26 +578,23 @@ class _FullTextSearchQuickSettingsPanelState
               children: [
                 IconButton(
                   key: const Key(
-                    'library_search_full_text_search_foliate_rebuild_button',
-                  ),
+                      'library_search_full_text_search_foliate_rebuild_button'),
                   icon: const Icon(Icons.refresh),
                   tooltip: l10n.librarySearchRebuildIndexTooltip,
                   onPressed:
                       !_controller.foliateEnabled || widget.repository == null
-                      ? null
-                      : () => widget.repository!.rebuildIndex(
-                          ContentIndexCategory.foliate,
-                        ),
+                          ? null
+                          : () => widget.repository!
+                              .rebuildIndex(ContentIndexCategory.foliate),
                 ),
                 Switch(
                   key: const Key(
-                    'library_search_full_text_search_foliate_switch',
-                  ),
+                      'library_search_full_text_search_foliate_switch'),
                   value: _controller.foliateEnabled,
                   onChanged: widget.repository == null
                       ? null
                       : (value) =>
-                            _handleToggle(ContentIndexCategory.foliate, value),
+                          _handleToggle(ContentIndexCategory.foliate, value),
                 ),
               ],
             ),
