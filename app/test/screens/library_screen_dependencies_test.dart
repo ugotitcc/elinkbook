@@ -1,114 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
-import 'package:elinkbook/reader/layout_preset_repository.dart';
-import 'package:elinkbook/sync/sync_account_repository.dart';
-import 'package:elinkbook/sync/sync_client.dart';
-import 'package:elinkbook/sync/sync_checkpoint_result.dart';
-import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/cloud_import/google_drive_oauth_client.dart';
 import 'package:elinkbook/cloud_import/onedrive_oauth_client.dart';
 import 'package:elinkbook/remote/opds_client.dart';
 import 'package:elinkbook/l10n/app_locale.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 
-import '../support/fake_bookmarks_repository.dart';
-import '../support/fake_highlights_repository.dart';
-import '../support/fake_notes_repository.dart';
-import '../support/fake_custom_fonts_repository.dart';
-import '../support/fake_book_import_service.dart';
-import '../support/fake_book_reader_prefs_repository.dart';
 import '../support/fake_cloud_account_repository.dart';
 import '../support/fake_cloud_storage_client.dart';
 import '../support/fake_remote_server_repository.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_thumbnail_cache.dart';
-import '../support/fake_reading_stats_repository.dart';
 
 void main() {
-  setUpAll(() {
-    sqfliteFfiInit();
-  });
-
-  test('LibraryReaderFeatureRepositories 原樣持有六個注入的依賴，未提供時預設皆為 null', () async {
-    final db = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
-    addTearDown(db.close);
-
-    final bookmarksRepository = FakeBookmarksRepository();
-    final highlightsRepository = FakeHighlightsRepository();
-    final notesRepository = FakeNotesRepository();
-    final customFontsRepository = FakeCustomFontsRepository();
-    final layoutPresetRepository = LayoutPresetRepository(db);
-    final bookReaderPrefsRepository = FakeBookReaderPrefsRepository();
-
-    const empty = LibraryReaderFeatureRepositories();
-    expect(empty.bookmarksRepository, isNull);
-    expect(empty.highlightsRepository, isNull);
-    expect(empty.notesRepository, isNull);
-    expect(empty.customFontsRepository, isNull);
-    expect(empty.layoutPresetRepository, isNull);
-    expect(empty.bookReaderPrefsRepository, isNull);
-
-    final dependencies = LibraryReaderFeatureRepositories(
-      bookmarksRepository: bookmarksRepository,
-      highlightsRepository: highlightsRepository,
-      notesRepository: notesRepository,
-      customFontsRepository: customFontsRepository,
-      layoutPresetRepository: layoutPresetRepository,
-      bookReaderPrefsRepository: bookReaderPrefsRepository,
-    );
-    expect(dependencies.bookmarksRepository, same(bookmarksRepository));
-    expect(dependencies.highlightsRepository, same(highlightsRepository));
-    expect(dependencies.notesRepository, same(notesRepository));
-    expect(dependencies.customFontsRepository, same(customFontsRepository));
-    expect(dependencies.layoutPresetRepository, same(layoutPresetRepository));
-    expect(dependencies.bookReaderPrefsRepository, same(bookReaderPrefsRepository));
-  });
-
-  test('LibraryReaderFeatureRepositories.readingStatsRepository 預設為 null，'
-      '傳入時原樣持有同一個實例（epic-9-stats Issue 4）', () {
-    const empty = LibraryReaderFeatureRepositories();
-    expect(empty.readingStatsRepository, isNull);
-
-    final statsRepository = FakeReadingStatsRepository();
-    final dependencies = LibraryReaderFeatureRepositories(
-        readingStatsRepository: statsRepository);
-    expect(dependencies.readingStatsRepository, same(statsRepository));
-  });
-
-  test('LibraryReaderFeatureRepositories.bookImportService 預設為 null，'
-      '傳入時原樣持有同一個實例（epic-15-storage-permission Issue 0）', () {
-    const empty = LibraryReaderFeatureRepositories();
-    expect(empty.bookImportService, isNull);
-
-    final importService = FakeBookImportService();
-    final dependencies =
-        LibraryReaderFeatureRepositories(bookImportService: importService);
-    expect(dependencies.bookImportService, same(importService));
-  });
-
-  test('LibrarySyncDependencies 原樣持有三個注入的依賴，未提供時預設皆為 null', () {
-    final syncAccountRepository = SyncAccountRepository();
-    final syncClient = SyncClient(accountRepository: syncAccountRepository);
-    final syncCheckpointTrigger = SyncCheckpointTrigger(
-      runCheckpoint: () async => SyncCheckpointResult.notLoggedIn,
-    );
-
-    const empty = LibrarySyncDependencies();
-    expect(empty.syncAccountRepository, isNull);
-    expect(empty.syncClient, isNull);
-    expect(empty.syncCheckpointTrigger, isNull);
-
-    final dependencies = LibrarySyncDependencies(
-      syncAccountRepository: syncAccountRepository,
-      syncClient: syncClient,
-      syncCheckpointTrigger: syncCheckpointTrigger,
-    );
-    expect(dependencies.syncAccountRepository, same(syncAccountRepository));
-    expect(dependencies.syncClient, same(syncClient));
-    expect(dependencies.syncCheckpointTrigger, same(syncCheckpointTrigger));
-  });
-
   test('LibraryCloudAccountDependencies 原樣持有五個注入的依賴，未提供時預設皆為 null', () {
     final cloudAccountRepository = FakeCloudAccountRepository();
     final googleDriveOAuthClient =

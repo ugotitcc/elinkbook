@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../downloads/download_queue_controller.dart';
 import '../library/book_content_fingerprint.dart';
-import '../library/book_import_service.dart';
-import '../library/library_repository.dart';
-import '../reader/reader_prefs_manager.dart';
 import '../wifi_transfer/wifi_transfer_dependencies.dart';
 import 'library_screen.dart';
 import 'library_screen_dependencies.dart';
+import 'reader_feature_dependencies.dart';
 import 'settings_scaffold.dart';
 import 'sources_home_screen.dart';
+import 'sync_dependencies.dart';
 
 class _LibraryRefreshSignal extends ChangeNotifier {
   @override
@@ -31,11 +30,12 @@ class _LibraryRefreshSignal extends ChangeNotifier {
 /// `setState()`）永遠不會被子畫面收到（審查報告 review-plan-issue-1.md
 /// C-1，本計劃已依此修正為 `build()` 內直接建構）。
 class AdaptiveShellScaffold extends StatefulWidget {
-  final LibraryRepository repository;
-  final BookImportService importService;
-  final ReaderPrefsManager prefsManager;
-  final LibraryReaderFeatureRepositories readerFeatureRepositories;
-  final LibrarySyncDependencies syncDependencies;
+  /// 閱讀器功能依賴組（ADR 0037）：整組轉傳給書架與設定頁；書架／匯入用的
+  /// libraryRepository、bookImportService、prefsManager 皆取自這一組（單一來源）。
+  final ReaderFeatureDependencies readerFeatures;
+
+  /// 同步依賴組（ADR 0037）：只有設定頁的「同步」入口使用。
+  final SyncDependencies sync;
   final LibraryCloudAccountDependencies cloudAccountDependencies;
   final LibraryRemoteLibraryDependencies remoteLibraryDependencies;
   final ComputeRemoteFingerprint? computeFingerprint;
@@ -52,11 +52,8 @@ class AdaptiveShellScaffold extends StatefulWidget {
 
   const AdaptiveShellScaffold({
     super.key,
-    required this.repository,
-    required this.importService,
-    required this.prefsManager,
-    this.readerFeatureRepositories = const LibraryReaderFeatureRepositories(),
-    this.syncDependencies = const LibrarySyncDependencies(),
+    required this.readerFeatures,
+    required this.sync,
     this.cloudAccountDependencies = const LibraryCloudAccountDependencies(),
     this.remoteLibraryDependencies = const LibraryRemoteLibraryDependencies(),
     this.computeFingerprint,
@@ -104,11 +101,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
           index: _currentIndex,
           children: [
             LibraryScreen(
-              repository: widget.repository,
-              importService: widget.importService,
-              prefsManager: widget.prefsManager,
-              readerFeatureRepositories: widget.readerFeatureRepositories,
-              syncDependencies: widget.syncDependencies,
+              dependencies: widget.readerFeatures,
               cloudAccountDependencies: widget.cloudAccountDependencies,
               remoteLibraryDependencies: widget.remoteLibraryDependencies,
               computeFingerprint: widget.computeFingerprint,
@@ -119,8 +112,8 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
               onNavigateToSettings: () => _navigateTo(2),
             ),
             SourcesHomeScreen(
-              repository: widget.repository,
-              importService: widget.importService,
+              repository: widget.readerFeatures.libraryRepository,
+              importService: widget.readerFeatures.bookImportService,
               cloudAccountDependencies: widget.cloudAccountDependencies,
               remoteLibraryDependencies: widget.remoteLibraryDependencies,
               computeFingerprint: widget.computeFingerprint,
@@ -132,7 +125,8 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
               wifiTransferDependencies: widget.wifiTransferDependencies,
             ),
             SettingsScaffold(
-              prefsManager: widget.prefsManager,
+              readerFeatures: widget.readerFeatures,
+              sync: widget.sync,
               currentTheme: widget.themeDependencies.currentTheme,
               isEinkMode: widget.themeDependencies.isEinkMode,
               onThemeChanged: widget.themeDependencies.onThemeChanged,
@@ -140,15 +134,6 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
               currentLocaleOverride:
                   widget.localeDependencies.currentLocaleOverride,
               onLocaleChanged: widget.localeDependencies.onLocaleChanged,
-              customFontsRepository:
-                  widget.readerFeatureRepositories.customFontsRepository,
-              downloadableFontStore:
-                  widget.readerFeatureRepositories.downloadableFontStore,
-              syncAccountRepository:
-                  widget.syncDependencies.syncAccountRepository,
-              syncClient: widget.syncDependencies.syncClient,
-              onManualSync: widget.syncDependencies.onManualSync,
-              loadLastSyncedAt: widget.syncDependencies.loadLastSyncedAt,
               cloudAccountRepository:
                   widget.cloudAccountDependencies.cloudAccountRepository,
               googleDriveOAuthClient:
@@ -157,13 +142,6 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
                   widget.cloudAccountDependencies.oneDriveOAuthClient,
               onNavigateToLibrary: () => _navigateTo(0),
               onNavigateToSource: () => _navigateTo(1),
-              ttsProvider: widget.readerFeatureRepositories.ttsProvider,
-              fullTextSearchSettingsRepository: widget
-                  .readerFeatureRepositories.fullTextSearchSettingsRepository,
-              isFullTextSearchAvailable:
-                  widget.readerFeatureRepositories.isFullTextSearchAvailable,
-              readingStatsRepository:
-                  widget.readerFeatureRepositories.readingStatsRepository,
             ),
           ],
         ),

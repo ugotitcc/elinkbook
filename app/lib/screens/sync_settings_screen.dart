@@ -15,7 +15,7 @@ class SyncSettingsScreen extends StatefulWidget {
   final SyncAccountRepository accountRepository;
   final SyncClient syncClient;
   /// 重用 [SyncEngine.runCheckpoint]（增量同步）——刻意收窄成單一
-  /// callback 而非直接依賴整個 `SyncEngine`，見 `LibrarySyncDependencies`
+  /// callback 而非直接依賴整個 `SyncEngine`，見 `SyncDependencies`
   /// 的欄位說明（widget test 可注入輕量假 closure，不需要真正的
   /// sqflite `Database`）。
   final Future<SyncCheckpointResult> Function() onManualSync;

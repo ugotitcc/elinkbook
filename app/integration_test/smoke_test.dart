@@ -10,6 +10,7 @@ import 'package:elinkbook/screens/library_screen.dart';
 
 import '../test/support/fake_book_import_service.dart';
 import '../test/support/fake_library_repository.dart';
+import '../test/support/fake_reader_feature_dependencies.dart';
 import '../test/support/pump_localized_widget.dart';
 
 void main() {
@@ -24,8 +25,9 @@ void main() {
   });
 
   setUp(() async {
-    libraryRepository =
-        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    libraryRepository = await SqliteLibraryRepository.open(
+      inMemoryDatabasePath,
+    );
     prefsManager = ReaderPrefsManagerImpl(
       BookReaderPrefsRepository(libraryRepository.database),
       ReadingPositionRepository(libraryRepository.database),
@@ -36,14 +38,17 @@ void main() {
     await libraryRepository.close();
   });
 
-  testWidgets('LibraryScreen 可在真實裝置/模擬器上渲染（integration_test 基礎設施驗證）',
-      (tester) async {
+  testWidgets('LibraryScreen 可在真實裝置/模擬器上渲染（integration_test 基礎設施驗證）', (
+    tester,
+  ) async {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
-        repository: FakeLibraryRepository(),
-        importService: FakeBookImportService(),
-        prefsManager: prefsManager,
+        dependencies: fakeReaderFeatureDependencies(
+          libraryRepository: FakeLibraryRepository(),
+          bookImportService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
       ),
     );
     await tester.pumpAndSettle();

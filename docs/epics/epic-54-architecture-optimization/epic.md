@@ -487,3 +487,14 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-08 Issue 19 已合併（PR #334）。** EPUB 目錄「目前章節」改以 spine index 優先判定（`TocNavigator.findCurrentPath` 新增 `currentSpineIndex`），開書當下不再誤展開後面章節；`epub_toc_test` 已改回斷言開書預設收合。同一 spine 內多錨點的精確度須改 `main.js`，已登記為 Issue 20，經審查修訂後由使用者決定推動方案 B（見下）。
 
 **2026-10-08 Issue 20 決定推動（方案 B）。** 登記後經 `reviews/review-issue-20.md` 查證：原修復方向（回報章節內 fraction）不可行，改為轉發 foliate `relocate` 的 `tocItem` 可達 DOM 級精確。使用者在「方案 B（轉發 tocItem）」與「方案 C（維持 Issue 19 取捨、關閉工單）」之間，先回答 `C`，隨即更正為（2026-10-08 對話原話）：`打錯了，要選擇B才對，請修正`。最終決定為方案 B；曾短暫以 wontfix 關閉（commit `6cb1b767`），已還原為待處理。
+
+**2026-10-08 Issue 12 實作完成**（分支 `worktree-epic-54-issue-12`〔Native `EnterWorktree` 建立，另有早先建立的 `.worktrees/epic-54-issue-12`／`epic-54/issue-12-sync-deps` 空分支未使用，發 PR 前擇一〕，Native 直接開發，未使用 subagent。計畫見 `plans/plan-issue-12.md`）
+
+- 設計決定：使用者於 2026-10-08 對 Q1～Q3 回答「全 A」（原話記於計畫附錄 A）。`fullTextSearchSettingsRepository` 併入 `ReaderFeatureDependencies`（19 欄位）；`LibraryScreen`／`AdaptiveShellScaffold` 移除自己的 repository／importService／prefsManager，單一來源；`ElinkBookApp` 本 Issue 就改收 `readerFeatures`／`sync`。
+- 內容：新增 `SyncDependencies`（5 欄位，non-null）；`LibrarySearchScreen` 改收 `dependencies`（`searchRepository` 單一來源）；`SettingsScaffold` 改收 `readerFeatures`＋`sync`（建構子少 11 欄位，移除字型／統計／全文檢索／同步入口的 null 判斷與 `!`）；`LibraryScreen` 改收 `dependencies`；`AdaptiveShellScaffold`、`ElinkBookApp` 改收兩組；`main()` 建構一次兩組，`syncCheckpointTrigger` 同一實例放進兩組。刪除 `readerFeatureDependenciesFromLegacy`、`LibraryReaderFeatureRepositories`、`LibrarySyncDependencies`、`completeLegacy*`。
+- 驗證：範圍測試（14 檔）255 通過；完整 `flutter test` 3689 通過／1 略過／1 失敗，失敗為既存的 `pdf_reader_view_filters_test` bold overlay debouncer 案例（Issue 11 已在乾淨 `main` 確認，與本 Issue 無關）；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js`／`check_integration_keys.js` PASS；殘留 grep（舊型別、`completeLegacy`）無輸出。
+- 被刪測試與新恆真行為：見計畫附錄 B（共 25 案，皆為「依賴缺席型別上不可達」；降級提示測試全保留）。測試數算式見附錄 C。
+- Review Focus 對應：1→`elinkbook_app_wiring_test` 斷言 `readerFeatures.syncCheckpointTrigger` same `sync.syncCheckpointTrigger`；2→主題切換後 `LibraryScreen.dependencies`／`SettingsScaffold` 組仍 same；3→`LibrarySearchScreen`→`ReaderScreen` 與書架→搜尋的 `dependencies` same；4→附錄 B；5→`settings_scaffold_test` 同步入口 same 測試。
+- 真機 integration（2026-10-08，TCL 14〔`3CEF42ECD491687`，Android 15〕，分支 `f52fbc52`）：`smoke_test` 1／1 通過；`library_screen_test` 3／3 通過（流式 EPUB、FXL EPUB 皆由 `FoliateReaderView` 成功渲染）。結果只代表此裝置。計畫原預期 `library_screen_test` 在 base 上仍失敗（Issue 17 記錄），本次通過，未在 base 上重跑比對，不宣稱是本 Issue 修好。
+- 計畫外：codemod 搭配 `dart format` 使被遷移的測試檔格式變動較大（無行為差異）；清除一次 worktree gitdir 內的 0 位元組 stale `index.lock`（無 git 程序運行）。
+- ADR 0037 已同步：§1 補列 `fullTextSearchSettingsRepository` 與 `SyncDependencies` 的使用範圍；§6 轉換函式改為過去式。

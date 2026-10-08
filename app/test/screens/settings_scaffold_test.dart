@@ -10,6 +10,7 @@ import 'package:elinkbook/cloud_import/google_drive_oauth_client.dart';
 import 'package:elinkbook/cloud_import/onedrive_oauth_client.dart';
 import 'package:elinkbook/l10n/app_locale.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
+import 'package:elinkbook/screens/sync_settings_screen.dart';
 import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/screens/widgets/eb_section_header.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
@@ -24,6 +25,8 @@ import '../support/pump_localized_widget.dart';
 import '../support/fake_custom_fonts_repository.dart';
 import '../support/fake_downloadable_font_store.dart';
 import '../support/fake_full_text_search_settings_repository.dart';
+import '../support/fake_reader_feature_dependencies.dart';
+import '../support/fake_sync_dependencies.dart';
 
 const _appInfoChannel = MethodChannel('elinkbook/app_info');
 
@@ -62,7 +65,15 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await pumpLocalizedWidget(tester, SettingsScaffold(prefsManager: FakeReaderPrefsManager()));
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: fakeSyncDependencies(),
+      ),
+    );
 
     expect(find.text('設定'), findsOneWidget);
     expect(find.text('佈景'), findsOneWidget);
@@ -88,10 +99,13 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        currentTheme: AppTheme.light,
+        onThemeChanged: (theme) => receivedTheme = theme,
+        readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
-          currentTheme: AppTheme.light,
-          onThemeChanged: (theme) => receivedTheme = theme,
         ),
+        sync: fakeSyncDependencies(),
+      ),
     );
 
     await tester.tap(find.byKey(const Key('settings_theme_dot_sepia')));
@@ -105,11 +119,14 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        currentTheme: AppTheme.light,
+        isEinkMode: true,
+        onThemeChanged: (theme) => receivedTheme = theme,
+        readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
-          currentTheme: AppTheme.light,
-          isEinkMode: true,
-          onThemeChanged: (theme) => receivedTheme = theme,
         ),
+        sync: fakeSyncDependencies(),
+      ),
     );
 
     await tester.tap(find.byKey(const Key('settings_theme_dot_dark')));
@@ -132,7 +149,15 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await pumpLocalizedWidget(tester, SettingsScaffold(prefsManager: FakeReaderPrefsManager()));
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: fakeSyncDependencies(),
+      ),
+    );
 
     await tester.tap(find.byKey(const Key('settings_about_button')));
     await tester.pumpAndSettle();
@@ -146,7 +171,15 @@ void main() {
   });
 
   testWidgets('點擊「導航熱區」導航至 NavZoneSettingsScreen', (tester) async {
-    await pumpLocalizedWidget(tester, SettingsScaffold(prefsManager: FakeReaderPrefsManager()));
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: fakeSyncDependencies(),
+      ),
+    );
 
     await tester.tap(find.byKey(const Key('settings_nav_zone_button')));
     await tester.pumpAndSettle();
@@ -158,9 +191,12 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
           customFontsRepository: FakeCustomFontsRepository(),
         ),
+        sync: fakeSyncDependencies(),
+      ),
     );
 
     await tester.tap(find.byKey(const Key('settings_font_management_button')));
@@ -170,7 +206,15 @@ void main() {
   });
 
   testWidgets('點擊「閱讀預設值」導航至 ReadingDefaultsScreen', (tester) async {
-    await pumpLocalizedWidget(tester, SettingsScaffold(prefsManager: FakeReaderPrefsManager()));
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: fakeSyncDependencies(),
+      ),
+    );
 
     await tester.tap(find.byKey(const Key('settings_reading_defaults_button')));
     await tester.pumpAndSettle();
@@ -193,12 +237,16 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: fakeSyncDependencies(
           syncAccountRepository: accountRepository,
           syncClient: SyncClient(accountRepository: accountRepository),
           onManualSync: () async => SyncCheckpointResult.synced,
           loadLastSyncedAt: () async => null,
         ),
+      ),
     );
 
     expect(find.byKey(const Key('settings_sync_button')), findsOneWidget);
@@ -207,6 +255,37 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('同步'), findsOneWidget);
+  });
+
+  testWidgets('同步入口恆可點，且 SyncSettingsScreen 拿到的是組內同一批物件', (tester) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final sync = fakeSyncDependencies();
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: sync,
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('settings_sync_button')));
+    await tester.pumpAndSettle();
+
+    final screen = tester.widget<SyncSettingsScreen>(
+      find.byType(SyncSettingsScreen),
+    );
+    expect(screen.accountRepository, same(sync.syncAccountRepository));
+    expect(screen.syncClient, same(sync.syncClient));
+    expect(screen.onManualSync, same(sync.onManualSync));
+    expect(screen.loadLastSyncedAt, same(sync.loadLastSyncedAt));
   });
 
   testWidgets(
@@ -222,18 +301,21 @@ void main() {
 
       final cloudAccountRepository = FakeCloudAccountRepository();
       await pumpLocalizedWidget(
-      tester,
-      SettingsScaffold(
-            prefsManager: FakeReaderPrefsManager(),
-            cloudAccountRepository: cloudAccountRepository,
-            googleDriveOAuthClient: GoogleDriveOAuthClient(
-              accountRepository: cloudAccountRepository,
-            ),
-            oneDriveOAuthClient: OneDriveOAuthClient(
-              accountRepository: cloudAccountRepository,
-            ),
+        tester,
+        SettingsScaffold(
+          cloudAccountRepository: cloudAccountRepository,
+          googleDriveOAuthClient: GoogleDriveOAuthClient(
+            accountRepository: cloudAccountRepository,
           ),
-    );
+          oneDriveOAuthClient: OneDriveOAuthClient(
+            accountRepository: cloudAccountRepository,
+          ),
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
+        ),
+      );
 
       expect(
         find.byKey(const Key('settings_cloud_account_button')),
@@ -259,7 +341,15 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
-      await pumpLocalizedWidget(tester, SettingsScaffold(prefsManager: FakeReaderPrefsManager()));
+      await pumpLocalizedWidget(
+        tester,
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
+        ),
+      );
 
       expect(
         find.byKey(const Key('settings_reader_console_log_button')),
@@ -289,12 +379,15 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(
             globalPrefs: const GlobalReaderPrefs.initial().copyWith(
               consoleLogEnabled: true,
             ),
           ),
         ),
+        sync: fakeSyncDependencies(),
+      ),
     );
     await tester.pump();
 
@@ -321,7 +414,15 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await pumpLocalizedWidget(tester, SettingsScaffold(prefsManager: FakeReaderPrefsManager()));
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: fakeSyncDependencies(),
+      ),
+    );
     await tester.pump();
 
     expect(
@@ -347,7 +448,15 @@ void main() {
     });
 
     final prefsManager = FakeReaderPrefsManager();
-    await pumpLocalizedWidget(tester, SettingsScaffold(prefsManager: prefsManager));
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: prefsManager,
+        ),
+        sync: fakeSyncDependencies(),
+      ),
+    );
     await tester.pump();
 
     await tester.tap(find.byKey(const Key('settings_console_log_switch')));
@@ -372,11 +481,14 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        currentTheme: AppTheme.light,
+        isEinkMode: false,
+        onEinkModeChanged: (val) => receivedEink = val,
+        readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
-          currentTheme: AppTheme.light,
-          isEinkMode: false,
-          onEinkModeChanged: (val) => receivedEink = val,
         ),
+        sync: fakeSyncDependencies(),
+      ),
     );
 
     expect(find.byKey(const Key('settings_eink_mode_switch')), findsOneWidget);
@@ -393,9 +505,12 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        currentTheme: AppTheme.dark,
+        readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
-          currentTheme: AppTheme.dark,
         ),
+        sync: fakeSyncDependencies(),
+      ),
     );
 
     final lightPreview = resolveThemeData(
@@ -448,10 +563,13 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        currentTheme: AppTheme.light,
+        isEinkMode: true,
+        readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
-          currentTheme: AppTheme.light,
-          isEinkMode: true,
         ),
+        sync: fakeSyncDependencies(),
+      ),
     );
 
     // 不再有 Opacity 包裹圓點（原本的降低透明度手法已移除）。
@@ -514,10 +632,13 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        currentTheme: AppTheme.sepia,
+        isEinkMode: true,
+        readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
-          currentTheme: AppTheme.sepia,
-          isEinkMode: true,
         ),
+        sync: fakeSyncDependencies(),
+      ),
     );
 
     final semantics = tester.getSemantics(
@@ -536,14 +657,17 @@ void main() {
       final handle = tester.ensureSemantics();
       AppTheme? receivedTheme;
       await pumpLocalizedWidget(
-      tester,
-      SettingsScaffold(
+        tester,
+        SettingsScaffold(
+          currentTheme: AppTheme.light,
+          isEinkMode: false,
+          onThemeChanged: (theme) => receivedTheme = theme,
+          readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
-            currentTheme: AppTheme.light,
-            isEinkMode: false,
-            onThemeChanged: (theme) => receivedTheme = theme,
           ),
-    );
+          sync: fakeSyncDependencies(),
+        ),
+      );
 
       final semantics = tester.getSemantics(
         find.byKey(const Key('settings_theme_dot_sepia')),
@@ -568,10 +692,13 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        currentTheme: AppTheme.light,
+        isEinkMode: false,
+        readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
-          currentTheme: AppTheme.light,
-          isEinkMode: false,
         ),
+        sync: fakeSyncDependencies(),
+      ),
     );
 
     expect(find.byKey(const Key('settings_theme_locked_hint')), findsNothing);
@@ -597,7 +724,15 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await pumpLocalizedWidget(tester, SettingsScaffold(prefsManager: FakeReaderPrefsManager()));
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: fakeSyncDependencies(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     // 取所有 Text widget 的 data，只保留四個分區標題（各有至少一個
@@ -636,7 +771,15 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await pumpLocalizedWidget(tester, SettingsScaffold(prefsManager: FakeReaderPrefsManager()));
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: fakeSyncDependencies(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(Divider), findsNothing, reason: '不應再出現分隔線');
@@ -678,10 +821,13 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        onNavigateToLibrary: () => libraryTapped++,
+        onNavigateToSource: () => sourceTapped++,
+        readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
-          onNavigateToLibrary: () => libraryTapped++,
-          onNavigateToSource: () => sourceTapped++,
         ),
+        sync: fakeSyncDependencies(),
+      ),
     );
 
     expect(find.byKey(const Key('settings_library_button')), findsOneWidget);
@@ -700,7 +846,15 @@ void main() {
   testWidgets('未接上 onNavigateToLibrary／onNavigateToSource 時，圖示仍存在但不崩潰', (
     tester,
   ) async {
-    await pumpLocalizedWidget(tester, SettingsScaffold(prefsManager: FakeReaderPrefsManager()));
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: fakeSyncDependencies(),
+      ),
+    );
 
     expect(find.byKey(const Key('settings_library_button')), findsOneWidget);
     expect(find.byKey(const Key('settings_source_button')), findsOneWidget);
@@ -711,7 +865,15 @@ void main() {
   });
 
   testWidgets('點擊「朗讀語音與語速」導航至 TtsDefaultsScreen', (tester) async {
-    await pumpLocalizedWidget(tester, SettingsScaffold(prefsManager: FakeReaderPrefsManager()));
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: fakeSyncDependencies(),
+      ),
+    );
 
     await tester.tap(find.byKey(const Key('settings_tts_defaults_button')));
     await tester.pumpAndSettle();
@@ -731,25 +893,30 @@ void main() {
         initialEnabled: {ContentIndexCategory.pdf: true},
       );
       await pumpLocalizedWidget(
-      tester,
-      SettingsScaffold(
+        tester,
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
             fullTextSearchSettingsRepository: repository,
           ),
-    );
+          sync: fakeSyncDependencies(),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(
         tester
             .widget<Switch>(
-                find.byKey(const Key('settings_full_text_search_pdf_switch')))
+              find.byKey(const Key('settings_full_text_search_pdf_switch')),
+            )
             .value,
         isTrue,
       );
       expect(
         tester
-            .widget<Switch>(find.byKey(
-                const Key('settings_full_text_search_foliate_switch')))
+            .widget<Switch>(
+              find.byKey(const Key('settings_full_text_search_foliate_switch')),
+            )
             .value,
         isFalse,
       );
@@ -764,31 +931,37 @@ void main() {
       });
       final repository = FakeFullTextSearchSettingsRepository();
       await pumpLocalizedWidget(
-      tester,
-      SettingsScaffold(
+        tester,
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
             fullTextSearchSettingsRepository: repository,
           ),
-    );
+          sync: fakeSyncDependencies(),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      await tester
-          .tap(find.byKey(const Key('settings_full_text_search_pdf_switch')));
+      await tester.tap(
+        find.byKey(const Key('settings_full_text_search_pdf_switch')),
+      );
       await tester.pumpAndSettle();
       expect(
         find.byKey(const Key('full_text_search_enable_confirm_dialog')),
         findsOneWidget,
       );
 
-      await tester.tap(find.byKey(
-          const Key('full_text_search_enable_confirm_dialog_cancel')));
+      await tester.tap(
+        find.byKey(const Key('full_text_search_enable_confirm_dialog_cancel')),
+      );
       await tester.pumpAndSettle();
 
       expect(repository.setEnabledCalls, isEmpty);
       expect(
         tester
             .widget<Switch>(
-                find.byKey(const Key('settings_full_text_search_pdf_switch')))
+              find.byKey(const Key('settings_full_text_search_pdf_switch')),
+            )
             .value,
         isFalse,
       );
@@ -803,26 +976,32 @@ void main() {
       });
       final repository = FakeFullTextSearchSettingsRepository();
       await pumpLocalizedWidget(
-      tester,
-      SettingsScaffold(
+        tester,
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
             fullTextSearchSettingsRepository: repository,
           ),
-    );
+          sync: fakeSyncDependencies(),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      await tester
-          .tap(find.byKey(const Key('settings_full_text_search_pdf_switch')));
+      await tester.tap(
+        find.byKey(const Key('settings_full_text_search_pdf_switch')),
+      );
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(
-          const Key('full_text_search_enable_confirm_dialog_confirm')));
+      await tester.tap(
+        find.byKey(const Key('full_text_search_enable_confirm_dialog_confirm')),
+      );
       await tester.pumpAndSettle();
 
       expect(repository.setEnabledCalls, [(ContentIndexCategory.pdf, true)]);
       expect(
         tester
             .widget<Switch>(
-                find.byKey(const Key('settings_full_text_search_pdf_switch')))
+              find.byKey(const Key('settings_full_text_search_pdf_switch')),
+            )
             .value,
         isTrue,
       );
@@ -839,16 +1018,20 @@ void main() {
         initialEnabled: {ContentIndexCategory.pdf: true},
       );
       await pumpLocalizedWidget(
-      tester,
-      SettingsScaffold(
+        tester,
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
             fullTextSearchSettingsRepository: repository,
           ),
-    );
+          sync: fakeSyncDependencies(),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      await tester
-          .tap(find.byKey(const Key('settings_full_text_search_pdf_switch')));
+      await tester.tap(
+        find.byKey(const Key('settings_full_text_search_pdf_switch')),
+      );
       await tester.pumpAndSettle();
 
       expect(
@@ -859,32 +1042,37 @@ void main() {
     });
 
     testWidgets(
-        '重建索引按鈕：開關開啟時可用，點擊後呼叫 rebuildIndex（review-plan-issue-3.md I-1）',
-        (tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-      final repository = FakeFullTextSearchSettingsRepository(
-        initialEnabled: {ContentIndexCategory.pdf: true},
-      );
-      await pumpLocalizedWidget(
-      tester,
-      SettingsScaffold(
-            prefsManager: FakeReaderPrefsManager(),
-            fullTextSearchSettingsRepository: repository,
+      '重建索引按鈕：開關開啟時可用，點擊後呼叫 rebuildIndex（review-plan-issue-3.md I-1）',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        final repository = FakeFullTextSearchSettingsRepository(
+          initialEnabled: {ContentIndexCategory.pdf: true},
+        );
+        await pumpLocalizedWidget(
+          tester,
+          SettingsScaffold(
+            readerFeatures: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              fullTextSearchSettingsRepository: repository,
+            ),
+            sync: fakeSyncDependencies(),
           ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.byKey(const Key('settings_full_text_search_pdf_rebuild_button')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(repository.rebuildIndexCalls, [ContentIndexCategory.pdf]);
+      },
     );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(
-          const Key('settings_full_text_search_pdf_rebuild_button')));
-      await tester.pumpAndSettle();
-
-      expect(repository.rebuildIndexCalls, [ContentIndexCategory.pdf]);
-    });
 
     testWidgets('重建索引按鈕：開關關閉時停用', (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
@@ -894,22 +1082,27 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
       await pumpLocalizedWidget(
-      tester,
-      SettingsScaffold(
+        tester,
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
             fullTextSearchSettingsRepository:
                 FakeFullTextSearchSettingsRepository(),
           ),
-    );
+          sync: fakeSyncDependencies(),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      final button = tester.widget<IconButton>(find.byKey(
-          const Key('settings_full_text_search_pdf_rebuild_button')));
+      final button = tester.widget<IconButton>(
+        find.byKey(const Key('settings_full_text_search_pdf_rebuild_button')),
+      );
       expect(button.onPressed, isNull);
     });
 
-    testWidgets('isFullTextSearchAvailable 為 false 時顯示不支援提示、不顯示開關',
-        (tester) async {
+    testWidgets('isFullTextSearchAvailable 為 false 時顯示不支援提示、不顯示開關', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -917,14 +1110,17 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
       await pumpLocalizedWidget(
-      tester,
-      SettingsScaffold(
+        tester,
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
             fullTextSearchSettingsRepository:
                 FakeFullTextSearchSettingsRepository(),
             isFullTextSearchAvailable: false,
           ),
-    );
+          sync: fakeSyncDependencies(),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(
@@ -941,9 +1137,9 @@ void main() {
       );
     });
 
-    testWidgets(
-        'didUpdateWidget 時重新載入全文檢索開關狀態（review-plan-issue-3.md M-1）',
-        (tester) async {
+    testWidgets('didUpdateWidget 時重新載入全文檢索開關狀態（review-plan-issue-3.md M-1）', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -952,17 +1148,21 @@ void main() {
       });
       final repository = FakeFullTextSearchSettingsRepository();
       await pumpLocalizedWidget(
-      tester,
-      SettingsScaffold(
+        tester,
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
             fullTextSearchSettingsRepository: repository,
           ),
-    );
+          sync: fakeSyncDependencies(),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(
         tester
             .widget<Switch>(
-                find.byKey(const Key('settings_full_text_search_pdf_switch')))
+              find.byKey(const Key('settings_full_text_search_pdf_switch')),
+            )
             .value,
         isFalse,
       );
@@ -972,18 +1172,22 @@ void main() {
       // 傳入等價的 widget 設定）。
       await repository.setEnabled(ContentIndexCategory.pdf, true);
       await pumpLocalizedWidget(
-      tester,
-      SettingsScaffold(
+        tester,
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
             fullTextSearchSettingsRepository: repository,
           ),
-    );
+          sync: fakeSyncDependencies(),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(
         tester
             .widget<Switch>(
-                find.byKey(const Key('settings_full_text_search_pdf_switch')))
+              find.byKey(const Key('settings_full_text_search_pdf_switch')),
+            )
             .value,
         isTrue,
       );
@@ -991,13 +1195,17 @@ void main() {
   });
 
   group('epic-45-interface-i18n Issue 1：語言選擇 UI', () {
-    testWidgets('顯示「語言」入口，currentLocaleOverride 非 null 時 subtitle 顯示該語言名稱',
-        (tester) async {
+    testWidgets('顯示「語言」入口，currentLocaleOverride 非 null 時 subtitle 顯示該語言名稱', (
+      tester,
+    ) async {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
-          prefsManager: FakeReaderPrefsManager(),
           currentLocaleOverride: AppLocale.zhCN,
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
         ),
       );
 
@@ -1007,27 +1215,34 @@ void main() {
       expect(find.text('简体中文'), findsOneWidget);
     });
 
-    testWidgets(
-        'currentLocaleOverride 為 null（跟隨系統）時，subtitle 動態標註目前系統實際生效語言',
-        (tester) async {
+    testWidgets('currentLocaleOverride 為 null（跟隨系統）時，subtitle 動態標註目前系統實際生效語言', (
+      tester,
+    ) async {
       tester.platformDispatcher.localeTestValue = const Locale('en', 'US');
       addTearDown(tester.platformDispatcher.clearLocaleTestValue);
 
       await pumpLocalizedWidget(
         tester,
-        SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
+        ),
       );
 
       expect(find.text('跟隨系統（English）'), findsOneWidget);
     });
 
-    testWidgets('英文介面下語言選項仍顯示「正體中文」「简体中文」「English」（epic-48）',
-        (tester) async {
+    testWidgets('英文介面下語言選項仍顯示「正體中文」「简体中文」「English」（epic-48）', (tester) async {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
-          prefsManager: FakeReaderPrefsManager(),
           currentLocaleOverride: AppLocale.zhTW,
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
         ),
         locale: const Locale('en'),
       );
@@ -1038,24 +1253,35 @@ void main() {
       await tester.tap(find.byKey(const Key('settings_language_button')));
       await tester.pumpAndSettle();
 
-      Finder optionText(String key, String text) => find.descendant(
-            of: find.byKey(Key(key)),
-            matching: find.text(text),
-          );
-      expect(optionText('settings_language_option_zh_tw', '正體中文'), findsOneWidget);
-      expect(optionText('settings_language_option_zh_cn', '简体中文'), findsOneWidget);
-      expect(optionText('settings_language_option_en', 'English'), findsOneWidget);
+      Finder optionText(String key, String text) =>
+          find.descendant(of: find.byKey(Key(key)), matching: find.text(text));
+      expect(
+        optionText('settings_language_option_zh_tw', '正體中文'),
+        findsOneWidget,
+      );
+      expect(
+        optionText('settings_language_option_zh_cn', '简体中文'),
+        findsOneWidget,
+      );
+      expect(
+        optionText('settings_language_option_en', 'English'),
+        findsOneWidget,
+      );
       expect(find.text('Traditional Chinese'), findsNothing);
       expect(find.text('Simplified Chinese'), findsNothing);
     });
 
-    testWidgets('點擊「語言」開啟選擇器，4 個選項存在，目前選中項目正確反映 currentLocaleOverride',
-        (tester) async {
+    testWidgets('點擊「語言」開啟選擇器，4 個選項存在，目前選中項目正確反映 currentLocaleOverride', (
+      tester,
+    ) async {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
-          prefsManager: FakeReaderPrefsManager(),
           currentLocaleOverride: AppLocale.en,
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
         ),
       );
 
@@ -1074,7 +1300,10 @@ void main() {
         find.byKey(const Key('settings_language_option_zh_cn')),
         findsOneWidget,
       );
-      expect(find.byKey(const Key('settings_language_option_en')), findsOneWidget);
+      expect(
+        find.byKey(const Key('settings_language_option_en')),
+        findsOneWidget,
+      );
 
       // 【/receiving-code-review I-1 修正】`RadioListTile.groupValue`／
       // `onChanged` 已於本專案改用 `RadioGroup<T>` 祖先包裹（見
@@ -1088,35 +1317,45 @@ void main() {
     });
 
     testWidgets(
-        'currentLocaleOverride 為 null 時，開啟選擇器「跟隨系統」呈現選中狀態（/receiving-code-review I-3 修正）',
-        (tester) async {
-      await pumpLocalizedWidget(
-        tester,
-        SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
-      );
+      'currentLocaleOverride 為 null 時，開啟選擇器「跟隨系統」呈現選中狀態（/receiving-code-review I-3 修正）',
+      (tester) async {
+        await pumpLocalizedWidget(
+          tester,
+          SettingsScaffold(
+            readerFeatures: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+            ),
+            sync: fakeSyncDependencies(),
+          ),
+        );
 
-      await tester.tap(find.byKey(const Key('settings_language_button')));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('settings_language_button')));
+        await tester.pumpAndSettle();
 
-      final group = tester.widget<RadioGroup<AppLocale?>>(
-        find.byType(RadioGroup<AppLocale?>),
-      );
-      expect(group.groupValue, isNull);
-    });
+        final group = tester.widget<RadioGroup<AppLocale?>>(
+          find.byType(RadioGroup<AppLocale?>),
+        );
+        expect(group.groupValue, isNull);
+      },
+    );
 
-    testWidgets('選取「正體中文」選項，onLocaleChanged 收到 AppLocale.zhTW 且 Sheet 關閉',
-        (tester) async {
+    testWidgets('選取「正體中文」選項，onLocaleChanged 收到 AppLocale.zhTW 且 Sheet 關閉', (
+      tester,
+    ) async {
       AppLocale? received;
       var receivedCalled = false;
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
-          prefsManager: FakeReaderPrefsManager(),
           currentLocaleOverride: AppLocale.en,
           onLocaleChanged: (locale) {
             receivedCalled = true;
             received = locale;
           },
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
         ),
       );
 
@@ -1140,12 +1379,15 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
-          prefsManager: FakeReaderPrefsManager(),
           currentLocaleOverride: AppLocale.en,
           onLocaleChanged: (locale) {
             receivedCalled = true;
             received = locale;
           },
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
         ),
       );
 
@@ -1161,34 +1403,45 @@ void main() {
     });
 
     testWidgets(
-        '選取「簡體中文」與「English」選項，onLocaleChanged 分別收到對應列舉值（/receiving-code-review I-3 修正：原測試僅覆蓋正體中文／跟隨系統兩個選項）',
-        (tester) async {
-      AppLocale? received;
-      await pumpLocalizedWidget(
-        tester,
-        SettingsScaffold(
-          prefsManager: FakeReaderPrefsManager(),
-          onLocaleChanged: (locale) => received = locale,
-        ),
-      );
+      '選取「簡體中文」與「English」選項，onLocaleChanged 分別收到對應列舉值（/receiving-code-review I-3 修正：原測試僅覆蓋正體中文／跟隨系統兩個選項）',
+      (tester) async {
+        AppLocale? received;
+        await pumpLocalizedWidget(
+          tester,
+          SettingsScaffold(
+            onLocaleChanged: (locale) => received = locale,
+            readerFeatures: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+            ),
+            sync: fakeSyncDependencies(),
+          ),
+        );
 
-      await tester.tap(find.byKey(const Key('settings_language_button')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('settings_language_option_zh_cn')));
-      await tester.pumpAndSettle();
-      expect(received, AppLocale.zhCN);
+        await tester.tap(find.byKey(const Key('settings_language_button')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const Key('settings_language_option_zh_cn')),
+        );
+        await tester.pumpAndSettle();
+        expect(received, AppLocale.zhCN);
 
-      await tester.tap(find.byKey(const Key('settings_language_button')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('settings_language_option_en')));
-      await tester.pumpAndSettle();
-      expect(received, AppLocale.en);
-    });
+        await tester.tap(find.byKey(const Key('settings_language_button')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('settings_language_option_en')));
+        await tester.pumpAndSettle();
+        expect(received, AppLocale.en);
+      },
+    );
 
     testWidgets('未接上 onLocaleChanged 時，選取選項不崩潰', (tester) async {
       await pumpLocalizedWidget(
         tester,
-        SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
+        ),
       );
 
       await tester.tap(find.byKey(const Key('settings_language_button')));
@@ -1210,7 +1463,12 @@ void main() {
 
     await pumpLocalizedWidget(
       tester,
-      SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
+      SettingsScaffold(
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: fakeSyncDependencies(),
+      ),
       locale: const Locale('en'),
     );
 
@@ -1231,15 +1489,17 @@ void main() {
     expect(find.text('Console Log Interception'), findsOneWidget);
   });
 
-  testWidgets('E-Ink 模式下佈景色點的無障礙標籤正確帶出鎖定提示文字（英文）',
-      (tester) async {
+  testWidgets('E-Ink 模式下佈景色點的無障礙標籤正確帶出鎖定提示文字（英文）', (tester) async {
     final handle = tester.ensureSemantics();
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
-        prefsManager: FakeReaderPrefsManager(),
         isEinkMode: true,
         currentTheme: AppTheme.dark,
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: fakeSyncDependencies(),
       ),
       locale: const Locale('en'),
     );
@@ -1253,13 +1513,18 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('字型管理入口把 downloadableFontStore 傳給字型管理畫面（epic-49）', (tester) async {
+  testWidgets('字型管理入口把 downloadableFontStore 傳給字型管理畫面（epic-49）', (
+    tester,
+  ) async {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
-        prefsManager: FakeReaderPrefsManager(),
-        customFontsRepository: FakeCustomFontsRepository(),
-        downloadableFontStore: FakeDownloadableFontStore(),
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+          customFontsRepository: FakeCustomFontsRepository(),
+          downloadableFontStore: FakeDownloadableFontStore(),
+        ),
+        sync: fakeSyncDependencies(),
       ),
     );
 
@@ -1268,7 +1533,9 @@ void main() {
     await tester.tap(entry);
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('font_management_download_sourceHanSans')), findsOneWidget);
+    expect(
+      find.byKey(const Key('font_management_download_sourceHanSans')),
+      findsOneWidget,
+    );
   });
 }
-

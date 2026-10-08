@@ -4,11 +4,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
-import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../library/widgets/book_cover.dart';
 import '../reader/reader_jump_target.dart';
-import '../reader/reader_prefs_manager.dart';
 import '../reader/text_conversion.dart';
 import '../reader/text_conversion_mode.dart';
 import '../search/full_text_search_settings_repository.dart';
@@ -17,7 +15,7 @@ import '../search/search_repository.dart';
 import 'book_search_screen.dart';
 import 'full_text_search_confirm_dialog.dart';
 import 'library_paging.dart';
-import 'library_screen_dependencies.dart';
+import 'reader_feature_dependencies.dart';
 import 'reader_screen_route.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_section_header.dart';
@@ -31,21 +29,13 @@ import 'widgets/paging_bar.dart';
 /// （見 Issue 5）。
 class LibrarySearchScreen extends StatefulWidget {
   final String initialQuery;
-  final SearchRepository searchRepository;
-  final ReaderPrefsManager prefsManager;
-  final LibraryRepository libraryRepository;
-  final LibraryReaderFeatureRepositories readerFeatureRepositories;
-  final LibrarySyncDependencies syncDependencies;
+  final ReaderFeatureDependencies dependencies;
   final bool isEinkMode;
 
   const LibrarySearchScreen({
     super.key,
     this.initialQuery = '',
-    required this.searchRepository,
-    required this.prefsManager,
-    required this.libraryRepository,
-    this.readerFeatureRepositories = const LibraryReaderFeatureRepositories(),
-    this.syncDependencies = const LibrarySyncDependencies(),
+    required this.dependencies,
     this.isEinkMode = false,
   });
 
@@ -100,7 +90,8 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
   }
 
   Future<void> _loadTextConversion() async {
-    final globalPrefs = await widget.prefsManager.loadGlobalPrefs();
+    final globalPrefs = await widget.dependencies.prefsManager
+        .loadGlobalPrefs();
     if (!mounted) return;
     setState(() => _textConversion = globalPrefs.reading.textConversion);
   }
@@ -114,9 +105,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
   }
 
   Future<void> _loadFullTextSearchSettings() async {
-    final repository =
-        widget.readerFeatureRepositories.fullTextSearchSettingsRepository;
-    if (repository == null) return;
+    final repository = widget.dependencies.fullTextSearchSettingsRepository;
     final pdfEnabled = await repository.isEnabled(ContentIndexCategory.pdf);
     final foliateEnabled =
         await repository.isEnabled(ContentIndexCategory.foliate);
@@ -146,11 +135,11 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
   Future<void> _runSearch(String trimmedQuery) async {
     final requestId = ++_searchRequestId;
     final isFullTextSearchAvailable =
-        widget.readerFeatureRepositories.isFullTextSearchAvailable;
-    final titleAuthorResults =
-        await widget.searchRepository.searchTitleAuthor(trimmedQuery);
+        widget.dependencies.isFullTextSearchAvailable;
+    final titleAuthorResults = await widget.dependencies.searchRepository
+        .searchTitleAuthor(trimmedQuery);
     final contentResults = isFullTextSearchAvailable
-        ? await widget.searchRepository.searchContent(trimmedQuery)
+        ? await widget.dependencies.searchRepository.searchContent(trimmedQuery)
         : const <BookContentMatches>[];
     // 【防止過期回應覆蓋新結果】使用者可能在前一次查詢的 Future 尚未
     // resolve 前就輸入了新關鍵字觸發下一次查詢，若不比對 requestId，先
@@ -177,12 +166,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
       MaterialPageRoute(
         builder: (_) => buildReaderScreen(
           book: book,
-          dependencies: readerFeatureDependenciesFromLegacy(
-            prefsManager: widget.prefsManager,
-            features: widget.readerFeatureRepositories,
-            sync: widget.syncDependencies,
-            libraryRepository: widget.libraryRepository,
-          ),
+          dependencies: widget.dependencies,
           isEinkMode: widget.isEinkMode,
           // epic-10-search Issue 5：只有內容匹配片段的點擊會帶入
           // jumpTarget（見下方 _buildContentGroupCard 呼叫端），書名/作者
@@ -199,10 +183,9 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
       title: AppLocalizations.of(context)!.librarySearchSettingsSheetTitle,
       isEinkMode: widget.isEinkMode,
       builder: (context) => _FullTextSearchQuickSettingsPanel(
-        repository:
-            widget.readerFeatureRepositories.fullTextSearchSettingsRepository,
+        repository: widget.dependencies.fullTextSearchSettingsRepository,
         isFullTextSearchAvailable:
-            widget.readerFeatureRepositories.isFullTextSearchAvailable,
+            widget.dependencies.isFullTextSearchAvailable,
         isEinkMode: widget.isEinkMode,
       ),
     );
@@ -407,14 +390,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
         builder: (_) => BookSearchScreen(
           book: book,
           initialQuery: _controller.text.trim(),
-          dependencies: readerFeatureDependenciesFromLegacy(
-            prefsManager: widget.prefsManager,
-            features: widget.readerFeatureRepositories,
-            sync: widget.syncDependencies,
-            libraryRepository: widget.libraryRepository,
-            // 沿用本畫面自己的 searchRepository（與遷移前一致），不取 bundle 內的欄位。
-            searchRepository: widget.searchRepository,
-          ),
+          dependencies: widget.dependencies,
           isEinkMode: widget.isEinkMode,
         ),
       ),
@@ -467,7 +443,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
 
   Widget _buildContentGuidanceCard() {
     final l10n = AppLocalizations.of(context)!;
-    if (!widget.readerFeatureRepositories.isFullTextSearchAvailable) {
+    if (!widget.dependencies.isFullTextSearchAvailable) {
       return Padding(
         padding: const EdgeInsets.all(12),
         child: Text(l10n.fullTextSearchUnavailableMessage),

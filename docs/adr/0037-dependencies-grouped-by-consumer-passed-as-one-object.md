@@ -15,8 +15,8 @@
 ## 決策
 
 1. 依賴按「誰在用」分成四組，容器 `AppDependencies` 持有四組，只在 `main.dart` 與根部使用：
-   - `ReaderFeatureDependencies`（閱讀器功能）：含 `libraryRepository`、`importService`、`prefsManager`，以及 `ReaderScreen` 的 `ReadingSession` 需要的 `syncCheckpointTrigger`（閱讀器只需要「請求一次 Checkpoint」，不需要帳號、`SyncClient` 或手動同步）。
-   - `SyncDependencies`：同步帳號、`SyncClient`、`onManualSync`、`loadLastSyncedAt`，以及 `syncCheckpointTrigger`。
+   - `ReaderFeatureDependencies`（閱讀器功能）：含 `libraryRepository`、`importService`、`prefsManager`、`fullTextSearchSettingsRepository`（「啟用全文檢索」設定；Issue 12 補列，供書架、全庫搜尋與設定頁使用），以及 `ReaderScreen` 的 `ReadingSession` 需要的 `syncCheckpointTrigger`（閱讀器只需要「請求一次 Checkpoint」，不需要帳號、`SyncClient` 或手動同步）。
+   - `SyncDependencies`：同步帳號、`SyncClient`、`onManualSync`、`loadLastSyncedAt`，以及 `syncCheckpointTrigger`。只有 `SettingsScaffold` 與其上層（`AdaptiveShellScaffold`、`ElinkBookApp`）收這一組；`LibraryScreen`／`LibrarySearchScreen` 只收 `ReaderFeatureDependencies`。
    - `SourceDependencies`（雲端／遠端來源）：雲端帳號與 OAuth／storage client、`remoteServerRepository`、OPDS、`thumbnailCache`、`computeFingerprint`、網路檢查、`downloadQueueController`，以及 `WifiTransferDependencies` 涵蓋的欄位。
    - `AppearanceDependencies`：主題、E-Ink 模式，以及介面語言（`currentLocaleOverride`、`onLocaleChanged`）。
    同一個依賴可以出現在不只一組（例如 `syncCheckpointTrigger`），但必須由 `AppDependencies` 建構一次、把同一個實例放進各組，不得各組自行建構。
@@ -25,7 +25,7 @@
    例外：依書本才能建構的物件（`readingStatsTracker`）與純為 widget test 注入的 callback（`pickSingleBookFile`）不屬於應用層依賴，留在 `ReaderScreen` 建構子上作為測試注入點。
 4. 測試使用 `test/support/` 的工廠建立預設全是 fake 的依賴組，只覆寫情境需要的欄位。正式與測試是兩個 adapter，seam 成立。
 5. 不引入 DI 套件，也不使用 `InheritedWidget`；依賴仍顯式出現在建構子簽名上。
-6. 遷移逐畫面一刀切，同一個畫面的建構子不保留新舊參數並存。尚未遷移的外層畫面開書時，只能透過 `reader_screen_route.dart` 的單一轉換函式 `readerFeatureDependenciesFromLegacy` 暫時把舊 bundle 組裝成新的依賴組，由尚未遷移的外層畫面呼叫（實際有三處：書架、全庫搜尋開閱讀器、全庫搜尋開單書搜尋），該組裝在最後一個外層畫面遷移完成時移除。
+6. 遷移逐畫面一刀切，同一個畫面的建構子不保留新舊參數並存。遷移期間曾以 `reader_screen_route.dart` 的單一轉換函式 `readerFeatureDependenciesFromLegacy` 讓尚未遷移的外層畫面暫時組裝依賴組；該函式與舊 bundle（`LibraryReaderFeatureRepositories`、`LibrarySyncDependencies`）已於 Issue 12 全部移除，不再有新舊並存。
 
 ## 後果
 

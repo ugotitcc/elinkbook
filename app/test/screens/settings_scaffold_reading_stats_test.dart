@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/screens/adaptive_shell_scaffold.dart';
-import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/reading_stats_screen.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
 
@@ -11,6 +10,8 @@ import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_reading_stats_repository.dart';
 import '../support/pump_localized_widget.dart';
+import '../support/fake_reader_feature_dependencies.dart';
+import '../support/fake_sync_dependencies.dart';
 
 void _useTallView(WidgetTester tester) {
   tester.view.physicalSize = const Size(800, 1600);
@@ -26,22 +27,16 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('readingStatsRepository 為 null 時不顯示「閱讀統計」項目', (tester) async {
-    _useTallView(tester);
-    await pumpLocalizedWidget(
-      tester,
-      SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
-    );
-    expect(find.byKey(const Key('settings_reading_stats_button')), findsNothing);
-  });
-
   testWidgets('提供 repository 時顯示項目，點擊進入統計畫面', (tester) async {
     _useTallView(tester);
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
-        prefsManager: FakeReaderPrefsManager(),
-        readingStatsRepository: FakeReadingStatsRepository(),
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+          readingStatsRepository: FakeReadingStatsRepository(),
+        ),
+        sync: fakeSyncDependencies(),
       ),
     );
 
@@ -55,17 +50,20 @@ void main() {
     expect(find.byKey(const Key('reading_stats_heatmap')), findsOneWidget);
   });
 
-  testWidgets('AdaptiveShellScaffold 把 bundle 內的 repository 轉交設定頁', (tester) async {
+  testWidgets('AdaptiveShellScaffold 把 bundle 內的 repository 轉交設定頁', (
+    tester,
+  ) async {
     _useTallView(tester);
     await pumpLocalizedWidget(
       tester,
       AdaptiveShellScaffold(
-        repository: FakeLibraryRepository(),
-        importService: FakeBookImportService(),
-        prefsManager: FakeReaderPrefsManager(),
-        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+        readerFeatures: fakeReaderFeatureDependencies(
+          libraryRepository: FakeLibraryRepository(),
+          bookImportService: FakeBookImportService(),
+          prefsManager: FakeReaderPrefsManager(),
           readingStatsRepository: FakeReadingStatsRepository(),
         ),
+        sync: fakeSyncDependencies(),
       ),
     );
     await tester.pumpAndSettle();
@@ -76,25 +74,9 @@ void main() {
     await tester.tap(find.byKey(const Key('sources_settings_button')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('settings_reading_stats_button')), findsOneWidget);
-  });
-
-  testWidgets('AdaptiveShellScaffold 的 bundle 沒有 repository 時設定頁不顯示項目', (tester) async {
-    _useTallView(tester);
-    await pumpLocalizedWidget(
-      tester,
-      AdaptiveShellScaffold(
-        repository: FakeLibraryRepository(),
-        importService: FakeBookImportService(),
-        prefsManager: FakeReaderPrefsManager(),
-      ),
+    expect(
+      find.byKey(const Key('settings_reading_stats_button')),
+      findsOneWidget,
     );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('library_source_button')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('sources_settings_button')));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('settings_reading_stats_button')), findsNothing);
   });
 }

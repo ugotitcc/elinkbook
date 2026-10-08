@@ -50,7 +50,7 @@ abstract class FullTextSearchSettingsRepository {
 /// Task 1，review-plan-issue-3.md C-1）。
 ///
 /// [requestProcessing] 刻意收窄成單一 callback 而非直接持有整個
-/// `ContentIndexingScheduler`（比照 `LibrarySyncDependencies.onManualSync`
+/// `ContentIndexingScheduler`（比照 `SyncDependencies.onManualSync`
 /// 既有先例），正式執行路徑由 `main.dart` 傳入
 /// `contentIndexingScheduler.requestProcessing`。
 class SqliteFullTextSearchSettingsRepository

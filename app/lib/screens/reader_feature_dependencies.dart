@@ -14,6 +14,7 @@ import '../reader/reader_prefs_manager.dart';
 import '../reader/tts_audio_focus_source.dart';
 import '../reader/tts_audio_handler_startup.dart';
 import '../reader/tts_provider.dart';
+import '../search/full_text_search_settings_repository.dart';
 import '../search/search_repository.dart';
 import '../stats/reading_stats_repository.dart';
 import '../sync/sync_checkpoint_trigger.dart';
@@ -44,6 +45,10 @@ class ReaderFeatureDependencies {
 
   /// 本裝置系統 SQLite 是否有 FTS5 模組可用；`false` 時單書搜尋顯示降級提示。
   final bool isFullTextSearchAvailable;
+
+  /// 「啟用全文檢索」設定；書架重新下載後補索引、全庫搜尋與設定頁開關使用，
+  /// 閱讀器本身不用。
+  final FullTextSearchSettingsRepository fullTextSearchSettingsRepository;
   final ReadingStatsRepository readingStatsRepository;
   final ReaderActivityTracker readerActivityTracker;
   final SyncCheckpointTrigger syncCheckpointTrigger;
@@ -67,6 +72,7 @@ class ReaderFeatureDependencies {
     required this.bookReaderPrefsRepository,
     required this.searchRepository,
     required this.isFullTextSearchAvailable,
+    required this.fullTextSearchSettingsRepository,
     required this.readingStatsRepository,
     required this.readerActivityTracker,
     required this.syncCheckpointTrigger,

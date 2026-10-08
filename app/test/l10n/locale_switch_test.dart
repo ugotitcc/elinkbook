@@ -13,6 +13,8 @@ import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/pump_localized_widget.dart';
+import '../support/fake_reader_feature_dependencies.dart';
+import '../support/fake_sync_dependencies.dart';
 
 const _appInfoChannel = MethodChannel('elinkbook/app_info');
 
@@ -50,7 +52,12 @@ void main() {
     testWidgets('zh_TW locale（預設）下標題與外觀分區正確以正體中文渲染', (tester) async {
       await pumpLocalizedWidget(
         tester,
-        SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
+        ),
       );
 
       expect(find.text('設定'), findsOneWidget);
@@ -60,7 +67,12 @@ void main() {
     testWidgets('zh_CN locale 下標題與外觀分區正確以簡體中文渲染', (tester) async {
       await pumpLocalizedWidget(
         tester,
-        SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
+        ),
         locale: const Locale('zh', 'CN'),
       );
 
@@ -71,7 +83,12 @@ void main() {
     testWidgets('en locale 下標題與外觀分區正確以英文渲染', (tester) async {
       await pumpLocalizedWidget(
         tester,
-        SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
+        SettingsScaffold(
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
+        ),
         locale: const Locale('en'),
       );
 
@@ -89,17 +106,19 @@ void main() {
     });
 
     LibraryScreen buildScreen() => LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
-          prefsManager: FakeReaderPrefsManager(
-            globalPrefs: const GlobalReaderPrefs.initial().copyWith(
-              // 避免 openLastBookOnLaunch 預設 true 導致自動導覽到
-              // ReaderScreen，干擾本測試對書架空狀態文字的斷言（沿用
-              // library_screen_test.dart 既有慣例）。
-              reading: const ReadingDefaults(openLastBookOnLaunch: false),
-            ),
+      dependencies: fakeReaderFeatureDependencies(
+        libraryRepository: FakeLibraryRepository(),
+        bookImportService: FakeBookImportService(),
+        prefsManager: FakeReaderPrefsManager(
+          globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+            // 避免 openLastBookOnLaunch 預設 true 導致自動導覽到
+            // ReaderScreen，干擾本測試對書架空狀態文字的斷言（沿用
+            // library_screen_test.dart 既有慣例）。
+            reading: const ReadingDefaults(openLastBookOnLaunch: false),
           ),
-        );
+        ),
+      ),
+    );
 
     testWidgets('zh_TW locale（預設）下書架標題與空狀態文字正確以正體中文渲染', (tester) async {
       await pumpLocalizedWidget(tester, buildScreen());
