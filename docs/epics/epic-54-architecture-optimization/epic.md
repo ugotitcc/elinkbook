@@ -1,3 +1,4 @@
+- **接線守衛（程式審查 Important，選方案 B）**：`foliate_toc_footer_test` 新增直接載入 `FoliateReaderView` 的 `testWidgets`，斷言橋接收到的值：目錄根節點 `tocId == 0`、子節為 `[1,2,3]`、開書後 `tocItemId` 不為 null、跳到第三節後 `tocItemId == 3`、`locatorJson` 不含 `tocItemId`。TCL 14 上通過（該檔 +4、與 `epub_toc_test` 合跑 +6）；突變驗證：移除 `main.js` 流式分支的 `tocItemId` → 失敗（`Expected: not null`），`tocId: item.id ?? null` 改 `||` → 失敗（`Expected: <0>, Actual: <null>`），皆已還原。
 # `epic-54-architecture-optimization` 架構優化
 
 **狀態：** 🟡 開發中 (Active)

@@ -22,6 +22,71 @@ Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  // epic-54 Issue 20（程式審查 Important）：直接守護 JS→Dart 的 tocId／tocItemId
+  // 接線。ReaderScreen 層的整合測試在舊規則剛好答對時無法分辨有沒有傳到 id，
+  // 這裡直接斷言橋接收到的值：任何一端（main.js 轉發、codec 解析、falsy 的 0）
+  // 壞掉都會讓本測試失敗。
+  testWidgets(
+      '單 spine 多錨點：目錄節點帶 tocId（根為 0），relocate 回報的 tocItemId 隨跳轉改變',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_single_spine_multi_anchor.epub',
+        'foliate_toc_id.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final completer = Completer<void>();
+    String? errorMessage;
+    final key = GlobalKey<State<FoliateReaderView>>();
+    EpubPositionInfo? lastPosition;
+
+    await pumpLocalizedWidget(
+      tester,
+      FoliateReaderView(
+        key: key,
+        filePath: samplePath,
+        onPageRendered: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (message) {
+          errorMessage = message;
+          if (!completer.isCompleted) completer.complete();
+        },
+        onLocatorChanged: (info) => lastPosition = info,
+      ),
+    );
+
+    await completer.future.timeout(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+    expect(errorMessage, isNull);
+
+    // 目錄節點：根（單檔範例）id 為 0（falsy 陷阱），三個子節依序 1、2、3。
+    final toc = await FoliateReaderView.loadTableOfContents(key);
+    expect(toc, hasLength(1));
+    expect(toc.single.tocId, 0, reason: '第一個目錄項 id 為 0，不得變成 null');
+    expect(toc.single.children.map((e) => e.tocId), [1, 2, 3]);
+
+    // 開書後 relocate 必須帶 tocItemId（不為 null）。
+    expect(lastPosition, isNotNull);
+    expect(lastPosition!.tocItemId, isNotNull,
+        reason: 'main.js 應在 position 帶 tocItemId');
+
+    // 跳到第三節：foliate 以 live DOM 判定目前目錄項應為 id 3。
+    final s3 = toc.single.children[2];
+    FoliateReaderView.jumpToLocator(key, s3.locatorJson);
+    final deadline = DateTime.now().add(const Duration(seconds: 10));
+    while (lastPosition?.tocItemId != 3) {
+      if (DateTime.now().isAfter(deadline)) {
+        fail('等待逾時：跳到第三節後 tocItemId 應為 3，實際為 ${lastPosition?.tocItemId}');
+      }
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(lastPosition!.locatorJson, isNot(contains('tocItemId')),
+        reason: 'locatorJson 不得被污染');
+  });
+
   testWidgets('讀取全書目錄，點擊項目 200ms 內跳轉且畫面內容與章節一致',
       (tester) async {
     final samplePath = await _stageAssetAsFile(
