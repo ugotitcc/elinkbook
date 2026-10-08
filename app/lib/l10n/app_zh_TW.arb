@@ -1495,10 +1495,6 @@
   "@readerUnknownBookTitle": {
     "description": "ReaderScreen.bookTitle 未提供（僅測試直接建構時可能發生，正式生產路徑必定提供書名）時的回退顯示文字"
   },
-  "readerSaveAsPresetUnavailableMessage": "暫時無法儲存預設集",
-  "@readerSaveAsPresetUnavailableMessage": {
-    "description": "layoutPresetRepository 未提供時，點擊「另存為新預設集」顯示的 SnackBar 訊息"
-  },
   "readerSaveAsPresetFailedMessage": "另存為新預設集失敗",
   "@readerSaveAsPresetFailedMessage": {
     "description": "另存為新預設集過程發生例外時顯示的固定 SnackBar 訊息（不含例外原始文字，技術細節已由呼叫端 debugPrint() 記錄，見 epic-45-interface-i18n Issue 7）"
@@ -2558,17 +2554,9 @@
   "@sourcesHomeConnectedServicesSection": {
     "description": "「已連結服務」分區標題"
   },
-  "sourcesHomeCloudNotLinkedSubtitle": "尚未連結，請至設定畫面連結帳戶",
-  "@sourcesHomeCloudNotLinkedSubtitle": {
-    "description": "Google Drive／OneDrive 入口列未連結時的副標題"
-  },
   "sourcesHomeRemoteLibraryTitle": "遠端書庫（OPDS）",
   "@sourcesHomeRemoteLibraryTitle": {
     "description": "「遠端書庫」入口列標題，OPDS 為技術協定縮寫不翻譯"
-  },
-  "sourcesHomeRemoteLibraryNotConfiguredSubtitle": "尚未設定遠端書庫伺服器",
-  "@sourcesHomeRemoteLibraryNotConfiguredSubtitle": {
-    "description": "「遠端書庫」入口列尚未設定站點時的副標題"
   },
   "libraryImportFolderDialogTitle": "匯入資料夾",
   "@libraryImportFolderDialogTitle": {

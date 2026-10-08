@@ -498,3 +498,14 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 真機 integration（2026-10-08，TCL 14〔`3CEF42ECD491687`，Android 15〕，分支 `f52fbc52`）：`smoke_test` 1／1 通過；`library_screen_test` 3／3 通過（流式 EPUB、FXL EPUB 皆由 `FoliateReaderView` 成功渲染）。結果只代表此裝置。計畫原預期 `library_screen_test` 在 base 上仍失敗（Issue 17 記錄），本次通過，未在 base 上重跑比對，不宣稱是本 Issue 修好。
 - 計畫外：codemod 搭配 `dart format` 使被遷移的測試檔格式變動較大（無行為差異）；清除一次 worktree gitdir 內的 0 位元組 stale `index.lock`（無 git 程序運行）。
 - ADR 0037 已同步：§1 補列 `fullTextSearchSettingsRepository` 與 `SyncDependencies` 的使用範圍；§6 轉換函式改為過去式。
+
+**2026-10-08 Issue 13 實作完成**（分支 `epic-54-issue-13`〔`.worktrees/epic-54-issue-13`，基於 `main@b2b07178`〕，Native 直接開發，未使用 subagent。計畫見 `plans/plan-issue-13.md`）
+
+- 設計決定：Task 0 Q1～Q3 使用者回答「依據建議」（即 Q1=A、Q2=A、Q3=A，原話見計畫附錄 A）。`AppDependencies` 只持有 `readerFeatures`／`sync`／`sources` 三組靜態依賴；`AppearanceDependencies` 為每次 `build()` 現組的快照；WiFi 傳書不留開關、tile 恆顯示；外觀組不加 `==`／`hashCode`。ADR 0037 §1／§3／§6 已按此同步。
+- 內容：新增 `SourceDependencies`（12 欄位，non-null）／`AppearanceDependencies`（3 值＋3 callback）／`AppDependencies`（3 組容器）與三個 `fake_*_dependencies` 工廠；`SourcesHomeScreen`／`LibraryScreen`／`SettingsScaffold`／`AdaptiveShellScaffold`／`ElinkBookApp` 分兩段外殼樹原子切換（先來源組 Task 2，後外觀組 Task 3），最後 `AppDependencies` 收尾（Task 4）；`main()` 建構一次三組＋`syncCheckpointTrigger` 同一實例放進兩組。刪除 epic-26 Issue 7 的 4 個舊 bundle（`LibraryCloudAccountDependencies`、`LibraryRemoteLibraryDependencies`、`LibraryThemeDependencies`、`LibraryLocaleDependencies`）與 epic-44 的 `WifiTransferDependencies`，`library_screen_dependencies.dart` 整檔刪除。
+- 驗證：同基準檔清單 318 全過（算式見計畫附錄 C）；完整 `flutter test` 3698 通過／1 略過／1 失敗，失敗為既存的 `pdf_reader_view_filters_test` bold overlay debouncer 案例（Issue 12 已在乾淨 `main` 確認，與本 Issue 無關，改動範圍未碰 `reader/`）；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js`／`check_integration_keys.js` PASS；殘留 grep（5 個舊型別名，含註解）無輸出。
+- 被刪測試與新恆真行為：見計畫附錄 B（Task 2 刪 6 案＋新增 5 案；Task 3 整檔刪 2 案＋新增 3 案快照測試；Task 4 新增 4 案、無刪除）。測試數算式見附錄 C。
+- Review Focus 對應：1→來源頁開遠端／WiFi／GDrive／OneDrive 的 `same(...)` 欄位對帳 4 案；2→切換主題後三畫面同一新快照、其餘三組 same；3→E-Ink 三處一致＋遠端書庫貫穿、切語言後 State 保留；4→附錄 B；5→缺 `remoteDownloadUrl` 書本仍提示且不呼叫 `createOpdsClient`。
+- 真機 integration（TCL 14〔`3CEF42ECD491687`〕）：`library_screen_test` 3／3、`smoke_test` 1／1、`wifi_transfer_screen_test` 8／8 通過。結果只代表此裝置。真機手動確認（四入口可進入、三頁外觀一致）待 handoff 到可連線真機的設備後補做。
+- 與 `issues.md` 第 13 列的兩處落差：(1)「6 個舊 bundle」實際只剩 4 個（Issue 12 已刪 `LibraryReaderFeatureRepositories`、`LibrarySyncDependencies`）；(2)「`buildReaderScreen` 的暫時組裝」Issue 12 已整段刪除，無暫時組裝可移除。合併後回寫 `issues.md`／`docs/epics.md` 時一併更正。
+- 孤兒 ARB 鍵清理：刪除 `readerSaveAsPresetUnavailableMessage`（Issue 11 M-5）與本次新孤兒 `sourcesHomeCloudNotLinkedSubtitle`、`sourcesHomeRemoteLibraryNotConfiguredSubtitle`（Dart 使用端皆已消失，僅剩 ARB）；`flutter gen-l10n` 同步 3 個產生檔；`test/l10n` 71 全過。

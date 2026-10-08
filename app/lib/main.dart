@@ -131,8 +131,7 @@ Future<void> main() async {
   final downloadableFontStore = DownloadableFontStore(
     httpClient: http.Client(),
     directory: Directory(
-      p.join((await getApplicationSupportDirectory()).path, 'downloaded-fonts'),
-    ),
+        p.join((await getApplicationSupportDirectory()).path, 'downloaded-fonts')),
     webViewMajorVersion: webViewMajorVersion,
   );
   try {
@@ -158,9 +157,9 @@ Future<void> main() async {
   // plans/plan-issue-3.md Global Constraints。
   final fullTextSearchSettingsRepository =
       SqliteFullTextSearchSettingsRepository(
-        database: repository.database,
-        requestProcessing: contentIndexingScheduler.requestProcessing,
-      );
+    database: repository.database,
+    requestProcessing: contentIndexingScheduler.requestProcessing,
+  );
   // epic-10-search Issue 4：全庫搜尋資料存取層，直接對同一個 Database
   // 連線下 SQL（比照 fullTextSearchSettingsRepository 既有慣例）。
   final searchRepository = SqliteSearchRepository(
@@ -267,9 +266,7 @@ Future<void> main() async {
       final context = navigatorKey.currentContext;
       if (context == null) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.syncSessionExpiredToast),
-        ),
+        SnackBar(content: Text(AppLocalizations.of(context)!.syncSessionExpiredToast)),
       );
     },
   );

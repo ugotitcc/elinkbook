@@ -79,7 +79,7 @@
 
 **Files:** 無程式修改。
 
-- [ ] **Step 1: 確認前提（開工前再對照一次）**
+- [x] **Step 1: 確認前提（開工前再對照一次）**（路徑補 `app/` 前綴後三組檢查皆符合 Expected，見 ledger Ruling）
 
 在專案根目錄確認工作區狀態：
 ```bash
@@ -122,7 +122,7 @@ Q3  外觀組要不要帶 equality（==／hashCode）？
 
 使用者於 2026-10-08 回覆「同意」（即 Q1=A、Q2=A、Q3=A），原話已記入附錄 A。
 
-- [ ] **Step 3: 建立 worktree 與分支**
+- [x] **Step 3: 建立 worktree 與分支**（已建 `.worktrees/epic-54-issue-13`，分支 `epic-54-issue-13`，`flutter pub get` 完成）
 
 使用 `git worktree`（name：`epic-54-issue-13`）建立隔離 worktree：
 ```powershell
@@ -135,7 +135,7 @@ flutter pub get
 
 （Issue 12 曾因同時存在 `.worktrees/epic-54-issue-12` 與原生 worktree 兩套而需在發 PR 前擇一；本 Issue 只建一套。）
 
-- [ ] **Step 4: 記錄基準並補附錄 A**
+- [x] **Step 4: 記錄基準並補附錄 A**（基準 309 全過、analyze 乾淨，見附錄 C；附錄 A 已有使用者原話）
 
 ```bash
 flutter test test/screens/sources_home_screen_test.dart test/screens/library_screen_test.dart \
@@ -200,7 +200,7 @@ AppearanceDependencies fakeAppearanceDependencies({
 });
 ```
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**（RED 已見：編譯失敗）
 
 `test/support/fake_source_dependencies_test.dart`：
 
@@ -279,12 +279,12 @@ void main() {
 
 （`AppTheme.sepia`、`AppLocale.en` 的實際列舉成員名稱以 `lib/theme/app_theme.dart`、`lib/l10n/app_locale.dart` 為準，開工時對照後調整測試。）
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**（已確認）
 
 Run：`flutter test test/support/fake_source_dependencies_test.dart test/support/fake_appearance_dependencies_test.dart`
 Expected：編譯失敗（檔案與型別不存在）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**（四檔已建，介面與計畫一致）
 
 `lib/screens/source_dependencies.dart`：
 
@@ -469,12 +469,12 @@ AppearanceDependencies fakeAppearanceDependencies({
 }
 ```
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**（5 全過、analyze 乾淨）
 
 Run：`flutter test test/support/fake_source_dependencies_test.dart test/support/fake_appearance_dependencies_test.dart && flutter analyze`
 Expected：全過；analyze 乾淨。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**（5621b0e）
 
 ```bash
 git add lib/screens/source_dependencies.dart lib/screens/appearance_dependencies.dart \
@@ -535,7 +535,7 @@ git commit -m "feat(epic-54): Issue 13 新增 SourceDependencies、AppearanceDep
 
 遷移對照（`adaptive_shell_scaffold.dart`）：`SourcesHomeScreen(readerFeatures: widget.readerFeatures, sources: widget.sources, isEinkMode: widget.themeDependencies.isEinkMode, …)`；`LibraryScreen(dependencies: widget.readerFeatures, sources: widget.sources, themeDependencies: …, …)`；`SettingsScaffold(readerFeatures: …, sync: …, sources: widget.sources, …)`；移除 `import '../downloads/download_queue_controller.dart'`、`book_content_fingerprint.dart`、`wifi_transfer_dependencies.dart` 等不再使用者（以 analyze 為準）。
 
-- [ ] **Step 1: 改測試（先紅）**
+- [x] **Step 1: 改測試（先紅）**（RED 已見：`readerFeatures`／`sources` 命名參數不存在）
 
 0. **`SourcesHomeScreen`（14 處）：**
 
@@ -604,12 +604,12 @@ testWidgets('開 WiFi 傳書時，WifiTransferScreen 的來源欄位取自 sourc
    - 被刪的設定頁測試：「雲端帳號入口在三個欄位任一為 null 時停用」類案例；`grep -n "cloudAccount" test/screens/settings_scaffold*_test.dart` 列出候選，逐一記入附錄 B。**`settings_cloud_account_button` 點擊導覽至 `CloudAccountSettingsScreen` 的案例保留**，並補斷言該畫面的三個依賴與 `sources` 同一實例。
    - `elinkbook_app_wiring_test.dart`：既有三個測試改寫為新建構子；其中「每個欄位都與傳入 ElinkBookApp 的值同一實例」一案，雲端／遠端／下載佇列相關斷言改為 `LibraryScreen.sources`、`SourcesHomeScreen.sources`、`SettingsScaffold.sources` 皆 `same(sources)`。
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**（已確認）
 
 Run：`flutter test test/screens/sources_home_screen_test.dart`
 Expected：編譯失敗（`readerFeatures`／`sources` 命名參數不存在）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**（五畫面＋`ElinkBookApp`／`main()` 已切；舊 bundle 刪 2、WiFi 檔刪除；註解殘留已清）
 
 1. `SourcesHomeScreen`、`LibraryScreen`、`SettingsScaffold`、`AdaptiveShellScaffold` 依 Interfaces 與上面四張對照表改寫；移除不再使用的 import（以 analyze 為準）。
 2. `ElinkBookApp` 依 Interfaces 改為持有 `sources`；`build()` 把 `sources: widget.sources` 傳給 `AdaptiveShellScaffold`，不再組裝 `LibraryCloudAccountDependencies`／`LibraryRemoteLibraryDependencies`／`WifiTransferDependencies`。
@@ -636,7 +636,7 @@ final sources = SourceDependencies(
 4. 刪除 `lib/wifi_transfer/wifi_transfer_dependencies.dart`；`library_screen_dependencies.dart` 刪除 `LibraryCloudAccountDependencies`、`LibraryRemoteLibraryDependencies` 與其 import（Theme／Locale 保留到 Task 3）。
 5. 清理註解中的舊型別名稱：`grep -rn "LibraryCloudAccountDependencies\|LibraryRemoteLibraryDependencies\|WifiTransferDependencies\|wifiTransferDependencies" lib` 預期位置為 `wifi_transfer/` 內文件註解、`remote/remote_catalog_dependencies.dart`（「比照 `RemoteCatalogDependencies`」類說明）、`library_screen.dart` 欄位註解等；改為指向 `SourceDependencies`，**只改型別名稱與必要措辭，不重寫其他說明**。
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**（analyze 乾淨；同基準檔清單 313 全過；殘留 grep 無輸出）
 
 ```bash
 flutter analyze
@@ -655,7 +655,7 @@ grep -rn "LibraryCloudAccountDependencies\|LibraryRemoteLibraryDependencies\|Wif
 
 Expected：**無輸出**（含註解）。
 
-- [ ] **Step 5: 守衛腳本與提交**
+- [x] **Step 5: 守衛腳本與提交**（commit f16727a；兩守衛皆 PASS）
 
 ```bash
 node tool/check_l10n_hardcoded_strings.js
@@ -685,9 +685,11 @@ git commit -m "refactor(epic-54): Issue 13 來源組（雲端、遠端、WiFi �
 
 遷移對照（`settings_scaffold.dart`）：`widget.currentTheme`→`widget.appearance.currentTheme`；`widget.isEinkMode`→`widget.appearance.isEinkMode`；`widget.onThemeChanged?.call(theme)`→`widget.appearance.onThemeChanged(theme)`；`onChanged: widget.onEinkModeChanged`→`onChanged: widget.appearance.onEinkModeChanged`；`widget.onLocaleChanged?.call(choice.value)`→`widget.appearance.onLocaleChanged(choice.value)`；`widget.currentLocaleOverride`→`widget.appearance.currentLocaleOverride`（`_LanguagePickerSheet` 的參數照舊，由呼叫端傳值）。
 
-- [ ] **Step 1: 改測試（先紅）**
+- [x] **Step 1: 改測試（先紅）**（codemod 214 處＋純量合併 17 處＋bundle 手改 4 處＋RF 新增 3 案＋整檔刪除；RED 已見）
 
-   - Codemod（沿用 Task 2 的 `.scratch/` 腳本改規則）：`LibraryScreen(`、`SettingsScaffold(`、`AdaptiveShellScaffold(`、`SourcesHomeScreen(` 開括號後插入 `appearance: fakeAppearanceDependencies(),`（已含者略過）。手改：含 `themeDependencies: LibraryThemeDependencies(currentTheme: x, isEinkMode: y, onThemeChanged: f, …)` 者（`adaptive_shell_scaffold_test` 2 處、`library_screen_test` 1 處）改為 `appearance: fakeAppearanceDependencies(currentTheme: x, isEinkMode: y, onThemeChanged: f, …)`；含 `localeDependencies: LibraryLocaleDependencies(…)` 者（`adaptive_shell_scaffold_test` 1 處）同理；`SettingsScaffold(currentTheme: …, isEinkMode: …, onThemeChanged: …)` 這類舊引數（`settings_scaffold_test`、`locale_switch_test`、`theme_test`）併入 `appearance: fakeAppearanceDependencies(…)`；`SourcesHomeScreen(isEinkMode: true)` 改 `appearance: fakeAppearanceDependencies(isEinkMode: true)`。
+   - Codemod（沿用 Task 2 的 `.scratch/` 腳本改規則）：`LibraryScreen(`、`SettingsScaffold(`、`AdaptiveShellScaffold(`、`SourcesHomeScreen(` 開括號後插入 `appearance: fakeAppearanceDependencies(),`（已含者略過）。手改：含 `themeDependencies: LibraryThemeDependencies(currentTheme: x, isEinkMode: y, onThemeChanged: f, …)` 者（`adaptive_shell_scaffold_test` 2 處、`library_screen_test` 1 處）改為 `appearance: fakeAppearanceDependencies(currentTheme: x, isEinkMode: y, onThemeChanged: f, …)`；含 `localeDependencies: LibraryLocaleDependencies(…)` 者（`adaptive_shell_scaffold_test` 1 處）同理；`SettingsScaffold(currentTheme: …, isEinkMode: …, onThemeChanged: …)` 這類舊引數（`settings_scaffold_test`、`locale_switch_test`、`theme_test`）併入 `appearance: fakeAppearanceDependencies(…)`；`SourcesHomeScreen(isEinkMode: true)`（grep 無既有呼叫端，不需改）。
+
+   - 被刪測試：`settings_scaffold_test` 無「callback 為 null 時停用」案例（grep 僅命中「選取跟隨系統時 onLocaleChanged 收到 null 值」有效案例，已保留）；`library_screen_dependencies_test.dart` 整檔刪除（Theme 1 案＋Locale 1 案）。
    - 新增測試（Review Focus 2、3）：
 
 ```dart
@@ -725,19 +727,19 @@ testWidgets('切換介面語言後，AdaptiveShellScaffold 子畫面 State 保�
    測試內的切換步驟以 `test/theme/theme_test.dart`（點擊 `settings_theme_dot_dark`）、`test/l10n/elinkbook_app_locale_test.dart` 既有步驟為準，內聯寫出完整步驟，**不得留空**。
    - 被刪測試：「`onThemeChanged`／`onEinkModeChanged`／`onLocaleChanged` 為 null 時對應控制項停用」類（`grep -n "onThemeChanged\|onEinkModeChanged\|onLocaleChanged" test/screens/settings_scaffold_test.dart | grep -i "null\|停用\|disabled"`）逐一記入附錄 B；`library_screen_dependencies_test.dart` 整檔刪除（剩下 Theme／Locale 持有測試 4 案，型別即將刪除）。
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**（已確認：`appearance` 命名參數不存在）
 
 Run：`flutter test test/screens/adaptive_shell_scaffold_test.dart`
 Expected：編譯失敗（`appearance` 命名參數不存在）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**（四畫面＋ElinkBookApp 快照＋刪檔＋註解清理；analyze 乾淨）
 
 1. 四個畫面依 Interfaces 與對照表改寫；`AdaptiveShellScaffold` 把 `widget.appearance` 原樣傳給 `LibraryScreen`／`SourcesHomeScreen`／`SettingsScaffold`；`LibrarySearchScreen(isEinkMode: widget.appearance.isEinkMode)`、`ReaderScreen` 的 `isEinkMode` 同樣由呼叫端取值。
 2. `ElinkBookApp.build()` 現組 `AppearanceDependencies` 傳入 `AdaptiveShellScaffold(appearance: appearance, …)`。
 3. 刪除 `lib/screens/library_screen_dependencies.dart` 與 `test/screens/library_screen_dependencies_test.dart`；`reader_screen.dart` 148 行附近註解的 `LibraryThemeDependencies.isEinkMode` 改為 `AppearanceDependencies.isEinkMode`（只改型別名稱）；`main.dart` 移除 `library_screen_dependencies.dart` import。
 4. 清理其他註解中的舊名：`grep -rn "LibraryThemeDependencies\|LibraryLocaleDependencies\|themeDependencies\|localeDependencies" lib test integration_test`，只改型別／欄位名稱與必要措辭。
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**（analyze 乾淨；同基準檔清單 314 全過；殘留 grep 無輸出）
 
 ```bash
 flutter analyze
@@ -751,7 +753,7 @@ grep -rn "LibraryThemeDependencies\|LibraryLocaleDependencies\|themeDependencies
 
 Expected：analyze 乾淨；全過；grep 無輸出。通過數算式寫入附錄 C。
 
-- [ ] **Step 5: 守衛腳本與提交**
+- [x] **Step 5: 守衛腳本與提交**（commit bbdc8a1；兩守衛皆 PASS）
 
 ```bash
 node tool/check_l10n_hardcoded_strings.js
@@ -803,7 +805,7 @@ final s = sync ?? fakeSyncDependencies(syncCheckpointTrigger: trigger);
 ```
 若呼叫端只傳入 `readerFeatures`（自訂 trigger），未傳入的 `sync` 會自動借用該 trigger；反之亦然；若皆未傳入則新建一個共用；若兩者皆傳入則完全尊重呼叫端。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**（fake_app 4 案＋wiring 容器測試＋lifecycle/locale/theme 包裝；RED 已見）
 
 `test/support/fake_app_dependencies_test.dart`（另需補「只傳 `readerFeatures`」「只傳 `sync`」兩案，見 Interfaces 的推導規則）：
 
@@ -854,14 +856,14 @@ testWidgets('ElinkBookApp 把 AppDependencies 的三組原樣傳到書架、來�
 
    Task 3 的外觀切換測試改用 `fakeAppDependencies()`。其餘 `ElinkBookApp(` 呼叫（`app_lifecycle_sync` 4、`elinkbook_app_locale` 8、`theme_test` 3、wiring 其餘）改為 `ElinkBookApp(dependencies: fakeAppDependencies(…))`；需要自訂同步組者（`app_lifecycle_sync_test` 驗證 `paused` 觸發 checkpoint）傳 `fakeAppDependencies(sync: …, readerFeatures: …)` 並保留原斷言強度。
 
-- [ ] **Step 2: 跑測試確認失敗**
+- [x] **Step 2: 跑測試確認失敗**（已確認：編譯失敗）
 
 Run：`flutter test test/support/fake_app_dependencies_test.dart`
 Expected：編譯失敗。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**（AppDependencies＋fake 工廠＋main 收尾；analyze 乾淨）
 
-`lib/screens/app_dependencies.dart`：
+`lib/screens/app_dependencies.dart`（已按計畫實作）：
 
 ```dart
 import 'package:flutter/foundation.dart';
@@ -894,7 +896,7 @@ class AppDependencies {
 
 `main.dart`：`ElinkBookApp` 改為 `required AppDependencies dependencies`，`build()` 內以 `widget.dependencies.readerFeatures`／`.sync`／`.sources` 傳給 `AdaptiveShellScaffold`，`didChangeAppLifecycleState` 改 `widget.dependencies.sync.syncCheckpointTrigger.trigger()`；`main()` 在建完三組後 `final appDependencies = AppDependencies(readerFeatures: readerFeatures, sync: sync, sources: sources);` 並 `runApp(ElinkBookApp(dependencies: appDependencies, navigatorKey: navigatorKey, initialTheme: initialTheme, initialEinkMode: initialEinkMode, themePreferences: themePreferences, localePreferences: localePreferences, initialLocaleOverride: initialLocaleOverride))`。`ElinkBookApp` 的文件註解更新為「Issue 13 起收 `AppDependencies`」。
 
-- [ ] **Step 4: 跑測試確認通過**
+- [x] **Step 4: 跑測試確認通過**（analyze 乾淨；198 全過）
 
 ```bash
 flutter analyze
@@ -904,7 +906,7 @@ flutter test test/support test/elinkbook_app_wiring_test.dart test/app_lifecycle
 
 Expected：全過；analyze 乾淨。算式寫入附錄 C。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**（commit cc34b2e；l10n 守衛 PASS）
 
 ```bash
 node tool/check_l10n_hardcoded_strings.js
@@ -921,7 +923,7 @@ git commit -m "refactor(epic-54): Issue 13 新增 AppDependencies 容器，Elink
 - Modify: `app/lib/l10n/app_{zh_TW,zh_CN,zh,en}.arb` 與產生檔 `app_localizations.dart`、`app_localizations_en.dart`、`app_localizations_zh.dart`
 - Modify: `docs/adr/0037-dependencies-grouped-by-consumer-passed-as-one-object.md`、`docs/epics/epic-54-architecture-optimization/{epic.md,issues.md}`、本計畫檔
 
-- [ ] **Step 1: 確認孤兒鍵並清理**
+- [x] **Step 1: 確認孤兒鍵並清理**（3 鍵皆無 Dart 使用端，全刪＋gen-l10n；7 檔變動符合預期；l10n 71 全過）
 
 在 `app/` 目錄或專案根目錄確認孤兒鍵使用端（PowerShell）：
 ```powershell
@@ -945,11 +947,11 @@ flutter test test/l10n
 
 Expected：產生檔同步更新；ARB 鍵一致性守衛（Issue 6）與 l10n 測試通過。`git status` 只應看到上述 7 個檔案變動。
 
-- [ ] **Step 2: 完整 `flutter test`（只此一次，背景執行）**
+- [x] **Step 2: 完整 `flutter test`（只此一次，背景執行）**（3698 通過／1 略過／1 失敗，失敗為既存 debouncer）
 
 在 `app/` 下以 `run_in_background` 執行 `flutter test`。Expected：除 Issue 18／19 已記錄的既存失敗（`pdf_reader_view_filters_test` 加粗 debouncer，乾淨 `main` 同樣失敗）外全過；出現其他失敗逐一判定是否本 Issue 回歸。
 
-- [ ] **Step 3: integration 靜態確認與真機（需使用者在場）**
+- [x] **Step 3: integration 靜態確認與真機（需使用者在場）**（TCL 14：3／3＋1／1＋8／8 全過；手動確認待 handoff）
 
 `integration_test/library_screen_test.dart`、`smoke_test.dart` 本計畫只做機械遷移。向使用者確認後在 `TCL 14`（序號 `3CEF42ECD491687`）執行：
 
@@ -972,14 +974,14 @@ flutter test integration_test/wifi_transfer_screen_test.dart -d 3CEF42ECD491687
 結果只宣稱此裝置。Issue 12 在同一裝置上這兩檔皆通過；本次以「通過」或「與 Issue 12 結果不同（說明差異）」如實記錄。無法在場則在 `epic.md` 明寫「真機未驗」。
 另請使用者在真機手動確認一次（本 Issue 的核心使用者可見風險）：從「來源」頁開 Google Drive、OneDrive、遠端書庫、WiFi 傳書各一次可進入；切換主題、E-Ink、介面語言後書架／來源／設定三頁外觀一致。
 
-- [ ] **Step 4: 同步 ADR 0037 措辭**
+- [x] **Step 4: 同步 ADR 0037 措辭**（§1 三組＋快照＋12 欄位；§3 WiFi 定案；§6 移除補句；syncCheckpointTrigger 句未動）
 
 - §1：`SourceDependencies` 欄位列表改為與實作一致（12 欄位；`WifiTransferDependencies` 已併入，書庫與匯入服務取自閱讀器組，指紋函式與網路偵測取自來源組）；「容器 `AppDependencies` 持有四組」改為「`AppDependencies` 持有 `readerFeatures`／`sync`／`sources` 三組靜態依賴；`AppearanceDependencies` 因含可變狀態，由 `ElinkBookApp` 的 State 每次 `build()` 組成快照」（依 Task 0 Q1 的實際決定；若使用者選 B 則照 B 寫）。**§1 關於「`syncCheckpointTrigger` 同時放入閱讀器組與同步組、由 `main()`／`AppDependencies` 建構一次」的敘述必須逐字保持語意，不得因本次改寫而位移**（Issue 12 計畫審查 M-3 的教訓）。
 - §3：「WiFi 傳書於 Issue 13 處理」改為已處理的結論（依 Q2：不留開關，恆提供）。
 - §6：補一句 4 個 epic-26 舊 bundle 與 `WifiTransferDependencies` 已於 Issue 13 全部移除。
 - 「後果」的測試改動量數字不改（那是撰寫 ADR 當時的估計）。
 
-- [ ] **Step 5: 回寫文件（隨功能分支一起 commit）**
+- [x] **Step 5: 回寫文件（隨功能分支一起 commit）**（epic.md 完成段＋附錄 B/C 收尾；issues.md／epics.md 留待合併後）
 
 - `epic.md`：新增「Issue 13 實作完成」段（內容、驗證數字、附錄 B 摘要、真機結果或「未驗」、使用者決定的原話出處、**與 `issues.md` 第 13 列的兩處落差**〔舊 bundle 剩 4 個而非 6 個、`buildReaderScreen` 已無暫時組裝〕、孤兒 ARB 鍵清理結果）。
 - 本計畫：勾選全部 Step，附錄 A（使用者原話）、附錄 B（被刪測試清單）、附錄 C（測試數算式）填完。
@@ -1002,6 +1004,24 @@ flutter analyze
 
 ## 附錄 B：被刪除的測試清單（依「依賴 non-null，缺席型別上不可達」原則）
 
+依「依賴 non-null，缺席型別上不可達」原則刪除，無其他理由。Task 2 實際（commit f16727a）：
+
+| 測試檔 | 實際被刪 | 理由／對應的新恆真行為 |
+|---|---|---|
+| `sources_home_screen_test.dart`（4 案） | 「雲端/OPDS 依賴缺席時對應項目為停用狀態」「downloadQueueController 為 null 時…仍維持停用」「wifiTransferDependencies 為 null 時不顯示 WiFi 傳書入口」「wifiTransferDependencies 任一欄位為 null 時不顯示入口」 | tile 恆啟用、WiFi tile 恆顯示、下載佇列恆顯示；另新增 4 案 same-instance（遠端／WiFi／GDrive／OneDrive）、英文渲染案例改斷言副標不再出現 |
+| `library_screen_test.dart`（0 案可刪＋新增 1 案） | `grep`「libraryRemoteDisabledMessage｜遠端功能未啟用」無命中，無既有缺席案例 | 新增「書本缺 remoteDownloadUrl 時點重新下載，仍顯示提示且不呼叫 createOpdsClient」保留可達路徑 |
+| `settings_scaffold_test.dart`（0 案可刪） | `grep cloudAccount` 僅命中導覽案例，無「三欄位任一為 null 時停用」案例 | 導覽案例保留並補三個 same-instance 斷言 |
+| `library_screen_dependencies_test.dart`（2 案） | 「LibraryCloudAccountDependencies 原樣持有…」「LibraryRemoteLibraryDependencies 原樣持有…」＋ 8 個 import（5 fake＋3 package） | 被測型別已刪除；Theme／Locale 兩案保留到 Task 3 |
+| `adaptive_shell_scaffold_test.dart`（改寫 1 案，非刪除） | 「wifiTransferDependencies 正確原樣傳遞給 SourcesHomeScreen」改寫為「sources 與 readerFeatures 原樣傳到 SourcesHomeScreen」 | 同一實例語意保留 |
+
+Task 3 實際（commit bbdc8a1）：
+
+| 測試檔 | 實際被刪 | 理由／對應的新恆真行為 |
+|---|---|---|
+| `library_screen_dependencies_test.dart`（整檔，Theme 1 案＋Locale 1 案） | 「LibraryThemeDependencies 原樣持有…」「LibraryLocaleDependencies 原樣持有…」 | 被測型別已刪除；改由 `fake_appearance_dependencies_test` 與 wiring 快照測試覆蓋 |
+| `settings_scaffold_test.dart`（0 案可刪） | grep 無「callback 為 null 時控制項停用」案例；「選取跟隨系統時 onLocaleChanged 收到 null 值」為有效行為，已保留 | 三個 callback non-null |
+| `adaptive_shell_scaffold_test.dart`（改寫 2 處測試名稱，非刪除） | 「上層 themeDependencies 更新後…」「…localeDependencies…轉送」更名為 appearance 用語 | 語意不變 |
+
 依「依賴 non-null，缺席型別上不可達」原則刪除，無其他理由。預期類別（實際案例名稱與數量由執行者依實測填入）：
 
 | 測試檔 | 預期被刪類別 | 理由／對應的新恆真行為 |
@@ -1013,12 +1033,12 @@ flutter analyze
 
 ## 附錄 C：測試數基準與算式
 
-- Task 0 基準：（待填）
-- Task 1：（待填）
-- Task 2：（待填：`基準 − 被刪 ＋ 新增`）
-- Task 3：（待填）
-- Task 4：（待填）
-- Task 5 完整 `flutter test`：見 `epic.md`「Issue 13 實作完成」。
+- Task 0 基準：309 全過（Task 0 Step 4 十四檔清單）、`flutter analyze` No issues found。
+- Task 1：5 全過（新增 5 案：fake_source 3、fake_appearance 2）、analyze 乾淨。commit 5621b0e。
+- Task 2：同基準檔清單 313 全過（算式：基準 309 ＋ Task1 新增 5 − 被刪 6 ＋ 新增 5）；Task 2 Step 4 目錄範圍（l10n／theme 整目錄）413 全過；analyze 乾淨；殘留 grep 無輸出；兩守衛 PASS。commit f16727a。
+- Task 3：同基準檔清單 314 全過（算式：Task2 的 313 − 被刪 2 ＋ 新增 3）；Task 3 Step 4 目錄範圍（l10n／theme 整目錄）414 全過；analyze 乾淨；殘留 grep 無輸出；兩守衛 PASS。commit bbdc8a1。
+- Task 4：同基準檔清單 318 全過（算式：Task3 的 314 ＋ 新增 4；容器測試取代舊測試淨 0）；Task 4 Step 4 範圍 198 全過；analyze 乾淨；l10n 守衛 PASS。commit cc34b2e。
+- Task 5：完整 `flutter test` 3698 通過／1 略過／1 失敗（既存 `pdf_reader_view_filters_test` debouncer，Issue 12 已在乾淨 main 確認）；真機 TCL 14 上 `library_screen` 3／3、`smoke` 1／1、`wifi_transfer_screen` 8／8；孤兒 ARB 3 鍵刪除＋gen-l10n，`test/l10n` 71 全過。見 `epic.md`「Issue 13 實作完成」。
 
 ## Self-Review 結果
 

@@ -1141,10 +1141,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readerUnknownBookTitle => 'Unknown Book';
 
   @override
-  String get readerSaveAsPresetUnavailableMessage =>
-      'Can\'t save preset right now';
-
-  @override
   String get readerSaveAsPresetFailedMessage => 'Failed to save new preset';
 
   @override
@@ -2003,15 +1999,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sourcesHomeConnectedServicesSection => 'Connected Services';
 
   @override
-  String get sourcesHomeCloudNotLinkedSubtitle =>
-      'Not linked yet. Please link your account in Settings.';
-
-  @override
   String get sourcesHomeRemoteLibraryTitle => 'Remote Library (OPDS)';
-
-  @override
-  String get sourcesHomeRemoteLibraryNotConfiguredSubtitle =>
-      'No remote library server configured yet';
 
   @override
   String get libraryImportFolderDialogTitle => 'Import Folder';

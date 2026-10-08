@@ -2060,12 +2060,6 @@ abstract class AppLocalizations {
   /// **'未知書籍'**
   String get readerUnknownBookTitle;
 
-  /// layoutPresetRepository 未提供時，點擊「另存為新預設集」顯示的 SnackBar 訊息
-  ///
-  /// In zh_TW, this message translates to:
-  /// **'暫時無法儲存預設集'**
-  String get readerSaveAsPresetUnavailableMessage;
-
   /// 另存為新預設集過程發生例外時顯示的固定 SnackBar 訊息（不含例外原始文字，技術細節已由呼叫端 debugPrint() 記錄，見 epic-45-interface-i18n Issue 7）
   ///
   /// In zh_TW, this message translates to:
@@ -3467,23 +3461,11 @@ abstract class AppLocalizations {
   /// **'已連結服務'**
   String get sourcesHomeConnectedServicesSection;
 
-  /// Google Drive／OneDrive 入口列未連結時的副標題
-  ///
-  /// In zh_TW, this message translates to:
-  /// **'尚未連結，請至設定畫面連結帳戶'**
-  String get sourcesHomeCloudNotLinkedSubtitle;
-
   /// 「遠端書庫」入口列標題，OPDS 為技術協定縮寫不翻譯
   ///
   /// In zh_TW, this message translates to:
   /// **'遠端書庫（OPDS）'**
   String get sourcesHomeRemoteLibraryTitle;
-
-  /// 「遠端書庫」入口列尚未設定站點時的副標題
-  ///
-  /// In zh_TW, this message translates to:
-  /// **'尚未設定遠端書庫伺服器'**
-  String get sourcesHomeRemoteLibraryNotConfiguredSubtitle;
 
   /// 「是否依資料夾名稱自動建立分類」確認對話框標題
   ///
