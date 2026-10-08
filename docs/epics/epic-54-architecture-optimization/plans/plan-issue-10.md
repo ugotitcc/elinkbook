@@ -678,7 +678,7 @@ git commit -m "test(epic-54): Issue 10 ReaderSettingsSheet 流式欄位全欄位
 - 暫改（驗完必須還原）：`lib/screens/library_screen.dart`、`lib/screens/fxl_settings_sheet.dart`、`lib/screens/pdf_settings_sheet.dart`、`lib/screens/reader_settings_sheet.dart`、`test/support/full_book_reader_prefs.dart`
 - Modify：`docs/epics/epic-54-architecture-optimization/{epic.md,issues.md}`、`docs/epics.md`（進度同步在 PR 合併後於 `main` 做，見 Step 6）
 
-- [ ] **Step 1：變異驗證——證明每道守衛真的會紅**
+- [x] **Step 1：變異驗證——證明每道守衛真的會紅**
 
 每個變異：改一處 → 跑對應測試確認紅且訊息指出該欄位 → `git checkout -- <檔案>` 還原 → 跑同一測試確認回綠。
 
@@ -700,7 +700,7 @@ git diff main --stat -- lib
 
 預期：`git status` 乾淨；`lib/` 的 diff 只剩 `lib/screens/pdf_settings_sheet.dart`（Q2 納入）或完全為空（Q2 不納入）。
 
-- [ ] **Step 2：靜態檢查**
+- [x] **Step 2：靜態檢查**
 
 ```bash
 flutter analyze
@@ -709,7 +709,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 預期：`No issues found!`；l10n 檢查兩行 PASS。
 
-- [ ] **Step 3：完整測試（只此一次）**
+- [x] **Step 3：完整測試（只此一次）**
 
 ```bash
 flutter test
@@ -717,7 +717,7 @@ flutter test
 
 用 `run_in_background` 執行；通過後把「N 通過／M 略過／0 失敗」填進附錄 C。
 
-- [ ] **Step 4：文件同步（在分支上）**
+- [x] **Step 4：文件同步（在分支上）**
 
 `docs/epics/epic-54-architecture-optimization/epic.md` 新增「Issue 10 實作完成」段落（內容：守衛範圍 S1～S4、PDF 面板缺陷與修法〔或另立工單編號〕、變異驗證結果、測試數）。`issues.md` 第 10 列狀態改為 🟡 實作完成待審查。**不要**動 `docs/epics.md`（合併後才改）。
 
@@ -765,8 +765,8 @@ git commit -m "docs(epic-54): Issue 10 實作完成紀錄" -m "Co-Authored-By: C
 | Task 0 基準（`library_screen_test.dart --plain-name "版面覆寫"`） | 審查者於 `main` 實測 3（同上） |
 | 預期新增案例數 | 種子自檢 3＋S1 1＋S2 3＋S3 3＋S4 2 ＝ 12 |
 | Task 4 Step 2 PDF 守衛紅燈訊息（被丟欄位清單） | 3 個守衛全紅，共 20 個欄位被清成 null：font_family、font_size、font_weight、line_height、paragraph_spacing、letter_spacing、page_margins、margin_top、margin_bottom、margin_left、margin_right、text_align、publisher_styles、writing_mode_override、page_turn_mode_override、screen_orientation_override、show_header、column_mode、column_size、text_conversion_override（與計畫預測完全一致） |
-| Task 6 Step 1 變異驗證 M1～M6 實際紅燈訊息 | （待填） |
-| Task 6 Step 3 完整 `flutter test` | （待填） |
+| Task 6 Step 1 變異驗證 M1～M6 實際紅燈訊息 | M1（刪書架 `fullscreen` 帶回）：`fullscreen：預期 1，實際 null` ✓；M2（刪書架 `columnSize`）：`column_size：預期 800.0，實際 null` ✓；M3（刪 FXL `columnSize`）：3 個守衛全紅，`column_size：預期 800.0，實際 null` ✓；M4（PDF 還原舊 13 欄位寫法）：3 個守衛全紅，20 個欄位名 ✓；M5（刪 `_currentDraft` 的 `textConversionOverride`）：`text_conversion_override：預期 toTraditional，實際 null` ✓；M6（刪種子 `textConversionOverride`）：種子自檢紅，`未填：[text_conversion_override]` ✓。全部還原後回綠，`git status` 乾淨，`lib/` diff 僅 `pdf_settings_sheet.dart` |
+| Task 6 Step 3 完整 `flutter test` | 3716 通過／1 略過／2 失敗。2 失敗皆與本 Issue 無關：① `download_queue_controller_test`「偵測到重複…」在乾淨 `main` 同樣重現（既存失敗）；② `pdf_reader_view_filters_test`「第一頁疊加 RawImage 覆蓋層」在 worktree 單跑 16/16 全過（全量併發下 Isolate 計時抖動，同 Issue 21 家族），且該檔完全未引用 `PdfSettingsSheet` |
 
 ## Self-Review 結果
 
