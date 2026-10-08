@@ -41,6 +41,7 @@ import 'screens/source_dependencies.dart';
 import 'remote/remote_thumbnail_cache.dart';
 import 'remote/sqlite_remote_server_repository.dart';
 import 'screens/adaptive_shell_scaffold.dart';
+import 'screens/app_dependencies.dart';
 import 'screens/appearance_dependencies.dart';
 import 'screens/cloud_duplicate_confirm_dialog.dart';
 import 'screens/reader_feature_dependencies.dart';
@@ -359,11 +360,14 @@ Future<void> main() async {
     checkNetworkAvailability: checkNetworkAvailability,
     downloadQueueController: downloadQueueController,
   );
+  final appDependencies = AppDependencies(
+    readerFeatures: readerFeatures,
+    sync: sync,
+    sources: sources,
+  );
   runApp(
     ElinkBookApp(
-      readerFeatures: readerFeatures,
-      sync: sync,
-      sources: sources,
+      dependencies: appDependencies,
       navigatorKey: navigatorKey,
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
@@ -374,13 +378,12 @@ Future<void> main() async {
   );
 }
 
-/// elinkBook App 根元件。啟動時接受從 main 傳入之 [initialTheme] 與
+/// elinkBook App 根元件。Issue 13 起收 `AppDependencies`（三組靜態依賴的容器），
+/// 外觀快照由 State 每次 build 現組。啟動時接受從 main 傳入之 [initialTheme] 與
 /// [initialEinkMode]（解決開機閃白屏與狀態競爭問題，見 review 意見）。
 class ElinkBookApp extends StatefulWidget {
-  /// 閱讀器功能、同步與來源依賴組（ADR 0037）：由 `main()` 建構一次，原樣往下傳。
-  final ReaderFeatureDependencies readerFeatures;
-  final SyncDependencies sync;
-  final SourceDependencies sources;
+  /// 應用層依賴容器（ADR 0037）：由 `main()` 建構一次，原樣往下傳。
+  final AppDependencies dependencies;
   final GlobalKey<NavigatorState>? navigatorKey;
   final AppLocalePreferences localePreferences;
   final AppLocale? initialLocaleOverride;
@@ -390,9 +393,7 @@ class ElinkBookApp extends StatefulWidget {
 
   ElinkBookApp({
     super.key,
-    required this.readerFeatures,
-    required this.sync,
-    required this.sources,
+    required this.dependencies,
     this.navigatorKey,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
@@ -436,7 +437,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      widget.sync.syncCheckpointTrigger.trigger();
+      widget.dependencies.sync.syncCheckpointTrigger.trigger();
     }
   }
 
@@ -480,9 +481,9 @@ class _ElinkBookAppState extends State<ElinkBookApp>
       localeListResolutionCallback: (deviceLocales, supportedLocales) =>
           resolveMaterialAppLocale(deviceLocales),
       home: AdaptiveShellScaffold(
-        readerFeatures: widget.readerFeatures,
-        sync: widget.sync,
-        sources: widget.sources,
+        readerFeatures: widget.dependencies.readerFeatures,
+        sync: widget.dependencies.sync,
+        sources: widget.dependencies.sources,
         appearance: appearance,
       ),
     );

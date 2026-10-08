@@ -9,6 +9,7 @@ import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/remote/opds_client.dart';
 import 'package:elinkbook/l10n/app_locale.dart';
 import 'package:elinkbook/screens/adaptive_shell_scaffold.dart';
+import 'package:elinkbook/screens/app_dependencies.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
@@ -22,8 +23,8 @@ import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 
+import 'support/fake_app_dependencies.dart';
 import 'support/fake_book_import_service.dart';
-import 'support/fake_source_dependencies.dart';
 import 'support/fake_book_reader_prefs_repository.dart';
 import 'support/fake_bookmarks_repository.dart';
 import 'support/fake_cloud_account_repository.dart';
@@ -129,29 +130,31 @@ void main() {
 
     await tester.pumpWidget(
       ElinkBookApp(
-        sources: sources,
+        dependencies: AppDependencies(
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: repository,
+            bookImportService: importService,
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+            highlightsRepository: highlightsRepository,
+            notesRepository: notesRepository,
+            customFontsRepository: customFontsRepository,
+            layoutPresetRepository: layoutPresetRepository,
+            bookReaderPrefsRepository: bookReaderPrefsRepository,
+            ttsProvider: ttsProvider,
+            ttsAudio: ttsAudio,
+            readingStatsRepository: readingStatsRepository,
+            syncCheckpointTrigger: syncCheckpointTrigger,
+          ),
+          sync: fakeSyncDependencies(
+            syncAccountRepository: syncAccountRepository,
+            syncClient: syncClient,
+            syncCheckpointTrigger: syncCheckpointTrigger,
+          ),
+          sources: sources,
+        ),
         initialTheme: AppTheme.dark,
         initialEinkMode: true,
-        readerFeatures: fakeReaderFeatureDependencies(
-          libraryRepository: repository,
-          bookImportService: importService,
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
-          highlightsRepository: highlightsRepository,
-          notesRepository: notesRepository,
-          customFontsRepository: customFontsRepository,
-          layoutPresetRepository: layoutPresetRepository,
-          bookReaderPrefsRepository: bookReaderPrefsRepository,
-          ttsProvider: ttsProvider,
-          ttsAudio: ttsAudio,
-          readingStatsRepository: readingStatsRepository,
-          syncCheckpointTrigger: syncCheckpointTrigger,
-        ),
-        sync: fakeSyncDependencies(
-          syncAccountRepository: syncAccountRepository,
-          syncClient: syncClient,
-          syncCheckpointTrigger: syncCheckpointTrigger,
-        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -231,36 +234,25 @@ void main() {
     expect(libraryScreen.appearance.onEinkModeChanged, isNotNull);
   });
 
-  testWidgets('ElinkBookApp 把同一個閱讀器組與同步組原樣傳到外殼、書架與設定', (tester) async {
-    final trigger = fakeSyncDependencies().syncCheckpointTrigger;
-    final readerFeatures = fakeReaderFeatureDependencies(
-      syncCheckpointTrigger: trigger,
-    );
-    final sync = fakeSyncDependencies(syncCheckpointTrigger: trigger);
-    final sources = fakeSourceDependencies();
-
-    await tester.pumpWidget(
-      ElinkBookApp(
-        readerFeatures: readerFeatures,
-        sync: sync,
-        sources: sources,
-      ),
-    );
+  testWidgets('ElinkBookApp 把 AppDependencies 的三組原樣傳到書架、來源頁與設定頁', (
+    tester,
+  ) async {
+    final deps = fakeAppDependencies();
+    await tester.pumpWidget(ElinkBookApp(dependencies: deps));
     await tester.pumpAndSettle();
-
     final shell = tester.widget<AdaptiveShellScaffold>(
       find.byType(AdaptiveShellScaffold),
     );
-    expect(shell.readerFeatures, same(readerFeatures));
-    expect(shell.sync, same(sync));
-    expect(shell.sources, same(sources));
+    expect(shell.readerFeatures, same(deps.readerFeatures));
+    expect(shell.sync, same(deps.sync));
+    expect(shell.sources, same(deps.sources));
     expect(
       tester.widget<LibraryScreen>(find.byType(LibraryScreen)).dependencies,
-      same(readerFeatures),
+      same(deps.readerFeatures),
     );
     expect(
       tester.widget<LibraryScreen>(find.byType(LibraryScreen)).sources,
-      same(sources),
+      same(deps.sources),
     );
     expect(
       tester
@@ -268,32 +260,26 @@ void main() {
             find.byType(SourcesHomeScreen, skipOffstage: false),
           )
           .sources,
-      same(sources),
+      same(deps.sources),
     );
-    final settings = tester.widget<SettingsScaffold>(
-      find.byType(SettingsScaffold, skipOffstage: false),
-    );
-    expect(settings.readerFeatures, same(readerFeatures));
-    expect(settings.sync, same(sync));
-    expect(settings.sources, same(sources));
-    // 同一個 syncCheckpointTrigger 實例同時屬於兩個組（ADR 0037 §1）。
     expect(
-      readerFeatures.syncCheckpointTrigger,
-      same(sync.syncCheckpointTrigger),
+      tester
+          .widget<SettingsScaffold>(
+            find.byType(SettingsScaffold, skipOffstage: false),
+          )
+          .sources,
+      same(deps.sources),
+    );
+    expect(
+      deps.readerFeatures.syncCheckpointTrigger,
+      same(deps.sync.syncCheckpointTrigger),
     );
   });
 
   testWidgets('主題切換使 ElinkBookApp 重建後，依賴組仍是同一實例（不是 build 內新建）', (tester) async {
-    final readerFeatures = fakeReaderFeatureDependencies();
-    final sync = fakeSyncDependencies();
+    final deps = fakeAppDependencies();
 
-    await tester.pumpWidget(
-      ElinkBookApp(
-        readerFeatures: readerFeatures,
-        sync: sync,
-        sources: fakeSourceDependencies(),
-      ),
-    );
+    await tester.pumpWidget(ElinkBookApp(dependencies: deps));
     await tester.pumpAndSettle();
 
     final settingsBefore = tester.widget<SettingsScaffold>(
@@ -306,26 +292,18 @@ void main() {
       find.byType(LibraryScreen),
     );
     expect(libraryScreen.appearance.currentTheme, AppTheme.dark);
-    expect(libraryScreen.dependencies, same(readerFeatures));
+    expect(libraryScreen.dependencies, same(deps.readerFeatures));
     final settingsAfter = tester.widget<SettingsScaffold>(
       find.byType(SettingsScaffold, skipOffstage: false),
     );
-    expect(settingsAfter.readerFeatures, same(readerFeatures));
-    expect(settingsAfter.sync, same(sync));
+    expect(settingsAfter.readerFeatures, same(deps.readerFeatures));
+    expect(settingsAfter.sync, same(deps.sync));
   });
 
   testWidgets('切換主題後，三個畫面看到同一份新的外觀快照，其餘三組仍是原實例', (tester) async {
-    final rf = fakeReaderFeatureDependencies(
-      libraryRepository: FakeLibraryRepository(),
-      bookImportService: FakeBookImportService(),
-      prefsManager: FakeReaderPrefsManager(),
-    );
-    final sync = fakeSyncDependencies();
-    final sources = fakeSourceDependencies();
+    final deps = fakeAppDependencies();
 
-    await tester.pumpWidget(
-      ElinkBookApp(readerFeatures: rf, sync: sync, sources: sources),
-    );
+    await tester.pumpWidget(ElinkBookApp(dependencies: deps));
     await tester.pumpAndSettle();
 
     final before = tester
@@ -351,23 +329,15 @@ void main() {
     expect(sourcesHome.appearance, same(library.appearance));
     expect(settings.appearance, same(library.appearance));
     expect(library.appearance.currentTheme, AppTheme.dark);
-    expect(library.dependencies, same(rf));
-    expect(library.sources, same(sources));
-    expect(settings.sync, same(sync));
+    expect(library.dependencies, same(deps.readerFeatures));
+    expect(library.sources, same(deps.sources));
+    expect(settings.sync, same(deps.sync));
   });
 
   testWidgets('開啟 E-Ink 後，書架、來源頁、設定頁都拿到 isEinkMode == true', (tester) async {
-    final rf = fakeReaderFeatureDependencies(
-      libraryRepository: FakeLibraryRepository(),
-      bookImportService: FakeBookImportService(),
-      prefsManager: FakeReaderPrefsManager(),
-    );
-    final sync = fakeSyncDependencies();
-    final sources = fakeSourceDependencies();
+    final deps = fakeAppDependencies();
 
-    await tester.pumpWidget(
-      ElinkBookApp(readerFeatures: rf, sync: sync, sources: sources),
-    );
+    await tester.pumpWidget(ElinkBookApp(dependencies: deps));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('library_settings_button')));
@@ -403,17 +373,9 @@ void main() {
   testWidgets('切換介面語言後，AdaptiveShellScaffold 子畫面 State 保留（書架捲動／搜尋狀態不重置）', (
     tester,
   ) async {
-    final rf = fakeReaderFeatureDependencies(
-      libraryRepository: FakeLibraryRepository(),
-      bookImportService: FakeBookImportService(),
-      prefsManager: FakeReaderPrefsManager(),
-    );
-    final sync = fakeSyncDependencies();
-    final sources = fakeSourceDependencies();
+    final deps = fakeAppDependencies();
 
-    await tester.pumpWidget(
-      ElinkBookApp(readerFeatures: rf, sync: sync, sources: sources),
-    );
+    await tester.pumpWidget(ElinkBookApp(dependencies: deps));
     await tester.pumpAndSettle();
 
     final stateBefore = tester.state(find.byType(LibraryScreen));

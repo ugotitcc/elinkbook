@@ -10,6 +10,7 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 
 import '../support/fake_book_import_service.dart';
+import '../support/fake_app_dependencies.dart';
 import '../support/fake_appearance_dependencies.dart';
 import '../support/fake_source_dependencies.dart';
 import '../support/fake_library_repository.dart';
@@ -43,13 +44,15 @@ void main() {
 
     await tester.pumpWidget(
       ElinkBookApp(
-        sources: fakeSourceDependencies(),
-        readerFeatures: fakeReaderFeatureDependencies(
-          libraryRepository: FakeLibraryRepository(),
-          bookImportService: FakeBookImportService(),
-          prefsManager: prefsManager,
+        dependencies: fakeAppDependencies(
+          sources: fakeSourceDependencies(),
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+          sync: fakeSyncDependencies(),
         ),
-        sync: fakeSyncDependencies(),
       ),
     );
     await tester.pumpAndSettle();
@@ -72,15 +75,17 @@ void main() {
 
     await tester.pumpWidget(
       ElinkBookApp(
-        sources: fakeSourceDependencies(),
+        dependencies: fakeAppDependencies(
+          sources: fakeSourceDependencies(),
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+          sync: fakeSyncDependencies(),
+        ),
         initialTheme: theme,
         initialEinkMode: eink,
-        readerFeatures: fakeReaderFeatureDependencies(
-          libraryRepository: FakeLibraryRepository(),
-          bookImportService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
-        sync: fakeSyncDependencies(),
       ),
     );
     await tester.pumpAndSettle();
@@ -103,15 +108,17 @@ void main() {
 
     await tester.pumpWidget(
       ElinkBookApp(
-        sources: fakeSourceDependencies(),
+        dependencies: fakeAppDependencies(
+          sources: fakeSourceDependencies(),
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+          sync: fakeSyncDependencies(),
+        ),
         initialTheme: theme,
         initialEinkMode: eink,
-        readerFeatures: fakeReaderFeatureDependencies(
-          libraryRepository: FakeLibraryRepository(),
-          bookImportService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
-        sync: fakeSyncDependencies(),
       ),
     );
     await tester.pumpAndSettle();
