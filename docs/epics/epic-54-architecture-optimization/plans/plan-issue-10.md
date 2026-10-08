@@ -312,7 +312,7 @@ git commit -m "test(epic-54): Issue 10 BookReaderPrefs 33 欄位種子與逐欄�
 **Interfaces:**
 - Consumes: `fullBookReaderPrefsSeed`、`expectPrefsPreserved`（Task 1）。
 
-- [ ] **Step 1：寫守衛測試**
+- [x] **Step 1：寫守衛測試**
 
 ```dart
   testWidgets(
@@ -364,7 +364,7 @@ git commit -m "test(epic-54): Issue 10 BookReaderPrefs 33 欄位種子與逐欄�
   );
 ```
 
-- [ ] **Step 2：跑測試**
+- [x] **Step 2：跑測試**
 
 ```bash
 flutter test test/screens/library_screen_test.dart --plain-name "版面覆寫"
@@ -372,7 +372,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "版面覆寫"
 
 預期：通過（S1 現況完整，這是回歸守衛，不是紅燈起點；紅燈由 Task 6 變異驗證證明）。若紅，訊息會列出被丟的欄位——代表發現新缺陷，停下回報。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 flutter analyze

@@ -61,6 +61,7 @@ import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/book_action_sheet.dart';
 import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
 import '../support/fake_book_reader_prefs_repository.dart';
+import '../support/full_book_reader_prefs.dart';
 
 void main() {
   late SqliteLibraryRepository libraryRepository;
@@ -5438,6 +5439,54 @@ void main() {
     );
     expect(saved.pageTurnModeOverride, PageTurnMode.scroll);
   });
+
+  testWidgets(
+    '版面覆寫：種子 33 欄位全填，儲存後除 writingModeOverride／pageTurnModeOverride 外'
+    '全數原樣相等（Issue 10 全欄位保留守衛）',
+    (tester) async {
+      final book = _testBook(id: '1', title: '書A');
+      final repository = FakeLibraryRepository(initialBooks: [book]);
+      final bookReaderPrefsRepository = FakeBookReaderPrefsRepository();
+      await bookReaderPrefsRepository.save('1', fullBookReaderPrefsSeed);
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
+          sources: fakeSourceDependencies(),
+          dependencies: fakeReaderFeatureDependencies(
+            libraryRepository: repository,
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+            bookReaderPrefsRepository: bookReaderPrefsRepository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('book_action_menu_1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('book_action_layout_override')));
+      await tester.pumpAndSettle();
+      // 種子的 writingModeOverride 是 vertical：選「使用預設」要清成 null；
+      // pageTurnModeOverride 是 paginated：改成 scroll。
+      await tester.tap(
+        find.byKey(const Key('layout_override_writing_mode_default')),
+      );
+      await tester.tap(
+        find.byKey(const Key('layout_override_page_turn_mode_scroll')),
+      );
+      await tester.tap(find.byKey(const Key('layout_override_save_button')));
+      await tester.pumpAndSettle();
+
+      final saved = await bookReaderPrefsRepository.load('1');
+      expect(saved.writingModeOverride, isNull);
+      expect(saved.pageTurnModeOverride, PageTurnMode.scroll);
+      expectPrefsPreserved(
+        saved,
+        fullBookReaderPrefsSeed,
+        except: {'writing_mode_override', 'page_turn_mode_override'},
+      );
+    },
+  );
 
   testWidgets(
     '點擊「搜尋書本內容」入口，帶同一組關鍵字導航至 LibrarySearchScreen（epic-10-search Issue 4）',
