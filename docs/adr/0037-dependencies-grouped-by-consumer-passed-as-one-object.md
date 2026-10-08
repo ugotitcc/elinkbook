@@ -34,3 +34,4 @@
 - 測試改動量大：`ReaderScreen(` 在 5 個檔案約 267 處、`LibraryScreen(` 約 135 處、`SettingsScaffold(` 約 53 處，靠共用工廠降低每處成本。
 - 未選的做法：`InheritedWidget` 查找會讓缺依賴從編譯期錯誤變成執行期錯誤；保留 nullable 省略會延續目前的缺陷類型；新舊並存會延長漏轉送的風險期。
 - 守衛測試縮小為身分比對：驗證 `main.dart` 組裝的同一個實例傳到每個開書路徑；欄位是否遺漏改由型別系統保證。
+  - 已於 Issue 14 落地為 `app/test/elinkbook_app_wiring_test.dart` 的「開書路徑身分守衛」group：以完整 `ElinkBookApp` 為起點，走完書架→閱讀器、書架→全庫搜尋、全庫搜尋→閱讀器（書名結果／內容片段）、全庫搜尋→單書搜尋→閱讀器、閱讀器→單書搜尋共 6 條路徑，終點以 `same(...)` 比對整組、`syncCheckpointTrigger` 與 `isEinkMode`。`main()` 本身（建構一次、同一 trigger 放進兩組）無法在 widget test 執行，改由程式審查與一次性靜態確認把關。

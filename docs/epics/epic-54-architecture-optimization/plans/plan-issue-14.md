@@ -1,4 +1,4 @@
-# Issue 14：開書路徑身分守衛測試（ADR 0037 最終驗收）實作計畫
+ 既有測試 2（三組原樣）＋ P1、E-Ink 切換、P3a、P3b、P4＋P5、P6；P2 維持通過（無 trigger 斷言）——涵蓋預期 | P6（與預期一致） | P4＋P5（與預期一致） | P2、P3a、P3b、P4＋P5（與預期一致） | P1、E-Ink 切換後開書、P3a、P3b、P4＋P5、P6（P6 的 isEinkMode 經 ReaderScreen 轉傳，超出預期但合理） | P6（與預期一致） | P4＋P5（與預期一致） | P2、P3a、P3b、P4＋P5（與預期一致） | P1、E-Ink 切換後開書、P3a、P3b、P4＋P5、P6（P6 經 buildReaderScreen 組裝的 ReaderScreen 轉傳，超出預期但合理） |# Issue 14：開書路徑身分守衛測試（ADR 0037 最終驗收）實作計畫
 
 > **給執行者：** 必要子技能：使用 `superpowers:executing-plans` 逐 Task 執行本計畫（延續 Issue 12／13「使用者明確要求嚴禁 subagent」的做法，不要用 `subagent-driven-development`；若使用者改變主意，以使用者當下指示為準）。步驟使用 checkbox（`- [ ]`）語法追蹤進度；每完成一個 Step 就把它改為 `- [x]`。
 
@@ -89,7 +89,7 @@
 
 **Files:** 無程式修改。
 
-- [ ] **Step 1: 確認前提（開工前再對照一次）**
+- [x] **Step 1: 確認前提（開工前再對照一次）**
 
 在專案根目錄：
 ```bash
@@ -126,7 +126,7 @@ Q2  測試放哪裡？
 
 使用者回答後，把原話填入「附錄 A」。
 
-- [ ] **Step 3: 建立 worktree**
+- [x] **Step 3: 建立 worktree**
 
 在專案根目錄執行（不使用 `cd`，工作目錄由執行工具的 Cwd 指定）：
 
@@ -142,7 +142,7 @@ flutter pub get
 
 Expected：`git worktree list` 出現 `epic-54-issue-14`；`flutter pub get` 成功。**之後所有 Task 的指令都以 `.worktrees/epic-54-issue-14/app` 為工作目錄執行。**
 
-- [ ] **Step 4: 跑基準測試並記錄**
+- [x] **Step 4: 跑基準測試並記錄**
 
 ```bash
 flutter test test/elinkbook_app_wiring_test.dart
@@ -168,7 +168,7 @@ Expected：5 個測試全過（記入附錄 C 基準）；`No issues found!`。�
   - `void _expectReaderWired(WidgetTester tester, AppDependencies deps, {required bool isEinkMode})`
   - `Future<void> _disposeWiringApp(WidgetTester tester)`
 
-- [ ] **Step 1: 新增 import（接在既有 import 區塊最後一行之後，不動既有行）**
+- [x] **Step 1: 新增 import（接在既有 import 區塊最後一行之後，不動既有行）**
 
 在檔頭既有 `import 'support/fake_sync_dependencies.dart';` 之後加入：
 
@@ -187,7 +187,7 @@ import 'support/fake_search_repository.dart';
 
 若 `flutter analyze` 回報其中某個 import 已存在或未使用，只調整本步新增的行，不動既有行。
 
-- [ ] **Step 2: 寫 helper（檔尾，緊接在 `main()` 的結尾 `}` 之後，作為檔案層級私有函式）**
+- [x] **Step 2: 寫 helper（檔尾，緊接在 `main()` 的結尾 `}` 之後，作為檔案層級私有函式）**
 
 ```dart
 // ---------------------------------------------------------------------------
@@ -270,7 +270,7 @@ Future<void> _disposeWiringApp(WidgetTester tester) async {
 }
 ```
 
-- [ ] **Step 3: 寫失敗的測試（檔尾新增 `group`，放在 helper 之後）**
+- [x] **Step 3: 寫失敗的測試（檔尾新增 `group`，放在 helper 之後）**
 
 ```dart
 void _openBookWiringTests() {
@@ -331,7 +331,7 @@ void _openBookWiringTests() {
 
 > 說明：`group` 與 `registerReaderStatsTestEnvironment()` 的 `setUpAll`／`setUp`／`tearDown` 只在這個 group 內生效，不影響既有 5 個測試。把 group 包成函式是為了讓 `main()` 既有內容不動、只多一行呼叫。
 
-- [ ] **Step 4: 跑測試，預期「新測試通過」**
+- [x] **Step 4: 跑測試，預期「新測試通過」**
 
 這是守衛測試，被測的 `lib/` 本來就正確，所以「先紅」不成立；紅燈證明改由 Task 4 的變異驗證提供。此步預期直接全綠，若紅燈代表測試手法有誤（最常見的原因見下），不是 `lib/` 有缺陷：
 
@@ -345,7 +345,7 @@ Expected：8 個測試全過（5 既有＋3 新增）。常見失敗與處理：
 - `find.byType(ReaderScreen)` 找到 0 個：開書後需補 `await tester.runAsync(() => Future.delayed(Duration.zero)); await tester.pump();`（見「測試素材」）。補在 `_expectReaderWired` 之前，並在報告中記錄。
 - 遇到的任何 flaky 現象一律記錄，不用 `skip` 掩蓋。
 
-- [ ] **Step 5: 靜態檢查與 commit**
+- [x] **Step 5: 靜態檢查與 commit**
 
 ```bash
 flutter analyze
@@ -369,7 +369,7 @@ Expected：analyze 乾淨、守衛 PASS。
 - Consumes：Task 1 的 `_pumpWiringApp`、`_openLibraryContentSearch`、`_expectReaderWired`、`_disposeWiringApp`、`_wiringBook()`、`_kWiringBookId`。
 - Produces：無（Task 3 不依賴本 Task 新增的 symbol）。
 
-- [ ] **Step 1: 新增兩個測試（接在 Task 1 的「切換 E-Ink 後再開書」測試之後、group 結尾之前）**
+- [x] **Step 1: 新增兩個測試（接在 Task 1 的「切換 E-Ink 後再開書」測試之後、group 結尾之前）**
 
 ```dart
     testWidgets('P3a 書架 → 全庫搜尋 → 點書名結果 → ReaderScreen：整組依賴原樣', (tester) async {
@@ -426,7 +426,7 @@ Expected：analyze 乾淨、守衛 PASS。
     });
 ```
 
-- [ ] **Step 2: 跑測試**
+- [x] **Step 2: 跑測試**
 
 ```bash
 flutter test test/elinkbook_app_wiring_test.dart
@@ -434,7 +434,7 @@ flutter test test/elinkbook_app_wiring_test.dart
 
 Expected：10 個測試全過。若 `initialJumpTarget` 不是 `ReaderScreen` 的公開欄位名稱，改用 `git grep -n "initialJumpTarget" -- lib/screens/reader_screen.dart` 查實際欄位名，不得刪除這條斷言。
 
-- [ ] **Step 3: 靜態檢查與 commit**
+- [x] **Step 3: 靜態檢查與 commit**
 
 ```bash
 flutter analyze
@@ -456,7 +456,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Consumes：同 Task 2。
 - Produces：無。
 
-- [ ] **Step 1: 新增兩個測試（接在 Task 2 的測試之後、group 結尾之前）**
+- [x] **Step 1: 新增兩個測試（接在 Task 2 的測試之後、group 結尾之前）**
 
 ```dart
     testWidgets(
@@ -544,7 +544,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
     });
 ```
 
-- [ ] **Step 2: 跑測試**
+- [x] **Step 2: 跑測試**
 
 ```bash
 flutter test test/elinkbook_app_wiring_test.dart
@@ -552,7 +552,7 @@ flutter test test/elinkbook_app_wiring_test.dart
 
 Expected：12 個測試全過。若 `ContentMatchSnippet` 不接受 `chapterIndex` 或 `BookSearchDetailResult` 建構子簽名不符，以 `book_search_screen_test.dart:51-73`（`_makeResult`）為準修正，不改 `lib/`。
 
-- [ ] **Step 3: 靜態檢查與 commit**
+- [x] **Step 3: 靜態檢查與 commit**
 
 ```bash
 flutter analyze
@@ -571,7 +571,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 守衛測試不能只看「全綠」，必須看到它在 `lib/` 被改壞時變紅。每個變異：改一處 → 跑 `flutter test test/elinkbook_app_wiring_test.dart` → 記錄哪些測試變紅 → `git checkout -- <file>` 還原。
 
-- [ ] **Step 1: 建立暫時的複本函式（只用於變異，不 commit）**
+- [x] **Step 1: 建立暫時的複本函式（只用於變異，不 commit）**
 
 變異期間只跑 `flutter test test/elinkbook_app_wiring_test.dart` 看紅燈即可，**不要跑 `flutter analyze`**（暫時函式與改壞的程式碼會引發無意義警告）；Step 3 全部還原後才跑完整分析。
 
@@ -602,25 +602,25 @@ ReaderFeatureDependencies cloneForMutation(ReaderFeatureDependencies d) =>
     );
 ```
 
-- [ ] **Step 2: 逐一套用變異並記錄**
+- [x] **Step 2: 逐一套用變異並記錄**
 
 每一列：套用「改法」→ 跑測試 → 填入「實際變紅的測試」→ 還原該檔（`reader_feature_dependencies.dart` 的複本函式保留到全部做完）。
 
 | # | 檔案與改法 | 預期變紅 | 實際變紅（執行者填） |
 |---|---|---|---|
-| M1 | `reader_screen_route.dart`：`dependencies: dependencies` → `dependencies: cloneForMutation(dependencies)` | P1、P3a、P3b、P4＋P5、E-Ink 切換後開書 | |
-| M2 | `library_screen.dart` `_openLibrarySearchScreen`：`dependencies: widget.dependencies` → `cloneForMutation(widget.dependencies)` | P2、P3a、P3b、P4＋P5 | |
-| M3 | `library_search_screen.dart` `_openBookSearch`：`dependencies: widget.dependencies` → `cloneForMutation(widget.dependencies)` | P4＋P5 | |
-| M4 | `reader_screen.dart` `_openBookSearch`：`dependencies: widget.dependencies` → `cloneForMutation(widget.dependencies)` | P6 | |
-| M5 | `reader_screen_route.dart`：`isEinkMode: isEinkMode` → `isEinkMode: false` | P1、P3a、P3b、P4＋P5、E-Ink 切換後開書 | |
-| M6 | `library_screen.dart` `_openLibrarySearchScreen`：`isEinkMode: widget.appearance.isEinkMode` → `false` | P2（及經它進入的 P3a、P3b、P4＋P5） | |
-| M7 | `library_search_screen.dart` `_openBookSearch`：`isEinkMode: widget.isEinkMode` → `false` | P4＋P5 | |
-| M8 | `reader_screen.dart` `_openBookSearch`：`isEinkMode: widget.isEinkMode` → `false` | P6 | |
-| M9 | `main.dart`／`app_dependencies` 不改；改 `test/support/fake_app_dependencies.dart` 的 `fakeAppDependencies`：`sync` 改用不共用的新 trigger（`fakeSyncDependencies()` 不帶 `syncCheckpointTrigger`），且測試端 `_pumpWiringApp` 不改 | 所有通到 `ReaderScreen` 的測試（`syncCheckpointTrigger` 同一實例斷言）；**執行後務必還原 `test/` 檔** | |
+| M1 | `reader_screen_route.dart`：`dependencies: dependencies` → `dependencies: cloneForMutation(dependencies)` | P1、P3a、P3b、P4＋P5、E-Ink 切換後開書 | P1、E-Ink 切換後開書、P3a、P3b、P4＋P5、P6（P6 經 buildReaderScreen 組裝的 ReaderScreen 轉傳，超出預期但合理） |
+| M2 | `library_screen.dart` `_openLibrarySearchScreen`：`dependencies: widget.dependencies` → `cloneForMutation(widget.dependencies)` | P2、P3a、P3b、P4＋P5 | P2、P3a、P3b、P4＋P5（與預期一致） |
+| M3 | `library_search_screen.dart` `_openBookSearch`：`dependencies: widget.dependencies` → `cloneForMutation(widget.dependencies)` | P4＋P5 | P4＋P5（與預期一致） |
+| M4 | `reader_screen.dart` `_openBookSearch`：`dependencies: widget.dependencies` → `cloneForMutation(widget.dependencies)` | P6 | P6（與預期一致） |
+| M5 | `reader_screen_route.dart`：`isEinkMode: isEinkMode` → `isEinkMode: false` | P1、P3a、P3b、P4＋P5、E-Ink 切換後開書 | P1、E-Ink 切換後開書、P3a、P3b、P4＋P5、P6（P6 的 isEinkMode 經 ReaderScreen 轉傳，超出預期但合理） |
+| M6 | `library_screen.dart` `_openLibrarySearchScreen`：`isEinkMode: widget.appearance.isEinkMode` → `false` | P2（及經它進入的 P3a、P3b、P4＋P5） | P2、P3a、P3b、P4＋P5（與預期一致） |
+| M7 | `library_search_screen.dart` `_openBookSearch`：`isEinkMode: widget.isEinkMode` → `false` | P4＋P5 | P4＋P5（與預期一致） |
+| M8 | `reader_screen.dart` `_openBookSearch`：`isEinkMode: widget.isEinkMode` → `false` | P6 | P6（與預期一致） |
+| M9 | `main.dart`／`app_dependencies` 不改；改 `test/support/fake_app_dependencies.dart` 的 `fakeAppDependencies`：`sync` 改用不共用的新 trigger（`fakeSyncDependencies()` 不帶 `syncCheckpointTrigger`），且測試端 `_pumpWiringApp` 不改 | 所有通到 `ReaderScreen` 的測試（`syncCheckpointTrigger` 同一實例斷言）；**執行後務必還原 `test/` 檔** | 既有測試2（三組原樣）＋ P1、E-Ink 切換、P3a、P3b、P4＋P5、P6；P2 維持通過（無 trigger 斷言）——涵蓋預期 |
 
 驗收：「實際變紅」欄必須涵蓋「預期變紅」欄（可多不可少）。任何一列變異後測試仍全綠，代表該跳沒被守住——回到 Task 1～3 補斷言，不得調整預期欄來遷就。
 
-- [ ] **Step 3: 全部還原並確認 `lib/` 無殘留**
+- [x] **Step 3: 全部還原並確認 `lib/` 無殘留**
 
 ```bash
 git checkout -- lib test/support
@@ -636,7 +636,7 @@ flutter test test/elinkbook_app_wiring_test.dart
 
 Expected：12 個全過。
 
-- [ ] **Step 4: `main()` 的一次性靜態確認（Q1 選 A 時）**
+- [x] **Step 4: `main()` 的一次性靜態確認（Q1 選 A 時）**
 
 ```bash
 git grep -c "SyncCheckpointTrigger(" -- lib/main.dart
@@ -655,7 +655,7 @@ Expected：第一行輸出 `lib/main.dart:1`（`git grep -c` 會帶檔名前綴�
 - Modify: `docs/epics/epic-54-architecture-optimization/epic.md`（新增「Issue 14 實作完成」段）
 - 不在本 PR 改：`issues.md` 第 14 列與 `docs/epics.md`（合併後在 `main` 直接 commit＋push）
 
-- [ ] **Step 1: ADR 0037「後果」最後一條補落地說明**
+- [x] **Step 1: ADR 0037「後果」最後一條補落地說明**
 
 把
 
@@ -669,11 +669,11 @@ Expected：第一行輸出 `lib/main.dart:1`（`git grep -c` 會帶檔名前綴�
   - 已於 Issue 14 落地為 `app/test/elinkbook_app_wiring_test.dart` 的「開書路徑身分守衛」group：以完整 `ElinkBookApp` 為起點，走完書架→閱讀器、書架→全庫搜尋、全庫搜尋→閱讀器（書名結果／內容片段）、全庫搜尋→單書搜尋→閱讀器、閱讀器→單書搜尋共 6 條路徑，終點以 `same(...)` 比對整組、`syncCheckpointTrigger` 與 `isEinkMode`。`main()` 本身（建構一次、同一 trigger 放進兩組）無法在 widget test 執行，改由程式審查與一次性靜態確認把關。
 ```
 
-- [ ] **Step 2: `epic.md` 新增「Issue 14 實作完成」段**
+- [x] **Step 2: `epic.md` 新增「Issue 14 實作完成」段**
 
 仿「Issue 13 實作完成」（約 502 行）格式，內容：分支與 worktree、計畫連結、新增測試清單（12 個＝既有 5＋新增 7）、變異驗證 M1～M9 的實際結果表、`main()` 靜態確認輸出、`lib/` 零差異聲明、Q1／Q2 使用者決定。
 
-- [ ] **Step 3: 完整驗證（在 `app/` 下，`run_in_background`）**
+- [x] **Step 3: 完整驗證（在 `app/` 下，`run_in_background`）**
 
 ```bash
 flutter analyze
@@ -696,7 +696,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 Expected：第一行無輸出。
 
-- [ ] **Step 5: 請求程式審查**（嚴禁 subagent，改為自審：`reviews/review-code-issue-14.md`）
+- [x] **Step 5: 請求程式審查**（嚴禁 subagent，改為自審：`reviews/review-code-issue-14.md`）
 
 審查重點：(1) 六條路徑是否都有終點斷言（對照「六條開書路徑」表）；(2) 變異驗證表是否每列「實際」涵蓋「預期」；(3) `lib/` 零差異；(4) 既有 5 個測試未被改動（`git diff main -- app/test/elinkbook_app_wiring_test.dart` 只有新增行與 `main()` 內那一行呼叫）。審查者先產出報告（`reviews/`，gitignore），不得直接改程式；處理審查意見後才發 PR（Gitea：`tea pr create -l jigong -r huthief/elinkBook`，由使用者合併）。
 
@@ -713,13 +713,13 @@ Expected：第一行無輸出。
 
 ## 附錄 C：測試數基準與實測紀錄（執行者依實測填入）
 
-- Task 0 基準：`elinkbook_app_wiring_test.dart` 5 全過；`flutter analyze` No issues found。
-- Task 1：8 全過（5＋3）。
-- Task 2：10 全過（8＋2）。
-- Task 3：12 全過（10＋2）。
-- Task 4 Step 2 變異驗證結果：（填入 M1～M9 實際變紅表）
-- Task 4 Step 4 `main()` 靜態確認輸出：
-- Task 5：完整 `flutter test`：
+- Task 0 基準：`elinkbook_app_wiring_test.dart` 6 全過（計畫撰寫時為 5，實測既有測試為 6）；`flutter analyze` No issues found。
+- Task 1：9 全過（6＋3）。
+- Task 2：11 全過（9＋2）。
+- Task 3：13 全過（11＋2）。
+- Task 4 Step 2 變異驗證結果：見 Step 2 變異表「實際變紅」欄（M1、M5 另含 P6，M9 另含既有測試 2；皆為預期的超集，守衛有效）。
+- Task 4 Step 4 `main()` 靜態確認輸出：`git grep -c SyncCheckpointTrigger( -- lib/main.dart` → `lib/main.dart:1`；`syncCheckpointTrigger: syncCheckpointTrigger` 2 筆（lib/main.dart:333 ReaderFeatureDependencies 建構內、:341 SyncDependencies 建構內）；`AppDependencies(` 1 筆（lib/main.dart:360，三組皆區域變數傳入）。
+- Task 5：完整 `flutter test`：3705 通過／1 略過／1 失敗（總時約 6 分 20 秒）；唯一失敗為既存 `pdf_reader_view_filters_test` bold overlay debouncer 案（本分支與乾淨 main@6f3d6656 皆同樣失敗，與本 Issue 無關；改動範圍未碰 `reader/`）。算式：Issue 13 時 3698 通過＋本 Issue 新增 7 案＝3705。
 
 ## Self-Review 結果
 

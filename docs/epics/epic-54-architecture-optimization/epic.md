@@ -511,3 +511,11 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 格式雜訊（程式審查 M-1）：`lib/` 內三處與本 Issue 無關的 `dart format` 重排（`settings_scaffold.dart` 三個 Key 折行、`main.dart` 建構子初始化清單、`library_screen.dart` SnackBar 折行）已還原為基線寫法（對 `main` 比對無差異）；測試檔（`library_screen_test`、`sources_home_screen_test`、`settings_scaffold_test` 等）因 codemod 搭配 `dart format` 含大量無行為差異的重排，未逐檔還原，沿用 Issue 12 先例於此註明。
 - 驗證數字的來源（程式審查 M-3）：獨立審查重跑 Task 3 範圍 14 組測試 418 通過、analyze 與守衛腳本 PASS；完整 `flutter test` 3698 與 TCL 14 真機結果為實作者記錄，審查者未重現；真機手動確認已由使用者回報全數通過（2026-10-08）。
 - 孤兒 ARB 鍵清理：刪除 `readerSaveAsPresetUnavailableMessage`（Issue 11 M-5）與本次新孤兒 `sourcesHomeCloudNotLinkedSubtitle`、`sourcesHomeRemoteLibraryNotConfiguredSubtitle`（Dart 使用端皆已消失，僅剩 ARB）；`flutter gen-l10n` 同步 3 個產生檔；`test/l10n` 71 全過。
+
+**2026-10-08 Issue 14 實作完成**（分支 `epic-54-issue-14`〔`.worktrees/epic-54-issue-14`，基於 `main@6f3d6656`〕，Native 直接開發，未使用 subagent。計畫見 `plans/plan-issue-14.md`）
+
+- 設計決定：Task 0 Q1＝A（不為 `main()` 寫永久測試，只做一次性靜態確認，結果見下）、Q2＝A（擴充 `elinkbook_app_wiring_test.dart`，檔尾新增 group；原話見計畫附錄 A）。`lib/` 零差異（純測試工作）。
+- 內容：`app/test/elinkbook_app_wiring_test.dart` 新增「開書路徑身分守衛」group（7 案）：P1 書架點書→閱讀器、P2 書架→全庫搜尋、E-Ink 切換後再開書、P3a 全庫搜尋點書名結果→閱讀器、P3b 點內容片段→閱讀器（含 `initialJumpTarget` 非空斷言）、P4＋P5 全庫搜尋→查看全部→單書搜尋→點片段→閱讀器、P6 閱讀器→單書搜尋（fromReader）。共用起手式 `_pumpWiringApp`／`_openLibraryContentSearch`／`_expectReaderWired`／`_disposeWiringApp`。既有測試實測為 6 案（計畫撰寫時記為 5），全檔共 13 案。`_pumpWiringApp` 明確關閉 Issue 29 啟動自動開書（`openLastBookOnLaunch: false`，比照 `library_screen_test.dart` 共用 fixture），否則啟動即自動推入閱讀器、書架按鍵不可點。
+- 變異驗證 M1～M9（暫時改壞 `lib/` 再還原，不 commit）：M1（路由整組複本）→ P1、E-Ink 切換、P3a、P3b、P4＋P5、P6 變紅；M2（書架→全庫搜尋整組複本）→ P2、P3a、P3b、P4＋P5；M3（全庫搜尋→單書搜尋整組複本）→ P4＋P5；M4（閱讀器→單書搜尋整組複本）→ P6；M5（路由 E-Ink 鎖 false）→ P1、E-Ink 切換、P3a、P3b、P4＋P5、P6；M6（書架→全庫搜尋 E-Ink 鎖 false）→ P2、P3a、P3b、P4＋P5；M7（全庫搜尋→單書搜尋 E-Ink 鎖 false）→ P4＋P5；M8（閱讀器→單書搜尋 E-Ink 鎖 false）→ P6；M9（`sync` 改用不共用的新 trigger）→ 既有測試 2（三組原樣）＋ P1、E-Ink 切換、P3a、P3b、P4＋P5、P6，P2 維持通過。每列「實際」皆涵蓋「預期」（M1／M5 另含 P6、M9 另含既有測試 2，皆為預期的超集，詳見計畫變異表）。還原後 `git diff main --stat -- lib` 無輸出，單檔 13 全過。
+- `main()` 靜態確認輸出：`git grep -c "SyncCheckpointTrigger(" -- lib/main.dart` → `lib/main.dart:1`；`syncCheckpointTrigger: syncCheckpointTrigger` 2 筆（`:333` 在 `ReaderFeatureDependencies(` 建構內、`:341` 在 `SyncDependencies(` 建構內）；`AppDependencies(` 1 筆（`:360`，三組皆區域變數傳入）。
+- ADR 0037「後果」最後一條已追加 Issue 14 落地說明行。
