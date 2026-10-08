@@ -7,6 +7,7 @@ import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import '../support/fake_reader_feature_dependencies.dart';
+import '../support/fake_source_dependencies.dart';
 // ignore: unused_import
 import 'package:elinkbook/screens/full_text_search_confirm_dialog.dart';
 import 'package:elinkbook/screens/book_search_screen.dart';
@@ -1035,6 +1036,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
             fullTextSearchSettingsRepository: repository,

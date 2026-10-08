@@ -10,6 +10,7 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 
 import '../support/fake_book_import_service.dart';
+import '../support/fake_source_dependencies.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/pump_localized_widget.dart';
@@ -41,6 +42,7 @@ void main() {
 
     await tester.pumpWidget(
       ElinkBookApp(
+        sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(),
           bookImportService: FakeBookImportService(),
@@ -69,6 +71,7 @@ void main() {
 
     await tester.pumpWidget(
       ElinkBookApp(
+        sources: fakeSourceDependencies(),
         initialTheme: theme,
         initialEinkMode: eink,
         readerFeatures: fakeReaderFeatureDependencies(
@@ -99,6 +102,7 @@ void main() {
 
     await tester.pumpWidget(
       ElinkBookApp(
+        sources: fakeSourceDependencies(),
         initialTheme: theme,
         initialEinkMode: eink,
         readerFeatures: fakeReaderFeatureDependencies(
@@ -128,6 +132,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          sources: fakeSourceDependencies(),
           currentTheme: AppTheme.light,
           isEinkMode: false,
           onThemeChanged: (theme) => receivedTheme = theme,
@@ -157,6 +162,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          sources: fakeSourceDependencies(),
           currentTheme: AppTheme.light,
           isEinkMode: false,
           onEinkModeChanged: (enabled) => receivedEinkMode = enabled,

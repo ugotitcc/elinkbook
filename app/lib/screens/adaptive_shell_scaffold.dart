@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../downloads/download_queue_controller.dart';
-import '../library/book_content_fingerprint.dart';
-import '../wifi_transfer/wifi_transfer_dependencies.dart';
 import 'library_screen.dart';
 import 'library_screen_dependencies.dart';
 import 'reader_feature_dependencies.dart';
 import 'settings_scaffold.dart';
+import 'source_dependencies.dart';
 import 'sources_home_screen.dart';
 import 'sync_dependencies.dart';
 
@@ -36,32 +34,21 @@ class AdaptiveShellScaffold extends StatefulWidget {
 
   /// 同步依賴組（ADR 0037）：只有設定頁的「同步」入口使用。
   final SyncDependencies sync;
-  final LibraryCloudAccountDependencies cloudAccountDependencies;
-  final LibraryRemoteLibraryDependencies remoteLibraryDependencies;
-  final ComputeRemoteFingerprint? computeFingerprint;
-  final Future<bool> Function()? isMobileDataConnection;
-  final DownloadQueueController? downloadQueueController;
+
+  /// 來源依賴組（ADR 0037）：原樣往下傳給書架、來源頁與設定頁。
+  final SourceDependencies sources;
   final LibraryThemeDependencies themeDependencies;
 
   /// 介面語言依賴（epic-45-interface-i18n Issue 1，`spec.md` §4）。
   final LibraryLocaleDependencies localeDependencies;
 
-  /// WiFi 傳書入口依賴（epic-44-wifi-book-transfer Issue 1），原樣往下
-  /// 傳給 `SourcesHomeScreen`。
-  final WifiTransferDependencies? wifiTransferDependencies;
-
   const AdaptiveShellScaffold({
     super.key,
     required this.readerFeatures,
     required this.sync,
-    this.cloudAccountDependencies = const LibraryCloudAccountDependencies(),
-    this.remoteLibraryDependencies = const LibraryRemoteLibraryDependencies(),
-    this.computeFingerprint,
-    this.isMobileDataConnection,
-    this.downloadQueueController,
+    required this.sources,
     this.themeDependencies = const LibraryThemeDependencies(),
     this.localeDependencies = const LibraryLocaleDependencies(),
-    this.wifiTransferDependencies,
   });
 
   @override
@@ -102,31 +89,23 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
           children: [
             LibraryScreen(
               dependencies: widget.readerFeatures,
-              cloudAccountDependencies: widget.cloudAccountDependencies,
-              remoteLibraryDependencies: widget.remoteLibraryDependencies,
-              computeFingerprint: widget.computeFingerprint,
-              isMobileDataConnection: widget.isMobileDataConnection,
+              sources: widget.sources,
               themeDependencies: widget.themeDependencies,
               refreshSignal: _libraryRefreshSignal,
               onNavigateToSource: () => _navigateTo(1),
               onNavigateToSettings: () => _navigateTo(2),
             ),
             SourcesHomeScreen(
-              repository: widget.readerFeatures.libraryRepository,
-              importService: widget.readerFeatures.bookImportService,
-              cloudAccountDependencies: widget.cloudAccountDependencies,
-              remoteLibraryDependencies: widget.remoteLibraryDependencies,
-              computeFingerprint: widget.computeFingerprint,
-              isMobileDataConnection: widget.isMobileDataConnection,
-              downloadQueueController: widget.downloadQueueController,
+              readerFeatures: widget.readerFeatures,
+              sources: widget.sources,
               isEinkMode: widget.themeDependencies.isEinkMode,
               onNavigateToLibrary: () => _navigateTo(0),
               onNavigateToSettings: () => _navigateTo(2),
-              wifiTransferDependencies: widget.wifiTransferDependencies,
             ),
             SettingsScaffold(
               readerFeatures: widget.readerFeatures,
               sync: widget.sync,
+              sources: widget.sources,
               currentTheme: widget.themeDependencies.currentTheme,
               isEinkMode: widget.themeDependencies.isEinkMode,
               onThemeChanged: widget.themeDependencies.onThemeChanged,
@@ -134,12 +113,6 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
               currentLocaleOverride:
                   widget.localeDependencies.currentLocaleOverride,
               onLocaleChanged: widget.localeDependencies.onLocaleChanged,
-              cloudAccountRepository:
-                  widget.cloudAccountDependencies.cloudAccountRepository,
-              googleDriveOAuthClient:
-                  widget.cloudAccountDependencies.googleDriveOAuthClient,
-              oneDriveOAuthClient:
-                  widget.cloudAccountDependencies.oneDriveOAuthClient,
               onNavigateToLibrary: () => _navigateTo(0),
               onNavigateToSource: () => _navigateTo(1),
             ),

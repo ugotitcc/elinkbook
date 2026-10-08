@@ -9,6 +9,10 @@ import 'package:elinkbook/remote/opds_client.dart';
 import 'package:elinkbook/screens/adaptive_shell_scaffold.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
+import 'package:elinkbook/screens/source_dependencies.dart';
+import 'package:elinkbook/screens/sources_home_screen.dart';
+import 'package:elinkbook/downloads/download_queue_controller.dart';
+import 'package:elinkbook/wifi_transfer/network_availability.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
@@ -16,6 +20,7 @@ import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 
 import 'support/fake_book_import_service.dart';
+import 'support/fake_source_dependencies.dart';
 import 'support/fake_book_reader_prefs_repository.dart';
 import 'support/fake_bookmarks_repository.dart';
 import 'support/fake_cloud_account_repository.dart';
@@ -98,22 +103,30 @@ void main() {
     final computeFingerprint = FakeFingerprintComputer().call;
     final thumbnailCache = FakeRemoteThumbnailCache();
     Future<bool> isMobileDataConnection() async => false;
+    final downloadQueueController = DownloadQueueController(
+      onDuplicateConfirm: (_) async => false,
+    );
+    final sources = SourceDependencies(
+      cloudAccountRepository: cloudAccountRepository,
+      googleDriveOAuthClient: googleDriveOAuthClient,
+      oneDriveOAuthClient: oneDriveOAuthClient,
+      googleDriveStorageClient: googleDriveStorageClient,
+      oneDriveStorageClient: oneDriveStorageClient,
+      remoteServerRepository: remoteServerRepository,
+      createOpdsClient: createOpdsClient,
+      thumbnailCache: thumbnailCache,
+      computeFingerprint: computeFingerprint,
+      isMobileDataConnection: isMobileDataConnection,
+      checkNetworkAvailability: checkNetworkAvailability,
+      downloadQueueController: downloadQueueController,
+    );
     final ttsProvider = FakeTtsProvider();
     final readingStatsRepository = FakeReadingStatsRepository();
     final ttsAudio = TtsAudioHandlerHolder.degraded();
 
     await tester.pumpWidget(
       ElinkBookApp(
-        cloudAccountRepository: cloudAccountRepository,
-        googleDriveOAuthClient: googleDriveOAuthClient,
-        oneDriveOAuthClient: oneDriveOAuthClient,
-        googleDriveStorageClient: googleDriveStorageClient,
-        oneDriveStorageClient: oneDriveStorageClient,
-        remoteServerRepository: remoteServerRepository,
-        createOpdsClient: createOpdsClient,
-        computeFingerprint: computeFingerprint,
-        thumbnailCache: thumbnailCache,
-        isMobileDataConnection: isMobileDataConnection,
+        sources: sources,
         initialTheme: AppTheme.dark,
         initialEinkMode: true,
         readerFeatures: fakeReaderFeatureDependencies(
@@ -183,46 +196,31 @@ void main() {
     expect(shell.sync.syncClient, same(syncClient));
     expect(shell.sync.syncCheckpointTrigger, same(syncCheckpointTrigger));
 
+    expect(libraryScreen.sources, same(sources));
     expect(
-      libraryScreen.cloudAccountDependencies.cloudAccountRepository,
-      same(cloudAccountRepository),
+      tester
+          .widget<SourcesHomeScreen>(
+            find.byType(SourcesHomeScreen, skipOffstage: false),
+          )
+          .sources,
+      same(sources),
     );
     expect(
-      libraryScreen.cloudAccountDependencies.googleDriveOAuthClient,
-      same(googleDriveOAuthClient),
-    );
-    expect(
-      libraryScreen.cloudAccountDependencies.oneDriveOAuthClient,
-      same(oneDriveOAuthClient),
-    );
-    expect(
-      libraryScreen.cloudAccountDependencies.googleDriveStorageClient,
-      same(googleDriveStorageClient),
-    );
-    expect(
-      libraryScreen.cloudAccountDependencies.oneDriveStorageClient,
-      same(oneDriveStorageClient),
+      tester
+          .widget<SettingsScaffold>(
+            find.byType(SettingsScaffold, skipOffstage: false),
+          )
+          .sources,
+      same(sources),
     );
 
+    // computeFingerprint 同時服務雲端匯入、OPDS 下載與 WiFi 傳書，
+    // 只有 SourceDependencies 這一個來源（Issue 7 曾漏轉發）。
+    expect(libraryScreen.sources.computeFingerprint, same(computeFingerprint));
     expect(
-      libraryScreen.remoteLibraryDependencies.remoteServerRepository,
-      same(remoteServerRepository),
+      libraryScreen.sources.downloadQueueController,
+      same(downloadQueueController),
     );
-    expect(
-      libraryScreen.remoteLibraryDependencies.createOpdsClient,
-      same(createOpdsClient),
-    );
-    expect(
-      libraryScreen.remoteLibraryDependencies.thumbnailCache,
-      same(thumbnailCache),
-    );
-
-    // computeFingerprint／isMobileDataConnection 刻意不併入任何 bundle
-    // （見 plans/plan-issue-7.md「規劃階段查證」第 3 點），本次審查修正的
-    // Critical 問題正是前者在 main.dart 遺漏轉發，故這裡是本測試最直接
-    // 針對的斷言。
-    expect(libraryScreen.computeFingerprint, same(computeFingerprint));
-    expect(libraryScreen.isMobileDataConnection, same(isMobileDataConnection));
 
     expect(libraryScreen.themeDependencies.currentTheme, AppTheme.dark);
     expect(libraryScreen.themeDependencies.isEinkMode, isTrue);
@@ -236,9 +234,14 @@ void main() {
       syncCheckpointTrigger: trigger,
     );
     final sync = fakeSyncDependencies(syncCheckpointTrigger: trigger);
+    final sources = fakeSourceDependencies();
 
     await tester.pumpWidget(
-      ElinkBookApp(readerFeatures: readerFeatures, sync: sync),
+      ElinkBookApp(
+        readerFeatures: readerFeatures,
+        sync: sync,
+        sources: sources,
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -247,15 +250,29 @@ void main() {
     );
     expect(shell.readerFeatures, same(readerFeatures));
     expect(shell.sync, same(sync));
+    expect(shell.sources, same(sources));
     expect(
       tester.widget<LibraryScreen>(find.byType(LibraryScreen)).dependencies,
       same(readerFeatures),
+    );
+    expect(
+      tester.widget<LibraryScreen>(find.byType(LibraryScreen)).sources,
+      same(sources),
+    );
+    expect(
+      tester
+          .widget<SourcesHomeScreen>(
+            find.byType(SourcesHomeScreen, skipOffstage: false),
+          )
+          .sources,
+      same(sources),
     );
     final settings = tester.widget<SettingsScaffold>(
       find.byType(SettingsScaffold, skipOffstage: false),
     );
     expect(settings.readerFeatures, same(readerFeatures));
     expect(settings.sync, same(sync));
+    expect(settings.sources, same(sources));
     // 同一個 syncCheckpointTrigger 實例同時屬於兩個組（ADR 0037 §1）。
     expect(
       readerFeatures.syncCheckpointTrigger,
@@ -268,7 +285,11 @@ void main() {
     final sync = fakeSyncDependencies();
 
     await tester.pumpWidget(
-      ElinkBookApp(readerFeatures: readerFeatures, sync: sync),
+      ElinkBookApp(
+        readerFeatures: readerFeatures,
+        sync: sync,
+        sources: fakeSourceDependencies(),
+      ),
     );
     await tester.pumpAndSettle();
 

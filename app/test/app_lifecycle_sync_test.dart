@@ -6,6 +6,7 @@ import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 
 import 'support/fake_book_import_service.dart';
+import 'support/fake_source_dependencies.dart';
 import 'support/fake_library_repository.dart';
 import 'support/fake_reader_prefs_manager.dart';
 import 'support/fake_reader_feature_dependencies.dart';
@@ -29,6 +30,7 @@ void main() {
 
     await tester.pumpWidget(
       ElinkBookApp(
+        sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(),
           bookImportService: FakeBookImportService(),
@@ -60,6 +62,7 @@ void main() {
 
     await tester.pumpWidget(
       ElinkBookApp(
+        sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(),
           bookImportService: FakeBookImportService(),
@@ -91,6 +94,7 @@ void main() {
 
     await tester.pumpWidget(
       ElinkBookApp(
+        sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(),
           bookImportService: FakeBookImportService(),
@@ -119,6 +123,7 @@ void main() {
   testWidgets('未提供 syncCheckpointTrigger 時，App 進入背景不拋出例外（零回歸）', (tester) async {
     await tester.pumpWidget(
       ElinkBookApp(
+        sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(),
           bookImportService: FakeBookImportService(),

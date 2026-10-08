@@ -10,7 +10,6 @@ import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:pdfrx/pdfrx.dart';
 
-import 'cloud_import/cloud_account_repository.dart';
 import 'cloud_import/cloud_storage_client.dart';
 import 'cloud_import/google_drive_oauth_client.dart';
 import 'cloud_import/google_drive_storage_client.dart';
@@ -36,11 +35,9 @@ import 'reader/tts_audio_focus_source.dart';
 import 'reader/tts_audio_handler.dart';
 import 'reader/tts_audio_handler_startup.dart';
 import 'reader/webview_font_support.dart';
-import 'remote/opds_client.dart';
 import 'remote/opds_http_client.dart';
-import 'remote/remote_server_repository.dart';
 import 'wifi_transfer/network_availability.dart';
-import 'wifi_transfer/wifi_transfer_dependencies.dart';
+import 'screens/source_dependencies.dart';
 import 'remote/remote_thumbnail_cache.dart';
 import 'remote/sqlite_remote_server_repository.dart';
 import 'screens/adaptive_shell_scaffold.dart';
@@ -133,7 +130,8 @@ Future<void> main() async {
   final downloadableFontStore = DownloadableFontStore(
     httpClient: http.Client(),
     directory: Directory(
-        p.join((await getApplicationSupportDirectory()).path, 'downloaded-fonts')),
+      p.join((await getApplicationSupportDirectory()).path, 'downloaded-fonts'),
+    ),
     webViewMajorVersion: webViewMajorVersion,
   );
   try {
@@ -159,9 +157,9 @@ Future<void> main() async {
   // plans/plan-issue-3.md Global Constraints。
   final fullTextSearchSettingsRepository =
       SqliteFullTextSearchSettingsRepository(
-    database: repository.database,
-    requestProcessing: contentIndexingScheduler.requestProcessing,
-  );
+        database: repository.database,
+        requestProcessing: contentIndexingScheduler.requestProcessing,
+      );
   // epic-10-search Issue 4：全庫搜尋資料存取層，直接對同一個 Database
   // 連線下 SQL（比照 fullTextSearchSettingsRepository 既有慣例）。
   final searchRepository = SqliteSearchRepository(
@@ -268,7 +266,9 @@ Future<void> main() async {
       final context = navigatorKey.currentContext;
       if (context == null) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.syncSessionExpiredToast)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.syncSessionExpiredToast),
+        ),
       );
     },
   );
@@ -344,22 +344,26 @@ Future<void> main() async {
     onManualSync: syncEngine.runCheckpoint,
     loadLastSyncedAt: syncMetadataRepository.loadLastPushCompletedAt,
   );
+  // ADR 0037：來源依賴組由 main() 建構一次，ElinkBookApp 原樣往下傳。
+  final sources = SourceDependencies(
+    cloudAccountRepository: cloudAccountRepository,
+    googleDriveOAuthClient: googleDriveOAuthClient,
+    oneDriveOAuthClient: oneDriveOAuthClient,
+    googleDriveStorageClient: googleDriveStorageClient,
+    oneDriveStorageClient: oneDriveStorageClient,
+    remoteServerRepository: remoteServerRepository,
+    createOpdsClient: () => OpdsHttpClient(),
+    thumbnailCache: thumbnailCache,
+    computeFingerprint: computeBookContentFingerprint,
+    isMobileDataConnection: _isMobileDataConnection,
+    checkNetworkAvailability: checkNetworkAvailability,
+    downloadQueueController: downloadQueueController,
+  );
   runApp(
     ElinkBookApp(
       readerFeatures: readerFeatures,
       sync: sync,
-      cloudAccountRepository: cloudAccountRepository,
-      googleDriveOAuthClient: googleDriveOAuthClient,
-      oneDriveOAuthClient: oneDriveOAuthClient,
-      googleDriveStorageClient: googleDriveStorageClient,
-      oneDriveStorageClient: oneDriveStorageClient,
-      remoteServerRepository: remoteServerRepository,
-      createOpdsClient: () => OpdsHttpClient(),
-      computeFingerprint: computeBookContentFingerprint,
-      thumbnailCache: thumbnailCache,
-      isMobileDataConnection: _isMobileDataConnection,
-      checkNetworkAvailability: checkNetworkAvailability,
-      downloadQueueController: downloadQueueController,
+      sources: sources,
       navigatorKey: navigatorKey,
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
@@ -373,21 +377,10 @@ Future<void> main() async {
 /// elinkBook App 根元件。啟動時接受從 main 傳入之 [initialTheme] 與
 /// [initialEinkMode]（解決開機閃白屏與狀態競爭問題，見 review 意見）。
 class ElinkBookApp extends StatefulWidget {
-  /// 閱讀器功能依賴組與同步依賴組（ADR 0037）：由 `main()` 建構一次，原樣往下傳。
-  /// Issue 13 再收進 `AppDependencies`。
+  /// 閱讀器功能、同步與來源依賴組（ADR 0037）：由 `main()` 建構一次，原樣往下傳。
   final ReaderFeatureDependencies readerFeatures;
   final SyncDependencies sync;
-  final CloudAccountRepository? cloudAccountRepository;
-  final GoogleDriveOAuthClient? googleDriveOAuthClient;
-  final OneDriveOAuthClient? oneDriveOAuthClient;
-  final CloudStorageClient? googleDriveStorageClient;
-  final CloudStorageClient? oneDriveStorageClient;
-  final RemoteServerRepository? remoteServerRepository;
-  final OpdsClient Function()? createOpdsClient;
-  final ComputeRemoteFingerprint? computeFingerprint;
-  final RemoteThumbnailCache? thumbnailCache;
-  final Future<bool> Function()? isMobileDataConnection;
-  final DownloadQueueController? downloadQueueController;
+  final SourceDependencies sources;
   final GlobalKey<NavigatorState>? navigatorKey;
   final AppLocalePreferences localePreferences;
   final AppLocale? initialLocaleOverride;
@@ -395,35 +388,19 @@ class ElinkBookApp extends StatefulWidget {
   final AppTheme initialTheme;
   final bool initialEinkMode;
 
-  /// WiFi 傳書入口的網路先決條件偵測（epic-44-wifi-book-transfer
-  /// Issue 1），生產環境傳入 `checkNetworkAvailability`（`network_availability.dart`
-  /// 頂層函式）。
-  final CheckNetworkAvailability? checkNetworkAvailability;
-
   ElinkBookApp({
     super.key,
     required this.readerFeatures,
     required this.sync,
-    this.cloudAccountRepository,
-    this.googleDriveOAuthClient,
-    this.oneDriveOAuthClient,
-    this.googleDriveStorageClient,
-    this.oneDriveStorageClient,
-    this.remoteServerRepository,
-    this.createOpdsClient,
-    this.computeFingerprint,
-    this.thumbnailCache,
-    this.isMobileDataConnection,
-    this.downloadQueueController,
+    required this.sources,
     this.navigatorKey,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
-    this.checkNetworkAvailability,
     this.initialLocaleOverride,
     AppLocalePreferences? localePreferences,
     AppThemePreferences? themePreferences,
-  })  : themePreferences = themePreferences ?? AppThemePreferences(),
-        localePreferences = localePreferences ?? AppLocalePreferences();
+  }) : themePreferences = themePreferences ?? AppThemePreferences(),
+       localePreferences = localePreferences ?? AppLocalePreferences();
 
   @override
   State<ElinkBookApp> createState() => _ElinkBookAppState();
@@ -494,21 +471,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
       home: AdaptiveShellScaffold(
         readerFeatures: widget.readerFeatures,
         sync: widget.sync,
-        cloudAccountDependencies: LibraryCloudAccountDependencies(
-          cloudAccountRepository: widget.cloudAccountRepository,
-          googleDriveOAuthClient: widget.googleDriveOAuthClient,
-          oneDriveOAuthClient: widget.oneDriveOAuthClient,
-          googleDriveStorageClient: widget.googleDriveStorageClient,
-          oneDriveStorageClient: widget.oneDriveStorageClient,
-        ),
-        remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
-          remoteServerRepository: widget.remoteServerRepository,
-          createOpdsClient: widget.createOpdsClient,
-          thumbnailCache: widget.thumbnailCache,
-        ),
-        computeFingerprint: widget.computeFingerprint,
-        isMobileDataConnection: widget.isMobileDataConnection,
-        downloadQueueController: widget.downloadQueueController,
+        sources: widget.sources,
         themeDependencies: LibraryThemeDependencies(
           currentTheme: _theme,
           isEinkMode: _isEinkMode,
@@ -518,12 +481,6 @@ class _ElinkBookAppState extends State<ElinkBookApp>
         localeDependencies: LibraryLocaleDependencies(
           currentLocaleOverride: _localeOverride,
           onLocaleChanged: _handleLocaleChanged,
-        ),
-        wifiTransferDependencies: WifiTransferDependencies(
-          libraryRepository: widget.readerFeatures.libraryRepository,
-          importService: widget.readerFeatures.bookImportService,
-          computeFingerprint: widget.computeFingerprint,
-          checkNetworkAvailability: widget.checkNetworkAvailability,
         ),
       ),
     );

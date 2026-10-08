@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-import '../library/book_content_fingerprint.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/book_reader_prefs_repository.dart';
 import '../reader/page_turn_mode.dart';
@@ -18,6 +17,7 @@ import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import 'library_screen_dependencies.dart';
 import 'reader_feature_dependencies.dart';
+import 'source_dependencies.dart';
 import 'book_grid_tile_metrics.dart';
 import 'library_book_list_controller.dart';
 import 'library_batch_actions.dart';
@@ -60,17 +60,9 @@ class LibraryScreen extends StatefulWidget {
   /// 全文檢索設定、版面覆寫 repository 等；開書與開全庫搜尋時整組轉傳同一個實例。
   final ReaderFeatureDependencies dependencies;
 
-  /// 收斂原本 `cloudAccountRepository`／`googleDriveOAuthClient`／
-  /// `oneDriveOAuthClient`／`googleDriveStorageClient`／
-  /// `oneDriveStorageClient` 五個獨立參數（epic-26-architecture-hardening
-  /// Issue 7）。
-  final LibraryCloudAccountDependencies cloudAccountDependencies;
-
-  /// 收斂原本 `remoteServerRepository`／`createOpdsClient`／`thumbnailCache`
-  /// 三個獨立參數（epic-26-architecture-hardening Issue 7）。
-  final LibraryRemoteLibraryDependencies remoteLibraryDependencies;
-  final ComputeRemoteFingerprint? computeFingerprint;
-  final Future<bool> Function()? isMobileDataConnection;
+  /// 來源依賴組（ADR 0037）：重新下載遠端書用其中的 remoteServerRepository、
+  /// createOpdsClient 與 isMobileDataConnection，全部 non-null。
+  final SourceDependencies sources;
 
   /// 收斂原本 `currentTheme`／`isEinkMode`／`onThemeChanged`／`onEinkModeChanged`
   /// 四個獨立參數（epic-26-architecture-hardening Issue 7）。
@@ -82,10 +74,7 @@ class LibraryScreen extends StatefulWidget {
   const LibraryScreen({
     super.key,
     required this.dependencies,
-    this.cloudAccountDependencies = const LibraryCloudAccountDependencies(),
-    this.remoteLibraryDependencies = const LibraryRemoteLibraryDependencies(),
-    this.computeFingerprint,
-    this.isMobileDataConnection,
+    required this.sources,
     this.themeDependencies = const LibraryThemeDependencies(),
     this.refreshSignal,
     this.onNavigateToSource,
@@ -511,26 +500,23 @@ class _LibraryScreenState extends State<LibraryScreen>
   /// 到永久 `remote_books/` 目錄→刪除暫存），避免把永久 `filePath` 指向
   /// OS 可回收的暫存路徑。
   Future<void> _handleRedownload(Book book) async {
-    final remoteServerRepository =
-        widget.remoteLibraryDependencies.remoteServerRepository;
-    final createOpdsClient = widget.remoteLibraryDependencies.createOpdsClient;
+    final remoteServerRepository = widget.sources.remoteServerRepository;
+    final createOpdsClient = widget.sources.createOpdsClient;
     final remoteServerId = book.remoteServerId;
     final remoteDownloadUrl = book.remoteDownloadUrl;
-    if (remoteServerRepository == null ||
-        createOpdsClient == null ||
-        remoteServerId == null ||
-        remoteDownloadUrl == null) {
+    if (remoteServerId == null || remoteDownloadUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context)!.libraryRemoteDisabledMessage),
+          content: Text(
+            AppLocalizations.of(context)!.libraryRemoteDisabledMessage,
+          ),
         ),
       );
       return;
     }
     if (_redownloadingBookIds.contains(book.id)) return;
 
-    final isMobileData =
-        await (widget.isMobileDataConnection?.call() ?? Future.value(false));
+    final isMobileData = await widget.sources.isMobileDataConnection();
     if (!mounted) return;
     final confirmed = await _confirmRedownload(book, isMobileData);
     if (confirmed != true) return;
@@ -612,7 +598,9 @@ class _LibraryScreenState extends State<LibraryScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context)!.libraryRedownloadFailedMessage),
+          content: Text(
+            AppLocalizations.of(context)!.libraryRedownloadFailedMessage,
+          ),
         ),
       );
     } finally {
@@ -904,8 +892,9 @@ class _LibraryScreenState extends State<LibraryScreen>
                         ? (searchResults.isEmpty
                               ? Center(
                                   child: Text(
-                                    AppLocalizations.of(context)!
-                                        .libraryNoMatchingBooks,
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.libraryNoMatchingBooks,
                                   ),
                                 )
                               : _buildBookList(
@@ -1589,7 +1578,9 @@ class _BookGridTile extends StatelessWidget {
                           minWidth: 48,
                           minHeight: 48,
                         ),
-                        tooltip: AppLocalizations.of(context)!.libraryBookMenuTooltip,
+                        tooltip: AppLocalizations.of(
+                          context,
+                        )!.libraryBookMenuTooltip,
                         onPressed: onMenuTap,
                       ),
                     ),
@@ -1681,8 +1672,11 @@ class _BookListTile extends StatelessWidget {
       // maxLines/overflow（epic-36 Issue 7 追加修正——I-1）：書名/作者過長
       // 換行會撐高這一列，讓 libraryListRowHeight() 假設的固定列高失準，
       // 進而讓依此估算出的 pageSize 偏多、造成本頁部分項目被裁切。
-      title: Text(convertText(book.title, textConversion),
-          maxLines: 1, overflow: TextOverflow.ellipsis),
+      title: Text(
+        convertText(book.title, textConversion),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       subtitle: Text(
         convertText(book.author ?? '', textConversion),
         maxLines: 1,

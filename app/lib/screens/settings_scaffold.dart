@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../cloud_import/cloud_account_repository.dart';
-import '../cloud_import/google_drive_oauth_client.dart';
-import '../cloud_import/onedrive_oauth_client.dart';
 import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
 import '../search/full_text_search_settings_repository.dart';
@@ -18,6 +15,7 @@ import 'reader_feature_dependencies.dart';
 import 'reader_console_log_screen.dart';
 import 'reading_defaults_screen.dart';
 import 'reading_stats_screen.dart';
+import 'source_dependencies.dart';
 import 'sync_dependencies.dart';
 import 'sync_settings_screen.dart';
 import 'tts_defaults_screen.dart';
@@ -50,9 +48,10 @@ class SettingsScaffold extends StatefulWidget {
   /// 語意。
   final AppLocale? currentLocaleOverride;
   final ValueChanged<AppLocale?>? onLocaleChanged;
-  final CloudAccountRepository? cloudAccountRepository;
-  final GoogleDriveOAuthClient? googleDriveOAuthClient;
-  final OneDriveOAuthClient? oneDriveOAuthClient;
+
+  /// 來源依賴組（ADR 0037）：「雲端帳號」入口取其中的帳號 repository 與
+  /// Google Drive／OneDrive OAuth client，全部 non-null，入口恆可點。
+  final SourceDependencies sources;
   final VoidCallback? onNavigateToLibrary;
   final VoidCallback? onNavigateToSource;
 
@@ -60,15 +59,13 @@ class SettingsScaffold extends StatefulWidget {
     super.key,
     required this.readerFeatures,
     required this.sync,
+    required this.sources,
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
     this.onThemeChanged,
     this.onEinkModeChanged,
     this.currentLocaleOverride,
     this.onLocaleChanged,
-    this.cloudAccountRepository,
-    this.googleDriveOAuthClient,
-    this.oneDriveOAuthClient,
     this.onNavigateToLibrary,
     this.onNavigateToSource,
   });
@@ -340,7 +337,8 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                   children: [
                     IconButton(
                       key: const Key(
-                          'settings_full_text_search_pdf_rebuild_button'),
+                        'settings_full_text_search_pdf_rebuild_button',
+                      ),
                       icon: const Icon(Icons.refresh),
                       tooltip: l10n.settingsFullTextSearchRebuildIndexTooltip,
                       onPressed: !_fullTextSearchTogglesController.pdfEnabled
@@ -371,7 +369,8 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                   children: [
                     IconButton(
                       key: const Key(
-                          'settings_full_text_search_foliate_rebuild_button'),
+                        'settings_full_text_search_foliate_rebuild_button',
+                      ),
                       icon: const Icon(Icons.refresh),
                       tooltip: l10n.settingsFullTextSearchRebuildIndexTooltip,
                       onPressed:
@@ -384,7 +383,8 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                     ),
                     Switch(
                       key: const Key(
-                          'settings_full_text_search_foliate_switch'),
+                        'settings_full_text_search_foliate_switch',
+                      ),
                       value: _fullTextSearchTogglesController.foliateEnabled,
                       onChanged: (value) => _handleFullTextSearchToggle(
                         ContentIndexCategory.foliate,
@@ -421,24 +421,19 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
               key: const Key('settings_cloud_account_button'),
               title: Text(l10n.settingsCloudAccountLabel),
               trailing: const Icon(Icons.chevron_right),
-              onTap:
-                  widget.cloudAccountRepository == null ||
-                      widget.googleDriveOAuthClient == null ||
-                      widget.oneDriveOAuthClient == null
-                  ? null
-                  : () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => CloudAccountSettingsScreen(
-                            cloudAccountRepository:
-                                widget.cloudAccountRepository!,
-                            googleDriveOAuthClient:
-                                widget.googleDriveOAuthClient!,
-                            oneDriveOAuthClient: widget.oneDriveOAuthClient!,
-                          ),
-                        ),
-                      );
-                    },
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => CloudAccountSettingsScreen(
+                      cloudAccountRepository:
+                          widget.sources.cloudAccountRepository,
+                      googleDriveOAuthClient:
+                          widget.sources.googleDriveOAuthClient,
+                      oneDriveOAuthClient: widget.sources.oneDriveOAuthClient,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
           EBSectionHeader(title: l10n.settingsAboutSectionTitle),

@@ -10,6 +10,7 @@ import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
 
 import '../support/fake_book_import_service.dart';
+import '../support/fake_source_dependencies.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/pump_localized_widget.dart';
@@ -53,6 +54,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
           ),
@@ -68,6 +70,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
           ),
@@ -84,6 +87,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
           ),
@@ -106,6 +110,7 @@ void main() {
     });
 
     LibraryScreen buildScreen() => LibraryScreen(
+      sources: fakeSourceDependencies(),
       dependencies: fakeReaderFeatureDependencies(
         libraryRepository: FakeLibraryRepository(),
         bookImportService: FakeBookImportService(),
