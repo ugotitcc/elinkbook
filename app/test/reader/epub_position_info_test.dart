@@ -2,6 +2,28 @@ import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('EpubPositionInfo.tocItemId', () {
+    test('tocItemId 納入 == 與 hashCode；預設為 null', () {
+      const a = EpubPositionInfo(locatorJson: 'l', tocItemId: 1);
+      const b = EpubPositionInfo(locatorJson: 'l', tocItemId: 1);
+      const c = EpubPositionInfo(locatorJson: 'l', tocItemId: 2);
+      const d = EpubPositionInfo(locatorJson: 'l');
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+      expect(a, isNot(c));
+      expect(a, isNot(d));
+      expect(d.tocItemId, isNull);
+      expect(a.toString(), contains('tocItemId: 1'));
+    });
+
+    test('positionKey 不受 tocItemId 影響（位置去重鍵只看 cfi 與 index）', () {
+      const json = '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}';
+      const a = EpubPositionInfo(locatorJson: json, tocItemId: 1);
+      const b = EpubPositionInfo(locatorJson: json, tocItemId: 2);
+      expect(a.positionKey, b.positionKey);
+    });
+  });
+
   group('positionKey：只代表「位置」，忽略會抖動的 fraction', () {
     test('同 cfi 與 index、fraction 不同，鍵相同', () {
       const a = EpubPositionInfo(

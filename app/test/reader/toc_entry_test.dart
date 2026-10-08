@@ -4,6 +4,29 @@ import 'package:elinkbook/reader/toc_entry.dart';
 
 void main() {
   group('TocEntry.fromWire', () {
+    test('解析 tocId（含第一個目錄項的 id 為 0，不得被當成缺席）', () {
+      final entry = TocEntry.fromWire({
+        'title': '第一章',
+        'locatorJson': '',
+        'progression': null,
+        'tocId': 0,
+        'children': <Object?>[
+          {'title': '第一節', 'locatorJson': '', 'tocId': 1, 'children': <Object?>[]},
+        ],
+      });
+      expect(entry.tocId, 0);
+      expect(entry.children.single.tocId, 1);
+    });
+
+    test('缺 tocId 欄位時為 null（向下相容舊資料）', () {
+      final entry = TocEntry.fromWire({
+        'title': '第一章',
+        'locatorJson': 'l1',
+        'children': <Object?>[],
+      });
+      expect(entry.tocId, isNull);
+    });
+
     test('解析單層節點（無子項）', () {
       final entry = TocEntry.fromWire({
         'title': '第一章',

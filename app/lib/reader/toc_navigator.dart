@@ -28,16 +28,31 @@ class TocNavigator {
   /// 偏高（小章節單頁時位元組估計 double-count），兩者疊加會讓開書當下命中
   /// 後面章節的子節。spine index 是章節層級的精確資訊，不受此影響。
   ///
-  /// [currentProgression] 與 [currentSpineIndex] 皆為 `null`（例如尚未收到
+  /// epic-54 Issue 20：[currentTocItemId]（`EpubPositionInfo.tocItemId`，
+  /// foliate 以 live DOM `Range.comparePoint` 判定的目前目錄項 id）優先於上述
+  /// 兩種規則，解決同一 spine 內多個錨點時依 progression 猜測的不精確。
+  ///
+  /// [currentProgression]、[currentSpineIndex]、[currentTocItemId] 皆為 `null`（例如尚未收到
   /// 任何 `onLocatorChanged` 回報）或沒有任何節點通過時，回傳空清單——
   /// 呼叫端據此不預設展開任何層級、不高亮任何項目。
   static List<TocEntry> findCurrentPath(
     List<TocEntry> entries,
     double? currentProgression, {
     int? currentSpineIndex,
+    int? currentTocItemId,
   }) {
-    if (currentProgression == null && currentSpineIndex == null) {
+    if (currentProgression == null &&
+        currentSpineIndex == null &&
+        currentTocItemId == null) {
       return const [];
+    }
+    // epic-54 Issue 20：foliate 以 live DOM 判定的目前目錄項，精確度最高，
+    // 有命中就直接採用；查無（id 缺席、目錄尚未載入、節點缺 tocId）則
+    // 往下退回 spine index／progression 規則。注意 id 0 是合法值，
+    // 一律以 `!= null` 判斷，不可用 truthy。
+    if (currentTocItemId != null) {
+      final byId = _pathToTocId(entries, currentTocItemId, const []);
+      if (byId != null) return byId;
     }
     List<TocEntry>? bestPath;
     void walk(List<TocEntry> nodes, List<TocEntry> path) {
@@ -52,6 +67,21 @@ class TocNavigator {
 
     walk(entries, const []);
     return bestPath ?? const [];
+  }
+
+  /// DFS 找出 [TocEntry.tocId] 等於 [tocId] 的節點，回傳根到該節點的路徑；
+  /// 查無回傳 `null`。
+  static List<TocEntry>? _pathToTocId(
+    List<TocEntry> nodes,
+    int tocId,
+    List<TocEntry> path,
+  ) {
+    for (final node in nodes) {
+      if (node.tocId == tocId) return [...path, node];
+      final found = _pathToTocId(node.children, tocId, [...path, node]);
+      if (found != null) return found;
+    }
+    return null;
   }
 
   /// 單一節點是否已被讀者通過，規則見 [findCurrentPath] 的文件註解。

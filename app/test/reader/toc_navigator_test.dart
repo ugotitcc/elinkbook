@@ -133,4 +133,103 @@ void main() {
       expect(TocNavigator.findCurrentPath(toc, null), isEmpty);
     });
   });
+
+  group('findCurrentPath（tocItemId 優先，Issue 20）', () {
+    // 單一 spine（index 0）內三個錨點：第一章下有第一節／第二節／第三節。
+    // progression 刻意設成與「讀者實際位置」不一致，證明結果來自 tocItemId。
+    final s1 = TocEntry(
+        title: '第一節', locatorJson: loc(0, 0.10), progression: 0.10, tocId: 1);
+    final s2 = TocEntry(
+        title: '第二節', locatorJson: loc(0, 0.40), progression: 0.40, tocId: 2);
+    final s3 = TocEntry(
+        title: '第三節', locatorJson: loc(0, 0.70), progression: 0.70, tocId: 3);
+    final ch = TocEntry(
+      title: '第一章',
+      locatorJson: loc(0),
+      progression: null,
+      tocId: 0,
+      children: [s1, s2, s3],
+    );
+    final next =
+        TocEntry(title: '第二章', locatorJson: loc(1), progression: null, tocId: 4);
+    final toc = [ch, next];
+
+    test('開書 progression 偏高（0.55）但 foliate 回報目前是第一節：只選第一節', () {
+      expect(
+        TocNavigator.findCurrentPath(toc, 0.55,
+            currentSpineIndex: 0, currentTocItemId: 1),
+        [ch, s1],
+        reason: '不得因 0.55 >= 0.40 而誤選第二節',
+      );
+    });
+
+    test('currentTocItemId 為 0（第一個目錄項）要命中第一個節點，不得退回舊規則', () {
+      expect(
+        TocNavigator.findCurrentPath(toc, 0.55,
+            currentSpineIndex: 0, currentTocItemId: 0),
+        [ch],
+        reason: '0 是合法 id；若被當成缺席會退回 progression 規則而選到第二節',
+      );
+    });
+
+    test('回報第三節：回傳第一章→第三節的完整祖先路徑', () {
+      expect(
+        TocNavigator.findCurrentPath(toc, 0.05,
+            currentSpineIndex: 0, currentTocItemId: 3),
+        [ch, s3],
+      );
+    });
+
+    test('目前 spine 沒有目錄項、foliate 回報前一章節點：回傳該節點的祖先路徑', () {
+      // 讀者在 spine 2（無目錄項的插頁），tocItem 為前一個項目「第三節」。
+      expect(
+        TocNavigator.findCurrentPath(toc, 0.9,
+            currentSpineIndex: 2, currentTocItemId: 3),
+        [ch, s3],
+      );
+    });
+
+    test('currentTocItemId 在樹中查無節點：退回 spine index 規則（Issue 19）', () {
+      expect(
+        TocNavigator.findCurrentPath(toc, 0.9,
+            currentSpineIndex: 1, currentTocItemId: 99),
+        [next],
+      );
+    });
+
+    test('currentTocItemId 為 null：行為與 Issue 19 相同', () {
+      // 明確斷言 Issue 19 規則的結果（同 spine 內依 progression：0.10、0.40
+      // 已通過、0.70 未通過 → 第二節），而非拿同一條路徑跟自己比。
+      expect(
+        TocNavigator.findCurrentPath(toc, 0.55,
+            currentSpineIndex: 0, currentTocItemId: null),
+        [ch, s2],
+      );
+      expect(
+        TocNavigator.findCurrentPath(toc, 0.55, currentSpineIndex: 0),
+        [ch, s2],
+      );
+    });
+
+    test('節點缺 tocId（舊資料）時 id 不命中，退回舊規則且不拋例外', () {
+      final legacy =
+          TocEntry(title: '舊節點', locatorJson: loc(0), progression: null);
+      expect(
+        TocNavigator.findCurrentPath([legacy], null,
+            currentSpineIndex: 0, currentTocItemId: 0),
+        [legacy],
+      );
+    });
+
+    test('只有 currentTocItemId、其餘皆 null 也能判定（不被「皆 null 回空」誤擋）', () {
+      expect(
+        TocNavigator.findCurrentPath(toc, null, currentTocItemId: 2),
+        [ch, s2],
+      );
+    });
+
+    test('三者皆 null 回傳空清單（首個 relocate 之前）', () {
+      expect(TocNavigator.findCurrentPath(toc, null), isEmpty);
+    });
+  });
 }

@@ -201,4 +201,98 @@ void main() {
     expect(find.byType(TocBottomSheet), findsNothing, reason: '目錄驗證完成後應正常關閉');
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
   });
+
+  testWidgets('單一 spine 內多個目錄錨點：開書與跳轉後「目前章節」皆由 DOM 判定，精確到小節（epic-54 Issue 20）',
+      (tester) async {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    final libraryRepository =
+        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    addTearDown(() => libraryRepository.close());
+    final prefsManager = ReaderPrefsManagerImpl(
+      BookReaderPrefsRepository(libraryRepository.database),
+      ReadingPositionRepository(libraryRepository.database),
+    );
+
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_single_spine_multi_anchor.epub',
+        'epub_toc_single_spine.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    await libraryRepository.insertBook(Book(
+      id: 'b_epub_toc_single_spine',
+      title: 'EPUB 單檔多錨點目錄測試書',
+      format: BookFileFormat.epub,
+      filePath: samplePath,
+      source: BookSource.local,
+      createTime: DateTime.now(),
+      lastReadTime: DateTime.now(),
+    ));
+
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_epub_toc_single_spine',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+      ),
+    );
+    await _pumpUntilLoaded(tester);
+    await _pumpUntilFooterVisible(tester);
+
+    Future<void> openToc() async {
+      await _pumpUntilTocButtonEnabled(tester);
+      await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
+      await tester.pumpAndSettle();
+      expect(find.byType(TocBottomSheet), findsOneWidget);
+    }
+
+    bool selected(String title) =>
+        tester.widget<ListTile>(find.widgetWithText(ListTile, title)).selected;
+
+    Future<void> closeToc() async {
+      await tester.tap(find.byKey(const Key('toc_bottom_sheet_close_button')));
+      await tester.pumpAndSettle();
+    }
+
+    String progressText() =>
+        tester
+            .widget<Text>(find.byKey(const Key('reader_footer_progress_text')))
+            .data ??
+        '';
+
+    // 1) 開書位於第一節（頁面含 h1 與 s1 錨點，s2/s3 在後面）：
+    //    不得因全書 progression 偏高而選到第二、三節。
+    await openToc();
+    expect(selected('第一節'), isTrue, reason: '開書位於第一節');
+    expect(selected('第二節'), isFalse);
+    expect(selected('第三節'), isFalse);
+    final progressAtOpen = progressText();
+
+    // 2) 跳到第三節。
+    await tester.tap(find.widgetWithText(ListTile, '第三節'));
+    await tester.pumpAndSettle();
+    await _pumpUntilProgressChanged(tester, progressAtOpen);
+    await openToc();
+    expect(selected('第三節'), isTrue, reason: '跳到第三節後應標示第三節');
+    expect(selected('第一節'), isFalse);
+    expect(selected('第二節'), isFalse);
+    final progressAtS3 = progressText();
+
+    // 3) 回頭跳到第二節（往回跳，驗證不是只會往後）。
+    await tester.tap(find.widgetWithText(ListTile, '第二節'));
+    await tester.pumpAndSettle();
+    await _pumpUntilProgressChanged(tester, progressAtS3);
+    await openToc();
+    expect(selected('第二節'), isTrue, reason: '往回跳到第二節後應標示第二節');
+    expect(selected('第一節'), isFalse);
+    expect(selected('第三節'), isFalse);
+
+    await closeToc();
+    expect(find.byType(TocBottomSheet), findsNothing);
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+  });
 }

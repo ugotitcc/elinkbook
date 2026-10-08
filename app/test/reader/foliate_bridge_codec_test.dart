@@ -51,6 +51,16 @@ void main() {
   });
 
   group('parseTableOfContents', () {
+    test('含 tocId 的目錄 JSON：巢狀節點的 tocId（含 0）皆被解析', () {
+      final entries = parseTableOfContents(
+        '[{"title":"單檔範例","locatorJson":"","progression":null,"tocId":0,'
+        '"children":[{"title":"第一節","locatorJson":"","progression":null,'
+        '"tocId":1,"children":[]}]}]',
+      );
+      expect(entries.single.tocId, 0);
+      expect(entries.single.children.single.tocId, 1);
+    });
+
     test('解析扁平（無巢狀子項目）目錄陣列', () {
       const json = '['
           '{"title":"第一章","locatorJson":"{\\"cfi\\":\\"epubcfi(/6/4)\\",\\"index\\":0,\\"fraction\\":0.0}",'
@@ -249,6 +259,43 @@ void main() {
   });
 
   group('parseLocatorChanged', () {
+    test('position 帶 tocItemId：解析為整數，locatorJson 原樣不變（不含 tocItemId）', () {
+      const locator = '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}';
+      final info = parseLocatorChanged([
+        locator,
+        '{"fraction":0.1,"locationIndex":9,"locationTotal":100,'
+            '"visualPageIndex":null,"visualTotalPages":null,"tocItemId":2}',
+      ]);
+      expect(info.tocItemId, 2);
+      expect(info.locatorJson, locator);
+      expect(info.locatorJson, isNot(contains('tocItemId')));
+    });
+
+    test('tocItemId 為 0（第一個目錄項）要保留為 0，不得變成 null', () {
+      final info = parseLocatorChanged([
+        '{"cfi":"epubcfi(/6/4)"}',
+        '{"fraction":0.0,"locationIndex":1,"locationTotal":10,'
+            '"visualPageIndex":null,"visualTotalPages":null,"tocItemId":0}',
+      ]);
+      expect(info.tocItemId, 0);
+    });
+
+    test('tocItemId 缺席或為 null（無目錄／位置在第一個目錄項之前）：為 null，不拋例外', () {
+      final absent = parseLocatorChanged([
+        '{"cfi":"epubcfi(/6/4)"}',
+        '{"fraction":0.1,"locationIndex":9,"locationTotal":100,'
+            '"visualPageIndex":null,"visualTotalPages":null}',
+      ]);
+      final explicitNull = parseLocatorChanged([
+        '{"cfi":"epubcfi(/6/4)"}',
+        '{"fraction":0.1,"locationIndex":9,"locationTotal":100,'
+            '"visualPageIndex":null,"visualTotalPages":null,"tocItemId":null}',
+      ]);
+      expect(absent.tocItemId, isNull);
+      expect(explicitNull.tocItemId, isNull);
+      expect(parseLocatorChanged(const []).tocItemId, isNull);
+    });
+
     test('流式格式：position 帶 locationIndex/locationTotal，'
         'visualPageIndex/visualTotalPages 為 null', () {
       final info = parseLocatorChanged([
