@@ -753,6 +753,10 @@ async function buildTocEntry(item) {
       ? JSON.stringify({ cfi, index, fraction })
       : '',
     progression: fraction,
+    // epic-54 Issue 20：foliate TOCProgress.assignIDs 指派的唯一整數 id
+    //（DFS 前序、從 0 起；0 為合法值，故用 ?? 不用 ||），供 Dart 端與
+    // relocate 回報的 tocItem.id 直接比對。
+    tocId: item.id ?? null,
     children,
   }
 }
@@ -1140,6 +1144,9 @@ async function openBook() {
       // 視覺頁數——這是本 Issue 順帶修正的一個既有頁碼顯示錯誤，不是嚴格
       // 的零行為改變（見 review-issue-10.md Important #2、issues.md
       // Issue 10 驗收標準）。
+      // epic-54 Issue 20：tocItemId 取自 foliate 以 live DOM Range.comparePoint
+      // 算出的目前目錄項（e.detail.tocItem）。放在第 2 參數 position，
+      // 不放第 1 參數 locatorJson（凍結，會持久化並跨裝置同步）。
       const position = view.isFixedLayout && view.renderer
         // FXL/CBZ：view.renderer.page/.pages（fixed-layout.js）是全書
         // 真實視覺頁數，非估計值。
@@ -1149,6 +1156,7 @@ async function openBook() {
             locationTotal: null,
             visualPageIndex: view.renderer.page ?? 0,
             visualTotalPages: view.renderer.pages ?? 0,
+            tocItemId: e.detail.tocItem?.id ?? null,
           }
         // 流式格式：location.current/.total 是 SectionProgress 的位元組
         // 估計刻度（每 1500 bytes 一個刻度），非精確視覺頁數。
@@ -1158,6 +1166,7 @@ async function openBook() {
             locationTotal: location?.total ?? 0,
             visualPageIndex: null,
             visualTotalPages: null,
+            tocItemId: e.detail.tocItem?.id ?? null,
           }
       window.flutter_inappwebview.callHandler(
         'onLocatorChanged',
