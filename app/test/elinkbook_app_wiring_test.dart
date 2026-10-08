@@ -49,6 +49,7 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/screens/library_search_screen.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import 'package:elinkbook/search/search_repository.dart';
 
 import 'screens/reader_screen_stats_harness.dart';
 import 'support/fake_search_repository.dart';
@@ -545,6 +546,59 @@ void _openBookWiringTests() {
       await tester.pumpAndSettle();
 
       _expectReaderWired(tester, deps, isEinkMode: true);
+      await _disposeWiringApp(tester);
+    });
+
+    testWidgets('P3a 書架 → 全庫搜尋 → 點書名結果 → ReaderScreen：整組依賴原樣', (tester) async {
+      final deps = await _pumpWiringApp(
+        tester,
+        searchRepository: FakeSearchRepository(
+          titleAuthorResults: [_wiringBook()],
+        ),
+      );
+      await _openLibraryContentSearch(tester);
+
+      await tester.tap(
+        find.byKey(Key('library_search_title_author_result_$_kWiringBookId')),
+      );
+      await tester.pumpAndSettle();
+
+      _expectReaderWired(tester, deps, isEinkMode: true);
+      await _disposeWiringApp(tester);
+    });
+
+    testWidgets('P3b 書架 → 全庫搜尋 → 點內容片段 → ReaderScreen：整組依賴原樣且帶跳轉目標', (
+      tester,
+    ) async {
+      final deps = await _pumpWiringApp(
+        tester,
+        searchRepository: FakeSearchRepository(
+          contentResults: [
+            BookContentMatches(
+              book: _wiringBook(),
+              matches: const [
+                ContentMatchSnippet(
+                  snippet: '含有守衛關鍵字的句子',
+                  locator: 'epubcfi(/6/2)',
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      await _openLibraryContentSearch(tester);
+
+      await tester.tap(
+        find.byKey(Key('library_search_content_snippet_${_kWiringBookId}_0')),
+      );
+      await tester.pumpAndSettle();
+
+      _expectReaderWired(tester, deps, isEinkMode: true);
+      expect(
+        tester.widget<ReaderScreen>(find.byType(ReaderScreen)).initialJumpTarget,
+        isNotNull,
+        reason: '內容片段點擊須帶跳轉目標，書名結果則不帶（P3a）',
+      );
       await _disposeWiringApp(tester);
     });
   });
