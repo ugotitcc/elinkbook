@@ -29,6 +29,13 @@ class TocEntry implements BookTocItem {
   /// 視為錯誤）。
   final double? progression;
 
+  /// foliate 為目錄項指派的唯一整數 id（`progress.js assignIDs`，DFS 前序、
+  /// 從 0 起）。`main.js buildTocEntry` 輸出；供 [TocNavigator] 與
+  /// `EpubPositionInfo.tocItemId`（foliate 以 live DOM 判定的目前目錄項）
+  /// 直接比對，免除同一 spine 多錨點時依 progression 猜測的不精確
+  /// （epic-54 Issue 20）。舊資料或非 foliate 來源為 `null`。
+  final int? tocId;
+
   @override
   final List<TocEntry> children;
 
@@ -39,6 +46,7 @@ class TocEntry implements BookTocItem {
     required this.title,
     required this.locatorJson,
     this.progression,
+    this.tocId,
     this.children = const [],
   });
 
@@ -51,6 +59,7 @@ class TocEntry implements BookTocItem {
       title: map['title'] as String? ?? '',
       locatorJson: map['locatorJson'] as String? ?? '',
       progression: (map['progression'] as num?)?.toDouble(),
+      tocId: (map['tocId'] as num?)?.toInt(),
       children: rawChildren
           .map((e) => TocEntry.fromWire(e as Map<Object?, Object?>))
           .toList(),

@@ -103,6 +103,8 @@ EpubPositionInfo parseLocatorChanged(List<dynamic> args) {
     locationTotal: (position['locationTotal'] as num?)?.toInt(),
     visualPageIndex: (position['visualPageIndex'] as num?)?.toInt(),
     visualTotalPages: (position['visualTotalPages'] as num?)?.toInt(),
+    // epic-54 Issue 20：foliate 以 live DOM 判定的目前目錄項 id（可為 null）。
+    tocItemId: (position['tocItemId'] as num?)?.toInt(),
   );
 }
 

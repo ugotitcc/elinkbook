@@ -47,6 +47,12 @@ class EpubPositionInfo {
   final int? visualPageIndex;
   final int? visualTotalPages;
 
+  /// foliate `relocate` 事件的 `tocItem.id`：目前位置所屬目錄項的唯一 id
+  /// （live DOM 判定，epic-54 Issue 20）。只供即時 UI（目錄展開／高亮）使用，
+  /// **不屬於** [locatorJson]、不持久化、不跨裝置同步。書無目錄或位置落在
+  /// 第一個目錄項之前時為 `null`。注意 `0` 是合法 id。
+  final int? tocItemId;
+
   const EpubPositionInfo({
     required this.locatorJson,
     this.progression,
@@ -54,6 +60,7 @@ class EpubPositionInfo {
     this.locationTotal,
     this.visualPageIndex,
     this.visualTotalPages,
+    this.tocItemId,
   }) : assert(
           !((locationIndex != null || locationTotal != null) &&
               (visualPageIndex != null || visualTotalPages != null)),
@@ -86,15 +93,17 @@ class EpubPositionInfo {
       other.locationIndex == locationIndex &&
       other.locationTotal == locationTotal &&
       other.visualPageIndex == visualPageIndex &&
-      other.visualTotalPages == visualTotalPages;
+      other.visualTotalPages == visualTotalPages &&
+      other.tocItemId == tocItemId;
 
   @override
   int get hashCode => Object.hash(locatorJson, progression, locationIndex,
-      locationTotal, visualPageIndex, visualTotalPages);
+      locationTotal, visualPageIndex, visualTotalPages, tocItemId);
 
   @override
   String toString() =>
       'EpubPositionInfo(locatorJson: $locatorJson, progression: $progression, '
       'locationIndex: $locationIndex, locationTotal: $locationTotal, '
-      'visualPageIndex: $visualPageIndex, visualTotalPages: $visualTotalPages)';
+      'visualPageIndex: $visualPageIndex, visualTotalPages: $visualTotalPages, '
+      'tocItemId: $tocItemId)';
 }
