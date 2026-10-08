@@ -506,8 +506,8 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 驗證：同基準檔清單 318 全過（算式見計畫附錄 C）；完整 `flutter test` 3698 通過／1 略過／1 失敗，失敗為既存的 `pdf_reader_view_filters_test` bold overlay debouncer 案例（Issue 12 已在乾淨 `main` 確認，與本 Issue 無關，改動範圍未碰 `reader/`）；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js`／`check_integration_keys.js` PASS；殘留 grep（5 個舊型別名，含註解）無輸出。
 - 被刪測試與新恆真行為：見計畫附錄 B（Task 2 刪 6 案＋新增 5 案；Task 3 整檔刪 2 案＋新增 3 案快照測試；Task 4 新增 4 案、無刪除）。測試數算式見附錄 C。
 - Review Focus 對應：1→來源頁開遠端／WiFi／GDrive／OneDrive 的 `same(...)` 欄位對帳 4 案；2→切換主題後三畫面同一新快照、其餘三組 same；3→E-Ink 三處一致＋遠端書庫貫穿、切語言後 State 保留；4→附錄 B；5→缺 `remoteDownloadUrl` 書本仍提示且不呼叫 `createOpdsClient`。
-- 真機 integration（TCL 14〔`3CEF42ECD491687`〕）：`library_screen_test` 3／3、`smoke_test` 1／1、`wifi_transfer_screen_test` 8／8 通過。結果只代表此裝置。真機手動確認（四入口可進入、三頁外觀一致）待 handoff 到可連線真機的設備後補做。
+- 真機 integration（TCL 14〔`3CEF42ECD491687`〕）：`library_screen_test` 3／3、`smoke_test` 1／1、`wifi_transfer_screen_test` 8／8 通過。結果只代表此裝置。真機手動確認（來源頁四入口與下載佇列、主題／E-Ink／語言三頁同步、設定頁雲端帳號與同步入口、書架重新下載與開書、三支 integration）已由使用者於 2026-10-08 完成，回報全數通過（使用者口頭回報，未附日誌；裝置以使用者實測為準）。
 - 與 `issues.md` 第 13 列的兩處落差：(1)「6 個舊 bundle」實際只剩 4 個（Issue 12 已刪 `LibraryReaderFeatureRepositories`、`LibrarySyncDependencies`）；(2)「`buildReaderScreen` 的暫時組裝」Issue 12 已整段刪除，無暫時組裝可移除。合併後回寫 `issues.md`／`docs/epics.md` 時一併更正。
 - 格式雜訊（程式審查 M-1）：`lib/` 內三處與本 Issue 無關的 `dart format` 重排（`settings_scaffold.dart` 三個 Key 折行、`main.dart` 建構子初始化清單、`library_screen.dart` SnackBar 折行）已還原為基線寫法（對 `main` 比對無差異）；測試檔（`library_screen_test`、`sources_home_screen_test`、`settings_scaffold_test` 等）因 codemod 搭配 `dart format` 含大量無行為差異的重排，未逐檔還原，沿用 Issue 12 先例於此註明。
-- 驗證數字的來源（程式審查 M-3）：獨立審查重跑 Task 3 範圍 14 組測試 418 通過、analyze 與守衛腳本 PASS；完整 `flutter test` 3698 與 TCL 14 真機結果為實作者記錄，審查者未重現；真機手動確認尚未做。
+- 驗證數字的來源（程式審查 M-3）：獨立審查重跑 Task 3 範圍 14 組測試 418 通過、analyze 與守衛腳本 PASS；完整 `flutter test` 3698 與 TCL 14 真機結果為實作者記錄，審查者未重現；真機手動確認已由使用者回報全數通過（2026-10-08）。
 - 孤兒 ARB 鍵清理：刪除 `readerSaveAsPresetUnavailableMessage`（Issue 11 M-5）與本次新孤兒 `sourcesHomeCloudNotLinkedSubtitle`、`sourcesHomeRemoteLibraryNotConfiguredSubtitle`（Dart 使用端皆已消失，僅剩 ARB）；`flutter gen-l10n` 同步 3 個產生檔；`test/l10n` 71 全過。
