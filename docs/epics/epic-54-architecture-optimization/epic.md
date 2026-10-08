@@ -539,3 +539,11 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 
 - PR #339（`epic-54-issue-10` → `main`）已合併，合併 commit `fe765e77`。程式審查 0 Critical／1 Important（文件措辭，已修）／3 Minor。全套 `flutter test` 3717 通過／1 略過／1 失敗（`download_queue_controller_test` 整套並行偶發，單跑通過，見上）。
 - Epic 54 剩 Issue 20（EPUB 目錄同一 spine 多錨點，方案 B）待撰寫 Plan；Epic 暫不歸檔。
+
+**2026-10-09 Issue 20 實作完成與真機驗證結果**（分支 `epic-54/issue-20-toc-tocitem-forward`，計畫 `plans/plan-issue-20.md`，方案 B 的使用者原話見該計畫附錄 A）
+
+- **機制**：`main.js buildTocEntry` 輸出 `tocId: item.id ?? null`；`onLocatorChanged` 第 2 參數 `position`（FXL／流式兩分支）帶 `tocItemId: e.detail.tocItem?.id ?? null`。Dart 端 `TocEntry.tocId`／`EpubPositionInfo.tocItemId`／`parseLocatorChanged` 接收；`TocNavigator.findCurrentPath` 新增 `currentTocItemId`，樹中命中即回傳祖先路徑，查無退回 Issue 19 的 spine index 規則。`_currentEpubTocPath()` 一處傳入。第 1 參數 `locatorJson` 與釘定 vendor 檔皆未改動（`git diff` 對 `chapterIndex, fraction` 零命中）。
+- **單元測試**：`toc_navigator_test` 25 案（新增 9 案，含 id 為 0、前章節點、查無 id、缺 tocId 舊資料）；codec／entry／position info 共 85 案。突變：把 id 0 排除 → 1 案失敗；整段停用 id 分支 → 5 案失敗。
+- **真機（TCL 14，Android 15）**：新增單 spine 三錨點 fixture `sample_single_spine_multi_anchor.epub` 與 `epub_toc_test` 第二個 `testWidgets`，`epub_toc_test` +2 通過；`notes_bookmark_test`（+2）、`reader_header_footer_toggle_test`（+4）無回歸。**未對該裝置執行 `pm clear`**（破壞性、未經使用者確認，且測試不依賴乾淨狀態）。
+- **整合測試咬力（如實記錄）**：暫時移除 `currentTocItemId` 傳入後在 TCL 14 重跑，新 `testWidgets` **仍通過**——此 fixture 與裝置上舊規則剛好答對，故整合測試只證明端到端接線（JS 的 id 確實傳到 Dart 且路徑正確、無例外），**不證明精確度改善**；精確度改善由 `toc_navigator_test` 的「progression 偏高仍選第一節」等案證明。
+- **完整 `flutter test`**：3735 通過／1 略過／0 失敗（Issue 21 後首度維持全綠）。
