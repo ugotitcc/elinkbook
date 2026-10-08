@@ -520,3 +520,10 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - `main()` 靜態確認輸出：`git grep -c "SyncCheckpointTrigger(" -- lib/main.dart` → `lib/main.dart:1`；`syncCheckpointTrigger: syncCheckpointTrigger` 2 筆（`:333` 在 `ReaderFeatureDependencies(` 建構內、`:341` 在 `SyncDependencies(` 建構內）；`AppDependencies(` 1 筆（`:360`，三組皆區域變數傳入）。
 - ADR 0037「後果」最後一條已追加 Issue 14 落地說明行。
 - 程式審查補驗（`reviews/review-code-issue-14.md`，0 Critical／0 Important／3 Minor）：獨立重現 M1～M9 全部變異，變紅測試皆涵蓋預期（與上列一致）；完整 `flutter test` 3705 通過／1 略過／1 失敗，失敗為既存的 `pdf_reader_view_filters_test` debouncer 案例（單跑重現，`lib/` 零差異故非本 Issue 造成）。
+
+**2026-10-08 Issue 21 實作（缺陷，測試過期；分支 `epic-54-issue-21`，直接 TDD，不寫 plan）**
+
+- 症狀：`flutter test` 長期有 1 個失敗——`pdf_reader_view_filters_test` 的「同時有多頁需要加粗運算時，各頁互不取消」，`Expected: >= 2 / Actual: 1`。Issue 12 起被記為「既存失敗」，Issue 14 完整測試時再度出現。
+- 診斷：單跑穩定重現（4/4 紅）。二分：`1e20dda6^`（epic-59 之前）綠、`1e20dda6`（`PdfOverlayJobQueue`，`maxConcurrent = 1`）起紅，該提交只新增 `pdf_overlay_job_queue_test.dart`，未同步調整本案例。等待輪數掃描：40／42／44 全紅、46 偶爾綠、48～120 全綠。結論：覆蓋圖計算序列化後第 2 頁較晚完成，測試的「40 輪內完成」時間假設過期；測試要防的「後登記的頁面取消先前頁面」在佇列下仍成立（同頁去重、頁與頁互不取消），非產品缺陷。
+- 修正：只改 `test/reader/pdf_reader_view_filters_test.dart` 該案例——`maxIterations` 40→120（約 2.5 倍餘裕）、測試名稱與 `reason` 改寫為佇列語意（不再談 debouncer）。`lib/` 零差異。
+- 驗證：目標案例連跑 3 次全綠、整檔 16 案全過、`flutter analyze` 乾淨、l10n 守衛 PASS。
