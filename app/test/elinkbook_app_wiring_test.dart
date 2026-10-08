@@ -43,6 +43,15 @@ import 'support/fake_tts_provider.dart';
 import 'package:elinkbook/reader/tts_audio_handler_startup.dart';
 import 'support/fake_reader_feature_dependencies.dart';
 import 'support/fake_sync_dependencies.dart';
+import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/book_group.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/reader/global_reader_prefs.dart';
+import 'package:elinkbook/screens/library_search_screen.dart';
+import 'package:elinkbook/screens/reader_screen.dart';
+
+import 'screens/reader_screen_stats_harness.dart';
+import 'support/fake_search_repository.dart';
 
 /// epic-26-architecture-hardening Issue 7 審查修正（review-issue-7.md
 /// Important #1）：Issue 7 把 `LibraryScreen` 27 個具名參數收斂為 5 個
@@ -401,5 +410,142 @@ void main() {
       same(stateBefore),
       reason: 'IndexedStack 不重建子畫面：切語言只換外觀快照，不重置書架狀態',
     );
+  });
+  _openBookWiringTests();
+}
+
+// ---------------------------------------------------------------------------
+// Issue 14：開書路徑身分守衛的共同起手式。
+// ---------------------------------------------------------------------------
+
+const _kWiringBookId = 'wiring-book';
+
+/// 書架上唯一的一本書。檔案用 `test/fixtures/sample.epub`，讓 `ReaderScreen`
+/// 走假 WebView 平台（見 [registerReaderStatsTestEnvironment]）正常開啟。
+Book _wiringBook() => Book(
+  id: _kWiringBookId,
+  title: '守衛測試書',
+  format: BookFileFormat.epub,
+  filePath: 'test/fixtures/sample.epub',
+  source: BookSource.local,
+  groupName: BookGroup.uncategorized,
+  createTime: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+  lastReadTime: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+);
+
+/// 以完整 `ElinkBookApp` 為起點：容器由 `fakeAppDependencies` 組成，
+/// `readerFeatures` 內的 `libraryRepository` 放一本 [_wiringBook]。
+/// 只傳 `readerFeatures` 給 `fakeAppDependencies`，所以 `sync` 會沿用同一個
+/// `syncCheckpointTrigger`（與 `main()` 的組裝方式一致）。
+Future<AppDependencies> _pumpWiringApp(
+  WidgetTester tester, {
+  FakeSearchRepository? searchRepository,
+  bool isEinkMode = true,
+}) async {
+  // Issue 29 的啟動自動開書預設為 true，會在 pump 後自動推入 ReaderScreen、
+  // 把書架藏到路由後方導致 `book_item_*` 找不到；本守衛驗證的是手動開書路徑，
+  // 故在此明確關閉（比照 `library_screen_test.dart` 共用 fixture 做法）。
+  final deps = fakeAppDependencies(
+    readerFeatures: fakeReaderFeatureDependencies(
+      libraryRepository: FakeLibraryRepository(initialBooks: [_wiringBook()]),
+      searchRepository: searchRepository,
+      prefsManager: FakeReaderPrefsManager(
+        globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+          reading: ReadingDefaults(openLastBookOnLaunch: false),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpWidget(
+    ElinkBookApp(dependencies: deps, initialEinkMode: isEinkMode),
+  );
+  await tester.pumpAndSettle();
+  return deps;
+}
+
+/// 書架 → 全庫搜尋（P2）：展開書架搜尋框、輸入關鍵字、點「搜尋書本內容」入口。
+Future<void> _openLibraryContentSearch(WidgetTester tester) async {
+  if (find.byKey(const Key('library_search_field')).evaluate().isEmpty) {
+    await tester.tap(find.byKey(const Key('library_search_toggle_button')));
+    await tester.pumpAndSettle();
+  }
+  // 關鍵字「守衛」對應 [_wiringBook] 的書名「守衛測試書」；FakeSearchRepository
+  // 不過濾、直接回傳建構時給的結果，所以結果必然包含該書。
+  await tester.enterText(find.byKey(const Key('library_search_field')), '守衛');
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('library_content_search_entry_button')));
+  await tester.pumpAndSettle();
+}
+
+/// 通到 `ReaderScreen` 的每條路徑終點共用的斷言：整組同一實例、
+/// `syncCheckpointTrigger` 與同步組是同一實例、E-Ink 狀態、書本身分。
+void _expectReaderWired(
+  WidgetTester tester,
+  AppDependencies deps, {
+  required bool isEinkMode,
+}) {
+  expect(find.byType(ReaderScreen), findsOneWidget);
+  final reader = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+  expect(reader.dependencies, same(deps.readerFeatures));
+  expect(
+    reader.dependencies.syncCheckpointTrigger,
+    same(deps.sync.syncCheckpointTrigger),
+  );
+  expect(reader.isEinkMode, isEinkMode);
+  expect(reader.bookId, _kWiringBookId);
+}
+
+/// 換掉整棵樹讓 `ReaderScreen` dispose（取消 30 秒開書逾時計時器）。
+Future<void> _disposeWiringApp(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump();
+}
+
+void _openBookWiringTests() {
+  group('Issue 14：開書路徑身分守衛（容器 → 每條開書路徑）', () {
+    registerReaderStatsTestEnvironment();
+
+    testWidgets('P1 書架點書 → ReaderScreen：整組依賴、同步 trigger、E-Ink 皆原樣', (
+      tester,
+    ) async {
+      final deps = await _pumpWiringApp(tester);
+
+      await tester.tap(find.byKey(Key('book_item_$_kWiringBookId')));
+      await tester.pumpAndSettle();
+
+      _expectReaderWired(tester, deps, isEinkMode: true);
+      await _disposeWiringApp(tester);
+    });
+
+    testWidgets('P2 書架 → LibrarySearchScreen：整組依賴與 E-Ink 原樣', (tester) async {
+      final deps = await _pumpWiringApp(tester);
+
+      await _openLibraryContentSearch(tester);
+
+      expect(find.byType(LibrarySearchScreen), findsOneWidget);
+      final search = tester.widget<LibrarySearchScreen>(
+        find.byType(LibrarySearchScreen),
+      );
+      expect(search.dependencies, same(deps.readerFeatures));
+      expect(search.isEinkMode, isTrue);
+      await _disposeWiringApp(tester);
+    });
+
+    testWidgets('切換 E-Ink 後再開書：ReaderScreen 看到新的 E-Ink 值，依賴組仍是容器原實例', (
+      tester,
+    ) async {
+      final deps = await _pumpWiringApp(tester, isEinkMode: false);
+      tester
+          .widget<LibraryScreen>(find.byType(LibraryScreen))
+          .appearance
+          .onEinkModeChanged(true);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(Key('book_item_$_kWiringBookId')));
+      await tester.pumpAndSettle();
+
+      _expectReaderWired(tester, deps, isEinkMode: true);
+      await _disposeWiringApp(tester);
+    });
   });
 }
