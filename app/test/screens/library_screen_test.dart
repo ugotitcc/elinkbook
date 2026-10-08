@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' show sqrt;
 import '../support/fake_reader_feature_dependencies.dart';
+import '../support/fake_appearance_dependencies.dart';
 import '../support/fake_source_dependencies.dart';
 
 import 'package:flutter/material.dart';
@@ -17,7 +18,6 @@ import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_paging.dart';
 import 'package:elinkbook/screens/library_screen.dart';
-import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/library_search_screen.dart';
 
 import '../support/fake_full_text_search_settings_repository.dart';
@@ -111,6 +111,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(),
@@ -133,6 +134,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(throwOnListBooks: true),
@@ -152,6 +154,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -193,6 +196,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -224,6 +228,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -252,6 +257,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -301,6 +307,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: books),
@@ -342,6 +349,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: books),
@@ -378,6 +386,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: books),
@@ -416,6 +425,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -453,6 +463,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: books),
@@ -509,6 +520,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -539,6 +551,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -571,6 +584,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -607,6 +621,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -683,6 +698,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -719,6 +735,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -773,6 +790,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -810,6 +828,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -849,6 +868,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         refreshSignal: refreshSignal,
         dependencies: fakeReaderFeatureDependencies(
@@ -903,6 +923,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -930,6 +951,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -960,6 +982,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -985,6 +1008,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         key: const Key('library_screen_after_restart'),
         dependencies: fakeReaderFeatureDependencies(
@@ -1026,6 +1050,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(
@@ -1070,6 +1095,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1089,6 +1115,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         key: const Key('library_screen_after_restart'),
         dependencies: fakeReaderFeatureDependencies(
@@ -1125,6 +1152,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1189,6 +1217,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1217,6 +1246,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1261,6 +1291,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1308,6 +1339,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1351,6 +1383,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1383,6 +1416,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1426,6 +1460,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -1454,6 +1489,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(
@@ -1488,6 +1524,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -1525,6 +1562,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -1564,6 +1602,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1606,6 +1645,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1651,6 +1691,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1690,6 +1731,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1728,6 +1770,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1773,6 +1816,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1808,6 +1852,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1844,6 +1889,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1896,6 +1942,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1933,6 +1980,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -1996,6 +2044,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -2035,6 +2084,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -2082,6 +2132,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -2151,6 +2202,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -2191,6 +2243,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -2230,6 +2283,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -2276,6 +2330,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -2319,6 +2374,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -2355,6 +2411,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -2393,6 +2450,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: repository,
@@ -2443,6 +2501,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -2574,6 +2633,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -2661,6 +2721,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -2701,6 +2762,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -2730,6 +2792,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -2795,6 +2858,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -2842,6 +2906,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -2898,6 +2963,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -2942,6 +3008,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -2998,6 +3065,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -3028,6 +3096,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -3065,6 +3134,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -3106,6 +3176,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -3138,6 +3209,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -3182,6 +3254,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -3218,6 +3291,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -3261,6 +3335,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -3310,6 +3385,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -3361,6 +3437,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -3411,6 +3488,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(
@@ -3449,6 +3527,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -3474,6 +3553,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: const []),
@@ -3514,6 +3594,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -3597,6 +3678,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -3640,6 +3722,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -3695,6 +3778,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: repository,
@@ -3754,6 +3838,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -3825,6 +3910,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(
             remoteServerRepository: FakeRemoteServerRepository(
               initialServers: [server],
@@ -3861,6 +3947,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(
             remoteServerRepository: FakeRemoteServerRepository(
               initialServers: [server],
@@ -3891,6 +3978,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(
             remoteServerRepository: FakeRemoteServerRepository(
               initialServers: [server],
@@ -3942,6 +4030,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(
             remoteServerRepository: FakeRemoteServerRepository(
               initialServers: [server],
@@ -3990,6 +4079,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(
             remoteServerRepository: FakeRemoteServerRepository(
               initialServers: [server],
@@ -4047,6 +4137,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(
             remoteServerRepository: FakeRemoteServerRepository(
               initialServers: [server],
@@ -4080,6 +4171,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(),
@@ -4110,7 +4202,7 @@ void main() {
   });
 
   testWidgets(
-    'LibraryScreen 點開一本書後，ReaderScreen 收到的 isEinkMode 與 themeDependencies.isEinkMode 一致',
+    'LibraryScreen 點開一本書後，ReaderScreen 收到的 isEinkMode 與 appearance.isEinkMode 一致',
     (tester) async {
       final book = _testBook(
         id: '1',
@@ -4123,7 +4215,7 @@ void main() {
         tester,
         LibraryScreen(
           sources: fakeSourceDependencies(),
-          themeDependencies: LibraryThemeDependencies(isEinkMode: true),
+          appearance: fakeAppearanceDependencies(isEinkMode: true),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
             bookImportService: FakeBookImportService(),
@@ -4143,7 +4235,7 @@ void main() {
         readerScreen.isEinkMode,
         isTrue,
         reason:
-            'LibraryScreen._openBook() 未把 themeDependencies.isEinkMode '
+            'LibraryScreen._openBook() 未把 appearance.isEinkMode '
             '貫穿給 ReaderScreen，導致朗讀高亮在 E-Ink 模式下仍使用一般的'
             '半透明色，在低對比度螢幕上難以辨識。',
       );
@@ -4157,6 +4249,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           onNavigateToSource: () => sourceTapped++,
           dependencies: fakeReaderFeatureDependencies(
@@ -4182,6 +4275,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         onNavigateToSource: () => sourceTapped++,
         dependencies: fakeReaderFeatureDependencies(
@@ -4212,6 +4306,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: books),
@@ -4267,6 +4362,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: books),
@@ -4318,6 +4414,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: books),
@@ -4370,6 +4467,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: books),
@@ -4411,6 +4509,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: groupBooks),
@@ -4457,6 +4556,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: books),
@@ -4503,6 +4603,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: books),
@@ -4551,6 +4652,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(),
@@ -4579,6 +4681,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(
@@ -4618,6 +4721,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(
@@ -4670,6 +4774,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -4706,6 +4811,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -4728,6 +4834,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(
@@ -4757,6 +4864,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(
@@ -4803,6 +4911,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(
@@ -4845,6 +4954,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -4867,6 +4977,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -4890,6 +5001,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -4915,6 +5027,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -4957,6 +5070,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -4986,6 +5100,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -5011,6 +5126,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -5047,6 +5163,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -5097,6 +5214,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -5139,6 +5257,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -5182,6 +5301,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -5222,6 +5342,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -5275,6 +5396,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -5325,6 +5447,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -5376,6 +5499,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(
@@ -5410,6 +5534,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -5439,6 +5564,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(),
@@ -5461,6 +5587,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(),
@@ -5479,6 +5606,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(),
@@ -5503,6 +5631,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: books),
@@ -5528,6 +5657,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),
@@ -5561,6 +5691,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(initialBooks: [book]),

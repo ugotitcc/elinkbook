@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../library/models/library_enums.dart';
 import '../remote/remote_catalog_dependencies.dart';
+import 'appearance_dependencies.dart';
 import 'cloud_browser_screen.dart';
 import 'reader_feature_dependencies.dart';
 import 'remote_server_list_screen.dart';
@@ -23,7 +24,9 @@ class SourcesHomeScreen extends StatelessWidget {
   /// 來源依賴組（ADR 0037）：雲端、遠端書庫、WiFi 傳書與下載佇列取自這一組，
   /// 全部 non-null——正式環境恆提供，各入口恆啟用。
   final SourceDependencies sources;
-  final bool isEinkMode;
+
+  /// 外觀快照（ADR 0037）：E-Ink 修飾子等由上層每次 build 現組往下傳。
+  final AppearanceDependencies appearance;
   final VoidCallback? onNavigateToLibrary;
   final VoidCallback? onNavigateToSettings;
 
@@ -31,7 +34,7 @@ class SourcesHomeScreen extends StatelessWidget {
     super.key,
     required this.readerFeatures,
     required this.sources,
-    this.isEinkMode = false,
+    required this.appearance,
     this.onNavigateToLibrary,
     this.onNavigateToSettings,
   });
@@ -103,7 +106,7 @@ class SourcesHomeScreen extends StatelessWidget {
             createOpdsClient: sources.createOpdsClient,
           ),
           importService: readerFeatures.bookImportService,
-          isEinkMode: isEinkMode,
+          isEinkMode: appearance.isEinkMode,
           downloadQueueController: sources.downloadQueueController,
         ),
       ),

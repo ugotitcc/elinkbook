@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -6,8 +7,10 @@ import 'package:elinkbook/cloud_import/onedrive_oauth_client.dart';
 import 'package:elinkbook/main.dart';
 import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/remote/opds_client.dart';
+import 'package:elinkbook/l10n/app_locale.dart';
 import 'package:elinkbook/screens/adaptive_shell_scaffold.dart';
 import 'package:elinkbook/screens/library_screen.dart';
+import 'package:elinkbook/screens/remote_server_list_screen.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
 import 'package:elinkbook/screens/source_dependencies.dart';
 import 'package:elinkbook/screens/sources_home_screen.dart';
@@ -222,10 +225,10 @@ void main() {
       same(downloadQueueController),
     );
 
-    expect(libraryScreen.themeDependencies.currentTheme, AppTheme.dark);
-    expect(libraryScreen.themeDependencies.isEinkMode, isTrue);
-    expect(libraryScreen.themeDependencies.onThemeChanged, isNotNull);
-    expect(libraryScreen.themeDependencies.onEinkModeChanged, isNotNull);
+    expect(libraryScreen.appearance.currentTheme, AppTheme.dark);
+    expect(libraryScreen.appearance.isEinkMode, isTrue);
+    expect(libraryScreen.appearance.onThemeChanged, isNotNull);
+    expect(libraryScreen.appearance.onEinkModeChanged, isNotNull);
   });
 
   testWidgets('ElinkBookApp 把同一個閱讀器組與同步組原樣傳到外殼、書架與設定', (tester) async {
@@ -296,18 +299,145 @@ void main() {
     final settingsBefore = tester.widget<SettingsScaffold>(
       find.byType(SettingsScaffold, skipOffstage: false),
     );
-    settingsBefore.onThemeChanged!(AppTheme.dark);
+    settingsBefore.appearance.onThemeChanged(AppTheme.dark);
     await tester.pumpAndSettle();
 
     final libraryScreen = tester.widget<LibraryScreen>(
       find.byType(LibraryScreen),
     );
-    expect(libraryScreen.themeDependencies.currentTheme, AppTheme.dark);
+    expect(libraryScreen.appearance.currentTheme, AppTheme.dark);
     expect(libraryScreen.dependencies, same(readerFeatures));
     final settingsAfter = tester.widget<SettingsScaffold>(
       find.byType(SettingsScaffold, skipOffstage: false),
     );
     expect(settingsAfter.readerFeatures, same(readerFeatures));
     expect(settingsAfter.sync, same(sync));
+  });
+
+  testWidgets('切換主題後，三個畫面看到同一份新的外觀快照，其餘三組仍是原實例', (tester) async {
+    final rf = fakeReaderFeatureDependencies(
+      libraryRepository: FakeLibraryRepository(),
+      bookImportService: FakeBookImportService(),
+      prefsManager: FakeReaderPrefsManager(),
+    );
+    final sync = fakeSyncDependencies();
+    final sources = fakeSourceDependencies();
+
+    await tester.pumpWidget(
+      ElinkBookApp(readerFeatures: rf, sync: sync, sources: sources),
+    );
+    await tester.pumpAndSettle();
+
+    final before = tester
+        .widget<LibraryScreen>(find.byType(LibraryScreen))
+        .appearance;
+
+    // 以 theme_test.dart 既有手法點選深色主題圓點，觸發 _ElinkBookAppState.setState。
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_theme_dot_dark')));
+    await tester.pumpAndSettle();
+
+    final library = tester.widget<LibraryScreen>(
+      find.byType(LibraryScreen, skipOffstage: false),
+    );
+    final sourcesHome = tester.widget<SourcesHomeScreen>(
+      find.byType(SourcesHomeScreen, skipOffstage: false),
+    );
+    final settings = tester.widget<SettingsScaffold>(
+      find.byType(SettingsScaffold, skipOffstage: false),
+    );
+    expect(library.appearance, isNot(same(before)));
+    expect(sourcesHome.appearance, same(library.appearance));
+    expect(settings.appearance, same(library.appearance));
+    expect(library.appearance.currentTheme, AppTheme.dark);
+    expect(library.dependencies, same(rf));
+    expect(library.sources, same(sources));
+    expect(settings.sync, same(sync));
+  });
+
+  testWidgets('開啟 E-Ink 後，書架、來源頁、設定頁都拿到 isEinkMode == true', (tester) async {
+    final rf = fakeReaderFeatureDependencies(
+      libraryRepository: FakeLibraryRepository(),
+      bookImportService: FakeBookImportService(),
+      prefsManager: FakeReaderPrefsManager(),
+    );
+    final sync = fakeSyncDependencies();
+    final sources = fakeSourceDependencies();
+
+    await tester.pumpWidget(
+      ElinkBookApp(readerFeatures: rf, sync: sync, sources: sources),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_eink_mode_switch')));
+    await tester.pumpAndSettle();
+
+    final library = tester.widget<LibraryScreen>(
+      find.byType(LibraryScreen, skipOffstage: false),
+    );
+    final sourcesHome = tester.widget<SourcesHomeScreen>(
+      find.byType(SourcesHomeScreen, skipOffstage: false),
+    );
+    final settings = tester.widget<SettingsScaffold>(
+      find.byType(SettingsScaffold, skipOffstage: false),
+    );
+    expect(library.appearance.isEinkMode, isTrue);
+    expect(sourcesHome.appearance.isEinkMode, isTrue);
+    expect(settings.appearance.isEinkMode, isTrue);
+
+    // 從來源頁開遠端書庫，isEinkMode 貫穿到底層畫面。
+    await tester.tap(find.byKey(const Key('settings_source_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sources_remote_library_tile')));
+    await tester.pumpAndSettle();
+
+    final remoteList = tester.widget<RemoteServerListScreen>(
+      find.byType(RemoteServerListScreen),
+    );
+    expect(remoteList.isEinkMode, isTrue);
+  });
+
+  testWidgets('切換介面語言後，AdaptiveShellScaffold 子畫面 State 保留（書架捲動／搜尋狀態不重置）', (
+    tester,
+  ) async {
+    final rf = fakeReaderFeatureDependencies(
+      libraryRepository: FakeLibraryRepository(),
+      bookImportService: FakeBookImportService(),
+      prefsManager: FakeReaderPrefsManager(),
+    );
+    final sync = fakeSyncDependencies();
+    final sources = fakeSourceDependencies();
+
+    await tester.pumpWidget(
+      ElinkBookApp(readerFeatures: rf, sync: sync, sources: sources),
+    );
+    await tester.pumpAndSettle();
+
+    final stateBefore = tester.state(find.byType(LibraryScreen));
+    final appearanceBefore = tester
+        .widget<LibraryScreen>(find.byType(LibraryScreen))
+        .appearance;
+
+    // 沿用 elinkbook_app_locale_test.dart 既有切語言手法。
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_language_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_language_option_en')));
+    await tester.pumpAndSettle();
+
+    final library = tester.widget<LibraryScreen>(
+      find.byType(LibraryScreen, skipOffstage: false),
+    );
+    expect(library.appearance.currentLocaleOverride, AppLocale.en);
+    expect(library.appearance, isNot(same(appearanceBefore)));
+    expect(
+      tester.state(find.byType(LibraryScreen, skipOffstage: false)),
+      same(stateBefore),
+      reason: 'IndexedStack 不重建子畫面：切語言只換外觀快照，不重置書架狀態',
+    );
   });
 }

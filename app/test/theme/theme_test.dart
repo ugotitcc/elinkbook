@@ -10,6 +10,7 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 
 import '../support/fake_book_import_service.dart';
+import '../support/fake_appearance_dependencies.dart';
 import '../support/fake_source_dependencies.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
@@ -133,9 +134,11 @@ void main() {
         tester,
         SettingsScaffold(
           sources: fakeSourceDependencies(),
-          currentTheme: AppTheme.light,
-          isEinkMode: false,
-          onThemeChanged: (theme) => receivedTheme = theme,
+          appearance: fakeAppearanceDependencies(
+            currentTheme: AppTheme.light,
+            isEinkMode: false,
+            onThemeChanged: (theme) => receivedTheme = theme,
+          ),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: prefsManager,
           ),
@@ -163,9 +166,11 @@ void main() {
         tester,
         SettingsScaffold(
           sources: fakeSourceDependencies(),
-          currentTheme: AppTheme.light,
-          isEinkMode: false,
-          onEinkModeChanged: (enabled) => receivedEinkMode = enabled,
+          appearance: fakeAppearanceDependencies(
+            currentTheme: AppTheme.light,
+            isEinkMode: false,
+            onEinkModeChanged: (enabled) => receivedEinkMode = enabled,
+          ),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: prefsManager,
           ),

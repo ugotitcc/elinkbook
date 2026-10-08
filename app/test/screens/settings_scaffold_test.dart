@@ -21,6 +21,7 @@ import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/search/full_text_search_settings_repository.dart';
 import '../support/fake_cloud_account_repository.dart';
+import '../support/fake_appearance_dependencies.dart';
 import '../support/fake_source_dependencies.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/pump_localized_widget.dart';
@@ -70,6 +71,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -103,8 +105,10 @@ void main() {
       tester,
       SettingsScaffold(
         sources: fakeSourceDependencies(),
-        currentTheme: AppTheme.light,
-        onThemeChanged: (theme) => receivedTheme = theme,
+        appearance: fakeAppearanceDependencies(
+          currentTheme: AppTheme.light,
+          onThemeChanged: (theme) => receivedTheme = theme,
+        ),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
         ),
@@ -124,9 +128,11 @@ void main() {
       tester,
       SettingsScaffold(
         sources: fakeSourceDependencies(),
-        currentTheme: AppTheme.light,
-        isEinkMode: true,
-        onThemeChanged: (theme) => receivedTheme = theme,
+        appearance: fakeAppearanceDependencies(
+          currentTheme: AppTheme.light,
+          isEinkMode: true,
+          onThemeChanged: (theme) => receivedTheme = theme,
+        ),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
         ),
@@ -157,6 +163,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -180,6 +187,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -198,6 +206,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -217,6 +226,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -246,6 +256,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -279,6 +290,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -325,6 +337,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          appearance: fakeAppearanceDependencies(),
           sources: sources,
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
@@ -372,6 +385,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
@@ -408,6 +422,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(
@@ -447,6 +462,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -482,6 +498,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: prefsManager,
@@ -514,9 +531,11 @@ void main() {
       tester,
       SettingsScaffold(
         sources: fakeSourceDependencies(),
-        currentTheme: AppTheme.light,
-        isEinkMode: false,
-        onEinkModeChanged: (val) => receivedEink = val,
+        appearance: fakeAppearanceDependencies(
+          currentTheme: AppTheme.light,
+          isEinkMode: false,
+          onEinkModeChanged: (val) => receivedEink = val,
+        ),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
         ),
@@ -539,7 +558,7 @@ void main() {
       tester,
       SettingsScaffold(
         sources: fakeSourceDependencies(),
-        currentTheme: AppTheme.dark,
+        appearance: fakeAppearanceDependencies(currentTheme: AppTheme.dark),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
         ),
@@ -598,8 +617,10 @@ void main() {
       tester,
       SettingsScaffold(
         sources: fakeSourceDependencies(),
-        currentTheme: AppTheme.light,
-        isEinkMode: true,
+        appearance: fakeAppearanceDependencies(
+          currentTheme: AppTheme.light,
+          isEinkMode: true,
+        ),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
         ),
@@ -668,8 +689,10 @@ void main() {
       tester,
       SettingsScaffold(
         sources: fakeSourceDependencies(),
-        currentTheme: AppTheme.sepia,
-        isEinkMode: true,
+        appearance: fakeAppearanceDependencies(
+          currentTheme: AppTheme.sepia,
+          isEinkMode: true,
+        ),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
         ),
@@ -696,9 +719,11 @@ void main() {
         tester,
         SettingsScaffold(
           sources: fakeSourceDependencies(),
-          currentTheme: AppTheme.light,
-          isEinkMode: false,
-          onThemeChanged: (theme) => receivedTheme = theme,
+          appearance: fakeAppearanceDependencies(
+            currentTheme: AppTheme.light,
+            isEinkMode: false,
+            onThemeChanged: (theme) => receivedTheme = theme,
+          ),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
           ),
@@ -730,8 +755,10 @@ void main() {
       tester,
       SettingsScaffold(
         sources: fakeSourceDependencies(),
-        currentTheme: AppTheme.light,
-        isEinkMode: false,
+        appearance: fakeAppearanceDependencies(
+          currentTheme: AppTheme.light,
+          isEinkMode: false,
+        ),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
         ),
@@ -765,6 +792,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -813,6 +841,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -861,6 +890,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         onNavigateToLibrary: () => libraryTapped++,
         onNavigateToSource: () => sourceTapped++,
@@ -890,6 +920,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -910,6 +941,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -938,6 +970,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
@@ -977,6 +1010,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
@@ -1023,6 +1057,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
@@ -1066,6 +1101,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
@@ -1103,6 +1139,7 @@ void main() {
         await pumpLocalizedWidget(
           tester,
           SettingsScaffold(
+            appearance: fakeAppearanceDependencies(),
             sources: fakeSourceDependencies(),
             readerFeatures: fakeReaderFeatureDependencies(
               prefsManager: FakeReaderPrefsManager(),
@@ -1132,6 +1169,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
@@ -1161,6 +1199,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
@@ -1200,6 +1239,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
@@ -1225,6 +1265,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
@@ -1254,7 +1295,9 @@ void main() {
         tester,
         SettingsScaffold(
           sources: fakeSourceDependencies(),
-          currentLocaleOverride: AppLocale.zhCN,
+          appearance: fakeAppearanceDependencies(
+            currentLocaleOverride: AppLocale.zhCN,
+          ),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
           ),
@@ -1277,6 +1320,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
@@ -1293,7 +1337,9 @@ void main() {
         tester,
         SettingsScaffold(
           sources: fakeSourceDependencies(),
-          currentLocaleOverride: AppLocale.zhTW,
+          appearance: fakeAppearanceDependencies(
+            currentLocaleOverride: AppLocale.zhTW,
+          ),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
           ),
@@ -1333,7 +1379,9 @@ void main() {
         tester,
         SettingsScaffold(
           sources: fakeSourceDependencies(),
-          currentLocaleOverride: AppLocale.en,
+          appearance: fakeAppearanceDependencies(
+            currentLocaleOverride: AppLocale.en,
+          ),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
           ),
@@ -1378,6 +1426,7 @@ void main() {
         await pumpLocalizedWidget(
           tester,
           SettingsScaffold(
+            appearance: fakeAppearanceDependencies(),
             sources: fakeSourceDependencies(),
             readerFeatures: fakeReaderFeatureDependencies(
               prefsManager: FakeReaderPrefsManager(),
@@ -1405,11 +1454,13 @@ void main() {
         tester,
         SettingsScaffold(
           sources: fakeSourceDependencies(),
-          currentLocaleOverride: AppLocale.en,
-          onLocaleChanged: (locale) {
-            receivedCalled = true;
-            received = locale;
-          },
+          appearance: fakeAppearanceDependencies(
+            currentLocaleOverride: AppLocale.en,
+            onLocaleChanged: (locale) {
+              receivedCalled = true;
+              received = locale;
+            },
+          ),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
           ),
@@ -1438,11 +1489,13 @@ void main() {
         tester,
         SettingsScaffold(
           sources: fakeSourceDependencies(),
-          currentLocaleOverride: AppLocale.en,
-          onLocaleChanged: (locale) {
-            receivedCalled = true;
-            received = locale;
-          },
+          appearance: fakeAppearanceDependencies(
+            currentLocaleOverride: AppLocale.en,
+            onLocaleChanged: (locale) {
+              receivedCalled = true;
+              received = locale;
+            },
+          ),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
           ),
@@ -1469,7 +1522,9 @@ void main() {
           tester,
           SettingsScaffold(
             sources: fakeSourceDependencies(),
-            onLocaleChanged: (locale) => received = locale,
+            appearance: fakeAppearanceDependencies(
+              onLocaleChanged: (locale) => received = locale,
+            ),
             readerFeatures: fakeReaderFeatureDependencies(
               prefsManager: FakeReaderPrefsManager(),
             ),
@@ -1497,6 +1552,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: FakeReaderPrefsManager(),
@@ -1525,6 +1581,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -1557,8 +1614,10 @@ void main() {
       tester,
       SettingsScaffold(
         sources: fakeSourceDependencies(),
-        isEinkMode: true,
-        currentTheme: AppTheme.dark,
+        appearance: fakeAppearanceDependencies(
+          isEinkMode: true,
+          currentTheme: AppTheme.dark,
+        ),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
         ),
@@ -1582,6 +1641,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),

@@ -14,6 +14,7 @@ import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
+import '../test/support/fake_appearance_dependencies.dart';
 import '../test/support/fake_source_dependencies.dart';
 import '../test/support/pump_localized_widget.dart';
 
@@ -107,6 +108,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: repository,
@@ -213,6 +215,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         dependencies: fakeReaderFeatureDependencies(
           libraryRepository: repository,
@@ -311,6 +314,7 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
           sources: fakeSourceDependencies(),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: repository,

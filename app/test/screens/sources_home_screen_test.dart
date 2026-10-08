@@ -15,6 +15,7 @@ import 'package:elinkbook/screens/sources_home_screen.dart';
 import 'package:elinkbook/screens/wifi_transfer_screen.dart';
 
 import '../support/fake_wakelock_plus_platform.dart';
+import '../support/fake_appearance_dependencies.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
@@ -74,6 +75,7 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
+          appearance: fakeAppearanceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             bookImportService: importService,
           ),
@@ -106,6 +108,7 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
+          appearance: fakeAppearanceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             bookImportService: importService,
           ),
@@ -133,6 +136,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SourcesHomeScreen(
+        appearance: fakeAppearanceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           bookImportService: FakeBookImportService(),
         ),
@@ -158,6 +162,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SourcesHomeScreen(
+        appearance: fakeAppearanceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           bookImportService: FakeBookImportService(),
         ),
@@ -185,6 +190,7 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
+          appearance: fakeAppearanceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             bookImportService: FakeBookImportService(),
           ),
@@ -217,6 +223,7 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
+          appearance: fakeAppearanceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(),
           sources: fakeSourceDependencies(),
           onNavigateToLibrary: () => libraryTapped++,
@@ -244,6 +251,7 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: SourcesHomeScreen(
+            appearance: fakeAppearanceDependencies(),
             readerFeatures: fakeReaderFeatureDependencies(),
             sources: fakeSourceDependencies(
               downloadQueueController: controller,
@@ -267,6 +275,7 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: SourcesHomeScreen(
+            appearance: fakeAppearanceDependencies(),
             readerFeatures: fakeReaderFeatureDependencies(),
             sources: fakeSourceDependencies(
               downloadQueueController: controller,
@@ -313,6 +322,7 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
+          appearance: fakeAppearanceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(),
             bookImportService: FakeBookImportService(),
@@ -340,6 +350,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SourcesHomeScreen(
+        appearance: fakeAppearanceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(),
         sources: sources,
       ),
@@ -375,7 +386,11 @@ void main() {
       final readerFeatures = fakeReaderFeatureDependencies();
       await pumpLocalizedWidget(
         tester,
-        SourcesHomeScreen(readerFeatures: readerFeatures, sources: sources),
+        SourcesHomeScreen(
+          readerFeatures: readerFeatures,
+          sources: sources,
+          appearance: fakeAppearanceDependencies(),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -402,7 +417,11 @@ void main() {
       final readerFeatures = fakeReaderFeatureDependencies();
       await pumpLocalizedWidget(
         tester,
-        SourcesHomeScreen(readerFeatures: readerFeatures, sources: sources),
+        SourcesHomeScreen(
+          readerFeatures: readerFeatures,
+          sources: sources,
+          appearance: fakeAppearanceDependencies(),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -434,7 +453,11 @@ void main() {
       final readerFeatures = fakeReaderFeatureDependencies();
       await pumpLocalizedWidget(
         tester,
-        SourcesHomeScreen(readerFeatures: readerFeatures, sources: sources),
+        SourcesHomeScreen(
+          readerFeatures: readerFeatures,
+          sources: sources,
+          appearance: fakeAppearanceDependencies(),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -466,6 +489,7 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: SourcesHomeScreen(
+          appearance: fakeAppearanceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(),
           sources: fakeSourceDependencies(),
         ),

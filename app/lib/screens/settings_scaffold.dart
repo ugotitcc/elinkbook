@@ -7,6 +7,7 @@ import '../search/full_text_search_toggles_controller.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_theme_data.dart';
 import 'about_screen.dart';
+import 'appearance_dependencies.dart';
 import 'cloud_account_settings_screen.dart';
 import 'font_management_screen.dart';
 import 'full_text_search_confirm_dialog.dart';
@@ -38,16 +39,10 @@ class SettingsScaffold extends StatefulWidget {
 
   /// 同步依賴組（ADR 0037）：「同步」入口開啟 `SyncSettingsScreen` 時取用。
   final SyncDependencies sync;
-  final AppTheme currentTheme;
-  final bool isEinkMode;
-  final ValueChanged<AppTheme>? onThemeChanged;
-  final ValueChanged<bool>? onEinkModeChanged;
 
-  /// 介面語言（FR-49，epic-45-interface-i18n Issue 1）。`null` 代表跟隨
-  /// 系統，比照 `spec.md` §4 `LibraryLocaleDependencies` 的 nullable 儲存
-  /// 語意。
-  final AppLocale? currentLocaleOverride;
-  final ValueChanged<AppLocale?>? onLocaleChanged;
+  /// 外觀快照（ADR 0037）：主題、E-Ink 與介面語言，加上三個變更 callback，
+  /// 全部 non-null，由上層每次 build 現組往下傳。
+  final AppearanceDependencies appearance;
 
   /// 來源依賴組（ADR 0037）：「雲端帳號」入口取其中的帳號 repository 與
   /// Google Drive／OneDrive OAuth client，全部 non-null，入口恆可點。
@@ -60,12 +55,7 @@ class SettingsScaffold extends StatefulWidget {
     required this.readerFeatures,
     required this.sync,
     required this.sources,
-    this.currentTheme = AppTheme.light,
-    this.isEinkMode = false,
-    this.onThemeChanged,
-    this.onEinkModeChanged,
-    this.currentLocaleOverride,
-    this.onLocaleChanged,
+    required this.appearance,
     this.onNavigateToLibrary,
     this.onNavigateToSource,
   });
@@ -151,7 +141,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
       final confirmed = await showFullTextSearchEnableConfirmDialog(
         context,
         category: category,
-        isEinkMode: widget.isEinkMode,
+        isEinkMode: widget.appearance.isEinkMode,
       );
       if (!confirmed) return;
     }
@@ -187,7 +177,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
           _SettingsCard(
             child: ListTile(
               title: Text(l10n.settingsThemeLabel),
-              subtitle: widget.isEinkMode
+              subtitle: widget.appearance.isEinkMode
                   ? Text(
                       l10n.settingsThemeLockedHint,
                       key: const Key('settings_theme_locked_hint'),
@@ -229,8 +219,8 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
               key: const Key('settings_eink_mode_switch'),
               title: Text(l10n.settingsEinkModeLabel),
               subtitle: Text(l10n.settingsEinkModeSubtitle),
-              value: widget.isEinkMode,
-              onChanged: widget.onEinkModeChanged,
+              value: widget.appearance.isEinkMode,
+              onChanged: widget.appearance.onEinkModeChanged,
             ),
           ),
           _SettingsCard(
@@ -295,7 +285,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                     builder: (context) => TtsDefaultsScreen(
                       prefsManager: widget.readerFeatures.prefsManager,
                       ttsProvider: widget.readerFeatures.ttsProvider,
-                      isEinkMode: widget.isEinkMode,
+                      isEinkMode: widget.appearance.isEinkMode,
                     ),
                   ),
                 );
@@ -480,20 +470,20 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
   Widget _buildThemeDot(BuildContext context, AppTheme theme, String key) {
     final l10n = AppLocalizations.of(context)!;
     final previewTheme = resolveThemeData(theme: theme, isEinkMode: false);
-    final locked = widget.isEinkMode;
-    final isCurrentTheme = widget.currentTheme == theme;
+    final locked = widget.appearance.isEinkMode;
+    final isCurrentTheme = widget.appearance.currentTheme == theme;
     final isSelected = isCurrentTheme && !locked;
     return Semantics(
       label: locked
           ? l10n.settingsThemeDotLockedSemanticsLabel(
               _themeLabel(theme, l10n),
-              _themeLabel(widget.currentTheme, l10n),
+              _themeLabel(widget.appearance.currentTheme, l10n),
             )
           : l10n.settingsThemeDotSemanticsLabel(_themeLabel(theme, l10n)),
       button: !locked,
       child: GestureDetector(
         key: Key(key),
-        onTap: locked ? null : () => widget.onThemeChanged?.call(theme),
+        onTap: locked ? null : () => widget.appearance.onThemeChanged(theme),
         child: Container(
           width: 24,
           height: 24,
@@ -530,7 +520,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
   };
 
   Widget _buildLanguageSubtitle(BuildContext context, AppLocalizations l10n) {
-    final override = widget.currentLocaleOverride;
+    final override = widget.appearance.currentLocaleOverride;
     if (override != null) {
       return Text(_languageLabel(override, l10n));
     }
@@ -555,13 +545,13 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
     final choice = await EBSheetShell.show<_LocaleChoice>(
       context,
       title: l10n.settingsLanguageTitle,
-      isEinkMode: widget.isEinkMode,
+      isEinkMode: widget.appearance.isEinkMode,
       builder: (context) => _LanguagePickerSheet(
-        currentLocaleOverride: widget.currentLocaleOverride,
+        currentLocaleOverride: widget.appearance.currentLocaleOverride,
       ),
     );
     if (choice == null) return;
-    widget.onLocaleChanged?.call(choice.value);
+    widget.appearance.onLocaleChanged(choice.value);
   }
 }
 

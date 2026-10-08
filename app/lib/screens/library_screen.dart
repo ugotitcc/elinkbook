@@ -15,7 +15,7 @@ import '../remote/remote_book_downloader.dart';
 import '../remote/remote_server_profile.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
-import 'library_screen_dependencies.dart';
+import 'appearance_dependencies.dart';
 import 'reader_feature_dependencies.dart';
 import 'source_dependencies.dart';
 import 'book_grid_tile_metrics.dart';
@@ -64,9 +64,8 @@ class LibraryScreen extends StatefulWidget {
   /// createOpdsClient 與 isMobileDataConnection，全部 non-null。
   final SourceDependencies sources;
 
-  /// 收斂原本 `currentTheme`／`isEinkMode`／`onThemeChanged`／`onEinkModeChanged`
-  /// 四個獨立參數（epic-26-architecture-hardening Issue 7）。
-  final LibraryThemeDependencies themeDependencies;
+  /// 外觀快照（ADR 0037）：主題／E-Ink 等由上層每次 build 現組往下傳。
+  final AppearanceDependencies appearance;
   final Listenable? refreshSignal;
   final VoidCallback? onNavigateToSource;
   final VoidCallback? onNavigateToSettings;
@@ -75,7 +74,7 @@ class LibraryScreen extends StatefulWidget {
     super.key,
     required this.dependencies,
     required this.sources,
-    this.themeDependencies = const LibraryThemeDependencies(),
+    required this.appearance,
     this.refreshSignal,
     this.onNavigateToSource,
     this.onNavigateToSettings,
@@ -445,7 +444,7 @@ class _LibraryScreenState extends State<LibraryScreen>
             builder: (_) => buildReaderScreen(
               book: book,
               dependencies: widget.dependencies,
-              isEinkMode: widget.themeDependencies.isEinkMode,
+              isEinkMode: widget.appearance.isEinkMode,
             ),
           ),
         )
@@ -649,7 +648,7 @@ class _LibraryScreenState extends State<LibraryScreen>
     final result = await EBSheetShell.show<BookAction>(
       context,
       title: convertText(book.title, _textConversion),
-      isEinkMode: widget.themeDependencies.isEinkMode,
+      isEinkMode: widget.appearance.isEinkMode,
       builder: (context) => BookActionSheet(
         book: book,
         showRemoveCache: showRemoveCache,
@@ -838,7 +837,7 @@ class _LibraryScreenState extends State<LibraryScreen>
             builder: (_) => LibrarySearchScreen(
               initialQuery: _searchQuery,
               dependencies: widget.dependencies,
-              isEinkMode: widget.themeDependencies.isEinkMode,
+              isEinkMode: widget.appearance.isEinkMode,
             ),
           ),
         )
@@ -1207,7 +1206,7 @@ class _LibraryScreenState extends State<LibraryScreen>
               // 實際能放下的還要少，違背 Issue 7「消除留白」的目的）。
               final rowContentHeight = cellWidth / _kCellAspectRatio;
               final pagingBarHeight = PagingBar.resolvedHeight(
-                widget.themeDependencies.isEinkMode,
+                widget.appearance.isEinkMode,
               );
               final availableGridHeight =
                   constraints.maxHeight - pagingBarHeight - 2 * gridPadding;
@@ -1289,7 +1288,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                     onNext: safePage < pageCount - 1
                         ? () => setState(() => _paging.goToNextPage())
                         : null,
-                    isEinkMode: widget.themeDependencies.isEinkMode,
+                    isEinkMode: widget.appearance.isEinkMode,
                   ),
                 ],
               );

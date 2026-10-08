@@ -41,8 +41,8 @@ import 'screens/source_dependencies.dart';
 import 'remote/remote_thumbnail_cache.dart';
 import 'remote/sqlite_remote_server_repository.dart';
 import 'screens/adaptive_shell_scaffold.dart';
+import 'screens/appearance_dependencies.dart';
 import 'screens/cloud_duplicate_confirm_dialog.dart';
-import 'screens/library_screen_dependencies.dart';
 import 'screens/reader_feature_dependencies.dart';
 import 'screens/reading_position_conflict_dialog.dart';
 import 'screens/sync_dependencies.dart';
@@ -458,6 +458,17 @@ class _ElinkBookAppState extends State<ElinkBookApp>
   @override
   Widget build(BuildContext context) {
     final themeData = resolveThemeData(theme: _theme, isEinkMode: _isEinkMode);
+    // 外觀快照（ADR 0037 Task 0 Q1-A）：可變狀態的擁有者是這個 State，
+    // 每次 build 依目前值現組一份往下傳；三個子畫面看到同一份。其他三組
+    // （readerFeatures／sync／sources）仍是 main() 建的同一實例。
+    final appearance = AppearanceDependencies(
+      currentTheme: _theme,
+      isEinkMode: _isEinkMode,
+      currentLocaleOverride: _localeOverride,
+      onThemeChanged: _handleThemeChanged,
+      onEinkModeChanged: _handleEinkModeChanged,
+      onLocaleChanged: _handleLocaleChanged,
+    );
     return MaterialApp(
       navigatorKey: widget.navigatorKey,
       title: 'elinkBook',
@@ -472,16 +483,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
         readerFeatures: widget.readerFeatures,
         sync: widget.sync,
         sources: widget.sources,
-        themeDependencies: LibraryThemeDependencies(
-          currentTheme: _theme,
-          isEinkMode: _isEinkMode,
-          onThemeChanged: _handleThemeChanged,
-          onEinkModeChanged: _handleEinkModeChanged,
-        ),
-        localeDependencies: LibraryLocaleDependencies(
-          currentLocaleOverride: _localeOverride,
-          onLocaleChanged: _handleLocaleChanged,
-        ),
+        appearance: appearance,
       ),
     );
   }

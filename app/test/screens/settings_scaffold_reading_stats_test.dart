@@ -6,6 +6,7 @@ import 'package:elinkbook/screens/reading_stats_screen.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
 
 import '../support/fake_book_import_service.dart';
+import '../support/fake_appearance_dependencies.dart';
 import '../support/fake_source_dependencies.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
@@ -33,6 +34,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           prefsManager: FakeReaderPrefsManager(),
@@ -59,6 +61,7 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       AdaptiveShellScaffold(
+        appearance: fakeAppearanceDependencies(),
         sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(),
