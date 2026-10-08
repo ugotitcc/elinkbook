@@ -637,7 +637,7 @@ git commit -m "refactor(epic-54): Issue 12 外殼骨幹（設定、書架、外�
 
 在 `app/` 下以 `run_in_background` 執行 `flutter test`。Expected：除 Issue 18／19 已記錄的既存失敗（`pdf_reader_view_filters_test` 加粗 debouncer，乾淨 `main` 同樣失敗）外全過；出現其他失敗逐一判定是否本 Issue 回歸。
 
-- [ ] **Step 2: integration 靜態確認與真機（需使用者在場）**
+- [x] **Step 2: integration 靜態確認與真機（需使用者在場）**
 
 `integration_test/library_screen_test.dart`、`smoke_test.dart` 本 Task 只做機械遷移。向使用者確認後在 `TCL 14`（序號 `3CEF42ECD491687`）執行：
 

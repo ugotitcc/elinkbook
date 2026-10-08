@@ -495,6 +495,6 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 驗證：範圍測試（14 檔）255 通過；完整 `flutter test` 3689 通過／1 略過／1 失敗，失敗為既存的 `pdf_reader_view_filters_test` bold overlay debouncer 案例（Issue 11 已在乾淨 `main` 確認，與本 Issue 無關）；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js`／`check_integration_keys.js` PASS；殘留 grep（舊型別、`completeLegacy`）無輸出。
 - 被刪測試與新恆真行為：見計畫附錄 B（共 25 案，皆為「依賴缺席型別上不可達」；降級提示測試全保留）。測試數算式見附錄 C。
 - Review Focus 對應：1→`elinkbook_app_wiring_test` 斷言 `readerFeatures.syncCheckpointTrigger` same `sync.syncCheckpointTrigger`；2→主題切換後 `LibraryScreen.dependencies`／`SettingsScaffold` 組仍 same；3→`LibrarySearchScreen`→`ReaderScreen` 與書架→搜尋的 `dependencies` same；4→附錄 B；5→`settings_scaffold_test` 同步入口 same 測試。
-- 真機：**未驗**。`integration_test/library_screen_test.dart`、`smoke_test.dart` 僅做機械遷移並通過 analyze；跑真機會安裝 debug 版，Issue 11 記錄過可能因降版安裝而清除手機資料，需使用者在場確認後再於 TCL 14 執行。
+- 真機 integration（2026-10-08，TCL 14〔`3CEF42ECD491687`，Android 15〕，分支 `f52fbc52`）：`smoke_test` 1／1 通過；`library_screen_test` 3／3 通過（流式 EPUB、FXL EPUB 皆由 `FoliateReaderView` 成功渲染）。結果只代表此裝置。計畫原預期 `library_screen_test` 在 base 上仍失敗（Issue 17 記錄），本次通過，未在 base 上重跑比對，不宣稱是本 Issue 修好。
 - 計畫外：codemod 搭配 `dart format` 使被遷移的測試檔格式變動較大（無行為差異）；清除一次 worktree gitdir 內的 0 位元組 stale `index.lock`（無 git 程序運行）。
 - ADR 0037 已同步：§1 補列 `fullTextSearchSettingsRepository` 與 `SyncDependencies` 的使用範圍；§6 轉換函式改為過去式。
