@@ -83,7 +83,7 @@
 
 **Files:** 無程式修改。
 
-- [ ] **Step 1：確認起點乾淨**
+- [x] **Step 1：確認起點乾淨**
 
 在 repo 根目錄執行：
 
@@ -99,7 +99,7 @@ git branch --show-current
 
 兩題都有建議預設，但**沒有使用者回覆前不得開始 Task 1 以後的實作**。
 
-- [ ] **Step 3：建立 worktree**
+- [x] **Step 3：建立 worktree**
 
 ```bash
 git worktree add .worktrees/epic-54-issue-10 -b epic-54-issue-10
@@ -108,7 +108,7 @@ cd .worktrees/epic-54-issue-10/app && flutter pub get
 
 之後所有指令都在 `.worktrees/epic-54-issue-10/app/` 下執行。
 
-- [ ] **Step 4：跑基準（異動將觸及的 5 個測試檔）**
+- [x] **Step 4：跑基準（異動將觸及的 5 個測試檔）**
 
 ```bash
 flutter test test/reader/book_reader_prefs_test.dart test/screens/fxl_settings_sheet_test.dart test/screens/pdf_settings_sheet_test.dart test/screens/reader_settings_sheet_test.dart
@@ -117,7 +117,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "版面覆寫"
 
 預期：全數通過。把「通過案例數」填進附錄 C 的基準欄。若有失敗，先停下回報，不要帶著紅燈開工。
 
-- [ ] **Step 5：複核「已查證的事實」**
+- [x] **Step 5：複核「已查證的事實」**
 
 ```bash
 git grep -n "BookReaderPrefs(" -- lib
@@ -137,7 +137,7 @@ git grep -n "BookReaderPrefs(" -- lib
 - Produces: `const BookReaderPrefs fullBookReaderPrefsSeed`；`void expectPrefsPreserved(BookReaderPrefs? actual, BookReaderPrefs expected, {Set<String> except = const {}})`。`except` 內放 `toMap()` 的欄位名（snake_case，如 `'writing_mode_override'`）。
 - Consumes: `BookReaderPrefs.toMap(String)`。
 
-- [ ] **Step 1：先寫自檢測試（紅）**
+- [x] **Step 1：先寫自檢測試（紅）**
 
 在 `book_reader_prefs_test.dart` 的 import 區加：
 
@@ -176,7 +176,7 @@ import '../support/full_book_reader_prefs.dart';
   });
 ```
 
-- [ ] **Step 2：跑測試確認紅**
+- [x] **Step 2：跑測試確認紅**
 
 ```bash
 flutter test test/reader/book_reader_prefs_test.dart
@@ -184,7 +184,7 @@ flutter test test/reader/book_reader_prefs_test.dart
 
 預期：編譯失敗（找不到 `../support/full_book_reader_prefs.dart`）。
 
-- [ ] **Step 3：建立種子與比對函式**
+- [x] **Step 3：建立種子與比對函式**
 
 建立 `app/test/support/full_book_reader_prefs.dart`：
 
@@ -286,7 +286,7 @@ void expectPrefsPreserved(
 }
 ```
 
-- [ ] **Step 4：跑測試確認綠**
+- [x] **Step 4：跑測試確認綠**
 
 ```bash
 flutter test test/reader/book_reader_prefs_test.dart
@@ -294,7 +294,7 @@ flutter test test/reader/book_reader_prefs_test.dart
 
 預期：全數通過（含新增 3 個）。若 `toMap` 長度不是 34，代表模型欄位數已變，回頭修正計畫與種子。
 
-- [ ] **Step 5：analyze 與 Commit**
+- [x] **Step 5：analyze 與 Commit**
 
 ```bash
 flutter analyze
@@ -312,7 +312,7 @@ git commit -m "test(epic-54): Issue 10 BookReaderPrefs 33 欄位種子與逐欄�
 **Interfaces:**
 - Consumes: `fullBookReaderPrefsSeed`、`expectPrefsPreserved`（Task 1）。
 
-- [ ] **Step 1：寫守衛測試**
+- [x] **Step 1：寫守衛測試**
 
 ```dart
   testWidgets(
@@ -364,7 +364,7 @@ git commit -m "test(epic-54): Issue 10 BookReaderPrefs 33 欄位種子與逐欄�
   );
 ```
 
-- [ ] **Step 2：跑測試**
+- [x] **Step 2：跑測試**
 
 ```bash
 flutter test test/screens/library_screen_test.dart --plain-name "版面覆寫"
@@ -372,7 +372,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "版面覆寫"
 
 預期：通過（S1 現況完整，這是回歸守衛，不是紅燈起點；紅燈由 Task 6 變異驗證證明）。若紅，訊息會列出被丟的欄位——代表發現新缺陷，停下回報。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 flutter analyze
@@ -390,7 +390,7 @@ git commit -m "test(epic-54): Issue 10 書架版面覆寫儲存全欄位保留�
 **Interfaces:**
 - Consumes: `fullBookReaderPrefsSeed`、`expectPrefsPreserved`。
 
-- [ ] **Step 1：寫守衛測試**
+- [x] **Step 1：寫守衛測試**
 
 在檔尾新增（沿用檔內 `MaterialApp` 包裝寫法）：
 
@@ -458,7 +458,7 @@ void _fxlFullFieldGuardTests() {
 
 注意：`fxl_settings_sheet_test.dart` 現有的 `showHeader`／`showFooter` 開關預設值是 `false`，種子是 `true`，面板的本地狀態以 `?? false` 初始化——種子是非 null，所以初始值取種子值，不會被洗成預設。
 
-- [ ] **Step 2：跑測試**
+- [x] **Step 2：跑測試**
 
 ```bash
 flutter test test/screens/fxl_settings_sheet_test.dart
@@ -466,7 +466,7 @@ flutter test test/screens/fxl_settings_sheet_test.dart
 
 預期：全數通過（含新增 3 個）。若 `ensureVisible` 找不到 widget（面板內容超出預設視窗），把 `SingleChildScrollView` 外層改成 `tester.view.physicalSize = const Size(800, 2400)`（比照 `reader_settings_sheet_test.dart:2495-2500`，含 `addTearDown` 還原）。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 flutter analyze
@@ -485,7 +485,7 @@ git commit -m "test(epic-54): Issue 10 FxlSettingsSheet 全欄位保留守衛" -
 **Interfaces:**
 - Consumes: `fullBookReaderPrefsSeed`、`expectPrefsPreserved`、檔內既有 `_pumpSheet(tester, prefs, onChanged)`。
 
-- [ ] **Step 1：寫守衛測試**
+- [x] **Step 1：寫守衛測試**
 
 在 `main()` 結尾（最後一個 `}` 之前）新增：
 
@@ -534,7 +534,7 @@ git commit -m "test(epic-54): Issue 10 FxlSettingsSheet 全欄位保留守衛" -
   });
 ```
 
-- [ ] **Step 2：跑測試確認紅，並記錄被丟的欄位**
+- [x] **Step 2：跑測試確認紅，並記錄被丟的欄位**
 
 ```bash
 flutter test test/screens/pdf_settings_sheet_test.dart --plain-name "全欄位保留守衛"
@@ -542,7 +542,7 @@ flutter test test/screens/pdf_settings_sheet_test.dart --plain-name "全欄位�
 
 預期：3 個全紅，失敗訊息列出被清成 `null` 的欄位，應包含：`font_family`、`font_size`、`font_weight`、`line_height`、`paragraph_spacing`、`letter_spacing`、`page_margins`、4 個 `margin_*`、`text_align`、`publisher_styles`、`writing_mode_override`、`page_turn_mode_override`、`screen_orientation_override`、`show_header`、`column_mode`、`column_size`、`text_conversion_override`（共 20 個）。把實際輸出貼進附錄 C。**若實際沒有紅**，代表 S3 的描述有誤，停下回報，不要硬改。
 
-- [ ] **Step 3：（依 Q2）修正 `_notifyChanged()`**
+- [x] **Step 3：（依 Q2）修正 `_notifyChanged()`**
 
 若附錄 A Q2 答「不納入」：跳過本步驟，把 3 個守衛測試加上 `skip: 'Issue 10 Q2：PDF 面板丟欄位另立工單，見 issues.md 第 N 列'`（N 為新工單編號，先登錄再 skip；**不得無 skip 帶紅燈提交**），並在 `issues.md` 登錄新工單。
 
@@ -576,7 +576,7 @@ flutter test test/screens/pdf_settings_sheet_test.dart --plain-name "全欄位�
 
 同時把類別文件註解（約 `:20-23`）中「未追蹤的 EPUB 欄位維持 null 不影響實際使用情境」那句改為「其餘欄位以 `widget.prefs` 為底原樣保留」。
 
-- [ ] **Step 4：跑 PDF 面板全檔與依賴它的閱讀器測試**
+- [x] **Step 4：跑 PDF 面板全檔與依賴它的閱讀器測試**
 
 ```bash
 flutter test test/screens/pdf_settings_sheet_test.dart
@@ -585,7 +585,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "PDF"
 
 預期：全數通過。**既有測試若有因為「onChanged 帶出的 prefs 現在含其他欄位」而紅的**（例如以 `==` 比對整物件預期其他欄位為 null），逐一檢查：若測試的前提是「其他欄位為 null」且 `widget.prefs` 本來就是 `empty`，則不受影響；若真有受影響者，停下回報，不要改弱斷言。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 flutter analyze
@@ -606,7 +606,7 @@ git commit -m "fix(epic-54): Issue 10 PdfSettingsSheet 改以 copyWith 保留其
 - Consumes: `fullBookReaderPrefsSeed`、`expectPrefsPreserved`、檔內既有 `_pumpSheet`、`switchToTab`。
 - 預期值：`fullBookReaderPrefsSeed.reflowableEpubFields()`（21 個欄位保留、12 個清成 null——epic-28 Issue 3 的刻意設計）。
 
-- [ ] **Step 1：寫守衛測試**
+- [x] **Step 1：寫守衛測試**
 
 ```dart
   group('全欄位保留守衛（Issue 10）：種子 33 欄位，操作一個控制項後，21 個流式欄位只有該欄位改變、'
@@ -654,7 +654,7 @@ git commit -m "fix(epic-54): Issue 10 PdfSettingsSheet 改以 copyWith 保留其
   });
 ```
 
-- [ ] **Step 2：跑測試**
+- [x] **Step 2：跑測試**
 
 ```bash
 flutter test test/screens/reader_settings_sheet_test.dart --plain-name "全欄位保留守衛"
@@ -662,7 +662,7 @@ flutter test test/screens/reader_settings_sheet_test.dart --plain-name "全欄�
 
 預期：通過。若紅且被丟的是 `font_size`／`paragraph_spacing`，多半是種子值經滑桿換算有浮點差，改選能無損來回的值（並同步改 `full_book_reader_prefs.dart` 與其註解）；若是其他欄位，代表發現新缺陷，停下回報。若 `reader_settings_fullscreen` 在 `呈現` 分頁找不到，參照 `reader_settings_sheet_test.dart` 內既有 fullscreen 測試的切分頁方式。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 flutter analyze
@@ -678,7 +678,7 @@ git commit -m "test(epic-54): Issue 10 ReaderSettingsSheet 流式欄位全欄位
 - 暫改（驗完必須還原）：`lib/screens/library_screen.dart`、`lib/screens/fxl_settings_sheet.dart`、`lib/screens/pdf_settings_sheet.dart`、`lib/screens/reader_settings_sheet.dart`、`test/support/full_book_reader_prefs.dart`
 - Modify：`docs/epics/epic-54-architecture-optimization/{epic.md,issues.md}`、`docs/epics.md`（進度同步在 PR 合併後於 `main` 做，見 Step 6）
 
-- [ ] **Step 1：變異驗證——證明每道守衛真的會紅**
+- [x] **Step 1：變異驗證——證明每道守衛真的會紅**
 
 每個變異：改一處 → 跑對應測試確認紅且訊息指出該欄位 → `git checkout -- <檔案>` 還原 → 跑同一測試確認回綠。
 
@@ -700,7 +700,7 @@ git diff main --stat -- lib
 
 預期：`git status` 乾淨；`lib/` 的 diff 只剩 `lib/screens/pdf_settings_sheet.dart`（Q2 納入）或完全為空（Q2 不納入）。
 
-- [ ] **Step 2：靜態檢查**
+- [x] **Step 2：靜態檢查**
 
 ```bash
 flutter analyze
@@ -709,7 +709,7 @@ node tool/check_l10n_hardcoded_strings.js
 
 預期：`No issues found!`；l10n 檢查兩行 PASS。
 
-- [ ] **Step 3：完整測試（只此一次）**
+- [x] **Step 3：完整測試（只此一次）**
 
 ```bash
 flutter test
@@ -717,7 +717,7 @@ flutter test
 
 用 `run_in_background` 執行；通過後把「N 通過／M 略過／0 失敗」填進附錄 C。
 
-- [ ] **Step 4：文件同步（在分支上）**
+- [x] **Step 4：文件同步（在分支上）**
 
 `docs/epics/epic-54-architecture-optimization/epic.md` 新增「Issue 10 實作完成」段落（內容：守衛範圍 S1～S4、PDF 面板缺陷與修法〔或另立工單編號〕、變異驗證結果、測試數）。`issues.md` 第 10 列狀態改為 🟡 實作完成待審查。**不要**動 `docs/epics.md`（合併後才改）。
 
@@ -764,9 +764,9 @@ git commit -m "docs(epic-54): Issue 10 實作完成紀錄" -m "Co-Authored-By: C
 | Task 0 基準（`book_reader_prefs`＋`fxl`＋`pdf`＋`reader_settings` 四檔通過數） | 審查者於 `main` 實測 232（執行者開工時仍須自測填入） |
 | Task 0 基準（`library_screen_test.dart --plain-name "版面覆寫"`） | 審查者於 `main` 實測 3（同上） |
 | 預期新增案例數 | 種子自檢 3＋S1 1＋S2 3＋S3 3＋S4 2 ＝ 12 |
-| Task 4 Step 2 PDF 守衛紅燈訊息（被丟欄位清單） | （待填） |
-| Task 6 Step 1 變異驗證 M1～M6 實際紅燈訊息 | （待填） |
-| Task 6 Step 3 完整 `flutter test` | （待填） |
+| Task 4 Step 2 PDF 守衛紅燈訊息（被丟欄位清單） | 3 個守衛全紅，共 20 個欄位被清成 null：font_family、font_size、font_weight、line_height、paragraph_spacing、letter_spacing、page_margins、margin_top、margin_bottom、margin_left、margin_right、text_align、publisher_styles、writing_mode_override、page_turn_mode_override、screen_orientation_override、show_header、column_mode、column_size、text_conversion_override（與計畫預測完全一致） |
+| Task 6 Step 1 變異驗證 M1～M6 實際紅燈訊息 | M1（刪書架 `fullscreen` 帶回）：`fullscreen：預期 1，實際 null` ✓；M2（刪書架 `columnSize`）：`column_size：預期 800.0，實際 null` ✓；M3（刪 FXL `columnSize`）：3 個守衛全紅，`column_size：預期 800.0，實際 null` ✓；M4（PDF 還原舊 13 欄位寫法）：3 個守衛全紅，20 個欄位名 ✓；M5（刪 `_currentDraft` 的 `textConversionOverride`）：`text_conversion_override：預期 toTraditional，實際 null` ✓；M6（刪種子 `textConversionOverride`）：種子自檢紅，`未填：[text_conversion_override]` ✓。全部還原後回綠，`git status` 乾淨，`lib/` diff 僅 `pdf_settings_sheet.dart` |
+| Task 6 Step 3 完整 `flutter test` | 審查前第一次 3716 通過／1 略過／2 失敗；審查後重跑（最終實作 commit）**3717 通過／1 略過／1 失敗**。唯一失敗 `download_queue_controller_test`「偵測到重複且 onDuplicateConfirm 回傳 false…」為整套並行偶發（`epic.md` 已記錄的固定輪數 `pumpEventQueue()` 問題），單跑 3/3 通過，本 Issue 未碰下載程式；未確認乾淨 `main` 是否重現。第一次的 `pdf_reader_view_filters_test` 覆蓋層案例（同 Issue 21 家族）重跑未再出現 |
 
 ## Self-Review 結果
 

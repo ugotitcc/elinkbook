@@ -16,6 +16,8 @@ import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
+import '../support/full_book_reader_prefs.dart';
+
 const _activeDraftPrefs = BookReaderPrefs(
   marginTop: 32.0,
   marginBottom: 16.0,
@@ -2471,6 +2473,53 @@ void main() {
       await switchToTab(tester, tab);
       expect(tester.getSize(sheet).height, textTabHeight, reason: tab);
     }
+  });
+
+  group('全欄位保留守衛（Issue 10）：種子 33 欄位，操作一個控制項後，21 個流式欄位只有該欄位改變、'
+      '其餘 12 個欄位依設計清成 null', () {
+    testWidgets('切換全螢幕 → 只有 fullscreen 改變', (tester) async {
+      BookReaderPrefs? notified;
+      await _pumpSheet(
+        tester,
+        fullBookReaderPrefsSeed,
+        (prefs) => notified = prefs,
+      );
+      await switchToTab(tester, '呈現');
+      await tester.tap(find.byKey(const Key('reader_settings_fullscreen')));
+      await tester.pump();
+
+      expect(notified, isNotNull);
+      expect(notified!.fullscreen, isFalse);
+      // 預期基準 ＝ 種子過濾成流式 EPUB 的 21 個欄位（另 12 個為 null，是設計）。
+      expectPrefsPreserved(
+        notified!,
+        fullBookReaderPrefsSeed.reflowableEpubFields(),
+        except: {'fullscreen'},
+      );
+    });
+
+    testWidgets('切換頁尾顯示 → 只有 show_footer 改變', (tester) async {
+      BookReaderPrefs? notified;
+      await _pumpSheet(
+        tester,
+        fullBookReaderPrefsSeed,
+        (prefs) => notified = prefs,
+      );
+      // show_footer 開關在「邊界」分頁（reader_settings_sheet.dart
+      // _buildBoundaryTab），不是「呈現」分頁——計畫原假設有誤，依檔內既有
+      // show_footer 測試的切分頁方式修正。
+      await switchToTab(tester, '邊界');
+      await tester.tap(find.byKey(const Key('reader_settings_show_footer')));
+      await tester.pump();
+
+      expect(notified, isNotNull);
+      expect(notified!.showFooter, isFalse);
+      expectPrefsPreserved(
+        notified!,
+        fullBookReaderPrefsSeed.reflowableEpubFields(),
+        except: {'show_footer'},
+      );
+    });
   });
 }
 

@@ -527,3 +527,10 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 診斷：單跑穩定重現（4/4 紅）。二分：`1e20dda6^`（epic-59 之前）綠、`1e20dda6`（`PdfOverlayJobQueue`，`maxConcurrent = 1`）起紅，該提交只新增 `pdf_overlay_job_queue_test.dart`，未同步調整本案例。等待輪數掃描：40／42／44 全紅、46 偶爾綠、48～120 全綠。結論：覆蓋圖計算序列化後第 2 頁較晚完成，測試的「40 輪內完成」時間假設過期；測試要防的「後登記的頁面取消先前頁面」在佇列下仍成立（同頁去重、頁與頁互不取消），非產品缺陷。
 - 修正：只改 `test/reader/pdf_reader_view_filters_test.dart` 該案例——`maxIterations` 40→120（約 2.5 倍餘裕）、測試名稱與 `reason` 改寫為佇列語意（不再談 debouncer）。`lib/` 零差異。
 - 驗證：目標案例連跑 3 次全綠、整檔 16 案全過、`flutter analyze` 乾淨、l10n 守衛 PASS。
+
+**2026-10-08 Issue 10 實作完成**（分支 `epic-54-issue-10`〔`.worktrees/epic-54-issue-10`〕，Native 直接開發，未使用 subagent。計畫見 `plans/plan-issue-10.md`，設計決定 Task 0 Q1＝A〔不做 Sentinel，只做守衛〕、Q2＝A〔納入 PDF 面板修復〕；原話見計畫附錄 A）
+
+- 內容：新增 `app/test/support/full_book_reader_prefs.dart`（33 欄位全填的 `fullBookReaderPrefsSeed`，值皆取非面板預設＋可被滑桿換算無損來回；`expectPrefsPreserved` 以 `toMap()` 逐欄位比對並在訊息列出欄位名，`except` 先驗為 `toMap()` 鍵）。守衛範圍 S1～S4 共 12 案：種子自檢 3（全非 null／round-trip／`copyWith()` 等價）、書架版面覆寫 1、FxlSettingsSheet 3、PdfSettingsSheet 3、ReaderSettingsSheet 2（以 `reflowableEpubFields()` 為基準，12 欄位依設計為 null）。Task 5 守衛初寫時把 `show_footer` 誤放在「呈現」分頁（實際在「邊界」分頁），已按檔內既有測試慣例修正，註解記於測試內。
+- PDF 面板缺陷與修法（S3）：守衛先紅，證實 20 個欄位被清成 null（與計畫預測一致，詳見計畫附錄 C）。`_notifyChanged()` 改為 `widget.prefs.copyWith(...)`（面板送出的 12 欄位全是非 null，不需清空語意；`pdfCropRect` 不傳即保留），類別文件註解同步更新。`lib/` diff 僅此一檔。
+- 變異驗證 M1～M6（暫改後全數 `git checkout` 還原，不 commit）：M1（刪書架 `fullscreen` 帶回）→ `fullscreen：預期 1，實際 null`；M2（刪書架 `columnSize`）→ `column_size`；M3（刪 FXL `columnSize`）→ 3 守衛全紅；M4（PDF 還原舊 13 欄位寫法）→ 3 守衛全紅 20 欄位；M5（刪 `_currentDraft` 的 `textConversionOverride`）→ `text_conversion_override`；M6（刪種子 `textConversionOverride`）→ 種子自檢紅。還原後全綠，`git status` 乾淨。
+- 完整 `flutter test`：程式審查前第一次 3716 通過／1 略過／2 失敗；審查後在最終實作 commit 上重跑為 **3717 通過／1 略過／1 失敗**，唯一失敗為 `download_queue_controller_test`「偵測到重複且 onDuplicateConfirm 回傳 false…」（`checkingDuplicate` 未進到 `duplicateSkipped`）。該檔單跑連續 3 次 14/14 全過，且本 Issue 未碰下載相關程式；此即上文（約第 188 行）已記錄的「整套並行時偶發失敗：固定輪數 `pumpEventQueue()`」，**未**確認乾淨 `main` 是否同樣重現。第一次的另一失敗（`pdf_reader_view_filters_test` 覆蓋層案例，同 Issue 21 家族的計時抖動）重跑未再出現。`flutter analyze` 乾淨，l10n 守衛三行 PASS。
