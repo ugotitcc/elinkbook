@@ -766,7 +766,7 @@ git commit -m "docs(epic-54): Issue 10 實作完成紀錄" -m "Co-Authored-By: C
 | 預期新增案例數 | 種子自檢 3＋S1 1＋S2 3＋S3 3＋S4 2 ＝ 12 |
 | Task 4 Step 2 PDF 守衛紅燈訊息（被丟欄位清單） | 3 個守衛全紅，共 20 個欄位被清成 null：font_family、font_size、font_weight、line_height、paragraph_spacing、letter_spacing、page_margins、margin_top、margin_bottom、margin_left、margin_right、text_align、publisher_styles、writing_mode_override、page_turn_mode_override、screen_orientation_override、show_header、column_mode、column_size、text_conversion_override（與計畫預測完全一致） |
 | Task 6 Step 1 變異驗證 M1～M6 實際紅燈訊息 | M1（刪書架 `fullscreen` 帶回）：`fullscreen：預期 1，實際 null` ✓；M2（刪書架 `columnSize`）：`column_size：預期 800.0，實際 null` ✓；M3（刪 FXL `columnSize`）：3 個守衛全紅，`column_size：預期 800.0，實際 null` ✓；M4（PDF 還原舊 13 欄位寫法）：3 個守衛全紅，20 個欄位名 ✓；M5（刪 `_currentDraft` 的 `textConversionOverride`）：`text_conversion_override：預期 toTraditional，實際 null` ✓；M6（刪種子 `textConversionOverride`）：種子自檢紅，`未填：[text_conversion_override]` ✓。全部還原後回綠，`git status` 乾淨，`lib/` diff 僅 `pdf_settings_sheet.dart` |
-| Task 6 Step 3 完整 `flutter test` | 3716 通過／1 略過／2 失敗。2 失敗皆與本 Issue 無關：① `download_queue_controller_test`「偵測到重複…」在乾淨 `main` 同樣重現（既存失敗）；② `pdf_reader_view_filters_test`「第一頁疊加 RawImage 覆蓋層」在 worktree 單跑 16/16 全過（全量併發下 Isolate 計時抖動，同 Issue 21 家族），且該檔完全未引用 `PdfSettingsSheet` |
+| Task 6 Step 3 完整 `flutter test` | 審查前第一次 3716 通過／1 略過／2 失敗；審查後重跑（最終實作 commit）**3717 通過／1 略過／1 失敗**。唯一失敗 `download_queue_controller_test`「偵測到重複且 onDuplicateConfirm 回傳 false…」為整套並行偶發（`epic.md` 已記錄的固定輪數 `pumpEventQueue()` 問題），單跑 3/3 通過，本 Issue 未碰下載程式；未確認乾淨 `main` 是否重現。第一次的 `pdf_reader_view_filters_test` 覆蓋層案例（同 Issue 21 家族）重跑未再出現 |
 
 ## Self-Review 結果
 
