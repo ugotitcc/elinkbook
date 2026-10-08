@@ -606,7 +606,7 @@ git commit -m "fix(epic-54): Issue 10 PdfSettingsSheet 改以 copyWith 保留其
 - Consumes: `fullBookReaderPrefsSeed`、`expectPrefsPreserved`、檔內既有 `_pumpSheet`、`switchToTab`。
 - 預期值：`fullBookReaderPrefsSeed.reflowableEpubFields()`（21 個欄位保留、12 個清成 null——epic-28 Issue 3 的刻意設計）。
 
-- [ ] **Step 1：寫守衛測試**
+- [x] **Step 1：寫守衛測試**
 
 ```dart
   group('全欄位保留守衛（Issue 10）：種子 33 欄位，操作一個控制項後，21 個流式欄位只有該欄位改變、'
@@ -654,7 +654,7 @@ git commit -m "fix(epic-54): Issue 10 PdfSettingsSheet 改以 copyWith 保留其
   });
 ```
 
-- [ ] **Step 2：跑測試**
+- [x] **Step 2：跑測試**
 
 ```bash
 flutter test test/screens/reader_settings_sheet_test.dart --plain-name "全欄位保留守衛"
@@ -662,7 +662,7 @@ flutter test test/screens/reader_settings_sheet_test.dart --plain-name "全欄�
 
 預期：通過。若紅且被丟的是 `font_size`／`paragraph_spacing`，多半是種子值經滑桿換算有浮點差，改選能無損來回的值（並同步改 `full_book_reader_prefs.dart` 與其註解）；若是其他欄位，代表發現新缺陷，停下回報。若 `reader_settings_fullscreen` 在 `呈現` 分頁找不到，參照 `reader_settings_sheet_test.dart` 內既有 fullscreen 測試的切分頁方式。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 flutter analyze
