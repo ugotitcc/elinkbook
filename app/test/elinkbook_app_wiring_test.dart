@@ -47,6 +47,7 @@ import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
+import 'package:elinkbook/screens/book_search_screen.dart';
 import 'package:elinkbook/screens/library_search_screen.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/search/search_repository.dart';
@@ -599,6 +600,90 @@ void _openBookWiringTests() {
         isNotNull,
         reason: '內容片段點擊須帶跳轉目標，書名結果則不帶（P3a）',
       );
+      await _disposeWiringApp(tester);
+    });
+
+    testWidgets(
+      'P4＋P5 書架 → 全庫搜尋 → 查看全部 → 單書搜尋 → 點片段 → ReaderScreen：整鏈同一實例',
+      (tester) async {
+        final book = _wiringBook();
+        final deps = await _pumpWiringApp(
+          tester,
+          searchRepository: FakeSearchRepository(
+            contentResults: [
+              BookContentMatches(
+                book: book,
+                matches: [
+                  for (var i = 0; i < 3; i++)
+                    ContentMatchSnippet(
+                      snippet: '片段$i',
+                      locator: 'epubcfi(/6/$i)',
+                    ),
+                ],
+                totalMatches: 10, // 大於顯示筆數，才會出現「查看全部」
+              ),
+            ],
+            bookSearchDetailResult: BookSearchDetailResult(
+              book: book,
+              matches: const [
+                ContentMatchSnippet(
+                  snippet: '單書搜尋的片段',
+                  locator: 'epubcfi(/6/2)',
+                  chapterIndex: 1,
+                ),
+              ],
+              totalMatches: 1,
+              isTruncated: false, // 建構子必填（search_repository.dart:53）
+            ),
+          ),
+        );
+        await _openLibraryContentSearch(tester);
+
+        // P4：全庫搜尋 → 單書搜尋
+        await tester.tap(
+          find.byKey(Key('library_search_drill_down_$_kWiringBookId')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(BookSearchScreen), findsOneWidget);
+        final bookSearch = tester.widget<BookSearchScreen>(
+          find.byType(BookSearchScreen),
+        );
+        expect(bookSearch.dependencies, same(deps.readerFeatures));
+        expect(bookSearch.isEinkMode, isTrue);
+        expect(bookSearch.fromReader, isFalse);
+
+        // P5：單書搜尋（fromReader == false）→ 閱讀器
+        await tester.tap(find.byKey(const Key('book_search_snippet_0')));
+        await tester.pumpAndSettle();
+        _expectReaderWired(tester, deps, isEinkMode: true);
+        await _disposeWiringApp(tester);
+      },
+    );
+
+    testWidgets('P6 書架 → ReaderScreen → 單書搜尋（fromReader）：整組依賴與 E-Ink 原樣', (
+      tester,
+    ) async {
+      final deps = await _pumpWiringApp(tester);
+      await tester.tap(find.byKey(Key('book_item_$_kWiringBookId')));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BookSearchScreen), findsOneWidget);
+      final bookSearch = tester.widget<BookSearchScreen>(
+        find.byType(BookSearchScreen),
+      );
+      expect(bookSearch.fromReader, isTrue);
+      expect(bookSearch.book.id, _kWiringBookId);
+      expect(bookSearch.dependencies, same(deps.readerFeatures));
+      expect(
+        bookSearch.dependencies.syncCheckpointTrigger,
+        same(deps.sync.syncCheckpointTrigger),
+      );
+      expect(bookSearch.isEinkMode, isTrue);
       await _disposeWiringApp(tester);
     });
   });
