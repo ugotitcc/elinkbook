@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../downloads/download_queue_controller.dart';
-import '../library/book_content_fingerprint.dart';
-import '../wifi_transfer/wifi_transfer_dependencies.dart';
+import 'appearance_dependencies.dart';
 import 'library_screen.dart';
-import 'library_screen_dependencies.dart';
 import 'reader_feature_dependencies.dart';
 import 'settings_scaffold.dart';
+import 'source_dependencies.dart';
 import 'sources_home_screen.dart';
 import 'sync_dependencies.dart';
 
@@ -25,7 +23,7 @@ class _LibraryRefreshSignal extends ChangeNotifier {
 /// `runtimeType`、相同清單位置」的 widget，Flutter reconciliation
 /// （`Element.update`／`State.didUpdateWidget`）就會重用既有 `Element`／
 /// `State`，`LibraryScreen` 的頁碼/搜尋/下鑽狀態不會遺失；反之若快取成
-/// `late final` 欄位，上層 `themeDependencies` 等參數之後的變更（例如
+/// `late final` 欄位，上層 `appearance` 等參數之後的變更（例如
 /// 使用者在「設定」切換主題／E-Ink 模式回呼到 `main.dart` 觸發
 /// `setState()`）永遠不會被子畫面收到（審查報告 review-plan-issue-1.md
 /// C-1，本計劃已依此修正為 `build()` 內直接建構）。
@@ -36,32 +34,20 @@ class AdaptiveShellScaffold extends StatefulWidget {
 
   /// 同步依賴組（ADR 0037）：只有設定頁的「同步」入口使用。
   final SyncDependencies sync;
-  final LibraryCloudAccountDependencies cloudAccountDependencies;
-  final LibraryRemoteLibraryDependencies remoteLibraryDependencies;
-  final ComputeRemoteFingerprint? computeFingerprint;
-  final Future<bool> Function()? isMobileDataConnection;
-  final DownloadQueueController? downloadQueueController;
-  final LibraryThemeDependencies themeDependencies;
 
-  /// 介面語言依賴（epic-45-interface-i18n Issue 1，`spec.md` §4）。
-  final LibraryLocaleDependencies localeDependencies;
+  /// 來源依賴組（ADR 0037）：原樣往下傳給書架、來源頁與設定頁。
+  final SourceDependencies sources;
 
-  /// WiFi 傳書入口依賴（epic-44-wifi-book-transfer Issue 1），原樣往下
-  /// 傳給 `SourcesHomeScreen`。
-  final WifiTransferDependencies? wifiTransferDependencies;
+  /// 外觀快照（ADR 0037）：由 `ElinkBookApp` 每次 build 現組，原樣往下傳給
+  /// 三個子畫面——三處看到的是同一份快照。
+  final AppearanceDependencies appearance;
 
   const AdaptiveShellScaffold({
     super.key,
     required this.readerFeatures,
     required this.sync,
-    this.cloudAccountDependencies = const LibraryCloudAccountDependencies(),
-    this.remoteLibraryDependencies = const LibraryRemoteLibraryDependencies(),
-    this.computeFingerprint,
-    this.isMobileDataConnection,
-    this.downloadQueueController,
-    this.themeDependencies = const LibraryThemeDependencies(),
-    this.localeDependencies = const LibraryLocaleDependencies(),
-    this.wifiTransferDependencies,
+    required this.sources,
+    required this.appearance,
   });
 
   @override
@@ -88,7 +74,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
     // 【審查修正 review-plan-issue-1.md C-1】三個子畫面在此直接建構、不
     // 快取成欄位——IndexedStack 讓所有子項全程掛載，Flutter 依
     // runtimeType/清單位置比對重用既有 Element/State，狀態不會遺失；
-    // 反之若快取在 initState()，widget.themeDependencies 等參數之後的
+    // 反之若快取在 initState()，widget.appearance 等參數之後的
     // 變更就永遠傳不到已快取的子畫面（例如使用者在「設定」切主題/E-Ink
     // 後，SettingsScaffold/SourcesHomeScreen 拿到的仍是最初舊值）。
     return PopScope(
@@ -102,44 +88,24 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
           children: [
             LibraryScreen(
               dependencies: widget.readerFeatures,
-              cloudAccountDependencies: widget.cloudAccountDependencies,
-              remoteLibraryDependencies: widget.remoteLibraryDependencies,
-              computeFingerprint: widget.computeFingerprint,
-              isMobileDataConnection: widget.isMobileDataConnection,
-              themeDependencies: widget.themeDependencies,
+              sources: widget.sources,
+              appearance: widget.appearance,
               refreshSignal: _libraryRefreshSignal,
               onNavigateToSource: () => _navigateTo(1),
               onNavigateToSettings: () => _navigateTo(2),
             ),
             SourcesHomeScreen(
-              repository: widget.readerFeatures.libraryRepository,
-              importService: widget.readerFeatures.bookImportService,
-              cloudAccountDependencies: widget.cloudAccountDependencies,
-              remoteLibraryDependencies: widget.remoteLibraryDependencies,
-              computeFingerprint: widget.computeFingerprint,
-              isMobileDataConnection: widget.isMobileDataConnection,
-              downloadQueueController: widget.downloadQueueController,
-              isEinkMode: widget.themeDependencies.isEinkMode,
+              readerFeatures: widget.readerFeatures,
+              sources: widget.sources,
+              appearance: widget.appearance,
               onNavigateToLibrary: () => _navigateTo(0),
               onNavigateToSettings: () => _navigateTo(2),
-              wifiTransferDependencies: widget.wifiTransferDependencies,
             ),
             SettingsScaffold(
               readerFeatures: widget.readerFeatures,
               sync: widget.sync,
-              currentTheme: widget.themeDependencies.currentTheme,
-              isEinkMode: widget.themeDependencies.isEinkMode,
-              onThemeChanged: widget.themeDependencies.onThemeChanged,
-              onEinkModeChanged: widget.themeDependencies.onEinkModeChanged,
-              currentLocaleOverride:
-                  widget.localeDependencies.currentLocaleOverride,
-              onLocaleChanged: widget.localeDependencies.onLocaleChanged,
-              cloudAccountRepository:
-                  widget.cloudAccountDependencies.cloudAccountRepository,
-              googleDriveOAuthClient:
-                  widget.cloudAccountDependencies.googleDriveOAuthClient,
-              oneDriveOAuthClient:
-                  widget.cloudAccountDependencies.oneDriveOAuthClient,
+              sources: widget.sources,
+              appearance: widget.appearance,
               onNavigateToLibrary: () => _navigateTo(0),
               onNavigateToSource: () => _navigateTo(1),
             ),

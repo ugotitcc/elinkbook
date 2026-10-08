@@ -10,6 +10,9 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 
 import '../support/fake_book_import_service.dart';
+import '../support/fake_app_dependencies.dart';
+import '../support/fake_appearance_dependencies.dart';
+import '../support/fake_source_dependencies.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/pump_localized_widget.dart';
@@ -41,12 +44,15 @@ void main() {
 
     await tester.pumpWidget(
       ElinkBookApp(
-        readerFeatures: fakeReaderFeatureDependencies(
-          libraryRepository: FakeLibraryRepository(),
-          bookImportService: FakeBookImportService(),
-          prefsManager: prefsManager,
+        dependencies: fakeAppDependencies(
+          sources: fakeSourceDependencies(),
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+          sync: fakeSyncDependencies(),
         ),
-        sync: fakeSyncDependencies(),
       ),
     );
     await tester.pumpAndSettle();
@@ -69,14 +75,17 @@ void main() {
 
     await tester.pumpWidget(
       ElinkBookApp(
+        dependencies: fakeAppDependencies(
+          sources: fakeSourceDependencies(),
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+          sync: fakeSyncDependencies(),
+        ),
         initialTheme: theme,
         initialEinkMode: eink,
-        readerFeatures: fakeReaderFeatureDependencies(
-          libraryRepository: FakeLibraryRepository(),
-          bookImportService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
-        sync: fakeSyncDependencies(),
       ),
     );
     await tester.pumpAndSettle();
@@ -99,14 +108,17 @@ void main() {
 
     await tester.pumpWidget(
       ElinkBookApp(
+        dependencies: fakeAppDependencies(
+          sources: fakeSourceDependencies(),
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+          sync: fakeSyncDependencies(),
+        ),
         initialTheme: theme,
         initialEinkMode: eink,
-        readerFeatures: fakeReaderFeatureDependencies(
-          libraryRepository: FakeLibraryRepository(),
-          bookImportService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
-        sync: fakeSyncDependencies(),
       ),
     );
     await tester.pumpAndSettle();
@@ -128,9 +140,12 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
-          currentTheme: AppTheme.light,
-          isEinkMode: false,
-          onThemeChanged: (theme) => receivedTheme = theme,
+          sources: fakeSourceDependencies(),
+          appearance: fakeAppearanceDependencies(
+            currentTheme: AppTheme.light,
+            isEinkMode: false,
+            onThemeChanged: (theme) => receivedTheme = theme,
+          ),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: prefsManager,
           ),
@@ -157,9 +172,12 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         SettingsScaffold(
-          currentTheme: AppTheme.light,
-          isEinkMode: false,
-          onEinkModeChanged: (enabled) => receivedEinkMode = enabled,
+          sources: fakeSourceDependencies(),
+          appearance: fakeAppearanceDependencies(
+            currentTheme: AppTheme.light,
+            isEinkMode: false,
+            onEinkModeChanged: (enabled) => receivedEinkMode = enabled,
+          ),
           readerFeatures: fakeReaderFeatureDependencies(
             prefsManager: prefsManager,
           ),

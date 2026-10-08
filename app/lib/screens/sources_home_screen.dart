@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../cloud_import/cloud_storage_client.dart';
-import '../downloads/download_queue_controller.dart';
 import '../l10n/app_localizations.dart';
-import '../library/book_content_fingerprint.dart';
-import '../library/book_import_service.dart';
-import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
 import '../remote/remote_catalog_dependencies.dart';
-import '../wifi_transfer/wifi_transfer_dependencies.dart';
+import 'appearance_dependencies.dart';
 import 'cloud_browser_screen.dart';
-import 'library_screen_dependencies.dart';
+import 'reader_feature_dependencies.dart';
 import 'remote_server_list_screen.dart';
+import 'source_dependencies.dart';
 import 'support/book_import_picker_helper.dart';
 import 'widgets/download_queue_panel.dart';
 import 'widgets/eb_field_card.dart';
@@ -22,49 +18,29 @@ import 'wifi_transfer_screen.dart';
 /// §功能①）：只聚合既有本機/雲端/OPDS 入口，不新增任何底層匯入/雲端
 /// 邏輯——AppBar 拿掉「＋」匯入選單後的功能真空由本畫面承接。
 class SourcesHomeScreen extends StatelessWidget {
-  final LibraryRepository repository;
-  final BookImportService importService;
-  final LibraryCloudAccountDependencies cloudAccountDependencies;
-  final LibraryRemoteLibraryDependencies remoteLibraryDependencies;
-  final ComputeRemoteFingerprint? computeFingerprint;
-  final Future<bool> Function()? isMobileDataConnection;
-  final bool isEinkMode;
+  /// 閱讀器功能依賴組（ADR 0037）：本機匯入與書庫存取取自這一組。
+  final ReaderFeatureDependencies readerFeatures;
+
+  /// 來源依賴組（ADR 0037）：雲端、遠端書庫、WiFi 傳書與下載佇列取自這一組，
+  /// 全部 non-null——正式環境恆提供，各入口恆啟用。
+  final SourceDependencies sources;
+
+  /// 外觀快照（ADR 0037）：E-Ink 修飾子等由上層每次 build 現組往下傳。
+  final AppearanceDependencies appearance;
   final VoidCallback? onNavigateToLibrary;
   final VoidCallback? onNavigateToSettings;
 
-  /// 視覺還原（Visual Accuracy Mode）：Google Drive／OneDrive／OPDS 遠端
-  /// 書庫下載一律改為加入這個常駐佇列（見 `DownloadQueuePanel`），取代
-  /// 原本 `CloudBrowserScreen`／`RemoteCatalogScreen` 各自用
-  /// `showDialog()` 跳出的模態下載對話框——三種來源共用同一份清單。`null`
-  /// 時（例如尚未組裝完整匯入相依）本畫面不渲染下載佇列區塊，
-  /// `_openXxxBrowser`／`_openRemoteLibrary` 也不會把控制器往下傳
-  /// ——`computeFingerprint` 為 `null` 時本來就已經停用這三個入口本身
-  /// （見下方 `googleDriveEnabled`/`oneDriveEnabled`/`remoteEnabled`），
-  /// 這裡維持同一個「有齊全相依才啟用」的既有慣例。
-  final DownloadQueueController? downloadQueueController;
-
-  /// WiFi 傳書入口依賴（epic-44-wifi-book-transfer Issue 1，spec.md
-  /// 「依賴注入收斂」）：任一必要欄位為 `null` 時「本機」分區不顯示此
-  /// 入口。
-  final WifiTransferDependencies? wifiTransferDependencies;
-
   const SourcesHomeScreen({
     super.key,
-    required this.repository,
-    required this.importService,
-    this.cloudAccountDependencies = const LibraryCloudAccountDependencies(),
-    this.remoteLibraryDependencies = const LibraryRemoteLibraryDependencies(),
-    this.computeFingerprint,
-    this.isMobileDataConnection,
-    this.isEinkMode = false,
+    required this.readerFeatures,
+    required this.sources,
+    required this.appearance,
     this.onNavigateToLibrary,
     this.onNavigateToSettings,
-    this.downloadQueueController,
-    this.wifiTransferDependencies,
   });
 
   Future<void> _handlePickFiles(BuildContext context) async {
-    final result = await pickAndImportFiles(importService);
+    final result = await pickAndImportFiles(readerFeatures.bookImportService);
     if (result == null) return;
     if (!context.mounted) return;
     showImportResultSnackBar(context, result);
@@ -72,7 +48,7 @@ class SourcesHomeScreen extends StatelessWidget {
 
   Future<void> _handlePickFolder(BuildContext context) async {
     final result = await pickAndImportFolder(
-      importService,
+      readerFeatures.bookImportService,
       // 資料夾選擇器等待期間使用者可能已離開此畫面（審查報告 M-1）：
       // `context.mounted` 需在等待結束、真正要彈出確認對話框前才檢查，
       // 而非在呼叫 pickAndImportFolder() 之前檢查一次就假設之後都有效。
@@ -85,37 +61,34 @@ class SourcesHomeScreen extends StatelessWidget {
     showImportResultSnackBar(context, result);
   }
 
-  void _openGoogleDriveBrowser(
-    BuildContext context,
-    CloudStorageClient client,
-  ) {
+  void _openGoogleDriveBrowser(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => CloudBrowserScreen(
-          client: client,
-          libraryRepository: repository,
-          importService: importService,
+          client: sources.googleDriveStorageClient,
+          libraryRepository: readerFeatures.libraryRepository,
+          importService: readerFeatures.bookImportService,
           source: BookSource.googleDrive,
-          computeFingerprint: computeFingerprint!,
-          isMobileDataConnection: isMobileDataConnection,
-          downloadQueueController: downloadQueueController!,
+          computeFingerprint: sources.computeFingerprint,
+          isMobileDataConnection: sources.isMobileDataConnection,
+          downloadQueueController: sources.downloadQueueController,
         ),
       ),
     );
   }
 
-  void _openOneDriveBrowser(BuildContext context, CloudStorageClient client) {
+  void _openOneDriveBrowser(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => CloudBrowserScreen(
-          client: client,
-          libraryRepository: repository,
-          importService: importService,
+          client: sources.oneDriveStorageClient,
+          libraryRepository: readerFeatures.libraryRepository,
+          importService: readerFeatures.bookImportService,
           source: BookSource.oneDrive,
-          computeFingerprint: computeFingerprint!,
-          isMobileDataConnection: isMobileDataConnection,
+          computeFingerprint: sources.computeFingerprint,
+          isMobileDataConnection: sources.isMobileDataConnection,
           title: 'OneDrive',
-          downloadQueueController: downloadQueueController!,
+          downloadQueueController: sources.downloadQueueController,
         ),
       ),
     );
@@ -125,30 +98,29 @@ class SourcesHomeScreen extends StatelessWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => RemoteServerListScreen(
-          repository: remoteLibraryDependencies.remoteServerRepository!,
-          libraryRepository: repository,
+          repository: sources.remoteServerRepository,
+          libraryRepository: readerFeatures.libraryRepository,
           dependencies: RemoteCatalogDependencies(
-            computeFingerprint: computeFingerprint!,
-            thumbnailCache: remoteLibraryDependencies.thumbnailCache!,
-            createOpdsClient: remoteLibraryDependencies.createOpdsClient!,
+            computeFingerprint: sources.computeFingerprint,
+            thumbnailCache: sources.thumbnailCache,
+            createOpdsClient: sources.createOpdsClient,
           ),
-          importService: importService,
-          isEinkMode: isEinkMode,
-          downloadQueueController: downloadQueueController!,
+          importService: readerFeatures.bookImportService,
+          isEinkMode: appearance.isEinkMode,
+          downloadQueueController: sources.downloadQueueController,
         ),
       ),
     );
   }
 
   void _openWifiTransfer(BuildContext context) {
-    final deps = wifiTransferDependencies!;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => WifiTransferScreen(
-          libraryRepository: deps.libraryRepository!,
-          importService: deps.importService!,
-          computeFingerprint: deps.computeFingerprint!,
-          checkNetworkAvailability: deps.checkNetworkAvailability!,
+          libraryRepository: readerFeatures.libraryRepository,
+          importService: readerFeatures.bookImportService,
+          computeFingerprint: sources.computeFingerprint,
+          checkNetworkAvailability: sources.checkNetworkAvailability,
         ),
       ),
     );
@@ -157,27 +129,6 @@ class SourcesHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final googleDriveClient = cloudAccountDependencies.googleDriveStorageClient;
-    final oneDriveClient = cloudAccountDependencies.oneDriveStorageClient;
-    final googleDriveEnabled =
-        googleDriveClient != null &&
-        computeFingerprint != null &&
-        downloadQueueController != null;
-    final oneDriveEnabled =
-        oneDriveClient != null &&
-        computeFingerprint != null &&
-        downloadQueueController != null;
-    final remoteEnabled =
-        remoteLibraryDependencies.remoteServerRepository != null &&
-        remoteLibraryDependencies.createOpdsClient != null &&
-        remoteLibraryDependencies.thumbnailCache != null &&
-        computeFingerprint != null &&
-        downloadQueueController != null;
-    final wifiTransferEnabled =
-        wifiTransferDependencies?.libraryRepository != null &&
-        wifiTransferDependencies?.importService != null &&
-        wifiTransferDependencies?.computeFingerprint != null &&
-        wifiTransferDependencies?.checkNetworkAvailability != null;
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.sourcesHomeTitle),
@@ -219,17 +170,16 @@ class SourcesHomeScreen extends StatelessWidget {
               onTap: () => _handlePickFolder(context),
             ),
           ),
-          if (wifiTransferEnabled)
-            EBFieldCard(
-              padding: EdgeInsets.zero,
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              child: ListTile(
-                key: const Key('sources_wifi_transfer_tile'),
-                leading: const Icon(Icons.wifi),
-                title: Text(l10n.sourcesHomeWifiTransferTile),
-                onTap: () => _openWifiTransfer(context),
-              ),
+          EBFieldCard(
+            padding: EdgeInsets.zero,
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: ListTile(
+              key: const Key('sources_wifi_transfer_tile'),
+              leading: const Icon(Icons.wifi),
+              title: Text(l10n.sourcesHomeWifiTransferTile),
+              onTap: () => _openWifiTransfer(context),
             ),
+          ),
           EBSectionHeader(title: l10n.sourcesHomeConnectedServicesSection),
           EBFieldCard(
             padding: EdgeInsets.zero,
@@ -238,13 +188,7 @@ class SourcesHomeScreen extends StatelessWidget {
               key: const Key('sources_google_drive_tile'),
               leading: const Icon(Icons.cloud),
               title: const Text('Google Drive'),
-              subtitle: googleDriveEnabled
-                  ? null
-                  : Text(l10n.sourcesHomeCloudNotLinkedSubtitle),
-              enabled: googleDriveEnabled,
-              onTap: googleDriveEnabled
-                  ? () => _openGoogleDriveBrowser(context, googleDriveClient)
-                  : null,
+              onTap: () => _openGoogleDriveBrowser(context),
             ),
           ),
           EBFieldCard(
@@ -254,11 +198,7 @@ class SourcesHomeScreen extends StatelessWidget {
               key: const Key('sources_onedrive_tile'),
               leading: const Icon(Icons.cloud_outlined),
               title: const Text('OneDrive'),
-              subtitle: oneDriveEnabled ? null : Text(l10n.sourcesHomeCloudNotLinkedSubtitle),
-              enabled: oneDriveEnabled,
-              onTap: oneDriveEnabled
-                  ? () => _openOneDriveBrowser(context, oneDriveClient)
-                  : null,
+              onTap: () => _openOneDriveBrowser(context),
             ),
           ),
           EBFieldCard(
@@ -268,13 +208,14 @@ class SourcesHomeScreen extends StatelessWidget {
               key: const Key('sources_remote_library_tile'),
               leading: const Icon(Icons.dns),
               title: Text(l10n.sourcesHomeRemoteLibraryTitle),
-              subtitle: remoteEnabled ? null : Text(l10n.sourcesHomeRemoteLibraryNotConfiguredSubtitle),
-              enabled: remoteEnabled,
-              onTap: remoteEnabled ? () => _openRemoteLibrary(context) : null,
+              onTap: () => _openRemoteLibrary(context),
             ),
           ),
-          if (downloadQueueController != null)
-            DownloadQueuePanel(controller: downloadQueueController!),
+          // 視覺還原（VISUAL_ANALYSIS.md）：常駐下載佇列——Google Drive／
+          // OneDrive／OPDS 遠端書庫下載一律改為加入這個常駐佇列，取代原本
+          // `CloudBrowserScreen`／`RemoteCatalogScreen` 各自用
+          // `showDialog()` 跳出的模態下載對話框——三種來源共用同一份清單。
+          DownloadQueuePanel(controller: sources.downloadQueueController),
         ],
       ),
     );

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -6,15 +7,23 @@ import 'package:elinkbook/cloud_import/onedrive_oauth_client.dart';
 import 'package:elinkbook/main.dart';
 import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/remote/opds_client.dart';
+import 'package:elinkbook/l10n/app_locale.dart';
 import 'package:elinkbook/screens/adaptive_shell_scaffold.dart';
+import 'package:elinkbook/screens/app_dependencies.dart';
 import 'package:elinkbook/screens/library_screen.dart';
+import 'package:elinkbook/screens/remote_server_list_screen.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
+import 'package:elinkbook/screens/source_dependencies.dart';
+import 'package:elinkbook/screens/sources_home_screen.dart';
+import 'package:elinkbook/downloads/download_queue_controller.dart';
+import 'package:elinkbook/wifi_transfer/network_availability.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 
+import 'support/fake_app_dependencies.dart';
 import 'support/fake_book_import_service.dart';
 import 'support/fake_book_reader_prefs_repository.dart';
 import 'support/fake_bookmarks_repository.dart';
@@ -98,44 +107,54 @@ void main() {
     final computeFingerprint = FakeFingerprintComputer().call;
     final thumbnailCache = FakeRemoteThumbnailCache();
     Future<bool> isMobileDataConnection() async => false;
+    final downloadQueueController = DownloadQueueController(
+      onDuplicateConfirm: (_) async => false,
+    );
+    final sources = SourceDependencies(
+      cloudAccountRepository: cloudAccountRepository,
+      googleDriveOAuthClient: googleDriveOAuthClient,
+      oneDriveOAuthClient: oneDriveOAuthClient,
+      googleDriveStorageClient: googleDriveStorageClient,
+      oneDriveStorageClient: oneDriveStorageClient,
+      remoteServerRepository: remoteServerRepository,
+      createOpdsClient: createOpdsClient,
+      thumbnailCache: thumbnailCache,
+      computeFingerprint: computeFingerprint,
+      isMobileDataConnection: isMobileDataConnection,
+      checkNetworkAvailability: checkNetworkAvailability,
+      downloadQueueController: downloadQueueController,
+    );
     final ttsProvider = FakeTtsProvider();
     final readingStatsRepository = FakeReadingStatsRepository();
     final ttsAudio = TtsAudioHandlerHolder.degraded();
 
     await tester.pumpWidget(
       ElinkBookApp(
-        cloudAccountRepository: cloudAccountRepository,
-        googleDriveOAuthClient: googleDriveOAuthClient,
-        oneDriveOAuthClient: oneDriveOAuthClient,
-        googleDriveStorageClient: googleDriveStorageClient,
-        oneDriveStorageClient: oneDriveStorageClient,
-        remoteServerRepository: remoteServerRepository,
-        createOpdsClient: createOpdsClient,
-        computeFingerprint: computeFingerprint,
-        thumbnailCache: thumbnailCache,
-        isMobileDataConnection: isMobileDataConnection,
+        dependencies: AppDependencies(
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: repository,
+            bookImportService: importService,
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+            highlightsRepository: highlightsRepository,
+            notesRepository: notesRepository,
+            customFontsRepository: customFontsRepository,
+            layoutPresetRepository: layoutPresetRepository,
+            bookReaderPrefsRepository: bookReaderPrefsRepository,
+            ttsProvider: ttsProvider,
+            ttsAudio: ttsAudio,
+            readingStatsRepository: readingStatsRepository,
+            syncCheckpointTrigger: syncCheckpointTrigger,
+          ),
+          sync: fakeSyncDependencies(
+            syncAccountRepository: syncAccountRepository,
+            syncClient: syncClient,
+            syncCheckpointTrigger: syncCheckpointTrigger,
+          ),
+          sources: sources,
+        ),
         initialTheme: AppTheme.dark,
         initialEinkMode: true,
-        readerFeatures: fakeReaderFeatureDependencies(
-          libraryRepository: repository,
-          bookImportService: importService,
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
-          highlightsRepository: highlightsRepository,
-          notesRepository: notesRepository,
-          customFontsRepository: customFontsRepository,
-          layoutPresetRepository: layoutPresetRepository,
-          bookReaderPrefsRepository: bookReaderPrefsRepository,
-          ttsProvider: ttsProvider,
-          ttsAudio: ttsAudio,
-          readingStatsRepository: readingStatsRepository,
-          syncCheckpointTrigger: syncCheckpointTrigger,
-        ),
-        sync: fakeSyncDependencies(
-          syncAccountRepository: syncAccountRepository,
-          syncClient: syncClient,
-          syncCheckpointTrigger: syncCheckpointTrigger,
-        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -183,110 +202,204 @@ void main() {
     expect(shell.sync.syncClient, same(syncClient));
     expect(shell.sync.syncCheckpointTrigger, same(syncCheckpointTrigger));
 
+    expect(libraryScreen.sources, same(sources));
     expect(
-      libraryScreen.cloudAccountDependencies.cloudAccountRepository,
-      same(cloudAccountRepository),
+      tester
+          .widget<SourcesHomeScreen>(
+            find.byType(SourcesHomeScreen, skipOffstage: false),
+          )
+          .sources,
+      same(sources),
     );
     expect(
-      libraryScreen.cloudAccountDependencies.googleDriveOAuthClient,
-      same(googleDriveOAuthClient),
-    );
-    expect(
-      libraryScreen.cloudAccountDependencies.oneDriveOAuthClient,
-      same(oneDriveOAuthClient),
-    );
-    expect(
-      libraryScreen.cloudAccountDependencies.googleDriveStorageClient,
-      same(googleDriveStorageClient),
-    );
-    expect(
-      libraryScreen.cloudAccountDependencies.oneDriveStorageClient,
-      same(oneDriveStorageClient),
+      tester
+          .widget<SettingsScaffold>(
+            find.byType(SettingsScaffold, skipOffstage: false),
+          )
+          .sources,
+      same(sources),
     );
 
+    // computeFingerprint 同時服務雲端匯入、OPDS 下載與 WiFi 傳書，
+    // 只有 SourceDependencies 這一個來源（Issue 7 曾漏轉發）。
+    expect(libraryScreen.sources.computeFingerprint, same(computeFingerprint));
     expect(
-      libraryScreen.remoteLibraryDependencies.remoteServerRepository,
-      same(remoteServerRepository),
-    );
-    expect(
-      libraryScreen.remoteLibraryDependencies.createOpdsClient,
-      same(createOpdsClient),
-    );
-    expect(
-      libraryScreen.remoteLibraryDependencies.thumbnailCache,
-      same(thumbnailCache),
+      libraryScreen.sources.downloadQueueController,
+      same(downloadQueueController),
     );
 
-    // computeFingerprint／isMobileDataConnection 刻意不併入任何 bundle
-    // （見 plans/plan-issue-7.md「規劃階段查證」第 3 點），本次審查修正的
-    // Critical 問題正是前者在 main.dart 遺漏轉發，故這裡是本測試最直接
-    // 針對的斷言。
-    expect(libraryScreen.computeFingerprint, same(computeFingerprint));
-    expect(libraryScreen.isMobileDataConnection, same(isMobileDataConnection));
-
-    expect(libraryScreen.themeDependencies.currentTheme, AppTheme.dark);
-    expect(libraryScreen.themeDependencies.isEinkMode, isTrue);
-    expect(libraryScreen.themeDependencies.onThemeChanged, isNotNull);
-    expect(libraryScreen.themeDependencies.onEinkModeChanged, isNotNull);
+    expect(libraryScreen.appearance.currentTheme, AppTheme.dark);
+    expect(libraryScreen.appearance.isEinkMode, isTrue);
+    expect(libraryScreen.appearance.onThemeChanged, isNotNull);
+    expect(libraryScreen.appearance.onEinkModeChanged, isNotNull);
   });
 
-  testWidgets('ElinkBookApp 把同一個閱讀器組與同步組原樣傳到外殼、書架與設定', (tester) async {
-    final trigger = fakeSyncDependencies().syncCheckpointTrigger;
-    final readerFeatures = fakeReaderFeatureDependencies(
-      syncCheckpointTrigger: trigger,
-    );
-    final sync = fakeSyncDependencies(syncCheckpointTrigger: trigger);
-
-    await tester.pumpWidget(
-      ElinkBookApp(readerFeatures: readerFeatures, sync: sync),
-    );
+  testWidgets('ElinkBookApp 把 AppDependencies 的三組原樣傳到書架、來源頁與設定頁', (
+    tester,
+  ) async {
+    final deps = fakeAppDependencies();
+    await tester.pumpWidget(ElinkBookApp(dependencies: deps));
     await tester.pumpAndSettle();
-
     final shell = tester.widget<AdaptiveShellScaffold>(
       find.byType(AdaptiveShellScaffold),
     );
-    expect(shell.readerFeatures, same(readerFeatures));
-    expect(shell.sync, same(sync));
+    expect(shell.readerFeatures, same(deps.readerFeatures));
+    expect(shell.sync, same(deps.sync));
+    expect(shell.sources, same(deps.sources));
     expect(
       tester.widget<LibraryScreen>(find.byType(LibraryScreen)).dependencies,
-      same(readerFeatures),
+      same(deps.readerFeatures),
     );
-    final settings = tester.widget<SettingsScaffold>(
-      find.byType(SettingsScaffold, skipOffstage: false),
-    );
-    expect(settings.readerFeatures, same(readerFeatures));
-    expect(settings.sync, same(sync));
-    // 同一個 syncCheckpointTrigger 實例同時屬於兩個組（ADR 0037 §1）。
     expect(
-      readerFeatures.syncCheckpointTrigger,
-      same(sync.syncCheckpointTrigger),
+      tester.widget<LibraryScreen>(find.byType(LibraryScreen)).sources,
+      same(deps.sources),
+    );
+    expect(
+      tester
+          .widget<SourcesHomeScreen>(
+            find.byType(SourcesHomeScreen, skipOffstage: false),
+          )
+          .sources,
+      same(deps.sources),
+    );
+    expect(
+      tester
+          .widget<SettingsScaffold>(
+            find.byType(SettingsScaffold, skipOffstage: false),
+          )
+          .sources,
+      same(deps.sources),
+    );
+    expect(
+      deps.readerFeatures.syncCheckpointTrigger,
+      same(deps.sync.syncCheckpointTrigger),
     );
   });
 
   testWidgets('主題切換使 ElinkBookApp 重建後，依賴組仍是同一實例（不是 build 內新建）', (tester) async {
-    final readerFeatures = fakeReaderFeatureDependencies();
-    final sync = fakeSyncDependencies();
+    final deps = fakeAppDependencies();
 
-    await tester.pumpWidget(
-      ElinkBookApp(readerFeatures: readerFeatures, sync: sync),
-    );
+    await tester.pumpWidget(ElinkBookApp(dependencies: deps));
     await tester.pumpAndSettle();
 
     final settingsBefore = tester.widget<SettingsScaffold>(
       find.byType(SettingsScaffold, skipOffstage: false),
     );
-    settingsBefore.onThemeChanged!(AppTheme.dark);
+    settingsBefore.appearance.onThemeChanged(AppTheme.dark);
     await tester.pumpAndSettle();
 
     final libraryScreen = tester.widget<LibraryScreen>(
       find.byType(LibraryScreen),
     );
-    expect(libraryScreen.themeDependencies.currentTheme, AppTheme.dark);
-    expect(libraryScreen.dependencies, same(readerFeatures));
+    expect(libraryScreen.appearance.currentTheme, AppTheme.dark);
+    expect(libraryScreen.dependencies, same(deps.readerFeatures));
     final settingsAfter = tester.widget<SettingsScaffold>(
       find.byType(SettingsScaffold, skipOffstage: false),
     );
-    expect(settingsAfter.readerFeatures, same(readerFeatures));
-    expect(settingsAfter.sync, same(sync));
+    expect(settingsAfter.readerFeatures, same(deps.readerFeatures));
+    expect(settingsAfter.sync, same(deps.sync));
+  });
+
+  testWidgets('切換主題後，三個畫面看到同一份新的外觀快照，其餘三組仍是原實例', (tester) async {
+    final deps = fakeAppDependencies();
+
+    await tester.pumpWidget(ElinkBookApp(dependencies: deps));
+    await tester.pumpAndSettle();
+
+    final before = tester
+        .widget<LibraryScreen>(find.byType(LibraryScreen))
+        .appearance;
+
+    // 以 theme_test.dart 既有手法點選深色主題圓點，觸發 _ElinkBookAppState.setState。
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_theme_dot_dark')));
+    await tester.pumpAndSettle();
+
+    final library = tester.widget<LibraryScreen>(
+      find.byType(LibraryScreen, skipOffstage: false),
+    );
+    final sourcesHome = tester.widget<SourcesHomeScreen>(
+      find.byType(SourcesHomeScreen, skipOffstage: false),
+    );
+    final settings = tester.widget<SettingsScaffold>(
+      find.byType(SettingsScaffold, skipOffstage: false),
+    );
+    expect(library.appearance, isNot(same(before)));
+    expect(sourcesHome.appearance, same(library.appearance));
+    expect(settings.appearance, same(library.appearance));
+    expect(library.appearance.currentTheme, AppTheme.dark);
+    expect(library.dependencies, same(deps.readerFeatures));
+    expect(library.sources, same(deps.sources));
+    expect(settings.sync, same(deps.sync));
+  });
+
+  testWidgets('開啟 E-Ink 後，書架、來源頁、設定頁都拿到 isEinkMode == true', (tester) async {
+    final deps = fakeAppDependencies();
+
+    await tester.pumpWidget(ElinkBookApp(dependencies: deps));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_eink_mode_switch')));
+    await tester.pumpAndSettle();
+
+    final library = tester.widget<LibraryScreen>(
+      find.byType(LibraryScreen, skipOffstage: false),
+    );
+    final sourcesHome = tester.widget<SourcesHomeScreen>(
+      find.byType(SourcesHomeScreen, skipOffstage: false),
+    );
+    final settings = tester.widget<SettingsScaffold>(
+      find.byType(SettingsScaffold, skipOffstage: false),
+    );
+    expect(library.appearance.isEinkMode, isTrue);
+    expect(sourcesHome.appearance.isEinkMode, isTrue);
+    expect(settings.appearance.isEinkMode, isTrue);
+
+    // 從來源頁開遠端書庫，isEinkMode 貫穿到底層畫面。
+    await tester.tap(find.byKey(const Key('settings_source_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sources_remote_library_tile')));
+    await tester.pumpAndSettle();
+
+    final remoteList = tester.widget<RemoteServerListScreen>(
+      find.byType(RemoteServerListScreen),
+    );
+    expect(remoteList.isEinkMode, isTrue);
+  });
+
+  testWidgets('切換介面語言後，AdaptiveShellScaffold 子畫面 State 保留（書架捲動／搜尋狀態不重置）', (
+    tester,
+  ) async {
+    final deps = fakeAppDependencies();
+
+    await tester.pumpWidget(ElinkBookApp(dependencies: deps));
+    await tester.pumpAndSettle();
+
+    final stateBefore = tester.state(find.byType(LibraryScreen));
+    final appearanceBefore = tester
+        .widget<LibraryScreen>(find.byType(LibraryScreen))
+        .appearance;
+
+    // 沿用 elinkbook_app_locale_test.dart 既有切語言手法。
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_language_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_language_option_en')));
+    await tester.pumpAndSettle();
+
+    final library = tester.widget<LibraryScreen>(
+      find.byType(LibraryScreen, skipOffstage: false),
+    );
+    expect(library.appearance.currentLocaleOverride, AppLocale.en);
+    expect(library.appearance, isNot(same(appearanceBefore)));
+    expect(
+      tester.state(find.byType(LibraryScreen, skipOffstage: false)),
+      same(stateBefore),
+      reason: 'IndexedStack 不重建子畫面：切語言只換外觀快照，不重置書架狀態',
+    );
   });
 }

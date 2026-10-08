@@ -1112,9 +1112,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get readerUnknownBookTitle => '未知書籍';
 
   @override
-  String get readerSaveAsPresetUnavailableMessage => '暫時無法儲存預設集';
-
-  @override
   String get readerSaveAsPresetFailedMessage => '另存為新預設集失敗';
 
   @override
@@ -1923,13 +1920,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sourcesHomeConnectedServicesSection => '已連結服務';
 
   @override
-  String get sourcesHomeCloudNotLinkedSubtitle => '尚未連結，請至設定畫面連結帳戶';
-
-  @override
   String get sourcesHomeRemoteLibraryTitle => '遠端書庫（OPDS）';
-
-  @override
-  String get sourcesHomeRemoteLibraryNotConfiguredSubtitle => '尚未設定遠端書庫伺服器';
 
   @override
   String get libraryImportFolderDialogTitle => '匯入資料夾';
@@ -3368,9 +3359,6 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get readerUnknownBookTitle => '未知书籍';
 
   @override
-  String get readerSaveAsPresetUnavailableMessage => '暂时无法保存预设集';
-
-  @override
   String get readerSaveAsPresetFailedMessage => '另存为新预设集失败';
 
   @override
@@ -4179,13 +4167,7 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get sourcesHomeConnectedServicesSection => '已连结服务';
 
   @override
-  String get sourcesHomeCloudNotLinkedSubtitle => '尚未连结，请至设定画面连结账户';
-
-  @override
   String get sourcesHomeRemoteLibraryTitle => '远程书库（OPDS）';
-
-  @override
-  String get sourcesHomeRemoteLibraryNotConfiguredSubtitle => '尚未设定远程书库服务器';
 
   @override
   String get libraryImportFolderDialogTitle => '汇入资料夹';
@@ -5624,9 +5606,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get readerUnknownBookTitle => '未知書籍';
 
   @override
-  String get readerSaveAsPresetUnavailableMessage => '暫時無法儲存預設集';
-
-  @override
   String get readerSaveAsPresetFailedMessage => '另存為新預設集失敗';
 
   @override
@@ -6435,13 +6414,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get sourcesHomeConnectedServicesSection => '已連結服務';
 
   @override
-  String get sourcesHomeCloudNotLinkedSubtitle => '尚未連結，請至設定畫面連結帳戶';
-
-  @override
   String get sourcesHomeRemoteLibraryTitle => '遠端書庫（OPDS）';
-
-  @override
-  String get sourcesHomeRemoteLibraryNotConfiguredSubtitle => '尚未設定遠端書庫伺服器';
 
   @override
   String get libraryImportFolderDialogTitle => '匯入資料夾';

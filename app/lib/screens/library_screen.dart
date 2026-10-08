@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-import '../library/book_content_fingerprint.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/book_reader_prefs_repository.dart';
 import '../reader/page_turn_mode.dart';
@@ -16,8 +15,9 @@ import '../remote/remote_book_downloader.dart';
 import '../remote/remote_server_profile.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
-import 'library_screen_dependencies.dart';
+import 'appearance_dependencies.dart';
 import 'reader_feature_dependencies.dart';
+import 'source_dependencies.dart';
 import 'book_grid_tile_metrics.dart';
 import 'library_book_list_controller.dart';
 import 'library_batch_actions.dart';
@@ -60,21 +60,12 @@ class LibraryScreen extends StatefulWidget {
   /// 全文檢索設定、版面覆寫 repository 等；開書與開全庫搜尋時整組轉傳同一個實例。
   final ReaderFeatureDependencies dependencies;
 
-  /// 收斂原本 `cloudAccountRepository`／`googleDriveOAuthClient`／
-  /// `oneDriveOAuthClient`／`googleDriveStorageClient`／
-  /// `oneDriveStorageClient` 五個獨立參數（epic-26-architecture-hardening
-  /// Issue 7）。
-  final LibraryCloudAccountDependencies cloudAccountDependencies;
+  /// 來源依賴組（ADR 0037）：重新下載遠端書用其中的 remoteServerRepository、
+  /// createOpdsClient 與 isMobileDataConnection，全部 non-null。
+  final SourceDependencies sources;
 
-  /// 收斂原本 `remoteServerRepository`／`createOpdsClient`／`thumbnailCache`
-  /// 三個獨立參數（epic-26-architecture-hardening Issue 7）。
-  final LibraryRemoteLibraryDependencies remoteLibraryDependencies;
-  final ComputeRemoteFingerprint? computeFingerprint;
-  final Future<bool> Function()? isMobileDataConnection;
-
-  /// 收斂原本 `currentTheme`／`isEinkMode`／`onThemeChanged`／`onEinkModeChanged`
-  /// 四個獨立參數（epic-26-architecture-hardening Issue 7）。
-  final LibraryThemeDependencies themeDependencies;
+  /// 外觀快照（ADR 0037）：主題／E-Ink 等由上層每次 build 現組往下傳。
+  final AppearanceDependencies appearance;
   final Listenable? refreshSignal;
   final VoidCallback? onNavigateToSource;
   final VoidCallback? onNavigateToSettings;
@@ -82,11 +73,8 @@ class LibraryScreen extends StatefulWidget {
   const LibraryScreen({
     super.key,
     required this.dependencies,
-    this.cloudAccountDependencies = const LibraryCloudAccountDependencies(),
-    this.remoteLibraryDependencies = const LibraryRemoteLibraryDependencies(),
-    this.computeFingerprint,
-    this.isMobileDataConnection,
-    this.themeDependencies = const LibraryThemeDependencies(),
+    required this.sources,
+    required this.appearance,
     this.refreshSignal,
     this.onNavigateToSource,
     this.onNavigateToSettings,
@@ -456,7 +444,7 @@ class _LibraryScreenState extends State<LibraryScreen>
             builder: (_) => buildReaderScreen(
               book: book,
               dependencies: widget.dependencies,
-              isEinkMode: widget.themeDependencies.isEinkMode,
+              isEinkMode: widget.appearance.isEinkMode,
             ),
           ),
         )
@@ -511,15 +499,11 @@ class _LibraryScreenState extends State<LibraryScreen>
   /// 到永久 `remote_books/` 目錄→刪除暫存），避免把永久 `filePath` 指向
   /// OS 可回收的暫存路徑。
   Future<void> _handleRedownload(Book book) async {
-    final remoteServerRepository =
-        widget.remoteLibraryDependencies.remoteServerRepository;
-    final createOpdsClient = widget.remoteLibraryDependencies.createOpdsClient;
+    final remoteServerRepository = widget.sources.remoteServerRepository;
+    final createOpdsClient = widget.sources.createOpdsClient;
     final remoteServerId = book.remoteServerId;
     final remoteDownloadUrl = book.remoteDownloadUrl;
-    if (remoteServerRepository == null ||
-        createOpdsClient == null ||
-        remoteServerId == null ||
-        remoteDownloadUrl == null) {
+    if (remoteServerId == null || remoteDownloadUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.libraryRemoteDisabledMessage),
@@ -529,8 +513,7 @@ class _LibraryScreenState extends State<LibraryScreen>
     }
     if (_redownloadingBookIds.contains(book.id)) return;
 
-    final isMobileData =
-        await (widget.isMobileDataConnection?.call() ?? Future.value(false));
+    final isMobileData = await widget.sources.isMobileDataConnection();
     if (!mounted) return;
     final confirmed = await _confirmRedownload(book, isMobileData);
     if (confirmed != true) return;
@@ -661,7 +644,7 @@ class _LibraryScreenState extends State<LibraryScreen>
     final result = await EBSheetShell.show<BookAction>(
       context,
       title: convertText(book.title, _textConversion),
-      isEinkMode: widget.themeDependencies.isEinkMode,
+      isEinkMode: widget.appearance.isEinkMode,
       builder: (context) => BookActionSheet(
         book: book,
         showRemoveCache: showRemoveCache,
@@ -850,7 +833,7 @@ class _LibraryScreenState extends State<LibraryScreen>
             builder: (_) => LibrarySearchScreen(
               initialQuery: _searchQuery,
               dependencies: widget.dependencies,
-              isEinkMode: widget.themeDependencies.isEinkMode,
+              isEinkMode: widget.appearance.isEinkMode,
             ),
           ),
         )
@@ -1218,7 +1201,7 @@ class _LibraryScreenState extends State<LibraryScreen>
               // 實際能放下的還要少，違背 Issue 7「消除留白」的目的）。
               final rowContentHeight = cellWidth / _kCellAspectRatio;
               final pagingBarHeight = PagingBar.resolvedHeight(
-                widget.themeDependencies.isEinkMode,
+                widget.appearance.isEinkMode,
               );
               final availableGridHeight =
                   constraints.maxHeight - pagingBarHeight - 2 * gridPadding;
@@ -1300,7 +1283,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                     onNext: safePage < pageCount - 1
                         ? () => setState(() => _paging.goToNextPage())
                         : null,
-                    isEinkMode: widget.themeDependencies.isEinkMode,
+                    isEinkMode: widget.appearance.isEinkMode,
                   ),
                 ],
               );

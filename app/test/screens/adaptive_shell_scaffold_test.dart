@@ -7,14 +7,12 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/l10n/app_locale.dart';
 import 'package:elinkbook/screens/adaptive_shell_scaffold.dart';
 import 'package:elinkbook/screens/library_screen.dart';
-import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
 import 'package:elinkbook/screens/sources_home_screen.dart';
-import 'package:elinkbook/wifi_transfer/network_availability.dart';
-import 'package:elinkbook/wifi_transfer/wifi_transfer_dependencies.dart';
 
 import '../support/fake_book_import_service.dart';
-import '../support/fake_fingerprint_computer.dart';
+import '../support/fake_appearance_dependencies.dart';
+import '../support/fake_source_dependencies.dart';
 import '../support/pump_localized_widget.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
@@ -34,6 +32,8 @@ void main() {
 
   Widget buildApp() {
     return AdaptiveShellScaffold(
+      appearance: fakeAppearanceDependencies(),
+      sources: fakeSourceDependencies(),
       readerFeatures: fakeReaderFeatureDependencies(
         libraryRepository: FakeLibraryRepository(),
         bookImportService: FakeBookImportService(),
@@ -81,6 +81,8 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       AdaptiveShellScaffold(
+        appearance: fakeAppearanceDependencies(),
+        sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           libraryRepository: repository,
           bookImportService: FakeBookImportService(),
@@ -134,7 +136,8 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         AdaptiveShellScaffold(
-          themeDependencies: LibraryThemeDependencies(
+          sources: fakeSourceDependencies(),
+          appearance: fakeAppearanceDependencies(
             onEinkModeChanged: (val) => toggledValue = val,
           ),
           readerFeatures: fakeReaderFeatureDependencies(
@@ -158,7 +161,7 @@ void main() {
         settingsScreen.readerFeatures.customFontsRepository,
         same(customFontsRepository),
       );
-      expect(settingsScreen.onEinkModeChanged, isNotNull);
+      expect(settingsScreen.appearance.onEinkModeChanged, isNotNull);
 
       await tester.tap(find.byKey(const Key('settings_eink_mode_switch')));
       await tester.pumpAndSettle();
@@ -168,11 +171,12 @@ void main() {
   );
 
   testWidgets(
-    '上層 themeDependencies 更新後，已切換過去的 SettingsScreen 收到最新 isEinkMode（審查報告 C-1 回歸測試：子畫面不得在 initState 快取）',
+    '上層 appearance 更新後，已切換過去的 SettingsScreen 收到最新 isEinkMode（審查報告 C-1 回歸測試：子畫面不得在 initState 快取）',
     (tester) async {
       Widget buildWithEink(bool isEinkMode) {
         return AdaptiveShellScaffold(
-          themeDependencies: LibraryThemeDependencies(isEinkMode: isEinkMode),
+          sources: fakeSourceDependencies(),
+          appearance: fakeAppearanceDependencies(isEinkMode: isEinkMode),
           readerFeatures: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(),
             bookImportService: FakeBookImportService(),
@@ -194,12 +198,12 @@ void main() {
       var settingsScreen = tester.widget<SettingsScaffold>(
         find.byType(SettingsScaffold),
       );
-      expect(settingsScreen.isEinkMode, isFalse);
+      expect(settingsScreen.appearance.isEinkMode, isFalse);
 
       // 重新 pumpWidget 同一個 AdaptiveShellScaffold（同一個 widget tree
-      // 位置），但 themeDependencies.isEinkMode 已改變——模擬使用者在別處
+      // 位置），但 appearance.isEinkMode 已改變——模擬使用者在別處
       // 切換 E-Ink 模式後，main.dart 的 setState() 觸發整棵 widget tree
-      // 帶著新的 themeDependencies 重新 build()。
+      // 帶著新的 appearance 重新 build()。
       await pumpLocalizedWidget(tester, buildWithEink(true), isEinkMode: true);
       await tester.pumpAndSettle();
 
@@ -207,7 +211,7 @@ void main() {
         find.byType(SettingsScaffold),
       );
       expect(
-        settingsScreen.isEinkMode,
+        settingsScreen.appearance.isEinkMode,
         isTrue,
         reason:
             '若 AdaptiveShellScaffold 把子畫面快取在 initState()，這裡會維持 false，'
@@ -249,6 +253,8 @@ void main() {
     await pumpLocalizedWidget(
       tester,
       AdaptiveShellScaffold(
+        appearance: fakeAppearanceDependencies(),
+        sources: fakeSourceDependencies(),
         readerFeatures: fakeReaderFeatureDependencies(
           libraryRepository: FakeLibraryRepository(),
           bookImportService: FakeBookImportService(),
@@ -277,6 +283,8 @@ void main() {
       await pumpLocalizedWidget(
         tester,
         AdaptiveShellScaffold(
+          appearance: fakeAppearanceDependencies(),
+          sources: fakeSourceDependencies(),
           readerFeatures: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(),
             bookImportService: FakeBookImportService(),
@@ -303,26 +311,21 @@ void main() {
     },
   );
 
-  testWidgets('wifiTransferDependencies 正確原樣傳遞給 SourcesHomeScreen', (
+  testWidgets('sources 與 readerFeatures 原樣傳到 SourcesHomeScreen', (
     tester,
   ) async {
-    final fingerprintComputer = FakeFingerprintComputer();
-    final wifiDeps = WifiTransferDependencies(
+    final sources = fakeSourceDependencies();
+    final readerFeatures = fakeReaderFeatureDependencies(
       libraryRepository: FakeLibraryRepository(),
-      importService: FakeBookImportService(),
-      computeFingerprint: fingerprintComputer.call,
-      checkNetworkAvailability: () async =>
-          const NetworkAvailability(kind: NetworkAvailabilityKind.unavailable),
+      bookImportService: FakeBookImportService(),
+      prefsManager: prefsManager,
     );
     await pumpLocalizedWidget(
       tester,
       AdaptiveShellScaffold(
-        wifiTransferDependencies: wifiDeps,
-        readerFeatures: fakeReaderFeatureDependencies(
-          libraryRepository: FakeLibraryRepository(),
-          bookImportService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
+        appearance: fakeAppearanceDependencies(),
+        sources: sources,
+        readerFeatures: readerFeatures,
         sync: fakeSyncDependencies(),
       ),
     );
@@ -334,17 +337,19 @@ void main() {
     final sourcesHomeScreen = tester.widget<SourcesHomeScreen>(
       find.byType(SourcesHomeScreen),
     );
-    expect(sourcesHomeScreen.wifiTransferDependencies, wifiDeps);
+    expect(sourcesHomeScreen.sources, same(sources));
+    expect(sourcesHomeScreen.readerFeatures, same(readerFeatures));
   });
 
   testWidgets(
-    'SettingsScaffold 收到 localeDependencies.currentLocaleOverride／onLocaleChanged 轉送',
+    'SettingsScaffold 收到 appearance.currentLocaleOverride／onLocaleChanged 轉送',
     (tester) async {
       AppLocale? received;
       await pumpLocalizedWidget(
         tester,
         AdaptiveShellScaffold(
-          localeDependencies: LibraryLocaleDependencies(
+          sources: fakeSourceDependencies(),
+          appearance: fakeAppearanceDependencies(
             currentLocaleOverride: AppLocale.zhCN,
             onLocaleChanged: (locale) => received = locale,
           ),
@@ -364,10 +369,10 @@ void main() {
       final settingsScaffold = tester.widget<SettingsScaffold>(
         find.byType(SettingsScaffold),
       );
-      expect(settingsScaffold.currentLocaleOverride, AppLocale.zhCN);
-      expect(settingsScaffold.onLocaleChanged, isNotNull);
+      expect(settingsScaffold.appearance.currentLocaleOverride, AppLocale.zhCN);
+      expect(settingsScaffold.appearance.onLocaleChanged, isNotNull);
 
-      settingsScaffold.onLocaleChanged!(AppLocale.en);
+      settingsScaffold.appearance.onLocaleChanged(AppLocale.en);
       expect(received, AppLocale.en);
     },
   );

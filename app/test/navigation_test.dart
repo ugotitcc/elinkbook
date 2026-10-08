@@ -10,6 +10,8 @@ import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
 import 'support/fake_book_import_service.dart';
+import 'support/fake_appearance_dependencies.dart';
+import 'support/fake_source_dependencies.dart';
 import 'support/fake_library_repository.dart';
 import 'support/fake_reader_prefs_manager.dart';
 import 'support/fake_reader_feature_dependencies.dart';
@@ -45,6 +47,8 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
+          sources: fakeSourceDependencies(),
           onNavigateToSettings: () => settingsRequested++,
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: FakeLibraryRepository(),

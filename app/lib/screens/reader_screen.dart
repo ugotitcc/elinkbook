@@ -145,7 +145,7 @@ class ReaderScreen extends StatefulWidget {
   final bool? isFixedLayout;
 
   /// E-Ink 高對比模式（epic-34-tts-readalong Issue 8）：App 層級主題設定
-  /// （見 `main.dart`／`LibraryThemeDependencies.isEinkMode`），由
+  /// （見 `main.dart`／`AppearanceDependencies.isEinkMode`），由
   /// [LibraryScreen._openBook] 貫穿傳入。目前唯一用途是朗讀高亮的視覺
   /// 呈現方式——[onHighlightSegment] 呼叫
   /// `FoliateReaderView.showTtsHighlight()` 時傳入的 `einkMode` 參數，

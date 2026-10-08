@@ -8,6 +8,8 @@ import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/adaptive_shell_scaffold.dart';
 
 import '../support/fake_book_import_service.dart';
+import '../support/fake_app_dependencies.dart';
+import '../support/fake_source_dependencies.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_reader_feature_dependencies.dart';
@@ -23,12 +25,15 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ElinkBookApp(
-        readerFeatures: fakeReaderFeatureDependencies(
-          libraryRepository: FakeLibraryRepository(),
-          bookImportService: FakeBookImportService(),
-          prefsManager: FakeReaderPrefsManager(),
+        dependencies: fakeAppDependencies(
+          sources: fakeSourceDependencies(),
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
         ),
-        sync: fakeSyncDependencies(),
       ),
     );
     await tester.pumpAndSettle();
@@ -41,12 +46,15 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ElinkBookApp(
-        readerFeatures: fakeReaderFeatureDependencies(
-          libraryRepository: FakeLibraryRepository(),
-          bookImportService: FakeBookImportService(),
-          prefsManager: FakeReaderPrefsManager(),
+        dependencies: fakeAppDependencies(
+          sources: fakeSourceDependencies(),
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
         ),
-        sync: fakeSyncDependencies(),
       ),
     );
     await tester.pumpAndSettle();
@@ -67,13 +75,16 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ElinkBookApp(
-        initialLocaleOverride: AppLocale.en,
-        readerFeatures: fakeReaderFeatureDependencies(
-          libraryRepository: FakeLibraryRepository(),
-          bookImportService: FakeBookImportService(),
-          prefsManager: FakeReaderPrefsManager(),
+        dependencies: fakeAppDependencies(
+          sources: fakeSourceDependencies(),
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
         ),
-        sync: fakeSyncDependencies(),
+        initialLocaleOverride: AppLocale.en,
       ),
     );
     await tester.pumpAndSettle();
@@ -87,12 +98,15 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         ElinkBookApp(
-          readerFeatures: fakeReaderFeatureDependencies(
-            libraryRepository: FakeLibraryRepository(),
-            bookImportService: FakeBookImportService(),
-            prefsManager: FakeReaderPrefsManager(),
+          dependencies: fakeAppDependencies(
+            sources: fakeSourceDependencies(),
+            readerFeatures: fakeReaderFeatureDependencies(
+              libraryRepository: FakeLibraryRepository(),
+              bookImportService: FakeBookImportService(),
+              prefsManager: FakeReaderPrefsManager(),
+            ),
+            sync: fakeSyncDependencies(),
           ),
-          sync: fakeSyncDependencies(),
         ),
       );
       await tester.pumpAndSettle();
@@ -107,12 +121,15 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         ElinkBookApp(
-          readerFeatures: fakeReaderFeatureDependencies(
-            libraryRepository: FakeLibraryRepository(),
-            bookImportService: FakeBookImportService(),
-            prefsManager: FakeReaderPrefsManager(),
+          dependencies: fakeAppDependencies(
+            sources: fakeSourceDependencies(),
+            readerFeatures: fakeReaderFeatureDependencies(
+              libraryRepository: FakeLibraryRepository(),
+              bookImportService: FakeBookImportService(),
+              prefsManager: FakeReaderPrefsManager(),
+            ),
+            sync: fakeSyncDependencies(),
           ),
-          sync: fakeSyncDependencies(),
         ),
       );
       await tester.pumpAndSettle();
@@ -138,12 +155,15 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         ElinkBookApp(
-          readerFeatures: fakeReaderFeatureDependencies(
-            libraryRepository: FakeLibraryRepository(),
-            bookImportService: FakeBookImportService(),
-            prefsManager: FakeReaderPrefsManager(),
+          dependencies: fakeAppDependencies(
+            sources: fakeSourceDependencies(),
+            readerFeatures: fakeReaderFeatureDependencies(
+              libraryRepository: FakeLibraryRepository(),
+              bookImportService: FakeBookImportService(),
+              prefsManager: FakeReaderPrefsManager(),
+            ),
+            sync: fakeSyncDependencies(),
           ),
-          sync: fakeSyncDependencies(),
         ),
       );
       await tester.pumpAndSettle();
@@ -160,12 +180,15 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         ElinkBookApp(
-          readerFeatures: fakeReaderFeatureDependencies(
-            libraryRepository: FakeLibraryRepository(),
-            bookImportService: FakeBookImportService(),
-            prefsManager: FakeReaderPrefsManager(),
+          dependencies: fakeAppDependencies(
+            sources: fakeSourceDependencies(),
+            readerFeatures: fakeReaderFeatureDependencies(
+              libraryRepository: FakeLibraryRepository(),
+              bookImportService: FakeBookImportService(),
+              prefsManager: FakeReaderPrefsManager(),
+            ),
+            sync: fakeSyncDependencies(),
           ),
-          sync: fakeSyncDependencies(),
         ),
       );
       await tester.pumpAndSettle();
@@ -188,13 +211,16 @@ void main() {
   testWidgets('選取「跟隨系統」後，MaterialApp.locale 變回 null（不再手動覆寫）', (tester) async {
     await tester.pumpWidget(
       ElinkBookApp(
-        initialLocaleOverride: AppLocale.en,
-        readerFeatures: fakeReaderFeatureDependencies(
-          libraryRepository: FakeLibraryRepository(),
-          bookImportService: FakeBookImportService(),
-          prefsManager: FakeReaderPrefsManager(),
+        dependencies: fakeAppDependencies(
+          sources: fakeSourceDependencies(),
+          readerFeatures: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(),
+            bookImportService: FakeBookImportService(),
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
         ),
-        sync: fakeSyncDependencies(),
+        initialLocaleOverride: AppLocale.en,
       ),
     );
     await tester.pumpAndSettle();

@@ -10,7 +10,6 @@ import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:pdfrx/pdfrx.dart';
 
-import 'cloud_import/cloud_account_repository.dart';
 import 'cloud_import/cloud_storage_client.dart';
 import 'cloud_import/google_drive_oauth_client.dart';
 import 'cloud_import/google_drive_storage_client.dart';
@@ -36,16 +35,15 @@ import 'reader/tts_audio_focus_source.dart';
 import 'reader/tts_audio_handler.dart';
 import 'reader/tts_audio_handler_startup.dart';
 import 'reader/webview_font_support.dart';
-import 'remote/opds_client.dart';
 import 'remote/opds_http_client.dart';
-import 'remote/remote_server_repository.dart';
 import 'wifi_transfer/network_availability.dart';
-import 'wifi_transfer/wifi_transfer_dependencies.dart';
+import 'screens/source_dependencies.dart';
 import 'remote/remote_thumbnail_cache.dart';
 import 'remote/sqlite_remote_server_repository.dart';
 import 'screens/adaptive_shell_scaffold.dart';
+import 'screens/app_dependencies.dart';
+import 'screens/appearance_dependencies.dart';
 import 'screens/cloud_duplicate_confirm_dialog.dart';
-import 'screens/library_screen_dependencies.dart';
 import 'screens/reader_feature_dependencies.dart';
 import 'screens/reading_position_conflict_dialog.dart';
 import 'screens/sync_dependencies.dart';
@@ -344,22 +342,29 @@ Future<void> main() async {
     onManualSync: syncEngine.runCheckpoint,
     loadLastSyncedAt: syncMetadataRepository.loadLastPushCompletedAt,
   );
+  // ADR 0037：來源依賴組由 main() 建構一次，ElinkBookApp 原樣往下傳。
+  final sources = SourceDependencies(
+    cloudAccountRepository: cloudAccountRepository,
+    googleDriveOAuthClient: googleDriveOAuthClient,
+    oneDriveOAuthClient: oneDriveOAuthClient,
+    googleDriveStorageClient: googleDriveStorageClient,
+    oneDriveStorageClient: oneDriveStorageClient,
+    remoteServerRepository: remoteServerRepository,
+    createOpdsClient: () => OpdsHttpClient(),
+    thumbnailCache: thumbnailCache,
+    computeFingerprint: computeBookContentFingerprint,
+    isMobileDataConnection: _isMobileDataConnection,
+    checkNetworkAvailability: checkNetworkAvailability,
+    downloadQueueController: downloadQueueController,
+  );
+  final appDependencies = AppDependencies(
+    readerFeatures: readerFeatures,
+    sync: sync,
+    sources: sources,
+  );
   runApp(
     ElinkBookApp(
-      readerFeatures: readerFeatures,
-      sync: sync,
-      cloudAccountRepository: cloudAccountRepository,
-      googleDriveOAuthClient: googleDriveOAuthClient,
-      oneDriveOAuthClient: oneDriveOAuthClient,
-      googleDriveStorageClient: googleDriveStorageClient,
-      oneDriveStorageClient: oneDriveStorageClient,
-      remoteServerRepository: remoteServerRepository,
-      createOpdsClient: () => OpdsHttpClient(),
-      computeFingerprint: computeBookContentFingerprint,
-      thumbnailCache: thumbnailCache,
-      isMobileDataConnection: _isMobileDataConnection,
-      checkNetworkAvailability: checkNetworkAvailability,
-      downloadQueueController: downloadQueueController,
+      dependencies: appDependencies,
       navigatorKey: navigatorKey,
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
@@ -370,24 +375,12 @@ Future<void> main() async {
   );
 }
 
-/// elinkBook App 根元件。啟動時接受從 main 傳入之 [initialTheme] 與
+/// elinkBook App 根元件。Issue 13 起收 `AppDependencies`（三組靜態依賴的容器），
+/// 外觀快照由 State 每次 build 現組。啟動時接受從 main 傳入之 [initialTheme] 與
 /// [initialEinkMode]（解決開機閃白屏與狀態競爭問題，見 review 意見）。
 class ElinkBookApp extends StatefulWidget {
-  /// 閱讀器功能依賴組與同步依賴組（ADR 0037）：由 `main()` 建構一次，原樣往下傳。
-  /// Issue 13 再收進 `AppDependencies`。
-  final ReaderFeatureDependencies readerFeatures;
-  final SyncDependencies sync;
-  final CloudAccountRepository? cloudAccountRepository;
-  final GoogleDriveOAuthClient? googleDriveOAuthClient;
-  final OneDriveOAuthClient? oneDriveOAuthClient;
-  final CloudStorageClient? googleDriveStorageClient;
-  final CloudStorageClient? oneDriveStorageClient;
-  final RemoteServerRepository? remoteServerRepository;
-  final OpdsClient Function()? createOpdsClient;
-  final ComputeRemoteFingerprint? computeFingerprint;
-  final RemoteThumbnailCache? thumbnailCache;
-  final Future<bool> Function()? isMobileDataConnection;
-  final DownloadQueueController? downloadQueueController;
+  /// 應用層依賴容器（ADR 0037）：由 `main()` 建構一次，原樣往下傳。
+  final AppDependencies dependencies;
   final GlobalKey<NavigatorState>? navigatorKey;
   final AppLocalePreferences localePreferences;
   final AppLocale? initialLocaleOverride;
@@ -395,30 +388,12 @@ class ElinkBookApp extends StatefulWidget {
   final AppTheme initialTheme;
   final bool initialEinkMode;
 
-  /// WiFi 傳書入口的網路先決條件偵測（epic-44-wifi-book-transfer
-  /// Issue 1），生產環境傳入 `checkNetworkAvailability`（`network_availability.dart`
-  /// 頂層函式）。
-  final CheckNetworkAvailability? checkNetworkAvailability;
-
   ElinkBookApp({
     super.key,
-    required this.readerFeatures,
-    required this.sync,
-    this.cloudAccountRepository,
-    this.googleDriveOAuthClient,
-    this.oneDriveOAuthClient,
-    this.googleDriveStorageClient,
-    this.oneDriveStorageClient,
-    this.remoteServerRepository,
-    this.createOpdsClient,
-    this.computeFingerprint,
-    this.thumbnailCache,
-    this.isMobileDataConnection,
-    this.downloadQueueController,
+    required this.dependencies,
     this.navigatorKey,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
-    this.checkNetworkAvailability,
     this.initialLocaleOverride,
     AppLocalePreferences? localePreferences,
     AppThemePreferences? themePreferences,
@@ -459,7 +434,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      widget.sync.syncCheckpointTrigger.trigger();
+      widget.dependencies.sync.syncCheckpointTrigger.trigger();
     }
   }
 
@@ -481,6 +456,17 @@ class _ElinkBookAppState extends State<ElinkBookApp>
   @override
   Widget build(BuildContext context) {
     final themeData = resolveThemeData(theme: _theme, isEinkMode: _isEinkMode);
+    // 外觀快照（ADR 0037 Task 0 Q1-A）：可變狀態的擁有者是這個 State，
+    // 每次 build 依目前值現組一份往下傳；三個子畫面看到同一份。其他三組
+    // （readerFeatures／sync／sources）仍是 main() 建的同一實例。
+    final appearance = AppearanceDependencies(
+      currentTheme: _theme,
+      isEinkMode: _isEinkMode,
+      currentLocaleOverride: _localeOverride,
+      onThemeChanged: _handleThemeChanged,
+      onEinkModeChanged: _handleEinkModeChanged,
+      onLocaleChanged: _handleLocaleChanged,
+    );
     return MaterialApp(
       navigatorKey: widget.navigatorKey,
       title: 'elinkBook',
@@ -492,39 +478,10 @@ class _ElinkBookAppState extends State<ElinkBookApp>
       localeListResolutionCallback: (deviceLocales, supportedLocales) =>
           resolveMaterialAppLocale(deviceLocales),
       home: AdaptiveShellScaffold(
-        readerFeatures: widget.readerFeatures,
-        sync: widget.sync,
-        cloudAccountDependencies: LibraryCloudAccountDependencies(
-          cloudAccountRepository: widget.cloudAccountRepository,
-          googleDriveOAuthClient: widget.googleDriveOAuthClient,
-          oneDriveOAuthClient: widget.oneDriveOAuthClient,
-          googleDriveStorageClient: widget.googleDriveStorageClient,
-          oneDriveStorageClient: widget.oneDriveStorageClient,
-        ),
-        remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
-          remoteServerRepository: widget.remoteServerRepository,
-          createOpdsClient: widget.createOpdsClient,
-          thumbnailCache: widget.thumbnailCache,
-        ),
-        computeFingerprint: widget.computeFingerprint,
-        isMobileDataConnection: widget.isMobileDataConnection,
-        downloadQueueController: widget.downloadQueueController,
-        themeDependencies: LibraryThemeDependencies(
-          currentTheme: _theme,
-          isEinkMode: _isEinkMode,
-          onThemeChanged: _handleThemeChanged,
-          onEinkModeChanged: _handleEinkModeChanged,
-        ),
-        localeDependencies: LibraryLocaleDependencies(
-          currentLocaleOverride: _localeOverride,
-          onLocaleChanged: _handleLocaleChanged,
-        ),
-        wifiTransferDependencies: WifiTransferDependencies(
-          libraryRepository: widget.readerFeatures.libraryRepository,
-          importService: widget.readerFeatures.bookImportService,
-          computeFingerprint: widget.computeFingerprint,
-          checkNetworkAvailability: widget.checkNetworkAvailability,
-        ),
+        readerFeatures: widget.dependencies.readerFeatures,
+        sync: widget.dependencies.sync,
+        sources: widget.dependencies.sources,
+        appearance: appearance,
       ),
     );
   }
