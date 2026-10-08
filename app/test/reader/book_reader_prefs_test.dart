@@ -14,6 +14,8 @@ import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 
+import '../support/full_book_reader_prefs.dart';
+
 void main() {
   test('BookReaderPrefs.empty 所有欄位皆為 null', () {
     const prefs = BookReaderPrefs.empty;
@@ -702,5 +704,32 @@ void main() {
       () {
     final filtered = BookReaderPrefs.empty.reflowableEpubFields();
     expect(filtered, BookReaderPrefs.empty);
+  });
+
+  group('fullBookReaderPrefsSeed 種子自檢（Issue 10：新增欄位漏填種子時要在這裡紅）', () {
+    test('toMap 的 33 個欄位值全部非 null', () {
+      final map = fullBookReaderPrefsSeed.toMap('seed');
+      final nullKeys = [
+        for (final e in map.entries)
+          if (e.value == null) e.key,
+      ];
+      expect(
+        nullKeys,
+        isEmpty,
+        reason: '種子必須填滿每個欄位，否則該欄位的「漏帶」守衛形同虛設；'
+            '新增欄位時請同步補進 fullBookReaderPrefsSeed。未填：$nullKeys',
+      );
+      expect(map.length, 34, reason: '33 個欄位 ＋ book_id');
+    });
+
+    test('toMap／fromMap round-trip 後與種子相等', () {
+      final restored =
+          BookReaderPrefs.fromMap(fullBookReaderPrefsSeed.toMap('seed'));
+      expect(restored, fullBookReaderPrefsSeed);
+    });
+
+    test('copyWith() 不傳參數時與種子相等（33 個欄位皆被帶回）', () {
+      expect(fullBookReaderPrefsSeed.copyWith(), fullBookReaderPrefsSeed);
+    });
   });
 }

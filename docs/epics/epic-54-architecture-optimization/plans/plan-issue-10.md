@@ -83,7 +83,7 @@
 
 **Files:** 無程式修改。
 
-- [ ] **Step 1：確認起點乾淨**
+- [x] **Step 1：確認起點乾淨**
 
 在 repo 根目錄執行：
 
@@ -99,7 +99,7 @@ git branch --show-current
 
 兩題都有建議預設，但**沒有使用者回覆前不得開始 Task 1 以後的實作**。
 
-- [ ] **Step 3：建立 worktree**
+- [x] **Step 3：建立 worktree**
 
 ```bash
 git worktree add .worktrees/epic-54-issue-10 -b epic-54-issue-10
@@ -108,7 +108,7 @@ cd .worktrees/epic-54-issue-10/app && flutter pub get
 
 之後所有指令都在 `.worktrees/epic-54-issue-10/app/` 下執行。
 
-- [ ] **Step 4：跑基準（異動將觸及的 5 個測試檔）**
+- [x] **Step 4：跑基準（異動將觸及的 5 個測試檔）**
 
 ```bash
 flutter test test/reader/book_reader_prefs_test.dart test/screens/fxl_settings_sheet_test.dart test/screens/pdf_settings_sheet_test.dart test/screens/reader_settings_sheet_test.dart
@@ -117,7 +117,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "版面覆寫"
 
 預期：全數通過。把「通過案例數」填進附錄 C 的基準欄。若有失敗，先停下回報，不要帶著紅燈開工。
 
-- [ ] **Step 5：複核「已查證的事實」**
+- [x] **Step 5：複核「已查證的事實」**
 
 ```bash
 git grep -n "BookReaderPrefs(" -- lib
@@ -137,7 +137,7 @@ git grep -n "BookReaderPrefs(" -- lib
 - Produces: `const BookReaderPrefs fullBookReaderPrefsSeed`；`void expectPrefsPreserved(BookReaderPrefs? actual, BookReaderPrefs expected, {Set<String> except = const {}})`。`except` 內放 `toMap()` 的欄位名（snake_case，如 `'writing_mode_override'`）。
 - Consumes: `BookReaderPrefs.toMap(String)`。
 
-- [ ] **Step 1：先寫自檢測試（紅）**
+- [x] **Step 1：先寫自檢測試（紅）**
 
 在 `book_reader_prefs_test.dart` 的 import 區加：
 
@@ -176,7 +176,7 @@ import '../support/full_book_reader_prefs.dart';
   });
 ```
 
-- [ ] **Step 2：跑測試確認紅**
+- [x] **Step 2：跑測試確認紅**
 
 ```bash
 flutter test test/reader/book_reader_prefs_test.dart
@@ -184,7 +184,7 @@ flutter test test/reader/book_reader_prefs_test.dart
 
 預期：編譯失敗（找不到 `../support/full_book_reader_prefs.dart`）。
 
-- [ ] **Step 3：建立種子與比對函式**
+- [x] **Step 3：建立種子與比對函式**
 
 建立 `app/test/support/full_book_reader_prefs.dart`：
 
@@ -286,7 +286,7 @@ void expectPrefsPreserved(
 }
 ```
 
-- [ ] **Step 4：跑測試確認綠**
+- [x] **Step 4：跑測試確認綠**
 
 ```bash
 flutter test test/reader/book_reader_prefs_test.dart
@@ -294,7 +294,7 @@ flutter test test/reader/book_reader_prefs_test.dart
 
 預期：全數通過（含新增 3 個）。若 `toMap` 長度不是 34，代表模型欄位數已變，回頭修正計畫與種子。
 
-- [ ] **Step 5：analyze 與 Commit**
+- [x] **Step 5：analyze 與 Commit**
 
 ```bash
 flutter analyze
