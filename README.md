@@ -41,7 +41,7 @@ APK 內含以下開源元件，版權與授權如下：
 
 ## 可下載字型
 
-字型檔不包含在 APK 內，由使用者在 App 的字型管理下載。5 款皆為 SIL Open Font License 1.1（OFL），可商用、可再散布。
+字型檔不包含在 APK 內，由使用者在 App 的字型管理下載。7 款皆為 SIL Open Font License 1.1（OFL），可商用、可再散布。
 
 | 字型 | 授權 | 版權 |
 |---|---|---|
@@ -50,3 +50,5 @@ APK 內含以下開源元件，版權與授權如下：
 | 原俠正楷（GuanKiapTsingKhai） | SIL OFL 1.1 | Copyright 2022-2025 Tony Huang |
 | 源流明體（GenRyuMin） | SIL OFL 1.1 | Copyright 2014-2019 Adobe（衍生自思源宋體） |
 | 台灣圓體（TaiwanPearl） | SIL OFL 1.1 | 上游授權檔未載明版權人 |
+| 白鷺楷（BailuKai） | SIL OFL 1.1 | Copyright 2022-2025 Tony Huang；Copyright 2026 Hu Yen-Chuan（衍生自原俠正楷） |
+| 獅尾B2加糖宋體（SweiB2Sugar） | SIL OFL 1.1 | 上游授權檔未載明版權人 |
