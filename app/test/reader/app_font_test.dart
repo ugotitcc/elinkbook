@@ -11,6 +11,8 @@ void main() {
       AppFont.guanKiapTsingKhai: 'GuanKiapTsingKhai',
       AppFont.taiwanPearl: 'TaiwanPearl',
       AppFont.genRyuMinTW: 'GenRyuMinTW',
+      AppFont.bailuKai: 'BailuKai',
+      AppFont.sweiB2Sugar: 'SweiB2SugarCJKtc',
     };
     // epic-49 Issue 8：epic-48 停用的 3 款恢復為可下載字型，順序即字型管理與閱讀設定的列出順序
     expect(AppFont.values, [
@@ -19,6 +21,8 @@ void main() {
       AppFont.guanKiapTsingKhai,
       AppFont.taiwanPearl,
       AppFont.genRyuMinTW,
+      AppFont.bailuKai,
+      AppFont.sweiB2Sugar,
     ]);
     for (final font in AppFont.values) {
       expect(font.familyName, expected[font]);
@@ -37,9 +41,10 @@ void main() {
       return AppFont.values.map((f) => f.displayName(l10n)).join('、');
     }
 
-    expect(namesIn(const Locale('zh', 'TW')), '思源黑體、思源宋體、原俠正楷、台灣圓體、源流明體');
-    expect(namesIn(const Locale('zh', 'CN')), '思源黑体、思源宋体、原侠正楷、台湾圆体、源流明体');
+    expect(namesIn(const Locale('zh', 'TW')), '思源黑體、思源宋體、原俠正楷、台灣圓體、源流明體、白鷺楷、獅尾B2加糖宋體');
+    expect(namesIn(const Locale('zh', 'CN')), '思源黑体、思源宋体、原侠正楷、台湾圆体、源流明体、白鹭楷、狮尾B2加糖宋体');
     expect(namesIn(const Locale('en')),
-        'Source Han Sans、Source Han Serif、GuanKiapTsingKhai、TaiwanPearl、GenRyuMin TW');
+        'Source Han Sans、Source Han Serif、GuanKiapTsingKhai、TaiwanPearl、GenRyuMin TW、'
+            'Bailu Kai、Swei B2 Sugar Song');
   });
 }

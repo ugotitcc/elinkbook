@@ -445,6 +445,8 @@
   "fontNameGuanKiapTsingKhai": "GuanKiapTsingKhai",
   "fontNameTaiwanPearl": "TaiwanPearl",
   "fontNameGenRyuMinTW": "GenRyuMin TW",
+  "fontNameBailuKai": "Bailu Kai",
+  "fontNameSweiB2Sugar": "Swei B2 Sugar Song",
   "fontManagementUploadTooltip": "Upload font",
   "fontManagementBuiltInSectionLabel": "Built-in Fonts",
   "fontManagementCustomSectionLabel": "Custom Fonts",

@@ -1556,6 +1556,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fontNameGenRyuMinTW => 'GenRyuMin TW';
 
   @override
+  String get fontNameBailuKai => 'Bailu Kai';
+
+  @override
+  String get fontNameSweiB2Sugar => 'Swei B2 Sugar Song';
+
+  @override
   String get fontManagementUploadTooltip => 'Upload font';
 
   @override

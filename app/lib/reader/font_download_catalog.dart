@@ -59,5 +59,17 @@ FontDownloadSpec fontDownloadSpecOf(AppFont font) {
         sizeBytes: 15976964,
         sha256: '9178c199d633075b8bb91902216c3e1bc977a11fde12471a2c9a250434402927',
       );
+    case AppFont.bailuKai:
+      return const FontDownloadSpec(
+        publishPath: 'v1/BailuKai-Medium.ttf',
+        sizeBytes: 14711412,
+        sha256: '4678fe023d707ad29dadc39cdf5f64c7d3a0dfdc2b43520454de5d10f8defdcd',
+      );
+    case AppFont.sweiB2Sugar:
+      return const FontDownloadSpec(
+        publishPath: 'v1/SweiB2SugarCJKtc-Medium.ttf',
+        sizeBytes: 25859984,
+        sha256: 'c0024df2d9c4996a4e8f44025a4e7eb729cb91540fb089555160e7c770e72c2e',
+      );
   }
 }

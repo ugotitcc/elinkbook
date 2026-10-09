@@ -2777,6 +2777,18 @@ abstract class AppLocalizations {
   /// **'源流明體'**
   String get fontNameGenRyuMinTW;
 
+  /// 內建字型名稱：白鷺楷（字型管理清單與閱讀設定的字型下拉選單，epic-55 Issue 3）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'白鷺楷'**
+  String get fontNameBailuKai;
+
+  /// 內建字型名稱：獅尾B2加糖宋體（字型管理清單與閱讀設定的字型下拉選單，epic-55 Issue 3）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'獅尾B2加糖宋體'**
+  String get fontNameSweiB2Sugar;
+
   /// AppBar「上傳字型」按鈕的無障礙提示文字
   ///
   /// In zh_TW, this message translates to:

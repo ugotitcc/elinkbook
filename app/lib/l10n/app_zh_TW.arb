@@ -2027,6 +2027,14 @@
   "@fontNameGenRyuMinTW": {
     "description": "內建字型名稱：源流明體（字型管理清單與閱讀設定的字型下拉選單，epic-49 Issue 8）"
   },
+  "fontNameBailuKai": "白鷺楷",
+  "@fontNameBailuKai": {
+    "description": "內建字型名稱：白鷺楷（字型管理清單與閱讀設定的字型下拉選單，epic-55 Issue 3）"
+  },
+  "fontNameSweiB2Sugar": "獅尾B2加糖宋體",
+  "@fontNameSweiB2Sugar": {
+    "description": "內建字型名稱：獅尾B2加糖宋體（字型管理清單與閱讀設定的字型下拉選單，epic-55 Issue 3）"
+  },
   "fontManagementUploadTooltip": "上傳字型",
   "@fontManagementUploadTooltip": {
     "description": "AppBar「上傳字型」按鈕的無障礙提示文字"

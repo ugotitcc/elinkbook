@@ -1500,6 +1500,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fontNameGenRyuMinTW => '源流明體';
 
   @override
+  String get fontNameBailuKai => '白鷺楷';
+
+  @override
+  String get fontNameSweiB2Sugar => '獅尾B2加糖宋體';
+
+  @override
   String get fontManagementUploadTooltip => '上傳字型';
 
   @override
@@ -3747,6 +3753,12 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get fontNameGenRyuMinTW => '源流明体';
 
   @override
+  String get fontNameBailuKai => '白鹭楷';
+
+  @override
+  String get fontNameSweiB2Sugar => '狮尾B2加糖宋体';
+
+  @override
   String get fontManagementUploadTooltip => '上传字体';
 
   @override
@@ -5992,6 +6004,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get fontNameGenRyuMinTW => '源流明體';
+
+  @override
+  String get fontNameBailuKai => '白鷺楷';
+
+  @override
+  String get fontNameSweiB2Sugar => '獅尾B2加糖宋體';
 
   @override
   String get fontManagementUploadTooltip => '上傳字型';

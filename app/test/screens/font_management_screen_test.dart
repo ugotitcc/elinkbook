@@ -532,7 +532,7 @@ void main() {
       );
     });
 
-    testWidgets('5 款內建字型依序列出，大小正確（Issue 8）', (tester) async {
+    testWidgets('7 款內建字型依序列出，大小正確（Issue 8）', (tester) async {
       // 預設測試畫面 800x600 放不下 5 列＋自訂字型區塊，加高避免 ListView 沒建出後面幾列
       tester.view.physicalSize = const Size(2400, 6000);
       addTearDown(tester.view.resetPhysicalSize);
@@ -543,6 +543,10 @@ void main() {
       expect(subtitleOf(AppFont.guanKiapTsingKhai, '14.0 MB · 未下載'), findsOneWidget);
       expect(subtitleOf(AppFont.taiwanPearl, '20.7 MB · 未下載'), findsOneWidget);
       expect(subtitleOf(AppFont.genRyuMinTW, '15.2 MB · 未下載'), findsOneWidget);
+      expect(subtitleOf(AppFont.bailuKai, '14.0 MB · 未下載'), findsOneWidget);
+      expect(subtitleOf(AppFont.sweiB2Sugar, '24.7 MB · 未下載'), findsOneWidget);
+      expect(find.text('白鷺楷'), findsOneWidget);
+      expect(find.text('獅尾B2加糖宋體'), findsOneWidget);
       expect(find.text('原俠正楷'), findsOneWidget);
       expect(find.text('台灣圓體'), findsOneWidget);
       expect(find.text('源流明體'), findsOneWidget);
