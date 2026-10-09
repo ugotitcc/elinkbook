@@ -37,6 +37,18 @@ void main() {
     expect(genRyu.sizeBytes, 15976964);
     expect(genRyu.sha256,
         '9178c199d633075b8bb91902216c3e1bc977a11fde12471a2c9a250434402927');
+
+    final bailu = fontDownloadSpecOf(AppFont.bailuKai);
+    expect(bailu.publishPath, 'v1/BailuKai-Medium.ttf');
+    expect(bailu.sizeBytes, 14711412);
+    expect(bailu.sha256,
+        '4678fe023d707ad29dadc39cdf5f64c7d3a0dfdc2b43520454de5d10f8defdcd');
+
+    final swei = fontDownloadSpecOf(AppFont.sweiB2Sugar);
+    expect(swei.publishPath, 'v1/SweiB2SugarCJKtc-Medium.ttf');
+    expect(swei.sizeBytes, 25859984);
+    expect(swei.sha256,
+        'c0024df2d9c4996a4e8f44025a4e7eb729cb91540fb089555160e7c770e72c2e');
   });
 
   test('每款字型的發布路徑互不相同，格式為 v<N>/<檔名>.ttf，雜湊為 64 字元小寫十六進位', () {

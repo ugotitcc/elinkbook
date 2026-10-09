@@ -13,6 +13,8 @@ enum AppFont {
   guanKiapTsingKhai, // 原俠正楷 GuanKiapTsingKhai.ttf
   taiwanPearl, // 台灣圓體 TaiwanPearl-Regular.ttf
   genRyuMinTW, // 源流明體 GenRyuMinTW-Regular.ttf
+  bailuKai, // 白鷺楷 BailuKai-Medium.ttf
+  sweiB2Sugar, // 獅尾B2加糖宋體 SweiB2SugarCJKtc-Medium.ttf
 }
 
 /// [AppFont] 對應的實際字型家族名稱字串。此值透過 method channel 的
@@ -34,6 +36,10 @@ extension AppFontFamilyName on AppFont {
         return 'TaiwanPearl';
       case AppFont.genRyuMinTW:
         return 'GenRyuMinTW';
+      case AppFont.bailuKai:
+        return 'BailuKai';
+      case AppFont.sweiB2Sugar:
+        return 'SweiB2SugarCJKtc';
     }
   }
 
@@ -51,6 +57,10 @@ extension AppFontFamilyName on AppFont {
         return l10n.fontNameTaiwanPearl;
       case AppFont.genRyuMinTW:
         return l10n.fontNameGenRyuMinTW;
+      case AppFont.bailuKai:
+        return l10n.fontNameBailuKai;
+      case AppFont.sweiB2Sugar:
+        return l10n.fontNameSweiB2Sugar;
     }
   }
 }

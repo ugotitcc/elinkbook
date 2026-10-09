@@ -211,7 +211,7 @@ _Avoid_: 登入過期（專指同步帳號）、未登入（沒連結帳號是�
 _Avoid_: sync_id（已否決的雙 id 設計，本機 id 現在就是同步用的那個 id，不是另外疊加的欄位）、UUID（過於籠統，未點出「本機主鍵與同步識別碼合一」這個關鍵設計）
 
 **自訂字型（Custom Font）**：
-`epic-14-system-settings`（FR-35）引入的使用者上傳字型，與內建字型（思源黑體/思源宋體/原俠正楷/台灣圓體/源流明體，見「可下載字型」）並列於同一份全域字型清單，統一以 family name 字串識別（`AppFont` enum 僅保留供內建字型清單 UI 呈現，不再是儲存型別）。**只對 EPUB 生效**——PDF 為原生點陣圖渲染，不套用字型設定。**不複製檔案進 App 私有目錄**，比照 ADR 0002 對書籍檔案的既有精神，以 `content://` URI＋`takePersistableUriPermission()` 直接引用，見 ADR 0021。
+`epic-14-system-settings`（FR-35）引入的使用者上傳字型，與內建字型（思源黑體/思源宋體/原俠正楷/台灣圓體/源流明體/白鷺楷/獅尾B2加糖宋體，見「可下載字型」）並列於同一份全域字型清單，統一以 family name 字串識別（`AppFont` enum 僅保留供內建字型清單 UI 呈現，不再是儲存型別）。**只對 EPUB 生效**——PDF 為原生點陣圖渲染，不套用字型設定。**不複製檔案進 App 私有目錄**，比照 ADR 0002 對書籍檔案的既有精神，以 `content://` URI＋`takePersistableUriPermission()` 直接引用，見 ADR 0021。
 _Avoid_: 上傳字型（動詞誤用成獨立概念）、外部字型（未點出「不複製、直接引用」這個關鍵特性）
 
 **可下載字型（Downloadable Font）**：

@@ -66,6 +66,16 @@ const List<ThirdPartyLicense> kThirdPartyLicenses = [
     packageName: '源流明體',
     assetPath: 'assets/licenses/font-gen-ryu-min.txt',
   ),
+  // 白鷺楷（衍生自原俠正楷）與獅尾B2加糖宋體（衍生自思源宋體），同為 SIL OFL 1.1。
+  // 獅尾上游授權檔沒有版權行，asset 末尾另附 README 的來源說明（比照台灣圓體）。
+  ThirdPartyLicense(
+    packageName: '白鷺楷',
+    assetPath: 'assets/licenses/font-bailu-kai.txt',
+  ),
+  ThirdPartyLicense(
+    packageName: '獅尾B2加糖宋體',
+    assetPath: 'assets/licenses/font-swei-b2-sugar.txt',
+  ),
 ];
 
 /// 把 [kThirdPartyLicenses] 登錄到 Flutter 的 [LicenseRegistry]，

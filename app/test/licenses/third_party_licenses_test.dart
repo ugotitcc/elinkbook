@@ -48,7 +48,7 @@ void main() {
   });
 
   group('kThirdPartyLicenses 清單', () {
-    test('10 項：5 項程式元件加 5 款字型，順序與名稱符合 spec', () {
+    test('12 項：5 項程式元件加 7 款字型，順序與名稱符合 spec', () {
       expect(kThirdPartyLicenses.map((l) => l.packageName).toList(), [
         'foliate-js',
         'zip.js',
@@ -60,6 +60,8 @@ void main() {
         '原俠正楷',
         '台灣圓體',
         '源流明體',
+        '白鷺楷',
+        '獅尾B2加糖宋體',
       ]);
     });
 
@@ -72,7 +74,7 @@ void main() {
   });
 
   group('registerThirdPartyLicenses', () {
-    test('以真實 rootBundle 登錄：10 筆、packages 與清單一致、全文含上游版權關鍵字', () async {
+    test('以真實 rootBundle 登錄：12 筆、packages 與清單一致、全文含上游版權關鍵字', () async {
       registerThirdPartyLicenses();
 
       final entries = await _readAllLicenses();
@@ -91,8 +93,10 @@ void main() {
       expect(textByPackage['fflate'], contains('Arjun Barrett'));
       expect(textByPackage['OpenCC'], contains('Apache License'));
       expect(textByPackage['Readium kotlin-toolkit'], contains('Readium'));
-      // 5 款字型：皆為 SIL OFL 1.1，並含各自上游的版權關鍵字
-      for (final font in ['思源黑體', '思源宋體', '原俠正楷', '台灣圓體', '源流明體']) {
+      // 7 款字型：皆為 SIL OFL 1.1，並含各自上游的版權關鍵字
+      for (final font in [
+        '思源黑體', '思源宋體', '原俠正楷', '台灣圓體', '源流明體', '白鷺楷', '獅尾B2加糖宋體',
+      ]) {
         expect(
           textByPackage[font],
           contains('SIL Open Font License'),
@@ -105,6 +109,12 @@ void main() {
       expect(textByPackage['原俠正楷'], contains('Tony Huang'));
       // 中文 Reserved Font Name 要能正確讀出（UTF-8）
       expect(textByPackage['原俠正楷'], contains('原俠'));
+      // 白鷺楷：保留原俠正楷版權行，並加上衍生作者的版權行
+      expect(textByPackage['白鷺楷'], contains('Tony Huang'));
+      expect(textByPackage['白鷺楷'], contains('BailuKai is a modified version'));
+      // 獅尾：上游原檔無版權行，末尾附 README 來源說明（含作者與思源宋體版權）
+      expect(textByPackage['獅尾B2加糖宋體'], contains('max32002'));
+      expect(textByPackage['獅尾B2加糖宋體'], contains('Adobe'));
       for (final text in textByPackage.values) {
         expect(text.trim(), isNotEmpty);
       }
@@ -213,6 +223,7 @@ void main() {
       'font-source-han-serif': 'SourceHanSerif-LICENSE',
       'font-guan-kiap-tsing-khai': 'GuanKiapTsingKhai-LICENSE',
       'font-gen-ryu-min': 'GenRyuMin-LICENSE',
+      'font-bailu-kai': 'BailuKai-LICENSE',
     };
 
     // git 索引內是 LF，但 Windows（autocrlf=true）工作目錄是 CRLF；
@@ -233,6 +244,22 @@ void main() {
         );
       });
     }
+
+    test('font-swei-b2-sugar.txt 以 fonts-cdn 的 SweiB2Sugar-LICENSE.txt 全文開頭，並附來源說明', () {
+      final asset = File('assets/licenses/font-swei-b2-sugar.txt');
+      final source = File('../fonts-cdn/fonts/licenses/SweiB2Sugar-LICENSE.txt');
+
+      expect(asset.existsSync(), isTrue, reason: '${asset.path} 不存在');
+      expect(source.existsSync(), isTrue, reason: '${source.path} 不存在');
+      final assetText = normalize(asset.readAsStringSync());
+      final sourceText = normalize(source.readAsStringSync());
+
+      expect(assetText.startsWith(sourceText), isTrue);
+      final note = assetText.substring(sourceText.length);
+      expect(note, contains('來源說明'));
+      expect(note, contains('非 SIL OFL 授權條款的一部分'));
+      expect(note, contains('https://github.com/max32002/swei-b2-sugar'));
+    });
 
     test('font-taiwan-pearl.txt 以 fonts-cdn 的 TaiwanPearl-LICENSE.txt 全文開頭，並附 README 來源說明', () {
       final asset = File('assets/licenses/font-taiwan-pearl.txt');

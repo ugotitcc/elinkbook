@@ -533,7 +533,7 @@ void main() {
       expect((await filesIn(fontsDir))..sort(), [specA.publishPath, specB.publishPath]);
     });
 
-    test('正式字型目錄＋舊 WebView（91）：只公開新恢復的 3 款（Issue 8）', () {
+    test('正式字型目錄＋舊 WebView（91）：只公開 30MB 以下的 5 款（Issue 8；epic-55 加白鷺楷、獅尾）', () {
       final store = DownloadableFontStore(
         httpClient: serving({}),
         directory: fontsDir,
@@ -541,7 +541,13 @@ void main() {
         webViewMajorVersion: 91,
       );
       expect(store.supportedFonts,
-          [AppFont.guanKiapTsingKhai, AppFont.taiwanPearl, AppFont.genRyuMinTW]);
+          [
+            AppFont.guanKiapTsingKhai,
+            AppFont.taiwanPearl,
+            AppFont.genRyuMinTW,
+            AppFont.bailuKai,
+            AppFont.sweiB2Sugar,
+          ]);
     });
   });
 }
