@@ -31,6 +31,8 @@ const TARGETS = {
     keySource: path.join(APP_DIR, 'android', 'key.properties.release'),
     oauthSource: path.join(APP_DIR, 'config', 'cloud_oauth.release.json'),
     buildArgs: ['build', 'apk', '--release', '--split-per-abi'],
+    // 另外多建一次不拆 ABI 的共用版（app-release.apk），發版要 5 個檔含它。
+    extraBuildArgs: [['build', 'apk', '--release']],
     output: 'build/app/outputs/flutter-apk/',
   },
   aab: {
@@ -115,13 +117,15 @@ async function main() {
     console.log(`[配對] ${path.relative(APP_DIR, t.keySource)} -> android/key.properties`);
   }
 
-  const args = [...t.buildArgs, '--dart-define-from-file=config/cloud_oauth.json'];
-  console.log(`[建置] flutter ${args.join(' ')}`);
-  // Windows 的 flutter 是 flutter.bat，要用 shell 才找得到。
-  const r = spawnSync('flutter', args, { cwd: APP_DIR, stdio: 'inherit', shell: true });
-  if (r.status !== 0) {
-    console.error('[失敗] 建置沒有成功。檔案會自動還原。');
-    process.exit(2);
+  for (const base of [t.buildArgs, ...(t.extraBuildArgs || [])]) {
+    const args = [...base, '--dart-define-from-file=config/cloud_oauth.json'];
+    console.log(`[建置] flutter ${args.join(' ')}`);
+    // Windows 的 flutter 是 flutter.bat，要用 shell 才找得到。
+    const r = spawnSync('flutter', args, { cwd: APP_DIR, stdio: 'inherit', shell: true });
+    if (r.status !== 0) {
+      console.error('[失敗] 建置沒有成功。檔案會自動還原。');
+      process.exit(2);
+    }
   }
   console.log(`[完成] 產物在 app/${t.output}`);
 }

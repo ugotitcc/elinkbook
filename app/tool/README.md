@@ -183,7 +183,7 @@ node app/tool/test_bump_version.mjs
 
 | 目標 | 金鑰（`android/key.properties` 來源） | OAuth（`config/cloud_oauth.json` 來源） | 指令 |
 |---|---|---|---|
-| `apk` | `key.properties.release` | `cloud_oauth.release.json` | `flutter build apk --release --split-per-abi` |
+| `apk` | `key.properties.release` | `cloud_oauth.release.json` | `flutter build apk --release --split-per-abi`，再建一次 `flutter build apk --release`（共用版 `app-release.apk`） |
 | `aab` | `key.properties.upload` | `cloud_oauth.release.json` | `flutter build appbundle --release` |
 | `debug` | 不換 | `cloud_oauth.debug.json` | `flutter build apk --debug` |
 
