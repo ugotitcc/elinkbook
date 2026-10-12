@@ -157,6 +157,8 @@ bump_version → 換成發佈金鑰 → analyze/test → build apk
 
 ### 2.2 換成發佈金鑰
 
+**可用腳本代勞：**在 `app/` 下執行 `node tool/build_release.js --target apk`。它會自動換金鑰與 `cloud_oauth.json`、建置、再還原，可直接跳到 2.4。下面是手動做法。
+
 ```bash
 cp app/android/key.properties.release app/android/key.properties
 ```

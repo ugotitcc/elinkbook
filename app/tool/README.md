@@ -177,6 +177,27 @@ node tool/bump_version.js --pubspec <路徑> --log <路徑>
 node app/tool/test_bump_version.mjs
 ```
 
+## `build_release.js`
+
+打包時自動配對簽章金鑰與 OAuth 設定檔，建置完再還原，不用手動 `cp`。
+
+| 目標 | 金鑰（`android/key.properties` 來源） | OAuth（`config/cloud_oauth.json` 來源） | 指令 |
+|---|---|---|---|
+| `apk` | `key.properties.release` | `cloud_oauth.release.json` | `flutter build apk --release --split-per-abi` |
+| `aab` | `key.properties.upload` | `cloud_oauth.release.json` | `flutter build appbundle --release` |
+| `debug` | 不換 | `cloud_oauth.debug.json` | `flutter build apk --debug` |
+
+```bash
+cd app
+node tool/build_release.js                 # 互動式選擇
+node tool/build_release.js --target apk    # 直接指定
+```
+
+- 建置前先備份目前的 `key.properties` 與 `cloud_oauth.json`，結束後（成功、失敗、Ctrl+C）一律還原。
+- 來源檔缺少時，在動任何檔案之前就中止。
+- 結束碼 `0`：成功。`1`：取消。`2`：設定錯誤或建置失敗（檔案已還原）。
+- 它不做版本號、簽章驗證、改檔名與 SHA-256；這些仍照 `docs/research/release_apk_sop.md`。
+
 ## `check_foliate_es_compat.js`
 
 靜態掃描 `app/android/app/src/main/assets/foliate/`（`readest/foliate-js`
