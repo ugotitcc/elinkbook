@@ -5,7 +5,7 @@
     { "id": "guanKiapTsingKhai", "file": "fonts/GuanKiapTsingKhai.ttf", "path": "v1/GuanKiapTsingKhai.ttf", "bytes": 14675776, "sha256": "758632243c499e431fd0c847f5e8c431acf59a9b41a26237a819466139994d38" },
     { "id": "taiwanPearl", "file": "fonts/TaiwanPearl-Regular.ttf", "path": "v1/TaiwanPearl-Regular.ttf", "bytes": 21704488, "sha256": "51b3c9a4ab1b6b45dcdad7c5ae93386aea399fd3dabb85d2ac41110dc57f211d" },
     { "id": "genRyuMinTW", "file": "fonts/GenRyuMinTW-Regular.ttf", "path": "v1/GenRyuMinTW-Regular.ttf", "bytes": 15976964, "sha256": "9178c199d633075b8bb91902216c3e1bc977a11fde12471a2c9a250434402927" },
-    { "id": "bailuKai", "file": "fonts/BailuKai-Medium.ttf", "path": "v1/BailuKai-Medium.ttf", "bytes": 14711412, "sha256": "4678fe023d707ad29dadc39cdf5f64c7d3a0dfdc2b43520454de5d10f8defdcd" },
+    { "id": "bailuKai", "file": "fonts/BailuKai-Medium.ttf", "path": "v2/BailuKai-Medium.ttf", "bytes": 14706900, "sha256": "c4ac77906015f8a862b2b7b074fd6e3e6b203e55fad0f9b2a57cdb43ca71db7b" },
     { "id": "sweiB2Sugar", "file": "fonts/SweiB2SugarCJKtc-Medium.ttf", "path": "v1/SweiB2SugarCJKtc-Medium.ttf", "bytes": 25859984, "sha256": "c0024df2d9c4996a4e8f44025a4e7eb729cb91540fb089555160e7c770e72c2e" }
   ]
 }

@@ -39,10 +39,10 @@ void main() {
         '9178c199d633075b8bb91902216c3e1bc977a11fde12471a2c9a250434402927');
 
     final bailu = fontDownloadSpecOf(AppFont.bailuKai);
-    expect(bailu.publishPath, 'v1/BailuKai-Medium.ttf');
-    expect(bailu.sizeBytes, 14711412);
+    expect(bailu.publishPath, 'v2/BailuKai-Medium.ttf');
+    expect(bailu.sizeBytes, 14706900);
     expect(bailu.sha256,
-        '4678fe023d707ad29dadc39cdf5f64c7d3a0dfdc2b43520454de5d10f8defdcd');
+        'c4ac77906015f8a862b2b7b074fd6e3e6b203e55fad0f9b2a57cdb43ca71db7b');
 
     final swei = fontDownloadSpecOf(AppFont.sweiB2Sugar);
     expect(swei.publishPath, 'v1/SweiB2SugarCJKtc-Medium.ttf');

@@ -61,9 +61,9 @@ FontDownloadSpec fontDownloadSpecOf(AppFont font) {
       );
     case AppFont.bailuKai:
       return const FontDownloadSpec(
-        publishPath: 'v1/BailuKai-Medium.ttf',
-        sizeBytes: 14711412,
-        sha256: '4678fe023d707ad29dadc39cdf5f64c7d3a0dfdc2b43520454de5d10f8defdcd',
+        publishPath: 'v2/BailuKai-Medium.ttf',
+        sizeBytes: 14706900,
+        sha256: 'c4ac77906015f8a862b2b7b074fd6e3e6b203e55fad0f9b2a57cdb43ca71db7b',
       );
     case AppFont.sweiB2Sugar:
       return const FontDownloadSpec(
