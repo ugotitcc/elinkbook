@@ -79,3 +79,4 @@ docs/archive/2026-10-05-epic-60-crop-mode-lost-after-cancel/reviews/
 docs/epics/epic-58-pdf-crop-drag-select/reviews/
 .scratch/
 app/test_driver/
+app/config/cloud_oauth.test.json
