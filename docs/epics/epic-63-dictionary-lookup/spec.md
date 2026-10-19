@@ -1,37 +1,8 @@
-# 字典功能 Phase 1：實作計畫
+# `epic-63-dictionary-lookup` 規格（SPEC）
 
-狀態：草案，等待審查。**尚未實作。**
-
-相關文件：`PHASE1_AUDIT.md`（現況）、`DICTIONARY_FORMATS_AND_LICENSES.md`（格式與授權）。
-
-## 1. 已決定的範圍
-
-| 決定 | 內容 |
-|---|---|
-| 平台 | 只做 Android |
-| 入口 | `AnnotationToolbar` 新增「查字典」按鈕，點了開底部面板 |
-| 匯入格式 | JSON/CSV、MDX。StarDict 延後 |
-| 字典存放 | 獨立的 `dictionary.db`，不動主庫（`version: 28`） |
-| 線上查詞 | 預設關閉。預設端點為萌典。第一次使用要同意。只送選取的詞 |
-| 自訂網址 | 不做 |
-| 方向 | 每本字典標記來源語言與目標語言。依選字內容的字元類型挑字典。使用者可調順序 |
-| MDX 顯示 | 在 WebView 顯示，關閉 JavaScript，擋掉所有網路連線 |
-| 查詢候選 | 產出有序候選清單（大小寫、Unicode 正規化、英文詞形還原、去變音符號），第一個命中就停 |
-| 選字規則 | 按鈕一律顯示。有空白視為片語整串查；CJK 不含標點且最多 8 個字元；超過就提示「選取範圍太長」，不發出任何查詢 |
-| MDX 顯示最低要求 | 交叉參照（`entry://`、`bword://`）、同詞條錨點、圖片、獨立 `.css`、深色與 E-Ink 配色 |
-| 文件位置 | 調查文件在 `docs/research/dictionary/`；本計畫書暫留 `docs/dictionary/`，核准後轉成 Epic 的 `design.md` 與 `spec.md`。暫不開 Epic、不改 `docs/epics.md` |
-
-決定依據見 `docs/research/dictionary/READEST_ANALYSIS_AND_PROPOSAL.md`。
-
-## 2. 不做的事
-
-- 不內建任何字典資料。
-- 不做 StarDict、自訂線上網址、PDF 選字查詢、桌面版。
-- 不做 MDX 的 `sound://` 音訊、外開連結範本、外部字典 App 呼叫（列為 Phase 2 候選，見 §11）。
-- 不複製 Readest 或任何 AGPL／GPL 專案的程式碼。
-- 不改 `main.js`、CFI、閱讀進度、劃線、TTS。
-- 不把字典資料放進同步。
-- 不送出書名、前後文、閱讀位置。
+> 本檔案是此 Epic 核心介面、型別、資料庫與驗收標準的唯一事實來源。背景、已決定範圍、風險、待確認項目見同目錄 `epic.md`；工單見 `issues.md`；調查依據見 `docs/research/dictionary/`。
+>
+> 章節編號沿用調查階段的計畫書，所以不連續：§1、§2、§6、§10、§11 在 `epic.md`，§8 在 `issues.md`。文中的「§N」交叉參照仍以這個編號為準。
 
 ## 3. 架構
 
@@ -295,30 +266,6 @@ CREATE INDEX idx_entries_lookup ON dictionary_entries(source_id, headword_norm);
 - 原因：Android 的 `content://` 路徑有時沒有副檔名。Readest 曾因此把多檔格式判成「不完整」。
 - 對 MDX，用主檔名配對 `.mdx`、`.mdd`、`.css`。
 
-## 6. 風險與緩解
-
-| 風險 | 影響 | 緩解 |
-|---|---|---|
-| MDX 套件品質不明 | 無法開啟或查詢錯誤 | Issue 1 先做技術驗證；介面隔離，可換套件 |
-| 舊 MDX 用 LZO | 匯入失敗 | 匯入時偵測並顯示明確訊息；驗證階段決定是否自寫 |
-| 英→繁中免費字典稀少 | 使用者沒有資料可用 | 文件說明；Phase 1 只保證匯入機制 |
-| 萌典無服務保證 | 查詢失敗 | 逾時、錯誤分類、不阻塞閱讀 |
-| 萌典 ND 授權 | 違規改動詞條 | 原文顯示、固定來源標示、不做簡繁轉換 |
-| `cleartext` 允許 | 誤走 `http` | Dart 端只接受 `https`，有單元測試 |
-| `win32` 相依鏈 | `pub get` 失敗 | 加套件前先試解析；失敗就退回備案 |
-| 面板內的 WebView 在 E-Ink 太慢 | 體驗差 | 真機量測；不通過則 MDX 改顯示純文字（備案） |
-| 大 MDX 佔記憶體 | 閃退 | 驗證階段量測；設定檔案大小警告 |
-| 匯入凍結 UI | 體驗差 | 背景 Isolate；closure 用頂層函式（見 `CLAUDE.md`） |
-| 選字太長 | 查不到、版面爆掉 | 片語與 CJK 8 字元規則（見 §3.4），超過不發任何查詢 |
-| 新資料庫遷移 | 資料遺失 | `dictionary.db` 自有版本；刪除不影響書庫 |
-| MDX 真實世界相容性 | 版面壞掉、連結失效 | Readest 一路修了許多 MDX 渲染問題（見 `READEST_ANALYSIS_AND_PROPOSAL.md` §2.7），預期會遇到。用 2 至 3 本真實字典驗收 |
-| Android 原生選取控點與面板重疊 | 面板被控點蓋住 | 計畫保留選取以便劃線。真機確認；不行就在面板開啟時隱藏控點 |
-| 關閉面板後工具列重新出現 | 體驗差 | Readest 曾因此出錯（#5526、#5585）。加入 widget 測試案例 |
-| 詞形還原誤判 | 查到錯的詞 | 只在精確比對全數落空後才用；候選只用於本機字典 |
-| 授權污染 | 法律風險 | 不複製 Readest 或任何 AGPL／GPL 程式碼。寫規格與寫程式分開 |
-
-遷移風險：主庫 schema 不變，所以沒有主庫遷移風險。
-
 ## 7. 測試策略
 
 遵守 CLAUDE.md 的範圍規則：每個 Task 只跑觸及的測試檔。完整 `flutter test` 只在計畫最後一個 Task 與合併前各一次。
@@ -371,24 +318,6 @@ CREATE INDEX idx_entries_lookup ON dictionary_entries(source_id, headword_norm);
 - `node tool/check_l10n_hardcoded_strings.js`
 - 動到 `lib/` Key 或 `integration_test/` 時：`node tool/check_integration_keys.js`
 
-## 8. 建議的 Issue 拆分
-
-每張 Issue 可獨立合併，順序有相依。
-
-| # | 內容 | 驗收重點 |
-|---|---|---|
-| 1 | MDX 解析器技術驗證（spike） | 驗證清單完成，結論寫入 `DICTIONARY_FORMATS_AND_LICENSES.md`，選定套件 |
-| 2 | 模型、介面、`dictionary.db`、`DictionaryStore` | 單元測試通過；刪除連動 |
-| 3 | JSON/CSV 匯入 + 重複匯入偵測 + 查詢候選鏈與英文詞形還原 + 本機 provider + `DictionaryService`（僅本機） | 匯入 10 萬筆有進度可取消；查詢達標；`ran` 查得到 `run`；重複匯入有提示 |
-| 4 | 查詢面板 + `AnnotationToolbar` 按鈕 + 選字規則 + 依賴注入 | 選字到顯示結果可用；FXL 不顯示按鈕；太長有提示 |
-| 5 | 字典設定畫面（清單、匯入、排序、刪除、啟用） | 三種方向可設定；刪除需確認 |
-| 6a | MDX 匯入 + 詞條 WebView 顯示 + 交叉參照與錨點 + 返回堆疊 | JS 關閉、網路被擋；`entry://` 可點可返回；`#錨點` 可跳轉 |
-| 6b | MDX 圖片（`.mdd`）、獨立 `.css`、深色與 E-Ink 配色 | 無 JS 下圖片顯示；深色與 E-Ink 下文字可讀；真機量測 |
-| 7 | 線上查詞（萌典）+ 同意對話框 + 隱私更新 | 未同意零請求；來源標示；`https` 強制 |
-| 8 | 授權頁、隱私頁、l10n 收尾、整合測試 | 檢查腳本通過；真機測試 |
-
-相依：6a 需 2、4、5；6b 需 6a；7 需 3、4；Issue 1 的選型結果決定 6a 使用的套件。
-
 ## 9. 驗收標準
 
 功能：
@@ -430,36 +359,3 @@ CREATE INDEX idx_entries_lookup ON dictionary_entries(source_id, headword_norm);
 29. `main.js` 無改動。
 30. `flutter analyze` 無問題；兩支檢查腳本通過。
 31. 程式碼中沒有取自 Readest 或其他 AGPL／GPL 專案的內容。
-
-## 10. 待確認項目
-
-已確認（2026-10-19）：
-
-- 選字規則改採 §3.4（片語整串查、CJK 8 字元上限）。取代原本的 50 字元與縮短重試。
-- 英文詞形還原納入 Phase 1。取代原本的「只轉小寫」。
-- MDX 最低要求納入 Phase 1，Issue 6 拆成 6a、6b。
-- 外開連結與外部字典 App 列入 Phase 2 候選。
-
-仍是預設假設，請確認或修改：
-
-1. **PDF**：Phase 1 不接。PDF 的選字走 `PdfSelectionInfo`，後續另立 Issue。（預設：不做）
-2. **線上結果出現時機**：本機有結果時，線上也一起查。（預設：一起查，分區顯示）
-3. **詞彙表**：`CONTEXT.md` 尚無字典相關詞條。建議實作時補上「字典來源」「查詢請求」等詞。本次依指示未修改。
-4. **ADR**：以下兩點符合「難以回復、事後令人意外、有真實取捨」，建議實作時各寫一份 ADR：
-   - 字典資料獨立於主庫（`dictionary.db`）。
-   - 線上查詢請求型別不含前後文。
-5. **顯示方式**：Phase 1 用分區加返回堆疊。頁籤等真機試用後再決定。（預設：分區）
-6. **Epic 編號與轉換**：計畫核准後，轉成 `docs/epics/<epic名>/` 的 `design.md` 與 `spec.md`，並更新 `docs/epics.md`。編號與優先順序由你定。
-
-## 11. Phase 2 候選
-
-不在 Phase 1 範圍。依優先順序：
-
-1. **StarDict 匯入**：沿用 Readest 證明可行的策略：不轉入資料庫，掃一次 `.idx` 取偏移量，二分搜尋，LRU 快取。多檔依主檔名分組，不完整的組合明確回報。
-2. **MDX `sound://` 音訊**：用現有 `just_audio` 播放。先在真機驗證 MIME 與播放時機。
-3. **外開連結範本**：範本含 `%WORD%`，僅允許 `https`。結果頁只顯示「在 {名稱} 開啟」卡片，使用者點擊後才用系統瀏覽器開啟。不嵌入、不解析。
-4. **外部字典 App 呼叫**：`ACTION_PROCESS_TEXT`，需 `AndroidManifest.xml` 加 `<queries>` 與過濾廠商瀏覽器。
-5. **PDF 選字查詢**。
-6. **頁籤式顯示**。
-
-明確不做：把前後文送去 AI 服務。若日後要做，必須是另一個請求型別，有獨立的同意流程，不與 `LookupRequest` 共用。

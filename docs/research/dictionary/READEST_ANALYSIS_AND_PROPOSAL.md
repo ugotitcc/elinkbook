@@ -2,7 +2,7 @@
 
 分析日期：2026-10-19。對象：[readest/readest](https://github.com/readest/readest)（最後推送 2026-10-18）。
 
-相關文件：`PHASE1_AUDIT.md`、`PHASE1_IMPLEMENTATION_PLAN.md`、`DICTIONARY_FORMATS_AND_LICENSES.md`。
+相關文件：`PHASE1_AUDIT.md`、`docs/epics/epic-63-dictionary-lookup/`（`epic.md`、`spec.md`、`issues.md`）、`DICTIONARY_FORMATS_AND_LICENSES.md`。
 
 **狀態：已採納（2026-10-19）。** 實作計畫已依本文更新，見 §8。
 
@@ -280,4 +280,4 @@ JavaScript 維持關閉。取捨：牛津 9 這類字典的圖片放大靠 `oncl
 4. **§4.3 外開連結**與 **§4.4 外部字典 App** 列入 Phase 2 候選？（我建議：是）
 ## 8. 結果
 
-2026-10-19：以上 4 題都採納建議。`docs/dictionary/PHASE1_IMPLEMENTATION_PLAN.md` 已依 §5 更新，§6 的證據已補進 `DICTIONARY_FORMATS_AND_LICENSES.md`。
+2026-10-19：以上 4 題都採納建議。`docs/epics/epic-63-dictionary-lookup/spec.md`（原 `PHASE1_IMPLEMENTATION_PLAN.md`）已依 §5 更新，§6 的證據已補進 `DICTIONARY_FORMATS_AND_LICENSES.md`。
