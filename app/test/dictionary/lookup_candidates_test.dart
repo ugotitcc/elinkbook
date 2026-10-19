@@ -66,6 +66,24 @@ void main() {
       }
     });
 
+    test("彎撇號備援：don’t 之後有 don't", () {
+      final c = lookupCandidates('don’t', lang: 'en');
+      expect(c, contains("don't"));
+      expect(c.indexOf("don't"), greaterThan(c.indexOf('don’t')));
+    });
+
+    test("所有格：dog’s 與 dog's 之後有 dog", () {
+      for (final w in ['dog’s', "dog's", 'Dog’s']) {
+        final c = lookupCandidates(w, lang: 'en');
+        expect(c, contains('dog'), reason: w);
+        expect(c.indexOf('dog'), greaterThan(0), reason: w);
+      }
+    });
+
+    test('中文字典不產生所有格候選', () {
+      expect(lookupCandidates("dog's", lang: 'zh'), isNot(contains('dog')));
+    });
+
     test('片語首字大寫只動第一個字元', () {
       expect(
         lookupCandidates('kick the bucket', lang: 'en').take(3),

@@ -5,7 +5,9 @@ import 'models/dictionary_entry.dart';
 /// 查詢候選清單（spec §3.4），依序：
 /// 原字串、小寫、首字大寫（第一個字元大寫、其餘小寫）、全大寫；
 /// 再接 `lemmatize(lang, 小寫)` 的結果；
-/// 最後把前面每個含變音符號的候選去變音符號後附上（`café` 先於 `cafe`）。
+/// 再把前面每個含變音符號的候選去變音符號後附上（`café` 先於 `cafe`）；
+/// 再把彎撇號 `’`、`‘`、`ʼ` 換成直撇號 `'` 附上（EPUB 排版用彎撇號，
+/// 字典詞頭多半是直撇號）；英文再補上去掉所有格 `'s` 的詞（`dog's`→`dog`）。
 /// 相同字串只保留第一次出現。輸入去空白後為空 → 回傳空清單。
 ///
 /// 清單保留大小寫變體（MDX 字典可能區分大小寫）；不分大小寫的來源請再用
@@ -30,8 +32,26 @@ List<String> lookupCandidates(String text, {required String lang}) {
     final stripped = stripLatinDiacritics(c);
     if (stripped != c) add(stripped);
   }
+
+  for (final c in List<String>.of(out)) {
+    final straight = c.replaceAll(_curlyApostrophes, "'");
+    if (straight != c) add(straight);
+  }
+
+  if (_primaryLang(lang) == 'en') {
+    for (final c in List<String>.of(out)) {
+      if (c.length > 2 && c.toLowerCase().endsWith("'s")) {
+        add(c.substring(0, c.length - 2));
+      }
+    }
+  }
   return out;
 }
+
+final _curlyApostrophes = RegExp('[’‘ʼ]');
+
+String _primaryLang(String lang) =>
+    lang.toLowerCase().split(RegExp(r'[-_]')).first;
 
 /// 依 `headwordNorm()` 去重，保留第一次出現的順序與原樣字串。
 /// 比對不分大小寫的來源（JSON、CSV、CC-CEDICT）用它，避免對同一個詞查三次。

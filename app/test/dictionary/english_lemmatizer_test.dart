@@ -88,4 +88,49 @@ void main() {
       expect(c.toSet().length, c.length, reason: w);
     }
   });
+
+  test('順序：常見詞的正確原形排在碰巧也是單字的錯詞幹前面', () {
+    const expectedFirst = {
+      'notes': 'note',
+      'rates': 'rate',
+      'uses': 'use',
+      'used': 'use',
+      'cares': 'care',
+      'cared': 'care',
+      'planes': 'plane',
+      'hopes': 'hope',
+      'hoped': 'hope',
+      'hoping': 'hope',
+      'riding': 'ride',
+      'rides': 'ride',
+      'hated': 'hate',
+      'finer': 'fine',
+      'stared': 'stare',
+      'dying': 'die',
+      'lying': 'lie',
+      // 雙寫子音：原形沒有 e。
+      'hopped': 'hop',
+      'stopped': 'stop',
+      'running': 'run',
+      'bigger': 'big',
+      'planned': 'plan',
+      // 詞幹本來就以 s／x／ch／l 等結尾。
+      'boxes': 'box',
+      'passed': 'pass',
+      'called': 'call',
+      'cats': 'cat',
+      'walked': 'walk',
+      'walking': 'walk',
+    };
+    expectedFirst.forEach((word, lemma) {
+      expect(lemmatizeEnglish(word).first, lemma, reason: word);
+    });
+  });
+
+  test('規則產生的候選至少 3 個字母，不產生 us、hi 這類短詞', () {
+    expect(lemmatizeEnglish('uses'), isNot(contains('us')));
+    expect(lemmatizeEnglish('used'), isNot(contains('us')));
+    expect(lemmatizeEnglish('his'), isEmpty);
+    expect(lemmatizeEnglish('dying'), isNot(contains('dy')));
+  });
 }

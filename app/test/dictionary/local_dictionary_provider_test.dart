@@ -140,6 +140,22 @@ void main() {
     );
   });
 
+  test('字典同時有 hop 與 hope：hoped 命中 hope，不是 hop', () async {
+    final provider = await providerWith(['hop', 'hope']);
+
+    final outcome = await provider.lookup(const LookupRequest('hoped'));
+
+    expect(outcome.entries.single.headword, 'hope');
+  });
+
+  test('EPUB 的彎撇號 don’t 能查到直撇號詞頭', () async {
+    final provider = await providerWith(["don't"]);
+
+    final outcome = await provider.lookup(const LookupRequest('don’t'));
+
+    expect(outcome.status, OutcomeStatus.found);
+  });
+
   test('同一詞頭多筆全部回傳', () async {
     final provider = await providerWith(['IT', 'it']);
 

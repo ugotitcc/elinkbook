@@ -29,13 +29,20 @@ const int kMaxCjkSelectionLength = 8;
 
 final _edge = RegExp(r'^[\s\p{P}\p{S}]+|[\s\p{P}\p{S}]+$', unicode: true);
 final _whitespaceRun = RegExp(r'\s+');
+
+/// 兩個漢字之間的空白。EPUB 段落中間斷行時，選取結果會在漢字間夾一個換行，
+/// 中文詞本來就不用空白分隔，所以直接移除。
+final _spaceBetweenHan = RegExp(
+  r'(?<=\p{Script=Han})\s+(?=\p{Script=Han})',
+  unicode: true,
+);
 final _han = RegExp(r'\p{Script=Han}', unicode: true);
 final _latin = RegExp(r'\p{Script=Latin}', unicode: true);
 final _notWordChar = RegExp(r'[\p{P}\p{S}\p{Cc}]', unicode: true);
 
 /// 選字處理（spec §3.4），依序：
 /// 1. 去頭尾空白與標點；空字串 → [SelectionProblem.invalidSelection]。
-/// 2. 內部連續空白（含換行）整理成單一空白。
+/// 2. 漢字之間的空白移除；其餘內部連續空白（含換行）整理成單一空白。
 /// 3. 含空白 → 片語：內部標點允許，不設長度上限。
 /// 4. 不含空白：內部有標點或控制字元 → invalidSelection，只有「不含 CJK 且
 ///    是 `-`、`'`、`’`」例外（`state-of-the-art`、`don't`）。
@@ -46,7 +53,8 @@ SelectionNormalization normalizeLookupSelection(String raw) {
   if (trimmed.isEmpty) {
     return const RejectedSelection(SelectionProblem.invalidSelection);
   }
-  final text = trimmed.replaceAll(_whitespaceRun, ' ');
+  final text =
+      trimmed.replaceAll(_spaceBetweenHan, '').replaceAll(_whitespaceRun, ' ');
   final charType = detectCharType(text);
 
   if (!text.contains(' ')) {

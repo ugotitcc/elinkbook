@@ -89,6 +89,18 @@ void main() {
     expect(_ok('café').charType, SelectionCharType.latin);
   });
 
+  test('漢字之間的空白與換行直接移除（EPUB 段落中間斷行）', () {
+    expect(_ok('相濡\n以沫').text, '相濡以沫');
+    expect(_ok('相濡  以 沫').text, '相濡以沫');
+    // 移除後才算長度：9 個字仍然太長。
+    _rejected('一二三四五\n六七八九', SelectionProblem.tooLong);
+  });
+
+  test('拉丁字母與漢字之間的空白保留', () {
+    expect(_ok('iPhone 手機').text, 'iPhone 手機');
+    expect(_ok('kick the bucket').text, 'kick the bucket');
+  });
+
   test('擴展 B 區的漢字算 CJK', () {
     expect(detectCharType('𠀀'), SelectionCharType.cjk);
   });
