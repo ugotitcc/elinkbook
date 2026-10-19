@@ -203,7 +203,7 @@ git commit -m "feat(epic-63): Issue 2 dictionary.db 開啟與外鍵設定"
   - `lookup` 先把 `word` 套 `headwordNorm()`，比對 `source_id` 與 `headword_norm`，依 `id` 排序；`word` 去空白後為空時直接回傳 `const []`。
   - `format` 存 `DictionaryFormat.name`、`body_kind` 存 `EntryBodyKind.name`、`imported_at` 存 `importedAt.toUtc().toIso8601String()`，讀回是 UTC（審查 M-1）；`storagePath`、`licenseNote` 的 `''` 存成 `''`，讀回時資料庫的 `NULL` 也轉成 `''`，即 `(row['storage_path'] as String?) ?? ''`（審查 M-2）。
 
-- [ ] **Step 1: 寫失敗的測試 `dictionary_store_test.dart`**
+- [x] **Step 1: 寫失敗的測試 `dictionary_store_test.dart`**
 
 `setUp` 開 `inMemoryDatabasePath`（`singleInstance: false`）並建立 `DictionaryStore`；`tearDown` 關閉。測試檔內寫 `_source({id, priority, enabled})` 與 `_entry(sourceId, headword, {body})` 兩個小工廠。測試名稱與斷言：
 - `test('寫入來源後可完整讀回')`：每個欄位相等，含 `format`；`importedAt` 用 `isAtSameMomentAs` 比對。
@@ -227,21 +227,21 @@ git commit -m "feat(epic-63): Issue 2 dictionary.db 開啟與外鍵設定"
 - `test('重複的來源 id 寫入失敗，且不留下半筆')`：第二次 `insertSource` 同 id → `expect(..., throwsA(isA<DatabaseException>()))`；`listSources()` 仍只有一筆。
 - `test('寫入詞條給不存在的來源會失敗（外鍵生效）')`：`expect(store.insertEntries([_entry('missing', 'x')]), throwsA(isA<DatabaseException>()))`。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/dictionary_store_test.dart`
 Expected: FAIL，找不到 `DictionaryStore`。
 
-- [ ] **Step 3: 實作 `DictionaryStore`**
+- [x] **Step 3: 實作 `DictionaryStore`**
 
 簽章見 Interfaces。`insertEntries` 用傳入的 `DatabaseExecutor` 建 `batch()`，所以在 `transaction` 內會跟著同一個交易。所有 SQL 用 `?` 參數或 `db.insert/query/update/delete` 的 `where`/`whereArgs`，不拼字串。來源與詞條的 `Map` 轉換寫成兩個私有方法（`_sourceToRow`／`_rowToSource`、`_entryToRow`／`_rowToEntry`）。類別註解註明：`headword_norm` 公式只存在 `headwordNorm()` 一處。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/dictionary/dictionary_store_test.dart`
 Expected: PASS（19 個測試）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary/storage/dictionary_store.dart app/test/dictionary/dictionary_store_test.dart
