@@ -561,7 +561,7 @@ git commit -m "feat(epic-63): Issue 3 查詢候選清單與去變音符號"
 4. `LookupRequest` 帶的是處理後的 `text`。
 5. 沒有符合的字典 → `LookupCompleted` 且 `outcomes` 為空。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `local_dictionary_provider_test.dart`（記憶體 `dictionary.db` ＋ 真的 `DictionaryStore`）：
 - `test('命中第一個候選就停')`：字典同時有 `ran` 與 `run`，查 `ran` → `entries.single.headword == 'ran'`；以計數用的 `DictionaryStore` 子類別（覆寫 `lookup`）驗證 `store.lookup` 只被呼叫 1 次，不會再去查 `run`。
@@ -587,20 +587,20 @@ git commit -m "feat(epic-63): Issue 3 查詢候選清單與去變音符號"
 - `test('LookupRequest 帶處理後的文字')`：`「apple」` → `result.request.word == 'apple'`。
 - `test('本機查詢 p95 小於 300 ms（含候選鏈）')`（驗收 23）：10 萬筆詞條的字典，隨機查 200 次含詞形還原的詞，第 190 名（p95）耗時小於 300 ms。註解說明這是開發機基準，真機量測屬 Issue 8。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/local_dictionary_provider_test.dart test/dictionary/dictionary_service_test.dart`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作 `LocalDictionaryProvider` 與 `DictionaryService`**
+- [x] **Step 3: 實作 `LocalDictionaryProvider` 與 `DictionaryService`**
 
 語言碼比對用一個私有的 `_primaryLang(String)`（轉小寫、取 `-` 前段）。`DictionaryService` 不快取來源清單（每次查詢都讀，設定畫面改動即時生效）。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary app/test/dictionary
