@@ -95,7 +95,7 @@ app/test/dictionary/  對應的 *_test.dart（見各 Task）
   - `DictionaryImporter` 新增 `Future<ImportHints> readHints(String filePath, String fileName);`
   - `DictionaryStore`：`insertSource(DictionarySource source, {String? contentId})`（新增選填參數）、`Future<String?> findSourceIdByContentId(String contentId)`。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `dictionary_store_test.dart` 新增 `group('content_id')`：
 - `test('寫入時帶 contentId，可用它找回來源 id')`：`insertSource(_source('a'), contentId: 'cid-1')`；`findSourceIdByContentId('cid-1')` 等於 `'a'`。
@@ -104,20 +104,20 @@ app/test/dictionary/  對應的 *_test.dart（見各 Task）
 
 `dictionary_interfaces_test.dart`：`_FakeImporter` 補 `readHints`（回傳 `ImportHints(name: 'x')`），新增 `test('ImportProgress 預設為寫入階段且沒有摘要')`：`const ImportProgress(processed: 1, total: 2)` 的 `stage == ImportStage.writing`、`summary == null`。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（在 `app/`）: `flutter test test/dictionary/dictionary_store_test.dart test/dictionary/dictionary_interfaces_test.dart`
 Expected: FAIL（找不到 `findSourceIdByContentId`、`ImportStage`、`ImportHints`）。
 
-- [ ] **Step 3: 實作上述 Interfaces**
+- [x] **Step 3: 實作上述 Interfaces**
 
 型別放在 `dictionary_importer.dart`。`insertSource` 把 `contentId` 寫進 `content_id` 欄。`findSourceIdByContentId` 用參數化查詢回傳第一筆的 `id`。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary app/test/dictionary
