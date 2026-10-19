@@ -93,13 +93,13 @@ app/test/dictionary/
   - `class ImportProgress { final int processed; final int total; }`（`const` 建構子，全部 `required`）
   - `abstract class DictionaryImporter { bool canHandle(String fileName); Stream<ImportProgress> import(ImportRequest request, {required CancelToken cancel}); }`
 
-- [ ] **Step 1: 寫失敗的測試 `lookup_request_test.dart`**
+- [x] **Step 1: 寫失敗的測試 `lookup_request_test.dart`**
 
 測試名稱與斷言：
 - `test('相同的詞視為相等')`：`expect(const LookupRequest('run'), const LookupRequest('run'))`；`expect(const LookupRequest('run'), isNot(const LookupRequest('ran')))`。
 - `test('型別只有 word 一個欄位，防止日後加前後文欄位')`：用 `File('lib/dictionary/models/lookup_request.dart').readAsStringSync()` 讀原始碼，以 `RegExp(r'^  (final|late|var)\s', multiLine: true)` 數欄位宣告，`expect(count, 1)`，並 `expect(source, contains('final String word;'))`。regex 刻意只吃「恰好兩格縮排」：`dart format` 保證類別成員縮排兩格、方法內的區域變數至少四格，所以 `==` 裡的 `final other = ...` 不會被誤算（審查 I-3）。測試註解說明：Dart 無法反射列舉欄位，所以用原始碼掃描守住這條隱私底線（對應 spec §3.2 的「從型別上保證不可能把書中內容送出去」）。
 
-- [ ] **Step 2: 寫失敗的測試 `dictionary_interfaces_test.dart`**
+- [x] **Step 2: 寫失敗的測試 `dictionary_interfaces_test.dart`**
 
 在測試檔內寫一個 `_FakeProvider implements DictionaryProvider` 與一個 `_FakeOnline implements OnlineDictionaryProvider`，一個 `_FakeImporter implements DictionaryImporter`。
 - `test('DictionaryProvider 回傳 ProviderOutcome')`：`lookup(const LookupRequest('run'))` 回傳 `status == OutcomeStatus.found`、`entries.length == 1`。
@@ -107,21 +107,21 @@ app/test/dictionary/
 - `test('CancelToken 取消後 isCancelled 為 true')`：建構後 `isCancelled == false`；`cancel()` 後 `true`。
 - `test('headwordNorm 去頭尾空白並轉小寫')`：`headwordNorm('  IT ')` 等於 `'it'`；`headwordNorm('相濡以沫')` 原樣不變。
 
-- [ ] **Step 3: 執行測試，確認失敗**
+- [x] **Step 3: 執行測試，確認失敗**
 
 Run（在 `app/`）: `flutter test test/dictionary/lookup_request_test.dart test/dictionary/dictionary_interfaces_test.dart`
 Expected: FAIL，錯誤為找不到 `package:elinkbook/dictionary/...`（import 找不到）。
 
-- [ ] **Step 4: 實作上述 Interfaces 區塊列出的所有型別**
+- [x] **Step 4: 實作上述 Interfaces 區塊列出的所有型別**
 
 放在「Files」列出的檔案。每個檔案頂端用中文類別註解說明用途；`LookupRequest` 的註解要寫明「刻意只有一個詞，沒有前後文欄位」。`CancelToken` 用單一私有 `bool` 實作。
 
-- [ ] **Step 5: 執行測試，確認通過**
+- [x] **Step 5: 執行測試，確認通過**
 
 Run: `flutter test test/dictionary/lookup_request_test.dart test/dictionary/dictionary_interfaces_test.dart`
 Expected: PASS。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/dictionary app/test/dictionary
