@@ -141,7 +141,7 @@ git commit -m "feat(epic-63): Issue 2 字典模型與抽象介面"
 - Produces: `abstract final class DictionaryDatabase { static const int version = 1; static Future<Database> open(String path, {bool singleInstance = true}); }`。`open` 比照 `SqliteLibraryRepository.open`：`singleInstance` 預設 `true`；測試要在同一個 process 開多個 `:memory:` 時傳 `false`。
 - Produces: 頂層 `Future<String> defaultDictionaryDatabasePath()`，回傳 App 文件目錄下的 `dictionary.db`（審查 M-3）。比照 `defaultLibraryDatabasePath()`：不寫測試（`path_provider` 需要平台 channel），註解寫明僅供正式執行時使用。Issue 4 的 `main.dart` 呼叫它。
 
-- [ ] **Step 1: 寫失敗的測試 `dictionary_database_test.dart`**
+- [x] **Step 1: 寫失敗的測試 `dictionary_database_test.dart`**
 
 `setUpAll` 比照 `app/test/search/search_repository_test.dart`：`sqfliteFfiInit(); databaseFactory = databaseFactoryFfi;`。測試名稱與斷言：
 - `test('建立兩張表與查詢索引')`：開 `inMemoryDatabasePath`（`singleInstance: false`），查 `sqlite_master`，斷言有表 `dictionary_sources`、`dictionary_entries` 與索引 `idx_entries_lookup`。
@@ -150,21 +150,21 @@ git commit -m "feat(epic-63): Issue 2 字典模型與抽象介面"
 - `test('主資料庫版本仍為 28')`：`final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath, singleInstance: false)`；`expect(await repo.database.getVersion(), 28)`；`await repo.close()`。
 - `test('dictionary.db 與主庫是不同檔案')`：用兩個不同暫存路徑各開一個，確認 `dictionary_sources` 不存在於主庫（`sqlite_master` 查無）。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/dictionary_database_test.dart`
 Expected: FAIL，找不到 `DictionaryDatabase`。
 
-- [ ] **Step 3: 實作 `DictionaryDatabase.open`**
+- [x] **Step 3: 實作 `DictionaryDatabase.open`**
 
 `openDatabase(path, version: version, singleInstance: singleInstance, onConfigure: ..., onCreate: ...)`。`onConfigure` 只執行 `PRAGMA foreign_keys = ON`；`onCreate` 逐字執行 `spec.md` §4 的兩個 `CREATE TABLE` 與一個 `CREATE INDEX`。類別註解寫明：外鍵設定放 `onConfigure` 的原因（連線層級，每次開啟都要設），並指向 `sqlite_library_repository.dart` 的同一做法。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/dictionary/dictionary_database_test.dart`
 Expected: PASS（5 個測試）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary/storage/dictionary_database.dart app/test/dictionary/dictionary_database_test.dart
