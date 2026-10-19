@@ -340,4 +340,23 @@ void main() {
       expect((await store.lookup('s1', 'run')).length, 1);
     });
   });
+
+  group('content_id', () {
+    test('寫入時帶 contentId，可用它找回來源 id', () async {
+      await store.insertSource(_source('a'), contentId: 'cid-1');
+      expect(await store.findSourceIdByContentId('cid-1'), 'a');
+    });
+
+    test('找不到 contentId 回傳 null；沒帶 contentId 的來源不會被找到', () async {
+      await store.insertSource(_source('a'));
+      expect(await store.findSourceIdByContentId('cid-1'), isNull);
+      expect(await store.findSourceIdByContentId(''), isNull);
+    });
+
+    test('刪除來源後，同一個 contentId 找不到', () async {
+      await store.insertSource(_source('a'), contentId: 'cid-1');
+      await store.deleteSource('a');
+      expect(await store.findSourceIdByContentId('cid-1'), isNull);
+    });
+  });
 }

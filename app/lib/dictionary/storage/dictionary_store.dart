@@ -28,12 +28,25 @@ class DictionaryStore {
     return action(this);
   }
 
-  Future<void> insertSource(DictionarySource source) async {
+  /// [contentId] 是重複匯入偵測用的內容指紋，不屬於模型，只在這裡存取。
+  Future<void> insertSource(DictionarySource source, {String? contentId}) async {
     await _db.insert(
       'dictionary_sources',
-      _sourceToRow(source),
+      {..._sourceToRow(source), 'content_id': contentId},
       conflictAlgorithm: ConflictAlgorithm.abort,
     );
+  }
+
+  /// 以內容指紋找來源 id；找不到回傳 `null`。
+  Future<String?> findSourceIdByContentId(String contentId) async {
+    final rows = await _db.query(
+      'dictionary_sources',
+      columns: ['id'],
+      where: 'content_id = ?',
+      whereArgs: [contentId],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.first['id'] as String;
   }
 
   /// 找不到回傳 `null`。

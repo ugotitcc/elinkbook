@@ -34,6 +34,10 @@ class _FakeImporter implements DictionaryImporter {
   bool canHandle(String fileName) => fileName.endsWith('.json');
 
   @override
+  Future<ImportHints> readHints(String filePath, String fileName) async =>
+      const ImportHints(name: 'x');
+
+  @override
   Stream<ImportProgress> import(
     ImportRequest request, {
     required CancelToken cancel,
@@ -67,6 +71,12 @@ void main() {
         )
         .toList();
     expect(progress.single.processed, 1);
+  });
+
+  test('ImportProgress 預設為寫入階段且沒有摘要', () {
+    const progress = ImportProgress(processed: 1, total: 2);
+    expect(progress.stage, ImportStage.writing);
+    expect(progress.summary, isNull);
   });
 
   test('CancelToken 取消後 isCancelled 為 true', () {

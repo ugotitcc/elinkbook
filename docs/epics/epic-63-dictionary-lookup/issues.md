@@ -81,7 +81,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 ## Issue 3：JSON/CSV 與 CC-CEDICT 匯入、重複匯入偵測、查詢候選鏈、本機查詢
 
-**Status:** ready-for-agent
+**Status:** in-review（2026-10-19：實作完成，待程式審查與 PR）
 
 **依賴：** Issue 2。
 
