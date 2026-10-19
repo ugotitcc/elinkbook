@@ -24,14 +24,17 @@
 |---|---|
 | 平台 | 只做 Android |
 | 查詢入口 | `AnnotationToolbar` 新增按鈕，開底部面板 |
-| 匯入格式 | JSON/CSV、MDX。StarDict 延後 |
+| 匯入格式 | JSON/CSV、CC-CEDICT、MDX。StarDict 延後 |
 | 字典存放 | 獨立的 `dictionary.db` |
 | 線上查詞 | 預設關閉；預設端點為萌典；第一次使用要同意；只送選取的詞 |
 | 自訂網址 | 不做（Phase 2 候選：外開連結版） |
 | 三個方向 | 每本字典標記來源與目標語言；依選字的字元類型挑字典；使用者可調順序 |
 | MDX 顯示 | WebView，關閉 JavaScript、擋所有網路 |
 | Readest 分析採納 | 查詢候選鏈與英文詞形還原；片語與 CJK 8 字元規則；MDX 最低要求（交叉參照、錨點、圖片、CSS、配色） |
-| MDX 解析器 | 未選定。Issue 1 用真實字典驗證 `dict_reader` 與 `mdict_flutter` |
+| MDX 解析器 | 未選定。Issue 1 用真實字典驗證 `dict_reader` 與 `mdict_flutter`。**不用 `readest/js-mdict`**（v7 起 AGPL-3.0），2026-10-19 決定；備案見 `DICTIONARY_FORMATS_AND_LICENSES.md` |
+| CC-CEDICT | Phase 1 新增 `CedictImporter`（它不是 JSON、CSV 或 MDX）；不內建、不散布，使用者自行下載。拼音顯示轉成聲調符號（`pīnyīn`），資料庫存原文；注音留待後續 |
+| MDX 外部 CSS | 匯入時可多選 `.mdx`、`.mdd`、`.css`；CSS 依詞條 `<link href>` 的檔名配對；缺檔仍可讀並提醒，可事後補匯入 |
+| 驗收用字典 | `tmp/dictionary/` 下的教育部 MDX、簡明古漢語 MDX、CC-CEDICT；只作本機測試，不進版控、不放 fixtures |
 
 
 ---
@@ -44,7 +47,7 @@
 |---|---|
 | 平台 | 只做 Android |
 | 入口 | `AnnotationToolbar` 新增「查字典」按鈕，點了開底部面板 |
-| 匯入格式 | JSON/CSV、MDX。StarDict 延後 |
+| 匯入格式 | JSON/CSV、CC-CEDICT、MDX。StarDict 延後 |
 | 字典存放 | 獨立的 `dictionary.db`，不動主庫（`version: 28`） |
 | 線上查詞 | 預設關閉。預設端點為萌典。第一次使用要同意。只送選取的詞 |
 | 自訂網址 | 不做 |
@@ -82,6 +85,8 @@
 | 大 MDX 佔記憶體 | 閃退 | 驗證階段量測；設定檔案大小警告 |
 | 匯入凍結 UI | 體驗差 | 解析放進 `Isolate.run()`，寫入留在主 Isolate 分批進行（見 `spec.md` §3.3）；closure 用頂層函式（見 `CLAUDE.md`、`AGENTS.md`） |
 | Dart 無 Unicode 正規化 | 分解形式的詞查不到 | Phase 1 不做 NFC／NFD；真機回報後再評估套件與授權（見 `spec.md` §3.4） |
+| 真實 MDX 的特殊設定 | 套件打不開或顯示殘留標記 | 兩個實檔都是 `Encrypted=2`；一個有 `StyleSheet`、一個 `StripKey=Yes`。列為 Issue 1 必過項目，缺的功能在 `MdxReader` 補 |
+| 沒有 LZO 驗收檔 | 無法驗證 LZO 支援 | 需人類另外提供一本 LZO 壓縮的 MDX |
 | 選字太長 | 查不到、版面爆掉 | 片語與 CJK 8 字元規則（見 §3.4），超過不發任何查詢 |
 | 新資料庫遷移 | 資料遺失 | `dictionary.db` 自有版本；刪除不影響書庫 |
 | MDX 真實世界相容性 | 版面壞掉、連結失效 | Readest 一路修了許多 MDX 渲染問題（見 `READEST_ANALYSIS_AND_PROPOSAL.md` §2.7），預期會遇到。用 2 至 3 本真實字典驗收 |
@@ -112,6 +117,8 @@
 5. **顯示方式**：已確認（2026-10-19，審查 Important 2）：Phase 1 用分段選擇器，一次只顯示一本字典，加返回堆疊。取代原本的「分區」預設。
 6. **Epic 編號與順位**：已轉成 Epic（2026-10-19）。編號 `epic-63` 是目前最大編號加一，順位 64 是看板最後一列。若要調整，請告知。
 7. **PRD 與詞彙表**：統一在 Issue 8 補 `docs/prd.md` 的 FR 條目與 `CONTEXT.md` 詞條。
+8. **CC-CEDICT 拼音顯示**：已確認（2026-10-19）：聲調符號。
+9. **MDX 外部 CSS 的配對方式**：已確認（2026-10-19）：多選匯入，依詞條 `<link href>` 的檔名配對。
 
 ## 11. Phase 2 候選
 

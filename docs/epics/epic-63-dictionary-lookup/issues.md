@@ -6,7 +6,7 @@
 |---|---|---|---|---|
 | 1 | MDX 解析器技術驗證（spike，需真機與真實字典） | 無 | ready-for-human | |
 | 2 | 模型、介面、`dictionary.db` 與 `DictionaryStore` | 無 | ready-for-agent | |
-| 3 | JSON/CSV 匯入、重複匯入偵測、查詢候選鏈、本機查詢 | 2 | ready-for-agent | |
+| 3 | JSON/CSV 與 CC-CEDICT 匯入、重複匯入偵測、查詢候選鏈、本機查詢 | 2 | ready-for-agent | |
 | 4 | 查詢面板、`AnnotationToolbar` 按鈕、選字規則、依賴注入 | 3 | ready-for-agent | |
 | 5 | 字典設定畫面 | 3 | ready-for-agent | |
 | 6a | MDX 匯入、詞條顯示、交叉參照與錨點、返回堆疊 | 1、4、5 | ready-for-agent | |
@@ -35,7 +35,11 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 **What to build：**
 - 比較 `dict_reader` 與 `mdict_flutter`，決定 MDX 使用哪個套件，或判斷兩者都不夠、需要另外評估自寫。
-- 用 2 至 3 本真實 MDX 驗證。其中一本要是 LZO 壓縮。字典由人類提供。
+- 用真實 MDX 驗證。驗收檔放在 `tmp/dictionary/`（不進版控）：
+  - `教育部重編國語辭典(第五版).mdx`：UTF-16、`Encrypted=2`、有 `StyleSheet`、163,085 筆。
+  - `簡明古漢語常用字字典（川大版2003）正體.mdx`：UTF-8、`Encrypted=2`、`StripKey=Yes`、標題為佔位字串、引用不存在的外部 CSS。
+  - 兩者都只看到 zlib。**仍需人類另外提供一本 LZO 壓縮的 MDX。**
+- 兩個檔案的第三方授權不明，不得進版控、不得放進 fixtures，文件只記格式資訊。
 - 驗證清單見 `docs/research/dictionary/DICTIONARY_FORMATS_AND_LICENSES.md` §4。
 - 先試 `flutter pub get`，確認不破壞 `pubspec.yaml` 的 `win32` 相依解析。
 - 追加驗證：`InAppWebView` 在 `javaScriptEnabled: false`、`loadDataWithBaseURL` 下，`<a href="#x">` 是否能原生跳轉；MDD 資源路徑含反斜線、空白、URL 編碼時，所選套件能否取到。
@@ -75,7 +79,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 ---
 
-## Issue 3：JSON/CSV 匯入、重複匯入偵測、查詢候選鏈、本機查詢
+## Issue 3：JSON/CSV 與 CC-CEDICT 匯入、重複匯入偵測、查詢候選鏈、本機查詢
 
 **Status:** ready-for-agent
 
@@ -83,6 +87,8 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 **What to build：**
 - `JsonCsvImporter`：格式見 `spec.md` §5。解析放進 `Isolate.run()`（closure 用頂層函式，見 `CLAUDE.md`、`AGENTS.md`），寫入留在主 Isolate 分批進行，每批之間檢查 `CancelToken` 並發出 `ImportProgress`，取消時整個交易回復。執行緒分工見 `spec.md` §3.3。
+- `CedictImporter`：格式見 `spec.md` §5。繁體與簡體各產生詞頭，拼音以原文存放，釋義存成純文字。
+- `pinyin_tone_marks.dart`：聲調數字轉聲調符號的純函式（規則見 `spec.md` §5）。顯示端在 Issue 4 的查詢面板呼叫。
 - 重複匯入偵測（`content_id`）與檔名取得規則（用 `PlatformFile.name`）。
 - `lookup_text_normalizer.dart`（去頭尾標點、內部標點、CJK 8 字元規則，見 `spec.md` §3.4）、`lookup_candidates.dart`（含 Latin 變音符號對照表，不做 Unicode 正規化）、`lemmatize/`（只登錄英文）。
 - 匯入時計算 `headword_norm = headword.trim().toLowerCase()`。
@@ -90,10 +96,11 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 **測試要求：**
 - `json_csv_importer_test.dart`：正常檔、缺欄、壞編碼、超大詞條、取消。
+- `cedict_importer_test.dart`、`pinyin_tone_marks_test.dart`：案例見 `spec.md` §7。
 - `lookup_text_normalizer_test.dart`、`lookup_candidates_test.dart`、`english_lemmatizer_test.dart`、`lemmatizer_registry_test.dart`、`content_id_test.dart`（案例見 `spec.md` §7）。
 - `local_dictionary_provider_test.dart`、`dictionary_service_test.dart`：方向挑選、候選依序嘗試、第一個命中就停。
 
-**驗收標準：** 驗收 1、2、12、13、14、20、23、24。匯入 10 萬筆有進度、可取消、UI 不凍結。
+**驗收標準：** 驗收 1、2、12、13、14、20、23、24、33、37（資料層與轉換函式；畫面顯示在 Issue 4）。匯入 10 萬筆有進度、可取消、UI 不凍結。
 
 **Blocked by：** Issue 2。
 
@@ -134,14 +141,16 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 **What to build：**
 - `dictionary_settings_screen.dart`，入口在 `settings_scaffold.dart` 的「閱讀」分區。
 - 字典清單：名稱、語言方向、筆數、啟用開關、拖曳排序、刪除（需確認）。
-- 匯入流程：選檔 → 選語言方向（必填）→ 進度 → 可取消。
+- 匯入流程：選檔（可一次多選）→ 選語言方向（必填）→ 進度 → 可取消。
+- MDX 附屬檔案：一次選 `.mdx`、`.mdd`、`.css`；抽樣記錄 `referenced_css`；缺檔提醒；「新增附屬檔案」動作（規則見 `spec.md` §3.7）。MDX 的實際解析在 Issue 6a，本 Issue 先把檔案配對與複製做好。
 - 錯誤訊息一律三段式。
 
 **測試要求：**
-- `dictionary_settings_screen_test.dart`：匯入流程、排序、啟用、刪除確認、重複匯入提示。
+- `dictionary_settings_screen_test.dart`：匯入流程、排序、啟用、刪除確認、重複匯入提示、多選匯入、缺 CSS 提醒與補匯入後提醒消失。
+- `mdx_companion_files_test.dart`：案例見 `spec.md` §7。
 - `node tool/check_l10n_hardcoded_strings.js`。
 
-**驗收標準：** 驗收 1、2、6、20。三種方向都可設定；刪除後檔案與資料一併清除。
+**驗收標準：** 驗收 1、2、6、20、38。三種方向都可設定；刪除後檔案與資料一併清除。
 
 **Blocked by：** Issue 3。
 
@@ -158,7 +167,8 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 - 詞條以 `InAppWebView` 顯示：JavaScript 關閉、擋所有網路與檔案請求。
 - `shouldOverrideUrlLoading` 處理 `entry://詞`、`bword://詞`（URL 解碼後重新查詢並推入返回堆疊）。
 - `#錨點`：載入詞條前在 Dart 端把 `entry://#x` 改寫成 `#x`，用 `loadDataWithBaseURL` 搭配固定 baseUrl 載入，由 WebView 原生處理，不需要 JavaScript。Issue 1 的驗證若顯示此做法不成立，回報後再調整。
-- 加密 MDX 匯入時顯示三段式錯誤。
+- 支援 `Encrypted=2`；記錄區塊加密（需註冊碼）匯入時顯示三段式錯誤。
+- 展開標頭 `StyleSheet`；`StripKey` 與 `KeyCaseSensitive` 的查詢規則；標題為佔位字串時改用 `Description` 或檔名（見 `spec.md` §3.6）。
 - 非內部連結（`http`、`https`、`file`）不載入、不開啟。
 
 **測試要求：**
@@ -166,7 +176,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 - `dictionary_lookup_sheet_test.dart`：返回堆疊。
 - 整合測試（真機）：`entry://` 可點可返回；`#錨點` 跳轉；JavaScript 不執行；網路請求被擋。
 
-**驗收標準：** 驗收 11、16、17、21、22。
+**驗收標準：** 驗收 11、16、17、21、22、34、35、36。
 
 **Blocked by：** Issue 1、4、5。
 
@@ -180,7 +190,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 **What to build：**
 - 圖片：在 `shouldInterceptRequest` 從 `.mdd` 回傳資源。先 `Uri.decodeComponent`、把反斜線換成 `/`，先試原路徑，找不到再去掉開頭的 `/`。依副檔名設 `contentType`。
-- 獨立 `.css`：匯入時依主檔名一併複製，載入詞條時注入。
+- 外部 `.css`：載入詞條前，依詞條 `<link href>` 的檔名換成內嵌 `<style>`，移除 `@import`；沒有對應檔案的 `<link>` 直接移除（規則見 `spec.md` §3.6）。
 - 深色與 E-Ink 配色：注入覆寫樣式，蓋掉詞條寫死的文字與背景顏色。
 - 已知限制寫進設定畫面說明：依賴 `onclick` 的互動（例如牛津 9 圖片放大）在 JavaScript 關閉時不運作。
 
@@ -239,6 +249,6 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 - 完整 `flutter test`（計畫最後一個 Task 時執行一次）。
 - 真機：EPUB 選字 → 查字典 → 結果顯示；E-Ink 裝置量測。
 
-**驗收標準：** `spec.md` §9 驗收 1～32 全數成立；驗收 31（沒有取自 AGPL／GPL 專案的程式碼）由人類最終確認。
+**驗收標準：** `spec.md` §9 驗收 1～38 全數成立；驗收 31（沒有取自 AGPL／GPL 專案的程式碼）由人類最終確認。
 
 **Blocked by：** Issue 1～7。

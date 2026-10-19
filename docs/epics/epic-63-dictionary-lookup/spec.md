@@ -44,7 +44,7 @@ app/lib/screens/
 ### 3.2 模型
 
 ```dart
-enum DictionaryFormat { jsonCsv, mdx }          // stardict 之後再加
+enum DictionaryFormat { jsonCsv, cedict, mdx }  // stardict 之後再加
 
 class DictionarySource {
   final String id;
@@ -204,9 +204,12 @@ MDX 詞條處理（無需 JavaScript）：
 | `entry://詞`、`bword://詞` | 在 `shouldOverrideUrlLoading` 攔截。URL 解碼後重新查詢，推入返回堆疊 |
 | `#錨點`、`entry://#錨點` | 載入詞條 HTML 前，在 Dart 端把 `href="entry://#x"` 改寫成 `href="#x"`。用 `loadDataWithBaseURL` 載入，並指定固定的 baseUrl，讓純 `#x` 由 WebView 原生處理，不需要 JavaScript，也不需要 `shouldOverrideUrlLoading` 攔截。不當作詞條名稱查詢 |
 | 圖片 | 在 `shouldInterceptRequest` 從 `.mdd` 回傳資源。先對網址做 `Uri.decodeComponent`，再把反斜線換成 `/`，先試原路徑，找不到再去掉開頭的 `/`。依副檔名設 `contentType`（`image/jpeg`、`image/png`、`image/gif`、`image/webp`、`image/svg+xml`）；沒設正確的型別，部分 WebView 會拒絕渲染 |
-| 獨立 `.css` | 匯入時依主檔名一併複製到私有目錄，載入詞條時注入 |
+| 外部 `.css` | 匯入時可一併選取 `.css`，複製到該字典的私有目錄（保留原檔名）。載入詞條前，把 `<link ... href="x.css">` 依**詞條裡寫的檔名**（只比對檔名、不分大小寫）換成內嵌的 `<style>`，並移除 `@import`。沒有對應檔案的 `<link>` 直接移除，詞條改用我們的預設樣式。不依主檔名配對，因為實檔的 CSS 名稱常與 MDX 主檔名無關（例如 `ghychyz.css`） |
 | 深色與 E-Ink 配色 | 注入覆寫樣式，蓋掉詞條寫死的文字與背景顏色 |
-| 加密 MDX | 匯入時偵測並顯示明確錯誤，不支援 |
+| 加密 | `Encrypted=2`（只加密關鍵字索引區，不需密碼）必須支援；記錄區塊加密（`Encrypted` 含 1，需註冊碼）匯入時偵測並顯示明確錯誤，不支援。以上依 MDict 格式的一般理解，Issue 1 用實檔確認 |
+| `StyleSheet` | 標頭有樣式表時，詞條內的 `` `數字` `` 標記要在 `MdxReader` 展開成對應的前後 HTML 片段，再交給 WebView |
+| `StripKey=Yes` | 查詢字串套用與製作時相同的去空白、去標點規則；`KeyCaseSensitive=No` 時比對不分大小寫 |
+| 字典名稱 | 標頭 `Title` 是預設佔位字串（例如 `Title (No HTML code allowed)`）或空白時，改用 `Description` 第一行，再不行用檔名 |
 | `sound://` 音訊 | Phase 1 不做，連結不可點並維持原樣顯示 |
 
 已知限制：JavaScript 關閉時，依賴 `onclick` 的互動（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。在字典設定的說明註明。
@@ -218,7 +221,14 @@ MDX 詞條處理（無需 JavaScript）：
 放在「設定 → 閱讀 → 字典」。
 
 - 字典清單：名稱、語言方向、筆數、啟用開關、拖曳排序、刪除（需確認）。
-- 匯入：選檔 → 選語言方向（必填）→ 顯示進度 → 可取消。
+- 匯入：選檔（可一次多選）→ 選語言方向（必填）→ 顯示進度 → 可取消。
+- MDX 匯入可一次選取 `.mdx` 與其附屬的 `.mdd`、`.css`：
+  - 每個 `.mdx` 各自成為一本字典。
+  - `.mdd` 與 `.mdx` 主檔名相同者配成一組（MDict 慣例）。
+  - 同一批選取的 `.css` 附加到這批中引用它的每一本 `.mdx`。
+- 匯入時抽樣讀取前 200 筆詞條，找出引用的 CSS 檔名，存進 `referenced_css`。引用了但沒有匯入的檔案，字典清單該列顯示提醒：「詞條引用了 ghychyz.css，但沒有匯入」。
+- 每本 MDX 字典有「新增附屬檔案」動作，可事後補選 `.css` 或 `.mdd`，提醒隨之更新。
+- 沒有 CSS 時詞條仍可讀，只是少了字典原本的排版。
 - 線上查詢區塊：開關、萌典說明、同意狀態。由 Issue 7 在 `dictionary_settings_screen.dart` 補上（Issue 5 先建立畫面骨架）。
 - 錯誤訊息採三段式：發生什麼、為什麼、使用者要做什麼。
 
@@ -237,6 +247,7 @@ CREATE TABLE dictionary_sources (
   enabled INTEGER NOT NULL DEFAULT 1,
   storage_path TEXT,
   content_id TEXT,              -- 重複匯入偵測，算法見 §5
+  referenced_css TEXT,          -- JSON 陣列：抽樣詞條引用的 CSS 檔名（僅 MDX）
   entry_count INTEGER NOT NULL DEFAULT 0,
   license_note TEXT,
   imported_at TEXT NOT NULL
@@ -286,6 +297,27 @@ CREATE INDEX idx_entries_lookup ON dictionary_entries(source_id, headword_norm);
 - UTF-8，第一列為標題。
 - 欄位：`headword`、`definition`（必填）、`pronunciation`、`pos`（選填）。
 
+### CC-CEDICT（`CedictImporter`）
+
+格式：純文字 UTF-8，一行一筆：
+
+```
+繁體 簡體 [pin1 yin1] /釋義1/釋義2/
+```
+
+- `#` 開頭的行是註解與中繼資料，略過。檔頭 `#! entries=`、`#! date=`、`#! license=` 可讀出來存進 `license_note`。
+- 繁體與簡體各產生一個詞頭，共用同一筆內容；兩者相同時只產生一個。`headword_norm` 套用 §4 公式。
+- 拼音以原文（聲調數字）存進 `pronunciation`，**顯示時**轉成聲調符號，例如 `pin1 yin1` 顯示為 `pīnyīn`。轉換規則：
+  - 聲調 1 至 4 標在母音上；聲調 5 與無數字為輕聲，不標。
+  - 標調位置：有 `a` 或 `e` 就標在它上面；否則有 `ou` 標在 `o`；否則標在最後一個母音。
+  - `u:` 轉成 `ü`（例如 `lu:4` 顯示為 `lǜ`）。
+  - 非拼音的片段（例如 `3C`、`11`、單獨的大寫字母）原樣保留。
+  - 純函式，放在 `app/lib/dictionary/pinyin_tone_marks.dart`。注音留待後續。
+- 釋義用 `/` 切開，每條存成一行純文字（`body_kind = plainText`）。
+- 釋義內的 `see 繁|簡[pin1 yin1]` 交叉參照，Phase 1 當純文字顯示，不做點擊跳轉。
+- 語言方向固定預設為 `zh`→`en`，使用者仍可修改。
+- 不符合格式的行略過並計數，比照通用規則。
+
 ### 通用規則
 
 - 缺必填欄位的列略過，並在匯入結果顯示略過筆數與前幾筆原因。
@@ -302,7 +334,7 @@ CREATE INDEX idx_entries_lookup ON dictionary_entries(source_id, headword_norm);
 
 - 一律使用 `file_picker` 回傳的 `PlatformFile.name`（真實檔名），不從路徑字串解析。
 - 原因：Android 的 `content://` 路徑有時沒有副檔名。Readest 曾因此把多檔格式判成「不完整」。
-- 對 MDX，用主檔名配對 `.mdx`、`.mdd`、`.css`。
+- 對 MDX：`.mdd` 依主檔名與 `.mdx` 配對；`.css` 依詞條內 `<link href>` 的檔名配對（見 §3.6、§3.7）。
 
 ## 7. 測試策略
 
@@ -322,6 +354,9 @@ CREATE INDEX idx_entries_lookup ON dictionary_entries(source_id, headword_norm);
 - `content_id_test.dart`：相同檔案同 ID、不同檔案不同 ID、重複匯入提示。
 - `json_csv_importer_test.dart`：正常檔、缺欄、壞編碼、超大詞條、取消。
 - `dictionary_store_test.dart`：寫入、查詢、刪除連動、優先順序。
+- `cedict_importer_test.dart`：用自製的小檔（不用真實 CC-CEDICT）：註解行、繁簡相同與不同、釋義切分、交叉參照原文保留、壞行略過並計數、檔頭中繼資料。
+- `pinyin_tone_marks_test.dart`：聲調 1 至 5、`a`／`e`／`ou`／最後母音的標調位置、`u:` 轉 `ü`、`3C`／`11` 原樣保留、大寫保留、多音節以空白分隔。
+- `mdx_companion_files_test.dart`：用自製小檔：`.mdd` 依主檔名配對；`.css` 依詞條 `<link href>` 檔名配對（不分大小寫）；沒有對應檔案的 `<link>` 被移除；`@import` 被移除；`referenced_css` 抽樣結果；事後補匯入後提醒消失。
 - `local_dictionary_provider_test.dart`
 - `moedict_provider_test.dart`：用 `MockClient` 驗證：
   - 請求網址只含詞。
@@ -404,3 +439,9 @@ CREATE INDEX idx_entries_lookup ON dictionary_entries(source_id, headword_norm);
 30. `flutter analyze` 無問題；兩支檢查腳本通過。
 31. 程式碼中沒有取自 Readest 或其他 AGPL／GPL 專案的內容。
 32. 查詢面板用分段選擇器，一次只顯示一本字典；同一時間畫面上最多一個 `InAppWebView`，且沒有巢狀捲動。
+33. 可匯入 CC-CEDICT 發行檔（`cedict_ts.u8`），查「繁體」或「簡體」都能得到同一筆內容，並顯示授權說明（CC BY-SA 4.0）。
+34. `Encrypted=2` 的 MDX 可匯入並查詢。
+35. 標頭有 `StyleSheet` 的 MDX，詞條顯示時標記已展開，畫面上不出現 `` `數字` `` 殘留。
+36. MDX 標題為預設佔位字串時，字典清單顯示有意義的名稱（`Description` 或檔名）。
+37. CC-CEDICT 的拼音以聲調符號顯示（`pin1 yin1` 顯示為 `pīnyīn`），資料庫中仍存原文。
+38. 匯入 MDX 時可一次多選 `.mdx`、`.mdd`、`.css`；CSS 依詞條內 `<link href>` 的檔名配對。缺少被引用的 CSS 時，詞條仍可讀，字典清單顯示提醒，且可事後補匯入。
