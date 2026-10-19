@@ -1,6 +1,6 @@
 # `epic-63-dictionary-lookup` 字典查詢（離線匯入＋可選線上查詞）
 
-**狀態：** 🟡 開發中 (Active)（Issue 1 已合併，Issue 2 起尚未開始）
+**狀態：** 🟡 開發中 (Active)（Issue 1、2 已合併，Issue 3 起尚未開始）
 **存放路徑：** `docs/epics/epic-63-dictionary-lookup/`
 **關聯文件：** `spec.md`、`issues.md`
 **調查文件：** `docs/research/dictionary/PHASE1_AUDIT.md`、`DICTIONARY_FORMATS_AND_LICENSES.md`、`READEST_ANALYSIS_AND_PROPOSAL.md`
@@ -46,7 +46,14 @@
 | Issue | 狀態 | PR | 摘要 |
 |---|---|---|---|
 | 1 MDX 解析器技術驗證 | done（2026-10-19） | #343 | 採用 `dict_reader 1.6.1`；`mdict_flutter` 淘汰。實機（平板、E-Ink）效能在門檻內，large.mdx 開啟後記憶體增量最高 45.7 MB，裕度約 4 MB。結論與封裝必補清單見 `docs/research/dictionary/DICTIONARY_FORMATS_AND_LICENSES.md`「驗證結果」。 |
-| 2 至 8 | 尚未開始 | | |
+| 2 模型、介面、`dictionary.db` 與 `DictionaryStore` | done（2026-10-19） | #344 | 純 Dart 資料層，35 個測試。`LookupRequest` 為 `final class`（只有 `word`）。`DictionaryStore` 持有 `DatabaseExecutor`，提供 `transaction()` 供 Issue 3 取消匯入時整批回復。主庫仍為 version 28。 |
+| 3 至 8 | 尚未開始 | | |
+
+**Issue 3 規劃時要處理（Issue 2 程式審查延後項，見 `reviews/review-code-issue-2.md`）：**
+- M-7：`insertEntries` 不分批，匯入器要自己每批 2,000 筆。
+- M-8：去空白後為空的詞頭會寫入但永遠查不到，匯入器要略過並計數。
+- M-9：整個匯入在單一交易內，會擋住同連線的查詢。要決定匯入期間是否允許查詢。
+- Issue 5：`listSources()` 遇到未知 `format` 字串會整個失敗（M-2）。
 
 **Issue 6a 第一個任務**：在 E-Ink 上補測真實 CJK 大檔、隨機鍵查詢與含快取的穩態記憶體。
 
