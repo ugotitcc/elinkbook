@@ -4,7 +4,7 @@
 
 | Issue | 標題 | 依賴 | 狀態 | PR |
 |---|---|---|---|---|
-| 1 | MDX 解析器技術驗證（spike，需真機與真實字典） | 無 | done | 無（僅文件；結論見 `DICTIONARY_FORMATS_AND_LICENSES.md`「驗證結果」） |
+| 1 | MDX 解析器技術驗證（spike，需真機與真實字典） | 無 | done | #343 |
 | 2 | 模型、介面、`dictionary.db` 與 `DictionaryStore` | 無 | ready-for-agent | |
 | 3 | JSON/CSV 與 CC-CEDICT 匯入、重複匯入偵測、查詢候選鏈、本機查詢 | 2 | ready-for-agent | |
 | 4 | 查詢面板、`AnnotationToolbar` 按鈕、選字規則、依賴注入 | 3 | ready-for-agent | |

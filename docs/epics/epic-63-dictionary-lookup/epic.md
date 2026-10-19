@@ -1,6 +1,6 @@
 # `epic-63-dictionary-lookup` 字典查詢（離線匯入＋可選線上查詞）
 
-**狀態：** 🟡 開發中 (Active)（Discovery／Architecting／Scrum Master 已完成，尚未開始實作）
+**狀態：** 🟡 開發中 (Active)（Issue 1 已合併，Issue 2 起尚未開始）
 **存放路徑：** `docs/epics/epic-63-dictionary-lookup/`
 **關聯文件：** `spec.md`、`issues.md`
 **調查文件：** `docs/research/dictionary/PHASE1_AUDIT.md`、`DICTIONARY_FORMATS_AND_LICENSES.md`、`READEST_ANALYSIS_AND_PROPOSAL.md`
@@ -40,6 +40,15 @@
 ---
 
 以下章節沿用調查階段的編號（見 `spec.md` 開頭說明）。
+
+## 進度記錄
+
+| Issue | 狀態 | PR | 摘要 |
+|---|---|---|---|
+| 1 MDX 解析器技術驗證 | done（2026-10-19） | #343 | 採用 `dict_reader 1.6.1`；`mdict_flutter` 淘汰。實機（平板、E-Ink）效能在門檻內，large.mdx 開啟後記憶體增量最高 45.7 MB，裕度約 4 MB。結論與封裝必補清單見 `docs/research/dictionary/DICTIONARY_FORMATS_AND_LICENSES.md`「驗證結果」。 |
+| 2 至 8 | 尚未開始 | | |
+
+**Issue 6a 第一個任務**：在 E-Ink 上補測真實 CJK 大檔、隨機鍵查詢與含快取的穩態記憶體。
 
 ## 1. 已決定的範圍
 
