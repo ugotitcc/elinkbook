@@ -200,7 +200,7 @@ dictionary_entries            -- 只給 JSON/CSV 來源
 3. 標題為佔位字串時改用 `Description` 第一行，再不行用檔名。
 4. 把字串例外與各種例外包成統一的錯誤型別（`unsupportedCompression`、`corrupt`、`notFound`），LZO 顯示三段式錯誤。
 4a. **匯入時就擋下 LZO 與截斷檔**：`dict_reader` 的 `open()` 不解壓記錄區塊，假 LZO 檔與「截在記錄區段」的檔案都能 `open()` 成功；LZO 要到該區塊第一次被查詢才丟錯，截斷檔則只有落在被截區域的鍵才出錯，其餘鍵照常回傳。`spec.md` §3.6 與驗收 39 要求匯入時就顯示錯誤並整批回復，所以匯入流程必須掃描所有記錄區塊的壓縮型態欄位與實際長度。已用兩個會失敗的測試描述這項缺口（`synthetic_fixtures_test.dart` 的 `open() alone rejects ...`，標籤 `wrapper-gap`）。
-5. MDD 資源鍵轉換：網址 → `Uri.decodeComponent` → 去掉 baseUrl 與開頭 `/` → 把 `/` 換成 `\` → 前面加 `\`。
+5. MDD 資源鍵轉換：網址 → 去掉 baseUrl 與開頭 `/` → `Uri.decodeComponent` → 把 `/` 換成 `\` → 前面加 `\`（順序以 `spec.md` §3.6 為準：先剝 baseUrl 再解碼，避免編碼後的斜線 `%2F` 干擾剝除）。
 6. `shouldInterceptRequest` 對所有 `http(s)` 請求（含 `favicon.ico`）回傳明確回應，找不到就回 404 空內容。
 7. 缺檔 CSS：把沒有對應檔案的 `<link>` 移除（`spec.md` §3.6 已定）。
 

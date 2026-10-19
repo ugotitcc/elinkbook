@@ -93,7 +93,7 @@ docs/epics/epic-63-dictionary-lookup/epic.md                  # 改：MDX 解析
 - 記錄區段標頭：4 個 8 位元組大端整數（記錄區塊數、詞條數、記錄區塊資訊大小、記錄區塊總大小）；接著每區塊一組 (壓縮大小, 解壓大小)（各 8 位元組大端）；再接區塊本體。
 - MDX 記錄 = 內文 + 結尾空字元；偏移為記錄在「全部解壓記錄串接」中的位置。MDD 記錄不加空字元。每個記錄區塊解壓後最大 64 KB。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `test_make_test_mdx.py`（`unittest`）：
 - `test_zlib_header_fields`：`build_mdx([("apple","蘋果")], encoding="UTF-8", record_compression=2)` 的前 4 位元組大端長度等於 UTF-16LE 標頭（含結尾 `\x00\x00`）的位元組數；標頭字串含 `GeneratedByEngineVersion="2.0"` 與 `Encoding="UTF-8"`；標頭最後兩個位元組為 `\x00\x00`。
@@ -102,21 +102,21 @@ docs/epics/epic-63-dictionary-lookup/epic.md                  # 改：MDX 解析
 - `test_keys_sorted_case_insensitive`：`apple`、`Apple`、`banana` 產生的鍵順序為 `apple`、`Apple`、`banana`（穩定排序）。
 - `test_large_body_is_not_highly_compressible`：以 2,000 筆、330 位元組內文產生，檔案大小不小於原始內文總和的 60%。
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -X utf8 -m unittest .scratch/mdx_spike/tools/test_make_test_mdx.py -v`
 Expected: FAIL（`ModuleNotFoundError` 或 `make_test_mdx` 未定義）。
 
-- [ ] **Step 3: 實作 `build_mdx`、`build_mdd` 與命令列**
+- [x] **Step 3: 實作 `build_mdx`、`build_mdd` 與命令列**
 
 在 `make_test_mdx.py`。用標準庫 `zlib`、`struct`、`base64`、`random`、`argparse`。格式照上方清單。`fake-lzo` 的記錄資料用固定的 64 位元組任意內容。
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `python3 -X utf8 -m unittest .scratch/mdx_spike/tools/test_make_test_mdx.py -v`
 Expected: 5 個測試 PASS。
 
-- [ ] **Step 5: 產生所有測試檔**
+- [x] **Step 5: 產生所有測試檔**
 
 Run（逐一）：`python3 -X utf8 .scratch/mdx_spike/tools/make_test_mdx.py <kind> .scratch/mdx_spike/fixtures/<kind>.<mdx|mdd>`，`kind` 為 `zlib`、`fake-lzo`、`truncated`、`mdd`、`large`。
 Expected: `fixtures/large.mdx` 大小介於 90 與 130 MB；若不在範圍，調整 `--body-bytes`（內文隨機位元組須維持低壓縮率），不要放寬範圍。（`fixtures/` 在 `.scratch/` 下，不進版控。）
@@ -150,13 +150,13 @@ class DictReaderAdapter {
 }
 ```
 
-- [ ] **Step 1: 建立專案並確認相依解析**
+- [x] **Step 1: 建立專案並確認相依解析**
 
 `pubspec.yaml`：`environment: sdk: ^3.11.5`，依賴 `dict_reader: 1.6.1`，dev 依賴 `test: ^1.25.8`、`mdict_flutter: 0.1.1`（僅供 Task 3 的淘汰證據）。
 Run: `cd .scratch/mdx_spike && dart pub get`
 Expected: 成功，無版本衝突。（`flutter pub add dict_reader --dry-run` 在 `app/` 已於 2026-10-19 確認可解析：新增 `blockchain_utils`、`charset`、`convert`、`html_unescape`、`pointycastle` 與 `dict_reader` 本身，皆為新增，無升降級。）
 
-- [ ] **Step 2: 寫失敗的測試 `synthetic_fixtures_test.dart`**
+- [x] **Step 2: 寫失敗的測試 `synthetic_fixtures_test.dart`**
 
 **每個測試自己開啟對應的 fixture，並在 `tearDown` 呼叫 `close()`；不要在 `setUp` 共用一個預設檔案**（MDX 測試與 MDD 測試的檔案型態不同）。
 
@@ -172,16 +172,16 @@ Expected: 成功，無版本衝突。（`flutter pub add dict_reader --dry-run` 
 - `missing file throws MdxSpikeError(notFound)`。
 - `mdd resource lookup`：開啟 `mdd.mdd`，分別以 `\pic\a b.png`、`/pic/a b.png`、`pic/a b.png` 呼叫 `resource`，**三種結果寫入** `report/mdd_key_forms.json`（資訊用，不作為通過條件），並斷言至少一種非 null。
 
-- [ ] **Step 3: 執行測試確認失敗**
+- [x] **Step 3: 執行測試確認失敗**
 
 Run: `cd .scratch/mdx_spike && dart test test/synthetic_fixtures_test.dart`
 Expected: FAIL（`dict_reader_adapter.dart` 不存在）。
 
-- [ ] **Step 4: 實作 `DictReaderAdapter`**
+- [x] **Step 4: 實作 `DictReaderAdapter`**
 
 `open` 呼叫 `DictReader(path).initDict()`；`lookup` 用 `locate(key)` 再 `readOneMdx`；`prefix` 用 `search(prefix, limit: limit)`；`resource` 用 `locate` 再 `readOneMdd`；`header` 取其 `header`。所有 `catch (e)` 轉成 `MdxSpikeError`：`e is String && e.contains('Compression')` → `unsupportedCompression`；`FormatException`／`StateError`／`RangeError` → `corrupt`；檔案不存在的 `FileSystemException` → `notFound`；其餘 → `other`。這一層只做 API 對應與錯誤分類，不補功能；它同時是之後 `MdxReader` 錯誤包裝的原型。
 
-- [ ] **Step 5: 執行測試，記錄結果**
+- [x] **Step 5: 執行測試，記錄結果**
 
 Run: `cd .scratch/mdx_spike && dart test test/synthetic_fixtures_test.dart --reporter expanded`
 Expected: 全數 PASS。若有失敗，**不要修轉接層去掩蓋**：把測試名稱與錯誤貼進 `report/synthetic_failures.md`，並在 Task 5 判斷是否影響採用。
@@ -196,7 +196,7 @@ Expected: 全數 PASS。若有失敗，**不要修轉接層去掩蓋**：把測�
 **Interfaces:**
 - Consumes: Task 2 的 `DictReaderAdapter`；環境變數 `MDX_SPIKE_DIR`（指向 `tmp/dictionary/`），未設定時兩個測試檔都 `skip`。
 
-- [ ] **Step 1: 寫 `real_files_test.dart`**
+- [x] **Step 1: 寫 `real_files_test.dart`**
 
 對兩個真實檔案各跑（`dict_reader` 唯一候選）：
 - `opens real file (Encrypted=2) and entryCount matches header`：教育部 `entryCount == 163085`；古漢語 `== 7587`。
@@ -207,11 +207,11 @@ Expected: 全數 PASS。若有失敗，**不要修轉接層去掩蓋**：把測�
 - `title placeholder detected (古漢語)`：`header['Title']` 等於 `Title (No HTML code allowed)`，`header['Description']` 非空。
 - `unresolved css link is present (古漢語)`：`lookup('一')` 的內容含 `ghychyz.css`（確認 Issue 6a 需處理缺檔 CSS）。
 
-- [ ] **Step 2: 寫 `mdict_flutter_elimination_test.dart`**
+- [x] **Step 2: 寫 `mdict_flutter_elimination_test.dart`**
 
 兩個真實檔各一個測試：用 `MdictReader(path).open()`，**不作為通過條件**：測試永遠通過，把結果（成功或例外型別與訊息）寫進 `report/mdict_flutter_elimination.json`。目的是留下可重現的淘汰證據。預期結果：兩者皆 `FormatException: Filter error, bad data`。
 
-- [ ] **Step 3: 執行**
+- [x] **Step 3: 執行**
 
 Run（PowerShell）：`$env:MDX_SPIKE_DIR='U:\MyDeveloper\AI\elinkBook\tmp\dictionary'; cd .scratch\mdx_spike; dart test test/real_files_test.dart test/mdict_flutter_elimination_test.dart --reporter expanded`
 Expected: `real_files_test.dart` 全數 PASS。**`dict_reader` 在任一真實檔開啟失敗，是整個 Issue 的必過項目失敗**：貼進 `report/real_failures.md`，直接跳到 Task 5 的規則 4。
@@ -226,11 +226,11 @@ Expected: `real_files_test.dart` 全數 PASS。**`dict_reader` 在任一真實�
 **Interfaces:**
 - Consumes: Task 2 的 `DictReaderAdapter`（以 `path:` 相依引用 `.scratch/mdx_spike`）、Task 1 的 `fixtures/large.mdx` 與 `mdd.mdd`。
 
-- [ ] **Step 1: 實作 `bench.dart`**
+- [x] **Step 1: 實作 `bench.dart`**
 
 函式 `Future<Map<String, Object>> runBench(String path)`，回傳 JSON：`openMs`、`rssBeforeMb`、`rssAfterOpenMb`、`rssAfterLookupsMb`（用 `ProcessInfo.currentRss`）、`lookupP50Ms`、`lookupP95Ms`（100 次，鍵隨機取自 `prefix('', limit: 1000)`）、`firstLookupMs`。結果寫到 App 外部檔案目錄的 `bench_<file>.json`。**每次只量一個檔案，量完結束行程**（UI 只提供「量測教育部」「量測 large」兩個按鈕，每次量測前以 `adb shell am force-stop <applicationId>` 重新啟動 App），避免前一次的記憶體基準汙染增量。
 
-- [ ] **Step 2: 實作 `webview_probe.dart`（`javaScriptEnabled: false`）**
+- [x] **Step 2: 實作 `webview_probe.dart`（`javaScriptEnabled: false`）**
 
 一個畫面載入下列 HTML，用 `loadDataWithBaseURL`，`baseUrl = https://dict.local/`，`useShouldInterceptRequest: true`：
 - 頁首一個連結 `<a href="#target">`，頁尾 `<h2 id="target">`，中間夠長（超過 3 個螢幕高度）。
@@ -242,13 +242,13 @@ Expected: `real_files_test.dart` 全數 PASS。**`dict_reader` 在任一真實�
 2. `shouldInterceptRequest` 收到的所有網址（原樣字串），並一律回傳 200 與一個 1×1 PNG。
 3. 點擊 `#target` 連結後的 `controller.getScrollY()`：**點擊後每 50 ms 輪詢一次，直到連續兩次相同或累計 1 秒，取最後一次的值**（Android WebView 的錨點捲動是非同步的，立刻讀會得到假的 0）。同時記錄輪詢過程的所有取樣值。
 
-- [ ] **Step 3: 在實機執行並收集結果**
+- [x] **Step 3: 在實機執行並收集結果**
 
 Run（人類）：把 `tmp/dictionary/教育部重編國語辭典(第五版).mdx` 與 `fixtures/large.mdx` 推到裝置：`adb push ... /sdcard/Android/data/<applicationId>/files/`。接著 `flutter run -d <device-id> --release`，依畫面按鈕執行 bench 與 probe。
 裝置：**至少一台實機；有 E-Ink 閱讀器就必須在上面量**（`issues.md` Issue 1 的驗收要求 E-Ink）。若只有一般手機，仍照做，並在 Task 5 的文件中明確寫「E-Ink 未驗證」，該項留為 Issue 6a 開工前的待辦，不阻擋本 Issue 完成。有多台時，一般手機作為對照組。
 Expected: 每台各產生 `bench_*.json` 與 `webview_probe.json`，`adb pull` 回 `.scratch/mdx_spike/report/<device>/`。
 
-- [ ] **Step 4: 判讀 WebView 結果**
+- [x] **Step 4: 判讀 WebView 結果**
 
 人類依 `webview_probe.json` 填入：
 - 輪詢後的 `getScrollY() > 0`：`javaScriptEnabled:false` 下錨點可原生跳轉（成立 → `spec.md` §3.6 的「Dart 端改寫 `entry://#x` 為 `#x`」做法可行）；不成立 → 記錄，並在決策文件提出替代案。
@@ -273,11 +273,11 @@ Expected: 每台各產生 `bench_*.json` 與 `webview_probe.json`，`adb pull` �
 | 3 | `dict_reader` 通過規則 2，且 `large.mdx` 的記憶體增量 < 50 MB、p95 < 300 ms（所有量到的實機） | **採用 `dict_reader`** |
 | 4 | `dict_reader` 被淘汰，或規則 3 的門檻不過 | 不直接採用。備案：(a) 在 MIT 授權下修補（vendor）`dict_reader`，改成依區塊延遲載入鍵（記憶體不過時優先）；(b) 把 MIT 的 `js-mdict` v6.0.7 移植成 Dart。開新 Issue，Issue 6a 狀態改 `needs-info` |
 
-- [ ] **Step 1: 授權確認**
+- [x] **Step 1: 授權確認**
 
 讀 `dict_reader` 的 `LICENSE`，以及 `dart pub deps --style=list` 列出的遞移相依的授權（至少 `blockchain_utils`、`pointycastle`、`charset`、`convert`、`html_unescape`）。結果寫成表，欄位為套件、版本、授權、是否需要放進 `app/assets/licenses/`。任何 GPL／AGPL／LGPL 的遞移相依 → 觸發規則 2。
 
-- [ ] **Step 2: 寫「驗證結果」一節**
+- [x] **Step 2: 寫「驗證結果」一節**
 
 內容：
 - 決策規則表與最終結論。
@@ -289,11 +289,11 @@ Expected: 每台各產生 `bench_*.json` 與 `webview_probe.json`，`adb pull` �
 - `MdxReader` 薄封裝必須補的功能清單，例如：`StripKey` 與 `KeyCaseSensitive` 查詢規則（`dict_reader` 未處理）、標題佔位字串處理、把字串例外包成統一錯誤、缺檔 CSS 的處理。
 - 驗證清單第 1 至 11 項逐項打勾或註明未完成原因（未驗證項目：Big5 編碼、v3、真實 `.mdd`、E-Ink 若無裝置）。
 
-- [ ] **Step 3: 更新 Issue 狀態與引用**
+- [x] **Step 3: 更新 Issue 狀態與引用**
 
 `issues.md`：Issue 1 的 `Status` 改為 `done`；Issue 6a 的「What to build」把「`mdx_reader.dart` 薄封裝（隔離所選套件）」補上套件名稱與版本；若走規則 4，6a 的狀態改為 `needs-info`。`epic.md`：「MDX 解析器」列填入結論。
 
-- [ ] **Step 4: 提交文件**
+- [x] **Step 4: 提交文件**
 
 ```bash
 git status --short    # 確認只有 docs/ 下的三個檔案；.scratch/ 與 tmp/ 不在清單
@@ -312,3 +312,12 @@ Expected: commit 只含文件。`flutter analyze` 與 `flutter test` 不需執�
 - **未涵蓋**：Big5 編碼的 MDX、v3 格式、真實 `.mdd`（只有合成 MDD），文件中列為「未驗證」。
 - **類型一致**：`MdxSpikeError.kind` 的值（`unsupportedCompression`、`corrupt`、`notFound`、`other`）與 `DictReaderAdapter` 方法簽名在 Task 2、3、4 使用一致。
 - **比例**：計畫以介面、測試名稱與決策規則為主。
+
+## 執行偏差（2026-10-19，勾選框依此完成）
+
+- Task 2 Step 5、Task 3：`KeyCaseSensitive=No` 的大小寫測試與後來新增的兩個「`open()` 單獨呼叫能否擋下假 LZO／截斷檔」測試會失敗，已用 `wrapper-gap` 標籤保留並記錄，完成判定用 `--exclude-tags wrapper-gap`。
+- Task 3 的真實檔測試是在記錄第三方套件的行為，沒有「缺程式碼」的失敗階段；改用錯誤的 `MDX_SPIKE_DIR` 確認測試會因 `notFound` 失敗。
+- Task 4：`runBench` 放在 `.scratch/mdx_spike/lib/bench.dart`（CLI 與 App 共用）；實機為一般 Android 平板，沒有 E-Ink 裝置；`adb push` 無法推入含 CJK 的檔名，改由 App 複製成 CJK 檔名；探針 App 補了 `INTERNET` 權限。
+- Task 4 Step 2：錨點的 `scrollY` 輪詢掛在 `onUpdateVisitedHistory`，實測純 `#錨點` 導航不會觸發，所以沒有數值，以截圖為證（`report/oppo_opd2102/anchor_before.png`、`anchor_after.png`）。補一個手動取樣按鈕留待下次有裝置時做。
+- Task 5：同時修改了 `spec.md` §3.6（圖片鍵轉換與錨點說明），因為實測推翻了原規則。
+- 最後審查與程式審查後新增的測試與修正，見 `reviews/review-code-issue-1.md` 與 `.scratch/mdx_spike/report/ledger_plan_issue_1.md`。
