@@ -17,9 +17,18 @@ void main() {
     // 方法內的區域變數至少四格，不會被誤算。
     final source =
         File('lib/dictionary/models/lookup_request.dart').readAsStringSync();
-    final fieldCount =
-        RegExp(r'^  (final|late|var)\s', multiLine: true).allMatches(source).length;
+    final fieldCount = RegExp(r'^  (static\s+)?(final|late|var)\s', multiLine: true)
+        .allMatches(source)
+        .length;
     expect(fieldCount, 1);
     expect(source, contains('final String word;'));
+  });
+
+  test('是 final class，其他檔案無法繼承或實作它來夾帶前後文欄位', () {
+    // 沒有 final class 的話，別處可以 `extends LookupRequest` 加欄位，
+    // 上面的單檔掃描就抓不到。
+    final source =
+        File('lib/dictionary/models/lookup_request.dart').readAsStringSync();
+    expect(source, contains(RegExp(r'^final class LookupRequest\b', multiLine: true)));
   });
 }

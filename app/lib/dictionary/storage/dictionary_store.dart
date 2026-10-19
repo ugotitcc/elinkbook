@@ -17,6 +17,9 @@ class DictionaryStore {
 
   /// 在單一交易內執行 [action]；[action] 丟出例外時整個交易回復。
   /// 已經在交易內時直接執行，不巢狀開交易。
+  ///
+  /// **[action] 內只能使用參數給的 `store`。** 誤用外層的 store 會等不到交易
+  /// 釋放連線而永遠卡住（sqflite 會把同一連線上的操作排隊）。
   Future<T> transaction<T>(Future<T> Function(DictionaryStore store) action) {
     final db = _db;
     if (db is Database) {
@@ -115,7 +118,12 @@ class DictionaryStore {
         'storage_path': source.storagePath,
         'entry_count': source.entryCount,
         'license_note': source.licenseNote,
-        'imported_at': source.importedAt.toUtc().toIso8601String(),
+        // 截到毫秒：toIso8601String 在微秒不為 0 時會輸出 6 位小數，與 3 位
+        // 小數的字串混在一起做文字排序會反。固定 3 位小數才能讓 ORDER BY 正確。
+        'imported_at': DateTime.fromMillisecondsSinceEpoch(
+          source.importedAt.millisecondsSinceEpoch,
+          isUtc: true,
+        ).toIso8601String(),
       };
 
   DictionarySource _rowToSource(Map<String, Object?> row) => DictionarySource(

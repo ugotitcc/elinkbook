@@ -97,7 +97,25 @@ void main() {
 
       final read = await store.getSource('a');
       expect(read!.importedAt.isUtc, isTrue);
-      expect(read.importedAt.isAtSameMomentAs(local), isTrue);
+      // 儲存精度為毫秒（見下一個測試），所以比對毫秒。
+      expect(
+        read.importedAt.millisecondsSinceEpoch,
+        local.millisecondsSinceEpoch,
+      );
+    });
+
+    test('imported_at 固定存成毫秒精度，文字排序才與時間順序一致', () async {
+      // 微秒不為 0 時 toIso8601String 會輸出 6 位小數，與 3 位小數的字串
+      // 混在一起做文字排序會反（".123Z" 排在 ".123456Z" 之後）。
+      await store.insertSource(
+        _source('a', importedAt: DateTime.utc(2026, 10, 19, 8, 0, 0, 123, 456)),
+      );
+
+      final rows = await db.query('dictionary_sources', columns: ['imported_at']);
+      expect(
+        rows.single['imported_at'],
+        matches(RegExp(r'^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$')),
+      );
     });
 
     test('資料庫中 storage_path 與 license_note 為 NULL 時讀回空字串', () async {
@@ -285,8 +303,14 @@ void main() {
       expect((await store.lookup('s2', 'run')).length, 1);
     });
 
-    test('刪除不存在的來源不丟例外', () async {
+    test('刪除不存在的來源不丟例外，也不影響既有資料', () async {
+      await store.insertSource(_source('s1'));
+      await store.insertEntries([_entry('s1', 'run')]);
+
       await store.deleteSource('missing');
+
+      expect((await store.listSources()).map((s) => s.id), ['s1']);
+      expect((await store.lookup('s1', 'run')).length, 1);
     });
   });
 
