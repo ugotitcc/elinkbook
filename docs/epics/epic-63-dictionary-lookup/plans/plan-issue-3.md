@@ -212,7 +212,7 @@ git commit -m "feat(epic-63): Issue 3 重複匯入偵測 content_id"
 - `headword` 去空白後為空 → 略過（`missingHeadword`）；`definition` 去空白後為空 → `missingDefinition`；`definition` 的 UTF-8 位元組超過 65,536 → `definitionTooLong`。
 - 每筆 `bodyKind` 為 `plainText`；`partOfSpeech` 取自 `pos`。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `csv_rows_test.dart`：
 - `test('基本多列多欄')`
@@ -244,20 +244,20 @@ git commit -m "feat(epic-63): Issue 3 重複匯入偵測 content_id"
 - `test('匯入 10 萬筆：有多個進度事件，完成後可查詢')`（驗收 24）：進度事件數大於 10；最後 `importedCount == 100000`；`testWidgets` 不用，`timeout: Timeout(Duration(seconds: 120))`。
 - `test('匯入 10 萬筆可在中途取消')`：收到第 3 個 writing 事件時取消 → `cancelled`，資料庫無殘留。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/csv_rows_test.dart test/dictionary/json_csv_importer_test.dart`
 Expected: FAIL（找不到 `parseCsvRows`、`JsonCsvImporter`）。
 
-- [ ] **Step 3: 實作 `csv_rows.dart`、`import_pipeline.dart`、`json_csv_importer.dart`**
+- [x] **Step 3: 實作 `csv_rows.dart`、`import_pipeline.dart`、`json_csv_importer.dart`**
 
 簽章見 Interfaces。`runImportPipeline` 用 `StreamController` 驅動（交易 callback 內無法 `yield`）；內部取消用私有例外類別。`parseJsonCsvFile` 與 `runParserInIsolate` 必須是頂層函式，`Isolate.run` 的 closure 只引用 `parser` 與 `input` 兩個參數。`newId` 預設 `Uuid().v4()`，`now` 預設 `DateTime.now`。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary/importers app/test/dictionary
