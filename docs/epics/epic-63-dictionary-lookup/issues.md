@@ -55,7 +55,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 ## Issue 2：模型、介面、`dictionary.db` 與 `DictionaryStore`
 
-**Status:** ready-for-agent
+**Status:** done（2026-10-19：實作完成，待程式審查與合併）
 
 **依賴：** 無。
 
