@@ -256,32 +256,32 @@ git commit -m "feat(epic-63): Issue 2 DictionaryStore 來源與詞條讀寫"
 - Modify: `docs/epics/epic-63-dictionary-lookup/issues.md`（Issue 2 的 `Status`）
 - Modify: `docs/epics/epic-63-dictionary-lookup/plans/plan-issue-2.md`（勾選步驟）
 
-- [ ] **Step 1: 執行本 Issue 全部測試**
+- [x] **Step 1: 執行本 Issue 全部測試**
 
 Run（在 `app/`）: `flutter test test/dictionary/`
 Expected: 全數 PASS。
 
-- [ ] **Step 2: 靜態分析**
+- [x] **Step 2: 靜態分析**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3: 兩支檢查腳本**
+- [x] **Step 3: 兩支檢查腳本**
 
 Run: `node tool/check_l10n_hardcoded_strings.js` 與 `node tool/check_integration_keys.js`
 Expected: 兩支都通過（本 Issue 沒有 UI，預期無變化）。
 
-- [ ] **Step 4: 確認沒有碰到禁區**
+- [x] **Step 4: 確認沒有碰到禁區**
 
 Run（在專案根目錄）: `git diff main --stat -- app/lib/library app/lib/sync app/pubspec.yaml`
 Expected: 無輸出（主庫、同步、`pubspec.yaml` 都沒動）。
 
-- [ ] **Step 5: 完整 `flutter test`（整張計畫最後一個 Task）**
+- [x] **Step 5: 完整 `flutter test`（整張計畫最後一個 Task）**
 
 Run: `flutter test`
 Expected: 全數 PASS。把通過時間與 commit 記進 PR 說明。
 
-- [ ] **Step 6: 更新 `issues.md` 的 Issue 2 狀態，勾選本計畫所有步驟，Commit**
+- [x] **Step 6: 更新 `issues.md` 的 Issue 2 狀態，勾選本計畫所有步驟，Commit**
 
 ```bash
 git add docs/epics/epic-63-dictionary-lookup
