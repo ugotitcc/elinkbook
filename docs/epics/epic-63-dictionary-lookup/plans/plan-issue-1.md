@@ -317,7 +317,7 @@ Expected: commit 只含文件。`flutter analyze` 與 `flutter test` 不需執�
 
 - Task 2 Step 5、Task 3：`KeyCaseSensitive=No` 的大小寫測試與後來新增的兩個「`open()` 單獨呼叫能否擋下假 LZO／截斷檔」測試會失敗，已用 `wrapper-gap` 標籤保留並記錄，完成判定用 `--exclude-tags wrapper-gap`。
 - Task 3 的真實檔測試是在記錄第三方套件的行為，沒有「缺程式碼」的失敗階段；改用錯誤的 `MDX_SPIKE_DIR` 確認測試會因 `notFound` 失敗。
-- Task 4：`runBench` 放在 `.scratch/mdx_spike/lib/bench.dart`（CLI 與 App 共用）；實機為一般 Android 平板，沒有 E-Ink 裝置；`adb push` 無法推入含 CJK 的檔名，改由 App 複製成 CJK 檔名；探針 App 補了 `INTERNET` 權限。
+- Task 4：`runBench` 放在 `.scratch/mdx_spike/lib/bench.dart`（CLI 與 App 共用）；先在一般 Android 平板量測，**E-Ink 裝置（Allwinner WAVE）稍後接上，同日補測完成**（`report/wave_eink/`）；`adb push` 無法推入含 CJK 的檔名，改由 App 複製成 CJK 檔名；探針 App 補了 `INTERNET` 權限。
 - Task 4 Step 2：錨點的 `scrollY` 輪詢掛在 `onUpdateVisitedHistory`，實測純 `#錨點` 導航不會觸發，所以沒有數值，以截圖為證（`report/oppo_opd2102/anchor_before.png`、`anchor_after.png`）。補一個手動取樣按鈕留待下次有裝置時做。
 - Task 5：同時修改了 `spec.md` §3.6（圖片鍵轉換與錨點說明），因為實測推翻了原規則。
 - 最後審查與程式審查後新增的測試與修正，見 `reviews/review-code-issue-1.md` 與 `.scratch/mdx_spike/report/ledger_plan_issue_1.md`。

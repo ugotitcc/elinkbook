@@ -133,7 +133,7 @@ dictionary_entries            -- 只給 JSON/CSV 來源
 |---|---|---|
 | 1 | `mdict_flutter` 在兩個真實檔案開啟失敗 | 成立，淘汰。兩個檔案都丟 `FormatException: Filter error, bad data`（`report/mdict_flutter_elimination.json`）。另讀原始碼確認：記錄區塊壓縮型態不是 zlib 時 `return null`，與「查無此詞」無法區分 |
 | 2 | `dict_reader` 真實檔開啟失敗，或遞移相依有 GPL／AGPL／LGPL | 不成立。兩個檔案都能開啟；授權見下表，無 copyleft |
-| 3 | `large.mdx` 記憶體增量 < 50 MB 且 p95 < 300 ms | 成立，但前提很窄：合成的 ASCII 鍵、一台非 E-Ink 實機、查詢集中於前 1000 筆；**開啟後增量最高 45.0 MB，離門檻只剩 5 MB**。真實大檔、隨機查詢、E-Ink 都要補測，見「效能」一節的警語 |
+| 3 | `large.mdx` 記憶體增量 < 50 MB 且 p95 < 300 ms | 成立，但前提很窄：合成的 ASCII 鍵、查詢集中於前 1000 筆。**開啟後增量：平板最高 45.0 MB、E-Ink 最高 45.7 MB，離門檻只剩約 5 MB。** 真實 CJK 大檔與隨機查詢仍要補測，見「效能」一節的警語 |
 
 #### `dict_reader` 授權（含遞移相依）
 
@@ -168,7 +168,7 @@ dictionary_entries            -- 只給 JSON/CSV 來源
 
 #### 效能
 
-實機：OPPO OPD2102（Android 13、3.7 GB RAM、release 模式；**非 E-Ink**）。每次量測前強制停止 App，一次只量一個檔案。
+實機一：OPPO OPD2102（Android 13、3.7 GB RAM、arm64、release 模式；**非 E-Ink**）。實機二（E-Ink）：Allwinner WAVE（Android 12、4 GB RAM、1872×1404、**armeabi-v7a 32 位元**、release 模式）。每次量測前強制停止 App，一次只量一個檔案。
 
 | 檔案 | 筆數 | 開啟 | 開啟後記憶體增量 | 查詢後記憶體增量 | p50 | p95 |
 |---|---|---|---|---|---|---|
@@ -182,8 +182,22 @@ dictionary_entries            -- 只給 JSON/CSV 來源
   1. **鍵的形式**：large.mdx 的鍵是 ASCII 的合成詞，Dart 對 ASCII 字串較省記憶體。每把鍵約 108 B；教育部（UTF-16 的 CJK 鍵）約 140 B。照此外推，一本 40 萬筆的真實 CJK 字典約 56 MB，可能超過 50 MB。
   2. **查詢沒讓快取長大**：量測的查詢鍵取自 `prefix('', limit: 1000)`，只落在前幾個記錄區塊；`dict_reader` 有最多 32 MB 的記錄區塊快取。實際隨機查詢時，快取最多再加 32 MB。
   3. **薄封裝的額外記憶體**：`KeyCaseSensitive=No` 的大小寫摺疊，因 `dict_reader` 以精確字串比對，可能需要另建一份摺疊後的鍵索引，這份記憶體尚未估算。
-- 因此 E-Ink 補測（與 Issue 6a 開工前）必量：真實 CJK 大檔或 UTF-16 合成大檔、隨機鍵查詢、穩態 RSS（含快取）、開啟後峰值。
+- E-Ink 已於 2026-10-19 補測（見上表）。Issue 6a 仍須在 E-Ink 上量：真實 CJK 大檔或 UTF-16 合成大檔、隨機鍵查詢、穩態 RSS（含快取）、開啟後峰值。
 - 桌面預檢（Windows，非實機）：教育部開啟 3.5 s、增量 30.6 MB；large 開啟 0.6 s、增量 45.1 MB。
+
+#### E-Ink 實機（Allwinner WAVE，2026-10-19 補測）
+
+| 檔案 | 筆數 | 開啟 | 開啟後記憶體增量 | 查詢後記憶體增量 | p50 | p95 |
+|---|---|---|---|---|---|---|
+| 教育部（UTF-16，3 次） | 163,085 | 1,779–1,873 ms | 21.0–24.3 MB | 17.3–24.2 MB | 0.22–0.23 ms | 3.0–3.2 ms |
+| 古漢語（1 次） | 7,587 | 73 ms | 1.8 MB | 2.5 MB | 0.03 ms | 0.20 ms |
+| large.mdx（102 MB 合成，3 次） | 400,000 | 3,664–3,884 ms | **43.2–45.7 MB** | 36.1–45.0 MB | 0.03 ms | 2.6–3.1 ms |
+
+- 查詢延遲 p95 最高 3.2 ms，遠低於 300 ms 門檻。
+- 開啟時間約為平板的 3 倍：教育部 1.8 s（平板 0.64 s）、large 3.7–3.9 s（平板 1.1–1.2 s）。沒有開啟時間門檻，但 100 MB 級字典的匯入後首次開啟要有進度提示。
+- 記憶體：large 開啟後增量最高 45.7 MB，仍在 50 MB 內，但裕度只有約 4 MB。上述三個警語（ASCII 鍵、快取沒長大、封裝額外記憶體）在 E-Ink 上同樣適用。
+- 這台是 32 位元 ARM（armeabi-v7a）；`dict_reader` 是純 Dart，沒有原生程式庫，release 組建含 armeabi-v7a 即可運作。
+- WebView 行為與平板完全一致：錨點原生跳轉（截圖 `report/wave_eink/anchor_after.png`）、`entry://apple` 觸發 `shouldOverrideUrlLoading`、圖片請求網址形式相同、純 `#錨點` 導航同樣不觸發回呼。
 
 #### WebView（`javaScriptEnabled: false`，System WebView 155，`loadDataWithBaseURL`，baseUrl `https://dict.local/`）
 
@@ -213,7 +227,7 @@ dictionary_entries            -- 只給 JSON/CSV 來源
 | 3 | 精確與前綴查詢 p50／p95 | 精確查詢完成；**前綴查詢未在實機量測** |
 | 4 | LZO、加密、v3 的錯誤行為 | LZO 以假區塊完成；`Encrypted=1`（記錄區塊加密）與 v3 **未驗證**（沒有樣本） |
 | 5 | UTF-8、UTF-16、Big5 | UTF-8、UTF-16 完成；**Big5 未驗證**（沒有樣本） |
-| 6 | E-Ink 裝置重做第 2、3 項 | **未驗證**（沒有 E-Ink 裝置）。Issue 6a 開工前補測；若記憶體增量超過 50 MB，備案是修補（vendor）`dict_reader` 改成依區塊延遲載入鍵 |
+| 6 | E-Ink 裝置重做第 2、3 項 | 完成（Allwinner WAVE，2026-10-19）：large 開啟後增量最高 45.7 MB、p95 最高 3.2 ms；開啟時間約為平板 3 倍。真實 CJK 大檔與隨機查詢仍待 Issue 6a 補測；若超過 50 MB，備案是修補（vendor）`dict_reader` 改成依區塊延遲載入鍵 |
 | 7 | `Encrypted=2` | 完成，兩個真實檔都通過 |
 | 8 | `StyleSheet` 展開 | 完成，`dict_reader` 內建 |
 | 9 | `StripKey=Yes` | 完成，`dict_reader` 不處理，需在 `MdxReader` 補 |

@@ -9,7 +9,7 @@
 | 3 | JSON/CSV 與 CC-CEDICT 匯入、重複匯入偵測、查詢候選鏈、本機查詢 | 2 | ready-for-agent | |
 | 4 | 查詢面板、`AnnotationToolbar` 按鈕、選字規則、依賴注入 | 3 | ready-for-agent | |
 | 5 | 字典設定畫面 | 3 | ready-for-agent | |
-| 6a | MDX 匯入、詞條顯示、交叉參照與錨點、返回堆疊 | 1、4、5、E-Ink 補測 | ready-for-agent（開工前提：E-Ink 補測） | |
+| 6a | MDX 匯入、詞條顯示、交叉參照與錨點、返回堆疊 | 1、4、5 | ready-for-agent | |
 | 6b | MDX 圖片、獨立 CSS、深色與 E-Ink 配色 | 6a | ready-for-human | |
 | 7 | 線上查詞（萌典）、同意對話框、隱私更新 | 3、4、5 | ready-for-agent | |
 | 8 | 授權頁、隱私頁、l10n 收尾、整合測試 | 全部 | ready-for-human | |
@@ -29,7 +29,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 ## Issue 1：MDX 解析器技術驗證（spike）
 
-**Status:** done（2026-10-19：採用 `dict_reader 1.6.1`；E-Ink 裝置未驗證，Issue 6a 開工前補測）
+**Status:** done（2026-10-19：採用 `dict_reader 1.6.1`；平板與 E-Ink 實機皆已量測）
 
 **依賴：** 無。
 
@@ -47,7 +47,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 **測試要求：** 無產品程式碼。spike 的程式放 `.scratch/`，不進版控。
 
-**驗收標準：** 驗證清單 6 項都有數字或結論；選定套件；授權全文與相依套件授權已讀過；實體 E-Ink 裝置上量測開啟時間、記憶體、查詢延遲。（2026-10-19 修改：Issue 1 期間沒有 E-Ink 裝置，已改在一台一般 Android 平板量測；E-Ink 補測移為 Issue 6a 的開工前提，由人類確認這個調整。）
+**驗收標準：** 驗證清單 6 項都有數字或結論；選定套件；授權全文與相依套件授權已讀過；實體 E-Ink 裝置上量測開啟時間、記憶體、查詢延遲（2026-10-19 已在 Allwinner WAVE E-Ink 平板完成，見 `DICTIONARY_FORMATS_AND_LICENSES.md`「驗證結果」）。
 
 **Blocked by：** 無。
 
@@ -160,13 +160,13 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 **Status:** ready-for-agent
 
-**依賴：** Issue 1（選定套件）、Issue 4、Issue 5，以及 **E-Ink 補測**（開工前提，見下）。
+**依賴：** Issue 1（選定套件）、Issue 4、Issue 5。
 
 **What to build：**
 - `MdxImporter` 與 `mdx_reader.dart` 薄封裝（隔離所選套件 **`dict_reader 1.6.1`，MIT**；Issue 1 選定）。MDX 保留原檔，複製到私有目錄。
 - `dict_reader` 缺的功能由薄封裝補：`KeyCaseSensitive=No` 大小寫摺疊、`StripKey=Yes` 去空白標點、標題佔位字串、統一錯誤型別（它對 LZO 丟的是字串）、MDD 鍵轉換、對所有 `http(s)` 請求回傳明確回應（清單與理由見 `DICTIONARY_FORMATS_AND_LICENSES.md`「驗證結果」）。
 - 加入 `app/pubspec.yaml` 前先把相依套件授權（見同文件授權表）放進 `app/assets/licenses/` 並登錄 `third_party_licenses.dart`。
-- **開工前提：E-Ink 補測**（Issue 1 期間沒有 E-Ink 裝置）。在 E-Ink 裝置量記憶體與開啟時間，並加量：真實 CJK 大檔或 UTF-16 合成大檔、隨機鍵查詢、穩態 RSS（含快取）。`large.mdx` 在一台非 E-Ink 平板上，開啟後記憶體增量最高 45.0 MB，離 50 MB 門檻只剩 5 MB（見 `DICTIONARY_FORMATS_AND_LICENSES.md`「驗證結果」）。補測結果超過門檻時，備案是修補（vendor）`dict_reader` 改成依區塊延遲載入鍵。
+- **第一個任務：在 E-Ink 上補測真實情境的記憶體。** Issue 1 已在 E-Ink 實機（Allwinner WAVE）量過合成檔：`large.mdx` 開啟後增量最高 45.7 MB、p95 最高 3.2 ms，離 50 MB 門檻只剩約 4 MB。仍須補量：真實 CJK 大檔或 UTF-16 合成大檔、隨機鍵查詢、穩態 RSS（含快取）。結果超過門檻時，備案是修補（vendor）`dict_reader` 改成依區塊延遲載入鍵。
 - 匯入時掃描所有記錄區塊的壓縮型態與實際長度，擋下 LZO 與截斷檔（`dict_reader` 的 `open()` 不會發現；見研究文件「必須補的功能」第 4a 項）。fixture 要包含「截在記錄區段」的檔案，不只是截在關鍵字區段。
 - 詞條以 `InAppWebView` 顯示：JavaScript 關閉、擋所有網路與檔案請求。
 - `shouldOverrideUrlLoading` 處理 `entry://詞`、`bword://詞`（URL 解碼後重新查詢並推入返回堆疊）。
@@ -183,7 +183,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 **驗收標準：** 驗收 11、16、17、21、22、34、35、36、39。
 
-**Blocked by：** Issue 1、4、5；E-Ink 補測。
+**Blocked by：** Issue 1、4、5。
 
 ---
 
