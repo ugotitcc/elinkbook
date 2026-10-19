@@ -138,7 +138,7 @@ git commit -m "feat(epic-63): Issue 3 匯入型別擴充與 Store 的 content_id
 
 算法（spec §5）：檔案 ≥ 128 KB（131,072 位元組）時，取前 64 KB 與後 64 KB 各算 SHA-256；小於 128 KB 時只雜湊整個檔案。最後對 `'$headHash:$tailHash:$size:$fileName'` 再算一次 SHA-256 的十六進位字串。小檔案時 `tailHash` 用空字串。用 `RandomAccessFile` 讀區段，不整檔讀進記憶體。
 
-- [ ] **Step 1: 寫失敗的測試 `content_id_test.dart`**
+- [x] **Step 1: 寫失敗的測試 `content_id_test.dart`**
 
 用 `Directory.systemTemp.createTempSync()` 建檔，`tearDown` 刪除。
 - `test('相同內容與檔名，兩次計算結果相同')`
@@ -150,20 +150,20 @@ git commit -m "feat(epic-63): Issue 3 匯入型別擴充與 Store 的 content_id
 - `test('空檔案可計算')`
 - `test('檔案不存在丟 DictionaryImportException(unreadableFile)')`
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/content_id_test.dart`
 Expected: FAIL（找不到 `computeContentId`）。
 
-- [ ] **Step 3: 實作 `computeContentId`**
+- [x] **Step 3: 實作 `computeContentId`**
 
 簽章見 Interfaces。`FileSystemException` 轉成 `DictionaryImportException('unreadableFile')`。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary/content_id.dart app/test/dictionary/content_id_test.dart
