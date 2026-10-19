@@ -332,7 +332,7 @@ git commit -m "feat(epic-63): Issue 3 CC-CEDICT 匯入器"
 
 規則（spec §5）：以空白切成片段，逐段處理，輸出以單一空白重新連接（見「已決定事項」第一條）。片段符合 `^[A-Za-züÜ:]+[1-5]$`（音節加聲調數字）才轉換，否則原樣保留（`3C`、`11`、單獨大寫字母、無數字的片段）。轉換：`u:`／`U:` 先變 `ü`／`Ü`；聲調 1 至 4 標在母音上，5 視為輕聲不標；標調位置：有 `a` 或 `e` 標在它上面，否則有 `ou` 標在 `o`，否則標在最後一個母音；大寫保留；聲調數字一律移除（含 5 與沒有母音的片段如 `r5` → `r`）。
 
-- [ ] **Step 1: 寫失敗的測試 `pinyin_tone_marks_test.dart`**
+- [x] **Step 1: 寫失敗的測試 `pinyin_tone_marks_test.dart`**
 
 - `test('聲調 1 至 4')`：`ma1`→`mā`、`ma2`→`má`、`ma3`→`mǎ`、`ma4`→`mà`。
 - `test('聲調 5 與無數字為輕聲，不標')`：`ma5`→`ma`、`ma`→`ma`。
@@ -346,20 +346,20 @@ git commit -m "feat(epic-63): Issue 3 CC-CEDICT 匯入器"
 - `test('沒有母音的片段只去掉數字')`：`r5`→`r`。
 - `test('空字串回傳空字串')`
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/pinyin_tone_marks_test.dart`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作 `pinyinToneMarks`**
+- [x] **Step 3: 實作 `pinyinToneMarks`**
 
 母音加聲調用一張 `Map<String, List<String>>` 對照表（`a e i o u ü` 大小寫各 4 個聲調的預組字元）。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary/pinyin_tone_marks.dart app/test/dictionary/pinyin_tone_marks_test.dart
