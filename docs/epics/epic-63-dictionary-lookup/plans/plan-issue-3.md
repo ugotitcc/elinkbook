@@ -38,7 +38,8 @@
 - **候選依字典語言產生：** 詞形還原依每本字典的 `sourceLang` 查登錄表，所以查中文字典時不會套英文規則（驗收 14）。
 - **候選清單與去重分兩層：** `lookupCandidates()` 回傳含大小寫變體的完整清單（MDX 之後要用）；`dedupeByHeadwordNorm()` 另一個函式，由 `LocalDictionaryProvider` 套用（JSON/CSV/CEDICT 的比對本來就不分大小寫）。
 - **新字典優先順序：** 取目前最大 `priority` 加 1，排在最後。
-- **取代已匯入的字典：** `ImportRequest.replaceExisting = true` 時，在同一個交易內先刪舊來源再寫新的，所以取代失敗不會讓使用者失去舊字典。
+- **取代已匯入的字典：** `ImportRequest.replaceExisting = true` 且找到同 `content_id` 的舊來源時，沿用舊的 `id`、`priority`、`enabled`，在同一個交易內先刪舊來源再寫新的，所以取代失敗不會讓使用者失去舊字典，取代成功也不會打亂使用者排好的順序與開關。
+- **`content_id` 不加進 `DictionarySource` 模型：** 目前只有重複偵測用它，由 Store 的 `insertSource(..., {contentId})` 與 `findSourceIdByContentId` 處理就夠。等 Issue 5／6a 真的需要從物件讀它再加（審查 I-2 提議加欄位，本計畫暫不採用）。
 - **匯入期間查詢（Issue 2 審查 M-9）：** 單一交易會讓同一連線上的查詢排隊到匯入結束。本 Issue 不處理；Issue 5 的設定畫面在匯入進行中要顯示進度並暫停查詢入口，已記在計畫尾端「交給後續 Issue」。
 - **`DictionaryImporter` 新增 `readHints()`：** Issue 5 的匯入畫面要在選檔後預填語言方向與名稱（spec §5：JSON 有填時代入選擇器）。這會改動 Issue 2 的介面，Task 1 同步更新 Issue 2 的測試替身。
 - **`content://` 路徑：** 本 Issue 的 `content_id` 與匯入器只處理本機可讀檔案路徑（`file_picker` 會複製到快取目錄）。不呼叫原生 channel。
@@ -192,10 +193,14 @@ git commit -m "feat(epic-63): Issue 3 重複匯入偵測 content_id"
 匯入流程 `runImportPipeline` 的行為（以事件順序描述）：
 1. 發出 `ImportProgress(stage: parsing, processed: 0, total: 0)`。
 2. `computeContentId`；`store.findSourceIdByContentId` 已有同 ID 且 `!replaceExisting` → `addError(DuplicateDictionaryException)` 後結束。
-3. `runParserInIsolate`；`DictionaryImportException` 原樣 `addError`。解析結果 `entries` 為空 → `addError(DictionaryImportException('noValidEntries'))`，不碰資料庫。
-4. 解析完成後若 `cancel.isCancelled` → 發出 `stage: cancelled` 結束，不碰資料庫。
-5. `store.transaction`：`replaceExisting` 且有舊來源時先 `deleteSource`；`insertSource`（`priority` 取最大值加 1，`contentId` 帶入，`entryCount` 為 `entries.length`）；每 2,000 筆 `insertEntries` 並發出 `ImportProgress(stage: writing, processed, total)`；每批之前檢查 `cancel.isCancelled`，已取消就丟內部例外讓交易回復，然後發出 `stage: cancelled`。
-6. 成功後發出 `ImportProgress(stage: done, processed: total, total: total, summary: ...)`，關閉 stream。
+3. **解析前先決定 `sourceId`**（解析器在 Isolate 內建立詞條，詞條必須帶正確的 `sourceId`，主 Isolate 不再逐筆複製）：
+   - `replaceExisting` 且步驟 2 找到舊來源 → 沿用舊來源的 `id`，並用 `store.getSource` 讀出舊的 `priority` 與 `enabled`，新來源原樣帶過去（使用者排好的順序與開關不因取代而重設）。
+   - 其他情況 → `id` 用 `newId()`，`priority` 取目前最大值加 1，`enabled` 為 `true`。
+4. `runParserInIsolate(parser, ParseInput(filePath, sourceId))`；`DictionaryImportException` 原樣 `addError`。解析結果 `entries` 為空 → `addError(DictionaryImportException('noValidEntries'))`，不碰資料庫。
+5. 解析完成後若 `cancel.isCancelled` → 發出 `stage: cancelled` 結束，不碰資料庫。
+6. `store.transaction((txnStore) async { … })`：**交易內所有寫入只能用 `txnStore`，不可用外層的 `store`**（外層 `store` 會等不到連線而永遠卡住，見 `DictionaryStore.transaction` 的合約註解）。內容：`replaceExisting` 且有舊來源時先 `txnStore.deleteSource(sourceId)`；`txnStore.insertSource`（用步驟 3 決定的 `id`、`priority`、`enabled`，`contentId` 帶入，`entryCount` 為 `entries.length`）；每 2,000 筆 `txnStore.insertEntries` 並發出 `ImportProgress(stage: writing, processed, total)`；每批之前檢查 `cancel.isCancelled`，已取消就丟內部例外讓交易回復，然後發出 `stage: cancelled`。
+7. 成功後發出 `ImportProgress(stage: done, processed: total, total: total, summary: ...)`。
+8. 所有失敗（重複、解析、空檔、寫入）一律 `controller.addError(e)` 後 `await controller.close()`，不在非同步回呼裡直接 `throw`，呼叫端才接得到。
 
 `name` 優先序：`request.name` → 解析結果的 `name` → 去掉副檔名的 `request.fileName`。`sourceLang`／`targetLang` 以 `request` 為準。`licenseNote` 優先序：`request.licenseNote`（非空）→ 解析結果。
 
@@ -230,7 +235,9 @@ git commit -m "feat(epic-63): Issue 3 重複匯入偵測 content_id"
 - `test('沒有任何有效筆數丟 noValidEntries，且不建立來源')`（Review Focus 4）：空陣列；以及全部缺欄兩種。
 - `test('重複匯入同一檔案丟 DuplicateDictionaryException，帶既有來源 id')`
 - `test('replaceExisting 在同一交易內取代舊字典')`：舊詞條消失、新詞條存在、來源只剩一本；另測「取代時新檔解析失敗，舊字典仍在」。
+- `test('replaceExisting 保留舊字典的 id、優先順序與啟用狀態')`：先匯入兩本，把第一本 `setEnabled(false)`、`setPriority(7)`；再用同一個檔案、`replaceExisting: true` 重匯第一本 → `id` 不變、`priority == 7`、`enabled == false`，來源只剩兩本。
 - `test('新字典優先順序排在最後')`
+- `test('詞條的 sourceId 在解析時就已正確，寫入不發生外鍵錯誤')`：匯入後 `store.lookup(sourceId, …)` 查得到，且 `PRAGMA foreign_key_check` 無結果。
 - `test('取消：解析前就取消，資料庫無來源與詞條')`（Review Focus 3）
 - `test('取消：寫入中途取消，整個交易回復')`：5,000 筆、第一批寫完後 `cancel()`（用 `listen` 在收到第一個 writing 事件時取消）；最後事件 `stage == cancelled`；`listSources()` 為空、`dictionary_entries` 為 0 筆。
 - `test('readHints 回傳 JSON 內的名稱與語言；沒有就用檔名')`
@@ -271,7 +278,7 @@ git commit -m "feat(epic-63): Issue 3 匯入流程與 JSON/CSV 匯入器"
 
 行規則（spec §5）：
 - 空行與 `#` 開頭的行略過；`#! license=` 的值存為 `licenseNote`（其餘 `#!` 檔頭忽略）。
-- 資料行格式 `繁體 簡體 [pin1 yin1] /釋義1/釋義2/`。繁體與簡體各產生一筆詞條（兩者相同只產生一筆），共用 `pronunciation`（原文）、`body`（釋義用 `\n` 連接，一條一行）、`bodyKind == plainText`。
+- 資料行格式 `繁體 簡體 [pin1 yin1] /釋義1/釋義2/`。繁體與簡體各產生一筆詞條（兩者相同只產生一筆），共用 `pronunciation`（原文）、`body`（釋義用 `\n` 連接，一條一行）、`bodyKind == plainText`。釋義以 `/` 切開後要濾掉空字串（行尾的 `/` 會切出空項），免得 `body` 頭尾多出空行。
 - 不符合格式的行略過並計數（`reason == malformedLine`）；`index` 為檔內行號。
 - `readHints`：`name` 為去掉副檔名的檔名；`sourceLang == 'zh'`、`targetLang == 'en'`；`licenseNote` 取自檔頭。
 - 解碼與 BOM 規則同 `parseJsonCsvFile`。
@@ -282,6 +289,7 @@ git commit -m "feat(epic-63): Issue 3 匯入流程與 JSON/CSV 匯入器"
 - `test('註解行與空行略過，檔頭 license 存進 licenseNote')`：`#! license=Creative Commons Attribution-ShareAlike 4.0 International License`。
 - `test('繁簡不同：各產生一個詞頭，共用內容')`：`學生 学生 [xue2 sheng5] /student/pupil/` → 查 `學生` 與 `学生` 都得到同一份 `body`（`'student\npupil'`）與 `pronunciation == 'xue2 sheng5'`。
 - `test('繁簡相同：只產生一個詞頭')`：`的 的 [de5] /possessive particle/` → `importedCount == 1`。
+- `test('釋義頭尾沒有空行')`：`/student/pupil/` 的 `body == 'student\npupil'`（不以 `\n` 開頭或結尾）。
 - `test('拼音以原文存放，不轉聲調符號')`
 - `test('交叉參照原文保留')`：`/see 學生|学生[xue2 sheng5]/` 的 `body` 原樣。
 - `test('釋義內含斜線之外的特殊字元原樣保留')`：`CL:個|个[ge4]`。
@@ -381,7 +389,7 @@ git commit -m "feat(epic-63): Issue 3 拼音聲調數字轉聲調符號"
 4. 含空白 → 片語：內部標點允許，整串視為有效，不設長度上限。
 5. 不含空白：內部有標點或控制字元時，只有「不含 CJK 且該字元是 `-`、`'`、`’`」的情況允許（`state-of-the-art`、`don't`）；其餘 → `invalidSelection`（`天地，玄黃`）。
 6. 不含空白且含 CJK：字元數（`runes.length`）超過 8 → `tooLong`。標點檢查先於長度檢查。
-7. `detectCharType`：含 Han 字元（`U+3400–4DBF`、`U+4E00–9FFF`、`U+F900–FAFF`、`U+20000–2A6DF`）為 CJK；含拉丁字母（`\p{Script=Latin}` 的字母）為拉丁；兩者皆有為 `mixed`；兩者皆無（例如純數字）歸 `latin`。
+7. `detectCharType`：含 Han 字元（`RegExp(r'\p{Script=Han}', unicode: true)`，已用 Dart 確認可涵蓋擴展 B 區的 `𠀀`）為 CJK；含拉丁字母（`\p{Script=Latin}` 的字母）為拉丁；兩者皆有為 `mixed`；兩者皆無（例如純數字）歸 `latin`。
 
 - [ ] **Step 1: 寫失敗的測試 `lookup_text_normalizer_test.dart`**
 
@@ -398,6 +406,7 @@ git commit -m "feat(epic-63): Issue 3 拼音聲調數字轉聲調符號"
 - `test('混合文字的 CJK 長度算整串字元數')`：`iPhone手機` 通過；`iPhone手機手機手機` 超過 8 → `tooLong`。
 - `test('detectCharType：拉丁、CJK、混合、純數字')`：`apple`→latin、`蘋果`→cjk、`iPhone手機`→mixed、`123`→latin。
 - `test('帶重音的拉丁字母算拉丁')`：`café`。
+- `test('擴展 B 區的漢字算 CJK')`：`𠀀` → `cjk`。
 
 - [ ] **Step 2: 執行測試，確認失敗**
 
