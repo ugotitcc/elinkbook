@@ -283,7 +283,7 @@ git commit -m "feat(epic-63): Issue 3 匯入流程與 JSON/CSV 匯入器"
 - `readHints`：`name` 為去掉副檔名的檔名；`sourceLang == 'zh'`、`targetLang == 'en'`；`licenseNote` 取自檔頭。
 - 解碼與 BOM 規則同 `parseJsonCsvFile`。
 
-- [ ] **Step 1: 寫失敗的測試 `cedict_importer_test.dart`**
+- [x] **Step 1: 寫失敗的測試 `cedict_importer_test.dart`**
 
 用自製小檔（不用真實 CC-CEDICT）。測試名稱與斷言：
 - `test('註解行與空行略過，檔頭 license 存進 licenseNote')`：`#! license=Creative Commons Attribution-ShareAlike 4.0 International License`。
@@ -299,20 +299,20 @@ git commit -m "feat(epic-63): Issue 3 匯入流程與 JSON/CSV 匯入器"
 - `test('全部是註解的檔案丟 noValidEntries')`
 - `test('取消與重複匯入走同一條流程')`：同一檔案匯入兩次 → 第二次 `DuplicateDictionaryException`。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/cedict_importer_test.dart`
 Expected: FAIL（找不到 `CedictImporter`）。
 
-- [ ] **Step 3: 實作 `CedictImporter` 與 `parseCedictFile`**
+- [x] **Step 3: 實作 `CedictImporter` 與 `parseCedictFile`**
 
 資料行用一個 `RegExp` 切三段（繁體、簡體、拼音、釋義）。其餘走 `runImportPipeline`，`format: DictionaryFormat.cedict`。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary/importers/cedict_importer.dart app/test/dictionary/cedict_importer_test.dart
