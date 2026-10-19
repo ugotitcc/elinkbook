@@ -35,7 +35,8 @@
 - `ImportRequest`、`ImportProgress`、`CancelToken` 在 spec 只有名字、沒有欄位。本 Issue 只放最小版本（見 Task 1），Issue 3 需要時再擴充。
 - `headword_norm` 由 `DictionaryStore.insertEntries` 計算並寫入，匯入器不需自己算。查詢端用同一個頂層函式 `headwordNorm()`，公式只存在一處。
 - `content_id`、`referenced_css` 欄位在表裡建立，但本 Issue 的 Store 不讀寫它們（Issue 3、6a 才用）。
-- 單一交易包住整個匯入的 API，留給 Issue 3 加。
+- 單一交易的接縫在本 Issue 就建好（審查 I-1）：`DictionaryStore` 持有 `DatabaseExecutor`，並提供 `transaction()`。原因：`insertEntries` 內的 `Batch` 在一般連線上會各自提交，Issue 3 取消匯入時無法回復；接縫晚加就得改建構子。
+- `updateEntryCount` 不建（審查 I-2 的一半，不採納）：匯入器先解析完整份檔案才寫入，筆數在 `insertSource` 前就已知，隨 `DictionarySource.entryCount` 一次寫入。MDX 的筆數來自檔頭。沒有任何呼叫端需要事後更新。
 
 ---
 
@@ -81,7 +82,7 @@ app/test/dictionary/
   - `enum EntryBodyKind { plainText, html }`
   - `class DictionaryEntry`：`const` 建構子；`sourceId`、`headword`、`body`、`bodyKind` 為 `required`，`pronunciation`、`partOfSpeech` 為可空具名參數。
   - `String headwordNorm(String headword)`：回傳 `headword.trim().toLowerCase()`。
-  - `class LookupRequest { const LookupRequest(this.word); final String word; }`，覆寫 `==`、`hashCode`。
+  - `class LookupRequest { const LookupRequest(this.word); final String word; }`，覆寫 `==`、`hashCode`。兩者一律寫成 expression body（箭頭函式），方法內不宣告區域變數。
   - `enum OutcomeStatus { found, notFound, skipped, failed }`
   - `class ProviderOutcome`：`const` 建構子；`providerId`、`displayName`、`status` 為 `required`，`entries` 預設 `const []`，`attribution`、`errorCode` 可空。
   - `class LookupResult`：`const` 建構子；`request`、`outcomes`（兩者 `required`）。
@@ -96,7 +97,7 @@ app/test/dictionary/
 
 測試名稱與斷言：
 - `test('相同的詞視為相等')`：`expect(const LookupRequest('run'), const LookupRequest('run'))`；`expect(const LookupRequest('run'), isNot(const LookupRequest('ran')))`。
-- `test('型別只有 word 一個欄位，防止日後加前後文欄位')`：用 `File('lib/dictionary/models/lookup_request.dart').readAsStringSync()` 讀原始碼，以 `RegExp(r'^\s*(final|late|var)\s', multiLine: true)` 數欄位宣告，`expect(count, 1)`，並 `expect(source, contains('final String word;'))`。測試註解說明：Dart 無法反射列舉欄位，所以用原始碼掃描守住這條隱私底線（對應 spec §3.2 的「從型別上保證不可能把書中內容送出去」）。
+- `test('型別只有 word 一個欄位，防止日後加前後文欄位')`：用 `File('lib/dictionary/models/lookup_request.dart').readAsStringSync()` 讀原始碼，以 `RegExp(r'^  (final|late|var)\s', multiLine: true)` 數欄位宣告，`expect(count, 1)`，並 `expect(source, contains('final String word;'))`。regex 刻意只吃「恰好兩格縮排」：`dart format` 保證類別成員縮排兩格、方法內的區域變數至少四格，所以 `==` 裡的 `final other = ...` 不會被誤算（審查 I-3）。測試註解說明：Dart 無法反射列舉欄位，所以用原始碼掃描守住這條隱私底線（對應 spec §3.2 的「從型別上保證不可能把書中內容送出去」）。
 
 - [ ] **Step 2: 寫失敗的測試 `dictionary_interfaces_test.dart`**
 
@@ -138,6 +139,7 @@ git commit -m "feat(epic-63): Issue 2 字典模型與抽象介面"
 **Interfaces:**
 - Consumes: 無（只用 `sqflite`）。
 - Produces: `abstract final class DictionaryDatabase { static const int version = 1; static Future<Database> open(String path, {bool singleInstance = true}); }`。`open` 比照 `SqliteLibraryRepository.open`：`singleInstance` 預設 `true`；測試要在同一個 process 開多個 `:memory:` 時傳 `false`。
+- Produces: 頂層 `Future<String> defaultDictionaryDatabasePath()`，回傳 App 文件目錄下的 `dictionary.db`（審查 M-3）。比照 `defaultLibraryDatabasePath()`：不寫測試（`path_provider` 需要平台 channel），註解寫明僅供正式執行時使用。Issue 4 的 `main.dart` 呼叫它。
 
 - [ ] **Step 1: 寫失敗的測試 `dictionary_database_test.dart`**
 
@@ -182,8 +184,10 @@ git commit -m "feat(epic-63): Issue 2 dictionary.db 開啟與外鍵設定"
 - Produces（Issue 3、5 使用）：
   ```dart
   class DictionaryStore {
-    DictionaryStore(this._db); // Database
+    DictionaryStore(this._db); // DatabaseExecutor（Database 或 Transaction 皆可）
+    Future<T> transaction<T>(Future<T> Function(DictionaryStore store) action);
     Future<void> insertSource(DictionarySource source);
+    Future<DictionarySource?> getSource(String sourceId);
     Future<List<DictionarySource>> listSources({bool enabledOnly = false});
     Future<void> setEnabled(String sourceId, bool enabled);
     Future<void> setPriority(String sourceId, int priority);
@@ -192,15 +196,22 @@ git commit -m "feat(epic-63): Issue 2 dictionary.db 開啟與外鍵設定"
     Future<List<DictionaryEntry>> lookup(String sourceId, String word);
   }
   ```
+  - `transaction`：若 `_db` 是 `Database`，呼叫 `_db.transaction((txn) => action(DictionaryStore(txn)))`；若已在交易內（`_db` 是 `Transaction`），直接 `action(this)`，不巢狀開交易。`action` 丟出例外時整個交易回復。
+  - `getSource`：找不到回傳 `null`。用途：Issue 5 刪除字典時要先取 `storagePath` 才能刪私有複本（spec §4 末段）。
   - `listSources` 排序：`priority ASC, imported_at ASC, id ASC`。
   - `insertEntries` 用 `Batch` 一次寫入，計算並寫入 `headword_norm`。
   - `lookup` 先把 `word` 套 `headwordNorm()`，比對 `source_id` 與 `headword_norm`，依 `id` 排序；`word` 去空白後為空時直接回傳 `const []`。
-  - `format` 存 `DictionaryFormat.name`、`body_kind` 存 `EntryBodyKind.name`、`imported_at` 存 UTC 的 ISO 8601 字串；`storagePath`、`licenseNote` 空字串存成 `''`（讀回仍是 `''`）。
+  - `format` 存 `DictionaryFormat.name`、`body_kind` 存 `EntryBodyKind.name`、`imported_at` 存 `importedAt.toUtc().toIso8601String()`，讀回是 UTC（審查 M-1）；`storagePath`、`licenseNote` 的 `''` 存成 `''`，讀回時資料庫的 `NULL` 也轉成 `''`，即 `(row['storage_path'] as String?) ?? ''`（審查 M-2）。
 
 - [ ] **Step 1: 寫失敗的測試 `dictionary_store_test.dart`**
 
 `setUp` 開 `inMemoryDatabasePath`（`singleInstance: false`）並建立 `DictionaryStore`；`tearDown` 關閉。測試檔內寫 `_source({id, priority, enabled})` 與 `_entry(sourceId, headword, {body})` 兩個小工廠。測試名稱與斷言：
-- `test('寫入來源後可完整讀回')`：每個欄位相等，含 `importedAt`（UTC）與 `format`。
+- `test('寫入來源後可完整讀回')`：每個欄位相等，含 `format`；`importedAt` 用 `isAtSameMomentAs` 比對。
+- `test('本地時區的 importedAt 讀回後是同一時刻且為 UTC')`（M-1）：傳入 `DateTime.now()`，讀回 `isUtc == true` 且 `isAtSameMomentAs(原值)`。
+- `test('資料庫中 storage_path 與 license_note 為 NULL 時讀回空字串')`（M-2）：用原生 `db.insert` 寫入不含這兩欄的來源列，`getSource` 回傳 `storagePath == ''`、`licenseNote == ''`，不丟 `TypeError`。
+- `test('getSource 找得到回傳來源，找不到回傳 null')`（I-2）。
+- `test('transaction 內的寫入在 action 丟例外時整批回復')`（I-1）：`transaction` 內先 `insertSource`、再 `insertEntries`，然後 `throw StateError`；`expect(..., throwsStateError)`；之後 `listSources()` 為空、`dictionary_entries` 的 `count(*)` 為 `0`。
+- `test('transaction 正常結束時寫入生效，並可回傳值')`（I-1）。
 - `test('依優先順序列出，數字小者在前')`：priority 3、1、2 → 讀回 id 順序為 priority 1、2、3；priority 相同時依 `imported_at` 再依 `id`。
 - `test('enabledOnly 只回傳啟用的來源')`：停用一本後 `listSources(enabledOnly: true)` 不含它；`listSources()` 仍含。
 - `test('setEnabled 與 setPriority 會更新並影響排序')`。
@@ -223,12 +234,12 @@ Expected: FAIL，找不到 `DictionaryStore`。
 
 - [ ] **Step 3: 實作 `DictionaryStore`**
 
-簽章見 Interfaces。所有 SQL 用 `?` 參數或 `db.insert/query/update/delete` 的 `where`/`whereArgs`，不拼字串。來源與詞條的 `Map` 轉換寫成兩個私有方法（`_sourceToRow`／`_rowToSource`、`_entryToRow`／`_rowToEntry`）。類別註解註明：`headword_norm` 公式只存在 `headwordNorm()` 一處。
+簽章見 Interfaces。`insertEntries` 用傳入的 `DatabaseExecutor` 建 `batch()`，所以在 `transaction` 內會跟著同一個交易。所有 SQL 用 `?` 參數或 `db.insert/query/update/delete` 的 `where`/`whereArgs`，不拼字串。來源與詞條的 `Map` 轉換寫成兩個私有方法（`_sourceToRow`／`_rowToSource`、`_entryToRow`／`_rowToEntry`）。類別註解註明：`headword_norm` 公式只存在 `headwordNorm()` 一處。
 
 - [ ] **Step 4: 執行測試，確認通過**
 
 Run: `flutter test test/dictionary/dictionary_store_test.dart`
-Expected: PASS（14 個測試）。
+Expected: PASS（19 個測試）。
 
 - [ ] **Step 5: Commit**
 
