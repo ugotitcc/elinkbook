@@ -506,7 +506,7 @@ git commit -m "feat(epic-63): Issue 3 英文詞形還原與語言登錄表"
 
 `lookupCandidates` 的順序（spec §3.4）：原字串、小寫、首字大寫（第一個字元大寫、其餘小寫）、全大寫；再接 `lemmatize(lang, 小寫)` 的結果；最後把前面每個含變音符號的候選去變音符號後附上（`café` 先於 `cafe`）。相同字串只保留第一次出現。輸入去空白後為空 → 回傳空清單。
 
-- [ ] **Step 1: 寫失敗的測試 `lookup_candidates_test.dart`**
+- [x] **Step 1: 寫失敗的測試 `lookup_candidates_test.dart`**
 
 - `test('順序：原字串、小寫、首字大寫、全大寫')`：`'aPPle'`（lang `en`）→ 清單開頭依序為 `['aPPle','apple','Apple','APPLE']`。
 - `test('首字大寫與原字串相同時去重')`：`'Apple'` → 開頭為 `['Apple','apple','APPLE']`。
@@ -521,18 +521,18 @@ git commit -m "feat(epic-63): Issue 3 英文詞形還原與語言登錄表"
 - `test('dedupeByHeadwordNorm：套用公式後相同的候選只留第一個')`：`['Run','run','RUN','ran']` → `['Run','ran']`。
 - `test('dedupeByHeadwordNorm 保留原樣字串與順序')`
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/lookup_candidates_test.dart`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary/lookup_candidates.dart app/test/dictionary/lookup_candidates_test.dart
