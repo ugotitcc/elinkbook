@@ -11,14 +11,14 @@
 | 5 | 字典設定畫面 | 3 | ready-for-agent | |
 | 6a | MDX 匯入、詞條顯示、交叉參照與錨點、返回堆疊 | 1、4、5 | ready-for-agent | |
 | 6b | MDX 圖片、獨立 CSS、深色與 E-Ink 配色 | 6a | ready-for-human | |
-| 7 | 線上查詞（萌典）、同意對話框、隱私更新 | 3、4 | ready-for-agent | |
+| 7 | 線上查詞（萌典）、同意對話框、隱私更新 | 3、4、5 | ready-for-agent | |
 | 8 | 授權頁、隱私頁、l10n 收尾、整合測試 | 全部 | ready-for-human | |
 
 ```
 Issue 1（MDX 驗證 spike）────────────────────────┐
 Issue 2（模型＋資料庫）──> Issue 3（匯入＋查詢）─┬─> Issue 4（面板＋按鈕）──┬─> Issue 6a ──> Issue 6b ─┐
                                                  ├─> Issue 5（設定畫面）────┘                          ├─> Issue 8
-                                                 └─────────────> Issue 7（線上查詞，需 4）────────────┘
+                                                 └─> Issue 7（線上查詞，需 3、4、5）─────────────────┘
 ```
 
 Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行；Issue 6a 需等 1、4、5。
@@ -38,6 +38,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 - 用 2 至 3 本真實 MDX 驗證。其中一本要是 LZO 壓縮。字典由人類提供。
 - 驗證清單見 `docs/research/dictionary/DICTIONARY_FORMATS_AND_LICENSES.md` §4。
 - 先試 `flutter pub get`，確認不破壞 `pubspec.yaml` 的 `win32` 相依解析。
+- 追加驗證：`InAppWebView` 在 `javaScriptEnabled: false`、`loadDataWithBaseURL` 下，`<a href="#x">` 是否能原生跳轉；MDD 資源路徑含反斜線、空白、URL 編碼時，所選套件能否取到。
 - 結論寫回 `DICTIONARY_FORMATS_AND_LICENSES.md` 的「驗證結果」一節。
 
 **測試要求：** 無產品程式碼。spike 的程式放 `.scratch/`，不進版控。
@@ -59,12 +60,14 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 - `DictionaryProvider`、`OnlineDictionaryProvider`、`DictionaryImporter` 抽象介面。
 - `dictionary_database.dart`：開啟 `dictionary.db`，自帶版本號，啟用 `PRAGMA foreign_keys = ON`。
 - `DictionaryStore`：來源與詞條的讀寫、依優先順序列出、刪除連動。
+- `PRAGMA foreign_keys = ON` 放在 `openDatabase` 的 `onConfigure`（連線層級設定；比照主庫的做法）。
 - 不動主資料庫（`version: 28`），不登錄 `sync_table_specs.dart`。
 
 **測試要求：**
 - `dictionary_store_test.dart`：寫入、查詢、優先順序、啟用旗標、刪除連動（詞條隨來源刪除）。
 - `lookup_request_test.dart`：型別只有 `word`，防止日後加前後文欄位。
 - 主庫版本斷言：`version` 仍為 28。
+- 重新開啟資料庫後，刪除來源仍會連帶刪除詞條（確認 `onConfigure` 每次開啟都生效）。
 
 **驗收標準：** 驗收 28。`flutter analyze` 乾淨；上述測試通過。
 
@@ -79,9 +82,10 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 **依賴：** Issue 2。
 
 **What to build：**
-- `JsonCsvImporter`：格式見 `spec.md` §5。單一交易分批寫入，可取消，背景 Isolate（closure 用頂層函式，見 `CLAUDE.md`）。
+- `JsonCsvImporter`：格式見 `spec.md` §5。解析放進 `Isolate.run()`（closure 用頂層函式，見 `CLAUDE.md`、`AGENTS.md`），寫入留在主 Isolate 分批進行，每批之間檢查 `CancelToken` 並發出 `ImportProgress`，取消時整個交易回復。執行緒分工見 `spec.md` §3.3。
 - 重複匯入偵測（`content_id`）與檔名取得規則（用 `PlatformFile.name`）。
-- `lookup_text_normalizer.dart`、`lookup_candidates.dart`、`lemmatize/`（只登錄英文）。
+- `lookup_text_normalizer.dart`（去頭尾標點、內部標點、CJK 8 字元規則，見 `spec.md` §3.4）、`lookup_candidates.dart`（含 Latin 變音符號對照表，不做 Unicode 正規化）、`lemmatize/`（只登錄英文）。
+- 匯入時計算 `headword_norm = headword.trim().toLowerCase()`。
 - `LocalDictionaryProvider` 與 `DictionaryService`（僅本機；依字元類型與語言方向挑字典）。
 
 **測試要求：**
@@ -103,18 +107,19 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 **What to build：**
 - `AnnotationToolbar` 新增 `onLookupPressed` 與按鈕；`reader_screen.dart` 兩處（EPUB 約 2928 行、PDF 約 2950 行）傳入 callback。PDF 端 Phase 1 不顯示按鈕。
-- `dictionary_lookup_sheet.dart`：各狀態（有結果、無結果、尚未匯入、線上已關閉、失敗、選取太長）。用 `EbSheetShell`，無動畫，E-Ink 用邊框。
+- `dictionary_lookup_sheet.dart`：各狀態（有結果、無結果、尚未匯入、線上已關閉、失敗、選取含標點、選取太長）。用 `EbSheetShell`，無動畫，E-Ink 用邊框。
+- 分段選擇器，一次只顯示一本字典（`spec.md` §3.6）；預設選第一個有結果的分段；只有一個 provider 時不顯示選擇器；同時最多一個 `InAppWebView`，且獨佔剩餘高度。
 - `DictionaryService` 加入 `ReaderFeatureDependencies`（`required`）；`main.dart` 建構一次；`test/support/` 工廠加預設 fake。
-- 關閉面板時保留選取，不重複彈出標註工具列。
+- 關閉面板後，既有選取範圍與原本的 `AnnotationToolbar` 維持，不重複建立工具列、不重新觸發選取變更事件。
 - l10n 字串進四份 ARB。
 
 **測試要求：**
 - `annotation_toolbar_test.dart`：新按鈕出現、點擊觸發 callback。
-- `dictionary_lookup_sheet_test.dart`：六種狀態、太長提示、關閉後選取保留。
-- `reader_screen_test.dart` 相關案例：FXL 與 CBZ 不顯示按鈕。
+- `dictionary_lookup_sheet_test.dart`：各狀態、太長提示、含標點提示；分段選擇器的預設選取、切換、單一 provider 時隱藏。
+- `reader_screen_test.dart` 相關案例：FXL 與 CBZ 不顯示按鈕；關閉字典面板後，既有選取範圍與原本的 `AnnotationToolbar` 維持，不出現第二個實例。
 - `node tool/check_l10n_hardcoded_strings.js`。
 
-**驗收標準：** 驗收 3、4、5、12、26。選字到顯示結果可用；Android 原生選取控點不蓋住面板（真機確認）。
+**驗收標準：** 驗收 3、4、5、12、26、32。選字到顯示結果可用；Android 原生選取控點不蓋住面板（真機確認）。
 
 **Blocked by：** Issue 3。
 
@@ -151,7 +156,8 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 **What to build：**
 - `MdxImporter` 與 `mdx_reader.dart` 薄封裝（隔離所選套件）。MDX 保留原檔，複製到私有目錄。
 - 詞條以 `InAppWebView` 顯示：JavaScript 關閉、擋所有網路與檔案請求。
-- `shouldOverrideUrlLoading` 處理 `entry://`、`bword://`（URL 解碼後重新查詢並推入返回堆疊）、`#錨點`、`entry://#錨點`。
+- `shouldOverrideUrlLoading` 處理 `entry://詞`、`bword://詞`（URL 解碼後重新查詢並推入返回堆疊）。
+- `#錨點`：載入詞條前在 Dart 端把 `entry://#x` 改寫成 `#x`，用 `loadDataWithBaseURL` 搭配固定 baseUrl 載入，由 WebView 原生處理，不需要 JavaScript。Issue 1 的驗證若顯示此做法不成立，回報後再調整。
 - 加密 MDX 匯入時顯示三段式錯誤。
 - 非內部連結（`http`、`https`、`file`）不載入、不開啟。
 
@@ -173,7 +179,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 **依賴：** Issue 6a。
 
 **What to build：**
-- 圖片：在 `shouldInterceptRequest` 從 `.mdd` 回傳資源。先試原路徑，找不到再去掉開頭的 `/`。
+- 圖片：在 `shouldInterceptRequest` 從 `.mdd` 回傳資源。先 `Uri.decodeComponent`、把反斜線換成 `/`，先試原路徑，找不到再去掉開頭的 `/`。依副檔名設 `contentType`。
 - 獨立 `.css`：匯入時依主檔名一併複製，載入詞條時注入。
 - 深色與 E-Ink 配色：注入覆寫樣式，蓋掉詞條寫死的文字與背景顏色。
 - 已知限制寫進設定畫面說明：依賴 `onclick` 的互動（例如牛津 9 圖片放大）在 JavaScript 關閉時不運作。
@@ -193,9 +199,11 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 **Status:** ready-for-agent
 
-**依賴：** Issue 3、Issue 4。
+**依賴：** Issue 3、Issue 4、Issue 5。
 
 **What to build：**
+- 在 `dictionary_settings_screen.dart`（Issue 5 建立）補上線上查詢區塊：開關、萌典說明、同意狀態卡片。
+- 查詢面板的「線上查詢已關閉」提示附上通往此區塊的設定入口。
 - `MoedictProvider`（`OnlineDictionaryProvider`）：`https://www.moedict.tw/uni/{詞}`，逾時 5 秒，寬鬆解析（缺欄位不當掉，格式不認得時顯示「無法解析」）。
 - 只接受 `https`（`AndroidManifest.xml` 有 `usesCleartextTraffic="true"`，必須在 Dart 端擋）。
 - `dictionary_online_consent_dialog.dart`；同意狀態存 `dictionary_settings_repository.dart`（`shared_preferences`）。預設關閉。
@@ -222,7 +230,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 **What to build：**
 - 新增所用套件的授權全文到 `app/assets/licenses/`，登錄到 `app/lib/licenses/third_party_licenses.dart`。
-- 補 `docs/prd.md` 的字典 FR 條目與 `CONTEXT.md` 詞條。
+- 補 `docs/prd.md` 的字典 FR 條目與 `CONTEXT.md` 詞條（`epic.md` 與本檔統一在此 Issue 處理）。
 - 補兩份 ADR（見 `epic.md` §10 第 4 項）。
 - 補齊整合測試與真機驗收。
 
@@ -231,6 +239,6 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 - 完整 `flutter test`（計畫最後一個 Task 時執行一次）。
 - 真機：EPUB 選字 → 查字典 → 結果顯示；E-Ink 裝置量測。
 
-**驗收標準：** `spec.md` §9 驗收 1～31 全數成立；驗收 31（沒有取自 AGPL／GPL 專案的程式碼）由人類最終確認。
+**驗收標準：** `spec.md` §9 驗收 1～32 全數成立；驗收 31（沒有取自 AGPL／GPL 專案的程式碼）由人類最終確認。
 
 **Blocked by：** Issue 1～7。

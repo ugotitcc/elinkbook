@@ -4,7 +4,7 @@
 **存放路徑：** `docs/epics/epic-63-dictionary-lookup/`
 **關聯文件：** `spec.md`、`issues.md`
 **調查文件：** `docs/research/dictionary/PHASE1_AUDIT.md`、`DICTIONARY_FORMATS_AND_LICENSES.md`、`READEST_ANALYSIS_AND_PROPOSAL.md`
-**關聯 PRD 章節：** 尚無字典需求。實作前需補 `docs/prd.md`（見下方「待確認項目」）
+**關聯 PRD 章節：** 尚無字典需求。`docs/prd.md` 的 FR 條目與 `CONTEXT.md` 詞條在 Issue 8 補上
 
 ## 背景
 
@@ -80,7 +80,8 @@
 | `win32` 相依鏈 | `pub get` 失敗 | 加套件前先試解析；失敗就退回備案 |
 | 面板內的 WebView 在 E-Ink 太慢 | 體驗差 | 真機量測；不通過則 MDX 改顯示純文字（備案） |
 | 大 MDX 佔記憶體 | 閃退 | 驗證階段量測；設定檔案大小警告 |
-| 匯入凍結 UI | 體驗差 | 背景 Isolate；closure 用頂層函式（見 `CLAUDE.md`） |
+| 匯入凍結 UI | 體驗差 | 解析放進 `Isolate.run()`，寫入留在主 Isolate 分批進行（見 `spec.md` §3.3）；closure 用頂層函式（見 `CLAUDE.md`、`AGENTS.md`） |
+| Dart 無 Unicode 正規化 | 分解形式的詞查不到 | Phase 1 不做 NFC／NFD；真機回報後再評估套件與授權（見 `spec.md` §3.4） |
 | 選字太長 | 查不到、版面爆掉 | 片語與 CJK 8 字元規則（見 §3.4），超過不發任何查詢 |
 | 新資料庫遷移 | 資料遺失 | `dictionary.db` 自有版本；刪除不影響書庫 |
 | MDX 真實世界相容性 | 版面壞掉、連結失效 | Readest 一路修了許多 MDX 渲染問題（見 `READEST_ANALYSIS_AND_PROPOSAL.md` §2.7），預期會遇到。用 2 至 3 本真實字典驗收 |
@@ -103,14 +104,14 @@
 仍是預設假設，請確認或修改：
 
 1. **PDF**：Phase 1 不接。PDF 的選字走 `PdfSelectionInfo`，後續另立 Issue。（預設：不做）
-2. **線上結果出現時機**：本機有結果時，線上也一起查。（預設：一起查，分區顯示）
+2. **線上結果出現時機**：本機有結果時，線上也一起查。（預設：一起查，作為最後一個分段）
 3. **詞彙表**：`CONTEXT.md` 尚無字典相關詞條。建議實作時補上「字典來源」「查詢請求」等詞。本次依指示未修改。
 4. **ADR**：以下兩點符合「難以回復、事後令人意外、有真實取捨」，建議實作時各寫一份 ADR：
    - 字典資料獨立於主庫（`dictionary.db`）。
    - 線上查詢請求型別不含前後文。
-5. **顯示方式**：Phase 1 用分區加返回堆疊。頁籤等真機試用後再決定。（預設：分區）
+5. **顯示方式**：已確認（2026-10-19，審查 Important 2）：Phase 1 用分段選擇器，一次只顯示一本字典，加返回堆疊。取代原本的「分區」預設。
 6. **Epic 編號與順位**：已轉成 Epic（2026-10-19）。編號 `epic-63` 是目前最大編號加一，順位 64 是看板最後一列。若要調整，請告知。
-7. **PRD**：`docs/prd.md` 尚無字典需求。建議在 Issue 4 合併前補上 FR 條目，並在 `CONTEXT.md` 補詞條。
+7. **PRD 與詞彙表**：統一在 Issue 8 補 `docs/prd.md` 的 FR 條目與 `CONTEXT.md` 詞條。
 
 ## 11. Phase 2 候選
 
@@ -121,6 +122,6 @@
 3. **外開連結範本**：範本含 `%WORD%`，僅允許 `https`。結果頁只顯示「在 {名稱} 開啟」卡片，使用者點擊後才用系統瀏覽器開啟。不嵌入、不解析。
 4. **外部字典 App 呼叫**：`ACTION_PROCESS_TEXT`，需 `AndroidManifest.xml` 加 `<queries>` 與過濾廠商瀏覽器。
 5. **PDF 選字查詢**。
-6. **頁籤式顯示**。
+6. 每本字典獨立的瀏覽歷史（目前只有面板層級的返回堆疊）。
 
 明確不做：把前後文送去 AI 服務。若日後要做，必須是另一個請求型別，有獨立的同意流程，不與 `LookupRequest` 共用。
