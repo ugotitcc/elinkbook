@@ -123,6 +123,119 @@ dictionary_entries            -- 只給 JSON/CSV 來源
 10. 詞條 HTML 引用的外部 CSS 沒有一併匯入時：行為是否安全（不當掉、不載入網路）。
 11. 目前三個驗收檔都沒有 LZO，手上也沒有 LZO 字典。Phase 1 決定不支援 LZO（2026-10-19），只確認遇到 LZO 區塊時丟出明確錯誤；可用自製的假區塊測試，不需要真字典。
 
+### 驗證結果（Issue 1，2026-10-19）
+
+**結論：採用 `dict_reader 1.6.1`（MIT）。** `mdict_flutter` 淘汰。
+
+#### 決策規則的套用
+
+| 順序 | 條件 | 結果 |
+|---|---|---|
+| 1 | `mdict_flutter` 在兩個真實檔案開啟失敗 | 成立，淘汰。兩個檔案都丟 `FormatException: Filter error, bad data`（`report/mdict_flutter_elimination.json`）。另讀原始碼確認：記錄區塊壓縮型態不是 zlib 時 `return null`，與「查無此詞」無法區分 |
+| 2 | `dict_reader` 真實檔開啟失敗，或遞移相依有 GPL／AGPL／LGPL | 不成立。兩個檔案都能開啟；授權見下表，無 copyleft |
+| 3 | `large.mdx` 記憶體增量 < 50 MB 且 p95 < 300 ms | 成立，但前提很窄：合成的 ASCII 鍵、查詢集中於前 1000 筆。**開啟後增量：平板最高 45.0 MB、E-Ink 最高 45.7 MB，離門檻只剩約 5 MB。** 真實 CJK 大檔與隨機查詢仍要補測，見「效能」一節的警語 |
+
+#### `dict_reader` 授權（含遞移相依）
+
+| 套件 | 版本 | 授權 | 放進 `app/assets/licenses/` |
+|---|---|---|---|
+| dict_reader | 1.6.1 | MIT | 是 |
+| blockchain_utils | 6.0.0 | BSD-3-Clause | 是 |
+| pointycastle | 4.0.0 | MIT（Bouncy Castle） | 是 |
+| charset | 2.0.1 | Apache-2.0 | 是 |
+| convert、collection、typed_data、html_unescape | 3.1.2、1.19.1、1.4.0、2.0.0 | BSD-3-Clause | 是 |
+
+另：`flutter pub add dict_reader --dry-run` 在 `app/` 解析成功，只新增 `dict_reader`、`blockchain_utils`、`charset`、`convert`、`html_unescape`、`pointycastle`，沒有升降級既有套件，`win32` 相依鏈不受影響。
+
+#### 真實檔案（`dict_reader`）
+
+| 項目 | 教育部 MDX | 古漢語 MDX |
+|---|---|---|
+| 開啟（`Encrypted=2`） | 成功，163,085 筆 | 成功，7,587 筆 |
+| `lookup('一')` | 命中 | 命中 |
+| 取樣 200 個鍵全部可查 | 是 | 是 |
+| `StyleSheet` 展開 | 已展開，200 筆取樣無 `` `數字` `` 殘留 | 無樣式表 |
+| `StripKey=Yes` | — | **不處理**：`' 一 '`、`'一，'` 查無 |
+| 標題佔位字串 | — | `Title (No HTML code allowed)`，`Description` 非空 |
+| 缺檔 CSS | — | 詞條內含 `<link href="ghychyz.css">`，查詢本身不受影響 |
+| CJK／全形括號檔名 | 在 Android 上複製成該檔名後可正常開啟 | 同左 |
+
+#### 合成檔案
+
+- 通過：開啟、50 筆、查詢命中／查無、空字串與純空白鍵不丟例外、前綴搜尋、CJK 鍵、假 LZO 區塊丟 `unsupportedCompression`（`dict_reader` 丟的是**字串**，轉接層包成統一例外）、截斷檔 10 秒內丟 `corrupt`、檔案不存在丟 `notFound`。
+- 失敗：`KeyCaseSensitive=No` 時 `lookup('APPLE')` 查無（`dict_reader` 以精確字串比對）。見 `report/synthetic_failures.md`。
+- MDD：只有反斜線形式 `\pic\a b.png` 查得到；`/pic/a b.png`、`pic/a b.png` 都查無。
+
+#### 效能
+
+實機一：OPPO OPD2102（Android 13、3.7 GB RAM、arm64、release 模式；**非 E-Ink**）。實機二（E-Ink）：Allwinner WAVE（Android 12、4 GB RAM、1872×1404、**armeabi-v7a 32 位元**、release 模式）。每次量測前強制停止 App，一次只量一個檔案。
+
+| 檔案 | 筆數 | 開啟 | 開啟後記憶體增量 | 查詢後記憶體增量 | p50 | p95 |
+|---|---|---|---|---|---|---|
+| 教育部（UTF-16，3 次） | 163,085 | 630–643 ms | 21.7–24.3 MB | 25.5–27.8 MB | 0.07 ms | 0.22 ms |
+| 古漢語（1 次） | 7,587 | 37 ms | 0.0 MB | 1.0 MB | 0.01 ms | 0.05 ms |
+| large.mdx（102 MB 合成，3 次） | 400,000 | 1,123–1,170 ms | **40.1–45.0 MB** | 24.6–42.6 MB | 0.01 ms | 0.82–1.24 ms |
+
+- 查詢只量了精確查詢 100 次；前綴查詢未在實機量測。
+- 門檻定義的是「開啟 100 MB MDX」的記憶體增量，所以以**開啟後增量**為準：large.mdx 為 40.1–45.0 MB，峰值 45.0 MB，離 50 MB 只剩 5 MB。「查詢後增量」較低（24.6–42.6 MB）是 GC 在開啟後才回收，不代表實際用量下降。（最後審查指出：初版文件採用了查詢後的數字，低報了峰值。）
+- `dict_reader` 會把所有鍵載入記憶體，增量與筆數成正比。以下三個因素讓這個結果只代表「最有利的情境」：
+  1. **鍵的形式**：large.mdx 的鍵是 ASCII 的合成詞，Dart 對 ASCII 字串較省記憶體。每把鍵約 108 B；教育部（UTF-16 的 CJK 鍵）約 140 B。照此外推，一本 40 萬筆的真實 CJK 字典約 56 MB，可能超過 50 MB。
+  2. **查詢沒讓快取長大**：量測的查詢鍵取自 `prefix('', limit: 1000)`，只落在前幾個記錄區塊；`dict_reader` 有最多 32 MB 的記錄區塊快取。實際隨機查詢時，快取最多再加 32 MB。
+  3. **薄封裝的額外記憶體**：`KeyCaseSensitive=No` 的大小寫摺疊，因 `dict_reader` 以精確字串比對，可能需要另建一份摺疊後的鍵索引，這份記憶體尚未估算。
+- E-Ink 已於 2026-10-19 補測（見上表）。Issue 6a 仍須在 E-Ink 上量：真實 CJK 大檔或 UTF-16 合成大檔、隨機鍵查詢、穩態 RSS（含快取）、開啟後峰值。
+- 桌面預檢（Windows，非實機）：教育部開啟 3.5 s、增量 30.6 MB；large 開啟 0.6 s、增量 45.1 MB。
+
+#### E-Ink 實機（Allwinner WAVE，2026-10-19 補測）
+
+| 檔案 | 筆數 | 開啟 | 開啟後記憶體增量 | 查詢後記憶體增量 | p50 | p95 |
+|---|---|---|---|---|---|---|
+| 教育部（UTF-16，3 次） | 163,085 | 1,779–1,873 ms | 21.0–24.3 MB | 17.3–24.2 MB | 0.22–0.23 ms | 3.0–3.2 ms |
+| 古漢語（1 次） | 7,587 | 73 ms | 1.8 MB | 2.5 MB | 0.03 ms | 0.20 ms |
+| large.mdx（102 MB 合成，3 次） | 400,000 | 3,664–3,884 ms | **43.2–45.7 MB** | 36.1–45.0 MB | 0.03 ms | 2.6–3.1 ms |
+
+- 查詢延遲 p95 最高 3.2 ms，遠低於 300 ms 門檻。
+- 開啟時間約為平板的 3 倍：教育部 1.8 s（平板 0.64 s）、large 3.7–3.9 s（平板 1.1–1.2 s）。沒有開啟時間門檻，但 100 MB 級字典的匯入後首次開啟要有進度提示。
+- 記憶體：large 開啟後增量最高 45.7 MB，仍在 50 MB 內，但裕度只有約 4 MB。上述三個警語（ASCII 鍵、快取沒長大、封裝額外記憶體）在 E-Ink 上同樣適用。
+- 這台是 32 位元 ARM（armeabi-v7a）；`dict_reader` 是純 Dart，沒有原生程式庫，release 組建含 armeabi-v7a 即可運作。
+- WebView 行為與平板完全一致：錨點原生跳轉（截圖 `report/wave_eink/anchor_after.png`）、`entry://apple` 觸發 `shouldOverrideUrlLoading`、圖片請求網址形式相同、純 `#錨點` 導航同樣不觸發回呼。
+
+#### WebView（`javaScriptEnabled: false`，System WebView 155，`loadDataWithBaseURL`，baseUrl `https://dict.local/`）
+
+- `#錨點` 在無 JavaScript 下**原生跳轉成立**（截圖為證）。純 `#錨點` 導航**不觸發** `shouldOverrideUrlLoading` 與 `onUpdateVisitedHistory`，所以不能靠這兩個回呼偵測，也不需要攔截。`spec.md` §3.6 的「Dart 端把 `entry://#x` 改寫成 `#x`」做法可行。
+- `entry://apple`：`shouldOverrideUrlLoading` 收到原樣字串。回傳 ALLOW 時還會進 `shouldInterceptRequest`；實作要回傳 CANCEL。
+- 圖片：三種寫法（`pic/a b.png`、`pic/a%20b.png`、`\pic\a b.png`）全部歸一成 `https://dict.local/pic/a%20b.png`（空白變 `%20`、反斜線變 `/`，且只送一次請求）。
+- `shouldInterceptRequest` 也會收到 `data:text/html;...` 與 `https://dict.local/favicon.ico`。**回傳 `null` 的請求會走真實網路**，所以要擋網路，就必須對所有 `http(s)` 請求回傳明確的回應。
+- 探針 App 缺 `INTERNET` 權限時 `InAppWebView` 建立失敗；正式 App 已有此權限。
+
+#### `MdxReader` 薄封裝必須補的功能
+
+1. `KeyCaseSensitive=No`：對鍵與查詢字串套用同一個大小寫摺疊。
+2. `StripKey=Yes`：查詢字串套用與製作時相同的去空白、去標點規則。
+3. 標題為佔位字串時改用 `Description` 第一行，再不行用檔名。
+4. 把字串例外與各種例外包成統一的錯誤型別（`unsupportedCompression`、`corrupt`、`notFound`），LZO 顯示三段式錯誤。
+4a. **匯入時就擋下 LZO 與截斷檔**：`dict_reader` 的 `open()` 不解壓記錄區塊，假 LZO 檔與「截在記錄區段」的檔案都能 `open()` 成功；LZO 要到該區塊第一次被查詢才丟錯，截斷檔則只有落在被截區域的鍵才出錯，其餘鍵照常回傳。`spec.md` §3.6 與驗收 39 要求匯入時就顯示錯誤並整批回復，所以匯入流程必須掃描所有記錄區塊的壓縮型態欄位與實際長度。已用兩個會失敗的測試描述這項缺口（`synthetic_fixtures_test.dart` 的 `open() alone rejects ...`，標籤 `wrapper-gap`）。
+5. MDD 資源鍵轉換：網址 → 去掉 baseUrl 與開頭 `/` → `Uri.decodeComponent` → 把 `/` 換成 `\` → 前面加 `\`（順序以 `spec.md` §3.6 為準：先剝 baseUrl 再解碼，避免編碼後的斜線 `%2F` 干擾剝除）。
+6. `shouldInterceptRequest` 對所有 `http(s)` 請求（含 `favicon.ico`）回傳明確回應，找不到就回 404 空內容。
+7. 缺檔 CSS：把沒有對應檔案的 `<link>` 移除（`spec.md` §3.6 已定）。
+
+#### 驗證清單逐項
+
+| # | 項目 | 結果 |
+|---|---|---|
+| 1 | `pub` 相依解析 | 完成，無衝突 |
+| 2 | 開啟 100 MB 以上 MDX：時間、記憶體 | 完成（合成檔，實機一台） |
+| 3 | 精確與前綴查詢 p50／p95 | 精確查詢完成；**前綴查詢未在實機量測** |
+| 4 | LZO、加密、v3 的錯誤行為 | LZO 以假區塊完成；`Encrypted=1`（記錄區塊加密）與 v3 **未驗證**（沒有樣本） |
+| 5 | UTF-8、UTF-16、Big5 | UTF-8、UTF-16 完成；**Big5 未驗證**（沒有樣本） |
+| 6 | E-Ink 裝置重做第 2、3 項 | 完成（Allwinner WAVE，2026-10-19）：large 開啟後增量最高 45.7 MB、p95 最高 3.2 ms；開啟時間約為平板 3 倍。真實 CJK 大檔與隨機查詢仍待 Issue 6a 補測；若超過 50 MB，備案是修補（vendor）`dict_reader` 改成依區塊延遲載入鍵 |
+| 7 | `Encrypted=2` | 完成，兩個真實檔都通過 |
+| 8 | `StyleSheet` 展開 | 完成，`dict_reader` 內建 |
+| 9 | `StripKey=Yes` | 完成，`dict_reader` 不處理，需在 `MdxReader` 補 |
+| 10 | 缺檔 CSS | 完成，查詢不受影響；WebView 端要攔截所有請求 |
+| 11 | LZO 驗收檔 | 不取得；Phase 1 不支援 LZO，已用假區塊驗證錯誤路徑 |
+
+原始量測與探針輸出在 `.scratch/mdx_spike/report/`（不進版控）。
+
 ### 驗收檔探測結果（2026-10-19，唯讀，只讀標頭與區塊型態）
 
 檔案放在 `tmp/dictionary/`（已被 `.gitignore` 排除，不進版控）。文件只記格式資訊，不貼內容。

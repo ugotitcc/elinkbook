@@ -202,8 +202,8 @@ MDX 詞條處理（無需 JavaScript）：
 | 項目 | 做法 |
 |---|---|
 | `entry://詞`、`bword://詞` | 在 `shouldOverrideUrlLoading` 攔截。URL 解碼後重新查詢，推入返回堆疊 |
-| `#錨點`、`entry://#錨點` | 載入詞條 HTML 前，在 Dart 端把 `href="entry://#x"` 改寫成 `href="#x"`。用 `loadDataWithBaseURL` 載入，並指定固定的 baseUrl，讓純 `#x` 由 WebView 原生處理，不需要 JavaScript，也不需要 `shouldOverrideUrlLoading` 攔截。不當作詞條名稱查詢 |
-| 圖片 | 在 `shouldInterceptRequest` 從 `.mdd` 回傳資源。先對網址做 `Uri.decodeComponent`，再把反斜線換成 `/`，先試原路徑，找不到再去掉開頭的 `/`。依副檔名設 `contentType`（`image/jpeg`、`image/png`、`image/gif`、`image/webp`、`image/svg+xml`）；沒設正確的型別，部分 WebView 會拒絕渲染 |
+| `#錨點`、`entry://#錨點` | 載入詞條 HTML 前，在 Dart 端把 `href="entry://#x"` 改寫成 `href="#x"`。用 `loadDataWithBaseURL` 載入，並指定固定的 baseUrl，讓純 `#x` 由 WebView 原生處理，不需要 JavaScript，也不需要 `shouldOverrideUrlLoading` 攔截（實測：純 `#錨點` 導航在無 JavaScript 下可原生跳轉，且不觸發 `shouldOverrideUrlLoading` 與 `onUpdateVisitedHistory`）。不當作詞條名稱查詢 |
+| 圖片 | 在 `shouldInterceptRequest` 從 `.mdd` 回傳資源。實測（Issue 1）WebView 送來的網址一律是 `https://dict.local/pic/a%20b.png` 這種形式（空白編成 `%20`、反斜線變成 `/`）；而 MDD 的鍵是 `\pic\a b.png`。所以：去掉 baseUrl 與開頭 `/`，做 `Uri.decodeComponent`，把 `/` 換成 `\`，前面加 `\`；找不到再試不加開頭 `\` 的形式。對所有 `http(s)` 請求（含 `favicon.ico`）都必須回傳明確的回應，找不到回 404 空內容，因為回傳 `null` 會讓 WebView 走真實網路。依副檔名設 `contentType`（`image/jpeg`、`image/png`、`image/gif`、`image/webp`、`image/svg+xml`）；沒設正確的型別，部分 WebView 會拒絕渲染 |
 | 外部 `.css` | 匯入時可一併選取 `.css`，複製到該字典的私有目錄（保留原檔名）。載入詞條前，把 `<link ... href="x.css">` 依**詞條裡寫的檔名**（只比對檔名、不分大小寫）換成內嵌的 `<style>`，並移除 `@import`。沒有對應檔案的 `<link>` 直接移除，詞條改用我們的預設樣式。不依主檔名配對，因為實檔的 CSS 名稱常與 MDX 主檔名無關（例如 `ghychyz.css`） |
 | 深色與 E-Ink 配色 | 注入覆寫樣式，蓋掉詞條寫死的文字與背景顏色 |
 | LZO 壓縮 | Phase 1 不支援。區塊壓縮型態為 LZO 時，匯入顯示三段式錯誤：「這本字典使用 LZO 壓縮，目前不支援。請改用 zlib 版本，或用 MDict 工具重新打包。」。測試用自製的假區塊（壓縮型態寫成 LZO）驗證錯誤路徑 |

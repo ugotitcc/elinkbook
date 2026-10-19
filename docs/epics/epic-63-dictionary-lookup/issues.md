@@ -4,7 +4,7 @@
 
 | Issue | 標題 | 依賴 | 狀態 | PR |
 |---|---|---|---|---|
-| 1 | MDX 解析器技術驗證（spike，需真機與真實字典） | 無 | ready-for-human | |
+| 1 | MDX 解析器技術驗證（spike，需真機與真實字典） | 無 | done | 無（僅文件；結論見 `DICTIONARY_FORMATS_AND_LICENSES.md`「驗證結果」） |
 | 2 | 模型、介面、`dictionary.db` 與 `DictionaryStore` | 無 | ready-for-agent | |
 | 3 | JSON/CSV 與 CC-CEDICT 匯入、重複匯入偵測、查詢候選鏈、本機查詢 | 2 | ready-for-agent | |
 | 4 | 查詢面板、`AnnotationToolbar` 按鈕、選字規則、依賴注入 | 3 | ready-for-agent | |
@@ -29,7 +29,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 ## Issue 1：MDX 解析器技術驗證（spike）
 
-**Status:** ready-for-human
+**Status:** done（2026-10-19：採用 `dict_reader 1.6.1`；平板與 E-Ink 實機皆已量測）
 
 **依賴：** 無。
 
@@ -47,7 +47,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 **測試要求：** 無產品程式碼。spike 的程式放 `.scratch/`，不進版控。
 
-**驗收標準：** 驗證清單 6 項都有數字或結論；選定套件；授權全文與相依套件授權已讀過；實體 E-Ink 裝置上量測開啟時間、記憶體、查詢延遲。
+**驗收標準：** 驗證清單 6 項都有數字或結論；選定套件；授權全文與相依套件授權已讀過；實體 E-Ink 裝置上量測開啟時間、記憶體、查詢延遲（2026-10-19 已在 Allwinner WAVE E-Ink 平板完成，見 `DICTIONARY_FORMATS_AND_LICENSES.md`「驗證結果」）。
 
 **Blocked by：** 無。
 
@@ -163,7 +163,11 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 **依賴：** Issue 1（選定套件）、Issue 4、Issue 5。
 
 **What to build：**
-- `MdxImporter` 與 `mdx_reader.dart` 薄封裝（隔離所選套件）。MDX 保留原檔，複製到私有目錄。
+- `MdxImporter` 與 `mdx_reader.dart` 薄封裝（隔離所選套件 **`dict_reader 1.6.1`，MIT**；Issue 1 選定）。MDX 保留原檔，複製到私有目錄。
+- `dict_reader` 缺的功能由薄封裝補：`KeyCaseSensitive=No` 大小寫摺疊、`StripKey=Yes` 去空白標點、標題佔位字串、統一錯誤型別（它對 LZO 丟的是字串）、MDD 鍵轉換、對所有 `http(s)` 請求回傳明確回應（清單與理由見 `DICTIONARY_FORMATS_AND_LICENSES.md`「驗證結果」）。
+- 加入 `app/pubspec.yaml` 前先把相依套件授權（見同文件授權表）放進 `app/assets/licenses/` 並登錄 `third_party_licenses.dart`。
+- **第一個任務：在 E-Ink 上補測真實情境的記憶體。** Issue 1 已在 E-Ink 實機（Allwinner WAVE）量過合成檔：`large.mdx` 開啟後增量最高 45.7 MB、p95 最高 3.2 ms，離 50 MB 門檻只剩約 4 MB。仍須補量：真實 CJK 大檔或 UTF-16 合成大檔、隨機鍵查詢、穩態 RSS（含快取）。結果超過門檻時，備案是修補（vendor）`dict_reader` 改成依區塊延遲載入鍵。
+- 匯入時掃描所有記錄區塊的壓縮型態與實際長度，擋下 LZO 與截斷檔（`dict_reader` 的 `open()` 不會發現；見研究文件「必須補的功能」第 4a 項）。fixture 要包含「截在記錄區段」的檔案，不只是截在關鍵字區段。
 - 詞條以 `InAppWebView` 顯示：JavaScript 關閉、擋所有網路與檔案請求。
 - `shouldOverrideUrlLoading` 處理 `entry://詞`、`bword://詞`（URL 解碼後重新查詢並推入返回堆疊）。
 - `#錨點`：載入詞條前在 Dart 端把 `entry://#x` 改寫成 `#x`，用 `loadDataWithBaseURL` 搭配固定 baseUrl 載入，由 WebView 原生處理，不需要 JavaScript。Issue 1 的驗證若顯示此做法不成立，回報後再調整。
@@ -190,7 +194,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 **依賴：** Issue 6a。
 
 **What to build：**
-- 圖片：在 `shouldInterceptRequest` 從 `.mdd` 回傳資源。先 `Uri.decodeComponent`、把反斜線換成 `/`，先試原路徑，找不到再去掉開頭的 `/`。依副檔名設 `contentType`。
+- 圖片：在 `shouldInterceptRequest` 從 `.mdd` 回傳資源。網址轉成 MDD 鍵的規則以 `spec.md` §3.6 為準（去掉 baseUrl 與開頭 `/` → `Uri.decodeComponent` → 把 `/` 換成 `\` → 前面加 `\`；實測 WebView 送來的是 `https://dict.local/pic/a%20b.png`，而 MDD 的鍵是 `\pic\a b.png`）。依副檔名設 `contentType`。
 - 外部 `.css`：載入詞條前，依詞條 `<link href>` 的檔名換成內嵌 `<style>`，移除 `@import`；沒有對應檔案的 `<link>` 直接移除（規則見 `spec.md` §3.6）。
 - 深色與 E-Ink 配色：注入覆寫樣式，蓋掉詞條寫死的文字與背景顏色。
 - 已知限制寫進設定畫面說明：依賴 `onclick` 的互動（例如牛津 9 圖片放大）在 JavaScript 關閉時不運作。
