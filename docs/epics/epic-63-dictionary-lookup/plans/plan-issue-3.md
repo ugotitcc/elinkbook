@@ -391,7 +391,7 @@ git commit -m "feat(epic-63): Issue 3 拼音聲調數字轉聲調符號"
 6. 不含空白且含 CJK：字元數（`runes.length`）超過 8 → `tooLong`。標點檢查先於長度檢查。
 7. `detectCharType`：含 Han 字元（`RegExp(r'\p{Script=Han}', unicode: true)`，已用 Dart 確認可涵蓋擴展 B 區的 `𠀀`）為 CJK；含拉丁字母（`\p{Script=Latin}` 的字母）為拉丁；兩者皆有為 `mixed`；兩者皆無（例如純數字）歸 `latin`。
 
-- [ ] **Step 1: 寫失敗的測試 `lookup_text_normalizer_test.dart`**
+- [x] **Step 1: 寫失敗的測試 `lookup_text_normalizer_test.dart`**
 
 - `test('去頭尾標點：「相濡以沫」與《紅樓夢》')`：→ `相濡以沫`、`紅樓夢`，`charType == cjk`。
 - `test('去頭尾空白與換行')`
@@ -408,20 +408,20 @@ git commit -m "feat(epic-63): Issue 3 拼音聲調數字轉聲調符號"
 - `test('帶重音的拉丁字母算拉丁')`：`café`。
 - `test('擴展 B 區的漢字算 CJK')`：`𠀀` → `cjk`。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/lookup_text_normalizer_test.dart`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 用 `RegExp(..., unicode: true)` 處理 `\p{P}`、`\p{S}`、`\p{L}`。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary/lookup_text_normalizer.dart app/test/dictionary/lookup_text_normalizer_test.dart
