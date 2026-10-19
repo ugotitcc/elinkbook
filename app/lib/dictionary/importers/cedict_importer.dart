@@ -70,6 +70,7 @@ ParsedDictionary parseCedictFile(ParseInput input) {
   final text = readImportText(input.filePath);
   final skips = SkipTracker();
   final entries = <DictionaryEntry>[];
+  var recordCount = 0;
 
   final lines = const LineSplitter().convert(text);
   for (var i = 0; i < lines.length; i++) {
@@ -93,6 +94,7 @@ ParsedDictionary parseCedictFile(ParseInput input) {
       skips.add(i + 1, 'malformedLine');
       continue;
     }
+    recordCount++;
     for (final headword in {traditional, simplified}) {
       entries.add(
         DictionaryEntry(
@@ -109,6 +111,7 @@ ParsedDictionary parseCedictFile(ParseInput input) {
   return ParsedDictionary(
     licenseNote: _licenseOf(text),
     entries: entries,
+    recordCount: recordCount,
     skippedCount: skips.count,
     skipSamples: skips.samples,
   );

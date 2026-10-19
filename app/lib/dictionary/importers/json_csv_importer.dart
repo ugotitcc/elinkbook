@@ -48,7 +48,7 @@ Future<ImportHints> readJsonCsvHintsInIsolate(
 
 ImportHints _readJsonCsvHints(String filePath, String fileName) {
   final fallback = ImportHints(name: fileNameWithoutExtension(fileName));
-  if (!filePath.toLowerCase().endsWith('.json')) return fallback;
+  if (!fileName.toLowerCase().endsWith('.json')) return fallback;
   final root = _decodeJsonRoot(readImportText(filePath));
   return ImportHints(
     name: _string(root['name']) ?? fallback.name,
@@ -82,15 +82,22 @@ ParsedDictionary parseJsonCsvFile(ParseInput input) {
   String? name, sourceLang, targetLang, licenseNote;
 
   /// 驗證一筆資料；通過就加入 [entries]，否則記錄略過原因。
+  /// 必填欄位（headword、definition）出現但不是字串 → `invalidField`；
+  /// 選填欄位型別不對一律當成沒填。
   void accept(
     int index, {
-    String? headword,
-    String? definition,
-    String? pronunciation,
-    String? pos,
+    Object? headword,
+    Object? definition,
+    Object? pronunciation,
+    Object? pos,
   }) {
-    final head = headword?.trim() ?? '';
-    final body = definition ?? '';
+    if ((headword != null && headword is! String) ||
+        (definition != null && definition is! String)) {
+      skips.add(index, 'invalidField');
+      return;
+    }
+    final head = (headword as String?)?.trim() ?? '';
+    final body = (definition as String?) ?? '';
     if (head.isEmpty) {
       skips.add(index, 'missingHeadword');
     } else if (body.trim().isEmpty) {
@@ -111,7 +118,7 @@ ParsedDictionary parseJsonCsvFile(ParseInput input) {
     }
   }
 
-  if (input.filePath.toLowerCase().endsWith('.csv')) {
+  if (input.fileName.toLowerCase().endsWith('.csv')) {
     final rows = parseCsvRows(text);
     if (rows.isEmpty) throw const DictionaryImportException('invalidFormat');
     final header = rows.first.map((c) => c.trim().toLowerCase()).toList();
@@ -124,6 +131,8 @@ ParsedDictionary parseJsonCsvFile(ParseInput input) {
         (i >= 0 && i < row.length) ? row[i] : null;
     for (var r = 1; r < rows.length; r++) {
       final row = rows[r];
+      // Excel 常把格式化過的空白列匯出成 `,,,`，直接忽略，不算略過。
+      if (row.every((c) => c.trim().isEmpty)) continue;
       accept(
         r,
         headword: cell(row, h),
@@ -144,13 +153,13 @@ ParsedDictionary parseJsonCsvFile(ParseInput input) {
       if (e is Map) {
         accept(
           i + 1,
-          headword: e['headword'] as String?,
-          definition: e['definition'] as String?,
-          pronunciation: e['pronunciation'] as String?,
-          pos: e['pos'] as String?,
+          headword: e['headword'],
+          definition: e['definition'],
+          pronunciation: e['pronunciation'],
+          pos: e['pos'],
         );
       } else {
-        skips.add(i + 1, 'missingHeadword');
+        skips.add(i + 1, 'invalidField');
       }
     }
   }

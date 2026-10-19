@@ -651,9 +651,29 @@ git commit -m "docs(epic-63): Issue 3 實作完成，更新狀態"
 
 ## 交給後續 Issue
 
-- **Issue 4：** 面板用 `LookupRejected.problem` 顯示「選取內容含有標點」「選取範圍太長」；`outcomes` 為空時顯示「尚未匯入字典」；拼音顯示呼叫 `pinyinToneMarks()`；`DictionaryService` 的建構與注入（`main.dart`、`ReaderFeatureDependencies`）。
+- **Issue 4：** `LookupCompleted.outcomes` 為空時分不出「沒有任何字典」與「沒有符合這種文字的字典」（審查 M-5），面板接手前先決定要不要在 `LookupCompleted` 加欄位；面板用 `LookupRejected.problem` 顯示「選取內容含有標點」「選取範圍太長」；`outcomes` 為空時顯示「尚未匯入字典」；拼音顯示呼叫 `pinyinToneMarks()`；`DictionaryService` 的建構與注入（`main.dart`、`ReaderFeatureDependencies`）。
 - **Issue 5：** 匯入畫面呼叫 `readHints()` 預填；`DuplicateDictionaryException` 轉成「這本字典已匯入」並提供略過／取代（取代傳 `replaceExisting: true`）；`DictionaryImportException.code` 與 `ImportSummary.skipSamples` 轉成三段式 l10n 訊息；匯入進行中暫停查詢入口（Issue 2 審查 M-9）；`listSources()` 遇到未知 `format` 字串的處理（M-2）。
 - **Issue 6a：** `DictionaryFormat.mdx` 的匯入與 `content_id` 的 `content://` 路徑支援。
+
+---
+
+## 程式審查後修訂（`reviews/review-code-issue-3.md`）
+
+使用者選擇修 I-1 至 I-5，加上 M-1、M-4、M-8；我另外順手做了 M-2、M-3、M-7（都是小改動）。使用者對 Declined 項目的決定：
+
+- **漢字之間的空白移除**（spec §3.4 已更新）。
+- **型別不對的必填欄位**：新增略過原因 `invalidField`（JSON 的 `entries` 內不是物件也用它）。
+- **CC-CEDICT 的筆數算行數**，不是詞頭數（`ParsedDictionary.recordCount`）。
+- **只依 `zh`／`en` 挑字典**：Phase 1 接受，日文等其他語言的字典目前不會被查到，記入後續項目。
+
+對計畫內容的影響：
+
+- `ParseInput` 多了 `fileName`；格式一律依 `request.fileName` 判斷，不看路徑（修正本計畫 Task 3 原本依路徑副檔名分流的矛盾）。
+- 取消訂閱匯入 stream 也會中止匯入並回復交易。
+- 詞形還原排序：`-es` 依詞幹結尾決定先切 1 或切 2；沒雙寫的 CVC 詞幹先補 `e`；規則候選至少 3 個字母；`dying`→`die`。
+- Task 3 的 Ruling「取代時新檔解析失敗做不出來」不成立（大檔指紋只看頭尾），已補回該測試。
+
+審查延後、尚未處理（Minor）：M-5（`outcomes` 為空時分不出兩種原因，交給 Issue 4）、M-6、M-9、M-10 a–d，以及 Declined 中的 `readHints` 讀整檔、`.txt` 接手條件、分號分隔 CSV。
 
 ---
 

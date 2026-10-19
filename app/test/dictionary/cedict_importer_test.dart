@@ -71,7 +71,8 @@ void main() {
 
     final last = await runImport(path);
 
-    expect(last.summary!.importedCount, 2);
+    // 筆數算「行數」，不是詞頭數：繁簡不同的一行算 1 筆。
+    expect(last.summary!.importedCount, 1);
     expect(last.summary!.skippedCount, 0);
     final source = (await store.getSource(last.summary!.sourceId))!;
     expect(
@@ -79,6 +80,10 @@ void main() {
       'Creative Commons Attribution-ShareAlike 4.0 International License',
     );
     expect(source.name, 'c');
+    expect(source.entryCount, 1);
+    // 兩個詞頭都寫進去了。
+    expect((await store.lookup(source.id, '學生')).length, 1);
+    expect((await store.lookup(source.id, '学生')).length, 1);
   });
 
   test('繁簡不同：各產生一個詞頭，共用內容', () async {

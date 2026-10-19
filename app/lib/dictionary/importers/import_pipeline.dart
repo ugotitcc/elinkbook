@@ -24,9 +24,17 @@ const int kImportBatchSize = 2000;
 /// [sourceId] 在解析前就決定好，解析器直接用它建立詞條，主 Isolate 寫入時
 /// 不必再逐筆複製。
 class ParseInput {
-  const ParseInput({required this.filePath, required this.sourceId});
+  const ParseInput({
+    required this.filePath,
+    required this.fileName,
+    required this.sourceId,
+  });
 
   final String filePath;
+
+  /// 呼叫端傳入的真實檔名（`PlatformFile.name`）。判斷格式一律用它，不從
+  /// [filePath] 解析：Android 的快取路徑不一定有副檔名。
+  final String fileName;
   final String sourceId;
 }
 
@@ -38,6 +46,7 @@ class ParsedDictionary {
     this.sourceLang,
     this.targetLang,
     this.licenseNote,
+    this.recordCount,
     this.skippedCount = 0,
     this.skipSamples = const [],
   });
@@ -47,6 +56,10 @@ class ParsedDictionary {
   final String? targetLang;
   final String? licenseNote;
   final List<DictionaryEntry> entries;
+
+  /// 檔內成功匯入的筆數（顯示給使用者看的「筆數」）。`null` 時等於
+  /// `entries.length`。CC-CEDICT 一行可能產生繁簡兩個詞頭，筆數算行數。
+  final int? recordCount;
   final int skippedCount;
   final List<ImportSkip> skipSamples;
 }
@@ -91,7 +104,7 @@ String readImportText(String filePath) {
   } on FormatException {
     throw const DictionaryImportException('invalidEncoding');
   }
-  return text.startsWith('﻿') ? text.substring(1) : text;
+  return text.startsWith('\uFEFF') ? text.substring(1) : text;
 }
 
 /// 去掉副檔名的檔名，當作字典名稱的最後備案。
@@ -118,6 +131,9 @@ Stream<ImportProgress> runImportPipeline({
   DateTime Function()? now,
 }) {
   final controller = StreamController<ImportProgress>();
+  // 呼叫端取消訂閱（離開畫面）也要中止匯入，否則字典會在背景默默寫完。
+  var unsubscribed = false;
+  bool isCancelled() => cancel.isCancelled || unsubscribed;
 
   Future<void> run() async {
     try {
@@ -125,7 +141,7 @@ Stream<ImportProgress> runImportPipeline({
         controller: controller,
         store: store,
         request: request,
-        cancel: cancel,
+        isCancelled: isCancelled,
         format: format,
         parser: parser,
         newId: newId ?? () => const Uuid().v4(),
@@ -139,6 +155,7 @@ Stream<ImportProgress> runImportPipeline({
   }
 
   controller.onListen = () => unawaited(run());
+  controller.onCancel = () => unsubscribed = true;
   return controller.stream;
 }
 
@@ -146,7 +163,7 @@ Future<void> _execute({
   required StreamController<ImportProgress> controller,
   required DictionaryStore store,
   required ImportRequest request,
-  required CancelToken cancel,
+  required bool Function() isCancelled,
   required DictionaryFormat format,
   required DictionaryParser parser,
   required String Function() newId,
@@ -160,7 +177,7 @@ Future<void> _execute({
   controller.add(
     const ImportProgress(processed: 0, total: 0, stage: ImportStage.parsing),
   );
-  if (cancel.isCancelled) {
+  if (isCancelled()) {
     controller.add(cancelled);
     return;
   }
@@ -193,20 +210,31 @@ Future<void> _execute({
     enabled = true;
   }
 
-  final parsed = await runParserInIsolate(
-    parser,
-    ParseInput(filePath: request.filePath, sourceId: sourceId),
-  );
-  if (parsed.entries.isEmpty) {
-    throw const DictionaryImportException('noValidEntries');
-  }
-  if (cancel.isCancelled) {
+  // 解析（10 萬筆要好幾秒）前再檢查一次：前面的檔案讀取期間可能已被取消。
+  if (isCancelled()) {
     controller.add(cancelled);
     return;
+  }
+  final parsed = await runParserInIsolate(
+    parser,
+    ParseInput(
+      filePath: request.filePath,
+      fileName: request.fileName,
+      sourceId: sourceId,
+    ),
+  );
+  // 取消優先於「沒有有效筆數」：使用者已經按了取消，不該看到錯誤訊息。
+  if (isCancelled()) {
+    controller.add(cancelled);
+    return;
+  }
+  if (parsed.entries.isEmpty) {
+    throw const DictionaryImportException('noValidEntries');
   }
 
   final entries = parsed.entries;
   final total = entries.length;
+  final recordCount = parsed.recordCount ?? total;
   final licenseNote = request.licenseNote.isNotEmpty
       ? request.licenseNote
       : (parsed.licenseNote ?? '');
@@ -221,7 +249,7 @@ Future<void> _execute({
     priority: priority,
     enabled: enabled,
     storagePath: '',
-    entryCount: total,
+    entryCount: recordCount,
     licenseNote: licenseNote,
     importedAt: now(),
   );
@@ -232,12 +260,12 @@ Future<void> _execute({
       if (existing != null) await txnStore.deleteSource(sourceId);
       await txnStore.insertSource(source, contentId: contentId);
       for (var i = 0; i < total; i += kImportBatchSize) {
-        if (cancel.isCancelled) throw const _ImportCancelled();
+        if (isCancelled()) throw const _ImportCancelled();
         final end = min(i + kImportBatchSize, total);
         await txnStore.insertEntries(entries.sublist(i, end));
         controller.add(ImportProgress(processed: end, total: total));
       }
-      if (cancel.isCancelled) throw const _ImportCancelled();
+      if (isCancelled()) throw const _ImportCancelled();
     });
   } on _ImportCancelled {
     controller.add(cancelled);
@@ -251,7 +279,7 @@ Future<void> _execute({
       stage: ImportStage.done,
       summary: ImportSummary(
         sourceId: sourceId,
-        importedCount: total,
+        importedCount: recordCount,
         skippedCount: parsed.skippedCount,
         skipSamples: parsed.skipSamples,
       ),

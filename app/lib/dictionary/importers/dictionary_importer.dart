@@ -40,6 +40,7 @@ enum ImportStage { parsing, writing, done, cancelled }
 
 /// 被略過的一筆資料。[index] 為檔內第幾筆（從 1 起算）；[reason] 為
 /// `missingHeadword`、`missingDefinition`、`definitionTooLong`、
+/// `invalidField`（必填欄位型別不對，或 JSON 的 entries 內不是物件）、
 /// `malformedLine` 之一。
 class ImportSkip {
   const ImportSkip({required this.index, required this.reason});
@@ -120,6 +121,8 @@ abstract class DictionaryImporter {
   /// 讀檔頭的名稱、語言與授權，供匯入畫面預填。
   Future<ImportHints> readHints(String filePath, String fileName);
 
+  /// 取消訂閱回傳的 stream 也會中止匯入（交易回復），不必另外呼叫
+  /// [CancelToken.cancel]；但要讓 UI 收到 [ImportStage.cancelled]，仍須呼叫它。
   Stream<ImportProgress> import(
     ImportRequest request, {
     required CancelToken cancel,

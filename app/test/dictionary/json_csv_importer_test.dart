@@ -55,10 +55,11 @@ void main() {
     bool replace = false,
     String? name,
     String licenseNote = '',
+    String? fileName,
   }) =>
       ImportRequest(
         filePath: path,
-        fileName: path.split(RegExp(r'[\\/]')).last,
+        fileName: fileName ?? path.split(RegExp(r'[\\/]')).last,
         sourceLang: 'en',
         targetLang: 'zh-Hant',
         name: name,
@@ -72,9 +73,16 @@ void main() {
     bool replace = false,
     String? name,
     String licenseNote = '',
+    String? fileName,
   }) =>
       importer.import(
-        requestFor(path, replace: replace, name: name, licenseNote: licenseNote),
+        requestFor(
+          path,
+          replace: replace,
+          name: name,
+          licenseNote: licenseNote,
+          fileName: fileName,
+        ),
         cancel: cancel ?? CancelToken(),
       );
 
@@ -193,7 +201,7 @@ void main() {
   });
 
   test('Excel 匯出的 CSV：UTF-8 BOM、CRLF、引號內有逗號與換行', () async {
-    final text = '﻿headword,definition\r\n'
+    final text = '\uFEFFheadword,definition\r\n'
         'apple,"紅色, 圓的\n水果"\r\n';
     final path = writeText('x.csv', text);
 
@@ -206,7 +214,7 @@ void main() {
   test('JSON 開頭有 BOM 也能解析', () async {
     final path = writeText(
       'bom.json',
-      '﻿${jsonEncode({'entries': entriesJson(1)})}',
+      '\uFEFF${jsonEncode({'entries': entriesJson(1)})}',
     );
     expect((await runImport(path)).summary!.importedCount, 1);
   });
@@ -403,6 +411,122 @@ void main() {
     expect(events.last.stage, ImportStage.cancelled);
     expect(await store.listSources(), isEmpty);
     expect(await count('dictionary_entries'), 0);
+  });
+
+
+  test('路徑沒有副檔名時，依 request.fileName 判斷 CSV 或 JSON', () async {
+    final csv = writeText('cache_001', 'headword,definition\napple,蘋果\n');
+    final json = writeJson('cache_002', {'entries': entriesJson(2)});
+
+    final a = await (start(csv, fileName: 'x.csv').toList()).then((e) => e.last);
+    final b = await (start(json, fileName: 'y.json').toList()).then((e) => e.last);
+
+    expect(a.summary!.importedCount, 1);
+    expect(b.summary!.importedCount, 2);
+    final hints = await importer.readHints(
+      writeJson('cache_003', {'name': '無副檔名', 'entries': entriesJson(1)}),
+      'z.json',
+    );
+    expect(hints.name, '無副檔名');
+  });
+
+  test('JSON 欄位型別不對的列略過並計數，其他列照常匯入', () async {
+    final path = writeJson('t.json', {
+      'entries': [
+        {'headword': 'ok', 'definition': '好', 'pronunciation': 5, 'pos': []},
+        {'headword': 123, 'definition': 'x'},
+        {'headword': 'a', 'definition': ['義1', '義2']},
+        'not an object',
+        {'headword': 'b', 'definition': {'k': 'v'}},
+      ],
+    });
+
+    final last = await runImport(path);
+
+    expect(last.summary!.importedCount, 1);
+    expect(last.summary!.skippedCount, 4);
+    expect(last.summary!.skipSamples.map((s) => s.index), [2, 3, 4, 5]);
+    expect(
+      last.summary!.skipSamples.every((s) => s.reason == 'invalidField'),
+      isTrue,
+    );
+    final hit = (await store.lookup(last.summary!.sourceId, 'ok')).single;
+    expect(hit.pronunciation, isNull);
+    expect(hit.partOfSpeech, isNull);
+  });
+
+  test('取消訂閱 stream 也會中止匯入，資料庫無殘留', () async {
+    final path = writeJson('d.json', {'entries': entriesJson(20000)});
+    final done = Completer<void>();
+    late StreamSubscription<ImportProgress> sub;
+    sub = start(path).listen((e) {
+      if (e.stage == ImportStage.writing && !done.isCompleted) {
+        done.complete();
+        sub.cancel();
+      }
+    });
+    await done.future;
+
+    // 同一條連線上的查詢會排在匯入交易之後，所以拿到結果時交易已結束。
+    expect(await store.listSources(), isEmpty);
+    expect(await count('dictionary_entries'), 0);
+  });
+
+  test('取消發生在解析期間：回報取消，不是錯誤', () async {
+    // 沒有有效筆數的檔案：若先檢查「沒有有效筆數」就會丟錯誤而不是取消。
+    final path = writeJson('empty.json', {'entries': <Object>[]});
+    final token = CancelToken();
+    final events = <ImportProgress>[];
+    final done = Completer<void>();
+    start(path, cancel: token).listen(
+      (e) {
+        events.add(e);
+        if (e.stage == ImportStage.parsing) token.cancel();
+      },
+      onError: done.completeError,
+      onDone: done.complete,
+    );
+    await done.future;
+
+    expect(events.last.stage, ImportStage.cancelled);
+  });
+
+  test('取代時新檔解析失敗：舊字典與詞條仍在', () async {
+    // 大檔案的指紋只看頭尾各 64 KB，中段改壞後指紋不變，才會走到取代。
+    final good = {'entries': entriesJson(8000)};
+    final path = writeJson('big.json', good);
+    final first = await runImport(path);
+
+    final bytes = File(path).readAsBytesSync();
+    expect(bytes.length, greaterThan(200 * 1024));
+    final mid = bytes.length ~/ 2;
+    // 把中段一個結構字元改掉，讓 JSON 失效、大小不變。
+    final idx = bytes.indexOf(0x7B, mid); // '{'
+    bytes[idx] = 0x23; // '#'
+    File(path).writeAsBytesSync(bytes);
+
+    await expectLater(
+      start(path, replace: true).toList(),
+      importError('invalidFormat'),
+    );
+
+    expect(
+      (await store.listSources()).map((s) => s.id),
+      [first.summary!.sourceId],
+    );
+    expect(await count('dictionary_entries'), 8000);
+  });
+
+  test('CSV 的全空列（Excel 常見的 ,,,）直接忽略，不算略過', () async {
+    final path = writeText(
+      'blank.csv',
+      'headword,definition\n,\n,,\napple,蘋果\n , \n',
+    );
+
+    final last = await runImport(path);
+
+    expect(last.summary!.importedCount, 1);
+    expect(last.summary!.skippedCount, 0);
   });
 
   test('readHints 回傳 JSON 內的名稱與語言；沒有就用檔名', () async {
