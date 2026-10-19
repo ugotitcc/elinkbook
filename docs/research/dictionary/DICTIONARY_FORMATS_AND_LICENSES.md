@@ -133,7 +133,7 @@ dictionary_entries            -- 只給 JSON/CSV 來源
 |---|---|---|
 | 1 | `mdict_flutter` 在兩個真實檔案開啟失敗 | 成立，淘汰。兩個檔案都丟 `FormatException: Filter error, bad data`（`report/mdict_flutter_elimination.json`）。另讀原始碼確認：記錄區塊壓縮型態不是 zlib 時 `return null`，與「查無此詞」無法區分 |
 | 2 | `dict_reader` 真實檔開啟失敗，或遞移相依有 GPL／AGPL／LGPL | 不成立。兩個檔案都能開啟；授權見下表，無 copyleft |
-| 3 | `large.mdx` 記憶體增量 < 50 MB 且 p95 < 300 ms | 成立（在一台實機上；E-Ink 未驗證，見下） |
+| 3 | `large.mdx` 記憶體增量 < 50 MB 且 p95 < 300 ms | 成立，但前提很窄：合成的 ASCII 鍵、一台非 E-Ink 實機、查詢集中於前 1000 筆；**開啟後增量最高 45.0 MB，離門檻只剩 5 MB**。真實大檔、隨機查詢、E-Ink 都要補測，見「效能」一節的警語 |
 
 #### `dict_reader` 授權（含遞移相依）
 
@@ -170,14 +170,19 @@ dictionary_entries            -- 只給 JSON/CSV 來源
 
 實機：OPPO OPD2102（Android 13、3.7 GB RAM、release 模式；**非 E-Ink**）。每次量測前強制停止 App，一次只量一個檔案。
 
-| 檔案 | 筆數 | 開啟 | 記憶體增量 | p50 | p95 |
-|---|---|---|---|---|---|
-| 教育部（UTF-16，3 次） | 163,085 | 630–643 ms | 25.5–27.8 MB | 0.07 ms | 0.22 ms |
-| 古漢語（1 次） | 7,587 | 37 ms | 1.0 MB | 0.01 ms | 0.05 ms |
-| large.mdx（102 MB 合成，3 次） | 400,000 | 1,123–1,170 ms | 24.6–42.6 MB | 0.01 ms | 0.82–1.24 ms |
+| 檔案 | 筆數 | 開啟 | 開啟後記憶體增量 | 查詢後記憶體增量 | p50 | p95 |
+|---|---|---|---|---|---|---|
+| 教育部（UTF-16，3 次） | 163,085 | 630–643 ms | 21.7–24.3 MB | 25.5–27.8 MB | 0.07 ms | 0.22 ms |
+| 古漢語（1 次） | 7,587 | 37 ms | 0.0 MB | 1.0 MB | 0.01 ms | 0.05 ms |
+| large.mdx（102 MB 合成，3 次） | 400,000 | 1,123–1,170 ms | **40.1–45.0 MB** | 24.6–42.6 MB | 0.01 ms | 0.82–1.24 ms |
 
 - 查詢只量了精確查詢 100 次；前綴查詢未在實機量測。
-- 100 MB 檔案的記憶體增量最高 42.6 MB，離 50 MB 門檻不遠，且三次波動大（24.6–42.6）。`dict_reader` 會把所有鍵載入記憶體，增量與筆數成正比。
+- 門檻定義的是「開啟 100 MB MDX」的記憶體增量，所以以**開啟後增量**為準：large.mdx 為 40.1–45.0 MB，峰值 45.0 MB，離 50 MB 只剩 5 MB。「查詢後增量」較低（24.6–42.6 MB）是 GC 在開啟後才回收，不代表實際用量下降。（最後審查指出：初版文件採用了查詢後的數字，低報了峰值。）
+- `dict_reader` 會把所有鍵載入記憶體，增量與筆數成正比。以下三個因素讓這個結果只代表「最有利的情境」：
+  1. **鍵的形式**：large.mdx 的鍵是 ASCII 的合成詞，Dart 對 ASCII 字串較省記憶體。每把鍵約 108 B；教育部（UTF-16 的 CJK 鍵）約 140 B。照此外推，一本 40 萬筆的真實 CJK 字典約 56 MB，可能超過 50 MB。
+  2. **查詢沒讓快取長大**：量測的查詢鍵取自 `prefix('', limit: 1000)`，只落在前幾個記錄區塊；`dict_reader` 有最多 32 MB 的記錄區塊快取。實際隨機查詢時，快取最多再加 32 MB。
+  3. **薄封裝的額外記憶體**：`KeyCaseSensitive=No` 的大小寫摺疊，因 `dict_reader` 以精確字串比對，可能需要另建一份摺疊後的鍵索引，這份記憶體尚未估算。
+- 因此 E-Ink 補測（與 Issue 6a 開工前）必量：真實 CJK 大檔或 UTF-16 合成大檔、隨機鍵查詢、穩態 RSS（含快取）、開啟後峰值。
 - 桌面預檢（Windows，非實機）：教育部開啟 3.5 s、增量 30.6 MB；large 開啟 0.6 s、增量 45.1 MB。
 
 #### WebView（`javaScriptEnabled: false`，System WebView 155，`loadDataWithBaseURL`，baseUrl `https://dict.local/`）
@@ -194,6 +199,7 @@ dictionary_entries            -- 只給 JSON/CSV 來源
 2. `StripKey=Yes`：查詢字串套用與製作時相同的去空白、去標點規則。
 3. 標題為佔位字串時改用 `Description` 第一行，再不行用檔名。
 4. 把字串例外與各種例外包成統一的錯誤型別（`unsupportedCompression`、`corrupt`、`notFound`），LZO 顯示三段式錯誤。
+4a. **匯入時就擋下 LZO 與截斷檔**：`dict_reader` 的 `open()` 不解壓記錄區塊，假 LZO 檔與「截在記錄區段」的檔案都能 `open()` 成功；LZO 要到該區塊第一次被查詢才丟錯，截斷檔則只有落在被截區域的鍵才出錯，其餘鍵照常回傳。`spec.md` §3.6 與驗收 39 要求匯入時就顯示錯誤並整批回復，所以匯入流程必須掃描所有記錄區塊的壓縮型態欄位與實際長度。已用兩個會失敗的測試描述這項缺口（`synthetic_fixtures_test.dart` 的 `open() alone rejects ...`，標籤 `wrapper-gap`）。
 5. MDD 資源鍵轉換：網址 → `Uri.decodeComponent` → 去掉 baseUrl 與開頭 `/` → 把 `/` 換成 `\` → 前面加 `\`。
 6. `shouldInterceptRequest` 對所有 `http(s)` 請求（含 `favicon.ico`）回傳明確回應，找不到就回 404 空內容。
 7. 缺檔 CSS：把沒有對應檔案的 `<link>` 移除（`spec.md` §3.6 已定）。
