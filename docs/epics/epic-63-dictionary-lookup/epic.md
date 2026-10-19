@@ -31,7 +31,7 @@
 | 三個方向 | 每本字典標記來源與目標語言；依選字的字元類型挑字典；使用者可調順序 |
 | MDX 顯示 | WebView，關閉 JavaScript、擋所有網路 |
 | Readest 分析採納 | 查詢候選鏈與英文詞形還原；片語與 CJK 8 字元規則；MDX 最低要求（交叉參照、錨點、圖片、CSS、配色） |
-| MDX 解析器 | 未選定。Issue 1 用真實字典驗證 `dict_reader` 與 `mdict_flutter`。**不用 `readest/js-mdict`**（v7 起 AGPL-3.0），2026-10-19 決定；備案見 `DICTIONARY_FORMATS_AND_LICENSES.md` |
+| MDX 解析器 | **採用 `dict_reader 1.6.1`（MIT）**，Issue 1 驗證（2026-10-19）：兩個真實檔都能開，實機效能在門檻內；`mdict_flutter` 淘汰（真實檔開啟失敗）。E-Ink 未驗證。**不用 `readest/js-mdict`**（v7 起 AGPL-3.0），2026-10-19 決定；備案見 `DICTIONARY_FORMATS_AND_LICENSES.md` |
 | CC-CEDICT | Phase 1 新增 `CedictImporter`（它不是 JSON、CSV 或 MDX）；不內建、不散布，使用者自行下載。拼音顯示轉成聲調符號（`pīnyīn`），資料庫存原文；注音留待後續 |
 | MDX 外部 CSS | 匯入時可多選 `.mdx`、`.mdd`、`.css`；CSS 依詞條 `<link href>` 的檔名配對；缺檔仍可讀並提醒，可事後補匯入 |
 | 驗收用字典 | `tmp/dictionary/` 下的教育部 MDX、簡明古漢語 MDX、CC-CEDICT；只作本機測試，不進版控、不放 fixtures |
