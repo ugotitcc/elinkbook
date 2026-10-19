@@ -38,7 +38,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 - 用真實 MDX 驗證。驗收檔放在 `tmp/dictionary/`（不進版控）：
   - `教育部重編國語辭典(第五版).mdx`：UTF-16、`Encrypted=2`、有 `StyleSheet`、163,085 筆。
   - `簡明古漢語常用字字典（川大版2003）正體.mdx`：UTF-8、`Encrypted=2`、`StripKey=Yes`、標題為佔位字串、引用不存在的外部 CSS。
-  - 兩者都只看到 zlib。**仍需人類另外提供一本 LZO 壓縮的 MDX。**
+  - 兩者都只看到 zlib。目前沒有 LZO 字典，Phase 1 不支援 LZO；Issue 1 只需確認所選套件遇到 LZO 區塊時丟出明確錯誤而不是當掉。若手上有 LZO 檔可順便測，但不是必要條件。
 - 兩個檔案的第三方授權不明，不得進版控、不得放進 fixtures，文件只記格式資訊。
 - 驗證清單見 `docs/research/dictionary/DICTIONARY_FORMATS_AND_LICENSES.md` §4。
 - 先試 `flutter pub get`，確認不破壞 `pubspec.yaml` 的 `win32` 相依解析。
@@ -167,16 +167,17 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 - 詞條以 `InAppWebView` 顯示：JavaScript 關閉、擋所有網路與檔案請求。
 - `shouldOverrideUrlLoading` 處理 `entry://詞`、`bword://詞`（URL 解碼後重新查詢並推入返回堆疊）。
 - `#錨點`：載入詞條前在 Dart 端把 `entry://#x` 改寫成 `#x`，用 `loadDataWithBaseURL` 搭配固定 baseUrl 載入，由 WebView 原生處理，不需要 JavaScript。Issue 1 的驗證若顯示此做法不成立，回報後再調整。
+- 偵測 LZO 壓縮區塊：匯入時顯示三段式錯誤並整批回復（Phase 1 不支援 LZO，見 `spec.md` §3.6）。
 - 支援 `Encrypted=2`；記錄區塊加密（需註冊碼）匯入時顯示三段式錯誤。
 - 展開標頭 `StyleSheet`；`StripKey` 與 `KeyCaseSensitive` 的查詢規則；標題為佔位字串時改用 `Description` 或檔名（見 `spec.md` §3.6）。
 - 非內部連結（`http`、`https`、`file`）不載入、不開啟。
 
 **測試要求：**
-- 以自製小型 MDX fixture 做單元測試：查詢、前綴、加密偵測、壞檔。
+- 以自製小型 MDX fixture 做單元測試：查詢、前綴、加密偵測、壞檔、LZO 假區塊（壓縮型態標成 LZO）觸發錯誤且不留半成品。
 - `dictionary_lookup_sheet_test.dart`：返回堆疊。
 - 整合測試（真機）：`entry://` 可點可返回；`#錨點` 跳轉；JavaScript 不執行；網路請求被擋。
 
-**驗收標準：** 驗收 11、16、17、21、22、34、35、36。
+**驗收標準：** 驗收 11、16、17、21、22、34、35、36、39。
 
 **Blocked by：** Issue 1、4、5。
 
@@ -249,6 +250,6 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 - 完整 `flutter test`（計畫最後一個 Task 時執行一次）。
 - 真機：EPUB 選字 → 查字典 → 結果顯示；E-Ink 裝置量測。
 
-**驗收標準：** `spec.md` §9 驗收 1～38 全數成立；驗收 31（沒有取自 AGPL／GPL 專案的程式碼）由人類最終確認。
+**驗收標準：** `spec.md` §9 驗收 1～39 全數成立；驗收 31（沒有取自 AGPL／GPL 專案的程式碼）由人類最終確認。
 
 **Blocked by：** Issue 1～7。

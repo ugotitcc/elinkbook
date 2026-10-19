@@ -206,6 +206,7 @@ MDX 詞條處理（無需 JavaScript）：
 | 圖片 | 在 `shouldInterceptRequest` 從 `.mdd` 回傳資源。先對網址做 `Uri.decodeComponent`，再把反斜線換成 `/`，先試原路徑，找不到再去掉開頭的 `/`。依副檔名設 `contentType`（`image/jpeg`、`image/png`、`image/gif`、`image/webp`、`image/svg+xml`）；沒設正確的型別，部分 WebView 會拒絕渲染 |
 | 外部 `.css` | 匯入時可一併選取 `.css`，複製到該字典的私有目錄（保留原檔名）。載入詞條前，把 `<link ... href="x.css">` 依**詞條裡寫的檔名**（只比對檔名、不分大小寫）換成內嵌的 `<style>`，並移除 `@import`。沒有對應檔案的 `<link>` 直接移除，詞條改用我們的預設樣式。不依主檔名配對，因為實檔的 CSS 名稱常與 MDX 主檔名無關（例如 `ghychyz.css`） |
 | 深色與 E-Ink 配色 | 注入覆寫樣式，蓋掉詞條寫死的文字與背景顏色 |
+| LZO 壓縮 | Phase 1 不支援。區塊壓縮型態為 LZO 時，匯入顯示三段式錯誤：「這本字典使用 LZO 壓縮，目前不支援。請改用 zlib 版本，或用 MDict 工具重新打包。」。測試用自製的假區塊（壓縮型態寫成 LZO）驗證錯誤路徑 |
 | 加密 | `Encrypted=2`（只加密關鍵字索引區，不需密碼）必須支援；記錄區塊加密（`Encrypted` 含 1，需註冊碼）匯入時偵測並顯示明確錯誤，不支援。以上依 MDict 格式的一般理解，Issue 1 用實檔確認 |
 | `StyleSheet` | 標頭有樣式表時，詞條內的 `` `數字` `` 標記要在 `MdxReader` 展開成對應的前後 HTML 片段，再交給 WebView |
 | `StripKey=Yes` | 查詢字串套用與製作時相同的去空白、去標點規則；`KeyCaseSensitive=No` 時比對不分大小寫 |
@@ -441,6 +442,7 @@ CREATE INDEX idx_entries_lookup ON dictionary_entries(source_id, headword_norm);
 32. 查詢面板用分段選擇器，一次只顯示一本字典；同一時間畫面上最多一個 `InAppWebView`，且沒有巢狀捲動。
 33. 可匯入 CC-CEDICT 發行檔（`cedict_ts.u8`），查「繁體」或「簡體」都能得到同一筆內容，並顯示授權說明（CC BY-SA 4.0）。
 34. `Encrypted=2` 的 MDX 可匯入並查詢。
+39. 區塊壓縮型態為 LZO 的 MDX，匯入時顯示三段式錯誤，不當掉、不留下半成品資料。
 35. 標頭有 `StyleSheet` 的 MDX，詞條顯示時標記已展開，畫面上不出現 `` `數字` `` 殘留。
 36. MDX 標題為預設佔位字串時，字典清單顯示有意義的名稱（`Description` 或檔名）。
 37. CC-CEDICT 的拼音以聲調符號顯示（`pin1 yin1` 顯示為 `pīnyīn`），資料庫中仍存原文。
