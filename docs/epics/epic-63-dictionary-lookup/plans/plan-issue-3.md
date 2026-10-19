@@ -450,7 +450,7 @@ git commit -m "feat(epic-63): Issue 3 選字處理與字元類型判斷"
 - 寧可多產生：錯的詞幹只會查不到。但不得回傳空字串或與輸入相同的字串，且清單不重複。
 - 長度 1 至 2 個字母的詞不套用規則（只查不規則表），避免 `is`→`i`、`as`→`a` 之類的候選。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `english_lemmatizer_test.dart`：
 - `test('不規則：ran→run、mice→mouse、children→child')`：`lemmatizeEnglish('ran')` 的第一個等於 `'run'`。
@@ -469,20 +469,20 @@ git commit -m "feat(epic-63): Issue 3 選字處理與字元類型判斷"
 - `test('en 與 en-US 都走英文')`：`lemmatize('en-US', 'ran')` 含 `run`。
 - `test('語言碼不分大小寫')`：`EN`。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/english_lemmatizer_test.dart test/dictionary/lemmatizer_registry_test.dart`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作 `lemmatizer.dart`（型別與登錄表）與 `english_lemmatizer.dart`**
+- [x] **Step 3: 實作 `lemmatizer.dart`（型別與登錄表）與 `english_lemmatizer.dart`**
 
 登錄表為 `const Map<String, Lemmatizer>`，目前只有 `'en'`。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary/lemmatize app/test/dictionary
