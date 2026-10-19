@@ -33,7 +33,7 @@
 
 ## 已決定事項（spec 沒寫清楚，本計畫的選擇）
 
-- **待你確認：拼音顯示是否保留空白。** spec §5 與驗收 37 寫 `pin1 yin1` 顯示為 `pīnyīn`（無空白），但 §7 寫「多音節以空白分隔」。CC-CEDICT 不標詞界，全部串起來會把 `zhong1 guo2 ren2` 與詞組混在一起。本計畫採**保留空白**（`pīn yīn`）。若你要無空白，Task 5 的一條測試與實作各改一行，並需更新 spec 驗收 37。
+- **已確認（使用者選保留空白）：拼音顯示保留空白。** spec §5 與驗收 37 寫 `pin1 yin1` 顯示為 `pīnyīn`（無空白），但 §7 寫「多音節以空白分隔」。CC-CEDICT 不標詞界，全部串起來會把 `zhong1 guo2 ren2` 與詞組混在一起。本計畫採**保留空白**（`pīn yīn`）。spec §5、驗收 37 與 epic.md 已同步改為 `pīn yīn`。
 - **語言方向挑選：** 選字為拉丁 → 挑 `sourceLang` 主語言為 `en` 的字典；CJK → `zh`；混合 → `zh` 與 `en` 都挑。比對只看語言碼第一段（`zh-Hant`、`zh` 都算 `zh`；`en-US` 算 `en`）。
 - **候選依字典語言產生：** 詞形還原依每本字典的 `sourceLang` 查登錄表，所以查中文字典時不會套英文規則（驗收 14）。
 - **候選清單與去重分兩層：** `lookupCandidates()` 回傳含大小寫變體的完整清單（MDX 之後要用）；`dedupeByHeadwordNorm()` 另一個函式，由 `LocalDictionaryProvider` 套用（JSON/CSV/CEDICT 的比對本來就不分大小寫）。

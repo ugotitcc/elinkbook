@@ -308,7 +308,7 @@ CREATE INDEX idx_entries_lookup ON dictionary_entries(source_id, headword_norm);
 
 - `#` 開頭的行是註解與中繼資料，略過。檔頭 `#! entries=`、`#! date=`、`#! license=` 可讀出來存進 `license_note`。
 - 繁體與簡體各產生一個詞頭，共用同一筆內容；兩者相同時只產生一個。`headword_norm` 套用 §4 公式。
-- 拼音以原文（聲調數字）存進 `pronunciation`，**顯示時**轉成聲調符號，例如 `pin1 yin1` 顯示為 `pīnyīn`。轉換規則：
+- 拼音以原文（聲調數字）存進 `pronunciation`，**顯示時**轉成聲調符號，例如 `pin1 yin1` 顯示為 `pīn yīn`（音節間保留空白）。轉換規則：
   - 聲調 1 至 4 標在母音上；聲調 5 與無數字為輕聲，不標。
   - 標調位置：有 `a` 或 `e` 就標在它上面；否則有 `ou` 標在 `o`；否則標在最後一個母音。
   - `u:` 轉成 `ü`（例如 `lu:4` 顯示為 `lǜ`）。
@@ -445,5 +445,5 @@ CREATE INDEX idx_entries_lookup ON dictionary_entries(source_id, headword_norm);
 39. 區塊壓縮型態為 LZO 的 MDX，匯入時顯示三段式錯誤，不當掉、不留下半成品資料。
 35. 標頭有 `StyleSheet` 的 MDX，詞條顯示時標記已展開，畫面上不出現 `` `數字` `` 殘留。
 36. MDX 標題為預設佔位字串時，字典清單顯示有意義的名稱（`Description` 或檔名）。
-37. CC-CEDICT 的拼音以聲調符號顯示（`pin1 yin1` 顯示為 `pīnyīn`），資料庫中仍存原文。
+37. CC-CEDICT 的拼音以聲調符號顯示（`pin1 yin1` 顯示為 `pīn yīn`（音節間保留空白）），資料庫中仍存原文。
 38. 匯入 MDX 時可一次多選 `.mdx`、`.mdd`、`.css`；CSS 依詞條內 `<link href>` 的檔名配對。缺少被引用的 CSS 時，詞條仍可讀，字典清單顯示提醒，且可事後補匯入。
