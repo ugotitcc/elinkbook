@@ -2492,6 +2492,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dictionaryImportLeaveConfirmAction => '離開並取消';
+
+  @override
+  String get dictionaryImportLeaveConfirmStay => '繼續匯入';
+
+  @override
+  String get dictionaryDragHandleLabel => '拖曳排序';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -4982,6 +4988,12 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get dictionaryImportLeaveConfirmAction => '离开并取消';
+
+  @override
+  String get dictionaryImportLeaveConfirmStay => '继续导入';
+
+  @override
+  String get dictionaryDragHandleLabel => '拖动排序';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -7472,4 +7484,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dictionaryImportLeaveConfirmAction => '離開並取消';
+
+  @override
+  String get dictionaryImportLeaveConfirmStay => '繼續匯入';
+
+  @override
+  String get dictionaryDragHandleLabel => '拖曳排序';
 }

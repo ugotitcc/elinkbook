@@ -2589,4 +2589,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dictionaryImportLeaveConfirmAction => 'Leave and cancel';
+
+  @override
+  String get dictionaryImportLeaveConfirmStay => 'Keep importing';
+
+  @override
+  String get dictionaryDragHandleLabel => 'Drag to reorder';
 }

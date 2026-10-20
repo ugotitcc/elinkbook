@@ -711,5 +711,7 @@
   "dictionaryImportOrphanCompanions": "选到的 .mdd 或 .css 没有可附加的字典。请同时选择对应的 .mdx 主文件，或到已导入的 MDX 字典点“添加附属文件”。",
   "dictionaryImportLeaveConfirmTitle": "离开并取消导入？",
   "dictionaryImportLeaveConfirmMessage": "字典正在导入中，现在离开会取消这次导入。已写入的部分不会保留。",
-  "dictionaryImportLeaveConfirmAction": "离开并取消"
+  "dictionaryImportLeaveConfirmAction": "离开并取消",
+  "dictionaryImportLeaveConfirmStay": "继续导入",
+  "dictionaryDragHandleLabel": "拖动排序"
 }

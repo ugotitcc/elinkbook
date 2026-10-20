@@ -3344,5 +3344,13 @@
   "dictionaryImportLeaveConfirmAction": "離開並取消",
   "@dictionaryImportLeaveConfirmAction": {
     "description": "匯入中離開確認的確認按鈕"
+  },
+  "dictionaryImportLeaveConfirmStay": "繼續匯入",
+  "@dictionaryImportLeaveConfirmStay": {
+    "description": "匯入中離開確認的「留下繼續匯入」按鈕"
+  },
+  "dictionaryDragHandleLabel": "拖曳排序",
+  "@dictionaryDragHandleLabel": {
+    "description": "字典清單拖曳排序把手的語意標籤（螢幕閱讀器朗讀）"
   }
 }

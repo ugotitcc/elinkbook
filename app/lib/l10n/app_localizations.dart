@@ -4378,6 +4378,18 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'離開並取消'**
   String get dictionaryImportLeaveConfirmAction;
+
+  /// 匯入中離開確認的「留下繼續匯入」按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'繼續匯入'**
+  String get dictionaryImportLeaveConfirmStay;
+
+  /// 字典清單拖曳排序把手的語意標籤（螢幕閱讀器朗讀）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'拖曳排序'**
+  String get dictionaryDragHandleLabel;
 }
 
 class _AppLocalizationsDelegate

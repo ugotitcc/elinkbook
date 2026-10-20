@@ -179,6 +179,57 @@ void main() {
     });
   }
 
+  for (final eink in [true, false]) {
+    testWidgets('拖曳把手觸控區寬至少 56dp、涵蓋整列高度（isEinkMode: $eink）', (tester) async {
+      final manager = FakeDictionaryManager(
+        items: [
+          _item('a', priority: 0),
+          _item('b', priority: 1),
+          _item('c', priority: 2),
+        ],
+      );
+      await _pump(tester, manager, isEinkMode: eink);
+
+      final handle = tester.getRect(
+        find.byKey(const Key('dictionary_drag_handle_c')),
+      );
+      final row = tester.getRect(find.byKey(const Key('dictionary_item_c')));
+      expect(handle.width, greaterThanOrEqualTo(56));
+      expect(handle.height, greaterThanOrEqualTo(row.height - 20));
+
+      // 起點落在舊圖示（左 8dp 起 40dp 寬、上方 8dp 起 40dp 高）之外、
+      // 新觸控區之內：水平偏離圖示中心 24dp、貼近列底部。
+      final start = Offset(row.left + 8 + 48, row.bottom - 8);
+      final gesture = await tester.startGesture(start);
+      for (var i = 0; i < 8; i++) {
+        await gesture.moveBy(const Offset(0, -50));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(manager.reorderCalls, [
+        ['c', 'a', 'b'],
+      ]);
+    });
+  }
+
+  testWidgets('拖曳把手帶有語意標籤', (tester) async {
+    final manager = FakeDictionaryManager(items: [_item('a')]);
+    final semantics = tester.ensureSemantics();
+    await _pump(tester, manager);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('dictionary_drag_handle_a')),
+        matching: find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.label == '拖曳排序',
+        ),
+      ),
+      findsOneWidget,
+    );
+    semantics.dispose();
+  });
+
   testWidgets('拖曳排序：reorder 尚未完成時畫面已是新順序，不彈回原位', (tester) async {
     final manager = FakeDictionaryManager(
       items: [
@@ -905,6 +956,8 @@ void main() {
         await tester.tap(find.byType(BackButton));
         await tester.pumpAndSettle();
         expect(find.text('離開並取消匯入？'), findsOneWidget);
+        expect(find.text('繼續匯入'), findsOneWidget);
+        expect(find.text('離開並取消'), findsOneWidget);
 
         await tester.tap(find.byKey(const Key('dictionary_import_leave_stay')));
         await tester.pumpAndSettle();

@@ -711,5 +711,7 @@
   "dictionaryImportOrphanCompanions": "The selected .mdd or .css files have no dictionary to attach to. Select the matching .mdx file together with them, or use \"Add companion files\" on an imported MDX dictionary.",
   "dictionaryImportLeaveConfirmTitle": "Leave and cancel the import?",
   "dictionaryImportLeaveConfirmMessage": "A dictionary is being imported. Leaving now cancels the import, and nothing already written is kept.",
-  "dictionaryImportLeaveConfirmAction": "Leave and cancel"
+  "dictionaryImportLeaveConfirmAction": "Leave and cancel",
+  "dictionaryImportLeaveConfirmStay": "Keep importing",
+  "dictionaryDragHandleLabel": "Drag to reorder"
 }

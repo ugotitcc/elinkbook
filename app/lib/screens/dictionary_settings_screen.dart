@@ -481,7 +481,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
           TextButton(
             key: const Key('dictionary_import_leave_stay'),
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.cancel),
+            child: Text(l10n.dictionaryImportLeaveConfirmStay),
           ),
           TextButton(
             key: const Key('dictionary_import_leave_confirm'),
@@ -667,20 +667,34 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
     final source = item.source;
     final theme = Theme.of(context);
     final content = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      // 讓拖曳把手的觸控區涵蓋整列高度：Row 以 stretch 撐滿，
+      // 其餘控制項各自置中。
+      child: IntrinsicHeight(
+        child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ReorderableDragStartListener(
             key: Key('dictionary_drag_handle_${source.id}'),
             index: index,
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.drag_handle),
+            // 觸控區至少 56dp 寬、整列高；圖示大小不變。
+            child: Semantics(
+              label: l10n.dictionaryDragHandleLabel,
+              // 透明 ColoredBox 讓整個區域都吃得到觸控（等同 opaque），
+              // 不是只有圖示本身。
+              child: const SizedBox(
+                width: 56,
+                child: ColoredBox(
+                  color: Colors.transparent,
+                  child: Center(child: Icon(Icons.drag_handle)),
+                ),
+              ),
             ),
           ),
           Expanded(
-            child: Column(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(source.name, style: theme.textTheme.titleMedium),
@@ -711,19 +725,25 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                   ),
               ],
             ),
+            ),
           ),
-          Switch(
-            key: Key('dictionary_enabled_${source.id}'),
-            value: source.enabled,
-            onChanged: (value) => _setEnabled(item, value),
+          Center(
+            child: Switch(
+              key: Key('dictionary_enabled_${source.id}'),
+              value: source.enabled,
+              onChanged: (value) => _setEnabled(item, value),
+            ),
           ),
-          IconButton(
-            key: Key('dictionary_delete_${source.id}'),
-            icon: const Icon(Icons.delete_outline),
-            tooltip: l10n.dictionaryDeleteConfirmAction,
-            onPressed: () => _confirmDelete(item),
+          Center(
+            child: IconButton(
+              key: Key('dictionary_delete_${source.id}'),
+              icon: const Icon(Icons.delete_outline),
+              tooltip: l10n.dictionaryDeleteConfirmAction,
+              onPressed: () => _confirmDelete(item),
+            ),
           ),
         ],
+      ),
       ),
     );
     return Container(
