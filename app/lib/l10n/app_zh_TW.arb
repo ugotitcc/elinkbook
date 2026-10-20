@@ -3177,5 +3177,164 @@
   "dictionarySettingsAddCompanionFailed": "無法新增附屬檔案。檔案無法讀取，或儲存空間不足。請確認檔案存在、空間足夠後再試一次。",
   "@dictionarySettingsAddCompanionFailed": {
     "description": "新增 MDX 字典附屬檔案失敗的三段式訊息"
+  },
+  "dictionaryImportButton": "匯入字典",
+  "@dictionaryImportButton": {
+    "description": "匯入字典的按鈕（字典設定畫面右上角）"
+  },
+  "dictionaryImportTitle": "匯入字典",
+  "@dictionaryImportTitle": {
+    "description": "匯入字典對話框標題"
+  },
+  "dictionaryImportNameLabel": "名稱",
+  "@dictionaryImportNameLabel": {
+    "description": "匯入對話框的字典名稱欄位標籤"
+  },
+  "dictionaryImportDirectionLabel": "查詢方向",
+  "@dictionaryImportDirectionLabel": {
+    "description": "匯入對話框的查詢方向欄位標籤"
+  },
+  "dictionaryImportLicenseLabel": "授權說明",
+  "@dictionaryImportLicenseLabel": {
+    "description": "匯入對話框的授權說明欄位標籤"
+  },
+  "dictionaryImportLargeFileHint": "檔案較大，匯入可能需要較長時間",
+  "@dictionaryImportLargeFileHint": {
+    "description": "匯入對話框的大檔案提示（超過 50 MB）"
+  },
+  "dictionaryImportConfirm": "匯入",
+  "@dictionaryImportConfirm": {
+    "description": "匯入對話框的確認按鈕"
+  },
+  "dictionaryImportCancel": "取消",
+  "@dictionaryImportCancel": {
+    "description": "匯入對話框與進度遮罩的取消按鈕"
+  },
+  "dictionaryImportProgress": "已處理 {processed} / {total} 筆",
+  "@dictionaryImportProgress": {
+    "description": "匯入進度文字",
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "dictionaryImportDone": "匯入 {count} 筆",
+  "@dictionaryImportDone": {
+    "description": "匯入完成摘要，count 為匯入筆數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dictionaryImportSkippedSummary": "略過 {count} 筆",
+  "@dictionaryImportSkippedSummary": {
+    "description": "匯入摘要的略過筆數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dictionaryImportSkipSample": "第 {index} 筆：{reason}",
+  "@dictionaryImportSkipSample": {
+    "description": "略過原因清單的一行，index 為檔內第幾筆，reason 為已轉成文字的原因",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "dictionaryImportSkipMissingHeadword": "缺少詞頭",
+  "@dictionaryImportSkipMissingHeadword": {
+    "description": "略過原因：缺少詞頭"
+  },
+  "dictionaryImportSkipMissingDefinition": "缺少解釋",
+  "@dictionaryImportSkipMissingDefinition": {
+    "description": "略過原因：缺少解釋"
+  },
+  "dictionaryImportSkipDefinitionTooLong": "解釋過長",
+  "@dictionaryImportSkipDefinitionTooLong": {
+    "description": "略過原因：解釋過長"
+  },
+  "dictionaryImportSkipInvalidField": "欄位格式不對",
+  "@dictionaryImportSkipInvalidField": {
+    "description": "略過原因：欄位格式不對"
+  },
+  "dictionaryImportSkipMalformedLine": "該行格式不對",
+  "@dictionaryImportSkipMalformedLine": {
+    "description": "略過原因：該行格式不對"
+  },
+  "dictionaryImportDuplicateTitle": "這本字典已匯入",
+  "@dictionaryImportDuplicateTitle": {
+    "description": "重複匯入對話框標題"
+  },
+  "dictionaryImportDuplicateMessage": "已經匯入過內容相同的字典。要略過，還是用這次的檔案取代舊的？",
+  "@dictionaryImportDuplicateMessage": {
+    "description": "重複匯入對話框內容"
+  },
+  "dictionaryImportDuplicateSkip": "略過",
+  "@dictionaryImportDuplicateSkip": {
+    "description": "重複匯入對話框的略過按鈕"
+  },
+  "dictionaryImportDuplicateReplace": "取代",
+  "@dictionaryImportDuplicateReplace": {
+    "description": "重複匯入對話框的取代按鈕"
+  },
+  "dictionaryImportErrorUnreadableFile": "無法匯入這個檔案。檔案無法讀取。請確認檔案存在、沒有損毀後再試一次。",
+  "@dictionaryImportErrorUnreadableFile": {
+    "description": "匯入失敗（無法讀取檔案）的三段式訊息"
+  },
+  "dictionaryImportErrorInvalidEncoding": "無法匯入這個檔案。檔案的文字編碼無法辨識。請把檔案轉存成 UTF-8 編碼後再試一次。",
+  "@dictionaryImportErrorInvalidEncoding": {
+    "description": "匯入失敗（編碼不對）的三段式訊息"
+  },
+  "dictionaryImportErrorInvalidFormat": "無法匯入這個檔案。檔案格式不符合字典格式。請確認檔案是 JSON、CSV 或 CC-CEDICT 字典檔後再試一次。",
+  "@dictionaryImportErrorInvalidFormat": {
+    "description": "匯入失敗（格式不對）的三段式訊息"
+  },
+  "dictionaryImportErrorNoValidEntries": "無法匯入這個檔案。檔案裡沒有可用的詞條。請確認檔案內容不是空的，且每筆都有詞頭與解釋後再試一次。",
+  "@dictionaryImportErrorNoValidEntries": {
+    "description": "匯入失敗（沒有有效詞條）的三段式訊息"
+  },
+  "dictionaryImportErrorGeneric": "無法匯入這個檔案。匯入時發生未預期的錯誤。請稍後再試一次，若仍失敗請換一個檔案。",
+  "@dictionaryImportErrorGeneric": {
+    "description": "匯入失敗（其他原因）的三段式訊息"
+  },
+  "dictionaryImportUnsupportedFile": "無法匯入「{file}」。這個檔案類型不支援。請改選 JSON、CSV、TXT（CC-CEDICT）或 MDX 字典檔。",
+  "@dictionaryImportUnsupportedFile": {
+    "description": "不支援的檔案的三段式訊息，file 為檔名",
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "dictionaryImportMdxNotYet": "這個版本還不能匯入 MDX。請先匯入 JSON、CSV 或 CC-CEDICT 字典，等之後的版本再匯入 MDX。",
+  "@dictionaryImportMdxNotYet": {
+    "description": "MDX 尚未支援的訊息"
+  },
+  "dictionaryImportOrphanCompanions": "選到的 .mdd 或 .css 沒有可附加的字典。請同時選擇對應的 .mdx 主檔，或到已匯入的 MDX 字典按「新增附屬檔案」。",
+  "@dictionaryImportOrphanCompanions": {
+    "description": "選到附屬檔案但沒有 MDX 的提醒"
+  },
+  "dictionaryImportLeaveConfirmTitle": "離開並取消匯入？",
+  "@dictionaryImportLeaveConfirmTitle": {
+    "description": "匯入中離開確認的標題"
+  },
+  "dictionaryImportLeaveConfirmMessage": "字典正在匯入中，現在離開會取消這次匯入。已寫入的部分不會保留。",
+  "@dictionaryImportLeaveConfirmMessage": {
+    "description": "匯入中離開確認的內容"
+  },
+  "dictionaryImportLeaveConfirmAction": "離開並取消",
+  "@dictionaryImportLeaveConfirmAction": {
+    "description": "匯入中離開確認的確認按鈕"
   }
 }

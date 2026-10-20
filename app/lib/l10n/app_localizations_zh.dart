@@ -2361,6 +2361,121 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get dictionarySettingsAddCompanionFailed =>
       '無法新增附屬檔案。檔案無法讀取，或儲存空間不足。請確認檔案存在、空間足夠後再試一次。';
+
+  @override
+  String get dictionaryImportButton => '匯入字典';
+
+  @override
+  String get dictionaryImportTitle => '匯入字典';
+
+  @override
+  String get dictionaryImportNameLabel => '名稱';
+
+  @override
+  String get dictionaryImportDirectionLabel => '查詢方向';
+
+  @override
+  String get dictionaryImportLicenseLabel => '授權說明';
+
+  @override
+  String get dictionaryImportLargeFileHint => '檔案較大，匯入可能需要較長時間';
+
+  @override
+  String get dictionaryImportConfirm => '匯入';
+
+  @override
+  String get dictionaryImportCancel => '取消';
+
+  @override
+  String dictionaryImportProgress(int processed, int total) {
+    return '已處理 $processed / $total 筆';
+  }
+
+  @override
+  String dictionaryImportDone(int count) {
+    return '匯入 $count 筆';
+  }
+
+  @override
+  String dictionaryImportSkippedSummary(int count) {
+    return '略過 $count 筆';
+  }
+
+  @override
+  String dictionaryImportSkipSample(int index, String reason) {
+    return '第 $index 筆：$reason';
+  }
+
+  @override
+  String get dictionaryImportSkipMissingHeadword => '缺少詞頭';
+
+  @override
+  String get dictionaryImportSkipMissingDefinition => '缺少解釋';
+
+  @override
+  String get dictionaryImportSkipDefinitionTooLong => '解釋過長';
+
+  @override
+  String get dictionaryImportSkipInvalidField => '欄位格式不對';
+
+  @override
+  String get dictionaryImportSkipMalformedLine => '該行格式不對';
+
+  @override
+  String get dictionaryImportDuplicateTitle => '這本字典已匯入';
+
+  @override
+  String get dictionaryImportDuplicateMessage =>
+      '已經匯入過內容相同的字典。要略過，還是用這次的檔案取代舊的？';
+
+  @override
+  String get dictionaryImportDuplicateSkip => '略過';
+
+  @override
+  String get dictionaryImportDuplicateReplace => '取代';
+
+  @override
+  String get dictionaryImportErrorUnreadableFile =>
+      '無法匯入這個檔案。檔案無法讀取。請確認檔案存在、沒有損毀後再試一次。';
+
+  @override
+  String get dictionaryImportErrorInvalidEncoding =>
+      '無法匯入這個檔案。檔案的文字編碼無法辨識。請把檔案轉存成 UTF-8 編碼後再試一次。';
+
+  @override
+  String get dictionaryImportErrorInvalidFormat =>
+      '無法匯入這個檔案。檔案格式不符合字典格式。請確認檔案是 JSON、CSV 或 CC-CEDICT 字典檔後再試一次。';
+
+  @override
+  String get dictionaryImportErrorNoValidEntries =>
+      '無法匯入這個檔案。檔案裡沒有可用的詞條。請確認檔案內容不是空的，且每筆都有詞頭與解釋後再試一次。';
+
+  @override
+  String get dictionaryImportErrorGeneric =>
+      '無法匯入這個檔案。匯入時發生未預期的錯誤。請稍後再試一次，若仍失敗請換一個檔案。';
+
+  @override
+  String dictionaryImportUnsupportedFile(String file) {
+    return '無法匯入「$file」。這個檔案類型不支援。請改選 JSON、CSV、TXT（CC-CEDICT）或 MDX 字典檔。';
+  }
+
+  @override
+  String get dictionaryImportMdxNotYet =>
+      '這個版本還不能匯入 MDX。請先匯入 JSON、CSV 或 CC-CEDICT 字典，等之後的版本再匯入 MDX。';
+
+  @override
+  String get dictionaryImportOrphanCompanions =>
+      '選到的 .mdd 或 .css 沒有可附加的字典。請同時選擇對應的 .mdx 主檔，或到已匯入的 MDX 字典按「新增附屬檔案」。';
+
+  @override
+  String get dictionaryImportLeaveConfirmTitle => '離開並取消匯入？';
+
+  @override
+  String get dictionaryImportLeaveConfirmMessage =>
+      '字典正在匯入中，現在離開會取消這次匯入。已寫入的部分不會保留。';
+
+  @override
+  String get dictionaryImportLeaveConfirmAction => '離開並取消';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -4720,6 +4835,121 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   @override
   String get dictionarySettingsAddCompanionFailed =>
       '无法添加附属文件。文件无法读取，或存储空间不足。请确认文件存在、空间足够后再试一次。';
+
+  @override
+  String get dictionaryImportButton => '导入字典';
+
+  @override
+  String get dictionaryImportTitle => '导入字典';
+
+  @override
+  String get dictionaryImportNameLabel => '名称';
+
+  @override
+  String get dictionaryImportDirectionLabel => '查询方向';
+
+  @override
+  String get dictionaryImportLicenseLabel => '授权说明';
+
+  @override
+  String get dictionaryImportLargeFileHint => '文件较大，导入可能需要较长时间';
+
+  @override
+  String get dictionaryImportConfirm => '导入';
+
+  @override
+  String get dictionaryImportCancel => '取消';
+
+  @override
+  String dictionaryImportProgress(int processed, int total) {
+    return '已处理 $processed / $total 条';
+  }
+
+  @override
+  String dictionaryImportDone(int count) {
+    return '导入 $count 条';
+  }
+
+  @override
+  String dictionaryImportSkippedSummary(int count) {
+    return '跳过 $count 条';
+  }
+
+  @override
+  String dictionaryImportSkipSample(int index, String reason) {
+    return '第 $index 条：$reason';
+  }
+
+  @override
+  String get dictionaryImportSkipMissingHeadword => '缺少词头';
+
+  @override
+  String get dictionaryImportSkipMissingDefinition => '缺少释义';
+
+  @override
+  String get dictionaryImportSkipDefinitionTooLong => '释义过长';
+
+  @override
+  String get dictionaryImportSkipInvalidField => '字段格式不对';
+
+  @override
+  String get dictionaryImportSkipMalformedLine => '该行格式不对';
+
+  @override
+  String get dictionaryImportDuplicateTitle => '这本字典已导入';
+
+  @override
+  String get dictionaryImportDuplicateMessage =>
+      '已经导入过内容相同的字典。要跳过，还是用这次的文件替换旧的？';
+
+  @override
+  String get dictionaryImportDuplicateSkip => '跳过';
+
+  @override
+  String get dictionaryImportDuplicateReplace => '替换';
+
+  @override
+  String get dictionaryImportErrorUnreadableFile =>
+      '无法导入这个文件。文件无法读取。请确认文件存在、没有损坏后再试一次。';
+
+  @override
+  String get dictionaryImportErrorInvalidEncoding =>
+      '无法导入这个文件。文件的文字编码无法识别。请把文件另存为 UTF-8 编码后再试一次。';
+
+  @override
+  String get dictionaryImportErrorInvalidFormat =>
+      '无法导入这个文件。文件格式不符合字典格式。请确认文件是 JSON、CSV 或 CC-CEDICT 字典文件后再试一次。';
+
+  @override
+  String get dictionaryImportErrorNoValidEntries =>
+      '无法导入这个文件。文件里没有可用的词条。请确认文件内容不是空的，且每条都有词头与释义后再试一次。';
+
+  @override
+  String get dictionaryImportErrorGeneric =>
+      '无法导入这个文件。导入时发生未预期的错误。请稍后再试一次，若仍失败请换一个文件。';
+
+  @override
+  String dictionaryImportUnsupportedFile(String file) {
+    return '无法导入“$file”。这个文件类型不支持。请改选 JSON、CSV、TXT（CC-CEDICT）或 MDX 字典文件。';
+  }
+
+  @override
+  String get dictionaryImportMdxNotYet =>
+      '这个版本还不能导入 MDX。请先导入 JSON、CSV 或 CC-CEDICT 字典，等之后的版本再导入 MDX。';
+
+  @override
+  String get dictionaryImportOrphanCompanions =>
+      '选到的 .mdd 或 .css 没有可附加的字典。请同时选择对应的 .mdx 主文件，或到已导入的 MDX 字典点“添加附属文件”。';
+
+  @override
+  String get dictionaryImportLeaveConfirmTitle => '离开并取消导入？';
+
+  @override
+  String get dictionaryImportLeaveConfirmMessage =>
+      '字典正在导入中，现在离开会取消这次导入。已写入的部分不会保留。';
+
+  @override
+  String get dictionaryImportLeaveConfirmAction => '离开并取消';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -7079,4 +7309,119 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get dictionarySettingsAddCompanionFailed =>
       '無法新增附屬檔案。檔案無法讀取，或儲存空間不足。請確認檔案存在、空間足夠後再試一次。';
+
+  @override
+  String get dictionaryImportButton => '匯入字典';
+
+  @override
+  String get dictionaryImportTitle => '匯入字典';
+
+  @override
+  String get dictionaryImportNameLabel => '名稱';
+
+  @override
+  String get dictionaryImportDirectionLabel => '查詢方向';
+
+  @override
+  String get dictionaryImportLicenseLabel => '授權說明';
+
+  @override
+  String get dictionaryImportLargeFileHint => '檔案較大，匯入可能需要較長時間';
+
+  @override
+  String get dictionaryImportConfirm => '匯入';
+
+  @override
+  String get dictionaryImportCancel => '取消';
+
+  @override
+  String dictionaryImportProgress(int processed, int total) {
+    return '已處理 $processed / $total 筆';
+  }
+
+  @override
+  String dictionaryImportDone(int count) {
+    return '匯入 $count 筆';
+  }
+
+  @override
+  String dictionaryImportSkippedSummary(int count) {
+    return '略過 $count 筆';
+  }
+
+  @override
+  String dictionaryImportSkipSample(int index, String reason) {
+    return '第 $index 筆：$reason';
+  }
+
+  @override
+  String get dictionaryImportSkipMissingHeadword => '缺少詞頭';
+
+  @override
+  String get dictionaryImportSkipMissingDefinition => '缺少解釋';
+
+  @override
+  String get dictionaryImportSkipDefinitionTooLong => '解釋過長';
+
+  @override
+  String get dictionaryImportSkipInvalidField => '欄位格式不對';
+
+  @override
+  String get dictionaryImportSkipMalformedLine => '該行格式不對';
+
+  @override
+  String get dictionaryImportDuplicateTitle => '這本字典已匯入';
+
+  @override
+  String get dictionaryImportDuplicateMessage =>
+      '已經匯入過內容相同的字典。要略過，還是用這次的檔案取代舊的？';
+
+  @override
+  String get dictionaryImportDuplicateSkip => '略過';
+
+  @override
+  String get dictionaryImportDuplicateReplace => '取代';
+
+  @override
+  String get dictionaryImportErrorUnreadableFile =>
+      '無法匯入這個檔案。檔案無法讀取。請確認檔案存在、沒有損毀後再試一次。';
+
+  @override
+  String get dictionaryImportErrorInvalidEncoding =>
+      '無法匯入這個檔案。檔案的文字編碼無法辨識。請把檔案轉存成 UTF-8 編碼後再試一次。';
+
+  @override
+  String get dictionaryImportErrorInvalidFormat =>
+      '無法匯入這個檔案。檔案格式不符合字典格式。請確認檔案是 JSON、CSV 或 CC-CEDICT 字典檔後再試一次。';
+
+  @override
+  String get dictionaryImportErrorNoValidEntries =>
+      '無法匯入這個檔案。檔案裡沒有可用的詞條。請確認檔案內容不是空的，且每筆都有詞頭與解釋後再試一次。';
+
+  @override
+  String get dictionaryImportErrorGeneric =>
+      '無法匯入這個檔案。匯入時發生未預期的錯誤。請稍後再試一次，若仍失敗請換一個檔案。';
+
+  @override
+  String dictionaryImportUnsupportedFile(String file) {
+    return '無法匯入「$file」。這個檔案類型不支援。請改選 JSON、CSV、TXT（CC-CEDICT）或 MDX 字典檔。';
+  }
+
+  @override
+  String get dictionaryImportMdxNotYet =>
+      '這個版本還不能匯入 MDX。請先匯入 JSON、CSV 或 CC-CEDICT 字典，等之後的版本再匯入 MDX。';
+
+  @override
+  String get dictionaryImportOrphanCompanions =>
+      '選到的 .mdd 或 .css 沒有可附加的字典。請同時選擇對應的 .mdx 主檔，或到已匯入的 MDX 字典按「新增附屬檔案」。';
+
+  @override
+  String get dictionaryImportLeaveConfirmTitle => '離開並取消匯入？';
+
+  @override
+  String get dictionaryImportLeaveConfirmMessage =>
+      '字典正在匯入中，現在離開會取消這次匯入。已寫入的部分不會保留。';
+
+  @override
+  String get dictionaryImportLeaveConfirmAction => '離開並取消';
 }
