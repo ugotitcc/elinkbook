@@ -1,9 +1,12 @@
 // MDX 詞條 HTML 前處理（epic-63 Issue 6a Task 4）。
 //
-// 只做三件事，順序固定：
+// 只做下列幾件事，順序固定：
 // 1. `href="entry://#x"` → `href="#x"`（單雙引號、屬性大小寫皆可）。
 // 2. `sound://` 連結移除 `href`、保留文字（Phase 1 不支援音訊）。
-// 3. 沒有 `<html>` 外殼時補上完整文件與必要的 meta。
+// 3. 移除會在使用者沒操作時自動跳轉或預先連線的標籤：
+//    `<meta http-equiv="refresh">`、`<link rel="dns-prefetch|preconnect|
+//    prefetch|prerender">`，以及 `<a ping>` 屬性（審查 I-7）。
+// 4. 沒有 `<html>` 外殼時補上完整文件與必要的 meta。
 //
 // 刻意不處理 `<link>`／CSS／配色：那些屬於 Issue 6b。
 
@@ -18,6 +21,30 @@ final RegExp _entryFragmentHref = RegExp(
 
 final RegExp _soundHref = RegExp(
   r'''\s+href\s*=\s*(["'])sound://[^"']*\1''',
+  caseSensitive: false,
+);
+
+final RegExp _metaTagPattern = RegExp(r'<meta\b[^>]*>', caseSensitive: false);
+final RegExp _httpEquivRefresh = RegExp(
+  r'''http-equiv\s*=\s*["']?\s*refresh\b''',
+  caseSensitive: false,
+);
+
+final RegExp _linkTagPattern = RegExp(r'<link\b[^>]*>', caseSensitive: false);
+final RegExp _relAttr = RegExp(
+  r'''\brel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))''',
+  caseSensitive: false,
+);
+const Set<String> _preconnectRels = {
+  'dns-prefetch',
+  'preconnect',
+  'prefetch',
+  'prerender',
+};
+
+final RegExp _anchorTagPattern = RegExp(r'<a\b[^>]*>', caseSensitive: false);
+final RegExp _pingAttr = RegExp(
+  r'''\s+ping\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>"']+)''',
   caseSensitive: false,
 );
 
@@ -44,6 +71,8 @@ String prepareEntryHtml(String html) {
   // 連同前面的空白一起移除，避免留下 `<a  >`。
   out = out.replaceAll(_soundHref, '');
 
+  out = _stripAutoNavigation(out);
+
   if (!_htmlTag.hasMatch(out)) {
     return '<!DOCTYPE html><html><head>$_metaTags</head>'
         '<body>$out</body></html>';
@@ -61,4 +90,24 @@ String prepareEntryHtml(String html) {
     }
   }
   return out;
+}
+
+/// 移除自動跳轉與預先連線的標籤（WebView 設定與請求攔截之外的第二道防線）。
+String _stripAutoNavigation(String html) {
+  var out = html.replaceAllMapped(
+    _metaTagPattern,
+    (match) => _httpEquivRefresh.hasMatch(match.group(0)!) ? '' : match.group(0)!,
+  );
+  out = out.replaceAllMapped(_linkTagPattern, (match) {
+    final tag = match.group(0)!;
+    final rel = _relAttr.firstMatch(tag);
+    if (rel == null) return tag;
+    final value = rel.group(1) ?? rel.group(2) ?? rel.group(3) ?? '';
+    final tokens = value.toLowerCase().split(RegExp(r'\s+'));
+    return tokens.any(_preconnectRels.contains) ? '' : tag;
+  });
+  return out.replaceAllMapped(
+    _anchorTagPattern,
+    (match) => match.group(0)!.replaceAll(_pingAttr, ''),
+  );
 }

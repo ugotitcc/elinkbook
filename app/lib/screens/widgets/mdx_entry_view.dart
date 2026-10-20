@@ -8,6 +8,9 @@
 // - `shouldInterceptRequest` 除了 `data:` 初始文件外，任何請求都回 404 空內容，
 //   永不回傳 `null`（回 `null` 會讓 WebView 走真實網路）。圖片與外部 CSS 的
 //   實際回傳是 Issue 6b，這裡先留好呼叫點。
+// - 只有主框架且有使用者手勢的導覽才會帶出詞條查詢；`Safe Browsing` 關閉。
+//   `blockNetworkLoads` 未啟用：未能在真機驗證它不影響 `data:` 初始文件與
+//   攔截回應，留待 Issue 6b 圖片攔截時一併確認（審查 I-7）。
 //
 // 決策邏輯是靜態純函式，單元測試不必建 WebView。
 import 'dart:typed_data';
@@ -86,9 +89,23 @@ class MdxEntryView extends StatefulWidget {
   final void Function(Uri url, MdxRequestDecision decision)?
       onRequestIntercepted;
 
-  /// 點擊連結時的處理方式：詞條連結取消導航並回傳詞；錨點放行；其餘取消。
-  static MdxNavigationDecision decideNavigation(String url) {
+  /// 導覽時的處理方式：詞條連結取消導航並回傳詞；錨點放行；其餘取消。
+  ///
+  /// 只有「主框架」且「使用者真的點了」的導覽才可能帶出詞條或放行錨點：
+  /// - [isForMainFrame] 為 false（`<iframe src="entry://x">` 這類子框架）一律取消，
+  ///   不回傳詞條。
+  /// - [hasGesture] 為 false（`<meta refresh>` 之類沒有使用者操作的跳轉）時，
+  ///   詞條連結取消且不回傳詞條。平台沒提供（null，例如 iOS）時視為通過。
+  /// 頁內錨點只要在主框架就放行（它不會觸發查詢）。
+  static MdxNavigationDecision decideNavigation(
+    String url, {
+    bool isForMainFrame = true,
+    bool? hasGesture,
+  }) {
+    if (!isForMainFrame) return const MdxNavigationDecision.cancel();
     return switch (classifyLink(url)) {
+      MdxEntryLink() when hasGesture == false =>
+        const MdxNavigationDecision.cancel(),
       MdxEntryLink(:final word) => MdxNavigationDecision.cancel(word),
       MdxAnchorLink() => const MdxNavigationDecision.allow(),
       MdxBlockedLink() => const MdxNavigationDecision.cancel(),
@@ -150,6 +167,8 @@ class _MdxEntryViewState extends State<MdxEntryView> {
         cacheEnabled: false,
         useShouldOverrideUrlLoading: true,
         useShouldInterceptRequest: true,
+        // 不讓 Safe Browsing 連 Google 檢查網址（審查 I-7）。
+        safeBrowsingEnabled: false,
       ),
       onWebViewCreated: (controller) {
         _controller = controller;
@@ -157,7 +176,11 @@ class _MdxEntryViewState extends State<MdxEntryView> {
       },
       shouldOverrideUrlLoading: (controller, navigationAction) async {
         final url = navigationAction.request.url?.toString() ?? '';
-        final decision = MdxEntryView.decideNavigation(url);
+        final decision = MdxEntryView.decideNavigation(
+          url,
+          isForMainFrame: navigationAction.isForMainFrame,
+          hasGesture: navigationAction.hasGesture,
+        );
         final word = decision.entryWord;
         if (word != null) widget.config.onEntryLink(word);
         return decision.allow

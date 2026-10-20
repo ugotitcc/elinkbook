@@ -45,6 +45,66 @@ void main() {
     });
   });
 
+  group('自動跳轉與預先連線（I-7）', () {
+    test('移除 <meta http-equiv=refresh>（引號、屬性順序、大小寫皆可）', () {
+      for (final tag in [
+        '<meta http-equiv="refresh" content="0;url=entry://x">',
+        "<meta content='0;url=http://a.b' http-equiv='Refresh'>",
+        '<META HTTP-EQUIV=refresh CONTENT="0">',
+        '<meta  http-equiv = " refresh " content="5" />',
+      ]) {
+        final out = prepareEntryHtml('<p>前</p>$tag<p>後</p>');
+        expect(out.toLowerCase(), isNot(contains('refresh')), reason: tag);
+        expect(out, contains('<p>前</p>'));
+        expect(out, contains('<p>後</p>'));
+      }
+    });
+
+    test('不影響其他 meta', () {
+      final out = prepareEntryHtml(
+        '<html><head><meta charset="utf-8">'
+        '<meta name="x" content="refresh"></head><body>b</body></html>',
+      );
+      expect(out, contains('<meta charset="utf-8">'));
+      expect(out, contains('<meta name="x" content="refresh">'));
+    });
+
+    test('移除 rel=dns-prefetch／preconnect／prefetch／prerender 的 <link>', () {
+      for (final rel in ['dns-prefetch', 'preconnect', 'prefetch', 'prerender']) {
+        for (final tag in [
+          '<link rel="$rel" href="http://a.b/">',
+          "<link href='http://a.b/' REL='${rel.toUpperCase()}' crossorigin>",
+          '<link rel=$rel href=http://a.b/ />',
+          '<link rel="stylesheet $rel" href="http://a.b/">',
+        ]) {
+          final out = prepareEntryHtml('<p>前</p>$tag<p>後</p>');
+          expect(out.toLowerCase(), isNot(contains(rel)), reason: tag);
+          expect(out, contains('<p>前</p>'));
+          expect(out, contains('<p>後</p>'));
+        }
+      }
+    });
+
+    test('樣式表 <link> 原樣保留（含 rel 排在 href 後面）', () {
+      const a = '<link rel="stylesheet" href="x.css">';
+      const b = '<link href="y.css" rel="stylesheet">';
+      final out = prepareEntryHtml('$a$b');
+      expect(out, contains(a));
+      expect(out, contains(b));
+    });
+
+    test('移除 <a ping> 屬性、保留連結本身', () {
+      final out = prepareEntryHtml(
+        '<a href="entry://x" ping="http://track.example/p">x</a>'
+        "<a PING='http://t/' href=\"#n\">n</a>",
+      );
+      expect(out.toLowerCase(), isNot(contains('ping')));
+      expect(out, contains('href="entry://x"'));
+      expect(out, contains('>x</a>'));
+      expect(out, contains('href="#n"'));
+    });
+  });
+
   group('文件外殼與 meta', () {
     test('<link> 原樣保留（本 Issue 不處理 CSS）', () {
       const link = '<link rel="stylesheet" href="ghychyz.css">';
