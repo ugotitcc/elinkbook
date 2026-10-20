@@ -116,7 +116,9 @@ void main() {
     );
     expect(confirm().onPressed, isNull);
 
-    await tester.tap(find.byKey(const Key('dictionary_import_direction_zhToEn')));
+    await tester.tap(
+      find.byKey(const Key('dictionary_import_direction_zhToEn')),
+    );
     await tester.pumpAndSettle();
     expect(confirm().onPressed, isNotNull);
   });

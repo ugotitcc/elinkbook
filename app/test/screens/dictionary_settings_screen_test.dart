@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:elinkbook/dictionary/dictionary_manager.dart';
+import 'package:elinkbook/dictionary/importers/dictionary_importer.dart';
 import 'package:elinkbook/dictionary/mdx_companion_files.dart';
 import 'package:elinkbook/dictionary/models/dictionary_source.dart';
 import 'package:elinkbook/screens/dictionary_settings_screen.dart';
@@ -348,5 +349,462 @@ void main() {
 
     expect(find.byType(AnimatedSwitcher), findsNothing);
     expect(find.byType(AnimatedContainer), findsNothing);
+  });
+
+  group('匯入流程', () {
+    PickedFile pf(String name, {int size = 10}) =>
+        PickedFile(path: '/tmp/$name', name: name, size: size);
+
+    ImportProgress writing(int processed, int total) => ImportProgress(
+      processed: processed,
+      total: total,
+      stage: ImportStage.writing,
+    );
+
+    ImportProgress done({
+      int count = 3,
+      int skipped = 0,
+      List<ImportSkip> samples = const [],
+    }) => ImportProgress(
+      processed: count,
+      total: count,
+      stage: ImportStage.done,
+      summary: ImportSummary(
+        sourceId: 'new',
+        importedCount: count,
+        skippedCount: skipped,
+        skipSamples: samples,
+      ),
+    );
+
+    /// 成功匯入的 stream：先回報一次進度，再把新字典加進 [manager.items] 並完成。
+    Stream<ImportProgress> Function(PickedFile, ImportRequest, CancelToken)
+    okStream(FakeDictionaryManager manager, {ImportProgress? last}) =>
+        (file, request, cancel) async* {
+          yield writing(1, 3);
+          // 多檔匯入時 id 不能重複。
+          final id = manager.items.any((i) => i.source.id == 'new') ? 'new2' : 'new';
+          manager.items = [...manager.items, _item(id)];
+          yield last ?? done();
+        };
+
+    Future<void> tapImport(WidgetTester tester) async {
+      await tester.tap(
+        find.byKey(const Key('dictionary_settings_import_button')),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    /// 在匯入對話框選方向（若指定）並按匯入。
+    Future<void> confirmDialog(WidgetTester tester, {String? direction}) async {
+      expect(find.byKey(const Key('dictionary_import_dialog')), findsOneWidget);
+      if (direction != null) {
+        await tester.tap(
+          find.byKey(Key('dictionary_import_direction_$direction')),
+        );
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.byKey(const Key('dictionary_import_confirm')));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> closeMessage(WidgetTester tester) async {
+      await tester.tap(
+        find.byKey(const Key('dictionary_import_message_close')),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    final progress = find.byKey(const Key('dictionary_import_progress'));
+
+    testWidgets('選一個 JSON：預填 → 確認 → 顯示進度 → 完成摘要 → 清單重新載入', (tester) async {
+      final manager = FakeDictionaryManager()
+        ..importGate = Completer<void>()
+        ..readHintsFn = ((f) => const ImportHints(
+          name: '提示名稱',
+          sourceLang: 'en',
+          targetLang: 'zh',
+          licenseNote: 'CC0',
+        ));
+      manager.importStream = okStream(manager);
+      await _pump(tester, manager, pickFiles: (_) async => [pf('a.json')]);
+
+      await tapImport(tester);
+      expect(find.text('提示名稱'), findsOneWidget);
+      expect(find.text('CC0'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('dictionary_import_confirm')));
+      await tester.pump();
+      await tester.pump();
+
+      // 匯入中：進度遮罩出現，清單還沒有新字典。
+      expect(progress, findsOneWidget);
+      expect(find.text('字典new'), findsNothing);
+
+      manager.importGate!.complete();
+      await tester.pumpAndSettle();
+
+      expect(progress, findsNothing);
+      expect(find.text('匯入 3 筆'), findsOneWidget);
+      expect(manager.importCalls.single.request.name, '提示名稱');
+      expect(manager.importCalls.single.request.sourceLang, 'en');
+      expect(manager.importCalls.single.request.targetLang, 'zh-Hant');
+      expect(manager.importCalls.single.request.licenseNote, 'CC0');
+      expect(manager.importCalls.single.request.replaceExisting, isFalse);
+      expect(find.text('字典new'), findsOneWidget);
+    });
+
+    testWidgets('提示的 sourceLang／targetLang 對得上就預選方向', (tester) async {
+      final manager = FakeDictionaryManager()
+        ..readHintsFn = ((f) => const ImportHints(
+          name: 'CEDICT',
+          sourceLang: 'zh',
+          targetLang: 'en',
+        ));
+      await _pump(tester, manager, pickFiles: (_) async => [pf('c.txt')]);
+      await tapImport(tester);
+
+      bool selected(String d) => tester
+          .widget<ChoiceChip>(find.byKey(Key('dictionary_import_direction_$d')))
+          .selected;
+      expect(selected('zhToEn'), isTrue);
+      expect(selected('enToZh'), isFalse);
+    });
+
+    testWidgets('重複匯入：按略過不再匯入', (tester) async {
+      final manager = FakeDictionaryManager();
+      manager.importStream = (file, request, cancel) async* {
+        throw const DuplicateDictionaryException('old');
+      };
+      await _pump(tester, manager, pickFiles: (_) async => [pf('a.json')]);
+      await tapImport(tester);
+      await confirmDialog(tester, direction: 'enToZh');
+
+      expect(find.text('這本字典已匯入'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const Key('dictionary_import_duplicate_skip')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(manager.importCalls, hasLength(1));
+      expect(find.text('這本字典已匯入'), findsNothing);
+      expect(find.textContaining('匯入 '), findsNothing);
+    });
+
+    testWidgets('重複匯入時進度遮罩已先消失，按取代後只出現一個新的進度遮罩', (tester) async {
+      final manager = FakeDictionaryManager();
+      final replaceGate = Completer<void>();
+      manager.importStream = (file, request, cancel) async* {
+        if (!request.replaceExisting) {
+          throw const DuplicateDictionaryException('old');
+        }
+        yield writing(1, 3);
+        await replaceGate.future;
+        yield done();
+      };
+      await _pump(tester, manager, pickFiles: (_) async => [pf('a.json')]);
+      await tapImport(tester);
+      await confirmDialog(tester, direction: 'enToZh');
+
+      // 重複提示出現時，進度遮罩已清掉，畫面上只有一個層。
+      expect(find.text('這本字典已匯入'), findsOneWidget);
+      expect(progress, findsNothing);
+
+      await tester.tap(
+        find.byKey(const Key('dictionary_import_duplicate_replace')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('這本字典已匯入'), findsNothing);
+      expect(progress, findsOneWidget);
+      expect(manager.importCalls, hasLength(2));
+      expect(manager.importCalls.last.request.replaceExisting, isTrue);
+
+      replaceGate.complete();
+      await tester.pumpAndSettle();
+      expect(progress, findsNothing);
+      expect(find.text('匯入 3 筆'), findsOneWidget);
+    });
+
+    testWidgets('匯入中按取消：CancelToken 被取消，不出現完成摘要，進度遮罩消失', (tester) async {
+      final manager = FakeDictionaryManager();
+      CancelToken? token;
+      manager.importStream = (file, request, cancel) async* {
+        token = cancel;
+        yield writing(1, 10);
+        while (!cancel.isCancelled) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+        yield const ImportProgress(
+          processed: 1,
+          total: 10,
+          stage: ImportStage.cancelled,
+        );
+      };
+      await _pump(tester, manager, pickFiles: (_) async => [pf('a.json')]);
+      await tapImport(tester);
+      await tester.tap(
+        find.byKey(const Key('dictionary_import_direction_enToZh')),
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('dictionary_import_confirm')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(progress, findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const Key('dictionary_import_progress_cancel')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+
+      expect(token!.isCancelled, isTrue);
+      expect(progress, findsNothing);
+      expect(
+        find.byKey(const Key('dictionary_import_message_close')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('匯入失敗後進度遮罩消失，錯誤訊息可關閉', (tester) async {
+      final manager = FakeDictionaryManager()
+        ..importError = const DictionaryImportException('invalidFormat');
+      await _pump(tester, manager, pickFiles: (_) async => [pf('a.json')]);
+      await tapImport(tester);
+      await confirmDialog(tester, direction: 'enToZh');
+
+      expect(progress, findsNothing);
+      expect(find.textContaining('格式不符合字典格式'), findsOneWidget);
+      await closeMessage(tester);
+      expect(find.textContaining('格式不符合字典格式'), findsNothing);
+    });
+
+    testWidgets('未知錯誤碼顯示通用三段式訊息，不顯示原始碼', (tester) async {
+      final manager = FakeDictionaryManager()
+        ..importError = const DictionaryImportException('weirdCode');
+      await _pump(tester, manager, pickFiles: (_) async => [pf('a.json')]);
+      await tapImport(tester);
+      await confirmDialog(tester, direction: 'enToZh');
+
+      expect(find.textContaining('未預期的錯誤'), findsOneWidget);
+      expect(find.textContaining('weirdCode'), findsNothing);
+    });
+
+    testWidgets('空檔（noValidEntries）顯示三段式錯誤，清單沒有多一本', (tester) async {
+      final manager = FakeDictionaryManager(items: [_item('a')])
+        ..importError = const DictionaryImportException('noValidEntries');
+      await _pump(tester, manager, pickFiles: (_) async => [pf('empty.json')]);
+      await tapImport(tester);
+      await confirmDialog(tester, direction: 'enToZh');
+
+      expect(find.textContaining('沒有可用的詞條'), findsOneWidget);
+      await closeMessage(tester);
+      expect(find.byKey(const Key('dictionary_item_a')), findsOneWidget);
+      expect(find.byKey(const Key('dictionary_item_new')), findsNothing);
+      expect((await manager.list()).length, 1);
+    });
+
+    testWidgets('多選兩個檔案：依序各跳一次對話框', (tester) async {
+      final manager = FakeDictionaryManager();
+      manager.importStream = okStream(manager);
+      await _pump(
+        tester,
+        manager,
+        pickFiles: (_) async => [pf('a.json'), pf('b.csv')],
+      );
+      await tapImport(tester);
+      expect(manager.readHintsCalls.map((f) => f.name), ['a.json']);
+      await confirmDialog(tester, direction: 'enToZh');
+
+      expect(manager.readHintsCalls.map((f) => f.name), ['a.json', 'b.csv']);
+      expect(find.byKey(const Key('dictionary_import_dialog')), findsOneWidget);
+      await confirmDialog(tester, direction: 'zhToEn');
+
+      expect(manager.importCalls.map((c) => c.file.name), ['a.json', 'b.csv']);
+    });
+
+    testWidgets('有略過筆數：摘要列出略過數與原因', (tester) async {
+      final manager = FakeDictionaryManager();
+      manager.importStream = okStream(
+        manager,
+        last: done(
+          count: 5,
+          skipped: 2,
+          samples: const [
+            ImportSkip(index: 3, reason: 'missingHeadword'),
+            ImportSkip(index: 7, reason: 'malformedLine'),
+          ],
+        ),
+      );
+      await _pump(tester, manager, pickFiles: (_) async => [pf('a.json')]);
+      await tapImport(tester);
+      await confirmDialog(tester, direction: 'enToZh');
+
+      expect(find.text('匯入 5 筆'), findsOneWidget);
+      expect(find.text('略過 2 筆'), findsOneWidget);
+      expect(find.text('第 3 筆：缺少詞頭'), findsOneWidget);
+      expect(find.text('第 7 筆：該行格式不對'), findsOneWidget);
+    });
+
+    testWidgets('a.mdx＋a.mdd＋x.css 顯示尚不能匯入 MDX，同批 b.json 照常匯入', (tester) async {
+      final manager = FakeDictionaryManager();
+      manager.importStream = okStream(manager);
+      await _pump(
+        tester,
+        manager,
+        pickFiles: (_) async => [
+          pf('a.mdx'),
+          pf('a.mdd'),
+          pf('x.css'),
+          pf('b.json'),
+        ],
+      );
+      await tapImport(tester);
+      await confirmDialog(tester, direction: 'enToZh');
+
+      expect(manager.importCalls.map((c) => c.file.name), ['b.json']);
+      expect(find.textContaining('這個版本還不能匯入 MDX'), findsOneWidget);
+      expect(find.text('匯入 3 筆'), findsOneWidget);
+    });
+
+    testWidgets('不支援的副檔名顯示不支援的檔案', (tester) async {
+      final manager = FakeDictionaryManager()..canImportFn = (_) => false;
+      await _pump(tester, manager, pickFiles: (_) async => [pf('a.json')]);
+      await tapImport(tester);
+
+      expect(find.textContaining('這個檔案類型不支援'), findsOneWidget);
+      expect(manager.importCalls, isEmpty);
+    });
+
+    testWidgets('讀取提示失敗：顯示三段式錯誤並跳過該檔', (tester) async {
+      final manager = FakeDictionaryManager()
+        ..readHintsFn = ((f) =>
+            throw const DictionaryImportException('unreadableFile'));
+      await _pump(tester, manager, pickFiles: (_) async => [pf('a.json')]);
+      await tapImport(tester);
+
+      expect(find.textContaining('檔案無法讀取'), findsOneWidget);
+      expect(manager.importCalls, isEmpty);
+    });
+
+    testWidgets('只選 .css（沒有 .mdx）：顯示沒有可附加的字典提醒', (tester) async {
+      final manager = FakeDictionaryManager();
+      await _pump(tester, manager, pickFiles: (_) async => [pf('x.css')]);
+      await tapImport(tester);
+
+      expect(find.textContaining('沒有可附加的字典'), findsOneWidget);
+      expect(manager.importCalls, isEmpty);
+    });
+
+    testWidgets('超過 50 MB 的檔案在對話框顯示大檔提示', (tester) async {
+      final manager = FakeDictionaryManager();
+      await _pump(
+        tester,
+        manager,
+        pickFiles: (_) async => [pf('big.json', size: 60 * 1024 * 1024)],
+      );
+      await tapImport(tester);
+      expect(
+        find.byKey(const Key('dictionary_import_large_file_hint')),
+        findsOneWidget,
+      );
+    });
+
+    group('匯入進行中按返回', () {
+      /// 把設定畫面 push 在一個首頁上，才有返回鍵與可觀察的離開。
+      Future<(FakeDictionaryManager, Completer<void>)> pumpPushed(
+        WidgetTester tester,
+        void Function(CancelToken) onToken,
+      ) async {
+        final manager = FakeDictionaryManager();
+        final gate = Completer<void>();
+        manager.importStream = (file, request, cancel) async* {
+          onToken(cancel);
+          yield writing(1, 3);
+          await gate.future;
+          manager.items = [...manager.items, _item('new')];
+          yield done();
+        };
+        await pumpLocalizedWidget(
+          tester,
+          Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                key: const Key('home_open'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => DictionarySettingsScreen(
+                      manager: manager,
+                      isEinkMode: false,
+                      pickFiles: (_) async => [pf('a.json'), pf('b.json')],
+                    ),
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.byKey(const Key('home_open')));
+        await tester.pumpAndSettle();
+        await tapImport(tester);
+        await tester.tap(
+          find.byKey(const Key('dictionary_import_direction_enToZh')),
+        );
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('dictionary_import_confirm')));
+        await tester.pump();
+        await tester.pump();
+        expect(progress, findsOneWidget);
+        return (manager, gate);
+      }
+
+      testWidgets('不確認：留在畫面且匯入繼續；點遮罩空白處不會關閉', (tester) async {
+        CancelToken? token;
+        final (manager, gate) = await pumpPushed(tester, (t) => token = t);
+
+        await tester.tapAt(const Offset(5, 300));
+        await tester.pump();
+        expect(progress, findsOneWidget);
+
+        await tester.tap(find.byType(BackButton));
+        await tester.pumpAndSettle();
+        expect(find.text('離開並取消匯入？'), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('dictionary_import_leave_stay')));
+        await tester.pumpAndSettle();
+        expect(find.byType(DictionarySettingsScreen), findsOneWidget);
+        expect(token!.isCancelled, isFalse);
+        expect(progress, findsOneWidget);
+
+        // 匯入繼續：放行後，第一個檔案完成並接著處理第二個檔案的對話框。
+        gate.complete();
+        await tester.pumpAndSettle();
+        expect(manager.importCalls.map((c) => c.file.name), ['a.json']);
+        expect(find.byKey(const Key('dictionary_import_dialog')), findsOneWidget);
+      });
+
+      testWidgets('確認：取消匯入、離開畫面，後面的檔案不再處理', (tester) async {
+        CancelToken? token;
+        final (manager, gate) = await pumpPushed(tester, (t) => token = t);
+
+        await tester.tap(find.byType(BackButton));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const Key('dictionary_import_leave_confirm')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DictionarySettingsScreen), findsNothing);
+        expect(token!.isCancelled, isTrue);
+
+        // 放行卡住的 stream，確認離開後不會再處理 b.json，也不丟例外。
+        gate.complete();
+        await tester.pumpAndSettle();
+        expect(manager.readHintsCalls.map((f) => f.name), ['a.json']);
+        expect(tester.takeException(), isNull);
+      });
+    });
   });
 }
