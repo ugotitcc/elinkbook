@@ -388,48 +388,86 @@ class _DictionaryLookupSheetState extends State<DictionaryLookupSheet> {
     AppLocalizations l10n,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SegmentedButton<String>(
-        key: const Key('dictionary_lookup_segments'),
-        showSelectedIcon: false,
-        segments: [
-          for (final outcome in outcomes)
-            ButtonSegment<String>(
-              value: outcome.providerId,
-              label: _segmentLabelWidget(
-                outcome,
-                isSelected: outcome.providerId == selectedId,
-                l10n: l10n,
-                colorScheme: colorScheme,
-              ),
-            ),
-        ],
-        selected: {selectedId},
-        onSelectionChanged: (selection) {
-          setState(() {
-            _selectedProviderId = selection.first;
-            // 切換分段就丟棄上一個 WebView 與它的返回堆疊，不同時保留兩個。
-            _resetMdxNavigation();
-          });
-        },
-        // 這裡刻意不設 `style.side`：`SegmentedButton` 只把它套在外框與
-        // 分段之間的垂直分隔線，選中分段自己的邊框不會被畫出來（【final
-        // review I-2】）。E-Ink 的「選中」改由標籤外框呈現。
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 每個標籤最多佔面板寬度的 45%，且 N 個分段加上按鈕內距與外側邊距
+        // 要放得進面板（兩個分段時不必橫向捲動）；至少留 96dp 避免標籤太窄。
+        const barPadding = 32.0;
+        const segmentChrome = 32.0;
+        final fitWidth =
+            (constraints.maxWidth - barPadding) / outcomes.length -
+                segmentChrome;
+        final maxLabelWidth =
+            fitWidth.clamp(96.0, constraints.maxWidth * 0.45).toDouble();
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SegmentedButton<String>(
+            key: const Key('dictionary_lookup_segments'),
+            showSelectedIcon: false,
+            segments: [
+              for (final outcome in outcomes)
+                ButtonSegment<String>(
+                  value: outcome.providerId,
+                  label: _segmentLabelWidget(
+                    outcome,
+                    isSelected: outcome.providerId == selectedId,
+                    l10n: l10n,
+                    colorScheme: colorScheme,
+                    maxWidth: maxLabelWidth,
+                  ),
+                ),
+            ],
+            selected: {selectedId},
+            onSelectionChanged: (selection) {
+              setState(() {
+                _selectedProviderId = selection.first;
+                // 切換分段就丟棄上一個 WebView 與它的返回堆疊，不同時保留兩個。
+                _resetMdxNavigation();
+              });
+            },
+            // 這裡刻意不設 `style.side`：`SegmentedButton` 只把它套在外框與
+            // 分段之間的垂直分隔線，選中分段自己的邊框不會被畫出來（【final
+            // review I-2】）。E-Ink 的「選中」改由標籤外框呈現。
+          ),
+        );
+      },
     );
   }
 
   /// E-Ink 用邊框標示選中的分段（陰影在電子紙上會殘影）；其餘情況回傳純
   /// 文字，讓 `SegmentedButton` 維持自身預設的選中樣式。
+  ///
+  /// 名稱過長時只截斷名稱（單行、省略號），狀態後綴固定可見；長按顯示含
+  /// 後綴的完整名稱。
   Widget _segmentLabelWidget(
     ProviderOutcome outcome, {
     required bool isSelected,
     required AppLocalizations l10n,
     required ColorScheme colorScheme,
+    required double maxWidth,
   }) {
-    final label = Text(_segmentLabel(outcome, l10n));
+    final suffix = _segmentSuffix(outcome, l10n);
+    final label = Tooltip(
+      message: '${outcome.displayName}$suffix',
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                outcome.displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+              ),
+            ),
+            if (suffix.isNotEmpty) Text(suffix, maxLines: 1, softWrap: false),
+          ],
+        ),
+      ),
+    );
     if (!widget.isEinkMode || !isSelected) return label;
     return Container(
       key: Key('dictionary_lookup_segment_selected_${outcome.providerId}'),
@@ -444,15 +482,13 @@ class _DictionaryLookupSheetState extends State<DictionaryLookupSheet> {
 
   /// 每個分段標籤都帶狀態後綴，不只選中的那個：使用者要先看到哪本字典
   /// 沒查到，才知道要不要切過去。
-  String _segmentLabel(ProviderOutcome outcome, AppLocalizations l10n) {
-    final suffix = switch (outcome.status) {
-      OutcomeStatus.found => '',
-      OutcomeStatus.notFound => l10n.dictionaryLookupSegmentNotFound,
-      OutcomeStatus.skipped => l10n.dictionaryLookupSegmentSkipped,
-      OutcomeStatus.failed => l10n.dictionaryLookupSegmentFailed,
-    };
-    return '${outcome.displayName}$suffix';
-  }
+  String _segmentSuffix(ProviderOutcome outcome, AppLocalizations l10n) =>
+      switch (outcome.status) {
+        OutcomeStatus.found => '',
+        OutcomeStatus.notFound => l10n.dictionaryLookupSegmentNotFound,
+        OutcomeStatus.skipped => l10n.dictionaryLookupSegmentSkipped,
+        OutcomeStatus.failed => l10n.dictionaryLookupSegmentFailed,
+      };
 
   Widget _outcomeBody(ProviderOutcome outcome, AppLocalizations l10n) {
     switch (outcome.status) {

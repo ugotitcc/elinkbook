@@ -420,9 +420,13 @@ void main() {
       );
 
       expect(find.text('甲典'), findsWidgets);
-      expect(find.text('乙典（無）'), findsOneWidget);
-      expect(find.text('丙典（略過）'), findsOneWidget);
-      expect(find.text('丁典（失敗）'), findsOneWidget);
+      // 名稱與狀態後綴是分開的兩個 Text（名稱過長時只截斷名稱）。
+      expect(find.text('乙典'), findsOneWidget);
+      expect(find.text('（無）'), findsOneWidget);
+      expect(find.text('丙典'), findsOneWidget);
+      expect(find.text('（略過）'), findsOneWidget);
+      expect(find.text('丁典'), findsOneWidget);
+      expect(find.text('（失敗）'), findsOneWidget);
     });
 
     testWidgets('底部顯示來源名稱與 attribution', (tester) async {
@@ -819,6 +823,51 @@ void main() {
       await tester.tap(find.text('甲 MDX'));
       await tester.pump();
       expect(created, 3);
+    });
+
+    testWidgets('很長的字典名稱不會把相鄰分段擠出畫面（640dp 寬）', (tester) async {
+      tester.view.physicalSize = const Size(640, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      const longA = '簡明古漢語常用字字典（川大版2003）正體　本字典收錄常用字的古代漢語用法與例句說明';
+      const longB = '教育部重編國語辭典修訂本　包含字詞釋義、注音、相關詞與出處引文的完整說明內容';
+      await _pumpSheet(
+        tester,
+        response: Future.value(
+          _completed([
+            _outcome('a', name: longA, entries: [_entry('甲詞條', body: '甲內容')]),
+            _outcome('b', name: longB, status: OutcomeStatus.notFound),
+          ]),
+        ),
+      );
+
+      final bar = tester.getRect(find.byKey(const Key('dictionary_lookup_segments')));
+      expect(bar.left, greaterThanOrEqualTo(0));
+      expect(bar.right, lessThanOrEqualTo(640));
+
+      // 兩個分段的標籤都完整落在橫向捲動區之內，不必捲動就看得到。
+      Finder inBar(String text) => find.descendant(
+        of: find.byKey(const Key('dictionary_lookup_segments')),
+        matching: find.text(text),
+      );
+      for (final name in [longA, longB]) {
+        final rect = tester.getRect(inBar(name));
+        expect(rect.left, greaterThanOrEqualTo(0), reason: name);
+        expect(rect.right, lessThanOrEqualTo(640), reason: name);
+      }
+      // 名稱被截斷成單行，狀態後綴仍然看得到。
+      expect(tester.getRect(inBar('（無）')).right, lessThanOrEqualTo(640));
+      expect(tester.getRect(inBar(longB)).height, lessThan(30));
+
+      // 長名稱有 Tooltip 帶完整名稱與後綴。
+      expect(find.byTooltip(longA), findsOneWidget);
+      expect(find.byTooltip('$longB（無）'), findsOneWidget);
+
+      // 點第二個分段會選中它。
+      await tester.tap(inBar(longB));
+      await tester.pump();
+      expect(find.byKey(const Key('dictionary_lookup_not_found')), findsWidgets);
     });
 
     testWidgets('HTML 詞條撐滿面板高度，切回純文字分段後縮回', (tester) async {
