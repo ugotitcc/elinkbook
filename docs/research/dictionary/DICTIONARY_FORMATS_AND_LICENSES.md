@@ -236,6 +236,24 @@ dictionary_entries            -- 只給 JSON/CSV 來源
 
 原始量測與探針輸出在 `.scratch/mdx_spike/report/`（不進版控）。
 
+### Issue 6a 補測（E-Ink，2026-10-20）
+
+目的：補 Issue 1 留下的三項空白——真實／合成 CJK 大檔、**隨機鍵**（從全部鍵抽 500 個，不是前 1000 筆）、查詢後穩態與開啟後峰值。
+
+方法：`.scratch/mdx_spike` 探針 App（release、armeabi-v7a），`runBench` 以 `prefix('', limit: 全部筆數)` 取得全部鍵後隨機抽 500 個；每個檔量三次，每次先 `am force-stop`。RSS 取自 `ProcessInfo.currentRss`；峰值為開啟後與每次查詢取樣的最大值；穩態為 500 次查詢後靜置 2 秒的最後一次取樣（不強制 GC，數值偏保守）。合成檔 `large_cjk_400k.mdx`：40 萬筆、鍵為 3 個 CJK 字元、UTF-16、內文 120 字元隨機 base64（自製 `make_test_mdx.py large-cjk`，不進版控）。
+
+| 檔案 | 筆數 | 開啟 | 開啟後增量 | 峰值增量 | 查詢後穩態增量 | p50 | p95 |
+|---|---|---|---|---|---|---|---|
+| 教育部（真實 CJK、UTF-16、20 MB） | 163,085 | 1,995–2,188 ms | 30.4–31.7 MB | 45.8–47.9 MB | 45.8–47.6 MB | 0.52–0.57 ms | 3.1–3.3 ms |
+| `large_cjk_400k`（合成 CJK、UTF-16、47 MB） | 400,000 | 4,983–5,141 ms | 37.4–50.7 MB | 70.0–71.4 MB | **70.0–70.9 MB** | 2.7–2.9 ms | 3.5–4.0 ms |
+
+原始 JSON 在 `.scratch/mdx_spike/report/wave_eink/6a_*.json`（不進版控）。
+
+**結論：40 萬筆 CJK 字典的穩態增量 70.0–70.9 MB，超過 50 MB 門檻。** 教育部真實字典 45.8–47.6 MB 雖在門檻內，但只剩 2–4 MB 裕度；兩個檔的峰值都出現在查詢後（記錄區塊快取長大），開啟後增量低估實際用量 10–30 MB。依 `plan-issue-6a.md` Task 1 Step 3，Issue 6a 在此暫停，待選擇：
+
+1. vendor 修補 `dict_reader`，改成依區塊延遲載入鍵（降低常駐鍵索引）。
+2. Reader 池上限改為 1 本，接受第二次查詢要重開（約 2 s／5 s）。
+
 ### 驗收檔探測結果（2026-10-19，唯讀，只讀標頭與區塊型態）
 
 檔案放在 `tmp/dictionary/`（已被 `.gitignore` 排除，不進版控）。文件只記格式資訊，不貼內容。
