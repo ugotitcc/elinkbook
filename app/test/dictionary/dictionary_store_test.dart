@@ -359,4 +359,51 @@ void main() {
       expect(await store.findSourceIdByContentId('cid-1'), isNull);
     });
   });
+
+  group('補強（Issue 5）', () {
+    test('setReferencedCss 寫入後 getSource 讀得回 referencedCss', () async {
+      await store.insertSource(_source('a'));
+      expect((await store.getSource('a'))!.referencedCss, isEmpty);
+
+      await store.setReferencedCss('a', ['x.css', 'y.css']);
+
+      expect((await store.getSource('a'))!.referencedCss, ['x.css', 'y.css']);
+    });
+
+    test('reorderSources 重寫成 0..n-1，listSources 依新順序', () async {
+      await store.insertSource(_source('a', priority: 5));
+      await store.insertSource(_source('b', priority: 1));
+      await store.insertSource(_source('c', priority: 9));
+
+      await store.reorderSources(['c', 'a', 'ghost', 'b']);
+
+      final sources = await store.listSources();
+      expect(sources.map((s) => s.id), ['c', 'a', 'b']);
+      expect(sources.map((s) => s.priority), [0, 1, 3]);
+    });
+
+    test('reorderSources 不在清單內的來源不動', () async {
+      await store.insertSource(_source('a', priority: 5));
+      await store.insertSource(_source('b', priority: 7));
+
+      await store.reorderSources(['b']);
+
+      expect((await store.getSource('a'))!.priority, 5);
+      expect((await store.getSource('b'))!.priority, 0);
+    });
+
+    test('listSources 略過 format 無法辨識的列，其餘照常回傳', () async {
+      await store.insertSource(_source('a'));
+      await db.rawInsert(
+        "INSERT INTO dictionary_sources (id, name, format, source_lang, "
+        "target_lang, priority, enabled, entry_count, imported_at) "
+        "VALUES ('bad', '未知', 'stardict', 'en', 'zh-Hant', 0, 1, 0, "
+        "'2026-10-19T08:00:00.000Z')",
+      );
+
+      final sources = await store.listSources();
+
+      expect(sources.map((s) => s.id), ['a']);
+    });
+  });
 }

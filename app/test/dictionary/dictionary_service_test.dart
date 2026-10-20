@@ -6,6 +6,7 @@ import 'package:elinkbook/dictionary/models/dictionary_source.dart';
 import 'package:elinkbook/dictionary/models/lookup_result.dart';
 import 'package:elinkbook/dictionary/storage/dictionary_database.dart';
 import 'package:elinkbook/dictionary/storage/dictionary_store.dart';
+import 'package:elinkbook/dictionary/storage/dictionary_store_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -128,6 +129,21 @@ void main() {
 
       expect(opened, 0);
     });
+  });
+
+  test('fromProvider：兩個 service 共用同一個 provider 只開啟一次', () async {
+    var opened = 0;
+    final provider = DictionaryStoreProvider(() async {
+      opened++;
+      return store;
+    });
+    final a = DictionaryService.fromProvider(provider);
+    final b = DictionaryService.fromProvider(provider);
+
+    await a.lookup('天地');
+    await b.lookup('天地');
+
+    expect(opened, 1);
   });
 
   LookupResult completed(DictionaryLookupResponse r) {

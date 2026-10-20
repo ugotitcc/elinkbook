@@ -1,4 +1,6 @@
 // app/lib/dictionary/storage/dictionary_store.dart
+import 'dart:convert';
+
 import 'package:sqflite/sqflite.dart';
 
 import '../models/dictionary_entry.dart';
@@ -66,7 +68,12 @@ class DictionaryStore {
       where: enabledOnly ? 'enabled = 1' : null,
       orderBy: 'priority ASC, imported_at ASC, id ASC',
     );
-    return rows.map(_rowToSource).toList();
+    final sources = <DictionarySource>[];
+    for (final row in rows) {
+      final source = _tryRowToSource(row);
+      if (source != null) sources.add(source);
+    }
+    return sources;
   }
 
   Future<void> setEnabled(String sourceId, bool enabled) async {
@@ -85,6 +92,26 @@ class DictionaryStore {
       where: 'id = ?',
       whereArgs: [sourceId],
     );
+  }
+
+  /// 以 JSON 陣列存入 `referenced_css`。
+  Future<void> setReferencedCss(String sourceId, List<String> names) async {
+    await _db.update(
+      'dictionary_sources',
+      {'referenced_css': jsonEncode(names)},
+      where: 'id = ?',
+      whereArgs: [sourceId],
+    );
+  }
+
+  /// 在同一個交易內把 `priority` 重寫成 `0..n-1`（依 [orderedIds] 順序）。
+  /// 不在清單內的來源不動；清單內不存在的 id 忽略。
+  Future<void> reorderSources(List<String> orderedIds) {
+    return transaction((store) async {
+      for (var i = 0; i < orderedIds.length; i++) {
+        await store.setPriority(orderedIds[i], i);
+      }
+    });
   }
 
   /// 刪除來源列；詞條由外鍵 `ON DELETE CASCADE` 連帶刪除。
@@ -139,10 +166,19 @@ class DictionaryStore {
         ).toIso8601String(),
       };
 
-  DictionarySource _rowToSource(Map<String, Object?> row) => DictionarySource(
+  /// `format` 無法辨識（例如未來版本寫入的格式）回傳 `null`，由呼叫端略過。
+  DictionarySource? _tryRowToSource(Map<String, Object?> row) {
+    final format = DictionaryFormat.values.asNameMap()[row['format']];
+    return format == null ? null : _rowToSource(row, format);
+  }
+
+  DictionarySource _rowToSource(Map<String, Object?> row,
+          [DictionaryFormat? format]) =>
+      DictionarySource(
         id: row['id'] as String,
         name: row['name'] as String,
-        format: DictionaryFormat.values.byName(row['format'] as String),
+        format: format ??
+            DictionaryFormat.values.byName(row['format'] as String),
         sourceLang: row['source_lang'] as String,
         targetLang: row['target_lang'] as String,
         priority: row['priority'] as int,
@@ -151,7 +187,14 @@ class DictionaryStore {
         entryCount: row['entry_count'] as int,
         licenseNote: (row['license_note'] as String?) ?? '',
         importedAt: DateTime.parse(row['imported_at'] as String),
+        referencedCss: _decodeCssNames(row['referenced_css']),
       );
+
+  /// 空或 `null` → 空清單。
+  List<String> _decodeCssNames(Object? raw) {
+    if (raw is! String || raw.isEmpty) return const [];
+    return (jsonDecode(raw) as List).cast<String>();
+  }
 
   Map<String, Object?> _entryToRow(DictionaryEntry entry) => {
         'source_id': entry.sourceId,
