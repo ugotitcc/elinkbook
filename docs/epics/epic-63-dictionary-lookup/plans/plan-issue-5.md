@@ -124,7 +124,7 @@ app/test/
   - `DictionaryStore.reorderSources(List<String> orderedIds)`：同一個交易內把 `priority` 重寫成 `0..n-1`；不在清單內的來源不動。
   - `listSources()`：略過 `format` 無法辨識的列（不丟例外）。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `dictionary_store_provider_test.dart`：
 - `test('第一次呼叫才開啟，之後回傳同一個 store')`（計數 `open` 次數為 1）。
@@ -137,20 +137,20 @@ app/test/
 
 `dictionary_service_test.dart` 新增 `test('fromProvider：兩個 service 共用同一個 provider 只開啟一次')`。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（在 `app/`）: `flutter test test/dictionary/dictionary_store_provider_test.dart test/dictionary/dictionary_store_test.dart test/dictionary/dictionary_service_test.dart`
 Expected: FAIL（找不到類別或方法）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 把 `DictionaryService._store()` 的記憶與失敗重試邏輯搬進 `DictionaryStoreProvider`；`DictionaryService` 只持有 provider。`_rowToSource` 讀 `referenced_css`（空或 `null` → 空清單）。`listSources` 先轉換、轉不出來的列略過（用 `DictionaryFormat.values.asNameMap()` 查找，查無就略過）。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS（含 Issue 4 的 3 個 `lazy` 測試仍通過）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary app/test/dictionary
@@ -182,7 +182,7 @@ git commit -m "feat(epic-63): Issue 5 共用延遲開啟 provider 與 store 補�
   - `Future<bool> canImport(String fileName)`：任一匯入器 `canHandle` 即為真。
   - `Future<ImportHints> readHints(PickedFile file)`；`Stream<ImportProgress> import(PickedFile file, ImportRequest request, {required CancelToken cancel})`：用第一個 `canHandle` 的匯入器。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `mdx_companion_files_test.dart`：
 - `planCompanions`：`a.mdx`＋`a.MDD`＋`x.css` → 一組，`mdd` 配上、`css` 附上；`a.mdx`＋`b.mdd` → `mdd` 為 `null`、`b.mdd` 進 `unmatchedCompanions`；兩個 `.mdx` 與一個共用 `.css` → 兩組都帶該 `css`；`.json` 進 `others`；沒有 `.mdx` 時所有 `.css` 進 `unmatchedCompanions`。
@@ -197,20 +197,20 @@ git commit -m "feat(epic-63): Issue 5 共用延遲開啟 provider 與 store 補�
 - `addCompanions` 忽略 `.txt`；同名 `.css` 覆蓋。
 - `canImport('a.json')` 為真、`canImport('a.mdx')` 為假（本 Issue 沒有 MDX 匯入器）。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/mdx_companion_files_test.dart test/dictionary/dictionary_manager_test.dart`
 Expected: FAIL（找不到檔案）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 三個檔案依 Interfaces。`DictionaryManager.import` 用 `async*` 轉發匯入器的 stream，使呼叫端取消訂閱時能一路傳到匯入器（Issue 3 已保證取消訂閱會回復交易）。`list()` 的 `missingCss` 只對 `format == mdx` 計算：`missingCss(referenced: source.referencedCss, present: await files.listFiles(source.id))`。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary app/test/dictionary
@@ -232,25 +232,25 @@ git commit -m "feat(epic-63): Issue 5 字典管理門面與 MDX 附屬檔案配�
 - `main.dart`：建構一個 `DictionaryStoreProvider`（內容同 Issue 4 的開啟函式），`DictionaryService.fromProvider(provider)` 與 `DictionaryManager(store: provider, files: DictionaryFileStore(<getApplicationSupportDirectory()>/dictionaries), importerFactories: [(s) => JsonCsvImporter(store: s), (s) => CedictImporter(store: s)])` 共用它。
 - 測試替身：`class FakeDictionaryManager implements DictionaryManager`，用記憶體 `List<DictionaryListItem>` 回應 `list()`，記錄 `setEnabled`、`reorder`、`delete`、`addCompanions`、`import` 的呼叫；`import` 回傳可由建構子設定的進度 stream。`fakeReaderFeatureDependencies({DictionaryManager? dictionaryManager})` 預設 `FakeDictionaryManager()`。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `fake_reader_feature_dependencies_test.dart` 新增：`test('預設帶有 DictionaryManager，且每次呼叫是新實例')`、`test('可覆寫 dictionaryManager')`。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/support/fake_reader_feature_dependencies_test.dart`
 Expected: FAIL（編譯錯誤）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 欄位、`main.dart` 接線、替身。`getApplicationSupportDirectory()` 在 `main.dart` 已有 import（字型下載用）。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2；再跑 `flutter analyze` 確認所有 `ReaderFeatureDependencies(` 呼叫處都編譯過。
 Expected: PASS、No issues found。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/reader_feature_dependencies.dart app/lib/main.dart app/test/support
@@ -273,7 +273,7 @@ git commit -m "feat(epic-63): Issue 5 DictionaryManager 加入 ReaderFeatureDepe
 - 每列顯示：名稱、方向（例：「英→繁中」）、筆數、啟用開關、拖曳把手；MDX 且 `missingCss` 非空時多一行提醒（「詞條引用了 ghychyz.css，但沒有匯入」，多個檔名以頓號連接）；授權說明有填時顯示。
 - l10n：標題「字典」、方向三個標籤（「英→繁中」「中→英」「中→中」）、筆數（ICU plural）、空清單文字（「尚未匯入字典」附一句下一步）、刪除確認（標題、內容含字典名稱與「詞條與附屬檔案會一併刪除，無法復原」、按鈕）、缺檔提醒、「新增附屬檔案」、刪除失敗三段式訊息（`dictionarySettingsDeleteFailed`）。四份 ARB 都要加，zh_TW 附 `@key` 說明。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `dictionary_settings_screen_test.dart`（用 `FakeDictionaryManager`；比照其他畫面 widget test 的 pump 輔助）：
 - `空清單顯示尚未匯入字典`。
@@ -288,20 +288,20 @@ git commit -m "feat(epic-63): Issue 5 DictionaryManager 加入 ReaderFeatureDepe
 - `list() 丟例外時顯示失敗訊息，不是空白畫面`。
 - `E-Ink 模式找不到 AnimatedXxx（AnimatedSwitcher、AnimatedContainer）`。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/dictionary_settings_screen_test.dart`
 Expected: FAIL（找不到檔案）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 先加 ARB 並 `flutter gen-l10n`，再寫畫面。`ReorderableListView` 的 `buildDefaultDragHandles: false`，每列自帶 `ReorderableDragStartListener` 與 `Key('dictionary_item_<id>')`。啟用、刪除、補附屬檔案後呼叫 `_reload()` 重新取得清單；排序例外，見「已決定事項」的樂觀更新。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/dictionary_settings_screen.dart app/lib/l10n app/test/screens/dictionary_settings_screen_test.dart
@@ -332,7 +332,7 @@ git commit -m "feat(epic-63): Issue 5 字典設定畫面清單與管理動作"
   7. 匯入進行中以畫面的單一 `PopScope(canPop: !_importing)` 攔返回：先跳「離開會取消匯入」確認，確認才取消並離開（Review Focus 1）。進度不是路由，所以返回鍵一定先到這個 `PopScope`。
 - l10n：匯入按鈕、對話框欄位標籤、方向三個標籤（沿用 Task 4）、大檔提示、進度文字、取消、「這本字典已匯入」與略過／取代、摘要、四個錯誤碼的三段式訊息、略過原因（`missingHeadword`、`missingDefinition`、`definitionTooLong`、`invalidField`、`malformedLine`）、「不支援的檔案」、「這個版本還不能匯入 MDX」、離開確認。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `dictionary_import_dialog_test.dart`：
 - `fromLangs`：`('en','zh-Hant')`→`enToZh`；`('zh','en')`→`zhToEn`；`('zh','zh-Hant')`→`zhToZh`；寬容比對：`('EN','zh-TW')`→`enToZh`、`('zh','zh_CN')`→`zhToZh`、`('en','zh')`→`enToZh`；`('fr','en')`、`('en','en')`與 `null`→`null`。
@@ -355,20 +355,20 @@ git commit -m "feat(epic-63): Issue 5 字典設定畫面清單與管理動作"
 - `匯入進行中按返回：出現離開確認；確認後取消匯入並離開；不確認則留在畫面且匯入繼續`（Review Focus 1、審查 I-2）。點進度遮罩的空白處不會關閉它。
 - `提示的 sourceLang／targetLang 對得上就預選方向（CEDICT 預設中→英）`。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/widgets/dictionary_import_dialog_test.dart test/screens/dictionary_settings_screen_test.dart`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 先加 ARB 並 `flutter gen-l10n`。流程寫成畫面 State 內的一個 `_runImportFlow()`，逐檔 `await`；每一步後檢查 `mounted`，離開畫面就停止後續檔案。`ImportSkip.reason` 與錯誤碼的轉換各用一個 `switch`，未知碼落到通用三段式訊息，不顯示原始碼。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens app/lib/l10n app/test/screens
@@ -387,7 +387,7 @@ git commit -m "feat(epic-63): Issue 5 字典匯入流程"
 - `settings_scaffold.dart`：「閱讀」分區在「閱讀預設值」之後加 `_SettingsCard(child: ListTile(...))`（與同分區其他入口一致，審查 M-4），`Key('settings_dictionary_button')`，標題為 `settingsDictionaryLabel`（zh_TW「字典」），`chevron_right`，點了 `push(DictionarySettingsScreen(manager: widget.readerFeatures.dictionaryManager, isEinkMode: widget.appearance.isEinkMode))`。
 - `reader_screen.dart`：`_handleLookupPressed` 傳給 `DictionaryLookupSheet.show` 的 `onOpenSettings` 由 `null` 改為：先 `Navigator.of(context).pop()` 關面板，再 `push(DictionarySettingsScreen(...))`。不呼叫 `_handleSelectionCleared`、`_handleCloseAnnotationToolbar`、`clearSelection`（沿用 Issue 4 約束）。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `settings_scaffold_test.dart` 新增：`testWidgets('閱讀分區有字典入口，點了開啟字典設定畫面')`。
 
@@ -395,21 +395,21 @@ git commit -m "feat(epic-63): Issue 5 字典匯入流程"
 - `尚未匯入字典時面板顯示前往字典設定；點了面板關閉並開啟字典設定畫面`。
 - `從面板進入設定再返回後，AnnotationToolbar 仍只有一個實例，選取仍在`（Element 與 Issue 4 的案例同樣用 `same(...)` 斷言）。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/settings_scaffold_test.dart` 與 `flutter test test/screens/reader_screen_test.dart --plain-name "Epic 63 Issue 5"`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 入口與 callback 依 Interfaces。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2，再跑 Issue 4 的 `--plain-name "Epic 63 Issue 4"` 確認沒有回歸。
 Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens app/lib/l10n app/test/screens
@@ -422,7 +422,7 @@ git commit -m "feat(epic-63): Issue 5 設定入口與查詢面板前往字典設
 
 **Files:** 無新增。
 
-- [ ] **Step 1: 靜態檢查**
+- [x] **Step 1: 靜態檢查**
 
 在 `app/` 執行：
 ```bash
@@ -432,12 +432,12 @@ node tool/check_integration_keys.js
 ```
 Expected: 三者皆乾淨。
 
-- [ ] **Step 2: 完整測試（整張計畫唯一一次）**
+- [x] **Step 2: 完整測試（整張計畫唯一一次）**
 
 Run: `flutter test`
 Expected: All tests passed。
 
-- [ ] **Step 3: 回歸確認**
+- [x] **Step 3: 回歸確認**
 
 - `git diff main -- app/android app/pubspec.yaml app/pubspec.lock app/lib/library app/lib/sync` 無輸出。
 - 主資料庫版本仍為 28；`dictionary.db` 版本仍為 1（`DictionaryDatabase.version`）。
@@ -468,6 +468,12 @@ git commit -m "docs(epic-63): Issue 5 實作完成，更新狀態"
 ## 交給後續 Issue
 
 - **Issue 6a：** `MdxImporter` 加入 `DictionaryManager` 的 `importerFactories`；匯入時用 `extractReferencedCssNames` 抽樣前 200 筆詞條並呼叫 `setReferencedCss`；把配對好的 `.mdx`／`.mdd`／`.css` 以 `DictionaryFileStore.copyInto` 複製進私有目錄，`storage_path` 指向私有複本；把本 Issue「這個版本還不能匯入 MDX」的分支換成實際匯入。
+- **Issue 6a 必須處理（Issue 5 最終審查留下的）：**
+  - `DictionaryStore._decodeCssNames` 遇到壞 JSON 會丟例外，會讓 `listSources`／`getSource` 整個失敗；6a 開始寫 `referenced_css` 時加 `try/catch`，失敗回傳空清單。
+  - `DictionaryFileStore.copyInto`／`dirFor` 沒有消毒檔名與 `sourceId`；6a 大量複製檔案前，對檔名取 `p.basename` 並拒絕 `..`。
+  - 取代匯入是先刪再插（`import_pipeline.dart`），`referenced_css` 會遺失；6a 取代 MDX 時要重新抽樣寫入。
+  - `file_picker` 的快取複本不會自動清除；MDX 動輒上百 MB，複製進私有目錄後呼叫 `FilePicker.clearTemporaryFiles()`。
+  - `.mdx` 的「這個版本還不能匯入 MDX」分支換成實際匯入；匯入失敗訊息補上 MDX 的錯誤碼（LZO、加密）。
 - **Issue 7：** 在 `dictionary_settings_screen.dart` 補線上查詢區塊（開關、萌典說明、同意狀態）；「線上查詢已關閉」的「前往字典設定」入口已由本 Issue 接上。
 
 ---
@@ -492,3 +498,12 @@ git commit -m "docs(epic-63): Issue 5 實作完成，更新狀態"
 - **M-2：** 新增「l10n 鍵名」表。
 - **M-3：** 加 `dictionary_import_cancel`，另加進度遮罩的兩個 Key。
 - **M-4：** 設定入口包 `_SettingsCard`。
+
+---
+
+## 最終審查結果（整分支，`reviews/` 不進版控）
+
+- 結論：修正後可合併。沒有 Critical。
+- 合併前修的 6 項（已修並重新審查通過）：Manager 真實匯入路徑測試、缺 CSS 分隔符移進 l10n、英文 ICU plural、失敗訊息帶檔名、不支援檔案訊息拿掉 MDX、`mounted` 檢查順序。
+- 其餘 Minor 維持延後，清單在審查報告；重要的已列在上面「交給後續 Issue」。
+- 完整 `flutter test`：4049 通過、1 略過。
