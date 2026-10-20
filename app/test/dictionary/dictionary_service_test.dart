@@ -170,6 +170,35 @@ void main() {
     expect(result.outcomes, isEmpty);
   });
 
+  test('沒有任何啟用字典：outcomes 為空且 hasEnabledDictionary 為 false', () async {
+    final response = await service.lookup('apple');
+
+    expect(response, isA<LookupCompleted>());
+    final completedResponse = response as LookupCompleted;
+    expect(completedResponse.result.outcomes, isEmpty);
+    expect(completedResponse.hasEnabledDictionary, isFalse);
+  });
+
+  test('有英文字典、選中文：outcomes 為空但 hasEnabledDictionary 為 true', () async {
+    await addSource('en1', 'en', ['apple']);
+
+    final response = await service.lookup('蘋果');
+
+    final completedResponse = response as LookupCompleted;
+    expect(completedResponse.result.outcomes, isEmpty);
+    expect(completedResponse.hasEnabledDictionary, isTrue);
+  });
+
+  test('有符合的字典：hasEnabledDictionary 為 true', () async {
+    await addSource('zh1', 'zh', ['蘋果']);
+
+    final response = await service.lookup('蘋果');
+
+    final completedResponse = response as LookupCompleted;
+    expect(completedResponse.result.outcomes.single.status, OutcomeStatus.found);
+    expect(completedResponse.hasEnabledDictionary, isTrue);
+  });
+
   test('一本字典丟例外：該分段 failed，其他分段照常', () async {
     await addSource('bad', 'en', ['run'], priority: 0);
     await addSource('good', 'en', ['run'], priority: 1);

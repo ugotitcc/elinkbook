@@ -19,12 +19,19 @@ final class LookupRejected extends DictionaryLookupResponse {
   final SelectionProblem problem;
 }
 
-/// 查詢完成。`result.outcomes` 為空代表沒有符合方向的字典（面板顯示
-/// 「尚未匯入字典」）。
+/// 查詢完成。[hasEnabledDictionary] 區分兩種「outcomes 為空」：沒有任何
+/// 啟用中的字典（面板顯示「尚未匯入字典」）／有字典但都不適用這段文字
+/// （面板顯示「沒有適用於這段文字的字典」）。
 final class LookupCompleted extends DictionaryLookupResponse {
-  const LookupCompleted(this.result);
+  const LookupCompleted({
+    required this.result,
+    required this.hasEnabledDictionary,
+  });
 
   final LookupResult result;
+
+  /// `listSources(enabledOnly: true)` 是否非空。
+  final bool hasEnabledDictionary;
 }
 
 /// 查詢入口：選字處理 → 依文字類型挑字典 → 逐本查詢並組裝結果。
@@ -50,7 +57,10 @@ class DictionaryService {
       if (!allowed.contains(_primaryLang(source.sourceLang))) continue;
       outcomes.add(await _lookupOne(source, request));
     }
-    return LookupCompleted(LookupResult(request: request, outcomes: outcomes));
+    return LookupCompleted(
+      result: LookupResult(request: request, outcomes: outcomes),
+      hasEnabledDictionary: sources.isNotEmpty,
+    );
   }
 
   /// 任何例外只影響該分段，不影響其他字典。
