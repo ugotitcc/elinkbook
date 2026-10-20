@@ -514,6 +514,13 @@ git commit -m "docs(epic-63): Issue 6a 實作完成，更新狀態"
 - **Issue 6b（維持 `issues.md` 原案，驗收 18、19、25）：** `.mdd` 圖片攔截（`shouldInterceptRequest` 讀資源、`resourceKeyCandidates`、`contentTypeFor`；`MdxReader.resource`）、外部 `.css` 內嵌與 `@import` 移除、深色與 E-Ink 配色覆寫、`DictionaryService.mdxResource`／`mdxCss`、`MdxEntryViewConfig` 補 `loadResource`／`loadCss`／`isEinkMode`；真機量測 100 MB MDX 記憶體。本 Issue 在 `MdxEntryView.decideRequest` 留好呼叫點（恆回 404）。
 - **Issue 7：** 線上查詞分段；面板的「線上查詢已關閉」入口（Issue 5 已接上設定連結）。
 - **Issue 8：** 授權頁與隱私頁的 MDX 說明、l10n 收尾、整合測試補齊；字典設定的說明文字註明「JavaScript 關閉時，依賴 `onclick` 的互動（例如牛津 9 的圖片放大）不會運作」。
+- **審查後續項（不在 6a 實作）：**
+  - 啟動時對帳 `dictionaries/` 目錄：正式目錄不存在但 `<id>.old` 存在 → 還原；刪除所有 `*.staging`；正式目錄存在時刪除 `*.old`；刪除沒有對應來源列的目錄（取代匯入中途被系統終止會留下這些殘留）。
+  - `prepareEntryHtml` 正規式強化：屬性值內含 `>`、以實體編碼的屬性值（例如 `&#x72;efresh`）、`<area ping>`。
+  - `.mdd` 附屬檔也跑 `validateBlocks`（目前 LZO 的 `.mdd` 要到 6b 讀圖時才出錯）。
+  - `@@@LINK=` 重導向詞條：spec 未提，`dict_reader` 不處理，畫面會顯示原文；真實字典常用，需 spec 補一條。
+  - E-Ink 重新量測備註：鍵比對修補後（2026-10-21）p50 約 17.7–19.5 ms、p95 約 32–34 ms；教育部穩態曾出現一次 48.6 MB 離群值，Issue 6b 加入圖片與 CSS 快取後要重量，並用真實英文 `StripKey=Yes` 字典補延遲。
+  - `blockNetworkLoads`：與 Issue 6b 的圖片攔截一起評估，須在真機確認不影響 `data:` 初始文件、錨點與 `entry://` 攔截。
 
 ---
 

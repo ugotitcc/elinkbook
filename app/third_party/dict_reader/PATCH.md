@@ -74,12 +74,19 @@ p95 從約 3–4 ms 升到約 31 ms（仍在可接受範圍；查詢是使用者
 桌面預檢（Windows）：40 萬筆檔案開啟 +1.2 MB、500 次查詢加 200 次讀內文後
 穩態 +43.6 MB。
 
+**鍵比對修補後複測（2026-10-21，同一台 E-Ink 實機、release）：** 加上 `_normKey`（旗標在標頭設定時快取成欄位）、
+區塊內線性掃描與邊界鄰塊後，教育部 p50／p95 為 17.7–18.9／32.2–33.3 ms，40 萬筆合成檔為
+18.3–19.5／32.6–33.9 ms，簡明古漢語（`StripKey=Yes`、7,587 筆）6.4–6.7／8.8 ms；
+穩態增量 37.1–48.6 MB（教育部有一次 48.6 MB 離群值，其餘 37.1–38.6 MB）、
+40 萬筆 39.4–39.8 MB。相對上表（修正前）p50 約 +2–3 ms、p95 約 +2 ms，記憶體不變。
+細節見研究文件「鍵比對修補後複測」。
+
 **驗證：** `app/test/dictionary/mdx_reader_test.dart`（含多區塊 fixture `multi-block.mdx`
-與片語 fixture `strip-phrases.mdx`）、
-`mdx_dictionary_provider_test.dart`、`mdx_importer_test.dart` 涵蓋
-（含真實檔案 `tmp/dictionary/教育部重編國語辭典.mdx`，檔案存在時才跑）。
-記憶體補測數據見 `docs/research/dictionary/DICTIONARY_FORMATS_AND_LICENSES.md`
-「Issue 6a 補測」。
+與片語 fixture `strip-phrases.mdx`）涵蓋查詢行為；其中「真實字典」一項會在
+`tmp/dictionary/教育部重編國語辭典.mdx` 存在時才跑（不進版控）。
+`mdx_dictionary_provider_test.dart`、`mdx_importer_test.dart` 只使用自製 fixture，
+不使用真實檔案。記憶體補測數據見 `docs/research/dictionary/DICTIONARY_FORMATS_AND_LICENSES.md`
+「Issue 6a 補測」與「鍵比對修補後複測」。
 
 ## 升級步驟
 
