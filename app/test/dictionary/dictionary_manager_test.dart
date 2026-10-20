@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:elinkbook/dictionary/content_id.dart';
 import 'package:elinkbook/dictionary/dictionary_file_store.dart';
 import 'package:elinkbook/dictionary/dictionary_manager.dart';
 import 'package:elinkbook/dictionary/dictionary_service.dart';
@@ -307,4 +308,129 @@ void main() {
       expect(await manager.list(), isEmpty);
     });
   });
+
+  group('Issue 6a 接線', () {
+    test('delete 先呼叫 onEvict，再刪私有目錄', () async {
+      final log = <String>[];
+      final loggingFiles = _LoggingFileStore(Directory('${tmp.path}/dicts2'), log);
+      final m = DictionaryManager(
+        store: provider,
+        files: loggingFiles,
+        importerFactories: const [],
+        onEvict: (id) async => log.add('evict:$id'),
+      );
+      await store.insertSource(_source('a'));
+
+      await m.delete('a');
+
+      expect(log, ['evict:a', 'delete:a']);
+    });
+
+    test('import 會把 companions 原樣傳給匯入器', () async {
+      final recording = _RecordingImporter();
+      final m = DictionaryManager(
+        store: provider,
+        files: files,
+        importerFactories: [(s) => recording],
+      );
+      final file = await picked('a.mdx', 'MDX');
+      final companions = [(path: '${tmp.path}/c.css', name: 'c.css')];
+
+      final last = await m
+          .import(
+            file,
+            ImportRequest(
+              filePath: file.path,
+              fileName: file.name,
+              sourceLang: 'zh',
+              targetLang: 'zh-Hant',
+              companions: companions,
+            ),
+            cancel: CancelToken(),
+          )
+          .last;
+
+      expect(last.stage, ImportStage.done);
+      expect(recording.lastRequest!.companions, companions);
+    });
+
+    test('replaceExisting 匯入前呼叫 onEvict(existingId)', () async {
+      final file = await picked('r.mdx', 'MDX');
+      final contentId = await computeContentId(
+        filePath: file.path,
+        fileName: file.name,
+      );
+      await store.insertSource(
+        _source('old', format: DictionaryFormat.mdx),
+        contentId: contentId,
+      );
+      final evicted = <String>[];
+      final m = DictionaryManager(
+        store: provider,
+        files: files,
+        importerFactories: [(s) => _RecordingImporter()],
+        onEvict: (id) async => evicted.add(id),
+      );
+
+      await m
+          .import(
+            file,
+            ImportRequest(
+              filePath: file.path,
+              fileName: file.name,
+              sourceLang: 'zh',
+              targetLang: 'zh-Hant',
+              replaceExisting: true,
+            ),
+            cancel: CancelToken(),
+          )
+          .toList();
+
+      expect(evicted, ['old']);
+    });
+  });
+}
+
+/// 只記錄收到的 request，並直接回報完成；用來驗證 manager 的接線。
+class _RecordingImporter implements DictionaryImporter {
+  ImportRequest? lastRequest;
+
+  @override
+  bool canHandle(String fileName) => fileName.toLowerCase().endsWith('.mdx');
+
+  @override
+  Future<ImportHints> readHints(String filePath, String fileName) async =>
+      ImportHints(name: fileName);
+
+  @override
+  Stream<ImportProgress> import(
+    ImportRequest request, {
+    required CancelToken cancel,
+  }) async* {
+    lastRequest = request;
+    yield const ImportProgress(
+      processed: 1,
+      total: 1,
+      stage: ImportStage.done,
+      summary: ImportSummary(
+        sourceId: 'new',
+        importedCount: 1,
+        skippedCount: 0,
+        skipSamples: [],
+      ),
+    );
+  }
+}
+
+/// 記錄 `deleteAll` 被呼叫的順序。
+class _LoggingFileStore extends DictionaryFileStore {
+  _LoggingFileStore(super.root, this.log);
+
+  final List<String> log;
+
+  @override
+  Future<void> deleteAll(String sourceId) {
+    log.add('delete:$sourceId');
+    return super.deleteAll(sourceId);
+  }
 }

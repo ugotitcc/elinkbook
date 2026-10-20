@@ -22,6 +22,7 @@ import 'dictionary/dictionary_manager.dart';
 import 'dictionary/dictionary_service.dart';
 import 'dictionary/importers/cedict_importer.dart';
 import 'dictionary/importers/json_csv_importer.dart';
+import 'dictionary/importers/mdx_importer.dart';
 import 'dictionary/storage/dictionary_database.dart';
 import 'dictionary/storage/dictionary_store.dart';
 import 'dictionary/storage/dictionary_store_provider.dart';
@@ -143,16 +144,18 @@ Future<void> main() async {
   final dictionaryService = DictionaryService.fromProvider(
     dictionaryStoreProvider,
   );
+  final dictionaryFileStore = DictionaryFileStore(
+    Directory(
+      p.join((await getApplicationSupportDirectory()).path, 'dictionaries'),
+    ),
+  );
   final dictionaryManager = DictionaryManager(
     store: dictionaryStoreProvider,
-    files: DictionaryFileStore(
-      Directory(
-        p.join((await getApplicationSupportDirectory()).path, 'dictionaries'),
-      ),
-    ),
+    files: dictionaryFileStore,
     importerFactories: [
       (s) => JsonCsvImporter(store: s),
       (s) => CedictImporter(store: s),
+      (s) => MdxImporter(store: s, files: dictionaryFileStore),
     ],
   );
   // epic-49：內建字型改為可下載字型，存在 App 支援目錄（非使用者可見、清除快取不會被刪）。

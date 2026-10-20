@@ -1,4 +1,5 @@
 // app/lib/dictionary/dictionary_manager.dart
+import 'content_id.dart';
 import 'dictionary_file_store.dart';
 import 'importers/dictionary_importer.dart';
 import 'mdx_companion_files.dart';
@@ -23,13 +24,21 @@ class DictionaryManager {
     required DictionaryFileStore files,
     required List<DictionaryImporter Function(DictionaryStore)>
         importerFactories,
+    Future<void> Function(String sourceId)? onEvict,
   })  : _store = store,
         _files = files,
-        _importerFactories = importerFactories;
+        _importerFactories = importerFactories,
+        _onEvict = onEvict ?? _noopEvict;
 
   final DictionaryStoreProvider _store;
   final DictionaryFileStore _files;
   final List<DictionaryImporter Function(DictionaryStore)> _importerFactories;
+
+  /// 來源列被刪除或取代前呼叫；Task 6 用來關掉 reader 池內的控制代碼。
+  /// 預設什麼都不做。
+  final Future<void> Function(String sourceId) _onEvict;
+
+  static Future<void> _noopEvict(String sourceId) async {}
 
   Future<List<DictionaryListItem>> list() async {
     final store = await _store();
@@ -61,6 +70,9 @@ class DictionaryManager {
   /// 來源列與詞條保留，使用者可再試一次；反過來會留下查不到的孤兒檔案。
   Future<void> delete(String id) async {
     final store = await _store();
+    // 先讓 reader 池放掉控制代碼，否則 Windows／部分 Android 檔案系統上
+    // 仍開著的檔案刪不掉。
+    await _onEvict(id);
     await _files.deleteAll(id);
     await store.deleteSource(id);
   }
@@ -100,6 +112,15 @@ class DictionaryManager {
     final importer = _importerFor(store, file.name);
     if (importer == null) {
       throw const DictionaryImportException('invalidFormat');
+    }
+    // 取代前先放掉舊版本的 reader；匯入器會覆蓋同一個 id 的私有檔案。
+    if (request.replaceExisting) {
+      final contentId = await computeContentId(
+        filePath: request.filePath,
+        fileName: request.fileName,
+      );
+      final existingId = await store.findSourceIdByContentId(contentId);
+      if (existingId != null) await _onEvict(existingId);
     }
     yield* importer.import(request, cancel: cancel);
   }

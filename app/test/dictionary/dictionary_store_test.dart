@@ -405,5 +405,23 @@ void main() {
 
       expect(sources.map((s) => s.id), ['a']);
     });
+
+    test('referenced_css 是壞 JSON 或含非字串元素時回傳空清單', () async {
+      await store.insertSource(_source('a'));
+
+      for (final raw in ['not json', '[1, "x.css"]', '{"x": 1}', '["ok.css", 2]']) {
+        await db.rawUpdate(
+          'UPDATE dictionary_sources SET referenced_css = ? WHERE id = ?',
+          [raw, 'a'],
+        );
+
+        expect(
+          (await store.getSource('a'))!.referencedCss,
+          isEmpty,
+          reason: 'raw=$raw',
+        );
+        expect((await store.listSources()).single.referencedCss, isEmpty);
+      }
+    });
   });
 }

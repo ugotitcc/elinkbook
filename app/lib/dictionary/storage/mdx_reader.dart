@@ -245,6 +245,23 @@ class MdxReader {
     }
   }
 
+  /// 抽樣前 [limit] 筆詞條的內容，供匯入時找 `<link href="...css">`。
+  ///
+  /// 只讀前幾筆，不掃整本字典；解壓失敗一樣轉成 [MdxException]。
+  Future<List<String>> sampleEntryBodies({int limit = 200}) async {
+    if (limit <= 0) return const [];
+    try {
+      final bodies = <String>[];
+      await for (final record in _reader.readWithOffset()) {
+        bodies.add(await _reader.readOneMdx(record));
+        if (bodies.length >= limit) break;
+      }
+      return bodies;
+    } catch (error) {
+      throw _mapError(error, _path);
+    }
+  }
+
   /// 依標頭套用查詢字串的正規化；結果為空表示不需要查。
   String _normalizeQuery(String key) {
     var query = key.trim();
