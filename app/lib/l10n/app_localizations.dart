@@ -952,6 +952,12 @@ abstract class AppLocalizations {
   /// **'複製'**
   String get readerAnnotationCopyTooltip;
 
+  /// 選字浮動工具列「查字典」按鈕的無障礙提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'查字典'**
+  String get readerAnnotationLookupTooltip;
+
   /// 選字浮動工具列備註按鈕提示文字：這次選取已有備註
   ///
   /// In zh_TW, this message translates to:

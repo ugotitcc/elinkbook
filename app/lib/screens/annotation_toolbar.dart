@@ -23,6 +23,9 @@ import '../theme/elink_tokens.dart';
 /// （呼叫端依 [hasExistingNote] 決定要開新增還是編輯對話框，本 Widget
 /// 只負責顯示對應文字，不含 Dialog 邏輯）；點擊關閉觸發 [onClosePressed]；
 /// 點擊複製觸發 [onCopyPressed]（呼叫端負責把選取文字寫入剪貼簿）；
+/// [onLookupPressed] 非 `null` 時在複製與備註之間顯示「查字典」按鈕
+/// （epic-63 Issue 4），由呼叫端負責開字典查詢面板；`null` 時不顯示
+/// （PDF 端與 FXL 不提供查詢）；
 /// [onDeletePressed] 為 `null` 時不顯示刪除按鈕（代表這次選取沒有命中
 /// 既有標記），非 `null` 時顯示，`tooltip` 使用 [deleteButtonLabel]。
 class AnnotationToolbar extends StatelessWidget {
@@ -30,6 +33,7 @@ class AnnotationToolbar extends StatelessWidget {
   final VoidCallback onNotePressed;
   final VoidCallback onClosePressed;
   final VoidCallback onCopyPressed;
+  final VoidCallback? onLookupPressed;
   final VoidCallback? onDeletePressed;
   final String? deleteButtonLabel;
   final bool hasExistingNote;
@@ -47,6 +51,7 @@ class AnnotationToolbar extends StatelessWidget {
     required this.onClosePressed,
     required this.onCopyPressed,
     required this.isEinkMode,
+    this.onLookupPressed,
     this.onDeletePressed,
     this.deleteButtonLabel,
     this.hasExistingNote = false,
@@ -115,6 +120,13 @@ class AnnotationToolbar extends StatelessWidget {
                   tooltip: l10n.readerAnnotationCopyTooltip,
                   onPressed: onCopyPressed,
                 ),
+                if (onLookupPressed != null)
+                  IconButton(
+                    key: const Key('annotation_toolbar_lookup'),
+                    icon: const Icon(Icons.menu_book_outlined),
+                    tooltip: l10n.readerAnnotationLookupTooltip,
+                    onPressed: onLookupPressed,
+                  ),
                 IconButton(
                   key: const Key('annotation_toolbar_note'),
                   icon: const Icon(Icons.edit_note),

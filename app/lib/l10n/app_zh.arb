@@ -142,6 +142,7 @@
   "readerNoteDialogDefaultTitle": "備註",
   "readerAnnotationUnderlineTooltip": "底線",
   "readerAnnotationCopyTooltip": "複製",
+  "readerAnnotationLookupTooltip": "查字典",
   "readerAnnotationEditNoteTooltip": "編輯備註",
   "readerAnnotationAddNoteTooltip": "新增備註",
   "readerAnnotationDeleteHighlightAndNote": "刪除畫線與備註",

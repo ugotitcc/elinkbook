@@ -142,6 +142,7 @@
   "readerNoteDialogDefaultTitle": "Note",
   "readerAnnotationUnderlineTooltip": "Underline",
   "readerAnnotationCopyTooltip": "Copy",
+  "readerAnnotationLookupTooltip": "Look up",
   "readerAnnotationEditNoteTooltip": "Edit note",
   "readerAnnotationAddNoteTooltip": "Add note",
   "readerAnnotationDeleteHighlightAndNote": "Delete highlight & note",

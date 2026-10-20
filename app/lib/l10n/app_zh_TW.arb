@@ -692,6 +692,10 @@
   "@readerAnnotationCopyTooltip": {
     "description": "選字浮動工具列「複製」按鈕的無障礙提示文字"
   },
+  "readerAnnotationLookupTooltip": "查字典",
+  "@readerAnnotationLookupTooltip": {
+    "description": "選字浮動工具列「查字典」按鈕的無障礙提示文字"
+  },
   "readerAnnotationEditNoteTooltip": "編輯備註",
   "@readerAnnotationEditNoteTooltip": {
     "description": "選字浮動工具列備註按鈕提示文字：這次選取已有備註"

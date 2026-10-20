@@ -533,6 +533,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get readerAnnotationCopyTooltip => '複製';
 
   @override
+  String get readerAnnotationLookupTooltip => '查字典';
+
+  @override
   String get readerAnnotationEditNoteTooltip => '編輯備註';
 
   @override
@@ -2786,6 +2789,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get readerAnnotationCopyTooltip => '复制';
 
   @override
+  String get readerAnnotationLookupTooltip => '查字典';
+
+  @override
   String get readerAnnotationEditNoteTooltip => '编辑备注';
 
   @override
@@ -5037,6 +5043,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerAnnotationCopyTooltip => '複製';
+
+  @override
+  String get readerAnnotationLookupTooltip => '查字典';
 
   @override
   String get readerAnnotationEditNoteTooltip => '編輯備註';

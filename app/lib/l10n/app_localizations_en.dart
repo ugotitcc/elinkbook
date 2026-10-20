@@ -547,6 +547,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readerAnnotationCopyTooltip => 'Copy';
 
   @override
+  String get readerAnnotationLookupTooltip => 'Look up';
+
+  @override
   String get readerAnnotationEditNoteTooltip => 'Edit note';
 
   @override
