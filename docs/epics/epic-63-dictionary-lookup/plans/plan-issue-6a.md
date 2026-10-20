@@ -417,7 +417,7 @@ git commit -m "feat(epic-63): Issue 6a MDX 詞條 WebView 顯示與返回堆疊"
     ```
   - 摘要多一行：若匯入後 `list()` 該字典有 `missingCss`，列出「詞條引用了 … 但沒有匯入」並提示可用「新增附屬檔案」補上。
   - 三個新錯誤碼各一則三段式訊息（LZO 用 Global Constraints 的文字）；`dictionaryImportMdxNotYet` 不再使用（保留 ARB 鍵待下一次清理，或一併刪除並確認 `check_l10n_hardcoded_strings.js` 通過）。
-  - 匯入完成後對每個新匯入的 `.mdx` 呼叫 `FilePicker.clearTemporaryFiles()`（`try/catch` 包住，失敗只記錄；Issue 5 延後項）。
+  - 整批選取的檔案全部處理完之後（放在 `_runImportFlow` 的 `finally`，且本批至少成功匯入一本 MDX 時），只呼叫一次 `FilePicker.clearTemporaryFiles()`（`try/catch` 包住，失敗只記錄；Issue 5 延後項）。**不可在批次中途清除**：它清的是整個選檔器暫存目錄，同批尚未處理的 `.mdx`／`.mdd`／`.css` 會一起被刪（審查 C-1）。
 - l10n：`dictionaryImportErrorUnsupportedCompression`、`dictionaryImportErrorEncryptedRecords`、`dictionaryImportErrorCorruptFile`、`dictionaryImportMissingCssAfterImport(files)`。
 
 - [x] **Step 1: 寫失敗的測試**（用 `FakeDictionaryManager`，`canImportFn` 對 `.mdx` 回真）
@@ -579,3 +579,13 @@ git commit -m "docs(epic-63): Issue 6a 實作完成，更新狀態"
 
 1. **`MdxEntryView.decideRequest` 改為回傳 `MdxRequestDecision?`。** 原定「任何輸入都回 404、永不回 `null`」。但 `InAppWebView` 的初始文件是用 `data:text/html;base64,…` 載入的，若把 `data:` 也攔成 404，詞條會整片空白（面板只剩「網頁無法使用」）。改為 `data:` 回 `null` 交還 WebView，其餘（`http(s)`、`file`、`entry`、`bword`、`sound` 等）一律 404 空本文。Global Constraints 的「所有 `http(s)` 請求回明確回應」仍成立；測試改為先斷言 `data:` 回 `null`，再逐項驗證其餘 URL 都回 404。
 2. **`MdxEntryView` 新增 `onWebViewCreated`／`onRequestIntercepted` 兩個回呼。** 純粹是整合測試的觀察點：`javaScriptEnabled: false` 之下 `evaluateJavascript` 也不會執行，只能從原生端事件（`onWebViewCreated` 取得控制權、`onRequestIntercepted` 記錄被攔下的請求）觀察。預設 `null`，正式路徑行為不變；與 ADR 0037 允許在 widget 建構子注入測試用回呼的既有做法一致。
+
+---
+
+## 實作期間的偏離（Task 1、3、5、8 及審查修正）
+
+1. **`dict_reader` 改為 vendor 修補後的 path dependency（Task 1 關卡結果）。** 原定 `dict_reader: 1.6.1` 精確版本。Task 1 實測 40 萬筆 CJK 字典的穩態增量為 70.0–70.9 MB，超過 50 MB 門檻，使用者於 2026-10-20 選擇方案 1（vendor 修補）。因此 `pubspec.yaml` 改為 `dict_reader: path: third_party/dict_reader`，只改 `dict_reader_base.dart` 的鍵索引（鍵依區塊延遲載入、鍵比對集中到 `_normKey`），細節與修補後數字見 `app/third_party/dict_reader/PATCH.md`。「新增套件只有 `dict_reader`」的精神不變（`pubspec.lock` 仍只多 `dict_reader`〔path〕與其遞移套件）。
+2. **`validateBlocks` 自己解析檔案結構，不用 `readWithOffset()`（Task 3）。** 原定用 `readWithOffset()` 取得各記錄區塊位移。實作改為直接讀檔頭、鍵區標頭與記錄區塊資訊表（依 v1／v2 版面決定欄位寬度與 checksum），再逐塊只讀 4 位元組壓縮型態：不需要先走一次完整的 reader 串流，記憶體用量更低。審查 I-1 因此補上 v1 版面與「讀取前先和檔案長度比對」的檢查。
+3. **取代匯入改用暫存目錄（Task 5，審查 I-3）。** 原計畫直接把新檔搬進舊字典的目錄，失敗時連舊列一起刪。改為新檔先放 `<id>.staging`，全部成功後才 evict reader、換目錄並寫來源列；失敗或取消只刪暫存目錄，舊字典原封不動。`MdxImporter` 因此多一個選用的 `onEvict` 建構參數。
+4. **暫存檔清除時機（Task 8，審查 C-1）。** 見 Task 8 內文：整批結束後清一次，不是每本 MDX 匯入後清。
+5. **`StripKey` 的鍵比對（審查 I-4）。** `MdxReader` 原本只對查詢字串去空白標點；vendor 的鍵比對現在對查詢與檔內鍵套用同一個 `_normKey`，含空白或連字號的片語才查得到。
