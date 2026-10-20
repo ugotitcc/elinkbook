@@ -643,9 +643,12 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
             buildDefaultDragHandles: false,
             itemCount: items.length,
             onReorder: _onReorder,
-            // E-Ink 不用拖曳時的陰影與動畫，直接回傳原 Widget。
+            // E-Ink 不用拖曳時的陰影與動畫；但拖曳中的列會被提到 Overlay，
+            // 脫離 Scaffold 的 Material，Switch 等元件需要 Material 祖先，
+            // 所以仍要包一層透明 Material（無 elevation、無陰影）。
             proxyDecorator: widget.isEinkMode
-                ? (child, index, animation) => child
+                ? (child, index, animation) =>
+                      Material(type: MaterialType.transparency, child: child)
                 : null,
             itemBuilder: (context, index) =>
                 _buildItem(context, l10n, items[index], index),

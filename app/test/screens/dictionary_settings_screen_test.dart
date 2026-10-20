@@ -146,6 +146,39 @@ void main() {
     expect(_visibleOrder(tester, ['a', 'b', 'c']), ['c', 'a', 'b']);
   });
 
+  for (final eink in [true, false]) {
+    testWidgets('拖曳進行中（isEinkMode: $eink）拖曳代理列不丟例外，放開後仍會排序', (
+      tester,
+    ) async {
+      final manager = FakeDictionaryManager(
+        items: [
+          _item('a', priority: 0),
+          _item('b', priority: 1),
+          _item('c', priority: 2),
+        ],
+      );
+      await _pump(tester, manager, isEinkMode: eink);
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byKey(const Key('dictionary_drag_handle_c'))),
+      );
+      // 分段移動並 pump，讓拖曳代理列真的被建進 Overlay。
+      for (var i = 0; i < 8; i++) {
+        await gesture.moveBy(const Offset(0, -50));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      // 放開前檢查：代理列內的 Switch 需要 Material 祖先。
+      expect(tester.takeException(), isNull);
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(manager.reorderCalls, [
+        ['c', 'a', 'b'],
+      ]);
+    });
+  }
+
   testWidgets('拖曳排序：reorder 尚未完成時畫面已是新順序，不彈回原位', (tester) async {
     final manager = FakeDictionaryManager(
       items: [
