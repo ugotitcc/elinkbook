@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -25,6 +27,13 @@ const List<String> _importExtensions = [
 /// 選檔器簽章：傳入允許的副檔名（不含點），回傳選到的檔案；取消回傳 `null`。
 typedef DictionaryFilePicker =
     Future<List<PickedFile>?> Function(List<String> extensions);
+
+/// 清除選檔器暫存檔的函式；預設為 [FilePicker.clearTemporaryFiles]，
+/// 可注入測試替身。
+typedef DictionaryTempFileCleaner = Future<bool?> Function();
+
+/// [DictionaryTempFileCleaner] 的預設實作。
+Future<bool?> clearDictionaryTempFiles() => FilePicker.clearTemporaryFiles();
 
 /// [DictionaryFilePicker] 的預設實作：`FilePicker` 多選，缺本機路徑的檔案略過。
 Future<List<PickedFile>?> pickDictionaryFilesViaFilePicker(
@@ -57,6 +66,7 @@ class DictionarySettingsScreen extends StatefulWidget {
     required this.manager,
     required this.isEinkMode,
     this.pickFiles,
+    this.clearTempFiles,
   });
 
   final DictionaryManager manager;
@@ -66,6 +76,10 @@ class DictionarySettingsScreen extends StatefulWidget {
 
   /// 選檔器；`null` 時使用 [pickDictionaryFilesViaFilePicker]，供 widget test 注入。
   final DictionaryFilePicker? pickFiles;
+
+  /// 匯入 MDX 成功後清除選檔器暫存檔；`null` 時使用
+  /// [clearDictionaryTempFiles]（Issue 5 延後項）。
+  final DictionaryTempFileCleaner? clearTempFiles;
 
   @override
   State<DictionarySettingsScreen> createState() =>
@@ -227,45 +241,53 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
     try {
       final plan = planCompanions(files);
       var mdxNoticeShown = false;
-      // 一般檔案逐檔處理；MDX 組只取主檔，附屬檔案留給 MDX 匯入器。
-      final queue = [...plan.others, for (final g in plan.groups) g.mdx];
-      for (final file in queue) {
-        final isMdx = file.name.toLowerCase().endsWith('.mdx');
+      var stop = false;
+      // 一般檔案逐檔處理；MDX 組只取主檔，附屬檔案交給 MDX 匯入器。
+      for (final file in plan.others) {
         final supported = await widget.manager.canImport(file.name);
         if (!mounted) return;
         if (!supported) {
-          if (!isMdx) {
-            messages.add([l10n.dictionaryImportUnsupportedFile(file.name)]);
-          } else if (!mdxNoticeShown) {
-            mdxNoticeShown = true;
-            messages.add([l10n.dictionaryImportMdxNotYet]);
-          }
+          messages.add([l10n.dictionaryImportUnsupportedFile(file.name)]);
           continue;
         }
-        final ImportHints hints;
-        try {
-          hints = await widget.manager.readHints(file);
-        } catch (error) {
-          debugPrint('Failed to read dictionary hints: $error');
-          if (!mounted) return;
-          messages.add([file.name, _importErrorMessage(l10n, error)]);
-          continue;
-        }
-        if (!mounted) return;
-        final choices = await showDictionaryImportDialog(
-          context,
-          hints: hints,
-          initialDirection: DictionaryDirection.fromLangs(
-            hints.sourceLang,
-            hints.targetLang,
-          ),
-          isLargeFile: file.size > _largeFileBytes,
-          isEinkMode: widget.isEinkMode,
+        final keepGoing = await _importPicked(
+          file: file,
+          l10n: l10n,
+          messages: messages,
         );
-        if (choices == null) continue;
-        if (!mounted) return;
-        final keepGoing = await _importOne(file, choices, l10n, messages);
-        if (!keepGoing || !mounted) break;
+        if (!keepGoing || !mounted) {
+          stop = true;
+          break;
+        }
+      }
+      // MDX：`.mdd`／`.css` 依主檔名分組，與主檔一起送進匯入器。
+      if (!stop) {
+        for (final group in plan.groups) {
+          final supported = await widget.manager.canImport(group.mdx.name);
+          if (!mounted) return;
+          if (!supported) {
+            // 沒有 MDX 匯入器的組態（例如舊版接線）：維持 Issue 5 的提示，
+            // 同批的其他格式照常匯入。
+            if (!mdxNoticeShown) {
+              mdxNoticeShown = true;
+              messages.add([l10n.dictionaryImportMdxNotYet]);
+            }
+            continue;
+          }
+          final companions = [
+            if (group.mdd != null)
+              (path: group.mdd!.path, name: group.mdd!.name),
+            for (final companion in group.css)
+              (path: companion.path, name: companion.name),
+          ];
+          final keepGoing = await _importPicked(
+            file: group.mdx,
+            l10n: l10n,
+            messages: messages,
+            companions: companions,
+          );
+          if (!keepGoing || !mounted) break;
+        }
       }
       if (!mounted) return;
       if (plan.unmatchedCompanions.isNotEmpty) {
@@ -277,13 +299,46 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
     }
   }
 
+  /// 讀提示 → 匯入對話框 → 匯入一個檔案。回傳 `false` 表示取消或已離開畫面。
+  Future<bool> _importPicked({
+    required PickedFile file,
+    required AppLocalizations l10n,
+    required List<List<String>> messages,
+    List<({String path, String name})> companions = const [],
+  }) async {
+    final ImportHints hints;
+    try {
+      hints = await widget.manager.readHints(file);
+    } catch (error) {
+      debugPrint('Failed to read dictionary hints: $error');
+      if (!mounted) return false;
+      messages.add([file.name, _importErrorMessage(l10n, error)]);
+      return true;
+    }
+    if (!mounted) return false;
+    final choices = await showDictionaryImportDialog(
+      context,
+      hints: hints,
+      initialDirection: DictionaryDirection.fromLangs(
+        hints.sourceLang,
+        hints.targetLang,
+      ),
+      isLargeFile: file.size > _largeFileBytes,
+      isEinkMode: widget.isEinkMode,
+    );
+    if (choices == null) return true;
+    if (!mounted) return false;
+    return _importOne(file, choices, l10n, messages, companions: companions);
+  }
+
   /// 匯入一個檔案。回傳 `false` 表示使用者取消或已離開畫面，後面的檔案不再處理。
   Future<bool> _importOne(
     PickedFile file,
     ImportChoices choices,
     AppLocalizations l10n,
-    List<List<String>> messages,
-  ) async {
+    List<List<String>> messages, {
+    List<({String path, String name})> companions = const [],
+  }) async {
     var replace = false;
     while (true) {
       final token = CancelToken();
@@ -307,6 +362,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
             name: choices.name,
             licenseNote: choices.licenseNote,
             replaceExisting: replace,
+            companions: companions,
           ),
           cancel: token,
         );
@@ -350,10 +406,45 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
         return true;
       }
       if (summary != null) {
-        messages.add(_summaryLines(l10n, choices.name, summary));
+        final lines = _summaryLines(l10n, choices.name, summary);
         await _reload();
+        if (!mounted) return false;
+        if (_isMdxFile(file.name)) {
+          final missing = _missingCssForSource(summary.sourceId);
+          if (missing.isNotEmpty) {
+            lines.add(
+              l10n.dictionaryImportMissingCssAfterImport(
+                missing.join(l10n.dictionaryListSeparator),
+              ),
+            );
+          }
+          // Issue 5 延後項：MDX 匯入完成後清掉選檔器的暫存複本。
+          // 不等待完成：清理失敗不影響匯入結果，也不該卡住摘要對話框。
+          unawaited(_clearTempFiles());
+        }
+        messages.add(lines);
       }
       return true;
+    }
+  }
+
+  bool _isMdxFile(String fileName) => fileName.toLowerCase().endsWith('.mdx');
+
+  /// 從目前清單找出剛匯入來源缺少的樣式表；尚未重新載入或找不到時回空。
+  List<String> _missingCssForSource(String sourceId) {
+    for (final item in _items ?? const <DictionaryListItem>[]) {
+      if (item.source.id == sourceId) return item.missingCss;
+    }
+    return const [];
+  }
+
+  /// 清除選檔器暫存檔；失敗只記錄，不影響已經完成的匯入。
+  Future<void> _clearTempFiles() async {
+    final clear = widget.clearTempFiles ?? clearDictionaryTempFiles;
+    try {
+      await clear();
+    } catch (error) {
+      debugPrint('Failed to clear dictionary temp files: $error');
     }
   }
 
@@ -453,6 +544,10 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
         'invalidEncoding' => l10n.dictionaryImportErrorInvalidEncoding,
         'invalidFormat' => l10n.dictionaryImportErrorInvalidFormat,
         'noValidEntries' => l10n.dictionaryImportErrorNoValidEntries,
+        'unsupportedCompression' =>
+          l10n.dictionaryImportErrorUnsupportedCompression,
+        'encryptedRecords' => l10n.dictionaryImportErrorEncryptedRecords,
+        'corruptFile' => l10n.dictionaryImportErrorCorruptFile,
         _ => l10n.dictionaryImportErrorGeneric,
       };
     }

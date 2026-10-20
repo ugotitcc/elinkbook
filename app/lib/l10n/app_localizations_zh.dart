@@ -2477,6 +2477,23 @@ class AppLocalizationsZh extends AppLocalizations {
       '無法匯入這個檔案。匯入時發生未預期的錯誤。請稍後再試一次，若仍失敗請換一個檔案。';
 
   @override
+  String get dictionaryImportErrorUnsupportedCompression =>
+      '這本字典使用 LZO 壓縮，目前不支援。請改用 zlib 版本，或用 MDict 工具重新打包。';
+
+  @override
+  String get dictionaryImportErrorEncryptedRecords =>
+      '無法匯入這個檔案。字典的詞條內容有加密，目前不支援。請改用未加密的版本，或用 MDict 工具重新打包後再試一次。';
+
+  @override
+  String get dictionaryImportErrorCorruptFile =>
+      '無法匯入這個檔案。字典檔的內容不完整或已損毀。請重新下載或複製檔案後再試一次。';
+
+  @override
+  String dictionaryImportMissingCssAfterImport(String files) {
+    return '詞條引用了 $files，但沒有匯入。請到字典清單按「新增附屬檔案」補上。';
+  }
+
+  @override
   String dictionaryImportUnsupportedFile(String file) {
     return '無法匯入「$file」。這個檔案類型不支援。請改選 JSON、CSV 或 TXT（CC-CEDICT）字典檔。';
   }
@@ -4979,6 +4996,23 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
       '无法导入这个文件。导入时发生未预期的错误。请稍后再试一次，若仍失败请换一个文件。';
 
   @override
+  String get dictionaryImportErrorUnsupportedCompression =>
+      '这本字典使用 LZO 压缩，目前不支持。请改用 zlib 版本，或用 MDict 工具重新打包。';
+
+  @override
+  String get dictionaryImportErrorEncryptedRecords =>
+      '无法导入这个文件。字典的词条内容已加密，目前不支持。请改用未加密的版本，或用 MDict 工具重新打包后再试一次。';
+
+  @override
+  String get dictionaryImportErrorCorruptFile =>
+      '无法导入这个文件。字典文件的内容不完整或已损坏。请重新下载或复制文件后再试一次。';
+
+  @override
+  String dictionaryImportMissingCssAfterImport(String files) {
+    return '词条引用了 $files，但没有导入。请到字典清单按「添加附属文件」补上。';
+  }
+
+  @override
   String dictionaryImportUnsupportedFile(String file) {
     return '无法导入“$file”。这个文件类型不支持。请改选 JSON、CSV 或 TXT（CC-CEDICT）字典文件。';
   }
@@ -7479,6 +7513,23 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get dictionaryImportErrorGeneric =>
       '無法匯入這個檔案。匯入時發生未預期的錯誤。請稍後再試一次，若仍失敗請換一個檔案。';
+
+  @override
+  String get dictionaryImportErrorUnsupportedCompression =>
+      '這本字典使用 LZO 壓縮，目前不支援。請改用 zlib 版本，或用 MDict 工具重新打包。';
+
+  @override
+  String get dictionaryImportErrorEncryptedRecords =>
+      '無法匯入這個檔案。字典的詞條內容有加密，目前不支援。請改用未加密的版本，或用 MDict 工具重新打包後再試一次。';
+
+  @override
+  String get dictionaryImportErrorCorruptFile =>
+      '無法匯入這個檔案。字典檔的內容不完整或已損毀。請重新下載或複製檔案後再試一次。';
+
+  @override
+  String dictionaryImportMissingCssAfterImport(String files) {
+    return '詞條引用了 $files，但沒有匯入。請到字典清單按「新增附屬檔案」補上。';
+  }
 
   @override
   String dictionaryImportUnsupportedFile(String file) {

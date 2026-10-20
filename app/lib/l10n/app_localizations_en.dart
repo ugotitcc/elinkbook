@@ -2573,6 +2573,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not import this file. An unexpected error occurred. Try again later, or try a different file.';
 
   @override
+  String get dictionaryImportErrorUnsupportedCompression =>
+      'This dictionary uses LZO compression, which is not supported yet. Use a zlib version, or repackage it with an MDict tool.';
+
+  @override
+  String get dictionaryImportErrorEncryptedRecords =>
+      'Could not import this file. The dictionary\'s entries are encrypted, which is not supported yet. Use an unencrypted version, or repackage it with an MDict tool and try again.';
+
+  @override
+  String get dictionaryImportErrorCorruptFile =>
+      'Could not import this file. The dictionary file is incomplete or damaged. Download or copy the file again, then try again.';
+
+  @override
+  String dictionaryImportMissingCssAfterImport(String files) {
+    return 'Entries refer to these files, which were not imported: $files. Use \"Add companion files\" in the dictionary list to add them.';
+  }
+
+  @override
   String dictionaryImportUnsupportedFile(String file) {
     return 'Could not import \"$file\". This file type is not supported. Choose a JSON, CSV or TXT (CC-CEDICT) dictionary file instead.';
   }
