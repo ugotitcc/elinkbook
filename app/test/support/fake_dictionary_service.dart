@@ -1,4 +1,5 @@
 import 'package:elinkbook/dictionary/dictionary_service.dart';
+import 'package:elinkbook/dictionary/models/dictionary_entry.dart';
 import 'package:elinkbook/dictionary/models/lookup_request.dart';
 import 'package:elinkbook/dictionary/models/lookup_result.dart';
 
@@ -22,6 +23,15 @@ class FakeDictionaryService implements DictionaryService {
   /// 讓 `lookup` 丟出例外，驗證面板的 `snapshot.hasError` 路徑。
   Object? error;
 
+  /// 每次 `lookupInSource` 的參數，依呼叫順序。
+  final List<({String sourceId, String word})> lookupInSourceCalls = [];
+
+  /// `lookupInSource` 的回傳；預設查無。
+  List<DictionaryEntry> lookupInSourceResult = const [];
+
+  /// 讓 `lookupInSource` 丟出例外。
+  Object? lookupInSourceError;
+
   static DictionaryLookupResponse _emptyResponse() => LookupCompleted(
         result: const LookupResult(request: LookupRequest(''), outcomes: []),
         hasEnabledDictionary: false,
@@ -36,5 +46,15 @@ class FakeDictionaryService implements DictionaryService {
       response = queue.removeAt(0);
     }
     return response;
+  }
+
+  @override
+  Future<List<DictionaryEntry>> lookupInSource(
+    String sourceId,
+    String word,
+  ) async {
+    lookupInSourceCalls.add((sourceId: sourceId, word: word));
+    if (lookupInSourceError != null) throw lookupInSourceError!;
+    return lookupInSourceResult;
   }
 }

@@ -7,6 +7,7 @@ import 'package:elinkbook/dictionary/models/lookup_result.dart';
 import 'package:elinkbook/dictionary/storage/dictionary_database.dart';
 import 'package:elinkbook/dictionary/storage/dictionary_store.dart';
 import 'package:elinkbook/dictionary/storage/dictionary_store_provider.dart';
+import 'package:elinkbook/dictionary/storage/mdx_reader_pool.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -326,4 +327,79 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 120)),
   );
+
+  group('Issue 6a：MDX 來源', () {
+    late MdxReaderPool pool;
+
+    setUp(() {
+      pool = MdxReaderPool();
+    });
+
+    tearDown(() => pool.closeAll());
+
+    DictionarySource mdxSource(
+      String id, {
+      int priority = 0,
+      String sourceLang = 'en',
+      String file = 'zlib.mdx',
+    }) =>
+        DictionarySource(
+          id: id,
+          name: 'MDX $id',
+          format: DictionaryFormat.mdx,
+          sourceLang: sourceLang,
+          targetLang: 'zh-Hant',
+          priority: priority,
+          enabled: true,
+          storagePath: 'test/fixtures/mdx/$file',
+          entryCount: 0,
+          licenseNote: '',
+          importedAt: DateTime.utc(2026, 10, 19),
+        );
+
+    test('JSON 與 MDX 來源各一段，依 priority 排序', () async {
+      await addSource('json1', 'en', ['apple'], priority: 0);
+      await store.insertSource(mdxSource('mdx1', priority: 1));
+      final mdxService = DictionaryService(store: store, mdxPool: pool);
+
+      final result = completed(await mdxService.lookup('apple'));
+
+      expect(result.outcomes.map((o) => o.providerId), ['json1', 'mdx1']);
+      expect(result.outcomes.map((o) => o.status), [
+        OutcomeStatus.found,
+        OutcomeStatus.found,
+      ]);
+      expect(result.outcomes.last.entries.first.bodyKind, EntryBodyKind.html);
+    });
+
+    test('未提供 pool：MDX 來源 failed，errorCode 為 mdxUnavailable', () async {
+      await store.insertSource(mdxSource('mdx1'));
+
+      final result = completed(await service.lookup('apple'));
+
+      expect(result.outcomes.single.status, OutcomeStatus.failed);
+      expect(result.outcomes.single.errorCode, 'mdxUnavailable');
+      expect(result.outcomes.single.entries, isEmpty);
+    });
+
+    test('lookupInSource 只查指定來源，且不做語言過濾', () async {
+      // 來源語言是 zh，查的卻是拉丁詞：一般 lookup 會被方向挑選略過，
+      // 交叉參照必須照查。
+      await store.insertSource(mdxSource('mdx-zh', sourceLang: 'zh'));
+      final mdxService = DictionaryService(store: store, mdxPool: pool);
+
+      final entries = await mdxService.lookupInSource('mdx-zh', 'apple');
+
+      expect(entries, hasLength(2));
+      expect(entries.first.bodyKind, EntryBodyKind.html);
+    });
+
+    test('lookupInSource 查無或來源不存在 → 空清單', () async {
+      await addSource('en1', 'en', ['apple']);
+      await store.insertSource(mdxSource('mdx1'));
+
+      expect(await service.lookupInSource('en1', 'zzzz'), isEmpty);
+      expect(await service.lookupInSource('missing', 'apple'), isEmpty);
+    });
+  });
 }

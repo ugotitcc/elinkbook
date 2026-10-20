@@ -26,6 +26,7 @@ import 'dictionary/importers/mdx_importer.dart';
 import 'dictionary/storage/dictionary_database.dart';
 import 'dictionary/storage/dictionary_store.dart';
 import 'dictionary/storage/dictionary_store_provider.dart';
+import 'dictionary/storage/mdx_reader_pool.dart';
 import 'library/book_content_fingerprint.dart';
 import 'library/book_import_service_impl.dart';
 import 'library/sqlite_library_repository.dart';
@@ -141,8 +142,12 @@ Future<void> main() async {
     );
     return DictionaryStore(dictionaryDatabase);
   });
+  // epic-63 Issue 6a：MDX reader 池同時服務查詢與管理；刪除或取代字典前
+  // 要先 evict，否則檔案控制代碼還開著時會刪不掉。
+  final mdxReaderPool = MdxReaderPool();
   final dictionaryService = DictionaryService.fromProvider(
     dictionaryStoreProvider,
+    mdxPool: mdxReaderPool,
   );
   final dictionaryFileStore = DictionaryFileStore(
     Directory(
@@ -157,6 +162,7 @@ Future<void> main() async {
       (s) => CedictImporter(store: s),
       (s) => MdxImporter(store: s, files: dictionaryFileStore),
     ],
+    onEvict: mdxReaderPool.evict,
   );
   // epic-49：內建字型改為可下載字型，存在 App 支援目錄（非使用者可見、清除快取不會被刪）。
   // prepare() 建立存放目錄並清掉上次被系統終止時殘留的 .part 暫存檔；
