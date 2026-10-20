@@ -1,10 +1,13 @@
 // app/test/dictionary/dictionary_manager_test.dart
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:elinkbook/dictionary/dictionary_file_store.dart';
 import 'package:elinkbook/dictionary/dictionary_manager.dart';
 import 'package:elinkbook/dictionary/dictionary_service.dart';
 import 'package:elinkbook/dictionary/importers/cedict_importer.dart';
+import 'package:elinkbook/dictionary/importers/dictionary_importer.dart';
 import 'package:elinkbook/dictionary/importers/json_csv_importer.dart';
 import 'package:elinkbook/dictionary/mdx_companion_files.dart';
 import 'package:elinkbook/dictionary/models/dictionary_entry.dart';
@@ -202,5 +205,106 @@ void main() {
   test('canImport：json 為真、mdx 為假', () async {
     expect(await manager.canImport('a.json'), isTrue);
     expect(await manager.canImport('a.mdx'), isFalse);
+  });
+
+  group('真實匯入路徑（JsonCsvImporter）', () {
+    /// 寫一個小 JSON 字典並回傳「使用者選到的」檔案。
+    Future<PickedFile> pickedJson() {
+      final content = jsonEncode({
+        'name': '小字典',
+        'entries': [
+          {'headword': 'apple', 'definition': '蘋果'},
+          {'headword': 'run', 'definition': '跑'},
+        ],
+      });
+      return picked('d.json', content);
+    }
+
+    ImportRequest requestFor(PickedFile f, {bool replace = false}) =>
+        ImportRequest(
+          filePath: f.path,
+          fileName: f.name,
+          sourceLang: 'en',
+          targetLang: 'zh-Hant',
+          replaceExisting: replace,
+        );
+
+    /// 跑完整個 stream，回傳最後一筆進度。
+    Future<ImportProgress> runToEnd(PickedFile f, {bool replace = false}) async {
+      ImportProgress? last;
+      await for (final p in manager.import(
+        f,
+        requestFor(f, replace: replace),
+        cancel: CancelToken(),
+      )) {
+        last = p;
+      }
+      return last!;
+    }
+
+    test('readHints → import 跑完後 list() 出現新字典，名稱與筆數正確', () async {
+      final file = await pickedJson();
+
+      final hints = await manager.readHints(file);
+      expect(hints.name, '小字典');
+
+      final last = await runToEnd(file);
+      expect(last.stage, ImportStage.done);
+
+      final items = await manager.list();
+      expect(items, hasLength(1));
+      expect(items.single.source.name, '小字典');
+      expect(items.single.source.entryCount, 2);
+      expect(items.single.source.id, last.summary!.sourceId);
+    });
+
+    test('重複匯入丟 DuplicateDictionaryException；replaceExisting 沿用 priority 與 enabled',
+        () async {
+      await addWithEntry('other', '天地', priority: 0);
+      final file = await pickedJson();
+      final first = await runToEnd(file);
+      final importedId = first.summary!.sourceId;
+
+      // 製造非預設值：停用、並排到最前面（priority 0）。
+      await manager.setEnabled(importedId, false);
+      await manager.reorder([importedId, 'other']);
+      final before = (await manager.list())
+          .firstWhere((i) => i.source.id == importedId)
+          .source;
+      expect(before.priority, 0);
+      expect(before.enabled, isFalse);
+
+      await expectLater(
+        runToEnd(file),
+        throwsA(isA<DuplicateDictionaryException>()),
+      );
+
+      final replaced = await runToEnd(file, replace: true);
+      expect(replaced.stage, ImportStage.done);
+
+      final items = await manager.list();
+      expect(items, hasLength(2));
+      final after = items.firstWhere((i) => i.source.id == importedId).source;
+      expect(after.priority, before.priority);
+      expect(after.enabled, isFalse);
+    });
+
+    test('匯入時取消訂閱不會留下半成品字典', () async {
+      final file = await pickedJson();
+      final done = Completer<void>();
+      late StreamSubscription<ImportProgress> sub;
+      // 收到第一個進度事件（解析階段，尚未寫入）就取消訂閱。
+      sub = manager.import(file, requestFor(file), cancel: CancelToken()).listen(
+        (_) {
+          sub.cancel();
+          done.complete();
+        },
+      );
+      await done.future;
+      // 給背景流程足夠時間；若它誤寫入，字典會出現在清單中。
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+
+      expect(await manager.list(), isEmpty);
+    });
   });
 }
