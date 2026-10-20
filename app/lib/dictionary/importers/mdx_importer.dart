@@ -27,11 +27,16 @@ class MdxImporter implements DictionaryImporter {
   MdxImporter({
     required DictionaryStore store,
     required DictionaryFileStore files,
+    Future<void> Function(String sourceId)? onEvict,
   }) : _store = store,
-       _files = files;
+       _files = files,
+       _onEvict = onEvict;
 
   final DictionaryStore _store;
   final DictionaryFileStore _files;
+
+  /// 取代匯入換目錄前，先放掉該字典的 reader（檔案控制代碼）。
+  final Future<void> Function(String sourceId)? _onEvict;
 
   /// 抽樣找 `<link href>` 的詞條數。只讀開頭，不掃整本字典。
   static const int sampleSize = 200;
@@ -115,14 +120,18 @@ class MdxImporter implements DictionaryImporter {
     final priority = existing?.priority ?? await _nextPriority();
     final enabled = existing?.enabled ?? true;
 
-    // 只有真的動到私有目錄後才需要清理；失敗時刪掉整個來源目錄。
-    var touchedFiles = false;
+    // 取代匯入時，新檔先放在 `<id>.staging` 暫存目錄，全部成功後才換掉舊目錄；
+    // 失敗或取消只刪暫存目錄，舊字典（來源列與檔案）原封不動。
+    final replacing = existing != null;
+    final workId = replacing ? stagingIdFor(sourceId) : sourceId;
     var committed = false;
     try {
       if (isCancelled()) {
         controller.add(cancelled);
         return;
       }
+      // 上次被系統中止時可能留下暫存目錄，先清掉。
+      if (replacing) await _files.deleteAll(workId);
 
       // 1. 開檔、整檔區塊檢查。先 close 再搬檔，避免之後 rename 時檔案
       //    仍被佔用（Windows／部分 Android 檔案系統會失敗）。
@@ -150,40 +159,41 @@ class MdxImporter implements DictionaryImporter {
         return;
       }
 
-      // 2. 搬主檔，複製附屬檔，移除上一次留下、這次沒選到的附屬檔。
-      touchedFiles = true;
-      final storagePath = await _files.moveInto(
-        sourceId,
+      // 2. 搬主檔、複製附屬檔（新目錄是空的，不會有上一次殘留的附屬檔）。
+      final workPath = await _files.moveInto(
+        workId,
         request.filePath,
         request.fileName,
       );
-      final keep = <String>{p.basename(request.fileName)};
       for (final companion in request.companions) {
         final lower = companion.name.toLowerCase();
         if (!lower.endsWith('.mdd') && !lower.endsWith('.css')) continue;
         await _files.copyInto(
-          sourceId,
+          workId,
           // `copyInto` 只用 path 與 name；size 是給 UI 顯示的，這裡不需要。
           PickedFile(path: companion.path, name: companion.name, size: 0),
         );
-        keep.add(p.basename(companion.name));
       }
-      await _removeStaleFiles(sourceId, keep);
 
       if (isCancelled()) {
         controller.add(cancelled);
         return;
       }
 
-      // 3. 以私有路徑重新開啟，抽樣詞條找引用的樣式表。
-      final referencedCss = await _sampleReferencedCss(storagePath);
+      // 3. 以暫存（或新）目錄的路徑重新開啟，抽樣詞條找引用的樣式表。
+      final referencedCss = await _sampleReferencedCss(workPath);
 
       if (isCancelled()) {
         controller.add(cancelled);
         return;
       }
 
-      // 4. 單一交易寫來源列；取代時先刪舊列（舊列的 id 相同）。
+      // 4. 取代時此刻才換目錄（換完不再檢查取消，進入提交階段），
+      //    再單一交易寫來源列；取代時先刪舊列（舊列的 id 相同）。
+      final storagePath = p.join(
+        _files.dirFor(sourceId).path,
+        p.basename(request.fileName),
+      );
       final source = DictionarySource(
         id: sourceId,
         name: request.name ?? displayName,
@@ -197,12 +207,27 @@ class MdxImporter implements DictionaryImporter {
         licenseNote: request.licenseNote,
         importedAt: DateTime.now(),
       );
-      await _store.transaction((txn) async {
-        if (existing != null) await txn.deleteSource(sourceId);
-        await txn.insertSource(source, contentId: contentId);
-        await txn.setReferencedCss(sourceId, referencedCss);
-      });
+      final backupId = '$sourceId.old';
+      if (replacing) await _swapInStaging(sourceId, workId, backupId);
+      try {
+        await _store.transaction((txn) async {
+          if (replacing) await txn.deleteSource(sourceId);
+          await txn.insertSource(source, contentId: contentId);
+          await txn.setReferencedCss(sourceId, referencedCss);
+        });
+      } catch (_) {
+        // 寫入失敗：把舊目錄換回來，舊字典維持可用。
+        if (replacing) await _restoreOld(sourceId, workId, backupId);
+        rethrow;
+      }
       committed = true;
+      if (replacing) {
+        try {
+          await _files.deleteAll(backupId);
+        } catch (error) {
+          debugPrint('MdxImporter 清理舊目錄失敗（$sourceId）：$error');
+        }
+      }
 
       controller.add(
         ImportProgress(
@@ -222,27 +247,61 @@ class MdxImporter implements DictionaryImporter {
     } on FileSystemException {
       throw const DictionaryImportException('unreadableFile');
     } finally {
-      if (!committed && touchedFiles) {
-        await _cleanup(sourceId, replacing: existing != null);
-      }
+      if (!committed) await _cleanup(workId);
     }
   }
 
-  /// 失敗或取消時刪除私有目錄；清理失敗只記錄，不蓋掉原始錯誤。
-  ///
-  /// 取代既有字典時，舊來源列指向的檔案已被這次匯入覆蓋或刪除，留著只會
-  /// 變成查不到的壞字典，所以連來源列一起刪掉（使用者重新匯入即可）。
-  Future<void> _cleanup(String sourceId, {required bool replacing}) async {
-    try {
-      await _files.deleteAll(sourceId);
-    } catch (error) {
-      debugPrint('MdxImporter 清理私有目錄失敗（$sourceId）：$error');
+  /// 暫存目錄的 id；與正式目錄同層，名稱不會和 uuid 衝突。
+  @visibleForTesting
+  static String stagingIdFor(String sourceId) => '$sourceId.staging';
+
+  /// 舊目錄先改名為備份，暫存目錄再改成正式名稱。
+  Future<void> _swapInStaging(
+    String sourceId,
+    String stagingId,
+    String backupId,
+  ) async {
+    // reader 還開著舊檔時改名會失敗（Windows），也會讀到換到一半的內容。
+    await _onEvict?.call(sourceId);
+    await _files.deleteAll(backupId);
+    if (await _files.dirFor(sourceId).exists()) {
+      await _files.renameDir(sourceId, backupId);
     }
-    if (!replacing) return;
     try {
-      await _store.deleteSource(sourceId);
+      await _files.renameDir(stagingId, sourceId);
+    } catch (_) {
+      await _restoreOld(sourceId, stagingId, backupId);
+      rethrow;
+    }
+  }
+
+  /// 換目錄後失敗：把新目錄退回暫存名稱，舊目錄換回正式名稱。盡力而為，
+  /// 失敗只記錄，不蓋掉原始錯誤。
+  Future<void> _restoreOld(
+    String sourceId,
+    String stagingId,
+    String backupId,
+  ) async {
+    try {
+      if (await _files.dirFor(backupId).exists()) {
+        await _files.deleteAll(stagingId);
+        if (await _files.dirFor(sourceId).exists()) {
+          await _files.renameDir(sourceId, stagingId);
+        }
+        await _files.renameDir(backupId, sourceId);
+      }
     } catch (error) {
-      debugPrint('MdxImporter 清理來源列失敗（$sourceId）：$error');
+      debugPrint('MdxImporter 還原舊目錄失敗（$sourceId）：$error');
+    }
+  }
+
+  /// 失敗或取消時刪除這次建立的目錄（取代匯入是暫存目錄，新匯入是正式目錄）；
+  /// 清理失敗只記錄，不蓋掉原始錯誤。舊字典的來源列與檔案不受影響。
+  Future<void> _cleanup(String workId) async {
+    try {
+      await _files.deleteAll(workId);
+    } catch (error) {
+      debugPrint('MdxImporter 清理私有目錄失敗（$workId）：$error');
     }
   }
 
@@ -250,15 +309,6 @@ class MdxImporter implements DictionaryImporter {
   Future<int> _nextPriority() async {
     final all = await _store.listSources();
     return all.isEmpty ? 0 : all.map((s) => s.priority).reduce(max) + 1;
-  }
-
-  /// 移除私有目錄內不在 [keep] 的舊附屬檔（例如換了一批 `.css`）。
-  Future<void> _removeStaleFiles(String sourceId, Set<String> keep) async {
-    final dir = _files.dirFor(sourceId);
-    for (final name in await _files.listFiles(sourceId)) {
-      if (keep.contains(name)) continue;
-      await File('${dir.path}/$name').delete();
-    }
   }
 
   Future<List<String>> _sampleReferencedCss(String storagePath) async {

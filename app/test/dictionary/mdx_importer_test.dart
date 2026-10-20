@@ -196,24 +196,49 @@ void main() {
     expect(await subdirs(files.root), isEmpty);
   });
 
-  test('取代匯入在搬檔後失敗：舊列與私有目錄一起清掉，不留壞字典', () async {
-    final first = await run(
+  /// 先匯入一本 html.mdx（附 .mdd），回傳它的 id 與舊目錄的檔名清單。
+  Future<String> importOriginal() async {
+    final summary = await run(
       await copyFixture('html.mdx'),
       fileName: 'html.mdx',
+      companions: [(path: await copyFixture('mdd.mdd'), name: 'mdd.mdd')],
     );
-    final id = first.sourceId;
-    expect(await store.getSource(id), isNotNull);
+    return summary.sourceId;
+  }
 
-    // 同名同內容 → 判為取代既有來源；附屬檔案指向不存在的路徑，讓搬檔後的
-    // 複製步驟失敗（此時私有目錄已經被動過）。
+  /// 取代匯入的第二份來源檔（同名同內容 → 判為取代既有來源）。
+  Future<String> againFile() async {
     final againDir = await Directory('${tmp.path}/again').create();
     final again = await File(
       '$_fixtures/html.mdx',
     ).copy('${againDir.path}/html.mdx');
+    return again.path;
+  }
 
+  Future<void> expectOldDictionaryIntact(String id) async {
+    final source = await store.getSource(id);
+    expect(source, isNotNull, reason: '舊來源列要保留');
+    expect(File(source!.storagePath).existsSync(), isTrue);
+    expect(
+      await files.listFiles(id),
+      unorderedEquals(['html.mdx', 'mdd.mdd']),
+      reason: '舊檔案要原封不動',
+    );
+    // 只剩正式目錄，沒有暫存或備份目錄。
+    expect((await subdirs(files.root)).map((d) => d.uri.pathSegments[
+        d.uri.pathSegments.length - 2]), [id]);
+  }
+
+  test('取代匯入在搬檔後失敗：舊列與舊檔案原封不動，只刪暫存目錄（I-3）', () async {
+    final id = await importOriginal();
+    final before = (await store.getSource(id))!;
+    await store.setPriority(id, 5);
+    await store.setEnabled(id, false);
+
+    // 附屬檔案指向不存在的路徑，讓暫存目錄內的複製步驟失敗。
     await expectLater(
       start(
-        again.path,
+        await againFile(),
         fileName: 'html.mdx',
         replace: true,
         companions: [(path: '${tmp.path}/no-such.css', name: 'ghychyz.css')],
@@ -221,14 +246,74 @@ void main() {
       throwsA(isA<DictionaryImportException>()),
     );
 
-    // 舊列的檔案已被這次匯入覆蓋／刪除，留著只會是查不到的字典。
-    expect(await store.getSource(id), isNull);
-    expect(await store.listSources(), isEmpty);
-    expect(await subdirs(files.root), isEmpty);
+    await expectOldDictionaryIntact(id);
+    final after = (await store.getSource(id))!;
+    expect(after.priority, 5);
+    expect(after.enabled, isFalse);
+    expect(after.storagePath, before.storagePath);
+  });
+
+  test('取代匯入在抽樣階段被取消：舊列與舊檔案原封不動（I-3）', () async {
+    final id = await importOriginal();
+    final cancel = CancelToken();
+
+    // 第一個進度事件之後（開檔驗證階段）就取消；匯入會在下一個取消檢查點停下。
+    final progress = <ImportProgress>[];
+    await for (final event in start(
+      await againFile(),
+      fileName: 'html.mdx',
+      replace: true,
+      cancel: cancel,
+    )) {
+      progress.add(event);
+      if (event.stage == ImportStage.parsing && event.total > 0) {
+        cancel.cancel();
+      }
+    }
+
+    expect(progress.last.stage, ImportStage.cancelled);
+    await expectOldDictionaryIntact(id);
+  });
+
+  test('取代匯入換目錄前會先 evict 該字典的 reader（I-3）', () async {
+    final evicted = <String>[];
+    importer = MdxImporter(
+      store: store,
+      files: files,
+      onEvict: (id) async => evicted.add(id),
+    );
+    final id = await importOriginal();
+    expect(evicted, isEmpty, reason: '新匯入不需要 evict');
+
+    await run(await againFile(), fileName: 'html.mdx', replace: true);
+
+    expect(evicted, [id]);
+  });
+
+  test('取代匯入成功：舊檔被換掉，沒選到的附屬檔不保留，無暫存／備份目錄', () async {
+    final id = await importOriginal();
+
+    final replaced = await run(
+      await againFile(),
+      fileName: 'html.mdx',
+      replace: true,
+      companions: [(path: await copyFixture('ghychyz.css'), name: 'ghychyz.css')],
+    );
+
+    expect(replaced.sourceId, id);
+    expect(
+      await files.listFiles(id),
+      unorderedEquals(['html.mdx', 'ghychyz.css']),
+      reason: '這次沒選 mdd，舊的 mdd 不保留',
+    );
+    final source = (await store.getSource(id))!;
+    expect(File(source.storagePath).existsSync(), isTrue);
+    expect(source.storagePath, startsWith(files.dirFor(id).path));
+    expect(await subdirs(files.root), hasLength(1));
   });
 
   test(
-    '重複匯入 → DuplicateDictionaryException；取代後沿用 id／priority／enabled',
+    '重複匯入 → DuplicateDictionaryException；取代後沿用 id／priority／enabled，並重新抽樣 referenced_css',
     () async {
       final first = await run(
         await copyFixture('html.mdx'),
@@ -236,6 +321,12 @@ void main() {
       );
       await store.setPriority(first.sourceId, 7);
       await store.setEnabled(first.sourceId, false);
+      // 把舊列的 referenced_css 改成過時的值；取代後必須被重新抽樣的結果蓋掉。
+      await store.setReferencedCss(first.sourceId, ['stale-old.css']);
+      expect(
+        (await store.getSource(first.sourceId))!.referencedCss,
+        ['stale-old.css'],
+      );
 
       final duplicate = await copyFixture('html.mdx');
       await expectLater(
@@ -253,7 +344,7 @@ void main() {
       final source = (await store.getSource(first.sourceId))!;
       expect(source.priority, 7);
       expect(source.enabled, isFalse);
-      expect(source.referencedCss, contains('ghychyz.css'));
+      expect(source.referencedCss, ['ghychyz.css']);
     },
   );
 

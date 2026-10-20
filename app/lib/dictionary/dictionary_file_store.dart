@@ -58,6 +58,12 @@ class DictionaryFileStore {
     return destination;
   }
 
+  /// 把 [fromId] 的目錄改名為 [toId]（同一個根目錄下，原子操作）。
+  /// [toId] 目錄必須不存在；取代匯入用來把暫存目錄換成正式目錄。
+  Future<void> renameDir(String fromId, String toId) async {
+    await dirFor(fromId).rename(dirFor(toId).path);
+  }
+
   /// 刪除整個目錄；目錄不存在時不丟例外。
   Future<void> deleteAll(String sourceId) async {
     final dir = dirFor(sourceId);

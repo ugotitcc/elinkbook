@@ -160,7 +160,11 @@ Future<void> main() async {
     importerFactories: [
       (s) => JsonCsvImporter(store: s),
       (s) => CedictImporter(store: s),
-      (s) => MdxImporter(store: s, files: dictionaryFileStore),
+      (s) => MdxImporter(
+        store: s,
+        files: dictionaryFileStore,
+        onEvict: mdxReaderPool.evict,
+      ),
     ],
     onEvict: mdxReaderPool.evict,
   );
