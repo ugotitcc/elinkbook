@@ -48,13 +48,22 @@ void main() {
   });
 
   group('kThirdPartyLicenses 清單', () {
-    test('12 項：5 項程式元件加 7 款字型，順序與名稱符合 spec', () {
+    test('19 項：12 項程式元件加 7 款字型，順序與名稱符合 spec', () {
       expect(kThirdPartyLicenses.map((l) => l.packageName).toList(), [
         'foliate-js',
         'zip.js',
         'fflate',
         'OpenCC',
         'Readium kotlin-toolkit',
+        // dict_reader 1.6.1 與其遞移相依（MIT／BSD-3-Clause／Apache-2.0）。
+        // collection 與 typed_data 共用一份 BSD-3-Clause 全文，合併成一筆。
+        'dict_reader',
+        'blockchain_utils',
+        'pointycastle',
+        'charset',
+        'convert',
+        'collection / typed_data',
+        'html_unescape',
         '思源黑體',
         '思源宋體',
         '原俠正楷',
@@ -74,7 +83,7 @@ void main() {
   });
 
   group('registerThirdPartyLicenses', () {
-    test('以真實 rootBundle 登錄：12 筆、packages 與清單一致、全文含上游版權關鍵字', () async {
+    test('以真實 rootBundle 登錄：19 筆、packages 與清單一致、全文含上游版權關鍵字', () async {
       registerThirdPartyLicenses();
 
       final entries = await _readAllLicenses();
@@ -93,6 +102,17 @@ void main() {
       expect(textByPackage['fflate'], contains('Arjun Barrett'));
       expect(textByPackage['OpenCC'], contains('Apache License'));
       expect(textByPackage['Readium kotlin-toolkit'], contains('Readium'));
+      // epic-63：MDX 解析器與遞移相依的授權
+      expect(textByPackage['dict_reader'], contains('Mumulhl'));
+      expect(textByPackage['blockchain_utils'], contains('Mohsen'));
+      expect(textByPackage['pointycastle'], contains('Bouncy Castle'));
+      expect(textByPackage['charset'], contains('Apache License'));
+      expect(textByPackage['convert'], contains('Dart project authors'));
+      expect(
+        textByPackage['collection / typed_data'],
+        contains('Dart project authors'),
+      );
+      expect(textByPackage['html_unescape'], contains('Filip Hracek'));
       // 7 款字型：皆為 SIL OFL 1.1，並含各自上游的版權關鍵字
       for (final font in [
         '思源黑體', '思源宋體', '原俠正楷', '台灣圓體', '源流明體', '白鷺楷', '獅尾B2加糖宋體',

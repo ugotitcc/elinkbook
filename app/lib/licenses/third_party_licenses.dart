@@ -42,6 +42,37 @@ const List<ThirdPartyLicense> kThirdPartyLicenses = [
     packageName: 'Readium kotlin-toolkit',
     assetPath: 'assets/licenses/readium-kotlin-toolkit.txt',
   ),
+  // epic-63：MDX 解析器 dict_reader 1.6.1（MIT）與其遞移相依。
+  // collection 與 typed_data 的 LICENSE 全文相同（BSD-3-Clause，Dart 專案作者），
+  // 因此共用一份 asset，名稱合併顯示。
+  ThirdPartyLicense(
+    packageName: 'dict_reader',
+    assetPath: 'assets/licenses/dict-reader.txt',
+  ),
+  ThirdPartyLicense(
+    packageName: 'blockchain_utils',
+    assetPath: 'assets/licenses/blockchain-utils.txt',
+  ),
+  ThirdPartyLicense(
+    packageName: 'pointycastle',
+    assetPath: 'assets/licenses/pointycastle.txt',
+  ),
+  ThirdPartyLicense(
+    packageName: 'charset',
+    assetPath: 'assets/licenses/charset.txt',
+  ),
+  ThirdPartyLicense(
+    packageName: 'convert',
+    assetPath: 'assets/licenses/convert.txt',
+  ),
+  ThirdPartyLicense(
+    packageName: 'collection / typed_data',
+    assetPath: 'assets/licenses/collection-typed-data.txt',
+  ),
+  ThirdPartyLicense(
+    packageName: 'html_unescape',
+    assetPath: 'assets/licenses/html-unescape.txt',
+  ),
   // 5 款可下載字型（SIL OFL 1.1）：字型檔不在 APK 內，由使用者在字型管理下載；
   // 但授權是靜態資訊，與是否已下載無關，永遠顯示（epic-55 design Q5）。
   // 台灣圓體的上游授權檔沒有版權行，原文照顯示、不補寫；asset 末尾另附
