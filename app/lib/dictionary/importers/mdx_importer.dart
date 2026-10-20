@@ -9,6 +9,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
@@ -221,17 +222,27 @@ class MdxImporter implements DictionaryImporter {
     } on FileSystemException {
       throw const DictionaryImportException('unreadableFile');
     } finally {
-      if (!committed && touchedFiles) await _cleanup(sourceId);
+      if (!committed && touchedFiles) {
+        await _cleanup(sourceId, replacing: existing != null);
+      }
     }
   }
 
   /// 失敗或取消時刪除私有目錄；清理失敗只記錄，不蓋掉原始錯誤。
-  Future<void> _cleanup(String sourceId) async {
+  ///
+  /// 取代既有字典時，舊來源列指向的檔案已被這次匯入覆蓋或刪除，留著只會
+  /// 變成查不到的壞字典，所以連來源列一起刪掉（使用者重新匯入即可）。
+  Future<void> _cleanup(String sourceId, {required bool replacing}) async {
     try {
       await _files.deleteAll(sourceId);
     } catch (error) {
-      // ignore: avoid_print
-      print('MdxImporter cleanup failed for $sourceId: $error');
+      debugPrint('MdxImporter 清理私有目錄失敗（$sourceId）：$error');
+    }
+    if (!replacing) return;
+    try {
+      await _store.deleteSource(sourceId);
+    } catch (error) {
+      debugPrint('MdxImporter 清理來源列失敗（$sourceId）：$error');
     }
   }
 

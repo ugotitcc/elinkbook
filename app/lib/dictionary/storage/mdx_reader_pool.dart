@@ -2,6 +2,12 @@
 //
 // 每本字典只保留一個 reader；超過上限時關掉最久沒用的。以 `Future` 記錄
 // 開啟中的項目，避免同一個來源被並發開啟兩次。
+//
+// 查詢一律走 [MdxReaderPool.use]：`evict`／`closeAll`／LRU 淘汰會等該項目
+// 手上沒有進行中的查詢才真的關檔，否則關掉的 reader 還在讀，查詢會被誤判
+// 成壞檔（計畫 Task 6）。
+import 'dart:async';
+
 import 'mdx_reader.dart';
 
 /// 以來源 id 為鍵的 LRU reader 池。
@@ -52,6 +58,29 @@ class MdxReaderPool {
     }
   }
 
+  /// 取得 reader 並在 [action] 執行期間把它標記為「使用中」。
+  ///
+  /// 這段期間 `evict`／`closeAll`／LRU 淘汰不會關掉它。查詢請走這個入口，
+  /// 不要直接拿 [acquire] 的 reader 去讀。
+  Future<T> use<T>(
+    String sourceId,
+    String path,
+    Future<T> Function(MdxReader reader) action,
+  ) async {
+    final reader = await acquire(sourceId, path);
+    final entry = _entries[sourceId];
+    if (entry == null) {
+      // 在 `acquire` 完成前就被移出池；reader 由移出的一方負責關閉。
+      throw const MdxException(MdxErrorKind.notFound, 'reader 已被移出池');
+    }
+    entry.beginUse();
+    try {
+      return await action(reader);
+    } finally {
+      entry.endUse();
+    }
+  }
+
   /// 關閉並移除 [sourceId]；不在池內時不做事。
   Future<void> evict(String sourceId) async {
     final entry = _entries.remove(sourceId);
@@ -84,8 +113,11 @@ class MdxReaderPool {
   }
 
   /// 關閉單一項目；開啟失敗或關閉失敗都視為已釋放，不影響其他 reader。
+  ///
+  /// 項目還在被查詢使用時先等它結束，避免關掉正在讀的檔案。
   Future<void> _close(_PoolEntry entry) async {
     try {
+      await entry.idle;
       final reader = await entry.reader;
       await reader.close();
     } catch (_) {
@@ -102,4 +134,23 @@ class _PoolEntry {
 
   /// 開啟尚未完成；這段期間不要被 LRU 挑中。
   bool opening = true;
+
+  /// 進行中的查詢數；大於 0 時不可以關檔。
+  int _inFlight = 0;
+  Completer<void>? _idle;
+
+  void beginUse() => _inFlight++;
+
+  void endUse() {
+    _inFlight--;
+    if (_inFlight > 0) return;
+    _idle?.complete();
+    _idle = null;
+  }
+
+  /// 沒有進行中的查詢時立刻完成；否則等最後一個查詢結束。
+  Future<void> get idle {
+    if (_inFlight == 0) return Future<void>.value();
+    return (_idle ??= Completer<void>()).future;
+  }
 }

@@ -26,40 +26,11 @@ class MdxDictionaryProvider implements DictionaryProvider {
   @override
   Future<ProviderOutcome> lookup(LookupRequest request) async {
     try {
-      final reader = await _pool.acquire(_source.id, _source.storagePath);
-
-      var candidates = lookupCandidates(
-        request.word,
-        lang: _source.sourceLang,
-      );
-      // 審查 I-3：區分大小寫的字典不能把 `apple`／`Apple` 合成一個候選，
-      // 否則只收其中一種寫法的字典會查不到。不分大小寫的來源才去重。
-      if (!reader.meta.keyCaseSensitive) {
-        candidates = dedupeByHeadwordNorm(candidates);
-      }
-
-      for (final candidate in candidates) {
-        final bodies = await reader.lookupAll(candidate);
-        if (bodies.isEmpty) continue;
-        return ProviderOutcome(
-          providerId: id,
-          displayName: _source.name,
-          status: OutcomeStatus.found,
-          entries: [
-            for (final body in bodies)
-              DictionaryEntry(
-                sourceId: _source.id,
-                headword: candidate,
-                body: body,
-                bodyKind: EntryBodyKind.html,
-              ),
-          ],
-        );
-      }
-      return ProviderOutcome(
-        providerId: id,
-        displayName: _source.name,
-        status: OutcomeStatus.notFound,
+      // 走 `use` 而不是 `acquire`：查詢期間池不會把這個 reader 關掉。
+      return await _pool.use(
+        _source.id,
+        _source.storagePath,
+        (reader) => _lookupWith(request, reader),
       );
     } on MdxException catch (error) {
       // 壞檔只讓這一段失敗，不影響其他字典；errorCode 供 UI 轉譯。
@@ -70,5 +41,44 @@ class MdxDictionaryProvider implements DictionaryProvider {
         errorCode: error.kind.name,
       );
     }
+  }
+
+  Future<ProviderOutcome> _lookupWith(
+    LookupRequest request,
+    MdxReader reader,
+  ) async {
+    var candidates = lookupCandidates(
+      request.word,
+      lang: _source.sourceLang,
+    );
+    // 審查 I-3：區分大小寫的字典不能把 `apple`／`Apple` 合成一個候選，
+    // 否則只收其中一種寫法的字典會查不到。不分大小寫的來源才去重。
+    if (!reader.meta.keyCaseSensitive) {
+      candidates = dedupeByHeadwordNorm(candidates);
+    }
+
+    for (final candidate in candidates) {
+      final bodies = await reader.lookupAll(candidate);
+      if (bodies.isEmpty) continue;
+      return ProviderOutcome(
+        providerId: id,
+        displayName: _source.name,
+        status: OutcomeStatus.found,
+        entries: [
+          for (final body in bodies)
+            DictionaryEntry(
+              sourceId: _source.id,
+              headword: candidate,
+              body: body,
+              bodyKind: EntryBodyKind.html,
+            ),
+        ],
+      );
+    }
+    return ProviderOutcome(
+      providerId: id,
+      displayName: _source.name,
+      status: OutcomeStatus.notFound,
+    );
   }
 }

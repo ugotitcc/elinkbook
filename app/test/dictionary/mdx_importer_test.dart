@@ -196,6 +196,37 @@ void main() {
     expect(await subdirs(files.root), isEmpty);
   });
 
+  test('取代匯入在搬檔後失敗：舊列與私有目錄一起清掉，不留壞字典', () async {
+    final first = await run(
+      await copyFixture('html.mdx'),
+      fileName: 'html.mdx',
+    );
+    final id = first.sourceId;
+    expect(await store.getSource(id), isNotNull);
+
+    // 同名同內容 → 判為取代既有來源；附屬檔案指向不存在的路徑，讓搬檔後的
+    // 複製步驟失敗（此時私有目錄已經被動過）。
+    final againDir = await Directory('${tmp.path}/again').create();
+    final again = await File(
+      '$_fixtures/html.mdx',
+    ).copy('${againDir.path}/html.mdx');
+
+    await expectLater(
+      start(
+        again.path,
+        fileName: 'html.mdx',
+        replace: true,
+        companions: [(path: '${tmp.path}/no-such.css', name: 'ghychyz.css')],
+      ).toList(),
+      throwsA(isA<DictionaryImportException>()),
+    );
+
+    // 舊列的檔案已被這次匯入覆蓋／刪除，留著只會是查不到的字典。
+    expect(await store.getSource(id), isNull);
+    expect(await store.listSources(), isEmpty);
+    expect(await subdirs(files.root), isEmpty);
+  });
+
   test(
     '重複匯入 → DuplicateDictionaryException；取代後沿用 id／priority／enabled',
     () async {

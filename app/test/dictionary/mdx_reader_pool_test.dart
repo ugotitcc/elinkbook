@@ -1,6 +1,8 @@
 // MdxReaderPool 測試（epic-63 Issue 6a Task 6）。
 //
 // 全部注入假 opener，不碰真實檔案；關閉行為由假 reader 計數。
+import 'dart:async';
+
 import 'package:elinkbook/dictionary/storage/mdx_reader.dart';
 import 'package:elinkbook/dictionary/storage/mdx_reader_pool.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -134,5 +136,54 @@ void main() {
     final reader = await pool.acquire('a', 'a.mdx');
     expect(reader, isA<_FakeReader>());
     expect(opener.opened, ['a.mdx', 'a.mdx']);
+  });
+
+  test('查詢進行中 evict 會等查詢結束才關檔', () async {
+    final gate = Completer<void>();
+    final started = Completer<void>();
+    final using = pool.use('a', 'a.mdx', (reader) async {
+      started.complete();
+      await gate.future;
+      return reader;
+    });
+    await started.future;
+
+    final fake = opener.readers['a.mdx']!;
+    var evicted = false;
+    final evicting = pool.evict('a').then((_) => evicted = true);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(evicted, isFalse, reason: '查詢還在跑，不該先關檔');
+    expect(fake.closed, 0);
+
+    gate.complete();
+    await using;
+    await evicting;
+
+    expect(fake.closed, 1);
+  });
+
+  test('LRU 淘汰也不會關掉正在查詢的 reader', () async {
+    final gate = Completer<void>();
+    final started = Completer<void>();
+    final using = pool.use('a', 'a.mdx', (reader) async {
+      started.complete();
+      await gate.future;
+      return reader;
+    });
+    await started.future;
+    await pool.acquire('b', 'b.mdx');
+
+    // 開啟 c 會觸發 trim；a 雖然最久沒用，但正在查詢，只能等。
+    final openingC = pool.acquire('c', 'c.mdx');
+    await Future<void>.delayed(Duration.zero);
+    expect(opener.readers['a.mdx']!.closed, 0);
+
+    gate.complete();
+    await using;
+    await openingC;
+
+    expect(opener.readers['a.mdx']!.closed, 1);
+    expect(opener.readers['c.mdx']!.closed, 0);
   });
 }
