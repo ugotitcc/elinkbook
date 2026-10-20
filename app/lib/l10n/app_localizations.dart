@@ -2321,6 +2321,12 @@ abstract class AppLocalizations {
   /// **'閱讀預設值'**
   String get settingsReadingDefaultsLabel;
 
+  /// 設定畫面「閱讀」分區的「字典」項目標題，點了進入字典設定畫面
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字典'**
+  String get settingsDictionaryLabel;
+
   /// 設定畫面「導航熱區」項目標題，同時是 NavZoneSettingsScreen 的 AppBar 標題
   ///
   /// In zh_TW, this message translates to:
@@ -4078,6 +4084,312 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'（失敗）'**
   String get dictionaryLookupSegmentFailed;
+
+  /// 字典設定畫面的標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字典'**
+  String get dictionarySettingsTitle;
+
+  /// 字典方向標籤：英文查繁體中文
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'英→繁中'**
+  String get dictionaryDirectionEnToZh;
+
+  /// 字典方向標籤：中文查英文
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'中→英'**
+  String get dictionaryDirectionZhToEn;
+
+  /// 字典方向標籤：中文查中文
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'中→中'**
+  String get dictionaryDirectionZhToZh;
+
+  /// 字典的詞條筆數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{count, plural, =1{1 筆} other{{count} 筆}}'**
+  String dictionaryEntryCount(int count);
+
+  /// 字典設定畫面空清單的標題文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未匯入字典'**
+  String get dictionarySettingsEmpty;
+
+  /// 字典設定畫面空清單的下一步提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'請選擇字典檔案匯入，匯入後閱讀時就能查詢。'**
+  String get dictionarySettingsEmptyHint;
+
+  /// 讀取字典清單失敗的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法讀取字典清單。字典資料暫時無法存取。請離開此畫面後重新進入再試一次。'**
+  String get dictionarySettingsLoadFailed;
+
+  /// 刪除字典失敗的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法刪除這本字典。字典的檔案可能正被其他程式占用。請稍後再按一次刪除。'**
+  String get dictionarySettingsDeleteFailed;
+
+  /// 儲存字典排序失敗的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法儲存字典順序。寫入資料時發生錯誤，已還原成原本的順序。請再拖曳一次。'**
+  String get dictionarySettingsReorderFailed;
+
+  /// 刪除字典確認對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除字典'**
+  String get dictionaryDeleteConfirmTitle;
+
+  /// 刪除字典確認對話框內容，name 為字典名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定要刪除「{name}」嗎？詞條與附屬檔案會一併刪除，無法復原。'**
+  String dictionaryDeleteConfirmMessage(String name);
+
+  /// 刪除字典確認對話框的確認按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get dictionaryDeleteConfirmAction;
+
+  /// MDX 字典缺少樣式表的提醒，files 為以頓號連接的檔名
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'詞條引用了 {files}，但沒有匯入'**
+  String dictionaryMissingCssWarning(String files);
+
+  /// 清單項目之間的分隔符（例如缺少的樣式表檔名清單）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'、'**
+  String get dictionaryListSeparator;
+
+  /// 為 MDX 字典補上附屬檔案（樣式表、MDD）的按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'新增附屬檔案'**
+  String get dictionaryAddCompanion;
+
+  /// 新增 MDX 字典附屬檔案失敗的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法新增附屬檔案。檔案無法讀取，或儲存空間不足。請確認檔案存在、空間足夠後再試一次。'**
+  String get dictionarySettingsAddCompanionFailed;
+
+  /// 匯入字典的按鈕（字典設定畫面右上角）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'匯入字典'**
+  String get dictionaryImportButton;
+
+  /// 匯入字典對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'匯入字典'**
+  String get dictionaryImportTitle;
+
+  /// 匯入對話框的字典名稱欄位標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'名稱'**
+  String get dictionaryImportNameLabel;
+
+  /// 匯入對話框的查詢方向欄位標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'查詢方向'**
+  String get dictionaryImportDirectionLabel;
+
+  /// 匯入對話框的授權說明欄位標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'授權說明'**
+  String get dictionaryImportLicenseLabel;
+
+  /// 匯入對話框的大檔案提示（超過 50 MB）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'檔案較大，匯入可能需要較長時間'**
+  String get dictionaryImportLargeFileHint;
+
+  /// 匯入對話框的確認按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'匯入'**
+  String get dictionaryImportConfirm;
+
+  /// 匯入對話框與進度遮罩的取消按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'取消'**
+  String get dictionaryImportCancel;
+
+  /// 匯入進度文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已處理 {processed} / {total} 筆'**
+  String dictionaryImportProgress(int processed, int total);
+
+  /// 匯入完成摘要，count 為匯入筆數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{count, plural, other{匯入 {count} 筆}}'**
+  String dictionaryImportDone(int count);
+
+  /// 匯入摘要的略過筆數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{count, plural, other{略過 {count} 筆}}'**
+  String dictionaryImportSkippedSummary(int count);
+
+  /// 略過原因清單的一行，index 為檔內第幾筆，reason 為已轉成文字的原因
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'第 {index} 筆：{reason}'**
+  String dictionaryImportSkipSample(int index, String reason);
+
+  /// 略過原因：缺少詞頭
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'缺少詞頭'**
+  String get dictionaryImportSkipMissingHeadword;
+
+  /// 略過原因：缺少解釋
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'缺少解釋'**
+  String get dictionaryImportSkipMissingDefinition;
+
+  /// 略過原因：解釋過長
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'解釋過長'**
+  String get dictionaryImportSkipDefinitionTooLong;
+
+  /// 略過原因：欄位格式不對
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'欄位格式不對'**
+  String get dictionaryImportSkipInvalidField;
+
+  /// 略過原因：該行格式不對
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'該行格式不對'**
+  String get dictionaryImportSkipMalformedLine;
+
+  /// 重複匯入對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'這本字典已匯入'**
+  String get dictionaryImportDuplicateTitle;
+
+  /// 重複匯入對話框內容
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已經匯入過內容相同的字典。要略過，還是用這次的檔案取代舊的？'**
+  String get dictionaryImportDuplicateMessage;
+
+  /// 重複匯入對話框的略過按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'略過'**
+  String get dictionaryImportDuplicateSkip;
+
+  /// 重複匯入對話框的取代按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'取代'**
+  String get dictionaryImportDuplicateReplace;
+
+  /// 匯入失敗（無法讀取檔案）的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法匯入這個檔案。檔案無法讀取。請確認檔案存在、沒有損毀後再試一次。'**
+  String get dictionaryImportErrorUnreadableFile;
+
+  /// 匯入失敗（編碼不對）的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法匯入這個檔案。檔案的文字編碼無法辨識。請把檔案轉存成 UTF-8 編碼後再試一次。'**
+  String get dictionaryImportErrorInvalidEncoding;
+
+  /// 匯入失敗（格式不對）的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法匯入這個檔案。檔案格式不符合字典格式。請確認檔案是 JSON、CSV 或 CC-CEDICT 字典檔後再試一次。'**
+  String get dictionaryImportErrorInvalidFormat;
+
+  /// 匯入失敗（沒有有效詞條）的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法匯入這個檔案。檔案裡沒有可用的詞條。請確認檔案內容不是空的，且每筆都有詞頭與解釋後再試一次。'**
+  String get dictionaryImportErrorNoValidEntries;
+
+  /// 匯入失敗（其他原因）的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法匯入這個檔案。匯入時發生未預期的錯誤。請稍後再試一次，若仍失敗請換一個檔案。'**
+  String get dictionaryImportErrorGeneric;
+
+  /// 不支援的檔案的三段式訊息，file 為檔名
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法匯入「{file}」。這個檔案類型不支援。請改選 JSON、CSV 或 TXT（CC-CEDICT）字典檔。'**
+  String dictionaryImportUnsupportedFile(String file);
+
+  /// MDX 尚未支援的訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'這個版本還不能匯入 MDX。請先匯入 JSON、CSV 或 CC-CEDICT 字典，等之後的版本再匯入 MDX。'**
+  String get dictionaryImportMdxNotYet;
+
+  /// 選到附屬檔案但沒有 MDX 的提醒
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選到的 .mdd 或 .css 沒有可附加的字典。請同時選擇對應的 .mdx 主檔，或到已匯入的 MDX 字典按「新增附屬檔案」。'**
+  String get dictionaryImportOrphanCompanions;
+
+  /// 匯入中離開確認的標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'離開並取消匯入？'**
+  String get dictionaryImportLeaveConfirmTitle;
+
+  /// 匯入中離開確認的內容
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字典正在匯入中，現在離開會取消這次匯入。已寫入的部分不會保留。'**
+  String get dictionaryImportLeaveConfirmMessage;
+
+  /// 匯入中離開確認的確認按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'離開並取消'**
+  String get dictionaryImportLeaveConfirmAction;
+
+  /// 匯入中離開確認的「留下繼續匯入」按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'繼續匯入'**
+  String get dictionaryImportLeaveConfirmStay;
+
+  /// 字典清單拖曳排序把手的語意標籤（螢幕閱讀器朗讀）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'拖曳排序'**
+  String get dictionaryDragHandleLabel;
 }
 
 class _AppLocalizationsDelegate

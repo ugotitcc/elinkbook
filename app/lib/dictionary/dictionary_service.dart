@@ -5,6 +5,7 @@ import 'models/lookup_request.dart';
 import 'models/lookup_result.dart';
 import 'providers/local_dictionary_provider.dart';
 import 'storage/dictionary_store.dart';
+import 'storage/dictionary_store_provider.dart';
 
 /// [DictionaryService.lookup] 的回傳。用型別區分「選取無效」與「查詢完成」，
 /// 不用例外傳遞預期內的情況。
@@ -38,27 +39,19 @@ final class LookupCompleted extends DictionaryLookupResponse {
 /// 目前只查本機字典（線上字典是後續 Issue）。
 class DictionaryService {
   DictionaryService({required DictionaryStore store})
-      : _openStore = (() async => store);
+      : _store = DictionaryStoreProvider(() async => store);
 
   /// 延遲開啟：第一次 [lookup]（且選取有效）才呼叫 [openStore]，之後重用。
   /// 開啟失敗時 [lookup] 丟出例外、不快取失敗，下一次查詢會重試。
   /// 字典是邊緣功能，開檔失敗不應擋住 App 啟動。
   DictionaryService.lazy(Future<DictionaryStore> Function() openStore)
-      : _openStore = openStore;
+      : _store = DictionaryStoreProvider(openStore);
 
-  final Future<DictionaryStore> Function() _openStore;
-  Future<DictionaryStore>? _opening;
+  /// 與其他服務（例如字典管理）共用同一個 [provider]，資料庫只開一次。
+  DictionaryService.fromProvider(DictionaryStoreProvider provider)
+      : _store = provider;
 
-  Future<DictionaryStore> _store() async {
-    final opening = _opening ??= _openStore();
-    try {
-      return await opening;
-    } catch (_) {
-      // 失敗不快取，讓下一次查詢重試。
-      if (identical(_opening, opening)) _opening = null;
-      rethrow;
-    }
-  }
+  final DictionaryStoreProvider _store;
 
   Future<DictionaryLookupResponse> lookup(String selectedText) async {
     final selection = normalizeLookupSelection(selectedText);

@@ -1708,6 +1708,10 @@
   "@settingsReadingDefaultsLabel": {
     "description": "設定畫面「閱讀預設值」項目標題，同時是 ReadingDefaultsScreen 的 AppBar 標題"
   },
+  "settingsDictionaryLabel": "字典",
+  "@settingsDictionaryLabel": {
+    "description": "設定畫面「閱讀」分區的「字典」項目標題，點了進入字典設定畫面"
+  },
   "settingsNavZoneLabel": "導航熱區",
   "@settingsNavZoneLabel": {
     "description": "設定畫面「導航熱區」項目標題，同時是 NavZoneSettingsScreen 的 AppBar 標題"
@@ -3098,5 +3102,255 @@
   "dictionaryLookupSegmentFailed": "（失敗）",
   "@dictionaryLookupSegmentFailed": {
     "description": "字典面板分段標籤的狀態後綴：查詢失敗"
+  },
+  "dictionarySettingsTitle": "字典",
+  "@dictionarySettingsTitle": {
+    "description": "字典設定畫面的標題"
+  },
+  "dictionaryDirectionEnToZh": "英→繁中",
+  "@dictionaryDirectionEnToZh": {
+    "description": "字典方向標籤：英文查繁體中文"
+  },
+  "dictionaryDirectionZhToEn": "中→英",
+  "@dictionaryDirectionZhToEn": {
+    "description": "字典方向標籤：中文查英文"
+  },
+  "dictionaryDirectionZhToZh": "中→中",
+  "@dictionaryDirectionZhToZh": {
+    "description": "字典方向標籤：中文查中文"
+  },
+  "dictionaryEntryCount": "{count, plural, =1{1 筆} other{{count} 筆}}",
+  "@dictionaryEntryCount": {
+    "description": "字典的詞條筆數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dictionarySettingsEmpty": "尚未匯入字典",
+  "@dictionarySettingsEmpty": {
+    "description": "字典設定畫面空清單的標題文字"
+  },
+  "dictionarySettingsEmptyHint": "請選擇字典檔案匯入，匯入後閱讀時就能查詢。",
+  "@dictionarySettingsEmptyHint": {
+    "description": "字典設定畫面空清單的下一步提示"
+  },
+  "dictionarySettingsLoadFailed": "無法讀取字典清單。字典資料暫時無法存取。請離開此畫面後重新進入再試一次。",
+  "@dictionarySettingsLoadFailed": {
+    "description": "讀取字典清單失敗的三段式訊息"
+  },
+  "dictionarySettingsDeleteFailed": "無法刪除這本字典。字典的檔案可能正被其他程式占用。請稍後再按一次刪除。",
+  "@dictionarySettingsDeleteFailed": {
+    "description": "刪除字典失敗的三段式訊息"
+  },
+  "dictionarySettingsReorderFailed": "無法儲存字典順序。寫入資料時發生錯誤，已還原成原本的順序。請再拖曳一次。",
+  "@dictionarySettingsReorderFailed": {
+    "description": "儲存字典排序失敗的三段式訊息"
+  },
+  "dictionaryDeleteConfirmTitle": "刪除字典",
+  "@dictionaryDeleteConfirmTitle": {
+    "description": "刪除字典確認對話框標題"
+  },
+  "dictionaryDeleteConfirmMessage": "確定要刪除「{name}」嗎？詞條與附屬檔案會一併刪除，無法復原。",
+  "@dictionaryDeleteConfirmMessage": {
+    "description": "刪除字典確認對話框內容，name 為字典名稱",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dictionaryDeleteConfirmAction": "刪除",
+  "@dictionaryDeleteConfirmAction": {
+    "description": "刪除字典確認對話框的確認按鈕"
+  },
+  "dictionaryMissingCssWarning": "詞條引用了 {files}，但沒有匯入",
+  "@dictionaryMissingCssWarning": {
+    "description": "MDX 字典缺少樣式表的提醒，files 為以頓號連接的檔名",
+    "placeholders": {
+      "files": {
+        "type": "String"
+      }
+    }
+  },
+  "dictionaryListSeparator": "、",
+  "@dictionaryListSeparator": {
+    "description": "清單項目之間的分隔符（例如缺少的樣式表檔名清單）"
+  },
+  "dictionaryAddCompanion": "新增附屬檔案",
+  "@dictionaryAddCompanion": {
+    "description": "為 MDX 字典補上附屬檔案（樣式表、MDD）的按鈕"
+  },
+  "dictionarySettingsAddCompanionFailed": "無法新增附屬檔案。檔案無法讀取，或儲存空間不足。請確認檔案存在、空間足夠後再試一次。",
+  "@dictionarySettingsAddCompanionFailed": {
+    "description": "新增 MDX 字典附屬檔案失敗的三段式訊息"
+  },
+  "dictionaryImportButton": "匯入字典",
+  "@dictionaryImportButton": {
+    "description": "匯入字典的按鈕（字典設定畫面右上角）"
+  },
+  "dictionaryImportTitle": "匯入字典",
+  "@dictionaryImportTitle": {
+    "description": "匯入字典對話框標題"
+  },
+  "dictionaryImportNameLabel": "名稱",
+  "@dictionaryImportNameLabel": {
+    "description": "匯入對話框的字典名稱欄位標籤"
+  },
+  "dictionaryImportDirectionLabel": "查詢方向",
+  "@dictionaryImportDirectionLabel": {
+    "description": "匯入對話框的查詢方向欄位標籤"
+  },
+  "dictionaryImportLicenseLabel": "授權說明",
+  "@dictionaryImportLicenseLabel": {
+    "description": "匯入對話框的授權說明欄位標籤"
+  },
+  "dictionaryImportLargeFileHint": "檔案較大，匯入可能需要較長時間",
+  "@dictionaryImportLargeFileHint": {
+    "description": "匯入對話框的大檔案提示（超過 50 MB）"
+  },
+  "dictionaryImportConfirm": "匯入",
+  "@dictionaryImportConfirm": {
+    "description": "匯入對話框的確認按鈕"
+  },
+  "dictionaryImportCancel": "取消",
+  "@dictionaryImportCancel": {
+    "description": "匯入對話框與進度遮罩的取消按鈕"
+  },
+  "dictionaryImportProgress": "已處理 {processed} / {total} 筆",
+  "@dictionaryImportProgress": {
+    "description": "匯入進度文字",
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "dictionaryImportDone": "{count, plural, other{匯入 {count} 筆}}",
+  "@dictionaryImportDone": {
+    "description": "匯入完成摘要，count 為匯入筆數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dictionaryImportSkippedSummary": "{count, plural, other{略過 {count} 筆}}",
+  "@dictionaryImportSkippedSummary": {
+    "description": "匯入摘要的略過筆數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dictionaryImportSkipSample": "第 {index} 筆：{reason}",
+  "@dictionaryImportSkipSample": {
+    "description": "略過原因清單的一行，index 為檔內第幾筆，reason 為已轉成文字的原因",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "dictionaryImportSkipMissingHeadword": "缺少詞頭",
+  "@dictionaryImportSkipMissingHeadword": {
+    "description": "略過原因：缺少詞頭"
+  },
+  "dictionaryImportSkipMissingDefinition": "缺少解釋",
+  "@dictionaryImportSkipMissingDefinition": {
+    "description": "略過原因：缺少解釋"
+  },
+  "dictionaryImportSkipDefinitionTooLong": "解釋過長",
+  "@dictionaryImportSkipDefinitionTooLong": {
+    "description": "略過原因：解釋過長"
+  },
+  "dictionaryImportSkipInvalidField": "欄位格式不對",
+  "@dictionaryImportSkipInvalidField": {
+    "description": "略過原因：欄位格式不對"
+  },
+  "dictionaryImportSkipMalformedLine": "該行格式不對",
+  "@dictionaryImportSkipMalformedLine": {
+    "description": "略過原因：該行格式不對"
+  },
+  "dictionaryImportDuplicateTitle": "這本字典已匯入",
+  "@dictionaryImportDuplicateTitle": {
+    "description": "重複匯入對話框標題"
+  },
+  "dictionaryImportDuplicateMessage": "已經匯入過內容相同的字典。要略過，還是用這次的檔案取代舊的？",
+  "@dictionaryImportDuplicateMessage": {
+    "description": "重複匯入對話框內容"
+  },
+  "dictionaryImportDuplicateSkip": "略過",
+  "@dictionaryImportDuplicateSkip": {
+    "description": "重複匯入對話框的略過按鈕"
+  },
+  "dictionaryImportDuplicateReplace": "取代",
+  "@dictionaryImportDuplicateReplace": {
+    "description": "重複匯入對話框的取代按鈕"
+  },
+  "dictionaryImportErrorUnreadableFile": "無法匯入這個檔案。檔案無法讀取。請確認檔案存在、沒有損毀後再試一次。",
+  "@dictionaryImportErrorUnreadableFile": {
+    "description": "匯入失敗（無法讀取檔案）的三段式訊息"
+  },
+  "dictionaryImportErrorInvalidEncoding": "無法匯入這個檔案。檔案的文字編碼無法辨識。請把檔案轉存成 UTF-8 編碼後再試一次。",
+  "@dictionaryImportErrorInvalidEncoding": {
+    "description": "匯入失敗（編碼不對）的三段式訊息"
+  },
+  "dictionaryImportErrorInvalidFormat": "無法匯入這個檔案。檔案格式不符合字典格式。請確認檔案是 JSON、CSV 或 CC-CEDICT 字典檔後再試一次。",
+  "@dictionaryImportErrorInvalidFormat": {
+    "description": "匯入失敗（格式不對）的三段式訊息"
+  },
+  "dictionaryImportErrorNoValidEntries": "無法匯入這個檔案。檔案裡沒有可用的詞條。請確認檔案內容不是空的，且每筆都有詞頭與解釋後再試一次。",
+  "@dictionaryImportErrorNoValidEntries": {
+    "description": "匯入失敗（沒有有效詞條）的三段式訊息"
+  },
+  "dictionaryImportErrorGeneric": "無法匯入這個檔案。匯入時發生未預期的錯誤。請稍後再試一次，若仍失敗請換一個檔案。",
+  "@dictionaryImportErrorGeneric": {
+    "description": "匯入失敗（其他原因）的三段式訊息"
+  },
+  "dictionaryImportUnsupportedFile": "無法匯入「{file}」。這個檔案類型不支援。請改選 JSON、CSV 或 TXT（CC-CEDICT）字典檔。",
+  "@dictionaryImportUnsupportedFile": {
+    "description": "不支援的檔案的三段式訊息，file 為檔名",
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "dictionaryImportMdxNotYet": "這個版本還不能匯入 MDX。請先匯入 JSON、CSV 或 CC-CEDICT 字典，等之後的版本再匯入 MDX。",
+  "@dictionaryImportMdxNotYet": {
+    "description": "MDX 尚未支援的訊息"
+  },
+  "dictionaryImportOrphanCompanions": "選到的 .mdd 或 .css 沒有可附加的字典。請同時選擇對應的 .mdx 主檔，或到已匯入的 MDX 字典按「新增附屬檔案」。",
+  "@dictionaryImportOrphanCompanions": {
+    "description": "選到附屬檔案但沒有 MDX 的提醒"
+  },
+  "dictionaryImportLeaveConfirmTitle": "離開並取消匯入？",
+  "@dictionaryImportLeaveConfirmTitle": {
+    "description": "匯入中離開確認的標題"
+  },
+  "dictionaryImportLeaveConfirmMessage": "字典正在匯入中，現在離開會取消這次匯入。已寫入的部分不會保留。",
+  "@dictionaryImportLeaveConfirmMessage": {
+    "description": "匯入中離開確認的內容"
+  },
+  "dictionaryImportLeaveConfirmAction": "離開並取消",
+  "@dictionaryImportLeaveConfirmAction": {
+    "description": "匯入中離開確認的確認按鈕"
+  },
+  "dictionaryImportLeaveConfirmStay": "繼續匯入",
+  "@dictionaryImportLeaveConfirmStay": {
+    "description": "匯入中離開確認的「留下繼續匯入」按鈕"
+  },
+  "dictionaryDragHandleLabel": "拖曳排序",
+  "@dictionaryDragHandleLabel": {
+    "description": "字典清單拖曳排序把手的語意標籤（螢幕閱讀器朗讀）"
   }
 }

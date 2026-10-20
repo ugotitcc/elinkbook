@@ -17,6 +17,7 @@ class DictionarySource {
     required this.entryCount,
     required this.licenseNote,
     required this.importedAt,
+    this.referencedCss = const [],
   });
 
   final String id;
@@ -40,4 +41,7 @@ class DictionarySource {
   /// 使用者匯入時可填，顯示用。
   final String licenseNote;
   final DateTime importedAt;
+
+  /// MDX 詞條引用的樣式表檔名；其他格式為空清單。
+  final List<String> referencedCss;
 }

@@ -11,6 +11,7 @@ import 'appearance_dependencies.dart';
 import 'cloud_account_settings_screen.dart';
 import 'font_management_screen.dart';
 import 'full_text_search_confirm_dialog.dart';
+import 'dictionary_settings_screen.dart';
 import 'nav_zone_settings_screen.dart';
 import 'reader_feature_dependencies.dart';
 import 'reader_console_log_screen.dart';
@@ -252,6 +253,23 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                   MaterialPageRoute(
                     builder: (context) => ReadingDefaultsScreen(
                       prefsManager: widget.readerFeatures.prefsManager,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          _SettingsCard(
+            child: ListTile(
+              key: const Key('settings_dictionary_button'),
+              title: Text(l10n.settingsDictionaryLabel),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => DictionarySettingsScreen(
+                      manager: widget.readerFeatures.dictionaryManager,
+                      isEinkMode: widget.appearance.isEinkMode,
                     ),
                   ),
                 );

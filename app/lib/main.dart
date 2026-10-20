@@ -17,9 +17,14 @@ import 'cloud_import/onedrive_oauth_client.dart';
 import 'cloud_import/onedrive_storage_client.dart';
 import 'cloud_import/secure_storage_cloud_account_repository.dart';
 import 'downloads/download_queue_controller.dart';
+import 'dictionary/dictionary_file_store.dart';
+import 'dictionary/dictionary_manager.dart';
 import 'dictionary/dictionary_service.dart';
+import 'dictionary/importers/cedict_importer.dart';
+import 'dictionary/importers/json_csv_importer.dart';
 import 'dictionary/storage/dictionary_database.dart';
 import 'dictionary/storage/dictionary_store.dart';
+import 'dictionary/storage/dictionary_store_provider.dart';
 import 'library/book_content_fingerprint.dart';
 import 'library/book_import_service_impl.dart';
 import 'library/sqlite_library_repository.dart';
@@ -127,13 +132,29 @@ Future<void> main() async {
   // epic-63 Issue 4：字典資料庫與主庫分開（自帶版本號，見 plan Global
   // Constraints）。延遲到第一次查字典才開啟，開檔失敗只影響查字典，
   // 不會擋住 App 啟動；`DictionaryService` 由 ADR 0037 依賴組往下傳，
-  // 面板每次查詢都經過同一個實例。
-  final dictionaryService = DictionaryService.lazy(() async {
+  // 面板每次查詢都經過同一個實例。epic-63 Issue 5：查詢服務與字典管理
+  // 共用同一個 `DictionaryStoreProvider`，`dictionary.db` 只會開一次。
+  final dictionaryStoreProvider = DictionaryStoreProvider(() async {
     final dictionaryDatabase = await DictionaryDatabase.open(
       await defaultDictionaryDatabasePath(),
     );
     return DictionaryStore(dictionaryDatabase);
   });
+  final dictionaryService = DictionaryService.fromProvider(
+    dictionaryStoreProvider,
+  );
+  final dictionaryManager = DictionaryManager(
+    store: dictionaryStoreProvider,
+    files: DictionaryFileStore(
+      Directory(
+        p.join((await getApplicationSupportDirectory()).path, 'dictionaries'),
+      ),
+    ),
+    importerFactories: [
+      (s) => JsonCsvImporter(store: s),
+      (s) => CedictImporter(store: s),
+    ],
+  );
   // epic-49：內建字型改為可下載字型，存在 App 支援目錄（非使用者可見、清除快取不會被刪）。
   // prepare() 建立存放目錄並清掉上次被系統終止時殘留的 .part 暫存檔；
   // 失敗只影響字型下載功能，不能擋住 App 啟動。
@@ -348,6 +369,7 @@ Future<void> main() async {
     ttsAudio: ttsAudio,
     ttsAudioFocusSource: ttsAudioFocusSource,
     dictionaryService: dictionaryService,
+    dictionaryManager: dictionaryManager,
   );
   final sync = SyncDependencies(
     syncAccountRepository: syncAccountRepository,

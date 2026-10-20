@@ -55,6 +55,7 @@ import 'package:elinkbook/dictionary/dictionary_service.dart';
 import 'package:elinkbook/dictionary/models/dictionary_entry.dart';
 import 'package:elinkbook/dictionary/models/lookup_request.dart';
 import 'package:elinkbook/dictionary/models/lookup_result.dart';
+import 'package:elinkbook/screens/dictionary_settings_screen.dart';
 import 'package:elinkbook/screens/widgets/dictionary_lookup_sheet.dart';
 import '../support/fake_dictionary_service.dart';
 import '../support/fake_highlights_repository.dart';
@@ -5378,6 +5379,122 @@ void main() {
 
       expect(find.byType(DictionaryLookupSheet), findsNothing);
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // epic-63-dictionary-lookup Issue 5：查詢面板「前往字典設定」。
+  // ─────────────────────────────────────────────────────────────────────
+  group('Epic 63 Issue 5：前往字典設定', () {
+    const selectionText = '天地';
+
+    // 尚未匯入任何字典：面板會顯示「前往字典設定」連結。
+    const noDictionary = LookupCompleted(
+      result: LookupResult(
+        request: LookupRequest(selectionText),
+        outcomes: [],
+      ),
+      hasEnabledDictionary: false,
+    );
+
+    Future<FoliateReaderView> pumpEpub(
+      WidgetTester tester, {
+      required String bookId,
+    }) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: bookId,
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              dictionaryService: FakeDictionaryService(response: noDictionary),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final view = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      view.onPageRendered();
+      view.onLayoutResolved?.call(
+        EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      return view;
+    }
+
+    void reportSelection(FoliateReaderView view) {
+      view.onSelectionChanged?.call(
+        EpubSelectionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          rect: const PercentRect(left: 0.1, top: 0.2, right: 0.5, bottom: 0.3),
+          text: selectionText,
+        ),
+      );
+    }
+
+    testWidgets('尚未匯入字典時面板顯示前往字典設定；點了面板關閉並開啟字典設定畫面', (
+      tester,
+    ) async {
+      final view = await pumpEpub(tester, bookId: 'b_lookup_settings_open');
+      reportSelection(view);
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_lookup')));
+      await tester.pumpAndSettle();
+      final link = find.byKey(const Key('dictionary_lookup_open_settings'));
+      expect(link, findsOneWidget);
+
+      await tester.tap(link);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DictionaryLookupSheet), findsNothing);
+      expect(find.byType(DictionarySettingsScreen), findsOneWidget);
+    });
+
+    testWidgets('從面板進入設定再返回後，AnnotationToolbar 仍只有一個實例，選取仍在', (
+      tester,
+    ) async {
+      final view = await pumpEpub(tester, bookId: 'b_lookup_settings_back');
+      reportSelection(view);
+      await tester.pump();
+      // 工具列若被清掉再重建，Element 會是新的；同一個 Element 代表原樣留著。
+      final toolbarElement = tester.element(find.byType(AnnotationToolbar));
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_lookup')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('dictionary_lookup_open_settings')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(DictionarySettingsScreen), findsOneWidget);
+
+      // 返回閱讀畫面（Navigator.pop 與系統返回等價）。
+      Navigator.of(tester.element(find.byType(DictionarySettingsScreen))).pop();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DictionarySettingsScreen), findsNothing);
+      expect(
+        tester.element(find.byType(AnnotationToolbar)),
+        same(toolbarElement),
+        reason: '往返字典設定期間工具列不得被移除再重建',
+      );
+      expect(find.byType(AnnotationToolbar), findsOneWidget);
     });
   });
 

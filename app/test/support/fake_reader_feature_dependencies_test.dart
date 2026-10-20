@@ -1,7 +1,9 @@
+import 'package:elinkbook/dictionary/dictionary_manager.dart';
 import 'package:elinkbook/dictionary/dictionary_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_bookmarks_repository.dart';
+import 'fake_dictionary_manager.dart';
 import 'fake_dictionary_service.dart';
 import 'fake_full_text_search_settings_repository.dart';
 import 'fake_reader_feature_dependencies.dart';
@@ -76,6 +78,23 @@ void main() {
       final deps = fakeReaderFeatureDependencies(dictionaryService: service);
 
       expect(deps.dictionaryService, same(service));
+    });
+
+    test('預設帶有 DictionaryManager，且每次呼叫是新實例', () {
+      final a = fakeReaderFeatureDependencies();
+      final b = fakeReaderFeatureDependencies();
+
+      expect(a.dictionaryManager, isA<DictionaryManager>());
+      expect(a.dictionaryManager, isA<FakeDictionaryManager>());
+      expect(a.dictionaryManager, isNot(same(b.dictionaryManager)));
+    });
+
+    test('可覆寫 dictionaryManager', () {
+      final manager = FakeDictionaryManager();
+
+      final deps = fakeReaderFeatureDependencies(dictionaryManager: manager);
+
+      expect(deps.dictionaryManager, same(manager));
     });
   });
 }

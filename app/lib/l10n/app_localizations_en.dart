@@ -1306,6 +1306,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsReadingDefaultsLabel => 'Reading Defaults';
 
   @override
+  String get settingsDictionaryLabel => 'Dictionary';
+
+  @override
   String get settingsNavZoneLabel => 'Navigation Zones';
 
   @override
@@ -2388,4 +2391,208 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dictionaryLookupSegmentFailed => ' (Failed)';
+
+  @override
+  String get dictionarySettingsTitle => 'Dictionaries';
+
+  @override
+  String get dictionaryDirectionEnToZh => 'EN → Trad. Chinese';
+
+  @override
+  String get dictionaryDirectionZhToEn => 'Chinese → EN';
+
+  @override
+  String get dictionaryDirectionZhToZh => 'Chinese → Chinese';
+
+  @override
+  String dictionaryEntryCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count entries',
+      one: '1 entry',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dictionarySettingsEmpty => 'No dictionaries imported yet';
+
+  @override
+  String get dictionarySettingsEmptyHint =>
+      'Choose a dictionary file to import. Once imported, you can look words up while reading.';
+
+  @override
+  String get dictionarySettingsLoadFailed =>
+      'Could not load the dictionary list. The dictionary data is temporarily unavailable. Leave this screen and open it again.';
+
+  @override
+  String get dictionarySettingsDeleteFailed =>
+      'Could not delete this dictionary. Its files may be in use by another app. Wait a moment and tap delete again.';
+
+  @override
+  String get dictionarySettingsReorderFailed =>
+      'Could not save the dictionary order. A write error occurred and the previous order was restored. Drag the item again.';
+
+  @override
+  String get dictionaryDeleteConfirmTitle => 'Delete dictionary';
+
+  @override
+  String dictionaryDeleteConfirmMessage(String name) {
+    return 'Delete \"$name\"? Its entries and companion files will be deleted too, and this cannot be undone.';
+  }
+
+  @override
+  String get dictionaryDeleteConfirmAction => 'Delete';
+
+  @override
+  String dictionaryMissingCssWarning(String files) {
+    return 'Entries refer to these files, which were not imported: $files';
+  }
+
+  @override
+  String get dictionaryListSeparator => ', ';
+
+  @override
+  String get dictionaryAddCompanion => 'Add companion files';
+
+  @override
+  String get dictionarySettingsAddCompanionFailed =>
+      'Could not add the companion files. The file may be unreadable or storage may be full. Check that the file exists and there is enough space, then try again.';
+
+  @override
+  String get dictionaryImportButton => 'Import dictionary';
+
+  @override
+  String get dictionaryImportTitle => 'Import dictionary';
+
+  @override
+  String get dictionaryImportNameLabel => 'Name';
+
+  @override
+  String get dictionaryImportDirectionLabel => 'Direction';
+
+  @override
+  String get dictionaryImportLicenseLabel => 'License note';
+
+  @override
+  String get dictionaryImportLargeFileHint =>
+      'This file is large, so importing may take a while';
+
+  @override
+  String get dictionaryImportConfirm => 'Import';
+
+  @override
+  String get dictionaryImportCancel => 'Cancel';
+
+  @override
+  String dictionaryImportProgress(int processed, int total) {
+    return 'Processed $processed of $total';
+  }
+
+  @override
+  String dictionaryImportDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Imported $count entries',
+      one: 'Imported 1 entry',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dictionaryImportSkippedSummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Skipped $count entries',
+      one: 'Skipped 1 entry',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dictionaryImportSkipSample(int index, String reason) {
+    return 'Entry $index: $reason';
+  }
+
+  @override
+  String get dictionaryImportSkipMissingHeadword => 'missing headword';
+
+  @override
+  String get dictionaryImportSkipMissingDefinition => 'missing definition';
+
+  @override
+  String get dictionaryImportSkipDefinitionTooLong => 'definition too long';
+
+  @override
+  String get dictionaryImportSkipInvalidField => 'invalid field';
+
+  @override
+  String get dictionaryImportSkipMalformedLine => 'malformed line';
+
+  @override
+  String get dictionaryImportDuplicateTitle =>
+      'This dictionary is already imported';
+
+  @override
+  String get dictionaryImportDuplicateMessage =>
+      'A dictionary with the same content was already imported. Skip it, or replace the old one with this file?';
+
+  @override
+  String get dictionaryImportDuplicateSkip => 'Skip';
+
+  @override
+  String get dictionaryImportDuplicateReplace => 'Replace';
+
+  @override
+  String get dictionaryImportErrorUnreadableFile =>
+      'Could not import this file. The file could not be read. Check that it exists and is not damaged, then try again.';
+
+  @override
+  String get dictionaryImportErrorInvalidEncoding =>
+      'Could not import this file. Its text encoding was not recognized. Save the file as UTF-8 and try again.';
+
+  @override
+  String get dictionaryImportErrorInvalidFormat =>
+      'Could not import this file. Its format is not a supported dictionary format. Check that it is a JSON, CSV or CC-CEDICT dictionary file, then try again.';
+
+  @override
+  String get dictionaryImportErrorNoValidEntries =>
+      'Could not import this file. It has no usable entries. Check that the file is not empty and that every entry has a headword and a definition, then try again.';
+
+  @override
+  String get dictionaryImportErrorGeneric =>
+      'Could not import this file. An unexpected error occurred. Try again later, or try a different file.';
+
+  @override
+  String dictionaryImportUnsupportedFile(String file) {
+    return 'Could not import \"$file\". This file type is not supported. Choose a JSON, CSV or TXT (CC-CEDICT) dictionary file instead.';
+  }
+
+  @override
+  String get dictionaryImportMdxNotYet =>
+      'This version cannot import MDX yet. Import a JSON, CSV or CC-CEDICT dictionary for now, and import MDX in a later version.';
+
+  @override
+  String get dictionaryImportOrphanCompanions =>
+      'The selected .mdd or .css files have no dictionary to attach to. Select the matching .mdx file together with them, or use \"Add companion files\" on an imported MDX dictionary.';
+
+  @override
+  String get dictionaryImportLeaveConfirmTitle =>
+      'Leave and cancel the import?';
+
+  @override
+  String get dictionaryImportLeaveConfirmMessage =>
+      'A dictionary is being imported. Leaving now cancels the import, and nothing already written is kept.';
+
+  @override
+  String get dictionaryImportLeaveConfirmAction => 'Leave and cancel';
+
+  @override
+  String get dictionaryImportLeaveConfirmStay => 'Keep importing';
+
+  @override
+  String get dictionaryDragHandleLabel => 'Drag to reorder';
 }

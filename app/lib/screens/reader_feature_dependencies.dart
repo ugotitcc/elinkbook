@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
+import '../dictionary/dictionary_manager.dart';
 import '../dictionary/dictionary_service.dart';
 import '../reader/book_reader_prefs_repository.dart';
 import '../reader/bookmarks_repository.dart';
@@ -64,6 +65,10 @@ class ReaderFeatureDependencies {
   /// 一次；閱讀器選字後開面板時使用。
   final DictionaryService dictionaryService;
 
+  /// 字典管理入口（epic-63 Issue 5）；設定頁的字典管理畫面使用，與
+  /// [dictionaryService] 共用同一個 `dictionary.db` 延遲開啟 provider。
+  final DictionaryManager dictionaryManager;
+
   const ReaderFeatureDependencies({
     required this.prefsManager,
     required this.libraryRepository,
@@ -85,5 +90,6 @@ class ReaderFeatureDependencies {
     required this.ttsAudio,
     required this.ttsAudioFocusSource,
     required this.dictionaryService,
+    required this.dictionaryManager,
   });
 }
