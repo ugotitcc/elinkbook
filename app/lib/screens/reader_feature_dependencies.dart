@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
+import '../dictionary/dictionary_service.dart';
 import '../reader/book_reader_prefs_repository.dart';
 import '../reader/bookmarks_repository.dart';
 import '../reader/custom_fonts_repository.dart';
@@ -59,6 +60,10 @@ class ReaderFeatureDependencies {
   final TtsAudioHandlerHolder ttsAudio;
   final TtsAudioFocusSource ttsAudioFocusSource;
 
+  /// 字典查詢入口（epic-63 Issue 4）。`main.dart` 以 `dictionary.db` 建構
+  /// 一次；閱讀器選字後開面板時使用。
+  final DictionaryService dictionaryService;
+
   const ReaderFeatureDependencies({
     required this.prefsManager,
     required this.libraryRepository,
@@ -79,5 +84,6 @@ class ReaderFeatureDependencies {
     required this.ttsProvider,
     required this.ttsAudio,
     required this.ttsAudioFocusSource,
+    required this.dictionaryService,
   });
 }

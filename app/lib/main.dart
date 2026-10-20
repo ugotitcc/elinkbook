@@ -17,6 +17,9 @@ import 'cloud_import/onedrive_oauth_client.dart';
 import 'cloud_import/onedrive_storage_client.dart';
 import 'cloud_import/secure_storage_cloud_account_repository.dart';
 import 'downloads/download_queue_controller.dart';
+import 'dictionary/dictionary_service.dart';
+import 'dictionary/storage/dictionary_database.dart';
+import 'dictionary/storage/dictionary_store.dart';
 import 'library/book_content_fingerprint.dart';
 import 'library/book_import_service_impl.dart';
 import 'library/sqlite_library_repository.dart';
@@ -121,6 +124,15 @@ Future<void> main() async {
   final highlightsRepository = HighlightsRepository(repository.database);
   final notesRepository = NotesRepository(repository.database);
   final customFontsRepository = CustomFontsRepository(repository.database);
+  // epic-63 Issue 4：字典資料庫與主庫分開（自帶版本號，見 plan Global
+  // Constraints），啟動時開啟一次；`DictionaryService` 由 ADR 0037 依賴組
+  // 往下傳，面板每次查詢都經過同一個實例。
+  final dictionaryDatabase = await DictionaryDatabase.open(
+    await defaultDictionaryDatabasePath(),
+  );
+  final dictionaryService = DictionaryService(
+    store: DictionaryStore(dictionaryDatabase),
+  );
   // epic-49：內建字型改為可下載字型，存在 App 支援目錄（非使用者可見、清除快取不會被刪）。
   // prepare() 建立存放目錄並清掉上次被系統終止時殘留的 .part 暫存檔；
   // 失敗只影響字型下載功能，不能擋住 App 啟動。
@@ -334,6 +346,7 @@ Future<void> main() async {
     ttsProvider: ttsProvider,
     ttsAudio: ttsAudio,
     ttsAudioFocusSource: ttsAudioFocusSource,
+    dictionaryService: dictionaryService,
   );
   final sync = SyncDependencies(
     syncAccountRepository: syncAccountRepository,
