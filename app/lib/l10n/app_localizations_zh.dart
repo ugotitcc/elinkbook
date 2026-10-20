@@ -2357,6 +2357,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dictionaryAddCompanion => '新增附屬檔案';
+
+  @override
+  String get dictionarySettingsAddCompanionFailed =>
+      '無法新增附屬檔案。檔案無法讀取，或儲存空間不足。請確認檔案存在、空間足夠後再試一次。';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -4712,6 +4716,10 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get dictionaryAddCompanion => '添加附属文件';
+
+  @override
+  String get dictionarySettingsAddCompanionFailed =>
+      '无法添加附属文件。文件无法读取，或存储空间不足。请确认文件存在、空间足够后再试一次。';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -7067,4 +7075,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dictionaryAddCompanion => '新增附屬檔案';
+
+  @override
+  String get dictionarySettingsAddCompanionFailed =>
+      '無法新增附屬檔案。檔案無法讀取，或儲存空間不足。請確認檔案存在、空間足夠後再試一次。';
 }

@@ -676,5 +676,6 @@
   "dictionaryDeleteConfirmMessage": "确定要删除“{name}”吗？词条与附属文件会一并删除，无法恢复。",
   "dictionaryDeleteConfirmAction": "删除",
   "dictionaryMissingCssWarning": "词条引用了 {files}，但没有导入",
-  "dictionaryAddCompanion": "添加附属文件"
+  "dictionaryAddCompanion": "添加附属文件",
+  "dictionarySettingsAddCompanionFailed": "无法添加附属文件。文件无法读取，或存储空间不足。请确认文件存在、空间足够后再试一次。"
 }

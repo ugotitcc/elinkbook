@@ -3173,5 +3173,9 @@
   "dictionaryAddCompanion": "新增附屬檔案",
   "@dictionaryAddCompanion": {
     "description": "為 MDX 字典補上附屬檔案（樣式表、MDD）的按鈕"
+  },
+  "dictionarySettingsAddCompanionFailed": "無法新增附屬檔案。檔案無法讀取，或儲存空間不足。請確認檔案存在、空間足夠後再試一次。",
+  "@dictionarySettingsAddCompanionFailed": {
+    "description": "新增 MDX 字典附屬檔案失敗的三段式訊息"
   }
 }

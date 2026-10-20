@@ -4168,6 +4168,12 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'新增附屬檔案'**
   String get dictionaryAddCompanion;
+
+  /// 新增 MDX 字典附屬檔案失敗的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法新增附屬檔案。檔案無法讀取，或儲存空間不足。請確認檔案存在、空間足夠後再試一次。'**
+  String get dictionarySettingsAddCompanionFailed;
 }
 
 class _AppLocalizationsDelegate

@@ -676,5 +676,6 @@
   "dictionaryDeleteConfirmMessage": "確定要刪除「{name}」嗎？詞條與附屬檔案會一併刪除，無法復原。",
   "dictionaryDeleteConfirmAction": "刪除",
   "dictionaryMissingCssWarning": "詞條引用了 {files}，但沒有匯入",
-  "dictionaryAddCompanion": "新增附屬檔案"
+  "dictionaryAddCompanion": "新增附屬檔案",
+  "dictionarySettingsAddCompanionFailed": "無法新增附屬檔案。檔案無法讀取，或儲存空間不足。請確認檔案存在、空間足夠後再試一次。"
 }

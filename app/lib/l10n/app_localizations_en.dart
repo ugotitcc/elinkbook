@@ -2449,4 +2449,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dictionaryAddCompanion => 'Add companion files';
+
+  @override
+  String get dictionarySettingsAddCompanionFailed =>
+      'Could not add the companion files. The file may be unreadable or storage may be full. Check that the file exists and there is enough space, then try again.';
 }

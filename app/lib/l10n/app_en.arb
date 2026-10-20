@@ -676,5 +676,6 @@
   "dictionaryDeleteConfirmMessage": "Delete \"{name}\"? Its entries and companion files will be deleted too, and this cannot be undone.",
   "dictionaryDeleteConfirmAction": "Delete",
   "dictionaryMissingCssWarning": "Entries refer to {files}, but it was not imported",
-  "dictionaryAddCompanion": "Add companion files"
+  "dictionaryAddCompanion": "Add companion files",
+  "dictionarySettingsAddCompanionFailed": "Could not add the companion files. The file may be unreadable or storage may be full. Check that the file exists and there is enough space, then try again."
 }

@@ -150,13 +150,18 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
   }
 
   Future<void> _addCompanions(DictionaryListItem item) async {
+    final l10n = AppLocalizations.of(context)!;
     final pick = widget.pickFiles ?? pickDictionaryFilesViaFilePicker;
-    final files = await pick(const ['css', 'mdd']);
-    if (files == null || files.isEmpty) return;
     try {
+      final files = await pick(const ['css', 'mdd']);
+      if (files == null || files.isEmpty) return;
+      if (!mounted) return;
+      setState(() => _actionError = null);
       await widget.manager.addCompanions(item.source.id, files);
     } catch (error) {
       debugPrint('Failed to add dictionary companions: $error');
+      if (!mounted) return;
+      setState(() => _actionError = l10n.dictionarySettingsAddCompanionFailed);
     }
     await _reload();
   }

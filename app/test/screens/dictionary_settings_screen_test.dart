@@ -290,6 +290,47 @@ void main() {
     expect(find.byKey(const Key('dictionary_missing_css_m')), findsNothing);
   });
 
+  const addFailedMessage =
+      '無法新增附屬檔案。檔案無法讀取，或儲存空間不足。請確認檔案存在、空間足夠後再試一次。';
+
+  testWidgets('addCompanions 丟例外：顯示三段式錯誤，缺檔提醒仍在', (tester) async {
+    final manager = FakeDictionaryManager(items: [
+      _item('m', format: DictionaryFormat.mdx, missingCss: ['ghychyz.css']),
+    ]);
+    manager.onAddCompanions = (sourceId, files) => throw StateError('disk full');
+    await _pump(
+      tester,
+      manager,
+      pickFiles: (_) async => const [
+        PickedFile(path: '/tmp/ghychyz.css', name: 'ghychyz.css', size: 10),
+      ],
+    );
+
+    await tester.tap(find.byKey(const Key('dictionary_add_companion_m')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(addFailedMessage), findsOneWidget);
+    expect(find.byKey(const Key('dictionary_missing_css_m')), findsOneWidget);
+  });
+
+  testWidgets('選檔器丟例外：顯示同樣的錯誤，不產生未處理例外', (tester) async {
+    final manager = FakeDictionaryManager(items: [
+      _item('m', format: DictionaryFormat.mdx, missingCss: ['ghychyz.css']),
+    ]);
+    await _pump(
+      tester,
+      manager,
+      pickFiles: (_) async => throw StateError('picker'),
+    );
+
+    await tester.tap(find.byKey(const Key('dictionary_add_companion_m')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(addFailedMessage), findsOneWidget);
+    expect(manager.addCompanionsCalls, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('list() 丟例外時顯示失敗訊息，不是空白畫面', (tester) async {
     final manager = FakeDictionaryManager()..listError = StateError('db');
     await _pump(tester, manager);
