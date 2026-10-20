@@ -55,6 +55,9 @@ class DictionaryLookupSheet extends StatefulWidget {
         ? Colors.transparent
         : null;
     final response = service.lookup(selectedText);
+    // 面板建出來之前就失敗（例如字典資料庫開不起來）時，不要變成未處理錯誤；
+    // FutureBuilder 稍後訂閱時仍會收到同一個錯誤並顯示失敗訊息。
+    response.ignore();
     await EBSheetShell.show<void>(
       context,
       title: title,

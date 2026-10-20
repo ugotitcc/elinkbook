@@ -5197,6 +5197,8 @@ void main() {
       reportSelection(view);
       await tester.pump();
       expect(find.byType(AnnotationToolbar), findsOneWidget);
+      // 工具列若被清掉再重建，Element 會是新的；同一個 Element 代表原樣留著。
+      final toolbarElement = tester.element(find.byType(AnnotationToolbar));
 
       await tester.tap(find.byKey(const Key('annotation_toolbar_lookup')));
       await tester.pumpAndSettle();
@@ -5206,6 +5208,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(DictionaryLookupSheet), findsNothing);
+      expect(
+        tester.element(find.byType(AnnotationToolbar)),
+        same(toolbarElement),
+        reason: '開關面板期間工具列不得被移除再重建',
+      );
       expect(
         find.byType(AnnotationToolbar),
         findsOneWidget,

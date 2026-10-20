@@ -37,9 +37,28 @@ final class LookupCompleted extends DictionaryLookupResponse {
 /// 查詢入口：選字處理 → 依文字類型挑字典 → 逐本查詢並組裝結果。
 /// 目前只查本機字典（線上字典是後續 Issue）。
 class DictionaryService {
-  DictionaryService({required DictionaryStore store}) : _store = store;
+  DictionaryService({required DictionaryStore store})
+      : _openStore = (() async => store);
 
-  final DictionaryStore _store;
+  /// 延遲開啟：第一次 [lookup]（且選取有效）才呼叫 [openStore]，之後重用。
+  /// 開啟失敗時 [lookup] 丟出例外、不快取失敗，下一次查詢會重試。
+  /// 字典是邊緣功能，開檔失敗不應擋住 App 啟動。
+  DictionaryService.lazy(Future<DictionaryStore> Function() openStore)
+      : _openStore = openStore;
+
+  final Future<DictionaryStore> Function() _openStore;
+  Future<DictionaryStore>? _opening;
+
+  Future<DictionaryStore> _store() async {
+    final opening = _opening ??= _openStore();
+    try {
+      return await opening;
+    } catch (_) {
+      // 失敗不快取，讓下一次查詢重試。
+      if (identical(_opening, opening)) _opening = null;
+      rethrow;
+    }
+  }
 
   Future<DictionaryLookupResponse> lookup(String selectedText) async {
     final selection = normalizeLookupSelection(selectedText);
@@ -50,12 +69,13 @@ class DictionaryService {
 
     final request = LookupRequest(selection.text);
     final allowed = _allowedLanguages(selection.charType);
+    final store = await _store();
     // 不快取來源清單：設定畫面改動後立即生效。
-    final sources = await _store.listSources(enabledOnly: true);
+    final sources = await store.listSources(enabledOnly: true);
     final outcomes = <ProviderOutcome>[];
     for (final source in sources) {
       if (!allowed.contains(_primaryLang(source.sourceLang))) continue;
-      outcomes.add(await _lookupOne(source, request));
+      outcomes.add(await _lookupOne(store, source, request));
     }
     return LookupCompleted(
       result: LookupResult(request: request, outcomes: outcomes),
@@ -65,11 +85,12 @@ class DictionaryService {
 
   /// 任何例外只影響該分段，不影響其他字典。
   Future<ProviderOutcome> _lookupOne(
+    DictionaryStore store,
     DictionarySource source,
     LookupRequest request,
   ) async {
     try {
-      return await LocalDictionaryProvider(store: _store, source: source)
+      return await LocalDictionaryProvider(store: store, source: source)
           .lookup(request);
     } catch (_) {
       return ProviderOutcome(
