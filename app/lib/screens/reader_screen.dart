@@ -69,6 +69,7 @@ import '../reader/zone_action.dart';
 import '../stats/reading_stats_tracker.dart';
 import '../theme/elink_tokens.dart';
 import 'annotation_toolbar.dart';
+import 'widgets/dictionary_lookup_sheet.dart';
 import 'support/book_import_picker_helper.dart'
     show SingleBookFilePicker, pickSingleBookFileViaFilePicker;
 import 'note_edit_dialog.dart';
@@ -337,6 +338,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 手動裁切互動模式是否進行中（決策 #14），驅動 PdfReaderView 的宣告式
   // cropEditModeActive prop；只有 PDF 分支會用到，EPUB 分支永遠是 false。
   bool _cropEditModeActive = false;
+
+  /// epic-63 Issue 4：字典面板開著時擋掉重複點擊，避免疊出兩層面板。
+  /// 面板關閉後在 `finally` 還原，不觸發重建（旗標不影響畫面）。
+  bool _lookupSheetOpen = false;
   // PDF 目前頁碼/總頁數狀態，由 PdfReaderView.onPageChanged 回報驅動頁尾
   // 顯示（Epic 5 Issue 1）。EPUB 讀取畫面本 issue 不使用此欄位。
   PdfPageInfo? _pdfPageInfo;
@@ -1931,6 +1936,26 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _handlePdfSelectionCanceled();
   }
 
+  /// epic-63 Issue 4：選字後按「查字典」。面板自己負責查詢與顯示；這裡只
+  /// 負責擋重複點擊與開面板，**不動**選取狀態——關掉面板後工具列與選取範圍
+  /// 都要還在，使用者才能接著劃線。
+  Future<void> _handleLookupPressed(String text) async {
+    if (_lookupSheetOpen) return;
+    _lookupSheetOpen = true;
+    try {
+      await DictionaryLookupSheet.show(
+        context,
+        selectedText: text,
+        service: widget.dependencies.dictionaryService,
+        isEinkMode: widget.isEinkMode,
+      );
+    } finally {
+      // 只還原旗標：它不是畫面狀態，不需要 setState；`await` 之後也不碰
+      // `context`，ReaderScreen 先被銷毀時不會用到失效的 State。
+      _lookupSheetOpen = false;
+    }
+  }
+
   Future<void> _handleCopySelection(String text) async {
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
@@ -2930,6 +2955,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   onNotePressed: _handleNotePressed,
                   onClosePressed: _handleCloseAnnotationToolbar,
                   onCopyPressed: () => _handleCopySelection(selection.text),
+                  onLookupPressed: () => _handleLookupPressed(selection.text),
                   onDeletePressed: existingItem == null
                       ? null
                       : () => _handleDeleteExistingAnnotation(existingItem),

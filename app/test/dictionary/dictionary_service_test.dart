@@ -87,6 +87,49 @@ void main() {
     await store.insertEntries([for (final h in headwords) _entry(id, h)]);
   }
 
+  group('DictionaryService.lazy（延遲開啟）', () {
+    test('建構時不開啟；第一次 lookup 才開，之後重用同一個 store', () async {
+      var opened = 0;
+      final lazy = DictionaryService.lazy(() async {
+        opened++;
+        return store;
+      });
+      expect(opened, 0);
+
+      await lazy.lookup('天地');
+      await lazy.lookup('天地');
+
+      expect(opened, 1);
+    });
+
+    test('開啟失敗：lookup 丟出例外，下一次 lookup 會重試', () async {
+      var attempts = 0;
+      final lazy = DictionaryService.lazy(() async {
+        attempts++;
+        if (attempts == 1) throw StateError('開檔失敗');
+        return store;
+      });
+
+      await expectLater(lazy.lookup('天地'), throwsStateError);
+      final response = await lazy.lookup('天地');
+
+      expect(response, isA<LookupCompleted>());
+      expect(attempts, 2);
+    });
+
+    test('選取無效時不開啟字典資料庫', () async {
+      var opened = 0;
+      final lazy = DictionaryService.lazy(() async {
+        opened++;
+        return store;
+      });
+
+      await lazy.lookup('，');
+
+      expect(opened, 0);
+    });
+  });
+
   LookupResult completed(DictionaryLookupResponse r) {
     expect(r, isA<LookupCompleted>());
     return (r as LookupCompleted).result;
@@ -168,6 +211,35 @@ void main() {
     final result = completed(await service.lookup('apple'));
 
     expect(result.outcomes, isEmpty);
+  });
+
+  test('沒有任何啟用字典：outcomes 為空且 hasEnabledDictionary 為 false', () async {
+    final response = await service.lookup('apple');
+
+    expect(response, isA<LookupCompleted>());
+    final completedResponse = response as LookupCompleted;
+    expect(completedResponse.result.outcomes, isEmpty);
+    expect(completedResponse.hasEnabledDictionary, isFalse);
+  });
+
+  test('有英文字典、選中文：outcomes 為空但 hasEnabledDictionary 為 true', () async {
+    await addSource('en1', 'en', ['apple']);
+
+    final response = await service.lookup('蘋果');
+
+    final completedResponse = response as LookupCompleted;
+    expect(completedResponse.result.outcomes, isEmpty);
+    expect(completedResponse.hasEnabledDictionary, isTrue);
+  });
+
+  test('有符合的字典：hasEnabledDictionary 為 true', () async {
+    await addSource('zh1', 'zh', ['蘋果']);
+
+    final response = await service.lookup('蘋果');
+
+    final completedResponse = response as LookupCompleted;
+    expect(completedResponse.result.outcomes.single.status, OutcomeStatus.found);
+    expect(completedResponse.hasEnabledDictionary, isTrue);
   });
 
   test('一本字典丟例外：該分段 failed，其他分段照常', () async {

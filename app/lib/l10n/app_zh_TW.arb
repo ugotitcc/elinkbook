@@ -692,6 +692,10 @@
   "@readerAnnotationCopyTooltip": {
     "description": "選字浮動工具列「複製」按鈕的無障礙提示文字"
   },
+  "readerAnnotationLookupTooltip": "查字典",
+  "@readerAnnotationLookupTooltip": {
+    "description": "選字浮動工具列「查字典」按鈕的無障礙提示文字"
+  },
   "readerAnnotationEditNoteTooltip": "編輯備註",
   "@readerAnnotationEditNoteTooltip": {
     "description": "選字浮動工具列備註按鈕提示文字：這次選取已有備註"
@@ -3042,5 +3046,57 @@
   "statsWeekdayFri": "五",
   "@statsWeekdayFri": {
     "description": "貢獻圖左側星期標籤欄：星期五（週五列）"
+  },
+  "dictionaryLookupTitle": "查字典",
+  "@dictionaryLookupTitle": {
+    "description": "字典查詢面板的標題"
+  },
+  "dictionaryLookupInvalidSelection": "選取內容含有標點，請重新選取",
+  "@dictionaryLookupInvalidSelection": {
+    "description": "選取文字含有標點（例如一次選了整句）時，字典面板的提示"
+  },
+  "dictionaryLookupTooLong": "選取範圍太長，請縮短後再查",
+  "@dictionaryLookupTooLong": {
+    "description": "選取範圍超過單詞長度上限時，字典面板的提示"
+  },
+  "dictionaryLookupNoDictionary": "尚未匯入字典",
+  "@dictionaryLookupNoDictionary": {
+    "description": "字典面板：一本啟用中的字典都沒有"
+  },
+  "dictionaryLookupNoMatchingDictionary": "沒有適用於這段文字的字典",
+  "@dictionaryLookupNoMatchingDictionary": {
+    "description": "字典面板：有字典，但沒有語言方向符合這段文字的字典（例如只有英文字典卻選了中文）"
+  },
+  "dictionaryLookupNotFound": "查無此詞",
+  "@dictionaryLookupNotFound": {
+    "description": "字典面板：這本字典沒有這個詞"
+  },
+  "dictionaryLookupOnlineDisabled": "線上查詢已關閉",
+  "@dictionaryLookupOnlineDisabled": {
+    "description": "字典面板：這個線上字典分段因為線上查詢設定關閉而略過"
+  },
+  "dictionaryLookupFailed": "這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。",
+  "@dictionaryLookupFailed": {
+    "description": "字典面板：這本字典查詢時發生錯誤"
+  },
+  "dictionaryLookupOpenSettings": "前往字典設定",
+  "@dictionaryLookupOpenSettings": {
+    "description": "字典面板：開啟字典設定畫面的連結文字"
+  },
+  "dictionaryLookupLoading": "查詢中…",
+  "@dictionaryLookupLoading": {
+    "description": "字典面板：查詢進行中的文字（E-Ink 模式以文字取代旋轉指示）"
+  },
+  "dictionaryLookupSegmentNotFound": "（無）",
+  "@dictionaryLookupSegmentNotFound": {
+    "description": "字典面板分段標籤的狀態後綴：查無此詞"
+  },
+  "dictionaryLookupSegmentSkipped": "（略過）",
+  "@dictionaryLookupSegmentSkipped": {
+    "description": "字典面板分段標籤的狀態後綴：略過（例如線上查詢已關閉）"
+  },
+  "dictionaryLookupSegmentFailed": "（失敗）",
+  "@dictionaryLookupSegmentFailed": {
+    "description": "字典面板分段標籤的狀態後綴：查詢失敗"
   }
 }

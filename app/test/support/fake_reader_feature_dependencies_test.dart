@@ -1,6 +1,8 @@
+import 'package:elinkbook/dictionary/dictionary_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_bookmarks_repository.dart';
+import 'fake_dictionary_service.dart';
 import 'fake_full_text_search_settings_repository.dart';
 import 'fake_reader_feature_dependencies.dart';
 
@@ -57,6 +59,23 @@ void main() {
       final b = fakeReaderFeatureDependencies();
 
       expect(a.bookmarksRepository, isNot(same(b.bookmarksRepository)));
+    });
+
+    test('預設帶有 DictionaryService，且每次呼叫是新實例', () {
+      final a = fakeReaderFeatureDependencies();
+      final b = fakeReaderFeatureDependencies();
+
+      expect(a.dictionaryService, isA<DictionaryService>());
+      expect(a.dictionaryService, isA<FakeDictionaryService>());
+      expect(a.dictionaryService, isNot(same(b.dictionaryService)));
+    });
+
+    test('可覆寫 dictionaryService', () {
+      final service = FakeDictionaryService();
+
+      final deps = fakeReaderFeatureDependencies(dictionaryService: service);
+
+      expect(deps.dictionaryService, same(service));
     });
   });
 }

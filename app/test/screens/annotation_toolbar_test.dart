@@ -420,4 +420,78 @@ void main() {
     expect(find.byTooltip('Copy'), findsOneWidget);
     expect(find.byTooltip('Add note'), findsOneWidget);
   });
+
+  testWidgets('onLookupPressed 為 null 時不顯示查字典按鈕', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: Scaffold(
+          body: AnnotationToolbar(
+            onStyleSelected: (_) {},
+            onNotePressed: () {},
+            onClosePressed: () {},
+            onCopyPressed: () {},
+            isEinkMode: false,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('annotation_toolbar_lookup')), findsNothing);
+  });
+
+  testWidgets('onLookupPressed 非 null：顯示按鈕，點擊觸發一次 callback', (tester) async {
+    var pressedCount = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: Scaffold(
+          body: AnnotationToolbar(
+            onStyleSelected: (_) {},
+            onNotePressed: () {},
+            onClosePressed: () {},
+            onCopyPressed: () {},
+            isEinkMode: false,
+            onLookupPressed: () => pressedCount++,
+          ),
+        ),
+      ),
+    );
+
+    final finder = find.byKey(const Key('annotation_toolbar_lookup'));
+    expect(finder, findsOneWidget);
+    await tester.tap(finder);
+    expect(pressedCount, 1);
+  });
+
+  testWidgets('查字典按鈕的 tooltip 隨語言切換', (tester) async {
+    Widget toolbar(Locale locale) => MaterialApp(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: Scaffold(
+            body: AnnotationToolbar(
+              onStyleSelected: (_) {},
+              onNotePressed: () {},
+              onClosePressed: () {},
+              onCopyPressed: () {},
+              isEinkMode: false,
+              onLookupPressed: () {},
+            ),
+          ),
+        );
+
+    await tester.pumpWidget(toolbar(const Locale('zh', 'TW')));
+    expect(find.byTooltip('查字典'), findsOneWidget);
+
+    await tester.pumpWidget(toolbar(const Locale('en')));
+    expect(find.byTooltip('Look up'), findsOneWidget);
+  });
 }

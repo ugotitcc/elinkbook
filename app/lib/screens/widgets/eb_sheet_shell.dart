@@ -30,15 +30,22 @@ class EBSheetShell extends StatelessWidget {
   /// 參數為 Flutter 3.41+ 原生支援（已查證 `bottom_sheet.dart` SDK 原始
   /// 碼），不需要自建 `AnimationController`（自建需要 `TickerProvider`，
   /// 靜態方法無法取得，且呼叫端須負責 dispose，有記憶體洩漏風險）。
+  ///
+  /// [barrierColor] 原樣傳給 `showModalBottomSheet`；`null` 維持 Flutter
+  /// 預設遮罩。閱讀器內的呼叫端比照 `ReaderScreen._showThemedModalBottomSheet`
+  /// 的規則，深色主題與 E-Ink 傳 `Colors.transparent`（見
+  /// `dictionary_lookup_sheet.dart` 的 `show`）。
   static Future<T?> show<T>(
     BuildContext context, {
     required String title,
     required WidgetBuilder builder,
     bool isEinkMode = false,
+    Color? barrierColor,
   }) {
     return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
+      barrierColor: barrierColor,
       sheetAnimationStyle: isEinkMode ? AnimationStyle.noAnimation : null,
       builder: (context) => EBSheetShell(
         title: title,

@@ -108,7 +108,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 ## Issue 4：查詢面板、`AnnotationToolbar` 按鈕、選字規則、依賴注入
 
-**Status:** ready-for-agent
+**Status:** in-review
 
 **依賴：** Issue 3。
 

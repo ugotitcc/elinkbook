@@ -1,5 +1,6 @@
 import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/library_repository.dart';
+import 'package:elinkbook/dictionary/dictionary_service.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/bookmarks_repository.dart';
 import 'package:elinkbook/reader/custom_fonts_repository.dart';
@@ -23,6 +24,7 @@ import 'fake_book_import_service.dart';
 import 'fake_book_reader_prefs_repository.dart';
 import 'fake_bookmarks_repository.dart';
 import 'fake_custom_fonts_repository.dart';
+import 'fake_dictionary_service.dart';
 import 'fake_downloadable_font_store.dart';
 import 'fake_full_text_search_settings_repository.dart';
 import 'fake_highlights_repository.dart';
@@ -57,6 +59,7 @@ ReaderFeatureDependencies fakeReaderFeatureDependencies({
   TtsProvider? ttsProvider,
   TtsAudioHandlerHolder? ttsAudio,
   TtsAudioFocusSource? ttsAudioFocusSource,
+  DictionaryService? dictionaryService,
 }) {
   return ReaderFeatureDependencies(
     prefsManager: prefsManager ?? FakeReaderPrefsManager(),
@@ -85,6 +88,7 @@ ReaderFeatureDependencies fakeReaderFeatureDependencies({
     ttsProvider: ttsProvider ?? FakeTtsProvider(),
     ttsAudio: ttsAudio ?? TtsAudioHandlerHolder.unavailable(),
     ttsAudioFocusSource: ttsAudioFocusSource ?? FakeTtsAudioFocusSource(),
+    dictionaryService: dictionaryService ?? FakeDictionaryService(),
   );
 }
 

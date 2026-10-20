@@ -533,6 +533,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get readerAnnotationCopyTooltip => '複製';
 
   @override
+  String get readerAnnotationLookupTooltip => '查字典';
+
+  @override
   String get readerAnnotationEditNoteTooltip => '編輯備註';
 
   @override
@@ -2255,6 +2258,45 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get statsWeekdayFri => '五';
+
+  @override
+  String get dictionaryLookupTitle => '查字典';
+
+  @override
+  String get dictionaryLookupInvalidSelection => '選取內容含有標點，請重新選取';
+
+  @override
+  String get dictionaryLookupTooLong => '選取範圍太長，請縮短後再查';
+
+  @override
+  String get dictionaryLookupNoDictionary => '尚未匯入字典';
+
+  @override
+  String get dictionaryLookupNoMatchingDictionary => '沒有適用於這段文字的字典';
+
+  @override
+  String get dictionaryLookupNotFound => '查無此詞';
+
+  @override
+  String get dictionaryLookupOnlineDisabled => '線上查詢已關閉';
+
+  @override
+  String get dictionaryLookupFailed => '這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。';
+
+  @override
+  String get dictionaryLookupOpenSettings => '前往字典設定';
+
+  @override
+  String get dictionaryLookupLoading => '查詢中…';
+
+  @override
+  String get dictionaryLookupSegmentNotFound => '（無）';
+
+  @override
+  String get dictionaryLookupSegmentSkipped => '（略過）';
+
+  @override
+  String get dictionaryLookupSegmentFailed => '（失敗）';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -2784,6 +2826,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get readerAnnotationCopyTooltip => '复制';
+
+  @override
+  String get readerAnnotationLookupTooltip => '查字典';
 
   @override
   String get readerAnnotationEditNoteTooltip => '编辑备注';
@@ -4508,6 +4553,45 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get statsWeekdayFri => '五';
+
+  @override
+  String get dictionaryLookupTitle => '查字典';
+
+  @override
+  String get dictionaryLookupInvalidSelection => '选取内容含有标点，请重新选取';
+
+  @override
+  String get dictionaryLookupTooLong => '选取范围太长，请缩短后再查';
+
+  @override
+  String get dictionaryLookupNoDictionary => '尚未导入字典';
+
+  @override
+  String get dictionaryLookupNoMatchingDictionary => '没有适用于这段文字的字典';
+
+  @override
+  String get dictionaryLookupNotFound => '查无此词';
+
+  @override
+  String get dictionaryLookupOnlineDisabled => '在线查询已关闭';
+
+  @override
+  String get dictionaryLookupFailed => '这本字典查询失败。请稍后重试，或到字典设置确认这本字典。';
+
+  @override
+  String get dictionaryLookupOpenSettings => '前往字典设置';
+
+  @override
+  String get dictionaryLookupLoading => '查询中…';
+
+  @override
+  String get dictionaryLookupSegmentNotFound => '（无）';
+
+  @override
+  String get dictionaryLookupSegmentSkipped => '（略过）';
+
+  @override
+  String get dictionaryLookupSegmentFailed => '（失败）';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -5037,6 +5121,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerAnnotationCopyTooltip => '複製';
+
+  @override
+  String get readerAnnotationLookupTooltip => '查字典';
 
   @override
   String get readerAnnotationEditNoteTooltip => '編輯備註';
@@ -6761,4 +6848,43 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get statsWeekdayFri => '五';
+
+  @override
+  String get dictionaryLookupTitle => '查字典';
+
+  @override
+  String get dictionaryLookupInvalidSelection => '選取內容含有標點，請重新選取';
+
+  @override
+  String get dictionaryLookupTooLong => '選取範圍太長，請縮短後再查';
+
+  @override
+  String get dictionaryLookupNoDictionary => '尚未匯入字典';
+
+  @override
+  String get dictionaryLookupNoMatchingDictionary => '沒有適用於這段文字的字典';
+
+  @override
+  String get dictionaryLookupNotFound => '查無此詞';
+
+  @override
+  String get dictionaryLookupOnlineDisabled => '線上查詢已關閉';
+
+  @override
+  String get dictionaryLookupFailed => '這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。';
+
+  @override
+  String get dictionaryLookupOpenSettings => '前往字典設定';
+
+  @override
+  String get dictionaryLookupLoading => '查詢中…';
+
+  @override
+  String get dictionaryLookupSegmentNotFound => '（無）';
+
+  @override
+  String get dictionaryLookupSegmentSkipped => '（略過）';
+
+  @override
+  String get dictionaryLookupSegmentFailed => '（失敗）';
 }
