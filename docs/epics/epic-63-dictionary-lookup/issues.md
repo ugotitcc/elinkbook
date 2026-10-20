@@ -9,7 +9,7 @@
 | 3 | JSON/CSV 與 CC-CEDICT 匯入、重複匯入偵測、查詢候選鏈、本機查詢 | 2 | done | #345 |
 | 4 | 查詢面板、`AnnotationToolbar` 按鈕、選字規則、依賴注入 | 3 | done | #347 |
 | 5 | 字典設定畫面 | 3 | done | #349 |
-| 6a | MDX 匯入、詞條顯示、交叉參照與錨點、返回堆疊 | 1、4、5 | ready-for-agent | |
+| 6a | MDX 匯入、詞條顯示、交叉參照與錨點、返回堆疊 | 1、4、5 | in-review | |
 | 6b | MDX 圖片、獨立 CSS、深色與 E-Ink 配色 | 6a | ready-for-human | |
 | 7 | 線上查詞（萌典）、同意對話框、隱私更新 | 3、4、5 | ready-for-agent | |
 | 8 | 授權頁、隱私頁、l10n 收尾、整合測試 | 全部 | ready-for-human | |
@@ -158,7 +158,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 ## Issue 6a：MDX 匯入、詞條顯示、交叉參照與錨點、返回堆疊
 
-**Status:** ready-for-agent
+**Status:** in-review
 
 **依賴：** Issue 1（選定套件）、Issue 4、Issue 5。
 

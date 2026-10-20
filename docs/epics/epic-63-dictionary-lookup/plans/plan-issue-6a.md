@@ -100,19 +100,19 @@ app/integration_test/dictionary_mdx_test.dart     [新增] 真機：WebView 行�
 
 **Interfaces:** 無程式介面；產出是數字與一個 go／no-go 結論。
 
-- [ ] **Step 1: 準備量測檔**
+- [x] **Step 1: 準備量測檔**
 
 用 `.scratch/mdx_spike/`（不進版控）既有的探針 App 與 `bench.dart`；檔案：`tmp/dictionary/教育部重編國語辭典.mdx`（真實 CJK、UTF-16、163,085 筆）。再用 `.scratch/mdx_spike/tools/make_test_mdx.py`（此時還沒搬進 `app/tool/`）產一個 UTF-16 的 40 萬筆合成大檔（`--entries 400000`，鍵改成 CJK；需要時擴充產生器的鍵格式，不進版控）。
 
-- [ ] **Step 2: 在 E-Ink 實機（Allwinner WAVE）量測**
+- [x] **Step 2: 在 E-Ink 實機（Allwinner WAVE）量測**
 
 每個檔各量三次（每次先強制停止 App）：開啟後記憶體增量、**隨機鍵**（從全部鍵隨機抽 500 個，不是前 1000 筆）查詢後的穩態記憶體、p50／p95、開啟後峰值。
 
-- [ ] **Step 3: 決策**
+- [x] **Step 3: 決策**
 
 增量（含快取穩態）≤ 50 MB：記錄結果，繼續 Task 2。超過：**停下來**，把數字與兩個選項（vendor 修補 `dict_reader` 改成依區塊延遲載入鍵；Reader 池改成最多 1 個並接受更慢的第二次查詢）交給使用者決定，不自行選。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/research/dictionary/DICTIONARY_FORMATS_AND_LICENSES.md
@@ -132,24 +132,24 @@ git commit -m "docs(epic-63): Issue 6a E-Ink 真實 CJK 大檔記憶體補測"
 - Produces: `dict_reader: 1.6.1` 可 import；七項授權登錄；fixtures（見下）。
 - Fixtures（全部自製，進版控）：`zlib.mdx`（50 筆，`KeyCaseSensitive=No`）、`mdd.mdd`、`fake-lzo.mdx`、`truncated.mdx`、`cut-records.mdx`（截在記錄區段）、`html.mdx`（詞條含 `entry://`、`bword://`、`entry://#x`、`#x`、`sound://`、`http://example.com` 連結與一個 `<link href="ghychyz.css">`，標頭有 `StyleSheet`）、`strip-key.mdx`（`StripKey=Yes`）、`case-sensitive.mdx`（`KeyCaseSensitive=Yes`，只收小寫鍵 `apple`）、`placeholder-title.mdx`（`Title (No HTML code allowed)`、有 `Description`）。`mdd.mdd` 在本 Issue 只當作匯入時要複製的附屬檔案（Issue 6b 才讀它）。`.scratch/mdx_spike/fixtures/` 的前五個可直接複製；後四個用 `make_test_mdx.py` 新增 kind 產生。`large.mdx` 不進版控。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 授權頁測試：`kThirdPartyLicenses` 共 19 項、含七個新套件名稱，且每個 `assetPath` 都在 asset bundle 內讀得到、非空、含該授權的關鍵字（MIT／BSD／Apache）。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（在 `app/`）: `flutter test test/licenses/third_party_licenses_test.dart`
 Expected: FAIL（找不到新套件與 asset）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 `flutter pub add dict_reader:1.6.1` 後確認 `pubspec.lock` 只新增研究文件列的六個遞移套件（`dict_reader`、`blockchain_utils`、`charset`、`convert`、`html_unescape`、`pointycastle`），`win32` 相依鏈不變。授權全文逐字複製自各套件的 `LICENSE`（pub cache），不改寫。產生器 `make_test_mdx.py` 以 spike 版為基礎，加 `html`、`strip-key`、`placeholder-title` 三個 kind，並在檔頭註明是自寫、無第三方程式碼。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2；再跑 `flutter analyze`。Expected: PASS、No issues found。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/pubspec.yaml app/pubspec.lock app/assets/licenses app/lib/licenses app/tool/make_test_mdx.py app/test/fixtures/mdx app/test/licenses
@@ -170,7 +170,7 @@ git commit -m "feat(epic-63): Issue 6a 加入 dict_reader 與授權、MDX 測試
   - `class MdxMeta { final String title; final String? description; final bool keyCaseSensitive; final bool stripKey; final int encrypted; final int entryCount; }`；`title` 已套用「標題佔位字串」規則的前一步（原始 `Title`），最終顯示名稱由 `String displayName(String fileName)` 決定。
   - `class MdxReader { static Future<MdxReader> open(String path); MdxMeta get meta; String displayName(String fileName); Future<List<String>> lookupAll(String key); Future<void> validateBlocks({void Function(int done, int total)? onProgress}); Future<void> close(); }`
 
-- [ ] **Step 1: 寫失敗的測試**（用 Task 2 的 fixtures）
+- [x] **Step 1: 寫失敗的測試**（用 Task 2 的 fixtures）
 
 - `open` 成功：`entryCount == 50`；檔案不存在 → `MdxException(notFound)`；`truncated.mdx` 在 10 秒內 → `corrupt`；`open` 失敗後不留半初始化狀態（再 `open` 同路徑的好檔可成功）。
 - `lookupAll`：命中回傳 HTML 字串清單；查無回傳空清單；空字串與純空白不丟例外；`KeyCaseSensitive=No` 的 `APPLE` 查得到 `apple`；`strip-key.mdx` 的 `' 一 '`、`'一，'` 查得到 `一`；同一個鍵兩筆記錄都回傳。
@@ -178,20 +178,20 @@ git commit -m "feat(epic-63): Issue 6a 加入 dict_reader 與授權、MDX 測試
 - `validateBlocks`（主 Isolate、只讀每塊 4 位元組壓縮型態）：`zlib.mdx` 通過；`fake-lzo.mdx` → `unsupportedCompression`；`cut-records.mdx`（`open` 能成功）→ `corrupt`；`onProgress` 被呼叫、最後一次 `done == total`；區塊超過 `file.length` 的檔案 → `corrupt`。
 - `meta.encrypted`：以 `tmp/dictionary/教育部重編國語辭典.mdx` 為真實驗收檔的案例，檔案不存在時 `skip`（`Encrypted=2` 可開啟並查詢，驗收 34）。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/mdx_reader_test.dart`
 Expected: FAIL（找不到檔案）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 `dict_reader` 的各種失敗（含它對不支援壓縮丟的**字串**、`FormatException`、`StateError`、`RangeError`、`FileSystemException`）全部在此轉成 `MdxException`。`KeyCaseSensitive=No` 的折疊：對鍵與查詢字串套同一個 `toLowerCase`；若需另建折疊索引，只建「折疊後鍵 → 原鍵清單」的對照，並在 class doc 記下記憶體代價。`StripKey=Yes`：查詢字串去掉空白與標點（Unicode 標點類別 `\p{P}`、全形空白）後再查。記錄區塊加密（`Encrypted` 含 1）在 `open` 後立刻 `encryptedRecords`。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2；`flutter analyze`。Expected: PASS、No issues found。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary/storage/mdx_reader.dart app/test/dictionary/mdx_reader_test.dart
@@ -214,7 +214,7 @@ git commit -m "feat(epic-63): Issue 6a MdxReader 薄封裝與統一錯誤"
   - `sealed class MdxLinkAction`：`MdxEntryLink(String word)`（`entry://詞`、`bword://詞`，已 URL 解碼、去掉結尾 `/`）、`MdxAnchorLink`（純 `#x` 或 `https://dict.local/#x`，不攔截）、`MdxBlockedLink`（其餘一切，含 `http`、`https`、`file`、`sound`、`javascript`）。
   - `MdxLinkAction classifyLink(String url)`。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `mdx_html_prepare_test.dart`：
 - `entry://#top` 變 `#top`；`entry://詞` 不動；單引號版本也改寫。
@@ -225,20 +225,20 @@ git commit -m "feat(epic-63): Issue 6a MdxReader 薄封裝與統一錯誤"
 `mdx_link_policy_test.dart`：
 - `classifyLink`：`entry://apple`、`bword://apple` → `MdxEntryLink('apple')`；`entry://%E5%A4%A9%E5%9C%B0/` → `MdxEntryLink('天地')`；`#x`、`https://dict.local/#x` → `MdxAnchorLink`；`https://example.com`、`http://dict.local/x`（非 https）、`file:///x`、`sound://a`、`javascript:alert(1)` → `MdxBlockedLink`。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/mdx_html_prepare_test.dart test/dictionary/mdx_link_policy_test.dart`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 兩檔都只放純函式與型別，不 import `flutter_inappwebview`。HTML 用正規表示式處理即可（不引入 HTML 解析套件）；屬性比對要容忍單雙引號與大小寫。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2；`flutter analyze`。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary/mdx_html_prepare.dart app/lib/dictionary/mdx_link_policy.dart app/test/dictionary
@@ -265,7 +265,7 @@ git commit -m "feat(epic-63): Issue 6a MDX HTML 前處理與連結政策純函�
   - `DictionaryStore._decodeCssNames` 遇到壞 JSON 或非字串元素回傳空清單（Issue 5 延後項）。
   - `main.dart`：`importerFactories` 加 `(s) => MdxImporter(store: s, files: dictionaryFileStore)`。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `mdx_importer_test.dart`（記憶體 DB＋暫存目錄＋Task 2 fixtures）：
 - 匯入 `html.mdx`＋`mdd.mdd`＋一個 `.css`：來源列 `format == mdx`、`entryCount` 正確、`storagePath` 在私有目錄內且檔案存在、私有目錄含 `.mdd` 與 `.css`；`referenced_css` 含 `ghychyz.css`；`list()` 的 `missingCss` 在 `.css` 缺席時含它、在場時為空（驗收 38）。
@@ -280,20 +280,20 @@ git commit -m "feat(epic-63): Issue 6a MDX HTML 前處理與連結政策純函�
 `dictionary_store_test.dart`：`referenced_css` 欄位寫入壞 JSON（`rawUpdate`）時 `getSource`／`listSources` 不丟例外且 `referencedCss` 為空。
 `dictionary_file_store_test.dart`：檔名含 `../x`、`a/b.css`、空字串時只取 basename 或丟 `ArgumentError`；`moveInto` 跨目錄成功且來源檔消失。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/mdx_importer_test.dart test/dictionary/dictionary_manager_test.dart test/dictionary/dictionary_store_test.dart test/dictionary/dictionary_file_store_test.dart`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 整檔檢查在主 Isolate 做（見「已決定事項」），不用 `Isolate.run`。`validateBlocks` 完成後先 `close()` 再搬檔；搬完以私有路徑重新開啟抽樣 `referenced_css`。匯入器把整個流程包在 `try/finally`，失敗路徑統一走「刪私有目錄」的清理函式；清理本身失敗只記錄、不蓋掉原錯誤。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2；`flutter analyze`。Expected: PASS、No issues found。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary app/lib/main.dart app/test/dictionary
@@ -318,26 +318,26 @@ git commit -m "feat(epic-63): Issue 6a MDX 匯入器、私有目錄與整檔檢�
   - `main.dart`：建立一個 `MdxReaderPool`，傳給 `DictionaryService.fromProvider` 與 `DictionaryManager.onEvict`。
   - `FakeDictionaryService` 補上 `lookupInSource`（記錄呼叫、可設定回傳）。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `mdx_reader_pool_test.dart`（注入假 `opener`）：重複 `acquire` 同一來源只開一次；開第三個時第一個被關閉（`maxOpen: 2`）；`evict` 關閉並移除，之後再 `acquire` 會重開；`closeAll` 全關；開啟失敗不記住（下次重試）。
 `mdx_dictionary_provider_test.dart`（真 `MdxReader`＋fixtures）：`zlib.mdx` 查 `apple` → `found`、`bodyKind == html`；英文候選鏈（`ran`→`run` 類，用 fixtures 中適用的詞）命中；查無 → `notFound`；`fake-lzo.mdx` 的查詢 → `failed` 且 `errorCode == 'unsupportedCompression'`，不丟例外；同鍵兩筆都回傳；**`case-sensitive.mdx`（`KeyCaseSensitive=Yes`、只收小寫 `apple`）查 `Apple` 仍命中**（候選含小寫變體，驗證沒有被去重掉，審查 I-3）。
 `dictionary_service_test.dart` 新增：含一個 JSON 來源與一個 MDX 來源時 `outcomes` 兩個分段依優先序；未提供 pool 時 MDX 來源 `failed`；`lookupInSource` 一個正向與一個查無案例。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/dictionary/mdx_reader_pool_test.dart test/dictionary/mdx_dictionary_provider_test.dart test/dictionary/dictionary_service_test.dart`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 池內的 reader 以 `Future` 記錄（避免並發 `acquire` 開兩次）。`evict`／`closeAll` 要等進行中的查詢結束再關（用每個 reader 的簡單排隊即可，不加鎖套件）。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2；`flutter analyze`。Expected: PASS、No issues found。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary app/lib/main.dart app/test/dictionary app/test/support
@@ -365,7 +365,7 @@ git commit -m "feat(epic-63): Issue 6a MDX 查詢提供者、reader 池與服務
   - 系統返回（審查 M-4）：以 `PopScope(canPop: stack.isEmpty, onPopInvokedWithResult: (didPop, _) { if (!didPop) 彈出一層 })` 包住面板內容，堆疊非空時實體返回鍵與返回手勢先回退詞條，堆疊空了才關閉面板。
   - l10n：`dictionaryLookupBack`（tooltip，zh_TW「返回上一個詞條」）、`dictionaryLookupLinkNotFound`（zh_TW「找不到這個詞條」）。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `mdx_entry_view_test.dart`（只測靜態決策函式，不建 `InAppWebView`）：`entry://apple` → 取消並帶 `entryWord == 'apple'`；`entry://%E5%A4%A9%E5%9C%B0/` → `entryWord == '天地'`；`#x` → 放行；`https://example.com`、`file:///x`、`sound://a` → 取消且 `entryWord == null`；`decideRequest`：`https://dict.local/pic/a.png`、`https://dict.local/favicon.ico`、`https://example.com/a.png`、`http://example.com` 全部 404 且本文為空；任何輸入都不回傳 `null`。
 
@@ -376,21 +376,21 @@ git commit -m "feat(epic-63): Issue 6a MDX 查詢提供者、reader 池與服務
 - 返回堆疊非空時送出系統返回（`tester.binding.handlePopRoute()` 或等價方式）：回到上一個詞條、面板仍在；堆疊空時系統返回關閉面板。
 - E-Ink 模式找不到 `AnimatedXxx`。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/widgets/mdx_entry_view_test.dart test/screens/widgets/dictionary_lookup_sheet_test.dart`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 先加 ARB 並 `flutter gen-l10n`。`MdxEntryView` 的決策函式是純的，`InAppWebView` 只做轉接。版面測試若丟例外，依「已決定事項」的備案把根 `Column` 改 `mainAxisSize: max`。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2，再跑 `flutter test test/screens/reader_screen_test.dart --plain-name "Epic 63"` 確認 Issue 4、5 沒有回歸；`flutter analyze`、`node tool/check_l10n_hardcoded_strings.js`。
 Expected: PASS、No issues found。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens app/lib/l10n app/test/screens
@@ -420,7 +420,7 @@ git commit -m "feat(epic-63): Issue 6a MDX 詞條 WebView 顯示與返回堆疊"
   - 匯入完成後對每個新匯入的 `.mdx` 呼叫 `FilePicker.clearTemporaryFiles()`（`try/catch` 包住，失敗只記錄；Issue 5 延後項）。
 - l10n：`dictionaryImportErrorUnsupportedCompression`、`dictionaryImportErrorEncryptedRecords`、`dictionaryImportErrorCorruptFile`、`dictionaryImportMissingCssAfterImport(files)`。
 
-- [ ] **Step 1: 寫失敗的測試**（用 `FakeDictionaryManager`，`canImportFn` 對 `.mdx` 回真）
+- [x] **Step 1: 寫失敗的測試**（用 `FakeDictionaryManager`，`canImportFn` 對 `.mdx` 回真）
 
 - 選 `a.mdx`＋`a.mdd`＋`x.css`：`import` 被呼叫一次，`request.companions` 含 `a.mdd` 與 `x.css`（轉換正確；沒有 `.mdd` 時只含 `.css`，不丟型別錯誤）；對話框的方向未選時「匯入」按鈕停用。
 - `import` stream 丟 `DictionaryImportException('unsupportedCompression')`／`encryptedRecords`／`corruptFile`：各顯示對應三段式訊息，且畫面上沒有原始碼字串；LZO 訊息含「改用 zlib 版本」。
@@ -430,21 +430,21 @@ git commit -m "feat(epic-63): Issue 6a MDX 詞條 WebView 顯示與返回堆疊"
 - `canImport('a.mdx')` 為假時（沒有 MDX 匯入器的組態）：維持 Issue 5 的「還不能匯入」行為（回歸保護）。
 - 匯入完成後呼叫了清除暫存檔的注入函式（`clearTempFiles` 以建構參數注入，測試記錄呼叫）。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/dictionary_settings_screen_test.dart`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 先加 ARB 並 `flutter gen-l10n`。`clearTempFiles` 預設用 `FilePicker.clearTemporaryFiles`，建構參數可注入（與 `pickFiles` 同一個風格）。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2；`flutter analyze`、`node tool/check_l10n_hardcoded_strings.js`。
 Expected: PASS、No issues found。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens app/lib/l10n app/test/screens
@@ -459,11 +459,11 @@ git commit -m "feat(epic-63): Issue 6a 設定畫面 MDX 匯入流程"
 - Create: `app/integration_test/dictionary_mdx_test.dart`
 - Modify: `docs/epics/epic-63-dictionary-lookup/issues.md`（狀態 `in-review`）、本計畫（勾選）
 
-- [ ] **Step 1: 寫整合測試（真機）**
+- [x] **Step 1: 寫整合測試（真機）**
 
 `dictionary_mdx_test.dart`（`-d <device-id>`；用 Task 2 的 fixtures 直接建 `MdxEntryView`，不經檔案選擇器）：MDX 詞條在 WebView 顯示、JavaScript 不執行（詞條內放 `<script>` 改動 DOM，斷言沒變）、對外網路請求被擋（任何 `http(s)` 請求拿到 404）、`entry://` 可點可返回、`#錨點` 與 `entry://#錨點`（改寫後）可跳轉。圖片與深色／E-Ink 配色屬 Issue 6b，不在這裡。依 `app/tool/README.md` 的格式引用 Key，並跑 `node tool/check_integration_keys.js`。
 
-- [ ] **Step 2: 靜態檢查**
+- [x] **Step 2: 靜態檢查**
 
 在 `app/` 執行：
 ```bash
@@ -473,19 +473,19 @@ node tool/check_integration_keys.js
 ```
 Expected: 三者皆乾淨。
 
-- [ ] **Step 3: 完整測試（整張計畫唯一一次）**
+- [x] **Step 3: 完整測試（整張計畫唯一一次）**
 
 Run: `flutter test`
 Expected: All tests passed。
 
-- [ ] **Step 4: 回歸確認**
+- [x] **Step 4: 回歸確認**
 
 - `git diff main -- app/android app/lib/library app/lib/sync` 無輸出；`pubspec.yaml` 只多 `dict_reader`。
 - 主資料庫版本仍為 28；`dictionary.db` 版本仍為 1。
 - 授權：`app/assets/licenses/` 七項齊全，授權頁顯示。
 - 程式碼中沒有取自 Readest／AGPL／GPL 專案的內容（自查：`dict_reader` 之外的 MDX 解析程式都是自寫）。
 
-- [ ] **Step 5: 真機確認（人工）**
+- [x] **Step 5: 真機確認（人工）**
 
 在 E-Ink 機與一般機各做（驗收檔：`tmp/dictionary/教育部重編國語辭典.mdx`、`簡明古漢語常用字字典.mdx`，只作本機測試）：
 1. 匯入教育部 MDX：進度、名稱（有意義的書名）、方向必選、完成摘要。
@@ -498,7 +498,7 @@ Expected: All tests passed。
 8. 記憶體：E-Ink 上開啟教育部字典後 `dumpsys meminfo` 增量在 Task 1 的結果範圍內；面板開關與切換分段 10 次後 App 沒被系統回收。
 9. 面板開著時旋轉螢幕或按返回鍵：不當掉，選取與工具列維持（Issue 4 約束）。
 
-- [ ] **Step 6: 更新文件並 Commit**
+- [x] **Step 6: 更新文件並 Commit**
 
 把 `issues.md` Issue 6a 狀態改成 `in-review`；本計畫 Step 全部勾選；在計畫尾端補真機結果。
 
@@ -540,3 +540,33 @@ git commit -m "docs(epic-63): Issue 6a 實作完成，更新狀態"
 - **M-3：** 授權頁測試明確改成 19 項。
 - **M-4：** 面板加 `PopScope`，堆疊非空時系統返回先回退詞條。
 - **M-5：** Task 1 標明產生器路徑為 `.scratch/mdx_spike/tools/make_test_mdx.py`。
+
+---
+
+## Task 9 Step 5 真機驗收結果（2026-10-20，WAVE `TCE70P24B2202374`，Android 12）
+
+### 自動化部分
+
+| 驗收內容 | 方式 | 結果 |
+|---|---|---|
+| 匯入成功：來源列、`entryCount`、`referencedCss`、私有目錄與檔案都在 | 臨時真機整合測試（真實 Android 檔案系統＋sqflite，`html.mdx`） | 通過 |
+| 佔位 `Title` → 改用 `Description` 當名稱 | 同上（`placeholder-title.mdx`） | 通過 |
+| LZO → `unsupportedCompression`、截斷 → `corruptFile`，且私有目錄與來源列都無殘留（驗收 36、38） | 同上（`fake-lzo.mdx`、`truncated.mdx`） | 通過 |
+| 刪除來源 → 私有目錄整個消失、清單不再出現 | 同上 | 通過 |
+| WebView：JS 不執行、對外請求回 404、`entry://` 可點可返回、`#錨點` 與改寫後的 `entry://#錨點` 跳轉 | `integration_test/dictionary_mdx_test.dart` | 4/4 通過 |
+
+臨時整合測試跑完即刪、未進版控（fixture 以 base64 內嵌，避免為一次性檢查動 `pubspec.yaml` 的 asset 清單）。這台 E-Ink 機的 `screencap` 拍不到 Flutter 畫面（Impeller／SurfaceView 全黑，`dumpsys gfxinfo` 顯示 0 frames），而匯入必經 Android SAF 選檔器（原生 UI），UI 流程無法用 adb 驅動，因此下列 9 項由使用者在實機目視完成。
+
+### 人工驗收
+
+素材：`tmp/dictionary/教育部重編國語辭典.mdx`、`簡明古漢語常用字字典.mdx`（僅本機測試）；另外為第 4、5 項做兩支示範檔 `demo_mdx.mdx`（詞條「水」含 `#錨點`、`entry://#錨點`、`entry://五行`）與 `demo_text.json`（純文字字典，用來產生第二個分段）。
+
+1. 匯入教育部 MDX：進度、名稱、方向必選、完成摘要 — 正常。
+2. 匯入古漢語 MDX：名稱不是佔位字串、摘要顯示缺 `ghychyz.css`、補 `.css` 後提醒消失 — 正常。
+3. 閱讀器選字查詢：MDX 分段顯示在 WebView、`StyleSheet` 展開且畫面無編號殘留 — 正常。
+4. `entry://` 交叉參照可點、可返回（面板返回鈕與 Android 實體返回鍵都逐層回退）；`#錨點` 與 `entry://#錨點` 都跳轉 — 正常。真實字典以「水 → 參見「五行」條」驗證，錨點以 `demo_mdx.mdx` 的「水」詞條驗證（教育部字典沒有頁內錨點）。
+5. 面板高度：HTML 詞條撐到 85%、切回純文字分段縮回，來回切換無版面例外 — 正常。
+6. LZO／截斷檔：三段式錯誤、清單沒多一本、私有目錄無殘留 — 正常。
+7. 刪除 MDX 字典：私有目錄整個清掉、查詢不再出現 — 正常。
+8. 記憶體：開啟教育部字典後記憶體正常、面板開關與切換分段 10 次後 App 未被系統回收 — 正常（使用者目視確認，未另記具體數字；量測基準仍為 Task 1 的 +37.7~38.8 MB）。
+9. 面板開著時旋轉螢幕／按返回鍵：不當掉，選取與工具列維持 — 正常。
