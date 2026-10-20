@@ -97,6 +97,9 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
   /// 整個匯入流程（含對話框）進行中；用來停用匯入按鈕，避免重複觸發。
   bool _flowRunning = false;
 
+  /// 本批至少匯入成功一本 MDX；整批結束後才清選檔器暫存檔（見 [_runImportFlow]）。
+  bool _mdxImportedInBatch = false;
+
   /// 正在寫入字典（進度遮罩顯示中）；為真時攔截返回。
   bool _importing = false;
   ImportProgress? _importProgress;
@@ -236,6 +239,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
       _flowRunning = true;
       _actionError = null;
     });
+    _mdxImportedInBatch = false;
     // 每則訊息是一組文字行。
     final messages = <List<String>>[];
     try {
@@ -295,6 +299,11 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
       }
       if (messages.isNotEmpty) await _showMessages(messages);
     } finally {
+      // Issue 5 延後項：整批結束後才清掉選檔器的暫存複本。
+      // `clearTemporaryFiles` 清的是整個暫存目錄，若在批次中途清，同批後面
+      // 尚未處理的 .mdx／.mdd／.css 也會一起被刪。不等待完成：清理失敗不影響
+      // 匯入結果，也不該卡住畫面。
+      if (_mdxImportedInBatch) unawaited(_clearTempFiles());
       if (mounted) setState(() => _flowRunning = false);
     }
   }
@@ -418,9 +427,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
               ),
             );
           }
-          // Issue 5 延後項：MDX 匯入完成後清掉選檔器的暫存複本。
-          // 不等待完成：清理失敗不影響匯入結果，也不該卡住摘要對話框。
-          unawaited(_clearTempFiles());
+          _mdxImportedInBatch = true;
         }
         messages.add(lines);
       }

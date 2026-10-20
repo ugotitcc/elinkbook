@@ -926,6 +926,37 @@ void main() {
       );
       await tapImport(tester);
       await confirmDialog(tester, direction: 'enToZh');
+      // 整批結束（摘要對話框關閉）後才清除。
+      await closeMessage(tester);
+      expect(cleared, 1);
+    });
+
+    testWidgets('同一批兩本 MDX：整批結束後才清除暫存檔，且只清一次（C-1）', (tester) async {
+      var cleared = 0;
+      final manager = FakeDictionaryManager()..canImportFn = (_) => true;
+      manager.importStream = okStream(manager);
+
+      await _pump(
+        tester,
+        manager,
+        pickFiles: (_) async => [pf('a.mdx'), pf('b.mdx')],
+        clearTempFiles: () async {
+          cleared += 1;
+          return true;
+        },
+      );
+      await tapImport(tester);
+
+      // 第一本匯入完成後，第二本的對話框已出現：此時還不能清暫存檔，
+      // 否則 b.mdx 與它的附屬檔會在讀取前被刪掉。
+      await confirmDialog(tester, direction: 'enToZh');
+      expect(manager.importCalls.map((c) => c.file.name), ['a.mdx']);
+      expect(cleared, 0);
+
+      await confirmDialog(tester, direction: 'enToZh');
+      expect(manager.importCalls.map((c) => c.file.name), ['a.mdx', 'b.mdx']);
+      expect(cleared, 0, reason: '摘要對話框還開著，整批尚未結束');
+      await closeMessage(tester);
       expect(cleared, 1);
     });
 
