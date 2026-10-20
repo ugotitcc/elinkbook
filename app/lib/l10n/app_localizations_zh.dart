@@ -2359,6 +2359,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get dictionaryListSeparator => '、';
+
+  @override
   String get dictionaryAddCompanion => '新增附屬檔案';
 
   @override
@@ -2396,12 +2399,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String dictionaryImportDone(int count) {
-    return '匯入 $count 筆';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '匯入 $count 筆',
+    );
+    return '$_temp0';
   }
 
   @override
   String dictionaryImportSkippedSummary(int count) {
-    return '略過 $count 筆';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '略過 $count 筆',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -2459,7 +2472,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String dictionaryImportUnsupportedFile(String file) {
-    return '無法匯入「$file」。這個檔案類型不支援。請改選 JSON、CSV、TXT（CC-CEDICT）或 MDX 字典檔。';
+    return '無法匯入「$file」。這個檔案類型不支援。請改選 JSON、CSV 或 TXT（CC-CEDICT）字典檔。';
   }
 
   @override
@@ -4836,6 +4849,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   }
 
   @override
+  String get dictionaryListSeparator => '、';
+
+  @override
   String get dictionaryAddCompanion => '添加附属文件';
 
   @override
@@ -4873,12 +4889,22 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String dictionaryImportDone(int count) {
-    return '导入 $count 条';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '导入 $count 条',
+    );
+    return '$_temp0';
   }
 
   @override
   String dictionaryImportSkippedSummary(int count) {
-    return '跳过 $count 条';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '跳过 $count 条',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -4936,7 +4962,7 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String dictionaryImportUnsupportedFile(String file) {
-    return '无法导入“$file”。这个文件类型不支持。请改选 JSON、CSV、TXT（CC-CEDICT）或 MDX 字典文件。';
+    return '无法导入“$file”。这个文件类型不支持。请改选 JSON、CSV 或 TXT（CC-CEDICT）字典文件。';
   }
 
   @override
@@ -7313,6 +7339,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
+  String get dictionaryListSeparator => '、';
+
+  @override
   String get dictionaryAddCompanion => '新增附屬檔案';
 
   @override
@@ -7350,12 +7379,22 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String dictionaryImportDone(int count) {
-    return '匯入 $count 筆';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '匯入 $count 筆',
+    );
+    return '$_temp0';
   }
 
   @override
   String dictionaryImportSkippedSummary(int count) {
-    return '略過 $count 筆';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '略過 $count 筆',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -7413,7 +7452,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String dictionaryImportUnsupportedFile(String file) {
-    return '無法匯入「$file」。這個檔案類型不支援。請改選 JSON、CSV、TXT（CC-CEDICT）或 MDX 字典檔。';
+    return '無法匯入「$file」。這個檔案類型不支援。請改選 JSON、CSV 或 TXT（CC-CEDICT）字典檔。';
   }
 
   @override

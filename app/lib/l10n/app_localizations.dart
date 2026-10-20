@@ -4169,6 +4169,12 @@ abstract class AppLocalizations {
   /// **'詞條引用了 {files}，但沒有匯入'**
   String dictionaryMissingCssWarning(String files);
 
+  /// 清單項目之間的分隔符（例如缺少的樣式表檔名清單）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'、'**
+  String get dictionaryListSeparator;
+
   /// 為 MDX 字典補上附屬檔案（樣式表、MDD）的按鈕
   ///
   /// In zh_TW, this message translates to:
@@ -4238,13 +4244,13 @@ abstract class AppLocalizations {
   /// 匯入完成摘要，count 為匯入筆數
   ///
   /// In zh_TW, this message translates to:
-  /// **'匯入 {count} 筆'**
+  /// **'{count, plural, other{匯入 {count} 筆}}'**
   String dictionaryImportDone(int count);
 
   /// 匯入摘要的略過筆數
   ///
   /// In zh_TW, this message translates to:
-  /// **'略過 {count} 筆'**
+  /// **'{count, plural, other{略過 {count} 筆}}'**
   String dictionaryImportSkippedSummary(int count);
 
   /// 略過原因清單的一行，index 為檔內第幾筆，reason 為已轉成文字的原因
@@ -4340,7 +4346,7 @@ abstract class AppLocalizations {
   /// 不支援的檔案的三段式訊息，file 為檔名
   ///
   /// In zh_TW, this message translates to:
-  /// **'無法匯入「{file}」。這個檔案類型不支援。請改選 JSON、CSV、TXT（CC-CEDICT）或 MDX 字典檔。'**
+  /// **'無法匯入「{file}」。這個檔案類型不支援。請改選 JSON、CSV 或 TXT（CC-CEDICT）字典檔。'**
   String dictionaryImportUnsupportedFile(String file);
 
   /// MDX 尚未支援的訊息

@@ -248,7 +248,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
         } catch (error) {
           debugPrint('Failed to read dictionary hints: $error');
           if (!mounted) return;
-          messages.add([_importErrorMessage(l10n, error)]);
+          messages.add([file.name, _importErrorMessage(l10n, error)]);
           continue;
         }
         if (!mounted) return;
@@ -346,7 +346,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
       }
       if (error != null) {
         debugPrint('Failed to import dictionary: $error');
-        messages.add([_importErrorMessage(l10n, error)]);
+        messages.add([file.name, _importErrorMessage(l10n, error)]);
         return true;
       }
       if (summary != null) {
@@ -663,9 +663,6 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
   ) {
     final source = item.source;
     final theme = Theme.of(context);
-    final separator = Localizations.localeOf(context).languageCode == 'zh'
-        ? '、'
-        : ', ';
     final content = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Row(
@@ -697,7 +694,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       l10n.dictionaryMissingCssWarning(
-                        item.missingCss.join(separator),
+                        item.missingCss.join(l10n.dictionaryListSeparator),
                       ),
                       key: Key('dictionary_missing_css_${source.id}'),
                       style: TextStyle(color: theme.colorScheme.error),

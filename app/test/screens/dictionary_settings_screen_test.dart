@@ -43,6 +43,7 @@ Future<void> _pump(
   FakeDictionaryManager manager, {
   bool isEinkMode = false,
   DictionaryFilePicker? pickFiles,
+  Locale locale = const Locale('zh', 'TW'),
 }) async {
   await pumpLocalizedWidget(
     tester,
@@ -52,6 +53,7 @@ Future<void> _pump(
       pickFiles: pickFiles,
     ),
     isEinkMode: isEinkMode,
+    locale: locale,
   );
   await tester.pumpAndSettle();
 }
@@ -238,6 +240,27 @@ void main() {
     expect(
       find.byKey(const Key('dictionary_settings_action_error')),
       findsNothing,
+    );
+  });
+
+  testWidgets('英文介面：缺 CSS 提醒用英文逗號分隔', (tester) async {
+    final manager = FakeDictionaryManager(
+      items: [
+        _item(
+          'm',
+          format: DictionaryFormat.mdx,
+          missingCss: ['ghychyz.css', 'b.css'],
+        ),
+      ],
+    );
+    await _pump(tester, manager, locale: const Locale('en'));
+
+    expect(
+      find.text(
+        'Entries refer to these files, which were not imported: '
+        'ghychyz.css, b.css',
+      ),
+      findsOneWidget,
     );
   });
 
@@ -674,6 +697,8 @@ void main() {
       await tapImport(tester);
 
       expect(find.textContaining('這個檔案類型不支援'), findsOneWidget);
+      // 這個版本還不能匯入 MDX，訊息不可建議使用者改選 MDX。
+      expect(find.textContaining('MDX'), findsNothing);
       expect(manager.importCalls, isEmpty);
     });
 
@@ -686,6 +711,82 @@ void main() {
 
       expect(find.textContaining('檔案無法讀取'), findsOneWidget);
       expect(manager.importCalls, isEmpty);
+    });
+
+    testWidgets('兩個檔案其中一個讀取提示失敗：錯誤訊息帶出該檔檔名', (tester) async {
+      final manager = FakeDictionaryManager()
+        ..readHintsFn = ((f) {
+          if (f.name == 'bad.json') {
+            throw const DictionaryImportException('unreadableFile');
+          }
+          return const ImportHints(name: '好字典');
+        });
+      manager.importStream = okStream(manager);
+      await _pump(
+        tester,
+        manager,
+        pickFiles: (_) async => [pf('bad.json'), pf('good.json')],
+      );
+      await tapImport(tester);
+      await confirmDialog(tester, direction: 'enToZh');
+
+      expect(find.text('bad.json'), findsOneWidget);
+      expect(find.textContaining('檔案無法讀取'), findsOneWidget);
+      expect(find.text('good.json'), findsNothing);
+    });
+
+    testWidgets('兩個檔案其中一個匯入失敗：錯誤訊息帶出該檔檔名', (tester) async {
+      final manager = FakeDictionaryManager();
+      manager.importStream = (file, request, cancel) async* {
+        if (file.name == 'bad.json') {
+          throw const DictionaryImportException('invalidFormat');
+        }
+        yield done();
+      };
+      await _pump(
+        tester,
+        manager,
+        pickFiles: (_) async => [pf('bad.json'), pf('good.json')],
+      );
+      await tapImport(tester);
+      await confirmDialog(tester, direction: 'enToZh');
+      await confirmDialog(tester, direction: 'enToZh');
+
+      expect(find.text('bad.json'), findsOneWidget);
+      expect(find.textContaining('格式不符合字典格式'), findsOneWidget);
+    });
+
+    testWidgets('英文介面：匯入與略過筆數單數用 entry、複數用 entries', (tester) async {
+      Future<void> importWith(
+        WidgetTester tester,
+        int count,
+        int skipped,
+      ) async {
+        final manager = FakeDictionaryManager();
+        manager.importStream = okStream(
+          manager,
+          last: done(count: count, skipped: skipped),
+        );
+        await _pump(
+          tester,
+          manager,
+          pickFiles: (_) async => [pf('a.json')],
+          locale: const Locale('en'),
+        );
+        await tapImport(tester);
+        await confirmDialog(tester, direction: 'enToZh');
+      }
+
+      await importWith(tester, 1, 1);
+      expect(find.text('Imported 1 entry'), findsOneWidget);
+      expect(find.text('Skipped 1 entry'), findsOneWidget);
+      await closeMessage(tester);
+
+      // 重新建構畫面，換成複數情境。
+      await tester.pumpWidget(const SizedBox());
+      await importWith(tester, 2, 3);
+      expect(find.text('Imported 2 entries'), findsOneWidget);
+      expect(find.text('Skipped 3 entries'), findsOneWidget);
     });
 
     testWidgets('只選 .css（沒有 .mdx）：顯示沒有可附加的字典提醒', (tester) async {

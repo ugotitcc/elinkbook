@@ -2447,8 +2447,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dictionaryMissingCssWarning(String files) {
-    return 'Entries refer to $files, but it was not imported';
+    return 'Entries refer to these files, which were not imported: $files';
   }
+
+  @override
+  String get dictionaryListSeparator => ', ';
 
   @override
   String get dictionaryAddCompanion => 'Add companion files';
@@ -2489,12 +2492,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dictionaryImportDone(int count) {
-    return 'Imported $count entries';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Imported $count entries',
+      one: 'Imported 1 entry',
+    );
+    return '$_temp0';
   }
 
   @override
   String dictionaryImportSkippedSummary(int count) {
-    return 'Skipped $count entries';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Skipped $count entries',
+      one: 'Skipped 1 entry',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -2553,7 +2568,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dictionaryImportUnsupportedFile(String file) {
-    return 'Could not import \"$file\". This file type is not supported. Choose a JSON, CSV, TXT (CC-CEDICT) or MDX dictionary file instead.';
+    return 'Could not import \"$file\". This file type is not supported. Choose a JSON, CSV or TXT (CC-CEDICT) dictionary file instead.';
   }
 
   @override
