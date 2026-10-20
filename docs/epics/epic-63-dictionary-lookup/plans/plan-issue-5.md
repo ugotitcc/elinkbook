@@ -41,8 +41,30 @@
 - **MDX 附屬檔案目錄：** `<App 支援目錄>/dictionaries/<sourceId>/`，放 MDX 私有複本、`.mdd`、`.css`（保留原檔名）。刪除字典時整個目錄刪除。
 - **MDX 在本 Issue 的行為：** 匯入流程會對選到的 `.mdx`／`.mdd`／`.css` 做配對並顯示結果，但因為沒有 MDX 匯入器（Issue 6a），`.mdx` 顯示「這個版本還不能匯入 MDX」。`DictionaryManager` 以匯入器清單判斷能不能處理；Issue 6a 加入 `MdxImporter` 即生效。「新增附屬檔案」與缺檔提醒對任何 `format == mdx` 的來源都可運作，本 Issue 以直接寫入 store 的 MDX 來源測試。
 - **`referenced_css` 的取得：** 本 Issue 提供純函式 `extractReferencedCssNames(Iterable<String> bodies)`（抽樣掃詞條 HTML 的 `<link href>`）與 store 的 `setReferencedCss`；實際抽樣前 200 筆詞條要讀 MDX，由 Issue 6a 呼叫。
-- **排序：** `ReorderableListView` 拖曳，放手後把整份順序重寫成 `priority = 0..n-1`（不留空號、不重複）。
+- **排序：** `ReorderableListView` 拖曳，放手後把整份順序重寫成 `priority = 0..n-1`（不留空號、不重複）。`onReorder` 先處理 index 位移（`newIndex > oldIndex` 時減 1）並立即 `setState` 更新本地順序，再非同步呼叫 `manager.reorder`；寫入失敗才顯示錯誤並 `_reload()` 還原。這是唯一不走「操作後 `_reload()`」的動作，因為等寫入完才更新會讓項目彈回原位再跳走，E-Ink 上會刷新兩次（審查 I-4）。
+- **匯入進度不用 `showDialog`：** 進度直接畫在設定畫面上（`Stack` 內一層擋住點擊的遮罩加 `Card`，狀態由畫面的 `_importProgress` 控制）。這樣沒有第二個路由，返回鍵只由畫面的 `PopScope(canPop: !_importing)` 處理；匯入結束（完成、取消、失敗、重複）一律先把進度清掉，再彈出後續的對話框，不會疊對話框（審查 I-1、I-2）。
+- **刪除順序：先刪私有目錄，成功後再刪來源列。** 目錄刪除失敗時資料庫沒變，字典仍在清單、可重試，不會留下沒人管得到的孤立檔案。目錄刪成功但刪列失敗時，MDX 來源暫時缺檔，使用者重試刪除即可（審查 I-3；取代 spec §4 的敘述順序，兩者都在同一個流程內，不違反 spec）。
+- **方向比對寬容：** `DictionaryDirection.fromLangs` 把語言碼轉小寫、只看第一段（`-`／`_` 前）。來源 `en` 且目標第一段為 `zh` → 英→繁中；來源 `zh` 且目標為 `en` → 中→英；來源 `zh` 且目標第一段為 `zh` → 中→中。`zh-TW`、`zh-HK`、`zh-CN` 都算中文目標。儲存時仍寫該方向的固定語言碼（`zh-Hant` 等），所以 `zh-CN` 目標的字典會存成 `zh-Hant`；目標語言目前只用於顯示，不影響查詢（審查 M-1）。
 - **查詢面板的「前往字典設定」：** 本 Issue 接上（Issue 4 交接）。點了先關面板再開設定畫面，不清選取。
+
+## l10n 鍵名（四份 ARB 統一用這些名稱，審查 M-2）
+
+| 用途 | 鍵名 |
+|---|---|
+| 設定入口、畫面標題 | `settingsDictionaryLabel`、`dictionarySettingsTitle` |
+| 方向標籤 | `dictionaryDirectionEnToZh`、`dictionaryDirectionZhToEn`、`dictionaryDirectionZhToZh` |
+| 筆數（ICU plural） | `dictionaryEntryCount(count)` |
+| 空清單 | `dictionarySettingsEmpty`、`dictionarySettingsEmptyHint` |
+| 載入清單失敗、刪除失敗、排序失敗（三段式） | `dictionarySettingsLoadFailed`、`dictionarySettingsDeleteFailed`、`dictionarySettingsReorderFailed` |
+| 刪除確認 | `dictionaryDeleteConfirmTitle`、`dictionaryDeleteConfirmMessage(name)`、`dictionaryDeleteConfirmAction` |
+| 缺檔提醒、補附屬檔案 | `dictionaryMissingCssWarning(files)`、`dictionaryAddCompanion` |
+| 匯入入口與對話框 | `dictionaryImportButton`、`dictionaryImportTitle`、`dictionaryImportNameLabel`、`dictionaryImportDirectionLabel`、`dictionaryImportLicenseLabel`、`dictionaryImportLargeFileHint`、`dictionaryImportConfirm`、`dictionaryImportCancel` |
+| 進度、摘要 | `dictionaryImportProgress(processed, total)`、`dictionaryImportDone(count)`、`dictionaryImportSkippedSummary(count)` |
+| 略過原因 | `dictionaryImportSkipMissingHeadword`、`dictionaryImportSkipMissingDefinition`、`dictionaryImportSkipDefinitionTooLong`、`dictionaryImportSkipInvalidField`、`dictionaryImportSkipMalformedLine` |
+| 重複匯入 | `dictionaryImportDuplicateTitle`、`dictionaryImportDuplicateMessage`、`dictionaryImportDuplicateSkip`、`dictionaryImportDuplicateReplace` |
+| 匯入失敗（三段式，依錯誤碼；未知碼用通用） | `dictionaryImportErrorUnreadableFile`、`dictionaryImportErrorInvalidEncoding`、`dictionaryImportErrorInvalidFormat`、`dictionaryImportErrorNoValidEntries`、`dictionaryImportErrorGeneric` |
+| 不支援的檔案、MDX 未支援、沒有可附加的字典 | `dictionaryImportUnsupportedFile`、`dictionaryImportMdxNotYet`、`dictionaryImportOrphanCompanions` |
+| 離開確認 | `dictionaryImportLeaveConfirmTitle`、`dictionaryImportLeaveConfirmMessage`、`dictionaryImportLeaveConfirmAction` |
 
 ---
 
@@ -156,7 +178,7 @@ git commit -m "feat(epic-63): Issue 5 共用延遲開啟 provider 與 store 補�
 - Produces（`dictionary_manager.dart`）:
   - `class DictionaryListItem { final DictionarySource source; final List<String> missingCss; }`
   - `class DictionaryManager { DictionaryManager({required DictionaryStoreProvider store, required DictionaryFileStore files, required List<DictionaryImporter Function(DictionaryStore)> importerFactories}); }`
-  - `Future<List<DictionaryListItem>> list()`；`Future<void> setEnabled(String id, bool enabled)`；`Future<void> reorder(List<String> orderedIds)`；`Future<void> delete(String id)`（刪來源列、再 `files.deleteAll`；任一步失敗讓例外往上丟，不吞掉）；`Future<void> addCompanions(String sourceId, List<PickedFile> files)`（只接受 `.css`、`.mdd`，其他副檔名忽略）。
+  - `Future<List<DictionaryListItem>> list()`；`Future<void> setEnabled(String id, bool enabled)`；`Future<void> reorder(List<String> orderedIds)`；`Future<void> delete(String id)`（**先** `files.deleteAll`，成功後才刪來源列；任一步失敗讓例外往上丟，不吞掉）；`Future<void> addCompanions(String sourceId, List<PickedFile> files)`（只接受 `.css`、`.mdd`，其他副檔名忽略）。
   - `Future<bool> canImport(String fileName)`：任一匯入器 `canHandle` 即為真。
   - `Future<ImportHints> readHints(PickedFile file)`；`Stream<ImportProgress> import(PickedFile file, ImportRequest request, {required CancelToken cancel})`：用第一個 `canHandle` 的匯入器。
 
@@ -170,7 +192,7 @@ git commit -m "feat(epic-63): Issue 5 共用延遲開啟 provider 與 store 補�
 `dictionary_manager_test.dart`（記憶體 DB＋暫存目錄）：
 - `list()` 依優先順序回傳；MDX 來源 `referencedCss` 有而目錄沒有 → `missingCss` 有該檔名；補 `addCompanions`（`.css`）後再 `list()` → `missingCss` 為空（驗收 38）。
 - `delete` 後：`list()` 沒有它、`store.lookup` 查不到詞條、私有目錄不存在（驗收 6、Review Focus 2）。
-- `delete` 時目錄刪除失敗（注入會丟例外的 `DictionaryFileStore` 子類）→ 例外往上傳，來源列已刪（不留半個字典的 UI 狀態由畫面處理，見 Task 4）。
+- `delete` 時目錄刪除失敗（注入會丟例外的 `DictionaryFileStore` 子類）→ 例外往上傳，**來源列與詞條都還在**，`list()` 仍回傳它，再次 `delete`（目錄恢復正常）可成功。
 - `reorder` 後 `DictionaryService.lookup` 的 `outcomes` 順序跟著變。
 - `addCompanions` 忽略 `.txt`；同名 `.css` 覆蓋。
 - `canImport('a.json')` 為真、`canImport('a.mdx')` 為假（本 Issue 沒有 MDX 匯入器）。
@@ -258,8 +280,9 @@ git commit -m "feat(epic-63): Issue 5 DictionaryManager 加入 ReaderFeatureDepe
 - `清單依序顯示名稱、方向標籤、筆數`；三種方向各一本，標籤分別為「英→繁中」「中→英」「中→中」（驗收 2）。
 - `切換啟用開關呼叫 setEnabled 並更新畫面`。
 - `拖曳排序後呼叫 reorder，傳入新的 id 順序`（用 `tester.drag` 拖把手）。
+- `拖曳排序：reorder 尚未完成（Completer 未完成）時，畫面已是新順序，不彈回原位`；`reorder 丟例外：顯示三段式錯誤並還原成舊順序`（審查 I-4）。
 - `刪除：先出確認對話框；取消不刪；確認後呼叫 delete 並從清單消失`。
-- `刪除失敗（delete 丟例外）：顯示三段式錯誤，清單重新載入`。
+- `刪除失敗（delete 丟例外）：顯示三段式錯誤，清單重新載入後該字典仍在，可再按刪除重試`（審查 I-3）。
 - `MDX 來源缺 CSS 時顯示提醒；非 MDX 來源不顯示提醒與「新增附屬檔案」`。
 - `點新增附屬檔案：選檔後呼叫 addCompanions，提醒消失`（`pickFiles` 注入回傳一個 `ghychyz.css`；`FakeDictionaryManager` 在 `addCompanions` 後更新 `missingCss`）。
 - `list() 丟例外時顯示失敗訊息，不是空白畫面`。
@@ -272,7 +295,7 @@ Expected: FAIL（找不到檔案）。
 
 - [ ] **Step 3: 實作**
 
-先加 ARB 並 `flutter gen-l10n`，再寫畫面。`ReorderableListView` 的 `buildDefaultDragHandles: false`，每列自帶 `ReorderableDragStartListener` 與 `Key('dictionary_item_<id>')`。操作後都呼叫 `_reload()` 重新取得清單，不在本地手動改狀態。
+先加 ARB 並 `flutter gen-l10n`，再寫畫面。`ReorderableListView` 的 `buildDefaultDragHandles: false`，每列自帶 `ReorderableDragStartListener` 與 `Key('dictionary_item_<id>')`。啟用、刪除、補附屬檔案後呼叫 `_reload()` 重新取得清單；排序例外，見「已決定事項」的樂觀更新。
 
 - [ ] **Step 4: 執行測試，確認通過**
 
@@ -296,23 +319,23 @@ git commit -m "feat(epic-63): Issue 5 字典設定畫面清單與管理動作"
 
 **Interfaces:**
 - Produces（`dictionary_import_dialog.dart`）:
-  - `enum DictionaryDirection { enToZh, zhToEn, zhToZh }`，附 `String sourceLang`、`String targetLang`（`en`／`zh-Hant`、`zh`／`en`、`zh`／`zh-Hant`）；`static DictionaryDirection? fromLangs(String? source, String? target)`（對不上回傳 `null`）。
+  - `enum DictionaryDirection { enToZh, zhToEn, zhToZh }`，附 `String sourceLang`、`String targetLang`（`en`／`zh-Hant`、`zh`／`en`、`zh`／`zh-Hant`）；`static DictionaryDirection? fromLangs(String? source, String? target)`：比對規則見「已決定事項」的「方向比對寬容」，對不上回傳 `null`。
   - `typedef ImportChoices = ({String name, DictionaryDirection direction, String licenseNote});`
-  - `Future<ImportChoices?> showDictionaryImportDialog(BuildContext, {required ImportHints hints, required DictionaryDirection? initialDirection, required bool isLargeFile, required bool isEinkMode})`：取消回傳 `null`；方向未選時「匯入」按鈕停用。固定 Key：`dictionary_import_name`、`dictionary_import_direction_<enToZh|zhToEn|zhToZh>`、`dictionary_import_license`、`dictionary_import_confirm`、`dictionary_import_large_file_hint`。
+  - `Future<ImportChoices?> showDictionaryImportDialog(BuildContext, {required ImportHints hints, required DictionaryDirection? initialDirection, required bool isLargeFile, required bool isEinkMode})`：取消回傳 `null`；方向未選時「匯入」按鈕停用。固定 Key：`dictionary_import_name`、`dictionary_import_direction_<enToZh|zhToEn|zhToZh>`、`dictionary_import_license`、`dictionary_import_confirm`、`dictionary_import_cancel`、`dictionary_import_large_file_hint`。
 - 畫面流程（`dictionary_settings_screen.dart`）:
   1. 按 `dictionary_settings_import_button`：`pickFiles(['json','csv','txt','u8','mdx','mdd','css'])`，可多選。
   2. `planCompanions` 分組。`others` 逐檔：`canImport` 為假 → 該檔顯示三段式「不支援的檔案」；為真 → `readHints`（失敗顯示三段式錯誤並跳過）→ 對話框 → 匯入。`groups`（MDX）：`canImport(mdx.name)` 為假 → 顯示「這個版本還不能匯入 MDX」並略過整組；`unmatchedCompanions` 顯示一則提醒（沒有可附加的 `.mdx`）。
-  3. 匯入中顯示進度對話框（已處理／總數、取消鈕）；取消呼叫 `CancelToken.cancel()` 並等 `ImportStage.cancelled`。
+  3. 匯入中在畫面上顯示進度遮罩（`Key('dictionary_import_progress')`：已處理／總數、取消鈕 `Key('dictionary_import_progress_cancel')`），不用 `showDialog`；取消呼叫 `CancelToken.cancel()` 並等 `ImportStage.cancelled`。匯入以 `try/finally` 包住，結束時（完成、取消、失敗、重複）先清掉進度遮罩，再顯示後續對話框。
   4. `DuplicateDictionaryException` → 對話框「這本字典已匯入」，按鈕「略過」「取代」（驗收 20）；取代以 `replaceExisting: true` 重跑一次。
   5. 完成：顯示摘要「匯入 N 筆」；`skippedCount > 0` 時加「略過 M 筆」與前幾筆原因（`ImportSkip.reason` 轉 l10n）；完成後 `_reload()`。
   6. `DictionaryImportException.code`（`unreadableFile`、`invalidEncoding`、`invalidFormat`、`noValidEntries`）各轉成三段式 l10n 訊息。
-  7. 匯入進行中以 `PopScope` 攔返回：先跳「離開會取消匯入」確認，確認才取消並離開（Review Focus 1）。
+  7. 匯入進行中以畫面的單一 `PopScope(canPop: !_importing)` 攔返回：先跳「離開會取消匯入」確認，確認才取消並離開（Review Focus 1）。進度不是路由，所以返回鍵一定先到這個 `PopScope`。
 - l10n：匯入按鈕、對話框欄位標籤、方向三個標籤（沿用 Task 4）、大檔提示、進度文字、取消、「這本字典已匯入」與略過／取代、摘要、四個錯誤碼的三段式訊息、略過原因（`missingHeadword`、`missingDefinition`、`definitionTooLong`、`invalidField`、`malformedLine`）、「不支援的檔案」、「這個版本還不能匯入 MDX」、離開確認。
 
 - [ ] **Step 1: 寫失敗的測試**
 
 `dictionary_import_dialog_test.dart`：
-- `fromLangs`：`('en','zh-Hant')`→`enToZh`；`('zh','en')`→`zhToEn`；`('zh','zh-Hant')`→`zhToZh`；`('fr','en')`與 `null`→`null`。
+- `fromLangs`：`('en','zh-Hant')`→`enToZh`；`('zh','en')`→`zhToEn`；`('zh','zh-Hant')`→`zhToZh`；寬容比對：`('EN','zh-TW')`→`enToZh`、`('zh','zh_CN')`→`zhToZh`、`('en','zh')`→`enToZh`；`('fr','en')`、`('en','en')`與 `null`→`null`。
 - `initialDirection 為 null 時匯入按鈕停用，選了方向後啟用`。
 - `名稱與授權預填 hints，可修改，確認時回傳修改後的值`。
 - `isLargeFile 為真時顯示大檔提示`。
@@ -321,13 +344,15 @@ git commit -m "feat(epic-63): Issue 5 字典設定畫面清單與管理動作"
 `dictionary_settings_screen_test.dart` 新增 `group('匯入流程')`（`pickFiles` 與 `FakeDictionaryManager.import` 都注入）：
 - `選一個 JSON：對話框預填 → 確認 → 顯示進度 → 完成摘要 → 清單重新載入`。
 - `重複匯入：丟 DuplicateDictionaryException → 顯示「這本字典已匯入」；按略過不再匯入；按取代以 replaceExisting: true 重新匯入`。
-- `匯入中按取消：CancelToken 被取消，不出現完成摘要`。
+- `匯入中按取消：CancelToken 被取消，不出現完成摘要，進度遮罩消失`。
+- `重複匯入時進度遮罩已先消失：畫面上同時只有「這本字典已匯入」一個層，按取代後再出現新的進度遮罩（不疊多個）`（審查 I-1）。
+- `匯入失敗（DictionaryImportException）後進度遮罩消失，錯誤訊息可關閉`。
 - `多選兩個檔案：依序各跳一次對話框`。
 - `空檔（noValidEntries）顯示三段式錯誤，清單沒有多一本`（Review Focus 4）。
 - `有略過筆數：摘要列出略過數與原因`。
 - `選到 a.mdx＋a.mdd＋x.css：顯示「這個版本還不能匯入 MDX」，同批的 b.json 照常匯入`（Review Focus 5）。
 - `只選 .css（沒有 .mdx）：顯示沒有可附加的字典提醒`。
-- `匯入進行中按返回：出現離開確認；確認後取消匯入並離開；不確認則留在畫面`（Review Focus 1）。
+- `匯入進行中按返回：出現離開確認；確認後取消匯入並離開；不確認則留在畫面且匯入繼續`（Review Focus 1、審查 I-2）。點進度遮罩的空白處不會關閉它。
 - `提示的 sourceLang／targetLang 對得上就預選方向（CEDICT 預設中→英）`。
 
 - [ ] **Step 2: 執行測試，確認失敗**
@@ -359,7 +384,7 @@ git commit -m "feat(epic-63): Issue 5 字典匯入流程"
 - Test: `app/test/screens/settings_scaffold_test.dart`、`app/test/screens/reader_screen_test.dart`
 
 **Interfaces:**
-- `settings_scaffold.dart`：「閱讀」分區在「閱讀預設值」之後加 `ListTile`，`Key('settings_dictionary_button')`，標題為 `settingsDictionaryLabel`（zh_TW「字典」），`chevron_right`，點了 `push(DictionarySettingsScreen(manager: widget.readerFeatures.dictionaryManager, isEinkMode: widget.appearance.isEinkMode))`。
+- `settings_scaffold.dart`：「閱讀」分區在「閱讀預設值」之後加 `_SettingsCard(child: ListTile(...))`（與同分區其他入口一致，審查 M-4），`Key('settings_dictionary_button')`，標題為 `settingsDictionaryLabel`（zh_TW「字典」），`chevron_right`，點了 `push(DictionarySettingsScreen(manager: widget.readerFeatures.dictionaryManager, isEinkMode: widget.appearance.isEinkMode))`。
 - `reader_screen.dart`：`_handleLookupPressed` 傳給 `DictionaryLookupSheet.show` 的 `onOpenSettings` 由 `null` 改為：先 `Navigator.of(context).pop()` 關面板，再 `push(DictionarySettingsScreen(...))`。不呼叫 `_handleSelectionCleared`、`_handleCloseAnnotationToolbar`、`clearSelection`（沿用 Issue 4 約束）。
 
 - [ ] **Step 1: 寫失敗的測試**
@@ -453,3 +478,17 @@ git commit -m "docs(epic-63): Issue 5 實作完成，更新狀態"
 - **Issue 3／4 延後項：** `readHints` 預填、`DuplicateDictionaryException`、三段式錯誤、`listSources` 未知 `format`（Task 1）、M-9 匯入期間暫停查詢（已決定事項）、`onOpenSettings` 接線（Task 6）。
 - **型別一致：** `PickedFile`、`MdxGroup`、`CompanionPlan` 只在 Task 2 定義，Task 4、5 使用；`DictionaryListItem` 只在 Task 2 定義；`DictionaryDirection`、`ImportChoices` 只在 Task 5 定義；`dictionaryManager` 欄位只在 Task 3 定義，Task 6 使用。
 - **比例：** 測試案例佔大宗；程式碼區塊只有簽章與固定值，沒有函式本體。
+
+---
+
+## 計畫審查後修訂（`reviews/review-plan-issue-5.md`）
+
+8 項都已核對程式現況，全部採用。
+
+- **I-1、I-2：** 採審查的替代方案。進度不用 `showDialog`，畫在設定畫面上，由單一 `PopScope` 管返回鍵；匯入結束先清進度再彈後續對話框。加對應測試。
+- **I-3：** 刪除改成先刪私有目錄、成功後才刪來源列。Task 2 與 Task 4 的失敗測試相應改寫。
+- **I-4：** 排序改為樂觀更新（唯一不走 `_reload()` 的動作），加「寫入未完成時已是新順序」與失敗還原的測試。
+- **M-1：** `fromLangs` 寬容比對（只看語言碼第一段），加測試。
+- **M-2：** 新增「l10n 鍵名」表。
+- **M-3：** 加 `dictionary_import_cancel`，另加進度遮罩的兩個 Key。
+- **M-4：** 設定入口包 `_SettingsCard`。
