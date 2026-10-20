@@ -54,6 +54,28 @@ class _FakeMdxEntryView extends StatelessWidget {
       const SizedBox(key: Key('fake_mdx_view'), child: Text('MDX 詞條'));
 }
 
+/// 會記錄 State 建立次數的假 MDX 元件，用來確認切換分段時 WebView 是否重建。
+class _CountingMdxEntryView extends StatefulWidget {
+  const _CountingMdxEntryView({required this.onStateCreated});
+
+  final VoidCallback onStateCreated;
+
+  @override
+  State<_CountingMdxEntryView> createState() => _CountingMdxEntryViewState();
+}
+
+class _CountingMdxEntryViewState extends State<_CountingMdxEntryView> {
+  @override
+  void initState() {
+    super.initState();
+    widget.onStateCreated();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      const SizedBox(key: Key('fake_mdx_view'), child: Text('MDX 詞條'));
+}
+
 /// 收集每次建構 [MdxEntryViewConfig] 的參數，測試再用 `last` 觸發連結。
 class _MdxRecorder {
   final List<MdxEntryViewConfig> configs = [];
@@ -764,6 +786,39 @@ void main() {
 
       expect(find.byKey(const Key('fake_mdx_view')), findsNothing);
       expect(find.text('純文字詞條'), findsOneWidget);
+    });
+
+    testWidgets('兩個 MDX 分段之間切換：WebView 的 State 會重建（I-6）', (tester) async {
+      var created = 0;
+      await _pumpSheet(
+        tester,
+        mdxEntryViewBuilder: (context, config) => _CountingMdxEntryView(
+          onStateCreated: () => created++,
+        ),
+        response: Future.value(
+          _completed([
+            _outcome(
+              'm1',
+              name: '甲 MDX',
+              entries: [_htmlEntry('詞', body: '<p>甲</p>')],
+            ),
+            _outcome(
+              'm2',
+              name: '乙 MDX',
+              entries: [_htmlEntry('詞', body: '<p>乙</p>')],
+            ),
+          ]),
+        ),
+      );
+      expect(created, 1);
+
+      await tester.tap(find.text('乙 MDX'));
+      await tester.pump();
+      expect(created, 2, reason: '切到另一本 MDX 要丟棄舊 WebView 並建立新的');
+
+      await tester.tap(find.text('甲 MDX'));
+      await tester.pump();
+      expect(created, 3);
     });
 
     testWidgets('HTML 詞條撐滿面板高度，切回純文字分段後縮回', (tester) async {

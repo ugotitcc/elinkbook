@@ -286,15 +286,20 @@ class _DictionaryLookupSheetState extends State<DictionaryLookupSheet> {
 
     final html = _mdxFrame?.html ?? _mergeEntryHtml(outcome.entries);
     final builder = widget.mdxEntryViewBuilder ?? _buildDefaultMdxEntryView;
-    return builder(
-      context,
-      MdxEntryViewConfig(
-        sourceId: outcome.providerId,
-        html: html,
-        onEntryLink: (word) => _followEntryLink(
+    // 以分段的 providerId 當 key：切換到另一本 MDX 時丟棄舊 WebView、建立新的
+    // （spec §3.6），不沿用舊的捲動位置與導覽歷史。
+    return KeyedSubtree(
+      key: ValueKey(outcome.providerId),
+      child: builder(
+        context,
+        MdxEntryViewConfig(
           sourceId: outcome.providerId,
-          word: word,
-          currentHtml: html,
+          html: html,
+          onEntryLink: (word) => _followEntryLink(
+            sourceId: outcome.providerId,
+            word: word,
+            currentHtml: html,
+          ),
         ),
       ),
     );
