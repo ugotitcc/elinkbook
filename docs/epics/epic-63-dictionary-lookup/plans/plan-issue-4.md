@@ -152,13 +152,16 @@ git commit -m "feat(epic-63): Issue 4 工具列新增查字典按鈕"
 **Files:**
 - Modify: `app/lib/screens/reader_feature_dependencies.dart`
 - Modify: `app/lib/main.dart`
+- Create: `app/test/support/fake_dictionary_service.dart`
 - Modify: `app/test/support/fake_reader_feature_dependencies.dart`
 - Test: `app/test/support/fake_reader_feature_dependencies_test.dart`
 
 **Interfaces:**
 - Produces: `ReaderFeatureDependencies.dictionaryService`（`required`，`DictionaryService`，non-null）。
-- `main.dart`：開啟 `dictionary.db`（`DictionaryDatabase.open`，路徑與 `library.db` 同目錄，檔名 `dictionary.db`），`DictionaryService(store: DictionaryStore(db))` 建構一次，放進 `readerFeatures`。
-- 測試工廠：`fakeReaderFeatureDependencies({DictionaryService? dictionaryService})`，預設用記憶體資料庫（`inMemoryDatabasePath`、`singleInstance: false`）建的真 `DictionaryService`（空字典）。
+- `main.dart`：用既有的 `defaultDictionaryDatabasePath()`（`dictionary_database.dart:10`）取得路徑，`DictionaryDatabase.open` 開啟 `dictionary.db`，`DictionaryService(store: DictionaryStore(db))` 建構一次，放進 `readerFeatures`。
+- 測試工廠：`fakeReaderFeatureDependencies({DictionaryService? dictionaryService})`，預設值為 `FakeDictionaryService()`。
+- 新增 `app/test/support/fake_dictionary_service.dart`：`class FakeDictionaryService implements DictionaryService`，不碰資料庫。`lookup` 回傳可由建構子設定的 `DictionaryLookupResponse`（預設 `LookupCompleted`，`outcomes` 為空、`hasEnabledDictionary: false`），並記錄每次呼叫的參數 `calls`。
+- **不改 `DictionaryService` 的型別結構。** 已實測：`implements` 一個含私有成員的類別（跨檔案）可以編譯執行，不需要抽介面或改名。
 
 - [ ] **Step 1: 寫失敗的測試**
 
@@ -171,7 +174,7 @@ Expected: FAIL（編譯錯誤：沒有 `dictionaryService`）。
 
 - [ ] **Step 3: 實作**
 
-先確認 `defaultLibraryDatabasePath()`（`sqlite_library_repository.dart:15`）的目錄寫法，字典路徑與它同一個目錄。工廠是同步函式，不能 `await` 開資料庫：改為接受 `DictionaryService?`，預設值用一個小的測試用 `FakeDictionaryService`（實作 `DictionaryService` 介面不可行時，改在 `test/support/` 建 `fake_dictionary_service.dart`，繼承 `DictionaryService` 並覆寫 `lookup` 回傳可設定的 `DictionaryLookupResponse`，預設回傳 `LookupCompleted` 且 `outcomes` 為空、`hasEnabledDictionary: false`）。建構子需要 `DictionaryStore`：若繼承不便，在 Step 3 先把 `DictionaryService` 抽出 `abstract interface class DictionaryLookup { Future<DictionaryLookupResponse> lookup(String); }` 並讓依賴組欄位型別用它。**此處在實作時依實際程式碼擇一，並在本檔「已決定事項」補記。**
+建立 `FakeDictionaryService`（見 Interfaces），工廠預設用它。
 
 - [ ] **Step 4: 執行測試，確認通過**
 
@@ -197,16 +200,33 @@ git commit -m "feat(epic-63): Issue 4 DictionaryService 加入 ReaderFeatureDepe
 **Interfaces:**
 - Produces: `class DictionaryLookupSheet extends StatefulWidget`，建構參數 `{required String selectedText, required Future<DictionaryLookupResponse> response, required bool isEinkMode, VoidCallback? onOpenSettings}`；`static Future<void> show(BuildContext, {required String selectedText, required DictionaryService service, required bool isEinkMode, VoidCallback? onOpenSettings})` 內部呼叫 `EBSheetShell.show` 並只呼叫一次 `service.lookup(selectedText)`。
 - 固定 Key：`dictionary_lookup_loading`、`dictionary_lookup_rejected`（含 `…_invalid`／`…_too_long` 後綴不需要，用文字斷言）、`dictionary_lookup_empty_no_dictionary`、`dictionary_lookup_empty_no_match`、`dictionary_lookup_segments`（分段選擇器）、`dictionary_lookup_entry_<index>`、`dictionary_lookup_not_found`、`dictionary_lookup_skipped`、`dictionary_lookup_failed`。
-- l10n（zh_TW 文字）：標題「查字典」；`dictionaryLookupInvalidSelection`「選取內容含有標點，請重新選取」；`dictionaryLookupTooLong`「選取範圍太長，請縮短後再查」；`dictionaryLookupNoDictionary`「尚未匯入字典」；`dictionaryLookupNoMatchingDictionary`「沒有適用於這段文字的字典」；`dictionaryLookupNotFound`「查無此詞」；`dictionaryLookupOnlineDisabled`「線上查詢已關閉」；`dictionaryLookupFailed`「這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。」；`dictionaryLookupOpenSettings`「前往字典設定」。
+- l10n（zh_TW 文字）：標題「查字典」；`dictionaryLookupInvalidSelection`「選取內容含有標點，請重新選取」；`dictionaryLookupTooLong`「選取範圍太長，請縮短後再查」；`dictionaryLookupNoDictionary`「尚未匯入字典」；`dictionaryLookupNoMatchingDictionary`「沒有適用於這段文字的字典」；`dictionaryLookupNotFound`「查無此詞」；`dictionaryLookupOnlineDisabled`「線上查詢已關閉」；`dictionaryLookupFailed`「這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。」；`dictionaryLookupOpenSettings`「前往字典設定」；`dictionaryLookupLoading`「查詢中…」（en `Looking up…`）；分段狀態後綴 `dictionaryLookupSegmentNotFound`「（無）」、`dictionaryLookupSegmentSkipped`「（略過）」、`dictionaryLookupSegmentFailed`「（失敗）」（en 為 ` (None)`、` (Skipped)`、` (Failed)`）。四份 ARB 都要加，zh_TW 附 `@key` 說明。
 
 顯示規則：
-- 等待中：`CircularProgressIndicator`（E-Ink 下仍可，它不是過場動畫；若 E-Ink 要求靜態，改顯示文字「查詢中…」，依 `isEinkMode` 切換）。
+- 等待中：`isEinkMode` 為 `true` 時顯示靜態 `Text(l10n.dictionaryLookupLoading)`（旋轉指示會造成持續局刷與殘影）；否則顯示 `CircularProgressIndicator`。
+- 查詢丟出未攔截的例外（`FutureBuilder` 的 `snapshot.hasError`）：顯示 `dictionaryLookupFailed`，不留空白。
 - `LookupRejected`：依 `problem` 顯示兩句其中之一。
 - `LookupCompleted`，`outcomes` 為空：依 `hasEnabledDictionary` 顯示兩句其中之一。
 - `outcomes` 只有一個：不顯示選擇器，直接顯示內容。
-- 多個：頂端 `SegmentedButton`，標籤為 `displayName`；選中分段標示結果狀態（`found` 不加註、`notFound` 加「無」、`skipped` 加「略過」、`failed` 加「失敗」）。
+- 多個：頂端 `SegmentedButton`。**每個**分段標籤都是 `displayName` 加狀態後綴（不只選中的那個）：`found` 不加、`notFound` 加 `dictionaryLookupSegmentNotFound`、`skipped` 加 `…Skipped`、`failed` 加 `…Failed`。
 - 內容：`found` → 每筆詞條一張卡片：詞頭、拼音（經 `pinyinToneMarks`）、詞性、內文（純文字，可選取）；`notFound` → 「查無此詞」；`skipped` → 「線上查詢已關閉」；`failed` → 失敗訊息。
 - 底部固定一行來源名稱（`displayName`）；有 `attribution` 時一併顯示。
+
+版面（`EBSheetShell` 的 `child` 外面是 `Flexible`，所以內容要自己貼合高度）：
+
+```dart
+Column(
+  mainAxisSize: MainAxisSize.min,
+  crossAxisAlignment: CrossAxisAlignment.stretch,
+  children: [
+    if (outcomes.length > 1) segmentedBar,
+    Flexible(child: ListView(shrinkWrap: true, children: content)),
+    footer,
+  ],
+)
+```
+
+內容少時貼合內容高度，內容多時最高到 85% 螢幕並可捲動。不要用 `Expanded`（短內容也會撐滿），也不要放沒有 `shrinkWrap` 的 `ListView`（高度無限會丟例外）。
 
 - [ ] **Step 1: 寫失敗的測試**
 
@@ -218,6 +238,10 @@ git commit -m "feat(epic-63): Issue 4 DictionaryService 加入 ReaderFeatureDepe
 - `多個 provider：預設選中第一個 found 的分段`（第一個 notFound、第二個 found → 選中第二個）；`都沒有 found：選第一個`。
 - `點另一個分段會切換內容`。
 - `notFound 分段顯示查無此詞`、`skipped 顯示線上查詢已關閉`、`failed 顯示失敗訊息`。
+- `每個分段標籤都帶狀態後綴（包含未選中的）`。
+- `E-Ink 模式等待中顯示「查詢中…」文字，不出現 CircularProgressIndicator；一般模式則出現`。
+- `response 丟出例外時顯示失敗訊息`。
+- `短內容時面板不撐滿、長內容可捲動且不丟 RenderFlex 例外`（用 `tester.takeException()` 為 null 斷言）。
 - `onOpenSettings 為 null 時不顯示前往設定連結；非 null 時顯示且可觸發`。
 - `拼音 pin1 yin1 顯示為 pīn yīn`；`沒有拼音的詞條不顯示拼音列`。
 - `E-Ink 模式：選中分段有邊框、頁面上找不到 AnimatedXxx 類 widget`（至少斷言 `find.byType(AnimatedSwitcher)` 與 `AnimatedContainer` 為空）。
@@ -276,7 +300,7 @@ Expected: FAIL。
 
 - [ ] **Step 3: 實作**
 
-`widget.readerFeatures.dictionaryService` 取服務（先確認 `ReaderScreen` 取用依賴組的實際欄位名稱）。`isEinkMode` 用 `widget.isEinkMode`。`onOpenSettings` 傳 `null`。
+用 `widget.dependencies.dictionaryService` 取服務（`reader_screen.dart:128` 的欄位名稱）。`isEinkMode` 用 `widget.isEinkMode`。`onOpenSettings` 傳 `null`。
 
 - [ ] **Step 4: 執行測試，確認通過**
 
@@ -350,4 +374,17 @@ git commit -m "docs(epic-63): Issue 4 實作完成，更新狀態"
 - **Spec 覆蓋：** 驗收 3（Task 2、5）、4（Task 5 FXL／CBZ 測試）、5（本機查詢本來就不連網，Task 4 無網路程式）、12（Task 4 兩個提示）、26（Task 4 無動畫斷言＋Task 6 真機）、32（Task 4 分段選擇器，一次只顯示一本）。
 - **Issue 3 延後項：** M-5（Task 1、4）；拼音轉換（Task 4）；`DictionaryService` 注入（Task 3）。
 - **型別一致：** `hasEnabledDictionary` 只在 Task 1 定義，Task 4 使用；`onLookupPressed` 只在 Task 2 定義，Task 5 使用；`DictionaryLookupSheet.show` 只在 Task 4 定義，Task 5 使用。
-- **未決：** Task 3 Step 3 的 `DictionaryService` 在測試工廠中如何替身（繼承 vs 抽介面），實作時依實際程式碼擇一並回寫。
+
+---
+
+## 計畫審查後修訂（`reviews/review-plan-issue-4.md`）
+
+- **I-1（部分採用）：** 審查說「`implements` 含私有成員的類別會編譯錯誤」，實測不成立（跨檔 `implements` 可編譯執行）。所以不改名、不抽介面；測試替身 `FakeDictionaryService implements DictionaryService`，不碰資料庫。審查要「先拍板」的部分採用。
+- **I-2：** 補齊 `dictionaryLookupLoading` 與三個分段狀態後綴字串。
+- **I-3：** 每個分段標籤都帶狀態後綴，不只選中的。
+- **I-4：** 面板版面寫明 `Column(min)` + `Flexible(ListView(shrinkWrap))`。
+- **M-1：** `main.dart` 用既有的 `defaultDictionaryDatabasePath()`。
+- **M-2：** 欄位名稱定為 `widget.dependencies`。
+- **M-3：** E-Ink 等待中固定顯示靜態文字。
+- **M-4：** `response` 丟例外時顯示失敗訊息，並補測試。
+
