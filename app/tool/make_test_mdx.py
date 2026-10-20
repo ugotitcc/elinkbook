@@ -245,10 +245,22 @@ def _small_entries(n: int):
 
 
 def _html_entries():
-    """Task 4／Task 5 的連結與 CSS 測試資料。詞條都排在最前面，方便抽樣。"""
-    links = (
+    """Task 4／Task 5／Task 9 的連結、錨點與 CSS 測試資料。詞條都排在最前面，方便抽樣。
+
+    `apple` 刻意是完整 HTML 文件（含 `<title>`），讓 Task 9 的真機整合測試
+    不必執行 JavaScript 也能用 `getTitle()` 判斷「頁面已載入」與「頁面
+    JavaScript 沒有執行」。最前面三個 20vh 的區塊連結讓點擊座標穩定。
+    """
+    apple = (
+        '<html><head><meta charset="utf-8">'
+        '<title>MDX 詞條 apple</title>'
         '<link rel="stylesheet" href="ghychyz.css">'
-        "<h1>apple</h1><p>蘋果</p>"
+        '</head><body style="margin:0">'
+        '<a href="entry://banana" style="display:block;height:20vh">entry</a>'
+        '<a href="#n1" style="display:block;height:20vh">anchor</a>'
+        '<a href="entry://#n1" style="display:block;height:20vh">'
+        'entry anchor</a>'
+        '<h1>apple</h1><p>蘋果</p>'
         '<a href="entry://apple">apple（entry）</a>'
         '<a href="entry://Apple">Apple（entry，大小寫不同）</a>'
         '<a href="entry://apple#n1">apple 的義項（entry＋錨點）</a>'
@@ -256,10 +268,25 @@ def _html_entries():
         '<a href="bword://banana">banana（bword）</a>'
         '<a href="sound://apple.wav">發音（sound）</a>'
         '<a href="http://example.com">外部網站</a>'
+        '<p id="js-target">原值</p>'
+        # Task 9：JavaScript 關閉時，這段不得改動 title 或 DOM。
+        '<script>document.title="JS_RAN";'
+        'document.body.setAttribute("data-js-ran","yes");'
+        'document.getElementById("js-target").textContent="已變更";</script>'
+        # Task 9：任何對外請求都應被攔截成 404。
+        '<img id="remote-image" src="https://example.com/mdx-probe.png">'
+        '<div style="height:3000px"></div>'
+        '<p id="n1">義項一</p>'
+        '</body></html>'
+    )
+    banana = (
+        '<html><head><meta charset="utf-8">'
+        '<title>MDX 詞條 banana</title></head>'
+        '<body><b>banana</b> 香蕉</body></html>'
     )
     return [
-        ("apple", links),
-        ("banana", "<b>banana</b> 香蕉"),
+        ("apple", apple),
+        ("banana", banana),
         ("天地", '<b>天地</b> <a href="entry://%E5%A4%A9%E5%9C%B0">自身連結</a>'),
     ]
 

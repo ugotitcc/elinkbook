@@ -5,9 +5,9 @@
 //   WebView 原生處理。
 // - `shouldOverrideUrlLoading` 只放行頁內錨點；`entry://`／`bword://` 轉成
 //   詞條查詢（回傳給面板推入返回堆疊），其餘一律取消。
-// - `shouldInterceptRequest` 對任何請求都回 404 空內容，永不回傳 `null`
-//   （回 `null` 會讓 WebView 走真實網路）。圖片與外部 CSS 的實際回傳是
-//   Issue 6b，這裡先留好呼叫點。
+// - `shouldInterceptRequest` 除了 `data:` 初始文件外，任何請求都回 404 空內容，
+//   永不回傳 `null`（回 `null` 會讓 WebView 走真實網路）。圖片與外部 CSS 的
+//   實際回傳是 Issue 6b，這裡先留好呼叫點。
 //
 // 決策邏輯是靜態純函式，單元測試不必建 WebView。
 import 'dart:typed_data';
@@ -68,9 +68,23 @@ class MdxRequestDecision {
 
 /// 單一詞條的 WebView。同一時間畫面上最多一個（由面板控制）。
 class MdxEntryView extends StatefulWidget {
-  const MdxEntryView({super.key, required this.config});
+  const MdxEntryView({
+    super.key,
+    required this.config,
+    this.onWebViewCreated,
+    this.onRequestIntercepted,
+  });
 
   final MdxEntryViewConfig config;
+
+  /// 取得底層 controller 的測試掛鉤（整合測試用來讀標題／觸發導覽）；
+  /// 正式流程不需要。
+  final void Function(InAppWebViewController controller)? onWebViewCreated;
+
+  /// 測試掛鉤：回報每個被攔截的請求與決策（`data:` 初始文件不會回報）。
+  /// 正式流程不需要。
+  final void Function(Uri url, MdxRequestDecision decision)?
+      onRequestIntercepted;
 
   /// 點擊連結時的處理方式：詞條連結取消導航並回傳詞；錨點放行；其餘取消。
   static MdxNavigationDecision decideNavigation(String url) {
@@ -81,10 +95,15 @@ class MdxEntryView extends StatefulWidget {
     };
   }
 
-  /// 任何資源請求都回 404 空本文（Issue 6b 才會依 [url] 回傳 `.mdd` 內的
-  /// 圖片／CSS；這裡先保留同樣的呼叫點）。
-  static MdxRequestDecision decideRequest(String url) =>
-      const MdxRequestDecision(statusCode: 404);
+  /// 任何資源請求都回 404 空本文，只有 `data:` 例外。
+  ///
+  /// `data:` 是 [InAppWebViewInitialData]（`loadDataWithBaseURL`）提供的初始
+  /// 文件，必須交還 WebView 自己載入；若也回 404，整頁會變成「網頁無法使用」
+  ///（Task 9 真機確認）。`data:` 不涉及網路或檔案存取，放行沒有安全疑慮。
+  static MdxRequestDecision? decideRequest(String url) {
+    if (url.startsWith('data:')) return null;
+    return const MdxRequestDecision(statusCode: 404);
+  }
 
   @override
   State<MdxEntryView> createState() => _MdxEntryViewState();
@@ -109,6 +128,7 @@ class _MdxEntryViewState extends State<MdxEntryView> {
       mimeType: 'text/html',
       encoding: 'utf8',
       baseUrl: WebUri(kMdxBaseUrl),
+      historyUrl: WebUri(kMdxBaseUrl),
     );
   }
 
@@ -121,6 +141,7 @@ class _MdxEntryViewState extends State<MdxEntryView> {
         mimeType: 'text/html',
         encoding: 'utf8',
         baseUrl: WebUri(kMdxBaseUrl),
+        historyUrl: WebUri(kMdxBaseUrl),
       ),
       initialSettings: InAppWebViewSettings(
         javaScriptEnabled: false,
@@ -130,7 +151,10 @@ class _MdxEntryViewState extends State<MdxEntryView> {
         useShouldOverrideUrlLoading: true,
         useShouldInterceptRequest: true,
       ),
-      onWebViewCreated: (controller) => _controller = controller,
+      onWebViewCreated: (controller) {
+        _controller = controller;
+        widget.onWebViewCreated?.call(controller);
+      },
       shouldOverrideUrlLoading: (controller, navigationAction) async {
         final url = navigationAction.request.url?.toString() ?? '';
         final decision = MdxEntryView.decideNavigation(url);
@@ -144,6 +168,9 @@ class _MdxEntryViewState extends State<MdxEntryView> {
         final decision = MdxEntryView.decideRequest(
           request.url.toString(),
         );
+        // `data:` 初始文件交還 WebView；其他請求一律由我們回應，永不連網。
+        if (decision == null) return null;
+        widget.onRequestIntercepted?.call(request.url, decision);
         // statusCode 有值時 `headers`／`reasonPhrase` 也必須有值。
         return WebResourceResponse(
           contentType: 'text/plain',

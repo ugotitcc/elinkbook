@@ -60,7 +60,13 @@ void main() {
   });
 
   group('decideRequest', () {
-    test('所有 http(s) 請求都回 404 空本文，永不回傳 null', () {
+    test('data: 初始文件交還 WebView，其餘請求一律 404 空本文', () {
+      expect(
+        MdxEntryView.decideRequest(
+          'data:text/html;charset=utf-8;base64,PGh0bWw+',
+        ),
+        isNull,
+      );
       for (final url in [
         'https://dict.local/pic/a.png',
         'https://dict.local/favicon.ico',
@@ -70,7 +76,7 @@ void main() {
         'file:///x',
         'entry://apple',
       ]) {
-        final decision = MdxEntryView.decideRequest(url);
+        final decision = MdxEntryView.decideRequest(url)!;
         expect(decision.statusCode, 404, reason: url);
         expect(decision.body, isEmpty, reason: url);
       }
