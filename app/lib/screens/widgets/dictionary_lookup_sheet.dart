@@ -39,9 +39,10 @@ class DictionaryLookupSheet extends StatefulWidget {
 
   /// 開啟面板。查詢在這裡發一次，`builder` 重建不會重查。
   ///
-  /// 遮罩比照 `ReaderScreen._showThemedModalBottomSheet` 的既有規則：深色
-  /// 主題（書頁背景已很深，再疊 54% 黑遮罩會逼近全黑）與 E-Ink（面板不
-  /// 撐滿時，上方露出的遮罩在電子紙上會抖動成一片黑）都改為完全透明。
+  /// 遮罩參考 `ReaderScreen._showThemedModalBottomSheet`，但規則略有不同：
+  /// 深色主題（書頁背景已很深，再疊 54% 黑遮罩會逼近全黑）與 E-Ink 一律
+  /// 完全透明。E-Ink 在面板不撐滿時，上方露出的遮罩會在電子紙上抖動成
+  /// 一片黑。
   static Future<void> show(
     BuildContext context, {
     required String selectedText,

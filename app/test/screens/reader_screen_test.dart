@@ -5347,6 +5347,38 @@ void main() {
 
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('面板開著時 ReaderScreen 的 route 先被移除：關面板後不丟例外', (
+      tester,
+    ) async {
+      final service = FakeDictionaryService(response: completedWithEntry());
+      final view = await pumpEpub(
+        tester,
+        bookId: 'b_lookup_route_removed',
+        dictionaryService: service,
+      );
+      reportSelection(view);
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_lookup')));
+      await tester.pumpAndSettle();
+      expect(find.byType(DictionaryLookupSheet), findsOneWidget);
+
+      // Navigator 與面板 route 都還在，只有 ReaderScreen 的 route 被拿掉，
+      // ReaderScreen 因此先 dispose；之後面板才關閉，await 才回到
+      // _handleLookupPressed 的 finally。
+      final readerElement = tester.element(find.byType(ReaderScreen));
+      final navigator = Navigator.of(readerElement);
+      navigator.removeRoute(ModalRoute.of(readerElement)!);
+      await tester.pumpAndSettle();
+      expect(find.byType(ReaderScreen), findsNothing);
+
+      navigator.pop();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DictionaryLookupSheet), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   // ─────────────────────────────────────────────────────────────────────
