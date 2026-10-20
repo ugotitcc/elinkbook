@@ -100,7 +100,21 @@ class DictReader {
 
   static const _maxRecordBlockCacheSize = 32 * 1024 * 1024;
 
-  late Map<String, String> header;
+  late Map<String, String> _header;
+
+  Map<String, String> get header => _header;
+
+  /// 設定標頭時一併快取鍵比對用的旗標（elinkBook vendor patch）：
+  /// `_normKey` 每次查詢會呼叫很多次，不必每次都查標頭表。
+  set header(Map<String, String> value) {
+    _header = value;
+    _stripKeys = (value['StripKey'] ?? 'No').toLowerCase() == 'yes';
+    _caseInsensitiveKeys =
+        (value['KeyCaseSensitive'] ?? 'Yes').toLowerCase() == 'no';
+  }
+
+  bool _stripKeys = false;
+  bool _caseInsensitiveKeys = false;
 
   void Function()? _onHeaderRead;
   void Function()? _onRecordBlockInfoRead;
@@ -648,11 +662,6 @@ class DictReader {
 
   static final RegExp _stripKeyPattern =
       RegExp(r'[\s\p{P}\u3000]', unicode: true);
-
-  bool get _stripKeys => (header['StripKey'] ?? 'No').toLowerCase() == 'yes';
-
-  bool get _caseInsensitiveKeys =>
-      (header['KeyCaseSensitive'] ?? 'Yes').toLowerCase() == 'no';
 
   /// 同一個鍵下一筆記錄的位移；最後一筆回傳 `null`。
   Future<int?> _nextRecordStart(

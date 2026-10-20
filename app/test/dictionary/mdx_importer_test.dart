@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:elinkbook/dictionary/dictionary_file_store.dart';
 import 'package:elinkbook/dictionary/dictionary_manager.dart';
 import 'package:elinkbook/dictionary/importers/dictionary_importer.dart';
+import 'package:elinkbook/dictionary/mdx_companion_files.dart';
 import 'package:elinkbook/dictionary/importers/mdx_importer.dart';
 import 'package:elinkbook/dictionary/models/dictionary_source.dart';
 import 'package:elinkbook/dictionary/storage/dictionary_database.dart';
@@ -253,26 +254,63 @@ void main() {
     expect(after.storagePath, before.storagePath);
   });
 
-  test('取代匯入在抽樣階段被取消：舊列與舊檔案原封不動（I-3）', () async {
+  /// 在「暫存目錄已搬檔、複製附屬檔之後、換目錄與寫來源列之前」這個時間點
+  /// 取消或失敗，舊字典必須原封不動（I-3）。
+  Future<void> expectReplaceInterruptedAfterStaging({
+    required void Function(CancelToken cancel) onStaged,
+    required bool expectCancelled,
+  }) async {
     final id = await importOriginal();
+    await store.setPriority(id, 5);
+    await store.setEnabled(id, false);
     final cancel = CancelToken();
+    importer = MdxImporter(
+      store: store,
+      files: _SpyFileStore(files.root, onCopied: () => onStaged(cancel)),
+    );
 
-    // 第一個進度事件之後（開檔驗證階段）就取消；匯入會在下一個取消檢查點停下。
-    final progress = <ImportProgress>[];
-    await for (final event in start(
-      await againFile(),
-      fileName: 'html.mdx',
-      replace: true,
-      cancel: cancel,
-    )) {
-      progress.add(event);
-      if (event.stage == ImportStage.parsing && event.total > 0) {
-        cancel.cancel();
+    final events = <ImportProgress>[];
+    Object? error;
+    try {
+      await for (final event in start(
+        await againFile(),
+        fileName: 'html.mdx',
+        replace: true,
+        companions: [(path: await copyFixture('ghychyz.css'), name: 'ghychyz.css')],
+        cancel: cancel,
+      )) {
+        events.add(event);
       }
+    } catch (e) {
+      error = e;
     }
 
-    expect(progress.last.stage, ImportStage.cancelled);
+    if (expectCancelled) {
+      expect(error, isNull);
+      expect(events.last.stage, ImportStage.cancelled);
+    } else {
+      expect(error, isA<DictionaryImportException>());
+    }
+    // 暫存目錄確實被建立過、且已搬完檔：不是在搬檔前就中止。
+    expect(_SpyFileStore.copiedCount, greaterThan(0));
     await expectOldDictionaryIntact(id);
+    final after = (await store.getSource(id))!;
+    expect(after.priority, 5);
+    expect(after.enabled, isFalse);
+  }
+
+  test('取代匯入在暫存檔已搬完、換目錄前被取消：舊列與舊檔案原封不動（I-3）', () async {
+    await expectReplaceInterruptedAfterStaging(
+      onStaged: (cancel) => cancel.cancel(),
+      expectCancelled: true,
+    );
+  });
+
+  test('取代匯入在暫存檔已搬完、換目錄前失敗：舊列與舊檔案原封不動（I-3）', () async {
+    await expectReplaceInterruptedAfterStaging(
+      onStaged: (_) => throw const FileSystemException('模擬磁碟已滿'),
+      expectCancelled: false,
+    );
   });
 
   test('取代匯入換目錄前會先 evict 該字典的 reader（I-3）', () async {
@@ -393,4 +431,25 @@ int _indexOf(List<int> haystack, List<int> needle) {
     if (match) return i;
   }
   return -1;
+}
+
+/// 在每次 `copyInto` 完成後呼叫 [onCopied]，用來在「暫存檔已落地」之後
+/// 注入取消或失敗。
+class _SpyFileStore extends DictionaryFileStore {
+  _SpyFileStore(super.root, {required this.onCopied}) {
+    copiedCount = 0;
+  }
+
+  final void Function() onCopied;
+
+  static int copiedCount = 0;
+
+  @override
+  Future<void> copyInto(String sourceId, PickedFile file) async {
+    await super.copyInto(sourceId, file);
+    copiedCount++;
+    // 此時主檔已搬進暫存目錄，附屬檔也已複製。
+    expect(await dirFor(sourceId).exists(), isTrue);
+    onCopied();
+  }
 }

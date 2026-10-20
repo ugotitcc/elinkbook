@@ -190,9 +190,10 @@ class MdxImporter implements DictionaryImporter {
 
       // 4. 取代時此刻才換目錄（換完不再檢查取消，進入提交階段），
       //    再單一交易寫來源列；取代時先刪舊列（舊列的 id 相同）。
+      // 主檔落地檔名取自 moveInto 的回傳值（已消毒），不自行重算。
       final storagePath = p.join(
         _files.dirFor(sourceId).path,
-        p.basename(request.fileName),
+        p.basename(workPath),
       );
       final source = DictionarySource(
         id: sourceId,

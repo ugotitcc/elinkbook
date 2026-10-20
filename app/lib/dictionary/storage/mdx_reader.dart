@@ -329,7 +329,8 @@ class MdxReader {
         numberWidth,
         numberWidth * (isV2 ? 4 : 3),
       );
-      final recordOffset = keyOffset + keyHeadLength + keyInfoSize + keyBlocksSize;
+      final recordOffset =
+          keyOffset + keyHeadLength + keyInfoSize + keyBlocksSize;
       if (recordOffset < 0 || recordOffset + numberWidth * 4 > length) {
         throw const MdxException(MdxErrorKind.corrupt, '記錄區標頭超出檔尾');
       }
@@ -341,12 +342,13 @@ class MdxReader {
       }
       final blockCount = _readUintBE(recordHead, numberWidth, 0);
       // 先和剩餘檔案長度比對再讀，避免亂數的 blockCount 觸發超大讀取。
-      final infoBytes = blockCount * numberWidth * 2;
+      // 用除法比較，避免 blockCount 很大時乘法溢位。
+      final infoStart = recordOffset + numberWidth * 4;
       if (blockCount < 0 ||
-          infoBytes < 0 ||
-          recordOffset + numberWidth * 4 + infoBytes > length) {
+          blockCount > (length - infoStart) ~/ (numberWidth * 2)) {
         throw const MdxException(MdxErrorKind.corrupt, '記錄區塊資訊超出檔尾');
       }
+      final infoBytes = blockCount * numberWidth * 2;
       final infoLength = await file.read(infoBytes);
       if (infoLength.length < infoBytes) {
         throw const MdxException(MdxErrorKind.corrupt, '記錄區塊資訊不完整');

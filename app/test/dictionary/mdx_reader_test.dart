@@ -305,6 +305,34 @@ void main() {
       );
     });
 
+    test('v2 字典記錄區塊數為 2^60 → corrupt，不做超大讀取', () async {
+      final dir = Directory.systemTemp.createTempSync('mdx_v2_count_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final bytes = File('$_fixtures/zlib.mdx').readAsBytesSync();
+      final file = File('${dir.path}/v2-count.mdx')..writeAsBytesSync(bytes);
+
+      final reader = await MdxReader.open(file.path);
+      addTearDown(reader.close);
+
+      // v2 版面：鍵區標頭 5 個 8 位元組數字＋4 位元組 checksum；
+      // 第 4、5 個是資訊大小與鍵區塊大小。
+      final view = ByteData.sublistView(bytes);
+      final keyOffset = view.getUint32(0) + 8;
+      final recordOffset =
+          keyOffset +
+          44 +
+          view.getUint64(keyOffset + 24) +
+          view.getUint64(keyOffset + 32);
+      final patched = Uint8List.fromList(bytes);
+      ByteData.sublistView(patched).setUint64(recordOffset, 1 << 60);
+      file.writeAsBytesSync(patched);
+
+      await expectLater(
+        reader.validateBlocks(),
+        throwsA(_exceptionOfKind(MdxErrorKind.corrupt)),
+      );
+    });
+
     test('多區塊字典逐塊通過（I-5）', () async {
       final reader = await MdxReader.open('$_fixtures/multi-block.mdx');
       addTearDown(reader.close);
