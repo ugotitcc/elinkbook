@@ -2297,6 +2297,66 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dictionaryLookupSegmentFailed => '（失敗）';
+
+  @override
+  String get dictionarySettingsTitle => '字典';
+
+  @override
+  String get dictionaryDirectionEnToZh => '英→繁中';
+
+  @override
+  String get dictionaryDirectionZhToEn => '中→英';
+
+  @override
+  String get dictionaryDirectionZhToZh => '中→中';
+
+  @override
+  String dictionaryEntryCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 筆',
+      one: '1 筆',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dictionarySettingsEmpty => '尚未匯入字典';
+
+  @override
+  String get dictionarySettingsEmptyHint => '請選擇字典檔案匯入，匯入後閱讀時就能查詢。';
+
+  @override
+  String get dictionarySettingsLoadFailed =>
+      '無法讀取字典清單。字典資料暫時無法存取。請離開此畫面後重新進入再試一次。';
+
+  @override
+  String get dictionarySettingsDeleteFailed =>
+      '無法刪除這本字典。字典的檔案可能正被其他程式占用。請稍後再按一次刪除。';
+
+  @override
+  String get dictionarySettingsReorderFailed =>
+      '無法儲存字典順序。寫入資料時發生錯誤，已還原成原本的順序。請再拖曳一次。';
+
+  @override
+  String get dictionaryDeleteConfirmTitle => '刪除字典';
+
+  @override
+  String dictionaryDeleteConfirmMessage(String name) {
+    return '確定要刪除「$name」嗎？詞條與附屬檔案會一併刪除，無法復原。';
+  }
+
+  @override
+  String get dictionaryDeleteConfirmAction => '刪除';
+
+  @override
+  String dictionaryMissingCssWarning(String files) {
+    return '詞條引用了 $files，但沒有匯入';
+  }
+
+  @override
+  String get dictionaryAddCompanion => '新增附屬檔案';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -4592,6 +4652,66 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get dictionaryLookupSegmentFailed => '（失败）';
+
+  @override
+  String get dictionarySettingsTitle => '字典';
+
+  @override
+  String get dictionaryDirectionEnToZh => '英→繁中';
+
+  @override
+  String get dictionaryDirectionZhToEn => '中→英';
+
+  @override
+  String get dictionaryDirectionZhToZh => '中→中';
+
+  @override
+  String dictionaryEntryCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 条',
+      one: '1 条',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dictionarySettingsEmpty => '尚未导入字典';
+
+  @override
+  String get dictionarySettingsEmptyHint => '请选择字典文件导入，导入后阅读时就能查询。';
+
+  @override
+  String get dictionarySettingsLoadFailed =>
+      '无法读取字典列表。字典数据暂时无法访问。请离开此页面后重新进入再试一次。';
+
+  @override
+  String get dictionarySettingsDeleteFailed =>
+      '无法删除这本字典。字典的文件可能正被其他程序占用。请稍后再点一次删除。';
+
+  @override
+  String get dictionarySettingsReorderFailed =>
+      '无法保存字典顺序。写入数据时发生错误，已还原成原本的顺序。请再拖动一次。';
+
+  @override
+  String get dictionaryDeleteConfirmTitle => '删除字典';
+
+  @override
+  String dictionaryDeleteConfirmMessage(String name) {
+    return '确定要删除“$name”吗？词条与附属文件会一并删除，无法恢复。';
+  }
+
+  @override
+  String get dictionaryDeleteConfirmAction => '删除';
+
+  @override
+  String dictionaryMissingCssWarning(String files) {
+    return '词条引用了 $files，但没有导入';
+  }
+
+  @override
+  String get dictionaryAddCompanion => '添加附属文件';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -6887,4 +7007,64 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dictionaryLookupSegmentFailed => '（失敗）';
+
+  @override
+  String get dictionarySettingsTitle => '字典';
+
+  @override
+  String get dictionaryDirectionEnToZh => '英→繁中';
+
+  @override
+  String get dictionaryDirectionZhToEn => '中→英';
+
+  @override
+  String get dictionaryDirectionZhToZh => '中→中';
+
+  @override
+  String dictionaryEntryCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 筆',
+      one: '1 筆',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dictionarySettingsEmpty => '尚未匯入字典';
+
+  @override
+  String get dictionarySettingsEmptyHint => '請選擇字典檔案匯入，匯入後閱讀時就能查詢。';
+
+  @override
+  String get dictionarySettingsLoadFailed =>
+      '無法讀取字典清單。字典資料暫時無法存取。請離開此畫面後重新進入再試一次。';
+
+  @override
+  String get dictionarySettingsDeleteFailed =>
+      '無法刪除這本字典。字典的檔案可能正被其他程式占用。請稍後再按一次刪除。';
+
+  @override
+  String get dictionarySettingsReorderFailed =>
+      '無法儲存字典順序。寫入資料時發生錯誤，已還原成原本的順序。請再拖曳一次。';
+
+  @override
+  String get dictionaryDeleteConfirmTitle => '刪除字典';
+
+  @override
+  String dictionaryDeleteConfirmMessage(String name) {
+    return '確定要刪除「$name」嗎？詞條與附屬檔案會一併刪除，無法復原。';
+  }
+
+  @override
+  String get dictionaryDeleteConfirmAction => '刪除';
+
+  @override
+  String dictionaryMissingCssWarning(String files) {
+    return '詞條引用了 $files，但沒有匯入';
+  }
+
+  @override
+  String get dictionaryAddCompanion => '新增附屬檔案';
 }

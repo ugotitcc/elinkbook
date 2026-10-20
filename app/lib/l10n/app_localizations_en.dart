@@ -2388,4 +2388,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dictionaryLookupSegmentFailed => ' (Failed)';
+
+  @override
+  String get dictionarySettingsTitle => 'Dictionaries';
+
+  @override
+  String get dictionaryDirectionEnToZh => 'EN → Trad. Chinese';
+
+  @override
+  String get dictionaryDirectionZhToEn => 'Chinese → EN';
+
+  @override
+  String get dictionaryDirectionZhToZh => 'Chinese → Chinese';
+
+  @override
+  String dictionaryEntryCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count entries',
+      one: '1 entry',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dictionarySettingsEmpty => 'No dictionaries imported yet';
+
+  @override
+  String get dictionarySettingsEmptyHint =>
+      'Choose a dictionary file to import. Once imported, you can look words up while reading.';
+
+  @override
+  String get dictionarySettingsLoadFailed =>
+      'Could not load the dictionary list. The dictionary data is temporarily unavailable. Leave this screen and open it again.';
+
+  @override
+  String get dictionarySettingsDeleteFailed =>
+      'Could not delete this dictionary. Its files may be in use by another app. Wait a moment and tap delete again.';
+
+  @override
+  String get dictionarySettingsReorderFailed =>
+      'Could not save the dictionary order. A write error occurred and the previous order was restored. Drag the item again.';
+
+  @override
+  String get dictionaryDeleteConfirmTitle => 'Delete dictionary';
+
+  @override
+  String dictionaryDeleteConfirmMessage(String name) {
+    return 'Delete \"$name\"? Its entries and companion files will be deleted too, and this cannot be undone.';
+  }
+
+  @override
+  String get dictionaryDeleteConfirmAction => 'Delete';
+
+  @override
+  String dictionaryMissingCssWarning(String files) {
+    return 'Entries refer to $files, but it was not imported';
+  }
+
+  @override
+  String get dictionaryAddCompanion => 'Add companion files';
 }

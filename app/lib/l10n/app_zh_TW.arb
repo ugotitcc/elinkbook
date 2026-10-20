@@ -3098,5 +3098,80 @@
   "dictionaryLookupSegmentFailed": "（失敗）",
   "@dictionaryLookupSegmentFailed": {
     "description": "字典面板分段標籤的狀態後綴：查詢失敗"
+  },
+  "dictionarySettingsTitle": "字典",
+  "@dictionarySettingsTitle": {
+    "description": "字典設定畫面的標題"
+  },
+  "dictionaryDirectionEnToZh": "英→繁中",
+  "@dictionaryDirectionEnToZh": {
+    "description": "字典方向標籤：英文查繁體中文"
+  },
+  "dictionaryDirectionZhToEn": "中→英",
+  "@dictionaryDirectionZhToEn": {
+    "description": "字典方向標籤：中文查英文"
+  },
+  "dictionaryDirectionZhToZh": "中→中",
+  "@dictionaryDirectionZhToZh": {
+    "description": "字典方向標籤：中文查中文"
+  },
+  "dictionaryEntryCount": "{count, plural, =1{1 筆} other{{count} 筆}}",
+  "@dictionaryEntryCount": {
+    "description": "字典的詞條筆數",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dictionarySettingsEmpty": "尚未匯入字典",
+  "@dictionarySettingsEmpty": {
+    "description": "字典設定畫面空清單的標題文字"
+  },
+  "dictionarySettingsEmptyHint": "請選擇字典檔案匯入，匯入後閱讀時就能查詢。",
+  "@dictionarySettingsEmptyHint": {
+    "description": "字典設定畫面空清單的下一步提示"
+  },
+  "dictionarySettingsLoadFailed": "無法讀取字典清單。字典資料暫時無法存取。請離開此畫面後重新進入再試一次。",
+  "@dictionarySettingsLoadFailed": {
+    "description": "讀取字典清單失敗的三段式訊息"
+  },
+  "dictionarySettingsDeleteFailed": "無法刪除這本字典。字典的檔案可能正被其他程式占用。請稍後再按一次刪除。",
+  "@dictionarySettingsDeleteFailed": {
+    "description": "刪除字典失敗的三段式訊息"
+  },
+  "dictionarySettingsReorderFailed": "無法儲存字典順序。寫入資料時發生錯誤，已還原成原本的順序。請再拖曳一次。",
+  "@dictionarySettingsReorderFailed": {
+    "description": "儲存字典排序失敗的三段式訊息"
+  },
+  "dictionaryDeleteConfirmTitle": "刪除字典",
+  "@dictionaryDeleteConfirmTitle": {
+    "description": "刪除字典確認對話框標題"
+  },
+  "dictionaryDeleteConfirmMessage": "確定要刪除「{name}」嗎？詞條與附屬檔案會一併刪除，無法復原。",
+  "@dictionaryDeleteConfirmMessage": {
+    "description": "刪除字典確認對話框內容，name 為字典名稱",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dictionaryDeleteConfirmAction": "刪除",
+  "@dictionaryDeleteConfirmAction": {
+    "description": "刪除字典確認對話框的確認按鈕"
+  },
+  "dictionaryMissingCssWarning": "詞條引用了 {files}，但沒有匯入",
+  "@dictionaryMissingCssWarning": {
+    "description": "MDX 字典缺少樣式表的提醒，files 為以頓號連接的檔名",
+    "placeholders": {
+      "files": {
+        "type": "String"
+      }
+    }
+  },
+  "dictionaryAddCompanion": "新增附屬檔案",
+  "@dictionaryAddCompanion": {
+    "description": "為 MDX 字典補上附屬檔案（樣式表、MDD）的按鈕"
   }
 }

@@ -661,5 +661,20 @@
   "dictionaryLookupLoading": "查询中…",
   "dictionaryLookupSegmentNotFound": "（无）",
   "dictionaryLookupSegmentSkipped": "（略过）",
-  "dictionaryLookupSegmentFailed": "（失败）"
+  "dictionaryLookupSegmentFailed": "（失败）",
+  "dictionarySettingsTitle": "字典",
+  "dictionaryDirectionEnToZh": "英→繁中",
+  "dictionaryDirectionZhToEn": "中→英",
+  "dictionaryDirectionZhToZh": "中→中",
+  "dictionaryEntryCount": "{count, plural, =1{1 条} other{{count} 条}}",
+  "dictionarySettingsEmpty": "尚未导入字典",
+  "dictionarySettingsEmptyHint": "请选择字典文件导入，导入后阅读时就能查询。",
+  "dictionarySettingsLoadFailed": "无法读取字典列表。字典数据暂时无法访问。请离开此页面后重新进入再试一次。",
+  "dictionarySettingsDeleteFailed": "无法删除这本字典。字典的文件可能正被其他程序占用。请稍后再点一次删除。",
+  "dictionarySettingsReorderFailed": "无法保存字典顺序。写入数据时发生错误，已还原成原本的顺序。请再拖动一次。",
+  "dictionaryDeleteConfirmTitle": "删除字典",
+  "dictionaryDeleteConfirmMessage": "确定要删除“{name}”吗？词条与附属文件会一并删除，无法恢复。",
+  "dictionaryDeleteConfirmAction": "删除",
+  "dictionaryMissingCssWarning": "词条引用了 {files}，但没有导入",
+  "dictionaryAddCompanion": "添加附属文件"
 }

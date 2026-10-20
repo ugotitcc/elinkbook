@@ -661,5 +661,20 @@
   "dictionaryLookupLoading": "Looking up…",
   "dictionaryLookupSegmentNotFound": " (None)",
   "dictionaryLookupSegmentSkipped": " (Skipped)",
-  "dictionaryLookupSegmentFailed": " (Failed)"
+  "dictionaryLookupSegmentFailed": " (Failed)",
+  "dictionarySettingsTitle": "Dictionaries",
+  "dictionaryDirectionEnToZh": "EN → Trad. Chinese",
+  "dictionaryDirectionZhToEn": "Chinese → EN",
+  "dictionaryDirectionZhToZh": "Chinese → Chinese",
+  "dictionaryEntryCount": "{count, plural, =1{1 entry} other{{count} entries}}",
+  "dictionarySettingsEmpty": "No dictionaries imported yet",
+  "dictionarySettingsEmptyHint": "Choose a dictionary file to import. Once imported, you can look words up while reading.",
+  "dictionarySettingsLoadFailed": "Could not load the dictionary list. The dictionary data is temporarily unavailable. Leave this screen and open it again.",
+  "dictionarySettingsDeleteFailed": "Could not delete this dictionary. Its files may be in use by another app. Wait a moment and tap delete again.",
+  "dictionarySettingsReorderFailed": "Could not save the dictionary order. A write error occurred and the previous order was restored. Drag the item again.",
+  "dictionaryDeleteConfirmTitle": "Delete dictionary",
+  "dictionaryDeleteConfirmMessage": "Delete \"{name}\"? Its entries and companion files will be deleted too, and this cannot be undone.",
+  "dictionaryDeleteConfirmAction": "Delete",
+  "dictionaryMissingCssWarning": "Entries refer to {files}, but it was not imported",
+  "dictionaryAddCompanion": "Add companion files"
 }

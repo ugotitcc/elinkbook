@@ -661,5 +661,20 @@
   "dictionaryLookupLoading": "查詢中…",
   "dictionaryLookupSegmentNotFound": "（無）",
   "dictionaryLookupSegmentSkipped": "（略過）",
-  "dictionaryLookupSegmentFailed": "（失敗）"
+  "dictionaryLookupSegmentFailed": "（失敗）",
+  "dictionarySettingsTitle": "字典",
+  "dictionaryDirectionEnToZh": "英→繁中",
+  "dictionaryDirectionZhToEn": "中→英",
+  "dictionaryDirectionZhToZh": "中→中",
+  "dictionaryEntryCount": "{count, plural, =1{1 筆} other{{count} 筆}}",
+  "dictionarySettingsEmpty": "尚未匯入字典",
+  "dictionarySettingsEmptyHint": "請選擇字典檔案匯入，匯入後閱讀時就能查詢。",
+  "dictionarySettingsLoadFailed": "無法讀取字典清單。字典資料暫時無法存取。請離開此畫面後重新進入再試一次。",
+  "dictionarySettingsDeleteFailed": "無法刪除這本字典。字典的檔案可能正被其他程式占用。請稍後再按一次刪除。",
+  "dictionarySettingsReorderFailed": "無法儲存字典順序。寫入資料時發生錯誤，已還原成原本的順序。請再拖曳一次。",
+  "dictionaryDeleteConfirmTitle": "刪除字典",
+  "dictionaryDeleteConfirmMessage": "確定要刪除「{name}」嗎？詞條與附屬檔案會一併刪除，無法復原。",
+  "dictionaryDeleteConfirmAction": "刪除",
+  "dictionaryMissingCssWarning": "詞條引用了 {files}，但沒有匯入",
+  "dictionaryAddCompanion": "新增附屬檔案"
 }

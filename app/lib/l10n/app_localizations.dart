@@ -4078,6 +4078,96 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'（失敗）'**
   String get dictionaryLookupSegmentFailed;
+
+  /// 字典設定畫面的標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字典'**
+  String get dictionarySettingsTitle;
+
+  /// 字典方向標籤：英文查繁體中文
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'英→繁中'**
+  String get dictionaryDirectionEnToZh;
+
+  /// 字典方向標籤：中文查英文
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'中→英'**
+  String get dictionaryDirectionZhToEn;
+
+  /// 字典方向標籤：中文查中文
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'中→中'**
+  String get dictionaryDirectionZhToZh;
+
+  /// 字典的詞條筆數
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{count, plural, =1{1 筆} other{{count} 筆}}'**
+  String dictionaryEntryCount(int count);
+
+  /// 字典設定畫面空清單的標題文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未匯入字典'**
+  String get dictionarySettingsEmpty;
+
+  /// 字典設定畫面空清單的下一步提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'請選擇字典檔案匯入，匯入後閱讀時就能查詢。'**
+  String get dictionarySettingsEmptyHint;
+
+  /// 讀取字典清單失敗的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法讀取字典清單。字典資料暫時無法存取。請離開此畫面後重新進入再試一次。'**
+  String get dictionarySettingsLoadFailed;
+
+  /// 刪除字典失敗的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法刪除這本字典。字典的檔案可能正被其他程式占用。請稍後再按一次刪除。'**
+  String get dictionarySettingsDeleteFailed;
+
+  /// 儲存字典排序失敗的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法儲存字典順序。寫入資料時發生錯誤，已還原成原本的順序。請再拖曳一次。'**
+  String get dictionarySettingsReorderFailed;
+
+  /// 刪除字典確認對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除字典'**
+  String get dictionaryDeleteConfirmTitle;
+
+  /// 刪除字典確認對話框內容，name 為字典名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確定要刪除「{name}」嗎？詞條與附屬檔案會一併刪除，無法復原。'**
+  String dictionaryDeleteConfirmMessage(String name);
+
+  /// 刪除字典確認對話框的確認按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'刪除'**
+  String get dictionaryDeleteConfirmAction;
+
+  /// MDX 字典缺少樣式表的提醒，files 為以頓號連接的檔名
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'詞條引用了 {files}，但沒有匯入'**
+  String dictionaryMissingCssWarning(String files);
+
+  /// 為 MDX 字典補上附屬檔案（樣式表、MDD）的按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'新增附屬檔案'**
+  String get dictionaryAddCompanion;
 }
 
 class _AppLocalizationsDelegate
