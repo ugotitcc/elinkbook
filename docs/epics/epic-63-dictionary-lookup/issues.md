@@ -8,7 +8,7 @@
 | 2 | 模型、介面、`dictionary.db` 與 `DictionaryStore` | 無 | done | #344 |
 | 3 | JSON/CSV 與 CC-CEDICT 匯入、重複匯入偵測、查詢候選鏈、本機查詢 | 2 | done | #345 |
 | 4 | 查詢面板、`AnnotationToolbar` 按鈕、選字規則、依賴注入 | 3 | done | #347 |
-| 5 | 字典設定畫面 | 3 | in-review | |
+| 5 | 字典設定畫面 | 3 | done | #349 |
 | 6a | MDX 匯入、詞條顯示、交叉參照與錨點、返回堆疊 | 1、4、5 | ready-for-agent | |
 | 6b | MDX 圖片、獨立 CSS、深色與 E-Ink 配色 | 6a | ready-for-human | |
 | 7 | 線上查詞（萌典）、同意對話框、隱私更新 | 3、4、5 | ready-for-agent | |
@@ -134,7 +134,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 ## Issue 5：字典設定畫面
 
-**Status:** in-review
+**Status:** done（2026-10-20：已合併，PR #349）
 
 **依賴：** Issue 3。
 
