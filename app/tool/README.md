@@ -300,6 +300,47 @@ node app/tool/test_tts_safe_window.mjs
 - 結束碼 `0`：13 項情境全數通過。
 - 非 `0`：斷言失敗或拋出例外，會印出對應的錯誤訊息與堆疊。
 
+## `make_test_mdx.py`
+
+產生自製的 MDX／MDD 測試檔（MDict 格式 v2.0），供 epic-63 的字典單元測試使用
+（`app/test/fixtures/mdx/`）。
+
+**背景**：MDX 是二進位格式，沒有現成的公開測試檔可以直接放進版控，真實字典又
+有授權問題。這支腳本用 Python 標準函式庫直接組出必要的區塊結構（檔頭、鍵區塊、
+記錄區塊），**完全自寫、未複製任何第三方程式碼**，產出的檔案只含假內容。
+
+### 產生的檔案
+
+| kind | 檔案 | 用途 |
+|------|------|------|
+| `zlib` | `zlib.mdx` | 一般字典：zlib 壓縮、`KeyCaseSensitive=No` |
+| `mdd` | `mdd.mdd` | 最小 MDD（圖片與 CSS 各一筆） |
+| `fake-lzo` | `fake-lzo.mdx` | 記錄區塊標成 LZO（不支援的壓縮） |
+| `truncated` | `truncated.mdx` | 整檔砍半，模擬下載中斷 |
+| `cut-records` | `cut-records.mdx` | 只砍記錄區塊，檔頭與鍵區完整 |
+| `html` | `html.mdx` | 詞條含 `entry://`、`bword://`、`#x`、`sound://`、`http://` 與 `<link href="ghychyz.css">`，標頭有 `StyleSheet` |
+| `strip-key` | `strip-key.mdx` | `StripKey=Yes`，鍵含「一」等 CJK 字 |
+| `case-sensitive` | `case-sensitive.mdx` | `KeyCaseSensitive=Yes`，只收小寫鍵 `apple` |
+| `placeholder-title` | `placeholder-title.mdx` | `Title` 是預設佔位字串、`Description` 有內容 |
+| `placeholder-title-empty` | `placeholder-title-empty.mdx` | 同上但 `Description` 為空（名稱應退回檔名） |
+| `large` / `large-cjk` | （不進版控） | 合成大檔，供記憶體補測 |
+
+### 執行方式
+
+```bash
+cd app
+
+# 一般 fixture（輸出到 test/fixtures/mdx/）
+python -X utf8 tool/make_test_mdx.py html test/fixtures/mdx/html.mdx
+python -X utf8 tool/make_test_mdx.py mdd test/fixtures/mdx/mdd.mdd
+
+# 合成大檔（只放本機，例如 tmp/，不要加進版控）
+python -X utf8 tool/make_test_mdx.py large-cjk tmp/large_cjk.mdx --entries 400000
+```
+
+改動格式細節（例如新增一種損壞情境）時，改這支腳本後**重新產生全部 fixture**，
+不要手改二進位檔。
+
 ## `filter_antigravity_log.py` / `filter_antigravity_log.ps1`
 
 過濾 Antigravity CLI 日誌噪音（`C:\Users\huthief\.gemini\antigravity-cli\log\cli-*.log`）。

@@ -36,7 +36,7 @@
 - **Task 1 是量測與決策關卡，不是寫程式。** 要在 E-Ink 實機用真實 CJK 檔補測記憶體（`issues.md` 第一個任務）。結果超過 50 MB 增量時，停下來問使用者要不要走備案（vendor 修補 `dict_reader`），不自行改方向。
 - **`MdxReader` 介面（`storage/mdx_reader.dart`）：** `open(path)`、`meta`（標題、編碼、`keyCaseSensitive`、`stripKey`、`encrypted`、`entryCount`）、`lookupAll(key)`（同鍵多筆）、`validateBlocks()`（匯入時整檔檢查）、`close()`。`.mdd` 資源讀取（`resource`）屬 Issue 6b，本 Issue 不加。查詢字串規則（`KeyCaseSensitive=No` 折疊、`StripKey=Yes` 去空白標點）寫在這一層，上層不知道。
 - **統一錯誤：** `MdxException(MdxErrorKind kind)`，`kind` 為 `unsupportedCompression`、`encryptedRecords`、`corrupt`、`notFound`、`other`；`dict_reader` 丟的字串與各種例外都包成它。匯入失敗時轉成 `DictionaryImportException` 的新碼：`unsupportedCompression`、`encryptedRecords`、`corruptFile`（既有碼不變）。
-- **標題：** 標頭 `Title` 是預設佔位字串（以 `Title (No HTML code allowed)` 開頭）或空白時，改用 `Description` 第一行（去 HTML 標籤與空白），再不行用檔名（不含副檔名）。結果只用於 `ImportHints.name` 的預填。
+- **標題：** 標頭 `Title` 是預設佔位字串（與 `Title (No HTML code allowed)` 完全相等，不分大小寫）或空白時，改用 `Description` 第一行（去 HTML 標籤與空白），再不行用檔名（不含副檔名）。結果只用於 `ImportHints.name` 的預填。採完全相等而非前綴比對：`spec.md` §3.6 寫的是「例如」，而真實字典的佔位字串都是完整相同的一句，前綴比對反而可能誤判真的以這句話開頭的標題。
 - **匯入的整檔檢查：** `validateBlocks()` 掃描所有記錄區塊：每塊的壓縮型態必須是 0 或 2（zlib 為 2），每塊的位移加壓縮後長度不得超過檔案大小；型態 1（LZO）→ `unsupportedCompression`，超出檔案 → `corrupt`。做法固定為：用 `readWithOffset()` 取得各記錄區塊的位移與壓縮後長度（依位移去重），自己以非同步 `RandomAccessFile` 只讀每塊的 4 位元組壓縮型態；不解壓、不把整份記錄區塊載進記憶體。工作量只是幾百次小讀取，**在主 Isolate 執行，不用 `Isolate.run`**（也因此 `onProgress` 可直接回呼）；迴圈每處理固定數量的區塊就讓出事件迴圈，避免卡 UI（審查 M-1）。
 - **搬檔與 reader 生命週期（審查 I-2）：** `open` 與 `validateBlocks` 完成後**立刻 `await reader.close()`**，確保檔案控制代碼釋放，再搬檔（Windows 與部分檔案系統上，開著的檔案不能 `rename` 或刪除）。搬檔：先 `File.rename` 到私有目錄，失敗（跨掛載點）改串流複製再刪來源；不整檔讀進記憶體。目標為 `<DictionaryFileStore.dirFor(sourceId)>/<原檔名>`；`storage_path` 存這個私有路徑。`.mdd`、`.css` 同目錄。搬完後以**私有路徑重新 `open`** 抽樣 `referenced_css`（同時確認搬移後的檔案完整），用完再 `close`。
 - **`ImportRequest` 加選填 `companions`：** `List<({String path, String name})>`，預設空；MDX 匯入器用它接 `.mdd`、`.css`。不改其他匯入器。
@@ -570,3 +570,12 @@ git commit -m "docs(epic-63): Issue 6a 實作完成，更新狀態"
 7. 刪除 MDX 字典：私有目錄整個清掉、查詢不再出現 — 正常。
 8. 記憶體：開啟教育部字典後記憶體正常、面板開關與切換分段 10 次後 App 未被系統回收 — 正常（使用者目視確認，未另記具體數字；量測基準仍為 Task 1 的 +37.7~38.8 MB）。
 9. 面板開著時旋轉螢幕／按返回鍵：不當掉，選取與工具列維持 — 正常。
+
+---
+
+## 實作期間的偏離（Task 7）
+
+實作到真機驗收時，Task 7 的介面有兩處必須調整，程式碼與測試都已照新行為寫，在此補記：
+
+1. **`MdxEntryView.decideRequest` 改為回傳 `MdxRequestDecision?`。** 原定「任何輸入都回 404、永不回 `null`」。但 `InAppWebView` 的初始文件是用 `data:text/html;base64,…` 載入的，若把 `data:` 也攔成 404，詞條會整片空白（面板只剩「網頁無法使用」）。改為 `data:` 回 `null` 交還 WebView，其餘（`http(s)`、`file`、`entry`、`bword`、`sound` 等）一律 404 空本文。Global Constraints 的「所有 `http(s)` 請求回明確回應」仍成立；測試改為先斷言 `data:` 回 `null`，再逐項驗證其餘 URL 都回 404。
+2. **`MdxEntryView` 新增 `onWebViewCreated`／`onRequestIntercepted` 兩個回呼。** 純粹是整合測試的觀察點：`javaScriptEnabled: false` 之下 `evaluateJavascript` 也不會執行，只能從原生端事件（`onWebViewCreated` 取得控制權、`onRequestIntercepted` 記錄被攔下的請求）觀察。預設 `null`，正式路徑行為不變；與 ADR 0037 允許在 widget 建構子注入測試用回呼的既有做法一致。

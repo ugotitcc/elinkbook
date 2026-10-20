@@ -82,9 +82,10 @@ dependencies:
   sqflite_common_ffi: ^2.4.0+3
   path: ^1.9.1
   # MDX 解析（epic-63 Issue 6a）。原始碼是 dict_reader 1.6.1（MIT）的
-  # 本地副本，放在 third_party/dict_reader；唯一的修補是鍵改為依區塊延遲
-  # 載入（40 萬筆 CJK 字典在 E-Ink 上的穩態記憶體從 70 MB 降到 39–42 MB，
-  # 見 third_party/dict_reader/PATCH.md）。升級上游時要重新套用該修補。
+  # 本地副本，放在 third_party/dict_reader；修補兩處：鍵改為依區塊延遲
+  # 載入（40 萬筆 CJK 字典在 E-Ink 上的穩態記憶體從 70 MB 降到 39–42 MB），
+  # 以及鍵的比較集中到 `_compareKeys`（`KeyCaseSensitive=No` 時不分大小寫）。
+  # 詳見 third_party/dict_reader/PATCH.md；升級上游時要重新套用。
   dict_reader:
     path: third_party/dict_reader
   file_picker: ^11.0.2
