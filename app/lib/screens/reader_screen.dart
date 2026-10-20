@@ -1953,8 +1953,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // 再用 ReaderScreen 自己的 context 開字典設定；面板的 context 此時
         // 已失效，不能拿來導覽。
         onOpenSettings: () {
-          Navigator.of(context).pop();
           if (!mounted) return;
+          Navigator.of(context).pop();
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => DictionarySettingsScreen(
