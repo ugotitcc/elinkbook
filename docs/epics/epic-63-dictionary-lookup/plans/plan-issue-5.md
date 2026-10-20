@@ -442,7 +442,7 @@ Expected: All tests passed。
 - `git diff main -- app/android app/pubspec.yaml app/pubspec.lock app/lib/library app/lib/sync` 無輸出。
 - 主資料庫版本仍為 28；`dictionary.db` 版本仍為 1（`DictionaryDatabase.version`）。
 
-- [ ] **Step 4: 真機確認（人工）**
+- [x] **Step 4: 真機確認（人工）**
 
 在真機執行（`tmp/dictionary/` 的真實檔案只作本機測試）：
 1. 設定 → 閱讀 → 字典，進入畫面，清單為空。
@@ -454,7 +454,7 @@ Expected: All tests passed。
 7. 閱讀器選字 → 查字典 → 尚未匯入字典時點「前往字典設定」：面板關閉、設定畫面開啟；返回後選取與工具列仍在。
 8. E-Ink 機：畫面無動畫、拖曳排序可操作。
 
-- [ ] **Step 5: 更新文件並 Commit**
+- [x] **Step 5: 更新文件並 Commit**
 
 把 `issues.md` Issue 5 狀態改成 `in-review`；本計畫 Step 全部勾選。
 
@@ -507,3 +507,30 @@ git commit -m "docs(epic-63): Issue 5 實作完成，更新狀態"
 - 合併前修的 6 項（已修並重新審查通過）：Manager 真實匯入路徑測試、缺 CSS 分隔符移進 l10n、英文 ICU plural、失敗訊息帶檔名、不支援檔案訊息拿掉 MDX、`mounted` 檢查順序。
 - 其餘 Minor 維持延後，清單在審查報告；重要的已列在上面「交給後續 Issue」。
 - 完整 `flutter test`：4049 通過、1 略過。
+
+---
+
+## 真機確認結果（2026-10-20，WAVE E-Ink 機，Android 12）
+
+字典用 `tmp/dictionary/cedict_ts.u8`（真實 CC-CEDICT）與自製 `mini.json`；上一輪用 `adb` 放進去的測試字典先在畫面上刪除。
+
+1. 清單、啟用、刪除（有確認）：通過。
+2. 匯入 `cedict_ts.u8`：預選中→英、顯示進度與摘要、清單顯示「125297 筆」與檔頭授權網址：通過。
+3. 重複匯入：「這本字典已匯入」，略過與取代都正常：通過。
+4. 匯入 `mini.json`：預選中→中、名稱與授權預填：通過。
+5. 選 `.mdx`：顯示不支援提示，不當掉：通過。
+6. 匯入中按返回：出現離開確認；留下則匯入繼續，離開則取消：通過。
+7. 拖曳排序：順序存進資料庫（用 `adb` 讀 `dictionary.db` 確認），重進畫面仍在：通過。
+8. 閱讀器「前往字典設定」：面板關閉、設定開啟；返回後選取與工具列仍在，再查有結果：通過（用橫排書）。
+
+真機找到的 3 個問題（單元測試沒抓到），都已修並重新審查：
+
+- **E-Ink 拖曳時紅屏**（`No Material widget found`）：E-Ink 的 `proxyDecorator` 回傳裸 child，被拖起的列到了 `Overlay`、沒有 Material 祖先。已改為包透明 `Material`；補了「拖到一半」的測試（原本 `tester.drag` 一次拖完，看不到代理列）。
+- **拖曳把手太小**：要壓準圖示才拖得動。已放大到 56dp 寬、整列高；使用者回報「變順，勉強可以」。
+- **離開確認的「取消」有歧義**：已改為「繼續匯入」與「離開並取消」。
+
+未驗證／留待後續：
+
+- 直排書與 CBZ 本輪沒有重測（與本 Issue 無關）。
+- E-Ink 上的殘影只用肉眼，沒有量測；系統字體放到最大時列版面沒有實測。
+- 16:59 的 log 出現 `File picker is already active`：選檔器還開著時又觸發一次匯入。程式有接住、沒有當掉；審查時列為可延後項（`_flowRunning` 在選檔 `await` 之後才設），真機上真的發生過，之後可順手把防重入提前。
