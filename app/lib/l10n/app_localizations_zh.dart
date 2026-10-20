@@ -1266,6 +1266,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsReadingDefaultsLabel => '閱讀預設值';
 
   @override
+  String get settingsDictionaryLabel => '字典';
+
+  @override
   String get settingsNavZoneLabel => '導航熱區';
 
   @override
@@ -3740,6 +3743,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get settingsReadingDefaultsLabel => '阅读预设值';
 
   @override
+  String get settingsDictionaryLabel => '字典';
+
+  @override
   String get settingsNavZoneLabel => '导航热区';
 
   @override
@@ -6212,6 +6218,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsReadingDefaultsLabel => '閱讀預設值';
+
+  @override
+  String get settingsDictionaryLabel => '字典';
 
   @override
   String get settingsNavZoneLabel => '導航熱區';

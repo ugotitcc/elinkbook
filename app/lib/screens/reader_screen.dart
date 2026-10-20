@@ -69,6 +69,7 @@ import '../reader/zone_action.dart';
 import '../stats/reading_stats_tracker.dart';
 import '../theme/elink_tokens.dart';
 import 'annotation_toolbar.dart';
+import 'dictionary_settings_screen.dart';
 import 'widgets/dictionary_lookup_sheet.dart';
 import 'support/book_import_picker_helper.dart'
     show SingleBookFilePicker, pickSingleBookFileViaFilePicker;
@@ -1948,6 +1949,21 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         selectedText: text,
         service: widget.dependencies.dictionaryService,
         isEinkMode: widget.isEinkMode,
+        // epic-63 Issue 5：先只用 Navigator.pop 關面板（不碰選取狀態），
+        // 再用 ReaderScreen 自己的 context 開字典設定；面板的 context 此時
+        // 已失效，不能拿來導覽。
+        onOpenSettings: () {
+          Navigator.of(context).pop();
+          if (!mounted) return;
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => DictionarySettingsScreen(
+                manager: widget.dependencies.dictionaryManager,
+                isEinkMode: widget.isEinkMode,
+              ),
+            ),
+          );
+        },
       );
     } finally {
       // 只還原旗標：它不是畫面狀態，不需要 setState；`await` 之後也不碰

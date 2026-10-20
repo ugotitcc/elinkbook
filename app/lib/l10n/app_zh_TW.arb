@@ -1708,6 +1708,10 @@
   "@settingsReadingDefaultsLabel": {
     "description": "設定畫面「閱讀預設值」項目標題，同時是 ReadingDefaultsScreen 的 AppBar 標題"
   },
+  "settingsDictionaryLabel": "字典",
+  "@settingsDictionaryLabel": {
+    "description": "設定畫面「閱讀」分區的「字典」項目標題，點了進入字典設定畫面"
+  },
   "settingsNavZoneLabel": "導航熱區",
   "@settingsNavZoneLabel": {
     "description": "設定畫面「導航熱區」項目標題，同時是 NavZoneSettingsScreen 的 AppBar 標題"

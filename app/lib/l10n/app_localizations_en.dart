@@ -1306,6 +1306,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsReadingDefaultsLabel => 'Reading Defaults';
 
   @override
+  String get settingsDictionaryLabel => 'Dictionary';
+
+  @override
   String get settingsNavZoneLabel => 'Navigation Zones';
 
   @override

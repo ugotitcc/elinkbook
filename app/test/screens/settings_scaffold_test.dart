@@ -10,6 +10,7 @@ import 'package:elinkbook/cloud_import/google_drive_oauth_client.dart';
 import 'package:elinkbook/cloud_import/onedrive_oauth_client.dart';
 import 'package:elinkbook/l10n/app_locale.dart';
 import 'package:elinkbook/screens/cloud_account_settings_screen.dart';
+import 'package:elinkbook/screens/dictionary_settings_screen.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
 import 'package:elinkbook/screens/sync_settings_screen.dart';
 import 'package:elinkbook/sync/sync_checkpoint_result.dart';
@@ -241,6 +242,32 @@ void main() {
     expect(find.text('閱讀預設值'), findsOneWidget);
   });
 
+  testWidgets('閱讀分區有字典入口，點了開啟字典設定畫面', (tester) async {
+    await pumpLocalizedWidget(
+      tester,
+      SettingsScaffold(
+        appearance: fakeAppearanceDependencies(),
+        sources: fakeSourceDependencies(),
+        readerFeatures: fakeReaderFeatureDependencies(
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+        sync: fakeSyncDependencies(),
+      ),
+    );
+
+    final button = find.byKey(const Key('settings_dictionary_button'));
+    expect(button, findsOneWidget);
+    expect(
+      find.descendant(of: button, matching: find.text('字典')),
+      findsOneWidget,
+    );
+
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DictionarySettingsScreen), findsOneWidget);
+  });
+
   testWidgets('SettingsScreen 顯示「同步」入口，點擊導航至 SyncSettingsScreen', (
     tester,
   ) async {
@@ -375,7 +402,7 @@ void main() {
     'Issue 33）',
     (tester) async {
       // 四分區重排後「關於」分區被推到較下方，需放大視窗
-      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
         tester.view.resetPhysicalSize();
@@ -938,6 +965,13 @@ void main() {
   });
 
   testWidgets('點擊「朗讀語音與語速」導航至 TtsDefaultsScreen', (tester) async {
+    // 閱讀分區多了「字典」入口，需放大視窗才能讓朗讀入口落在可視範圍內
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
     await pumpLocalizedWidget(
       tester,
       SettingsScaffold(

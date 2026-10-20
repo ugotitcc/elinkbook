@@ -2321,6 +2321,12 @@ abstract class AppLocalizations {
   /// **'閱讀預設值'**
   String get settingsReadingDefaultsLabel;
 
+  /// 設定畫面「閱讀」分區的「字典」項目標題，點了進入字典設定畫面
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'字典'**
+  String get settingsDictionaryLabel;
+
   /// 設定畫面「導航熱區」項目標題，同時是 NavZoneSettingsScreen 的 AppBar 標題
   ///
   /// In zh_TW, this message translates to:
