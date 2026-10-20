@@ -1,7 +1,10 @@
 # dict_reader 1.6.1 本地修補（elinkBook Issue 6a）
 
 上游：https://github.com/mumu-lhl/dict_reader，MIT，版本 1.6.1。
-本目錄是上游 `lib/` 的直接副本，只套用下列一項修補；其餘程式碼逐字未改。
+本目錄是上游 `lib/` 的直接副本，只修改 `lib/src/dict_reader_base.dart` 的鍵索引：
+(1) 鍵改為依區塊延遲載入（降低記憶體）、(2) 鍵的比對集中到 `_normKey`（套用
+`KeyCaseSensitive`／`StripKey` 規則）。兩者是同一份鍵索引改寫的兩面，以下合併說明；
+其餘程式碼逐字未改。
 
 ## 修補：鍵改為依區塊延遲載入
 
@@ -31,15 +34,31 @@
 - `exportCache`／`importCache` 需要完整鍵清單，改為丟 `UnsupportedError`；
   elinkBook 沒有使用這兩個 API。
 
-**行為不變：** 對同一把鍵回傳相同記錄；重複鍵（同一詞多筆）全部回傳。
-鍵的比較改為透過 `_compareKeys`、`_keysEqual`、`_keyStartsWith`：
-檔頭 `KeyCaseSensitive=No` 時以 `toLowerCase()` 比對，否則用
-`String.compareTo`。這是必要的：真實字典（例如教育部辭典）的鍵在檔內
-以小寫排序，查 `Apple` 時若仍用大小寫敏感比對，會在同一個鍵區塊裡找不到
-`apple`。elinkBook 的 `MdxReader` 仍會先折疊查詢字串（重複折疊不影響結果），
+**鍵的比對（`_normKey`）：** 查詢字串與檔內的每一把鍵都先經過同一個正規化再比：
+
+- `StripKey=Yes`：去掉空白、標點（Unicode `P` 類別）與全形空白。真實製作工具在
+  這個旗標下，檔內存的鍵仍是原字串（例如 `a la carte`、`a-bomb`），但排序與比對
+  以去除後的形式為準。若只對查詢字串去除、檔內鍵不處理（上一版與上游的行為），
+  含空白或連字號的片語會永遠查不到（`strip-phrases.mdx` 測試重現過）。
+- `KeyCaseSensitive=No`：折疊成小寫。真實字典（例如教育部辭典）的鍵在檔內以小寫
+  排序，查 `Apple` 時若仍用大小寫敏感比對，會在同一個鍵區塊裡找不到 `apple`。
+
+elinkBook 的 `MdxReader` 仍會先套用同一規則處理查詢字串（重複套用不影響結果），
 但**不得**在 `meta.keyCaseSensitive == true` 時做去重（見 Issue 6a 審查 I-3）。
-鍵區塊在檔內本來就依字典排序排列，因此區塊二分搜尋與原本「全量排序後
-二分搜尋」在合法檔案上結果一致。
+
+**仍然保留的排序假設（精確版）：**
+
+- 區塊之間：檔內的鍵區塊依「正規化後的鍵」遞增排列，所以用各區塊 `tail` 的
+  正規化值做二分搜尋找第一塊。這是 MDict 製作工具的共同慣例。
+- 區塊內：**不**假設順序，一律線性掃描（一塊最多數千把鍵），因此區塊內的排序
+  細節（例如同一個正規化鍵的大小寫變體交錯）不影響結果。
+- 區塊邊界：查詢鍵不大於第一塊的 `head` 時，連前一塊一起掃；掃完後若該塊的
+  `tail` 不大於查詢鍵就繼續下一塊（重複鍵跨塊）。
+- 若某個字典的區塊之間也不是依正規化鍵排序，區塊二分搜尋仍可能漏掉；
+  這類檔案目前沒有遇過，遇到時要改成逐塊掃描 head／tail。
+- `search()`（前綴搜尋）在區塊內仍用二分搜尋，elinkBook 沒有使用；若要使用，
+  需先確認區塊內順序。
+- 對同一把鍵回傳相同記錄；重複鍵（同一詞多筆）全部回傳。
 
 **記憶體與延遲（E-Ink 實機補測，Allwinner WAVE、armeabi-v7a、Android 12）：**
 
@@ -55,7 +74,8 @@ p95 從約 3–4 ms 升到約 31 ms（仍在可接受範圍；查詢是使用者
 桌面預檢（Windows）：40 萬筆檔案開啟 +1.2 MB、500 次查詢加 200 次讀內文後
 穩態 +43.6 MB。
 
-**驗證：** `app/test/dictionary/mdx_reader_test.dart`、
+**驗證：** `app/test/dictionary/mdx_reader_test.dart`（含多區塊 fixture `multi-block.mdx`
+與片語 fixture `strip-phrases.mdx`）、
 `mdx_dictionary_provider_test.dart`、`mdx_importer_test.dart` 涵蓋
 （含真實檔案 `tmp/dictionary/教育部重編國語辭典.mdx`，檔案存在時才跑）。
 記憶體補測數據見 `docs/research/dictionary/DICTIONARY_FORMATS_AND_LICENSES.md`

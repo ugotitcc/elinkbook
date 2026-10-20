@@ -18,6 +18,14 @@ kind：
     case-sensitive            KeyCaseSensitive=Yes，只收小寫鍵 apple
     placeholder-title         Title 是預設佔位字串，Description 有內容
     placeholder-title-empty   同上但 Description 為空（顯示名稱應退回檔名）
+    v1                        MDict 1.2 版格式（4 位元組數字、鍵區標頭無 checksum、
+                              鍵區塊資訊不壓縮），供 validateBlocks 的 v1 路徑測試
+    strip-phrases             StripKey=Yes，鍵含空白與連字號的英文片語
+                              （a la carte／a-bomb／a b／apple），檔內依「去空白標點、
+                              轉小寫」後的鍵排序（真實製作工具的慣例）
+    encrypted-yes             標頭 Encrypted="Yes"（舊格式的記錄區塊加密，等同 1）
+    multi-block               區塊上限調到 512 位元組，約 300 筆、含跨區塊的重複鍵
+                              （dupkey 60 筆），測鍵區塊／記錄區塊的跨塊路徑
     large / large-cjk         合成大檔，供 Issue 6a 記憶體補測（不進版控）
 
 產物為二進位檔，請勿手改；要調整測試資料就改本檔後重新產生。
@@ -27,6 +35,7 @@ import argparse
 import base64
 import random
 import struct
+import unicodedata
 import zlib
 
 BLOCK_LIMIT = 64 * 1024  # 每個記錄／關鍵字區塊解壓後上限
@@ -44,6 +53,15 @@ def _xml_attr(value: str) -> str:
         .replace(">", "&gt;")
         .replace('"', "&quot;")
     )
+
+
+def _sort_key(key: str, strip_key: bool) -> str:
+    """檔內排序用的鍵。StripKey=Yes 時去掉空白與標點再轉小寫。"""
+    if strip_key:
+        key = "".join(
+            ch for ch in key if not (ch.isspace() or unicodedata.category(ch).startswith("P"))
+        )
+    return key.lower()
 
 
 def truncate(data: bytes) -> bytes:
@@ -134,24 +152,40 @@ def _group(items, size_of, limit):
     return groups
 
 
-def _assemble(header_xml: str, keys, records, *, utf16_keys: bool, record_compression: int) -> bytes:
-    """keys: 已排序的鍵字串；records: 與 keys 同序的記錄位元組（已含結尾字元）。"""
+def _assemble(
+    header_xml: str,
+    keys,
+    records,
+    *,
+    utf16_keys: bool,
+    record_compression: int,
+    block_limit: int = BLOCK_LIMIT,
+    v1: bool = False,
+) -> bytes:
+    """keys: 已排序的鍵字串；records: 與 keys 同序的記錄位元組（已含結尾字元）。
+
+    v1=True 時輸出 MDict 1.2 版結構：數字 4 位元組、鍵區標頭只有 4 個數字且
+    沒有 checksum、鍵區塊資訊不壓縮、鍵文字長度欄位 1 位元組且無結尾字元。"""
+    num = ">I" if v1 else ">Q"
     # --- 記錄區
     offsets, acc = [], 0
     for r in records:
         offsets.append(acc)
         acc += len(r)
-    rec_groups = _group(list(range(len(records))), lambda i: len(records[i]), BLOCK_LIMIT)
+    rec_groups = _group(list(range(len(records))), lambda i: len(records[i]), block_limit)
     rec_blocks, rec_info = [], []
     for g in rec_groups:
         decomp = b"".join(records[i] for i in g)
         blk = _pack_block(decomp, record_compression)
         rec_blocks.append(blk)
         rec_info.append((len(blk), len(decomp)))
-    rec_info_bytes = b"".join(struct.pack(">2Q", c, d) for c, d in rec_info)
+    rec_info_bytes = b"".join(struct.pack(num, c) + struct.pack(num, d) for c, d in rec_info)
     rec_blocks_bytes = b"".join(rec_blocks)
     record_section = (
-        struct.pack(">4Q", len(rec_blocks), len(records), len(rec_info_bytes), len(rec_blocks_bytes))
+        b"".join(
+            struct.pack(num, v)
+            for v in (len(rec_blocks), len(records), len(rec_info_bytes), len(rec_blocks_bytes))
+        )
         + rec_info_bytes
         + rec_blocks_bytes
     )
@@ -160,26 +194,42 @@ def _assemble(header_xml: str, keys, records, *, utf16_keys: bool, record_compre
     term = _term(utf16_keys)
 
     def key_entry(i):
-        return struct.pack(">Q", offsets[i]) + _encode_text(keys[i], utf16_keys) + term
+        return struct.pack(num, offsets[i]) + _encode_text(keys[i], utf16_keys) + term
 
-    key_groups = _group(list(range(len(keys))), lambda i: len(key_entry(i)), BLOCK_LIMIT // 2)
+    key_groups = _group(list(range(len(keys))), lambda i: len(key_entry(i)), block_limit // 2)
     key_blocks, info_parts = [], []
     for g in key_groups:
         decomp = b"".join(key_entry(i) for i in g)
         blk = _pack_block(decomp, 2)
         key_blocks.append(blk)
         head, tail = keys[g[0]], keys[g[-1]]
-        info_parts.append(
-            struct.pack(">Q", len(g))
-            + struct.pack(">H", _text_len(head, utf16_keys)) + _encode_text(head, utf16_keys) + term
-            + struct.pack(">H", _text_len(tail, utf16_keys)) + _encode_text(tail, utf16_keys) + term
-            + struct.pack(">2Q", len(blk), len(decomp))
-        )
+        if v1:
+            info_parts.append(
+                struct.pack(num, len(g))
+                + struct.pack(">B", _text_len(head, utf16_keys)) + _encode_text(head, utf16_keys)
+                + struct.pack(">B", _text_len(tail, utf16_keys)) + _encode_text(tail, utf16_keys)
+                + struct.pack(num, len(blk)) + struct.pack(num, len(decomp))
+            )
+        else:
+            info_parts.append(
+                struct.pack(">Q", len(g))
+                + struct.pack(">H", _text_len(head, utf16_keys)) + _encode_text(head, utf16_keys) + term
+                + struct.pack(">H", _text_len(tail, utf16_keys)) + _encode_text(tail, utf16_keys) + term
+                + struct.pack(">2Q", len(blk), len(decomp))
+            )
     info_decomp = b"".join(info_parts)
-    info_block = _pack_block(info_decomp, 2)
     key_blocks_bytes = b"".join(key_blocks)
-    key_head = struct.pack(">5Q", len(key_blocks), len(keys), len(info_decomp), len(info_block), len(key_blocks_bytes))
-    key_section = key_head + struct.pack(">I", zlib.adler32(key_head) & 0xFFFFFFFF) + info_block + key_blocks_bytes
+    if v1:
+        # v1：鍵區標頭 4 個數字、無 checksum；鍵區塊資訊直接存放、不壓縮。
+        key_head = b"".join(
+            struct.pack(num, v)
+            for v in (len(key_blocks), len(keys), len(info_decomp), len(key_blocks_bytes))
+        )
+        key_section = key_head + info_decomp + key_blocks_bytes
+    else:
+        info_block = _pack_block(info_decomp, 2)
+        key_head = struct.pack(">5Q", len(key_blocks), len(keys), len(info_decomp), len(info_block), len(key_blocks_bytes))
+        key_section = key_head + struct.pack(">I", zlib.adler32(key_head) & 0xFFFFFFFF) + info_block + key_blocks_bytes
 
     return _header_bytes(header_xml) + key_section + record_section
 
@@ -195,22 +245,37 @@ def build_mdx(
     title: str = "Test fixture",
     description: str = "epic-63 test fixture",
     stylesheet: str = "",
+    block_limit: int = BLOCK_LIMIT,
+    v1: bool = False,
+    encrypted: str = "0",
 ) -> bytes:
-    """entries: list[(key, text)]。encoding：'UTF-8' 或 'UTF-16'（UTF-16LE）。"""
+    """entries: list[(key, text)]。encoding：'UTF-8' 或 'UTF-16'（UTF-16LE）。
+
+    排序：strip_key=True 時依「去空白標點、轉小寫」後的鍵（真實製作工具的慣例），
+    否則依小寫鍵；同鍵維持輸入順序（穩定排序）。"""
     utf16 = encoding.upper() == "UTF-16"
-    ordered = sorted(entries, key=lambda kv: kv[0].lower())
+    ordered = sorted(entries, key=lambda kv: _sort_key(kv[0], strip_key))
     keys = [k for k, _ in ordered]
     rec_term = _term(utf16)
     records = [_encode_text(t, utf16) + rec_term for _, t in ordered]
     xml = (
-        '<Dictionary GeneratedByEngineVersion="2.0" RequiredEngineVersion="2.0" Encrypted="0" '
+        f'<Dictionary GeneratedByEngineVersion="{"1.2" if v1 else "2.0"}" '
+        f'RequiredEngineVersion="{"1.2" if v1 else "2.0"}" Encrypted="{encrypted}" '
         f'Encoding="{encoding}" Format="Html" '
         f'KeyCaseSensitive="{"Yes" if key_case_sensitive else "No"}" '
         f'StripKey="{"Yes" if strip_key else "No"}" '
         f'Title="{_xml_attr(title)}" Description="{_xml_attr(description)}" '
         f'StyleSheet="{_xml_attr(stylesheet)}" />'
     )
-    return _assemble(xml, keys, records, utf16_keys=utf16, record_compression=record_compression)
+    return _assemble(
+        xml,
+        keys,
+        records,
+        utf16_keys=utf16,
+        record_compression=record_compression,
+        block_limit=block_limit,
+        v1=v1,
+    )
 
 
 def build_mdd(entries) -> bytes:
@@ -306,6 +371,10 @@ def main():
             "case-sensitive",
             "placeholder-title",
             "placeholder-title-empty",
+            "v1",
+            "strip-phrases",
+            "multi-block",
+            "encrypted-yes",
             "large",
             "large-cjk",
         ],
@@ -348,6 +417,37 @@ def main():
             record_compression=2,
             strip_key=True,
         )
+    elif a.kind == "v1":
+        data = build_mdx(
+            _small_entries(a.entries or 50),
+            encoding="UTF-8",
+            record_compression=2,
+            v1=True,
+        )
+    elif a.kind == "encrypted-yes":
+        # 舊格式的記錄區塊加密旗標：標頭寫 Encrypted="Yes"（等同 1）。
+        data = build_mdx(
+            _small_entries(a.entries or 50),
+            encoding="UTF-8",
+            record_compression=2,
+            encrypted="Yes",
+        )
+    elif a.kind == "strip-phrases":
+        # 刻意讓「原字串順序」與「去空白標點後順序」不同：
+        # 原字串：a b < a la carte < a-bomb < apple；去除後：ab < abomb < alacarte < apple。
+        entries = [
+            ("a la carte", "<b>a la carte</b> 照菜單點菜"),
+            ("a-bomb", "<b>a-bomb</b> 原子彈"),
+            ("apple", "<b>apple</b> 蘋果"),
+            ("a b", "<b>a b</b> 空白測試"),
+        ] + [(f"w{i:04d}", f"<p>definition {i}</p>") for i in range(46)]
+        data = build_mdx(entries, encoding="UTF-8", record_compression=2, strip_key=True)
+    elif a.kind == "multi-block":
+        # 區塊上限 512 位元組：鍵區塊約 256 位元組、記錄區塊 512 位元組。
+        entries = [(f"k{i:04d}", f"<p>entry {i}</p>") for i in range(240)] + [
+            ("dupkey", f"<p>dup-{i:03d}</p>") for i in range(60)
+        ]
+        data = build_mdx(entries, encoding="UTF-8", record_compression=2, block_limit=512)
     elif a.kind == "case-sensitive":
         # 只收小寫鍵；查詢 APPLE 時不得命中。
         entries = [("apple", "<b>apple</b> 蘋果（區分大小寫）")] + [

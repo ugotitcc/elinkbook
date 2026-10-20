@@ -512,25 +512,26 @@ class DictReader {
     final blocks = _keyBlockList;
     if (blocks == null) return const [];
 
-    final firstBlock = _lowerBoundBlockIndex(key);
+    final nk = _normKey(key);
+    final firstBlock = _lowerBoundBlockIndex(nk);
     if (firstBlock >= blocks.length) return const [];
 
     final results = <RecordOffsetInfo>[];
-    for (var blockIndex = firstBlock;
+    for (var blockIndex = _firstScanBlock(nk, firstBlock);
         blockIndex < blocks.length;
         blockIndex++) {
       final block = await _loadKeyBlock(blockIndex);
-      var i = blockIndex == firstBlock ? _lowerBoundInBlock(block, key) : 0;
-      while (i < block.length && _keysEqual(block[i].$2, key)) {
+      // 區塊內線性掃描（一塊只有數百到數千把鍵）：不假設檔內順序與
+      // 比較順序完全一致。
+      for (var i = 0; i < block.length; i++) {
+        if (_normKey(block[i].$2) != nk) continue;
         final recordStart = block[i].$1;
         final recordEnd = await _nextRecordStart(blockIndex, block, i);
         final offsetInfo =
             _buildRecordOffsetInfo(key, recordStart, recordEnd ?? -1);
         if (offsetInfo != null) results.add(offsetInfo);
-        i++;
       }
-      // 區塊內還有比 key 大的鍵：重複項不可能跨到下一區塊。
-      if (i < block.length) break;
+      if (!_mayContinueAfter(blockIndex, firstBlock, nk)) break;
     }
     return results;
   }
@@ -543,19 +544,20 @@ class DictReader {
     final blocks = _keyBlockList;
     if (blocks == null) return const [];
 
+    final nk = _normKey(key);
     final matched = <String>[];
     var first = true;
-    for (var blockIndex = _lowerBoundBlockIndex(key);
+    for (var blockIndex = _lowerBoundBlockIndex(nk);
         blockIndex < blocks.length;
         blockIndex++) {
       final block = _loadKeyBlockSync(blockIndex);
       var i = 0;
       if (first) {
-        i = _lowerBoundInBlock(block, key);
+        i = _lowerBoundInBlock(block, nk);
         first = false;
       }
       for (; i < block.length; i++) {
-        if (!_keyStartsWith(block[i].$2, key)) return matched;
+        if (!_normKey(block[i].$2).startsWith(nk)) return matched;
         if (limit != null && matched.length >= limit) return matched;
         matched.add(block[i].$2);
       }
@@ -569,21 +571,46 @@ class DictReader {
   bool exist(String key) {
     final blocks = _keyBlockList;
     if (blocks == null) return false;
-    final blockIndex = _lowerBoundBlockIndex(key);
-    if (blockIndex >= blocks.length) return false;
-    final block = _loadKeyBlockSync(blockIndex);
-    final i = _lowerBoundInBlock(block, key);
-    return i < block.length && _keysEqual(block[i].$2, key);
+    final nk = _normKey(key);
+    final firstBlock = _lowerBoundBlockIndex(nk);
+    if (firstBlock >= blocks.length) return false;
+    for (var blockIndex = _firstScanBlock(nk, firstBlock);
+        blockIndex < blocks.length;
+        blockIndex++) {
+      final block = _loadKeyBlockSync(blockIndex);
+      for (final entry in block) {
+        if (_normKey(entry.$2) == nk) return true;
+      }
+      if (!_mayContinueAfter(blockIndex, firstBlock, nk)) break;
+    }
+    return false;
   }
 
-  /// 第一個 tail >= [key] 的鍵區塊；找不到回傳區塊數。
-  int _lowerBoundBlockIndex(String key) {
+  /// 開始掃描的區塊：[firstBlock] 的前一塊也要看，當查詢鍵落在 [firstBlock]
+  /// 的開頭邊界上（鍵不大於該塊的 head）。邊界上的相等鍵可能留在前一塊
+  /// （例如排序依據與比較不完全一致的檔案）。
+  int _firstScanBlock(String nk, int firstBlock) {
+    if (firstBlock == 0) return 0;
+    final head = _normKey(_keyBlockList![firstBlock].head);
+    return nk.compareTo(head) <= 0 ? firstBlock - 1 : firstBlock;
+  }
+
+  /// 掃完 [blockIndex] 後是否還要看下一塊：已在 [firstBlock] 之前的塊一律
+  /// 繼續；之後只在該塊的 tail 不大於查詢鍵時繼續（重複鍵可能跨塊）。
+  bool _mayContinueAfter(int blockIndex, int firstBlock, String nk) {
+    if (blockIndex < firstBlock) return true;
+    final tail = _normKey(_keyBlockList![blockIndex].tail);
+    return tail.compareTo(nk) <= 0;
+  }
+
+  /// 第一個正規化 tail >= [nk] 的鍵區塊；找不到回傳區塊數。
+  int _lowerBoundBlockIndex(String nk) {
     final blocks = _keyBlockList!;
     var min = 0;
     var max = blocks.length;
     while (min < max) {
       final middle = min + ((max - min) >> 1);
-      if (_compareKeys(blocks[middle].tail, key) < 0) {
+      if (_normKey(blocks[middle].tail).compareTo(nk) < 0) {
         min = middle + 1;
       } else {
         max = middle;
@@ -592,12 +619,12 @@ class DictReader {
     return min;
   }
 
-  int _lowerBoundInBlock(List<(int, String)> block, String key) {
+  int _lowerBoundInBlock(List<(int, String)> block, String nk) {
     var min = 0;
     var max = block.length;
     while (min < max) {
       final middle = min + ((max - min) >> 1);
-      if (_compareKeys(block[middle].$2, key) < 0) {
+      if (_normKey(block[middle].$2).compareTo(nk) < 0) {
         min = middle + 1;
       } else {
         max = middle;
@@ -606,22 +633,26 @@ class DictReader {
     return min;
   }
 
-  /// 鍵在檔內的排序依 `KeyCaseSensitive` 而定（elinkBook vendor patch）：
-  /// 不分大小寫的字典，檔內鍵以小寫排序，逐字比較會找不到（例如
-  /// `apple`／`Apple` 在同一區塊時）。比較與相等都套同一個折疊。
+  /// 鍵的正規化（elinkBook vendor patch），查詢字串與檔內的鍵都套同一個：
+  /// - `StripKey=Yes`：去掉空白、標點（Unicode `P` 類別）與全形空白。真實製作工具
+  ///   在這個旗標下，檔內的鍵仍是原字串（例如 `a la carte`），但排序與比對
+  ///   都以去除後的形式為準。
+  /// - `KeyCaseSensitive=No`：折疊成小寫。
+  /// 與 elinkBook 的 `MdxReader._normalizeQuery` 規則相同（重複套用不影響結果）。
+  String _normKey(String key) {
+    var out = key;
+    if (_stripKeys) out = out.replaceAll(_stripKeyPattern, '');
+    if (_caseInsensitiveKeys) out = out.toLowerCase();
+    return out;
+  }
+
+  static final RegExp _stripKeyPattern =
+      RegExp(r'[\s\p{P}\u3000]', unicode: true);
+
+  bool get _stripKeys => (header['StripKey'] ?? 'No').toLowerCase() == 'yes';
+
   bool get _caseInsensitiveKeys =>
       (header['KeyCaseSensitive'] ?? 'Yes').toLowerCase() == 'no';
-
-  int _compareKeys(String a, String b) => _caseInsensitiveKeys
-      ? a.toLowerCase().compareTo(b.toLowerCase())
-      : a.compareTo(b);
-
-  bool _keysEqual(String a, String b) =>
-      _caseInsensitiveKeys ? a.toLowerCase() == b.toLowerCase() : a == b;
-
-  bool _keyStartsWith(String key, String prefix) => _caseInsensitiveKeys
-      ? key.toLowerCase().startsWith(prefix.toLowerCase())
-      : key.startsWith(prefix);
 
   /// 同一個鍵下一筆記錄的位移；最後一筆回傳 `null`。
   Future<int?> _nextRecordStart(

@@ -323,6 +323,10 @@ node app/tool/test_tts_safe_window.mjs
 | `case-sensitive` | `case-sensitive.mdx` | `KeyCaseSensitive=Yes`，只收小寫鍵 `apple` |
 | `placeholder-title` | `placeholder-title.mdx` | `Title` 是預設佔位字串、`Description` 有內容 |
 | `placeholder-title-empty` | `placeholder-title-empty.mdx` | 同上但 `Description` 為空（名稱應退回檔名） |
+| `v1` | `v1.mdx` | MDict 1.2 版格式（4 位元組數字、鍵區標頭無 checksum、鍵區塊資訊不壓縮），測 `validateBlocks` 的 v1 路徑 |
+| `strip-phrases` | `strip-phrases.mdx` | `StripKey=Yes`，鍵含空白與連字號的英文片語，檔內依「去空白標點、轉小寫」排序 |
+| `multi-block` | `multi-block.mdx` | 區塊上限 512 位元組、約 300 筆、含跨區塊重複鍵（`dupkey` 60 筆），測跨塊路徑 |
+| `encrypted-yes` | `encrypted-yes.mdx` | 標頭 `Encrypted="Yes"`（舊格式的記錄區塊加密） |
 | `large` / `large-cjk` | （不進版控） | 合成大檔，供記憶體補測 |
 
 ### 執行方式

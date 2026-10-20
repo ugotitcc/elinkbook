@@ -132,9 +132,17 @@ class MdxReader {
       keyCaseSensitive:
           (header['KeyCaseSensitive'] ?? 'Yes').toLowerCase() != 'no',
       stripKey: (header['StripKey'] ?? 'No').toLowerCase() == 'yes',
-      encrypted: int.tryParse(header['Encrypted'] ?? '') ?? 0,
+      encrypted: _parseEncrypted(header['Encrypted']),
       entryCount: reader.numEntries,
     );
+  }
+
+  /// 解析標頭 `Encrypted`，規則與 dict_reader 一致：缺欄位或 `No` 為 0、
+  /// `Yes` 為 1（舊格式的記錄區塊加密），其餘當整數解析，解析不出來視為 0。
+  static int _parseEncrypted(String? raw) {
+    if (raw == null || raw == 'No') return 0;
+    if (raw == 'Yes') return 1;
+    return int.tryParse(raw) ?? 0;
   }
 
   /// 把 dict_reader 的失敗統一成 [MdxException]。
@@ -299,17 +307,32 @@ class MdxReader {
       }
       final headerSize = _readUintBE(headerSizeBytes, 4, 0);
 
-      // 關鍵字區開頭：5 個數字、4 位元組 checksum、鍵區塊資訊、鍵區塊。
+      // 關鍵字區標頭依版本不同（比照 dict_reader 的 _readKeySectionHeader）：
+      // - v2：5 個數字（區塊數、筆數、資訊解壓大小、資訊大小、鍵區塊大小）
+      //   ＋ 4 位元組 checksum。
+      // - v1：4 個數字（區塊數、筆數、資訊大小、鍵區塊大小），沒有 checksum。
+      final isV2 = version >= 2.0;
       final keyOffset = headerSize + 8;
+      final keyHeadLength = numberWidth * (isV2 ? 5 : 4) + (isV2 ? 4 : 0);
       await file.setPosition(keyOffset);
-      final keyHead = await file.read(numberWidth * 5);
-      if (keyHead.length < numberWidth * 5) {
+      final keyHead = await file.read(keyHeadLength);
+      if (keyHead.length < keyHeadLength) {
         throw const MdxException(MdxErrorKind.corrupt, '關鍵字區標頭不完整');
       }
-      final keyInfoSize = _readUintBE(keyHead, numberWidth, numberWidth * 3);
-      final keyBlocksSize = _readUintBE(keyHead, numberWidth, numberWidth * 4);
-      final recordOffset =
-          keyOffset + numberWidth * 5 + 4 + keyInfoSize + keyBlocksSize;
+      final keyInfoSize = _readUintBE(
+        keyHead,
+        numberWidth,
+        numberWidth * (isV2 ? 3 : 2),
+      );
+      final keyBlocksSize = _readUintBE(
+        keyHead,
+        numberWidth,
+        numberWidth * (isV2 ? 4 : 3),
+      );
+      final recordOffset = keyOffset + keyHeadLength + keyInfoSize + keyBlocksSize;
+      if (recordOffset < 0 || recordOffset + numberWidth * 4 > length) {
+        throw const MdxException(MdxErrorKind.corrupt, '記錄區標頭超出檔尾');
+      }
 
       await file.setPosition(recordOffset);
       final recordHead = await file.read(numberWidth * 4);
@@ -317,8 +340,15 @@ class MdxReader {
         throw const MdxException(MdxErrorKind.corrupt, '記錄區標頭不完整');
       }
       final blockCount = _readUintBE(recordHead, numberWidth, 0);
-      final infoLength = await file.read(blockCount * numberWidth * 2);
-      if (infoLength.length < blockCount * numberWidth * 2) {
+      // 先和剩餘檔案長度比對再讀，避免亂數的 blockCount 觸發超大讀取。
+      final infoBytes = blockCount * numberWidth * 2;
+      if (blockCount < 0 ||
+          infoBytes < 0 ||
+          recordOffset + numberWidth * 4 + infoBytes > length) {
+        throw const MdxException(MdxErrorKind.corrupt, '記錄區塊資訊超出檔尾');
+      }
+      final infoLength = await file.read(infoBytes);
+      if (infoLength.length < infoBytes) {
         throw const MdxException(MdxErrorKind.corrupt, '記錄區塊資訊不完整');
       }
 
