@@ -379,7 +379,7 @@ void main() {
 
       final sources = await store.listSources();
       expect(sources.map((s) => s.id), ['c', 'a', 'b']);
-      expect(sources.map((s) => s.priority), [0, 1, 3]);
+      expect(sources.map((s) => s.priority), [0, 1, 2]);
     });
 
     test('reorderSources 不在清單內的來源不動', () async {

@@ -105,11 +105,19 @@ class DictionaryStore {
   }
 
   /// 在同一個交易內把 `priority` 重寫成 `0..n-1`（依 [orderedIds] 順序）。
-  /// 不在清單內的來源不動；清單內不存在的 id 忽略。
+  /// 不在清單內的來源不動；清單內不存在的 id 忽略且不佔序號。
   Future<void> reorderSources(List<String> orderedIds) {
     return transaction((store) async {
-      for (var i = 0; i < orderedIds.length; i++) {
-        await store.setPriority(orderedIds[i], i);
+      // 只替真的更新到列的 id 編號，不存在的 id 不佔序號，避免留空號。
+      var next = 0;
+      for (final id in orderedIds) {
+        final updated = await store._db.update(
+          'dictionary_sources',
+          {'priority': next},
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        if (updated > 0) next++;
       }
     });
   }
