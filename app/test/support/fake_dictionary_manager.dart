@@ -30,11 +30,13 @@ class FakeDictionaryManager implements DictionaryManager {
   Completer<void>? listGate;
   Completer<void>? reorderGate;
   Completer<void>? importGate;
+  Completer<void>? deleteGate;
 
   /// 設定後對應方法丟出此例外。
   Object? listError;
   Object? reorderError;
   Object? importError;
+  Object? deleteError;
 
   /// `addCompanions` 被呼叫後執行，測試可在此更新 [items] 的 `missingCss`。
   void Function(String sourceId, List<PickedFile> files)? onAddCompanions;
@@ -61,7 +63,14 @@ class FakeDictionaryManager implements DictionaryManager {
   Future<List<DictionaryListItem>> list() async {
     await listGate?.future;
     if (listError != null) throw listError!;
-    return List<DictionaryListItem>.of(items);
+    // 依優先序排列，同序號維持目前順序（List.sort 不穩定，故帶索引比較）。
+    final indexed = items.asMap().entries.toList()
+      ..sort((x, y) {
+        final byPriority =
+            x.value.source.priority.compareTo(y.value.source.priority);
+        return byPriority != 0 ? byPriority : x.key.compareTo(y.key);
+      });
+    return [for (final e in indexed) e.value];
   }
 
   @override
@@ -83,20 +92,32 @@ class FakeDictionaryManager implements DictionaryManager {
     reorderCalls.add(List<String>.of(orderedIds));
     await reorderGate?.future;
     if (reorderError != null) throw reorderError!;
-    final byId = {for (final item in items) item.source.id: item};
+    // 比照 `DictionaryStore.reorderSources`：只有存在且被列出的來源依序重編為
+    // 0..k-1（不存在的 id 不佔序號）；沒被列出的來源維持原優先序。
+    final existing = {for (final item in items) item.source.id};
+    final newPriority = <String, int>{};
+    for (final id in orderedIds) {
+      if (existing.contains(id) && !newPriority.containsKey(id)) {
+        newPriority[id] = newPriority.length;
+      }
+    }
     items = [
-      for (var i = 0; i < orderedIds.length; i++)
-        if (byId[orderedIds[i]] != null)
-          DictionaryListItem(
-            source: _copy(byId[orderedIds[i]]!.source, priority: i),
-            missingCss: byId[orderedIds[i]]!.missingCss,
-          ),
+      for (final item in items)
+        newPriority.containsKey(item.source.id)
+            ? DictionaryListItem(
+                source: _copy(item.source, priority: newPriority[item.source.id]),
+                missingCss: item.missingCss,
+              )
+            : item,
     ];
   }
 
   @override
   Future<void> delete(String id) async {
     deleteCalls.add(id);
+    await deleteGate?.future;
+    // 比照正式實作：先刪目錄，失敗就丟例外，來源列保留。
+    if (deleteError != null) throw deleteError!;
     items = items.where((item) => item.source.id != id).toList();
   }
 
