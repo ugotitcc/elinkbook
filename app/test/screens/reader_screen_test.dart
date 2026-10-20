@@ -51,6 +51,12 @@ import '../support/fake_custom_fonts_repository.dart';
 import 'package:elinkbook/screens/notes_bottom_sheet.dart';
 import '../support/fake_bookmarks_repository.dart';
 import 'package:elinkbook/screens/annotation_toolbar.dart';
+import 'package:elinkbook/dictionary/dictionary_service.dart';
+import 'package:elinkbook/dictionary/models/dictionary_entry.dart';
+import 'package:elinkbook/dictionary/models/lookup_request.dart';
+import 'package:elinkbook/dictionary/models/lookup_result.dart';
+import 'package:elinkbook/screens/widgets/dictionary_lookup_sheet.dart';
+import '../support/fake_dictionary_service.dart';
 import '../support/fake_highlights_repository.dart';
 import '../support/fake_notes_repository.dart';
 import '../support/fake_tts_provider.dart';
@@ -5042,6 +5048,298 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('已複製到剪貼簿'), findsOneWidget);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // epic-63-dictionary-lookup Issue 4：選字後的「查字典」按鈕與查詢面板。
+  // ─────────────────────────────────────────────────────────────────────
+  group('Epic 63 Issue 4：查字典', () {
+    const selectionText = '天地';
+
+    LookupCompleted completedWithEntry() => LookupCompleted(
+          result: const LookupResult(
+            request: LookupRequest(selectionText),
+            outcomes: [
+              ProviderOutcome(
+                providerId: 'local',
+                displayName: '測試字典',
+                status: OutcomeStatus.found,
+                entries: [
+                  DictionaryEntry(
+                    sourceId: 'local',
+                    headword: selectionText,
+                    body: '天與地。',
+                    bodyKind: EntryBodyKind.plainText,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          hasEnabledDictionary: true,
+        );
+
+    Future<FoliateReaderView> pumpEpub(
+      WidgetTester tester, {
+      required String bookId,
+      FakeDictionaryService? dictionaryService,
+      String filePath = 'test/fixtures/sample.epub',
+      bool isFixedLayout = false,
+    }) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: filePath,
+            bookId: bookId,
+            isFixedLayout: isFixedLayout,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              dictionaryService: dictionaryService ?? FakeDictionaryService(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final view = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      view.onPageRendered();
+      view.onLayoutResolved?.call(
+        EpubLayoutInfo(
+          isFixedLayout: isFixedLayout,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      return view;
+    }
+
+    void reportSelection(FoliateReaderView view, {String text = selectionText}) {
+      view.onSelectionChanged?.call(
+        EpubSelectionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          rect: const PercentRect(left: 0.1, top: 0.2, right: 0.5, bottom: 0.3),
+          text: text,
+        ),
+      );
+    }
+
+    testWidgets('流式 EPUB 選字後工具列有查字典按鈕', (tester) async {
+      final view = await pumpEpub(tester, bookId: 'b_lookup_toolbar');
+      reportSelection(view);
+      await tester.pump();
+
+      expect(find.byType(AnnotationToolbar), findsOneWidget);
+      expect(
+        find.byKey(const Key('annotation_toolbar_lookup')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('點查字典：開啟面板，並以選取文字呼叫 DictionaryService.lookup 一次', (
+      tester,
+    ) async {
+      final service = FakeDictionaryService(response: completedWithEntry());
+      final view = await pumpEpub(
+        tester,
+        bookId: 'b_lookup_open',
+        dictionaryService: service,
+      );
+      reportSelection(view);
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_lookup')));
+      await tester.pumpAndSettle();
+
+      expect(service.calls, [selectionText]);
+      expect(find.byType(DictionaryLookupSheet), findsOneWidget);
+      expect(find.text('天與地。'), findsOneWidget);
+    });
+
+    testWidgets('快速點兩次查字典只開一個面板', (tester) async {
+      final service = FakeDictionaryService(response: completedWithEntry());
+      final view = await pumpEpub(
+        tester,
+        bookId: 'b_lookup_double_tap',
+        dictionaryService: service,
+      );
+      reportSelection(view);
+      await tester.pump();
+
+      final button = find.byKey(const Key('annotation_toolbar_lookup'));
+      await tester.tap(button);
+      // 第二下在面板尚未顯示時送達；模態遮罩已出現時 hit test 會落空，
+      // 這正是旗標要擋的情況，故關閉 warnIfMissed。
+      await tester.tap(button, warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DictionaryLookupSheet), findsOneWidget);
+      expect(service.calls, hasLength(1));
+    });
+
+    testWidgets('關閉面板後 AnnotationToolbar 仍只有一個實例，選取狀態仍在', (
+      tester,
+    ) async {
+      final service = FakeDictionaryService(response: completedWithEntry());
+      final view = await pumpEpub(
+        tester,
+        bookId: 'b_lookup_close',
+        dictionaryService: service,
+      );
+      reportSelection(view);
+      await tester.pump();
+      expect(find.byType(AnnotationToolbar), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_lookup')));
+      await tester.pumpAndSettle();
+      expect(find.byType(DictionaryLookupSheet), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('eb_sheet_shell_close_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DictionaryLookupSheet), findsNothing);
+      expect(
+        find.byType(AnnotationToolbar),
+        findsOneWidget,
+        reason: '關閉面板不得清掉選取狀態，工具列應原樣留著且只有一個實例',
+      );
+      expect(
+        find.byKey(const Key('annotation_toolbar_lookup')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('關閉面板不會呼叫 clearSelection：選取文字仍可複製', (tester) async {
+      final clipboardCalls = <String>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+            if (call.method == 'Clipboard.setData') {
+              clipboardCalls.add(call.arguments['text'] as String);
+            }
+            return null;
+          });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      final service = FakeDictionaryService(response: completedWithEntry());
+      final view = await pumpEpub(
+        tester,
+        bookId: 'b_lookup_close_keeps_selection',
+        dictionaryService: service,
+      );
+      reportSelection(view);
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_lookup')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('eb_sheet_shell_close_button')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_copy')));
+      await tester.pump();
+
+      expect(clipboardCalls, [selectionText]);
+    });
+
+    testWidgets('FXL（isFixedLayout: true）：呼叫 onSelectionChanged 後找不到查字典按鈕', (
+      tester,
+    ) async {
+      final view = await pumpEpub(
+        tester,
+        bookId: 'b_lookup_fxl',
+        isFixedLayout: true,
+      );
+      reportSelection(view);
+      await tester.pump();
+
+      expect(find.byType(AnnotationToolbar), findsNothing);
+      expect(find.byKey(const Key('annotation_toolbar_lookup')), findsNothing);
+    });
+
+    testWidgets('CBZ（副檔名 .cbz）：呼叫 onSelectionChanged 後找不到查字典按鈕', (
+      tester,
+    ) async {
+      final view = await pumpEpub(
+        tester,
+        bookId: 'b_lookup_cbz',
+        filePath: 'test/fixtures/sample.cbz',
+        isFixedLayout: true,
+      );
+      reportSelection(view);
+      await tester.pump();
+
+      expect(find.byType(AnnotationToolbar), findsNothing);
+      expect(find.byKey(const Key('annotation_toolbar_lookup')), findsNothing);
+    });
+
+    testWidgets('PDF 選取：工具列沒有查字典按鈕', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_lookup_pdf',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              dictionaryService: FakeDictionaryService(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      pdfView.onSelectionRectComputed?.call(
+        const PdfSelectionInfo(
+          pageIndex: 0,
+          rect: PercentRect(left: 0.3, top: 0.2, right: 0.6, bottom: 0.3),
+          widgetRect: PercentRect(left: 0.3, top: 0.2, right: 0.6, bottom: 0.3),
+          text: selectionText,
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(AnnotationToolbar), findsOneWidget);
+      expect(
+        find.byKey(const Key('annotation_toolbar_lookup')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('面板開著時移除 ReaderScreen 不丟例外', (tester) async {
+      final service = FakeDictionaryService(response: completedWithEntry());
+      final view = await pumpEpub(
+        tester,
+        bookId: 'b_lookup_dispose',
+        dictionaryService: service,
+      );
+      reportSelection(view);
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_lookup')));
+      await tester.pumpAndSettle();
+      expect(find.byType(DictionaryLookupSheet), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    });
   });
 
   // ─────────────────────────────────────────────────────────────────────
