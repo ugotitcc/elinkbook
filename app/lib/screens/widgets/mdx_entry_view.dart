@@ -13,9 +13,9 @@
 //   攔截回應，留待 Issue 6b 圖片攔截時一併確認（審查 I-7）。
 //
 // 決策邏輯是靜態純函式，單元測試不必建 WebView。
-import 'dart:typed_data';
-
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../../dictionary/mdx_html_prepare.dart';
@@ -89,6 +89,18 @@ class MdxEntryView extends StatefulWidget {
   final void Function(Uri url, MdxRequestDecision decision)?
       onRequestIntercepted;
 
+  /// WebView 要主動搶下的手勢。
+  ///
+  /// 詞條放在可拖曳關閉的底部面板內，面板的垂直拖曳辨識器會在手勢競技場
+  /// 贏過原生 WebView，WebView 永遠收不到垂直拖曳、長詞條捲不動。
+  /// `InAppWebView` 只會替 `gestureRecognizers` 內的辨識器搶手勢，所以這裡
+  /// 加入垂直拖曳；點擊與長按不在集合內，仍照原本的方式送進 WebView
+  /// （`entry://` 連結與錨點的點擊不受影響），面板把手與標題列不在 WebView
+  /// 範圍內，照常可以拖曳或關閉。
+  static final Set<Factory<OneSequenceGestureRecognizer>> gestureRecognizers = {
+    Factory<VerticalDragGestureRecognizer>(VerticalDragGestureRecognizer.new),
+  };
+
   /// 導覽時的處理方式：詞條連結取消導航並回傳詞；錨點放行；其餘取消。
   ///
   /// 只有「主框架」且「使用者真的點了」的導覽才可能帶出詞條或放行錨點：
@@ -153,6 +165,7 @@ class _MdxEntryViewState extends State<MdxEntryView> {
   Widget build(BuildContext context) {
     return InAppWebView(
       key: const Key('mdx_entry_view'),
+      gestureRecognizers: MdxEntryView.gestureRecognizers,
       initialData: InAppWebViewInitialData(
         data: prepareEntryHtml(widget.config.html),
         mimeType: 'text/html',

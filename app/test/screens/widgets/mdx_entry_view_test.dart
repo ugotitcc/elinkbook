@@ -1,4 +1,5 @@
 import 'package:elinkbook/screens/widgets/mdx_entry_view.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Epic 63 Issue 6a Task 7：`MdxEntryView` 的兩個決策函式是純函式，這裡只測
@@ -116,6 +117,19 @@ void main() {
         MdxEntryView.decideNavigation('#x', hasGesture: false).allow,
         isTrue,
       );
+    });
+  });
+
+  group('gestureRecognizers', () {
+    test('包含垂直拖曳辨識器，詞條才捲得動（底部面板內）', () {
+      final recognizers = MdxEntryView.gestureRecognizers
+          .map((factory) => factory.constructor())
+          .toList();
+
+      expect(recognizers.whereType<VerticalDragGestureRecognizer>(), hasLength(1));
+      // 不搶點擊與長按，entry:// 連結與錨點照常運作。
+      expect(recognizers.whereType<TapGestureRecognizer>(), isEmpty);
+      expect(recognizers.whereType<LongPressGestureRecognizer>(), isEmpty);
     });
   });
 

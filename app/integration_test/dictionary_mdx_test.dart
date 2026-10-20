@@ -12,8 +12,14 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:elinkbook/dictionary/dictionary_service.dart';
 import 'package:elinkbook/dictionary/mdx_link_policy.dart';
+import 'package:elinkbook/dictionary/models/dictionary_entry.dart';
+import 'package:elinkbook/dictionary/models/lookup_request.dart';
+import 'package:elinkbook/dictionary/models/lookup_result.dart';
 import 'package:elinkbook/dictionary/storage/mdx_reader.dart';
+import 'package:elinkbook/screens/widgets/dictionary_lookup_sheet.dart';
+import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
 import 'package:elinkbook/screens/widgets/mdx_entry_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -264,5 +270,88 @@ void main() {
       (value) => value > 0,
       '`entry://#n1` 改寫後的錨點跳轉',
     );
+  });
+
+  testWidgets('長詞條放在可拖曳的底部面板內，垂直拖曳會捲動詞條而不是關面板', (tester) async {
+    // 200 段文字，內容遠高於面板。
+    final longHtml =
+        '<html><head><meta charset="utf-8"><title>long</title></head><body>'
+        '${List.generate(200, (i) => '<p>第 $i 段　長詞條測試內容</p>').join()}'
+        '</body></html>';
+    final controllerReady = Completer<InAppWebViewController>();
+    final response = Future.value(
+      LookupCompleted(
+        result: LookupResult(
+          request: const LookupRequest('詞'),
+          outcomes: [
+            ProviderOutcome(
+              providerId: 'long',
+              displayName: '長字典',
+              status: OutcomeStatus.found,
+              entries: [
+                DictionaryEntry(
+                  sourceId: 'long',
+                  headword: '詞',
+                  body: longHtml,
+                  bodyKind: EntryBodyKind.html,
+                ),
+              ],
+            ),
+          ],
+        ),
+        hasEnabledDictionary: true,
+      ),
+    );
+
+    await pumpLocalizedWidget(
+      tester,
+      const Scaffold(body: SizedBox.expand()),
+    );
+    // 真實的底部面板（可拖曳關閉）＋真實的 DictionaryLookupSheet，
+    // 詞條元件用預設的 MdxEntryView（只多接一個取得 controller 的掛鉤）。
+    unawaited(
+      EBSheetShell.show<void>(
+        tester.element(find.byType(Scaffold)),
+        title: '查詢',
+        builder: (context) => DictionaryLookupSheet(
+          selectedText: '詞',
+          response: response,
+          isEinkMode: false,
+          mdxEntryViewBuilder: (context, config) => MdxEntryView(
+            config: config,
+            onWebViewCreated: (controller) {
+              if (!controllerReady.isCompleted) {
+                controllerReady.complete(controller);
+              }
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    final controller =
+        await controllerReady.future.timeout(const Duration(seconds: 15));
+    await _waitForTitle(tester, controller, 'long');
+    await _waitFor<int>(
+      tester,
+      controller.getScrollY,
+      (value) => value == 0,
+      '頁面在頁首',
+    );
+
+    // 在 WebView 中央向上拖曳 400 像素。
+    await tester.drag(find.byType(MdxEntryView), const Offset(0, -400));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final scrollY = await _waitFor<int>(
+      tester,
+      controller.getScrollY,
+      (value) => value > 0,
+      '垂直拖曳後詞條捲動（scrollY > 0）',
+    );
+    debugPrint('垂直拖曳後 scrollY = $scrollY');
+    // 面板沒有被拖曳關掉。
+    expect(find.byType(DictionaryLookupSheet), findsOneWidget);
+    expect(find.byType(MdxEntryView), findsOneWidget);
   });
 }
