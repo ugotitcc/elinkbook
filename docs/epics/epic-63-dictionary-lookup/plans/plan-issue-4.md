@@ -77,7 +77,7 @@ app/test/
 - Consumes: Issue 3 的 `DictionaryService`、`LookupCompleted`。
 - Produces: `LookupCompleted({required LookupResult result, required bool hasEnabledDictionary})`；`final bool hasEnabledDictionary`（`listSources(enabledOnly: true)` 是否非空）。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `dictionary_service_test.dart` 新增：
 - `test('沒有任何啟用字典：outcomes 為空且 hasEnabledDictionary 為 false')`
@@ -85,20 +85,20 @@ app/test/
 - `test('有符合的字典：hasEnabledDictionary 為 true')`
 - 既有案例若直接 `const LookupCompleted(...)` 建構，補上新參數。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（在 `app/`）: `flutter test test/dictionary/dictionary_service_test.dart`
 Expected: FAIL（`hasEnabledDictionary` 不存在）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 `LookupCompleted` 加欄位（`required`）。`lookup()` 取得 `sources` 後以 `sources.isNotEmpty` 傳入。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/dictionary app/test/dictionary
@@ -118,27 +118,27 @@ git commit -m "feat(epic-63): Issue 4 LookupCompleted 區分沒有字典與沒�
 - Produces: `AnnotationToolbar` 新增選填 `VoidCallback? onLookupPressed`；非 `null` 時，在第二列「複製」之後、「備註」之前顯示 `IconButton`，`Key('annotation_toolbar_lookup')`，`Icons.menu_book_outlined`，tooltip 為 `l10n.readerAnnotationLookupTooltip`。
 - l10n：`readerAnnotationLookupTooltip`（zh_TW「查字典」、en「Look up」）。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `annotation_toolbar_test.dart` 新增：
 - `test`／`testWidgets('onLookupPressed 為 null 時不顯示查字典按鈕')`
 - `testWidgets('onLookupPressed 非 null：顯示按鈕，點擊觸發一次 callback')`
 - `testWidgets('查字典按鈕的 tooltip 隨語言切換')`（zh_TW 與 en 各斷言一次）。沿用該檔既有的 pump 輔助。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/annotation_toolbar_test.dart`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 四份 ARB 加字串後執行 `flutter gen-l10n`。按鈕寫法比照同列「複製」按鈕。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/annotation_toolbar.dart app/lib/l10n app/test/screens/annotation_toolbar_test.dart
@@ -163,25 +163,25 @@ git commit -m "feat(epic-63): Issue 4 工具列新增查字典按鈕"
 - 新增 `app/test/support/fake_dictionary_service.dart`：`class FakeDictionaryService implements DictionaryService`，不碰資料庫。`lookup` 回傳可由建構子設定的 `DictionaryLookupResponse`（預設 `LookupCompleted`，`outcomes` 為空、`hasEnabledDictionary: false`），並記錄每次呼叫的參數 `calls`。
 - **不改 `DictionaryService` 的型別結構。** 已實測：`implements` 一個含私有成員的類別（跨檔案）可以編譯執行，不需要抽介面或改名。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `fake_reader_feature_dependencies_test.dart` 新增 `test('預設帶有 DictionaryService，且每次呼叫是新實例')`；`test('可覆寫 dictionaryService')`。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/support/fake_reader_feature_dependencies_test.dart`
 Expected: FAIL（編譯錯誤：沒有 `dictionaryService`）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 建立 `FakeDictionaryService`（見 Interfaces），工廠預設用它。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2；再跑 `flutter analyze` 確認所有 `ReaderFeatureDependencies(` 呼叫處（`main.dart` 與測試）都編譯過。
 Expected: PASS、No issues found。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/reader_feature_dependencies.dart app/lib/main.dart app/test/support
@@ -228,7 +228,7 @@ Column(
 
 內容少時貼合內容高度，內容多時最高到 85% 螢幕並可捲動。不要用 `Expanded`（短內容也會撐滿），也不要放沒有 `shrinkWrap` 的 `ListView`（高度無限會丟例外）。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `dictionary_lookup_sheet_test.dart`（用 `pumpLocalizedWidget` 比照其他 widget test；`response` 直接傳 `Future.value(...)`）：
 - `等待中顯示載入指示`（用永不完成的 `Completer.future`）。
@@ -247,20 +247,20 @@ Column(
 - `E-Ink 模式：選中分段有邊框、頁面上找不到 AnimatedXxx 類 widget`（至少斷言 `find.byType(AnimatedSwitcher)` 與 `AnimatedContainer` 為空）。
 - `show() 只呼叫一次 service.lookup`（用計數的 fake）。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/widgets/dictionary_lookup_sheet_test.dart`
 Expected: FAIL（找不到檔案）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 先加 ARB 並 `flutter gen-l10n`，再寫 widget。`SegmentedButton` 的 `selected` 用分段的 `providerId`。切換只呼叫 `setState`，不重新查詢。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2。Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/widgets/dictionary_lookup_sheet.dart app/lib/l10n app/test/screens/widgets
@@ -280,7 +280,7 @@ git commit -m "feat(epic-63): Issue 4 字典查詢面板"
 - 新增 `_handleLookupPressed(String text)`：用 `_lookupSheetOpen` 旗標擋重複點擊；`await DictionaryLookupSheet.show(...)`；回來後在 `finally` 把旗標還原（不呼叫 `setState`，除非 `mounted`）。
 - EPUB 端 `AnnotationToolbar(... onLookupPressed: () => _handleLookupPressed(selection.text))`；PDF 端不傳。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 `reader_screen_test.dart` 新增 `group('Epic 63 Issue 4：查字典')`，沿用 5005 行附近「複製」案例的 pump 與 `onSelectionChanged` 寫法：
 - `流式 EPUB 選字後工具列有查字典按鈕`。
@@ -293,21 +293,21 @@ git commit -m "feat(epic-63): Issue 4 字典查詢面板"
 - `PDF 選取：工具列沒有查字典按鈕`（沿用該檔 PDF 選取案例的寫法）。
 - `面板開著時移除 ReaderScreen 不丟例外`。
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "Epic 63 Issue 4"`
 Expected: FAIL。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 用 `widget.dependencies.dictionaryService` 取服務（`reader_screen.dart:128` 的欄位名稱）。`isEinkMode` 用 `widget.isEinkMode`。`onOpenSettings` 傳 `null`。
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run: 同 Step 2，再跑 `flutter test test/screens/annotation_toolbar_test.dart test/screens/widgets/dictionary_lookup_sheet_test.dart`。
 Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -320,7 +320,7 @@ git commit -m "feat(epic-63): Issue 4 閱讀器接上字典查詢面板"
 
 **Files:** 無新增。
 
-- [ ] **Step 1: 靜態檢查**
+- [x] **Step 1: 靜態檢查**
 
 在 `app/` 執行：
 ```bash
@@ -330,12 +330,12 @@ node tool/check_integration_keys.js
 ```
 Expected: 三者皆乾淨。
 
-- [ ] **Step 2: 完整測試（整張計畫唯一一次）**
+- [x] **Step 2: 完整測試（整張計畫唯一一次）**
 
 Run: `flutter test`
 Expected: All tests passed。
 
-- [ ] **Step 3: 回歸確認**
+- [x] **Step 3: 回歸確認**
 
 - `app/lib/` 沒有 `main.js` 變更：`git diff main -- app/android` 無輸出。
 - 主資料庫版本仍為 28：`git diff main -- app/lib/library` 無輸出。
@@ -350,7 +350,7 @@ Expected: All tests passed。
 5. E-Ink 模式：面板無動畫，選中分段有邊框。
 6. 開 FXL 書與 CBZ，長按沒有工具列。
 
-- [ ] **Step 5: 更新文件並 Commit**
+- [x] **Step 5: 更新文件並 Commit**
 
 把 `issues.md` Issue 4 狀態改成 `in-review`；`docs/epics/epic-63-dictionary-lookup/plans/plan-issue-4.md` 的 Step 全部勾選。
 
