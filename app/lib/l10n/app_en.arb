@@ -648,5 +648,18 @@
   "statsClearAllSuccess": "All reading stats cleared",
   "statsWeekdayMon": "Mon",
   "statsWeekdayWed": "Wed",
-  "statsWeekdayFri": "Fri"
+  "statsWeekdayFri": "Fri",
+  "dictionaryLookupTitle": "Look up",
+  "dictionaryLookupInvalidSelection": "The selection contains punctuation. Please select again.",
+  "dictionaryLookupTooLong": "The selection is too long. Please shorten it and try again.",
+  "dictionaryLookupNoDictionary": "No dictionaries imported yet",
+  "dictionaryLookupNoMatchingDictionary": "No dictionary applies to this text",
+  "dictionaryLookupNotFound": "No entry found",
+  "dictionaryLookupOnlineDisabled": "Online lookup is off",
+  "dictionaryLookupFailed": "This dictionary failed to look up. Please try again later, or check this dictionary in dictionary settings.",
+  "dictionaryLookupOpenSettings": "Dictionary settings",
+  "dictionaryLookupLoading": "Looking up…",
+  "dictionaryLookupSegmentNotFound": " (None)",
+  "dictionaryLookupSegmentSkipped": " (Skipped)",
+  "dictionaryLookupSegmentFailed": " (Failed)"
 }

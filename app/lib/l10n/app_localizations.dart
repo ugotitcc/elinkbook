@@ -4000,6 +4000,84 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'五'**
   String get statsWeekdayFri;
+
+  /// 字典查詢面板的標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'查字典'**
+  String get dictionaryLookupTitle;
+
+  /// 選取文字含有標點（例如一次選了整句）時，字典面板的提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選取內容含有標點，請重新選取'**
+  String get dictionaryLookupInvalidSelection;
+
+  /// 選取範圍超過單詞長度上限時，字典面板的提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選取範圍太長，請縮短後再查'**
+  String get dictionaryLookupTooLong;
+
+  /// 字典面板：一本啟用中的字典都沒有
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未匯入字典'**
+  String get dictionaryLookupNoDictionary;
+
+  /// 字典面板：有字典，但沒有語言方向符合這段文字的字典（例如只有英文字典卻選了中文）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'沒有適用於這段文字的字典'**
+  String get dictionaryLookupNoMatchingDictionary;
+
+  /// 字典面板：這本字典沒有這個詞
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'查無此詞'**
+  String get dictionaryLookupNotFound;
+
+  /// 字典面板：這個線上字典分段因為線上查詢設定關閉而略過
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'線上查詢已關閉'**
+  String get dictionaryLookupOnlineDisabled;
+
+  /// 字典面板：這本字典查詢時發生錯誤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。'**
+  String get dictionaryLookupFailed;
+
+  /// 字典面板：開啟字典設定畫面的連結文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'前往字典設定'**
+  String get dictionaryLookupOpenSettings;
+
+  /// 字典面板：查詢進行中的文字（E-Ink 模式以文字取代旋轉指示）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'查詢中…'**
+  String get dictionaryLookupLoading;
+
+  /// 字典面板分段標籤的狀態後綴：查無此詞
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'（無）'**
+  String get dictionaryLookupSegmentNotFound;
+
+  /// 字典面板分段標籤的狀態後綴：略過（例如線上查詢已關閉）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'（略過）'**
+  String get dictionaryLookupSegmentSkipped;
+
+  /// 字典面板分段標籤的狀態後綴：查詢失敗
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'（失敗）'**
+  String get dictionaryLookupSegmentFailed;
 }
 
 class _AppLocalizationsDelegate

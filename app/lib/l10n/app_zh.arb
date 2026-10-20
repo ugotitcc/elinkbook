@@ -648,5 +648,18 @@
   "statsClearAllSuccess": "已清除全部閱讀統計",
   "statsWeekdayMon": "一",
   "statsWeekdayWed": "三",
-  "statsWeekdayFri": "五"
+  "statsWeekdayFri": "五",
+  "dictionaryLookupTitle": "查字典",
+  "dictionaryLookupInvalidSelection": "選取內容含有標點，請重新選取",
+  "dictionaryLookupTooLong": "選取範圍太長，請縮短後再查",
+  "dictionaryLookupNoDictionary": "尚未匯入字典",
+  "dictionaryLookupNoMatchingDictionary": "沒有適用於這段文字的字典",
+  "dictionaryLookupNotFound": "查無此詞",
+  "dictionaryLookupOnlineDisabled": "線上查詢已關閉",
+  "dictionaryLookupFailed": "這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。",
+  "dictionaryLookupOpenSettings": "前往字典設定",
+  "dictionaryLookupLoading": "查詢中…",
+  "dictionaryLookupSegmentNotFound": "（無）",
+  "dictionaryLookupSegmentSkipped": "（略過）",
+  "dictionaryLookupSegmentFailed": "（失敗）"
 }

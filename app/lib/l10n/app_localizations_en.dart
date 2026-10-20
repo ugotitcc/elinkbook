@@ -2345,4 +2345,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statsWeekdayFri => 'Fri';
+
+  @override
+  String get dictionaryLookupTitle => 'Look up';
+
+  @override
+  String get dictionaryLookupInvalidSelection =>
+      'The selection contains punctuation. Please select again.';
+
+  @override
+  String get dictionaryLookupTooLong =>
+      'The selection is too long. Please shorten it and try again.';
+
+  @override
+  String get dictionaryLookupNoDictionary => 'No dictionaries imported yet';
+
+  @override
+  String get dictionaryLookupNoMatchingDictionary =>
+      'No dictionary applies to this text';
+
+  @override
+  String get dictionaryLookupNotFound => 'No entry found';
+
+  @override
+  String get dictionaryLookupOnlineDisabled => 'Online lookup is off';
+
+  @override
+  String get dictionaryLookupFailed =>
+      'This dictionary failed to look up. Please try again later, or check this dictionary in dictionary settings.';
+
+  @override
+  String get dictionaryLookupOpenSettings => 'Dictionary settings';
+
+  @override
+  String get dictionaryLookupLoading => 'Looking up…';
+
+  @override
+  String get dictionaryLookupSegmentNotFound => ' (None)';
+
+  @override
+  String get dictionaryLookupSegmentSkipped => ' (Skipped)';
+
+  @override
+  String get dictionaryLookupSegmentFailed => ' (Failed)';
 }
