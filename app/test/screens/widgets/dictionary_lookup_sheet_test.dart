@@ -6,11 +6,23 @@ import 'package:elinkbook/dictionary/models/dictionary_entry.dart';
 import 'package:elinkbook/dictionary/models/lookup_request.dart';
 import 'package:elinkbook/dictionary/models/lookup_result.dart';
 import 'package:elinkbook/screens/widgets/dictionary_lookup_sheet.dart';
+import 'package:elinkbook/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_dictionary_service.dart';
 import '../../support/pump_localized_widget.dart';
+
+/// 捕捉 Navigator 實際推入的 Route，用來檢查面板的遮罩顏色
+/// （比照 `eb_sheet_shell_test.dart` 的既有手法）。
+class _RecordingNavigatorObserver extends NavigatorObserver {
+  Route<dynamic>? lastPushedRoute;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    lastPushedRoute = route;
+  }
+}
 
 const _failedMessage =
     '這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。';
@@ -315,6 +327,45 @@ void main() {
   });
 
   group('詞條內容', () {
+    testWidgets('面板顯示這次查詢的詞', (tester) async {
+      await _pumpSheet(
+        tester,
+        response: Future.value(
+          _completed([
+            _outcome('a', entries: [_entry('詞條甲')]),
+          ]),
+        ),
+      );
+
+      expect(
+        find.byKey(const Key('dictionary_lookup_query_word')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const Key('dictionary_lookup_query_word')))
+            .data,
+        '詞',
+      );
+    });
+
+    testWidgets('查無此詞時仍顯示查詢的詞', (tester) async {
+      await _pumpSheet(
+        tester,
+        response: Future.value(
+          _completed([_outcome('a', status: OutcomeStatus.notFound)]),
+        ),
+      );
+
+      expect(
+        tester
+            .widget<Text>(find.byKey(const Key('dictionary_lookup_query_word')))
+            .data,
+        '詞',
+      );
+      expect(find.text('查無此詞'), findsOneWidget);
+    });
+
     testWidgets('拼音 pin1 yin1 顯示為 pīn yīn', (tester) async {
       await _pumpSheet(
         tester,
@@ -392,7 +443,7 @@ void main() {
       expect(find.text('查詢中…'), findsNothing);
     });
 
-    testWidgets('選中分段有加粗邊框，且頁面沒有 AnimatedXxx', (tester) async {
+    testWidgets('選中分段有加粗邊框，未選中的沒有，且頁面沒有 AnimatedXxx', (tester) async {
       await _pumpSheet(
         tester,
         isEinkMode: true,
@@ -404,12 +455,16 @@ void main() {
         ),
       );
 
-      final segmented = tester.widget<SegmentedButton<String>>(
-        find.byKey(const Key('dictionary_lookup_segments')),
+      final selected = tester.widget<Container>(
+        find.byKey(const Key('dictionary_lookup_segment_selected_a')),
       );
-      final side = segmented.style!.side!.resolve({WidgetState.selected});
-      expect(side, isNotNull);
-      expect(side!.width, 2);
+      final border = (selected.decoration! as BoxDecoration).border! as Border;
+      expect(border.top.width, 2);
+      expect(border.left.width, 2);
+      expect(
+        find.byKey(const Key('dictionary_lookup_segment_selected_b')),
+        findsNothing,
+      );
 
       expect(find.byType(AnimatedSwitcher), findsNothing);
       expect(find.byType(AnimatedContainer), findsNothing);
@@ -492,6 +547,61 @@ void main() {
   });
 
   group('show()', () {
+    Future<_RecordingNavigatorObserver> openSheet(
+      WidgetTester tester, {
+      bool isEinkMode = false,
+      AppTheme theme = AppTheme.light,
+    }) async {
+      final observer = _RecordingNavigatorObserver();
+      final service = FakeDictionaryService(
+        response: _completed([
+          _outcome('a', entries: [_entry('詞條甲')]),
+        ]),
+      );
+      await pumpLocalizedWidget(
+        tester,
+        Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => DictionaryLookupSheet.show(
+              context,
+              selectedText: '詞',
+              service: service,
+              isEinkMode: isEinkMode,
+            ),
+            child: const Text('open'),
+          ),
+        ),
+        isEinkMode: isEinkMode,
+        theme: theme,
+        navigatorObservers: [observer],
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      return observer;
+    }
+
+    testWidgets('E-Ink 模式遮罩透明，不把書頁壓黑', (tester) async {
+      final observer = await openSheet(tester, isEinkMode: true);
+
+      expect(observer.lastPushedRoute, isA<ModalBottomSheetRoute<void>>());
+      final route = observer.lastPushedRoute! as ModalBottomSheetRoute<void>;
+      expect(route.barrierColor, Colors.transparent);
+    });
+
+    testWidgets('深色主題遮罩透明，不把書頁壓黑', (tester) async {
+      final observer = await openSheet(tester, theme: AppTheme.dark);
+
+      final route = observer.lastPushedRoute! as ModalBottomSheetRoute<void>;
+      expect(route.barrierColor, Colors.transparent);
+    });
+
+    testWidgets('一般模式維持預設遮罩', (tester) async {
+      final observer = await openSheet(tester);
+
+      final route = observer.lastPushedRoute! as ModalBottomSheetRoute<void>;
+      expect(route.barrierColor, Colors.black54);
+    });
+
     testWidgets('只呼叫一次 service.lookup', (tester) async {
       final service = FakeDictionaryService(
         response: _completed([

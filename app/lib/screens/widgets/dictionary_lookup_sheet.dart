@@ -38,6 +38,10 @@ class DictionaryLookupSheet extends StatefulWidget {
   final VoidCallback? onOpenSettings;
 
   /// 開啟面板。查詢在這裡發一次，`builder` 重建不會重查。
+  ///
+  /// 遮罩比照 `ReaderScreen._showThemedModalBottomSheet` 的既有規則：深色
+  /// 主題（書頁背景已很深，再疊 54% 黑遮罩會逼近全黑）與 E-Ink（面板不
+  /// 撐滿時，上方露出的遮罩在電子紙上會抖動成一片黑）都改為完全透明。
   static Future<void> show(
     BuildContext context, {
     required String selectedText,
@@ -46,11 +50,16 @@ class DictionaryLookupSheet extends StatefulWidget {
     VoidCallback? onOpenSettings,
   }) async {
     final title = AppLocalizations.of(context)!.dictionaryLookupTitle;
+    final barrierColor = isEinkMode ||
+            Theme.of(context).brightness == Brightness.dark
+        ? Colors.transparent
+        : null;
     final response = service.lookup(selectedText);
     await EBSheetShell.show<void>(
       context,
       title: title,
       isEinkMode: isEinkMode,
+      barrierColor: barrierColor,
       builder: (context) => DictionaryLookupSheet(
         selectedText: selectedText,
         response: response,
@@ -74,22 +83,49 @@ class _DictionaryLookupSheetState extends State<DictionaryLookupSheet> {
     return FutureBuilder<DictionaryLookupResponse>(
       future: widget.response,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return _loading(l10n);
-        }
-        if (snapshot.hasError) {
-          return _message(
-            const Key('dictionary_lookup_failed'),
-            l10n.dictionaryLookupFailed,
-          );
-        }
-        final response = snapshot.data!;
-        if (response is LookupRejected) {
-          return _rejected(response.problem, l10n);
-        }
-        return _completed(response as LookupCompleted, l10n);
+        // 查詢的詞固定釘在面板頂端（不分狀態）：使用者從選取叫出面板後，
+        // 捲動詞條或來回切換分段時仍看得到自己在查哪個詞（spec §3.6）。
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _queryWordHeader(),
+            Flexible(child: _content(snapshot, l10n)),
+          ],
+        );
       },
     );
+  }
+
+  Widget _queryWordHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Text(
+        widget.selectedText,
+        key: const Key('dictionary_lookup_query_word'),
+        style: Theme.of(context).textTheme.titleLarge,
+      ),
+    );
+  }
+
+  Widget _content(
+    AsyncSnapshot<DictionaryLookupResponse> snapshot,
+    AppLocalizations l10n,
+  ) {
+    if (snapshot.connectionState != ConnectionState.done) {
+      return _loading(l10n);
+    }
+    if (snapshot.hasError) {
+      return _message(
+        const Key('dictionary_lookup_failed'),
+        l10n.dictionaryLookupFailed,
+      );
+    }
+    final response = snapshot.data!;
+    if (response is LookupRejected) {
+      return _rejected(response.problem, l10n);
+    }
+    return _completed(response as LookupCompleted, l10n);
   }
 
   Widget _loading(AppLocalizations l10n) {
@@ -184,24 +220,43 @@ class _DictionaryLookupSheetState extends State<DictionaryLookupSheet> {
           for (final outcome in outcomes)
             ButtonSegment<String>(
               value: outcome.providerId,
-              label: Text(_segmentLabel(outcome, l10n)),
+              label: _segmentLabelWidget(
+                outcome,
+                isSelected: outcome.providerId == selectedId,
+                l10n: l10n,
+                colorScheme: colorScheme,
+              ),
             ),
         ],
         selected: {selectedId},
         onSelectionChanged: (selection) {
           setState(() => _selectedProviderId = selection.first);
         },
-        // E-Ink 用邊框標示選中（陰影在電子紙上會殘影）。
-        style: widget.isEinkMode
-            ? ButtonStyle(
-                side: WidgetStateProperty.resolveWith(
-                  (states) => states.contains(WidgetState.selected)
-                      ? BorderSide(color: colorScheme.outline, width: 2)
-                      : null,
-                ),
-              )
-            : null,
+        // 這裡刻意不設 `style.side`：`SegmentedButton` 只把它套在外框與
+        // 分段之間的垂直分隔線，選中分段自己的邊框不會被畫出來（【final
+        // review I-2】）。E-Ink 的「選中」改由標籤外框呈現。
       ),
+    );
+  }
+
+  /// E-Ink 用邊框標示選中的分段（陰影在電子紙上會殘影）；其餘情況回傳純
+  /// 文字，讓 `SegmentedButton` 維持自身預設的選中樣式。
+  Widget _segmentLabelWidget(
+    ProviderOutcome outcome, {
+    required bool isSelected,
+    required AppLocalizations l10n,
+    required ColorScheme colorScheme,
+  }) {
+    final label = Text(_segmentLabel(outcome, l10n));
+    if (!widget.isEinkMode || !isSelected) return label;
+    return Container(
+      key: Key('dictionary_lookup_segment_selected_${outcome.providerId}'),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        border: Border.all(color: colorScheme.outline, width: 2),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: label,
     );
   }
 
