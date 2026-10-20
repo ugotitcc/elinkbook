@@ -2302,6 +2302,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dictionaryLookupSegmentFailed => '（失敗）';
 
   @override
+  String get dictionaryLookupBack => '返回上一個詞條';
+
+  @override
+  String get dictionaryLookupLinkNotFound => '找不到這個詞條';
+
+  @override
   String get dictionarySettingsTitle => '字典';
 
   @override
@@ -4798,6 +4804,12 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get dictionaryLookupSegmentFailed => '（失败）';
 
   @override
+  String get dictionaryLookupBack => '返回上一个词条';
+
+  @override
+  String get dictionaryLookupLinkNotFound => '找不到这个词条';
+
+  @override
   String get dictionarySettingsTitle => '字典';
 
   @override
@@ -7292,6 +7304,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dictionaryLookupSegmentFailed => '（失敗）';
+
+  @override
+  String get dictionaryLookupBack => '返回上一個詞條';
+
+  @override
+  String get dictionaryLookupLinkNotFound => '找不到這個詞條';
 
   @override
   String get dictionarySettingsTitle => '字典';

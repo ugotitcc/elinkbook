@@ -3103,6 +3103,14 @@
   "@dictionaryLookupSegmentFailed": {
     "description": "字典面板分段標籤的狀態後綴：查詢失敗"
   },
+  "dictionaryLookupBack": "返回上一個詞條",
+  "@dictionaryLookupBack": {
+    "description": "MDX 詞條內跳轉後，查詢詞標題列左側返回鈕的 tooltip"
+  },
+  "dictionaryLookupLinkNotFound": "找不到這個詞條",
+  "@dictionaryLookupLinkNotFound": {
+    "description": "MDX 詞條內的交叉參照連結查無詞條時，面板頂端的提示"
+  },
   "dictionarySettingsTitle": "字典",
   "@dictionarySettingsTitle": {
     "description": "字典設定畫面的標題"

@@ -663,6 +663,8 @@
   "dictionaryLookupSegmentNotFound": "（无）",
   "dictionaryLookupSegmentSkipped": "（略过）",
   "dictionaryLookupSegmentFailed": "（失败）",
+  "dictionaryLookupBack": "返回上一个词条",
+  "dictionaryLookupLinkNotFound": "找不到这个词条",
   "dictionarySettingsTitle": "字典",
   "dictionaryDirectionEnToZh": "英→繁中",
   "dictionaryDirectionZhToEn": "中→英",

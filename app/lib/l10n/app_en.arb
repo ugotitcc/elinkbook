@@ -663,6 +663,8 @@
   "dictionaryLookupSegmentNotFound": " (None)",
   "dictionaryLookupSegmentSkipped": " (Skipped)",
   "dictionaryLookupSegmentFailed": " (Failed)",
+  "dictionaryLookupBack": "Back to the previous entry",
+  "dictionaryLookupLinkNotFound": "No entry found for this link",
   "dictionarySettingsTitle": "Dictionaries",
   "dictionaryDirectionEnToZh": "EN → Trad. Chinese",
   "dictionaryDirectionZhToEn": "Chinese → EN",

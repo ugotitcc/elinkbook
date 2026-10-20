@@ -4085,6 +4085,18 @@ abstract class AppLocalizations {
   /// **'（失敗）'**
   String get dictionaryLookupSegmentFailed;
 
+  /// MDX 詞條內跳轉後，查詢詞標題列左側返回鈕的 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'返回上一個詞條'**
+  String get dictionaryLookupBack;
+
+  /// MDX 詞條內的交叉參照連結查無詞條時，面板頂端的提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'找不到這個詞條'**
+  String get dictionaryLookupLinkNotFound;
+
   /// 字典設定畫面的標題
   ///
   /// In zh_TW, this message translates to:

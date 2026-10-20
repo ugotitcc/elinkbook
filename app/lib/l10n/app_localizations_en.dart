@@ -2393,6 +2393,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dictionaryLookupSegmentFailed => ' (Failed)';
 
   @override
+  String get dictionaryLookupBack => 'Back to the previous entry';
+
+  @override
+  String get dictionaryLookupLinkNotFound => 'No entry found for this link';
+
+  @override
   String get dictionarySettingsTitle => 'Dictionaries';
 
   @override
