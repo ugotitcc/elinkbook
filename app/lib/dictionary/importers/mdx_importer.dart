@@ -165,13 +165,26 @@ class MdxImporter implements DictionaryImporter {
         request.filePath,
         request.fileName,
       );
+      // 這次匯入提供的檔名（不分大小寫），沿用舊附屬檔時以它們為準。
+      final supplied = <String>{p.basename(request.fileName).toLowerCase()};
       for (final companion in request.companions) {
         final lower = companion.name.toLowerCase();
         if (!lower.endsWith('.mdd') && !lower.endsWith('.css')) continue;
+        supplied.add(p.basename(companion.name).toLowerCase());
         await _files.copyInto(
           workId,
           // `copyInto` 只用 path 與 name；size 是給 UI 顯示的，這裡不需要。
           PickedFile(path: companion.path, name: companion.name, size: 0),
+        );
+      }
+
+      // 取代時沿用舊目錄事後補的附屬檔（複製，不搬移：舊目錄要留到換目錄為止）。
+      if (replacing) {
+        await _carryOverCompanions(
+          fromId: sourceId,
+          toId: workId,
+          oldMainName: p.basename(existing.storagePath),
+          supplied: supplied,
         );
       }
 
@@ -249,6 +262,28 @@ class MdxImporter implements DictionaryImporter {
       throw const DictionaryImportException('unreadableFile');
     } finally {
       if (!committed) await _cleanup(workId);
+    }
+  }
+
+  /// 把舊目錄的附屬檔（`.mdd`、`.css`，不含舊主檔）複製進暫存目錄。
+  ///
+  /// 這次匯入已提供同名（不分大小寫）的檔案時以新的為準，不覆蓋。複製走
+  /// [DictionaryFileStore.copyInto]，與其他附屬檔使用同一套檔名消毒。
+  Future<void> _carryOverCompanions({
+    required String fromId,
+    required String toId,
+    required String oldMainName,
+    required Set<String> supplied,
+  }) async {
+    final oldDir = _files.dirFor(fromId);
+    for (final name in await _files.listFiles(fromId)) {
+      final lower = name.toLowerCase();
+      if (name == oldMainName || supplied.contains(lower)) continue;
+      if (!lower.endsWith('.mdd') && !lower.endsWith('.css')) continue;
+      await _files.copyInto(
+        toId,
+        PickedFile(path: p.join(oldDir.path, name), name: name, size: 0),
+      );
     }
   }
 

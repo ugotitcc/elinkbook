@@ -328,7 +328,7 @@ void main() {
     expect(evicted, [id]);
   });
 
-  test('取代匯入成功：舊檔被換掉，沒選到的附屬檔不保留，無暫存／備份目錄', () async {
+  test('取代匯入成功：新檔取代主檔，沿用的附屬檔不丟，無暫存／備份目錄', () async {
     final id = await importOriginal();
 
     final replaced = await run(
@@ -341,13 +341,127 @@ void main() {
     expect(replaced.sourceId, id);
     expect(
       await files.listFiles(id),
-      unorderedEquals(['html.mdx', 'ghychyz.css']),
-      reason: '這次沒選 mdd，舊的 mdd 不保留',
+      unorderedEquals(['html.mdx', 'mdd.mdd', 'ghychyz.css']),
+      reason: '這次沒選 mdd，舊目錄的 mdd 沿用',
     );
     final source = (await store.getSource(id))!;
     expect(File(source.storagePath).existsSync(), isTrue);
     expect(source.storagePath, startsWith(files.dirFor(id).path));
     expect(await subdirs(files.root), hasLength(1));
+  });
+
+  /// 舊字典目錄：html.mdx、mdd.mdd，加上事後用「新增附屬檔案」補的 ghychyz.css。
+  Future<String> importOriginalWithLateCss() async {
+    final id = await importOriginal();
+    await files.copyInto(
+      id,
+      PickedFile(
+        path: await copyFixture('ghychyz.css'),
+        name: 'ghychyz.css',
+        size: 0,
+      ),
+    );
+    return id;
+  }
+
+  test('取代匯入沒帶任何附屬檔：舊目錄的 .css 與 .mdd 沿用（round 4）', () async {
+    final id = await importOriginalWithLateCss();
+
+    await run(await againFile(), fileName: 'html.mdx', replace: true);
+
+    expect(
+      await files.listFiles(id),
+      unorderedEquals(['html.mdx', 'mdd.mdd', 'ghychyz.css']),
+    );
+    final source = (await store.getSource(id))!;
+    // 重新抽樣看得到沿用過來的檔案：沒有缺 css。
+    expect(source.referencedCss, ['ghychyz.css']);
+    final manager = DictionaryManager(
+      store: DictionaryStoreProvider(() async => store),
+      files: files,
+      importerFactories: const [],
+    );
+    expect((await manager.list()).single.missingCss, isEmpty);
+    expect(await subdirs(files.root), hasLength(1));
+  });
+
+  test('取代匯入帶同名 .css（大小寫不同）：新內容勝出，其他舊附屬檔沿用（round 4）', () async {
+    final id = await importOriginalWithLateCss();
+    final newCss = File('${tmp.path}/new.css')..writeAsStringSync('NEW-CSS');
+
+    await run(
+      await againFile(),
+      fileName: 'html.mdx',
+      replace: true,
+      companions: [(path: newCss.path, name: 'GHYCHYZ.CSS')],
+    );
+
+    final names = await files.listFiles(id);
+    expect(
+      names.map((n) => n.toLowerCase()),
+      unorderedEquals(['html.mdx', 'mdd.mdd', 'ghychyz.css']),
+      reason: '同名（不分大小寫）只留一份',
+    );
+    final css = names.firstWhere((n) => n.toLowerCase() == 'ghychyz.css');
+    expect(File('${files.dirFor(id).path}/$css').readAsStringSync(), 'NEW-CSS');
+  });
+
+  Future<void> expectLateCssDictionaryIntact(String id) async {
+    expect(await store.getSource(id), isNotNull);
+    expect(
+      await files.listFiles(id),
+      unorderedEquals(['html.mdx', 'mdd.mdd', 'ghychyz.css']),
+    );
+    expect(await subdirs(files.root), hasLength(1), reason: '只剩正式目錄');
+  }
+
+  test('沿用舊附屬檔時複製失敗：舊目錄與舊列原封不動，無暫存目錄（round 4）', () async {
+    final id = await importOriginalWithLateCss();
+    final oldDir = files.dirFor(id).path;
+    importer = MdxImporter(
+      store: store,
+      files: _SpyFileStore(
+        files.root,
+        onCopied: () {},
+        onCopiedFile: (file) {
+          if (file.path.startsWith(oldDir)) {
+            throw const FileSystemException('模擬沿用時磁碟已滿');
+          }
+        },
+      ),
+    );
+
+    await expectLater(
+      start(await againFile(), fileName: 'html.mdx', replace: true).toList(),
+      throwsA(isA<DictionaryImportException>()),
+    );
+    await expectLateCssDictionaryIntact(id);
+  });
+
+  test('沿用舊附屬檔之後被取消：舊目錄與舊列原封不動，無暫存目錄（round 4）', () async {
+    final id = await importOriginalWithLateCss();
+    final oldDir = files.dirFor(id).path;
+    final cancel = CancelToken();
+    importer = MdxImporter(
+      store: store,
+      files: _SpyFileStore(
+        files.root,
+        onCopied: () {},
+        onCopiedFile: (file) {
+          if (file.path.startsWith(oldDir)) cancel.cancel();
+        },
+      ),
+    );
+
+    final events = await start(
+      await againFile(),
+      fileName: 'html.mdx',
+      replace: true,
+      cancel: cancel,
+    ).toList();
+
+    expect(events.last.stage, ImportStage.cancelled);
+    await expectLateCssDictionaryIntact(id);
   });
 
   test(
@@ -436,11 +550,14 @@ int _indexOf(List<int> haystack, List<int> needle) {
 /// 在每次 `copyInto` 完成後呼叫 [onCopied]，用來在「暫存檔已落地」之後
 /// 注入取消或失敗。
 class _SpyFileStore extends DictionaryFileStore {
-  _SpyFileStore(super.root, {required this.onCopied}) {
+  _SpyFileStore(super.root, {required this.onCopied, this.onCopiedFile}) {
     copiedCount = 0;
   }
 
   final void Function() onCopied;
+
+  /// 需要知道複製的是哪個檔案時使用（例如區分沿用舊附屬檔的複製）。
+  final void Function(PickedFile file)? onCopiedFile;
 
   static int copiedCount = 0;
 
@@ -450,6 +567,7 @@ class _SpyFileStore extends DictionaryFileStore {
     copiedCount++;
     // 此時主檔已搬進暫存目錄，附屬檔也已複製。
     expect(await dirFor(sourceId).exists(), isTrue);
+    onCopiedFile?.call(file);
     onCopied();
   }
 }
