@@ -11,6 +11,8 @@ class _FakeProvider implements DictionaryProvider {
   @override
   String get id => 'fake';
 
+  String get displayName => '假字典';
+
   @override
   Future<ProviderOutcome> lookup(LookupRequest request) async => ProviderOutcome(
         providerId: id,
