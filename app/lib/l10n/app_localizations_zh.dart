@@ -2287,6 +2287,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dictionaryLookupFailed => '這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。';
 
   @override
+  String get dictionaryLookupOnlineFailed =>
+      '萌典暫時查不到：連線逾時或服務沒有回應。請確認網路後再查一次，或改用本機字典。';
+
+  @override
+  String get dictionaryLookupOnlineUnparseable =>
+      '無法解析萌典的回應：回傳的格式本 App 看不懂。請稍後再試；一直發生時請到意見反應回報。';
+
+  @override
   String get dictionaryLookupOpenSettings => '前往字典設定';
 
   @override
@@ -4806,6 +4814,14 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get dictionaryLookupFailed => '这本字典查询失败。请稍后重试，或到字典设置确认这本字典。';
 
   @override
+  String get dictionaryLookupOnlineFailed =>
+      '萌典暂时查不到：连接超时或服务没有回应。请确认网络后再查一次，或改用本地字典。';
+
+  @override
+  String get dictionaryLookupOnlineUnparseable =>
+      '无法解析萌典的回应：返回的格式本 App 看不懂。请稍后重试；一直发生时请到意见反馈回报。';
+
+  @override
   String get dictionaryLookupOpenSettings => '前往字典设置';
 
   @override
@@ -7323,6 +7339,14 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dictionaryLookupFailed => '這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。';
+
+  @override
+  String get dictionaryLookupOnlineFailed =>
+      '萌典暫時查不到：連線逾時或服務沒有回應。請確認網路後再查一次，或改用本機字典。';
+
+  @override
+  String get dictionaryLookupOnlineUnparseable =>
+      '無法解析萌典的回應：回傳的格式本 App 看不懂。請稍後再試；一直發生時請到意見反應回報。';
 
   @override
   String get dictionaryLookupOpenSettings => '前往字典設定';

@@ -658,6 +658,8 @@
   "dictionaryLookupNotFound": "查无此词",
   "dictionaryLookupOnlineDisabled": "在线查询已关闭",
   "dictionaryLookupFailed": "这本字典查询失败。请稍后重试，或到字典设置确认这本字典。",
+  "dictionaryLookupOnlineFailed": "萌典暂时查不到：连接超时或服务没有回应。请确认网络后再查一次，或改用本地字典。",
+  "dictionaryLookupOnlineUnparseable": "无法解析萌典的回应：返回的格式本 App 看不懂。请稍后重试；一直发生时请到意见反馈回报。",
   "dictionaryLookupOpenSettings": "前往字典设置",
   "dictionaryLookupLoading": "查询中…",
   "dictionaryLookupSegmentNotFound": "（无）",

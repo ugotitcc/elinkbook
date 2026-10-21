@@ -5,6 +5,7 @@ import 'package:elinkbook/dictionary/lookup_text_normalizer.dart';
 import 'package:elinkbook/dictionary/models/dictionary_entry.dart';
 import 'package:elinkbook/dictionary/models/lookup_request.dart';
 import 'package:elinkbook/dictionary/models/lookup_result.dart';
+import 'package:elinkbook/dictionary/providers/moedict_provider.dart';
 import 'package:elinkbook/screens/widgets/dictionary_lookup_sheet.dart';
 import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
 import 'package:elinkbook/screens/widgets/mdx_entry_view.dart';
@@ -98,6 +99,7 @@ ProviderOutcome _outcome(
   OutcomeStatus status = OutcomeStatus.found,
   List<DictionaryEntry> entries = const [],
   String? attribution,
+  String? errorCode,
 }) =>
     ProviderOutcome(
       providerId: id,
@@ -105,6 +107,7 @@ ProviderOutcome _outcome(
       status: status,
       entries: entries,
       attribution: attribution,
+      errorCode: errorCode,
     );
 
 LookupCompleted _completed(
@@ -351,6 +354,127 @@ void main() {
 
       expect(find.byKey(const Key('dictionary_lookup_failed')), findsOneWidget);
       expect(find.text(_failedMessage), findsOneWidget);
+    });
+  });
+
+  group('線上分段的訊息', () {
+    const onlineFailed =
+        '萌典暫時查不到：連線逾時或服務沒有回應。請確認網路後再查一次，或改用本機字典。';
+    const onlineUnparseable =
+        '無法解析萌典的回應：回傳的格式本 App 看不懂。請稍後再試；一直發生時請到意見反應回報。';
+
+    testWidgets('unparseable 顯示無法解析訊息', (tester) async {
+      await _pumpSheet(
+        tester,
+        response: Future.value(
+          _completed([
+            _outcome(
+              'moedict',
+              name: '萌典',
+              status: OutcomeStatus.failed,
+              errorCode: 'unparseable',
+            ),
+          ]),
+        ),
+      );
+
+      expect(find.text(onlineUnparseable), findsOneWidget);
+      expect(find.text(_failedMessage), findsNothing);
+    });
+
+    testWidgets('offline 顯示線上失敗訊息', (tester) async {
+      await _pumpSheet(
+        tester,
+        response: Future.value(
+          _completed([
+            _outcome(
+              'moedict',
+              name: '萌典',
+              status: OutcomeStatus.failed,
+              errorCode: 'offline',
+            ),
+          ]),
+        ),
+      );
+
+      expect(find.text(onlineFailed), findsOneWidget);
+      expect(find.byKey(const Key('dictionary_lookup_failed')), findsOneWidget);
+    });
+
+    testWidgets('timeout、network、httpError、insecureUrl 都顯示線上失敗訊息',
+        (tester) async {
+      for (final code in ['timeout', 'network', 'httpError', 'insecureUrl']) {
+        await _pumpSheet(
+          tester,
+          response: Future.value(
+            _completed([
+              _outcome(
+                'moedict',
+                name: '萌典',
+                status: OutcomeStatus.failed,
+                errorCode: code,
+              ),
+            ]),
+          ),
+        );
+
+        expect(find.text(onlineFailed), findsOneWidget, reason: code);
+      }
+    });
+
+    testWidgets('localLookupFailed 仍顯示原本訊息', (tester) async {
+      await _pumpSheet(
+        tester,
+        response: Future.value(
+          _completed([
+            _outcome(
+              'a',
+              status: OutcomeStatus.failed,
+              errorCode: 'localLookupFailed',
+            ),
+          ]),
+        ),
+      );
+
+      expect(find.text(_failedMessage), findsOneWidget);
+      expect(find.text(onlineFailed), findsNothing);
+    });
+
+    testWidgets('萌典 found 分段的頁尾顯示來源標示', (tester) async {
+      await _pumpSheet(
+        tester,
+        response: Future.value(
+          _completed([
+            _outcome(
+              'moedict',
+              name: '萌典',
+              entries: [_entry('相濡以沫')],
+              attribution: MoedictProvider.attribution,
+            ),
+          ]),
+        ),
+      );
+
+      expect(find.textContaining('CC BY-ND 3.0 TW'), findsOneWidget);
+      expect(find.textContaining(MoedictProvider.attribution), findsOneWidget);
+    });
+
+    testWidgets('線上 skipped 且 onOpenSettings 存在時顯示設定連結', (tester) async {
+      var tapped = 0;
+      await _pumpSheet(
+        tester,
+        onOpenSettings: () => tapped++,
+        response: Future.value(
+          _completed([
+            _outcome('moedict', name: '萌典', status: OutcomeStatus.skipped),
+          ]),
+        ),
+      );
+
+      final link = find.byKey(const Key('dictionary_lookup_open_settings'));
+      expect(link, findsOneWidget);
+      await tester.tap(link);
+      expect(tapped, 1);
     });
   });
 

@@ -520,10 +520,24 @@ class _DictionaryLookupSheetState extends State<DictionaryLookupSheet> {
       case OutcomeStatus.failed:
         return _message(
           const Key('dictionary_lookup_failed'),
-          l10n.dictionaryLookupFailed,
+          _failedMessageFor(outcome.errorCode, l10n),
         );
     }
   }
+
+  /// 線上分段的失敗訊息依錯誤碼細分（spec §3.7 三段式）；本機或其他未知
+  /// 錯誤維持原本的通用訊息。
+  String _failedMessageFor(String? errorCode, AppLocalizations l10n) =>
+      switch (errorCode) {
+        'unparseable' => l10n.dictionaryLookupOnlineUnparseable,
+        'timeout' ||
+        'network' ||
+        'httpError' ||
+        'offline' ||
+        'insecureUrl' =>
+          l10n.dictionaryLookupOnlineFailed,
+        _ => l10n.dictionaryLookupFailed,
+      };
 
   Widget _entryCard(int index, DictionaryEntry entry) {
     final theme = Theme.of(context);

@@ -3083,6 +3083,14 @@
   "@dictionaryLookupFailed": {
     "description": "字典面板：這本字典查詢時發生錯誤"
   },
+  "dictionaryLookupOnlineFailed": "萌典暫時查不到：連線逾時或服務沒有回應。請確認網路後再查一次，或改用本機字典。",
+  "@dictionaryLookupOnlineFailed": {
+    "description": "字典面板：萌典分段查詢失敗（逾時、斷線、HTTP 錯誤、非 https 或離線）"
+  },
+  "dictionaryLookupOnlineUnparseable": "無法解析萌典的回應：回傳的格式本 App 看不懂。請稍後再試；一直發生時請到意見反應回報。",
+  "@dictionaryLookupOnlineUnparseable": {
+    "description": "字典面板：萌典回應格式無法解析"
+  },
   "dictionaryLookupOpenSettings": "前往字典設定",
   "@dictionaryLookupOpenSettings": {
     "description": "字典面板：開啟字典設定畫面的連結文字"

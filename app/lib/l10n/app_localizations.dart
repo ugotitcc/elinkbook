@@ -4055,6 +4055,18 @@ abstract class AppLocalizations {
   /// **'這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。'**
   String get dictionaryLookupFailed;
 
+  /// 字典面板：萌典分段查詢失敗（逾時、斷線、HTTP 錯誤、非 https 或離線）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'萌典暫時查不到：連線逾時或服務沒有回應。請確認網路後再查一次，或改用本機字典。'**
+  String get dictionaryLookupOnlineFailed;
+
+  /// 字典面板：萌典回應格式無法解析
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法解析萌典的回應：回傳的格式本 App 看不懂。請稍後再試；一直發生時請到意見反應回報。'**
+  String get dictionaryLookupOnlineUnparseable;
+
   /// 字典面板：開啟字典設定畫面的連結文字
   ///
   /// In zh_TW, this message translates to:

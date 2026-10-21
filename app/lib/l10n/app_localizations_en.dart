@@ -2378,6 +2378,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'This dictionary failed to look up. Please try again later, or check this dictionary in dictionary settings.';
 
   @override
+  String get dictionaryLookupOnlineFailed =>
+      'Moedict is unavailable right now: the connection timed out or the service did not respond. Check your network and try again, or use a local dictionary.';
+
+  @override
+  String get dictionaryLookupOnlineUnparseable =>
+      'Could not read Moedict\'s response: the format is not one this app understands. Please try again later; if it keeps happening, report it through feedback.';
+
+  @override
   String get dictionaryLookupOpenSettings => 'Dictionary settings';
 
   @override
