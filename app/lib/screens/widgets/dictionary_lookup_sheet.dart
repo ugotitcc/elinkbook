@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../dictionary/dictionary_service.dart';
 import '../../dictionary/lookup_text_normalizer.dart';
+import '../../dictionary/mdx_resource.dart';
+import '../../dictionary/mdx_theme_override.dart';
 import '../../dictionary/models/dictionary_entry.dart';
 import '../../dictionary/models/lookup_result.dart';
 import '../../dictionary/pinyin_tone_marks.dart';
@@ -32,6 +34,7 @@ class DictionaryLookupSheet extends StatefulWidget {
     this.onOpenSettings,
     this.mdxEntryViewBuilder,
     this.lookupInSource,
+    this.readMdxResource,
   });
 
   /// 這次查詢的選取文字（原字串；去標點與長度判斷由服務負責）。
@@ -53,6 +56,10 @@ class DictionaryLookupSheet extends StatefulWidget {
   /// `null` 時詞條連結不會有反應。
   final Future<List<DictionaryEntry>> Function(String sourceId, String word)?
       lookupInSource;
+
+  /// 讀取 MDD 資源（例如圖片）的回呼；`null` 時詞條資源不會載入。
+  final Future<MdxResource?> Function(String sourceId, String url)?
+      readMdxResource;
 
   /// 開啟面板。查詢在這裡發一次，`builder` 重建不會重查。
   ///
@@ -86,9 +93,10 @@ class DictionaryLookupSheet extends StatefulWidget {
         response: response,
         isEinkMode: isEinkMode,
         onOpenSettings: onOpenSettings,
-        // 面板只需要 service 的這一個方法；`show` 組好再傳入，呼叫端不必
-        // 重複接線（Issue 6a Task 7）。
+        // 面板只需要 service 的這兩個方法；`show` 組好再傳入，呼叫端不必
+        // 重複接線（Issue 6a Task 7 / Issue 6b Task 5）。
         lookupInSource: service.lookupInSource,
+        readMdxResource: service.readMdxResource,
       ),
     );
   }
@@ -286,6 +294,7 @@ class _DictionaryLookupSheetState extends State<DictionaryLookupSheet> {
 
     final html = _mdxFrame?.html ?? _mergeEntryHtml(outcome.entries);
     final builder = widget.mdxEntryViewBuilder ?? _buildDefaultMdxEntryView;
+    final readResource = widget.readMdxResource;
     // 以分段的 providerId 當 key：切換到另一本 MDX 時丟棄舊 WebView、建立新的
     // （spec §3.6），不沿用舊的捲動位置與導覽歷史。
     return KeyedSubtree(
@@ -299,6 +308,14 @@ class _DictionaryLookupSheetState extends State<DictionaryLookupSheet> {
             sourceId: outcome.providerId,
             word: word,
             currentHtml: html,
+          ),
+          resolveResource: readResource == null
+              ? null
+              : (url) => readResource(outcome.providerId, url),
+          colors: mdxColorsFor(
+            isEinkMode: widget.isEinkMode,
+            brightness: Theme.of(context).brightness,
+            scheme: Theme.of(context).colorScheme,
           ),
         ),
       ),
