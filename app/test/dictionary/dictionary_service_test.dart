@@ -1,15 +1,25 @@
 // app/test/dictionary/dictionary_service_test.dart
+import 'dart:async';
+
 import 'package:elinkbook/dictionary/dictionary_service.dart';
+import 'package:elinkbook/dictionary/dictionary_settings_repository.dart';
 import 'package:elinkbook/dictionary/lookup_text_normalizer.dart';
 import 'package:elinkbook/dictionary/models/dictionary_entry.dart';
 import 'package:elinkbook/dictionary/models/dictionary_source.dart';
+import 'package:elinkbook/dictionary/models/lookup_request.dart';
 import 'package:elinkbook/dictionary/models/lookup_result.dart';
+import 'package:elinkbook/dictionary/providers/moedict_provider.dart';
+import 'package:elinkbook/dictionary/providers/online_dictionary_provider.dart';
 import 'package:elinkbook/dictionary/storage/dictionary_database.dart';
 import 'package:elinkbook/dictionary/storage/dictionary_store.dart';
 import 'package:elinkbook/dictionary/storage/dictionary_store_provider.dart';
 import 'package:elinkbook/dictionary/storage/mdx_reader_pool.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import '../support/fake_dictionary_settings_repository.dart';
 
 /// 計數 lookup 次數；[failingSourceId] 指定的來源會丟例外。
 class _TestStore extends DictionaryStore {
@@ -52,6 +62,46 @@ DictionaryEntry _entry(String sourceId, String headword) => DictionaryEntry(
       body: '釋義 $headword',
       bodyKind: EntryBodyKind.plainText,
     );
+
+/// 計數用的線上 provider：可指定回應、丟例外或永遠不完成（證明沒被呼叫）。
+class _CountingOnlineProvider implements OnlineDictionaryProvider {
+  final List<LookupRequest> requests = [];
+  ProviderOutcome? outcome;
+  Object? error;
+  Completer<ProviderOutcome>? hang;
+
+  @override
+  String get id => 'moedict';
+
+  @override
+  String get displayName => '萌典';
+
+  @override
+  Future<ProviderOutcome> lookup(LookupRequest request) {
+    requests.add(request);
+    final pending = hang;
+    if (pending != null) return pending.future;
+    final failure = error;
+    if (failure != null) return Future.error(failure);
+    return Future.value(
+      outcome ??
+          ProviderOutcome(
+            providerId: id,
+            displayName: displayName,
+            status: OutcomeStatus.found,
+            entries: [
+              DictionaryEntry(
+                sourceId: id,
+                headword: request.word,
+                body: '線上釋義',
+                bodyKind: EntryBodyKind.plainText,
+              ),
+            ],
+            attribution: '來源標示',
+          ),
+    );
+  }
+}
 
 void main() {
   late Database db;
@@ -400,6 +450,241 @@ void main() {
 
       expect(await service.lookupInSource('en1', 'zzzz'), isEmpty);
       expect(await service.lookupInSource('missing', 'apple'), isEmpty);
+    });
+  });
+
+  group('線上分段', () {
+    DateTime consent() => DateTime.utc(2026, 10, 21, 8);
+
+    DictionaryService withOnline({
+      required OnlineDictionaryProvider online,
+      DictionarySettingsRepository? settings,
+      Future<bool> Function()? isNetworkAvailable,
+    }) =>
+        DictionaryService(
+          store: store,
+          onlineProvider: online,
+          settings: settings ?? FakeDictionarySettingsRepository(),
+          isNetworkAvailable: isNetworkAvailable,
+        );
+
+    FakeDictionarySettingsRepository notConsented() =>
+        FakeDictionarySettingsRepository();
+
+    FakeDictionarySettingsRepository consented() =>
+        FakeDictionarySettingsRepository(consentAt: consent());
+
+    test('未同意：純中文選字回 skipped，網路呼叫 0', () async {
+      await addSource('zh1', 'zh', ['相濡以沫']);
+      final online = _CountingOnlineProvider();
+      final settings = notConsented();
+
+      final result = completed(
+        await withOnline(online: online, settings: settings).lookup('相濡以沫'),
+      );
+
+      expect(result.outcomes.map((o) => o.providerId), ['zh1', 'moedict']);
+      expect(result.outcomes.last.status, OutcomeStatus.skipped);
+      expect(result.outcomes.last.displayName, '萌典');
+      expect(online.requests, isEmpty);
+      expect(settings.loadCount, 1);
+    });
+
+    test('未同意：中英混合選字同樣 skipped，呼叫 0', () async {
+      await addSource('zh1', 'zh', ['iPhone 手機']);
+      final online = _CountingOnlineProvider();
+
+      final result = completed(
+        await withOnline(online: online).lookup('iPhone 手機'),
+      );
+
+      expect(result.outcomes.last.providerId, 'moedict');
+      expect(result.outcomes.last.status, OutcomeStatus.skipped);
+      expect(online.requests, isEmpty);
+    });
+
+    test('未同意：純拉丁選字沒有線上分段', () async {
+      await addSource('en1', 'en', ['run']);
+      final online = _CountingOnlineProvider();
+      final settings = notConsented();
+
+      final result = completed(
+        await withOnline(online: online, settings: settings).lookup('run'),
+      );
+
+      expect(result.outcomes.map((o) => o.providerId), ['en1']);
+      expect(online.requests, isEmpty);
+      expect(settings.loadCount, 0);
+    });
+
+    test('已同意：線上分段排在本機之後', () async {
+      await addSource('zh0', 'zh', ['相濡以沫'], priority: 0);
+      await addSource('zh1', 'zh', ['相濡以沫'], priority: 1);
+      final online = _CountingOnlineProvider();
+
+      final result = completed(
+        await withOnline(online: online, settings: consented())
+            .lookup('相濡以沫'),
+      );
+
+      expect(result.outcomes.map((o) => o.providerId), [
+        'zh0',
+        'zh1',
+        'moedict',
+      ]);
+      expect(result.outcomes.last.status, OutcomeStatus.found);
+    });
+
+    test('送出的是 normalizeLookupSelection 後的字串', () async {
+      final online = _CountingOnlineProvider();
+      final service = withOnline(online: online, settings: consented());
+
+      await service.lookup('「相濡以沫」');
+      expect(online.requests.single.word, '相濡以沫');
+
+      await service.lookup('ran');
+      expect(online.requests, hasLength(1));
+    });
+
+    test('不送候選詞：中文選字時線上 provider 只被呼叫一次', () async {
+      await addSource('zh1', 'zh', ['相濡以沫']);
+      final online = _CountingOnlineProvider();
+
+      await withOnline(online: online, settings: consented()).lookup('相濡以沫');
+
+      expect(online.requests, hasLength(1));
+      expect(online.requests.single.word, '相濡以沫');
+    });
+
+    test('撤回後立即生效：不需要重建 service', () async {
+      await addSource('zh1', 'zh', ['相濡以沫']);
+      final online = _CountingOnlineProvider();
+      final settings = consented();
+      final service = withOnline(online: online, settings: settings);
+
+      await service.lookup('相濡以沫');
+      expect(online.requests, hasLength(1));
+
+      settings.consentAt = null;
+      final result = completed(await service.lookup('相濡以沫'));
+
+      expect(online.requests, hasLength(1));
+      expect(result.outcomes.last.status, OutcomeStatus.skipped);
+    });
+
+    test('離線：不呼叫 provider，回 failed／offline 且不拖慢本機', () async {
+      await addSource('zh1', 'zh', ['相濡以沫']);
+      final online = _CountingOnlineProvider()..hang = Completer();
+      final watch = Stopwatch()..start();
+
+      final result = completed(
+        await withOnline(
+          online: online,
+          settings: consented(),
+          isNetworkAvailable: () async => false,
+        ).lookup('相濡以沫'),
+      );
+      watch.stop();
+
+      expect(result.outcomes.first.status, OutcomeStatus.found);
+      expect(result.outcomes.last.status, OutcomeStatus.failed);
+      expect(result.outcomes.last.errorCode, 'offline');
+      expect(online.requests, isEmpty);
+      expect(watch.elapsed, lessThan(const Duration(seconds: 1)));
+    });
+
+    test('本機與線上互不影響：線上丟例外', () async {
+      await addSource('zh1', 'zh', ['相濡以沫']);
+      final online = _CountingOnlineProvider()..error = StateError('壞了');
+
+      final result = completed(
+        await withOnline(online: online, settings: consented())
+            .lookup('相濡以沫'),
+      );
+
+      expect(result.outcomes.first.status, OutcomeStatus.found);
+      expect(result.outcomes.last.status, OutcomeStatus.failed);
+      expect(result.outcomes.last.errorCode, 'network');
+    });
+
+    test('本機與線上互不影響：本機丟例外', () async {
+      await addSource('zh1', 'zh', ['相濡以沫']);
+      store.failingSourceId = 'zh1';
+
+      final result = completed(
+        await withOnline(
+          online: _CountingOnlineProvider(),
+          settings: consented(),
+        ).lookup('相濡以沫'),
+      );
+
+      expect(result.outcomes.first.status, OutcomeStatus.failed);
+      expect(result.outcomes.last.status, OutcomeStatus.found);
+    });
+
+    test('選取無效時不查線上', () async {
+      final online = _CountingOnlineProvider();
+      final settings = consented();
+
+      final response = await withOnline(online: online, settings: settings)
+          .lookup('天地，玄黃');
+
+      expect(response, isA<LookupRejected>());
+      expect(online.requests, isEmpty);
+      expect(settings.loadCount, 0);
+    });
+
+    test('沒有本機字典但已同意：outcomes 只有 moedict', () async {
+      final response = await withOnline(
+        online: _CountingOnlineProvider(),
+        settings: consented(),
+      ).lookup('相濡以沫');
+
+      final completedResponse = response as LookupCompleted;
+      expect(completedResponse.hasEnabledDictionary, isFalse);
+      expect(
+        completedResponse.result.outcomes.map((o) => o.providerId),
+        ['moedict'],
+      );
+    });
+
+    test('沒有本機字典且未同意：不附 skipped', () async {
+      final online = _CountingOnlineProvider();
+
+      final response = await withOnline(online: online).lookup('相濡以沫');
+
+      final completedResponse = response as LookupCompleted;
+      expect(completedResponse.hasEnabledDictionary, isFalse);
+      expect(completedResponse.result.outcomes, isEmpty);
+      expect(online.requests, isEmpty);
+    });
+
+    test('有本機字典且未同意：附 skipped', () async {
+      await addSource('zh1', 'zh', ['相濡以沫']);
+
+      final result = completed(
+        await withOnline(online: _CountingOnlineProvider()).lookup('相濡以沫'),
+      );
+
+      expect(result.outcomes.last.providerId, 'moedict');
+      expect(result.outcomes.last.status, OutcomeStatus.skipped);
+    });
+
+    test('未同意：真 MoedictProvider 不發出任何 HTTP 請求', () async {
+      var calls = 0;
+      final client = MockClient((_) async {
+        calls++;
+        return http.Response('{}', 200);
+      });
+      final service = DictionaryService(
+        store: store,
+        onlineProvider: MoedictProvider(client: client),
+        settings: notConsented(),
+      );
+
+      await service.lookup('相濡以沫');
+
+      expect(calls, 0);
     });
   });
 }
