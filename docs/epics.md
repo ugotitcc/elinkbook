@@ -71,7 +71,7 @@
 | 61 | `epic-60-crop-mode-lost-after-cancel` （缺陷）PDF 手動裁切按 ✕ 取消後，版面設定「裁切」分頁的模式按鈕全部沒有反白 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 62 | `epic-61-startup-black-screen` （缺陷）安裝新版後第一次啟動黑屏：`main()` 的 `AudioService.init` 例外未接住，`runApp` 未執行 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 63 | `epic-62-google-oauth-verification` Google OAuth 驗證回覆（隱私權政策補 Google 使用者資料與 Limited Use 聲明；Drive 登出時向 Google 撤銷 refresh token） | 🟡 開發中 (Active) | 已合併（PR #329）；待部署網站、重錄 Demo 影片並回覆 Google 審查信，完成後歸檔 |
-| 64 | `epic-63-dictionary-lookup` 字典查詢（離線匯入 JSON/CSV／MDX＋可選線上查詞，英→繁中、中→英、中→中） | 🟡 開發中 (Active) | Issue 1 已合併（PR #343）；Issue 2 已合併（PR #344）；Issue 3 已合併（PR #345）；Issue 4 已合併（PR #347）；Issue 5 已合併（PR #349）；Issue 6a 已合併（PR #350）；下一步 Issue 7、6b（6b 需人類驗收） |
+| 64 | `epic-63-dictionary-lookup` 字典查詢（離線匯入 JSON/CSV／MDX＋可選線上查詞，英→繁中、中→英、中→中） | 🟡 開發中 (Active) | Issue 1 已合併（PR #343）；Issue 2 已合併（PR #344）；Issue 3 已合併（PR #345）；Issue 4 已合併（PR #347）；Issue 5 已合併（PR #349）；Issue 6a 已合併（PR #350）；Issue 7 已合併（PR #351）；下一步 Issue 6b（需人類驗收）、Issue 8 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。

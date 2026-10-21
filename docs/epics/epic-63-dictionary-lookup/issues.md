@@ -213,7 +213,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 ## Issue 7：線上查詞（萌典）、同意對話框、隱私更新
 
-**Status:** ready-for-agent
+**Status:** done（2026-10-21：已合併，PR #351）
 
 **依賴：** Issue 3、Issue 4、Issue 5。
 
