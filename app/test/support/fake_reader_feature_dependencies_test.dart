@@ -1,10 +1,12 @@
 import 'package:elinkbook/dictionary/dictionary_manager.dart';
 import 'package:elinkbook/dictionary/dictionary_service.dart';
+import 'package:elinkbook/dictionary/dictionary_settings_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_bookmarks_repository.dart';
 import 'fake_dictionary_manager.dart';
 import 'fake_dictionary_service.dart';
+import 'fake_dictionary_settings_repository.dart';
 import 'fake_full_text_search_settings_repository.dart';
 import 'fake_reader_feature_dependencies.dart';
 
@@ -95,6 +97,25 @@ void main() {
       final deps = fakeReaderFeatureDependencies(dictionaryManager: manager);
 
       expect(deps.dictionaryManager, same(manager));
+    });
+
+    test('預設帶有 DictionarySettingsRepository，且每次呼叫是新實例', () {
+      final a = fakeReaderFeatureDependencies();
+      final b = fakeReaderFeatureDependencies();
+
+      expect(a.dictionarySettings, isA<DictionarySettingsRepository>());
+      expect(a.dictionarySettings, isA<FakeDictionarySettingsRepository>());
+      expect(a.dictionarySettings, isNot(same(b.dictionarySettings)));
+    });
+
+    test('可覆寫 dictionarySettings', () {
+      final settings = FakeDictionarySettingsRepository(
+        consentAt: DateTime.utc(2026, 10, 21),
+      );
+
+      final deps = fakeReaderFeatureDependencies(dictionarySettings: settings);
+
+      expect(deps.dictionarySettings, same(settings));
     });
   });
 }

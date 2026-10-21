@@ -1,4 +1,5 @@
 // app/lib/dictionary/dictionary_service.dart
+import 'dictionary_settings_repository.dart';
 import 'lookup_text_normalizer.dart';
 import 'models/dictionary_entry.dart';
 import 'models/dictionary_source.dart';
@@ -6,6 +7,7 @@ import 'models/lookup_request.dart';
 import 'models/lookup_result.dart';
 import 'providers/local_dictionary_provider.dart';
 import 'providers/mdx_dictionary_provider.dart';
+import 'providers/online_dictionary_provider.dart';
 import 'storage/dictionary_store.dart';
 import 'storage/dictionary_store_provider.dart';
 import 'storage/mdx_reader_pool.dart';
@@ -39,11 +41,19 @@ final class LookupCompleted extends DictionaryLookupResponse {
 }
 
 /// 查詢入口：選字處理 → 依文字類型挑字典 → 逐本查詢並組裝結果。
-/// 目前只查本機字典（線上字典是後續 Issue）。
+/// 本機字典依優先順序在前，線上來源（若已同意且開啟）最後一段。
 class DictionaryService {
-  DictionaryService({required DictionaryStore store, MdxReaderPool? mdxPool})
-      : _store = DictionaryStoreProvider(() async => store),
-        _mdxPool = mdxPool;
+  DictionaryService({
+    required DictionaryStore store,
+    MdxReaderPool? mdxPool,
+    OnlineDictionaryProvider? onlineProvider,
+    DictionarySettingsRepository? settings,
+    Future<bool> Function()? isNetworkAvailable,
+  })  : _store = DictionaryStoreProvider(() async => store),
+        _mdxPool = mdxPool,
+        _onlineProvider = onlineProvider,
+        _settings = settings,
+        _isNetworkAvailable = isNetworkAvailable;
 
   /// 延遲開啟：第一次 [lookup]（且選取有效）才呼叫 [openStore]，之後重用。
   /// 開啟失敗時 [lookup] 丟出例外、不快取失敗，下一次查詢會重試。
@@ -51,20 +61,41 @@ class DictionaryService {
   DictionaryService.lazy(
     Future<DictionaryStore> Function() openStore, {
     MdxReaderPool? mdxPool,
+    OnlineDictionaryProvider? onlineProvider,
+    DictionarySettingsRepository? settings,
+    Future<bool> Function()? isNetworkAvailable,
   })  : _store = DictionaryStoreProvider(openStore),
-        _mdxPool = mdxPool;
+        _mdxPool = mdxPool,
+        _onlineProvider = onlineProvider,
+        _settings = settings,
+        _isNetworkAvailable = isNetworkAvailable;
 
   /// 與其他服務（例如字典管理）共用同一個 [provider]，資料庫只開一次。
   DictionaryService.fromProvider(
     DictionaryStoreProvider provider, {
     MdxReaderPool? mdxPool,
+    OnlineDictionaryProvider? onlineProvider,
+    DictionarySettingsRepository? settings,
+    Future<bool> Function()? isNetworkAvailable,
   })  : _store = provider,
-        _mdxPool = mdxPool;
+        _mdxPool = mdxPool,
+        _onlineProvider = onlineProvider,
+        _settings = settings,
+        _isNetworkAvailable = isNetworkAvailable;
 
   final DictionaryStoreProvider _store;
 
   /// MDX 來源的 reader 池；未提供時 MDX 分段一律回 `failed`。
   final MdxReaderPool? _mdxPool;
+
+  /// 線上查詞來源；與 [_settings] 任一為 `null` 時完全不做線上查詢。
+  final OnlineDictionaryProvider? _onlineProvider;
+
+  /// 線上同意狀態；每次查詢都重讀，撤回立即生效。
+  final DictionarySettingsRepository? _settings;
+
+  /// `null` 視為有網路；只擋「完全沒有連線」，其餘交給 provider 逾時。
+  final Future<bool> Function()? _isNetworkAvailable;
 
   Future<DictionaryLookupResponse> lookup(String selectedText) async {
     final selection = normalizeLookupSelection(selectedText);
@@ -74,6 +105,8 @@ class DictionaryService {
     selection as NormalizedSelection;
 
     final request = LookupRequest(selection.text);
+    // 先啟動線上查詢（不 await），與本機查詢同時進行。
+    final online = _startOnlineLookup(selection.charType, request);
     final allowed = _allowedLanguages(selection.charType);
     final store = await _store();
     // 不快取來源清單：設定畫面改動後立即生效。
@@ -83,10 +116,84 @@ class DictionaryService {
       if (!allowed.contains(_primaryLang(source.sourceLang))) continue;
       outcomes.add(await _lookupOne(store, source, request));
     }
+    if (online != null) {
+      final outcome = await online;
+      // 沒有本機字典又未同意時不附 skipped，面板才會顯示「尚未匯入字典」。
+      final suppress = outcome.status == OutcomeStatus.skipped && sources.isEmpty;
+      if (!suppress) outcomes.add(outcome);
+    }
     return LookupCompleted(
       result: LookupResult(request: request, outcomes: outcomes),
       hasEnabledDictionary: sources.isNotEmpty,
     );
+  }
+
+  /// 只有含 CJK 的選字才查線上；純拉丁選字沒有線上分段。
+  Future<ProviderOutcome>? _startOnlineLookup(
+    SelectionCharType charType,
+    LookupRequest request,
+  ) {
+    final provider = _onlineProvider;
+    final settings = _settings;
+    if (charType == SelectionCharType.latin ||
+        provider == null ||
+        settings == null) {
+      return null;
+    }
+    return _lookupOnline(provider, settings, request);
+  }
+
+  /// 永不丟例外：任何失敗都變成一個分段狀態。
+  Future<ProviderOutcome> _lookupOnline(
+    OnlineDictionaryProvider provider,
+    DictionarySettingsRepository settings,
+    LookupRequest request,
+  ) async {
+    // 每次重新讀：撤回同意後下一次查詢立即生效。
+    DateTime? consentAt;
+    try {
+      consentAt = await settings.loadOnlineConsentAt();
+    } catch (_) {
+      // 讀不到同意狀態就當作未同意：寧可不連網，也不讓整個查詢丟例外。
+      consentAt = null;
+    }
+    if (consentAt == null) {
+      return ProviderOutcome(
+        providerId: provider.id,
+        displayName: provider.displayName,
+        status: OutcomeStatus.skipped,
+      );
+    }
+
+    final isNetworkAvailable = _isNetworkAvailable;
+    if (isNetworkAvailable != null) {
+      bool available;
+      try {
+        available = await isNetworkAvailable();
+      } catch (_) {
+        // 連線狀態判斷失敗時不擋，交給 provider 的逾時。
+        available = true;
+      }
+      if (!available) {
+        return ProviderOutcome(
+          providerId: provider.id,
+          displayName: provider.displayName,
+          status: OutcomeStatus.failed,
+          errorCode: 'offline',
+        );
+      }
+    }
+
+    try {
+      return await provider.lookup(request);
+    } catch (_) {
+      return ProviderOutcome(
+        providerId: provider.id,
+        displayName: provider.displayName,
+        status: OutcomeStatus.failed,
+        errorCode: 'network',
+      );
+    }
   }
 
   /// 交叉參照用：只查指定來源，不做語言（方向）過濾。

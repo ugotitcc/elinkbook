@@ -2378,6 +2378,46 @@ class AppLocalizationsEn extends AppLocalizations {
       'This dictionary failed to look up. Please try again later, or check this dictionary in dictionary settings.';
 
   @override
+  String get dictionaryLookupOnlineFailed =>
+      'Moedict is unavailable right now: the connection timed out or the service did not respond. Check your network and try again, or use a local dictionary.';
+
+  @override
+  String get dictionaryLookupOnlineUnparseable =>
+      'Could not read Moedict\'s response: the format is not one this app understands. Please try again later; if it keeps happening, report it through feedback.';
+
+  @override
+  String get dictionaryOnlineConsentTitle => 'Turn on online lookup?';
+
+  @override
+  String get dictionaryOnlineConsentBody =>
+      'What is sent: the single word you selected.\nSent to: Moedict (www.moedict.tw), run by a third party.\nNot sent: book title, surrounding text, reading position, or device identifiers.\nYou can turn this off anytime in Settings → Reading → Dictionaries.';
+
+  @override
+  String get dictionaryOnlineConsentAgree => 'Agree and turn on';
+
+  @override
+  String get dictionaryOnlineConsentCancel => 'Cancel';
+
+  @override
+  String get dictionaryOnlineSectionTitle => 'Online lookup (Moedict)';
+
+  @override
+  String get dictionaryOnlineSectionDescription =>
+      'When on, looking up a Chinese word adds a \"Moedict\" section. Only the word you selected is sent to www.moedict.tw. The book title, surrounding text, position and device identifiers are never sent. Off by default.';
+
+  @override
+  String get dictionaryOnlineStatusOff => 'Not agreed yet';
+
+  @override
+  String dictionaryOnlineStatusOn(String date) {
+    return 'Agreed on $date';
+  }
+
+  @override
+  String get dictionaryOnlineSaveFailed =>
+      'Could not save the online lookup setting: writing to device storage failed. Check the free space and try again.';
+
+  @override
   String get dictionaryLookupOpenSettings => 'Dictionary settings';
 
   @override

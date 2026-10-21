@@ -4055,6 +4055,72 @@ abstract class AppLocalizations {
   /// **'這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。'**
   String get dictionaryLookupFailed;
 
+  /// 字典面板：萌典分段查詢失敗（逾時、斷線、HTTP 錯誤、非 https 或離線）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'萌典暫時查不到：連線逾時或服務沒有回應。請確認網路後再查一次，或改用本機字典。'**
+  String get dictionaryLookupOnlineFailed;
+
+  /// 字典面板：萌典回應格式無法解析
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法解析萌典的回應：回傳的格式本 App 看不懂。請稍後再試；一直發生時請到意見反應回報。'**
+  String get dictionaryLookupOnlineUnparseable;
+
+  /// 線上查詞同意對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'開啟線上查詞？'**
+  String get dictionaryOnlineConsentTitle;
+
+  /// 線上查詞同意對話框內容：四行說明送出什麼、送到哪裡、不送什麼、如何關閉
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'會送出：你選取的那個詞。\n送到：萌典（www.moedict.tw），由第三方營運。\n不會送出：書名、前後文、位置、裝置識別。\n你可以隨時在「設定 → 閱讀 → 字典」關閉。'**
+  String get dictionaryOnlineConsentBody;
+
+  /// 線上查詞同意對話框：同意並開啟線上查詞
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'同意並開啟'**
+  String get dictionaryOnlineConsentAgree;
+
+  /// 線上查詞同意對話框：取消，維持關閉
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'取消'**
+  String get dictionaryOnlineConsentCancel;
+
+  /// 字典設定畫面：線上查詞區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'線上查詞（萌典）'**
+  String get dictionaryOnlineSectionTitle;
+
+  /// 字典設定畫面：線上查詞區塊說明（送出什麼、預設關閉）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'開啟後，查中文詞時會多一個「萌典」分段。只會把你選取的那個詞送到 www.moedict.tw。不會送出書名、前後文、位置或裝置識別。預設關閉。'**
+  String get dictionaryOnlineSectionDescription;
+
+  /// 字典設定畫面：線上查詞尚未同意／已關閉
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未同意'**
+  String get dictionaryOnlineStatusOff;
+
+  /// 字典設定畫面：線上查詞已同意，顯示同意日期
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已於 {date} 同意'**
+  String dictionaryOnlineStatusOn(String date);
+
+  /// 字典設定畫面：線上查詞同意狀態儲存失敗（三段式：發生什麼、為什麼、怎麼辦）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法儲存線上查詞設定：裝置儲存空間寫入失敗。請確認剩餘空間後再試一次。'**
+  String get dictionaryOnlineSaveFailed;
+
   /// 字典面板：開啟字典設定畫面的連結文字
   ///
   /// In zh_TW, this message translates to:

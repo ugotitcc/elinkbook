@@ -269,6 +269,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                   MaterialPageRoute(
                     builder: (context) => DictionarySettingsScreen(
                       manager: widget.readerFeatures.dictionaryManager,
+                      settings: widget.readerFeatures.dictionarySettings,
                       isEinkMode: widget.appearance.isEinkMode,
                     ),
                   ),

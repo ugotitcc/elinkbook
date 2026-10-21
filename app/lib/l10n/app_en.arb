@@ -658,6 +658,24 @@
   "dictionaryLookupNotFound": "No entry found",
   "dictionaryLookupOnlineDisabled": "Online lookup is off",
   "dictionaryLookupFailed": "This dictionary failed to look up. Please try again later, or check this dictionary in dictionary settings.",
+  "dictionaryLookupOnlineFailed": "Moedict is unavailable right now: the connection timed out or the service did not respond. Check your network and try again, or use a local dictionary.",
+  "dictionaryLookupOnlineUnparseable": "Could not read Moedict's response: the format is not one this app understands. Please try again later; if it keeps happening, report it through feedback.",
+  "dictionaryOnlineConsentTitle": "Turn on online lookup?",
+  "dictionaryOnlineConsentBody": "What is sent: the single word you selected.\nSent to: Moedict (www.moedict.tw), run by a third party.\nNot sent: book title, surrounding text, reading position, or device identifiers.\nYou can turn this off anytime in Settings → Reading → Dictionaries.",
+  "dictionaryOnlineConsentAgree": "Agree and turn on",
+  "dictionaryOnlineConsentCancel": "Cancel",
+  "dictionaryOnlineSectionTitle": "Online lookup (Moedict)",
+  "dictionaryOnlineSectionDescription": "When on, looking up a Chinese word adds a \"Moedict\" section. Only the word you selected is sent to www.moedict.tw. The book title, surrounding text, position and device identifiers are never sent. Off by default.",
+  "dictionaryOnlineStatusOff": "Not agreed yet",
+  "dictionaryOnlineStatusOn": "Agreed on {date}",
+  "@dictionaryOnlineStatusOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "dictionaryOnlineSaveFailed": "Could not save the online lookup setting: writing to device storage failed. Check the free space and try again.",
   "dictionaryLookupOpenSettings": "Dictionary settings",
   "dictionaryLookupLoading": "Looking up…",
   "dictionaryLookupSegmentNotFound": " (None)",

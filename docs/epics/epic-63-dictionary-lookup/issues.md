@@ -258,3 +258,19 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 **驗收標準：** `spec.md` §9 驗收 1～39 全數成立；驗收 31（沒有取自 AGPL／GPL 專案的程式碼）由人類最終確認。
 
 **Blocked by：** Issue 1～7。
+
+---
+
+## 後續項目（Issue 7 實機測試發現，不屬於 Issue 7 範圍）
+
+兩項都在 Issue 4 起就存在，Issue 7 沒有動到相關程式。2026-10-21 在 WAVE E-Ink 機實測發現。
+
+1. **E-Ink 模式下查字典面板沒有外框。**
+   - 位置：`app/lib/screens/widgets/eb_sheet_shell.dart` 的外殼只有把手、標題、關閉鍵，沒有 E-Ink 邊框。
+   - 目前只有已選的分段有邊框（`dictionary_lookup_sheet.dart`）。
+   - 方向：E-Ink 時外殼加外框，不用陰影。
+2. **選字的圓點（系統選取控點）會一直畫在字典面板上。**
+   - 原因：控點由系統畫在最上層。`ReaderScreen._handleLookupPressed` 刻意不動選取狀態，好讓關面板後還能劃線。
+   - 方向：面板開啟時隱藏選取控點，關閉後還原；不可清掉選取範圍。
+
+另有一張 2026-10-21 16:46 的紅畫面截圖（字典設定拖曳排序：`No Material widget found`）。後續實測沒有再出現。

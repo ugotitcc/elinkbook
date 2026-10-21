@@ -2287,6 +2287,46 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dictionaryLookupFailed => '這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。';
 
   @override
+  String get dictionaryLookupOnlineFailed =>
+      '萌典暫時查不到：連線逾時或服務沒有回應。請確認網路後再查一次，或改用本機字典。';
+
+  @override
+  String get dictionaryLookupOnlineUnparseable =>
+      '無法解析萌典的回應：回傳的格式本 App 看不懂。請稍後再試；一直發生時請到意見反應回報。';
+
+  @override
+  String get dictionaryOnlineConsentTitle => '開啟線上查詞？';
+
+  @override
+  String get dictionaryOnlineConsentBody =>
+      '會送出：你選取的那個詞。\n送到：萌典（www.moedict.tw），由第三方營運。\n不會送出：書名、前後文、位置、裝置識別。\n你可以隨時在「設定 → 閱讀 → 字典」關閉。';
+
+  @override
+  String get dictionaryOnlineConsentAgree => '同意並開啟';
+
+  @override
+  String get dictionaryOnlineConsentCancel => '取消';
+
+  @override
+  String get dictionaryOnlineSectionTitle => '線上查詞（萌典）';
+
+  @override
+  String get dictionaryOnlineSectionDescription =>
+      '開啟後，查中文詞時會多一個「萌典」分段。只會把你選取的那個詞送到 www.moedict.tw。不會送出書名、前後文、位置或裝置識別。預設關閉。';
+
+  @override
+  String get dictionaryOnlineStatusOff => '尚未同意';
+
+  @override
+  String dictionaryOnlineStatusOn(String date) {
+    return '已於 $date 同意';
+  }
+
+  @override
+  String get dictionaryOnlineSaveFailed =>
+      '無法儲存線上查詞設定：裝置儲存空間寫入失敗。請確認剩餘空間後再試一次。';
+
+  @override
   String get dictionaryLookupOpenSettings => '前往字典設定';
 
   @override
@@ -4806,6 +4846,46 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get dictionaryLookupFailed => '这本字典查询失败。请稍后重试，或到字典设置确认这本字典。';
 
   @override
+  String get dictionaryLookupOnlineFailed =>
+      '萌典暂时查不到：连接超时或服务没有回应。请确认网络后再查一次，或改用本地字典。';
+
+  @override
+  String get dictionaryLookupOnlineUnparseable =>
+      '无法解析萌典的回应：返回的格式本 App 看不懂。请稍后重试；一直发生时请到意见反馈回报。';
+
+  @override
+  String get dictionaryOnlineConsentTitle => '开启在线查词？';
+
+  @override
+  String get dictionaryOnlineConsentBody =>
+      '会送出：你选中的那个词。\n送到：萌典（www.moedict.tw），由第三方运营。\n不会送出：书名、前后文、位置、设备识别。\n你可以随时在「设置 → 阅读 → 字典」关闭。';
+
+  @override
+  String get dictionaryOnlineConsentAgree => '同意并开启';
+
+  @override
+  String get dictionaryOnlineConsentCancel => '取消';
+
+  @override
+  String get dictionaryOnlineSectionTitle => '在线查词（萌典）';
+
+  @override
+  String get dictionaryOnlineSectionDescription =>
+      '开启后，查中文词时会多一个“萌典”分段。只会把你选取的那个词送到 www.moedict.tw。不会送出书名、前后文、位置或设备识别。默认关闭。';
+
+  @override
+  String get dictionaryOnlineStatusOff => '尚未同意';
+
+  @override
+  String dictionaryOnlineStatusOn(String date) {
+    return '已于 $date 同意';
+  }
+
+  @override
+  String get dictionaryOnlineSaveFailed =>
+      '无法保存在线查词设置：设备存储空间写入失败。请确认剩余空间后再试一次。';
+
+  @override
   String get dictionaryLookupOpenSettings => '前往字典设置';
 
   @override
@@ -7323,6 +7403,46 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dictionaryLookupFailed => '這本字典查詢失敗。請稍後再試，或到字典設定確認這本字典。';
+
+  @override
+  String get dictionaryLookupOnlineFailed =>
+      '萌典暫時查不到：連線逾時或服務沒有回應。請確認網路後再查一次，或改用本機字典。';
+
+  @override
+  String get dictionaryLookupOnlineUnparseable =>
+      '無法解析萌典的回應：回傳的格式本 App 看不懂。請稍後再試；一直發生時請到意見反應回報。';
+
+  @override
+  String get dictionaryOnlineConsentTitle => '開啟線上查詞？';
+
+  @override
+  String get dictionaryOnlineConsentBody =>
+      '會送出：你選取的那個詞。\n送到：萌典（www.moedict.tw），由第三方營運。\n不會送出：書名、前後文、位置、裝置識別。\n你可以隨時在「設定 → 閱讀 → 字典」關閉。';
+
+  @override
+  String get dictionaryOnlineConsentAgree => '同意並開啟';
+
+  @override
+  String get dictionaryOnlineConsentCancel => '取消';
+
+  @override
+  String get dictionaryOnlineSectionTitle => '線上查詞（萌典）';
+
+  @override
+  String get dictionaryOnlineSectionDescription =>
+      '開啟後，查中文詞時會多一個「萌典」分段。只會把你選取的那個詞送到 www.moedict.tw。不會送出書名、前後文、位置或裝置識別。預設關閉。';
+
+  @override
+  String get dictionaryOnlineStatusOff => '尚未同意';
+
+  @override
+  String dictionaryOnlineStatusOn(String date) {
+    return '已於 $date 同意';
+  }
+
+  @override
+  String get dictionaryOnlineSaveFailed =>
+      '無法儲存線上查詞設定：裝置儲存空間寫入失敗。請確認剩餘空間後再試一次。';
 
   @override
   String get dictionaryLookupOpenSettings => '前往字典設定';

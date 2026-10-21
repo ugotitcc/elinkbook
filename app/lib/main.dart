@@ -20,9 +20,11 @@ import 'downloads/download_queue_controller.dart';
 import 'dictionary/dictionary_file_store.dart';
 import 'dictionary/dictionary_manager.dart';
 import 'dictionary/dictionary_service.dart';
+import 'dictionary/dictionary_settings_repository.dart';
 import 'dictionary/importers/cedict_importer.dart';
 import 'dictionary/importers/json_csv_importer.dart';
 import 'dictionary/importers/mdx_importer.dart';
+import 'dictionary/providers/moedict_provider.dart';
 import 'dictionary/storage/dictionary_database.dart';
 import 'dictionary/storage/dictionary_store.dart';
 import 'dictionary/storage/dictionary_store_provider.dart';
@@ -145,9 +147,22 @@ Future<void> main() async {
   // epic-63 Issue 6a：MDX reader 池同時服務查詢與管理；刪除或取代字典前
   // 要先 evict，否則檔案控制代碼還開著時會刪不掉。
   final mdxReaderPool = MdxReaderPool();
+  // epic-63 Issue 7：線上查詞同意狀態。查詢端與設定畫面共用同一個實例，
+  // 設定頁關閉後查詢端立刻看得到（未同意時不送出任何請求）。
+  final dictionarySettings = SharedPreferencesDictionarySettingsRepository();
+  // 專用的 `http.Client` 只給萌典用，不與雲端匯入共用連線池，避免夾帶其他
+  // 服務的 cookie 或標頭；請求本身也不加任何標頭（見 `MoedictProvider`）。
+  final moedictProvider = MoedictProvider(client: http.Client());
   final dictionaryService = DictionaryService.fromProvider(
     dictionaryStoreProvider,
     mdxPool: mdxReaderPool,
+    onlineProvider: moedictProvider,
+    settings: dictionarySettings,
+    // 只擋完全沒有連線的情況；其餘（逾時、HTTP 錯誤）交給 provider 判斷。
+    isNetworkAvailable: () async =>
+        (await Connectivity().checkConnectivity()).any(
+          (result) => result != ConnectivityResult.none,
+        ),
   );
   final dictionaryFileStore = DictionaryFileStore(
     Directory(
@@ -383,6 +398,7 @@ Future<void> main() async {
     ttsAudioFocusSource: ttsAudioFocusSource,
     dictionaryService: dictionaryService,
     dictionaryManager: dictionaryManager,
+    dictionarySettings: dictionarySettings,
   );
   final sync = SyncDependencies(
     syncAccountRepository: syncAccountRepository,
