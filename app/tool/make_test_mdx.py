@@ -9,6 +9,7 @@
 kind：
     zlib                      50 筆，zlib 壓縮、KeyCaseSensitive=No
     mdd                       最小 MDD（圖片與 CSS 各一筆）
+    images                    成對的 MDX（pic 詞條）與 MDD（PNG 與 MP3）
     fake-lzo                  記錄區塊標成 LZO（實際內容任意），用來測不支援壓縮
     truncated                 把正常檔砍半，模擬下載中斷
     cut-records               砍掉檔尾 80 位元組（只傷到記錄區塊，檔頭與鍵區完整）
@@ -33,6 +34,7 @@ kind：
 
 import argparse
 import base64
+import os
 import random
 import struct
 import unicodedata
@@ -363,6 +365,7 @@ def main():
         choices=[
             "zlib",
             "mdd",
+            "images",
             "fake-lzo",
             "truncated",
             "cut-records",
@@ -386,6 +389,24 @@ def main():
 
     if a.kind == "mdd":
         data = build_mdd([("\\pic\\a b.png", _TINY_PNG), ("\\css\\x.css", b"body{color:#000}")])
+    elif a.kind == "images":
+        mdx_data = build_mdx(
+            [("pic", '<p><img src="pic/a b.png"><img src="pic/sub/c.png"></p>')],
+            encoding="UTF-8",
+            record_compression=2,
+            title="Images test fixture",
+            description="epic-63 images test fixture",
+        )
+        mdd_data = build_mdd([
+            (r"\pic\a b.png", _TINY_PNG),
+            (r"\pic\sub\c.png", _TINY_PNG),
+            (r"\snd\x.mp3", b"ID3\x03\x00\x00\x00\x00\x00\x00fake-mp3-bytes"),
+        ])
+        mdd_out = os.path.splitext(a.out)[0] + ".mdd"
+        with open(mdd_out, "wb") as f:
+            f.write(mdd_data)
+        print(f"images (mdd): {len(mdd_data)} bytes -> {mdd_out}")
+        data = mdx_data
     elif a.kind == "large":
         data = build_mdx(
             large_entries(a.entries or 400000, a.body_bytes),

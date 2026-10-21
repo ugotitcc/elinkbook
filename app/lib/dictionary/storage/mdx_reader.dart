@@ -10,9 +10,12 @@
 // 鍵的常駐記憶體由 vendor 修補後的 dict_reader 以區塊為單位控管
 // （見 app/third_party/dict_reader/PATCH.md）。
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dict_reader/dict_reader.dart';
 import 'package:path/path.dart' as p;
+
+import '../mdx_resource.dart';
 
 /// MDX 開啟或讀取失敗的種類。錯誤訊息由 UI 依此轉成三段式文案。
 enum MdxErrorKind {
@@ -80,9 +83,10 @@ class MdxMeta {
 /// 同一時間只會持有一個檔案控制代碼；[close] 可重複呼叫。開啟失敗時
 /// 不會保留半初始化的 reader，也不會佔住檔案。
 class MdxReader {
-  MdxReader._(this._reader, this._path, this.meta);
+  MdxReader._(this._reader, this._mddReader, this._path, this.meta);
 
   final DictReader _reader;
+  final DictReader? _mddReader;
   final String _path;
 
   final MdxMeta meta;
@@ -90,6 +94,9 @@ class MdxReader {
   bool _closed = false;
 
   /// 開啟 [path] 並讀取標頭與區塊索引（不含全部鍵）。
+  ///
+  /// 若同目錄下存在同主檔名之 `.mdd` 檔，則一併開啟。若 `.mdd` 損壞或開啟失敗，
+  /// 則當作沒有 `.mdd`，不影響 `.mdx` 之開啟。
   ///
   /// 失敗一律轉成 [MdxException]。記錄區塊加密的檔案在開啟後立刻以
   /// [MdxErrorKind.encryptedRecords] 失敗，避免之後才在查詢時出錯。
@@ -99,6 +106,7 @@ class MdxReader {
     }
 
     final reader = DictReader(path);
+    DictReader? mddReader;
     try {
       await reader.initDict();
       final meta = _metaFrom(reader);
@@ -108,7 +116,22 @@ class MdxReader {
           'Encrypted=${meta.encrypted}',
         );
       }
-      return MdxReader._(reader, path, meta);
+
+      final mddPath = await _findSiblingMdd(path);
+      if (mddPath != null) {
+        final candidate = DictReader(mddPath);
+        try {
+          await candidate.initDict();
+          mddReader = candidate;
+        } catch (_) {
+          try {
+            await candidate.close();
+          } catch (_) {}
+          mddReader = null;
+        }
+      }
+
+      return MdxReader._(reader, mddReader, path, meta);
     } catch (error) {
       // 失敗路徑一定要釋放控制代碼，否則呼叫端重試好檔時會受影響。
       try {
@@ -116,7 +139,34 @@ class MdxReader {
       } catch (_) {
         // 清理失敗不覆蓋原始錯誤。
       }
+      try {
+        await mddReader?.close();
+      } catch (_) {}
       throw _mapError(error, path);
+    }
+  }
+
+  /// 尋找同目錄下主檔名相符（不分大小寫）的單一 `.mdd` 檔案。
+  ///
+  /// 忽略 `.1.mdd` 等分卷；掃描目錄失敗時回傳 null。
+  static Future<String?> _findSiblingMdd(String mdxPath) async {
+    try {
+      final dir = Directory(p.dirname(mdxPath));
+      if (!await dir.exists()) return null;
+
+      final targetStem = p.basenameWithoutExtension(mdxPath).toLowerCase();
+      await for (final entity in dir.list()) {
+        final ext = p.extension(entity.path).toLowerCase();
+        if (ext == '.mdd') {
+          final stem = p.basenameWithoutExtension(entity.path).toLowerCase();
+          if (stem == targetStem && await FileSystemEntity.isFile(entity.path)) {
+            return entity.path;
+          }
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -398,10 +448,56 @@ class MdxReader {
     return value;
   }
 
+  /// 讀取成對 .mdd 內的資源（例如圖片）。
+  ///
+  /// 若字典未附 .mdd、鍵不存在、副檔名不支援、解壓後超過 [maxBytes]、
+  /// 讀取過程拋出任何例外、或 reader 已關閉，一律回傳 `null`，不拋例外。
+  Future<MdxResource?> readResource(
+    String url, {
+    int maxBytes = kMdxResourceMaxBytes,
+  }) async {
+    if (_closed) return null;
+    final mdd = _mddReader;
+    if (mdd == null) return null;
+
+    final keys = mddKeysForUrl(url);
+    if (keys.isEmpty) return null;
+
+    final contentType = imageContentTypeForKey(keys.first);
+    if (contentType == null) return null;
+
+    try {
+      for (final key in keys) {
+        if (_closed) return null;
+        final offsetInfo = await mdd.locate(key);
+        if (offsetInfo != null) {
+          if (_closed) return null;
+          final raw = await mdd.readOneMdd(offsetInfo);
+          if (raw.length > maxBytes) return null;
+          final Uint8List bytes =
+              raw is Uint8List ? raw : Uint8List.fromList(raw);
+          return MdxResource(
+            bytes: bytes,
+            contentType: contentType,
+          );
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// 關閉檔案；可重複呼叫。
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
-    await _reader.close();
+    try {
+      await _reader.close();
+    } finally {
+      try {
+        await _mddReader?.close();
+      } catch (_) {}
+    }
   }
 }

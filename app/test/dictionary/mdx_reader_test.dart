@@ -370,4 +370,148 @@ void main() {
       expect(hits, isNotEmpty);
     }, timeout: const Timeout(Duration(minutes: 2)));
   });
+
+  group('readResource', () {
+    late Directory tempDir;
+
+    setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('mdx_images_test_');
+    });
+
+    tearDown(() {
+      try {
+        tempDir.deleteSync(recursive: true);
+      } catch (_) {}
+    });
+
+    void copyFixture(String name, [String? targetName]) {
+      final bytes = File('$_fixtures/$name').readAsBytesSync();
+      final target = File('${tempDir.path}/${targetName ?? name}');
+      target.writeAsBytesSync(bytes);
+    }
+
+    test('讀到圖片與子目錄', () async {
+      copyFixture('images.mdx');
+      copyFixture('images.mdd');
+
+      final reader = await MdxReader.open('${tempDir.path}/images.mdx');
+      addTearDown(reader.close);
+
+      final res1 = await reader.readResource('https://dict.local/pic/a%20b.png');
+      expect(res1, isNotNull);
+      expect(res1!.contentType, 'image/png');
+      expect(
+        res1.bytes.sublist(0, 8),
+        [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+      );
+
+      final res2 = await reader.readResource('https://dict.local/pic/sub/c.png');
+      expect(res2, isNotNull);
+      expect(res2!.contentType, 'image/png');
+      expect(
+        res2.bytes.sublist(0, 8),
+        [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+      );
+    });
+
+    test('找不到回 null', () async {
+      copyFixture('images.mdx');
+      copyFixture('images.mdd');
+
+      final reader = await MdxReader.open('${tempDir.path}/images.mdx');
+      addTearDown(reader.close);
+
+      expect(
+        await reader.readResource('https://dict.local/pic/none.png'),
+        isNull,
+      );
+    });
+
+    test('不支援的副檔名回 null', () async {
+      copyFixture('images.mdx');
+      copyFixture('images.mdd');
+
+      final reader = await MdxReader.open('${tempDir.path}/images.mdx');
+      addTearDown(reader.close);
+
+      expect(
+        await reader.readResource('https://dict.local/snd/x.mp3'),
+        isNull,
+      );
+    });
+
+    test('沒有 mdd 的字典：readResource 回 null，lookupAll 照常', () async {
+      copyFixture('images.mdx');
+
+      final reader = await MdxReader.open('${tempDir.path}/images.mdx');
+      addTearDown(reader.close);
+
+      expect(
+        await reader.readResource('https://dict.local/pic/a%20b.png'),
+        isNull,
+      );
+      final hits = await reader.lookupAll('pic');
+      expect(hits, hasLength(1));
+    });
+
+    test('mdd 壞檔不讓字典失敗：open 仍成功、readResource 回 null', () async {
+      copyFixture('images.mdx');
+      final mddBytes = File('$_fixtures/images.mdd').readAsBytesSync();
+      File('${tempDir.path}/images.mdd')
+          .writeAsBytesSync(mddBytes.sublist(0, mddBytes.length ~/ 2));
+
+      final reader = await MdxReader.open('${tempDir.path}/images.mdx');
+      addTearDown(reader.close);
+
+      expect(
+        await reader.readResource('https://dict.local/pic/a%20b.png'),
+        isNull,
+      );
+      expect(await reader.lookupAll('pic'), hasLength(1));
+    });
+
+    test('主檔名不分大小寫配對：Images.MDD 配 images.mdx', () async {
+      copyFixture('images.mdx');
+      copyFixture('images.mdd', 'Images.MDD');
+
+      final reader = await MdxReader.open('${tempDir.path}/images.mdx');
+      addTearDown(reader.close);
+
+      final res = await reader.readResource('https://dict.local/pic/a%20b.png');
+      expect(res, isNotNull);
+      expect(res!.contentType, 'image/png');
+    });
+
+    test('超過上限回 null，未超過時可讀取', () async {
+      copyFixture('images.mdx');
+      copyFixture('images.mdd');
+
+      final reader = await MdxReader.open('${tempDir.path}/images.mdx');
+      addTearDown(reader.close);
+
+      final resLimit = await reader.readResource(
+        'https://dict.local/pic/a%20b.png',
+        maxBytes: 1,
+      );
+      expect(resLimit, isNull);
+
+      final resNormal = await reader.readResource(
+        'https://dict.local/pic/a%20b.png',
+      );
+      expect(resNormal, isNotNull);
+    });
+
+    test('close 之後 readResource 回 null、不丟例外', () async {
+      copyFixture('images.mdx');
+      copyFixture('images.mdd');
+
+      final reader = await MdxReader.open('${tempDir.path}/images.mdx');
+      await reader.close();
+
+      expect(
+        await reader.readResource('https://dict.local/pic/a%20b.png'),
+        isNull,
+      );
+    });
+  });
 }

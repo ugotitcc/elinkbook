@@ -3,6 +3,7 @@
 // 全部注入假 opener，不碰真實檔案；關閉行為由假 reader 計數。
 import 'dart:async';
 
+import 'package:elinkbook/dictionary/mdx_resource.dart';
 import 'package:elinkbook/dictionary/storage/mdx_reader.dart';
 import 'package:elinkbook/dictionary/storage/mdx_reader_pool.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,6 +37,13 @@ class _FakeReader implements MdxReader {
   Future<void> validateBlocks({
     void Function(int done, int total)? onProgress,
   }) async {}
+
+  @override
+  Future<MdxResource?> readResource(
+    String url, {
+    int maxBytes = kMdxResourceMaxBytes,
+  }) async =>
+      null;
 
   @override
   Future<void> close() async => closed++;
