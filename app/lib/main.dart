@@ -20,6 +20,7 @@ import 'downloads/download_queue_controller.dart';
 import 'dictionary/dictionary_file_store.dart';
 import 'dictionary/dictionary_manager.dart';
 import 'dictionary/dictionary_service.dart';
+import 'dictionary/dictionary_settings_repository.dart';
 import 'dictionary/importers/cedict_importer.dart';
 import 'dictionary/importers/json_csv_importer.dart';
 import 'dictionary/importers/mdx_importer.dart';
@@ -149,6 +150,9 @@ Future<void> main() async {
     dictionaryStoreProvider,
     mdxPool: mdxReaderPool,
   );
+  // epic-63 Issue 7：線上查詞同意狀態。查詢端與設定畫面共用同一個實例，
+  // 設定頁關閉後查詢端立刻看得到（未同意時不送出任何請求）。
+  final dictionarySettings = SharedPreferencesDictionarySettingsRepository();
   final dictionaryFileStore = DictionaryFileStore(
     Directory(
       p.join((await getApplicationSupportDirectory()).path, 'dictionaries'),
@@ -383,6 +387,7 @@ Future<void> main() async {
     ttsAudioFocusSource: ttsAudioFocusSource,
     dictionaryService: dictionaryService,
     dictionaryManager: dictionaryManager,
+    dictionarySettings: dictionarySettings,
   );
   final sync = SyncDependencies(
     syncAccountRepository: syncAccountRepository,

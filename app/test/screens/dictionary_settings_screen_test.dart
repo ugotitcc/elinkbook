@@ -1,14 +1,17 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:elinkbook/dictionary/dictionary_manager.dart';
 import 'package:elinkbook/dictionary/importers/dictionary_importer.dart';
 import 'package:elinkbook/dictionary/mdx_companion_files.dart';
 import 'package:elinkbook/dictionary/models/dictionary_source.dart';
+import 'package:elinkbook/dictionary/providers/moedict_provider.dart';
 import 'package:elinkbook/screens/dictionary_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_dictionary_manager.dart';
+import '../support/fake_dictionary_settings_repository.dart';
 import '../support/pump_localized_widget.dart';
 
 DictionaryListItem _item(
@@ -45,6 +48,7 @@ Future<void> _pump(
   DictionaryFilePicker? pickFiles,
   DictionaryTempFileCleaner? clearTempFiles,
   Locale locale = const Locale('zh', 'TW'),
+  FakeDictionarySettingsRepository? settings,
 }) async {
   await pumpLocalizedWidget(
     tester,
@@ -53,6 +57,7 @@ Future<void> _pump(
       isEinkMode: isEinkMode,
       pickFiles: pickFiles,
       clearTempFiles: clearTempFiles,
+      settings: settings ?? FakeDictionarySettingsRepository(),
     ),
     isEinkMode: isEinkMode,
     locale: locale,
@@ -1108,6 +1113,7 @@ void main() {
                       manager: manager,
                       isEinkMode: false,
                       pickFiles: (_) async => [pf('a.json'), pf('b.json')],
+                      settings: FakeDictionarySettingsRepository(),
                     ),
                   ),
                 ),
@@ -1179,4 +1185,207 @@ void main() {
       });
     });
   });
+
+  group('線上查詞區塊（epic-63 Issue 7）', () {
+    SwitchListTile onlineSwitch(WidgetTester tester) =>
+        tester.widget<SwitchListTile>(
+          find.byKey(const Key('dictionary_online_switch')),
+        );
+
+    testWidgets('預設關閉並顯示尚未同意，且載入同意狀態一次', (tester) async {
+      final settings = FakeDictionarySettingsRepository();
+
+      await _pump(tester, FakeDictionaryManager(), settings: settings);
+
+      expect(find.byKey(const Key('dictionary_online_section')), findsOneWidget);
+      expect(onlineSwitch(tester).value, isFalse);
+      expect(
+        tester
+            .widget<Text>(find.byKey(const Key('dictionary_online_status')))
+            .data,
+        '尚未同意',
+      );
+      expect(settings.loadCount, 1);
+    });
+
+    testWidgets('打開開關先跳同意對話框；取消後仍關閉且不寫入', (tester) async {
+      final settings = FakeDictionarySettingsRepository();
+
+      await _pump(tester, FakeDictionaryManager(), settings: settings);
+      await tester.tap(find.byKey(const Key('dictionary_online_switch')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('dictionary_online_consent_dialog')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('dictionary_online_consent_cancel')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('dictionary_online_consent_dialog')),
+        findsNothing,
+      );
+      expect(onlineSwitch(tester).value, isFalse);
+      expect(settings.saveCount, 0);
+      expect(settings.consentAt, isNull);
+    });
+
+    testWidgets('同意後開關為開、狀態顯示日期，並寫入同意時刻', (tester) async {
+      final settings = FakeDictionarySettingsRepository();
+      final now = DateTime.utc(2026, 10, 21, 12);
+
+      await withClock(Clock.fixed(now), () async {
+        await _pump(tester, FakeDictionaryManager(), settings: settings);
+        await tester.tap(find.byKey(const Key('dictionary_online_switch')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const Key('dictionary_online_consent_agree')),
+        );
+        await tester.pumpAndSettle();
+      });
+
+      expect(settings.saveCount, 1);
+      expect(settings.consentAt, now);
+      expect(onlineSwitch(tester).value, isTrue);
+      expect(
+        tester
+            .widget<Text>(find.byKey(const Key('dictionary_online_status')))
+            .data,
+        contains('2026-10-21'),
+      );
+    });
+
+    testWidgets('對話框開啟與儲存期間開關停用，不會重複觸發', (tester) async {
+      final settings = _GatedSettingsRepository();
+
+      await _pump(tester, FakeDictionaryManager(), settings: settings);
+      await tester.tap(find.byKey(const Key('dictionary_online_switch')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('dictionary_online_consent_dialog')),
+        findsOneWidget,
+      );
+      expect(onlineSwitch(tester).onChanged, isNull);
+
+      await tester.tap(
+        find.byKey(const Key('dictionary_online_consent_agree')),
+      );
+      await tester.pumpAndSettle();
+
+      // 儲存尚未完成：開關維持停用，也沒有再跳一次對話框。
+      expect(onlineSwitch(tester).onChanged, isNull);
+      expect(settings.saveCount, 1);
+      expect(
+        find.byKey(const Key('dictionary_online_consent_dialog')),
+        findsNothing,
+      );
+
+      settings.saveGate.complete();
+      await tester.pumpAndSettle();
+
+      expect(onlineSwitch(tester).onChanged, isNotNull);
+      expect(onlineSwitch(tester).value, isTrue);
+    });
+
+    testWidgets('已同意時關閉開關：清除同意且不跳對話框', (tester) async {
+      final settings = FakeDictionarySettingsRepository(
+        consentAt: DateTime.utc(2026, 10, 20, 3),
+      );
+
+      await _pump(tester, FakeDictionaryManager(), settings: settings);
+      expect(onlineSwitch(tester).value, isTrue);
+
+      await tester.tap(find.byKey(const Key('dictionary_online_switch')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('dictionary_online_consent_dialog')),
+        findsNothing,
+      );
+      expect(settings.saveCount, 1);
+      expect(settings.consentAt, isNull);
+      expect(onlineSwitch(tester).value, isFalse);
+    });
+
+    testWidgets('儲存失敗：開關維持關閉、顯示三段式錯誤、不丟例外', (tester) async {
+      final settings = FakeDictionarySettingsRepository()..failOnSave = true;
+
+      await _pump(tester, FakeDictionaryManager(), settings: settings);
+      await tester.tap(find.byKey(const Key('dictionary_online_switch')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('dictionary_online_consent_agree')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(onlineSwitch(tester).value, isFalse);
+      expect(settings.consentAt, isNull);
+      expect(
+        tester
+            .widget<Text>(find.byKey(const Key('dictionary_online_status')))
+            .data,
+        '尚未同意',
+      );
+      final error = tester.widget<Text>(
+        find.byKey(const Key('dictionary_online_save_error')),
+      );
+      // 三段式：發生什麼（沒有儲存成功）、為什麼（無法寫入）、怎麼辦（請再切換）。
+      expect(error.data, contains('沒有儲存成功'));
+      expect(error.data, contains('無法寫入'));
+      expect(error.data, contains('請'));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('字典清單為空時區塊仍在', (tester) async {
+      await _pump(tester, FakeDictionaryManager());
+
+      expect(find.byKey(const Key('dictionary_settings_empty')), findsOneWidget);
+      expect(find.byKey(const Key('dictionary_online_section')), findsOneWidget);
+    });
+
+    testWidgets('字典清單載入失敗時區塊仍在', (tester) async {
+      final manager = FakeDictionaryManager()..listError = StateError('db');
+
+      await _pump(tester, manager);
+
+      expect(
+        find.byKey(const Key('dictionary_settings_load_error')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('dictionary_online_section')), findsOneWidget);
+    });
+
+    testWidgets('有字典清單時區塊仍在，並顯示萌典來源標示', (tester) async {
+      final manager = FakeDictionaryManager(items: [_item('a')]);
+
+      await _pump(tester, manager);
+
+      expect(find.byKey(const Key('dictionary_online_section')), findsOneWidget);
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(const Key('dictionary_online_attribution')),
+            )
+            .data,
+        MoedictProvider.attribution,
+      );
+    });
+  });
+}
+
+/// `saveOnlineConsentAt` 會停在 [saveGate]，用來驗證「儲存期間」開關停用。
+class _GatedSettingsRepository extends FakeDictionarySettingsRepository {
+  final Completer<void> saveGate = Completer<void>();
+
+  @override
+  Future<void> saveOnlineConsentAt(DateTime? at) async {
+    saveCount++;
+    await saveGate.future;
+    consentAt = at;
+  }
 }

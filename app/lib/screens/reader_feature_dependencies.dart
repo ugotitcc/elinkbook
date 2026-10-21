@@ -4,6 +4,7 @@ import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../dictionary/dictionary_manager.dart';
 import '../dictionary/dictionary_service.dart';
+import '../dictionary/dictionary_settings_repository.dart';
 import '../reader/book_reader_prefs_repository.dart';
 import '../reader/bookmarks_repository.dart';
 import '../reader/custom_fonts_repository.dart';
@@ -69,6 +70,10 @@ class ReaderFeatureDependencies {
   /// [dictionaryService] 共用同一個 `dictionary.db` 延遲開啟 provider。
   final DictionaryManager dictionaryManager;
 
+  /// 線上查詞的同意狀態（epic-63 Issue 7）；字典設定畫面的開關使用，與
+  /// [dictionaryService] 共用同一個實例，關閉後查詢端立刻停止送出。
+  final DictionarySettingsRepository dictionarySettings;
+
   const ReaderFeatureDependencies({
     required this.prefsManager,
     required this.libraryRepository,
@@ -91,5 +96,6 @@ class ReaderFeatureDependencies {
     required this.ttsAudioFocusSource,
     required this.dictionaryService,
     required this.dictionaryManager,
+    required this.dictionarySettings,
   });
 }

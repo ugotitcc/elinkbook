@@ -25,7 +25,7 @@ Map<String, Object?> _moedictPayload({
   Object? heteronyms,
 }) =>
     {
-      if (title != null) 'title': title,
+      'title': ?title,
       'heteronyms': heteronyms ??
           [
             {

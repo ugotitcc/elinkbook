@@ -3107,6 +3107,31 @@
   "@dictionaryOnlineConsentCancel": {
     "description": "線上查詞同意對話框：取消，維持關閉"
   },
+  "dictionaryOnlineSectionTitle": "線上查詞（萌典）",
+  "@dictionaryOnlineSectionTitle": {
+    "description": "字典設定畫面：線上查詞區塊標題"
+  },
+  "dictionaryOnlineSectionDescription": "開啟後，查中文詞時只會把選取的那個詞送到萌典。預設關閉，未開啟前不會連網。",
+  "@dictionaryOnlineSectionDescription": {
+    "description": "字典設定畫面：線上查詞區塊說明（送出什麼、預設關閉）"
+  },
+  "dictionaryOnlineStatusOff": "尚未同意",
+  "@dictionaryOnlineStatusOff": {
+    "description": "字典設定畫面：線上查詞尚未同意／已關閉"
+  },
+  "dictionaryOnlineStatusOn": "已同意（{date}）",
+  "@dictionaryOnlineStatusOn": {
+    "description": "字典設定畫面：線上查詞已同意，顯示同意日期",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "dictionaryOnlineSaveFailed": "線上查詞設定沒有儲存成功：無法寫入本機設定。請再切換一次；一直失敗請重新開啟 App 後再試。",
+  "@dictionaryOnlineSaveFailed": {
+    "description": "字典設定畫面：線上查詞同意狀態儲存失敗（三段式：發生什麼、為什麼、怎麼辦）"
+  },
   "dictionaryLookupOpenSettings": "前往字典設定",
   "@dictionaryLookupOpenSettings": {
     "description": "字典面板：開啟字典設定畫面的連結文字"

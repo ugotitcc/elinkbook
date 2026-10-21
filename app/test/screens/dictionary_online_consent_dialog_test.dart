@@ -1,6 +1,4 @@
 // app/test/screens/dictionary_online_consent_dialog_test.dart
-import 'dart:async';
-
 import 'package:elinkbook/screens/dictionary_online_consent_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

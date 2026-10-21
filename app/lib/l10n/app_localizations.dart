@@ -4091,6 +4091,36 @@ abstract class AppLocalizations {
   /// **'取消'**
   String get dictionaryOnlineConsentCancel;
 
+  /// 字典設定畫面：線上查詞區塊標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'線上查詞（萌典）'**
+  String get dictionaryOnlineSectionTitle;
+
+  /// 字典設定畫面：線上查詞區塊說明（送出什麼、預設關閉）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'開啟後，查中文詞時只會把選取的那個詞送到萌典。預設關閉，未開啟前不會連網。'**
+  String get dictionaryOnlineSectionDescription;
+
+  /// 字典設定畫面：線上查詞尚未同意／已關閉
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'尚未同意'**
+  String get dictionaryOnlineStatusOff;
+
+  /// 字典設定畫面：線上查詞已同意，顯示同意日期
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已同意（{date}）'**
+  String dictionaryOnlineStatusOn(String date);
+
+  /// 字典設定畫面：線上查詞同意狀態儲存失敗（三段式：發生什麼、為什麼、怎麼辦）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'線上查詞設定沒有儲存成功：無法寫入本機設定。請再切換一次；一直失敗請重新開啟 App 後再試。'**
+  String get dictionaryOnlineSaveFailed;
+
   /// 字典面板：開啟字典設定畫面的連結文字
   ///
   /// In zh_TW, this message translates to:

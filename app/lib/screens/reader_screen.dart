@@ -1959,6 +1959,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             MaterialPageRoute(
               builder: (_) => DictionarySettingsScreen(
                 manager: widget.dependencies.dictionaryManager,
+                settings: widget.dependencies.dictionarySettings,
                 isEinkMode: widget.isEinkMode,
               ),
             ),

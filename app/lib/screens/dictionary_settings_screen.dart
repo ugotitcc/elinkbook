@@ -1,13 +1,17 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../dictionary/dictionary_manager.dart';
+import '../dictionary/dictionary_settings_repository.dart';
 import '../dictionary/importers/dictionary_importer.dart';
 import '../dictionary/mdx_companion_files.dart';
 import '../dictionary/models/dictionary_source.dart';
+import '../dictionary/providers/moedict_provider.dart';
 import '../l10n/app_localizations.dart';
+import 'dictionary_online_consent_dialog.dart';
 import 'widgets/dictionary_import_dialog.dart';
 
 /// 超過此大小的檔案在匯入對話框顯示大檔提示（50 MB）。
@@ -64,12 +68,16 @@ class DictionarySettingsScreen extends StatefulWidget {
   const DictionarySettingsScreen({
     super.key,
     required this.manager,
+    required this.settings,
     required this.isEinkMode,
     this.pickFiles,
     this.clearTempFiles,
   });
 
   final DictionaryManager manager;
+
+  /// 線上查詞的同意狀態（epic-63 Issue 7）；`null` 同意時刻＝關閉。
+  final DictionarySettingsRepository settings;
 
   /// E-Ink 模式：不使用動畫與陰影，改以邊框區分。
   final bool isEinkMode;
@@ -108,10 +116,20 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
   /// 使用者已按取消，等待匯入器回報 [ImportStage.cancelled]。
   bool _cancelling = false;
 
+  /// 線上查詞的同意時刻；`null` 代表未同意／已關閉（epic-63 Issue 7）。
+  DateTime? _onlineConsentAt;
+
+  /// 同意對話框開啟中或寫入同意狀態中；為真時停用開關，避免連點疊多個對話框。
+  bool _savingConsent = false;
+
+  /// 上次寫入同意狀態失敗；顯示在線上區塊內，下一次切換前清除。
+  bool _onlineSaveError = false;
+
   @override
   void initState() {
     super.initState();
     _reload();
+    _loadOnlineConsent();
   }
 
   @override
@@ -133,6 +151,53 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
       debugPrint('Failed to load dictionaries: $error');
       if (!mounted) return;
       setState(() => _loadFailed = true);
+    }
+  }
+
+  /// 讀取線上查詞同意狀態；失敗一律視為未同意（不連網），不擋住畫面。
+  Future<void> _loadOnlineConsent() async {
+    DateTime? at;
+    try {
+      at = await widget.settings.loadOnlineConsentAt();
+    } catch (error) {
+      debugPrint('Failed to load online dictionary consent: $error');
+      at = null;
+    }
+    if (!mounted) return;
+    setState(() => _onlineConsentAt = at);
+  }
+
+  /// 切換線上查詞：開啟先跳同意對話框，同意後才寫入；關閉直接寫入 `null`。
+  ///
+  /// 寫入失敗時保留原值並在區塊內顯示錯誤，不丟例外、不把開關停在半開狀態。
+  Future<void> _onToggleOnline(bool enabled) async {
+    if (_savingConsent) return;
+    setState(() {
+      _savingConsent = true;
+      _onlineSaveError = false;
+    });
+    try {
+      if (enabled) {
+        final agreed = await showDictionaryOnlineConsentDialog(
+          context,
+          isEinkMode: widget.isEinkMode,
+        );
+        if (!mounted || !agreed) return;
+        final at = clock.now();
+        await widget.settings.saveOnlineConsentAt(at);
+        if (!mounted) return;
+        setState(() => _onlineConsentAt = at);
+      } else {
+        await widget.settings.saveOnlineConsentAt(null);
+        if (!mounted) return;
+        setState(() => _onlineConsentAt = null);
+      }
+    } catch (error) {
+      debugPrint('Failed to save online dictionary consent: $error');
+      if (!mounted) return;
+      setState(() => _onlineSaveError = true);
+    } finally {
+      if (mounted) setState(() => _savingConsent = false);
     }
   }
 
@@ -631,7 +696,15 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
         ),
         body: Stack(
           children: [
-            Positioned.fill(child: _buildBody(context, l10n)),
+            Positioned.fill(
+              child: Column(
+                children: [
+                  Expanded(child: _buildBody(context, l10n)),
+                  // 固定在底部：清單為空、載入失敗、正常三種狀態都要看得到。
+                  _buildOnlineSection(context, l10n),
+                ],
+              ),
+            ),
             if (_importing) _buildProgressOverlay(context, l10n),
           ],
         ),
@@ -757,6 +830,76 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// 線上查詞區塊（epic-63 Issue 7，spec §3.7）。
+  ///
+  /// 開關本身就是同意與否：未同意時關閉，且查詢端不會送出任何請求。同意時刻
+  /// 只顯示日期；來源標示是固定常數（`MoedictProvider.attribution`），不走 l10n。
+  Widget _buildOnlineSection(BuildContext context, AppLocalizations l10n) {
+    final theme = Theme.of(context);
+    final consentAt = _onlineConsentAt;
+    final status = consentAt == null
+        ? l10n.dictionaryOnlineStatusOff
+        : l10n.dictionaryOnlineStatusOn(
+            consentAt.toLocal().toIso8601String().substring(0, 10),
+          );
+    return Container(
+      key: const Key('dictionary_online_section'),
+      // E-Ink 以邊框區分；一般模式用分隔線，兩者皆不使用陰影。
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: widget.isEinkMode
+                ? theme.colorScheme.onSurface
+                : theme.dividerColor,
+          ),
+        ),
+        color: theme.colorScheme.surface,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            key: const Key('dictionary_online_switch'),
+            title: Text(l10n.dictionaryOnlineSectionTitle),
+            subtitle: Text(l10n.dictionaryOnlineSectionDescription),
+            value: consentAt != null,
+            // 對話框開啟與儲存期間停用，避免連點疊出多個對話框。
+            onChanged: _savingConsent ? null : _onToggleOnline,
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  status,
+                  key: const Key('dictionary_online_status'),
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  MoedictProvider.attribution,
+                  key: const Key('dictionary_online_attribution'),
+                  style: theme.textTheme.bodySmall,
+                ),
+                if (_onlineSaveError)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      l10n.dictionaryOnlineSaveFailed,
+                      key: const Key('dictionary_online_save_error'),
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

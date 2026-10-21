@@ -2308,6 +2308,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dictionaryOnlineConsentCancel => '取消';
 
   @override
+  String get dictionaryOnlineSectionTitle => '線上查詞（萌典）';
+
+  @override
+  String get dictionaryOnlineSectionDescription =>
+      '開啟後，查中文詞時只會把選取的那個詞送到萌典。預設關閉，未開啟前不會連網。';
+
+  @override
+  String get dictionaryOnlineStatusOff => '尚未同意';
+
+  @override
+  String dictionaryOnlineStatusOn(String date) {
+    return '已同意（$date）';
+  }
+
+  @override
+  String get dictionaryOnlineSaveFailed =>
+      '線上查詞設定沒有儲存成功：無法寫入本機設定。請再切換一次；一直失敗請重新開啟 App 後再試。';
+
+  @override
   String get dictionaryLookupOpenSettings => '前往字典設定';
 
   @override
@@ -4848,6 +4867,25 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get dictionaryOnlineConsentCancel => '取消';
 
   @override
+  String get dictionaryOnlineSectionTitle => '在线查词（萌典）';
+
+  @override
+  String get dictionaryOnlineSectionDescription =>
+      '开启后，查中文词时只会把你选中的那个词送到萌典。默认关闭，未开启前不会联网。';
+
+  @override
+  String get dictionaryOnlineStatusOff => '尚未同意';
+
+  @override
+  String dictionaryOnlineStatusOn(String date) {
+    return '已同意（$date）';
+  }
+
+  @override
+  String get dictionaryOnlineSaveFailed =>
+      '在线查词设置没有保存成功：无法写入本机设置。请再切换一次；一直失败请重新打开 App 后再试。';
+
+  @override
   String get dictionaryLookupOpenSettings => '前往字典设置';
 
   @override
@@ -7386,6 +7424,25 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dictionaryOnlineConsentCancel => '取消';
+
+  @override
+  String get dictionaryOnlineSectionTitle => '線上查詞（萌典）';
+
+  @override
+  String get dictionaryOnlineSectionDescription =>
+      '開啟後，查中文詞時只會把選取的那個詞送到萌典。預設關閉，未開啟前不會連網。';
+
+  @override
+  String get dictionaryOnlineStatusOff => '尚未同意';
+
+  @override
+  String dictionaryOnlineStatusOn(String date) {
+    return '已同意（$date）';
+  }
+
+  @override
+  String get dictionaryOnlineSaveFailed =>
+      '線上查詞設定沒有儲存成功：無法寫入本機設定。請再切換一次；一直失敗請重新開啟 App 後再試。';
 
   @override
   String get dictionaryLookupOpenSettings => '前往字典設定';
