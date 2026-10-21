@@ -9,9 +9,10 @@
 //   WebView；屬 [kMdxBaseUrl] 且解析成功的 MDD 資源回傳 200 二進位內容；
 //   其餘請求一律回傳 404，永不回傳 `null`（回 `null` 會讓 WebView 走真實網路）。
 //   外部 CSS 已在上游（Issue 6b Task 2）內聯，配色覆寫由 [prepareEntryHtml] 注入。
-// - 只有主框架且有使用者手勢的導覽才會帶出詞條查詢；`Safe Browsing` 關閉。
-//   `blockNetworkLoads` 未啟用：未能在真機驗證它不影響 `data:` 初始文件與
-//   攔截回應，留待 Task 8 真機驗證確認（審查 I-7）。
+// - 只有主框架且有使用者手勢的導覽才會帶出詞條查詢；`Safe Browsing` 關閉、
+//   `blockNetworkLoads: true` 啟用（Task 8 真機驗證確認不影響 `data:` 初始文件、
+//   `loadData` 重載、錨點與 `shouldInterceptRequest` 圖片渲染，作為攔截之外的
+//   第二道網路封鎖防線，審查 I-7）。
 //
 // 決策邏輯是靜態純函式，單元測試不必建 WebView。
 import 'package:flutter/gestures.dart';
@@ -263,8 +264,9 @@ class _MdxEntryViewState extends State<MdxEntryView> {
         cacheEnabled: false,
         useShouldOverrideUrlLoading: true,
         useShouldInterceptRequest: true,
-        // 不讓 Safe Browsing 連 Google 檢查網址（審查 I-7）。
+        // 不讓 Safe Browsing 連 Google 檢查網址，並在引擎層封鎖網路載入（審查 I-7、Task 8 真機確認）。
         safeBrowsingEnabled: false,
+        blockNetworkLoads: true,
       ),
       onWebViewCreated: (controller) {
         _controller = controller;

@@ -234,6 +234,8 @@ flutter:
     - test/fixtures/sample.ttf
     # epic-63 Issue 6a 整合測試：MDX 詞條（含 script／錨點／對外圖片）。
     - test/fixtures/mdx/html.mdx
+    - test/fixtures/mdx/images.mdx
+    - test/fixtures/mdx/images.mdd
     - assets/wifi_transfer/index.html
     - assets/licenses/
     # epic-48：內建字型一律不打包進 APK，改由 epic-49「可下載字型」在使用者

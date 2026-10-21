@@ -1,19 +1,24 @@
-// epic-63 Issue 6a Task 9：MDX 詞條 WebView 的真機驗證。
+// epic-63 Issue 6a Task 9 / Issue 6b Task 8：MDX 詞條 WebView 的真機驗證。
 //
-// 直接用 Task 2 的 `html.mdx` fixture 開啟 [MdxReader]，把詞條 HTML 交給
-// [MdxEntryView]，不經檔案選擇器與字典匯入流程。驗證重點是 WebView 層級的
-// 安全性與導覽行為：JavaScript 不執行、對外請求被攔成 404、`entry://` 可
-// 點可返回、錨點（含 `entry://#錨點` 改寫後）可跳轉。圖片與配色屬 Issue 6b。
+// 直接用 `html.mdx` 與 `images.mdx`／`images.mdd` fixture 開啟 [MdxReader]，
+// 把詞條 HTML 交給 [MdxEntryView]，不經檔案選擇器與字典匯入流程。驗證重點是
+// WebView 層級的安全性、導覽、圖片攔截與配色行為：JavaScript 不執行、對外與
+// 缺檔請求被攔成 404、`entry://` 可點可返回、錨點（含 `entry://#錨點` 改寫後）
+// 可跳轉、`.mdd` 圖片（含空白與子目錄路徑）回 200 並渲染、深色與 E-Ink 覆寫
+// 樣式注入後可讀，以及 `blockNetworkLoads: true` 下初始文件與攔截圖片皆正常。
 //
 // 這個測試刻意只觀察「原生端看得到」的狀態（`getTitle`、`getScrollY`、
-// `getUrl` 與攔截回呼），不呼叫 `evaluateJavascript`：頁面 JavaScript 關閉
-// 後，Android WebView 連 `evaluateJavascript` 都不執行（Task 9 真機確認），
-// 用 JS 讀 DOM 會讓測試驗證到錯誤的前提。
+// `getUrl`、`getContentHeight`、`getSettings` 與攔截回呼），不呼叫
+// `evaluateJavascript`：頁面 JavaScript 關閉後，Android WebView 連
+// `evaluateJavascript` 都不執行（Task 9 真機確認），用 JS 讀 DOM 會讓測試
+// 驗證到錯誤的前提。
 import 'dart:async';
 import 'dart:io';
 
 import 'package:elinkbook/dictionary/dictionary_service.dart';
+import 'package:elinkbook/dictionary/mdx_html_prepare.dart';
 import 'package:elinkbook/dictionary/mdx_link_policy.dart';
+import 'package:elinkbook/dictionary/mdx_theme_override.dart';
 import 'package:elinkbook/dictionary/models/dictionary_entry.dart';
 import 'package:elinkbook/dictionary/models/lookup_request.dart';
 import 'package:elinkbook/dictionary/models/lookup_result.dart';
@@ -145,6 +150,10 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   late String mdxPath;
+  late String imagesMdxPath;
+  late String imagesMddPath;
+  late MdxReader imagesReader;
+  late String picHtml;
   late Map<String, String> entries;
 
   setUpAll(() async {
@@ -158,11 +167,25 @@ void main() {
       'banana': (await reader.lookupAll('banana')).first,
     };
     await reader.close();
+
+    imagesMdxPath = await _stageAssetAsFile(
+      'test/fixtures/mdx/images.mdx',
+      'images.mdx',
+    );
+    imagesMddPath = await _stageAssetAsFile(
+      'test/fixtures/mdx/images.mdd',
+      'images.mdd',
+    );
+    imagesReader = await MdxReader.open(imagesMdxPath);
+    picHtml = (await imagesReader.lookupAll('pic')).first;
   });
 
   tearDownAll(() async {
-    final file = File(mdxPath);
-    if (await file.exists()) await file.delete();
+    await imagesReader.close();
+    for (final path in [mdxPath, imagesMdxPath, imagesMddPath]) {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    }
   });
 
   /// 建好畫面並取得 controller。
@@ -334,6 +357,12 @@ void main() {
     await _waitForTitle(tester, controller, 'long');
     await _waitFor<int>(
       tester,
+      controller.getContentHeight,
+      (value) => value > 500,
+      '長詞條內容高度已排版完成',
+    );
+    await _waitFor<int>(
+      tester,
       controller.getScrollY,
       (value) => value == 0,
       '頁面在頁首',
@@ -353,5 +382,275 @@ void main() {
     // 面板沒有被拖曳關掉。
     expect(find.byType(DictionaryLookupSheet), findsOneWidget);
     expect(find.byType(MdxEntryView), findsOneWidget);
+  });
+
+  testWidgets('圖片在 JavaScript 關閉下顯示', (tester) async {
+    final spaceImage = Completer<MdxRequestDecision>();
+    final created = Completer<InAppWebViewController>();
+
+    await pumpLocalizedWidget(
+      tester,
+      Scaffold(
+        body: MdxEntryView(
+          config: MdxEntryViewConfig(
+            sourceId: 'images',
+            html: picHtml,
+            onEntryLink: (_) {},
+            resolveResource: imagesReader.readResource,
+          ),
+          onWebViewCreated: (controller) {
+            if (!created.isCompleted) created.complete(controller);
+          },
+          onRequestIntercepted: (url, decision) {
+            if (url.toString() == 'https://dict.local/pic/a%20b.png' &&
+                !spaceImage.isCompleted) {
+              spaceImage.complete(decision);
+            }
+          },
+        ),
+      ),
+    );
+
+    final controller =
+        await created.future.timeout(const Duration(seconds: 15));
+    final settings = await controller.getSettings();
+    expect(settings?.javaScriptEnabled, isFalse);
+
+    final decision = await spaceImage.future.timeout(
+      const Duration(seconds: 20),
+      onTimeout: () => fail('pic/a b.png 沒有被攔截'),
+    );
+    expect(decision.statusCode, 200);
+    expect(decision.contentType, 'image/png');
+    expect(decision.bytes, isNotNull);
+    expect(
+      decision.bytes!.sublist(0, 8),
+      [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+    );
+  });
+
+  testWidgets('路徑帶空白與子目錄的圖片各回 200', (tester) async {
+    final intercepted = <String, MdxRequestDecision>{};
+    final created = Completer<InAppWebViewController>();
+
+    await pumpLocalizedWidget(
+      tester,
+      Scaffold(
+        body: MdxEntryView(
+          config: MdxEntryViewConfig(
+            sourceId: 'images',
+            html: picHtml,
+            onEntryLink: (_) {},
+            resolveResource: imagesReader.readResource,
+          ),
+          onWebViewCreated: (controller) {
+            if (!created.isCompleted) created.complete(controller);
+          },
+          onRequestIntercepted: (url, decision) {
+            intercepted[url.toString()] = decision;
+          },
+        ),
+      ),
+    );
+
+    await created.future.timeout(const Duration(seconds: 15));
+    await _waitFor<bool>(
+      tester,
+      () async =>
+          intercepted['https://dict.local/pic/a%20b.png'] != null &&
+          intercepted['https://dict.local/pic/sub/c.png'] != null,
+      (ready) => ready,
+      '空白路徑與子目錄圖片皆被攔截',
+    );
+
+    final spaceDecision = intercepted['https://dict.local/pic/a%20b.png']!;
+    final subDecision = intercepted['https://dict.local/pic/sub/c.png']!;
+    expect(spaceDecision.statusCode, 200);
+    expect(spaceDecision.contentType, 'image/png');
+    expect(subDecision.statusCode, 200);
+    expect(subDecision.contentType, 'image/png');
+  });
+
+  testWidgets('找不到的圖片與 favicon 回 404，不連網', (tester) async {
+    final intercepted = <String, MdxRequestDecision>{};
+    final created = Completer<InAppWebViewController>();
+    const htmlWithMissingAndFavicon =
+        '<html><head><title>missing-test</title>'
+        '<link rel="icon" href="/favicon.ico">'
+        '</head><body>'
+        '<img src="pic/missing.png">'
+        '<img src="/favicon.ico">'
+        '</body></html>';
+
+    await pumpLocalizedWidget(
+      tester,
+      Scaffold(
+        body: MdxEntryView(
+          config: MdxEntryViewConfig(
+            sourceId: 'images',
+            html: htmlWithMissingAndFavicon,
+            onEntryLink: (_) {},
+            resolveResource: imagesReader.readResource,
+          ),
+          onWebViewCreated: (controller) {
+            if (!created.isCompleted) created.complete(controller);
+          },
+          onRequestIntercepted: (url, decision) {
+            intercepted[url.toString()] = decision;
+          },
+        ),
+      ),
+    );
+
+    final controller =
+        await created.future.timeout(const Duration(seconds: 15));
+    await _waitForTitle(tester, controller, 'missing-test');
+    await _waitFor<bool>(
+      tester,
+      () async =>
+          intercepted['https://dict.local/pic/missing.png'] != null &&
+          intercepted['https://dict.local/favicon.ico'] != null,
+      (ready) => ready,
+      '找不到的圖片與 favicon.ico 皆被攔截',
+    );
+
+    final missingDecision = intercepted['https://dict.local/pic/missing.png']!;
+    final faviconDecision = intercepted['https://dict.local/favicon.ico']!;
+    expect(missingDecision.statusCode, 404);
+    expect(missingDecision.bytes, isNull);
+    expect(faviconDecision.statusCode, 404);
+    expect(faviconDecision.bytes, isNull);
+    expect((await controller.getUrl()).toString(), kMdxBaseUrl);
+  });
+
+  testWidgets('深色與 E-Ink 下可讀：colors 注入後標題正常且覆寫樣式存在於載入文件',
+      (tester) async {
+    final darkColors = mdxColorsFor(
+      isEinkMode: false,
+      brightness: Brightness.dark,
+      scheme: ThemeData.dark().colorScheme,
+    )!;
+    final einkColors = mdxColorsFor(
+      isEinkMode: true,
+      brightness: Brightness.light,
+      scheme: ThemeData.light().colorScheme,
+    )!;
+
+    final created = Completer<InAppWebViewController>();
+    await pumpLocalizedWidget(
+      tester,
+      Scaffold(
+        body: MdxEntryView(
+          config: MdxEntryViewConfig(
+            sourceId: 'fixture',
+            html: entries['apple']!,
+            onEntryLink: (_) {},
+            colors: darkColors,
+          ),
+          onWebViewCreated: (controller) {
+            if (!created.isCompleted) created.complete(controller);
+          },
+        ),
+      ),
+    );
+
+    final controller =
+        await created.future.timeout(const Duration(seconds: 15));
+    await _waitForTitle(tester, controller, _appleTitle);
+
+    final darkWebView =
+        tester.widget<InAppWebView>(find.byType(InAppWebView));
+    final darkInitialHtml = darkWebView.platform.params.initialData?.data ?? '';
+    expect(darkInitialHtml, contains(mdxOverrideCss(darkColors)));
+    expect(
+      darkInitialHtml,
+      contains('img{background-color:#ffffff !important'),
+    );
+
+    // 切換為 E-Ink 配色並同時換詞條標題確認重載完成。
+    await pumpLocalizedWidget(
+      tester,
+      Scaffold(
+        body: MdxEntryView(
+          config: MdxEntryViewConfig(
+            sourceId: 'fixture',
+            html: entries['banana']!,
+            onEntryLink: (_) {},
+            colors: einkColors,
+          ),
+        ),
+      ),
+    );
+    await _waitForTitle(tester, controller, _bananaTitle);
+
+    final einkPrepared = prepareEntryHtml(
+      entries['banana']!,
+      overrideCss: mdxOverrideCss(einkColors),
+    );
+    expect(
+      einkPrepared,
+      contains('html,body{background:#ffffff !important;color:#000000 !important}'),
+    );
+    expect(
+      einkPrepared,
+      contains('text-decoration:underline !important'),
+    );
+  });
+
+  testWidgets('blockNetworkLoads 啟用下：data: 初始文件與攔截圖片皆正常載入渲染',
+      (tester) async {
+    final intercepted = <String, MdxRequestDecision>{};
+    final created = Completer<InAppWebViewController>();
+    // 兩張 1x1 PNG 設為寬 300px、高 auto（1:1 比例解碼後各佔 300px 高）；
+    // 若圖片未載入或被 blockNetworkLoads 擋下，高度不會撐開。
+    const probeHtml =
+        '<html><head><meta charset="utf-8"><title>block-probe</title></head>'
+        '<body style="margin:0">'
+        '<img src="pic/a b.png" style="display:block;width:300px;height:auto">'
+        '<img src="pic/sub/c.png" style="display:block;width:300px;height:auto">'
+        '</body></html>';
+
+    await pumpLocalizedWidget(
+      tester,
+      Scaffold(
+        body: MdxEntryView(
+          config: MdxEntryViewConfig(
+            sourceId: 'images',
+            html: probeHtml,
+            onEntryLink: (_) {},
+            resolveResource: imagesReader.readResource,
+          ),
+          onWebViewCreated: (controller) {
+            if (!created.isCompleted) created.complete(controller);
+          },
+          onRequestIntercepted: (url, decision) {
+            intercepted[url.toString()] = decision;
+          },
+        ),
+      ),
+    );
+
+    final controller =
+        await created.future.timeout(const Duration(seconds: 15));
+    await _waitForTitle(tester, controller, 'block-probe');
+    await _waitFor<bool>(
+      tester,
+      () async =>
+          intercepted['https://dict.local/pic/a%20b.png'] != null &&
+          intercepted['https://dict.local/pic/sub/c.png'] != null,
+      (ready) => ready,
+      'blockNetworkLoads 啟用下兩張圖片皆被攔截',
+    );
+    final contentHeight = await _waitFor<int>(
+      tester,
+      controller.getContentHeight,
+      (height) => height >= 600,
+      '兩張 300px 1:1 圖片解碼渲染撐開頁面高度（>= 600）',
+    );
+    final settings = await controller.getSettings();
+    expect(settings?.blockNetworkLoads, isTrue);
+    expect(intercepted['https://dict.local/pic/a%20b.png']!.statusCode, 200);
+    expect(intercepted['https://dict.local/pic/sub/c.png']!.statusCode, 200);
+    expect(contentHeight, greaterThanOrEqualTo(600));
   });
 }

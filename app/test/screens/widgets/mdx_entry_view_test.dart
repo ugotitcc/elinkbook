@@ -399,4 +399,32 @@ void main() {
       expect(reloadCount, 2, reason: 'colors 改變應再次觸發 reload');
     });
   });
+
+  group('initialSettings 安全設定固定值（Task 8）', () {
+    testWidgets('固定啟用 blockNetworkLoads 並關閉 JS、檔案存取、快取與 Safe Browsing',
+        (tester) async {
+      await pumpLocalizedWidget(
+        tester,
+        MdxEntryView(
+          config: MdxEntryViewConfig(
+            sourceId: 'src',
+            html: '<p>內容</p>',
+            onEntryLink: (_) {},
+          ),
+        ),
+      );
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final settings = webView.platform.params.initialSettings;
+      expect(settings, isNotNull);
+      expect(settings!.blockNetworkLoads, isTrue);
+      expect(settings.javaScriptEnabled, isFalse);
+      expect(settings.allowFileAccess, isFalse);
+      expect(settings.allowContentAccess, isFalse);
+      expect(settings.cacheEnabled, isFalse);
+      expect(settings.safeBrowsingEnabled, isFalse);
+      expect(settings.useShouldOverrideUrlLoading, isTrue);
+      expect(settings.useShouldInterceptRequest, isTrue);
+    });
+  });
 }
