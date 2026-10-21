@@ -4085,6 +4085,18 @@ abstract class AppLocalizations {
   /// **'（失敗）'**
   String get dictionaryLookupSegmentFailed;
 
+  /// MDX 詞條內跳轉後，查詢詞標題列左側返回鈕的 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'返回上一個詞條'**
+  String get dictionaryLookupBack;
+
+  /// MDX 詞條內的交叉參照連結查無詞條時，面板頂端的提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'找不到這個詞條'**
+  String get dictionaryLookupLinkNotFound;
+
   /// 字典設定畫面的標題
   ///
   /// In zh_TW, this message translates to:
@@ -4342,6 +4354,30 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'無法匯入這個檔案。匯入時發生未預期的錯誤。請稍後再試一次，若仍失敗請換一個檔案。'**
   String get dictionaryImportErrorGeneric;
+
+  /// 匯入失敗（LZO 壓縮）的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'這本字典使用 LZO 壓縮，目前不支援。請改用 zlib 版本，或用 MDict 工具重新打包。'**
+  String get dictionaryImportErrorUnsupportedCompression;
+
+  /// 匯入失敗（詞條內容加密）的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法匯入這個檔案。字典的詞條內容有加密，目前不支援。請改用未加密的版本，或用 MDict 工具重新打包後再試一次。'**
+  String get dictionaryImportErrorEncryptedRecords;
+
+  /// 匯入失敗（檔案不完整或損毀）的三段式訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'無法匯入這個檔案。字典檔的內容不完整或已損毀。請重新下載或複製檔案後再試一次。'**
+  String get dictionaryImportErrorCorruptFile;
+
+  /// MDX 匯入完成後的摘要提醒，files 為以頓號連接的缺檔檔名
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'詞條引用了 {files}，但沒有匯入。請到字典清單按「新增附屬檔案」補上。'**
+  String dictionaryImportMissingCssAfterImport(String files);
 
   /// 不支援的檔案的三段式訊息，file 為檔名
   ///

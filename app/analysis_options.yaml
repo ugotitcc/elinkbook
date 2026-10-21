@@ -12,6 +12,9 @@ include: package:flutter_lints/flutter.yaml
 analyzer:
   exclude:
     - patches/**
+    # third_party 是上游套件的本地副本（含 Issue 6a 的延遲載入修補），
+    # 套用專案 lint 會產生大量與本專案無關的警告。
+    - third_party/**
 
 linter:
   # The lint rules applied to this project can be customized in the

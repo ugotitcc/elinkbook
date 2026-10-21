@@ -198,10 +198,24 @@ class DictionaryStore {
         referencedCss: _decodeCssNames(row['referenced_css']),
       );
 
-  /// 空或 `null` → 空清單。
+  /// 空、`null`、壞 JSON、非陣列或含非字串元素 → 空清單。
+  ///
+  /// `referenced_css` 只是輔助資訊，壞掉不該讓整本字典讀不出來。
   List<String> _decodeCssNames(Object? raw) {
     if (raw is! String || raw.isEmpty) return const [];
-    return (jsonDecode(raw) as List).cast<String>();
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } on FormatException {
+      return const [];
+    }
+    if (decoded is! List) return const [];
+    final names = <String>[];
+    for (final item in decoded) {
+      if (item is! String) return const [];
+      names.add(item);
+    }
+    return names;
   }
 
   Map<String, Object?> _entryToRow(DictionaryEntry entry) => {

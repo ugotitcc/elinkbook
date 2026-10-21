@@ -6,6 +6,8 @@ import 'package:elinkbook/dictionary/models/dictionary_entry.dart';
 import 'package:elinkbook/dictionary/models/lookup_request.dart';
 import 'package:elinkbook/dictionary/models/lookup_result.dart';
 import 'package:elinkbook/screens/widgets/dictionary_lookup_sheet.dart';
+import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
+import 'package:elinkbook/screens/widgets/mdx_entry_view.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +34,7 @@ DictionaryEntry _entry(
   String? pronunciation,
   String? partOfSpeech,
   String body = '釋義內容',
+  EntryBodyKind bodyKind = EntryBodyKind.plainText,
 }) =>
     DictionaryEntry(
       sourceId: 'src',
@@ -39,8 +42,55 @@ DictionaryEntry _entry(
       pronunciation: pronunciation,
       partOfSpeech: partOfSpeech,
       body: body,
-      bodyKind: EntryBodyKind.plainText,
+      bodyKind: bodyKind,
     );
+
+/// 假的 MDX 詞條顯示元件：記下建構參數，畫面上只放一個可辨識的 Key。
+class _FakeMdxEntryView extends StatelessWidget {
+  const _FakeMdxEntryView();
+
+  @override
+  Widget build(BuildContext context) =>
+      const SizedBox(key: Key('fake_mdx_view'), child: Text('MDX 詞條'));
+}
+
+/// 會記錄 State 建立次數的假 MDX 元件，用來確認切換分段時 WebView 是否重建。
+class _CountingMdxEntryView extends StatefulWidget {
+  const _CountingMdxEntryView({required this.onStateCreated});
+
+  final VoidCallback onStateCreated;
+
+  @override
+  State<_CountingMdxEntryView> createState() => _CountingMdxEntryViewState();
+}
+
+class _CountingMdxEntryViewState extends State<_CountingMdxEntryView> {
+  @override
+  void initState() {
+    super.initState();
+    widget.onStateCreated();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      const SizedBox(key: Key('fake_mdx_view'), child: Text('MDX 詞條'));
+}
+
+/// 收集每次建構 [MdxEntryViewConfig] 的參數，測試再用 `last` 觸發連結。
+class _MdxRecorder {
+  final List<MdxEntryViewConfig> configs = [];
+
+  MdxEntryViewConfig get last => configs.last;
+
+  Widget build(BuildContext context, MdxEntryViewConfig config) {
+    configs.add(config);
+    return const _FakeMdxEntryView();
+  }
+}
+
+/// 建立 HTML 詞條（內容由 WebView 顯示）。
+DictionaryEntry _htmlEntry(String headword, {String body = '<p>HTML 釋義</p>'}) =>
+    _entry(headword, body: body, bodyKind: EntryBodyKind.html);
 
 ProviderOutcome _outcome(
   String id, {
@@ -77,6 +127,9 @@ Future<void> _pumpSheet(
   bool isEinkMode = false,
   VoidCallback? onOpenSettings,
   bool settle = true,
+  MdxEntryViewBuilder? mdxEntryViewBuilder,
+  Future<List<DictionaryEntry>> Function(String sourceId, String word)?
+      lookupInSource,
 }) async {
   await pumpLocalizedWidget(
     tester,
@@ -92,6 +145,8 @@ Future<void> _pumpSheet(
                 response: response,
                 isEinkMode: isEinkMode,
                 onOpenSettings: onOpenSettings,
+                mdxEntryViewBuilder: mdxEntryViewBuilder,
+                lookupInSource: lookupInSource,
               ),
             ),
           ],
@@ -101,6 +156,70 @@ Future<void> _pumpSheet(
     isEinkMode: isEinkMode,
   );
   if (settle) await tester.pump();
+}
+
+/// 把面板放進真的 [EBSheetShell]（高度上限為螢幕 85%），用來驗證 HTML 詞條
+/// 以 `Expanded` 撐滿剩餘高度、切回純文字後縮回。
+Future<void> _pumpSheetInShell(
+  WidgetTester tester, {
+  required Future<DictionaryLookupResponse> response,
+  MdxEntryViewBuilder? mdxEntryViewBuilder,
+  Future<List<DictionaryEntry>> Function(String sourceId, String word)?
+      lookupInSource,
+}) async {
+  await pumpLocalizedWidget(
+    tester,
+    Scaffold(
+      body: Align(
+        alignment: Alignment.bottomCenter,
+        child: EBSheetShell(
+          title: '查字典',
+          child: DictionaryLookupSheet(
+            selectedText: '詞',
+            response: response,
+            isEinkMode: false,
+            mdxEntryViewBuilder: mdxEntryViewBuilder,
+            lookupInSource: lookupInSource,
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+}
+
+/// 把面板放上真的 modal route（`EBSheetShell.show`），才能用
+/// `handlePopRoute()` 驗證系統返回與 `PopScope` 的互動。
+Future<void> _pumpSheetOnModalRoute(
+  WidgetTester tester, {
+  required Future<DictionaryLookupResponse> response,
+  MdxEntryViewBuilder? mdxEntryViewBuilder,
+  Future<List<DictionaryEntry>> Function(String sourceId, String word)?
+      lookupInSource,
+}) async {
+  await pumpLocalizedWidget(
+    tester,
+    Scaffold(
+      body: Builder(
+        builder: (context) => ElevatedButton(
+          onPressed: () => EBSheetShell.show<void>(
+            context,
+            title: '查字典',
+            builder: (context) => DictionaryLookupSheet(
+              selectedText: '詞',
+              response: response,
+              isEinkMode: false,
+              mdxEntryViewBuilder: mdxEntryViewBuilder,
+              lookupInSource: lookupInSource,
+            ),
+          ),
+          child: const Text('open'),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('open'));
+  await tester.pumpAndSettle();
 }
 
 Set<String> _selectedSegments(WidgetTester tester) => tester
@@ -301,9 +420,13 @@ void main() {
       );
 
       expect(find.text('甲典'), findsWidgets);
-      expect(find.text('乙典（無）'), findsOneWidget);
-      expect(find.text('丙典（略過）'), findsOneWidget);
-      expect(find.text('丁典（失敗）'), findsOneWidget);
+      // 名稱與狀態後綴是分開的兩個 Text（名稱過長時只截斷名稱）。
+      expect(find.text('乙典'), findsOneWidget);
+      expect(find.text('（無）'), findsOneWidget);
+      expect(find.text('丙典'), findsOneWidget);
+      expect(find.text('（略過）'), findsOneWidget);
+      expect(find.text('丁典'), findsOneWidget);
+      expect(find.text('（失敗）'), findsOneWidget);
     });
 
     testWidgets('底部顯示來源名稱與 attribution', (tester) async {
@@ -631,4 +754,309 @@ void main() {
       expect(find.text('詞條甲'), findsOneWidget);
     });
   });
+
+  group('MDX 詞條顯示', () {
+    LookupCompleted twoSegments() => _completed([
+          _outcome('a', name: '乙典', entries: [_entry('純文字詞條')]),
+          _outcome(
+            'mdx',
+            name: 'MDX 典',
+            entries: [_htmlEntry('詞', body: '<p>原始 HTML</p>')],
+          ),
+        ]);
+
+    testWidgets('選中 MDX 分段時只放一個 WebView 元件，切走後移除', (tester) async {
+      final recorder = _MdxRecorder();
+      await _pumpSheet(
+        tester,
+        mdxEntryViewBuilder: recorder.build,
+        response: Future.value(twoSegments()),
+      );
+
+      // 預設選中第一個 found 的純文字分段。
+      expect(find.byKey(const Key('fake_mdx_view')), findsNothing);
+
+      await tester.tap(find.text('MDX 典'));
+      await tester.pump();
+
+      expect(find.byKey(const Key('fake_mdx_view')), findsOneWidget);
+      expect(find.byType(ListView), findsNothing);
+      expect(find.text('純文字詞條'), findsNothing);
+      expect(recorder.last.sourceId, 'mdx');
+      expect(recorder.last.html, contains('原始 HTML'));
+
+      await tester.tap(find.text('乙典'));
+      await tester.pump();
+
+      expect(find.byKey(const Key('fake_mdx_view')), findsNothing);
+      expect(find.text('純文字詞條'), findsOneWidget);
+    });
+
+    testWidgets('兩個 MDX 分段之間切換：WebView 的 State 會重建（I-6）', (tester) async {
+      var created = 0;
+      await _pumpSheet(
+        tester,
+        mdxEntryViewBuilder: (context, config) => _CountingMdxEntryView(
+          onStateCreated: () => created++,
+        ),
+        response: Future.value(
+          _completed([
+            _outcome(
+              'm1',
+              name: '甲 MDX',
+              entries: [_htmlEntry('詞', body: '<p>甲</p>')],
+            ),
+            _outcome(
+              'm2',
+              name: '乙 MDX',
+              entries: [_htmlEntry('詞', body: '<p>乙</p>')],
+            ),
+          ]),
+        ),
+      );
+      expect(created, 1);
+
+      await tester.tap(find.text('乙 MDX'));
+      await tester.pump();
+      expect(created, 2, reason: '切到另一本 MDX 要丟棄舊 WebView 並建立新的');
+
+      await tester.tap(find.text('甲 MDX'));
+      await tester.pump();
+      expect(created, 3);
+    });
+
+    testWidgets('很長的字典名稱不會把相鄰分段擠出畫面（640dp 寬）', (tester) async {
+      tester.view.physicalSize = const Size(640, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      const longA = '簡明古漢語常用字字典（川大版2003）正體　本字典收錄常用字的古代漢語用法與例句說明';
+      const longB = '教育部重編國語辭典修訂本　包含字詞釋義、注音、相關詞與出處引文的完整說明內容';
+      await _pumpSheet(
+        tester,
+        response: Future.value(
+          _completed([
+            _outcome('a', name: longA, entries: [_entry('甲詞條', body: '甲內容')]),
+            _outcome('b', name: longB, status: OutcomeStatus.notFound),
+          ]),
+        ),
+      );
+
+      final bar = tester.getRect(find.byKey(const Key('dictionary_lookup_segments')));
+      expect(bar.left, greaterThanOrEqualTo(0));
+      expect(bar.right, lessThanOrEqualTo(640));
+
+      // 兩個分段的標籤都完整落在橫向捲動區之內，不必捲動就看得到。
+      Finder inBar(String text) => find.descendant(
+        of: find.byKey(const Key('dictionary_lookup_segments')),
+        matching: find.text(text),
+      );
+      for (final name in [longA, longB]) {
+        final rect = tester.getRect(inBar(name));
+        expect(rect.left, greaterThanOrEqualTo(0), reason: name);
+        expect(rect.right, lessThanOrEqualTo(640), reason: name);
+      }
+      // 名稱被截斷成單行，狀態後綴仍然看得到。
+      expect(tester.getRect(inBar('（無）')).right, lessThanOrEqualTo(640));
+      expect(tester.getRect(inBar(longB)).height, lessThan(30));
+
+      // 長名稱有 Tooltip 帶完整名稱與後綴。
+      expect(find.byTooltip(longA), findsOneWidget);
+      expect(find.byTooltip('$longB（無）'), findsOneWidget);
+
+      // 點第二個分段會選中它。
+      await tester.tap(inBar(longB));
+      await tester.pump();
+      expect(find.byKey(const Key('dictionary_lookup_not_found')), findsWidgets);
+    });
+
+    testWidgets('HTML 詞條撐滿面板高度，切回純文字分段後縮回', (tester) async {
+      final recorder = _MdxRecorder();
+      await _pumpSheetInShell(
+        tester,
+        mdxEntryViewBuilder: recorder.build,
+        response: Future.value(twoSegments()),
+      );
+
+      await tester.tap(find.text('MDX 典'));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      final shellHeight = tester.getSize(find.byType(EBSheetShell)).height;
+      expect(
+        shellHeight,
+        moreOrLessEquals(screenHeight * 0.85, epsilon: 1),
+      );
+      final htmlHeight =
+          tester.getSize(find.byType(DictionaryLookupSheet)).height;
+      // 面板扣掉外殼標題列後幾乎填滿 85% 的高度。
+      expect(htmlHeight, greaterThan(shellHeight * 0.7));
+
+      await tester.tap(find.text('乙典'));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final plainHeight =
+          tester.getSize(find.byType(DictionaryLookupSheet)).height;
+      expect(plainHeight, lessThan(htmlHeight));
+      expect(plainHeight, lessThan(screenHeight * 0.5));
+    });
+
+    testWidgets('詞條連結查得到時顯示新詞條，返回鈕可逐層回退', (tester) async {
+      final recorder = _MdxRecorder();
+      final calls = <({String sourceId, String word})>[];
+      var results = <DictionaryEntry>[_htmlEntry('天地', body: '<p>第二層</p>')];
+
+      await _pumpSheet(
+        tester,
+        mdxEntryViewBuilder: recorder.build,
+        lookupInSource: (sourceId, word) async {
+          calls.add((sourceId: sourceId, word: word));
+          return results;
+        },
+        response: Future.value(
+          _completed([
+            _outcome(
+              'mdx',
+              name: 'MDX 典',
+              entries: [_htmlEntry('詞', body: '<p>第一層</p>')],
+            ),
+          ]),
+        ),
+      );
+
+      expect(find.byKey(const Key('dictionary_lookup_back')), findsNothing);
+      expect(recorder.last.html, contains('第一層'));
+
+      recorder.last.onEntryLink('天地');
+      await tester.pumpAndSettle();
+
+      expect(calls, [(sourceId: 'mdx', word: '天地')]);
+      expect(find.byKey(const Key('dictionary_lookup_back')), findsOneWidget);
+      expect(_queryWord(tester), '天地');
+      expect(recorder.last.html, contains('第二層'));
+
+      // 第二層：再點一次連結，堆疊變成兩層。
+      results = [_htmlEntry('第三', body: '<p>第三層</p>')];
+      recorder.last.onEntryLink('第三');
+      await tester.pumpAndSettle();
+
+      expect(_queryWord(tester), '第三');
+
+      await tester.tap(find.byKey(const Key('dictionary_lookup_back')));
+      await tester.pump();
+
+      expect(_queryWord(tester), '天地');
+      expect(recorder.last.html, contains('第二層'));
+      expect(find.byKey(const Key('dictionary_lookup_back')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('dictionary_lookup_back')));
+      await tester.pump();
+
+      expect(_queryWord(tester), '詞');
+      expect(recorder.last.html, contains('第一層'));
+      expect(find.byKey(const Key('dictionary_lookup_back')), findsNothing);
+    });
+
+    testWidgets('連結查無詞條時顯示提示、不推入堆疊', (tester) async {
+      final recorder = _MdxRecorder();
+      await _pumpSheet(
+        tester,
+        mdxEntryViewBuilder: recorder.build,
+        lookupInSource: (sourceId, word) async => const [],
+        response: Future.value(
+          _completed([
+            _outcome('mdx', name: 'MDX 典', entries: [_htmlEntry('詞')]),
+          ]),
+        ),
+      );
+
+      recorder.last.onEntryLink('查無');
+      await tester.pumpAndSettle();
+
+      expect(find.text('找不到這個詞條'), findsOneWidget);
+      expect(find.byKey(const Key('dictionary_lookup_back')), findsNothing);
+      expect(find.byKey(const Key('fake_mdx_view')), findsOneWidget);
+    });
+
+    testWidgets('切換分段會清空返回堆疊與提示', (tester) async {
+      final recorder = _MdxRecorder();
+      await _pumpSheet(
+        tester,
+        mdxEntryViewBuilder: recorder.build,
+        lookupInSource: (sourceId, word) async => [_htmlEntry('天地')],
+        response: Future.value(twoSegments()),
+      );
+
+      await tester.tap(find.text('MDX 典'));
+      await tester.pump();
+      recorder.last.onEntryLink('天地');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('dictionary_lookup_back')), findsOneWidget);
+
+      await tester.tap(find.text('乙典'));
+      await tester.pump();
+      await tester.tap(find.text('MDX 典'));
+      await tester.pump();
+
+      expect(find.byKey(const Key('dictionary_lookup_back')), findsNothing);
+      expect(find.text('找不到這個詞條'), findsNothing);
+      expect(_queryWord(tester), '詞');
+    });
+
+    testWidgets('系統返回先回退詞條，堆疊空了才關閉面板', (tester) async {
+      final recorder = _MdxRecorder();
+      await _pumpSheetOnModalRoute(
+        tester,
+        mdxEntryViewBuilder: recorder.build,
+        lookupInSource: (sourceId, word) async => [_htmlEntry('天地')],
+        response: Future.value(
+          _completed([
+            _outcome('mdx', name: 'MDX 典', entries: [_htmlEntry('詞')]),
+          ]),
+        ),
+      );
+
+      recorder.last.onEntryLink('天地');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('dictionary_lookup_back')), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DictionaryLookupSheet), findsOneWidget);
+      expect(_queryWord(tester), '詞');
+      expect(find.byKey(const Key('dictionary_lookup_back')), findsNothing);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DictionaryLookupSheet), findsNothing);
+    });
+
+    testWidgets('E-Ink 模式的 MDX 詞條沒有動畫元件', (tester) async {
+      final recorder = _MdxRecorder();
+      await _pumpSheet(
+        tester,
+        isEinkMode: true,
+        mdxEntryViewBuilder: recorder.build,
+        response: Future.value(
+          _completed([
+            _outcome('mdx', name: 'MDX 典', entries: [_htmlEntry('詞')]),
+          ]),
+        ),
+      );
+
+      expect(find.byKey(const Key('fake_mdx_view')), findsOneWidget);
+      expect(find.byType(AnimatedSwitcher), findsNothing);
+      expect(find.byType(AnimatedContainer), findsNothing);
+      expect(find.byType(AnimatedOpacity), findsNothing);
+    });
+  });
 }
+
+String? _queryWord(WidgetTester tester) => tester
+    .widget<Text>(find.byKey(const Key('dictionary_lookup_query_word')))
+    .data;

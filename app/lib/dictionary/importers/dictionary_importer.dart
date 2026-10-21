@@ -20,6 +20,7 @@ class ImportRequest {
     this.name,
     this.licenseNote = '',
     this.replaceExisting = false,
+    this.companions = const [],
   });
 
   final String filePath;
@@ -33,6 +34,11 @@ class ImportRequest {
 
   /// `true` 時，若已匯入同一內容的字典，在同一個交易內取代它。
   final bool replaceExisting;
+
+  /// 同一次選取的附屬檔案（`.mdd`、`.css`）。只有 MDX 匯入器會使用；
+  /// 其他格式忽略。`path` 是選檔器給的實際路徑，`name` 是顯示與落地用的
+  /// 檔名（落地前會再取 basename）。
+  final List<({String path, String name})> companions;
 }
 
 /// 匯入進行到哪個階段。
@@ -95,7 +101,8 @@ class ImportHints {
 }
 
 /// 匯入失敗。[code] 為 `unreadableFile`、`invalidEncoding`、`invalidFormat`、
-/// `noValidEntries` 之一。
+/// `noValidEntries`、`unsupportedCompression`、`encryptedRecords`、
+/// `corruptFile` 之一。
 class DictionaryImportException implements Exception {
   const DictionaryImportException(this.code);
 

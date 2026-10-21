@@ -9,7 +9,7 @@
 | 3 | JSON/CSV 與 CC-CEDICT 匯入、重複匯入偵測、查詢候選鏈、本機查詢 | 2 | done | #345 |
 | 4 | 查詢面板、`AnnotationToolbar` 按鈕、選字規則、依賴注入 | 3 | done | #347 |
 | 5 | 字典設定畫面 | 3 | done | #349 |
-| 6a | MDX 匯入、詞條顯示、交叉參照與錨點、返回堆疊 | 1、4、5 | ready-for-agent | |
+| 6a | MDX 匯入、詞條顯示、交叉參照與錨點、返回堆疊 | 1、4、5 | in-review | |
 | 6b | MDX 圖片、獨立 CSS、深色與 E-Ink 配色 | 6a | ready-for-human | |
 | 7 | 線上查詞（萌典）、同意對話框、隱私更新 | 3、4、5 | ready-for-agent | |
 | 8 | 授權頁、隱私頁、l10n 收尾、整合測試 | 全部 | ready-for-human | |
@@ -158,7 +158,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 ## Issue 6a：MDX 匯入、詞條顯示、交叉參照與錨點、返回堆疊
 
-**Status:** ready-for-agent
+**Status:** in-review
 
 **依賴：** Issue 1（選定套件）、Issue 4、Issue 5。
 
@@ -197,6 +197,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 - 圖片：在 `shouldInterceptRequest` 從 `.mdd` 回傳資源。網址轉成 MDD 鍵的規則以 `spec.md` §3.6 為準（去掉 baseUrl 與開頭 `/` → `Uri.decodeComponent` → 把 `/` 換成 `\` → 前面加 `\`；實測 WebView 送來的是 `https://dict.local/pic/a%20b.png`，而 MDD 的鍵是 `\pic\a b.png`）。依副檔名設 `contentType`。
 - 外部 `.css`：載入詞條前，依詞條 `<link href>` 的檔名換成內嵌 `<style>`，移除 `@import`；沒有對應檔案的 `<link>` 直接移除（規則見 `spec.md` §3.6）。
 - 深色與 E-Ink 配色：注入覆寫樣式，蓋掉詞條寫死的文字與背景顏色。
+- MDD 鍵轉換：把 WebView 送來的網址（`https://dict.local/pic/a%20b.png`）轉成 MDD 的鍵（`\pic\a b.png`）。Issue 6a 的 `MdxReader` 薄封裝只做了 MDX 詞條讀取，**沒有**實作這段轉換（Issue 6a 計畫 I-1 已把圖片整個切給本 Issue），做法照上一條的規則實作並補單元測試。
 - 已知限制寫進設定畫面說明：依賴 `onclick` 的互動（例如牛津 9 圖片放大）在 JavaScript 關閉時不運作。
 
 **測試要求：**

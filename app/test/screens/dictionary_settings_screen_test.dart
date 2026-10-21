@@ -43,6 +43,7 @@ Future<void> _pump(
   FakeDictionaryManager manager, {
   bool isEinkMode = false,
   DictionaryFilePicker? pickFiles,
+  DictionaryTempFileCleaner? clearTempFiles,
   Locale locale = const Locale('zh', 'TW'),
 }) async {
   await pumpLocalizedWidget(
@@ -51,6 +52,7 @@ Future<void> _pump(
       manager: manager,
       isEinkMode: isEinkMode,
       pickFiles: pickFiles,
+      clearTempFiles: clearTempFiles,
     ),
     isEinkMode: isEinkMode,
     locale: locale,
@@ -773,6 +775,189 @@ void main() {
       expect(manager.importCalls.map((c) => c.file.name), ['b.json']);
       expect(find.textContaining('這個版本還不能匯入 MDX'), findsOneWidget);
       expect(find.text('匯入 3 筆'), findsOneWidget);
+    });
+
+    testWidgets('選 a.mdx＋a.mdd＋x.css：附屬檔案帶進 ImportRequest，方向未選時匯入鈕停用', (
+      tester,
+    ) async {
+      final manager = FakeDictionaryManager()..canImportFn = (_) => true;
+      manager.importStream = okStream(manager);
+      await _pump(
+        tester,
+        manager,
+        pickFiles: (_) async => [pf('a.mdx'), pf('a.mdd'), pf('x.css')],
+      );
+      await tapImport(tester);
+
+      // 檔案標頭沒有語言資訊 → 方向未預選，「匯入」停用。
+      expect(find.byKey(const Key('dictionary_import_dialog')), findsOneWidget);
+      final confirm = tester.widget<FilledButton>(
+        find.byKey(const Key('dictionary_import_confirm')),
+      );
+      expect(confirm.onPressed, isNull);
+
+      await confirmDialog(tester, direction: 'enToZh');
+
+      expect(manager.importCalls, hasLength(1));
+      expect(manager.importCalls.single.file.name, 'a.mdx');
+      expect(
+        manager.importCalls.single.request.companions.map((c) => c.name),
+        ['a.mdd', 'x.css'],
+      );
+      expect(
+        manager.importCalls.single.request.companions.map((c) => c.path),
+        ['/tmp/a.mdd', '/tmp/x.css'],
+      );
+    });
+
+    testWidgets('選 a.mdx＋x.css（沒有 .mdd）：companions 只含 css，不丟型別錯誤', (tester) async {
+      final manager = FakeDictionaryManager()..canImportFn = (_) => true;
+      manager.importStream = okStream(manager);
+      await _pump(
+        tester,
+        manager,
+        pickFiles: (_) async => [pf('a.mdx'), pf('x.css')],
+      );
+      await tapImport(tester);
+      await confirmDialog(tester, direction: 'enToZh');
+
+      expect(
+        manager.importCalls.single.request.companions.map((c) => c.name),
+        ['x.css'],
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final (code, expected) in [
+      ('unsupportedCompression', '改用 zlib 版本'),
+      ('encryptedRecords', '詞條內容有加密'),
+      ('corruptFile', '內容不完整或已損毀'),
+    ]) {
+      testWidgets('MDX 匯入失敗（$code）：顯示三段式訊息，不顯示原始碼', (tester) async {
+        final manager = FakeDictionaryManager()..canImportFn = (_) => true;
+        manager.importStream = (file, request, cancel) async* {
+          throw DictionaryImportException(code);
+        };
+        await _pump(tester, manager, pickFiles: (_) async => [pf('a.mdx')]);
+        await tapImport(tester);
+        await confirmDialog(tester, direction: 'enToZh');
+
+        expect(find.textContaining(expected), findsOneWidget);
+        expect(find.textContaining(code), findsNothing);
+      });
+    }
+
+    testWidgets('匯入成功但缺樣式表：摘要列出缺檔並提示新增附屬檔案', (tester) async {
+      final manager = FakeDictionaryManager()..canImportFn = (_) => true;
+      manager.importStream = (file, request, cancel) async* {
+        manager.items = [
+          ...manager.items,
+          _item('new', format: DictionaryFormat.mdx, missingCss: ['x.css']),
+        ];
+        yield done();
+      };
+      await _pump(tester, manager, pickFiles: (_) async => [pf('a.mdx')]);
+      await tapImport(tester);
+      await confirmDialog(tester, direction: 'enToZh');
+
+      expect(
+        find.text('詞條引用了 x.css，但沒有匯入。請到字典清單按「新增附屬檔案」補上。'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('新增附屬檔案'), findsWidgets);
+    });
+
+    testWidgets('同批 a.mdx＋b.json：各跳一次對話框、各匯入一次，MDX 失敗不影響 JSON', (tester) async {
+      final manager = FakeDictionaryManager()..canImportFn = (_) => true;
+      manager.importStream = (file, request, cancel) async* {
+        if (file.name == 'a.mdx') {
+          throw const DictionaryImportException('invalidFormat');
+        }
+        manager.items = [...manager.items, _item('new')];
+        yield done();
+      };
+      await _pump(
+        tester,
+        manager,
+        pickFiles: (_) async => [pf('a.mdx'), pf('b.json')],
+      );
+      await tapImport(tester);
+
+      // 一般檔案先處理，再處理 MDX 組。
+      expect(manager.readHintsCalls.map((f) => f.name), ['b.json']);
+      await confirmDialog(tester, direction: 'enToZh');
+      expect(manager.readHintsCalls.map((f) => f.name), ['b.json', 'a.mdx']);
+      await confirmDialog(tester, direction: 'enToZh');
+
+      expect(manager.importCalls.map((c) => c.file.name), ['b.json', 'a.mdx']);
+      expect(find.textContaining('格式不符合字典格式'), findsOneWidget);
+      expect(find.text('匯入 3 筆'), findsOneWidget);
+    });
+
+    testWidgets('MDX 匯入完成後呼叫清除暫存檔；JSON 匯入不呼叫', (tester) async {
+      var cleared = 0;
+      final manager = FakeDictionaryManager()..canImportFn = (_) => true;
+      manager.importStream = okStream(manager);
+
+      Future<bool?> clear() async {
+        cleared += 1;
+        return true;
+      }
+
+      // 先匯入 JSON：不應清除暫存檔。
+      await _pump(
+        tester,
+        manager,
+        pickFiles: (_) async => [pf('a.json')],
+        clearTempFiles: clear,
+      );
+      await tapImport(tester);
+      await confirmDialog(tester, direction: 'enToZh');
+      expect(cleared, 0);
+      await closeMessage(tester);
+
+      // 再匯入 MDX：完成後清除一次。
+      await tester.pumpWidget(const SizedBox());
+      await _pump(
+        tester,
+        manager,
+        pickFiles: (_) async => [pf('a.mdx')],
+        clearTempFiles: clear,
+      );
+      await tapImport(tester);
+      await confirmDialog(tester, direction: 'enToZh');
+      // 整批結束（摘要對話框關閉）後才清除。
+      await closeMessage(tester);
+      expect(cleared, 1);
+    });
+
+    testWidgets('同一批兩本 MDX：整批結束後才清除暫存檔，且只清一次（C-1）', (tester) async {
+      var cleared = 0;
+      final manager = FakeDictionaryManager()..canImportFn = (_) => true;
+      manager.importStream = okStream(manager);
+
+      await _pump(
+        tester,
+        manager,
+        pickFiles: (_) async => [pf('a.mdx'), pf('b.mdx')],
+        clearTempFiles: () async {
+          cleared += 1;
+          return true;
+        },
+      );
+      await tapImport(tester);
+
+      // 第一本匯入完成後，第二本的對話框已出現：此時還不能清暫存檔，
+      // 否則 b.mdx 與它的附屬檔會在讀取前被刪掉。
+      await confirmDialog(tester, direction: 'enToZh');
+      expect(manager.importCalls.map((c) => c.file.name), ['a.mdx']);
+      expect(cleared, 0);
+
+      await confirmDialog(tester, direction: 'enToZh');
+      expect(manager.importCalls.map((c) => c.file.name), ['a.mdx', 'b.mdx']);
+      expect(cleared, 0, reason: '摘要對話框還開著，整批尚未結束');
+      await closeMessage(tester);
+      expect(cleared, 1);
     });
 
     testWidgets('不支援的副檔名顯示不支援的檔案', (tester) async {

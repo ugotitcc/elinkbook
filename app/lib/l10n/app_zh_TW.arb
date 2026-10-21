@@ -3103,6 +3103,14 @@
   "@dictionaryLookupSegmentFailed": {
     "description": "字典面板分段標籤的狀態後綴：查詢失敗"
   },
+  "dictionaryLookupBack": "返回上一個詞條",
+  "@dictionaryLookupBack": {
+    "description": "MDX 詞條內跳轉後，查詢詞標題列左側返回鈕的 tooltip"
+  },
+  "dictionaryLookupLinkNotFound": "找不到這個詞條",
+  "@dictionaryLookupLinkNotFound": {
+    "description": "MDX 詞條內的交叉參照連結查無詞條時，面板頂端的提示"
+  },
   "dictionarySettingsTitle": "字典",
   "@dictionarySettingsTitle": {
     "description": "字典設定畫面的標題"
@@ -3315,6 +3323,27 @@
   "dictionaryImportErrorGeneric": "無法匯入這個檔案。匯入時發生未預期的錯誤。請稍後再試一次，若仍失敗請換一個檔案。",
   "@dictionaryImportErrorGeneric": {
     "description": "匯入失敗（其他原因）的三段式訊息"
+  },
+  "dictionaryImportErrorUnsupportedCompression": "這本字典使用 LZO 壓縮，目前不支援。請改用 zlib 版本，或用 MDict 工具重新打包。",
+  "@dictionaryImportErrorUnsupportedCompression": {
+    "description": "匯入失敗（LZO 壓縮）的三段式訊息"
+  },
+  "dictionaryImportErrorEncryptedRecords": "無法匯入這個檔案。字典的詞條內容有加密，目前不支援。請改用未加密的版本，或用 MDict 工具重新打包後再試一次。",
+  "@dictionaryImportErrorEncryptedRecords": {
+    "description": "匯入失敗（詞條內容加密）的三段式訊息"
+  },
+  "dictionaryImportErrorCorruptFile": "無法匯入這個檔案。字典檔的內容不完整或已損毀。請重新下載或複製檔案後再試一次。",
+  "@dictionaryImportErrorCorruptFile": {
+    "description": "匯入失敗（檔案不完整或損毀）的三段式訊息"
+  },
+  "dictionaryImportMissingCssAfterImport": "詞條引用了 {files}，但沒有匯入。請到字典清單按「新增附屬檔案」補上。",
+  "@dictionaryImportMissingCssAfterImport": {
+    "description": "MDX 匯入完成後的摘要提醒，files 為以頓號連接的缺檔檔名",
+    "placeholders": {
+      "files": {
+        "type": "String"
+      }
+    }
   },
   "dictionaryImportUnsupportedFile": "無法匯入「{file}」。這個檔案類型不支援。請改選 JSON、CSV 或 TXT（CC-CEDICT）字典檔。",
   "@dictionaryImportUnsupportedFile": {
