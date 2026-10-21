@@ -665,9 +665,9 @@
   "dictionaryOnlineConsentAgree": "同意并开启",
   "dictionaryOnlineConsentCancel": "取消",
   "dictionaryOnlineSectionTitle": "在线查词（萌典）",
-  "dictionaryOnlineSectionDescription": "开启后，查中文词时只会把你选中的那个词送到萌典。默认关闭，未开启前不会联网。",
+  "dictionaryOnlineSectionDescription": "开启后，查中文词时会多一个“萌典”分段。只会把你选取的那个词送到 www.moedict.tw。不会送出书名、前后文、位置或设备识别。默认关闭。",
   "dictionaryOnlineStatusOff": "尚未同意",
-  "dictionaryOnlineStatusOn": "已同意（{date}）",
+  "dictionaryOnlineStatusOn": "已于 {date} 同意",
   "@dictionaryOnlineStatusOn": {
     "placeholders": {
       "date": {
@@ -675,7 +675,7 @@
       }
     }
   },
-  "dictionaryOnlineSaveFailed": "在线查词设置没有保存成功：无法写入本机设置。请再切换一次；一直失败请重新打开 App 后再试。",
+  "dictionaryOnlineSaveFailed": "无法保存在线查词设置：设备存储空间写入失败。请确认剩余空间后再试一次。",
   "dictionaryLookupOpenSettings": "前往字典设置",
   "dictionaryLookupLoading": "查询中…",
   "dictionaryLookupSegmentNotFound": "（无）",

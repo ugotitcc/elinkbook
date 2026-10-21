@@ -2403,7 +2403,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dictionaryOnlineSectionDescription =>
-      'When on, only the selected Chinese word is sent to Moedict. Off by default; no network request is made until you turn it on.';
+      'When on, looking up a Chinese word adds a \"Moedict\" section. Only the word you selected is sent to www.moedict.tw. The book title, surrounding text, position and device identifiers are never sent. Off by default.';
 
   @override
   String get dictionaryOnlineStatusOff => 'Not agreed yet';
@@ -2415,7 +2415,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dictionaryOnlineSaveFailed =>
-      'The online lookup setting was not saved: the app could not write local settings. Toggle it again; if it keeps failing, restart the app and try again.';
+      'Could not save the online lookup setting: writing to device storage failed. Check the free space and try again.';
 
   @override
   String get dictionaryLookupOpenSettings => 'Dictionary settings';

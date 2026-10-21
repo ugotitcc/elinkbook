@@ -15,9 +15,13 @@ class FakeDictionarySettingsRepository
   /// 為真時 [saveOnlineConsentAt] 丟 [StateError]，模擬寫入失敗。
   bool failOnSave = false;
 
+  /// 為真時 [loadOnlineConsentAt] 丟 [StateError]，模擬讀取失敗。
+  bool failOnLoad = false;
+
   @override
   Future<DateTime?> loadOnlineConsentAt() async {
     loadCount++;
+    if (failOnLoad) throw StateError('讀取失敗');
     return consentAt;
   }
 

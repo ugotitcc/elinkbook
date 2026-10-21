@@ -2312,19 +2312,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dictionaryOnlineSectionDescription =>
-      '開啟後，查中文詞時只會把選取的那個詞送到萌典。預設關閉，未開啟前不會連網。';
+      '開啟後，查中文詞時會多一個「萌典」分段。只會把你選取的那個詞送到 www.moedict.tw。不會送出書名、前後文、位置或裝置識別。預設關閉。';
 
   @override
   String get dictionaryOnlineStatusOff => '尚未同意';
 
   @override
   String dictionaryOnlineStatusOn(String date) {
-    return '已同意（$date）';
+    return '已於 $date 同意';
   }
 
   @override
   String get dictionaryOnlineSaveFailed =>
-      '線上查詞設定沒有儲存成功：無法寫入本機設定。請再切換一次；一直失敗請重新開啟 App 後再試。';
+      '無法儲存線上查詞設定：裝置儲存空間寫入失敗。請確認剩餘空間後再試一次。';
 
   @override
   String get dictionaryLookupOpenSettings => '前往字典設定';
@@ -4871,19 +4871,19 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get dictionaryOnlineSectionDescription =>
-      '开启后，查中文词时只会把你选中的那个词送到萌典。默认关闭，未开启前不会联网。';
+      '开启后，查中文词时会多一个“萌典”分段。只会把你选取的那个词送到 www.moedict.tw。不会送出书名、前后文、位置或设备识别。默认关闭。';
 
   @override
   String get dictionaryOnlineStatusOff => '尚未同意';
 
   @override
   String dictionaryOnlineStatusOn(String date) {
-    return '已同意（$date）';
+    return '已于 $date 同意';
   }
 
   @override
   String get dictionaryOnlineSaveFailed =>
-      '在线查词设置没有保存成功：无法写入本机设置。请再切换一次；一直失败请重新打开 App 后再试。';
+      '无法保存在线查词设置：设备存储空间写入失败。请确认剩余空间后再试一次。';
 
   @override
   String get dictionaryLookupOpenSettings => '前往字典设置';
@@ -7430,19 +7430,19 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dictionaryOnlineSectionDescription =>
-      '開啟後，查中文詞時只會把選取的那個詞送到萌典。預設關閉，未開啟前不會連網。';
+      '開啟後，查中文詞時會多一個「萌典」分段。只會把你選取的那個詞送到 www.moedict.tw。不會送出書名、前後文、位置或裝置識別。預設關閉。';
 
   @override
   String get dictionaryOnlineStatusOff => '尚未同意';
 
   @override
   String dictionaryOnlineStatusOn(String date) {
-    return '已同意（$date）';
+    return '已於 $date 同意';
   }
 
   @override
   String get dictionaryOnlineSaveFailed =>
-      '線上查詞設定沒有儲存成功：無法寫入本機設定。請再切換一次；一直失敗請重新開啟 App 後再試。';
+      '無法儲存線上查詞設定：裝置儲存空間寫入失敗。請確認剩餘空間後再試一次。';
 
   @override
   String get dictionaryLookupOpenSettings => '前往字典設定';

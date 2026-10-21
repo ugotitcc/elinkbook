@@ -150,7 +150,13 @@ class DictionaryService {
     LookupRequest request,
   ) async {
     // 每次重新讀：撤回同意後下一次查詢立即生效。
-    final consentAt = await settings.loadOnlineConsentAt();
+    DateTime? consentAt;
+    try {
+      consentAt = await settings.loadOnlineConsentAt();
+    } catch (_) {
+      // 讀不到同意狀態就當作未同意：寧可不連網，也不讓整個查詢丟例外。
+      consentAt = null;
+    }
     if (consentAt == null) {
       return ProviderOutcome(
         providerId: provider.id,

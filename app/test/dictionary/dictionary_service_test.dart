@@ -572,6 +572,34 @@ void main() {
       expect(result.outcomes.last.status, OutcomeStatus.skipped);
     });
 
+    test('讀不到同意狀態：視為未同意，不丟例外、不連網，本機結果照常', () async {
+      await addSource('zh1', 'zh', ['相濡以沫']);
+      final online = _CountingOnlineProvider();
+      final settings = consented()..failOnLoad = true;
+
+      final result = completed(
+        await withOnline(online: online, settings: settings).lookup('相濡以沫'),
+      );
+
+      expect(result.outcomes.map((o) => o.providerId), ['zh1', 'moedict']);
+      expect(result.outcomes.first.status, OutcomeStatus.found);
+      expect(result.outcomes.last.status, OutcomeStatus.skipped);
+      expect(online.requests, isEmpty);
+    });
+
+    test('連線狀態判斷丟例外：不擋，照樣呼叫 provider', () async {
+      await addSource('zh1', 'zh', ['相濡以沫']);
+      final online = _CountingOnlineProvider();
+
+      await withOnline(
+        online: online,
+        settings: consented(),
+        isNetworkAvailable: () async => throw StateError('無法判斷'),
+      ).lookup('相濡以沫');
+
+      expect(online.requests, hasLength(1));
+    });
+
     test('離線：不呼叫 provider，回 failed／offline 且不拖慢本機', () async {
       await addSource('zh1', 'zh', ['相濡以沫']);
       final online = _CountingOnlineProvider()..hang = Completer();

@@ -1334,10 +1334,10 @@ void main() {
       final error = tester.widget<Text>(
         find.byKey(const Key('dictionary_online_save_error')),
       );
-      // 三段式：發生什麼（沒有儲存成功）、為什麼（無法寫入）、怎麼辦（請再切換）。
-      expect(error.data, contains('沒有儲存成功'));
-      expect(error.data, contains('無法寫入'));
-      expect(error.data, contains('請'));
+      // 三段式：發生什麼（無法儲存）、為什麼（寫入失敗）、怎麼辦（請確認剩餘空間）。
+      expect(error.data, contains('無法儲存線上查詞設定'));
+      expect(error.data, contains('寫入失敗'));
+      expect(error.data, contains('請確認剩餘空間'));
       expect(tester.takeException(), isNull);
     });
 
