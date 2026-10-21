@@ -3091,6 +3091,22 @@
   "@dictionaryLookupOnlineUnparseable": {
     "description": "字典面板：萌典回應格式無法解析"
   },
+  "dictionaryOnlineConsentTitle": "開啟線上查詞？",
+  "@dictionaryOnlineConsentTitle": {
+    "description": "線上查詞同意對話框標題"
+  },
+  "dictionaryOnlineConsentBody": "會送出：你選取的那個詞。\n送到：萌典（www.moedict.tw），由第三方營運。\n不會送出：書名、前後文、位置、裝置識別。\n你可以隨時在「設定 → 閱讀 → 字典」關閉。",
+  "@dictionaryOnlineConsentBody": {
+    "description": "線上查詞同意對話框內容：四行說明送出什麼、送到哪裡、不送什麼、如何關閉"
+  },
+  "dictionaryOnlineConsentAgree": "同意並開啟",
+  "@dictionaryOnlineConsentAgree": {
+    "description": "線上查詞同意對話框：同意並開啟線上查詞"
+  },
+  "dictionaryOnlineConsentCancel": "取消",
+  "@dictionaryOnlineConsentCancel": {
+    "description": "線上查詞同意對話框：取消，維持關閉"
+  },
   "dictionaryLookupOpenSettings": "前往字典設定",
   "@dictionaryLookupOpenSettings": {
     "description": "字典面板：開啟字典設定畫面的連結文字"

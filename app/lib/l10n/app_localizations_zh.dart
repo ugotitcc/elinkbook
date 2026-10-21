@@ -2295,6 +2295,19 @@ class AppLocalizationsZh extends AppLocalizations {
       '無法解析萌典的回應：回傳的格式本 App 看不懂。請稍後再試；一直發生時請到意見反應回報。';
 
   @override
+  String get dictionaryOnlineConsentTitle => '開啟線上查詞？';
+
+  @override
+  String get dictionaryOnlineConsentBody =>
+      '會送出：你選取的那個詞。\n送到：萌典（www.moedict.tw），由第三方營運。\n不會送出：書名、前後文、位置、裝置識別。\n你可以隨時在「設定 → 閱讀 → 字典」關閉。';
+
+  @override
+  String get dictionaryOnlineConsentAgree => '同意並開啟';
+
+  @override
+  String get dictionaryOnlineConsentCancel => '取消';
+
+  @override
   String get dictionaryLookupOpenSettings => '前往字典設定';
 
   @override
@@ -4822,6 +4835,19 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
       '无法解析萌典的回应：返回的格式本 App 看不懂。请稍后重试；一直发生时请到意见反馈回报。';
 
   @override
+  String get dictionaryOnlineConsentTitle => '开启在线查词？';
+
+  @override
+  String get dictionaryOnlineConsentBody =>
+      '会送出：你选中的那个词。\n送到：萌典（www.moedict.tw），由第三方运营。\n不会送出：书名、前后文、位置、设备识别。\n你可以随时在「设置 → 阅读 → 字典」关闭。';
+
+  @override
+  String get dictionaryOnlineConsentAgree => '同意并开启';
+
+  @override
+  String get dictionaryOnlineConsentCancel => '取消';
+
+  @override
   String get dictionaryLookupOpenSettings => '前往字典设置';
 
   @override
@@ -7347,6 +7373,19 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get dictionaryLookupOnlineUnparseable =>
       '無法解析萌典的回應：回傳的格式本 App 看不懂。請稍後再試；一直發生時請到意見反應回報。';
+
+  @override
+  String get dictionaryOnlineConsentTitle => '開啟線上查詞？';
+
+  @override
+  String get dictionaryOnlineConsentBody =>
+      '會送出：你選取的那個詞。\n送到：萌典（www.moedict.tw），由第三方營運。\n不會送出：書名、前後文、位置、裝置識別。\n你可以隨時在「設定 → 閱讀 → 字典」關閉。';
+
+  @override
+  String get dictionaryOnlineConsentAgree => '同意並開啟';
+
+  @override
+  String get dictionaryOnlineConsentCancel => '取消';
 
   @override
   String get dictionaryLookupOpenSettings => '前往字典設定';

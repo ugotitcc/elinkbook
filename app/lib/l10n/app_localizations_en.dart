@@ -2386,6 +2386,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not read Moedict\'s response: the format is not one this app understands. Please try again later; if it keeps happening, report it through feedback.';
 
   @override
+  String get dictionaryOnlineConsentTitle => 'Turn on online lookup?';
+
+  @override
+  String get dictionaryOnlineConsentBody =>
+      'What is sent: the single word you selected.\nSent to: Moedict (www.moedict.tw), run by a third party.\nNot sent: book title, surrounding text, reading position, or device identifiers.\nYou can turn this off anytime in Settings → Reading → Dictionaries.';
+
+  @override
+  String get dictionaryOnlineConsentAgree => 'Agree and turn on';
+
+  @override
+  String get dictionaryOnlineConsentCancel => 'Cancel';
+
+  @override
   String get dictionaryLookupOpenSettings => 'Dictionary settings';
 
   @override

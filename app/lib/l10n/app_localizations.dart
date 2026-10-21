@@ -4067,6 +4067,30 @@ abstract class AppLocalizations {
   /// **'無法解析萌典的回應：回傳的格式本 App 看不懂。請稍後再試；一直發生時請到意見反應回報。'**
   String get dictionaryLookupOnlineUnparseable;
 
+  /// 線上查詞同意對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'開啟線上查詞？'**
+  String get dictionaryOnlineConsentTitle;
+
+  /// 線上查詞同意對話框內容：四行說明送出什麼、送到哪裡、不送什麼、如何關閉
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'會送出：你選取的那個詞。\n送到：萌典（www.moedict.tw），由第三方營運。\n不會送出：書名、前後文、位置、裝置識別。\n你可以隨時在「設定 → 閱讀 → 字典」關閉。'**
+  String get dictionaryOnlineConsentBody;
+
+  /// 線上查詞同意對話框：同意並開啟線上查詞
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'同意並開啟'**
+  String get dictionaryOnlineConsentAgree;
+
+  /// 線上查詞同意對話框：取消，維持關閉
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'取消'**
+  String get dictionaryOnlineConsentCancel;
+
   /// 字典面板：開啟字典設定畫面的連結文字
   ///
   /// In zh_TW, this message translates to:
