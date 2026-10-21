@@ -141,4 +141,105 @@ void main() {
       expect(out, contains('<body>'));
     });
   });
+
+  group('overrideCss 樣式注入（Issue 6b Task 4）', () {
+    test('overrideCss == null 時輸出與現行完全相同（回歸）', () {
+      const samples = [
+        '<a href="entry://#top">top</a>',
+        '<a href="sound://a.mp3">發音</a>',
+        '<p>前</p><meta http-equiv="refresh" content="0"><p>後</p>',
+        '<link rel="dns-prefetch" href="http://a.b/">',
+        '<a href="entry://x" ping="http://t">x</a>',
+        '<b>apple</b> 蘋果',
+        '<html><head><title>x</title></head><body><p>內容</p></body></html>',
+        '',
+      ];
+      for (final sample in samples) {
+        expect(
+          prepareEntryHtml(sample, overrideCss: null),
+          equals(prepareEntryHtml(sample)),
+        );
+      }
+    });
+
+    test('完整文件：覆寫樣式位於字典原有 <style> 之後、</head> 之前', () {
+      const doc =
+          '<html><head><style>.dict { color: red; }</style></head>'
+          '<body><p>詞條內容</p></body></html>';
+      const override = 'html,body{background:#000000 !important}';
+      final out = prepareEntryHtml(doc, overrideCss: override);
+
+      expect(out, contains('<style>$override</style></head>'));
+      final dictStyleIdx = out.indexOf('.dict { color: red; }');
+      final overrideStyleIdx = out.indexOf(override);
+      final headCloseIdx = out.indexOf('</head>');
+
+      expect(dictStyleIdx, isNonNegative);
+      expect(overrideStyleIdx, greaterThan(dictStyleIdx));
+      expect(headCloseIdx, greaterThan(overrideStyleIdx));
+    });
+
+    test('片段輸入：覆寫樣式出現在補出的 <head> 內，且位於 meta 之後', () {
+      const fragment = '<div class="entry">詞條</div>';
+      const override = 'html,body{background:#121212 !important}';
+      final out = prepareEntryHtml(fragment, overrideCss: override);
+
+      expect(out, contains('<head>'));
+      expect(out, contains('<meta charset="utf-8">'));
+      expect(out, contains('<style>$override</style></head>'));
+      final metaIdx = out.indexOf('<meta charset="utf-8">');
+      final overrideIdx = out.indexOf(override);
+      final headCloseIdx = out.indexOf('</head>');
+
+      expect(overrideIdx, greaterThan(metaIdx));
+      expect(headCloseIdx, greaterThan(overrideIdx));
+    });
+
+    test('完整文件無 <head>：建立 <head> 並置入 meta 與覆寫樣式（覆寫樣式在後）', () {
+      const doc = '<html><body><p>無 head 文件</p></body></html>';
+      const override = 'html,body{color:#ffffff !important}';
+      final out = prepareEntryHtml(doc, overrideCss: override);
+
+      expect(out, contains('<head>'));
+      expect(out, contains('<meta charset="utf-8">'));
+      expect(out, contains('<style>$override</style></head>'));
+      final metaIdx = out.indexOf('<meta charset="utf-8">');
+      final overrideIdx = out.indexOf(override);
+      final headCloseIdx = out.indexOf('</head>');
+
+      expect(overrideIdx, greaterThan(metaIdx));
+      expect(headCloseIdx, greaterThan(overrideIdx));
+    });
+
+    test('完整文件有 <head> 但無 </head>：覆寫樣式插入在 head 結尾並在 <body> 之前', () {
+      const doc = '<html><head><title>t</title><body><p>內容</p></body></html>';
+      const override = 'html,body{color:#ffffff !important}';
+      final out = prepareEntryHtml(doc, overrideCss: override);
+
+      final overrideIdx = out.indexOf(override);
+      final bodyIdx = out.indexOf('<body>');
+      expect(overrideIdx, isNonNegative);
+      expect(bodyIdx, greaterThan(overrideIdx));
+    });
+
+    test('詞條寫死顏色：輸入含 inline 顏色標籤與屬性，覆寫樣式規則仍存在於文件頭部', () {
+      const doc =
+          '<html><head><title>t</title></head>'
+          '<body bgcolor="#ffffff">'
+          '<font color="#000000"><span style="color:#000;background:#fff">文字</span></font>'
+          '</body></html>';
+      const override =
+          'html,body{background:#000000 !important;color:#ffffff !important}'
+          '*{color:#ffffff !important;background-color:transparent !important}';
+      final out = prepareEntryHtml(doc, overrideCss: override);
+
+      expect(out, contains('<style>$override</style></head>'));
+      expect(out, contains('<font color="#000000">'));
+      expect(out, contains('bgcolor="#ffffff"'));
+      expect(out, contains('style="color:#000;background:#fff"'));
+      final styleIdx = out.indexOf(override);
+      final bodyIdx = out.indexOf('<body');
+      expect(styleIdx, lessThan(bodyIdx));
+    });
+  });
 }
