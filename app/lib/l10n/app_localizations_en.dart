@@ -2658,4 +2658,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dictionaryDragHandleLabel => 'Drag to reorder';
+
+  @override
+  String get dictionaryMdxLimitNote =>
+      'Known limitation: Dictionary entries do not execute JavaScript. Features relying on click scripts (such as Oxford 9 image magnification) will not work, and only thumbnails will be visible.';
 }

@@ -1376,6 +1376,41 @@ void main() {
       );
     });
   });
+
+  group('MDX 已知限制說明', () {
+    const expectedNote =
+        '已知限制：字典詞條不會執行 JavaScript，所以依賴點擊腳本的功能（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。';
+
+    testWidgets('字典清單為空時顯示 MDX 已知限制說明', (tester) async {
+      await _pump(tester, FakeDictionaryManager());
+
+      expect(find.byKey(const Key('dictionary_settings_empty')), findsOneWidget);
+      expect(find.byKey(const Key('dictionary_mdx_limit_note')), findsOneWidget);
+      expect(find.text(expectedNote), findsOneWidget);
+    });
+
+    testWidgets('字典清單載入失敗時顯示 MDX 已知限制說明', (tester) async {
+      final manager = FakeDictionaryManager()..listError = StateError('db');
+
+      await _pump(tester, manager);
+
+      expect(
+        find.byKey(const Key('dictionary_settings_load_error')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('dictionary_mdx_limit_note')), findsOneWidget);
+      expect(find.text(expectedNote), findsOneWidget);
+    });
+
+    testWidgets('有字典清單時顯示 MDX 已知限制說明', (tester) async {
+      final manager = FakeDictionaryManager(items: [_item('a')]);
+
+      await _pump(tester, manager);
+
+      expect(find.byKey(const Key('dictionary_mdx_limit_note')), findsOneWidget);
+      expect(find.text(expectedNote), findsOneWidget);
+    });
+  });
 }
 
 /// `saveOnlineConsentAt` 會停在 [saveGate]，用來驗證「儲存期間」開關停用。

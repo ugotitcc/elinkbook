@@ -152,4 +152,121 @@ void main() {
 
     await tester.pumpAndSettle();
   });
+
+  testWidgets('isEinkMode: true 時最外層有 eb_sheet_shell_eink_border 外框（上左右 2px、無陰影）',
+      (tester) async {
+    const outlineColor = Color(0xFF79747E);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: ThemeData(
+          colorScheme: const ColorScheme.light(outline: outlineColor),
+        ),
+        home: const Scaffold(
+          body: EBSheetShell(
+            title: '標題',
+            isEinkMode: true,
+            child: Text('內容'),
+          ),
+        ),
+      ),
+    );
+
+    final finder = find.byKey(const Key('eb_sheet_shell_eink_border'));
+    expect(finder, findsOneWidget);
+
+    final decoratedBox = tester.widget<DecoratedBox>(finder);
+    expect(decoratedBox.decoration, isA<BoxDecoration>());
+    final decoration = decoratedBox.decoration as BoxDecoration;
+    expect(decoration.boxShadow, isNull);
+    expect(decoration.border, isA<Border>());
+    final border = decoration.border as Border;
+
+    expect(border.top.width, 2.0);
+    expect(border.top.color, outlineColor);
+    expect(border.left.width, 2.0);
+    expect(border.left.color, outlineColor);
+    expect(border.right.width, 2.0);
+    expect(border.right.color, outlineColor);
+    expect(border.bottom.width, 0.0);
+  });
+
+  testWidgets('isEinkMode: false 時沒有 eb_sheet_shell_eink_border 外框元件',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: EBSheetShell(
+            title: '標題',
+            isEinkMode: false,
+            child: Text('內容'),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('eb_sheet_shell_eink_border')), findsNothing);
+  });
+
+  testWidgets('EBSheetShell.show 在 isEinkMode: true 時 BottomSheet 為直角且無陰影',
+      (tester) async {
+    await _pumpAndOpen(tester, isEinkMode: true);
+    await tester.pumpAndSettle();
+
+    final bottomSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
+    expect(bottomSheet.elevation, 0);
+    expect(bottomSheet.shape, isA<RoundedRectangleBorder>());
+    final shape = bottomSheet.shape as RoundedRectangleBorder;
+    expect(shape.borderRadius, BorderRadius.zero);
+  });
+
+  testWidgets('EBSheetShell.show 在 isEinkMode: false 時 BottomSheet 沿用主題預設',
+      (tester) async {
+    await _pumpAndOpen(tester, isEinkMode: false);
+    await tester.pumpAndSettle();
+
+    final bottomSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
+    expect(bottomSheet.elevation, isNot(0));
+    final shape = bottomSheet.shape;
+    if (shape is RoundedRectangleBorder) {
+      expect(shape.borderRadius, isNot(BorderRadius.zero));
+    }
+  });
+
+  testWidgets('標題、把手、關閉鍵仍在，ConstrainedBox 最大高度仍為螢幕 85%', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(
+          body: EBSheetShell(
+            title: '測試標題',
+            isEinkMode: true,
+            child: Text('內容'),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('測試標題'), findsOneWidget);
+    expect(find.byKey(const Key('eb_sheet_shell_drag_handle')), findsOneWidget);
+    expect(find.byKey(const Key('eb_sheet_shell_close_button')), findsOneWidget);
+
+    final screenHeight = tester.getSize(find.byType(MaterialApp)).height;
+    final constrainedBox = tester.widget<ConstrainedBox>(
+      find
+          .descendant(
+            of: find.byType(EBSheetShell),
+            matching: find.byType(ConstrainedBox),
+          )
+          .first,
+    );
+    expect(constrainedBox.constraints.maxHeight, screenHeight * 0.85);
+  });
 }

@@ -700,6 +700,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
               child: Column(
                 children: [
                   Expanded(child: _buildBody(context, l10n)),
+                  _buildMdxLimitNote(context, l10n),
                   // 固定在底部：清單為空、載入失敗、正常三種狀態都要看得到。
                   _buildOnlineSection(context, l10n),
                 ],
@@ -830,6 +831,32 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// MDX 已知限制說明區塊（JavaScript 不執行、點擊腳本無效）。
+  ///
+  /// 固定在底部：清單為空、載入失敗、正常三種狀態都要看得到（比照 Issue 7 線上區塊）。
+  Widget _buildMdxLimitNote(BuildContext context, AppLocalizations l10n) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: widget.isEinkMode
+                ? theme.colorScheme.onSurface
+                : theme.dividerColor,
+          ),
+        ),
+        color: theme.colorScheme.surface,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Text(
+        l10n.dictionaryMdxLimitNote,
+        key: const Key('dictionary_mdx_limit_note'),
+        style: theme.textTheme.bodySmall,
+      ),
     );
   }
 

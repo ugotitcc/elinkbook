@@ -31,6 +31,10 @@ class EBSheetShell extends StatelessWidget {
   /// 碼），不需要自建 `AnimationController`（自建需要 `TickerProvider`，
   /// 靜態方法無法取得，且呼叫端須負責 dispose，有記憶體洩漏風險）。
   ///
+  /// E-Ink 模式下傳 `elevation: 0` 與 `shape: const RoundedRectangleBorder()`
+  /// （直角、無陰影），避免 Material 3 預設陰影與頂部圓角干擾非對稱外框；
+  /// 非 E-Ink 模式維持 `null` 沿用主題預設。
+  ///
   /// [barrierColor] 原樣傳給 `showModalBottomSheet`；`null` 維持 Flutter
   /// 預設遮罩。閱讀器內的呼叫端比照 `ReaderScreen._showThemedModalBottomSheet`
   /// 的規則，深色主題與 E-Ink 傳 `Colors.transparent`（見
@@ -47,6 +51,8 @@ class EBSheetShell extends StatelessWidget {
       isScrollControlled: true,
       barrierColor: barrierColor,
       sheetAnimationStyle: isEinkMode ? AnimationStyle.noAnimation : null,
+      elevation: isEinkMode ? 0 : null,
+      shape: isEinkMode ? const RoundedRectangleBorder() : null,
       builder: (context) => EBSheetShell(
         title: title,
         isEinkMode: isEinkMode,
@@ -58,7 +64,7 @@ class EBSheetShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
-    return SafeArea(
+    final content = SafeArea(
       child: ConstrainedBox(
         // `DESIGN.md#L235`：「最大高度」限制為螢幕高度的 50% 至 85%，指的
         // 是抽屜高度的上限箝制，不是任何抽屜都要強制撐滿至少 50% 螢幕高
@@ -108,5 +114,30 @@ class EBSheetShell extends StatelessWidget {
         ),
       ),
     );
+
+    if (isEinkMode) {
+      return DecoratedBox(
+        key: const Key('eb_sheet_shell_eink_border'),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outline,
+              width: 2,
+            ),
+            left: BorderSide(
+              color: Theme.of(context).colorScheme.outline,
+              width: 2,
+            ),
+            right: BorderSide(
+              color: Theme.of(context).colorScheme.outline,
+              width: 2,
+            ),
+          ),
+        ),
+        child: content,
+      );
+    }
+
+    return content;
   }
 }
