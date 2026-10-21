@@ -1,4 +1,7 @@
 // MdxDictionaryProvider 測試（epic-63 Issue 6a Task 6）。
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:elinkbook/dictionary/models/dictionary_entry.dart';
 import 'package:elinkbook/dictionary/models/dictionary_source.dart';
 import 'package:elinkbook/dictionary/models/lookup_request.dart';
@@ -104,5 +107,113 @@ void main() {
 
     expect(outcome.status, OutcomeStatus.found);
     expect(outcome.entries.single.headword, 'apple');
+  });
+
+  group('CSS 內嵌整合測試', () {
+    late Directory tempDir;
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('elinkbook_mdx_prov_');
+    });
+
+    tearDown(() async {
+      await pool.closeAll();
+      if (tempDir.existsSync()) {
+        try {
+          tempDir.deleteSync(recursive: true);
+        } catch (_) {}
+      }
+    });
+
+    test('在暫存目錄有 .css 時，詞條 entry.body 內嵌該 CSS', () async {
+      await File('$_fixtures/html.mdx').copy('${tempDir.path}/html.mdx');
+      await File('${tempDir.path}/ghychyz.css')
+          .writeAsString('body { color: #111; }');
+
+      final source = DictionarySource(
+        id: 'mdx-html',
+        name: 'MDX HTML',
+        format: DictionaryFormat.mdx,
+        sourceLang: 'en',
+        targetLang: 'zh-Hant',
+        priority: 0,
+        enabled: true,
+        storagePath: '${tempDir.path}/html.mdx',
+        entryCount: 3,
+        licenseNote: '',
+        importedAt: DateTime.utc(2026, 10, 19),
+      );
+
+      final p = MdxDictionaryProvider(pool: pool, source: source);
+      final outcome = await p.lookup(const LookupRequest('apple'));
+
+      expect(outcome.status, OutcomeStatus.found);
+      expect(outcome.entries, isNotEmpty);
+      final body = outcome.entries.first.body;
+      expect(body, contains('<style>body { color: #111; }</style>'));
+      expect(body, isNot(contains('<link')));
+    });
+
+    test('目錄沒有 .css 時 <link> 被移除、查詢仍 found', () async {
+      await File('$_fixtures/html.mdx').copy('${tempDir.path}/html.mdx');
+
+      final source = DictionarySource(
+        id: 'mdx-html',
+        name: 'MDX HTML',
+        format: DictionaryFormat.mdx,
+        sourceLang: 'en',
+        targetLang: 'zh-Hant',
+        priority: 0,
+        enabled: true,
+        storagePath: '${tempDir.path}/html.mdx',
+        entryCount: 3,
+        licenseNote: '',
+        importedAt: DateTime.utc(2026, 10, 19),
+      );
+
+      final p = MdxDictionaryProvider(pool: pool, source: source);
+      final outcome = await p.lookup(const LookupRequest('apple'));
+
+      expect(outcome.status, OutcomeStatus.found);
+      expect(outcome.entries, isNotEmpty);
+      final body = outcome.entries.first.body;
+      expect(body, isNot(contains('<link')));
+      expect(body, isNot(contains('<style>body { color: #111; }</style>')));
+    });
+
+    test('非 UTF-8 的 css 不中斷查詢（Big5／GBK 位元組），查詢仍 found', () async {
+      await File('$_fixtures/html.mdx').copy('${tempDir.path}/html.mdx');
+      await File('${tempDir.path}/ghychyz.css').writeAsBytes([
+        ...utf8.encode('body { content: "'),
+        0xb4,
+        0xfa,
+        0xb8,
+        0xd5,
+        ...utf8.encode('"; }'),
+      ]);
+
+      final source = DictionarySource(
+        id: 'mdx-html',
+        name: 'MDX HTML',
+        format: DictionaryFormat.mdx,
+        sourceLang: 'en',
+        targetLang: 'zh-Hant',
+        priority: 0,
+        enabled: true,
+        storagePath: '${tempDir.path}/html.mdx',
+        entryCount: 3,
+        licenseNote: '',
+        importedAt: DateTime.utc(2026, 10, 19),
+      );
+
+      final p = MdxDictionaryProvider(pool: pool, source: source);
+      final outcome = await p.lookup(const LookupRequest('apple'));
+
+      expect(outcome.status, OutcomeStatus.found);
+      expect(outcome.entries, isNotEmpty);
+      final body = outcome.entries.first.body;
+      expect(body, contains('<style>'));
+      expect(body, isNot(contains('<link')));
+    });
   });
 }
