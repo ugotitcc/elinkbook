@@ -199,6 +199,9 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 - 深色與 E-Ink 配色：注入覆寫樣式，蓋掉詞條寫死的文字與背景顏色。
 - MDD 鍵轉換：把 WebView 送來的網址（`https://dict.local/pic/a%20b.png`）轉成 MDD 的鍵（`\pic\a b.png`）。Issue 6a 的 `MdxReader` 薄封裝只做了 MDX 詞條讀取，**沒有**實作這段轉換（Issue 6a 計畫 I-1 已把圖片整個切給本 Issue），做法照上一條的規則實作並補單元測試。
 - 已知限制寫進設定畫面說明：依賴 `onclick` 的互動（例如牛津 9 圖片放大）在 JavaScript 關閉時不運作。
+- 併入 Issue 7 實機測試發現的兩項（見檔尾「後續項目」）：
+  - E-Ink 模式下，`EBSheetShell`（`app/lib/screens/widgets/eb_sheet_shell.dart`）加外框，不用陰影。
+  - 查字典面板開啟時隱藏系統選取控點，關閉後還原；不可清掉選取範圍。
 
 **測試要求：**
 - 配色覆寫與資源路徑解析的單元測試。
@@ -206,6 +209,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 - 用 2 至 3 本真實 MDX 驗收（字典由人類提供）。
 
 **驗收標準：** 驗收 18、19、25。真機量測開啟 100 MB MDX 的記憶體增量。
+另加：E-Ink 面板有外框；開面板後選取控點不再蓋在面板上，關閉後選取範圍仍在。
 
 **Blocked by：** Issue 6a。
 
@@ -261,7 +265,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 ---
 
-## 後續項目（Issue 7 實機測試發現，不屬於 Issue 7 範圍）
+## 後續項目（Issue 7 實機測試發現，不屬於 Issue 7 範圍；已併入 Issue 6b）
 
 兩項都在 Issue 4 起就存在，Issue 7 沒有動到相關程式。2026-10-21 在 WAVE E-Ink 機實測發現。
 
