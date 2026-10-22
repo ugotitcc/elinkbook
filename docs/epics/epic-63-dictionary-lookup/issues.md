@@ -287,3 +287,13 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
      - 在 vendored 的 `app/patches/flutter_inappwebview_android` 補上原生 `requestFocus` channel 方法（呼叫 `webView.requestFocus()`），或讓 `MdxEntryView` 的原生 `WebView` 不搶奪觸控焦點（`setFocusable(false)` / `setFocusableInTouchMode(false)`），再搭配 `FoliateReaderView` 內外層 frame 焦點切換（開面板聚焦外層 `document.body`、關面板先 `controller.requestFocus()` 再聚焦章節 `iframe`），即可在不改 `main.js` 且不破壞 DOM `Selection` 的前提下穩定隱藏並還原系統選取控點。
 
 另有一張 2026-10-21 16:46 的紅畫面截圖（字典設定拖曳排序：`No Material widget found`）。後續實測沒有再出現。
+
+3. **WAVE E-Ink 機長按選字很難觸發（2026-10-22，真機錄影與觸控原始訊號，結論：裝置觸控限制，本 Issue 不處理）。**
+   - 現象：手指長按文字，工具列很久才出現或不出現，畫面還會閃一下（錄影 `tmp/images/難選字.mp4`）。
+   - 觸控訊號（`adb shell getevent -l -t /dev/input/event4`，裝置 `cyttsp5_mt`）：
+     - 25 秒 51 次按壓，平均約 0.3 秒就斷開；超過 0.5 秒的按壓有 10 次，其中 9 次同時偵測到 2 至 5 個接觸點、位置橫跳。
+     - 只用單根指尖按住不動，同一個位置（誤差 ±3 單位）在 1.6 秒內連續回報 7 次「按下、放開」，每次 0.02 至 0.43 秒；沒有任何一次達到長按需要的約 0.5 秒連續接觸。
+   - 對照：用 `adb shell input swipe` 注入的單指長按（500 至 1500 ms、手指飄移到 16 px）每次都成功跳出工具列，所以 App 的長按到選字流程本身正常。
+   - 判讀：觸控面板或電子紙刷新干擾造成斷訊（「畫面閃一下」可能是同一個原因，未證實）。
+   - 可能的方向（皆未做）：用 Wacom 電磁筆選字（不受電容觸控斷訊影響，未驗證）；在 App 內做容忍斷訊的長按偵測（動到選字核心，風險高，需另立計畫）；在系統桌面長按圖示錄同樣的訊號，確認是否整台裝置的問題。
+   - 無關的已修問題：選字時多一根手指碰螢幕會讓整頁縮放（Task 10 已關閉流式格式的 WebView 原生縮放）。
