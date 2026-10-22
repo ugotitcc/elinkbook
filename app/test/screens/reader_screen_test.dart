@@ -5196,6 +5196,50 @@ void main() {
       expect(find.text('天與地。'), findsOneWidget);
     });
 
+    // 驗收 3 的 TXT／MD 兩半：TXT 與 MD 匯入後都合成為 EPUB 結構、走同一個
+    // `FoliateReaderView`，但先前只有 EPUB 的查字典測試（Issue 8 盤點缺口 3）。
+    testWidgets('驗收 3：TXT 選字後工具列有查字典，點擊開面板並顯示結果', (tester) async {
+      final service = FakeDictionaryService(response: completedWithEntry());
+      final view = await pumpEpub(
+        tester,
+        bookId: 'b_lookup_txt',
+        dictionaryService: service,
+        filePath: 'test/fixtures/sample_synth.txt',
+      );
+      reportSelection(view);
+      await tester.pump();
+
+      expect(find.byKey(const Key('annotation_toolbar_lookup')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_lookup')));
+      await tester.pumpAndSettle();
+
+      expect(service.calls, [selectionText]);
+      expect(find.byType(DictionaryLookupSheet), findsOneWidget);
+      expect(find.text('天與地。'), findsOneWidget);
+    });
+
+    testWidgets('驗收 3：MD 選字後工具列有查字典，點擊開面板並顯示結果', (tester) async {
+      final service = FakeDictionaryService(response: completedWithEntry());
+      final view = await pumpEpub(
+        tester,
+        bookId: 'b_lookup_md',
+        dictionaryService: service,
+        filePath: 'test/fixtures/sample_synth.md',
+      );
+      reportSelection(view);
+      await tester.pump();
+
+      expect(find.byKey(const Key('annotation_toolbar_lookup')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_lookup')));
+      await tester.pumpAndSettle();
+
+      expect(service.calls, [selectionText]);
+      expect(find.byType(DictionaryLookupSheet), findsOneWidget);
+      expect(find.text('天與地。'), findsOneWidget);
+    });
+
     testWidgets('快速點兩次查字典只開一個面板', (tester) async {
       final service = FakeDictionaryService(response: completedWithEntry());
       final view = await pumpEpub(
