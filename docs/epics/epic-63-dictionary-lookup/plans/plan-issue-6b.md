@@ -401,6 +401,28 @@
   git add app/lib app/test
   git commit -m "fix(epic-63): Issue 6b 深色與 E-Ink 的分段選擇器與劃線工具列對比"
   ```
+### Task 10：流式格式關閉 WebView 原生雙指縮放（真機後補，2026-10-22）
+
+真機錄影（`tmp/images/選字跳動.mp4`）顯示：選字時只要多一根手指碰到螢幕，整頁文字就被放大或縮小，小字更難選。原因是 `FoliateReaderView` 的 `InAppWebViewSettings` 沒設 `supportZoom`，套件預設為 `true`，viewport 也沒禁止縮放；流式格式沒有自己的縮放功能，這個原生縮放是意外開著的。固定版面（`fixed-layout.js`）有自己的雙指縮放，不能全關。問題在 `main` 上就存在，不是本 Issue 造成。
+
+**Files:**
+- Modify: `app/lib/reader/foliate_reader_view.dart`（`initialSettings` 加 `supportZoom`）
+- Test: `app/test/reader/foliate_reader_view_test.dart`
+
+**Interfaces:** 不新增公開介面。`supportZoom: widget.isFixedLayoutHint == true`：固定版面（含 CBZ）維持原生縮放，其餘（含 `isFixedLayoutHint == null`）關閉。`isFixedLayoutHint` 由 `ReaderScreen` 以 `Book.isFixedLayout` 傳入，開書前就已知；`initialSettings` 只在建立 WebView 時生效，與該參數「僅開書當下生效」的既有限制一致。
+
+- [x] **Step 1: 寫失敗測試**（`foliate_reader_view_test.dart`，比照既有 `pumpView` 取得 `InAppWebView.platform.params.initialSettings`）：`isFixedLayoutHint: false` 與 `null` 時 `supportZoom == false`；`isFixedLayoutHint: true` 時 `supportZoom == true`。
+- [x] **Step 2: 執行確認失敗**
+  Run: `cd app && flutter test test/reader/foliate_reader_view_test.dart`
+  Expected: FAIL（`supportZoom` 為預設的 `true`）。
+- [x] **Step 3: 實作**：`InAppWebViewSettings(... supportZoom: widget.isFixedLayoutHint == true)`，附中文註解說明原因。
+- [x] **Step 4: 執行確認通過**（同 Step 2 指令；另跑 `cd app && flutter test test/screens/reader_screen_test.dart` 確認回歸）Expected: PASS。
+- [ ] **Step 5: 真機確認**：EPUB／TXT 選字時多指觸碰不再縮放；CBZ 或固定版面 EPUB 的雙指縮放仍可用。
+- [ ] **Step 6: Commit**
+  ```bash
+  git add app/lib app/test docs
+  git commit -m "fix(epic-63): Issue 6b 流式格式關閉 WebView 原生雙指縮放"
+  ```
 ---
 
 ## 交給人類
