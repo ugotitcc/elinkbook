@@ -281,8 +281,9 @@ void main() {
           ImportRequest(
             filePath: mdxPath,
             fileName: fileName,
-            sourceLang: 'zh',
-            targetLang: 'en',
+            // 詞頭是拉丁字母（`pic`），來源語言要是 en 才會被拉丁選字挑到。
+            sourceLang: 'en',
+            targetLang: 'zh',
             companions: [(path: mddPath, name: 'images.mdd')],
           ),
           cancel: CancelToken(),
