@@ -1,10 +1,10 @@
 # `epic-63-dictionary-lookup` 字典查詢（離線匯入＋可選線上查詞）
 
-**狀態：** 🟡 開發中 (Active)（Issue 1、2 已合併，Issue 3 起尚未開始）
+**狀態：** 🟡 收尾中（Issue 1 至 7 已合併，Issue 8 進行中）
 **存放路徑：** `docs/epics/epic-63-dictionary-lookup/`
 **關聯文件：** `spec.md`、`issues.md`
 **調查文件：** `docs/research/dictionary/PHASE1_AUDIT.md`、`DICTIONARY_FORMATS_AND_LICENSES.md`、`READEST_ANALYSIS_AND_PROPOSAL.md`
-**關聯 PRD 章節：** 尚無字典需求。`docs/prd.md` 的 FR 條目與 `CONTEXT.md` 詞條在 Issue 8 補上
+**關聯 PRD 章節：** `docs/prd.md` FR-50～53（Issue 8 補上）；詞彙見 `CONTEXT.md`「字典查詢」一節；架構決定見 ADR 0038、0039
 
 ## 背景
 
@@ -47,15 +47,21 @@
 |---|---|---|---|
 | 1 MDX 解析器技術驗證 | done（2026-10-19） | #343 | 採用 `dict_reader 1.6.1`；`mdict_flutter` 淘汰。實機（平板、E-Ink）效能在門檻內，large.mdx 開啟後記憶體增量最高 45.7 MB，裕度約 4 MB。結論與封裝必補清單見 `docs/research/dictionary/DICTIONARY_FORMATS_AND_LICENSES.md`「驗證結果」。 |
 | 2 模型、介面、`dictionary.db` 與 `DictionaryStore` | done（2026-10-19） | #344 | 純 Dart 資料層，35 個測試。`LookupRequest` 為 `final class`（只有 `word`）。`DictionaryStore` 持有 `DatabaseExecutor`，提供 `transaction()` 供 Issue 3 取消匯入時整批回復。主庫仍為 version 28。 |
-| 3 至 8 | 尚未開始 | | |
+| 3 JSON/CSV 與 CC-CEDICT 匯入、重複匯入偵測、查詢候選鏈、本機查詢 | done（2026-10-20） | #345 | 三種匯入器（JSON、CSV、CC-CEDICT）各自分批寫入、略過空詞頭；重複匯入以內容偵測並提示；查詢候選鏈（原字串、大小寫、去變音符號、英文詞形還原）第一個命中就停。本機 p95 在門檻內（`dictionary_service_test.dart`）。 |
+| 4 查詢面板、`AnnotationToolbar` 按鈕、選字規則、依賴注入 | done（2026-10-20） | #347 | 「查字典」按鈕掛上 `AnnotationToolbar`；選字先去除頭尾標點，片語整串查，CJK 上限 8 字元、內部含標點不查且零請求；查詢面板為分段選擇器，一次顯示一本。FXL 與 CBZ 不出現按鈕。 |
+| 5 字典設定畫面 | done（2026-10-20） | #349 | 字典清單、啟用、排序、刪除與匯入入口；來源語言與目標語言必填。刪除連動清除詞條與私有附屬檔。 |
+| 6a MDX 匯入、詞條顯示、交叉參照與錨點、返回堆疊 | done（2026-10-21） | #350 | `MdxReader` ＋ vendor 修補的 `dict_reader`；詞條在關閉 JavaScript 的 WebView 顯示，`entry://`／`bword://` 交叉參照與同詞條錨點可用；分段選擇器加返回堆疊。E-Ink 真實 CJK 大檔記憶體與鍵比對延遲已量測。 |
+| 6b MDX 圖片、獨立 CSS、深色與 E-Ink 配色 | done（2026-10-22） | #352 | `.mdd` 圖片經 `DictionaryService` 提供、外部 `.css` 依 `<link href>` 檔名內嵌、深色與 E-Ink 配色覆寫。驗收 25 僅部分證實，固定版面與 CBZ 縮放未真機驗證（見 PR 說明）。 |
+| 7 線上查詞（萌典）、同意對話框、隱私更新 | done（2026-10-21） | #351 | 預設關閉；第一次開啟前顯示同意對話框，同意狀態存 `onlineConsentAt`；未同意零請求。請求只帶 `word`、僅 `https`、5 秒逾時，結果原文顯示並附固定來源標示。 |
+| 8 授權頁、隱私頁、l10n 收尾、整合測試 | 進行中 | | 授權頁補萌典與 CC-CEDICT 資料來源標示、`dict_reader` 修補版註記；PRD 與 `CONTEXT.md` 詞條、ADR 0038／0039、`CLAUDE.md` 字典查詢段落；驗收 1 至 39 逐項盤點與缺口測試。 |
 
-**Issue 3 規劃時要處理（Issue 2 程式審查延後項，見 `reviews/review-code-issue-2.md`）：**
+**Issue 3 規劃時要處理（Issue 2 程式審查延後項，見 `reviews/review-code-issue-2.md`）——Issue 3、5 已完成，以下皆已處理：**
 - M-7：`insertEntries` 不分批，匯入器要自己每批 2,000 筆。
 - M-8：去空白後為空的詞頭會寫入但永遠查不到，匯入器要略過並計數。
 - M-9：整個匯入在單一交易內，會擋住同連線的查詢。要決定匯入期間是否允許查詢。
 - Issue 5：`listSources()` 遇到未知 `format` 字串會整個失敗（M-2）。
 
-**Issue 6a 第一個任務**：在 E-Ink 上補測真實 CJK 大檔、隨機鍵查詢與含快取的穩態記憶體。
+**Issue 6a 第一個任務**：在 E-Ink 上補測真實 CJK 大檔、隨機鍵查詢與含快取的穩態記憶體。（已完成，見 `plans/plan-issue-6a.md` Task 9）
 
 ## 1. 已決定的範圍
 
@@ -126,13 +132,13 @@
 
 1. **PDF**：Phase 1 不接。PDF 的選字走 `PdfSelectionInfo`，後續另立 Issue。（預設：不做）
 2. **線上結果出現時機**：本機有結果時，線上也一起查。（預設：一起查，作為最後一個分段）
-3. **詞彙表**：`CONTEXT.md` 尚無字典相關詞條。建議實作時補上「字典來源」「查詢請求」等詞。本次依指示未修改。
-4. **ADR**：以下兩點符合「難以回復、事後令人意外、有真實取捨」，建議實作時各寫一份 ADR：
+3. **詞彙表**：`CONTEXT.md` 尚無字典相關詞條。建議實作時補上「字典來源」「查詢請求」等詞。本次依指示未修改。（已完成（Issue 8）：`CONTEXT.md` 新增「字典查詢」一節）
+4. **ADR**：以下兩點符合「難以回復、事後令人意外、有真實取捨」，建議實作時各寫一份 ADR：（已完成（Issue 8）：ADR 0038、0039）
    - 字典資料獨立於主庫（`dictionary.db`）。
    - 線上查詢請求型別不含前後文。
 5. **顯示方式**：已確認（2026-10-19，審查 Important 2）：Phase 1 用分段選擇器，一次只顯示一本字典，加返回堆疊。取代原本的「分區」預設。
 6. **Epic 編號與順位**：已轉成 Epic（2026-10-19）。編號 `epic-63` 是目前最大編號加一，順位 64 是看板最後一列。若要調整，請告知。
-7. **PRD 與詞彙表**：統一在 Issue 8 補 `docs/prd.md` 的 FR 條目與 `CONTEXT.md` 詞條。
+7. **PRD 與詞彙表**：統一在 Issue 8 補 `docs/prd.md` 的 FR 條目與 `CONTEXT.md` 詞條。（已完成（Issue 8）：FR-50～53 與「字典查詢」詞條）
 8. **CC-CEDICT 拼音顯示**：已確認（2026-10-19）：聲調符號。
 9. **MDX 外部 CSS 的配對方式**：已確認（2026-10-19）：多選匯入，依詞條 `<link href>` 的檔名配對。
 
