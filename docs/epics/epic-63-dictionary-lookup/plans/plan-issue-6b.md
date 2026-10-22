@@ -323,7 +323,7 @@
 
 - [ ] **Step 5: 執行確認通過**（同 Step 3 指令）Expected: PASS。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   ```bash
   git add app/lib app/test
   git commit -m "feat(epic-63): Issue 6b 查字典面板開啟時隱藏選取控點"
@@ -394,9 +394,9 @@
 
 - [x] **Step 4: 執行確認通過**（同 Step 2 指令；另跑 `cd app && node tool/check_l10n_hardcoded_strings.js`）Expected: PASS。
 
-- [ ] **Step 5: 真機確認**：深色主題查字典，選中分段看得清；深色主題選字，劃線工具列有外框。
+- [x] **Step 5: 真機確認**（2026-10-22 以 adb 截圖驗證）：深色主題查字典，選中分段看得清；深色主題選字，劃線工具列有外框。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   ```bash
   git add app/lib app/test
   git commit -m "fix(epic-63): Issue 6b 深色與 E-Ink 的分段選擇器與劃線工具列對比"
@@ -418,7 +418,7 @@
 - [x] **Step 3: 實作**：`InAppWebViewSettings(... supportZoom: widget.isFixedLayoutHint == true)`，附中文註解說明原因。
 - [x] **Step 4: 執行確認通過**（同 Step 2 指令；另跑 `cd app && flutter test test/screens/reader_screen_test.dart` 確認回歸）Expected: PASS。
 - [ ] **Step 5: 真機確認**：EPUB／TXT 選字時多指觸碰不再縮放；CBZ 或固定版面 EPUB 的雙指縮放仍可用。
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   ```bash
   git add app/lib app/test docs
   git commit -m "fix(epic-63): Issue 6b 流式格式關閉 WebView 原生雙指縮放"
@@ -441,6 +441,9 @@
 
 1. **`app/pubspec.yaml` 登錄兩個 asset（Task 8，審查 I-1）。** Global Constraints 寫「不動 `pubspec.yaml`」，本意是不新增套件與相依。整合測試要在真機讀 `images.mdx`、`images.mdd`，必須把 fixture 宣告為 asset（比照 6a 的 `html.mdx`），所以在 `flutter: assets:` 多加 `test/fixtures/mdx/images.mdx` 與 `test/fixtures/mdx/images.mdd` 兩行。沒有新增套件、沒有改相依。
 2. **Task 7 走失敗路徑。** 真機探測結論與下一步方向記在 `issues.md` 檔尾「後續項目」第 2 項；`app/lib` 沒有留下半成品。
+3. **深色外框改用 `onSurfaceVariant`，面板與工具列的深色外框波及多個畫面（Task 9，真機後補）。** 計畫原寫外框用 `outline`；深色的 `outline` 與 `surface` 只差約 1.3:1，真機看不見，改用高對比的 `onSurfaceVariant`。`EBSheetShell` 在深色（非 E-Ink）也加上 2 px 外框並改直角（外框不能搭圓角，面板圓角會讓外框四角突出），所以使用 `EBSheetShell` 的其他畫面（書籍動作 Sheet、筆記面板等）在深色下也會有外框與直角。
+4. **`isFixedLayoutHint` 改傳解析後的值（Task 10，補審 I-2）。** `reader_screen.dart` 原本傳 `widget.isFixedLayout`，舊資料可能是 `null`，會讓 CBZ 被誤關縮放；改傳 `_dispatchedIsFixedLayout ?? widget.isFixedLayout`，並補測試。
+5. **Task 10 Step 5 的固定版面與 CBZ 雙指縮放未在真機驗證。** 手上沒有這類檔案；`fixed-layout.js` 的縮放看起來由 JS 處理、不依賴原生縮放，但屬推論。
 ---
 
 ## 自我檢查

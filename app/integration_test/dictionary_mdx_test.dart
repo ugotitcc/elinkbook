@@ -601,7 +601,7 @@ void main() {
       (tester) async {
     final intercepted = <String, MdxRequestDecision>{};
     final created = Completer<InAppWebViewController>();
-    // 兩張 1x1 PNG 設為寬 300px、高 auto（1:1 比例解碼後各佔 300px 高）；
+    // 兩張 64×64 PNG 設為寬 300px、高 auto（1:1 比例解碼後各佔 300px 高）；
     // 若圖片未載入或被 blockNetworkLoads 擋下，高度不會撐開。
     const probeHtml =
         '<html><head><meta charset="utf-8"><title>block-probe</title></head>'

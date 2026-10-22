@@ -46,13 +46,16 @@ class EBSheetShell extends StatelessWidget {
     bool isEinkMode = false,
     Color? barrierColor,
   }) {
+    // 深色的外框是直角（見 [build]），面板仍是預設圓角時外框四角會突出，所以
+    // 深色也改直角；陰影在深色下本來就看不見，維持預設。
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
       barrierColor: barrierColor,
       sheetAnimationStyle: isEinkMode ? AnimationStyle.noAnimation : null,
       elevation: isEinkMode ? 0 : null,
-      shape: isEinkMode ? const RoundedRectangleBorder() : null,
+      shape: isEinkMode || isDark ? const RoundedRectangleBorder() : null,
       builder: (context) => EBSheetShell(
         title: title,
         isEinkMode: isEinkMode,

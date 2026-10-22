@@ -24,10 +24,12 @@ class _RecordingNavigatorObserver extends NavigatorObserver {
 Future<void> _pumpAndOpen(
   WidgetTester tester, {
   bool isEinkMode = false,
+  AppTheme theme = AppTheme.light,
   NavigatorObserver? observer,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      theme: resolveThemeData(theme: theme, isEinkMode: isEinkMode),
       navigatorObservers: observer == null ? [] : [observer],
       locale: const Locale('zh', 'TW'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -299,6 +301,17 @@ void main() {
     if (shape is RoundedRectangleBorder) {
       expect(shape.borderRadius, isNot(BorderRadius.zero));
     }
+  });
+
+  // 深色的外框是直角（上左右各 2px，不能搭圓角），面板若仍是預設的 28px 圓角，
+  // 外框四角會從圓角面板突出（真機截圖）。深色比照 E-Ink 改直角。
+  testWidgets('EBSheetShell.show 在深色（非 E-Ink）時 BottomSheet 為直角', (tester) async {
+    await _pumpAndOpen(tester, theme: AppTheme.dark, isEinkMode: false);
+    await tester.pumpAndSettle();
+
+    final shape = tester.widget<BottomSheet>(find.byType(BottomSheet)).shape;
+    expect(shape, isA<RoundedRectangleBorder>());
+    expect((shape! as RoundedRectangleBorder).borderRadius, BorderRadius.zero);
   });
 
   testWidgets('標題、把手、關閉鍵仍在，ConstrainedBox 最大高度仍為螢幕 85%', (tester) async {
