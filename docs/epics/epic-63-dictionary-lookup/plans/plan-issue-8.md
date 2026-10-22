@@ -157,17 +157,17 @@
 - Consumes: Task 1 的缺口清單（人類確認要補的項目）。
 - Produces: 每個被補的缺口有一個測試，測試名稱開頭帶驗收編號，例如 `驗收 20：重複匯入同一檔案提示已匯入`。
 
-- [ ] **Step 1: 逐項補自動測試。** 只補人類在 Task 1 Step 4 確認要補的「補自動測試」缺口。每個缺口先寫失敗測試、確認失敗原因正確，再視需要補最小實作（若缺口其實是功能缺陷，停止並回報人類，不在本 Issue 偷偷改功能）。
-- [ ] **Step 2: 寫整合測試** `dictionary_lookup_flow_test.dart`（真機）。用真實 `DictionaryService`、真實 `DictionaryManager`、真實 `dictionary.db`（暫存目錄），直接呼叫匯入器與 `DictionaryLookupSheet.show`，不經檔案選擇器。測試資料在 `setUp` 用 Dart 字串寫進 `getTemporaryDirectory()` 下的檔案（最小 JSON、最小 CC-CEDICT 文字），再把路徑交給匯入器。不依賴 `app/test/fixtures/`，做法比照 `cedict_importer_test.dart`、`json_csv_importer_test.dart`：
+- [x] **Step 1: 逐項補自動測試。** 只補人類在 Task 1 Step 4 確認要補的「補自動測試」缺口。每個缺口先寫失敗測試、確認失敗原因正確，再視需要補最小實作（若缺口其實是功能缺陷，停止並回報人類，不在本 Issue 偷偷改功能）。
+- [x] **Step 2: 寫整合測試** `dictionary_lookup_flow_test.dart`（真機）。用真實 `DictionaryService`、真實 `DictionaryManager`、真實 `dictionary.db`（暫存目錄），直接呼叫匯入器與 `DictionaryLookupSheet.show`，不經檔案選擇器。測試資料在 `setUp` 用 Dart 字串寫進 `getTemporaryDirectory()` 下的檔案（最小 JSON、最小 CC-CEDICT 文字），再把路徑交給匯入器。不依賴 `app/test/fixtures/`，做法比照 `cedict_importer_test.dart`、`json_csv_importer_test.dart`：
   - `JSON 字典匯入後，查詢面板顯示結果`：匯入 → 開面板 → 找到詞條文字。
   - `查詢候選鏈：ran 能查到只存 run 的字典`（驗收 13）。
   - `CC-CEDICT：查繁體與簡體得到同一筆，並顯示授權說明`（驗收 33）。
   - `沒有網路也能查本機字典`（驗收 5，用注入的 `isNetworkAvailable: () async => false`）。
   - `刪除字典後相關資料清除`（驗收 6）：呼叫 `DictionaryManager.delete(id)`（它會一併刪 `.mdd`、`.css` 等本機附屬檔；`DictionaryStore.deleteSource` 只刪資料庫記錄），再斷言詞條查不到、附屬檔不存在。
   沿用 `dictionary_mdx_test.dart` 的檔頭註解與暫存檔做法。
-- [ ] **Step 3: 靜態檢查。** Run: `cd app && flutter analyze && node tool/check_integration_keys.js && node tool/check_l10n_hardcoded_strings.js`。Expected: `No issues found!`；兩支腳本無錯誤。
-- [ ] **Step 4: 先問人類再跑整合測試。** 在對話裡說明「會把手機上的 App 解除安裝並清掉資料」，人類同意後才執行 `cd app && flutter test integration_test/dictionary_lookup_flow_test.dart -d <device-id>`。Expected: 全數通過。跑完提醒人類重新匯入字典與書。
-- [ ] **Step 5: Commit**
+- [x] **Step 3: 靜態檢查。** Run: `cd app && flutter analyze && node tool/check_integration_keys.js && node tool/check_l10n_hardcoded_strings.js`。Expected: `No issues found!`；兩支腳本無錯誤。
+- [x] **Step 4: 先問人類再跑整合測試。**（2026-10-22 人類選擇延後到 Task 5 真機驗收時一併執行；本 Task 只完成詢問，未解除安裝 App。） 在對話裡說明「會把手機上的 App 解除安裝並清掉資料」，人類同意後才執行 `cd app && flutter test integration_test/dictionary_lookup_flow_test.dart -d <device-id>`。Expected: 全數通過。跑完提醒人類重新匯入字典與書。
+- [x] **Step 5: Commit**
   ```bash
   git add app/test app/integration_test
   git commit -m "test(epic-63): Issue 8 補驗收缺口測試與字典查詢整合測試"
@@ -177,9 +177,9 @@
 
 ### Task 5：全套驗證、真機確認與收尾
 
-- [ ] **Step 1: 靜態檢查。** Run: `cd app && flutter analyze && node tool/check_l10n_hardcoded_strings.js && node tool/check_integration_keys.js`。Expected: `No issues found!`；兩支腳本無錯誤。
-- [ ] **Step 2: 完整測試（本計畫唯一一次）。** Run: `cd app && flutter test`。Expected: 全數通過。有失敗先單獨在 `main` 跑該檔確認是不是既有失敗，一致才可註明並略過。
-- [ ] **Step 3: 驗收對照表定稿。** 更新 `reviews/acceptance-issue-8.md`：Task 4 補完後每個缺口改為有證據，仍無證據的列為「已知限制」並確認已寫進 `issues.md`。
+- [x] **Step 1: 靜態檢查。** Run: `cd app && flutter analyze && node tool/check_l10n_hardcoded_strings.js && node tool/check_integration_keys.js`。Expected: `No issues found!`；兩支腳本無錯誤。
+- [x] **Step 2: 完整測試（本計畫唯一一次）。**（2026-10-22：`+4327 ~2: All tests passed!`） Run: `cd app && flutter test`。Expected: 全數通過。有失敗先單獨在 `main` 跑該檔確認是不是既有失敗，一致才可註明並略過。
+- [x] **Step 3: 驗收對照表定稿。** 更新 `reviews/acceptance-issue-8.md`：Task 4 補完後每個缺口改為有證據，仍無證據的列為「已知限制」並確認已寫進 `issues.md`。
 - [ ] **Step 4: 真機確認（請人類在場）**，裝置：WAVE E-Ink 機。
   0. **重建環境。** Task 4 的整合測試已把 App 解除安裝並清掉資料。先執行 `cd app && flutter run -d <device-id>` 重新安裝，再匯入一本範例 EPUB（如 `app/test/fixtures/sample.epub`）。要測字典查詞，另請人類重新匯入一本字典。
   1. 設定頁的授權頁看得到「萌典」與「CC-CEDICT」兩筆資料來源標示，內容正確、可捲動。
