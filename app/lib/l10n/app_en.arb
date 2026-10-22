@@ -737,5 +737,6 @@
   "dictionaryImportLeaveConfirmMessage": "A dictionary is being imported. Leaving now cancels the import, and nothing already written is kept.",
   "dictionaryImportLeaveConfirmAction": "Leave and cancel",
   "dictionaryImportLeaveConfirmStay": "Keep importing",
-  "dictionaryDragHandleLabel": "Drag to reorder"
+  "dictionaryDragHandleLabel": "Drag to reorder",
+  "dictionaryMdxLimitNote": "Known limitation: Dictionary entries do not execute JavaScript. Features relying on click scripts (such as Oxford 9 image magnification) will not work, and only thumbnails will be visible."
 }

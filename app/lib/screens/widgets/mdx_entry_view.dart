@@ -1,16 +1,18 @@
-// MDX 詞條顯示元件（epic-63 Issue 6a Task 7）。
+// MDX 詞條顯示元件（epic-63 Issue 6a Task 7 / Issue 6b Task 5）。
 //
 // 詞條 HTML 一律在「JavaScript 關閉、禁止檔案與網路存取」的 WebView 內顯示：
 // - 只載入我們自己傳入的字串，baseUrl 固定為 [kMdxBaseUrl]，頁內錨點由
 //   WebView 原生處理。
 // - `shouldOverrideUrlLoading` 只放行頁內錨點；`entry://`／`bword://` 轉成
 //   詞條查詢（回傳給面板推入返回堆疊），其餘一律取消。
-// - `shouldInterceptRequest` 除了 `data:` 初始文件外，任何請求都回 404 空內容，
-//   永不回傳 `null`（回 `null` 會讓 WebView 走真實網路）。圖片與外部 CSS 的
-//   實際回傳是 Issue 6b，這裡先留好呼叫點。
-// - 只有主框架且有使用者手勢的導覽才會帶出詞條查詢；`Safe Browsing` 關閉。
-//   `blockNetworkLoads` 未啟用：未能在真機驗證它不影響 `data:` 初始文件與
-//   攔截回應，留待 Issue 6b 圖片攔截時一併確認（審查 I-7）。
+// - `shouldInterceptRequest` 回應由 `decideRequest` 決定：`data:` 初始文件交還
+//   WebView；屬 [kMdxBaseUrl] 且解析成功的 MDD 資源回傳 200 二進位內容；
+//   其餘請求一律回傳 404，永不回傳 `null`（回 `null` 會讓 WebView 走真實網路）。
+//   外部 CSS 已在上游（Issue 6b Task 2）內聯，配色覆寫由 [prepareEntryHtml] 注入。
+// - 只有主框架且有使用者手勢的導覽才會帶出詞條查詢；`Safe Browsing` 關閉、
+//   `blockNetworkLoads: true` 啟用（Task 8 真機驗證確認不影響 `data:` 初始文件、
+//   `loadData` 重載、錨點與 `shouldInterceptRequest` 圖片渲染，作為攔截之外的
+//   第二道網路封鎖防線，審查 I-7）。
 //
 // 決策邏輯是靜態純函式，單元測試不必建 WebView。
 import 'package:flutter/gestures.dart';
@@ -20,6 +22,8 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../../dictionary/mdx_html_prepare.dart';
 import '../../dictionary/mdx_link_policy.dart';
+import '../../dictionary/mdx_resource.dart';
+import '../../dictionary/mdx_theme_override.dart';
 
 /// 建立 MDX 詞條顯示元件的函式；面板用注入的版本測試版面與返回堆疊。
 typedef MdxEntryViewBuilder = Widget Function(
@@ -33,6 +37,8 @@ class MdxEntryViewConfig {
     required this.sourceId,
     required this.html,
     required this.onEntryLink,
+    this.resolveResource,
+    this.colors,
   });
 
   final String sourceId;
@@ -42,6 +48,12 @@ class MdxEntryViewConfig {
 
   /// 使用者點了 `entry://`／`bword://` 連結時呼叫，參數是已解碼的詞條文字。
   final void Function(String word) onEntryLink;
+
+  /// 讀取此詞條所屬字典資源（如圖片）的回呼；`null` 時資源請求回傳 404。
+  final Future<MdxResource?> Function(String url)? resolveResource;
+
+  /// 詞條在特定主題模式下的覆寫色彩配置；`null` 表示使用原生樣式。
+  final MdxColors? colors;
 }
 
 /// `shouldOverrideUrlLoading` 的決策結果。
@@ -61,12 +73,23 @@ class MdxNavigationDecision {
 
 /// `shouldInterceptRequest` 的決策結果。
 class MdxRequestDecision {
-  const MdxRequestDecision({required this.statusCode, this.body = ''});
+  const MdxRequestDecision({
+    required this.statusCode,
+    this.body = '',
+    this.bytes,
+    this.contentType = 'text/plain',
+  });
 
   final int statusCode;
 
   /// 回應本文；本 Issue 恆為空字串。
   final String body;
+
+  /// 二進位資源資料（如圖片）；404 時為 null。
+  final Uint8List? bytes;
+
+  /// MIME 內容型別（例如 `image/png`），預設 `text/plain`。
+  final String contentType;
 }
 
 /// 單一詞條的 WebView。同一時間畫面上最多一個（由面板控制）。
@@ -76,6 +99,7 @@ class MdxEntryView extends StatefulWidget {
     required this.config,
     this.onWebViewCreated,
     this.onRequestIntercepted,
+    @visibleForTesting this.onLoadHtml,
   });
 
   final MdxEntryViewConfig config;
@@ -88,6 +112,10 @@ class MdxEntryView extends StatefulWidget {
   /// 正式流程不需要。
   final void Function(Uri url, MdxRequestDecision decision)?
       onRequestIntercepted;
+
+  /// 測試掛鉤：當 [_loadHtml] 被呼叫時觸發（用來驗證組態變更觸發重載）。
+  /// 正式流程不需要。
+  final VoidCallback? onLoadHtml;
 
   /// WebView 要主動搶下的手勢。
   ///
@@ -124,14 +152,64 @@ class MdxEntryView extends StatefulWidget {
     };
   }
 
-  /// 任何資源請求都回 404 空本文，只有 `data:` 例外。
+  /// 攔截資源請求的決策：`data:` 放行；屬 [kMdxBaseUrl] 的資源請求以
+  /// [resolveResource] 解析，成功回傳 200，其餘一律 404 空內容。
   ///
   /// `data:` 是 [InAppWebViewInitialData]（`loadDataWithBaseURL`）提供的初始
   /// 文件，必須交還 WebView 自己載入；若也回 404，整頁會變成「網頁無法使用」
   ///（Task 9 真機確認）。`data:` 不涉及網路或檔案存取，放行沒有安全疑慮。
-  static MdxRequestDecision? decideRequest(String url) {
+  static Future<MdxRequestDecision?> decideRequest(
+    String url, {
+    Future<MdxResource?> Function(String url)? resolveResource,
+  }) async {
     if (url.startsWith('data:')) return null;
-    return const MdxRequestDecision(statusCode: 404);
+    if (!url.startsWith(kMdxBaseUrl)) {
+      return const MdxRequestDecision(statusCode: 404);
+    }
+    if (resolveResource == null) {
+      return const MdxRequestDecision(statusCode: 404);
+    }
+    try {
+      final resource = await resolveResource(url);
+      if (resource == null) {
+        return const MdxRequestDecision(statusCode: 404);
+      }
+      return MdxRequestDecision(
+        statusCode: 200,
+        bytes: resource.bytes,
+        contentType: resource.contentType,
+      );
+    } catch (_) {
+      return const MdxRequestDecision(statusCode: 404);
+    }
+  }
+
+  /// 將 [MdxRequestDecision] 轉換為 WebView 的 [WebResourceResponse]。
+  ///
+  /// `decision` 為 `null` 時回傳 `null`（放行請求，由 WebView 自行載入）。
+  /// 200 回應時 [WebResourceResponse.contentEncoding] 必須為 `null`，二進位
+  /// 資料（如圖片）若帶 `utf-8` 會讓部分 WebView 拒絕渲染。
+  /// 404 回應維持現有格式（`text/plain`、`utf-8`）。
+  static WebResourceResponse? responseFor(MdxRequestDecision? decision) {
+    if (decision == null) return null;
+    if (decision.statusCode == 200) {
+      return WebResourceResponse(
+        contentType: decision.contentType,
+        contentEncoding: null,
+        data: decision.bytes ?? Uint8List(0),
+        statusCode: 200,
+        reasonPhrase: 'OK',
+        headers: {'Content-Type': decision.contentType},
+      );
+    }
+    return WebResourceResponse(
+      contentType: 'text/plain',
+      contentEncoding: 'utf-8',
+      data: Uint8List(0),
+      statusCode: decision.statusCode,
+      reasonPhrase: 'Not Found',
+      headers: const {'Content-Type': 'text/plain'},
+    );
   }
 
   @override
@@ -144,16 +222,20 @@ class _MdxEntryViewState extends State<MdxEntryView> {
   @override
   void didUpdateWidget(covariant MdxEntryView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 詞條連結跳到另一筆詞條時是同一個元件、新的 HTML：重新載入文件，
-    // 不要沿用舊頁面（也不需要重建整個 WebView）。
-    if (oldWidget.config.html != widget.config.html) {
+    // 詞條連結跳到另一筆詞條時是同一個元件、新的 HTML；或主題／E-Ink 模式
+    // 切換時色彩覆寫改變：重新載入文件，不要沿用舊頁面。
+    if (oldWidget.config.html != widget.config.html ||
+        oldWidget.config.colors != widget.config.colors) {
       _loadHtml();
     }
   }
 
   Future<void> _loadHtml() async {
+    widget.onLoadHtml?.call();
+    final colors = widget.config.colors;
+    final overrideCss = colors == null ? null : mdxOverrideCss(colors);
     await _controller?.loadData(
-      data: prepareEntryHtml(widget.config.html),
+      data: prepareEntryHtml(widget.config.html, overrideCss: overrideCss),
       mimeType: 'text/html',
       encoding: 'utf8',
       baseUrl: WebUri(kMdxBaseUrl),
@@ -163,11 +245,13 @@ class _MdxEntryViewState extends State<MdxEntryView> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = widget.config.colors;
+    final overrideCss = colors == null ? null : mdxOverrideCss(colors);
     return InAppWebView(
       key: const Key('mdx_entry_view'),
       gestureRecognizers: MdxEntryView.gestureRecognizers,
       initialData: InAppWebViewInitialData(
-        data: prepareEntryHtml(widget.config.html),
+        data: prepareEntryHtml(widget.config.html, overrideCss: overrideCss),
         mimeType: 'text/html',
         encoding: 'utf8',
         baseUrl: WebUri(kMdxBaseUrl),
@@ -180,8 +264,9 @@ class _MdxEntryViewState extends State<MdxEntryView> {
         cacheEnabled: false,
         useShouldOverrideUrlLoading: true,
         useShouldInterceptRequest: true,
-        // 不讓 Safe Browsing 連 Google 檢查網址（審查 I-7）。
+        // 不讓 Safe Browsing 連 Google 檢查網址，並在引擎層封鎖網路載入（審查 I-7、Task 8 真機確認）。
         safeBrowsingEnabled: false,
+        blockNetworkLoads: true,
       ),
       onWebViewCreated: (controller) {
         _controller = controller;
@@ -201,21 +286,14 @@ class _MdxEntryViewState extends State<MdxEntryView> {
             : NavigationActionPolicy.CANCEL;
       },
       shouldInterceptRequest: (controller, request) async {
-        final decision = MdxEntryView.decideRequest(
+        final decision = await MdxEntryView.decideRequest(
           request.url.toString(),
+          resolveResource: widget.config.resolveResource,
         );
         // `data:` 初始文件交還 WebView；其他請求一律由我們回應，永不連網。
         if (decision == null) return null;
         widget.onRequestIntercepted?.call(request.url, decision);
-        // statusCode 有值時 `headers`／`reasonPhrase` 也必須有值。
-        return WebResourceResponse(
-          contentType: 'text/plain',
-          contentEncoding: 'utf-8',
-          data: Uint8List(0),
-          statusCode: decision.statusCode,
-          reasonPhrase: 'Not Found',
-          headers: const {'Content-Type': 'text/plain'},
-        );
+        return MdxEntryView.responseFor(decision);
       },
     );
   }

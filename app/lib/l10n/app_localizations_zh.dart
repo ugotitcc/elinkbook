@@ -2561,6 +2561,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dictionaryDragHandleLabel => '拖曳排序';
+
+  @override
+  String get dictionaryMdxLimitNote =>
+      '已知限制：字典詞條不會執行 JavaScript，所以依賴點擊腳本的功能（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -5120,6 +5124,10 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get dictionaryDragHandleLabel => '拖动排序';
+
+  @override
+  String get dictionaryMdxLimitNote =>
+      '已知限制：词典词条不会执行 JavaScript，因此依赖点击脚本的功能（例如牛津 9 的图片放大）无法运作，仅能看到缩略图。';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -7679,4 +7687,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dictionaryDragHandleLabel => '拖曳排序';
+
+  @override
+  String get dictionaryMdxLimitNote =>
+      '已知限制：字典詞條不會執行 JavaScript，所以依賴點擊腳本的功能（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。';
 }

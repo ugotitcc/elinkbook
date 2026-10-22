@@ -5,8 +5,83 @@ import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/screens/annotation_toolbar.dart';
+import '../support/wcag_contrast.dart';
+
+Future<void> _pumpToolbar(
+  WidgetTester tester, {
+  required AppTheme theme,
+  required bool isEinkMode,
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      locale: const Locale('zh', 'TW'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      theme: resolveThemeData(theme: theme, isEinkMode: isEinkMode),
+      home: Scaffold(
+        body: AnnotationToolbar(
+          onStyleSelected: (_) {},
+          onNotePressed: () {},
+          onClosePressed: () {},
+          onCopyPressed: () {},
+          isEinkMode: isEinkMode,
+        ),
+      ),
+    ),
+  );
+}
+
+/// 工具列最外層的 `Material`（有 `RoundedRectangleBorder` 的那個）外框。
+BorderSide _toolbarBorder(WidgetTester tester) {
+  final material = tester.widget<Material>(
+    find
+        .descendant(
+          of: find.byType(AnnotationToolbar),
+          matching: find.byType(Material),
+        )
+        .first,
+  );
+  return (material.shape! as RoundedRectangleBorder).side;
+}
 
 void main() {
+  group('外框（Issue 6b Task 9）', () {
+    testWidgets('深色（非 E-Ink）有 1.5 寬、對底色對比 ≥ 4.5 的淺灰外框', (tester) async {
+      await _pumpToolbar(tester, theme: AppTheme.dark, isEinkMode: false);
+
+      final side = _toolbarBorder(tester);
+      final scheme = Theme.of(tester.element(find.byType(AnnotationToolbar)))
+          .colorScheme;
+      expect(side.width, 1.5);
+      // 深色的 `outline` 與 `surface` 幾乎同色，外框看不見；改用高對比灰色。
+      expect(side.color, scheme.onSurfaceVariant);
+      expect(
+        contrastRatio(side.color, scheme.surface),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+
+    testWidgets('E-Ink 維持 outline 外框顏色', (tester) async {
+      await _pumpToolbar(tester, theme: AppTheme.light, isEinkMode: true);
+
+      final scheme = Theme.of(tester.element(find.byType(AnnotationToolbar)))
+          .colorScheme;
+      expect(_toolbarBorder(tester).color, scheme.outline);
+    });
+
+    testWidgets('E-Ink 維持 1.5 寬的 outline 外框', (tester) async {
+      await _pumpToolbar(tester, theme: AppTheme.light, isEinkMode: true);
+
+      expect(_toolbarBorder(tester).width, 1.5);
+    });
+
+    testWidgets('淺色且非 E-Ink 沒有外框', (tester) async {
+      await _pumpToolbar(tester, theme: AppTheme.light, isEinkMode: false);
+
+      expect(_toolbarBorder(tester), BorderSide.none);
+    });
+  });
+
   testWidgets('顯示螢光筆三色、底線、備註、關閉共 6 個按鈕', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

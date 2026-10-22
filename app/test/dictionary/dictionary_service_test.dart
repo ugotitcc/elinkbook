@@ -451,6 +451,41 @@ void main() {
       expect(await service.lookupInSource('en1', 'zzzz'), isEmpty);
       expect(await service.lookupInSource('missing', 'apple'), isEmpty);
     });
+
+    test('readMdxResource 對已匯入的 images 來源回圖片；來源不存在回 null；mdxPool == null 回 null', () async {
+      await store.insertSource(mdxSource('images-src', file: 'images.mdx'));
+      final mdxService = DictionaryService(store: store, mdxPool: pool);
+
+      final resource = await mdxService.readMdxResource(
+        'images-src',
+        'https://dict.local/pic/a%20b.png',
+      );
+      expect(resource, isNotNull);
+      expect(resource!.contentType, 'image/png');
+      expect(
+        resource.bytes.sublist(0, 8),
+        [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+      );
+
+      // 來源不存在回 null
+      expect(
+        await mdxService.readMdxResource(
+          'non-existent',
+          'https://dict.local/pic/a%20b.png',
+        ),
+        isNull,
+      );
+
+      // mdxPool == null 回 null
+      final serviceWithoutPool = DictionaryService(store: store);
+      expect(
+        await serviceWithoutPool.readMdxResource(
+          'images-src',
+          'https://dict.local/pic/a%20b.png',
+        ),
+        isNull,
+      );
+    });
   });
 
   group('線上分段', () {

@@ -315,6 +315,7 @@ node app/tool/test_tts_safe_window.mjs
 |------|------|------|
 | `zlib` | `zlib.mdx` | 一般字典：zlib 壓縮、`KeyCaseSensitive=No` |
 | `mdd` | `mdd.mdd` | 最小 MDD（圖片與 CSS 各一筆） |
+| `images` | `images.mdx` / `images.mdd` | 成對的 MDX（pic 詞條）與 MDD（PNG 與 MP3 資源） |
 | `fake-lzo` | `fake-lzo.mdx` | 記錄區塊標成 LZO（不支援的壓縮） |
 | `truncated` | `truncated.mdx` | 整檔砍半，模擬下載中斷 |
 | `cut-records` | `cut-records.mdx` | 只砍記錄區塊，檔頭與鍵區完整 |
@@ -337,6 +338,7 @@ cd app
 # 一般 fixture（輸出到 test/fixtures/mdx/）
 python -X utf8 tool/make_test_mdx.py html test/fixtures/mdx/html.mdx
 python -X utf8 tool/make_test_mdx.py mdd test/fixtures/mdx/mdd.mdd
+python -X utf8 tool/make_test_mdx.py images test/fixtures/mdx/images.mdx
 
 # 合成大檔（只放本機，例如 tmp/，不要加進版控）
 python -X utf8 tool/make_test_mdx.py large-cjk tmp/large_cjk.mdx --entries 400000

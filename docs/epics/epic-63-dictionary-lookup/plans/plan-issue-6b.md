@@ -83,7 +83,7 @@
   - `List<String> mddKeysForUrl(String url)`：不在 `kMdxBaseUrl` 底下、解碼失敗、或去掉開頭 `/` 與查詢後路徑為空，一律回空清單；否則回 `[r'\pic\a b.png', r'pic\a b.png']`（第一個含開頭 `\`，第二個不含）。
   - `String? imageContentTypeForKey(String key)`：副檔名不分大小寫，只認 spec 列的五種（`.jpg`／`.jpeg` 皆為 `image/jpeg`），其餘回 `null`。
 
-- [ ] **Step 1: 寫失敗測試** `mdx_resource_test.dart`：
+- [x] **Step 1: 寫失敗測試** `mdx_resource_test.dart`：
   - `空白與子目錄`：`https://dict.local/pic/a%20b.png` → `[r'\pic\a b.png', r'pic\a b.png']`。
   - `中文與 %25`：`https://dict.local/%E5%9C%96/50%25.png` → 第一個鍵為 `\圖\50%.png`。
   - `查詢字串與錨點被去掉`：`https://dict.local/pic/a.png?v=1#x` → 第一個鍵為 `\pic\a.png`。
@@ -93,15 +93,15 @@
   - `favicon 不特判`：`https://dict.local/favicon.ico` 回 `[r'\favicon.ico', r'favicon.ico']`（是否 404 由讀取端決定）。
   - `contentType`：`.PNG`、`.jpg`、`.jpeg`、`.gif`、`.webp`、`.svg` 各自對應；`.mp3`、`.css`、無副檔名回 `null`。
 
-- [ ] **Step 2: 執行確認失敗**
+- [x] **Step 2: 執行確認失敗**
   Run: `cd app && flutter test test/dictionary/mdx_resource_test.dart`
   Expected: FAIL（找不到 `mdx_resource.dart`）。
 
-- [ ] **Step 3: 實作**上述簽章。鍵轉換用 `Uri.tryParse` 取 `path`（已排除查詢與錨點），再 `Uri.decodeComponent`（包 try/catch）。
+- [x] **Step 3: 實作**上述簽章。鍵轉換用 `Uri.tryParse` 取 `path`（已排除查詢與錨點），再 `Uri.decodeComponent`（包 try/catch）。
 
-- [ ] **Step 4: 執行確認通過**（同 Step 2 指令）Expected: PASS。
+- [x] **Step 4: 執行確認通過**（同 Step 2 指令）Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add app/lib/dictionary/mdx_resource.dart app/test/dictionary/mdx_resource_test.dart
   git commit -m "feat(epic-63): Issue 6b MDD 資源鍵轉換與型別"
@@ -120,7 +120,7 @@
 - Consumes: `extractReferencedCssNames`（`mdx_companion_files.dart`）。
 - Produces: `String inlineLinkedCss(String html, Map<String, String> cssByLowerName)`：`cssByLowerName` 的鍵是小寫檔名。
 
-- [ ] **Step 1: 寫失敗測試** `mdx_css_inline_test.dart`：
+- [x] **Step 1: 寫失敗測試** `mdx_css_inline_test.dart`：
   - `依檔名換成 style`：`<link rel="stylesheet" href="css/Ghychyz.CSS">` + `{'ghychyz.css': 'p{color:red}'}` → 輸出含 `<style>p{color:red}</style>`、不含 `<link`。
   - `查詢字串與路徑不影響配對`：`href="../x/a.css?v=2"` 配 `a.css`。
   - `沒有對應檔案的 link 被移除`：輸出不含 `<link`，也不含任何 `<style>`。
@@ -131,15 +131,15 @@
   - `href="http://evil/x.css"` 且檔名剛好是已匯入的 `x.css`：照檔名配對內嵌（只比對檔名），不產生任何對外請求。
   - `provider` 測試（`mdx_dictionary_provider_test.dart`）：在暫存目錄放 `.mdx`（`html.mdx` 複本）與 `ghychyz.css`，詞條含 `<link href="ghychyz.css">` 時，回傳的 `entry.body` 內嵌了該 CSS；目錄沒有 `.css` 時 `<link>` 被移除、查詢仍 `found`。
 
-- [ ] **Step 2: 執行確認失敗**
+- [x] **Step 2: 執行確認失敗**
   Run: `cd app && flutter test test/dictionary/mdx_css_inline_test.dart test/dictionary/mdx_dictionary_provider_test.dart`
   Expected: FAIL。
 
-- [ ] **Step 3: 實作** `inlineLinkedCss`：用與 `extractReferencedCssNames` 相同的 `<link>`／`href` 比對規則取檔名（可共用該檔的私有 regex 時抽成共用常數，不要複製貼上第二份）；只處理副檔名 `.css` 的 `<link>`。`MdxDictionaryProvider._lookupWith` 在組 `DictionaryEntry` 前，若任一 body 含 `<link`（不分大小寫）才讀 `p.dirname(source.storagePath)` 下的 `.css`（讀取失敗當作沒有），並對每筆 body 呼叫 `inlineLinkedCss`。讀檔用 `File.readAsBytes()` 再 `utf8.decode(bytes, allowMalformed: true)`，整段包 `try/catch`（許多舊字典的 `.css` 是 GBK／Big5，直接 `readAsString()` 會丟 `FormatException`）。
+- [x] **Step 3: 實作** `inlineLinkedCss`：用與 `extractReferencedCssNames` 相同的 `<link>`／`href` 比對規則取檔名（可共用該檔的私有 regex 時抽成共用常數，不要複製貼上第二份）；只處理副檔名 `.css` 的 `<link>`。`MdxDictionaryProvider._lookupWith` 在組 `DictionaryEntry` 前，若任一 body 含 `<link`（不分大小寫）才讀 `p.dirname(source.storagePath)` 下的 `.css`（讀取失敗當作沒有），並對每筆 body 呼叫 `inlineLinkedCss`。讀檔用 `File.readAsBytes()` 再 `utf8.decode(bytes, allowMalformed: true)`，整段包 `try/catch`（許多舊字典的 `.css` 是 GBK／Big5，直接 `readAsString()` 會丟 `FormatException`）。
 
-- [ ] **Step 4: 執行確認通過**（同 Step 2 指令）Expected: PASS。
+- [x] **Step 4: 執行確認通過**（同 Step 2 指令）Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add app/lib/dictionary app/test/dictionary
   git commit -m "feat(epic-63): Issue 6b 詞條外部 CSS 依檔名內嵌"
@@ -161,9 +161,9 @@
   - `MdxReader.readResource(String url, {int maxBytes = kMdxResourceMaxBytes}) → Future<MdxResource?>`：沒有 `.mdd`、鍵不存在、副檔名不支援、超過 `maxBytes`、讀取丟例外，全部回 `null`。`readOneMdd` 回傳 `List<int>`，組 `MdxResource` 時轉成 `Uint8List`（已是 `Uint8List` 就直接用，否則 `Uint8List.fromList`）。
   - `DictionaryService.readMdxResource(String sourceId, String url) → Future<MdxResource?>`：來源不存在、沒有 pool、任何例外回 `null`。
 
-- [ ] **Step 1: 產生 fixture**：`make_test_mdx.py` 新增 `images` 種類。`images.mdx` 有一筆詞條 `pic`，本文含 `<img src="pic/a b.png">`；`images.mdd` 有 `\pic\a b.png`（最小 PNG）、`\pic\sub\c.png`、`\snd\x.mp3`（用來測不支援的副檔名）。依 `tool/README.md` 慣例執行並把指令寫進 README。
+- [x] **Step 1: 產生 fixture**：`make_test_mdx.py` 新增 `images` 種類。`images.mdx` 有一筆詞條 `pic`，本文含 `<img src="pic/a b.png">`；`images.mdd` 有 `\pic\a b.png`（最小 PNG）、`\pic\sub\c.png`、`\snd\x.mp3`（用來測不支援的副檔名）。依 `tool/README.md` 慣例執行並把指令寫進 README。
 
-- [ ] **Step 2: 寫失敗測試**（`mdx_reader_test.dart`，把 `images.mdx`／`images.mdd` 複製到暫存目錄後開啟）：
+- [x] **Step 2: 寫失敗測試**（`mdx_reader_test.dart`，把 `images.mdx`／`images.mdd` 複製到暫存目錄後開啟）：
   - `讀到圖片`：`readResource('https://dict.local/pic/a%20b.png')` 的 `contentType == 'image/png'`、`bytes` 開頭為 PNG 簽章。
   - `子目錄`：`pic/sub/c.png` 讀得到。
   - `找不到回 null`：`pic/none.png`。
@@ -175,15 +175,15 @@
   - `close` 之後 `readResource` 回 `null`、不丟例外。
   `dictionary_service_test.dart`：`readMdxResource` 對已匯入的 `images` 來源回圖片；來源不存在回 `null`；`mdxPool == null` 回 `null`。
 
-- [ ] **Step 3: 執行確認失敗**
+- [x] **Step 3: 執行確認失敗**
   Run: `cd app && flutter test test/dictionary/mdx_reader_test.dart test/dictionary/dictionary_service_test.dart`
   Expected: FAIL。
 
-- [ ] **Step 4: 實作** `MdxReader`：`open` 完成 `.mdx` 後，掃同目錄找主檔名相同的 `.mdd`，用 `DictReader(path).initDict()` 開啟，任何失敗當作沒有（並釋放控制代碼）；`close` 一併關閉。`readResource` 依序試 `mddKeysForUrl` 回傳的鍵：`locate` → `readOneMdd`，大小以讀出的位元組數判斷上限。`DictionaryService.readMdxResource` 照 `lookupInSource` 的方式找來源，走 `pool.use`。
+- [x] **Step 4: 實作** `MdxReader`：`open` 完成 `.mdx` 後，掃同目錄找主檔名相同的 `.mdd`，用 `DictReader(path).initDict()` 開啟，任何失敗當作沒有（並釋放控制代碼）；`close` 一併關閉。`readResource` 依序試 `mddKeysForUrl` 回傳的鍵：`locate` → `readOneMdd`，大小以讀出的位元組數判斷上限。`DictionaryService.readMdxResource` 照 `lookupInSource` 的方式找來源，走 `pool.use`。
 
-- [ ] **Step 5: 執行確認通過**（同 Step 3 指令）Expected: PASS。
+- [x] **Step 5: 執行確認通過**（同 Step 3 指令）Expected: PASS。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   ```bash
   git add app/lib/dictionary app/tool app/test
   git commit -m "feat(epic-63): Issue 6b 讀取 mdd 圖片資源並經 DictionaryService 提供"
@@ -205,22 +205,22 @@
   - `String mdxOverrideCss(MdxColors colors)`：回傳 `<style>` 內容，含 `html,body{background:#rrggbb !important;color:#rrggbb !important}`、`*{color:...!important;background-color:transparent !important;border-color:...!important}`、`a{color:... !important}`（`underlineLinks` 為真時加 `text-decoration:underline !important`）、`img{background-color:#ffffff !important;max-width:100% !important;height:auto}`。`img` 必須帶 `!important`：否則會被 `*{background-color:transparent !important}` 蓋掉，透明底黑線圖在深色下就隱形；兩者都有 `!important` 時，元素選擇器 `img` 比 `*` 優先。
   - `prepareEntryHtml(String html, {String? overrideCss})`：有值時在 `</head>` 前（沒有 head 外殼時補在 head 內）插入 `<style>$overrideCss</style>`，保證在字典自己的樣式之後。
 
-- [ ] **Step 1: 寫失敗測試**：
+- [x] **Step 1: 寫失敗測試**：
   - `mdxColorsFor`：E-Ink（任何亮度）→ 黑字白底且 `underlineLinks == true`；深色非 E-Ink → 取自 `ColorScheme`；淺色非 E-Ink → `null`。
   - `mdxOverrideCss`：輸出含 `!important`、含傳入的十六進位色碼（小寫、六碼）；`img` 規則含 `background-color:#ffffff !important`（用正規表示式斷言它帶 `!important`）；`MdxColors` 相同欄位的兩個實例 `==` 為真。
   - `對比可讀`：用 `ThemeData.dark()` 與 E-Ink 的色彩，計算前景與背景的 WCAG 對比，皆 ≥ 4.5。
   - `prepareEntryHtml` 注入：完整文件時覆寫樣式位於字典自己的 `<style>` 之後、`</head>` 之前；片段輸入時出現在補出的 `<head>` 內；`overrideCss == null` 時輸出與現行完全相同（回歸）。
   - `詞條寫死顏色`：輸入含 `<font color="#000">`、`bgcolor="#fff"`、`style="color:#000;background:#fff"`，輸出的覆寫樣式仍在其後（行內樣式靠 `!important` 蓋過，單元測試只確認規則存在與順序）。
 
-- [ ] **Step 2: 執行確認失敗**
+- [x] **Step 2: 執行確認失敗**
   Run: `cd app && flutter test test/dictionary/mdx_theme_override_test.dart test/dictionary/mdx_html_prepare_test.dart`
   Expected: FAIL。
 
-- [ ] **Step 3: 實作**上述簽章。色碼轉換用 `Color` 的 RGB 通道取十六進位；`mdx_html_prepare.dart` 檔頭註解「刻意不處理 `<link>`／CSS／配色」改為指向 Task 2 與本 Task 的位置。
+- [x] **Step 3: 實作**上述簽章。色碼轉換用 `Color` 的 RGB 通道取十六進位；`mdx_html_prepare.dart` 檔頭註解「刻意不處理 `<link>`／CSS／配色」改為指向 Task 2 與本 Task 的位置。
 
-- [ ] **Step 4: 執行確認通過**（同 Step 2 指令）Expected: PASS。
+- [x] **Step 4: 執行確認通過**（同 Step 2 指令）Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add app/lib/dictionary app/test/dictionary
   git commit -m "feat(epic-63): Issue 6b 深色與 E-Ink 配色覆寫樣式"
@@ -243,7 +243,7 @@
   - **`colors` 與 `resolveResource` 在 `_mdxEntryView` 組裝 `MdxEntryViewConfig` 時綁定**：取 `Theme.of(context)` 與 `widget.isEinkMode` 呼叫 `mdxColorsFor`；`resolveResource: (url) => widget.readMdxResource?.call(outcome.providerId, url)`（`readMdxResource` 為 `null` 時整個 `resolveResource` 為 `null`）。這樣測試用的 `mdxEntryViewBuilder` 收到的 `config` 也是完整的。`_buildDefaultMdxEntryView` 維持 `(context, config) => MdxEntryView(config: config)`，不改。
   - `_MdxEntryViewState.didUpdateWidget`：`html` **或 `colors`** 任一不同就呼叫 `_loadHtml()`（面板開著時切換深淺色或 E-Ink，畫面要跟著換）。
 
-- [ ] **Step 1: 寫失敗測試**：
+- [x] **Step 1: 寫失敗測試**：
   - `decideRequest`：`data:` 回 `null`；`https://dict.local/pic/a.png` 有資源 → 200、`contentType == 'image/png'`、位元組相同；資源回 `null` → 404；`resolveResource` 丟例外 → 404 不丟；`https://evil.example/a.png`、`file:///x`、`http://dict.local/x` → 404 且**不呼叫** `resolveResource`；`resolveResource == null` → 404。
   - `config 帶 colors 時 prepare 結果含覆寫樣式`；`colors == null` 時不含。
   - `colors 變更會重新載入`：同一個 `MdxEntryView`、`html` 不變、`colors` 從 `null` 換成深色，`_loadHtml` 被觸發（用 `onWebViewCreated` 取得的 controller 替身或載入計數觀察）；`colors` 相等（兩個相同欄位的實例）時不重載。
@@ -251,15 +251,15 @@
   - `200 的回應不帶 contentEncoding`：`decideRequest` 回傳的決策轉成 `WebResourceResponse` 時，200 的 `contentEncoding` 為 `null`、`headers` 含 `Content-Type`；404 維持 `text/plain` 與 `utf-8`。
   - 回歸：6a 既有的 `decideNavigation`、手勢、返回堆疊測試全數通過。
 
-- [ ] **Step 2: 執行確認失敗**
+- [x] **Step 2: 執行確認失敗**
   Run: `cd app && flutter test test/screens/widgets/mdx_entry_view_test.dart test/screens/widgets/dictionary_lookup_sheet_test.dart`
   Expected: FAIL。
 
-- [ ] **Step 3: 實作**。`shouldInterceptRequest` 回傳的 `WebResourceResponse`：200 時 `contentType` 用資源型別、`statusCode: 200`、`reasonPhrase: 'OK'`、`headers: {'Content-Type': ...}`，**`contentEncoding` 不給（`null`）**——它在 Android 是傳輸壓縮編碼（`Content-Encoding`），不是字元集，二進位圖片帶 `utf-8` 會讓部分 WebView 拒絕渲染（`foliate_reader_view.dart` 的圖片與字型攔截也不帶）；404 維持現有格式（`text/plain`、`utf-8`）。`_loadHtml` 與 `initialData` 都要帶 `overrideCss`。更新檔頭註解中「圖片與外部 CSS 的實際回傳是 Issue 6b」「`blockNetworkLoads` 留待 Issue 6b」兩段。**`blockNetworkLoads` 不在本 Task 啟用**，真機驗證放 Task 8。
+- [x] **Step 3: 實作**。`shouldInterceptRequest` 回傳的 `WebResourceResponse`：200 時 `contentType` 用資源型別、`statusCode: 200`、`reasonPhrase: 'OK'`、`headers: {'Content-Type': ...}`，**`contentEncoding` 不給（`null`）**——它在 Android 是傳輸壓縮編碼（`Content-Encoding`），不是字元集，二進位圖片帶 `utf-8` 會讓部分 WebView 拒絕渲染（`foliate_reader_view.dart` 的圖片與字型攔截也不帶）；404 維持現有格式（`text/plain`、`utf-8`）。`_loadHtml` 與 `initialData` 都要帶 `overrideCss`。更新檔頭註解中「圖片與外部 CSS 的實際回傳是 Issue 6b」「`blockNetworkLoads` 留待 Issue 6b」兩段。**`blockNetworkLoads` 不在本 Task 啟用**，真機驗證放 Task 8。
 
-- [ ] **Step 4: 執行確認通過**（同 Step 2 指令；另跑 `cd app && node tool/check_l10n_hardcoded_strings.js`）Expected: PASS。
+- [x] **Step 4: 執行確認通過**（同 Step 2 指令；另跑 `cd app && node tool/check_l10n_hardcoded_strings.js`）Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add app/lib/screens/widgets app/test/screens/widgets
   git commit -m "feat(epic-63): Issue 6b MDX 詞條 WebView 回傳 mdd 圖片並套用配色覆寫"
@@ -276,7 +276,7 @@
 **Interfaces:**
 - Produces: `EBSheetShell` 在 `isEinkMode: true` 時，最外層有 Key `eb_sheet_shell_eink_border` 的 `DecoratedBox`，邊框為上、左、右各 2 px、顏色 `colorScheme.outline`，無 `boxShadow`；`isEinkMode: false` 時沒有該元件。`EBSheetShell.show` 在 `isEinkMode: true` 時傳 `elevation: 0` 與 `shape: const RoundedRectangleBorder()`（直角、無陰影）：Material 3 的底部面板預設有陰影與頂部圓角，只加內層邊框會留下陰影，且非對稱邊框不能搭圓角；`isEinkMode: false` 時兩者維持 `null`（沿用預設）。設定畫面新增 Key `dictionary_mdx_limit_note` 顯示 `dictionaryMdxLimitNote`（有無字典、載入失敗三種狀態都顯示，比照 Issue 7 線上區塊的做法）。
 
-- [ ] **Step 1: 寫失敗測試**：
+- [x] **Step 1: 寫失敗測試**：
   - `E-Ink 時有外框`：找到 `eb_sheet_shell_eink_border`，其 `BoxDecoration.border` 的上、左、右寬度為 2、`boxShadow` 為 `null`。
   - `非 E-Ink 沒有外框元件`。
   - `E-Ink 面板無陰影、直角`：以 `EBSheetShell.show` 開面板，找到的 `BottomSheet` 其 `elevation == 0`、`shape` 為 `RoundedRectangleBorder` 且 `borderRadius` 為 `BorderRadius.zero`；非 E-Ink 時 `elevation` 與 `shape` 沿用主題預設（不是我們指定的值）。
@@ -284,15 +284,15 @@
   - 設定畫面：說明文字存在，三種狀態皆顯示；`find.text` 對應 zh-TW 文案。
   - 既有用到 `EBSheetShell` 的測試（`book_action_sheet`、筆記面板、字典面板）：只跑 `grep -rln "EBSheetShell" app/test` 找到的檔案，確認通過。
 
-- [ ] **Step 2: 執行確認失敗**
+- [x] **Step 2: 執行確認失敗**
   Run: `cd app && flutter test test/screens/widgets/eb_sheet_shell_test.dart test/screens/dictionary_settings_screen_test.dart`
   Expected: FAIL。
 
-- [ ] **Step 3: 實作**。ARB 四份加 `dictionaryMdxLimitNote`（zh-TW 見上表；zh-CN、en 各自翻譯，`@key` 附說明）。執行 `cd app && flutter gen-l10n`。
+- [x] **Step 3: 實作**。ARB 四份加 `dictionaryMdxLimitNote`（zh-TW 見上表；zh-CN、en 各自翻譯，`@key` 附說明）。執行 `cd app && flutter gen-l10n`。
 
-- [ ] **Step 4: 執行確認通過**（同 Step 2 指令加上 `grep` 找到的 `EBSheetShell` 測試檔；另跑 `node tool/check_l10n_hardcoded_strings.js`）Expected: PASS。
+- [x] **Step 4: 執行確認通過**（同 Step 2 指令加上 `grep` 找到的 `EBSheetShell` 測試檔；另跑 `node tool/check_l10n_hardcoded_strings.js`）Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add app/lib app/test
   git commit -m "feat(epic-63): Issue 6b E-Ink 面板外框與 MDX 已知限制說明"
@@ -309,7 +309,7 @@
 **Interfaces:**
 - Produces: `FoliateReaderView.setSelectionHandlesHidden(GlobalKey<State<FoliateReaderView>> key, bool hidden)`（靜態，仿 `clearSelection` 的寫法）。`ReaderScreen._handleLookupPressed` 開面板前呼叫 `true`，`finally` 呼叫 `false`。選取範圍與 `AnnotationToolbar` 不得被清除。
 
-- [ ] **Step 1: 真機探測（先於實作）**：在 `FoliateReaderView` 用 `InAppWebViewController.clearFocus()`（`app/patches/flutter_inappwebview_android/.../in_app_webview_controller.dart:2245`）做暫時實驗，裝置為 WAVE E-Ink 機。**控制器上沒有 `requestFocus()`**（只有 `requestFocusNodeHref()`，用途不同），還原焦點的路徑要在探測時一併找出，候選依序：Flutter 端 `FocusNode.requestFocus()`、`FocusScope.of(context).requestFocus(...)`、關面板後重新送出原選取（如果前兩者都無法讓控點回來）。判定標準：開字典面板時控點消失；關閉面板後控點與選取範圍都回來；`AnnotationToolbar` 的劃線、備註、複製仍可用。把結果（成功或失敗、做法、現象）寫進 `reviews/`（不進版控）。
+- [x] **Step 1: 真機探測（先於實作）**：在 `FoliateReaderView` 用 `InAppWebViewController.clearFocus()`（`app/patches/flutter_inappwebview_android/.../in_app_webview_controller.dart:2245`）做暫時實驗，裝置為 WAVE E-Ink 機。**控制器上沒有 `requestFocus()`**（只有 `requestFocusNodeHref()`，用途不同），還原焦點的路徑要在探測時一併找出，候選依序：Flutter 端 `FocusNode.requestFocus()`、`FocusScope.of(context).requestFocus(...)`、關面板後重新送出原選取（如果前兩者都無法讓控點回來）。判定標準：開字典面板時控點消失；關閉面板後控點與選取範圍都回來；`AnnotationToolbar` 的劃線、備註、複製仍可用。把結果（成功或失敗、做法、現象）寫進 `reviews/`（不進版控）。
   - **失敗時**（含找不到可靠的還原路徑）：不做 Step 2 到 Step 5，在 `issues.md` 檔尾「後續項目」第 2 項補上探測結果與下一步方向，本 Task 結束。
   - `main.js` 不能改；只能用 Dart 端與既有 WebView 控制介面。
 
@@ -323,7 +323,7 @@
 
 - [ ] **Step 5: 執行確認通過**（同 Step 3 指令）Expected: PASS。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   ```bash
   git add app/lib app/test
   git commit -m "feat(epic-63): Issue 6b 查字典面板開啟時隱藏選取控點"
@@ -337,22 +337,22 @@
 - Modify: `app/integration_test/dictionary_mdx_test.dart`
 - 需要人類提供：2 至 3 本含圖片的真實 MDX／MDD（只作本機測試，放 `tmp/dictionary/`，不進版控）
 
-- [ ] **Step 1: 寫整合測試**（真機，沿用 6a 的 `_waitFor`／攔截回呼作法，不用 `evaluateJavascript`）：
+- [x] **Step 1: 寫整合測試**（真機，沿用 6a 的 `_waitFor`／攔截回呼作法，不用 `evaluateJavascript`）：
   - `圖片在 JavaScript 關閉下顯示`：用 `images.mdx`／`images.mdd`，詞條 `pic` 的 `<img src="pic/a b.png">` 被攔截並回 200、`image/png`（以 `onRequestIntercepted` 觀察）。
   - `路徑帶空白與子目錄的圖片`：`pic/a b.png`、`pic/sub/c.png` 各回 200。
   - `找不到的圖片與 favicon 回 404，不連網`。
   - `深色與 E-Ink 下可讀`：以 `colors` 注入後，頁面標題讀取正常，且覆寫樣式存在於載入的文件（用 6a 既有的只讀原生狀態的方式；若無法直接讀，改比對傳給 WebView 的 HTML 字串）。
   - `blockNetworkLoads` 探測：在測試內暫時啟用，確認 `data:` 初始文件與攔截回應仍可載入；可行才在 `MdxEntryView` 啟用並補一個單元測試固定住設定值。**任何渲染異常（含圖片或初始文件載不出來）就維持關閉**，並在 `mdx_entry_view.dart` 註解記下現象。
 
-- [ ] **Step 2: 靜態檢查**
+- [x] **Step 2: 靜態檢查**
   Run: `cd app && flutter analyze && node tool/check_l10n_hardcoded_strings.js && node tool/check_integration_keys.js`
   Expected: `No issues found!`；兩支腳本無錯誤。
 
-- [ ] **Step 3: 完整測試（本計畫唯一一次）**
+- [x] **Step 3: 完整測試（本計畫唯一一次）**
   Run: `cd app && flutter test`
   Expected: 全數通過。6a 曾記錄 `test/reader/pdf_reader_view_filters_test.dart` 的兩個 PDF 加粗測試在 `main` 上失敗；若這次又出現，先單獨在 `main` 跑該檔確認是否同樣失敗，一致就在此註明、不在本 Issue 處理；不一致就是本分支的回歸，要修。
 
-- [ ] **Step 4: 驗收對照**（逐項填寫結果）
+- [x] **Step 4: 驗收對照**（逐項填寫結果）
   - 驗收 18：Task 3「讀到圖片」「子目錄」、Task 5「decideRequest」、Task 8 圖片整合測試。
   - 驗收 19：Task 4「對比可讀」、Task 8 深色與 E-Ink 整合測試。
   - 驗收 25：Step 5 第 6 項實測。
@@ -368,8 +368,61 @@
   6. 開啟 100 MB 等級 MDX（`tmp/dictionary/large_cjk_400k.mdx` 或人類提供的真實檔）：記憶體增量小於 50 MB（沿用 6a 的量測方式與 `PATCH.md` 的基準）。
   7. 設定畫面看得到「已知限制」說明。
 
-- [ ] **Step 6: 回報**：把結果寫進 `reviews/`（不進版控）。通過後等人類決定合併，之後才更新 `issues.md` 狀態與 `docs/epics.md` 備註。
+- [x] **Step 6: 回報**：把結果寫進 `reviews/`（不進版控）。通過後等人類決定合併，之後才更新 `issues.md` 狀態與 `docs/epics.md` 備註。
 
+### Task 9：深色與 E-Ink 的面板控制項對比（真機後補，2026-10-22）
+
+真機在 WAVE E-Ink 機的深色主題發現兩個看不清的控制項，都是 Issue 4 起就有，主題是「深色與 E-Ink 配色」，併入本 Issue。
+
+**Files:**
+- Modify: `app/lib/screens/widgets/dictionary_lookup_sheet.dart`（分段選擇器 `SegmentedButton` 加明確的 `style`）、`app/lib/screens/annotation_toolbar.dart`（深色加邊框）
+- Test: `app/test/screens/widgets/dictionary_lookup_sheet_test.dart`、`app/test/screens/annotation_toolbar_test.dart`
+
+**Interfaces:** 不新增公開介面。
+- 分段選擇器：選中分段的底色與文字色在深色與 E-Ink 下，文字對底色的 WCAG 對比 ≥ 4.5。深色（非 E-Ink）：選中用 `colorScheme.primary`／`onPrimary`，未選中透明底配 `onSurface`。E-Ink：選中不填色（透明底配 `onSurface`），靠既有的標籤外框標示。淺色且非 E-Ink 維持 `SegmentedButton` 預設樣式。
+- 劃線工具列：`isEinkMode` 或深色主題時，外框為 `BorderSide(color: colorScheme.outline, width: 1.5)`；淺色且非 E-Ink 維持無外框、`elevation: 4`。
+
+- [x] **Step 1: 寫失敗測試**：
+  - 面板（`dictionary_lookup_sheet_test.dart`）：用 `resolveThemeData(theme: AppTheme.dark, isEinkMode: false)`、`resolveThemeData(theme: AppTheme.light, isEinkMode: true)` 各開一次有兩個以上分段的面板，取 `SegmentedButton.style` 以 `WidgetState.selected` 解出選中的底色與文字色，WCAG 對比皆 ≥ 4.5；淺色非 E-Ink 的 `style` 沒有被我們覆寫選中色。
+  - 工具列（`annotation_toolbar_test.dart`）：深色（`AppTheme.dark`、非 E-Ink）時 `Material.shape` 的 `side.width == 1.5` 且顏色為 `colorScheme.outline`；E-Ink 維持；淺色非 E-Ink 為 `BorderSide.none`。
+
+- [x] **Step 2: 執行確認失敗**
+  Run: `cd app && flutter test test/screens/widgets/dictionary_lookup_sheet_test.dart test/screens/annotation_toolbar_test.dart`
+  Expected: FAIL。
+
+- [x] **Step 3: 實作**上述兩處；WCAG 對比的計算函式沿用 `mdx_theme_override_test.dart` 的 `_contrastRatio`（兩個測試檔都要用時抽到 `app/test/support/` 共用，不複製第二份）。
+
+- [x] **Step 4: 執行確認通過**（同 Step 2 指令；另跑 `cd app && node tool/check_l10n_hardcoded_strings.js`）Expected: PASS。
+
+- [x] **Step 5: 真機確認**（2026-10-22 以 adb 截圖驗證）：深色主題查字典，選中分段看得清；深色主題選字，劃線工具列有外框。
+
+- [x] **Step 6: Commit**
+  ```bash
+  git add app/lib app/test
+  git commit -m "fix(epic-63): Issue 6b 深色與 E-Ink 的分段選擇器與劃線工具列對比"
+  ```
+### Task 10：流式格式關閉 WebView 原生雙指縮放（真機後補，2026-10-22）
+
+真機錄影（`tmp/images/選字跳動.mp4`）顯示：選字時只要多一根手指碰到螢幕，整頁文字就被放大或縮小，小字更難選。原因是 `FoliateReaderView` 的 `InAppWebViewSettings` 沒設 `supportZoom`，套件預設為 `true`，viewport 也沒禁止縮放；流式格式沒有自己的縮放功能，這個原生縮放是意外開著的。固定版面（`fixed-layout.js`）有自己的雙指縮放，不能全關。問題在 `main` 上就存在，不是本 Issue 造成。
+
+**Files:**
+- Modify: `app/lib/reader/foliate_reader_view.dart`（`initialSettings` 加 `supportZoom`）
+- Test: `app/test/reader/foliate_reader_view_test.dart`
+
+**Interfaces:** 不新增公開介面。`supportZoom: widget.isFixedLayoutHint == true`：固定版面（含 CBZ）維持原生縮放，其餘（含 `isFixedLayoutHint == null`）關閉。`isFixedLayoutHint` 由 `ReaderScreen` 以 `Book.isFixedLayout` 傳入，開書前就已知；`initialSettings` 只在建立 WebView 時生效，與該參數「僅開書當下生效」的既有限制一致。
+
+- [x] **Step 1: 寫失敗測試**（`foliate_reader_view_test.dart`，比照既有 `pumpView` 取得 `InAppWebView.platform.params.initialSettings`）：`isFixedLayoutHint: false` 與 `null` 時 `supportZoom == false`；`isFixedLayoutHint: true` 時 `supportZoom == true`。
+- [x] **Step 2: 執行確認失敗**
+  Run: `cd app && flutter test test/reader/foliate_reader_view_test.dart`
+  Expected: FAIL（`supportZoom` 為預設的 `true`）。
+- [x] **Step 3: 實作**：`InAppWebViewSettings(... supportZoom: widget.isFixedLayoutHint == true)`，附中文註解說明原因。
+- [x] **Step 4: 執行確認通過**（同 Step 2 指令；另跑 `cd app && flutter test test/screens/reader_screen_test.dart` 確認回歸）Expected: PASS。
+- [ ] **Step 5: 真機確認**：EPUB／TXT 選字時多指觸碰不再縮放；CBZ 或固定版面 EPUB 的雙指縮放仍可用。
+- [x] **Step 6: Commit**
+  ```bash
+  git add app/lib app/test docs
+  git commit -m "fix(epic-63): Issue 6b 流式格式關閉 WebView 原生雙指縮放"
+  ```
 ---
 
 ## 交給人類
@@ -382,6 +435,15 @@
 - **Issue 8：** 授權頁、隱私頁、l10n 收尾、整合測試補齊。
 - **後續優化（不在 Phase 1）：** `.mdd` 分卷（`name.1.mdd`）；放在 `.mdd` 內的 `.css`；`sound://` 音訊；字典名稱過長時自動截短（6a 已記）。
 
+---
+
+## 實作期間的偏離
+
+1. **`app/pubspec.yaml` 登錄兩個 asset（Task 8，審查 I-1）。** Global Constraints 寫「不動 `pubspec.yaml`」，本意是不新增套件與相依。整合測試要在真機讀 `images.mdx`、`images.mdd`，必須把 fixture 宣告為 asset（比照 6a 的 `html.mdx`），所以在 `flutter: assets:` 多加 `test/fixtures/mdx/images.mdx` 與 `test/fixtures/mdx/images.mdd` 兩行。沒有新增套件、沒有改相依。
+2. **Task 7 走失敗路徑。** 真機探測結論與下一步方向記在 `issues.md` 檔尾「後續項目」第 2 項；`app/lib` 沒有留下半成品。
+3. **深色外框改用 `onSurfaceVariant`，面板與工具列的深色外框波及多個畫面（Task 9，真機後補）。** 計畫原寫外框用 `outline`；深色的 `outline` 與 `surface` 只差約 1.3:1，真機看不見，改用高對比的 `onSurfaceVariant`。`EBSheetShell` 在深色（非 E-Ink）也加上 2 px 外框並改直角（外框不能搭圓角，面板圓角會讓外框四角突出），所以使用 `EBSheetShell` 的其他畫面（書籍動作 Sheet、筆記面板等）在深色下也會有外框與直角。
+4. **`isFixedLayoutHint` 改傳解析後的值（Task 10，補審 I-2）。** `reader_screen.dart` 原本傳 `widget.isFixedLayout`，舊資料可能是 `null`，會讓 CBZ 被誤關縮放；改傳 `_dispatchedIsFixedLayout ?? widget.isFixedLayout`，並補測試。
+5. **Task 10 Step 5 的固定版面與 CBZ 雙指縮放未在真機驗證。** 手上沒有這類檔案；`fixed-layout.js` 的縮放看起來由 JS 處理、不依賴原生縮放，但屬推論。
 ---
 
 ## 自我檢查

@@ -810,6 +810,13 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
           initialSettings: InAppWebViewSettings(
             javaScriptEnabled: true,
             useShouldInterceptRequest: true,
+            // 流式格式沒有自己的縮放功能，Android WebView 預設開著的原生雙指縮放
+            // 只會在選字時被多一根手指誤觸，整頁忽大忽小（epic-63 Issue 6b 真機
+            // 錄影）。固定版面（含 CBZ）的 `fixed-layout.js` 有自己的縮放，且
+            // 實際縮放行為需在真機確認，所以只對固定版面保留。`initialSettings`
+            // 只在建立 WebView 時生效，與 `isFixedLayoutHint` 僅開書當下生效的
+            // 既有限制一致。
+            supportZoom: widget.isFixedLayoutHint == true,
             webViewAssetLoader: WebViewAssetLoader(
               pathHandlers: [
                 InternalStoragePathHandler(

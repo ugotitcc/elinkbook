@@ -2175,6 +2175,63 @@ void main() {
     });
   });
 
+  group('WebView 原生縮放（epic-63 Issue 6b Task 10）', () {
+    setUp(() {
+      cacheBookForServing = (filePath, instanceId) async {
+        return '/fake/cache/dir/current.epub';
+      };
+    });
+
+    Future<InAppWebViewSettings> pumpAndGetSettings(
+      WidgetTester tester, {
+      bool? isFixedLayoutHint,
+    }) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: FoliateReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+            isFixedLayoutHint: isFixedLayoutHint,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      return tester
+          .widget<InAppWebView>(find.byType(InAppWebView))
+          .platform
+          .params
+          .initialSettings!;
+    }
+
+    // 選字時多一根手指碰到螢幕就會縮放整頁（真機錄影），流式格式沒有自己的
+    // 縮放功能，原生縮放只會帶來誤觸。
+    testWidgets('流式格式（isFixedLayoutHint 為 false）關閉原生縮放', (tester) async {
+      final settings =
+          await pumpAndGetSettings(tester, isFixedLayoutHint: false);
+
+      expect(settings.supportZoom, isFalse);
+    });
+
+    testWidgets('isFixedLayoutHint 為 null 時視同流式，關閉原生縮放', (tester) async {
+      final settings = await pumpAndGetSettings(tester);
+
+      expect(settings.supportZoom, isFalse);
+    });
+
+    testWidgets('固定版面（含 CBZ）維持原生縮放', (tester) async {
+      final settings =
+          await pumpAndGetSettings(tester, isFixedLayoutHint: true);
+
+      expect(settings.supportZoom, isTrue);
+    });
+  });
+
   group('已下載字型（epic-49 Issue 4）', () {
     // 前面的 `mounted guard / dispose race` group 會覆寫 cacheBookForServing
     // 為失敗／永不完成版本且不還原，這裡每次測試前恢復成功版本，否則完整

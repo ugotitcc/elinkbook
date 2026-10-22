@@ -3309,7 +3309,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           columnMode: resolved.columnMode,
           columnSize: resolved.columnSize,
           showFooter: resolved.showFooter,
-          isFixedLayoutHint: widget.isFixedLayout,
+          // 傳解析後的值：舊資料的 `widget.isFixedLayout` 可能是 null，但 CBZ 已被解析為
+          // 固定版面；`FoliateReaderView` 靠它決定是否保留 WebView 原生縮放
+          // （epic-63 Issue 6b Task 10）。
+          isFixedLayoutHint: _dispatchedIsFixedLayout ?? widget.isFixedLayout,
           textColor: _themedTextColor,
           backgroundColor: _themedBackgroundColor,
           dualPageMode: resolved.dualPageMode,

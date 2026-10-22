@@ -1,4 +1,5 @@
 import 'package:elinkbook/dictionary/dictionary_service.dart';
+import 'package:elinkbook/dictionary/mdx_resource.dart';
 import 'package:elinkbook/dictionary/models/dictionary_entry.dart';
 import 'package:elinkbook/dictionary/models/lookup_request.dart';
 import 'package:elinkbook/dictionary/models/lookup_result.dart';
@@ -32,6 +33,15 @@ class FakeDictionaryService implements DictionaryService {
   /// 讓 `lookupInSource` 丟出例外。
   Object? lookupInSourceError;
 
+  /// 每次 `readMdxResource` 的參數，依呼叫順序。
+  final List<({String sourceId, String url})> readMdxResourceCalls = [];
+
+  /// `readMdxResource` 的回傳；預設為 null。
+  MdxResource? readMdxResourceResult;
+
+  /// 讓 `readMdxResource` 丟出例外。
+  Object? readMdxResourceError;
+
   static DictionaryLookupResponse _emptyResponse() => LookupCompleted(
         result: const LookupResult(request: LookupRequest(''), outcomes: []),
         hasEnabledDictionary: false,
@@ -56,5 +66,15 @@ class FakeDictionaryService implements DictionaryService {
     lookupInSourceCalls.add((sourceId: sourceId, word: word));
     if (lookupInSourceError != null) throw lookupInSourceError!;
     return lookupInSourceResult;
+  }
+
+  @override
+  Future<MdxResource?> readMdxResource(
+    String sourceId,
+    String url,
+  ) async {
+    readMdxResourceCalls.add((sourceId: sourceId, url: url));
+    if (readMdxResourceError != null) throw readMdxResourceError!;
+    return readMdxResourceResult;
   }
 }

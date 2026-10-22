@@ -4492,6 +4492,12 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'拖曳排序'**
   String get dictionaryDragHandleLabel;
+
+  /// 字典設定畫面底部的 MDX 已知限制說明（JavaScript 不執行、點擊腳本無效）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'已知限制：字典詞條不會執行 JavaScript，所以依賴點擊腳本的功能（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。'**
+  String get dictionaryMdxLimitNote;
 }
 
 class _AppLocalizationsDelegate

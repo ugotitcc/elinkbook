@@ -101,24 +101,29 @@ CompanionPlan planCompanions(List<PickedFile> files) {
   );
 }
 
-final _linkTag = RegExp(r'<link\b[^>]*>', caseSensitive: false);
-final _hrefAttr = RegExp(
+final linkTagPattern = RegExp(r'<link\b[^>]*>', caseSensitive: false);
+final hrefAttrPattern = RegExp(
   '''href\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))''',
   caseSensitive: false,
 );
+
+/// 從 href 屬性值取出小寫檔名（去掉查詢字串、錨點與路徑）。
+String extractFileNameFromHref(String hrefValue) {
+  final clean = hrefValue.split(RegExp(r'[?#]')).first;
+  return clean.split(RegExp(r'[/\\]')).last.toLowerCase();
+}
 
 /// 從 HTML 的 `<link href="x.css">` 取出被引用的樣式表檔名（不含路徑、
 /// 轉小寫、去重）。`@import` 不算。
 Set<String> extractReferencedCssNames(Iterable<String> bodies) {
   final names = <String>{};
   for (final body in bodies) {
-    for (final tag in _linkTag.allMatches(body)) {
-      final href = _hrefAttr.firstMatch(tag.group(0)!);
+    for (final tag in linkTagPattern.allMatches(body)) {
+      final href = hrefAttrPattern.firstMatch(tag.group(0)!);
       if (href == null) continue;
       final value = href.group(1) ?? href.group(2) ?? href.group(3) ?? '';
       // 只留檔名，去掉查詢字串、錨點與路徑。
-      final clean = value.split(RegExp(r'[?#]')).first;
-      final name = clean.split(RegExp(r'[/\\]')).last.toLowerCase();
+      final name = extractFileNameFromHref(value);
       if (name.endsWith('.css')) names.add(name);
     }
   }

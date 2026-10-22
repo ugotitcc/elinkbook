@@ -1478,6 +1478,37 @@ void main() {
     expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
   });
 
+  // epic-63 Issue 6b Task 10：`FoliateReaderView` 以 isFixedLayoutHint 決定是否保留
+  // WebView 原生縮放。舊資料的 `Book.isFixedLayout` 可能是 null，但 ReaderScreen
+  // 已依格式解析出 `_dispatchedIsFixedLayout`（CBZ 恆為固定版面），下傳的必須是
+  // 解析後的值，否則 CBZ 會被誤關縮放。
+  testWidgets('CBZ 的 Book.isFixedLayout 為 null 時，isFixedLayoutHint 傳解析後的 true', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.cbz',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: FakeLibraryRepository(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+    expect(view.isFixedLayoutHint, isTrue);
+  });
+
   testWidgets('CBZ 書籍建構 FoliateReaderView 時，isComicBookHint 正確傳為 true'
       '（epic-11 Issue 4 程式碼審查 Important #1 迴歸測試——Task 8 一度誤以為'
       '這個參數已存在於呼叫端而遺漏補上，導致 CBZ 的 book.dir RTL 覆寫在 '

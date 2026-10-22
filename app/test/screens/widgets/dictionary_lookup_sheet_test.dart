@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:elinkbook/dictionary/dictionary_service.dart';
 import 'package:elinkbook/dictionary/lookup_text_normalizer.dart';
+import 'package:elinkbook/dictionary/mdx_resource.dart';
 import 'package:elinkbook/dictionary/models/dictionary_entry.dart';
 import 'package:elinkbook/dictionary/models/lookup_request.dart';
 import 'package:elinkbook/dictionary/models/lookup_result.dart';
@@ -11,10 +13,13 @@ import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
 import 'package:elinkbook/screens/widgets/mdx_entry_view.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_dictionary_service.dart';
+import '../../support/fake_inappwebview_platform.dart';
 import '../../support/pump_localized_widget.dart';
+import '../../support/wcag_contrast.dart';
 
 /// 捕捉 Navigator 實際推入的 Route，用來檢查面板的遮罩顏色
 /// （比照 `eb_sheet_shell_test.dart` 的既有手法）。
@@ -133,6 +138,9 @@ Future<void> _pumpSheet(
   MdxEntryViewBuilder? mdxEntryViewBuilder,
   Future<List<DictionaryEntry>> Function(String sourceId, String word)?
       lookupInSource,
+  Future<MdxResource?> Function(String sourceId, String url)?
+      readMdxResource,
+  AppTheme theme = AppTheme.light,
 }) async {
   await pumpLocalizedWidget(
     tester,
@@ -150,6 +158,7 @@ Future<void> _pumpSheet(
                 onOpenSettings: onOpenSettings,
                 mdxEntryViewBuilder: mdxEntryViewBuilder,
                 lookupInSource: lookupInSource,
+                readMdxResource: readMdxResource,
               ),
             ),
           ],
@@ -157,6 +166,7 @@ Future<void> _pumpSheet(
       ),
     ),
     isEinkMode: isEinkMode,
+    theme: theme,
   );
   if (settle) await tester.pump();
 }
@@ -232,6 +242,9 @@ Set<String> _selectedSegments(WidgetTester tester) => tester
     .selected;
 
 void main() {
+  setUpAll(() {
+    InAppWebViewPlatform.instance = FakeInAppWebViewPlatform();
+  });
   group('載入與選取無效', () {
     testWidgets('等待中顯示載入指示', (tester) async {
       final completer = Completer<DictionaryLookupResponse>();
@@ -718,6 +731,82 @@ void main() {
     });
   });
 
+  group('分段選擇器對比（深色與 E-Ink，Issue 6b Task 9）', () {
+    Future<void> pumpTwoSegments(
+      WidgetTester tester, {
+      required AppTheme theme,
+      required bool isEinkMode,
+    }) =>
+        _pumpSheet(
+          tester,
+          theme: theme,
+          isEinkMode: isEinkMode,
+          response: Future.value(
+            _completed([
+              _outcome('a', name: '甲典', entries: [_entry('甲詞')]),
+              _outcome('b', name: '乙典', entries: [_entry('乙詞')]),
+            ]),
+          ),
+        );
+
+    ButtonStyle? segmentStyle(WidgetTester tester) => tester
+        .widget<SegmentedButton<String>>(
+          find.byKey(const Key('dictionary_lookup_segments')),
+        )
+        .style;
+
+    ColorScheme schemeOf(WidgetTester tester) => Theme.of(
+          tester.element(find.byKey(const Key('dictionary_lookup_segments'))),
+        ).colorScheme;
+
+    /// 透明底以面板底色（`surface`）計算實際對比。
+    Color effectiveBackground(Color? color, ColorScheme scheme) =>
+        color == null || color.a == 0 ? scheme.surface : color;
+
+    void expectReadable(
+      WidgetTester tester, {
+      required Set<WidgetState> states,
+    }) {
+      final style = segmentStyle(tester);
+      expect(style, isNotNull, reason: '深色與 E-Ink 必須明確指定分段樣式');
+      final scheme = schemeOf(tester);
+      final background = effectiveBackground(
+        style!.backgroundColor?.resolve(states),
+        scheme,
+      );
+      final foreground = style.foregroundColor!.resolve(states)!;
+      expect(
+        contrastRatio(foreground, background),
+        greaterThanOrEqualTo(4.5),
+        reason: 'states=$states 的文字對底色對比不足',
+      );
+    }
+
+    testWidgets('深色：選中與未選中分段的文字對比 ≥ 4.5', (tester) async {
+      await pumpTwoSegments(tester, theme: AppTheme.dark, isEinkMode: false);
+
+      expectReadable(tester, states: {WidgetState.selected});
+      expectReadable(tester, states: <WidgetState>{});
+    });
+
+    testWidgets('E-Ink：選中與未選中分段的文字對比 ≥ 4.5，選中不填色', (tester) async {
+      await pumpTwoSegments(tester, theme: AppTheme.light, isEinkMode: true);
+
+      expectReadable(tester, states: {WidgetState.selected});
+      expectReadable(tester, states: <WidgetState>{});
+      final selectedBackground = segmentStyle(tester)!
+          .backgroundColor!
+          .resolve({WidgetState.selected});
+      expect(selectedBackground?.a, 0, reason: 'E-Ink 選中靠外框，不填灰底');
+    });
+
+    testWidgets('淺色且非 E-Ink：沿用 SegmentedButton 預設樣式', (tester) async {
+      await pumpTwoSegments(tester, theme: AppTheme.light, isEinkMode: false);
+
+      expect(segmentStyle(tester), isNull);
+    });
+  });
+
   group('錯誤與版面', () {
     testWidgets('response 丟出例外時顯示失敗訊息', (tester) async {
       final completer = Completer<DictionaryLookupResponse>();
@@ -1177,6 +1266,124 @@ void main() {
       expect(find.byType(AnimatedSwitcher), findsNothing);
       expect(find.byType(AnimatedContainer), findsNothing);
       expect(find.byType(AnimatedOpacity), findsNothing);
+    });
+
+    testWidgets('mdxEntryViewBuilder 收到 resolveResource，呼叫時會傳入 providerId 與 url', (tester) async {
+      final recorder = _MdxRecorder();
+      final calls = <({String sourceId, String url})>[];
+      final sampleBytes = Uint8List.fromList([1, 2, 3]);
+
+      await _pumpSheet(
+        tester,
+        mdxEntryViewBuilder: recorder.build,
+        readMdxResource: (sourceId, url) async {
+          calls.add((sourceId: sourceId, url: url));
+          return MdxResource(bytes: sampleBytes, contentType: 'image/png');
+        },
+        response: Future.value(
+          _completed([
+            _outcome('mdx_src', name: 'MDX 典', entries: [_htmlEntry('詞')]),
+          ]),
+        ),
+      );
+
+      expect(recorder.last.resolveResource, isNotNull);
+      final result =
+          await recorder.last.resolveResource!('https://dict.local/pic/a.png');
+      expect(calls, [(sourceId: 'mdx_src', url: 'https://dict.local/pic/a.png')]);
+      expect(result?.bytes, sampleBytes);
+    });
+
+    testWidgets('readMdxResource 為 null 時，config.resolveResource 為 null', (tester) async {
+      final recorder = _MdxRecorder();
+      await _pumpSheet(
+        tester,
+        mdxEntryViewBuilder: recorder.build,
+        readMdxResource: null,
+        response: Future.value(
+          _completed([
+            _outcome('mdx', name: 'MDX 典', entries: [_htmlEntry('詞')]),
+          ]),
+        ),
+      );
+
+      expect(recorder.last.resolveResource, isNull);
+    });
+
+    testWidgets('深色主題的 config.colors 非 null，淺色且非 E-Ink 為 null，E-Ink 非 null',
+        (tester) async {
+      // 1. 淺色模式且非 E-Ink：colors 應為 null
+      final lightRecorder = _MdxRecorder();
+      await _pumpSheet(
+        tester,
+        mdxEntryViewBuilder: lightRecorder.build,
+        isEinkMode: false,
+        theme: AppTheme.light,
+        response: Future.value(
+          _completed([_outcome('m', entries: [_htmlEntry('詞')])]),
+        ),
+      );
+      expect(lightRecorder.last.colors, isNull);
+
+      // 2. 深色主題且非 E-Ink：colors 應非 null，且 underlineLinks 為 false
+      final darkRecorder = _MdxRecorder();
+      await _pumpSheet(
+        tester,
+        mdxEntryViewBuilder: darkRecorder.build,
+        isEinkMode: false,
+        theme: AppTheme.dark,
+        response: Future.value(
+          _completed([_outcome('m', entries: [_htmlEntry('詞')])]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(darkRecorder.last.colors, isNotNull);
+      expect(darkRecorder.last.colors!.underlineLinks, isFalse);
+
+      // 3. E-Ink 模式（無論明暗）：colors 應非 null，且 underlineLinks 為 true
+      final einkRecorder = _MdxRecorder();
+      await _pumpSheet(
+        tester,
+        mdxEntryViewBuilder: einkRecorder.build,
+        isEinkMode: true,
+        theme: AppTheme.light,
+        response: Future.value(
+          _completed([_outcome('m', entries: [_htmlEntry('詞')])]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(einkRecorder.last.colors, isNotNull);
+      expect(einkRecorder.last.colors!.underlineLinks, isTrue);
+    });
+
+    testWidgets('show() 會將 service.readMdxResource 傳入面板', (tester) async {
+      final service = FakeDictionaryService(
+        response: _completed([
+          _outcome('m', entries: [_htmlEntry('詞')]),
+        ]),
+      );
+
+      await pumpLocalizedWidget(
+        tester,
+        Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => DictionaryLookupSheet.show(
+              context,
+              selectedText: '詞',
+              service: service,
+              isEinkMode: false,
+            ),
+            child: const Text('open'),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      final sheet = tester.widget<DictionaryLookupSheet>(
+        find.byType(DictionaryLookupSheet),
+      );
+      expect(sheet.readMdxResource, isNotNull);
     });
   });
 }

@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
+import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 
 import '../../support/pump_localized_widget.dart';
+import '../../support/wcag_contrast.dart';
 
 /// 捕捉 Navigator 實際推入的 Route，供斷言 `ModalBottomSheetRoute` 的
 /// `transitionDuration` 是否真的依 `isEinkMode` 走到 `AnimationStyle.
@@ -21,10 +24,12 @@ class _RecordingNavigatorObserver extends NavigatorObserver {
 Future<void> _pumpAndOpen(
   WidgetTester tester, {
   bool isEinkMode = false,
+  AppTheme theme = AppTheme.light,
   NavigatorObserver? observer,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      theme: resolveThemeData(theme: theme, isEinkMode: isEinkMode),
       navigatorObservers: observer == null ? [] : [observer],
       locale: const Locale('zh', 'TW'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -151,5 +156,193 @@ void main() {
     );
 
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('isEinkMode: true 時最外層有 eb_sheet_shell_eink_border 外框（上左右 2px、無陰影）',
+      (tester) async {
+    const outlineColor = Color(0xFF79747E);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: ThemeData(
+          colorScheme: const ColorScheme.light(outline: outlineColor),
+        ),
+        home: const Scaffold(
+          body: EBSheetShell(
+            title: '標題',
+            isEinkMode: true,
+            child: Text('內容'),
+          ),
+        ),
+      ),
+    );
+
+    final finder = find.byKey(const Key('eb_sheet_shell_eink_border'));
+    expect(finder, findsOneWidget);
+
+    final decoratedBox = tester.widget<DecoratedBox>(finder);
+    expect(decoratedBox.decoration, isA<BoxDecoration>());
+    final decoration = decoratedBox.decoration as BoxDecoration;
+    expect(decoration.boxShadow, isNull);
+    expect(decoration.border, isA<Border>());
+    final border = decoration.border as Border;
+
+    expect(border.top.width, 2.0);
+    expect(border.top.color, outlineColor);
+    expect(border.left.width, 2.0);
+    expect(border.left.color, outlineColor);
+    expect(border.right.width, 2.0);
+    expect(border.right.color, outlineColor);
+    expect(border.bottom.width, 0.0);
+  });
+
+  testWidgets('深色（非 E-Ink）有 eb_sheet_shell_dark_border 外框：2px、淺灰色、對面板底色對比 ≥ 4.5',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.dark, isEinkMode: false),
+        home: const Scaffold(
+          body: EBSheetShell(
+            title: '標題',
+            isEinkMode: false,
+            child: Text('內容'),
+          ),
+        ),
+      ),
+    );
+
+    final finder = find.byKey(const Key('eb_sheet_shell_dark_border'));
+    expect(finder, findsOneWidget);
+    expect(find.byKey(const Key('eb_sheet_shell_eink_border')), findsNothing);
+
+    final scheme = Theme.of(tester.element(finder)).colorScheme;
+    final decoration =
+        tester.widget<DecoratedBox>(finder).decoration as BoxDecoration;
+    final border = decoration.border! as Border;
+    expect(decoration.boxShadow, isNull);
+    expect(border.top.width, 2.0);
+    expect(border.left.width, 2.0);
+    expect(border.right.width, 2.0);
+    expect(border.bottom.width, 0.0);
+    // 深色的 `outline` 與 `surface` 幾乎同色（約 1.3:1），電子紙上看不見；
+    // 外框改用 `onSurfaceVariant` 這個高對比灰色。
+    expect(border.top.color, scheme.onSurfaceVariant);
+    expect(
+      contrastRatio(border.top.color, scheme.surface),
+      greaterThanOrEqualTo(4.5),
+    );
+  });
+
+  testWidgets('淺色且非 E-Ink 沒有 eb_sheet_shell_dark_border 外框元件', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: const Scaffold(
+          body: EBSheetShell(
+            title: '標題',
+            isEinkMode: false,
+            child: Text('內容'),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('eb_sheet_shell_dark_border')), findsNothing);
+  });
+
+  testWidgets('isEinkMode: false 時沒有 eb_sheet_shell_eink_border 外框元件',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: EBSheetShell(
+            title: '標題',
+            isEinkMode: false,
+            child: Text('內容'),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('eb_sheet_shell_eink_border')), findsNothing);
+  });
+
+  testWidgets('EBSheetShell.show 在 isEinkMode: true 時 BottomSheet 為直角且無陰影',
+      (tester) async {
+    await _pumpAndOpen(tester, isEinkMode: true);
+    await tester.pumpAndSettle();
+
+    final bottomSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
+    expect(bottomSheet.elevation, 0);
+    expect(bottomSheet.shape, isA<RoundedRectangleBorder>());
+    final shape = bottomSheet.shape as RoundedRectangleBorder;
+    expect(shape.borderRadius, BorderRadius.zero);
+  });
+
+  testWidgets('EBSheetShell.show 在 isEinkMode: false 時 BottomSheet 沿用主題預設',
+      (tester) async {
+    await _pumpAndOpen(tester, isEinkMode: false);
+    await tester.pumpAndSettle();
+
+    final bottomSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
+    expect(bottomSheet.elevation, isNot(0));
+    final shape = bottomSheet.shape;
+    if (shape is RoundedRectangleBorder) {
+      expect(shape.borderRadius, isNot(BorderRadius.zero));
+    }
+  });
+
+  // 深色的外框是直角（上左右各 2px，不能搭圓角），面板若仍是預設的 28px 圓角，
+  // 外框四角會從圓角面板突出（真機截圖）。深色比照 E-Ink 改直角。
+  testWidgets('EBSheetShell.show 在深色（非 E-Ink）時 BottomSheet 為直角', (tester) async {
+    await _pumpAndOpen(tester, theme: AppTheme.dark, isEinkMode: false);
+    await tester.pumpAndSettle();
+
+    final shape = tester.widget<BottomSheet>(find.byType(BottomSheet)).shape;
+    expect(shape, isA<RoundedRectangleBorder>());
+    expect((shape! as RoundedRectangleBorder).borderRadius, BorderRadius.zero);
+  });
+
+  testWidgets('標題、把手、關閉鍵仍在，ConstrainedBox 最大高度仍為螢幕 85%', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(
+          body: EBSheetShell(
+            title: '測試標題',
+            isEinkMode: true,
+            child: Text('內容'),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('測試標題'), findsOneWidget);
+    expect(find.byKey(const Key('eb_sheet_shell_drag_handle')), findsOneWidget);
+    expect(find.byKey(const Key('eb_sheet_shell_close_button')), findsOneWidget);
+
+    final screenHeight = tester.getSize(find.byType(MaterialApp)).height;
+    final constrainedBox = tester.widget<ConstrainedBox>(
+      find
+          .descendant(
+            of: find.byType(EBSheetShell),
+            matching: find.byType(ConstrainedBox),
+          )
+          .first,
+    );
+    expect(constrainedBox.constraints.maxHeight, screenHeight * 0.85);
   });
 }

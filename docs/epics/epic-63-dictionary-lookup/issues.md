@@ -274,7 +274,26 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
    - 目前只有已選的分段有邊框（`dictionary_lookup_sheet.dart`）。
    - 方向：E-Ink 時外殼加外框，不用陰影。
 2. **選字的圓點（系統選取控點）會一直畫在字典面板上。**
-   - 原因：控點由系統畫在最上層。`ReaderScreen._handleLookupPressed` 刻意不動選取狀態，好讓關面板後還能劃線。
+   - 原因：控點由系統畫在最上層（Android `APPLICATION_SUB_PANEL` 的 `PopupWindow`）。`ReaderScreen._handleLookupPressed` 刻意不動選取狀態，好讓關面板後還能劃線。
    - 方向：面板開啟時隱藏選取控點，關閉後還原；不可清掉選取範圍。
+   - **Issue 6b Task 7 真機探測結果（2026-10-21，WAVE E-Ink 機 Android 12，結論：失敗，本 Issue 不出貨，見 `reviews/issue-6b-task-7-probe.md`）：**
+     1. `InAppWebViewController.clearFocus()`（對應原生 `webView.clearFocus()`）雖能立即移除兩個系統選取控點 `PopupWindow`，但 Chromium `SelectionPopupControllerImpl.onViewFocusChanged(false)` 會連帶把章節 iframe 內的 DOM `Selection` 折疊（`isCollapsed: true, text: ""`），立刻觸發 `main.js` 的 `selectionchange` → `onSelectionCleared` → `ReaderScreen._handleSelectionCleared()`，清空 `_currentSelection` 並銷毀 `AnnotationToolbar`。
+     2. 計畫所列三條還原路徑皆無法讓控點回來：
+        - Flutter 端 `FocusNode.requestFocus()`：`PlatformViewLink._handleFrameworkFocusChanged` 只在 `isFocused == false` 時呼叫 `_controller.clearFocus()`，`isFocused == true` 時為空操作（`PlatformViewController` 與 `flutter_inappwebview_android` 皆無 `requestFocus` 方法）；且一旦把 `PlatformViewLink` 的 `FocusNode` 設為有焦點，後續每次開底部面板都會觸發失焦並自動呼叫 `_controller.clearFocus()` 清掉選取。
+        - Flutter 端 `FocusScope.of(context).requestFocus(...)`：同樣無法還原原生 `android.webkit.WebView` 的 View 焦點（`document.hasFocus()` 維持 `false`），控點與選取皆不回來。
+        - 關面板後以 JS 重新送出原選取（開面板前 `cloneRange()`，關面板後 `removeAllRanges()` + `addRange(range)`）：若曾呼叫 `clearFocus()`，因原生 `WebView` 已失去 Android View 焦點且無 `requestFocus()` 可還原，選取僅顯示為失焦灰底、控點不出現；即使不呼叫 `clearFocus()` 保留 View 焦點，Chromium Blink 的 `DOMSelection::addRange()` 對程式觸發的選取固定設 `ShouldShowHandle(false)`，只會畫出藍底反白，不會重新建立系統選取控點 `PopupWindow`。
+     3. 額外探測「同一 WebView 內切換焦點 frame」（開面板時 `document.body.tabIndex = -1; document.body.focus()` 把 Blink 焦點移到外層 `index.html`，關面板時對有選取的章節 iframe 呼叫 `doc.defaultView?.focus()`）：單純開關面板、捲動 MDX 詞條或切換分段時，控點可隱藏且關面板後控點與藍底選取皆能完整回來；但只要使用者在 `MdxEntryView`（面板內的第二個 `InAppWebView`）內發生點擊（例如點 `entry://` 交叉參照或 `#錨點`），第二個原生 `WebView` 就會搶走 Android View 焦點（使底層閱讀器 `WebView` 的 `document.hasFocus()` 變成 `false`），關閉面板銷毀 `MdxEntryView` 後 Android 只把 View 焦點退回根層 `FlutterView`，底層閱讀器 `WebView` 因缺少原生 `requestFocus()` 介面而無法取回焦點，控點仍不會回來。
+   - **下一步方向（留待後續工單）：**
+     - 在 vendored 的 `app/patches/flutter_inappwebview_android` 補上原生 `requestFocus` channel 方法（呼叫 `webView.requestFocus()`），或讓 `MdxEntryView` 的原生 `WebView` 不搶奪觸控焦點（`setFocusable(false)` / `setFocusableInTouchMode(false)`），再搭配 `FoliateReaderView` 內外層 frame 焦點切換（開面板聚焦外層 `document.body`、關面板先 `controller.requestFocus()` 再聚焦章節 `iframe`），即可在不改 `main.js` 且不破壞 DOM `Selection` 的前提下穩定隱藏並還原系統選取控點。
 
 另有一張 2026-10-21 16:46 的紅畫面截圖（字典設定拖曳排序：`No Material widget found`）。後續實測沒有再出現。
+
+3. **WAVE E-Ink 機長按選字很難觸發（2026-10-22，真機錄影與觸控原始訊號，結論：裝置觸控限制，本 Issue 不處理）。**
+   - 現象：手指長按文字，工具列很久才出現或不出現，畫面還會閃一下（錄影 `tmp/images/難選字.mp4`）。
+   - 觸控訊號（`adb shell getevent -l -t /dev/input/event4`，裝置 `cyttsp5_mt`）：
+     - 25 秒 51 次按壓，平均約 0.3 秒就斷開；超過 0.5 秒的按壓有 10 次，其中 9 次同時偵測到 2 至 5 個接觸點、位置橫跳。
+     - 只用單根指尖按住不動，同一個位置（誤差 ±3 單位）在 1.6 秒內連續回報 7 次「按下、放開」，每次 0.02 至 0.43 秒；沒有任何一次達到長按需要的約 0.5 秒連續接觸。
+   - 對照：用 `adb shell input swipe` 注入的單指長按（500 至 1500 ms、手指飄移到 16 px）每次都成功跳出工具列，所以 App 的長按到選字流程本身正常。
+   - 判讀（假設，未證實）：觸控面板或電子紙刷新干擾造成斷訊；「畫面閃一下」可能是同一個原因。唯一確定的是：訊號層面同一點會連續斷訊，且常同時出現 2 至 5 個接觸點。
+   - 可能的方向（皆未做）：用 Wacom 電磁筆選字（不受電容觸控斷訊影響，未驗證）；在 App 內做容忍斷訊的長按偵測（動到選字核心，風險高，需另立計畫）；在系統桌面長按圖示錄同樣的訊號，確認是否整台裝置的問題。
+   - 相關的已修問題：選字時多一根手指碰螢幕會讓整頁縮放（Task 10 已關閉流式格式的 WebView 原生縮放）。上述 2 至 5 個幽靈接觸點可能就是當時縮放誤觸的來源，兩者可能有同一個根因。

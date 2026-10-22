@@ -1,6 +1,7 @@
 // app/lib/dictionary/dictionary_service.dart
 import 'dictionary_settings_repository.dart';
 import 'lookup_text_normalizer.dart';
+import 'mdx_resource.dart';
 import 'models/dictionary_entry.dart';
 import 'models/dictionary_source.dart';
 import 'models/lookup_request.dart';
@@ -215,6 +216,35 @@ class DictionaryService {
     if (source == null) return const [];
     final outcome = await _lookupOne(store, source, LookupRequest(word));
     return outcome.status == OutcomeStatus.found ? outcome.entries : const [];
+  }
+
+  /// 讀取 MDX 字典成對的 `.mdd` 資源（例如圖片）。
+  ///
+  /// 來源不存在、來源非 MDX 格式、未提供 `_mdxPool`、或讀取過程拋出任何例外時，
+  /// 一律回傳 `null`，不拋出例外。
+  Future<MdxResource?> readMdxResource(String sourceId, String url) async {
+    final pool = _mdxPool;
+    if (pool == null) return null;
+
+    try {
+      final store = await _store();
+      final sources = await store.listSources();
+      DictionarySource? source;
+      for (final candidate in sources) {
+        if (candidate.id == sourceId) {
+          source = candidate;
+          break;
+        }
+      }
+      if (source == null || source.format != DictionaryFormat.mdx) {
+        return null;
+      }
+      return await pool.use(source.id, source.storagePath, (reader) {
+        return reader.readResource(url);
+      });
+    } catch (_) {
+      return null;
+    }
   }
 
   /// 任何例外只影響該分段，不影響其他字典。

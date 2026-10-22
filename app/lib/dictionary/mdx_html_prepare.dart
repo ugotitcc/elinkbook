@@ -1,4 +1,4 @@
-// MDX 詞條 HTML 前處理（epic-63 Issue 6a Task 4）。
+// MDX 詞條 HTML 前處理（epic-63 Issue 6a Task 4 / Issue 6b Task 4）。
 //
 // 只做下列幾件事，順序固定：
 // 1. `href="entry://#x"` → `href="#x"`（單雙引號、屬性大小寫皆可）。
@@ -8,7 +8,8 @@
 //    prefetch|prerender">`，以及 `<a ping>` 屬性（審查 I-7）。
 // 4. 沒有 `<html>` 外殼時補上完整文件與必要的 meta。
 //
-// 刻意不處理 `<link>`／CSS／配色：那些屬於 Issue 6b。
+// `<link>`／CSS 樣式內聯由 `mdx_css_inline.dart` 處理（Issue 6b Task 2）；
+// 配色覆寫由 `mdx_theme_override.dart` 產生並透過 [prepareEntryHtml] 的 [overrideCss] 參數注入（Issue 6b Task 4）。
 
 const String _metaTags =
     '<meta charset="utf-8">'
@@ -50,6 +51,8 @@ final RegExp _pingAttr = RegExp(
 
 final RegExp _htmlTag = RegExp(r'<html(?:\s|>)', caseSensitive: false);
 final RegExp _headOpenTag = RegExp(r'<head[^>]*>', caseSensitive: false);
+final RegExp _headCloseTag = RegExp(r'</head\s*>', caseSensitive: false);
+final RegExp _bodyOpenTag = RegExp(r'<body(?:\s|>|$)', caseSensitive: false);
 final RegExp _htmlOpenTag = RegExp(r'<html[^>]*>', caseSensitive: false);
 final RegExp _charsetMeta = RegExp(
   r'<meta[^>]+charset\s*=',
@@ -60,7 +63,10 @@ final RegExp _charsetMeta = RegExp(
 ///
 /// 輸入可以是片段或完整文件；輸出一定是完整文件。空字串也會得到有效的
 /// 空文件，呼叫端不必特判。
-String prepareEntryHtml(String html) {
+///
+/// 若提供 [overrideCss]，會以 `<style>` 標籤注入至 `<head>` 尾端（在字典
+/// 自身樣式之後），作為深色與 E-Ink 模式的配色覆寫。
+String prepareEntryHtml(String html, {String? overrideCss}) {
   var out = html.replaceAllMapped(
     _entryFragmentHref,
     (match) =>
@@ -74,7 +80,9 @@ String prepareEntryHtml(String html) {
   out = _stripAutoNavigation(out);
 
   if (!_htmlTag.hasMatch(out)) {
-    return '<!DOCTYPE html><html><head>$_metaTags</head>'
+    final styleTag =
+        overrideCss != null ? '<style>$overrideCss</style>' : '';
+    return '<!DOCTYPE html><html><head>$_metaTags$styleTag</head>'
         '<body>$out</body></html>';
   }
 
@@ -89,6 +97,33 @@ String prepareEntryHtml(String html) {
       out = out.replaceRange(insertAt, insertAt, '<head>$_metaTags</head>');
     }
   }
+
+  if (overrideCss != null) {
+    final styleTag = '<style>$overrideCss</style>';
+    final headClose = _headCloseTag.firstMatch(out);
+    if (headClose != null) {
+      out = out.replaceRange(headClose.start, headClose.start, styleTag);
+    } else {
+      final headOpen = _headOpenTag.firstMatch(out);
+      if (headOpen != null) {
+        final bodyOpen = _bodyOpenTag.firstMatch(out);
+        if (bodyOpen != null) {
+          out = out.replaceRange(
+            bodyOpen.start,
+            bodyOpen.start,
+            '$styleTag</head>',
+          );
+        } else {
+          out = '$out$styleTag</head>';
+        }
+      } else {
+        final htmlTag = _htmlOpenTag.firstMatch(out);
+        final insertAt = htmlTag?.end ?? 0;
+        out = out.replaceRange(insertAt, insertAt, '<head>$styleTag</head>');
+      }
+    }
+  }
+
   return out;
 }
 
