@@ -370,6 +370,37 @@
 
 - [x] **Step 6: 回報**：把結果寫進 `reviews/`（不進版控）。通過後等人類決定合併，之後才更新 `issues.md` 狀態與 `docs/epics.md` 備註。
 
+### Task 9：深色與 E-Ink 的面板控制項對比（真機後補，2026-10-22）
+
+真機在 WAVE E-Ink 機的深色主題發現兩個看不清的控制項，都是 Issue 4 起就有，主題是「深色與 E-Ink 配色」，併入本 Issue。
+
+**Files:**
+- Modify: `app/lib/screens/widgets/dictionary_lookup_sheet.dart`（分段選擇器 `SegmentedButton` 加明確的 `style`）、`app/lib/screens/annotation_toolbar.dart`（深色加邊框）
+- Test: `app/test/screens/widgets/dictionary_lookup_sheet_test.dart`、`app/test/screens/annotation_toolbar_test.dart`
+
+**Interfaces:** 不新增公開介面。
+- 分段選擇器：選中分段的底色與文字色在深色與 E-Ink 下，文字對底色的 WCAG 對比 ≥ 4.5。深色（非 E-Ink）：選中用 `colorScheme.primary`／`onPrimary`，未選中透明底配 `onSurface`。E-Ink：選中不填色（透明底配 `onSurface`），靠既有的標籤外框標示。淺色且非 E-Ink 維持 `SegmentedButton` 預設樣式。
+- 劃線工具列：`isEinkMode` 或深色主題時，外框為 `BorderSide(color: colorScheme.outline, width: 1.5)`；淺色且非 E-Ink 維持無外框、`elevation: 4`。
+
+- [x] **Step 1: 寫失敗測試**：
+  - 面板（`dictionary_lookup_sheet_test.dart`）：用 `resolveThemeData(theme: AppTheme.dark, isEinkMode: false)`、`resolveThemeData(theme: AppTheme.light, isEinkMode: true)` 各開一次有兩個以上分段的面板，取 `SegmentedButton.style` 以 `WidgetState.selected` 解出選中的底色與文字色，WCAG 對比皆 ≥ 4.5；淺色非 E-Ink 的 `style` 沒有被我們覆寫選中色。
+  - 工具列（`annotation_toolbar_test.dart`）：深色（`AppTheme.dark`、非 E-Ink）時 `Material.shape` 的 `side.width == 1.5` 且顏色為 `colorScheme.outline`；E-Ink 維持；淺色非 E-Ink 為 `BorderSide.none`。
+
+- [x] **Step 2: 執行確認失敗**
+  Run: `cd app && flutter test test/screens/widgets/dictionary_lookup_sheet_test.dart test/screens/annotation_toolbar_test.dart`
+  Expected: FAIL。
+
+- [x] **Step 3: 實作**上述兩處；WCAG 對比的計算函式沿用 `mdx_theme_override_test.dart` 的 `_contrastRatio`（兩個測試檔都要用時抽到 `app/test/support/` 共用，不複製第二份）。
+
+- [x] **Step 4: 執行確認通過**（同 Step 2 指令；另跑 `cd app && node tool/check_l10n_hardcoded_strings.js`）Expected: PASS。
+
+- [ ] **Step 5: 真機確認**：深色主題查字典，選中分段看得清；深色主題選字，劃線工具列有外框。
+
+- [ ] **Step 6: Commit**
+  ```bash
+  git add app/lib app/test
+  git commit -m "fix(epic-63): Issue 6b 深色與 E-Ink 的分段選擇器與劃線工具列對比"
+  ```
 ---
 
 ## 交給人類

@@ -422,6 +422,7 @@ class _DictionaryLookupSheetState extends State<DictionaryLookupSheet> {
           child: SegmentedButton<String>(
             key: const Key('dictionary_lookup_segments'),
             showSelectedIcon: false,
+            style: _segmentStyle(colorScheme),
             segments: [
               for (final outcome in outcomes)
                 ButtonSegment<String>(
@@ -450,6 +451,32 @@ class _DictionaryLookupSheetState extends State<DictionaryLookupSheet> {
         );
       },
     );
+  }
+
+  /// 分段選擇器的明確樣式（Issue 6b Task 9）。
+  ///
+  /// `SegmentedButton` 預設的選中色（`secondaryContainer`）在深色與電子紙上
+  /// 對比不足，真機上選中分段的文字看不清。
+  /// - E-Ink：選中不填色，靠 [_segmentLabelWidget] 的外框標示。
+  /// - 深色：選中用 `primary`／`onPrimary`，未選中用 `onSurface`。
+  /// - 淺色且非 E-Ink：回傳 `null`，沿用預設樣式。
+  ButtonStyle? _segmentStyle(ColorScheme colorScheme) {
+    if (widget.isEinkMode) {
+      return SegmentedButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        foregroundColor: colorScheme.onSurface,
+        selectedBackgroundColor: Colors.transparent,
+        selectedForegroundColor: colorScheme.onSurface,
+      );
+    }
+    if (colorScheme.brightness == Brightness.dark) {
+      return SegmentedButton.styleFrom(
+        foregroundColor: colorScheme.onSurface,
+        selectedBackgroundColor: colorScheme.primary,
+        selectedForegroundColor: colorScheme.onPrimary,
+      );
+    }
+    return null;
   }
 
   /// E-Ink 用邊框標示選中的分段（陰影在電子紙上會殘影）；其餘情況回傳純

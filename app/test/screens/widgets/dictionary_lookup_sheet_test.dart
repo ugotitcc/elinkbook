@@ -19,6 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/fake_dictionary_service.dart';
 import '../../support/fake_inappwebview_platform.dart';
 import '../../support/pump_localized_widget.dart';
+import '../../support/wcag_contrast.dart';
 
 /// 捕捉 Navigator 實際推入的 Route，用來檢查面板的遮罩顏色
 /// （比照 `eb_sheet_shell_test.dart` 的既有手法）。
@@ -727,6 +728,82 @@ void main() {
 
       expect(find.byType(AnimatedSwitcher), findsNothing);
       expect(find.byType(AnimatedContainer), findsNothing);
+    });
+  });
+
+  group('分段選擇器對比（深色與 E-Ink，Issue 6b Task 9）', () {
+    Future<void> pumpTwoSegments(
+      WidgetTester tester, {
+      required AppTheme theme,
+      required bool isEinkMode,
+    }) =>
+        _pumpSheet(
+          tester,
+          theme: theme,
+          isEinkMode: isEinkMode,
+          response: Future.value(
+            _completed([
+              _outcome('a', name: '甲典', entries: [_entry('甲詞')]),
+              _outcome('b', name: '乙典', entries: [_entry('乙詞')]),
+            ]),
+          ),
+        );
+
+    ButtonStyle? segmentStyle(WidgetTester tester) => tester
+        .widget<SegmentedButton<String>>(
+          find.byKey(const Key('dictionary_lookup_segments')),
+        )
+        .style;
+
+    ColorScheme schemeOf(WidgetTester tester) => Theme.of(
+          tester.element(find.byKey(const Key('dictionary_lookup_segments'))),
+        ).colorScheme;
+
+    /// 透明底以面板底色（`surface`）計算實際對比。
+    Color effectiveBackground(Color? color, ColorScheme scheme) =>
+        color == null || color.a == 0 ? scheme.surface : color;
+
+    void expectReadable(
+      WidgetTester tester, {
+      required Set<WidgetState> states,
+    }) {
+      final style = segmentStyle(tester);
+      expect(style, isNotNull, reason: '深色與 E-Ink 必須明確指定分段樣式');
+      final scheme = schemeOf(tester);
+      final background = effectiveBackground(
+        style!.backgroundColor?.resolve(states),
+        scheme,
+      );
+      final foreground = style.foregroundColor!.resolve(states)!;
+      expect(
+        contrastRatio(foreground, background),
+        greaterThanOrEqualTo(4.5),
+        reason: 'states=$states 的文字對底色對比不足',
+      );
+    }
+
+    testWidgets('深色：選中與未選中分段的文字對比 ≥ 4.5', (tester) async {
+      await pumpTwoSegments(tester, theme: AppTheme.dark, isEinkMode: false);
+
+      expectReadable(tester, states: {WidgetState.selected});
+      expectReadable(tester, states: <WidgetState>{});
+    });
+
+    testWidgets('E-Ink：選中與未選中分段的文字對比 ≥ 4.5，選中不填色', (tester) async {
+      await pumpTwoSegments(tester, theme: AppTheme.light, isEinkMode: true);
+
+      expectReadable(tester, states: {WidgetState.selected});
+      expectReadable(tester, states: <WidgetState>{});
+      final selectedBackground = segmentStyle(tester)!
+          .backgroundColor!
+          .resolve({WidgetState.selected});
+      expect(selectedBackground?.a, 0, reason: 'E-Ink 選中靠外框，不填灰底');
+    });
+
+    testWidgets('淺色且非 E-Ink：沿用 SegmentedButton 預設樣式', (tester) async {
+      await pumpTwoSegments(tester, theme: AppTheme.light, isEinkMode: false);
+
+      expect(segmentStyle(tester), isNull);
     });
   });
 

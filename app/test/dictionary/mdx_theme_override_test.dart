@@ -1,29 +1,9 @@
 // MDX 深色與 E-Ink 配色覆寫（epic-63 Issue 6b Task 4）。
-import 'dart:math' as math;
 import 'package:elinkbook/dictionary/mdx_theme_override.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-double _relativeLuminance(Color color) {
-  double transform(double c) {
-    return c <= 0.04045
-        ? c / 12.92
-        : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
-  }
-
-  final r = transform(color.r);
-  final g = transform(color.g);
-  final b = transform(color.b);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-double _contrastRatio(Color c1, Color c2) {
-  final l1 = _relativeLuminance(c1);
-  final l2 = _relativeLuminance(c2);
-  final lighter = math.max(l1, l2);
-  final darker = math.min(l1, l2);
-  return (lighter + 0.05) / (darker + 0.05);
-}
+import '../support/wcag_contrast.dart';
 
 void main() {
   group('MdxColors 相等性', () {
@@ -159,7 +139,7 @@ void main() {
         brightness: Brightness.light,
         scheme: ThemeData.light().colorScheme,
       )!;
-      final cr = _contrastRatio(colors.foreground, colors.background);
+      final cr = contrastRatio(colors.foreground, colors.background);
       expect(cr, greaterThanOrEqualTo(4.5));
     });
 
@@ -169,7 +149,7 @@ void main() {
         brightness: Brightness.dark,
         scheme: ThemeData.dark().colorScheme,
       )!;
-      final cr = _contrastRatio(colors.foreground, colors.background);
+      final cr = contrastRatio(colors.foreground, colors.background);
       expect(cr, greaterThanOrEqualTo(4.5));
     });
   });
