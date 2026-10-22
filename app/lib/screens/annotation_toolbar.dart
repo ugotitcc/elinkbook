@@ -67,10 +67,13 @@ class AnnotationToolbar extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
         // 深色主題的工具列底色（surface）與書頁幾乎同色，陰影又看不見，
-        // 真機上工具列融進文字裡，所以深色與 E-Ink 都畫外框。
-        side: isEinkMode || colorScheme.brightness == Brightness.dark
+        // 真機上工具列融進文字裡，所以深色與 E-Ink 都畫外框。深色的 `outline`
+        // 與 `surface` 幾乎同色（約 1.3:1），改用高對比的 `onSurfaceVariant`。
+        side: isEinkMode
             ? BorderSide(color: colorScheme.outline, width: 1.5)
-            : BorderSide.none,
+            : colorScheme.brightness == Brightness.dark
+                ? BorderSide(color: colorScheme.onSurfaceVariant, width: 1.5)
+                : BorderSide.none,
       ),
       color: colorScheme.surface,
       child: Padding(

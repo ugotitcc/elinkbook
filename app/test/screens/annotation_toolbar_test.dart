@@ -5,6 +5,7 @@ import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/screens/annotation_toolbar.dart';
+import '../support/wcag_contrast.dart';
 
 Future<void> _pumpToolbar(
   WidgetTester tester, {
@@ -45,14 +46,27 @@ BorderSide _toolbarBorder(WidgetTester tester) {
 
 void main() {
   group('外框（Issue 6b Task 9）', () {
-    testWidgets('深色（非 E-Ink）有 1.5 寬的 outline 外框', (tester) async {
+    testWidgets('深色（非 E-Ink）有 1.5 寬、對底色對比 ≥ 4.5 的淺灰外框', (tester) async {
       await _pumpToolbar(tester, theme: AppTheme.dark, isEinkMode: false);
 
       final side = _toolbarBorder(tester);
       final scheme = Theme.of(tester.element(find.byType(AnnotationToolbar)))
           .colorScheme;
       expect(side.width, 1.5);
-      expect(side.color, scheme.outline);
+      // 深色的 `outline` 與 `surface` 幾乎同色，外框看不見；改用高對比灰色。
+      expect(side.color, scheme.onSurfaceVariant);
+      expect(
+        contrastRatio(side.color, scheme.surface),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+
+    testWidgets('E-Ink 維持 outline 外框顏色', (tester) async {
+      await _pumpToolbar(tester, theme: AppTheme.light, isEinkMode: true);
+
+      final scheme = Theme.of(tester.element(find.byType(AnnotationToolbar)))
+          .colorScheme;
+      expect(_toolbarBorder(tester).color, scheme.outline);
     });
 
     testWidgets('E-Ink 維持 1.5 寬的 outline 外框', (tester) async {

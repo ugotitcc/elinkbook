@@ -115,23 +115,23 @@ class EBSheetShell extends StatelessWidget {
       ),
     );
 
-    if (isEinkMode) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+    if (isEinkMode || isDark) {
+      // 深色主題的 `outline` 與 `surface` 幾乎同色（約 1.3:1），電子紙上外框
+      // 看不見，真機上面板與書頁糊在一起；深色改用高對比的 `onSurfaceVariant`
+      // 灰色。E-Ink 維持 `outline`（E-Ink 主題自己的 `outline` 是純黑）。
+      final borderColor =
+          isEinkMode ? colorScheme.outline : colorScheme.onSurfaceVariant;
       return DecoratedBox(
-        key: const Key('eb_sheet_shell_eink_border'),
+        key: Key(isEinkMode
+            ? 'eb_sheet_shell_eink_border'
+            : 'eb_sheet_shell_dark_border'),
         decoration: BoxDecoration(
           border: Border(
-            top: BorderSide(
-              color: Theme.of(context).colorScheme.outline,
-              width: 2,
-            ),
-            left: BorderSide(
-              color: Theme.of(context).colorScheme.outline,
-              width: 2,
-            ),
-            right: BorderSide(
-              color: Theme.of(context).colorScheme.outline,
-              width: 2,
-            ),
+            top: BorderSide(color: borderColor, width: 2),
+            left: BorderSide(color: borderColor, width: 2),
+            right: BorderSide(color: borderColor, width: 2),
           ),
         ),
         child: content,

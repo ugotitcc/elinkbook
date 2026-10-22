@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
+import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 
 import '../../support/pump_localized_widget.dart';
+import '../../support/wcag_contrast.dart';
 
 /// 捕捉 Navigator 實際推入的 Route，供斷言 `ModalBottomSheetRoute` 的
 /// `transitionDuration` 是否真的依 `isEinkMode` 走到 `AnimationStyle.
@@ -191,6 +194,66 @@ void main() {
     expect(border.right.width, 2.0);
     expect(border.right.color, outlineColor);
     expect(border.bottom.width, 0.0);
+  });
+
+  testWidgets('深色（非 E-Ink）有 eb_sheet_shell_dark_border 外框：2px、淺灰色、對面板底色對比 ≥ 4.5',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.dark, isEinkMode: false),
+        home: const Scaffold(
+          body: EBSheetShell(
+            title: '標題',
+            isEinkMode: false,
+            child: Text('內容'),
+          ),
+        ),
+      ),
+    );
+
+    final finder = find.byKey(const Key('eb_sheet_shell_dark_border'));
+    expect(finder, findsOneWidget);
+    expect(find.byKey(const Key('eb_sheet_shell_eink_border')), findsNothing);
+
+    final scheme = Theme.of(tester.element(finder)).colorScheme;
+    final decoration =
+        tester.widget<DecoratedBox>(finder).decoration as BoxDecoration;
+    final border = decoration.border! as Border;
+    expect(decoration.boxShadow, isNull);
+    expect(border.top.width, 2.0);
+    expect(border.left.width, 2.0);
+    expect(border.right.width, 2.0);
+    expect(border.bottom.width, 0.0);
+    // 深色的 `outline` 與 `surface` 幾乎同色（約 1.3:1），電子紙上看不見；
+    // 外框改用 `onSurfaceVariant` 這個高對比灰色。
+    expect(border.top.color, scheme.onSurfaceVariant);
+    expect(
+      contrastRatio(border.top.color, scheme.surface),
+      greaterThanOrEqualTo(4.5),
+    );
+  });
+
+  testWidgets('淺色且非 E-Ink 沒有 eb_sheet_shell_dark_border 外框元件', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: const Scaffold(
+          body: EBSheetShell(
+            title: '標題',
+            isEinkMode: false,
+            child: Text('內容'),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('eb_sheet_shell_dark_border')), findsNothing);
   });
 
   testWidgets('isEinkMode: false 時沒有 eb_sheet_shell_eink_border 外框元件',

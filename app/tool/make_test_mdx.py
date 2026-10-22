@@ -293,6 +293,40 @@ def build_mdd(entries) -> bytes:
     return _assemble(xml, keys, records, utf16_keys=True, record_compression=2)
 
 
+def _make_png(size: int, cross: bool) -> bytes:
+    """產生 size×size 的灰階 PNG：黑色粗外框、白底，cross 為真時再畫兩條對角線。
+
+    只用標準函式庫（struct、zlib）。圖要夠大、夠黑白分明，真機（含電子紙）上
+    肉眼一看就知道圖有沒有顯示；1×1 的圖看不出來。
+    """
+    import struct
+    import zlib
+
+    border = max(2, size // 16)
+    rows = []
+    for y in range(size):
+        row = bytearray([0])  # 每列的濾鏡型別 0（None）
+        for x in range(size):
+            on_border = (
+                x < border or y < border or x >= size - border or y >= size - border
+            )
+            on_cross = cross and (abs(x - y) < border or abs(x - (size - 1 - y)) < border)
+            row.append(0 if (on_border or on_cross) else 255)
+        rows.append(bytes(row))
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        body = kind + data
+        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body))
+
+    ihdr = struct.pack(">IIBBBBB", size, size, 8, 0, 0, 0, 0)  # 8 位元灰階
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", ihdr)
+        + chunk(b"IDAT", zlib.compress(b"".join(rows)))
+        + chunk(b"IEND", b"")
+    )
+
+
 _TINY_PNG = bytes.fromhex(
     "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
     "0000000d49444154789c6360f8cfc000000301010018dd8db00000000049454e44ae426082"
@@ -391,15 +425,16 @@ def main():
         data = build_mdd([("\\pic\\a b.png", _TINY_PNG), ("\\css\\x.css", b"body{color:#000}")])
     elif a.kind == "images":
         mdx_data = build_mdx(
-            [("pic", '<p><img src="pic/a b.png"><img src="pic/sub/c.png"></p>')],
+            [("pic", '<h3>pic</h3><p>圖片測試：下面應有兩張黑框方塊圖（第一張有叉）。</p>'
+                   '<p><img src="pic/a b.png"> <img src="pic/sub/c.png"></p>')],
             encoding="UTF-8",
             record_compression=2,
             title="Images test fixture",
             description="epic-63 images test fixture",
         )
         mdd_data = build_mdd([
-            (r"\pic\a b.png", _TINY_PNG),
-            (r"\pic\sub\c.png", _TINY_PNG),
+            (r"\pic\a b.png", _make_png(64, cross=True)),
+            (r"\pic\sub\c.png", _make_png(64, cross=False)),
             (r"\snd\x.mp3", b"ID3\x03\x00\x00\x00\x00\x00\x00fake-mp3-bytes"),
         ])
         mdd_out = os.path.splitext(a.out)[0] + ".mdd"

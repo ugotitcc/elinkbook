@@ -390,6 +390,23 @@ void main() {
       target.writeAsBytesSync(bytes);
     }
 
+    test('fixture 的圖片是肉眼看得到的尺寸（至少 32×32），不是 1×1', () async {
+      copyFixture('images.mdx');
+      copyFixture('images.mdd');
+
+      final reader = await MdxReader.open('${tempDir.path}/images.mdx');
+      addTearDown(reader.close);
+
+      for (final path in ['pic/a%20b.png', 'pic/sub/c.png']) {
+        final res = await reader.readResource('https://dict.local/$path');
+        expect(res, isNotNull, reason: path);
+        // PNG 的 IHDR 在第 16 到 23 位元組：寬、高各 4 位元組（大端序）。
+        final data = ByteData.sublistView(res!.bytes);
+        expect(data.getUint32(16), greaterThanOrEqualTo(32), reason: '$path 寬度');
+        expect(data.getUint32(20), greaterThanOrEqualTo(32), reason: '$path 高度');
+      }
+    });
+
     test('讀到圖片與子目錄', () async {
       copyFixture('images.mdx');
       copyFixture('images.mdd');
