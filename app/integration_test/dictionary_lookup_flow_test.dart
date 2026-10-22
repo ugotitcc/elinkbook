@@ -270,6 +270,44 @@ void main() {
     expect(online.errorCode, 'offline');
   });
 
+  testWidgets('驗收 23：本機查詢 p95 小於 300 ms（含候選鏈，真機）', (tester) async {
+    // 一半查得到（第一個候選就命中）、一半查不到（跑完整條候選鏈），
+    // 量測含 SQLite 與候選產生的服務層延遲。
+    final entries = List.generate(
+      200,
+      (i) => '{"headword": "term$i", "definition": "詞條 $i"}',
+    ).join(',\n');
+    await importText(
+      'p95.json',
+      '{"name": "p95", "sourceLang": "en", "targetLang": "zh", '
+          '"entries": [$entries]}',
+      sourceLang: 'en',
+      targetLang: 'zh',
+    );
+    final service = DictionaryService.fromProvider(provider, mdxPool: mdxPool);
+
+    // 暖機：第一次查詢含來源清單載入，不列入分佈。
+    await service.lookup('term0');
+
+    final samples = <int>[];
+    final stopwatch = Stopwatch();
+    for (var i = 0; i < 200; i++) {
+      final word = i.isEven ? 'term$i' : 'term${i}ed';
+      stopwatch
+        ..reset()
+        ..start();
+      await service.lookup(word);
+      stopwatch.stop();
+      samples.add(stopwatch.elapsedMicroseconds);
+    }
+    samples.sort();
+    final p50 = samples[99] / 1000;
+    final p95 = samples[189] / 1000;
+    debugPrint('驗收 23：本機查詢 p50 = ${p50.toStringAsFixed(1)} ms、'
+        'p95 = ${p95.toStringAsFixed(1)} ms（200 次）');
+    expect(p95, lessThan(300));
+  });
+
   testWidgets('刪除字典後相關資料清除（驗收 6）', (tester) async {
     // MDX 主檔與 `.mdd` 附屬檔都是真實檔案，刪除要連私有目錄一起清掉。
     final mdxPath = await stageAsset('test/fixtures/mdx/images.mdx', 'images.mdx');
