@@ -384,6 +384,12 @@
 
 ---
 
+## 實作期間的偏離
+
+1. **`app/pubspec.yaml` 登錄兩個 asset（Task 8，審查 I-1）。** Global Constraints 寫「不動 `pubspec.yaml`」，本意是不新增套件與相依。整合測試要在真機讀 `images.mdx`、`images.mdd`，必須把 fixture 宣告為 asset（比照 6a 的 `html.mdx`），所以在 `flutter: assets:` 多加 `test/fixtures/mdx/images.mdx` 與 `test/fixtures/mdx/images.mdd` 兩行。沒有新增套件、沒有改相依。
+2. **Task 7 走失敗路徑。** 真機探測結論與下一步方向記在 `issues.md` 檔尾「後續項目」第 2 項；`app/lib` 沒有留下半成品。
+---
+
 ## 自我檢查
 
 - **Spec 覆蓋：** §3.6 圖片（Task 1、3、5）、外部 `.css`（Task 2）、深色與 E-Ink 配色（Task 4、5）、已知限制說明（Task 6）；§7 整合測試的圖片與配色項目（Task 8）；驗收 18、19、25（Task 8 Step 4）；後續項目兩項（Task 6、7）。
