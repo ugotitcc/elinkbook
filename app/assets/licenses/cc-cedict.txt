@@ -1,0 +1,20 @@
+CC-CEDICT 資料
+
+資料名稱：CC-CEDICT（Chinese-English dictionary）
+授權名稱：Creative Commons Attribution-ShareAlike 4.0 International（CC BY-SA 4.0）
+授權網址：https://creativecommons.org/licenses/by-sa/4.0/
+上游網址：https://cc-cedict.org/
+發行檔：cedict_ts.u8，由 MDBG 提供下載（https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.zip）
+上游引用作品：CEDICT（Paul Andrew Denisowski）
+著作權人：見上游網址（本專案未另行改寫上游的著作權人字樣）
+
+本資料為「資料」而非程式碼，不內建於本 App，也不隨本 App 散布。使用者自行下載發行檔後，透過「設定 → 字典」匯入；匯入後只存在使用者的裝置上，不進入同步後端。
+
+----
+
+本 App 的使用方式說明（非授權條款的一部分）：
+
+- 匯入時讀取發行檔的檔頭授權說明，並保留在字典的授權欄位。
+- 繁體與簡體詞頭指向同一筆內容；拼音以聲調符號顯示，資料庫仍存原文。
+- 本 App 只在使用者裝置上使用這份資料，不重新散布、不上傳。
+- 完整的 CC BY-SA 4.0 法律條文以授權網址為準，不內嵌。

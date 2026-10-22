@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:elinkbook/dictionary/providers/moedict_provider.dart';
 import 'package:elinkbook/licenses/third_party_licenses.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -34,6 +35,12 @@ class _FakeBundle extends AssetBundle {
 Future<List<LicenseEntry>> _readAllLicenses() =>
     LicenseRegistry.licenses.toList();
 
+/// 補註後的 `dict_reader` 完整名稱；只在清單定義一次，測試引用它，
+/// 避免測試與程式兩處各寫一份、日後改字串時不一致。
+String get _dictReaderName => kThirdPartyLicenses
+    .firstWhere((l) => l.assetPath == 'assets/licenses/dict-reader.txt')
+    .packageName;
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -48,7 +55,7 @@ void main() {
   });
 
   group('kThirdPartyLicenses 清單', () {
-    test('19 項：12 項程式元件加 7 款字型，順序與名稱符合 spec', () {
+    test('21 項：12 項程式元件、2 筆資料來源加 7 款字型，順序與名稱符合 spec', () {
       expect(kThirdPartyLicenses.map((l) => l.packageName).toList(), [
         'foliate-js',
         'zip.js',
@@ -57,13 +64,16 @@ void main() {
         'Readium kotlin-toolkit',
         // dict_reader 1.6.1 與其遞移相依（MIT／BSD-3-Clause／Apache-2.0）。
         // collection 與 typed_data 共用一份 BSD-3-Clause 全文，合併成一筆。
-        'dict_reader',
+        _dictReaderName,
         'blockchain_utils',
         'pointycastle',
         'charset',
         'convert',
         'collection / typed_data',
         'html_unescape',
+        // 資料來源（不是程式碼，也不內建在 App 裡）
+        '萌典（教育部《重編國語辭典修訂本》資料）',
+        'CC-CEDICT 資料',
         '思源黑體',
         '思源宋體',
         '原俠正楷',
@@ -72,6 +82,17 @@ void main() {
         '白鷺楷',
         '獅尾B2加糖宋體',
       ]);
+    });
+
+    test('登錄清單含萌典資料與 CC-CEDICT 資料', () {
+      final names = kThirdPartyLicenses.map((l) => l.packageName);
+      expect(names, contains('萌典（教育部《重編國語辭典修訂本》資料）'));
+      expect(names, contains('CC-CEDICT 資料'));
+    });
+
+    test('dict_reader 名稱註明修補版', () {
+      expect(_dictReaderName, contains('PATCH.md'));
+      expect(_dictReaderName, contains('修補'));
     });
 
     test('packageName 與 assetPath 皆不重複', () {
@@ -83,7 +104,7 @@ void main() {
   });
 
   group('registerThirdPartyLicenses', () {
-    test('以真實 rootBundle 登錄：19 筆、packages 與清單一致、全文含上游版權關鍵字', () async {
+    test('以真實 rootBundle 登錄：21 筆、packages 與清單一致、全文含上游版權關鍵字', () async {
       registerThirdPartyLicenses();
 
       final entries = await _readAllLicenses();
@@ -103,7 +124,7 @@ void main() {
       expect(textByPackage['OpenCC'], contains('Apache License'));
       expect(textByPackage['Readium kotlin-toolkit'], contains('Readium'));
       // epic-63：MDX 解析器與遞移相依的授權
-      expect(textByPackage['dict_reader'], contains('Mumulhl'));
+      expect(textByPackage[_dictReaderName], contains('Mumulhl'));
       expect(textByPackage['blockchain_utils'], contains('Mohsen'));
       expect(textByPackage['pointycastle'], contains('Bouncy Castle'));
       expect(textByPackage['charset'], contains('Apache License'));
@@ -138,6 +159,34 @@ void main() {
       for (final text in textByPackage.values) {
         expect(text.trim(), isNotEmpty);
       }
+    });
+
+    test('新 asset 可由真實 bundle 載入：萌典與 CC-CEDICT 的標示內容', () async {
+      final moedict =
+          await rootBundle.loadString('assets/licenses/moedict-data.txt');
+      expect(moedict, contains('CC BY-ND 3.0 TW'));
+      expect(moedict, contains('教育部'));
+      expect(moedict, contains('重編國語辭典修訂本'));
+      expect(
+        moedict,
+        contains('https://creativecommons.org/licenses/by-nd/3.0/tw/'),
+      );
+
+      final cedict =
+          await rootBundle.loadString('assets/licenses/cc-cedict.txt');
+      expect(cedict, contains('CC BY-SA'));
+      expect(cedict, contains('CC-CEDICT'));
+      expect(
+        cedict,
+        contains('https://creativecommons.org/licenses/by-sa/4.0/'),
+      );
+    });
+
+    test('萌典標示與 provider 常數一致', () async {
+      final moedict =
+          await rootBundle.loadString('assets/licenses/moedict-data.txt');
+      // 兩處寫法必須逐字相同，避免日後只改一邊造成來源標示不一致。
+      expect(moedict, contains(MoedictProvider.attribution));
     });
 
     test('台灣圓體：原檔沒有版權行，不補寫版權人／年份；僅附 README 來源說明', () async {
