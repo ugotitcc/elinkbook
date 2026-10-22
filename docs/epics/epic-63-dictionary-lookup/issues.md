@@ -302,3 +302,8 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
    - 判讀（假設，未證實）：觸控面板或電子紙刷新干擾造成斷訊；「畫面閃一下」可能是同一個原因。唯一確定的是：訊號層面同一點會連續斷訊，且常同時出現 2 至 5 個接觸點。
    - 可能的方向（皆未做）：用 Wacom 電磁筆選字（不受電容觸控斷訊影響，未驗證）；在 App 內做容忍斷訊的長按偵測（動到選字核心，風險高，需另立計畫）；在系統桌面長按圖示錄同樣的訊號，確認是否整台裝置的問題。
    - 相關的已修問題：選字時多一根手指碰螢幕會讓整頁縮放（Task 10 已關閉流式格式的 WebView 原生縮放）。上述 2 至 5 個幽靈接觸點可能就是當時縮放誤觸的來源，兩者可能有同一個根因。
+4. **從系統檔案選擇器返回時 EGL context 遺失，Impeller 在 raster 執行緒 abort（2026-10-22 Issue 8 真機驗收發現，與字典功能無關）。**
+   - 現象：匯入書籍（`e8_cedict.md`，80 位元組）時畫面先黑掉，接著 App 退出；當晚三次。
+   - logcat：返回 App 後 `eglMakeCurrentImpl:1038 error 3002 (EGL_BAD_ACCESS)` → `Could not create a complete framebuffer` → `Check failed: result. Must be able to encode GL commands without error` → `Fatal signal 6 (SIGABRT)`（raster 執行緒）。
+   - 已確認不是 Issue 8 造成：本 Issue 只改授權清單與測試，`app/lib` 的 diff 只有 `third_party_licenses.dart`。
+   - 已另立 `epic-64-import-resume-egl-crash` 追蹤，不在本 Epic 處理。
