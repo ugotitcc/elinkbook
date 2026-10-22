@@ -180,12 +180,12 @@
 - [x] **Step 1: 靜態檢查。** Run: `cd app && flutter analyze && node tool/check_l10n_hardcoded_strings.js && node tool/check_integration_keys.js`。Expected: `No issues found!`；兩支腳本無錯誤。
 - [x] **Step 2: 完整測試（本計畫唯一一次）。**（2026-10-22：`+4327 ~2: All tests passed!`） Run: `cd app && flutter test`。Expected: 全數通過。有失敗先單獨在 `main` 跑該檔確認是不是既有失敗，一致才可註明並略過。
 - [x] **Step 3: 驗收對照表定稿。** 更新 `reviews/acceptance-issue-8.md`：Task 4 補完後每個缺口改為有證據，仍無證據的列為「已知限制」並確認已寫進 `issues.md`。
-- [ ] **Step 4: 真機確認（請人類在場）**，裝置：WAVE E-Ink 機。
+- [x] **Step 4: 真機確認（請人類在場）**，裝置：WAVE E-Ink 機。（2026-10-22 完成；數字見 `reviews/issue-8-report.md` 與 `acceptance-issue-8.md`「真機驗收記錄」）
   0. **重建環境。** Task 4 的整合測試已把 App 解除安裝並清掉資料。先執行 `cd app && flutter run -d <device-id>` 重新安裝，再匯入一本範例 EPUB（如 `app/test/fixtures/sample.epub`）。要測字典查詞，另請人類重新匯入一本字典。
   1. 設定頁的授權頁看得到「萌典」與「CC-CEDICT」兩筆資料來源標示，內容正確、可捲動。
   2. EPUB 選字 → 查字典 → 結果顯示（選字用 `adb shell input swipe` 長按，或人類用電磁筆；這台機器手指長按有斷訊問題，見 `issues.md` 後續項目第 3 項）。
   3. 面板開啟時間與記憶體（沿用 6a、6b 的量測方式，記錄數字）。
-- [ ] **Step 5: 回報。** 把結果寫進 `reviews/`（不進版控）。通過後等人類決定合併。合併後才更新 `issues.md` 狀態與 `docs/epics.md` 備註。**歸檔（搬到 `docs/archive/`）由人類指定，本計畫不做。**
+- [x] **Step 5: 回報。**（2026-10-23：報告寫在 `reviews/issue-8-report.md`；等合併後才更新 `issues.md` 狀態與 `docs/epics.md` 備註） 把結果寫進 `reviews/`（不進版控）。通過後等人類決定合併。合併後才更新 `issues.md` 狀態與 `docs/epics.md` 備註。**歸檔（搬到 `docs/archive/`）由人類指定，本計畫不做。**
 
 ---
 
