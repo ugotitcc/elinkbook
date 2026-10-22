@@ -189,7 +189,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
 
 ## Issue 6b：MDX 圖片、獨立 CSS、深色與 E-Ink 配色
 
-**Status:** ready-for-human
+**Status:** done（2026-10-22：已合併，PR #352；驗收 25 未完全證實，Task 10 固定版面與 CBZ 縮放未真機驗證，見 PR 說明）
 
 **依賴：** Issue 6a。
 
