@@ -1595,7 +1595,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 回呼，onPageRendered 是 PDF 開書成功的唯一既有訊號。
     if (detectBookFormat(_activeFilePath) == BookFormat.pdf && !_pdfTocLoaded) {
       _pdfTocLoaded = true;
-      PdfReaderView.loadTableOfContents(_pdfReaderViewKey).then((items) {
+      _surface.pdf!.loadTableOfContents().then((items) {
         if (!mounted) return;
         setState(() => _pdfTocEntries = items);
       });
@@ -1863,7 +1863,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       }
     });
     if (_tocEntries.isEmpty && !_tocLoaded) {
-      FoliateReaderView.loadTableOfContents(_foliateEpubReaderViewKey)
+      _surface.foliate!.loadTableOfContents()
           .then((entries) {
         if (!mounted) return;
         setState(() {
