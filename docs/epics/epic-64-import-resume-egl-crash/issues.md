@@ -6,7 +6,7 @@
 
 ## Issue 1：重現、定位與修復 Impeller／EGL context 遺失造成的 abort
 
-**Status:** needs-triage
+**Status:** ready-for-human（2026-10-23 已診斷並實作補畫面緩解，自動化重現腳本驗證通過；待使用者在 WAVE 手動重複原操作確認，見 `epic.md`「診斷結果」）
 
 **依賴：** 無。
 

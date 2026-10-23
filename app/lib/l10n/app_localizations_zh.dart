@@ -2436,6 +2436,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get readerTocLoadingMessage => '目錄載入中，請稍候';
 
   @override
+  String get dictionaryImportDirectionRequiredHint => '請先選擇查詢方向';
+
+  @override
   String get dictionaryImportConfirm => '匯入';
 
   @override
@@ -5002,6 +5005,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get readerTocLoadingMessage => '目录加载中，请稍候';
 
   @override
+  String get dictionaryImportDirectionRequiredHint => '请先选择查询方向';
+
+  @override
   String get dictionaryImportConfirm => '导入';
 
   @override
@@ -7566,6 +7572,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerTocLoadingMessage => '目錄載入中，請稍候';
+
+  @override
+  String get dictionaryImportDirectionRequiredHint => '請先選擇查詢方向';
 
   @override
   String get dictionaryImportConfirm => '匯入';

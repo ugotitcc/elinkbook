@@ -158,6 +158,16 @@ class _DictionaryImportDialogState extends State<_DictionaryImportDialog> {
                     ),
                 ],
               ),
+              // 方向未選時「匯入」鈕是灰的，用一行字說明原因，不然使用者會以為卡住。
+              if (_direction == null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    l10n.dictionaryImportDirectionRequiredHint,
+                    key: const Key('dictionary_import_direction_hint'),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
               const SizedBox(height: 16),
               TextField(
                 key: const Key('dictionary_import_license'),

@@ -3271,6 +3271,10 @@
   "@readerTocLoadingMessage": {
     "description": "閱讀器：目錄還沒載入完成時點「目錄」按鈕，顯示的短提示（SnackBar）"
   },
+  "dictionaryImportDirectionRequiredHint": "請先選擇查詢方向",
+  "@dictionaryImportDirectionRequiredHint": {
+    "description": "匯入對話框：還沒選查詢方向時，顯示在方向選項下方的提示，說明匯入鈕為什麼不能按"
+  },
   "dictionaryImportConfirm": "匯入",
   "@dictionaryImportConfirm": {
     "description": "匯入對話框的確認按鈕"

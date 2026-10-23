@@ -2530,6 +2530,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Loading the table of contents, please wait';
 
   @override
+  String get dictionaryImportDirectionRequiredHint =>
+      'Choose a direction first';
+
+  @override
   String get dictionaryImportConfirm => 'Import';
 
   @override

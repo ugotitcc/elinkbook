@@ -707,6 +707,7 @@
   "dictionaryImportLicenseLabel": "授权说明",
   "dictionaryImportLargeFileHint": "文件较大，导入可能需要较长时间",
   "readerTocLoadingMessage": "目录加载中，请稍候",
+  "dictionaryImportDirectionRequiredHint": "请先选择查询方向",
   "dictionaryImportConfirm": "导入",
   "dictionaryImportCancel": "取消",
   "dictionaryImportProgress": "已处理 {processed} / {total} 条",
