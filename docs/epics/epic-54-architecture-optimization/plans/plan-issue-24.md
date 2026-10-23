@@ -119,10 +119,10 @@ bool isIgnoredPdfSelection({required PdfSelectionInfo info, required List<Highli
 
 **Files：** 新增 `annotation_controller.dart`、`test/reader/annotation_controller_test.dart`（由 `annotation_session_test.dart` 以 `git mv` 改名後改寫）。
 
-- [ ] **Step 1：** `git mv test/reader/annotation_session_test.dart test/reader/annotation_controller_test.dart`；把 `AnnotationSession` 的案例改為對 `AnnotationController` 的狀態斷言（`reload` 後 `highlights`／`notes`；`createHighlight` 後清單與 `pendingHighlightId`；`saveNote` 新增／更新／帶 `pendingHighlightId`；`deleteExisting`）。`AnnotationSnapshot` 相等性案例隨類型刪除。
-- [ ] **Step 2（紅）：** 新增案例：`select` 重置 pending；`clearSelection`；`existingItem`（EPUB 以 id、PDF 以矩形重疊）；`createHighlight` 無選取不動作；`saveNote` 完成後選取與 pending 為 null；`isIgnoredPdfSelection` 三種情況（非退化、退化未命中、退化命中）；`AnnotationSelection.fromEpub`／`fromPdf` 欄位對映（PDF 的 `anchorRect` 是 `widgetRect`）。
-- [ ] **Step 3（綠）：** 實作 `annotation_controller.dart`（`AnnotationLocator` 自 `annotation_session.dart` 原樣搬入；controller 內部沿用其 repository 呼叫）。**同一個 commit** 把 `annotation_session.dart` 內的 `class AnnotationLocator` 刪除，改為 `export 'annotation_controller.dart' show AnnotationLocator;`（計畫審查 I-2：避免兩檔同名型別在 `reader_screen.dart` 同時 import 時衝突；全專案只有單一定義）。`annotation_session.dart` 與 `reader_screen.dart` 對它的使用暫時並存，Task 3 Step 3 刪除。
-- [ ] **Step 4：** `flutter analyze`；跑 `test/reader/annotation_controller_test.dart`、`annotation_resolution_test.dart`；commit。
+- [x] **Step 1：** `git mv test/reader/annotation_session_test.dart test/reader/annotation_controller_test.dart`；把 `AnnotationSession` 的案例改為對 `AnnotationController` 的狀態斷言（`reload` 後 `highlights`／`notes`；`createHighlight` 後清單與 `pendingHighlightId`；`saveNote` 新增／更新／帶 `pendingHighlightId`；`deleteExisting`）。`AnnotationSnapshot` 相等性案例隨類型刪除。
+- [x] **Step 2（紅）：** 新增案例：`select` 重置 pending；`clearSelection`；`existingItem`（EPUB 以 id、PDF 以矩形重疊）；`createHighlight` 無選取不動作；`saveNote` 完成後選取與 pending 為 null；`isIgnoredPdfSelection` 三種情況（非退化、退化未命中、退化命中）；`AnnotationSelection.fromEpub`／`fromPdf` 欄位對映（PDF 的 `anchorRect` 是 `widgetRect`）。
+- [x] **Step 3（綠）：** 實作 `annotation_controller.dart`（`AnnotationLocator` 自 `annotation_session.dart` 原樣搬入；controller 內部沿用其 repository 呼叫）。**同一個 commit** 把 `annotation_session.dart` 內的 `class AnnotationLocator` 刪除，改為 `export 'annotation_controller.dart' show AnnotationLocator;`（計畫審查 I-2：避免兩檔同名型別在 `reader_screen.dart` 同時 import 時衝突；全專案只有單一定義）。`annotation_session.dart` 與 `reader_screen.dart` 對它的使用暫時並存，Task 3 Step 3 刪除。
+- [x] **Step 4：** `flutter analyze`；跑 `test/reader/annotation_controller_test.dart`、`annotation_resolution_test.dart`；commit。
 
 ### Task 3：`ReaderScreen` 遷移（計畫審查 C-1／I-1／I-3 修訂：選取、劃線、備註、工具列互相耦合，不可拆成會斷編譯的小步，改為 3 個 commit）
 
