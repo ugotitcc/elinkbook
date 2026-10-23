@@ -1,12 +1,13 @@
 // app/test/reader/reader_jump_target_test.dart
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
-import 'package:elinkbook/reader/book_format.dart';
-import 'package:elinkbook/reader/foliate_reader_view.dart';
-import 'package:elinkbook/reader/pdf_reader_view.dart';
+import 'package:elinkbook/reader/foliate_reader_surface.dart';
+import 'package:elinkbook/reader/pdf_reader_surface.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
 import 'package:elinkbook/reader/reader_jump_target.dart';
+import 'package:elinkbook/reader/reader_surface.dart';
+
+import '../support/fake_reader_surface.dart';
 
 void main() {
   group('ReaderJumpTarget.fromContentLocator', () {
@@ -91,14 +92,10 @@ void main() {
     });
   });
 
-  // applyTo() 底層的 PdfReaderView/FoliateReaderView 靜態 helper 對「key
-  // 尚未掛載任何 State」的情況皆為靜默忽略（見兩者各自文件註解），不拋
-  // 例外——這裡刻意使用未掛載的空白 GlobalKey，讓測試只聚焦驗證 applyTo()
-  // 自己的分派與回傳值邏輯，不需要真正渲染 PdfReaderView/FoliateReaderView
-  // （那部分的副作用是否真的觸發，由 reader_screen_test.dart 既有的全螢幕
-  // 整合測試把關，見本計畫 Global Constraints 的邊界權衡說明）。
-  final pdfKey = GlobalKey<State<PdfReaderView>>();
-  final foliateKey = GlobalKey<State<FoliateReaderView>>();
+  // applyTo() 現在只委派給 ReaderSurface（epic-54 Issue 23）：格式分派搬進
+  // adapter。這裡用「未掛載」的真實 adapter，聚焦驗證 applyTo() 與 adapter
+  // 組合起來的回傳值語意；View 的副作用是否真的觸發，由 View 自己的測試與
+  // reader_screen_test.dart 把關。
 
   group('applyTo：PDF 格式', () {
     test('pdfPageIndex 為 null 時，不論 shouldNavigate 為何皆回傳 false', () {
@@ -108,18 +105,14 @@ void main() {
 
       expect(
         target.applyTo(
-          format: BookFormat.pdf,
-          pdfKey: pdfKey,
-          foliateKey: foliateKey,
+          surface: PdfReaderSurface(),
           shouldNavigate: false,
         ),
         isFalse,
       );
       expect(
         target.applyTo(
-          format: BookFormat.pdf,
-          pdfKey: pdfKey,
-          foliateKey: foliateKey,
+          surface: PdfReaderSurface(),
           shouldNavigate: true,
         ),
         isFalse,
@@ -132,18 +125,14 @@ void main() {
 
       expect(
         target.applyTo(
-          format: BookFormat.pdf,
-          pdfKey: pdfKey,
-          foliateKey: foliateKey,
+          surface: PdfReaderSurface(),
           shouldNavigate: false,
         ),
         isFalse,
       );
       expect(
         target.applyTo(
-          format: BookFormat.pdf,
-          pdfKey: pdfKey,
-          foliateKey: foliateKey,
+          surface: PdfReaderSurface(),
           shouldNavigate: true,
         ),
         isFalse,
@@ -158,18 +147,14 @@ void main() {
 
       expect(
         target.applyTo(
-          format: BookFormat.pdf,
-          pdfKey: pdfKey,
-          foliateKey: foliateKey,
+          surface: PdfReaderSurface(),
           shouldNavigate: false,
         ),
         isTrue,
       );
       expect(
         target.applyTo(
-          format: BookFormat.pdf,
-          pdfKey: pdfKey,
-          foliateKey: foliateKey,
+          surface: PdfReaderSurface(),
           shouldNavigate: true,
         ),
         isTrue,
@@ -183,52 +168,60 @@ void main() {
 
       expect(
         target.applyTo(
-          format: BookFormat.epub,
-          pdfKey: pdfKey,
-          foliateKey: foliateKey,
+          surface: FoliateReaderSurface(),
           shouldNavigate: false,
         ),
         isFalse,
       );
       expect(
         target.applyTo(
-          format: BookFormat.epub,
-          pdfKey: pdfKey,
-          foliateKey: foliateKey,
+          surface: FoliateReaderSurface(),
           shouldNavigate: true,
         ),
         isFalse,
       );
     });
 
-    test('cfi 存在時，所有 Foliate 格式（epub/azw3/cbz/txt/md）皆回傳 true'
-        '（防止實作誤寫成 format == BookFormat.epub 而非 isFoliateFormat(format)）',
-        () {
+    test('cfi 存在時回傳 true（各 Foliate 格式共用同一個 adapter；格式分派由 ReaderScreen 建立 surface 時負責）', () {
       const target = ReaderJumpTarget(cfi: 'epubcfi(/6/4!/4/2)');
 
-      for (final format in [
-        BookFormat.epub,
-        BookFormat.azw3,
-        BookFormat.cbz,
-        BookFormat.txt,
-        BookFormat.md,
-      ]) {
-        expect(
-          target.applyTo(
-            format: format,
-            pdfKey: pdfKey,
-            foliateKey: foliateKey,
-            shouldNavigate: false,
-          ),
-          isTrue,
-          reason: '格式 $format 應被視為 Foliate 格式',
-        );
-      }
+      expect(
+        target.applyTo(
+          surface: FoliateReaderSurface(),
+          shouldNavigate: false,
+        ),
+        isTrue,
+      );
+    });
+  });
+
+  group('applyTo：指令序列（FakeReaderSurface）', () {
+    const target = ReaderJumpTarget(
+      pdfPageIndex: 3,
+      pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+    );
+
+    test('shouldNavigate 為 true：先導覽、再疊暫態高亮，回傳 surface 的高亮結果', () {
+      final surface = FakeReaderSurface.pdf(showsTransientHighlight: true);
+
+      final shown = target.applyTo(surface: surface, shouldNavigate: true);
+
+      expect(surface.calls, ['jumpTo', 'showTransientHighlight']);
+      expect(shown, isTrue);
+    });
+
+    test('shouldNavigate 為 false：只疊暫態高亮、不導覽', () {
+      final surface = FakeReaderSurface.pdf(showsTransientHighlight: false);
+
+      final shown = target.applyTo(surface: surface, shouldNavigate: false);
+
+      expect(surface.calls, ['showTransientHighlight']);
+      expect(shown, isFalse);
     });
   });
 
   group('applyTo：不支援的格式', () {
-    test('BookFormat.unknown 不論 shouldNavigate 為何皆回傳 false', () {
+    test('NoopReaderSurface（BookFormat.unknown）不論 shouldNavigate 為何皆回傳 false', () {
       const target = ReaderJumpTarget(
         cfi: 'epubcfi(/6/4!/4/2)',
         pdfPageIndex: 3,
@@ -237,18 +230,14 @@ void main() {
 
       expect(
         target.applyTo(
-          format: BookFormat.unknown,
-          pdfKey: pdfKey,
-          foliateKey: foliateKey,
+          surface: const NoopReaderSurface(),
           shouldNavigate: false,
         ),
         isFalse,
       );
       expect(
         target.applyTo(
-          format: BookFormat.unknown,
-          pdfKey: pdfKey,
-          foliateKey: foliateKey,
+          surface: const NoopReaderSurface(),
           shouldNavigate: true,
         ),
         isFalse,

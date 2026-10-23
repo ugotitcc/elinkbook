@@ -1354,7 +1354,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// （Issue 5）建立的相同分派模式。
   void _jumpToEpubLocator(String locatorJson) {
     // Epic 20 Issue 2：EPUB 一律使用 FoliateReaderView。
-    FoliateReaderView.jumpToLocator(_foliateEpubReaderViewKey, locatorJson);
+    _surface.jumpTo(ReaderJumpTarget(cfi: locatorJson));
   }
 
   /// EPUB 目前章節路徑（epic-54 Issue 19）：同時傳入全書 progression 與
@@ -1413,7 +1413,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           Navigator.of(context).pop();
           final pageIndex = (entry as PdfTocItem).pageIndex;
           if (pageIndex != null) {
-            PdfReaderView.jumpToPage(_pdfReaderViewKey, pageIndex);
+            _surface.jumpTo(ReaderJumpTarget(pdfPageIndex: pageIndex));
           }
         },
         thumbnailTabContent: PdfThumbnailPanel(
@@ -1425,7 +1425,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           ),
           onPageSelected: (pageIndex) {
             Navigator.of(context).pop();
-            PdfReaderView.jumpToPage(_pdfReaderViewKey, pageIndex);
+            _surface.jumpTo(ReaderJumpTarget(pdfPageIndex: pageIndex));
           },
         ),
         searchTabContent: PdfSearchPanel(
@@ -1465,8 +1465,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final currentIndex = matches.isEmpty ? null : 0;
     PdfReaderView.setSearchHighlights(_pdfReaderViewKey, matches, currentIndex: currentIndex);
     if (currentIndex != null) {
-      PdfReaderView.jumpToPageAtRect(
-        _pdfReaderViewKey,
+      _surface.pdf!.jumpToPageAtRect(
         matches[currentIndex].pageIndex,
         matches[currentIndex].rect,
       );
@@ -1486,8 +1485,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final current = _pdfSearchStateNotifier.value.currentIndex ?? -1;
     final next = (current + delta) % _pdfSearchMatches.length;
     PdfReaderView.setSearchHighlights(_pdfReaderViewKey, _pdfSearchMatches, currentIndex: next);
-    PdfReaderView.jumpToPageAtRect(
-      _pdfReaderViewKey,
+    _surface.pdf!.jumpToPageAtRect(
       _pdfSearchMatches[next].pageIndex,
       _pdfSearchMatches[next].rect,
     );
@@ -1542,7 +1540,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           if (locatorJson != null) {
             _jumpToEpubLocator(locatorJson);
           } else if (pdfPageIndex != null) {
-            PdfReaderView.jumpToPage(_pdfReaderViewKey, pdfPageIndex);
+            _surface.jumpTo(ReaderJumpTarget(pdfPageIndex: pdfPageIndex));
           }
         },
         onAnnotationsChanged: format == BookFormat.pdf
@@ -1553,7 +1551,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           if (bookmark.epubLocatorJson != null) {
             _jumpToEpubLocator(bookmark.epubLocatorJson!);
           } else if (bookmark.pdfPageIndex != null) {
-            PdfReaderView.jumpToPage(_pdfReaderViewKey, bookmark.pdfPageIndex!);
+            _surface.jumpTo(ReaderJumpTarget(pdfPageIndex: bookmark.pdfPageIndex!));
           }
           // epic-6-annotations Issue 4：FXL 書籤跳轉概念上等同換頁，套用與
           // EpubReaderView.onFixedLayoutPageTurn（見本檔案下方
@@ -1630,9 +1628,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (jumpTarget == null) return;
     _searchJumpHighlightTriggered = true;
     final highlightShown = jumpTarget.applyTo(
-      format: detectBookFormat(_activeFilePath),
-      pdfKey: _pdfReaderViewKey,
-      foliateKey: _foliateEpubReaderViewKey,
+      surface: _surface,
       shouldNavigate: false,
     );
     if (highlightShown) {
@@ -1686,9 +1682,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 只決定要不要額外疊加高亮／啟動自動清除計時器。
   void _handleReaderSearchJumpTarget(ReaderJumpTarget jumpTarget) {
     final highlightShown = jumpTarget.applyTo(
-      format: detectBookFormat(_activeFilePath),
-      pdfKey: _pdfReaderViewKey,
-      foliateKey: _foliateEpubReaderViewKey,
+      surface: _surface,
       shouldNavigate: true,
     );
     if (highlightShown) {
@@ -2945,8 +2939,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       : ReaderFooter(
                           currentPage: _pdfPageInfo!.pageIndex + 1,
                           totalPages: _pdfPageInfo!.totalPages,
-                          onPageChanged: (page1Indexed) => PdfReaderView.jumpToPage(
-                              _pdfReaderViewKey, page1Indexed - 1),
+                          onPageChanged: (page1Indexed) => _surface.jumpTo(
+                              ReaderJumpTarget(pdfPageIndex: page1Indexed - 1)),
                         ),
                   onTocTap: _onTocTapFor(format),
                   isBookmarked: _pdfBookmarkAtCurrentPosition != null,
@@ -3157,8 +3151,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       onPageChanged: (page1Indexed) {
         final progression =
             totalPages > 0 ? (page1Indexed - 1) / totalPages : 0.0;
-        FoliateReaderView.jumpToProgression(
-            _foliateEpubReaderViewKey, progression);
+        _surface.jumpTo(ReaderJumpTarget(progression: progression));
       },
     );
   }
