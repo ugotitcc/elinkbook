@@ -22,6 +22,7 @@ import 'foliate_native_bridge.dart';
 import 'js_bridge_gateway.dart';
 import 'page_turn_mode.dart';
 import 'percent_rect.dart';
+import 'platform_view_frame_flush.dart';
 import 'reader_console_log.dart';
 import 'tap_zone_detector.dart';
 import 'toc_entry.dart';
@@ -788,6 +789,8 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       }
     }
     detachReaderView();
+    // WebView 平台檢視關閉後補送畫面，讓引擎拆開 raster／主執行緒併合（epic-64）。
+    flushFramesAfterPlatformViewRemoved();
     super.dispose();
   }
 
