@@ -4301,6 +4301,12 @@ abstract class AppLocalizations {
   /// **'檔案較大，匯入可能需要較長時間'**
   String get dictionaryImportLargeFileHint;
 
+  /// 閱讀器：目錄還沒載入完成時點「目錄」按鈕，顯示的短提示（SnackBar）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'目錄載入中，請稍候'**
+  String get readerTocLoadingMessage;
+
   /// 匯入對話框：還沒選查詢方向時，顯示在方向選項下方的提示，說明匯入鈕為什麼不能按
   ///
   /// In zh_TW, this message translates to:

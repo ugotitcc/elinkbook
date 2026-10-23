@@ -2526,6 +2526,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This file is large, so importing may take a while';
 
   @override
+  String get readerTocLoadingMessage =>
+      'Loading the table of contents, please wait';
+
+  @override
   String get dictionaryImportDirectionRequiredHint =>
       'Choose a direction first';
 

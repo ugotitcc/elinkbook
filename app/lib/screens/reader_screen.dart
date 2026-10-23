@@ -2455,14 +2455,30 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// `ReaderChromeBottomBar` 時抽出，`_buildChromeTopBar`／
   /// `_buildFoliateChromeBottomBar`／PDF 選單列共用同一份防呆條件，避免
   /// 三處重複）：PDF 用 `_pdfTocLoaded`，Foliate 格式用
-  /// `_autoDetectedWritingMode`／`_tocLoaded`，兩者皆未就緒時回傳 `null`
-  /// 顯示為停用狀態。
+  /// `_autoDetectedWritingMode`／`_tocLoaded`；未就緒時回傳
+  /// [_showTocLoadingHint]（按鈕仍可點，點了顯示載入中提示），非支援格式才回傳
+  /// `null`（停用）。
   VoidCallback? _onTocTapFor(BookFormat format) {
     if (format == BookFormat.pdf) {
-      return !_pdfTocLoaded ? null : _openPdfToc;
+      return _pdfTocLoaded ? _openPdfToc : _showTocLoadingHint;
     }
     if (!isFoliateFormat(format)) return null;
-    return (_autoDetectedWritingMode == null || !_tocLoaded) ? null : _openToc;
+    final ready = _autoDetectedWritingMode != null && _tocLoaded;
+    return ready ? _openToc : _showTocLoadingHint;
+  }
+
+  /// 目錄還沒載入完成時點「目錄」：按鈕不再灰著沒反應（WAVE 上大書開書後要等
+  /// 約 2.5 分鐘才好，灰色會被誤判成按鈕壞掉），改為顯示短提示。
+  void _showTocLoadingHint() {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          key: const Key('reader_toc_loading_snackbar'),
+          content: Text(AppLocalizations.of(context)!.readerTocLoadingMessage),
+          duration: const Duration(seconds: 2),
+        ),
+      );
   }
 
   /// `ReaderChromeBottomBar` 建構參數在 [_buildBottomChrome] 三個分支

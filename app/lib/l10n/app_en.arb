@@ -706,6 +706,7 @@
   "dictionaryImportDirectionLabel": "Direction",
   "dictionaryImportLicenseLabel": "License note",
   "dictionaryImportLargeFileHint": "This file is large, so importing may take a while",
+  "readerTocLoadingMessage": "Loading the table of contents, please wait",
   "dictionaryImportDirectionRequiredHint": "Choose a direction first",
   "dictionaryImportConfirm": "Import",
   "dictionaryImportCancel": "Cancel",

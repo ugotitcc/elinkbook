@@ -282,6 +282,23 @@ Book _relinkTestBook({
   );
 }
 
+/// 目錄還沒載入完成時：按鈕仍可點（不再是灰色停用），點了只顯示「目錄載入中」提示，
+/// 不會開出空的目錄。WAVE 上大書開書後要等約 2.5 分鐘目錄才好，灰色沒反應會被誤判成壞掉。
+Future<void> _expectTocTapShowsLoadingHint(WidgetTester tester) async {
+  final finder = find.byKey(const Key('reader_chrome_toc_button'));
+  expect(finder, findsOneWidget);
+  expect(
+    tester.widget<IconButton>(finder).onPressed,
+    isNotNull,
+    reason: '目錄尚未載入完成時按鈕也要可點',
+  );
+  await tester.tap(finder);
+  await tester.pump();
+  expect(find.byKey(const Key('reader_toc_loading_snackbar')), findsOneWidget);
+  expect(find.text('目錄載入中，請稍候'), findsOneWidget);
+  expect(find.byType(TocBottomSheet), findsNothing);
+}
+
 void main() {
   late FakeReaderPrefsManager prefsManager;
   // 保存原始實作， tearDownAll 時還原
@@ -2629,7 +2646,7 @@ void main() {
 
   // --- Epic 5 Issue 4：EPUB 目錄（TOC）樹狀清單 ---
 
-  testWidgets('EPUB 格式顯示「目錄」按鈕，初始為停用狀態', (tester) async {
+  testWidgets('EPUB 格式顯示「目錄」按鈕，目錄未載入前點了只顯示載入中提示', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('zh', 'TW'),
@@ -2647,18 +2664,11 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final finder = find.byKey(const Key('reader_chrome_toc_button'));
-    expect(finder, findsOneWidget);
-    expect(
-      tester.widget<IconButton>(finder).onPressed,
-      isNull,
-      reason: '尚未收到 onLayoutResolved，按鈕應為停用狀態',
-    );
+    await _expectTocTapShowsLoadingHint(tester);
   });
 
-  testWidgets('PDF 格式下，目錄按鈕初始為停用狀態（epic-38-reader-chrome-tts-redesign '
-      'Issue 1 審查修正：ReaderChromeTopBar 目錄按鈕全格式恆常渲染，不再是'
-      '「PDF 不存在」，_pdfTocLoaded 完成前 onPressed 為 null）', (tester) async {
+  testWidgets('PDF 格式下，_pdfTocLoaded 完成前目錄按鈕仍可點，點了只顯示載入中提示'
+      '（目錄按鈕全格式恆常渲染，epic-38-reader-chrome-tts-redesign Issue 1）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('zh', 'TW'),
@@ -2676,19 +2686,13 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final finder = find.byKey(const Key('reader_chrome_toc_button'));
-    expect(finder, findsOneWidget);
-    expect(
-      tester.widget<IconButton>(finder).onPressed,
-      isNull,
-      reason: '_pdfTocLoaded 尚未完成，按鈕應為停用狀態',
-    );
+    await _expectTocTapShowsLoadingHint(tester);
   });
 
-  testWidgets('EPUB 固定版面（FXL）開書後，目錄按鈕初始為停用狀態（epic-38-reader-chrome-'
+  testWidgets('EPUB 固定版面（FXL）開書後，目錄未就緒前點了只顯示載入中提示（epic-38-reader-chrome-'
       'tts-redesign Issue 1 審查修正：ReaderChromeTopBar 目錄按鈕全格式恆常'
-      '渲染，不再受既有 AppBar 隱藏機制排除，FXL 與 reflowable EPUB 走同一套'
-      '_autoDetectedWritingMode 防呆條件）', (tester) async {
+      '渲染，FXL 與 reflowable EPUB 走同一套 _autoDetectedWritingMode 就緒條件）',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('zh', 'TW'),
@@ -2712,15 +2716,8 @@ void main() {
     // 在這個測試 fixture 下 `_tocLoaded` 的非同步載入會在同一次
     // `pump()` 內就完成，若先呼叫 onLayoutResolved 讓
     // `_autoDetectedWritingMode` 非 null，反而會因為 `_tocLoaded` 已同時
-    // 就緒而直接變成可點擊，無法穩定觀察到停用狀態。
-    final finder = find.byKey(const Key('reader_chrome_toc_button'));
-    expect(finder, findsOneWidget);
-    expect(
-      tester.widget<IconButton>(finder).onPressed,
-      isNull,
-      reason: '尚未收到 onLayoutResolved，_autoDetectedWritingMode 仍為 null，'
-          '按鈕應為停用狀態',
-    );
+    // 就緒而直接變成可點擊，無法穩定觀察到「未就緒」狀態。
+    await _expectTocTapShowsLoadingHint(tester);
   });
 
   testWidgets(

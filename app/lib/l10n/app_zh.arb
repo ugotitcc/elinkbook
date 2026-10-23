@@ -706,6 +706,7 @@
   "dictionaryImportDirectionLabel": "查詢方向",
   "dictionaryImportLicenseLabel": "授權說明",
   "dictionaryImportLargeFileHint": "檔案較大，匯入可能需要較長時間",
+  "readerTocLoadingMessage": "目錄載入中，請稍候",
   "dictionaryImportDirectionRequiredHint": "請先選擇查詢方向",
   "dictionaryImportConfirm": "匯入",
   "dictionaryImportCancel": "取消",
