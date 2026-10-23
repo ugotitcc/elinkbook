@@ -311,3 +311,11 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
    - 驗收 33：上游 CC-CEDICT 檔頭 `#! license=` 只給網址，所以授權說明畫面顯示 `https://creativecommons.org/licenses/by-sa/4.0/`，不會出現字面「CC BY-SA 4.0」。spec 與 PRD 的寫法比實際多了名稱。
    - 驗收 24：「UI 不凍結」只有人類在 WAVE E-Ink 機上觀察，沒有幀時間量測。解析走 `Isolate.run`，這是設計依據，不是量測結果。
    - 方向（皆未做）：匯入器把 `licenseNote` 正規化成「CC BY-SA 4.0（網址）」，或把 spec 與 PRD 文字改成「顯示授權網址」；需要時再補幀時間量測。
+6. **匯入字型與匯入字典的選檔畫面沒有取消鈕（2026-10-23，WAVE E-Ink 機 Android 12，結論：系統選取器行為，不修）。**
+   - 現象：選檔畫面滿版，頂端只有漢堡選單，沒有「取消」或「關閉」鈕（截圖 `tmp/images/選檔滿版.jpg`）。
+   - 原因：這是 Android 系統的 DocumentsUI，由 `FilePicker.pickFiles` 呼叫，App 無法改它的版面。
+   - 取消方式：按狀態列最左邊的返回鍵 ◁。
+   - 方向（皆未做）：選檔前顯示「按返回鍵可取消」提示；自製 App 內選檔畫面（會失去 SD 卡與雲端存取，不建議）。
+7. **字典面板高度隨字典切換跳動（2026-10-23，已修）。**
+   - 原因：HTML 字典撐到面板上限，純文字字典縮到內容高度。
+   - 修法：有 2 個以上分段時，面板固定為螢幕高度的 80%（`kDictionarySheetMaxHeightFactor`）；只有 1 個分段時維持依內容縮短。
