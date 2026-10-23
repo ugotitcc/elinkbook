@@ -111,9 +111,9 @@ bool isIgnoredPdfSelection({required PdfSelectionInfo info, required List<Highli
 
 **Files：** 新增 `annotation_toolbar_layout.dart`、`annotation_toolbar_layout_test.dart`；修改 `annotation_resolution.dart`、`annotation_resolution_test.dart`、`reader_screen.dart`（僅三處 `resolvePdfExistingAnnotation` 呼叫端）。
 
-- [ ] **Step 1（紅）：** 寫 `annotation_toolbar_layout_test.dart`：上方空間足夠 → 貼上方；不足 → 貼下方並 clamp；`annotationToolbarLeft` clamp 到 `size.width - 256`；測值取自現行 `_annotationToolbarTop`／`_pdfAnnotationToolbarTop` 公式。在 `annotation_resolution_test.dart` 把 `resolvePdfExistingAnnotation` 的呼叫改為 `pageIndex:`＋`rect:` 新簽章（此時為紅）。
-- [ ] **Step 2（綠）：** 新增 `annotation_toolbar_layout.dart`（常數 104／8／256 自 `reader_screen.dart` 約 2356–2358 搬入）；改 `resolvePdfExistingAnnotation` 簽章；`reader_screen.dart` 三處呼叫端改傳 `pageIndex:`＋`rect:`：約 1995 行（變數 `info`）、約 2126 行（變數 `selection`）、約 2799 行（變數 `pdfSelection`，build 內）；以 `grep -n resolvePdfExistingAnnotation` 為準，變數名不可全部套 `info`。**此 Task 不刪 `reader_screen.dart` 的舊定位方法**（Task 3 才換）。
-- [ ] **Step 3：** `flutter analyze`；跑 `test/reader/annotation_toolbar_layout_test.dart`、`annotation_resolution_test.dart`、`test/screens/reader_screen_test.dart`（標註與 PDF 退化選取相關案例，用 `--plain-name` 縮小）；commit。
+- [x] **Step 1（紅）：** 寫 `annotation_toolbar_layout_test.dart`：上方空間足夠 → 貼上方；不足 → 貼下方並 clamp；`annotationToolbarLeft` clamp 到 `size.width - 256`；測值取自現行 `_annotationToolbarTop`／`_pdfAnnotationToolbarTop` 公式。在 `annotation_resolution_test.dart` 把 `resolvePdfExistingAnnotation` 的呼叫改為 `pageIndex:`＋`rect:` 新簽章（此時為紅）。
+- [x] **Step 2（綠）：** 新增 `annotation_toolbar_layout.dart`（常數 104／8／256 自 `reader_screen.dart` 約 2356–2358 搬入）；改 `resolvePdfExistingAnnotation` 簽章；`reader_screen.dart` 三處呼叫端改傳 `pageIndex:`＋`rect:`：約 1995 行（變數 `info`）、約 2126 行（變數 `selection`）、約 2799 行（變數 `pdfSelection`，build 內）；以 `grep -n resolvePdfExistingAnnotation` 為準，變數名不可全部套 `info`。**此 Task 不刪 `reader_screen.dart` 的舊定位方法**（Task 3 才換）。
+- [x] **Step 3：** `flutter analyze`；跑 `test/reader/annotation_toolbar_layout_test.dart`、`annotation_resolution_test.dart`、`test/screens/reader_screen_test.dart`（標註與 PDF 退化選取相關案例，用 `--plain-name` 縮小）；commit。
 
 ### Task 2：`AnnotationController` 與測試
 

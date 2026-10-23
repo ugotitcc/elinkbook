@@ -1993,7 +1993,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final isDegenerate = info.rect.left == info.rect.right;
     if (isDegenerate &&
         resolvePdfExistingAnnotation(
-              selection: info,
+              pageIndex: info.pageIndex,
+              rect: info.rect,
               highlights: _highlights,
               notes: _notes,
             ) ==
@@ -2124,7 +2125,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final session = _annotationSession;
     if (selection == null) return;
     final existing = resolvePdfExistingAnnotation(
-      selection: selection,
+      pageIndex: selection.pageIndex,
+      rect: selection.rect,
       highlights: _highlights,
       notes: _notes,
     )?.note;
@@ -2797,7 +2799,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         final pdfExistingItem = pdfSelection == null
             ? null
             : resolvePdfExistingAnnotation(
-                selection: pdfSelection,
+                pageIndex: pdfSelection.pageIndex,
+                rect: pdfSelection.rect,
                 highlights: _highlights,
                 notes: _notes,
               );

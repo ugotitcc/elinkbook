@@ -2,7 +2,7 @@ import 'annotation_list_item.dart';
 import 'epub_decoration.dart';
 import 'highlight.dart';
 import 'note.dart';
-import 'pdf_selection_info.dart';
+import 'percent_rect.dart';
 
 /// 依 EPUB 選取範圍回報的 [existingAnnotationId]（JS 端 hit-test 結果，
 /// 見 main.js `reportSelection()`），反查是哪一筆既有畫線/備註記錄
@@ -49,14 +49,15 @@ AnnotationListItem? resolveEpubExistingAnnotation({
 /// `note.highlightId == null` 判斷慣例，避免已依附畫線的備註被誤判為
 /// 獨立命中）。
 AnnotationListItem? resolvePdfExistingAnnotation({
-  required PdfSelectionInfo selection,
+  required int pageIndex,
+  required PercentRect rect,
   required List<Highlight> highlights,
   required List<Note> notes,
 }) {
   for (final highlight in highlights) {
-    if (highlight.pdfPageIndex == selection.pageIndex &&
+    if (highlight.pdfPageIndex == pageIndex &&
         highlight.pdfRect != null &&
-        highlight.pdfRect!.overlaps(selection.rect)) {
+        highlight.pdfRect!.overlaps(rect)) {
       Note? note;
       for (final n in notes) {
         if (n.highlightId == highlight.id) {
@@ -69,9 +70,9 @@ AnnotationListItem? resolvePdfExistingAnnotation({
   }
   for (final note in notes) {
     if (note.highlightId == null &&
-        note.pdfPageIndex == selection.pageIndex &&
+        note.pdfPageIndex == pageIndex &&
         note.pdfRect != null &&
-        note.pdfRect!.overlaps(selection.rect)) {
+        note.pdfRect!.overlaps(rect)) {
       return AnnotationListItem(note: note);
     }
   }
