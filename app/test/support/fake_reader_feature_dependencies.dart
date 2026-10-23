@@ -12,6 +12,7 @@ import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/reader/notes_repository.dart';
 import 'package:elinkbook/reader/reader_activity_tracker.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
+import 'package:elinkbook/reader/reader_surface_factory.dart';
 import 'package:elinkbook/reader/tts_audio_focus_source.dart';
 import 'package:elinkbook/reader/tts_audio_handler_startup.dart';
 import 'package:elinkbook/reader/tts_provider.dart';
@@ -66,6 +67,7 @@ ReaderFeatureDependencies fakeReaderFeatureDependencies({
   DictionaryService? dictionaryService,
   DictionaryManager? dictionaryManager,
   DictionarySettingsRepository? dictionarySettings,
+  ReaderSurfaceFactory? readerSurfaceFactory,
 }) {
   return ReaderFeatureDependencies(
     prefsManager: prefsManager ?? FakeReaderPrefsManager(),
@@ -98,6 +100,7 @@ ReaderFeatureDependencies fakeReaderFeatureDependencies({
     dictionaryManager: dictionaryManager ?? FakeDictionaryManager(),
     dictionarySettings:
         dictionarySettings ?? FakeDictionarySettingsRepository(),
+    readerSurfaceFactory: readerSurfaceFactory ?? defaultReaderSurfaceFactory,
   );
 }
 
