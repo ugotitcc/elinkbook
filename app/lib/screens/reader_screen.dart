@@ -7,9 +7,9 @@ import 'package:intl/intl.dart';
 
 import '../l10n/app_localizations.dart';
 
+import '../reader/annotation_controller.dart';
 import '../reader/annotation_list_item.dart';
-import '../reader/annotation_resolution.dart';
-import '../reader/annotation_session.dart';
+import '../reader/annotation_toolbar_layout.dart';
 import '../reader/book_format.dart';
 import '../reader/bookmark.dart';
 import '../reader/bookmark_position_context.dart';
@@ -34,9 +34,7 @@ import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
-import '../reader/highlight.dart';
 import '../reader/highlight_style.dart';
-import '../reader/note.dart';
 import '../reader/pdf_search_match.dart';
 import '../reader/pdf_search_state.dart';
 
@@ -369,29 +367,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // （等待相關非同步就緒訊號才啟用），不引入本專案目前沒有的「Bottom
   // Sheet 內顯示載入中」UI 型態。
   bool _tocLoaded = false;
-  // EPUB 劃線／備註快取（epic-6-annotations Issue 2），由
-  // _reloadAnnotations() 統一載入與更新。
-  List<Highlight> _highlights = [];
-  List<Note> _notes = [];
   bool _annotationsLoaded = false;
-  // 目前選取範圍（原生 onSelectionChanged 回報），非 null 時於 body
-  // Stack 顯示 AnnotationToolbar；FXL 一律不使用（見
-  // _handleSelectionChanged 開頭防呆）。
-  EpubSelectionInfo? _currentSelection;
-  // 同一次選取中，使用者若已點擊螢光筆/底線建立劃線，暫存其資料庫 id，
-  // 供接著點擊「備註」時把新備註連結到這筆劃線（design.md 使用者流程：
-  // 「若同時已選色/底線，備註與劃線共存於同一筆記錄」）。新選取範圍
-  // 開始時（_handleSelectionChanged）重置為 null。
-  String? _pendingHighlightIdForSelection;
-  // PDF 劃線／備註目前選取狀態（epic-6-annotations Issue 3），由原生端
-  // onSelectionRectComputed 回報；非 null 時於 body Stack 顯示
-  // AnnotationToolbar。與 EPUB 的 _currentSelection 並存但不會同時非
-  // null（同一次只會開啟一種格式的書籍）。
-  PdfSelectionInfo? _currentPdfSelection;
-  String? _pendingPdfHighlightIdForSelection;
-  // Epic 43 Issue 1：EPUB／PDF 共用的劃線/備註 CRUD 深模組。依賴恆由
+  // 「標註」module（epic-54 Issue 24）：目前選取範圍、同一次選取中剛建立
+  // 的劃線 id、本書的劃線與備註清單，以及這些記錄的 CRUD，全由
+  // [AnnotationController] 單一擁有；EPUB 與 PDF 共用同一套流程。它不
+  // 通知，本類別呼叫後自己 setState。依賴恆由
   // [ReaderFeatureDependencies] 提供，直接建構，不再有缺席分支。
-  late final AnnotationSession _annotationSession = AnnotationSession(
+  late final AnnotationController _annotations = AnnotationController(
     highlightsRepository: widget.dependencies.highlightsRepository,
     notesRepository: widget.dependencies.notesRepository,
     bookId: widget.bookId,
@@ -1866,54 +1848,37 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _session.recordActivity(); // 長按選取（劃線）算閱讀活動
     if (_isFixedLayout) return;
     setState(() {
-      _currentSelection = info;
-      _pendingHighlightIdForSelection = null;
+      _annotations.select(AnnotationSelection.fromEpub(info));
     });
   }
 
+  /// 選取結束／取消的共用收尾：EPUB 的 `onSelectionCleared`、PDF 的
+  /// `onSelectionCanceled`、PDF 換頁、關閉工具列、刪除既有標註之後都走
+  /// 這裡。
   void _handleSelectionCleared() {
     if (!mounted) return;
-    setState(() {
-      _currentSelection = null;
-      _pendingHighlightIdForSelection = null;
-    });
+    setState(_annotations.clearSelection);
   }
 
   /// Epic 25 Issue 3：使用者主動點擊 AnnotationToolbar 關閉按鈕時呼叫——
   /// 除了清空 Dart 端選取狀態（比照 [_handleSelectionCleared]）外，額外
-  /// 呼叫 JS 端 window.clearSelection() 清除 WebView 原生選取（藍色反白
-  /// ＋拖曳控點），避免工具列消失後畫面仍殘留原生選取視覺（該視覺層不受
-  /// Dart state 控制，見 main.js window.clearSelection 註解）。PDF 端沒有
-  /// 這個問題（見 Global Constraints「PDF 端不需要對應的原生選取清除
-  /// 機制」的查證結論），故 PDF 呼叫端直接沿用既有
-  /// [_handlePdfSelectionCanceled]，不需要對應的 wrapper。
+  /// 呼叫 `ReaderSurface.clearSelection()` 清除 WebView 原生選取（藍色
+  /// 反白＋拖曳控點），避免工具列消失後畫面仍殘留原生選取視覺（該視覺層
+  /// 不受 Dart state 控制，見 main.js window.clearSelection 註解）。
+  /// PDF 的 `ReaderSurface.clearSelection()` 是空操作
+  /// （pdf_reader_surface.dart），故 EPUB／PDF 共用同一個關閉流程，行為
+  /// 不變（epic-54 Issue 24 決策 9）。
   void _handleCloseAnnotationToolbar() {
     _handleSelectionCleared();
     _surface.clearSelection();
   }
 
   Future<void> _handleDeleteExistingAnnotation(AnnotationListItem item) async {
-    final session = _annotationSession;
-    final snapshot = await session.deleteExisting(item);
+    await _annotations.deleteExisting(item);
     if (!mounted) return;
-    setState(() {
-      _highlights = snapshot.highlights;
-      _notes = snapshot.notes;
-    });
+    setState(() {});
     _sendAnnotationsToNative();
     _handleCloseAnnotationToolbar();
-  }
-
-  Future<void> _handlePdfDeleteExistingAnnotation(AnnotationListItem item) async {
-    final session = _annotationSession;
-    final snapshot = await session.deleteExisting(item);
-    if (!mounted) return;
-    setState(() {
-      _highlights = snapshot.highlights;
-      _notes = snapshot.notes;
-    });
-    _sendAnnotationsToNative();
-    _handlePdfSelectionCanceled();
   }
 
   /// epic-63 Issue 4：選字後按「查字典」。面板自己負責查詢與顯示；這裡只
@@ -1988,86 +1953,45 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 劃線/備註時才顯示編輯工具列；沒命中維持原本「什麼都不做」的行為，
     // 避免任何一次精準點擊（例如翻頁時手指多停留了一下）都意外彈出建立
     // 工具列。非退化選取（有明顯拖曳）的既有行為完全不變。
-    final isDegenerate = info.rect.left == info.rect.right;
-    if (isDegenerate &&
-        resolvePdfExistingAnnotation(
-              pageIndex: info.pageIndex,
-              rect: info.rect,
-              highlights: _highlights,
-              notes: _notes,
-            ) ==
-            null) {
+    if (isIgnoredPdfSelection(
+      info: info,
+      highlights: _annotations.highlights,
+      notes: _annotations.notes,
+    )) {
       return;
     }
     // 放在退化選取守衛之後：沒命中既有標註的零面積長按（例如翻頁時手指多停留
     // 一下）是無效操作，不算閱讀活動；有效的拖曳框選或點選既有標註才算。
     _session.recordActivity();
     setState(() {
-      _currentPdfSelection = info;
-      _pendingPdfHighlightIdForSelection = null;
-    });
-  }
-
-  void _handlePdfSelectionCanceled() {
-    if (!mounted) return;
-    setState(() {
-      _currentPdfSelection = null;
-      _pendingPdfHighlightIdForSelection = null;
+      _annotations.select(AnnotationSelection.fromPdf(info));
     });
   }
 
   Future<void> _handleHighlightStyleSelected(HighlightStyle style) async {
-    final selection = _currentSelection;
-    final session = _annotationSession;
-    if (selection == null) return;
-    final result = await session.createHighlight(
-      locator: AnnotationLocator.epub(
-        locatorJson: selection.locatorJson,
-        progression: selection.progression,
-      ),
-      style: style,
-    );
+    await _annotations.createHighlight(style);
     if (!mounted) return;
-    setState(() {
-      _highlights = result.snapshot.highlights;
-      _notes = result.snapshot.notes;
-      _pendingHighlightIdForSelection = result.highlightId;
-    });
+    setState(() {});
     _sendAnnotationsToNative();
   }
 
+  /// EPUB／PDF 共用的「備註」流程：選取與既有備註的判定交給
+  /// [AnnotationController]，對話框（UI 副作用）留在這裡。
   Future<void> _handleNotePressed() async {
-    final selection = _currentSelection;
-    final session = _annotationSession;
+    final selection = _annotations.selection;
     if (selection == null) return;
-    final existing = resolveEpubExistingAnnotation(
-      existingAnnotationId: selection.existingAnnotationId,
-      highlights: _highlights,
-      notes: _notes,
-    )?.note;
+    final existing = _annotations.existingItem?.note;
     final l10n = AppLocalizations.of(context)!;
     final text = await showNoteTextDialog(
       context,
       initialText: existing?.text ?? '',
       title: existing != null ? l10n.readerAnnotationEditNoteTooltip : l10n.readerAnnotationAddNoteTooltip,
     );
+    // 使用者取消對話框：選取與工具列維持原樣，不算一次修改。
     if (text == null) return;
-    final snapshot = await session.createOrUpdateNote(
-      locator: AnnotationLocator.epub(
-        locatorJson: selection.locatorJson,
-        progression: selection.progression,
-      ),
-      text: text,
-      existing: existing,
-      pendingHighlightId: _pendingHighlightIdForSelection,
-    );
+    await _annotations.saveNote(selection: selection, text: text, existing: existing);
     if (!mounted) return;
-    setState(() {
-      _highlights = snapshot.highlights;
-      _notes = snapshot.notes;
-      _currentSelection = null;
-      _pendingHighlightIdForSelection = null;
-    });
+    setState(() {});
     _sendAnnotationsToNative();
   }
 
@@ -2077,13 +2001,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 呼叫，非只呼叫一次——這裡的 `_annotationsLoaded` 只用於「開書時是否
   /// 已載入過初始清單」，不是「是否曾呼叫過本方法」）。
   Future<void> _reloadAnnotations() async {
-    final session = _annotationSession;
-    final snapshot = await session.reload();
+    await _annotations.reload();
     if (!mounted) return;
-    setState(() {
-      _highlights = snapshot.highlights;
-      _notes = snapshot.notes;
-    });
+    setState(() {});
     _sendAnnotationsToNative();
   }
 
@@ -2098,82 +2018,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (!mounted) return;
     final tokens = Theme.of(context).extension<ElinkTokens>()!;
     _surface.refreshAnnotations(
-      highlights: _highlights,
-      notes: _notes,
+      highlights: _annotations.highlights,
+      notes: _annotations.notes,
       tokens: tokens,
     );
-  }
-
-  Future<void> _handlePdfHighlightStyleSelected(HighlightStyle style) async {
-    final selection = _currentPdfSelection;
-    final session = _annotationSession;
-    if (selection == null) return;
-    final result = await session.createHighlight(
-      locator: AnnotationLocator.pdf(pageIndex: selection.pageIndex, rect: selection.rect),
-      style: style,
-    );
-    if (!mounted) return;
-    setState(() {
-      _highlights = result.snapshot.highlights;
-      _notes = result.snapshot.notes;
-      _pendingPdfHighlightIdForSelection = result.highlightId;
-    });
-    _sendAnnotationsToNative();
-  }
-
-  Future<void> _handlePdfNotePressed() async {
-    final selection = _currentPdfSelection;
-    final session = _annotationSession;
-    if (selection == null) return;
-    final existing = resolvePdfExistingAnnotation(
-      pageIndex: selection.pageIndex,
-      rect: selection.rect,
-      highlights: _highlights,
-      notes: _notes,
-    )?.note;
-    final l10n = AppLocalizations.of(context)!;
-    final text = await showNoteTextDialog(
-      context,
-      initialText: existing?.text ?? '',
-      title: existing != null ? l10n.readerAnnotationEditNoteTooltip : l10n.readerAnnotationAddNoteTooltip,
-    );
-    if (text == null) return;
-    final snapshot = await session.createOrUpdateNote(
-      locator: AnnotationLocator.pdf(pageIndex: selection.pageIndex, rect: selection.rect),
-      text: text,
-      existing: existing,
-      pendingHighlightId: _pendingPdfHighlightIdForSelection,
-    );
-    if (!mounted) return;
-    setState(() {
-      _highlights = snapshot.highlights;
-      _notes = snapshot.notes;
-      _currentPdfSelection = null;
-      _pendingPdfHighlightIdForSelection = null;
-    });
-    _sendAnnotationsToNative();
-  }
-
-  // 浮動工具列估計高度／與選取範圍的間距，PDF 版本（比照 EPUB 的
-  // _annotationToolbarHeight／_annotationToolbarGap 既有常數值，兩者刻意
-  // 保持相同數值，故不重複宣告，直接複用）。
-
-  /// PDF 版本的浮動工具列定位計算，邏輯與 EPUB 的 [_annotationToolbarTop]
-  /// 完全相同（皆為「優先貼在選取範圍上方，空間不足時貼下方」），但參數
-  /// 型別不同（[PdfSelectionInfo] 而非 [EpubSelectionInfo]），故獨立宣告
-  /// 一份而非嘗試合併兩者呼叫端（Surgical Changes 原則：不更動 Issue 2
-  /// 已驗證穩定的 [_annotationToolbarTop] 本體）。
-  double _pdfAnnotationToolbarTop(PdfSelectionInfo selection, Size size) {
-    // 【審查修正 Finding 1】此處 [size] 是整個 widget 尺寸，PAGE_FIT 模式下
-    // 頁面常因長寬比與螢幕不同而產生 letterbox 留白，故改用相對整個
-    // widget（含留白）換算的 [selection.widgetRect]，而非相對 bitmap
-    // 內容範圍的 [selection.rect]（後者仍保留給持久化/重繪使用，見
-    // PdfSelectionInfo 的欄位說明），避免工具列位置隨留白量偏移。
-    final topAboveSelection =
-        selection.widgetRect.top * size.height - _annotationToolbarHeight - _annotationToolbarGap;
-    if (topAboveSelection >= 0) return topAboveSelection;
-    final belowSelection = selection.widgetRect.bottom * size.height + _annotationToolbarGap;
-    return belowSelection.clamp(0.0, size.height - _annotationToolbarHeight);
   }
 
   @override
@@ -2320,34 +2168,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // _buildAppBarTitle() 一併刪除（epic-38-reader-chrome-tts-redesign
   // Issue 1）；_pdfThumbnailMaxWidth 仍被 _openPdfToc() 使用，保留。
   static const double _pdfThumbnailMaxWidth = 120;
-
-  // 浮動工具列估計高度／與選取範圍的間距（初始選擇，真機測試後可能需
-  // 微調，見 Global Constraints「選取矩形座標協定」）。
-  //
-  // 【epic-27-reader-device-compat Issue 11】改為雙列版面後的估計值：
-  // 第一列 5 顆 IconButton（3 色+底線+關閉）＝5*48=240，第二列最多 3 顆
-  // （複製/備註/刪除）＝3*48=144，寬度取兩列較大者 240，加上外層 Padding
-  // 左右各 8dp＝256；高度為兩列各 48dp 加上外層 Padding 上下各 4dp＝104。
-  // 這是估計值，不是嚴謹量測結果——若 widget test（例如既有的「工具列
-  // 右緣不應超出畫面寬度」測試）顯示與實際渲染尺寸有落差，以測試回報的
-  // 真實數值為準調整這兩個常數，不可保留錯誤估計值。
-  static const _annotationToolbarHeight = 104.0;
-  static const _annotationToolbarGap = 8.0;
-  static const _annotationToolbarWidth = 256.0;
-
-  /// 【審查修正】原本無條件把工具列定位在選取範圍上方、clamp 到
-  /// `>= 0`，若選取範圍太靠近頂端（`topPct * height < 工具列高度`），
-  /// clamp 後的 `top` 會落在 0，導致工具列往下遮住選取範圍第一行文字
-  /// （clamp 只保證不跑到畫面外，不保證不遮擋選取範圍本身）。改為：
-  /// 選取範圍上方若有足夠空間才貼在上方；空間不足時改貼在選取範圍
-  /// 下方，兩種情況下工具列都不會覆蓋選取矩形本體。
-  double _annotationToolbarTop(EpubSelectionInfo selection, Size size) {
-    final topAboveSelection =
-        selection.rect.top * size.height - _annotationToolbarHeight - _annotationToolbarGap;
-    if (topAboveSelection >= 0) return topAboveSelection;
-    final belowSelection = selection.rect.bottom * size.height + _annotationToolbarGap;
-    return belowSelection.clamp(0.0, size.height - _annotationToolbarHeight);
-  }
 
   /// 頂部 Chrome 列的 `Positioned` 包裝（epic-38-reader-chrome-tts-redesign
   /// Issue 1 審查修正；2026-09-10 修正：頁首／工具列拆成兩組各自獨立的
@@ -2760,26 +2580,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final body = LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest;
-        final selection = _currentSelection;
-        final pdfSelection = _currentPdfSelection;
+        final selection = _annotations.selection;
         // epic-27-reader-device-compat Issue 11：每次 build 都重新計算，
-        // 不快取在 State 欄位——_highlights/_notes 可能在選取進行中被其他
-        // 途徑更動，重新計算才能保證資料是最新的。
-        final existingItem = selection == null
-            ? null
-            : resolveEpubExistingAnnotation(
-                existingAnnotationId: selection.existingAnnotationId,
-                highlights: _highlights,
-                notes: _notes,
-              );
-        final pdfExistingItem = pdfSelection == null
-            ? null
-            : resolvePdfExistingAnnotation(
-                pageIndex: pdfSelection.pageIndex,
-                rect: pdfSelection.rect,
-                highlights: _highlights,
-                notes: _notes,
-              );
+        // 不快取在 State 欄位——劃線/備註清單可能在選取進行中被其他途徑
+        // 更動，重新計算才能保證資料是最新的（EPUB 以
+        // existingAnnotationId、PDF 以矩形重疊判斷）。
+        final existingItem = _annotations.existingItem;
         return Stack(
           key: const Key('reader_body_stack'),
           children: [
@@ -2917,15 +2723,26 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                     ),
             if (selection != null)
               Positioned(
-                left: (selection.rect.left * size.width)
-                    .clamp(0.0, size.width - _annotationToolbarWidth),
-                top: _annotationToolbarTop(selection, size),
+                // 錨點取 selection.anchorRect：EPUB 是 rect、PDF 是
+                // widgetRect（含 letterbox 留白），避免工具列位置隨留白量
+                // 偏移（見 annotation_toolbar_layout.dart）。
+                left: annotationToolbarLeft(
+                  anchorRect: selection.anchorRect,
+                  size: size,
+                ),
+                top: annotationToolbarTop(
+                  anchorRect: selection.anchorRect,
+                  size: size,
+                ),
                 child: AnnotationToolbar(
                   onStyleSelected: _handleHighlightStyleSelected,
                   onNotePressed: _handleNotePressed,
                   onClosePressed: _handleCloseAnnotationToolbar,
                   onCopyPressed: () => _handleCopySelection(selection.text),
-                  onLookupPressed: () => _handleLookupPressed(selection.text),
+                  // 查字典只有 Foliate 格式有（PDF 沒有字典查詢路徑）。
+                  onLookupPressed: _surface.foliate == null
+                      ? null
+                      : () => _handleLookupPressed(selection.text),
                   onDeletePressed: existingItem == null
                       ? null
                       : () => _handleDeleteExistingAnnotation(existingItem),
@@ -2933,28 +2750,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       ? null
                       : _annotationDeleteButtonLabel(existingItem),
                   hasExistingNote: existingItem?.note != null,
-                  isEinkMode: widget.isEinkMode,
-                ),
-              ),
-            if (pdfSelection != null)
-              Positioned(
-                // 同上（見 _pdfAnnotationToolbarTop 註解）：改用相對整個
-                // widget 尺寸的 widgetRect，避免 letterbox 留白造成偏移。
-                left: (pdfSelection.widgetRect.left * size.width)
-                    .clamp(0.0, size.width - _annotationToolbarWidth),
-                top: _pdfAnnotationToolbarTop(pdfSelection, size),
-                child: AnnotationToolbar(
-                  onStyleSelected: _handlePdfHighlightStyleSelected,
-                  onNotePressed: _handlePdfNotePressed,
-                  onClosePressed: _handlePdfSelectionCanceled,
-                  onCopyPressed: () => _handleCopySelection(pdfSelection.text),
-                  onDeletePressed: pdfExistingItem == null
-                      ? null
-                      : () => _handlePdfDeleteExistingAnnotation(pdfExistingItem),
-                  deleteButtonLabel: pdfExistingItem == null
-                      ? null
-                      : _annotationDeleteButtonLabel(pdfExistingItem),
-                  hasExistingNote: pdfExistingItem?.note != null,
                   isEinkMode: widget.isEinkMode,
                 ),
               ),
@@ -3352,7 +3147,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             _prefs.copyWith(pdfCropRect: rect),
           ),
           onSelectionRectComputed: _handlePdfSelectionRectComputed,
-          onSelectionCanceled: _handlePdfSelectionCanceled,
+          onSelectionCanceled: _handleSelectionCleared,
           navZoneActions: resolved.navZoneActions,
           onZoneAction: _handleZoneAction,
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
@@ -3424,9 +3219,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           // EPUB 那種 WebView 切頁自動清空 window.getSelection() 的
           // 瀏覽器原生語意可依賴，換頁時需主動清除既有選取與工具列，
           // 避免選取範圍/AnnotationToolbar 殘留在已經翻過的頁面上。
-          if (_currentPdfSelection != null) _handlePdfSelectionCanceled();
+          if (_annotations.selection != null) _handleSelectionCleared();
           // 審查修正：換頁當下若長按拖曳框選仍進行中（尚未放開手指），
-          // 上面的 guard 不會觸發（_currentPdfSelection 此時仍是
+          // 上面的 guard 不會觸發（_annotations.selection 此時仍是
           // null），但 PdfReaderView 內部進行中的拖曳狀態不受換頁影響，
           // 放開手指後仍會用換頁前的舊頁面座標重新彈出 Toolbar，一併
           // 中止它，見 PdfReaderView.cancelActiveSelectionDrag 文件。
@@ -3442,7 +3237,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         if (format == BookFormat.pdf) {
           _surface.nextPage();
           // Epic 24 Issue 10：理由同上方 previousPage 分支。
-          if (_currentPdfSelection != null) _handlePdfSelectionCanceled();
+          if (_annotations.selection != null) _handleSelectionCleared();
           // 審查修正：理由同上方 previousPage 分支。
           _surface.pdf!.cancelActiveSelectionDrag();
         } else if (isFoliateFormat(format)) {
