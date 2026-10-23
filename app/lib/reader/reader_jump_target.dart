@@ -24,7 +24,15 @@ class ReaderJumpTarget {
   /// 為 `null` 時，仍會正常跳轉頁面，只是不顯示暫態高亮。
   final PercentRect? pdfRect;
 
-  const ReaderJumpTarget({this.cfi, this.pdfPageIndex, this.pdfRect});
+  /// Foliate 格式的目標進度比例（0.0～1.0），進度條拖動用；與 [cfi] 擇一。
+  final double? progression;
+
+  const ReaderJumpTarget({
+    this.cfi,
+    this.pdfPageIndex,
+    this.pdfRect,
+    this.progression,
+  });
 
   /// 從 `SearchRepository.searchContent()` 回傳的
   /// `ContentMatchSnippet.locator` 建構跳轉目標（spec.md §1／§6）：
