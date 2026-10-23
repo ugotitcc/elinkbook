@@ -139,7 +139,7 @@ bool isIgnoredPdfSelection({required PdfSelectionInfo info, required List<Highli
   - 刪除與關閉：`_handleDeleteExistingAnnotation`／`_handlePdfDeleteExistingAnnotation` 合成：`await _annotations.deleteExisting(item)` → `mounted` → `setState` → `_sendAnnotationsToNative()` → `_handleCloseAnnotationToolbar()`。`_handleCloseAnnotationToolbar` = `_handleSelectionCleared()` ＋ `_surface.clearSelection()`，PDF 與 EPUB 共用。
   - 工具列：刪 `_annotationToolbarTop`、`_pdfAnnotationToolbarTop` 與三個常數；build 內兩個 `Positioned(AnnotationToolbar)` 合成一個（`_annotations.selection != null` 時以 `annotationToolbarLeft/Top` 定位，錨點取 `selection.anchorRect`；`onLookupPressed` 只在 `_surface.foliate != null` 時傳入；`existingItem` 取自 `_annotations.existingItem`，刪除 build 內原本的 `existingItem`／`pdfExistingItem` 區域變數；`onStyleSelected`／`onNotePressed`／`onDeletePressed` 改指合併後的方法，PDF 專屬回呼不再存在，計畫審查 I-3）。
   - 驗證：跑 `reader_screen_test.dart` 全檔（含標註約 4676–5010、PDF 約 8713–9125、10262–10451）、`annotation_toolbar_test.dart`、`reader_screen_surface_test.dart`、`reader_screen_stats_activity_test.dart`、`annotation_controller_test.dart`。commit。
-- [ ] **Step 3（刪舊；一個 commit）：** `git rm app/lib/reader/annotation_session.dart`；`grep -rn "annotation_session\|AnnotationSession\|AnnotationSnapshot" app/lib app/test` 應為 0（不含註解）；`flutter analyze`；commit。
+- [x] **Step 3（刪舊；一個 commit）：** `git rm app/lib/reader/annotation_session.dart`；`grep -rn "annotation_session\|AnnotationSession\|AnnotationSnapshot" app/lib app/test` 應為 0（不含註解）；`flutter analyze`；commit。
 
 ### Task 4：收尾
 
