@@ -370,7 +370,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // Sheet 內顯示載入中」UI 型態。
   bool _tocLoaded = false;
   // EPUB 劃線／備註快取（epic-6-annotations Issue 2），由
-  // _reloadAnnotationsAndRefreshDecorations() 統一載入與更新。
+  // _reloadAnnotations() 統一載入與更新。
   List<Highlight> _highlights = [];
   List<Note> _notes = [];
   bool _annotationsLoaded = false;
@@ -1516,9 +1516,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             _surface.jumpTo(ReaderJumpTarget(pdfPageIndex: pdfPageIndex));
           }
         },
-        onAnnotationsChanged: format == BookFormat.pdf
-            ? _reloadPdfAnnotationsAndSync
-            : _reloadAnnotationsAndRefreshDecorations,
+        onAnnotationsChanged: _reloadAnnotations,
         onBookmarkSelected: (bookmark) {
           Navigator.of(context).pop();
           if (bookmark.epubLocatorJson != null) {
@@ -1561,7 +1559,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (detectBookFormat(_activeFilePath) == BookFormat.pdf &&
         !_annotationsLoaded) {
       _annotationsLoaded = true;
-      _reloadPdfAnnotationsAndSync();
+      _reloadAnnotations();
     }
     // epic-24-pdf-engine-rebuild Issue 5：PDF 目錄背景載入，比照上方
     // _annotationsLoaded 的既有旗標模式（先設 true 再發起非同步呼叫，避免
@@ -1817,7 +1815,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// `isFixedLayout`（`main.js` 轉發 `view.isFixedLayout`，見
   /// `parseFoliateLayoutResolved`），故此處收到的 `info.isFixedLayout`
   /// 可信；`widget.isFixedLayout == true`（強制 FXL）的保護維持不變。觸發
-  /// `_reloadAnnotationsAndRefreshDecorations` 以載入劃線備註——`_sendDecorationsToNative()`
+  /// `_reloadAnnotations` 以載入劃線備註——`_sendAnnotationsToNative()`
   /// 現已無條件使用 `FoliateReaderView.setDecorations`，FXL 書籍的
   /// 劃線/備註疊圖已生效（Issue 4 修正）。
   void _handleFoliateLayoutResolved(EpubLayoutInfo info) {
@@ -1849,7 +1847,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
     if (!_annotationsLoaded) {
       _annotationsLoaded = true;
-      _reloadAnnotationsAndRefreshDecorations();
+      _reloadAnnotations();
     }
   }
 
@@ -1902,7 +1900,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _highlights = snapshot.highlights;
       _notes = snapshot.notes;
     });
-    _sendDecorationsToNative();
+    _sendAnnotationsToNative();
     _handleCloseAnnotationToolbar();
   }
 
@@ -1914,7 +1912,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _highlights = snapshot.highlights;
       _notes = snapshot.notes;
     });
-    _sendPdfAnnotationsToNative();
+    _sendAnnotationsToNative();
     _handlePdfSelectionCanceled();
   }
 
@@ -2035,7 +2033,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _notes = result.snapshot.notes;
       _pendingHighlightIdForSelection = result.highlightId;
     });
-    _sendDecorationsToNative();
+    _sendAnnotationsToNative();
   }
 
   Future<void> _handleNotePressed() async {
@@ -2070,14 +2068,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _currentSelection = null;
       _pendingHighlightIdForSelection = null;
     });
-    _sendDecorationsToNative();
+    _sendAnnotationsToNative();
   }
 
-  /// 重新查詢本書全部劃線/備註並送給原生端重繪 Decorator（比照 TOC 的
+  /// 重新查詢本書全部劃線/備註並送給原生端重畫（EPUB 走 Decorator、PDF
+  /// 走 Bitmap 疊加，由 [_sendAnnotationsToNative] 統一轉給閱讀面；比照 TOC 的
   /// 「只在尚未載入過才抓取」慣例，但本方法每次 CRUD 後皆會主動重新
   /// 呼叫，非只呼叫一次——這裡的 `_annotationsLoaded` 只用於「開書時是否
   /// 已載入過初始清單」，不是「是否曾呼叫過本方法」）。
-  Future<void> _reloadAnnotationsAndRefreshDecorations() async {
+  Future<void> _reloadAnnotations() async {
     final session = _annotationSession;
     final snapshot = await session.reload();
     if (!mounted) return;
@@ -2085,14 +2084,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _highlights = snapshot.highlights;
       _notes = snapshot.notes;
     });
-    _sendDecorationsToNative();
+    _sendAnnotationsToNative();
   }
 
-  /// 無條件使用 `FoliateReaderView.setDecorations`（Issue 4 修正：
+  /// 把目前劃線/備註清單整組送給閱讀面重畫——EPUB／PDF 共用同一個
+  /// `ReaderSurface.refreshAnnotations`。
+  ///
+  /// EPUB 端無條件使用 `FoliateReaderView.setDecorations`（Issue 4 修正：
   /// FXL 書籍的劃線/備註疊圖從本工單起才第一次真正生效，先前因
   /// `_dispatchedIsFixedLayout` 分派到已無人建構的 `EpubReaderView` 而
   /// 靜默失敗）。
-  void _sendDecorationsToNative() {
+  void _sendAnnotationsToNative() {
     if (!mounted) return;
     final tokens = Theme.of(context).extension<ElinkTokens>()!;
     _surface.refreshAnnotations(
@@ -2101,7 +2103,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       tokens: tokens,
     );
   }
-
 
   Future<void> _handlePdfHighlightStyleSelected(HighlightStyle style) async {
     final selection = _currentPdfSelection;
@@ -2117,7 +2118,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _notes = result.snapshot.notes;
       _pendingPdfHighlightIdForSelection = result.highlightId;
     });
-    _sendPdfAnnotationsToNative();
+    _sendAnnotationsToNative();
   }
 
   Future<void> _handlePdfNotePressed() async {
@@ -2150,32 +2151,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _currentPdfSelection = null;
       _pendingPdfHighlightIdForSelection = null;
     });
-    _sendPdfAnnotationsToNative();
-  }
-
-  /// 重新查詢本書全部劃線/備註並送給原生端重繪 Bitmap 疊加（PDF 版本，
-  /// 比照 EPUB 的 [_reloadAnnotationsAndRefreshDecorations]）。共用同一組
-  /// [_highlights]／[_notes] state 欄位——單一 ReaderScreen 會話只會載入
-  /// 其中一種格式的書籍，不會同時混用。
-  Future<void> _reloadPdfAnnotationsAndSync() async {
-    final session = _annotationSession;
-    final snapshot = await session.reload();
-    if (!mounted) return;
-    setState(() {
-      _highlights = snapshot.highlights;
-      _notes = snapshot.notes;
-    });
-    _sendPdfAnnotationsToNative();
-  }
-
-  void _sendPdfAnnotationsToNative() {
-    if (!mounted) return;
-    final tokens = Theme.of(context).extension<ElinkTokens>()!;
-    _surface.refreshAnnotations(
-      highlights: _highlights,
-      notes: _notes,
-      tokens: tokens,
-    );
+    _sendAnnotationsToNative();
   }
 
   // 浮動工具列估計高度／與選取範圍的間距，PDF 版本（比照 EPUB 的
