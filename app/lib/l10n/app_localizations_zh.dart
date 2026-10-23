@@ -2433,6 +2433,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dictionaryImportLargeFileHint => '檔案較大，匯入可能需要較長時間';
 
   @override
+  String get readerTocLoadingMessage => '目錄載入中，請稍候';
+
+  @override
   String get dictionaryImportConfirm => '匯入';
 
   @override
@@ -4996,6 +4999,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get dictionaryImportLargeFileHint => '文件较大，导入可能需要较长时间';
 
   @override
+  String get readerTocLoadingMessage => '目录加载中，请稍候';
+
+  @override
   String get dictionaryImportConfirm => '导入';
 
   @override
@@ -7557,6 +7563,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dictionaryImportLargeFileHint => '檔案較大，匯入可能需要較長時間';
+
+  @override
+  String get readerTocLoadingMessage => '目錄載入中，請稍候';
 
   @override
   String get dictionaryImportConfirm => '匯入';
