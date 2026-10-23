@@ -1,6 +1,6 @@
 # `epic-63-dictionary-lookup` 字典查詢（離線匯入＋可選線上查詞）
 
-**狀態：** 🟡 開發中 (Active)（Issue 1 至 7 已合併，Issue 8 進行中）
+**狀態：** 🟡 開發中 (Active)（Issue 1 至 8 已合併，待人類決定歸檔）
 **存放路徑：** `docs/epics/epic-63-dictionary-lookup/`
 **關聯文件：** `spec.md`、`issues.md`
 **調查文件：** `docs/research/dictionary/PHASE1_AUDIT.md`、`DICTIONARY_FORMATS_AND_LICENSES.md`、`READEST_ANALYSIS_AND_PROPOSAL.md`
@@ -53,7 +53,7 @@
 | 6a MDX 匯入、詞條顯示、交叉參照與錨點、返回堆疊 | done（2026-10-21） | #350 | `MdxReader` ＋ vendor 修補的 `dict_reader`；詞條在關閉 JavaScript 的 WebView 顯示，`entry://`／`bword://` 交叉參照與同詞條錨點可用；分段選擇器加返回堆疊。E-Ink 真實 CJK 大檔記憶體與鍵比對延遲已量測。 |
 | 6b MDX 圖片、獨立 CSS、深色與 E-Ink 配色 | done（2026-10-22） | #352 | `.mdd` 圖片經 `DictionaryService` 提供、外部 `.css` 依 `<link href>` 檔名內嵌、深色與 E-Ink 配色覆寫。驗收 25 僅部分證實，固定版面與 CBZ 縮放未真機驗證（見 PR 說明）。 |
 | 7 線上查詞（萌典）、同意對話框、隱私更新 | done（2026-10-21） | #351 | 預設關閉；第一次開啟前顯示同意對話框，同意狀態存 `onlineConsentAt`；未同意零請求。請求只帶 `word`、僅 `https`、5 秒逾時，結果原文顯示並附固定來源標示。 |
-| 8 授權頁、隱私頁、l10n 收尾、整合測試 | 進行中 | | 授權頁補萌典與 CC-CEDICT 資料來源標示、`dict_reader` 修補版註記；PRD 與 `CONTEXT.md` 詞條、ADR 0038／0039、`CLAUDE.md` 字典查詢段落；驗收 1 至 39 逐項盤點與缺口測試。 |
+| 8 授權頁、隱私頁、l10n 收尾、整合測試 | done（2026-10-23） | #353 | 授權頁補萌典與 CC-CEDICT 資料來源標示、`dict_reader` 修補版註記；PRD 與 `CONTEXT.md` 詞條、ADR 0038／0039、`CLAUDE.md` 字典查詢段落；驗收 1 至 39 逐項盤點與缺口測試。 |
 
 **Issue 3 規劃時要處理（Issue 2 程式審查延後項，見 `reviews/review-code-issue-2.md`）——Issue 3、5 已完成，以下皆已處理：**
 - M-7：`insertEntries` 不分批，匯入器要自己每批 2,000 筆。
