@@ -3267,6 +3267,10 @@
   "@dictionaryImportLargeFileHint": {
     "description": "匯入對話框的大檔案提示（超過 50 MB）"
   },
+  "dictionaryImportDirectionRequiredHint": "請先選擇查詢方向",
+  "@dictionaryImportDirectionRequiredHint": {
+    "description": "匯入對話框：還沒選查詢方向時，顯示在方向選項下方的提示，說明匯入鈕為什麼不能按"
+  },
   "dictionaryImportConfirm": "匯入",
   "@dictionaryImportConfirm": {
     "description": "匯入對話框的確認按鈕"
