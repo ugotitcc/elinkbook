@@ -24,6 +24,7 @@ import '../../dictionary/mdx_html_prepare.dart';
 import '../../dictionary/mdx_link_policy.dart';
 import '../../dictionary/mdx_resource.dart';
 import '../../dictionary/mdx_theme_override.dart';
+import '../../reader/platform_view_frame_flush.dart';
 
 /// 建立 MDX 詞條顯示元件的函式；面板用注入的版本測試版面與返回堆疊。
 typedef MdxEntryViewBuilder = Widget Function(
@@ -218,6 +219,13 @@ class MdxEntryView extends StatefulWidget {
 
 class _MdxEntryViewState extends State<MdxEntryView> {
   InAppWebViewController? _controller;
+
+  @override
+  void dispose() {
+    // WebView 平台檢視關閉後補送畫面，讓引擎拆開 raster／主執行緒併合（epic-64）。
+    flushFramesAfterPlatformViewRemoved();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(covariant MdxEntryView oldWidget) {

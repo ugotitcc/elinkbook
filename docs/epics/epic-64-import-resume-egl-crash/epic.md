@@ -49,6 +49,33 @@ F libc    : Fatal signal 6 (SIGABRT), code -6 (SI_TKILL) in tid 13820 (1.raster)
 
 缺陷修復。先以 `/diagnose` 建立可控重現（開選擇器 → 返回 → 記 red/green），再決定修法（例如：關閉 Impeller 走 Skia、升級／更換 Flutter 引擎、或在原生端處理 surface 重建）。是否要寫 `plan-issue-N.md` 由人類在診斷後決定；保留程式審查（報告存 `reviews/`，不進版控）。
 
+## 診斷結果（2026-10-23，WAVE，Flutter 3.47.4，Impeller GLES）
+
+**症狀範圍比原本以為的大：** 不只檔案選擇器。**任何「離開 App 再回來」都會中**（選擇器、Home、切換 App），前提是**同一個行程之前開過閱讀器（`InAppWebView` 平台檢視）**。行程活著但畫面永久全黑／全白，或 Impeller `FATAL` → SIGABRT。
+
+**證據：**
+- 使用者手動重現三次：選擇器關閉後 1 毫秒內 raster 執行緒 `EGL_BAD_ACCESS`（no current context）。
+- 自動化重現腳本 `repro/wave_egl_seq.ps1`（步驟 R=開關閱讀器、P=選擇器、H=Home、F=補畫面）。修法前：`HRH` 紅燈 2/2、`PRP` 紅燈 1/1、`RPRP` 紅燈 2/2；`RP`、`RRRRP`、`PPPPPP`（沒開過閱讀器）、`HRFH` 全綠。
+- 這台 GPU 是 PowerVR Rogue GE8300；引擎原始碼 `android_surface_gl_impeller.cc` 的 `ShouldClearContextBetweenFrames()` 註解描述同一類驅動競爭條件（PowerVR Rogue GE8320，Activity 切換＋平台檢視期間的 `eglMakeCurrent`），但只對 Android ≤ 10 的 MT6762／MT6765 開啟，不涵蓋 WAVE（Android 12，`sun50iw10p1`）。
+
+**根因（推論，由 A/B 支持，未用引擎偵錯器直接證實）：** 有平台檢視時 Flutter 把 raster 執行緒併進主執行緒，要送出若干個畫面才拆開。電子紙閒置時幾乎不出畫面，閱讀器關閉後併合狀態一直留著；此時畫面表面重建（`RecreateOnscreenSurfaceAndMakeOnscreenContextCurrent`）在主執行緒把 EGL context 設成 current，之後 raster 執行緒 `eglMakeCurrent` 得到 `EGL_BAD_ACCESS`。A/B：`HRH` 紅燈 2/2，同序列在關閉閱讀器後人為補約 16 個畫面（`HRFH`）綠燈 2/2。
+
+**修法：** `lib/reader/platform_view_frame_flush.dart` 的 `flushFramesAfterPlatformViewRemoved()`：`FoliateReaderView` 與 `MdxEntryView` 的 `dispose()` 後補送 12 個畫面，補完停止。修法後同一台 WAVE：`HRH` 綠 2/2、`PRP` 綠 1/1、反覆「開閱讀器＋選擇器」8 輪綠 1/1。
+
+**已排除的方向：**
+- 關閉 Impeller：這版 Android 引擎已移除 Skia（`SLIMPELLER`），`enable-impeller=false` 旗標被忽略。
+- `RenderMode.texture`：選擇器返回 3 次正常，但「Recents 滑掉再開」與先開過閱讀器的行程重開仍出現 `EGL_BAD_ACCESS` 白畫面；且冷啟動期間畫面全白。已還原。
+- `--enable-hcpp-and-surface-control`：log 顯示仍是 `legacy platform view rendering strategy`，旗標無效，不算有效 A/B。
+- `ImpellerBackend=vulkan`：引擎只在 debug／profile 接受，release 不可用。
+
+**限制：**
+- 只在 debug 版、`adb` 自動化操作下驗證；**尚未由使用者在 WAVE 手動重複原本會黑的操作確認**。
+- 字典面板的 `MdxEntryView` 補畫面同一個機制，但沒有單獨用 loop 驗證。
+- 沒有量測 release 版；補畫面是否造成電子紙多餘刷新（閃爍）要用眼睛看。
+- 這是繞過引擎／驅動問題的 App 層緩解，不是根治。根治需要引擎把這類 GPU（Allwinner／PowerVR Rogue）加進 `ShouldClearContextBetweenFrames()`，或改用自編引擎；可考慮向 Flutter 回報。
+
 ## 開發記錄
+
+**2026-10-23** 診斷、重現腳本、修法與驗證，見上方「診斷結果」。待使用者手動驗證。
 
 **2026-10-23** 登錄 Epic。來源：`epic-63-dictionary-lookup` Issue 8 Task 5 真機驗收（2026-10-22 23:41～23:56 三次）。尚未診斷，尚未寫任何程式。issue 見 `issues.md`。
