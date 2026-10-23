@@ -123,6 +123,31 @@ void main() {
     expect(confirm().onPressed, isNotNull);
   });
 
+  testWidgets('還沒選方向時，選項下方顯示「請先選擇查詢方向」，選了就消失', (tester) async {
+    await _open(tester, onResult: (_) {});
+    final hint = find.byKey(const Key('dictionary_import_direction_hint'));
+    expect(hint, findsOneWidget);
+    expect(find.text('請先選擇查詢方向'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const Key('dictionary_import_direction_zhToZh')),
+    );
+    await tester.pumpAndSettle();
+    expect(hint, findsNothing);
+  });
+
+  testWidgets('已有預選方向時不顯示方向提示', (tester) async {
+    await _open(
+      tester,
+      initialDirection: DictionaryDirection.enToZh,
+      onResult: (_) {},
+    );
+    expect(
+      find.byKey(const Key('dictionary_import_direction_hint')),
+      findsNothing,
+    );
+  });
+
   testWidgets('名稱與授權預填 hints，可修改，確認時回傳修改後的值', (tester) async {
     ImportChoices? result;
     await _open(

@@ -4301,6 +4301,12 @@ abstract class AppLocalizations {
   /// **'檔案較大，匯入可能需要較長時間'**
   String get dictionaryImportLargeFileHint;
 
+  /// 匯入對話框：還沒選查詢方向時，顯示在方向選項下方的提示，說明匯入鈕為什麼不能按
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'請先選擇查詢方向'**
+  String get dictionaryImportDirectionRequiredHint;
+
   /// 匯入對話框的確認按鈕
   ///
   /// In zh_TW, this message translates to:
