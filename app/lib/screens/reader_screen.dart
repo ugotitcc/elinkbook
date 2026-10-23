@@ -1417,8 +1417,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         },
         thumbnailTabContent: PdfThumbnailPanel(
           totalPages: _pdfPageInfo?.totalPages ?? 0,
-          renderThumbnail: (pageIndex) => PdfReaderView.renderThumbnail(
-            _pdfReaderViewKey,
+          renderThumbnail: (pageIndex) => _surface.pdf!.renderThumbnail(
             pageIndex,
             maxWidth: pdfThumbnailMaxWidth,
           ),
@@ -1448,7 +1447,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final requestId = ++_pdfSearchRequestId;
     if (query.isEmpty) {
       _pdfSearchMatches = const [];
-      PdfReaderView.setSearchHighlights(_pdfReaderViewKey, const [], currentIndex: null);
+      _surface.pdf!.setSearchHighlights(const [], currentIndex: null);
       _pdfSearchStateNotifier.value = const PdfSearchState.initial();
       return;
     }
@@ -1458,11 +1457,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       matchCount: 0,
       currentIndex: null,
     );
-    final matches = await PdfReaderView.search(_pdfReaderViewKey, query);
+    final matches = await _surface.pdf!.search(query);
     if (!mounted || requestId != _pdfSearchRequestId) return;
     _pdfSearchMatches = matches;
     final currentIndex = matches.isEmpty ? null : 0;
-    PdfReaderView.setSearchHighlights(_pdfReaderViewKey, matches, currentIndex: currentIndex);
+    _surface.pdf!.setSearchHighlights(matches, currentIndex: currentIndex);
     if (currentIndex != null) {
       _surface.pdf!.jumpToPageAtRect(
         matches[currentIndex].pageIndex,
@@ -1483,7 +1482,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_pdfSearchMatches.isEmpty) return;
     final current = _pdfSearchStateNotifier.value.currentIndex ?? -1;
     final next = (current + delta) % _pdfSearchMatches.length;
-    PdfReaderView.setSearchHighlights(_pdfReaderViewKey, _pdfSearchMatches, currentIndex: next);
+    _surface.pdf!.setSearchHighlights(_pdfSearchMatches, currentIndex: next);
     _surface.pdf!.jumpToPageAtRect(
       _pdfSearchMatches[next].pageIndex,
       _pdfSearchMatches[next].rect,
