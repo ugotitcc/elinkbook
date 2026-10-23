@@ -16,12 +16,16 @@ class EBSheetShell extends StatelessWidget {
   /// 標題列版面。
   final List<Widget> actions;
 
+  /// 抽屜高度上限佔螢幕高度的比例，預設 85%。
+  final double maxHeightFactor;
+
   const EBSheetShell({
     super.key,
     required this.title,
     required this.child,
     this.isEinkMode = false,
     this.actions = const [],
+    this.maxHeightFactor = 0.85,
   });
 
   /// `isEinkMode: true` 時用 `AnimationStyle.noAnimation`（`duration`／
@@ -45,6 +49,7 @@ class EBSheetShell extends StatelessWidget {
     required WidgetBuilder builder,
     bool isEinkMode = false,
     Color? barrierColor,
+    double maxHeightFactor = 0.85,
   }) {
     // 深色的外框是直角（見 [build]），面板仍是預設圓角時外框四角會突出，所以
     // 深色也改直角；陰影在深色下本來就看不見，維持預設。
@@ -59,6 +64,7 @@ class EBSheetShell extends StatelessWidget {
       builder: (context) => EBSheetShell(
         title: title,
         isEinkMode: isEinkMode,
+        maxHeightFactor: maxHeightFactor,
         child: Builder(builder: builder),
       ),
     );
@@ -75,7 +81,7 @@ class EBSheetShell extends StatelessWidget {
         // 會在平板等大螢幕上產生巨大無意義留白）；超出上限時內部改採
         // ListView 滾動（由呼叫端的 child 自行決定，本元件不強制）。
         constraints: BoxConstraints(
-          maxHeight: screenHeight * 0.85,
+          maxHeight: screenHeight * maxHeightFactor,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

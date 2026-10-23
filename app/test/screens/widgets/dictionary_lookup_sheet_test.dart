@@ -187,6 +187,7 @@ Future<void> _pumpSheetInShell(
         alignment: Alignment.bottomCenter,
         child: EBSheetShell(
           title: '查字典',
+          maxHeightFactor: kDictionarySheetMaxHeightFactor,
           child: DictionaryLookupSheet(
             selectedText: '詞',
             response: response,
@@ -1083,7 +1084,7 @@ void main() {
       expect(find.byKey(const Key('dictionary_lookup_not_found')), findsWidgets);
     });
 
-    testWidgets('HTML 詞條撐滿面板高度，切回純文字分段後縮回', (tester) async {
+    testWidgets('HTML 詞條撐滿面板高度（多分段時純文字分段也維持同高）', (tester) async {
       final recorder = _MdxRecorder();
       await _pumpSheetInShell(
         tester,
@@ -1100,7 +1101,7 @@ void main() {
       final shellHeight = tester.getSize(find.byType(EBSheetShell)).height;
       expect(
         shellHeight,
-        moreOrLessEquals(screenHeight * 0.85, epsilon: 1),
+        moreOrLessEquals(screenHeight * 0.8, epsilon: 1),
       );
       final htmlHeight =
           tester.getSize(find.byType(DictionaryLookupSheet)).height;
@@ -1113,8 +1114,31 @@ void main() {
       expect(tester.takeException(), isNull);
       final plainHeight =
           tester.getSize(find.byType(DictionaryLookupSheet)).height;
-      expect(plainHeight, lessThan(htmlHeight));
-      expect(plainHeight, lessThan(screenHeight * 0.5));
+      expect(plainHeight, moreOrLessEquals(htmlHeight, epsilon: 0.5));
+    });
+
+    testWidgets('多個分段時面板高度固定，切換分段不跳動且不超過螢幕 80%', (tester) async {
+      final recorder = _MdxRecorder();
+      await _pumpSheetInShell(
+        tester,
+        mdxEntryViewBuilder: recorder.build,
+        response: Future.value(twoSegments()),
+      );
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+
+      // 預設分段與切換後的分段（HTML 與純文字）高度必須一樣。
+      final firstHeight = tester.getSize(find.byType(EBSheetShell)).height;
+      await tester.tap(find.text('MDX 典'));
+      await tester.pump();
+      final mdxHeight = tester.getSize(find.byType(EBSheetShell)).height;
+      await tester.tap(find.text('乙典'));
+      await tester.pump();
+      final plainHeight = tester.getSize(find.byType(EBSheetShell)).height;
+
+      expect(mdxHeight, moreOrLessEquals(firstHeight, epsilon: 0.5));
+      expect(plainHeight, moreOrLessEquals(mdxHeight, epsilon: 0.5));
+      expect(plainHeight, lessThanOrEqualTo(screenHeight * 0.8 + 0.5));
     });
 
     testWidgets('詞條連結查得到時顯示新詞條，返回鈕可逐層回退', (tester) async {

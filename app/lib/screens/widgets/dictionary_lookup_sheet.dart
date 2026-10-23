@@ -11,6 +11,9 @@ import '../../l10n/app_localizations.dart';
 import 'eb_sheet_shell.dart';
 import 'mdx_entry_view.dart';
 
+/// 字典面板高度上限佔螢幕高度的比例；多個分段時面板固定在這個高度。
+const double kDictionarySheetMaxHeightFactor = 0.8;
+
 /// 字典查詢面板（epic-63 Issue 4）：顯示 [DictionaryService.lookup] 的結果。
 ///
 /// 純 Flutter，HTML 詞條交給注入的 [MdxEntryViewBuilder]（預設
@@ -88,6 +91,7 @@ class DictionaryLookupSheet extends StatefulWidget {
       title: title,
       isEinkMode: isEinkMode,
       barrierColor: barrierColor,
+      maxHeightFactor: kDictionarySheetMaxHeightFactor,
       builder: (context) => DictionaryLookupSheet(
         selectedText: selectedText,
         response: response,
@@ -257,8 +261,11 @@ class _DictionaryLookupSheetState extends State<DictionaryLookupSheet> {
     final outcome = outcomes.firstWhere((o) => o.providerId == selectedId);
     // HTML 詞條獨佔面板剩餘高度（spec §3.6）；純文字沿用可捲動的卡片列表。
     final mdxView = _mdxEntryView(outcome);
+    // 多個分段時一律撐滿面板上限，切換字典高度才不會跳動；只有一個分段時
+    // 維持依內容縮短。
+    final fillPanel = outcomes.length > 1;
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: fillPanel ? MainAxisSize.max : MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (outcomes.length > 1) ...[
@@ -271,6 +278,7 @@ class _DictionaryLookupSheetState extends State<DictionaryLookupSheet> {
           // 內容少時貼合內容高度；內容多時最高到 `EBSheetShell` 的 85% 上限並可
           // 捲動。`Flexible` 讓 Column 維持 `min`，不會把短內容撐滿。
           Flexible(
+            fit: fillPanel ? FlexFit.tight : FlexFit.loose,
             child: ListView(
               shrinkWrap: true,
               padding: EdgeInsets.zero,
