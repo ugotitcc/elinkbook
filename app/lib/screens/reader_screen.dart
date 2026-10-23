@@ -1659,12 +1659,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_searchJumpHighlightTimer == null) return;
     _searchJumpHighlightTimer?.cancel();
     _searchJumpHighlightTimer = null;
-    final format = detectBookFormat(_activeFilePath);
-    if (format == BookFormat.pdf) {
-      PdfReaderView.clearTemporaryHighlight(_pdfReaderViewKey);
-    } else if (isFoliateFormat(format)) {
-      FoliateReaderView.clearSearchHighlight(_foliateEpubReaderViewKey);
-    }
+    _surface.clearTransientHighlight();
   }
 
   /// 閱讀器搜尋就地跳轉（epic-10-search Issue 8，spec.md §9.4）：使用者在
@@ -1923,7 +1918,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// [_handlePdfSelectionCanceled]，不需要對應的 wrapper。
   void _handleCloseAnnotationToolbar() {
     _handleSelectionCleared();
-    FoliateReaderView.clearSelection(_foliateEpubReaderViewKey);
+    _surface.clearSelection();
   }
 
   Future<void> _handleDeleteExistingAnnotation(AnnotationListItem item) async {
@@ -1957,7 +1952,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_lookupSheetOpen) return;
     _lookupSheetOpen = true;
     // 收起 WebView 選字拉桿，避免浮在面板上方；Dart 端選取狀態不動。
-    FoliateReaderView.suspendSelection(_foliateEpubReaderViewKey);
+    _surface.suspendSelection();
     try {
       await DictionaryLookupSheet.show(
         context,
@@ -1985,7 +1980,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // 只還原旗標：它不是畫面狀態，不需要 setState；`await` 之後也不碰
       // `context`，ReaderScreen 先被銷毀時不會用到失效的 State。
       _lookupSheetOpen = false;
-      FoliateReaderView.restoreSelection(_foliateEpubReaderViewKey);
+      _surface.restoreSelection();
     }
   }
 
