@@ -333,13 +333,14 @@ ThemeData _buildEinkTheme() {
     highlightColor: Colors.transparent,
     extensions: const [
       ElinkTokens(
-        // highlightYellow／highlightGreen／highlightBlue／ttsActiveHighlight：
-        // DESIGN.md §1.2 標註「無背景（改用下劃線／外框／點虛線）」、未給
-        // 明確 hex 值——E-Ink 純黑白色盤下取黑色（描邊/底線用色），實際
-        // 「不畫底色改畫線條」的渲染邏輯屬其他 Issue 範圍，這裡只決定色票值。
-        highlightYellow: Color(0xFF000000),
-        highlightGreen: Color(0xFF000000),
-        highlightBlue: Color(0xFF000000),
+        // highlightYellow／highlightGreen／highlightBlue：螢光筆是不透明填色，
+        // 三色全黑會變成黑底黑字，所以各用一種灰階（由淺到深），黑字壓上去
+        // 對比都 ≥ 4.5（最深的 0x8F 約 6.5）。
+        // ttsActiveHighlight：DESIGN.md §1.2 標註「無背景（改用下劃線／外框／
+        // 點虛線）」、未給明確 hex 值，維持黑色（描邊/底線用色）。
+        highlightYellow: Color(0xFFE0E0E0),
+        highlightGreen: Color(0xFFB8B8B8),
+        highlightBlue: Color(0xFF8F8F8F),
         underlineColor: Color(0xFF000000),
         progressTrack: Color(0xFF000000),
         coverPlaceholder: Color(0xFFFFFFFF),

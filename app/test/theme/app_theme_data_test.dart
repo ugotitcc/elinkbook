@@ -5,6 +5,8 @@ import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/theme/elink_tokens.dart';
 
+import '../support/wcag_contrast.dart';
+
 /// 比較兩個顏色的 RGB 分量是否相同，忽略 alpha（用於驗證某個顏色是否
 /// 「來源於」另一個顏色，即使中間套用了不同透明度）。
 bool _sameRgb(Color a, Color b) => a.r == b.r && a.g == b.g && a.b == b.b;
@@ -410,9 +412,10 @@ void main() {
       final tokens = theme.extension<ElinkTokens>();
 
       expect(tokens, isNotNull);
-      expect(tokens!.highlightYellow, const Color(0xFF000000));
-      expect(tokens.highlightGreen, const Color(0xFF000000));
-      expect(tokens.highlightBlue, const Color(0xFF000000));
+      // 三色螢光筆各用一種灰階（由淺到深），黑字壓在上面仍清楚可讀。
+      expect(tokens!.highlightYellow, const Color(0xFFE0E0E0));
+      expect(tokens.highlightGreen, const Color(0xFFB8B8B8));
+      expect(tokens.highlightBlue, const Color(0xFF8F8F8F));
       expect(tokens.underlineColor, const Color(0xFF000000));
       expect(tokens.progressTrack, const Color(0xFF000000));
       expect(tokens.coverPlaceholder, const Color(0xFFFFFFFF));
@@ -421,6 +424,28 @@ void main() {
       expect(tokens.isEink, true);
       expect(tokens.reducedMotion, true);
       expect(tokens.discretePaging, true);
+    });
+
+    test('E-Ink 三色螢光筆是三種不同灰階，且黑字壓上去對比 ≥ 4.5', () {
+      final tokens = resolveThemeData(theme: AppTheme.light, isEinkMode: true)
+          .extension<ElinkTokens>()!;
+      final fills = [
+        tokens.highlightYellow,
+        tokens.highlightGreen,
+        tokens.highlightBlue,
+      ];
+
+      expect(fills.toSet().length, 3, reason: '三色不可相同');
+      for (final fill in fills) {
+        // 純灰階：R、G、B 相等，電子紙才不會抖色。
+        expect(fill.r, fill.g);
+        expect(fill.g, fill.b);
+        expect(
+          contrastRatio(const Color(0xFF000000), fill),
+          greaterThanOrEqualTo(4.5),
+          reason: '黑字壓在 $fill 上要讀得清楚',
+        );
+      }
     });
   });
 }

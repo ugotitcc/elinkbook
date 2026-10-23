@@ -12,7 +12,15 @@ import 'remote_server_profile.dart';
 /// design.md「E-Ink 與後續優化」）：記憶體 LRU＋本機磁碟，減少使用者
 /// 在同一瀏覽 session 或跨 App 啟動重複下載同一張縮圖。
 abstract class RemoteThumbnailCache {
-  Future<Uint8List> fetch(RemoteServerProfile server, String url, Map<String, String> headers);
+  /// [version]（通常是書目的 `<updated>`）不同就視為不同的快取項目：Calibre
+  /// 的封面網址只含書本編號（`/get/cover/534/Library`），書庫重建或換封面後
+  /// 網址不變，只用網址當鍵會一直拿到舊封面。
+  Future<Uint8List> fetch(
+    RemoteServerProfile server,
+    String url,
+    Map<String, String> headers, {
+    String? version,
+  });
 }
 
 /// [RemoteThumbnailCacheImpl] 的網路擷取函式型別，注入而非直接呼叫
@@ -96,21 +104,28 @@ class RemoteThumbnailCacheImpl implements RemoteThumbnailCache {
   String _diskKeyFor(String url) => sha256.convert(utf8.encode(url)).toString();
 
   @override
-  Future<Uint8List> fetch(RemoteServerProfile server, String url, Map<String, String> headers) async {
-    final memHit = _memoryGet(url);
+  Future<Uint8List> fetch(
+    RemoteServerProfile server,
+    String url,
+    Map<String, String> headers, {
+    String? version,
+  }) async {
+    // 快取鍵＝網址＋版本；沒有版本時退回只用網址（與舊行為相同）。
+    final key = version == null ? url : '$url\n$version';
+    final memHit = _memoryGet(key);
     if (memHit != null) return memHit;
 
-    final diskFile = File(p.join(_cacheDir.path, _diskKeyFor(url)));
+    final diskFile = File(p.join(_cacheDir.path, _diskKeyFor(key)));
     if (await diskFile.exists()) {
       final bytes = await diskFile.readAsBytes();
-      _memoryPut(url, bytes);
+      _memoryPut(key, bytes);
       return bytes;
     }
 
     final bytes = await _fetchOverNetwork(server, url, headers);
     if (!await _cacheDir.exists()) await _cacheDir.create(recursive: true);
     await diskFile.writeAsBytes(bytes);
-    _memoryPut(url, bytes);
+    _memoryPut(key, bytes);
     return bytes;
   }
 }

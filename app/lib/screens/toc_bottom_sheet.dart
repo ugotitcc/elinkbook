@@ -94,11 +94,40 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
   late Set<BookTocItem> _expanded;
   late List<_FlatTocRow> _visibleRows;
 
+  /// 一列目錄項目的預估高度（`ListTile` 預設最小高度），只用來估算開啟時的
+  /// 初始捲動位置；實際位置由 [_currentRowKey] 在第一幀後校正。
+  static const double _estimatedRowHeight = 56;
+
+  /// 標記「目前章節」那一列，供第一幀後 `Scrollable.ensureVisible` 校正位置。
+  final GlobalKey _currentRowKey = GlobalKey();
+  late final ScrollController _scrollController;
+
   @override
   void initState() {
     super.initState();
     _expanded = Set.of(widget.initiallyExpandedEntries);
     _visibleRows = _flatten(widget.entries, depth: 0);
+    // 開啟時直接把目前章節捲進畫面，長目錄不必每次從頭往下滑；
+    // 目前章節上方留約兩列，讓使用者看得到前後文。
+    final currentIndex =
+        _visibleRows.indexWhere((row) => identical(row.entry, widget.currentEntry));
+    _scrollController = ScrollController(
+      initialScrollOffset:
+          currentIndex <= 2 ? 0 : (currentIndex - 2) * _estimatedRowHeight,
+    );
+    if (currentIndex >= 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final rowContext = _currentRowKey.currentContext;
+        if (!mounted || rowContext == null) return;
+        Scrollable.ensureVisible(rowContext, alignment: 0.3);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   /// 依目前 [_expanded] 狀態，把樹狀結構攤平成「目前應該顯示」的列清單
@@ -131,72 +160,93 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
     final isEmpty = widget.entries.isEmpty;
     return ListView.builder(
       key: const Key('toc_bottom_sheet_list'),
+      controller: _scrollController,
       shrinkWrap: true,
-      padding: const EdgeInsets.all(16),
-      // +1：索引 0 固定是標題列；entries 為空時額外 +1 顯示提示列；
-      // 其餘索引對應 _visibleRows[index - 1]。
-      itemCount: _visibleRows.length + 1 + (isEmpty ? 1 : 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      // entries 為空時只有一列提示；其餘索引對應 _visibleRows[index]。
+      itemCount: isEmpty ? 1 : _visibleRows.length,
       itemBuilder: (context, index) {
-        if (index == 0) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(l10n.readerTocTitle,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                IconButton(
-                  key: const Key('toc_bottom_sheet_close_button'),
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          );
-        }
-        if (isEmpty && index == 1) {
+        if (isEmpty) {
           return Padding(
             key: const Key('toc_bottom_sheet_empty_text'),
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Center(child: Text(l10n.readerTocEmptyMessage)),
           );
         }
-        return _buildEntryRow(_visibleRows[index - 1]);
+        return _buildEntryRow(_visibleRows[index]);
       },
+    );
+  }
+
+  /// 固定在清單上方的標題列與關閉鈕：不放進捲動清單，長目錄往下捲時
+  /// 關閉鈕仍在畫面上。
+  Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(l10n.readerTocTitle,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          IconButton(
+            key: const Key('toc_bottom_sheet_close_button'),
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isPdf = widget.format == BookFormat.pdf;
+    // 高度上限 85%：不蓋滿整個螢幕，頂端保留可點擊關閉的空白。
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
     return SafeArea(
-      child: widget.format == BookFormat.pdf
-          ? DefaultTabController(
-              length: 3,
-              child: Column(
-                children: [
-                  TabBar(
-                    tabs: [
-                      Tab(text: l10n.readerTocTabChapters),
-                      Tab(text: l10n.readerTocTabThumbnails),
-                      Tab(text: l10n.readerTocTabSearch),
-                    ],
-                  ),
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        _buildTocList(),
-                        widget.thumbnailTabContent ??
-                            Center(child: Text(l10n.readerFeatureComingSoon)),
-                        widget.searchTabContent ??
-                            Center(child: Text(l10n.readerFeatureComingSoon)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : _buildTocList(),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: Column(
+          mainAxisSize: isPdf ? MainAxisSize.max : MainAxisSize.min,
+          children: [
+            _buildHeader(),
+            if (isPdf)
+              Expanded(child: _buildPdfTabs(l10n))
+            else
+              Flexible(child: _buildTocList()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPdfTabs(AppLocalizations l10n) {
+    return DefaultTabController(
+      length: 3,
+      child: Column(
+        children: [
+          TabBar(
+            tabs: [
+              Tab(text: l10n.readerTocTabChapters),
+              Tab(text: l10n.readerTocTabThumbnails),
+              Tab(text: l10n.readerTocTabSearch),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildTocList(),
+                widget.thumbnailTabContent ??
+                    Center(child: Text(l10n.readerFeatureComingSoon)),
+                widget.searchTabContent ??
+                    Center(child: Text(l10n.readerFeatureComingSoon)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -212,6 +262,7 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
         : null;
 
     return Padding(
+      key: isCurrent ? _currentRowKey : null,
       padding: EdgeInsets.only(left: row.depth * 16),
       child: ListTile(
         key: Key('toc_entry_${node.stableId}'),

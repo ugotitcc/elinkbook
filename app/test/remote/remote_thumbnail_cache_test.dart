@@ -43,6 +43,32 @@ void main() {
     expect(tempDir.listSync(), isNotEmpty);
   });
 
+  test('同一個網址但版本（書目 updated）不同時，不沿用舊封面（Calibre 書庫重建後'
+      '封面對不上書名）', () async {
+    var served = 0;
+    final cache = RemoteThumbnailCacheImpl(
+      cacheDir: tempDir,
+      fetchOverNetwork: (server, url, headers) async =>
+          Uint8List.fromList([++served]),
+    );
+
+    final old = await cache.fetch(server, 'http://x/get/cover/534/Library',
+        const {},
+        version: '2026-10-01T00:00:00+00:00');
+    final fresh = await cache.fetch(server, 'http://x/get/cover/534/Library',
+        const {},
+        version: '2026-10-23T00:00:00+00:00');
+    // 版本相同則命中快取，不再下載。
+    final again = await cache.fetch(server, 'http://x/get/cover/534/Library',
+        const {},
+        version: '2026-10-23T00:00:00+00:00');
+
+    expect(old, [1]);
+    expect(fresh, [2]);
+    expect(again, [2]);
+    expect(served, 2);
+  });
+
   test('記憶體快取命中時不呼叫網路擷取函式', () async {
     final networkCalls = <String>[];
     final cache = RemoteThumbnailCacheImpl(

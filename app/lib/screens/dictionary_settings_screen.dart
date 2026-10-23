@@ -213,8 +213,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
   Future<void> _onReorder(int oldIndex, int newIndex) async {
     final current = _items;
     if (current == null) return;
-    // ReorderableListView 的 newIndex 是「移除前」的位置，往後移時要減 1。
-    if (newIndex > oldIndex) newIndex -= 1;
+    // `onReorderItem` 的 newIndex 已經是「移除後」的位置，不必再調整。
     if (newIndex == oldIndex) return;
     final reordered = List<DictionaryListItem>.of(current);
     reordered.insert(newIndex, reordered.removeAt(oldIndex));
@@ -818,7 +817,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
             key: const Key('dictionary_settings_list'),
             buildDefaultDragHandles: false,
             itemCount: items.length,
-            onReorder: _onReorder,
+            onReorderItem: _onReorder,
             // E-Ink 不用拖曳時的陰影與動畫；但拖曳中的列會被提到 Overlay，
             // 脫離 Scaffold 的 Material，Switch 等元件需要 Material 祖先，
             // 所以仍要包一層透明 Material（無 elevation、無陰影）。
@@ -889,13 +888,18 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SwitchListTile(
-            key: const Key('dictionary_online_switch'),
-            title: Text(l10n.dictionaryOnlineSectionTitle),
-            subtitle: Text(l10n.dictionaryOnlineSectionDescription),
-            value: consentAt != null,
-            // 對話框開啟與儲存期間停用，避免連點疊出多個對話框。
-            onChanged: _savingConsent ? null : _onToggleOnline,
+          // 外層 Container 有底色會蓋住 ListTile 的墨水效果，Flutter 要求
+          // ListTile 自己有一層 Material；透明即可，不改變外觀。
+          Material(
+            type: MaterialType.transparency,
+            child: SwitchListTile(
+              key: const Key('dictionary_online_switch'),
+              title: Text(l10n.dictionaryOnlineSectionTitle),
+              subtitle: Text(l10n.dictionaryOnlineSectionDescription),
+              value: consentAt != null,
+              // 對話框開啟與儲存期間停用，避免連點疊出多個對話框。
+              onChanged: _savingConsent ? null : _onToggleOnline,
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),

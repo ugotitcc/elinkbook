@@ -88,18 +88,21 @@ class AnnotationToolbar extends StatelessWidget {
                   key: const Key('annotation_toolbar_highlighter_yellow'),
                   color: highlightStyleColor(HighlightStyle.highlighterYellow,
                       tokens: tokens),
+                  outlineColor: colorScheme.onSurface,
                   onTap: () => onStyleSelected(HighlightStyle.highlighterYellow),
                 ),
                 _colorButton(
                   key: const Key('annotation_toolbar_highlighter_pink'),
                   color: highlightStyleColor(HighlightStyle.highlighterPink,
                       tokens: tokens),
+                  outlineColor: colorScheme.onSurface,
                   onTap: () => onStyleSelected(HighlightStyle.highlighterPink),
                 ),
                 _colorButton(
                   key: const Key('annotation_toolbar_highlighter_blue'),
                   color: highlightStyleColor(HighlightStyle.highlighterBlue,
                       tokens: tokens),
+                  outlineColor: colorScheme.onSurface,
                   onTap: () => onStyleSelected(HighlightStyle.highlighterBlue),
                 ),
                 IconButton(
@@ -156,11 +159,21 @@ class AnnotationToolbar extends StatelessWidget {
   Widget _colorButton({
     required Key key,
     required Color color,
+    required Color outlineColor,
     required VoidCallback onTap,
   }) {
+    // 色塊加 onSurface 外框：米色主題與 E-Ink 灰階的色塊本身很淡，
+    // 沒有外框幾乎看不到。
     return IconButton(
       key: key,
-      icon: Icon(Icons.circle, color: color),
+      icon: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color,
+          border: Border.all(color: outlineColor, width: 1.5),
+        ),
+        child: const SizedBox(width: 20, height: 20),
+      ),
       onPressed: onTap,
     );
   }

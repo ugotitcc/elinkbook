@@ -477,6 +477,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         widget.server,
         thumbnailUrl,
         buildOpdsAuthHeaders(widget.server, _password),
+        version: entry.updated,
       ),
       // 〔審查 review-plan-issue-5.md Important 採納〕Flutter 的
       // FutureBuilder.didUpdateWidget() 只要傳入的 future 是新的物件實例
