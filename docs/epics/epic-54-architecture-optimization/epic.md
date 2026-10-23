@@ -119,6 +119,43 @@
 
 CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需新 ADR（可逆、不違反既有 ADR）。
 
+## Issue 23～28 候選（第三次 `/improve-codebase-architecture` 檢視，2026-10-23）
+
+來源：以 2026-09 以來異動最多的檔案為熱點（`reader_screen.dart` 3581 行、約 120 個私有成員、約 41 個狀態欄位，83 次異動）。對應測試集中在 `test/screens/reader_screen_test.dart`（12803 行），沒有候選 24、25、26 所需的小型單元；對照 `annotation_session_test`、`bookmark_toggle_test`、`reader_jump_target_test` 這類小而精的單元測試，缺的是把「協調層」也一併抽出。`main.dart` 近期異動幾乎都是 ADR 0037 依賴分組遷移，屬已定案方向，不列入。
+
+**候選與順序（尚未 `/grilling`，以下為檢視結論，非定案）**
+- Issue 23（閱讀面 module，Strong）：先做。有了 fake adapter，24、25、28 才能脫離 widget test。
+- Issue 24（標註 module，Strong）、Issue 25（本書書籤 module，Worth exploring）：依賴 23。
+- Issue 26（版面預設集流程）、Issue 27（是否固定版面）：獨立，可並行。
+- Issue 28（診斷殘留，Speculative）：建議併入 23。
+
+**需留意的 ADR／CONTEXT**
+- Issue 23 不得合併渲染（CONTEXT「Chrome Bar」：底層渲染維持獨立；ADR 0013、0022）。
+- Issue 26 須保持「設定面板草稿具現化原則」，PDF 與 EPUB 面板的 nullable 語意不可被合併。
+- Issue 27 須保持「人工版面覆蓋」行為；ADR 0017、0023。
+
+## Issue 23 設計決策（`/improve-codebase-architecture` 第三次檢視後 `/grilling` 定案，2026-10-23）
+
+來源：第三次架構檢視候選 A。事實盤點（子代理回報，已核對）：兩個 View 共 22 個 static 方法，兩邊都有的只有 `nextPage`、`previousPage`、`loadTableOfContents`（回傳型別不同）；TTS 只有 Foliate，內文搜尋與縮圖只有 PDF；`ReaderScreen` 沒有任何直接讀 `key.currentState`，資料都經 callback 回傳；測試沒有以 fake 取代 View 的既有機制（`test/support/` 只有 `fake_inappwebview_platform.dart`，替換的是平台層）。
+
+**事實修正**：檢視報告原寫「刪除 6 個 `…ForTest` 後門」，實際只有 `loadTableOfContentsForTest` 轉呼叫 View；其餘 5 個（`triggerZoneAction`、`togglePdfBookmark`、`openPdfToc`、`openSleepTimerPickerForTest`、`reportTtsPlayingForTest`）碰的是 `ReaderScreen` 內部，與閱讀面無關，不在 Issue 23 範圍。
+
+**定案**
+1. **純重構、零行為變化**：fire-and-forget、呼叫順序、`mounted` 檢查逐字保留；要改行為另開 Issue。
+2. **interface 只放共通指令**：翻頁、跳轉、清暫態高亮、整組重畫標註、清選取、載入目錄。TTS 與 PDF 搜尋／縮圖留在格式專屬介面（`tts`／`pdfSearch` 非 null 才使用），不做空實作。
+3. **只收指令，不收 View 建構**：`GlobalKey` 移進 adapter；View 建構（`reader_screen.dart` 約 3308、3400）仍在 `ReaderScreen`，`key:` 改取自 adapter。「建構＋全部 callback」收進 module 另開 Issue。
+4. **跳轉走 `ReaderJumpTarget`**：`ReaderJumpTarget.applyTo`（吃兩把 key）改為 `surface.jumpTo(target)`，分支邏輯搬進各 adapter；進度條與頁碼拖動同一入口。
+5. **未掛載行為逐字保留並寫進 interface 文件**：指令靜默忽略，查詢回 `const []`、`0`、`null`；兩個 adapter 與 fake 都照做。
+6. **注入**：`ReaderFeatureDependencies` 新增 `readerSurfaceFactory`，預設為正式 adapter 工廠；不新增 `ReaderScreen` 建構參數（目前 27 個），`main.dart` 組裝不變；需確認 `elinkbook_app_wiring_test.dart` 的身分比對不受影響。
+7. **生命週期**：一個 State 恆為一本書；adapter 在 `initState` 依 `detectBookFormat()` 建立一次。Foliate 各格式共用同一個 Foliate adapter。
+8. **兩個 View 的 static 方法與其測試不動**，adapter 是唯一呼叫端；改成實例方法會牽動 View 測試，這張不做。
+9. **Issue 28 縮小併入**：只刪除 `[DEBUG-e26i3-zoneaction]` 診斷插樁（`reader_screen.dart` 約 3491–3520）；「暫態高亮＋3 秒計時器 module」與 `_creationZone.run` 不併入，清高亮呼叫只換成 `surface` 指令，Zone 特例原樣保留，計時器 module 留在 Issue 28。
+10. **Task 順序**（每個 Task 結束測試皆綠）：(1) interface＋fake＋契約測試（含未掛載規則）；(2) Foliate adapter；(3) PDF adapter；(4) `ReaderJumpTarget`→`surface.jumpTo` 並遷移其測試；(5) `ReaderScreen` 逐組遷移呼叫（翻頁→跳轉→清暫態高亮／清選取→標註重畫→目錄→TTS→PDF 搜尋與縮圖），每組一個 commit；(6) `readerSurfaceFactory` 進依賴組、補 wiring 測試、刪 `loadTableOfContentsForTest`；(7) 遷移 `reader_screen_test.dart` 的指令轉發案例（replace, don't layer，舊案例刪除，純 UI 案例留原檔）；(8) `CONTEXT.md` 詞條（已加）、完整 `flutter test`。
+11. **驗收**：`reader_screen.dart` 內對 `FoliateReaderView.<方法>`／`PdfReaderView.<方法>` 的 static 呼叫為 0（只剩建構 View），以 grep 在 plan 內驗證，不另寫永久守衛測試；完整 `flutter test` 全綠。
+12. **流程**：一張 Issue 一個 PR、多個 commit；寫 `plans/plan-issue-23.md`；保留程式審查（報告存 `reviews/`，不進版控）。
+
+`CONTEXT.md` 已新增「閱讀面」詞條。無需新 ADR（可逆、不牴觸既有 ADR）。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -555,3 +592,7 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 
 - PR #340（`epic-54/issue-20-toc-tocitem-forward` → `main`）已合併，合併 commit `d29cac58`。程式審查 0 Critical／1 Important（JS→Dart 接線無測試守護，已補 `foliate_toc_footer_test`）／2 Minor（皆已處理）。
 - Epic 54 全部 Issue（1～20）皆已合併；Epic 暫不歸檔，是否歸檔由使用者指定。
+
+**2026-10-23** 第三次架構檢視：登錄 Issue 23～28（閱讀面、標註、本書書籤、版面預設集、固定版面判斷、診斷殘留），皆待規劃，尚未寫程式。依序 `/grilling` 逐一分析。
+
+**2026-10-23** Issue 23 設計定案（`/grilling` 12 項決策），見「Issue 23 設計決策」；Issue 28 縮小併入 23。尚未寫 plan、尚未寫程式。
