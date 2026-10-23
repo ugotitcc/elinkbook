@@ -596,3 +596,13 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-23** 第三次架構檢視：登錄 Issue 23～28（閱讀面、標註、本書書籤、版面預設集、固定版面判斷、診斷殘留），皆待規劃，尚未寫程式。依序 `/grilling` 逐一分析。
 
 **2026-10-23** Issue 23 設計定案（`/grilling` 12 項決策），見「Issue 23 設計決策」；Issue 28 縮小併入 23。尚未寫 plan、尚未寫程式。
+
+**2026-10-24 Issue 23 實作完成**（分支 `epic-54/issue-23-reader-surface`，尚未開 PR）
+
+- 新增 `ReaderSurface` interface 與 `FoliateFacet`／`PdfFacet`、`NoopReaderSurface`（`reader_surface.dart`）、`FoliateReaderSurface`、`PdfReaderSurface`、`reader_surface_factory.dart`；`ReaderFeatureDependencies` 新增 `readerSurfaceFactory`（預設正式工廠，`main.dart` 不改）。
+- `reader_screen.dart` 對 `FoliateReaderView`／`PdfReaderView` 的 static 呼叫降為 0（以排除註解行的 grep 驗收）；兩把 `GlobalKey` 改由 adapter 擁有；刪除 `loadTableOfContentsForTest` 與 `[DEBUG-e26i3-zoneaction]` 診斷插樁。
+- 與計畫的出入（皆為計畫審查已定案，見 `plans/plan-issue-23.md`）：Task 4 併入 Task 5 Step 3（簽章與呼叫端同一個 commit）；目錄載入放 facet（精確型別）；TTS 呼叫用 `_surface.foliate?.` 保持「非 Foliate 時沿用預設值」。
+- **Task 7 盤點結論**：`reader_screen_test.dart` 與 `reader_screen_stats_*` 裡用 `triggerZoneAction` 的案例都是在驗證「UI 狀態」（工具列消失、統計計時、載入中忽略換頁），或用真實 View 端到端驗證高亮（`pdf_reader_jump_highlight_*`），沒有任何案例「只」驗證指令有沒有送到 View，所以**沒有舊案例可刪**（replace, don't layer 的前提不成立）。指令轉發規則改由新測試涵蓋：`reader_surface_test`／`foliate_reader_surface_test`／`pdf_reader_surface_test`（adapter 契約與裝飾轉換）、`reader_jump_target_test`（`applyTo` 序列）、`reader_screen_surface_test`（以 `FakeReaderSurface` 驗證翻頁順序與開書高亮接線）。
+- 驗證：完整 `flutter test`：4371 通過／2 略過／3 失敗；3 個失敗皆為逾時或檔案鎖類的不穩定案例（`pdf_reader_view_filters_test` 的加粗覆蓋層案例在未含本次改動的 `main` 上單獨執行同樣失敗，另兩個 `downloadable_font_store_test` 暫存檔刪除被占用、`pdf_reader_view_filters_test` 多頁加粗逾時；與本次改動無關，上一輪整體測試曾全綠）。`flutter analyze` 乾淨；`check_l10n_hardcoded_strings`、`check_integration_keys` 通過。
+- 已知限制：`FakePlatformInAppWebViewWidget` 沒有 WebViewController，flutter_test 無法攔截 `evaluateJavascript`，Foliate adapter 的 JS 轉發只能由既有 View 測試與 integration 測試保障；PDF 暫態高亮的畫面呈現由 `pdf_reader_view_paginated_test` 保障。
+- 待辦：WAVE 真機抽驗（EPUB 與 PDF 各一本：翻頁、目錄跳轉、搜尋跳轉高亮、劃線、查字典水滴不浮出且關面板後選取還原）、程式審查報告（`reviews/review-code-issue-23.md`，不進版控）。
