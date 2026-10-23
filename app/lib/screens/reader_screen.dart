@@ -30,6 +30,7 @@ import '../reader/tts_audio_handler_startup.dart';
 import '../reader/tts_audio_player.dart';
 import '../reader/tts_controller.dart';
 import '../reader/tts_provider.dart';
+import '../reader/tts_segment_cfi.dart';
 import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
@@ -3201,10 +3202,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       loadSegments: () async {
         final chapterIndex =
             extractChapterIndex(_epubPositionInfo?.locatorJson) ?? 0;
-        return FoliateReaderView.loadTtsSegments(
-          _foliateEpubReaderViewKey,
-          chapterIndex,
-        );
+        return _surface.foliate?.loadTtsSegments(chapterIndex) ??
+            const <TtsSegmentCfi>[];
       },
       // 朗讀同步高亮（epic-34-tts-readalong Issue 3，ADR 0026）：只呼叫
       // 既有 Overlayer 管線，不引用 highlightsRepository/notesRepository。
@@ -3214,10 +3213,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // WritingMode.vertical）。
       onHighlightSegment: (segment) {
         if (segment == null) {
-          FoliateReaderView.clearTtsHighlight(_foliateEpubReaderViewKey);
+          _surface.foliate?.clearTtsHighlight();
         } else {
-          FoliateReaderView.showTtsHighlight(
-            _foliateEpubReaderViewKey,
+          _surface.foliate?.showTtsHighlight(
             segment.cfi,
             vertical: _resolved?.writingMode == WritingMode.vertical,
             einkMode: widget.isEinkMode,
@@ -3233,11 +3231,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       lookupStartIndex: (segs) async {
         final visibleCfi = extractCfi(_epubPositionInfo?.locatorJson);
         if (visibleCfi == null) return 0;
-        return FoliateReaderView.lookupSegmentByCfi(
-          _foliateEpubReaderViewKey,
-          visibleCfi,
-          segs.map((s) => s.cfi).toList(),
-        );
+        return _surface.foliate?.lookupSegmentByCfi(
+              visibleCfi,
+              segs.map((s) => s.cfi).toList(),
+            ) ??
+            0;
       },
     );
     _ttsController = controller;
