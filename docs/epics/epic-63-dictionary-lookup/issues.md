@@ -307,3 +307,7 @@ Issue 1、2 互相獨立，可平行；Issue 4、5 在 Issue 3 之後可平行�
    - logcat：返回 App 後 `eglMakeCurrentImpl:1038 error 3002 (EGL_BAD_ACCESS)` → `Could not create a complete framebuffer` → `Check failed: result. Must be able to encode GL commands without error` → `Fatal signal 6 (SIGABRT)`（raster 執行緒）。
    - 已確認不是 Issue 8 造成：本 Issue 只改授權清單與測試，`app/lib` 的 diff 只有 `third_party_licenses.dart`。
    - 已另立 `epic-64-import-resume-egl-crash` 追蹤，不在本 Epic 處理。
+5. **驗收 33、24 的證據限制（2026-10-23，Issue 8 程式審查 I-1）。**
+   - 驗收 33：上游 CC-CEDICT 檔頭 `#! license=` 只給網址，所以授權說明畫面顯示 `https://creativecommons.org/licenses/by-sa/4.0/`，不會出現字面「CC BY-SA 4.0」。spec 與 PRD 的寫法比實際多了名稱。
+   - 驗收 24：「UI 不凍結」只有人類在 WAVE E-Ink 機上觀察，沒有幀時間量測。解析走 `Isolate.run`，這是設計依據，不是量測結果。
+   - 方向（皆未做）：匯入器把 `licenseNote` 正規化成「CC BY-SA 4.0（網址）」，或把 spec 與 PRD 文字改成「顯示授權網址」；需要時再補幀時間量測。
