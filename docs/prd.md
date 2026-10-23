@@ -7,8 +7,10 @@ classification:
   complexity: 'Moderate'
 inputDocuments: ['docs/prd.md']
 stepsCompleted: ['step-e-01-discovery', 'step-e-02-review', 'step-e-03-edit']
-lastEdited: '2026-10-09'
+lastEdited: '2026-10-22'
 editHistory:
+  - date: '2026-10-22'
+    changes: '`epic-63-dictionary-lookup` Issue 8 回填字典需求：新增 FR-50 字典查詢、FR-51 字典匯入與管理、FR-52 查詢面板、FR-53 線上查詞（萌典），歸入「4.3 互動、分析與知識管理」，優先級皆 P1。數字與 `spec.md` §9 一致（選取上限 8 個 CJK 字元、本機查詢 p95 < 300 ms、線上 5 秒逾時、100 MB MDX 記憶體增量 < 50 MB）。§6 補 FR-50～53 的決策交叉參照（指向 epic-63 與 ADR 0038、0039）。'
   - date: '2026-10-09'
     changes: 'FR-09 新增白鷺楷（衍生自原俠正楷）與獅尾B2加糖宋體（衍生自思源宋體）為可下載字型，內建字型由 5 款增為 7 款，皆為 SIL OFL 1.1（epic-55 Issue 3）。'
   - date: '2026-10-02'
@@ -151,6 +153,10 @@ editHistory:
 | FR-18 | **實體按鍵控制**：閱讀介面支援使用裝置音量鍵進行翻頁；**翻頁方向固定為「音量增加鍵＝上一頁、音量減少鍵＝下一頁」，不隨直排/橫排或點擊熱區之鏡像設定改變**；是否啟用音量鍵翻頁可於系統設定中開關（見 FR-36）；**離開閱讀介面後，音量鍵須恢復系統原生音量調節功能**。                                                                                                                                 | P1     |
 | FR-25 | **註記清單**：提供統一的「劃線與備註」側邊欄清單，展示所有歷史動作，點選後立即跳轉至書中對應位置。                                                                                                                                           | P1     |
 | FR-24 | **導航區域 (Navigation Zones)**：支援**自定義 3x3 九宮格點擊區域**，適用於 EPUB 流式、PDF、EPUB FXL 三種畫面；提供「左翻頁」「右翻頁」「單手」三種固定模板（皆為使用者手動選擇，**不隨橫直排自動鏡像**，以適應左右手持機習慣與閱讀方向偏好），另提供「自訂」選項可完全自由編輯 9 格各自的動作（上一頁／下一頁／選單／無動作）。 | P1     |
+| FR-50 | **字典查詢**：閱讀流式 EPUB、TXT、Markdown (MD) 時，選取文字後工具列出現「查字典」，點擊開啟查詢面板並顯示結果；**固定版面（FXL）與 CBZ 不出現該按鈕**。選取文字先去除頭尾標點再判斷：含空白時視為片語整串查一次；**CJK 選取上限 8 個字元**，超過顯示「選取範圍太長」；CJK 內部含標點顯示「選取內容含有標點」；兩者都不發出任何查詢（含線上）。查詢依候選順序（原字串、大小寫變體、去變音符號、英文詞形還原）嘗試，第一個命中就停。 | P1     |
+| FR-51 | **字典匯入與管理**：支援匯入 JSON、CSV、CC-CEDICT 發行檔（`cedict_ts.u8`）與 MDX（可同時多選 `.mdx`、`.mdd`、`.css`）；每本字典的來源語言與目標語言為必填；可停用／啟用、調整優先順序、刪除（刪除後詞條與私有複本一併清除）；重複匯入同一檔案時提示「這本字典已匯入」，可選擇略過或取代；加密與 LZO 壓縮的 MDX 匯入時顯示明確的錯誤說明，不當掉、不留下半成品資料。 | P1     |
+| FR-52 | **查詢面板**：以分段選擇器呈現，同一時間只顯示一本字典的結果，支援返回堆疊（交叉參照與系統返回鍵都逐層回退）；MDX 詞條在關閉 JavaScript 的 WebView 中顯示，支援 `.mdd` 圖片、字典自帶的外部 CSS、深色與 E-Ink 配色，且詞條內的任何外部連結都不載入、不開啟。 | P1     |
+| FR-53 | **線上查詞（萌典）**：預設關閉，第一次開啟前必須顯示同意對話框；同意後才可查詢，只送出使用者選取的那個詞（不送書名、前後文、位置、裝置識別），僅接受 `https`，逾時 5 秒；結果原文顯示、不改動，並固定顯示「資料來源：教育部《重編國語辭典修訂本》（CC BY-ND 3.0 TW），經由萌典提供」；可隨時在設定關閉，關閉後立即停止送出請求。 | P1     |
 
 ### 4.4 雲端同步
 
@@ -214,3 +220,4 @@ editHistory:
 - **語音朗讀（FR-45～47）之技術架構**：不在 PRD 範圍，完整研究與建議架構詳見 `docs/research/tts_integration_architecture_research.md`（Foliate 格式篇：Provider 抽象層、音訊快取、CFI↔TTS Timeline 對齊、重用既有 `overlayer.js`／`epubcfi.js` 而非另建高亮機制）與 `docs/research/pdf_tts_integration_architecture_research.md`（PDF 篇：頁碼＋文字座標定位、`pdfrx.loadStructuredText()` 既有能力、與劃線/書籤持久化模型分離之風險提醒）。兩份報告建議分期實作（系統原生 TTS＋句級高亮 → 分塊快取＋雲端 API → 端側神經語音），PDF 排在 Foliate 格式之後獨立成期。
 - **簡繁轉換（FR-48）之技術架構**：尚無研究報告，技術路線（例如是否採用 OpenCC 或等效字元/詞彙對照表方案、於 WebView 內對 DOM 文字節點做顯示層轉換而不修改底層檔案、與既有 CFI 定位／劃線座標之相容性）留待該功能啟動 Discovery／Architecting 階段（`/grill-with-docs`／`/to-spec`）決定，不在 PRD 範圍。
 - **多語系介面（FR-49）之技術架構**：尚無研究報告，技術路線（例如是否採用 Flutter 官方 `flutter_localizations`／`intl` ARB 檔案方案、既有畫面中大量硬編碼正體中文字串之抽取範圍與分期策略、語言切換是否需要重啟 App 才生效）留待該功能啟動 Discovery／Architecting 階段決定，不在 PRD 範圍；可預期是一項橫跨全部既有畫面的大範圍工作，建議 Discovery 階段優先討論分期範圍（例如先涵蓋核心書架/閱讀器/系統設定畫面，次要管理類彈窗延後）。
+- **字典查詢（FR-50～53）之技術架構**：需求與實作決策見 `docs/epics/epic-63-dictionary-lookup/`（`epic.md`、`spec.md`、`issues.md`）與兩份 ADR——ADR 0038（字典資料獨立於主庫 `dictionary.db`）、ADR 0039（線上查詢請求型別只含詞）。重點：本機字典資料不進主資料庫、不進同步；MDX 解析採 `dict_reader` 與本專案的延遲載入修補（`app/third_party/dict_reader/PATCH.md`）；MDX 詞條在關閉 JavaScript、攔截所有外部請求的 WebView 中顯示；線上查詞由 `LookupRequest` 型別保證只送一個詞。

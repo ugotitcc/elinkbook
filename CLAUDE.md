@@ -77,6 +77,15 @@ flutter build apk --release --dart-define-from-file=config/cloud_oauth.json
 - **檢視模式**：格狀（`SliverGridDelegateWithFixedCrossAxisCount`，欄數依螢幕方向調整）／列表，皆由 `LibraryPreferences`（`SharedPreferences`）記住使用者上次選擇。
 - 舊有的固定範例書籍機制（`sample_books.dart`/`stageSampleBookFile()`）已隨圖書庫管理實作完成而移除；`app/test/fixtures/sample.epub`／`sample.pdf` 現在純粹是測試/整合測試 fixture，不再供 `LibraryScreen` 展示使用。
 
+### 字典查詢
+
+`app/lib/dictionary/` 是獨立的字典子系統，資料與書庫分離（見 ADR 0038、0039）。
+- `DictionaryService`（`app/lib/dictionary/dictionary_service.dart`）：協調本機與線上分段。線上分段永不丟例外（失敗化為 `failed` 狀態）；本機分段在開啟字典資料庫失敗時 `lookup` 會丟出例外，由呼叫端顯示錯誤。
+- `dictionary.db` 與 `DictionaryStore`（`app/lib/dictionary/storage/`）：獨立的 SQLite 檔（`DictionaryDatabase.version`），不進主庫 `version: 28`、不登錄同步表；刪除來源連動刪除詞條與私有複本。
+- `MdxReader` ＋ vendor 修補的 `dict_reader`（`app/third_party/dict_reader/PATCH.md`）：MDX 保留原檔，鍵索引依區塊延遲載入；升級套件後須重套修補並重新量測記憶體。
+- MDX 詞條的 WebView 安全邊界：`javaScriptEnabled: false`、封鎖網路載入，`shouldInterceptRequest` 對所有請求回明確回應（外部一律 404），永不連網。
+- 線上查詞預設關閉；未同意時零請求。`LookupRequest` 只有 `word`，不帶書名、前後文、位置或裝置識別。
+
 ## 這是什麼產品
 
 elinkBook（易閱書）是一款跨平台電子書閱讀器，核心差異化在於正確、高品質支援**直排（Vertical Writing）繁體中文排版**——包含正確的標點符號位置（破折號、引號）與避頭尾（換行規則）——並提供深度排版客製化與無縫跨裝置同步。

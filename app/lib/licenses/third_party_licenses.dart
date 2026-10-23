@@ -46,7 +46,9 @@ const List<ThirdPartyLicense> kThirdPartyLicenses = [
   // collection 與 typed_data 的 LICENSE 全文相同（BSD-3-Clause，Dart 專案作者），
   // 因此共用一份 asset，名稱合併顯示。
   ThirdPartyLicense(
-    packageName: 'dict_reader',
+    // 本專案對鍵索引做了延遲載入與鍵比對的修補，原文逐字未改；
+    // 名稱註明修補版與修補說明的位置（LICENSE 原文不動）。
+    packageName: 'dict_reader（含本專案修補，見 app/third_party/dict_reader/PATCH.md）',
     assetPath: 'assets/licenses/dict-reader.txt',
   ),
   ThirdPartyLicense(
@@ -72,6 +74,17 @@ const List<ThirdPartyLicense> kThirdPartyLicenses = [
   ThirdPartyLicense(
     packageName: 'html_unescape',
     assetPath: 'assets/licenses/html-unescape.txt',
+  ),
+  // epic-63：字典「資料來源」（不是程式碼，也不內建在 App 裡）。
+  // 兩者都要求散布時標示來源；在這份清單裡各放一份「標示聲明＋官方授權網址」，
+  // 不內嵌 CC 法律全文（CC 授權允許以網址標示授權）。
+  ThirdPartyLicense(
+    packageName: '萌典（教育部《重編國語辭典修訂本》資料）',
+    assetPath: 'assets/licenses/moedict-data.txt',
+  ),
+  ThirdPartyLicense(
+    packageName: 'CC-CEDICT 資料',
+    assetPath: 'assets/licenses/cc-cedict.txt',
   ),
   // 5 款可下載字型（SIL OFL 1.1）：字型檔不在 APK 內，由使用者在字型管理下載；
   // 但授權是靜態資訊，與是否已下載無關，永遠顯示（epic-55 design Q5）。
