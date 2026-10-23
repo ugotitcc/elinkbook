@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
-import 'package:clock/clock.dart';
 import 'package:intl/intl.dart';
 
 import '../l10n/app_localizations.dart';
@@ -55,7 +54,6 @@ import '../reader/reading_session.dart';
 import '../storage/storage_access_probe.dart'
     show StorageAccessProbeResult, probeStorageAccess;
 import '../reader/open_book_flow.dart';
-import '../reader/reader_console_log.dart';
 import '../reader/reader_jump_target.dart';
 import '../reader/reader_surface.dart';
 import '../reader/reader_prefs_manager.dart';
@@ -3465,11 +3463,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         if (_openBookFlow.isLoading) return;
         _session.recordActivity();
         if (format == BookFormat.pdf) {
-          // Epic 26 Issue 3 暫時性真機診斷插樁：量測熱區判定觸發換頁的
-          // 時間點，與 TapZoneDetector／長按框選插樁交叉比對，確認是否
-          // 為誤觸換頁。診斷結束後需整段移除。
-          ReaderConsoleLog.add(
-              '[DEBUG-e26i3-zoneaction] previousPage t=${clock.now().millisecondsSinceEpoch}');
           _surface.previousPage();
           // Epic 24 Issue 10：PDF 框選狀態是純 Dart 端矩形選取，沒有
           // EPUB 那種 WebView 切頁自動清空 window.getSelection() 的
@@ -3491,10 +3484,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         if (_openBookFlow.isLoading) return;
         _session.recordActivity();
         if (format == BookFormat.pdf) {
-          // Epic 26 Issue 3 暫時性真機診斷插樁：見上方 previousPage
-          // 分支註解，同理。
-          ReaderConsoleLog.add(
-              '[DEBUG-e26i3-zoneaction] nextPage t=${clock.now().millisecondsSinceEpoch}');
           _surface.nextPage();
           // Epic 24 Issue 10：理由同上方 previousPage 分支。
           if (_currentPdfSelection != null) _handlePdfSelectionCanceled();
