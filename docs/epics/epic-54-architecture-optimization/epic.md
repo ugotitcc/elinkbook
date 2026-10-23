@@ -606,3 +606,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 驗證：完整 `flutter test`：4371 通過／2 略過／3 失敗；3 個失敗皆為逾時或檔案鎖類的不穩定案例（`pdf_reader_view_filters_test` 的加粗覆蓋層案例在未含本次改動的 `main` 上單獨執行同樣失敗，另兩個 `downloadable_font_store_test` 暫存檔刪除被占用、`pdf_reader_view_filters_test` 多頁加粗逾時；與本次改動無關，上一輪整體測試曾全綠）。`flutter analyze` 乾淨；`check_l10n_hardcoded_strings`、`check_integration_keys` 通過。
 - 已知限制：`FakePlatformInAppWebViewWidget` 沒有 WebViewController，flutter_test 無法攔截 `evaluateJavascript`，Foliate adapter 的 JS 轉發只能由既有 View 測試與 integration 測試保障；PDF 暫態高亮的畫面呈現由 `pdf_reader_view_paginated_test` 保障。
 - 待辦：WAVE 真機抽驗（EPUB 與 PDF 各一本：翻頁、目錄跳轉、搜尋跳轉高亮、劃線、查字典水滴不浮出且關面板後選取還原）、程式審查報告（`reviews/review-code-issue-23.md`，不進版控）。
+
+**2026-10-24** Issue 23 真機抽驗時，使用者回報「從書架反覆開同一本書、多操作幾次後一直開書逾時，關掉 App 才恢復」，判斷應為舊問題，先登錄為 Issue 29（待查），不在 Issue 23 處理。自動重現腳本存為 `repro/reopen_loop.ps1`（用法見檔頭；14 輪未重現）。
