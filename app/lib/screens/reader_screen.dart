@@ -23,6 +23,7 @@ import '../reader/epub_decoration.dart';
 import '../reader/epub_position_info.dart';
 import '../reader/epub_selection_info.dart';
 import '../reader/foliate_bridge_codec.dart';
+import '../reader/foliate_reader_surface.dart';
 import '../reader/foliate_reader_view.dart';
 import '../reader/tts_audio_focus_coordinator.dart';
 import '../reader/tts_audio_handler.dart';
@@ -45,6 +46,7 @@ import '../reader/pdf_search_state.dart';
 import '../reader/pdf_page_info.dart';
 import '../reader/pdf_crop_frame_overlay.dart';
 import '../reader/pdf_crop_mode.dart';
+import '../reader/pdf_reader_surface.dart';
 import '../reader/pdf_reader_view.dart';
 import '../reader/pdf_toc_item.dart';
 import '../reader/pdf_toc_navigator.dart';
@@ -56,6 +58,7 @@ import '../storage/storage_access_probe.dart'
 import '../reader/open_book_flow.dart';
 import '../reader/reader_console_log.dart';
 import '../reader/reader_jump_target.dart';
+import '../reader/reader_surface.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/toc_entry.dart';
 import '../reader/toc_navigator.dart';
@@ -423,6 +426,22 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // EPUB widget key；_epubReaderViewKey（Readium）僅保留供 Issue 5 清理前
   // 過渡期間的舊程式碼路徑相容，不再被任何分派邏輯建構。
   final _foliateEpubReaderViewKey = GlobalKey<State<FoliateReaderView>>();
+  // 閱讀面（見 CONTEXT.md「閱讀面」）：對目前這本書的渲染畫面下指令的單一
+  // interface。一個 State 恆為一本書，首次使用時依格式建立一次。過渡期
+  // （epic-54 Issue 23 Task 5）沿用上方兩把既有 key 傳進 adapter，讓
+  // 新舊呼叫路徑打到同一個已掛載的 View。
+  late final ReaderSurface _surface = _createReaderSurface();
+
+  ReaderSurface _createReaderSurface() {
+    final format = detectBookFormat(_activeFilePath);
+    if (format == BookFormat.pdf) {
+      return PdfReaderSurface(viewKey: _pdfReaderViewKey);
+    }
+    if (isFoliateFormat(format)) {
+      return FoliateReaderSurface(viewKey: _foliateEpubReaderViewKey);
+    }
+    return const NoopReaderSurface();
+  }
   // 記錄上一次實際套用給系統的螢幕方向，避免在偏好設定頻繁變動時（例如
   // 拖曳滑桿）重複呼叫 SystemChrome.setPreferredOrientations。
   ScreenOrientationSetting? _lastAppliedOrientation;
@@ -3385,9 +3404,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             _lastTtsPageTurnAt = now;
             _ttsController?.suppressNextExternalPositionChange();
             if (direction == 'prev') {
-              FoliateReaderView.previousPage(_foliateEpubReaderViewKey);
+              _surface.previousPage();
             } else {
-              FoliateReaderView.nextPage(_foliateEpubReaderViewKey);
+              _surface.nextPage();
             }
           },
           onSelectionChanged: _handleSelectionChanged,
@@ -3494,7 +3513,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           // 為誤觸換頁。診斷結束後需整段移除。
           ReaderConsoleLog.add(
               '[DEBUG-e26i3-zoneaction] previousPage t=${clock.now().millisecondsSinceEpoch}');
-          PdfReaderView.previousPage(_pdfReaderViewKey);
+          _surface.previousPage();
           // Epic 24 Issue 10：PDF 框選狀態是純 Dart 端矩形選取，沒有
           // EPUB 那種 WebView 切頁自動清空 window.getSelection() 的
           // 瀏覽器原生語意可依賴，換頁時需主動清除既有選取與工具列，
@@ -3505,10 +3524,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           // null），但 PdfReaderView 內部進行中的拖曳狀態不受換頁影響，
           // 放開手指後仍會用換頁前的舊頁面座標重新彈出 Toolbar，一併
           // 中止它，見 PdfReaderView.cancelActiveSelectionDrag 文件。
-          PdfReaderView.cancelActiveSelectionDrag(_pdfReaderViewKey);
+          _surface.pdf!.cancelActiveSelectionDrag();
         } else if (isFoliateFormat(format)) {
           // Epic 11 Issue 2：KF8 (AZW3) 與 EPUB 共用 FoliateReaderView。
-          FoliateReaderView.previousPage(_foliateEpubReaderViewKey);
+          _surface.previousPage();
         }
         break;
       case ZoneAction.nextPage:
@@ -3519,14 +3538,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           // 分支註解，同理。
           ReaderConsoleLog.add(
               '[DEBUG-e26i3-zoneaction] nextPage t=${clock.now().millisecondsSinceEpoch}');
-          PdfReaderView.nextPage(_pdfReaderViewKey);
+          _surface.nextPage();
           // Epic 24 Issue 10：理由同上方 previousPage 分支。
           if (_currentPdfSelection != null) _handlePdfSelectionCanceled();
           // 審查修正：理由同上方 previousPage 分支。
-          PdfReaderView.cancelActiveSelectionDrag(_pdfReaderViewKey);
+          _surface.pdf!.cancelActiveSelectionDrag();
         } else if (isFoliateFormat(format)) {
           // Epic 11 Issue 2：KF8 (AZW3) 與 EPUB 共用 FoliateReaderView。
-          FoliateReaderView.nextPage(_foliateEpubReaderViewKey);
+          _surface.nextPage();
         }
         break;
       case ZoneAction.menu:
