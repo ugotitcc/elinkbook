@@ -14,6 +14,7 @@ import '../reader/layout_preset_repository.dart';
 import '../reader/notes_repository.dart';
 import '../reader/reader_activity_tracker.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../reader/reader_surface_factory.dart';
 import '../reader/tts_audio_focus_source.dart';
 import '../reader/tts_audio_handler_startup.dart';
 import '../reader/tts_provider.dart';
@@ -74,6 +75,10 @@ class ReaderFeatureDependencies {
   /// [dictionaryService] 共用同一個實例，關閉後查詢端立刻停止送出。
   final DictionarySettingsRepository dictionarySettings;
 
+  /// 依書籍格式建立「閱讀面」的工廠（epic-54 Issue 23，見 CONTEXT.md「閱讀面」）。
+  /// 預設為正式工廠；測試可換成 `FakeReaderSurface`，不需新增 `ReaderScreen` 建構參數。
+  final ReaderSurfaceFactory readerSurfaceFactory;
+
   const ReaderFeatureDependencies({
     required this.prefsManager,
     required this.libraryRepository,
@@ -97,5 +102,6 @@ class ReaderFeatureDependencies {
     required this.dictionaryService,
     required this.dictionaryManager,
     required this.dictionarySettings,
+    this.readerSurfaceFactory = defaultReaderSurfaceFactory,
   });
 }

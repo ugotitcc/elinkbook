@@ -21,7 +21,6 @@ import '../reader/custom_font.dart';
 import '../reader/epub_position_info.dart';
 import '../reader/epub_selection_info.dart';
 import '../reader/foliate_bridge_codec.dart';
-import '../reader/foliate_reader_surface.dart';
 import '../reader/foliate_reader_view.dart';
 import '../reader/tts_audio_focus_coordinator.dart';
 import '../reader/tts_audio_handler.dart';
@@ -44,7 +43,6 @@ import '../reader/pdf_search_state.dart';
 import '../reader/pdf_page_info.dart';
 import '../reader/pdf_crop_frame_overlay.dart';
 import '../reader/pdf_crop_mode.dart';
-import '../reader/pdf_reader_surface.dart';
 import '../reader/pdf_reader_view.dart';
 import '../reader/pdf_toc_item.dart';
 import '../reader/pdf_toc_navigator.dart';
@@ -263,17 +261,6 @@ class ReaderScreen extends StatefulWidget {
       state._session.onTtsPlayingChanged(isPlaying);
     }
   }
-
-  /// 供真機整合測試讀取目前書籍目錄（epic-11-multi-format-reader
-  /// Issue 4），比照既有 [triggerZoneAction] 強型別 static helper 模式。
-  /// [key] 對應的 State 若尚未掛載，回傳空清單。
-  static Future<List<TocEntry>> loadTableOfContentsForTest(
-    GlobalKey<State<ReaderScreen>> key,
-  ) async {
-    final state = key.currentState;
-    if (state is! _ReaderScreenState) return const [];
-    return FoliateReaderView.loadTableOfContents(state._foliateEpubReaderViewKey);
-  }
 }
 
 class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver {
@@ -416,29 +403,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 用於呼叫 PdfReaderView.jumpToPage(key, pageIndex) 這個強型別 static
   // helper（審查修正，見 Task 2 Step 4——不使用 as dynamic 跨 State 私有
   // 邊界呼叫，避免 release 混淆／tree-shaking 風險）。
-  final _pdfReaderViewKey = GlobalKey<State<PdfReaderView>>();
   // 用於呼叫 FoliateReaderView 的強型別 static helper。epic-20 Issue 2
   // 起，所有 EPUB（FXL／流式）皆統一建構 FoliateReaderView（見
   // _resolveEpubEngineDispatch／_buildBody），此 key 已是實際掛載的唯一
   // EPUB widget key；_epubReaderViewKey（Readium）僅保留供 Issue 5 清理前
   // 過渡期間的舊程式碼路徑相容，不再被任何分派邏輯建構。
-  final _foliateEpubReaderViewKey = GlobalKey<State<FoliateReaderView>>();
   // 閱讀面（見 CONTEXT.md「閱讀面」）：對目前這本書的渲染畫面下指令的單一
-  // interface。一個 State 恆為一本書，首次使用時依格式建立一次。過渡期
-  // （epic-54 Issue 23 Task 5）沿用上方兩把既有 key 傳進 adapter，讓
-  // 新舊呼叫路徑打到同一個已掛載的 View。
-  late final ReaderSurface _surface = _createReaderSurface();
-
-  ReaderSurface _createReaderSurface() {
-    final format = detectBookFormat(_activeFilePath);
-    if (format == BookFormat.pdf) {
-      return PdfReaderSurface(viewKey: _pdfReaderViewKey);
-    }
-    if (isFoliateFormat(format)) {
-      return FoliateReaderSurface(viewKey: _foliateEpubReaderViewKey);
-    }
-    return const NoopReaderSurface();
-  }
+  // interface。一個 State 恆為一本書，首次使用時依格式經
+  // `dependencies.readerSurfaceFactory` 建立一次；兩個 View 的 `GlobalKey`
+  // 由 adapter 擁有（`surface.foliate!.viewKey`／`surface.pdf!.viewKey`），
+  // 本類別只用它們建構 View，不再直接持有或呼叫。
+  late final ReaderSurface _surface = widget.dependencies.readerSurfaceFactory(
+    detectBookFormat(_activeFilePath),
+  );
   // 記錄上一次實際套用給系統的螢幕方向，避免在偏好設定頻繁變動時（例如
   // 拖曳滑桿）重複呼叫 SystemChrome.setPreferredOrientations。
   ScreenOrientationSetting? _lastAppliedOrientation;
@@ -3280,7 +3257,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // 對流式格式無意義但傳入無害（main.js 僅在 isComicBookHint===true
         // 時讀取它，見 Issue 3 main.js 註解）。
         return FoliateReaderView(
-          key: _foliateEpubReaderViewKey,
+          key: _surface.foliate!.viewKey,
           filePath: _activeFilePath,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
@@ -3372,7 +3349,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // 裁切（Issue 3）、劃線選取回呼（Issue 4）、導航熱區（Issue 8）
         // 皆已補回。
         return PdfReaderView(
-          key: _pdfReaderViewKey,
+          key: _surface.pdf!.viewKey,
           filePath: _activeFilePath,
           // epic-10-search Issue 5：理由同上方 FoliateReaderView 分支。
           initialPageIndex: widget.initialJumpTarget?.pdfPageIndex ??

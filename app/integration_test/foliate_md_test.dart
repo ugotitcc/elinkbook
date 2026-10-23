@@ -9,6 +9,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
@@ -85,7 +86,9 @@ void main() {
 
       expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
-      final toc = await ReaderScreen.loadTableOfContentsForTest(readerKey);
+      final readerView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      final toc = await FoliateReaderView.loadTableOfContents(
+          readerView.key! as GlobalKey<State<FoliateReaderView>>);
       expect(toc.map((e) => e.title), ['第一章 起源', '第二章 結局']);
     },
   );
