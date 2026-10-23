@@ -19,7 +19,6 @@ import '../reader/book_reader_prefs.dart';
 import '../reader/app_font.dart';
 import '../reader/available_fonts.dart';
 import '../reader/custom_font.dart';
-import '../reader/epub_decoration.dart';
 import '../reader/epub_position_info.dart';
 import '../reader/epub_selection_info.dart';
 import '../reader/foliate_bridge_codec.dart';
@@ -39,7 +38,6 @@ import '../library/library_repository.dart';
 import '../reader/highlight.dart';
 import '../reader/highlight_style.dart';
 import '../reader/note.dart';
-import '../reader/pdf_annotation_decoration.dart';
 import '../reader/pdf_search_match.dart';
 import '../reader/pdf_search_state.dart';
 
@@ -2121,24 +2119,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void _sendDecorationsToNative() {
     if (!mounted) return;
     final tokens = Theme.of(context).extension<ElinkTokens>()!;
-    final decorations = <EpubDecoration>[
-      for (final highlight in _highlights)
-        if (highlight.epubLocatorJson != null)
-          EpubDecoration.forHighlight(
-            highlightId: highlight.id,
-            locatorJson: highlight.epubLocatorJson!,
-            tint: highlightStyleColor(highlight.style, tokens: tokens).toARGB32(),
-            isUnderline: highlight.style == HighlightStyle.underline,
-          ),
-      for (final note in _notes)
-        if (note.highlightId == null && note.epubLocatorJson != null)
-          EpubDecoration.forNote(
-            noteId: note.id,
-            locatorJson: note.epubLocatorJson!,
-            tint: noteOnlyTint.toARGB32(),
-          ),
-    ];
-    FoliateReaderView.setDecorations(_foliateEpubReaderViewKey, decorations);
+    _surface.refreshAnnotations(
+      highlights: _highlights,
+      notes: _notes,
+      tokens: tokens,
+    );
   }
 
 
@@ -2209,24 +2194,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void _sendPdfAnnotationsToNative() {
     if (!mounted) return;
     final tokens = Theme.of(context).extension<ElinkTokens>()!;
-    final annotations = <PdfAnnotationDecoration>[
-      for (final highlight in _highlights)
-        if (highlight.pdfPageIndex != null && highlight.pdfRect != null)
-          PdfAnnotationDecoration.forHighlight(
-            pageIndex: highlight.pdfPageIndex!,
-            rect: highlight.pdfRect!,
-            tint: highlightStyleColor(highlight.style, tokens: tokens).toARGB32(),
-            isUnderline: highlight.style == HighlightStyle.underline,
-          ),
-      for (final note in _notes)
-        if (note.highlightId == null && note.pdfPageIndex != null && note.pdfRect != null)
-          PdfAnnotationDecoration.forNote(
-            pageIndex: note.pdfPageIndex!,
-            rect: note.pdfRect!,
-            tint: noteOnlyTint.toARGB32(),
-          ),
-    ];
-    PdfReaderView.refreshAnnotations(_pdfReaderViewKey, annotations);
+    _surface.refreshAnnotations(
+      highlights: _highlights,
+      notes: _notes,
+      tokens: tokens,
+    );
   }
 
   // 浮動工具列估計高度／與選取範圍的間距，PDF 版本（比照 EPUB 的
