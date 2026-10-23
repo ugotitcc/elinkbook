@@ -156,6 +156,38 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 
 `CONTEXT.md` 已新增「閱讀面」詞條。無需新 ADR（可逆、不牴觸既有 ADR）。
 
+## Issue 24 設計決策（第三次檢視後 `/grilling` 定案，2026-10-24）
+
+來源：第三次架構檢視候選 B。事實盤點（子代理回報，已核對 `reader_screen.dart`）：
+
+- EPUB／PDF 成對方法的真正差異只有五項：選取型別（`EpubSelectionInfo`／`PdfSelectionInfo`）、locator 建構（`.epub`／`.pdf`）、「既有標註」解析函式、工具列錨點矩形（EPUB 用 `rect`，PDF 用 `widgetRect`）、取消選取的方式。其餘約八成是逐行複製。
+- `_sendDecorationsToNative`／`_sendPdfAnnotationsToNative` 逐字相同；兩個 reload 方法只差最後呼叫哪個 send。
+- `_highlights`／`_notes` 兩種格式共用；選取欄位各一套（`_currentSelection`＋`_pendingHighlightIdForSelection`、`_currentPdfSelection`＋`_pendingPdfHighlightIdForSelection`），同一個 State 只會用到其中一套。
+- `AnnotationSession`（129 行）無狀態、只包 CRUD 並回傳快照，屬淺 module。
+- PDF 退化選取守衛（`rect.left == rect.right` 且沒命中既有標註則忽略）內嵌在 State 方法裡，只有 widget 整合測試（`reader_screen_test.dart` 約 10375、10451）。
+- PDF 的 `ReaderSurface.clearSelection()` 是空操作（`pdf_reader_surface.dart`），所以 EPUB 的「關閉工具列」與 PDF 的「取消選取」在行為上可以合為一個。
+
+**定案**
+
+1. **純重構、零行為變化**；要改行為另開 Issue。
+2. **module 名稱「標註」**，類別 `AnnotationController`（`lib/reader/annotation_controller.dart`），擁有：選取、待存劃線 id、劃線清單、備註清單，以及劃線／備註的新增、更新、刪除。`CONTEXT.md` 新增「標註」詞條。
+3. **不通知**：`AnnotationController` 不是 `ChangeNotifier`；`ReaderScreen` 呼叫後自己 `setState`（和現行流程一致）。
+4. **建立方式**：`ReaderScreen` 以已注入的 `highlightsRepository`／`notesRepository` 直接建立（和現在的 `AnnotationSession` 一樣）；不新增 `ReaderScreen` 建構參數，也不新增工廠（一個 adapter 只是假接縫）。
+5. **併入 `AnnotationSession`**：刪除 `annotation_session.dart` 與 `AnnotationSnapshot`（併入後沒有消費者）；`AnnotationLocator` 保留（「存什麼」），搬進 `annotation_controller.dart` 或維持原檔，以實作時編譯為準。
+6. **統一選取型別 `AnnotationSelection`**（`locator`、`text`、`anchorRect`、`existingAnnotationId`）：module 內部使用；兩個 View 的回呼型別與 `EpubSelectionInfo`／`PdfSelectionInfo` 不動，由 `ReaderScreen` 接線處轉換。
+7. **PDF 退化選取守衛抽成純函式**（放 `annotation_controller.dart` 頂層），補單元測試；`reader_screen_test.dart` 那兩個整合案例保留（它們驗的是畫面有沒有工具列）。
+8. **工具列定位抽成純函式**，輸入錨點矩形與尺寸；EPUB 傳 `rect`、PDF 傳 `widgetRect`；常數 `_annotationToolbarHeight`／`Gap`／`Width` 隨之搬走。
+9. **兩個 build 內的工具列區塊合成一個**；查字典鈕只有 Foliate 格式傳入，關閉行為統一為「清選取＋`_surface.clearSelection()`」（PDF 的 `clearSelection()` 是空操作，行為不變）。
+10. **UI 副作用留在 `ReaderScreen`**：備註對話框、複製的 SnackBar、`AppLocalizations`、查字典面板。module 不碰 `BuildContext`。
+11. **兩個 `_send…ToNative` 合成一個、兩個 reload 合成一個**（Issue 23 自審 M-1）。
+12. **PDF 換頁取消選取的順序不動**：換頁 →（有選取才）清選取 → `cancelActiveSelectionDrag`。
+13. **`resolvePdfExistingAnnotation` 簽章改為收 `pageIndex`＋`rect`**（不再收 `PdfSelectionInfo`），因為 `AnnotationSelection` 不帶 PDF 專屬型別；其單元測試同一個 commit 遷移。
+14. **測試搬遷（replace, don't layer）**：`annotation_session_test`（15 案例）改為 `annotation_controller_test`；`annotation_resolution_test` 隨簽章遷移；`reader_screen_test` 的標註案例全留。
+15. **PR 切法**：一張 Issue 一個 PR、多個 commit；Issue 23 的文件收尾（狀態改為已合併 PR #361、Issue 28 診斷插樁已於 Issue 23 刪除）一併放進這個 PR。
+16. **流程**：寫 `plans/plan-issue-24.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）。
+
+無需新 ADR（可逆、不牴觸既有 ADR；CONTEXT「劃線」「備註」詞條只規定 FXL 不支援，行為不變）。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -608,3 +640,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 待辦：WAVE 真機抽驗（EPUB 與 PDF 各一本：翻頁、目錄跳轉、搜尋跳轉高亮、劃線、查字典水滴不浮出且關面板後選取還原）、程式審查報告（`reviews/review-code-issue-23.md`，不進版控）。
 
 **2026-10-24** Issue 23 真機抽驗時，使用者回報「從書架反覆開同一本書、多操作幾次後一直開書逾時，關掉 App 才恢復」，判斷應為舊問題，先登錄為 Issue 29（待查），不在 Issue 23 處理。自動重現腳本存為 `repro/reopen_loop.ps1`（用法見檔頭；14 輪未重現）。
+
+**2026-10-24** Issue 24 設計定案（`/grilling` 16 項決策），見「Issue 24 設計決策」；已寫 `plans/plan-issue-24.md`，待計畫審查。尚未寫程式。

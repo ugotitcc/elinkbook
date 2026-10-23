@@ -328,6 +328,10 @@ _Avoid_: 進度儲存（「進度」只是位置的其中一個欄位，不含�
 `ReaderScreen` 對「目前這本書的渲染畫面」下指令的單一 interface：翻頁、跳轉、清暫態高亮、整組重畫標註、清選取、載入目錄。Foliate 格式（EPUB／KF8／CBZ／TXT／MD）共用同一個 adapter，PDF 另一個，測試用 fake。View 尚未掛載時，指令靜默忽略、查詢回傳預設值（空清單、0、`null`）。TTS（只有 Foliate）與 PDF 內文搜尋、頁縮圖是格式專屬功能，不在共通 interface 內，各由專屬介面提供。只涵蓋「指令」，不涵蓋 View 的建構與 callback，也不合併底層渲染（見「Chrome Bar」詞條與 ADR 0013、0022）。
 _Avoid_: 閱讀器（太籠統，也指整個 `ReaderScreen`）、渲染層（本詞條不處理渲染）
 
+**標註（Annotation，`epic-54-architecture-optimization`）**：
+劃線與備註的選取與清單，由 `AnnotationController` 單一 module 擁有：目前選取範圍、同一次選取中剛建立的劃線 id（供接著建立的備註連結）、本書劃線與備註清單，以及新增、更新、刪除。EPUB 與 PDF 共用同一套流程；兩個 View 只負責回報選取與重畫，不持有標註狀態。備註對話框、複製提示等畫面副作用留在 `ReaderScreen`。
+_Avoid_: 註記（與「備註」混淆）、標記
+
 ## 字典查詢
 
 **字典來源（Dictionary Source，`epic-63-dictionary-lookup`）**：
