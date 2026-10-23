@@ -418,7 +418,7 @@ E-Ink 裝置：
 
 - [ ] `mdict_flutter` 與 `dict_reader` 的真實字典測試。
 - [ ] mdict-cpp 的授權，以及 `mdict_flutter` 是否含衍生程式碼。
-- [ ] ECDICT 的授權原文。（CC-CEDICT 已由檔頭確認 CC BY-SA 4.0，但授權全文仍需放進授權頁。）
+- [ ] ECDICT 的授權原文。（CC-CEDICT 已由檔頭確認 CC BY-SA 4.0。epic-63 Issue 8 決定授權頁放「標示聲明＋官方網址」，不內嵌法律全文，人類已確認 2026-10-22。）
 - [x] LZO 驗收檔：不取得。Phase 1 不支援 LZO，只驗證錯誤路徑。
 - [ ] FreeDict 是否有英→繁中。
 - [ ] 簡轉繁後再散布或顯示，是否構成改作（ECDICT 轉繁中時）。

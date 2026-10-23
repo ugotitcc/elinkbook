@@ -271,7 +271,8 @@ void main() {
   });
 
   testWidgets('驗收 23：本機查詢 p95 小於 300 ms（含候選鏈，真機）', (tester) async {
-    // 一半查得到（第一個候選就命中）、一半查不到（跑完整條候選鏈），
+    // 一半查得到（第一個候選就命中）、一半是 `term${i}ed`（詞形還原後
+    // 才命中 `term$i`，要走到後段候選，不是全部落空），
     // 量測含 SQLite 與候選產生的服務層延遲。
     final entries = List.generate(
       200,

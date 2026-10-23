@@ -1,6 +1,6 @@
 # `epic-63-dictionary-lookup` 字典查詢（離線匯入＋可選線上查詞）
 
-**狀態：** 🟡 收尾中（Issue 1 至 7 已合併，Issue 8 進行中）
+**狀態：** 🟡 開發中 (Active)（Issue 1 至 7 已合併，Issue 8 進行中）
 **存放路徑：** `docs/epics/epic-63-dictionary-lookup/`
 **關聯文件：** `spec.md`、`issues.md`
 **調查文件：** `docs/research/dictionary/PHASE1_AUDIT.md`、`DICTIONARY_FORMATS_AND_LICENSES.md`、`READEST_ANALYSIS_AND_PROPOSAL.md`
