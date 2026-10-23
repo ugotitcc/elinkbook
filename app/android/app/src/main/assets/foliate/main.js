@@ -707,6 +707,45 @@ window.clearSelection = function () {
   }
 }
 
+/**
+ * 暫時收起選取（查字典面板開啟期間）：WebView 的選字拉桿（水滴）是系統
+ * 另外畫的視窗，浮在 Flutter 畫面最上層，字典面板蓋不住。面板開啟時先
+ * 把各 doc 的選取範圍存起來再清掉；面板關閉後由 restoreSelection() 還原。
+ * suspended 旗標讓 reportSelection() 在這段期間忽略 selectionchange，
+ * 否則 Dart 端會收到 onSelectionCleared 而把工具列一起關掉。
+ */
+let selectionSuspended = false
+let suspendedSelections = []
+window.suspendSelection = function () {
+  if (selectionSuspended) return
+  selectionSuspended = true
+  suspendedSelections = []
+  for (const { doc } of view.renderer.getContents()) {
+    const sel = doc.getSelection()
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) continue
+    suspendedSelections.push({
+      doc,
+      ranges: Array.from({ length: sel.rangeCount }, (_, i) => sel.getRangeAt(i).cloneRange()),
+    })
+    sel.removeAllRanges()
+  }
+}
+
+/** 還原 suspendSelection() 存下的選取範圍；先放開旗標，讓還原觸發的
+ * selectionchange 正常回報給 Dart 端。 */
+window.restoreSelection = function () {
+  if (!selectionSuspended) return
+  selectionSuspended = false
+  const saved = suspendedSelections
+  suspendedSelections = []
+  for (const { doc, ranges } of saved) {
+    const sel = doc.getSelection()
+    if (!sel) continue
+    sel.removeAllRanges()
+    for (const r of ranges) sel.addRange(r)
+  }
+}
+
 
 /**
  * 遞迴解析單一目錄節點：透過 view.book.resolveHref() 取得 {index, anchor}，
@@ -1267,6 +1306,7 @@ async function openBook() {
       // 故 doc/index 皆從本次 'load' 呼叫的區域變數閉包讀取（見
       // spike-overlayer-annotations.md「已記錄的既有 API 落差」）。
       const reportSelection = async () => {
+        if (selectionSuspended) return
         const selection = doc.getSelection()
         if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
           classifier.lastNonCollapsedSelectionAtMs = null

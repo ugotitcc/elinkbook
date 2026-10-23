@@ -1943,6 +1943,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   Future<void> _handleLookupPressed(String text) async {
     if (_lookupSheetOpen) return;
     _lookupSheetOpen = true;
+    // 收起 WebView 選字拉桿，避免浮在面板上方；Dart 端選取狀態不動。
+    FoliateReaderView.suspendSelection(_foliateEpubReaderViewKey);
     try {
       await DictionaryLookupSheet.show(
         context,
@@ -1970,6 +1972,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // 只還原旗標：它不是畫面狀態，不需要 setState；`await` 之後也不碰
       // `context`，ReaderScreen 先被銷毀時不會用到失效的 State。
       _lookupSheetOpen = false;
+      FoliateReaderView.restoreSelection(_foliateEpubReaderViewKey);
     }
   }
 
