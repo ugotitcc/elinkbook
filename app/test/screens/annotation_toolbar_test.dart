@@ -45,6 +45,36 @@ BorderSide _toolbarBorder(WidgetTester tester) {
 }
 
 void main() {
+  group('螢光筆色塊辨識度', () {
+    // 色塊本身很淡時（米色主題、E-Ink 灰階），要靠外框讓使用者看得到；
+    // 非文字元件的 WCAG 對比標準是 3:1。
+    for (final theme in [AppTheme.sepia, AppTheme.light]) {
+      testWidgets('${theme.name}：三個色塊都有外框，外框對工具列底色對比 ≥ 3',
+          (tester) async {
+        await _pumpToolbar(tester, theme: theme, isEinkMode: false);
+
+        final surface = Theme.of(tester.element(find.byType(AnnotationToolbar)))
+            .colorScheme
+            .surface;
+        for (final name in ['yellow', 'pink', 'blue']) {
+          final swatch = find.descendant(
+            of: find.byKey(Key('annotation_toolbar_highlighter_$name')),
+            matching: find.byType(DecoratedBox),
+          );
+          expect(swatch, findsOneWidget, reason: '$name 色塊要有外框裝飾');
+          final decoration =
+              tester.widget<DecoratedBox>(swatch).decoration as BoxDecoration;
+          final border = decoration.border! as Border;
+          expect(
+            contrastRatio(border.top.color, surface),
+            greaterThanOrEqualTo(3),
+            reason: '$name 色塊外框要看得清楚',
+          );
+        }
+      });
+    }
+  });
+
   group('外框（Issue 6b Task 9）', () {
     testWidgets('深色（非 E-Ink）有 1.5 寬、對底色對比 ≥ 4.5 的淺灰外框', (tester) async {
       await _pumpToolbar(tester, theme: AppTheme.dark, isEinkMode: false);

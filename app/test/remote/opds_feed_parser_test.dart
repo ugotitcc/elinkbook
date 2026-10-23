@@ -96,6 +96,27 @@ void main() {
     expect(book.acquisitions.single.format, isNull);
   });
 
+  test('書目的 <updated> 會解析出來（縮圖快取用它判斷封面是否換過），缺少時為 null', () {
+    const xml = '''<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>updated 測試</title>
+  <entry>
+    <id>urn:uuid:a</id>
+    <title>有 updated</title>
+    <updated>2026-10-23T00:20:01+00:00</updated>
+    <link rel="http://opds-spec.org/acquisition" type="application/epub+zip" href="a.epub"/>
+  </entry>
+  <entry>
+    <id>urn:uuid:b</id>
+    <title>沒有 updated</title>
+    <link rel="http://opds-spec.org/acquisition" type="application/epub+zip" href="b.epub"/>
+  </entry>
+</feed>''';
+    final feed = parser.parse(xml, feedUri, fallbackTitles: _zhFallback);
+    expect(feed.entries[0].updated, '2026-10-23T00:20:01+00:00');
+    expect(feed.entries[1].updated, isNull);
+  });
+
   test('〔審查 Finding 2〕MIME type 無法辨識時退回看 href 副檔名（含查詢字串，不誤判）', () {
     const xml = '''<?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom">

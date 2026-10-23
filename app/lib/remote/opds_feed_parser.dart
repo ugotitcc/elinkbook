@@ -148,6 +148,7 @@ class OpdsFeedParser {
       title: entryTitle,
       author: author,
       thumbnailUrl: thumbnailHref == null ? null : _resolve(feedUri, thumbnailHref),
+      updated: _firstText(entry, 'updated'),
       acquisitions: acquisitions,
     );
   }

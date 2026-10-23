@@ -23,7 +23,12 @@ class FakeRemoteThumbnailCache implements RemoteThumbnailCache {
   );
 
   @override
-  Future<Uint8List> fetch(RemoteServerProfile server, String url, Map<String, String> headers) async {
+  Future<Uint8List> fetch(
+    RemoteServerProfile server,
+    String url,
+    Map<String, String> headers, {
+    String? version,
+  }) async {
     fetchCalls.add(url);
     if (error != null) throw error!;
     return minimalPngBytes;

@@ -67,6 +67,10 @@ class OpdsEntry {
   final String title;
   final String? author;
   final String? thumbnailUrl;
+
+  /// 條目的 `<updated>` 原始字串，供縮圖快取判斷封面是否換過；來源沒有就是
+  /// `null`。不參與 [==]／[hashCode]：它是快取版本，不是書的身分。
+  final String? updated;
   final List<OpdsAcquisition> acquisitions;
 
   const OpdsEntry({
@@ -74,6 +78,7 @@ class OpdsEntry {
     required this.title,
     this.author,
     this.thumbnailUrl,
+    this.updated,
     this.acquisitions = const [],
   });
 
