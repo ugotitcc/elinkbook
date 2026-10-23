@@ -522,6 +522,23 @@ class FoliateReaderView extends StatefulWidget {
     }
   }
 
+  /// 查字典面板開啟期間暫時收起 WebView 選取（含系統選字拉桿），不通知 Dart
+  /// 端選取已清除；見 main.js window.suspendSelection 註解。
+  static void suspendSelection(GlobalKey<State<FoliateReaderView>> key) {
+    final state = key.currentState;
+    if (state is _FoliateReaderViewState) {
+      state._evaluate('window.suspendSelection()');
+    }
+  }
+
+  /// 還原 [suspendSelection] 收起的選取範圍。
+  static void restoreSelection(GlobalKey<State<FoliateReaderView>> key) {
+    final state = key.currentState;
+    if (state is _FoliateReaderViewState) {
+      state._evaluate('window.restoreSelection()');
+    }
+  }
+
 
   @override
   State<FoliateReaderView> createState() => _FoliateReaderViewState();
