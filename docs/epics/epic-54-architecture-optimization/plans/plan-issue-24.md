@@ -147,5 +147,5 @@ bool isIgnoredPdfSelection({required PdfSelectionInfo info, required List<Highli
 - [x] **Step 2：** `epic.md` 開發記錄；`issues.md` Issue 24 狀態；Issue 23 狀態改為「🟢 已合併（PR #361）」並註記 Issue 28 的診斷插樁已於 Issue 23 刪除；`docs/epics.md` 對應列同步更新。
 - [x] **Step 3：** 驗收：`grep -n "_currentPdfSelection\|_pendingPdfHighlightIdForSelection\|_pdfAnnotationToolbarTop\|_sendPdfAnnotationsToNative\|_reloadPdfAnnotationsAndSync" app/lib/screens/reader_screen.dart` 應為 0（含註解行；Task 3 Step 2 已要求同步改註解）。
 - [x] **Step 4：** `flutter analyze`；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；完整 `flutter test`（`run_in_background`，只跑一個）。
-- [ ] **Step 5：** WAVE 真機抽驗（EPUB 與 PDF 各一本）：劃線四種樣式、備註新增／編輯、刪除既有標註、PDF 單點長按不彈工具列、PDF 長按拖曳框選、換頁清選取、工具列不超出螢幕邊緣、EPUB 查字典後選取還原。
+- [x] **Step 5：** WAVE 真機抽驗（EPUB 與 PDF 各一本）：劃線四種樣式、備註新增／編輯、刪除既有標註、PDF 單點長按不彈工具列、PDF 長按拖曳框選、換頁清選取、工具列不超出螢幕邊緣、EPUB 查字典後選取還原。
 - [ ] **Step 6：** 程式審查（報告存 `reviews/review-code-issue-24.md`，不進版控）；開 PR。
