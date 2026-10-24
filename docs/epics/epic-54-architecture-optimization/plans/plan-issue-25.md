@@ -137,5 +137,5 @@ class BookmarkController {
 - [x] **Step 2：** `epic.md` 開發記錄；`issues.md` Issue 25 狀態；`docs/epics.md` 對應列同步。
 - [x] **Step 3：** 驗收：`grep -rn "_fxlBookmarks\|_loadFxlBookmarks\|_bookmarkAtCurrentPosition\|_pdfBookmarkAtCurrentPosition\|_matchesCurrentPosition\|bookmark_toggle\.dart" app/lib app/test` 應為 0（含註解；有註解提到舊名稱須同步改字）。注意正則用 `bookmark_toggle\.dart`，不可用 `bookmark_toggle`——Widget Key `notes_sheet_bookmark_toggle` 與測試 bookId `b_fxl_bookmark_toggle` 合法且不可更名。
 - [x] **Step 4：** `flutter analyze`；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；完整 `flutter test`（`run_in_background`，只跑一個）。
-- [ ] **Step 5：** WAVE 真機抽驗（流式 EPUB、FXL、PDF 各一本）：已有書籤的書開啟時星號正確；FAB 新增／移除；面板新增／移除後關閉，FAB 星號同步；面板重新命名／刪除／全刪；PDF 書籤跳轉。
+- [x] **Step 5：** WAVE 真機抽驗（流式 EPUB、FXL、PDF 各一本）：已有書籤的書開啟時星號正確；FAB 新增／移除；面板新增／移除後關閉，FAB 星號同步；面板重新命名／刪除／全刪；PDF 書籤跳轉。
 - [ ] **Step 6：** 程式審查（報告存 `reviews/review-code-issue-25.md`，不進版控）；開 PR。
