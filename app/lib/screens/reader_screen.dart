@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
 
 import '../l10n/app_localizations.dart';
@@ -11,9 +10,8 @@ import '../reader/annotation_controller.dart';
 import '../reader/annotation_list_item.dart';
 import '../reader/annotation_toolbar_layout.dart';
 import '../reader/book_format.dart';
-import '../reader/bookmark.dart';
+import '../reader/bookmark_controller.dart';
 import '../reader/bookmark_position_context.dart';
-import '../reader/bookmark_toggle.dart' as bookmark_toggle;
 import '../reader/book_reader_prefs.dart';
 import '../reader/app_font.dart';
 import '../reader/available_fonts.dart';
@@ -299,13 +297,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // Issue 2）：只影響展開列是否顯示，不影響朗讀播放本身，格式無關
   // （CBZ 的裝飾面板與一般格式共用同一個旗標）。
   bool _ttsPanelCollapsed = false;
-  // FXL 懸浮「🔖 書籤 toggle」按鈕圖示所需的最小狀態快取
-  // （epic-6-annotations Issue 4）：與 NotesBottomSheet 內部「🔖 書籤」
-  // 分頁各自獨立載入自己的清單（比照既有分頁按鈕 toggle 與 Bottom Sheet
-  // 清單各自管理狀態的既定模式），只負責懸浮按鈕圖示的二態顯示。載入
-  // 時機見 _handleLayoutResolved（初次開書）／_openNotesSheet（Bottom
-  // Sheet 關閉後重新整理，使用者可能在分頁裡新增/刪除書籤）。
-  List<Bookmark> _fxlBookmarks = [];
+  // 本書書籤 module（epic-54 Issue 25，見 CONTEXT.md「本書書籤」）：
+  // 持有本書書籤清單，負責懸浮／底部選單列書籤按鈕的二態圖示與切換。
+  // 與 NotesBottomSheet 內部「🔖 書籤」分頁各自持有自己的清單（比照既有
+  // 分頁按鈕 toggle 與 Bottom Sheet 清單各自管理狀態的既定模式）。載入
+  // 時機：initState（開書，所有格式）與 _openNotesSheet（Bottom Sheet
+  // 關閉後重新整理，使用者可能在分頁裡新增/刪除書籤）。
+  late final BookmarkController _bookmarks = BookmarkController(
+    repository: widget.dependencies.bookmarksRepository,
+    bookId: widget.bookId,
+  );
   // 版面設定預設集清單快取（epic-28-reader-settings-enhancements
   // Issue 3），開書時載入一次，比照既有一次性載入快取模式；
   // 另存/覆蓋/刪除完成後重新載入。
@@ -478,6 +479,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _resolveEpubEngineDispatch();
     _loadAvailableFonts();
     _loadLayoutPresets();
+    // 開書即載入本書書籤（epic-54 Issue 25 設計決策 7）：原本只有 PDF 借
+    // `_pdfTocLoaded` 旗標在 onPageRendered 時載入，流式 EPUB 從未載入，
+    // 星號可能停在未加入狀態。載入失敗只 debugPrint，清單維持空值。
+    _bookmarks.load().then((_) {
+      if (mounted) setState(() {});
+    });
     _openBookFlow.start();
     widget.dependencies.prefsManager.load(widget.bookId).then((loaded) {
       if (!mounted) return;
@@ -1160,17 +1167,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
-  Future<void> _loadFxlBookmarks() async {
-    final repository = widget.dependencies.bookmarksRepository;
-    try {
-      final list = await repository.listByBook(widget.bookId);
-      if (!mounted) return;
-      setState(() => _fxlBookmarks = list);
-    } catch (e) {
-      debugPrint('Failed to load FXL bookmarks: $e');
-    }
-  }
-
   /// 載入可用字型（epic-54 Issue 1）：已下載的內建字型與自訂字型各自讀取、各自
   /// 處理失敗（視為空集合，不阻擋開書），兩邊都完成才一次組出 [AvailableFonts]。
   Future<void> _loadAvailableFonts() async {
@@ -1221,59 +1217,21 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
   }
 
-  /// 目前頁是否已有書籤——比較 epubLocatorJson 完全相同字串，比照
-  /// NotesBottomSheet._matchesCurrentPosition 既有邏輯（FXL／流式 EPUB
-  /// 副檔名皆為 .epub，恆用 epubLocatorJson，不使用 pdfPageIndex，見
-  /// Global Constraints）。epic-18 Issue 7 泛用化改名（原
-  /// _fxlBookmarkAtCurrentPosition），供 FXL 與流式 EPUB 共用。
-  Bookmark? get _bookmarkAtCurrentPosition {
-    final locatorJson = _epubPositionInfo?.locatorJson;
-    if (locatorJson == null) return null;
-    for (final bookmark in _fxlBookmarks) {
-      if (bookmark.epubLocatorJson == locatorJson) return bookmark;
-    }
-    return null;
-  }
-
-  /// PDF 版本的「目前頁是否已有書籤」（epic-24-pdf-engine-rebuild Issue
-  /// 8）：比對 `pdfPageIndex`，比照 [_bookmarkAtCurrentPosition] 的 EPUB
-  /// 版本邏輯，共用同一份 [_fxlBookmarks] 快取（[_loadFxlBookmarks] 是
-  /// 格式無關的 `repository.listByBook` 查詢，見該方法定義）。
-  Bookmark? get _pdfBookmarkAtCurrentPosition {
-    final pageIndex = _pdfPageInfo?.pageIndex;
-    if (pageIndex == null) return null;
-    for (final bookmark in _fxlBookmarks) {
-      if (bookmark.pdfPageIndex == pageIndex) return bookmark;
-    }
-    return null;
-  }
-
   Future<void> _toggleBookmark() async {
-    final repository = widget.dependencies.bookmarksRepository;
     final positionInfo = _epubPositionInfo;
     if (positionInfo == null) return;
     // 書籤預設名稱是建立當下語言的快照；在 await 之前取得 l10n
     final l10n = AppLocalizations.of(context)!;
-    await bookmark_toggle.toggleBookmark(
-      repository: repository,
-      bookId: widget.bookId,
-      matches: (bookmark) =>
-          bookmark.epubLocatorJson == positionInfo.locatorJson,
-      build: () => Bookmark(
-        id: const Uuid().v4(),
-        bookId: widget.bookId,
-        name: Bookmark.defaultName(
-          BookmarkPositionContext(
-            epubLocatorJson: positionInfo.locatorJson,
-            progression: positionInfo.progression,
-          ),
-          l10n,
-        ),
+    // FAB 的 context 刻意不帶 chapterTitle（epic-54 Issue 25 設計決策 6）：
+    // 預設名稱維持「進度 N%」，與筆記面板帶章節名的名稱不同是現狀。
+    await _bookmarks.toggle(
+      position: BookmarkPositionContext(
         epubLocatorJson: positionInfo.locatorJson,
         progression: positionInfo.progression,
       ),
+      l10n: l10n,
     );
-    await _loadFxlBookmarks();
+    if (mounted) setState(() {});
   }
 
   /// PDF 版本的書籤 toggle：本工單只需完成邏輯本身（見 issues.md Issue 4
@@ -1281,22 +1239,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// [ReaderScreen.togglePdfBookmark] 這個測試 seam 觸發，UI 尚無法直接
   /// 點擊呼叫。
   Future<void> _togglePdfBookmark() async {
-    final repository = widget.dependencies.bookmarksRepository;
     final pageIndex = _pdfPageInfo?.pageIndex;
     if (pageIndex == null) return;
     final l10n = AppLocalizations.of(context)!;
-    await bookmark_toggle.toggleBookmark(
-      repository: repository,
-      bookId: widget.bookId,
-      matches: (bookmark) => bookmark.pdfPageIndex == pageIndex,
-      build: () => Bookmark(
-        id: const Uuid().v4(),
-        bookId: widget.bookId,
-        name: Bookmark.defaultName(BookmarkPositionContext(pdfPageIndex: pageIndex), l10n),
-        pdfPageIndex: pageIndex,
-      ),
+    await _bookmarks.toggle(
+      position: BookmarkPositionContext(pdfPageIndex: pageIndex),
+      l10n: l10n,
     );
-    await _loadFxlBookmarks();
+    if (mounted) setState(() {});
   }
 
   /// 依 `_dispatchedIsFixedLayout` 分派到正確的原生 widget 執行目錄／
@@ -1516,17 +1466,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         },
       ),
     ).then((_) {
-      // epic-6-annotations Issue 4：FXL 懸浮書籤按鈕的二態圖示快取
-      // （_fxlBookmarks）與本 Bottom Sheet 內「🔖 書籤」分頁各自獨立載入
-      // 自己的清單（見 _loadFxlBookmarks 說明），Bottom Sheet 關閉後主動
-      // 重新整理一次，確保使用者在分頁裡新增/刪除書籤後，懸浮按鈕圖示不會
-      // 停留在過期狀態。
-      // epic-24-pdf-engine-rebuild Issue 8：PDF 同樣使用 _fxlBookmarks
-      // 快取來驅動書籤 FAB 星號圖示（Step 9），Notes Sheet 關閉後的
-      // 重新整理必須涵蓋 PDF，否則使用者在筆記面板裡新增/刪除 PDF 書籤
-      // 後，FAB 圖示會停留在過期狀態。_openNotesSheet 的 format 參數
-      // 已是 BookFormat 型別，此處直接比對即可，無需再呼叫 detectBookFormat。
-      if (_isFixedLayout || format == BookFormat.pdf) _loadFxlBookmarks();
+      // 本書書籤 module 與 NotesBottomSheet 內「🔖 書籤」分頁各自載入自己
+      // 的清單，Bottom Sheet 關閉後主動重新整理一次，確保使用者在分頁裡
+      // 新增/刪除書籤後，懸浮／底部選單列按鈕圖示不會停留在過期狀態。
+      // epic-54 Issue 25 設計決策 7：重載範圍從「FXL／PDF」擴大為所有格式
+      // （流式 EPUB 的星號原本在面板關閉後同樣會過期）。
+      _bookmarks.load().then((_) {
+        if (mounted) setState(() {});
+      });
     });
   }
 
@@ -1554,13 +1501,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         if (!mounted) return;
         setState(() => _pdfTocEntries = items);
       });
-      // epic-24-pdf-engine-rebuild Issue 8（審查意見 Important 1）：PDF
-      // 開書成功時一併載入書籤快取，讓 Step 9 新增的書籤 FAB 星號圖示在
-      // 使用者尚未手動 toggle／開過筆記面板前就能正確反映既有書籤狀態。
-      // 借用既有 _pdfTocLoaded 旗標的去重保護（本區塊本來就只會在單一
-      // PDF 開書流程中執行一次），不另外新增專屬旗標。
-      // 書籤 repository 恆由 dependencies 提供，此處不需額外判斷。
-      _loadFxlBookmarks();
     }
     // epic-10-search Issue 5：書籍成功渲染（含 PDF／Foliate，兩者皆走
     // onPageRendered）即代表已抵達 initialJumpTarget 指定的目標位置
@@ -2252,7 +2192,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           ? const SizedBox.shrink()
           : _buildFoliateEpubFooter(_epubPositionInfo!),
       onTocTap: _onTocTapFor(format),
-      isBookmarked: _bookmarkAtCurrentPosition != null,
+      isBookmarked: _bookmarks.at(BookmarkPositionContext(
+            epubLocatorJson: _epubPositionInfo?.locatorJson,
+          )) !=
+          null,
       onBookmarkTap:
           _epubPositionInfo == null ? null : _toggleBookmark,
       onAnnotationsTap: _autoDetectedWritingMode == null ||
@@ -2670,7 +2613,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                               ReaderJumpTarget(pdfPageIndex: page1Indexed - 1)),
                         ),
                   onTocTap: _onTocTapFor(format),
-                  isBookmarked: _pdfBookmarkAtCurrentPosition != null,
+                  isBookmarked: _bookmarks.at(BookmarkPositionContext(
+                        pdfPageIndex: _pdfPageInfo?.pageIndex,
+                      )) !=
+                      null,
                   onBookmarkTap:
                       _pdfPageInfo == null ? null : _togglePdfBookmark,
                   onAnnotationsTap: !_openBookFlow.isRendered

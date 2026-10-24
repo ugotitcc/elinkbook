@@ -186,6 +186,30 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 15. **PR 切法**：一張 Issue 一個 PR、多個 commit；Issue 23 的文件收尾（狀態改為已合併 PR #361、Issue 28 診斷插樁已於 Issue 23 刪除）一併放進這個 PR。
 16. **流程**：寫 `plans/plan-issue-24.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）。
 
+## Issue 25 設計決策（第三次檢視後 `/grilling` 定案，2026-10-24）
+
+來源：第三次架構檢視候選 C。事實盤點（已核對 `reader_screen.dart`、`notes_bottom_sheet.dart`）：
+
+- 「此位置有沒有書籤」有 3 份實作（`_bookmarkAtCurrentPosition`、`_pdfBookmarkAtCurrentPosition`、`NotesBottomSheet._matchesCurrentPosition`），面板的 `_toggleBookmark` 另有一份沒用 `bookmark_toggle.dart` 的切換。
+- `_fxlBookmarks` 是全格式共用快取；`_loadFxlBookmarks` 只有 4 處呼叫（EPUB 切換後、PDF 切換後、PDF 開書時借 `_pdfTocLoaded` 旗標、面板關閉後且限 FXL／PDF）。**流式 EPUB 開書時沒人載入**，書籤星號可能是空的（讀程式推論，未在真機驗證）。
+- 預設名稱不一致：FAB 切換不帶章節名（「進度 N%」），面板切換帶章節名（「章節 (N%)」）。
+- 載入失敗只 `debugPrint`。
+
+**定案**
+
+1. **純重構**，唯一刻意的行為變化見第 7 點。
+2. **新增 `BookmarkController`**（`lib/reader/bookmark_controller.dart`）：持有書籤清單，提供 `load()`、`at(位置)`、`toggle(position:, l10n:)`。不是 `ChangeNotifier`，`ReaderScreen` 呼叫後自己 `setState`；不碰 `BuildContext`，`l10n` 由呼叫端在 `await` 前取好傳入。
+3. **位置直接用 `BookmarkPositionContext`**：`pdfPageIndex` 有值比頁碼，否則比 `epubLocatorJson` 字串。比對規則抽成頂層純函式。
+4. **併入並刪除 `bookmark_toggle.dart`**。
+5. **`toggle` 的存在性判斷仍直查 repository**（Epic 26 競態修復保留），做完自己重載清單；呼叫端不再手動 `await _loadFxlBookmarks()`。
+6. **面板自建同類別實例**，`NotesBottomSheet` 建構參數不動，兩份清單維持。預設名稱差異原樣保留，由呼叫端傳入的 context 決定。
+7. **唯一的行為變化**：module 建立時所有格式都載入；面板關閉後所有格式都重載；PDF 不再借 `_pdfTocLoaded`。先寫「流式 EPUB 開書後星號正確」的失敗測試，再修。
+8. **載入失敗維持只 `debugPrint`**，清單保持舊值。
+9. **分支**：等 PR #363（Issue 24）合併後，從新的 `main` 開。
+10. **測試（replace, don't layer）**：`bookmark_toggle_test` 改為 `bookmark_controller_test`；補純函式測試；`fxl_bookmarks_test` 等畫面測試保留。
+11. **文件**：`CONTEXT.md` 已補「本書書籤」。無需新 ADR（可逆、不牴觸既有 ADR）。
+12. **流程**：一張 Issue 一個 PR、多個 commit；寫 `plans/plan-issue-25.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）。
+
 無需新 ADR（可逆、不牴觸既有 ADR；CONTEXT「劃線」「備註」詞條只規定 FXL 不支援，行為不變）。
 
 ## 開發記錄
@@ -650,3 +674,10 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-24 WAVE 真機抽驗通過**：分支版（commit `68731ed`）安裝於 WAVE（Android 12／API 31），EPUB 與 PDF 各一本，8 項全數正常：劃線四種樣式、備註新增／編輯、刪除既有標註、PDF 單點長按不彈工具列、PDF 長按拖曳框選、換頁清選取、工具列不超出螢幕邊緣、EPUB 查字典後選取還原。
 
 **2026-10-24 PR 已開**：Issue 24 分支 `epic-54/issue-24-annotation` 推上 `origin`，開 PR [#363](https://git.jigong.org/huthief/elinkBook/pulls/363)（`main` ← `epic-54/issue-24-annotation`），待合併。
+
+**2026-10-24 Issue 25 實作完成**：新增 `BookmarkController`（`app/lib/reader/bookmark_controller.dart`，持有本書書籤清單，提供 `load()`／`at(position)`／`toggle(position:, l10n:)`；比對規則抽出頂層純函式 `isSameBookmarkPosition`；`toggle` 的存在性判斷直查 repository，完成後自己重載清單）與改名後的 `bookmark_controller_test`（原 `bookmark_toggle_test`，3→18 案例）；`bookmark_toggle.dart` 併入後刪除。`ReaderScreen`：`_fxlBookmarks`／`_loadFxlBookmarks`／`_bookmarkAtCurrentPosition`／`_pdfBookmarkAtCurrentPosition` 收成 `late final BookmarkController _bookmarks`（不新增建構參數），星號改 `_bookmarks.at(BookmarkPositionContext(...))`、切換改 `_bookmarks.toggle(...)` 後自行 `setState`；`initState` 即載入書籤（所有格式），`_handlePageRendered` 不再借 `_pdfTocLoaded` 載入書籤；面板關閉後的重載移除「FXL／PDF」條件。`NotesBottomSheet`：自建 `BookmarkController`（建構參數不動），刪 `_matchesCurrentPosition`／`_bookmarkAtCurrentPosition` 與自寫切換，重新命名／刪除／全刪流程不變。行為變化只有設計決策 7（流式 EPUB 開書即載入書籤、面板關閉後所有格式重載）；FAB 與面板的預設名稱差異原樣保留。測試：`bookmark_controller_test` 18 案例（含「記憶體清單是舊的、資料庫已有書籤時仍刪除」的 Epic 26 競態回歸）；`reader_screen_test` 新增 4 案例（流式 EPUB／FXL／PDF 開書後星號正確、面板新增後關閉 FAB 星號同步），並補「FAB 預設名稱不帶章節名」的斷言（2026-10-24 審查 I-1／M-4；mutation 驗證：移除 `initState` 的開書載入 → FXL／PDF 兩案例轉紅〔流式 EPUB 案例已於 Task 2 驗證〕，FAB 暫時帶 `chapterTitle` → 名稱斷言轉紅）。驗證：`reader_screen_test`＋`reader_chrome_bottom_bar_test`＋`bookmark_controller_test` 330 通過；`notes_bottom_sheet_test` 34 通過；`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js` PASS。待辦：WAVE 真機抽驗、程式審查、PR。
+
+**2026-10-24 Issue 25 程式審查**：審查報告 `reviews/review-code-issue-25.md`（不進版控），0 Critical／0 Important／4 Minor，結論 Yes（可合併）。Minor 1（`load()` 亂序覆寫，低風險）已登錄為 `issues.md` Issue 30，不擋合併；Minor 2～4 為設計取捨，不處理。
+
+**2026-10-24 WAVE 真機抽驗通過**：分支版（commit `cc97a7f5`）安裝於 WAVE，10 項全數正常：流式 EPUB 開書即顯示正確星號（不需點任何按鈕）、星號切換、面板新增後關閉星號同步、面板重新命名／刪除、書籤跳轉；FXL 開書星號與切換；PDF 星號隨翻頁變化與書籤跳轉；FAB 加的書籤名稱不帶章節名、面板加的帶章節名。
+**2026-10-24 PR 已開**：Issue 25 分支 `epic-54/issue-25-bookmark` 推上 `origin`，開 PR [#364](https://git.jigong.org/huthief/elinkBook/pulls/364)（`main` ← `epic-54/issue-25-bookmark`），待合併。完整 `flutter test` 4415 通過／1 略過／1 失敗（`sqlite_reading_stats_repository_test` onCleared 案例，單獨重跑 19 個全過，與本次改動無關）。
