@@ -64,7 +64,13 @@ sealed class EngineDispatch {
 final class EngineDispatchKnown extends EngineDispatch {
   const EngineDispatchKnown(this.isFixedLayout);
   final bool isFixedLayout;
+
+  // 覆寫 operator ==、hashCode、toString（例如 'Known(true)'），
+  // 讓表格測試能用 equals 比對、失敗時輸出看得懂（審查 I-3）。
 }
+
+// EngineDispatchNeedsDetection、EngineDispatchNotApplicable 同樣覆寫三者
+// （無欄位：同型別即相等；toString 回 'NeedsDetection'、'NotApplicable'）。
 
 /// 需補判斷：EPUB 且宣告值為 null；補判斷期間畫面維持載入。
 final class EngineDispatchNeedsDetection extends EngineDispatch {
@@ -113,12 +119,20 @@ bool reconcileFixedLayoutFlag({
 
 **Files：** 新增 `engine_dispatch.dart`、`test/reader/engine_dispatch_test.dart`。
 
-- [ ] **Step 1（紅）：** 寫 `engine_dispatch_test.dart`：
+- [ ] **Step 1（紅）：** 先建 `engine_dispatch.dart` 骨架（型別含 `==`／`hashCode`／`toString`，兩個函式先 `throw UnimplementedError()`），讓測試能編譯、在執行期紅燈（審查 M-2）。再寫 `engine_dispatch_test.dart`：
   - `resolveEngineDispatch`：
     - 宣告值非 `null`：對全部 7 種格式（epub／pdf／azw3／cbz／txt／md／unknown）各測 `true` 與 `false`，都回 `Known(declared)`（含 PDF／unknown）。
     - 宣告值為 `null`：依上方解析表逐格一個案例（epub → `NeedsDetection`；azw3／txt／md → `Known(false)`；cbz → `Known(true)`；pdf／unknown → `NotApplicable`）。
   - `reconcileFixedLayoutFlag`：`declared`（`null`／`false`／`true`）× `reported`（`true`／`false`）× `current`（`true`／`false`）共 12 列：`declared == true` → 回 `current`；其餘 → 回 `reported`。
-  - 用 `switch` 對三態做窮舉斷言，確保 sealed 型別的窮舉編譯檢查有效。
+  - 用不帶 `default` 的 `switch` 運算式對三態做窮舉，確保 sealed 型別的窮舉編譯檢查有效（審查 M-3）：
+
+    ```dart
+    String describe(EngineDispatch d) => switch (d) {
+          EngineDispatchKnown(:final isFixedLayout) => 'known:$isFixedLayout',
+          EngineDispatchNeedsDetection() => 'needsDetection',
+          EngineDispatchNotApplicable() => 'notApplicable',
+        };
+    ```
 - [ ] **Step 2（綠）：** 實作 `engine_dispatch.dart`。註解沿用原碼的 `epic-11` Issue 2 C2 教訓說明（防禦預設值是為了避免畫面永遠停在載入）。
 - [ ] **Step 3：** `flutter analyze`；跑 `test/reader/engine_dispatch_test.dart`；commit。
 
@@ -137,8 +151,9 @@ bool reconcileFixedLayoutFlag({
     switch (dispatch) {
       case EngineDispatchKnown(:final isFixedLayout):
         _dispatchedIsFixedLayout = isFixedLayout;
-        // 宣告／預設為固定版面時，同步設外觀開關（不受開書後回報覆蓋）
-        if (isFixedLayout) _isFixedLayout = true;
+        // 只有「宣告值」明確為 true（含強制 FXL、CBZ 匯入時寫入的 true）才同步設外觀開關；
+        // CBZ 宣告值為 null 的防禦預設 true 只進 _dispatchedIsFixedLayout（原碼如此，審查 I-2）
+        if (widget.isFixedLayout == true) _isFixedLayout = true;
       case EngineDispatchNotApplicable():
         _dispatchedIsFixedLayout = null;
       case EngineDispatchNeedsDetection():
@@ -153,15 +168,15 @@ bool reconcileFixedLayoutFlag({
 - [ ] **Step 3：** 欄位註解同步（`_dispatchedIsFixedLayout` 約 418–428 行、方法 doc 約 514–523 行）：指向 `engine_dispatch.dart` 與 `CONTEXT.md`「引擎分派判斷」，保留「與 `_isFixedLayout` 是不同概念」的說明；加 import `../reader/engine_dispatch.dart`。
 - [ ] **Step 4：** 新增不對稱記錄案例，放在約 2003（矩陣迴圈結束）之後，搭建比照矩陣（約 1951–1973）與補判斷案例（約 1375 的 `FakeLibraryRepository(detectedIsFixedLayout: true)`）：
   - 宣告值 `null`、補判斷回 `true`、檔案用 `sample_fixed_layout.epub`；
-  - **尚未呼叫 `onLayoutResolved` 時**點版面按鈕，應開啟 `ReaderSettingsSheet`（外觀開關仍為 `false`），不是 `FxlSettingsSheet`；
-  - 關閉面板後呼叫 `onLayoutResolved(isFixedLayout: true)`，再點版面按鈕，應開啟 `FxlSettingsSheet`。
+  - **尚未呼叫 `onLayoutResolved` 時**：版面按鈕（`Key('reader_chrome_layout_button')`）的 `onPressed` 為 `null`（`_buildBottomBar` 的 `onLayoutTap`：外觀開關 `false` 且 `_autoDetectedWritingMode == null` → `null`），畫面上沒有 `FxlSettingsSheet`。對照：宣告值為 `true` 時按鈕一開始就可點開 `FxlSettingsSheet`（審查 I-1：不可斷言開啟 `ReaderSettingsSheet`，按鈕此時是停用的）；
+  - 呼叫 `onLayoutResolved(isFixedLayout: true)` 後：按鈕變可點，點下去開啟 `FxlSettingsSheet`（`findsOneWidget`）。
   - 案例名稱與註解標明「補判斷回 true 不立刻設外觀開關為既有行為，是否對稱化另議（epic-54 Issue 27 決策 5）」。
   - 若版面按鈕在回報前不可點、無法觀察，改用同一個外觀開關的其他可觀察結果（例如 `onLayoutTap` 以外的 `_isFixedLayout` 分支）並在 `epic.md` 記錄偏差；不可為了讓案例成立而改實作。
 - [ ] **Step 5：** 驗證：`flutter analyze`；跑 `reader_screen_test.dart` 中與版面有關的案例（`--plain-name "isFixedLayout"`、`--plain-name "onLayoutResolved"`、`--plain-name "強制 FXL"`、`--plain-name "AZW3"`、`--plain-name "CBZ"`、`--plain-name "TXT 書籍"`、`--plain-name "MD 書籍"`、`--plain-name "FXL"`）、`engine_dispatch_test.dart`、`reader_screen_route_test.dart`；commit。
 
 ### Task 3：收尾
 
-- [ ] **Step 1（設計定案時已完成）：** `CONTEXT.md`「引擎分派判斷」詞條補開書前解析規則與兩個值的差別。
+- [x] **Step 1（已於 Task 0 Step 2 的 commit `b2c365d1` 完成）：** `CONTEXT.md`「引擎分派判斷」詞條補開書前解析規則與兩個值的差別。
 - [ ] **Step 2：** `epic.md` 開發記錄；`issues.md` Issue 27 狀態；`docs/epics.md` 對應列同步。
 - [ ] **Step 3：** 驗收：`grep -n "防禦性視為\|防禦性補上" app/lib/screens/reader_screen.dart` 應為 0（4 個防禦分支的註解已搬走）；`reader_screen.dart` 的 `_resolveEpubEngineDispatch` 不再出現 `BookFormat.azw3`／`BookFormat.cbz`／`BookFormat.txt`／`BookFormat.md`。
 - [ ] **Step 4：** `flutter analyze`；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；完整 `flutter test`（`run_in_background`，只跑一個）。
