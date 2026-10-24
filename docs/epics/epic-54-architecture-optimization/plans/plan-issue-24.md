@@ -104,8 +104,8 @@ bool isIgnoredPdfSelection({required PdfSelectionInfo info, required List<Highli
 
 ### Task 0：提交計畫
 
-- [ ] **Step 1：** 在文件分支提交本計畫、`epic.md` 設計決策、`issues.md` 狀態（純文件），開 PR 合併。
-- [ ] **Step 2：** 建立 worktree `.worktrees/epic-54-issue-24-annotation`，分支 `epic-54/issue-24-annotation`；後續 Task 都在這個 worktree 的 `app/` 下執行。
+- [x] **Step 1（已完成，文件 PR #362 合併；往後計畫不再另開文件分支）：** 在文件分支提交本計畫、`epic.md` 設計決策、`issues.md` 狀態（純文件），開 PR 合併。
+- [x] **Step 2：** 建立 worktree `.worktrees/epic-54-issue-24-annotation`，分支 `epic-54/issue-24-annotation`；後續 Task 都在這個 worktree 的 `app/` 下執行。
 
 ### Task 1：純函式（定位、守衛、簽章遷移）
 
