@@ -286,10 +286,10 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **定案**
 
 1. **分兩階段**：階段一只診斷、不改行為；階段二待抓到證據後另開一輪修復。Issue 29 在階段二完成前維持開啟。
-2. **階段一記錄的階段**（每筆格式 `[OpenBook#<實例編號>] <階段> <細節>`）：開書開始（副檔名）、書複製完成（耗時、是否為 null）、書複製失敗、WebView 建立、頁面載入開始（只記路徑，不記查詢字串）、頁面載入完成、載入錯誤、HTTP 錯誤（狀態碼）、WebView 渲染行程結束、書檔資源載入（`/book/` 路徑的耗時）、已渲染、離開畫面（有無刪快取目錄）。
+2. **階段一記錄的階段**（每筆格式 `[OpenBook#<實例編號>] <階段> <細節>`）：開書開始（副檔名）、書複製完成（耗時、是否為 null）、書複製失敗、WebView 建立、頁面載入開始（只記路徑，不記查詢字串）、頁面載入完成與已渲染（附「距開書 N ms」）、載入錯誤、HTTP 錯誤（狀態碼）、WebView 渲染行程結束、離開畫面（有無刪快取目錄）。**不用 `onLoadResource`**：套件看到它會隱式開啟 `useOnLoadResource`，每個資源多一次訊息，會改變開書行為（計畫審查 I-2）。
 3. **逾時當下多寫一行**：「開書逾時，最後階段：… （距今 N 秒）」。由 `OpenBookFlow` 新增選用的 `onTimedOut` 回呼觸發，`OpenBookFlow` 本身不依賴記錄類別。
 4. **記錄放 `ReaderConsoleLog`**，同時 `debugPrint` 到 logcat。只存記憶體，不落地。
-5. **新增 `app/lib/reader/open_book_trace.dart`**：`OpenBookTrace.record(instanceId, stage, [detail])` 與 `OpenBookTrace.timeoutSummary()`，記住最後一筆。有單元測試。
+5. **新增 `app/lib/reader/open_book_trace.dart`**：`OpenBookTrace.startSession()`（`ReaderScreen.initState` 呼叫，清掉前一本書的最後階段）、`record(instanceId, stage, [detail])`、`timeoutSummary()`、`recordTimeout()`，記住最後一筆。有單元測試。`onTimedOut` 回呼的例外由 `OpenBookFlow` 吞掉，絕不影響切換到失敗畫面。
 6. **不改行為**：不改開書流程、不改 WebView 設定、不改快取。
 7. **階段二**不預先決定修法；候選假設（HTTP 快取、實例編號撞號、原生複製狀態）待證據決定，不在階段一試修。
 8. **WAVE 抽驗**：階段一裝上後，到「設定 → 閱讀器 Console Log」確認每次開書都有完整階段；使用者照常使用，逾時發生時不關 App，回報後由我用 adb 與截圖收證據。
