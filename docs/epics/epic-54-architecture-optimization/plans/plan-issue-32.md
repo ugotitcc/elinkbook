@@ -172,9 +172,9 @@ class _GatedNotesRepository extends FakeNotesRepository {
 
 ### Task 2：收尾
 
-- [ ] **Step 1：** `epic.md` 開發記錄；`issues.md` Issue 32 狀態；`docs/epics.md` 同步。
-- [ ] **Step 2：** 驗收：`grep -n "_reloadSeq" app/lib/reader/annotation_controller.dart` 有序號宣告與兩處使用；`git diff main --stat -- app/lib` 只有 `annotation_controller.dart`。
-- [ ] **Step 3：** `flutter analyze`；兩個 `check_*.js`（沒有 Node 則記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
-- [ ] **Step 4：** 程式審查（報告存 `reviews/review-code-issue-32.md`，不進版控）。
+- [x] **Step 1：** `epic.md` 開發記錄；`issues.md` Issue 32 狀態；`docs/epics.md` 同步。
+- [x] **Step 2：** 驗收：`grep -n "_reloadSeq" app/lib/reader/annotation_controller.dart` 有序號宣告與兩處使用；`git diff main --stat -- app/lib` 只有 `annotation_controller.dart`。
+- [x] **Step 3：** `flutter analyze`；兩個 `check_*.js`（沒有 Node 則記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
+- [x] **Step 4：** 程式審查（報告存 `reviews/review-code-issue-32.md`，不進版控）。
 - [ ] **Step 5：** WAVE 真機抽驗（風險低，一輪即可）：開 EPUB 一本，連續建立 3～4 筆劃線（快速操作），再刪除其中一筆；畫面上的劃線與清單一致；再開一本 PDF 做同樣操作。
 - [ ] **Step 6：** 開 PR；PR 開出後把 Issue 32 的狀態同步（Issue 30 已在 Task 0 同步）。
