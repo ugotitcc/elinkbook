@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 
 import '../l10n/app_localizations.dart';
 
@@ -72,10 +71,9 @@ import 'notes_bottom_sheet.dart';
 import 'book_search_screen.dart';
 import 'fxl_settings_sheet.dart';
 import 'layout_preset_book_picker_screen.dart';
-import 'layout_preset_name_dialog.dart';
+import 'layout_preset_dialogs.dart';
 import 'pdf_settings_sheet.dart';
-import '../reader/layout_preset.dart';
-import '../reader/layout_preset_actions.dart' as layout_preset_actions;
+import '../reader/layout_preset_flow.dart';
 import 'reader_chrome_bottom_bar.dart';
 import 'reader_feature_dependencies.dart';
 import 'reader_footer.dart';
@@ -307,10 +305,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     repository: widget.dependencies.bookmarksRepository,
     bookId: widget.bookId,
   );
-  // 版面設定預設集清單快取（epic-28-reader-settings-enhancements
-  // Issue 3），開書時載入一次，比照既有一次性載入快取模式；
-  // 另存/覆蓋/刪除完成後重新載入。
-  List<LayoutPreset> _layoutPresets = [];
+  // 版面設定預設集 module（epic-54 Issue 26，見 CONTEXT.md「版面設定預設集」）：
+  // 持有預設集清單，負責另存／套用／從其他書複製／刪除；要問使用者的事由
+  // DialogLayoutPresetPrompts 接到真實對話框（畫面已卸載時一律視為取消）。
+  // 是 ChangeNotifier：_openLayoutSettings 的面板用 ListenableBuilder 監聽。
+  // 「套用到目前書籍」寫入成功後由它呼叫 _handlePrefsChanged 刷新畫面。
+  late final LayoutPresetFlow _presetFlow = LayoutPresetFlow(
+    presetRepository: widget.dependencies.layoutPresetRepository,
+    prefsRepository: widget.dependencies.bookReaderPrefsRepository,
+    currentBookId: widget.bookId,
+    prompts: DialogLayoutPresetPrompts(
+      contextProvider: () => mounted ? context : null,
+    ),
+    onCurrentBookPrefsApplied: _handlePrefsChanged,
+  );
   // 可用字型（epic-54 Issue 1，見 CONTEXT.md「可用字型」）：已下載的內建字型加自訂
   // 字型，開書時各載入一次，閱讀期間不會改變（字型管理畫面不在閱讀器內，下載或
   // 刪除都要離開閱讀器）。兩邊都讀完（任一邊失敗視為空集合）才組出，在那之前為
@@ -478,7 +486,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
     _loadAvailableFonts();
-    _loadLayoutPresets();
+    _presetFlow.load();
     // 開書即載入本書書籤（epic-54 Issue 25 設計決策 7）：原本只有 PDF 借
     // `_pdfTocLoaded` 旗標在 onPageRendered 時載入，流式 EPUB 從未載入，
     // 星號可能停在未加入狀態。載入失敗只 debugPrint，清單維持空值。
@@ -666,6 +674,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 全螢幕模式離開閱讀畫面時無條件還原，不判斷 _lastAppliedFullscreen
     // （比照上一行既有的螢幕方向無條件還原寫法），避免外溢到書架等其他畫面。
     _fullscreenChannel.invokeMethod('setEnabled', false);
+    // 預設集 module：dispose 之後不再通知、不再呼叫 _handlePrefsChanged。
+    _presetFlow.dispose();
     super.dispose();
   }
 
@@ -811,42 +821,54 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   void _openLayoutSettings() {
-    StateSetter? setSheetState;
     _showThemedModalBottomSheet<void>(
       transparentBarrier: true,
       // Bottom Sheet 預設的下滑關閉手勢（enableDrag: true）與 Slider 的
       // 水平拖曳手勢在混合角度滑動時容易被手勢競技場誤判，導致使用者
       // 調整滑桿時選單意外關閉；停用後仍可點擊背景遮罩關閉。
       enableDrag: false,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setState) {
-          setSheetState = setState;
-          return ReaderSettingsSheet(
-            prefs: _prefs,
-            onChanged: _handlePrefsChanged,
-            availableFonts: _availableFonts ?? AvailableFonts.empty,
-            bookId: widget.bookId,
-            layoutPresets: _layoutPresets,
-            isEinkMode: widget.isEinkMode,
-            onSaveAsPreset: (draft) async {
-              await _handleSaveAsPreset(draft);
-              if (mounted) setSheetState?.call(() {});
-            },
-            onApplyPreset: (preset, {required targetBookIds}) async {
-              await _handleApplyPreset(preset, targetBookIds: targetBookIds);
-              if (mounted) setSheetState?.call(() {});
-            },
-            onApplyFromBook: (sourceBookId, {required targetBookIds}) async {
-              await _handleApplyFromBook(sourceBookId, targetBookIds: targetBookIds);
-              if (mounted) setSheetState?.call(() {});
-            },
-            onRequestBookPicker: _handleRequestBookPicker,
-            onDeletePreset: (id) async {
-              await _handleDeletePreset(id);
-              if (mounted) setSheetState?.call(() {});
-            },
-          );
-        },
+      // 預設集操作（另存／套用／複製／刪除）結束後 _presetFlow 會通知，
+      // 面板以最新的 _prefs 與預設集清單重畫（取代舊的 StatefulBuilder 手動重畫包裝）。
+      builder: (_) => ListenableBuilder(
+        listenable: _presetFlow,
+        builder: (_, _) => ReaderSettingsSheet(
+          prefs: _prefs,
+          onChanged: _handlePrefsChanged,
+          availableFonts: _availableFonts ?? AvailableFonts.empty,
+          bookId: widget.bookId,
+          layoutPresets: _presetFlow.presets,
+          isEinkMode: widget.isEinkMode,
+          onSaveAsPreset: (draft) async {
+            _reportPresetFailure(
+              await _presetFlow.saveAsPreset(draft),
+              key: const Key('reader_save_as_preset_error_snackbar'),
+              message: (l10n) => l10n.readerSaveAsPresetFailedMessage,
+            );
+          },
+          onApplyPreset: (preset, {required targetBookIds}) async {
+            _reportPresetFailure(
+              await _presetFlow.applyPreset(preset, targetBookIds: targetBookIds),
+              key: const Key('reader_apply_preset_error_snackbar'),
+              message: (l10n) => l10n.readerApplyPresetFailedMessage,
+            );
+          },
+          onApplyFromBook: (sourceBookId, {required targetBookIds}) async {
+            _reportPresetFailure(
+              await _presetFlow.applyFromBook(sourceBookId,
+                  targetBookIds: targetBookIds),
+              key: const Key('reader_apply_preset_error_snackbar'),
+              message: (l10n) => l10n.readerApplyPresetFailedMessage,
+            );
+          },
+          onRequestBookPicker: _handleRequestBookPicker,
+          onDeletePreset: (id) async {
+            _reportPresetFailure(
+              await _presetFlow.deletePreset(id),
+              key: const Key('reader_delete_preset_error_snackbar'),
+              message: (l10n) => l10n.readerDeletePresetFailedMessage,
+            );
+          },
+        ),
       ),
     );
   }
@@ -877,273 +899,21 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
-  /// 版面設定預設集「另存為新預設集」（epic-28-reader-settings-
-  /// enhancements Issue 3）：命名輸入 → 未滿 3 組直接 insert，已滿 3 組
-  /// 跳出覆蓋選單 → 覆蓋前二次確認 → replace，完成後重新載入清單。
-  ///
-  /// epic-27-reader-device-compat Issue 4：真機回報點擊後畫面完全無反應
-  /// （`reviews/bugfix-repro.md` Issue 4），根因無法 100% 確認（可能是
-  /// `repository == null`〔階段一〕，也可能是真機環境某處拋出未預期例外
-  /// 〔階段二〕），故本次採「提高可觀測性＋防禦性」而非直接臆測修復——
-  /// 把兩種原本會靜默失敗的路徑都改成使用者可見的 SnackBar 提示，並保留
-  /// debugPrint 供日後若再次收到回報時排查根因。
-  Future<void> _handleSaveAsPreset(BookReaderPrefs currentDraft) async {
-    final l10n = AppLocalizations.of(context)!;
-    final repository = widget.dependencies.layoutPresetRepository;
-    try {
-      final name = await showLayoutPresetNameDialog(context);
-      if (name == null || !mounted) return;
-      final filteredPrefs = currentDraft.reflowableEpubFields();
-      List<LayoutPreset> updated;
-      if (_layoutPresets.length < 3) {
-        updated = await layout_preset_actions.insertNewLayoutPreset(
-          repository,
-          name: name,
-          prefs: filteredPrefs,
-        );
-      } else {
-        final target = await _selectPresetToOverwrite();
-        if (target == null || !mounted) return;
-        final confirmed = await _confirmOverwrite(target.name);
-        // I-2（審查修訂）：對話框彈出期間使用者可能退出閱讀器，pop 後
-        // State 可能已 unmounted，比照 issues.md I-3／Task 7
-        // _applyPrefsToTargets 既有慣例，`!confirmed` 與 `!mounted`
-        // 合併檢查。
-        if (!confirmed || !mounted) return;
-        updated = await layout_preset_actions.overwriteLayoutPreset(
-          repository,
-          target: target,
-          name: name,
-          prefs: filteredPrefs,
-        );
-      }
-      if (!mounted) return;
-      setState(() => _layoutPresets = updated);
-    } catch (e, stackTrace) {
-      debugPrint('另存為新預設集失敗：$e\n$stackTrace');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          key: const Key('reader_save_as_preset_error_snackbar'),
-          content: Text(l10n.readerSaveAsPresetFailedMessage),
-        ),
-      );
-    }
-  }
-
-  Future<LayoutPreset?> _selectPresetToOverwrite() {
-    final l10n = AppLocalizations.of(context)!;
-    final dateFormat = DateFormat.yMd(Localizations.localeOf(context).toString());
-    return showDialog<LayoutPreset>(
-      context: context,
-      builder: (dialogContext) => SimpleDialog(
-        title: Text(l10n.readerOverwritePresetPickerTitle),
-        children: [
-          ..._layoutPresets.map((preset) => SimpleDialogOption(
-                key: Key('layout_preset_overwrite_option_${preset.id}'),
-                onPressed: () => Navigator.of(dialogContext).pop(preset),
-                child: Text(l10n.readerOverwritePresetOptionLabel(
-                  preset.name,
-                  dateFormat.format(preset.updatedAt),
-                )),
-              )),
-          SimpleDialogOption(
-            key: const Key('layout_preset_overwrite_cancel'),
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.cancel),
-          ),
-        ],
+  /// 預設集操作失敗時的使用者可見提示（原本 4 份重複的 try／catch／SnackBar，
+  /// epic-54 Issue 26 收斂）：失敗細節已由 [LayoutPresetFlow] `debugPrint`，
+  /// 這裡只在 [outcome] 為失敗且畫面仍在時顯示對應的 SnackBar。
+  void _reportPresetFailure(
+    LayoutPresetOutcome outcome, {
+    required Key key,
+    required String Function(AppLocalizations l10n) message,
+  }) {
+    if (outcome != LayoutPresetOutcome.failed || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: key,
+        content: Text(message(AppLocalizations.of(context)!)),
       ),
     );
-  }
-
-  Future<bool> _confirmOverwrite(String name) async {
-    final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.readerConfirmOverwriteTitle),
-        content: Text(l10n.readerOverwritePresetConfirmMessage(name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            key: const Key('layout_preset_overwrite_confirm'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.readerConfirmOverwriteTitle),
-          ),
-        ],
-      ),
-    );
-    return confirmed ?? false;
-  }
-
-  Future<bool> _confirmApplyToOtherBooks(int count) async {
-    final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.readerConfirmApplyTitle),
-        content: Text(l10n.readerApplyToOthersConfirmMessage(count)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            key: const Key('layout_preset_apply_confirm'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.readerConfirmApplyTitle),
-          ),
-        ],
-      ),
-    );
-    return confirmed ?? false;
-  }
-
-  /// 套用版面設定至一批書籍（epic-28-reader-settings-enhancements Issue 3，
-  /// 經 Epic 43 Issue 2 收斂為 [_handleApplyPreset]/[_handleApplyFromBook]
-  /// 共用核心）：「套用到目前書籍」（`targetBookIds` 恰為 `[widget.bookId]`，
-  /// [ReaderSettingsSheet] 的「套用到本書」快速按鈕固定產生這個形狀）直接
-  /// 寫入不需確認；其餘情況（「套用到其他書籍」流程，即使使用者只勾選 1
-  /// 本其他書籍）皆先跳出「即將覆蓋 N 本書」確認——**判斷依據刻意不是
-  /// `targetBookIds.length > 1`**：使用者透過「套用到其他書籍」picker 只
-  /// 勾選 1 本書時，`targetBookIds.length == 1`，但這仍是「其他書籍」語意
-  /// （design.md「套用目標二選一」的第二選項），不是「套用到目前書籍」的
-  /// 快速動作，兩者不可用數量混為一談，見
-  /// [layout_preset_actions.layoutPresetTargetsCurrentBookOnly]。目標含
-  /// 目前書籍時，寫入後呼叫既有 [_handlePrefsChanged] 即時刷新畫面（比照
-  /// spec.md「套用到目前書籍後的畫面刷新」，不新增另一條刷新路徑）。
-  Future<void> _applyPrefsToTargets(
-    BookReaderPrefs prefs,
-    List<String> targetBookIds,
-  ) async {
-    final repository = widget.dependencies.bookReaderPrefsRepository;
-    if (targetBookIds.isEmpty) return;
-    try {
-      if (!layout_preset_actions.layoutPresetTargetsCurrentBookOnly(
-        targetBookIds,
-        widget.bookId,
-      )) {
-        final confirmed =
-            await _confirmApplyToOtherBooks(targetBookIds.length);
-        if (!confirmed || !mounted) return;
-      }
-      await layout_preset_actions.applyLayoutPresetPrefs(
-        repository,
-        prefs: prefs,
-        targetBookIds: targetBookIds,
-      );
-      if (!mounted) return;
-      if (targetBookIds.contains(widget.bookId)) {
-        _handlePrefsChanged(prefs);
-      }
-    } catch (e, stackTrace) {
-      // Epic 43 Issue 5：比照 _handleSaveAsPreset 既有的 try/catch +
-      // SnackBar 模式，補齊套用預設集失敗時的使用者可見提示。
-      debugPrint('套用版面設定失敗：$e\n$stackTrace');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          key: const Key('reader_apply_preset_error_snackbar'),
-          content: Text(AppLocalizations.of(context)!.readerApplyPresetFailedMessage),
-        ),
-      );
-    }
-  }
-
-  Future<void> _handleApplyPreset(
-    LayoutPreset preset, {
-    required List<String> targetBookIds,
-  }) async {
-    await _applyPrefsToTargets(preset.prefs, targetBookIds);
-  }
-
-  /// 書籍設定複製（epic-28-reader-settings-enhancements Issue 3）：先讀取
-  /// 來源書籍目前的版面偏好設定，以 [BookReaderPrefs.reflowableEpubFields]
-  /// 過濾後交給 [_applyPrefsToTargets] 處理後續判斷/確認/寫入/刷新。
-  Future<void> _handleApplyFromBook(
-    String sourceBookId, {
-    required List<String> targetBookIds,
-  }) async {
-    final repository = widget.dependencies.bookReaderPrefsRepository;
-    if (targetBookIds.isEmpty) return;
-    try {
-      final sourcePrefs =
-          (await repository.load(sourceBookId)).reflowableEpubFields();
-      if (!mounted) return;
-      await _applyPrefsToTargets(sourcePrefs, targetBookIds);
-    } catch (e, stackTrace) {
-      // Epic 43 Issue 5（I-2 審查修訂）：repository.load() 發生在呼叫
-      // _applyPrefsToTargets 之前，不在它內部的 try/catch 保護範圍內，
-      // 需要自己獨立這一層——與 _applyPrefsToTargets 內部的 try/catch
-      // 是兩層獨立保護，不會為同一次失敗重複顯示兩次 SnackBar（見上方
-      // Global Constraints 說明）。
-      debugPrint('套用版面設定失敗：$e\n$stackTrace');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          key: const Key('reader_apply_preset_error_snackbar'),
-          content: Text(AppLocalizations.of(context)!.readerApplyPresetFailedMessage),
-        ),
-      );
-    }
-  }
-
-  Future<void> _handleDeletePreset(int id) async {
-    final repository = widget.dependencies.layoutPresetRepository;
-    String presetName = '';
-    for (final preset in _layoutPresets) {
-      if (preset.id == id) {
-        presetName = preset.name;
-        break;
-      }
-    }
-    final confirmed = await _confirmDeletePreset(presetName);
-    // I-2（審查修訂）：理由同上（`_handleSaveAsPreset` 覆蓋確認）。
-    if (!confirmed || !mounted) return;
-    try {
-      final updated =
-          await layout_preset_actions.deleteLayoutPreset(repository, id);
-      if (!mounted) return;
-      setState(() => _layoutPresets = updated);
-    } catch (e, stackTrace) {
-      // Epic 43 Issue 5：比照 _handleSaveAsPreset 既有的 try/catch +
-      // SnackBar 模式，補齊刪除預設集失敗時的使用者可見提示。
-      debugPrint('刪除預設集失敗：$e\n$stackTrace');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          key: const Key('reader_delete_preset_error_snackbar'),
-          content: Text(AppLocalizations.of(context)!.readerDeletePresetFailedMessage),
-        ),
-      );
-    }
-  }
-
-  Future<bool> _confirmDeletePreset(String name) async {
-    final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.readerConfirmDeleteTitle),
-        content: Text(l10n.readerDeletePresetConfirmMessage(name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            key: const Key('layout_preset_delete_confirm'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.readerConfirmDeleteTitle),
-          ),
-        ],
-      ),
-    );
-    return confirmed ?? false;
   }
 
   /// 書籍選擇器（epic-28-reader-settings-enhancements Issue 3
@@ -1203,17 +973,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     } catch (e) {
       debugPrint('Failed to load custom fonts: $e');
       return const [];
-    }
-  }
-
-  Future<void> _loadLayoutPresets() async {
-    final repository = widget.dependencies.layoutPresetRepository;
-    try {
-      final presets = await repository.listAll();
-      if (!mounted) return;
-      setState(() => _layoutPresets = presets);
-    } catch (e) {
-      debugPrint('Failed to load layout presets: $e');
     }
   }
 

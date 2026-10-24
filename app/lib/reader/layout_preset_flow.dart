@@ -46,7 +46,7 @@ abstract interface class LayoutPresetPrompts {
 /// - 套用成功且目標含目前書籍時，**先**呼叫 [onCurrentBookPrefsApplied]，
 ///   **再**通知，面板重畫時畫面端的 `_prefs` 已是新值。
 ///
-/// 原 `layout_preset_actions.dart`（頂層函式）已併入本類別的私有方法。
+/// 原本分散的頂層操作函式（Issue 26 之前的預設集寫入函式）已併入本類別的私有方法。
 class LayoutPresetFlow extends ChangeNotifier {
   LayoutPresetFlow({
     required LayoutPresetRepository presetRepository,

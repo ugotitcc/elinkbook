@@ -470,7 +470,7 @@ void main() {
     });
   });
 
-  // ---- 以真實 sqlite 測持久化語意（取代舊 layout_preset_actions_test）----
+  // ---- 以真實 sqlite 測持久化語意（取代舊的預設集操作函式測試）----
   group('LayoutPresetFlow（真實 sqlite）', () {
     late SqliteLibraryRepository libraryRepository;
     late LayoutPresetRepository presetRepo;
