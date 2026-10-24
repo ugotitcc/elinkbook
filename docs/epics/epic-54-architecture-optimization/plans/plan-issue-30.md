@@ -96,7 +96,7 @@ class _GatedBookmarksRepository extends FakeBookmarksRepository {
 }
 ```
 
-- [ ] **Step 1（紅）：** 在 `bookmark_controller_test.dart` 新增 `group('load 世代保護')`，先寫測試、確認失敗：
+- [x] **Step 1（紅）：** 在 `bookmark_controller_test.dart` 新增 `group('load 世代保護')`，先寫測試、確認失敗：
   - 先發的舊 `load`（快照 `[A]`）、後發的新 `load`（快照 `[A, B]`）；新的先完成，舊的後完成 → `bookmarks` 為 `[A, B]`（目前會被蓋回 `[A]`，紅燈）。
   - 舊的先完成、新的後完成 → `bookmarks` 為新值（正常順序，目前就會綠）。
   - 新的失敗、舊的成功（舊的後完成）→ 清單維持載入前的值，舊結果不套用，不丟例外。
@@ -104,7 +104,7 @@ class _GatedBookmarksRepository extends FakeBookmarksRepository {
   - 開書第一次 `load`（快照 `[]`）還沒回來，`toggle`（新增書籤並自己 `load`）先完成，之後第一次 `load` 才完成 → `bookmarks` 含新書籤，`at(位置)` 非 null。
   - 單獨一次 `load` 照常更新（既有案例已涵蓋，不重複）。
   - 在 `group('load 世代保護')` 內宣告 `tearDown(() => repository.releaseAll());`，斷言失敗時也不遺留未完成的 `Future`（審查 I-1）。
-- [ ] **Step 2（綠）：** `BookmarkController` 加 `int _loadSeq = 0;`。`load()` 改為：
+- [x] **Step 2（綠）：** `BookmarkController` 加 `int _loadSeq = 0;`。`load()` 改為：
 
   ```dart
   Future<void> load() async {
@@ -121,7 +121,7 @@ class _GatedBookmarksRepository extends FakeBookmarksRepository {
   ```
 
   更新 `load()` 的 doc 註解：說明世代保護規則與「失敗只 `debugPrint`、清單維持現狀」，並標註 `（epic-54 Issue 30）`（審查 M-4）。`toggle` 不動。
-- [ ] **Step 3：** `flutter analyze`；跑 `test/reader/bookmark_controller_test.dart` 與 `test/screens/notes_bottom_sheet_test.dart`（確實存在，34 個案例，使用 `BookmarkController`，審查 M-1）；`reader_screen_test.dart --plain-name "書籤"`；commit。
+- [x] **Step 3：** `flutter analyze`；跑 `test/reader/bookmark_controller_test.dart` 與 `test/screens/notes_bottom_sheet_test.dart`（確實存在，34 個案例，使用 `BookmarkController`，審查 M-1）；`reader_screen_test.dart --plain-name "書籤"`；commit。
 
 ### Task 2：收尾
 

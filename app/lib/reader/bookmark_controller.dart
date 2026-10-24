@@ -44,17 +44,23 @@ class BookmarkController {
   final BookmarksRepository _repository;
   final String _bookId;
   List<Bookmark> _bookmarks = const [];
+  int _loadSeq = 0;
 
   /// 記憶體中的書籤清單（最近一次 [load]／[toggle] 的結果）。
   /// 只供讀取；變更請走 [load]／[toggle]。
   List<Bookmark> get bookmarks => _bookmarks;
 
-  /// 重新讀取本書書籤清單（設計決策 8）：失敗只 `debugPrint`，清單保持舊值、
-  /// 不往外丟出例外。`mounted` 檢查與 `setState` 由呼叫端負責，因此回傳
-  /// `Future` 供呼叫端 `await`。
+  /// 重新讀取本書書籤清單（設計決策 8；世代保護見 epic-54 Issue 30）：每次呼叫
+  /// 遞增序號 [_loadSeq]，若有較新的 [load] 已發出則丟棄過期結果。失敗只
+  /// `debugPrint`，清單保持現狀、不往外丟出例外。`mounted` 檢查與 `setState`
+  /// 由呼叫端負責，因此回傳 `Future` 供呼叫端 `await`。
   Future<void> load() async {
+    final seq = ++_loadSeq;
     try {
-      _bookmarks = await _repository.listByBook(_bookId);
+      final loaded = await _repository.listByBook(_bookId);
+      // 有較新的 load 已發出：這次結果過期，丟掉（Issue 30）。
+      if (seq != _loadSeq) return;
+      _bookmarks = loaded;
     } catch (e) {
       debugPrint('Failed to load bookmarks: $e');
     }
