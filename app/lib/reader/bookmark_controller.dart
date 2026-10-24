@@ -29,7 +29,7 @@ bool isSameBookmarkPosition(
 /// 本書書籤 module（Epic 54 Issue 25；詞彙見 `CONTEXT.md`「本書書籤」）：
 /// 持有一本書的書籤清單，提供 [load]、[at]、[toggle]。收斂原本散在
 /// `ReaderScreen`（EPUB／PDF 各一份）與 `NotesBottomSheet`（第三份）的
-/// 「目前位置有沒有書籤」實作，以及 `bookmark_toggle.dart` 的切換邏輯。
+/// 「目前位置有沒有書籤」實作，以及原本獨立成檔的切換邏輯（已併入本 module）。
 ///
 /// 刻意不是 `ChangeNotifier`（設計決策 2）：呼叫後由呼叫端自己 `setState`，
 /// 與現行流程一致。也刻意不碰 `BuildContext`——需要 `AppLocalizations` 的

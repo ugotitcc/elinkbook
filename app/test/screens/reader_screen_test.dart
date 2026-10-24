@@ -5870,8 +5870,9 @@ void main() {
       );
       await tester.pump();
 
-      // 刻意不打開 NotesBottomSheet——重現「_fxlBookmarks 快取從未被
-      // 預先載入」的狀態，開書後直接第一次點擊書籤按鈕。
+      // 刻意不打開 NotesBottomSheet——開書後直接第一次點擊書籤按鈕。
+      // epic-54 Issue 25 起開書即載入清單，但存在性判斷仍須直查 repository，
+      // 本案例守住「不因記憶體清單狀態而重複新增」的行為。
       final finder = find.byKey(
         const Key('reader_chrome_bookmark_button'),
       );
@@ -9499,7 +9500,7 @@ void main() {
 
     ReaderScreen.togglePdfBookmark(key);
     await tester.pump();
-    // _togglePdfBookmark 是 async（呼叫 repository.delete + _loadFxlBookmarks），
+    // _togglePdfBookmark 是 async（呼叫 repository.delete + 重新載入書籤清單），
     // togglePdfBookmark static seam 以 unawaited 包裝，需多 pump 讓 microtask 完成。
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
