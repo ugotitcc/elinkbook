@@ -7,7 +7,7 @@ import 'bookmark_position_context.dart';
 /// 用到其中一組（依書籍格式而定，FXL 因副檔名是 .epub 而併入 EPUB 那一組，
 /// 見審查修正 1.1），比照 ReadingPosition 既有的欄位語意。
 class Bookmark {
-  /// UUID primary key，新增前由呼叫端產生（例如 `reader_screen.dart`
+  /// UUID primary key，新增前由呼叫端產生（例如 `bookmark_controller.dart`
   /// 直接呼叫 `const Uuid().v4()`）。
   final String id;
   final String bookId;

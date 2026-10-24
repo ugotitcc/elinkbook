@@ -5891,6 +5891,155 @@ void main() {
     },
   );
 
+  testWidgets(
+    '流式 EPUB：開書並收到位置回報後，既有書籤應立即反映在書籤按鈕圖示上（Issue 25 行為修正）',
+    (tester) async {
+      const locatorJson = '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}';
+      final bookmarksRepository = FakeBookmarksRepository();
+      // 模擬「先前已在此位置加過書籤」：開書時 repository 已有一筆。
+      await bookmarksRepository.insert(
+        Bookmark(
+          id: 'preloaded-bookmark',
+          bookId: 'b_foliate_bookmark_preloaded',
+          name: '既有書籤',
+          epubLocatorJson: locatorJson,
+          progression: 0.1,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_bookmark_preloaded',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: locatorJson,
+          progression: 0.1,
+          locationIndex: 0,
+          locationTotal: 10,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // 刻意不點任何按鈕：流式 EPUB 開書時就應載入書籤（設計決策 7）。
+      final finder = find.byKey(
+        const Key('reader_chrome_bookmark_button'),
+      );
+      expect(
+        (tester.widget<IconButton>(finder).icon as Icon).icon,
+        Icons.star,
+        reason: '流式 EPUB 開書時應載入既有書籤，星號不應停在未加入狀態',
+      );
+    },
+  );
+
+  testWidgets(
+    '流式 EPUB：在筆記面板新增書籤後關閉面板，懸浮書籤按鈕圖示應同步為已加入（Issue 25 行為修正）',
+    (tester) async {
+      final bookmarksRepository = FakeBookmarksRepository();
+      const locatorJson = '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_notes_sheet_reload',
+            isFixedLayout: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      foliateView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: locatorJson,
+          progression: 0.1,
+          locationIndex: 0,
+          locationTotal: 10,
+        ),
+      );
+      await tester.pump();
+
+      final bookmarkToggleFinder = find.byKey(
+        const Key('reader_chrome_bookmark_button'),
+      );
+      expect(
+        (tester.widget<IconButton>(bookmarkToggleFinder).icon as Icon).icon,
+        Icons.star_border,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('reader_chrome_annotations_button')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // 「✎ 劃線筆記」按鈕開啟後預設停在「✏️ 劃線與備註」分頁（initialTabIndex:
+      // 1），需先切到「🔖 書籤」分頁才看得到 notes_sheet_bookmark_toggle。
+      await tester.tap(find.byKey(const Key('notes_sheet_tab_bookmarks')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.byKey(const Key('notes_sheet_bookmark_toggle')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // 關閉 Bottom Sheet（點擊外側遮罩）。
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        (tester.widget<IconButton>(bookmarkToggleFinder).icon as Icon).icon,
+        Icons.star,
+        reason: '面板關閉後應對所有格式重新載入書籤，流式 EPUB 也不例外',
+      );
+    },
+  );
+
   testWidgets('流式 EPUB：點擊浮動筆記按鈕開啟 NotesBottomSheet（Issue 7）', (tester) async {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(

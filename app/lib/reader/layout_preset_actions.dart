@@ -2,7 +2,7 @@
 /// 操作的純函式模組（Epic 43 Issue 2）。頂層函式，不做成類別——
 /// `LayoutPresetRepository`／`BookReaderPrefsRepository` 分屬不同操作
 /// 子集，已證實不永遠成對提供（`issues.md` Issue 2 Q3），比照
-/// `bookmark_toggle.dart` 既有風格，各函式各自宣告自己實際需要的
+/// `bookmark_controller.dart` 既有風格，各函式各自宣告自己實際需要的
 /// repository 為必要參數。
 library;
 
