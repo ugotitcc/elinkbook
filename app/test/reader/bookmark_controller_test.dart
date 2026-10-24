@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
@@ -32,6 +34,46 @@ class _FlakyBookmarksRepository implements BookmarksRepository {
   @override
   Future<void> deleteAllForBook(String bookId) =>
       _inner.deleteAllForBook(bookId);
+}
+
+/// 可手動控制 listByBook 完成順序，模擬「較舊的查詢比較新的查詢晚回來」。
+/// 繼承 [FakeBookmarksRepository]：儲存與 insert／rename／delete 都沿用，只覆寫 listByBook。
+class _GatedBookmarksRepository extends FakeBookmarksRepository {
+  final List<Completer<void>> _gates = [];
+  final List<bool> _failures = [];
+
+  /// 下一次 listByBook 要等這個閘門；fail 為 true 時，放行後丟例外。
+  Completer<void> gateNext({bool fail = false}) {
+    final gate = Completer<void>();
+    _gates.add(gate);
+    _failures.add(fail);
+    return gate;
+  }
+
+  /// 放行所有尚未完成的閘門；測試的 tearDown 呼叫，避免斷言失敗時遺留未完成的 Future。
+  void releaseAll() {
+    for (final gate in _gates) {
+      if (!gate.isCompleted) gate.complete();
+    }
+    _gates.clear();
+    _failures.clear();
+  }
+
+  @override
+  Future<List<Bookmark>> listByBook(String bookId) async {
+    // 閘門與快照都必須在第一個 await 之前同步取得：
+    //  - 快照定格在「呼叫當下」的資料（先等閘門才讀資料，舊查詢也會讀到新資料，
+    //    沒有世代保護時測試會偽綠）；
+    //  - 閘門依「呼叫順序」分配，不受微任務排程影響。
+    final snapshotFuture = super.listByBook(bookId);
+    final gate = _gates.isEmpty ? null : _gates.removeAt(0);
+    final fail = gate == null ? false : _failures.removeAt(0);
+    final snapshot = await snapshotFuture;
+    if (gate == null) return snapshot;
+    await gate.future;
+    if (fail) throw StateError('查詢失敗');
+    return snapshot;
+  }
 }
 
 void main() {
@@ -357,6 +399,176 @@ void main() {
 
       expect(controller.bookmarks, hasLength(1));
       expect(controller.bookmarks.single.epubLocatorJson, 'loc-a');
+    });
+  });
+
+  group('load 世代保護', () {
+    late _GatedBookmarksRepository repository;
+    late BookmarkController controller;
+
+    setUp(() {
+      repository = _GatedBookmarksRepository();
+      controller = BookmarkController(
+        repository: repository,
+        bookId: 'b1',
+      );
+    });
+
+    tearDown(() {
+      // 斷言失敗時也不遺留未完成的 Future（審查 I-1）
+      repository.releaseAll();
+    });
+
+    test('先發的舊 load、後發的新 load；新的先完成，舊的後完成 → bookmarks 為新值（不被過期舊結果蓋掉）',
+        () async {
+      await repository.insert(epubBookmark(id: 'bm1', locatorJson: 'loc-a'));
+
+      // 舊 load：卡在第一個閘門，此時快照為 [bm1]
+      final gateOld = repository.gateNext();
+      final futureOld = controller.load();
+
+      // 在兩次 load 之間新增 bm2
+      await repository.insert(epubBookmark(id: 'bm2', locatorJson: 'loc-b'));
+
+      // 新 load：卡在第二個閘門，此時快照為 [bm1, bm2]
+      final gateNew = repository.gateNext();
+      final futureNew = controller.load();
+
+      // 新的先放行並完成
+      gateNew.complete();
+      await futureNew;
+      expect(controller.bookmarks.map((b) => b.id), ['bm1', 'bm2']);
+
+      // 舊的後放行並完成
+      gateOld.complete();
+      await futureOld;
+
+      // 驗證清單維持最新值，未被舊的 [bm1] 覆蓋
+      expect(controller.bookmarks.map((b) => b.id), ['bm1', 'bm2']);
+    });
+
+    test('循序兩次 load：舊的完成後才發起新的，兩次皆正常依序更新', () async {
+      await repository.insert(epubBookmark(id: 'bm1', locatorJson: 'loc-a'));
+
+      final gateOld = repository.gateNext();
+      final futureOld = controller.load();
+      gateOld.complete();
+      await futureOld;
+      expect(controller.bookmarks.map((b) => b.id), ['bm1']);
+
+      await repository.insert(epubBookmark(id: 'bm2', locatorJson: 'loc-b'));
+
+      final gateNew = repository.gateNext();
+      final futureNew = controller.load();
+      gateNew.complete();
+      await futureNew;
+      expect(controller.bookmarks.map((b) => b.id), ['bm1', 'bm2']);
+    });
+
+    test('並行兩次 load：舊的先完成（因新的已發出而丟棄）、新的後完成 → bookmarks 為新值',
+        () async {
+      await repository.insert(epubBookmark(id: 'bm1', locatorJson: 'loc-a'));
+
+      final gateOld = repository.gateNext();
+      final futureOld = controller.load();
+
+      await repository.insert(epubBookmark(id: 'bm2', locatorJson: 'loc-b'));
+
+      final gateNew = repository.gateNext();
+      final futureNew = controller.load();
+
+      // 舊的先放行：因為較新的 load 已發出，舊結果過期被丟棄，清單維持空值
+      gateOld.complete();
+      await futureOld;
+      expect(controller.bookmarks, isEmpty);
+
+      // 新的後放行並完成：套用最新結果
+      gateNew.complete();
+      await futureNew;
+      expect(controller.bookmarks.map((b) => b.id), ['bm1', 'bm2']);
+    });
+
+    test('新的失敗、舊的成功（舊的後完成）→ 清單維持載入前的值，舊結果不套用，不丟例外', () async {
+      await repository.insert(epubBookmark(id: 'bm1', locatorJson: 'loc-a'));
+      // 先正常載入一次初始狀態 [bm1]
+      await controller.load();
+      expect(controller.bookmarks.map((b) => b.id), ['bm1']);
+
+      // 在舊 load 發起前再加一筆 bm2
+      await repository.insert(epubBookmark(id: 'bm2', locatorJson: 'loc-b'));
+
+      // 舊 load：成功取得 [bm1, bm2]，但卡在閘門
+      final gateOld = repository.gateNext();
+      final futureOld = controller.load();
+
+      // 新 load：設定 fail: true，將拋出例外
+      final gateNew = repository.gateNext(fail: true);
+      final futureNew = controller.load();
+
+      // 新的先放行（失敗，catch 吞掉不拋出）
+      gateNew.complete();
+      await expectLater(futureNew, completes);
+      // 新的失敗後，清單維持先前的 [bm1]
+      expect(controller.bookmarks.map((b) => b.id), ['bm1']);
+
+      // 舊的後放行（雖查詢成功，但因已有較新的 load 發起過，舊結果過期不套用）
+      gateOld.complete();
+      await expectLater(futureOld, completes);
+
+      // 清單仍維持 [bm1]，舊結果 [bm1, bm2] 不套用
+      expect(controller.bookmarks.map((b) => b.id), ['bm1']);
+    });
+
+    test('新的先成功並套用新值，舊的後失敗 → 清單維持新值，不丟例外（舊請求例外不洗掉已套用的新資料，審查 M-2）',
+        () async {
+      await repository.insert(epubBookmark(id: 'bm1', locatorJson: 'loc-a'));
+
+      // 舊 load：設定 fail: true
+      final gateOld = repository.gateNext(fail: true);
+      final futureOld = controller.load();
+
+      await repository.insert(epubBookmark(id: 'bm2', locatorJson: 'loc-b'));
+
+      // 新 load：成功
+      final gateNew = repository.gateNext();
+      final futureNew = controller.load();
+
+      // 新的先放行並完成
+      gateNew.complete();
+      await expectLater(futureNew, completes);
+      expect(controller.bookmarks.map((b) => b.id), ['bm1', 'bm2']);
+
+      // 舊的後放行並失敗
+      gateOld.complete();
+      await expectLater(futureOld, completes);
+
+      // 清單仍維持新值
+      expect(controller.bookmarks.map((b) => b.id), ['bm1', 'bm2']);
+    });
+
+    test('開書第一次 load 還沒回來，toggle 先完成，之後第一次 load 才完成 → bookmarks 含新書籤，at 非 null',
+        () async {
+      // 1. 開書第一次 load（此時資料庫為空），卡在閘門
+      final gateInit = repository.gateNext();
+      final futureInit = controller.load();
+
+      // 2. 使用者點擊 toggle 新增書籤（toggle 內部查存在性、insert、內部 load 皆直接放行）
+      await controller.toggle(
+        position: const BookmarkPositionContext(epubLocatorJson: 'loc-a'),
+        l10n: l10n,
+      );
+      expect(controller.bookmarks, hasLength(1));
+
+      // 3. 第一次 load 的閘門放行（舊的空清單結果回來）
+      gateInit.complete();
+      await futureInit;
+
+      // 4. 驗證新書籤未被過期的第一次 load 洗掉
+      expect(controller.bookmarks, hasLength(1));
+      expect(
+        controller.at(const BookmarkPositionContext(epubLocatorJson: 'loc-a')),
+        isNotNull,
+      );
     });
   });
 }

@@ -296,6 +296,25 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 9. **分支與流程**：分支 `epic-54/issue-29-open-timeout-diagnosis`，計畫與實作同分支同 PR；PR 合併後 Issue 29 仍開啟（階段二）。同一個分支順手把 `issues.md` 與 `docs/epics.md` 的 Issue 27 狀態同步成已合併（PR #366）。
 10. **文件**：不新增詞彙（`CONTEXT.md` 不動）；不需 ADR（可逆、診斷性質）。
 
+## Issue 30 設計決策（`/grilling` 定案，2026-10-24）
+
+來源：Issue 25 程式審查 Minor 1。事實盤點（已核對 `bookmark_controller.dart`、`reader_screen.dart`、`notes_bottom_sheet.dart`）：
+
+- `BookmarkController.load()` 沒有世代保護：開書時第一次 `load` 還沒回來，使用者點星號，`toggle` 內的 `load` 先完成，較舊的 `load` 後完成並覆寫過期清單，星號短暫顯示錯誤，直到下次重載。資料不會損毀，因為 `toggle` 的存在性判斷直接查 repository。
+- 呼叫端 `ReaderScreen`（約 500、1206 行）與 `NotesBottomSheet._loadBookmarks`（約 147 行）都是 `await load()` 之後 `setState`，不依賴 `load()` 到底有沒有改清單，所以序號保護不需要改呼叫端。
+- 同型寫法也存在於 `AnnotationController.reload()`，另列 Issue 32。
+
+**定案**
+
+1. **純修缺陷**，只改 `BookmarkController.load()`，對外介面不變。
+2. **規則**：每次 `load()` 發出時遞增序號；結果回來時序號不是最新的就丟掉。不採「排隊逐一執行」，避免使用者的點擊要等前一次讀完。
+3. **最新那次失敗**：舊結果也不套用，只 `debugPrint`，清單維持現狀（舊結果可能比 `toggle` 剛寫入的資料還舊）。舊的那次失敗時同樣只 `debugPrint`，不影響較新的結果。
+4. **接受的副作用**：`toggle` 的結尾 `load()` 若被更晚發出、尚未完成的 `load` 取代，清單會等那次完成才更新；呼叫端在每次 `load` 完成後都會 `setState`，最終畫面仍是最新清單。
+5. **測試**：`test/reader/bookmark_controller_test.dart` 新增「可手動控制完成順序」的假 repository（呼叫當下先取資料快照，再等閘門放行），涵蓋：新的先完成、舊的後完成 → 保持新值；舊的先完成、新的後完成 → 新值；新的失敗、舊的成功 → 不套用；舊的失敗、新的成功 → 新值；開書第一次 `load` 還沒回來時 `toggle` 先完成 → 清單含新書籤。既有案例不改。
+6. **範圍外**：`AnnotationController.reload()`（Issue 32）；`toggle` 的存在性判斷（已直查 repository，不變）。
+7. **文件**：本段；`issues.md` Issue 30 已定案、新增 Issue 32、Issue 29 狀態同步為「階段一已合併（PR #367）」；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR（可逆、局部修正）。
+8. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；寫 `plans/plan-issue-30.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -775,3 +794,7 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-24 Issue 27 計畫審查與實作完成**：計畫審查 0 Critical、3 Important（I-1 不對稱案例的版面按鈕回報前是停用的，測試改斷言 `onPressed` 為 `null`；I-2 CBZ 宣告值 `null` 時不可提早設外觀開關；I-3 三態型別補 `==`／`hashCode`／`toString`）、3 Minor，全部納入計畫。新增 `app/lib/reader/engine_dispatch.dart`（`resolveEngineDispatch`、`reconcileFixedLayoutFlag`）與 36 個表格測試；`ReaderScreen` 兩個欄位都保留，4 個防禦分支改由純函式提供；新增 1 個畫面案例記錄「補判斷回 `true` 不立刻設外觀開關」。完整 `flutter test` 4483 通過、1 略過、0 失敗，`flutter analyze` 乾淨。`check_*.js` 兩個腳本因本機沒有 Node 未執行（本次未改字串與 Key）。程式審查（自審）0 Critical、0 Important、1 Minor。**WAVE 真機抽驗通過**：流式 EPUB、FXL EPUB、CBZ、PDF、TXT 都能開；FXL 外觀與設定面板正確；書架「強制 FXL」後重開為 FXL，「恢復自動判斷」後回到原判斷。待開 PR。
 
 **2026-10-24 Issue 29 階段一實作完成**：計畫審查 0 Critical、5 Important、5 Minor 全部納入計畫（最關鍵：不傳 `onLoadResource`，因為套件會隱式開啟 `useOnLoadResource`；`onTimedOut` 例外必須吞掉；`ReaderScreen.initState` 呼叫 `OpenBookTrace.startSession()`）。新增 `app/lib/reader/open_book_trace.dart`，`FoliateReaderView` 記錄 開書開始、書複製完成／失敗、WebView 建立、頁面載入開始／完成、載入錯誤、HTTP 錯誤、渲染行程結束、已渲染、離開畫面；`OpenBookFlow` 新增選用 `onTimedOut`，逾時時寫「最後階段」。`lib/` 差異只有新增行，不改開書行為。完整 `flutter test` 4502 通過、1 略過、1 失敗：`pdf_reader_view_filters_test` 的 bold overlay 案例（等背景 Isolate 的時間型案例，與本次無關，該檔單獨重跑兩次 16/16 全過）。`check_*.js` 兩個腳本因本機沒有 Node 未執行（本次未改字串與 Key）。程式審查（自審）0 Critical、0 Important、1 Minor。**WAVE 真機抽驗通過**：設定畫面的「閱讀器 Console Log」可看到每次開書的完整階段與離開畫面記錄，同一本書連開多次都有。待開 PR；PR 合併後 Issue 29 仍開啟，等使用者回報逾時當下的 Console Log 再做階段二。
+
+**2026-10-24 Issue 30 實作完成**：修復 `BookmarkController.load()` 世代保護（`app/lib/reader/bookmark_controller.dart`，新增 `int _loadSeq = 0`，每次 `load()` 遞增序號，若有較新的 `load` 已發出則丟棄過期結果；最新或較舊的呼叫失敗時皆只 `debugPrint`，清單維持現狀、不往外拋出例外）。呼叫端完全不改（`git diff main --stat -- app/lib` 僅 `bookmark_controller.dart` 1 檔）。測試：`bookmark_controller_test.dart` 新增 `_GatedBookmarksRepository`（繼承 `FakeBookmarksRepository`，在 `await gate.future` 前立即截取快照；`tearDown` 自動 `releaseAll()` 清理），新增 6 案例（舊先發新後發且新先回舊後回、循序兩次 load、並行兩次 load 舊先回、新失敗舊成功、新先成功舊後失敗、開書第一次 load 未回時 toggle 先完成）；18→24 案例全數通過。驗證：`bookmark_controller_test` 24 個、`notes_bottom_sheet_test` 34 個、`reader_screen_test`「書籤」14 個全綠；`flutter analyze` No issues found!；完整 `flutter test` 4508 通過、1 略過、1 失敗（`download_queue_controller_test` 既有平行負載競態，單獨重跑 14/14 全過）。程式審查（自審，`reviews/review-code-issue-30.md`）0 Critical、0 Important、0 Minor，結論 Approved。待開 PR。
+
+**2026-10-24 WAVE 真機抽驗通過**：分支版安裝於 WAVE，EPUB 與 PDF 各一本，開書後立刻連點星號 5～6 次，星號狀態與最後一次點擊一致，書籤清單資料正確。待開 PR。
