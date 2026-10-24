@@ -8,6 +8,7 @@ import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
+import 'package:elinkbook/reader/open_book_trace.dart';
 import 'package:elinkbook/reader/reader_console_log.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
@@ -1295,6 +1296,88 @@ void main() {
   // 與 main.js 的 JS 版本邏輯完全一致。本測試無法直接驗證 JS 端行為（無
   // JS 測試框架），但作為可執行文件確保四種組合的預期結果被記錄且可回歸
   // 檢查；若未來 Dart 端需要相同邏輯（例如 PDF 路徑），可直接參考此處。
+  // epic-54 Issue 29 階段一：開書階段記錄。測試環境觸發不了 InAppWebView 的
+  // 載入回呼，這裡驗證 initState／_cacheBook／dispose 的記錄與組字純函式；
+  // WebView 回呼的接線靠 WAVE 真機抽驗。
+  group('開書階段記錄（epic-54 Issue 29）', () {
+    late Future<String?> Function(String, String) fakeCache;
+
+    setUp(() {
+      fakeCache = cacheBookForServing;
+      ReaderConsoleLog.clear();
+      OpenBookTrace.startSession();
+    });
+
+    tearDown(() {
+      cacheBookForServing = fakeCache;
+      ReaderConsoleLog.clear();
+      OpenBookTrace.startSession();
+    });
+
+    Future<void> pumpView(WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: FoliateReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+    }
+
+    bool logged(String fragment) =>
+        ReaderConsoleLog.entries.value.any((e) => e.contains(fragment));
+
+    testWidgets('書複製成功：記 開書開始、書複製完成，離開畫面時記 離開畫面', (tester) async {
+      await pumpView(tester);
+
+      expect(logged('] 開書開始 epub'), isTrue);
+      expect(logged('] 書複製完成 耗時 '), isTrue);
+
+      await tester.pumpWidget(const SizedBox());
+      expect(logged('] 離開畫面 已刪快取目錄=否'), isTrue);
+    });
+
+    testWidgets('cacheBookForServing 回傳 null：記 書複製失敗 回傳 null（耗時…）', (tester) async {
+      cacheBookForServing = (filePath, instanceId) async => null;
+
+      await pumpView(tester);
+
+      expect(logged('] 書複製失敗 回傳 null（耗時 '), isTrue);
+      expect(logged('] 書複製完成'), isFalse);
+    });
+
+    testWidgets('cacheBookForServing 拋例外：記 書複製失敗 <例外型別>（耗時…）', (tester) async {
+      cacheBookForServing =
+          (filePath, instanceId) async => throw StateError('boom');
+
+      await pumpView(tester);
+
+      expect(logged('] 書複製失敗 StateError（耗時 '), isTrue);
+    });
+
+    test('組字純函式：null 輸入不拋例外並回固定 fallback', () {
+      expect(describeTraceUrlPath(null), '(null)');
+      expect(describeTraceUrlPath(Uri.parse('https://a.b/assets/x.html?q=1')),
+          '/assets/x.html');
+      expect(describeTraceHttpError(null, null), '(no status) (null)');
+      expect(describeTraceHttpError(404, Uri.parse('https://a.b/book/x.epub')),
+          '404 /book/x.epub');
+      expect(describeTraceLoadError(null, null), '(null)');
+      expect(describeTraceLoadError('TIMEOUT', 'net::ERR'), 'TIMEOUT net::ERR');
+      expect(describeTraceRenderGone(null), '當機=否');
+      expect(describeTraceRenderGone(true), '當機=是');
+      expect(describeTraceSinceOpen(1234), '距開書 1234 ms');
+    });
+  });
+
   group('isDualPageEnabled truth table（可執行文件）', () {
     /// 等效於 main.js 的 isDualPageEnabled(dualPageMode, isLandscape)
     /// 與 EpubReaderView.kt:149-151 的邏輯

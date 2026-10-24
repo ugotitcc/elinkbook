@@ -122,13 +122,13 @@ class OpenBookTrace {
 
 **Files：** `foliate_reader_view.dart`、對應測試檔。
 
-- [ ] **Step 1：** 加 import `open_book_trace.dart`。`initState` 先啟動一個 `Stopwatch`（供 `距開書 N ms` 使用），記 `開書開始`（副檔名用 `cacheFileExtension(widget.filePath)`）。
-- [ ] **Step 2：** `_cacheBook`：開始前存 `Stopwatch`；成功記 `書複製完成 耗時 N ms`；回傳 null 記 `書複製失敗 回傳 null（耗時 N ms）`；`catch` 記 `書複製失敗 <e.runtimeType>（耗時 N ms）`（審查 M-4）。**既有的 `ReaderConsoleLog.add` 與 `onError` 呼叫保留。**
-- [ ] **Step 3：** `_onWebViewCreated` 開頭記 `WebView 建立`；`onPageRendered` handler 內、呼叫 `widget.onPageRendered()` 之前記 `已渲染 距開書 N ms`。
-- [ ] **Step 4：** `InAppWebView` 新增回呼（回呼本體一行）：`onLoadStart`、`onLoadStop`（記 `url?.path ?? '(null)'`）、`onReceivedError`、`onReceivedHttpError`（狀態碼 `?.toString() ?? '(no status)'`）、`onRenderProcessGone`（`當機=是／否`）。**不加 `onLoadResource`**（審查 I-2）。把「錯誤描述／路徑／狀態碼」這類組字邏輯抽成檔內頂層純函式（例如 `describeHttpError`），方便測試，且必須處理 null（審查 I-4）。
-- [ ] **Step 5：** `dispose`：在 `super.dispose()` 之前記 `離開畫面 已刪快取目錄=是／否`。
-- [ ] **Step 6：** 測試：用既有的 `cacheBookForServing` 覆寫與 `FakePlatformInAppWebViewWidget`：成功路徑記錄出現 `開書開始`、`書複製完成`；回傳 null 路徑出現 `書複製失敗`；離開畫面出現 `離開畫面`；純函式測試涵蓋 null 輸入（路徑 `null`、狀態碼 `null`）不拋例外並回固定字串。每個測試 `setUp` 清 `ReaderConsoleLog` 與 `OpenBookTrace`。
-- [ ] **Step 7：** `flutter analyze`；跑 `foliate_reader_view` 相關測試檔與 `reader_screen_test.dart` 的開書案例（`--plain-name "開書"`）；commit。
+- [x] **Step 1：** 加 import `open_book_trace.dart`。`initState` 先啟動一個 `Stopwatch`（供 `距開書 N ms` 使用），記 `開書開始`（副檔名用 `cacheFileExtension(widget.filePath)`）。
+- [x] **Step 2：** `_cacheBook`：開始前存 `Stopwatch`；成功記 `書複製完成 耗時 N ms`；回傳 null 記 `書複製失敗 回傳 null（耗時 N ms）`；`catch` 記 `書複製失敗 <e.runtimeType>（耗時 N ms）`（審查 M-4）。**既有的 `ReaderConsoleLog.add` 與 `onError` 呼叫保留。**
+- [x] **Step 3：** `_onWebViewCreated` 開頭記 `WebView 建立`；`onPageRendered` handler 內、呼叫 `widget.onPageRendered()` 之前記 `已渲染 距開書 N ms`。
+- [x] **Step 4：** `InAppWebView` 新增回呼（回呼本體一行）：`onLoadStart`、`onLoadStop`（記 `url?.path ?? '(null)'`）、`onReceivedError`、`onReceivedHttpError`（狀態碼 `?.toString() ?? '(no status)'`）、`onRenderProcessGone`（`當機=是／否`）。**不加 `onLoadResource`**（審查 I-2）。把「錯誤描述／路徑／狀態碼」這類組字邏輯抽成檔內頂層純函式（例如 `describeHttpError`），方便測試，且必須處理 null（審查 I-4）。
+- [x] **Step 5：** `dispose`：在 `super.dispose()` 之前記 `離開畫面 已刪快取目錄=是／否`。
+- [x] **Step 6：** 測試：用既有的 `cacheBookForServing` 覆寫與 `FakePlatformInAppWebViewWidget`：成功路徑記錄出現 `開書開始`、`書複製完成`；回傳 null 路徑出現 `書複製失敗`；離開畫面出現 `離開畫面`；純函式測試涵蓋 null 輸入（路徑 `null`、狀態碼 `null`）不拋例外並回固定字串。每個測試 `setUp` 清 `ReaderConsoleLog` 與 `OpenBookTrace`。
+- [x] **Step 7：** `flutter analyze`；跑 `foliate_reader_view` 相關測試檔與 `reader_screen_test.dart` 的開書案例（`--plain-name "開書"`）；commit。
 
 ### Task 3：逾時摘要
 

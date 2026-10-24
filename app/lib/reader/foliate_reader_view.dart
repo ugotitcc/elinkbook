@@ -20,6 +20,7 @@ import 'foliate_bridge_codec.dart';
 import 'foliate_bridge_handlers.dart';
 import 'foliate_native_bridge.dart';
 import 'js_bridge_gateway.dart';
+import 'open_book_trace.dart';
 import 'page_turn_mode.dart';
 import 'percent_rect.dart';
 import 'platform_view_frame_flush.dart';
@@ -58,6 +59,28 @@ window.applyPreferences = function (prefs) {
 const _userAgentLogJs = '''
 console.log('[UserAgent] ' + navigator.userAgent);
 ''';
+
+/// 開書階段記錄（epic-54 Issue 29 階段一）用的組字函式。回呼本體只呼叫
+/// [OpenBookTrace.record]，組字邏輯抽出來獨立測試：測試環境觸發不了
+/// `InAppWebView` 的回呼，且平台回傳的欄位可能是 null，必須有固定的 fallback。
+String describeTraceUrlPath(Uri? uri) => uri?.path ?? '(null)';
+
+/// `HTTP 錯誤` 的細節：狀態碼與路徑。
+String describeTraceHttpError(int? statusCode, Uri? uri) =>
+    '${statusCode?.toString() ?? '(no status)'} ${describeTraceUrlPath(uri)}';
+
+/// `載入錯誤` 的細節：錯誤型別與描述。
+String describeTraceLoadError(Object? type, String? description) {
+  final text = '${type ?? '(null)'} ${description ?? ''}';
+  return text.trim();
+}
+
+/// `渲染行程結束` 的細節。
+String describeTraceRenderGone(bool? didCrash) =>
+    '當機=${didCrash == true ? '是' : '否'}';
+
+/// 「距開書 N ms」。
+String describeTraceSinceOpen(int elapsedMs) => '距開書 $elapsedMs ms';
 
 /// `InAppWebView.onConsoleMessage` 的訊息處理邏輯（epic-18-reader-device-qa
 /// Issue 33，真機使用回報）。抽成頂層純函式獨立測試——原因與
@@ -555,6 +578,9 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
   /// 本實例的唯一 ID，用於區隔快取子目錄（避免螢幕轉場期間的競態）。
   late final String _instanceId = identityHashCode(this).toString();
 
+  /// 開書階段記錄的「距開書 N ms」計時（epic-54 Issue 29）。
+  final Stopwatch _openWatch = Stopwatch()..start();
+
   /// Epic 25 Issue 1 修法：目前 WebView 內是否有文字選取範圍存在，供
   /// `TapZoneDetector` 判斷是否要抑制翻頁動作（見下方 onTap 說明）。
   /// 由 `onSelectionChanged`/`onSelectionCleared` JS 橋接 handler 直接維護，
@@ -568,12 +594,15 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
   @override
   void initState() {
     super.initState();
+    OpenBookTrace.record(
+        _instanceId, '開書開始', cacheFileExtension(widget.filePath));
     _cacheBook();
   }
 
   /// 非同步前置快取步驟：將 EPUB 檔案複製到原生端快取目錄，
   /// 供 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務。
   Future<void> _cacheBook() async {
+    final copyWatch = Stopwatch()..start();
     try {
       final cacheFn = cacheBookForServing;
       final cachedPath = await cacheFn(widget.filePath, _instanceId);
@@ -588,16 +617,22 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
         return;
       }
       if (cachedPath != null) {
+        OpenBookTrace.record(
+            _instanceId, '書複製完成', '耗時 ${copyWatch.elapsedMilliseconds} ms');
         // cacheBookForServing 回傳的是檔案絕對路徑，InternalStoragePathHandler 要的是目錄
         setState(() {
           _bookCacheDir = File(cachedPath).parent.path;
         });
       } else {
+        OpenBookTrace.record(_instanceId, '書複製失敗',
+            '回傳 null（耗時 ${copyWatch.elapsedMilliseconds} ms）');
         ReaderConsoleLog.add('[FoliateReaderView] _cacheBook 失敗：cacheBookForServing 回傳 null');
         widget.onError(AppLocalizations.of(context)!.readerFailedToLoadBookMessage);
       }
     } catch (e) {
       if (!mounted) return;
+      OpenBookTrace.record(_instanceId, '書複製失敗',
+          '${e.runtimeType}（耗時 ${copyWatch.elapsedMilliseconds} ms）');
       ReaderConsoleLog.add('[FoliateReaderView] _cacheBook 拋出例外: $e');
       widget.onError(AppLocalizations.of(context)!.readerFailedToLoadBookMessage);
     }
@@ -659,6 +694,7 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
   }
 
   Future<void> _onWebViewCreated(InAppWebViewController controller) async {
+    OpenBookTrace.record(_instanceId, 'WebView 建立');
     _controller = controller;
     _gateway = JsBridgeGateway(
       evaluate: _evaluate,
@@ -687,6 +723,8 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     controller.addJavaScriptHandler(
       handlerName: FoliateBridgeHandlers.onPageRendered,
       callback: (args) {
+        OpenBookTrace.record(_instanceId, '已渲染',
+            describeTraceSinceOpen(_openWatch.elapsedMilliseconds));
         widget.onPageRendered();
         // epic-54 Issue 18：回報 `main.js` 的真實 `view.isFixedLayout`
         //（此前寫死 false 的契約前提已隨 epic-20 失效，見
@@ -799,12 +837,16 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
   @override
   void dispose() {
     // 清理本實例的快取子目錄（避免孤兒子目錄累積）
+    var deletedCacheDir = false;
     if (_bookCacheDir != null) {
       final cacheDir = Directory(_bookCacheDir!);
       if (cacheDir.existsSync()) {
         cacheDir.deleteSync(recursive: true);
+        deletedCacheDir = true;
       }
     }
+    OpenBookTrace.record(
+        _instanceId, '離開畫面', '已刪快取目錄=${deletedCacheDir ? '是' : '否'}');
     detachReaderView();
     // WebView 平台檢視關閉後補送畫面，讓引擎拆開 raster／主執行緒併合（epic-64）。
     flushFramesAfterPlatformViewRemoved();
@@ -879,6 +921,28 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
             ),
           ]),
           onWebViewCreated: _onWebViewCreated,
+          // epic-54 Issue 29 階段一：只記錄開書階段，不影響載入。刻意不傳
+          // onLoadResource——套件會因此隱式開啟 useOnLoadResource 並注入
+          // PerformanceObserver，每個資源多一次訊息，會改變開書行為。
+          onLoadStart: (controller, url) => OpenBookTrace.record(
+              _instanceId, '頁面載入開始', describeTraceUrlPath(url)),
+          onLoadStop: (controller, url) => OpenBookTrace.record(
+              _instanceId,
+              '頁面載入完成',
+              '${describeTraceUrlPath(url)} '
+                  '${describeTraceSinceOpen(_openWatch.elapsedMilliseconds)}'),
+          onReceivedError: (controller, request, error) =>
+              OpenBookTrace.record(_instanceId, '載入錯誤',
+                  describeTraceLoadError(error.type, error.description)),
+          onReceivedHttpError: (controller, request, errorResponse) =>
+              OpenBookTrace.record(
+                  _instanceId,
+                  'HTTP 錯誤',
+                  describeTraceHttpError(
+                      errorResponse.statusCode, request.url)),
+          onRenderProcessGone: (controller, detail) => OpenBookTrace.record(
+              _instanceId, '渲染行程結束',
+              describeTraceRenderGone(detail.didCrash)),
           shouldInterceptRequest: _shouldInterceptRequest,
           // epic-18-reader-device-qa Issue 33：見上方
           // handleFoliateConsoleMessage 註解。
