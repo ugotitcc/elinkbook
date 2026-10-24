@@ -238,6 +238,31 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 11. **文件**：`CONTEXT.md`「版面設定預設集」詞條補一句；本段；`issues.md` 更新（Issue 26 已定案、Issue 25 已合併 PR #364、新增 Issue 31）。無需新 ADR（可逆、不牴觸既有 ADR）。
 12. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；寫 `plans/plan-issue-26.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次。
 
+## Issue 27 設計決策（第三次檢視後 `/grilling` 定案，2026-10-24）
+
+來源：第三次架構檢視候選 E。事實盤點（已核對 `reader_screen.dart`、`CONTEXT.md`）：
+
+- 四個來源其實是兩組不同的東西：`widget.isFixedLayout`（`Book.isFixedLayout` 的宣告值）加 `_dispatchedIsFixedLayout`（解析後的「開書前結果」，`null` = EPUB 補判斷進行中，畫面維持載入）；以及 `EpubLayoutInfo.isFixedLayout`（開書後 foliate-js 回報）加 `_isFixedLayout`（約 15 處讀取的 FXL 外觀開關，初值 `false`）。
+- 兩個欄位會不一致是設計如此：宣告為 `false`、foliate 回報 `true` 時，外觀開關變 `true`，但「開書前結果」仍是 `false`（`isFixedLayoutHint` 因此維持關閉）。`CONTEXT.md` 已明寫兩者「互不影響」，所以 `issues.md` 原本的「畫面只持有一個結果欄位」不成立。
+- `_resolveEpubEngineDispatch`（`reader_screen.dart` 524–588）有 4 個防禦分支：`azw3`→`false`、`cbz`→`true`、`txt`→`false`、`md`→`false`，是 `epic-11` Issue 2 C2 缺陷（畫面永遠停在載入）的修復。
+- 不對稱：宣告值為 `true`（強制 FXL 或 CBZ）時，外觀開關在 `initState` 立刻設 `true`；補判斷非同步回來 `true` 時只改「開書前結果」，外觀開關等 foliate 回報。
+- 既有畫面測試已涵蓋這些規則：約 1939–1946 的 6 列矩陣（宣告值 × 回報值）、約 1432／1466／1621／1648 四個防禦分支、約 2245 強制 FXL、約 1375／1404 補判斷。
+
+**定案**
+
+1. **純重構、零行為變化**。
+2. **不合成欄位**：「開書前結果」與「FXL 外觀開關」是兩個概念，兩個欄位都保留；`issues.md` 的描述已修正。
+3. **新增 `lib/reader/engine_dispatch.dart`**，放兩個純函式（名稱以編譯為準）：
+   - 開書前解析：輸入「格式＋宣告值」，回傳三態——已知（帶 `bool`）／需補判斷／不適用。`ReaderScreen` 的 `_dispatchedIsFixedLayout` 仍是 `bool?`，由三態對應：已知 → 該值；需補判斷 → `null` 並發起補判斷；不適用 → `null`。
+   - 開書後回報如何改寫外觀開關：輸入「宣告值＋回報值＋目前值」；宣告為 `true`（含人工版面覆蓋的「強制 FXL」與 CBZ）時忽略回報，其餘以回報為準。
+4. **防禦分支改成以格式為鍵的一張表**，值逐字保留，每格一個單元測試。
+5. **不對稱逐字保留**：補判斷回來為 `true` 時不立刻設外觀開關，用測試記錄；是否對稱化另議，不在這張。
+6. **留在 `ReaderScreen`**：補判斷的非同步呼叫與 `setState`、重新連結後重跑解析、傳給 View 的 `isFixedLayoutHint`。
+7. **測試**：新增純函式表格測試；既有畫面測試全部保留，不刪（它們是 C2、Issue 18 I-1 等真實缺陷的迴歸測試，且驗的是函式真的接到畫面上）。
+8. **「人工版面覆蓋」行為不變**：強制 FXL 已有畫面案例；「恢復自動判斷」在書架端，這張沒碰；不補新測試。
+9. **文件**：`CONTEXT.md`「引擎分派判斷」詞條補開書前解析規則與兩個值的差別；本段；`issues.md` 更新（Issue 27 已定案、Issue 26 已合併 PR #365）。無需新 ADR（可逆、不牴觸 ADR 0017、0023）。
+10. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；寫 `plans/plan-issue-27.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -713,3 +738,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-24 WAVE 真機抽驗通過**：分支版（commit `3474eaba`）安裝於 WAVE，8 項全數正常：另存為新預設集（未滿 3 組）槽位即時出現；存滿 3 組後另存跳覆蓋選單與覆蓋確認；套用到本書畫面與面板滑桿即時同步、槽位顯示勾號；套用到其他書跳「即將覆蓋 N 本書」確認；書籍設定複製；刪除預設集（取消保留、確認後槽位變回空的）；取名、選覆蓋目標、覆蓋確認三步驟取消都不變動清單；確認對話框開著時按返回離開閱讀器不閃退。
 
 **2026-10-24 Issue 26 程式審查與 PR**：審查報告 `reviews/review-code-issue-26.md`（不進版控），0 Critical／0 Important／4 Minor，結論 Yes（可合併）。Minor 1（文件狀態）已於開 PR 時更新；Minor 2（`_presetFlow` 建構時捕捉 `widget.*`，與 `BookmarkController` 同模式）、Minor 3（`applyFromBook` 與 `_applyToTargets` 的 dispose 語意註解）為註解補充，未處理；Minor 4（刪除確認丟例外時往上拋）為沿用舊行為，非回歸。分支 `epic-54/issue-26-layout-preset-flow` 推上 `origin`，開 PR [#365](https://git.jigong.org/huthief/elinkBook/pulls/365)（`main` ← `epic-54/issue-26-layout-preset-flow`），待合併。
+
+**2026-10-24 Issue 27 計畫審查與實作完成**：計畫審查 0 Critical、3 Important（I-1 不對稱案例的版面按鈕回報前是停用的，測試改斷言 `onPressed` 為 `null`；I-2 CBZ 宣告值 `null` 時不可提早設外觀開關；I-3 三態型別補 `==`／`hashCode`／`toString`）、3 Minor，全部納入計畫。新增 `app/lib/reader/engine_dispatch.dart`（`resolveEngineDispatch`、`reconcileFixedLayoutFlag`）與 36 個表格測試；`ReaderScreen` 兩個欄位都保留，4 個防禦分支改由純函式提供；新增 1 個畫面案例記錄「補判斷回 `true` 不立刻設外觀開關」。完整 `flutter test` 4483 通過、1 略過、0 失敗，`flutter analyze` 乾淨。`check_*.js` 兩個腳本因本機沒有 Node 未執行（本次未改字串與 Key）。程式審查（自審）0 Critical、0 Important、1 Minor。**WAVE 真機抽驗通過**：流式 EPUB、FXL EPUB、CBZ、PDF、TXT 都能開；FXL 外觀與設定面板正確；書架「強制 FXL」後重開為 FXL，「恢復自動判斷」後回到原判斷。待開 PR。
