@@ -52,21 +52,47 @@
 
 **Files：** `bookmark_controller.dart`、`test/reader/bookmark_controller_test.dart`。
 
-測試用假 repository 草案（以實際編譯為準）：
+測試用假 repository 草案（以實際編譯為準；審查 I-1、I-2）：
 
 ```dart
-/// 可手動控制 listByBook 完成順序：呼叫當下先取資料快照，再等閘門放行，
-/// 模擬「較舊的查詢比較新的查詢晚回來」。
-class _GatedBookmarksRepository implements BookmarksRepository {
-  final FakeBookmarksRepository inner = FakeBookmarksRepository();
-  final List<Completer<void>> _gates = [];   // 依呼叫順序排隊的閘門
-  final List<bool> _failures = [];           // 對應閘門放行後是否丟例外
+/// 可手動控制 listByBook 完成順序，模擬「較舊的查詢比較新的查詢晚回來」。
+/// 繼承 [FakeBookmarksRepository]：儲存與 insert／rename／delete 都沿用，只覆寫 listByBook。
+class _GatedBookmarksRepository extends FakeBookmarksRepository {
+  final List<Completer<void>> _gates = [];
+  final List<bool> _failures = [];
 
-  /// 下一次 listByBook 要等閘門；回傳該閘門。
-  Completer<void> gateNext({bool fail = false});
+  /// 下一次 listByBook 要等這個閘門；fail 為 true 時，放行後丟例外。
+  Completer<void> gateNext({bool fail = false}) {
+    final gate = Completer<void>();
+    _gates.add(gate);
+    _failures.add(fail);
+    return gate;
+  }
 
-  // listByBook：有排到閘門就先取快照、await 閘門、再依 fail 丟例外或回傳快照；
-  // 沒排到閘門就直接回傳（等同 FakeBookmarksRepository）。
+  /// 放行所有尚未完成的閘門；測試的 tearDown 呼叫，避免斷言失敗時遺留未完成的 Future。
+  void releaseAll() {
+    for (final gate in _gates) {
+      if (!gate.isCompleted) gate.complete();
+    }
+    _gates.clear();
+    _failures.clear();
+  }
+
+  @override
+  Future<List<Bookmark>> listByBook(String bookId) async {
+    // 閘門與快照都必須在第一個 await 之前同步取得：
+    //  - 快照定格在「呼叫當下」的資料（先等閘門才讀資料，舊查詢也會讀到新資料，
+    //    沒有世代保護時測試會偽綠）；
+    //  - 閘門依「呼叫順序」分配，不受微任務排程影響。
+    final snapshotFuture = super.listByBook(bookId);
+    final gate = _gates.isEmpty ? null : _gates.removeAt(0);
+    final fail = gate == null ? false : _failures.removeAt(0);
+    final snapshot = await snapshotFuture;
+    if (gate == null) return snapshot;
+    await gate.future;
+    if (fail) throw StateError('查詢失敗');
+    return snapshot;
+  }
 }
 ```
 
@@ -74,10 +100,10 @@ class _GatedBookmarksRepository implements BookmarksRepository {
   - 先發的舊 `load`（快照 `[A]`）、後發的新 `load`（快照 `[A, B]`）；新的先完成，舊的後完成 → `bookmarks` 為 `[A, B]`（目前會被蓋回 `[A]`，紅燈）。
   - 舊的先完成、新的後完成 → `bookmarks` 為新值（正常順序，目前就會綠）。
   - 新的失敗、舊的成功（舊的後完成）→ 清單維持載入前的值，舊結果不套用，不丟例外。
-  - 舊的失敗、新的成功 → 清單為新值，不丟例外。
+  - 新的先成功並套用新值，舊的後失敗 → 清單維持新值，不丟例外（舊請求的例外只記 log，不洗掉已套用的新資料，審查 M-2）。
   - 開書第一次 `load`（快照 `[]`）還沒回來，`toggle`（新增書籤並自己 `load`）先完成，之後第一次 `load` 才完成 → `bookmarks` 含新書籤，`at(位置)` 非 null。
   - 單獨一次 `load` 照常更新（既有案例已涵蓋，不重複）。
-  - 每個案例結束前讓所有閘門放行，避免遺留未完成的 `Future`。
+  - 在 `group('load 世代保護')` 內宣告 `tearDown(() => repository.releaseAll());`，斷言失敗時也不遺留未完成的 `Future`（審查 I-1）。
 - [ ] **Step 2（綠）：** `BookmarkController` 加 `int _loadSeq = 0;`。`load()` 改為：
 
   ```dart
@@ -94,8 +120,8 @@ class _GatedBookmarksRepository implements BookmarksRepository {
   }
   ```
 
-  更新 `load()` 的 doc 註解：說明世代保護規則與「失敗只 `debugPrint`、清單維持現狀」。`toggle` 不動。
-- [ ] **Step 3：** `flutter analyze`；跑 `test/reader/bookmark_controller_test.dart` 與 `test/screens/notes_bottom_sheet_test.dart`（若存在，使用同一個 controller）；`reader_screen_test.dart --plain-name "書籤"`；commit。
+  更新 `load()` 的 doc 註解：說明世代保護規則與「失敗只 `debugPrint`、清單維持現狀」，並標註 `（epic-54 Issue 30）`（審查 M-4）。`toggle` 不動。
+- [ ] **Step 3：** `flutter analyze`；跑 `test/reader/bookmark_controller_test.dart` 與 `test/screens/notes_bottom_sheet_test.dart`（確實存在，34 個案例，使用 `BookmarkController`，審查 M-1）；`reader_screen_test.dart --plain-name "書籤"`；commit。
 
 ### Task 2：收尾
 
@@ -104,4 +130,4 @@ class _GatedBookmarksRepository implements BookmarksRepository {
 - [ ] **Step 3：** `flutter analyze`；兩個 `check_*.js`（沒有 Node 則記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
 - [ ] **Step 4：** 程式審查（報告存 `reviews/review-code-issue-30.md`，不進版控）。
 - [ ] **Step 5：** WAVE 真機抽驗（風險低，抽驗一輪即可）：開 EPUB 一本，開書後立刻連點星號 5～6 次，星號狀態與最後一次點擊一致；到書籤清單確認資料正確；再開一本 PDF 做同樣操作。
-- [ ] **Step 6：** 開 PR；PR 開出後把 Issue 29／30 的狀態同步。
+- [ ] **Step 6：** 開 PR；PR 開出後把 Issue 30 的狀態同步（Issue 29 已在 Task 0 同步，審查 M-3）。
