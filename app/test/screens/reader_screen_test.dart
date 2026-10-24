@@ -109,7 +109,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 // 「未能透過程式碼靜態確認、但無法排除的可能」）。LayoutPresetRepository
 // 是一般 class（非 final/sealed），可安全繼承並只覆寫 insert()；listAll()
 // 不覆寫、沿用真實記憶體內 SQLite 連線正常運作，確保 ReaderScreen
-// initState() 時機的 _loadLayoutPresets() 不受影響（見
+// initState() 時機的 LayoutPresetFlow.load() 不受影響（見
 // docs/epics/epic-27-reader-device-compat/plans/plan-issue-4.md
 // 規劃階段查證第 5 點）。
 class _ThrowingLayoutPresetRepository extends LayoutPresetRepository {
@@ -10161,6 +10161,17 @@ void main() {
       final all = await tester.runAsync(() => layoutPresetRepository.listAll());
       expect(all, hasLength(1));
       expect(all!.single.name, '測試預設集');
+
+      // 面板在另存完成後重畫（ListenableBuilder 監聽 LayoutPresetFlow，
+      // epic-54 Issue 26 計畫審查 I-2）：第 0 槽由空槽位變成有內容。
+      expect(
+        find.byKey(const Key('reader_settings_preset_slot_0_row')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('reader_settings_preset_slot_0_empty')),
+        findsNothing,
+      );
     });
 
     testWidgets('存滿 3 組後再次另存，跳出覆蓋選單，選擇並確認後正確覆蓋既有一組', (tester) async {
@@ -10304,8 +10315,8 @@ void main() {
 
     // M-2（審查修訂）：只用「套用到目前書籍」（save() 拋例外）驗證，不另外
     // 補一則「套用到其他書籍」（saveMultiple() 拋例外）——兩條路徑在
-    // _applyPrefsToTargets 內部共用同一個 try/catch 區塊，save/saveMultiple
-    // 各自的分支邏輯本身已由 Issue 2 的 layout_preset_actions_test.dart
+    // LayoutPresetFlow 的套用核心內共用同一個 try/catch 區塊，save/saveMultiple
+    // 各自的分支邏輯本身已由 layout_preset_flow_test.dart
     // 獨立驗證過，此處只需要證明「這一個 catch 區塊」有效即可，不需要
     // 為同一段 catch 邏輯重複測兩次。
     testWidgets('套用預設集到目前書籍：寫入過程拋出例外時顯示提示，不被靜默吞掉', (
@@ -10444,6 +10455,16 @@ void main() {
 
       final all = await tester.runAsync(() => layoutPresetRepository.listAll());
       expect(all, isEmpty);
+
+      // 面板在刪除完成後重畫（epic-54 Issue 26 計畫審查 I-2）：第 0 槽變回空槽位。
+      expect(
+        find.byKey(const Key('reader_settings_preset_slot_0_row')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('reader_settings_preset_slot_0_empty')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('刪除預設集：刪除過程拋出例外時顯示提示，不被靜默吞掉', (tester) async {
@@ -10490,38 +10511,6 @@ void main() {
       expect(find.text('刪除預設集失敗'), findsOneWidget);
       expect(tester.takeException(), isNull);
       // M-3（審查修訂）：驗證刪除失敗時底層資料未被誤刪，狀態未受污染。
-      final all = await tester.runAsync(() => layoutPresetRepository.listAll());
-      expect(all, hasLength(1));
-    });
-
-    testWidgets('刪除預設集：確認對話框取消時不刪除', (tester) async {
-      await tester.runAsync(
-        () => layoutPresetRepository.insert(
-          LayoutPreset(
-            id: null,
-            name: '不應被刪除',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-            prefs: BookReaderPrefs.empty,
-          ),
-        ),
-      );
-
-      await pumpReaderScreen(tester);
-      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
-      await tester.pumpAndSettle();
-      await switchToTab(tester, '預設集');
-      await tester.ensureVisible(
-        find.byKey(const Key('reader_settings_preset_slot_0_delete')),
-      );
-      await tester.tap(
-        find.byKey(const Key('reader_settings_preset_slot_0_delete')),
-      );
-      await tester.pumpAndSettle();
-      // 「確認刪除」對話框中點擊「取消」。
-      await tester.tap(find.text('取消').last);
-      await tester.pumpAndSettle();
-
       final all = await tester.runAsync(() => layoutPresetRepository.listAll());
       expect(all, hasLength(1));
     });

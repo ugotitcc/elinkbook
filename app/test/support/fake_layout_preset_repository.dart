@@ -10,8 +10,17 @@ class FakeLayoutPresetRepository implements LayoutPresetRepository {
   final List<LayoutPreset> _presets = [];
   int _nextId = 1;
 
+  /// 指定哪些方法要丟例外（`'listAll'`／`'insert'`／`'replace'`／`'delete'`），
+  /// 供測試注入失敗情境（epic-54 Issue 26 計畫審查 M-3）。可在測試中途改變。
+  final Set<String> failOn = {};
+
+  void _maybeFail(String method) {
+    if (failOn.contains(method)) throw StateError('fake $method failed');
+  }
+
   @override
   Future<List<LayoutPreset>> listAll() async {
+    _maybeFail('listAll');
     final sorted = _presets.toList()
       ..sort((a, b) => (a.id ?? 0).compareTo(b.id ?? 0));
     return sorted;
@@ -19,6 +28,7 @@ class FakeLayoutPresetRepository implements LayoutPresetRepository {
 
   @override
   Future<void> insert(LayoutPreset preset) async {
+    _maybeFail('insert');
     final now = DateTime.now();
     _presets.add(LayoutPreset(
       id: _nextId++,
@@ -31,6 +41,7 @@ class FakeLayoutPresetRepository implements LayoutPresetRepository {
 
   @override
   Future<void> replace(int id, LayoutPreset preset) async {
+    _maybeFail('replace');
     final index = _presets.indexWhere((p) => p.id == id);
     if (index == -1) return;
     final existing = _presets[index];
@@ -45,6 +56,7 @@ class FakeLayoutPresetRepository implements LayoutPresetRepository {
 
   @override
   Future<void> delete(int id) async {
+    _maybeFail('delete');
     _presets.removeWhere((p) => p.id == id);
   }
 }

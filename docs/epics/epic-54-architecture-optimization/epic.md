@@ -212,6 +212,32 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 
 無需新 ADR（可逆、不牴觸既有 ADR；CONTEXT「劃線」「備註」詞條只規定 FXL 不支援，行為不變）。
 
+## Issue 26 設計決策（第三次檢視後 `/grilling` 定案，2026-10-24）
+
+來源：第三次架構檢視候選 D。事實盤點（已核對 `reader_screen.dart`、`reader_settings_sheet.dart`）：
+
+- 預設集流程在 `reader_screen.dart` 約 813–1168 行，共約 355 行：另存、套用、從其他書複製、刪除四個處理方法，加三個幾乎相同的確認對話框（覆蓋、套用到其他書、刪除）與一個覆蓋目標選單。
+- 錯誤處理的 try／`debugPrint`／SnackBar 重複 4 份，鍵有 3 種：`reader_save_as_preset_error_snackbar`、`reader_apply_preset_error_snackbar`（用 2 次）、`reader_delete_preset_error_snackbar`。
+- `_openLayoutSettings` 用 `StatefulBuilder`，4 個處理方法做完各自呼叫 `setSheetState?.call(() {})`。
+- `ReaderSettingsSheet` 的預設集回呼型別是 `void Function(...)`，面板不 `await` 它們。
+- `_handlePrefsChanged` 有 5 個呼叫端；每次拖滑桿都 `saveBookPrefs`，不 `await`、不 `catch`。
+- `layout_preset_actions.dart`（103 行頂層函式）已有單元測試。
+
+**定案**
+
+1. **純重構、零行為變化**。`_handlePrefsChanged` 的「合併連續寫入並回報失敗」會改行為，拆為 Issue 31，不在這張。
+2. **新增 `LayoutPresetFlow`**（`lib/reader/layout_preset_flow.dart`）：持有預設集清單，提供另存、套用、從其他書複製、刪除。不碰 `BuildContext`。要問使用者的事（取名、選覆蓋目標、覆蓋／套用／刪除確認）透過建構時注入的函式處理；每個操作回傳「成功／取消／失敗」。不新增 `ReaderScreen` 建構參數，也不做工廠（比照 Issue 24、25）。
+3. **`ChangeNotifier`**：預設集清單有兩個使用者（面板與覆蓋選單），在不同路由上。`_openLayoutSettings` 改用 `ListenableBuilder`，刪掉 `StatefulBuilder` 與 4 個 `setSheetState` 包裝；`ReaderScreen` 不再為預設集 `setState`。`dispose` 後不再 `notifyListeners`（旗標擋住）。這與 Issue 24、25 的「不通知」不同，原因是這裡的消費者不只 `ReaderScreen` 一個。
+4. **套用到目前書籍後**：建構時注入 `onCurrentBookPrefsApplied(prefs)`，指向 `_handlePrefsChanged`。寫入成功後由 flow 呼叫，順序不變。
+5. **書籍選擇器** `_handleRequestBookPicker` 留在 `ReaderScreen`：純導航，flow 的操作都不依賴它。
+6. **併入 `layout_preset_actions.dart`**：刪除舊檔，`layout_preset_actions_test.dart` 改名遷移（replace, don't layer）。
+7. **對話框搬到獨立檔案**。畫面接線處在每個對話框關閉後檢查 `mounted`，已卸載就回傳取消；flow 不知道 `mounted`。
+8. **載入與失敗逐字保留**：載入失敗只 `debugPrint`，清單保持空；3 個 SnackBar 鍵與訊息不變，畫面依「失敗」顯示對應的那一個。
+9. **測試**：新增 `layout_preset_flow_test.dart`，用假的注入函式測另存（未滿 3 組、已滿 3 組覆蓋、各步驟取消、失敗）、套用（只含目前書籍不用確認、其他書要確認、取消、失敗）、從其他書複製（載入失敗）、刪除（確認、取消、失敗）。`reader_screen_test.dart` 沿用 Issue 23 的規則：只驗證邏輯的案例搬走並刪除舊案例，驗證畫面的案例留下；逐案分類寫在計畫裡。
+10. **範圍外**：兩份 `_buildSliderRow`（`reader_settings_sheet.dart:780`、`pdf_settings_sheet.dart:529`）不收斂，也不另開 Issue。不動「設定面板草稿具現化原則」涵蓋的面板本地狀態。
+11. **文件**：`CONTEXT.md`「版面設定預設集」詞條補一句；本段；`issues.md` 更新（Issue 26 已定案、Issue 25 已合併 PR #364、新增 Issue 31）。無需新 ADR（可逆、不牴觸既有 ADR）。
+12. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；寫 `plans/plan-issue-26.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -681,3 +707,9 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 
 **2026-10-24 WAVE 真機抽驗通過**：分支版（commit `cc97a7f5`）安裝於 WAVE，10 項全數正常：流式 EPUB 開書即顯示正確星號（不需點任何按鈕）、星號切換、面板新增後關閉星號同步、面板重新命名／刪除、書籤跳轉；FXL 開書星號與切換；PDF 星號隨翻頁變化與書籤跳轉；FAB 加的書籤名稱不帶章節名、面板加的帶章節名。
 **2026-10-24 PR 已開**：Issue 25 分支 `epic-54/issue-25-bookmark` 推上 `origin`，開 PR [#364](https://git.jigong.org/huthief/elinkBook/pulls/364)（`main` ← `epic-54/issue-25-bookmark`），待合併。完整 `flutter test` 4415 通過／1 略過／1 失敗（`sqlite_reading_stats_repository_test` onCleared 案例，單獨重跑 19 個全過，與本次改動無關）。
+
+**2026-10-24 Issue 26 實作完成**（分支 `epic-54/issue-26-layout-preset-flow`，計畫見 `plans/plan-issue-26.md`，計畫審查報告 `reviews/review-plan-issue-26.md`〔不進版控〕：1 Critical／5 Important／6 Minor 全數採納）：新增 `LayoutPresetFlow`（`app/lib/reader/layout_preset_flow.dart`，`ChangeNotifier`，持有預設集清單，提供 `saveAsPreset`／`applyPreset`／`applyFromBook`／`deletePreset`，回傳 `done`／`cancelled`／`failed`；四個操作結束時一律通知一次，套用含目前書籍時先呼叫 `onCurrentBookPrefsApplied` 再通知；`dispose` 冪等，`applyFromBook` 在讀取來源後被 dispose 則不寫入）與 `DialogLayoutPresetPrompts`（`app/lib/screens/layout_preset_dialogs.dart`，把取名、覆蓋目標、覆蓋／套用／刪除確認接到真實對話框，畫面已卸載一律視為取消）。`ReaderScreen` 刪除 `_layoutPresets`、`_loadLayoutPresets`、五個處理方法與三個確認對話框，`_openLayoutSettings` 由 `StatefulBuilder`＋4 個 `setSheetState` 包裝改為 `ListenableBuilder`，四種失敗共用 `_reportPresetFailure`（3 個 SnackBar 鍵與文案不變）；`reader_screen.dart` 少約 355 行。`layout_preset_actions.dart` 併入後刪除，`layout_preset_actions_test` 改名為 `layout_preset_flow_test`（36 案例，含真實 sqlite 持久化 5 案例）；`FakeLayoutPresetRepository`／`FakeBookReaderPrefsRepository` 新增 `failOn`（與 `calls`）。`reader_screen_test.dart` 刪「刪除確認取消不刪除」1 案例（移到 flow 測試），另存與刪除案例新增面板槽位出現／消失斷言。驗證：`flutter analyze` No issues found；`check_l10n_hardcoded_strings.js`、`check_integration_keys.js` PASS；`reader_screen_test`（預設集 13＋複製 2）、`reader_settings_sheet_test`、`layout_preset_flow_test`、`layout_preset_dialogs_test`、`elinkbook_app_wiring_test`、`fake_reader_feature_dependencies_test`、`reader_screen_route_test` 通過。另：`app/analysis_options.yaml` 加入 `build/**`、`android/**` 排除（commit `7f6f6a9d`）——Flutter 3.47 的 `AnalysisOptionsMigration` 在缺少這兩項時，會於任何 flutter 指令載入專案時自動寫入檔案，之前每次 `flutter analyze` 都會弄髒工作區。完整 `flutter test`：**4446 通過／1 略過／0 失敗**（第一次執行因系統記憶體不足被中止，重跑後完成）。待辦：WAVE 真機抽驗、程式審查、PR。
+
+**2026-10-24 WAVE 真機抽驗通過**：分支版（commit `3474eaba`）安裝於 WAVE，8 項全數正常：另存為新預設集（未滿 3 組）槽位即時出現；存滿 3 組後另存跳覆蓋選單與覆蓋確認；套用到本書畫面與面板滑桿即時同步、槽位顯示勾號；套用到其他書跳「即將覆蓋 N 本書」確認；書籍設定複製；刪除預設集（取消保留、確認後槽位變回空的）；取名、選覆蓋目標、覆蓋確認三步驟取消都不變動清單；確認對話框開著時按返回離開閱讀器不閃退。
+
+**2026-10-24 Issue 26 程式審查與 PR**：審查報告 `reviews/review-code-issue-26.md`（不進版控），0 Critical／0 Important／4 Minor，結論 Yes（可合併）。Minor 1（文件狀態）已於開 PR 時更新；Minor 2（`_presetFlow` 建構時捕捉 `widget.*`，與 `BookmarkController` 同模式）、Minor 3（`applyFromBook` 與 `_applyToTargets` 的 dispose 語意註解）為註解補充，未處理；Minor 4（刪除確認丟例外時往上拋）為沿用舊行為，非回歸。分支 `epic-54/issue-26-layout-preset-flow` 推上 `origin`，開 PR [#365](https://git.jigong.org/huthief/elinkBook/pulls/365)（`main` ← `epic-54/issue-26-layout-preset-flow`），待合併。
