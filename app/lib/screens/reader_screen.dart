@@ -9,6 +9,7 @@ import '../reader/annotation_controller.dart';
 import '../reader/annotation_list_item.dart';
 import '../reader/annotation_toolbar_layout.dart';
 import '../reader/book_format.dart';
+import '../reader/engine_dispatch.dart';
 import '../reader/bookmark_controller.dart';
 import '../reader/bookmark_position_context.dart';
 import '../reader/book_reader_prefs.dart';
@@ -424,7 +425,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 控制項顯示邏輯、跳過流式限定功能）。與既有 _isFixedLayout
   // （foliate-js 開書後才回報的執行期狀態，驅動 FXL 懸浮控制項/AppBar
   // 顯示邏輯）是兩個不同概念，互不影響——見
-  // docs/epics/epic-17-epub-render-migration/spec.md「已知限制」。
+  // docs/epics/epic-17-epub-render-migration/spec.md「已知限制」與
+  // CONTEXT.md「引擎分派判斷」；解析規則見 engine_dispatch.dart。
   bool? _dispatchedIsFixedLayout;
 
   /// 搜尋跳轉暫態高亮 3 秒生命週期計時器（epic-10-search Issue 5，
@@ -521,70 +523,36 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 非 EPUB 格式完全不受影響（`_dispatchedIsFixedLayout`
   /// 維持 null 但 `_buildBody` 的 gating 條件只在 format == epub 時才要求
   /// 它非 null）。
+  /// 各格式的解析規則（含 AZW3／CBZ／TXT／MD 的防禦預設值）集中在
+  /// `engine_dispatch.dart` 的 [resolveEngineDispatch]，詞彙見 CONTEXT.md
+  /// 「引擎分派判斷」。
   void _resolveEpubEngineDispatch() {
-    _dispatchedIsFixedLayout = widget.isFixedLayout;
-    if (_dispatchedIsFixedLayout != null) {
-      // 當使用者透過「強制 FXL」設定 isFixedLayout=true 時，
-      // 同步設定 _isFixedLayout 確保所有 FXL chrome（AppBar 隱藏、
-      // 懸浮設定按鈕等）正確顯示，不受 native view 異步回報覆蓋。
-      if (_dispatchedIsFixedLayout == true) {
-        _isFixedLayout = true;
-      }
-      return;
+    final dispatch = resolveEngineDispatch(
+      format: detectBookFormat(_activeFilePath),
+      declared: widget.isFixedLayout,
+    );
+    switch (dispatch) {
+      case EngineDispatchKnown(:final isFixedLayout):
+        _dispatchedIsFixedLayout = isFixedLayout;
+        // 當使用者透過「強制 FXL」設定 isFixedLayout=true 時，
+        // 同步設定 _isFixedLayout 確保所有 FXL chrome（AppBar 隱藏、
+        // 懸浮設定按鈕等）正確顯示，不受 native view 異步回報覆蓋。
+        // 只看「宣告值」：CBZ 宣告值為 null 的防禦預設 true 不碰外觀開關。
+        if (widget.isFixedLayout == true) {
+          _isFixedLayout = true;
+        }
+      case EngineDispatchNotApplicable():
+        _dispatchedIsFixedLayout = null;
+      case EngineDispatchNeedsDetection():
+        _dispatchedIsFixedLayout = null;
+        final repository = widget.dependencies.libraryRepository;
+        repository
+            .detectAndCacheEpubLayout(widget.bookId, _activeFilePath)
+            .then((result) {
+          if (!mounted) return;
+          setState(() => _dispatchedIsFixedLayout = result);
+        });
     }
-    final format = detectBookFormat(_activeFilePath);
-    if (format == BookFormat.azw3) {
-      // KF8 目前沒有對應 EPUB detectAndCacheEpubLayout() 的執行期重新偵測
-      // 手段（容器格式不同，不能沿用 EPUB 的 OPF/CSS 解析器）。isFixedLayout
-      // 為 null 時（多為匯入階段 metadata 擷取失敗的既有書籍），防禦性視為
-      // false（reflowable，絕大多數 AZW3 檔案的常態）而非讓其永遠停留
-      // null——後者會讓 _buildBody 的 gating 條件永遠等不到非 null 值，
-      // FoliateReaderView 永遠無法建構，書籍完全無法開啟（epic-11 Issue 2
-      // 程式碼審查 C2）。
-      _dispatchedIsFixedLayout = false;
-      return;
-    }
-    if (format == BookFormat.cbz) {
-      // CBZ 恆為固定版面（無流式變體，spec.md「CBZ 支援」），
-      // Book.isFixedLayout 理論上匯入時必定已寫入 true
-      // （book_import_service_impl.dart），此處防禦性補上與上方 azw3
-      // 分支相同邏輯的 null-safety 修正（比照該分支修復的 epic-11 Issue 2
-      // C2 教訓，避免任何未來邊界情況下 _dispatchedIsFixedLayout 永遠
-      // 停留 null 導致 FoliateReaderView 永遠無法建構）。與 azw3 分支
-      // 不同之處僅在預設值——CBZ 沒有 reflowable 變體，防禦性預設為
-      // `true`，非 azw3 的 `false`（epic-11 Issue 3 程式碼審查 Important
-      // #1：此分支原計畫已寫好，實作階段遺漏未落地）。
-      _dispatchedIsFixedLayout = true;
-      return;
-    }
-    if (format == BookFormat.txt) {
-      // TXT 合成後恆為流式（無 FXL 變體，spec.md「TXT／Markdown 合成書籍
-      // 結構」），Book.isFixedLayout 理論上匯入時必定已寫入 false
-      // （book_import_service_impl.dart），此處防禦性補上與上方
-      // azw3/cbz 分支相同邏輯的 null-safety 修正（比照 Issue 2 C2／
-      // Issue 3 Important #1 的既有教訓，避免任何未來邊界情況下
-      // _dispatchedIsFixedLayout 永遠停留 null 導致 FoliateReaderView
-      // 永遠無法建構）。
-      _dispatchedIsFixedLayout = false;
-      return;
-    }
-    if (format == BookFormat.md) {
-      // MD 合成後恆為流式（無 FXL 變體，spec.md「TXT／Markdown 合成書籍
-      // 結構」），Book.isFixedLayout 理論上匯入時必定已寫入 false
-      // （book_import_service_impl.dart），此處防禦性補上與上方
-      // azw3/cbz/txt 分支相同邏輯的 null-safety 修正（比照 Issue 2 C2／
-      // Issue 3 Important #1／Issue 4 的既有教訓）。
-      _dispatchedIsFixedLayout = false;
-      return;
-    }
-    if (format != BookFormat.epub) return;
-    final repository = widget.dependencies.libraryRepository;
-    repository
-        .detectAndCacheEpubLayout(widget.bookId, _activeFilePath)
-        .then((result) {
-      if (!mounted) return;
-      setState(() => _dispatchedIsFixedLayout = result);
-    });
   }
 
   /// [_openBookFlow] 狀態變動時重繪。
@@ -1502,11 +1470,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void _handleFoliateLayoutResolved(EpubLayoutInfo info) {
     if (!mounted) return;
     setState(() {
-      // 當使用者透過「強制 FXL」手動設定 isFixedLayout=true 時，
-      // 覆蓋 native view 的異步回報（見 _resolveEpubEngineDispatch 註解）。
-      if (widget.isFixedLayout != true) {
-        _isFixedLayout = info.isFixedLayout;
-      }
+      // 宣告為固定版面（含「強制 FXL」）時忽略 native view 的異步回報
+      // （見 reconcileFixedLayoutFlag）。
+      _isFixedLayout = reconcileFixedLayoutFlag(
+        declared: widget.isFixedLayout,
+        reported: info.isFixedLayout,
+        current: _isFixedLayout,
+      );
       _autoDetectedWritingMode = info.writingMode;
       final loaded = _loaded;
       if (loaded != null) {

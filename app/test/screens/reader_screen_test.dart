@@ -2002,6 +2002,66 @@ void main() {
     );
   }
 
+  // 補判斷回 true 不立刻設外觀開關（_isFixedLayout）是既有行為，是否對稱化
+  // 另議（epic-54 Issue 27 決策 5）：宣告值 null 的 EPUB 補判斷回 true 時，
+  // 只有 _dispatchedIsFixedLayout 變 true；版面按鈕要等 onLayoutResolved
+  // 回報後才從停用變成開啟 FxlSettingsSheet。
+  testWidgets(
+    '補判斷回 true 不立刻設外觀開關：回報前版面按鈕停用，回報後開啟 FxlSettingsSheet',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_fixed_layout.epub',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              libraryRepository:
+                  FakeLibraryRepository(detectedIsFixedLayout: true),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final layoutButton = find.byKey(const Key('reader_chrome_layout_button'));
+      expect(find.byType(FoliateReaderView), findsOneWidget);
+      // 回報前：外觀開關仍為 false 且尚無自動偵測的書寫方向 → 按鈕停用
+      expect(tester.widget<IconButton>(layoutButton).onPressed, isNull);
+      expect(find.byType(FxlSettingsSheet), findsNothing);
+
+      tester
+          .widget<FoliateReaderView>(find.byType(FoliateReaderView))
+          .onLayoutResolved
+          ?.call(
+            const EpubLayoutInfo(
+              isFixedLayout: true,
+              writingMode: WritingMode.horizontal,
+            ),
+          );
+      await tester.pump();
+
+      expect(tester.widget<IconButton>(layoutButton).onPressed, isNotNull);
+      await tester.tap(layoutButton);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(FxlSettingsSheet), findsOneWidget);
+    },
+  );
+
   testWidgets('EPUB 固定版面開書後，畫面右上角出現懸浮設定按鈕，點擊能開啟 FxlSettingsSheet', (
     tester,
   ) async {

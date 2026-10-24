@@ -140,7 +140,7 @@ bool reconcileFixedLayoutFlag({
 
 **Files：** `reader_screen.dart`、`test/screens/reader_screen_test.dart`。
 
-- [ ] **Step 1：** `_resolveEpubEngineDispatch` 改為：
+- [x] **Step 1：** `_resolveEpubEngineDispatch` 改為：
 
   ```dart
   void _resolveEpubEngineDispatch() {
@@ -164,15 +164,15 @@ bool reconcileFixedLayoutFlag({
   ```
 
   注意：原碼第一行 `_dispatchedIsFixedLayout = widget.isFixedLayout;` 在 `NotApplicable`／`NeedsDetection` 時等於賦值 `null`，行為相同。**原本 4 個防禦分支的長註解整段刪除**，其內容已搬進 `engine_dispatch.dart`。
-- [ ] **Step 2：** `_handleFoliateLayoutResolved` 內 `if (widget.isFixedLayout != true) { _isFixedLayout = info.isFixedLayout; }` 改為 `_isFixedLayout = reconcileFixedLayoutFlag(declared: widget.isFixedLayout, reported: info.isFixedLayout, current: _isFixedLayout);`，其餘（`_autoDetectedWritingMode`、`_resolved`）不動。
-- [ ] **Step 3：** 欄位註解同步（`_dispatchedIsFixedLayout` 約 418–428 行、方法 doc 約 514–523 行）：指向 `engine_dispatch.dart` 與 `CONTEXT.md`「引擎分派判斷」，保留「與 `_isFixedLayout` 是不同概念」的說明；加 import `../reader/engine_dispatch.dart`。
-- [ ] **Step 4：** 新增不對稱記錄案例，放在約 2003（矩陣迴圈結束）之後，搭建比照矩陣（約 1951–1973）與補判斷案例（約 1375 的 `FakeLibraryRepository(detectedIsFixedLayout: true)`）：
+- [x] **Step 2：** `_handleFoliateLayoutResolved` 內 `if (widget.isFixedLayout != true) { _isFixedLayout = info.isFixedLayout; }` 改為 `_isFixedLayout = reconcileFixedLayoutFlag(declared: widget.isFixedLayout, reported: info.isFixedLayout, current: _isFixedLayout);`，其餘（`_autoDetectedWritingMode`、`_resolved`）不動。
+- [x] **Step 3：** 欄位註解同步（`_dispatchedIsFixedLayout` 約 418–428 行、方法 doc 約 514–523 行）：指向 `engine_dispatch.dart` 與 `CONTEXT.md`「引擎分派判斷」，保留「與 `_isFixedLayout` 是不同概念」的說明；加 import `../reader/engine_dispatch.dart`。
+- [x] **Step 4：** 新增不對稱記錄案例，放在約 2003（矩陣迴圈結束）之後，搭建比照矩陣（約 1951–1973）與補判斷案例（約 1375 的 `FakeLibraryRepository(detectedIsFixedLayout: true)`）：
   - 宣告值 `null`、補判斷回 `true`、檔案用 `sample_fixed_layout.epub`；
   - **尚未呼叫 `onLayoutResolved` 時**：版面按鈕（`Key('reader_chrome_layout_button')`）的 `onPressed` 為 `null`（`_buildBottomBar` 的 `onLayoutTap`：外觀開關 `false` 且 `_autoDetectedWritingMode == null` → `null`），畫面上沒有 `FxlSettingsSheet`。對照：宣告值為 `true` 時按鈕一開始就可點開 `FxlSettingsSheet`（審查 I-1：不可斷言開啟 `ReaderSettingsSheet`，按鈕此時是停用的）；
   - 呼叫 `onLayoutResolved(isFixedLayout: true)` 後：按鈕變可點，點下去開啟 `FxlSettingsSheet`（`findsOneWidget`）。
   - 案例名稱與註解標明「補判斷回 true 不立刻設外觀開關為既有行為，是否對稱化另議（epic-54 Issue 27 決策 5）」。
   - 若版面按鈕在回報前不可點、無法觀察，改用同一個外觀開關的其他可觀察結果（例如 `onLayoutTap` 以外的 `_isFixedLayout` 分支）並在 `epic.md` 記錄偏差；不可為了讓案例成立而改實作。
-- [ ] **Step 5：** 驗證：`flutter analyze`；跑 `reader_screen_test.dart` 中與版面有關的案例（`--plain-name "isFixedLayout"`、`--plain-name "onLayoutResolved"`、`--plain-name "強制 FXL"`、`--plain-name "AZW3"`、`--plain-name "CBZ"`、`--plain-name "TXT 書籍"`、`--plain-name "MD 書籍"`、`--plain-name "FXL"`）、`engine_dispatch_test.dart`、`reader_screen_route_test.dart`；commit。
+- [x] **Step 5：** 驗證：`flutter analyze`；跑 `reader_screen_test.dart` 中與版面有關的案例（`--plain-name "isFixedLayout"`、`--plain-name "onLayoutResolved"`、`--plain-name "強制 FXL"`、`--plain-name "AZW3"`、`--plain-name "CBZ"`、`--plain-name "TXT 書籍"`、`--plain-name "MD 書籍"`、`--plain-name "FXL"`）、`engine_dispatch_test.dart`、`reader_screen_route_test.dart`；commit。
 
 ### Task 3：收尾
 
