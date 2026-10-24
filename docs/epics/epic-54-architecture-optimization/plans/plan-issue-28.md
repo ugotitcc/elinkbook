@@ -101,7 +101,7 @@ class TransientHighlightTimer {
 }
 ```
 
-- [ ] **Step 1（紅）：** 新增 `transient_highlight_timer_test.dart`，先寫測試、確認失敗（檔案不存在的編譯失敗即為紅燈）。多數案例用 `fakeAsync` 加預設工廠，不寫假 `Timer` 類別（審查 M-1）：
+- [x] **Step 1（紅）：** 新增 `transient_highlight_timer_test.dart`，先寫測試、確認失敗（檔案不存在的編譯失敗即為紅燈）。多數案例用 `fakeAsync` 加預設工廠，不寫假 `Timer` 類別（審查 M-1）：
   - 到期：在 `fakeAsync` 內 `start`，`elapse(3 秒)` 後呼叫一次 `onExpire`，且 `onExpire` 執行當下 `isActive` 已為 false。
   - 未到期：`elapse(2 秒 999 毫秒)` 時尚未呼叫 `onExpire`，`isActive` 為 true。
   - 重新啟動：`start` 後過 2 秒再 `start`，再過 2 秒時第一次的 `onExpire` 沒被呼叫；從第二次 `start` 起滿 3 秒才呼叫第二次的 `onExpire`（舊計時器被取消、新的重新計 3 秒）。
@@ -109,8 +109,8 @@ class TransientHighlightTimer {
   - 沒有啟動時 `cancel()` 是安全的無動作。
   - 預設時長：只有這一個案例用 `timerFactory`，假工廠記錄收到的 `duration`，應為 3 秒；工廠回傳 `fakeAsync` 內建立的真 `Timer` 即可，不需假類別。
   - Zone：在 `fakeAsync` 內建構、再用 `Zone.root.run` 呼叫 `start`，`elapse(3 秒)` 後仍呼叫 `onExpire`（證明計時器建在建構時的 Zone）。
-- [ ] **Step 2（綠）：** 新增 `transient_highlight_timer.dart`，內容依上方草案；新檔可執行 `dart format`。
-- [ ] **Step 3：** `flutter analyze`；跑 `test/reader/transient_highlight_timer_test.dart`；commit。此時 `ReaderScreen` 還沒改，行為完全不變。
+- [x] **Step 2（綠）：** 新增 `transient_highlight_timer.dart`，內容依上方草案；新檔可執行 `dart format`。
+- [x] **Step 3：** `flutter analyze`；跑 `test/reader/transient_highlight_timer_test.dart`；commit。此時 `ReaderScreen` 還沒改，行為完全不變。
 
 ### Task 2：`ReaderScreen` 改用 module
 
