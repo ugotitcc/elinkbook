@@ -119,7 +119,7 @@ bool reconcileFixedLayoutFlag({
 
 **Files：** 新增 `engine_dispatch.dart`、`test/reader/engine_dispatch_test.dart`。
 
-- [ ] **Step 1（紅）：** 先建 `engine_dispatch.dart` 骨架（型別含 `==`／`hashCode`／`toString`，兩個函式先 `throw UnimplementedError()`），讓測試能編譯、在執行期紅燈（審查 M-2）。再寫 `engine_dispatch_test.dart`：
+- [x] **Step 1（紅）：** 先建 `engine_dispatch.dart` 骨架（型別含 `==`／`hashCode`／`toString`，兩個函式先 `throw UnimplementedError()`），讓測試能編譯、在執行期紅燈（審查 M-2）。再寫 `engine_dispatch_test.dart`：
   - `resolveEngineDispatch`：
     - 宣告值非 `null`：對全部 7 種格式（epub／pdf／azw3／cbz／txt／md／unknown）各測 `true` 與 `false`，都回 `Known(declared)`（含 PDF／unknown）。
     - 宣告值為 `null`：依上方解析表逐格一個案例（epub → `NeedsDetection`；azw3／txt／md → `Known(false)`；cbz → `Known(true)`；pdf／unknown → `NotApplicable`）。
@@ -133,8 +133,8 @@ bool reconcileFixedLayoutFlag({
           EngineDispatchNotApplicable() => 'notApplicable',
         };
     ```
-- [ ] **Step 2（綠）：** 實作 `engine_dispatch.dart`。註解沿用原碼的 `epic-11` Issue 2 C2 教訓說明（防禦預設值是為了避免畫面永遠停在載入）。
-- [ ] **Step 3：** `flutter analyze`；跑 `test/reader/engine_dispatch_test.dart`；commit。
+- [x] **Step 2（綠）：** 實作 `engine_dispatch.dart`。註解沿用原碼的 `epic-11` Issue 2 C2 教訓說明（防禦預設值是為了避免畫面永遠停在載入）。
+- [x] **Step 3：** `flutter analyze`；跑 `test/reader/engine_dispatch_test.dart`；commit。
 
 ### Task 2：`ReaderScreen` 遷移與不對稱記錄案例
 
