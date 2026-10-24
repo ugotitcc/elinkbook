@@ -180,5 +180,5 @@ bool reconcileFixedLayoutFlag({
 - [x] **Step 2：** `epic.md` 開發記錄；`issues.md` Issue 27 狀態；`docs/epics.md` 對應列同步。
 - [x] **Step 3：** 驗收：`grep -n "防禦性視為\|防禦性補上" app/lib/screens/reader_screen.dart` 應為 0（4 個防禦分支的註解已搬走）；`reader_screen.dart` 的 `_resolveEpubEngineDispatch` 不再出現 `BookFormat.azw3`／`BookFormat.cbz`／`BookFormat.txt`／`BookFormat.md`。
 - [x] **Step 4：** `flutter analyze`；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；完整 `flutter test`（`run_in_background`，只跑一個）。
-- [ ] **Step 5：** WAVE 真機抽驗（備一本流式 EPUB、一本 FXL EPUB、一本 CBZ、一本 PDF、一本 TXT）：每本都能正常開啟（不卡在載入）；FXL EPUB 與 CBZ 的懸浮設定按鈕與 FXL 設定面板正確；流式 EPUB 與 TXT 開版面設定是流式面板；書架對 EPUB 做「強制 FXL」後重開，外觀是 FXL；「恢復自動判斷」後重開，回到原判斷。
+- [x] **Step 5：** WAVE 真機抽驗（備一本流式 EPUB、一本 FXL EPUB、一本 CBZ、一本 PDF、一本 TXT）：每本都能正常開啟（不卡在載入）；FXL EPUB 與 CBZ 的懸浮設定按鈕與 FXL 設定面板正確；流式 EPUB 與 TXT 開版面設定是流式面板；書架對 EPUB 做「強制 FXL」後重開，外觀是 FXL；「恢復自動判斷」後重開，回到原判斷。
 - [ ] **Step 6：** 程式審查（報告存 `reviews/review-code-issue-27.md`，不進版控）；開 PR；PR 開出後把 Issue 26 與 Issue 27 的狀態同步。
