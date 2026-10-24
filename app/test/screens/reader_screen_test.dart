@@ -39,6 +39,8 @@ import 'package:elinkbook/screens/reader_chrome_bottom_bar.dart';
 import 'package:elinkbook/screens/reader_chrome_top_bar.dart';
 import 'package:elinkbook/screens/tts_panel.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
+import 'package:elinkbook/reader/open_book_trace.dart';
+import 'package:elinkbook/reader/reader_console_log.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:elinkbook/storage/storage_access_probe.dart';
 import 'package:elinkbook/reader/foliate_bridge_codec.dart';
@@ -318,6 +320,9 @@ void main() {
   setUp(() {
     pdfrxInitialize();
     prefsManager = FakeReaderPrefsManager();
+    // 開書階段記錄是靜態狀態（epic-54 Issue 29），每個案例開始前清乾淨。
+    ReaderConsoleLog.clear();
+    OpenBookTrace.startSession();
     // ReaderScreen 初始化時會透過 elinkbook/fullscreen MethodChannel 呼叫
     // setEnabled（非同步、非 awaited）。若前一個測試的 addTearDown 移除了
     // mock handler，這段 async 呼叫會在 handler 遺失時完成，導致
@@ -8078,6 +8083,17 @@ void main() {
         reason: '滿 30 秒後應切換為可見的錯誤畫面，而非讓使用者永遠面對轉圈圈',
       );
       expect(find.byKey(const Key('reader_loading_indicator')), findsNothing);
+
+      // epic-54 Issue 29 階段一：逾時時 ReaderScreen 把 OpenBookFlow 的
+      // onTimedOut 接到 OpenBookTrace，設定畫面的 Console Log 要看得到。
+      // 這個案例開的是 PDF，沒有任何 Foliate 階段記錄。
+      expect(
+        ReaderConsoleLog.entries.value.any(
+          (e) => e.endsWith('[OpenBook#-] 開書逾時 沒有任何階段記錄'),
+        ),
+        isTrue,
+        reason: '逾時後 ReaderConsoleLog 應有一行「開書逾時」與最後階段摘要',
+      );
     },
   );
 

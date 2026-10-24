@@ -134,17 +134,17 @@ class OpenBookTrace {
 
 **Files：** `open_book_flow.dart`、`reader_screen.dart`、`test/reader/open_book_flow_test.dart`。
 
-- [ ] **Step 1（紅）：** `open_book_flow_test.dart` 新增案例：
+- [x] **Step 1（紅）：** `open_book_flow_test.dart` 新增案例：
   - 計時器到點且仍是載入中 → `onTimedOut` 呼叫恰好 1 次，且在狀態變成失敗之前。
   - 已渲染後計時器到點（或計時器已被取消）→ 不呼叫。
   - 已 dispose → 不呼叫。
   - 視圖錯誤先到（`onViewError`）→ 不呼叫 `onTimedOut`。
   - `onTimedOut` 拋例外時，狀態仍照常切到失敗（審查 I-3）。
   - 沿用該檔既有的 `timerFactory` 假計時器。
-- [ ] **Step 2（綠）：** `OpenBookFlow` 新增 `this.onTimedOut` 選用參數；`_onTimeout` 通過 guard 後、`_fail` 之前以 `try { onTimedOut?.call(); } catch (_) {}` 呼叫它。
-- [ ] **Step 3：** `ReaderScreen.initState`（`OpenBookFlow` 建構之前）呼叫 `OpenBookTrace.startSession()`；建構 `OpenBookFlow` 時傳入 `onTimedOut: OpenBookTrace.recordTimeout`。
-- [ ] **Step 4：** `reader_screen_test.dart` 在既有開書逾時案例結尾補斷言：`ReaderConsoleLog.entries.value` 有一筆含 `[OpenBook#-] 開書逾時`（接線防線，審查 I-5）。該檔的 `setUp`／`tearDown` 補 `OpenBookTrace.startSession()`（審查 M-3）。
-- [ ] **Step 5：** `flutter analyze`；跑 `open_book_flow_test.dart`、`open_book_trace_test.dart`、`reader_screen_test.dart`（含逾時案例，`--plain-name "逾時"`）；commit。
+- [x] **Step 2（綠）：** `OpenBookFlow` 新增 `this.onTimedOut` 選用參數；`_onTimeout` 通過 guard 後、`_fail` 之前以 `try { onTimedOut?.call(); } catch (_) {}` 呼叫它。
+- [x] **Step 3：** `ReaderScreen.initState`（`OpenBookFlow` 建構之前）呼叫 `OpenBookTrace.startSession()`；建構 `OpenBookFlow` 時傳入 `onTimedOut: OpenBookTrace.recordTimeout`。
+- [x] **Step 4：** `reader_screen_test.dart` 在既有開書逾時案例結尾補斷言：`ReaderConsoleLog.entries.value` 有一筆含 `[OpenBook#-] 開書逾時`（接線防線，審查 I-5）。該檔的 `setUp`／`tearDown` 補 `OpenBookTrace.startSession()`（審查 M-3）。
+- [x] **Step 5：** `flutter analyze`；跑 `open_book_flow_test.dart`、`open_book_trace_test.dart`、`reader_screen_test.dart`（含逾時案例，`--plain-name "逾時"`）；commit。
 
 ### Task 4：收尾與 WAVE 抽驗
 

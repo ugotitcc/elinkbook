@@ -146,6 +146,7 @@ class OpenBookFlow extends ChangeNotifier {
     required String filePath,
     required this.probe,
     this.relinkBook,
+    this.onTimedOut,
     this.timeout = const Duration(seconds: 30),
     this.timerFactory = Timer.new,
   }) : _filePath = filePath;
@@ -154,6 +155,11 @@ class OpenBookFlow extends ChangeNotifier {
 
   /// `null` 代表沒有重新連結能力（例如沒有匯入服務）。
   final OpenBookRelink? relinkBook;
+
+  /// 計時器到點、尚未切到失敗之前呼叫一次（epic-54 Issue 29 階段一：讓畫面
+  /// 記下逾時前的最後階段）。只供診斷：回呼拋出的例外一律吞掉，絕不能擋住
+  /// 切到失敗畫面。
+  final void Function()? onTimedOut;
 
   /// 開書逾時上限。30 秒是 epic-27-reader-device-compat Issue 2 依
   /// 慢速裝置真機回報調整的值（原為 12 秒）。
@@ -261,6 +267,11 @@ class OpenBookFlow extends ChangeNotifier {
 
   void _onTimeout() {
     if (_disposed || _state is! OpenBookLoading) return;
+    try {
+      onTimedOut?.call();
+    } catch (_) {
+      // 診斷回呼的例外不得影響逾時處理
+    }
     _fail(OpenBookFailureSource.timeout, null);
   }
 
