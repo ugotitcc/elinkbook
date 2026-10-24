@@ -680,3 +680,4 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-24 Issue 25 程式審查**：審查報告 `reviews/review-code-issue-25.md`（不進版控），0 Critical／0 Important／4 Minor，結論 Yes（可合併）。Minor 1（`load()` 亂序覆寫，低風險）已登錄為 `issues.md` Issue 30，不擋合併；Minor 2～4 為設計取捨，不處理。
 
 **2026-10-24 WAVE 真機抽驗通過**：分支版（commit `cc97a7f5`）安裝於 WAVE，10 項全數正常：流式 EPUB 開書即顯示正確星號（不需點任何按鈕）、星號切換、面板新增後關閉星號同步、面板重新命名／刪除、書籤跳轉；FXL 開書星號與切換；PDF 星號隨翻頁變化與書籤跳轉；FAB 加的書籤名稱不帶章節名、面板加的帶章節名。
+**2026-10-24 PR 已開**：Issue 25 分支 `epic-54/issue-25-bookmark` 推上 `origin`，開 PR [#364](https://git.jigong.org/huthief/elinkBook/pulls/364)（`main` ← `epic-54/issue-25-bookmark`），待合併。完整 `flutter test` 4415 通過／1 略過／1 失敗（`sqlite_reading_stats_repository_test` onCleared 案例，單獨重跑 19 個全過，與本次改動無關）。
