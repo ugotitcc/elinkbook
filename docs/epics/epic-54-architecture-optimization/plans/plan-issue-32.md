@@ -168,7 +168,7 @@ class _GatedNotesRepository extends FakeNotesRepository {
   ```
 
   為 `reload()` 加 doc 註解：說明世代保護規則、「兩份清單一起套用或一起丟掉」與「查詢失敗時例外照舊往外丟」，並標註 `（epic-54 Issue 32）`。其餘方法不動。
-- [x] **Step 3：** `flutter analyze`；跑 `test/reader/annotation_controller_test.dart`、`test/screens/reader_screen_test.dart --name="劃線|備註"`（多個 `--plain-name` 會要求同時符合，所以改用正則，審查 M-2）；commit。
+- [x] **Step 3：** `flutter analyze`；跑 `test/reader/annotation_controller_test.dart`、`test/screens/reader_screen_test.dart --plain-name 劃線`、再跑一次 `--plain-name 備註`（多個 `--plain-name` 會要求同時符合，所以分兩次跑；`--name="劃線|備註"` 在 Windows bash 下中文編碼會失效，程式審查 Minor 3）；commit。
 
 ### Task 2：收尾
 
