@@ -45,7 +45,7 @@ AnnotationListItem? resolveEpubExistingAnnotation({
 /// （epic-27-reader-device-compat Issue 11）。PDF 框選不像 EPUB 走
 /// WebView，沒有 JS 端可以預先算好命中結果，直接在這裡用純 Dart 矩形
 /// 重疊比對；先掃畫線（連同它依附的備註一併回傳），沒有才掃純備註（比照
-/// `ReaderScreen._sendPdfAnnotationsToNative` 既有的
+/// `ReaderScreen._sendAnnotationsToNative` 既有的
 /// `note.highlightId == null` 判斷慣例，避免已依附畫線的備註被誤判為
 /// 獨立命中）。
 AnnotationListItem? resolvePdfExistingAnnotation({

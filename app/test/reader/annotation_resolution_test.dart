@@ -151,7 +151,7 @@ void main() {
         notes: const [note],
       );
       expect(result, isNull,
-          reason: '比照 _sendPdfAnnotationsToNative 既有慣例，highlightId '
+          reason: '比照 _sendAnnotationsToNative 既有慣例，highlightId '
               '非 null 的備註是依附於某筆畫線顯示，不應被當成獨立的純'
               '備註命中。');
     });

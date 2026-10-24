@@ -3264,7 +3264,7 @@ void main() {
       // null」限制的既有因應方式：專案既有測試不新增 Method Channel Mock
       // 基礎設施，見 spec.md「Testing Decisions」）。由於
       // `_handleSelectionChanged` 是私有方法，本測試改為直接驗證
-      // `AnnotationToolbar` 在 `_currentSelection` 非 null 時確實會被
+      // `AnnotationToolbar` 在 `AnnotationController.selection` 非 null 時確實會被
       // build 出來，透過 State 是否存在對應的公開行為間接驗證——此處
       // 選擇不新增測試專用的 public API，僅驗證 widget tree 初始狀態不
       // 顯示 AnnotationToolbar（上一個測試已涵蓋），選取觸發後的顯示邏輯
@@ -4558,7 +4558,7 @@ void main() {
     },
   );
 
-  // epic-20-fxl-foliate-migration Issue 4 Task 2/3：_sendDecorationsToNative()
+  // epic-20-fxl-foliate-migration Issue 4 Task 2/3：_sendAnnotationsToNative()
   // 修正前對 FXL 書籍會呼叫已無人建構的 EpubReaderView.setDecorations（見
   // tmp/epic-20/issue2-implementation-review.md 原始發現），修正後無條件呼叫
   // FoliateReaderView.setDecorations——比照上方既有的流式版本測試風格
@@ -8698,7 +8698,7 @@ void main() {
       // 的 _handleHighlightStyleSelected（reader_screen.dart），讓使用者
       // 能接著按「備註」把備註掛在同一筆劃線上（見
       // AnnotationToolbar.onNotePressed 文件註解）；只有按下「備註」或
-      // 取消選取才會清空 _currentPdfSelection。
+      // 取消選取才會清空 AnnotationController.selection。
       expect(
         find.byType(AnnotationToolbar),
         findsOneWidget,
