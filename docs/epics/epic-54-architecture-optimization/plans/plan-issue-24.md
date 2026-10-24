@@ -104,25 +104,25 @@ bool isIgnoredPdfSelection({required PdfSelectionInfo info, required List<Highli
 
 ### Task 0：提交計畫
 
-- [ ] **Step 1：** 在文件分支提交本計畫、`epic.md` 設計決策、`issues.md` 狀態（純文件），開 PR 合併。
-- [ ] **Step 2：** 建立 worktree `.worktrees/epic-54-issue-24-annotation`，分支 `epic-54/issue-24-annotation`；後續 Task 都在這個 worktree 的 `app/` 下執行。
+- [x] **Step 1（已完成，文件 PR #362 合併；往後計畫不再另開文件分支）：** 在文件分支提交本計畫、`epic.md` 設計決策、`issues.md` 狀態（純文件），開 PR 合併。
+- [x] **Step 2：** 建立 worktree `.worktrees/epic-54-issue-24-annotation`，分支 `epic-54/issue-24-annotation`；後續 Task 都在這個 worktree 的 `app/` 下執行。
 
 ### Task 1：純函式（定位、守衛、簽章遷移）
 
 **Files：** 新增 `annotation_toolbar_layout.dart`、`annotation_toolbar_layout_test.dart`；修改 `annotation_resolution.dart`、`annotation_resolution_test.dart`、`reader_screen.dart`（僅三處 `resolvePdfExistingAnnotation` 呼叫端）。
 
-- [ ] **Step 1（紅）：** 寫 `annotation_toolbar_layout_test.dart`：上方空間足夠 → 貼上方；不足 → 貼下方並 clamp；`annotationToolbarLeft` clamp 到 `size.width - 256`；測值取自現行 `_annotationToolbarTop`／`_pdfAnnotationToolbarTop` 公式。在 `annotation_resolution_test.dart` 把 `resolvePdfExistingAnnotation` 的呼叫改為 `pageIndex:`＋`rect:` 新簽章（此時為紅）。
-- [ ] **Step 2（綠）：** 新增 `annotation_toolbar_layout.dart`（常數 104／8／256 自 `reader_screen.dart` 約 2356–2358 搬入）；改 `resolvePdfExistingAnnotation` 簽章；`reader_screen.dart` 三處呼叫端改傳 `pageIndex:`＋`rect:`：約 1995 行（變數 `info`）、約 2126 行（變數 `selection`）、約 2799 行（變數 `pdfSelection`，build 內）；以 `grep -n resolvePdfExistingAnnotation` 為準，變數名不可全部套 `info`。**此 Task 不刪 `reader_screen.dart` 的舊定位方法**（Task 3 才換）。
-- [ ] **Step 3：** `flutter analyze`；跑 `test/reader/annotation_toolbar_layout_test.dart`、`annotation_resolution_test.dart`、`test/screens/reader_screen_test.dart`（標註與 PDF 退化選取相關案例，用 `--plain-name` 縮小）；commit。
+- [x] **Step 1（紅）：** 寫 `annotation_toolbar_layout_test.dart`：上方空間足夠 → 貼上方；不足 → 貼下方並 clamp；`annotationToolbarLeft` clamp 到 `size.width - 256`；測值取自現行 `_annotationToolbarTop`／`_pdfAnnotationToolbarTop` 公式。在 `annotation_resolution_test.dart` 把 `resolvePdfExistingAnnotation` 的呼叫改為 `pageIndex:`＋`rect:` 新簽章（此時為紅）。
+- [x] **Step 2（綠）：** 新增 `annotation_toolbar_layout.dart`（常數 104／8／256 自 `reader_screen.dart` 約 2356–2358 搬入）；改 `resolvePdfExistingAnnotation` 簽章；`reader_screen.dart` 三處呼叫端改傳 `pageIndex:`＋`rect:`：約 1995 行（變數 `info`）、約 2126 行（變數 `selection`）、約 2799 行（變數 `pdfSelection`，build 內）；以 `grep -n resolvePdfExistingAnnotation` 為準，變數名不可全部套 `info`。**此 Task 不刪 `reader_screen.dart` 的舊定位方法**（Task 3 才換）。
+- [x] **Step 3：** `flutter analyze`；跑 `test/reader/annotation_toolbar_layout_test.dart`、`annotation_resolution_test.dart`、`test/screens/reader_screen_test.dart`（標註與 PDF 退化選取相關案例，用 `--plain-name` 縮小）；commit。
 
 ### Task 2：`AnnotationController` 與測試
 
 **Files：** 新增 `annotation_controller.dart`、`test/reader/annotation_controller_test.dart`（由 `annotation_session_test.dart` 以 `git mv` 改名後改寫）。
 
-- [ ] **Step 1：** `git mv test/reader/annotation_session_test.dart test/reader/annotation_controller_test.dart`；把 `AnnotationSession` 的案例改為對 `AnnotationController` 的狀態斷言（`reload` 後 `highlights`／`notes`；`createHighlight` 後清單與 `pendingHighlightId`；`saveNote` 新增／更新／帶 `pendingHighlightId`；`deleteExisting`）。`AnnotationSnapshot` 相等性案例隨類型刪除。
-- [ ] **Step 2（紅）：** 新增案例：`select` 重置 pending；`clearSelection`；`existingItem`（EPUB 以 id、PDF 以矩形重疊）；`createHighlight` 無選取不動作；`saveNote` 完成後選取與 pending 為 null；`isIgnoredPdfSelection` 三種情況（非退化、退化未命中、退化命中）；`AnnotationSelection.fromEpub`／`fromPdf` 欄位對映（PDF 的 `anchorRect` 是 `widgetRect`）。
-- [ ] **Step 3（綠）：** 實作 `annotation_controller.dart`（`AnnotationLocator` 自 `annotation_session.dart` 原樣搬入；controller 內部沿用其 repository 呼叫）。**同一個 commit** 把 `annotation_session.dart` 內的 `class AnnotationLocator` 刪除，改為 `export 'annotation_controller.dart' show AnnotationLocator;`（計畫審查 I-2：避免兩檔同名型別在 `reader_screen.dart` 同時 import 時衝突；全專案只有單一定義）。`annotation_session.dart` 與 `reader_screen.dart` 對它的使用暫時並存，Task 3 Step 3 刪除。
-- [ ] **Step 4：** `flutter analyze`；跑 `test/reader/annotation_controller_test.dart`、`annotation_resolution_test.dart`；commit。
+- [x] **Step 1：** `git mv test/reader/annotation_session_test.dart test/reader/annotation_controller_test.dart`；把 `AnnotationSession` 的案例改為對 `AnnotationController` 的狀態斷言（`reload` 後 `highlights`／`notes`；`createHighlight` 後清單與 `pendingHighlightId`；`saveNote` 新增／更新／帶 `pendingHighlightId`；`deleteExisting`）。`AnnotationSnapshot` 相等性案例隨類型刪除。
+- [x] **Step 2（紅）：** 新增案例：`select` 重置 pending；`clearSelection`；`existingItem`（EPUB 以 id、PDF 以矩形重疊）；`createHighlight` 無選取不動作；`saveNote` 完成後選取與 pending 為 null；`isIgnoredPdfSelection` 三種情況（非退化、退化未命中、退化命中）；`AnnotationSelection.fromEpub`／`fromPdf` 欄位對映（PDF 的 `anchorRect` 是 `widgetRect`）。
+- [x] **Step 3（綠）：** 實作 `annotation_controller.dart`（`AnnotationLocator` 自 `annotation_session.dart` 原樣搬入；controller 內部沿用其 repository 呼叫）。**同一個 commit** 把 `annotation_session.dart` 內的 `class AnnotationLocator` 刪除，改為 `export 'annotation_controller.dart' show AnnotationLocator;`（計畫審查 I-2：避免兩檔同名型別在 `reader_screen.dart` 同時 import 時衝突；全專案只有單一定義）。`annotation_session.dart` 與 `reader_screen.dart` 對它的使用暫時並存，Task 3 Step 3 刪除。
+- [x] **Step 4：** `flutter analyze`；跑 `test/reader/annotation_controller_test.dart`、`annotation_resolution_test.dart`；commit。
 
 ### Task 3：`ReaderScreen` 遷移（計畫審查 C-1／I-1／I-3 修訂：選取、劃線、備註、工具列互相耦合，不可拆成會斷編譯的小步，改為 3 個 commit）
 
@@ -130,8 +130,8 @@ bool isIgnoredPdfSelection({required PdfSelectionInfo info, required List<Highli
 
 > 為什麼 Step 2 不能再拆：四個舊選取欄位被選取 handler（約 1871–1880、2007–2016）、劃線／備註 handler（約 2021–2070、2106–2149）、PDF 刪除與關閉（約 1918、2970）、build（約 2785、2786、2939、2960）同時讀寫；`_highlights`／`_notes` 的來源改到 controller 後，劃線／備註 handler 也必須同時改用 controller 的選取。若分開，會有兩份選取狀態並存，或中間 commit 找不到方法。
 
-- [ ] **Step 1（只去重，不動狀態；一個 commit）：** `_reloadAnnotationsAndRefreshDecorations`／`_reloadPdfAnnotationsAndSync` 合成 `_reloadAnnotations`；`_sendDecorationsToNative`／`_sendPdfAnnotationsToNative` 合成 `_sendAnnotationsToNative`；所有呼叫點（約 1519–1521、1564、1852、各 handler 內）同步改。`_highlights`、`_notes`、四個選取欄位、`_annotationSession` **全部保留**。`flutter analyze` 乾淨後跑 `reader_screen_test.dart` 全檔，commit。
-- [ ] **Step 2（狀態、選取、劃線、備註、刪除、工具列一次遷移；一個 commit）：** 先在 `pdf_reader_surface_test.dart` 確認 PDF `clearSelection()` 為空操作（已有案例；沒有則補一個，紅綠）。接著在同一個 commit 內完成下列全部：
+- [x] **Step 1（只去重，不動狀態；一個 commit）：** `_reloadAnnotationsAndRefreshDecorations`／`_reloadPdfAnnotationsAndSync` 合成 `_reloadAnnotations`；`_sendDecorationsToNative`／`_sendPdfAnnotationsToNative` 合成 `_sendAnnotationsToNative`；所有呼叫點（約 1519–1521、1564、1852、各 handler 內）同步改。`_highlights`、`_notes`、四個選取欄位、`_annotationSession` **全部保留**。`flutter analyze` 乾淨後跑 `reader_screen_test.dart` 全檔，commit。
+- [x] **Step 2（狀態、選取、劃線、備註、刪除、工具列一次遷移；一個 commit）：** 先在 `pdf_reader_surface_test.dart` 確認 PDF `clearSelection()` 為空操作（已有案例；沒有則補一個，紅綠）。接著在同一個 commit 內完成下列全部：
   - 刪 `_highlights`、`_notes`、`_currentSelection`、`_pendingHighlightIdForSelection`、`_currentPdfSelection`、`_pendingPdfHighlightIdForSelection`、`_annotationSession`，新增 `late final AnnotationController _annotations = AnnotationController(highlightsRepository: widget.dependencies.highlightsRepository, notesRepository: widget.dependencies.notesRepository, bookId: widget.bookId)`；其餘讀 `_highlights`／`_notes` 之處改 `_annotations.highlights`／`.notes`（以 `grep -n "_highlights\|_notes\b"` 為準，避開其他同名欄位）；`import` 改為只引 `annotation_controller.dart`。
   - 選取：`_handleSelectionChanged`：`mounted` → `_session.recordActivity()` → `_isFixedLayout` 守衛 → `setState(() => _annotations.select(AnnotationSelection.fromEpub(info)))`。`_handlePdfSelectionRectComputed`：`mounted` → `isIgnoredPdfSelection(...)` 回 true 則 return → `_session.recordActivity()` → `setState(select(fromPdf(info)))`（順序逐字保留）。`_handleSelectionCleared`／`_handlePdfSelectionCanceled` 合成 `_handleSelectionCleared`，**所有呼叫點一併改**：接線（約 3345、3376）、PDF 換頁（約 3448、3466：`if (_annotations.selection != null) _handleSelectionCleared();` 後接 `cancelActiveSelectionDrag`，順序不變）、PDF 刪除（約 1918）、PDF 工具列關閉（約 2970）。約 3450 與 1891 行的註解若提到舊欄位或舊方法名，同步改字，讓驗收 grep 為 0（計畫審查 M-2）。
   - 劃線：`_handleHighlightStyleSelected`／`_handlePdfHighlightStyleSelected` 合成一個：`await _annotations.createHighlight(style); if (!mounted) return; setState(() {}); _sendAnnotationsToNative();`。
@@ -139,13 +139,13 @@ bool isIgnoredPdfSelection({required PdfSelectionInfo info, required List<Highli
   - 刪除與關閉：`_handleDeleteExistingAnnotation`／`_handlePdfDeleteExistingAnnotation` 合成：`await _annotations.deleteExisting(item)` → `mounted` → `setState` → `_sendAnnotationsToNative()` → `_handleCloseAnnotationToolbar()`。`_handleCloseAnnotationToolbar` = `_handleSelectionCleared()` ＋ `_surface.clearSelection()`，PDF 與 EPUB 共用。
   - 工具列：刪 `_annotationToolbarTop`、`_pdfAnnotationToolbarTop` 與三個常數；build 內兩個 `Positioned(AnnotationToolbar)` 合成一個（`_annotations.selection != null` 時以 `annotationToolbarLeft/Top` 定位，錨點取 `selection.anchorRect`；`onLookupPressed` 只在 `_surface.foliate != null` 時傳入；`existingItem` 取自 `_annotations.existingItem`，刪除 build 內原本的 `existingItem`／`pdfExistingItem` 區域變數；`onStyleSelected`／`onNotePressed`／`onDeletePressed` 改指合併後的方法，PDF 專屬回呼不再存在，計畫審查 I-3）。
   - 驗證：跑 `reader_screen_test.dart` 全檔（含標註約 4676–5010、PDF 約 8713–9125、10262–10451）、`annotation_toolbar_test.dart`、`reader_screen_surface_test.dart`、`reader_screen_stats_activity_test.dart`、`annotation_controller_test.dart`。commit。
-- [ ] **Step 3（刪舊；一個 commit）：** `git rm app/lib/reader/annotation_session.dart`；`grep -rn "annotation_session\|AnnotationSession\|AnnotationSnapshot" app/lib app/test` 應為 0（不含註解）；`flutter analyze`；commit。
+- [x] **Step 3（刪舊；一個 commit）：** `git rm app/lib/reader/annotation_session.dart`；`grep -rn "annotation_session\|AnnotationSession\|AnnotationSnapshot" app/lib app/test` 應為 0（不含註解）；`flutter analyze`；commit。
 
 ### Task 4：收尾
 
 - [x] **Step 1（設計定案時已完成）：** `CONTEXT.md` 新增「標註」詞條（劃線＋備註的選取、待存劃線與清單，歸 `AnnotationController` 管；View 只回報選取與重畫）。
-- [ ] **Step 2：** `epic.md` 開發記錄；`issues.md` Issue 24 狀態；Issue 23 狀態改為「🟢 已合併（PR #361）」並註記 Issue 28 的診斷插樁已於 Issue 23 刪除；`docs/epics.md` 對應列同步更新。
-- [ ] **Step 3：** 驗收：`grep -n "_currentPdfSelection\|_pendingPdfHighlightIdForSelection\|_pdfAnnotationToolbarTop\|_sendPdfAnnotationsToNative\|_reloadPdfAnnotationsAndSync" app/lib/screens/reader_screen.dart` 應為 0（含註解行；Task 3 Step 2 已要求同步改註解）。
-- [ ] **Step 4：** `flutter analyze`；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；完整 `flutter test`（`run_in_background`，只跑一個）。
-- [ ] **Step 5：** WAVE 真機抽驗（EPUB 與 PDF 各一本）：劃線四種樣式、備註新增／編輯、刪除既有標註、PDF 單點長按不彈工具列、PDF 長按拖曳框選、換頁清選取、工具列不超出螢幕邊緣、EPUB 查字典後選取還原。
-- [ ] **Step 6：** 程式審查（報告存 `reviews/review-code-issue-24.md`，不進版控）；開 PR。
+- [x] **Step 2：** `epic.md` 開發記錄；`issues.md` Issue 24 狀態；Issue 23 狀態改為「🟢 已合併（PR #361）」並註記 Issue 28 的診斷插樁已於 Issue 23 刪除；`docs/epics.md` 對應列同步更新。
+- [x] **Step 3：** 驗收：`grep -n "_currentPdfSelection\|_pendingPdfHighlightIdForSelection\|_pdfAnnotationToolbarTop\|_sendPdfAnnotationsToNative\|_reloadPdfAnnotationsAndSync" app/lib/screens/reader_screen.dart` 應為 0（含註解行；Task 3 Step 2 已要求同步改註解）。
+- [x] **Step 4：** `flutter analyze`；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；完整 `flutter test`（`run_in_background`，只跑一個）。
+- [x] **Step 5：** WAVE 真機抽驗（EPUB 與 PDF 各一本）：劃線四種樣式、備註新增／編輯、刪除既有標註、PDF 單點長按不彈工具列、PDF 長按拖曳框選、換頁清選取、工具列不超出螢幕邊緣、EPUB 查字典後選取還原。
+- [x] **Step 6：** 程式審查（報告存 `reviews/review-code-issue-24.md`，不進版控）；開 PR。

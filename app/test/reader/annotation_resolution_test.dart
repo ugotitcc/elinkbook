@@ -3,7 +3,6 @@ import 'package:elinkbook/reader/annotation_resolution.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/reader/note.dart';
-import 'package:elinkbook/reader/pdf_selection_info.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
 
 void main() {
@@ -75,13 +74,9 @@ void main() {
         pdfPageIndex: 0,
         pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.3),
       );
-      const selection = PdfSelectionInfo(
-        pageIndex: 0,
-        rect: PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
-        widgetRect: PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
-      );
       final result = resolvePdfExistingAnnotation(
-        selection: selection,
+        pageIndex: 0,
+        rect: const PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
         highlights: const [highlight],
         notes: const [],
       );
@@ -96,13 +91,9 @@ void main() {
         pdfPageIndex: 0,
         pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.2, bottom: 0.2),
       );
-      const selection = PdfSelectionInfo(
-        pageIndex: 0,
-        rect: PercentRect(left: 0.7, top: 0.7, right: 0.9, bottom: 0.9),
-        widgetRect: PercentRect(left: 0.7, top: 0.7, right: 0.9, bottom: 0.9),
-      );
       final result = resolvePdfExistingAnnotation(
-        selection: selection,
+        pageIndex: 0,
+        rect: const PercentRect(left: 0.7, top: 0.7, right: 0.9, bottom: 0.9),
         highlights: const [highlight],
         notes: const [],
       );
@@ -117,13 +108,9 @@ void main() {
         pdfPageIndex: 1,
         pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.3),
       );
-      const selection = PdfSelectionInfo(
-        pageIndex: 0,
-        rect: PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
-        widgetRect: PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
-      );
       final result = resolvePdfExistingAnnotation(
-        selection: selection,
+        pageIndex: 0,
+        rect: const PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
         highlights: const [highlight],
         notes: const [],
       );
@@ -138,13 +125,9 @@ void main() {
         pdfPageIndex: 0,
         pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.3),
       );
-      const selection = PdfSelectionInfo(
-        pageIndex: 0,
-        rect: PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
-        widgetRect: PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
-      );
       final result = resolvePdfExistingAnnotation(
-        selection: selection,
+        pageIndex: 0,
+        rect: const PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
         highlights: const [],
         notes: const [note],
       );
@@ -161,18 +144,14 @@ void main() {
         pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.3),
         highlightId: 'h-not-in-list',
       );
-      const selection = PdfSelectionInfo(
-        pageIndex: 0,
-        rect: PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
-        widgetRect: PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
-      );
       final result = resolvePdfExistingAnnotation(
-        selection: selection,
+        pageIndex: 0,
+        rect: const PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
         highlights: const [],
         notes: const [note],
       );
       expect(result, isNull,
-          reason: '比照 _sendPdfAnnotationsToNative 既有慣例，highlightId '
+          reason: '比照 _sendAnnotationsToNative 既有慣例，highlightId '
               '非 null 的備註是依附於某筆畫線顯示，不應被當成獨立的純'
               '備註命中。');
     });

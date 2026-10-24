@@ -15,7 +15,7 @@ import 'reader_jump_target.dart';
 import 'reader_surface.dart';
 
 /// 把劃線與備註轉成 PDF 的 [PdfAnnotationDecoration] 清單（原樣搬自
-/// `ReaderScreen._sendPdfAnnotationsToNative`）：劃線在前、備註在後；頁碼與
+/// `ReaderScreen._sendAnnotationsToNative` 的 PDF 分支）：劃線在前、備註在後；頁碼與
 /// 座標都有才轉換；備註只轉換「獨立備註」（`highlightId` 為 null）。
 List<PdfAnnotationDecoration> buildPdfAnnotationDecorations({
   required List<Highlight> highlights,
@@ -83,7 +83,7 @@ class PdfReaderSurface implements ReaderSurface, PdfFacet {
   void clearTransientHighlight() => PdfReaderView.clearTemporaryHighlight(viewKey);
 
   // PDF 的選取框是 Flutter 自己畫的，沒有 WebView 原生選取，這三個是空操作；
-  // PDF 端的選取清除走 ReaderScreen 自己的 _handlePdfSelectionCanceled。
+  // Dart 端的選取狀態由 ReaderScreen 清除（EPUB／PDF 共用同一個關閉流程）。
   @override
   void clearSelection() {}
 

@@ -12,7 +12,7 @@ import 'toc_entry.dart';
 import 'tts_segment_cfi.dart';
 
 /// 把劃線與備註轉成 Foliate 的 [EpubDecoration] 清單（原樣搬自
-/// `ReaderScreen._sendDecorationsToNative`）：劃線在前、備註在後；只轉換有
+/// `ReaderScreen._sendAnnotationsToNative` 的 EPUB 分支）：劃線在前、備註在後；只轉換有
 /// `epubLocatorJson` 的項目；備註只轉換「獨立備註」（`highlightId` 為 null，
 /// 掛在劃線上的備註由劃線本身呈現）。
 List<EpubDecoration> buildEpubDecorations({
