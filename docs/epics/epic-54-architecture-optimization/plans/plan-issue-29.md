@@ -72,8 +72,8 @@
 
 ### Task 0：提交設計文件與計畫
 
-- [ ] **Step 1：** 分支 `epic-54/issue-29-open-timeout-diagnosis`（已從含 PR #366 的 `main` 建立）。
-- [ ] **Step 2：** 提交 `epic.md`、`issues.md`、`docs/epics.md`、本計畫（純文件，一個 commit）。不提交 `app/android/gradle.properties`。
+- [x] **Step 1：** 分支 `epic-54/issue-29-open-timeout-diagnosis`（已從含 PR #366 的 `main` 建立）。
+- [x] **Step 2：** 提交 `epic.md`、`issues.md`、`docs/epics.md`、本計畫（純文件，一個 commit）。不提交 `app/android/gradle.properties`。
 
 ### Task 1：`OpenBookTrace` 與單元測試
 
@@ -107,7 +107,7 @@ class OpenBookTrace {
 }
 ```
 
-- [ ] **Step 1（紅）：** 先建骨架（函式 `throw UnimplementedError()`），再寫測試：
+- [x] **Step 1（紅）：** 先建骨架（函式 `throw UnimplementedError()`），再寫測試：
   - `record` 寫入 `ReaderConsoleLog.entries`，內容含 `[OpenBook#123] 開書開始 epub`；沒有細節時沒有尾端空白。
   - `record` 連續兩次，`timeoutSummary` 反映最後一筆，且含細節（審查 M-1）：例如 `最後階段：書複製失敗 回傳 null（耗時 12 ms）（實例 #101，距今 31 秒）`。
   - `timeoutSummary` 的距今秒數用 `clock` 控制（31 秒後顯示 `31`）。
@@ -115,8 +115,8 @@ class OpenBookTrace {
   - `startSession` 之後回到沒有記錄；先記錄「離開畫面」再 `startSession`，摘要不含它（審查 I-1）。
   - `recordTimeout` 寫入的那一行內含摘要，且摘要不是它自己（審查 M-2）。
   - 每個測試 `setUp` 呼叫 `ReaderConsoleLog.clear()` 與 `OpenBookTrace.startSession()`；`ReaderConsoleLog.clock` 與 `OpenBookTrace.clock` 在 `tearDown` 還原。
-- [ ] **Step 2（綠）：** 實作。
-- [ ] **Step 3：** `flutter analyze`；跑 `test/reader/open_book_trace_test.dart`；commit。
+- [x] **Step 2（綠）：** 實作。
+- [x] **Step 3：** `flutter analyze`；跑 `test/reader/open_book_trace_test.dart`；commit。
 
 ### Task 2：`FoliateReaderView` 接上階段記錄
 
