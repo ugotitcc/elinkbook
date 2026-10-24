@@ -31,6 +31,7 @@
 | 27 | **「是否固定版面」收斂成純函式**：`_resolveEpubEngineDispatch`（`reader_screen.dart` 534–599）azw3／cbz／txt／md 四條近乎相同的防禦分支，加上 `widget.isFixedLayout`、`_dispatchedIsFixedLayout`、`_isFixedLayout`、`EpubLayoutInfo.isFixedLayout` 四個來源。格式＋既有值 → 「固定版面／需偵測」，畫面只持有一個結果欄位。須確認 CONTEXT「人工版面覆蓋」行為不變（ADR 0017、0023 只規定不決定引擎）。獨立，可並行 | Worth exploring | ⚪ 待規劃 |
 | 28 | **暫態高亮計時器 module**：搜尋跳轉高亮＋3 秒自動清除（`reader_screen.dart` 約 1631–1651，含為測試捕捉 Zone 的 `_creationZone.run`）包成可注入時鐘的小 module。`[DEBUG-e26i3-zoneaction]` 診斷插樁的刪除已併入 Issue 23，本張只剩計時器 module；須待 Issue 23 完成後再評估 | Speculative | ⚪ 待規劃 |
 | 29 | （缺陷，待查；來源 Issue 23 真機抽驗）WAVE 上從書架反覆開同一本書、做多次操作後，該書一直出現「開書逾時」（30 秒內沒收到 `onPageRendered`），要完全關掉 App 重開才恢復。使用者判斷應為舊問題（尚未用 Issue 23 之前的 `main` 版對照確認）。已知：Issue 23 分支版在 WAVE 上以 `repro/reopen_loop.ps1` 自動開關同一本書 14 輪（含每輪翻 6 頁）全部成功，未重現；使用者實際操作的步驟與書籍格式未記錄；失敗時 logcat 顯示每次開書建立兩個 InAppWebView（是否正常待比對）。方向：先請使用者回報重現步驟與書名／格式，再用 `main` 對照版確認是否舊問題，檢查 Foliate 開書流程在「同一本書第 N 次開啟」的靜態／快取狀態（例如 `cacheBookForServing`、WebView 行程）| Worth exploring | ⚪ 待查 |
+| 30 | （缺陷，低風險；來源 Issue 25 程式審查 Minor 1）`BookmarkController.load()` 沒有世代保護：開書時的第一次 `load` 尚未回來，使用者就點書籤星號，`toggle` 內的 `load` 先完成，較舊的 `load` 後完成並覆寫過期清單，星號短暫顯示錯誤，直到下次重載（資料不會損毀，`toggle` 直查 repository）。方向：`load()` 加遞增序號，只接受最新一次呼叫的結果，補單元測試（先完成的新 load、後完成的舊 load → 清單保持新值）。依賴 Issue 25 合併 | Speculative | ⚪ 待規劃 |
 
 Issue 2～6 只列標題，動手前須各自 `/grill-with-docs` 設計；候選來源與證據見 2026-09-30 架構檢視報告。
 
