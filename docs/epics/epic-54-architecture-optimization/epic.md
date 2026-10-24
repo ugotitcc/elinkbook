@@ -335,6 +335,26 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 8. **文件**：本段；`issues.md` Issue 32 已定案、Issue 30 補標已合併（PR #368）；`docs/epics.md` 同步；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR。
 9. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；先寫 `plans/plan-issue-32.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次。
 
+## Issue 28 設計決策（`/grilling` 定案，2026-10-24）
+
+來源：第三次檢視候選。Issue 23 已刪除 `[DEBUG-e26i3-zoneaction]` 診斷插樁，本張只剩計時器 module。事實盤點（已核對 `reader_screen.dart`）：
+
+- 搜尋跳轉暫態高亮的 3 秒自動清除計時器在 `_startSearchJumpHighlightAutoClearTimer()`（約 1267 行）與 `_clearSearchJumpHighlight()`（約 1283 行）；欄位 `_searchJumpHighlightTimer`、`_creationZone`；`dispose` 取消計時器。
+- `_creationZone` 只為這個計時器存在：測試在 `tester.runAsync` 的真實 Zone 內觸發開書回呼，計時器會建在錯的 Zone，`tester.pump` 推不動，所以先捕捉 Zone，再 `_creationZone.run(() => Timer(...))`。
+- 兩個啟動點（開書當下、閱讀器內就地跳轉）共用同一個啟動方法；提前清除由 `_handleZoneAction` 對每次動作無條件呼叫 `_clearSearchJumpHighlight()`。
+- 既有測試已涵蓋「3 秒自動清除」與「提前點擊清除」（`reader_screen_test.dart` 約 657～745、12233、12377 行）。
+
+**定案**
+
+1. **純重構，行為不變**：使用者看到的高亮與清除時機完全一樣。
+2. **新檔 `app/lib/reader/transient_highlight_timer.dart`**，類別 `TransientHighlightTimer`，只管計時器：建構子 `({Duration duration = 3 秒, Timer Function(Duration, void Function())? timerFactory})`；建構時自己捕捉 `Zone.current`，預設工廠用 `zone.run(() => Timer(...))`（把 `_creationZone` 手法搬進 module）；`start(onExpire)` 先取消舊的再重新計時，到期時先把自己標成未啟動、再呼叫 `onExpire`；`cancel()`；`isActive`（已啟動且未取消、未到期）。
+3. **`ReaderScreen`**：刪 `_creationZone` 與 `_searchJumpHighlightTimer`，改持有一個 `TransientHighlightTimer`；必須在 `initState` 明確建構（不能 `late final` 延遲初始化），讓它捕捉 `initState` 當下的 Zone。提前清除路徑：`isActive` 為 false 直接返回，否則 `cancel()` 並呼叫 `_surface.clearTransientHighlight()`；到期路徑：`onExpire` 直接呼叫 `_surface.clearTransientHighlight()`（到期時 `isActive` 已為 false，不可再走提前清除的判斷，否則高亮清不掉）。兩個啟動點照舊共用啟動方法。`_searchJumpHighlightTriggered` 旗標與 `_surface` 呼叫留在畫面（module 不依賴 `_surface`）。
+4. **`ReaderScreen` 不新增任何公開建構參數**（測試縫隙放在 module 的可選 `timerFactory`）。
+5. **測試**：新檔 `test/reader/transient_highlight_timer_test.dart`（假工廠與 `fake_async`：到期呼叫、重新啟動取消舊的、`cancel` 後不到期、`isActive` 轉換、預設工廠在另一個 Zone 呼叫 `start` 仍由建構時的 Zone 推進）；`reader_screen_test.dart` 既有案例不改，全部維持綠燈。
+6. **範圍外**：搜尋跳轉流程、`ReaderJumpTarget`、`clearTransientHighlight` 的實作。
+7. **文件**：本段；`issues.md` Issue 28 已定案、Issue 32 補標已合併（PR #369）；`docs/epics.md` 同步；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR。
+8. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；先寫 `plans/plan-issue-28.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次；WAVE 抽驗：從書內搜尋跳轉，高亮 3 秒後消失，提前點擊立刻清除。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
