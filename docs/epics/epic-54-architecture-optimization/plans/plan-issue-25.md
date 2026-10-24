@@ -96,23 +96,23 @@ class BookmarkController {
 
 **Files：** 新增 `bookmark_controller.dart`、`test/reader/bookmark_controller_test.dart`（由 `bookmark_toggle_test.dart` 以 `git mv` 改名後改寫）；暫不刪 `bookmark_toggle.dart`（Task 2 刪）。
 
-- [ ] **Step 1：** `git mv test/reader/bookmark_toggle_test.dart test/reader/bookmark_controller_test.dart`；三個既有案例改為對 `BookmarkController.toggle` 的斷言（無書籤→新增；已有→刪除；多筆只刪命中的那筆），位置改用 `BookmarkPositionContext`。
-- [ ] **Step 2（紅）：** 新增案例：
+- [x] **Step 1：** `git mv test/reader/bookmark_toggle_test.dart test/reader/bookmark_controller_test.dart`；三個既有案例改為對 `BookmarkController.toggle` 的斷言（無書籤→新增；已有→刪除；多筆只刪命中的那筆），位置改用 `BookmarkPositionContext`。
+- [x] **Step 2（紅）：** 新增案例：
   - `isSameBookmarkPosition`：PDF 同頁／不同頁；EPUB 同字串／不同字串；兩者皆 null 回 false；`pdfPageIndex` 有值時忽略 `epubLocatorJson`。
   - `load()`：載入後 `bookmarks` 為 repository 內容；repository 丟例外時清單保持舊值且不丟出。
   - `at()`：命中回書籤、未命中回 null；只看記憶體清單（未 `load` 時回 null）。
   - `toggle()`：記憶體清單是舊的（未 `load`）、資料庫已有該位置書籤 → 仍刪除，不重複新增（Review Focus 1）；toggle 後 `bookmarks` 已是最新；新增的名稱 = `Bookmark.defaultName(position, l10n)`；新增的書籤欄位三者取自 position。
-- [ ] **Step 3（綠）：** 實作 `bookmark_controller.dart`。
-- [ ] **Step 4：** `flutter analyze`；跑 `test/reader/bookmark_controller_test.dart`、`bookmark_test.dart`；commit。
+- [x] **Step 3（綠）：** 實作 `bookmark_controller.dart`。
+- [x] **Step 4：** `flutter analyze`；跑 `test/reader/bookmark_controller_test.dart`、`bookmark_test.dart`；commit。
 
 ### Task 2：`ReaderScreen` 遷移與載入時機修正（唯一行為變化）
 
 **Files：** `reader_screen.dart`、`bookmark_toggle.dart`（刪除）、`test/screens/reader_screen_test.dart`。
 
-- [ ] **Step 1（紅）：** 在 `reader_screen_test.dart` 流式 EPUB 書籤案例區（約 5763–5892）新增，**搭建比照 5763 的 `b_foliate_bookmark_btn` 案例**（`sample.epub`、`isFixedLayout: false`、`foliateView.onPageRendered()` 加 `onLocatorChanged` 模擬位置）；**不要比照 3362**——那是 FXL 案例，面板關閉後本來就會重載，測不出缺陷：
+- [x] **Step 1（紅）：** 在 `reader_screen_test.dart` 流式 EPUB 書籤案例區（約 5763–5892）新增，**搭建比照 5763 的 `b_foliate_bookmark_btn` 案例**（`sample.epub`、`isFixedLayout: false`、`foliateView.onPageRendered()` 加 `onLocatorChanged` 模擬位置）；**不要比照 3362**——那是 FXL 案例，面板關閉後本來就會重載，測不出缺陷：
   - 流式 EPUB：repository 預先放一筆與當前定位相同的書籤，開書並收到位置回報後，**不點任何按鈕**，書籤按鈕圖示應為「已加入」。現行程式應失敗。
   - 流式 EPUB：開面板新增書籤後關閉，FAB 圖示應為「已加入」（決策 7、Review Focus 6：面板關閉後重載擴大到所有格式）。現行程式應失敗。
-- [ ] **Step 2（綠，一個 commit）：**
+- [x] **Step 2（綠，一個 commit）：**
   - 新增 `late final BookmarkController _bookmarks = BookmarkController(repository: widget.dependencies.bookmarksRepository, bookId: widget.bookId)`；`initState` 內 `_bookmarks.load().then((_) { if (mounted) setState(() {}); })`（放在 `_loadLayoutPresets()` 之後）。
   - 刪 `_fxlBookmarks`、`_loadFxlBookmarks`、`_bookmarkAtCurrentPosition`、`_pdfBookmarkAtCurrentPosition`。
   - 星號圖示（約 2255、2673）改用 `_bookmarks.at(...)`：EPUB 傳 `BookmarkPositionContext(epubLocatorJson: _epubPositionInfo?.locatorJson)`，PDF 傳 `BookmarkPositionContext(pdfPageIndex: _pdfPageInfo?.pageIndex)`；位置為 null 時行為與現狀相同（回 null）。
@@ -121,21 +121,21 @@ class BookmarkController {
   - 面板關閉後：`_loadFxlBookmarks()` 改為 `_bookmarks.load().then(...setState)`，**移除 `_isFixedLayout || format == BookFormat.pdf` 條件**。
   - 刪 `import '../reader/bookmark_toggle.dart'` 與 `import 'package:uuid/uuid.dart'`（兩處 `Uuid().v4()` 移入 controller 後不再使用，否則 analyze 報未用 import）；`git rm app/lib/reader/bookmark_toggle.dart`。
   - `app/lib/reader/layout_preset_actions.dart` 第 5 行註解提到 `bookmark_toggle.dart` 的風格，改為「`bookmark_controller.dart`」（檔案已刪，避免註解指向不存在的檔案）。
-- [ ] **Step 3：** 驗證：`flutter analyze`；跑 `reader_screen_test.dart` 全檔（含書籤 3076–3460、流式 EPUB 5763–5892〔含 Epic 26 Issue 1 競態案例 `b_epic26_issue1`〕、PDF 約 9303／9351）、`reader_chrome_bottom_bar_test.dart`、`bookmark_controller_test.dart`；Step 1 兩個新案例轉綠；commit。
+- [x] **Step 3：** 驗證：`flutter analyze`；跑 `reader_screen_test.dart` 全檔（含書籤 3076–3460、流式 EPUB 5763–5892〔含 Epic 26 Issue 1 競態案例 `b_epic26_issue1`〕、PDF 約 9303／9351）、`reader_chrome_bottom_bar_test.dart`、`bookmark_controller_test.dart`；Step 1 兩個新案例轉綠；commit。
 
 ### Task 3：`NotesBottomSheet` 遷移
 
 **Files：** `notes_bottom_sheet.dart`。
 
-- [ ] **Step 1：** `_NotesBottomSheetState` 新增 `late final BookmarkController _bookmarkController`（`initState` 建立，`repository: widget.bookmarksRepository`、`bookId: widget.bookId`）；`_bookmarks` 改讀 `_bookmarkController.bookmarks`；`_loadBookmarks` 改為 `_bookmarkController.load()` 後 `setState`（重新命名／刪除／全刪流程仍呼叫 `_loadBookmarks`，其內部資料操作不動）。
-- [ ] **Step 2：** 刪 `_matchesCurrentPosition` 與 `_bookmarkAtCurrentPosition`，改 `_bookmarkController.at(widget.currentPosition)`；`_toggleBookmark` 改為 `await _bookmarkController.toggle(position: widget.currentPosition, l10n: l10n)` 後 `setState`，`l10n` 在 `await` 前取得。面板傳帶 `chapterTitle` 的 `currentPosition`（現狀），名稱不變。刪 `import 'package:uuid/uuid.dart'`（`Uuid().v4()` 已移入 controller）。
-- [ ] **Step 3：** `flutter analyze`；跑 `test/screens/notes_bottom_sheet_test.dart` 全檔、`reader_screen_test.dart` 書籤相關案例；commit。
+- [x] **Step 1：** `_NotesBottomSheetState` 新增 `late final BookmarkController _bookmarkController`（`initState` 建立，`repository: widget.bookmarksRepository`、`bookId: widget.bookId`）；`_bookmarks` 改讀 `_bookmarkController.bookmarks`；`_loadBookmarks` 改為 `_bookmarkController.load()` 後 `setState`（重新命名／刪除／全刪流程仍呼叫 `_loadBookmarks`，其內部資料操作不動）。
+- [x] **Step 2：** 刪 `_matchesCurrentPosition` 與 `_bookmarkAtCurrentPosition`，改 `_bookmarkController.at(widget.currentPosition)`；`_toggleBookmark` 改為 `await _bookmarkController.toggle(position: widget.currentPosition, l10n: l10n)` 後 `setState`，`l10n` 在 `await` 前取得。面板傳帶 `chapterTitle` 的 `currentPosition`（現狀），名稱不變。刪 `import 'package:uuid/uuid.dart'`（`Uuid().v4()` 已移入 controller）。
+- [x] **Step 3：** `flutter analyze`；跑 `test/screens/notes_bottom_sheet_test.dart` 全檔、`reader_screen_test.dart` 書籤相關案例；commit。
 
 ### Task 4：收尾
 
-- [ ] **Step 1（設計定案時已完成）：** `CONTEXT.md` 新增「本書書籤」。
-- [ ] **Step 2：** `epic.md` 開發記錄；`issues.md` Issue 25 狀態；`docs/epics.md` 對應列同步。
-- [ ] **Step 3：** 驗收：`grep -rn "_fxlBookmarks\|_loadFxlBookmarks\|_bookmarkAtCurrentPosition\|_pdfBookmarkAtCurrentPosition\|_matchesCurrentPosition\|bookmark_toggle\.dart" app/lib app/test` 應為 0（含註解；有註解提到舊名稱須同步改字）。注意正則用 `bookmark_toggle\.dart`，不可用 `bookmark_toggle`——Widget Key `notes_sheet_bookmark_toggle` 與測試 bookId `b_fxl_bookmark_toggle` 合法且不可更名。
-- [ ] **Step 4：** `flutter analyze`；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；完整 `flutter test`（`run_in_background`，只跑一個）。
+- [x] **Step 1（設計定案時已完成）：** `CONTEXT.md` 新增「本書書籤」。
+- [x] **Step 2：** `epic.md` 開發記錄；`issues.md` Issue 25 狀態；`docs/epics.md` 對應列同步。
+- [x] **Step 3：** 驗收：`grep -rn "_fxlBookmarks\|_loadFxlBookmarks\|_bookmarkAtCurrentPosition\|_pdfBookmarkAtCurrentPosition\|_matchesCurrentPosition\|bookmark_toggle\.dart" app/lib app/test` 應為 0（含註解；有註解提到舊名稱須同步改字）。注意正則用 `bookmark_toggle\.dart`，不可用 `bookmark_toggle`——Widget Key `notes_sheet_bookmark_toggle` 與測試 bookId `b_fxl_bookmark_toggle` 合法且不可更名。
+- [x] **Step 4：** `flutter analyze`；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；完整 `flutter test`（`run_in_background`，只跑一個）。
 - [ ] **Step 5：** WAVE 真機抽驗（流式 EPUB、FXL、PDF 各一本）：已有書籤的書開啟時星號正確；FAB 新增／移除；面板新增／移除後關閉，FAB 星號同步；面板重新命名／刪除／全刪；PDF 書籤跳轉。
 - [ ] **Step 6：** 程式審查（報告存 `reviews/review-code-issue-25.md`，不進版控）；開 PR。

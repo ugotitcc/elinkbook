@@ -3449,6 +3449,79 @@ void main() {
     expect(afterRemove, isEmpty);
   });
 
+  testWidgets(
+    'FXL：開書後收到位置回報時，既有書籤應立即反映在書籤按鈕圖示上，不需先點任何按鈕（Issue 25 審查 I-1）',
+    (tester) async {
+      final bookmarksRepository = FakeBookmarksRepository();
+      // 模擬「先前已在此位置加過書籤」：開書時 repository 已有一筆。
+      await bookmarksRepository.insert(
+        Bookmark(
+          id: 'fxl-preloaded',
+          bookId: 'b_fxl_bookmark_preloaded',
+          name: '既有書籤',
+          epubLocatorJson: '{"href":"/page1.xhtml"}',
+          progression: 0.2,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_fixed_layout.epub',
+            bookId: 'b_fxl_bookmark_preloaded',
+            isFixedLayout: true,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              bookmarksRepository: bookmarksRepository,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final view = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      view.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: true,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+
+      // 解決 loading state 導致 CircularProgressIndicator 動畫持續排程與
+      // MissingPluginException 問題（比照同區既有 FXL 書籤測試）。
+      view.onPageRendered();
+      await tester.pump();
+
+      view.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: '{"href":"/page1.xhtml"}',
+          progression: 0.2,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // 刻意不點任何按鈕：FXL 開書時就應載入書籤（設計決策 7）。
+      final finder = find.byKey(
+        const Key('reader_chrome_bookmark_button'),
+      );
+      expect(
+        (tester.widget<IconButton>(finder).icon as Icon).icon,
+        Icons.star,
+        reason: 'FXL 開書時應載入既有書籤，星號不應停在未加入狀態',
+      );
+    },
+  );
+
   // --- Epic 6 Issue 4：FXL 書籤支援（Task 2） ---
 
   testWidgets('FXL：懸浮筆記按鈕開啟 Bottom Sheet，「🔖 書籤」分頁可用、「✏️ 劃線與備註」分頁顯示空狀態且不可互動', (
@@ -5816,6 +5889,14 @@ void main() {
         'b_foliate_bookmark_btn',
       );
       expect(afterAdd, hasLength(1));
+      // FAB 的預設名稱刻意不帶章節名（epic-54 Issue 25 設計決策 6／審查
+      // M-4）：筆記面板新增的書籤會帶章節名，兩者名稱不同是現狀、不得統一。
+      expect(
+        afterAdd.single.name,
+        lookupAppLocalizations(
+          const Locale('zh', 'TW'),
+        ).bookmarkDefaultNamePercent(10),
+      );
     },
   );
 
@@ -9510,6 +9591,62 @@ void main() {
     final saved = await bookmarksRepository.listByBook('b1');
     expect(saved, isEmpty, reason: '已存在同頁書籤時應移除，而非重複新增');
   });
+
+  testWidgets(
+    'PDF：開書後收到頁碼回報時，既有書籤應立即反映在書籤按鈕圖示上，不需先點任何按鈕（Issue 25 審查 I-1）',
+    (tester) async {
+      final bookmarksRepository = FakeBookmarksRepository();
+      // 模擬「先前已在此頁加過書籤」：開書時 repository 已有一筆。
+      await bookmarksRepository.insert(
+        Bookmark(
+          id: 'pdf-preloaded',
+          bookId: 'b_pdf_bookmark_preloaded',
+          name: '第 1 頁',
+          pdfPageIndex: 0,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_pdf_bookmark_preloaded',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              bookmarksRepository: bookmarksRepository,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      // 等待 pdfrx 真實載入 PDF（比照本檔案既有 PDF 測試慣例）。
+      await pumpUntilPdfReady(tester);
+
+      // 模擬原生端回報頁碼，讓 _pdfPageInfo 非 null。
+      tester
+          .widget<PdfReaderView>(find.byType(PdfReaderView))
+          .onPageChanged
+          ?.call(const PdfPageInfo(pageIndex: 0, totalPages: 5));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // 刻意不呼叫 togglePdfBookmark：PDF 開書時就應載入書籤（設計決策 7）。
+      final finder = find.byKey(
+        const Key('reader_chrome_bookmark_button'),
+      );
+      expect(
+        (tester.widget<IconButton>(finder).icon as Icon).icon,
+        Icons.star,
+        reason: 'PDF 開書時應載入既有書籤，星號不應停在未加入狀態',
+      );
+    },
+  );
 
   testWidgets('PDF 開書後背景載入目錄；載入完成前 openPdfToc 無作用，完成後可開啟 TocBottomSheet', (
     tester,
