@@ -212,6 +212,32 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 
 無需新 ADR（可逆、不牴觸既有 ADR；CONTEXT「劃線」「備註」詞條只規定 FXL 不支援，行為不變）。
 
+## Issue 26 設計決策（第三次檢視後 `/grilling` 定案，2026-10-24）
+
+來源：第三次架構檢視候選 D。事實盤點（已核對 `reader_screen.dart`、`reader_settings_sheet.dart`）：
+
+- 預設集流程在 `reader_screen.dart` 約 813–1168 行，共約 355 行：另存、套用、從其他書複製、刪除四個處理方法，加三個幾乎相同的確認對話框（覆蓋、套用到其他書、刪除）與一個覆蓋目標選單。
+- 錯誤處理的 try／`debugPrint`／SnackBar 重複 4 份，鍵有 3 種：`reader_save_as_preset_error_snackbar`、`reader_apply_preset_error_snackbar`（用 2 次）、`reader_delete_preset_error_snackbar`。
+- `_openLayoutSettings` 用 `StatefulBuilder`，4 個處理方法做完各自呼叫 `setSheetState?.call(() {})`。
+- `ReaderSettingsSheet` 的預設集回呼型別是 `void Function(...)`，面板不 `await` 它們。
+- `_handlePrefsChanged` 有 5 個呼叫端；每次拖滑桿都 `saveBookPrefs`，不 `await`、不 `catch`。
+- `layout_preset_actions.dart`（103 行頂層函式）已有單元測試。
+
+**定案**
+
+1. **純重構、零行為變化**。`_handlePrefsChanged` 的「合併連續寫入並回報失敗」會改行為，拆為 Issue 31，不在這張。
+2. **新增 `LayoutPresetFlow`**（`lib/reader/layout_preset_flow.dart`）：持有預設集清單，提供另存、套用、從其他書複製、刪除。不碰 `BuildContext`。要問使用者的事（取名、選覆蓋目標、覆蓋／套用／刪除確認）透過建構時注入的函式處理；每個操作回傳「成功／取消／失敗」。不新增 `ReaderScreen` 建構參數，也不做工廠（比照 Issue 24、25）。
+3. **`ChangeNotifier`**：預設集清單有兩個使用者（面板與覆蓋選單），在不同路由上。`_openLayoutSettings` 改用 `ListenableBuilder`，刪掉 `StatefulBuilder` 與 4 個 `setSheetState` 包裝；`ReaderScreen` 不再為預設集 `setState`。`dispose` 後不再 `notifyListeners`（旗標擋住）。這與 Issue 24、25 的「不通知」不同，原因是這裡的消費者不只 `ReaderScreen` 一個。
+4. **套用到目前書籍後**：建構時注入 `onCurrentBookPrefsApplied(prefs)`，指向 `_handlePrefsChanged`。寫入成功後由 flow 呼叫，順序不變。
+5. **書籍選擇器** `_handleRequestBookPicker` 留在 `ReaderScreen`：純導航，flow 的操作都不依賴它。
+6. **併入 `layout_preset_actions.dart`**：刪除舊檔，`layout_preset_actions_test.dart` 改名遷移（replace, don't layer）。
+7. **對話框搬到獨立檔案**。畫面接線處在每個對話框關閉後檢查 `mounted`，已卸載就回傳取消；flow 不知道 `mounted`。
+8. **載入與失敗逐字保留**：載入失敗只 `debugPrint`，清單保持空；3 個 SnackBar 鍵與訊息不變，畫面依「失敗」顯示對應的那一個。
+9. **測試**：新增 `layout_preset_flow_test.dart`，用假的注入函式測另存（未滿 3 組、已滿 3 組覆蓋、各步驟取消、失敗）、套用（只含目前書籍不用確認、其他書要確認、取消、失敗）、從其他書複製（載入失敗）、刪除（確認、取消、失敗）。`reader_screen_test.dart` 沿用 Issue 23 的規則：只驗證邏輯的案例搬走並刪除舊案例，驗證畫面的案例留下；逐案分類寫在計畫裡。
+10. **範圍外**：兩份 `_buildSliderRow`（`reader_settings_sheet.dart:780`、`pdf_settings_sheet.dart:529`）不收斂，也不另開 Issue。不動「設定面板草稿具現化原則」涵蓋的面板本地狀態。
+11. **文件**：`CONTEXT.md`「版面設定預設集」詞條補一句；本段；`issues.md` 更新（Issue 26 已定案、Issue 25 已合併 PR #364、新增 Issue 31）。無需新 ADR（可逆、不牴觸既有 ADR）。
+12. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；寫 `plans/plan-issue-26.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
