@@ -186,6 +186,30 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 15. **PR 切法**：一張 Issue 一個 PR、多個 commit；Issue 23 的文件收尾（狀態改為已合併 PR #361、Issue 28 診斷插樁已於 Issue 23 刪除）一併放進這個 PR。
 16. **流程**：寫 `plans/plan-issue-24.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）。
 
+## Issue 25 設計決策（第三次檢視後 `/grilling` 定案，2026-10-24）
+
+來源：第三次架構檢視候選 C。事實盤點（已核對 `reader_screen.dart`、`notes_bottom_sheet.dart`）：
+
+- 「此位置有沒有書籤」有 3 份實作（`_bookmarkAtCurrentPosition`、`_pdfBookmarkAtCurrentPosition`、`NotesBottomSheet._matchesCurrentPosition`），面板的 `_toggleBookmark` 另有一份沒用 `bookmark_toggle.dart` 的切換。
+- `_fxlBookmarks` 是全格式共用快取；`_loadFxlBookmarks` 只有 4 處呼叫（EPUB 切換後、PDF 切換後、PDF 開書時借 `_pdfTocLoaded` 旗標、面板關閉後且限 FXL／PDF）。**流式 EPUB 開書時沒人載入**，書籤星號可能是空的（讀程式推論，未在真機驗證）。
+- 預設名稱不一致：FAB 切換不帶章節名（「進度 N%」），面板切換帶章節名（「章節 (N%)」）。
+- 載入失敗只 `debugPrint`。
+
+**定案**
+
+1. **純重構**，唯一刻意的行為變化見第 7 點。
+2. **新增 `BookmarkController`**（`lib/reader/bookmark_controller.dart`）：持有書籤清單，提供 `load()`、`at(位置)`、`toggle(position:, l10n:)`。不是 `ChangeNotifier`，`ReaderScreen` 呼叫後自己 `setState`；不碰 `BuildContext`，`l10n` 由呼叫端在 `await` 前取好傳入。
+3. **位置直接用 `BookmarkPositionContext`**：`pdfPageIndex` 有值比頁碼，否則比 `epubLocatorJson` 字串。比對規則抽成頂層純函式。
+4. **併入並刪除 `bookmark_toggle.dart`**。
+5. **`toggle` 的存在性判斷仍直查 repository**（Epic 26 競態修復保留），做完自己重載清單；呼叫端不再手動 `await _loadFxlBookmarks()`。
+6. **面板自建同類別實例**，`NotesBottomSheet` 建構參數不動，兩份清單維持。預設名稱差異原樣保留，由呼叫端傳入的 context 決定。
+7. **唯一的行為變化**：module 建立時所有格式都載入；面板關閉後所有格式都重載；PDF 不再借 `_pdfTocLoaded`。先寫「流式 EPUB 開書後星號正確」的失敗測試，再修。
+8. **載入失敗維持只 `debugPrint`**，清單保持舊值。
+9. **分支**：等 PR #363（Issue 24）合併後，從新的 `main` 開。
+10. **測試（replace, don't layer）**：`bookmark_toggle_test` 改為 `bookmark_controller_test`；補純函式測試；`fxl_bookmarks_test` 等畫面測試保留。
+11. **文件**：`CONTEXT.md` 已補「本書書籤」。無需新 ADR（可逆、不牴觸既有 ADR）。
+12. **流程**：一張 Issue 一個 PR、多個 commit；寫 `plans/plan-issue-25.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）。
+
 無需新 ADR（可逆、不牴觸既有 ADR；CONTEXT「劃線」「備註」詞條只規定 FXL 不支援，行為不變）。
 
 ## 開發記錄
