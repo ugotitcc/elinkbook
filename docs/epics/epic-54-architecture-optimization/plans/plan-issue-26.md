@@ -137,14 +137,14 @@ class LayoutPresetFlow extends ChangeNotifier {
 
 **Files：** 新增 `layout_preset_flow.dart`、`test/reader/layout_preset_flow_test.dart`（由 `layout_preset_actions_test.dart` 以 `git mv` 改名後改寫）；暫不刪 `layout_preset_actions.dart`（Task 3 刪）。
 
-- [ ] **Step 1：** `git mv test/reader/layout_preset_actions_test.dart test/reader/layout_preset_flow_test.dart`；原有案例改為對 flow 的斷言：
+- [x] **Step 1：** `git mv test/reader/layout_preset_actions_test.dart test/reader/layout_preset_flow_test.dart`；原有案例改為對 flow 的斷言：
   - `layoutPresetTargetsCurrentBookOnly` 四個案例（`[current]` 為真；多本即使含 current 為假；單本但不是 current 為假；空清單為假）改測 `applyPreset` 的「是否跳確認」：只有目前書籍不跳、其餘跳。
   - `insertNewLayoutPreset` 兩個案例 → 另存未滿 3 組：清單含新預設集且已有 id；清單依插入順序。
   - `overwriteLayoutPreset` 兩個案例 → 另存已滿 3 組：覆蓋後 id／createdAt 不變、name／prefs 更新；`target.id` 為 null 的案例改寫為「`pickOverwriteTarget` 回傳 id 為 null 的預設集 → `saveAsPreset` 回傳 `failed`，repository 沒有任何寫入」（`AssertionError` 會被 flow 的 catch 抓走，與現況在 `_handleSaveAsPreset` try 內顯示失敗 SnackBar 一致；不可寫成 `throwsA(AssertionError)`，也不可為了遷就測試拿掉 catch；I-5）。
   - `deleteLayoutPreset` 一個案例 → `deletePreset`：刪除後清單不含該筆、其餘保留。
   - `applyLayoutPresetPrefs` 三個案例 → 單筆走 `save`、多本走 `saveMultiple`、空清單不寫入且回傳 `cancelled`（語意釘點 6）。
   - **假 repository 來源**（M-3）：資料持久性案例沿用舊測試的 sqlite（`LayoutPresetRepository` 搭 in-memory 資料庫）；需要注入例外的案例用 `FakeLayoutPresetRepository`／`FakeBookReaderPrefsRepository`，**新增 `failOn` 參數**（指定哪個方法丟例外），放在 `test/support/`，不複製 `reader_screen_test.dart` 內私有的 `_Throwing…` 類別。
-- [ ] **Step 2（紅）：** 新增案例（用假的 `LayoutPresetPrompts` 記錄呼叫順序、假的 repository 可注入例外）：
+- [x] **Step 2（紅）：** 新增案例（用假的 `LayoutPresetPrompts` 記錄呼叫順序、假的 repository 可注入例外）：
   - `load()`：載入後 `presets` 為 repository 內容並通知一次；丟例外時清單不變、不丟出。
   - 另存：取名取消 → `cancelled` 且不寫入；已滿 3 組時順序 = 取名 → 選目標 → 覆蓋確認 → 寫入；選目標取消、覆蓋確認取消 → `cancelled` 且不寫入；寫入丟例外 → `failed`；寫入前用 `reflowableEpubFields()` 過濾（斷言寫入的 prefs 不含非流式欄位）；成功後 `presets` 更新並通知。
   - 套用：目標不是「只有目前書籍」時先 `confirmApplyToOthers(count)`，取消 → `cancelled` 且不寫入；寫入丟例外 → `failed`；目標含目前書籍時寫入成功後呼叫 `onCurrentBookPrefsApplied(prefs)` 一次**且先於通知**，不含時不呼叫；`onCurrentBookPrefsApplied` 丟例外 → `failed`（釘點 3）；`confirmApplyToOthers` 丟例外 → `failed`（釘點 2）。
@@ -153,8 +153,8 @@ class LayoutPresetFlow extends ChangeNotifier {
   - 另存補充：`presets.length` 在 `askName` 回傳**之後**才判斷（釘點 1，測法：`askName` 的假實作在回傳前先讓 repository 多一筆，使長度由 2 變 3，斷言走覆蓋流程）；`askName`／`pickOverwriteTarget`／`confirmOverwrite` 丟例外 → `failed`（釘點 2）。
   - 通知（C-1）：四個操作各測「結束時通知至少一次」（含 `cancelled`、`failed`）；套用含目前書籍時回呼先於通知（用一個記錄事件順序的 list 斷言）。
   - `dispose`：`dispose` 後才完成的寫入不通知、不呼叫 `onCurrentBookPrefsApplied`；連續呼叫兩次 `dispose` 不拋錯（M-4）。
-- [ ] **Step 3（綠）：** 實作 `layout_preset_flow.dart`。
-- [ ] **Step 4：** `flutter analyze`；跑 `test/reader/layout_preset_flow_test.dart`；commit。
+- [x] **Step 3（綠）：** 實作 `layout_preset_flow.dart`。
+- [x] **Step 4：** `flutter analyze`；跑 `test/reader/layout_preset_flow_test.dart`；commit。
 
 ### Task 2：畫面端對話框實作
 
