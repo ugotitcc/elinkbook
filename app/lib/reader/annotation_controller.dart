@@ -126,6 +126,7 @@ class AnnotationController {
   List<Note> _notes = const [];
   AnnotationSelection? _selection;
   String? _pendingHighlightId;
+  int _reloadSeq = 0;
 
   List<Highlight> get highlights => _highlights;
 
@@ -173,9 +174,16 @@ class AnnotationController {
     _pendingHighlightId = null;
   }
 
+  /// 重新載入本書的劃線與備註清單（世代保護見 epic-54 Issue 32）：每次呼叫
+  /// 遞增序號 [_reloadSeq]，在劃線與備註兩個查詢都完成後只檢查一次；若有較新的
+  /// [reload] 已發出則兩份清單一起丟掉，否則兩份清單一起套用。不加 `try/catch`，
+  /// 查詢失敗時例外照舊往外丟。
   Future<void> reload() async {
+    final seq = ++_reloadSeq;
     final highlights = await highlightsRepository.listByBook(bookId);
     final notes = await notesRepository.listByBook(bookId);
+    // 有較新的 reload 已發出：這次結果過期，兩份一起丟掉（Issue 32）。
+    if (seq != _reloadSeq) return;
     _highlights = highlights;
     _notes = notes;
   }

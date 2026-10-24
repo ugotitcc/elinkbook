@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/annotation_controller.dart';
 import 'package:elinkbook/reader/annotation_list_item.dart';
@@ -54,6 +56,77 @@ Highlight _highlight({
     pdfPageIndex: pdfPageIndex,
     pdfRect: pdfRect,
   );
+}
+
+/// 可手動控制 listByBook 完成順序，模擬「較舊的查詢比較新的查詢晚回來」。
+/// 繼承 [FakeHighlightsRepository]：儲存與 insert／delete 都沿用，只覆寫 listByBook。
+class _GatedHighlightsRepository extends FakeHighlightsRepository {
+  final List<Completer<void>> _gates = [];
+  final List<bool> _failures = [];
+
+  /// 下一次 listByBook 要等這個閘門；fail 為 true 時，放行後丟例外。
+  Completer<void> gateNext({bool fail = false}) {
+    final gate = Completer<void>();
+    _gates.add(gate);
+    _failures.add(fail);
+    return gate;
+  }
+
+  /// 放行所有尚未完成的閘門；tearDown 呼叫，避免斷言失敗時遺留未完成的 Future。
+  void releaseAll() {
+    for (final gate in _gates) {
+      if (!gate.isCompleted) gate.complete();
+    }
+    _gates.clear();
+    _failures.clear();
+  }
+
+  @override
+  Future<List<Highlight>> listByBook(String bookId) async {
+    // 閘門與快照都在第一個 await 之前同步取得：快照定格在「呼叫當下」，
+    // 閘門依「呼叫順序」分配。
+    final snapshotFuture = super.listByBook(bookId);
+    final gate = _gates.isEmpty ? null : _gates.removeAt(0);
+    final fail = gate == null ? false : _failures.removeAt(0);
+    final snapshot = await snapshotFuture;
+    if (gate == null) return snapshot;
+    await gate.future;
+    if (fail) throw StateError('查詢失敗');
+    return snapshot;
+  }
+}
+
+/// 可手動控制 listByBook 完成順序；與 [_GatedHighlightsRepository] 對稱。
+class _GatedNotesRepository extends FakeNotesRepository {
+  final List<Completer<void>> _gates = [];
+  final List<bool> _failures = [];
+
+  Completer<void> gateNext({bool fail = false}) {
+    final gate = Completer<void>();
+    _gates.add(gate);
+    _failures.add(fail);
+    return gate;
+  }
+
+  void releaseAll() {
+    for (final gate in _gates) {
+      if (!gate.isCompleted) gate.complete();
+    }
+    _gates.clear();
+    _failures.clear();
+  }
+
+  @override
+  Future<List<Note>> listByBook(String bookId) async {
+    final snapshotFuture = super.listByBook(bookId);
+    final gate = _gates.isEmpty ? null : _gates.removeAt(0);
+    final fail = gate == null ? false : _failures.removeAt(0);
+    final snapshot = await snapshotFuture;
+    if (gate == null) return snapshot;
+    await gate.future;
+    if (fail) throw StateError('查詢失敗');
+    return snapshot;
+  }
 }
 
 void main() {
@@ -546,6 +619,163 @@ void main() {
 
       expect(controller.highlights, isEmpty);
       expect(controller.notes, isEmpty);
+    });
+  });
+
+  group('reload 世代保護', () {
+    late _GatedHighlightsRepository highlightsRepository;
+    late _GatedNotesRepository notesRepository;
+    late AnnotationController controller;
+
+    setUp(() {
+      highlightsRepository = _GatedHighlightsRepository();
+      notesRepository = _GatedNotesRepository();
+      controller = _controller(highlightsRepository, notesRepository);
+    });
+
+    tearDown(() {
+      highlightsRepository.releaseAll();
+      notesRepository.releaseAll();
+    });
+
+    test('先發的舊 reload、後發的新 reload；新的先完成、舊的後完成 → highlights 為新值（不被過期舊結果蓋掉）',
+        () async {
+      await highlightsRepository.insert(_highlight(id: 'h1'));
+
+      final gateOld = highlightsRepository.gateNext();
+      final futureOld = controller.reload();
+
+      await highlightsRepository.insert(_highlight(id: 'h2'));
+
+      final gateNew = highlightsRepository.gateNext();
+      final futureNew = controller.reload();
+
+      gateNew.complete();
+      await futureNew;
+      expect(controller.highlights.map((h) => h.id), ['h1', 'h2']);
+
+      gateOld.complete();
+      await futureOld;
+
+      expect(controller.highlights.map((h) => h.id), ['h1', 'h2']);
+    });
+
+    test('循序兩次：第一次 reload 完成後才發第二次 → 兩次都依序套用', () async {
+      await highlightsRepository.insert(_highlight(id: 'h1'));
+
+      final gateOld = highlightsRepository.gateNext();
+      final futureOld = controller.reload();
+      gateOld.complete();
+      await futureOld;
+      expect(controller.highlights.map((h) => h.id), ['h1']);
+
+      await highlightsRepository.insert(_highlight(id: 'h2'));
+
+      final gateNew = highlightsRepository.gateNext();
+      final futureNew = controller.reload();
+      gateNew.complete();
+      await futureNew;
+      expect(controller.highlights.map((h) => h.id), ['h1', 'h2']);
+    });
+
+    test('並行兩次、舊的先完成：兩次 reload 都已發出，舊的先放行 → 當下 highlights 不變（舊結果丟掉），新的放行後才變成新值',
+        () async {
+      await highlightsRepository.insert(_highlight(id: 'h1'));
+
+      final gateOld = highlightsRepository.gateNext();
+      final futureOld = controller.reload();
+
+      await highlightsRepository.insert(_highlight(id: 'h2'));
+
+      final gateNew = highlightsRepository.gateNext();
+      final futureNew = controller.reload();
+
+      gateOld.complete();
+      await futureOld;
+      expect(controller.highlights, isEmpty);
+
+      gateNew.complete();
+      await futureNew;
+      expect(controller.highlights.map((h) => h.id), ['h1', 'h2']);
+    });
+
+    test('舊的卡在第二個查詢（備註）時，新的整個完成；放行舊的 → 劃線與備註都維持新值（一起丟掉，不半套用）',
+        () async {
+      await highlightsRepository.insert(_highlight(id: 'h1'));
+      await notesRepository.insert(
+        const Note(id: 'n1', bookId: 'b1', text: 'n1', epubLocatorJson: 'loc'),
+      );
+
+      final gateNoteOld = notesRepository.gateNext();
+      final futureOld = controller.reload();
+      // 讓 futureOld 跑完劃線查詢（取得 [h1]）並推進到備註查詢閘門（取得快照 [n1] 並停住）
+      await pumpEventQueue();
+
+      await highlightsRepository.insert(_highlight(id: 'h2'));
+      await notesRepository.insert(
+        const Note(id: 'n2', bookId: 'b1', text: 'n2', epubLocatorJson: 'loc'),
+      );
+
+      await controller.reload();
+      expect(controller.highlights.map((h) => h.id), ['h1', 'h2']);
+      expect(controller.notes.map((n) => n.id), ['n1', 'n2']);
+
+      gateNoteOld.complete();
+      await futureOld;
+
+      expect(controller.highlights.map((h) => h.id), ['h1', 'h2']);
+      expect(controller.notes.map((n) => n.id), ['n1', 'n2']);
+    });
+
+    test('新的那次查詢失敗 → await 該次 reload() 丟例外，清單維持原值', () async {
+      await highlightsRepository.insert(_highlight(id: 'h1'));
+      await controller.reload();
+      expect(controller.highlights.map((h) => h.id), ['h1']);
+
+      final gateNew = highlightsRepository.gateNext(fail: true);
+      final futureNew = controller.reload();
+      gateNew.complete();
+
+      await expectLater(futureNew, throwsA(isA<StateError>()));
+      expect(controller.highlights.map((h) => h.id), ['h1']);
+    });
+
+    test('舊的那次查詢失敗 → await 該次 reload() 照舊丟例外，已套用的新值不變', () async {
+      await highlightsRepository.insert(_highlight(id: 'h1'));
+
+      final gateOld = highlightsRepository.gateNext(fail: true);
+      final futureOld = controller.reload();
+
+      await highlightsRepository.insert(_highlight(id: 'h2'));
+
+      final gateNew = highlightsRepository.gateNext();
+      final futureNew = controller.reload();
+
+      gateNew.complete();
+      await futureNew;
+      expect(controller.highlights.map((h) => h.id), ['h1', 'h2']);
+
+      gateOld.complete();
+      await expectLater(futureOld, throwsA(isA<StateError>()));
+      expect(controller.highlights.map((h) => h.id), ['h1', 'h2']);
+    });
+
+    test('開書第一次 reload（快照空）還沒回來，createHighlight 先完成，之後第一次 reload 才完成 → highlights 含新劃線，pendingHighlightId 為新劃線 id',
+        () async {
+      final gateInit = highlightsRepository.gateNext();
+      final futureInit = controller.reload();
+
+      controller.select(_epubSelection());
+      await controller.createHighlight(HighlightStyle.highlighterYellow);
+      expect(controller.highlights, hasLength(1));
+      final createdId = controller.highlights.single.id;
+      expect(controller.pendingHighlightId, createdId);
+
+      gateInit.complete();
+      await futureInit;
+
+      expect(controller.highlights.map((h) => h.id), [createdId]);
+      expect(controller.pendingHighlightId, createdId);
     });
   });
 }

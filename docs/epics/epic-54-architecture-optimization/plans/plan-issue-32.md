@@ -137,7 +137,7 @@ class _GatedNotesRepository extends FakeNotesRepository {
 
 注意：`reload()` 先查劃線，劃線查詢完成後才查備註，所以備註閘門是在「劃線那一步結束後」才被取走，順序仍依呼叫順序分配。「舊的卡在備註」案例中，兩次 `reload()` 必須在同一個同步區段內先後發出（中間不 `await`），實作時先確認該案例在沒有 `_reloadSeq` 時確實是紅燈。
 
-- [ ] **Step 1（紅）：** 在 `annotation_controller_test.dart` 新增 `group('reload 世代保護')`，先寫測試、確認失敗：
+- [x] **Step 1（紅）：** 在 `annotation_controller_test.dart` 新增 `group('reload 世代保護')`，先寫測試、確認失敗：
   - 先發的舊 `reload`（劃線快照 `[h1]`）、後發的新 `reload`（快照 `[h1, h2]`）；新的先完成、舊的後完成 → `highlights` 為 `[h1, h2]`（目前會被蓋回 `[h1]`，紅燈）。
   - 循序兩次：第一次 `reload()` 完成後才發第二次 → 兩次都依序套用，`highlights` 依序為舊值、新值（目前就會綠）。
   - 並行兩次、舊的先完成：兩次 `reload()` 都已發出，舊的先放行 → 當下 `highlights` 不變（舊結果因序號過期被丟掉），新的放行後才變成新值（審查 M-1；目前會在舊的完成當下被蓋成舊值，紅燈）。
@@ -153,7 +153,7 @@ class _GatedNotesRepository extends FakeNotesRepository {
       notesRepository.releaseAll();
     });
     ```
-- [ ] **Step 2（綠）：** `AnnotationController` 加 `int _reloadSeq = 0;`。`reload()` 改為：
+- [x] **Step 2（綠）：** `AnnotationController` 加 `int _reloadSeq = 0;`。`reload()` 改為：
 
   ```dart
   Future<void> reload() async {
@@ -168,7 +168,7 @@ class _GatedNotesRepository extends FakeNotesRepository {
   ```
 
   為 `reload()` 加 doc 註解：說明世代保護規則、「兩份清單一起套用或一起丟掉」與「查詢失敗時例外照舊往外丟」，並標註 `（epic-54 Issue 32）`。其餘方法不動。
-- [ ] **Step 3：** `flutter analyze`；跑 `test/reader/annotation_controller_test.dart`、`test/screens/reader_screen_test.dart --name="劃線|備註"`（多個 `--plain-name` 會要求同時符合，所以改用正則，審查 M-2）；commit。
+- [x] **Step 3：** `flutter analyze`；跑 `test/reader/annotation_controller_test.dart`、`test/screens/reader_screen_test.dart --name="劃線|備註"`（多個 `--plain-name` 會要求同時符合，所以改用正則，審查 M-2）；commit。
 
 ### Task 2：收尾
 
