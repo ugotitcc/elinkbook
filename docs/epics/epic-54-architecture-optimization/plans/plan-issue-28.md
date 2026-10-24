@@ -116,15 +116,15 @@ class TransientHighlightTimer {
 
 **Files：** `reader_screen.dart`。
 
-- [ ] **Step 1：** 先跑一次基準，分三次執行（多個 `--plain-name` 會要求同時符合，所以分次跑）：`flutter test test/screens/reader_screen_test.dart --plain-name 暫態高亮`、`--plain-name 就地跳轉`、`--plain-name 搜尋跳轉`。計畫審查時已實測的基準：暫態高亮 8 個、就地跳轉 3 個、搜尋跳轉 5 個，全部通過（三組可能有重疊，不能相加；審查 M-3）。若實跑數字與此不同，先查明原因再動手。
-- [ ] **Step 2：** 修改 `reader_screen.dart`：
+- [x] **Step 1：** 先跑一次基準，分三次執行（多個 `--plain-name` 會要求同時符合，所以分次跑）：`flutter test test/screens/reader_screen_test.dart --plain-name 暫態高亮`、`--plain-name 就地跳轉`、`--plain-name 搜尋跳轉`。計畫審查時已實測的基準：暫態高亮 8 個、就地跳轉 3 個、搜尋跳轉 5 個，全部通過（三組可能有重疊，不能相加；審查 M-3）。若實跑數字與此不同，先查明原因再動手。
+- [x] **Step 2：** 修改 `reader_screen.dart`：
   - 刪 `Timer? _searchJumpHighlightTimer` 與 `late Zone _creationZone`（含其 doc 註解）；`initState` 的 `_creationZone = Zone.current;` 改成 `_searchJumpHighlightTimer = TransientHighlightTimer();`（欄位型別 `late final TransientHighlightTimer`，在 `initState` 第一行 `super.initState()` 之後賦值）。
   - `_startSearchJumpHighlightAutoClearTimer()`：改成 `_searchJumpHighlightTimer.start(() => _surface.clearTransientHighlight())`（到期路徑，直接清除高亮；用閉包而非 tear-off，到期當下才取 `_surface`）；更新 doc 註解，移除「使用捕捉到的 fake Zone」的說明，改指向 module。
   - `_clearSearchJumpHighlight()`（提前清除）：`if (!_searchJumpHighlightTimer.isActive) return; _searchJumpHighlightTimer.cancel(); _surface.clearTransientHighlight();`。
   - `dispose`：`_searchJumpHighlightTimer.cancel();`。
   - 補上 `import '../reader/transient_highlight_timer.dart';`（路徑依該檔既有 import 風格）。
   - 欄位 doc 註解（約 435～438 行）更新，不要留下已不存在的 `_creationZone` 說明；「刻意使用裸 `Timer`、不引入 `package:clock`」的理由已搬到 `TransientHighlightTimer` 的類別 doc 註解（審查 M-2），欄位註解只留「3 秒內提前清除、取兩者較早發生者」的說明；其餘程式碼不動。
-- [ ] **Step 3：** `flutter analyze`；重跑 Step 1 的三組測試，通過數與基準相同；再跑整個 `test/screens/reader_screen_test.dart` 一次（此檔是本 Issue 唯一觸及的畫面測試檔，完整檔案跑一次可抓到 Zone 相關回歸）；commit。
+- [x] **Step 3：** `flutter analyze`；重跑 Step 1 的三組測試，通過數與基準相同；再跑整個 `test/screens/reader_screen_test.dart` 一次（此檔是本 Issue 唯一觸及的畫面測試檔，完整檔案跑一次可抓到 Zone 相關回歸）；commit。
 
 ### Task 3：收尾
 

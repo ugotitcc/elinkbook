@@ -27,6 +27,7 @@ import '../reader/tts_audio_handler_startup.dart';
 import '../reader/tts_audio_player.dart';
 import '../reader/tts_controller.dart';
 import '../reader/tts_provider.dart';
+import '../reader/transient_highlight_timer.dart';
 import '../reader/tts_segment_cfi.dart';
 import '../library/models/book.dart';
 import '../library/models/book_group.dart';
@@ -431,24 +432,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   bool? _dispatchedIsFixedLayout;
 
   /// 搜尋跳轉暫態高亮 3 秒生命週期計時器（epic-10-search Issue 5，
-  /// spec.md §6）。非 `null` 代表目前有顯示中的暫態高亮，
-  /// [_handleZoneAction] 於任何翻頁/點擊動作發生時會提前呼叫
-  /// [_clearSearchJumpHighlight]，取 3 秒與提前清除兩者較早發生者。刻意
-  /// 使用裸 `Timer`（不引入 `package:clock`）——理由見本計畫 Global
-  /// Constraints。
-  Timer? _searchJumpHighlightTimer;
+  /// spec.md §6）。[TransientHighlightTimer.isActive] 為 `true` 代表目前有
+  /// 顯示中的暫態高亮，[_handleZoneAction] 於任何翻頁/點擊動作發生時會提前
+  /// 呼叫 [_clearSearchJumpHighlight]，取 3 秒與提前清除兩者較早發生者。
+  /// 必須在 [initState] 建構（見該處註解）；計時與 Zone 捕捉的說明見
+  /// [TransientHighlightTimer]（epic-54 Issue 28）。
+  late final TransientHighlightTimer _searchJumpHighlightTimer;
 
   /// 避免 [_handlePageRendered] 在極端情況下被呼叫超過一次時重複觸發
   /// 暫態高亮、重新啟動 3 秒計時——`initialJumpTarget` 只在開書當下這一
   /// 次性場景生效（spec.md §6）。
   bool _searchJumpHighlightTriggered = false;
-
-  /// 捕捉建立時的 Zone，確保搜尋跳轉 Timer 恆在 fake-async Zone 內建立，
-  /// 即使 `_handlePageRendered` 本身是在 `tester.runAsync` 的真實 Zone
-  /// 內被觸發（`pumpUntilPdfReady` 為了等待 pdfrx 真實 I/O，會暫時離開
-  /// fake Zone），Timer 仍會是 fake Timer，才能被 `tester.pump(duration)`
-  /// 正確推進（見 Task 4 測試對 `pumpUntilPdfReady` 與 Timer 互動的註解）。
-  late Zone _creationZone;
 
   /// 本次開書的閱讀會話（epic-54 Issue 8）：閱讀統計、閱讀活動判定、Checkpoint
   /// Timer、前後景與離開時的收尾，以及閱讀位置儲存都在其中；本 State 只負責
@@ -458,7 +452,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   @override
   void initState() {
     super.initState();
-    _creationZone = Zone.current;
+    // 必須在 initState 明確建構（不可延遲初始化）：module 於建構時捕捉
+    // Zone.current，確保搜尋跳轉 Timer 恆在 fake-async Zone 內建立，即使
+    // `_handlePageRendered` 是在 `tester.runAsync` 的真實 Zone 內被觸發
+    // （epic-54 Issue 28）。
+    _searchJumpHighlightTimer = TransientHighlightTimer();
     // epic-61 Issue 2：監聽 holder——handler 晚到時補 attach（見
     // _onTtsAudioHolderChanged）；降級（已發生或晚到）時補提示一次。
     _listenedTtsAudio = widget.dependencies.ttsAudio;
@@ -620,7 +618,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _openBookFlow
       ..removeListener(_onOpenBookFlowChanged)
       ..dispose();
-    _searchJumpHighlightTimer?.cancel();
+    _searchJumpHighlightTimer.cancel();
     _ttsSleepTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _volumeKeyChannel.setMethodCallHandler(null);
@@ -1265,25 +1263,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// Issue 5 開書當下高亮／Issue 8 就地跳轉高亮共用同一段邏輯，見
   /// [_maybeShowSearchJumpHighlight]／[_handleReaderSearchJumpTarget]）。
   void _startSearchJumpHighlightAutoClearTimer() {
-    _searchJumpHighlightTimer?.cancel();
-    // 使用捕捉到的 fake Zone 建立 Timer，避免在 runAsync 真實 Zone 內
-    // 建立導致 tester.pump 無法推進。
-    _searchJumpHighlightTimer =
-        _creationZone.run(() => Timer(
-              const Duration(seconds: 3),
-              _clearSearchJumpHighlight,
-            ));
+    // 到期路徑：到期時 isActive 已為 false，所以直接清除高亮，不走
+    // [_clearSearchJumpHighlight] 的 isActive 判斷。
+    _searchJumpHighlightTimer.start(() => _surface.clearTransientHighlight());
   }
 
-  /// 清除搜尋跳轉暫態高亮：3 秒計時到期，或 [_handleZoneAction] 偵測到
-  /// 使用者提前翻頁/點擊畫面時呼叫，取兩者較早發生者（spec.md §6）。
-  /// [_searchJumpHighlightTimer] 為 `null`（尚未顯示過或已清除過）時安全
-  /// 提前 return，可重複呼叫（[_handleZoneAction] 對每一次動作都無條件
-  /// 呼叫本方法，不會判斷目前是否真的有顯示中的高亮）。
+  /// 提前清除搜尋跳轉暫態高亮：[_handleZoneAction] 偵測到使用者提前翻頁/
+  /// 點擊畫面時呼叫（3 秒到期的清除走 [_startSearchJumpHighlightAutoClearTimer]
+  /// 的 `onExpire`，取兩者較早發生者，spec.md §6）。計時器未啟動（尚未顯示過、
+  /// 已到期或已清除過）時安全提前 return，可重複呼叫（[_handleZoneAction]
+  /// 對每一次動作都無條件呼叫本方法，不會判斷目前是否真的有顯示中的高亮）。
   void _clearSearchJumpHighlight() {
-    if (_searchJumpHighlightTimer == null) return;
-    _searchJumpHighlightTimer?.cancel();
-    _searchJumpHighlightTimer = null;
+    if (!_searchJumpHighlightTimer.isActive) return;
+    _searchJumpHighlightTimer.cancel();
     _surface.clearTransientHighlight();
   }
 
