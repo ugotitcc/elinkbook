@@ -125,9 +125,9 @@ class _GatedBookmarksRepository extends FakeBookmarksRepository {
 
 ### Task 2：收尾
 
-- [ ] **Step 1：** `epic.md` 開發記錄；`issues.md` Issue 30 狀態；`docs/epics.md` 同步。
-- [ ] **Step 2：** 驗收：`grep -n "_loadSeq" app/lib/reader/bookmark_controller.dart` 有序號宣告與兩處使用；呼叫端檔案沒有差異（`git diff main --stat -- app/lib` 只有 `bookmark_controller.dart`）。
-- [ ] **Step 3：** `flutter analyze`；兩個 `check_*.js`（沒有 Node 則記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
-- [ ] **Step 4：** 程式審查（報告存 `reviews/review-code-issue-30.md`，不進版控）。
+- [x] **Step 1：** `epic.md` 開發記錄；`issues.md` Issue 30 狀態；`docs/epics.md` 同步。
+- [x] **Step 2：** 驗收：`grep -n "_loadSeq" app/lib/reader/bookmark_controller.dart` 有序號宣告與兩處使用；呼叫端檔案沒有差異（`git diff main --stat -- app/lib` 只有 `bookmark_controller.dart`）。
+- [x] **Step 3：** `flutter analyze`；兩個 `check_*.js`（沒有 Node 則記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
+- [x] **Step 4：** 程式審查（報告存 `reviews/review-code-issue-30.md`，不進版控）。
 - [ ] **Step 5：** WAVE 真機抽驗（風險低，抽驗一輪即可）：開 EPUB 一本，開書後立刻連點星號 5～6 次，星號狀態與最後一次點擊一致；到書籤清單確認資料正確；再開一本 PDF 做同樣操作。
 - [ ] **Step 6：** 開 PR；PR 開出後把 Issue 30 的狀態同步（Issue 29 已在 Task 0 同步，審查 M-3）。
