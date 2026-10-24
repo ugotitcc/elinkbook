@@ -76,7 +76,6 @@ class _GatedBookmarksRepository extends FakeBookmarksRepository {
   }
 }
 
-
 void main() {
   // defaultName 依介面語言輸出；純 Dart 單元測試沒有 BuildContext，
   // 以 lookupAppLocalizations() 取得（比照 bookmark_test）。
