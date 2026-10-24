@@ -315,6 +315,26 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 7. **文件**：本段；`issues.md` Issue 30 已定案、新增 Issue 32、Issue 29 狀態同步為「階段一已合併（PR #367）」；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR（可逆、局部修正）。
 8. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；寫 `plans/plan-issue-30.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次。
 
+## Issue 32 設計決策（`/grilling` 定案，2026-10-24）
+
+來源：Issue 30 `/grilling`。事實盤點（已核對 `annotation_controller.dart`、`reader_screen.dart`）：
+
+- `AnnotationController.reload()` 先查劃線、再查備註（兩次 `await`），最後一起指定。沒有世代保護：較舊的 `reload` 後完成，會把兩份清單蓋回過期值，劃線與備註短暫顯示錯誤。資料不會損毀。
+- 與 Issue 30 的差別：`reload()` 沒有 `try/catch`，查詢失敗時例外往外丟。
+- 呼叫端 `reader_screen.dart` 的 `_reloadAnnotations()`（約 1677 行）是 `await reload()` → `setState` → `_sendAnnotationsToNative()`，不依賴 `reload()` 有沒有改清單。`createHighlight`、`saveNote`、`deleteExisting` 結尾也呼叫 `reload()`。
+
+**定案**
+
+1. **只改 `AnnotationController.reload()`**，對外介面不變，呼叫端不改。
+2. **規則**：實例欄位 `_reloadSeq`；每次 `reload()` 發出時遞增；兩個查詢都完成後只檢查一次，序號不是最新就丟掉兩份結果，劃線與備註一起套用或一起丟掉（備註有 `highlightId`，分開套用可能短暫出現指向不存在劃線的備註）。不排隊、不加鎖。
+3. **錯誤行為不變**：不加 `try/catch`；任何一次查詢失敗，例外照舊往外丟，不改寫入流程的行為。已知取捨：新的那次查詢失敗、舊的那次成功但已被丟掉時，清單會停在更早的舊值，直到下一次成功的 `reload`（與 Issue 30 同一取捨）。
+4. **不抽共用工具**：不動 Issue 30 的 `BookmarkController`；兩處各自 3 行，抽象比重複重。
+5. **接受的副作用**：被取代的 `reload()` 仍正常結束，呼叫端照樣 `setState` 並重畫，畫面最終是最新清單。
+6. **測試**：`test/reader/annotation_controller_test.dart` 新增可手動控制完成順序的假 repository（繼承 `FakeHighlightsRepository`／`FakeNotesRepository`，呼叫當下先取快照），涵蓋：新的先完成、舊的後完成 → 保持新值；舊的先完成、新的後完成 → 新值；劃線與備註一起丟掉；失敗時例外照舊往外丟。既有案例不改。
+7. **範圍外**：`BookmarkController`（Issue 30 已完成）。
+8. **文件**：本段；`issues.md` Issue 32 已定案、Issue 30 補標已合併（PR #368）；`docs/epics.md` 同步；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR。
+9. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；先寫 `plans/plan-issue-32.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -798,3 +818,7 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-24 Issue 30 實作完成**：修復 `BookmarkController.load()` 世代保護（`app/lib/reader/bookmark_controller.dart`，新增 `int _loadSeq = 0`，每次 `load()` 遞增序號，若有較新的 `load` 已發出則丟棄過期結果；最新或較舊的呼叫失敗時皆只 `debugPrint`，清單維持現狀、不往外拋出例外）。呼叫端完全不改（`git diff main --stat -- app/lib` 僅 `bookmark_controller.dart` 1 檔）。測試：`bookmark_controller_test.dart` 新增 `_GatedBookmarksRepository`（繼承 `FakeBookmarksRepository`，在 `await gate.future` 前立即截取快照；`tearDown` 自動 `releaseAll()` 清理），新增 6 案例（舊先發新後發且新先回舊後回、循序兩次 load、並行兩次 load 舊先回、新失敗舊成功、新先成功舊後失敗、開書第一次 load 未回時 toggle 先完成）；18→24 案例全數通過。驗證：`bookmark_controller_test` 24 個、`notes_bottom_sheet_test` 34 個、`reader_screen_test`「書籤」14 個全綠；`flutter analyze` No issues found!；完整 `flutter test` 4508 通過、1 略過、1 失敗（`download_queue_controller_test` 既有平行負載競態，單獨重跑 14/14 全過）。程式審查（自審，`reviews/review-code-issue-30.md`）0 Critical、0 Important、0 Minor，結論 Approved。待開 PR。
 
 **2026-10-24 WAVE 真機抽驗通過**：分支版安裝於 WAVE，EPUB 與 PDF 各一本，開書後立刻連點星號 5～6 次，星號狀態與最後一次點擊一致，書籤清單資料正確。待開 PR。
+
+**2026-10-24 Issue 32 實作完成**：修復 `AnnotationController.reload()` 世代保護（`app/lib/reader/annotation_controller.dart`，新增 `int _reloadSeq = 0`，每次 `reload()` 遞增序號，在劃線與備註兩個查詢都完成後只檢查一次，若有較新的 `reload` 已發出則兩份清單一起丟掉，否則一起套用；錯誤行為不變，不加 `try/catch`，例外照舊往外丟）。呼叫端完全不改（`git diff main --stat -- app/lib` 僅 `annotation_controller.dart` 1 檔，+8 行）。測試：`annotation_controller_test.dart` 新增對稱的 `_GatedHighlightsRepository` 與 `_GatedNotesRepository`（繼承 `FakeHighlightsRepository`／`FakeNotesRepository`，在第一個 `await` 前同步取得快照與閘門；`tearDown` 自動 `releaseAll()` 清理），新增 7 案例（舊先發新後發且新先回舊後回、循序兩次 reload、並行兩次 reload 舊先回、舊的卡在備註查詢時新的整個完成後放行舊的不半套用、新的查詢失敗、舊的查詢失敗、開書第一次 reload 未回時 createHighlight 先完成）；28→35 案例全數通過。驗證：`annotation_controller_test` 35 個、`reader_screen_test`「劃線」6 個＋「備註」7 個全綠；`flutter analyze` No issues found!；`check_*.js` 兩個腳本因本機 nvm 未啟用 Node 未執行（本次未改字串與 Key）；完整 `flutter test` 4515 通過、1 略過、1 失敗（`download_queue_controller_test` 既有平行負載競態，單獨重跑 14/14 全過）。程式審查（自審，`reviews/review-code-issue-32.md`）0 Critical、0 Important、0 Minor，結論 Approved。待 WAVE 真機抽驗與開 PR。
+
+**2026-10-24 Issue 32 WAVE 真機抽驗通過**：WAVE（`TCE70P24B2202374`）安裝 debug APK；EPUB 與 PDF 各快速連續建立 3～4 筆劃線、再刪除其中一筆，畫面上的劃線與清單一致。
