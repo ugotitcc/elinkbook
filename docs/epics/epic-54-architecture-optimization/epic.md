@@ -315,6 +315,26 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 7. **文件**：本段；`issues.md` Issue 30 已定案、新增 Issue 32、Issue 29 狀態同步為「階段一已合併（PR #367）」；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR（可逆、局部修正）。
 8. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；寫 `plans/plan-issue-30.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次。
 
+## Issue 32 設計決策（`/grilling` 定案，2026-10-24）
+
+來源：Issue 30 `/grilling`。事實盤點（已核對 `annotation_controller.dart`、`reader_screen.dart`）：
+
+- `AnnotationController.reload()` 先查劃線、再查備註（兩次 `await`），最後一起指定。沒有世代保護：較舊的 `reload` 後完成，會把兩份清單蓋回過期值，劃線與備註短暫顯示錯誤。資料不會損毀。
+- 與 Issue 30 的差別：`reload()` 沒有 `try/catch`，查詢失敗時例外往外丟。
+- 呼叫端 `reader_screen.dart` 的 `_reloadAnnotations()`（約 1677 行）是 `await reload()` → `setState` → `_sendAnnotationsToNative()`，不依賴 `reload()` 有沒有改清單。`createHighlight`、`saveNote`、`deleteExisting` 結尾也呼叫 `reload()`。
+
+**定案**
+
+1. **只改 `AnnotationController.reload()`**，對外介面不變，呼叫端不改。
+2. **規則**：實例欄位 `_reloadSeq`；每次 `reload()` 發出時遞增；兩個查詢都完成後只檢查一次，序號不是最新就丟掉兩份結果，劃線與備註一起套用或一起丟掉（備註有 `highlightId`，分開套用可能短暫出現指向不存在劃線的備註）。不排隊、不加鎖。
+3. **錯誤行為不變**：不加 `try/catch`；任何一次查詢失敗，例外照舊往外丟，不改寫入流程的行為。
+4. **不抽共用工具**：不動 Issue 30 的 `BookmarkController`；兩處各自 3 行，抽象比重複重。
+5. **接受的副作用**：被取代的 `reload()` 仍正常結束，呼叫端照樣 `setState` 並重畫，畫面最終是最新清單。
+6. **測試**：`test/reader/annotation_controller_test.dart` 新增可手動控制完成順序的假 repository（繼承 `FakeHighlightsRepository`／`FakeNotesRepository`，呼叫當下先取快照），涵蓋：新的先完成、舊的後完成 → 保持新值；舊的先完成、新的後完成 → 新值；劃線與備註一起丟掉；失敗時例外照舊往外丟。既有案例不改。
+7. **範圍外**：`BookmarkController`（Issue 30 已完成）。
+8. **文件**：本段；`issues.md` Issue 32 已定案、Issue 30 補標已合併（PR #368）；`docs/epics.md` 同步；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR。
+9. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；先寫 `plans/plan-issue-32.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
