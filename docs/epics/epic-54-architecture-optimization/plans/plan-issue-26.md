@@ -186,7 +186,7 @@ class LayoutPresetFlow extends ChangeNotifier {
 - [x] **Step 2：** `epic.md` 開發記錄；`issues.md` Issue 26 狀態；`docs/epics.md` 對應列同步。
 - [x] **Step 3：** 驗收：`grep -n "_handleSaveAsPreset\|_handleApplyPreset\|_handleApplyFromBook\|_handleDeletePreset\|_applyPrefsToTargets\|_confirmOverwrite\|_confirmApplyToOtherBooks\|_confirmDeletePreset\|_selectPresetToOverwrite\|_loadLayoutPresets\|_layoutPresets\|setSheetState" app/lib/screens/reader_screen.dart` 應為 0（含註解；有註解提到舊名稱須同步改字）。
 - [x] **Step 4：** `git checkout app/analysis_options.yaml`（若被改寫）；`flutter analyze`；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；完整 `flutter test`（`run_in_background`，只跑一個）。
-- [ ] **Step 5：** WAVE 真機抽驗（流式 EPUB 一本，並另備至少兩本流式 EPUB 供「套用到其他書」）：另存為新預設集（未滿 3 組）；存滿 3 組後再另存，覆蓋選單與覆蓋確認；套用預設集到本書，畫面即時反映；套用到其他書籍，跳確認；書籍設定複製；刪除預設集（確認與取消）；取名、覆蓋、套用、刪除各步驟按取消後不產生變動；每次操作後面板的預設集槽位即時更新；對話框開著時按返回離開閱讀器不閃退。
+- [x] **Step 5：** WAVE 真機抽驗（流式 EPUB 一本，並另備至少兩本流式 EPUB 供「套用到其他書」）：另存為新預設集（未滿 3 組）；存滿 3 組後再另存，覆蓋選單與覆蓋確認；套用預設集到本書，畫面即時反映；套用到其他書籍，跳確認；書籍設定複製；刪除預設集（確認與取消）；取名、覆蓋、套用、刪除各步驟按取消後不產生變動；每次操作後面板的預設集槽位即時更新；對話框開著時按返回離開閱讀器不閃退。
 - [ ] **Step 6：** 程式審查（報告存 `reviews/review-code-issue-26.md`，不進版控）；開 PR。
 
 ---
