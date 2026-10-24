@@ -41,6 +41,30 @@ void main() {
       // 下方為 0.95 * 800 + 8 = 768，clamp 到 800 - 104 = 696。
       expect(top, 696);
     });
+
+    test('上方空間剛好等於 0 時仍貼在上方（邊界值）', () {
+      const rect = PercentRect(left: 0.1, top: 0.14, right: 0.5, bottom: 0.2);
+
+      final top = annotationToolbarTop(
+        anchorRect: rect,
+        size: const Size(400, 800),
+      );
+
+      // 0.14 * 800 - 104 - 8 = 0（浮點誤差內）；若改成嚴格大於 0 會落到下方 168。
+      expect(top, closeTo(0, 1e-9));
+    });
+
+    test('畫面高度小於工具列高度時貼齊上緣，不拋例外', () {
+      const rect = PercentRect(left: 0.1, top: 0.05, right: 0.5, bottom: 0.1);
+
+      final top = annotationToolbarTop(
+        anchorRect: rect,
+        size: const Size(400, 90),
+      );
+
+      // 下方為 0.1 * 90 + 8 = 17，但上界 90 - 104 為負，退化為 0。
+      expect(top, 0);
+    });
   });
 
   group('annotationToolbarLeft', () {
@@ -65,6 +89,18 @@ void main() {
 
       // 0.9 * 400 = 360，clamp 到 400 - 256 = 144。
       expect(left, 144);
+    });
+
+    test('畫面寬度小於工具列寬度時貼齊左緣，不拋例外', () {
+      const rect = PercentRect(left: 0.9, top: 0.5, right: 0.95, bottom: 0.6);
+
+      final left = annotationToolbarLeft(
+        anchorRect: rect,
+        size: const Size(200, 800),
+      );
+
+      // 0.9 * 200 = 180，但上界 200 - 256 為負，退化為 0。
+      expect(left, 0);
     });
   });
 }

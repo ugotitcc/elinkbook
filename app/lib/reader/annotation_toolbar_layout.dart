@@ -14,9 +14,9 @@ const double kAnnotationToolbarGap = 8.0;
 const double kAnnotationToolbarWidth = 256.0;
 
 /// 浮動標註工具列的垂直位置：優先貼在選取範圍上方，上方空間不足時改貼
-/// 下方，並保證不超出畫面。輸入的 [anchorRect] 是相對整個 widget 的百分比
-/// 矩形——EPUB 傳 `EpubSelectionInfo.rect`，PDF 傳 `widgetRect`（含
-/// letterbox 留白，避免工具列位置隨留白量偏移）。
+/// 下方，並保證不超出畫面（畫面比工具列還矮時靠上緣，不會拋例外）。輸入的
+/// [anchorRect] 是相對整個 widget 的百分比矩形——EPUB 傳 `EpubSelectionInfo.rect`，
+/// PDF 傳 `widgetRect`（含 letterbox 留白，避免工具列位置隨留白量偏移）。
 double annotationToolbarTop({
   required PercentRect anchorRect,
   required Size size,
@@ -25,14 +25,17 @@ double annotationToolbarTop({
       anchorRect.top * size.height - kAnnotationToolbarHeight - kAnnotationToolbarGap;
   if (topAboveSelection >= 0) return topAboveSelection;
   final belowSelection = anchorRect.bottom * size.height + kAnnotationToolbarGap;
-  return belowSelection.clamp(0.0, size.height - kAnnotationToolbarHeight);
+  final maxTop = size.height - kAnnotationToolbarHeight;
+  return belowSelection.clamp(0.0, maxTop < 0 ? 0.0 : maxTop);
 }
 
-/// 浮動標註工具列的水平位置：以選取範圍左緣對齊，clamp 到不超出畫面右緣。
+/// 浮動標註工具列的水平位置：以選取範圍左緣對齊，clamp 到不超出畫面右緣
+/// （畫面比工具列還窄時靠左緣，不會拋例外）。
 double annotationToolbarLeft({
   required PercentRect anchorRect,
   required Size size,
 }) {
-  return (anchorRect.left * size.width)
-      .clamp(0.0, size.width - kAnnotationToolbarWidth);
+  final left = anchorRect.left * size.width;
+  final maxLeft = size.width - kAnnotationToolbarWidth;
+  return left.clamp(0.0, maxLeft < 0 ? 0.0 : maxLeft);
 }

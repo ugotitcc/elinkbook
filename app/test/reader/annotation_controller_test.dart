@@ -263,6 +263,21 @@ void main() {
       expect(inserted.progression, isNull);
     });
 
+    test('寫入的是呼叫端捕捉的 selection，而非期間被 select() 換掉的選取', () async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final controller = _controller(highlightsRepo, notesRepo);
+      final captured = _epubSelection(locatorJson: 'loc-a', progression: 0.3);
+      controller.select(captured);
+      // 模擬對話框開啟期間使用者又換了選取：寫入位置仍應取方法開頭捕捉的那個。
+      controller.select(_epubSelection(locatorJson: 'loc-b', progression: 0.7));
+
+      await controller.saveNote(selection: captured, text: '備註');
+
+      expect(controller.notes.single.epubLocatorJson, 'loc-a');
+      expect(controller.notes.single.progression, 0.3);
+    });
+
     test('完成後清空選取與 pendingHighlightId', () async {
       final highlightsRepo = FakeHighlightsRepository();
       final notesRepo = FakeNotesRepository();
@@ -415,6 +430,31 @@ void main() {
             _highlight(epubLocatorJson: null, pdfPageIndex: 0, pdfRect: rect),
           ],
           notes: const [],
+        ),
+        isFalse,
+      );
+    });
+
+    test('退化選取但命中既有獨立備註時不忽略（與 existingItem 同一條解析規則）', () {
+      const info = PdfSelectionInfo(
+        pageIndex: 0,
+        rect: PercentRect(left: 0.3, top: 0.2, right: 0.3, bottom: 0.2),
+        widgetRect: PercentRect(left: 0.3, top: 0.2, right: 0.3, bottom: 0.2),
+      );
+
+      expect(
+        isIgnoredPdfSelection(
+          info: info,
+          highlights: const [],
+          notes: const [
+            Note(
+              id: 'n-pdf',
+              bookId: 'b1',
+              text: '獨立備註',
+              pdfPageIndex: 0,
+              pdfRect: rect,
+            ),
+          ],
         ),
         isFalse,
       );
