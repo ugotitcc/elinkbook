@@ -148,8 +148,8 @@ class OpenBookTrace {
 
 ### Task 4：收尾與 WAVE 抽驗
 
-- [ ] **Step 1：** `epic.md` 開發記錄；`issues.md` Issue 29 狀態；`docs/epics.md` 同步。
-- [ ] **Step 2：** `flutter analyze`；兩個 `check_*.js`（沒有 Node 則記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
-- [ ] **Step 3：** 程式審查（報告存 `reviews/review-code-issue-29.md`，不進版控）。
-- [ ] **Step 4：** WAVE 真機抽驗：build 並安裝除錯版；開 EPUB、FXL EPUB、CBZ 各一本，到「設定 → 閱讀器 Console Log」確認每次開書都有 `開書開始` → `書複製完成` → `WebView 建立` → `頁面載入開始` → `頁面載入完成` → `已渲染`；退出後有 `離開畫面`。同一本書連開 3 次，每次都有完整階段。
-- [ ] **Step 5：** 開 PR；PR 合併後 Issue 29 保持開啟（階段二待證據）；使用者照常使用，遇到逾時時不要關 App，截圖「閱讀器 Console Log」回報。
+- [x] **Step 1：** `epic.md` 開發記錄；`issues.md` Issue 29 狀態；`docs/epics.md` 同步。
+- [x] **Step 2：** `flutter analyze`；兩個 `check_*.js`（沒有 Node 則記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
+- [x] **Step 3：** 程式審查（報告存 `reviews/review-code-issue-29.md`，不進版控）。
+- [x] **Step 4：** WAVE 真機抽驗：build 並安裝除錯版；開 EPUB、FXL EPUB、CBZ 各一本，到「設定 → 閱讀器 Console Log」確認每次開書都有 `開書開始` → `書複製完成` → `WebView 建立` → `頁面載入開始` → `頁面載入完成` → `已渲染`；退出後有 `離開畫面`。同一本書連開 3 次，每次都有完整階段。
+- [x] **Step 5：** 開 PR；PR 合併後 Issue 29 保持開啟（階段二待證據）；使用者照常使用，遇到逾時時不要關 App，截圖「閱讀器 Console Log」回報。
