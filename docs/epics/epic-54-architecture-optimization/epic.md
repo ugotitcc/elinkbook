@@ -296,6 +296,25 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 9. **分支與流程**：分支 `epic-54/issue-29-open-timeout-diagnosis`，計畫與實作同分支同 PR；PR 合併後 Issue 29 仍開啟（階段二）。同一個分支順手把 `issues.md` 與 `docs/epics.md` 的 Issue 27 狀態同步成已合併（PR #366）。
 10. **文件**：不新增詞彙（`CONTEXT.md` 不動）；不需 ADR（可逆、診斷性質）。
 
+## Issue 30 設計決策（`/grilling` 定案，2026-10-24）
+
+來源：Issue 25 程式審查 Minor 1。事實盤點（已核對 `bookmark_controller.dart`、`reader_screen.dart`、`notes_bottom_sheet.dart`）：
+
+- `BookmarkController.load()` 沒有世代保護：開書時第一次 `load` 還沒回來，使用者點星號，`toggle` 內的 `load` 先完成，較舊的 `load` 後完成並覆寫過期清單，星號短暫顯示錯誤，直到下次重載。資料不會損毀，因為 `toggle` 的存在性判斷直接查 repository。
+- 呼叫端 `ReaderScreen`（約 500、1206 行）與 `NotesBottomSheet._loadBookmarks`（約 147 行）都是 `await load()` 之後 `setState`，不依賴 `load()` 到底有沒有改清單，所以序號保護不需要改呼叫端。
+- 同型寫法也存在於 `AnnotationController.reload()`，另列 Issue 32。
+
+**定案**
+
+1. **純修缺陷**，只改 `BookmarkController.load()`，對外介面不變。
+2. **規則**：每次 `load()` 發出時遞增序號；結果回來時序號不是最新的就丟掉。不採「排隊逐一執行」，避免使用者的點擊要等前一次讀完。
+3. **最新那次失敗**：舊結果也不套用，只 `debugPrint`，清單維持現狀（舊結果可能比 `toggle` 剛寫入的資料還舊）。舊的那次失敗時同樣只 `debugPrint`，不影響較新的結果。
+4. **接受的副作用**：`toggle` 的結尾 `load()` 若被更晚發出、尚未完成的 `load` 取代，清單會等那次完成才更新；呼叫端在每次 `load` 完成後都會 `setState`，最終畫面仍是最新清單。
+5. **測試**：`test/reader/bookmark_controller_test.dart` 新增「可手動控制完成順序」的假 repository（呼叫當下先取資料快照，再等閘門放行），涵蓋：新的先完成、舊的後完成 → 保持新值；舊的先完成、新的後完成 → 新值；新的失敗、舊的成功 → 不套用；舊的失敗、新的成功 → 新值；開書第一次 `load` 還沒回來時 `toggle` 先完成 → 清單含新書籤。既有案例不改。
+6. **範圍外**：`AnnotationController.reload()`（Issue 32）；`toggle` 的存在性判斷（已直查 repository，不變）。
+7. **文件**：本段；`issues.md` Issue 30 已定案、新增 Issue 32、Issue 29 狀態同步為「階段一已合併（PR #367）」；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR（可逆、局部修正）。
+8. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；寫 `plans/plan-issue-30.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
