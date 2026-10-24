@@ -10,6 +10,7 @@ import '../reader/annotation_list_item.dart';
 import '../reader/annotation_toolbar_layout.dart';
 import '../reader/book_format.dart';
 import '../reader/engine_dispatch.dart';
+import '../reader/open_book_trace.dart';
 import '../reader/bookmark_controller.dart';
 import '../reader/bookmark_position_context.dart';
 import '../reader/book_reader_prefs.dart';
@@ -464,8 +465,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _listenedTtsAudio?.addListener(_onTtsAudioHolderChanged);
     _checkShowDegradedNotice();
     final importService = widget.dependencies.bookImportService;
+    // 新的一次開書：清掉前一本書留下的最後階段，逾時摘要才不會被污染
+    // （epic-54 Issue 29 階段一）。
+    OpenBookTrace.startSession();
     _openBookFlow = OpenBookFlow(
       filePath: widget.filePath,
+      onTimedOut: OpenBookTrace.recordTimeout,
       // 讀取頂層可覆寫變數的當下值，widget test 才能以覆寫注入假探測。
       probe: (uri) => probeStorageAccess(uri),
       relinkBook: (uri, displayName) => importService.relinkBook(

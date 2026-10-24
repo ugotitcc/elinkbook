@@ -70,9 +70,11 @@ void main() {
     String filePath = _contentUri,
     OpenBookProbe? probe,
     OpenBookRelink? relinkBook,
+    void Function()? onTimedOut,
   }) {
     final flow = OpenBookFlow(
       filePath: filePath,
+      onTimedOut: onTimedOut,
       probe: (uri) {
         probeCalls.add(uri);
         return (probe ?? (_) async => StorageAccessProbeResult.unknownError)(uri);
@@ -318,6 +320,83 @@ void main() {
       expect(probeCalls, hasLength(1));
       expect((flow.state as OpenBookFailed).source,
           OpenBookFailureSource.timeout);
+    });
+  });
+
+  // epic-54 Issue 29 階段一：逾時診斷回呼。回呼只用來寫記錄，不得影響開書流程。
+  group('開書逾時回呼（onTimedOut）', () {
+    test('仍在載入中計時器到點：呼叫恰好一次，且呼叫當下狀態還是 Loading', () {
+      final states = <OpenBookState>[];
+      late OpenBookFlow flow;
+      flow = buildFlow(
+        filePath: '/data/books/a.epub',
+        onTimedOut: () => states.add(flow.state),
+      )..start();
+
+      timers.single.fire();
+
+      expect(states, hasLength(1));
+      expect(states.single, isA<OpenBookLoading>());
+      expect(flow.state, isA<OpenBookFailed>());
+    });
+
+    test('已渲染後計時器 callback 仍被呼叫：不呼叫 onTimedOut', () {
+      var calls = 0;
+      final flow = buildFlow(
+        filePath: '/data/books/a.epub',
+        onTimedOut: () => calls++,
+      )..start();
+      flow.onRendered();
+
+      timers.single.forceFire();
+
+      expect(calls, 0);
+    });
+
+    test('視圖錯誤先到：不呼叫 onTimedOut', () {
+      var calls = 0;
+      final flow = buildFlow(
+        filePath: '/data/books/a.epub',
+        onTimedOut: () => calls++,
+      )..start();
+      flow.onViewError('boom');
+
+      timers.single.forceFire();
+
+      expect(calls, 0);
+    });
+
+    test('已 dispose 後計時器 callback 仍被呼叫：不呼叫 onTimedOut', () {
+      var calls = 0;
+      final flow = buildFlow(
+        filePath: '/data/books/a.epub',
+        onTimedOut: () => calls++,
+      )..start();
+      flow.dispose();
+
+      timers.single.forceFire();
+
+      expect(calls, 0);
+    });
+
+    test('onTimedOut 拋例外：狀態仍照常切到 Failed(timeout)（診斷不能擋住逾時畫面）', () {
+      final flow = buildFlow(
+        filePath: '/data/books/a.epub',
+        onTimedOut: () => throw StateError('診斷壞了'),
+      )..start();
+
+      timers.single.fire();
+
+      final failed = flow.state as OpenBookFailed;
+      expect(failed.source, OpenBookFailureSource.timeout);
+    });
+
+    test('沒有注入 onTimedOut：逾時照常失敗', () {
+      final flow = buildFlow(filePath: '/data/books/a.epub')..start();
+
+      timers.single.fire();
+
+      expect(flow.state, isA<OpenBookFailed>());
     });
   });
 

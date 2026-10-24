@@ -263,6 +263,39 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 9. **文件**：`CONTEXT.md`「引擎分派判斷」詞條補開書前解析規則與兩個值的差別；本段；`issues.md` 更新（Issue 27 已定案、Issue 26 已合併 PR #365）。無需新 ADR（可逆、不牴觸 ADR 0017、0023）。
 10. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；寫 `plans/plan-issue-27.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次。
 
+## Issue 29 設計決策（`/grilling` 定案，2026-10-24）
+
+來源：Issue 23 真機抽驗時使用者回報「從書架反覆開同一本書，一直開書逾時，關掉 App 才恢復」。
+
+**使用者提供的事實**
+
+- 只發生在 EPUB，不限書名。
+- 常見時機：開同一本書的第二次；啟動 App 自動帶入最後閱讀書籍；看過別本再開另一本。
+- 逾時後：退回書架再開同一本仍逾時；開另一本書正常；哪一本會壞是隨機的。
+- 推論：壞掉的狀態綁在「那本書」（同一檔案或同一開書網址），不是整個 App 的 WebView 壞掉。
+
+**已核對的程式事實**
+
+- 逾時由 `OpenBookFlow`（`open_book_flow.dart`）計時，30 秒內沒收到 `onPageRendered` 即失敗。
+- `FoliateReaderView` 先把書複製到 `files/foliate_book_cache/<實例編號>/`（實例編號為 `identityHashCode(this)`），才建立 `InAppWebView`；`dispose` 會刪該目錄。WAVE 上該目錄目前是空的，沒有殘留。
+- 開書網址 `https://appassets.androidplatform.net/assets/foliate/index.html?prefs=…&initialCfi=…` 的內容由書與位置決定；同一本書同一位置網址完全相同，WebView 自己的 HTTP 快取（`cache/WebView/Default/HTTP Cache`）可能以網址為鍵。這是目前最符合「同一本書黏住」的假設，**尚未證實**。
+- 書檔由原生 `InternalStoragePathHandler` 直接串流，Dart 的 `shouldInterceptRequest` 看不到它。
+- 全書搜尋建索引另用 `HeadlessInAppWebView`（`foliate_content_indexer.dart`），可能就是 logcat 看到的第二個 WebView，未證實。
+- 設定畫面已有「閱讀器 Console Log」（`ReaderConsoleLogScreen`，`settings_scaffold.dart`），資料來自 `ReaderConsoleLog`（記憶體內、上限 500 筆、每筆自動帶毫秒時間）。
+
+**定案**
+
+1. **分兩階段**：階段一只診斷、不改行為；階段二待抓到證據後另開一輪修復。Issue 29 在階段二完成前維持開啟。
+2. **階段一記錄的階段**（每筆格式 `[OpenBook#<實例編號>] <階段> <細節>`）：開書開始（副檔名）、書複製完成（耗時、是否為 null）、書複製失敗、WebView 建立、頁面載入開始（只記路徑，不記查詢字串）、頁面載入完成與已渲染（附「距開書 N ms」）、載入錯誤、HTTP 錯誤（狀態碼）、WebView 渲染行程結束、離開畫面（有無刪快取目錄）。**不用 `onLoadResource`**：套件看到它會隱式開啟 `useOnLoadResource`，每個資源多一次訊息，會改變開書行為（計畫審查 I-2）。
+3. **逾時當下多寫一行**：「開書逾時，最後階段：… （距今 N 秒）」。由 `OpenBookFlow` 新增選用的 `onTimedOut` 回呼觸發，`OpenBookFlow` 本身不依賴記錄類別。
+4. **記錄放 `ReaderConsoleLog`**，同時 `debugPrint` 到 logcat。只存記憶體，不落地。
+5. **新增 `app/lib/reader/open_book_trace.dart`**：`OpenBookTrace.startSession()`（`ReaderScreen.initState` 呼叫，清掉前一本書的最後階段）、`record(instanceId, stage, [detail])`、`timeoutSummary()`、`recordTimeout()`，記住最後一筆。有單元測試。`onTimedOut` 回呼的例外由 `OpenBookFlow` 吞掉，絕不影響切換到失敗畫面。
+6. **不改行為**：不改開書流程、不改 WebView 設定、不改快取。
+7. **階段二**不預先決定修法；候選假設（HTTP 快取、實例編號撞號、原生複製狀態）待證據決定，不在階段一試修。
+8. **WAVE 抽驗**：階段一裝上後，到「設定 → 閱讀器 Console Log」確認每次開書都有完整階段；使用者照常使用，逾時發生時不關 App，回報後由我用 adb 與截圖收證據。
+9. **分支與流程**：分支 `epic-54/issue-29-open-timeout-diagnosis`，計畫與實作同分支同 PR；PR 合併後 Issue 29 仍開啟（階段二）。同一個分支順手把 `issues.md` 與 `docs/epics.md` 的 Issue 27 狀態同步成已合併（PR #366）。
+10. **文件**：不新增詞彙（`CONTEXT.md` 不動）；不需 ADR（可逆、診斷性質）。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -740,3 +773,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-24 Issue 26 程式審查與 PR**：審查報告 `reviews/review-code-issue-26.md`（不進版控），0 Critical／0 Important／4 Minor，結論 Yes（可合併）。Minor 1（文件狀態）已於開 PR 時更新；Minor 2（`_presetFlow` 建構時捕捉 `widget.*`，與 `BookmarkController` 同模式）、Minor 3（`applyFromBook` 與 `_applyToTargets` 的 dispose 語意註解）為註解補充，未處理；Minor 4（刪除確認丟例外時往上拋）為沿用舊行為，非回歸。分支 `epic-54/issue-26-layout-preset-flow` 推上 `origin`，開 PR [#365](https://git.jigong.org/huthief/elinkBook/pulls/365)（`main` ← `epic-54/issue-26-layout-preset-flow`），待合併。
 
 **2026-10-24 Issue 27 計畫審查與實作完成**：計畫審查 0 Critical、3 Important（I-1 不對稱案例的版面按鈕回報前是停用的，測試改斷言 `onPressed` 為 `null`；I-2 CBZ 宣告值 `null` 時不可提早設外觀開關；I-3 三態型別補 `==`／`hashCode`／`toString`）、3 Minor，全部納入計畫。新增 `app/lib/reader/engine_dispatch.dart`（`resolveEngineDispatch`、`reconcileFixedLayoutFlag`）與 36 個表格測試；`ReaderScreen` 兩個欄位都保留，4 個防禦分支改由純函式提供；新增 1 個畫面案例記錄「補判斷回 `true` 不立刻設外觀開關」。完整 `flutter test` 4483 通過、1 略過、0 失敗，`flutter analyze` 乾淨。`check_*.js` 兩個腳本因本機沒有 Node 未執行（本次未改字串與 Key）。程式審查（自審）0 Critical、0 Important、1 Minor。**WAVE 真機抽驗通過**：流式 EPUB、FXL EPUB、CBZ、PDF、TXT 都能開；FXL 外觀與設定面板正確；書架「強制 FXL」後重開為 FXL，「恢復自動判斷」後回到原判斷。待開 PR。
+
+**2026-10-24 Issue 29 階段一實作完成**：計畫審查 0 Critical、5 Important、5 Minor 全部納入計畫（最關鍵：不傳 `onLoadResource`，因為套件會隱式開啟 `useOnLoadResource`；`onTimedOut` 例外必須吞掉；`ReaderScreen.initState` 呼叫 `OpenBookTrace.startSession()`）。新增 `app/lib/reader/open_book_trace.dart`，`FoliateReaderView` 記錄 開書開始、書複製完成／失敗、WebView 建立、頁面載入開始／完成、載入錯誤、HTTP 錯誤、渲染行程結束、已渲染、離開畫面；`OpenBookFlow` 新增選用 `onTimedOut`，逾時時寫「最後階段」。`lib/` 差異只有新增行，不改開書行為。完整 `flutter test` 4502 通過、1 略過、1 失敗：`pdf_reader_view_filters_test` 的 bold overlay 案例（等背景 Isolate 的時間型案例，與本次無關，該檔單獨重跑兩次 16/16 全過）。`check_*.js` 兩個腳本因本機沒有 Node 未執行（本次未改字串與 Key）。程式審查（自審）0 Critical、0 Important、1 Minor。**WAVE 真機抽驗通過**：設定畫面的「閱讀器 Console Log」可看到每次開書的完整階段與離開畫面記錄，同一本書連開多次都有。待開 PR；PR 合併後 Issue 29 仍開啟，等使用者回報逾時當下的 Console Log 再做階段二。
