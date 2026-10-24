@@ -6,7 +6,7 @@
 
 **Architecture：** 新類別 `TransientHighlightTimer`（`app/lib/reader/transient_highlight_timer.dart`）只管計時器：`start(onExpire)`／`cancel()`／`isActive`，建構時捕捉 `Zone.current`，可選 `timerFactory` 供單元測試。`ReaderScreen` 在 `initState` 建構一個實例，取代 `_searchJumpHighlightTimer` 與 `_creationZone`。
 
-**Tech Stack：** Flutter／Dart、`flutter_test`、`fake_async`（測試用；先確認 `pubspec.yaml` 的 `dev_dependencies` 已有，沒有則改用 `flutter_test` 內建的 `fakeAsync`）。指令一律在 `app/` 目錄下執行。
+**Tech Stack：** Flutter／Dart、`flutter_test`、`fake_async`（測試用；已在 `pubspec.yaml` 的 `dev_dependencies`，`^1.3.3`）。指令一律在 `app/` 目錄下執行。
 
 **Spec：** 沒有獨立 `spec.md`，設計依據是 `docs/epics/epic-54-architecture-optimization/epic.md`「Issue 28 設計決策」（決策 1～8）。
 
@@ -65,6 +65,10 @@ import 'dart:async';
 /// 只管計時：建構時捕捉 [Zone.current]，之後不論 [start] 在哪個 Zone 被呼叫，
 /// 預設都在建構當下的 Zone 建立 [Timer]——測試的 `tester.runAsync` 會暫時離開
 /// fake-async Zone，計時器若建在真實 Zone，`tester.pump` 就推不動。
+///
+/// 刻意使用裸 `Timer` 加 Zone 捕捉，不引入 `package:clock`：測試靠 fake-async
+/// Zone 推進時間，不需要另一套可注入的時鐘（審查 M-2；原註解在 `ReaderScreen`
+/// 的欄位上，搬到這裡）。
 class TransientHighlightTimer {
   TransientHighlightTimer({
     this.duration = const Duration(seconds: 3),
@@ -97,13 +101,14 @@ class TransientHighlightTimer {
 }
 ```
 
-- [ ] **Step 1（紅）：** 新增 `transient_highlight_timer_test.dart`，先寫測試、確認失敗（檔案不存在的編譯失敗即為紅燈）：
-  - 假工廠記錄 `(duration, callback)`：`start` 後 `isActive` 為 true；手動觸發 callback → 呼叫一次 `onExpire`，且呼叫當下 `isActive` 已為 false。
-  - 重新啟動：連續 `start` 兩次，第一個計時器被取消（假計時器 `isActive` 為 false），只有第二個會呼叫 `onExpire`。
-  - `cancel()` 後不呼叫 `onExpire`，`isActive` 為 false。
+- [ ] **Step 1（紅）：** 新增 `transient_highlight_timer_test.dart`，先寫測試、確認失敗（檔案不存在的編譯失敗即為紅燈）。多數案例用 `fakeAsync` 加預設工廠，不寫假 `Timer` 類別（審查 M-1）：
+  - 到期：在 `fakeAsync` 內 `start`，`elapse(3 秒)` 後呼叫一次 `onExpire`，且 `onExpire` 執行當下 `isActive` 已為 false。
+  - 未到期：`elapse(2 秒 999 毫秒)` 時尚未呼叫 `onExpire`，`isActive` 為 true。
+  - 重新啟動：`start` 後過 2 秒再 `start`，再過 2 秒時第一次的 `onExpire` 沒被呼叫；從第二次 `start` 起滿 3 秒才呼叫第二次的 `onExpire`（舊計時器被取消、新的重新計 3 秒）。
+  - `cancel()` 後 `elapse(5 秒)` 不呼叫 `onExpire`，`isActive` 為 false。
   - 沒有啟動時 `cancel()` 是安全的無動作。
-  - 預設時長為 3 秒（假工廠收到的 `duration`）。
-  - 預設工廠與 `fakeAsync`：在 `fakeAsync` 內建構、再用 `Zone.root.run` 呼叫 `start`，`elapse(3 秒)` 後仍呼叫 `onExpire`（證明計時器建在建構時的 Zone）。
+  - 預設時長：只有這一個案例用 `timerFactory`，假工廠記錄收到的 `duration`，應為 3 秒；工廠回傳 `fakeAsync` 內建立的真 `Timer` 即可，不需假類別。
+  - Zone：在 `fakeAsync` 內建構、再用 `Zone.root.run` 呼叫 `start`，`elapse(3 秒)` 後仍呼叫 `onExpire`（證明計時器建在建構時的 Zone）。
 - [ ] **Step 2（綠）：** 新增 `transient_highlight_timer.dart`，內容依上方草案；新檔可執行 `dart format`。
 - [ ] **Step 3：** `flutter analyze`；跑 `test/reader/transient_highlight_timer_test.dart`；commit。此時 `ReaderScreen` 還沒改，行為完全不變。
 
@@ -111,14 +116,14 @@ class TransientHighlightTimer {
 
 **Files：** `reader_screen.dart`。
 
-- [ ] **Step 1：** 先跑一次基準：`flutter test test/screens/reader_screen_test.dart --plain-name 暫態高亮`、`--plain-name 就地跳轉`、`--plain-name 搜尋跳轉`（多個 `--plain-name` 會要求同時符合，分次跑；先用 `grep -n` 確認這些關鍵字在測試名稱中存在，沒有則改用實際名稱），記錄通過數，作為改動前基準。
+- [ ] **Step 1：** 先跑一次基準，分三次執行（多個 `--plain-name` 會要求同時符合，所以分次跑）：`flutter test test/screens/reader_screen_test.dart --plain-name 暫態高亮`、`--plain-name 就地跳轉`、`--plain-name 搜尋跳轉`。計畫審查時已實測的基準：暫態高亮 8 個、就地跳轉 3 個、搜尋跳轉 5 個，全部通過（三組可能有重疊，不能相加；審查 M-3）。若實跑數字與此不同，先查明原因再動手。
 - [ ] **Step 2：** 修改 `reader_screen.dart`：
   - 刪 `Timer? _searchJumpHighlightTimer` 與 `late Zone _creationZone`（含其 doc 註解）；`initState` 的 `_creationZone = Zone.current;` 改成 `_searchJumpHighlightTimer = TransientHighlightTimer();`（欄位型別 `late final TransientHighlightTimer`，在 `initState` 第一行 `super.initState()` 之後賦值）。
   - `_startSearchJumpHighlightAutoClearTimer()`：改成 `_searchJumpHighlightTimer.start(() => _surface.clearTransientHighlight())`（到期路徑，直接清除高亮；用閉包而非 tear-off，到期當下才取 `_surface`）；更新 doc 註解，移除「使用捕捉到的 fake Zone」的說明，改指向 module。
   - `_clearSearchJumpHighlight()`（提前清除）：`if (!_searchJumpHighlightTimer.isActive) return; _searchJumpHighlightTimer.cancel(); _surface.clearTransientHighlight();`。
   - `dispose`：`_searchJumpHighlightTimer.cancel();`。
   - 補上 `import '../reader/transient_highlight_timer.dart';`（路徑依該檔既有 import 風格）。
-  - 欄位 doc 註解（約 435～438 行）更新，不要留下已不存在的 `_creationZone` 說明；其餘程式碼不動。
+  - 欄位 doc 註解（約 435～438 行）更新，不要留下已不存在的 `_creationZone` 說明；「刻意使用裸 `Timer`、不引入 `package:clock`」的理由已搬到 `TransientHighlightTimer` 的類別 doc 註解（審查 M-2），欄位註解只留「3 秒內提前清除、取兩者較早發生者」的說明；其餘程式碼不動。
 - [ ] **Step 3：** `flutter analyze`；重跑 Step 1 的三組測試，通過數與基準相同；再跑整個 `test/screens/reader_screen_test.dart` 一次（此檔是本 Issue 唯一觸及的畫面測試檔，完整檔案跑一次可抓到 Zone 相關回歸）；commit。
 
 ### Task 3：收尾
