@@ -5,10 +5,9 @@ import 'package:path_provider/path_provider.dart';
 // 直接依賴平台介面以避免 SharePlus.instance 快取首個 Fake 導致的跨測試污染
 // （見 Task 2：SharePlus.instance 在首個測試捕獲 Fake 後，後續測試的 share 仍導向首個 Fake）
 import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
-import 'package:uuid/uuid.dart';
-
 import '../reader/annotation_list_item.dart';
 import '../reader/bookmark.dart';
+import '../reader/bookmark_controller.dart';
 import '../reader/bookmark_position_context.dart';
 import '../reader/bookmarks_repository.dart';
 import '../reader/highlight.dart';
@@ -108,7 +107,7 @@ class NotesBottomSheet extends StatefulWidget {
 class _NotesBottomSheetState extends State<NotesBottomSheet>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  List<Bookmark> _bookmarks = [];
+  late final BookmarkController _bookmarkController;
   List<Highlight> _highlights = [];
   List<Note> _notes = [];
   // 重新命名對話框使用的 TextEditingController（審查修正：修補洩漏）。
@@ -129,6 +128,10 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
       vsync: this,
       initialIndex: widget.initialTabIndex,
     );
+    _bookmarkController = BookmarkController(
+      repository: widget.bookmarksRepository,
+      bookId: widget.bookId,
+    );
     _loadBookmarks();
     _loadAnnotations();
   }
@@ -141,9 +144,9 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   }
 
   Future<void> _loadBookmarks() async {
-    final list = await widget.bookmarksRepository.listByBook(widget.bookId);
+    await _bookmarkController.load();
     if (!mounted) return;
-    setState(() => _bookmarks = list);
+    setState(() {});
   }
 
   Future<void> _loadAnnotations() async {
@@ -163,7 +166,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   /// `writeAsString()`／`SharePlatform.instance.share()` 皆涉及非同步 I/O
   /// 與平台通道，極端環境（例如儲存空間不足、使用者中途取消系統分享面板
   /// 拋出例外）下不應讓整個 Bottom Sheet 崩潰，比照專案既有對外部 I/O
-  /// 失敗的防禦性慣例（見 `_loadFxlBookmarks()` 既有寫法）。直接呼叫
+  /// 失敗的防禦性慣例（見 `BookmarkController.load()` 既有寫法）。直接呼叫
   /// `SharePlatform.instance`（而非 `SharePlus.instance` wrapper）的理由
   /// 見上方 import 旁註解（epic-45-interface-i18n Issue 8）。
   Future<void> _exportMarkdown() async {
@@ -180,7 +183,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
         bookAuthor: widget.bookAuthor,
         progress: widget.bookProgress,
         exportTime: DateTime.now(),
-        bookmarks: _bookmarks,
+        bookmarks: _bookmarkController.bookmarks,
         annotations: mergeAnnotations(_highlights, _notes),
       );
       final tempDir = await getTemporaryDirectory();
@@ -247,7 +250,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
 
   Widget _buildBookmarksTab() {
     final l10n = AppLocalizations.of(context)!;
-    final existing = _bookmarkAtCurrentPosition;
+    final existing = _bookmarkController.at(widget.currentPosition);
     return Column(
       children: [
         Padding(
@@ -268,8 +271,9 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
                 key: const Key('notes_sheet_delete_all_bookmarks'),
                 icon: const Icon(Icons.delete_sweep),
                 tooltip: l10n.readerNotesSheetDeleteAllBookmarksTooltip,
-                onPressed:
-                    _bookmarks.isEmpty ? null : _confirmDeleteAllBookmarks,
+                onPressed: _bookmarkController.bookmarks.isEmpty
+                    ? null
+                    : _confirmDeleteAllBookmarks,
               ),
             ],
           ),
@@ -277,52 +281,25 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
         Expanded(
           child: ListView.builder(
             key: const Key('notes_sheet_bookmark_list'),
-            itemCount: _bookmarks.length,
+            itemCount: _bookmarkController.bookmarks.length,
             itemBuilder: (context, index) =>
-                _buildBookmarkRow(_bookmarks[index]),
+                _buildBookmarkRow(_bookmarkController.bookmarks[index]),
           ),
         ),
       ],
     );
   }
 
-  /// 目前位置是否已有書籤——EPUB／FXL 比對 epubLocatorJson 是否完全相同
-  /// 字串，PDF 比對 pdfPageIndex 是否相同（見 Global Constraints「書籤
-  /// toggle 的相等性判斷」，審查修正 1.1）。
-  bool _matchesCurrentPosition(Bookmark bookmark) {
-    final pdfPageIndex = widget.currentPosition.pdfPageIndex;
-    if (pdfPageIndex != null) return bookmark.pdfPageIndex == pdfPageIndex;
-    final epubLocatorJson = widget.currentPosition.epubLocatorJson;
-    if (epubLocatorJson != null) {
-      return bookmark.epubLocatorJson == epubLocatorJson;
-    }
-    return false;
-  }
-
-  Bookmark? get _bookmarkAtCurrentPosition {
-    for (final bookmark in _bookmarks) {
-      if (_matchesCurrentPosition(bookmark)) return bookmark;
-    }
-    return null;
-  }
-
   Future<void> _toggleBookmark() async {
     // 在任何 await 之前取得，避免跨非同步間隔使用 BuildContext
     final l10n = AppLocalizations.of(context)!;
-    final existing = _bookmarkAtCurrentPosition;
-    if (existing != null) {
-      await widget.bookmarksRepository.delete(existing.id);
-    } else {
-      await widget.bookmarksRepository.insert(Bookmark(
-        id: const Uuid().v4(),
-        bookId: widget.bookId,
-        name: Bookmark.defaultName(widget.currentPosition, l10n),
-        epubLocatorJson: widget.currentPosition.epubLocatorJson,
-        progression: widget.currentPosition.progression,
-        pdfPageIndex: widget.currentPosition.pdfPageIndex,
-      ));
-    }
-    await _loadBookmarks();
+    // 面板的 currentPosition 帶 chapterTitle，預設名稱維持「章節 (N%)」；
+    // 與 FAB 不帶章節名的名稱不同是現狀（epic-54 Issue 25 設計決策 6）。
+    await _bookmarkController.toggle(
+      position: widget.currentPosition,
+      l10n: l10n,
+    );
+    if (mounted) setState(() {});
   }
 
   Future<void> _renameBookmark(Bookmark bookmark) async {
@@ -373,7 +350,9 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
         final l10n = AppLocalizations.of(dialogContext)!;
         return AlertDialog(
           title: Text(
-            l10n.readerNotesSheetDeleteAllBookmarksConfirm(_bookmarks.length),
+            l10n.readerNotesSheetDeleteAllBookmarksConfirm(
+              _bookmarkController.bookmarks.length,
+            ),
           ),
           actions: [
             TextButton(
