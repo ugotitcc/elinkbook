@@ -355,6 +355,29 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 7. **文件**：本段；`issues.md` Issue 28 已定案、Issue 32 補標已合併（PR #369）；`docs/epics.md` 同步；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR。
 8. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；先寫 `plans/plan-issue-28.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次；WAVE 抽驗：從書內搜尋跳轉，高亮 3 秒後消失，提前點擊立刻清除。
 
+## Issue 31 設計決策（`/grilling` 定案，2026-10-25）
+
+來源：Issue 26 `/grilling`。事實盤點（已核對 `reader_screen.dart`、`reader_prefs_manager_impl.dart`）：
+
+- `ReaderScreen._handlePrefsChanged`（約 726 行）先 `setState` 更新畫面，再呼叫 `widget.dependencies.prefsManager.saveBookPrefs(...)`；**不 `await`、不 `catch`**。寫入失敗時例外變成沒人接的非同步錯誤，使用者看不到任何提示；`main.dart` 沒有全域處理。
+- 5 個呼叫端（EPUB／PDF／FXL 三個設定面板、套用預設集到目前書籍、PDF 裁切完成）都走這個方法。
+- `saveBookPrefs` 是 SQLite 單筆寫入（`_sqliteRepository.save`），同一資料庫連線的寫入依呼叫順序執行，連續拖滑桿時最後一次寫入的值是最終值，不會亂序。
+- 提示先例：`dictionaryOnlineSaveFailed`；`reader_screen.dart` 已有多處 `SnackBar` 用法與 `ReaderConsoleLog`。語系檔共 4 個 `.arb`（`app_en`、`app_zh`、`app_zh_CN`、`app_zh_TW`），`app_localizations*.dart` 為進版控的生成檔。
+
+**定案**
+
+1. **只改 `_handlePrefsChanged` 的持久化那一行**，5 個呼叫端不改；畫面更新、螢幕方向、系統 UI 模式的順序與行為不變。
+2. **新增私有方法 `_persistBookPrefs(prefs)`**：`try/catch` 包住 `saveBookPrefs`，由 `unawaited` 呼叫，仍不等待寫入結果。
+3. **失敗時**：一律寫一行 `ReaderConsoleLog`（`[ReaderScreen] 閱讀設定儲存失敗：<例外型別>`，不放例外全文）；**每次開書最多提示一次**（旗標 `_prefsSaveFailureNotified`），第一次失敗才跳 `SnackBar`，之後再失敗只寫 Console Log；顯示前先確認 `mounted`。**修訂（程式審查 Important 1，2026-10-25）**：設定面板（modal bottom sheet）開著時，SnackBar 畫在閱讀器 Scaffold 底部會被面板蓋住，且約 4 秒後消失、旗標又已用掉，使用者永遠看不到；面板高度隨內容變動，「浮動加抬高 margin」要猜高度、不穩。改為：閱讀器被別的路由蓋住（`ModalRoute.of(context)?.isCurrent == false`）時只記 Console Log 並標記「待提示」，不消耗旗標；面板關閉後由共用的 `_showThemedModalBottomSheet`（涵蓋全部 7 個面板）補提示一次；閱讀器沒被蓋住時直接提示。已知限制：被蓋住的若是全螢幕頁面（例如搜尋頁）而非面板，待提示要等到下一次面板關閉才出現。另外 `_persistBookPrefs` 的 `catch (e)` 刻意連 `Error` 一起接住，已在註解說明。
+4. **不回復畫面**：失敗時畫面維持新設定，本次閱讀照常生效，提示說明「下次開書可能還原」。
+5. **不合併連續寫入**：維持每次都寫（單筆 SQLite 寫入便宜，沒有效能回報；延遲合併會多出離開或閃退時尚未寫出的資料遺失風險）。
+6. **提示文字**：新 key `readerPrefsSaveFailedMessage`，`SnackBar` 加 `Key('reader_prefs_save_failed_snackbar')`；zh：「閱讀設定未能儲存：裝置儲存空間寫入失敗。本次閱讀仍使用新設定，下次開書可能還原。請確認剩餘空間。」；en 同義翻譯；`app_zh_CN.arb` 用簡體；`app_zh_TW.arb` 同 zh；重新產生 `app_localizations*.dart`（`flutter gen-l10n`）。
+7. **測試**：`FakeReaderPrefsManager` 新增可讓 `saveBookPrefs` 丟例外的開關；`reader_screen_test.dart` 新增：寫入失敗時出現提示；連續兩次失敗只出現一次；失敗後畫面設定維持新值；離開畫面後失敗不報錯；成功時沒有提示。既有案例不改。
+8. **範圍外**：`saveGlobalPrefs` 與其他偏好設定的寫入（本張只處理單書偏好）；`LibraryPreferences` 系列；呼叫端合併或延遲寫入。
+9. **風險提醒**：`check_l10n_hardcoded_strings.js` 在本機跑不了（沒有 Node），以 `flutter analyze` 與測試補強，並在開發記錄註明未執行。
+10. **文件**：本段；`issues.md` Issue 31 已定案、Issue 28 補標已合併（PR #370）；`docs/epics.md` 同步；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR。
+11. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；先寫 `plans/plan-issue-31.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次；WAVE 抽驗：正常拖滑桿不出現提示（真機無法製造寫入失敗，失敗路徑靠單元測試）。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -846,3 +869,13 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-25 Issue 28 實作完成**：新增 `TransientHighlightTimer`（`app/lib/reader/transient_highlight_timer.dart`，`start(onExpire)`／`cancel()`／`isActive`，建構時捕捉 `Zone.current`，可選 `timerFactory`）；`reader_screen.dart` 改持有一個實例，刪除 `_creationZone` 與 `Timer? _searchJumpHighlightTimer`，到期路徑直接清除高亮、提前清除才判斷 `isActive`；`ReaderScreen` 無新增公開參數。測試：新增 `test/reader/transient_highlight_timer_test.dart`（7 個）；`reader_screen_test.dart` 整份通過，三組基準（暫態高亮 8、就地跳轉 3、搜尋跳轉 5）與改動前一致。`flutter analyze` 乾淨；`git diff main --stat -- app/lib` 只有 `reader_screen.dart` 與新檔。完整 `flutter test`：+4522、1 略過、1 失敗——失敗為 `pdf_reader_view_filters_test.dart` 的 bold overlay 案例（與 Issue 29 同一個時序不穩定案例，單獨重跑 2 次各 16 個全過，與本 Issue 無關）。`check_l10n_hardcoded_strings.js`、`check_integration_keys.js` 因本機 nvm 沒有 Node 未執行（未動字串與 Key）。程式審查（自審）報告：`reviews/review-code-issue-28.md`（不進版控），0 Critical／0 Important／1 Minor，結論可合併。待 WAVE 抽驗。
 
 **2026-10-25 Issue 28 WAVE 真機抽驗通過**：WAVE（`TCE70P24B2202374`）安裝 debug APK；EPUB 與 PDF 各做一次——書內搜尋就地跳轉後高亮約 3 秒自動消失；3 秒內點擊畫面立刻清除；3 秒內連續跳轉兩次，從第二次起重新計 3 秒。
+
+**2026-10-25 Issue 31 實作完成**（分支 `epic-54/issue-31-prefs-write-failure`，計畫見 `plans/plan-issue-31.md`）：`ReaderScreen._handlePrefsChanged` 內 `saveBookPrefs` 改走私有方法 `_persistBookPrefs(BookReaderPrefs prefs)`（`unawaited` 呼叫，不改 `setState`、`_applyScreenOrientation()`、`_applySystemUiMode()` 順序，5 個呼叫端與其他偏好儲存完全不動）；寫入失敗時 `ReaderConsoleLog.add('[ReaderScreen] 閱讀設定儲存失敗：${e.runtimeType}')`（只記型別名稱，不含路徑或設定值），並在每次開書第一次失敗時（`bool _prefsSaveFailureNotified = false;` 與 `mounted` 守衛）顯示 `SnackBar(key: const Key('reader_prefs_save_failed_snackbar'))`（多語系鍵 `readerPrefsSaveFailedMessage`：「設定未能儲存，下次開書可能恢復原狀」），畫面設定維持使用者剛選的值、不回復。`FakeReaderPrefsManager` 新增選用 `saveBookPrefsError` 與 `saveBookPrefsGate`；`reader_screen_test.dart` 新增「單書偏好寫入失敗提示（epic-54 Issue 31）」group 共 4 個案例（寫入失敗顯示一次 SnackBar＋畫面設定維持新值＋Console Log 僅記 `runtimeType`、連續兩次失敗只顯示一次、寫入成功不顯示、State 已卸載時失敗不拋例外，全檔共 303 個全綠）；`arb_consistency_test.dart` 4 個全綠。驗收：`grep -n "saveBookPrefs" app/lib/screens/reader_screen.dart` 僅 `_persistBookPrefs` 內 1 處；`git diff main --stat -- app/lib` 僅 `reader_screen.dart`、4 個 `.arb` 與 `app_localizations*.dart`。`flutter analyze` No issues found!；`check_l10n_hardcoded_strings.js`、`check_integration_keys.js` 因本機 nvm 未設定啟用 Node 版本未執行；完整 `flutter test` **4527 通過、1 略過、0 失敗**。程式審查報告：`reviews/review-code-issue-31.md`（不進版控），0 Critical／0 Important／0 Minor，結論 Ready to merge: Yes。
+
+**2026-10-25 Issue 31 WAVE 真機抽驗通過**：WAVE（`TCE70P24B2202374`）安裝 debug APK；EPUB 與 PDF 各開一本，調整字級、Fit 模式與雙頁模式等設定，畫面即時反應且未出現儲存失敗提示，離開後重新開書設定皆保留。
+
+**2026-10-25 Issue 31 PR 已開**：分支 `epic-54/issue-31-prefs-write-failure` 推上 `origin`，開 PR [#371](https://git.jigong.org/huthief/elinkBook/pulls/371)（`main` ← `epic-54/issue-31-prefs-write-failure`），待合併。
+
+**2026-10-25 Issue 31 程式審查修訂（PR #371）**：獨立審查（`reviews/review-code-issue-31-r2.md`，不進版控）0 Critical／1 Important／3 Minor，結論 With fixes。Important 1（面板開著時 SnackBar 被蓋住）已修：見決策 3 修訂；`reader_screen.dart` 新增 `_prefsSaveFailureNoticePending`、`_isCoveredByModalRoute()`、`_showPrefsSaveFailureNotice()`、`_flushPendingPrefsSaveFailureNotice()`，`_showThemedModalBottomSheet` 改為 `async` 並在面板關閉後補提示。測試：先改測試確認紅燈（面板開著案例失敗）再改實作；`reader_screen_test.dart` 該 group 由 4 個變 5 個（面板開著失敗→關閉前不提示、關閉後出現；面板已關閉後才失敗→直接提示；面板開著連續兩次失敗→關閉後只出現一次；成功不提示；dispose 後失敗不拋例外），整份 304 個全過；`flutter analyze` 乾淨。Minor 1（`catch (e)` 吞 `Error`）：以註解說明，不改行為；Minor 2（文案斷定原因為儲存空間）：沿用決策 6 指定文字，不改；Minor 3（測試依賴單次 `pump`）：新版改為關閉面板後驗證，不再依賴。待 WAVE 重新抽驗與更新 PR。
+
+**2026-10-25 Issue 31 審查修訂後 WAVE 重新抽驗通過**：WAVE（`TCE70P24B2202374`）安裝修訂版 debug APK；EPUB 與 PDF 各開版面設定面板拖動滑桿並調整多個設定，畫面即時反應、沒有出現儲存失敗提示、面板關閉後沒有補跳提示；離開後重新開書設定仍保留。真機無法製造寫入失敗，失敗路徑由單元測試涵蓋。

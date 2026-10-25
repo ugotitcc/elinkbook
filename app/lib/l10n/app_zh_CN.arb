@@ -740,5 +740,6 @@
   "dictionaryImportLeaveConfirmAction": "离开并取消",
   "dictionaryImportLeaveConfirmStay": "继续导入",
   "dictionaryDragHandleLabel": "拖动排序",
-  "dictionaryMdxLimitNote": "已知限制：词典词条不会执行 JavaScript，因此依赖点击脚本的功能（例如牛津 9 的图片放大）无法运作，仅能看到缩略图。"
+  "dictionaryMdxLimitNote": "已知限制：词典词条不会执行 JavaScript，因此依赖点击脚本的功能（例如牛津 9 的图片放大）无法运作，仅能看到缩略图。",
+  "readerPrefsSaveFailedMessage": "阅读设定未能保存：设备存储空间写入失败。本次阅读仍使用新设定，下次开书可能还原。请确认剩余空间。"
 }

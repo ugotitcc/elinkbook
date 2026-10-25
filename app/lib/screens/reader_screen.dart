@@ -50,6 +50,7 @@ import '../reader/reading_session.dart';
 import '../storage/storage_access_probe.dart'
     show StorageAccessProbeResult, probeStorageAccess;
 import '../reader/open_book_flow.dart';
+import '../reader/reader_console_log.dart';
 import '../reader/reader_jump_target.dart';
 import '../reader/reader_surface.dart';
 import '../reader/reader_prefs_manager.dart';
@@ -333,6 +334,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   BookReaderPrefs _prefs = BookReaderPrefs.empty;
   LoadedPrefs? _loaded;
   ResolvedPreferences? _resolved;
+  /// 單書偏好寫入失敗是否已提示過使用者（每次開書最多提示一次，epic-54 Issue 31）。
+  bool _prefsSaveFailureNotified = false;
+
+  /// 寫入失敗時閱讀器被設定面板等 modal 蓋住，提示（SnackBar 畫在閱讀器
+  /// Scaffold 底部，會被 modal 蓋住）延後到 modal 關閉後才顯示
+  /// （epic-54 Issue 31 程式審查 Important 1）。
+  bool _prefsSaveFailureNoticePending = false;
   // 手動裁切互動模式是否進行中（決策 #14），驅動 PdfReaderView 的宣告式
   // cropEditModeActive prop；只有 PDF 分支會用到，EPUB 分支永遠是 false。
   bool _cropEditModeActive = false;
@@ -722,7 +730,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// （screenOrientationOverride 可能剛被這次變動改變）。不 await 持久化
   /// 結果——使用者互動的視覺回饋（畫面即時反映新設定）不應等待資料庫寫入
   /// 完成，比照本專案其餘偏好設定寫入呼叫的既有慣例（例如
-  /// LibraryPreferences 系列方法在 UI callback 中皆未 await）。
+  /// LibraryPreferences 系列方法在 UI callback 中皆未 await）。寫入失敗的處理見
+  /// [_persistBookPrefs]。
   void _handlePrefsChanged(BookReaderPrefs prefs) {
     setState(() {
       _prefs = prefs;
@@ -740,9 +749,55 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         );
       }
     });
-    widget.dependencies.prefsManager.saveBookPrefs(widget.bookId, prefs);
+    unawaited(_persistBookPrefs(prefs));
     _applyScreenOrientation();
     _applySystemUiMode();
+  }
+
+  /// 寫入單書偏好；失敗時記 Console Log，並在每次開書第一次失敗時提示使用者
+  /// （epic-54 Issue 31）。不 await：畫面即時回饋不等資料庫，畫面也不回復。
+  ///
+  /// 刻意用 `catch (e)` 連 `Error` 一起接住：這個 Future 是 `unawaited` 呼叫，
+  /// 沒人接的例外只會變成使用者看不到的非同步錯誤；Console Log 保留型別供追查。
+  ///
+  /// 設定面板（modal bottom sheet）開著時閱讀器不是目前路由，SnackBar 會被面板
+  /// 蓋住，且 4 秒後消失、旗標又已用掉，使用者永遠看不到——所以這時只標記「待
+  /// 提示」，等面板關閉後由 [_showThemedModalBottomSheet] 補提示一次。
+  Future<void> _persistBookPrefs(BookReaderPrefs prefs) async {
+    try {
+      await widget.dependencies.prefsManager.saveBookPrefs(widget.bookId, prefs);
+    } catch (e) {
+      ReaderConsoleLog.add('[ReaderScreen] 閱讀設定儲存失敗：${e.runtimeType}');
+      if (_prefsSaveFailureNotified || !mounted) return;
+      if (_isCoveredByModalRoute()) {
+        _prefsSaveFailureNoticePending = true;
+        return;
+      }
+      _showPrefsSaveFailureNotice();
+    }
+  }
+
+  /// 閱讀器目前是否被別的路由（設定面板等）蓋住。
+  bool _isCoveredByModalRoute() => ModalRoute.of(context)?.isCurrent == false;
+
+  void _showPrefsSaveFailureNotice() {
+    _prefsSaveFailureNotified = true;
+    _prefsSaveFailureNoticePending = false;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: const Key('reader_prefs_save_failed_snackbar'),
+        content: Text(AppLocalizations.of(context)!.readerPrefsSaveFailedMessage),
+      ),
+    );
+  }
+
+  /// 面板關閉後補上「設定未能儲存」提示；仍被別的路由蓋住時繼續等。
+  void _flushPendingPrefsSaveFailureNotice() {
+    if (!_prefsSaveFailureNoticePending || _prefsSaveFailureNotified || !mounted) {
+      return;
+    }
+    if (_isCoveredByModalRoute()) return;
+    _showPrefsSaveFailureNotice();
   }
 
   /// 手動選區裁切請求（決策 #14）：關閉目前開啟的 PdfSettingsSheet、切換
@@ -774,12 +829,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 面板（EPUB／PDF／FXL）用，讓使用者邊調整邊看到上方內文即時變化。
   /// 面板改為不撐滿螢幕後，上方露出的 54% 黑遮罩在 E-Ink 上會抖動成一片
   /// 黑，完全看不到內文（2026-09-28 真機回報）。
+  ///
+  /// 面板關閉後會補上「單書偏好寫入失敗」的待提示（epic-54 Issue 31）。
   Future<T?> _showThemedModalBottomSheet<T>({
     required WidgetBuilder builder,
     bool enableDrag = true,
     bool transparentBarrier = false,
-  }) {
-    return showModalBottomSheet<T>(
+  }) async {
+    final result = await showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
       enableDrag: enableDrag,
@@ -789,6 +846,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           : null,
       builder: builder,
     );
+    _flushPendingPrefsSaveFailureNotice();
+    return result;
   }
 
   void _openLayoutSettings() {

@@ -4505,6 +4505,12 @@ abstract class AppLocalizations {
   /// **'拖曳排序'**
   String get dictionaryDragHandleLabel;
 
+  /// 閱讀畫面單書偏好寫入 SQLite 失敗時的 SnackBar 提示（每次開書最多提示一次，epic-54 Issue 31）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'閱讀設定未能儲存：裝置儲存空間寫入失敗。本次閱讀仍使用新設定，下次開書可能還原。請確認剩餘空間。'**
+  String get readerPrefsSaveFailedMessage;
+
   /// 字典設定畫面底部的 MDX 已知限制說明（JavaScript 不執行、點擊腳本無效）
   ///
   /// In zh_TW, this message translates to:

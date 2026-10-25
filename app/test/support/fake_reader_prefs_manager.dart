@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
@@ -19,6 +21,13 @@ class FakeReaderPrefsManager implements ReaderPrefsManager {
   final List<String> savedBookPrefsCalls = [];
   final List<GlobalReaderPrefs> savedGlobalPrefsCalls = [];
   final List<MapEntry<String, ReadingPosition>> savedReadingPositionCalls = [];
+
+  /// 測試用：非 null 時 [saveBookPrefs] 會拋出此物件，且不寫入、不記錄呼叫
+  /// （epic-54 Issue 31）。
+  Object? saveBookPrefsError;
+
+  /// 測試用：非 null 時 [saveBookPrefs] 會先等待此 Completer 完成（epic-54 Issue 31）。
+  Completer<void>? saveBookPrefsGate;
 
   FakeReaderPrefsManager({
     Map<String, BookReaderPrefs>? bookPrefsByBookId,
@@ -54,6 +63,8 @@ class FakeReaderPrefsManager implements ReaderPrefsManager {
 
   @override
   Future<void> saveBookPrefs(String bookId, BookReaderPrefs prefs) async {
+    if (saveBookPrefsGate != null) await saveBookPrefsGate!.future;
+    if (saveBookPrefsError != null) throw saveBookPrefsError!;
     bookPrefsByBookId[bookId] = prefs;
     savedBookPrefsCalls.add(bookId);
   }
