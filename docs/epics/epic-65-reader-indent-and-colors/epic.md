@@ -23,7 +23,7 @@
 
 1. **放在新 Epic**：兩項功能同屬「版面設定增強」，不併入 `epic-54`（架構優化）。兩張 Issue，Issue 1 先做。
 2. **首行縮排（Issue 1）**：開關加字數滑桿（附 +/-）；範圍 0～4 字、每次調 0.5 字；開關打開預設 2 字；關閉＝維持書本原本的縮排。
-3. **縮排的套用範圍**：只套用 Foliate 流式格式（EPUB、TXT、MD、KF8），PDF、固定版面（FXL）、CBZ 不套用；套用到所有 `p` 段落，置中、空白、只含圖片的段落不特別排除（先用 WAVE 實書確認，必要時另開修正）；`!important`，不受「停用書本 CSS」影響；直排時往下縮。
+3. **縮排的套用範圍**：只套用 Foliate 流式格式（EPUB、TXT、MD、KF8），PDF、固定版面（FXL）、CBZ 不套用；套用到所有 `p` 段落，置中、空白、只含圖片的段落不特別排除（先用 WAVE 實書確認，必要時另開修正）〔**已被 Issue 3 修訂**：WAVE 實測確認置中段落會偏移，改為排除置中與無文字段落，見「Issue 3 設計決策」〕；`!important`，不受「停用書本 CSS」影響；直排時往下縮。
 4. **縮排的儲存**：單書偏好，`BookReaderPrefs` 新增 `firstLineIndent`（`double?`，單位 em，`null`＝關閉）；SQLite 版本 28→29，`book_reader_prefs` 新增欄位；「版面預設集」JSON 含此欄位，舊預設集讀不到視為 `null`。
 5. **自訂閱讀顏色（Issue 2）**：背景色與文字色都可自訂。每個佈景（淺色、深色、宣紙）各存一組，全域、不分書；沒設定就用佈景原本的顏色。
 6. **自訂色的邊界**：E-Ink 模式一律不套用，維持純黑白高對比；只影響閱讀器頁面，不影響書庫、設定頁等其他畫面（閱讀器內另算背景色，不直接改共用的 `scaffoldBackgroundColor`）；只套用 Foliate 流式格式，PDF、固定版面不套用。
@@ -33,6 +33,28 @@
 10. **範圍外**：把淺色佈景整體背景改純白（使用者選擇做自訂功能，而非單改色）；PDF／固定版面的背景與縮排；單書層級的自訂色。
 11. **詞彙**：`CONTEXT.md` 新增「首行縮排」與「自訂閱讀顏色」兩個詞條。不需要 ADR。
 12. **流程**：兩張 Issue 各自一個分支、一個 PR，計畫與實作同分支同 PR（不另開文件 PR）；先寫 `plans/plan-issue-N.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在 Issue 最後跑一次；WAVE 真機抽驗後才開 PR。
+
+## Issue 3 設計決策（`/grill-with-docs` 定案，2026-10-25）
+
+來源：Issue 1 WAVE 實測第 (7) 項——`text-indent` 對 `text-align: center` 的段落同樣生效，置中段落首行偏移，設定 4 字時甚至被擠成 3 行。這修訂了 Discovery 決策 3「置中、空白、只含圖片的段落不特別排除」。
+
+事實盤點（已核對 `main.js`）：
+
+- 縮排規則是純 CSS，由 `window.applyPreferences` 組成後以 `view.renderer.setStyles([fontFaceCss, css])` 套給整本書。CSS 沒辦法判斷「這段實際是不是置中」（置中常寫在書本自己的 class，不是寫在段落上）。
+- `main.js` 已有每個章節載入的掛勾（`view.addEventListener('load', …)`，`isIndexMode` 時提早 return）和 `applyTextConversion` 的模式：章節載入時套用，`applyPreferences` 時對 `view.renderer.getContents()` 所有已載入章節重做。
+- 使用者選了「文字對齊」時，`p { text-align: … !important }` 會讓所有段落同一種對齊，書本原本的置中看不出來。
+
+**定案**
+
+1. **規則**：首行縮排只套用到「有文字、且實際顯示不是置中」的段落。排除：實際顯示為置中的段落（行內 style、`align` 屬性、書本 class 都算）；沒有文字的段落（空白、只有圖片、只有空白字元）。**不排除**靠右對齊的段落。
+2. **做法：JS 標記**。`main.js` 新增函式（暫名 `markNoIndentParagraphs(doc, prefs)`）：以 `getComputedStyle(p).textAlign` 含 `center`、或 `textContent.trim() === ''`，判定要排除的 `p`，加上屬性 `data-elink-no-indent`。CSS 規則由 `p { text-indent: … }` 改為 `p:not([data-elink-no-indent]) { text-indent: Nem !important; }`（`0` 與 `!important` 語意不變）。
+3. **何時標記**：章節載入事件（含預讀章節）與 `applyPreferences`（對所有已載入章節重新標記）。縮排關閉（`firstLineIndent` 不是數字）時移除標記、不做計算，避免多餘效能成本。
+4. **使用者選了「文字對齊」時**（`prefs.textAlign` 有值）：不做置中排除，所有有文字的段落都縮排；只排除沒有文字的段落。
+5. **Dart 端不改**：偏好 map 已含 `textAlign` 與 `firstLineIndent`；不需要新欄位、不需要資料庫升級、不需要新 l10n 字串。
+6. **驗證**：`main.js` 本機沒有測試台（沒有 Node）。做一本探針 EPUB（置中 class、行內置中、`align="center"`、空段落、只有圖片的段落、一般段落、直排版）放到 WAVE 實測，不進版控。若使用者裝好 Node，則加 `app/tool/foliate_touch_harness/` 測試情境（比照 `scenario-vertical-paragraph-spacing.mjs`）並實際跑過；沒裝就不提交跑不了的腳本，並在開發記錄註明未執行。
+7. **已知風險**：標記必須在章節顯示前完成，否則會閃一下縮排再消失；要在 WAVE 上看。大章節的 `getComputedStyle` 成本也要在 WAVE 上觀察。
+8. **文件**：本段；`issues.md` 新增 Issue 3；`docs/epics.md` 同步；`CONTEXT.md`「首行縮排」詞條補上排除規則；`CLAUDE.md`、`docs/prd.md` 不動；不需要 ADR。
+9. **流程**：新增 Issue 3、不重排編號；Issue 3 先於 Issue 2 執行；分支 `epic-65/issue-3-indent-exclusions`，計畫與實作同分支同 PR；先寫 `plans/plan-issue-3.md`，計畫審查後再動手。
 
 ## 開發記錄
 
