@@ -13260,7 +13260,13 @@ void main() {
     ReaderSettingsSheet currentSheet(WidgetTester tester) =>
         tester.widget<ReaderSettingsSheet>(find.byType(ReaderSettingsSheet));
 
-    testWidgets('寫入失敗：顯示失敗 SnackBar、畫面維持新設定、Console Log 只記例外型別',
+    /// 關閉設定面板（modal bottom sheet）。
+    Future<void> closeSheet(WidgetTester tester) async {
+      Navigator.of(tester.element(find.byType(ReaderSettingsSheet))).pop();
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('面板開著時寫入失敗：面板關閉前不提示，關閉後出現失敗 SnackBar、畫面維持新設定、Console Log 只記例外型別',
         (tester) async {
       prefsManager.saveBookPrefsError = StateError('disk full / secret/path.db');
       await pumpAndOpenLayoutSheet(tester);
@@ -13268,6 +13274,14 @@ void main() {
       final sheet = currentSheet(tester);
       sheet.onChanged(sheet.prefs.copyWith(fontSize: 1.5));
       await tester.pump();
+
+      expect(
+        find.byKey(failedSnackBarKey),
+        findsNothing,
+        reason: '面板開著時 SnackBar 會被面板蓋住，應延後到面板關閉後再提示',
+      );
+
+      await closeSheet(tester);
 
       expect(find.byKey(failedSnackBarKey), findsOneWidget);
       expect(currentReaderView(tester).fontSize, 1.5);
@@ -13282,20 +13296,39 @@ void main() {
       );
     });
 
-    testWidgets('連續兩次寫入失敗：SnackBar 只出現一次', (tester) async {
+    testWidgets('面板已關閉後才寫入失敗：直接提示，不用等', (tester) async {
+      prefsManager.saveBookPrefsError = StateError('disk full');
+      await pumpAndOpenLayoutSheet(tester);
+
+      final sheet = currentSheet(tester);
+      await closeSheet(tester);
+      expect(find.byKey(failedSnackBarKey), findsNothing);
+
+      // 面板已關閉，閱讀器是目前路由；直接呼叫面板留下的 onChanged
+      // （即 _handlePrefsChanged）模擬關閉後才回報的寫入失敗。
+      sheet.onChanged(sheet.prefs.copyWith(fontSize: 1.5));
+      await tester.pump();
+
+      expect(find.byKey(failedSnackBarKey), findsOneWidget);
+    });
+
+    testWidgets('連續兩次寫入失敗（面板開著）：關閉面板後 SnackBar 只出現一次',
+        (tester) async {
       prefsManager.saveBookPrefsError = StateError('disk full');
       await pumpAndOpenLayoutSheet(tester);
 
       final sheet1 = currentSheet(tester);
       sheet1.onChanged(sheet1.prefs.copyWith(fontSize: 1.5));
       await tester.pump();
-      expect(find.byKey(failedSnackBarKey), findsOneWidget);
 
       final sheet2 = currentSheet(tester);
       sheet2.onChanged(sheet2.prefs.copyWith(fontSize: 1.75));
       await tester.pump();
-      expect(find.byKey(failedSnackBarKey), findsOneWidget);
+      expect(find.byKey(failedSnackBarKey), findsNothing);
       expect(currentReaderView(tester).fontSize, 1.75);
+
+      await closeSheet(tester);
+      expect(find.byKey(failedSnackBarKey), findsOneWidget);
 
       ScaffoldMessenger.of(
         tester.element(find.byType(ReaderScreen)),

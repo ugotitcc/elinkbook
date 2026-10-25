@@ -368,7 +368,7 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 
 1. **只改 `_handlePrefsChanged` 的持久化那一行**，5 個呼叫端不改；畫面更新、螢幕方向、系統 UI 模式的順序與行為不變。
 2. **新增私有方法 `_persistBookPrefs(prefs)`**：`try/catch` 包住 `saveBookPrefs`，由 `unawaited` 呼叫，仍不等待寫入結果。
-3. **失敗時**：一律寫一行 `ReaderConsoleLog`（`[ReaderScreen] 閱讀設定儲存失敗：<例外型別>`，不放例外全文）；**每次開書最多提示一次**（旗標 `_prefsSaveFailureNotified`），第一次失敗才跳 `SnackBar`，之後再失敗只寫 Console Log；顯示前先確認 `mounted`。
+3. **失敗時**：一律寫一行 `ReaderConsoleLog`（`[ReaderScreen] 閱讀設定儲存失敗：<例外型別>`，不放例外全文）；**每次開書最多提示一次**（旗標 `_prefsSaveFailureNotified`），第一次失敗才跳 `SnackBar`，之後再失敗只寫 Console Log；顯示前先確認 `mounted`。**修訂（程式審查 Important 1，2026-10-25）**：設定面板（modal bottom sheet）開著時，SnackBar 畫在閱讀器 Scaffold 底部會被面板蓋住，且約 4 秒後消失、旗標又已用掉，使用者永遠看不到；面板高度隨內容變動，「浮動加抬高 margin」要猜高度、不穩。改為：閱讀器被別的路由蓋住（`ModalRoute.of(context)?.isCurrent == false`）時只記 Console Log 並標記「待提示」，不消耗旗標；面板關閉後由共用的 `_showThemedModalBottomSheet`（涵蓋全部 7 個面板）補提示一次；閱讀器沒被蓋住時直接提示。已知限制：被蓋住的若是全螢幕頁面（例如搜尋頁）而非面板，待提示要等到下一次面板關閉才出現。另外 `_persistBookPrefs` 的 `catch (e)` 刻意連 `Error` 一起接住，已在註解說明。
 4. **不回復畫面**：失敗時畫面維持新設定，本次閱讀照常生效，提示說明「下次開書可能還原」。
 5. **不合併連續寫入**：維持每次都寫（單筆 SQLite 寫入便宜，沒有效能回報；延遲合併會多出離開或閃退時尚未寫出的資料遺失風險）。
 6. **提示文字**：新 key `readerPrefsSaveFailedMessage`，`SnackBar` 加 `Key('reader_prefs_save_failed_snackbar')`；zh：「閱讀設定未能儲存：裝置儲存空間寫入失敗。本次閱讀仍使用新設定，下次開書可能還原。請確認剩餘空間。」；en 同義翻譯；`app_zh_CN.arb` 用簡體；`app_zh_TW.arb` 同 zh；重新產生 `app_localizations*.dart`（`flutter gen-l10n`）。
@@ -875,3 +875,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-25 Issue 31 WAVE 真機抽驗通過**：WAVE（`TCE70P24B2202374`）安裝 debug APK；EPUB 與 PDF 各開一本，調整字級、Fit 模式與雙頁模式等設定，畫面即時反應且未出現儲存失敗提示，離開後重新開書設定皆保留。
 
 **2026-10-25 Issue 31 PR 已開**：分支 `epic-54/issue-31-prefs-write-failure` 推上 `origin`，開 PR [#371](https://git.jigong.org/huthief/elinkBook/pulls/371)（`main` ← `epic-54/issue-31-prefs-write-failure`），待合併。
+
+**2026-10-25 Issue 31 程式審查修訂（PR #371）**：獨立審查（`reviews/review-code-issue-31-r2.md`，不進版控）0 Critical／1 Important／3 Minor，結論 With fixes。Important 1（面板開著時 SnackBar 被蓋住）已修：見決策 3 修訂；`reader_screen.dart` 新增 `_prefsSaveFailureNoticePending`、`_isCoveredByModalRoute()`、`_showPrefsSaveFailureNotice()`、`_flushPendingPrefsSaveFailureNotice()`，`_showThemedModalBottomSheet` 改為 `async` 並在面板關閉後補提示。測試：先改測試確認紅燈（面板開著案例失敗）再改實作；`reader_screen_test.dart` 該 group 由 4 個變 5 個（面板開著失敗→關閉前不提示、關閉後出現；面板已關閉後才失敗→直接提示；面板開著連續兩次失敗→關閉後只出現一次；成功不提示；dispose 後失敗不拋例外），整份 304 個全過；`flutter analyze` 乾淨。Minor 1（`catch (e)` 吞 `Error`）：以註解說明，不改行為；Minor 2（文案斷定原因為儲存空間）：沿用決策 6 指定文字，不改；Minor 3（測試依賴單次 `pump`）：新版改為關閉面板後驗證，不再依賴。待 WAVE 重新抽驗與更新 PR。
