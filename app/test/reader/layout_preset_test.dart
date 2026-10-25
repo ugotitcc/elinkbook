@@ -22,6 +22,18 @@ void main() {
     expect(preset.prefs, prefs);
   });
 
+  test('LayoutPreset 的 prefs 保留 firstLineIndent（epic-65 Issue 1）', () {
+    final preset = LayoutPreset(
+      id: null,
+      name: '首行縮排',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      prefs: const BookReaderPrefs(firstLineIndent: 2),
+    );
+
+    expect(preset.prefs.firstLineIndent, 2.0);
+  });
+
   test('LayoutPreset 的 id 可為 null（尚未存入資料庫的暫存物件）', () {
     final preset = LayoutPreset(
       id: null,

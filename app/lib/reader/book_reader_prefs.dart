@@ -40,6 +40,14 @@ class BookReaderPrefs {
   final double? fontWeight; // Readium 倍率語意（1.0 = normal），非 CSS 300-900 原始值
   final double? lineHeight;
   final double? paragraphSpacing;
+
+  /// 首行縮排（epic-65-reader-indent-and-colors Issue 1），單位 em。
+  /// `null` = 關閉（維持書本原本的縮排，不產生任何 CSS）；`>= 0` 的值 =
+  /// 強制 `text-indent: Nem !important`（`0` 會把書本原有縮排清掉，是合法
+  /// 值）。範圍 0～4，每次 0.5。只套用 Foliate 流式格式（EPUB／TXT／MD／
+  /// KF8），PDF／FXL／CBZ 不套用。
+  final double? firstLineIndent;
+
   final double? letterSpacing; // em 單位，-0.05~1，null=不覆蓋書本原生字距
   final double? pageMargins; // 單一數值，四邊同步變動，見 ADR 0005（僅供 EpubReaderView／FXL 使用）
 
@@ -98,6 +106,7 @@ class BookReaderPrefs {
     this.fontWeight,
     this.lineHeight,
     this.paragraphSpacing,
+    this.firstLineIndent,
     this.letterSpacing,
     this.pageMargins,
     this.marginTop,
@@ -139,6 +148,7 @@ class BookReaderPrefs {
       'font_weight': fontWeight,
       'line_height': lineHeight,
       'paragraph_spacing': paragraphSpacing,
+      'first_line_indent': firstLineIndent,
       'letter_spacing': letterSpacing,
       'page_margins': pageMargins,
       'margin_top': marginTop,
@@ -182,6 +192,7 @@ class BookReaderPrefs {
       fontWeight: (map['font_weight'] as num?)?.toDouble(),
       lineHeight: (map['line_height'] as num?)?.toDouble(),
       paragraphSpacing: (map['paragraph_spacing'] as num?)?.toDouble(),
+      firstLineIndent: (map['first_line_indent'] as num?)?.toDouble(),
       letterSpacing: (map['letter_spacing'] as num?)?.toDouble(),
       pageMargins: (map['page_margins'] as num?)?.toDouble(),
       marginTop: (map['margin_top'] as num?)?.toDouble(),
@@ -244,6 +255,7 @@ class BookReaderPrefs {
       other.fontWeight == fontWeight &&
       other.lineHeight == lineHeight &&
       other.paragraphSpacing == paragraphSpacing &&
+      other.firstLineIndent == firstLineIndent &&
       other.letterSpacing == letterSpacing &&
       other.pageMargins == pageMargins &&
       other.marginTop == marginTop &&
@@ -281,6 +293,7 @@ class BookReaderPrefs {
         fontWeight,
         lineHeight,
         paragraphSpacing,
+        firstLineIndent,
         letterSpacing,
         pageMargins,
         marginTop,
@@ -321,6 +334,7 @@ class BookReaderPrefs {
     double? fontWeight,
     double? lineHeight,
     double? paragraphSpacing,
+    double? firstLineIndent,
     double? letterSpacing,
     double? pageMargins,
     double? marginTop,
@@ -356,6 +370,7 @@ class BookReaderPrefs {
       fontWeight: fontWeight ?? this.fontWeight,
       lineHeight: lineHeight ?? this.lineHeight,
       paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
+      firstLineIndent: firstLineIndent ?? this.firstLineIndent,
       letterSpacing: letterSpacing ?? this.letterSpacing,
       pageMargins: pageMargins ?? this.pageMargins,
       marginTop: marginTop ?? this.marginTop,
@@ -389,7 +404,7 @@ class BookReaderPrefs {
     );
   }
 
-  /// 只保留 [ReaderSettingsSheet]（流式 EPUB 版面設定）實際呈現的 21 個
+  /// 只保留 [ReaderSettingsSheet]（流式 EPUB 版面設定）實際呈現的 22 個
   /// 欄位，其餘 12 個欄位（`pageMargins`、8 個 `pdf*`、3 個 `dualPage*`）
   /// 一律強制設為 `null`，**不論來源物件實際內容為何**——epic-28-reader-
   /// settings-enhancements Issue 3「欄位污染防護」，見 spec.md「資料
@@ -406,6 +421,7 @@ class BookReaderPrefs {
       fontWeight: fontWeight,
       lineHeight: lineHeight,
       paragraphSpacing: paragraphSpacing,
+      firstLineIndent: firstLineIndent,
       letterSpacing: letterSpacing,
       marginTop: marginTop,
       marginBottom: marginBottom,

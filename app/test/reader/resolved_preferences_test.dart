@@ -53,6 +53,45 @@ void main() {
     expect(resolved.pdfPageTurnMode, PdfPageTurnMode.paginated);
   });
 
+  test('firstLineIndent 未傳入時為 null，傳入值原樣保留（epic-65 Issue 1）', () {
+    const absent = ResolvedPreferences(
+      pageTurnMode: PageTurnMode.paginated,
+      screenOrientation: ScreenOrientationSetting.auto,
+      pdfFitMode: PdfFitMode.pageFit,
+      pdfContrast: 0,
+      pdfBrightness: 0,
+      pdfBoldStrength: 0,
+      pdfCropMode: PdfCropMode.none,
+      dualPageMode: DualPageMode.auto,
+      dualPageCoverAlone: true,
+      dualPageDirection: DualPageDirection.ltr,
+      showHeader: true,
+      showFooter: true,
+      navZoneActions: rightFlipZoneTemplate,
+      showNavZoneDebugOverlay: false,
+    );
+    expect(absent.firstLineIndent, isNull);
+
+    const present = ResolvedPreferences(
+      firstLineIndent: 0,
+      pageTurnMode: PageTurnMode.paginated,
+      screenOrientation: ScreenOrientationSetting.auto,
+      pdfFitMode: PdfFitMode.pageFit,
+      pdfContrast: 0,
+      pdfBrightness: 0,
+      pdfBoldStrength: 0,
+      pdfCropMode: PdfCropMode.none,
+      dualPageMode: DualPageMode.auto,
+      dualPageCoverAlone: true,
+      dualPageDirection: DualPageDirection.ltr,
+      showHeader: true,
+      showFooter: true,
+      navZoneActions: rightFlipZoneTemplate,
+      showNavZoneDebugOverlay: false,
+    );
+    expect(present.firstLineIndent, 0.0);
+  });
+
   test('volumeKeyEnabled 未傳入時預設 true', () {
     const resolved = ResolvedPreferences(
       pageTurnMode: PageTurnMode.paginated,

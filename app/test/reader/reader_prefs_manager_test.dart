@@ -66,6 +66,27 @@ void main() {
       expect(resolved.fullscreen, isFalse);
       expect(resolved.volumeKeyEnabled, isTrue);
       expect(resolved.consoleLogEnabled, isFalse);
+      expect(resolved.firstLineIndent, isNull);
+    });
+
+    test('首行縮排：單書覆寫值帶進 ResolvedPreferences，未覆寫時維持 null', () {
+      final absent = manager.resolve(LoadedPrefs(
+        bookPrefs: BookReaderPrefs.empty,
+        globalPrefs: const GlobalReaderPrefs.initial(),
+      ));
+      expect(absent.firstLineIndent, isNull);
+
+      final overridden = manager.resolve(LoadedPrefs(
+        bookPrefs: const BookReaderPrefs(firstLineIndent: 2),
+        globalPrefs: const GlobalReaderPrefs.initial(),
+      ));
+      expect(overridden.firstLineIndent, 2.0);
+
+      final zero = manager.resolve(LoadedPrefs(
+        bookPrefs: const BookReaderPrefs(firstLineIndent: 0),
+        globalPrefs: const GlobalReaderPrefs.initial(),
+      ));
+      expect(zero.firstLineIndent, 0.0);
     });
 
     test('翻頁模式：未覆寫時為逐頁；單書覆寫為連續捲動時採用單書值', () {

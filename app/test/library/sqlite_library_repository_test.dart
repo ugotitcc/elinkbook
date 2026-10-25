@@ -2554,6 +2554,19 @@ void main() {
         .single;
     expect(row['pdf_page_turn_mode'], 'scroll');
   });
+  test('全新安裝的 book_reader_prefs 表包含 first_line_indent 欄位（version 29 起 onCreate 已含括）',
+      () async {
+    await repository.insertBook(_book('b_first_line_indent'));
+    await repository.database.insert('book_reader_prefs', {
+      'book_id': 'b_first_line_indent',
+      'first_line_indent': 2.0,
+    });
+    final row = (await repository.database.query('book_reader_prefs',
+            where: 'book_id = ?', whereArgs: ['b_first_line_indent']))
+        .single;
+    expect(row['first_line_indent'], 2.0);
+  });
+
   test('既有 version 27 裝置升級到 version 28，book_reader_prefs 新增 pdf_page_turn_mode 欄位，既有 PDF 偏好完整保留',
       () async {
     final tempDir = await Directory.systemTemp
@@ -2675,11 +2688,90 @@ void main() {
     expect(updated['pdf_page_turn_mode'], 'scroll');
   });
   test(
-      '既有 version 1 裝置（無 book_reader_prefs 表）跳級升級到 version 28，'
-      'book_reader_prefs 表正確建立含 pdf_page_turn_mode，且不拋出 duplicate column name 例外',
+      '既有 version 28 裝置升級到 version 29，book_reader_prefs 新增 first_line_indent 欄位，既有列保留且新欄位為 null',
       () async {
     final tempDir = await Directory.systemTemp
-        .createTemp('elinkbook_migration_v1_to_v28_test');
+        .createTemp('elinkbook_migration_v28_to_v29_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 28,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_size REAL,
+              paragraph_spacing REAL,
+              pdf_page_turn_mode TEXT
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.insert('book_reader_prefs', {
+      'book_id': 'b1',
+      'font_size': 18.0,
+      'paragraph_spacing': 12.0,
+      'pdf_page_turn_mode': 'scroll',
+    });
+    await oldDb.close();
+
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    expect(await upgraded.database.getVersion(), 29);
+    final row = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(row['font_size'], 18.0);
+    expect(row['paragraph_spacing'], 12.0);
+    expect(row['pdf_page_turn_mode'], 'scroll');
+    expect(row['first_line_indent'], isNull);
+
+    await upgraded.database.update(
+      'book_reader_prefs',
+      {'first_line_indent': 1.5},
+      where: 'book_id = ?',
+      whereArgs: ['b1'],
+    );
+    final updated = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(updated['first_line_indent'], 1.5);
+  });
+  test(
+      '既有 version 1 裝置（無 book_reader_prefs 表）跳級升級到 version 29，'
+      'book_reader_prefs 表正確建立含 pdf_page_turn_mode 與 first_line_indent，且不拋出 duplicate column name 例外',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v1_to_v29_test');
     addTearDown(() => tempDir.delete(recursive: true));
     final dbPath = p.join(tempDir.path, 'test.db');
     final oldDb = await databaseFactory.openDatabase(
@@ -2719,11 +2811,13 @@ void main() {
     await upgraded.database.insert('book_reader_prefs', {
       'book_id': 'b1',
       'pdf_page_turn_mode': 'paginated',
+      'first_line_indent': 2.0,
     });
     final row = (await upgraded.database.query('book_reader_prefs',
             where: 'book_id = ?', whereArgs: ['b1']))
         .single;
     expect(row['pdf_page_turn_mode'], 'paginated');
+    expect(row['first_line_indent'], 2.0);
   });
   test('全新安裝的 custom_fonts 表可用（version 16 起 onCreate 已含括）', () async {
     await repository.database.insert('custom_fonts', {
@@ -4757,10 +4851,10 @@ void main() {
               'isFullTextSearchAvailable 仍須為 true');
     });
 
-    test('全新安裝（onCreate 直接建到 version 28）：isFullTextSearchAvailable 為 true，'
+    test('全新安裝（onCreate 直接建到 version 29）：isFullTextSearchAvailable 為 true，'
         '行為與現行版本一致（零回歸）', () async {
       expect(repository.isFullTextSearchAvailable, isTrue);
-      expect(await repository.database.getVersion(), 28);
+      expect(await repository.database.getVersion(), 29);
     });
   });
 }

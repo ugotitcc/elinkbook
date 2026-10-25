@@ -68,18 +68,18 @@
 
 **Files：** `book_reader_prefs.dart`、`sqlite_library_repository.dart`、`resolved_preferences.dart`、`reader_prefs_manager_impl.dart`、`test/support/full_book_reader_prefs.dart`，以及 `test/reader/book_reader_prefs_test.dart`、`test/library/sqlite_library_repository_test.dart`、`test/reader/resolved_preferences_test.dart`、`test/reader/reader_prefs_manager_test.dart`、`test/reader/layout_preset_repository_test.dart`、`test/reader/layout_preset_test.dart`、`test/stats/daily_reading_stats_schema_test.dart`、`test/dictionary/dictionary_database_test.dart`（後兩個只改版本號斷言，審查 I-1、M-1）。
 
-- [ ] **Step 1（紅）：** 先寫測試、確認失敗（編譯失敗即紅燈）：
+- [x] **Step 1（紅）：** 先寫測試、確認失敗（編譯失敗即紅燈）：
   - `book_reader_prefs_test`：`firstLineIndent` 往返（有值、`0`、`null`）；`fromMap` 缺 `first_line_indent` 鍵讀成 `null`；`==`／`hashCode` 納入新欄位；`copyWith(firstLineIndent: 1.5)`；`reflowableEpubFields()` 保留新欄位。
   - `sqlite_library_repository_test`：全新安裝建表含 `first_line_indent`；從 v28 升級後既有列保留、新欄位為 `null`；從更舊版本（例如 v2 或 v27）升級不重複加欄位；寫入與讀回單書偏好含縮排。
   - `resolved_preferences_test`／`reader_prefs_manager_test`：`resolve` 把 `book.firstLineIndent` 帶到 `ResolvedPreferences.firstLineIndent`；`null` 維持 `null`。
   - 版面預設集：在 `layout_preset_repository_test.dart`（`prefs_json` 往返）與 `layout_preset_test.dart` 補：儲存含縮排的預設集再讀回，欄位保留；舊 JSON（無該鍵）讀成 `null`。
   - **同步更新既有斷言**（升到 v29 與新增欄位會直接打破它們，審查 I-1）：`sqlite_library_repository_test.dart:4763`、`daily_reading_stats_schema_test.dart:36` 與 `:109`、`dictionary_database_test.dart:105` 的 `getVersion()` 由 `28` 改 `29`（`dictionary_database_test` 的測試名稱「主資料庫版本仍為 28」一併改）；`book_reader_prefs_test.dart:722` 的 `map.length` 由 `34` 改 `35`（reason 的「33 個欄位」改 34）；`book_reader_prefs_test.dart:625` 的 `reflowableEpubFields()` 測試，保留欄位由 21 個改 22 個（測試名稱與斷言一併更新）。這些屬於預期中的既有斷言更新，不算「既有案例不改」的例外。
-- [ ] **Step 2（綠）：** 實作：
+- [x] **Step 2（綠）：** 實作：
   - `BookReaderPrefs`：欄位 `final double? firstLineIndent;`（doc 註解寫明語意與範圍）、建構子、`toMap` 鍵 `first_line_indent`、`fromMap`、`==`、`hashCode`、`copyWith`、`reflowableEpubFields()`。
   - `sqlite_library_repository.dart`：版本 28→29；新增 `_addFirstLineIndentColumn(db)`（比照 `_addPdfPageTurnModeColumn`）；`onUpgrade` 的 else 分支加 `if (oldVersion < 29)`；`_createBookReaderPrefsTable` 加 `first_line_indent REAL`。
   - `ResolvedPreferences` 新欄位與建構子；`ReaderPrefsManagerImpl.resolve` 帶入。
   - `test/support/full_book_reader_prefs.dart` 補新欄位（非 null 範本）。
-- [ ] **Step 3：** `flutter analyze`；跑 Step 1 Files 列出的全部測試檔（含兩個只改版本號的 `daily_reading_stats_schema_test.dart`、`dictionary_database_test.dart`）；commit（明確列檔）。
+- [x] **Step 3：** `flutter analyze`；跑 Step 1 Files 列出的全部測試檔（含兩個只改版本號的 `daily_reading_stats_schema_test.dart`、`dictionary_database_test.dart`）；commit（明確列檔）。
 
 ### Task 2：Foliate 管線（view、reader_screen、main.js）
 

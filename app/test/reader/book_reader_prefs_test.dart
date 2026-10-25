@@ -46,6 +46,7 @@ void main() {
     expect(prefs.letterSpacing, isNull);
     expect(prefs.pdfPageTurnAnimation, isNull);
     expect(prefs.textConversionOverride, isNull);
+    expect(prefs.firstLineIndent, isNull);
   });
 
   test('兩個欄位值完全相同的 BookReaderPrefs 視為相等', () {
@@ -576,6 +577,67 @@ void main() {
     expect(updated.textConversionOverride, TextConversionMode.toTraditional);
   });
 
+  group('firstLineIndent（epic-65 Issue 1：首行縮排）', () {
+    test('toMap／fromMap 往返保留 2.0', () {
+      const prefs = BookReaderPrefs(firstLineIndent: 2.0);
+      final map = prefs.toMap('book-1');
+      expect(map['first_line_indent'], 2.0);
+      expect(BookReaderPrefs.fromMap(map).firstLineIndent, 2.0);
+    });
+
+    test('0 是合法值（清掉書本縮排），往返後仍為 0 而非 null', () {
+      const prefs = BookReaderPrefs(firstLineIndent: 0);
+      final map = prefs.toMap('book-1');
+      expect(map['first_line_indent'], 0.0);
+      final restored = BookReaderPrefs.fromMap(map);
+      expect(restored.firstLineIndent, 0.0);
+      expect(restored.firstLineIndent, isNotNull);
+    });
+
+    test('null（關閉）往返後仍為 null', () {
+      final map = BookReaderPrefs.empty.toMap('book-1');
+      expect(map['first_line_indent'], isNull);
+      expect(BookReaderPrefs.fromMap(map).firstLineIndent, isNull);
+    });
+
+    test('fromMap 缺少 first_line_indent 鍵（舊資料列／舊預設集 JSON）讀成 null', () {
+      final map = BookReaderPrefs.empty.toMap('book-1')
+        ..remove('first_line_indent');
+      expect(BookReaderPrefs.fromMap(map).firstLineIndent, isNull);
+    });
+
+    test('SQLite 對無小數的 REAL 讀回 int 時也能轉成 double', () {
+      final map = BookReaderPrefs.empty.toMap('book-1')
+        ..['first_line_indent'] = 2;
+      expect(BookReaderPrefs.fromMap(map).firstLineIndent, 2.0);
+    });
+
+    test('== 與 hashCode 納入 firstLineIndent', () {
+      const a = BookReaderPrefs(fontSize: 18, firstLineIndent: 2);
+      const b = BookReaderPrefs(fontSize: 18, firstLineIndent: 2);
+      const different = BookReaderPrefs(fontSize: 18, firstLineIndent: 0);
+      const absent = BookReaderPrefs(fontSize: 18);
+
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+      expect(a, isNot(different));
+      expect(a, isNot(absent));
+    });
+
+    test('copyWith 更新 firstLineIndent 時，其餘欄位保留原值', () {
+      const original = BookReaderPrefs(fontSize: 18, firstLineIndent: 2);
+      final updated = original.copyWith(firstLineIndent: 1.5);
+
+      expect(updated.firstLineIndent, 1.5);
+      expect(updated.fontSize, 18);
+    });
+
+    test('reflowableEpubFields() 保留 firstLineIndent（含 0）', () {
+      const prefs = BookReaderPrefs(firstLineIndent: 0);
+      expect(prefs.reflowableEpubFields().firstLineIndent, 0.0);
+    });
+  });
+
   group('enumByNameOrNull', () {
     test('找不到對應名稱時回傳 null，不拋出例外', () {
       expect(enumByNameOrNull(EpubTextAlign.values, 'not_a_real_value'), isNull);
@@ -622,7 +684,7 @@ void main() {
     expect(restored.textConversionOverride, isNull);
   });
 
-  test('reflowableEpubFields() 過濾掉 PDF／雙頁／pageMargins 共 12 個欄位，其餘 21 個流式 EPUB 欄位保留（epic-28 Issue 3 欄位污染防護）',
+  test('reflowableEpubFields() 過濾掉 PDF／雙頁／pageMargins 共 12 個欄位，其餘 22 個流式 EPUB 欄位保留（epic-28 Issue 3 欄位污染防護）',
       () {
     const prefs = BookReaderPrefs(
       fontFamily: 'SourceHanSansTC',
@@ -630,6 +692,7 @@ void main() {
       fontWeight: 1.5,
       lineHeight: 1.6,
       paragraphSpacing: 12,
+      firstLineIndent: 2,
       letterSpacing: 0.1,
       marginTop: 40,
       marginBottom: 20,
@@ -662,12 +725,13 @@ void main() {
 
     final filtered = prefs.reflowableEpubFields();
 
-    // 20 個保留欄位。
+    // 21 個保留欄位。
     expect(filtered.fontFamily, 'SourceHanSansTC');
     expect(filtered.fontSize, 18);
     expect(filtered.fontWeight, 1.5);
     expect(filtered.lineHeight, 1.6);
     expect(filtered.paragraphSpacing, 12);
+    expect(filtered.firstLineIndent, 2.0);
     expect(filtered.letterSpacing, 0.1);
     expect(filtered.marginTop, 40);
     expect(filtered.marginBottom, 20);
@@ -707,7 +771,7 @@ void main() {
   });
 
   group('fullBookReaderPrefsSeed 種子自檢（Issue 10：新增欄位漏填種子時要在這裡紅）', () {
-    test('toMap 的 33 個欄位值全部非 null', () {
+    test('toMap 的 34 個欄位值全部非 null', () {
       final map = fullBookReaderPrefsSeed.toMap('seed');
       final nullKeys = [
         for (final e in map.entries)
@@ -719,7 +783,7 @@ void main() {
         reason: '種子必須填滿每個欄位，否則該欄位的「漏帶」守衛形同虛設；'
             '新增欄位時請同步補進 fullBookReaderPrefsSeed。未填：$nullKeys',
       );
-      expect(map.length, 34, reason: '33 個欄位 ＋ book_id');
+      expect(map.length, 35, reason: '34 個欄位 ＋ book_id');
     });
 
     test('toMap／fromMap round-trip 後與種子相等', () {
@@ -728,7 +792,7 @@ void main() {
       expect(restored, fullBookReaderPrefsSeed);
     });
 
-    test('copyWith() 不傳參數時與種子相等（33 個欄位皆被帶回）', () {
+    test('copyWith() 不傳參數時與種子相等（34 個欄位皆被帶回）', () {
       expect(fullBookReaderPrefsSeed.copyWith(), fullBookReaderPrefsSeed);
     });
   });

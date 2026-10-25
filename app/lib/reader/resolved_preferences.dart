@@ -32,6 +32,11 @@ class ResolvedPreferences {
   final double? fontWeight;
   final double? lineHeight;
   final double? paragraphSpacing;
+
+  /// 首行縮排（epic-65 Issue 1），單位 em。`null` = 關閉（不產生任何 CSS），
+  /// `>= 0` = 強制 `text-indent: Nem !important`（`0` 會清掉書本縮排）。
+  final double? firstLineIndent;
+
   final double? letterSpacing;
   final double? pageMargins;
   final double? marginTop;
@@ -101,6 +106,7 @@ class ResolvedPreferences {
     this.fontWeight,
     this.lineHeight,
     this.paragraphSpacing,
+    this.firstLineIndent,
     this.letterSpacing,
     this.pageMargins,
     this.marginTop,

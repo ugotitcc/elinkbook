@@ -142,6 +142,36 @@ void main() {
     expect(restored, prefs);
   });
 
+  test('prefs_json 往返保留 firstLineIndent（epic-65 Issue 1）', () async {
+    const prefs = BookReaderPrefs(firstLineIndent: 1.5);
+    await repository.insert(LayoutPreset(
+      id: null,
+      name: '首行縮排預設集',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      prefs: prefs,
+    ));
+
+    final restored = (await repository.listAll()).single.prefs;
+    expect(restored.firstLineIndent, 1.5);
+    expect(restored, prefs);
+  });
+
+  test('舊預設集 JSON 沒有 first_line_indent 鍵時讀成 null，不拋出例外', () async {
+    // 模擬 epic-65 之前寫入的 prefs_json：只有舊欄位，沒有 first_line_indent。
+    await libraryRepository.database.insert('layout_preset', {
+      'name': '舊預設集',
+      'created_at': 1000,
+      'updated_at': 1000,
+      'prefs_json': '{"font_size":18.0,"writing_mode_override":"vertical"}',
+    });
+
+    final restored = (await repository.listAll()).single.prefs;
+    expect(restored.firstLineIndent, isNull);
+    expect(restored.fontSize, 18.0);
+    expect(restored.writingModeOverride, WritingMode.vertical);
+  });
+
   test('即使 prefs 含未過濾的 PDF/雙頁欄位，JSON 往返仍不遺失資料（過濾責任在寫入端 reflowableEpubFields()，repository 本身不做過濾）',
       () async {
     const prefs = BookReaderPrefs(
