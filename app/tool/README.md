@@ -324,6 +324,10 @@ node app/tool/test_tts_safe_window.mjs
 - 結束碼 `0`：13 項情境全數通過。
 - 非 `0`：斷言失敗或拋出例外，會印出對應的錯誤訊息與堆疊。
 
+## `test_column_pitch.mjs`
+
+驗證 `column-pitch.js` 的欄間隔量測與補償純函式（`epic-54` Issue 34：舊 WebView 直排欄間隔與頁高不一致補償）。零 DOM 依賴，用 Node.js 內建 `node:assert/strict` 直接執行：`node app/tool/test_column_pitch.mjs`（結束碼 `0` 全數通過）。
+
 ## `make_test_mdx.py`
 
 產生自製的 MDX／MDD 測試檔（MDict 格式 v2.0），供 epic-63 的字典單元測試使用
