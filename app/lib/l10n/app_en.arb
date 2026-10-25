@@ -264,6 +264,8 @@
   "readerSettingsFontSizeLabel": "Font size",
   "readerSettingsFontWeightLabel": "Font weight",
   "readerSettingsLineHeightLabel": "Line height",
+  "readerSettingsFirstLineIndentLabel": "First-line indent",
+  "readerSettingsFirstLineIndentValue": "{count} em",
   "readerSettingsParagraphSpacingLabel": "Paragraph spacing",
   "readerSettingsLetterSpacingLabel": "Letter spacing",
   "readerSettingsDisableBookCssLabel": "Disable book CSS",

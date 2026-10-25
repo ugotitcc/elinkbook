@@ -80,6 +80,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   static const _defaultFontWeightMultiplier = 1.0; // 倍率，UI 顯示 400（1.0 × 400）
   static const _defaultLineHeight = 1.0;
   static const _defaultParagraphSpacing = 10.0;
+  static const _defaultFirstLineIndent = 2.0;
   static const _defaultLetterSpacing = 0.0;
   static const _defaultMarginTop = 32.0;
   static const _defaultMarginBottom = 16.0;
@@ -95,6 +96,12 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late bool _lineHeightOverridden;
   late double _paragraphSpacing;
   late bool _paragraphSpacingOverridden;
+
+  /// 首行縮排（epic-65 Issue 1）：開關狀態與上次的數值分開存。開關關閉時
+  /// `_currentDraft` 送出 `null`（不產生任何 CSS），但保留數值，讓使用者
+  /// 重新打開時回到原本的字數。
+  late double _firstLineIndent;
+  late bool _firstLineIndentOn;
   late double _letterSpacing;
   late bool _letterSpacingOverridden;
   late double _marginTop;
@@ -130,6 +137,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
         : _defaultParagraphSpacing;
     _paragraphSpacingOverridden = widget.prefs.paragraphSpacing != null;
+    _firstLineIndent =
+        widget.prefs.firstLineIndent ?? _defaultFirstLineIndent;
+    _firstLineIndentOn = widget.prefs.firstLineIndent != null;
     _letterSpacing = widget.prefs.letterSpacing ?? _defaultLetterSpacing;
     _letterSpacingOverridden = widget.prefs.letterSpacing != null;
     _marginTop = widget.prefs.marginTop ?? _defaultMarginTop;
@@ -168,6 +178,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
             : _defaultParagraphSpacing;
         _paragraphSpacingOverridden = widget.prefs.paragraphSpacing != null;
+        _firstLineIndent =
+            widget.prefs.firstLineIndent ?? _defaultFirstLineIndent;
+        _firstLineIndentOn = widget.prefs.firstLineIndent != null;
         _letterSpacing = widget.prefs.letterSpacing ?? _defaultLetterSpacing;
         _letterSpacingOverridden = widget.prefs.letterSpacing != null;
         _marginTop = widget.prefs.marginTop ?? _defaultMarginTop;
@@ -193,6 +206,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return ((value / base) * 10000).round() / 10000;
   }
 
+  /// 首行縮排數值顯示（0.5 步進）：整數不帶小數（`2` 而非 `2.0`），
+  /// 半字保留一位（`0.5`）。l10n 的 `count` 佔位符是字串型別，小數值
+  /// 若用 int 會在編譯期失敗、用 double 會顯示成 `2.0`。
+  String _formatFirstLineIndent(double value) {
+    return value == value.roundToDouble()
+        ? value.round().toString()
+        : value.toStringAsFixed(1);
+  }
+
   /// **epic-28-reader-settings-enhancements Issue 4 審查回應**：這裡回傳的
   /// `null`（未覆寫）不只影響本書畫面即時渲染，也會被 [_buildLayoutPresetSection]
   /// 的「另存為新預設集」／「複製到其他書籍」原封不動存進 [LayoutPreset]／
@@ -213,6 +235,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     paragraphSpacing: _paragraphSpacingOverridden
         ? _toMultiplier(_paragraphSpacing, 10.0)
         : null,
+    firstLineIndent: _firstLineIndentOn ? _firstLineIndent : null,
     letterSpacing: _letterSpacingOverridden ? _letterSpacing : null,
     marginTop: _marginTop,
     marginBottom: _marginBottom,
@@ -581,6 +604,38 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         const SizedBox(height: 8),
         _buildTextAlignRow(),
         const SizedBox(height: 8),
+        EBFieldCard(
+          padding: EdgeInsets.zero,
+          child: SwitchListTile(
+            key: const Key('reader_settings_first_line_indent_switch'),
+            title: Text(l10n.readerSettingsFirstLineIndentLabel,
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            value: _firstLineIndentOn,
+            onChanged: (v) => setState(() {
+              _firstLineIndentOn = v;
+              _notifyChanged();
+            }),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildSliderRow(
+          keyPrefix: 'reader_settings_first_line_indent',
+          label: l10n.readerSettingsFirstLineIndentLabel,
+          value: _firstLineIndent,
+          min: 0,
+          max: 4,
+          step: 0.5,
+          displayValue: l10n.readerSettingsFirstLineIndentValue(
+            _formatFirstLineIndent(_firstLineIndent),
+          ),
+          enabled: _firstLineIndentOn,
+          onChanged: (v) => setState(() {
+            _firstLineIndent = v;
+            _firstLineIndentOn = true;
+            _notifyChanged();
+          }),
+        ),
+        const SizedBox(height: 8),
         _buildWritingModeOverrideRow(),
         const SizedBox(height: 8),
         _buildScreenOrientationOverrideRow(),
@@ -788,10 +843,14 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     required ValueChanged<double> onChanged,
     bool? isOverridden,
     VoidCallback? onReset,
+    bool enabled = true,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final divisions = ((max - min) / step).round();
     final clampedValue = value.clamp(min, max);
+    // 停用態（epic-65 Issue 1 首行縮排的開關關閉時）：一般模式的 Slider 與
+    // 兩側 IconButton 一律傳 null，E-Ink 模式以 IgnorePointer 擋掉 EBStepper
+    // 的點擊；兩種模式都降透明度，讓「現在不能調」在 E-Ink 上也看得出來。
     return EBFieldCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -832,48 +891,59 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             ],
           ),
           widget.isEinkMode
-              ? EBStepper(
-                  keyPrefix: keyPrefix,
-                  value: clampedValue,
-                  min: min,
-                  max: max,
-                  step: step,
-                  displayValue: displayValue,
-                  onChanged: onChanged,
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              ? IgnorePointer(
+                  ignoring: !enabled,
+                  child: Opacity(
+                    opacity: enabled ? 1.0 : 0.45,
+                    child: EBStepper(
+                      keyPrefix: keyPrefix,
+                      value: clampedValue,
+                      min: min,
+                      max: max,
+                      step: step,
+                      displayValue: displayValue,
+                      onChanged: onChanged,
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    ),
+                  ),
                 )
-              : Row(
-                  children: [
-                    IconButton(
-                      key: Key('${keyPrefix}_decrement'),
-                      icon: const Icon(Icons.remove),
-                      onPressed: clampedValue - step < min - 1e-9
-                          ? null
-                          : () => onChanged(
-                              (clampedValue - step).clamp(min, max),
-                            ),
-                    ),
-                    Expanded(
-                      child: Slider(
-                        key: Key('${keyPrefix}_slider'),
-                        value: clampedValue,
-                        min: min,
-                        max: max,
-                        divisions: divisions,
-                        onChanged: (v) => onChanged(v.clamp(min, max)),
+              : Opacity(
+                  opacity: enabled ? 1.0 : 0.45,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        key: Key('${keyPrefix}_decrement'),
+                        icon: const Icon(Icons.remove),
+                        onPressed: !enabled || clampedValue - step < min - 1e-9
+                            ? null
+                            : () => onChanged(
+                                (clampedValue - step).clamp(min, max),
+                              ),
                       ),
-                    ),
-                    IconButton(
-                      key: Key('${keyPrefix}_increment'),
-                      icon: const Icon(Icons.add),
-                      onPressed: clampedValue + step > max + 1e-9
-                          ? null
-                          : () => onChanged(
-                              (clampedValue + step).clamp(min, max),
-                            ),
-                    ),
-                  ],
+                      Expanded(
+                        child: Slider(
+                          key: Key('${keyPrefix}_slider'),
+                          value: clampedValue,
+                          min: min,
+                          max: max,
+                          divisions: divisions,
+                          onChanged: enabled
+                              ? (v) => onChanged(v.clamp(min, max))
+                              : null,
+                        ),
+                      ),
+                      IconButton(
+                        key: Key('${keyPrefix}_increment'),
+                        icon: const Icon(Icons.add),
+                        onPressed: !enabled || clampedValue + step > max + 1e-9
+                            ? null
+                            : () => onChanged(
+                                (clampedValue + step).clamp(min, max),
+                              ),
+                      ),
+                    ],
+                  ),
                 ),
         ],
       ),
@@ -1288,9 +1358,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }
 
   /// 固定列（非使用者建立的預設集，不佔用 3 個 slot 名額、不可刪除）：
-  /// 一鍵把「字級／字重／行距／段落間距／字距」5 個目前有覆寫的數值欄位
-  /// 全部清空，改回本書原始樣式（等同逐一按下每個欄位既有的「恢復本書
-  /// 原樣式」按鈕）。副標題刻意不顯示具體數值——這 5 個欄位在「未覆寫」
+  /// 一鍵把「字級／字重／行距／段落間距／首行縮排／字距」6 個目前有覆寫
+  /// 的數值欄位全部清空，改回本書原始樣式（等同逐一按下每個欄位既有的
+  /// 「恢復本書原樣式」按鈕）。副標題刻意不顯示具體數值——這 6 個欄位在「未覆寫」
   /// 狀態下實際套用的是書本自身的原生樣式，App 沒有一個對應的全域數值
   /// 設定可供顯示（`GlobalReaderPrefs` 只涵蓋翻頁模式／螢幕方向／熱區等
   /// 欄位，見 `global_reader_prefs.dart`），顯示假數字會誤導使用者。
@@ -1300,6 +1370,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         !_fontWeightOverridden &&
         !_lineHeightOverridden &&
         !_paragraphSpacingOverridden &&
+        !_firstLineIndentOn &&
         !_letterSpacingOverridden;
     final colorScheme = Theme.of(context).colorScheme;
     final foregroundColor = isActive ? colorScheme.onPrimary : null;
@@ -1333,6 +1404,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       _lineHeight = _defaultLineHeight;
       _paragraphSpacingOverridden = false;
       _paragraphSpacing = _defaultParagraphSpacing;
+      _firstLineIndentOn = false;
+      _firstLineIndent = _defaultFirstLineIndent;
       _letterSpacingOverridden = false;
       _letterSpacing = _defaultLetterSpacing;
       _notifyChanged();

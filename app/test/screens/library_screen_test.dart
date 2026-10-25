@@ -5441,7 +5441,7 @@ void main() {
   });
 
   testWidgets(
-    '版面覆寫：種子 33 欄位全填，儲存後除 writingModeOverride／pageTurnModeOverride 外'
+    '版面覆寫：種子 34 欄位全填，儲存後除 writingModeOverride／pageTurnModeOverride 外'
     '全數原樣相等（Issue 10 全欄位保留守衛）',
     (tester) async {
       final book = _testBook(id: '1', title: '書A');

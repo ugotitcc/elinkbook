@@ -174,6 +174,7 @@ void main() {
         fontWeight: 1.75,
         lineHeight: 1.6,
         paragraphSpacing: 1.2,
+        firstLineIndent: 2,
         letterSpacing: 0.1,
         marginTop: 72,
         marginBottom: 20,
@@ -195,6 +196,7 @@ void main() {
         'fontWeight': 1.75,
         'lineHeight': 1.6,
         'paragraphSpacing': 1.2,
+        'firstLineIndent': 2.0,
         'letterSpacing': 0.1,
         'marginTop': 72.0,
         'marginBottom': 20.0,
@@ -209,6 +211,40 @@ void main() {
         'backgroundColor': '#121214',
         'isLandscape': false, 'isComicBookHint': false,
       });
+    });
+
+    test('firstLineIndent 非 null 時 map 含 firstLineIndent，null 時不含（epic-65 Issue 1）', () {
+      const withIndent = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        firstLineIndent: 2,
+      );
+      expect(buildFoliatePreferencesMap(withIndent), {
+        'firstLineIndent': 2.0,
+        'isLandscape': false, 'isComicBookHint': false,
+      });
+
+      // 0 是合法值（清掉書本縮排），不得與 null（關閉）混為一談。
+      const zero = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        firstLineIndent: 0,
+      );
+      expect(buildFoliatePreferencesMap(zero), {
+        'firstLineIndent': 0.0,
+        'isLandscape': false, 'isComicBookHint': false,
+      });
+
+      const without = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      );
+      expect(
+          buildFoliatePreferencesMap(without).containsKey('firstLineIndent'),
+          isFalse);
     });
 
     test('writingMode: horizontal 時 map 含 writingMode: horizontal', () {
@@ -377,6 +413,29 @@ void main() {
         fontSize: 1.0,
       );
       expect(foliatePreferencesChanged(oldView, newView), isFalse);
+    });
+
+    test('firstLineIndent 變動回傳 true（epic-65 Issue 1：改縮排要重送偏好）', () {
+      const oldView = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        firstLineIndent: 2,
+      );
+      const newView = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        firstLineIndent: 0,
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isTrue);
+
+      const turnedOff = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      );
+      expect(foliatePreferencesChanged(oldView, turnedOff), isTrue);
     });
 
     test('writingMode 變動回傳 true', () {

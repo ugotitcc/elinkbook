@@ -95,14 +95,14 @@ void main() {
     expect(remaining.single['c'], 0);
   });
 
-  test('主資料庫版本仍為 28', () async {
+  test('主資料庫版本仍為 29', () async {
     final repo = await SqliteLibraryRepository.open(
       inMemoryDatabasePath,
       singleInstance: false,
     );
     addTearDown(repo.close);
 
-    expect(await repo.database.getVersion(), 28);
+    expect(await repo.database.getVersion(), 29);
   });
 
   test('dictionary.db 與主庫是不同檔案，主庫沒有字典表', () async {

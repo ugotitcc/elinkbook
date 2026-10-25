@@ -237,6 +237,15 @@ function buildOverrideCss(prefs) {
     // 直排 vertical-rl＝left。見 foliate_touch_harness/scenario-vertical-paragraph-spacing.mjs。
     rules.push(`p { margin-block-end: ${prefs.paragraphSpacing}em !important; }`)
   }
+  if (typeof prefs.firstLineIndent === 'number') {
+    // epic-65-reader-indent-and-colors Issue 1：首行縮排，套用到所有 p（含置中、
+    // 空白、只含圖片的段落，決策 3）。0 是合法值——強制 text-indent: 0 會把書本
+    // 原有的縮排清掉，因此不能用 truthy 判斷（0 會被誤判為關閉）。text-indent
+    // 是 inline 軸的起始端縮排，vertical-rl 下 inline 軸為垂直方向，首行自然
+    // 「往下」縮，不需要依 writingMode 分支處理。`!important` 讓它不受
+    // publisherStyles（停用書本 CSS）影響。
+    rules.push(`p { text-indent: ${prefs.firstLineIndent}em !important; }`)
+  }
   if (typeof prefs.letterSpacing === 'number') {
     // epic-28-reader-settings-enhancements Issue 1：letter-spacing 作用於
     // inline 軸方向，vertical-rl 下 inline 軸即為垂直方向，語意依然合法，

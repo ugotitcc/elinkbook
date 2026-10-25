@@ -2475,7 +2475,228 @@ void main() {
     }
   });
 
-  group('全欄位保留守衛（Issue 10）：種子 33 欄位，操作一個控制項後，21 個流式欄位只有該欄位改變、'
+  group('首行縮排（epic-65-reader-indent-and-colors Issue 1）', () {
+    /// 縮排開關與滑桿在「呈現」分頁：開面板後先切到該分頁。
+    Future<void> pumpOnPresentation(
+      WidgetTester tester,
+      BookReaderPrefs prefs,
+      ValueChanged<BookReaderPrefs> onChanged, {
+      bool isEinkMode = false,
+    }) async {
+      await _pumpSheet(tester, prefs, onChanged, isEinkMode: isEinkMode);
+      await switchToTab(tester, '呈現');
+    }
+
+    testWidgets('縮排開關與滑桿在「呈現」分頁，不在「文字」分頁', (tester) async {
+      await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+
+      expect(
+        find.byKey(const Key('reader_settings_first_line_indent_switch')),
+        findsNothing,
+        reason: '預設的「文字」分頁不應再有縮排開關',
+      );
+      expect(
+        find.byKey(const Key('reader_settings_first_line_indent_slider')),
+        findsNothing,
+      );
+
+      await switchToTab(tester, '呈現');
+
+      expect(
+        find.byKey(const Key('reader_settings_first_line_indent_switch')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('reader_settings_first_line_indent_slider')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('初始 firstLineIndent 為 null 時開關為關，滑桿與 +/- 按鈕皆停用',
+        (tester) async {
+      await pumpOnPresentation(tester, BookReaderPrefs.empty, _noopOnChanged);
+
+      final switchTile = tester.widget<SwitchListTile>(
+          find.byKey(const Key('reader_settings_first_line_indent_switch')));
+      expect(switchTile.value, isFalse);
+
+      final slider = tester.widget<Slider>(
+          find.byKey(const Key('reader_settings_first_line_indent_slider')));
+      expect(slider.onChanged, isNull, reason: '開關關閉時滑桿不可操作');
+      expect(
+        tester
+            .widget<IconButton>(find.byKey(
+                const Key('reader_settings_first_line_indent_decrement')))
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<IconButton>(find.byKey(
+                const Key('reader_settings_first_line_indent_increment')))
+            .onPressed,
+        isNull,
+      );
+    });
+
+    testWidgets('打開開關即回報 2.0；滑桿範圍 0～4、步進 0.5；+/- 各改 0.5',
+        (tester) async {
+      BookReaderPrefs? result;
+      await pumpOnPresentation(tester, BookReaderPrefs.empty, (p) => result = p);
+
+      await tester.tap(find
+          .byKey(const Key('reader_settings_first_line_indent_switch')));
+      await tester.pump();
+
+      expect(result, isNotNull);
+      expect(result!.firstLineIndent, 2.0, reason: '開啟預設 2 字');
+
+      final slider = tester.widget<Slider>(
+          find.byKey(const Key('reader_settings_first_line_indent_slider')));
+      expect(slider.min, 0);
+      expect(slider.max, 4);
+      expect(slider.divisions, 8, reason: '0～4、每次 0.5 → 8 段');
+      expect(slider.onChanged, isNotNull);
+
+      await tester.tap(find.byKey(
+          const Key('reader_settings_first_line_indent_increment')));
+      await tester.pump();
+      expect(result!.firstLineIndent, 2.5);
+
+      await tester.tap(find.byKey(
+          const Key('reader_settings_first_line_indent_decrement')));
+      await tester.pump();
+      expect(result!.firstLineIndent, 2.0);
+    });
+
+    testWidgets('滑桿拉到 0 時回報 0.0，不是 null（0＝清掉書本原有縮排）',
+        (tester) async {
+      BookReaderPrefs? result;
+      await pumpOnPresentation(
+        tester,
+        const BookReaderPrefs(firstLineIndent: 2),
+        (p) => result = p,
+      );
+
+      final slider = tester.widget<Slider>(
+          find.byKey(const Key('reader_settings_first_line_indent_slider')));
+      slider.onChanged!(0);
+      await tester.pump();
+
+      expect(result, isNotNull);
+      expect(result!.firstLineIndent, 0.0);
+      expect(result!.firstLineIndent, isNotNull);
+    });
+
+    testWidgets('關閉開關時回報 null，其他欄位不變', (tester) async {
+      BookReaderPrefs? result;
+      await pumpOnPresentation(
+        tester,
+        const BookReaderPrefs(firstLineIndent: 2, fontSize: 1.25),
+        (p) => result = p,
+      );
+
+      await tester.tap(find
+          .byKey(const Key('reader_settings_first_line_indent_switch')));
+      await tester.pump();
+
+      expect(result, isNotNull);
+      expect(result!.firstLineIndent, isNull);
+      expect(result!.fontSize, 1.25, reason: '其他欄位不得被連帶清空');
+    });
+
+    testWidgets('「重設為本書原樣式」把縮排一併關閉，且縮排開著時該列不算已套用',
+        (tester) async {
+      BookReaderPrefs? result;
+      await _pumpSheet(
+        tester,
+        const BookReaderPrefs(firstLineIndent: 2),
+        (p) => result = p,
+      );
+      await switchToTab(tester, '預設集');
+
+      // 只有縮排被覆寫，其餘 5 個數值欄位都未覆寫 → 重設列不該顯示「已套用」。
+      expect(
+        find.byKey(const Key('reader_settings_preset_reset_apply')),
+        findsOneWidget,
+        reason: '縮排開著代表尚未回到本書原樣式',
+      );
+      expect(
+        find.byKey(const Key('reader_settings_preset_reset_active_indicator')),
+        findsNothing,
+      );
+
+      await tester
+          .tap(find.byKey(const Key('reader_settings_preset_reset_apply')));
+      await tester.pump();
+
+      expect(result, isNotNull);
+      expect(result!.firstLineIndent, isNull);
+      expect(
+        find.byKey(const Key('reader_settings_preset_reset_active_indicator')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('修改其他欄位時，_currentDraft 保留既有縮排值', (tester) async {
+      BookReaderPrefs? result;
+      await _pumpSheet(
+        tester,
+        const BookReaderPrefs(firstLineIndent: 1.5),
+        (p) => result = p,
+      );
+
+      await tester
+          .tap(find.byKey(const Key('reader_settings_font_size_increment')));
+      await tester.pump();
+
+      expect(result, isNotNull);
+      expect(result!.fontSize, isNotNull);
+      expect(result!.firstLineIndent, 1.5);
+    });
+
+    testWidgets('E-Ink 模式使用步進器；停用時點擊 +/- 不觸發 onChanged',
+        (tester) async {
+      var calls = 0;
+      BookReaderPrefs? result;
+      await pumpOnPresentation(
+        tester,
+        BookReaderPrefs.empty,
+        (p) {
+          calls++;
+          result = p;
+        },
+        isEinkMode: true,
+      );
+
+      expect(
+        find.byKey(const Key('reader_settings_first_line_indent_slider')),
+        findsNothing,
+        reason: 'E-Ink 模式不得使用 Slider',
+      );
+      expect(
+        find.byKey(const Key('reader_settings_first_line_indent_value')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(
+          const Key('reader_settings_first_line_indent_increment')));
+      await tester.pump();
+      expect(calls, 0, reason: '開關關閉時步進器停用，點擊不得回報');
+
+      await tester.tap(find
+          .byKey(const Key('reader_settings_first_line_indent_switch')));
+      await tester.pump();
+      expect(result!.firstLineIndent, 2.0);
+
+      await tester.tap(find.byKey(
+          const Key('reader_settings_first_line_indent_increment')));
+      await tester.pump();
+      expect(result!.firstLineIndent, 2.5);
+    });
+  });
+
+  group('全欄位保留守衛（Issue 10）：種子 34 欄位，操作一個控制項後，22 個流式欄位只有該欄位改變、'
       '其餘 12 個欄位依設計清成 null', () {
     testWidgets('切換全螢幕 → 只有 fullscreen 改變', (tester) async {
       BookReaderPrefs? notified;

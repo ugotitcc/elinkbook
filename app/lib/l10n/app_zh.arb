@@ -264,6 +264,8 @@
   "readerSettingsFontSizeLabel": "字級",
   "readerSettingsFontWeightLabel": "字重",
   "readerSettingsLineHeightLabel": "行距",
+  "readerSettingsFirstLineIndentLabel": "首行縮排",
+  "readerSettingsFirstLineIndentValue": "{count} 字",
   "readerSettingsParagraphSpacingLabel": "段落間距",
   "readerSettingsLetterSpacingLabel": "字距",
   "readerSettingsDisableBookCssLabel": "停用書本 CSS",

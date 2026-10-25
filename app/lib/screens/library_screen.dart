@@ -1925,6 +1925,7 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
       fontWeight: existing.fontWeight,
       lineHeight: existing.lineHeight,
       paragraphSpacing: existing.paragraphSpacing,
+      firstLineIndent: existing.firstLineIndent,
       letterSpacing: existing.letterSpacing,
       pageMargins: existing.pageMargins,
       marginTop: existing.marginTop,

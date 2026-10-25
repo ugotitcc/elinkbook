@@ -160,6 +160,9 @@ Map<String, Object?> buildFoliatePreferencesMap(FoliateReaderView view) {
   if (view.paragraphSpacing != null) {
     map['paragraphSpacing'] = view.paragraphSpacing;
   }
+  if (view.firstLineIndent != null) {
+    map['firstLineIndent'] = view.firstLineIndent;
+  }
   if (view.letterSpacing != null) map['letterSpacing'] = view.letterSpacing;
   if (view.marginTop != null) map['marginTop'] = view.marginTop;
   if (view.marginBottom != null) map['marginBottom'] = view.marginBottom;
@@ -206,6 +209,7 @@ bool foliatePreferencesChanged(
       oldView.fontWeight != newView.fontWeight ||
       oldView.lineHeight != newView.lineHeight ||
       oldView.paragraphSpacing != newView.paragraphSpacing ||
+      oldView.firstLineIndent != newView.firstLineIndent ||
       oldView.letterSpacing != newView.letterSpacing ||
       oldView.marginTop != newView.marginTop ||
       oldView.marginBottom != newView.marginBottom ||
@@ -276,6 +280,11 @@ class FoliateReaderView extends StatefulWidget {
   final double? fontWeight;
   final double? lineHeight;
   final double? paragraphSpacing;
+
+  /// 首行縮排（epic-65 Issue 1），單位 em。見
+  /// [BookReaderPrefs.firstLineIndent]：`null` = 關閉、`>= 0` = 強制套用。
+  final double? firstLineIndent;
+
   final double? letterSpacing;
   final double? marginTop;
   final double? marginBottom;
@@ -360,6 +369,7 @@ class FoliateReaderView extends StatefulWidget {
     this.fontWeight,
     this.lineHeight,
     this.paragraphSpacing,
+    this.firstLineIndent,
     this.letterSpacing,
     this.marginTop,
     this.marginBottom,

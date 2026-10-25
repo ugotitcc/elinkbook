@@ -641,7 +641,7 @@ Future<BookReaderPrefs?> _tapAndCapture(
 }
 
 void _fxlFullFieldGuardTests() {
-  group('全欄位保留守衛（Issue 10）：種子 33 欄位，操作一個控制項後只有該欄位改變', () {
+  group('全欄位保留守衛（Issue 10）：種子 34 欄位，操作一個控制項後只有該欄位改變', () {
     testWidgets('切換全螢幕 → 只有 fullscreen 改變', (tester) async {
       final changed = await _tapAndCapture(tester, 'fxl_settings_fullscreen');
       expect(changed, isNotNull);
