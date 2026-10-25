@@ -2476,9 +2476,45 @@ void main() {
   });
 
   group('首行縮排（epic-65-reader-indent-and-colors Issue 1）', () {
+    /// 縮排開關與滑桿在「呈現」分頁：開面板後先切到該分頁。
+    Future<void> pumpOnPresentation(
+      WidgetTester tester,
+      BookReaderPrefs prefs,
+      ValueChanged<BookReaderPrefs> onChanged, {
+      bool isEinkMode = false,
+    }) async {
+      await _pumpSheet(tester, prefs, onChanged, isEinkMode: isEinkMode);
+      await switchToTab(tester, '呈現');
+    }
+
+    testWidgets('縮排開關與滑桿在「呈現」分頁，不在「文字」分頁', (tester) async {
+      await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+
+      expect(
+        find.byKey(const Key('reader_settings_first_line_indent_switch')),
+        findsNothing,
+        reason: '預設的「文字」分頁不應再有縮排開關',
+      );
+      expect(
+        find.byKey(const Key('reader_settings_first_line_indent_slider')),
+        findsNothing,
+      );
+
+      await switchToTab(tester, '呈現');
+
+      expect(
+        find.byKey(const Key('reader_settings_first_line_indent_switch')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('reader_settings_first_line_indent_slider')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('初始 firstLineIndent 為 null 時開關為關，滑桿與 +/- 按鈕皆停用',
         (tester) async {
-      await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+      await pumpOnPresentation(tester, BookReaderPrefs.empty, _noopOnChanged);
 
       final switchTile = tester.widget<SwitchListTile>(
           find.byKey(const Key('reader_settings_first_line_indent_switch')));
@@ -2506,7 +2542,7 @@ void main() {
     testWidgets('打開開關即回報 2.0；滑桿範圍 0～4、步進 0.5；+/- 各改 0.5',
         (tester) async {
       BookReaderPrefs? result;
-      await _pumpSheet(tester, BookReaderPrefs.empty, (p) => result = p);
+      await pumpOnPresentation(tester, BookReaderPrefs.empty, (p) => result = p);
 
       await tester.tap(find
           .byKey(const Key('reader_settings_first_line_indent_switch')));
@@ -2536,7 +2572,7 @@ void main() {
     testWidgets('滑桿拉到 0 時回報 0.0，不是 null（0＝清掉書本原有縮排）',
         (tester) async {
       BookReaderPrefs? result;
-      await _pumpSheet(
+      await pumpOnPresentation(
         tester,
         const BookReaderPrefs(firstLineIndent: 2),
         (p) => result = p,
@@ -2554,7 +2590,7 @@ void main() {
 
     testWidgets('關閉開關時回報 null，其他欄位不變', (tester) async {
       BookReaderPrefs? result;
-      await _pumpSheet(
+      await pumpOnPresentation(
         tester,
         const BookReaderPrefs(firstLineIndent: 2, fontSize: 1.25),
         (p) => result = p,
@@ -2623,7 +2659,7 @@ void main() {
         (tester) async {
       var calls = 0;
       BookReaderPrefs? result;
-      await _pumpSheet(
+      await pumpOnPresentation(
         tester,
         BookReaderPrefs.empty,
         (p) {

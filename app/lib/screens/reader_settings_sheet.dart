@@ -457,36 +457,6 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             _notifyChanged();
           }),
         ),
-        EBFieldCard(
-          padding: EdgeInsets.zero,
-          child: SwitchListTile(
-            key: const Key('reader_settings_first_line_indent_switch'),
-            title: Text(l10n.readerSettingsFirstLineIndentLabel,
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            value: _firstLineIndentOn,
-            onChanged: (v) => setState(() {
-              _firstLineIndentOn = v;
-              _notifyChanged();
-            }),
-          ),
-        ),
-        _buildSliderRow(
-          keyPrefix: 'reader_settings_first_line_indent',
-          label: l10n.readerSettingsFirstLineIndentLabel,
-          value: _firstLineIndent,
-          min: 0,
-          max: 4,
-          step: 0.5,
-          displayValue: l10n.readerSettingsFirstLineIndentValue(
-            _formatFirstLineIndent(_firstLineIndent),
-          ),
-          enabled: _firstLineIndentOn,
-          onChanged: (v) => setState(() {
-            _firstLineIndent = v;
-            _firstLineIndentOn = true;
-            _notifyChanged();
-          }),
-        ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_letter_spacing',
           label: l10n.readerSettingsLetterSpacingLabel,
@@ -633,6 +603,38 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _buildColumnModeRow(),
         const SizedBox(height: 8),
         _buildTextAlignRow(),
+        const SizedBox(height: 8),
+        EBFieldCard(
+          padding: EdgeInsets.zero,
+          child: SwitchListTile(
+            key: const Key('reader_settings_first_line_indent_switch'),
+            title: Text(l10n.readerSettingsFirstLineIndentLabel,
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            value: _firstLineIndentOn,
+            onChanged: (v) => setState(() {
+              _firstLineIndentOn = v;
+              _notifyChanged();
+            }),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildSliderRow(
+          keyPrefix: 'reader_settings_first_line_indent',
+          label: l10n.readerSettingsFirstLineIndentLabel,
+          value: _firstLineIndent,
+          min: 0,
+          max: 4,
+          step: 0.5,
+          displayValue: l10n.readerSettingsFirstLineIndentValue(
+            _formatFirstLineIndent(_firstLineIndent),
+          ),
+          enabled: _firstLineIndentOn,
+          onChanged: (v) => setState(() {
+            _firstLineIndent = v;
+            _firstLineIndentOn = true;
+            _notifyChanged();
+          }),
+        ),
         const SizedBox(height: 8),
         _buildWritingModeOverrideRow(),
         const SizedBox(height: 8),

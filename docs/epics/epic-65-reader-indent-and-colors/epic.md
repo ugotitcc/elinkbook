@@ -42,7 +42,7 @@
 
 - 資料層：`BookReaderPrefs.firstLineIndent`（`double?`，em）＋ `copyWith`／序列化；主資料庫 28→29（`_addFirstLineIndentColumn` 比照 `_addPdfPageTurnModeColumn`，`_createBookReaderPrefsTable` 一步到位）；`ResolvedPreferences`／`resolve()` 與版面預設集種子同步；資料層測試含 v28→v29 升級、單書偏好寫入讀回、預設集 JSON 往返。
 - 渲染層：`FoliateReaderView.firstLineIndent` 進偏好 map（`didUpdateWidget` 一併比對），`main.js` 產生 `p { text-indent: Nem !important }`；`reader_screen.dart` 傳值。PDF／FXL／CBZ 完全沒有入口。
-- 面板：「文字」分頁新增首行縮排開關（`SwitchListTile`，Key `reader_settings_first_line_indent_switch`）與 0～4 em、步進 0.5 的滑桿列（Key `reader_settings_first_line_indent`），關閉時兩側 `+`／`-` 與滑桿一起停用、E-Ink 模式沿用步進器；「重設為本書原樣式」的 `isActive` 納入縮排。
+- 面板：「呈現」分頁（原在「文字」分頁，程式審查後搬移，見開發記錄）新增首行縮排開關（`SwitchListTile`，Key `reader_settings_first_line_indent_switch`）與 0～4 em、步進 0.5 的滑桿列（Key `reader_settings_first_line_indent`），關閉時兩側 `+`／`-` 與滑桿一起停用、E-Ink 模式沿用步進器；「重設為本書原樣式」的 `isActive` 納入縮排。
 - 四個整列重建點（`BookReaderPrefs`、面板 `_currentDraft`、`library_screen._save()`、`fxl_settings_sheet._notifyChanged()`）都補了欄位，避免儲存時把縮排清掉；全欄位保留守衛從 33 欄位／21 個流式欄位擴到 34／22。
 - l10n：`readerSettingsFirstLineIndentLabel`、`readerSettingsFirstLineIndentValue`（`count` 為 **String**，整數不帶小數、半字一位）四語齊備。
 - 既有測試配合調整：`book_reader_prefs_test` map 欄位數 35、流式 22；`sqlite_library_repository_test` `getVersion` 29；`daily_reading_stats_schema_test`（全新安裝與升級終點 28→29）與 `dictionary_database_test`（「主資料庫版本仍為 29」）同步更新。
@@ -80,3 +80,5 @@
 **待辦（尚未完成）**：開 PR、Issue 1 狀態同步 `docs/epics.md`／`issues.md`。
 
 **本機無法執行的檢查**：`node tool/check_l10n_hardcoded_strings.js` 與 `node tool/check_integration_keys.js` 未執行——`node --version` 回應「No active Node.js version is configured」，且 nvm 的 `installs` 目錄為空（沒有任何已安裝版本）。兩支腳本需在有 Node 的環境補跑。
+
+**2026-10-25 Issue 1 獨立程式審查後修訂（3 項 Minor 全修，使用者指示）**：審查報告 `reviews/review-code-issue-1-r2.md`（不進版控）0 Critical／0 Important／3 Minor，結論可合併。修訂：(1) FXL／CBZ 閘門——`reader_screen.dart` 傳給 `FoliateReaderView` 的 `firstLineIndent` 改為 `_isFixedLayout ? null : resolved.firstLineIndent`（比照 `_themedTextColor`），新增 2 個 `reader_screen_test` 案例（固定版面偏好殘留縮排時不傳、流式照常傳），先確認紅燈再修；(2) zh_TW `.arb` 的 `@readerSettingsFirstLineIndentValue` 描述補明單位（中文版「字」、英文版 em，CJK 1 字約 1em）並重新產生 l10n；(3) 縮排開關與滑桿從「文字」分頁搬到「呈現」分頁（排在「文字對齊」之後），同時解掉「文字」分頁高度餘裕的疑慮；`reader_settings_sheet_test.dart` 的縮排案例改為先切到「呈現」分頁，並新增「控制項在呈現分頁、不在文字分頁」案例，先確認紅燈（6 個失敗）再搬。驗證：`flutter analyze` 乾淨；`reader_settings_sheet_test.dart` 整份 105 個全過（含 `textTabHeight < 1000` 與「使用全域預設」5 個守衛）；`reader_screen_test.dart` 整份 306 個全過。**控制項位置改變，需在 WAVE 重新抽驗。**

@@ -1000,6 +1000,51 @@ void main() {
     },
   );
 
+  // epic-65 Issue 1 程式審查 Minor 1：首行縮排只套用流式 Foliate 格式；
+  // 固定版面（含 CBZ）即使偏好裡殘留縮排值，也不傳給 FoliateReaderView。
+  Future<FoliateReaderView> pumpWithIndentPrefs(
+    WidgetTester tester, {
+    required bool isFixedLayout,
+  }) async {
+    final indentPrefs = FakeReaderPrefsManager(
+      bookPrefsByBookId: {'b1': const BookReaderPrefs(firstLineIndent: 2)},
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: isFixedLayout
+              ? 'test/fixtures/sample_fixed_layout.epub'
+              : 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          isFixedLayout: isFixedLayout,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: indentPrefs,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    return tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+  }
+
+  testWidgets('固定版面：偏好殘留首行縮排時不傳給 FoliateReaderView', (tester) async {
+    final view = await pumpWithIndentPrefs(tester, isFixedLayout: true);
+
+    expect(view.firstLineIndent, isNull);
+  });
+
+  testWidgets('流式 EPUB：首行縮排照常傳給 FoliateReaderView', (tester) async {
+    final view = await pumpWithIndentPrefs(tester, isFixedLayout: false);
+
+    expect(view.firstLineIndent, 2.0);
+  });
+
   testWidgets('isFixedLayout: false 時直接建構 FoliateReaderView，不呼叫偵測', (
     tester,
   ) async {
