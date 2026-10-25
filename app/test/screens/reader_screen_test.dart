@@ -910,7 +910,7 @@ void main() {
     });
   });
 
-  testWidgets('EPUB 格式顯示「⚙️版面」按鈕，初始為停用狀態', (tester) async {
+  testWidgets('EPUB 格式顯示「⚙️版面」按鈕，初始為「載入中」提示狀態', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('zh', 'TW'),
@@ -929,8 +929,8 @@ void main() {
     expect(finder, findsOneWidget);
     expect(
       tester.widget<IconButton>(finder).onPressed,
-      isNull,
-      reason: '尚未收到 onLayoutResolved，_autoDetectedWritingMode 仍為 null，按鈕應為停用狀態',
+      isNotNull,
+      reason: '尚未收到 onLayoutResolved 時按鈕也要可點（點了只顯示載入中提示）',
     );
   });
 
@@ -1327,11 +1327,18 @@ void main() {
       await tester.pump();
 
       final finder = find.byKey(const Key('reader_chrome_layout_button'));
+      // 尚未收到 onLayoutResolved：按鈕仍可點，點了只顯示「版面設定載入中」提示，
+      // 不會開出版面設定面板（比照目錄按鈕，避免灰色沒反應被誤判成壞掉）。
       expect(
         tester.widget<IconButton>(finder).onPressed,
-        isNull,
-        reason: '尚未收到 onLayoutResolved，_autoDetectedWritingMode 仍為 null',
+        isNotNull,
+        reason: '尚未收到 onLayoutResolved 時按鈕也要可點',
       );
+      await tester.tap(finder);
+      await tester.pump();
+      expect(find.byKey(const Key('reader_layout_loading_snackbar')), findsOneWidget);
+      expect(find.text('版面設定載入中，請稍候'), findsOneWidget);
+      expect(find.byType(ReaderSettingsSheet), findsNothing);
 
       final foliateView = tester.widget<FoliateReaderView>(
         find.byType(FoliateReaderView),
@@ -1783,15 +1790,15 @@ void main() {
     // 排版方向的雙層解析獨立於「⚙️版面」按鈕的啟用條件——後者仍要求真正
     // 收到 onLayoutResolved（見 _buildAppBarActions 的
     // _autoDetectedWritingMode 判斷），純 flutter test 環境下 AndroidView
-    // 不會觸發原生回呼，因此這裡按鈕仍是停用狀態，屬預期行為，不是本測試
-    // 要驗證的重點。
+    // 不會觸發原生回呼，因此這裡按鈕仍是「載入中」提示狀態（可點但不開面板），
+    // 屬預期行為，不是本測試要驗證的重點。
     expect(
       tester
           .widget<IconButton>(
             find.byKey(const Key('reader_chrome_layout_button')),
           )
           .onPressed,
-      isNull,
+      isNotNull,
     );
   });
 
@@ -2089,8 +2096,9 @@ void main() {
 
       final layoutButton = find.byKey(const Key('reader_chrome_layout_button'));
       expect(find.byType(FoliateReaderView), findsOneWidget);
-      // 回報前：外觀開關仍為 false 且尚無自動偵測的書寫方向 → 按鈕停用
-      expect(tester.widget<IconButton>(layoutButton).onPressed, isNull);
+      // 回報前：外觀開關仍為 false 且尚無自動偵測的書寫方向 → 按鈕仍可點，
+      // 但只顯示「載入中」提示，不開任何設定面板
+      expect(tester.widget<IconButton>(layoutButton).onPressed, isNotNull);
       expect(find.byType(FxlSettingsSheet), findsNothing);
 
       tester

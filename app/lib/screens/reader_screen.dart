@@ -2012,6 +2012,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       );
   }
 
+  /// 書還沒渲染完成（[_autoDetectedWritingMode] 尚未回報）時點「版面設定」：
+  /// 比照 [_showTocLoadingHint]，按鈕不再灰著沒反應，改為顯示短提示。
+  void _showLayoutLoadingHint() {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          key: const Key('reader_layout_loading_snackbar'),
+          content: Text(AppLocalizations.of(context)!.readerLayoutLoadingMessage),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+  }
+
   /// `ReaderChromeBottomBar` 建構參數在 [_buildBottomChrome] 三個分支
   /// （尚未建構 controller／controller 存在但 idle／CBZ 未展開面板）完全
   /// 相同，只有 [onTtsTap] 不同——抽成獨立方法避免三份重複（epic-38-
@@ -2039,7 +2053,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           : () => _openNotesSheet(format, initialTabIndex: 1),
       onLayoutTap: _isFixedLayout
           ? _openFxlSettings
-          : (_autoDetectedWritingMode == null ? null : _openLayoutSettings),
+          : (_autoDetectedWritingMode == null
+              ? _showLayoutLoadingHint
+              : _openLayoutSettings),
       onTtsTap: onTtsTap,
       backgroundColor: _themedFabBackgroundColor,
       iconColor: _themedFabIconColor,

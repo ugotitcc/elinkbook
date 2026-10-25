@@ -4319,6 +4319,12 @@ abstract class AppLocalizations {
   /// **'目錄載入中，請稍候'**
   String get readerTocLoadingMessage;
 
+  /// 閱讀器：書還沒渲染完成時點「版面設定」按鈕，顯示的短提示（SnackBar）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'版面設定載入中，請稍候'**
+  String get readerLayoutLoadingMessage;
+
   /// 匯入對話框：還沒選查詢方向時，顯示在方向選項下方的提示，說明匯入鈕為什麼不能按
   ///
   /// In zh_TW, this message translates to:

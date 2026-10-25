@@ -2538,6 +2538,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Loading the table of contents, please wait';
 
   @override
+  String get readerLayoutLoadingMessage =>
+      'Loading layout settings, please wait';
+
+  @override
   String get dictionaryImportDirectionRequiredHint =>
       'Choose a direction first';
 
