@@ -61,15 +61,15 @@
 
 **Files：** `reader_screen.dart`、4 個 `.arb`、生成檔、`fake_reader_prefs_manager.dart`、`reader_screen_test.dart`。
 
-- [ ] **Step 1：** 假 manager 加失敗開關。`FakeReaderPrefsManager` 新增欄位（名稱以實作為準，例如 `Object? saveBookPrefsError`）；`saveBookPrefs` 在欄位非 null 時 `throw` 該物件，且**不寫入、不加進 `savedBookPrefsCalls`**。預設 null，既有測試不受影響。
-- [ ] **Step 2（紅）：** 在 `reader_screen_test.dart` 新增案例，先寫測試、確認失敗。觸發偏好變更的方式：沿用既有測試中「開啟設定面板並改一個值」或 PDF 裁切完成等已能觸發 `_handlePrefsChanged` 的路徑（先 `grep -n "savedBookPrefsCalls"` 找一個現成路徑照做，不另發明）：
+- [x] **Step 1：** 假 manager 加失敗開關。`FakeReaderPrefsManager` 新增欄位（名稱以實作為準，例如 `Object? saveBookPrefsError`）；`saveBookPrefs` 在欄位非 null 時 `throw` 該物件，且**不寫入、不加進 `savedBookPrefsCalls`**。預設 null，既有測試不受影響。
+- [x] **Step 2（紅）：** 在 `reader_screen_test.dart` 新增案例，先寫測試、確認失敗。觸發偏好變更的方式：沿用既有測試中「開啟設定面板並改一個值」或 PDF 裁切完成等已能觸發 `_handlePrefsChanged` 的路徑（先 `grep -n "savedBookPrefsCalls"` 找一個現成路徑照做，不另發明）：
   - 寫入失敗：出現 `Key('reader_prefs_save_failed_snackbar')`，且畫面設定（以既有斷言方式確認）維持新值。
   - 連續兩次失敗：`SnackBar` 只出現一次（第二次失敗後仍只有一個）。
   - 寫入成功：沒有該 `SnackBar`。
   - 寫入失敗但 State 已 dispose：不拋例外（以 `tester.takeException()` 為 null 確認）。可讓 fake 的失敗用 `Completer` 延後，先離開畫面再讓它失敗。
   - 因 `l10n` key 尚未存在，此時先讓測試用字面文字以外的方式斷言（只斷言 `Key`），避免與 Step 3 循環依賴。
-- [ ] **Step 3：** l10n。4 個 `.arb` 加 `readerPrefsSaveFailedMessage`（文字見 `epic.md` 決策 6；`app_zh_TW.arb` 同 `app_zh.arb`；`app_zh_CN.arb` 用簡體；`app_en.arb` 為英文翻譯）；執行 `flutter gen-l10n`，確認 `app_localizations*.dart` 有對應 getter 且沒有其他不相關差異。
-- [ ] **Step 4（綠）：** 修改 `reader_screen.dart`：
+- [x] **Step 3：** l10n。4 個 `.arb` 加 `readerPrefsSaveFailedMessage`（文字見 `epic.md` 決策 6；`app_zh_TW.arb` 同 `app_zh.arb`；`app_zh_CN.arb` 用簡體；`app_en.arb` 為英文翻譯）；執行 `flutter gen-l10n`，確認 `app_localizations*.dart` 有對應 getter 且沒有其他不相關差異。
+- [x] **Step 4（綠）：** 修改 `reader_screen.dart`：
   - 新增欄位 `bool _prefsSaveFailureNotified = false;`（附 doc 註解：每次開書最多提示一次，epic-54 Issue 31）。
   - 新增私有方法：
 
@@ -94,7 +94,7 @@
     ```
 
   - `_handlePrefsChanged` 內 `widget.dependencies.prefsManager.saveBookPrefs(widget.bookId, prefs);` 改為 `unawaited(_persistBookPrefs(prefs));`，其餘行不動；更新該方法 doc 註解，補一句「寫入失敗的處理見 [_persistBookPrefs]」，不要刪除既有的設計說明。
-- [ ] **Step 5：** `flutter analyze`；跑 `test/screens/reader_screen_test.dart --plain-name` 對應新案例名稱關鍵字、再跑整份 `reader_screen_test.dart`（偏好變更路徑多，整份跑一次最安全）；commit。
+- [x] **Step 5：** `flutter analyze`；跑 `test/screens/reader_screen_test.dart --plain-name` 對應新案例名稱關鍵字、再跑整份 `reader_screen_test.dart`（偏好變更路徑多，整份跑一次最安全）；commit。
 
 ### Task 2：收尾
 

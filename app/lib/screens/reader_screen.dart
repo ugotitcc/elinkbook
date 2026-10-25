@@ -50,6 +50,7 @@ import '../reader/reading_session.dart';
 import '../storage/storage_access_probe.dart'
     show StorageAccessProbeResult, probeStorageAccess;
 import '../reader/open_book_flow.dart';
+import '../reader/reader_console_log.dart';
 import '../reader/reader_jump_target.dart';
 import '../reader/reader_surface.dart';
 import '../reader/reader_prefs_manager.dart';
@@ -333,6 +334,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   BookReaderPrefs _prefs = BookReaderPrefs.empty;
   LoadedPrefs? _loaded;
   ResolvedPreferences? _resolved;
+  /// 單書偏好寫入失敗是否已提示過使用者（每次開書最多提示一次，epic-54 Issue 31）。
+  bool _prefsSaveFailureNotified = false;
   // 手動裁切互動模式是否進行中（決策 #14），驅動 PdfReaderView 的宣告式
   // cropEditModeActive prop；只有 PDF 分支會用到，EPUB 分支永遠是 false。
   bool _cropEditModeActive = false;
@@ -722,7 +725,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// （screenOrientationOverride 可能剛被這次變動改變）。不 await 持久化
   /// 結果——使用者互動的視覺回饋（畫面即時反映新設定）不應等待資料庫寫入
   /// 完成，比照本專案其餘偏好設定寫入呼叫的既有慣例（例如
-  /// LibraryPreferences 系列方法在 UI callback 中皆未 await）。
+  /// LibraryPreferences 系列方法在 UI callback 中皆未 await）。寫入失敗的處理見
+  /// [_persistBookPrefs]。
   void _handlePrefsChanged(BookReaderPrefs prefs) {
     setState(() {
       _prefs = prefs;
@@ -740,9 +744,27 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         );
       }
     });
-    widget.dependencies.prefsManager.saveBookPrefs(widget.bookId, prefs);
+    unawaited(_persistBookPrefs(prefs));
     _applyScreenOrientation();
     _applySystemUiMode();
+  }
+
+  /// 寫入單書偏好；失敗時記 Console Log，並在每次開書第一次失敗時提示使用者
+  /// （epic-54 Issue 31）。不 await：畫面即時回饋不等資料庫，畫面也不回復。
+  Future<void> _persistBookPrefs(BookReaderPrefs prefs) async {
+    try {
+      await widget.dependencies.prefsManager.saveBookPrefs(widget.bookId, prefs);
+    } catch (e) {
+      ReaderConsoleLog.add('[ReaderScreen] 閱讀設定儲存失敗：${e.runtimeType}');
+      if (_prefsSaveFailureNotified || !mounted) return;
+      _prefsSaveFailureNotified = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: const Key('reader_prefs_save_failed_snackbar'),
+          content: Text(AppLocalizations.of(context)!.readerPrefsSaveFailedMessage),
+        ),
+      );
+    }
   }
 
   /// 手動選區裁切請求（決策 #14）：關閉目前開啟的 PdfSettingsSheet、切換

@@ -2668,6 +2668,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dictionaryDragHandleLabel => 'Drag to reorder';
 
   @override
+  String get readerPrefsSaveFailedMessage =>
+      'Could not save reading settings: failed to write to device storage. New settings remain active for this session, but may revert next time you open the book. Check available storage space.';
+
+  @override
   String get dictionaryMdxLimitNote =>
       'Known limitation: Dictionary entries do not execute JavaScript. Features relying on click scripts (such as Oxford 9 image magnification) will not work, and only thumbnails will be visible.';
 }

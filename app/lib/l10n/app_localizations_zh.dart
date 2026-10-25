@@ -2569,6 +2569,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dictionaryDragHandleLabel => '拖曳排序';
 
   @override
+  String get readerPrefsSaveFailedMessage =>
+      '閱讀設定未能儲存：裝置儲存空間寫入失敗。本次閱讀仍使用新設定，下次開書可能還原。請確認剩餘空間。';
+
+  @override
   String get dictionaryMdxLimitNote =>
       '已知限制：字典詞條不會執行 JavaScript，所以依賴點擊腳本的功能（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。';
 }
@@ -5138,6 +5142,10 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get dictionaryDragHandleLabel => '拖动排序';
 
   @override
+  String get readerPrefsSaveFailedMessage =>
+      '阅读设定未能保存：设备存储空间写入失败。本次阅读仍使用新设定，下次开书可能还原。请确认剩余空间。';
+
+  @override
   String get dictionaryMdxLimitNote =>
       '已知限制：词典词条不会执行 JavaScript，因此依赖点击脚本的功能（例如牛津 9 的图片放大）无法运作，仅能看到缩略图。';
 }
@@ -7705,6 +7713,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dictionaryDragHandleLabel => '拖曳排序';
+
+  @override
+  String get readerPrefsSaveFailedMessage =>
+      '閱讀設定未能儲存：裝置儲存空間寫入失敗。本次閱讀仍使用新設定，下次開書可能還原。請確認剩餘空間。';
 
   @override
   String get dictionaryMdxLimitNote =>

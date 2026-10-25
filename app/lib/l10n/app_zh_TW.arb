@@ -3439,6 +3439,10 @@
   "@dictionaryDragHandleLabel": {
     "description": "字典清單拖曳排序把手的語意標籤（螢幕閱讀器朗讀）"
   },
+  "readerPrefsSaveFailedMessage": "閱讀設定未能儲存：裝置儲存空間寫入失敗。本次閱讀仍使用新設定，下次開書可能還原。請確認剩餘空間。",
+  "@readerPrefsSaveFailedMessage": {
+    "description": "閱讀畫面單書偏好寫入 SQLite 失敗時的 SnackBar 提示（每次開書最多提示一次，epic-54 Issue 31）"
+  },
   "dictionaryMdxLimitNote": "已知限制：字典詞條不會執行 JavaScript，所以依賴點擊腳本的功能（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。",
   "@dictionaryMdxLimitNote": {
     "description": "字典設定畫面底部的 MDX 已知限制說明（JavaScript 不執行、點擊腳本無效）"

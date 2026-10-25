@@ -740,5 +740,6 @@
   "dictionaryImportLeaveConfirmAction": "離開並取消",
   "dictionaryImportLeaveConfirmStay": "繼續匯入",
   "dictionaryDragHandleLabel": "拖曳排序",
-  "dictionaryMdxLimitNote": "已知限制：字典詞條不會執行 JavaScript，所以依賴點擊腳本的功能（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。"
+  "dictionaryMdxLimitNote": "已知限制：字典詞條不會執行 JavaScript，所以依賴點擊腳本的功能（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。",
+  "readerPrefsSaveFailedMessage": "閱讀設定未能儲存：裝置儲存空間寫入失敗。本次閱讀仍使用新設定，下次開書可能還原。請確認剩餘空間。"
 }
