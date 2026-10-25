@@ -6,7 +6,7 @@
 |---|---|---|---|---|
 | 1 | 首行縮排：`BookReaderPrefs.firstLineIndent`、SQLite v29、預設集 JSON、`main.js` 規則、「呈現」分頁開關與滑桿 | 無 | ✅ 已合併 | #372 |
 | 2 | 自訂閱讀顏色：各佈景獨立的背景色與文字色（RGB 滑桿加色碼輸入）、E-Ink 不套用、「呈現」分頁、還原預設 | 無（建議 Issue 1 之後做，避免同時改版面設定面板） | ⚪ 待規劃 | — |
-| 3 | 縮排排除置中與無文字段落：`main.js` 新增 `markNoIndentParagraphs`，縮排 CSS 改為 `p:not([data-elink-no-indent])`；使用者選「文字對齊」時不做置中排除（來源：Issue 1 WAVE 實測；先於 Issue 2 執行） | Issue 1 已合併 | 🟢 已完成，待開 PR | — |
+| 3 | 縮排排除置中與無文字段落：`main.js` 新增 `markNoIndentParagraphs`，縮排 CSS 改為 `p:not([data-elink-no-indent])`；使用者選「文字對齊」時不做置中排除（來源：Issue 1 WAVE 實測；先於 Issue 2 執行） | Issue 1 已合併 | ✅ 已合併（PR #373） | — |
 
 ## Issue 1 單元測試要求
 
