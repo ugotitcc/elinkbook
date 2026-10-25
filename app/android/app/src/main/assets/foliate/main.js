@@ -292,8 +292,12 @@ function buildOverrideCss(prefs) {
     // epic-65 Issue 3：置中與沒有文字的段落不縮排。CSS 無法判斷「實際顯示
     // 是否置中」（置中常寫在書本自己的 class），改由 markNoIndentParagraphs()
     // 在章節載入／偏好變更時以 getComputedStyle 判定並加上
-    // data-elink-no-indent 屬性，這裡用 :not() 跳過。屬性選擇器不影響其他規則。
+    // data-elink-no-indent 屬性。被標記的 p 明確設為 0（審查 I-1）：只跳過的話
+    // 會退回書本自己的 p { text-indent } 全域規則，置中段落仍會偏移，也違反
+    // 「0 清掉書本縮排」的語意。未標記的 p 用 :not() 套用縮排值；選擇器特異度
+    // 因此由 (0,0,1) 升為 (0,1,1)，會蓋過書本較弱的 !important 縮排（審查 M-2）。
     rules.push(`p:not([data-elink-no-indent]) { text-indent: ${prefs.firstLineIndent}em !important; }`)
+    rules.push('p[data-elink-no-indent] { text-indent: 0 !important; }')
   }
   if (typeof prefs.letterSpacing === 'number') {
     // epic-28-reader-settings-enhancements Issue 1：letter-spacing 作用於

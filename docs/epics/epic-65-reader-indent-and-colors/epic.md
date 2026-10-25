@@ -131,3 +131,9 @@
   - (6) 直排探針書驗證：一般段落垂直首行往下縮排；置中段落維持垂直置中、不往下縮。
   - (7) 真實長篇 EPUB（《長篇繁體中文直排測試書》）：段落載入與翻頁順暢，無任何卡頓。
   - (8) 離開書本重開：單書偏好完整保留。
+
+**2026-10-25 Issue 3 獨立審查（`reviews/review-code-issue-3-r2.md`）修訂**：0 Critical／1 Important／5 Minor。
+- I-1（已修）：被標記的段落原本只是「不套用 App 縮排」，會退回書本自己的 `p { text-indent }`，置中段落在有全域 p 縮排的書裡仍偏移，`firstLineIndent = 0` 也比 Issue 1 退步。`main.js` 新增 `p[data-elink-no-indent] { text-indent: 0 !important; }`。
+- M-2（已補註解）：選擇器特異度由 (0,0,1) 升為 (0,1,1)，會蓋過書本較弱的 `!important` 縮排。
+- M-1、M-3、M-4、M-5：不改（已知限制或影響極小）。
+- 修訂後 WAVE 重新抽驗通過：探針書 `probe_global_indent.epub`（書本 CSS 含全域 `p { text-indent: 2em }`）。不開縮排維持書本原樣；縮排 4 字時一般段落縮 4 字，class／行內／`align` 三種置中段落不偏移、空段落無偏移；拖到 0 時一般段落也是 0；翻到第二章結果相同。
