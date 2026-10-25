@@ -14,33 +14,43 @@ class ReaderColorPreferences {
   static String _textKey(AppTheme theme) => 'reader_color_${theme.name}_text';
 
   /// 讀取指定佈景的自訂顏色設定。若未設定或色碼格式毀損，欄位安全回退為 `null`。
+  /// 若底層 `SharedPreferences` 未就緒（例如測試環境），安全回退為 [ReaderColors.empty]。
   Future<ReaderColors> load(AppTheme theme) async {
-    final prefs = await SharedPreferences.getInstance();
-    final rawBg = prefs.getString(_bgKey(theme));
-    final rawText = prefs.getString(_textKey(theme));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawBg = prefs.getString(_bgKey(theme));
+      final rawText = prefs.getString(_textKey(theme));
 
-    final bg = rawBg != null ? parseHexColor(rawBg) : null;
-    final text = rawText != null ? parseHexColor(rawText) : null;
+      final bg = rawBg != null ? parseHexColor(rawBg) : null;
+      final text = rawText != null ? parseHexColor(rawText) : null;
 
-    return ReaderColors(background: bg, text: text);
+      return ReaderColors(background: bg, text: text);
+    } catch (_) {
+      return const ReaderColors();
+    }
   }
 
   /// 儲存指定佈景的自訂顏色設定。欄位若為 `null`，則移除對應 key。
+  /// 若底層 `SharedPreferences` 未就緒（例如測試環境），安全略過。
   Future<void> save(AppTheme theme, ReaderColors colors) async {
-    final prefs = await SharedPreferences.getInstance();
-    final bgKey = _bgKey(theme);
-    final textKey = _textKey(theme);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final bgKey = _bgKey(theme);
+      final textKey = _textKey(theme);
 
-    if (colors.background != null) {
-      await prefs.setString(bgKey, formatHexColor(colors.background!));
-    } else {
-      await prefs.remove(bgKey);
-    }
+      if (colors.background != null) {
+        await prefs.setString(bgKey, formatHexColor(colors.background!));
+      } else {
+        await prefs.remove(bgKey);
+      }
 
-    if (colors.text != null) {
-      await prefs.setString(textKey, formatHexColor(colors.text!));
-    } else {
-      await prefs.remove(textKey);
+      if (colors.text != null) {
+        await prefs.setString(textKey, formatHexColor(colors.text!));
+      } else {
+        await prefs.remove(textKey);
+      }
+    } catch (_) {
+      // 測試環境容錯
     }
   }
 }

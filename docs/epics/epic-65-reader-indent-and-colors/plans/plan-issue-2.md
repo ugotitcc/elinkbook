@@ -200,11 +200,11 @@ class ReaderColorPreferences {
 
 ## Task 4：驗證與收尾
 
-- [ ] **Step 1：** `node --version`。可執行就跑 `node tool/check_l10n_hardcoded_strings.js` 與 `node tool/check_integration_keys.js`；不可執行就在 `epic.md` 開發記錄註明「未執行」與風險。
-- [ ] **Step 2：** 背景執行一次完整 `flutter test`（`run_in_background`，只跑一個）；已知 `test/reader/pdf_reader_view_filters_test.dart` 的加粗案例偶發失敗，單跑通過即可記為既有不穩。
-- [ ] **Step 3：** `flutter analyze` 乾淨。
-- [ ] **Step 4：更新文件。** `epic.md` 補 Issue 2 開發記錄（實作、驗證結果、未執行項目）；`issues.md` Issue 2 狀態改「✅ 實作完成，待真機」；`docs/epics.md` 備註同步；本計畫勾選完成的步驟。
-- [ ] **Step 5：Commit。** 訊息：`docs(epic-65): Issue 2 自訂閱讀顏色驗證與收尾（Issue 2 Task 4）`。
+- [x] **Step 1：** `node --version`。可執行就跑 `node tool/check_l10n_hardcoded_strings.js` 與 `node tool/check_integration_keys.js`；不可執行就在 `epic.md` 開發記錄註明「未執行」與風險。
+- [x] **Step 2：** 背景執行一次完整 `flutter test`（`run_in_background`，只跑一個）；已知 `test/reader/pdf_reader_view_filters_test.dart` 的加粗案例偶發失敗，單跑通過即可記為既有不穩。
+- [x] **Step 3：** `flutter analyze` 乾淨。
+- [x] **Step 4：更新文件。** `epic.md` 補 Issue 2 開發記錄（實作、驗證結果、未執行項目）；`issues.md` Issue 2 狀態改「✅ 實作完成，待真機」；`docs/epics.md` 備註同步；本計畫勾選完成的步驟。
+- [x] **Step 5：Commit。** 訊息：`docs(epic-65): Issue 2 自訂閱讀顏色驗證與收尾（Issue 2 Task 4）`。
 - [ ] **Step 6：WAVE 真機抽驗**（`flutter build apk --debug`，`adb -s TCE70P24B2202374 install -r build/app/outputs/flutter-apk/app-debug.apk`，由使用者操作）：
   1. 淺色佈景：背景改純白、文字改深灰，內文、頁首、頁尾、翻頁時的載入畫面都一致，沒有明顯閃一下原色。
   2. 深色與羊皮紙各自設不同顏色，切換佈景後各自保留。

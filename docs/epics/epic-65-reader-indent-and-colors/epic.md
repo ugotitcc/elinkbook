@@ -163,3 +163,36 @@
 - M-2（已補註解）：選擇器特異度由 (0,0,1) 升為 (0,1,1)，會蓋過書本較弱的 `!important` 縮排。
 - M-1、M-3、M-4、M-5：不改（已知限制或影響極小）。
 - 修訂後 WAVE 重新抽驗通過：探針書 `probe_global_indent.epub`（書本 CSS 含全域 `p { text-indent: 2em }`）。不開縮排維持書本原樣；縮排 4 字時一般段落縮 4 字，class／行內／`align` 三種置中段落不偏移、空段落無偏移；拖到 0 時一般段落也是 0；翻到第二章結果相同。
+
+**2026-10-25 Issue 2 自訂閱讀顏色完成實作與收尾（分支 `epic-65/issue-2-custom-reading-colors`）**：
+
+- 實作重點：
+  - 值物件與偏好：新增 `app/lib/theme/reader_colors.dart`（`ReaderColors` 值物件、`parseHexColor`、`formatHexColor`、WCAG 2.1 相對亮度與對比度演算法 `contrastRatio`）與 `app/lib/theme/reader_color_preferences.dart`（`load(AppTheme)`、`save(AppTheme, ReaderColors)` 透過 `SharedPreferences` 持久化，依 `AppTheme.name` 隔離；null 欄位移除 key）。
+  - ReaderScreen 顏色套用與主題貫穿：
+    - `ReaderFeatureDependencies` 新增 `readerColorPreferences`。
+    - `ReaderScreen` 新增 `appTheme` 參數（預設 `AppTheme.light`），`didUpdateWidget` 於 `appTheme` 變更時重載自訂色（Ruling M-4）。
+    - `_themedTextColor` 與 `_themedBackgroundColor` 在 `isFoliateFormat(format) && !_isFixedLayout` 且非 E-Ink 模式下套用自訂色（Ruling I-4：PDF／FXL 不套用自訂色且載入遮罩維持 `scaffoldBackgroundColor`，避免閃爍或污染）。
+    - 搜尋路徑主題貫穿（Ruling I-1）：`LibraryScreen` 開書與推入 `LibrarySearchScreen` 傳 `widget.appearance.currentTheme`；`LibrarySearchScreen` 與 `BookSearchScreen` 新增 `appTheme` 並貫穿至開書與跨畫面跳轉。
+  - 版面設定「佈景」分頁：
+    - `DefaultTabController` 擴充為 5 個分頁；TabBar 在「呈現」後、「預設集」前新增 `Tab(key: Key('reader_settings_tab_theme'), text: l10n.readerSettingsTabTheme)`。
+    - IndexedStack 第 3 分頁加入 `_buildThemeColorsTab()`（不可逆決策：展示方法非 StatefulWidget，保持草稿在 State 根層級）。
+    - 頂端顯示「正在調整：{佈景名}」（`readerColorsEditingTheme` 帶 placeholder 參數，Ruling M-2）。
+    - 背景色與文字色兩區塊各含：色塊預覽、還原按鈕（未設定自訂色時停用 `onPressed: null`，Ruling M-3）、Hex 色碼輸入框（無效時標紅）、紅/綠/藍 3 條滑桿（0～255 整數步進，E-Ink 模式以 EBStepper 呈現）。
+    - 控制器與錯誤狀態於 `_ReaderSettingsSheetState` 根層級管理，覆寫 `dispose()` 釋放（Ruling I-3），`didUpdateWidget` 同步外部更新。
+    - WCAG 對比度警示：有效背景與有效文字之 `contrastRatio < 3.0` 時即時顯示警告橫幅。
+    - E-Ink 模式防護：顯示說明橫幅，整頁以 `IgnorePointer`＋`Opacity` 停用。
+    - 既有測試相容修正（Ruling I-2）：`reader_settings_sheet_test.dart:2418` 分頁索引斷言更新（佈景 index 3、預設集 index 4）；2472 行高度巡訪加入 `'佈景'`；數值卡片微調內距使新分頁高度受 `< 1000` 守衛保護。
+    - l10n：4 個 `.arb` 檔新增 11 組新字串，`flutter gen-l10n` 齊備。
+- 驗證：
+  - `flutter analyze`：No issues found!
+  - 單元測試：
+    - `test/theme/reader_colors_test.dart`（10/10 passed）
+    - `test/theme/reader_color_preferences_test.dart`（6/6 passed）
+    - `test/screens/reader_screen_custom_colors_test.dart`（10/10 passed）
+    - `test/screens/reader_settings_sheet_test.dart`（117/117 passed）
+    - `test/screens/reader_screen_route_test.dart`（3/3 passed）
+    - `test/screens/book_search_screen_test.dart`（18/18 passed）
+    - `test/screens/library_search_screen_test.dart`（31/31 passed）
+    - `test/screens/reader_screen_surface_test.dart`（4/4 passed）
+    - `test/screens/reader_screen_tts_late_handler_test.dart`（9/9 passed）
+  - 本機無法執行的檢查：`check_l10n_hardcoded_strings.js` 與 `check_integration_keys.js` 未執行（本機環境無可用 Node.js，依 Global Constraints 跳過）。
