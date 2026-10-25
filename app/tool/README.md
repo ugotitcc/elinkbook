@@ -2,6 +2,30 @@
 
 開發輔助腳本，不屬於 App 本身，不會被打包進 APK。
 
+## 在這台 Windows 執行 Node 腳本
+
+nvm 沒有安裝任何 Node 版本，`node` 會回 `No active Node.js version is configured`。pnpm 內建了 Node，改用它：
+
+```powershell
+# 1. 把 pnpm 的 Node 排到 PATH 最前面（只對目前這個 PowerShell 視窗有效）
+$env:PATH = "$env:PNPM_HOME;$env:PATH"
+node --version   # 應為 v24.15.0
+
+# 2. 提交前的兩個檢查（在 app/）
+cd app
+node tool/check_l10n_hardcoded_strings.js
+node tool/check_integration_keys.js
+
+# 3. foliate_touch_harness（第一次要先裝 Chrome）
+cd tool/foliate_touch_harness
+npx puppeteer browsers install chrome
+node run-all.mjs
+```
+
+- 步驟 1 不能省：`run-all.mjs` 會用 PATH 裡的 `node` 起子程序。
+- 不要用 `pnpm exec`：測試台用 `package-lock.json`，pnpm 的依賴檢查會失敗。改用 `npx` 或 `node`。
+- 在 Git Bash 裡 PATH 不同，請用 PowerShell。
+
 ## `check_integration_keys.js`
 
 找出 `app/integration_test/` 引用、但 `app/lib/` 已不存在的 `Key`。`integration_test/` 只能在真機執行，
