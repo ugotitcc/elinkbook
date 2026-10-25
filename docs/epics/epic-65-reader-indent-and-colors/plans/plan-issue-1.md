@@ -116,9 +116,9 @@
 
 ### Task 4：收尾
 
-- [ ] **Step 1：** `CLAUDE.md` 與 `AGENTS.md` 內主庫版本描述 `version: 28` 都改為 `version: 29`（`git grep -n "version: 28"` 確認沒有遺漏）；`docs/prd.md` 版面控制項描述補「首行縮排」一項（先讀原句再做最小修改）；`epic.md` 開發記錄；`issues.md` Issue 1 狀態；`docs/epics.md` 備註同步。
-- [ ] **Step 2：** 驗收：`grep -rn "firstLineIndent\|first_line_indent" app/lib` 涵蓋模型、資料庫、解析、view、reader_screen、面板、兩個重建點；`git diff main --stat -- app/lib` 沒有預期外的檔案。
-- [ ] **Step 3：** `flutter analyze`；兩個 `check_*.js`（先 `node --version`，能執行就跑，不能才記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
-- [ ] **Step 4：** 程式審查（報告存 `reviews/review-code-issue-1.md`，不進版控）。
+- [x] **Step 1：** `CLAUDE.md` 與 `AGENTS.md` 內主庫版本描述 `version: 28` 都改為 `version: 29`（`git grep -n "version: 28"` 確認沒有遺漏）；`docs/prd.md` 版面控制項描述補「首行縮排」一項（先讀原句再做最小修改）；`epic.md` 開發記錄；`issues.md` Issue 1 狀態；`docs/epics.md` 備註同步。
+- [x] **Step 2：** 驗收：`grep -rn "firstLineIndent\|first_line_indent" app/lib` 涵蓋模型、資料庫、解析、view、reader_screen、面板、兩個重建點；`git diff main --stat -- app/lib` 沒有預期外的檔案。
+- [x] **Step 3：** `flutter analyze`；兩個 `check_*.js`（先 `node --version`，能執行就跑，不能才記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
+- [x] **Step 4：** 程式審查（報告存 `reviews/review-code-issue-1.md`，不進版控）。
 - [ ] **Step 5：** WAVE 真機抽驗：(1) 開一本 EPUB 橫排，版面設定「文字」分頁打開首行縮排，段落首行縮 2 字；(2) 拖滑桿到 0、1、4，縮排即時變化，0 時書本原有縮排消失；(3) 關閉開關，書本恢復原貌；(4) 直排書重做一次，縮排往下；(5) 離開重開，設定保留；(6) 開一本 TXT 重做一次；(7) 開一本有置中段落的書，記錄置中段落是否被縮排（決策 3 的已知取捨，結果寫入 `epic.md`）；(8) 開 PDF，確認沒有縮排控制項。
 - [ ] **Step 6：** 開 PR；PR 開出後把 Issue 1 狀態同步。

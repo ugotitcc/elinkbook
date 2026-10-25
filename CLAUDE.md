@@ -81,7 +81,7 @@ flutter build apk --release --dart-define-from-file=config/cloud_oauth.json
 
 `app/lib/dictionary/` 是獨立的字典子系統，資料與書庫分離（見 ADR 0038、0039）。
 - `DictionaryService`（`app/lib/dictionary/dictionary_service.dart`）：協調本機與線上分段。線上分段永不丟例外（失敗化為 `failed` 狀態）；本機分段在開啟字典資料庫失敗時 `lookup` 會丟出例外，由呼叫端顯示錯誤。
-- `dictionary.db` 與 `DictionaryStore`（`app/lib/dictionary/storage/`）：獨立的 SQLite 檔（`DictionaryDatabase.version`），不進主庫 `version: 28`、不登錄同步表；刪除來源連動刪除詞條與私有複本。
+- `dictionary.db` 與 `DictionaryStore`（`app/lib/dictionary/storage/`）：獨立的 SQLite 檔（`DictionaryDatabase.version`），不進主庫 `version: 29`、不登錄同步表；刪除來源連動刪除詞條與私有複本。
 - `MdxReader` ＋ vendor 修補的 `dict_reader`（`app/third_party/dict_reader/PATCH.md`）：MDX 保留原檔，鍵索引依區塊延遲載入；升級套件後須重套修補並重新量測記憶體。
 - MDX 詞條的 WebView 安全邊界：`javaScriptEnabled: false`、封鎖網路載入，`shouldInterceptRequest` 對所有請求回明確回應（外部一律 404），永不連網。
 - 線上查詞預設關閉；未同意時零請求。`LookupRequest` 只有 `word`，不帶書名、前後文、位置或裝置識別。

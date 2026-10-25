@@ -14,7 +14,7 @@
 事實盤點（已核對程式）：
 
 - 全專案目前沒有任何縮排功能。版面設定走一條現成的路：偏好 → `foliate_reader_view.dart` 組 map → `main.js` 組 CSS（例如段距 `p { margin-block-end: … !important }`）。縮排可用同一條路加 `text-indent`。
-- 單書偏好 `BookReaderPrefs` 存 SQLite（資料庫目前版本 28）；「版面預設集」另存 JSON（`prefs_json`），欄位新增時舊預設集要能讀。
+- 單書偏好 `BookReaderPrefs` 存 SQLite（Discovery 時版本 28，Issue 1 已升到 29）；「版面預設集」另存 JSON（`prefs_json`），欄位新增時舊預設集要能讀。
 - 淺色佈景 `scaffoldBackground` 為 `#F0F6FC`，閱讀器頁面背景取自 `Theme.scaffoldBackgroundColor`，**整個 App 的畫面共用它**；E-Ink 佈景為純白。
 - 佈景（淺色／深色／宣紙）與 E-Ink 開關存在 `SharedPreferences`（`AppThemePreferences`），是全域設定。
 - 版面設定面板有 4 個分頁（文字、邊界、呈現、偏好）；數值控制項都有滑桿加 +/- 按鈕（E-Ink 模式改用步進器）。
@@ -37,3 +37,26 @@
 ## 開發記錄
 
 **2026-10-25** 登錄 Epic 並完成 Discovery 決策。尚未撰寫計畫、尚未寫程式。
+
+**2026-10-25** Issue 1 計畫（`plans/plan-issue-1.md`）經審查後實作完成（分支 `epic-65/issue-1-first-line-indent`）。重點：
+
+- 資料層：`BookReaderPrefs.firstLineIndent`（`double?`，em）＋ `copyWith`／序列化；主資料庫 28→29（`_addFirstLineIndentColumn` 比照 `_addPdfPageTurnModeColumn`，`_createBookReaderPrefsTable` 一步到位）；`ResolvedPreferences`／`resolve()` 與版面預設集種子同步；資料層測試含 v28→v29 升級、單書偏好寫入讀回、預設集 JSON 往返。
+- 渲染層：`FoliateReaderView.firstLineIndent` 進偏好 map（`didUpdateWidget` 一併比對），`main.js` 產生 `p { text-indent: Nem !important }`；`reader_screen.dart` 傳值。PDF／FXL／CBZ 完全沒有入口。
+- 面板：「文字」分頁新增首行縮排開關（`SwitchListTile`，Key `reader_settings_first_line_indent_switch`）與 0～4 em、步進 0.5 的滑桿列（Key `reader_settings_first_line_indent`），關閉時兩側 `+`／`-` 與滑桿一起停用、E-Ink 模式沿用步進器；「重設為本書原樣式」的 `isActive` 納入縮排。
+- 四個整列重建點（`BookReaderPrefs`、面板 `_currentDraft`、`library_screen._save()`、`fxl_settings_sheet._notifyChanged()`）都補了欄位，避免儲存時把縮排清掉；全欄位保留守衛從 33 欄位／21 個流式欄位擴到 34／22。
+- l10n：`readerSettingsFirstLineIndentLabel`、`readerSettingsFirstLineIndentValue`（`count` 為 **String**，整數不帶小數、半字一位）四語齊備。
+- 既有測試配合調整：`book_reader_prefs_test` map 欄位數 35、流式 22；`sqlite_library_repository_test` `getVersion` 29；`daily_reading_stats_schema_test`（全新安裝與升級終點 28→29）與 `dictionary_database_test`（「主資料庫版本仍為 29」）同步更新。
+
+**驗證（Issue 1 收尾）**：
+
+- `flutter analyze`：No issues found!
+- 範圍測試：Task 3 收尾五個受影響測試檔合跑 627 通過；Task 1／2 各自範圍全綠（232／126）。
+- 完整 `flutter test`：兩次皆為 **4551 通過、1 略過、1 失敗**，但失敗者兩次不同，且都在本分支零改動的模組：
+  - 第一次：`search/content_indexing_scheduler_test.dart`「開啟閱讀畫面時…記錄游標」，單跑該檔 9/9 通過（測試以固定 `Future.delayed(200ms)` 做時序同步）。
+  - 第二次：`reader/pdf_reader_view_filters_test.dart`「`pdfBoldStrength > 0` 時第一頁疊加覆蓋層」，單跑該檔 16/16 通過（`docs/epics/epic-54-architecture-optimization/epic.md` 已多次記錄此檔為既存 flaky／失敗案例）。
+  - 判定：滿載並行下的既存 flaky，與 Issue 1 無關（`git diff main --name-only` 不含 `reader/pdf_*` 與 `search/*`）。
+- 程式審查：獨立審查 subagent（唯讀、fresh context）＋執行者複核，報告在 `reviews/review-code-issue-1.md`（不進版控），結論 **0 Critical／0 Important／3 Minor**（3 條 Minor 皆為正向確認，無可執行缺陷）。
+
+**待辦（尚未完成）**：WAVE 真機抽驗 8 項（含置中段落的實測結果需回填本檔）、開 PR 與 Issue 狀態同步。
+
+**本機無法執行的檢查**：`node tool/check_l10n_hardcoded_strings.js` 與 `node tool/check_integration_keys.js` 未執行——`node --version` 回應「No active Node.js version is configured」，且 nvm 的 `installs` 目錄為空（沒有任何已安裝版本）。兩支腳本需在有 Node 的環境補跑。
