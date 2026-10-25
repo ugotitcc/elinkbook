@@ -877,3 +877,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-25 Issue 31 PR 已開**：分支 `epic-54/issue-31-prefs-write-failure` 推上 `origin`，開 PR [#371](https://git.jigong.org/huthief/elinkBook/pulls/371)（`main` ← `epic-54/issue-31-prefs-write-failure`），待合併。
 
 **2026-10-25 Issue 31 程式審查修訂（PR #371）**：獨立審查（`reviews/review-code-issue-31-r2.md`，不進版控）0 Critical／1 Important／3 Minor，結論 With fixes。Important 1（面板開著時 SnackBar 被蓋住）已修：見決策 3 修訂；`reader_screen.dart` 新增 `_prefsSaveFailureNoticePending`、`_isCoveredByModalRoute()`、`_showPrefsSaveFailureNotice()`、`_flushPendingPrefsSaveFailureNotice()`，`_showThemedModalBottomSheet` 改為 `async` 並在面板關閉後補提示。測試：先改測試確認紅燈（面板開著案例失敗）再改實作；`reader_screen_test.dart` 該 group 由 4 個變 5 個（面板開著失敗→關閉前不提示、關閉後出現；面板已關閉後才失敗→直接提示；面板開著連續兩次失敗→關閉後只出現一次；成功不提示；dispose 後失敗不拋例外），整份 304 個全過；`flutter analyze` 乾淨。Minor 1（`catch (e)` 吞 `Error`）：以註解說明，不改行為；Minor 2（文案斷定原因為儲存空間）：沿用決策 6 指定文字，不改；Minor 3（測試依賴單次 `pump`）：新版改為關閉面板後驗證，不再依賴。待 WAVE 重新抽驗與更新 PR。
+
+**2026-10-25 Issue 31 審查修訂後 WAVE 重新抽驗通過**：WAVE（`TCE70P24B2202374`）安裝修訂版 debug APK；EPUB 與 PDF 各開版面設定面板拖動滑桿並調整多個設定，畫面即時反應、沒有出現儲存失敗提示、面板關閉後沒有補跳提示；離開後重新開書設定仍保留。真機無法製造寫入失敗，失敗路徑由單元測試涵蓋。
