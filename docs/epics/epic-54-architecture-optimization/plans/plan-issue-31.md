@@ -98,9 +98,9 @@
 
 ### Task 2：收尾
 
-- [ ] **Step 1：** `epic.md` 開發記錄；`issues.md` Issue 31 狀態；`docs/epics.md` 同步。
-- [ ] **Step 2：** 驗收：`grep -n "saveBookPrefs" app/lib/screens/reader_screen.dart` 只剩 `_persistBookPrefs` 內一處；`git diff main --stat -- app/lib` 只有 `reader_screen.dart`、4 個 `.arb` 與 `app_localizations*.dart`。
-- [ ] **Step 3：** `flutter analyze`；兩個 `check_*.js`（沒有 Node 則記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
-- [ ] **Step 4：** 程式審查（報告存 `reviews/review-code-issue-31.md`，不進版控）。
-- [ ] **Step 5：** WAVE 真機抽驗（風險低，一輪即可）：EPUB 與 PDF 各開一本，拖動字級、行距等滑桿並調整幾個設定，確認畫面即時反應、**沒有**出現儲存失敗提示；離開後重新開書，設定仍保留。
+- [x] **Step 1：** `epic.md` 開發記錄；`issues.md` Issue 31 狀態；`docs/epics.md` 同步。
+- [x] **Step 2：** 驗收：`grep -n "saveBookPrefs" app/lib/screens/reader_screen.dart` 只剩 `_persistBookPrefs` 內一處；`git diff main --stat -- app/lib` 只有 `reader_screen.dart`、4 個 `.arb` 與 `app_localizations*.dart`。
+- [x] **Step 3：** `flutter analyze`；兩個 `check_*.js`（沒有 Node 則記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
+- [x] **Step 4：** 程式審查（報告存 `reviews/review-code-issue-31.md`，不進版控）。
+- [x] **Step 5：** WAVE 真機抽驗（風險低，一輪即可）：EPUB 與 PDF 各開一本，拖動字級、行距等滑桿並調整幾個設定，確認畫面即時反應、**沒有**出現儲存失敗提示；離開後重新開書，設定仍保留。
 - [ ] **Step 6：** 開 PR；PR 開出後把 Issue 31 的狀態同步（Issue 28 已在 Task 0 同步）。
