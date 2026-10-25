@@ -27,8 +27,8 @@
 4. **縮排的儲存**：單書偏好，`BookReaderPrefs` 新增 `firstLineIndent`（`double?`，單位 em，`null`＝關閉）；SQLite 版本 28→29，`book_reader_prefs` 新增欄位；「版面預設集」JSON 含此欄位，舊預設集讀不到視為 `null`。
 5. **自訂閱讀顏色（Issue 2）**：背景色與文字色都可自訂。每個佈景（淺色、深色、宣紙）各存一組，全域、不分書；沒設定就用佈景原本的顏色。
 6. **自訂色的邊界**：E-Ink 模式一律不套用，維持純黑白高對比；只影響閱讀器頁面，不影響書庫、設定頁等其他畫面（閱讀器內另算背景色，不直接改共用的 `scaffoldBackgroundColor`）；只套用 Foliate 流式格式，PDF、固定版面不套用。
-7. **自訂色的介面**：放在版面設定面板「呈現」分頁；背景色與文字色各有紅、綠、藍 3 條滑桿（0～255）加色碼輸入框，雙向即時同步，附「還原預設」按鈕；色碼格式 `#RRGGBB`，輸入無效時不套用、輸入框標紅。
-8. **自訂色不做對比警告**，也不自動改字色（文字色已讓使用者自己調）。
+7. **自訂色的介面**：〔**已被 Issue 2 設計決策修訂**：改放新的「佈景」分頁，見「Issue 2 設計決策」〕背景色與文字色各有紅、綠、藍 3 條滑桿（0～255）加色碼輸入框，雙向即時同步，附「還原預設」按鈕；色碼格式 `#RRGGBB`，輸入無效時不套用、輸入框標紅。
+8. **自訂色不自動改字色**（文字色已讓使用者自己調）。〔**對比警告已被 Issue 2 設計決策修訂**：原為「不做對比警告」，改為顯示警告但仍套用〕
 9. **自訂色的儲存**：`SharedPreferences`（比照佈景偏好），不動 SQLite。
 10. **範圍外**：把淺色佈景整體背景改純白（使用者選擇做自訂功能，而非單改色）；PDF／固定版面的背景與縮排；單書層級的自訂色。
 11. **詞彙**：`CONTEXT.md` 新增「首行縮排」與「自訂閱讀顏色」兩個詞條。不需要 ADR。
@@ -55,6 +55,32 @@
 7. **已知風險**：標記必須在章節顯示前完成，否則會閃一下縮排再消失；要在 WAVE 上看。大章節的 `getComputedStyle` 成本也要在 WAVE 上觀察。
 8. **文件**：本段；`issues.md` 新增 Issue 3；`docs/epics.md` 同步；`CONTEXT.md`「首行縮排」詞條補上排除規則；`CLAUDE.md`、`docs/prd.md` 不動；不需要 ADR。
 9. **流程**：新增 Issue 3、不重排編號；Issue 3 先於 Issue 2 執行；分支 `epic-65/issue-3-indent-exclusions`，計畫與實作同分支同 PR；先寫 `plans/plan-issue-3.md`，計畫審查後再動手。
+
+## Issue 2 設計決策（`/grill-with-docs` 定案，2026-10-25）
+
+承接 Discovery 決策 5、6、9、10；以下修訂或補充決策 7、8。
+
+事實盤點（已核對程式）：
+
+- `main.js` 的 `buildOverrideCss` 已支援 `prefs.textColor` 與 `prefs.backgroundColor`（`html, body { background-color … !important }`），`foliate_reader_view.dart` 的 `buildFoliatePreferencesMap` 也已把 `FoliateReaderView.textColor`／`backgroundColor` 轉成 `#RRGGBB` 送過去。**JS 與 FoliateReaderView 不用改**。
+- `ReaderScreen` 現在用 `_themedTextColor`（`colorScheme.onSurface`）與 `_themedBackgroundColor`（`scaffoldBackgroundColor`）餵給 `FoliateReaderView`，頁首／頁尾文字也用 `_themedTextColor`；WebView 載入遮罩（`reader_render_placeholder_background`）用 `scaffoldBackgroundColor`。
+- `ReaderScreen` 目前只知道 `isEinkMode`，不知道目前是哪個 `AppTheme`；`buildReaderScreen()` 的三個呼叫端都有 `widget.appearance`，可帶入 `currentTheme`。
+
+**定案**
+
+1. **範圍**：每個佈景（淺色、深色、羊皮紙）各存一組自訂的背景色與文字色。全域，不分書。沒設定（`null`）就退回佈景原色。
+2. **作用對象**：「佈景」分頁一次只調「目前正在用的佈景」那一組，頂端寫「正在調整：{佈景名}」。分頁裡不放切換佈景的選單（不在範圍內）。
+3. **分頁位置**：新增「佈景」分頁，順序為 文字｜邊界｜呈現｜佈景｜預設集（5 個分頁）。顏色控制項放在這裡，不放「呈現」。
+4. **控制項排版**：背景色與文字色兩個區塊都全展開。每個區塊有色塊預覽、紅綠藍 3 條滑桿（0～255，附 +/-）、`#RRGGBB` 色碼輸入框，滑桿與輸入框雙向即時同步。
+5. **無效色碼**：輸入框標紅、不套用、不寫入。
+6. **對比警告**：文字色與背景色的對比低於 WCAG 建議的 3:1 時，面板顯示警告文字，但仍然套用，不阻擋。
+7. **還原預設**：背景色、文字色各一顆按鈕，只清掉目前佈景的那一個顏色。
+8. **套用範圍**：內文頁面、WebView 後面的 Flutter 底色與載入遮罩、頁首／頁尾文字都跟著自訂色。浮動按鈕維持跟佈景走（`_themedFabBackgroundColor`）。
+9. **E-Ink 高對比模式**：自訂色不套用；「佈景」分頁仍顯示但整頁停用，頂端寫「E-Ink 高對比模式不套用自訂顏色」。
+10. **儲存**：`SharedPreferences`，新類別 `ReaderColorPreferences`（比照 `AppThemePreferences`），每個佈景兩個 key，存 `#RRGGBB` 字串，沒設定就沒有 key。不升級 SQLite，不進單書偏好，不進版面預設集。
+11. **適用格式**：只套用 Foliate 流式；PDF、固定版面（FXL）不套用，也不顯示「佈景」分頁（PDF 走自己的設定面板；FXL 走 `FxlSettingsSheet`，兩者都不是 `ReaderSettingsSheet`）。
+12. **文件**：本段；`issues.md` 更新 Issue 2；`docs/epics.md` 同步；`CONTEXT.md` 的「自訂閱讀顏色」詞條已存在、不用改；不需要 ADR；`CLAUDE.md`、`docs/prd.md` 不動。
+13. **流程**：分支 `epic-65/issue-2-custom-reading-colors`，計畫與實作同分支同 PR；先寫 `plans/plan-issue-2.md`，計畫審查後再動手。
 
 ## 開發記錄
 
