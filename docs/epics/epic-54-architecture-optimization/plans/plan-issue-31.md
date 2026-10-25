@@ -103,4 +103,4 @@
 - [x] **Step 3：** `flutter analyze`；兩個 `check_*.js`（沒有 Node 則記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
 - [x] **Step 4：** 程式審查（報告存 `reviews/review-code-issue-31.md`，不進版控）。
 - [x] **Step 5：** WAVE 真機抽驗（風險低，一輪即可）：EPUB 與 PDF 各開一本，拖動字級、行距等滑桿並調整幾個設定，確認畫面即時反應、**沒有**出現儲存失敗提示；離開後重新開書，設定仍保留。
-- [ ] **Step 6：** 開 PR；PR 開出後把 Issue 31 的狀態同步（Issue 28 已在 Task 0 同步）。
+- [x] **Step 6：** 開 PR；PR 開出後把 Issue 31 的狀態同步（Issue 28 已在 Task 0 同步）。
