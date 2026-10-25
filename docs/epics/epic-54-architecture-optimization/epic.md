@@ -355,6 +355,29 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 7. **文件**：本段；`issues.md` Issue 28 已定案、Issue 32 補標已合併（PR #369）；`docs/epics.md` 同步；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR。
 8. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；先寫 `plans/plan-issue-28.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次；WAVE 抽驗：從書內搜尋跳轉，高亮 3 秒後消失，提前點擊立刻清除。
 
+## Issue 31 設計決策（`/grilling` 定案，2026-10-25）
+
+來源：Issue 26 `/grilling`。事實盤點（已核對 `reader_screen.dart`、`reader_prefs_manager_impl.dart`）：
+
+- `ReaderScreen._handlePrefsChanged`（約 726 行）先 `setState` 更新畫面，再呼叫 `widget.dependencies.prefsManager.saveBookPrefs(...)`；**不 `await`、不 `catch`**。寫入失敗時例外變成沒人接的非同步錯誤，使用者看不到任何提示；`main.dart` 沒有全域處理。
+- 5 個呼叫端（EPUB／PDF／FXL 三個設定面板、套用預設集到目前書籍、PDF 裁切完成）都走這個方法。
+- `saveBookPrefs` 是 SQLite 單筆寫入（`_sqliteRepository.save`），同一資料庫連線的寫入依呼叫順序執行，連續拖滑桿時最後一次寫入的值是最終值，不會亂序。
+- 提示先例：`dictionaryOnlineSaveFailed`；`reader_screen.dart` 已有多處 `SnackBar` 用法與 `ReaderConsoleLog`。語系檔共 4 個 `.arb`（`app_en`、`app_zh`、`app_zh_CN`、`app_zh_TW`），`app_localizations*.dart` 為進版控的生成檔。
+
+**定案**
+
+1. **只改 `_handlePrefsChanged` 的持久化那一行**，5 個呼叫端不改；畫面更新、螢幕方向、系統 UI 模式的順序與行為不變。
+2. **新增私有方法 `_persistBookPrefs(prefs)`**：`try/catch` 包住 `saveBookPrefs`，由 `unawaited` 呼叫，仍不等待寫入結果。
+3. **失敗時**：一律寫一行 `ReaderConsoleLog`（`[ReaderScreen] 閱讀設定儲存失敗：<例外型別>`，不放例外全文）；**每次開書最多提示一次**（旗標 `_prefsSaveFailureNotified`），第一次失敗才跳 `SnackBar`，之後再失敗只寫 Console Log；顯示前先確認 `mounted`。
+4. **不回復畫面**：失敗時畫面維持新設定，本次閱讀照常生效，提示說明「下次開書可能還原」。
+5. **不合併連續寫入**：維持每次都寫（單筆 SQLite 寫入便宜，沒有效能回報；延遲合併會多出離開或閃退時尚未寫出的資料遺失風險）。
+6. **提示文字**：新 key `readerPrefsSaveFailedMessage`，`SnackBar` 加 `Key('reader_prefs_save_failed_snackbar')`；zh：「閱讀設定未能儲存：裝置儲存空間寫入失敗。本次閱讀仍使用新設定，下次開書可能還原。請確認剩餘空間。」；en 同義翻譯；`app_zh_CN.arb` 用簡體；`app_zh_TW.arb` 同 zh；重新產生 `app_localizations*.dart`（`flutter gen-l10n`）。
+7. **測試**：`FakeReaderPrefsManager` 新增可讓 `saveBookPrefs` 丟例外的開關；`reader_screen_test.dart` 新增：寫入失敗時出現提示；連續兩次失敗只出現一次；失敗後畫面設定維持新值；離開畫面後失敗不報錯；成功時沒有提示。既有案例不改。
+8. **範圍外**：`saveGlobalPrefs` 與其他偏好設定的寫入（本張只處理單書偏好）；`LibraryPreferences` 系列；呼叫端合併或延遲寫入。
+9. **風險提醒**：`check_l10n_hardcoded_strings.js` 在本機跑不了（沒有 Node），以 `flutter analyze` 與測試補強，並在開發記錄註明未執行。
+10. **文件**：本段；`issues.md` Issue 31 已定案、Issue 28 補標已合併（PR #370）；`docs/epics.md` 同步；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR。
+11. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；先寫 `plans/plan-issue-31.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次；WAVE 抽驗：正常拖滑桿不出現提示（真機無法製造寫入失敗，失敗路徑靠單元測試）。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
