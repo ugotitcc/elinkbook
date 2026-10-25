@@ -17,7 +17,7 @@
 - **儲存**：key 為 `reader_color_<light|dark|sepia>_background` 與 `reader_color_<…>_text`，值為 `#RRGGBB` 大寫字串；還原時 `remove(key)`。讀到格式不合的字串當作沒設定，不崩潰。
 - **E-Ink 不套用**：`isEinkMode == true` 時 `ReaderScreen` 不疊自訂色；「佈景」分頁仍顯示，但整頁停用並顯示說明。
 - **只影響閱讀器頁面**：不得修改全域 `ThemeData`／`scaffoldBackgroundColor`；浮動按鈕（`_themedFabBackgroundColor`、`_themedFabForegroundColor`）維持跟佈景走。
-- **套用範圍**：送進 `FoliateReaderView` 的 `textColor`／`backgroundColor`、頁首／頁尾文字（已用 `_themedTextColor`）、WebView 載入遮罩（`reader_render_placeholder_background`）。固定版面（`_isFixedLayout`）維持不套用。
+- **套用範圍**：送進 `FoliateReaderView` 的 `textColor`／`backgroundColor`、頁首／頁尾文字（已用 `_themedTextColor`）、WebView 載入遮罩（`reader_render_placeholder_background`）。固定版面（`_isFixedLayout`）與 PDF 維持不套用：自訂色只在 `isFoliateFormat(format) && !_isFixedLayout` 時疊加（`_isFixedLayout` 對 PDF 預設是 `false`，不能只靠它判斷；審查 I-4）。PDF 的載入遮罩顏色必須維持 `scaffoldBackgroundColor`（既有 `reader_screen_test.dart` 約 8295 行斷言）。
 - **無效色碼**：輸入框標紅、不套用、不寫入偏好；已套用的顏色維持上一個有效值。
 - **對比警告**：以 WCAG 對比公式，有效背景色與有效文字色（沒設定的那邊用佈景原色）對比低於 3.0 時顯示警告文字，仍然套用。
 - **新增建構參數一律有預設值**，避免大量既有測試改動：`ReaderScreen.appTheme` 預設 `AppTheme.light`；`ReaderSettingsSheet` 的 `appTheme`、`readerColors`、`onReaderColorsChanged` 皆有預設；`ReaderFeatureDependencies.readerColorPreferences` 預設 `ReaderColorPreferences()`（因此 `main.dart` 與 `fakeReaderFeatureDependencies` 都不必改）。
@@ -41,6 +41,9 @@
 6. **分頁數量變動。** 分頁從 4 個變 5 個，既有測試若假設 4 個或用索引取分頁會壞。→ Task 3 先全域搜尋 `reader_settings_tab_` 與 `length: 4`，逐一確認。
 7. **滑桿與色碼輸入互相覆寫。** 輸入框打到一半（例如 `#12`）不能把滑桿重設，也不能被滑桿的更新蓋掉正在輸入的文字。→ 面板測試：打字過程中滑桿位置不變、輸入完整有效色碼後滑桿同步。
 8. **對比警告基準。** 只設了其中一色時，另一色要用佈景原色計算。→ 純函式測試與面板測試。
+9. **PDF 洩漏自訂色。** PDF 的 `_isFixedLayout` 預設為 `false`，只用它判斷會讓 PDF 載入遮罩吃到 Foliate 的自訂背景。→ `ReaderScreen` 測試：PDF 載入遮罩仍等於 `scaffoldBackgroundColor`（審查 I-4）。
+10. **搜尋路徑的佈景傳遞。** 從全庫搜尋、單書搜尋開書時，`appTheme` 必須一路傳到 `ReaderScreen`，否則深色／羊皮紙使用者會吃到淺色的自訂色。→ 逐個呼叫端確認，並各補一個「傳入深色，開書後吃到深色自訂色」的測試（審查 I-1）。
+11. **不可逆決策：頁籤不得抽成獨立 `StatefulWidget`。** 色碼控制器與錯誤狀態留在 `_ReaderSettingsSheetState`，並在 `dispose()` 釋放（審查 I-3）。
 
 ## File Structure
 
@@ -51,7 +54,9 @@
 | `app/lib/screens/reader_feature_dependencies.dart` | 修改 | 新欄位 `readerColorPreferences`（有預設值） |
 | `app/lib/screens/reader_screen.dart` | 修改 | `appTheme` 參數、載入自訂色、疊色、遮罩、傳給面板、儲存 |
 | `app/lib/screens/reader_screen_route.dart` | 修改 | `buildReaderScreen` 新增 `appTheme` 並轉傳 |
-| `app/lib/screens/library_screen.dart`、`book_search_screen.dart`、`library_search_screen.dart` | 修改 | 三個呼叫端帶入 `appearance.currentTheme` |
+| `app/lib/screens/library_screen.dart` | 修改 | 開書（約 444 行）與推入 `LibrarySearchScreen`（約 833 行）時帶入 `widget.appearance.currentTheme` |
+| `app/lib/screens/library_search_screen.dart` | 修改 | 新增 `appTheme` 參數（預設 `AppTheme.light`）；開書（約 167 行）與推入 `BookSearchScreen`（約 390 行）時轉傳 |
+| `app/lib/screens/book_search_screen.dart` | 修改 | 新增 `appTheme` 參數（預設 `AppTheme.light`）；開書（約 172 行）時轉傳 |
 | `app/lib/screens/reader_settings_sheet.dart` | 修改 | 第 5 個分頁「佈景」 |
 | `app/lib/l10n/*.arb` 與生成檔 | 修改／重新產生 | 新字串 |
 | `app/test/theme/reader_colors_test.dart` | 新增 | 色碼解析、格式化、對比 |
@@ -102,11 +107,11 @@ class ReaderColorPreferences {
 
 ## Task 2：`ReaderScreen` 套用自訂色
 
-**Files:** 修改 `reader_feature_dependencies.dart`、`reader_screen.dart`、`reader_screen_route.dart`、`library_screen.dart`、`book_search_screen.dart`、`library_search_screen.dart`；測試新增 `app/test/screens/reader_screen_custom_colors_test.dart`（沿用既有 `reader_screen_*_test.dart` 的建構方式，先 `Grep` 找一個用 `FakeReaderSurface` 的現成測試當樣板）
+**Files:** 修改 `reader_feature_dependencies.dart`、`reader_screen.dart`、`reader_screen_route.dart`、`library_screen.dart`、`book_search_screen.dart`、`library_search_screen.dart`（只有 `LibraryScreen` 持有 `appearance`，另外兩個搜尋畫面要新增 `appTheme` 參數，見審查 I-1）；測試新增 `app/test/screens/reader_screen_custom_colors_test.dart`（沿用既有 `reader_screen_*_test.dart` 的建構方式，先 `Grep` 找一個用 `FakeReaderSurface` 的現成測試當樣板）
 
 **Interfaces — Consumes：** Task 1 的 `ReaderColors`、`ReaderColorPreferences`。**Produces：** `ReaderScreen.appTheme`（`AppTheme`，預設 `AppTheme.light`）；`buildReaderScreen(appTheme:)`；`ReaderFeatureDependencies.readerColorPreferences`。
 
-- [ ] **Step 1：確認樣板。** `Grep` `ReaderSettingsSheet(` 與 `FoliateReaderView(` 在 `test/screens/` 的用法，決定如何讀到送進 `FoliateReaderView` 的 `textColor`／`backgroundColor`（現有測試若已有讀取方式就沿用）。
+- [ ] **Step 1：確認樣板。** `Grep` `ReaderSettingsSheet(` 與 `FoliateReaderView(` 在 `test/screens/` 的用法，決定如何讀到送進 `FoliateReaderView` 的 `textColor`／`backgroundColor`（現有測試若已有讀取方式就沿用）。以 `reader_screen_surface_test.dart:28-38` 為樣板：`setUp` 要 mock `elinkbook/fullscreen` 與 `elinkbook/volume_key` 兩個 MethodChannel，否則會噴 `MissingPluginException`；顏色是非同步載入，`pumpWidget` 後要補 `await tester.pump(); await tester.runAsync(() => Future.delayed(Duration.zero)); await tester.pump();`（審查 M-1）。
 - [ ] **Step 2：寫失敗測試。** 預先 `setMockInitialValues` 塞淺色自訂色，開啟 `ReaderScreen(appTheme: AppTheme.light, isEinkMode: false)`：
   - `FoliateReaderView.backgroundColor` 與 `.textColor` 等於自訂色。
   - 只設背景時，文字色仍是 `colorScheme.onSurface`。
@@ -114,15 +119,22 @@ class ReaderColorPreferences {
   - `isEinkMode: true` 時兩者都是 E-Ink 主題色（不是自訂色）。
   - `isFixedLayout: true` 時兩者為 `null`。
   - 頁首／頁尾文字顏色等於自訂文字色。
-  - 載入遮罩 `reader_render_placeholder_background` 的 `ColoredBox.color` 等於自訂背景色。
+  - 載入遮罩 `reader_render_placeholder_background` 的 `ColoredBox.color` 等於自訂背景色（Foliate 流式、非 E-Ink）。
+  - **PDF**（`.pdf` 路徑，預設 `_isFixedLayout == false`）：載入遮罩顏色仍等於 `scaffoldBackgroundColor`，不吃自訂色（審查 I-4）。
   - 全域 `Theme.of(context).scaffoldBackgroundColor` 不變。
+  - `appTheme` 變更：同一個 `ReaderScreen` 以不同 `appTheme` 重建後，顏色改讀新佈景（審查 M-4）。
+  - 搜尋路徑（審查 I-1）：`LibrarySearchScreen(appTheme: AppTheme.dark)` 與 `BookSearchScreen(appTheme: AppTheme.dark)` 開書後，傳給 `ReaderScreen` 的 `appTheme` 是 `dark`；`ReaderScreen` 推入 `BookSearchScreen` 時轉傳自己的 `appTheme`（各補一個案例，樣板見 `book_search_screen_test.dart`、`library_search_screen_test.dart`）。
 - [ ] **Step 3：** 執行該測試檔。Expected：FAIL。
 - [ ] **Step 4：實作。**
   1. `ReaderFeatureDependencies` 新增 `final ReaderColorPreferences readerColorPreferences;`，建構子 `this.readerColorPreferences = const ReaderColorPreferences()`。
-  2. `ReaderScreen` 新增 `final AppTheme appTheme;`（預設 `AppTheme.light`）；`buildReaderScreen` 與三個呼叫端傳 `widget.appearance.currentTheme`。
+  2. `ReaderScreen` 新增 `final AppTheme appTheme;`（預設 `AppTheme.light`）；`buildReaderScreen` 新增 `AppTheme appTheme = AppTheme.light` 並轉傳。呼叫端（審查 I-1，只有 `LibraryScreen` 持有 `appearance`）：
+     - `LibraryScreen`：開書（約 444 行）與推入 `LibrarySearchScreen`（約 833 行）傳 `widget.appearance.currentTheme`。
+     - `LibrarySearchScreen`、`BookSearchScreen`：各新增 `final AppTheme appTheme;`（預設 `AppTheme.light`，既有測試不受影響）；`LibrarySearchScreen` 開書（約 167 行）與推入 `BookSearchScreen`（約 390 行）傳 `widget.appTheme`；`BookSearchScreen` 開書（約 172 行）傳 `widget.appTheme`。
+     - `ReaderScreen` 推入 `BookSearchScreen`（約 1437 行）傳 `widget.appTheme`。
   3. `_ReaderScreenState` 新增 `ReaderColors _readerColors = ReaderColors.empty;`，`initState` 以 `unawaited(_loadReaderColors())` 讀入，完成且 `mounted` 時 `setState`。**取捨（Review Focus 5）：** 不另外擋住開書流程；書頁先用佈景原色，讀完（一般在幾十毫秒內）再更新，由 `didUpdateWidget` 觸發 `setStyles`。WAVE 實測若有明顯閃爍，再改成在載入遮罩期間等待顏色讀完。
-  4. `_themedTextColor`／`_themedBackgroundColor` 改為：固定版面回傳 `null`；E-Ink 模式回傳原本的 Theme 值；其餘 `(_readerColors.text ?? Theme 值)`。
-  5. 載入遮罩的 `color` 改用 `_themedBackgroundColor ?? Theme.of(context).scaffoldBackgroundColor`。
+  4. `_themedTextColor`／`_themedBackgroundColor` 改為：固定版面回傳 `null`；E-Ink 模式回傳原本的 Theme 值；**非 Foliate 格式（PDF）也只回傳原本的 Theme 值，不疊自訂色**（審查 I-4，判斷用 `isFoliateFormat(detectBookFormat(widget.filePath))`，與 `build()` 內既有的 `format` 同一來源）；其餘 `(_readerColors.text ?? Theme 值)`。
+  5. 載入遮罩的 `color` 改為：Foliate 流式且非 E-Ink 時用 `_themedBackgroundColor`，否則維持 `Theme.of(context).scaffoldBackgroundColor`。
+  6. 新增 `didUpdateWidget`（`ReaderScreen` 目前沒有）：`widget.appTheme != oldWidget.appTheme` 時 `unawaited(_loadReaderColors())`（審查 M-4）。
 - [ ] **Step 5：** 執行該測試檔。Expected：PASS。再跑 `flutter test test/screens/reader_screen_route_test.dart`（若檔案不存在，改跑 `Grep buildReaderScreen test/` 找到的測試檔）確認三個呼叫端與既有測試沒壞。
 - [ ] **Step 6：** `flutter analyze` 乾淨。
 - [ ] **Step 7：Commit。** 明確列檔，訊息：`feat(reader): 閱讀器套用各佈景自訂的背景色與文字色（epic-65 Issue 2 Task 2）`。
@@ -151,7 +163,11 @@ class ReaderColorPreferences {
 | `readerColorsResetBackground` | 還原背景色 |
 | `readerColorsResetText` | 還原文字色 |
 
-- [ ] **Step 1：全域搜尋分頁假設。** `Grep` `reader_settings_tab_`、`length: 4`、`readerSettingsTab` 在 `app/lib` 與 `app/test`，列出所有假設「4 個分頁」的地方（Review Focus 6），記入開發記錄。
+`readerColorsEditingTheme` 帶參數，`app_zh_TW.arb` 的 `@readerColorsEditingTheme` 要比照 `@settingsThemeDotSemanticsLabel`（約 1680 行）寫 `description` 與 `placeholders: { "themeName": { "type": "String" } }`（審查 M-2）；其餘 3 個 `.arb` 比照各檔既有帶參數字串的寫法。
+
+- [ ] **Step 1：全域搜尋分頁假設。** `Grep` `reader_settings_tab_`、`length: 4`、`readerSettingsTab` 在 `app/lib` 與 `app/test`，列出所有假設「4 個分頁」的地方（Review Focus 6），記入開發記錄。已知必改（審查 I-2）：
+  - `reader_settings_sheet_test.dart:2418`「切換分頁沒有動畫」的陣列改為 `[('邊界', 1), ('呈現', 2), ('佈景', 3), ('預設集', 4), ('文字', 0)]`。
+  - `reader_settings_sheet_test.dart:2472` 的分頁高度巡訪清單加入 `'佈景'`（新分頁高度也要受「面板高度不變」守衛）。
 - [ ] **Step 2：寫失敗測試。** `reader_settings_sheet_test.dart` 新增（`Key` 命名：`reader_settings_tab_theme`、`reader_colors_background_hex`、`reader_colors_background_r/g/b`（滑桿 keyPrefix）、`reader_colors_text_*`、`reader_colors_background_reset`、`reader_colors_text_reset`、`reader_colors_low_contrast_warning`、`reader_colors_eink_hint`）：
   - 分頁順序為 文字｜邊界｜呈現｜佈景｜預設集，共 5 個。
   - 點「佈景」顯示「正在調整：羊皮紙」（傳 `appTheme: AppTheme.sepia`）。
@@ -161,6 +177,9 @@ class ReaderColorPreferences {
   - 色碼框輸入 `#336699` → 三條滑桿同步為 51／102／153，回呼收到新色。
   - 輸入 `#12`（打到一半）→ 框標紅、無回呼、滑桿位置不變；再補成 `#123456` → 恢復並回呼。
   - 按「還原背景色」→ 回呼的 `background == null`、`text` 保持；按「還原文字色」同理。
+  - 該顏色沒設定（`null`）時，對應的還原按鈕 `onPressed` 為 `null`（停用）；設定後啟用（審查 M-3）。
+  - `didUpdateWidget`：外部傳入新的 `readerColors` 後，滑桿與色碼框同步更新（審查 I-3）。
+  - 色碼控制器已釋放：面板移除後無例外（`dispose()` 有覆寫）。
   - 背景 `#FFFFFF`＋文字 `#EEEEEE` → 顯示低對比警告；改成 `#000000` → 警告消失。只設文字色時，背景用 `Theme.scaffoldBackgroundColor` 計算。
   - `isEinkMode: true` → 顯示 `reader_colors_eink_hint`，滑桿與輸入框不可操作（`enabled: false` / `IgnorePointer`），不呼叫回呼。
 - [ ] **Step 3：** `flutter test test/screens/reader_settings_sheet_test.dart`。Expected：新案例 FAIL，既有案例照舊（若有因分頁數改變而壞的，依 Step 1 清單在同一步修正預期）。
@@ -168,8 +187,8 @@ class ReaderColorPreferences {
   1. `.arb` 四檔新增字串，`flutter gen-l10n`。
   2. `DefaultTabController(length: 5)`；`TabBar` 在「呈現」後、「預設集」前加 `Tab(key: Key('reader_settings_tab_theme'), text: l10n.readerSettingsTabTheme)`；`IndexedStack` 依同順序加入 `_buildThemeColorsTab()`；更新「4 個 `_buildXxxTab()`」那段不可逆決策註解的數字與清單。
   3. State 新增 `late ReaderColors _readerColors`（`initState` 由 `widget.readerColors` 初始化）。
-  4. `_buildThemeColorsTab()`：頂端「正在調整：{佈景名}」（佈景名用既有 `settingsThemeLight/Dark/Sepia`）；E-Ink 時加說明並以 `IgnorePointer`＋`Opacity` 整頁停用；背景、文字兩個區塊各用同一個私有 widget `_ReaderColorEditor`（色塊、R／G／B 三條 `_buildSliderRow`（min 0、max 255、step 1，顯示整數）、色碼 `TextField`＋錯誤文字、還原按鈕）。
-  5. 色碼框用自己的 `TextEditingController`；只有「使用者在框內輸入」時才解析並回推滑桿，「滑桿變動」時才改寫框內文字（避免互相覆寫，Review Focus 7）。
+  4. `_buildThemeColorsTab()`：頂端「正在調整：{佈景名}」（佈景名用既有 `settingsThemeLight/Dark/Sepia`）；E-Ink 時加說明並以 `IgnorePointer`＋`Opacity` 整頁停用；背景、文字兩個區塊各用同一個輔助方法 `_buildColorEditor(...)`（色塊、R／G／B 三條 `_buildSliderRow`（min 0、max 255、step 1，顯示整數）、色碼 `TextField`＋錯誤文字、還原按鈕）。**它只是 `_ReaderSettingsSheetState` 的展示方法或純 `StatelessWidget`，不得是 `StatefulWidget`**（`reader_settings_sheet.dart:364` 的不可逆決策；審查 I-3）。還原按鈕在該顏色為 `null` 時 `onPressed: null`（審查 M-3）。
+  5. 背景與文字的 `TextEditingController`（`_bgHexController`、`_textHexController`）與各自的錯誤狀態旗標定義在 `_ReaderSettingsSheetState` 根層級；`initState` 建立、**新增 `dispose()` 釋放兩個控制器**（目前此檔沒有 `dispose()`）。只有「使用者在框內輸入」時才解析並回推滑桿，「滑桿變動」時才改寫框內文字（避免互相覆寫，Review Focus 7）。既有 `didUpdateWidget`（約 163 行）補上：`widget.readerColors != oldWidget.readerColors` 時同步 `_readerColors` 與兩個控制器文字（審查 I-3）。
   6. 低對比警告用 `contrastRatio(有效背景, 有效文字) < 3.0` 判斷。
   7. 每次有效變動：更新 `_readerColors`、呼叫 `widget.onReaderColorsChanged?.call(_readerColors)`。
   8. `ReaderScreen` 開面板處傳入 `appTheme: widget.appTheme`、`readerColors: _readerColors`、`onReaderColorsChanged: _handleReaderColorsChanged`；後者 `setState(() => _readerColors = c)` 並 `unawaited(widget.dependencies.readerColorPreferences.save(widget.appTheme, c))`。
