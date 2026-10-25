@@ -158,6 +158,51 @@ let decorationIdByCfi = new Map()
 let lastDecorations = []
 
 /**
+ * 標記不該縮排的段落（epic-65 Issue 3）：實際顯示為置中的 p，以及沒有文字的 p
+ * （空白、只有 <br>、只有圖片）。縮排 CSS 以 :not([data-elink-no-indent]) 跳過它們。
+ *
+ * 使用者選了「文字對齊」（prefs.textAlign 有值）時，所有 p 都被 App 強制成同一種
+ * 對齊，computed 值不再反映書本原貌，此時只排除沒有文字的段落（決策 4）。
+ * 不排除靠右對齊。
+ *
+ * 縮排關閉（firstLineIndent 不是數字）時移除標記、不做 getComputedStyle 計算
+ * （決策 3、Review Focus 5）。firstLineIndent === 0 仍是合法值，照常標記——
+ * 0 與「關閉」的 CSS 語意不同（0 會清掉書本原有縮排）。
+ *
+ * doc.defaultView 為 null 或沒有 getComputedStyle 時視為「不是置中」（只排除沒有
+ * 文字的段落），刻意不退回外層 window——外層 window 對子文件元素算出的值不可靠。
+ */
+function markNoIndentParagraphs(doc, prefs) {
+  if (!doc) return
+  if (typeof prefs?.firstLineIndent !== 'number') {
+    // 關閉：只清理確實有標記的節點，不全量走訪、不碰 computed style
+    for (const p of doc.querySelectorAll('p[data-elink-no-indent]')) {
+      p.removeAttribute('data-elink-no-indent')
+    }
+    return
+  }
+  const skipCentered = !prefs.textAlign
+  const win = doc.defaultView
+  const canCompute = !!win && typeof win.getComputedStyle === 'function'
+  // 階段一：只讀。讀寫交錯會讓每個 p 都強制同步重算樣式（layout thrashing）。
+  const toAdd = []
+  const toRemove = []
+  for (const p of doc.querySelectorAll('p')) {
+    const empty = (p.textContent || '').trim() === ''
+    // 沒有文字已確定排除，不必再算 computed style
+    const centered = !empty && skipCentered && canCompute &&
+      (win.getComputedStyle(p).textAlign || '').includes('center')
+    const exclude = empty || centered
+    const marked = p.hasAttribute('data-elink-no-indent')
+    if (exclude && !marked) toAdd.push(p)
+    else if (!exclude && marked) toRemove.push(p)
+  }
+  // 階段二：批次寫入
+  for (const p of toAdd) p.setAttribute('data-elink-no-indent', '')
+  for (const p of toRemove) p.removeAttribute('data-elink-no-indent')
+}
+
+/**
  * 依目前偏好 [prefs] 產生要疊加在書本樣式之上的覆蓋 CSS 文字（透過
  * Paginator.setStyles() 的第二個陣列元素套用，見 Global Constraints）。
  * `publisherStyles === false` 時改用萬用選取器 `*`，讓覆蓋規則的優先度
@@ -238,13 +283,21 @@ function buildOverrideCss(prefs) {
     rules.push(`p { margin-block-end: ${prefs.paragraphSpacing}em !important; }`)
   }
   if (typeof prefs.firstLineIndent === 'number') {
-    // epic-65-reader-indent-and-colors Issue 1：首行縮排，套用到所有 p（含置中、
-    // 空白、只含圖片的段落，決策 3）。0 是合法值——強制 text-indent: 0 會把書本
-    // 原有的縮排清掉，因此不能用 truthy 判斷（0 會被誤判為關閉）。text-indent
-    // 是 inline 軸的起始端縮排，vertical-rl 下 inline 軸為垂直方向，首行自然
-    // 「往下」縮，不需要依 writingMode 分支處理。`!important` 讓它不受
-    // publisherStyles（停用書本 CSS）影響。
-    rules.push(`p { text-indent: ${prefs.firstLineIndent}em !important; }`)
+    // epic-65-reader-indent-and-colors Issue 1：首行縮排。0 是合法值——強制
+    // text-indent: 0 會把書本原有的縮排清掉，因此不能用 truthy 判斷（0 會被
+    // 誤判為關閉）。text-indent 是 inline 軸的起始端縮排，vertical-rl 下
+    // inline 軸為垂直方向，首行自然「往下」縮，不需要依 writingMode 分支處理。
+    // `!important` 讓它不受 publisherStyles（停用書本 CSS）影響。
+    //
+    // epic-65 Issue 3：置中與沒有文字的段落不縮排。CSS 無法判斷「實際顯示
+    // 是否置中」（置中常寫在書本自己的 class），改由 markNoIndentParagraphs()
+    // 在章節載入／偏好變更時以 getComputedStyle 判定並加上
+    // data-elink-no-indent 屬性。被標記的 p 明確設為 0（審查 I-1）：只跳過的話
+    // 會退回書本自己的 p { text-indent } 全域規則，置中段落仍會偏移，也違反
+    // 「0 清掉書本縮排」的語意。未標記的 p 用 :not() 套用縮排值；選擇器特異度
+    // 因此由 (0,0,1) 升為 (0,1,1)，會蓋過書本較弱的 !important 縮排（審查 M-2）。
+    rules.push(`p:not([data-elink-no-indent]) { text-indent: ${prefs.firstLineIndent}em !important; }`)
+    rules.push('p[data-elink-no-indent] { text-indent: 0 !important; }')
   }
   if (typeof prefs.letterSpacing === 'number') {
     // epic-28-reader-settings-enhancements Issue 1：letter-spacing 作用於
@@ -463,6 +516,15 @@ window.applyPreferences = function (prefs) {
   view.renderer.setAttribute('margin-left', `${marginLeftPx}px`)
   view.renderer.setAttribute('margin-right', `${marginRightPx}px`)
   view.renderer.setStyles([fontFaceCss, buildOverrideCss(prefs)])
+
+  // epic-65 Issue 3：重標已載入章節的「不縮排」段落。必須在 setStyles() 之後
+  // ——它是同步寫入 <style>，之後讀到的 computed text-align 才已反映最新的
+  // 統一對齊覆蓋；順序顛倒時，從「統一置中」切回預設會把整本書誤判成置中。
+  // FXL 已在上面提早 return，不會走到這裡；load 事件上的 FXL firstLineIndent
+  // 恆為 null，只會走 markNoIndentParagraphs() 的清理分支。
+  for (const { doc } of view.renderer.getContents()) {
+    markNoIndentParagraphs(doc, prefs)
+  }
 
   // /diagnose（Epic 18 Issue 45，2026-08-11）：切換書寫方向後翻頁一次跳
   // 好幾頁、退出重進才恢復正常。根因：Paginator 內部決定分欄/捲動軸
@@ -1306,6 +1368,12 @@ async function openBook() {
       // 賦予 initialPrefs 的初始值，不依賴 window.applyPreferences() 是否
       // 已執行過。
       applyTextConversion(doc, currentTextConversion)
+      // epic-65 Issue 3：章節載入（含 look-ahead 預讀章節）時同步標記不縮排
+      // 段落，避免先縮排再消失的閃爍（Review Focus 1、2）。load 事件由
+      // paginator.js 的 afterLoad 派發，派發前已先 setStyles()，此處讀到的
+      // computed text-align 已是套用覆蓋後的結果。lastAppliedPrefs 以
+      // initialPrefs 初始化，load 觸發時一定有值。
+      markNoIndentParagraphs(doc, lastAppliedPrefs)
       const classifier = new TouchIntentClassifier()
 
       // 選取範圍即時回報（epic-17 Issue 8）：抽成共用函式，供既有

@@ -23,7 +23,7 @@
 
 1. **放在新 Epic**：兩項功能同屬「版面設定增強」，不併入 `epic-54`（架構優化）。兩張 Issue，Issue 1 先做。
 2. **首行縮排（Issue 1）**：開關加字數滑桿（附 +/-）；範圍 0～4 字、每次調 0.5 字；開關打開預設 2 字；關閉＝維持書本原本的縮排。
-3. **縮排的套用範圍**：只套用 Foliate 流式格式（EPUB、TXT、MD、KF8），PDF、固定版面（FXL）、CBZ 不套用；套用到所有 `p` 段落，置中、空白、只含圖片的段落不特別排除（先用 WAVE 實書確認，必要時另開修正）；`!important`，不受「停用書本 CSS」影響；直排時往下縮。
+3. **縮排的套用範圍**：只套用 Foliate 流式格式（EPUB、TXT、MD、KF8），PDF、固定版面（FXL）、CBZ 不套用；套用到所有 `p` 段落，置中、空白、只含圖片的段落不特別排除（先用 WAVE 實書確認，必要時另開修正）〔**已被 Issue 3 修訂**：WAVE 實測確認置中段落會偏移，改為排除置中與無文字段落，見「Issue 3 設計決策」〕；`!important`，不受「停用書本 CSS」影響；直排時往下縮。
 4. **縮排的儲存**：單書偏好，`BookReaderPrefs` 新增 `firstLineIndent`（`double?`，單位 em，`null`＝關閉）；SQLite 版本 28→29，`book_reader_prefs` 新增欄位；「版面預設集」JSON 含此欄位，舊預設集讀不到視為 `null`。
 5. **自訂閱讀顏色（Issue 2）**：背景色與文字色都可自訂。每個佈景（淺色、深色、宣紙）各存一組，全域、不分書；沒設定就用佈景原本的顏色。
 6. **自訂色的邊界**：E-Ink 模式一律不套用，維持純黑白高對比；只影響閱讀器頁面，不影響書庫、設定頁等其他畫面（閱讀器內另算背景色，不直接改共用的 `scaffoldBackgroundColor`）；只套用 Foliate 流式格式，PDF、固定版面不套用。
@@ -33,6 +33,28 @@
 10. **範圍外**：把淺色佈景整體背景改純白（使用者選擇做自訂功能，而非單改色）；PDF／固定版面的背景與縮排；單書層級的自訂色。
 11. **詞彙**：`CONTEXT.md` 新增「首行縮排」與「自訂閱讀顏色」兩個詞條。不需要 ADR。
 12. **流程**：兩張 Issue 各自一個分支、一個 PR，計畫與實作同分支同 PR（不另開文件 PR）；先寫 `plans/plan-issue-N.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在 Issue 最後跑一次；WAVE 真機抽驗後才開 PR。
+
+## Issue 3 設計決策（`/grill-with-docs` 定案，2026-10-25）
+
+來源：Issue 1 WAVE 實測第 (7) 項——`text-indent` 對 `text-align: center` 的段落同樣生效，置中段落首行偏移，設定 4 字時甚至被擠成 3 行。這修訂了 Discovery 決策 3「置中、空白、只含圖片的段落不特別排除」。
+
+事實盤點（已核對 `main.js`）：
+
+- 縮排規則是純 CSS，由 `window.applyPreferences` 組成後以 `view.renderer.setStyles([fontFaceCss, css])` 套給整本書。CSS 沒辦法判斷「這段實際是不是置中」（置中常寫在書本自己的 class，不是寫在段落上）。
+- `main.js` 已有每個章節載入的掛勾（`view.addEventListener('load', …)`，`isIndexMode` 時提早 return）和 `applyTextConversion` 的模式：章節載入時套用，`applyPreferences` 時對 `view.renderer.getContents()` 所有已載入章節重做。
+- 使用者選了「文字對齊」時，`p { text-align: … !important }` 會讓所有段落同一種對齊，書本原本的置中看不出來。
+
+**定案**
+
+1. **規則**：首行縮排只套用到「有文字、且實際顯示不是置中」的段落。排除：實際顯示為置中的段落（行內 style、`align` 屬性、書本 class 都算）；沒有文字的段落（空白、只有圖片、只有空白字元）。**不排除**靠右對齊的段落。
+2. **做法：JS 標記**。`main.js` 新增函式（暫名 `markNoIndentParagraphs(doc, prefs)`）：以 `getComputedStyle(p).textAlign` 含 `center`、或 `textContent.trim() === ''`，判定要排除的 `p`，加上屬性 `data-elink-no-indent`。CSS 規則由 `p { text-indent: … }` 改為 `p:not([data-elink-no-indent]) { text-indent: Nem !important; }`（`0` 與 `!important` 語意不變）。
+3. **何時標記**：章節載入事件（含預讀章節）與 `applyPreferences`（對所有已載入章節重新標記）。縮排關閉（`firstLineIndent` 不是數字）時移除標記、不做計算，避免多餘效能成本。
+4. **使用者選了「文字對齊」時**（`prefs.textAlign` 有值）：不做置中排除，所有有文字的段落都縮排；只排除沒有文字的段落。
+5. **Dart 端不改**：偏好 map 已含 `textAlign` 與 `firstLineIndent`；不需要新欄位、不需要資料庫升級、不需要新 l10n 字串。
+6. **驗證**：`main.js` 本機沒有測試台（沒有 Node）。做一本探針 EPUB（置中 class、行內置中、`align="center"`、空段落、只有圖片的段落、一般段落、直排版）放到 WAVE 實測，不進版控。若使用者裝好 Node，則加 `app/tool/foliate_touch_harness/` 測試情境（比照 `scenario-vertical-paragraph-spacing.mjs`）並實際跑過；沒裝就不提交跑不了的腳本，並在開發記錄註明未執行。
+7. **已知風險**：標記必須在章節顯示前完成，否則會閃一下縮排再消失；要在 WAVE 上看。大章節的 `getComputedStyle` 成本也要在 WAVE 上觀察。
+8. **文件**：本段；`issues.md` 新增 Issue 3；`docs/epics.md` 同步；`CONTEXT.md`「首行縮排」詞條補上排除規則；`CLAUDE.md`、`docs/prd.md` 不動；不需要 ADR。
+9. **流程**：新增 Issue 3、不重排編號；Issue 3 先於 Issue 2 執行；分支 `epic-65/issue-3-indent-exclusions`，計畫與實作同分支同 PR；先寫 `plans/plan-issue-3.md`，計畫審查後再動手。
 
 ## 開發記錄
 
@@ -84,3 +106,34 @@
 **2026-10-25 Issue 1 獨立程式審查後修訂（3 項 Minor 全修，使用者指示）**：審查報告 `reviews/review-code-issue-1-r2.md`（不進版控）0 Critical／0 Important／3 Minor，結論可合併。修訂：(1) FXL／CBZ 閘門——`reader_screen.dart` 傳給 `FoliateReaderView` 的 `firstLineIndent` 改為 `_isFixedLayout ? null : resolved.firstLineIndent`（比照 `_themedTextColor`），新增 2 個 `reader_screen_test` 案例（固定版面偏好殘留縮排時不傳、流式照常傳），先確認紅燈再修；(2) zh_TW `.arb` 的 `@readerSettingsFirstLineIndentValue` 描述補明單位（中文版「字」、英文版 em，CJK 1 字約 1em）並重新產生 l10n；(3) 縮排開關與滑桿從「文字」分頁搬到「呈現」分頁（排在「文字對齊」之後），同時解掉「文字」分頁高度餘裕的疑慮；`reader_settings_sheet_test.dart` 的縮排案例改為先切到「呈現」分頁，並新增「控制項在呈現分頁、不在文字分頁」案例，先確認紅燈（6 個失敗）再搬。驗證：`flutter analyze` 乾淨；`reader_settings_sheet_test.dart` 整份 105 個全過（含 `textTabHeight < 1000` 與「使用全域預設」5 個守衛）；`reader_screen_test.dart` 整份 306 個全過。**控制項位置改變，需在 WAVE 重新抽驗。**
 
 **2026-10-25 Issue 1 審查修訂後 WAVE 重新抽驗通過**：WAVE（`TCE70P24B2202374`）安裝修訂版 debug APK；「呈現」分頁有首行縮排開關與滑桿（排在「文字對齊」之後），「文字」分頁已無此控制項；打開開關後縮排即時生效，滑桿拖到 0、1、4 即時變化；關閉開關時滑桿與 +/- 變淡且不可操作；PDF 與漫畫（CBZ）的版面設定沒有縮排控制項。
+
+**2026-10-25 Issue 3 縮排排除置中與無文字段落完成實作與收尾（分支 `epic-65/issue-3-indent-exclusions`）**：
+
+- 實作重點：
+  - `main.js`：新增 `markNoIndentParagraphs(doc, prefs)`，透過 `getComputedStyle(p).textAlign.includes('center')` 判定置中段落，並判斷 `(p.textContent || '').trim() === ''` 排除空白／純圖片／`<br>` 段落，加上 `data-elink-no-indent` 屬性。
+  - 縮排 CSS 改為 `p:not([data-elink-no-indent]) { text-indent: Nem !important; }`。
+  - 當使用者指定文字對齊（`prefs.textAlign` 有值）時，只排除無文字段落，不排除置中段落（決策 4）。
+  - 縮排關閉（`firstLineIndent` 非數字）時移除標記，不做樣式計算。
+  - 兩階段讀寫分離（Layout Thrashing 防護）與 `win` 防禦（`doc.defaultView` 為空時降級）。
+  - 於章節載入 `load` 事件（避免閃爍）及 `applyPreferences`（`setStyles` 之後同步重標）呼叫。
+- 程式審查：執行者依 Review Focus 8 項完成審查，報告存於 `reviews/review-code-issue-3.md`（0 Critical / 0 Important / 2 Minor），結論可合併。
+- 驗證：
+  - `flutter analyze`：No issues found!
+  - 單元測試：`test/reader/foliate_reader_view_test.dart` 126/126 passed。
+  - 全套測試：完整 `flutter test` **4555 通過、1 略過、0 失敗**（All tests passed）。
+  - 本機無法執行的檢查：`check_l10n_hardcoded_strings.js`、`check_integration_keys.js` 與 `foliate_touch_harness` 未執行（本機環境無可用 Node.js，依 Global Constraints 跳過）。
+- **WAVE 真機抽驗（`TCE70P24B2202374`／Android 12，`app-debug.apk`）**：
+  - (1) 橫排探針書開縮排 2 字：一般段落首行縮排 2 字；行內置中、`align="center"`、class 置中段落皆維持嚴格置中且不縮排；空段落、純圖片段落無偏移。
+  - (2) 翻到第二章：新章節載入立即生效，無先縮排再消失的閃爍現象。
+  - (3) 縮排滑桿拖至 4 字：一般段落縮排 4 字，置中段落完全不受影響、未被擠成多行。
+  - (4) 關閉縮排開關：全部段落恢復書本原貌（一般段落恢復齊行無縮排）。
+  - (5) 統一文字對齊「置中」：所有有文字段落依統一對齊顯示且具縮排規則，無文字段落仍排除。
+  - (6) 直排探針書驗證：一般段落垂直首行往下縮排；置中段落維持垂直置中、不往下縮。
+  - (7) 真實長篇 EPUB（《長篇繁體中文直排測試書》）：段落載入與翻頁順暢，無任何卡頓。
+  - (8) 離開書本重開：單書偏好完整保留。
+
+**2026-10-25 Issue 3 獨立審查（`reviews/review-code-issue-3-r2.md`）修訂**：0 Critical／1 Important／5 Minor。
+- I-1（已修）：被標記的段落原本只是「不套用 App 縮排」，會退回書本自己的 `p { text-indent }`，置中段落在有全域 p 縮排的書裡仍偏移，`firstLineIndent = 0` 也比 Issue 1 退步。`main.js` 新增 `p[data-elink-no-indent] { text-indent: 0 !important; }`。
+- M-2（已補註解）：選擇器特異度由 (0,0,1) 升為 (0,1,1)，會蓋過書本較弱的 `!important` 縮排。
+- M-1、M-3、M-4、M-5：不改（已知限制或影響極小）。
+- 修訂後 WAVE 重新抽驗通過：探針書 `probe_global_indent.epub`（書本 CSS 含全域 `p { text-indent: 2em }`）。不開縮排維持書本原樣；縮排 4 字時一般段落縮 4 字，class／行內／`align` 三種置中段落不偏移、空段落無偏移；拖到 0 時一般段落也是 0；翻到第二章結果相同。
