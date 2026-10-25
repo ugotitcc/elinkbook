@@ -52,7 +52,7 @@
   - `export function nextMaxHeight(args: { pitch: number, target: number, base: number }): number | null` — `|pitch - target| < PITCH_TOLERANCE` 回 `null`；否則回 `base - (pitch - target)`。
   - `export function compensateColumnPitch(args: { target: number, measure: () => {pitch:number,columnLength:number}|null, getBoxHeight: () => number, setMaxHeight: (px:number) => void, resetMaxHeight: () => void }): { status: 'skipped' | 'ok' | 'compensated' | 'gave-up', iterations: number }`
 
-- [ ] **步驟 1：寫失敗測試 `app/tool/test_column_pitch.mjs`**（比照 `test_tts_safe_window.mjs`：`node:assert/strict`、零依賴、結束碼 0／非 0）。案例（名稱用正體中文，斷言用下列數值）：
+- [x] **步驟 1：寫失敗測試 `app/tool/test_column_pitch.mjs`**（比照 `test_tts_safe_window.mjs`：`node:assert/strict`、零依賴、結束碼 0／非 0）。案例（名稱用正體中文，斷言用下列數值）：
   - **a 單頁章節**：`measure` 回 `null` → `status === 'skipped'`、`setMaxHeight` 呼叫 0 次、`resetMaxHeight` 呼叫 0 次。
   - **b 新版引擎**：`measure` 回 `{pitch: 999.5, columnLength: 927.5}`、`target = 999.5` → `status === 'ok'`、`iterations === 0`、`setMaxHeight` 0 次。
   - **c 單欄舊引擎一步收斂**：`target = 999.5`、`getBoxHeight() = 999.5`；`measure` 第 1 次回 `{pitch: 1071.5, columnLength: 999.5}`，`setMaxHeight` 被呼叫後改回 `{pitch: 999.5, columnLength: 927.5}` → `setMaxHeight` 收到 `927.5`、`status === 'compensated'`、`iterations === 1`。
@@ -64,11 +64,11 @@
   - **f2 量測的邊界**：橫排 RTL，兩矩形 `left` 為 `1000`、`500`（遞減）→ `pitch === 500`（取絕對值）；兩矩形 `top` 相同 → `null`（`pitch` 為 0）。
   - **g `nextMaxHeight`**：`{pitch: 1000, target: 999.5, base: 999.5}`（誤差 0.5）→ `null`；誤差正好 1.5 → 回數值（容許邊界不含）。
   - **h 算出非正數的高度**：`target = 999.5`、`getBoxHeight() = 50`、`measure` 回 `{pitch: 1071.5, columnLength: 50}`（算得 `50 − 72 = −22`）→ `setMaxHeight` 0 次、`resetMaxHeight` 恰好 1 次、`status === 'gave-up'`。另測 `isValidMaxHeight(0)`、`isValidMaxHeight(-22)`、`isValidMaxHeight(NaN)` 為 `false`，`isValidMaxHeight(927.5)` 為 `true`。
-- [ ] **步驟 2：執行確認失敗**：PowerShell `node app/tool/test_column_pitch.mjs`，預期因找不到 `column-pitch.js` 而失敗（結束碼非 0）。
-- [ ] **步驟 3：實作 `column-pitch.js`**。迭代規則：迴圈最多 `MAX_COMPENSATION_ITERATIONS` 輪；每輪先 `measure()`（第一輪回 `null` → `skipped`；之後回 `null` → 還原並 `gave-up`），再 `nextMaxHeight`（`base` = 上一次 `setMaxHeight` 的值；第一次調整前用 `Math.min(getBoxHeight(), columnLength)`）；為 `null` 即結束（第一輪結束為 `ok`，之後為 `compensated`，`iterations` = 已呼叫 `setMaxHeight` 的次數）；算出的值未通過 `isValidMaxHeight` 立即 `resetMaxHeight()` 並回 `gave-up`（不呼叫 `setMaxHeight`）；否則 `setMaxHeight`。調整滿 4 次後再量一次，仍超出容許誤差就 `resetMaxHeight()` 並回 `gave-up`。檔案開頭註解寫明：零 DOM 依賴、用途、與 `CONTEXT.md`「頁高／欄間隔」對應。
-- [ ] **步驟 4：執行確認通過**：同指令，預期結束碼 0，輸出「全數通過」。
-- [ ] **步驟 5：`app/tool/README.md` 加上 `test_column_pitch.mjs` 一行**（用途與用法，格式比照既有條目）。
-- [ ] **步驟 6：Commit**：`git add app/android/app/src/main/assets/foliate/column-pitch.js app/tool/test_column_pitch.mjs app/tool/README.md`，訊息 `feat(foliate): 欄間隔補償純函式與測試（epic-54 Issue 34 Task 1）`。
+- [x] **步驟 2：執行確認失敗**：PowerShell `node app/tool/test_column_pitch.mjs`，預期因找不到 `column-pitch.js` 而失敗（結束碼非 0）。
+- [x] **步驟 3：實作 `column-pitch.js`**。迭代規則：迴圈最多 `MAX_COMPENSATION_ITERATIONS` 輪；每輪先 `measure()`（第一輪回 `null` → `skipped`；之後回 `null` → 還原並 `gave-up`），再 `nextMaxHeight`（`base` = 上一次 `setMaxHeight` 的值；第一次調整前用 `Math.min(getBoxHeight(), columnLength)`）；為 `null` 即結束（第一輪結束為 `ok`，之後為 `compensated`，`iterations` = 已呼叫 `setMaxHeight` 的次數）；算出的值未通過 `isValidMaxHeight` 立即 `resetMaxHeight()` 並回 `gave-up`（不呼叫 `setMaxHeight`）；否則 `setMaxHeight`。調整滿 4 次後再量一次，仍超出容許誤差就 `resetMaxHeight()` 並回 `gave-up`。檔案開頭註解寫明：零 DOM 依賴、用途、與 `CONTEXT.md`「頁高／欄間隔」對應。
+- [x] **步驟 4：執行確認通過**：同指令，預期結束碼 0，輸出「全數通過」。
+- [x] **步驟 5：`app/tool/README.md` 加上 `test_column_pitch.mjs` 一行**（用途與用法，格式比照既有條目）。
+- [x] **步驟 6：Commit**：`git add app/android/app/src/main/assets/foliate/column-pitch.js app/tool/test_column_pitch.mjs app/tool/README.md`，訊息 `feat(foliate): 欄間隔補償純函式與測試（epic-54 Issue 34 Task 1）`。
 
 ---
 
@@ -82,23 +82,23 @@
 - Consumes：Task 1 的 `compensateColumnPitch`、`PITCH_TOLERANCE`（`import` 自 `./column-pitch.js`）。
 - Produces：`main.js` 內部函式 `attachColumnPitchCompensation(doc: Document): void`（不對外匯出；由 `'load'` 事件處理器呼叫，索引模式 `isIndexMode` 不呼叫）。
 
-- [ ] **步驟 1：寫測試台情境（會失敗）**。`launchHarnessPage` 載入記憶體組的單章直排 EPUB（160 個段落，章節內以 `html{writing-mode:vertical-rl}` 宣告直排，比照 `scratchpad/diag/pitch.mjs` 的作法）、`viewport: { width: 749, height: 999 }`、`prefs: { fontSize: 1.75, marginTop: 32, marginBottom: 16, marginLeft: 24, marginRight: 24, columnMode: 'single' }`。檔案開頭註解寫明：Chromium 156 無法重現 Chrome 91 的誤差，改以 `column-gap` 加大 72 模擬同樣的欄間隔誤差（決策 8）。`report()` 檢查項（名稱用正體中文）：
+- [x] **步驟 1：寫測試台情境（會失敗）**。`launchHarnessPage` 載入記憶體組的單章直排 EPUB（160 個段落，章節內以 `html{writing-mode:vertical-rl}` 宣告直排，比照 `scratchpad/diag/pitch.mjs` 的作法）、`viewport: { width: 749, height: 999 }`、`prefs: { fontSize: 1.75, marginTop: 32, marginBottom: 16, marginLeft: 24, marginRight: 24, columnMode: 'single' }`。檔案開頭註解寫明：Chromium 156 無法重現 Chrome 91 的誤差，改以 `column-gap` 加大 72 模擬同樣的欄間隔誤差（決策 8）。`report()` 檢查項（名稱用正體中文）：
   1. **前提**：未模擬誤差時，`body.getClientRects()` 相鄰欄起點差與 `renderer.size` 相差小於 1.5，且根元素 inline `max-height` 為 `none`（新版引擎不動作，Review Focus 1）。
   2. **模擬舊引擎**：對根元素 `style.setProperty('column-gap', '144px', 'important')`，等 800 ms，欄起點差與 `renderer.size` 相差小於 1.5，且 `max-height` 是小於頁高的 px 值（補償生效）。
   3. **重排後可再次補償**（Review Focus 4）：呼叫 `window.applyPreferences({ ...PREFS, writingMode: 'vertical', fontSize: 2.0 })`（paginator 會把 `max-height` 重設為 `none`、`column-gap` 回 72），等 800 ms，欄間隔等於頁高；再次注入 `column-gap: 144px`，等 800 ms，欄間隔仍等於頁高。
   4. **無窮迴圈防護**：補償完成後掛一個計數用 `MutationObserver` 觀察根元素 `style` 屬性 1500 ms，變動次數小於 10。
   5. **無未捕捉例外**：`pageErrors.length === 0`。
-- [ ] **步驟 2：執行確認失敗**：PowerShell 在 `app/tool/foliate_touch_harness` 執行 `node scenario-column-pitch-compensation.mjs`，預期檢查項 2、3 FAIL（尚未接線）。
-- [ ] **步驟 3：`main.js` 實作 `attachColumnPitchCompensation(doc)`**：
+- [x] **步驟 2：執行確認失敗**：PowerShell 在 `app/tool/foliate_touch_harness` 執行 `node scenario-column-pitch-compensation.mjs`，預期檢查項 2、3 FAIL（尚未接線）。
+- [x] **步驟 3：`main.js` 實作 `attachColumnPitchCompensation(doc)`**：
   - 前置條件不符就不掛觀察者、不量測：`view.isFixedLayout` 為真（FXL／CBZ，審查 I-1）、橫排、捲動、`renderer.size` 不大於 0。`vertical` 以 `doc.defaultView.getComputedStyle(doc.documentElement).writingMode` 判斷；分頁以 `view.renderer.scrolled === false` 判斷。
   - 觀察者回呼首行：`doc.defaultView`、`doc.documentElement`、`doc.body` 任一為 `null`（iframe 已被移除）就直接 `return`（審查 M-2）。
   - `compensateColumnPitch` 的 `measure` 用 `Array.from(doc.body.getClientRects())` 傳給 `measureColumnPitch`；`getBoxHeight` 用 `doc.documentElement.getBoundingClientRect().height`；`setMaxHeight`／`resetMaxHeight` 用 `documentElement.style.setProperty('max-height', ..., 'important')`。
   - 掛 `new MutationObserver(...)`，只觀察 `documentElement` 的 `style` 屬性；回呼內用 `busy` 旗標避免重入，執行完以 `observer.takeRecords()` 丟掉自己造成的變動。章節文件載入後也主動執行一次。
   - 結果為 `gave-up` 時 `console.warn('[column-pitch] 補償失敗，維持原排版')`，模組層級旗標確保只警告一次。
   - 變數與函式註解用正體中文，說明「為何」：Chrome 91 直排多欄把欄長排成頁高、忽略上下內距。
-- [ ] **步驟 4：執行確認通過**：同步驟 2 指令，預期全部 PASS。
-- [ ] **步驟 5：回歸**：PowerShell 在 `app/tool/foliate_touch_harness` 執行 `node run-all.mjs`，預期結尾「整體結果：全部 PASS」（`run-all.mjs` 會自動納入新情境）。
-- [ ] **步驟 6：Commit**：`git add app/android/app/src/main/assets/foliate/main.js app/tool/foliate_touch_harness/scenario-column-pitch-compensation.mjs`，訊息 `fix(foliate): 舊 WebView 直排欄間隔與頁高不一致的補償（epic-54 Issue 34 Task 2）`。
+- [x] **步驟 4：執行確認通過**：同步驟 2 指令，預期全部 PASS。
+- [x] **步驟 5：回歸**：PowerShell 在 `app/tool/foliate_touch_harness` 執行 `node run-all.mjs`，預期結尾「整體結果：全部 PASS」（`run-all.mjs` 會自動納入新情境）。
+- [x] **步驟 6：Commit**：`git add app/android/app/src/main/assets/foliate/main.js app/tool/foliate_touch_harness/scenario-column-pitch-compensation.mjs`，訊息 `fix(foliate): 舊 WebView 直排欄間隔與頁高不一致的補償（epic-54 Issue 34 Task 2）`。
 
 ---
 
@@ -106,11 +106,11 @@
 
 **Files：** 不新增；只驗證。
 
-- [ ] **步驟 1：ES 相容性掃描**：PowerShell `node app/tool/check_foliate_es_compat.js`，預期結束碼 0。若 `column-pitch.js` 或 `main.js` 新增的語法被掃出，改寫而不是加 polyfill。
-- [ ] **步驟 2：既有純邏輯測試**：`node app/tool/test_section_progress_density.mjs`、`node app/tool/test_tts_safe_window.mjs`、`node app/tool/test_column_pitch.mjs`，預期各自結束碼 0。
-- [ ] **步驟 3：Dart 端**：`cd app` 後 `flutter analyze`（預期 No issues found）；`flutter test test/reader/foliate_reader_view_test.dart test/reader/foliate_bridge_codec_test.dart`，預期全綠。
-- [ ] **步驟 4：確認沒碰 vendored**：`git diff main --stat -- app/android/app/src/main/assets/foliate` 只應列出 `main.js`、`column-pitch.js`。
-- [ ] **步驟 5：不需 commit**（無檔案變動）；結果留待 Task 4 一併記錄。
+- [x] **步驟 1：ES 相容性掃描**：PowerShell `node app/tool/check_foliate_es_compat.js`，預期結束碼 0。若 `column-pitch.js` 或 `main.js` 新增的語法被掃出，改寫而不是加 polyfill。
+- [x] **步驟 2：既有純邏輯測試**：`node app/tool/test_section_progress_density.mjs`、`node app/tool/test_tts_safe_window.mjs`、`node app/tool/test_column_pitch.mjs`，預期各自結束碼 0。
+- [x] **步驟 3：Dart 端**：`cd app` 後 `flutter analyze`（預期 No issues found）；`flutter test test/reader/foliate_reader_view_test.dart test/reader/foliate_bridge_codec_test.dart`，預期全綠。
+- [x] **步驟 4：確認沒碰 vendored**：`git diff main --stat -- app/android/app/src/main/assets/foliate` 只應列出 `main.js`、`column-pitch.js`。
+- [x] **步驟 5：不需 commit**（無檔案變動）；結果留待 Task 4 一併記錄。
 
 ---
 
@@ -123,13 +123,13 @@
 **Interfaces：**
 - Produces：`python app/tool/detect_two_column_gap.py <png>...`，每張圖印一行 `<檔名> maxBlankBand=<像素> BUG|ok`，或 `<檔名> INVALID frac=<值>`（全黑、全白、載入中）；任一張為 `BUG` 時結束碼 1。判定：內容區（略過頂部 100、底部 60、左 80、右 40 像素）內整列無墨（灰階 < 128 的像素數為 0）的連續空帶超過 80 像素為 `BUG`；有墨比例大於 0.5 或小於 0.03 為 `INVALID`。
 
-- [ ] **步驟 1：實作 `detect_two_column_gap.py`**（依上述判定；使用 PIL 與 numpy；檔案開頭註解寫明這是為 Issue 34 的 176 像素空帶而設）。驗證用的截圖**不進版控**，一律放在暫存目錄：在步驟 2 安裝新版**之前**，裝置上還是有問題的版本，先截一張問題圖 `adb -s TCE70P24B2202374 exec-out screencap -p > <暫存目錄>/wave_bug.png`（預期偵測 `maxBlankBand=176 BUG`）；正常圖用任一正常頁（例如開橫排範例書）截取（預期 `ok`）。README 加一行。（審查 M-3）
-- [ ] **步驟 2：建置安裝**：`cd app`，`flutter build apk --debug`，`MSYS_NO_PATHCONV=1 adb -s TCE70P24B2202374 install -r build/app/outputs/flutter-apk/app-debug.apk`。
-- [ ] **步驟 3：重現迴圈轉綠**：裝置資料庫維持使用者原狀（會自動續讀最後一本「早安」，位置在章節第 4 頁）。`adb shell am force-stop cc.ugotit.elinkbook` → `am start -n cc.ugotit.elinkbook/.MainActivity`，等日誌出現「已渲染」後再等 6 秒，用 `adb -s TCE70P24B2202374 exec-out screencap -p > <暫存目錄>/wave_N.png` 截圖（Git Bash 內做，不要經 PowerShell 轉向，會損毀二進位；審查 M-1），再執行 `python app/tool/detect_two_column_gap.py <暫存目錄>/wave_N.png`；連續 3 次，預期全為 `ok`（修復前 5／5 為 `BUG`、`maxBlankBand=176`）。
-- [ ] **步驟 4：連翻對稱**：同一本書點右側熱區（1200,936）5 次、再點左側熱區（200,936）5 次，每次等 3.5 秒；預期每次都換頁、最後畫面與起點相同。
-- [ ] **步驟 5：回歸三本書**：CBZ、定樣式 EPUB、橫排多章節範例各開一次，預期都能顯示；橫排書不受補償影響。
-- [ ] **步驟 6：還原裝置狀態**：確認不留下被改過的資料庫；若測試中動過閱讀位置，用進度條調回約 23%。
-- [ ] **步驟 7：Commit**：`git add app/tool/detect_two_column_gap.py app/tool/README.md`，訊息 `test(tool): 直排兩欄偵測腳本（epic-54 Issue 34 Task 4）`。
+- [x] **步驟 1：實作 `detect_two_column_gap.py`**（依上述判定；使用 PIL 與 numpy；檔案開頭註解寫明這是為 Issue 34 的 176 像素空帶而設）。驗證用的截圖**不進版控**，一律放在暫存目錄：在步驟 2 安裝新版**之前**，裝置上還是有問題的版本，先截一張問題圖 `adb -s TCE70P24B2202374 exec-out screencap -p > <暫存目錄>/wave_bug.png`（預期偵測 `maxBlankBand=176 BUG`）；正常圖用任一正常頁（例如開橫排範例書）截取（預期 `ok`）。README 加一行。（審查 M-3）
+- [x] **步驟 2：建置安裝**：`cd app`，`flutter build apk --debug`，`MSYS_NO_PATHCONV=1 adb -s TCE70P24B2202374 install -r build/app/outputs/flutter-apk/app-debug.apk`。
+- [x] **步驟 3：重現迴圈轉綠**：裝置資料庫維持使用者原狀（會自動續讀最後一本「早安」，位置在章節第 4 頁）。`adb shell am force-stop cc.ugotit.elinkbook` → `am start -n cc.ugotit.elinkbook/.MainActivity`，等日誌出現「已渲染」後再等 6 秒，用 `adb -s TCE70P24B2202374 exec-out screencap -p > <暫存目錄>/wave_N.png` 截圖（Git Bash 內做，不要經 PowerShell 轉向，會損毀二進位；審查 M-1），再執行 `python app/tool/detect_two_column_gap.py <暫存目錄>/wave_N.png`；連續 3 次，預期全為 `ok`（修復前 5／5 為 `BUG`、`maxBlankBand=176`）。
+- [x] **步驟 4：連翻對稱**：同一本書點右側熱區（1200,936）5 次、再點左側熱區（200,936）5 次，每次等 3.5 秒；預期每次都換頁、最後畫面與起點相同。
+- [x] **步驟 5：回歸三本書**：CBZ、定樣式 EPUB、橫排多章節範例各開一次，預期都能顯示；橫排書不受補償影響。
+- [x] **步驟 6：還原裝置狀態**：確認不留下被改過的資料庫；若測試中動過閱讀位置，用進度條調回約 23%。
+- [x] **步驟 7：Commit**：`git add app/tool/detect_two_column_gap.py app/tool/README.md`，訊息 `test(tool): 直排兩欄偵測腳本（epic-54 Issue 34 Task 4）`。
 
 ---
 
@@ -138,11 +138,11 @@
 **Files：**
 - Modify: `docs/epics/epic-54-architecture-optimization/epic.md`（開發記錄）、`docs/epics/epic-54-architecture-optimization/issues.md`、`docs/epics.md`
 
-- [ ] **步驟 1：完整測試**：`cd app`，`flutter test`（`run_in_background`，只跑一個），預期全綠；失敗就修，不要重跑第二份。
-- [ ] **步驟 2：開發記錄**：`epic.md` 新增「2026-10-25 Issue 34 實作完成」，寫入：測試台案例數、`test_column_pitch.mjs` 案例數、真機 3 次冷啟動結果（修復前後 `maxBlankBand` 對比）、連翻對稱結果、已知限制（上邊距貼頁頂、頁底多一個 `column-gap`）、`flutter test` 通過數。
-- [ ] **步驟 3：狀態**：`issues.md` Issue 34 狀態改為「🟡 PR 待合併」（合併後再改 ✅）；`docs/epics.md` 同步。**換行符**：先數 `\r\n` 與 `\n` 的多寡，再以位元組插入單一行，`git diff --stat` 必須只有預期的行數。
-- [ ] **步驟 4：Commit**：`docs(epic-54): Issue 34 實作完成與驗證記錄（Task 5）`。
-- [ ] **步驟 5：推送並開 PR**：推 `epic-54/issue-34-column-pitch`；用 Gitea API 開 PR（token 在 `C:\Users\huthief\.gitea_token`，不要輸出）；PR 描述寫根因、補償做法、驗證結果、未做項目與已知限制。
+- [x] **步驟 1：完整測試**：`cd app`，`flutter test`（`run_in_background`，只跑一個），預期全綠；失敗就修，不要重跑第二份。
+- [x] **步驟 2：開發記錄**：`epic.md` 新增「2026-10-25 Issue 34 實作完成」，寫入：測試台案例數、`test_column_pitch.mjs` 案例數、真機 3 次冷啟動結果（修復前後 `maxBlankBand` 對比）、連翻對稱結果、已知限制（上邊距貼頁頂、頁底多一個 `column-gap`）、`flutter test` 通過數。
+- [x] **步驟 3：狀態**：`issues.md` Issue 34 狀態改為「🟡 PR 待合併」（合併後再改 ✅）；`docs/epics.md` 同步。**換行符**：先數 `\r\n` 與 `\n` 的多寡，再以位元組插入單一行，`git diff --stat` 必須只有預期的行數。
+- [x] **步驟 4：Commit**：`docs(epic-54): Issue 34 實作完成與驗證記錄（Task 5）`。
+- [x] **步驟 5：推送並開 PR**：推 `epic-54/issue-34-column-pitch`；用 Gitea API 開 PR（token 在 `C:\Users\huthief\.gitea_token`，不要輸出）；PR 描述寫根因、補償做法、驗證結果、未做項目與已知限制。
 
 ---
 
