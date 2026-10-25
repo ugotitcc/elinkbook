@@ -24,9 +24,9 @@
 
 ### 2.1 上游來源與當前釘定狀態
 - **上游 Repository**：`https://github.com/readest/foliate-js`
-- **當前 Pinned Commit**：`c09f06da40737348fac71c03bc94bde53d5968b1` (2026-08-25)
+- **當前 Pinned Commit**：`4735e67932578d4f3510276412a1a196d482d66b` (2026-10-25)
 - **資產存放路徑**：`app/android/app/src/main/assets/foliate/`
-- **Pinned Commit 異動歷史**：`dd71f2be356563c16a23272686189fcfb45d0b82` (2026-07-19，最初釘定) → `6c6a491cf540696182d6fae70d6e26879b1e8369` (2026-07-25，`epic-32` 同步，範圍：`paginator.js` 觸控核心重寫) → `c09f06da40737348fac71c03bc94bde53d5968b1` (2026-08-25，`epic-33` 同步，範圍：7 個檔案，見 `docs/epics/epic-33-foliate-js-vendor-sync/issues.md`)。
+- **Pinned Commit 異動歷史**：`dd71f2be356563c16a23272686189fcfb45d0b82` (2026-07-19，最初釘定) → `6c6a491cf540696182d6fae70d6e26879b1e8369` (2026-07-25，`epic-32` 同步，範圍：`paginator.js` 觸控核心重寫) → `c09f06da40737348fac71c03bc94bde53d5968b1` (2026-08-25，`epic-33` 同步，範圍：7 個檔案，見 `docs/epics/epic-33-foliate-js-vendor-sync/issues.md`)。 → `4735e67932578d4f3510276412a1a196d482d66b` (2026-10-25，`epic-54` Issue 34 同步，範圍：11 個既有 vendored 檔案＋新增 `section-chunks.js`，`paginator.js` 與 `view.js`／`progress.js`／`fixed-layout.js` 手動 patch 皆已補回)
 
 ### 2.2 資產與職責劃分表
 
@@ -43,6 +43,7 @@
 | **Vendored** | `overlayer.js` | 上游 | 劃線、螢光筆、底線之 SVG 渲染層與點擊命中測試 (`hitTest`) | 無 |
 | **Vendored** | `comic-book.js` | 上游 | CBZ 漫畫容器讀取（`epic-33` c09f06d 同步範圍內確認逐位元組相同） | 無 |
 | **Vendored** | `text-walker.js` | 上游 | DOM 文字節點遍歷 | 無 |
+| **Vendored** | `section-chunks.js` | 上游 | 超大章節分塊渲染（`paginator.js` 的相依模組，`4735e67` 同步新增） | 無 |
 | **Vendored** | `vendor/zip.js` | 上游 | EPUB Zip 解壓縮核心 | 無 |
 | **Vendored** | `construct-style-sheets-polyfill.js` | 上游 | CSSStyleSheet 建構 Polyfill | 無 |
 | **App Bridge** | `index.html` | 本專案 | WebView 初始 HTML 容器，載入 `<foliate-view>` 與 `main.js` | 不適用（本專案自建，非 vendored） |
