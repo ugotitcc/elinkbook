@@ -4,7 +4,7 @@
 
 | Issue | 標題 | 依賴 | 狀態 | PR |
 |---|---|---|---|---|
-| 1 | 首行縮排：`BookReaderPrefs.firstLineIndent`、SQLite v29、預設集 JSON、`main.js` 規則、「呈現」分頁開關與滑桿 | 無 | 🟡 實作完成，待程式審查與 WAVE 真機抽驗 | — |
+| 1 | 首行縮排：`BookReaderPrefs.firstLineIndent`、SQLite v29、預設集 JSON、`main.js` 規則、「呈現」分頁開關與滑桿 | 無 | ✅ 已合併 | #372 |
 | 2 | 自訂閱讀顏色：各佈景獨立的背景色與文字色（RGB 滑桿加色碼輸入）、E-Ink 不套用、「呈現」分頁、還原預設 | 無（建議 Issue 1 之後做，避免同時改版面設定面板） | ⚪ 待規劃 | — |
 
 ## Issue 1 單元測試要求
