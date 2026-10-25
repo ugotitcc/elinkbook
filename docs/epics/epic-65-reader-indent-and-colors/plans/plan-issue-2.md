@@ -93,15 +93,15 @@ class ReaderColorPreferences {
 }
 ```
 
-- [ ] **Step 1：寫失敗測試（色碼與對比）。** `reader_colors_test.dart`：`parseHexColor('#FFFFFF')` 得 `Color(0xFFFFFFFF)`；小寫 `#ff8800` 可解析；`'FFFFFF'`（缺 `#`）、`'#FFF'`、`'#GGGGGG'`、`''`、`'#FFFFFFF'` 皆回 `null`；`formatHexColor(Color(0xFF0A0B0C))` 為 `'#0A0B0C'`（補前導零）；`contrastRatio(白, 黑)` ≈ 21、`contrastRatio(白, 白)` = 1、參數順序對調結果相同；`ReaderColors.withBackground(null)` 清掉背景但保留文字。
-- [ ] **Step 2：** `flutter test test/theme/reader_colors_test.dart`。Expected：FAIL（檔案不存在）。
-- [ ] **Step 3：實作 `reader_colors.dart`。** 只含純函式與值物件，不 import `package:flutter/material.dart` 以外的東西（用 `dart:ui` 的 `Color` 即可）。
-- [ ] **Step 4：** 同一指令。Expected：PASS。
-- [ ] **Step 5：寫失敗測試（偏好）。** `reader_color_preferences_test.dart`（`SharedPreferences.setMockInitialValues({})`）：沒存過 → `load` 回 `ReaderColors.empty`；存背景後讀回相同；只存背景時文字為 `null`；淺色存的值不影響深色與羊皮紙；存 `ReaderColors.empty`（或把某欄位設 `null`）後該 key 確實不存在（`prefs.containsKey` 為 false）；預先塞 `reader_color_light_background: 'zzz'` 時 `load` 回 `null` 欄位、不崩潰。
-- [ ] **Step 6：** `flutter test test/theme/reader_color_preferences_test.dart`。Expected：FAIL。
-- [ ] **Step 7：實作 `reader_color_preferences.dart`。** key 用 `AppTheme.name` 組成；寫入用 `formatHexColor`、讀出用 `parseHexColor`。
-- [ ] **Step 8：** 兩個測試檔都跑。Expected：PASS。`flutter analyze` 乾淨。
-- [ ] **Step 9：Commit。** `git add` 四個檔案，訊息：`feat(reader): 自訂閱讀顏色的值物件與偏好儲存（epic-65 Issue 2 Task 1）`。
+- [x] **Step 1：寫失敗測試（色碼與對比）。** `reader_colors_test.dart`：`parseHexColor('#FFFFFF')` 得 `Color(0xFFFFFFFF)`；小寫 `#ff8800` 可解析；`'FFFFFF'`（缺 `#`）、`'#FFF'`、`'#GGGGGG'`、`''`、`'#FFFFFFF'` 皆回 `null`；`formatHexColor(Color(0xFF0A0B0C))` 為 `'#0A0B0C'`（補前導零）；`contrastRatio(白, 黑)` ≈ 21、`contrastRatio(白, 白)` = 1、參數順序對調結果相同；`ReaderColors.withBackground(null)` 清掉背景但保留文字。
+- [x] **Step 2：** `flutter test test/theme/reader_colors_test.dart`。Expected：FAIL（檔案不存在）。
+- [x] **Step 3：實作 `reader_colors.dart`。** 只含純函式與值物件，不 import `package:flutter/material.dart` 以外的東西（用 `dart:ui` 的 `Color` 即可）。
+- [x] **Step 4：** 同一指令。Expected：PASS。
+- [x] **Step 5：寫失敗測試（偏好）。** `reader_color_preferences_test.dart`（`SharedPreferences.setMockInitialValues({})`）：沒存過 → `load` 回 `ReaderColors.empty`；存背景後讀回相同；只存背景時文字為 `null`；淺色存的值不影響深色與羊皮紙；存 `ReaderColors.empty`（或把某欄位設 `null`）後該 key 確實不存在（`prefs.containsKey` 為 false）；預先塞 `reader_color_light_background: 'zzz'` 時 `load` 回 `null` 欄位、不崩潰。
+- [x] **Step 6：** `flutter test test/theme/reader_color_preferences_test.dart`。Expected：FAIL。
+- [x] **Step 7：實作 `reader_color_preferences.dart`。** key 用 `AppTheme.name` 組成；寫入用 `formatHexColor`、讀出用 `parseHexColor`。
+- [x] **Step 8：** 兩個測試檔都跑。Expected：PASS。`flutter analyze` 乾淨。
+- [x] **Step 9：Commit。** `git add` 四個檔案，訊息：`feat(reader): 自訂閱讀顏色的值物件與偏好儲存（epic-65 Issue 2 Task 1）`。
 
 ---
 
