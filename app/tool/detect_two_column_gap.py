@@ -44,7 +44,7 @@ def analyze_image(path: str) -> tuple[str, bool]:
     ink = region < INK_THRESHOLD
     frac = float(ink.mean())
     if frac > MAX_INK_FRAC or frac < MIN_INK_FRAC:
-        return f'{path} INVALID frac={frac:.4f}', False
+        return f'{path} INVALID frac={frac:.4f}', True
 
     # 每一列（水平方向）是否有任何有墨像素
     row_has_ink = ink.any(axis=1)

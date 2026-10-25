@@ -57,7 +57,7 @@ function buildVerticalFixtureEpub() {
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <title>第一章</title>
-  <style>html { writing-mode: vertical-rl; }</style>
+  <style>body { writing-mode: vertical-rl; }</style>
 </head>
 <body>
   ${paragraphs}

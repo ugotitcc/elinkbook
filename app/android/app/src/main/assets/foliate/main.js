@@ -1789,13 +1789,15 @@ function canCompensateColumnPitch(doc) {
   const renderer = view.renderer
   if (!renderer || renderer.scrolled !== false) return false
   if (!(renderer.size > 0)) return false
-  const writingMode =
-    doc.defaultView.getComputedStyle(doc.documentElement).writingMode || ''
-  return writingMode.indexOf('vertical') === 0
+  const win = doc.defaultView
+  const rootWm = win.getComputedStyle(doc.documentElement).writingMode || ''
+  const bodyWm = win.getComputedStyle(doc.body).writingMode || ''
+  return rootWm.indexOf('vertical') === 0 || bodyWm.indexOf('vertical') === 0
 }
 
 function attachColumnPitchCompensation(doc) {
-  if (!canCompensateColumnPitch(doc)) return
+  if (!doc || !doc.defaultView || !doc.documentElement || !doc.body) return
+  if (view.isFixedLayout) return
 
   let busy = false
   const observer = new MutationObserver(() => {
