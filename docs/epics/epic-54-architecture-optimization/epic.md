@@ -335,6 +335,26 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 8. **文件**：本段；`issues.md` Issue 32 已定案、Issue 30 補標已合併（PR #368）；`docs/epics.md` 同步；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR。
 9. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；先寫 `plans/plan-issue-32.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次。
 
+## Issue 28 設計決策（`/grilling` 定案，2026-10-24）
+
+來源：第三次檢視候選。Issue 23 已刪除 `[DEBUG-e26i3-zoneaction]` 診斷插樁，本張只剩計時器 module。事實盤點（已核對 `reader_screen.dart`）：
+
+- 搜尋跳轉暫態高亮的 3 秒自動清除計時器在 `_startSearchJumpHighlightAutoClearTimer()`（約 1267 行）與 `_clearSearchJumpHighlight()`（約 1283 行）；欄位 `_searchJumpHighlightTimer`、`_creationZone`；`dispose` 取消計時器。
+- `_creationZone` 只為這個計時器存在：測試在 `tester.runAsync` 的真實 Zone 內觸發開書回呼，計時器會建在錯的 Zone，`tester.pump` 推不動，所以先捕捉 Zone，再 `_creationZone.run(() => Timer(...))`。
+- 兩個啟動點（開書當下、閱讀器內就地跳轉）共用同一個啟動方法；提前清除由 `_handleZoneAction` 對每次動作無條件呼叫 `_clearSearchJumpHighlight()`。
+- 既有測試已涵蓋「3 秒自動清除」與「提前點擊清除」（`reader_screen_test.dart` 約 657～745、12233、12377 行）。
+
+**定案**
+
+1. **純重構，行為不變**：使用者看到的高亮與清除時機完全一樣。
+2. **新檔 `app/lib/reader/transient_highlight_timer.dart`**，類別 `TransientHighlightTimer`，只管計時器：建構子 `({Duration duration = 3 秒, Timer Function(Duration, void Function())? timerFactory})`；建構時自己捕捉 `Zone.current`，預設工廠用 `zone.run(() => Timer(...))`（把 `_creationZone` 手法搬進 module）；`start(onExpire)` 先取消舊的再重新計時，到期時先把自己標成未啟動、再呼叫 `onExpire`；`cancel()`；`isActive`（已啟動且未取消、未到期）。
+3. **`ReaderScreen`**：刪 `_creationZone` 與 `_searchJumpHighlightTimer`，改持有一個 `TransientHighlightTimer`；必須在 `initState` 明確建構（不能 `late final` 延遲初始化），讓它捕捉 `initState` 當下的 Zone。提前清除路徑：`isActive` 為 false 直接返回，否則 `cancel()` 並呼叫 `_surface.clearTransientHighlight()`；到期路徑：`onExpire` 直接呼叫 `_surface.clearTransientHighlight()`（到期時 `isActive` 已為 false，不可再走提前清除的判斷，否則高亮清不掉）。兩個啟動點照舊共用啟動方法。`_searchJumpHighlightTriggered` 旗標與 `_surface` 呼叫留在畫面（module 不依賴 `_surface`）。
+4. **`ReaderScreen` 不新增任何公開建構參數**（測試縫隙放在 module 的可選 `timerFactory`）。
+5. **測試**：新檔 `test/reader/transient_highlight_timer_test.dart`（假工廠與 `fake_async`：到期呼叫、重新啟動取消舊的、`cancel` 後不到期、`isActive` 轉換、預設工廠在另一個 Zone 呼叫 `start` 仍由建構時的 Zone 推進）；`reader_screen_test.dart` 既有案例不改，全部維持綠燈。
+6. **範圍外**：搜尋跳轉流程、`ReaderJumpTarget`、`clearTransientHighlight` 的實作。
+7. **文件**：本段；`issues.md` Issue 28 已定案、Issue 32 補標已合併（PR #369）；`docs/epics.md` 同步；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR。
+8. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；先寫 `plans/plan-issue-28.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次；WAVE 抽驗：從書內搜尋跳轉，高亮 3 秒後消失，提前點擊立刻清除。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -822,3 +842,7 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-24 Issue 32 實作完成**：修復 `AnnotationController.reload()` 世代保護（`app/lib/reader/annotation_controller.dart`，新增 `int _reloadSeq = 0`，每次 `reload()` 遞增序號，在劃線與備註兩個查詢都完成後只檢查一次，若有較新的 `reload` 已發出則兩份清單一起丟掉，否則一起套用；錯誤行為不變，不加 `try/catch`，例外照舊往外丟）。呼叫端完全不改（`git diff main --stat -- app/lib` 僅 `annotation_controller.dart` 1 檔，+8 行）。測試：`annotation_controller_test.dart` 新增對稱的 `_GatedHighlightsRepository` 與 `_GatedNotesRepository`（繼承 `FakeHighlightsRepository`／`FakeNotesRepository`，在第一個 `await` 前同步取得快照與閘門；`tearDown` 自動 `releaseAll()` 清理），新增 7 案例（舊先發新後發且新先回舊後回、循序兩次 reload、並行兩次 reload 舊先回、舊的卡在備註查詢時新的整個完成後放行舊的不半套用、新的查詢失敗、舊的查詢失敗、開書第一次 reload 未回時 createHighlight 先完成）；28→35 案例全數通過。驗證：`annotation_controller_test` 35 個、`reader_screen_test`「劃線」6 個＋「備註」7 個全綠；`flutter analyze` No issues found!；`check_*.js` 兩個腳本因本機 nvm 未啟用 Node 未執行（本次未改字串與 Key）；完整 `flutter test` 4515 通過、1 略過、1 失敗（`download_queue_controller_test` 既有平行負載競態，單獨重跑 14/14 全過）。程式審查（自審，`reviews/review-code-issue-32.md`）0 Critical、0 Important、0 Minor，結論 Approved。待 WAVE 真機抽驗與開 PR。
 
 **2026-10-24 Issue 32 WAVE 真機抽驗通過**：WAVE（`TCE70P24B2202374`）安裝 debug APK；EPUB 與 PDF 各快速連續建立 3～4 筆劃線、再刪除其中一筆，畫面上的劃線與清單一致。
+
+**2026-10-25 Issue 28 實作完成**：新增 `TransientHighlightTimer`（`app/lib/reader/transient_highlight_timer.dart`，`start(onExpire)`／`cancel()`／`isActive`，建構時捕捉 `Zone.current`，可選 `timerFactory`）；`reader_screen.dart` 改持有一個實例，刪除 `_creationZone` 與 `Timer? _searchJumpHighlightTimer`，到期路徑直接清除高亮、提前清除才判斷 `isActive`；`ReaderScreen` 無新增公開參數。測試：新增 `test/reader/transient_highlight_timer_test.dart`（7 個）；`reader_screen_test.dart` 整份通過，三組基準（暫態高亮 8、就地跳轉 3、搜尋跳轉 5）與改動前一致。`flutter analyze` 乾淨；`git diff main --stat -- app/lib` 只有 `reader_screen.dart` 與新檔。完整 `flutter test`：+4522、1 略過、1 失敗——失敗為 `pdf_reader_view_filters_test.dart` 的 bold overlay 案例（與 Issue 29 同一個時序不穩定案例，單獨重跑 2 次各 16 個全過，與本 Issue 無關）。`check_l10n_hardcoded_strings.js`、`check_integration_keys.js` 因本機 nvm 沒有 Node 未執行（未動字串與 Key）。程式審查（自審）報告：`reviews/review-code-issue-28.md`（不進版控），0 Critical／0 Important／1 Minor，結論可合併。待 WAVE 抽驗。
+
+**2026-10-25 Issue 28 WAVE 真機抽驗通過**：WAVE（`TCE70P24B2202374`）安裝 debug APK；EPUB 與 PDF 各做一次——書內搜尋就地跳轉後高亮約 3 秒自動消失；3 秒內點擊畫面立刻清除；3 秒內連續跳轉兩次，從第二次起重新計 3 秒。
