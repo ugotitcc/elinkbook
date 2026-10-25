@@ -57,6 +57,26 @@
   - 判定：滿載並行下的既存 flaky，與 Issue 1 無關（`git diff main --name-only` 不含 `reader/pdf_*` 與 `search/*`）。
 - 程式審查：獨立審查 subagent（唯讀、fresh context）＋執行者複核，報告在 `reviews/review-code-issue-1.md`（不進版控），結論 **0 Critical／0 Important／3 Minor**（3 條 Minor 皆為正向確認，無可執行缺陷）。
 
-**待辦（尚未完成）**：WAVE 真機抽驗 8 項（含置中段落的實測結果需回填本檔）、開 PR 與 Issue 狀態同步。
+**2026-10-25 WAVE 真機抽驗（TCE70P24B2202374／Android 12，`app-debug.apk`）**：
+
+- (1) EPUB 橫排：開關打開後每段首行縮 2 字，`h1` 標題不縮。
+- (2) 滑桿 2 → 0.5 → 0 → 4 皆即時生效，數值顯示「2 字」「0.5 字」「0 字」「4 字」；拉到 4 時 `+` 變淡停用。`0` 會把書本自帶的 `p{text-indent:2em}` 一起清掉（樣本見第 7 項）。
+- (3) 關閉開關後，畫面與開啟前的基準截圖**逐像素相同**（以自製探針書比較），書本自己的縮排完整回來。
+- (4) 直排書（`sample_long_chinese_vertical`，書本自帶 2em）：`0` 字時首欄貼齊上緣、全書由 10 頁變 9 頁；`4` 字時首字往下移約 2 字（2em→4em）。**縮排方向正確（往「下」）**。
+- (5) 單書偏好持久化：設 3.5 字 → 離開書本 → 重開，開關仍開、值仍 3.5、渲染一致；另開直排書時開關為關，兩本書互不影響。
+- (6) TXT（`sample_utf8_chapters`）與 EPUB 行為一致：段落縮 2 字、即時生效。附帶觀察：TXT 合成 EPUB 時「每行皆為 `<p>`」，所以「第一章 起源」這種章名行也會跟著縮（EPUB 的 `h1`／`h2` 不縮）；屬合成管線的既定結構，非回歸。
+- (7) **置中段落會被縮排**（自製 `sample_indent_center.epub`：`p{text-indent:2em}` ＋ 兩段 `p.center`）：
+  - 開關關閉時，書本自己的 2em 對置中段的影響是首行略偏（基準）。
+  - 設定 2 字：置中段首行相對其後各列往右偏約 1 字；設定 4 字：該段被擠成 3 行，首行起點與後兩行明顯不對齊。
+  - 判定：決策 3 的已知取捨成立——`text-indent` 對 `text-align: center` 的段落同樣生效，置中段不會維持嚴格置中（直排時偏移方向為往下）。Issue 1 不處理；建議在 Issue 2 之前評估改用 `p:not(.center)`／排除置中段落，或另開 Issue 追蹤。
+- (8) PDF：版面設定只有顯示／濾鏡／裁切；FXL 與 CBZ 的「漫畫版面設定」只有雙頁、翻頁方向、簡繁、全螢幕、頁首頁尾。**兩者都沒有首行縮排控制項**。
+
+**附帶確認**：
+
+- 開關關閉時滑桿列與 `+`／`-` 停用且明顯變淡（真機可見，E-Ink 模式同）。
+- 關閉開關會把數值重設回預設 2 字（不會記住上次的 4）；計畫寫的是「開啟預設 2 字」、未要求記住上次值，以計畫為準。
+- 抽驗用的自製探針書 `sample_indent_center.epub` 只在本機裝置使用，未進版控（驗完即刪）。
+
+**待辦（尚未完成）**：開 PR、Issue 1 狀態同步 `docs/epics.md`／`issues.md`。
 
 **本機無法執行的檢查**：`node tool/check_l10n_hardcoded_strings.js` 與 `node tool/check_integration_keys.js` 未執行——`node --version` 回應「No active Node.js version is configured」，且 nvm 的 `installs` 目錄為空（沒有任何已安裝版本）。兩支腳本需在有 Node 的環境補跑。
