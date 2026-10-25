@@ -917,6 +917,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get readerSettingsLineHeightLabel => '行距';
 
   @override
+  String get readerSettingsFirstLineIndentLabel => '首行縮排';
+
+  @override
+  String readerSettingsFirstLineIndentValue(String count) {
+    return '$count 字';
+  }
+
+  @override
   String get readerSettingsParagraphSpacingLabel => '段落間距';
 
   @override
@@ -3490,6 +3498,14 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get readerSettingsLineHeightLabel => '行距';
 
   @override
+  String get readerSettingsFirstLineIndentLabel => '首行缩排';
+
+  @override
+  String readerSettingsFirstLineIndentValue(String count) {
+    return '$count 字';
+  }
+
+  @override
   String get readerSettingsParagraphSpacingLabel => '段落间距';
 
   @override
@@ -6061,6 +6077,14 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerSettingsLineHeightLabel => '行距';
+
+  @override
+  String get readerSettingsFirstLineIndentLabel => '首行縮排';
+
+  @override
+  String readerSettingsFirstLineIndentValue(String count) {
+    return '$count 字';
+  }
 
   @override
   String get readerSettingsParagraphSpacingLabel => '段落間距';

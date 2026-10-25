@@ -69,6 +69,7 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
         fontWeight: widget.prefs.fontWeight,
         lineHeight: widget.prefs.lineHeight,
         paragraphSpacing: widget.prefs.paragraphSpacing,
+        firstLineIndent: widget.prefs.firstLineIndent,
         letterSpacing: widget.prefs.letterSpacing,
         pageMargins: widget.prefs.pageMargins,
         marginTop: widget.prefs.marginTop,

@@ -1684,6 +1684,18 @@ abstract class AppLocalizations {
   /// **'行距'**
   String get readerSettingsLineHeightLabel;
 
+  /// 文字分頁「首行縮排」開關標籤（epic-65 Issue 1）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'首行縮排'**
+  String get readerSettingsFirstLineIndentLabel;
+
+  /// 「首行縮排」數值（0～4 字，步進 0.5；以字串傳入避免 2.0 顯示成小數）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{count} 字'**
+  String readerSettingsFirstLineIndentValue(String count);
+
   /// 文字分頁「段落間距」滑桿標籤
   ///
   /// In zh_TW, this message translates to:

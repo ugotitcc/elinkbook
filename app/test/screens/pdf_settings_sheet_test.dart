@@ -1216,7 +1216,7 @@ void main() {
     expect(find.text('Crop'), findsOneWidget);
   });
 
-  group('全欄位保留守衛（Issue 10）：種子 33 欄位，操作一個控制項後只有該欄位改變', () {
+  group('全欄位保留守衛（Issue 10）：種子 34 欄位，操作一個控制項後只有該欄位改變', () {
     Future<BookReaderPrefs?> tapAndCapture(
       WidgetTester tester,
       String keyName,

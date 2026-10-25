@@ -941,6 +941,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readerSettingsLineHeightLabel => 'Line height';
 
   @override
+  String get readerSettingsFirstLineIndentLabel => 'First-line indent';
+
+  @override
+  String readerSettingsFirstLineIndentValue(String count) {
+    return '$count em';
+  }
+
+  @override
   String get readerSettingsParagraphSpacingLabel => 'Paragraph spacing';
 
   @override

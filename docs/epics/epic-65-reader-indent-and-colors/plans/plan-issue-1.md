@@ -97,8 +97,8 @@
 
 **Files：** `reader_settings_sheet.dart`、`library_screen.dart`、`fxl_settings_sheet.dart`、4 個 `.arb` 與生成檔、`test/screens/reader_settings_sheet_test.dart`、`test/screens/library_screen_test.dart`、`test/screens/fxl_settings_sheet_test.dart`、`test/screens/pdf_settings_sheet_test.dart`（四個檔都已有 `fullBookReaderPrefsSeed` ＋ `expectPrefsPreserved` 的欄位保留守衛測試：`reader_settings_sheet_test.dart:2478`、`fxl_settings_sheet_test.dart:644`、`library_screen_test.dart:5443`、`pdf_settings_sheet_test.dart:1227`；Task 1 把 `firstLineIndent` 補進 seed 後它們自動涵蓋新欄位，Step 2 確認即可，不必重寫）。
 
-- [ ] **Step 1：** l10n。新增字串（4 個 `.arb` 都加，`app_zh_CN` 用簡體）：`readerSettingsFirstLineIndentLabel`（「首行縮排」）、`readerSettingsFirstLineIndentValue`（帶 `{count}` 參數，zh：`{count} 字`；en：`{count} em`）。**佔位符 `count` 在 `@readerSettingsFirstLineIndentValue` 宣告為 `"String"` 型別**（步進 0.5 會出現小數，用 `int` 會編譯失敗、用 `double` 會顯示成 `2.0`；審查 I-3），由 `reader_settings_sheet.dart` 以輔助函式先格式化再傳入：`v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(1)`（`0.0`→`0`、`0.5`→`0.5`、`2.0`→`2`）。執行 `flutter gen-l10n`，確認只有預期差異。
-- [ ] **Step 2（紅）：** 面板與重建點測試：
+- [x] **Step 1：** l10n。新增字串（4 個 `.arb` 都加，`app_zh_CN` 用簡體）：`readerSettingsFirstLineIndentLabel`（「首行縮排」）、`readerSettingsFirstLineIndentValue`（帶 `{count}` 參數，zh：`{count} 字`；en：`{count} em`）。**佔位符 `count` 在 `@readerSettingsFirstLineIndentValue` 宣告為 `"String"` 型別**（步進 0.5 會出現小數，用 `int` 會編譯失敗、用 `double` 會顯示成 `2.0`；審查 I-3），由 `reader_settings_sheet.dart` 以輔助函式先格式化再傳入：`v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(1)`（`0.0`→`0`、`0.5`→`0.5`、`2.0`→`2`）。執行 `flutter gen-l10n`，確認只有預期差異。
+- [x] **Step 2（紅）：** 面板與重建點測試：
   - 面板「文字」分頁有 `Key('reader_settings_first_line_indent_switch')` 開關與 `reader_settings_first_line_indent` 滑桿列；初始 `prefs.firstLineIndent == null` 時開關為關、滑桿停用——**停用的斷言方式**：一般模式 `Slider.onChanged == null` 且兩側 `+`／`-` 的 `IconButton.onPressed == null`；E-Ink 模式點擊步進器 `+`／`-` 不觸發 `onChanged`（審查 I-2）。
   - 打開開關：`onChanged` 收到 `firstLineIndent == 2.0`；滑桿範圍 0～4、步進 0.5、+/- 按鈕各改 0.5。
   - 滑桿拉到 `0`：`onChanged` 收到 `0.0`（不是 `null`）。
@@ -109,10 +109,10 @@
   - `library_screen` 版面覆寫儲存：既有書籍有縮排時，儲存後縮排保留。
   - `fxl_settings_sheet`：帶縮排值的 prefs 經過它的 `onChanged` 後縮排保留。
   - E-Ink 模式：縮排滑桿列使用步進器（沿用 `_buildSliderRow` 的既有行為，測一次即可）。
-- [ ] **Step 3（綠）：** 實作：
+- [x] **Step 3（綠）：** 實作：
   - `reader_settings_sheet.dart`：狀態 `_firstLineIndent`（預設 `2.0`）與 `_firstLineIndentOn`；`initState`／`didUpdateWidget` 由 `widget.prefs.firstLineIndent` 還原；`_currentDraft` 帶入（開關關閉時為 `null`，開啟時為 `_firstLineIndent`）；在段距滑桿之後加 `SwitchListTile`（Key 如上）與 `_buildSliderRow`（`min: 0, max: 4, step: 0.5`，`displayValue` 用 `readerSettingsFirstLineIndentValue`，**`_buildSliderRow` 新增 `bool enabled = true` 參數**：`!enabled` 時一般模式 `Slider.onChanged` 與兩側 `IconButton.onPressed` 傳 `null`，並以 `Opacity(opacity: 0.45)` 包裝；E-Ink 模式以 `IgnorePointer(ignoring: !enabled, child: Opacity(...))` 包裝（或讓 `EBStepper` 支援 `enabled`），縮排滑桿列傳 `enabled: _firstLineIndentOn`、**不傳 `isOverridden`**。開關與滑桿各自一張 `EBFieldCard`（開關比照直排開關的寫法）；若 `textTabHeight < 1000` 守衛因此失敗，先把開關併入滑桿列同一張卡片，仍失敗才調整守衛數值並在 `epic.md` 記錄原因。「重設為本書原樣式」（`_resetToBookDefault`）把開關關閉，`_buildResetToBookDefaultRow` 的 `isActive` 判斷納入縮排，並把約 1291 行 doc 註解的「5 個欄位」改為「6 個（含首行縮排）」。
   - `library_screen.dart` 約 1922 行與 `fxl_settings_sheet.dart` 約 66 行的 `BookReaderPrefs(...)`：補 `firstLineIndent: existing.firstLineIndent` / `widget.prefs.firstLineIndent`。
-- [ ] **Step 4：** `flutter analyze`；跑上述測試檔；`reader_screen_test.dart` 整份跑一次；commit。
+- [x] **Step 4：** `flutter analyze`；跑上述測試檔；`reader_screen_test.dart` 整份跑一次；commit。
 
 ### Task 4：收尾
 
