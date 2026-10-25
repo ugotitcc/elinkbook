@@ -132,5 +132,5 @@ class TransientHighlightTimer {
 - [x] **Step 2：** 驗收：`grep -n "_creationZone\|_searchJumpHighlightTimer" app/lib/screens/reader_screen.dart` 中沒有 `_creationZone`，`_searchJumpHighlightTimer` 只剩宣告、初始化、啟動、清除、`dispose`；`git diff main --stat -- app/lib` 只有 `reader_screen.dart` 與新檔 `transient_highlight_timer.dart`。
 - [x] **Step 3：** `flutter analyze`；兩個 `check_*.js`（沒有 Node 則記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
 - [x] **Step 4：** 程式審查（報告存 `reviews/review-code-issue-28.md`，不進版控）。
-- [ ] **Step 5：** WAVE 真機抽驗（風險低，一輪即可）：在 EPUB 與 PDF 各做一次——(1) 從書內搜尋選一個結果就地跳轉，高亮約 3 秒後自動消失；(2) 再跳轉一次，在 3 秒內點擊畫面，高亮立刻消失；(3) 在 3 秒內連續跳轉兩次，高亮從第二次起重新計 3 秒。
+- [x] **Step 5：** WAVE 真機抽驗（風險低，一輪即可）：在 EPUB 與 PDF 各做一次——(1) 從書內搜尋選一個結果就地跳轉，高亮約 3 秒後自動消失；(2) 再跳轉一次，在 3 秒內點擊畫面，高亮立刻消失；(3) 在 3 秒內連續跳轉兩次，高亮從第二次起重新計 3 秒。
 - [ ] **Step 6：** 開 PR；PR 開出後把 Issue 28 的狀態同步（Issue 32 已在 Task 0 同步）。
