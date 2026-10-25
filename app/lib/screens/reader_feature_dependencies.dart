@@ -75,6 +75,8 @@ class ReaderFeatureDependencies {
   /// 線上查詞的同意狀態（epic-63 Issue 7）；字典設定畫面的開關使用，與
   /// [dictionaryService] 共用同一個實例，關閉後查詢端立刻停止送出。
   final DictionarySettingsRepository dictionarySettings;
+  /// 各佈景自訂的閱讀背景色／文字色（epic-65 Issue 2）。無狀態、讀寫 `SharedPreferences`，
+  /// 因此有預設值，測試與 `main.dart` 不必特別傳入。
   final ReaderColorPreferences readerColorPreferences;
 
   /// 依書籍格式建立「閱讀面」的工廠（epic-54 Issue 23，見 CONTEXT.md「閱讀面」）。

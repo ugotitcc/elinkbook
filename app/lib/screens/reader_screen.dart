@@ -533,6 +533,27 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     });
   }
 
+  @override
+  void didUpdateWidget(ReaderScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.appTheme != oldWidget.appTheme) {
+      unawaited(_loadReaderColors());
+    }
+  }
+
+  /// 自訂閱讀顏色的載入世代：每次載入、或使用者在面板改色都會加一。
+  /// 較早發出、較晚完成的載入結果世代不符，直接丟棄，不蓋掉較新的值。
+  int _colorsLoadGeneration = 0;
+
+  Future<void> _loadReaderColors() async {
+    final generation = ++_colorsLoadGeneration;
+    final colors = await widget.dependencies.readerColorPreferences.load(widget.appTheme);
+    if (!mounted || generation != _colorsLoadGeneration) return;
+    setState(() {
+      _readerColors = colors;
+    });
+  }
+
   /// 解析 `_dispatchedIsFixedLayout`（EPUB 的 FXL/流式 UI 語意判斷，epic-17
   /// Issue 3 引入；epic-20 Issue 2 起不再決定要建構哪個 widget——EPUB 一律
   /// 建構 [FoliateReaderView]，本方法只決定單頁/雙頁等 UI/chrome 語意）。
@@ -546,22 +567,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 各格式的解析規則（含 AZW3／CBZ／TXT／MD 的防禦預設值）集中在
   /// `engine_dispatch.dart` 的 [resolveEngineDispatch]，詞彙見 CONTEXT.md
   /// 「引擎分派判斷」。
-  @override
-  void didUpdateWidget(ReaderScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.appTheme != oldWidget.appTheme) {
-      unawaited(_loadReaderColors());
-    }
-  }
-
-  Future<void> _loadReaderColors() async {
-    final colors = await widget.dependencies.readerColorPreferences.load(widget.appTheme);
-    if (!mounted) return;
-    setState(() {
-      _readerColors = colors;
-    });
-  }
-
   void _resolveEpubEngineDispatch() {
     final dispatch = resolveEngineDispatch(
       format: detectBookFormat(_activeFilePath),
@@ -780,6 +785,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   void _handleReaderColorsChanged(ReaderColors colors) {
+    // 使用者已改色：讓還沒回來的舊載入作廢，避免畫面跳回舊值。
+    _colorsLoadGeneration++;
     setState(() => _readerColors = colors);
     unawaited(
       widget.dependencies.readerColorPreferences.save(
@@ -906,7 +913,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           appTheme: widget.appTheme,
           readerColors: _readerColors,
           onReaderColorsChanged: _handleReaderColorsChanged,
-
           onSaveAsPreset: (draft) async {
             _reportPresetFailure(
               await _presetFlow.saveAsPreset(draft),
@@ -1477,7 +1483,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           book: book,
           dependencies: widget.dependencies,
           isEinkMode: widget.isEinkMode,
-
           appTheme: widget.appTheme,
           fromReader: true,
         ),
@@ -1839,6 +1844,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // 第 1 點），整段條件式與 AppBar(...) 建構、_buildAppBarTitle()／
         // _buildAppBarActions() 兩個方法一併刪除。
         appBar: null,
+        // 全螢幕關閉時，狀態列與手勢列區域會露出 Scaffold 底色；流式 Foliate 書
+        // 讓它跟著閱讀背景（含自訂色），避免書頁兩側出現色帶。PDF、固定版面
+        // 時 _themedBackgroundColor 為 null，維持佈景原色（epic-65 Issue 2 審查 I-2）。
+        backgroundColor: _themedBackgroundColor,
         body: _buildBody(format, isLandscape),
       ),
     );
@@ -2119,7 +2128,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           iconColor: _themedFabIconColor,
           disabledIconColor: _themedTtsDisabledIconColor,
           isEinkMode: widget.isEinkMode,
-
           onPlayPause: controller.status == TtsPlaybackStatus.playing
               ? controller.pause
               : () => controller.play(),
@@ -2647,27 +2655,30 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   /// 流式 EPUB 顯示時的內容前景/背景色，來自 `Theme.of(context)`
   /// （已解析後的最終 `AppTheme`/E-Ink 高對比結果，見
-  /// `resolveThemeData()`）；EPUB 固定版面顯示時回傳 `null`——固定
-  /// 版面內容是圖片，無法預期背景色，強制上色沒有意義。呼叫端依情境
-  /// 決定 `null` 時的退回值（epic-22-reader-theme-integration Issue 1：
-  /// `FoliateReaderView` 直接傳 `null`；Issue 2 的頁首/頁尾會退回
+  /// `resolveThemeData()`）；EPUB 固定版面與 PDF 顯示時回傳 `null`——固定
+  /// 版面內容是圖片、PDF 由 PDFium 自行繪製，無法預期背景色，強制上色沒有
+  /// 意義。呼叫端依情境決定 `null` 時的退回值（epic-22-reader-theme-integration
+  /// Issue 1：`FoliateReaderView` 直接傳 `null`；Issue 2 的頁首/頁尾會退回
   /// 既有寫死 `Colors.black`，不在本 Task 範圍）。
+  ///
+  /// 自訂閱讀顏色（epic-65 Issue 2）：只在 Foliate 流式、且非 E-Ink 高對比
+  /// 模式時，才以使用者替目前佈景設定的顏色取代佈景原色；沒設定的那個顏色
+  /// 仍退回佈景原色。
   Color? get _themedTextColor {
-    final format = detectBookFormat(widget.filePath);
+    final format = detectBookFormat(_activeFilePath);
     if (!isFoliateFormat(format) || _isFixedLayout) return null;
     if (widget.isEinkMode) return Theme.of(context).colorScheme.onSurface;
     return _readerColors.text ?? Theme.of(context).colorScheme.onSurface;
   }
 
-
+  /// 背景色規則同 [_themedTextColor]；另供 `Scaffold.backgroundColor` 與載入
+  /// 遮罩使用。
   Color? get _themedBackgroundColor {
-    final format = detectBookFormat(widget.filePath);
+    final format = detectBookFormat(_activeFilePath);
     if (!isFoliateFormat(format) || _isFixedLayout) return null;
     if (widget.isEinkMode) return Theme.of(context).scaffoldBackgroundColor;
     return _readerColors.background ?? Theme.of(context).scaffoldBackgroundColor;
   }
-
-
 
   /// 浮動控制按鈕（返回/目錄/版面設定/書籤/筆記/進度）的底色/圖示色，
   /// 跟隨 Theme.of(context)（epic-22-reader-theme-integration Issue 3；

@@ -181,7 +181,7 @@
     - 控制器與錯誤狀態於 `_ReaderSettingsSheetState` 根層級管理，覆寫 `dispose()` 釋放（Ruling I-3），`didUpdateWidget` 同步外部更新。
     - WCAG 對比度警示：有效背景與有效文字之 `contrastRatio < 3.0` 時即時顯示警告橫幅。
     - E-Ink 模式防護：顯示說明橫幅，整頁以 `IgnorePointer`＋`Opacity` 停用。
-    - 既有測試相容修正（Ruling I-2）：`reader_settings_sheet_test.dart:2418` 分頁索引斷言更新（佈景 index 3、預設集 index 4）；2472 行高度巡訪加入 `'佈景'`；數值卡片微調內距使新分頁高度受 `< 1000` 守衛保護。
+    - 既有測試相容修正（Ruling I-2）：`reader_settings_sheet_test.dart:2418` 分頁索引斷言更新（佈景 index 3、預設集 index 4）；2472 行高度巡訪加入 `'佈景'`；〔已被下方審查修訂取代：內距已還原，改由「佈景」分頁自己壓縮〕。
     - l10n：4 個 `.arb` 檔新增 11 組新字串，`flutter gen-l10n` 齊備。
 - 驗證：
   - `flutter analyze`：No issues found!
@@ -196,3 +196,15 @@
     - `test/screens/reader_screen_surface_test.dart`（4/4 passed）
     - `test/screens/reader_screen_tts_late_handler_test.dart`（9/9 passed）
   - 本機無法執行的檢查：`check_l10n_hardcoded_strings.js` 與 `check_integration_keys.js` 未執行（本機環境無可用 Node.js，依 Global Constraints 跳過）。
+
+### Issue 2 獨立程式審查修訂（2026-10-25）
+
+審查報告：`reviews/review-code-issue-2.md`（Critical 0 / Important 4 / Minor 9）。人類裁示：I-1 選 C、I-2 選 A。
+
+- **I-1（選 C）**：還原 `_buildSliderRow`、`_buildFontFamilyDropdown` 的 `EBFieldCard` 預設內距；`_buildSliderRow` 新增 `compact` 參數，只有「佈景」分頁的 6 條 RGB 滑桿使用。既有分頁外觀不變，「面板高度 < 1000」守衛仍通過。
+- **I-2（選 A）**：`Scaffold.backgroundColor` 改傳 `_themedBackgroundColor`（流式 Foliate 且非 E-Ink 才有值；PDF、固定版面為 `null`，維持佈景原色）。補測試。狀態列／手勢列是否真的無色帶，留給 WAVE 確認。
+- **I-3**：補測試——`ReaderScreen` 推入 `BookSearchScreen` 轉傳 `appTheme`、只設文字色／只設背景色時的對比基準、面板移除無例外；E-Ink 測試改成真的點步進器與色碼框；全域主題測試改成逐項比對佈景原值。
+- **I-4**：完整 `flutter test`：4601 通過、1 略過、1 失敗；失敗的是已知偶發的 `test/reader/pdf_reader_view_filters_test.dart`（加粗覆蓋層），單跑 16/16 通過。`flutter analyze`：No issues found!
+- **一併修的 Minor**：M-1（載入世代保護，新增競態測試）、M-2（新方法移出別人的 doc comment）、M-3（空行與註解）、M-4（格式判斷改用 `_activeFilePath`）、M-7（E-Ink 不顯示對比警告，警告色改用 `errorContainer`）、M-8（簡體「主题」改「布景」）。
+- **未改（刻意）**：M-1(b)「面板在載入完成前就打開，改色時會刪掉另一色的 key」——載入只要幾毫秒，實務上打不開面板，風險接受；M-5 固定版面判斷前的短暫閃色——WAVE 觀察；M-6 偏好讀寫失敗被吞掉——與 `ReaderColorPreferences` 的測試環境容錯一起保留，另案處理；M-9 旋轉螢幕時輸入框被重設——可接受。
+- **WAVE 另加觀察項**：狀態列／手勢列有無色帶；全螢幕關閉時；鍵盤彈出時色碼框是否被遮住；開 CBZ／FXL 書的前幾百毫秒是否閃自訂色。

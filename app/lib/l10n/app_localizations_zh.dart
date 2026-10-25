@@ -5207,7 +5207,7 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
       '已知限制：词典词条不会执行 JavaScript，因此依赖点击脚本的功能（例如牛津 9 的图片放大）无法运作，仅能看到缩略图。';
 
   @override
-  String get readerSettingsTabTheme => '主题';
+  String get readerSettingsTabTheme => '布景';
 
   @override
   String readerColorsEditingTheme(String themeName) {

@@ -721,7 +721,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     final effectiveBg = _readerColors.background ?? themeBg;
     final effectiveText = _readerColors.text ?? themeText;
     final ratio = contrastRatio(effectiveBg, effectiveText);
-    final isLowContrast = ratio < 3.0;
+    // E-Ink 模式不套用自訂色，也就不依沒套用的顏色提示對比（審查 M-7）。
+    final isLowContrast = !widget.isEinkMode && ratio < 3.0;
 
     return ListView(
       key: const Key('reader_settings_tab_theme_list'),
@@ -764,15 +765,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             key: const Key('reader_colors_low_contrast_warning'),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.amber.shade100,
-              border: Border.all(color: Colors.amber.shade700),
+              color: Theme.of(context).colorScheme.errorContainer,
+              border: Border.all(color: Theme.of(context).colorScheme.error),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.warning_amber_rounded,
-                  color: Colors.amber.shade900,
+                  color: Theme.of(context).colorScheme.onErrorContainer,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
@@ -780,7 +781,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   child: Text(
                     l10n.readerColorsLowContrastWarning,
                     style: TextStyle(
-                      color: Colors.amber.shade900,
+                      color: Theme.of(context).colorScheme.onErrorContainer,
                       fontSize: 13,
                     ),
                   ),
@@ -923,6 +924,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         _buildSliderRow(
           keyPrefix: '${keyPrefix}_r',
+          compact: true,
           label: l10n.readerColorsRed,
           value: r,
           min: 0,
@@ -951,6 +953,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         _buildSliderRow(
           keyPrefix: '${keyPrefix}_g',
+          compact: true,
           label: l10n.readerColorsGreen,
           value: g,
           min: 0,
@@ -979,6 +982,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         _buildSliderRow(
           keyPrefix: '${keyPrefix}_b',
+          compact: true,
           label: l10n.readerColorsBlue,
           value: b,
           min: 0,
@@ -1110,8 +1114,6 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     final fonts = widget.availableFonts;
     final builtInFonts = fonts.builtInFonts;
     return EBFieldCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      margin: const EdgeInsets.symmetric(vertical: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1208,6 +1210,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     bool? isOverridden,
     VoidCallback? onReset,
     bool enabled = true,
+    bool compact = false,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final divisions = ((max - min) / step).round();
@@ -1216,8 +1219,14 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     // 兩側 IconButton 一律傳 null，E-Ink 模式以 IgnorePointer 擋掉 EBStepper
     // 的點擊；兩種模式都降透明度，讓「現在不能調」在 E-Ink 上也看得出來。
     return EBFieldCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      margin: const EdgeInsets.symmetric(vertical: 2),
+      // compact 只給「佈景」分頁用（6 條 RGB 滑桿），讓該分頁不超過既有最高分頁
+      // 的高度；其餘分頁維持 EBFieldCard 預設內距（epic-65 Issue 2 審查 I-1）。
+      padding: compact
+          ? const EdgeInsets.symmetric(horizontal: 12, vertical: 8)
+          : const EdgeInsets.all(12),
+      margin: compact
+          ? const EdgeInsets.symmetric(vertical: 2)
+          : const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

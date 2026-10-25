@@ -2968,7 +2968,65 @@ void main() {
         ).first,
       );
       expect(ignorePointer.ignoring, isTrue);
+
+      // 真的去點步進器與色碼框：不得有任何回呼（審查 I-3-4：原本的 isNull 是空斷言）。
+      await tester.tap(
+        find.byKey(const Key('reader_colors_background_r_increment')),
+        warnIfMissed: false,
+      );
+      await tester.tap(find.byKey(const Key('reader_colors_text_hex')), warnIfMissed: false);
+      await tester.pump();
       expect(updated, isNull);
+    });
+
+    testWidgets('E-Ink 模式不顯示低對比警告（自訂色不套用）（審查 M-7）', (tester) async {
+      await pumpOnThemeTab(
+        tester,
+        isEinkMode: true,
+        readerColors: const ReaderColors(
+          background: Color(0xFFFFFFFF),
+          text: Color(0xFFEEEEEE),
+        ),
+      );
+      expect(find.byKey(const Key('reader_colors_low_contrast_warning')), findsNothing);
+    });
+
+    testWidgets('只設文字色時，對比以佈景原色當背景計算（審查 I-3-3）', (tester) async {
+      // 淺色佈景背景約 #F0F6FC：淺灰文字與它太接近 → 警告；黑字 → 沒有警告。
+      await pumpOnThemeTab(
+        tester,
+        appTheme: AppTheme.light,
+        readerColors: const ReaderColors(text: Color(0xFFEEEEEE)),
+      );
+      expect(find.byKey(const Key('reader_colors_low_contrast_warning')), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('reader_colors_text_hex')), '#000000');
+      await tester.pump();
+      expect(find.byKey(const Key('reader_colors_low_contrast_warning')), findsNothing);
+    });
+
+    testWidgets('只設背景色時，對比以佈景原色當文字色計算（審查 I-3-3）', (tester) async {
+      // 淺色佈景文字是深色：深色背景與它太接近 → 警告；白背景 → 沒有警告。
+      await pumpOnThemeTab(
+        tester,
+        appTheme: AppTheme.light,
+        readerColors: const ReaderColors(background: Color(0xFF101010)),
+      );
+      expect(find.byKey(const Key('reader_colors_low_contrast_warning')), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('reader_colors_background_hex')), '#FFFFFF');
+      await tester.pump();
+      expect(find.byKey(const Key('reader_colors_low_contrast_warning')), findsNothing);
+    });
+
+    testWidgets('面板移除後沒有例外（色碼控制器已釋放）（審查 I-3-2）', (tester) async {
+      await pumpOnThemeTab(
+        tester,
+        readerColors: const ReaderColors(background: Color(0xFF123456)),
+      );
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+      expect(tester.takeException(), isNull);
     });
   });
 }

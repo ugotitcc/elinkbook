@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview_platform_interface/flutter_inappwebview_platform_interface.dart';
@@ -8,14 +10,18 @@ import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
+import 'package:elinkbook/screens/book_search_screen.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/theme/reader_color_preferences.dart';
+import 'package:elinkbook/theme/reader_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/fake_inappwebview_platform.dart';
+import '../support/fake_library_repository.dart';
+import '../support/fake_search_repository.dart';
 import '../support/fake_reader_feature_dependencies.dart';
 import '../support/fake_reader_prefs_manager.dart';
 
@@ -293,8 +299,13 @@ void main() {
       await pumpAndSettleColors(tester);
 
       final theme = Theme.of(tester.element(find.byType(ReaderScreen)));
-      // light 主題的 scaffoldBackgroundColor 應維持原始預設值，不被改為 #123456
-      expect(theme.scaffoldBackgroundColor, isNot(equals(const Color(0xFF123456))));
+      // ThemeData 必須與佈景原值逐項相同：自訂色只能影響閱讀器頁面，不能改到全域主題
+      // （審查 I-3-5：原本只比對「不等於 #123456」，幾乎恆真）。
+      final original = resolveThemeData(theme: AppTheme.light, isEinkMode: false);
+      expect(theme.scaffoldBackgroundColor, equals(original.scaffoldBackgroundColor));
+      expect(theme.colorScheme.surface, equals(original.colorScheme.surface));
+      expect(theme.colorScheme.onSurface, equals(original.colorScheme.onSurface));
+
     });
 
     testWidgets('開啟 PDF 時載入遮罩維持 scaffoldBackgroundColor，不被 Foliate 自訂色污染（Ruling I-4）', (tester) async {
@@ -368,6 +379,136 @@ void main() {
       expect(foliateView.backgroundColor, equals(const Color(0xFF445566)));
     });
 
+    testWidgets('Scaffold 背景跟著自訂背景色（避免狀態列／手勢列色帶）；PDF 與 E-Ink 維持佈景原色（審查 I-2）', (tester) async {
+      Future<Color?> scaffoldColor(
+        WidgetTester tester, {
+        required String filePath,
+        required String bookId,
+        bool isEinkMode = false,
+      }) async {
+        await tester.pumpWidget(
+          wrapWithTheme(
+            ReaderScreen(
+              filePath: filePath,
+              bookId: bookId,
+              appTheme: AppTheme.light,
+              isEinkMode: isEinkMode,
+              dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
+            ),
+            theme: AppTheme.light,
+            isEinkMode: isEinkMode,
+          ),
+        );
+        await pumpAndSettleColors(tester);
+        final scaffold = tester.widget<Scaffold>(
+          find.descendant(of: find.byType(ReaderScreen), matching: find.byType(Scaffold)).first,
+        );
+        return scaffold.backgroundColor;
+      }
+
+      SharedPreferences.setMockInitialValues({
+        'reader_color_light_background': '#112233',
+      });
+      expect(
+        await scaffoldColor(tester, filePath: 'test/fixtures/sample.epub', bookId: 'b_scaffold_epub'),
+        equals(const Color(0xFF112233)),
+      );
+
+      final original = resolveThemeData(theme: AppTheme.light, isEinkMode: false);
+      await tester.pumpWidget(const SizedBox());
+      expect(
+        await scaffoldColor(tester, filePath: 'test/fixtures/sample.pdf', bookId: 'b_scaffold_pdf'),
+        isNull,
+        reason: 'PDF 的 _themedBackgroundColor 為 null，Scaffold 用佈景預設底色',
+      );
+      expect(original.scaffoldBackgroundColor, isNot(equals(const Color(0xFF112233))));
+
+      await tester.pumpWidget(const SizedBox());
+      final eink = resolveThemeData(theme: AppTheme.light, isEinkMode: true);
+      expect(
+        await scaffoldColor(
+          tester,
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_scaffold_eink',
+          isEinkMode: true,
+        ),
+        equals(eink.scaffoldBackgroundColor),
+        reason: 'E-Ink 不套用自訂色',
+      );
+    });
+
+    testWidgets('閱讀器→單書搜尋：推入的 BookSearchScreen 轉傳 ReaderScreen 的 appTheme（審查 I-3-1）', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWidget(
+        wrapWithTheme(
+          ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_theme',
+            appTheme: AppTheme.dark,
+            isEinkMode: false,
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: FakeReaderPrefsManager(),
+              searchRepository: FakeSearchRepository(),
+              libraryRepository: FakeLibraryRepository(),
+            ),
+          ),
+          theme: AppTheme.dark,
+        ),
+      );
+      await pumpAndSettleColors(tester);
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pumpAndSettle();
+
+      final pushed = tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
+      expect(pushed.appTheme, equals(AppTheme.dark));
+    });
+
+    testWidgets('較早發出、較晚完成的載入結果不會蓋掉使用者剛改的顏色（審查 M-1）', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final gate = Completer<ReaderColors>();
+      final deps = fakeReaderFeatureDependencies(
+        prefsManager: FakeReaderPrefsManager(),
+        readerColorPreferences: _GatedReaderColorPreferences(gate.future),
+      );
+
+      await tester.pumpWidget(
+        wrapWithTheme(
+          ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_load_generation',
+            appTheme: AppTheme.light,
+            isEinkMode: false,
+            dependencies: deps,
+          ),
+          theme: AppTheme.light,
+        ),
+      );
+      await tester.pump();
+
+      // 載入還沒回來（gate 未放行）就先開面板並改色。
+      final reflowableView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      reflowableView.onPageRendered();
+      reflowableView.onLayoutResolved?.call(
+        const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(Tab, '佈景'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('reader_colors_background_hex')), '#334455');
+      await tester.pump();
+
+      // 舊的載入現在才完成，帶著舊值：不得蓋掉使用者剛改的新色。
+      gate.complete(const ReaderColors(background: Color(0xFF112233)));
+      await tester.pump();
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      expect(foliateView.backgroundColor, equals(const Color(0xFF334455)));
+    });
+
     testWidgets('開面板改背景色 → FoliateReaderView.backgroundColor 立刻更新且偏好已寫入', (tester) async {
       SharedPreferences.setMockInitialValues({});
 
@@ -413,4 +554,13 @@ void main() {
       expect(loadedPrefs.background, equals(const Color(0xFF334455)));
     });
   });
+}
+
+/// 載入結果由測試手動放行的偏好，用來重現「較早發出、較晚完成」的競態。
+class _GatedReaderColorPreferences extends ReaderColorPreferences {
+  const _GatedReaderColorPreferences(this._result);
+  final Future<ReaderColors> _result;
+
+  @override
+  Future<ReaderColors> load(AppTheme theme) => _result;
 }

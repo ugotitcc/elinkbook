@@ -176,7 +176,6 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
           book: widget.book,
           dependencies: widget.dependencies,
           isEinkMode: widget.isEinkMode,
-
           appTheme: widget.appTheme,
           initialJumpTarget: jumpTarget,
         ),
@@ -354,7 +353,6 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
               ? () => setState(() => _pagingCursor.goToNextPage())
               : null,
           isEinkMode: widget.isEinkMode,
-
           keyPrefix: 'book_search_paging_bar',
         ),
       ],
