@@ -779,6 +779,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _applySystemUiMode();
   }
 
+  void _handleReaderColorsChanged(ReaderColors colors) {
+    setState(() => _readerColors = colors);
+    unawaited(
+      widget.dependencies.readerColorPreferences.save(
+        widget.appTheme,
+        colors,
+      ),
+    );
+  }
+
   /// 寫入單書偏好；失敗時記 Console Log，並在每次開書第一次失敗時提示使用者
   /// （epic-54 Issue 31）。不 await：畫面即時回饋不等資料庫，畫面也不回復。
   ///
@@ -893,6 +903,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           bookId: widget.bookId,
           layoutPresets: _presetFlow.presets,
           isEinkMode: widget.isEinkMode,
+          appTheme: widget.appTheme,
+          readerColors: _readerColors,
+          onReaderColorsChanged: _handleReaderColorsChanged,
 
           onSaveAsPreset: (draft) async {
             _reportPresetFailure(

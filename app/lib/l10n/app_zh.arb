@@ -743,5 +743,18 @@
   "dictionaryImportLeaveConfirmStay": "繼續匯入",
   "dictionaryDragHandleLabel": "拖曳排序",
   "dictionaryMdxLimitNote": "已知限制：字典詞條不會執行 JavaScript，所以依賴點擊腳本的功能（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。",
-  "readerPrefsSaveFailedMessage": "閱讀設定未能儲存：裝置儲存空間寫入失敗。本次閱讀仍使用新設定，下次開書可能還原。請確認剩餘空間。"
+  "readerPrefsSaveFailedMessage": "閱讀設定未能儲存：裝置儲存空間寫入失敗。本次閱讀仍使用新設定，下次開書可能還原。請確認剩餘空間。",
+  "readerSettingsTabTheme": "佈景",
+  "readerColorsEditingTheme": "正在調整：{themeName}",
+  "readerColorsEinkDisabledHint": "E-Ink 高對比模式不套用自訂顏色",
+  "readerColorsBackgroundLabel": "背景色",
+  "readerColorsTextLabel": "文字色",
+  "readerColorsRed": "紅",
+  "readerColorsGreen": "綠",
+  "readerColorsBlue": "藍",
+  "readerColorsHexLabel": "色碼",
+  "readerColorsHexInvalid": "色碼格式錯誤，請輸入 #RRGGBB",
+  "readerColorsLowContrastWarning": "文字色與背景色太接近，可能難以閱讀",
+  "readerColorsResetBackground": "還原背景色",
+  "readerColorsResetText": "還原文字色"
 }

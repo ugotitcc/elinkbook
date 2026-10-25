@@ -13,6 +13,8 @@ import '../reader/screen_orientation_setting.dart';
 import '../reader/text_conversion_mode.dart';
 import '../l10n/app_localizations.dart';
 import '../reader/writing_mode.dart';
+import '../theme/app_theme.dart';
+import '../theme/reader_colors.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_option_chip_group.dart';
 import 'widgets/eb_stepper.dart';
@@ -52,6 +54,9 @@ class ReaderSettingsSheet extends StatefulWidget {
   onRequestBookPicker;
   final void Function(int id) onDeletePreset;
   final bool isEinkMode;
+  final AppTheme appTheme;
+  final ReaderColors readerColors;
+  final ValueChanged<ReaderColors>? onReaderColorsChanged;
 
   const ReaderSettingsSheet({
     super.key,
@@ -66,6 +71,9 @@ class ReaderSettingsSheet extends StatefulWidget {
     required this.onRequestBookPicker,
     required this.onDeletePreset,
     required this.isEinkMode,
+    this.appTheme = AppTheme.light,
+    this.readerColors = ReaderColors.empty,
+    this.onReaderColorsChanged,
   });
 
   @override
@@ -120,9 +128,18 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late ColumnMode _columnMode;
   late double _columnSize;
 
+  late ReaderColors _readerColors;
+  late final TextEditingController _bgHexController;
+  late final TextEditingController _textHexController;
+  String? _bgHexError;
+  String? _textHexError;
+
   @override
   void initState() {
     super.initState();
+    _readerColors = widget.readerColors;
+    _bgHexController = TextEditingController();
+    _textHexController = TextEditingController();
     _fontFamily = widget.prefs.fontFamily;
     _fontSize = widget.prefs.fontSize != null
         ? (widget.prefs.fontSize! * 16.0).roundToDouble()
@@ -199,6 +216,51 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _columnMode = widget.prefs.columnMode ?? ColumnMode.auto;
         _columnSize = widget.prefs.columnSize ?? 720.0;
       });
+    }
+    if (widget.readerColors != oldWidget.readerColors) {
+      _readerColors = widget.readerColors;
+      _syncHexControllers();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncHexControllers();
+  }
+
+  @override
+  void dispose() {
+    _bgHexController.dispose();
+    _textHexController.dispose();
+    super.dispose();
+  }
+
+  void _syncHexControllers() {
+    final themeBg = Theme.of(context).scaffoldBackgroundColor;
+    final themeText = Theme.of(context).colorScheme.onSurface;
+    final effectiveBg = _readerColors.background ?? themeBg;
+    final effectiveText = _readerColors.text ?? themeText;
+    final bgHex = formatHexColor(effectiveBg);
+    final textHex = formatHexColor(effectiveText);
+    if (_bgHexController.text.toUpperCase() != bgHex.toUpperCase()) {
+      _bgHexController.text = bgHex;
+    }
+    if (_textHexController.text.toUpperCase() != textHex.toUpperCase()) {
+      _textHexController.text = textHex;
+    }
+    _bgHexError = null;
+    _textHexError = null;
+  }
+
+  static String _themeLabel(AppTheme theme, AppLocalizations l10n) {
+    switch (theme) {
+      case AppTheme.light:
+        return l10n.settingsThemeLight;
+      case AppTheme.dark:
+        return l10n.settingsThemeDark;
+      case AppTheme.sepia:
+        return l10n.settingsThemeSepia;
     }
   }
 
@@ -291,7 +353,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             ),
             Flexible(
               child: DefaultTabController(
-                length: 4,
+                length: 5,
                 // 切換分頁不要有任何滑動動畫，點了就直接切過去（2026-09-28
                 // 使用者需求；E-Ink 上動畫會殘影）。
                 animationDuration: Duration.zero,
@@ -312,6 +374,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                         Tab(
                           key: const Key('reader_settings_tab_presentation'),
                           text: l10n.readerSettingsTabPresentation,
+                        ),
+                        Tab(
+                          key: const Key('reader_settings_tab_theme'),
+                          text: l10n.readerSettingsTabTheme,
                         ),
                         Tab(
                           key: const Key('reader_settings_tab_preferences'),
@@ -344,6 +410,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                                 _buildTextContentTab(),
                                 _buildBoundaryTab(),
                                 _buildPresentationTab(),
+                                _buildThemeColorsTab(),
                                 _buildPreferencesTab(),
                               ],
                             ),
@@ -361,8 +428,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     );
   }
 
-  /// 【不可逆的技術決策】以下 4 個 `_buildXxxTab()` 方法（文字／邊界／
-  /// 呈現／預設集）僅是本 State 的 `build()` 展示分支，一律不得抽成獨立
+  /// 【不可逆的技術決策】以下 5 個 `_buildXxxTab()` 方法（文字／邊界／
+  /// 呈現／佈景／預設集）僅是本 State 的 `build()` 展示分支，一律不得抽成獨立
   /// `StatefulWidget`。Issue 4 新增的 5 個「是否已覆寫」旗標（`_fontSizeOverridden`
   /// 等）與其餘全部草稿狀態皆留在 `_ReaderSettingsSheetState` 根層級，這些方法
   /// 只是直接讀寫同一組欄位——若日後為了重用或拆檔而把某個頁籤抽成獨立
@@ -647,6 +714,301 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     );
   }
 
+  Widget _buildThemeColorsTab() {
+    final l10n = AppLocalizations.of(context)!;
+    final themeBg = Theme.of(context).scaffoldBackgroundColor;
+    final themeText = Theme.of(context).colorScheme.onSurface;
+    final effectiveBg = _readerColors.background ?? themeBg;
+    final effectiveText = _readerColors.text ?? themeText;
+    final ratio = contrastRatio(effectiveBg, effectiveText);
+    final isLowContrast = ratio < 3.0;
+
+    return ListView(
+      key: const Key('reader_settings_tab_theme_list'),
+      shrinkWrap: true,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      children: [
+        Text(
+          l10n.readerColorsEditingTheme(_themeLabel(widget.appTheme, l10n)),
+          key: const Key('reader_colors_editing_theme'),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 12),
+        if (widget.isEinkMode) ...[
+          Container(
+            key: const Key('reader_colors_eink_hint'),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Theme.of(context).dividerColor),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.readerColorsEinkDisabledHint,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (isLowContrast) ...[
+          Container(
+            key: const Key('reader_colors_low_contrast_warning'),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade100,
+              border: Border.all(color: Colors.amber.shade700),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.amber.shade900,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.readerColorsLowContrastWarning,
+                    style: TextStyle(
+                      color: Colors.amber.shade900,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        IgnorePointer(
+          ignoring: widget.isEinkMode,
+          child: Opacity(
+            opacity: widget.isEinkMode ? 0.45 : 1.0,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildColorEditor(
+                  label: l10n.readerColorsBackgroundLabel,
+                  isBackground: true,
+                  currentColor: effectiveBg,
+                  isOverridden: _readerColors.background != null,
+                  controller: _bgHexController,
+                  errorText: _bgHexError,
+                  keyPrefix: 'reader_colors_background',
+                ),
+                const SizedBox(height: 16),
+                _buildColorEditor(
+                  label: l10n.readerColorsTextLabel,
+                  isBackground: false,
+                  currentColor: effectiveText,
+                  isOverridden: _readerColors.text != null,
+                  controller: _textHexController,
+                  errorText: _textHexError,
+                  keyPrefix: 'reader_colors_text',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildColorEditor({
+    required String label,
+    required bool isBackground,
+    required Color currentColor,
+    required bool isOverridden,
+    required TextEditingController controller,
+    required String? errorText,
+    required String keyPrefix,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final r = (currentColor.r * 255.0).round().clamp(0, 255).toDouble();
+    final g = (currentColor.g * 255.0).round().clamp(0, 255).toDouble();
+    final b = (currentColor.b * 255.0).round().clamp(0, 255).toDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        EBFieldCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 32,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: currentColor,
+                      border: Border.all(color: Theme.of(context).dividerColor),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const Spacer(),
+                  OutlinedButton(
+                    key: Key('${keyPrefix}_reset'),
+                    onPressed: isOverridden
+                        ? () {
+                            if (isBackground) {
+                              _readerColors = _readerColors.withBackground(null);
+                            } else {
+                              _readerColors = _readerColors.withText(null);
+                            }
+                            _syncHexControllers();
+                            widget.onReaderColorsChanged?.call(_readerColors);
+                            setState(() {});
+                          }
+                        : null,
+                    child: Text(
+                      isBackground
+                          ? l10n.readerColorsResetBackground
+                          : l10n.readerColorsResetText,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                key: Key('${keyPrefix}_hex'),
+                controller: controller,
+                decoration: InputDecoration(
+                  labelText: l10n.readerColorsHexLabel,
+                  errorText: errorText,
+                  isDense: true,
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  final parsed = parseHexColor(value);
+                  if (parsed != null) {
+                    if (isBackground) {
+                      _bgHexError = null;
+                      _readerColors = _readerColors.withBackground(parsed);
+                    } else {
+                      _textHexError = null;
+                      _readerColors = _readerColors.withText(parsed);
+                    }
+                    widget.onReaderColorsChanged?.call(_readerColors);
+                    setState(() {});
+                  } else {
+                    setState(() {
+                      if (isBackground) {
+                        _bgHexError = l10n.readerColorsHexInvalid;
+                      } else {
+                        _textHexError = l10n.readerColorsHexInvalid;
+                      }
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        _buildSliderRow(
+          keyPrefix: '${keyPrefix}_r',
+          label: l10n.readerColorsRed,
+          value: r,
+          min: 0,
+          max: 255,
+          step: 1,
+          displayValue: r.round().toString(),
+          onChanged: (newR) {
+            final newColor = Color.fromARGB(
+              255,
+              newR.round(),
+              g.round(),
+              b.round(),
+            );
+            if (isBackground) {
+              _readerColors = _readerColors.withBackground(newColor);
+              _bgHexController.text = formatHexColor(newColor);
+              _bgHexError = null;
+            } else {
+              _readerColors = _readerColors.withText(newColor);
+              _textHexController.text = formatHexColor(newColor);
+              _textHexError = null;
+            }
+            widget.onReaderColorsChanged?.call(_readerColors);
+            setState(() {});
+          },
+        ),
+        _buildSliderRow(
+          keyPrefix: '${keyPrefix}_g',
+          label: l10n.readerColorsGreen,
+          value: g,
+          min: 0,
+          max: 255,
+          step: 1,
+          displayValue: g.round().toString(),
+          onChanged: (newG) {
+            final newColor = Color.fromARGB(
+              255,
+              r.round(),
+              newG.round(),
+              b.round(),
+            );
+            if (isBackground) {
+              _readerColors = _readerColors.withBackground(newColor);
+              _bgHexController.text = formatHexColor(newColor);
+              _bgHexError = null;
+            } else {
+              _readerColors = _readerColors.withText(newColor);
+              _textHexController.text = formatHexColor(newColor);
+              _textHexError = null;
+            }
+            widget.onReaderColorsChanged?.call(_readerColors);
+            setState(() {});
+          },
+        ),
+        _buildSliderRow(
+          keyPrefix: '${keyPrefix}_b',
+          label: l10n.readerColorsBlue,
+          value: b,
+          min: 0,
+          max: 255,
+          step: 1,
+          displayValue: b.round().toString(),
+          onChanged: (newB) {
+            final newColor = Color.fromARGB(
+              255,
+              r.round(),
+              g.round(),
+              newB.round(),
+            );
+            if (isBackground) {
+              _readerColors = _readerColors.withBackground(newColor);
+              _bgHexController.text = formatHexColor(newColor);
+              _bgHexError = null;
+            } else {
+              _readerColors = _readerColors.withText(newColor);
+              _textHexController.text = formatHexColor(newColor);
+              _textHexError = null;
+            }
+            widget.onReaderColorsChanged?.call(_readerColors);
+            setState(() {});
+          },
+        ),
+      ],
+    );
+  }
+
   Widget _buildPreferencesTab() {
     return ListView(
       key: const Key('reader_settings_tab_preferences_list'),
@@ -748,6 +1110,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     final fonts = widget.availableFonts;
     final builtInFonts = fonts.builtInFonts;
     return EBFieldCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -852,6 +1216,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     // 兩側 IconButton 一律傳 null，E-Ink 模式以 IgnorePointer 擋掉 EBStepper
     // 的點擊；兩種模式都降透明度，讓「現在不能調」在 E-Ink 上也看得出來。
     return EBFieldCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

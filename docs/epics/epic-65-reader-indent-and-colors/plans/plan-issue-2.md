@@ -165,10 +165,10 @@ class ReaderColorPreferences {
 
 `readerColorsEditingTheme` 帶參數，`app_zh_TW.arb` 的 `@readerColorsEditingTheme` 要比照 `@settingsThemeDotSemanticsLabel`（約 1680 行）寫 `description` 與 `placeholders: { "themeName": { "type": "String" } }`（審查 M-2）；其餘 3 個 `.arb` 比照各檔既有帶參數字串的寫法。
 
-- [ ] **Step 1：全域搜尋分頁假設。** `Grep` `reader_settings_tab_`、`length: 4`、`readerSettingsTab` 在 `app/lib` 與 `app/test`，列出所有假設「4 個分頁」的地方（Review Focus 6），記入開發記錄。已知必改（審查 I-2）：
+- [x] **Step 1：全域搜尋分頁假設。** `Grep` `reader_settings_tab_`、`length: 4`、`readerSettingsTab` 在 `app/lib` 與 `app/test`，列出所有假設「4 個分頁」的地方（Review Focus 6），記入開發記錄。已知必改（審查 I-2）：
   - `reader_settings_sheet_test.dart:2418`「切換分頁沒有動畫」的陣列改為 `[('邊界', 1), ('呈現', 2), ('佈景', 3), ('預設集', 4), ('文字', 0)]`。
   - `reader_settings_sheet_test.dart:2472` 的分頁高度巡訪清單加入 `'佈景'`（新分頁高度也要受「面板高度不變」守衛）。
-- [ ] **Step 2：寫失敗測試。** `reader_settings_sheet_test.dart` 新增（`Key` 命名：`reader_settings_tab_theme`、`reader_colors_background_hex`、`reader_colors_background_r/g/b`（滑桿 keyPrefix）、`reader_colors_text_*`、`reader_colors_background_reset`、`reader_colors_text_reset`、`reader_colors_low_contrast_warning`、`reader_colors_eink_hint`）：
+- [x] **Step 2：寫失敗測試。** `reader_settings_sheet_test.dart` 新增（`Key` 命名：`reader_settings_tab_theme`、`reader_colors_background_hex`、`reader_colors_background_r/g/b`（滑桿 keyPrefix）、`reader_colors_text_*`、`reader_colors_background_reset`、`reader_colors_text_reset`、`reader_colors_low_contrast_warning`、`reader_colors_eink_hint`）：
   - 分頁順序為 文字｜邊界｜呈現｜佈景｜預設集，共 5 個。
   - 點「佈景」顯示「正在調整：羊皮紙」（傳 `appTheme: AppTheme.sepia`）。
   - 背景、文字兩個區塊都同時可見（不需展開）。
@@ -182,8 +182,8 @@ class ReaderColorPreferences {
   - 色碼控制器已釋放：面板移除後無例外（`dispose()` 有覆寫）。
   - 背景 `#FFFFFF`＋文字 `#EEEEEE` → 顯示低對比警告；改成 `#000000` → 警告消失。只設文字色時，背景用 `Theme.scaffoldBackgroundColor` 計算。
   - `isEinkMode: true` → 顯示 `reader_colors_eink_hint`，滑桿與輸入框不可操作（`enabled: false` / `IgnorePointer`），不呼叫回呼。
-- [ ] **Step 3：** `flutter test test/screens/reader_settings_sheet_test.dart`。Expected：新案例 FAIL，既有案例照舊（若有因分頁數改變而壞的，依 Step 1 清單在同一步修正預期）。
-- [ ] **Step 4：實作。**
+- [x] **Step 3：** `flutter test test/screens/reader_settings_sheet_test.dart`。Expected：新案例 FAIL，既有案例照舊（若有因分頁數改變而壞的，依 Step 1 清單在同一步修正預期）。
+- [x] **Step 4：實作。**
   1. `.arb` 四檔新增字串，`flutter gen-l10n`。
   2. `DefaultTabController(length: 5)`；`TabBar` 在「呈現」後、「預設集」前加 `Tab(key: Key('reader_settings_tab_theme'), text: l10n.readerSettingsTabTheme)`；`IndexedStack` 依同順序加入 `_buildThemeColorsTab()`；更新「4 個 `_buildXxxTab()`」那段不可逆決策註解的數字與清單。
   3. State 新增 `late ReaderColors _readerColors`（`initState` 由 `widget.readerColors` 初始化）。
@@ -192,9 +192,9 @@ class ReaderColorPreferences {
   6. 低對比警告用 `contrastRatio(有效背景, 有效文字) < 3.0` 判斷。
   7. 每次有效變動：更新 `_readerColors`、呼叫 `widget.onReaderColorsChanged?.call(_readerColors)`。
   8. `ReaderScreen` 開面板處傳入 `appTheme: widget.appTheme`、`readerColors: _readerColors`、`onReaderColorsChanged: _handleReaderColorsChanged`；後者 `setState(() => _readerColors = c)` 並 `unawaited(widget.dependencies.readerColorPreferences.save(widget.appTheme, c))`。
-- [ ] **Step 5：** 執行 `reader_settings_sheet_test.dart`。Expected：全部 PASS。另外在 `reader_screen_custom_colors_test.dart` 補一個案例：開面板改背景色 → `FoliateReaderView.backgroundColor` 立刻更新，且偏好已寫入（重新 `load` 讀回相同）。跑該檔 PASS。
-- [ ] **Step 6：** `flutter analyze` 乾淨。
-- [ ] **Step 7：Commit。** 明確列檔（含 4 個 `.arb` 與生成的 `app_localizations*.dart`），訊息：`feat(reader): 設定面板新增「佈景」分頁（epic-65 Issue 2 Task 3）`。
+- [x] **Step 5：** 執行 `reader_settings_sheet_test.dart`。Expected：全部 PASS。另外在 `reader_screen_custom_colors_test.dart` 補一個案例：開面板改背景色 → `FoliateReaderView.backgroundColor` 立刻更新，且偏好已寫入（重新 `load` 讀回相同）。跑該檔 PASS。
+- [x] **Step 6：** `flutter analyze` 乾淨。
+- [x] **Step 7：Commit。** 明確列檔（含 4 個 `.arb` 與生成的 `app_localizations*.dart`），訊息：`feat(reader): 設定面板新增「佈景」分頁（epic-65 Issue 2 Task 3）`。
 
 ---
 

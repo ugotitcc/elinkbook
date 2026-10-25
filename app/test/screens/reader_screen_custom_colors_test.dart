@@ -7,9 +7,12 @@ import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
+import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import 'package:elinkbook/screens/reader_settings_sheet.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
+import 'package:elinkbook/theme/reader_color_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/fake_inappwebview_platform.dart';
@@ -363,6 +366,51 @@ void main() {
 
       foliateView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
       expect(foliateView.backgroundColor, equals(const Color(0xFF445566)));
+    });
+
+    testWidgets('開面板改背景色 → FoliateReaderView.backgroundColor 立刻更新且偏好已寫入', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+
+      final prefsManager = FakeReaderPrefsManager();
+      await tester.pumpWidget(
+        wrapWithTheme(
+          ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_live_color_update',
+            appTheme: AppTheme.light,
+            isEinkMode: false,
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
+          theme: AppTheme.light,
+        ),
+      );
+      await pumpAndSettleColors(tester);
+
+      final reflowableView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      reflowableView.onPageRendered();
+      reflowableView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ReaderSettingsSheet), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(Tab, '佈景'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('reader_colors_background_hex')), '#334455');
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      expect(foliateView.backgroundColor, equals(const Color(0xFF334455)));
+
+      final loadedPrefs = await const ReaderColorPreferences().load(AppTheme.light);
+      expect(loadedPrefs.background, equals(const Color(0xFF334455)));
     });
   });
 }
