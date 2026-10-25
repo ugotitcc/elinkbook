@@ -60,7 +60,7 @@
 
 **Files：** `main.js`；條件性新增測試台情境。
 
-- [ ] **Step 1：** 先讀 `main.js` 的 `buildOverrideCss`（縮排規則一段）、`applyTextConversion` 及其兩個呼叫點（`load` 事件內、`applyPreferences` 內 `getContents()` 迴圈），確認這兩處是合適的掛勾位置；`grep -rn "text-indent\|first_line_indent" app/test` 確認有沒有掃描 `main.js` 字串的 Dart 測試。
+- [ ] **Step 1：** 先讀 `main.js` 的 `buildOverrideCss`（縮排規則一段）、`applyTextConversion` 及其兩個呼叫點（`load` 事件內、`applyPreferences` 內 `getContents()` 迴圈），確認這兩處是合適的掛勾位置；`grep -rn "text-indent\|first_line_indent" app/test` 確認有沒有掃描 `main.js` 字串的 Dart 測試（計畫審查已查：`app/test` 內沒有任何 `text-indent` 字串，不會被波及；實作時再跑一次 grep 確認）。
 - [ ] **Step 2：** 若有 Node（`node --version` 能執行）：先寫測試台情境 `scenario-first-line-indent-exclusions.mjs`，比照 `scenario-vertical-paragraph-spacing.mjs` 的寫法，涵蓋：一般段落縮排、行內置中不縮排、`align="center"` 不縮排、書本 class 置中不縮排、空段落不縮排、只有圖片的段落不縮排、`prefs.textAlign` 有值時置中段落也縮排（但空段落仍排除）、縮排關閉時沒有 `data-elink-no-indent` 屬性、`firstLineIndent: 0` 時 `text-indent` computed 為 `0px`；先確認紅燈（目前沒有排除邏輯）。沒有 Node 則跳過本步驟，改以 Step 5 的探針書驗證。
 - [ ] **Step 3：** 實作 `markNoIndentParagraphs(doc, prefs)`：
 
@@ -73,25 +73,41 @@
    * 縮排關閉時移除標記、不做 getComputedStyle 計算。
    */
   function markNoIndentParagraphs(doc, prefs) {
-    const paragraphs = doc.querySelectorAll('p')
-    if (typeof prefs.firstLineIndent !== 'number') {
-      for (const p of paragraphs) p.removeAttribute('data-elink-no-indent')
+    if (!doc) return
+    if (typeof prefs?.firstLineIndent !== 'number') {
+      // 縮排關閉：只清理確實有標記的節點，不全量走訪、不算 computed style
+      for (const p of doc.querySelectorAll('p[data-elink-no-indent]')) {
+        p.removeAttribute('data-elink-no-indent')
+      }
       return
     }
     const skipCentered = !prefs.textAlign
     const win = doc.defaultView
-    for (const p of paragraphs) {
+    const canCompute = !!win && typeof win.getComputedStyle === 'function'
+    // 階段一：只讀。讀寫交錯會讓每個 p 都強制同步重算樣式（Layout Thrashing）。
+    const toAdd = []
+    const toRemove = []
+    for (const p of doc.querySelectorAll('p')) {
       const empty = (p.textContent || '').trim() === ''
-      const centered = skipCentered && win.getComputedStyle(p).textAlign.includes('center')
-      if (empty || centered) p.setAttribute('data-elink-no-indent', '')
-      else p.removeAttribute('data-elink-no-indent')
+      // 沒有文字已確定排除，不必再算 computed style
+      const centered = !empty && skipCentered && canCompute &&
+        (win.getComputedStyle(p).textAlign || '').includes('center')
+      const exclude = empty || centered
+      const marked = p.hasAttribute('data-elink-no-indent')
+      if (exclude && !marked) toAdd.push(p)
+      else if (!exclude && marked) toRemove.push(p)
     }
+    // 階段二：批次寫入
+    for (const p of toAdd) p.setAttribute('data-elink-no-indent', '')
+    for (const p of toRemove) p.removeAttribute('data-elink-no-indent')
   }
   ```
 
-  （草案，以實際程式為準。）縮排 CSS 改為 ``p:not([data-elink-no-indent]) { text-indent: ${prefs.firstLineIndent}em !important; }``，並更新該段註解（刪除「含置中、空白、只含圖片的段落」的舊說明，改寫成新規則）。在 `load` 事件（`isIndexMode` 之後）呼叫 `markNoIndentParagraphs(doc, <目前生效的偏好>)`，並在 `applyPreferences` 對 `view.renderer.getContents()` 逐一重新標記。「目前生效的偏好」需用既有的「最後一次完整套用的偏好物件」變數，不要新增第二份狀態；先確認 `load` 事件觸發時該變數已有 `initialPrefs` 的值。
+  （草案，以實際程式為準。）縮排 CSS 改為 ``p:not([data-elink-no-indent]) { text-indent: ${prefs.firstLineIndent}em !important; }``，並更新該段註解（刪除「含置中、空白、只含圖片的段落」的舊說明，改寫成新規則）。在 `load` 事件（`isIndexMode` 之後）呼叫 `markNoIndentParagraphs(doc, <目前生效的偏好>)`，並在 `applyPreferences` 對 `view.renderer.getContents()` 逐一重新標記。「目前生效的偏好」需用既有的「最後一次完整套用的偏好物件」變數，不要新增第二份狀態；`lastAppliedPrefs` 在 `main.js:134` 以 `initialPrefs` 初始化（計畫審查已查證），`load` 事件觸發時一定有值。
+  **呼叫時序（審查 I-2，已查證）：** `applyPreferences` 內必須在 `view.renderer.setStyles(...)`（約 465 行）**之後**對 `getContents()` 逐一重標。`setStyles` 是同步寫入 `<style>`，所以之後讀到的 computed 值已不含舊的 `text-align` 覆蓋；順序顛倒時，從統一對齊切回預設會把整本書判成置中。`load` 事件由 `paginator.js` 的 `afterLoad` 派發，派發前已先呼叫 `setStyles(this.#styles)`，標記放在 `load` 內不需另外處理順序。FXL 在 `applyPreferences` 第 354 行已提早 return，不會走到標記；`load` 事件上 FXL 的 `firstLineIndent` 恆為 `null`（`reader_screen.dart` 已閘住），只會走「清理」分支，不另加 `isFixedLayout` 判斷。
+  **`win` 防禦（審查 I-3）：** `doc.defaultView` 為 `null` 或沒有 `getComputedStyle` 時，視為「不是置中」（只排除沒有文字的段落），不退回外層 `window`（外層 window 對別的文件元素算出的值不可靠）。
 - [ ] **Step 4：** 若有 Node：跑 Step 2 的情境確認綠燈，再跑 `app/tool/foliate_touch_harness/` 的 `run-all.mjs` 確認既有情境沒壞。沒有 Node 則跳過。
-- [ ] **Step 5：** 探針書。用 scratchpad 目錄建立 `sample_indent_exclusions.epub`（不進版控）：多章節（至少 2 章，驗證翻章）；章節 1 含一般段落、行內 `style="text-align:center"`、`align="center"`、書本 class `.c { text-align:center }`、空 `<p></p>`、`<p><br/></p>`、只有 `<img>` 的 `<p>`；章節 2 含一般與置中段落；另做一個直排版本。用 `adb push` 放到裝置。
+- [ ] **Step 5：** 探針書。用 scratchpad 目錄建立 `sample_indent_exclusions.epub`（不進版控）：多章節（至少 2 章，驗證翻章）；章節 1 含一般段落、行內 `style="text-align:center"`、`align="center"`、書本 class `.c { text-align:center }`、空 `<p></p>`、`<p><br/></p>`、只有 `<img>` 的 `<p>`；章節 2 含一般與置中段落；另做一個直排版本。用 `adb push` 放到裝置。產生方式：在 scratchpad 寫一支 Python 3 腳本，用 `zipfile` 組出最小 EPUB3（`mimetype` 第一個且不壓縮、`META-INF/container.xml`、`content.opf`、`nav.xhtml`、各章 XHTML；直排版本在 CSS 加 `writing-mode: vertical-rl`）。腳本不進版控。
 - [ ] **Step 6：** `flutter analyze`；`flutter test test/reader/foliate_reader_view_test.dart`（若 Step 1 找到掃描 `main.js` 字串的測試則一併更新並跑）；commit（明確列檔）。
 
 ### Task 2：收尾
