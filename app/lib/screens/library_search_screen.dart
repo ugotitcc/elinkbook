@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../theme/app_theme.dart';
 import '../library/models/book.dart';
 import '../library/widgets/book_cover.dart';
 import '../reader/reader_jump_target.dart';
@@ -29,12 +30,14 @@ import 'widgets/paging_bar.dart';
 /// （見 Issue 5）。
 class LibrarySearchScreen extends StatefulWidget {
   final String initialQuery;
+  final AppTheme appTheme;
   final ReaderFeatureDependencies dependencies;
   final bool isEinkMode;
 
   const LibrarySearchScreen({
     super.key,
     this.initialQuery = '',
+    this.appTheme = AppTheme.light,
     required this.dependencies,
     this.isEinkMode = false,
   });
@@ -168,6 +171,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
           book: book,
           dependencies: widget.dependencies,
           isEinkMode: widget.isEinkMode,
+          appTheme: widget.appTheme,
           // epic-10-search Issue 5：只有內容匹配片段的點擊會帶入
           // jumpTarget（見下方 _buildContentGroupCard 呼叫端），書名/作者
           // 匹配結果維持一般開書路徑（jumpTarget 預設 null）。
@@ -392,6 +396,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
           initialQuery: _controller.text.trim(),
           dependencies: widget.dependencies,
           isEinkMode: widget.isEinkMode,
+          appTheme: widget.appTheme,
         ),
       ),
     );

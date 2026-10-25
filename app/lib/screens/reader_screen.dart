@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
+import '../theme/app_theme.dart';
+import '../theme/reader_colors.dart';
 
 import '../reader/annotation_controller.dart';
 import '../reader/annotation_list_item.dart';
@@ -153,6 +155,10 @@ class ReaderScreen extends StatefulWidget {
   /// 非 nullable＋預設值模式）。
   final bool isEinkMode;
 
+  /// 全域閱讀主題（epic-65 Issue 2）：淺色／深色／羊皮紙。
+  /// 閱讀器自訂顏色依此欄位載入對應主題的設定值。
+  final AppTheme appTheme;
+
   /// 全庫搜尋跳轉目標（epic-10-search Issue 5，spec.md §6）：非 `null`
   /// 時，開書當下傳給底層 View 的初始定位參數改用本欄位（優先權高於
   /// 資料庫既有 `lastPosition`），除此之外不影響任何後續行為——後續翻頁
@@ -183,6 +189,7 @@ class ReaderScreen extends StatefulWidget {
     this.bookProgress = 0.0,
     this.isFixedLayout,
     this.isEinkMode = false,
+    this.appTheme = AppTheme.light,
     this.initialJumpTarget,
     this.pickSingleBookFile,
     this.readingStatsTracker,
@@ -281,6 +288,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // book_reader_prefs 資料表」）。
   WritingMode? _autoDetectedWritingMode;
   bool _isFixedLayout = false;
+  ReaderColors _readerColors = ReaderColors.empty;
   // 介面顯示狀態（AppBar＋頁尾＋FXL 懸浮控制項）是否可見，格式無關
   // （epic-7-interaction Issue 4，原為 FXL 專屬的 _fixedLayoutControlsVisible
   // 欄位改名／擴大適用範圍）。由熱區「選單」動作切換（見
@@ -460,6 +468,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   @override
   void initState() {
     super.initState();
+    unawaited(_loadReaderColors());
     // 必須在 initState 明確建構（不可延遲初始化）：module 於建構時捕捉
     // Zone.current，確保搜尋跳轉 Timer 恆在 fake-async Zone 內建立，即使
     // `_handlePageRendered` 是在 `tester.runAsync` 的真實 Zone 內被觸發
@@ -537,6 +546,22 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 各格式的解析規則（含 AZW3／CBZ／TXT／MD 的防禦預設值）集中在
   /// `engine_dispatch.dart` 的 [resolveEngineDispatch]，詞彙見 CONTEXT.md
   /// 「引擎分派判斷」。
+  @override
+  void didUpdateWidget(ReaderScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.appTheme != oldWidget.appTheme) {
+      unawaited(_loadReaderColors());
+    }
+  }
+
+  Future<void> _loadReaderColors() async {
+    final colors = await widget.dependencies.readerColorPreferences.load(widget.appTheme);
+    if (!mounted) return;
+    setState(() {
+      _readerColors = colors;
+    });
+  }
+
   void _resolveEpubEngineDispatch() {
     final dispatch = resolveEngineDispatch(
       format: detectBookFormat(_activeFilePath),
@@ -868,6 +893,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           bookId: widget.bookId,
           layoutPresets: _presetFlow.presets,
           isEinkMode: widget.isEinkMode,
+
           onSaveAsPreset: (draft) async {
             _reportPresetFailure(
               await _presetFlow.saveAsPreset(draft),
@@ -1438,6 +1464,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           book: book,
           dependencies: widget.dependencies,
           isEinkMode: widget.isEinkMode,
+
+          appTheme: widget.appTheme,
           fromReader: true,
         ),
       ),
@@ -2078,6 +2106,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           iconColor: _themedFabIconColor,
           disabledIconColor: _themedTtsDisabledIconColor,
           isEinkMode: widget.isEinkMode,
+
           onPlayPause: controller.status == TtsPlaybackStatus.playing
               ? controller.pause
               : () => controller.play(),
@@ -2346,7 +2375,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 child: IgnorePointer(
                   child: ColoredBox(
                     key: const Key('reader_render_placeholder_background'),
-                    color: Theme.of(context).scaffoldBackgroundColor,
+                    color: _themedBackgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
                   ),
                 ),
               ),
@@ -2610,10 +2639,22 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 決定 `null` 時的退回值（epic-22-reader-theme-integration Issue 1：
   /// `FoliateReaderView` 直接傳 `null`；Issue 2 的頁首/頁尾會退回
   /// 既有寫死 `Colors.black`，不在本 Task 範圍）。
-  Color? get _themedTextColor =>
-      _isFixedLayout ? null : Theme.of(context).colorScheme.onSurface;
-  Color? get _themedBackgroundColor =>
-      _isFixedLayout ? null : Theme.of(context).scaffoldBackgroundColor;
+  Color? get _themedTextColor {
+    final format = detectBookFormat(widget.filePath);
+    if (!isFoliateFormat(format) || _isFixedLayout) return null;
+    if (widget.isEinkMode) return Theme.of(context).colorScheme.onSurface;
+    return _readerColors.text ?? Theme.of(context).colorScheme.onSurface;
+  }
+
+
+  Color? get _themedBackgroundColor {
+    final format = detectBookFormat(widget.filePath);
+    if (!isFoliateFormat(format) || _isFixedLayout) return null;
+    if (widget.isEinkMode) return Theme.of(context).scaffoldBackgroundColor;
+    return _readerColors.background ?? Theme.of(context).scaffoldBackgroundColor;
+  }
+
+
 
   /// 浮動控制按鈕（返回/目錄/版面設定/書籤/筆記/進度）的底色/圖示色，
   /// 跟隨 Theme.of(context)（epic-22-reader-theme-integration Issue 3；

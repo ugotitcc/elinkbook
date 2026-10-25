@@ -111,8 +111,8 @@ class ReaderColorPreferences {
 
 **Interfaces — Consumes：** Task 1 的 `ReaderColors`、`ReaderColorPreferences`。**Produces：** `ReaderScreen.appTheme`（`AppTheme`，預設 `AppTheme.light`）；`buildReaderScreen(appTheme:)`；`ReaderFeatureDependencies.readerColorPreferences`。
 
-- [ ] **Step 1：確認樣板。** `Grep` `ReaderSettingsSheet(` 與 `FoliateReaderView(` 在 `test/screens/` 的用法，決定如何讀到送進 `FoliateReaderView` 的 `textColor`／`backgroundColor`（現有測試若已有讀取方式就沿用）。以 `reader_screen_surface_test.dart:28-38` 為樣板：`setUp` 要 mock `elinkbook/fullscreen` 與 `elinkbook/volume_key` 兩個 MethodChannel，否則會噴 `MissingPluginException`；顏色是非同步載入，`pumpWidget` 後要補 `await tester.pump(); await tester.runAsync(() => Future.delayed(Duration.zero)); await tester.pump();`（審查 M-1）。
-- [ ] **Step 2：寫失敗測試。** 預先 `setMockInitialValues` 塞淺色自訂色，開啟 `ReaderScreen(appTheme: AppTheme.light, isEinkMode: false)`：
+- [x] **Step 1：確認樣板。** `Grep` `ReaderSettingsSheet(` 與 `FoliateReaderView(` 在 `test/screens/` 的用法，決定如何讀到送進 `FoliateReaderView` 的 `textColor`／`backgroundColor`（現有測試若已有讀取方式就沿用）。以 `reader_screen_surface_test.dart:28-38` 為樣板：`setUp` 要 mock `elinkbook/fullscreen` 與 `elinkbook/volume_key` 兩個 MethodChannel，否則會噴 `MissingPluginException`；顏色是非同步載入，`pumpWidget` 後要補 `await tester.pump(); await tester.runAsync(() => Future.delayed(Duration.zero)); await tester.pump();`（審查 M-1）。
+- [x] **Step 2：寫失敗測試。** 預先 `setMockInitialValues` 塞淺色自訂色，開啟 `ReaderScreen(appTheme: AppTheme.light, isEinkMode: false)`：
   - `FoliateReaderView.backgroundColor` 與 `.textColor` 等於自訂色。
   - 只設背景時，文字色仍是 `colorScheme.onSurface`。
   - `appTheme: AppTheme.dark` 時不吃淺色的自訂色。
@@ -124,20 +124,20 @@ class ReaderColorPreferences {
   - 全域 `Theme.of(context).scaffoldBackgroundColor` 不變。
   - `appTheme` 變更：同一個 `ReaderScreen` 以不同 `appTheme` 重建後，顏色改讀新佈景（審查 M-4）。
   - 搜尋路徑（審查 I-1）：`LibrarySearchScreen(appTheme: AppTheme.dark)` 與 `BookSearchScreen(appTheme: AppTheme.dark)` 開書後，傳給 `ReaderScreen` 的 `appTheme` 是 `dark`；`ReaderScreen` 推入 `BookSearchScreen` 時轉傳自己的 `appTheme`（各補一個案例，樣板見 `book_search_screen_test.dart`、`library_search_screen_test.dart`）。
-- [ ] **Step 3：** 執行該測試檔。Expected：FAIL。
-- [ ] **Step 4：實作。**
+- [x] **Step 3：** 執行該測試檔。Expected：FAIL。
+- [x] **Step 4：實作。**
   1. `ReaderFeatureDependencies` 新增 `final ReaderColorPreferences readerColorPreferences;`，建構子 `this.readerColorPreferences = const ReaderColorPreferences()`。
   2. `ReaderScreen` 新增 `final AppTheme appTheme;`（預設 `AppTheme.light`）；`buildReaderScreen` 新增 `AppTheme appTheme = AppTheme.light` 並轉傳。呼叫端（審查 I-1，只有 `LibraryScreen` 持有 `appearance`）：
      - `LibraryScreen`：開書（約 444 行）與推入 `LibrarySearchScreen`（約 833 行）傳 `widget.appearance.currentTheme`。
      - `LibrarySearchScreen`、`BookSearchScreen`：各新增 `final AppTheme appTheme;`（預設 `AppTheme.light`，既有測試不受影響）；`LibrarySearchScreen` 開書（約 167 行）與推入 `BookSearchScreen`（約 390 行）傳 `widget.appTheme`；`BookSearchScreen` 開書（約 172 行）傳 `widget.appTheme`。
      - `ReaderScreen` 推入 `BookSearchScreen`（約 1437 行）傳 `widget.appTheme`。
   3. `_ReaderScreenState` 新增 `ReaderColors _readerColors = ReaderColors.empty;`，`initState` 以 `unawaited(_loadReaderColors())` 讀入，完成且 `mounted` 時 `setState`。**取捨（Review Focus 5）：** 不另外擋住開書流程；書頁先用佈景原色，讀完（一般在幾十毫秒內）再更新，由 `didUpdateWidget` 觸發 `setStyles`。WAVE 實測若有明顯閃爍，再改成在載入遮罩期間等待顏色讀完。
-  4. `_themedTextColor`／`_themedBackgroundColor` 改為：固定版面回傳 `null`；E-Ink 模式回傳原本的 Theme 值；**非 Foliate 格式（PDF）也只回傳原本的 Theme 值，不疊自訂色**（審查 I-4，判斷用 `isFoliateFormat(detectBookFormat(widget.filePath))`，與 `build()` 內既有的 `format` 同一來源）；其餘 `(_readerColors.text ?? Theme 值)`。
+  4. `_themedTextColor`／`_themedBackgroundColor` 改為：固定版面回傳 `null`；E-Ink 模式回傳原本的 Theme 值；**非 Foliate 格式（PDF）也只回傳原本的 Theme值，不疊自訂色**（審查 I-4，判斷用 `isFoliateFormat(detectBookFormat(widget.filePath))`，與 `build()` 內既有的 `format` 同一來源）；其餘 `(_readerColors.text ?? Theme 值)`。
   5. 載入遮罩的 `color` 改為：Foliate 流式且非 E-Ink 時用 `_themedBackgroundColor`，否則維持 `Theme.of(context).scaffoldBackgroundColor`。
   6. 新增 `didUpdateWidget`（`ReaderScreen` 目前沒有）：`widget.appTheme != oldWidget.appTheme` 時 `unawaited(_loadReaderColors())`（審查 M-4）。
-- [ ] **Step 5：** 執行該測試檔。Expected：PASS。再跑 `flutter test test/screens/reader_screen_route_test.dart`（若檔案不存在，改跑 `Grep buildReaderScreen test/` 找到的測試檔）確認三個呼叫端與既有測試沒壞。
-- [ ] **Step 6：** `flutter analyze` 乾淨。
-- [ ] **Step 7：Commit。** 明確列檔，訊息：`feat(reader): 閱讀器套用各佈景自訂的背景色與文字色（epic-65 Issue 2 Task 2）`。
+- [x] **Step 5：** 執行該測試檔。Expected：PASS。再跑 `flutter test test/screens/reader_screen_route_test.dart`（若檔案不存在，改跑 `Grep buildReaderScreen test/` 找到的測試檔）確認三個呼叫端與既有測試沒壞。
+- [x] **Step 6：** `flutter analyze` 乾淨。
+- [x] **Step 7：Commit。** 明確列檔，訊息：`feat(reader): 閱讀器套用各佈景自訂的背景色與文字色（epic-65 Issue 2 Task 2）`。
 
 ---
 

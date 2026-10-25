@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
+import '../theme/reader_color_preferences.dart';
 import '../dictionary/dictionary_manager.dart';
 import '../dictionary/dictionary_service.dart';
 import '../dictionary/dictionary_settings_repository.dart';
@@ -74,6 +75,7 @@ class ReaderFeatureDependencies {
   /// 線上查詞的同意狀態（epic-63 Issue 7）；字典設定畫面的開關使用，與
   /// [dictionaryService] 共用同一個實例，關閉後查詢端立刻停止送出。
   final DictionarySettingsRepository dictionarySettings;
+  final ReaderColorPreferences readerColorPreferences;
 
   /// 依書籍格式建立「閱讀面」的工廠（epic-54 Issue 23，見 CONTEXT.md「閱讀面」）。
   /// 預設為正式工廠；測試可換成 `FakeReaderSurface`，不需新增 `ReaderScreen` 建構參數。
@@ -102,6 +104,7 @@ class ReaderFeatureDependencies {
     required this.dictionaryService,
     required this.dictionaryManager,
     required this.dictionarySettings,
+    this.readerColorPreferences = const ReaderColorPreferences(),
     this.readerSurfaceFactory = defaultReaderSurfaceFactory,
   });
 }
