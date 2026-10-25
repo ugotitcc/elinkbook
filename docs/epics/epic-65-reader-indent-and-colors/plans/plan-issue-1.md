@@ -85,13 +85,13 @@
 
 **Files：** `foliate_reader_view.dart`、`reader_screen.dart`、`main.js`、`test/reader/foliate_reader_view_test.dart`。
 
-- [ ] **Step 1：** 先讀 `main.js` 約 160～260 行與 `foliate_reader_view.dart` 約 150～215 行，確認 `paragraphSpacing` 的加入點與 `didUpdateWidget` 比較清單。
-- [ ] **Step 2（紅）：** `foliate_reader_view_test` 補測：`firstLineIndent` 非 null 時 map 含 `firstLineIndent`；`null` 時不含；`didUpdateWidget` 比較在 `firstLineIndent` 改變時視為需要重送偏好（比照段距既有測試）。
-- [ ] **Step 3（綠）：** 實作：
+- [x] **Step 1：** 先讀 `main.js` 約 160～260 行與 `foliate_reader_view.dart` 約 150～215 行，確認 `paragraphSpacing` 的加入點與 `didUpdateWidget` 比較清單。
+- [x] **Step 2（紅）：** `foliate_reader_view_test` 補測：`firstLineIndent` 非 null 時 map 含 `firstLineIndent`；`null` 時不含；`didUpdateWidget` 比較在 `firstLineIndent` 改變時視為需要重送偏好（比照段距既有測試）。
+- [x] **Step 3（綠）：** 實作：
   - `FoliateReaderView` 新欄位 `firstLineIndent`、建構子、map 鍵、比較清單。
   - `reader_screen.dart`：`FoliateReaderView(...)` 傳 `firstLineIndent: resolved.firstLineIndent`（緊接 `paragraphSpacing`）。
   - `main.js`：在 `paragraphSpacing` 規則之後加 `if (typeof prefs.firstLineIndent === 'number') { rules.push(`p { text-indent: ${prefs.firstLineIndent}em !important; }`) }`，附註解說明 `0` 的語意、直排自然往下縮、與 `publisherStyles` 無關。
-- [ ] **Step 4：** `flutter analyze`；跑 `foliate_reader_view_test.dart`、`reader_screen_test.dart --plain-name` 與偏好相關關鍵字各一次（分次跑）；commit。
+- [x] **Step 4：** `flutter analyze`；跑 `foliate_reader_view_test.dart`、`reader_screen_test.dart --plain-name` 與偏好相關關鍵字各一次（分次跑）；commit。
 
 ### Task 3：設定面板與整列重建點
 
