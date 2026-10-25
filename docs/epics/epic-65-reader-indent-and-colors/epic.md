@@ -106,3 +106,28 @@
 **2026-10-25 Issue 1 獨立程式審查後修訂（3 項 Minor 全修，使用者指示）**：審查報告 `reviews/review-code-issue-1-r2.md`（不進版控）0 Critical／0 Important／3 Minor，結論可合併。修訂：(1) FXL／CBZ 閘門——`reader_screen.dart` 傳給 `FoliateReaderView` 的 `firstLineIndent` 改為 `_isFixedLayout ? null : resolved.firstLineIndent`（比照 `_themedTextColor`），新增 2 個 `reader_screen_test` 案例（固定版面偏好殘留縮排時不傳、流式照常傳），先確認紅燈再修；(2) zh_TW `.arb` 的 `@readerSettingsFirstLineIndentValue` 描述補明單位（中文版「字」、英文版 em，CJK 1 字約 1em）並重新產生 l10n；(3) 縮排開關與滑桿從「文字」分頁搬到「呈現」分頁（排在「文字對齊」之後），同時解掉「文字」分頁高度餘裕的疑慮；`reader_settings_sheet_test.dart` 的縮排案例改為先切到「呈現」分頁，並新增「控制項在呈現分頁、不在文字分頁」案例，先確認紅燈（6 個失敗）再搬。驗證：`flutter analyze` 乾淨；`reader_settings_sheet_test.dart` 整份 105 個全過（含 `textTabHeight < 1000` 與「使用全域預設」5 個守衛）；`reader_screen_test.dart` 整份 306 個全過。**控制項位置改變，需在 WAVE 重新抽驗。**
 
 **2026-10-25 Issue 1 審查修訂後 WAVE 重新抽驗通過**：WAVE（`TCE70P24B2202374`）安裝修訂版 debug APK；「呈現」分頁有首行縮排開關與滑桿（排在「文字對齊」之後），「文字」分頁已無此控制項；打開開關後縮排即時生效，滑桿拖到 0、1、4 即時變化；關閉開關時滑桿與 +/- 變淡且不可操作；PDF 與漫畫（CBZ）的版面設定沒有縮排控制項。
+
+**2026-10-25 Issue 3 縮排排除置中與無文字段落完成實作與收尾（分支 `epic-65/issue-3-indent-exclusions`）**：
+
+- 實作重點：
+  - `main.js`：新增 `markNoIndentParagraphs(doc, prefs)`，透過 `getComputedStyle(p).textAlign.includes('center')` 判定置中段落，並判斷 `(p.textContent || '').trim() === ''` 排除空白／純圖片／`<br>` 段落，加上 `data-elink-no-indent` 屬性。
+  - 縮排 CSS 改為 `p:not([data-elink-no-indent]) { text-indent: Nem !important; }`。
+  - 當使用者指定文字對齊（`prefs.textAlign` 有值）時，只排除無文字段落，不排除置中段落（決策 4）。
+  - 縮排關閉（`firstLineIndent` 非數字）時移除標記，不做樣式計算。
+  - 兩階段讀寫分離（Layout Thrashing 防護）與 `win` 防禦（`doc.defaultView` 為空時降級）。
+  - 於章節載入 `load` 事件（避免閃爍）及 `applyPreferences`（`setStyles` 之後同步重標）呼叫。
+- 程式審查：執行者依 Review Focus 8 項完成審查，報告存於 `reviews/review-code-issue-3.md`（0 Critical / 0 Important / 2 Minor），結論可合併。
+- 驗證：
+  - `flutter analyze`：No issues found!
+  - 單元測試：`test/reader/foliate_reader_view_test.dart` 126/126 passed。
+  - 全套測試：完整 `flutter test` **4555 通過、1 略過、0 失敗**（All tests passed）。
+  - 本機無法執行的檢查：`check_l10n_hardcoded_strings.js`、`check_integration_keys.js` 與 `foliate_touch_harness` 未執行（本機環境無可用 Node.js，依 Global Constraints 跳過）。
+- **WAVE 真機抽驗（`TCE70P24B2202374`／Android 12，`app-debug.apk`）**：
+  - (1) 橫排探針書開縮排 2 字：一般段落首行縮排 2 字；行內置中、`align="center"`、class 置中段落皆維持嚴格置中且不縮排；空段落、純圖片段落無偏移。
+  - (2) 翻到第二章：新章節載入立即生效，無先縮排再消失的閃爍現象。
+  - (3) 縮排滑桿拖至 4 字：一般段落縮排 4 字，置中段落完全不受影響、未被擠成多行。
+  - (4) 關閉縮排開關：全部段落恢復書本原貌（一般段落恢復齊行無縮排）。
+  - (5) 統一文字對齊「置中」：所有有文字段落依統一對齊顯示且具縮排規則，無文字段落仍排除。
+  - (6) 直排探針書驗證：一般段落垂直首行往下縮排；置中段落維持垂直置中、不往下縮。
+  - (7) 真實長篇 EPUB（《長篇繁體中文直排測試書》）：段落載入與翻頁順暢，無任何卡頓。
+  - (8) 離開書本重開：單書偏好完整保留。

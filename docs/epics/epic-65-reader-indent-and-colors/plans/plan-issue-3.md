@@ -112,9 +112,9 @@
 
 ### Task 2：收尾
 
-- [ ] **Step 1：** `epic.md` 開發記錄；`issues.md` Issue 3 狀態；`docs/epics.md` 備註；`CONTEXT.md` 詞條已於 Task 0 更新。
-- [ ] **Step 2：** 驗收：`git diff main --stat -- app/lib app/android` 只有 `main.js`（以及條件性的測試台情境）；`grep -n "data-elink-no-indent" main.js` 有標記、移除、CSS 三處。
-- [ ] **Step 3：** `flutter analyze`；兩個 `check_*.js`（先 `node --version`，能執行就跑，不能才記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
-- [ ] **Step 4：** 程式審查（報告存 `reviews/review-code-issue-3.md`，不進版控）。
-- [ ] **Step 5：** WAVE 真機抽驗，用探針書：(1) 開縮排 2 字：一般段落縮排；行內置中、`align="center"`、class 置中的段落**都不縮排**且維持置中；空段落與只有圖片的段落沒有偏移。(2) 翻到第二章：同樣規則，不閃爍（沒有先縮排再消失）。(3) 在面板拖縮排滑桿到 4 字：置中段落仍不受影響、沒有被擠成多行。(4) 關閉縮排開關：全部恢復書本原貌。(5) 在「呈現」分頁選「文字對齊：置中」：所有有文字的段落依統一對齊顯示且仍有縮排規則作用（接受此組合的視覺結果）；再改回「靠左」。(6) 直排探針書重做 (1)(3)。(7) 開一本長篇真實 EPUB（段落很多的章節），翻頁與切換縮排時沒有明顯卡頓。(8) 離開重開，設定保留。
+- [x] **Step 1：** `epic.md` 開發記錄；`issues.md` Issue 3 狀態；`docs/epics.md` 備註；`CONTEXT.md` 詞條已於 Task 0 更新。
+- [x] **Step 2：** 驗收：`git diff main --stat -- app/lib app/android` 只有 `main.js`（以及條件性的測試台情境）；`grep -n "data-elink-no-indent" main.js` 有標記、移除、CSS 三處。
+- [x] **Step 3：** `flutter analyze`；兩個 `check_*.js`（先 `node --version`，能執行就跑，不能才記錄未執行）；完整 `flutter test`（`run_in_background`，只跑一個）。
+- [x] **Step 4：** 程式審查（報告存 `reviews/review-code-issue-3.md`，不進版控）。
+- [x] **Step 5：** WAVE 真機抽驗，用探針書：(1) 開縮排 2 字：一般段落縮排；行內置中、`align="center"`、class 置中的段落**都不縮排**且維持置中；空段落與只有圖片的段落沒有偏移。(2) 翻到第二章：同樣規則，不閃爍（沒有先縮排再消失）。(3) 在面板拖縮排滑桿到 4 字：置中段落仍不受影響、沒有被擠成多行。(4) 關閉縮排開關：全部恢復書本原貌。(5) 在「呈現」分頁選「文字對齊：置中」：所有有文字的段落依統一對齊顯示且仍有縮排規則作用（接受此組合的視覺結果）；再改回「靠左」。(6) 直排探針書重做 (1)(3)。(7) 開一本長篇真實 EPUB（段落很多的章節），翻頁與切換縮排時沒有明顯卡頓。(8) 離開重開，設定保留。
 - [ ] **Step 6：** 開 PR；PR 開出後把 Issue 3 的狀態同步。
