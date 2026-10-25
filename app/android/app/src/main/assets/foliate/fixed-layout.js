@@ -5,7 +5,23 @@ const parseViewport = str => str
     ?.filter(x => x)
     ?.map(x => x.split('=').map(x => x.trim()))
 
-const getViewport = (doc, viewport) => {
+// A bitmap spine item is loaded as the browser's own image document, whose
+// synthetic meta (`width=device-width, minimum-scale=0.1`) has no page size,
+// and some comic converters write `width=(None, None), height=(None, None)`;
+// only a numeric width and height describe a fixed page
+const getPageSize = str => {
+    const props = Object.fromEntries(parseViewport(str) ?? [])
+    if (parseFloat(props.width) > 0 && parseFloat(props.height) > 0) return props
+}
+
+const getImageSize = async src => {
+    const img = new Image()
+    img.src = src
+    await img.decode().catch(() => {})
+    return { width: img.naturalWidth, height: img.naturalHeight }
+}
+
+export const getViewport = async (doc, viewport) => {
     // use `viewBox` for SVG
     if (doc.documentElement.localName === 'svg') {
         const [, , width, height] = doc.documentElement
@@ -14,17 +30,28 @@ const getViewport = (doc, viewport) => {
     }
 
     // get `viewport` `meta` element
-    const meta = parseViewport(doc.querySelector('meta[name="viewport"]')
+    const meta = getPageSize(doc.querySelector('meta[name="viewport"]')
         ?.getAttribute('content'))
-    if (meta) return Object.fromEntries(meta)
+    if (meta) return meta
 
     // fallback to book's viewport
-    if (typeof viewport === 'string') return parseViewport(viewport)
-    if (viewport?.width && viewport.height) return viewport
+    if (typeof viewport === 'string') {
+        const size = getPageSize(viewport)
+        if (size) return size
+    } else if (viewport?.width && viewport.height) return viewport
 
     // if no viewport (possibly with image directly in spine), get image size
     const img = doc.querySelector('img')
     if (img) return { width: img.naturalWidth, height: img.naturalHeight }
+
+    // an SVG <image> without width and height is laid out at the image's own
+    // size, which is not known yet when the document's load event fires
+    const image = doc.querySelector('svg image')
+    const src = image?.getAttribute('href') ?? image?.getAttribute('xlink:href')
+    if (src) {
+        const { width, height } = await getImageSize(src)
+        if (width > 0 && height > 0) return { width, height }
+    }
 
     // just show *something*, i guess...
     console.warn(new Error('Missing viewport properties'))
@@ -64,9 +91,39 @@ export const scrollGapToCss = (value) => {
     return Number.isFinite(n) && n >= 0 ? `${n}px` : null
 }
 
+// Where each scroll-mode page sits along the strip. Only the pages near the
+// viewport are in the DOM: one placeholder per page made every frame cost time
+// in proportion to the page count on WebKit, and a 2752-page PDF scrolled at a
+// few frames a second on iOS. The offsets are computed instead, the way a flex
+// column lays them out: a `gap` margin on both sides of every page, each page
+// after the first pulled `overlap` onto the one before it.
+export const layoutScrollPages = ({ sizes, gap, overlap }) => {
+    const starts = []
+    let pos = gap
+    for (const size of sizes) {
+        starts.push(pos)
+        pos += size + 2 * gap - overlap
+    }
+    return { starts, sizes, total: sizes.length ? pos - gap + overlap : 0 }
+}
+
+// Indices [from, to) of the pages overlapping the span [lo, hi) of the strip.
+export const findScrollPageRange = ({ starts, sizes }, lo, hi) => {
+    const first = test => {
+        let a = 0, b = starts.length
+        while (a < b) {
+            const mid = (a + b) >> 1
+            if (test(mid)) b = mid
+            else a = mid + 1
+        }
+        return a
+    }
+    return [first(i => starts[i] + sizes[i] > lo), first(i => starts[i] >= hi)]
+}
+
 // Decide which scroll-mode pages to begin loading and which to evict, given the
-// reader's current page and each page's load state. `visible` is set by the
-// IntersectionObserver (true while the page sits within the widened preload
+// reader's current page and each page's load state. `visible` is set by
+// #updateScrollWindow (true while the page sits within the widened preload
 // margin). Visible idle pages closest to the reader load first, bounded by how
 // many loads may run at once; loaded pages farthest from the reader are evicted
 // once over the in-memory cap, but a visible page is never torn out from under
@@ -112,14 +169,19 @@ export const computeScrollPinchTransform = ({
 })
 
 // Scroll offsets to apply to the host (`overflow:auto`) after rendering a
-// paginated page. Horizontal is always re-centered so the page sits in the
-// middle of the viewport. Vertical is reset to the top only on a page turn:
-// a tall fit-width page overflows the host vertically, and without the reset the
-// freshly-shown page inherits the previous page's offset and opens scrolled to
-// the bottom (#4683). Plain re-renders (resize, zoom, theme) keep the reader's
-// current vertical position within the page.
-export const computePaginatedScroll = ({ elementWidth, containerWidth, scrollTop, pageTurn }) => ({
-    scrollLeft: (elementWidth - containerWidth) / 2,
+// paginated page. Horizontal is re-centered so the page sits in the middle of
+// the viewport, unless the horizontal pan lock is on: there the offset the
+// reader panned to is carried over, so a zoomed page whose side margins are
+// cropped out of view stays cropped across page turns (#5976). Vertical is
+// reset to the top only on a page turn: a tall fit-width page overflows the
+// host vertically, and without the reset the freshly-shown page inherits the
+// previous page's offset and opens scrolled to the bottom (#4683). Plain
+// re-renders (resize, zoom, theme) keep the reader's current vertical position
+// within the page.
+export const computePaginatedScroll = ({
+    elementWidth, containerWidth, scrollTop, scrollLeft, pageTurn, lockPanX,
+}) => ({
+    scrollLeft: lockPanX ? scrollLeft : (elementWidth - containerWidth) / 2,
     scrollTop: pageTurn ? 0 : scrollTop,
 })
 
@@ -157,6 +219,33 @@ export const computeSpreadSpineOverlap = ({
     if (center || portrait || leftBlank || rightBlank) return 0
     return -1 / (devicePixelRatio || 1)
 }
+
+// Overlap (CSS px) between neighbouring scroll-mode pages, the scroll-flow
+// counterpart of `computeSpreadSpineOverlap` (readest#6484). With a zero gap
+// (Webtoon Mode) each zoomed page is a scaled compositor layer whose edge lands
+// on a fractional device pixel and is anti-aliased against transparency, so the
+// scroll background shows through as a thin line between the images. Pulling
+// every page onto the previous one puts each soft edge over the neighbour's
+// opaque content. It takes two device pixels: at a fractional
+// devicePixelRatio the resampled edge can be soft across two rows. Pages with
+// a gap between them never touch.
+export const computeScrollPageOverlap = ({ gap = 4, devicePixelRatio = 1 } = {}) =>
+    gap === 0 ? 2 / (devicePixelRatio || 1) : 0
+
+// Page columns the reader cell is showing, for the captured page curl
+// (readest#6239). Two means the curl turns just the outer page as a leaf hinged
+// at the spine (readest#6106): the shader reflects that leaf about the cell's
+// horizontal centre, which is where the spine actually is, because
+// `computeSpreadInlineMargins` pushes both pages together and centres the pair.
+// Every other shape — a centred page, the lone page portrait shows, a
+// blank-padded slot, a spread that has not been laid out yet, scroll mode —
+// has no spine to hinge on and curls as one sheet — hence the `true` blank
+// defaults, which make a spread nobody has laid out yet report one column. This
+// is deliberately the same notion of "spread" as `computeSpreadSpineOverlap`.
+export const computeSpreadColumnCount = ({
+    center = false, portrait = false, scrolled = false,
+    leftBlank = true, rightBlank = true,
+} = {}) => center || portrait || scrolled || leftBlank || rightBlank ? 1 : 2
 
 // Inline margins for the two pages of a spread. In landscape both pages are
 // shown and pushed together at the spine: the left page hugs the right edge
@@ -201,7 +290,7 @@ export const applyOverlayerViewBox = (frame, overlayer) => {
 }
 
 export class FixedLayout extends HTMLElement {
-    static observedAttributes = ['zoom', 'scale-factor', 'spread', 'flow', 'scroll-gap', 'scroll-direction']
+    static observedAttributes = ['zoom', 'scale-factor', 'spread', 'flow', 'scroll-gap', 'scroll-direction', 'lock-pan-x']
     #root = this.attachShadow({ mode: 'open' })
     #observer = new ResizeObserver(() => this.#render())
     #spreads
@@ -217,11 +306,21 @@ export class FixedLayout extends HTMLElement {
     #scaleFactor = 1.0
     #totalScaleFactor = 1.0
     #scrollLocked = false
+    // Horizontal offset handed over by #showSpread for the next #render().
+    #pannedX = null
+    // Horizontal offset of the vertical scroll strip while the pan lock holds
+    // it (see #syncScrollPanLock); null while the host scrolls on x itself.
+    #lockedPanX = null
+    // Pan handed in through `panX` before there was a page to apply it to.
+    #pendingPanX = null
     #isOverflowX = false
     #isOverflowY = false
     #preloadCache = new Map()
     #prerenderedSpreads = new Map()
     #spreadAccessTime = new Map()
+    #spreadAccessTick = 0
+    // Counter for the keys stale cached spreads move to on a regroup.
+    #staleSpreads = 0
     #maxConcurrentPreloads = 1
     #numPrerenderedSpreads = 1
     #maxCachedSpreads = 2
@@ -233,7 +332,10 @@ export class FixedLayout extends HTMLElement {
     #scrollMode = false
     #scrollHorizontal = false
     #scrollPages = []
-    #scrollObserver = null
+    // Pages whose placeholder is in the DOM: the ones near the viewport, plus
+    // any still loading or loaded (detaching an iframe would unload it).
+    #scrollMounted = new Set()
+    #scrollLayout = layoutScrollPages({ sizes: [], gap: 0, overlap: 0 })
     #scrollContainer = null
     #scrollLoadGen = new Map()
     // Live rendered-canvas cap. Each PDF page canvas is sized to the on-screen
@@ -266,7 +368,7 @@ export class FixedLayout extends HTMLElement {
         const c = this.#scrollHorizontal
             ? hostRect.left + this.clientWidth / 2
             : hostRect.top + this.clientHeight / 2
-        for (const page of this.#scrollPages) {
+        for (const page of this.#scrollMounted) {
             const rect = page.el.getBoundingClientRect()
             const lo = this.#scrollHorizontal ? rect.left : rect.top
             const hi = this.#scrollHorizontal ? rect.right : rect.bottom
@@ -278,19 +380,22 @@ export class FixedLayout extends HTMLElement {
     }
     // Scroll so the captured page sits back at its pre-commit on-screen rect.
     #restorePinchAnchor(anchor) {
-        const page = this.#scrollPages.find(p => p.index === anchor.index)
-        if (!page) return
+        const page = this.#scrollPages[anchor.index]
+        if (!this.#scrollMounted.has(page)) return
         const rect = page.el.getBoundingClientRect()
         const maxTop = Math.max(0, this.scrollHeight - this.clientHeight)
         const maxLeft = Math.max(0, this.scrollWidth - this.clientWidth)
         this.scrollTop = clamp(this.scrollTop + (rect.top - anchor.top), 0, maxTop)
-        this.scrollLeft = clamp(this.scrollLeft + (rect.left - anchor.left), 0, maxLeft)
+        if (this.#lockedPanX !== null)
+            this.#setLockedPanX(this.#lockedPanX + (rect.left - anchor.left))
+        else this.scrollLeft = clamp(this.scrollLeft + (rect.left - anchor.left), 0, maxLeft)
     }
     #getScrollModePageMetrics() {
+        const { starts, sizes } = this.#scrollLayout
         return this.#scrollPages.map(page => ({
             index: page.index,
-            start: this.#scrollHorizontal ? page.el.offsetLeft : page.el.offsetTop,
-            size: this.#scrollHorizontal ? page.el.offsetWidth : page.el.offsetHeight,
+            start: starts[page.index] ?? 0,
+            size: sizes[page.index] ?? 0,
         }))
     }
     #captureScrollModeAnchor() {
@@ -299,7 +404,7 @@ export class FixedLayout extends HTMLElement {
             ? this.#scrollCurrentIndex : this.#getScrollIndex()
         return captureScrollModeAnchor(
             this.#getScrollModePageMetrics(),
-            this.#scrollContentPos(),
+            this.#scrollProgression(),
             fallbackIndex,
         )
     }
@@ -317,8 +422,8 @@ export class FixedLayout extends HTMLElement {
         // exact spot the animation is already at — and #render()'s mandatory
         // initial ResizeObserver callback can land in the same tick as a page
         // turn requested right after open(), silently freezing it.
-        if (Math.abs(restoredPos - this.#scrollContentPos()) > 0.5) {
-            this.#setScrollContentPos(restoredPos)
+        if (Math.abs(restoredPos - this.#scrollProgression()) > 0.5) {
+            this.#setScrollProgression(restoredPos)
         }
         this.#scrollCurrentIndex = anchor.index
     }
@@ -330,29 +435,16 @@ export class FixedLayout extends HTMLElement {
     #scrollTotalLength() {
         return this.#scrollHorizontal ? this.scrollWidth : this.scrollHeight
     }
-    // Position of the viewport's leading edge in content coordinates (0 = the
-    // content's top/left edge). RTL horizontal scrolls into negative
-    // scrollLeft (direction: rtl container), so shift by the max offset to
-    // stay in the same coordinate space as offsetLeft page metrics.
-    #scrollContentPos() {
-        if (!this.#scrollHorizontal) return this.scrollTop
-        return this.rtl
-            ? this.scrollWidth - this.clientWidth + this.scrollLeft
-            : this.scrollLeft
-    }
-    #setScrollContentPos(pos) {
-        if (!this.#scrollHorizontal) {
-            this.scrollTop = pos
-            return
-        }
-        this.scrollLeft = this.rtl ? pos - (this.scrollWidth - this.clientWidth) : pos
-    }
-    // Distance read from the book start along the reading direction. Equals
-    // content position except for RTL horizontal, where reading starts at the
-    // right edge and progresses into negative scrollLeft.
+    // Distance read from the book start along the reading direction, the
+    // coordinate space of the page layout. RTL horizontal reading starts at
+    // the right edge and progresses into negative scrollLeft.
     #scrollProgression() {
         if (!this.#scrollHorizontal) return this.scrollTop
         return this.rtl ? -this.scrollLeft : this.scrollLeft
+    }
+    #setScrollProgression(pos) {
+        if (!this.#scrollHorizontal) this.scrollTop = pos
+        else this.scrollLeft = this.rtl ? -pos : pos
     }
     constructor() {
         super()
@@ -386,40 +478,57 @@ export class FixedLayout extends HTMLElement {
         :host([flow="scrolled"]) .scroll-page {
             touch-action: pan-x pan-y;
         }
+        /* Horizontal pan lock: the finger only moves the page up and down, so a
+           zoomed-in page panned to hide its wide side margins can't drift back
+           out of alignment with every slightly-diagonal swipe (#5976). Two
+           fingers stay unlisted, so pinch is still delivered to JS. Exempt
+           horizontal scroll flow, where x is the reading axis and locking it
+           would strand the reader. */
+        :host([lock-pan-x]:not([flow="scrolled"][scroll-direction="horizontal"])),
+        :host([lock-pan-x]:not([flow="scrolled"][scroll-direction="horizontal"])) .scroll-page {
+            touch-action: pan-y;
+        }
+        /* iOS ignores touch-action for a swipe that lands while the strip is
+           still coasting from the previous fling, so vertical scroll flow drops
+           the horizontal scroll range altogether: the host stops scrolling on
+           x and the strip is shifted by the offset the reader panned to
+           (#6407). */
+        :host([lock-pan-x][flow="scrolled"]:not([scroll-direction="horizontal"])) {
+            overflow-x: hidden;
+        }
+        :host([lock-pan-x][flow="scrolled"]:not([scroll-direction="horizontal"])) .scroll-container {
+            translate: var(--locked-pan-x, 0px) 0;
+        }
+        /* Sized by #layoutScrollPages to the whole strip, but at least the
+           viewport so unzoomed pages stay centered. */
         :host([flow="scrolled"]) .scroll-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            position: relative;
             min-height: 100%;
-            /* Grow to the widest (zoomed) page so the host can scroll across its
-               full width, but stay at least viewport-wide so unzoomed pages stay
-               centered. Without max-content the centered overflow is unreachable
-               (the flexbox centered-overflow scroll trap). */
-            width: max-content;
             min-width: 100%;
             background-color: var(--scroll-bg-color);
             background-opacity: var(--scroll-bg-opacity);
         }
+        /* Placed along the strip by #placeScrollPage and centered across it.
+           In Webtoon Mode each page overlaps the previous one to hide the
+           anti-aliased seam (readest#6484); later pages come later in the DOM,
+           so they paint on top. The pages are not clipped (no overflow:
+           hidden) because the clip of a box on a fractional device pixel is
+           itself anti-aliased and reopens the seam. */
         :host([flow="scrolled"]) .scroll-page {
-            position: relative;
-            flex-shrink: 0;
-            overflow: hidden;
-            /* Scale the gap with the zoom so the committed layout matches the
-               pinch preview, whose transform scales the whole container (gaps
-               included). Without this the gap snaps back to a fixed px on
-               release and the pages shift. */
-            margin: calc(var(--scroll-page-gap, 4px) * var(--scroll-zoom, 1)) 0;
+            position: absolute;
+            left: 0;
+            right: 0;
+            margin-inline: auto;
         }
         :host([flow="scrolled"]) .scroll-page iframe {
             pointer-events: none;
         }
-        :host([flow="scrolled"][scroll-direction="horizontal"]) .scroll-container {
-            flex-direction: row;
-            height: max-content;
-            min-height: 100%;
-        }
         :host([flow="scrolled"][scroll-direction="horizontal"]) .scroll-page {
-            margin: 0 calc(var(--scroll-page-gap, 4px) * var(--scroll-zoom, 1));
+            left: auto;
+            right: auto;
+            top: 0;
+            bottom: 0;
+            margin: auto 0;
         }`)
 
         this.#observer.observe(this)
@@ -450,14 +559,13 @@ export class FixedLayout extends HTMLElement {
                     this.#render()
                 }
                 break
-            case 'scroll-gap': {
-                const css = scrollGapToCss(value)
-                const anchor = this.#scrollMode ? this.#captureScrollModeAnchor() : null
-                if (css === null) this.style.removeProperty('--scroll-page-gap')
-                else this.style.setProperty('--scroll-page-gap', css)
-                if (anchor) this.#restoreScrollModeAnchor(anchor)
+            case 'scroll-gap':
+                if (this.#scrollContainer) this.#renderScrollMode()
                 break
-            }
+            case 'lock-pan-x':
+                this.#applyPanLockToFrames()
+                this.#syncScrollPanLock()
+                break
             case 'scroll-direction': {
                 const horizontal = value === 'horizontal'
                 if (horizontal === this.#scrollHorizontal) break
@@ -471,6 +579,80 @@ export class FixedLayout extends HTMLElement {
                 break
             }
         }
+    }
+    // `touch-action` doesn't cross an iframe boundary: a touch that lands on page
+    // content is governed by that document's own value, so the host's `pan-y`
+    // alone still leaves the page pannable sideways (#5976). Mirror the lock
+    // inside every frame, with the same horizontal-scroll-flow exemption the
+    // stylesheet makes.
+    #applyPanLock(doc) {
+        if (!doc?.documentElement) return
+        const locked = this.hasAttribute('lock-pan-x')
+            && !(this.getAttribute('flow') === 'scrolled'
+                && this.getAttribute('scroll-direction') === 'horizontal')
+        doc.documentElement.style.touchAction = locked ? 'pan-y' : ''
+    }
+    #applyPanLockToFrames() {
+        for (const iframe of this.#root.querySelectorAll('iframe'))
+            this.#applyPanLock(iframe.contentDocument)
+    }
+    // Hand the horizontal offset between the host's scrollLeft and the strip's
+    // translate as the lock's overflow-x rule turns on or off, so the page
+    // stays where the reader panned it.
+    #syncScrollPanLock() {
+        const locked = !!this.#scrollContainer && !this.#scrollHorizontal
+            && this.hasAttribute('lock-pan-x')
+        if (locked === (this.#lockedPanX !== null)) return
+        if (locked) {
+            this.#setLockedPanX(this.scrollLeft)
+            this.scrollLeft = 0
+            this.#applyPendingPanX()
+        } else {
+            const x = this.#lockedPanX
+            this.#clearLockedPanX()
+            this.scrollLeft = x
+        }
+    }
+    // Horizontal pan as a fraction of the page's horizontal overflow (0 = left
+    // edge, 1 = right edge), so the reader can store where a zoomed page was
+    // panned under the lock and restore it when the book is reopened. null when
+    // nothing overflows sideways, or in horizontal scroll flow, where x is the
+    // reading axis. Setting it before the first page renders defers it until
+    // there is one.
+    get panX() {
+        if (this.#scrollMode && this.#scrollHorizontal) return null
+        const max = this.#maxPanX()
+        if (!(max > 0)) return null
+        return (this.#lockedPanX ?? this.scrollLeft) / max
+    }
+    set panX(fraction) {
+        this.#pendingPanX = fraction
+        this.#applyPendingPanX()
+    }
+    #maxPanX() {
+        const width = this.#lockedPanX !== null
+            ? this.#scrollContainer.offsetWidth : this.scrollWidth
+        return width - this.clientWidth
+    }
+    #applyPendingPanX() {
+        if (this.#pendingPanX === null) return
+        if (this.#scrollMode ? !this.#scrollContainer?.offsetWidth : !this.#side) return
+        const fraction = this.#pendingPanX
+        this.#pendingPanX = null
+        if (this.#scrollMode && this.#scrollHorizontal) return
+        const max = this.#maxPanX()
+        if (!(max > 0)) return
+        if (this.#lockedPanX !== null) this.#setLockedPanX(fraction * max)
+        else this.scrollLeft = fraction * max
+    }
+    #setLockedPanX(x) {
+        const max = Math.max(0, this.#scrollContainer.offsetWidth - this.clientWidth)
+        this.#lockedPanX = clamp(x, 0, max)
+        this.style.setProperty('--locked-pan-x', `${-this.#lockedPanX}px`)
+    }
+    #clearLockedPanX() {
+        this.#lockedPanX = null
+        this.style.removeProperty('--locked-pan-x')
     }
     async #createFrame({ index, src: srcOption, detached = false }) {
         const srcOptionIsString = typeof srcOption === 'string'
@@ -504,11 +686,12 @@ export class FixedLayout extends HTMLElement {
 
         if (!src) return { blank: true, element, iframe }
         return new Promise(resolve => {
-            iframe.addEventListener('load', () => {
+            iframe.addEventListener('load', async () => {
                 const doc = iframe.contentDocument
+                this.#applyPanLock(doc)
                 iframe.dataset.sectionIndex = index
                 this.dispatchEvent(new CustomEvent('load', { detail: { doc, index } }))
-                const { width, height } = getViewport(doc, this.defaultViewport)
+                const { width, height } = await getViewport(doc, this.defaultViewport)
                 resolve({
                     element, iframe,
                     width: parseFloat(width),
@@ -530,6 +713,12 @@ export class FixedLayout extends HTMLElement {
             return []
         }
         if (!side) return []
+        // The offset the reader panned to, read before transform()'s resizes
+        // let the browser clamp it. #showSpread hands over its own snapshot:
+        // by the time a page turn reaches us its frame swap has already
+        // clamped the live value to 0 (#5976).
+        const pannedX = this.#pannedX ?? this.scrollLeft
+        this.#pannedX = null
         const left = this.#left ?? {}
         const right = this.#center ?? this.#right ?? {}
         const target = side === 'left' ? left : right
@@ -540,20 +729,23 @@ export class FixedLayout extends HTMLElement {
         this.#portrait = portrait
         const blankWidth = left.width ?? right.width ?? 0
         const blankHeight = left.height ?? right.height ?? 0
+        // Fit to the client box: a page taller than the view gets a classic
+        // scrollbar, which takes its room from the border box.
+        const { clientWidth, clientHeight } = this
 
         let scale = typeof this.#zoom === 'number' && !isNaN(this.#zoom)
             ? this.#zoom
             : (this.#zoom === 'fit-width'
                 ? (portrait || this.#center
-                    ? width / (target.width ?? blankWidth)
-                    : width / ((left.width ?? blankWidth) + (right.width ?? blankWidth)))
+                    ? clientWidth / (target.width ?? blankWidth)
+                    : clientWidth / ((left.width ?? blankWidth) + (right.width ?? blankWidth)))
                 : (portrait || this.#center
                     ? Math.min(
-                        width / (target.width ?? blankWidth),
-                        height / (target.height ?? blankHeight))
+                        clientWidth / (target.width ?? blankWidth),
+                        clientHeight / (target.height ?? blankHeight))
                     : Math.min(
-                        width / ((left.width ?? blankWidth) + (right.width ?? blankWidth)),
-                        height / Math.max(
+                        clientWidth / ((left.width ?? blankWidth) + (right.width ?? blankWidth)),
+                        clientHeight / Math.max(
                             left.height ?? blankHeight,
                             right.height ?? blankHeight)))
             ) || 1
@@ -636,7 +828,9 @@ export class FixedLayout extends HTMLElement {
                 elementWidth: element.clientWidth,
                 containerWidth,
                 scrollTop: container.scrollTop,
+                scrollLeft: pannedX,
                 pageTurn,
+                lockPanX: this.hasAttribute('lock-pan-x'),
             })
             container.scrollLeft = scrollLeft
             container.scrollTop = scrollTop
@@ -685,8 +879,8 @@ export class FixedLayout extends HTMLElement {
         // the zoom doesn't jump (matters most when the page was scrolled within
         // an overflowing zoom). See pinchEnd.
         if (this.#pinchAnchor) {
-            const frame = this.#center ?? this.#left ?? this.#right
-            if (frame?.element) {
+            const frame = this.#shownFrames()[0]
+            if (frame) {
                 const b = frame.element.getBoundingClientRect()
                 const maxTop = Math.max(0, this.scrollHeight - this.clientHeight)
                 const maxLeft = Math.max(0, this.scrollWidth - this.clientWidth)
@@ -695,6 +889,7 @@ export class FixedLayout extends HTMLElement {
             }
             this.#pinchAnchor = null
         }
+        this.#applyPendingPanX()
         return renderPromises
     }
     async #showSpread({ left, right, center, side, spreadIndex }) {
@@ -706,7 +901,7 @@ export class FixedLayout extends HTMLElement {
         const prerendered = cacheKey ? this.#prerenderedSpreads.get(cacheKey) : null
 
         if (prerendered) {
-            this.#spreadAccessTime.set(cacheKey, Date.now())
+            this.#touchSpread(cacheKey)
             if (prerendered.center) {
                 this.#center = prerendered.center
             } else {
@@ -718,14 +913,14 @@ export class FixedLayout extends HTMLElement {
                 this.#center = await this.#createFrame(center)
                 if (cacheKey) {
                     this.#prerenderedSpreads.set(cacheKey, { center: this.#center })
-                    this.#spreadAccessTime.set(cacheKey, Date.now())
+                    this.#touchSpread(cacheKey)
                 }
             } else {
                 this.#left = await this.#createFrame(left)
                 this.#right = await this.#createFrame(right)
                 if (cacheKey) {
                     this.#prerenderedSpreads.set(cacheKey, { left: this.#left, right: this.#right })
-                    this.#spreadAccessTime.set(cacheKey, Date.now())
+                    this.#touchSpread(cacheKey)
                 }
             }
         }
@@ -736,6 +931,11 @@ export class FixedLayout extends HTMLElement {
             ? [this.#center?.element]
             : [this.#left?.element, this.#right?.element]
 
+        // Making the outgoing frames absolute collapses the host's scrollable
+        // width, so the browser clamps the scroll offset to 0 before #render()
+        // gets to read it. Under the horizontal pan lock that offset is the
+        // one thing the page turn has to preserve, so snapshot it first.
+        if (this.hasAttribute('lock-pan-x')) this.#pannedX = this.scrollLeft
         Array.from(this.#root.children).forEach(child => {
             const isVisible = visibleFrames.includes(child)
             Object.assign(child.style, {
@@ -806,19 +1006,15 @@ export class FixedLayout extends HTMLElement {
             const el = document.createElement('div')
             el.className = 'scroll-page'
             el.dataset.index = i
-            this.#scrollContainer.append(el)
             return { el, index: i, section, state: 'idle', visible: false, frame: null, vpWidth: vw, vpHeight: vh }
         })
 
-        this.#renderScrollMode()
-
-        // Scroll to target position BEFORE setting up the observer
-        // so only pages near the target are observed as intersecting
-        if (currentIndex >= 0 && currentIndex < this.#scrollPages.length) {
-            this.#scrollPages[currentIndex].el.scrollIntoView(
-                this.#scrollHorizontal ? { inline: 'start', block: 'nearest' } : undefined)
+        // The first layout lands on the target page through the fallback of
+        // the scroll anchor, so only the pages around it are mounted.
+        if (currentIndex >= 0 && currentIndex < this.#scrollPages.length)
             this.#scrollCurrentIndex = currentIndex
-        }
+        this.#renderScrollMode()
+        this.#syncScrollPanLock()
 
         this.addEventListener('scroll', this.#handleScrollEvent)
         if (this.#scrollHorizontal) {
@@ -826,25 +1022,79 @@ export class FixedLayout extends HTMLElement {
             // (no-op) native vertical scroll cannot also fire elastic overscroll.
             this.addEventListener('wheel', this.#handleScrollWheel, { passive: false })
         }
-
-        // Set up IntersectionObserver after scroll position is established.
-        // rootMargin '200%' marks pages within ~2 viewport heights above/below as
-        // visible, giving the ~400 ms-per-page render enough lead time to finish
-        // before the page scrolls into view. The observer only flags visibility;
-        // #scheduleScrollPages decides what to actually load (nearest first,
-        // bounded concurrency) and evict.
-        this.#scrollObserver = new IntersectionObserver(entries => {
-            for (const entry of entries) {
-                const index = parseInt(entry.target.dataset.index)
-                const pageData = this.#scrollPages[index]
-                if (pageData) pageData.visible = entry.isIntersecting
+    }
+    // Mount the pages within ~2 viewports of the viewport and flag them
+    // visible, giving the ~400 ms-per-page render enough lead time to finish
+    // before a page scrolls into view; unmount the rest unless they hold a
+    // frame. #scheduleScrollPages decides what to actually load (nearest
+    // first, bounded concurrency) and evict.
+    #updateScrollWindow() {
+        const view = this.#scrollViewLength()
+        const pos = this.#scrollProgression()
+        const [from, to] = findScrollPageRange(this.#scrollLayout, pos - 2 * view, pos + 3 * view)
+        let changed = false
+        for (const page of this.#scrollMounted) {
+            if (page.index >= from && page.index < to) continue
+            if (page.visible) changed = true
+            page.visible = false
+            if (page.state !== 'loading' && page.state !== 'loaded') {
+                page.el.remove()
+                this.#scrollMounted.delete(page)
             }
-            this.#scheduleScrollPages()
-        }, { root: this, rootMargin: this.#scrollHorizontal ? '0px 200%' : '200% 0px' })
-
-        for (const page of this.#scrollPages) {
-            this.#scrollObserver.observe(page.el)
         }
+        for (let i = from; i < to; i++) {
+            const page = this.#scrollPages[i]
+            if (!page.visible) changed = true
+            page.visible = true
+            if (!this.#scrollMounted.has(page)) this.#mountScrollPage(page)
+        }
+        if (changed) this.#scheduleScrollPages()
+    }
+    // Insert in index order: a later page paints over an earlier one where
+    // they overlap, and readers of `.scroll-page` expect strip order.
+    #mountScrollPage(page) {
+        let next = null
+        for (const other of this.#scrollMounted)
+            if (other.index > page.index && (!next || other.index < next.index)) next = other
+        this.#scrollContainer.insertBefore(page.el, next?.el ?? null)
+        this.#scrollMounted.add(page)
+        this.#placeScrollPage(page)
+    }
+    #placeScrollPage(page) {
+        const scale = this.#scrollPageScale(page)
+        const start = `${this.#scrollLayout.starts[page.index]}px`
+        Object.assign(page.el.style, {
+            width: `${page.vpWidth * scale}px`,
+            height: `${page.vpHeight * scale}px`,
+        })
+        if (this.#scrollHorizontal) page.el.style.insetInlineStart = start
+        else page.el.style.top = start
+    }
+    // Scale fitting a page to the strip's cross axis.
+    #scrollPageScale(page) {
+        return this.#scrollHorizontal
+            ? (this.clientHeight / page.vpHeight) * this.#scaleFactor
+            : (this.clientWidth / page.vpWidth) * this.#scaleFactor
+    }
+    // Recompute where every page sits, size the strip, and move the mounted
+    // pages into place. The gap scales with the zoom so the committed layout
+    // matches the pinch preview, whose transform scales the whole container,
+    // gaps included.
+    #layoutScrollPages() {
+        const horizontal = this.#scrollHorizontal
+        const sizes = this.#scrollPages.map(page =>
+            (horizontal ? page.vpWidth : page.vpHeight) * this.#scrollPageScale(page))
+        const gap = parseFloat(scrollGapToCss(this.getAttribute('scroll-gap')) ?? 4)
+        this.#scrollLayout = layoutScrollPages({
+            sizes,
+            gap: gap * this.#scaleFactor,
+            overlap: computeScrollPageOverlap({ gap, devicePixelRatio: window.devicePixelRatio || 1 }),
+        })
+        const total = `${this.#scrollLayout.total}px`
+        const cross = `${(horizontal ? this.clientHeight : this.clientWidth) * this.#scaleFactor}px`
+        this.#scrollContainer.style.width = horizontal ? total : cross
+        this.#scrollContainer.style.height = horizontal ? cross : total
+        for (const page of this.#scrollMounted) this.#placeScrollPage(page)
     }
     // Load the nearest visible idle pages and evict the farthest off-screen ones,
     // honouring the concurrency and in-memory caps. Re-run whenever visibility or
@@ -872,6 +1122,7 @@ export class FixedLayout extends HTMLElement {
         // supported in this mode: a gesture spanning two page iframes can't be
         // owned by one document — keeping the iframes interactive is the
         // trade-off for native selection.)
+        this.#updateScrollWindow()
         this.#scrolling = true
         this.#setScrollIframeInteraction(false)
         if (this.#scrollIdleTimer) clearTimeout(this.#scrollIdleTimer)
@@ -895,7 +1146,7 @@ export class FixedLayout extends HTMLElement {
     }
     #setScrollIframeInteraction(enabled) {
         const value = enabled ? 'auto' : ''
-        for (const page of this.#scrollPages) {
+        for (const page of this.#scrollMounted) {
             if (page.frame?.iframe) {
                 page.frame.iframe.style.pointerEvents = value
             }
@@ -909,10 +1160,6 @@ export class FixedLayout extends HTMLElement {
             ? this.#scrollCurrentIndex : this.#getScrollIndex()
         this.removeEventListener('scroll', this.#handleScrollEvent)
         this.removeEventListener('wheel', this.#handleScrollWheel)
-        if (this.#scrollObserver) {
-            this.#scrollObserver.disconnect()
-            this.#scrollObserver = null
-        }
         if (this.#scrollIdleTimer) {
             clearTimeout(this.#scrollIdleTimer)
             this.#scrollIdleTimer = null
@@ -922,6 +1169,7 @@ export class FixedLayout extends HTMLElement {
             this.#teardownScrollPage(page)
         }
         this.#scrollPages = []
+        this.#scrollMounted.clear()
         this.#scrollLoadGen.clear()
         this.#scrollLoadingCount = 0
         this.#scrollCurrentIndex = -1
@@ -931,6 +1179,7 @@ export class FixedLayout extends HTMLElement {
         }
 
         // Reset scroll position left over from scroll mode
+        this.#clearLockedPanX()
         this.scrollTop = 0
         this.scrollLeft = 0
         // Must run even when navigate is false (axis rebuild): otherwise a
@@ -982,11 +1231,12 @@ export class FixedLayout extends HTMLElement {
 
         if (!src) return { blank: true, element, iframe }
         return new Promise(resolve => {
-            iframe.addEventListener('load', () => {
+            iframe.addEventListener('load', async () => {
                 const doc = iframe.contentDocument
+                this.#applyPanLock(doc)
                 iframe.dataset.sectionIndex = pageData.index
                 this.dispatchEvent(new CustomEvent('load', { detail: { doc, index: pageData.index } }))
-                const { width, height } = getViewport(doc, this.defaultViewport)
+                const { width, height } = await getViewport(doc, this.defaultViewport)
                 resolve({
                     element, iframe,
                     width: parseFloat(width),
@@ -1034,12 +1284,15 @@ export class FixedLayout extends HTMLElement {
             pageData.state = 'loaded'
             const scrollAnchor = this.#captureScrollModeAnchor()
             // Update dimensions from actual page viewport
-            if (frame.width && frame.height) {
+            if (frame.width && frame.height && (frame.width !== pageData.vpWidth
+                || frame.height !== pageData.vpHeight)) {
                 pageData.vpWidth = frame.width
                 pageData.vpHeight = frame.height
+                this.#layoutScrollPages()
             }
             this.#renderScrollPage(pageData)
             this.#restoreScrollModeAnchor(scrollAnchor)
+            this.#updateScrollWindow()
 
             // Make the page interactive right away when idle so text selection
             // and taps work without first scrolling. While scrolling, leave it
@@ -1114,42 +1367,41 @@ export class FixedLayout extends HTMLElement {
         }
         pageData.frame = null
         pageData.state = 'idle'
+        if (!pageData.visible && this.#scrollMounted.delete(pageData)) pageData.el.remove()
     }
     #renderScrollMode() {
-        const { width: hostWidth, height: hostHeight } = this.getBoundingClientRect()
-        if (!(this.#scrollHorizontal ? hostHeight : hostWidth)) return
-        // Scale the inter-page gap with the zoom so the committed layout matches
-        // the pinch preview (which scales the whole container, gaps included).
-        this.style.setProperty('--scroll-zoom', String(this.#scaleFactor))
+        // Fit pages to the client box: a classic scrollbar along the strip takes
+        // room from the border box, and pages that fill it overflow sideways.
+        const { clientWidth: hostWidth, clientHeight: hostHeight } = this
+        if (!this.#scrollContainer || !(this.#scrollHorizontal ? hostHeight : hostWidth)) return
         // A pinch commit restores the viewport-centre anchor (both axes) so the
         // zoom lands exactly where the live preview showed it; every other
         // re-render keeps the reader's vertical position via the top anchor.
         const pinchAnchor = this.#pinchAnchor
         const scrollAnchor = pinchAnchor ? null : this.#captureScrollModeAnchor()
-        for (const page of this.#scrollPages) {
-            const scale = this.#scrollHorizontal
-                ? (hostHeight / page.vpHeight) * this.#scaleFactor
-                : (hostWidth / page.vpWidth) * this.#scaleFactor
-            page.el.style.width = `${page.vpWidth * scale}px`
-            page.el.style.height = `${page.vpHeight * scale}px`
+        this.#layoutScrollPages()
+        for (const page of this.#scrollMounted) {
             if (page.state === 'loaded' && page.frame) {
                 this.#renderScrollPage(page)
             }
         }
+        // Clamp the locked offset to the resized strip, as the browser would
+        // clamp scrollLeft.
+        if (this.#lockedPanX !== null) this.#setLockedPanX(this.#lockedPanX)
+        this.#applyPendingPanX()
         if (pinchAnchor) {
             this.#restorePinchAnchor(pinchAnchor)
             this.#pinchAnchor = null
         } else {
             this.#restoreScrollModeAnchor(scrollAnchor)
         }
+        this.#updateScrollWindow()
     }
     #renderScrollPage(pageData) {
-        const { width: hostWidth, height: hostHeight } = this.getBoundingClientRect()
+        const { clientWidth: hostWidth, clientHeight: hostHeight } = this
         if (!(this.#scrollHorizontal ? hostHeight : hostWidth) || !pageData.frame) return
         const { vpWidth: vw, vpHeight: vh, frame } = pageData
-        const scale = this.#scrollHorizontal
-            ? (hostHeight / vh) * this.#scaleFactor
-            : (hostWidth / vw) * this.#scaleFactor
+        const scale = this.#scrollPageScale(pageData)
 
         if (frame.onZoom) {
             const p = frame.onZoom({
@@ -1177,9 +1429,6 @@ export class FixedLayout extends HTMLElement {
             width: `${vw * scale}px`,
             height: `${vh * scale}px`,
         })
-        // Update placeholder to match actual page dimensions
-        pageData.el.style.width = `${vw * scale}px`
-        pageData.el.style.height = `${vh * scale}px`
 
         const overlayer = this.#overlayers.get(pageData.index)
         if (overlayer) {
@@ -1194,28 +1443,24 @@ export class FixedLayout extends HTMLElement {
             overlayer.redraw()
         }
     }
+    // The page under the middle of the viewport, or the one after the gap
+    // the middle falls in.
     #getScrollIndex() {
         if (!this.#scrollPages.length) return -1
-        const hostRect = this.getBoundingClientRect()
-        const mid = this.#scrollHorizontal
-            ? hostRect.left + hostRect.width / 2
-            : hostRect.top + hostRect.height / 2
-        for (const page of this.#scrollPages) {
-            const rect = page.el.getBoundingClientRect()
-            const lo = this.#scrollHorizontal ? rect.left : rect.top
-            const hi = this.#scrollHorizontal ? rect.right : rect.bottom
-            if (lo <= mid && hi >= mid) return page.index
+        const mid = this.#scrollProgression() + this.#scrollViewLength() / 2
+        const [index] = findScrollPageRange(this.#scrollLayout, mid, mid)
+        return Math.min(index, this.#scrollPages.length - 1)
+    }
+    #scrollToPage(index, behavior) {
+        const start = this.#scrollLayout.starts[index] ?? 0
+        if (behavior) this.scrollTo(this.#scrollHorizontal
+            ? { left: this.rtl ? -start : start, behavior }
+            : { top: start, behavior })
+        else {
+            this.#setScrollProgression(start)
+            this.#updateScrollWindow()
         }
-        let closest = 0, minDist = Infinity
-        for (const page of this.#scrollPages) {
-            const rect = page.el.getBoundingClientRect()
-            const center = this.#scrollHorizontal
-                ? rect.left + rect.width / 2
-                : rect.top + rect.height / 2
-            const dist = Math.abs(center - mid)
-            if (dist < minDist) { minDist = dist; closest = page.index }
-        }
-        return closest
+        this.#scrollCurrentIndex = index
     }
     #reportScrollLocation() {
         const index = this.#getScrollIndex()
@@ -1312,6 +1557,56 @@ export class FixedLayout extends HTMLElement {
         this.#overlayers.clear()
         this.goToSpread(index, this.rtl ? 'right' : 'left', 'page')
     }
+    // A section can find out as it loads that it is a spread of its own: a
+    // streamed comic measures a page when its image arrives, and a wide one
+    // marks itself `pageSpread: 'center'`. Regroup from the first spread that
+    // changed; the spreads before it keep their objects and cached frames, so
+    // a spread object still at its index is still current.
+    #regroup() {
+        const old = this.#spreads
+        this.#spread(this.spread)
+        const same = (a, b) => a && b
+            && a.left === b.left && a.right === b.right && a.center === b.center
+        let from = 0
+        while (from < old.length && same(old[from], this.#spreads[from])) from++
+        if (from === old.length && from === this.#spreads.length) {
+            this.#spreads = old
+            return
+        }
+        this.#spreads = [...old.slice(0, from), ...this.#spreads.slice(from)]
+        const isRegrouped = key => Number(/^spread-(\d+)$/.exec(key)?.[1] ?? -1) >= from
+        for (const key of [...this.#preloadCache.keys()])
+            if (isRegrouped(key)) this.#preloadCache.delete(key)
+        // The spread on screen can be among the stale ones, and it has to
+        // outlive the turn that leaves it (readest#6239). So nothing is removed
+        // here: the frames move out of reach of the new indices, and the trim
+        // evicts them by age.
+        for (const key of [...this.#prerenderedSpreads.keys()]) {
+            if (!isRegrouped(key)) continue
+            const staleKey = `stale-${++this.#staleSpreads}`
+            this.#prerenderedSpreads.set(staleKey, this.#prerenderedSpreads.get(key))
+            this.#spreadAccessTime.set(staleKey, this.#spreadAccessTime.get(key) ?? 0)
+            this.#prerenderedSpreads.delete(key)
+            this.#spreadAccessTime.delete(key)
+        }
+    }
+    // After a regroup, go where the page a turn aimed at now sits: the page on
+    // `side` of the spread it was headed for.
+    #goToPageOf(spread, side, reason) {
+        const section = spread.center ?? spread[side] ?? spread.left ?? spread.right
+        const target = this.getSpreadOf(section)
+        this.#index = -1
+        return this.goToSpread(target.index, target.side, reason)
+    }
+    get columnCount() {
+        return computeSpreadColumnCount({
+            center: !!this.#center,
+            portrait: this.#portrait,
+            scrolled: this.#scrollMode,
+            leftBlank: !this.#left || !!this.#left.blank,
+            rightBlank: !this.#right || !!this.#right.blank,
+        })
+    }
     get index() {
         if (this.#scrollMode) return this.#scrollCurrentIndex >= 0
             ? this.#scrollCurrentIndex : this.#getScrollIndex()
@@ -1325,7 +1620,12 @@ export class FixedLayout extends HTMLElement {
     get pageColors() {
         return this.#pageColors
     }
+    // The reader assigns this on every page load; re-rendering for colors that
+    // did not change re-rendered every loaded page and rebuilt its overlayer.
     set pageColors(value) {
+        const old = this.#pageColors
+        if (old?.background === value?.background && old?.foreground === value?.foreground
+            && old?.keepImages === value?.keepImages) return
         this.#pageColors = value
         this.#render()
     }
@@ -1354,6 +1654,34 @@ export class FixedLayout extends HTMLElement {
                 >= this.#scrollTotalLength() - 2
         return this.#index >= this.#spreads.length - 1
     }
+    // Names the page next()/prev() would show, as the paginator does. A
+    // portrait view shows one side of a spread at a time, so the side is part
+    // of the key there.
+    getPageTurnKey(delta = 0) {
+        const spreads = this.#spreads
+        if (this.#scrollMode || !spreads?.[this.#index] || Math.abs(delta) > 1) return null
+        const key = (index, side) => this.#portrait && !spreads[index].center
+            ? `${index}:${side}` : `${index}`
+        if (!delta) return key(this.#index, this.#side)
+        // next() first reveals the hidden page of a portrait spread.
+        const toward = delta > 0 !== this.rtl ? 'right' : 'left'
+        const frame = toward === 'left' ? this.#left : this.#right
+        if (this.#portrait && !this.#center && this.#side !== toward && frame && !frame.blank)
+            return key(this.#index, toward)
+        const index = this.#index + delta
+        const spread = spreads[index]
+        if (!spread) return null
+        // goToSpread lands on the near side, or the only side a blank leaves.
+        const side = spread.center ? 'center' : !spread.left ? 'right' : !spread.right ? 'left'
+            : toward === 'left' ? 'right' : 'left'
+        return key(index, side)
+    }
+    // The section on screen, as the paginator names its primary view: callers
+    // pick the document they act on from getContents() by it. Without it they
+    // fell back to the first frame, the left page of a two-page spread.
+    get primaryIndex() {
+        return this.index
+    }
     #reportLocation(reason) {
         this.dispatchEvent(new CustomEvent('relocate', { detail:
             { reason, range: null, index: this.index, fraction: 0, size: 1 } }))
@@ -1370,9 +1698,24 @@ export class FixedLayout extends HTMLElement {
     async goToSpread(index, side, reason) {
         if (index < 0 || index > this.#spreads.length - 1) return
         if (index === this.#index) {
+            // Moving to the other page of the spread on screen (a portrait view
+            // shows one at a time): the side has to change with the page, or
+            // `index` keeps naming the page left behind, and the move is a
+            // relocation like any other.
+            const moved = side != null && side !== this.#side
+            if (moved) this.#side = side
             this.#render(side)
+            if (moved) this.#reportLocation(reason)
             return
         }
+        // The spread being left is the one the reader may still be touching: a
+        // captured page turn navigates under its overlay with the finger down on
+        // the outgoing frame, and detaching that iframe ends the touch sequence
+        // with no touchend, freezing the turn (readest#6239). Its stamp dates
+        // from when it was shown — older than every preload made since, so the
+        // trim in #preloadNextSpreads evicted it on each backward turn. Bump it
+        // now; the trim then drops a stale preload instead.
+        if (this.#index >= 0) this.#touchSpread(`spread-${this.#index}`)
         this.#index = index
         const spread = this.#spreads[index]
         const cacheKey = `spread-${index}`
@@ -1392,12 +1735,16 @@ export class FixedLayout extends HTMLElement {
             if (spread.center) {
                 const sectionIndex = this.book.sections.indexOf(spread.center)
                 const src = await spread.center?.load?.()
+                this.#regroup()
+                if (this.#spreads[index] !== spread) return this.#goToPageOf(spread, side, reason)
                 await this.#showSpread({ center: { index: sectionIndex, src }, spreadIndex: index, side })
             } else {
                 const indexL = this.book.sections.indexOf(spread.left)
                 const indexR = this.book.sections.indexOf(spread.right)
                 const srcL = await spread.left?.load?.()
                 const srcR = await spread.right?.load?.()
+                this.#regroup()
+                if (this.#spreads[index] !== spread) return this.#goToPageOf(spread, side, reason)
                 const left = { index: indexL, src: srcL }
                 const right = { index: indexR, src: srcR }
                 await this.#showSpread({ left, right, side, spreadIndex: index })
@@ -1443,20 +1790,26 @@ export class FixedLayout extends HTMLElement {
             const task = this.#preloadQueue.shift()
             if (!task) break
 
-            const { spread, cacheKey } = task
+            const { spread, cacheKey, targetIndex } = task
+            // A page that loads wide regroups the spreads, which can leave
+            // this task holding a spread that is no longer at its index.
+            const isStale = () => this.#spreads[targetIndex] !== spread
             this.#preloadCache.set(cacheKey, 'loading')
             this.#activePreloads++
             Promise.resolve().then(async () => {
                 try {
                     if (spread.center) {
                         const src = await spread.center?.load?.()
+                        this.#regroup()
+                        if (isStale()) return this.#preloadNextSpreads()
                         this.#preloadCache.set(cacheKey, { center: src })
 
                         const sectionIndex = this.book.sections.indexOf(spread.center)
                         const frame = await this.#createFrame({ index: sectionIndex, src, detached: true })
+                        if (isStale()) return frame.element.remove()
 
                         this.#prerenderedSpreads.set(cacheKey, { center: frame })
-                        this.#spreadAccessTime.set(cacheKey, Date.now())
+                        this.#touchSpread(cacheKey)
                         if (frame.onZoom) {
                             const doc = frame.iframe.contentDocument
                             frame.onZoom({ doc, scale: this.#totalScaleFactor, pageColors: this.#pageColors })
@@ -1464,15 +1817,22 @@ export class FixedLayout extends HTMLElement {
                     } else {
                         const srcL = await spread.left?.load?.()
                         const srcR = await spread.right?.load?.()
+                        this.#regroup()
+                        if (isStale()) return this.#preloadNextSpreads()
                         this.#preloadCache.set(cacheKey, { left: srcL, right: srcR })
 
                         const indexL = this.book.sections.indexOf(spread.left)
                         const indexR = this.book.sections.indexOf(spread.right)
                         const leftFrame = await this.#createFrame({ index: indexL, src: srcL, detached: true })
                         const rightFrame = await this.#createFrame({ index: indexR, src: srcR, detached: true })
+                        if (isStale()) {
+                            leftFrame.element.remove()
+                            rightFrame.element.remove()
+                            return
+                        }
 
                         this.#prerenderedSpreads.set(cacheKey, { left: leftFrame, right: rightFrame })
-                        this.#spreadAccessTime.set(cacheKey, Date.now())
+                        this.#touchSpread(cacheKey)
 
                         if (leftFrame.onZoom) {
                             const docL = leftFrame.iframe.contentDocument
@@ -1492,6 +1852,12 @@ export class FixedLayout extends HTMLElement {
                 }
             })
         }
+    }
+    // Most-recently-used ordering for the spread cache. A counter, not a clock:
+    // the trim sorts by this value, and two stamps in the same millisecond fell
+    // back to Map insertion order, which ranked the current spread oldest.
+    #touchSpread(cacheKey) {
+        this.#spreadAccessTime.set(cacheKey, ++this.#spreadAccessTick)
     }
     #cleanupPreloadCache() {
         const maxSpreads = this.#maxCachedSpreads
@@ -1572,12 +1938,7 @@ export class FixedLayout extends HTMLElement {
     async goTo(target) {
         const resolved = await target
         if (this.#scrollMode) {
-            const page = this.#scrollPages[resolved.index]
-            if (page) {
-                page.el.scrollIntoView(
-                    this.#scrollHorizontal ? { inline: 'start', block: 'nearest' } : undefined)
-                this.#scrollCurrentIndex = resolved.index
-            }
+            if (this.#scrollPages[resolved.index]) this.#scrollToPage(resolved.index)
             return
         }
         const { book } = this
@@ -1615,20 +1976,12 @@ export class FixedLayout extends HTMLElement {
     nextSection() {
         if (!this.#scrollMode) return
         const currentIndex = this.#getScrollIndex()
-        const nextIndex = Math.min(currentIndex + 1, this.#scrollPages.length - 1)
-        this.#scrollPages[nextIndex]?.el.scrollIntoView(this.#scrollHorizontal
-            ? { behavior: 'smooth', inline: 'start', block: 'nearest' }
-            : { behavior: 'smooth' })
-        this.#scrollCurrentIndex = nextIndex
+        this.#scrollToPage(Math.min(currentIndex + 1, this.#scrollPages.length - 1), 'smooth')
     }
     prevSection() {
         if (!this.#scrollMode) return
         const currentIndex = this.#getScrollIndex()
-        const prevIndex = Math.max(currentIndex - 1, 0)
-        this.#scrollPages[prevIndex]?.el.scrollIntoView(this.#scrollHorizontal
-            ? { behavior: 'smooth', inline: 'start', block: 'nearest' }
-            : { behavior: 'smooth' })
-        this.#scrollCurrentIndex = prevIndex
+        this.#scrollToPage(Math.max(currentIndex - 1, 0), 'smooth')
     }
     async pan(dx, dy) {
         if (this.#scrollMode) {
@@ -1688,7 +2041,7 @@ export class FixedLayout extends HTMLElement {
                     ratio,
                     scrollLeft: this.#scrollHorizontal && this.rtl
                         ? this.scrollWidth - this.clientWidth + this.scrollLeft
-                        : this.scrollLeft,
+                        : this.scrollLeft + (this.#lockedPanX ?? 0),
                     scrollTop: this.scrollTop,
                     viewportWidth: this.clientWidth,
                     viewportHeight: this.clientHeight,
@@ -1698,14 +2051,29 @@ export class FixedLayout extends HTMLElement {
             }
             return
         }
-        const frames = this.#center
-            ? [this.#center]
-            : [this.#left, this.#right]
-        for (const frame of frames) {
-            if (!frame?.element || frame.element.style.visibility === 'hidden') continue
-            frame.element.style.transform = `scale(${ratio})`
-            frame.element.style.transformOrigin = 'center'
+        const elements = this.#shownFrames()
+            .map(frame => frame.element)
+            .filter(element => element.style.visibility !== 'hidden')
+        if (!elements.length) return
+        // Scale the shown pages as one spread around its centre, which is how
+        // the committed zoom lays them out. Scaling each page around its own
+        // centre pulled the two pages of a spread apart, and the release
+        // jumped sideways (readest#6941). Offsets ignore the transform, so the
+        // origin holds still across moves.
+        const left = Math.min(...elements.map(el => el.offsetLeft))
+        const top = Math.min(...elements.map(el => el.offsetTop))
+        const right = Math.max(...elements.map(el => el.offsetLeft + el.offsetWidth))
+        const bottom = Math.max(...elements.map(el => el.offsetTop + el.offsetHeight))
+        for (const element of elements) {
+            element.style.transform = `scale(${ratio})`
+            element.style.transformOrigin = `${(left + right) / 2 - element.offsetLeft}px ${(top + bottom) / 2 - element.offsetTop}px`
         }
+    }
+    // The paginated pages on screen. Portrait shows one page of a spread and
+    // hides the other with display: none, which has no rect to anchor on.
+    #shownFrames() {
+        const frames = this.#center ? [this.#center] : [this.#left, this.#right]
+        return frames.filter(frame => frame?.element?.offsetWidth)
     }
     pinchEnd() {
         if (this.#scrollMode) {
@@ -1724,8 +2092,8 @@ export class FixedLayout extends HTMLElement {
         // Paginated: snapshot the spread's on-screen rect from the still-scaled
         // preview so the committed zoom (#render) can scroll it back to the same
         // spot instead of re-centring and jumping.
-        const shown = this.#center ?? this.#left ?? this.#right
-        if (shown?.element) {
+        const shown = this.#shownFrames()[0]
+        if (shown) {
             const b = shown.element.getBoundingClientRect()
             this.#pinchAnchor = { top: b.top, left: b.left }
         }
@@ -1783,10 +2151,6 @@ export class FixedLayout extends HTMLElement {
         if (this.#scrollMode) {
             this.removeEventListener('scroll', this.#handleScrollEvent)
             this.removeEventListener('wheel', this.#handleScrollWheel)
-            if (this.#scrollObserver) {
-                this.#scrollObserver.disconnect()
-                this.#scrollObserver = null
-            }
             if (this.#scrollIdleTimer) {
                 clearTimeout(this.#scrollIdleTimer)
                 this.#scrollIdleTimer = null
@@ -1795,6 +2159,7 @@ export class FixedLayout extends HTMLElement {
                 this.#teardownScrollPage(page)
             }
             this.#scrollPages = []
+            this.#scrollMounted.clear()
             this.#scrollLoadGen.clear()
             this.#scrollLoadingCount = 0
             if (this.#scrollContainer) {

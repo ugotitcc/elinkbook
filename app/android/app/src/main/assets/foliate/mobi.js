@@ -675,6 +675,17 @@ function rawBytesToString(uint8Array) {
     return result
 }
 
+// MOBI6 image records carry no MIME type, so tell the format by its signature;
+// an untyped blob is saved as text by the webview (readest #6562).
+const getImageType = raw => {
+    const b = ArrayBuffer.isView(raw) ? raw : new Uint8Array(raw)
+    if (b[0] === 0xff && b[1] === 0xd8) return 'image/jpeg'
+    if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png'
+    if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46) return 'image/gif'
+    if (b[0] === 0x42 && b[1] === 0x4d) return 'image/bmp'
+    return ''
+}
+
 class MOBI6 {
     parser = new DOMParser()
     serializer = new XMLSerializer()
@@ -796,7 +807,7 @@ class MOBI6 {
     async loadResource(index) {
         if (this.#resourceCache.has(index)) return this.#resourceCache.get(index)
         const raw = await this.mobi.loadResource(index)
-        const url = URL.createObjectURL(new Blob([raw]))
+        const url = URL.createObjectURL(new Blob([raw], { type: getImageType(raw) }))
         this.#resourceCache.set(index, url)
         return url
     }
@@ -963,6 +974,7 @@ class KF8 {
     #rawTail = new Uint8Array()
     #lastLoadedHead = -1
     #lastLoadedTail = -1
+    #rawQueue = Promise.resolve()
     #type = MIME.XHTML
     #inlineMap = new Map()
     constructor(mobi) {
@@ -1105,7 +1117,7 @@ class KF8 {
         const newData = await event.detail.data
         const newType = await event.detail.type
         const doc = newType === MIME.SVG ? this.parser.parseFromString(newData, newType) : null
-        return [new Blob([newData], { newType }),
+        return [new Blob([newData], { type: newType }),
             // SVG wrappers need to be inlined
             // as browsers don't allow external resources when loading SVG as an image
             doc?.getElementsByTagNameNS('http://www.w3.org/2000/svg', 'image')?.length
@@ -1126,7 +1138,22 @@ class KF8 {
     // NOTE: there doesn't seem to be a way to access text randomly?
     // how to know the decompressed size of the records without decompressing?
     // 4096 is just the maximum size
-    async loadRaw(start, end) {
+    //
+    // `#loadRawLocked` appends records to `#rawHead` / `#rawTail` across an
+    // `await`, so overlapping calls would interleave and land the records in
+    // completion order instead of index order, shifting every byte offset
+    // after the first out-of-order append. That never showed up when the book
+    // is an in-memory `File` (slices settle in issue order), but a file read
+    // through ranged requests finishes out of order, and the renderer does
+    // overlap loads — it preloads the adjacent section while another one is
+    // still loading. Serialize on a promise chain so the walk stays ordered;
+    // whichever call runs second usually finds its window already buffered.
+    loadRaw(start, end) {
+        const result = this.#rawQueue.then(() => this.#loadRawLocked(start, end))
+        this.#rawQueue = result.then(() => {}, () => {})
+        return result
+    }
+    async #loadRawLocked(start, end) {
         // here we load either from the front or back until we have reached the
         // required offsets; at worst you'd have to load half the book at once
         const distanceHead = end - this.#rawHead.length

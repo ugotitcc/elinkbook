@@ -3,6 +3,51 @@ const createSVGElement = tag =>
 
 let overlayerCounter = 0
 
+// The page a rect sits in. The paginator sizes the root to a single page and
+// lets the rest overflow it, so the root box tiles the pages along either
+// axis, in either direction; in scrolled mode the root is the whole document.
+const pageOf = (root, { left, top, right, bottom }) => {
+    if (!(root.width > 0 && root.height > 0)) return null
+    const x = root.left + Math.floor(((left + right) / 2 - root.left) / root.width) * root.width
+    const y = root.top + Math.floor(((top + bottom) / 2 - root.top) / root.height) * root.height
+    return { left: x, top: y, right: x + root.width, bottom: y + root.height }
+}
+
+// An OCR text layer (scanned PDFs) boxes every word on its own, each a little
+// off its neighbours, so a highlight drew a box per word, with gaps and
+// stepped edges between them (readest/readest#6578). Fold consecutive rects
+// of a line into one strip: a rect joins the line when it overlaps it across
+// the line and sits close along it. A comma or a note number joins however
+// small it is; a rect over twice the line's size, like a tall inline image,
+// starts its own, and so does the far cell of a table row.
+const mergeLineRects = (rects, vertical) => {
+    const [start, end, crossStart, crossEnd] = vertical
+        ? ['top', 'bottom', 'left', 'right'] : ['left', 'right', 'top', 'bottom']
+    const size = r => Math.max(r[crossEnd] - r[crossStart], 1)
+    const merged = []
+    for (const rect of rects) {
+        const line = merged[merged.length - 1]
+        let sameLine = false
+        if (line && line.page?.left === rect.page?.left && line.page?.top === rect.page?.top) {
+            const big = Math.max(size(line), size(rect))
+            const gap = Math.max(line[start], rect[start]) - Math.min(line[end], rect[end])
+            sameLine = size(rect) < 2 * size(line) && gap > -big && gap < 2 * big
+                && Math.min(line[crossEnd], rect[crossEnd]) > Math.max(line[crossStart], rect[crossStart])
+        }
+        if (!sameLine) {
+            merged.push({ ...rect })
+            continue
+        }
+        line.left = Math.min(line.left, rect.left)
+        line.top = Math.min(line.top, rect.top)
+        line.right = Math.max(line.right, rect.right)
+        line.bottom = Math.max(line.bottom, rect.bottom)
+        line.width = line.right - line.left
+        line.height = line.bottom - line.top
+    }
+    return merged
+}
+
 export class Overlayer {
     #svg = createSVGElement('svg')
     #map = new Map()
@@ -83,9 +128,18 @@ export class Overlayer {
         if (ancestor.nodeType !== Node.ELEMENT_NODE
             && ancestor.nodeType !== Node.DOCUMENT_NODE) return [range]
         const doc = ancestor.ownerDocument ?? ancestor
+        // Comparing a node with the range costs as much as the node's index
+        // among its siblings, so walk only from the range's start to the first
+        // node past its end, not over every child of the common ancestor: in a
+        // flat document (a single-file book) that ancestor is <body>.
+        let past = false
         const walker = doc.createTreeWalker(ancestor,
             NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
                 acceptNode: node => {
+                    if (range.comparePoint(node, 0) > 0) {
+                        past = true
+                        return NodeFilter.FILTER_ACCEPT
+                    }
                     if (!range.intersectsNode(node)) return NodeFilter.FILTER_REJECT
                     // Ruby annotations sit on their own line above (or beside)
                     // the base, so their rects would draw a second detached box
@@ -100,8 +154,18 @@ export class Overlayer {
                         ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP
                 },
             })
+        const { startContainer, startOffset } = range
+        const start = startContainer.nodeType === Node.TEXT_NODE
+            || startContainer.nodeType === Node.CDATA_SECTION_NODE
+            ? startContainer : startContainer.childNodes[startOffset]
+        if (start && start !== ancestor && ancestor.contains(start)) {
+            // the node right before `start`, so that `start` comes next
+            let before = start.previousSibling
+            if (before) while (before.lastChild) before = before.lastChild
+            walker.currentNode = before ?? start.parentNode
+        }
         const splitRanges = []
-        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        for (let node = walker.nextNode(); node && !past; node = walker.nextNode()) {
             const subRange = doc.createRange()
             if (node.nodeType === Node.TEXT_NODE) {
                 subRange.selectNodeContents(node)
@@ -118,17 +182,20 @@ export class Overlayer {
     }
     #getRects(range) {
         const zoom = this.#zoom
+        const root = this.#doc.documentElement.getBoundingClientRect()
         const rects = []
         for (const subRange of this.#splitRange(range)) {
             for (const rect of subRange.getClientRects()) {
-                rects.push({
+                const scaled = {
                     left: rect.left * zoom,
                     top: rect.top * zoom,
                     right: rect.right * zoom,
                     bottom: rect.bottom * zoom,
                     width: rect.width * zoom,
                     height: rect.height * zoom,
-                })
+                }
+                scaled.page = pageOf(root, scaled)
+                rects.push(scaled)
             }
         }
         return rects
@@ -264,9 +331,10 @@ export class Overlayer {
         g.style.opacity = 'var(--overlayer-highlight-opacity, .3)'
         g.style.mixBlendMode = 'var(--overlayer-highlight-blend-mode, normal)'
 
-        for (const [index, { left, top, height, width }] of rects.entries()) {
+        const lines = mergeLineRects(rects, vertical)
+        for (const [index, { left, top, height, width, page }] of lines.entries()) {
             const isFirst = index === 0
-            const isLast = index === rects.length - 1
+            const isLast = index === lines.length - 1
 
             let x, y, w, h
 
@@ -290,6 +358,21 @@ export class Overlayer {
                 radiusTopRight = isLast ? radius : 0
                 radiusBottomRight = isLast ? radius : 0
                 radiusBottomLeft = isFirst ? radius : 0
+            }
+
+            // The caps pad past the rects, and with the page margins and gap
+            // at zero the pages touch: the 2px after a column-wide image
+            // painted a stripe the height of the image down the edge of the
+            // next page (readest/readest#6128). Never paint past the rect's
+            // own page.
+            if (page) {
+                const right = Math.min(x + w, page.right)
+                const bottom = Math.min(y + h, page.bottom)
+                x = Math.max(x, page.left)
+                y = Math.max(y, page.top)
+                w = right - x
+                h = bottom - y
+                if (w <= 0 || h <= 0) continue
             }
 
             const rtl = Math.min(radiusTopLeft, w / 2, h / 2)

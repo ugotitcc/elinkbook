@@ -196,11 +196,18 @@ const isSkipNode = (node) => node.hasAttribute?.('cfi-skip')
 
 // CFI-relevant children: text + elements, with cfi-inert nodes removed and
 // cfi-skip wrappers spliced out (their own children hoisted in place, recursively).
-const rawChildNodes = (node) => Array.from(node.childNodes)
-    // "content other than element and character data is ignored"
-    .filter(node => isTextNode(node) || isElementNode(node))
-    .filter(node => !isInertNode(node))
-    .flatMap(node => isSkipNode(node) ? rawChildNodes(node) : [node])
+// One pass without intermediate arrays: a single-file book can put tens of
+// thousands of elements under <body>, and every CFI step indexes its parent.
+const rawChildNodes = (node, nodes = []) => {
+    for (let child = node.firstChild; child; child = child.nextSibling) {
+        // "content other than element and character data is ignored"
+        if (!isTextNode(child) && !isElementNode(child)) continue
+        if (isInertNode(child)) continue
+        if (isSkipNode(child)) rawChildNodes(child, nodes)
+        else nodes.push(child)
+    }
+    return nodes
+}
 
 const getChildNodes = (node, filter) => {
     const nodes = rawChildNodes(node)
@@ -218,27 +225,27 @@ const getChildNodes = (node, filter) => {
 // so multiple text nodes need to be combined, and nonexistent ones counted;
 // see "Step Reference to Child Element or Character Data (/)" in EPUB CFI spec
 const indexChildNodes = (node, filter) => {
-    const nodes = getChildNodes(node, filter)
-        .reduce((arr, node) => {
-            let last = arr[arr.length - 1]
-            if (!last) arr.push(node)
-            // "there is one chunk between each pair of child elements"
-            else if (isTextNode(node)) {
-                if (Array.isArray(last)) last.push(node)
-                else if (isTextNode(last)) arr[arr.length - 1] = [last, node]
-                else arr.push(node)
-            } else {
-                if (isElementNode(last)) arr.push(null, node)
-                else arr.push(node)
-            }
-            return arr
-        }, [])
+    const children = getChildNodes(node, filter)
+    // "'virtual' elements": "0 is a valid index"
+    const nodes = ['before']
     // "the first chunk is located before the first child element"
-    if (isElementNode(nodes[0])) nodes.unshift('first')
+    if (isElementNode(children[0])) nodes.push('first')
+    let last
+    for (const child of children) {
+        if (last === undefined) nodes.push(child)
+        // "there is one chunk between each pair of child elements"
+        else if (isTextNode(child)) {
+            if (Array.isArray(last)) last.push(child)
+            else if (isTextNode(last)) nodes[nodes.length - 1] = [last, child]
+            else nodes.push(child)
+        } else {
+            if (isElementNode(last)) nodes.push(null, child)
+            else nodes.push(child)
+        }
+        last = nodes[nodes.length - 1]
+    }
     // "the last chunk is located after the last child element"
-    if (isElementNode(nodes[nodes.length - 1])) nodes.push('last')
-    // "'virtual' elements"
-    nodes.unshift('before') // "0 is a valid index"
+    if (isElementNode(children[children.length - 1])) nodes.push('last')
     nodes.push('after') // "n+2 is a valid index"
     return nodes
 }
@@ -299,11 +306,27 @@ const nodeToParts = (node, offset, filter) => {
         .filter(x => x.index !== -1)
 }
 
+// nodeToParts keeps an offset only for text, so a boundary between an
+// element's children, (element, i), is written as the element and read back
+// as its start. As a range's end that drops everything before it: a selection
+// dragged past the last line of a PDF text layer ends after the layer's last
+// child and came back collapsed (readest/readest#6578). Move such an end into
+// the child before it.
+const endInsideChild = (node, offset) => {
+    while (isElementNode(node) && offset > 0) {
+        const child = node.childNodes[offset - 1]
+        if (!(isTextNode(child) || isElementNode(child)) || isInertNode(child)) break
+        node = child
+        offset = isTextNode(child) ? child.nodeValue.length : child.childNodes.length
+    }
+    return [node, offset]
+}
+
 export const fromRange = (range, filter) => {
-    const { startContainer, startOffset, endContainer, endOffset } = range
+    const { startContainer, startOffset } = range
     const start = nodeToParts(startContainer, startOffset, filter)
     if (range.collapsed) return toString([start])
-    const end = nodeToParts(endContainer, endOffset, filter)
+    const end = nodeToParts(...endInsideChild(range.endContainer, range.endOffset), filter)
     return buildRange([start], [end])
 }
 
