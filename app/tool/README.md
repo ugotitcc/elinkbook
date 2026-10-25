@@ -330,7 +330,7 @@ node app/tool/test_tts_safe_window.mjs
 
 ## `detect_two_column_gap.py`
 
-偵測直排頁面是否出現「上下兩欄錯位」的大高度水平空白帶（`epic-54` Issue 34 真機 WAVE 176 像素空帶驗證工具）。內容區（略過頂部 100、底部 60、左 80、右 40 像素）內整列無墨（灰階 `< 128` 像素數為 0）的連續空帶超過 80 像素時判為 `BUG`（結束碼 `1`），正常判為 `ok`（結束碼 `0`）。用法：`python app/tool/detect_two_column_gap.py <png>...`。
+偵測直排頁面是否出現「上下兩欄錯位」的大高度水平空白帶（`epic-54` Issue 34 真機 WAVE 176 像素空帶驗證工具）。內容區（略過頂部 100、底部 60、左 80、右 40 像素）內整列無墨（灰階 `< 128` 像素數為 0）的連續空帶超過 80 像素時判為 `BUG`（結束碼 `1`），正常判為 `ok`（結束碼 `0`）。用法：`python app/tool/detect_two_column_gap.py <png>...`。 全黑、全白或載入中的截圖判為 `INVALID`（結束碼 `1`）。**只適用單欄**：雙欄、自動欄數模式的兩個欄之間有設計內的欄間空白（WAVE 約 150 像素），會被誤判為 `BUG`。
 
 ## `make_test_mdx.py`
 
