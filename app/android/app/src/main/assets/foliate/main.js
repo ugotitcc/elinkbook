@@ -1800,6 +1800,9 @@ function attachColumnPitchCompensation(doc) {
   if (view.isFixedLayout) return
 
   let busy = false
+  // 補償放棄時記下當時的目標值：同一個目標下不再重試（否則每次 style 變動都會
+  // 白做最多 4 次強制排版）；版面改變（旋轉、改欄數）使目標值不同時才再試一次。
+  let gaveUpTarget = null
   const observer = new MutationObserver(() => {
     if (!doc.defaultView || !doc.documentElement || !doc.body) return
     if (busy) return
@@ -1813,6 +1816,7 @@ function attachColumnPitchCompensation(doc) {
     const columnCount = renderer.columnCount || 1
     const target = renderer.size / columnCount
     if (!(target > PITCH_TOLERANCE)) return
+    if (gaveUpTarget === target) return
 
     busy = true
     try {
@@ -1837,6 +1841,7 @@ function attachColumnPitchCompensation(doc) {
           )
         },
       })
+      gaveUpTarget = result.status === 'gave-up' ? target : null
       if (result.status === 'gave-up' && !columnPitchGaveUpWarned) {
         columnPitchGaveUpWarned = true
         console.warn('[column-pitch] 補償失敗，維持原排版')
@@ -1847,11 +1852,14 @@ function attachColumnPitchCompensation(doc) {
     }
   }
 
+  // 刻意不在這裡主動補償一次：'load' 事件由 paginator 的 afterLoad 派發，早於
+  // columnize／render，此時文件還沒套用版面、renderer.size 也可能是上一章的殘值，
+  // 量到的是無意義的數字。paginator 之後必定會改寫根元素 style，觀察者會在版面
+  // 就緒後被觸發（審查 I-2）。
   observer.observe(doc.documentElement, {
     attributes: true,
     attributeFilter: ['style'],
   })
-  runCompensation()
 }
 
 openBook()
