@@ -22,6 +22,7 @@ import 'package:elinkbook/search/search_repository.dart';
 import 'package:elinkbook/stats/reading_stats_repository.dart';
 import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
+import 'package:elinkbook/theme/reader_color_preferences.dart';
 
 import 'fake_book_import_service.dart';
 import 'fake_book_reader_prefs_repository.dart';
@@ -67,6 +68,7 @@ ReaderFeatureDependencies fakeReaderFeatureDependencies({
   DictionaryService? dictionaryService,
   DictionaryManager? dictionaryManager,
   DictionarySettingsRepository? dictionarySettings,
+  ReaderColorPreferences? readerColorPreferences,
   ReaderSurfaceFactory? readerSurfaceFactory,
 }) {
   return ReaderFeatureDependencies(
@@ -100,6 +102,8 @@ ReaderFeatureDependencies fakeReaderFeatureDependencies({
     dictionaryManager: dictionaryManager ?? FakeDictionaryManager(),
     dictionarySettings:
         dictionarySettings ?? FakeDictionarySettingsRepository(),
+    readerColorPreferences:
+        readerColorPreferences ?? const ReaderColorPreferences(),
     readerSurfaceFactory: readerSurfaceFactory ?? defaultReaderSurfaceFactory,
   );
 }

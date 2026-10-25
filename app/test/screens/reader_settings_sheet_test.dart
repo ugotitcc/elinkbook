@@ -14,7 +14,9 @@ import 'package:elinkbook/reader/screen_orientation_setting.dart';
 import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
+import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
+import 'package:elinkbook/theme/reader_colors.dart';
 
 import '../support/full_book_reader_prefs.dart';
 
@@ -2415,7 +2417,7 @@ void main() {
       tester.element(find.byKey(const Key('reader_settings_font_size_slider'))),
     );
 
-    for (final (label, index) in [('邊界', 1), ('呈現', 2), ('預設集', 3), ('文字', 0)]) {
+    for (final (label, index) in [('邊界', 1), ('呈現', 2), ('佈景', 3), ('預設集', 4), ('文字', 0)]) {
       await tester.tap(find.widgetWithText(Tab, label));
       await tester.pump();
       expect(tabController.index, index, reason: label);
@@ -2469,7 +2471,7 @@ void main() {
     // 最高的分頁內容約 700 多，面板不該再撐到接近 1400。
     expect(textTabHeight, lessThan(1000));
 
-    for (final tab in ['邊界', '呈現', '預設集']) {
+    for (final tab in ['邊界', '呈現', '佈景', '預設集']) {
       await switchToTab(tester, tab);
       expect(tester.getSize(sheet).height, textTabHeight, reason: tab);
     }
@@ -2742,6 +2744,291 @@ void main() {
       );
     });
   });
+
+  group('自訂閱讀顏色（佈景分頁，epic-65 Issue 2）', () {
+    Future<void> pumpOnThemeTab(
+      WidgetTester tester, {
+      AppTheme appTheme = AppTheme.light,
+      ReaderColors readerColors = ReaderColors.empty,
+      ValueChanged<ReaderColors>? onReaderColorsChanged,
+      bool isEinkMode = false,
+    }) async {
+      await _pumpSheet(
+        tester,
+        BookReaderPrefs.empty,
+        _noopOnChanged,
+        appTheme: appTheme,
+        readerColors: readerColors,
+        onReaderColorsChanged: onReaderColorsChanged,
+        isEinkMode: isEinkMode,
+      );
+      await switchToTab(tester, '佈景');
+    }
+
+    testWidgets('分頁順序為 文字｜邊界｜呈現｜佈景｜預設集，共 5 個', (tester) async {
+      await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+      final tabBar = tester.widget<TabBar>(find.byKey(const Key('reader_settings_tab_bar')));
+      expect(tabBar.tabs.length, 5);
+      expect(find.byKey(const Key('reader_settings_tab_theme')), findsOneWidget);
+    });
+
+    testWidgets('點「佈景」顯示「正在調整：羊皮紙」（傳 appTheme: AppTheme.sepia）', (tester) async {
+      await pumpOnThemeTab(tester, appTheme: AppTheme.sepia);
+      expect(find.byKey(const Key('reader_colors_editing_theme')), findsOneWidget);
+      expect(find.text('正在調整：羊皮紙'), findsOneWidget);
+    });
+
+    testWidgets('背景、文字兩個區塊都同時可見（不需展開）', (tester) async {
+      await pumpOnThemeTab(tester);
+      expect(find.byKey(const Key('reader_colors_background_hex')), findsOneWidget);
+      expect(find.byKey(const Key('reader_colors_text_hex')), findsOneWidget);
+    });
+
+    testWidgets('沒設定時色碼框顯示佈景原色（以 Theme 值格式化）', (tester) async {
+      await pumpOnThemeTab(tester, appTheme: AppTheme.light);
+      final bgTextField = tester.widget<TextField>(find.byKey(const Key('reader_colors_background_hex')));
+      final textTextField = tester.widget<TextField>(find.byKey(const Key('reader_colors_text_hex')));
+      final theme = resolveThemeData(theme: AppTheme.light, isEinkMode: false);
+      expect(bgTextField.controller?.text.toUpperCase(), equals(formatHexColor(theme.scaffoldBackgroundColor).toUpperCase()));
+      expect(textTextField.controller?.text.toUpperCase(), equals(formatHexColor(theme.colorScheme.onSurface).toUpperCase()));
+    });
+
+    testWidgets('拖動紅色滑桿 → 色碼框同步、onReaderColorsChanged 收到只改了背景的 ReaderColors', (tester) async {
+      ReaderColors? updated;
+      await pumpOnThemeTab(
+        tester,
+        appTheme: AppTheme.light,
+        onReaderColorsChanged: (c) => updated = c,
+      );
+
+      final rSlider = find.byKey(const Key('reader_colors_background_r_slider'));
+      expect(rSlider, findsOneWidget);
+      // 拖曳調整 R 滑桿
+      await tester.drag(rSlider, const Offset(100, 0));
+      await tester.pump();
+
+      expect(updated, isNotNull);
+      expect(updated!.background, isNotNull);
+      expect(updated!.text, isNull);
+
+      final bgTextField = tester.widget<TextField>(find.byKey(const Key('reader_colors_background_hex')));
+      expect(bgTextField.controller?.text.toUpperCase(), equals(formatHexColor(updated!.background!).toUpperCase()));
+    });
+
+    testWidgets('色碼框輸入 #336699 → 三條滑桿同步為 51／102／153，回呼收到新色', (tester) async {
+      ReaderColors? updated;
+      await pumpOnThemeTab(
+        tester,
+        appTheme: AppTheme.light,
+        onReaderColorsChanged: (c) => updated = c,
+      );
+
+      await tester.enterText(find.byKey(const Key('reader_colors_background_hex')), '#336699');
+      await tester.pump();
+
+      expect(updated, isNotNull);
+      expect(updated!.background, equals(const Color(0xFF336699)));
+
+      // 檢查 R/G/B 滑桿數值
+      final rSlider = tester.widget<Slider>(find.byKey(const Key('reader_colors_background_r_slider')));
+      final gSlider = tester.widget<Slider>(find.byKey(const Key('reader_colors_background_g_slider')));
+      final bSlider = tester.widget<Slider>(find.byKey(const Key('reader_colors_background_b_slider')));
+      expect(rSlider.value.round(), 51);
+      expect(gSlider.value.round(), 102);
+      expect(bSlider.value.round(), 153);
+    });
+
+    testWidgets('輸入 #12（打到一半）→ 框標紅、無回呼、滑桿位置不變；再補成 #123456 → 恢復並回呼', (tester) async {
+      ReaderColors? updated;
+      await pumpOnThemeTab(
+        tester,
+        appTheme: AppTheme.light,
+        onReaderColorsChanged: (c) => updated = c,
+      );
+
+      final rSliderBefore = tester.widget<Slider>(find.byKey(const Key('reader_colors_background_r_slider'))).value;
+
+      await tester.enterText(find.byKey(const Key('reader_colors_background_hex')), '#12');
+      await tester.pump();
+
+      expect(updated, isNull);
+      final rSliderAfter = tester.widget<Slider>(find.byKey(const Key('reader_colors_background_r_slider'))).value;
+      expect(rSliderAfter, equals(rSliderBefore));
+      expect(find.text('色碼格式錯誤，請輸入 #RRGGBB'), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('reader_colors_background_hex')), '#123456');
+      await tester.pump();
+
+      expect(updated, isNotNull);
+      expect(updated!.background, equals(const Color(0xFF123456)));
+      expect(find.text('色碼格式錯誤，請輸入 #RRGGBB'), findsNothing);
+    });
+
+    testWidgets('按「還原背景色」→ 回呼的 background == null、text 保持；按「還原文字色」同理', (tester) async {
+      ReaderColors? updated;
+      await pumpOnThemeTab(
+        tester,
+        appTheme: AppTheme.light,
+        readerColors: const ReaderColors(
+          background: Color(0xFF112233),
+          text: Color(0xFF445566),
+        ),
+        onReaderColorsChanged: (c) => updated = c,
+      );
+
+      await tester.tap(find.byKey(const Key('reader_colors_background_reset')));
+      await tester.pump();
+
+      expect(updated, isNotNull);
+      expect(updated!.background, isNull);
+      expect(updated!.text, equals(const Color(0xFF445566)));
+
+      await tester.tap(find.byKey(const Key('reader_colors_text_reset')));
+      await tester.pump();
+
+      expect(updated!.text, isNull);
+    });
+
+    testWidgets('該顏色沒設定（null）時，對應的還原按鈕 onPressed 為 null（停用）；設定後啟用（Ruling M-3）', (tester) async {
+      await pumpOnThemeTab(
+        tester,
+        appTheme: AppTheme.light,
+        readerColors: const ReaderColors(
+          background: null,
+          text: Color(0xFF123456),
+        ),
+      );
+
+      final bgResetButton = tester.widget<OutlinedButton>(find.byKey(const Key('reader_colors_background_reset')));
+      expect(bgResetButton.onPressed, isNull);
+
+      final textResetButton = tester.widget<OutlinedButton>(find.byKey(const Key('reader_colors_text_reset')));
+      expect(textResetButton.onPressed, isNotNull);
+    });
+
+    testWidgets('didUpdateWidget：外部傳入新的 readerColors 後，滑桿與色碼框同步更新（Ruling I-3）', (tester) async {
+      await _pumpSheet(
+        tester,
+        BookReaderPrefs.empty,
+        _noopOnChanged,
+        readerColors: const ReaderColors(background: Color(0xFF112233)),
+      );
+      await switchToTab(tester, '佈景');
+
+      var bgTextField = tester.widget<TextField>(find.byKey(const Key('reader_colors_background_hex')));
+      expect(bgTextField.controller?.text.toUpperCase(), '#112233');
+
+      // 外部更新 readerColors
+      await _pumpSheet(
+        tester,
+        BookReaderPrefs.empty,
+        _noopOnChanged,
+        readerColors: const ReaderColors(background: Color(0xFF556677)),
+      );
+      await tester.pump();
+
+      bgTextField = tester.widget<TextField>(find.byKey(const Key('reader_colors_background_hex')));
+      expect(bgTextField.controller?.text.toUpperCase(), '#556677');
+    });
+
+    testWidgets('背景 #FFFFFF＋文字 #EEEEEE → 顯示低對比警告；改成 #000000 → 警告消失', (tester) async {
+      await pumpOnThemeTab(
+        tester,
+        appTheme: AppTheme.light,
+        readerColors: const ReaderColors(
+          background: Color(0xFFFFFFFF),
+          text: Color(0xFFEEEEEE),
+        ),
+      );
+
+      expect(find.byKey(const Key('reader_colors_low_contrast_warning')), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('reader_colors_text_hex')), '#000000');
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_colors_low_contrast_warning')), findsNothing);
+    });
+
+    testWidgets('isEinkMode: true → 顯示 reader_colors_eink_hint，滑桿與輸入框不可操作', (tester) async {
+      ReaderColors? updated;
+      await pumpOnThemeTab(
+        tester,
+        appTheme: AppTheme.light,
+        isEinkMode: true,
+        onReaderColorsChanged: (c) => updated = c,
+      );
+
+      expect(find.byKey(const Key('reader_colors_eink_hint')), findsOneWidget);
+
+      // IgnorePointer 應阻擋操作
+      final ignorePointer = tester.widget<IgnorePointer>(
+        find.ancestor(
+          of: find.byKey(const Key('reader_colors_background_hex')),
+          matching: find.byType(IgnorePointer),
+        ).first,
+      );
+      expect(ignorePointer.ignoring, isTrue);
+
+      // 真的去點步進器與色碼框：不得有任何回呼（審查 I-3-4：原本的 isNull 是空斷言）。
+      await tester.tap(
+        find.byKey(const Key('reader_colors_background_r_increment')),
+        warnIfMissed: false,
+      );
+      await tester.tap(find.byKey(const Key('reader_colors_text_hex')), warnIfMissed: false);
+      await tester.pump();
+      expect(updated, isNull);
+    });
+
+    testWidgets('E-Ink 模式不顯示低對比警告（自訂色不套用）（審查 M-7）', (tester) async {
+      await pumpOnThemeTab(
+        tester,
+        isEinkMode: true,
+        readerColors: const ReaderColors(
+          background: Color(0xFFFFFFFF),
+          text: Color(0xFFEEEEEE),
+        ),
+      );
+      expect(find.byKey(const Key('reader_colors_low_contrast_warning')), findsNothing);
+    });
+
+    testWidgets('只設文字色時，對比以佈景原色當背景計算（審查 I-3-3）', (tester) async {
+      // 淺色佈景背景約 #F0F6FC：淺灰文字與它太接近 → 警告；黑字 → 沒有警告。
+      await pumpOnThemeTab(
+        tester,
+        appTheme: AppTheme.light,
+        readerColors: const ReaderColors(text: Color(0xFFEEEEEE)),
+      );
+      expect(find.byKey(const Key('reader_colors_low_contrast_warning')), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('reader_colors_text_hex')), '#000000');
+      await tester.pump();
+      expect(find.byKey(const Key('reader_colors_low_contrast_warning')), findsNothing);
+    });
+
+    testWidgets('只設背景色時，對比以佈景原色當文字色計算（審查 I-3-3）', (tester) async {
+      // 淺色佈景文字是深色：深色背景與它太接近 → 警告；白背景 → 沒有警告。
+      await pumpOnThemeTab(
+        tester,
+        appTheme: AppTheme.light,
+        readerColors: const ReaderColors(background: Color(0xFF101010)),
+      );
+      expect(find.byKey(const Key('reader_colors_low_contrast_warning')), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('reader_colors_background_hex')), '#FFFFFF');
+      await tester.pump();
+      expect(find.byKey(const Key('reader_colors_low_contrast_warning')), findsNothing);
+    });
+
+    testWidgets('面板移除後沒有例外（色碼控制器已釋放）（審查 I-3-2）', (tester) async {
+      await pumpOnThemeTab(
+        tester,
+        readerColors: const ReaderColors(background: Color(0xFF123456)),
+      );
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
 
 Future<void> _pumpSheet(
@@ -2759,6 +3046,9 @@ Future<void> _pumpSheet(
   void Function(int)? onDeletePreset,
   bool isEinkMode = false,
   Locale locale = const Locale('zh', 'TW'),
+  AppTheme appTheme = AppTheme.light,
+  ReaderColors readerColors = ReaderColors.empty,
+  ValueChanged<ReaderColors>? onReaderColorsChanged,
 }) async {
   // 設定較大的 Viewport，以防 ListView 元件超出預設的 800x600 範圍導致 tap 失敗
   // （Issue 14 邊距拆為 4 個獨立滑桿後內容變高，1200 已不足，調高至 1600；加入預設集區塊後調高至 2400）
@@ -2773,6 +3063,7 @@ Future<void> _pumpSheet(
     locale: locale,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    theme: resolveThemeData(theme: appTheme, isEinkMode: isEinkMode),
     home: Scaffold(
       body: ReaderSettingsSheet(
         prefs: prefs,
@@ -2786,6 +3077,9 @@ Future<void> _pumpSheet(
         bookId: bookId,
         layoutPresets: layoutPresets,
         isEinkMode: isEinkMode,
+        appTheme: appTheme,
+        readerColors: readerColors,
+        onReaderColorsChanged: onReaderColorsChanged,
         onSaveAsPreset: onSaveAsPreset ?? _noopSaveAsPreset,
         onApplyPreset: onApplyPreset ?? _noopApplyPreset,
         onApplyFromBook: onApplyFromBook ?? _noopApplyFromBook,

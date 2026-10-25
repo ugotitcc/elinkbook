@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../theme/app_theme.dart';
 import '../library/models/book.dart';
 import '../library/models/library_enums.dart';
 import '../reader/reader_jump_target.dart';
@@ -24,6 +25,7 @@ import 'widgets/paging_bar.dart';
 class BookSearchScreen extends StatefulWidget {
   final Book book;
   final String initialQuery;
+  final AppTheme appTheme;
   final ReaderFeatureDependencies dependencies;
   final bool isEinkMode;
 
@@ -36,6 +38,7 @@ class BookSearchScreen extends StatefulWidget {
     super.key,
     required this.book,
     this.initialQuery = '',
+    this.appTheme = AppTheme.light,
     required this.dependencies,
     this.isEinkMode = false,
     this.fromReader = false,
@@ -173,6 +176,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
           book: widget.book,
           dependencies: widget.dependencies,
           isEinkMode: widget.isEinkMode,
+          appTheme: widget.appTheme,
           initialJumpTarget: jumpTarget,
         ),
       ),

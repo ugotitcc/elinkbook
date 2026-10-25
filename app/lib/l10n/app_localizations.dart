@@ -4528,6 +4528,84 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'已知限制：字典詞條不會執行 JavaScript，所以依賴點擊腳本的功能（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。'**
   String get dictionaryMdxLimitNote;
+
+  /// 閱讀設定面板「佈景」頁籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'佈景'**
+  String get readerSettingsTabTheme;
+
+  /// 正在調整的佈景名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'正在調整：{themeName}'**
+  String readerColorsEditingTheme(String themeName);
+
+  /// E-Ink 模式下自訂顏色停用提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'E-Ink 高對比模式不套用自訂顏色'**
+  String get readerColorsEinkDisabledHint;
+
+  /// 自訂背景色區塊標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'背景色'**
+  String get readerColorsBackgroundLabel;
+
+  /// 自訂文字色區塊標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'文字色'**
+  String get readerColorsTextLabel;
+
+  /// 紅色滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'紅'**
+  String get readerColorsRed;
+
+  /// 綠色滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'綠'**
+  String get readerColorsGreen;
+
+  /// 藍色滑桿標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'藍'**
+  String get readerColorsBlue;
+
+  /// 色碼文字輸入框標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'色碼'**
+  String get readerColorsHexLabel;
+
+  /// 色碼格式錯誤提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'色碼格式錯誤，請輸入 #RRGGBB'**
+  String get readerColorsHexInvalid;
+
+  /// 低對比度閱讀警告
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'文字色與背景色太接近，可能難以閱讀'**
+  String get readerColorsLowContrastWarning;
+
+  /// 還原背景色按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'還原背景色'**
+  String get readerColorsResetBackground;
+
+  /// 還原文字色按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'還原文字色'**
+  String get readerColorsResetText;
 }
 
 class _AppLocalizationsDelegate

@@ -540,6 +540,31 @@ void main() {
     expect(readerScreen.dependencies, same(deps));
   });
 
+  testWidgets('appTheme 正確貫穿至點選書籍開啟的 ReaderScreen（epic-65 Issue 2）', (
+    tester,
+  ) async {
+    final book = _testBook(id: 'b1', title: '書一');
+    final deps = fakeReaderFeatureDependencies(
+      searchRepository: FakeSearchRepository(titleAuthorResults: [book]),
+    );
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        initialQuery: '書一',
+        appTheme: AppTheme.dark,
+        dependencies: deps,
+      )),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('library_search_title_author_result_b1')),
+    );
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.appTheme, equals(AppTheme.dark));
+  });
+
   testWidgets('點擊內容匹配片段會開啟 ReaderScreen', (tester) async {
     final book = _testBook(id: 'b1', title: '書一');
     await tester.pumpWidget(

@@ -1,5 +1,6 @@
 // app/lib/screens/reader_screen_route.dart
 import '../library/models/book.dart';
+import '../theme/app_theme.dart';
 import '../reader/reader_jump_target.dart';
 import 'reader_feature_dependencies.dart';
 import 'reader_screen.dart';
@@ -11,6 +12,7 @@ ReaderScreen buildReaderScreen({
   required Book book,
   required ReaderFeatureDependencies dependencies,
   required bool isEinkMode,
+  AppTheme appTheme = AppTheme.light,
   ReaderJumpTarget? initialJumpTarget,
 }) {
   return ReaderScreen(
@@ -22,6 +24,7 @@ ReaderScreen buildReaderScreen({
     bookProgress: book.progress,
     isFixedLayout: book.isFixedLayout,
     isEinkMode: isEinkMode,
+    appTheme: appTheme,
     initialJumpTarget: initialJumpTarget,
   );
 }

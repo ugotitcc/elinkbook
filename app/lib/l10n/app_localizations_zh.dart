@@ -2583,6 +2583,47 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get dictionaryMdxLimitNote =>
       '已知限制：字典詞條不會執行 JavaScript，所以依賴點擊腳本的功能（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。';
+
+  @override
+  String get readerSettingsTabTheme => '佈景';
+
+  @override
+  String readerColorsEditingTheme(String themeName) {
+    return '正在調整：$themeName';
+  }
+
+  @override
+  String get readerColorsEinkDisabledHint => 'E-Ink 高對比模式不套用自訂顏色';
+
+  @override
+  String get readerColorsBackgroundLabel => '背景色';
+
+  @override
+  String get readerColorsTextLabel => '文字色';
+
+  @override
+  String get readerColorsRed => '紅';
+
+  @override
+  String get readerColorsGreen => '綠';
+
+  @override
+  String get readerColorsBlue => '藍';
+
+  @override
+  String get readerColorsHexLabel => '色碼';
+
+  @override
+  String get readerColorsHexInvalid => '色碼格式錯誤，請輸入 #RRGGBB';
+
+  @override
+  String get readerColorsLowContrastWarning => '文字色與背景色太接近，可能難以閱讀';
+
+  @override
+  String get readerColorsResetBackground => '還原背景色';
+
+  @override
+  String get readerColorsResetText => '還原文字色';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -5164,6 +5205,47 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   @override
   String get dictionaryMdxLimitNote =>
       '已知限制：词典词条不会执行 JavaScript，因此依赖点击脚本的功能（例如牛津 9 的图片放大）无法运作，仅能看到缩略图。';
+
+  @override
+  String get readerSettingsTabTheme => '布景';
+
+  @override
+  String readerColorsEditingTheme(String themeName) {
+    return '正在调整：$themeName';
+  }
+
+  @override
+  String get readerColorsEinkDisabledHint => 'E-Ink 高对比模式不套用自定义颜色';
+
+  @override
+  String get readerColorsBackgroundLabel => '背景色';
+
+  @override
+  String get readerColorsTextLabel => '文字色';
+
+  @override
+  String get readerColorsRed => '红';
+
+  @override
+  String get readerColorsGreen => '绿';
+
+  @override
+  String get readerColorsBlue => '蓝';
+
+  @override
+  String get readerColorsHexLabel => '色值';
+
+  @override
+  String get readerColorsHexInvalid => '色值格式错误，请输入 #RRGGBB';
+
+  @override
+  String get readerColorsLowContrastWarning => '文字色与背景色太接近，可能难以阅读';
+
+  @override
+  String get readerColorsResetBackground => '还原背景色';
+
+  @override
+  String get readerColorsResetText => '还原文字色';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -7745,4 +7827,45 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get dictionaryMdxLimitNote =>
       '已知限制：字典詞條不會執行 JavaScript，所以依賴點擊腳本的功能（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。';
+
+  @override
+  String get readerSettingsTabTheme => '佈景';
+
+  @override
+  String readerColorsEditingTheme(String themeName) {
+    return '正在調整：$themeName';
+  }
+
+  @override
+  String get readerColorsEinkDisabledHint => 'E-Ink 高對比模式不套用自訂顏色';
+
+  @override
+  String get readerColorsBackgroundLabel => '背景色';
+
+  @override
+  String get readerColorsTextLabel => '文字色';
+
+  @override
+  String get readerColorsRed => '紅';
+
+  @override
+  String get readerColorsGreen => '綠';
+
+  @override
+  String get readerColorsBlue => '藍';
+
+  @override
+  String get readerColorsHexLabel => '色碼';
+
+  @override
+  String get readerColorsHexInvalid => '色碼格式錯誤，請輸入 #RRGGBB';
+
+  @override
+  String get readerColorsLowContrastWarning => '文字色與背景色太接近，可能難以閱讀';
+
+  @override
+  String get readerColorsResetBackground => '還原背景色';
+
+  @override
+  String get readerColorsResetText => '還原文字色';
 }

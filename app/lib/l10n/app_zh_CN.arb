@@ -743,5 +743,18 @@
   "dictionaryImportLeaveConfirmStay": "继续导入",
   "dictionaryDragHandleLabel": "拖动排序",
   "dictionaryMdxLimitNote": "已知限制：词典词条不会执行 JavaScript，因此依赖点击脚本的功能（例如牛津 9 的图片放大）无法运作，仅能看到缩略图。",
-  "readerPrefsSaveFailedMessage": "阅读设定未能保存：设备存储空间写入失败。本次阅读仍使用新设定，下次开书可能还原。请确认剩余空间。"
+  "readerPrefsSaveFailedMessage": "阅读设定未能保存：设备存储空间写入失败。本次阅读仍使用新设定，下次开书可能还原。请确认剩余空间。",
+  "readerSettingsTabTheme": "布景",
+  "readerColorsEditingTheme": "正在调整：{themeName}",
+  "readerColorsEinkDisabledHint": "E-Ink 高对比模式不套用自定义颜色",
+  "readerColorsBackgroundLabel": "背景色",
+  "readerColorsTextLabel": "文字色",
+  "readerColorsRed": "红",
+  "readerColorsGreen": "绿",
+  "readerColorsBlue": "蓝",
+  "readerColorsHexLabel": "色值",
+  "readerColorsHexInvalid": "色值格式错误，请输入 #RRGGBB",
+  "readerColorsLowContrastWarning": "文字色与背景色太接近，可能难以阅读",
+  "readerColorsResetBackground": "还原背景色",
+  "readerColorsResetText": "还原文字色"
 }

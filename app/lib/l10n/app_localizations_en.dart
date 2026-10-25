@@ -2682,4 +2682,48 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get dictionaryMdxLimitNote =>
       'Known limitation: Dictionary entries do not execute JavaScript. Features relying on click scripts (such as Oxford 9 image magnification) will not work, and only thumbnails will be visible.';
+
+  @override
+  String get readerSettingsTabTheme => 'Theme';
+
+  @override
+  String readerColorsEditingTheme(String themeName) {
+    return 'Editing: $themeName';
+  }
+
+  @override
+  String get readerColorsEinkDisabledHint =>
+      'Custom colors are disabled in E-Ink high-contrast mode';
+
+  @override
+  String get readerColorsBackgroundLabel => 'Background Color';
+
+  @override
+  String get readerColorsTextLabel => 'Text Color';
+
+  @override
+  String get readerColorsRed => 'R';
+
+  @override
+  String get readerColorsGreen => 'G';
+
+  @override
+  String get readerColorsBlue => 'B';
+
+  @override
+  String get readerColorsHexLabel => 'Hex';
+
+  @override
+  String get readerColorsHexInvalid =>
+      'Invalid hex format, please enter #RRGGBB';
+
+  @override
+  String get readerColorsLowContrastWarning =>
+      'Text and background colors have low contrast and may be hard to read';
+
+  @override
+  String get readerColorsResetBackground => 'Reset background';
+
+  @override
+  String get readerColorsResetText => 'Reset text color';
 }

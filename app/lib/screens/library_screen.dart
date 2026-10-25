@@ -445,6 +445,7 @@ class _LibraryScreenState extends State<LibraryScreen>
               book: book,
               dependencies: widget.dependencies,
               isEinkMode: widget.appearance.isEinkMode,
+              appTheme: widget.appearance.currentTheme,
             ),
           ),
         )
@@ -834,6 +835,7 @@ class _LibraryScreenState extends State<LibraryScreen>
               initialQuery: _searchQuery,
               dependencies: widget.dependencies,
               isEinkMode: widget.appearance.isEinkMode,
+              appTheme: widget.appearance.currentTheme,
             ),
           ),
         )
