@@ -8,6 +8,11 @@ import {
   resolveDisplayRange,
 } from './text-conversion-walker.js'
 import { convertTtsSegments } from './text-conversion.js'
+import {
+  compensateColumnPitch,
+  measureColumnPitch,
+  PITCH_TOLERANCE,
+} from './column-pitch.js'
 
 const view = document.getElementById('view')
 
@@ -1374,6 +1379,7 @@ async function openBook() {
       // computed text-align 已是套用覆蓋後的結果。lastAppliedPrefs 以
       // initialPrefs 初始化，load 觸發時一定有值。
       markNoIndentParagraphs(doc, lastAppliedPrefs)
+      attachColumnPitchCompensation(doc)
       const classifier = new TouchIntentClassifier()
 
       // 選取範圍即時回報（epic-17 Issue 8）：抽成共用函式，供既有
@@ -1766,6 +1772,94 @@ async function openBook() {
   } catch (e) {
     window.flutter_inappwebview.callHandler('onError', String((e && e.message) || e))
   }
+}
+
+// epic-54 Issue 34：舊版 WebView（如 Chrome 91）直排多欄會忽略根元素上下內距、
+// 把欄長直接排成頁高，使相鄰兩欄起點差（欄間隔）變成「頁高 + column-gap」，
+// 每翻一頁多累積一個 column-gap 的偏移，導致畫面出現上下兩欄錯位。
+// 在每個章節文件載入時量測實際欄間隔與目標頁高（renderer.size / columnCount），
+// 若超出容許誤差（PITCH_TOLERANCE）則迭代調整根元素 max-height 補償；
+// 並對根元素 style 屬性掛 MutationObserver，當 paginator.js 重排把 max-height
+// 重設為 none 時自動重新補償。
+let columnPitchGaveUpWarned = false
+
+function canCompensateColumnPitch(doc) {
+  if (!doc || !doc.defaultView || !doc.documentElement || !doc.body) return false
+  if (view.isFixedLayout) return false
+  const renderer = view.renderer
+  if (!renderer || renderer.scrolled !== false) return false
+  if (!(renderer.size > 0)) return false
+  const win = doc.defaultView
+  const rootWm = win.getComputedStyle(doc.documentElement).writingMode || ''
+  const bodyWm = win.getComputedStyle(doc.body).writingMode || ''
+  return rootWm.indexOf('vertical') === 0 || bodyWm.indexOf('vertical') === 0
+}
+
+function attachColumnPitchCompensation(doc) {
+  if (!doc || !doc.defaultView || !doc.documentElement || !doc.body) return
+  if (view.isFixedLayout) return
+
+  let busy = false
+  // 補償放棄時記下當時的目標值：同一個目標下不再重試（否則每次 style 變動都會
+  // 白做最多 4 次強制排版）；版面改變（旋轉、改欄數）使目標值不同時才再試一次。
+  let gaveUpTarget = null
+  const observer = new MutationObserver(() => {
+    if (!doc.defaultView || !doc.documentElement || !doc.body) return
+    if (busy) return
+    runCompensation()
+  })
+
+  function runCompensation() {
+    if (busy) return
+    if (!canCompensateColumnPitch(doc)) return
+    const renderer = view.renderer
+    const columnCount = renderer.columnCount || 1
+    const target = renderer.size / columnCount
+    if (!(target > PITCH_TOLERANCE)) return
+    if (gaveUpTarget === target) return
+
+    busy = true
+    try {
+      const result = compensateColumnPitch({
+        target,
+        measure: () =>
+          measureColumnPitch(Array.from(doc.body.getClientRects()), true),
+        getBoxHeight: () =>
+          doc.documentElement.getBoundingClientRect().height,
+        setMaxHeight: (px) => {
+          doc.documentElement.style.setProperty(
+            'max-height',
+            px + 'px',
+            'important',
+          )
+        },
+        resetMaxHeight: () => {
+          doc.documentElement.style.setProperty(
+            'max-height',
+            'none',
+            'important',
+          )
+        },
+      })
+      gaveUpTarget = result.status === 'gave-up' ? target : null
+      if (result.status === 'gave-up' && !columnPitchGaveUpWarned) {
+        columnPitchGaveUpWarned = true
+        console.warn('[column-pitch] 補償失敗，維持原排版')
+      }
+    } finally {
+      observer.takeRecords()
+      busy = false
+    }
+  }
+
+  // 刻意不在這裡主動補償一次：'load' 事件由 paginator 的 afterLoad 派發，早於
+  // columnize／render，此時文件還沒套用版面、renderer.size 也可能是上一章的殘值，
+  // 量到的是無意義的數字。paginator 之後必定會改寫根元素 style，觀察者會在版面
+  // 就緒後被觸發（審查 I-2）。
+  observer.observe(doc.documentElement, {
+    attributes: true,
+    attributeFilter: ['style'],
+  })
 }
 
 openBook()

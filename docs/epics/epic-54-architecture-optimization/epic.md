@@ -378,6 +378,34 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 10. **文件**：本段；`issues.md` Issue 31 已定案、Issue 28 補標已合併（PR #370）；`docs/epics.md` 同步；`CONTEXT.md` 不動（無新詞彙）；無需新 ADR。
 11. **流程**：分支從 `main` 開，計畫與實作同分支同 PR；先寫 `plans/plan-issue-31.md`、計畫審查後再動手；程式審查報告存 `reviews/`（不進版控）；完整 `flutter test` 只在最後跑一次；WAVE 抽驗：正常拖滑桿不出現提示（真機無法製造寫入失敗，失敗路徑靠單元測試）。
 
+## Issue 34 設計決策（`/grilling` 定案，2026-10-25）
+
+來源：2026-10-25 WAVE 真機回報「頁面變成上下兩欄、高度不一」。診斷與證據見「開發記錄」2026-10-25 Issue 34 診斷；上游 `readest/foliate-js` 已先同步到 `4735e67`（PR #377，同步後問題仍重現，所以不是上游已修的缺陷）。
+
+**事實盤點**（真機 WAVE，Chrome 91，量測方式為 `body.getClientRects()` 與文字範圍）：
+- 直排單欄、雙欄、自動欄數：欄間隔 = 頁高 + 72（72 = `column-gap`），每翻一頁多錯 72。
+- 橫排：每頁 2 欄、欄間隔 356 × 2 = 712 = 頁高 711，不受影響。
+- Chrome 91 的 `body.getClientRects()` 每欄回傳一個矩形，兩欄起點差即欄間隔，量測成本為常數。
+- 把根元素 `max-height` 設成「目前高度 − 誤差」，單欄、雙欄、自動欄數皆 1 步收斂（誤差 72 → 0），畫面兩欄消失。
+- 上邊距補不回來：`margin-top`、`position: relative; top`、`transform: translateY` 量測上皆無效；補償後文字貼頁頂、頁底多留一個 `column-gap`。
+- 電腦端 Chromium 156 欄間隔 = 頁高，不重現；但把 `column-gap` 加大 72 即可模擬同樣誤差。
+
+**決策**：
+1. **用量測判斷，不看 WebView 版本**：每個章節文件排版後，量欄間隔 P 與目標 T（= 頁高 ÷ 欄數）。|P − T| < 1.5 不動作。新版 WebView 自動不受影響。
+2. **補償只放 `main.js`**：不改 vendored `paginator.js`（ADR 0011／0017 不變、同步 SOP 不增加補丁）。
+3. **演算法**：誤差 err = P − T；把根元素 `max-height` 設成「base − err」（`!important`），重量；最多 4 次。第一次的 base = `min(根元素高度, 欄長)`（舊引擎單欄兩者相等；雙欄欄長 499.7 較小，真機實測用欄長才收斂，用根元素高度會無效）；之後的 base = 上一次實際設定的值（`max-height` 與欄間隔斜率為 1，用來修正第一次的偏差，新版引擎模擬時第一次會多扣內距，第二次補回）。（2026-10-25 寫計畫時修訂：原寫「目前根元素高度 − err」，雙欄實測失效。）
+4. **每次重排後重新套用**：`paginator.js` 每次排版都把 `max-height` 重設為 `none`。對每個章節文件的 `style` 屬性掛 `MutationObserver`，被改寫就重新補償（排版後、繪製前執行，不閃爍錯位畫面）；設定自己的值時須避免觸發無窮迴圈。
+5. **範圍**：只處理直排分頁模式。橫排量測正常；捲動模式沒有分欄。單頁章節（欄矩形少於 2 個）無法量測，略過。
+6. **安全閥**：4 次後誤差仍 ≥ 1.5，把 `max-height` 還原成 `none` 並放棄；同一次載入只在 console 警告一次。最壞情況等於現狀。
+7. **上邊距列為已知限制**：Chrome 91 無法恢復上邊距，補償後文字貼頁頂、頁底多留一個 `column-gap`。邊距另案處理，不阻擋本 Issue。
+8. **測試**：量測與校正抽成純函式做單元測試；測試台新增情境，在 Chromium 156 把 `column-gap` 加大 72 模擬舊引擎，驗證補償收斂、補償後欄間隔 = 頁高，且在未誤差時不動作；加上 WAVE 真機驗證（`scratchpad` 的冷啟動腳本與兩欄偵測，需改成進版控的測試台或手動步驟）。
+9. **詞彙**：「頁高」「欄間隔」寫入 `CONTEXT.md`。
+10. **不寫 ADR**：不改 vendored 檔案、容易回退，不符合「難以回退」；設計寫在本段。
+
+**範圍外**：恢復直排上邊距；橫排；其他 Chrome 91 以外的舊 WebView 是否同樣有此現象（未驗證，量測式補償預期自動涵蓋）。
+
+**文件**：本段；`issues.md` Issue 34 已定案；`docs/epics.md` 同步；`CONTEXT.md` 新增「頁高」「欄間隔」。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -883,3 +911,11 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-10-25 Issue 33 診斷與提示修法**（分支 `fix/layout-button-loading-hint`，PR [#376](https://git.jigong.org/huthief/elinkBook/pulls/376)）：使用者回報開書後點「版面設定」沒反應。WAVE 真機（`TCE70P24B2202374`）量測：按鈕要等 `onPageRendered`（第一次 `relocate` 後）才啟用，開書後 5.9～11.5 秒內 `onLayoutTap` 為 `null`（debug 版）；啟用後點擊處理函式 1 秒內被呼叫。修法：新增 `_showLayoutLoadingHint`，比照 `_showTocLoadingHint`；`readerLayoutLoadingMessage` 四語系；3 個舊測試由「停用」改「可點」。**未解決**：使用者實測書與工具列已顯示仍點不動；量到「已渲染」日誌後畫面要再 2.5～4.5 秒才更新（提示本身也晚約 2 秒出現）；`Timer` 停頓偵測只見 0.3～0.5 秒；靜止圖示取代 `CircularProgressIndicator` 實驗無改善（已還原）。下一步：用 release 版量測，再決定是否以 `dumpsys gfxinfo` 追哪一段慢。實驗過程曾誤觸翻頁，閱讀位置以進度條調回約 23%。
 
 **2026-10-25 Issue 34 診斷（直排欄間隔與頁高不一致）**：使用者保留 WAVE 問題畫面（`TCE70P24B2202374`，安裝 APK 後冷啟動自動續讀最後一本書即出現「上下兩欄、高度不一」）。重現：冷啟動 5/5 出現，空白帶固定 176 裝置像素；觸發條件為單書字級 1.75＋直排＋停在章節第 4 頁（`fullscreen`、`column_mode`、邊距不影響）。以暫時探針（`main.js` 印 `console.log`，已移除）量到：`renderer.start`／`size` 對齊（`start = 4×size`），但文件內 CSS 欄起點間隔為 1071.5，頁高為 999.5，差 72 = `column-gap`；每頁累積 72，第 4 頁偏移約 288 CSS px。對照：舊提交 `30d90879` 同樣重現（非今日修改造成）；`column-gap` 設 0 欄間隔變 999.5（對齊，但失去上邊距）；縮小文件高度無效。電腦端 Chromium 156 以相同 CSS（欄寬 927、間距 72、內距 48/24）量得欄間隔 = 頁高 = 999，不重現；WAVE WebView 為 Chrome 91，判定為舊版直排多欄忽略上下內距。尚未驗證其他舊版 WebView 裝置。實驗過程曾誤把 App 資料庫推壞（被截成 4090 位元組），已用備份還原並以 md5 驗證。下一步：`/grilling` 定補償設計。
+
+**2026-10-26 Issue 34 計畫審查修訂**：審查報告 `reviews/review-plan-issue-34.md`（不進版控）0 Critical／3 Important／3 Minor，結論 Approved with Fixes。全數處理：I-1 固定版面（FXL／CBZ）明確排除——核對後發現同步後的 `fixed-layout.js` 也有 `scrolled`、`columnCount` 成員，不能靠成員不存在來排除，故改為必要條件；I-2 非正數 `max-height` 守衛——**未照審查字面做**（`nextMaxHeight` 回 `null` 在計畫裡已代表「誤差在容許內」，非正數也回 `null` 會被誤判為補償成功），改新增 `isValidMaxHeight`，由迭代驅動器判斷後還原並放棄，加案例 h；I-3 `measureColumnPitch` 取絕對值且 `pitch <= 0` 回 `null`（審查說的「無限膨脹」被高估，迭代最多 4 次，但守衛仍採納），加案例 f2；M-1／M-3 補 adb 截圖指令與問題圖來源，截圖一律放暫存目錄不進版控；M-2 觀察者回呼首行檢查 `doc.defaultView`／`documentElement`／`body`。計畫 Review Focus 增為 6 項。
+
+**2026-10-25 Issue 34 實作完成**（分支 `epic-54/issue-34-column-pitch`，計畫見 `plans/plan-issue-34.md`）：新增純函式模組 `app/android/app/src/main/assets/foliate/column-pitch.js`（`PITCH_TOLERANCE = 1.5`、`MAX_COMPENSATION_ITERATIONS = 4`、`measureColumnPitch`、`isValidMaxHeight`、`nextMaxHeight`、`compensateColumnPitch`），於 `main.js` 新增 `canCompensateColumnPitch(doc)` 與 `attachColumnPitchCompensation(doc)`（排除 `view.isFixedLayout`、橫排、捲動模式與無效 `renderer.size`，以 `MutationObserver` 監聽根元素 `style` 並在每次重排後自動補償，iframe 卸載守衛齊備）；vendored `foliate/*.js` 零修改。新增兩欄空帶偵測腳本 `app/tool/detect_two_column_gap.py`。驗證：(1) `node app/tool/test_column_pitch.mjs` 共 **11 個案例**（a、b、c、c2、c3、d、e、f、f2、g、h）全數通過；(2) Puppeteer 觸控測試台新增 `scenario-column-pitch-compensation.mjs`（**5 個檢查項**：無誤差不動作、模擬舊引擎收斂、重排後再次補償、無窮迴圈防護、無未捕捉例外），`node run-all.mjs` 全套 **11 個情境**全數 PASS；(3) `node app/tool/check_foliate_es_compat.js`、`test_section_progress_density.mjs`（5/5）、`test_tts_safe_window.mjs`（13/13）全數通過；(4) WAVE 真機（`TCE70P24B2202374`，Chrome 91）驗證：安裝前截取問題畫面 `wave_bug.png` 為 `maxBlankBand=176 BUG`；安裝後連續 **3 次冷啟動**（`wave_1.png`～`wave_3.png`）全數轉為 `maxBlankBand=5 ok`；**連翻對稱**：右側熱區 (1200,936) 連點 5 次、左側熱區 (200,936) 連點 5 次，每次翻頁畫面皆變動（`diff≈0.24–0.26`）且全數 `maxBlankBand=5 ok`，最終畫面與起點像素完全一致（`diff=0.0000`）；回歸三本書（CBZ、定樣式 EPUB、橫排多章節範例）皆正常顯示，裝置已還原至「早安」約 23%（109/479）；(5) 已知限制：Chrome 91 直排多欄無法恢復上邊距，補償後上邊距貼頁頂、頁底多一個 `column-gap`；(6) Dart 端：`flutter analyze` No issues found!；`foliate_reader_view_test`＋`foliate_bridge_codec_test` 194/194 通過；完整 `flutter test` 並行執行 4593 通過／1 略過／9 個既有並行負載競態（該 8 個測試檔以 `--concurrency=1` 重跑 153/153 全過，合計 **4602 通過、1 略過**）。
+
+**2026-10-26 Issue 34 程式審查與修訂**：獨立審查（`reviews/review-code-issue-34.md`，不進版控）0 Critical／1 Important／2 Minor，結論 With fixes，全數處理：I-1 `canCompensateColumnPitch(doc)` 同時檢查 `doc.documentElement` 與 `doc.body` 的 `writingMode`（涵蓋將 `writing-mode: vertical-rl` 宣告於 `<body>` 的 EPUB3），且 `attachColumnPitchCompensation(doc)` 開頭僅檢查文件與 `view.isFixedLayout` 守衛、無條件為流式章節掛載 `MutationObserver`，將動態狀態判斷留在 `runCompensation()` 內（使初次開書或由捲動模式切換回分頁模式後仍能補償）（此路徑沒有自動化測試，測試台只涵蓋 body 直排＋分頁單欄情境）；M-1 `detect_two_column_gap.py` 遇到 `INVALID`（空白／全黑／載入中截圖）時回傳結束碼 1，與檔頭說明一致；M-2 更正上方開發記錄常數名稱筆誤為 `MAX_COMPENSATION_ITERATIONS = 4`。
+
+**2026-10-26 Issue 34 第二輪程式審查修訂**：獨立審查（報告以對話形式提供，未存檔）0 Critical／2 Important／7 Minor，結論 With fixes。I-2 採納：`attachColumnPitchCompensation` 結尾的主動 `runCompensation()` 移除——`load` 事件早於 `columnize`／`render`（`paginator.js` 約 868～872 行），此時文件尚未套版面、`renderer.size` 可能是上一章殘值；paginator 之後必定改寫根元素 `style`，觀察者會在版面就緒後觸發，測試台 11 個情境仍全數 PASS。M-2 採納：補償放棄時記下當時目標值（`gaveUpTarget`），同目標下不再重試，目標改變（旋轉、改欄數）才再試。I-1 以真機驗證（暫時探針，已移除）：WAVE 直排單欄補償後 `renderer.pages = 20`、實際欄矩形 20 個，與預期一致（補償前顯示 21，代表 `paginator.js:875` 的 `ResizeObserver` 確實會在 body 尺寸改變後重算頁數）；自動欄數 22 頁／43 欄一致；雙欄 `pages = 29`、59 欄（預期 30）——末頁只有半頁，`pages` 為 `Math.round(viewSize / size)`，補償後欄幾何與新版引擎相同，非本次造成。因此補償成功後不需主動呼叫 `renderer.render()`。文件修正：測試台情境數 10 → 11、`issues.md` 第 34 列正文「待設計」、`epic.md` 上一輪「並於測試台驗證」的過度宣稱，並於 README 補上 `detect_two_column_gap.py` 的 `INVALID` 與「只適用單欄、雙欄會誤判」。未處理（Minor，另議）：M-1 `busy` 守衛實為死程式碼（補償全程同步）、M-3 預讀章節過時版面的暫態（`reconcileSectionLayouts` 重排後會自我修正）、M-4 測試台模擬為變體路徑、`doc.defaultView` 為 `null` 的守衛無自動化案例。
