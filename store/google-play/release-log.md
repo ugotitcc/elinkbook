@@ -13,3 +13,4 @@
 | versionName | versionCode | 日期 | 軌道 | commit | 說明 |
 |---|---|---|---|---|---|
 | 1.0.0 | 1 | 2026-10-01 | APK | 84cfda56 | GitHub Releases |
+| 1.1.0 | 3 | 2026-10-27 | APK | 3192ab06 | GitHub Releases |
