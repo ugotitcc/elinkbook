@@ -401,7 +401,7 @@
       <div class="container">
         <div class="section-header">
           <span class="section-tag">Features & Capabilities</span>
-          <h2 class="section-title">匠心雕琢的九大核心閱讀體驗</h2>
+          <h2 class="section-title">匠心雕琢的核心閱讀體驗</h2>
           <p class="section-desc">從字裡行間的標點對齊到電子墨水屏的硬體適配，每一處細節皆為重度閱讀愛好者量身打造。</p>
         </div>
 
@@ -586,6 +586,29 @@
             <a class="feature-card-link" href="https://github.com/ugotitcc/elinkbook/tree/main/docker" target="_blank" rel="noopener noreferrer">查看部署說明 →</a>
           </div>
 
+          <!-- 功能 10 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <!-- 書本＋放大鏡 -->
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H12"/>
+                <path d="M12 2H6.5A2.5 2.5 0 0 0 4 4.5v15"/>
+                <path d="M12 2h8v6"/>
+                <circle cx="16" cy="15" r="3.5"/>
+                <line x1="21" y1="20" x2="18.5" y2="17.5"/>
+              </svg>
+            </div>
+            <h3 class="feature-card-title">字典查詢</h3>
+            <p class="feature-card-desc">
+              閱讀時選取詞彙即可查詞。支援匯入你自備的字典檔（JSON、CSV、MDX），完全離線執行。也可選用線上查詞（萌典），預設關閉，同意後才啟用，且只送出你選取的那個詞。App 不內建字典資料，需自行匯入字典檔。
+            </p>
+            <div class="feature-tags">
+              <span class="feature-tag-item">匯入 JSON／CSV／MDX</span>
+              <span class="feature-tag-item">英→繁中、中→英、中→中</span>
+              <span class="feature-tag-item">線上查詞預設關閉</span>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>
@@ -672,7 +695,7 @@
             <ul class="spec-list">
               <li>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                <span><strong>可下載字型</strong>：思源宋體、思源黑體、原俠正楷、台灣圓體、源流明體，在字型管理下載後離線使用</span>
+                <span><strong>可下載字型</strong>：思源宋體、思源黑體、原俠正楷、台灣圓體、源流明體、白鷺楷、獅尾B2加糖宋體，在字型管理下載後離線使用</span>
               </li>
               <li>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
@@ -680,7 +703,11 @@
               </li>
               <li>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                <span><strong>版面精細調節</strong>：行距、字距、段落間距、邊界空白均支援微調控制</span>
+                <span><strong>版面精細調節</strong>：行距、字距、段落間距、邊界空白均支援微調控制，另有首行縮排（0～4 字）與各佈景獨立的自訂閱讀顏色</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>多語系介面</strong>：App 介面支援正體中文、簡體中文、英文</span>
               </li>
               <li>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
@@ -824,6 +851,35 @@
         <p>
           當您透過本 APP 或 ugotit.cc 官方網站使用意見反饋、問題回報或客服聯繫服務時，我們會依需求請您提供聯絡電子郵件 (E-mail) 與問題描述，此資訊僅用於回覆您的諮詢與協助排查技術問題。
         </p>
+
+        <h3>6. Google 使用者資料 (Google User Data)</h3>
+        <p>
+          當您選擇從 Google Drive 匯入書籍時，本 APP 會請求 Google 授權範圍 <code>https://www.googleapis.com/auth/drive.readonly</code>（以及用於辨識登入狀態的 <code>email</code>、<code>openid</code>、<code>profile</code>）。處理方式如下：
+        </p>
+        <ul>
+          <li><strong>使用目的</strong>：僅用於提供「從 Google Drive 匯入書籍」這項功能，即列出您 Drive 中的資料夾與電子書檔案，並下載您所選取的書籍到您的裝置閱讀。</li>
+          <li><strong>唯讀存取</strong>：本 APP 不會修改、上傳、刪除或移動您 Google Drive 中的任何內容。</li>
+          <li><strong>儲存位置</strong>：下載的書籍與登入權杖（token）僅儲存於您裝置上本 APP 的私有儲存空間。ugotit.cc 不經營任何接收、儲存您 Google Drive 資料的伺服器，也不會收到這些資料。</li>
+          <li><strong>不作其他用途</strong>：我們不會將 Google 使用者資料用於廣告（包含個人化廣告）、不會出售、不會轉讓或揭露給任何第三方、不會用於訓練人工智慧或機器學習模型，也不會讓任何人員閱讀這些資料。</li>
+          <li><strong>撤銷授權</strong>：您可隨時在 APP 設定中登出，或至 <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">Google 帳號的第三方存取權設定</a>撤銷授權；登出後本 APP 即刪除裝置上保存的登入權杖。</li>
+        </ul>
+        <p>
+          elinkBook 使用及轉移從 Google API 取得的資訊至任何其他應用程式時，將遵守 <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>，包含其中的 Limited Use（有限使用）要求。
+          <br>
+          elinkBook's use and transfer of information received from Google APIs to any other app will adhere to the Google API Services User Data Policy, including the Limited Use requirements.
+        </p>
+
+        <h3>7. 字典查詢與線上查詞 (Dictionary Lookup，選用功能)</h3>
+        <p>
+          本 APP 的字典查詢預設使用您自行匯入的本機字典，<strong>完全離線執行，不會連網</strong>。
+        </p>
+        <ul>
+          <li><strong>選用且預設關閉</strong>：線上查詞（萌典）為選用功能，預設關閉；必須先在 APP 內閱讀說明並按下「同意並開啟」後才會啟用。</li>
+          <li><strong>只送出您選取的那個詞</strong>：啟用後，查詢中文詞時，本 APP 只會將<strong>您選取的那個詞</strong>以 HTTPS 送到 <code>www.moedict.tw</code>。不會送出書名、前後文、閱讀位置、裝置識別或帳號資訊。</li>
+          <li><strong>第三方服務</strong>：萌典由第三方志工營運，ugotit.cc 不經營該服務，也不會收到您的查詢內容。萌典如何處理其伺服器端的連線紀錄，適用萌典自身的隱私權政策。</li>
+          <li><strong>停用方式</strong>：您可隨時在 APP 的「設定 → 閱讀 → 字典」關閉線上查詞開關；關閉後本 APP 立即停止送出查詢。</li>
+          <li><strong>資料來源標示</strong>：查詢結果標示為教育部《重編國語辭典修訂本》（CC BY-ND 3.0 TW），經由萌典提供。</li>
+        </ul>
 
         <h2>三、資料安全與保護措施</h2>
         <p>
