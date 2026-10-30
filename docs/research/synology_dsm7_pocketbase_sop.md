@@ -11,7 +11,8 @@
 ### 1.1 系統需求
 - **Synology NAS**：DSM 7.0 或以上版本。
 - **套件**：已於 DSM 套件中心安裝 **Container Manager**（即 DSM 7 版本的 Docker）。
-- **PocketBase 版本**：必須 **≥ v0.23**（elinkBook checkpoint 同步引擎依賴 Batch API `/api/batch`）。本 SOP 示範使用 **v0.40.4**（自架時亦可使用當時最新穩定版）。
+- **PocketBase 版本**：必須 **≥ v0.23**（elinkBook checkpoint 同步引擎依賴 Batch API `/api/batch`）。本 SOP 預設使用 **v0.41.1**，**v0.41.1（含）以上版本皆可使用**。
+- **下載來源**：PocketBase 官方已由 GitHub 搬到 [ganigeorgiev.com 的 Releases 頁](https://ganigeorgiev.com/pocketbase/pocketbase/releases)。Dockerfile 預設從新站下載，並用 `checksums.txt` 驗證 SHA256。
 
 ### 1.2 目錄結構規劃 (File Station)
 建議在 Synology 預設的 `docker` 共用資料夾下建立專用目錄 `/volume1/docker/elinkbook-pocketbase`：
@@ -60,43 +61,37 @@
 在 `/volume1/docker/elinkbook-pocketbase/` 目錄下建立以下兩個檔案：
 
 #### 檔案 A: `Dockerfile`
-```dockerfile
-FROM alpine:3.20
-ARG PB_VERSION=0.40.4
+Dockerfile 以 repo 為唯一來源，本 SOP 不內嵌全文。請把 [`docker/Dockerfile`](../../docker/Dockerfile) 原封複製到 NAS 的 `/volume1/docker/elinkbook-pocketbase/Dockerfile`。
 
-RUN apk add --no-cache unzip ca-certificates wget
+這份 Dockerfile 會做四件事：
+- 基底映像用 `alpine:${ALPINE_TAG}`，預設 `latest`。
+- 從 `PB_BASE_URL` 下載 `PB_VERSION` 對應的 PocketBase（預設 `0.41.1`）。
+- 依 CPU 自動選 amd64、arm64 或 armv7。
+- 用 `checksums.txt` 驗證 SHA256，不符就讓建置失敗。
 
-# 下載官方 PocketBase Linux amd64 執行檔
-RUN wget https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip && \
-    unzip pocketbase_${PB_VERSION}_linux_amd64.zip -d /pb && \
-    rm pocketbase_${PB_VERSION}_linux_amd64.zip
-
-EXPOSE 8090
-
-VOLUME ["/pb/pb_data", "/pb/pb_migrations", "/pb/pb_hooks"]
-
-ENTRYPOINT ["/pb/pocketbase", "serve", "--http=0.0.0.0:8090"]
-```
+容器內部監聽 **port 80**。下方 compose 把 NAS 的 8090 對應到容器的 80。
 
 #### 檔案 B: `docker-compose.yml`
 ```yaml
-version: '3.8'
-
 services:
   pocketbase:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        ALPINE_TAG: ${ALPINE_TAG:-latest}
+        PB_VERSION: ${PB_VERSION:-0.41.1}
+        PB_BASE_URL: ${PB_BASE_URL:-https://ganigeorgiev.com/meta/pocketbase/pocketbase/download}
     container_name: elinkbook-pocketbase
     restart: always
     ports:
-      - "8090:8090"
+      - "8090:80"
     volumes:
       - ./pb_data:/pb/pb_data
       - ./pb_migrations:/pb/pb_migrations
       - ./pb_hooks:/pb/pb_hooks
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8090/api/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/api/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -125,12 +120,12 @@ services:
 1. 在 Container Manager -> **映像檔 (Image)** 下載或匯入 Alpine 映像檔。
 2. 至 **容器 (Container)** 點擊 **新增**：
    - **容器名稱**：`elinkbook-pocketbase`
-   - **連接埠設定**：本機連接埠 `8090` ↔ 容器連接埠 `8090` (TCP)。
+   - **連接埠設定**：本機連接埠 `8090` ↔ 容器連接埠 `80` (TCP)。
    - **儲存空間設定 (Volume Binding)**：
      - `/docker/elinkbook-pocketbase/pb_data` ↔ `/pb/pb_data`
      - `/docker/elinkbook-pocketbase/pb_migrations` ↔ `/pb/pb_migrations`
      - `/docker/elinkbook-pocketbase/pb_hooks` ↔ `/pb/pb_hooks`
-   - **執行指令**：`/pb/pocketbase serve --http=0.0.0.0:8090`
+   - **執行指令**：`/pb/pocketbase serve --http=0.0.0.0:80`
 
 ---
 
@@ -239,7 +234,7 @@ PocketBase 的所有資料庫與設定皆儲存於 `pb_data/data.db`。透過 DS
 
 ## 7. 步驟六：PocketBase 版本升級（更版）與回滾 SOP
 
-當 PocketBase 官方發布新版本（例如由 `v0.39.10` 升級至 `v0.40.4` 或更後續版本）時，請依照下列標準維運流程進行平滑升級。
+當 PocketBase 官方發布新版本（例如由 `v0.40.4` 升級至 `v0.41.1` 或更後續版本）時，請依照下列標準維運流程進行平滑升級。
 
 > [!IMPORTANT]
 > **資料安全第一原則**：PocketBase 啟動時會自動針對 SQLite 資料庫執行 schema 與系統遷移。在執行版本升級前，**務必先停用容器並對 `pb_data` 進行完整冷備份**，避免新版本遷移後若需降版造成資料庫不相容。
@@ -253,26 +248,23 @@ PocketBase 的所有資料庫與設定皆儲存於 `pb_data/data.db`。透過 DS
 2. **建立資料庫冷備份**：
    - **方式 A（File Station 複製）**：
      - 開啟 **File Station**，進入 `/docker/elinkbook-pocketbase/`。
-     - 選取 `pb_data` 資料夾，按右鍵選 **複製到/移動到... → 複製到**，在同一目錄下建立副本並重新命名為 `pb_data_backup_v0.39.10`。
+     - 選取 `pb_data` 資料夾，按右鍵選 **複製到/移動到... → 複製到**，在同一目錄下建立副本並重新命名為 `pb_data_backup_v0.40.4`。
    - **方式 B（SSH 命令列打包）**：
      ```bash
      cd /volume1/docker/elinkbook-pocketbase
-     tar -czvf pb_data_backup_v0.39.10.tar.gz pb_data/
+     tar -czvf pb_data_backup_v0.40.4.tar.gz pb_data/
      ```
 
-### 7.2 修改版本號（更新 Dockerfile）
+### 7.2 修改版本號（更新 `.env`）
 
-開啟 File Station 文字編輯器或透過 SSH 修改 `/volume1/docker/elinkbook-pocketbase/Dockerfile`：
+版本號由 `docker-compose.yml` 的 `PB_VERSION` 變數控制，預設 `0.41.1`。
+要指定其他版本，在 `/volume1/docker/elinkbook-pocketbase/` 建立或編輯 `.env`：
 
-將版本變數改為目標新版號（以升級至 `0.40.4` 為例）：
-```dockerfile
-# 原設定：
-# ARG PB_VERSION=0.39.10
-
-# 修改為新版號：
-ARG PB_VERSION=0.40.4
+```bash
+# 目標版本（0.41.1 含以上皆可）
+PB_VERSION=0.41.1
 ```
-儲存並關閉 `Dockerfile`。
+儲存並關閉 `.env`。不需要改 `Dockerfile`。
 
 ### 7.3 方式一：透過 Synology Container Manager UI 重新建置（推薦）
 
@@ -284,7 +276,7 @@ ARG PB_VERSION=0.40.4
    - 若為手動乾淨重建流程：
      1. 前往 **映像檔 (Image)**，刪除舊有的 `elinkbook-pocketbase_pocketbase` 或無標記映像檔（避免舊層快取殘留）。
      2. 回到 **專案 (Project)**，選取 `elinkbook-pocketbase`，點擊 **操作 → 啟動**（Container Manager 偵測到 Dockerfile 變更會自動重新觸發 `docker build` 並下載新版 PocketBase zip）。
-4. 觀察建置與啟動日誌，確認終端輸出 `pocketbase_0.40.4_linux_amd64.zip` 下載解壓縮完成，且狀態轉為綠色「執行中 (Running)」。
+4. 觀察建置與啟動日誌，確認 `pocketbase_0.41.1_linux_amd64.zip`（arm64 機型為 `linux_arm64`）下載、SHA256 驗證、解壓縮都完成，且狀態轉為綠色「執行中 (Running)」。
 
 ### 7.4 方式二：透過 SSH 終端機快速重新建置
 
@@ -313,7 +305,7 @@ docker compose logs -f
 
 - [ ] **1. 版本號確認**：
   - 瀏覽器登入 Admin 後台 `https://pocketbase.yourdomain.com/_/`。
-  - 檢視後台左下角或右上角資訊，確認目前顯示版本已更新為 `v0.40.4`。
+  - 檢視後台左下角或右上角資訊，確認目前顯示版本已更新為 `v0.41.1`。
 - [ ] **2. Health Check API 測試**：
   - 執行 `curl -i https://pocketbase.yourdomain.com/api/health`，確認回傳 `HTTP/2 200 OK` 且帶有 `{"code":200,"message":"API is healthy."}`。
 - [ ] **3. 關鍵 Batch API 啟用狀態檢查**：
@@ -343,10 +335,10 @@ docker compose logs -f
    - 將當前已受影響的 `pb_data` 改名或備份：
      `mv pb_data pb_data_failed`
    - 將 7.1 備份的乾淨目錄還原回 `pb_data`：
-     `cp -r pb_data_backup_v0.39.10 pb_data`
-     （若為 tar 備份則解壓縮：`tar -xzvf pb_data_backup_v0.39.10.tar.gz`）
-3. **還原 Dockerfile 版本號**：
-   - 將 `Dockerfile` 中的 `ARG PB_VERSION` 改回原先穩定運作的舊版本（例如 `0.39.10`）。
+     `cp -r pb_data_backup_v0.40.4 pb_data`
+     （若為 tar 備份則解壓縮：`tar -xzvf pb_data_backup_v0.40.4.tar.gz`）
+3. **還原版本號**：
+   - 將 `.env` 中的 `PB_VERSION` 改回原先穩定運作的舊版本（例如 `0.40.4`）。
 4. **重新建置舊版映像檔並啟動**：
    ```bash
    docker compose build --no-cache && docker compose up -d
