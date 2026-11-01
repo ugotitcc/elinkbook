@@ -13,7 +13,7 @@ services:
       - ${HOOKS_PATH:-./pb_hooks}:/pb/pb_hooks
       - ${MIGRATIONS_PATH:-./pb_migrations}:/pb/pb_migrations
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8090/api/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3

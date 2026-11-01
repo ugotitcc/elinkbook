@@ -23,10 +23,10 @@ RUN apk add --no-cache unzip ca-certificates wget && \
     unzip "${ZIP}" -d /pb && \
     rm "${ZIP}" checksums.txt
 
-EXPOSE 80
+EXPOSE 8090
 
 VOLUME /pb/pb_data
 VOLUME /pb/pb_hooks
 VOLUME /pb/pb_migrations
 
-ENTRYPOINT ["/pb/pocketbase", "serve", "--http=0.0.0.0:80"]
+ENTRYPOINT ["/pb/pocketbase", "serve", "--http=0.0.0.0:8090"]

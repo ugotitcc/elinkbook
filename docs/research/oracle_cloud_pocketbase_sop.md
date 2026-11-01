@@ -29,7 +29,7 @@
 |   ├── Traefik v3 (反向代理容器)                                         |
 |   │   ├── 監聽 Host :80 (自動 301 重定向至 HTTPS :443)                    |
 |   │   ├── 監聽 Host :443 (Let's Encrypt 自動申請與續約 ACME SSL 憑證)     |
-|   │   └── 內部路由轉發 -> pocketbase:80                                  |
+|   │   └── 內部路由轉發 -> pocketbase:8090                                 |
 |   │                                                                     |
 |   └── PocketBase 容器 (elinkBook 同步引擎)                              |
 |       ├── 僅暴露於 Docker 內部網路 (Port 80 不對公網開放，保障安全)      |
@@ -352,7 +352,7 @@ scp -i ~/.ssh/oci_elinkbook.key docker/Dockerfile   ubuntu@<您的_OCI_公網_IP
 - 依 CPU 自動選 **ARM64 (Ampere A1)** 或 **AMD64 (E2.1.Micro)** 版本。
 - 用 `checksums.txt` 驗證 SHA256，不符就讓建置失敗。
 
-容器內部監聽 **port 80**。下方 Traefik 路由也轉發到 80。
+容器內部監聽 **port 8090**。下方 Traefik 路由也轉發到 8090。
 
 ### 7.4 建立環境變數檔 `.env`
 
@@ -419,7 +419,7 @@ services:
       - "80"
     healthcheck:
       # 用 127.0.0.1 而非 localhost：Alpine 的 wget 可能先走 IPv6，而 PocketBase 只綁 IPv4
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/api/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8090/api/health"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -433,7 +433,7 @@ services:
       - "traefik.http.routers.pocketbase.tls=true"
       - "traefik.http.routers.pocketbase.tls.certresolver=myresolver"
       # 指定內部容器通訊埠號
-      - "traefik.http.services.pocketbase.loadbalancer.server.port=80"
+      - "traefik.http.services.pocketbase.loadbalancer.server.port=8090"
 
 networks:
   web:
@@ -469,7 +469,7 @@ docker logs elinkbook-pocketbase
 > Applied 1785715200_create_sync_collections.js
 > Applied 1785801600_add_created_updated_autodate_fields.js
 > Applied 1785801700_add_reading_positions_unique_index.js
-Server started at http://0.0.0.0:80
+Server started at http://0.0.0.0:8090
 ```
 
 ---

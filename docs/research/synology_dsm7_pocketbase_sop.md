@@ -69,7 +69,7 @@ Dockerfile 以 repo 為唯一來源，本 SOP 不內嵌全文。請把 [`docker/
 - 依 CPU 自動選 amd64、arm64 或 armv7。
 - 用 `checksums.txt` 驗證 SHA256，不符就讓建置失敗。
 
-容器內部監聽 **port 80**。下方 compose 把 NAS 的 8090 對應到容器的 80。
+容器內部監聽 **port 8090**。下方 compose 把 NAS 的 8090 對應到容器的 8090。
 
 #### 檔案 B: `docker-compose.yml`
 ```yaml
@@ -85,13 +85,13 @@ services:
     container_name: elinkbook-pocketbase
     restart: always
     ports:
-      - "8090:80"
+      - "8090:8090"
     volumes:
       - ./pb_data:/pb/pb_data
       - ./pb_migrations:/pb/pb_migrations
       - ./pb_hooks:/pb/pb_hooks
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/api/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8090/api/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -120,12 +120,12 @@ services:
 1. 在 Container Manager -> **映像檔 (Image)** 下載或匯入 Alpine 映像檔。
 2. 至 **容器 (Container)** 點擊 **新增**：
    - **容器名稱**：`elinkbook-pocketbase`
-   - **連接埠設定**：本機連接埠 `8090` ↔ 容器連接埠 `80` (TCP)。
+   - **連接埠設定**：本機連接埠 `8090` ↔ 容器連接埠 `8090` (TCP)。
    - **儲存空間設定 (Volume Binding)**：
      - `/docker/elinkbook-pocketbase/pb_data` ↔ `/pb/pb_data`
      - `/docker/elinkbook-pocketbase/pb_migrations` ↔ `/pb/pb_migrations`
      - `/docker/elinkbook-pocketbase/pb_hooks` ↔ `/pb/pb_hooks`
-   - **執行指令**：`/pb/pocketbase serve --http=0.0.0.0:80`
+   - **執行指令**：`/pb/pocketbase serve --http=0.0.0.0:8090`
 
 ---
 
