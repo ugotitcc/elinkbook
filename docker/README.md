@@ -6,7 +6,7 @@
 
 ```
 docker/
-├── Dockerfile                  # 容器建置檔 (Alpine 3.20 + 指定版本 PocketBase)
+├── Dockerfile                  # 容器建置檔 (Alpine + 指定版本 PocketBase，自動判斷 amd64／arm64／armv7 並驗證 SHA256)
 ├── docker-compose.yml          # Docker Compose 設定檔
 ├── .env                        # 環境變數實體檔 (變數控管)
 ├── .env.example                # 環境變數範例檔
@@ -42,7 +42,9 @@ docker compose logs -f
 
 | 變數名稱 | 預設值 | 說明 |
 |---|---|---|
-| `PB_VERSION` | `0.40.4` | PocketBase 版本 (必須 `>= 0.23` 以支援 Batch API) |
+| `PB_VERSION` | `0.41.1` | PocketBase 版本 (必須 `>= 0.23` 以支援 Batch API；**0.41.1（含）以上皆可**) |
+| `PB_BASE_URL` | `https://ganigeorgiev.com/meta/pocketbase/pocketbase/download` | PocketBase 下載來源。官方已由 GitHub 搬到此站；新站無法連線時可改回 `https://github.com/pocketbase/pocketbase/releases/download` |
+| `ALPINE_TAG` | `latest` | Alpine 基底映像標籤；需要可重現建置時改成固定版本 |
 | `PORT` | `8090` | 宿主機映射之對外 HTTP 埠號 |
 | `CONTAINER_NAME` | `elinkbook-pocketbase` | 容器名稱 |
 | `DATA_PATH` | `./pb_data` | 資料持久化儲存目錄 |

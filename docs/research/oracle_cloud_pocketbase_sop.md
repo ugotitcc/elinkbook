@@ -29,10 +29,10 @@
 |   ├── Traefik v3 (反向代理容器)                                         |
 |   │   ├── 監聽 Host :80 (自動 301 重定向至 HTTPS :443)                    |
 |   │   ├── 監聽 Host :443 (Let's Encrypt 自動申請與續約 ACME SSL 憑證)     |
-|   │   └── 內部路由轉發 -> pocketbase:8090                                |
+|   │   └── 內部路由轉發 -> pocketbase:80                                  |
 |   │                                                                     |
 |   └── PocketBase 容器 (elinkBook 同步引擎)                              |
-|       ├── 僅暴露於 Docker 內部網路 (Port 8090 不對公網開放，保障安全)    |
+|       ├── 僅暴露於 Docker 內部網路 (Port 80 不對公網開放，保障安全)      |
 |       ├── 掛載 pb_data (SQLite data.db 持久化資料庫)                     |
 |       ├── 掛載 pb_migrations (elinkBook 專屬 4 大 Collection 自動建表)   |
 |       └── 掛載 pb_hooks (每日凌晨 30 天軟刪除墓碑自動清理排程)           |
@@ -47,9 +47,9 @@ Oracle Cloud 提供業界最慷慨的永久免費額度（Always Free）：
 - **公網 IP**：提供 1 個免費保留固定公網 IP (Reserved Public IP)。
 
 ### 1.3 核心元件最低版本需求
-- **PocketBase**：必須 **≥ v0.23**（elinkBook checkpoint 同步引擎依賴 Batch API `/api/batch`）。本指南示範使用 **v0.40.4**（自架時亦可無痛替換為最新穩定版）。
+- **PocketBase**：必須 **≥ v0.23**（elinkBook checkpoint 同步引擎依賴 Batch API `/api/batch`）。本指南預設使用 **v0.41.1**，**v0.41.1（含）以上版本皆可使用**。
 - **Traefik**：v3.6 以上官方容器映像檔。較舊的 v3.1 搭配最新 Docker Engine（29 以上）可能無法連上 Docker socket。
-- **版號確認**：部署前先到 [PocketBase Releases](https://github.com/pocketbase/pocketbase/releases) 確認 `PB_VERSION` 對應的版本存在，否則 Dockerfile 下載會失敗。
+- **版號確認**：部署前先到 [PocketBase Releases](https://ganigeorgiev.com/pocketbase/pocketbase/releases) 確認 `PB_VERSION` 對應的版本存在，否則 Dockerfile 下載會失敗。PocketBase 官方已由 GitHub 搬到此站。
 - **作業系統**：Ubuntu 24.04 LTS 或 22.04 LTS Minimal。
 
 ---
@@ -294,7 +294,7 @@ chmod 600 traefik_data/acme.json
 ```text
 /opt/elinkbook-pocketbase/
 ├── docker-compose.yml                             # Traefik 與 PocketBase 容器編排檔
-├── Dockerfile                                     # 支援 ARM64/AMD64 多架構 PocketBase 映像檔定義
+├── Dockerfile                                     # 複製自 repo 的 docker/Dockerfile（支援 ARM64/AMD64）
 ├── .env                                           # 環境變數設定檔（網域與 Email）
 ├── traefik_data/
 │   └── acme.json                                  # Let's Encrypt SSL 憑證持久化儲存檔 (權限 600)
@@ -338,39 +338,21 @@ ls /opt/elinkbook-pocketbase/pb_migrations /opt/elinkbook-pocketbase/pb_hooks
 > - 每次執行最多清除 500 筆。
 > - `deleted_at` 是毫秒時間戳記（number），沒刪除時為 `0`。這與 App 端一致，不要改成文字欄位。
 
-### 7.3 撰寫多架構 Dockerfile
+### 7.3 部署 Dockerfile
 
-本 `Dockerfile` 內建自動架構偵測，不論您的 OCI VM 是 **ARM64 (Ampere A1)** 還是 **AMD64 (E2.1.Micro)**，皆能自動下載對應的官方 PocketBase 二進位檔：
+Dockerfile 以 repo 為唯一來源，本手冊不內嵌全文。在**你的電腦**（repo 根目錄）執行：
 
 ```bash
-cat << 'EOF' > Dockerfile
-FROM alpine:3.22
-
-ARG PB_VERSION=0.40.4
-
-RUN apk add --no-cache unzip ca-certificates wget
-
-# 依據硬體架構自動選擇下載 arm64 或 amd64 版本
-RUN ARCH=$(uname -m) && \
-    if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
-      PB_ARCH="linux_arm64"; \
-    elif [ "$ARCH" = "x86_64" ]; then \
-      PB_ARCH="linux_amd64"; \
-    else \
-      PB_ARCH="linux_amd64"; \
-    fi && \
-    echo "Downloading PocketBase v${PB_VERSION} for ${PB_ARCH}..." && \
-    wget https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_${PB_ARCH}.zip && \
-    unzip pocketbase_${PB_VERSION}_${PB_ARCH}.zip -d /pb && \
-    rm pocketbase_${PB_VERSION}_${PB_ARCH}.zip
-
-EXPOSE 8090
-
-VOLUME ["/pb/pb_data", "/pb/pb_migrations", "/pb/pb_hooks"]
-
-ENTRYPOINT ["/pb/pocketbase", "serve", "--http=0.0.0.0:8090"]
-EOF
+scp -i ~/.ssh/oci_elinkbook.key docker/Dockerfile   ubuntu@<您的_OCI_公網_IP>:/opt/elinkbook-pocketbase/
 ```
+
+這份 Dockerfile 會做四件事：
+- 基底映像用 `alpine:${ALPINE_TAG}`，預設 `latest`。
+- 從 `PB_BASE_URL` 下載 `PB_VERSION` 對應的 PocketBase（預設 `0.41.1`）。
+- 依 CPU 自動選 **ARM64 (Ampere A1)** 或 **AMD64 (E2.1.Micro)** 版本。
+- 用 `checksums.txt` 驗證 SHA256，不符就讓建置失敗。
+
+容器內部監聽 **port 80**。下方 Traefik 路由也轉發到 80。
 
 ### 7.4 建立環境變數檔 `.env`
 
@@ -423,6 +405,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        ALPINE_TAG: ${ALPINE_TAG:-latest}
+        PB_VERSION: ${PB_VERSION:-0.41.1}
+        PB_BASE_URL: ${PB_BASE_URL:-https://ganigeorgiev.com/meta/pocketbase/pocketbase/download}
     container_name: elinkbook-pocketbase
     restart: always
     volumes:
@@ -430,10 +416,10 @@ services:
       - ./pb_migrations:/pb/pb_migrations
       - ./pb_hooks:/pb/pb_hooks
     expose:
-      - "8090"
+      - "80"
     healthcheck:
       # 用 127.0.0.1 而非 localhost：Alpine 的 wget 可能先走 IPv6，而 PocketBase 只綁 IPv4
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8090/api/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/api/health"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -447,7 +433,7 @@ services:
       - "traefik.http.routers.pocketbase.tls=true"
       - "traefik.http.routers.pocketbase.tls.certresolver=myresolver"
       # 指定內部容器通訊埠號
-      - "traefik.http.services.pocketbase.loadbalancer.server.port=8090"
+      - "traefik.http.services.pocketbase.loadbalancer.server.port=80"
 
 networks:
   web:
@@ -483,7 +469,7 @@ docker logs elinkbook-pocketbase
 > Applied 1785715200_create_sync_collections.js
 > Applied 1785801600_add_created_updated_autodate_fields.js
 > Applied 1785801700_add_reading_positions_unique_index.js
-Server started at http://0.0.0.0:8090
+Server started at http://0.0.0.0:80
 ```
 
 ---
@@ -637,8 +623,8 @@ chmod +x /opt/elinkbook-pocketbase/backup.sh
    ```bash
    /opt/elinkbook-pocketbase/backup.sh
    ```
-2. **修改 Dockerfile 中的版本號**：
-   編輯 `/opt/elinkbook-pocketbase/Dockerfile`，將 `ARG PB_VERSION=0.40.4` 修改為新版本（例如 `0.41.0`）。
+2. **修改 `.env` 中的版本號**：
+   編輯 `/opt/elinkbook-pocketbase/.env`，加入或修改 `PB_VERSION=0.41.1`（0.41.1 含以上皆可）。不需要改 `Dockerfile`。
 3. **無快取重新建置並啟動**：
    ```bash
    cd /opt/elinkbook-pocketbase
@@ -661,7 +647,7 @@ chmod +x /opt/elinkbook-pocketbase/backup.sh
    rm -rf /opt/elinkbook-pocketbase/pb_data
    tar -xzf /opt/backups/pocketbase/pocketbase_backup_<TIMESTAMP>.tar.gz -C /opt/elinkbook-pocketbase/
    ```
-3. 將 `Dockerfile` 版本號改回原本舊版，執行 `docker compose up -d --build pocketbase`。
+3. 將 `.env` 的 `PB_VERSION` 改回原本舊版，執行 `docker compose up -d --build pocketbase`。
 
 ---
 
@@ -672,10 +658,10 @@ chmod +x /opt/elinkbook-pocketbase/backup.sh
 | **建立 ARM 實例時提示 `Out of host capacity`** | 該 Availability Domain 目前 ARM 資源被搶光 | 1. 更換同一 Region 的其他 Availability Domain 重試。<br>2. 改選「VM.Standard.E2.1.Micro」(AMD64 1 OCPU/1GB RAM) 即可秒開。<br>3. 升級至 PAYG 帳號享有高優先權。 |
 | **瀏覽器連線顯示 `ERR_CONNECTION_TIMED_OUT`** | 1. OCI VCN 安全清單未開 80/443<br>2. Ubuntu 系統內建 iptables 阻擋（較少見） | 1. 檢查 VCN Ingress Rules 是否有 `0.0.0.0/0` TCP 80 與 443。<br>2. 若 VCN 已放行仍逾時，再執行步驟 4.4 的 `iptables` 指令。 |
 | **Traefik 日誌出現 `client version ... is too old`（Docker API 版本）** | Traefik 版本太舊，與新版 Docker Engine 不相容 | 將 `docker-compose.yml` 的映像改為 `traefik:v3.6` 以上，再執行 `docker compose up -d`。 |
-| **瀏覽器顯示 `502 Bad Gateway`** | Traefik 無法連線至 PocketBase 8090 | 1. 檢查 PocketBase 容器是否異常退出：`docker logs elinkbook-pocketbase`。<br>2. 檢查 `docker-compose.yml` 中兩者是否都在 `web` 網路。 |
+| **瀏覽器顯示 `502 Bad Gateway`** | Traefik 無法連線至 PocketBase 80 | 1. 檢查 PocketBase 容器是否異常退出：`docker logs elinkbook-pocketbase`。<br>2. 檢查 `docker-compose.yml` 中兩者是否都在 `web` 網路。 |
 | **無法取得 HTTPS / SSL 憑證錯誤** | 1. DNS A 紀錄未生效或 IP 錯誤<br>2. Port 80 被防火牆擋住 (HTTP-01 失敗)<br>3. Cloudflare 開啟了橘色 Proxy | 1. 使用 `nslookup sync.yourdomain.com` 確認解析到的 IP 是否為 OCI 公網 IP。<br>2. 確認 Port 80 可由外網連入。<br>3. 若使用 Cloudflare，請切換為 **DNS Only (灰色雲朵)**。 |
 | **App 同步時提示 `Connection Refused` 或 `Cleartext HTTP not permitted`** | App 端設定之 URL 錯誤 | 1. App 內的伺服器網址務必填寫 **`https://`** 開頭。<br>2. 絕對**不要**在網址後面附加 `:8090`，外網統一由 Traefik 443 代理轉發。 |
-| **App 批次同步時報錯 `404 Not Found (/api/batch)`** | PocketBase 版本過舊 | PocketBase 必須 ≥ v0.23 才有 Batch API。請依本手冊安裝 v0.40.4 或以上版本。 |
+| **App 批次同步時報錯 `404 Not Found (/api/batch)`** | PocketBase 版本過舊 | PocketBase 必須 ≥ v0.23 才有 Batch API。請依本手冊安裝 v0.41.1 或以上版本。 |
 
 ---
 

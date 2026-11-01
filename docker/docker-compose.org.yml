@@ -6,7 +6,9 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        PB_VERSION: ${PB_VERSION:-0.40.4}
+        ALPINE_TAG: ${ALPINE_TAG:-latest}
+        PB_VERSION: ${PB_VERSION:-0.41.1}
+        PB_BASE_URL: ${PB_BASE_URL:-https://ganigeorgiev.com/meta/pocketbase/pocketbase/download}
     container_name: ${CONTAINER_NAME:-elinkbook-pocketbase}
     restart: unless-stopped
     ports:
