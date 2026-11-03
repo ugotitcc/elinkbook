@@ -89,3 +89,18 @@ class AudioSessionFocusSource implements TtsAudioFocusSource {
     _controller.close();
   }
 }
+
+/// 不會送出任何事件的 [TtsAudioFocusSource]（epic-66 Issue 1）。
+///
+/// 供不需要音訊焦點的平台使用：Windows 不呼叫 `AudioSession.instance`／
+/// `configure`（`audio_session` 依賴平台 channel），因此也沒有真實事件源。
+/// 事件流恆為空串流，[dispose] 為無效操作（沒有任何訂閱可取消）。
+class NoopTtsAudioFocusSource implements TtsAudioFocusSource {
+  const NoopTtsAudioFocusSource();
+
+  @override
+  Stream<TtsAudioFocusEvent> get events => const Stream<TtsAudioFocusEvent>.empty();
+
+  @override
+  void dispose() {}
+}
