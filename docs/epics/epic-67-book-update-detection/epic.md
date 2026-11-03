@@ -46,6 +46,6 @@
 
 ## 待辦
 
-- 依 SDD 流程進入 Architecting（`spec.md`，須詳述前台與背景佇列各通道的狀態機與介面契約）與 Issue 拆解（`issues.md`）。
+- Architecting（`spec.md`）與 Issue 拆解（`issues.md`，6 個 Issue）已完成；下一步為各 Issue 的 `plans/plan-issue-N.md` 與實作。建議先做 Issue 5（Foliate 降級，修掉既有「定位失敗書打不開」缺陷）與 Issue 1（核心）。
 - 新增的使用者可見字串（書籍動作選單、更新確認對話框、批次清單、註記偏移 SnackBar、待確認更新狀態、強制重新連結確認）須同步登錄在四份 ARB 檔：`app_en.arb`、`app_zh.arb`、`app_zh_CN.arb`、`app_zh_TW.arb`。
 - 後續工作：WiFi 傳輸的更新版處理。
