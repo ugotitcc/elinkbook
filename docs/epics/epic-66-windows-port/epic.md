@@ -33,8 +33,8 @@
 3. **操作**：保留 3×3 熱區（滑鼠當觸控），加鍵盤快捷鍵（方向鍵、PageUp／PageDown、Ctrl+F）與 F11 全螢幕（新增 `window_manager`，只在 Windows 啟用）。桌面專用版面（側欄、面板）不在本 Epic。
 4. **最低版本**：Windows 10 1809。WebView2 沒裝時顯示說明與下載連結，不打包執行環境。
 5. **匯入**：複製書檔到 `%APPDATA%` 下的 App 資料夾，與 Android 行為一致。
-6. **送書給 WebView**：預設用本機 `shelf` 伺服器（`127.0.0.1`、隨機埠、一次性權杖、只服務目前開著的書）。驗證 Issue 同時實測 WebView2 有沒有請求攔截或虛擬網域對應；有就用，沒有就用伺服器。
-7. **Metadata 解析**：目標是 Android 與 Windows 統一改用 foliate-js 的背景 WebView。前提是逐本對比 Readium 與 foliate-js 的結果（書名、作者、`identifier`、版面、封面）一致；`book_content_fingerprint.dart` 優先使用 `identifier`，不一致會讓同步把舊書當新書。不一致時 Android 保留 Readium，Windows 單獨用 foliate-js。
+6. **送書給 WebView**：預設用本機 `shelf` 伺服器（`127.0.0.1`、隨機埠、一次性權杖、只服務目前開著的書）。驗證 Issue 同時實測 WebView2 有沒有請求攔截或虛擬網域對應；有就用，沒有就用伺服器。**【2026-11-03 驗證結果】WebView2 有請求攔截，已用於實際開書，不需要 `shelf` 伺服器**（見決策 15 與 `spike-report.md` 結論 1）。
+7. **Metadata 解析**：目標是 Android 與 Windows 統一改用 foliate-js 的背景 WebView。前提是逐本對比 Readium 與 foliate-js 的結果（書名、作者、`identifier`、版面、封面）一致；`book_content_fingerprint.dart` 優先使用 `identifier`，不一致會讓同步把舊書當新書。不一致時 Android 保留 Readium，Windows 單獨用 foliate-js。**【2026-11-03 驗證結果】** Windows 上 `HeadlessInAppWebView` 載入 foliate-js 能讀出書名、`identifier`、封面（作者欄位因 `sample.epub` 本身無 `dc:creator`，尚未實證）；欄位型別見 `spike-report.md` 結論 2。**Readium 與 foliate-js 的逐本對比尚未做**，留給後續 Issue，本決策的「是否統一」仍待該對比結果。
 8. **WebView 套件**：先用上游 `flutter_inappwebview` 6.1.5。只有驗證證明不夠用，才考慮 fork。
 9. **測試**：`flutter test` 照舊；`integration_test` 加 `-d windows` 目標，每種格式一支冒煙測試（開書、翻頁、劃線）。不建 CI。
 10. **發佈**：先自用，打包成免安裝 zip。MSIX 與程式碼簽章等有對外發佈需求再議。
@@ -47,7 +47,7 @@
 
 審查結論：Ready with fixes。6 項重要意見已對照程式碼查證，全部成立。決策如下。
 
-15. **Issue 1 攔截優先，伺服器備案**（2026-11-03 修訂）：計畫階段讀 `flutter_inappwebview_windows` 0.6.0 的 C++ 原始碼（`in_app_webview.cpp:827-899`），WebView2 的 `WebResourceRequested` 已實作 `shouldInterceptRequest`。所以 Windows 沿用 Android 的攔截模式，在 Dart 端提供 foliate 資源與書檔，網址不變，`main.js` 不改。Issue 1 在 Windows 實測攔截；只有失敗才加做最小 `shelf` 伺服器原型。原版本是「Issue 1 一定做 `shelf` 原型」，已被取代。這同樣解除「過關條件 1 要開書、送書卻排在後面」的循環依賴。
+15. **Issue 1 攔截優先，伺服器備案**（2026-11-03 修訂）：計畫階段讀 `flutter_inappwebview_windows` 0.6.0 的 C++ 原始碼（`in_app_webview.cpp:827-899`），WebView2 的 `WebResourceRequested` 已實作 `shouldInterceptRequest`。所以 Windows 沿用 Android 的攔截模式，在 Dart 端提供 foliate 資源與書檔，網址不變，`main.js` 不改。Issue 1 在 Windows 實測攔截；只有失敗才加做最小 `shelf` 伺服器原型。原版本是「Issue 1 一定做 `shelf` 原型」，已被取代。這同樣解除「過關條件 1 要開書、送書卻排在後面」的循環依賴。**【2026-11-03 驗證結果】攔截實測成功**：3 個 fixture 與 224 MB EPUB 皆經攔截供應並成功開啟，`shelf` 備案不啟動。**已知代價：** 現行 `readWindowsBookBytes` 整檔讀進記憶體，224 MB 書開書瞬間 App 與 WebView2 合計尖峰約 3.8 GB（release 版，持續約 3 秒後回落）。判定為可接受，改善（分段服務）留給後續 Issue；數據與限制見 `spike-report.md` 結論 1。
 16. **啟動鏈平台防護**：`main.dart:253` 之後無條件呼叫 `AudioSession` 與 `AudioService.init()`，兩者在 Windows 沒有平台實作，啟動會直接丟 `MissingPluginException`。Windows 要跳過這兩段。跳過後 `TtsAudioHandlerHolder` 的狀態已定案（2026-11-03）：在 `TtsAudioHandlerStatus` 新增「此平台不需要」狀態，Windows 使用它。不沿用 `.unavailable()`——它代表「初始化中」，原為測試用，永久使用語意不符。（計畫審查查證：`lib/` 目前沒有任何地方依 `status` 分支，「一直轉圈」沒有證據；新增狀態是為了語意清楚，不是為了修轉圈。）新狀態的建構子與 UI 行為寫進 `plans/plan-issue-1.md`。
 17. **foliate-js 資源跨平台**：資源現在只放在 `app/android/app/src/main/assets/foliate/`，`pubspec.yaml` 沒宣告，Windows 建置不會打包。需要改成 Flutter 通用資產或由 CMake 複製。放置方式由 Issue 1 實測後決定，不在此預設。
 18. **消除寫死網域**：`https://appassets.androidplatform.net` 出現在 `main.js:1177`、`foliate_reader_view.dart:666`、`foliate_content_indexer.dart:217`、`foliate_native_bridge.dart:55`、`:60`（字型網址）。Windows 改用伺服器後，這五處都要改成由平台決定的 base URL。Android 的值不能變。
