@@ -19,6 +19,15 @@ import 'md_epub_synthesizer.dart';
 import 'txt_cover_generator.dart';
 import 'txt_epub_synthesizer.dart';
 
+/// 跨平台書籍詮釋資料解析器函式簽名（epic-66 Issue 2 Task 5）。
+///
+/// 依給定檔案 URI／路徑與格式（如 `'epub'`、`'pdf'`）非同步取得詮釋資料 map，
+/// 格式相容於 Android `kBookMetadataChannel` 的 `extractMetadata` 契約。
+typedef BookMetadataExtractor = Future<Map<String, Object?>?> Function(
+  String uri,
+  String format,
+);
+
 /// 依 URI/路徑字串最後一段（已對 percent-encoding 解碼）判斷書籍格式。
 /// 只依副檔名判斷，僅適用於本機檔案匯入（file_picker/SAF 對本機檔案提供者
 /// 通常會在 URI 中保留可辨識的原始檔名+副檔名）；不適用於雲端服務自訂的
@@ -65,11 +74,13 @@ class BookImportServiceImpl implements BookImportService {
     Directory? importedBooksDirectory,
     AppThemePreferences? themePreferences,
     FullTextSearchSettingsRepository? fullTextSearchSettingsRepository,
+    BookMetadataExtractor? metadataExtractor,
   })  : _repository = repository,
         _coversDirectory = coversDirectory,
         _importedBooksDirectory = importedBooksDirectory,
         _themePreferences = themePreferences ?? AppThemePreferences(),
-        _fullTextSearchSettingsRepository = fullTextSearchSettingsRepository;
+        _fullTextSearchSettingsRepository = fullTextSearchSettingsRepository,
+        _metadataExtractor = metadataExtractor;
 
   // 使用 kBookMetadataChannel（library_repository.dart）作為共用通道名稱。
 
@@ -77,6 +88,7 @@ class BookImportServiceImpl implements BookImportService {
   final Directory? _coversDirectory;
   final Directory? _importedBooksDirectory;
   final AppThemePreferences _themePreferences;
+  final BookMetadataExtractor? _metadataExtractor;
 
   /// epic-10-search Issue 2（spec.md §7）：新書匯入成功後連動全文檢索
   /// 索引狀態（CBZ 標記 unsupported；其餘格式依開關狀態決定是否插入
@@ -296,11 +308,12 @@ class BookImportServiceImpl implements BookImportService {
   /// 退回整檔 SHA-256。
   Future<String?> _readEpubIdentifier(String uri) async {
     try {
-      final metadata =
-          await kBookMetadataChannel.invokeMapMethod<String, Object?>(
-        'extractMetadata',
-        {'uri': uri, 'format': BookFileFormat.epub.name},
-      );
+      final metadata = _metadataExtractor != null
+          ? await _metadataExtractor(uri, BookFileFormat.epub.name)
+          : await kBookMetadataChannel.invokeMapMethod<String, Object?>(
+              'extractMetadata',
+              {'uri': uri, 'format': BookFileFormat.epub.name},
+            );
       return metadata?['identifier'] as String?;
     } on PlatformException {
       return null;
@@ -458,10 +471,12 @@ class BookImportServiceImpl implements BookImportService {
       coverPath = await _landCover(coverBytes, id);
     } else {
       try {
-        final metadata = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
-          'extractMetadata',
-          {'uri': resolvedUri, 'format': format.name},
-        );
+        final metadata = _metadataExtractor != null
+            ? await _metadataExtractor(resolvedUri, format.name)
+            : await kBookMetadataChannel.invokeMapMethod<String, Object?>(
+                'extractMetadata',
+                {'uri': resolvedUri, 'format': format.name},
+              );
         final extractedTitle = metadata?['title'] as String?;
         if (extractedTitle != null && extractedTitle.isNotEmpty) {
           title = extractedTitle;

@@ -3,6 +3,7 @@ import 'package:pocketbase/pocketbase.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../library/book_content_fingerprint.dart';
+import '../library/book_import_service_impl.dart' show BookMetadataExtractor;
 import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
 import 'sync_account_repository.dart';
@@ -52,6 +53,7 @@ class SyncEngine {
   /// 會正確回傳 `null`（見 `reading_position_conflict_dialog.dart` 既有
   /// 測試），不會讓 `runCheckpoint()` 真的卡死。
   final ReadingPositionConflictResolver? _onReadingPositionConflict;
+  final BookMetadataExtractor? _metadataExtractor;
 
   SyncEngine({
     required Database db,
@@ -59,11 +61,13 @@ class SyncEngine {
     required SyncMetadataRepository metadataRepository,
     PocketBaseClientFactory? clientFactory,
     ReadingPositionConflictResolver? onReadingPositionConflict,
+    BookMetadataExtractor? metadataExtractor,
   })  : _db = db,
         _accountRepository = accountRepository,
         _metadataRepository = metadataRepository,
         _clientFactory = clientFactory ?? PocketBase.new,
-        _onReadingPositionConflict = onReadingPositionConflict;
+        _onReadingPositionConflict = onReadingPositionConflict,
+        _metadataExtractor = metadataExtractor;
 
   /// epic-8-sync Issue 6（spec.md「同步引擎」併發防護）：SyncEngine 內建
   /// 單一執行鎖，避免三種 checkpoint 觸發來源（App 背景化／書籍切換／5
@@ -322,14 +326,19 @@ class SyncEngine {
     String? epubIdentifier;
     if (format == BookFileFormat.epub) {
       try {
-        final metadata = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
-          'extractMetadata',
-          {'uri': filePath, 'format': format.name},
-        );
+        final metadata = _metadataExtractor != null
+            ? await _metadataExtractor(filePath, format.name)
+            : await kBookMetadataChannel.invokeMapMethod<String, Object?>(
+                'extractMetadata',
+                {'uri': filePath, 'format': format.name},
+              );
         epubIdentifier = metadata?['identifier'] as String?;
       } on PlatformException {
         // 取得 OPF identifier 失敗：忽略，退回 SHA-256（比照匯入流程既有慣例，
         // 見 book_import_service_impl.dart）。
+      } on MissingPluginException {
+        // epic-66 Issue 1 / Issue 2：Windows 沒有原生 channel 或解析器丟
+        // MissingPluginException，退回整檔 SHA-256。
       }
     }
     try {
