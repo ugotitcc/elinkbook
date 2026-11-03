@@ -55,6 +55,9 @@
 6. **候選書排序與去重**（Task 3）：識別碼命中者排最前；同一本書同時符合第一、二層不得重複出現。
 7. **效能**（Task 3、7）：大批匯入每個檔案都要多一次中繼資料讀取。已加兩道前置短路：書庫內沒有同格式的書、或沒有任何身份命中，都不計算整檔雜湊。實測（Task 7）若資料夾匯入變慢明顯，回報而非自行優化。
 8. **作者為空不進第二層**：空字串、純空白、`null` 皆視為空（Task 1 測試）。
+9. **所有寫入正式檔名的路徑都要有暫存後綴**（Task 2、5；審查 C-1）：`_copyToLocalStorage`、`_persistPermissionOrLandCopy` 與四個 `_land*` 輔助。實作完用 grep 逐一確認，並以「無法持久化的 `content://` ＋損毀新檔」回歸測試把關。
+10. **`displayName` 全程傳遞**（Task 3、6；審查 I-1、I-2）：偵測、暫存複本匯入、並存三處都必須帶入，否則不透明 URI 會繞過偵測、書名會變成時間戳記。
+11. **偵測階段不做無效的原生呼叫**（Task 3；審查 I-3）：PDF 不呼叫 `extractMetadata`。
 
 ---
 
@@ -62,7 +65,7 @@
 
 **Files:**
 - Create: `app/lib/library/book_update_models.dart`
-- Modify: `app/lib/library/models/book.dart`（`copyWith` 新增 `clearCoverPath`／`clearAuthor`）
+- Modify: `app/lib/library/models/book.dart`（`copyWith` 新增 `clearCoverPath`／`clearAuthor`／`clearIsFixedLayout`，審查 M-1）
 - Create: `app/test/library/book_update_models_test.dart`
 - Modify: `app/test/library/models/` 下既有 `book_test.dart`（若存在則補案例；不存在則併入上面新檔）
 
@@ -110,10 +113,10 @@ String? normalizeBookKey(String? raw);
 
 - [ ] **Step 1：寫失敗測試**（`book_update_models_test.dart`）
   - `normalizeBookKey`：`'  Hello '`→`'hello'`；`'ＡＢＣ１２３'`→`'abc123'`；`'紅　樓夢'`（全形空白）→`'紅 樓夢'`；`''`、`'   '`、`null`→`null`；中文標點不被改動（`'，'` 維持）。
-  - `Book.copyWith(clearCoverPath: true)` 得到 `coverPath == null` 且其他欄位不變；`copyWith(clearAuthor: true)` 同理；兩旗標與同名值參數同時給時以清除旗標優先（`copyWith(coverPath: 'x', clearCoverPath: true).coverPath == null`）；不傳旗標時行為與現況相同（既有 `book_test` 全綠）。
+  - `Book.copyWith(clearCoverPath: true)` 得到 `coverPath == null` 且其他欄位不變；`copyWith(clearAuthor: true)`、`copyWith(clearIsFixedLayout: true)` 同理（舊書 `isFixedLayout == true`、新版為 null 時須能清成 null）；清除旗標與同名值參數同時給時以清除旗標優先（`copyWith(coverPath: 'x', clearCoverPath: true).coverPath == null`）；不傳旗標時行為與現況相同（既有 `book_test` 全綠）。
   - `BookUpdateCandidate.copyWith(stagedPath: ...)` 只改 `stagedPath`。
 - [ ] **Step 2：確認失敗** `flutter test --no-pub test/library/book_update_models_test.dart`
-- [ ] **Step 3：實作** 新檔與 `copyWith` 旗標（`copyWith` 只加兩個具名參數與兩行判斷，不動其他欄位）。
+- [ ] **Step 3：實作** 新檔與 `copyWith` 旗標（`copyWith` 只加三個具名參數與三行判斷，不動其他欄位）。
 - [ ] **Step 4：確認通過**，並跑 `flutter test --no-pub test/library/models`（若目錄存在）確認 `Book` 既有測試不回歸。
 - [ ] **Step 5：`flutter analyze`**；提交 `feat(library): 更新版偵測與取代的型別與正規化函式（epic-67 Issue 1 Task 1）`。
 
@@ -151,13 +154,14 @@ Future<_BookParts?> _prepareBookParts({
   required String fallbackTitle,
   String landSuffix = '',        // '' ＝ 第一次匯入的正式檔名；'.staging' ＝ 取代用暫存名
   bool strict = false,           // true：解析失敗拋 _NewFileParseException；false：維持現行降級
+  bool computeFingerprint = true, // false：略過整檔雜湊（取代沿用舊指紋，審查 M-4）；回傳的 contentFingerprint 為 null
 });
 ```
 
-`_landCover`／`_landCbzArchive`／`_landTxtEpub`／`_landMdEpub` 各增加選填 `{String suffix = ''}`，檔名為 `'$id.<ext>$suffix'`。
+**暫存後綴必須涵蓋所有會寫入正式檔名的落地輔助（審查 C-1）：** `_landCover`／`_landCbzArchive`／`_landTxtEpub`／`_landMdEpub`、**以及 `_copyToLocalStorage` 與 `_persistPermissionOrLandCopy`**，各增加選填 `{String landSuffix = ''}`（`_landCover` 等沿用 `suffix` 命名亦可，但全部統一為同一個參數名 `landSuffix`），檔名為 `'$id.<ext>$landSuffix'`。`_copyToLocalStorage` 現行寫死 `p.join(importedDir.path, '$id.${format.name}')`，若漏改，無法持久化授權的 `content://` 來源在取代時會在解析中繼資料**之前**就覆寫舊檔，擊穿原子性。實作後以 `grep -n "importedDir.path\|dir.path, '\$" app/lib/library/book_import_service_impl.dart` 確認所有寫入 `imported_books/`、`covers/` 的位置都經過 `landSuffix`，沒有遺漏。
 
 - [ ] **Step 1：先跑護欄並記錄基線** `flutter test --no-pub test/library/book_import_service_test.dart test/library/book_import_service_metadata_extractor_test.dart test/library/book_import_service_missing_channel_test.dart`，全綠後才開始改。
-- [ ] **Step 2：重構** 抽出 `_prepareBookParts`，`_importSingleFile` 改呼叫它（`landSuffix: ''`、`strict: false`）。`return null` 的分支（空 TXT、DRM、無頁面 CBZ、空 MD）在非嚴格模式維持回傳 `null`；嚴格模式改拋 `_NewFileParseException`。**不得調整任何既有分支的判斷順序與降級行為。**
+- [ ] **Step 2：重構** 抽出 `_prepareBookParts`，`_importSingleFile` 改呼叫它（`landSuffix: ''`、`strict: false`、`computeFingerprint: true`）；`_copyToLocalStorage`／`_persistPermissionOrLandCopy` 加上 `landSuffix`（預設空字串，`importFiles`／`relinkBook` 既有呼叫端不傳，行為不變）。`return null` 的分支（空 TXT、DRM、無頁面 CBZ、空 MD）在非嚴格模式維持回傳 `null`；嚴格模式改拋 `_NewFileParseException`。**不得調整任何既有分支的判斷順序與降級行為。**
 - [ ] **Step 3：確認三份既有測試仍全綠**（與 Step 1 相同的指令）。
 - [ ] **Step 4：`flutter analyze`**；提交 `refactor(library): 抽出匯入的逐格式處理為 _prepareBookParts，行為不變（epic-67 Issue 1 Task 2）`。
 
@@ -177,20 +181,23 @@ Future<_BookParts?> _prepareBookParts({
 Future<BookDetectionResult> detectBookUpdate(String uri, {String? displayName});
 ```
 
+公開介面不增加快取參數（審查 M-2）。實作拆成私有 `_detect(uri, displayName, List<Book> existingBooks)`，公開的 `detectBookUpdate` 自己讀一次 `listBooks()` 後轉呼叫；Task 6 的批次迴圈則在迴圈前讀一次、迴圈內每匯入一本新書就把它加進同一份清單（讓同批次內「B 是 A 的更新版」仍能被偵測），避免 N 個檔案做 N 次全庫查詢。
+
 **演算法（實作須依此順序）：**
 
 1. `format = _detectImportFormat(uri, displayName)`；`null` → `DetectedUnsupported`。
 2. `sameFormat = listBooks().where(format 相同)`；為空 → `DetectedNewBook`（前置短路，不讀新檔）。
 3. 取新檔身份 `_peekIdentity(uri, format, displayName)` → `(title, author, epubIdentifier)`：
-   - EPUB／PDF：`extractMetadata`（沿用 `_metadataExtractor` 注入點與 `MissingPluginException` 降級）；EPUB 另取 `identifier`。
+   - EPUB：`extractMetadata`（沿用 `_metadataExtractor` 注入點與 `MissingPluginException` 降級），取 `title`／`author`／`identifier`。
    - AZW3：`extractKf8Metadata`，任何例外 → 身份空白。
    - MD：讀檔（`content://` 用 `readContentUriBytes`）→ `parseMdFrontmatter` 取 `title`／`author`；取不到書名退回 `titleFromFileName`。
-   - TXT、CBZ：`(titleFromFileName, null, null)`。
+   - **PDF、TXT、CBZ：`(titleFromFileName(displayName ?? uri), null, null)`，不發任何原生呼叫**（審查 I-3，已查證 Android `BookMetadataChannel.kt` 與 Windows `windows_book_metadata.dart` 的 PDF 都固定回傳 `title: null`、`author: null`，只有封面位元組；偵測階段呼叫等於白白渲染第一頁並壓成 PNG，且結果注定進不了任何一層）。
    - 解析失敗 → 視為身份空白（回 `DetectedNewBook`），**偵測階段永不拋例外**。
 4. 候選：
    - 第一層（僅 EPUB）：`epubIdentifier?.trim()` 非空，且 `book.contentFingerprint == identifier`。
    - 第二層：`normalizeBookKey(title)`、`normalizeBookKey(author)` 皆非 null，且與 `book.title`／`book.author` 正規化後完全相同。
    - 兩層皆命中同一本只出現一次；第一層命中者排最前，其後依 `listBooks()` 順序。無候選 → `DetectedNewBook`。
+   - **信心等級（審查 M-3）**：`confidence = firstLayerMatches.isNotEmpty ? UpdateConfidence.high : UpdateConfidence.suspected`——只要有任何一本是識別碼命中就為高信心，其餘候選只是附帶選項。
 5. 重複 vs 更新版（D1）：算新檔 `newHash = computeBookContentFingerprint(uri, format)`（不傳 identifier，強制整檔 SHA-256；失敗 → 視為無法比對，回 `DetectedUpdate`）。對每個候選求「舊檔指紋」：
    - EPUB／PDF／AZW3：`computeBookContentFingerprint(book.filePath, format)`；拋例外 → 該書記入 `unreadableCandidateBookIds`，且不參與重複比對。
    - TXT／MD／CBZ：用 `book.contentFingerprint`。
@@ -201,7 +208,9 @@ Future<BookDetectionResult> detectBookUpdate(String uri, {String? displayName});
   - `格式先決`：PDF 新檔、書庫只有同書名 EPUB → `DetectedNewBook`；TXT 新檔、書庫只有同名 MD → `DetectedNewBook`（TXT 與 MD 不互通）。
   - `作者為空`：新檔作者 `null`／`''`／`'  '` 與書庫同書名 → `DetectedNewBook`；書庫書作者為空亦同。
   - `正規化`：`'ＨＥＬＬＯ 世界'`／`' hello 世界 '` 與書庫 `'Hello 世界'` 視為相同。
-  - `多候選排序`：兩本符合（一本識別碼命中、一本僅書名作者）→ 識別碼命中者在 `candidateBooks.first`；同一本兩層都命中只出現一次。
+  - `多候選排序`：兩本符合（一本識別碼命中、一本僅書名作者）→ 識別碼命中者在 `candidateBooks.first`，且 `confidence == high`；同一本兩層都命中只出現一次；只有書名作者命中時 `confidence == suspected`。
+  - `PDF 不發原生呼叫`：PDF 新檔偵測時 `extractMetadata` 一次都沒被呼叫，結果為 `DetectedNewBook`（審查 I-3）。
+  - `批次不重複查庫`：以計數的假 repository 驗證，`importFiles` 處理 N 個檔案時 `listBooks` 呼叫次數不隨 N 增加（Task 6 一併驗證）。
   - `舊檔讀不到`：既有書 `filePath` 指向不存在的檔 → `DetectedUpdate`，且 `unreadableCandidateBookIds` 含該書 id；其他可讀候選不在集合內。
   - `TXT／MD／CBZ 比對指紋`：MD 新檔 SHA == 既有 MD 的 `contentFingerprint` → `DetectedDuplicate`；不同 → `DetectedUpdate`。
   - `前置短路`：書庫無同格式書時 `computeSha256`、`extractMetadata` 一次都沒被呼叫（以 handler 計數驗證）。
@@ -267,12 +276,13 @@ Future<BookReplaceResult> replaceBook(
 4. **準備階段（只寫暫存名稱 `.staging`，不碰正式檔名與資料庫）**：
    - EPUB／PDF／AZW3：
      - 來源是 `candidate.stagedPath`（本機暫存檔）：最終 `filePath` 一律為私有複本 `imported_books/<id>.<ext>`，先把暫存檔複製到 `imported_books/<id>.<ext>.staging`。
-     - 來源是 `content://`：沿用 `_persistPermissionOrLandCopy` 的規則（可持久化且 URI 含副檔名 → 保持 URI、無需換名；否則複製到 `<id>.<ext>.staging`，最終落地為 `<id>.<ext>`）。
+     - 來源是 `content://`：呼叫 `_persistPermissionOrLandCopy(..., landSuffix: '.staging')`（審查 C-1：可持久化且 URI 含副檔名 → 保持 URI、無需換名；否則複製到 `<id>.<ext>.staging`，最終落地為 `<id>.<ext>`）。**不得呼叫不帶後綴的版本**，否則會在解析前覆寫舊檔。
      - 來源是本機路徑：保持路徑，無需換名。
-   - 呼叫 `_prepareBookParts(landSuffix: '.staging', strict: true)`（D3）；TXT／MD／CBZ 的合成檔、封面皆寫成 `<id>.<ext>.staging`／`<id>.png.staging`。
+   - 所有實際寫出的暫存檔路徑都登記到清單，供失敗時統一刪除與換名階段使用。
+   - 呼叫 `_prepareBookParts(landSuffix: '.staging', strict: true, computeFingerprint: false)`（D3；取代沿用舊指紋，不重算整檔雜湊，審查 M-4）；TXT／MD／CBZ 的合成檔、封面皆寫成 `<id>.<ext>.staging`／`<id>.png.staging`。
    - 任何一步失敗：刪除本次所有暫存名稱檔 → 回傳 `newFileParseFailed`（解析類）或 `writeFailed`（複製／寫檔類）；舊書不動。
 5. **換名階段**：對每個暫存檔做 `File.rename` 覆蓋為正式檔名（先換書檔、後換封面）。新版沒有封面（`parts.coverPath == null`）→ 刪除舊封面檔。換名失敗 → 清掉剩餘暫存檔、回傳 `writeFailed`（已換成功者無法還原，屬 Review Focus 2 殘餘風險）。
-6. **資料庫階段**：以 `book.copyWith(...)` 組新記錄——`title`、`author`（新檔無作者用 `clearAuthor`）、`filePath`、`coverPath`（無封面用 `clearCoverPath`）、`isFixedLayout` 取自新檔；**`id`、`contentFingerprint`、`progress`、`epubLocator`、`pdfPageIndex`、`groupName`、`createTime`、`lastReadTime`、同步相關欄位一律沿用**；`sourceRefs` 非 null 欄位覆寫。`updateBook` 失敗 → `writeFailed`。
+6. **資料庫階段**：以 `book.copyWith(...)` 組新記錄——`title`、`author`（新檔無作者用 `clearAuthor`）、`filePath`、`coverPath`（無封面用 `clearCoverPath`）、`isFixedLayout` 取自新檔（新檔為 null 用 `clearIsFixedLayout`，不得殘留舊值，審查 M-1）；**`id`、`contentFingerprint`、`progress`、`epubLocator`、`pdfPageIndex`、`groupName`、`createTime`、`lastReadTime`、同步相關欄位一律沿用**；`sourceRefs` 非 null 欄位覆寫。`updateBook` 失敗 → `writeFailed`。
 7. **收尾（失敗一律吞掉，不影響成功結果）**：舊私有複本——僅當「舊 `filePath` ≠ 新 `filePath`，且舊路徑位於 `imported_books/` 目錄內」才刪除（Review Focus 3）；`clearBookIndex(bookId)` → `handleBookAvailable(updatedBook)`；若有 `candidate` 則 `discardUpdateCandidate`。
 8. 回傳 `BookReplaceSuccess(updatedBook)`。
 
@@ -290,6 +300,9 @@ Future<BookReplaceResult> replaceBook(
   - `格式不符`：PDF 取代 EPUB → `formatMismatch`，舊書、舊檔完全不動。
   - `bookNotFound`：不存在的 id → `bookNotFound`。
   - `原子性（注入失敗）`：分別在 ①`copyContentUriToFile` 拋例外、②TXT 內容為空（合成失敗）、③`extractMetadata` 拋 `PlatformException`、④`ThrowOnUpdateRepository.updateBook` 拋例外 四個階段，驗證：回傳對應失敗原因；`imported_books/`、`covers/` 內**沒有任何 `.staging` 檔**；舊檔位元組與取代前完全相同；舊封面仍在；資料庫記錄與取代前相同（④ 的資料庫本身未被改動）。
+  - `無法持久化的 content:// 不提前覆寫（審查 C-1 回歸）`：舊書為私有複本 `imported_books/<id>.epub`；`takePersistableUriPermission` 拋 `PlatformException`、新來源為 `content://` 且新檔內容損毀（`extractMetadata` 拋 `PlatformException`）→ 回 `newFileParseFailed`，且舊檔位元組與取代前**逐位元相同**、目錄內無任何 `.staging` 檔。另一案例：新檔正常 → 取代成功後正式檔名為新內容。
+  - `isFixedLayout 不殘留`：舊書 `isFixedLayout == true`、新檔 `extractMetadata` 未回傳該鍵（null）→ 取代後 `isFixedLayout == null`。
+  - `不重算整檔雜湊`：取代過程 `computeSha256` 一次都沒被呼叫，`contentFingerprint` 與取代前相同（審查 M-4）。
   - `合成格式不提前覆蓋`：TXT 取代在「換名前」讀取正式檔名（以 hook 或在準備階段後檢查），內容仍是舊版。
   - `D3 嚴格模式`：`extractMetadata` 拋 `PlatformException` 時回 `newFileParseFailed`（不是降級成檔名）；拋 `MissingPluginException` 時降級成功（Windows 路徑）。
   - `sourceRefs`：帶 `cloudFileId`／`remoteServerId`／`remoteBookId`／`remoteDownloadUrl` 時對應欄位被寫入；不帶時沿用舊值。
@@ -326,13 +339,20 @@ Future<Book?> importCandidateAsNewBook(
 });
 ```
 
-**`importFiles`／`importFolder` 的改動：** 在既有「來源 URI 重複 → 跳過」判斷**之後**、`_importSingleFile` **之前**，對每個檔案呼叫 `detectBookUpdate`：
+**`importFiles`／`importFolder` 的改動：** 迴圈開始前讀一次 `listBooks()`（審查 M-2），在既有「來源 URI 重複 → 跳過」判斷**之後**、`_importSingleFile` **之前**，對每個檔案呼叫私有 `_detect`。**`importFiles` 必須傳入同索引的 `displayName`**（審查 I-2）：
+
+```dart
+final displayName = (displayNames != null && i < displayNames.length) ? displayNames[i] : null;
+final detection = await _detect(uri, displayName, existingBooks);
+```
+
+Android 媒體庫文件提供者回傳的 URI 是不透明 ID、不含副檔名，只傳 URI 會被判成 `DetectedUnsupported` 而繞過偵測、直接匯入成新書。`importFolder` 沿用現況（只有 URI 可用，不新增 displayName）。每成功匯入一本新書，就把它加進 `existingBooks`。處理分支：
 - `DetectedDuplicate` → `skippedDuplicateCount++`，不匯入（D2）。
 - `DetectedUpdate` → `_stageNewFile` 複製到更新暫存目錄；成功則 `candidate.copyWith(stagedPath: ...)` 加進 `updateCandidates`、不匯入；複製失敗 → 該檔略過（與單檔匯入失敗的既有處置一致，不影響其他檔）。
 - `DetectedNewBook`／`DetectedUnsupported` → 走既有 `_importSingleFile`（`DetectedUnsupported` 仍由其回傳 null 略過，行為不變）。
 - `detectBookUpdate` 自身永不拋例外，故不會中斷整批。
 
-`importCandidateAsNewBook` 實作：呼叫 `_importSingleFile`，加選填參數 `bool landLocalCopy`（只此入口為 true）——當處理來源是本機路徑（更新暫存檔）且格式為 EPUB／PDF／AZW3 時，先複製到 `imported_books/<新 id>.<ext>`，讓 `Book.filePath` 指向私有複本而非暫存目錄；TXT／MD／CBZ 本來就落地合成檔，不受影響。無論成敗，最後都 `discardUpdateCandidate`。
+`importCandidateAsNewBook` 實作：呼叫 `_importSingleFile`，**必須帶入 `displayName: candidate.displayName`**（審查 I-1）——處理來源是檔名為 `<微秒時間戳>-<hash>.<ext>` 的暫存檔，`_importSingleFile` 以 `titleFromFileName(displayName ?? uri)` 當退路書名，漏帶會讓 TXT／CBZ／PDF／沒有 OPF 標題的 EPUB 書名變成時間戳記；另外 `source`、`remoteServerId`、`remoteBookId`、`remoteDownloadUrl`、`cloudFileId` 取自 `sourceRefs`。加選填參數 `bool landLocalCopy`（只此入口為 true）——當處理來源是本機路徑（更新暫存檔）且格式為 EPUB／PDF／AZW3 時，先複製到 `imported_books/<新 id>.<ext>`，讓 `Book.filePath` 指向私有複本而非暫存目錄；TXT／MD／CBZ 本來就落地合成檔，不受影響。無論成敗，最後都 `discardUpdateCandidate`。
 
 - [ ] **Step 1：寫失敗測試**：
   - `更新版不寫入`：預置同 identifier 的 EPUB；`importFiles([新檔])` → `importedBooks` 空、`updateCandidates` 有 1 筆且 `stagedPath` 檔案存在、`listBooks()` 仍只有 1 本。
@@ -343,6 +363,9 @@ Future<Book?> importCandidateAsNewBook(
   - `並存`：`importCandidateAsNewBook` → 建出新書（新 `id`、新指紋、`filePath` 不在更新暫存目錄內），原書不變，暫存檔消失；再對同一個新檔呼叫 `detectBookUpdate` 不再被判為「待處理」迴圈——但**不要求**其回 `DetectedNewBook`（它與原書仍同識別碼）；要求的是 `importCandidateAsNewBook` 本身不重新偵測（以「不呼叫 `extractMetadata` 兩次」之外的可觀察行為驗證：結果一定建出新書）。
   - `並存失敗`：`_importSingleFile` 失敗（空 TXT）→ 回傳 null 且暫存檔仍被清除。
   - `sourceRefs`：並存時雲端／遠端欄位被寫入新書。
+  - `不透明 URI 仍能偵測（審查 I-2）`：URI 為 `content://com.android.providers.media.documents/document/document%3A1000001716`（無副檔名）、`displayNames: ['book.epub']`，預置同 identifier 的書 → 進入 `updateCandidates`，不被當成新書匯入。
+  - `並存書名（審查 I-1）`：候選 `displayName` 為 `'我的小說.txt'` 時，`importCandidateAsNewBook` 建出的書名為 `'我的小說'`，**不是**暫存檔名的時間戳記。
+  - `批次不重複查庫（審查 M-2）`：匯入 5 個檔案，假 repository 的 `listBooks` 呼叫次數為常數（與檔案數無關）；同批次「B 是剛匯入的 A 的更新版」仍被偵測為更新版。
 - [ ] **Step 2：確認失敗 → Step 3：實作 → Step 4：確認通過**，並重跑 Task 2～5 的測試檔。
 - [ ] **Step 5：`flutter analyze`**；提交 `feat(library): 強制作為新書匯入，匯入管線改為回傳更新候選（epic-67 Issue 1 Task 6）`。
 
