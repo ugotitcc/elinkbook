@@ -3460,6 +3460,10 @@
   "@readerPrefsSaveFailedMessage": {
     "description": "閱讀畫面單書偏好寫入 SQLite 失敗時的 SnackBar 提示（每次開書最多提示一次，epic-54 Issue 31）"
   },
+  "readerNavigationDegradedMessage": "原位置已變更，已跳至概略進度",
+  "@readerNavigationDegradedMessage": {
+    "description": "書籍內容更新後，書籤、劃線、備註或上次閱讀位置的精確定位失效，已改用概略進度時的 SnackBar 提示（epic-67 Issue 5；PDF 頁碼超界降級共用，Issue 6）"
+  },
   "dictionaryMdxLimitNote": "已知限制：字典詞條不會執行 JavaScript，所以依賴點擊腳本的功能（例如牛津 9 的圖片放大）不會運作，只看得到縮圖。",
   "@dictionaryMdxLimitNote": {
     "description": "字典設定畫面底部的 MDX 已知限制說明（JavaScript 不執行、點擊腳本無效）"

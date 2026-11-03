@@ -23,6 +23,7 @@ import '../reader/epub_position_info.dart';
 import '../reader/epub_selection_info.dart';
 import '../reader/foliate_bridge_codec.dart';
 import '../reader/foliate_reader_view.dart';
+import '../reader/navigation_degraded_reason.dart';
 import '../reader/tts_audio_focus_coordinator.dart';
 import '../reader/tts_audio_handler.dart';
 import '../reader/tts_audio_handler_startup.dart';
@@ -833,6 +834,21 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
+  /// 精確定位失效、已降級為概略進度（epic-67 Issue 5）。開書位置與註記跳轉
+  /// 共用同一則提示。
+  void _handleNavigationDegraded(NavigationDegradedReason reason) {
+    if (!mounted) return;
+    // 連續點擊多個失效的書籤時，先清掉前一則，讓使用者立刻看到最新回饋，
+    // 不讓提示排隊累積（審查 M-1）。
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: const Key('reader_navigation_degraded_snackbar'),
+        content: Text(AppLocalizations.of(context)!.readerNavigationDegradedMessage),
+      ),
+    );
+  }
+
   /// 面板關閉後補上「設定未能儲存」提示；仍被別的路由蓋住時繼續等。
   void _flushPendingPrefsSaveFailureNotice() {
     if (!_prefsSaveFailureNoticePending || _prefsSaveFailureNotified || !mounted) {
@@ -1092,9 +1108,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// `onAnnotationSelected`／`onBookmarkSelected`）不需要關心格式差異，
   /// 只需傳入目前使用中書籍的 `locatorJson`。比照 `_handleZoneAction`
   /// （Issue 5）建立的相同分派模式。
-  void _jumpToEpubLocator(String locatorJson) {
+  void _jumpToEpubLocator(String locatorJson, {double? progression}) {
     // Epic 20 Issue 2：EPUB 一律使用 FoliateReaderView。
-    _surface.jumpTo(ReaderJumpTarget(cfi: locatorJson));
+    // epic-67 Issue 5：progression 是精確定位失效時的降級進度（可為 null，
+    // 例如舊資料沒有記錄）。
+    _surface.jumpTo(ReaderJumpTarget(cfi: locatorJson, progression: progression));
   }
 
   /// EPUB 目前章節路徑（epic-54 Issue 19）：同時傳入全書 progression 與
@@ -1277,7 +1295,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           final locatorJson = item.highlight?.epubLocatorJson ?? item.note?.epubLocatorJson;
           final pdfPageIndex = item.highlight?.pdfPageIndex ?? item.note?.pdfPageIndex;
           if (locatorJson != null) {
-            _jumpToEpubLocator(locatorJson);
+            _jumpToEpubLocator(
+              locatorJson,
+              progression: item.highlight?.progression ?? item.note?.progression,
+            );
           } else if (pdfPageIndex != null) {
             _surface.jumpTo(ReaderJumpTarget(pdfPageIndex: pdfPageIndex));
           }
@@ -1286,7 +1307,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         onBookmarkSelected: (bookmark) {
           Navigator.of(context).pop();
           if (bookmark.epubLocatorJson != null) {
-            _jumpToEpubLocator(bookmark.epubLocatorJson!);
+            _jumpToEpubLocator(bookmark.epubLocatorJson!,
+                progression: bookmark.progression);
           } else if (bookmark.pdfPageIndex != null) {
             _surface.jumpTo(ReaderJumpTarget(pdfPageIndex: bookmark.pdfPageIndex!));
           }
@@ -2888,6 +2910,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           // 行為與一般開書完全同構。
           initialLocatorJson:
               widget.initialJumpTarget?.cfi ?? _initialPosition?.epubLocatorJson,
+          // epic-67 Issue 5：精確定位失效時的降級進度。搜尋跳轉目標只在自己帶有
+          // 進度比例時才使用——不拿資料庫的閱讀進度冒充（那是另一個位置）。
+          initialProgression: widget.initialJumpTarget?.cfi != null
+              ? widget.initialJumpTarget?.progression
+              : _initialPosition?.progress,
+          onNavigationDegraded: _handleNavigationDegraded,
           isComicBookHint: format == BookFormat.cbz,
           dualPageDirection: resolved.dualPageDirection,
           onLocatorChanged: (info) {
