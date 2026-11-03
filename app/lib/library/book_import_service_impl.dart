@@ -370,168 +370,28 @@ class BookImportServiceImpl implements BookImportService {
     final fallbackTitle = titleFromFileName(displayName ?? uri);
     final now = DateTime.now();
 
-    var title = fallbackTitle;
-    String? author;
-    String? coverPath;
-    bool? isFixedLayout;
-    String? epubIdentifier;
-    // CBZ 專屬：重建後檔案的落地路徑，與 resolvedUri（原始來源，指紋計算
-    // 依據）分離維護，見上方說明。其餘格式維持沿用 resolvedUri 本身。
-    var bookFilePath = resolvedUri;
-
-    if (format == BookFileFormat.txt) {
-      // 封面產生（dart:ui）與 EPUB 合成（純 Dart，Isolate.run() 背景執行）
-      // 是兩個獨立步驟，不可合併——dart:ui 綁定在裸 spawn 的 isolate 內
-      // 不可用，見 txt_epub_synthesizer.dart Task 6 開頭「背景」說明。
-      // 審查修正（reviews/review-issue-4-plan.md Important #1）：合成
-      // 必須先於封面產生執行——若先落地封面才發現內容為空而中止匯入，
-      // 會在磁碟留下孤兒封面檔案（沒有對應 Book 記錄，日後刪除書籍的
-      // 既有清理邏輯是依附在 Book 記錄上運作，永遠碰不到它）。
-      TxtSynthesisResult synthesis;
-      try {
-        synthesis = await synthesizeTxtBook(resolvedUri, id, fallbackTitle);
-      } on EmptyTxtException {
-        // 沒有可用內容的 TXT 本質上無法開啟，比照 CBZ 的
-        // NoComicPagesException 既有處置慣例，中止匯入、不建立 Book 記錄
-        // ——此時尚未呼叫 generateTxtCover()，磁碟上不會留下任何殘留檔案。
-        return null;
-      }
-      isFixedLayout = false;
-      bookFilePath = await _landTxtEpub(synthesis.epubBytes, id);
-      final isEinkMode = await _themePreferences.loadEinkMode();
-      final coverBytes =
-          await generateTxtCover(fallbackTitle, isEinkMode: isEinkMode);
-      coverPath = await _landCover(coverBytes, id);
-    } else if (format == BookFileFormat.azw3) {
-      try {
-        final metadata = await extractKf8Metadata(resolvedUri);
-        final extractedTitle = metadata['title'] as String?;
-        if (extractedTitle != null && extractedTitle.isNotEmpty) {
-          title = extractedTitle;
-        }
-        author = metadata['author'] as String?;
-        isFixedLayout = metadata['isFixedLayout'] as bool?;
-        final coverBytes = metadata['coverBytes'] as Uint8List?;
-        if (coverBytes != null) {
-          coverPath = await _landCover(coverBytes, id);
-        }
-      } on DrmProtectedException {
-        // DRM 加密：明確不支援，不可比照下方 PlatformException 分支降級為
-        // 「無封面/檔名為標題」繼續建立書籍記錄——中止本書匯入
-        // （spec.md「KF8 (AZW3) 支援」）。
-        return null;
-      } catch (_) {
-        // 其餘解析失敗（非 DRM，例如檔案損毀）：降級為「檔名為標題、無封面」，
-        // 比照既有 PlatformException 分支慣例，不中斷整批匯入。
-      }
-    } else if (format == BookFileFormat.cbz) {
-      // CBZ 自然排序重建與封面擷取（epic-11-multi-format-reader Issue 3）。
-      // 像 azw3 分支一樣做 try/catch 降級，不中斷整批匯入。
-      isFixedLayout = true; // CBZ 恆為定樣式（見 ADR 0023）
-      try {
-        final result = await prepareCbzForImport(resolvedUri);
-        // 重建後的壓縮檔需要落地到本機，讓 ReaderScreen 開啟時有正確
-        // 的 .cbz 副檔名（觸發 CBZ 分派路徑，見 detectBookFormat）。
-        bookFilePath = await _landCbzArchive(result.rebuiltArchiveBytes, id);
-        coverPath = await _landCover(result.coverBytes, id);
-      } on NoComicPagesException {
-        // CBZ 內不含任何圖片頁面（空封存或僅含非圖片檔案），中止本書匯入
-        // （spec.md「CBZ 支援」）。
-        return null;
-      } catch (_) {
-        // 其餘解析失敗（例如檔案損毀）：降級為「檔名為標題、無封面」，
-        // 比照既有 PlatformException 分支慣例，不中斷整批匯入。
-      }
-    } else if (format == BookFileFormat.md) {
-      // 合成必須先於封面產生執行——比照 Issue 4 Important #1 審查修正的
-      // 既有教訓，避免中止匯入時在磁碟留下孤兒封面檔案。
-      MdSynthesisResult synthesis;
-      try {
-        synthesis = await synthesizeMdBook(resolvedUri, id, fallbackTitle);
-      } on EmptyMdException {
-        return null;
-      }
-      isFixedLayout = false;
-      bookFilePath = await _landMdEpub(synthesis.epubBytes, id);
-      if (synthesis.frontmatterTitle != null && synthesis.frontmatterTitle!.isNotEmpty) {
-        title = synthesis.frontmatterTitle!;
-      }
-      author = synthesis.frontmatterAuthor;
-      // Frontmatter 未指定封面（或指定值無法解析，見 md_frontmatter.dart
-      // 文件註解）時，退回比照 TXT 既有的「依書名文字動態生成封面」機制
-      // （spec.md「TXT／Markdown 合成書籍結構」對 MD 的既定要求）。
-      // 審查修正 M1：loadEinkMode() 刻意寫在 ?? 右側才 await，讓已有
-      // Frontmatter 封面（frontmatterCoverBytes != null）時完全不觸發這次
-      // Preferences 讀取（?? 是短路求值，左側非 null 時右側整段不會執行）。
-      final coverBytes = synthesis.frontmatterCoverBytes ??
-          await generateTxtCover(
-            title,
-            isEinkMode: await _themePreferences.loadEinkMode(),
-          );
-      coverPath = await _landCover(coverBytes, id);
-    } else {
-      try {
-        final metadata = _metadataExtractor != null
-            ? await _metadataExtractor(resolvedUri, format.name)
-            : await kBookMetadataChannel.invokeMapMethod<String, Object?>(
-                'extractMetadata',
-                {'uri': resolvedUri, 'format': format.name},
-              );
-        final extractedTitle = metadata?['title'] as String?;
-        if (extractedTitle != null && extractedTitle.isNotEmpty) {
-          title = extractedTitle;
-        }
-        author = metadata?['author'] as String?;
-        // PDF 的 extractMetadata 回傳 map 沒有這個鍵，cast 結果自然為 null，
-        // 不需要另外依 format 分支判斷（見
-        // docs/epics/epic-17-epub-render-migration/spec.md「模組」）。
-        isFixedLayout = metadata?['isFixedLayout'] as bool?;
-        // epic-8-sync Issue 3：同一次 extractMetadata 回應一併取得，PDF
-        // 呼叫時這個鍵不存在，cast 結果自然為 null，不需要另外依 format
-        // 分支判斷（比照 isFixedLayout 既有處理方式）。
-        epubIdentifier = metadata?['identifier'] as String?;
-        final coverBytes = metadata?['coverBytes'] as Uint8List?;
-        if (coverBytes != null) {
-          coverPath = await _landCover(coverBytes, id);
-        }
-      } on PlatformException {
-        // 詮釋資料提取失敗：降級為「檔名為標題、無封面」，不中斷整批匯入。
-        // 指紋計算與詮釋資料提取彼此獨立（見下方），此處失敗不影響指紋
-        // 計算仍會嘗試執行。
-      } on MissingPluginException {
-        // epic-66 Issue 1 Task 8：Windows 沒有 `elinkbook/book_metadata`
-        // 原生端，invoke 必丟 MissingPluginException——降級內容與上方
-        // PlatformException 完全相同。Android 不會觸發此例外，行為不變。
-      }
-    }
-
-    // 重建後的 CBZ（bookFilePath ≠ resolvedUri）：指紋仍依原始來源計算，
-    // 跨裝置比對依原始來源內容而非重建後檔案，兩者內容等價但二進位不同，
-    // 不應因為排序重建而改變指紋值。
-    String? contentFingerprint;
-    try {
-      contentFingerprint = await computeBookContentFingerprint(
-        resolvedUri,
-        format,
-        epubIdentifier: epubIdentifier,
-      );
-    } catch (_) {
-      // 指紋計算失敗（原生端例外／檔案讀取失敗）：降級為 null，不中斷
-      // 整批匯入——這本書在補算前不參與跨裝置比對，比照 epic-17
-      // detectAndCacheEpubLayout() 的一次性補判斷模式（回填時機留待
-      // Issue 4 決定，見 issues.md）。
-    }
+    final parts = await _prepareBookParts(
+      originalUri: uri,
+      resolvedUri: resolvedUri,
+      format: format,
+      id: id,
+      fallbackTitle: fallbackTitle,
+      landSuffix: '',
+      strict: false,
+      computeFingerprint: true,
+    );
+    if (parts == null) return null;
 
     final book = Book(
       id: id,
-      title: title,
-      author: author,
+      title: parts.title,
+      author: parts.author,
       format: format,
-      filePath: bookFilePath,
+      filePath: parts.bookFilePath,
       source: source,
-      coverPath: coverPath,
-      isFixedLayout: isFixedLayout,
-      contentFingerprint: contentFingerprint,
+      coverPath: parts.coverPath,
+      isFixedLayout: parts.isFixedLayout,
+      contentFingerprint: parts.contentFingerprint,
       remoteServerId: remoteServerId,
       remoteBookId: remoteBookId,
       remoteDownloadUrl: remoteDownloadUrl,
@@ -608,12 +468,13 @@ class BookImportServiceImpl implements BookImportService {
   Future<String?> _persistPermissionOrLandCopy(
     String uri,
     String id,
-    BookFileFormat format,
-  ) async {
+    BookFileFormat format, {
+    String landSuffix = '',
+  }) async {
     if (!uri.startsWith('content://')) return uri;
     final permissionGranted = await persistReadAccess(uri);
     if (!permissionGranted || detectBookFileFormat(uri) == null) {
-      return _copyToLocalStorage(uri, id, format);
+      return _copyToLocalStorage(uri, id, format, landSuffix: landSuffix);
     }
     return uri;
   }
@@ -621,13 +482,16 @@ class BookImportServiceImpl implements BookImportService {
   /// [takePersistableUriPermission] 失敗時的退路：把 [uri] 的內容複製一份到
   /// App 私有文件目錄下的 `imported_books/` 子目錄，回傳複本的真實檔案路徑；
   /// 複製失敗（例如來源 URI 這次連暫時讀取都失敗）回傳 null。
+  /// [landSuffix] 供取代時寫入暫存檔名（如 `.staging`），審查 C-1。
   Future<String?> _copyToLocalStorage(
     String uri,
     String id,
-    BookFileFormat format,
-  ) async {
+    BookFileFormat format, {
+    String landSuffix = '',
+  }) async {
     final importedDir = await _resolveImportedBooksDirectory();
-    final destinationPath = p.join(importedDir.path, '$id.${format.name}');
+    final destinationPath =
+        p.join(importedDir.path, '$id.${format.name}$landSuffix');
     try {
       await kBookMetadataChannel.invokeMethod<void>(
         'copyContentUriToFile',
@@ -639,18 +503,26 @@ class BookImportServiceImpl implements BookImportService {
     }
   }
 
-  Future<String> _landCover(Uint8List bytes, String bookId) async {
+  Future<String> _landCover(
+    Uint8List bytes,
+    String bookId, {
+    String landSuffix = '',
+  }) async {
     final dir = await _resolveCoversDirectory();
-    final file = File(p.join(dir.path, '$bookId.png'));
+    final file = File(p.join(dir.path, '$bookId.png$landSuffix'));
     await file.writeAsBytes(bytes, flush: true);
     return file.path;
   }
 
   /// 將重建後的 CBZ 壓縮檔位元組寫入 `imported_books/` 目錄，回傳完整路徑。
   /// 檔名帶 `.cbz` 副檔名，確保 `detectBookFormat` 偵測正確。
-  Future<String> _landCbzArchive(Uint8List bytes, String bookId) async {
+  Future<String> _landCbzArchive(
+    Uint8List bytes,
+    String bookId, {
+    String landSuffix = '',
+  }) async {
     final importedDir = await _resolveImportedBooksDirectory();
-    final file = File(p.join(importedDir.path, '$bookId.cbz'));
+    final file = File(p.join(importedDir.path, '$bookId.cbz$landSuffix'));
     await file.writeAsBytes(bytes, flush: true);
     return file.path;
   }
@@ -660,9 +532,13 @@ class BookImportServiceImpl implements BookImportService {
   /// 為鍵、獨立子目錄」慣例，重用既有 `imported_books/` 目錄。**檔名副
   /// 檔名須維持 `.txt`**（Global Constraints 已查證事實 #1：`BookFormat.txt`
   /// 的分派依 `Book.filePath` 副檔名判斷，不可改為 `.epub`）。
-  Future<String> _landTxtEpub(Uint8List bytes, String bookId) async {
+  Future<String> _landTxtEpub(
+    Uint8List bytes,
+    String bookId, {
+    String landSuffix = '',
+  }) async {
     final dir = await _resolveImportedBooksDirectory();
-    final file = File(p.join(dir.path, '$bookId.txt'));
+    final file = File(p.join(dir.path, '$bookId.txt$landSuffix'));
     await file.writeAsBytes(bytes, flush: true);
     return file.path;
   }
@@ -671,11 +547,162 @@ class BookImportServiceImpl implements BookImportService {
   /// Issue 5），比照 [_landTxtEpub] 既有的「以 book id 為鍵、獨立子目錄」
   /// 慣例，重用既有 `imported_books/` 目錄。**檔名副檔名須維持 `.md`**
   /// （理由同 `_landTxtEpub` 對 `.txt` 的既有限制）。
-  Future<String> _landMdEpub(Uint8List bytes, String bookId) async {
+  Future<String> _landMdEpub(
+    Uint8List bytes,
+    String bookId, {
+    String landSuffix = '',
+  }) async {
     final dir = await _resolveImportedBooksDirectory();
-    final file = File(p.join(dir.path, '$bookId.md'));
+    final file = File(p.join(dir.path, '$bookId.md$landSuffix'));
     await file.writeAsBytes(bytes, flush: true);
     return file.path;
+  }
+
+  /// 逐格式處理新檔案的內容、中繼資料、封面與指紋（Task 2 抽取，供第一次匯入與取代共用）。
+  Future<_BookParts?> _prepareBookParts({
+    required String originalUri,
+    required String resolvedUri,
+    required BookFileFormat format,
+    required String id,
+    required String fallbackTitle,
+    String landSuffix = '',
+    bool strict = false,
+    bool computeFingerprint = true,
+  }) async {
+    var title = fallbackTitle;
+    String? author;
+    String? coverPath;
+    bool? isFixedLayout;
+    String? epubIdentifier;
+    var bookFilePath = resolvedUri;
+    final stagedFiles = <String>[];
+
+    if (format == BookFileFormat.txt) {
+      TxtSynthesisResult synthesis;
+      try {
+        synthesis = await synthesizeTxtBook(resolvedUri, id, fallbackTitle);
+      } on EmptyTxtException {
+        if (strict) throw _NewFileParseException();
+        return null;
+      }
+      isFixedLayout = false;
+      bookFilePath =
+          await _landTxtEpub(synthesis.epubBytes, id, landSuffix: landSuffix);
+      if (landSuffix.isNotEmpty) stagedFiles.add(bookFilePath);
+      final isEinkMode = await _themePreferences.loadEinkMode();
+      final coverBytes =
+          await generateTxtCover(fallbackTitle, isEinkMode: isEinkMode);
+      coverPath = await _landCover(coverBytes, id, landSuffix: landSuffix);
+      if (landSuffix.isNotEmpty) stagedFiles.add(coverPath);
+    } else if (format == BookFileFormat.azw3) {
+      try {
+        final metadata = await extractKf8Metadata(resolvedUri);
+        final extractedTitle = metadata['title'] as String?;
+        if (extractedTitle != null && extractedTitle.isNotEmpty) {
+          title = extractedTitle;
+        }
+        author = metadata['author'] as String?;
+        isFixedLayout = metadata['isFixedLayout'] as bool?;
+        final coverBytes = metadata['coverBytes'] as Uint8List?;
+        if (coverBytes != null) {
+          coverPath = await _landCover(coverBytes, id, landSuffix: landSuffix);
+          if (landSuffix.isNotEmpty) stagedFiles.add(coverPath);
+        }
+      } on DrmProtectedException {
+        if (strict) throw _NewFileParseException();
+        return null;
+      } catch (_) {
+        if (strict) throw _NewFileParseException();
+      }
+    } else if (format == BookFileFormat.cbz) {
+      isFixedLayout = true;
+      try {
+        final result = await prepareCbzForImport(resolvedUri);
+        bookFilePath = await _landCbzArchive(result.rebuiltArchiveBytes, id,
+            landSuffix: landSuffix);
+        if (landSuffix.isNotEmpty) stagedFiles.add(bookFilePath);
+        coverPath =
+            await _landCover(result.coverBytes, id, landSuffix: landSuffix);
+        if (landSuffix.isNotEmpty) stagedFiles.add(coverPath);
+      } on NoComicPagesException {
+        if (strict) throw _NewFileParseException();
+        return null;
+      } catch (_) {
+        if (strict) throw _NewFileParseException();
+      }
+    } else if (format == BookFileFormat.md) {
+      MdSynthesisResult synthesis;
+      try {
+        synthesis = await synthesizeMdBook(resolvedUri, id, fallbackTitle);
+      } on EmptyMdException {
+        if (strict) throw _NewFileParseException();
+        return null;
+      }
+      isFixedLayout = false;
+      bookFilePath =
+          await _landMdEpub(synthesis.epubBytes, id, landSuffix: landSuffix);
+      if (landSuffix.isNotEmpty) stagedFiles.add(bookFilePath);
+      if (synthesis.frontmatterTitle != null &&
+          synthesis.frontmatterTitle!.isNotEmpty) {
+        title = synthesis.frontmatterTitle!;
+      }
+      author = synthesis.frontmatterAuthor;
+      final coverBytes = synthesis.frontmatterCoverBytes ??
+          await generateTxtCover(
+            title,
+            isEinkMode: await _themePreferences.loadEinkMode(),
+          );
+      coverPath = await _landCover(coverBytes, id, landSuffix: landSuffix);
+      if (landSuffix.isNotEmpty) stagedFiles.add(coverPath);
+    } else {
+      try {
+        final metadata = _metadataExtractor != null
+            ? await _metadataExtractor(resolvedUri, format.name)
+            : await kBookMetadataChannel.invokeMapMethod<String, Object?>(
+                'extractMetadata',
+                {'uri': resolvedUri, 'format': format.name},
+              );
+        final extractedTitle = metadata?['title'] as String?;
+        if (extractedTitle != null && extractedTitle.isNotEmpty) {
+          title = extractedTitle;
+        }
+        author = metadata?['author'] as String?;
+        isFixedLayout = metadata?['isFixedLayout'] as bool?;
+        epubIdentifier = metadata?['identifier'] as String?;
+        final coverBytes = metadata?['coverBytes'] as Uint8List?;
+        if (coverBytes != null) {
+          coverPath = await _landCover(coverBytes, id, landSuffix: landSuffix);
+          if (landSuffix.isNotEmpty) stagedFiles.add(coverPath);
+        }
+      } on PlatformException {
+        if (strict) throw _NewFileParseException();
+      } on MissingPluginException {
+        // Windows 沒有 elinkbook/book_metadata 原生端，降級維持檔名為標題、無封面，strict 模式亦然
+      }
+    }
+
+    String? contentFingerprint;
+    if (computeFingerprint) {
+      try {
+        contentFingerprint = await computeBookContentFingerprint(
+          resolvedUri,
+          format,
+          epubIdentifier: epubIdentifier,
+        );
+      } catch (_) {
+        // 指紋計算失敗降級為 null
+      }
+    }
+
+    return _BookParts(
+      title: title,
+      author: author,
+      bookFilePath: bookFilePath,
+      coverPath: coverPath,
+      isFixedLayout: isFixedLayout,
+      contentFingerprint: contentFingerprint,
+      stagedFiles: stagedFiles,
+    );
   }
 
   Future<Directory> _resolveCoversDirectory() async {
@@ -698,3 +725,28 @@ class BookImportServiceImpl implements BookImportService {
     return dir;
   }
 }
+
+/// 逐格式處理的結果（尚未寫入資料庫，Task 2）。
+class _BookParts {
+  final String title;
+  final String? author;
+  final String bookFilePath;
+  final String? coverPath;
+  final bool? isFixedLayout;
+  final String? contentFingerprint;
+  final List<String> stagedFiles;
+
+  const _BookParts({
+    required this.title,
+    this.author,
+    required this.bookFilePath,
+    this.coverPath,
+    this.isFixedLayout,
+    this.contentFingerprint,
+    this.stagedFiles = const [],
+  });
+}
+
+/// 例外：嚴格模式下新檔無法解析（D3）。
+class _NewFileParseException implements Exception {}
+
