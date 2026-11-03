@@ -163,6 +163,9 @@ void main() {
       await pumpUntilPdfReady(
         tester,
         condition: () => find.byType(RawImage).evaluate().isNotEmpty,
+        // 等 Isolate 運算結果：條件成立即提前結束，上限只是逾時保險。
+        // 平行負載下實測需 23～89 輪（預設 30 輪會偶發逾時，epic-54 Issue 35）。
+        maxIterations: 120,
         delayBetweenPumps: const Duration(milliseconds: 50),
       );
       await tester.pump();
@@ -246,6 +249,8 @@ void main() {
       await pumpUntilPdfReady(
         tester,
         condition: () => computedRect != null,
+        // 同上：Isolate 運算逾時保險，條件成立即結束（epic-54 Issue 35）。
+        maxIterations: 120,
         delayBetweenPumps: const Duration(milliseconds: 50),
       );
 
@@ -365,6 +370,8 @@ void main() {
       await pumpUntilPdfReady(
         tester,
         condition: () => find.byType(RawImage).evaluate().isNotEmpty,
+        // 同上：Isolate 運算逾時保險，條件成立即結束（epic-54 Issue 35）。
+        maxIterations: 120,
         delayBetweenPumps: const Duration(milliseconds: 50),
       );
       await tester.pump();
