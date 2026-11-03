@@ -9,108 +9,9 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { launchHarnessPage, report } from './lib/harness.mjs'
+import { TEST_CASES, compareMetadata } from './lib/metadata-cases.mjs'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const METADATA_FIXTURES_DIR = path.resolve(__dirname, '../../test/fixtures/metadata')
-const ROOT_FIXTURES_DIR = path.resolve(__dirname, '../../test/fixtures')
 
-const TEST_CASES = [
-  {
-    filePath: path.join(METADATA_FIXTURES_DIR, 'meta_basic.epub'),
-    expected: {
-      title: '基本書名',
-      author: '王小明',
-      identifier: 'urn:uuid:meta-basic',
-      isFixedLayout: false,
-      hasCover: true,
-    },
-  },
-  {
-    filePath: path.join(METADATA_FIXTURES_DIR, 'meta_multi_identifier.epub'),
-    expected: {
-      title: '多識別碼',
-      author: null,
-      identifier: 'urn:uuid:meta-multi-second',
-      isFixedLayout: false,
-      hasCover: false,
-    },
-  },
-  {
-    filePath: path.join(METADATA_FIXTURES_DIR, 'meta_lang_titles_two_creators.epub'),
-    expected: {
-      title: '繁中書名',
-      author: '王小明',
-      identifier: 'urn:uuid:meta-lang',
-      isFixedLayout: false,
-      hasCover: false,
-    },
-  },
-  {
-    filePath: path.join(METADATA_FIXTURES_DIR, 'meta_creator_role.epub'),
-    expected: {
-      title: '角色作者',
-      author: '張三',
-      identifier: 'urn:uuid:meta-role',
-      isFixedLayout: false,
-      hasCover: false,
-    },
-  },
-  {
-    filePath: path.join(METADATA_FIXTURES_DIR, 'meta_epub2_cover.epub'),
-    expected: {
-      title: 'EPUB2 封面',
-      author: null,
-      identifier: 'urn:uuid:meta-epub2',
-      isFixedLayout: false,
-      hasCover: true,
-    },
-  },
-  {
-    filePath: path.join(METADATA_FIXTURES_DIR, 'meta_no_cover.epub'),
-    expected: {
-      title: '無封面',
-      author: null,
-      identifier: 'urn:uuid:meta-nocover',
-      isFixedLayout: false,
-      hasCover: false,
-    },
-  },
-  {
-    filePath: path.join(METADATA_FIXTURES_DIR, 'meta_fixed_layout.epub'),
-    expected: {
-      title: '固定版面',
-      author: null,
-      identifier: 'urn:uuid:meta-fxl',
-      isFixedLayout: true,
-      hasCover: false,
-    },
-  },
-  {
-    filePath: path.join(METADATA_FIXTURES_DIR, 'meta_no_identifier.epub'),
-    expected: {
-      title: '無識別碼',
-      author: null,
-      identifier: null,
-      isFixedLayout: false,
-      hasCover: false,
-    },
-  },
-  {
-    filePath: path.join(ROOT_FIXTURES_DIR, 'sample.epub'),
-    expected: {
-      identifier: 'urn:uuid:00000000-0000-0000-0000-000000000001',
-      hasCover: true,
-      isFixedLayout: false,
-    },
-  },
-  {
-    filePath: path.join(ROOT_FIXTURES_DIR, 'sample_fxl_svg_cover.epub'),
-    expected: {
-      isFixedLayout: true,
-      hasCover: true,
-    },
-  },
-]
 
 async function run() {
   const { browser, page } = await launchHarnessPage({
@@ -142,34 +43,8 @@ async function run() {
           fileName
         )
 
-        let pass = true
-        const mismatches = []
-
-        if ('title' in expected && res.title !== expected.title) {
-          pass = false
-          mismatches.push(`title: expected '${expected.title}', got '${res.title}'`)
-        }
-        if ('author' in expected && res.author !== expected.author) {
-          pass = false
-          mismatches.push(`author: expected '${expected.author}', got '${res.author}'`)
-        }
-        if ('identifier' in expected && res.identifier !== expected.identifier) {
-          pass = false
-          mismatches.push(`identifier: expected '${expected.identifier}', got '${res.identifier}'`)
-        }
-        if ('isFixedLayout' in expected && res.isFixedLayout !== expected.isFixedLayout) {
-          pass = false
-          mismatches.push(`isFixedLayout: expected ${expected.isFixedLayout}, got ${res.isFixedLayout}`)
-        }
-        if ('hasCover' in expected) {
-          const hasCover = res.coverBase64 !== null && typeof res.coverType === 'string' && res.coverType.startsWith('image/')
-          if (hasCover !== expected.hasCover) {
-            pass = false
-            mismatches.push(`hasCover: expected ${expected.hasCover}, got ${hasCover} (type: ${res.coverType})`)
-          }
-        }
-
-        report(fileName, pass, mismatches.join('; '))
+        const mismatches = compareMetadata(res, expected)
+        report(fileName, mismatches.length === 0, mismatches.join('; '))
       } catch (err) {
         report(fileName, false, `拋出非預期例外：${err.message}`)
       }

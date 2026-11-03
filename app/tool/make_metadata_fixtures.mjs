@@ -158,6 +158,39 @@ const FIXTURES = [
     manifestExtra: '',
     coverBytes: null,
   },
+  // ——邊界案例（review-issue-2.md Important 5）：真實書籍常見、但 Readium 與 foliate-js
+  // 取值規則可能不同的 identifier 形態。期望值由實測對比決定，見 issue-2-report.md。
+  {
+    fileName: 'meta_unique_id_dangling.epub',
+    packageAttrs: 'unique-identifier="missing-id"',
+    metadataXml: `    <dc:identifier id="isbn">9789860000009</dc:identifier>
+    <dc:identifier id="pub-id">urn:uuid:meta-dangling-second</dc:identifier>
+    <dc:title>識別碼懸空</dc:title>
+    <dc:language>zh-TW</dc:language>`,
+    manifestExtra: '',
+    coverBytes: null,
+  },
+  {
+    fileName: 'meta_identifier_whitespace.epub',
+    packageAttrs: 'unique-identifier="pub-id"',
+    metadataXml: `    <dc:identifier id="pub-id">
+      urn:uuid:meta-ws  
+    </dc:identifier>
+    <dc:title>識別碼含空白</dc:title>
+    <dc:language>zh-TW</dc:language>`,
+    manifestExtra: '',
+    coverBytes: null,
+  },
+  {
+    fileName: 'meta_identifier_opf_scheme.epub',
+    packageAttrs: 'unique-identifier="pub-id"',
+    metadataXml: `    <dc:identifier xmlns:opf="http://www.idpf.org/2007/opf" id="pub-id" opf:scheme="UUID">urn:uuid:meta-scheme</dc:identifier>
+    <dc:identifier xmlns:opf="http://www.idpf.org/2007/opf" id="isbn" opf:scheme="ISBN">9789860000010</dc:identifier>
+    <dc:title>識別碼含 opf:scheme</dc:title>
+    <dc:language>zh-TW</dc:language>`,
+    manifestExtra: '',
+    coverBytes: null,
+  },
 ]
 
 fs.mkdirSync(OUTPUT_DIR, { recursive: true })

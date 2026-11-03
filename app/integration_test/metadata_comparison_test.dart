@@ -1,7 +1,7 @@
 // Android Readium 詮釋資料提取對比測試（epic-66 Issue 2 Task 6）。
 //
 // 於實機（如 BooksPad）上執行，呼叫原生 elinkbook/book_metadata 通道
-// 提取 10 份 fixture 的 metadata，並印出 [metadata_comparison] 行供比對。
+// 提取 13 份 fixture 的 metadata，並印出 [metadata_comparison] 行供比對。
 //
 // 執行方式：
 // cd app && flutter test integration_test/metadata_comparison_test.dart -d <device-id>
@@ -67,6 +67,18 @@ const _comparisonCases = [
   _EpubComparisonCase(
     assetPath: 'test/fixtures/metadata/meta_no_identifier.epub',
     fileName: 'meta_no_identifier.epub',
+  ),
+  _EpubComparisonCase(
+    assetPath: 'test/fixtures/metadata/meta_unique_id_dangling.epub',
+    fileName: 'meta_unique_id_dangling.epub',
+  ),
+  _EpubComparisonCase(
+    assetPath: 'test/fixtures/metadata/meta_identifier_whitespace.epub',
+    fileName: 'meta_identifier_whitespace.epub',
+  ),
+  _EpubComparisonCase(
+    assetPath: 'test/fixtures/metadata/meta_identifier_opf_scheme.epub',
+    fileName: 'meta_identifier_opf_scheme.epub',
   ),
   _EpubComparisonCase(
     assetPath: 'test/fixtures/sample.epub',

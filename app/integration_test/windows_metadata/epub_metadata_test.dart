@@ -125,6 +125,33 @@ const _testCases = [
     expectedHasCover: false,
   ),
   _EpubTestCase(
+    assetPath: 'test/fixtures/metadata/meta_unique_id_dangling.epub',
+    fileName: 'meta_unique_id_dangling.epub',
+    expectedTitle: '識別碼懸空',
+    expectedAuthor: null,
+    expectedIdentifier: '9789860000009',
+    expectedIsFixedLayout: false,
+    expectedHasCover: false,
+  ),
+  _EpubTestCase(
+    assetPath: 'test/fixtures/metadata/meta_identifier_whitespace.epub',
+    fileName: 'meta_identifier_whitespace.epub',
+    expectedTitle: '識別碼含空白',
+    expectedAuthor: null,
+    expectedIdentifier: 'urn:uuid:meta-ws',
+    expectedIsFixedLayout: false,
+    expectedHasCover: false,
+  ),
+  _EpubTestCase(
+    assetPath: 'test/fixtures/metadata/meta_identifier_opf_scheme.epub',
+    fileName: 'meta_identifier_opf_scheme.epub',
+    expectedTitle: '識別碼含 opf:scheme',
+    expectedAuthor: null,
+    expectedIdentifier: 'urn:uuid:meta-scheme',
+    expectedIsFixedLayout: false,
+    expectedHasCover: false,
+  ),
+  _EpubTestCase(
     assetPath: 'test/fixtures/sample.epub',
     fileName: 'sample.epub',
     expectedTitle: null, // sample.epub title 不強制鎖定，以對比表為準
@@ -147,7 +174,7 @@ const _testCases = [
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Windows HeadlessInAppWebView 解析 10 份 EPUB metadata', (
+  testWidgets('Windows HeadlessInAppWebView 解析 13 份 EPUB metadata', (
     tester,
   ) async {
     final appSupport = await getApplicationSupportDirectory();

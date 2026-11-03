@@ -219,6 +219,9 @@ flutter:
     - test/fixtures/metadata/meta_no_cover.epub
     - test/fixtures/metadata/meta_fixed_layout.epub
     - test/fixtures/metadata/meta_no_identifier.epub
+    - test/fixtures/metadata/meta_unique_id_dangling.epub
+    - test/fixtures/metadata/meta_identifier_whitespace.epub
+    - test/fixtures/metadata/meta_identifier_opf_scheme.epub
     - test/fixtures/sample.azw3
     - test/fixtures/sample_no_identifier.epub
     - test/fixtures/sample_horizontal.epub
