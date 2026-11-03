@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show MissingPluginException;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -1258,10 +1259,18 @@ class SqliteLibraryRepository implements LibraryRepository {
 
   @override
   Future<bool> detectAndCacheEpubLayout(String bookId, String filePath) async {
-    final response = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
-      'detectEpubLayout',
-      {'uri': filePath},
-    );
+    final Map<String, Object?>? response;
+    try {
+      response = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
+        'detectEpubLayout',
+        {'uri': filePath},
+      );
+    } on MissingPluginException {
+      // epic-66 Issue 1 Task 9a：Windows 沒有 elinkbook/book_metadata 頻道。降級為
+      // 流式（false）並直接回傳、不寫入資料庫——偵測沒有真的發生，不能把猜測值
+      // 存成結果。Android 一定有這個頻道，此分支不會被走到。
+      return false;
+    }
     final isFixedLayout = response?['isFixedLayout'] as bool? ?? false;
     await _db.update(
       'books',
