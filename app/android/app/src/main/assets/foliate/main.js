@@ -94,6 +94,12 @@ const fontFaceCss = params.get('fontFaceCss') || ''
 // 再自行判斷格式。
 const initialCfi = params.get('initialCfi') || ''
 
+// epic-67 Issue 5：精確定位（initialCfi）失效時的降級進度比例（0～1）。
+// 缺漏或無法解析時為 NaN，降級流程會改開在書頭。
+const initialProgressionParam = params.get('initialProgression')
+const initialProgression =
+  initialProgressionParam === null ? NaN : parseFloat(initialProgressionParam)
+
 // epic-10-search Issue 1：索引模式旗標（ADR 0027 決策 2）。true 時
 // window.getSectionCount()/window.buildSegmentsForSection() 可用，且下方
 // view.addEventListener('load', ...) 內的觸控/選取/劃線手勢初始化整段跳過
@@ -599,6 +605,70 @@ window.previousPage = function () {
 
 window.jumpToFraction = function (fraction) {
   view.goToFraction(fraction)
+}
+
+/**
+ * epic-67 Issue 5：解析 CFI 並驗證章節索引在有效範圍內。
+ *
+ * 不能只靠 view.goTo()／view.resolveNavigation() 判斷失敗（實測）：章節索引
+ * 超界時 resolveNavigation 回傳 {index:-1} 看似成功，開書會卡死、跳轉則位置
+ * 不動；格式損壞時回傳 undefined。章節存在但元素路徑不存在時，Foliate 會自行
+ * 落在該章節，那不是失敗。
+ * 回傳可交給 renderer.goTo() 的物件；無效時回傳 null。
+ */
+function resolveValidatedCfi(cfi) {
+  let resolved
+  try {
+    resolved = view.resolveNavigation(cfi)
+  } catch (_) {
+    return null
+  }
+  if (!resolved || !Number.isInteger(resolved.index)) return null
+  const sectionCount = view.book?.sections?.length ?? 0
+  if (resolved.index < 0 || resolved.index >= sectionCount) return null
+  return resolved
+}
+
+/** 跳到全書進度比例（夾限 0～1）；比例無效或跳轉失敗回傳 false，不拋例外。 */
+async function goToFractionSafely(fraction) {
+  if (!Number.isFinite(fraction)) return false
+  try {
+    await view.goToFraction(Math.min(1, Math.max(0, fraction)))
+    return true
+  } catch (_) {
+    return false
+  }
+}
+
+/** 通知 Dart 端「精確定位失敗，已降級」。reason：'readingPosition' | 'annotation'。 */
+function reportNavigationDegraded(reason) {
+  window.flutter_inappwebview.callHandler('onNavigationDegraded', reason)
+}
+
+/**
+ * 開書定位：有 initialCfi 時先驗證再跳轉；失敗（無效、超界、跳轉拋例外）改用
+ * initialProgression，連比例也無效就開在書頭，並回報降級。沒有 initialCfi 時
+ * 與修正前完全相同。
+ */
+async function openAtInitialLocation() {
+  if (!initialCfi) {
+    await view.init({})
+    return
+  }
+  const resolved = resolveValidatedCfi(initialCfi)
+  if (resolved) {
+    try {
+      await view.renderer.goTo(resolved)
+      view.history.pushState(initialCfi)
+      return
+    } catch (_) {
+      // 落到下方降級流程
+    }
+  }
+  if (!(await goToFractionSafely(initialProgression))) {
+    await view.init({})
+  }
+  reportNavigationDegraded('readingPosition')
 }
 
 /**
@@ -1772,7 +1842,7 @@ async function openBook() {
       }, 200)
     })
     hostResizeObserver.observe(view.renderer)
-    await view.init(initialCfi ? { lastLocation: initialCfi } : {})
+    await openAtInitialLocation()
   } catch (e) {
     window.flutter_inappwebview.callHandler('onError', String((e && e.message) || e))
   }
