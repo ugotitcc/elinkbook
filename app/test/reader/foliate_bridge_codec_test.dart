@@ -603,4 +603,106 @@ void main() {
       expect(info.isFixedLayout, isTrue);
     });
   });
+
+  group('buildJumpToLocatorScript', () {
+    test('帶進度比例：第二個參數為數字', () {
+      expect(
+        buildJumpToLocatorScript('epubcfi(/6/4!/4/2)', fallbackProgression: 0.5),
+        'window.jumpToLocator("epubcfi(/6/4!/4/2)", 0.5)',
+      );
+    });
+
+    test('沒有進度比例：第二個參數為 null（舊資料沒有 progression）', () {
+      expect(
+        buildJumpToLocatorScript('epubcfi(/6/4!/4/2)'),
+        'window.jumpToLocator("epubcfi(/6/4!/4/2)", null)',
+      );
+    });
+
+    test('NaN 與無限大視為沒有比例，避免產生無效的 JS 字面值', () {
+      expect(
+        buildJumpToLocatorScript('epubcfi(/6/4)', fallbackProgression: double.nan),
+        'window.jumpToLocator("epubcfi(/6/4)", null)',
+      );
+      expect(
+        buildJumpToLocatorScript('epubcfi(/6/4)',
+            fallbackProgression: double.infinity),
+        'window.jumpToLocator("epubcfi(/6/4)", null)',
+      );
+    });
+
+    test('CFI 內的特殊字元由 JSON 編碼處理，不會破壞腳本', () {
+      expect(
+        buildJumpToLocatorScript('epubcfi(/6/4"x)'),
+        'window.jumpToLocator("epubcfi(/6/4\\"x)", null)',
+      );
+    });
+  });
+
+  group('extractCfiOrRaw', () {
+    test('可解析的 CFI（含 raw CFI 與新格式 JSON）回傳 CFI', () {
+      expect(extractCfiOrRaw('epubcfi(/6/4!/4/2)'), 'epubcfi(/6/4!/4/2)');
+      expect(
+        extractCfiOrRaw('{"cfi":"epubcfi(/6/4!/4/2)","index":1,"fraction":0.3}'),
+        'epubcfi(/6/4!/4/2)',
+      );
+    });
+
+    test('無法解析但非空：回傳去空白後的原字串（舊格式 JSON、損壞 CFI）', () {
+      const legacy = '{"href":"c2.xhtml","locations":{"progression":0.3}}';
+      expect(extractCfiOrRaw(legacy), legacy);
+      expect(extractCfiOrRaw('  epubcfi(/6/4!/4/  '), 'epubcfi(/6/4!/4/');
+    });
+
+    test('null 或空白回傳 null', () {
+      expect(extractCfiOrRaw(null), isNull);
+      expect(extractCfiOrRaw('   '), isNull);
+    });
+  });
+
+  group('buildInitialLocationParams', () {
+    test('CFI 與有限比例都有：兩個參數都帶', () {
+      expect(
+        buildInitialLocationParams(
+            initialLocatorJson: 'epubcfi(/6/4!/4/2)', initialProgression: 0.42),
+        {'initialCfi': 'epubcfi(/6/4!/4/2)', 'initialProgression': '0.42'},
+      );
+    });
+
+    test('只有 CFI：不帶比例', () {
+      expect(
+        buildInitialLocationParams(initialLocatorJson: 'epubcfi(/6/4!/4/2)'),
+        {'initialCfi': 'epubcfi(/6/4!/4/2)'},
+      );
+    });
+
+    test('沒有任何儲存位置（null 或空白）：回傳空 map（單獨的比例沒有意義）', () {
+      expect(buildInitialLocationParams(initialProgression: 0.42), isEmpty);
+      expect(
+        buildInitialLocationParams(initialLocatorJson: '   ', initialProgression: 0.42),
+        isEmpty,
+      );
+    });
+
+    test('舊格式或損壞的定位字串：原字串仍交給 JS，連同比例讓 JS 走降級', () {
+      const legacy = '{"href":"c2.xhtml","locations":{"progression":0.3}}';
+      expect(
+        buildInitialLocationParams(
+            initialLocatorJson: legacy, initialProgression: 0.42),
+        {'initialCfi': legacy, 'initialProgression': '0.42'},
+      );
+      expect(
+        buildInitialLocationParams(initialLocatorJson: ' epubcfi(/6/4!/4/ '),
+        {'initialCfi': 'epubcfi(/6/4!/4/'},
+      );
+    });
+
+    test('比例為 NaN 或無限大：不帶比例', () {
+      expect(
+        buildInitialLocationParams(
+            initialLocatorJson: 'epubcfi(/6/4)', initialProgression: double.nan),
+        {'initialCfi': 'epubcfi(/6/4)'},
+      );
+    });
+  });
 }

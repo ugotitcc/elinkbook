@@ -55,6 +55,44 @@ String? extractCfi(String? locatorJson) {
   }
 }
 
+/// 取出要交給 JS 的定位字串（epic-67 Issue 5）。可解析出 CFI 時回傳 CFI；
+/// 無法解析（舊格式 Readium Locator JSON、損壞字串）但非空時，回傳去空白後的
+/// 原字串，讓 JS 端判定無效並走降級——若在 Dart 端提早過濾，JS 的降級就會被
+/// 短路（開書靜默回書頭、點書籤毫無反應）。null 或空白回傳 null。
+String? extractCfiOrRaw(String? locatorJson) {
+  final cfi = extractCfi(locatorJson);
+  if (cfi != null) return cfi;
+  final trimmed = locatorJson?.trim();
+  return (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+}
+
+/// 產生「跳到 CFI」的 JS 呼叫字串（epic-67 Issue 5）。[fallbackProgression]
+/// 為 CFI 失效時的降級進度比例；`null`、NaN、無限大都以 JS 的 `null` 傳入
+/// （舊資料沒有 progression 時，JS 端只回報降級、不移動位置）。
+String buildJumpToLocatorScript(String cfi, {double? fallbackProgression}) {
+  final fraction =
+      (fallbackProgression != null && fallbackProgression.isFinite)
+          ? '$fallbackProgression'
+          : 'null';
+  return 'window.jumpToLocator(${jsonEncode(cfi)}, $fraction)';
+}
+
+/// 組出 index.html 的開書定位 URL 參數（epic-67 Issue 5）。沒有任何儲存位置
+/// （null 或空白）時回傳空 map——單獨的進度比例沒有意義，一般開書走書頭；有
+/// 儲存位置但無法解析時，原字串仍會帶入，由 JS 端判定無效並降級。
+Map<String, String> buildInitialLocationParams({
+  String? initialLocatorJson,
+  double? initialProgression,
+}) {
+  final cfi = extractCfiOrRaw(initialLocatorJson);
+  if (cfi == null) return const {};
+  return {
+    'initialCfi': cfi,
+    if (initialProgression != null && initialProgression.isFinite)
+      'initialProgression': '$initialProgression',
+  };
+}
+
 /// 把 `main.js` `window.getTableOfContents()` 回傳的 JSON 陣列字串解析為
 /// [TocEntry] 清單（取代原本 Kotlin 端 `FoliateLocatorCodec.parseTocEntries`
 /// + `tocEntryFromJsonObject`）。`jsonDecode` 產生的 `Map<String, dynamic>`

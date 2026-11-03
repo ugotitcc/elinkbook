@@ -16,4 +16,6 @@ abstract final class FoliateBridgeHandlers {
   static const onSegmentsForSectionReady = 'onSegmentsForSectionReady';
   static const onLocatorChanged = 'onLocatorChanged';
   static const onSelectionChanged = 'onSelectionChanged';
+  // epic-67 Issue 5：精確定位（CFI）失效、已改用概略進度時回報。
+  static const onNavigationDegraded = 'onNavigationDegraded';
 }

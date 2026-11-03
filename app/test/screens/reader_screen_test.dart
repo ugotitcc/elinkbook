@@ -44,6 +44,7 @@ import 'package:elinkbook/reader/reader_console_log.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:elinkbook/storage/storage_access_probe.dart';
 import 'package:elinkbook/reader/foliate_bridge_codec.dart';
+import 'package:elinkbook/reader/navigation_degraded_reason.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 import '../support/fake_inappwebview_platform.dart';
@@ -416,6 +417,102 @@ void main() {
       expect(foliateView.initialLocatorJson, 'epubcfi(/jump)');
       // 驗證 FoliateReaderView._buildInitialUri 依賴的 extractCfi 能成功解析純 CFI 字串
       expect(extractCfi(foliateView.initialLocatorJson), 'epubcfi(/jump)');
+    });
+
+    testWidgets('Foliate：開書把資料庫的閱讀進度當作 CFI 失效的降級比例傳給閱讀器',
+        (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_degrade_progress': const ReadingPosition(
+            epubLocatorJson: 'epubcfi(/stored)',
+            progress: 0.42,
+          ),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_degrade_progress',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      expect(foliateView.initialLocatorJson, 'epubcfi(/stored)');
+      expect(foliateView.initialProgression, 0.42);
+    });
+
+    testWidgets('Foliate：搜尋跳轉目標沒有進度比例時，不拿資料庫進度冒充（初始比例為 null）',
+        (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_degrade_jump_no_progress': const ReadingPosition(
+            epubLocatorJson: 'epubcfi(/stored)',
+            progress: 0.42,
+          ),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_degrade_jump_no_progress',
+            initialJumpTarget: const ReaderJumpTarget(cfi: 'epubcfi(/jump)'),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      expect(foliateView.initialLocatorJson, 'epubcfi(/jump)');
+      expect(foliateView.initialProgression, isNull);
+    });
+
+    testWidgets('Foliate：閱讀器回報降級時顯示提示（開書位置與註記跳轉共用）',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_degrade_snackbar',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      expect(foliateView.onNavigationDegraded, isNotNull);
+
+      foliateView.onNavigationDegraded!(NavigationDegradedReason.annotation);
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_navigation_degraded_snackbar')), findsOneWidget);
+      expect(find.text('原位置已變更，已跳至概略進度'), findsOneWidget);
     });
 
     testWidgets('Foliate：FoliateReaderView.textConversion 反映 resolveTextConversion() 解析結果（單書覆寫優先）',

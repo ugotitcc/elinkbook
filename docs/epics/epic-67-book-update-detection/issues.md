@@ -16,7 +16,7 @@ Issue 6 PDF 降級      ─┘
 | 2 | 本機匯入入口：匯入完成後彙整更新版清單（取代／並存／跳過、全部取代／全部跳過）與暫存檔收尾 | Issue 1 | ⏳ 未開始 | — |
 | 3 | 手動入口「用新檔案更新此書」與 `relinkBook` 強制重新連結 | Issue 1 | ⏳ 未開始 | — |
 | 4 | 下載佇列「待確認更新」：非阻塞狀態、專屬暫存目錄、面板確認、啟動清掃 | Issue 1 | ⏳ 未開始 | — |
-| 5 | Foliate 格式降級：開書與註記跳轉的精確定位失敗改用進度比例，並回報提示 | 無 | ⏳ 未開始 | — |
+| 5 | Foliate 格式降級：開書與註記跳轉的精確定位失敗改用進度比例，並回報提示 | 無 | 🟢 已完成 | [plan-issue-5.md](plans/plan-issue-5.md) |
 | 6 | PDF 降級：頁碼超界限制至最後一頁並回報提示 | 無（建議 Issue 5 之後，共用提示） | ⏳ 未開始 | — |
 
 每個 Issue 的新增畫面字串，一律同步登錄 `app_en.arb`、`app_zh.arb`、`app_zh_CN.arb`、`app_zh_TW.arb`，並於提交前跑 `flutter analyze`、`node tool/check_l10n_hardcoded_strings.js`；動到 `lib/` Key 或 `integration_test/` 者另跑 `node tool/check_integration_keys.js`。ARB 鍵名與測試檔案落點在各 Issue 的 `plan-issue-N.md` 決定（spec 不規定檔案路徑）。
@@ -70,6 +70,7 @@ Status: ready-for-agent（依賴 Issue 1）
 - 跳過、關閉清單、返回或取消時呼叫「丟棄候選」；取代或並存完成後自動收尾。
 - 「N 本已存在，已跳過」提示維持，並與更新版清單分開呈現。
 - 新增字串四語系同步。
+- 實測發現：章節索引超界會讓開書卡死、跳轉位置不動；元素路徑不存在不算失敗，詳見 `plans/plan-issue-5.md`。
 
 **單元測試要求**（widget test）：
 
@@ -125,14 +126,14 @@ Status: ready-for-agent（依賴 Issue 1）
 
 ## Issue 5：Foliate 格式降級
 
-Status: ready-for-agent（無依賴；建議先做）
+Status: completed（[plan-issue-5.md](plans/plan-issue-5.md)）
 
 **範圍**：EPUB／KF8／CBZ／TXT／MD。
 
 - 開書流程把儲存的進度比例一併傳給閱讀器；精確定位（CFI）失敗時不得讓整本書載入失敗，改用進度比例定位，並向 Dart 端回報「閱讀位置已降級」。
 - 註記與書籤跳轉請求同時帶精確定位與概略進度；精確定位失敗自動改用概略進度，並回報「註記位置已降級」。
 - Dart 端據此顯示「位置已變更，已跳至概略進度」提示。
-- 橋接契約：JS→Dart 通訊名稱一律登錄在 `FoliateBridgeHandlers`（新增 `onNavigationDegraded`，不得硬編碼）；降級原因以 Dart 列舉表達（閱讀位置、註記）；`ReaderJumpTarget` 新增概略進度欄位；`FoliateReaderView` 新增降級回呼，由 `ReaderScreen` 接線顯示提示。
+- 橋接契約：JS→Dart 通訊名稱一律登錄在 `FoliateBridgeHandlers`（新增 `onNavigationDegraded`，不得硬編碼）；降級原因以 Dart 列舉表達（閱讀位置、註記）；`ReaderJumpTarget` 沿用既有 `progression` 欄位作為降級進度（與 `cfi` 並存時的語意，不新增欄位）；`FoliateReaderView` 新增降級回呼，由 `ReaderScreen` 接線顯示提示。
 - 降級是通用安全網，同時涵蓋「新檔加舊位置」與「舊檔加新位置」（跨裝置同步）。
 - 動到 `foliate/main.js`：改動後依專案慣例跑 `node app/tool/check_foliate_es_compat.js`。
 - 新增字串四語系同步。

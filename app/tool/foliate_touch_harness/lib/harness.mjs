@@ -47,6 +47,10 @@ export async function launchHarnessPage({
   // beforeNavigate(page)：在頁面導覽（page.goto）之前呼叫，讓場景註冊
   // evaluateOnNewDocument 等需要早於 main.js 執行的注入（例如延遲 iframe load）。
   beforeNavigate = null,
+  // epic-67 Issue 5：開書定位。initialCfi 預設空字串、initialProgression 預設不帶，
+  // 與既有場景行為完全相同。
+  initialCfi = '',
+  initialProgression = null,
 }) {
   const relFiles = await listFilesRecursive(FOLIATE_DIR)
   const fileMap = new Map()
@@ -90,23 +94,29 @@ export async function launchHarnessPage({
     pageTurnMode: 'paginated', columnMode: 'auto', columnSize: 720,
     ...prefs,
   }
-  const openUrl = `${ORIGIN}/index.html?prefs=${encodeURIComponent(JSON.stringify(initialPrefs))}&fontFaceCss=&initialCfi=`
+  const progressionParam = initialProgression === null ? '' : `&initialProgression=${initialProgression}`
+  const openUrl = `${ORIGIN}/index.html?prefs=${encodeURIComponent(JSON.stringify(initialPrefs))}&fontFaceCss=&initialCfi=${encodeURIComponent(initialCfi)}${progressionParam}`
   await page.setViewport({ ...viewport, hasTouch: true })
   if (beforeNavigate) await beforeNavigate(page)
-  await page.goto(openUrl, { waitUntil: 'load' })
-  await page.waitForFunction(
-    () => window.__harnessEvents.some((e) => e.name === 'onPageRendered'),
-    { timeout: 15000 },
-  )
-  await page.waitForFunction(() => {
-    const container = document.querySelector('foliate-view')?.renderer?.shadowRoot?.getElementById('container')
-    for (const iframe of container?.querySelectorAll('iframe') ?? []) {
-      const text = iframe.contentDocument?.body?.textContent?.trim() ?? ''
-      if (text.length > 20) return true
-    }
-    return false
-  }, { timeout: 10000 })
-  await new Promise((r) => setTimeout(r, 300))
+  try {
+    await page.goto(openUrl, { waitUntil: 'load' })
+    await page.waitForFunction(
+      () => window.__harnessEvents.some((e) => e.name === 'onPageRendered'),
+      { timeout: 15000 },
+    )
+    await page.waitForFunction(() => {
+      const container = document.querySelector('foliate-view')?.renderer?.shadowRoot?.getElementById('container')
+      for (const iframe of container?.querySelectorAll('iframe') ?? []) {
+        const text = iframe.contentDocument?.body?.textContent?.trim() ?? ''
+        if (text.length > 20) return true
+      }
+      return false
+    }, { timeout: 10000 })
+    await new Promise((r) => setTimeout(r, 300))
+  } catch (err) {
+    await browser.close()
+    throw err
+  }
 
   const client = await page.createCDPSession()
   return { browser, page, client, pageErrors }

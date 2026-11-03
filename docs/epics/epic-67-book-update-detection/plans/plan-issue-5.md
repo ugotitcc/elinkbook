@@ -62,7 +62,7 @@
 - Produces（JS）：`resolveValidatedCfi(cfi)`、`goToFractionSafely(fraction)`、`reportNavigationDegraded(reason)`、`openAtInitialLocation()`；URL 參數 `initialProgression`；handler `onNavigationDegraded`，參數為字串 `'readingPosition'` 或 `'annotation'`。Task 2 會重用前三者。
 - Produces（harness）：`launchHarnessPage({ initialCfi, initialProgression, ... })`、`buildMultiChapterEpub()`（3 章，每章約 12 段長文字，章節索引 0～2）。
 
-- [ ] **Step 1：擴充 harness（向後相容）**
+- [x] **Step 1：擴充 harness（向後相容）**
 
 在 `lib/harness.mjs` 的 `launchHarnessPage` 參數列（`beforeNavigate = null,` 之後）加入：
 
@@ -92,7 +92,7 @@
   }
 ```
 
-- [ ] **Step 2：新增共用 fixture**
+- [x] **Step 2：新增共用 fixture**
 
 建立 `lib/multi-chapter-epub.mjs`：
 
@@ -125,7 +125,7 @@ export function buildMultiChapterEpub() {
 }
 ```
 
-- [ ] **Step 3：寫失敗的開書情境（RED）**
+- [x] **Step 3：寫失敗的開書情境（RED）**
 
 建立 `scenario-epic67-open-position-degrade.mjs`：
 
@@ -221,12 +221,12 @@ async function main() {
 main().catch((err) => { console.error(err); process.exitCode = 2 })
 ```
 
-- [ ] **Step 4：執行確認失敗**
+- [x] **Step 4：執行確認失敗**
 
 Run（在 `app/tool/foliate_touch_harness/`）：`node scenario-epic67-open-position-degrade.mjs`
 Expected：A、F、G 的定位項 PASS；B／D／E 顯示 `FAIL`（開書逾時，`r.opened` 為 false）；C、H 顯示 `FAIL`（開在書頭、無降級回報）；整體 exit code 1。
 
-- [ ] **Step 5：實作 `main.js`**
+- [x] **Step 5：實作 `main.js`**
 
 (5a) 在 `const initialCfi = params.get('initialCfi') || ''`（約 95 行）之後新增：
 
@@ -312,19 +312,19 @@ async function openAtInitialLocation() {
     await openAtInitialLocation()
 ```
 
-- [ ] **Step 6：執行確認通過**
+- [x] **Step 6：執行確認通過**
 
 Run：`node scenario-epic67-open-position-degrade.mjs`
 Expected：全部 `[PASS]`，exit code 0。若 B 的 `Math.abs(fraction - 0.8) < 0.15` 因分頁取整略超出，**不要放寬門檻**，先印出實際值判斷是實作問題還是 fixture 問題。
 
-- [ ] **Step 7：既有 harness 迴歸與 ES 相容檢查**
+- [x] **Step 7：既有 harness 迴歸與 ES 相容檢查**
 
 Run（`app/tool/foliate_touch_harness/`）：`node run-all.mjs`
 Expected：整體結果「全部 PASS」（既有場景因 harness 改動向後相容，不應受影響）。
 Run（`app/`）：`node tool/check_foliate_es_compat.js`
 Expected：無新的未設防 API 用法。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/tool/foliate_touch_harness app/android/app/src/main/assets/foliate/main.js
@@ -343,7 +343,7 @@ git commit -m "feat(epic-67): Issue 5 開書時 CFI 失效改用進度比例並�
 - Consumes（Task 1）：`resolveValidatedCfi`、`goToFractionSafely`、`reportNavigationDegraded`。
 - Produces：`window.jumpToLocator(cfi, fallbackProgression)`——第二參數為數字或 `null`；回傳 Promise；Task 4 的 Dart 腳本以此簽章呼叫。
 
-- [ ] **Step 1：寫失敗的跳轉情境（RED）**
+- [x] **Step 1：寫失敗的跳轉情境（RED）**
 
 建立 `scenario-epic67-jump-degrade.mjs`：
 
@@ -430,12 +430,12 @@ async function main() {
 main().catch((err) => { console.error(err); process.exitCode = 2 })
 ```
 
-- [ ] **Step 2：執行確認失敗**
+- [x] **Step 2：執行確認失敗**
 
 Run（`app/tool/foliate_touch_harness/`）：`node scenario-epic67-jump-degrade.mjs`
 Expected：A、F 的定位項 PASS；B／C／D／E 的「回報降級」項 `FAIL`；B／C／E2 的定位項 `FAIL`。（`NaN` 經 `page.evaluate` 序列化後可能變成 `null`，兩者在 JS 端都應被視為無比例，這正是 E1 要驗證的。）
 
-- [ ] **Step 3：實作 `window.jumpToLocator`**
+- [x] **Step 3：實作 `window.jumpToLocator`**
 
 把現有的
 
@@ -460,12 +460,12 @@ window.jumpToLocator = async function (cfi, fallbackProgression) {
 }
 ```
 
-- [ ] **Step 4：執行確認通過**
+- [x] **Step 4：執行確認通過**
 
 Run：`node scenario-epic67-jump-degrade.mjs` → 全部 `[PASS]`。
 Run：`node scenario-epic67-open-position-degrade.mjs` → 仍全部 `[PASS]`（共用函式未被破壞）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/tool/foliate_touch_harness app/android/app/src/main/assets/foliate/main.js
@@ -493,7 +493,7 @@ git commit -m "feat(epic-67): Issue 5 註記與書籤跳轉 CFI 失效改用進�
   - `String? extractCfiOrRaw(String? locatorJson)`：可解析出 CFI 就回傳 CFI；無法解析（舊格式 Readium Locator JSON、損壞字串）但去空白後非空時，回傳**去空白後的原字串**，讓 JS 端判定無效並走降級；null 或空白回傳 null。**這是為了避免 Dart 端提早過濾而短路 JS 的降級**（審查 I-1／I-2）。
   - `Map<String, String> buildInitialLocationParams({String? initialLocatorJson, double? initialProgression})`：以 `extractCfiOrRaw` 取得定位字串，非 null 時含 `initialCfi`；有限的比例才含 `initialProgression`；定位字串為 null（沒有任何儲存位置）時回傳空 map。
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 (1a) `foliate_bridge_handlers_test.dart`：在 `expected` 與 `actual` 兩個 map 各加一筆 `'onNavigationDegraded': 'onNavigationDegraded'`／`FoliateBridgeHandlers.onNavigationDegraded`，`values` 集合加 `FoliateBridgeHandlers.onNavigationDegraded`，並把第二個測試名稱的「11 個」改為「12 個」、`hasLength(11)` 改為 `hasLength(12)`。
 
@@ -630,12 +630,12 @@ void main() {
 
 （檔案頂端若尚未 import `foliate_bridge_codec.dart`，沿用既有 import；測試 `extractCfi` 的同一檔已經有。）
 
-- [ ] **Step 2：執行確認失敗**
+- [x] **Step 2：執行確認失敗**
 
 Run：`flutter test test/reader/foliate_bridge_handlers_test.dart test/reader/navigation_degraded_reason_test.dart test/reader/foliate_bridge_codec_test.dart`
 Expected：編譯錯誤（找不到 `onNavigationDegraded`、`navigation_degraded_reason.dart`、`buildJumpToLocatorScript`、`buildInitialLocationParams`、`extractCfiOrRaw`）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 (3a) `foliate_bridge_handlers.dart`，在 `onSelectionChanged` 之後加：
 
@@ -713,11 +713,11 @@ Map<String, String> buildInitialLocationParams({
 }
 ```
 
-- [ ] **Step 4：執行確認通過**
+- [x] **Step 4：執行確認通過**
 
 Run：同 Step 2 的指令 → 全部通過。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/reader app/test/reader
@@ -741,7 +741,7 @@ git commit -m "feat(epic-67): Issue 5 新增降級橋接常數、原因列舉與
   - `static void FoliateReaderView.jumpToLocator(GlobalKey<State<FoliateReaderView>> key, String locatorJson, {double? fallbackProgression})`。
   - `ReaderJumpTarget.progression` 的語意放寬：與 `cfi` 並存時，作為 CFI 失效的降級進度（不新增欄位，避免與既有 `progression` 重複）。
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 `foliate_reader_surface_test.dart` 的「所有指令靜默忽略、不拋例外」測試中，在 `surface.jumpTo(const ReaderJumpTarget(progression: 0.5));` 之後新增一行：
 
@@ -767,12 +767,12 @@ git commit -m "feat(epic-67): Issue 5 新增降級橋接常數、原因列舉與
 
 若該檔沒有名為 `_noop` 的頂層函式，改用檔內既有的等價寫法（例如 `() {}` 搭配非 `const` 建構）。
 
-- [ ] **Step 2：執行確認失敗**
+- [x] **Step 2：執行確認失敗**
 
 Run：`flutter test test/reader/foliate_reader_view_test.dart test/reader/foliate_reader_surface_test.dart`
 Expected：編譯錯誤（`initialProgression`、`onNavigationDegraded` 未定義）。
 
-- [ ] **Step 3：實作 `FoliateReaderView`**
+- [x] **Step 3：實作 `FoliateReaderView`**
 
 (3a) 檔頂 import 加：`import 'navigation_degraded_reason.dart';`（與其他 `reader/` 內 import 同區塊）。
 
@@ -871,14 +871,14 @@ Expected：編譯錯誤（`initialProgression`、`onNavigationDegraded` 未定�
   /// 與 [cfi] 並存時，是 CFI 在新版內容中失效時的降級進度（epic-67 Issue 5）。
 ```
 
-- [ ] **Step 4：執行確認通過**
+- [x] **Step 4：執行確認通過**
 
 Run：`flutter test test/reader/foliate_reader_view_test.dart test/reader/foliate_reader_surface_test.dart test/reader/reader_jump_target_test.dart`
 Expected：全部通過。
 Run：`flutter analyze`
 Expected："No issues found!"
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/reader app/test/reader
@@ -898,7 +898,7 @@ git commit -m "feat(epic-67): Issue 5 FoliateReaderView 傳遞降級進度並回
 - Consumes（Task 4）：`FoliateReaderView.initialProgression`、`FoliateReaderView.onNavigationDegraded`、`ReaderJumpTarget(cfi:, progression:)`。
 - Produces：ARB 鍵 `readerNavigationDegradedMessage`；SnackBar Key `reader_navigation_degraded_snackbar`（Issue 6 的 PDF 降級會沿用同一個鍵與訊息）。
 
-- [ ] **Step 1：新增 ARB 字串並產生本地化檔**
+- [x] **Step 1：新增 ARB 字串並產生本地化檔**
 
 `app_zh_TW.arb`（樣板，含描述），緊接在 `readerPrefsSaveFailedMessage` 條目（含其 `@` 描述區塊）之後插入：
 
@@ -918,7 +918,7 @@ git commit -m "feat(epic-67): Issue 5 FoliateReaderView 傳遞降級進度並回
 Run：`flutter gen-l10n`
 Expected：`lib/l10n/app_localizations*.dart` 出現 `readerNavigationDegradedMessage`。
 
-- [ ] **Step 2：寫失敗的畫面測試**
+- [x] **Step 2：寫失敗的畫面測試**
 
 在 `test/screens/reader_screen_test.dart` 內，緊接 `'Foliate：initialJumpTarget.cfi 優先於資料庫既有 lastPosition'` 那個 `testWidgets` 之後，加入以下三個（沿用該測試的 `MaterialApp` 包裝與 `tester.pump` 流程）：
 
@@ -1022,12 +1022,12 @@ Expected：`lib/l10n/app_localizations*.dart` 出現 `readerNavigationDegradedMe
 
 在檔案頂端 import 區補：`import 'package:elinkbook/reader/navigation_degraded_reason.dart';`、`import 'package:elinkbook/reader/reading_position.dart';`（若已間接 import 就不重複）。
 
-- [ ] **Step 3：執行確認失敗**
+- [x] **Step 3：執行確認失敗**
 
 Run：`flutter test test/screens/reader_screen_test.dart --plain-name "Foliate：開書把資料庫的閱讀進度"`（再分別跑另兩個 `--plain-name`）
 Expected：失敗（`initialProgression` 為 null、`onNavigationDegraded` 為 null）。
 
-- [ ] **Step 4：實作 `ReaderScreen`**
+- [x] **Step 4：實作 `ReaderScreen`**
 
 (4a) 檔頂 import 加 `import '../reader/navigation_degraded_reason.dart';`。
 
@@ -1092,14 +1092,14 @@ Expected：失敗（`initialProgression` 為 null、`onNavigationDegraded` 為 n
   }
 ```
 
-- [ ] **Step 5：執行確認通過**
+- [x] **Step 5：執行確認通過**
 
 Run：`flutter test test/screens/reader_screen_test.dart`
 Expected：全部通過（含既有案例）。
 Run：`flutter analyze` → "No issues found!"
 Run：`node tool/check_l10n_hardcoded_strings.js` → 無新違規。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/lib/l10n app/test/screens/reader_screen_test.dart
@@ -1118,7 +1118,7 @@ git commit -m "feat(epic-67): Issue 5 ReaderScreen 傳遞降級進度並顯示�
 **Interfaces:**
 - Consumes：`FoliateReaderView`（新參數）、`FoliateReaderView.jumpToLocator(..., fallbackProgression:)`。
 
-- [ ] **Step 1：寫真機整合測試**
+- [x] **Step 1：寫真機整合測試**
 
 建立 `integration_test/foliate_navigation_degrade_test.dart`（沿用 `foliate_epub_reader_view_test.dart` 的 `_stageAssetAsFile` 寫法與 `pumpLocalizedWidget`）：
 
@@ -1227,18 +1227,18 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：檢查鍵值腳本並在真機執行**
+- [x] **Step 2：檢查鍵值腳本並在真機執行**
 
 Run（`app/`）：`node tool/check_integration_keys.js` → 無新違規。
 Run：`flutter devices` 取得裝置 ID，再 `flutter test integration_test/foliate_navigation_degrade_test.dart -d <device-id>`
 Expected：兩個測試通過。**若本機沒有可用的真機或模擬器，如實在 PR 說明標註「整合測試未跑」，不要宣稱通過**；此步驟交由人類在真機補跑。
 
-- [ ] **Step 3：文件同步**
+- [x] **Step 3：文件同步**
 
 - `issues.md`：Issue 5 的橋接契約段落中，「`ReaderJumpTarget` 新增概略進度欄位」改為「`ReaderJumpTarget` 沿用既有 `progression` 欄位作為降級進度（與 `cfi` 並存時的語意，不新增欄位）」；總表 Issue 5 狀態改為「🟡 實作中」或實際進度；補一句「實測發現：章節索引超界會讓開書卡死、跳轉位置不動；元素路徑不存在不算失敗，詳見 `plans/plan-issue-5.md`」。
 - `epic.md`：待辦中補註 Issue 5 plan 已完成。
 
-- [ ] **Step 4：完整測試（此 Task 是最後一個，執行一次完整套件）**
+- [x] **Step 4：完整測試（此 Task 是最後一個，執行一次完整套件）**
 
 Run：`flutter analyze` → "No issues found!"
 Run：`flutter test`
@@ -1246,7 +1246,7 @@ Expected：全部通過。若有失敗，先判斷是否為本 Issue 造成（�
 Run（`app/tool/foliate_touch_harness/`）：`node run-all.mjs` → 全部 PASS。
 Run：`node tool/check_foliate_es_compat.js`、`node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js` → 皆無新違規。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/integration_test docs/epics/epic-67-book-update-detection

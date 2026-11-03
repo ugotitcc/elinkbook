@@ -4529,6 +4529,12 @@ abstract class AppLocalizations {
   /// **'閱讀設定未能儲存：裝置儲存空間寫入失敗。本次閱讀仍使用新設定，下次開書可能還原。請確認剩餘空間。'**
   String get readerPrefsSaveFailedMessage;
 
+  /// 書籍內容更新後，書籤、劃線、備註或上次閱讀位置的精確定位失效，已改用概略進度時的 SnackBar 提示（epic-67 Issue 5；PDF 頁碼超界降級共用，Issue 6）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'原位置已變更，已跳至概略進度'**
+  String get readerNavigationDegradedMessage;
+
   /// 字典設定畫面底部的 MDX 已知限制說明（JavaScript 不執行、點擊腳本無效）
   ///
   /// In zh_TW, this message translates to:
