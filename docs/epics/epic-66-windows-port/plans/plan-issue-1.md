@@ -12,7 +12,7 @@
 
 ## 與 `epic.md` 決策 15 的差異（使用者已確認，2026-11-03）
 
-原決策 15 寫「Issue 1 含最小 `shelf` 送書原型」。計畫階段查到 Windows 外掛已支援請求攔截，所以本計畫改成「攔截優先，伺服器是備案」。理由：攔截不新增伺服器、不開本機埠、`main.js` 與寫死網域都不用動，也不用做權杖。**如果 Task 8 實測攔截失敗，才加做 `shelf` 原型。**
+原決策 15 寫「Issue 1 含最小 `shelf` 送書原型」。計畫階段查到 Windows 外掛已支援請求攔截，所以本計畫改成「攔截優先，伺服器是備案」。理由：攔截不新增伺服器、不開本機埠、`main.js` 與寫死網域都不用動，也不用做權杖。**如果 Task 9 實測攔截失敗，才加做 `shelf` 原型。**
 
 ## Global Constraints
 
@@ -29,10 +29,10 @@
 ## Review Focus
 
 1. 書檔路徑含中文或空白（例如 `C:\Users\王小明\我的 書\a b.epub`）：要能複製到快取並開啟。測試在 Task 6。
-2. 書檔是 217 MB 等級：攔截回傳整本位元組，記憶體可能暴增。Task 8 實測並記錄尖峰記憶體。
+2. 書檔是 217 MB 等級：攔截回傳整本位元組，記憶體可能暴增。Task 9 實測並記錄尖峰記憶體。
 3. 同一本書連開兩次、或開書中途離開畫面：快取子目錄不能互相覆蓋或殘留。測試在 Task 6。
 4. 攔截回呼收到未知路徑：回 `null`（讓 WebView 走預設行為），不丟例外。測試在 Task 6。
-5. Windows 啟動時 `AudioService` 被跳過：閱讀器的 TTS 入口不能一直轉圈。測試在 Task 3。
+5. Windows 啟動時 `AudioService` 被跳過：閱讀器的 TTS 入口不能顯示降級提示。測試在 Task 3（`consumeDegradedNotice()` 恆為 `false`）。
 
 ## 檔案結構
 
@@ -46,7 +46,10 @@
 | `app/lib/reader/windows_reader_resources.dart` | 建立 | Windows 版 foliate 資源讀取、書檔快取、字型讀取 |
 | `app/lib/reader/foliate_native_bridge.dart` | 修改 | 四個 Android channel 函式依平台分流 |
 | `app/lib/reader/foliate_reader_view.dart` | 修改 | 攔截 `/book/`；Windows 不設 `webViewAssetLoader`；帶入 `webViewEnvironment` |
-| `app/lib/search/foliate_content_indexer.dart` | 修改 | 帶入 `webViewEnvironment` |
+| `app/lib/search/foliate_content_indexer.dart` | 修改 | 帶入 `webViewEnvironment`；Windows 攔截 `/book/`；`webViewAssetLoader` 只在 Android 設定 |
+| `app/lib/reader/tts_audio_focus_source.dart` | 修改 | 新增 `NoopTtsAudioFocusSource` |
+| `app/lib/screens/support/book_import_picker_helper.dart` | 修改 | 取 `f.identifier ?? f.path` |
+| `app/lib/library/book_import_service_impl.dart` | 修改 | metadata channel 不存在時降級 |
 | `app/windows/CMakeLists.txt` | 修改 | 把 foliate 資源複製到 `data/foliate` |
 | `app/integration_test/windows_spike/*.dart` | 建立 | 條件 3～7 的探針測試 |
 | `docs/epics/epic-66-windows-port/spike-report.md` | 建立 | 驗證報告 |
@@ -129,7 +132,8 @@ git commit -m "feat(platform): 新增平台判斷輔助（epic-66 Issue 1）"
 ### Task 3：啟動鏈平台防護與 TTS「此平台不需要」狀態
 
 **Files：**
-- Modify：`app/lib/reader/tts_audio_handler_startup.dart:55-60`（enum）、`:62`（建構子區）
+- Modify：`app/lib/reader/tts_audio_handler_startup.dart:40`（enum）、`:51-71`（`TtsAudioHandlerHolder` 與建構子區）
+- Modify：`app/lib/reader/tts_audio_focus_source.dart`（新增 `NoopTtsAudioFocusSource implements TtsAudioFocusSource`，`events` 恆為 `const Stream.empty()`）
 - Modify：`app/lib/main.dart:253-300`
 - Test：`app/test/reader/tts_audio_handler_startup_test.dart`（沿用既有檔；沒有就建立）
 
@@ -154,11 +158,11 @@ enum 新增 `notRequired`；新增 `TtsAudioHandlerHolder.notRequired()` 建構�
 
 - [ ] **Step 4：修改 `main.dart`**
 
-`isWindowsPlatform` 為真時：不呼叫 `AudioSession.instance`／`configure`、不呼叫 `AudioService.init`，`ttsAudio` 指派 `TtsAudioHandlerHolder.notRequired()`；`ttsAudioFocusSource` 在 Windows 要有替代值，先查它的使用處（`grep -n ttsAudioFocusSource lib`），用型別允許的最小空實作。Android 分支逐字保留。
+`isWindowsPlatform` 為真時：不呼叫 `AudioSession.instance`／`configure`、不呼叫 `AudioService.init`，`ttsAudio` 指派 `TtsAudioHandlerHolder.notRequired()`；`ttsAudioFocusSource` 在 Windows 使用 `NoopTtsAudioFocusSource()`。Android 分支逐字保留。
 
-- [ ] **Step 5：檢查 TTS 入口不轉圈**
+- [ ] **Step 5：確認沒有分支需要補**
 
-`grep -rn "TtsAudioHandlerStatus" lib`，逐一確認每個 `switch`／判斷對 `notRequired` 的行為：不顯示載入中、不顯示降級提示。需要補的分支補上，並各加一個 widget 測試。
+`grep -rn "TtsAudioHandlerStatus" lib` 預期只出現在 `tts_audio_handler_startup.dart` 內（審查已查證：`ReaderScreen` 直接讀 `holder.handler` 與 `consumeDegradedNotice()`，沒有人依 `status` 分支）。如果出現其他使用處，逐一確認對 `notRequired` 的行為（不顯示載入中、不顯示降級提示）並各補一個測試。
 
 - [ ] **Step 6：執行確認通過**
 
@@ -220,6 +224,8 @@ git commit -m "feat(windows): 建立 WebView2 環境並指定使用者資料夾�
 Run：`flutter build windows --debug`
 Expected：`app/build/windows/x64/runner/Debug/data/foliate/main.js` 存在（用 `ls` 確認）。
 
+`flutter build windows` 與 `flutter run -d windows` 都會以 `--target INSTALL` 建置（Flutter 工具 `build_windows.dart:225,251` 預設 `install = true`），所以 `install()` 規則在兩者都會執行，不需要另加 `POST_BUILD` 複製。在 Task 9 Step 1 用 `flutter run` 啟動後，再確認一次該檔案存在。
+
 - [ ] **Step 3：Commit**
 
 ```bash
@@ -240,6 +246,8 @@ git commit -m "build(windows): 打包 foliate-js 資源（epic-66 Issue 1）"
   - `Future<Uint8List?> loadWindowsFoliateAsset(String relativePath, {required String assetRoot})`：讀 `assetRoot/<relativePath>`；檔案不存在回 `null`；路徑含 `..` 回 `null`。
   - `Future<String?> cacheWindowsBook(String filePath, String instanceId, {required Directory baseDir})`：複製到 `baseDir/<instanceId>/current.<ext>`，回傳該檔絕對路徑；來源不存在回 `null`。副檔名沿用 `cacheFileExtension`。
   - `Future<Uint8List?> loadWindowsFileBytes(String path)`：讀本機檔案，不存在回 `null`。
+  - `Future<Uint8List?> readWindowsBookBytes(String requestPath, String bookDir)`：`requestPath` 必須以 `/book/` 開頭，其餘部分是檔名；讀 `bookDir/<檔名>`。路徑不以 `/book/` 開頭、檔名含 `..` 或路徑分隔符號、檔案不存在，一律回 `null`。閱讀器與索引器共用。
+  - `String windowsBookContentType(String fileName)`：`.epub` 回 `application/epub+zip`，`.cbz` 回 `application/vnd.comicbook+zip`，其餘回 `application/octet-stream`。
 
 - [ ] **Step 1：寫失敗的測試**（用 `Directory.systemTemp.createTemp`）
 
@@ -249,6 +257,10 @@ git commit -m "build(windows): 打包 foliate-js 資源（epic-66 Issue 1）"
 - `cacheWindowsBook：路徑含中文與空白也能複製`（來源 `我的 書/a b.epub`，內容位元組一致）。
 - `cacheWindowsBook：同一本書用不同 instanceId 不互相覆蓋`。
 - `cacheWindowsBook：來源不存在回 null`。
+- `readWindowsBookBytes：讀得到 /book/current.epub`。
+- `readWindowsBookBytes：/assets/foliate/main.js 回 null`。
+- `readWindowsBookBytes：/book/../secret.txt 回 null`。
+- `windowsBookContentType：.epub 與 .cbz 與未知副檔名各一個斷言`。
 
 - [ ] **Step 2：執行確認失敗**，Run：`flutter test test/reader/windows_reader_resources_test.dart`，Expected：FAIL。
 
@@ -293,9 +305,9 @@ git commit -m "feat(reader): 新增 Windows 讀者資源實作（epic-66 Issue 1
 
 - [ ] **Step 3：實作**
 
-- `foliate_native_bridge.dart`：`isWindowsPlatform` 時，`attachReaderView`／`detachReaderView` 直接返回；`loadAndroidAsset` 呼叫 `loadWindowsFoliateAsset`，`assetRoot` 為執行檔旁的 `data/` 目錄（`Platform.resolvedExecutable` 的父目錄）；`loadCustomFontBytes` 呼叫 `loadWindowsFileBytes`；`_defaultCacheBookForServing` 呼叫 `cacheWindowsBook`，`baseDir` 為 `getTemporaryDirectory()` 下的子資料夾。Android 分支逐字保留。
-- `foliate_reader_view.dart`：`_shouldInterceptRequest` 新增 `book` 分支，僅 Windows 啟用：讀 `_bookCacheDir` 下的檔案位元組，`contentType` 為 `application/epub+zip`（CBZ 等其他副檔名依 `cacheFileExtension` 對應，找不到對應就用 `application/octet-stream`）。`webViewAssetLoader` 只在 Android 設定。`InAppWebView` 與 `HeadlessInAppWebView` 都傳入 `webViewEnvironment: appWebViewEnvironment`。
-- `foliate_content_indexer.dart`：同樣傳入 `appWebViewEnvironment`。
+- `foliate_native_bridge.dart`：`isWindowsPlatform` 時，`attachReaderView`／`detachReaderView` 直接返回；`loadAndroidAsset` 呼叫 `loadWindowsFoliateAsset`，`assetRoot` 預設為執行檔旁的 `data/` 目錄（`Platform.resolvedExecutable` 的父目錄）；另提供頂層可覆寫變數 `String? windowsFoliateAssetRootOverride`（比照 `cacheBookForServing` 的測試覆寫設計），非 null 時優先使用，讓測試不必依賴 `flutter_tester.exe` 的位置；`loadCustomFontBytes` 呼叫 `loadWindowsFileBytes`；`_defaultCacheBookForServing` 呼叫 `cacheWindowsBook`，`baseDir` 為 `getTemporaryDirectory()` 下的子資料夾。Android 分支逐字保留。
+- `foliate_reader_view.dart`：`_shouldInterceptRequest` 新增 `book` 分支，僅 Windows 啟用：呼叫 `readWindowsBookBytes(path, _bookCacheDir!)`，非 null 就以 `windowsBookContentType` 回傳，null 就回 `null`。`webViewAssetLoader` 只在 Android 設定。`InAppWebView` 與 `HeadlessInAppWebView` 都傳入 `webViewEnvironment: appWebViewEnvironment`。
+- `foliate_content_indexer.dart`：傳入 `appWebViewEnvironment`；`webViewAssetLoader` 只在 `isAndroidPlatform` 時設定；`_shouldInterceptIndexRequest` 目前是 `static` 且只認 `/assets/foliate/`，改成可取得 `cacheDir` 的閉包（`cacheDir` 是索引流程內的區域變數），在 Windows 對 `/book/` 路徑呼叫 `readWindowsBookBytes(path, cacheDir)`。Android 的行為不變。
 
 - [ ] **Step 4：執行確認通過**
 
@@ -311,7 +323,50 @@ git commit -m "feat(reader): Windows 以請求攔截提供書檔與 foliate 資�
 
 ---
 
-### Task 8：開書實測（過關條件 1、2）
+### Task 8：Windows 最小匯入支援
+
+Task 9 要用標準 UI 匯入 fixture。新編譯的 Windows 版書庫是空的，而現有匯入流程有兩道阻礙（審查 I-2），所以本 Task 只做讓匯入能動的最小改動。資料夾匯入、`Book.filePath` 規範留給後續 Issue。
+
+**Files：**
+- Modify：`app/lib/screens/support/book_import_picker_helper.dart:29-30`、`:148`
+- Modify：`app/lib/library/book_import_service_impl.dart:305`、`:477`
+- Test：`app/test/screens/support/book_import_picker_helper_test.dart`、`app/test/library/book_import_service_missing_channel_test.dart`
+
+**Interfaces：**
+- Consumes：無。
+- Produces：選檔器對 `PlatformFile` 取 `identifier ?? path`；`_readEpubIdentifier` 與 `_importSingleFile` 的 metadata 呼叫在 `MissingPluginException` 時降級，行為與現有 `PlatformException` 降級相同。
+
+- [ ] **Step 1：寫失敗的測試**
+
+- `選檔器：identifier 為 null 時改用 path`：`PlatformFile(name: 'a.epub', size: 1, path: 'C:/books/a.epub')`（`identifier` 為 null）通過過濾，URI 為 `C:/books/a.epub`。
+- `選檔器：identifier 與 path 都是 null 時被過濾`。
+- `選檔器：兩者都有時優先用 identifier`（Android 行為不變）。
+- `匯入 EPUB：metadata channel 不存在時，標題退回檔名、不丟例外`（測試環境未註冊 `elinkbook/book_metadata` handler，invoke 會丟 `MissingPluginException`）。沿用既有匯入服務測試的建構方式（`ls test/library | grep import_service` 找範本）。
+
+- [ ] **Step 2：執行確認失敗**
+
+Run：兩個新測試檔。Expected：FAIL。
+
+- [ ] **Step 3：實作**
+
+- 選檔器：過濾條件與 URI 取值改為 `f.identifier ?? f.path`，同一次過濾建立 `uris` 與 `displayNames`，保持逐一對應（檔案內現有註解已要求）。`:148` 的單檔路徑同樣處理。
+- 匯入服務：在 `:305` 與 `:477` 的 `on PlatformException` 之後各加一個 `on MissingPluginException` 子句，內容與前者相同。Android 不會觸發這個例外，行為不變。
+
+- [ ] **Step 4：執行確認通過**
+
+Run：兩個新測試檔，加上既有的匯入服務測試檔與選檔器相關測試檔（`ls test/library test/screens/support` 確認實際檔名）。再跑 `flutter analyze`。
+Expected：PASS，`No issues found!`。
+
+- [ ] **Step 5：Commit**
+
+```bash
+git add app/lib/screens/support/book_import_picker_helper.dart app/lib/library/book_import_service_impl.dart app/test
+git commit -m "feat(import): Windows 選檔取 path，metadata channel 不存在時降級（epic-66 Issue 1）"
+```
+
+---
+
+### Task 9：開書實測（過關條件 1、2）
 
 這個 Task 要人眼確認，無法自動化。
 
@@ -322,7 +377,7 @@ Expected：App 視窗出現，沒有 `MissingPluginException`。若有，記下�
 
 - [ ] **Step 2：匯入並開書**
 
-匯入 `test/fixtures/sample_horizontal.epub`、`sample_declares_vertical.epub`、`sample_long_chinese_vertical.epub`。逐本開啟。
+用標準 UI 匯入（Task 8 已讓它可用）：`test/fixtures/sample_horizontal.epub`、`sample_declares_vertical.epub`、`sample_long_chinese_vertical.epub`。逐本開啟。
 Expected：橫排與直排方向正確；翻頁正常。
 
 - [ ] **Step 3：滑鼠選字**
@@ -345,7 +400,7 @@ Expected：能開；把尖峰數字記進報告。若記憶體暴增到不可用
 
 ---
 
-### Task 9：探針測試（過關條件 3～7）
+### Task 10：探針測試（過關條件 3～7）
 
 **Files：**
 - Create：`app/integration_test/windows_spike/pdf_cover_test.dart`
@@ -358,11 +413,11 @@ Expected：能開；把尖峰數字記進報告。若記憶體暴增到不可用
 
 - [ ] **Step 1：PDF（條件 3）**
 
-`pdf_cover_test.dart`：用 `pdfrx` 開 `test/fixtures/sample_multi_page.pdf`。斷言：`document.pages.length` 等於檔案實際頁數（用 `sample_multi_page.pdf` 已知頁數，執行時先印出再寫死）；第 0 頁 `render()` 後以 `image.createImage()` 轉 PNG，位元組開頭為 PNG 簽章 `89 50 4E 47`。
+`pdf_cover_test.dart`：用 `pdfrx` 開 `test/fixtures/sample_multi_page.pdf`。斷言：`document.pages.length` 等於檔案實際頁數（用 `sample_multi_page.pdf` 已知頁數，執行時先印出再寫死）；第 0 頁 `render()` 後用 `createImage()` 取得 `dart:ui.Image`，再用 `toByteData(format: ImageByteFormat.png)` 轉成位元組，開頭為 PNG 簽章 `89 50 4E 47`。
 
 - [ ] **Step 2：FTS5（條件 6）**
 
-`fts5_test.dart`：用 `databaseFactoryFfi` 開記憶體資料庫，`CREATE VIRTUAL TABLE t USING fts5(body)`，插入「直排繁體中文」，用 `MATCH` 查詢，斷言命中 1 列。
+`fts5_test.dart`：先呼叫 `sqfliteFfiInit()`（獨立 integration test 不會經過 `main.dart`），再用 `databaseFactoryFfi` 開記憶體資料庫，`CREATE VIRTUAL TABLE t USING fts5(body)`，插入「直排繁體中文」，用 `MATCH` 查詢，斷言命中 1 列。
 
 - [ ] **Step 3：安全儲存（條件 7）**
 
@@ -374,7 +429,7 @@ Expected：能開；把尖峰數字記進報告。若記憶體暴增到不可用
 
 - [ ] **Step 5：背景解析（條件 4）**
 
-`headless_metadata_test.dart`：用 `HeadlessInAppWebView` 載入探針頁（由攔截回呼從 Dart 字串提供，內容為一個 `<script type="module">`，從 `/assets/foliate/view.js` 取 `makeBook`，開 `/book/current.epub`，把 `book.metadata.title`、第一位作者、`identifier`、`rendition.layout`、封面 Blob 的 `type` 與 `size` 以 `callHandler` 傳回）。斷言：對 `sample.epub` 回傳的 `title` 非空、`identifier` 非空、封面 `size > 0`。同時把四個欄位印成 JSON，供 Task 10 做 Readium 對比表。
+`headless_metadata_test.dart`：用 `HeadlessInAppWebView` 載入探針頁（由攔截回呼從 Dart 字串提供，內容為一個 `<script type="module">`，從 `/assets/foliate/view.js` 取 `makeBook`，開 `/book/current.epub`，把 `book.metadata.title`、第一位作者、`identifier`、`rendition.layout`、封面 Blob 的 `type` 與 `size` 以 `callHandler` 傳回）。測試開頭先呼叫 Task 6 的 `cacheWindowsBook('test/fixtures/sample.epub', ...)` 把 fixture 複製到暫存目錄，攔截回呼再用 `readWindowsBookBytes` 回應 `/book/current.epub`。斷言：對 `sample.epub` 回傳的 `title` 非空、`identifier` 非空、封面 `size > 0`。同時把四個欄位印成 JSON，供 Task 11 做 Readium 對比表。
 
 - [ ] **Step 6：執行並記錄**
 
@@ -389,7 +444,7 @@ git commit -m "test(windows): 新增 Windows 技術驗證探針（epic-66 Issue 
 
 ---
 
-### Task 10：驗證報告與收尾
+### Task 11：驗證報告與收尾
 
 **Files：**
 - Create：`docs/epics/epic-66-windows-port/spike-report.md`
@@ -400,7 +455,7 @@ git commit -m "test(windows): 新增 Windows 技術驗證探針（epic-66 Issue 
 
 `spike-report.md` 用一張表列 7 個條件，每項：通過／失敗、證據（測試名稱或截圖路徑）、備註。另列三個結論：
 1. 送書方式：攔截可行嗎？大檔尖峰記憶體多少？需要伺服器備案嗎？
-2. Metadata：foliate-js 的輸出欄位（來自 Task 9 Step 5）。Readium 的對比表放到後續 Issue，這裡只記 foliate-js 能讀出哪些欄位。
+2. Metadata：foliate-js 的輸出欄位（來自 Task 10 Step 5）。Readium 的對比表放到後續 Issue，這裡只記 foliate-js 能讀出哪些欄位。
 3. 啟動時遇到的所有 `MissingPluginException` 與處置。
 
 - [ ] **Step 2：更新工單狀態**
@@ -423,7 +478,8 @@ git commit -m "docs(epic-66): Issue 1 技術驗證報告"
 
 ## 自我檢查
 
-- **過關條件覆蓋**：1、2 → Task 8；3、4、5、6、7 → Task 9。
-- **審查修訂覆蓋**：16（啟動鏈）→ Task 3；17（資源）→ Task 5；18（寫死網域）→ 攔截路線不需要改，已在 Architecture 說明；19（兩個消費者）→ Task 7；20（PDF 封面）→ Task 9 Step 1；23（使用者資料夾）→ Task 4。
-- **未涵蓋、留給後續 Issue**：21（選檔器 `f.identifier ?? f.path`）、22（`Book.filePath` 本機路徑）、24（`window_manager`）。本 Issue 用已匯入的 fixture 路徑驗證，不做匯入流程。若 Task 8 Step 2 的匯入就卡在選檔器，先用最小改動繞過並記入報告。
+- **過關條件覆蓋**：1、2 → Task 9；3、4、5、6、7 → Task 10。
+- **審查修訂覆蓋**：16（啟動鏈）→ Task 3；17（資源）→ Task 5；18（寫死網域）→ 攔截路線不需要改，已在 Architecture 說明；19（兩個消費者）→ Task 7；20（PDF 封面）→ Task 10 Step 1；23（使用者資料夾）→ Task 4。
+- **部分納入**：21（選檔器 `f.identifier ?? f.path`）在 Task 8 做最小版；資料夾匯入（`getDirectoryPath()`）留給後續 Issue。
+- **未涵蓋、留給後續 Issue**：22（`Book.filePath` 本機路徑規範）、24（`window_manager`）。
 - **型別一致**：`isWindowsPlatform`（Task 2）→ Task 3、4、7 使用；`appWebViewEnvironment`（Task 4）→ Task 7、9 使用；Task 6 三個函式 → Task 7 使用。
