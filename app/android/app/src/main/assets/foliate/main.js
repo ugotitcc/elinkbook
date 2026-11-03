@@ -677,10 +677,17 @@ async function openAtInitialLocation() {
  * 呼叫到這裡，舊格式/無效 JSON 在 Dart 端
  * FoliateEpubReaderView.jumpToLocator() static helper 就已被過濾掉，見
  * foliate_epub_reader_view.dart），本函式不需要再自行解析 JSON 或判斷
- * 格式。
+ * 格式。epic-67 Issue 5：第二參數為降級用的概略進度比例，可為 null。
  */
-window.jumpToLocator = function (cfi) {
-  view.goTo(cfi)
+window.jumpToLocator = async function (cfi, fallbackProgression) {
+  const resolved = resolveValidatedCfi(cfi)
+  if (resolved) {
+    // view.goTo 內部吞掉例外，失敗時回傳 undefined；成功時回傳已解析的目標物件。
+    const result = await view.goTo(cfi)
+    if (result) return
+  }
+  await goToFractionSafely(fallbackProgression)
+  reportNavigationDegraded('annotation')
 }
 
 /**
