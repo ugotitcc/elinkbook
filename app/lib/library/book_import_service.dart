@@ -1,3 +1,4 @@
+import 'book_update_models.dart';
 import 'models/book.dart';
 import 'models/library_enums.dart';
 
@@ -113,6 +114,12 @@ abstract class BookImportService {
   Future<BookRelinkResult> relinkBook(
     String bookId,
     String newUri, {
+    String? displayName,
+  });
+
+  /// 偵測 [uri] 是否為書庫中某本書的更新版（見 spec「判定規則」與 ADR 0040）。不寫入任何資料。
+  Future<BookDetectionResult> detectBookUpdate(
+    String uri, {
     String? displayName,
   });
 }

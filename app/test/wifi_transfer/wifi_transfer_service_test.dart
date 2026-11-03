@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/library/book_import_service.dart';
+import 'package:elinkbook/library/book_update_models.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/wifi_transfer/wifi_transfer_service.dart';
@@ -75,6 +76,13 @@ class _ThrowingImportService implements BookImportService {
     String? displayName,
   }) =>
       Future.value(const BookRelinkFailure(BookRelinkFailureReason.failed));
+
+  @override
+  Future<BookDetectionResult> detectBookUpdate(
+    String uri, {
+    String? displayName,
+  }) =>
+      Future.value(const DetectedNewBook());
 }
 
 void main() {

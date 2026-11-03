@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -9,9 +10,12 @@ import '../storage/storage_permission.dart';
 import '../theme/app_theme_preferences.dart';
 import 'book_content_fingerprint.dart';
 import 'book_import_service.dart';
+import 'book_update_models.dart';
 import 'cbz_import.dart';
+import 'content_uri_reader.dart';
 import 'kf8_metadata.dart';
 import 'library_repository.dart';
+import 'md_frontmatter.dart';
 import 'models/book.dart';
 import 'models/book_group.dart';
 import 'models/library_enums.dart';
@@ -300,6 +304,203 @@ class BookImportServiceImpl implements BookImportService {
       // 讀寫失敗等，一律視為 failed：本方法保證不拋出例外，呼叫端只需
       // 依結果顯示對應 SnackBar。
       return const BookRelinkFailure(BookRelinkFailureReason.failed);
+    }
+  }
+
+  @override
+  Future<BookDetectionResult> detectBookUpdate(
+    String uri, {
+    String? displayName,
+  }) async {
+    final existingBooks = await _repository.listBooks();
+    return _detectBookUpdateInternal(
+      uri,
+      displayName: displayName,
+      existingBooks: existingBooks,
+    );
+  }
+
+  /// 內部更新版偵測邏輯，接收預讀的 [existingBooks] 供批次迴圈重用（審查 M-2）。
+  Future<BookDetectionResult> _detectBookUpdateInternal(
+    String uri, {
+    String? displayName,
+    required List<Book> existingBooks,
+  }) async {
+    // 1. 格式判斷；未知格式回傳 DetectedUnsupported
+    final format = _detectImportFormat(uri, displayName);
+    if (format == null) {
+      return const DetectedUnsupported();
+    }
+
+    // 2. 前置短路：若書庫內沒有同格式書籍，直接回傳 DetectedNewBook（不讀新檔）
+    final sameFormatBooks =
+        existingBooks.where((b) => b.format == format).toList();
+    if (sameFormatBooks.isEmpty) {
+      return const DetectedNewBook();
+    }
+
+    // 3. 取得新檔身份（偵測階段永不拋例外）
+    final identity = await _peekIdentity(uri, format, displayName);
+
+    // 4. 候選比對：
+    // 第一層（僅 EPUB）：identifier 相同
+    final firstLayerMatches = <Book>[];
+    final trimmedNewId = identity.epubIdentifier?.trim();
+    if (format == BookFileFormat.epub &&
+        trimmedNewId != null &&
+        trimmedNewId.isNotEmpty) {
+      for (final book in sameFormatBooks) {
+        if (book.contentFingerprint == trimmedNewId) {
+          firstLayerMatches.add(book);
+        }
+      }
+    }
+
+    // 第二層（所有格式）：書名＋作者經正規化後完全相同；作者為空不進入此層
+    final secondLayerMatches = <Book>[];
+    final normTitle = normalizeBookKey(identity.title);
+    final normAuthor = normalizeBookKey(identity.author);
+    if (normTitle != null && normAuthor != null) {
+      for (final book in sameFormatBooks) {
+        final bookNormTitle = normalizeBookKey(book.title);
+        final bookNormAuthor = normalizeBookKey(book.author);
+        if (bookNormTitle == normTitle && bookNormAuthor == normAuthor) {
+          if (!firstLayerMatches.any((b) => b.id == book.id)) {
+            secondLayerMatches.add(book);
+          }
+        }
+      }
+    }
+
+    final candidateBooks = [...firstLayerMatches, ...secondLayerMatches];
+    if (candidateBooks.isEmpty) {
+      return const DetectedNewBook();
+    }
+
+    // 審查 M-3：只要有任何一本識別碼命中即為 high，否則為 suspected
+    final confidence = firstLayerMatches.isNotEmpty
+        ? UpdateConfidence.high
+        : UpdateConfidence.suspected;
+
+    // 5. 重複 vs 更新版（決策 D1）：
+    // 算新檔整檔 SHA-256（不傳 identifier，強制整檔雜湊）
+    String? newHash;
+    try {
+      newHash = await computeBookContentFingerprint(uri, format);
+    } catch (_) {
+      // 算不出新檔雜湊時視為無法比對重複，回 DetectedUpdate
+      return DetectedUpdate(
+        BookUpdateCandidate(
+          sourceUri: uri,
+          displayName: displayName,
+          format: format,
+          confidence: confidence,
+          candidateBooks: candidateBooks,
+          unreadableCandidateBookIds: const {},
+        ),
+      );
+    }
+
+    final unreadableCandidateBookIds = <String>{};
+    Book? duplicateBook;
+
+    for (final candidate in candidateBooks) {
+      String? oldHash;
+      if (format == BookFileFormat.epub ||
+          format == BookFileFormat.pdf ||
+          format == BookFileFormat.azw3) {
+        try {
+          oldHash =
+              await computeBookContentFingerprint(candidate.filePath, format);
+        } catch (_) {
+          unreadableCandidateBookIds.add(candidate.id);
+          continue;
+        }
+      } else {
+        // TXT／MD／CBZ：使用資料庫中儲存的原始檔指紋（決策 D1）
+        oldHash = candidate.contentFingerprint;
+      }
+
+      if (duplicateBook == null && oldHash != null && oldHash == newHash) {
+        duplicateBook = candidate;
+      }
+    }
+
+    if (duplicateBook != null) {
+      return DetectedDuplicate(duplicateBook);
+    }
+
+    return DetectedUpdate(
+      BookUpdateCandidate(
+        sourceUri: uri,
+        displayName: displayName,
+        format: format,
+        confidence: confidence,
+        candidateBooks: candidateBooks,
+        unreadableCandidateBookIds: unreadableCandidateBookIds,
+      ),
+    );
+  }
+
+  /// 快速讀取新檔身份（title, author, epubIdentifier），偵測階段永不拋出例外。
+  Future<({String title, String? author, String? epubIdentifier})>
+      _peekIdentity(
+    String uri,
+    BookFileFormat format,
+    String? displayName,
+  ) async {
+    final fallback = titleFromFileName(displayName ?? uri);
+    if (format == BookFileFormat.epub) {
+      try {
+        final metadata = _metadataExtractor != null
+            ? await _metadataExtractor(uri, format.name)
+            : await kBookMetadataChannel.invokeMapMethod<String, Object?>(
+                'extractMetadata',
+                {'uri': uri, 'format': format.name},
+              );
+        final extractedTitle = metadata?['title'] as String?;
+        final title = (extractedTitle != null && extractedTitle.isNotEmpty)
+            ? extractedTitle
+            : fallback;
+        final author = metadata?['author'] as String?;
+        final identifier = metadata?['identifier'] as String?;
+        return (title: title, author: author, epubIdentifier: identifier);
+      } catch (_) {
+        return (title: fallback, author: null, epubIdentifier: null);
+      }
+    } else if (format == BookFileFormat.azw3) {
+      try {
+        final metadata = await extractKf8Metadata(uri);
+        final extractedTitle = metadata['title'] as String?;
+        final title = (extractedTitle != null && extractedTitle.isNotEmpty)
+            ? extractedTitle
+            : fallback;
+        final author = metadata['author'] as String?;
+        return (title: title, author: author, epubIdentifier: null);
+      } catch (_) {
+        return (title: fallback, author: null, epubIdentifier: null);
+      }
+    } else if (format == BookFileFormat.md) {
+      try {
+        final bytes = uri.contains('://')
+            ? await readContentUriBytes(uri,
+                tempFilePrefix: 'md_probe', tempFileExtension: '.md')
+            : await File(uri).readAsBytes();
+        final rawContent = utf8.decode(bytes, allowMalformed: true);
+        final parsedDoc = parseMdFrontmatter(rawContent);
+        final title = (parsedDoc.frontmatter.title != null &&
+                parsedDoc.frontmatter.title!.isNotEmpty)
+            ? parsedDoc.frontmatter.title!
+            : fallback;
+        final author = parsedDoc.frontmatter.author;
+        return (title: title, author: author, epubIdentifier: null);
+      } catch (_) {
+        return (title: fallback, author: null, epubIdentifier: null);
+      }
+    } else {
+      // PDF, TXT, CBZ：審查 I-3，PDF 永不發送原生 extractMetadata（避免渲染封面），
+      // 直接回傳檔名標題且作者為 null
+      return (title: fallback, author: null, epubIdentifier: null);
     }
   }
 

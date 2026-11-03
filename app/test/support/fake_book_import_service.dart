@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:elinkbook/library/book_import_service.dart';
+import 'package:elinkbook/library/book_update_models.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 
 /// 記錄最近一次 [BookImportService.importFiles] 的呼叫參數，供測試斷言
@@ -128,4 +129,14 @@ class FakeBookImportService implements BookImportService {
     if (completer != null) return completer.future;
     return Future.value(relinkResult);
   }
+
+  /// epic-67 Issue 1 Task 3：更新版偵測預設回傳新書。
+  BookDetectionResult detectResult = const DetectedNewBook();
+
+  @override
+  Future<BookDetectionResult> detectBookUpdate(
+    String uri, {
+    String? displayName,
+  }) =>
+      Future.value(detectResult);
 }
