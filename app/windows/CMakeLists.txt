@@ -102,6 +102,14 @@ install(CODE "
 install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
 
+# epic-66 Issue 1 Task 5：foliate-js 資源的單一來源是 Android 的
+# `android/app/src/main/assets/foliate`（不複製進 pubspec.yaml，Android APK
+# 大小不變），Windows 產物從同一處複製到 `data/foliate/`。目錄名稱結尾加
+# 斜線表示「安裝目錄內容」，避免再疊一層 `foliate/`。
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../android/app/src/main/assets/foliate/"
+  DESTINATION "${INSTALL_BUNDLE_DATA_DIR}/foliate"
+  COMPONENT Runtime)
+
 # Install the AOT library on non-Debug builds only.
 install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   CONFIGURATIONS Profile;Release
