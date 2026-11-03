@@ -32,6 +32,7 @@ import 'dictionary/storage/mdx_reader_pool.dart';
 import 'library/book_content_fingerprint.dart';
 import 'library/book_import_service_impl.dart';
 import 'library/sqlite_library_repository.dart';
+import 'library/windows_book_metadata.dart';
 import 'licenses/third_party_licenses.dart';
 import 'platform/platform_support.dart';
 import 'reader/book_reader_prefs_repository.dart';
@@ -238,10 +239,14 @@ Future<void> main() async {
   // fullTextSearchSettingsRepository（見 plans/plan-issue-2.md），因此
   // importService 的建構挪到這裡（在它之後），不再是 repository 開啟後
   // 立刻建構。
+  // epic-66 Issue 2：Windows 使用 foliate-js / pdfrx 解析 metadata，
+  // Android 為 null 走既有 kBookMetadataChannel。
+  final metadataExtractor = isWindowsPlatform ? extractWindowsBookMetadata : null;
   final importService = BookImportServiceImpl(
     repository: repository,
     themePreferences: themePreferences,
     fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
+    metadataExtractor: metadataExtractor,
   );
   // epic-34-tts-readalong Issue 9：SystemTtsProvider 預設建構子內部會自行
   // 建立 FlutterTts()，App 層級不需要另外管理其生命週期或提供假物件。
@@ -324,6 +329,7 @@ Future<void> main() async {
     db: repository.database,
     accountRepository: syncAccountRepository,
     metadataRepository: syncMetadataRepository,
+    metadataExtractor: metadataExtractor,
     onReadingPositionConflict: (conflict) async {
       final context = navigatorKey.currentContext;
       // App 啟動極早期（尚未渲染出第一個畫面）理論上呼叫不到這裡——

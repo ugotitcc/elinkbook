@@ -6,7 +6,6 @@
 // - 其他格式: 回傳 null。
 
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 

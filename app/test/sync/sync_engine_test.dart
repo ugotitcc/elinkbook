@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/test/test_flutter_secure_storage_platform.dart';
 import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -299,6 +300,107 @@ void main() {
     final bookRows = await libraryRepository.database
         .query('books', where: 'id = ?', whereArgs: ['b2']);
     expect(bookRows.single['content_fingerprint'], isNotNull);
+  });
+
+  test('EPUB 書籍無指紋時，透過 metadataExtractor 取得 identifier 並回填', () async {
+    final book = Book(
+      id: 'b-epub-meta',
+      title: '測試 EPUB',
+      format: BookFileFormat.epub,
+      filePath: 'test/fixtures/sample.epub',
+      source: BookSource.local,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+    await libraryRepository.insertBook(book);
+    final bookmarksRepository = BookmarksRepository(libraryRepository.database);
+    await bookmarksRepository.insert(
+      const Bookmark(id: 'bm-sync-1', bookId: 'b-epub-meta', name: 'M', progression: 0.2),
+    );
+
+    final mockClient = mockPocketBase((request) async {
+      if (request.url.path == '/api/batch') {
+        return http.Response(
+          jsonEncode([
+            {'status': 200, 'body': {'id': 'pb-bm-1'}},
+          ]),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+
+    final engine = SyncEngine(
+      db: libraryRepository.database,
+      accountRepository: accountRepository,
+      metadataRepository: metadataRepository,
+      clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+      metadataExtractor: (uri, format) async => {
+        'identifier': 'urn:uuid:sync-custom-id',
+      },
+    );
+
+    await engine.runCheckpoint();
+
+    final bookRows = await libraryRepository.database
+        .query('books', where: 'id = ?', whereArgs: ['b-epub-meta']);
+    expect(bookRows.single['content_fingerprint'], 'urn:uuid:sync-custom-id');
+  });
+
+  test('EPUB 書籍回填指紋時 metadataExtractor 拋出 MissingPluginException：不中斷，退回整檔 SHA-256', () async {
+    final book = Book(
+      id: 'b-epub-missing',
+      title: '測試 EPUB 降級',
+      format: BookFileFormat.epub,
+      filePath: 'test/fixtures/sample.epub',
+      source: BookSource.local,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+    await libraryRepository.insertBook(book);
+    final bookmarksRepository = BookmarksRepository(libraryRepository.database);
+    await bookmarksRepository.insert(
+      const Bookmark(id: 'bm-sync-2', bookId: 'b-epub-missing', name: 'M', progression: 0.3),
+    );
+
+    final mockClient = mockPocketBase((request) async {
+      if (request.url.path == '/api/batch') {
+        return http.Response(
+          jsonEncode([
+            {'status': 200, 'body': {'id': 'pb-bm-2'}},
+          ]),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+
+    final engine = SyncEngine(
+      db: libraryRepository.database,
+      accountRepository: accountRepository,
+      metadataRepository: metadataRepository,
+      clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+      metadataExtractor: (uri, format) async =>
+          throw MissingPluginException('metadata channel not implemented'),
+    );
+
+    await engine.runCheckpoint();
+
+    final bookRows = await libraryRepository.database
+        .query('books', where: 'id = ?', whereArgs: ['b-epub-missing']);
+    final fp = bookRows.single['content_fingerprint'] as String?;
+    expect(fp, isNotNull);
+    expect(fp, hasLength(64), reason: '退回 64 位 SHA-256');
   });
 
   test('推送批次失敗（HTTP 錯誤）時，不更新 lastPushCompletedAt，也不寫入 sync_remote_ids',
