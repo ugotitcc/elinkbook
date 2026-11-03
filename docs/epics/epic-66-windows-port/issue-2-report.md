@@ -1,95 +1,153 @@
-# Issue 2：Readium 與 foliate-js 詮釋資料提取對比與大檔量測報告
+# Issue 2：Windows Metadata 解析——對比與記憶體報告
 
-本報告記錄 epic-66 Issue 2 Task 6（Android Readium 與 Windows foliate-js 詮釋資料跨平台對比）與 Task 7（記憶體與架構決策修訂）之實測結果。
+本報告記錄 epic-66 Issue 2 的實測結果：Android Readium 與 Windows foliate-js 的 metadata 逐欄對比、224 MB 大檔的記憶體量測，以及程式碼審查（`reviews/review-issue-2.md`）發現的**記憶體洩漏**的診斷與修正。
+
+> **這份報告取代了先前的版本。** 先前版本寫「無常駐洩漏（Residual Leak = 0 MB）」，那個結論是看「App 程序結束後回落」得出的，**是錯的**。審查指出後，實測證明每解析一次 224 MB 的書，App 私有記憶體會永久多約 452 MB。下文第 4 節記錄完整過程。
 
 ---
 
 ## 1. 測試環境
 
-- **Android（Readium）**：
-  - 裝置：BooksPad（`B78CW2508006423`，Android 12，API 31）
-  - 原生通道：`elinkbook/book_metadata`（`BookMetadataChannel.kt`，Readium `publication.metadata` 與 `publication.cover()`）
-  - 執行指令：`flutter test integration_test/metadata_comparison_test.dart -d B78CW2508006423`
-- **Windows（foliate-js）**：
-  - 環境：Microsoft Windows 11（x64），WebView2 Runtime
-  - 實作：`HeadlessInAppWebView` + `app/android/app/src/main/assets/foliate/metadata-probe.js`（`firstText()`、`readBookMetadata()`）
-  - 執行指令：`flutter test integration_test/windows_metadata/epub_metadata_test.dart -d windows`
+- **Android（Readium）：** BooksPad（`B78CW2508006423`，Android 12），原生通道 `elinkbook/book_metadata`。指令：`flutter test integration_test/metadata_comparison_test.dart -d B78CW2508006423`。
+- **Windows（foliate-js）：** Windows 11 x64、WebView2。實作為 `HeadlessInAppWebView` 加 `metadata-probe.js`。指令：`flutter test integration_test/windows_metadata/epub_metadata_test.dart -d windows`。
+- **版本：** 記憶體診斷迴圈用 debug 版；批次匯入量測（修正前）用 release 版。兩者標在各表。
 
 ---
 
-## 2. 10 份 Fixture 對比清單
+## 2. 13 份 Fixture 逐欄對比
 
-對比欄位：`title`（書名）、`author`（作者）、`identifier`（識別碼）、`isFixedLayout`（是否固定版面）、`cover`（封面提取）。
+比對欄位：書名（title）、作者（author）、識別碼（identifier）、是否固定版面（isFixedLayout）、有無封面。**13 份全部一致，不一致 0 份。**
 
-| Fixture | 引擎 | Title | Author | Identifier | isFixedLayout | Cover | 綜合判定 |
-|---|---|---|---|---|---|---|---|
-| `meta_basic.epub` | Readium<br>foliate-js | 基本書名<br>基本書名 | 王小明<br>王小明 | urn:uuid:meta-basic<br>urn:uuid:meta-basic | false<br>false | 有 (99B)<br>有 (70B) | ✅ **完全一致** |
-| `meta_multi_identifier.epub` | Readium<br>foliate-js | 多識別碼<br>多識別碼 | null<br>null | urn:uuid:meta-multi-second<br>urn:uuid:meta-multi-second | false<br>false | 無 (0B)<br>無 (0B) | ✅ **完全一致** |
-| `meta_lang_titles_two_creators.epub` | Readium<br>foliate-js | 繁中書名<br>繁中書名 | 王小明<br>王小明 | urn:uuid:meta-lang<br>urn:uuid:meta-lang | false<br>false | 無 (0B)<br>無 (0B) | ✅ **完全一致** |
-| `meta_creator_role.epub` | Readium<br>foliate-js | 角色作者<br>角色作者 | 張三<br>張三 | urn:uuid:meta-role<br>urn:uuid:meta-role | false<br>false | 無 (0B)<br>無 (0B) | ✅ **完全一致** |
-| `meta_epub2_cover.epub` | Readium<br>foliate-js | EPUB2 封面<br>EPUB2 封面 | null<br>null | urn:uuid:meta-epub2<br>urn:uuid:meta-epub2 | false<br>false | 有 (99B)<br>有 (70B) | ✅ **完全一致** |
-| `meta_no_cover.epub` | Readium<br>foliate-js | 無封面<br>無封面 | null<br>null | urn:uuid:meta-nocover<br>urn:uuid:meta-nocover | false<br>false | 無 (0B)<br>無 (0B) | ✅ **完全一致** |
-| `meta_fixed_layout.epub` | Readium<br>foliate-js | 固定版面<br>固定版面 | null<br>null | urn:uuid:meta-fxl<br>urn:uuid:meta-fxl | true<br>true | 無 (0B)<br>無 (0B) | ✅ **完全一致** |
-| `meta_no_identifier.epub` | Readium<br>foliate-js | 無識別碼<br>無識別碼 | null<br>null | null<br>null | false<br>false | 無 (0B)<br>無 (0B) | ✅ **完全一致** |
-| `sample.epub` | Readium<br>foliate-js | elinkBook 範例 EPUB<br>elinkBook 範例 EPUB | null<br>null | urn:uuid:00000000-0000-0000-0000-000000000001<br>urn:uuid:00000000-0000-0000-0000-000000000001 | false<br>false | 有 (105B)<br>有 (73B) | ✅ **完全一致** |
-| `sample_fxl_svg_cover.epub` | Readium<br>foliate-js | elinkBook FXL 範例（封面僅透過 alternates 可達）<br>elinkBook FXL 範例（封面僅透過 alternates 可達） | null<br>null | urn:uuid:00000000-0000-0000-0000-000000000002<br>urn:uuid:00000000-0000-0000-0000-000000000002 | true<br>true | 有 (105B)<br>有 (73B) | ✅ **完全一致** |
+| Fixture | title | author | identifier（兩端相同） | 固定版面 | 封面（Readium／foliate 位元組） |
+|---|---|---|---|---|---|
+| `meta_basic` | 基本書名 | 王小明 | `urn:uuid:meta-basic` | 否 | 有（99／70） |
+| `meta_multi_identifier` | 多識別碼 | null | `urn:uuid:meta-multi-second` | 否 | 無 |
+| `meta_lang_titles_two_creators` | 繁中書名 | 王小明 | `urn:uuid:meta-lang` | 否 | 無 |
+| `meta_creator_role` | 角色作者 | 張三 | `urn:uuid:meta-role` | 否 | 無 |
+| `meta_epub2_cover` | EPUB2 封面 | null | `urn:uuid:meta-epub2` | 否 | 有（99／70） |
+| `meta_no_cover` | 無封面 | null | `urn:uuid:meta-nocover` | 否 | 無 |
+| `meta_fixed_layout` | 固定版面 | null | `urn:uuid:meta-fxl` | **是** | 無 |
+| `meta_no_identifier` | 無識別碼 | null | `null` | 否 | 無 |
+| **`meta_unique_id_dangling`** | 識別碼懸空 | null | `9789860000009` | 否 | 無 |
+| **`meta_identifier_whitespace`** | 識別碼含空白 | null | `urn:uuid:meta-ws` | 否 | 無 |
+| **`meta_identifier_opf_scheme`** | 識別碼含 opf:scheme | null | `urn:uuid:meta-scheme` | 否 | 無 |
+| `sample` | elinkBook 範例 EPUB | null | `urn:uuid:00000000-0000-0000-0000-000000000001` | 否 | 有（105／73） |
+| `sample_fxl_svg_cover` | elinkBook FXL 範例（…alternates 可達） | null | `urn:uuid:00000000-0000-0000-0000-000000000002` | **是** | 有（105／73） |
 
----
+粗體三列是審查（Important 5）要求補的邊界案例。三種邊界在兩端取值相同：
 
-## 3. 欄位分析與同步風險評估
+- `unique-identifier` 指向不存在的 id：兩端都退回**第一筆** `dc:identifier`（ISBN）。
+- identifier 帶前後空白與換行：兩端都去掉空白。
+- identifier 帶 `opf:scheme`：兩端都取 `unique-identifier` 指向的那筆。
 
-1. **`identifier` 一致性（關鍵）**：
-   - 10 份 fixture 中，所有含 `dc:identifier` 的檔案，Readium 與 foliate-js 解析出的識別碼**100% 逐字元一致**。
-   - 特別是 `meta_multi_identifier.epub`，兩者皆能正確遵循 EPUB 規範選中 `<package unique-identifier="...">` 屬性所指定的第二組 ID（`urn:uuid:meta-multi-second`）。
-   - **同步風險結論**：`book_content_fingerprint.dart` 優先使用 `identifier` 作為書籍內容指紋；因為兩端解析出的字串完全一致，**Windows 與 Android 在跨裝置同步時無任何指紋分裂風險**。
-2. **`title` 與 `author` 一致性**：
-   - 多語系書名（`meta_lang_titles_two_creators.epub`）：foliate-js 正確選取 zh-TW 繁中，與 Readium 預設行為一致。
-   - 作者角色標記（`meta_creator_role.epub`）：foliate-js 透過 `firstText` 與物件結構提取 `name`，成功解析出「張三」，與 Readium 一致。
-3. **`isFixedLayout` 一致性**：
-   - `meta_fixed_layout.epub` 與 `sample_fxl_svg_cover.epub` 兩者皆精確回傳 `true`，其餘 8 份皆回傳 `false`。
-4. **`cover` 封面大小差異說明**：
-   - 封面存在性（hasCover）兩端 100% 一致。
-   - 位元組大小差異係因 Android 端 `BookMetadataChannel.kt` 將封面解碼為 `Bitmap` 後重新透過 `compress(Bitmap.CompressFormat.PNG, 100, stream)` 輸出（99/105 bytes），而 foliate-js 則是直接自 EPUB zip entry 取得原始圖檔 Blob（70/73 bytes）。兩者皆為有效圖片。
+封面位元組不同是已知的：Android 把封面解碼成 `Bitmap` 再壓成 PNG（99／105 位元組），foliate-js 直接取 zip 內的原始圖檔（70／73 位元組）。兩者皆為有效圖片，且 Windows 的 `_landCover` 一律寫成 `<bookId>.png`，Flutter 依內容解碼，實務上沒有影響。
 
 ---
 
-## 4. 大檔記憶體量測（Task 7 實測）
+## 3. identifier 一致性的結論與限制
 
-### 4.1 測試檔案與環境
-- **書檔路徑**：`U:\05電子書\IT\AI世界的底層邏輯與生存法則.epub`
-- **檔案大小**：235,583,038 bytes（**224.67 MB**）
-- **解析方式**：Windows 端 `extractWindowsBookMetadata`（`HeadlessInAppWebView` + `metadata-probe.js` / foliate-js）
-- **量測工具**：`app/tool/measure_large_epub_memory.ps1`（取樣頻率約 100ms，紀錄 `elinkbook` 與 `msedgewebview2` 之 WorkingSet 記憶體）
-- **測試入口**：`app/integration_test/windows_metadata/large_epub_test.dart`
+`book_content_fingerprint.dart` 優先用 `identifier` 當指紋，兩端不一致會讓同步把同一本書當成兩本，所以這是本 Issue 最重要的對比。
 
-### 4.2 抽取結果與耗時
-- **解析結果**：
-  - `title`：`AI世界的底層邏輯與生存法則`
-  - `author`：`程世嘉`
-  - `identifier`：`urn:uuid:71ce9aa8-e4ae-429c-a36a-152f3d1e3b82`
-  - `isFixedLayout`：`false`
-  - `coverBytes` 大小：`716,032 bytes`（高解析度 PNG 封面抽出正常）
-- **解析耗時**：**9,019 ms**（約 9.0 秒）
+**結論：已測的 13 份沒有任何不一致。** 這是「已測案例無不一致」，**不是**「零風險」的保證。
 
-### 4.3 記憶體軌跡分析（616 筆時序取樣）
-時序軌跡如下表（關鍵節點）：
+**未驗證的範圍（誠實列出）：**
 
-| 階段 | 時間（ElapsedSec） | elinkbook (App) MB | WebView2 總計 MB | WebView2 程序數 | 合計記憶體 MB | 說明 |
-|---|---|---|---|---|---|---|
-| 系統基準線 | 0.30s | 0.00 | 1,192.29 | 25 | 1,192.29 | 系統既有背景 WebView2 程序 |
-| 測試程式啟動 | 30.36s | 2.43 | 1,192.26 | 25 | 1,194.69 | Flutter runner 程序載入 |
-| 建立 HeadlessWebView | 33.25s | 198.66 | 1,192.37 | 25 | 1,391.04 | 初始 HeadlessInAppWebView 實體 |
-| 讀檔與解包 | 40.85s | 2,001.71 | 1,556.12 | 32 | 3,557.84 | foliate-js 載入 EPUB 中央目錄與解析 OPF |
-| **App 端尖峰** | **42.85s** | **2,588.20** | 1,556.48 | 32 | 4,144.69 | 解包 Blob、抽取 700KB 封面轉 Base64 |
-| **合計尖峰** | **43.03s** | 2,534.78 | 1,781.17 | 32 | **4,315.95** | WebView2 與 App 端資料傳遞交接處 |
-| **WebView2 尖峰** | **43.49s** | 1,102.63 | **2,864.70** | 32 | 3,967.34 | WebView2 垃圾回收前的暫存尖峰（淨增量約 1.67 GB） |
-| 解析完成與釋放 | 44.67s | 657.70 | 1,507.62 | 31 | 2,165.32 | `headless.dispose()` 觸發，WebView2 開始釋放 |
-| 程序結束 | 45.73s | 0.00 | 1,192.47 | 25 | 1,192.47 | elinkbook 退出，WebView2 子程序銷毀，回落至基準線 |
+- 只涵蓋 13 份人工建構的 fixture。真實出版社書籍（EPUB 2 套件、更多樣的 `dc:identifier` 寫法、非標準 OPF）尚未與 Readium 對比。
+- 224 MB 的真實書（見第 4 節）只跑了 foliate 端，沒有在 BooksPad 上跑 Readium。
+- Readium 與 foliate-js 的版本差異、不同 Android WebView 版本是否影響 foliate-js 的取值，沒有驗證。
 
-### 4.4 評估與結論
-1. **無 OOM 且耗時可接受**：224 MB 大書在 9.0 秒內完成 metadata 與高解析度封面抽取，未觸發 OOM，亦未逾時。
-2. **與 Issue 1 開書行為對比**：
-   - Issue 1 開書需解壓全書各章節 DOM 渲染樹，尖峰約 3.8 GB 且會持續保留於記憶體中。
-   - Issue 2 的 metadata 抽取僅解析 package OPF 與封面 Blob，完成後透過 `runSerialized` 與 `headless.dispose()` 立即銷毀 WebView2 子程序（由 32 個程序降回 25 個），記憶體完全釋放，**無常駐洩漏（Residual Leak = 0 MB）**。
-3. **並行保護**：`windows_epub_metadata.dart` 具備 `runSerialized` 循序鎖，即便使用者一次批次匯入數十本大書，也不會並行啟動多個 HeadlessInAppWebView 導致記憶體暴增。
-4. **UI 不凍結**：WebView2 是獨立進程（Out-of-process），9 秒的抽取過程完全由 WebView2 背景執行緒與 IPC 處理，Flutter UI 執行緒維持流暢。
+**建議：** 之後用使用者書庫裡的真實 EPUB（數十本）各跑一次兩端，再決定是否統一兩端至 foliate-js。
+
+另外更正 Issue 1 報告的一個錯誤：foliate-js 的作者欄位是 `metadata.author`（字串、`{name, role}` 物件或陣列），不是 `creator`；書名可能是語系物件如 `{"zh-TW":"繁中書名"}`。`metadata-probe.js` 的 `firstText()` 已處理這些形態。
+
+---
+
+## 4. 大檔記憶體：發現洩漏、診斷、修正
+
+### 4.1 時間線
+
+| 階段 | 做法 | 結論 |
+|---|---|---|
+| 第一版報告 | 單次解析 224 MB，看「程序結束後回落」 | 誤判「無洩漏」；量測腳本還混入了全系統的 WebView2 程序 |
+| 審查 | 指出結論沒有證據、腳本違反「只算 App 子孫程序」 | 重量 |
+| 批次匯入（release 版，同一個 App 程序） | 匯入 5 本，再匯入 5 本 224 MB 的複本 | 見 4.2 |
+| 診斷迴圈（debug 版） | 同一程序內只重複 `extractWindowsBookMetadata`，程序內讀記憶體 | 洩漏在 metadata 解析路徑，不在匯入流程 |
+| 假設驗證與排除 | 見 4.3 | 洩漏在 `shouldInterceptRequest` 回傳大資料之後的原生端 |
+| 修正 | 只傳需要的區段 | 見 4.4 |
+
+### 4.2 修正前：批次匯入實測（release 版，只計 App 及其 WebView2 子程序，平均取樣間隔 0.09 秒）
+
+| 階段 | `elinkbook.exe` 穩定值 | WebView2（App 子程序） |
+|---|---|---|
+| 匯入前 | 約 295 MB | 約 320 MB |
+| 第 1 批 5 本匯入後 | **1,414 到 1,473 MB**（+約 1.1 GB） | 約 321 MB |
+| 第 2 批 5 本匯入後 | **2,559 MB**（再 +約 1.1 GB） | 約 324 MB |
+| App 尖峰 | 第 1 批 3,332 MB／第 2 批 **5,032 MB** | 1,679 到 1,718 MB |
+
+每 5 本多約 1.1 GB（約書檔大小），**兩批線性累加**，不是第二批重複使用第一批的空間。WebView2 每次回到約 320 MB，所以洩漏在 `elinkbook.exe` 自己的程序。
+
+### 4.3 診斷（debug 版，同一程序重複解析同一本 224 MB 書，每次後等 6 秒）
+
+| 實驗 | 每次解析後的變化 |
+|---|---|
+| 無修改 | 私有記憶體 359 → 816 → 1,268 → 1,722 → **2,173 MB**（每次 **+約 452 MB，約書檔 2 倍**）；工作集每次 +約 228 MB；不回落 |
+| 每次攔截都回傳**同一個** Dart `Uint8List` | 工作集第 1 次 +461 MB，之後每次約 +225 MB → **排除 Dart 端抓著** |
+| 補外掛 `toWebView2Response()` 少的 `Release()` | 數字**完全不變**（649、877、1,104、1,331）→ 那是真的程式缺陷，但**不是主因**，已移除該修補 |
+
+**結論：** 洩漏在 `shouldInterceptRequest` 回傳大資料之後的原生端（外掛或 WebView2 內部），量與「傳輸的位元組」成正比。**更細的根因沒有查明**（外掛 C++ 與 WebView2 內部程式碼不在我們手上）。
+
+### 4.4 修正：只傳需要的區段
+
+metadata 只需要 ZIP 中央目錄、OPF 與封面。`metadata-probe.js` 新增 `readBookMetadataByRange`（類 Blob 物件，256 KB 區塊快取），Dart 的攔截只回應被要求的 `start`／`end` 區段，沒帶參數絕不整本回傳。
+
+**修正後（debug 版，同一程序）：**
+
+| | 修正前 | 修正後 |
+|---|---|---|
+| 4 次解析後私有記憶體 | 2,173 MB | **381 MB**（359 → 372 → 377 → 380 → 381） |
+| 每次後續解析的增量 | 約 +452 MB | **約 +3 到 5 MB** |
+| 解析當下工作集增量 | 約 +235 MB 且不回落 | 約 +14 MB |
+| 224 MB 解析耗時 | 9,019 ms | **約 2,500 ms**（2,486／2,524） |
+| 解析時 App 尖峰 | 約 2.5 到 5 GB | **約 439 MB** |
+| 解析時 App 加 WebView2 合計尖峰 | 約 3.7 到 4.3 GB | **約 800 MB** |
+| 解析結果 | 書名、作者、識別碼、封面 716,032 位元組 | **完全相同** |
+
+殘餘的每次約 3 到 5 MB 與每次傳輸量（約 1 到 2 MB，主要是封面）相稱，符合「洩漏與傳輸量成正比」的解釋。
+
+**測試與證據：**
+
+- `scenario-metadata-probe-range.mjs`：13 份 fixture 與整檔讀取結果一致；一本 **8 MB** 填充書只傳 **264 KB（2 次請求）**；`fetchRange` 失敗與損毀檔案都會 reject。
+- `test/library/windows_epub_range_test.dart`：`readFileRange`、`parseBookRange` 的邊界與上限。
+- `integration_test/windows_metadata/leak_probe_test.dart`：自動重現洩漏的迴圈（保留作為回歸量測）。
+
+### 4.5 限制（誠實列出）
+
+- 修正後的記憶體數字是 **debug 版、單程序、單一本書**；**release 版的批次匯入沒有重量**（修正前的批次數字是 release 版）。
+- 取樣只涵蓋測試程序的存活期，平均間隔 0.05 秒、最大 0.97 秒，極短的尖峰可能漏掉。
+- 先前報告的「UI 不凍結」**沒有量測**（沒有 frame time），已移除該說法。
+- 洩漏的更細根因（外掛或 WebView2 哪一段不釋放）**未查明**；我們是繞開它，不是修好它。
+
+---
+
+## 5. 未解決的連帶風險：閱讀器開書路徑
+
+同樣的 `shouldInterceptRequest` 整本回傳機制也用在：
+
+- **閱讀器開書**（`FoliateReaderView`，Issue 1）：整本書位元組走攔截回應。
+- **全文索引器**（`FoliateContentIndexer`）：同樣用 `HeadlessInAppWebView`。
+
+洩漏**只在 headless metadata 路徑被證明**。Issue 1 的實測顯示：在閱讀器裡開同一本 224 MB 的書再離開，App 記憶體沒有多出約兩份書的大小，所以閱讀器路徑**可能不受影響**，但原因沒有查明，也沒有針對性驗證。**建議另開 Issue 驗證**閱讀器與索引器路徑：同一程序內重複開關同一本大書，量私有記憶體。
+
+---
+
+## 6. 審查意見處理紀錄（`reviews/review-issue-2.md`）
+
+| 項 | 意見 | 處理 |
+|---|---|---|
+| Important 1 | 量測腳本取全系統 WebView2 程序 | 已重寫，只計 App 子孫程序（根程序名可設定、每 1 秒重掃子孫程序） |
+| Important 2 | 「無常駐洩漏」沒證據 | 實測**推翻**原結論，找到並修正洩漏（4.1–4.4） |
+| Important 3 | App 端尖峰 2.5 GB 沒解釋 | 同一修法：尖峰降到約 439 MB；「UI 不凍結」說法已移除 |
+| Important 4 | 範圍外的 `gradle.properties` | 已還原（`665944b6`） |
+| Important 5 | identifier 一致性只驗 10 份 | 補 3 份邊界 fixture，13 份兩端一致；結論改成「已測案例無不一致」並列出未驗證範圍（第 3 節） |
+| Minor 3 | 新情境沒登錄進 `run-all.mjs` | **不成立**：`run-all.mjs` 以 `scenario-*.mjs` 自動收集（審查報告已更正） |
+| 其餘 Minor | 角色區辨力、封面副檔名、`callHandler` 型別強轉、固定 50 ms 延遲等 | 未處理，列為後續（見審查報告 Minor 1、2、4、5、6、7） |

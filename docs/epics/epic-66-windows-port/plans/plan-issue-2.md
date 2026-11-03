@@ -379,3 +379,17 @@ git commit -m "docs(epic-66): Issue 2 驗證報告與決策 7 修訂"
 - **單元測試要求覆蓋：** `readBookMetadata` → Task 2；`renderPdfCover` → Task 3；`extractWindowsBookMetadata`（含逾時釋放）→ Task 4；`BookImportServiceImpl` 注入與 `relinkBook`、`SyncEngine` 回填 → Task 5。
 - **型別一致：** `readBookMetadata` 的 `coverBase64`／`coverType`（Task 2）→ Task 4 轉 `coverBytes`；`extractWindowsBookMetadata` 簽名與 `BookMetadataExtractor`（Task 5）相容；回傳鍵與 Android 契約一致。
 - **風險：** Task 6 需要實機與 JDK 17；Task 7 需要使用者的 224 MB 書。兩者缺了就停下來要。
+
+---
+
+## 審查後修訂（2026-11-04，依 `reviews/review-issue-2.md`）
+
+實作完成後的程式碼審查發現 App 端記憶體洩漏，實測推翻了原計畫「整本書走 `shouldInterceptRequest`、無洩漏」的假設。下列為與上文計畫的差異；上文各 Task 保留原貌作為歷史紀錄。
+
+- **Task 2（`metadata-probe.js`）：** 新增 `readBookMetadataByRange(size, fetchRange, name)` 與類 Blob 的 `RangeFile`（256 KB 區塊快取）。`readBookMetadata(file)` 保留。
+- **Task 4（`windows_epub_metadata.dart`）：** Step 6 的「`/book/current.epub` → `loadWindowsFileBytes(epubPath)` 整本回傳」**已作廢**。改為只回應 `?start=&end=` 指定的區段（`readFileRange`、`parseBookRange`，單次上限 `kMaxBookRangeBytes` 4 MB），沒帶參數不回應。探針頁面改用 `readBookMetadataByRange`，並把檔案大小寫進頁面。
+- **Task 1（fixture）：** 8 份增為 11 份（加 3 份邊界 identifier：`unique-identifier` 懸空、identifier 帶空白、identifier 帶 `opf:scheme`）；對比總數 10 份增為 13 份。期望值表抽成 `tool/foliate_touch_harness/lib/metadata-cases.mjs`，兩個 Puppeteer 情境共用。
+- **新增測試與工具：** `scenario-metadata-probe-range.mjs`、`test/library/windows_epub_range_test.dart`、`integration_test/windows_metadata/leak_probe_test.dart`（自動重現洩漏的迴圈）；`tool/measure_large_epub_memory.ps1` 重寫為只計 App 子孫程序。
+- **Task 7（記憶體報告）：** `issue-2-report.md` 整份重寫，推翻原「無常駐洩漏」結論，詳述診斷與修正。
+- **未採用：** 為外掛 `flutter_inappwebview_windows` 補 `Release()` 的本地修補（無改善，已移除）；本機迴圈位址 HTTP 伺服器（未需要）。
+- **未解決：** 閱讀器開書與全文索引器走同一個整本回傳機制，是否同樣洩漏未驗證，見 `issue-2-report.md` 第 5 節。
