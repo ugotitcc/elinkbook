@@ -47,10 +47,12 @@ import 'zone_action.dart';
 /// 有沒有暫存值、有的話立刻補套用（見 main.js 對應修改）。不論 Dart 端
 /// 呼叫發生在 main.js 載入完成前後都不會出錯、也不會遺漏。
 const _applyPreferencesQueueShimJs = '''
-window.__pendingApplyPreferences = null;
-window.applyPreferences = function (prefs) {
-  window.__pendingApplyPreferences = prefs;
-};
+if (!window.__applyPreferencesReady) {
+  window.__pendingApplyPreferences = null;
+  window.applyPreferences = function (prefs) {
+    window.__pendingApplyPreferences = prefs;
+  };
+}
 ''';
 
 /// 於診斷日誌開頭記錄 `navigator.userAgent`（epic-18-reader-device-qa

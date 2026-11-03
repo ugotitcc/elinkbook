@@ -80,6 +80,7 @@ docs/epics/epic-58-pdf-crop-drag-select/reviews/
 docs/epics/epic-63-dictionary-lookup/reviews/
 docs/epics/epic-65-reader-indent-and-colors/reviews/
 docs/epics/epic-66-windows-port/reviews/
+docs/epics/epic-67-book-update-detection/reviews/
 .scratch/
 app/test_driver/
 app/config/cloud_oauth.test.json

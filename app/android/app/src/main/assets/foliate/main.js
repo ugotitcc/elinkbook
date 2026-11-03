@@ -569,6 +569,10 @@ window.applyPreferences = function (prefs) {
 // _applyPreferencesQueueShimJs）。若 Dart 端在這之前已經呼叫過一次（被
 // shim 接住、存進 window.__pendingApplyPreferences），這裡立刻補套用一次，
 // 避免那次呼叫被靜默遺漏。
+// 真函式已就緒的旗標：舊版 WebView 偶爾讓 AT_DOCUMENT_START 注入晚到，shim 會在
+// 這之後才執行；shim 看到此旗標必須放棄覆蓋（見 foliate_reader_view.dart 的
+// _applyPreferencesQueueShimJs，與 scenario-late-shim-overwrite.mjs）。
+window.__applyPreferencesReady = true
 if (window.__pendingApplyPreferences) {
   const pendingPrefs = window.__pendingApplyPreferences
   window.__pendingApplyPreferences = null
