@@ -337,6 +337,202 @@ class BookImportServiceImpl implements BookImportService {
     }
   }
 
+  /// 以 [newUri]（或 [candidate.stagedPath]）取代書籍 [bookId] 的檔案內容。
+  /// 見 spec「取代的語意」與 ADR 0040。
+  ///
+  /// 已知殘餘風險（Review Focus 2）：若暫存檔已改名為正式檔名但後續資料庫
+  /// [updateBook] 寫入失敗，檔案內容與資料庫中繼資料會產生短暫不一致。
+  /// 此時再次呼叫本方法取代同本書籍即可修復。永不拋例外。
+  /// 依決策 D1 沿用原書指紋，依決策 D3 嚴格模式解析新檔。
+  @override
+  Future<BookReplaceResult> replaceBook(
+    String bookId,
+    String newUri, {
+    String? displayName,
+    BookUpdateCandidate? candidate,
+    BookSourceRefs? sourceRefs,
+  }) async {
+    // 1. findBookById；null → bookNotFound。
+    final book = await _repository.findBookById(bookId);
+    if (book == null) {
+      return const BookReplaceFailure(BookReplaceFailureReason.bookNotFound);
+    }
+
+    // 2. format = _detectImportFormat(newUri, displayName)；!= book.format → formatMismatch。允許所有格式。
+    final format = _detectImportFormat(newUri, displayName);
+    if (format == null || format != book.format) {
+      return const BookReplaceFailure(BookReplaceFailureReason.formatMismatch);
+    }
+
+    // 3. 決定處理來源 source = candidate?.stagedPath ?? newUri
+    final source = candidate?.stagedPath ?? newUri;
+
+    // 4. 準備階段（只寫暫存名稱 .staging，不碰正式檔名與資料庫）
+    final stagedFiles = <String>[];
+    String finalBookFilePath;
+    String resolvedUri;
+
+    try {
+      if (format == BookFileFormat.epub ||
+          format == BookFileFormat.pdf ||
+          format == BookFileFormat.azw3) {
+        if (candidate?.stagedPath != null) {
+          final importedDir = await _resolveImportedBooksDirectory();
+          final stagingPath =
+              p.join(importedDir.path, '$bookId.${format.name}.staging');
+          await File(candidate!.stagedPath!).copy(stagingPath);
+          stagedFiles.add(stagingPath);
+          resolvedUri = stagingPath;
+          finalBookFilePath = p.join(importedDir.path, '$bookId.${format.name}');
+        } else if (source.startsWith('content://')) {
+          final persisted = await _persistPermissionOrLandCopy(
+            source,
+            bookId,
+            format,
+            landSuffix: '.staging',
+          );
+          if (persisted == null) {
+            await _cleanStagedFiles(stagedFiles);
+            return const BookReplaceFailure(BookReplaceFailureReason.writeFailed);
+          }
+          if (persisted.endsWith('.staging')) {
+            stagedFiles.add(persisted);
+            resolvedUri = persisted;
+            finalBookFilePath = p.join(
+              (await _resolveImportedBooksDirectory()).path,
+              '$bookId.${format.name}',
+            );
+          } else {
+            resolvedUri = persisted;
+            finalBookFilePath = persisted;
+          }
+        } else {
+          resolvedUri = source;
+          finalBookFilePath = source;
+        }
+      } else {
+        resolvedUri = source;
+        final importedDir = await _resolveImportedBooksDirectory();
+        finalBookFilePath = p.join(importedDir.path, '$bookId.${format.name}');
+      }
+
+      final fallbackTitle = titleFromFileName(displayName ?? newUri);
+      final parts = await _prepareBookParts(
+        originalUri: source,
+        resolvedUri: resolvedUri,
+        format: format,
+        id: bookId,
+        fallbackTitle: fallbackTitle,
+        landSuffix: '.staging',
+        strict: true,
+        computeFingerprint: false,
+      );
+      if (parts == null) {
+        await _cleanStagedFiles(stagedFiles);
+        return const BookReplaceFailure(
+            BookReplaceFailureReason.newFileParseFailed);
+      }
+      stagedFiles.addAll(parts.stagedFiles);
+
+      // 5. 換名階段：對每個暫存檔做 File.rename 覆蓋為正式檔名（先換書檔、後換封面）
+      String? finalCoverPath;
+      for (final stagedPath in List.of(stagedFiles)) {
+        if (!stagedPath.endsWith('.staging')) continue;
+        final targetPath =
+            stagedPath.substring(0, stagedPath.length - '.staging'.length);
+        final stagingFile = File(stagedPath);
+        if (await stagingFile.exists()) {
+          final targetFile = File(targetPath);
+          if (await targetFile.exists()) {
+            await targetFile.delete();
+          }
+          await stagingFile.rename(targetPath);
+        }
+        if (targetPath.contains('covers')) {
+          finalCoverPath = targetPath;
+        }
+      }
+
+      // 如果新版沒有封面（parts.coverPath == null）→ 刪除舊封面檔（若存在）
+      if (parts.coverPath == null) {
+        if (book.coverPath != null) {
+          try {
+            final oldCoverFile = File(book.coverPath!);
+            if (await oldCoverFile.exists()) {
+              await oldCoverFile.delete();
+            }
+          } catch (_) {}
+        }
+      } else {
+        finalCoverPath = parts.coverPath!.replaceAll('.staging', '');
+      }
+
+      // 6. 資料庫階段
+      final updatedBook = book.copyWith(
+        title: parts.title,
+        author: parts.author,
+        clearAuthor: parts.author == null,
+        filePath: finalBookFilePath,
+        coverPath: parts.coverPath == null ? null : finalCoverPath,
+        clearCoverPath: parts.coverPath == null,
+        isFixedLayout: parts.isFixedLayout,
+        clearIsFixedLayout: parts.isFixedLayout == null,
+        source: sourceRefs?.source ?? book.source,
+        cloudFileId: sourceRefs?.cloudFileId ?? book.cloudFileId,
+        remoteServerId: sourceRefs?.remoteServerId ?? book.remoteServerId,
+        remoteBookId: sourceRefs?.remoteBookId ?? book.remoteBookId,
+        remoteDownloadUrl:
+            sourceRefs?.remoteDownloadUrl ?? book.remoteDownloadUrl,
+      );
+
+      await _repository.updateBook(updatedBook);
+
+      // 7. 收尾（失敗一律吞掉，不影響成功結果）
+      try {
+        final importedDir = await _resolveImportedBooksDirectory();
+        if (book.filePath != updatedBook.filePath &&
+            p.isWithin(importedDir.path, book.filePath)) {
+          final oldFile = File(book.filePath);
+          if (await oldFile.exists()) {
+            await oldFile.delete();
+          }
+        }
+      } catch (_) {}
+
+      try {
+        await _fullTextSearchSettingsRepository?.clearBookIndex(bookId);
+      } catch (_) {}
+      try {
+        await _fullTextSearchSettingsRepository
+            ?.handleBookAvailable(updatedBook);
+      } catch (_) {}
+
+      if (candidate != null) {
+        await discardUpdateCandidate(candidate);
+      }
+
+      return BookReplaceSuccess(updatedBook);
+    } on _NewFileParseException {
+      await _cleanStagedFiles(stagedFiles);
+      return const BookReplaceFailure(
+          BookReplaceFailureReason.newFileParseFailed);
+    } catch (_) {
+      await _cleanStagedFiles(stagedFiles);
+      return const BookReplaceFailure(BookReplaceFailureReason.writeFailed);
+    }
+  }
+
+  Future<void> _cleanStagedFiles(List<String> paths) async {
+    for (final path in paths) {
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {}
+    }
+  }
+
   /// 把新檔複製到更新暫存目錄（content:// 呼叫 copyContentUriToFile；本機路徑用 File.copy），
   /// 檔名 `<微秒時間戳>-<uri.hashCode>.<副檔名>`，失敗回傳 null（並清掉半成品）。
   Future<String?> _stageNewFile(String uri, BookFileFormat format) async {

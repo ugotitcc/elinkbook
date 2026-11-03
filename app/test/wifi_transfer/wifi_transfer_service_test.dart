@@ -87,6 +87,18 @@ class _ThrowingImportService implements BookImportService {
   @override
   Future<void> discardUpdateCandidate(BookUpdateCandidate candidate) =>
       Future.value();
+
+  @override
+  Future<BookReplaceResult> replaceBook(
+    String bookId,
+    String newUri, {
+    String? displayName,
+    BookUpdateCandidate? candidate,
+    BookSourceRefs? sourceRefs,
+  }) =>
+      Future.value(
+        const BookReplaceFailure(BookReplaceFailureReason.bookNotFound),
+      );
 }
 
 void main() {

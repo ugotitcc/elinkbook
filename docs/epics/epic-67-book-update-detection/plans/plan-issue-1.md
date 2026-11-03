@@ -288,7 +288,7 @@ Future<BookReplaceResult> replaceBook(
 
 **步驟：**
 
-- [ ] **Step 1：寫失敗測試**（`book_import_service_replace_test.dart`；用 `SqliteLibraryRepository` 記憶體庫＋真實暫存目錄檔案；失敗注入用 `ThrowOnUpdateRepository` 與會拋 `PlatformException` 的 channel handler）：
+- [x] **Step 1：寫失敗測試**（`book_import_service_replace_test.dart`；用 `SqliteLibraryRepository` 記憶體庫＋真實暫存目錄檔案；失敗注入用 `ThrowOnUpdateRepository` 與會拋 `PlatformException` 的 channel handler）：
   - `身份保留`：取代 EPUB 後 `id`、`contentFingerprint`、`progress`、`epubLocator`、`groupName`、`createTime`、`lastReadTime` 與取代前相同；PDF 同理保留 `pdfPageIndex`。
   - `註記保留`：取代前於同一資料庫預先寫入該書的書籤、劃線、備註各一筆，取代後三者仍存在且 `bookId` 不變；整個過程 `deleteBook` 呼叫次數為 0。
   - `單書版面偏好保留`：預先寫入 `book_reader_prefs`，取代後仍存在。
@@ -308,10 +308,10 @@ Future<BookReplaceResult> replaceBook(
   - `sourceRefs`：帶 `cloudFileId`／`remoteServerId`／`remoteBookId`／`remoteDownloadUrl` 時對應欄位被寫入；不帶時沿用舊值。
   - `candidate`：帶 `candidate.stagedPath` 取代成功後暫存檔消失；失敗時**暫存檔仍保留**（讓呼叫端可重試或自行丟棄）。
   - `殘餘風險記錄`：④ 之外另加一個案例，證明「換名成功但 `updateBook` 失敗」後再次呼叫 `replaceBook` 可成功修復。
-- [ ] **Step 2：確認失敗**。
-- [ ] **Step 3：實作** `replaceBook` 與必要私有輔助；`replaceBook` 文件註解必須寫明殘餘風險（Review Focus 2）與 D1／D3 的決定。
-- [ ] **Step 4：確認通過**，並重跑 Task 2、3 的測試檔。
-- [ ] **Step 5：`flutter analyze`**；提交 `feat(library): 書籍取代能力 replaceBook，原子換檔並保留註記與身份（epic-67 Issue 1 Task 5）`。
+- [x] **Step 2：確認失敗**。
+- [x] **Step 3：實作** `replaceBook` 與必要私有輔助；`replaceBook` 文件註解必須寫明殘餘風險（Review Focus 2）與 D1／D3 的決定。
+- [x] **Step 4：確認通過**，並重跑 Task 2、3 的測試檔。
+- [x] **Step 5：`flutter analyze`**；提交 `feat(library): 書籍取代能力 replaceBook，原子換檔並保留註記與身份（epic-67 Issue 1 Task 5）`。
 
 ---
 

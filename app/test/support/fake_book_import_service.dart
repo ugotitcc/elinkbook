@@ -147,4 +147,20 @@ class FakeBookImportService implements BookImportService {
     discardedCandidates.add(candidate);
     return Future.value();
   }
+
+  BookReplaceResult replaceResult =
+      const BookReplaceFailure(BookReplaceFailureReason.bookNotFound);
+  final List<(String, String)> replaceCalls = [];
+
+  @override
+  Future<BookReplaceResult> replaceBook(
+    String bookId,
+    String newUri, {
+    String? displayName,
+    BookUpdateCandidate? candidate,
+    BookSourceRefs? sourceRefs,
+  }) {
+    replaceCalls.add((bookId, newUri));
+    return Future.value(replaceResult);
+  }
 }
