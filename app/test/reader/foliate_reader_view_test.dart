@@ -2453,4 +2453,16 @@ void main() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
     cacheBookForServing = originalCacheBookForServing;
   });
+
+  group('epic-67 Issue 5：降級欄位', () {
+    test('initialProgression 與 onNavigationDegraded 為選填，預設 null', () {
+      const view = FoliateReaderView(
+        filePath: 'x.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      );
+      expect(view.initialProgression, isNull);
+      expect(view.onNavigationDegraded, isNull);
+    });
+  });
 }

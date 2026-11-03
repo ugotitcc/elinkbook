@@ -21,7 +21,8 @@ class ReaderJumpTarget {
   /// 為 `null` 時，仍會正常跳轉頁面，只是不顯示暫態高亮。
   final PercentRect? pdfRect;
 
-  /// Foliate 格式的目標進度比例（0.0～1.0），進度條拖動用；與 [cfi] 擇一。
+  /// Foliate 格式的目標進度比例（0.0～1.0）。單獨存在時是進度條拖動的跳轉目標；
+  /// 與 [cfi] 並存時，是 CFI 在新版內容中失效時的降級進度（epic-67 Issue 5）。
   final double? progression;
 
   const ReaderJumpTarget({

@@ -61,6 +61,7 @@ void main() {
       surface.previousPage();
       surface.jumpTo(const ReaderJumpTarget(cfi: 'epubcfi(/6/4!/4/2)'));
       surface.jumpTo(const ReaderJumpTarget(progression: 0.5));
+      surface.jumpTo(const ReaderJumpTarget(cfi: 'epubcfi(/6/4!/4/2)', progression: 0.5));
       surface.jumpTo(const ReaderJumpTarget(pdfPageIndex: 3));
       surface.clearTransientHighlight();
       surface.clearSelection();

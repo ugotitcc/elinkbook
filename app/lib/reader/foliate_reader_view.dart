@@ -21,6 +21,7 @@ import 'epub_text_align.dart';
 import 'foliate_bridge_codec.dart';
 import 'foliate_bridge_handlers.dart';
 import 'foliate_native_bridge.dart';
+import 'navigation_degraded_reason.dart';
 import 'js_bridge_gateway.dart';
 import 'open_book_trace.dart';
 import 'page_turn_mode.dart';
@@ -381,6 +382,15 @@ class FoliateReaderView extends StatefulWidget {
   final bool showNavZoneDebugOverlay;
   final bool consoleLogEnabled;
   final String? initialLocatorJson;
+
+  /// 精確定位（[initialLocatorJson]）失效時的降級進度比例（0～1）。只在開書當下
+  /// 讀取一次（epic-67 Issue 5）；`null` 時降級會改開在書頭。
+  final double? initialProgression;
+
+  /// 精確定位失效、已降級為概略進度時回報（epic-67 Issue 5）。呼叫端
+  /// （`ReaderScreen`）負責顯示提示；本欄位只回報事實，比照既有
+  /// [onLocatorChanged] 的「JS 回報事實、Dart 決定政策」分工。
+  final ValueChanged<NavigationDegradedReason>? onNavigationDegraded;
   final ValueChanged<EpubPositionInfo>? onLocatorChanged;
   final ValueChanged<EpubSelectionInfo>? onSelectionChanged;
   final VoidCallback? onSelectionCleared;
@@ -439,10 +449,12 @@ class FoliateReaderView extends StatefulWidget {
     this.showNavZoneDebugOverlay = false,
     this.consoleLogEnabled = false,
     this.initialLocatorJson,
+    this.initialProgression,
     this.onLocatorChanged,
     this.onSelectionChanged,
     this.onSelectionCleared,
     this.onTtsHighlightOutOfSafeWindow,
+    this.onNavigationDegraded,
   });
 
   static void nextPage(GlobalKey<State<FoliateReaderView>> key) {
@@ -471,13 +483,18 @@ class FoliateReaderView extends StatefulWidget {
 
   static void jumpToLocator(
     GlobalKey<State<FoliateReaderView>> key,
-    String locatorJson,
-  ) {
+    String locatorJson, {
+    double? fallbackProgression,
+  }) {
     final state = key.currentState;
     if (state is _FoliateReaderViewState) {
-      final cfi = extractCfi(locatorJson);
+      // 用 extractCfiOrRaw 而非 extractCfi：舊格式或損壞的定位字串也要交給 JS，
+      // 由 JS 判定無效後降級並回報；Dart 端提早過濾會讓點擊毫無反應（審查 I-1）。
+      final cfi = extractCfiOrRaw(locatorJson);
       if (cfi != null) {
-        state._evaluate('window.jumpToLocator(${jsonEncode(cfi)})');
+        state._evaluate(
+          buildJumpToLocatorScript(cfi, fallbackProgression: fallbackProgression),
+        );
       }
     }
   }
@@ -699,8 +716,10 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       // 文件註解——CBZ 需要 view.js 的 isCBZ() 對檔名做副檔名判斷）。
       'bookFileName': 'current.${cacheFileExtension(widget.filePath)}',
     };
-    final cfi = extractCfi(widget.initialLocatorJson);
-    if (cfi != null) params['initialCfi'] = cfi;
+    params.addAll(buildInitialLocationParams(
+      initialLocatorJson: widget.initialLocatorJson,
+      initialProgression: widget.initialProgression,
+    ));
     return Uri.https(
       'appassets.androidplatform.net',
       '/assets/foliate/index.html',
@@ -800,6 +819,14 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       // 直接單元測試，不再是這個 widget 內無法獨立驗證的匿名 closure。
       callback: (args) =>
           widget.onLocatorChanged?.call(parseLocatorChanged(args)),
+    );
+    controller.addJavaScriptHandler(
+      handlerName: FoliateBridgeHandlers.onNavigationDegraded,
+      callback: (args) {
+        final reason = parseNavigationDegradedReason(args);
+        if (reason == null || !mounted) return;
+        widget.onNavigationDegraded?.call(reason);
+      },
     );
     controller.addJavaScriptHandler(
       handlerName: FoliateBridgeHandlers.onTtsHighlightOutOfSafeWindow,

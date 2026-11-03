@@ -66,7 +66,8 @@ class FoliateReaderSurface implements ReaderSurface, FoliateFacet {
     final cfi = target.cfi;
     final progression = target.progression;
     if (cfi != null) {
-      FoliateReaderView.jumpToLocator(viewKey, cfi);
+      // progression 與 cfi 並存時，作為 CFI 失效的降級進度（epic-67 Issue 5）。
+      FoliateReaderView.jumpToLocator(viewKey, cfi, fallbackProgression: progression);
     } else if (progression != null) {
       FoliateReaderView.jumpToProgression(viewKey, progression);
     }
