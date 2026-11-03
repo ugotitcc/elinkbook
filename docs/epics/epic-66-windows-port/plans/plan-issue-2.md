@@ -79,20 +79,20 @@
 
 另兩份既有 fixture 一併納入對比：`sample.epub`（`identifier` `urn:uuid:00000000-0000-0000-0000-000000000001`，有封面）、`sample_fxl_svg_cover.epub`（固定版面，封面僅透過 alternates 可達，實測 foliate-js 讀得到封面）。
 
-- [ ] **Step 1：實作 `make_metadata_fixtures.mjs`**
+- [x] **Step 1：實作 `make_metadata_fixtures.mjs`**
 
 每份 fixture 是最小合法 EPUB3（`mimetype`、`META-INF/container.xml`、`OEBPS/content.opf`、`nav.xhtml`、一個章節）。有封面的用 1×1 PNG（`iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==`）。輸出到 `test/fixtures/metadata/`。結構比照 `scenario-writing-mode-autodetect.mjs` 的 `buildEpub`。
 
-- [ ] **Step 2：執行並確認可重現**
+- [x] **Step 2：執行並確認可重現**
 
 Run（PowerShell，在 `app/`）：`$env:PATH = "$env:PNPM_HOME;$env:PATH"; node tool/make_metadata_fixtures.mjs` 兩次，比較第二次前後各檔 SHA-256。
 Expected：8 個檔案存在；兩次 SHA-256 相同。
 
-- [ ] **Step 3：在 `pubspec.yaml` 的 `flutter: assets:` 加 8 行**
+- [x] **Step 3：在 `pubspec.yaml` 的 `flutter: assets:` 加 8 行**
 
 格式 `    - test/fixtures/metadata/<檔名>`，緊接 `test/fixtures/sample.epub` 之後。Run：`flutter pub get`。Expected：無錯誤。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/tool/make_metadata_fixtures.mjs app/test/fixtures/metadata app/pubspec.yaml
@@ -111,7 +111,7 @@ git commit -m "test(windows): 新增 metadata 解析測試 fixture（epic-66 Iss
 - Consumes：Task 1 的 fixture 與期望表；`./view.js` 的 `makeBook(file)`（必須用相對路徑：Windows 端這個模組由 `/assets/foliate/metadata-probe.js` 載入，相對路徑才會解析成 `/assets/foliate/view.js` 而命中 Dart 的資產攔截；寫 `/view.js` 會 404。測試台把 foliate 目錄掛在根目錄，兩種寫法都會過，所以測試抓不到這個錯）。
 - Produces：`export async function readBookMetadata(file: File): Promise<{title: string|null, author: string|null, identifier: string|null, isFixedLayout: boolean, coverBase64: string|null, coverType: string|null}>`，從 `/assets/foliate/metadata-probe.js`（Windows 端）取得。解析失敗時 reject。
 
-- [ ] **Step 1：寫失敗的測試 `scenario-metadata-probe.mjs`**
+- [x] **Step 1：寫失敗的測試 `scenario-metadata-probe.mjs`**
 
 用 `launchHarnessPage({ fixtureFileName: 'sample.epub' })` 開頁，再在頁面內 `await import('/metadata-probe.js')`，把每份 fixture（`test/fixtures/metadata/*.epub` 加 `sample.epub`、`sample_fxl_svg_cover.epub`）以 base64 傳入、組成 `File` 後呼叫 `readBookMetadata`。用 `report()` 輸出：
 
@@ -120,12 +120,12 @@ git commit -m "test(windows): 新增 metadata 解析測試 fixture（epic-66 Iss
 - `sample_fxl_svg_cover.epub`：有封面、`isFixedLayout` 為 `true`。
 - 隨機 1 KB 位元組組成的 `File`：`readBookMetadata` reject。
 
-- [ ] **Step 2：執行並確認失敗**
+- [x] **Step 2：執行並確認失敗**
 
 Run（PowerShell，在 `app/tool/foliate_touch_harness/`）：`$env:PATH = "$env:PNPM_HOME;$env:PATH"; node scenario-metadata-probe.mjs`
 Expected：FAIL（`/metadata-probe.js` 載入失敗）。
 
-- [ ] **Step 3：實作 `metadata-probe.js`**
+- [x] **Step 3：實作 `metadata-probe.js`**
 
 規則（ES 保守寫法，無 `Object.groupBy`、`.at()`）：
 
@@ -137,12 +137,12 @@ Expected：FAIL（`/metadata-probe.js` 載入失敗）。
 - 用相對路徑 `import { makeBook } from './view.js'`（理由見 Interfaces）。
 - 讀完封面、組好回傳物件之後，在 `finally` 呼叫 `try { book?.destroy() } catch (_) {}` 釋放 ZipReader 快取（`epub.js` 的 `destroy()`）；`book` 建立前就失敗時略過。
 
-- [ ] **Step 4：執行並確認通過**
+- [x] **Step 4：執行並確認通過**
 
 Run（PowerShell）：在 `app/tool/foliate_touch_harness/` 執行 `$env:PATH = "$env:PNPM_HOME;$env:PATH"; node scenario-metadata-probe.mjs`；再在 `app/` 執行 `$env:PATH = "$env:PNPM_HOME;$env:PATH"; node tool/check_foliate_es_compat.js`。
 Expected：全部 `[PASS]`；ES 相容掃描通過。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/metadata-probe.js app/tool/foliate_touch_harness/scenario-metadata-probe.mjs
@@ -160,24 +160,24 @@ git commit -m "feat(foliate): 新增 metadata-probe 讀書名、作者、識別�
 **Interfaces：**
 - Produces：`Future<Uint8List?> renderPdfCover(String path, {int maxDimension = 600})`。檔案不存在或沒有任何頁面回 `null`；檔案損毀時 `pdfrx` 的例外直接往外丟。
 
-- [ ] **Step 1：寫失敗的整合測試**
+- [x] **Step 1：寫失敗的整合測試**
 
 先 `await pdfrxFlutterInitialize()`。用 `test/fixtures/sample_multi_page.pdf`（複製到暫存檔）斷言：回傳的位元組開頭是 `89 50 4E 47`；用 `ui.instantiateImageCodec` 解出的寬、高都 ≤ 600 且至少一邊 > 0；不存在的路徑回 `null`。
 
-- [ ] **Step 2：執行並確認失敗**
+- [x] **Step 2：執行並確認失敗**
 
 Run：`flutter test integration_test/windows_metadata/pdf_cover_test.dart -d windows`
 Expected：FAIL（`renderPdfCover` 未定義，編譯錯誤）。
 
-- [ ] **Step 3：實作 `renderPdfCover`**
+- [x] **Step 3：實作 `renderPdfCover`**
 
 比照 `integration_test/windows_spike/pdf_cover_test.dart` 的渲染流程：`PdfDocument.openFile` → 第 0 頁 → `scale = min(maxDimension / width, maxDimension / height, 1)`，寬高至少 1 → `render()` → `createImage()` → `toByteData(format: png)`。`finally` 釋放 `image`、`rendered`、`document`。先確認 `File(path).exists()`，不存在回 `null`；`openFile` 成功後若 `document.pages.isEmpty`，`dispose()` 並回 `null`，不可直接取 `pages[0]`（會丟 `RangeError`）。沒有零頁 PDF 的 fixture，這條靠審查把關，不寫測試。
 
-- [ ] **Step 4：執行並確認通過**
+- [x] **Step 4：執行並確認通過**
 
 Run：同 Step 2。Expected：PASS。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/library/windows_pdf_cover.dart app/integration_test/windows_metadata/pdf_cover_test.dart
@@ -199,7 +199,7 @@ git commit -m "feat(library): Windows 以 pdfrx 產生 PDF 封面（epic-66 Issu
   - `Future<T> runSerialized<T>(Future<T> Function() task)`：同時呼叫時依序執行；前一個失敗不影響下一個。
   - `Future<Map<String, Object?>?> extractWindowsBookMetadata(String uri, String format, {Future<Map<String, Object?>> Function(String)? epubReader, Future<Uint8List?> Function(String)? pdfRenderer})`。簽名與 Task 5 的 `BookMetadataExtractor` 相容。`epub` 分支必須把 `epubReader` 的整個呼叫包在 `runSerialized` 裡，全 App 同一時間只會有一個 headless WebView。
 
-- [ ] **Step 1：寫失敗的單元測試 `windows_book_metadata_test.dart`**
+- [x] **Step 1：寫失敗的單元測試 `windows_book_metadata_test.dart`**
 
 注入假的 `epubReader`／`pdfRenderer`，斷言：
 
@@ -212,20 +212,20 @@ git commit -m "feat(library): Windows 以 pdfrx 產生 PDF 封面（epic-66 Issu
 - `runSerialized`：同時啟動兩個以 `Completer` 控制的任務，第二個在第一個完成前不開始；第一個丟例外後第二個仍會執行。
 - 同時呼叫兩次 `extractWindowsBookMetadata('a.epub', 'epub', epubReader: 假)`：第二次的 `epubReader` 在第一次完成前不開始（證明 `epub` 分支真的用了 `runSerialized`）。
 
-- [ ] **Step 2：執行並確認失敗**
+- [x] **Step 2：執行並確認失敗**
 
 Run：`flutter test test/library/windows_book_metadata_test.dart`
 Expected：FAIL（編譯錯誤）。
 
-- [ ] **Step 3：實作 `windows_book_metadata.dart`**
+- [x] **Step 3：實作 `windows_book_metadata.dart`**
 
 依 Interfaces 與上列斷言實作。錯誤包裝時保留原例外的 `toString()` 當 `message`。
 
-- [ ] **Step 4：執行並確認單元測試通過**
+- [x] **Step 4：執行並確認單元測試通過**
 
 Run：同 Step 2。Expected：PASS。
 
-- [ ] **Step 5：寫失敗的 Windows 整合測試 `epub_metadata_test.dart`**
+- [x] **Step 5：寫失敗的 Windows 整合測試 `epub_metadata_test.dart`**
 
 先 `initAppWebViewEnvironment(userDataFolder: (await getApplicationSupportDirectory()).path)`。把 Task 1 表的 8 份加 `sample.epub`、`sample_fxl_svg_cover.epub` 從 `rootBundle` 複製到暫存檔，呼叫 `extractWindowsBookMetadata(path, 'epub')`，斷言每份的 `title`、`author`、`identifier`、`isFixedLayout`、有無封面與 Task 1 表一致；每份印一行 `[metadata_comparison] <檔名> <JSON>`（鍵為 `title`、`author`、`identifier`、`isFixedLayout`、`coverBytes` 改為 `coverSize`），供 Task 6 對比。另外：
 
@@ -234,7 +234,7 @@ Run：同 Step 2。Expected：PASS。
 - 不存在的路徑：`extractWindowsBookMetadata` 丟 `PlatformException`。
 - 逾時案例之後，再對 `meta_basic.epub` 呼叫一次仍成功（前一個 headless WebView 已釋放）。
 
-- [ ] **Step 6：實作 `windows_epub_metadata.dart`**
+- [x] **Step 6：實作 `windows_epub_metadata.dart`**
 
 - 先確認 `File(epubPath).existsSync()`，不存在丟 `StateError`。**不複製書檔**：Windows 的書本來就是本機路徑，直接讀原檔，避免 224 MB 大檔多一次磁碟複製與暫存清理。
 - `HeadlessInAppWebView`：`webViewEnvironment: appWebViewEnvironment`，`useShouldInterceptRequest: true`。入口頁用固定網域（如 `https://foliate-metadata.local/probe.html`），內容由攔截回呼從 Dart 字串提供，是一段 `<script type="module">`：`import { readBookMetadata } from '/assets/foliate/metadata-probe.js'`，`fetch('/book/current.epub')` 組成 `File`，成功時 `callHandler('metadataResult', JSON.stringify(...))`，失敗時 `callHandler('metadataError', String(e))`。
@@ -242,12 +242,12 @@ Run：同 Step 2。Expected：PASS。
 - `coverBase64` 轉 `Uint8List`（`base64Decode`）放進 `coverBytes`。
 - `finally`：`dispose()` headless（不論成功、失敗、逾時）。
 
-- [ ] **Step 7：執行並確認整合測試通過**
+- [x] **Step 7：執行並確認整合測試通過**
 
 Run：`flutter test integration_test/windows_metadata/epub_metadata_test.dart -d windows`
 Expected：PASS，並印出 10 行 `[metadata_comparison]`。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/library/windows_epub_metadata.dart app/lib/library/windows_book_metadata.dart app/test/library/windows_book_metadata_test.dart app/integration_test/windows_metadata/epub_metadata_test.dart
@@ -266,7 +266,7 @@ git commit -m "feat(library): Windows 以 headless foliate-js 解析 EPUB metada
 - Consumes：Task 4 的 `extractWindowsBookMetadata`。
 - Produces：`typedef BookMetadataExtractor = Future<Map<String, Object?>?> Function(String uri, String format);`（放在 `book_import_service_impl.dart` 頂層）；`BookImportServiceImpl({..., BookMetadataExtractor? metadataExtractor})`、`SyncEngine({..., BookMetadataExtractor? metadataExtractor})`。
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 `setUp` 比照 `test/library/book_import_service_missing_channel_test.dart`（假 repository、暫存封面目錄、匯入目錄）。注入假 `metadataExtractor`，匯入一個 `.epub` 檔，斷言：
 
@@ -278,12 +278,12 @@ git commit -m "feat(library): Windows 以 headless foliate-js 解析 EPUB metada
 - `relinkBook`（呼叫方式比照 `test/library/book_import_service_test.dart` 既有案例）：先用假解析器（回 `identifier` `urn:uuid:x`）匯入一本 EPUB，再重新連結同一本 → 成功（證明 `_readEpubIdentifier` 走解析器）；重新連結 `identifier` 不同的另一本 → `BookRelinkFailure(contentMismatch)`。
 - `test/sync/sync_engine_test.dart`（比照第 257 行「書籍尚無指紋時，即時補算並回填後才推送」）：注入回 `identifier` 的假解析器，回填的 `content_fingerprint` 等於該 `identifier`；解析器丟 `MissingPluginException` 時不中斷，改用整檔 SHA-256。
 
-- [ ] **Step 2：執行並確認失敗**
+- [x] **Step 2：執行並確認失敗**
 
 Run：`flutter test test/library/book_import_service_metadata_extractor_test.dart`
 Expected：FAIL（編譯錯誤，`metadataExtractor` 參數不存在）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 - 在 `book_import_service_impl.dart` 加 `typedef` 與建構子參數、欄位 `_metadataExtractor`。
 - 修改 `else` 分支（`format` 為 `epub` 或 `pdf`）取得 `metadata` 的那一行：`_metadataExtractor != null` 時 `await _metadataExtractor!(resolvedUri, format.name)`，否則原本的 `kBookMetadataChannel.invokeMapMethod(...)`。其後的欄位讀取與既有 `on PlatformException`、`on MissingPluginException` 區塊不動。
@@ -291,12 +291,12 @@ Expected：FAIL（編譯錯誤，`metadataExtractor` 參數不存在）。
 - `SyncEngine`：建構子新增 `BookMetadataExtractor? metadataExtractor`；`_backfillFingerprintForBook`（約 317 行）取 identifier 時同上，並多接 `on MissingPluginException`（取不到就退回整檔 SHA-256）。
 - `main.dart`：在建構 `BookImportServiceImpl`（約 241 行）之前宣告 `final metadataExtractor = isWindowsPlatform ? extractWindowsBookMetadata : null;`，同時傳給 `BookImportServiceImpl` 與約 323 行的 `SyncEngine`，並加對應 import。
 
-- [ ] **Step 4：執行並確認通過**
+- [x] **Step 4：執行並確認通過**
 
 Run：`flutter test test/library/book_import_service_metadata_extractor_test.dart test/library/book_import_service_test.dart test/library/book_import_service_missing_channel_test.dart test/sync/sync_engine_test.dart test/elinkbook_app_wiring_test.dart`，再 `flutter analyze`。
 Expected：全綠；`No issues found!`。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/library/book_import_service_impl.dart app/lib/sync/sync_engine.dart app/lib/main.dart app/test/library/book_import_service_metadata_extractor_test.dart app/test/sync/sync_engine_test.dart
@@ -316,20 +316,20 @@ git commit -m "feat(import): Windows 匯入、重新連結與同步回填使用 
 
 **注意：** 這個 Task 會在 BooksPad（`B78CW2508006423`）重新安裝本分支的 debug 版，蓋掉裝置上目前的 App。若「二次開書逾時」的偵測版（`debug/capture-logs`）還要用，做完後要重裝。Android 建置需 JDK 17：這台機器的 `flutter` 會選到 JDK 25 而失敗。執行前先問使用者是否同意改全域設定 `flutter config --jdk-dir="C:/Program Files/Microsoft/jdk-17.0.21.21-hotspot"`，做完用 `flutter config --jdk-dir=` 還原；使用者不同意就停下來，請使用者自行在 JDK 17 環境執行 Step 2 並貼回輸出。
 
-- [ ] **Step 1：寫 Android 端傾印測試**
+- [x] **Step 1：寫 Android 端傾印測試**
 
 `metadata_comparison_test.dart`：對 10 份 fixture 各自複製成暫存檔，呼叫 `elinkbook/book_metadata` 的 `extractMetadata`（`format: 'epub'`），每份印一行 `[metadata_comparison] <檔名> <JSON>`，鍵與 Task 4 一致（`coverBytes` 換成 `coverSize`）。只斷言不丟例外。比照 `integration_test/book_metadata_channel_test.dart` 的 `_stageAssetAsFile`。
 
-- [ ] **Step 2：在 BooksPad 執行**
+- [x] **Step 2：在 BooksPad 執行**
 
 Run：`cd app && flutter test integration_test/metadata_comparison_test.dart -d B78CW2508006423`
 Expected：通過，印出 10 行（Readium 輸出）。
 
-- [ ] **Step 3：寫對比報告 `issue-2-report.md`**
+- [x] **Step 3：寫對比報告 `issue-2-report.md`**
 
 一張表：每份 fixture 一列，欄位為 `title`、`author`、`identifier`、`isFixedLayout`、`coverSize`，每欄顯示 Readium 值、foliate-js 值、是否一致。表後列出所有不一致，並為 `identifier` 不一致者說明同步風險（`book_content_fingerprint.dart` 優先用它當指紋）。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/integration_test/metadata_comparison_test.dart docs/epics/epic-66-windows-port/issue-2-report.md
@@ -343,28 +343,28 @@ git commit -m "docs(epic-66): Issue 2 Readium 與 foliate-js metadata 對比（e
 **Files：**
 - Modify：`docs/epics/epic-66-windows-port/issue-2-report.md`、`spike-report.md`、`epic.md`、`issues.md`
 
-- [ ] **Step 1：量 224 MB EPUB 讀 metadata 的尖峰記憶體**
+- [x] **Step 1：量 224 MB EPUB 讀 metadata 的尖峰記憶體**
 
 建置 release：`flutter build windows --release`（環境變數同 Global Constraints）。啟動 `build\windows\x64\runner\Release\elinkbook.exe`，用 PowerShell 取樣腳本（只計入 `elinkbook.exe` 及其子孫程序，每 0.1 秒讀工作集，每 2 秒重掃新程序）。匯入使用者提供的 224 MB EPUB，記下匯入期間 App 與 WebView2 的基準、尖峰、回落值，寫進 `issue-2-report.md`，並與 Issue 1 開書的 3.8 GB 比較。使用者沒有提供書就停下來向使用者要。
 
-- [ ] **Step 2：修正 Issue 1 報告的錯誤**
+- [x] **Step 2：修正 Issue 1 報告的錯誤**
 
 `spike-report.md` 結論 2 的欄位備忘寫 `metadata.creator`，實測作者欄位是 `metadata.author`（字串、`{name, role}` 物件或陣列）；書名可能是語系物件。改正該段，並註明 Issue 1 探針因讀 `creator` 而作者恆為 `null`。`epic.md` 決策 7 的「作者欄位尚未實證」改為 Issue 2 的結論。
 
-- [ ] **Step 3：依對比結果修訂決策 7**
+- [x] **Step 3：依對比結果修訂決策 7**
 
 在 `epic.md` 決策 7 補【Issue 2 結果】：列出 `identifier` 是否一致、是否可統一；不一致時寫明 Windows 單獨用 foliate-js、並指出同步風險。
 
-- [ ] **Step 4：更新 `issues.md`**
+- [x] **Step 4：更新 `issues.md`**
 
 Issue 2 狀態改為「🟡 驗證完成，待審查」。
 
-- [ ] **Step 5：品質檢查**
+- [x] **Step 5：品質檢查**
 
 Run（`app/`，PowerShell，每次先 `$env:PATH = "$env:PNPM_HOME;$env:PATH"`）：`node tool/check_foliate_es_compat.js`、`node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js`、`flutter analyze`；再跑一次完整 `flutter test`（`run_in_background`，只跑一個）。
 Expected：腳本 exit 0；`No issues found!`；測試全綠。有失敗先判斷是否本 Issue 造成，不是就記為既有問題。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add docs/epics/epic-66-windows-port
