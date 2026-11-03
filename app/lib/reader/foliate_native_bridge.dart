@@ -6,10 +6,12 @@ import 'package:flutter/services.dart' show MethodChannel;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../platform/platform_support.dart';
 import 'app_font.dart';
 import 'custom_font.dart';
 import 'foliate_bridge_codec.dart';
 import 'font_download_catalog.dart';
+import 'windows_reader_resources.dart';
 
 const _readerResourcesChannel = MethodChannel('elinkbook/reader_resources');
 
@@ -69,22 +71,48 @@ String buildFontFaceCss({
 /// 該檔案（例如 `view.js` 動態 import 但實際不存在的
 /// `vendor/fflate.js`——已知既有情況，非本次遷移引入）時回傳 `null`。
 Future<Uint8List?> loadAndroidAsset(String relativePath) {
+  // epic-66 Issue 1 Task 7：Windows 沒有 `elinkbook/reader_resources` 原生端，
+  // 改由 Dart 直接讀執行檔旁的 `data/` 目錄（Task 5 的 CMake install 複製處）。
+  if (isWindowsPlatform) {
+    return loadWindowsFoliateAsset(relativePath,
+        assetRoot: windowsFoliateAssetRoot);
+  }
   return _readerResourcesChannel
       .invokeMethod<Uint8List>('readAndroidAsset', {'path': relativePath});
+}
+
+/// Windows 版 foliate 資源根目錄的測試覆寫（比照 [cacheBookForServing] 的
+/// 頂層函數變數覆寫設計）：非 null 時優先使用，讓測試不必依賴
+/// `flutter_tester.exe` 的實際位置。
+String? windowsFoliateAssetRootOverride;
+
+/// Windows 版 foliate 資源根目錄：執行檔旁的 `data/`（`windows/CMakeLists.txt`
+/// 的 install 規則把 foliate-js 資源放在那裡，見 Task 5）。
+String get windowsFoliateAssetRoot {
+  final override = windowsFoliateAssetRootOverride;
+  if (override != null) return override;
+  return p.join(p.dirname(Platform.resolvedExecutable), 'data');
 }
 
 /// 通知原生端「目前有一個流式 EPUB 的 InAppWebView 已建立」，取代原本
 /// `FoliateEpubReaderView.kt` `init {}` 呼叫 `ReaderViewAttachmentTracker.attach()`
 /// （epic-7-interaction Issue 7 音量鍵攔截依據）。呼叫時機：
 /// `foliate_epub_reader_view.dart` 的 `onWebViewCreated` 回呼內。
-Future<void> attachReaderView() =>
-    _volumeKeyChannel.invokeMethod('attachReaderView');
+///
+/// epic-66 Issue 1 Task 7：Windows 沒有 `elinkbook/volume_key` 原生端，
+/// 直接返回（呼叫 MethodChannel 會丟 `MissingPluginException`）。
+Future<void> attachReaderView() {
+  if (isWindowsPlatform) return Future<void>.value();
+  return _volumeKeyChannel.invokeMethod('attachReaderView');
+}
 
 /// 對稱 [attachReaderView]，取代原本 `FoliateEpubReaderView.kt dispose()`
 /// 呼叫 `ReaderViewAttachmentTracker.detach()`。呼叫時機：
 /// `_FoliateEpubReaderViewState.dispose()`。
-Future<void> detachReaderView() =>
-    _volumeKeyChannel.invokeMethod('detachReaderView');
+Future<void> detachReaderView() {
+  if (isWindowsPlatform) return Future<void>.value();
+  return _volumeKeyChannel.invokeMethod('detachReaderView');
+}
 
 /// 讀取自訂字型的位元組（`content://` URI，ADR 0021 決策：不落地快取），
 /// 透過原生 `ReaderResourceChannel` 的 `readCustomFontBytes` 一次性讀取，
@@ -92,7 +120,11 @@ Future<void> detachReaderView() =>
 /// 自訂字型 `@font-face src` 請求。比照既有 [loadAndroidAsset] 模式（固定
 /// 函式宣告，非 [cacheBookForServing] 的可覆寫頂層函數變數——字型檔案不需要
 /// 書籍本體那種測試環境 mock 注入彈性）。
+///
+/// epic-66 Issue 1 Task 7：Windows 的字型來源是本機檔案路徑（沒有
+/// `content://` 與原生 channel），改由 Dart 直接讀。
 Future<Uint8List?> loadCustomFontBytes(String uri) {
+  if (isWindowsPlatform) return loadWindowsFileBytes(uri);
   return _readerResourcesChannel
       .invokeMethod<Uint8List>('readCustomFontBytes', {'uri': uri});
 }
@@ -127,6 +159,14 @@ Future<String?> Function(String filePath, String instanceId) cacheBookForServing
     _defaultCacheBookForServing;
 
 Future<String?> _defaultCacheBookForServing(String filePath, String instanceId) async {
+  // epic-66 Issue 1 Task 7：Windows 沒有原生 cache channel，且 `content://`
+  // 不存在（匯入時已落成本機路徑）——本機檔案直接以 Dart 串流複製到
+  // 臨時目錄的實例子目錄（語意同 Android 端的 instanceId 快取）。
+  if (isWindowsPlatform) {
+    final tempDir = await getTemporaryDirectory();
+    return cacheWindowsBook(filePath, instanceId,
+        baseDir: Directory(p.join(tempDir.path, 'book_cache')));
+  }
   final extension = cacheFileExtension(filePath);
   if (filePath.contains('://')) {
     return _readerResourcesCacheChannel.invokeMethod<String>(

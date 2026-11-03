@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../l10n/app_localizations.dart';
+import '../platform/platform_support.dart';
+import '../windows/windows_webview_environment.dart';
 import 'app_font.dart';
 import 'column_mode.dart';
 import 'custom_font.dart';
@@ -28,6 +30,7 @@ import 'reader_console_log.dart';
 import 'tap_zone_detector.dart';
 import 'toc_entry.dart';
 import 'tts_segment_cfi.dart';
+import 'windows_reader_resources.dart';
 import 'writing_mode.dart';
 import 'text_conversion_mode.dart';
 import 'zone_action.dart';
@@ -259,6 +262,40 @@ String? resolveCustomFontUri(String path, List<CustomFont> customFonts) {
   } on ArgumentError {
     return null;
   }
+}
+
+/// `shouldInterceptRequest` 攔截到的請求路徑分類（epic-66 Issue 1 Task 7）。
+///
+/// 把 [_FoliateReaderViewState._shouldInterceptRequest] 裡的路徑判斷抽成
+/// 可測的純函式——原因同 [resolveCustomFontUri]：私有回呼在 widget test
+/// 環境下觸發不到（見 `foliate_reader_view.dart:233-245` 註解）。
+enum FoliateRequestKind {
+  /// `/assets/foliate/`：foliate-js 靜態資源。
+  foliateAsset,
+
+  /// `/book/`：書檔（Android 由 `InternalStoragePathHandler` 服務，
+  /// Windows 由 Dart 攔截回呼讀本機快取）。
+  book,
+
+  /// `/assets/custom-fonts/`：自訂字型虛擬路徑。
+  customFont,
+
+  /// `/downloaded-fonts/`：已下載內建字型。
+  downloadedFont,
+
+  /// 其餘一律不攔截（回 `null`，讓 WebView 走預設行為）。
+  unknown,
+}
+
+/// 路徑 → [FoliateRequestKind] 的純分類（見該列舉文件）。
+FoliateRequestKind classifyFoliateRequestPath(String path) {
+  if (path.startsWith('/assets/foliate/')) return FoliateRequestKind.foliateAsset;
+  if (path.startsWith('/book/')) return FoliateRequestKind.book;
+  if (path.startsWith('/assets/custom-fonts/')) return FoliateRequestKind.customFont;
+  if (path.startsWith(kDownloadedFontsPathPrefix)) {
+    return FoliateRequestKind.downloadedFont;
+  }
+  return FoliateRequestKind.unknown;
 }
 
 /// 包裝 readest/foliate-js（釘定 commit
@@ -814,24 +851,44 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     WebResourceRequest request,
   ) async {
     final path = request.url.path;
-    // `/book/current.epub` 請求已改由原生 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務，
-    // 不再需要 Dart callback 攔截（見 Issue 8 Task 3）。
-    const foliateAssetsPrefix = '/assets/foliate/';
-    if (path.startsWith(foliateAssetsPrefix)) {
-      final relative = 'foliate/${path.substring(foliateAssetsPrefix.length)}';
-      final bytes = await loadAndroidAsset(relative);
-      if (bytes == null) return null;
-      final contentType =
-          path.endsWith('.js') ? 'text/javascript' : 'text/html';
-      return WebResourceResponse(contentType: contentType, data: bytes);
+    // `/book/current.epub` 在 Android 改由原生
+    // `WebViewAssetLoader.InternalStoragePathHandler` 串流服務（見 Issue 8
+    // Task 3）；Windows 沒有該 Handler（`webViewAssetLoader` 只在 Android
+    // 設定），改由本回呼讀本機快取（epic-66 Issue 1 Task 7）。
+    // 路徑判斷抽成 [classifyFoliateRequestPath] 純函式，見其文件註解。
+    switch (classifyFoliateRequestPath(path)) {
+      case FoliateRequestKind.foliateAsset:
+        const foliateAssetsPrefix = '/assets/foliate/';
+        final relative = 'foliate/${path.substring(foliateAssetsPrefix.length)}';
+        final bytes = await loadAndroidAsset(relative);
+        if (bytes == null) return null;
+        final contentType =
+            path.endsWith('.js') ? 'text/javascript' : 'text/html';
+        return WebResourceResponse(contentType: contentType, data: bytes);
+      case FoliateRequestKind.book:
+        // 僅 Windows 啟用；Android 維持回 null（交給 InternalStoragePathHandler）。
+        if (!isWindowsPlatform) return null;
+        final cacheDir = _bookCacheDir;
+        if (cacheDir == null) return null;
+        final bytes = await readWindowsBookBytes(path, cacheDir);
+        if (bytes == null) return null;
+        return WebResourceResponse(
+          contentType: windowsBookContentType(path),
+          data: bytes,
+        );
+      case FoliateRequestKind.customFont:
+        final customFontUri = resolveCustomFontUri(path, widget.customFonts);
+        if (customFontUri == null) return null;
+        final bytes = await loadCustomFontBytes(customFontUri);
+        if (bytes == null) return null;
+        return WebResourceResponse(contentType: 'font/ttf', data: bytes);
+      case FoliateRequestKind.downloadedFont:
+      case FoliateRequestKind.unknown:
+        // 已下載字型在 Android 由 InternalStoragePathHandler 服務；
+        // 其餘未知路徑一律回 null，讓 WebView 走預設行為、不丟例外
+        // （Review Focus 4）。
+        return null;
     }
-    final customFontUri = resolveCustomFontUri(path, widget.customFonts);
-    if (customFontUri != null) {
-      final bytes = await loadCustomFontBytes(customFontUri);
-      if (bytes == null) return null;
-      return WebResourceResponse(contentType: 'font/ttf', data: bytes);
-    }
-    return null;
   }
 
   @override
@@ -889,17 +946,27 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
             // 只在建立 WebView 時生效，與 `isFixedLayoutHint` 僅開書當下生效的
             // 既有限制一致。
             supportZoom: widget.isFixedLayoutHint == true,
-            webViewAssetLoader: WebViewAssetLoader(
-              pathHandlers: [
-                InternalStoragePathHandler(
-                    path: '/book/', directory: _bookCacheDir!),
-                if (widget.downloadedFontsDirectory != null)
-                  InternalStoragePathHandler(
-                      path: kDownloadedFontsPathPrefix,
-                      directory: widget.downloadedFontsDirectory!),
-              ],
-            ),
+            // epic-66 Issue 1 Task 7：`WebViewAssetLoader` 只在 Android 設定
+            // （Windows 的 `flutter_inappwebview_windows` 不走 pathHandler，
+            // `/book/` 改由 `_shouldInterceptRequest` 的 book 分支服務，
+            // `/assets/foliate/` 則由磁碟讀，見 windows_reader_resources.dart）。
+            webViewAssetLoader: isAndroidPlatform
+                ? WebViewAssetLoader(
+                    pathHandlers: [
+                      InternalStoragePathHandler(
+                          path: '/book/', directory: _bookCacheDir!),
+                      if (widget.downloadedFontsDirectory != null)
+                        InternalStoragePathHandler(
+                            path: kDownloadedFontsPathPrefix,
+                            directory: widget.downloadedFontsDirectory!),
+                    ],
+                  )
+                : null,
           ),
+          // epic-66 Issue 1 Task 4：Windows 需要帶入預先建立的 WebView2
+          // 環境（使用者資料夾見 windows_webview_environment.dart）；
+          // 其他平台為 null，行為不變。
+          webViewEnvironment: appWebViewEnvironment,
           // 【診斷修正】見上方 esCompatPolyfillJs 註解——在文件載入最早期
           // 注入 Object.groupBy/Map.groupBy/Array.prototype.at/
           // Array.prototype.findLastIndex 的 polyfill，避免舊版 WebView 開
