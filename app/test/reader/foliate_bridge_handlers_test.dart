@@ -20,6 +20,7 @@ void main() {
       'onSegmentsForSectionReady': 'onSegmentsForSectionReady',
       'onLocatorChanged': 'onLocatorChanged',
       'onSelectionChanged': 'onSelectionChanged',
+      'onNavigationDegraded': 'onNavigationDegraded',
     };
     const actual = <String, String>{
       'onTableOfContentsReady': FoliateBridgeHandlers.onTableOfContentsReady,
@@ -35,12 +36,13 @@ void main() {
           FoliateBridgeHandlers.onSegmentsForSectionReady,
       'onLocatorChanged': FoliateBridgeHandlers.onLocatorChanged,
       'onSelectionChanged': FoliateBridgeHandlers.onSelectionChanged,
+      'onNavigationDegraded': FoliateBridgeHandlers.onNavigationDegraded,
     };
 
     expect(actual, expected);
   });
 
-  test('11 個常數對應到 11 個相異字串，無重複值（防止複製貼上時誤用同一個字串）', () {
+  test('12 個常數對應到 12 個相異字串，無重複值（防止複製貼上時誤用同一個字串）', () {
     const values = <String>{
       FoliateBridgeHandlers.onTableOfContentsReady,
       FoliateBridgeHandlers.onTtsSegmentsReady,
@@ -53,8 +55,9 @@ void main() {
       FoliateBridgeHandlers.onSegmentsForSectionReady,
       FoliateBridgeHandlers.onLocatorChanged,
       FoliateBridgeHandlers.onSelectionChanged,
+      FoliateBridgeHandlers.onNavigationDegraded,
     };
 
-    expect(values, hasLength(11));
+    expect(values, hasLength(12));
   });
 }
