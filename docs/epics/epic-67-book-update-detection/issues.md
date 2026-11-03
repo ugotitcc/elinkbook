@@ -16,7 +16,7 @@ Issue 6 PDF 降級      ─┘
 | 2 | 本機匯入入口：匯入完成後彙整更新版清單（取代／並存／跳過、全部取代／全部跳過）與暫存檔收尾 | Issue 1 | ⏳ 未開始 | — |
 | 3 | 手動入口「用新檔案更新此書」與 `relinkBook` 強制重新連結 | Issue 1 | ⏳ 未開始 | — |
 | 4 | 下載佇列「待確認更新」：非阻塞狀態、專屬暫存目錄、面板確認、啟動清掃 | Issue 1 | ⏳ 未開始 | — |
-| 5 | Foliate 格式降級：開書與註記跳轉的精確定位失敗改用進度比例，並回報提示 | 無 | 🟢 已完成 | [plan-issue-5.md](plans/plan-issue-5.md) |
+| 5 | Foliate 格式降級：開書與註記跳轉的精確定位失敗改用進度比例，並回報提示 | 無 | ✅ 已合併 | #383（計畫：[plan-issue-5.md](plans/plan-issue-5.md)） |
 | 6 | PDF 降級：頁碼超界限制至最後一頁並回報提示 | 無（建議 Issue 5 之後，共用提示） | ⏳ 未開始 | — |
 
 每個 Issue 的新增畫面字串，一律同步登錄 `app_en.arb`、`app_zh.arb`、`app_zh_CN.arb`、`app_zh_TW.arb`，並於提交前跑 `flutter analyze`、`node tool/check_l10n_hardcoded_strings.js`；動到 `lib/` Key 或 `integration_test/` 者另跑 `node tool/check_integration_keys.js`。ARB 鍵名與測試檔案落點在各 Issue 的 `plan-issue-N.md` 決定（spec 不規定檔案路徑）。
@@ -126,7 +126,7 @@ Status: ready-for-agent（依賴 Issue 1）
 
 ## Issue 5：Foliate 格式降級
 
-Status: completed（[plan-issue-5.md](plans/plan-issue-5.md)）
+Status: completed（已合併 PR #383；[plan-issue-5.md](plans/plan-issue-5.md)）。真機整合測試 `foliate_navigation_degrade_test.dart` 由人類於真機補跑。
 
 **範圍**：EPUB／KF8／CBZ／TXT／MD。
 

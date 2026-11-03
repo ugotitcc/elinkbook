@@ -75,7 +75,7 @@
 | 65 | `epic-64-import-resume-egl-crash` （缺陷）從系統檔案選擇器返回時 EGL context 遺失，Impeller 在 raster 執行緒 abort（匯入書籍後黑屏退出） | 🟡 開發中 (Active) | Issue 1 已診斷並實作緩解（閱讀器／字典 WebView 關閉後補畫面），WAVE 自動化重現腳本驗證通過，待使用者手動驗證 |
 | 66 | `epic-65-reader-indent-and-colors` 版面設定增強：首行縮排（開關加 0～4 字滑桿）與自訂閱讀顏色（各佈景獨立的背景色與文字色，RGB 滑桿加色碼輸入） | 🟡 開發中 (Active) | Discovery 已定案；Issue 1 已合併（PR #372）；Issue 3（縮排排除置中與無文字段落）已合併（PR #373）；Issue 2（自訂閱讀顏色）已合併（PR #374）；全數完成，待歸檔 |
 | 67 | `epic-66-windows-port` Windows 版移植（功能對等，例外：雲端匯入延後、音量鍵／E-Ink／方向鎖定隱藏） | 🟡 開發中 (Active) | Discovery 已定案（2026-11-03）；Issue 1（技術驗證）已合併（PR #381），7 項過關條件全數通過、不需要 `shelf` 備案；後續 Issue 待展開；決策見 ADR 0041 |
-| 68 | `epic-67-book-update-detection` 書籍更新版偵測與取代（出版社更新檔匯入時判定同一本，可取代並保留註記） | 🟡 開發中 (Active) | Discovery 已定案（`/grill-with-docs`）；ADR 0040 已寫；spec 與 6 個 Issue 已拆，待實作 |
+| 68 | `epic-67-book-update-detection` 書籍更新版偵測與取代（出版社更新檔匯入時判定同一本，可取代並保留註記） | 🟡 開發中 (Active) | Discovery 已定案（`/grill-with-docs`）；ADR 0040 已寫；spec 與 6 個 Issue 已拆；Issue 5 已合併（PR #383） |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。
