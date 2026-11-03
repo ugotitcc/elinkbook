@@ -482,4 +482,55 @@ void main() {
     expect(copied.cloudFileId, 'onedrive-file-xyz789');
     expect(copied.groupName, '新分類');
   });
+
+  group('Book.copyWith 清除旗標（epic-67 Issue 1 Task 1）', () {
+    final book = Book(
+      id: 'b-clear',
+      title: '原有書名',
+      author: '原有作者',
+      format: BookFileFormat.epub,
+      filePath: '/storage/imported_books/b-clear.epub',
+      source: BookSource.local,
+      coverPath: '/storage/covers/b-clear.png',
+      isFixedLayout: true,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(2000),
+    );
+
+    test('clearCoverPath: true 可將 coverPath 清空為 null，其餘欄位不變', () {
+      final updated = book.copyWith(clearCoverPath: true);
+      expect(updated.coverPath, isNull);
+      expect(updated.author, book.author);
+      expect(updated.isFixedLayout, isTrue);
+      expect(updated.title, book.title);
+    });
+
+    test('clearAuthor: true 可將 author 清空為 null，其餘欄位不變', () {
+      final updated = book.copyWith(clearAuthor: true);
+      expect(updated.author, isNull);
+      expect(updated.coverPath, book.coverPath);
+      expect(updated.isFixedLayout, isTrue);
+    });
+
+    test('clearIsFixedLayout: true 可將 isFixedLayout 清空為 null，其餘欄位不變', () {
+      final updated = book.copyWith(clearIsFixedLayout: true);
+      expect(updated.isFixedLayout, isNull);
+      expect(updated.author, book.author);
+      expect(updated.coverPath, book.coverPath);
+    });
+
+    test('清除旗標與同名值參數同時給予時，以清除旗標優先', () {
+      final updated = book.copyWith(
+        coverPath: '/new/cover.png',
+        clearCoverPath: true,
+        author: '新作者',
+        clearAuthor: true,
+        isFixedLayout: false,
+        clearIsFixedLayout: true,
+      );
+      expect(updated.coverPath, isNull);
+      expect(updated.author, isNull);
+      expect(updated.isFixedLayout, isNull);
+    });
+  });
 }
