@@ -111,14 +111,14 @@ class BookSourceRefs {
 String? normalizeBookKey(String? raw);
 ```
 
-- [ ] **Step 1：寫失敗測試**（`book_update_models_test.dart`）
+- [x] **Step 1：寫失敗測試**（`book_update_models_test.dart`）
   - `normalizeBookKey`：`'  Hello '`→`'hello'`；`'ＡＢＣ１２３'`→`'abc123'`；`'紅　樓夢'`（全形空白）→`'紅 樓夢'`；`''`、`'   '`、`null`→`null`；中文標點不被改動（`'，'` 維持）。
   - `Book.copyWith(clearCoverPath: true)` 得到 `coverPath == null` 且其他欄位不變；`copyWith(clearAuthor: true)`、`copyWith(clearIsFixedLayout: true)` 同理（舊書 `isFixedLayout == true`、新版為 null 時須能清成 null）；清除旗標與同名值參數同時給時以清除旗標優先（`copyWith(coverPath: 'x', clearCoverPath: true).coverPath == null`）；不傳旗標時行為與現況相同（既有 `book_test` 全綠）。
   - `BookUpdateCandidate.copyWith(stagedPath: ...)` 只改 `stagedPath`。
-- [ ] **Step 2：確認失敗** `flutter test --no-pub test/library/book_update_models_test.dart`
-- [ ] **Step 3：實作** 新檔與 `copyWith` 旗標（`copyWith` 只加三個具名參數與三行判斷，不動其他欄位）。
-- [ ] **Step 4：確認通過**，並跑 `flutter test --no-pub test/library/models`（若目錄存在）確認 `Book` 既有測試不回歸。
-- [ ] **Step 5：`flutter analyze`**；提交 `feat(library): 更新版偵測與取代的型別與正規化函式（epic-67 Issue 1 Task 1）`。
+- [x] **Step 2：確認失敗** `flutter test --no-pub test/library/book_update_models_test.dart`
+- [x] **Step 3：實作** 新檔與 `copyWith` 旗標（`copyWith` 只加三個具名參數與三行判斷，不動其他欄位）。
+- [x] **Step 4：確認通過**，並跑 `flutter test --no-pub test/library/models`（若目錄存在）確認 `Book` 既有測試不回歸。
+- [x] **Step 5：`flutter analyze`**；提交 `feat(library): 更新版偵測與取代的型別與正規化函式（epic-67 Issue 1 Task 1）`。
 
 ---
 
@@ -160,10 +160,10 @@ Future<_BookParts?> _prepareBookParts({
 
 **暫存後綴必須涵蓋所有會寫入正式檔名的落地輔助（審查 C-1）：** `_landCover`／`_landCbzArchive`／`_landTxtEpub`／`_landMdEpub`、**以及 `_copyToLocalStorage` 與 `_persistPermissionOrLandCopy`**，各增加選填 `{String landSuffix = ''}`（`_landCover` 等沿用 `suffix` 命名亦可，但全部統一為同一個參數名 `landSuffix`），檔名為 `'$id.<ext>$landSuffix'`。`_copyToLocalStorage` 現行寫死 `p.join(importedDir.path, '$id.${format.name}')`，若漏改，無法持久化授權的 `content://` 來源在取代時會在解析中繼資料**之前**就覆寫舊檔，擊穿原子性。實作後以 `grep -n "importedDir.path\|dir.path, '\$" app/lib/library/book_import_service_impl.dart` 確認所有寫入 `imported_books/`、`covers/` 的位置都經過 `landSuffix`，沒有遺漏。
 
-- [ ] **Step 1：先跑護欄並記錄基線** `flutter test --no-pub test/library/book_import_service_test.dart test/library/book_import_service_metadata_extractor_test.dart test/library/book_import_service_missing_channel_test.dart`，全綠後才開始改。
-- [ ] **Step 2：重構** 抽出 `_prepareBookParts`，`_importSingleFile` 改呼叫它（`landSuffix: ''`、`strict: false`、`computeFingerprint: true`）；`_copyToLocalStorage`／`_persistPermissionOrLandCopy` 加上 `landSuffix`（預設空字串，`importFiles`／`relinkBook` 既有呼叫端不傳，行為不變）。`return null` 的分支（空 TXT、DRM、無頁面 CBZ、空 MD）在非嚴格模式維持回傳 `null`；嚴格模式改拋 `_NewFileParseException`。**不得調整任何既有分支的判斷順序與降級行為。**
-- [ ] **Step 3：確認三份既有測試仍全綠**（與 Step 1 相同的指令）。
-- [ ] **Step 4：`flutter analyze`**；提交 `refactor(library): 抽出匯入的逐格式處理為 _prepareBookParts，行為不變（epic-67 Issue 1 Task 2）`。
+- [x] **Step 1：先跑護欄並記錄基線** `flutter test --no-pub test/library/book_import_service_test.dart test/library/book_import_service_metadata_extractor_test.dart test/library/book_import_service_missing_channel_test.dart`，全綠後才開始改。
+- [x] **Step 2：重構** 抽出 `_prepareBookParts`，`_importSingleFile` 改呼叫它（`landSuffix: ''`、`strict: false`、`computeFingerprint: true`）；`_copyToLocalStorage`／`_persistPermissionOrLandCopy` 加上 `landSuffix`（預設空字串，`importFiles`／`relinkBook` 既有呼叫端不傳，行為不變）。`return null` 的分支（空 TXT、DRM、無頁面 CBZ、空 MD）在非嚴格模式維持回傳 `null`；嚴格模式改拋 `_NewFileParseException`。**不得調整任何既有分支的判斷順序與降級行為。**
+- [x] **Step 3：確認三份既有測試仍全綠**（與 Step 1 相同的指令）。
+- [x] **Step 4：`flutter analyze`**；提交 `refactor(library): 抽出匯入的逐格式處理為 _prepareBookParts，行為不變（epic-67 Issue 1 Task 2）`。
 
 ---
 
@@ -203,7 +203,7 @@ Future<BookDetectionResult> detectBookUpdate(String uri, {String? displayName});
    - TXT／MD／CBZ：用 `book.contentFingerprint`。
    - 任一候選的舊檔指紋 == `newHash` → `DetectedDuplicate(該書)`；否則 `DetectedUpdate(candidate)`。
 
-- [ ] **Step 1：寫失敗測試**（`book_import_service_detect_test.dart`；以 `SqliteLibraryRepository.open(inMemoryDatabasePath)` 預先 `insertBook` 既有書，`mockChannel` 控制 `extractMetadata`／`computeSha256`，本機檔案用 `Directory.systemTemp` 建 fixture，沿用 `book_import_service_test.dart` 的 setUp 樣式）：
+- [x] **Step 1：寫失敗測試**（`book_import_service_detect_test.dart`；以 `SqliteLibraryRepository.open(inMemoryDatabasePath)` 預先 `insertBook` 既有書，`mockChannel` 控制 `extractMetadata`／`computeSha256`，本機檔案用 `Directory.systemTemp` 建 fixture，沿用 `book_import_service_test.dart` 的 setUp 樣式）：
   - `分類`：書庫為空 → `DetectedNewBook`；副檔名未知 → `DetectedUnsupported`；EPUB identifier 相同、內容不同 → `DetectedUpdate(high)`；EPUB identifier 相同、整檔相同 → `DetectedDuplicate`；書名＋作者相同、identifier 不同 → `DetectedUpdate(suspected)`。
   - `格式先決`：PDF 新檔、書庫只有同書名 EPUB → `DetectedNewBook`；TXT 新檔、書庫只有同名 MD → `DetectedNewBook`（TXT 與 MD 不互通）。
   - `作者為空`：新檔作者 `null`／`''`／`'  '` 與書庫同書名 → `DetectedNewBook`；書庫書作者為空亦同。
@@ -217,10 +217,10 @@ Future<BookDetectionResult> detectBookUpdate(String uri, {String? displayName});
   - `無身份命中時不算整檔雜湊`：有同格式書但身份不符 → `computeSha256` 未被呼叫。
   - `永不拋例外`：`extractMetadata` 拋 `PlatformException` → `DetectedNewBook`。
   - `不寫入`：每個案例後 `listBooks()` 內容與預置相同。
-- [ ] **Step 2：確認失敗**。
-- [ ] **Step 3：實作** `detectBookUpdate` 與 `_peekIdentity`；介面加方法並補文件註解（引用 spec「判定規則」與 D1）。
-- [ ] **Step 4：確認通過**，並重跑 Task 2 的三份既有測試。
-- [ ] **Step 5：`flutter analyze`**；提交 `feat(library): 書籍更新版偵測（epic-67 Issue 1 Task 3）`。
+- [x] **Step 2：確認失敗**。
+- [x] **Step 3：實作** `detectBookUpdate` 與 `_peekIdentity`；介面加方法並補文件註解（引用 spec「判定規則」與 D1）。
+- [x] **Step 4：確認通過**，並重跑 Task 2 的三份既有測試。
+- [x] **Step 5：`flutter analyze`**；提交 `feat(library): 書籍更新版偵測（epic-67 Issue 1 Task 3）`。
 
 ---
 
@@ -241,9 +241,9 @@ Future<void> discardUpdateCandidate(BookUpdateCandidate candidate);
 
 內部輔助（私有）：`_stageNewFile(String uri, BookFileFormat format) → Future<String?>`：把新檔複製到更新暫存目錄（`content://` 呼叫既有 `copyContentUriToFile`；本機路徑用 `File.copy`），檔名 `<微秒時間戳>-<uri.hashCode>.<副檔名>`，失敗回傳 `null`（並清掉半成品）。
 
-- [ ] **Step 1：寫失敗測試**：`discardUpdateCandidate` 刪除暫存檔；`stagedPath == null` 不報錯；檔案已不存在不報錯；刪除失敗（目錄被替換成檔案等）不拋例外。`_stageNewFile` 以 `importFiles`（Task 6）間接驗證，這裡先只測丟棄。
-- [ ] **Step 2：確認失敗 → Step 3：實作 → Step 4：確認通過**。
-- [ ] **Step 5：`flutter analyze`**；提交 `feat(library): 丟棄更新候選與更新暫存目錄（epic-67 Issue 1 Task 4）`。
+- [x] **Step 1：寫失敗測試**：`discardUpdateCandidate` 刪除暫存檔；`stagedPath == null` 不報錯；檔案已不存在不報錯；刪除失敗（目錄被替換成檔案等）不拋例外。`_stageNewFile` 以 `importFiles`（Task 6）間接驗證，這裡先只測丟棄。
+- [x] **Step 2：確認失敗 → Step 3：實作 → Step 4：確認通過**。
+- [x] **Step 5：`flutter analyze`**；提交 `feat(library): 丟棄更新候選與更新暫存目錄（epic-67 Issue 1 Task 4）`。
 
 ---
 

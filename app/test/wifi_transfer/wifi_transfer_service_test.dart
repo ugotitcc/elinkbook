@@ -83,6 +83,10 @@ class _ThrowingImportService implements BookImportService {
     String? displayName,
   }) =>
       Future.value(const DetectedNewBook());
+
+  @override
+  Future<void> discardUpdateCandidate(BookUpdateCandidate candidate) =>
+      Future.value();
 }
 
 void main() {

@@ -122,4 +122,8 @@ abstract class BookImportService {
     String uri, {
     String? displayName,
   });
+
+  /// 丟棄候選：刪除其 [BookUpdateCandidate.stagedPath] 指向的暫存檔；已不存在或為 null 時靜默成功。
+  /// 呼叫端在使用者選跳過、關閉彙整清單、返回、取消時必須呼叫。永不拋例外。
+  Future<void> discardUpdateCandidate(BookUpdateCandidate candidate);
 }

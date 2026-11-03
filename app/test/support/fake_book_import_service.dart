@@ -139,4 +139,12 @@ class FakeBookImportService implements BookImportService {
     String? displayName,
   }) =>
       Future.value(detectResult);
+
+  final List<BookUpdateCandidate> discardedCandidates = [];
+
+  @override
+  Future<void> discardUpdateCandidate(BookUpdateCandidate candidate) {
+    discardedCandidates.add(candidate);
+    return Future.value();
+  }
 }

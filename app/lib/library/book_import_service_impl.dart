@@ -76,12 +76,14 @@ class BookImportServiceImpl implements BookImportService {
     required LibraryRepository repository,
     Directory? coversDirectory,
     Directory? importedBooksDirectory,
+    Directory? updateStagingDirectory,
     AppThemePreferences? themePreferences,
     FullTextSearchSettingsRepository? fullTextSearchSettingsRepository,
     BookMetadataExtractor? metadataExtractor,
   })  : _repository = repository,
         _coversDirectory = coversDirectory,
         _importedBooksDirectory = importedBooksDirectory,
+        _updateStagingDirectory = updateStagingDirectory,
         _themePreferences = themePreferences ?? AppThemePreferences(),
         _fullTextSearchSettingsRepository = fullTextSearchSettingsRepository,
         _metadataExtractor = metadataExtractor;
@@ -91,6 +93,7 @@ class BookImportServiceImpl implements BookImportService {
   final LibraryRepository _repository;
   final Directory? _coversDirectory;
   final Directory? _importedBooksDirectory;
+  final Directory? _updateStagingDirectory;
   final AppThemePreferences _themePreferences;
   final BookMetadataExtractor? _metadataExtractor;
 
@@ -320,6 +323,51 @@ class BookImportServiceImpl implements BookImportService {
     );
   }
 
+  @override
+  Future<void> discardUpdateCandidate(BookUpdateCandidate candidate) async {
+    final stagedPath = candidate.stagedPath;
+    if (stagedPath == null) return;
+    try {
+      final file = File(stagedPath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (_) {
+      // 靜默成功，永不拋出例外
+    }
+  }
+
+  /// 把新檔複製到更新暫存目錄（content:// 呼叫 copyContentUriToFile；本機路徑用 File.copy），
+  /// 檔名 `<微秒時間戳>-<uri.hashCode>.<副檔名>`，失敗回傳 null（並清掉半成品）。
+  Future<String?> _stageNewFile(String uri, BookFileFormat format) async {
+    String? destinationPath;
+    try {
+      final stagingDir = await _resolveUpdateStagingDirectory();
+      final filename =
+          '${DateTime.now().microsecondsSinceEpoch}-${uri.hashCode}.${format.name}';
+      destinationPath = p.join(stagingDir.path, filename);
+      if (uri.startsWith('content://')) {
+        await kBookMetadataChannel.invokeMethod<void>(
+          'copyContentUriToFile',
+          {'uri': uri, 'destinationPath': destinationPath},
+        );
+      } else {
+        await File(uri).copy(destinationPath);
+      }
+      return destinationPath;
+    } catch (_) {
+      if (destinationPath != null) {
+        try {
+          final file = File(destinationPath);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        } catch (_) {}
+      }
+      return null;
+    }
+  }
+
   /// 內部更新版偵測邏輯，接收預讀的 [existingBooks] 供批次迴圈重用（審查 M-2）。
   Future<BookDetectionResult> _detectBookUpdateInternal(
     String uri, {
@@ -389,6 +437,7 @@ class BookImportServiceImpl implements BookImportService {
       newHash = await computeBookContentFingerprint(uri, format);
     } catch (_) {
       // 算不出新檔雜湊時視為無法比對重複，回 DetectedUpdate
+      final stagedPath = await _stageNewFile(uri, format);
       return DetectedUpdate(
         BookUpdateCandidate(
           sourceUri: uri,
@@ -397,6 +446,7 @@ class BookImportServiceImpl implements BookImportService {
           confidence: confidence,
           candidateBooks: candidateBooks,
           unreadableCandidateBookIds: const {},
+          stagedPath: stagedPath,
         ),
       );
     }
@@ -430,6 +480,7 @@ class BookImportServiceImpl implements BookImportService {
       return DetectedDuplicate(duplicateBook);
     }
 
+    final stagedPath = await _stageNewFile(uri, format);
     return DetectedUpdate(
       BookUpdateCandidate(
         sourceUri: uri,
@@ -438,6 +489,7 @@ class BookImportServiceImpl implements BookImportService {
         confidence: confidence,
         candidateBooks: candidateBooks,
         unreadableCandidateBookIds: unreadableCandidateBookIds,
+        stagedPath: stagedPath,
       ),
     );
   }
@@ -920,6 +972,18 @@ class BookImportServiceImpl implements BookImportService {
           p.join(
             (await getApplicationDocumentsDirectory()).path,
             'imported_books',
+          ),
+        );
+    if (!await dir.exists()) await dir.create(recursive: true);
+    return dir;
+  }
+
+  Future<Directory> _resolveUpdateStagingDirectory() async {
+    final dir = _updateStagingDirectory ??
+        Directory(
+          p.join(
+            (await getApplicationDocumentsDirectory()).path,
+            'update_staging',
           ),
         );
     if (!await dir.exists()) await dir.create(recursive: true);
