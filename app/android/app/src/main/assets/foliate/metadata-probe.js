@@ -83,3 +83,77 @@ export async function readBookMetadata(file) {
     } catch (_) {}
   }
 }
+
+// ——區段讀取（審查 Important 2、3 的修正）——
+// 大檔（224 MB）整本走 Windows 的 shouldInterceptRequest 會在 App 程序留下約兩份書檔大小的
+// 原生記憶體（外掛／WebView2 端不釋放，量與傳輸位元組成正比），尖峰也高達數 GB。
+// metadata 只需要 ZIP 中央目錄、OPF 與封面，所以提供一個「依需要才抓區段」的類 Blob 物件：
+// makeBook／zip.js 只用到 size、name、type 與 slice(a, b).arrayBuffer()。
+// 以固定大小的區塊快取，避免 zip.js 零碎的小讀取變成大量往返。
+const RANGE_BLOCK_SIZE = 256 * 1024
+
+class RangeFile {
+  constructor(size, fetchRange, name) {
+    this.size = size
+    this.name = name
+    this.type = 'application/epub+zip'
+    this._fetchRange = fetchRange
+    this._blocks = new Map()
+  }
+
+  _block(index) {
+    let pending = this._blocks.get(index)
+    if (!pending) {
+      const start = index * RANGE_BLOCK_SIZE
+      const end = Math.min(start + RANGE_BLOCK_SIZE, this.size)
+      pending = Promise.resolve(this._fetchRange(start, end)).then((buf) => new Uint8Array(buf))
+      this._blocks.set(index, pending)
+    }
+    return pending
+  }
+
+  // 語意比照 Blob.slice：省略或負值的邊界相對於結尾，超出範圍夾回 [0, size]。
+  slice(start, end) {
+    const size = this.size
+    let from = start === undefined ? 0 : start
+    let to = end === undefined ? size : end
+    if (from < 0) from = Math.max(size + from, 0)
+    if (to < 0) to = Math.max(size + to, 0)
+    from = Math.min(from, size)
+    to = Math.min(Math.max(to, from), size)
+    const owner = this
+    return {
+      size: to - from,
+      type: owner.type,
+      async arrayBuffer() {
+        const length = to - from
+        const out = new Uint8Array(length)
+        if (length === 0) return out.buffer
+        const first = Math.floor(from / RANGE_BLOCK_SIZE)
+        const last = Math.floor((to - 1) / RANGE_BLOCK_SIZE)
+        const blocks = await Promise.all(
+          Array.from({ length: last - first + 1 }, (_, i) => owner._block(first + i)),
+        )
+        let written = 0
+        for (let i = 0; i < blocks.length; i++) {
+          const blockStart = (first + i) * RANGE_BLOCK_SIZE
+          const lo = Math.max(from, blockStart) - blockStart
+          const hi = Math.min(to, blockStart + blocks[i].length) - blockStart
+          out.set(blocks[i].subarray(lo, hi), written)
+          written += hi - lo
+        }
+        return out.buffer
+      },
+    }
+  }
+}
+
+/**
+ * 以區段方式讀取 EPUB metadata，不需要把整本書載入。
+ * @param {number} size 書檔位元組數
+ * @param {(start: number, end: number) => Promise<ArrayBuffer>} fetchRange 取得 [start, end) 的位元組
+ * @param {string} [name] 檔名（foliate 以副檔名判斷格式，預設 book.epub）
+ */
+export async function readBookMetadataByRange(size, fetchRange, name = 'book.epub') {
+  return readBookMetadata(new RangeFile(size, fetchRange, name))
+}
