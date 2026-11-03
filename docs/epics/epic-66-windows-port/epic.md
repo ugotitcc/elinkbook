@@ -43,6 +43,21 @@
 13. **PRD**：新增 NFR-7 與 §3.2 的 Windows 例外項（已完成）。
 14. **流程**：一個 Issue 一個分支、一個 PR，計畫與實作同分支同 PR。
 
+## 審查修訂（`reviews/review-epic-and-issues.md`，2026-11-03）
+
+審查結論：Ready with fixes。6 項重要意見已對照程式碼查證，全部成立。決策如下。
+
+15. **Issue 1 含最小送書原型**：Issue 1 自己做一個最小的 `shelf` 本機伺服器原型，供過關條件 1～4 使用。生產級伺服器（權杖、快取清理、錯誤回退）留給後續 Issue。這解除了「過關條件 1 要開書、送書卻排在後面」的循環依賴。
+16. **啟動鏈平台防護**：`main.dart:253` 之後無條件呼叫 `AudioSession` 與 `AudioService.init()`，兩者在 Windows 沒有平台實作，啟動會直接丟 `MissingPluginException`。Windows 要跳過這兩段。跳過後 `TtsAudioHandlerHolder` 的狀態已定案（2026-11-03）：在 `TtsAudioHandlerStatus` 新增「此平台不需要」狀態，Windows 使用它。不沿用 `.unavailable()`——它代表「初始化中」，原為測試用，永久使用會讓 TTS 介面一直顯示載入中。新狀態的建構子與 UI 行為寫進 `plans/plan-issue-1.md`。
+17. **foliate-js 資源跨平台**：資源現在只放在 `app/android/app/src/main/assets/foliate/`，`pubspec.yaml` 沒宣告，Windows 建置不會打包。需要改成 Flutter 通用資產或由 CMake 複製。放置方式由 Issue 1 實測後決定，不在此預設。
+18. **消除寫死網域**：`https://appassets.androidplatform.net` 出現在 `main.js:1177`、`foliate_reader_view.dart:666`、`foliate_content_indexer.dart:217`、`foliate_native_bridge.dart:55`、`:60`（字型網址）。Windows 改用伺服器後，這五處都要改成由平台決定的 base URL。Android 的值不能變。
+19. **WebView 內容有兩個消費者**：`FoliateReaderView`（開書）與 `FoliateContentIndexer`（背景全文檢索，由 `main.dart:216` 常駐啟動）。送書方式抽換時，兩者要同步。
+20. **PDF 的 metadata 與封面**：Android 用 `PdfRenderer` 算第 1 頁。Windows 用已在專案內的 `pdfrx` 開檔，第 0 頁算圖輸出 PNG，純 Dart，不新增原生 channel。foliate-js 不處理 PDF，所以決策 7 的對比只涵蓋 EPUB。
+21. **選檔器與資料夾**：`book_import_picker_helper.dart:29,148` 只收 `f.identifier != null` 的檔案。`identifier` 在 Android 是 `content://` URI，Windows 沒有，實體路徑在 `f.path`。Windows 要改取 `f.identifier ?? f.path`。資料夾選取用 `FilePicker.platform.getDirectoryPath()`，列舉用 `dart:io`，不寫 Windows 原生 channel。
+22. **Windows 的 `Book.filePath`**：一律存標準本機路徑（例如 `C:\Users\...`），不存 `file:///`。`book_content_fingerprint.dart:58` 以 `contains('://')` 判斷是否走原生 channel，`file:///` 會被誤判。
+23. **WebView2 使用者資料夾**：`WebViewEnvironmentSettings.userDataFolder` 明確指定到 `%APPDATA%` 下的 App 資料夾。預設會建在執行檔旁，免安裝 zip 若解壓到唯讀位置會初始化失敗。
+24. **`window_manager` 的 `win32` 相容**：`pubspec.lock` 的 `win32` 是 5.15.0。加入 `window_manager` 前，先確認它要求的 `win32` 區間，不可造成 pub 衝突（見 ADR 0040「後果」）。版本號在實際解析時確認，這裡不預先鎖定。
+
 ## 範圍外
 
 - 雲端匯入（Google Drive／OneDrive）。
