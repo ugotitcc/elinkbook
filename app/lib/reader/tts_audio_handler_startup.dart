@@ -35,19 +35,23 @@ Future<TtsAudioHandler?> initTtsAudioHandlerSafely(
 ///
 /// [pending]＝初始化中（背景啟動函式剛回傳、init 尚未結束；測試中「不關心
 /// TTS」的預設也是它，不提示）；[ready]＝handler 已就緒；[failed]＝初始化已
-/// 失敗、降級提示待顯示。狀態只會單向轉移，不會從 [ready] 或 [failed] 回到
-/// [pending]。
-enum TtsAudioHandlerStatus { pending, ready, failed }
+/// 失敗、降級提示待顯示；[notRequired]＝此平台不需要 AudioService
+/// （Windows，見 `main.dart` 的平台分支），終態、永不提示。
+/// 狀態只會單向轉移，不會從 [ready] 或 [failed] 回到 [pending]。
+enum TtsAudioHandlerStatus { pending, ready, failed, notRequired }
 
 /// 同時承載「handler 是否就緒」與「降級提示是否待顯示」的啟動階段 holder
 /// （epic-61 Issue 2），取代分開傳遞的 `ttsAudioHandler` 與
 /// `TtsDegradedNotice` 兩個參數——下游只需同步一個物件。
 ///
-/// 三個建構子的意圖：
+/// 建構子的意圖：
 /// - [TtsAudioHandlerHolder.ready]：handler 已就緒，不降級。
 /// - [TtsAudioHandlerHolder.degraded]：初始化已失敗（[failed]）、提示待顯示。
 /// - [TtsAudioHandlerHolder.unavailable]：初始化中（[pending]），不提示；
 ///   供只是需要傳一個依賴的一般測試最小改動使用，不會意外觸發提示。
+/// - [TtsAudioHandlerHolder.notRequired]：此平台不需要音訊服務
+///   （epic-66 Issue 1，Windows 跳過 `AudioSession`／`AudioService`），
+///   終態、無 handler、永不提示——閱讀器的 TTS 入口不得顯示降級提示。
 class TtsAudioHandlerHolder extends ChangeNotifier {
   TtsAudioHandlerHolder.ready(TtsAudioHandler handler)
       : _status = TtsAudioHandlerStatus.ready,
@@ -61,6 +65,11 @@ class TtsAudioHandlerHolder extends ChangeNotifier {
 
   TtsAudioHandlerHolder.unavailable()
       : _status = TtsAudioHandlerStatus.pending,
+        _handler = null,
+        _noticePending = false;
+
+  TtsAudioHandlerHolder.notRequired()
+      : _status = TtsAudioHandlerStatus.notRequired,
         _handler = null,
         _noticePending = false;
 

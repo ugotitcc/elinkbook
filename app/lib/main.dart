@@ -33,6 +33,7 @@ import 'library/book_content_fingerprint.dart';
 import 'library/book_import_service_impl.dart';
 import 'library/sqlite_library_repository.dart';
 import 'licenses/third_party_licenses.dart';
+import 'platform/platform_support.dart';
 import 'reader/book_reader_prefs_repository.dart';
 import 'reader/bookmarks_repository.dart';
 import 'reader/custom_fonts_repository.dart';
@@ -65,6 +66,7 @@ import 'sync/sync_client.dart';
 import 'sync/sync_engine.dart';
 import 'sync/sync_metadata_repository.dart';
 import 'theme/app_theme.dart';
+import 'windows/windows_webview_environment.dart';
 import 'theme/app_theme_data.dart';
 import 'reader/reader_activity_tracker.dart';
 import 'search/content_indexing_scheduler.dart';
@@ -244,56 +246,69 @@ Future<void> main() async {
   // epic-34-tts-readalong Issue 9：SystemTtsProvider 預設建構子內部會自行
   // 建立 FlutterTts()，App 層級不需要另外管理其生命週期或提供假物件。
   final ttsProvider = SystemTtsProvider();
-  // epic-34-tts-readalong Issue 7：AudioSession 設定一次即為 App 全程式
-  // 共用（audio_session 套件內部本身即單例，見該套件 AudioSession.instance
-  // 文件），朗讀內容一律視為 speech（語音），並要求「降低音量」型的暫時
-  // 失焦（AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK）也一律當成需要暫停處理
-  // （androidWillPauseWhenDucked: true）——降低音量的人聲朗讀無法辨識，
-  // 與音樂/Podcast 那種可以被降低音量、繼續播放的內容性質不同。
-  final ttsAudioSession = await AudioSession.instance;
-  await ttsAudioSession.configure(
-    const AudioSessionConfiguration(
-      androidAudioAttributes: AndroidAudioAttributes(
-        contentType: AndroidAudioContentType.speech,
-        usage: AndroidAudioUsage.media,
+  // epic-66 Issue 1：Windows 不啟動音訊服務。`audio_session` 與
+  // `audio_service` 都依賴平台 channel（Windows 外掛不存在），因此
+  // Windows 分支不呼叫 `AudioSession.instance`／`configure`、也不呼叫
+  // `AudioService.init`：holder 直接給終態 notRequired（無 handler、
+  // 永不顯示降級提示），音訊焦點改用無事件源的 NoopTtsAudioFocusSource。
+  // else 底下的 Android 分支與改動前逐字相同。
+  final TtsAudioHandlerHolder ttsAudio;
+  final TtsAudioFocusSource ttsAudioFocusSource;
+  if (isWindowsPlatform) {
+    ttsAudio = TtsAudioHandlerHolder.notRequired();
+    ttsAudioFocusSource = const NoopTtsAudioFocusSource();
+  } else {
+    // epic-34-tts-readalong Issue 7：AudioSession 設定一次即為 App 全程式
+    // 共用（audio_session 套件內部本身即單例，見該套件 AudioSession.instance
+    // 文件），朗讀內容一律視為 speech（語音），並要求「降低音量」型的暫時
+    // 失焦（AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK）也一律當成需要暫停處理
+    // （androidWillPauseWhenDucked: true）——降低音量的人聲朗讀無法辨識，
+    // 與音樂/Podcast 那種可以被降低音量、繼續播放的內容性質不同。
+    final ttsAudioSession = await AudioSession.instance;
+    await ttsAudioSession.configure(
+      const AudioSessionConfiguration(
+        androidAudioAttributes: AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.speech,
+          usage: AndroidAudioUsage.media,
+        ),
+        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+        androidWillPauseWhenDucked: true,
       ),
-      androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
-      androidWillPauseWhenDucked: true,
-    ),
-  );
-  final ttsAudioFocusSource = AudioSessionFocusSource(ttsAudioSession);
-  // AudioService.init() 全程式生命週期只能呼叫一次（見
-  // plans/plan-issue-7.md Global Constraints），失敗後也不可重試
-  // （見 initTtsAudioHandlerSafely 說明），建構出的單一 handler
-  // 由 ReaderScreen 於每次開書時呼叫 attachController()／
-  // detachController() 綁定/解綁目前的 TtsController。
-  // 通知頻道名稱（顯示於系統的通知設定）：此時尚無 BuildContext，改用啟動階段解析的
-  // AppLocalizations（使用者覆寫語言優先，否則跟隨裝置語言）。頻道只在此處建立一次，
-  // 語言以啟動當下為準（epic-45-interface-i18n Issue 10）。
-  final startupL10n = resolveStartupLocalizations(
-    localeOverride: initialLocaleOverride,
-    deviceLocales: WidgetsBinding.instance.platformDispatcher.locales,
-  );
-  // epic-61 Issue 2（F1）：AudioService.init 在 service 綁定逾時時約 10 秒
-  // 才丟例外，不可再阻塞啟動。同步取得 pending 狀態的 holder 後直接往下走、
-  // 先 runApp；init 在背景跑，完成後 holder 變成 ready 或 failed 並通知，
-  // ReaderScreen 監聽 holder 做晚到注入（handler 補 attachController、降級
-  // 補提示一次）。AudioService.init 全程式只呼叫一次、失敗後不可重試的限制
-  // 不變（見 startTtsAudioHandlerInBackground 說明）。
-  final ttsAudio = startTtsAudioHandlerInBackground(
-    () => AudioService.init(
-      builder: () => TtsAudioHandler(),
-      config: AudioServiceConfig(
-        androidNotificationChannelId: 'cc.ugotit.elinkbook.tts_channel',
-        androidNotificationChannelName: startupL10n.ttsNotificationChannelName,
-        // Android 12 起背景重啟前景服務有限制（見 audio_service 官方
-        // README「Android setup」段落說明），保持 false（暫停時服務維持
-        // 前景狀態，不釋放通知），避免使用者暫停朗讀後、App 進一步被系統
-        // 節流時無法重新啟動前景服務。
-        androidStopForegroundOnPause: false,
+    );
+    ttsAudioFocusSource = AudioSessionFocusSource(ttsAudioSession);
+    // AudioService.init() 全程式生命週期只能呼叫一次（見
+    // plans/plan-issue-7.md Global Constraints），失敗後也不可重試
+    // （見 initTtsAudioHandlerSafely 說明），建構出的單一 handler
+    // 由 ReaderScreen 於每次開書時呼叫 attachController()／
+    // detachController() 綁定/解綁目前的 TtsController。
+    // 通知頻道名稱（顯示於系統的通知設定）：此時尚無 BuildContext，改用啟動階段解析的
+    // AppLocalizations（使用者覆寫語言優先，否則跟隨裝置語言）。頻道只在此處建立一次，
+    // 語言以啟動當下為準（epic-45-interface-i18n Issue 10）。
+    final startupL10n = resolveStartupLocalizations(
+      localeOverride: initialLocaleOverride,
+      deviceLocales: WidgetsBinding.instance.platformDispatcher.locales,
+    );
+    // epic-61 Issue 2（F1）：AudioService.init 在 service 綁定逾時時約 10 秒
+    // 才丟例外，不可再阻塞啟動。同步取得 pending 狀態的 holder 後直接往下走、
+    // 先 runApp；init 在背景跑，完成後 holder 變成 ready 或 failed 並通知，
+    // ReaderScreen 監聽 holder 做晚到注入（handler 補 attachController、降級
+    // 補提示一次）。AudioService.init 全程式只呼叫一次、失敗後不可重試的限制
+    // 不變（見 startTtsAudioHandlerInBackground 說明）。
+    ttsAudio = startTtsAudioHandlerInBackground(
+      () => AudioService.init(
+        builder: () => TtsAudioHandler(),
+        config: AudioServiceConfig(
+          androidNotificationChannelId: 'cc.ugotit.elinkbook.tts_channel',
+          androidNotificationChannelName: startupL10n.ttsNotificationChannelName,
+          // Android 12 起背景重啟前景服務有限制（見 audio_service 官方
+          // README「Android setup」段落說明），保持 false（暫停時服務維持
+          // 前景狀態，不釋放通知），避免使用者暫停朗讀後、App 進一步被系統
+          // 節流時無法重新啟動前景服務。
+          androidStopForegroundOnPause: false,
+        ),
       ),
-    ),
-  );
+    );
+  }
   final syncAccountRepository = SyncAccountRepository();
   final syncClient = SyncClient(accountRepository: syncAccountRepository);
   // epic-8-sync Issue 6：Issue 4/5 只在測試中建構過 SyncEngine，這裡是
@@ -427,6 +442,15 @@ Future<void> main() async {
     sync: sync,
     sources: sources,
   );
+  // epic-66 Issue 1：Windows 必須在 runApp 之前建立 WebView2 環境，
+  // InAppWebView 才能在建構時拿到 webViewEnvironment（使用者資料夾落在
+  // %APPDATA% 下的 App 資料夾，見 windows_webview_environment.dart）。
+  // 非 Windows 平台直接略過，不增加任何呼叫（Android 路徑不變）。
+  if (isWindowsPlatform) {
+    await initAppWebViewEnvironment(
+      userDataFolder: (await getApplicationSupportDirectory()).path,
+    );
+  }
   runApp(
     ElinkBookApp(
       dependencies: appDependencies,

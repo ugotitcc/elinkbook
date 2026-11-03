@@ -304,6 +304,11 @@ class BookImportServiceImpl implements BookImportService {
       return metadata?['identifier'] as String?;
     } on PlatformException {
       return null;
+    } on MissingPluginException {
+      // epic-66 Issue 1 Task 8：Windows 沒有 `elinkbook/book_metadata`
+      // 原生端，降級與 PlatformException 相同（取不到 identifier，
+      // 指紋退回整檔 SHA-256）。Android 不會觸發此例外，行為不變。
+      return null;
     }
   }
 
@@ -478,6 +483,10 @@ class BookImportServiceImpl implements BookImportService {
         // 詮釋資料提取失敗：降級為「檔名為標題、無封面」，不中斷整批匯入。
         // 指紋計算與詮釋資料提取彼此獨立（見下方），此處失敗不影響指紋
         // 計算仍會嘗試執行。
+      } on MissingPluginException {
+        // epic-66 Issue 1 Task 8：Windows 沒有 `elinkbook/book_metadata`
+        // 原生端，invoke 必丟 MissingPluginException——降級內容與上方
+        // PlatformException 完全相同。Android 不會觸發此例外，行為不變。
       }
     }
 

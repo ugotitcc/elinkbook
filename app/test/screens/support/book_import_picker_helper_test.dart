@@ -60,14 +60,17 @@ void main() {
       expect(importService.lastImportCall, isNull);
     });
 
-    test('選取檔案但全部 identifier 為 null 時回傳 null，不呼叫 importFiles', () async {
+    // epic-66 Issue 1 Task 8：過濾條件改為 `identifier ?? path`（Windows 的
+    // file_picker 不回傳 identifier，見 PlatformFile.identifier 文件），因此
+    // 「可過濾」的定義變成兩者皆為 null。
+    test('選取檔案但 identifier 與 path 都是 null 時回傳 null，不呼叫 importFiles', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(filePickerChannel, (call) async {
             if (call.method == 'custom') {
               return [
                 {
                   'name': 'invalid.epub',
-                  'path': '/tmp/invalid.epub',
+                  'path': null,
                   'size': 100,
                   'identifier': null,
                 },
@@ -83,7 +86,55 @@ void main() {
       expect(importService.lastImportCall, isNull);
     });
 
-    test('選取檔案成功時過濾掉 null identifier 並保持 displayName 與 uri 對應', () async {
+    test('選檔器：identifier 為 null 時改用 path（epic-66 Issue 1 Task 8）', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(filePickerChannel, (call) async {
+            if (call.method == 'custom') {
+              return [
+                {
+                  'name': 'a.epub',
+                  'path': 'C:/books/a.epub',
+                  'size': 1,
+                  'identifier': null,
+                },
+              ];
+            }
+            return null;
+          });
+      final importService = FakeBookImportService();
+
+      final result = await pickAndImportFiles(importService);
+
+      expect(result, isNotNull);
+      expect(importService.lastImportCall, isNotNull);
+      expect(importService.lastImportCall!.uris, ['C:/books/a.epub']);
+      expect(importService.lastImportCall!.displayNames, ['a.epub']);
+    });
+
+    test('選檔器：兩者都有時優先用 identifier（Android 行為不變）', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(filePickerChannel, (call) async {
+            if (call.method == 'custom') {
+              return [
+                {
+                  'name': 'a.epub',
+                  'path': '/data/user/0/app/cache/a.epub',
+                  'size': 1,
+                  'identifier': 'content://example/a.epub',
+                },
+              ];
+            }
+            return null;
+          });
+      final importService = FakeBookImportService();
+
+      final result = await pickAndImportFiles(importService);
+
+      expect(result, isNotNull);
+      expect(importService.lastImportCall!.uris, ['content://example/a.epub']);
+    });
+
+    test('選取檔案成功時過濾掉無可用 URI 的檔案並保持 displayName 與 uri 對應', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(filePickerChannel, (call) async {
             if (call.method == 'custom') {
@@ -95,8 +146,16 @@ void main() {
                   'identifier': 'content://example/book1.epub',
                 },
                 {
+                  // epic-66 Issue 1 Task 8：identifier 為 null 但有 path 的
+                  // 檔案改走 path（Windows 情境），仍須參與逐一對應。
                   'name': 'null_id.pdf',
-                  'path': '/tmp/null_id.pdf',
+                  'path': 'C:/books/null_id.pdf',
+                  'size': 100,
+                  'identifier': null,
+                },
+                {
+                  'name': 'unusable.epub',
+                  'path': null,
                   'size': 100,
                   'identifier': null,
                 },
@@ -118,7 +177,13 @@ void main() {
       expect(importService.lastImportCall, isNotNull);
       expect(importService.lastImportCall!.uris, [
         'content://example/book1.epub',
+        'C:/books/null_id.pdf',
         'content://example/book2.epub',
+      ]);
+      expect(importService.lastImportCall!.displayNames, [
+        'book1.epub',
+        'null_id.pdf',
+        'book2.epub',
       ]);
     });
 
@@ -575,6 +640,54 @@ void main() {
         find.text('Imported 1 book, 3 already exist and were skipped'),
         findsOneWidget,
       );
+    });
+  });
+
+  // epic-66 Issue 1 Task 8：單檔選擇器（book_import_picker_helper.dart:148）
+  // 同樣改取 `identifier ?? path`。
+  group('pickSingleBookFileViaFilePicker', () {
+    test('單檔選取：identifier 為 null 時改用 path', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(filePickerChannel, (call) async {
+            if (call.method == 'custom') {
+              return [
+                {
+                  'name': 'a.epub',
+                  'path': 'C:/books/a.epub',
+                  'size': 1,
+                  'identifier': null,
+                },
+              ];
+            }
+            return null;
+          });
+
+      final result = await pickSingleBookFileViaFilePicker(['epub']);
+
+      expect(result, isNotNull);
+      expect(result!.uri, 'C:/books/a.epub');
+      expect(result.displayName, 'a.epub');
+    });
+
+    test('單檔選取：identifier 與 path 都是 null 時回傳 null', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(filePickerChannel, (call) async {
+            if (call.method == 'custom') {
+              return [
+                {
+                  'name': 'a.epub',
+                  'path': null,
+                  'size': 1,
+                  'identifier': null,
+                },
+              ];
+            }
+            return null;
+          });
+
+      final result = await pickSingleBookFileViaFilePicker(['epub']);
+
+      expect(result, isNull);
     });
   });
 }

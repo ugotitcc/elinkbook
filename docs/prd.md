@@ -7,8 +7,10 @@ classification:
   complexity: 'Moderate'
 inputDocuments: ['docs/prd.md']
 stepsCompleted: ['step-e-01-discovery', 'step-e-02-review', 'step-e-03-edit']
-lastEdited: '2026-10-22'
+lastEdited: '2026-11-03'
 editHistory:
+  - date: '2026-11-03'
+    changes: '`/grill-with-docs` 針對 Windows 移植進行 Discovery：新增 NFR-7（Windows 為支援平台，最低 Windows 10 1809，需 WebView2 執行環境），並在 §3.2 明列 Windows 第一版不含的功能；對應新規劃之 `epic-66-windows-port`，決策見 ADR 0041。'
   - date: '2026-10-22'
     changes: '`epic-63-dictionary-lookup` Issue 8 回填字典需求：新增 FR-50 字典查詢、FR-51 字典匯入與管理、FR-52 查詢面板、FR-53 線上查詞（萌典），歸入「4.3 互動、分析與知識管理」，優先級皆 P1。數字與 `spec.md` §9 一致（選取上限 8 個 CJK 字元、本機查詢 p95 < 300 ms、線上 5 秒逾時、100 MB MDX 記憶體增量 < 50 MB）。§6 補 FR-50～53 的決策交叉參照（指向 epic-63 與 ADR 0038、0039）。'
   - date: '2026-10-09'
@@ -96,6 +98,7 @@ editHistory:
 - **電子書商店**：不提供圖書採購、租閱等商業交易平台功能。
 - **多媒體編輯**：不支援對 PDF 內容進行深度編輯（如修改文字或圖片）。
 - **社交網絡系統**：本產品不包含完整的社交平台（如動態牆、好友系統），僅支援單向的內容分享。
+- **Windows 第一版不含**：Google Drive／OneDrive 雲端匯入、音量鍵翻頁、E-Ink 高對比與影像濾鏡、螢幕方向鎖定、TTS 背景播放與系統媒體控制。這些功能在 Windows 隱藏入口或延後，詳見 `epic-66-windows-port`。
 
 ---
 
@@ -206,6 +209,7 @@ editHistory:
 4. **渲染流暢度**：頁面翻轉保持 60 FPS，字型載入不得造成 UI 阻塞。
 5. **定位精確度**：確保跨裝置同步位置精確一致：**EPUB 使用 CFI 精確至字符級；PDF 精確至頁碼；TXT 精確至字元偏移量**（此為書籤/進度同步之基準精度；**劃線與備註之定位精度高於此基準，另見 FR-15**）。
 6. **平台相容性**：Android 版本須至少支援 **Android 11 (API 30)** 以上裝置正常執行，不得將最低支援版本限制在比這更新的門檻。
+7. **Windows 支援**：Windows 版須支援 **Windows 10 1809** 以上，並需要 Microsoft Edge WebView2 執行環境。未安裝時須顯示說明與下載連結，不得無聲失敗。Windows 版與 Android 共用同一份 Flutter 程式碼（見 ADR 0041）。
 
 ---
 

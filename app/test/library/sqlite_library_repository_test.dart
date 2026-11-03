@@ -3183,6 +3183,23 @@ void main() {
         isFalse,
       );
     });
+
+    // epic-66 Issue 1 Task 9a：Windows 沒有 elinkbook/book_metadata 頻道，invoke 必丟
+    // MissingPluginException。原本沒接，ReaderScreen 的 .then() 永遠等不到結果，
+    // 畫面卡在載入圖示直到 30 秒開書逾時。降級為流式（false），且不寫入資料庫——
+    // 偵測沒有真的發生，不能把猜測值當成偵測結果存起來。
+    test('頻道不存在（MissingPluginException）時回傳 false，且不寫入資料庫', () async {
+      await repository.insertBook(_book('b_detect_no_channel'));
+      // 刻意不設定 mock handler：flutter_test 預設對未實作的頻道丟 MissingPluginException。
+
+      final result = await repository.detectAndCacheEpubLayout(
+          'b_detect_no_channel', 'content://example/b_detect_no_channel');
+
+      expect(result, isFalse);
+      final books = await repository.listBooks();
+      expect(books.firstWhere((b) => b.id == 'b_detect_no_channel').isFixedLayout,
+          isNull);
+    });
   });
 
   test('全新安裝的 bookmarks/highlights/notes 表主鍵為 TEXT（UUID），books 表含同步欄位，sync_metadata 表已建立（version 17 起 onCreate 已含括）',

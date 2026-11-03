@@ -7,11 +7,14 @@ import 'dart:ui';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../library/models/book.dart';
+import '../platform/platform_support.dart';
 import '../reader/foliate_bridge_codec.dart';
 import '../reader/foliate_bridge_handlers.dart';
 import '../reader/foliate_native_bridge.dart';
 import '../reader/js_bridge_gateway.dart';
 import '../reader/tts_segment_cfi.dart';
+import '../reader/windows_reader_resources.dart';
+import '../windows/windows_webview_environment.dart';
 import 'content_indexer.dart';
 
 /// Foliate 格式（EPUB／KF8／CBZ／TXT／MD，皆經 readest/foliate-js 單引擎）
@@ -49,6 +52,37 @@ class FoliateContentIndexer implements ContentIndexer {
       final readyCompleter = Completer<void>();
       late final JsBridgeGateway gateway;
 
+      // epic-66 Issue 1 Task 7：攔截回呼由 static 函式改成能取得 [cacheDir]
+      // 的閉包——Windows 沒有 `InternalStoragePathHandler`（`webViewAssetLoader`
+      // 只在 Android 設定），`/book/` 必須由 Dart 端讀本機快取。Android 分支
+      // 與原本 `_shouldInterceptIndexRequest` 逐字相同。
+      Future<WebResourceResponse?> interceptIndexRequest(
+        InAppWebViewController controller,
+        WebResourceRequest request,
+      ) async {
+        final path = request.url.path;
+        const foliateAssetsPrefix = '/assets/foliate/';
+        if (path.startsWith(foliateAssetsPrefix)) {
+          final relative = 'foliate/${path.substring(foliateAssetsPrefix.length)}';
+          final bytes = await loadAndroidAsset(relative);
+          if (bytes == null) return null;
+          final contentType =
+              path.endsWith('.js') ? 'text/javascript' : 'text/html';
+          return WebResourceResponse(contentType: contentType, data: bytes);
+        }
+        if (isWindowsPlatform && path.startsWith('/book/')) {
+          final dir = cacheDir;
+          if (dir == null) return null;
+          final bytes = await readWindowsBookBytes(path, dir);
+          if (bytes == null) return null;
+          return WebResourceResponse(
+            contentType: windowsBookContentType(path),
+            data: bytes,
+          );
+        }
+        return null;
+      }
+
       // 【review-plan-issue-1.md I-2】章節擷取專用的獨立完成狀態——刻意不
       // 透過 JsBridgeGateway._pending（以 handler name 為單一插槽鍵）處理
       // 這個會在同一次 indexBook() 呼叫內對同一個 handler name 循環發出
@@ -71,12 +105,20 @@ class FoliateContentIndexer implements ContentIndexer {
         initialSettings: InAppWebViewSettings(
           javaScriptEnabled: true,
           useShouldInterceptRequest: true,
-          webViewAssetLoader: WebViewAssetLoader(
-            pathHandlers: [
-              InternalStoragePathHandler(path: '/book/', directory: cacheDir),
-            ],
-          ),
+          // epic-66 Issue 1 Task 7：`WebViewAssetLoader` 只在 Android 設定，
+          // Windows 的 `/book/` 由 interceptIndexRequest 閉包服務。
+          webViewAssetLoader: isAndroidPlatform
+              ? WebViewAssetLoader(
+                  pathHandlers: [
+                    InternalStoragePathHandler(
+                        path: '/book/', directory: cacheDir),
+                  ],
+                )
+              : null,
         ),
+        // epic-66 Issue 1 Task 4：Windows 帶入預先建立的 WebView2 環境，
+        // 其他平台為 null，行為不變。
+        webViewEnvironment: appWebViewEnvironment,
         // 【review-plan-issue-1.md I-1】與 FoliateReaderView 共用同一套
         // ES 相容性 polyfill／全域錯誤捕捉腳本（見 Step 0）——headless
         // webview 載入的是同一份 main.js／view.js／epub.js，在較舊 Android
@@ -94,7 +136,7 @@ class FoliateContentIndexer implements ContentIndexer {
             injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
           ),
         ]),
-        shouldInterceptRequest: _shouldInterceptIndexRequest,
+        shouldInterceptRequest: interceptIndexRequest,
         onWebViewCreated: (c) {
           controller = c;
           gateway = JsBridgeGateway(
@@ -225,22 +267,8 @@ class FoliateContentIndexer implements ContentIndexer {
 
   /// 索引模式只需要能載入 `assets/foliate/` 底下的靜態檔案（`index.html`／
   /// `main.js`／`view.js` 等），不需要字型攔截（索引模式不渲染任何可視文字，
-  /// `prefs`/`fontFaceCss` 查詢參數皆未帶入，預設空值不會觸發字型請求）——
-  /// 比照 `foliate_reader_view.dart` `_shouldInterceptRequest()` 精簡版。
-  static Future<WebResourceResponse?> _shouldInterceptIndexRequest(
-    InAppWebViewController controller,
-    WebResourceRequest request,
-  ) async {
-    final path = request.url.path;
-    const foliateAssetsPrefix = '/assets/foliate/';
-    if (path.startsWith(foliateAssetsPrefix)) {
-      final relative = 'foliate/${path.substring(foliateAssetsPrefix.length)}';
-      final bytes = await loadAndroidAsset(relative);
-      if (bytes == null) return null;
-      final contentType =
-          path.endsWith('.js') ? 'text/javascript' : 'text/html';
-      return WebResourceResponse(contentType: contentType, data: bytes);
-    }
-    return null;
-  }
+  /// `prefs`/`fontFaceCss` 查詢參數皆未帶入，預設空值不會觸發字型請求）。
+  /// epic-66 Issue 1 Task 7 起，這段邏輯改為 `indexBook()` 內能取得
+  /// `cacheDir` 的 `interceptIndexRequest` 閉包（Windows 需要服務 `/book/`），
+  /// 原 static `_shouldInterceptIndexRequest` 已移除。
 }

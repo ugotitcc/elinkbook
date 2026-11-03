@@ -145,4 +145,36 @@ void main() {
       expect(holder.consumeDegradedNotice(), isFalse);
     });
   });
+
+  group('TtsAudioHandlerHolder.notRequired（Windows 不啟動 AudioService）', () {
+    test('notRequired：狀態為 notRequired、沒有 handler', () {
+      final holder = TtsAudioHandlerHolder.notRequired();
+
+      expect(holder.status, TtsAudioHandlerStatus.notRequired);
+      expect(holder.handler, isNull);
+    });
+
+    test('notRequired：consumeDegradedNotice 恆為 false', () {
+      final holder = TtsAudioHandlerHolder.notRequired();
+
+      expect(holder.consumeDegradedNotice(), isFalse);
+      expect(holder.consumeDegradedNotice(), isFalse);
+    });
+
+    test('notRequired：不會被 startTtsAudioHandlerInBackground 的流程改變', () async {
+      final holder = TtsAudioHandlerHolder.notRequired();
+
+      // 背景啟動流程照常跑完（它建立自己的 holder），notRequired 是終態：
+      // 既不該顯示載入中、也不該顯示降級提示（Review Focus 5）。
+      startTtsAudioHandlerInBackground(() async => TtsAudioHandler());
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(holder.status, TtsAudioHandlerStatus.notRequired);
+      expect(holder.handler, isNull);
+      expect(holder.consumeDegradedNotice(), isFalse);
+      expect(holder.consumeDegradedNotice(), isFalse);
+      expect(holder.status, TtsAudioHandlerStatus.notRequired);
+      expect(holder.handler, isNull);
+    });
+  });
 }
