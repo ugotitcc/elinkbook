@@ -2,7 +2,7 @@
 
 **狀態：** 🟡 開發中 (Active)
 **存放路徑：** `docs/epics/epic-66-windows-port/`
-**關聯 PRD 章節：** NFR-7（Windows 支援）、§3.2（Windows 第一版不含的功能）；決策見 ADR 0040。
+**關聯 PRD 章節：** NFR-7（Windows 支援）、§3.2（Windows 第一版不含的功能）；決策見 ADR 0041。
 
 ## 背景
 
@@ -29,7 +29,7 @@
    - 延後：Google Drive／OneDrive 雲端匯入（Windows 的 OAuth 要走本機回呼，且需另外註冊桌面用戶端 ID）。
    - 簡化：TTS 只用 `flutter_tts`，不用 `audio_service`。
    - 保留：WiFi 傳書。
-2. **程式碼**：同一個 `app/` 加 `windows/`，平台判斷分流（ADR 0040）。
+2. **程式碼**：同一個 `app/` 加 `windows/`，平台判斷分流（ADR 0041）。
 3. **操作**：保留 3×3 熱區（滑鼠當觸控），加鍵盤快捷鍵（方向鍵、PageUp／PageDown、Ctrl+F）與 F11 全螢幕（新增 `window_manager`，只在 Windows 啟用）。桌面專用版面（側欄、面板）不在本 Epic。
 4. **最低版本**：Windows 10 1809。WebView2 沒裝時顯示說明與下載連結，不打包執行環境。
 5. **匯入**：複製書檔到 `%APPDATA%` 下的 App 資料夾，與 Android 行為一致。
@@ -39,7 +39,7 @@
 9. **測試**：`flutter test` 照舊；`integration_test` 加 `-d windows` 目標，每種格式一支冒煙測試（開書、翻頁、劃線）。不建 CI。
 10. **發佈**：先自用，打包成免安裝 zip。MSIX 與程式碼簽章等有對外發佈需求再議。
 11. **詞彙**：`CONTEXT.md` 新增「平台專屬功能」「本機內容伺服器」「背景解析」。
-12. **ADR**：現在只寫 ADR 0040。送書方式與 metadata 統一等驗證完成後再各寫一份。
+12. **ADR**：現在只寫 ADR 0041。送書方式與 metadata 統一等驗證完成後再各寫一份。
 13. **PRD**：新增 NFR-7 與 §3.2 的 Windows 例外項（已完成）。
 14. **流程**：一個 Issue 一個分支、一個 PR，計畫與實作同分支同 PR。
 
@@ -56,7 +56,7 @@
 21. **選檔器與資料夾**：`book_import_picker_helper.dart:29,148` 只收 `f.identifier != null` 的檔案。`identifier` 在 Android 是 `content://` URI，Windows 沒有，實體路徑在 `f.path`。Windows 要改取 `f.identifier ?? f.path`。資料夾選取用 `FilePicker.platform.getDirectoryPath()`，列舉用 `dart:io`，不寫 Windows 原生 channel。
 22. **Windows 的 `Book.filePath`**：一律存標準本機路徑（例如 `C:\Users\...`），不存 `file:///`。`book_content_fingerprint.dart:58` 以 `contains('://')` 判斷是否走原生 channel，`file:///` 會被誤判。
 23. **WebView2 使用者資料夾**：`WebViewEnvironmentSettings.userDataFolder` 明確指定到 `%APPDATA%` 下的 App 資料夾。預設會建在執行檔旁，免安裝 zip 若解壓到唯讀位置會初始化失敗。
-24. **`window_manager` 的 `win32` 相容**：`pubspec.lock` 的 `win32` 是 5.15.0。加入 `window_manager` 前，先確認它要求的 `win32` 區間，不可造成 pub 衝突（見 ADR 0040「後果」）。版本號在實際解析時確認，這裡不預先鎖定。
+24. **`window_manager` 的 `win32` 相容**：`pubspec.lock` 的 `win32` 是 5.15.0。加入 `window_manager` 前，先確認它要求的 `win32` 區間，不可造成 pub 衝突（見 ADR 0041「後果」）。版本號在實際解析時確認，這裡不預先鎖定。
 
 ## 範圍外
 
