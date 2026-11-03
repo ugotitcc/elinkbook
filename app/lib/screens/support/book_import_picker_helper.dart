@@ -22,12 +22,16 @@ Future<ImportResult?> pickAndImportFiles(BookImportService importService) async 
       allowedExtensions: ['epub', 'pdf', 'txt', 'cbz', 'azw3', 'md'],
     );
     if (picked == null || picked.files.isEmpty) return null;
-    // uris／displayNames 必須用同一次過濾（f.identifier != null）建立，保持
-    // 逐一對應——分開各自 map 再各自過濾會在有檔案 identifier 為 null 時
-    // 位移量不同，導致 displayNames[i] 對應到錯誤的 uris[i]。
-    final pickedWithUri =
-        picked.files.where((f) => f.identifier != null).toList();
-    final uris = pickedWithUri.map((f) => f.identifier!).toList();
+    // uris／displayNames 必須用同一次過濾建立，保持逐一對應——分開各自 map
+    // 再各自過濾會在有檔案可用 URI 為 null 時位移量不同，導致 displayNames[i]
+    // 對應到錯誤的 uris[i]。
+    // epic-66 Issue 1 Task 8：Windows 的 file_picker 不回傳 identifier
+    // （`PlatformFile.identifier` 文件：只有 Android/iOS 有，其餘平台為
+    // null），改取 path 本機路徑；Android 兩者都有時仍優先 identifier。
+    final pickedWithUri = picked.files
+        .where((f) => (f.identifier ?? f.path) != null)
+        .toList();
+    final uris = pickedWithUri.map((f) => f.identifier ?? f.path!).toList();
     if (uris.isEmpty) return null;
     final displayNames = pickedWithUri.map((f) => f.name).toList();
     return await importService.importFiles(uris, displayNames: displayNames);
@@ -133,7 +137,9 @@ typedef SingleBookFilePicker = Future<({String uri, String? displayName})?>
     Function(List<String> allowedExtensions);
 
 /// [SingleBookFilePicker] 的預設實作：`FilePicker` 單選。`uri` 是
-/// `PlatformFile.identifier`（Android 上為 `content://` URI），`displayName`
+/// `PlatformFile.identifier`（Android 上為 `content://` URI），identifier
+/// 為 null 的平台（Windows 等，見 `PlatformFile.identifier` 文件）改取
+/// `path` 本機路徑（epic-66 Issue 1 Task 8），`displayName`
 /// 是真實檔名，供 URI 不含副檔名時判斷格式。選擇器拋出例外時比照
 /// [pickAndImportFiles] 既有行為視為取消，回傳 `null`。
 Future<({String uri, String? displayName})?> pickSingleBookFileViaFilePicker(
@@ -145,7 +151,9 @@ Future<({String uri, String? displayName})?> pickSingleBookFileViaFilePicker(
       allowedExtensions: allowedExtensions,
     );
     final file = picked?.files.firstOrNull;
-    final uri = file?.identifier;
+    // epic-66 Issue 1 Task 8：同 pickAndImportFiles，Windows 無 identifier
+    // 時改取 path。
+    final uri = file?.identifier ?? file?.path;
     if (file == null || uri == null) return null;
     return (uri: uri, displayName: file.name);
   } catch (_) {
