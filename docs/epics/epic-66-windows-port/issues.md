@@ -5,7 +5,7 @@
 | Issue | 標題 | 依賴 | 狀態 | PR |
 |---|---|---|---|---|
 | 1 | 技術驗證：啟用 `windows/`、啟動鏈平台防護、最小送書原型，確認 7 項過關條件，輸出驗證報告 | 無 | ✅ 已合併 | #381 |
-| 2 | Windows Metadata 背景解析：EPUB 用 foliate-js、PDF 封面用 `pdfrx`，並與 Android Readium 逐本對比 | Issue 1 | 🟡 計畫中 | — |
+| 2 | Windows Metadata 背景解析：EPUB 用 foliate-js、PDF 封面用 `pdfrx`，並與 Android Readium 逐本對比 | Issue 1 | 🟡 驗證完成，待審查 | — |
 
 ## Issue 1 範圍
 

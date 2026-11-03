@@ -54,7 +54,7 @@
 | `rendition.layout` | `null` | `sample.epub` 未宣告 `rendition` → foliate 回 null（流式預期值） |
 | 封面 | `image/png`，73 bytes | `cover-image` 屬性指向 `cover.png`，`getCover()` Blob 有效（size > 0 ✓） |
 
-foliate-js 欄位型別備忘（Task 11 對比表參考）：`metadata.title` 為 language map（`sample.epub` 單一語系時 tidy 成字串）；`metadata.creator` 單筆時為物件（`{name, sortAs, role, code}`）、多筆時為陣列；`metadata.identifier` 為字串。
+foliate-js 欄位型別備忘（Issue 2 修正）：實測作者欄位是 `metadata.author`（字串、`{name, role}` 物件或陣列），非 `creator`；書名可能是語系物件或字串；`metadata.identifier` 為字串。Issue 1 探針因讀取不存在的 `creator` 欄位而使作者恆為 `null`，Issue 2 已於 `metadata-probe.js` 修正為讀取 `metadata.author`（並經 `firstText` 解析）。
 
 ## 結論 3：啟動鏈 `MissingPluginException` 與處置
 

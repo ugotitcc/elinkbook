@@ -45,6 +45,7 @@ Future<Map<String, Object?>?> extractWindowsBookMetadata(
   if (uri.contains('://')) {
     throw PlatformException(
       code: 'extraction_failed',
+      // l10n-ignore: PlatformException 內部技術錯誤訊息
       message: 'Windows 僅支援本機路徑，不支援 URI: $uri',
     );
   }
@@ -70,6 +71,7 @@ Future<Map<String, Object?>?> extractWindowsBookMetadata(
       if (coverBytes == null) {
         throw PlatformException(
           code: 'extraction_failed',
+          // l10n-ignore: PlatformException 內部技術錯誤訊息
           message: 'PDF 封面渲染失敗或檔案為空: $uri',
         );
       }

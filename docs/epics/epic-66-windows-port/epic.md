@@ -34,7 +34,7 @@
 4. **最低版本**：Windows 10 1809。WebView2 沒裝時顯示說明與下載連結，不打包執行環境。
 5. **匯入**：複製書檔到 `%APPDATA%` 下的 App 資料夾，與 Android 行為一致。
 6. **送書給 WebView**：預設用本機 `shelf` 伺服器（`127.0.0.1`、隨機埠、一次性權杖、只服務目前開著的書）。驗證 Issue 同時實測 WebView2 有沒有請求攔截或虛擬網域對應；有就用，沒有就用伺服器。**【2026-11-03 驗證結果】WebView2 有請求攔截，已用於實際開書，不需要 `shelf` 伺服器**（見決策 15 與 `spike-report.md` 結論 1）。
-7. **Metadata 解析**：目標是 Android 與 Windows 統一改用 foliate-js 的背景 WebView。前提是逐本對比 Readium 與 foliate-js 的結果（書名、作者、`identifier`、版面、封面）一致；`book_content_fingerprint.dart` 優先使用 `identifier`，不一致會讓同步把舊書當新書。不一致時 Android 保留 Readium，Windows 單獨用 foliate-js。**【2026-11-03 驗證結果】** Windows 上 `HeadlessInAppWebView` 載入 foliate-js 能讀出書名、`identifier`、封面（作者欄位因 `sample.epub` 本身無 `dc:creator`，尚未實證）；欄位型別見 `spike-report.md` 結論 2。**Readium 與 foliate-js 的逐本對比尚未做**，留給後續 Issue，本決策的「是否統一」仍待該對比結果。
+7. **Metadata 解析**：目標是 Android 與 Windows 統一改用 foliate-js 的背景 WebView。前提是逐本對比 Readium 與 foliate-js 的結果（書名、作者、`identifier`、版面、封面）一致；`book_content_fingerprint.dart` 優先使用 `identifier`，不一致會讓同步把舊書當新書。不一致時 Android 保留 Readium，Windows 單獨用 foliate-js。**【2026-11-03 驗證結果】** Windows 上 `HeadlessInAppWebView` 載入 foliate-js 能讀出書名、`identifier`、封面；欄位型別見 `spike-report.md` 結論 2。**【Issue 2 結果】** 10 份 fixture（含多識別碼、多語系、角色作者、EPUB2 封面、FXL、無封面、無識別碼等）在 BooksPad 與 Windows 實測對比，`title`、`author`、`identifier`、`isFixedLayout` 全部 100% 一致！`identifier` 兩端逐字元相符（零指紋分裂與同步風險）；封面提取語意一致。Windows 現由 foliate-js（EPUB）與 pdfrx（PDF 封面）提供 metadata，Android 保持既有 Readium 通道。未來具備統一兩端至 foliate-js 之可行性。
 8. **WebView 套件**：先用上游 `flutter_inappwebview` 6.1.5。只有驗證證明不夠用，才考慮 fork。
 9. **測試**：`flutter test` 照舊；`integration_test` 加 `-d windows` 目標，每種格式一支冒煙測試（開書、翻頁、劃線）。不建 CI。
 10. **發佈**：先自用，打包成免安裝 zip。MSIX 與程式碼簽章等有對外發佈需求再議。
