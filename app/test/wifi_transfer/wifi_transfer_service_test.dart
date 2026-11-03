@@ -99,6 +99,14 @@ class _ThrowingImportService implements BookImportService {
       Future.value(
         const BookReplaceFailure(BookReplaceFailureReason.bookNotFound),
       );
+
+  @override
+  Future<Book?> importCandidateAsNewBook(
+    BookUpdateCandidate candidate, {
+    String? folderName,
+    BookSourceRefs? sourceRefs,
+  }) =>
+      Future.value(null);
 }
 
 void main() {

@@ -354,7 +354,7 @@ Android 媒體庫文件提供者回傳的 URI 是不透明 ID、不含副檔名�
 
 `importCandidateAsNewBook` 實作：呼叫 `_importSingleFile`，**必須帶入 `displayName: candidate.displayName`**（審查 I-1）——處理來源是檔名為 `<微秒時間戳>-<hash>.<ext>` 的暫存檔，`_importSingleFile` 以 `titleFromFileName(displayName ?? uri)` 當退路書名，漏帶會讓 TXT／CBZ／PDF／沒有 OPF 標題的 EPUB 書名變成時間戳記；另外 `source`、`remoteServerId`、`remoteBookId`、`remoteDownloadUrl`、`cloudFileId` 取自 `sourceRefs`。加選填參數 `bool landLocalCopy`（只此入口為 true）——當處理來源是本機路徑（更新暫存檔）且格式為 EPUB／PDF／AZW3 時，先複製到 `imported_books/<新 id>.<ext>`，讓 `Book.filePath` 指向私有複本而非暫存目錄；TXT／MD／CBZ 本來就落地合成檔，不受影響。無論成敗，最後都 `discardUpdateCandidate`。
 
-- [ ] **Step 1：寫失敗測試**：
+- [x] **Step 1：寫失敗測試**：
   - `更新版不寫入`：預置同 identifier 的 EPUB；`importFiles([新檔])` → `importedBooks` 空、`updateCandidates` 有 1 筆且 `stagedPath` 檔案存在、`listBooks()` 仍只有 1 本。
   - `重複跳過`：整檔相同 → `skippedDuplicateCount == 1`、`updateCandidates` 空（D2）。
   - `新書與既有行為不回歸`：全新書匯入、同批次重複 URI 的跳過計數、`importFolder` 的授權失敗／列舉失敗結果與現況相同。
@@ -366,8 +366,8 @@ Android 媒體庫文件提供者回傳的 URI 是不透明 ID、不含副檔名�
   - `不透明 URI 仍能偵測（審查 I-2）`：URI 為 `content://com.android.providers.media.documents/document/document%3A1000001716`（無副檔名）、`displayNames: ['book.epub']`，預置同 identifier 的書 → 進入 `updateCandidates`，不被當成新書匯入。
   - `並存書名（審查 I-1）`：候選 `displayName` 為 `'我的小說.txt'` 時，`importCandidateAsNewBook` 建出的書名為 `'我的小說'`，**不是**暫存檔名的時間戳記。
   - `批次不重複查庫（審查 M-2）`：匯入 5 個檔案，假 repository 的 `listBooks` 呼叫次數為常數（與檔案數無關）；同批次「B 是剛匯入的 A 的更新版」仍被偵測為更新版。
-- [ ] **Step 2：確認失敗 → Step 3：實作 → Step 4：確認通過**，並重跑 Task 2～5 的測試檔。
-- [ ] **Step 5：`flutter analyze`**；提交 `feat(library): 強制作為新書匯入，匯入管線改為回傳更新候選（epic-67 Issue 1 Task 6）`。
+- [x] **Step 2：確認失敗 → Step 3：實作 → Step 4：確認通過**，並重跑 Task 2～5 的測試檔。
+- [x] **Step 5：`flutter analyze`**；提交 `feat(library): 強制作為新書匯入，匯入管線改為回傳更新候選（epic-67 Issue 1 Task 6）`。
 
 ---
 

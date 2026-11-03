@@ -118,9 +118,10 @@ class BookImportServiceImpl implements BookImportService {
       await _repository.upsertGroup(folderName);
     }
 
-    // 【診斷修正】見下方 _importSingleFile 前的重複偵測說明。
-    final seenUris = await _existingFilePaths();
+    final existingBooks = await _repository.listBooks();
+    final seenUris = existingBooks.map((b) => b.filePath).toSet();
     final imported = <Book>[];
+    final updateCandidates = <BookUpdateCandidate>[];
     var skippedDuplicateCount = 0;
     for (var i = 0; i < uris.length; i++) {
       final uri = uris[i];
@@ -128,8 +129,26 @@ class BookImportServiceImpl implements BookImportService {
         skippedDuplicateCount++;
         continue;
       }
-      final displayName =
-          (displayNames != null && i < displayNames.length) ? displayNames[i] : null;
+      final displayName = (displayNames != null && i < displayNames.length)
+          ? displayNames[i]
+          : null;
+
+      final detection = await _detectBookUpdateInternal(
+        uri,
+        displayName: displayName,
+        existingBooks: existingBooks,
+      );
+
+      if (detection is DetectedDuplicate) {
+        skippedDuplicateCount++;
+        continue;
+      } else if (detection is DetectedUpdate) {
+        if (detection.candidate.stagedPath != null) {
+          updateCandidates.add(detection.candidate);
+        }
+        continue;
+      }
+
       final book = await _importSingleFile(
         uri,
         displayName: displayName,
@@ -140,11 +159,15 @@ class BookImportServiceImpl implements BookImportService {
         remoteDownloadUrl: remoteDownloadUrls?[uri],
         cloudFileId: cloudFileIds?[uri],
       );
-      if (book != null) imported.add(book);
+      if (book != null) {
+        imported.add(book);
+        existingBooks.add(book);
+      }
     }
     return ImportResult(
       importedBooks: imported,
       skippedDuplicateCount: skippedDuplicateCount,
+      updateCandidates: updateCandidates,
     );
   }
 
@@ -193,13 +216,27 @@ class BookImportServiceImpl implements BookImportService {
       await _repository.upsertGroup(groupName);
     }
 
-    // 【診斷修正】見下方 _importSingleFile 前的重複偵測說明。
-    final seenUris = await _existingFilePaths();
+    final existingBooks = await _repository.listBooks();
+    final seenUris = existingBooks.map((b) => b.filePath).toSet();
     final imported = <Book>[];
+    final updateCandidates = <BookUpdateCandidate>[];
     var skippedDuplicateCount = 0;
     for (final uri in fileUris) {
       if (!seenUris.add(uri)) {
         skippedDuplicateCount++;
+        continue;
+      }
+      final detection = await _detectBookUpdateInternal(
+        uri,
+        existingBooks: existingBooks,
+      );
+      if (detection is DetectedDuplicate) {
+        skippedDuplicateCount++;
+        continue;
+      } else if (detection is DetectedUpdate) {
+        if (detection.candidate.stagedPath != null) {
+          updateCandidates.add(detection.candidate);
+        }
         continue;
       }
       final book = await _importSingleFile(
@@ -207,11 +244,15 @@ class BookImportServiceImpl implements BookImportService {
         folderName: groupName,
         takePermission: false,
       );
-      if (book != null) imported.add(book);
+      if (book != null) {
+        imported.add(book);
+        existingBooks.add(book);
+      }
     }
     return ImportResult(
       importedBooks: imported,
       skippedDuplicateCount: skippedDuplicateCount,
+      updateCandidates: updateCandidates,
     );
   }
 
@@ -522,6 +563,31 @@ class BookImportServiceImpl implements BookImportService {
     }
   }
 
+  @override
+  Future<Book?> importCandidateAsNewBook(
+    BookUpdateCandidate candidate, {
+    String? folderName,
+    BookSourceRefs? sourceRefs,
+  }) async {
+    try {
+      final source = candidate.stagedPath ?? candidate.sourceUri;
+      final book = await _importSingleFile(
+        source,
+        displayName: candidate.displayName,
+        folderName: folderName,
+        source: sourceRefs?.source ?? BookSource.local,
+        remoteServerId: sourceRefs?.remoteServerId,
+        remoteBookId: sourceRefs?.remoteBookId,
+        remoteDownloadUrl: sourceRefs?.remoteDownloadUrl,
+        cloudFileId: sourceRefs?.cloudFileId,
+        landLocalCopy: true,
+      );
+      return book;
+    } finally {
+      await discardUpdateCandidate(candidate);
+    }
+  }
+
   Future<void> _cleanStagedFiles(List<String> paths) async {
     for (final path in paths) {
       try {
@@ -774,27 +840,12 @@ class BookImportServiceImpl implements BookImportService {
     }
   }
 
-  /// 【診斷修正——真機回報「同一本書可以重複匯入」】圖書庫既有書籍的
-  /// `filePath` 集合，供匯入前判斷來源 URI 是否重複。比對依據是「來源檔案
-  /// URI/路徑是否相同」，不比對書名/作者（避免同名但內容不同的書被誤判為
-  /// 重複）——對大多數情況成立：`filePath` 只有在持久化 URI 權限授權失敗、
-  /// 或原始 URI 沒有可辨識副檔名時才會落地成本機複本（每次落地會產生新的
-  /// 隨機檔名），故此防護對「使用者重新選取同一份原始檔案」這個實際回報的
-  /// 情境有效；對「先前已落地成本機複本、之後又重新選取同一份原始檔案」
-  /// 這種較罕見的邊界情況無效（本機複本檔名與原始 URI 不同，比對不到），
-  /// 屬已知、可接受的限制。這個集合在同一次批次匯入呼叫（`importFiles`／
-  /// `importFolder`）期間會持續更新，故同一批次內重複選取同一個 URI 兩次
-  /// 也會被正確擋下第二次。
-  Future<Set<String>> _existingFilePaths() async {
-    final books = await _repository.listBooks();
-    return books.map((b) => b.filePath).toSet();
-  }
-
   Future<Book?> _importSingleFile(
     String uri, {
     String? displayName,
     String? folderName,
     bool takePermission = true,
+    bool landLocalCopy = false,
     BookSource source = BookSource.local,
     String? remoteServerId,
     String? remoteBookId,
@@ -810,7 +861,16 @@ class BookImportServiceImpl implements BookImportService {
     // 匯入（importFolder）的子檔案 URI 共用資料夾層級已取得的權限，呼叫時
     // 傳入 takePermission: false 跳過這一步。
     var resolvedUri = uri;
-    if (takePermission) {
+    if (landLocalCopy &&
+        (format == BookFileFormat.epub ||
+            format == BookFileFormat.pdf ||
+            format == BookFileFormat.azw3) &&
+        !uri.startsWith('content://')) {
+      final importedDir = await _resolveImportedBooksDirectory();
+      final destinationPath = p.join(importedDir.path, '$id.${format.name}');
+      await File(uri).copy(destinationPath);
+      resolvedUri = destinationPath;
+    } else if (takePermission) {
       final persisted = await _persistPermissionOrLandCopy(uri, id, format);
       if (persisted == null) return null;
       resolvedUri = persisted;

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/book_update_models.dart';
+import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 
 /// 記錄最近一次 [BookImportService.importFiles] 的呼叫參數，供測試斷言
@@ -162,5 +163,18 @@ class FakeBookImportService implements BookImportService {
   }) {
     replaceCalls.add((bookId, newUri));
     return Future.value(replaceResult);
+  }
+
+  Book? importCandidateResult;
+  final List<BookUpdateCandidate> importCandidateCalls = [];
+
+  @override
+  Future<Book?> importCandidateAsNewBook(
+    BookUpdateCandidate candidate, {
+    String? folderName,
+    BookSourceRefs? sourceRefs,
+  }) {
+    importCandidateCalls.add(candidate);
+    return Future.value(importCandidateResult);
   }
 }

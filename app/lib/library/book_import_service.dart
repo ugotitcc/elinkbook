@@ -27,10 +27,15 @@ class ImportResult {
   /// 就沒有可匯入的書」不是失敗，維持 null。
   final ImportFailure? failure;
 
+  /// 偵測到的更新版候選清單（epic-67 Issue 1 Task 6）。
+  /// 其 [BookUpdateCandidate.stagedPath] 皆已填入暫存檔路徑。
+  final List<BookUpdateCandidate> updateCandidates;
+
   const ImportResult({
-    required this.importedBooks,
+    this.importedBooks = const [],
     this.skippedDuplicateCount = 0,
     this.failure,
+    this.updateCandidates = const [],
   });
 }
 
@@ -138,6 +143,14 @@ abstract class BookImportService {
     String newUri, {
     String? displayName,
     BookUpdateCandidate? candidate,
+    BookSourceRefs? sourceRefs,
+  });
+
+  /// 略過更新版判定，把 [candidate] 當成新書匯入（spec「並存」）。新書 filePath 不得指向更新暫存目錄；
+  /// 完成後（成功或失敗）都丟棄候選。成功回傳新書，失敗回傳 null。
+  Future<Book?> importCandidateAsNewBook(
+    BookUpdateCandidate candidate, {
+    String? folderName,
     BookSourceRefs? sourceRefs,
   });
 }
