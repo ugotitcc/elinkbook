@@ -97,8 +97,8 @@ Future<BookUpdateApplyResult> applyBookUpdateChoices(
 
 **語意：** `SkipChoice` → `discardUpdateCandidate`；`ReplaceChoice(bookId)` → `replaceBook(bookId, candidate.sourceUri, displayName: candidate.displayName, candidate: candidate)`，成功則對「舊書 `coverPath`（取自 `candidate.candidateBooks` 中同 id 者）」與「`updatedBook.coverPath`」（非 null 者、去重）各呼叫一次 `onCoverChanged`；失敗或拋例外 → 補 `discardUpdateCandidate`、`failed++`；`CoexistChoice` → `importCandidateAsNewBook(candidate)`，回 null 或拋例外 → `failed++`（服務已自行丟棄暫存檔，不再重複丟棄）。
 
-- [ ] **Step 1：擴充 `FakeBookImportService`**：新增 `ImportResult importFilesResult`／`importFolderResult`（預設空結果，兩個方法在無 `pendingCompleter` 時回傳它）、`Map<String, BookReplaceResult> replaceResultsByBookId`（有對應 key 時優先於 `replaceResult`）、`Object? replaceThrows`。既有測試行為不變。
-- [ ] **Step 2：寫失敗測試**（`book_update_resolver_test.dart`，用上述假服務與 `onCoverChanged` 記錄器）：
+- [x] **Step 1：擴充 `FakeBookImportService`**：新增 `ImportResult importFilesResult`／`importFolderResult`（預設空結果，兩個方法在無 `pendingCompleter` 時回傳它）、`Map<String, BookReplaceResult> replaceResultsByBookId`（有對應 key 時優先於 `replaceResult`）、`Object? replaceThrows`。既有測試行為不變。
+- [x] **Step 2：寫失敗測試**（`book_update_resolver_test.dart`，用上述假服務與 `onCoverChanged` 記錄器）：
   - `跳過`：`SkipChoice` → `discardedCandidates` 含該候選、`replaceCalls`／`importCandidateCalls` 皆空、`skipped == 1`、`onCoverChanged` 未被呼叫。
   - `取代成功`：`ReplaceChoice('b1')` 且 `replaceResultsByBookId['b1'] = BookReplaceSuccess(updatedBook)` → `replaceCalls == [('b1', sourceUri)]`、`replaced == 1`；舊書 `coverPath` 與新書 `coverPath` 皆傳給 `onCoverChanged`（兩者相同時只呼叫一次）；成功分支不補丟棄（服務已自行丟棄，`discardedCandidates` 為空）。
   - `取代失敗`：回傳 `BookReplaceFailure(newFileParseFailed)` → `failed == 1`、`discardedCandidates` 含該候選、`onCoverChanged` 未被呼叫；`replaceThrows` 拋例外時同樣計失敗並丟棄。
@@ -106,10 +106,10 @@ Future<BookUpdateApplyResult> applyBookUpdateChoices(
   - `單筆失敗不中斷`：三筆 `[取代失敗, 跳過, 並存成功]` → 結果 `failed 1／skipped 1／coexisted 1`，三筆都被處理。
   - `多候選取代指定書`：候選書 `[b1, b2]`、`ReplaceChoice('b2')` → `replaceCalls` 的 bookId 為 `b2`，封面失效取自 `b2`。
   - `evictCoverImageCache`：先用 `PaintingBinding.instance.imageCache.putIfAbsent(FileImage(File(p)), …)` 放入一個項目，呼叫後 `imageCache.containsKey(FileImage(File(p))) == false`。
-- [ ] **Step 3：確認失敗** `flutter test --no-pub test/screens/support/book_update_resolver_test.dart`
-- [ ] **Step 4：實作** 上述型別與函式；實作時只依賴 `BookImportService` 公開介面。
-- [ ] **Step 5：確認通過**，並重跑 `test/screens/support/book_import_picker_helper_test.dart` 與 `test/screens/sources_home_screen_test.dart` 確認假服務擴充不回歸。
-- [ ] **Step 6：`flutter analyze`**；提交 `feat(library): 更新版決定的套用邏輯與封面快取失效（epic-67 Issue 2 Task 1）`。
+- [x] **Step 3：確認失敗** `flutter test --no-pub test/screens/support/book_update_resolver_test.dart`
+- [x] **Step 4：實作** 上述型別與函式；實作時只依賴 `BookImportService` 公開介面。
+- [x] **Step 5：確認通過**，並重跑 `test/screens/support/book_import_picker_helper_test.dart` 與 `test/screens/sources_home_screen_test.dart` 確認假服務擴充不回歸。
+- [x] **Step 6：`flutter analyze`**；提交 `feat(library): 更新版決定的套用邏輯與封面快取失效（epic-67 Issue 2 Task 1）`。
 
 ---
 
@@ -172,8 +172,8 @@ Future<BookUpdateApplyResult> showBookUpdateSummaryDialog(
 - Keys：`book_update_row_<i>`、`book_update_confidence_<i>`、`book_update_option_replace_<i>_<bookId>`、`book_update_option_coexist_<i>`、`book_update_option_skip_<i>`、`book_update_unreadable_<i>`、`book_update_replace_notice`、`book_update_replace_all`、`book_update_skip_all`、`book_update_apply`、`book_update_cancel`、`book_update_applying`。
 - 不可點外部關閉；以 `PopScope(canPop: false)` 攔截系統返回，視同取消（D3）。
 
-- [ ] **Step 1：新增 ARB 字串**至四份檔案並執行 `flutter gen-l10n`；跑 `flutter test --no-pub test/l10n/arb_consistency_test.dart test/l10n/app_localizations_generated_test.dart` 確認一致。
-- [ ] **Step 2：寫失敗測試**（`book_update_summary_dialog_test.dart`，以 `pumpLocalizedWidget` 包裝並點按鈕開啟；使用 `FakeBookImportService` 與 `BookUpdateCandidate` 夾具）：
+- [x] **Step 1：新增 ARB 字串**至四份檔案並執行 `flutter gen-l10n`；跑 `flutter test --no-pub test/l10n/arb_consistency_test.dart test/l10n/app_localizations_generated_test.dart` 確認一致。
+- [x] **Step 2：寫失敗測試**（`book_update_summary_dialog_test.dart`，以 `pumpLocalizedWidget` 包裝並點按鈕開啟；使用 `FakeBookImportService` 與 `BookUpdateCandidate` 夾具）：
   - `顯示每本的選項與信心`：兩筆候選（高信心／疑似）→ 各列顯示對應信心文字；單一候選列有「取代」「並存」「跳過」三個選項，預設選取「取代」。
   - `多候選`：一筆候選有書 `[b1, b2]` → 該列有 `book_update_option_replace_0_b1`、`_b2`、並存、跳過；`b1` 預設被選；改選 `b2` 後套用 → `replaceCalls` 的 bookId 為 `b2`。
   - `全部跳過`：按 `book_update_skip_all` 後所有列顯示「跳過」被選；按套用 → 所有候選被丟棄、`replaceCalls` 為空。
@@ -184,9 +184,9 @@ Future<BookUpdateApplyResult> showBookUpdateSummaryDialog(
   - `套用中不可重入`：以 `pendingCompleter`／可控 `replaceBook` 延遲完成，套用中連按兩次 `book_update_apply` 與返回 → `replaceCalls` 只有一次、對話框仍開啟、`book_update_applying` 可見；完成後對話框關閉。
   - `點外部遮罩不關閉（審查 M-2）`：點擊對話框外的遮罩位置 → 對話框仍在、`discardedCandidates` 仍為空。
   - `大量候選`：50 筆候選、長檔名（80 字）→ 不拋 overflow 例外，捲到最後一列可點到其選項；窄螢幕（寬 320）與 E-Ink 修飾子（`isEinkMode: true`）各 pump 一次無例外。
-- [ ] **Step 3：確認失敗 → Step 4：實作** `showBookUpdateSummaryDialog` 與 `_BookUpdateSummaryDialog`（狀態：每列目前選項、`_applying`）；套用時組出 `List<BookUpdateDecision>` 交給 `applyBookUpdateChoices`，完成後 `Navigator.pop(result)`；取消／返回則以全 `SkipChoice` 呼叫同一函式後 pop。
-- [ ] **Step 5：確認通過**；`node tool/check_l10n_hardcoded_strings.js`。
-- [ ] **Step 6：`flutter analyze`**；提交 `feat(library): 更新版彙整清單與在地化字串（epic-67 Issue 2 Task 2）`。
+- [x] **Step 3：確認失敗 → Step 4：實作** `showBookUpdateSummaryDialog` 與 `_BookUpdateSummaryDialog`（狀態：每列目前選項、`_applying`）；套用時組出 `List<BookUpdateDecision>` 交給 `applyBookUpdateChoices`，完成後 `Navigator.pop(result)`；取消／返回則以全 `SkipChoice` 呼叫同一函式後 pop。
+- [x] **Step 5：確認通過**；`node tool/check_l10n_hardcoded_strings.js`。
+- [x] **Step 6：`flutter analyze`**；提交 `feat(library): 更新版彙整清單與在地化字串（epic-67 Issue 2 Task 2）`。
 
 ---
 
@@ -217,7 +217,7 @@ Future<void> handleImportUpdateCandidates(
 
 **handler 結構（審查 I-1，現行 `if (!context.mounted) return;` 會讓卸載防護失效，必須改）：** `result == null` 才提前 return；`showImportResultSnackBar` 包在 `if (context.mounted)` 內；其後**無條件** `await handleImportUpdateCandidates(context, service, result)`，由它內部判斷 `context.mounted`（未掛載 → 丟棄全部候選後返回）。`_handlePickFolder` 同構。`showBookUpdateSummaryDialog` 的 `isEinkMode` 取自 `appearance.isEinkMode`（`SourcesHomeScreen` 已有該欄位，`handleImportUpdateCandidates` 增加選填參數 `bool isEinkMode = false` 往下傳）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
   - `book_import_picker_helper_test.dart` 新增 `handleImportUpdateCandidates` 群組（`FakeBookImportService`）：
     - `無候選`：不彈出任何對話框、`discardedCandidates` 為空。
     - `有候選且已掛載`：彈出 `BookUpdateSummaryDialog`（find `book_update_apply`）；按套用（預設取代）→ 出現「已更新 1 本」SnackBar（`bookUpdateResultReplacedOnlyMessage`）。
@@ -231,9 +231,9 @@ Future<void> handleImportUpdateCandidates(
     - `純重複只顯示既有提示`：`ImportResult(skippedDuplicateCount: 2)` 無候選 → 只出現「2 本已存在，已跳過」SnackBar，沒有清單。
     - `提示與清單分開`：結果同時有 `skippedDuplicateCount: 1` 與候選 → 先見既有 SnackBar 文字，清單照常彈出，且清單內不含「已存在，已跳過」字樣。
     - `資料夾匯入`同樣路徑一案例。
-- [ ] **Step 2：確認失敗 → Step 3：實作** `handleImportUpdateCandidates`；兩個 handler 在既有 `showImportResultSnackBar` 之後 `await handleImportUpdateCandidates(...)`（注意兩次呼叫之間再檢查 `context.mounted`——但卸載時仍須丟棄候選，故檢查邏輯放在 `handleImportUpdateCandidates` 內部，handler 不得在其前面提前 `return` 而漏丟棄）。
-- [ ] **Step 4：確認通過**，並重跑 Task 1、2 的測試檔。
-- [ ] **Step 5：`flutter analyze`**；提交 `feat(library): 本機匯入接上更新版彙整清單（epic-67 Issue 2 Task 3）`。
+- [x] **Step 2：確認失敗 → Step 3：實作** `handleImportUpdateCandidates`；兩個 handler 在既有 `showImportResultSnackBar` 之後 `await handleImportUpdateCandidates(...)`（注意兩次呼叫之間再檢查 `context.mounted`——但卸載時仍須丟棄候選，故檢查邏輯放在 `handleImportUpdateCandidates` 內部，handler 不得在其前面提前 `return` 而漏丟棄）。
+- [x] **Step 4：確認通過**，並重跑 Task 1、2 的測試檔。
+- [x] **Step 5：`flutter analyze`**；提交 `feat(library): 本機匯入接上更新版彙整清單（epic-67 Issue 2 Task 3）`。
 
 ---
 
