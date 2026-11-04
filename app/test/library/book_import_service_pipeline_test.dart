@@ -29,6 +29,13 @@ class _CountingLibraryRepository extends FakeLibraryRepository {
   }
 }
 
+class _ThrowOnInsertRepository extends FakeLibraryRepository {
+  @override
+  Future<Book> insertBook(Book book) async {
+    throw Exception('Simulated insertBook failure');
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -317,6 +324,73 @@ void main() {
 
       // 迴圈開始前只呼叫 1 次 listBooks
       expect(countingRepo.listBooksCallCount, 1);
+    });
+
+    test('審查修正：資料夾匯入無 displayName 的並存，書名退路用原始來源檔名', () async {
+      final stagedFile = File(p.join(stagingDir.path, '77777-1.txt'))
+        ..writeAsStringSync('第一章\n內文');
+      final candidate = BookUpdateCandidate(
+        sourceUri: 'content://tree/books/我的小說.txt',
+        format: BookFileFormat.txt,
+        confidence: UpdateConfidence.suspected,
+        candidateBooks: const [],
+        stagedPath: stagedFile.path,
+      );
+
+      final newBook = await service.importCandidateAsNewBook(candidate);
+
+      expect(newBook, isNotNull);
+      expect(newBook!.title, '我的小說');
+    });
+
+    test('審查修正：並存時寫庫失敗回傳 null，且落地複本與暫存檔皆清除', () async {
+      final failService = BookImportServiceImpl(
+        repository: _ThrowOnInsertRepository(),
+        coversDirectory: coversDir,
+        importedBooksDirectory: importedDir,
+        updateStagingDirectory: stagingDir,
+        themePreferences: AppThemePreferences(),
+      );
+      final stagedFile = File(p.join(stagingDir.path, '55555-2.epub'))
+        ..writeAsStringSync('內容');
+      final candidate = BookUpdateCandidate(
+        sourceUri: 'content://downloads/x.epub',
+        displayName: 'x.epub',
+        format: BookFileFormat.epub,
+        confidence: UpdateConfidence.high,
+        candidateBooks: const [],
+        stagedPath: stagedFile.path,
+      );
+
+      final result = await failService.importCandidateAsNewBook(candidate);
+
+      expect(result, isNull);
+      expect(importedDir.listSync(), isEmpty);
+      expect(stagedFile.existsSync(), isFalse);
+    });
+
+    test('審查修正：更新版暫存複製失敗時退回當成新書匯入，不讓檔案無聲消失', () async {
+      final oldFile = File(p.join(importedDir.path, 'b9.epub'))..writeAsStringSync('舊');
+      await repository.insertBook(Book(
+        id: 'b9',
+        title: '測試書',
+        author: '測試作者',
+        format: BookFileFormat.epub,
+        filePath: oldFile.path,
+        source: BookSource.local,
+        contentFingerprint: 'same-identifier',
+        createTime: DateTime.now(),
+        lastReadTime: DateTime.now(),
+      ));
+      // 更新暫存目錄被換成一般檔案 → _stageNewFile 必失敗
+      stagingDir.deleteSync(recursive: true);
+      File(stagingDir.path).writeAsStringSync('不是目錄');
+
+      final newFile = File(p.join(tempDir.path, 'match_id_x.epub'))..writeAsStringSync('新檔');
+      final result = await service.importFiles([newFile.path]);
+
+      expect(result.updateCandidates, isEmpty);
+      expect(result.importedBooks, hasLength(1));
     });
   });
 }

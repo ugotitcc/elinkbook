@@ -595,5 +595,102 @@ void main() {
       final updated = (retryResult as BookReplaceSuccess).updatedBook;
       expect(updated.title, '新版書名');
     });
+
+    test('審查修正：TXT 合成後封面寫入失敗，不殘留 .staging 檔且舊檔不動', () async {
+      final oldFile = File(p.join(importedDir.path, 'txt-fail.txt'))
+        ..writeAsStringSync('舊合成內容');
+      await repository.insertBook(Book(
+        id: 'txt-fail',
+        title: '舊 TXT',
+        format: BookFileFormat.txt,
+        filePath: oldFile.path,
+        source: BookSource.local,
+        groupName: BookGroup.uncategorized,
+        createTime: DateTime.now(),
+        lastReadTime: DateTime.now(),
+      ));
+      // 封面目錄被換成一般檔案 → 合成檔已寫出後，封面寫入才失敗
+      coversDir.deleteSync(recursive: true);
+      File(coversDir.path).writeAsStringSync('不是目錄');
+
+      final newTxt = File(p.join(tempDir.path, 'new.txt'))
+        ..writeAsStringSync('第一章\n新內容');
+      final result = await service.replaceBook('txt-fail', newTxt.path);
+
+      expect(result, isA<BookReplaceFailure>());
+      expect(oldFile.readAsStringSync(), '舊合成內容');
+      expect(
+        importedDir.listSync().where((f) => f.path.contains('.staging')),
+        isEmpty,
+      );
+    });
+
+    test('審查修正：新版無封面時，updateBook 失敗不得先刪舊封面', () async {
+      final throwRepo = ThrowOnUpdateRepository()..throwOnUpdate = true;
+      final throwService = BookImportServiceImpl(
+        repository: throwRepo,
+        coversDirectory: coversDir,
+        importedBooksDirectory: importedDir,
+        updateStagingDirectory: stagingDir,
+        themePreferences: AppThemePreferences(),
+      );
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'extractMetadata') {
+          return <String, Object?>{'title': '無封面新版'};
+        }
+        return null;
+      });
+      final oldFile = File(p.join(importedDir.path, 'cv.epub'))
+        ..writeAsStringSync('舊');
+      final oldCover = File(p.join(coversDir.path, 'cv.png'))
+        ..writeAsBytesSync([9, 9, 9]);
+      await throwRepo.insertBook(Book(
+        id: 'cv',
+        title: '舊',
+        format: BookFileFormat.epub,
+        filePath: oldFile.path,
+        coverPath: oldCover.path,
+        source: BookSource.local,
+        groupName: BookGroup.uncategorized,
+        createTime: DateTime.now(),
+        lastReadTime: DateTime.now(),
+      ));
+
+      final newFile = File(p.join(tempDir.path, 'n.epub'))
+        ..writeAsStringSync('新');
+      final result = await throwService.replaceBook('cv', newFile.path);
+
+      expect(result, isA<BookReplaceFailure>());
+      expect(oldCover.existsSync(), isTrue);
+    });
+
+    test('審查修正：同一本書並行取代會序列化，兩次皆成功且無暫存殘留', () async {
+      final oldFile = File(p.join(importedDir.path, 'par.epub'))
+        ..writeAsStringSync('舊');
+      await repository.insertBook(Book(
+        id: 'par',
+        title: '舊',
+        format: BookFileFormat.epub,
+        filePath: oldFile.path,
+        source: BookSource.local,
+        groupName: BookGroup.uncategorized,
+        createTime: DateTime.now(),
+        lastReadTime: DateTime.now(),
+      ));
+      final a = File(p.join(tempDir.path, 'a.epub'))..writeAsStringSync('A');
+      final b = File(p.join(tempDir.path, 'b.epub'))..writeAsStringSync('B');
+
+      final results = await Future.wait([
+        service.replaceBook('par', a.path),
+        service.replaceBook('par', b.path),
+      ]);
+
+      expect(results.every((r) => r is BookReplaceSuccess), isTrue);
+      expect(
+        importedDir.listSync().where((f) => f.path.contains('.staging')),
+        isEmpty,
+      );
+    });
   });
 }

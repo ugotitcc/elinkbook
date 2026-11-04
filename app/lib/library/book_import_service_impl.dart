@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -142,12 +143,13 @@ class BookImportServiceImpl implements BookImportService {
       if (detection is DetectedDuplicate) {
         skippedDuplicateCount++;
         continue;
-      } else if (detection is DetectedUpdate) {
-        if (detection.candidate.stagedPath != null) {
-          updateCandidates.add(detection.candidate);
-        }
+      } else if (detection is DetectedUpdate &&
+          detection.candidate.stagedPath != null) {
+        updateCandidates.add(detection.candidate);
         continue;
       }
+      // 更新版但暫存複製失敗（stagedPath 為 null）：不讓使用者的檔案無聲消失，
+      // 退回當成新書匯入，使用者之後可自行處理重複。
 
       final book = await _importSingleFile(
         uri,
@@ -233,12 +235,13 @@ class BookImportServiceImpl implements BookImportService {
       if (detection is DetectedDuplicate) {
         skippedDuplicateCount++;
         continue;
-      } else if (detection is DetectedUpdate) {
-        if (detection.candidate.stagedPath != null) {
-          updateCandidates.add(detection.candidate);
-        }
+      } else if (detection is DetectedUpdate &&
+          detection.candidate.stagedPath != null) {
+        updateCandidates.add(detection.candidate);
         continue;
       }
+      // 更新版但暫存複製失敗（stagedPath 為 null）：不讓使用者的檔案無聲消失，
+      // 退回當成新書匯入，使用者之後可自行處理重複。
       final book = await _importSingleFile(
         uri,
         folderName: groupName,
@@ -384,9 +387,41 @@ class BookImportServiceImpl implements BookImportService {
   /// 已知殘餘風險（Review Focus 2）：若暫存檔已改名為正式檔名但後續資料庫
   /// [updateBook] 寫入失敗，檔案內容與資料庫中繼資料會產生短暫不一致。
   /// 此時再次呼叫本方法取代同本書籍即可修復。永不拋例外。
-  /// 依決策 D1 沿用原書指紋，依決策 D3 嚴格模式解析新檔。
+  /// 依決策 D1 沿用原書指紋（已知限制：PDF／AZW3 取代後指紋為舊內容雜湊，
+  /// 之後 relinkBook 會回 contentMismatch，由「強制重新連結」處理），依決策 D3
+  /// 嚴格模式解析新檔。同一本書的呼叫會序列化執行。
   @override
   Future<BookReplaceResult> replaceBook(
+    String bookId,
+    String newUri, {
+    String? displayName,
+    BookUpdateCandidate? candidate,
+    BookSourceRefs? sourceRefs,
+  }) async {
+    // 同一本書的取代序列化執行：暫存檔名由 bookId 決定，並行呼叫會互相覆寫／誤刪。
+    final previous = _replaceTails[bookId] ?? Future<void>.value();
+    final done = Completer<void>();
+    _replaceTails[bookId] = done.future;
+    try {
+      await previous;
+      return await _replaceBookLocked(
+        bookId,
+        newUri,
+        displayName: displayName,
+        candidate: candidate,
+        sourceRefs: sourceRefs,
+      );
+    } finally {
+      done.complete();
+      if (identical(_replaceTails[bookId], done.future)) {
+        _replaceTails.remove(bookId);
+      }
+    }
+  }
+
+  final Map<String, Future<void>> _replaceTails = {};
+
+  Future<BookReplaceResult> _replaceBookLocked(
     String bookId,
     String newUri, {
     String? displayName,
@@ -433,7 +468,7 @@ class BookImportServiceImpl implements BookImportService {
             landSuffix: '.staging',
           );
           if (persisted == null) {
-            await _cleanStagedFiles(stagedFiles);
+            await _sweepStagingFiles(bookId);
             return const BookReplaceFailure(BookReplaceFailureReason.writeFailed);
           }
           if (persisted.endsWith('.staging')) {
@@ -467,45 +502,30 @@ class BookImportServiceImpl implements BookImportService {
         landSuffix: '.staging',
         strict: true,
         computeFingerprint: false,
+        stagedOut: stagedFiles,
       );
       if (parts == null) {
-        await _cleanStagedFiles(stagedFiles);
+        await _sweepStagingFiles(bookId);
         return const BookReplaceFailure(
             BookReplaceFailureReason.newFileParseFailed);
       }
-      stagedFiles.addAll(parts.stagedFiles);
 
-      // 5. 換名階段：對每個暫存檔做 File.rename 覆蓋為正式檔名（先換書檔、後換封面）
-      String? finalCoverPath;
+      // 5. 換名階段：File.rename 本身即原子覆蓋既有檔，不可先刪目標（否則換名失敗會遺失舊檔）
       for (final stagedPath in List.of(stagedFiles)) {
         if (!stagedPath.endsWith('.staging')) continue;
         final targetPath =
             stagedPath.substring(0, stagedPath.length - '.staging'.length);
         final stagingFile = File(stagedPath);
         if (await stagingFile.exists()) {
-          final targetFile = File(targetPath);
-          if (await targetFile.exists()) {
-            await targetFile.delete();
-          }
           await stagingFile.rename(targetPath);
         }
-        if (targetPath.contains('covers')) {
-          finalCoverPath = targetPath;
-        }
       }
-
-      // 如果新版沒有封面（parts.coverPath == null）→ 刪除舊封面檔（若存在）
-      if (parts.coverPath == null) {
-        if (book.coverPath != null) {
-          try {
-            final oldCoverFile = File(book.coverPath!);
-            if (await oldCoverFile.exists()) {
-              await oldCoverFile.delete();
-            }
-          } catch (_) {}
-        }
-      } else {
-        finalCoverPath = parts.coverPath!.replaceAll('.staging', '');
+      String? finalCoverPath;
+      final stagedCover = parts.coverPath;
+      if (stagedCover != null) {
+        finalCoverPath = stagedCover.endsWith('.staging')
+            ? stagedCover.substring(0, stagedCover.length - '.staging'.length)
+            : stagedCover;
       }
 
       // 6. 資料庫階段
@@ -514,8 +534,8 @@ class BookImportServiceImpl implements BookImportService {
         author: parts.author,
         clearAuthor: parts.author == null,
         filePath: finalBookFilePath,
-        coverPath: parts.coverPath == null ? null : finalCoverPath,
-        clearCoverPath: parts.coverPath == null,
+        coverPath: finalCoverPath,
+        clearCoverPath: finalCoverPath == null,
         isFixedLayout: parts.isFixedLayout,
         clearIsFixedLayout: parts.isFixedLayout == null,
         source: sourceRefs?.source ?? book.source,
@@ -529,6 +549,15 @@ class BookImportServiceImpl implements BookImportService {
       await _repository.updateBook(updatedBook);
 
       // 7. 收尾（失敗一律吞掉，不影響成功結果）
+      // 新版沒有封面 → 資料庫已不再指向舊封面，才刪除舊封面檔
+      if (finalCoverPath == null && book.coverPath != null) {
+        try {
+          final oldCoverFile = File(book.coverPath!);
+          if (await oldCoverFile.exists()) {
+            await oldCoverFile.delete();
+          }
+        } catch (_) {}
+      }
       try {
         final importedDir = await _resolveImportedBooksDirectory();
         if (book.filePath != updatedBook.filePath &&
@@ -554,11 +583,11 @@ class BookImportServiceImpl implements BookImportService {
 
       return BookReplaceSuccess(updatedBook);
     } on _NewFileParseException {
-      await _cleanStagedFiles(stagedFiles);
+      await _sweepStagingFiles(bookId);
       return const BookReplaceFailure(
           BookReplaceFailureReason.newFileParseFailed);
     } catch (_) {
-      await _cleanStagedFiles(stagedFiles);
+      await _sweepStagingFiles(bookId);
       return const BookReplaceFailure(BookReplaceFailureReason.writeFailed);
     }
   }
@@ -574,6 +603,8 @@ class BookImportServiceImpl implements BookImportService {
       final book = await _importSingleFile(
         source,
         displayName: candidate.displayName,
+        // stagedPath 的檔名是時間戳記，書名退路改用原始來源的檔名
+        fallbackName: candidate.displayName ?? candidate.sourceUri,
         folderName: folderName,
         source: sourceRefs?.source ?? BookSource.local,
         remoteServerId: sourceRefs?.remoteServerId,
@@ -583,9 +614,25 @@ class BookImportServiceImpl implements BookImportService {
         landLocalCopy: true,
       );
       return book;
+    } catch (_) {
+      return null;
     } finally {
       await discardUpdateCandidate(candidate);
     }
+  }
+
+  /// 取代失敗時依 [bookId] 掃除所有可能的暫存名稱檔（含寫到一半的半成品）。
+  Future<void> _sweepStagingFiles(String bookId) async {
+    final paths = <String>[];
+    try {
+      final importedDir = await _resolveImportedBooksDirectory();
+      for (final ext in const ['epub', 'pdf', 'azw3', 'cbz', 'txt', 'md']) {
+        paths.add(p.join(importedDir.path, '$bookId.$ext.staging'));
+      }
+      final coversDir = await _resolveCoversDirectory();
+      paths.add(p.join(coversDir.path, '$bookId.png.staging'));
+    } catch (_) {}
+    await _cleanStagedFiles(paths);
   }
 
   Future<void> _cleanStagedFiles(List<String> paths) async {
@@ -843,6 +890,7 @@ class BookImportServiceImpl implements BookImportService {
   Future<Book?> _importSingleFile(
     String uri, {
     String? displayName,
+    String? fallbackName,
     String? folderName,
     bool takePermission = true,
     bool landLocalCopy = false,
@@ -861,6 +909,7 @@ class BookImportServiceImpl implements BookImportService {
     // 匯入（importFolder）的子檔案 URI 共用資料夾層級已取得的權限，呼叫時
     // 傳入 takePermission: false 跳過這一步。
     var resolvedUri = uri;
+    String? landedCopy; // 並存時落地的私有複本；失敗時須清掉
     if (landLocalCopy &&
         (format == BookFileFormat.epub ||
             format == BookFileFormat.pdf ||
@@ -869,6 +918,7 @@ class BookImportServiceImpl implements BookImportService {
       final importedDir = await _resolveImportedBooksDirectory();
       final destinationPath = p.join(importedDir.path, '$id.${format.name}');
       await File(uri).copy(destinationPath);
+      landedCopy = destinationPath;
       resolvedUri = destinationPath;
     } else if (takePermission) {
       final persisted = await _persistPermissionOrLandCopy(uri, id, format);
@@ -876,20 +926,29 @@ class BookImportServiceImpl implements BookImportService {
       resolvedUri = persisted;
     }
 
-    final fallbackTitle = titleFromFileName(displayName ?? uri);
+    final fallbackTitle = titleFromFileName(fallbackName ?? displayName ?? uri);
     final now = DateTime.now();
 
-    final parts = await _prepareBookParts(
-      originalUri: uri,
-      resolvedUri: resolvedUri,
-      format: format,
-      id: id,
-      fallbackTitle: fallbackTitle,
-      landSuffix: '',
-      strict: false,
-      computeFingerprint: true,
-    );
-    if (parts == null) return null;
+    final _BookParts? parts;
+    try {
+      parts = await _prepareBookParts(
+        originalUri: uri,
+        resolvedUri: resolvedUri,
+        format: format,
+        id: id,
+        fallbackTitle: fallbackTitle,
+        landSuffix: '',
+        strict: false,
+        computeFingerprint: true,
+      );
+    } catch (_) {
+      if (landedCopy != null) await _cleanStagedFiles([landedCopy]);
+      rethrow;
+    }
+    if (parts == null) {
+      if (landedCopy != null) await _cleanStagedFiles([landedCopy]);
+      return null;
+    }
 
     final book = Book(
       id: id,
@@ -918,7 +977,13 @@ class BookImportServiceImpl implements BookImportService {
       lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
     );
 
-    final insertedBook = await _repository.insertBook(book);
+    final Book insertedBook;
+    try {
+      insertedBook = await _repository.insertBook(book);
+    } catch (_) {
+      if (landedCopy != null) await _cleanStagedFiles([landedCopy]);
+      rethrow;
+    }
     // epic-10-search Issue 2（spec.md §7，review-plan-issue-2.md C-2）：
     // _importSingleFile() 是全專案所有新書匯入與雲端/遠端首次下載的唯一
     // 收斂點（本機檔案/資料夾選取、Google Drive、OneDrive、Calibre/OPDS
@@ -1077,6 +1142,7 @@ class BookImportServiceImpl implements BookImportService {
     String landSuffix = '',
     bool strict = false,
     bool computeFingerprint = true,
+    List<String>? stagedOut,
   }) async {
     var title = fallbackTitle;
     String? author;
@@ -1084,7 +1150,7 @@ class BookImportServiceImpl implements BookImportService {
     bool? isFixedLayout;
     String? epubIdentifier;
     var bookFilePath = resolvedUri;
-    final stagedFiles = <String>[];
+    final stagedFiles = stagedOut ?? <String>[];
 
     if (format == BookFileFormat.txt) {
       TxtSynthesisResult synthesis;
