@@ -137,6 +137,7 @@ class _QueueItemRow extends StatelessWidget {
           tooltip: l10n.downloadQueueDismissTooltip,
           onPressed: () => controller.dismiss(item.id),
         );
+      case DownloadItemStatus.awaitingUpdateConfirmation:
       case DownloadItemStatus.pending:
       case DownloadItemStatus.checkingDuplicate:
         return const SizedBox(width: 48);
@@ -153,6 +154,8 @@ class _QueueItemRow extends StatelessWidget {
         return Icons.error_outline;
       case DownloadItemStatus.cancelled:
         return Icons.cancel_outlined;
+      case DownloadItemStatus.awaitingUpdateConfirmation:
+        return Icons.update;
       case DownloadItemStatus.pending:
       case DownloadItemStatus.downloading:
       case DownloadItemStatus.checkingDuplicate:
@@ -162,6 +165,7 @@ class _QueueItemRow extends StatelessWidget {
 
   String _statusLabel(AppLocalizations l10n, DownloadQueueItem item) {
     switch (item.status) {
+      case DownloadItemStatus.awaitingUpdateConfirmation:
       case DownloadItemStatus.pending:
         return l10n.downloadQueueStatusPending;
       case DownloadItemStatus.downloading:

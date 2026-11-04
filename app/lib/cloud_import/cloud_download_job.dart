@@ -1,6 +1,8 @@
 import '../downloads/download_queue_controller.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
+import '../library/book_update_models.dart';
+import '../library/book_update_settle.dart';
 import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
 import 'cloud_book_downloader.dart';
@@ -86,4 +88,14 @@ class CloudDownloadJob implements QueuedDownloadJob {
 
   @override
   bool isAuthFailure(Object error) => error is CloudAuthRequiredException;
+
+  @override
+  Future<BookUpdateCandidate?> detectUpdate(String tempPath) async => null;
+
+  @override
+  Future<BookUpdateSettleResult> settleUpdate(
+    BookUpdateCandidate candidate,
+    BookUpdateChoice choice,
+  ) async =>
+      const BookUpdateSettleResult(BookUpdateSettleOutcome.skipped);
 }

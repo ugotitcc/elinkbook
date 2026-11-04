@@ -3,6 +3,9 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import '../library/book_update_models.dart';
+import '../library/book_update_settle.dart';
+
 enum DownloadItemStatus {
   pending,
   downloading,
@@ -11,6 +14,7 @@ enum DownloadItemStatus {
   duplicateSkipped,
   failed,
   cancelled,
+  awaitingUpdateConfirmation,
 }
 
 /// 佇列裡的一筆下載項目（可變狀態，由 [DownloadQueueController] 內部
@@ -29,12 +33,17 @@ class DownloadQueueItem {
   /// false。重試時會先重設。
   bool needsReauth;
 
+  /// 僅在 [DownloadItemStatus.awaitingUpdateConfirmation] 時非 null，
+  /// 供下載面板點開更新版對話框時讀取。
+  BookUpdateCandidate? updateCandidate;
+
   DownloadQueueItem({
     required this.id,
     required this.name,
     this.status = DownloadItemStatus.pending,
     this.progress,
     this.needsReauth = false,
+    this.updateCandidate,
   });
 }
 
@@ -78,6 +87,16 @@ abstract class QueuedDownloadJob {
   /// （雲端授權失效，見 `CONTEXT.md`）。控制器不認得個別來源的例外型別，
   /// 由各來源自己判斷；不涉及帳號的來源（例如 OPDS 遠端書庫）回傳 `false`。
   bool isAuthFailure(Object error);
+
+  /// 對剛下載完成的暫存檔偵測更新版。回傳 null＝不是更新版（新書／重複／不支援／偵測失敗／暫存複製失敗）。
+  /// 回傳非 null 時，候選的 stagedPath 必為非 null，且呼叫端可安全刪除原暫存檔。
+  Future<BookUpdateCandidate?> detectUpdate(String tempPath);
+
+  /// 依使用者選擇結算候選（含來源參數）；永不拋例外。
+  Future<BookUpdateSettleResult> settleUpdate(
+    BookUpdateCandidate candidate,
+    BookUpdateChoice choice,
+  );
 }
 
 /// 視覺還原（Visual Accuracy Mode，`docs/research/uiux/VISUAL_ANALYSIS.md`）
@@ -112,15 +131,22 @@ abstract class QueuedDownloadJob {
 /// 下載的檔案最終都會被匯入），只是匯入時機從「整批結束後一次呼叫」變成
 /// 「逐筆完成時各自呼叫」。
 class DownloadQueueController extends ChangeNotifier {
-  DownloadQueueController({required this.onDuplicateConfirm});
+  DownloadQueueController({
+    required this.onDuplicateConfirm,
+    this.onCoverChanged,
+  });
 
   final Future<bool> Function(String name) onDuplicateConfirm;
+
+  /// 取代成功時對每個封面路徑通知（回呼為 null 時略過，審查 M-2）。
+  final void Function(String coverPath)? onCoverChanged;
 
   // `Map` 在 Dart 保證依插入順序疊代，直接當成「有序＋可用 id 查找」的
   // 佇列項目存放結構，不需要另外維護一份 List 對照。
   final Map<String, DownloadQueueItem> _itemsById = {};
   final Map<String, QueuedDownloadJob> _jobsById = {};
   final List<String> _pendingIds = [];
+  final Set<String> _resolvingIds = {};
   bool _running = false;
 
   List<DownloadQueueItem> get items => List.unmodifiable(_itemsById.values);
@@ -172,6 +198,21 @@ class DownloadQueueController extends ChangeNotifier {
 
       item.status = DownloadItemStatus.checkingDuplicate;
       notifyListeners();
+
+      BookUpdateCandidate? candidate;
+      try {
+        candidate = await job.detectUpdate(tempPath);
+      } catch (_) {
+        candidate = null;
+      }
+      if (candidate != null) {
+        await _deleteIfExists(tempPath);
+        item.updateCandidate = candidate;
+        item.status = DownloadItemStatus.awaitingUpdateConfirmation;
+        notifyListeners();
+        return;
+      }
+
       final fingerprint = await job.computeFingerprint(tempPath);
       final hasDuplicate = await job.hasDuplicate(fingerprint);
       if (hasDuplicate) {
@@ -208,13 +249,79 @@ class DownloadQueueController extends ChangeNotifier {
 
   void cancel(String id) => _jobsById[id]?.cancel();
 
+  /// 結算「待確認更新」項目；非該狀態、或同一項目正在結算中 → 回傳 failed 且不呼叫 job。
+  /// 內部以 `_resolvingIds` 管理結算中的項目：進入前若已在集合內直接回傳 failed；
+  /// 通過檢查後立即加入，以 try/finally 保證結束時移除（審查 I-4）。
+  Future<BookUpdateSettleResult> resolveUpdate(
+    String id,
+    BookUpdateChoice choice,
+  ) async {
+    final item = _itemsById[id];
+    final job = _jobsById[id];
+    if (item == null ||
+        job == null ||
+        item.status != DownloadItemStatus.awaitingUpdateConfirmation ||
+        _resolvingIds.contains(id)) {
+      return const BookUpdateSettleResult(BookUpdateSettleOutcome.failed);
+    }
+
+    final candidate = item.updateCandidate;
+    if (candidate == null) {
+      return const BookUpdateSettleResult(BookUpdateSettleOutcome.failed);
+    }
+
+    _resolvingIds.add(id);
+    try {
+      final result = await job.settleUpdate(candidate, choice);
+      for (final coverPath in result.changedCoverPaths) {
+        onCoverChanged?.call(coverPath);
+      }
+
+      switch (result.outcome) {
+        case BookUpdateSettleOutcome.replaced:
+        case BookUpdateSettleOutcome.coexisted:
+          item.status = DownloadItemStatus.done;
+          item.progress = 1.0;
+          item.updateCandidate = null;
+          notifyListeners();
+          break;
+        case BookUpdateSettleOutcome.skipped:
+          _itemsById.remove(id);
+          _jobsById.remove(id);
+          notifyListeners();
+          break;
+        case BookUpdateSettleOutcome.failed:
+          item.status = DownloadItemStatus.failed;
+          item.updateCandidate = null;
+          notifyListeners();
+          break;
+      }
+      return result;
+    } finally {
+      _resolvingIds.remove(id);
+    }
+  }
+
   /// 針對單一失敗／已取消的項目重新下載，不影響佇列中其他項目的順序
-  /// （立即重跑，不用重新排隊等待）。
-  Future<void> retry(String id) => _downloadOne(id);
+  /// （立即重跑，不用重新排隊等待）。對 [DownloadItemStatus.awaitingUpdateConfirmation] 項目不動作。
+  Future<void> retry(String id) async {
+    final item = _itemsById[id];
+    if (item?.status == DownloadItemStatus.awaitingUpdateConfirmation) return;
+    return _downloadOne(id);
+  }
 
   /// 從畫面上移除一筆已結束（完成／失敗／已取消／重複略過）的項目，讓
   /// 使用者可以自行清掉不想再看到的紀錄，避免佇列清單無限累積。
-  void dismiss(String id) {
+  /// 待確認更新項目會先以 [SkipChoice] 結算再移除。
+  /// 若該項目正在結算中（在 `_resolvingIds` 內）則不動作直接返回。
+  Future<void> dismiss(String id) async {
+    if (_resolvingIds.contains(id)) return;
+    final item = _itemsById[id];
+    if (item != null &&
+        item.status == DownloadItemStatus.awaitingUpdateConfirmation) {
+      await resolveUpdate(id, const SkipChoice());
+      return;
+    }
     _itemsById.remove(id);
     _jobsById.remove(id);
     notifyListeners();

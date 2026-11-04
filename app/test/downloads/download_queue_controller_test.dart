@@ -1,7 +1,32 @@
 import 'dart:async';
+import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/downloads/download_queue_controller.dart';
+import 'package:elinkbook/library/book_update_models.dart';
+import 'package:elinkbook/library/book_update_settle.dart';
+import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+BookUpdateCandidate _makeTestCandidate(String id) {
+  return BookUpdateCandidate(
+    sourceUri: 'file:///tmp/download-$id.epub',
+    format: BookFileFormat.epub,
+    stagedPath: '/tmp/staging-$id.epub',
+    confidence: UpdateConfidence.high,
+    candidateBooks: [
+      Book(
+        id: 'target-$id',
+        title: '目標書',
+        format: BookFileFormat.epub,
+        filePath: '/data/target.epub',
+        source: BookSource.local,
+        createTime: DateTime(2026, 1, 1),
+        lastReadTime: DateTime(2026, 1, 1),
+      ),
+    ],
+  );
+}
 
 /// [QueuedDownloadJob] 的最小可控假實作，讓
 /// [DownloadQueueController] 的通用排程／重複偵測／失敗／取消邏輯可以
@@ -70,7 +95,36 @@ class FakeQueuedDownloadJob implements QueuedDownloadJob {
   @override
   Future<String> computeFingerprint(String tempPath) async {
     computeFingerprintCalls++;
+    callSequence.add('computeFingerprint');
     return fingerprint;
+  }
+
+  BookUpdateCandidate? detectResult;
+  Object? detectThrows;
+  int detectCalls = 0;
+  final List<String> callSequence = [];
+
+  @override
+  Future<BookUpdateCandidate?> detectUpdate(String tempPath) async {
+    detectCalls++;
+    callSequence.add('detect');
+    if (detectThrows != null) throw detectThrows!;
+    return detectResult;
+  }
+
+  BookUpdateSettleResult settleResult =
+      const BookUpdateSettleResult(BookUpdateSettleOutcome.replaced);
+  Completer<BookUpdateSettleResult>? settleCompleter;
+  final List<(BookUpdateCandidate, BookUpdateChoice)> settleCalls = [];
+
+  @override
+  Future<BookUpdateSettleResult> settleUpdate(
+    BookUpdateCandidate candidate,
+    BookUpdateChoice choice,
+  ) async {
+    settleCalls.add((candidate, choice));
+    if (settleCompleter != null) return await settleCompleter!.future;
+    return settleResult;
   }
 
   @override
@@ -329,5 +383,251 @@ void main() {
 
     controller.dismiss('book-1');
     expect(controller.items, isEmpty);
+  });
+
+  group('待確認更新狀態機與結算（epic-67 Issue 4）', () {
+    test('更新版進入待確認且佇列繼續（Review Focus 1）', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final candidate = _makeTestCandidate('1');
+      final job1 = FakeQueuedDownloadJob(id: 'job-1')..detectResult = candidate;
+      final job2 = FakeQueuedDownloadJob(id: 'job-2');
+
+      controller.enqueueJobs([job1, job2]);
+      await pumpEventQueue();
+
+      expect(controller.items, hasLength(2));
+      final item1 = controller.items.firstWhere((e) => e.id == 'job-1');
+      final item2 = controller.items.firstWhere((e) => e.id == 'job-2');
+
+      expect(item1.status, DownloadItemStatus.awaitingUpdateConfirmation);
+      expect(item1.updateCandidate, candidate);
+      expect(job1.importCalls, 0);
+      expect(job1.promoteCalls, 0);
+
+      expect(item2.status, DownloadItemStatus.done);
+      expect(job2.importCalls, 1);
+    });
+
+    test('待確認期間再 enqueue 不受影響', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job1 = FakeQueuedDownloadJob(id: 'job-1')
+        ..detectResult = _makeTestCandidate('1');
+
+      controller.enqueueJobs([job1]);
+      await pumpEventQueue();
+
+      final job2 = FakeQueuedDownloadJob(id: 'job-2');
+      controller.enqueueJobs([job2]);
+      await pumpEventQueue();
+
+      expect(controller.items.firstWhere((e) => e.id == 'job-2').status, DownloadItemStatus.done);
+    });
+
+    test('原暫存檔在進入待確認後被刪除', () async {
+      final tempDir = await Directory.systemTemp.createTemp('download_test_');
+      final tempFile = File('${tempDir.path}/download.epub');
+      await tempFile.writeAsString('download content');
+
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = FakeQueuedDownloadJob(
+        id: 'job-1',
+        tempPath: tempFile.path,
+      )..detectResult = _makeTestCandidate('1');
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+
+      expect(await tempFile.exists(), isFalse);
+      await tempDir.delete(recursive: true);
+    });
+
+    test('偵測先於指紋與重複對話框（Review Focus 5）', () async {
+      var confirmCalled = false;
+      final controller = DownloadQueueController(
+        onDuplicateConfirm: (_) async {
+          confirmCalled = true;
+          return false;
+        },
+      );
+      final candidate = _makeTestCandidate('1');
+      final job = FakeQueuedDownloadJob(
+        id: 'job-1',
+        hasDuplicateResult: true,
+      )..detectResult = candidate;
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+
+      expect(confirmCalled, isFalse);
+      expect(job.computeFingerprintCalls, 0);
+      expect(job.callSequence, ['detect']);
+
+      // 迴歸測試：detectResult 為 null 且 hasDuplicate 為 true，仍呼叫 onDuplicateConfirm
+      final job2 = FakeQueuedDownloadJob(
+        id: 'job-2',
+        hasDuplicateResult: true,
+      );
+      controller.enqueueJobs([job2]);
+      await pumpEventQueue();
+      expect(confirmCalled, isTrue);
+      expect(job2.computeFingerprintCalls, 1);
+      expect(job2.callSequence, ['detect', 'computeFingerprint']);
+    });
+
+    test('偵測拋例外走既有流程（Review Focus 4）', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = FakeQueuedDownloadJob(id: 'job-1')..detectThrows = Exception('detect failed');
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+
+      expect(controller.items.single.status, DownloadItemStatus.done);
+      expect(job.importCalls, 1);
+    });
+
+    test('resolveUpdate 取代／並存成功：狀態為 done，通知 onCoverChanged', () async {
+      final coversChanged = <String>[];
+      final controller = DownloadQueueController(
+        onDuplicateConfirm: (_) async => false,
+        onCoverChanged: coversChanged.add,
+      );
+      final candidate = _makeTestCandidate('1');
+      final job = FakeQueuedDownloadJob(id: 'job-1')..detectResult = candidate;
+      job.settleResult = const BookUpdateSettleResult(
+        BookUpdateSettleOutcome.replaced,
+        changedCoverPaths: {'/covers/old.png', '/covers/new.png'},
+      );
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+
+      final result = await controller.resolveUpdate(
+        'job-1',
+        const ReplaceChoice('target-1'),
+      );
+
+      expect(result.outcome, BookUpdateSettleOutcome.replaced);
+      expect(controller.items.single.status, DownloadItemStatus.done);
+      expect(controller.items.single.progress, 1.0);
+      expect(controller.items.single.updateCandidate, isNull);
+      expect(job.settleCalls, [(candidate, const ReplaceChoice('target-1'))]);
+      expect(coversChanged, containsAll(['/covers/old.png', '/covers/new.png']));
+    });
+
+    test('resolveUpdate 跳過：項目從 items 移除，settleCalls 含 SkipChoice', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final candidate = _makeTestCandidate('1');
+      final job = FakeQueuedDownloadJob(id: 'job-1')..detectResult = candidate;
+      job.settleResult = const BookUpdateSettleResult(BookUpdateSettleOutcome.skipped);
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+
+      final result = await controller.resolveUpdate('job-1', const SkipChoice());
+
+      expect(result.outcome, BookUpdateSettleOutcome.skipped);
+      expect(controller.items, isEmpty);
+      expect(job.settleCalls, [(candidate, const SkipChoice())]);
+    });
+
+    test('resolveUpdate 失敗：項目變為 failed，updateCandidate 清空，可 retry 成功', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final candidate = _makeTestCandidate('1');
+      final job = FakeQueuedDownloadJob(id: 'job-1')..detectResult = candidate;
+      job.settleResult = const BookUpdateSettleResult(BookUpdateSettleOutcome.failed);
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+
+      final result = await controller.resolveUpdate('job-1', const ReplaceChoice('target-1'));
+
+      expect(result.outcome, BookUpdateSettleOutcome.failed);
+      final item = controller.items.single;
+      expect(item.status, DownloadItemStatus.failed);
+      expect(item.updateCandidate, isNull);
+
+      // retry 重新下載
+      job.detectResult = null; // 重新下載後這次當一般成功
+      await controller.retry('job-1');
+      expect(item.status, DownloadItemStatus.done);
+      expect(job.downloadCalls, 2);
+    });
+
+    test('重入與錯誤狀態防護（Review Focus 3）', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final candidate = _makeTestCandidate('1');
+      final job = FakeQueuedDownloadJob(id: 'job-1')..detectResult = candidate;
+      final settleCompleter = Completer<BookUpdateSettleResult>();
+      job.settleCompleter = settleCompleter;
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+
+      // 對非待確認狀態呼叫 resolveUpdate 回 failed 且不呼叫 settleUpdate
+      final nonExistentResult = await controller.resolveUpdate('not-exist', const SkipChoice());
+      expect(nonExistentResult.outcome, BookUpdateSettleOutcome.failed);
+
+      // 同時呼叫兩次 resolveUpdate
+      final future1 = controller.resolveUpdate('job-1', const ReplaceChoice('target-1'));
+      final future2 = controller.resolveUpdate('job-1', const ReplaceChoice('target-1'));
+
+      // 第二次立即回傳 failed，不重複進入 settleUpdate
+      final result2 = await future2;
+      expect(result2.outcome, BookUpdateSettleOutcome.failed);
+      expect(job.settleCalls, hasLength(1));
+
+      // 結算途中呼叫 dismiss 不動作（項目仍在，settleCalls 不增加）
+      await controller.dismiss('job-1');
+      expect(controller.items, hasLength(1));
+      expect(job.settleCalls, hasLength(1));
+
+      // 解鎖第一次結算
+      settleCompleter.complete(const BookUpdateSettleResult(BookUpdateSettleOutcome.replaced));
+      final result1 = await future1;
+      expect(result1.outcome, BookUpdateSettleOutcome.replaced);
+    });
+
+    test('未提供 onCoverChanged 時取代成功不拋例外（審查 M-2）', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final candidate = _makeTestCandidate('1');
+      final job = FakeQueuedDownloadJob(id: 'job-1')..detectResult = candidate;
+      job.settleResult = const BookUpdateSettleResult(
+        BookUpdateSettleOutcome.replaced,
+        changedCoverPaths: {'/covers/test.png'},
+      );
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+
+      final result = await controller.resolveUpdate('job-1', const ReplaceChoice('target-1'));
+      expect(result.outcome, BookUpdateSettleOutcome.replaced);
+    });
+
+    test('dismiss 待確認項目會先結算為 SkipChoice 再移除', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final candidate = _makeTestCandidate('1');
+      final job = FakeQueuedDownloadJob(id: 'job-1')..detectResult = candidate;
+      job.settleResult = const BookUpdateSettleResult(BookUpdateSettleOutcome.skipped);
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+
+      await controller.dismiss('job-1');
+      expect(job.settleCalls, [(candidate, const SkipChoice())]);
+      expect(controller.items, isEmpty);
+    });
+
+    test('retry 對待確認項目不動作', () async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = FakeQueuedDownloadJob(id: 'job-1')
+        ..detectResult = _makeTestCandidate('1');
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue();
+
+      expect(job.downloadCalls, 1);
+      await controller.retry('job-1');
+      expect(job.downloadCalls, 1);
+    });
   });
 }

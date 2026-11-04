@@ -1,10 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/downloads/download_queue_controller.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
+import 'package:elinkbook/library/book_update_models.dart';
+import 'package:elinkbook/library/book_update_settle.dart';
 import 'package:elinkbook/screens/widgets/download_queue_panel.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class _FakeQueuedDownloadJob implements QueuedDownloadJob {
   _FakeQueuedDownloadJob({required this.id, required this.name});
@@ -56,6 +58,16 @@ class _FakeQueuedDownloadJob implements QueuedDownloadJob {
 
   @override
   bool isAuthFailure(Object error) => error is _AuthFailure;
+
+  @override
+  Future<BookUpdateCandidate?> detectUpdate(String tempPath) async => null;
+
+  @override
+  Future<BookUpdateSettleResult> settleUpdate(
+    BookUpdateCandidate candidate,
+    BookUpdateChoice choice,
+  ) async =>
+      const BookUpdateSettleResult(BookUpdateSettleOutcome.skipped);
 }
 
 class _AuthFailure implements Exception {}

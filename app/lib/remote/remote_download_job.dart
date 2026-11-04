@@ -1,6 +1,8 @@
 import '../downloads/download_queue_controller.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
+import '../library/book_update_models.dart';
+import '../library/book_update_settle.dart';
 import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
 import 'opds_client.dart';
@@ -98,4 +100,14 @@ class RemoteDownloadJob implements QueuedDownloadJob {
   /// （與雲端匯入的 OAuth 不同，見 `CONTEXT.md`「遠端書庫」）。
   @override
   bool isAuthFailure(Object error) => false;
+
+  @override
+  Future<BookUpdateCandidate?> detectUpdate(String tempPath) async => null;
+
+  @override
+  Future<BookUpdateSettleResult> settleUpdate(
+    BookUpdateCandidate candidate,
+    BookUpdateChoice choice,
+  ) async =>
+      const BookUpdateSettleResult(BookUpdateSettleOutcome.skipped);
 }
