@@ -31,6 +31,8 @@ import 'dictionary/storage/dictionary_store_provider.dart';
 import 'dictionary/storage/mdx_reader_pool.dart';
 import 'library/book_content_fingerprint.dart';
 import 'library/book_import_service_impl.dart';
+import 'library/update_staging.dart';
+import 'screens/support/book_update_resolver.dart' show evictCoverImageCache;
 import 'library/sqlite_library_repository.dart';
 import 'library/windows_book_metadata.dart';
 import 'licenses/third_party_licenses.dart';
@@ -242,6 +244,10 @@ Future<void> main() async {
   // epic-66 Issue 2：Windows 使用 foliate-js / pdfrx 解析 metadata，
   // Android 為 null 走既有 kBookMetadataChannel。
   final metadataExtractor = isWindowsPlatform ? extractWindowsBookMetadata : null;
+  // epic-67 Issue 4：啟動時清空更新暫存目錄（update_staging），避免前次未結算暫存殘留。
+  try {
+    await sweepUpdateStaging(await getApplicationDocumentsDirectory());
+  } catch (_) {}
   final importService = BookImportServiceImpl(
     repository: repository,
     themePreferences: themePreferences,
@@ -394,6 +400,7 @@ Future<void> main() async {
         l10n.downloadQueueDuplicateConfirmMessage(name),
       );
     },
+    onCoverChanged: evictCoverImageCache,
   );
   // ADR 0037：依賴組由 main() 建構一次，ElinkBookApp 原樣往下傳（主題／語言切換
   // 重建 App 時不會變成新實例）。syncCheckpointTrigger 同一實例放進兩組。

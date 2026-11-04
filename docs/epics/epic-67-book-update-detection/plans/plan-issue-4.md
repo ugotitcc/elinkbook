@@ -228,14 +228,14 @@ Future<void> sweepUpdateStaging(Directory documentsDirectory);
 
 `main.dart`：在建立 `BookImportServiceImpl`／`DownloadQueueController` 之前（任何匯入發生之前）`await sweepUpdateStaging(await getApplicationDocumentsDirectory())`（以 try/catch 包住）；`DownloadQueueController` 建構時傳 `onCoverChanged: evictCoverImageCache`（自 `screens/support/book_update_resolver.dart` 匯入）。
 
-- [ ] **Step 1：寫失敗測試**（`update_staging_test.dart`，真實暫存目錄）：
+- [x] **Step 1：寫失敗測試**（`update_staging_test.dart`，真實暫存目錄）：
   - `清掃`：目錄含 3 個檔案與 1 個含檔案的子目錄 → 呼叫後目錄內為空。
   - `目錄不存在`：不拋例外。
   - `空目錄`：不拋例外。
   - `刪除失敗不拋例外`（Review Focus 7）：以 Windows 不可刪的情境難以穩定重現時，改測「路徑存在但是一般檔案而非目錄」→ 不拋例外、該檔案不被刪（只處理目錄）。
   - `常數`：`kUpdateStagingFolderName == 'update_staging'`，且 `BookImportServiceImpl` 在未指定 `updateStagingDirectory` 時使用同一名稱（以 `path_provider` 假實作或檢查常數引用，擇一能穩定驗證者）。
-- [ ] **Step 2：確認失敗 → Step 3：實作與接線 → Step 4：確認通過**，並重跑 `test/library/book_import_service_update_staging_test.dart`、`test/elinkbook_app_wiring_test.dart`。
-- [ ] **Step 5：`flutter analyze`**；提交 `feat(library): 啟動時清掃更新暫存目錄（epic-67 Issue 4 Task 4）`。
+- [x] **Step 2：確認失敗 → Step 3：實作與接線 → Step 4：確認通過**，並重跑 `test/library/book_import_service_update_staging_test.dart`、`test/elinkbook_app_wiring_test.dart`。
+- [x] **Step 5：`flutter analyze`**；提交 `feat(library): 啟動時清掃更新暫存目錄（epic-67 Issue 4 Task 4）`。
 
 ---
 
