@@ -1911,6 +1911,116 @@ void main() {
       expect(stored.author, '原作者');
       expect(stored.coverPath, '/covers/b1.png');
     });
+    group('relinkBook force 強制重新連結（epic-67 Issue 3）', () {
+      test('內容不符時 force:false 回 contentMismatch 且記錄完全不動', () async {
+        await seedBook(contentFingerprint: 'sha-old');
+        mockRelinkChannel(sha256: 'sha-different');
+
+        final result = await service.relinkBook('b1', newPdfUri, force: false);
+
+        expect((result as BookRelinkFailure).reason,
+            BookRelinkFailureReason.contentMismatch);
+        final stored = (await repository.findBookById('b1'))!;
+        expect(stored.filePath, oldPdfUri);
+        expect(stored.contentFingerprint, 'sha-old');
+      });
+
+      test('內容不符時 force:true 成功，filePath 更新、contentFingerprint 與 id／閱讀進度不變', () async {
+        final seeded = await seedBook(contentFingerprint: 'sha-old');
+        await repository.updateBook(
+            seeded.copyWith(progress: 0.65, pdfPageIndex: 23));
+        mockRelinkChannel(sha256: 'sha-different');
+
+        final result = await service.relinkBook('b1', newPdfUri, force: true);
+
+        expect(result, isA<BookRelinkSuccess>());
+        final updated = (result as BookRelinkSuccess).updatedBook;
+        expect(updated.id, 'b1');
+        expect(updated.filePath, newPdfUri);
+        expect(updated.contentFingerprint, 'sha-old');
+        expect(updated.progress, 0.65);
+        expect(updated.pdfPageIndex, 23);
+
+        final stored = (await repository.findBookById('b1'))!;
+        expect(stored.filePath, newPdfUri);
+        expect(stored.contentFingerprint, 'sha-old');
+        expect(stored.progress, 0.65);
+      });
+
+      test('格式不符時即使 force:true 仍回 formatMismatch', () async {
+        await seedBook(format: BookFileFormat.pdf);
+        mockRelinkChannel();
+
+        final result = await service.relinkBook('b1', newEpubUri, force: true);
+
+        expect((result as BookRelinkFailure).reason,
+            BookRelinkFailureReason.formatMismatch);
+      });
+
+      test('新 URI 是別本書的來源時即使 force:true 仍回 alreadyInLibrary', () async {
+        await seedBook(id: 'b1', filePath: oldPdfUri);
+        await seedBook(id: 'b2', filePath: newPdfUri);
+        mockRelinkChannel();
+
+        final result = await service.relinkBook('b1', newPdfUri, force: true);
+
+        expect((result as BookRelinkFailure).reason,
+            BookRelinkFailureReason.alreadyInLibrary);
+      });
+
+      test('TXT／MD／CBZ 即使 force:true 仍回 failed', () async {
+        for (final fmt in [BookFileFormat.txt, BookFileFormat.md, BookFileFormat.cbz]) {
+          await seedBook(id: 'book-${fmt.name}', format: fmt, filePath: '/local/path.${fmt.name}');
+          mockRelinkChannel();
+
+          final result = await service.relinkBook('book-${fmt.name}', '/new/path.${fmt.name}', force: true);
+          expect((result as BookRelinkFailure).reason,
+              BookRelinkFailureReason.failed,
+              reason: '${fmt.name} 不得重新連結');
+        }
+      });
+
+      test('原書沒有指紋時 force:true 仍補寫新檔指紋', () async {
+        await seedBook(contentFingerprint: null);
+        mockRelinkChannel(sha256: 'sha-new-computed');
+
+        final result = await service.relinkBook('b1', newPdfUri, force: true);
+
+        expect(result, isA<BookRelinkSuccess>());
+        expect((result as BookRelinkSuccess).updatedBook.contentFingerprint, 'sha-new-computed');
+        final stored = (await repository.findBookById('b1'))!;
+        expect(stored.contentFingerprint, 'sha-new-computed');
+      });
+
+      test('內容相符時 force:true 與 force:false 結果相同', () async {
+        await seedBook(contentFingerprint: 'sha-same');
+        mockRelinkChannel(sha256: 'sha-same');
+
+        final result = await service.relinkBook('b1', newPdfUri, force: true);
+
+        expect(result, isA<BookRelinkSuccess>());
+        expect((result as BookRelinkSuccess).updatedBook.filePath, newPdfUri);
+      });
+    });
+
+    group('detectImportFileFormat（epic-67 Issue 3）', () {
+      test('displayName 優先、URI 退路、兩者皆無法辨識回 null', () {
+        // displayName 優先
+        expect(detectImportFileFormat('content://opaque/12345', 'mybook.epub'), BookFileFormat.epub);
+        expect(detectImportFileFormat('content://opaque/book.pdf', 'override.azw3'), BookFileFormat.azw3);
+
+        // URI 退路
+        expect(detectImportFileFormat('content://storage/doc.pdf', null), BookFileFormat.pdf);
+        expect(detectImportFileFormat('/storage/emulated/0/novel.txt', null), BookFileFormat.txt);
+        expect(detectImportFileFormat('file:///path/to/comic.cbz', ''), BookFileFormat.cbz);
+        expect(detectImportFileFormat('/notes/readme.md', null), BookFileFormat.md);
+
+        // 兩者皆無法辨識
+        expect(detectImportFileFormat('content://opaque/12345', null), isNull);
+        expect(detectImportFileFormat('content://opaque/12345', 'no_extension'), isNull);
+        expect(detectImportFileFormat('content://opaque/unknown.xyz', 'test.unknown'), isNull);
+      });
+    });
   });
 }
 

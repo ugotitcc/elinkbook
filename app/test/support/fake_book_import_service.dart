@@ -36,11 +36,13 @@ class RelinkCallRecord {
   final String bookId;
   final String newUri;
   final String? displayName;
+  final bool force;
 
   const RelinkCallRecord({
     required this.bookId,
     required this.newUri,
     this.displayName,
+    this.force = false,
   });
 }
 
@@ -124,11 +126,13 @@ class FakeBookImportService implements BookImportService {
     String bookId,
     String newUri, {
     String? displayName,
+    bool force = false,
   }) {
     relinkCalls.add(RelinkCallRecord(
       bookId: bookId,
       newUri: newUri,
       displayName: displayName,
+      force: force,
     ));
     final error = relinkError;
     if (error != null) return Future.error(error);
