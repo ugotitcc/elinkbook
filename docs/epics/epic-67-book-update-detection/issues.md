@@ -61,7 +61,7 @@ Status: completed（已合併 PR #386；[plan-issue-1.md](plans/plan-issue-1.md)
 
 ## Issue 2：本機匯入入口與彙整清單
 
-Status: completed-pending-pr（計畫：[plan-issue-2.md](plans/plan-issue-2.md)）
+Status: completed-pending-pr（計畫：[plan-issue-2.md](plans/plan-issue-2.md)；真機手動驗證待人類執行）
 
 **範圍**：書架畫面接收匯入結果中的更新候選清單（由 Issue 1 在服務端產生），彈出一份彙整清單並驅動後續操作（單檔也用同一份）。本 Issue 只做畫面與接線，不改服務端匯入管線。
 

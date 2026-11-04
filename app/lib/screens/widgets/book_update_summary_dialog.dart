@@ -56,6 +56,11 @@ class _BookUpdateSummaryDialogState extends State<_BookUpdateSummaryDialog> {
   @override
   void initState() {
     super.initState();
+    // Issue 1 契約：更新候選至少有一本候選書。
+    assert(
+      widget.candidates.every((c) => c.candidateBooks.isNotEmpty),
+      '更新候選的 candidateBooks 不得為空',
+    );
     // 預設每筆候選選擇第一本候選書之取代選項（spec 故事 9）
     _choices = <BookUpdateChoice>[
       for (final c in widget.candidates)
@@ -156,7 +161,7 @@ class _BookUpdateSummaryDialogState extends State<_BookUpdateSummaryDialog> {
               Flexible(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxHeight: MediaQuery.sizeOf(context).height * 0.5,
+                    maxHeight: MediaQuery.sizeOf(context).height * 0.6,
                   ),
                   child: ListView.separated(
                     shrinkWrap: true,

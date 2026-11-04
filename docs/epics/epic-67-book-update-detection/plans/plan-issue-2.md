@@ -244,7 +244,7 @@ Future<void> handleImportUpdateCandidates(
 
 - [x] **Step 1：** `flutter analyze` 乾淨；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`。
 - [x] **Step 2：** 完整 `flutter test --no-pub` 全綠（本計畫唯一一次全套）；之後 `git checkout pubspec.lock windows/flutter`。
-- [x] **Step 3：真機／模擬器手動驗證**（`app/` 下 `flutter run`，由人類或執行者實測並記錄結果）：
+- [ ] **Step 3：真機／模擬器手動驗證（尚未執行，由人類另行處理）**（`app/` 下 `flutter run`，由人類或執行者實測並記錄結果）：
   1. 書庫預置一本 EPUB，再「選擇檔案」匯入同識別碼、內容不同的新版 → 彈出清單，選取代 → 書架上書名、封面立即更新（驗證 F4 的圖片快取），閱讀進度與書籤仍在。
   2. 同一批含一本全新書、一本整檔重複 → 新書匯入、重複走既有 SnackBar、更新版走清單。
   3. 清單按返回鍵／取消 → 書庫不變，`<documents>/update_staging/` 內無殘留。

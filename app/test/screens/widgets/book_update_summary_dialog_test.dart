@@ -318,23 +318,72 @@ void main() {
     expect(service.discardedCandidates, isEmpty);
   });
 
-  testWidgets('大量候選（50 筆）與窄螢幕無 overflow 例外', (tester) async {
+  List<BookUpdateCandidate> longNameCandidates() => List.generate(
+        50,
+        (i) => _makeCandidate(
+          sourceUri: 'file:///path/long_name_test_candidate_book_file_$i.epub',
+          displayName:
+              '這是一本非常長檔名用來測試排版是否溢位的書籍名稱展示長度超過八十個字元_檔案序號_$i.epub',
+        ),
+      );
+
+  void useNarrowScreen(WidgetTester tester) {
     tester.view.physicalSize = const Size(320 * 2, 640 * 2);
     tester.view.devicePixelRatio = 2.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+  }
 
-    final candidates = List.generate(
-      50,
-      (i) => _makeCandidate(
-        sourceUri: 'file:///path/long_name_test_candidate_book_file_$i.epub',
-        displayName: '這是一本非常長檔名用來測試排版是否溢位的書籍名稱展示長度超過八十個字元_檔案序號_$i.epub',
-      ),
+  testWidgets('大量候選（50 筆）窄螢幕：無 overflow，可捲到最後一列並點選其選項', (tester) async {
+    useNarrowScreen(tester);
+    final dialogResult = await _openDialog(
+      tester,
+      service: service,
+      candidates: longNameCandidates(),
     );
-
-    await _openDialog(tester, service: service, candidates: candidates, isEinkMode: true);
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    final lastSkip = find.byKey(const Key('book_update_option_skip_49'));
+    await tester.scrollUntilVisible(
+      lastSkip,
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.ensureVisible(lastSkip);
+    await tester.pumpAndSettle();
+    await tester.tap(lastSkip);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    // 其餘 49 筆維持預設取代（服務預設回失敗），第 50 筆改為跳過
+    await tester.tap(find.byKey(const Key('book_update_apply')));
+    await tester.pumpAndSettle();
+    final result = await dialogResult;
+    expect(result.skipped, 1);
+    expect(result.failed, 49);
+    expect(service.replaceCalls.length, 49);
+  });
+
+  testWidgets('大量候選（50 筆）E-Ink 模式：無 overflow、無過場動畫', (tester) async {
+    useNarrowScreen(tester);
+    await _openDialog(
+      tester,
+      service: service,
+      candidates: longNameCandidates(),
+      isEinkMode: true,
+    );
+    await tester.pump();
 
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('book_update_row_0')), findsOneWidget);
+    expect(find.byKey(const Key('book_update_apply')), findsOneWidget);
   });
 }
