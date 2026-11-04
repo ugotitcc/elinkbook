@@ -54,6 +54,12 @@ class RelinkCallRecord {
 class FakeBookImportService implements BookImportService {
   Completer<ImportResult>? pendingCompleter;
 
+  /// [importFiles] 的回傳結果，預設為空結果。
+  ImportResult importFilesResult = const ImportResult(importedBooks: []);
+
+  /// [importFolder] 的回傳結果，預設為空結果。
+  ImportResult importFolderResult = const ImportResult(importedBooks: []);
+
   /// 最近一次 [importFiles] 的呼叫參數；首次呼叫前為 `null`。
   ImportCallRecord? lastImportCall;
 
@@ -84,7 +90,7 @@ class FakeBookImportService implements BookImportService {
     );
     final completer = pendingCompleter;
     if (completer != null) return completer.future;
-    return Future.value(const ImportResult(importedBooks: []));
+    return Future.value(importFilesResult);
   }
 
   @override
@@ -96,7 +102,7 @@ class FakeBookImportService implements BookImportService {
     lastAutoGroupByFolderName = autoGroupByFolderName;
     final completer = pendingCompleter;
     if (completer != null) return completer.future;
-    return Future.value(const ImportResult(importedBooks: []));
+    return Future.value(importFolderResult);
   }
 
   /// epic-15-storage-permission Issue 2：[relinkBook] 的回傳值，預設為
@@ -151,6 +157,13 @@ class FakeBookImportService implements BookImportService {
 
   BookReplaceResult replaceResult =
       const BookReplaceFailure(BookReplaceFailureReason.bookNotFound);
+
+  /// 依 [bookId] 設定指定書籍的取代結果；優先於 [replaceResult]。
+  final Map<String, BookReplaceResult> replaceResultsByBookId = {};
+
+  /// 設定時 [replaceBook] 拋出此例外。
+  Object? replaceThrows;
+
   final List<(String, String)> replaceCalls = [];
 
   @override
@@ -162,7 +175,10 @@ class FakeBookImportService implements BookImportService {
     BookSourceRefs? sourceRefs,
   }) {
     replaceCalls.add((bookId, newUri));
-    return Future.value(replaceResult);
+    final error = replaceThrows;
+    if (error != null) return Future.error(error);
+    final result = replaceResultsByBookId[bookId] ?? replaceResult;
+    return Future.value(result);
   }
 
   Book? importCandidateResult;
