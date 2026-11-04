@@ -42,8 +42,20 @@ class SourcesHomeScreen extends StatelessWidget {
   Future<void> _handlePickFiles(BuildContext context) async {
     final result = await pickAndImportFiles(readerFeatures.bookImportService);
     if (result == null) return;
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      await discardUpdateCandidates(
+        readerFeatures.bookImportService,
+        result.updateCandidates,
+      );
+      return;
+    }
     showImportResultSnackBar(context, result);
+    await handleImportUpdateCandidates(
+      context,
+      readerFeatures.bookImportService,
+      result,
+      isEinkMode: appearance.isEinkMode,
+    );
   }
 
   Future<void> _handlePickFolder(BuildContext context) async {
@@ -57,8 +69,20 @@ class SourcesHomeScreen extends StatelessWidget {
           : Future.value(null),
     );
     if (result == null) return;
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      await discardUpdateCandidates(
+        readerFeatures.bookImportService,
+        result.updateCandidates,
+      );
+      return;
+    }
     showImportResultSnackBar(context, result);
+    await handleImportUpdateCandidates(
+      context,
+      readerFeatures.bookImportService,
+      result,
+      isEinkMode: appearance.isEinkMode,
+    );
   }
 
   void _openGoogleDriveBrowser(BuildContext context) {

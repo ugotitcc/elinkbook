@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../library/book_import_service.dart';
+import '../../library/book_update_models.dart';
+import '../widgets/book_update_summary_dialog.dart';
 
 const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');
 
@@ -128,6 +130,81 @@ void showImportResultSnackBar(BuildContext context, ImportResult result) {
           : l10n.libraryImportResultImportedOnlyMessage(importedCount))
       : l10n.libraryImportResultSkippedOnlyMessage(skippedCount);
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+}
+
+/// 丟棄所有候選的暫存檔。在畫面已卸載或取消時調用。
+Future<void> discardUpdateCandidates(
+  BookImportService importService,
+  List<BookUpdateCandidate> candidates,
+) async {
+  for (final candidate in candidates) {
+    try {
+      await importService.discardUpdateCandidate(candidate);
+    } catch (_) {}
+  }
+}
+
+/// 匯入完成後處理更新候選。無候選時什麼都不做；畫面已卸載時直接丟棄全部候選；
+/// 否則顯示彙整清單，完成後以 SnackBar 彙報（成功本數、失敗本數，全為跳過則不顯示）。
+Future<void> handleImportUpdateCandidates(
+  BuildContext context,
+  BookImportService importService,
+  ImportResult result, {
+  bool isEinkMode = false,
+}) async {
+  if (result.failure != null) return;
+  final candidates = result.updateCandidates;
+  if (candidates.isEmpty) return;
+
+  if (!context.mounted) {
+    await discardUpdateCandidates(importService, candidates);
+    return;
+  }
+
+  final applyResult = await showBookUpdateSummaryDialog(
+    context,
+    importService: importService,
+    candidates: candidates,
+    isEinkMode: isEinkMode,
+  );
+
+  if (!context.mounted) return;
+
+  final replaced = applyResult.replaced;
+  final coexisted = applyResult.coexisted;
+  final failed = applyResult.failed;
+
+  // 兩者皆無（全為跳過）→ 不顯示 SnackBar
+  if (replaced == 0 && coexisted == 0 && failed == 0) return;
+
+  final l10n = AppLocalizations.of(context)!;
+
+  String? successText;
+  if (replaced > 0 && coexisted > 0) {
+    successText = l10n.bookUpdateResultBothMessage(replaced, coexisted);
+  } else if (replaced > 0) {
+    successText = l10n.bookUpdateResultReplacedOnlyMessage(replaced);
+  } else if (coexisted > 0) {
+    successText = l10n.bookUpdateResultCoexistedOnlyMessage(coexisted);
+  }
+
+  String? failedText;
+  if (failed > 0) {
+    failedText = l10n.bookUpdateFailedMessage(failed);
+  }
+
+  final String message;
+  if (successText != null && failedText != null) {
+    message = l10n.bookUpdateResultWithFailedMessage(successText, failedText);
+  } else if (successText != null) {
+    message = successText;
+  } else {
+    message = failedText!;
+  }
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message)),
+  );
 }
 
 /// epic-15-storage-permission Issue 2：單檔選擇器。[allowedExtensions] 依
