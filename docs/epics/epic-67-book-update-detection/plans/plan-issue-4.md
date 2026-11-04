@@ -272,7 +272,7 @@ Future<void> sweepUpdateStaging(Directory documentsDirectory);
     - `移除`：點 dismiss → 假工作收到 `SkipChoice`、項目消失。
     - `取代失敗`：`settleResult` 為 failed → 項目變「失敗」並出現失敗 SnackBar。
 - [x] **Step 3：確認失敗 → Step 4：實作 → Step 5：確認通過**，並重跑 Issue 2 的 `test/screens/sources_home_screen_test.dart` 與 Task 2 的控制器測試。
-- [ ] **Step 6：`flutter analyze`**；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；提交 `feat(downloads): 下載面板處理待確認更新（epic-67 Issue 4 Task 5）`。
+- [x] **Step 6：`flutter analyze`**；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；提交 `feat(downloads): 下載面板處理待確認更新（epic-67 Issue 4 Task 5）`。
 
 ---
 
@@ -290,7 +290,7 @@ Future<void> sweepUpdateStaging(Directory documentsDirectory);
   - `一般新書匯入`：`updateCandidates` 為空時落地檔**不被刪**（書本身引用它）。
   - `一般新書與重複`：既有案例全數通過。
 - [x] **Step 2：確認失敗 → Step 3：實作 → Step 4：確認通過**。
-- [ ] **Step 5：`flutter analyze`**；提交 `fix(wifi): 更新版上傳維持當新書匯入，不被 Issue 1 的偵測吞掉（epic-67 Issue 4 Task 6）`。
+- [x] **Step 5：`flutter analyze`**；提交 `fix(wifi): 更新版上傳維持當新書匯入，不被 Issue 1 的偵測吞掉（epic-67 Issue 4 Task 6）`。
 
 ---
 
@@ -299,16 +299,16 @@ Future<void> sweepUpdateStaging(Directory documentsDirectory);
 **Files:**
 - Modify: `docs/epics/epic-67-book-update-detection/epic.md`、`issues.md`
 
-- [ ] **Step 1：** `flutter analyze` 乾淨；兩支 node 檢查腳本通過。
-- [ ] **Step 2：** 完整 `flutter test --no-pub` 全綠（本計畫唯一一次全套）；之後 `git checkout pubspec.lock windows/flutter`。
+- [x] **Step 1：** `flutter analyze` 乾淨；兩支 node 檢查腳本通過。
+- [x] **Step 2：** 完整 `flutter test --no-pub` 全綠（本計畫唯一一次全套）；之後 `git checkout pubspec.lock windows/flutter`。
 - [ ] **Step 3：真機／模擬器手動驗證**（由人類執行並把結果補記於 `epic.md`；執行者不得自行勾選）：
   1. 書庫預置一本 EPUB，從 Google Drive（或 OneDrive）下載同識別碼、內容不同的新版 → 項目顯示「待確認更新」，佇列中其他項目繼續下載；點「處理」選取代 → 書名／封面更新、閱讀進度與書籤仍在、`cloudFileId` 已補寫。
   2. 同上改用 Calibre 書庫，選並存 → 新書帶 `remoteServerId`／`remoteBookId`。
   3. 待確認狀態下 force-stop 重啟 App → 面板項目消失，`<documents>/update_staging/` 為空。
   4. 整檔相同的檔案仍出現原「已存在，仍要匯入？」對話框。
   5. WiFi 傳輸上傳一份更新版 EPUB → 成為新書（不再顯示失敗）。
-- [ ] **Step 4：文件同步：** `epic.md` 新增「Issue 4 計畫與實作」段，記錄 D1～D7、F4／F5（Issue 1 副作用與保底）、手動驗證結果（未執行則明寫「尚未執行」）；`issues.md` Issue 4 補計畫連結與狀態。`docs/epics.md` 備註與 PR 欄**合併後**才改。
-- [ ] **Step 5：提交** `docs(epic-67): Issue 4 實作記錄`。
+- [x] **Step 4：文件同步：** `epic.md` 新增「Issue 4 計畫與實作」段，記錄 D1～D7、F4／F5（Issue 1 副作用與保底）、手動驗證結果（未執行則明寫「尚未執行」）；`issues.md` Issue 4 補計畫連結與狀態。`docs/epics.md` 備註與 PR 欄**合併後**才改。
+- [x] **Step 5：提交** `docs(epic-67): Issue 4 實作記錄`。
 
 ---
 

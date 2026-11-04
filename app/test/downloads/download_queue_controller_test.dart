@@ -154,7 +154,7 @@ void main() {
     final job = FakeQueuedDownloadJob(id: 'book-1');
 
     controller.enqueueJobs([job]);
-    await pumpEventQueue();
+    await pumpEventQueue(times: 50);
 
     expect(controller.items.single.status, DownloadItemStatus.done);
     expect(job.downloadCalls, 1);
@@ -173,14 +173,14 @@ void main() {
     final jobB = FakeQueuedDownloadJob(id: 'book-b');
 
     controller.enqueueJobs([jobA, jobB]);
-    await pumpEventQueue();
+    await pumpEventQueue(times: 50);
 
     // jobA 卡在 completer 尚未 complete，jobB 應該還沒被呼叫到 download()。
     expect(jobA.downloadCalls, 1);
     expect(jobB.downloadCalls, 0);
 
     completerA.complete();
-    await pumpEventQueue();
+    await pumpEventQueue(times: 50);
 
     expect(jobB.downloadCalls, 1);
     expect(controller.items.map((e) => e.status).toList(), [
@@ -197,7 +197,7 @@ void main() {
 
     controller.enqueueJobs([job]);
     controller.enqueueJobs([FakeQueuedDownloadJob(id: 'book-1')]);
-    await pumpEventQueue();
+    await pumpEventQueue(times: 50);
 
     expect(controller.items, hasLength(1));
   });
@@ -209,7 +209,7 @@ void main() {
     final job = FakeQueuedDownloadJob(id: 'book-1', hasDuplicateResult: true);
 
     controller.enqueueJobs([job]);
-    await pumpEventQueue();
+    await pumpEventQueue(times: 50);
 
     expect(controller.items.single.status, DownloadItemStatus.duplicateSkipped);
     expect(job.promoteCalls, 0);
@@ -223,7 +223,7 @@ void main() {
     final job = FakeQueuedDownloadJob(id: 'book-1', hasDuplicateResult: true);
 
     controller.enqueueJobs([job]);
-    await pumpEventQueue();
+    await pumpEventQueue(times: 50);
 
     expect(controller.items.single.status, DownloadItemStatus.done);
     expect(job.promoteCalls, 1);
@@ -240,7 +240,7 @@ void main() {
     );
 
     controller.enqueueJobs([job]);
-    await pumpEventQueue();
+    await pumpEventQueue(times: 50);
 
     expect(controller.items.single.status, DownloadItemStatus.failed);
     expect(job.importCalls, 0);
@@ -254,10 +254,10 @@ void main() {
     final job = FakeQueuedDownloadJob(id: 'book-1', pendingCompleter: completer);
 
     controller.enqueueJobs([job]);
-    await pumpEventQueue();
+    await pumpEventQueue(times: 50);
     controller.cancel('book-1');
     completer.complete();
-    await pumpEventQueue();
+    await pumpEventQueue(times: 50);
 
     expect(controller.items.single.status, DownloadItemStatus.cancelled);
   });
@@ -272,7 +272,7 @@ void main() {
     );
 
     controller.enqueueJobs([job]);
-    await pumpEventQueue();
+    await pumpEventQueue(times: 50);
     expect(controller.items.single.status, DownloadItemStatus.failed);
 
     job.downloadError = null;
@@ -292,7 +292,7 @@ void main() {
       );
 
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       final item = controller.items.single;
       expect(item.status, DownloadItemStatus.failed);
@@ -304,7 +304,7 @@ void main() {
       final job = FakeQueuedDownloadJob(id: 'book-1', downloadError: StateError('x'));
 
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       final item = controller.items.single;
       expect(item.status, DownloadItemStatus.failed);
@@ -321,10 +321,10 @@ void main() {
       );
 
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
       controller.cancel('book-1');
       completer.complete();
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       final item = controller.items.single;
       expect(item.status, DownloadItemStatus.cancelled);
@@ -339,7 +339,7 @@ void main() {
         authFailurePredicate: (e) => e is StateError,
       );
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
       expect(controller.items.single.needsReauth, isTrue);
 
       job.downloadError = null;
@@ -358,7 +358,7 @@ void main() {
         authFailurePredicate: (e) => e is StateError,
       );
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
       expect(controller.items.single.needsReauth, isTrue);
 
       // 使用者重新連結後重試，這次是斷網之類的一般失敗，不該還顯示需重新連結。
@@ -378,7 +378,7 @@ void main() {
     final job = FakeQueuedDownloadJob(id: 'book-1');
 
     controller.enqueueJobs([job]);
-    await pumpEventQueue();
+    await pumpEventQueue(times: 50);
     expect(controller.items, hasLength(1));
 
     controller.dismiss('book-1');
@@ -393,7 +393,7 @@ void main() {
       final job2 = FakeQueuedDownloadJob(id: 'job-2');
 
       controller.enqueueJobs([job1, job2]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       expect(controller.items, hasLength(2));
       final item1 = controller.items.firstWhere((e) => e.id == 'job-1');
@@ -414,11 +414,11 @@ void main() {
         ..detectResult = _makeTestCandidate('1');
 
       controller.enqueueJobs([job1]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       final job2 = FakeQueuedDownloadJob(id: 'job-2');
       controller.enqueueJobs([job2]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       expect(controller.items.firstWhere((e) => e.id == 'job-2').status, DownloadItemStatus.done);
     });
@@ -435,7 +435,7 @@ void main() {
       )..detectResult = _makeTestCandidate('1');
 
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       expect(await tempFile.exists(), isFalse);
       await tempDir.delete(recursive: true);
@@ -456,7 +456,7 @@ void main() {
       )..detectResult = candidate;
 
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       expect(confirmCalled, isFalse);
       expect(job.computeFingerprintCalls, 0);
@@ -468,7 +468,7 @@ void main() {
         hasDuplicateResult: true,
       );
       controller.enqueueJobs([job2]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
       expect(confirmCalled, isTrue);
       expect(job2.computeFingerprintCalls, 1);
       expect(job2.callSequence, ['detect', 'computeFingerprint']);
@@ -479,7 +479,7 @@ void main() {
       final job = FakeQueuedDownloadJob(id: 'job-1')..detectThrows = Exception('detect failed');
 
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       expect(controller.items.single.status, DownloadItemStatus.done);
       expect(job.importCalls, 1);
@@ -499,7 +499,7 @@ void main() {
       );
 
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       final result = await controller.resolveUpdate(
         'job-1',
@@ -521,7 +521,7 @@ void main() {
       job.settleResult = const BookUpdateSettleResult(BookUpdateSettleOutcome.skipped);
 
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       final result = await controller.resolveUpdate('job-1', const SkipChoice());
 
@@ -537,7 +537,7 @@ void main() {
       job.settleResult = const BookUpdateSettleResult(BookUpdateSettleOutcome.failed);
 
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       final result = await controller.resolveUpdate('job-1', const ReplaceChoice('target-1'));
 
@@ -561,7 +561,7 @@ void main() {
       job.settleCompleter = settleCompleter;
 
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       // 對非待確認狀態呼叫 resolveUpdate 回 failed 且不呼叫 settleUpdate
       final nonExistentResult = await controller.resolveUpdate('not-exist', const SkipChoice());
@@ -597,7 +597,7 @@ void main() {
       );
 
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       final result = await controller.resolveUpdate('job-1', const ReplaceChoice('target-1'));
       expect(result.outcome, BookUpdateSettleOutcome.replaced);
@@ -610,7 +610,7 @@ void main() {
       job.settleResult = const BookUpdateSettleResult(BookUpdateSettleOutcome.skipped);
 
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       await controller.dismiss('job-1');
       expect(job.settleCalls, [(candidate, const SkipChoice())]);
@@ -623,7 +623,7 @@ void main() {
         ..detectResult = _makeTestCandidate('1');
 
       controller.enqueueJobs([job]);
-      await pumpEventQueue();
+      await pumpEventQueue(times: 50);
 
       expect(job.downloadCalls, 1);
       await controller.retry('job-1');

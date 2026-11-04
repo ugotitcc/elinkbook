@@ -88,3 +88,19 @@
   - **卸載防護（Review Focus 1）**：若使用者於選檔等待期間切換畫面，`SourcesHomeScreen` 在 `context.mounted == false` 時無條件呼叫 `discardUpdateCandidates` 丟棄所有候選暫存檔，保證暫存目錄不洩漏殘留。
   - **程式審查修正**：補 `SourcesHomeScreen` 選檔／資料夾匯入途中卸載的 widget test；50 筆清單測試改為真的捲到最後一列並點選，窄螢幕與 E-Ink 各自獨立驗證；清單高度改為螢幕 60%（與計畫一致，`shrinkWrap` 會一次建出全部列，屬已接受的取捨）；候選書清單加非空 `assert`。
   - **真機／模擬器手動驗證：尚未執行**，由人類另行處理（計畫 Task 4 Step 3 的三項情境：封面與書名即時更新、混合批次、取消後 `update_staging/` 無殘留）；完成後請把結果補記於此。
+
+## Issue 4 計畫與實作
+
+- **計畫文件**：[plan-issue-4.md](plans/plan-issue-4.md)
+- **實作分支**：`epic-67/issue-4-download-queue-pending-update`
+- **核心架構與決策定案**：
+  - **D1（分層與結算抽象）**：`QueuedDownloadJob` 抽象介面擴充 `detectUpdate(permanentPath)` 與 `settleUpdate(choice, updateCandidate, permanentPath)`。結算邏輯抽出為頂層純函式 `settleBookUpdate`（`book_update_settle.dart`），由 `CloudDownloadJob`、`RemoteDownloadJob` 與 Issue 2 的 `BookUpdateSummaryDialog` 共用，杜絕程式碼分歧。
+  - **D2（佇列非阻塞狀態與候選掛載）**：`DownloadItemStatus` 新增 `awaitingUpdateConfirmation`。偵測到更新候選時，項目轉入此狀態並攜帶 `updateCandidate`，佇列立即背景處理下一筆，完全不打斷使用者或阻斷後續下載。
+  - **D3（跳過與移除語意定案）**：使用者在對話框選「跳過」或於面板點「移除（dismiss）」時，均呼叫 `settleUpdate(SkipChoice)`，刪除專屬暫存檔並將項目從清單直接移除，不殘留「已跳過」狀態（人類審查確認）。
+  - **D4（對話框取消不丟棄暫存）**：面板點「處理」開啟 `BookUpdateSummaryDialog` 時設定 `discardOnCancel: false`，使用者返回或按取消時不刪除暫存檔、不推進狀態，項目仍保留在「待確認更新」，可隨時再次點擊處理（人類審查確認）。
+  - **D5（面板狀態與視覺呈現）**：待確認項目顯示 `Icons.update` 圖示與「待確認更新」標籤，尾端動作放置「處理」與「移除」按鈕。不畫進度條、不計入 `inProgress`。支援 E-Ink 模式（`isEinkMode`）關閉動畫。
+  - **D6（沿用既有暫存目錄與開機清掃）**：新檔偵測為更新版時，立即從臨時路徑移入 `<documents>/update_staging/`（`update_staging.dart` 之 `kUpdateStagingFolderName` 常數），不另開下載專用目錄；App 啟動時於 `main.dart` 呼叫 `sweepUpdateStaging()` 清除所有因非預期結束（如 force-stop 或崩潰）殘留的暫存檔。
+  - **D7（WiFi 傳輸維持「其餘當新書」）**：修復 Issue 1 匯入整合對 WiFi 傳輸造成的破壞——當 `result.updateCandidates` 非空時，逐筆呼叫 `importCandidateAsNewBook` 視同已匯入，並確保無條件刪除 WiFi 落地檔（審查 I-2）。
+  - **F4/F5（殘留候選與來源識別碼補寫）**：既有 `import(permanentPath)` 流程在未顯式結算但有更新候選時，提供保底「作為新書匯入」並清理暫存；取代時完整補寫 `cloudFileId`、`remoteServerId`、`remoteBookId`、`remoteDownloadUrl` 等來源識別欄位。
+  - **快取失效**：`DownloadQueueController` 注入 `onCoverChanged` 回呼（`evictCoverImageCache`），取代成功時立即淘汰圖片快取，確保書架與面板封面即時更新。
+  - **真機／模擬器手動驗證：尚未執行**，由人類另行處理（計畫 Task 7 Step 3 的五項情境：Google Drive/OneDrive 更新版下載與 cloudFileId 補寫、Calibre 書庫更新版下載與 remote 識別碼補寫、force-stop 重啟後 update_staging 清掃、整檔相同重複提示迴歸、WiFi 上傳更新版成為新書）；完成後請把結果補記於此。
