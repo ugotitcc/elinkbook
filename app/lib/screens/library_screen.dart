@@ -31,6 +31,9 @@ import 'package:intl/intl.dart';
 
 import '../l10n/app_localizations.dart';
 import 'book_action_sheet.dart';
+import 'support/book_import_picker_helper.dart'
+    show SingleBookFilePicker, pickSingleBookFileViaFilePicker;
+import 'support/manual_book_update_flow.dart';
 import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
 import 'library_paging.dart';
@@ -70,6 +73,9 @@ class LibraryScreen extends StatefulWidget {
   final VoidCallback? onNavigateToSource;
   final VoidCallback? onNavigateToSettings;
 
+  /// 單檔選取函式（測試可注入假選檔器；預設為 [pickSingleBookFileViaFilePicker]）。
+  final SingleBookFilePicker? pickSingleBookFile;
+
   const LibraryScreen({
     super.key,
     required this.dependencies,
@@ -78,6 +84,7 @@ class LibraryScreen extends StatefulWidget {
     this.refreshSignal,
     this.onNavigateToSource,
     this.onNavigateToSettings,
+    this.pickSingleBookFile,
   });
 
   @override
@@ -650,6 +657,7 @@ class _LibraryScreenState extends State<LibraryScreen>
         book: book,
         showRemoveCache: showRemoveCache,
         showLayoutOverride: true,
+        showUpdateBook: book.isDownloaded,
       ),
     );
     if (!mounted || result == null) return;
@@ -663,6 +671,18 @@ class _LibraryScreenState extends State<LibraryScreen>
           book,
           widget.dependencies.bookReaderPrefsRepository,
         );
+      case BookAction.updateBook:
+        final outcome = await runManualBookUpdate(
+          context,
+          book: book,
+          importService: widget.dependencies.bookImportService,
+          pickFile:
+              widget.pickSingleBookFile ?? pickSingleBookFileViaFilePicker,
+          isEinkMode: widget.appearance.isEinkMode,
+        );
+        if (mounted && outcome == ManualBookUpdateOutcome.replaced) {
+          await _bookListController.loadBooks();
+        }
       case BookAction.removeCache:
         _removeBookCache(book);
       case BookAction.delete:

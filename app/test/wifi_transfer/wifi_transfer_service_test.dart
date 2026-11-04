@@ -74,6 +74,7 @@ class _ThrowingImportService implements BookImportService {
     String bookId,
     String newUri, {
     String? displayName,
+    bool force = false,
   }) =>
       Future.value(const BookRelinkFailure(BookRelinkFailureReason.failed));
 

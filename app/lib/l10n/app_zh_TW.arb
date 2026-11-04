@@ -3645,5 +3645,41 @@
         "type": "String"
       }
     }
+  },
+  "readerForceRelinkTitle": "強制重新連結？",
+  "@readerForceRelinkTitle": {
+    "description": "重新選取檔案內容不符時的強制重新連結對話框標題"
+  },
+  "readerForceRelinkMessage": "選取的檔案與原書內容不一致，可能不是同一本書。若這是同一本書的新版本，可強制重新連結：只會更換檔案位置，閱讀進度與註記位置不會調整，可能因內容不同而偏移。",
+  "@readerForceRelinkMessage": {
+    "description": "重新選取檔案內容不符時的強制重新連結對話框說明"
+  },
+  "readerForceRelinkConfirm": "強制重新連結",
+  "@readerForceRelinkConfirm": {
+    "description": "強制重新連結確認按鈕"
+  },
+  "bookActionUpdateBook": "用新檔案更新此書",
+  "@bookActionUpdateBook": {
+    "description": "書籍長按動作選單：以使用者自選新檔案取代當前書籍"
+  },
+  "bookManualUpdateConfirmMessage": "將以「{fileName}」取代「{title}」的檔案內容。閱讀進度、分類與版面偏好會保留。",
+  "@bookManualUpdateConfirmMessage": {
+    "description": "手動更新書籍時的確認對話框內文",
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "bookManualUpdateConfirmButton": "更新",
+  "@bookManualUpdateConfirmButton": {
+    "description": "手動更新書籍確認對話框的確認按鈕"
+  },
+  "bookManualUpdateFormatMismatch": "選取的檔案格式與此書不同，無法更新",
+  "@bookManualUpdateFormatMismatch": {
+    "description": "手動更新書籍時選取了不同格式檔案的錯誤提示"
   }
 }

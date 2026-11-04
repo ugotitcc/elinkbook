@@ -116,10 +116,14 @@ abstract class BookImportService {
   /// 後才持久化授權或落地複本，最後以 `updateBook` 原地更新——`id`、
   /// 閱讀位置、劃線、書籤全部保留。任何驗證失敗都不修改記錄、不持久化
   /// 授權、不留下檔案。處理順序見 epic-15 spec.md「Re-link 服務」。
+  /// epic-67 Issue 3：[force] 為 true 時略過「內容指紋比對」
+  /// （僅在格式相同時有效）；[BookRelinkFailureReason.contentMismatch] 為呼叫端
+  /// 可在詢問使用者後以 `force: true` 重試的訊號。
   Future<BookRelinkResult> relinkBook(
     String bookId,
     String newUri, {
     String? displayName,
+    bool force = false,
   });
 
   /// 偵測 [uri] 是否為書庫中某本書的更新版（見 spec「判定規則」與 ADR 0040）。不寫入任何資料。

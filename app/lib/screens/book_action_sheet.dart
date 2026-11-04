@@ -11,6 +11,7 @@ enum BookAction {
   showDetails,
   move,
   layoutOverride,
+  updateBook,
   removeCache,
   delete,
 }
@@ -34,11 +35,16 @@ class BookActionSheet extends StatelessWidget {
   /// spec.md 原始建構子片段遺漏這個欄位，此為補充）。
   final bool showLayoutOverride;
 
+  /// 已下載書籍（`book.isDownloaded == true`）時顯示「用新檔案更新此書」選項；
+  /// `false` 時不渲染（未下載的遠端書無檔案可更新）。預設為 true。
+  final bool showUpdateBook;
+
   const BookActionSheet({
     super.key,
     required this.book,
     required this.showRemoveCache,
     required this.showLayoutOverride,
+    this.showUpdateBook = true,
   });
 
   void _handle(BuildContext context, BookAction action) {
@@ -75,6 +81,13 @@ class BookActionSheet extends StatelessWidget {
               leading: const Icon(Icons.view_column_outlined),
               title: Text(l10n.bookActionLayoutOverride),
               onTap: () => _handle(context, BookAction.layoutOverride),
+            ),
+          if (showUpdateBook)
+            ListTile(
+              key: const Key('book_action_update_book'),
+              leading: const Icon(Icons.file_upload_outlined),
+              title: Text(l10n.bookActionUpdateBook),
+              onTap: () => _handle(context, BookAction.updateBook),
             ),
           if (showRemoveCache)
             ListTile(

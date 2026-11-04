@@ -108,3 +108,20 @@
   - **快取失效**：`DownloadQueueController` 注入 `onCoverChanged`（`main.dart` 傳入 `evictCoverImageCache`），取代成功時對舊書與新書封面路徑各通知一次；回呼拋例外不影響結算。
   - **程式審查修正**：保底並存全數失敗改為丟例外（項目 failed）；對話框取消保底補上 `applier` 分支；`_deleteIfExists` 吞例外；`onCoverChanged` 以 try/catch 包住；面板顯示結算結果改用事先取得的 `ScaffoldMessenger`，對話框期間該列被卸載仍可顯示提示；補齊面板與對話框缺漏的測試。
   - **真機／模擬器手動驗證：尚未執行**，由人類另行處理（計畫 Task 7 Step 3 的五項情境：Google Drive/OneDrive 更新版下載與 cloudFileId 補寫、Calibre 書庫更新版下載與 remote 識別碼補寫、force-stop 重啟後 update_staging 清掃、整檔相同重複提示迴歸、WiFi 上傳更新版成為新書）；完成後請把結果補記於此。
+
+## Issue 3 計畫與實作
+
+- **計畫文件**：[plan-issue-3.md](plans/plan-issue-3.md)
+- **實作分支**：`epic-67/issue-3-manual-update-force-relink`
+- **核心架構與決策定案**：
+  - **D1（手動更新不比對身份）**：書架動作選單新增「用新檔案更新此書」（`BookAction.updateBook`），僅檢查檔案格式是否一致，不比對書名、作者或 identifier。
+  - **D2（格式檢查優先）**：選檔後由 `detectImportFileFormat`（`displayName` 優先於 URI）判斷格式；若格式不符直接提示 SnackBar 並結束，不彈對話框，不呼叫 `replaceBook`。
+  - **D3（強制重新連結通用規則）**：`relinkBook` 支援具名選填參數 `{bool force = false}`。原書有內容指紋且 `force: true` 時，跳過指紋計算與比對，直接完成重新連結；原書無指紋時仍會補寫新檔指紋。格式不符時即使 `force: true` 仍拒絕。
+  - **D4（閱讀器對話框詢問）**：`ReaderScreen` 重新選檔時遇 `contentMismatch`，彈出強制重新連結對話框（`showForceRelinkDialog`）；使用者按「強制重新連結」時以 `force: true` 重新呼叫 `relinkBook` 並原地重新開書；按取消則關閉對話框，維持錯誤視圖且不顯示 SnackBar。
+  - **D5（快取失效）**：取代成功後主動通知 `onCoverChanged`（`evictCoverImageCache`），去重後移除舊封面與新封面快取。
+  - **D6（更新中防護與模態鎖定）**：確認對話框內等待 `replaceBook`，以 `PopScope(canPop: false)` 擋返回鍵，取消與更新按鈕皆停用並顯示處理中文字。
+  - **D7（E-Ink 模式支援）**：對話框在 `isEinkMode: true` 時設定 `animationStyle: AnimationStyle.noAnimation` 抑制殘影。
+  - **已知限制**：
+    - 手動更新與強制重新連結後，既有的書籤、劃線、備註與閱讀進度位置不會因內容改版自動重新對齊，可能因內容不同而偏移。
+    - TXT／MD／CBZ 因無指紋比對與 SAF 重新連結需求，不支援 `relinkBook`。
+  - **真機／模擬器手動驗證：尚未執行**，由人類另行處理（計畫 Task 4 Step 3 的五項情境：1 書架「用新檔案更新此書」成功與封面即時更新、2 格式不符拒絕、3 閱讀器權限撤銷後重新選檔遇內容不符出現強制重新連結對話框、4 強制重新連結確認後原地開書、5 E-Ink 模式無過場動畫）；完成後請把結果補記於此。

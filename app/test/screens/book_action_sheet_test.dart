@@ -21,6 +21,7 @@ Book _book() {
 Widget _buildApp({
   bool showRemoveCache = true,
   bool showLayoutOverride = true,
+  bool showUpdateBook = true,
   Locale locale = const Locale('zh', 'TW'),
 }) {
   return MaterialApp(
@@ -35,6 +36,7 @@ Widget _buildApp({
             book: _book(),
             showRemoveCache: showRemoveCache,
             showLayoutOverride: showLayoutOverride,
+            showUpdateBook: showUpdateBook,
           ),
         ),
         child: const Text('open'),
@@ -48,6 +50,7 @@ Widget _buildResultApp({
   required ValueNotifier<BookAction?> resultNotifier,
   bool showRemoveCache = true,
   bool showLayoutOverride = true,
+  bool showUpdateBook = true,
   Locale locale = const Locale('zh', 'TW'),
 }) {
   return MaterialApp(
@@ -63,6 +66,7 @@ Widget _buildResultApp({
               book: _book(),
               showRemoveCache: showRemoveCache,
               showLayoutOverride: showLayoutOverride,
+              showUpdateBook: showUpdateBook,
             ),
           );
         },
@@ -87,7 +91,7 @@ void main() {
     expect(find.byKey(const Key('book_action_layout_override')), findsNothing);
   });
 
-  testWidgets('showRemoveCache／showLayoutOverride 皆為 true 時五個選項全部存在', (
+  testWidgets('showRemoveCache／showLayoutOverride 皆為 true 時所有選項全部存在', (
     tester,
   ) async {
     await tester.pumpWidget(_buildApp());
@@ -96,8 +100,27 @@ void main() {
     expect(find.byKey(const Key('book_action_details')), findsOneWidget);
     expect(find.byKey(const Key('book_action_move')), findsOneWidget);
     expect(find.byKey(const Key('book_action_layout_override')), findsOneWidget);
+    expect(find.byKey(const Key('book_action_update_book')), findsOneWidget);
     expect(find.byKey(const Key('book_action_remove_cache')), findsOneWidget);
     expect(find.byKey(const Key('book_action_delete')), findsOneWidget);
+  });
+
+  testWidgets('showUpdateBook: false 時「用新檔案更新此書」選項不存在', (tester) async {
+    await tester.pumpWidget(_buildApp(showUpdateBook: false));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('book_action_update_book')), findsNothing);
+  });
+
+  testWidgets('點擊「用新檔案更新此書」回傳 BookAction.updateBook 並關閉 Sheet', (tester) async {
+    final resultNotifier = ValueNotifier<BookAction?>(null);
+    await tester.pumpWidget(_buildResultApp(resultNotifier: resultNotifier));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_action_update_book')));
+    await tester.pumpAndSettle();
+    expect(resultNotifier.value, BookAction.updateBook);
   });
 
   // 以下「回傳值」測試：`showModalBottomSheet` 的 Future 只有在 Sheet 被
@@ -170,6 +193,7 @@ void main() {
     expect(find.text('Move'), findsOneWidget);
     expect(find.text('Layout Override'), findsOneWidget);
     expect(find.text('Remove Cache'), findsOneWidget);
+    expect(find.text('Update with new file'), findsOneWidget);
     expect(find.text('Delete'), findsOneWidget);
   });
 
@@ -182,6 +206,7 @@ void main() {
 
     expect(find.text('详细资料'), findsOneWidget);
     expect(find.text('排版覆盖'), findsOneWidget);
+    expect(find.text('用新文件更新此书'), findsOneWidget);
     expect(find.text('移除缓存'), findsOneWidget);
   });
 }

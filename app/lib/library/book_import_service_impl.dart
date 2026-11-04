@@ -49,6 +49,14 @@ BookFileFormat? detectBookFileFormat(String uriOrPath) {
   return null;
 }
 
+/// 依檔案 URI 與顯示名稱判定書籍格式（displayName 優先、無法辨識時退回 URI）。
+/// epic-67 Issue 3 抽出為頂層公開函式供手動更新流程與服務內部共用。
+BookFileFormat? detectImportFileFormat(String uri, String? displayName) =>
+    (displayName != null && displayName.isNotEmpty
+        ? detectBookFileFormat(displayName)
+        : null) ??
+    detectBookFileFormat(uri);
+
 /// 從 URI/路徑字串取出檔名（去除副檔名），供詮釋資料提取失敗時的降級標題、
 /// 以及 TXT 格式的封面文字使用。
 String titleFromFileName(String uriOrPath) {
@@ -275,6 +283,7 @@ class BookImportServiceImpl implements BookImportService {
     String bookId,
     String newUri, {
     String? displayName,
+    bool force = false,
   }) async {
     try {
       // 1. 讀取最新記錄：由服務自行讀取而非由呼叫端傳入 Book 快照，避免
@@ -298,41 +307,47 @@ class BookImportServiceImpl implements BookImportService {
             BookRelinkFailureReason.alreadyInLibrary);
       }
 
+      final originalFingerprint = book.contentFingerprint;
+      String? fingerprint;
+
       // 4. 利用選擇器核發的暫時讀取授權計算指紋——此時尚未持久化授權，
       //    選錯檔案不會白白消耗系統的持久化授權配額。
       //    算法必須與第一次匯入完全一致：EPUB 先取 OPF identifier（取不到才
       //    退回 SHA-256），其餘格式直接取 SHA-256。若跳過 extractMetadata，
       //    EPUB 會算出 SHA-256，和資料庫裡存的 identifier 永遠對不上。
-      final epubIdentifier = format == BookFileFormat.epub
-          ? await _readEpubIdentifier(newUri)
-          : null;
-      final fingerprint = await computeBookContentFingerprint(
-        newUri,
-        format!,
-        epubIdentifier: epubIdentifier,
-      );
-
-      // 5. 比對指紋；原書沒有指紋時略過，稍後補寫。
-      final originalFingerprint = book.contentFingerprint;
-      if (originalFingerprint != null && originalFingerprint != fingerprint) {
-        // 程式審查 M-3：匯入當下若 extractMetadata 失敗，資料庫存的是整檔
-        // SHA-256；這次讀得到 identifier 就會永遠對不上，同一本書只能刪除
-        // 重新匯入。指紋是以 identifier 算出時，再以 SHA-256 比對一次。
-        // 反過來（資料庫存 identifier、這次讀不到）無從補救，仍回傳
-        // contentMismatch，屬已知限制。
-        final usedIdentifier = fingerprint == epubIdentifier?.trim();
-        final sha256 = usedIdentifier
-            ? await computeBookContentFingerprint(newUri, format)
+      //    epic-67 Issue 3：原書已有指紋且 force == true 時，略過計算與比對；
+      //    原書沒有指紋時仍需計算以補寫指紋。
+      if (!force || originalFingerprint == null) {
+        final epubIdentifier = format == BookFileFormat.epub
+            ? await _readEpubIdentifier(newUri)
             : null;
-        if (sha256 != originalFingerprint) {
-          return const BookRelinkFailure(
-              BookRelinkFailureReason.contentMismatch);
+        fingerprint = await computeBookContentFingerprint(
+          newUri,
+          format!,
+          epubIdentifier: epubIdentifier,
+        );
+
+        // 5. 比對指紋；原書沒有指紋時略過，稍後補寫。
+        if (originalFingerprint != null && originalFingerprint != fingerprint) {
+          // 程式審查 M-3：匯入當下若 extractMetadata 失敗，資料庫存的是整檔
+          // SHA-256；這次讀得到 identifier 就會永遠對不上，同一本書只能刪除
+          // 重新匯入。指紋是以 identifier 算出時，再以 SHA-256 比對一次。
+          // 反過來（資料庫存 identifier、這次讀不到）無從補救，仍回傳
+          // contentMismatch，屬已知限制。
+          final usedIdentifier = fingerprint == epubIdentifier?.trim();
+          final sha256 = usedIdentifier
+              ? await computeBookContentFingerprint(newUri, format)
+              : null;
+          if (sha256 != originalFingerprint) {
+            return const BookRelinkFailure(
+                BookRelinkFailureReason.contentMismatch);
+          }
         }
       }
 
       // 6. 確認是同一本書後才持久化授權或落地複本（規則與第一次匯入共用）。
       final resolvedPath =
-          await _persistPermissionOrLandCopy(newUri, book.id, format);
+          await _persistPermissionOrLandCopy(newUri, book.id, format!);
       if (resolvedPath == null) {
         return const BookRelinkFailure(BookRelinkFailureReason.failed);
       }
@@ -1015,8 +1030,7 @@ class BookImportServiceImpl implements BookImportService {
   /// 保留可辨識檔名），沒有另外提供 displayName 時退回只看 URI。
   /// epic-15-storage-permission Issue 2 起由 [relinkBook] 共用。
   BookFileFormat? _detectImportFormat(String uri, String? displayName) =>
-      (displayName != null ? detectBookFileFormat(displayName) : null) ??
-          detectBookFileFormat(uri);
+      detectImportFileFormat(uri, displayName);
 
   /// 對 `content://` URI 持久化讀取授權，回傳最終要寫進 `Book.filePath` 的
   /// 路徑；非 `content://` 輸入原樣回傳。

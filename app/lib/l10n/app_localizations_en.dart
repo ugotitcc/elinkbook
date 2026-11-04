@@ -2845,4 +2845,29 @@ class AppLocalizationsEn extends AppLocalizations {
   ) {
     return '$successText; $failedText';
   }
+
+  @override
+  String get readerForceRelinkTitle => 'Force Relink?';
+
+  @override
+  String get readerForceRelinkMessage =>
+      'The selected file content does not match the original book and may be a different book. If this is a revised edition of the same book, you can force relink: only the file path will be updated; reading progress and annotations will be preserved but may shift due to content changes.';
+
+  @override
+  String get readerForceRelinkConfirm => 'Force Relink';
+
+  @override
+  String get bookActionUpdateBook => 'Update with new file';
+
+  @override
+  String bookManualUpdateConfirmMessage(String fileName, String title) {
+    return 'The contents of \"$title\" will be replaced with \"$fileName\". Reading progress, category, and layout preferences will be preserved.';
+  }
+
+  @override
+  String get bookManualUpdateConfirmButton => 'Update';
+
+  @override
+  String get bookManualUpdateFormatMismatch =>
+      'Selected file format does not match this book and cannot be updated';
 }
