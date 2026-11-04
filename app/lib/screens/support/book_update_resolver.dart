@@ -4,62 +4,17 @@ import 'package:flutter/painting.dart';
 
 import '../../library/book_import_service.dart';
 import '../../library/book_update_models.dart';
+import '../../library/book_update_settle.dart';
 
-/// 使用者對一筆更新候選的決定。
-sealed class BookUpdateChoice {
-  const BookUpdateChoice();
-}
-
-/// 取代既有書籍（指定 [bookId]）。
-final class ReplaceChoice extends BookUpdateChoice {
-  final String bookId;
-  const ReplaceChoice(this.bookId);
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ReplaceChoice &&
-          runtimeType == other.runtimeType &&
-          bookId == other.bookId;
-
-  @override
-  int get hashCode => bookId.hashCode;
-
-  @override
-  String toString() => 'ReplaceChoice($bookId)';
-}
-
-/// 並存（當成新書匯入）。
-final class CoexistChoice extends BookUpdateChoice {
-  const CoexistChoice();
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is CoexistChoice && runtimeType == other.runtimeType;
-
-  @override
-  int get hashCode => runtimeType.hashCode;
-
-  @override
-  String toString() => 'CoexistChoice()';
-}
-
-/// 跳過此更新候選。
-final class SkipChoice extends BookUpdateChoice {
-  const SkipChoice();
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SkipChoice && runtimeType == other.runtimeType;
-
-  @override
-  int get hashCode => runtimeType.hashCode;
-
-  @override
-  String toString() => 'SkipChoice()';
-}
+export '../../library/book_update_settle.dart'
+    show
+        BookUpdateChoice,
+        ReplaceChoice,
+        CoexistChoice,
+        SkipChoice,
+        BookUpdateSettleOutcome,
+        BookUpdateSettleResult,
+        settleBookUpdate;
 
 /// 一筆候選與其對應的使用者決定。
 class BookUpdateDecision {
@@ -137,69 +92,26 @@ Future<BookUpdateApplyResult> applyBookUpdateChoices(
   var failed = 0;
 
   for (final decision in decisions) {
-    final candidate = decision.candidate;
-    final choice = decision.choice;
+    final result = await settleBookUpdate(
+      service,
+      decision.candidate,
+      decision.choice,
+    );
 
-    switch (choice) {
-      case SkipChoice():
-        try {
-          await service.discardUpdateCandidate(candidate);
-        } catch (_) {}
-        skipped++;
-
-      case ReplaceChoice(bookId: final targetBookId):
-        try {
-          final result = await service.replaceBook(
-            targetBookId,
-            candidate.sourceUri,
-            displayName: candidate.displayName,
-            candidate: candidate,
-          );
-
-          if (result is BookReplaceSuccess) {
-            replaced++;
-
-            // 收集舊書與新書封面，非空且去重後觸發快取失效通知
-            final oldCover = candidate.candidateBooks
-                .where((b) => b.id == targetBookId)
-                .firstOrNull
-                ?.coverPath;
-            final newCover = result.updatedBook.coverPath;
-
-            final coversToEvict = <String>{
-              ?oldCover,
-              ?newCover,
-            };
-
-            for (final coverPath in coversToEvict) {
-              try {
-                onCoverChanged(coverPath);
-              } catch (_) {}
-            }
-          } else {
-            failed++;
-            try {
-              await service.discardUpdateCandidate(candidate);
-            } catch (_) {}
-          }
-        } catch (_) {
-          failed++;
+    switch (result.outcome) {
+      case BookUpdateSettleOutcome.replaced:
+        replaced++;
+        for (final coverPath in result.changedCoverPaths) {
           try {
-            await service.discardUpdateCandidate(candidate);
+            onCoverChanged(coverPath);
           } catch (_) {}
         }
-
-      case CoexistChoice():
-        try {
-          final book = await service.importCandidateAsNewBook(candidate);
-          if (book != null) {
-            coexisted++;
-          } else {
-            failed++;
-          }
-        } catch (_) {
-          failed++;
-        }
+      case BookUpdateSettleOutcome.coexisted:
+        coexisted++;
+      case BookUpdateSettleOutcome.skipped:
+        skipped++;
+      case BookUpdateSettleOutcome.failed:
+        failed++;
     }
   }
 
