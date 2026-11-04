@@ -556,6 +556,8 @@
   "downloadQueueStatusFailed": "Failed",
   "downloadQueueStatusNeedsReauth": "Account needs reconnecting",
   "downloadQueueStatusCancelled": "Cancelled",
+  "downloadQueueStatusAwaitingUpdate": "Update pending",
+  "downloadQueueUpdateReviewButton": "Review update",
   "downloadQueueDuplicateConfirmMessage": "Detected that \"{name}\" has the same content as an existing book on this device. Create a new copy anyway?",
   "sourcesHomeTitle": "Sources",
   "sourcesHomeLibraryTooltip": "Library",

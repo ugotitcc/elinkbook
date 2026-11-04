@@ -259,8 +259,8 @@ Future<void> sweepUpdateStaging(Directory documentsDirectory);
 
 **面板行為：** `inProgress` 判定維持只涵蓋 `pending`／`downloading`／`checkingDuplicate`，新狀態走非進行中分支（顯示圖示與標籤，不畫進度條；審查 M-1）。`_trailingAction` 簽章改為 `_trailingAction(BuildContext context, AppLocalizations l10n)`（點「處理」需 context 開對話框），待確認狀態以 `Row(mainAxisSize: MainAxisSize.min, children: [處理, 移除])` 建構，避免擠壓左側名稱（審查 I-3）。待確認項目的狀態圖示 `Icons.update`、標籤 `downloadQueueStatusAwaitingUpdate`（取代 Task 2 的暫時值）；尾端動作為「處理」按鈕（Key `sources_download_queue_update_review_<id>`）與既有「移除」按鈕（Key `sources_download_queue_dismiss_<id>`，呼叫 `controller.dismiss`）。點「處理」→ `showBookUpdateSummaryDialog(candidates: [item.updateCandidate!], applier: …, discardOnCancel: false, isEinkMode: isEinkMode)`；`applier` 呼叫 `controller.resolveUpdate(item.id, decision.choice)` 並把 outcome 對映成單筆 `BookUpdateApplyResult`；對話框關閉後（`context.mounted`）呼叫 `showBookUpdateResultSnackBar`。項目已不是待確認狀態時（例如對話框開啟期間被移除）`resolveUpdate` 回 `failed`，SnackBar 顯示失敗訊息。
 
-- [ ] **Step 1：新增 ARB 字串**至四份檔案並 `flutter gen-l10n`；跑 `flutter test --no-pub test/l10n/arb_consistency_test.dart test/l10n/app_localizations_generated_test.dart`。
-- [ ] **Step 2：寫失敗測試**
+- [x] **Step 1：新增 ARB 字串**至四份檔案並 `flutter gen-l10n`；跑 `flutter test --no-pub test/l10n/arb_consistency_test.dart test/l10n/app_localizations_generated_test.dart`。
+- [x] **Step 2：寫失敗測試**
   - 對話框（`book_update_summary_dialog_test.dart`）：`有 applier`——套用時 `applier` 收到正確的決定清單、`importService` 為 null 也可運作；`discardOnCancel: false`——按取消／系統返回後對話框關閉、`discardedCandidates` 為空、`applier` 未被呼叫、回傳全 0；預設 `discardOnCancel`——既有「取消丟棄」測試全數保持通過。
   - SnackBar 抽出（`book_import_picker_helper_test.dart`）：既有 `handleImportUpdateCandidates` 全部案例保持通過；另加直接呼叫 `showBookUpdateResultSnackBar` 的案例（取代／並存／混合／部分失敗／全為跳過不顯示）。
   - 對話框（補）：`discardOnCancel: false` 且僅傳 `applier`（`importService` 為 null）時，模擬 `showDialog` 回 null（以 `Navigator.pop(context)` 直接關閉）→ 不拋例外、`applier` 未被呼叫、回傳全 0（審查 I-1）。
@@ -271,7 +271,7 @@ Future<void> sweepUpdateStaging(Directory documentsDirectory);
     - `對話框取消不丟棄`（D4、Review Focus 2）：按取消後項目仍在、`settleCalls` 為空、可再次點「處理」。
     - `移除`：點 dismiss → 假工作收到 `SkipChoice`、項目消失。
     - `取代失敗`：`settleResult` 為 failed → 項目變「失敗」並出現失敗 SnackBar。
-- [ ] **Step 3：確認失敗 → Step 4：實作 → Step 5：確認通過**，並重跑 Issue 2 的 `test/screens/sources_home_screen_test.dart` 與 Task 2 的控制器測試。
+- [x] **Step 3：確認失敗 → Step 4：實作 → Step 5：確認通過**，並重跑 Issue 2 的 `test/screens/sources_home_screen_test.dart` 與 Task 2 的控制器測試。
 - [ ] **Step 6：`flutter analyze`**；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；提交 `feat(downloads): 下載面板處理待確認更新（epic-67 Issue 4 Task 5）`。
 
 ---

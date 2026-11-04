@@ -50,9 +50,11 @@ BookUpdateCandidate _makeCandidate({
 
 Future<Future<BookUpdateApplyResult>> _openDialog(
   WidgetTester tester, {
-  required FakeBookImportService service,
+  FakeBookImportService? service,
   required List<BookUpdateCandidate> candidates,
   bool isEinkMode = false,
+  bool discardOnCancel = true,
+  Future<BookUpdateApplyResult> Function(Map<BookUpdateCandidate, BookUpdateChoice> choices)? applier,
 }) async {
   late Future<BookUpdateApplyResult> result;
   await pumpLocalizedWidget(
@@ -64,6 +66,8 @@ Future<Future<BookUpdateApplyResult>> _openDialog(
           importService: service,
           candidates: candidates,
           isEinkMode: isEinkMode,
+          discardOnCancel: discardOnCancel,
+          applier: applier,
         ),
         child: const Text('open'),
       ),
@@ -386,4 +390,46 @@ void main() {
     expect(find.byKey(const Key('book_update_row_0')), findsOneWidget);
     expect(find.byKey(const Key('book_update_apply')), findsOneWidget);
   });
+
+  testWidgets("discardOnCancel 為 false 且取消（審查 I-1）：不丟棄暫存，回傳全為 0 之結果", (tester) async {
+    final c0 = _makeCandidate(sourceUri: "file:///c0.epub");
+    final resultFuture = await _openDialog(
+      tester,
+      service: service,
+      candidates: [c0],
+      discardOnCancel: false,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key("book_update_cancel")));
+    await tester.pumpAndSettle();
+
+    final result = await resultFuture;
+    expect(result, const BookUpdateApplyResult());
+    expect(service.discardedCandidates, isEmpty);
+  });
+
+  testWidgets("自訂 applier：點套用呼叫 applier 而非預設流程，importService 為 null 不拋例外", (tester) async {
+    final c0 = _makeCandidate(sourceUri: "file:///c0.epub");
+    Map<BookUpdateCandidate, BookUpdateChoice>? appliedChoices;
+    final resultFuture = await _openDialog(
+      tester,
+      service: null,
+      candidates: [c0],
+      applier: (choices) async {
+        appliedChoices = choices;
+        return const BookUpdateApplyResult(replaced: 1);
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key("book_update_apply")));
+    await tester.pumpAndSettle();
+
+    final result = await resultFuture;
+    expect(result.replaced, 1);
+    expect(appliedChoices, isNotNull);
+    expect(appliedChoices?[c0], const ReplaceChoice("b1"));
+  });
 }
+

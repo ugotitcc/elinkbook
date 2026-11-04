@@ -556,6 +556,8 @@
   "downloadQueueStatusFailed": "失敗",
   "downloadQueueStatusNeedsReauth": "需重新連結帳號",
   "downloadQueueStatusCancelled": "已取消",
+  "downloadQueueStatusAwaitingUpdate": "待確認更新",
+  "downloadQueueUpdateReviewButton": "確認更新",
   "downloadQueueDuplicateConfirmMessage": "偵測到「{name}」與本機已有的一本書內容相同，仍要建立新的一份嗎？",
   "sourcesHomeTitle": "來源",
   "sourcesHomeLibraryTooltip": "書架",

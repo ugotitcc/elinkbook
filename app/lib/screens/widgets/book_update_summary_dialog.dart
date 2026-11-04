@@ -10,10 +10,16 @@ import '../support/book_update_resolver.dart';
 /// 取消、返回鍵或全部跳過都會確保先丟棄候選暫存檔再回傳計數結果。
 Future<BookUpdateApplyResult> showBookUpdateSummaryDialog(
   BuildContext context, {
-  required BookImportService importService,
+  BookImportService? importService,
   required List<BookUpdateCandidate> candidates,
   bool isEinkMode = false,
+  bool discardOnCancel = true,
+  Future<BookUpdateApplyResult> Function(Map<BookUpdateCandidate, BookUpdateChoice> choices)? applier,
 }) async {
+  assert(
+    importService != null || applier != null,
+    "importService 與 applier 不能同時為 null",
+  );
   final result = await showDialog<BookUpdateApplyResult>(
     context: context,
     barrierDismissible: false,
@@ -21,6 +27,8 @@ Future<BookUpdateApplyResult> showBookUpdateSummaryDialog(
     builder: (dialogContext) => _BookUpdateSummaryDialog(
       importService: importService,
       candidates: candidates,
+      discardOnCancel: discardOnCancel,
+      applier: applier,
     ),
   );
 
@@ -28,20 +36,27 @@ Future<BookUpdateApplyResult> showBookUpdateSummaryDialog(
     return result;
   }
 
-  // 保底：若對話框因非預期途徑被關閉，全數丟棄暫存檔
+  // 保底：若對話框因非預期途徑被關閉
+  if (!discardOnCancel) {
+    return const BookUpdateApplyResult();
+  }
   return applyBookUpdateChoices(
-    importService,
+    importService!,
     candidates.map((c) => BookUpdateDecision(c, const SkipChoice())).toList(),
   );
 }
 
 class _BookUpdateSummaryDialog extends StatefulWidget {
-  final BookImportService importService;
+  final BookImportService? importService;
   final List<BookUpdateCandidate> candidates;
+  final bool discardOnCancel;
+  final Future<BookUpdateApplyResult> Function(Map<BookUpdateCandidate, BookUpdateChoice> choices)? applier;
 
   const _BookUpdateSummaryDialog({
-    required this.importService,
+    this.importService,
     required this.candidates,
+    this.discardOnCancel = true,
+    this.applier,
   });
 
   @override
@@ -98,15 +113,24 @@ class _BookUpdateSummaryDialogState extends State<_BookUpdateSummaryDialog> {
     if (_applying) return;
     setState(() => _applying = true);
 
-    final decisions = List.generate(
-      widget.candidates.length,
-      (i) => BookUpdateDecision(widget.candidates[i], _choices[i]),
-    );
-
-    final result = await applyBookUpdateChoices(
-      widget.importService,
-      decisions,
-    );
+    final applier = widget.applier;
+    final BookUpdateApplyResult result;
+    if (applier != null) {
+      final choicesMap = <BookUpdateCandidate, BookUpdateChoice>{
+        for (var i = 0; i < widget.candidates.length; i++)
+          widget.candidates[i]: _choices[i],
+      };
+      result = await applier(choicesMap);
+    } else {
+      final decisions = List.generate(
+        widget.candidates.length,
+        (i) => BookUpdateDecision(widget.candidates[i], _choices[i]),
+      );
+      result = await applyBookUpdateChoices(
+        widget.importService!,
+        decisions,
+      );
+    }
 
     if (mounted) {
       Navigator.of(context).pop(result);
@@ -117,12 +141,19 @@ class _BookUpdateSummaryDialogState extends State<_BookUpdateSummaryDialog> {
     if (_applying) return;
     setState(() => _applying = true);
 
+    if (!widget.discardOnCancel) {
+      if (mounted) {
+        Navigator.of(context).pop(const BookUpdateApplyResult());
+      }
+      return;
+    }
+
     final decisions = widget.candidates
         .map((c) => BookUpdateDecision(c, const SkipChoice()))
         .toList();
 
     final result = await applyBookUpdateChoices(
-      widget.importService,
+      widget.importService!,
       decisions,
     );
 

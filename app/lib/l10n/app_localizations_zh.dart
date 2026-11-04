@@ -1911,6 +1911,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get downloadQueueStatusCancelled => '已取消';
 
   @override
+  String get downloadQueueStatusAwaitingUpdate => '待確認更新';
+
+  @override
+  String get downloadQueueUpdateReviewButton => '確認更新';
+
+  @override
   String downloadQueueDuplicateConfirmMessage(String name) {
     return '偵測到「$name」與本機已有的一本書內容相同，仍要建立新的一份嗎？';
   }
@@ -4640,6 +4646,12 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get downloadQueueStatusCancelled => '已取消';
 
   @override
+  String get downloadQueueStatusAwaitingUpdate => '待确认更新';
+
+  @override
+  String get downloadQueueUpdateReviewButton => '确认更新';
+
+  @override
   String downloadQueueDuplicateConfirmMessage(String name) {
     return '侦测到「$name」与本机已有的一本书内容相同，仍要建立新的一份吗？';
   }
@@ -7367,6 +7379,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get downloadQueueStatusCancelled => '已取消';
+
+  @override
+  String get downloadQueueStatusAwaitingUpdate => '待確認更新';
+
+  @override
+  String get downloadQueueUpdateReviewButton => '確認更新';
 
   @override
   String downloadQueueDuplicateConfirmMessage(String name) {

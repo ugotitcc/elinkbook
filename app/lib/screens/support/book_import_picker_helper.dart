@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../library/book_import_service.dart';
 import '../../library/book_update_models.dart';
 import '../widgets/book_update_summary_dialog.dart';
+import 'book_update_resolver.dart'; // BookUpdateApplyResult
 
 const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');
 
@@ -169,10 +170,14 @@ Future<void> handleImportUpdateCandidates(
   );
 
   if (!context.mounted) return;
+  showBookUpdateResultSnackBar(context, applyResult);
+}
 
-  final replaced = applyResult.replaced;
-  final coexisted = applyResult.coexisted;
-  final failed = applyResult.failed;
+/// 顯示更新版結算結果之 SnackBar 提示（純取代、純並存、混合、含失敗，全為跳過時不顯示）。
+void showBookUpdateResultSnackBar(BuildContext context, BookUpdateApplyResult result) {
+  final replaced = result.replaced;
+  final coexisted = result.coexisted;
+  final failed = result.failed;
 
   // 兩者皆無（全為跳過）→ 不顯示 SnackBar
   if (replaced == 0 && coexisted == 0 && failed == 0) return;

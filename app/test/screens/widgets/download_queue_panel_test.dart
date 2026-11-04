@@ -4,6 +4,8 @@ import 'package:elinkbook/downloads/download_queue_controller.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/library/book_update_models.dart';
 import 'package:elinkbook/library/book_update_settle.dart';
+import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/widgets/download_queue_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -66,8 +68,15 @@ class _FakeQueuedDownloadJob implements QueuedDownloadJob {
   Future<BookUpdateSettleResult> settleUpdate(
     BookUpdateCandidate candidate,
     BookUpdateChoice choice,
-  ) async =>
-      const BookUpdateSettleResult(BookUpdateSettleOutcome.skipped);
+  ) async {
+    if (choice is ReplaceChoice) {
+      return const BookUpdateSettleResult(BookUpdateSettleOutcome.replaced);
+    } else if (choice is CoexistChoice) {
+      return const BookUpdateSettleResult(BookUpdateSettleOutcome.coexisted);
+    } else {
+      return const BookUpdateSettleResult(BookUpdateSettleOutcome.skipped);
+    }
+  }
 }
 
 class _AuthFailure implements Exception {}
@@ -77,12 +86,13 @@ void main() {
     WidgetTester tester,
     DownloadQueueController controller, {
     Locale locale = const Locale('zh', 'TW'),
+    bool isEinkMode = false,
   }) async {
     await tester.pumpWidget(MaterialApp(
       locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: DownloadQueuePanel(controller: controller)),
+      home: Scaffold(body: DownloadQueuePanel(controller: controller, isEinkMode: isEinkMode)),
     ));
   }
 
@@ -198,4 +208,114 @@ void main() {
     await tester.pump();
     expect(find.text('Cancelled'), findsOneWidget);
   });
+
+  group("待確認更新面板呈現與互動（epic-67 Issue 4 Task 5）", () {
+    BookUpdateCandidate makeCandidate(String id) {
+      return BookUpdateCandidate(
+        sourceUri: "file:///tmp/candidate-$id.epub",
+        displayName: "更新版書籍-$id.epub",
+        format: BookFileFormat.epub,
+        stagedPath: "/tmp/staging-$id.epub",
+        confidence: UpdateConfidence.high,
+        candidateBooks: [
+          Book(
+            id: "book-$id",
+            title: "舊版書籍-$id",
+            format: BookFileFormat.epub,
+            source: BookSource.local,
+            filePath: "/data/book-$id.epub",
+            createTime: DateTime(2026, 1, 1),
+            lastReadTime: DateTime(2026, 1, 1),
+          ),
+        ],
+      );
+    }
+
+    testWidgets("待確認項目呈現：顯示「待確認更新」標籤、review 按鈕與 dismiss 按鈕都在（Review Focus 3）", (tester) async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = _FakeQueuedDownloadJob(id: "job-1", name: "更新版書");
+      final candidate = makeCandidate("1");
+      await pumpPanel(tester, controller);
+
+      controller.enqueueJobs([job]);
+      final item = controller.items.first;
+      item.status = DownloadItemStatus.awaitingUpdateConfirmation;
+      item.updateCandidate = candidate;
+      controller.notifyListeners();
+      await tester.pumpAndSettle();
+
+      expect(find.text("待確認更新"), findsOneWidget);
+      expect(find.byKey(const Key("sources_download_queue_review_job-1")), findsOneWidget);
+      expect(find.byKey(const Key("sources_download_queue_dismiss_job-1")), findsOneWidget);
+    });
+
+    testWidgets("點 review 開對話框，選取代套用後呼叫 resolveUpdate 並彈出 SnackBar", (tester) async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = _FakeQueuedDownloadJob(id: "job-1", name: "更新版書");
+      final candidate = makeCandidate("1");
+      await pumpPanel(tester, controller);
+
+      controller.enqueueJobs([job]);
+      final item = controller.items.first;
+      item.status = DownloadItemStatus.awaitingUpdateConfirmation;
+      item.updateCandidate = candidate;
+      controller.notifyListeners();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key("sources_download_queue_review_job-1")));
+      await tester.pumpAndSettle();
+
+      expect(find.text("更新版書籍-1.epub"), findsOneWidget);
+      expect(find.byKey(const Key("book_update_apply")), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key("book_update_apply")));
+      await tester.pumpAndSettle();
+
+      expect(find.text("已更新 1 本"), findsOneWidget);
+      expect(item.status, DownloadItemStatus.done);
+    });
+
+    testWidgets("對話框按取消：候選未結算、項目仍在面板且仍為待確認（D4）", (tester) async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = _FakeQueuedDownloadJob(id: "job-1", name: "更新版書");
+      final candidate = makeCandidate("1");
+      await pumpPanel(tester, controller);
+
+      controller.enqueueJobs([job]);
+      final item = controller.items.first;
+      item.status = DownloadItemStatus.awaitingUpdateConfirmation;
+      item.updateCandidate = candidate;
+      controller.notifyListeners();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key("sources_download_queue_review_job-1")));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key("book_update_cancel")));
+      await tester.pumpAndSettle();
+
+      expect(item.status, DownloadItemStatus.awaitingUpdateConfirmation);
+      expect(controller.items, hasLength(1));
+    });
+
+    testWidgets("點待確認項目的 dismiss：resolveUpdate 帶入 SkipChoice 且項目消失", (tester) async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = _FakeQueuedDownloadJob(id: "job-1", name: "更新版書");
+      final candidate = makeCandidate("1");
+      await pumpPanel(tester, controller);
+
+      controller.enqueueJobs([job]);
+      final item = controller.items.first;
+      item.status = DownloadItemStatus.awaitingUpdateConfirmation;
+      item.updateCandidate = candidate;
+      controller.notifyListeners();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key("sources_download_queue_dismiss_job-1")));
+      await tester.pumpAndSettle();
+
+      expect(controller.items, isEmpty);
+    });
+  });
 }
+
