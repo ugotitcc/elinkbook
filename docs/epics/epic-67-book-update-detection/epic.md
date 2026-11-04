@@ -49,3 +49,23 @@
 - Architecting（`spec.md`）與 Issue 拆解（`issues.md`，6 個 Issue）已完成；Issue 5（Foliate 降級）已合併（PR #383，見 `plans/plan-issue-5.md`；該 PR 另衍生 PR #382，修正 `main` 在採用的 Flutter 3.41.9 編譯失敗的字典設定畫面）。下一步為 Issue 1（核心）與其餘 Issue 的 `plans/plan-issue-N.md` 與實作。
 - 新增的使用者可見字串（書籍動作選單、更新確認對話框、批次清單、註記偏移 SnackBar、待確認更新狀態、強制重新連結確認）須同步登錄在四份 ARB 檔：`app_en.arb`、`app_zh.arb`、`app_zh_CN.arb`、`app_zh_TW.arb`。
 - 後續工作：WiFi 傳輸的更新版處理。
+
+## Issue 1 計畫與實作
+
+- **計畫文件**：[plan-issue-1.md](plans/plan-issue-1.md)
+- **實作分支**：`epic-67/issue-1-detect-and-replace`
+- **核心架構與決策定案**：
+  - **D1（重複 vs 更新版的舊檔雜湊）**：舊書 `id` 與 `contentFingerprint` 取代後嚴格保留（落實 ADR 0040，PocketBase 免更動 schema）。判定「重複／更新版」時，EPUB／PDF／AZW3 現場雜湊舊書 `filePath` 的整檔 SHA-256（舊檔讀不到 → 降級為更新版並記入 `unreadableCandidateBookIds`）；TXT／MD／CBZ 的 `filePath` 是合成／重建後的落地檔、沒有原始檔，改比對儲存的 `contentFingerprint`（原始檔 SHA-256）。已被取代過的 MD 因指紋過期，之後會被判為更新版（可由使用者跳過），列為已知限制。
+  - **D2（整檔相同的重複直接略過）**：`importFiles`／`importFolder` 偵測到 `DetectedDuplicate` 時累加 `skippedDuplicateCount` 並略過，不產生候選也不寫入。代價：不同 URI、內容相同的 EPUB／PDF 不再能重複匯入。
+  - **D3（取代採嚴格模式）**：`replaceBook` 解析新檔時，`PlatformException`、DRM、空 TXT／MD、無頁面 CBZ、KF8 解析例外一律回傳 `newFileParseFailed`（永不拋例外，舊書不動）；`MissingPluginException`（Windows 無原生端）維持降級，與匯入一致。偵測階段（`detectBookUpdate`、`_peekIdentity`）永不拋例外，失敗視為身份空白。
+  - **D4（舊檔可讀性以集合表達）**：`BookUpdateCandidate.unreadableCandidateBookIds` 為「舊檔讀不到的候選書 id 集合」（空集合＝全部可讀），是 spec 單一旗標的超集。更新暫存目錄（`update_staging`）與 `discardUpdateCandidate` 另行提供。
+  - **F6（字元數欄位處理）**：`totalCharacterCount` 欄位在現行程式碼中無讀寫操作，維持 no-op，不進行額外計算。
+  - **F8（封面快取失效職責劃分）**：Service 層不依賴 Flutter 繪圖引擎快取；取代成功後，封面圖片快取失效（`PaintingBinding.instance.imageCache.evict(FileImage(File(coverPath)))`）必須由 UI 層（Issue 2 批次清單與 Issue 3 手動更新）主動處理。
+  - **殘餘風險**：換名（檔案）與 `updateBook`（資料庫）無法放進同一交易。順序為「全部暫存成功 → 換名 → `updateBook` → 清舊資產」；換名成功但 `updateBook` 失敗時，磁碟已是新檔、資料庫仍是舊中繼資料，**程式沒有還原機制**，再執行一次取代即可修復（有測試證明）。任何失敗分支只會清掉暫存名稱檔。
+  - **已知限制：取代沿用舊指紋（審查 I-5，人類決定維持）**：取代不重算整檔雜湊（計畫 M-4）。PDF／AZW3 的指紋是整檔 SHA-256，取代後仍是舊內容的雜湊；第二層（書名＋作者）命中且 identifier 不同的 EPUB，取代後指紋仍是舊 identifier。因此被取代過的書之後執行 `relinkBook` 會回 `contentMismatch`，由 Issue 3 的「強制重新連結」處理（見 ADR 0040、本 Epic 決策 11）。
+  - **審查後修正**：換名前不再先刪目標檔（`File.rename` 本身原子覆蓋）；取代任何失敗分支改依 `bookId` 掃除所有 `.staging` 暫存檔（含寫到一半的半成品）；舊封面改在 `updateBook` 成功後才刪；同一本書的 `replaceBook` 以每書序列化避免暫存檔名碰撞；`importCandidateAsNewBook` 例外一律回傳 null 並清掉落地複本，書名退路在無 `displayName` 時改用 `sourceUri`；更新版暫存複製失敗時退回當成新書匯入，不讓檔案無聲消失。
+  - **大批匯入體感效能量測（Review Focus 7）**：
+    - 50 本全新 EPUB 匯入：約 125 ms（平均 2.5 ms/本）
+    - 50 本重複 EPUB 偵測跳過：約 57 ms（平均 1.1 ms/本）
+    - 50 本更新版 EPUB 暫存與偵測：約 164 ms（平均 3.3 ms/本）
+    - 注意：以上數字來自 mock channel（中繼資料讀取為記憶體假回應），僅反映服務層本身的開銷，不代表真機原生呼叫與整檔雜湊的耗時；真機大批匯入體感須另行驗證。

@@ -1,3 +1,4 @@
+import 'book_update_models.dart';
 import 'models/book.dart';
 import 'models/library_enums.dart';
 
@@ -26,10 +27,15 @@ class ImportResult {
   /// 就沒有可匯入的書」不是失敗，維持 null。
   final ImportFailure? failure;
 
+  /// 偵測到的更新版候選清單（epic-67 Issue 1 Task 6）。
+  /// 其 [BookUpdateCandidate.stagedPath] 皆已填入暫存檔路徑。
+  final List<BookUpdateCandidate> updateCandidates;
+
   const ImportResult({
-    required this.importedBooks,
+    this.importedBooks = const [],
     this.skippedDuplicateCount = 0,
     this.failure,
+    this.updateCandidates = const [],
   });
 }
 
@@ -114,5 +120,37 @@ abstract class BookImportService {
     String bookId,
     String newUri, {
     String? displayName,
+  });
+
+  /// 偵測 [uri] 是否為書庫中某本書的更新版（見 spec「判定規則」與 ADR 0040）。不寫入任何資料。
+  Future<BookDetectionResult> detectBookUpdate(
+    String uri, {
+    String? displayName,
+  });
+
+  /// 丟棄候選：刪除其 [BookUpdateCandidate.stagedPath] 指向的暫存檔；已不存在或為 null 時靜默成功。
+  /// 呼叫端在使用者選跳過、關閉彙整清單、返回、取消時必須呼叫。永不拋例外。
+  Future<void> discardUpdateCandidate(BookUpdateCandidate candidate);
+
+  /// 以 [newUri]（或 [candidate.stagedPath]）取代書籍 [bookId] 的檔案內容。
+  /// 見 spec「取代的語意」與 ADR 0040。
+  ///
+  /// 已知殘餘風險（Review Focus 2）：若暫存檔已改名為正式檔名但後續資料庫
+  /// [updateBook] 寫入失敗，檔案內容與資料庫中繼資料會產生短暫不一致。
+  /// 此時再次呼叫本方法取代同本書籍即可修復。永不拋例外。
+  Future<BookReplaceResult> replaceBook(
+    String bookId,
+    String newUri, {
+    String? displayName,
+    BookUpdateCandidate? candidate,
+    BookSourceRefs? sourceRefs,
+  });
+
+  /// 略過更新版判定，把 [candidate] 當成新書匯入（spec「並存」）。新書 filePath 不得指向更新暫存目錄；
+  /// 完成後（成功或失敗）都丟棄候選。成功回傳新書，失敗回傳 null。
+  Future<Book?> importCandidateAsNewBook(
+    BookUpdateCandidate candidate, {
+    String? folderName,
+    BookSourceRefs? sourceRefs,
   });
 }

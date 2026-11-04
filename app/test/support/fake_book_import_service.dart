@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:elinkbook/library/book_import_service.dart';
+import 'package:elinkbook/library/book_update_models.dart';
+import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 
 /// 記錄最近一次 [BookImportService.importFiles] 的呼叫參數，供測試斷言
@@ -127,5 +129,52 @@ class FakeBookImportService implements BookImportService {
     final completer = relinkCompleter;
     if (completer != null) return completer.future;
     return Future.value(relinkResult);
+  }
+
+  /// epic-67 Issue 1 Task 3：更新版偵測預設回傳新書。
+  BookDetectionResult detectResult = const DetectedNewBook();
+
+  @override
+  Future<BookDetectionResult> detectBookUpdate(
+    String uri, {
+    String? displayName,
+  }) =>
+      Future.value(detectResult);
+
+  final List<BookUpdateCandidate> discardedCandidates = [];
+
+  @override
+  Future<void> discardUpdateCandidate(BookUpdateCandidate candidate) {
+    discardedCandidates.add(candidate);
+    return Future.value();
+  }
+
+  BookReplaceResult replaceResult =
+      const BookReplaceFailure(BookReplaceFailureReason.bookNotFound);
+  final List<(String, String)> replaceCalls = [];
+
+  @override
+  Future<BookReplaceResult> replaceBook(
+    String bookId,
+    String newUri, {
+    String? displayName,
+    BookUpdateCandidate? candidate,
+    BookSourceRefs? sourceRefs,
+  }) {
+    replaceCalls.add((bookId, newUri));
+    return Future.value(replaceResult);
+  }
+
+  Book? importCandidateResult;
+  final List<BookUpdateCandidate> importCandidateCalls = [];
+
+  @override
+  Future<Book?> importCandidateAsNewBook(
+    BookUpdateCandidate candidate, {
+    String? folderName,
+    BookSourceRefs? sourceRefs,
+  }) {
+    importCandidateCalls.add(candidate);
+    return Future.value(importCandidateResult);
   }
 }
