@@ -2747,6 +2747,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get readerForceRelinkConfirm => '強制重新連結';
+
+  @override
+  String get bookActionUpdateBook => '用新檔案更新此書';
+
+  @override
+  String bookManualUpdateConfirmMessage(String fileName, String title) {
+    return '將以「$fileName」取代「$title」的檔案內容。閱讀進度、分類與版面偏好會保留。';
+  }
+
+  @override
+  String get bookManualUpdateConfirmButton => '更新';
+
+  @override
+  String get bookManualUpdateFormatMismatch => '選取的檔案格式與此書不同，無法更新';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -5492,6 +5506,20 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get readerForceRelinkConfirm => '强制重新链接';
+
+  @override
+  String get bookActionUpdateBook => '用新文件更新此书';
+
+  @override
+  String bookManualUpdateConfirmMessage(String fileName, String title) {
+    return '将以“$fileName”替换“$title”的文件内容。阅读进度、分类与排版偏好会保留。';
+  }
+
+  @override
+  String get bookManualUpdateConfirmButton => '更新';
+
+  @override
+  String get bookManualUpdateFormatMismatch => '选取的文件格式与此书不同，无法更新';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -8237,4 +8265,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerForceRelinkConfirm => '強制重新連結';
+
+  @override
+  String get bookActionUpdateBook => '用新檔案更新此書';
+
+  @override
+  String bookManualUpdateConfirmMessage(String fileName, String title) {
+    return '將以「$fileName」取代「$title」的檔案內容。閱讀進度、分類與版面偏好會保留。';
+  }
+
+  @override
+  String get bookManualUpdateConfirmButton => '更新';
+
+  @override
+  String get bookManualUpdateFormatMismatch => '選取的檔案格式與此書不同，無法更新';
 }

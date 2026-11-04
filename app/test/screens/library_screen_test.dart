@@ -60,6 +60,7 @@ import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/book_action_sheet.dart';
 import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
+import 'package:elinkbook/library/book_update_models.dart';
 import '../support/fake_book_reader_prefs_repository.dart';
 import '../support/full_book_reader_prefs.dart';
 
@@ -5487,6 +5488,124 @@ void main() {
       );
     },
   );
+
+  group('用新檔案更新此書（epic-67 Issue 3）', () {
+    testWidgets('已下載的書 ⋮ 選單有「用新檔案更新此書」', (tester) async {
+      final book = _testBook(id: '1', title: '三國演義');
+      final repository = FakeLibraryRepository(initialBooks: [book]);
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
+          sources: fakeSourceDependencies(),
+          dependencies: fakeReaderFeatureDependencies(
+            libraryRepository: repository,
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_action_menu_1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('book_action_update_book')), findsOneWidget);
+    });
+
+    testWidgets('未下載（isDownloaded:false）的書沒有「用新檔案更新此書」', (tester) async {
+      final book = _testBook(id: '1', title: '遠端書').copyWith(
+        source: BookSource.calibreOpds,
+        isDownloaded: false,
+      );
+      final repository = FakeLibraryRepository(initialBooks: [book]);
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
+          sources: fakeSourceDependencies(),
+          dependencies: fakeReaderFeatureDependencies(
+            libraryRepository: repository,
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_action_menu_1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('book_action_update_book')), findsNothing);
+    });
+
+    for (final format in BookFileFormat.values) {
+      testWidgets('$format 格式已下載書籍皆顯示「用新檔案更新此書」', (tester) async {
+        final book = _testBook(id: '1', title: '書本').copyWith(
+          format: format,
+          filePath: '/data/imported/1.${format.name}',
+          isDownloaded: true,
+        );
+        final repository = FakeLibraryRepository(initialBooks: [book]);
+        await pumpLocalizedWidget(
+          tester,
+          LibraryScreen(
+            appearance: fakeAppearanceDependencies(),
+            sources: fakeSourceDependencies(),
+            dependencies: fakeReaderFeatureDependencies(
+              libraryRepository: repository,
+              bookImportService: FakeBookImportService(),
+              prefsManager: prefsManager,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('book_action_menu_1')));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('book_action_update_book')), findsOneWidget);
+      });
+    }
+
+    testWidgets('點選後經注入的選檔器選同格式檔並確認 → 假服務收到 replaceBook 且書架重新載入', (tester) async {
+      final book = _testBook(id: '1', title: '三國演義');
+      final repository = FakeLibraryRepository(initialBooks: [book]);
+      final service = FakeBookImportService()
+        ..replaceResult = BookReplaceSuccess(
+          book.copyWith(title: '三國演義（修訂版）'),
+        );
+
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
+          sources: fakeSourceDependencies(),
+          pickSingleBookFile: (exts) async =>
+              (uri: 'file:///path/three_v2.epub', displayName: 'three_v2.epub'),
+          dependencies: fakeReaderFeatureDependencies(
+            libraryRepository: repository,
+            bookImportService: service,
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_action_menu_1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('book_action_update_book')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('book_manual_update_dialog')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('book_manual_update_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(service.replaceCalls, hasLength(1));
+      expect(service.replaceCalls.first.$1, '1');
+      expect(find.text('已更新 1 本'), findsOneWidget);
+    });
+  });
 
   testWidgets(
     '點擊「搜尋書本內容」入口，帶同一組關鍵字導航至 LibrarySearchScreen（epic-10-search Issue 4）',

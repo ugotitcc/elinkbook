@@ -790,5 +790,9 @@
   "readerForceRelinkConfirm": "强制重新链接",
   "@readerForceRelinkConfirm": {
     "description": "强制重新链接确认按钮"
-  }
+  },
+  "bookActionUpdateBook": "用新文件更新此书",
+  "bookManualUpdateConfirmMessage": "将以“{fileName}”替换“{title}”的文件内容。阅读进度、分类与排版偏好会保留。",
+  "bookManualUpdateConfirmButton": "更新",
+  "bookManualUpdateFormatMismatch": "选取的文件格式与此书不同，无法更新"
 }

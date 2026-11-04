@@ -790,5 +790,9 @@
   "readerForceRelinkConfirm": "Force Relink",
   "@readerForceRelinkConfirm": {
     "description": "Confirm button to force relink"
-  }
+  },
+  "bookActionUpdateBook": "Update with new file",
+  "bookManualUpdateConfirmMessage": "The contents of \"{title}\" will be replaced with \"{fileName}\". Reading progress, category, and layout preferences will be preserved.",
+  "bookManualUpdateConfirmButton": "Update",
+  "bookManualUpdateFormatMismatch": "Selected file format does not match this book and cannot be updated"
 }

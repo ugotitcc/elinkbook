@@ -4759,6 +4759,30 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'強制重新連結'**
   String get readerForceRelinkConfirm;
+
+  /// 書籍長按動作選單：以使用者自選新檔案取代當前書籍
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'用新檔案更新此書'**
+  String get bookActionUpdateBook;
+
+  /// 手動更新書籍時的確認對話框內文
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'將以「{fileName}」取代「{title}」的檔案內容。閱讀進度、分類與版面偏好會保留。'**
+  String bookManualUpdateConfirmMessage(String fileName, String title);
+
+  /// 手動更新書籍確認對話框的確認按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'更新'**
+  String get bookManualUpdateConfirmButton;
+
+  /// 手動更新書籍時選取了不同格式檔案的錯誤提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選取的檔案格式與此書不同，無法更新'**
+  String get bookManualUpdateFormatMismatch;
 }
 
 class _AppLocalizationsDelegate

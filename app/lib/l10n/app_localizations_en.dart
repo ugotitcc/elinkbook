@@ -2855,4 +2855,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get readerForceRelinkConfirm => 'Force Relink';
+
+  @override
+  String get bookActionUpdateBook => 'Update with new file';
+
+  @override
+  String bookManualUpdateConfirmMessage(String fileName, String title) {
+    return 'The contents of \"$title\" will be replaced with \"$fileName\". Reading progress, category, and layout preferences will be preserved.';
+  }
+
+  @override
+  String get bookManualUpdateConfirmButton => 'Update';
+
+  @override
+  String get bookManualUpdateFormatMismatch =>
+      'Selected file format does not match this book and cannot be updated';
 }
