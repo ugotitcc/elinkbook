@@ -13,7 +13,7 @@ Issue 6 PDF 降級      ─┘
 | Issue | 標題 | 依賴 | 狀態 | PR |
 |---|---|---|---|---|
 | 1 | 核心：偵測（重複/更新版/新書）與取代（原子換檔、資產清理、保留註記與身份） | 無 | ✅ 已合併 | #386（計畫：[plan-issue-1.md](plans/plan-issue-1.md)） |
-| 2 | 本機匯入入口：匯入完成後彙整更新版清單（取代／並存／跳過、全部取代／全部跳過）與暫存檔收尾 | Issue 1 | ✅ 待合併 | （計畫：[plan-issue-2.md](plans/plan-issue-2.md)） |
+| 2 | 本機匯入入口：匯入完成後彙整更新版清單（取代／並存／跳過、全部取代／全部跳過）與暫存檔收尾 | Issue 1 | ✅ 已合併 | #387（計畫：[plan-issue-2.md](plans/plan-issue-2.md)） |
 | 3 | 手動入口「用新檔案更新此書」與 `relinkBook` 強制重新連結 | Issue 1 | ⏳ 未開始 | — |
 | 4 | 下載佇列「待確認更新」：非阻塞狀態、專屬暫存目錄、面板確認、啟動清掃 | Issue 1 | ⏳ 未開始 | — |
 | 5 | Foliate 格式降級：開書與註記跳轉的精確定位失敗改用進度比例，並回報提示 | 無 | ✅ 已合併 | #383（計畫：[plan-issue-5.md](plans/plan-issue-5.md)） |
@@ -61,7 +61,7 @@ Status: completed（已合併 PR #386；[plan-issue-1.md](plans/plan-issue-1.md)
 
 ## Issue 2：本機匯入入口與彙整清單
 
-Status: completed-pending-pr（計畫：[plan-issue-2.md](plans/plan-issue-2.md)；真機手動驗證待人類執行）
+Status: completed（已合併 PR #387；[plan-issue-2.md](plans/plan-issue-2.md)）。真機手動驗證由人類另行執行，結果補記於 epic.md
 
 **範圍**：書架畫面接收匯入結果中的更新候選清單（由 Issue 1 在服務端產生），彈出一份彙整清單並驅動後續操作（單檔也用同一份）。本 Issue 只做畫面與接線，不改服務端匯入管線。
 
