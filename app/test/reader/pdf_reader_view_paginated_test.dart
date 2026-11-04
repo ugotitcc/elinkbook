@@ -1,6 +1,7 @@
 import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/navigation_degraded_reason.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
@@ -70,6 +71,7 @@ class _Harness {
     double pdfContrast = 0,
     double pdfBrightness = 0,
     double pdfBoldStrength = 0.0,
+    ValueChanged<NavigationDegradedReason>? onNavigationDegraded,
   }) =>
       MaterialApp(
         locale: const Locale('zh', 'TW'),
@@ -86,6 +88,7 @@ class _Harness {
           onError: (_) {},
           onPageChanged: (PdfPageInfo info) => pages.add(info.pageIndex),
           onReadingActivity: reportActivity ? () => activity++ : null,
+          onNavigationDegraded: onNavigationDegraded,
           initialPageIndex: initialPageIndex,
           pdfPageTurnMode: turnMode,
           pdfFitMode: fit,
@@ -1237,6 +1240,25 @@ void main() {
           reason: '逐頁下加粗覆蓋圖應照常算出並顯示');
       expect(_visiblePages(c), [1]);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('逐頁模式開書初始頁碼超界：落在最後一頁所屬單元並通知', (tester) async {
+      _setSurface(tester, const Size(300, 900));
+      final h = _Harness();
+      final degraded = <NavigationDegradedReason>[];
+      final c = await h.open(
+        tester,
+        h.app(
+          initialPageIndex: 99,
+          onNavigationDegraded: degraded.add,
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(h.pages.last, 4);
+      expect(_visiblePages(c), [5]);
+      expect(degraded, [NavigationDegradedReason.readingPosition]);
     });
   });
 }
