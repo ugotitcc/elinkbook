@@ -2630,6 +2630,107 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get readerColorsResetText => '還原文字色';
+
+  @override
+  String get bookUpdateSummaryTitle => '發現書籍更新版';
+
+  @override
+  String get bookUpdateSummaryIntro => '以下檔案看起來是書庫中已有書籍的新版本，請選擇處理方式。';
+
+  @override
+  String get bookUpdateConfidenceHigh => '高信心：書籍識別碼相同';
+
+  @override
+  String get bookUpdateConfidenceSuspected => '疑似：書名與作者相同';
+
+  @override
+  String bookUpdateOptionReplace(String title) {
+    return '取代「$title」';
+  }
+
+  @override
+  String get bookUpdateOptionCoexist => '並存（當成新書匯入）';
+
+  @override
+  String get bookUpdateOptionSkip => '跳過';
+
+  @override
+  String get bookUpdateReplaceAll => '全部取代';
+
+  @override
+  String get bookUpdateSkipAll => '全部跳過';
+
+  @override
+  String get bookUpdateApply => '套用';
+
+  @override
+  String get bookUpdateReplaceNotice => '取代後，既有的書籤、劃線與備註位置可能因內容改版而偏移。';
+
+  @override
+  String bookUpdateOldFileUnreadable(String title) {
+    return '「$title」的舊檔已無法存取，取代後會一併修復檔案連結。';
+  }
+
+  @override
+  String get bookUpdateApplying => '處理中…';
+
+  @override
+  String bookUpdateResultBothMessage(int replaced, int coexisted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      replaced,
+      locale: localeName,
+      other: '已更新 $replaced 本',
+      one: '已更新 1 本',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      coexisted,
+      locale: localeName,
+      other: '已並存 $coexisted 本',
+      one: '已並存 1 本',
+    );
+    return '$_temp0，$_temp1';
+  }
+
+  @override
+  String bookUpdateResultReplacedOnlyMessage(int replaced) {
+    String _temp0 = intl.Intl.pluralLogic(
+      replaced,
+      locale: localeName,
+      other: '已更新 $replaced 本',
+      one: '已更新 1 本',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookUpdateResultCoexistedOnlyMessage(int coexisted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      coexisted,
+      locale: localeName,
+      other: '已並存 $coexisted 本',
+      one: '已並存 1 本',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookUpdateFailedMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 本更新失敗，書籍沒有任何變動',
+      one: '1 本更新失敗，書籍沒有任何變動',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookUpdateResultWithFailedMessage(
+    String successText,
+    String failedText,
+  ) {
+    return '$successText；$failedText';
+  }
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -5258,6 +5359,107 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get readerColorsResetText => '还原文字色';
+
+  @override
+  String get bookUpdateSummaryTitle => '发现书籍更新版';
+
+  @override
+  String get bookUpdateSummaryIntro => '以下文件看起来是书库中已有书籍的新版本，请选择处理方式。';
+
+  @override
+  String get bookUpdateConfidenceHigh => '高置信度：书籍标识符相同';
+
+  @override
+  String get bookUpdateConfidenceSuspected => '疑似：书名与作者相同';
+
+  @override
+  String bookUpdateOptionReplace(String title) {
+    return '替换“$title”';
+  }
+
+  @override
+  String get bookUpdateOptionCoexist => '并存（作为新书导入）';
+
+  @override
+  String get bookUpdateOptionSkip => '跳过';
+
+  @override
+  String get bookUpdateReplaceAll => '全部替换';
+
+  @override
+  String get bookUpdateSkipAll => '全部跳过';
+
+  @override
+  String get bookUpdateApply => '应用';
+
+  @override
+  String get bookUpdateReplaceNotice => '替换后，已有的书签、划线与笔记位置可能因内容改版而偏移。';
+
+  @override
+  String bookUpdateOldFileUnreadable(String title) {
+    return '“$title”的旧文件已无法访问，替换后将一并修复文件链接。';
+  }
+
+  @override
+  String get bookUpdateApplying => '处理中…';
+
+  @override
+  String bookUpdateResultBothMessage(int replaced, int coexisted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      replaced,
+      locale: localeName,
+      other: '已更新 $replaced 本',
+      one: '已更新 1 本',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      coexisted,
+      locale: localeName,
+      other: '已并存 $coexisted 本',
+      one: '已并存 1 本',
+    );
+    return '$_temp0，$_temp1';
+  }
+
+  @override
+  String bookUpdateResultReplacedOnlyMessage(int replaced) {
+    String _temp0 = intl.Intl.pluralLogic(
+      replaced,
+      locale: localeName,
+      other: '已更新 $replaced 本',
+      one: '已更新 1 本',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookUpdateResultCoexistedOnlyMessage(int coexisted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      coexisted,
+      locale: localeName,
+      other: '已并存 $coexisted 本',
+      one: '已并存 1 本',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookUpdateFailedMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 本更新失败，书籍没有任何变动',
+      one: '1 本更新失败，书籍没有任何变动',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookUpdateResultWithFailedMessage(
+    String successText,
+    String failedText,
+  ) {
+    return '$successText；$failedText';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -7886,4 +8088,105 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerColorsResetText => '還原文字色';
+
+  @override
+  String get bookUpdateSummaryTitle => '發現書籍更新版';
+
+  @override
+  String get bookUpdateSummaryIntro => '以下檔案看起來是書庫中已有書籍的新版本，請選擇處理方式。';
+
+  @override
+  String get bookUpdateConfidenceHigh => '高信心：書籍識別碼相同';
+
+  @override
+  String get bookUpdateConfidenceSuspected => '疑似：書名與作者相同';
+
+  @override
+  String bookUpdateOptionReplace(String title) {
+    return '取代「$title」';
+  }
+
+  @override
+  String get bookUpdateOptionCoexist => '並存（當成新書匯入）';
+
+  @override
+  String get bookUpdateOptionSkip => '跳過';
+
+  @override
+  String get bookUpdateReplaceAll => '全部取代';
+
+  @override
+  String get bookUpdateSkipAll => '全部跳過';
+
+  @override
+  String get bookUpdateApply => '套用';
+
+  @override
+  String get bookUpdateReplaceNotice => '取代後，既有的書籤、劃線與備註位置可能因內容改版而偏移。';
+
+  @override
+  String bookUpdateOldFileUnreadable(String title) {
+    return '「$title」的舊檔已無法存取，取代後會一併修復檔案連結。';
+  }
+
+  @override
+  String get bookUpdateApplying => '處理中…';
+
+  @override
+  String bookUpdateResultBothMessage(int replaced, int coexisted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      replaced,
+      locale: localeName,
+      other: '已更新 $replaced 本',
+      one: '已更新 1 本',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      coexisted,
+      locale: localeName,
+      other: '已並存 $coexisted 本',
+      one: '已並存 1 本',
+    );
+    return '$_temp0，$_temp1';
+  }
+
+  @override
+  String bookUpdateResultReplacedOnlyMessage(int replaced) {
+    String _temp0 = intl.Intl.pluralLogic(
+      replaced,
+      locale: localeName,
+      other: '已更新 $replaced 本',
+      one: '已更新 1 本',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookUpdateResultCoexistedOnlyMessage(int coexisted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      coexisted,
+      locale: localeName,
+      other: '已並存 $coexisted 本',
+      one: '已並存 1 本',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookUpdateFailedMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 本更新失敗，書籍沒有任何變動',
+      one: '1 本更新失敗，書籍沒有任何變動',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookUpdateResultWithFailedMessage(
+    String successText,
+    String failedText,
+  ) {
+    return '$successText；$failedText';
+  }
 }

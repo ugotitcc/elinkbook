@@ -161,6 +161,9 @@ class FakeBookImportService implements BookImportService {
   /// 依 [bookId] 設定指定書籍的取代結果；優先於 [replaceResult]。
   final Map<String, BookReplaceResult> replaceResultsByBookId = {};
 
+  /// 設定時 [replaceBook] 改為等待此 completer，讓測試控制「處理中」的時間點。
+  Completer<BookReplaceResult>? replaceCompleter;
+
   /// 設定時 [replaceBook] 拋出此例外。
   Object? replaceThrows;
 
@@ -177,6 +180,8 @@ class FakeBookImportService implements BookImportService {
     replaceCalls.add((bookId, newUri));
     final error = replaceThrows;
     if (error != null) return Future.error(error);
+    final completer = replaceCompleter;
+    if (completer != null) return completer.future;
     final result = replaceResultsByBookId[bookId] ?? replaceResult;
     return Future.value(result);
   }

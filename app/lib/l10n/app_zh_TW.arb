@@ -3524,5 +3524,118 @@
   "readerColorsResetText": "還原文字色",
   "@readerColorsResetText": {
     "description": "還原文字色按鈕"
+  },
+  "bookUpdateSummaryTitle": "發現書籍更新版",
+  "@bookUpdateSummaryTitle": {
+    "description": "書籍更新版彙整清單對話框標題"
+  },
+  "bookUpdateSummaryIntro": "以下檔案看起來是書庫中已有書籍的新版本，請選擇處理方式。",
+  "@bookUpdateSummaryIntro": {
+    "description": "書籍更新版彙整清單對話框說明文字"
+  },
+  "bookUpdateConfidenceHigh": "高信心：書籍識別碼相同",
+  "@bookUpdateConfidenceHigh": {
+    "description": "書籍更新版高信心標籤（識別碼相同）"
+  },
+  "bookUpdateConfidenceSuspected": "疑似：書名與作者相同",
+  "@bookUpdateConfidenceSuspected": {
+    "description": "書籍更新版疑似標籤（書名與作者相同）"
+  },
+  "bookUpdateOptionReplace": "取代「{title}」",
+  "@bookUpdateOptionReplace": {
+    "description": "更新候選選項：取代指定書名之既有書籍",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "bookUpdateOptionCoexist": "並存（當成新書匯入）",
+  "@bookUpdateOptionCoexist": {
+    "description": "更新候選選項：並存（略過更新判定匯入為新書）"
+  },
+  "bookUpdateOptionSkip": "跳過",
+  "@bookUpdateOptionSkip": {
+    "description": "更新候選選項：跳過此檔案"
+  },
+  "bookUpdateReplaceAll": "全部取代",
+  "@bookUpdateReplaceAll": {
+    "description": "更新版彙整清單捷徑按鈕：全部選取取代"
+  },
+  "bookUpdateSkipAll": "全部跳過",
+  "@bookUpdateSkipAll": {
+    "description": "更新版彙整清單捷徑按鈕：全部選取跳過"
+  },
+  "bookUpdateApply": "套用",
+  "@bookUpdateApply": {
+    "description": "更新版彙整清單確認執行按鈕"
+  },
+  "bookUpdateReplaceNotice": "取代後，既有的書籤、劃線與備註位置可能因內容改版而偏移。",
+  "@bookUpdateReplaceNotice": {
+    "description": "更新版清單有選取取代時常駐的提示文字"
+  },
+  "bookUpdateOldFileUnreadable": "「{title}」的舊檔已無法存取，取代後會一併修復檔案連結。",
+  "@bookUpdateOldFileUnreadable": {
+    "description": "原書檔案已無法存取時顯示的修復提示",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "bookUpdateApplying": "處理中…",
+  "@bookUpdateApplying": {
+    "description": "更新版套用中的進度提示"
+  },
+  "bookUpdateResultBothMessage": "{replaced, plural, =1{已更新 1 本} other{已更新 {replaced} 本}}，{coexisted, plural, =1{已並存 1 本} other{已並存 {coexisted} 本}}",
+  "@bookUpdateResultBothMessage": {
+    "description": "更新版處理結果：同時有取代與並存",
+    "placeholders": {
+      "replaced": {
+        "type": "int"
+      },
+      "coexisted": {
+        "type": "int"
+      }
+    }
+  },
+  "bookUpdateResultReplacedOnlyMessage": "{replaced, plural, =1{已更新 1 本} other{已更新 {replaced} 本}}",
+  "@bookUpdateResultReplacedOnlyMessage": {
+    "description": "更新版處理結果：僅有取代",
+    "placeholders": {
+      "replaced": {
+        "type": "int"
+      }
+    }
+  },
+  "bookUpdateResultCoexistedOnlyMessage": "{coexisted, plural, =1{已並存 1 本} other{已並存 {coexisted} 本}}",
+  "@bookUpdateResultCoexistedOnlyMessage": {
+    "description": "更新版處理結果：僅有並存",
+    "placeholders": {
+      "coexisted": {
+        "type": "int"
+      }
+    }
+  },
+  "bookUpdateFailedMessage": "{count, plural, =1{1 本更新失敗，書籍沒有任何變動} other{{count} 本更新失敗，書籍沒有任何變動}}",
+  "@bookUpdateFailedMessage": {
+    "description": "更新版處理結果：失敗提示",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bookUpdateResultWithFailedMessage": "{successText}；{failedText}",
+  "@bookUpdateResultWithFailedMessage": {
+    "description": "更新版處理結果：合併成功與失敗訊息",
+    "placeholders": {
+      "successText": {
+        "type": "String"
+      },
+      "failedText": {
+        "type": "String"
+      }
+    }
   }
 }
