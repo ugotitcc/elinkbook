@@ -112,7 +112,7 @@
 ## Issue 3 計畫與實作
 
 - **計畫文件**：[plan-issue-3.md](plans/plan-issue-3.md)
-- **實作分支**：`epic-67/issue-3-manual-update-force-relink`
+- **實作分支**：`epic-67/issue-3-manual-update-force-relink`（已合併，PR #391）
 - **核心架構與決策定案**：
   - **D1（手動更新不比對身份）**：書架動作選單新增「用新檔案更新此書」（`BookAction.updateBook`），僅檢查檔案格式是否一致，不比對書名、作者或 identifier。
   - **D2（格式檢查優先）**：選檔後由 `detectImportFileFormat`（`displayName` 優先於 URI）判斷格式；若格式不符直接提示 SnackBar 並結束，不彈對話框，不呼叫 `replaceBook`。
