@@ -62,17 +62,17 @@
 **Interfaces：**
 - Produces：`LeakVerdict evaluateLeak({required List<double> privateMb, required double bookMb, double thresholdRatio = 0.05})`。`privateMb[0]` 為暖身基線，`privateMb[i]`（i ≥ 1）為第 i 次「等待回落後」的值。回傳每次增量 `deltas`、超標次數 `exceededIterations`、`leaked`（任一次超標）、`ratcheting`（第 1～N 次增量皆為正）。
 
-- [ ] **Step 1：寫失敗測試**，涵蓋：
+- [x] **Step 1：寫失敗測試**，涵蓋：
   - 全部增量遠小於門檻 → `leaked == false`。
   - 某次增量剛好等於門檻 → 不算洩漏（嚴格大於才算）。
   - 某次增量略大於門檻 → `leaked == true`，`exceededIterations` 含該次。
   - 增量為負（記憶體下降）→ 不算洩漏、`ratcheting == false`。
   - 4 次增量皆為正但都低於門檻 → `leaked == false` 但 `ratcheting == true`（報告需註記）。
   - 只有基線一筆（無迭代）→ 丟 `ArgumentError`。
-- [ ] **Step 2：** `flutter test test/windows_leak/leak_verdict_test.dart`，確認失敗。
-- [ ] **Step 3：** 實作 `evaluateLeak`。
-- [ ] **Step 4：** 重跑測試通過；`flutter analyze`。
-- [ ] **Step 5：** commit。
+- [x] **Step 2：** `flutter test test/windows_leak/leak_verdict_test.dart`，確認失敗。
+- [x] **Step 3：** 實作 `evaluateLeak`。
+- [x] **Step 4：** 重跑測試通過；`flutter analyze`。
+- [x] **Step 5：** commit。
 
 ---
 
