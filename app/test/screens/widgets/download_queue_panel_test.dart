@@ -64,11 +64,18 @@ class _FakeQueuedDownloadJob implements QueuedDownloadJob {
   @override
   Future<BookUpdateCandidate?> detectUpdate(String tempPath) async => null;
 
+  /// 非 null 時覆寫結算結果（預設依選擇回傳對應結果）。
+  BookUpdateSettleOutcome? settleOutcomeOverride;
+  final List<BookUpdateChoice> settleChoices = [];
+
   @override
   Future<BookUpdateSettleResult> settleUpdate(
     BookUpdateCandidate candidate,
     BookUpdateChoice choice,
   ) async {
+    settleChoices.add(choice);
+    final override = settleOutcomeOverride;
+    if (override != null) return BookUpdateSettleResult(override);
     if (choice is ReplaceChoice) {
       return const BookUpdateSettleResult(BookUpdateSettleOutcome.replaced);
     } else if (choice is CoexistChoice) {
@@ -245,7 +252,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text("待確認更新"), findsOneWidget);
-      expect(find.byKey(const Key("sources_download_queue_review_job-1")), findsOneWidget);
+      expect(find.byKey(const Key("sources_download_queue_update_review_job-1")), findsOneWidget);
       expect(find.byKey(const Key("sources_download_queue_dismiss_job-1")), findsOneWidget);
     });
 
@@ -262,7 +269,7 @@ void main() {
       controller.notifyListeners();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key("sources_download_queue_review_job-1")));
+      await tester.tap(find.byKey(const Key("sources_download_queue_update_review_job-1")));
       await tester.pumpAndSettle();
 
       expect(find.text("更新版書籍-1.epub"), findsOneWidget);
@@ -288,7 +295,7 @@ void main() {
       controller.notifyListeners();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key("sources_download_queue_review_job-1")));
+      await tester.tap(find.byKey(const Key("sources_download_queue_update_review_job-1")));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key("book_update_cancel")));
@@ -316,6 +323,106 @@ void main() {
 
       expect(controller.items, isEmpty);
     });
+
+    Future<DownloadQueueItem> enqueueAwaiting(
+      WidgetTester tester,
+      DownloadQueueController controller,
+      _FakeQueuedDownloadJob job,
+      BookUpdateCandidate candidate,
+    ) async {
+      controller.enqueueJobs([job]);
+      final item = controller.items.first;
+      item.status = DownloadItemStatus.awaitingUpdateConfirmation;
+      item.updateCandidate = candidate;
+      controller.notifyListeners();
+      await tester.pumpAndSettle();
+      return item;
+    }
+
+    testWidgets("待確認項目不畫進度條（審查 M-1）", (tester) async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = _FakeQueuedDownloadJob(id: "job-1", name: "更新版書");
+      await pumpPanel(tester, controller);
+      await enqueueAwaiting(tester, controller, job, makeCandidate("1"));
+
+      expect(find.byKey(const Key("sources_download_queue_progress_job-1")), findsNothing);
+      expect(find.byIcon(Icons.update), findsOneWidget);
+    });
+
+    testWidgets("窄螢幕（寬 320）長名稱下待確認列無 overflow（審查 I-3）", (tester) async {
+      tester.view.physicalSize = const Size(320 * 2, 640 * 2);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = _FakeQueuedDownloadJob(
+        id: "job-1",
+        name: "這是一個非常非常長的書籍名稱用來測試窄螢幕下待確認更新列的排版是否會溢位" * 2,
+      );
+      await pumpPanel(tester, controller);
+      await enqueueAwaiting(tester, controller, job, makeCandidate("1"));
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key("sources_download_queue_update_review_job-1")), findsOneWidget);
+      expect(find.byKey(const Key("sources_download_queue_dismiss_job-1")), findsOneWidget);
+    });
+
+    testWidgets("對話框選跳過套用：項目從清單消失、假工作收到 SkipChoice", (tester) async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = _FakeQueuedDownloadJob(id: "job-1", name: "更新版書");
+      await pumpPanel(tester, controller);
+      await enqueueAwaiting(tester, controller, job, makeCandidate("1"));
+
+      await tester.tap(find.byKey(const Key("sources_download_queue_update_review_job-1")));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key("book_update_option_skip_0")));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key("book_update_apply")));
+      await tester.pumpAndSettle();
+
+      expect(controller.items, isEmpty);
+      expect(job.settleChoices.single, isA<SkipChoice>());
+      // 全為跳過不顯示 SnackBar
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets("結算失敗：項目變為失敗並出現失敗 SnackBar", (tester) async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = _FakeQueuedDownloadJob(id: "job-1", name: "更新版書")
+        ..settleOutcomeOverride = BookUpdateSettleOutcome.failed;
+      await pumpPanel(tester, controller);
+      final item = await enqueueAwaiting(tester, controller, job, makeCandidate("1"));
+
+      await tester.tap(find.byKey(const Key("sources_download_queue_update_review_job-1")));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key("book_update_apply")));
+      await tester.pumpAndSettle();
+
+      expect(item.status, DownloadItemStatus.failed);
+      expect(find.textContaining("更新失敗"), findsOneWidget);
+    });
+
+    testWidgets("對話框開啟期間項目被移除：該列卸載後仍顯示失敗 SnackBar（審查 M-4）", (tester) async {
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job = _FakeQueuedDownloadJob(id: "job-1", name: "更新版書");
+      await pumpPanel(tester, controller);
+      await enqueueAwaiting(tester, controller, job, makeCandidate("1"));
+
+      await tester.tap(find.byKey(const Key("sources_download_queue_update_review_job-1")));
+      await tester.pumpAndSettle();
+
+      // 對話框仍開著時，項目被移除（列隨之卸載）
+      await controller.dismiss("job-1");
+      await tester.pump();
+      expect(controller.items, isEmpty);
+
+      await tester.tap(find.byKey(const Key("book_update_apply")));
+      await tester.pumpAndSettle();
+
+      // 項目已不是待確認狀態 → resolveUpdate 回 failed；SnackBar 仍須顯示
+      expect(find.textContaining("更新失敗"), findsOneWidget);
+    });
   });
 }
-

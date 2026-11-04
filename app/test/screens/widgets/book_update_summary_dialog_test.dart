@@ -431,5 +431,76 @@ void main() {
     expect(appliedChoices, isNotNull);
     expect(appliedChoices?[c0], const ReplaceChoice("b1"));
   });
-}
 
+  testWidgets("applier + discardOnCancel 為 true 時按取消：改走 applier 以全 SkipChoice 丟棄（審查 I-2）", (tester) async {
+    final c0 = _makeCandidate(sourceUri: "file:///c0.epub");
+    Map<BookUpdateCandidate, BookUpdateChoice>? appliedChoices;
+    final resultFuture = await _openDialog(
+      tester,
+      service: null,
+      candidates: [c0],
+      discardOnCancel: true,
+      applier: (choices) async {
+        appliedChoices = choices;
+        return const BookUpdateApplyResult(skipped: 1);
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key("book_update_cancel")));
+    await tester.pumpAndSettle();
+
+    final result = await resultFuture;
+    expect(tester.takeException(), isNull);
+    expect(result.skipped, 1);
+    expect(appliedChoices?[c0], const SkipChoice());
+  });
+
+  testWidgets("applier + discardOnCancel 為 true 且對話框被直接關閉（回 null）：保底走 applier 全跳過（審查 I-2）", (tester) async {
+    final c0 = _makeCandidate(sourceUri: "file:///c0.epub");
+    Map<BookUpdateCandidate, BookUpdateChoice>? appliedChoices;
+    final resultFuture = await _openDialog(
+      tester,
+      service: null,
+      candidates: [c0],
+      discardOnCancel: true,
+      applier: (choices) async {
+        appliedChoices = choices;
+        return const BookUpdateApplyResult(skipped: 1);
+      },
+    );
+    await tester.pumpAndSettle();
+
+    Navigator.of(tester.element(find.byType(AlertDialog))).pop();
+    await tester.pumpAndSettle();
+
+    final result = await resultFuture;
+    expect(tester.takeException(), isNull);
+    expect(result.skipped, 1);
+    expect(appliedChoices?[c0], const SkipChoice());
+  });
+
+  testWidgets("僅 applier、discardOnCancel 為 false 且對話框被直接關閉（回 null）：不拋例外、不呼叫 applier、回傳全 0（審查 I-1）", (tester) async {
+    final c0 = _makeCandidate(sourceUri: "file:///c0.epub");
+    var applierCalls = 0;
+    final resultFuture = await _openDialog(
+      tester,
+      service: null,
+      candidates: [c0],
+      discardOnCancel: false,
+      applier: (choices) async {
+        applierCalls++;
+        return const BookUpdateApplyResult(replaced: 1);
+      },
+    );
+    await tester.pumpAndSettle();
+
+    Navigator.of(tester.element(find.byType(AlertDialog))).pop();
+    await tester.pumpAndSettle();
+
+    final result = await resultFuture;
+    expect(tester.takeException(), isNull);
+    expect(applierCalls, 0);
+    expect(result, const BookUpdateApplyResult());
+  });
+}

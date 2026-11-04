@@ -40,6 +40,24 @@ Future<BookUpdateApplyResult> showBookUpdateSummaryDialog(
   if (!discardOnCancel) {
     return const BookUpdateApplyResult();
   }
+  return _skipAll(
+    candidates,
+    importService: importService,
+    applier: applier,
+  );
+}
+
+/// 全部跳過：有 [applier] 時走 applier（呼叫端自行負責丟棄），否則走 [importService]（審查 I-2）。
+Future<BookUpdateApplyResult> _skipAll(
+  List<BookUpdateCandidate> candidates, {
+  required BookImportService? importService,
+  required Future<BookUpdateApplyResult> Function(
+    Map<BookUpdateCandidate, BookUpdateChoice> choices,
+  )? applier,
+}) {
+  if (applier != null) {
+    return applier({for (final c in candidates) c: const SkipChoice()});
+  }
   return applyBookUpdateChoices(
     importService!,
     candidates.map((c) => BookUpdateDecision(c, const SkipChoice())).toList(),
@@ -148,13 +166,10 @@ class _BookUpdateSummaryDialogState extends State<_BookUpdateSummaryDialog> {
       return;
     }
 
-    final decisions = widget.candidates
-        .map((c) => BookUpdateDecision(c, const SkipChoice()))
-        .toList();
-
-    final result = await applyBookUpdateChoices(
-      widget.importService!,
-      decisions,
+    final result = await _skipAll(
+      widget.candidates,
+      importService: widget.importService,
+      applier: widget.applier,
     );
 
     if (mounted) {

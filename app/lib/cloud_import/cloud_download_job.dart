@@ -88,13 +88,15 @@ class CloudDownloadJob implements QueuedDownloadJob {
     );
     if (result.updateCandidates.isNotEmpty) {
       final refs = BookSourceRefs(source: source, cloudFileId: entry.id);
+      var anyImported = false;
       for (final candidate in result.updateCandidates) {
         try {
-          await importService.importCandidateAsNewBook(
+          final book = await importService.importCandidateAsNewBook(
             candidate,
             folderName: folderName,
             sourceRefs: refs,
           );
+          if (book != null) anyImported = true;
         } catch (_) {}
       }
       try {
@@ -103,6 +105,11 @@ class CloudDownloadJob implements QueuedDownloadJob {
           await file.delete();
         }
       } catch (_) {}
+      // 一本都沒成功並存：不得讓項目顯示「完成」（檔案已刪、書庫裡沒有這本書）。
+      // 丟出例外使控制器標記為 failed，使用者可重試重新下載（審查 I-1）。
+      if (!anyImported) {
+        throw StateError('更新版保底並存匯入失敗');
+      }
     }
   }
 

@@ -206,6 +206,7 @@ class DownloadQueueController extends ChangeNotifier {
         candidate = null;
       }
       if (candidate != null) {
+        // 刪除原暫存檔失敗不得影響待確認流程（審查 M-2）；_deleteIfExists 已吞例外
         await _deleteIfExists(tempPath);
         item.updateCandidate = candidate;
         item.status = DownloadItemStatus.awaitingUpdateConfirmation;
@@ -242,9 +243,12 @@ class DownloadQueueController extends ChangeNotifier {
     }
   }
 
+  /// 刪除暫存檔；任何失敗皆吞掉，避免清理動作本身讓下載迴圈或 catch 分支再次拋例外。
   Future<void> _deleteIfExists(String path) async {
-    final file = File(path);
-    if (await file.exists()) await file.delete();
+    try {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    } catch (_) {}
   }
 
   void cancel(String id) => _jobsById[id]?.cancel();
@@ -274,7 +278,10 @@ class DownloadQueueController extends ChangeNotifier {
     try {
       final result = await job.settleUpdate(candidate, choice);
       for (final coverPath in result.changedCoverPaths) {
-        onCoverChanged?.call(coverPath);
+        // 封面快取失效只是 UI 的盡力而為通知，回呼拋例外不得中斷結算（審查 M-1）
+        try {
+          onCoverChanged?.call(coverPath);
+        } catch (_) {}
       }
 
       switch (result.outcome) {

@@ -175,14 +175,26 @@ Future<void> handleImportUpdateCandidates(
 
 /// 顯示更新版結算結果之 SnackBar 提示（純取代、純並存、混合、含失敗，全為跳過時不顯示）。
 void showBookUpdateResultSnackBar(BuildContext context, BookUpdateApplyResult result) {
+  showBookUpdateResultSnackBarWith(
+    ScaffoldMessenger.of(context),
+    AppLocalizations.of(context)!,
+    result,
+  );
+}
+
+/// 與 [showBookUpdateResultSnackBar] 相同，但改用事先取得的 [messenger] 與 [l10n]，
+/// 讓呼叫端在非同步等待（例如對話框）之後，即使原本的 context 已卸載仍可顯示提示（審查 M-4）。
+void showBookUpdateResultSnackBarWith(
+  ScaffoldMessengerState messenger,
+  AppLocalizations l10n,
+  BookUpdateApplyResult result,
+) {
   final replaced = result.replaced;
   final coexisted = result.coexisted;
   final failed = result.failed;
 
   // 兩者皆無（全為跳過）→ 不顯示 SnackBar
   if (replaced == 0 && coexisted == 0 && failed == 0) return;
-
-  final l10n = AppLocalizations.of(context)!;
 
   String? successText;
   if (replaced > 0 && coexisted > 0) {
@@ -207,7 +219,7 @@ void showBookUpdateResultSnackBar(BuildContext context, BookUpdateApplyResult re
     message = failedText!;
   }
 
-  ScaffoldMessenger.of(context).showSnackBar(
+  messenger.showSnackBar(
     SnackBar(content: Text(message)),
   );
 }

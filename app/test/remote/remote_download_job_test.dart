@@ -198,6 +198,7 @@ void main() {
         importedBooks: [],
         updateCandidates: [candidate],
       );
+      importService.importCandidateResult = _makeTestBook('new-id');
 
       final job = makeJob(
         importService: importService,
@@ -217,7 +218,7 @@ void main() {
       await tempDir.delete(recursive: true);
     });
 
-    test('殘留候選並存失敗時，permanentPath 同樣被刪除', () async {
+    test('殘留候選並存全部失敗：permanentPath 被刪且 import 拋例外，讓項目標為 failed（審查 I-1）', () async {
       final tempDir = await Directory.systemTemp.createTemp('remote_import_test_');
       final tempFile = File('${tempDir.path}/permanent.epub');
       await tempFile.writeAsString('content');
@@ -232,8 +233,48 @@ void main() {
 
       final job = makeJob(importService: importService);
 
-      await job.import(tempFile.path);
+      await expectLater(job.import(tempFile.path), throwsA(isA<StateError>()));
 
+      expect(await tempFile.exists(), isFalse);
+
+      await tempDir.delete(recursive: true);
+    });
+
+    test('殘留候選並存回傳 null 時同樣拋例外（審查 I-1）', () async {
+      final tempDir = await Directory.systemTemp.createTemp('remote_import_test_');
+      final tempFile = File('${tempDir.path}/permanent.epub');
+      await tempFile.writeAsString('content');
+
+      final importService = FakeBookImportService();
+      importService.importFilesResult = ImportResult(
+        importedBooks: [],
+        updateCandidates: [_makeCandidate()],
+      );
+      importService.importCandidateResult = null;
+
+      final job = makeJob(importService: importService);
+
+      await expectLater(job.import(tempFile.path), throwsA(isA<StateError>()));
+      expect(await tempFile.exists(), isFalse);
+
+      await tempDir.delete(recursive: true);
+    });
+
+    test('多筆殘留候選只要有一筆並存成功就不拋例外', () async {
+      final tempDir = await Directory.systemTemp.createTemp('remote_import_test_');
+      final tempFile = File('${tempDir.path}/permanent.epub');
+      await tempFile.writeAsString('content');
+
+      final importService = FakeBookImportService();
+      importService.importFilesResult = ImportResult(
+        importedBooks: [],
+        updateCandidates: [_makeCandidate(), _makeCandidate()],
+      );
+      importService.importCandidateResult = _makeTestBook('new-id');
+
+      final job = makeJob(importService: importService);
+
+      await job.import(tempFile.path);
       expect(await tempFile.exists(), isFalse);
 
       await tempDir.delete(recursive: true);

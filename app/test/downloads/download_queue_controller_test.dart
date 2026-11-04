@@ -629,5 +629,51 @@ void main() {
       await controller.retry('job-1');
       expect(job.downloadCalls, 1);
     });
+
+    test('onCoverChanged 拋例外不影響結算（審查 M-1）', () async {
+      final controller = DownloadQueueController(
+        onDuplicateConfirm: (_) async => false,
+        onCoverChanged: (_) => throw StateError('快取失效失敗'),
+      );
+      final job = FakeQueuedDownloadJob(id: 'job-1')
+        ..detectResult = _makeTestCandidate('1')
+        ..settleResult = const BookUpdateSettleResult(
+          BookUpdateSettleOutcome.replaced,
+          changedCoverPaths: {'/covers/a.png', '/covers/b.png'},
+        );
+
+      controller.enqueueJobs([job]);
+      await pumpEventQueue(times: 50);
+
+      final result = await controller.resolveUpdate('job-1', const ReplaceChoice('book-1'));
+      expect(result.outcome, BookUpdateSettleOutcome.replaced);
+      expect(controller.items.single.status, DownloadItemStatus.done);
+    });
+
+    test('刪除原暫存檔失敗不影響進入待確認，佇列照常繼續（審查 M-2）', () async {
+      final tempDir = await Directory.systemTemp.createTemp('download_test_');
+      final tempFile = File('${tempDir.path}/locked.epub');
+      await tempFile.writeAsString('content');
+      // Windows 上開啟中的檔案無法刪除，可重現刪除失敗；其他平台刪除會成功，斷言同樣成立
+      final handle = await tempFile.open();
+      addTearDown(() async {
+        await handle.close();
+        if (await tempDir.exists()) await tempDir.delete(recursive: true);
+      });
+
+      final controller = DownloadQueueController(onDuplicateConfirm: (_) async => false);
+      final job1 = FakeQueuedDownloadJob(id: 'job-1', tempPath: tempFile.path)
+        ..detectResult = _makeTestCandidate('1');
+      final job2 = FakeQueuedDownloadJob(id: 'job-2');
+
+      controller.enqueueJobs([job1, job2]);
+      await pumpEventQueue(times: 50);
+
+      expect(
+        controller.items.firstWhere((e) => e.id == 'job-1').status,
+        DownloadItemStatus.awaitingUpdateConfirmation,
+      );
+      expect(controller.items.firstWhere((e) => e.id == 'job-2').status, DownloadItemStatus.done);
+    });
   });
 }

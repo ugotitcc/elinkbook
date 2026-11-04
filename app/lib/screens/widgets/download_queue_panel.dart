@@ -159,7 +159,7 @@ class _QueueItemRow extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              key: Key('sources_download_queue_review_${item.id}'),
+              key: Key('sources_download_queue_update_review_${item.id}'),
               icon: const Icon(Icons.rate_review_outlined),
               tooltip: l10n.downloadQueueUpdateReviewButton,
               onPressed: () => _reviewUpdate(context, item),
@@ -185,6 +185,11 @@ class _QueueItemRow extends StatelessWidget {
     final candidate = item.updateCandidate;
     if (candidate == null) return;
 
+    // 對話框期間此列可能因項目被移除而卸載：先取得 messenger 與在地化字串，
+    // 之後不再依賴這個 context 是否仍掛載（審查 M-4）。
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
     final result = await showBookUpdateSummaryDialog(
       context,
       candidates: [candidate],
@@ -207,10 +212,7 @@ class _QueueItemRow extends StatelessWidget {
       },
     );
 
-    if (context.mounted &&
-        (result.replaced > 0 || result.coexisted > 0 || result.failed > 0)) {
-      showBookUpdateResultSnackBar(context, result);
-    }
+    showBookUpdateResultSnackBarWith(messenger, l10n, result);
   }
 
   IconData _statusIcon(DownloadItemStatus status) {
