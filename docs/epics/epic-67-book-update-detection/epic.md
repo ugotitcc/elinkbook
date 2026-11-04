@@ -125,3 +125,22 @@
     - 手動更新與強制重新連結後，既有的書籤、劃線、備註與閱讀進度位置不會因內容改版自動重新對齊，可能因內容不同而偏移。
     - TXT／MD／CBZ 因無指紋比對與 SAF 重新連結需求，不支援 `relinkBook`。
   - **真機／模擬器手動驗證：尚未執行**，由人類另行處理（計畫 Task 4 Step 3 的五項情境：1 書架「用新檔案更新此書」成功與封面即時更新、2 格式不符拒絕、3 閱讀器權限撤銷後重新選檔遇內容不符出現強制重新連結對話框、4 強制重新連結確認後原地開書、5 E-Ink 模式無過場動畫）；完成後請把結果補記於此。
+
+## Issue 6 計畫與實作
+
+- **計畫文件**：[plan-issue-6.md](plans/plan-issue-6.md)
+- **實作分支**：`epic-67/issue-6-pdf-degrade`
+- **核心架構與決策定案**：
+  - **D1（列舉與提示文案沿用）**：回呼列舉沿用 `NavigationDegradedReason`（`readingPosition` 與 `annotation`），訊息文案與 SnackBar 樣式直接沿用既有 `readerNavigationDegradedMessage`，零新增 ARB 鍵值與字串。
+  - **D2（不疊加提示）**：開書或跳頁期間若已觸發降級提示，SnackBar 遵循既有行為（非阻塞、短暫提示），不因連續回報而重複堆疊。
+  - **D3（開書主動夾頁）**：`_openDocument` 開啟 PDF 完成後，主動檢查初始頁碼 `initialPageIndex` 是否超出合法範圍（`< 0` 夾為 0，`>= pageCount` 夾為 `pageCount - 1`）。若超界，設定 `_startPageIndex` 為合法最後一頁、標記 `_initialPageDegraded = true`，並在 `onViewerReady` 回呼時發出 `onNavigationDegraded(NavigationDegradedReason.readingPosition)` 一次。若中途 unmount（`mounted == false`），不拋出例外亦不通知。
+  - **D4（跳頁夾頁取代靜默 return）**：`_jumpToPage(index)` 取代原本超界直接 `return false` 的行為，改為夾到 `pageCount - 1`（若 `< 0` 則夾為 0）、發出 `onNavigationDegraded(NavigationDegradedReason.annotation)`，回傳 `bool degraded` 表示是否發生降級。
+  - **D5（超界跳頁不發出暫態高亮）**：`jumpToPageAtRect` 呼叫 `_jumpToPage`，若發生超界降級（`degraded == true`），跳過 `_revealHighlight`，避免在最後一頁錯誤的矩形區域疊加不相干的高亮。
+  - **D6（閱讀位置持久化覆寫）**：降級落在最後一頁後，`onPageChanged` 依既有流程正常觸發，閱讀位置直接被最後一頁覆寫，原本超界的頁碼不保留。
+  - **D7 / Ruling 1（pending 重定位頁碼超界同步更新）**：`_openDocument` 偵測超界並修正 `_startPageIndex` 時，若 `_pendingReanchorPageIndex != null && _pendingReanchorPageIndex > last`，同步更新 `_pendingReanchorPageIndex = last`，避免旋轉或版面切換時被舊的超界頁碼拉回。
+  - **D8 / Ruling 2（高亮超界防禦保護）**：`_setJumpHighlight` 加入頁碼防禦 `pageIndex < 0 || pageIndex >= _controller.pageCount`，防止任何外部或內部非預期路徑以非法頁碼存取 `_pageHighlights` 導致例外。
+  - **D9 / Ruling 3（開書負數頁碼防禦）**：`_openDocument` 針對負數頁碼（`start < 0`）統一防禦歸零。
+  - **已知限制**：
+    - 夾到最後一頁只是「不壞」的安全網，書籤與劃線仍指向舊頁碼（PDF 沒有概略進度可用，與 Foliate 不同）；劃線的頁內矩形座標在新版內容中也可能對不上，屬 spec 已接受的偏移。
+    - 降級後閱讀位置會被最後一頁覆寫（D6），原本的超界頁碼不保留。
+  - **真機／模擬器手動驗證：尚未執行**，由人類另行處理（計畫 Task 3 Step 3 的四項情境：1 書架 20 頁 PDF 讀到第 18 頁更新成 5 頁後開書開在第 5 頁並出提示不閃退、2 同書在書籤清單點第 18 頁書籤跳到最後一頁出提示、3 雙頁與逐頁翻頁模式落在最後一頁不空白、4 正常 PDF 開書與跳轉不出現提示迴歸）；完成後請把結果補記於此。

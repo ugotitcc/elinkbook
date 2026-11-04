@@ -75,7 +75,7 @@
   - `PdfReaderView({..., ValueChanged<NavigationDegradedReason>? onNavigationDegraded})`（選填，預設 null；Task 2 接線）。
   - 行為契約：開書時 `initialPageIndex >= 總頁數 && 總頁數 > 0` → 開在最後一頁、通知一次 `readingPosition`；`jumpToPage`／`jumpToPageAtRect` 的 `pageIndex >= 總頁數 && 總頁數 > 0` → 跳最後一頁、通知一次 `annotation`；`pageIndex < 0` 維持靜默忽略。
 
-- [ ] **Step 1: 寫失敗測試**（沿用 `pdf_reader_view_test.dart` 既有 `pumpWidget`＋`pumpUntilPdfReady` 模式與 `sample_multi_page.pdf`（5 頁）；測試名稱用中文）
+- [x] **Step 1: 寫失敗測試**（沿用 `pdf_reader_view_test.dart` 既有 `pumpWidget`＋`pumpUntilPdfReady` 模式與 `sample_multi_page.pdf`（5 頁）；測試名稱用中文）
   - `pdf_reader_view_test.dart`：
     - `開書初始頁碼超出總頁數：開在最後一頁並通知一次 readingPosition`（`initialPageIndex: 99`；斷言 `lastPageInfo.pageIndex == 4`、通知清單為 `[readingPosition]`、`tester.takeException()` 為 null）
     - `開書初始頁碼剛好等於總頁數（off-by-one）：視為超界降級`（`initialPageIndex: 5`）
@@ -94,11 +94,11 @@
   - `pdf_reader_view_dual_page_test.dart`：`雙頁模式開書初始頁碼超界：開在最後一頁（所屬跨頁）並通知`；舊 999 案例標題同步改寫。
   - `pdf_reader_view_paginated_test.dart`：`逐頁模式開書初始頁碼超界：落在最後一頁所屬單元並通知`（沿用該檔既有 helper）。
 
-- [ ] **Step 2: 執行確認失敗**
+- [x] **Step 2: 執行確認失敗**
   Run（`app/`）：`flutter test test/reader/pdf_reader_view_test.dart test/reader/pdf_reader_view_dual_page_test.dart test/reader/pdf_reader_view_paginated_test.dart --no-pub`
   Expected: 編譯失敗（`onNavigationDegraded` 未定義）。
 
-- [ ] **Step 3: 實作**（`pdf_reader_view.dart`）
+- [x] **Step 3: 實作**（`pdf_reader_view.dart`）
   - 建構子與欄位加 `final ValueChanged<NavigationDegradedReason>? onNavigationDegraded;`（文件註解寫明兩種原因與 D1）；import `navigation_degraded_reason.dart`。
   - State 新增 `late int _startPageIndex`（`initState` 先設為 `widget.initialPageIndex ?? 0`）與 `bool _initialPageDegraded = false`。`_openDocument` 在 `setState(() => _document = document)` 前：`final last = document.pages.length - 1;` 若 `last >= 0` 且 `_startPageIndex > last`，設 `_startPageIndex = last`、`_pagedAnchorPage = last`、`_initialPageDegraded = true`（D3）。`didUpdateWidget` 的 `anchorBefore` 與 `build` 的 `initialPageNumber` 改讀 `_startPageIndex`；`initState` 的 `_pagedAnchorPage` 維持以 `_startPageIndex` 初始化。
   - 新私有方法 `void _notifyDegraded(NavigationDegradedReason reason)`：`WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) widget.onNavigationDegraded?.call(reason); })`（D4）。
@@ -108,14 +108,14 @@
   - `_applyPendingReanchor`：取得 `pageCount` 後夾制再 `_jumpToPage`（D7）；`_setJumpHighlight` 加超界檢查（D8）；`_openDocument` 內 `last >= 0` 時，`_startPageIndex < 0` 清洗為 0 並同步 `_pagedAnchorPage`（D9，不設 `_initialPageDegraded`）。
   - 通知內不得 await、不改狀態，維持現有 fire-and-forget 慣例。
 
-- [ ] **Step 4: 執行確認通過**
+- [x] **Step 4: 執行確認通過**
   Run: 同 Step 2 指令
   Expected: PASS（含既有跳頁、雙頁、逐頁、書籤相關案例不回歸）。另跑 `flutter test test/reader/pdf_reader_view_jump_highlight_test.dart test/reader/pdf_reader_view_search_test.dart test/reader/pdf_reader_surface_test.dart --no-pub` 確認搜尋跳轉與 Surface 不回歸。
 
-- [ ] **Step 5: 靜態檢查**
+- [x] **Step 5: 靜態檢查**
   Run: `flutter analyze` → "No issues found!"；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   ```bash
   git add app/lib/reader/pdf_reader_view.dart app/test/reader
   git commit -m "feat(reader): PDF 開書與跳頁頁碼超界時夾到最後一頁並通知降級（epic-67 Issue 6）"
@@ -133,26 +133,26 @@
 - Consumes: Task 1 的 `PdfReaderView.onNavigationDegraded`；Issue 5 的 `ReaderScreen._handleNavigationDegraded`（不改）。
 - Produces: 無新介面。
 
-- [ ] **Step 1: 寫失敗測試**（沿用 `reader_screen_test.dart:516` Foliate 案例的寫法）
+- [x] **Step 1: 寫失敗測試**（沿用 `reader_screen_test.dart:516` Foliate 案例的寫法）
   - `PDF：閱讀器回報降級時顯示與 Foliate 相同的提示`：開 `sample_multi_page.pdf`，`tester.widget<PdfReaderView>` 取得後斷言 `onNavigationDegraded` 非 null；呼叫 `(NavigationDegradedReason.readingPosition)` 與另一次 `annotation` 後 `pump()`，斷言找到 Key `reader_navigation_degraded_snackbar` 與文字「原位置已變更，已跳至概略進度」，且畫面上只有一則（連續兩次不排隊）。
   - `PDF：初始頁碼超界時真的顯示提示且書不壞`（端到端）：`ReaderScreen(filePath: sample_multi_page.pdf, initialJumpTarget: ReaderJumpTarget(pdfPageIndex: 99))`，以 `pumpUntilPdfReady` 等待後 `pump()`，斷言出現提示 SnackBar、沒有 `reader_error_text`、`PdfPageInfo` 頁尾顯示最後一頁（以既有頁碼指示 Key 或 `_pdfPageInfo` 可見文字為準，沿用該檔既有 PDF 頁碼斷言寫法）。
   - `PDF：初始頁碼有效時不顯示降級提示`（回歸，`pdfPageIndex: 2`）。
 
-- [ ] **Step 2: 執行確認失敗**
+- [x] **Step 2: 執行確認失敗**
   Run: `flutter test test/screens/reader_screen_test.dart --plain-name "降級" --no-pub`
   Expected: 新案例 FAIL（`onNavigationDegraded` 為 null）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
   在 `reader_screen.dart` 的 `PdfReaderView(` 參數列加一行 `onNavigationDegraded: _handleNavigationDegraded,`，不改其他邏輯。
 
-- [ ] **Step 4: 執行確認通過**
+- [x] **Step 4: 執行確認通過**
   Run: `flutter test test/screens/reader_screen_test.dart --plain-name "降級" --no-pub`；再跑 `--plain-name "PDF"` 確認既有 PDF 閱讀案例不回歸。
   Expected: PASS。
 
-- [ ] **Step 5: 靜態檢查**
+- [x] **Step 5: 靜態檢查**
   Run: `flutter analyze` → "No issues found!"；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   ```bash
   git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
   git commit -m "feat(reader): PDF 頁碼降級時顯示與 Foliate 相同的提示（epic-67 Issue 6）"
@@ -167,11 +167,11 @@
 - Modify: `docs/epics/epic-67-book-update-detection/issues.md`（Issue 6 列與 Status 改為實作完成待 PR）
 - Modify: 本計畫檔（勾選完成的步驟）
 
-- [ ] **Step 1: 完整測試與靜態檢查**
+- [x] **Step 1: 完整測試與靜態檢查**
   Run（`app/`）：`flutter test --no-pub`；`flutter analyze`；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；然後 `git checkout pubspec.lock windows/flutter`。
   Expected: 全部通過、analyze "No issues found!"。
 
-- [ ] **Step 2: 更新 epic.md 與 issues.md**
+- [x] **Step 2: 更新 epic.md 與 issues.md**
   記錄決策、已知限制，與真機驗證項目；真機驗證一律標「尚未執行，由人類另行處理」，不自行勾選。已知限制至少包含：
   - 夾到最後一頁只是「不壞」的安全網，書籤與劃線仍指向舊頁碼（PDF 沒有概略進度可用，與 Foliate 不同）；劃線的頁內矩形座標在新版內容中也可能對不上，屬 spec 已接受的偏移。
   - 降級後閱讀位置會被最後一頁覆寫（D6），原本的超界頁碼不保留。
@@ -182,7 +182,7 @@
   3. 雙頁（並列）與逐頁翻頁模式各重做第 1 項：落在最後一頁（所屬跨頁）、不空白。
   4. 正常 PDF 一般開書與書籤跳轉：不出現提示（迴歸）。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   ```bash
   git add docs/epics/epic-67-book-update-detection
   git commit -m "docs(epic-67): Issue 6 實作記錄與工單更新"
