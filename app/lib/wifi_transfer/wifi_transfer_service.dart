@@ -136,8 +136,24 @@ class WifiTransferService {
         [landedPath],
         displayNames: [originalFileName],
       );
-      if (result.importedBooks.isEmpty) {
+      var hasImported = result.importedBooks.isNotEmpty;
+      final hasUpdateCandidates = result.updateCandidates.isNotEmpty;
+      if (hasUpdateCandidates) {
+        for (final candidate in result.updateCandidates) {
+          final book = await importService.importCandidateAsNewBook(candidate);
+          if (book != null) {
+            hasImported = true;
+          }
+        }
+        // epic-67 Issue 4 Task 6 / 審查 I-2：並存的新書使用服務重新複製出的私有檔，
+        // WiFi 落地檔已無人引用。只要 result.updateCandidates 非空，無論並存成功與否
+        // 都要刪除落地檔以防孤兒檔洩漏。
         await safeDelete(landedPath);
+      }
+      if (!hasImported) {
+        if (!hasUpdateCandidates) {
+          await safeDelete(landedPath);
+        }
         return UploadResult(
           originalFileName: originalFileName,
           outcome: UploadOutcome.failed,

@@ -284,12 +284,12 @@ Future<void> sweepUpdateStaging(Directory documentsDirectory);
 
 **行為：** `importFiles` 回傳後，對 `result.updateCandidates` 每一筆呼叫 `importCandidateAsNewBook`（D7）；成功者視同已匯入。判定 `imported` 改為 `result.importedBooks.isNotEmpty || 至少一筆並存成功`；其餘維持（`isEmpty` → 失敗並刪落地檔）。**只要 `result.updateCandidates` 非空，無論並存成功與否都要 `safeDelete(landedPath)`**：並存的新書使用服務重新複製出的私有檔，WiFi 落地檔已無人引用（審查 I-2）。指紋相同的去重邏輯不動。
 
-- [ ] **Step 1：寫失敗測試**（假匯入服務回傳含 1 筆更新候選、`importedBooks` 為空）：
+- [x] **Step 1：寫失敗測試**（假匯入服務回傳含 1 筆更新候選、`importedBooks` 為空）：
   - `更新版上傳當新書匯入`：`importCandidateAsNewBook` 被呼叫、`UploadResult.outcome == imported`、**落地檔已被刪除**（`deleteFile` 假實作收到 `landedPath`）。
   - `並存失敗`：`importCandidateResult` 為 null → outcome `failed`、落地檔被刪。
   - `一般新書匯入`：`updateCandidates` 為空時落地檔**不被刪**（書本身引用它）。
   - `一般新書與重複`：既有案例全數通過。
-- [ ] **Step 2：確認失敗 → Step 3：實作 → Step 4：確認通過**。
+- [x] **Step 2：確認失敗 → Step 3：實作 → Step 4：確認通過**。
 - [ ] **Step 5：`flutter analyze`**；提交 `fix(wifi): 更新版上傳維持當新書匯入，不被 Issue 1 的偵測吞掉（epic-67 Issue 4 Task 6）`。
 
 ---
