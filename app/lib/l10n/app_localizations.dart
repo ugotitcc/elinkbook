@@ -4618,6 +4618,117 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'還原文字色'**
   String get readerColorsResetText;
+
+  /// 書籍更新版彙整清單對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'發現書籍更新版'**
+  String get bookUpdateSummaryTitle;
+
+  /// 書籍更新版彙整清單對話框說明文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'以下檔案看起來是書庫中已有書籍的新版本，請選擇處理方式。'**
+  String get bookUpdateSummaryIntro;
+
+  /// 書籍更新版高信心標籤（識別碼相同）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'高信心：書籍識別碼相同'**
+  String get bookUpdateConfidenceHigh;
+
+  /// 書籍更新版疑似標籤（書名與作者相同）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'疑似：書名與作者相同'**
+  String get bookUpdateConfidenceSuspected;
+
+  /// 更新候選選項：取代指定書名之既有書籍
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'取代「{title}」'**
+  String bookUpdateOptionReplace(String title);
+
+  /// 更新候選選項：並存（略過更新判定匯入為新書）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'並存（當成新書匯入）'**
+  String get bookUpdateOptionCoexist;
+
+  /// 更新候選選項：跳過此檔案
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'跳過'**
+  String get bookUpdateOptionSkip;
+
+  /// 更新版彙整清單捷徑按鈕：全部選取取代
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'全部取代'**
+  String get bookUpdateReplaceAll;
+
+  /// 更新版彙整清單捷徑按鈕：全部選取跳過
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'全部跳過'**
+  String get bookUpdateSkipAll;
+
+  /// 更新版彙整清單確認執行按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'套用'**
+  String get bookUpdateApply;
+
+  /// 更新版清單有選取取代時常駐的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'取代後，既有的書籤、劃線與備註位置可能因內容改版而偏移。'**
+  String get bookUpdateReplaceNotice;
+
+  /// 原書檔案已無法存取時顯示的修復提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'「{title}」的舊檔已無法存取，取代後會一併修復檔案連結。'**
+  String bookUpdateOldFileUnreadable(String title);
+
+  /// 更新版套用中的進度提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'處理中…'**
+  String get bookUpdateApplying;
+
+  /// 更新版處理結果：同時有取代與並存
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{replaced, plural, =1{已更新 1 本} other{已更新 {replaced} 本}}，{coexisted, plural, =1{已並存 1 本} other{已並存 {coexisted} 本}}'**
+  String bookUpdateResultBothMessage(int replaced, int coexisted);
+
+  /// 更新版處理結果：僅有取代
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{replaced, plural, =1{已更新 1 本} other{已更新 {replaced} 本}}'**
+  String bookUpdateResultReplacedOnlyMessage(int replaced);
+
+  /// 更新版處理結果：僅有並存
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{coexisted, plural, =1{已並存 1 本} other{已並存 {coexisted} 本}}'**
+  String bookUpdateResultCoexistedOnlyMessage(int coexisted);
+
+  /// 更新版處理結果：失敗提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{count, plural, =1{1 本更新失敗，書籍沒有任何變動} other{{count} 本更新失敗，書籍沒有任何變動}}'**
+  String bookUpdateFailedMessage(int count);
+
+  /// 更新版處理結果：合併成功與失敗訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{successText}；{failedText}'**
+  String bookUpdateResultWithFailedMessage(
+    String successText,
+    String failedText,
+  );
 }
 
 class _AppLocalizationsDelegate

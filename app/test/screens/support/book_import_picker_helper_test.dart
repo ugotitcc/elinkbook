@@ -1,4 +1,5 @@
 import 'package:elinkbook/library/book_import_service.dart';
+import 'package:elinkbook/library/book_update_models.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/support/book_import_picker_helper.dart';
@@ -688,6 +689,333 @@ void main() {
       final result = await pickSingleBookFileViaFilePicker(['epub']);
 
       expect(result, isNull);
+    });
+  });
+
+  group('handleImportUpdateCandidates', () {
+    BookUpdateCandidate makeCandidate({
+      String sourceUri = 'file:///test/new.epub',
+      String? displayName = 'new.epub',
+      String? targetBookId = 'b1',
+    }) {
+      return BookUpdateCandidate(
+        sourceUri: sourceUri,
+        displayName: displayName,
+        format: BookFileFormat.epub,
+        confidence: UpdateConfidence.high,
+        candidateBooks: [_testBook(targetBookId ?? 'b1')],
+      );
+    }
+
+    testWidgets('無候選：不彈出任何對話框且 discardedCandidates 為空', (tester) async {
+      final importService = FakeBookImportService();
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => handleImportUpdateCandidates(
+                  context,
+                  importService,
+                  const ImportResult(importedBooks: []),
+                ),
+                child: const Text('Handle'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Handle'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('book_update_apply')), findsNothing);
+      expect(importService.discardedCandidates, isEmpty);
+    });
+
+    testWidgets('有候選且已掛載：彈出清單，按套用後顯示已更新 1 本 SnackBar', (tester) async {
+      final importService = FakeBookImportService();
+      final candidate = makeCandidate();
+      importService.replaceResultsByBookId['b1'] = BookReplaceSuccess(_testBook('b1'));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => handleImportUpdateCandidates(
+                  context,
+                  importService,
+                  ImportResult(
+                    importedBooks: const [],
+                    updateCandidates: [candidate],
+                  ),
+                ),
+                child: const Text('Handle'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Handle'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('book_update_apply')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('book_update_apply')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('已更新 1 本'), findsOneWidget);
+    });
+
+    testWidgets('並存：改選並存後套用顯示已並存 1 本；分別取代與並存顯示合併訊息', (tester) async {
+      final importService = FakeBookImportService();
+      final c0 = makeCandidate(sourceUri: 'file:///c0.epub', targetBookId: 'b0');
+      final c1 = makeCandidate(sourceUri: 'file:///c1.epub', targetBookId: 'b1');
+      importService.replaceResultsByBookId['b0'] = BookReplaceSuccess(_testBook('b0'));
+      importService.importCandidateResult = _testBook('b1_coexist');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => handleImportUpdateCandidates(
+                  context,
+                  importService,
+                  ImportResult(
+                    importedBooks: const [],
+                    updateCandidates: [c0, c1],
+                  ),
+                ),
+                child: const Text('Handle'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Handle'));
+      await tester.pumpAndSettle();
+
+      // 改選第 1 列為並存
+      await tester.ensureVisible(find.byKey(const Key('book_update_option_coexist_1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('book_update_option_coexist_1')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_update_apply')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('已更新 1 本，已並存 1 本'), findsOneWidget);
+    });
+
+    testWidgets('部分失敗（審查 I-3）：2 筆取代成功、1 筆失敗顯示成功加失敗訊息', (tester) async {
+      final importService = FakeBookImportService();
+      final c0 = makeCandidate(sourceUri: 'file:///c0.epub', targetBookId: 'b0');
+      final c1 = makeCandidate(sourceUri: 'file:///c1.epub', targetBookId: 'b1');
+      final c2 = makeCandidate(sourceUri: 'file:///c2.epub', targetBookId: 'b2');
+
+      importService.replaceResultsByBookId['b0'] = BookReplaceSuccess(_testBook('b0'));
+      importService.replaceResultsByBookId['b1'] = BookReplaceSuccess(_testBook('b1'));
+      importService.replaceResultsByBookId['b2'] =
+          const BookReplaceFailure(BookReplaceFailureReason.writeFailed);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => handleImportUpdateCandidates(
+                  context,
+                  importService,
+                  ImportResult(
+                    importedBooks: const [],
+                    updateCandidates: [c0, c1, c2],
+                  ),
+                ),
+                child: const Text('Handle'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Handle'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_update_apply')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('已更新 2 本；1 本更新失敗，書籍沒有任何變動'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('全部失敗：只顯示失敗訊息', (tester) async {
+      final importService = FakeBookImportService();
+      final c0 = makeCandidate(sourceUri: 'file:///c0.epub', targetBookId: 'b0');
+
+      importService.replaceResultsByBookId['b0'] =
+          const BookReplaceFailure(BookReplaceFailureReason.writeFailed);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => handleImportUpdateCandidates(
+                  context,
+                  importService,
+                  ImportResult(
+                    importedBooks: const [],
+                    updateCandidates: [c0],
+                  ),
+                ),
+                child: const Text('Handle'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Handle'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_update_apply')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('1 本更新失敗，書籍沒有任何變動'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('isEinkMode: true 時對話框無過場動畫', (tester) async {
+      final importService = FakeBookImportService();
+      final candidate = makeCandidate();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => handleImportUpdateCandidates(
+                  context,
+                  importService,
+                  ImportResult(
+                    importedBooks: const [],
+                    updateCandidates: [candidate],
+                  ),
+                  isEinkMode: true,
+                ),
+                child: const Text('Handle'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Handle'));
+      await tester.pump(); // 一次 pump 即可找到
+
+      expect(find.byKey(const Key('book_update_apply')), findsOneWidget);
+    });
+
+    testWidgets('全部跳過：不顯示任何 SnackBar', (tester) async {
+      final importService = FakeBookImportService();
+      final candidate = makeCandidate();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => handleImportUpdateCandidates(
+                  context,
+                  importService,
+                  ImportResult(
+                    importedBooks: const [],
+                    updateCandidates: [candidate],
+                  ),
+                ),
+                child: const Text('Handle'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Handle'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_update_skip_all')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_update_apply')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('卸載防護（Review Focus 1）：mounted == false 時不彈出對話框且丟棄候選', (tester) async {
+      final importService = FakeBookImportService();
+      final candidate = makeCandidate();
+      late BuildContext capturedContext;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                capturedContext = context;
+                return const Text('Mounted Widget');
+              },
+            ),
+          ),
+        ),
+      );
+
+      // 把 widget pump 掉，使 capturedContext.mounted 變為 false
+      await tester.pumpWidget(const SizedBox());
+
+      await handleImportUpdateCandidates(
+        capturedContext,
+        importService,
+        ImportResult(
+          importedBooks: const [],
+          updateCandidates: [candidate],
+        ),
+      );
+
+      expect(find.byKey(const Key('book_update_apply')), findsNothing);
+      expect(importService.discardedCandidates, [candidate]);
     });
   });
 }

@@ -2734,4 +2734,109 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get readerColorsResetText => 'Reset text color';
+
+  @override
+  String get bookUpdateSummaryTitle => 'Book Updates Detected';
+
+  @override
+  String get bookUpdateSummaryIntro =>
+      'The following files appear to be new versions of books in your library. Please select an action.';
+
+  @override
+  String get bookUpdateConfidenceHigh =>
+      'High confidence: matching book identifier';
+
+  @override
+  String get bookUpdateConfidenceSuspected =>
+      'Suspected: matching title and author';
+
+  @override
+  String bookUpdateOptionReplace(String title) {
+    return 'Replace \"$title\"';
+  }
+
+  @override
+  String get bookUpdateOptionCoexist => 'Keep both (import as new book)';
+
+  @override
+  String get bookUpdateOptionSkip => 'Skip';
+
+  @override
+  String get bookUpdateReplaceAll => 'Replace all';
+
+  @override
+  String get bookUpdateSkipAll => 'Skip all';
+
+  @override
+  String get bookUpdateApply => 'Apply';
+
+  @override
+  String get bookUpdateReplaceNotice =>
+      'After replacing, bookmarks, highlights, and notes may shift due to content revisions.';
+
+  @override
+  String bookUpdateOldFileUnreadable(String title) {
+    return 'Original file for \"$title\" is inaccessible; replacing it will fix the file link.';
+  }
+
+  @override
+  String get bookUpdateApplying => 'Processing…';
+
+  @override
+  String bookUpdateResultBothMessage(int replaced, int coexisted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      replaced,
+      locale: localeName,
+      other: 'Updated $replaced books',
+      one: 'Updated 1 book',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      coexisted,
+      locale: localeName,
+      other: 'imported $coexisted books as new',
+      one: 'imported 1 book as new',
+    );
+    return '$_temp0, $_temp1';
+  }
+
+  @override
+  String bookUpdateResultReplacedOnlyMessage(int replaced) {
+    String _temp0 = intl.Intl.pluralLogic(
+      replaced,
+      locale: localeName,
+      other: 'Updated $replaced books',
+      one: 'Updated 1 book',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookUpdateResultCoexistedOnlyMessage(int coexisted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      coexisted,
+      locale: localeName,
+      other: 'Imported $coexisted books as new',
+      one: 'Imported 1 book as new',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookUpdateFailedMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count books failed to update; no changes were made',
+      one: '1 book failed to update; no changes were made',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookUpdateResultWithFailedMessage(
+    String successText,
+    String failedText,
+  ) {
+    return '$successText; $failedText';
+  }
 }

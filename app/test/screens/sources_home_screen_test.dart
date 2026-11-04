@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,6 +7,9 @@ import 'package:elinkbook/cloud_import/cloud_download_job.dart';
 import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
 import 'package:elinkbook/downloads/download_queue_controller.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
+import 'package:elinkbook/library/book_import_service.dart';
+import 'package:elinkbook/library/book_update_models.dart';
+import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/cloud_browser_screen.dart';
 import 'package:wakelock_plus/wakelock_plus.dart'
@@ -523,5 +528,341 @@ void main() {
       find.byKey(const Key('sources_remote_library_tile')),
     );
     expect(remoteTile.enabled, isTrue);
+  });
+
+  group('本機匯入更新版候選整合（epic-67 Issue 2）', () {
+    Book testBook(String id) {
+      final now = DateTime(2026, 1, 1);
+      return Book(
+        id: id,
+        title: '書 $id',
+        format: BookFileFormat.epub,
+        filePath: 'content://example/$id',
+        source: BookSource.local,
+        createTime: now,
+        lastReadTime: now,
+      );
+    }
+
+    testWidgets('選檔匯入含更新候選：出現清單，按套用後 replaceCalls 有一筆', (tester) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(filePickerChannel, (call) async {
+            if (call.method == 'custom') {
+              return [
+                {
+                  'name': 'book.epub',
+                  'path': '/tmp/book.epub',
+                  'size': 100,
+                  'identifier': 'content://example/book.epub',
+                },
+              ];
+            }
+            return null;
+          });
+
+      final importService = FakeBookImportService();
+      final candidate = BookUpdateCandidate(
+        sourceUri: 'content://example/book.epub',
+        displayName: 'book.epub',
+        format: BookFileFormat.epub,
+        confidence: UpdateConfidence.high,
+        candidateBooks: [testBook('b1')],
+      );
+      importService.importFilesResult = ImportResult(
+        importedBooks: const [],
+        updateCandidates: [candidate],
+      );
+      importService.replaceResultsByBookId['b1'] = BookReplaceSuccess(testBook('b1'));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SourcesHomeScreen(
+            appearance: fakeAppearanceDependencies(),
+            readerFeatures: fakeReaderFeatureDependencies(
+              bookImportService: importService,
+            ),
+            sources: fakeSourceDependencies(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('sources_pick_files_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('book_update_apply')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('book_update_apply')));
+      await tester.pumpAndSettle();
+
+      expect(importService.replaceCalls.length, 1);
+      expect(find.text('已更新 1 本'), findsOneWidget);
+    });
+
+    testWidgets('純重複只顯示既有提示：無候選時只出現既有跳過 SnackBar，沒有更新版清單', (tester) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(filePickerChannel, (call) async {
+            if (call.method == 'custom') {
+              return [
+                {
+                  'name': 'dup.epub',
+                  'path': '/tmp/dup.epub',
+                  'size': 100,
+                  'identifier': 'content://example/dup.epub',
+                },
+              ];
+            }
+            return null;
+          });
+
+      final importService = FakeBookImportService();
+      importService.importFilesResult = const ImportResult(
+        importedBooks: [],
+        skippedDuplicateCount: 2,
+        updateCandidates: [],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SourcesHomeScreen(
+            appearance: fakeAppearanceDependencies(),
+            readerFeatures: fakeReaderFeatureDependencies(
+              bookImportService: importService,
+            ),
+            sources: fakeSourceDependencies(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('sources_pick_files_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('2 本已存在，已跳過'), findsOneWidget);
+      expect(find.byKey(const Key('book_update_apply')), findsNothing);
+    });
+
+    testWidgets('提示與清單分開：同時有跳過重複與更新候選時，先見既有 SnackBar，清單照常彈出且不含跳過字樣', (tester) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(filePickerChannel, (call) async {
+            if (call.method == 'custom') {
+              return [
+                {
+                  'name': 'mix.epub',
+                  'path': '/tmp/mix.epub',
+                  'size': 100,
+                  'identifier': 'content://example/mix.epub',
+                },
+              ];
+            }
+            return null;
+          });
+
+      final importService = FakeBookImportService();
+      final candidate = BookUpdateCandidate(
+        sourceUri: 'content://example/mix.epub',
+        displayName: 'mix.epub',
+        format: BookFileFormat.epub,
+        confidence: UpdateConfidence.high,
+        candidateBooks: [testBook('b1')],
+      );
+      importService.importFilesResult = ImportResult(
+        importedBooks: const [],
+        skippedDuplicateCount: 1,
+        updateCandidates: [candidate],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SourcesHomeScreen(
+            appearance: fakeAppearanceDependencies(),
+            readerFeatures: fakeReaderFeatureDependencies(
+              bookImportService: importService,
+            ),
+            sources: fakeSourceDependencies(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('sources_pick_files_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 本已存在，已跳過'), findsOneWidget);
+      expect(find.byKey(const Key('book_update_apply')), findsOneWidget);
+      expect(find.widgetWithText(AlertDialog, '1 本已存在，已跳過'), findsNothing);
+    });
+
+    testWidgets('選檔匯入途中畫面被卸載：不彈清單，所有候選暫存被丟棄（審查 I-1）', (tester) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(filePickerChannel, (call) async {
+            if (call.method == 'custom') {
+              return [
+                {
+                  'name': 'book.epub',
+                  'path': '/tmp/book.epub',
+                  'size': 100,
+                  'identifier': 'content://example/book.epub',
+                },
+              ];
+            }
+            return null;
+          });
+
+      final importService = FakeBookImportService();
+      final completer = Completer<ImportResult>();
+      importService.pendingCompleter = completer;
+      final candidates = [
+        for (final id in ['b1', 'b2'])
+          BookUpdateCandidate(
+            sourceUri: 'content://example/$id.epub',
+            displayName: '$id.epub',
+            format: BookFileFormat.epub,
+            confidence: UpdateConfidence.high,
+            candidateBooks: [testBook(id)],
+            stagedPath: '/staging/$id.epub',
+          ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SourcesHomeScreen(
+            appearance: fakeAppearanceDependencies(),
+            readerFeatures: fakeReaderFeatureDependencies(
+              bookImportService: importService,
+            ),
+            sources: fakeSourceDependencies(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('sources_pick_files_button')));
+      await tester.pumpAndSettle();
+      expect(importService.lastImportCall, isNotNull); // 匯入已開始、停在等待中
+
+      // 使用者離開畫面（卸載 SourcesHomeScreen）後匯入才完成
+      await tester.pumpWidget(const SizedBox());
+      completer.complete(
+        ImportResult(importedBooks: const [], updateCandidates: candidates),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('book_update_apply')), findsNothing);
+      expect(importService.discardedCandidates, candidates);
+      expect(importService.replaceCalls, isEmpty);
+    });
+
+    testWidgets('資料夾匯入途中畫面被卸載：所有候選暫存被丟棄（審查 I-1）', (tester) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(folderPickerChannel, (call) async {
+            if (call.method == 'pickFolder') return 'content://example/folder';
+            return null;
+          });
+
+      final importService = FakeBookImportService();
+      final completer = Completer<ImportResult>();
+      importService.pendingCompleter = completer;
+      final candidate = BookUpdateCandidate(
+        sourceUri: 'content://example/f.epub',
+        displayName: 'f.epub',
+        format: BookFileFormat.epub,
+        confidence: UpdateConfidence.high,
+        candidateBooks: [testBook('b1')],
+        stagedPath: '/staging/f.epub',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SourcesHomeScreen(
+            appearance: fakeAppearanceDependencies(),
+            readerFeatures: fakeReaderFeatureDependencies(
+              bookImportService: importService,
+            ),
+            sources: fakeSourceDependencies(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('sources_pick_folder_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_import_folder_confirm')));
+      await tester.pumpAndSettle();
+      expect(importService.lastImportFolderUri, isNotNull);
+
+      await tester.pumpWidget(const SizedBox());
+      completer.complete(
+        ImportResult(importedBooks: const [], updateCandidates: [candidate]),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('book_update_apply')), findsNothing);
+      expect(importService.discardedCandidates, [candidate]);
+    });
+
+    testWidgets('資料夾匯入同樣路徑：含更新候選時彈出清單', (tester) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(folderPickerChannel, (call) async {
+            if (call.method == 'pickFolder') {
+              return 'content://example/folder';
+            }
+            return null;
+          });
+
+      final importService = FakeBookImportService();
+      final candidate = BookUpdateCandidate(
+        sourceUri: 'content://example/folder_book.epub',
+        displayName: 'folder_book.epub',
+        format: BookFileFormat.epub,
+        confidence: UpdateConfidence.high,
+        candidateBooks: [testBook('b1')],
+      );
+      importService.importFolderResult = ImportResult(
+        importedBooks: const [],
+        updateCandidates: [candidate],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SourcesHomeScreen(
+            appearance: fakeAppearanceDependencies(),
+            readerFeatures: fakeReaderFeatureDependencies(
+              bookImportService: importService,
+            ),
+            sources: fakeSourceDependencies(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('sources_pick_folder_button')));
+      await tester.pumpAndSettle();
+
+      // 確認自動分類對話框
+      expect(find.byKey(const Key('library_import_folder_confirm')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('library_import_folder_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('book_update_apply')), findsOneWidget);
+    });
   });
 }
