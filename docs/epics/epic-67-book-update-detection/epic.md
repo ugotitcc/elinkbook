@@ -129,7 +129,7 @@
 ## Issue 6 計畫與實作
 
 - **計畫文件**：[plan-issue-6.md](plans/plan-issue-6.md)
-- **實作分支**：`epic-67/issue-6-pdf-degrade`
+- **實作分支**：`epic-67/issue-6-pdf-degrade`（已合併，PR #392）
 - **核心架構與決策定案**：
   - **D1（列舉與提示文案沿用）**：回呼列舉沿用 `NavigationDegradedReason`（`readingPosition` 與 `annotation`），訊息文案與 SnackBar 樣式直接沿用既有 `readerNavigationDegradedMessage`，零新增 ARB 鍵值與字串。
   - **D2（只對超過最後一頁降級）**：頁碼 `>= pageCount`（且總頁數 > 0）才降級；負數頁碼與 0 頁文件維持靜默、不通知。提示 SnackBar 沿用既有行為（先收掉前一則，不排隊堆疊）。

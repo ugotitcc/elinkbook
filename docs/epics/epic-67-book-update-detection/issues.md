@@ -17,7 +17,7 @@ Issue 6 PDF 降級      ─┘
 | 3 | 手動入口「用新檔案更新此書」與 `relinkBook` 強制重新連結 | Issue 1 | ✅ 已合併（真機驗證待人類） | #391（計畫：[plan-issue-3.md](plans/plan-issue-3.md)） |
 | 4 | 下載佇列「待確認更新」：非阻塞狀態、專屬暫存目錄、面板確認、啟動清掃 | Issue 1 | ✅ 已合併（真機驗證待人類） | #390（計畫：[plan-issue-4.md](plans/plan-issue-4.md)） |
 | 5 | Foliate 格式降級：開書與註記跳轉的精確定位失敗改用進度比例，並回報提示 | 無 | ✅ 已合併 | #383（計畫：[plan-issue-5.md](plans/plan-issue-5.md)） |
-| 6 | PDF 降級：頁碼超界限制至最後一頁並回報提示 | 無（建議 Issue 5 之後，共用提示） | ⏳ 未開始 | — |
+| 6 | PDF 降級：頁碼超界限制至最後一頁並回報提示 | 無（建議 Issue 5 之後，共用提示） | ✅ 已合併（真機驗證待人類） | #392（計畫：[plan-issue-6.md](plans/plan-issue-6.md)） |
 
 每個 Issue 的新增畫面字串，一律同步登錄 `app_en.arb`、`app_zh.arb`、`app_zh_CN.arb`、`app_zh_TW.arb`，並於提交前跑 `flutter analyze`、`node tool/check_l10n_hardcoded_strings.js`；動到 `lib/` Key 或 `integration_test/` 者另跑 `node tool/check_integration_keys.js`。ARB 鍵名與測試檔案落點在各 Issue 的 `plan-issue-N.md` 決定（spec 不規定檔案路徑）。
 
@@ -150,7 +150,7 @@ Status: completed（已合併 PR #383；[plan-issue-5.md](plans/plan-issue-5.md)
 
 ## Issue 6：PDF 降級
 
-Status: 實作完成待 PR（已實作於分支 `epic-67/issue-6-pdf-degrade`）
+Status: completed（已合併 PR #392；[plan-issue-6.md](plans/plan-issue-6.md)）。真機手動驗證待人類執行，結果補記於 epic.md
 
 **範圍**：PDF 註記與閱讀位置的頁碼超出總頁數時，限制在最後一頁，並讓呼叫端得知發生降級，由閱讀畫面統一顯示與 Issue 5 相同的提示。兩個防護點：
 
