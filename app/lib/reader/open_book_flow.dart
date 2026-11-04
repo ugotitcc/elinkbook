@@ -122,7 +122,6 @@ final class OpenBookRelinkCancelled extends OpenBookRelinkOutcome {
 typedef OpenBookProbe = Future<StorageAccessProbeResult> Function(String uri);
 
 /// 以選好的檔案重新連結書籍記錄（`BookImportService.relinkBook` 的包裝）。
-/// 以選好的檔案重新連結書籍記錄（`BookImportService.relinkBook` 的包裝）。
 /// epic-67 Issue 3：增加選填具名參數 [force]。
 typedef OpenBookRelink = Future<BookRelinkResult> Function(
     String uri, String? displayName, {bool force});

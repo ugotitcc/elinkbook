@@ -5605,6 +5605,43 @@ void main() {
       expect(service.replaceCalls.first.$1, '1');
       expect(find.text('已更新 1 本'), findsOneWidget);
     });
+
+    for (final eink in [true, false]) {
+      testWidgets(
+          'appearance.isEinkMode=$eink 傳到手動更新對話框：'
+          '${eink ? "route 無過場動畫" : "route 有過場動畫"}', (tester) async {
+        final book = _testBook(id: '1', title: '三國演義');
+        await pumpLocalizedWidget(
+          tester,
+          LibraryScreen(
+            appearance: fakeAppearanceDependencies(isEinkMode: eink),
+            sources: fakeSourceDependencies(),
+            pickSingleBookFile: (exts) async =>
+                (uri: 'file:///path/three_v2.epub', displayName: 'three_v2.epub'),
+            dependencies: fakeReaderFeatureDependencies(
+              libraryRepository: FakeLibraryRepository(initialBooks: [book]),
+              bookImportService: FakeBookImportService(),
+              prefsManager: prefsManager,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('book_action_menu_1')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('book_action_update_book')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('book_manual_update_dialog')), findsOneWidget);
+
+        final route = ModalRoute.of(tester
+            .element(find.byKey(const Key('book_manual_update_dialog'))))!;
+        if (eink) {
+          expect(route.transitionDuration, Duration.zero);
+        } else {
+          expect(route.transitionDuration, greaterThan(Duration.zero));
+        }
+      });
+    }
   });
 
   testWidgets(

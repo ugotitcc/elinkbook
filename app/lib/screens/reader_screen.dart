@@ -490,7 +490,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       onTimedOut: OpenBookTrace.recordTimeout,
       // 讀取頂層可覆寫變數的當下值，widget test 才能以覆寫注入假探測。
       probe: (uri) => probeStorageAccess(uri),
-      relinkBook: (uri, displayName, {bool force = false}) => importService.relinkBook(
+      relinkBook: (uri, displayName, {bool force = false}) =>
+          importService.relinkBook(
         widget.bookId,
         uri,
         displayName: displayName,

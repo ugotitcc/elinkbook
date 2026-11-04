@@ -102,4 +102,36 @@ void main() {
 
     expect(result, isTrue);
   });
+
+  testWidgets('isEinkMode 為 true：開啟與關閉都不需過場影格（單次 pump 即完成）', (tester) async {
+    await pumpLocalizedWidget(
+      tester,
+      _Host(isEinkMode: true, onResult: (_) {}),
+    );
+    await tester.tap(find.byKey(const Key('open')));
+    await tester.pump();
+    // 無動畫：第一個影格就已完整顯示
+    expect(find.byKey(const Key('force_relink_dialog')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('force_relink_cancel')));
+    await tester.pump();
+    // 無動畫：單次 pump 後對話框已移除
+    expect(find.byKey(const Key('force_relink_dialog')), findsNothing);
+  });
+
+  testWidgets('isEinkMode 為 false（對照）：關閉有過場，單次 pump 後仍在畫面上', (tester) async {
+    await pumpLocalizedWidget(
+      tester,
+      _Host(onResult: (_) {}),
+    );
+    await tester.tap(find.byKey(const Key('open')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('force_relink_cancel')));
+    await tester.pump();
+    // 有動畫：離場過程中對話框仍存在，證明上一個測試的斷言確實能區分
+    expect(find.byKey(const Key('force_relink_dialog')), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('force_relink_dialog')), findsNothing);
+  });
 }

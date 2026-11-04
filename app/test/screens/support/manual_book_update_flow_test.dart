@@ -387,7 +387,7 @@ void main() {
       expect(result, ManualBookUpdateOutcome.replaced);
     });
 
-    testWidgets('E-Ink 模式（isEinkMode:true）：對話框無過場動畫', (tester) async {
+    testWidgets('E-Ink 模式（isEinkMode:true）：對話框無過場動畫，單次 pump 即顯示與移除', (tester) async {
       final service = FakeBookImportService();
       ManualBookUpdateOutcome? result;
 
@@ -406,13 +406,138 @@ void main() {
       );
 
       await tester.tap(find.byKey(const Key('trigger')));
+      // 選檔（非同步）完成後對話框開啟；無動畫時一個影格即完整顯示
+      await tester.pump();
+      await tester.pump();
+      expect(find.byKey(const Key('book_manual_update_dialog')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('book_manual_update_cancel')));
+      await tester.pump();
+      // 無動畫：單次 pump 後已移除
+      expect(find.byKey(const Key('book_manual_update_dialog')), findsNothing);
+      await tester.pumpAndSettle();
+      expect(result, ManualBookUpdateOutcome.cancelled);
+    });
+
+    testWidgets('非 E-Ink（對照）：取消後單次 pump 對話框仍在離場動畫中', (tester) async {
+      final service = FakeBookImportService();
+
+      await pumpLocalizedWidget(
+        tester,
+        _TestHost(
+          runner: (context) => runManualBookUpdate(
+            context,
+            book: _sampleBook(),
+            importService: service,
+            pickFile: (exts) async => (uri: 'file:///new.epub', displayName: 'new.epub'),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('trigger')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('book_manual_update_cancel')));
+      await tester.pump();
+      expect(find.byKey(const Key('book_manual_update_dialog')), findsOneWidget);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('待確認階段點對話框外面不會關閉，也不呼叫 replaceBook', (tester) async {
+      final service = FakeBookImportService();
+
+      await pumpLocalizedWidget(
+        tester,
+        _TestHost(
+          runner: (context) => runManualBookUpdate(
+            context,
+            book: _sampleBook(),
+            importService: service,
+            pickFile: (exts) async => (uri: 'file:///new.epub', displayName: 'new.epub'),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('trigger')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('book_manual_update_dialog')), findsOneWidget);
+
+      await tester.tapAt(const Offset(5, 5));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('book_manual_update_dialog')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('book_manual_update_cancel')));
+      expect(service.replaceCalls, isEmpty);
+    });
+
+    testWidgets('選檔期間畫面被卸載：不拋例外、不彈對話框、不呼叫 replaceBook', (tester) async {
+      final service = FakeBookImportService();
+      final pickCompleter = Completer<({String uri, String? displayName})?>();
+      final visible = ValueNotifier<bool>(true);
+
+      await pumpLocalizedWidget(
+        tester,
+        ValueListenableBuilder<bool>(
+          valueListenable: visible,
+          builder: (context, show, _) => show
+              ? _TestHost(
+                  runner: (context) => runManualBookUpdate(
+                    context,
+                    book: _sampleBook(),
+                    importService: service,
+                    pickFile: (exts) => pickCompleter.future,
+                  ),
+                )
+              : const Scaffold(body: SizedBox.shrink()),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('trigger')));
+      await tester.pump();
+      visible.value = false;
+      await tester.pump();
+
+      pickCompleter.complete((uri: 'file:///new.epub', displayName: 'new.epub'));
       await tester.pumpAndSettle();
 
-      expect(result, ManualBookUpdateOutcome.cancelled);
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('book_manual_update_dialog')), findsNothing);
+      expect(service.replaceCalls, isEmpty);
+    });
+
+    testWidgets('更新中畫面被卸載：不拋例外', (tester) async {
+      final service = FakeBookImportService();
+      final completer = Completer<BookReplaceResult>();
+      service.replaceCompleter = completer;
+      final visible = ValueNotifier<bool>(true);
+
+      await pumpLocalizedWidget(
+        tester,
+        ValueListenableBuilder<bool>(
+          valueListenable: visible,
+          builder: (context, show, _) => show
+              ? _TestHost(
+                  runner: (context) => runManualBookUpdate(
+                    context,
+                    book: _sampleBook(),
+                    importService: service,
+                    pickFile: (exts) async => (uri: 'file:///new.epub', displayName: 'new.epub'),
+                  ),
+                )
+              : const Scaffold(body: SizedBox.shrink()),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('trigger')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('book_manual_update_confirm')));
+      await tester.pump();
+
+      visible.value = false;
+      await tester.pump();
+
+      completer.complete(BookReplaceSuccess(_sampleBook()));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
     });
   });
 }

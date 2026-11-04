@@ -184,6 +184,7 @@ Future<int Function()> _pumpContentUriReader(
   String bookId = 'b_probe',
   BookImportService? bookImportService,
   SingleBookFilePicker? pickSingleBookFile,
+  bool isEinkMode = false,
 }) async {
   var probeCalls = 0;
   final original = probeStorageAccess;
@@ -203,6 +204,7 @@ Future<int Function()> _pumpContentUriReader(
         filePath: filePath,
         bookId: bookId,
         isFixedLayout: false,
+        isEinkMode: isEinkMode,
         pickSingleBookFile: pickSingleBookFile,
         dependencies: fakeReaderFeatureDependencies(
           prefsManager: prefsManager,
@@ -13343,6 +13345,75 @@ void main() {
       expect(cacheCalls.length, cacheCallsBefore, reason: '取消時不可重新開書');
       expect(service.relinkCalls, hasLength(1));
       expect(service.relinkCalls.first.force, isFalse);
+    });
+
+    testWidgets('isEinkMode 傳到強制重新連結對話框：對話框 route 無過場動畫',
+        (tester) async {
+      _overrideCacheBookForServing();
+      final service = FakeBookImportService()
+        ..relinkResult = const BookRelinkFailure(BookRelinkFailureReason.contentMismatch);
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: service,
+          isEinkMode: true,
+          pickSingleBookFile: _FakeSingleBookFilePicker(
+              (uri: newUri, displayName: 'book.epub')).call);
+      await failAndShowError(tester);
+
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byKey(const Key('force_relink_dialog')), findsOneWidget);
+      final route = ModalRoute.of(
+          tester.element(find.byKey(const Key('force_relink_dialog'))))!;
+      expect(route.transitionDuration, Duration.zero);
+    });
+
+    testWidgets('非 E-Ink（對照）：強制重新連結對話框 route 有過場動畫', (tester) async {
+      _overrideCacheBookForServing();
+      final service = FakeBookImportService()
+        ..relinkResult = const BookRelinkFailure(BookRelinkFailureReason.contentMismatch);
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: service,
+          pickSingleBookFile: _FakeSingleBookFilePicker(
+              (uri: newUri, displayName: 'book.epub')).call);
+      await failAndShowError(tester);
+
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+      await tester.pump();
+      final route = ModalRoute.of(
+          tester.element(find.byKey(const Key('force_relink_dialog'))))!;
+      expect(route.transitionDuration, greaterThan(Duration.zero));
+    });
+
+    testWidgets('強制對話框顯示期間畫面被卸載：不拋例外、不再呼叫第二次 relinkBook',
+        (tester) async {
+      _overrideCacheBookForServing();
+      final service = FakeBookImportService()
+        ..relinkResult = const BookRelinkFailure(BookRelinkFailureReason.contentMismatch);
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: service,
+          pickSingleBookFile: _FakeSingleBookFilePicker(
+              (uri: newUri, displayName: 'book.epub')).call);
+      await failAndShowError(tester);
+
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byKey(const Key('force_relink_dialog')), findsOneWidget);
+
+      // 換掉整個畫面（對話框 route 隨 Navigator 一併移除）
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(service.relinkCalls, hasLength(1));
     });
 
     testWidgets('按確認後以 force:true 重新連結並重新開書', (tester) async {

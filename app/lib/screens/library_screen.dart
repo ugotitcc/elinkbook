@@ -676,7 +676,8 @@ class _LibraryScreenState extends State<LibraryScreen>
           context,
           book: book,
           importService: widget.dependencies.bookImportService,
-          pickFile: widget.pickSingleBookFile ?? pickSingleBookFileViaFilePicker,
+          pickFile:
+              widget.pickSingleBookFile ?? pickSingleBookFileViaFilePicker,
           isEinkMode: widget.appearance.isEinkMode,
         );
         if (mounted && outcome == ManualBookUpdateOutcome.replaced) {

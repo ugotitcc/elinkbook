@@ -1,5 +1,4 @@
 import 'book_update_models.dart';
-export 'book_file_format_detection.dart' show detectImportFileFormat;
 import 'models/book.dart';
 import 'models/library_enums.dart';
 
