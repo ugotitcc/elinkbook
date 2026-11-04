@@ -12,7 +12,7 @@ Issue 6 PDF 降級      ─┘
 
 | Issue | 標題 | 依賴 | 狀態 | PR |
 |---|---|---|---|---|
-| 1 | 核心：偵測（重複/更新版/新書）與取代（原子換檔、資產清理、保留註記與身份） | 無 | ✅ 實作完成（待 PR） | —（分支：epic-67/issue-1-detect-and-replace，計畫：[plan-issue-1.md](plans/plan-issue-1.md)） |
+| 1 | 核心：偵測（重複/更新版/新書）與取代（原子換檔、資產清理、保留註記與身份） | 無 | ✅ 已合併 | #386（計畫：[plan-issue-1.md](plans/plan-issue-1.md)） |
 | 2 | 本機匯入入口：匯入完成後彙整更新版清單（取代／並存／跳過、全部取代／全部跳過）與暫存檔收尾 | Issue 1 | ⏳ 未開始 | — |
 | 3 | 手動入口「用新檔案更新此書」與 `relinkBook` 強制重新連結 | Issue 1 | ⏳ 未開始 | — |
 | 4 | 下載佇列「待確認更新」：非阻塞狀態、專屬暫存目錄、面板確認、啟動清掃 | Issue 1 | ⏳ 未開始 | — |
@@ -25,7 +25,7 @@ Issue 6 PDF 降級      ─┘
 
 ## Issue 1：核心——偵測與取代
 
-Status: ready-for-agent
+Status: completed（已合併 PR #386；[plan-issue-1.md](plans/plan-issue-1.md)）
 
 **範圍**：擴充 `BookImportService`（既有抽象介面）的兩個能力，三個入口之後共用。本 Issue 不含任何畫面。
 
