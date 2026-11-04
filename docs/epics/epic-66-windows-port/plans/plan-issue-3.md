@@ -88,9 +88,9 @@
   - `const kLargeEpubPath`、`const kIterations = 4`、`const kSettleSeconds = 6`、`double bookSizeMb()`。
 - 本 Task 無獨立單元測試（依賴實機程序）；由 Task 3 的整合測試實際驗證輸出格式。
 
-- [ ] **Step 1：** 實作 helper。PowerShell 只啟動一次/樣本，避免把啟動成本算進記憶體（它是外部程序，不影響 App 私有記憶體）。
-- [ ] **Step 2：** `flutter analyze`。
-- [ ] **Step 3：** commit。
+- [x] **Step 1：** 實作 helper。PowerShell 只啟動一次/樣本，避免把啟動成本算進記憶體（它是外部程序，不影響 App 私有記憶體）。
+- [x] **Step 2：** `flutter analyze`。
+- [x] **Step 3：** commit。
 
 ---
 
