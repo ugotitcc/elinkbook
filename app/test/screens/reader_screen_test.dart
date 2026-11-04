@@ -13278,7 +13278,6 @@ void main() {
 
     for (final entry in {
       BookRelinkFailureReason.formatMismatch: '選取的檔案格式與原書不同',
-      BookRelinkFailureReason.contentMismatch: '選取的檔案與原書內容不同，請選取同一本書',
       BookRelinkFailureReason.alreadyInLibrary: '這個檔案已經是書庫中的另一本書',
       BookRelinkFailureReason.failed: '重新連結失敗，請再試一次',
     }.entries) {
@@ -13309,12 +13308,56 @@ void main() {
       });
     }
 
-    testWidgets('先選錯再選對：重新開書時收掉上一次的失敗提示（程式審查 M-1）',
+    testWidgets('重新選取檔案遇 contentMismatch：出現強制重新連結對話框；按取消不顯示 SnackBar 且錯誤視圖仍在',
         (tester) async {
+      final cacheCalls = _overrideCacheBookForServing();
+      final service = FakeBookImportService()
+        ..relinkResult = const BookRelinkFailure(BookRelinkFailureReason.contentMismatch);
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: service,
+          pickSingleBookFile: _FakeSingleBookFilePicker(
+              (uri: newUri, displayName: 'book.epub')).call);
+      await failAndShowError(tester);
+      final cacheCallsBefore = cacheCalls.length;
+
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+      await tester.pump();
+
+      // 出現強制重新連結對話框
+      expect(find.byKey(const Key('force_relink_dialog')), findsOneWidget);
+      expect(find.byKey(const Key('force_relink_cancel')), findsOneWidget);
+      expect(find.byKey(const Key('force_relink_confirm')), findsOneWidget);
+
+      // 點取消
+      await tester.tap(find.byKey(const Key('force_relink_cancel')));
+      await tester.pumpAndSettle();
+
+      // 對話框關閉、不顯示 SnackBar、錯誤視圖仍在
+      expect(find.byKey(const Key('force_relink_dialog')), findsNothing);
+      expect(find.text('選取的檔案與原書內容不同，請選取同一本書'), findsNothing);
+      expect(errorText(tester), 'App 對這個檔案的存取權限已失效，請重新選取檔案。');
+      expect(find.byKey(relinkButton), findsOneWidget);
+      expect(cacheCalls.length, cacheCallsBefore, reason: '取消時不可重新開書');
+      expect(service.relinkCalls, hasLength(1));
+      expect(service.relinkCalls.first.force, isFalse);
+    });
+
+    testWidgets('按確認後以 force:true 重新連結並重新開書', (tester) async {
       _overrideCacheBookForServing();
       final service = FakeBookImportService()
-        ..relinkResult = const BookRelinkFailure(
-            BookRelinkFailureReason.contentMismatch);
+        ..relinkResult = const BookRelinkFailure(BookRelinkFailureReason.contentMismatch)
+        ..forceRelinkResult = BookRelinkSuccess(Book(
+          id: 'sample-book',
+          title: '已重連的書',
+          format: BookFileFormat.epub,
+          filePath: newUri,
+          source: BookSource.local,
+          createTime: DateTime(2026, 1, 1),
+          lastReadTime: DateTime(2026, 1, 1),
+        ));
       await _pumpContentUriReader(tester,
           prefsManager: prefsManager,
           probe: (_) async => StorageAccessProbeResult.permissionRevoked,
@@ -13326,7 +13369,38 @@ void main() {
       await tester.tap(find.byKey(relinkButton));
       await tester.pump();
       await tester.pump();
-      expect(find.text('選取的檔案與原書內容不同，請選取同一本書'), findsOneWidget);
+
+      // 出現對話框並按確認
+      expect(find.byKey(const Key('force_relink_dialog')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('force_relink_confirm')));
+      await tester.pumpAndSettle();
+
+      // 對話框關閉且以 force:true 重新連結並重新開書
+      expect(find.byKey(const Key('force_relink_dialog')), findsNothing);
+      expect(service.relinkCalls, hasLength(2));
+      expect(service.relinkCalls.first.force, isFalse);
+      expect(service.relinkCalls.last.force, isTrue);
+      expect(find.byKey(relinkProgress), findsNothing);
+    });
+
+    testWidgets('先選錯再選對：重新開書時收掉上一次的失敗提示（程式審查 M-1）',
+        (tester) async {
+      _overrideCacheBookForServing();
+      final service = FakeBookImportService()
+        ..relinkResult = const BookRelinkFailure(
+            BookRelinkFailureReason.formatMismatch);
+      await _pumpContentUriReader(tester,
+          prefsManager: prefsManager,
+          probe: (_) async => StorageAccessProbeResult.permissionRevoked,
+          bookImportService: service,
+          pickSingleBookFile: _FakeSingleBookFilePicker(
+              (uri: newUri, displayName: 'book.epub')).call);
+      await failAndShowError(tester);
+
+      await tester.tap(find.byKey(relinkButton));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('選取的檔案格式與原書不同'), findsOneWidget);
 
       service.relinkResult =
           BookRelinkSuccess(_relinkTestBook(filePath: newUri));
@@ -13337,7 +13411,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.byKey(const Key('reader_error_text')), findsNothing);
-      expect(find.text('選取的檔案與原書內容不同，請選取同一本書'), findsNothing);
+      expect(find.text('選取的檔案格式與原書不同'), findsNothing);
     });
 
     testWidgets('relinkBook 拋出例外：視為 failed，顯示 SnackBar 且按鈕恢復可用'

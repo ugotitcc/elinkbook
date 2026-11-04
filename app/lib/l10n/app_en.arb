@@ -778,5 +778,17 @@
   "bookUpdateResultReplacedOnlyMessage": "{replaced, plural, =1{Updated 1 book} other{Updated {replaced} books}}",
   "bookUpdateResultCoexistedOnlyMessage": "{coexisted, plural, =1{Imported 1 book as new} other{Imported {coexisted} books as new}}",
   "bookUpdateFailedMessage": "{count, plural, =1{1 book failed to update; no changes were made} other{{count} books failed to update; no changes were made}}",
-  "bookUpdateResultWithFailedMessage": "{successText}; {failedText}"
+  "bookUpdateResultWithFailedMessage": "{successText}; {failedText}",
+  "readerForceRelinkTitle": "Force Relink?",
+  "@readerForceRelinkTitle": {
+    "description": "Title of dialog asking to force relink when selected file content mismatches"
+  },
+  "readerForceRelinkMessage": "The selected file content does not match the original book and may be a different book. If this is a revised edition of the same book, you can force relink: only the file path will be updated; reading progress and annotations will be preserved but may shift due to content changes.",
+  "@readerForceRelinkMessage": {
+    "description": "Message explaining force relink implications"
+  },
+  "readerForceRelinkConfirm": "Force Relink",
+  "@readerForceRelinkConfirm": {
+    "description": "Confirm button to force relink"
+  }
 }

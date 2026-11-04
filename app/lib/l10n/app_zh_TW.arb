@@ -3645,5 +3645,17 @@
         "type": "String"
       }
     }
+  },
+  "readerForceRelinkTitle": "強制重新連結？",
+  "@readerForceRelinkTitle": {
+    "description": "重新選取檔案內容不符時的強制重新連結對話框標題"
+  },
+  "readerForceRelinkMessage": "選取的檔案與原書內容不一致，可能不是同一本書。若這是同一本書的新版本，可強制重新連結：只會更換檔案位置，閱讀進度與註記位置不會調整，可能因內容不同而偏移。",
+  "@readerForceRelinkMessage": {
+    "description": "重新選取檔案內容不符時的強制重新連結對話框說明"
+  },
+  "readerForceRelinkConfirm": "強制重新連結",
+  "@readerForceRelinkConfirm": {
+    "description": "強制重新連結確認按鈕"
   }
 }

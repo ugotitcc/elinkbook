@@ -778,5 +778,17 @@
   "bookUpdateResultReplacedOnlyMessage": "{replaced, plural, =1{已更新 1 本} other{已更新 {replaced} 本}}",
   "bookUpdateResultCoexistedOnlyMessage": "{coexisted, plural, =1{已并存 1 本} other{已并存 {coexisted} 本}}",
   "bookUpdateFailedMessage": "{count, plural, =1{1 本更新失败，书籍没有任何变动} other{{count} 本更新失败，书籍没有任何变动}}",
-  "bookUpdateResultWithFailedMessage": "{successText}；{failedText}"
+  "bookUpdateResultWithFailedMessage": "{successText}；{failedText}",
+  "readerForceRelinkTitle": "强制重新链接？",
+  "@readerForceRelinkTitle": {
+    "description": "重新选取档案内容不符时的强制重新链接对话框标题"
+  },
+  "readerForceRelinkMessage": "选取的档案与原书内容不一致，可能不是同一本书。若这是同一本书的新版本，可强制重新链接：只会更换档案位置，阅读进度与标注位置不会调整，可能因内容不同而偏移。",
+  "@readerForceRelinkMessage": {
+    "description": "重新选取档案内容不符时的强制重新链接对话框说明"
+  },
+  "readerForceRelinkConfirm": "强制重新链接",
+  "@readerForceRelinkConfirm": {
+    "description": "强制重新链接确认按钮"
+  }
 }

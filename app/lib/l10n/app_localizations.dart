@@ -4741,6 +4741,24 @@ abstract class AppLocalizations {
     String successText,
     String failedText,
   );
+
+  /// 重新選取檔案內容不符時的強制重新連結對話框標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'強制重新連結？'**
+  String get readerForceRelinkTitle;
+
+  /// 重新選取檔案內容不符時的強制重新連結對話框說明
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'選取的檔案與原書內容不一致，可能不是同一本書。若這是同一本書的新版本，可強制重新連結：只會更換檔案位置，閱讀進度與註記位置不會調整，可能因內容不同而偏移。'**
+  String get readerForceRelinkMessage;
+
+  /// 強制重新連結確認按鈕
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'強制重新連結'**
+  String get readerForceRelinkConfirm;
 }
 
 class _AppLocalizationsDelegate

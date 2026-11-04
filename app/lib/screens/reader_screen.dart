@@ -71,6 +71,7 @@ import '../theme/elink_tokens.dart';
 import 'annotation_toolbar.dart';
 import 'dictionary_settings_screen.dart';
 import 'widgets/dictionary_lookup_sheet.dart';
+import 'widgets/force_relink_dialog.dart' show showForceRelinkDialog;
 import 'support/book_import_picker_helper.dart'
     show SingleBookFilePicker, pickSingleBookFileViaFilePicker;
 import 'note_edit_dialog.dart';
@@ -489,10 +490,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       onTimedOut: OpenBookTrace.recordTimeout,
       // 讀取頂層可覆寫變數的當下值，widget test 才能以覆寫注入假探測。
       probe: (uri) => probeStorageAccess(uri),
-      relinkBook: (uri, displayName) => importService.relinkBook(
+      relinkBook: (uri, displayName, {bool force = false}) => importService.relinkBook(
         widget.bookId,
         uri,
         displayName: displayName,
+        force: force,
       ),
     )..addListener(_onOpenBookFlowChanged);
     _session = ReadingSession(
@@ -1527,7 +1529,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// SnackBar）；成功時原地重新開書；失敗時以 SnackBar 說明原因，錯誤視圖
   /// 維持原樣可再試一次。
   Future<void> _handleRelinkPressed() async {
-    final outcome = await _openBookFlow.relink(_pickBookFileForRelink);
+    final outcome = await _openBookFlow.relink(
+      _pickBookFileForRelink,
+      confirmForce: () async {
+        if (!mounted) return false;
+        return await showForceRelinkDialog(
+          context,
+          isEinkMode: widget.isEinkMode,
+        );
+      },
+    );
     if (!mounted) return;
     switch (outcome) {
       case OpenBookRelinkCancelled():

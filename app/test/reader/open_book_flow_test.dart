@@ -455,7 +455,7 @@ void main() {
 
     test('不在 Failed 狀態：回傳 cancelled，且不呼叫選檔', () async {
       final flow = buildFlow(
-          relinkBook: (_, _) async => BookRelinkSuccess(_book(_newUri)))
+          relinkBook: (_, _, {bool force = false}) async => BookRelinkSuccess(_book(_newUri)))
         ..start();
       var pickCalls = 0;
 
@@ -484,7 +484,7 @@ void main() {
 
     test('成功：Relinking → Loading，路徑更新並重新啟動 30 秒計時器', () async {
       final calls = <(String, String?)>[];
-      final flow = await failedFlow(relinkBook: (uri, displayName) async {
+      final flow = await failedFlow(relinkBook: (uri, displayName, {bool force = false}) async {
         calls.add((uri, displayName));
         return BookRelinkSuccess(_book('/data/imported/b1.epub'));
       });
@@ -506,7 +506,7 @@ void main() {
 
     test('Relinking 期間 failure 仍指向進入前的 Failed', () async {
       final pending = Completer<BookRelinkResult>();
-      final flow = await failedFlow(relinkBook: (_, _) => pending.future);
+      final flow = await failedFlow(relinkBook: (_, _, {bool force = false}) => pending.future);
       final before = flow.failure;
 
       final future = flow.relink(() async => _picked);
@@ -522,7 +522,7 @@ void main() {
 
     test('選檔取消：回傳 cancelled、不呼叫 relinkBook、回到原 Failed', () async {
       var relinkCalls = 0;
-      final flow = await failedFlow(relinkBook: (_, _) async {
+      final flow = await failedFlow(relinkBook: (_, _, {bool force = false}) async {
         relinkCalls++;
         return BookRelinkSuccess(_book(_newUri));
       });
@@ -538,7 +538,7 @@ void main() {
     for (final reason in BookRelinkFailureReason.values) {
       test('$reason：回傳 failed 並回到原 Failed，不重新開書', () async {
         final flow = await failedFlow(
-            relinkBook: (_, _) async => BookRelinkFailure(reason));
+            relinkBook: (_, _, {bool force = false}) async => BookRelinkFailure(reason));
         final before = flow.state;
         final timersBefore = timers.length;
 
@@ -553,7 +553,7 @@ void main() {
 
     test('relinkBook 拋出例外：視為 failed', () async {
       final flow = await failedFlow(
-          relinkBook: (_, _) async => throw StateError('爆掉'));
+          relinkBook: (_, _, {bool force = false}) async => throw StateError('爆掉'));
 
       final outcome = await flow.relink(() async => _picked);
 
@@ -564,7 +564,7 @@ void main() {
 
     test('選檔函式拋出例外：視為 failed', () async {
       final flow = await failedFlow(
-          relinkBook: (_, _) async => BookRelinkSuccess(_book(_newUri)));
+          relinkBook: (_, _, {bool force = false}) async => BookRelinkSuccess(_book(_newUri)));
 
       final outcome = await flow.relink(() async => throw StateError('爆掉'));
 
@@ -575,7 +575,7 @@ void main() {
     test('處理中再次呼叫 relink：回傳 cancelled，選檔只開一次（Review Focus 4）', () async {
       final pendingPick = Completer<OpenBookPickedFile?>();
       final flow = await failedFlow(
-          relinkBook: (_, _) async => BookRelinkSuccess(_book(_newUri)));
+          relinkBook: (_, _, {bool force = false}) async => BookRelinkSuccess(_book(_newUri)));
       var pickCalls = 0;
 
       final first = flow.relink(() {
@@ -595,7 +595,7 @@ void main() {
 
     test('Relinking 期間的視圖錯誤與 onRendered 一律忽略（Review Focus 4）', () async {
       final pending = Completer<BookRelinkResult>();
-      final flow = await failedFlow(relinkBook: (_, _) => pending.future);
+      final flow = await failedFlow(relinkBook: (_, _, {bool force = false}) => pending.future);
       final future = flow.relink(() async => _picked);
       await settle();
 
@@ -611,7 +611,7 @@ void main() {
     test('選檔期間 dispose：不呼叫 relinkBook、不拋例外、不通知（Review Focus 3）', () async {
       final pendingPick = Completer<OpenBookPickedFile?>();
       var relinkCalls = 0;
-      final flow = await failedFlow(relinkBook: (_, _) async {
+      final flow = await failedFlow(relinkBook: (_, _, {bool force = false}) async {
         relinkCalls++;
         return BookRelinkSuccess(_book(_newUri));
       });
@@ -630,7 +630,7 @@ void main() {
 
     test('relinkBook 處理中 dispose：結果回來不拋例外、不通知（Review Focus 3）', () async {
       final pending = Completer<BookRelinkResult>();
-      final flow = await failedFlow(relinkBook: (_, _) => pending.future);
+      final flow = await failedFlow(relinkBook: (_, _, {bool force = false}) => pending.future);
       final future = flow.relink(() async => _picked);
       await settle();
       var notifications = 0;
@@ -645,7 +645,7 @@ void main() {
 
     test('重新開書後再次視圖錯誤：以新路徑重新探測（Review Focus 5）', () async {
       final flow = await failedFlow(
-          relinkBook: (_, _) async => BookRelinkSuccess(_book(_newUri)));
+          relinkBook: (_, _, {bool force = false}) async => BookRelinkSuccess(_book(_newUri)));
       await flow.relink(() async => _picked);
 
       flow.onViewError('又失敗');
@@ -657,7 +657,7 @@ void main() {
 
     test('重新開書後再次卡住：新的 30 秒計時器到期會觸發逾時（Review Focus 5）', () async {
       final flow = await failedFlow(
-          relinkBook: (_, _) async => BookRelinkSuccess(_book(_newUri)));
+          relinkBook: (_, _, {bool force = false}) async => BookRelinkSuccess(_book(_newUri)));
       await flow.relink(() async => _picked);
 
       timers.last.fire();
@@ -666,6 +666,135 @@ void main() {
       expect((flow.state as OpenBookFailed).source,
           OpenBookFailureSource.timeout);
       expect(probeCalls, [_contentUri, _newUri]);
+    });
+
+    group('強制重新連結 confirmForce（epic-67 Issue 3）', () {
+      test('contentMismatch 且 confirmForce 回 true：以 force:true 再呼叫一次並重新開書（OpenBookRelinkReopened）', () async {
+        final relinkCalls = <({String uri, String? displayName, bool force})>[];
+        final flow = await failedFlow(relinkBook: (uri, name, {bool force = false}) async {
+          relinkCalls.add((uri: uri, displayName: name, force: force));
+          if (!force) {
+            return const BookRelinkFailure(BookRelinkFailureReason.contentMismatch);
+          }
+          return BookRelinkSuccess(_book(_newUri));
+        });
+
+        var confirmForceCalled = false;
+        final outcome = await flow.relink(
+          () async => _picked,
+          confirmForce: () async {
+            confirmForceCalled = true;
+            return true;
+          },
+        );
+
+        expect(confirmForceCalled, isTrue);
+        expect(relinkCalls, [
+          (uri: _newUri, displayName: 'book.epub', force: false),
+          (uri: _newUri, displayName: 'book.epub', force: true),
+        ]);
+        expect(outcome, isA<OpenBookRelinkReopened>());
+        expect((outcome as OpenBookRelinkReopened).newPath, _newUri);
+        expect(flow.state, isA<OpenBookLoading>());
+      });
+
+      test('contentMismatch 且 confirmForce 回 false：回 OpenBookRelinkCancelled、只呼叫一次 relinkBook（force:false）、狀態回到 OpenBookFailed', () async {
+        final relinkCalls = <({String uri, String? displayName, bool force})>[];
+        final flow = await failedFlow(relinkBook: (uri, name, {bool force = false}) async {
+          relinkCalls.add((uri: uri, displayName: name, force: force));
+          return const BookRelinkFailure(BookRelinkFailureReason.contentMismatch);
+        });
+
+        final outcome = await flow.relink(
+          () async => _picked,
+          confirmForce: () async => false,
+        );
+
+        expect(relinkCalls, [
+          (uri: _newUri, displayName: 'book.epub', force: false),
+        ]);
+        expect(outcome, isA<OpenBookRelinkCancelled>());
+        expect(flow.state, isA<OpenBookFailed>());
+      });
+
+      test('contentMismatch 但沒有 confirmForce：維持 OpenBookRelinkFailed(contentMismatch)', () async {
+        final flow = await failedFlow(
+          relinkBook: (_, _, {bool force = false}) async =>
+              const BookRelinkFailure(BookRelinkFailureReason.contentMismatch),
+        );
+
+        final outcome = await flow.relink(() async => _picked);
+
+        expect(outcome, isA<OpenBookRelinkFailed>());
+        expect((outcome as OpenBookRelinkFailed).reason,
+            BookRelinkFailureReason.contentMismatch);
+      });
+
+      test('formatMismatch／alreadyInLibrary／failed 不觸發 confirmForce', () async {
+        for (final reason in [
+          BookRelinkFailureReason.formatMismatch,
+          BookRelinkFailureReason.alreadyInLibrary,
+          BookRelinkFailureReason.failed,
+        ]) {
+          var confirmForceCalled = false;
+          final flow = await failedFlow(
+            relinkBook: (_, _, {bool force = false}) async =>
+                BookRelinkFailure(reason),
+          );
+
+          final outcome = await flow.relink(
+            () async => _picked,
+            confirmForce: () async {
+              confirmForceCalled = true;
+              return true;
+            },
+          );
+
+          expect(confirmForceCalled, isFalse);
+          expect(outcome, isA<OpenBookRelinkFailed>());
+          expect((outcome as OpenBookRelinkFailed).reason, reason);
+        }
+      });
+
+      test('confirmForce 拋例外視為 failed，不拋出', () async {
+        final flow = await failedFlow(
+          relinkBook: (_, _, {bool force = false}) async =>
+              const BookRelinkFailure(BookRelinkFailureReason.contentMismatch),
+        );
+
+        final outcome = await flow.relink(
+          () async => _picked,
+          confirmForce: () async => throw StateError('confirm failed'),
+        );
+
+        expect(outcome, isA<OpenBookRelinkFailed>());
+        expect((outcome as OpenBookRelinkFailed).reason,
+            BookRelinkFailureReason.failed);
+      });
+
+      test('confirmForce 等待期間 flow 被 dispose：不再呼叫第二次 relinkBook', () async {
+        final completer = Completer<bool>();
+        var relinkCount = 0;
+        final flow = await failedFlow(
+          relinkBook: (_, _, {bool force = false}) async {
+            relinkCount++;
+            return const BookRelinkFailure(BookRelinkFailureReason.contentMismatch);
+          },
+        );
+
+        final future = flow.relink(
+          () async => _picked,
+          confirmForce: () => completer.future,
+        );
+        await settle();
+
+        flow.dispose();
+        completer.complete(true);
+        final outcome = await future;
+
+        expect(outcome, isA<OpenBookRelinkCancelled>());
+        expect(relinkCount, 1);
+      });
     });
   });
 }

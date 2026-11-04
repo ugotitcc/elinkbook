@@ -118,6 +118,9 @@ class FakeBookImportService implements BookImportService {
   /// 設定時 [relinkBook] 回傳 `Future.error(relinkError)`，模擬服務拋出例外。
   Object? relinkError;
 
+  /// epic-67 Issue 3：[relinkBook] 帶 force: true 時的回傳值。為 null 時退回 [relinkResult]。
+  BookRelinkResult? forceRelinkResult;
+
   /// 每次 [relinkBook] 的呼叫參數，依呼叫順序排列。
   final List<RelinkCallRecord> relinkCalls = [];
 
@@ -138,6 +141,7 @@ class FakeBookImportService implements BookImportService {
     if (error != null) return Future.error(error);
     final completer = relinkCompleter;
     if (completer != null) return completer.future;
+    if (force && forceRelinkResult != null) return Future.value(forceRelinkResult);
     return Future.value(relinkResult);
   }
 

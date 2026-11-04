@@ -336,7 +336,7 @@ class BookImportServiceImpl implements BookImportService {
           // contentMismatch，屬已知限制。
           final usedIdentifier = fingerprint == epubIdentifier?.trim();
           final sha256 = usedIdentifier
-              ? await computeBookContentFingerprint(newUri, format!)
+              ? await computeBookContentFingerprint(newUri, format)
               : null;
           if (sha256 != originalFingerprint) {
             return const BookRelinkFailure(

@@ -122,8 +122,10 @@ final class OpenBookRelinkCancelled extends OpenBookRelinkOutcome {
 typedef OpenBookProbe = Future<StorageAccessProbeResult> Function(String uri);
 
 /// 以選好的檔案重新連結書籍記錄（`BookImportService.relinkBook` 的包裝）。
+/// 以選好的檔案重新連結書籍記錄（`BookImportService.relinkBook` 的包裝）。
+/// epic-67 Issue 3：增加選填具名參數 [force]。
 typedef OpenBookRelink = Future<BookRelinkResult> Function(
-    String uri, String? displayName);
+    String uri, String? displayName, {bool force});
 
 /// 使用者選取的檔案。與 `SingleBookFilePicker` 的回傳型別相同。
 typedef OpenBookPickedFile = ({String uri, String? displayName});
@@ -217,8 +219,9 @@ class OpenBookFlow extends ChangeNotifier {
   /// 由 Widget 提供的 [pick] 選檔；`null` 代表取消。保證不拋例外：選檔或
   /// relinkBook 的任何例外都視為 failed。
   Future<OpenBookRelinkOutcome> relink(
-    Future<OpenBookPickedFile?> Function() pick,
-  ) async {
+    Future<OpenBookPickedFile?> Function() pick, {
+    Future<bool> Function()? confirmForce,
+  }) async {
     final current = _state;
     final relinkBook = this.relinkBook;
     if (_disposed || current is! OpenBookFailed || relinkBook == null) {
@@ -235,11 +238,36 @@ class OpenBookFlow extends ChangeNotifier {
         outcome = const OpenBookRelinkCancelled();
       } else {
         final result = await relinkBook(picked.uri, picked.displayName);
-        outcome = switch (result) {
-          BookRelinkSuccess(:final updatedBook) =>
-            OpenBookRelinkReopened(updatedBook.filePath),
-          BookRelinkFailure(:final reason) => OpenBookRelinkFailed(reason),
-        };
+        if (result is BookRelinkFailure &&
+            result.reason == BookRelinkFailureReason.contentMismatch &&
+            confirmForce != null) {
+          if (_disposed) {
+            outcome = const OpenBookRelinkCancelled();
+          } else {
+            final confirmed = await confirmForce();
+            if (_disposed || !confirmed) {
+              outcome = const OpenBookRelinkCancelled();
+            } else {
+              final forcedResult = await relinkBook(
+                picked.uri,
+                picked.displayName,
+                force: true,
+              );
+              outcome = switch (forcedResult) {
+                BookRelinkSuccess(:final updatedBook) =>
+                  OpenBookRelinkReopened(updatedBook.filePath),
+                BookRelinkFailure(:final reason) =>
+                  OpenBookRelinkFailed(reason),
+              };
+            }
+          }
+        } else {
+          outcome = switch (result) {
+            BookRelinkSuccess(:final updatedBook) =>
+              OpenBookRelinkReopened(updatedBook.filePath),
+            BookRelinkFailure(:final reason) => OpenBookRelinkFailed(reason),
+          };
+        }
       }
     } catch (_) {
       outcome = const OpenBookRelinkFailed(BookRelinkFailureReason.failed);

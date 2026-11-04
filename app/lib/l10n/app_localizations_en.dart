@@ -2845,4 +2845,14 @@ class AppLocalizationsEn extends AppLocalizations {
   ) {
     return '$successText; $failedText';
   }
+
+  @override
+  String get readerForceRelinkTitle => 'Force Relink?';
+
+  @override
+  String get readerForceRelinkMessage =>
+      'The selected file content does not match the original book and may be a different book. If this is a revised edition of the same book, you can force relink: only the file path will be updated; reading progress and annotations will be preserved but may shift due to content changes.';
+
+  @override
+  String get readerForceRelinkConfirm => 'Force Relink';
 }

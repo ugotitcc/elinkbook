@@ -2737,6 +2737,16 @@ class AppLocalizationsZh extends AppLocalizations {
   ) {
     return '$successText；$failedText';
   }
+
+  @override
+  String get readerForceRelinkTitle => '強制重新連結？';
+
+  @override
+  String get readerForceRelinkMessage =>
+      '選取的檔案與原書內容不一致，可能不是同一本書。若這是同一本書的新版本，可強制重新連結：只會更換檔案位置，閱讀進度與註記位置不會調整，可能因內容不同而偏移。';
+
+  @override
+  String get readerForceRelinkConfirm => '強制重新連結';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -5472,6 +5482,16 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   ) {
     return '$successText；$failedText';
   }
+
+  @override
+  String get readerForceRelinkTitle => '强制重新链接？';
+
+  @override
+  String get readerForceRelinkMessage =>
+      '选取的档案与原书内容不一致，可能不是同一本书。若这是同一本书的新版本，可强制重新链接：只会更换档案位置，阅读进度与标注位置不会调整，可能因内容不同而偏移。';
+
+  @override
+  String get readerForceRelinkConfirm => '强制重新链接';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -8207,4 +8227,14 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   ) {
     return '$successText；$failedText';
   }
+
+  @override
+  String get readerForceRelinkTitle => '強制重新連結？';
+
+  @override
+  String get readerForceRelinkMessage =>
+      '選取的檔案與原書內容不一致，可能不是同一本書。若這是同一本書的新版本，可強制重新連結：只會更換檔案位置，閱讀進度與註記位置不會調整，可能因內容不同而偏移。';
+
+  @override
+  String get readerForceRelinkConfirm => '強制重新連結';
 }
