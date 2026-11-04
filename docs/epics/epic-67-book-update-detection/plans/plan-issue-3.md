@@ -80,7 +80,7 @@
   - 頂層 `BookFileFormat? detectImportFileFormat(String uri, String? displayName)`（定義於 `book_import_service_impl.dart`，與 `detectBookFileFormat` 並列；displayName 優先，無法辨識時退回 URI；畫面層改由 `library/book_file_format_detection.dart` 取得）。
   - 假服務 `RelinkCallRecord.force`（`bool`）。
 
-- [ ] **Step 1: 寫失敗測試**（`book_import_service_test.dart`，沿用該檔既有 relink 測試的 fixture 與建構方式，測試名稱用中文）
+- [x] **Step 1: 寫失敗測試**（`book_import_service_test.dart`，沿用該檔既有 relink 測試的 fixture 與建構方式，測試名稱用中文）
   - `relinkBook force：內容不符時 force:false 回 contentMismatch 且記錄完全不動`
   - `relinkBook force：內容不符時 force:true 成功，filePath 更新、contentFingerprint 與 id／閱讀進度不變`（斷言 `BookRelinkSuccess.updatedBook.contentFingerprint == 原指紋`，並從 repository 重新讀書驗證）
   - `relinkBook force：格式不符時即使 force:true 仍回 formatMismatch`
@@ -242,11 +242,11 @@
 - Modify: `docs/epics/epic-67-book-update-detection/issues.md`（Issue 3 列與 Status 改為實作完成待 PR）
 - Modify: 本計畫檔（勾選完成的步驟）
 
-- [ ] **Step 1: 完整測試與靜態檢查**
+- [x] **Step 1: 完整測試與靜態檢查**
   Run（`app/`）：`flutter test --no-pub`；`flutter analyze`；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`；然後 `git checkout pubspec.lock windows/flutter`。
   Expected: 全部通過、analyze "No issues found!"。
 
-- [ ] **Step 2: 更新 epic.md 與 issues.md**
+- [x] **Step 2: 更新 epic.md 與 issues.md**
   記錄決策、已知限制（見「不在範圍」）與真機驗證項目；真機驗證一律標「尚未執行，由人類另行處理」，不自行勾選。
 
 - [ ] **Step 3: 真機／模擬器手動驗證項目（由人類執行，結果補記於 epic.md）**
@@ -256,7 +256,7 @@
   4. 閱讀器重新選取檔案選到不同格式 → 仍直接拒絕（不出現強制對話框）。
   5. E-Ink 裝置：確認對話框顯示正常、無多餘過場殘影。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   ```bash
   git add docs/epics/epic-67-book-update-detection
   git commit -m "docs(epic-67): Issue 3 實作記錄與工單更新"
