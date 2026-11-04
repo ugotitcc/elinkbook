@@ -378,12 +378,12 @@ Android 媒體庫文件提供者回傳的 URI 是不透明 ID、不含副檔名�
 - Modify: `docs/epics/epic-67-book-update-detection/epic.md`（開發記錄）、`issues.md`（Issue 1 狀態與 PR 欄）、`docs/epics.md`（備註改為「Issue 1、5 已合併」，**合併後**才改）。
 - Modify: `CONTEXT.md` 僅在新增了詞彙時（本 Issue 預計不新增）。
 
-- [ ] **Step 1：`flutter analyze`**：修正因介面新增方法而編譯失敗的假實作。
-- [ ] **Step 2：字串檢查** `node tool/check_l10n_hardcoded_strings.js`（本 Issue 無畫面，預期零差異）。
-- [ ] **Step 3：完整 `flutter test --no-pub`** 全綠（本計畫唯一一次全套）。
-- [ ] **Step 4：大批匯入體感驗證**（Review Focus 7）：以 `importFolder` 對含約 50 個 EPUB 的資料夾（可用測試 fixture 複製）量測匯入前後耗時；若偵測造成顯著退步，在 `epic.md` 記錄數據並回報，**不自行優化**。
-- [ ] **Step 5：文件同步**：`epic.md` 新增「Issue 1 計畫與實作」段，記錄 D1～D4 的最終決定、F6（字元數欄位為 no-op）、F8（封面快取須由 Issue 2／3 接線處理）、殘餘風險。`issues.md` Issue 1 補上計畫連結；Issue 2、3 的範圍各補一行「取代成功後須 evict 該書封面的 `FileImage` 快取」。
-- [ ] **Step 6：提交** `docs(epic-67): Issue 1 實作記錄與後續 Issue 接線提醒`。
+- [x] **Step 1：`flutter analyze`**：修正因介面新增方法而編譯失敗的假實作。
+- [x] **Step 2：字串檢查** `node tool/check_l10n_hardcoded_strings.js`（本 Issue 無畫面，預期零差異）。
+- [x] **Step 3：完整 `flutter test --no-pub`** 全綠（本計畫唯一一次全套）。
+- [x] **Step 4：大批匯入體感驗證**（Review Focus 7）：以 `importFolder` 對含約 50 個 EPUB 的資料夾（可用測試 fixture 複製）量測匯入前後耗時；若偵測造成顯著退步，在 `epic.md` 記錄數據並回報，**不自行優化**。
+- [x] **Step 5：文件同步**：`epic.md` 新增「Issue 1 計畫與實作」段，記錄 D1～D4 的最終決定、F6（字元數欄位為 no-op）、F8（封面快取須由 Issue 2／3 接線處理）、殘餘風險。`issues.md` Issue 1 補上計畫連結；Issue 2、3 的範圍各補一行「取代成功後須 evict 該書封面的 `FileImage` 快取」。
+- [x] **Step 6：提交** `docs(epic-67): Issue 1 實作記錄與後續 Issue 接線提醒`。
 
 ---
 

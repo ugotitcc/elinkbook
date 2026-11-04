@@ -49,3 +49,21 @@
 - Architecting（`spec.md`）與 Issue 拆解（`issues.md`，6 個 Issue）已完成；Issue 5（Foliate 降級）已合併（PR #383，見 `plans/plan-issue-5.md`；該 PR 另衍生 PR #382，修正 `main` 在採用的 Flutter 3.41.9 編譯失敗的字典設定畫面）。下一步為 Issue 1（核心）與其餘 Issue 的 `plans/plan-issue-N.md` 與實作。
 - 新增的使用者可見字串（書籍動作選單、更新確認對話框、批次清單、註記偏移 SnackBar、待確認更新狀態、強制重新連結確認）須同步登錄在四份 ARB 檔：`app_en.arb`、`app_zh.arb`、`app_zh_CN.arb`、`app_zh_TW.arb`。
 - 後續工作：WiFi 傳輸的更新版處理。
+
+## Issue 1 計畫與實作
+
+- **計畫文件**：[plan-issue-1.md](plans/plan-issue-1.md)
+- **實作分支**：`epic-67/issue-1-detect-and-replace`
+- **核心架構與決策定案**：
+  - **D1（舊書指紋保留，整檔 SHA-256 分流重複與更新版）**：舊書 `contentFingerprint` 與 `id` 嚴格保留不變（落實 ADR 0040，PocketBase 免更動 schema）。在第一層 OPF identifier 相同時，透過比對整檔 SHA-256 區分「完全相同的重複檔案」與「內容變更的更新版」。
+  - **D2（重複檔案直接略過）**：批次匯入（`importFiles`／`importFolder`）中偵測到內容完全重複（`DetectedDuplicate`）時，比照既有行為累加 `skippedDuplicateCount` 並直接略過，不產生候選項目也不寫入資料庫。
+  - **D3（錯誤處理分級）**：`replaceBook` 取代操作採嚴格錯誤處理與兩階段檔案搬移（原子升級與復原機制），非致命失敗均會回復現場並拋出例外；`_peekIdentity` 與 `detectBookUpdate` 偵測階段則採優雅降級（永不拋例外，讀取失敗時退回檔名/預設值）。
+  - **D4（更新暫存目錄與清理能力）**：候選新檔複製於 App 私有專屬暫存目錄（`update_staging`），獨立於主書庫與落地目錄。提供 `discardUpdateCandidate` 能隨時安全清理暫存檔。
+  - **F6（字元數欄位處理）**：`totalCharacterCount` 欄位在現行程式碼中無讀寫操作，維持 no-op，不進行額外計算。
+  - **F8（封面快取失效職責劃分）**：Service 層不依賴 Flutter 繪圖引擎快取；取代成功後，封面圖片快取失效（`PaintingBinding.instance.imageCache.evict(FileImage(File(coverPath)))`）必須由 UI 層（Issue 2 批次清單與 Issue 3 手動更新）主動處理。
+  - **殘餘風險**：檔案搬移完成但資料庫 `updateBook` 失敗時，雖有實體檔復原機制，但若復原同時發生致命磁碟 I/O 錯誤，可能留下暫時性不一致；此情境可由使用者再次觸發「用新檔案更新此書」重新覆蓋修復。
+  - **大批匯入體感效能量測（Review Focus 7）**：
+    - 50 本全新 EPUB 匯入：約 125 ms（平均 2.5 ms/本）
+    - 50 本重複 EPUB 偵測跳過：約 57 ms（平均 1.1 ms/本）
+    - 50 本更新版 EPUB 暫存與偵測：約 164 ms（平均 3.3 ms/本）
+    - 體感無可觀測延遲，效能維持平穩零退化。

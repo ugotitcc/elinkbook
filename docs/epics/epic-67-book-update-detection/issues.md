@@ -12,7 +12,7 @@ Issue 6 PDF 降級      ─┘
 
 | Issue | 標題 | 依賴 | 狀態 | PR |
 |---|---|---|---|---|
-| 1 | 核心：偵測（重複/更新版/新書）與取代（原子換檔、資產清理、保留註記與身份） | 無 | 🟡 計畫已審查並修訂（待實作） | —（計畫：[plan-issue-1.md](plans/plan-issue-1.md)） |
+| 1 | 核心：偵測（重複/更新版/新書）與取代（原子換檔、資產清理、保留註記與身份） | 無 | ✅ 實作完成（待 PR） | —（分支：epic-67/issue-1-detect-and-replace，計畫：[plan-issue-1.md](plans/plan-issue-1.md)） |
 | 2 | 本機匯入入口：匯入完成後彙整更新版清單（取代／並存／跳過、全部取代／全部跳過）與暫存檔收尾 | Issue 1 | ⏳ 未開始 | — |
 | 3 | 手動入口「用新檔案更新此書」與 `relinkBook` 強制重新連結 | Issue 1 | ⏳ 未開始 | — |
 | 4 | 下載佇列「待確認更新」：非阻塞狀態、專屬暫存目錄、面板確認、啟動清掃 | Issue 1 | ⏳ 未開始 | — |
@@ -69,6 +69,7 @@ Status: ready-for-agent（依賴 Issue 1）
 - 取代前的確認文字提示「既有註記位置可能因內容改版而偏移」。
 - 跳過、關閉清單、返回或取消時呼叫「丟棄候選」；取代或並存完成後自動收尾。
 - 「N 本已存在，已跳過」提示維持，並與更新版清單分開呈現。
+- 取代成功後須 evict 該書封面的 `FileImage` 快取（`PaintingBinding.instance.imageCache.evict(FileImage(File(coverPath)))`，見 ADR 0040 與 F8）。
 - 新增字串四語系同步。
 - 實測發現：章節索引超界會讓開書卡死、跳轉位置不動；元素路徑不存在不算失敗，詳見 `plans/plan-issue-5.md`。
 
@@ -89,6 +90,7 @@ Status: ready-for-agent（依賴 Issue 1）
 
 - 書籍動作選單新增「用新檔案更新此書」（`BookAction` 列舉新增 `updateBook`，選項 Key 為 `book_action_update_book`，比照既有 `book_action_*` 命名）：選檔後只檢查格式相同，不做身份比對；通過即進入取代確認（含偏移提示）。格式不符回傳明確原因並拒絕。
 - `relinkBook` 內容不符、格式相同時，回傳可由呼叫端繼續確認的結果；畫面詢問「強制重新連結」，確認後只更新檔案路徑（不改指紋）。格式不符仍拒絕。此規則對所有書通用，不另記錄哪本書被取代過。
+- 取代成功後須 evict 該書封面的 `FileImage` 快取（`PaintingBinding.instance.imageCache.evict(FileImage(File(coverPath)))`，見 ADR 0040 與 F8）。
 - 新增字串四語系同步。
 
 **單元測試要求**：
