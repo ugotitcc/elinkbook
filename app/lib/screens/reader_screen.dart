@@ -2983,6 +2983,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               _initialPosition?.pdfPageIndex,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
+          onNavigationDegraded: _handleNavigationDegraded,
           dualPageMode: resolved.dualPageMode,
           dualPageCoverAlone: resolved.dualPageCoverAlone,
           dualPageDirection: resolved.dualPageDirection,

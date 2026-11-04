@@ -517,6 +517,95 @@ void main() {
       expect(find.text('原位置已變更，已跳至概略進度'), findsOneWidget);
     });
 
+    testWidgets('PDF：閱讀器回報降級時顯示與 Foliate 相同的提示', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_pdf_degrade_snackbar',
+            dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      expect(pdfView.onNavigationDegraded, isNotNull);
+
+      pdfView.onNavigationDegraded!(NavigationDegradedReason.readingPosition);
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_navigation_degraded_snackbar')), findsOneWidget);
+      expect(find.text('原位置已變更，已跳至概略進度'), findsOneWidget);
+
+      // 連續兩次通知不排隊堆疊，畫面上仍只有一則
+      pdfView.onNavigationDegraded!(NavigationDegradedReason.annotation);
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_navigation_degraded_snackbar')), findsOneWidget);
+      expect(find.text('原位置已變更，已跳至概略進度'), findsOneWidget);
+    });
+
+    testWidgets('PDF：初始頁碼超界時真的顯示提示且書不壞', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_pdf_initial_out_of_bounds',
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 99),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_error_text')), findsNothing);
+      expect(find.byKey(const Key('reader_navigation_degraded_snackbar')), findsOneWidget);
+      expect(find.text('原位置已變更，已跳至概略進度'), findsOneWidget);
+      // sample_multi_page.pdf 在連續捲動與測試視窗高度下，捲至文件底端時可視範圍頂部為第 4 頁（4/5）
+      expect(find.text('4/5'), findsOneWidget);
+    });
+
+    testWidgets('PDF：初始頁碼有效時不顯示降級提示', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_pdf_initial_valid',
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+            dependencies: fakeReaderFeatureDependencies(prefsManager: FakeReaderPrefsManager()),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_navigation_degraded_snackbar')), findsNothing);
+      expect(find.text('2/5'), findsOneWidget);
+    });
+
     testWidgets('Foliate：FoliateReaderView.textConversion 反映 resolveTextConversion() 解析結果（單書覆寫優先）',
         (tester) async {
       final prefsManager = FakeReaderPrefsManager(
