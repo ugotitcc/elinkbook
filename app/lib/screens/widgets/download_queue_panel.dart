@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../downloads/download_queue_controller.dart';
 import '../../l10n/app_localizations.dart';
+import '../support/book_import_picker_helper.dart';
+import '../support/book_update_resolver.dart';
+import 'book_update_summary_dialog.dart';
 import 'eb_field_card.dart';
 import 'eb_section_header.dart';
 
@@ -12,8 +15,13 @@ import 'eb_section_header.dart';
 /// 整個區塊（含分區標題）不渲染。
 class DownloadQueuePanel extends StatelessWidget {
   final DownloadQueueController controller;
+  final bool isEinkMode;
 
-  const DownloadQueuePanel({super.key, required this.controller});
+  const DownloadQueuePanel({
+    super.key,
+    required this.controller,
+    this.isEinkMode = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +38,11 @@ class DownloadQueuePanel extends StatelessWidget {
             for (final item in items)
               EBFieldCard(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                child: _QueueItemRow(item: item, controller: controller),
+                child: _QueueItemRow(
+                  item: item,
+                  controller: controller,
+                  isEinkMode: isEinkMode,
+                ),
               ),
           ],
         );
@@ -42,8 +54,13 @@ class DownloadQueuePanel extends StatelessWidget {
 class _QueueItemRow extends StatelessWidget {
   final DownloadQueueItem item;
   final DownloadQueueController controller;
+  final bool isEinkMode;
 
-  const _QueueItemRow({required this.item, required this.controller});
+  const _QueueItemRow({
+    required this.item,
+    required this.controller,
+    this.isEinkMode = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -107,12 +124,12 @@ class _QueueItemRow extends StatelessWidget {
             ],
           ),
         ),
-        _trailingAction(l10n),
+        _trailingAction(context, l10n),
       ],
     );
   }
 
-  Widget _trailingAction(AppLocalizations l10n) {
+  Widget _trailingAction(BuildContext context, AppLocalizations l10n) {
     switch (item.status) {
       case DownloadItemStatus.downloading:
         return IconButton(
@@ -137,10 +154,65 @@ class _QueueItemRow extends StatelessWidget {
           tooltip: l10n.downloadQueueDismissTooltip,
           onPressed: () => controller.dismiss(item.id),
         );
+      case DownloadItemStatus.awaitingUpdateConfirmation:
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              key: Key('sources_download_queue_update_review_${item.id}'),
+              icon: const Icon(Icons.rate_review_outlined),
+              tooltip: l10n.downloadQueueUpdateReviewButton,
+              onPressed: () => _reviewUpdate(context, item),
+            ),
+            IconButton(
+              key: Key('sources_download_queue_dismiss_${item.id}'),
+              icon: const Icon(Icons.close),
+              tooltip: l10n.downloadQueueDismissTooltip,
+              onPressed: () => controller.dismiss(item.id),
+            ),
+          ],
+        );
       case DownloadItemStatus.pending:
       case DownloadItemStatus.checkingDuplicate:
         return const SizedBox(width: 48);
     }
+  }
+
+  Future<void> _reviewUpdate(
+    BuildContext context,
+    DownloadQueueItem item,
+  ) async {
+    final candidate = item.updateCandidate;
+    if (candidate == null) return;
+
+    // 對話框期間此列可能因項目被移除而卸載：先取得 messenger 與在地化字串，
+    // 之後不再依賴這個 context 是否仍掛載（審查 M-4）。
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    final result = await showBookUpdateSummaryDialog(
+      context,
+      candidates: [candidate],
+      discardOnCancel: false,
+      isEinkMode: isEinkMode,
+      importService: null,
+      applier: (choices) async {
+        final choice = choices[candidate] ?? const SkipChoice();
+        final settleResult = await controller.resolveUpdate(item.id, choice);
+        return BookUpdateApplyResult(
+          replaced:
+              settleResult.outcome == BookUpdateSettleOutcome.replaced ? 1 : 0,
+          coexisted:
+              settleResult.outcome == BookUpdateSettleOutcome.coexisted ? 1 : 0,
+          skipped:
+              settleResult.outcome == BookUpdateSettleOutcome.skipped ? 1 : 0,
+          failed:
+              settleResult.outcome == BookUpdateSettleOutcome.failed ? 1 : 0,
+        );
+      },
+    );
+
+    showBookUpdateResultSnackBarWith(messenger, l10n, result);
   }
 
   IconData _statusIcon(DownloadItemStatus status) {
@@ -153,6 +225,8 @@ class _QueueItemRow extends StatelessWidget {
         return Icons.error_outline;
       case DownloadItemStatus.cancelled:
         return Icons.cancel_outlined;
+      case DownloadItemStatus.awaitingUpdateConfirmation:
+        return Icons.update;
       case DownloadItemStatus.pending:
       case DownloadItemStatus.downloading:
       case DownloadItemStatus.checkingDuplicate:
@@ -162,6 +236,8 @@ class _QueueItemRow extends StatelessWidget {
 
   String _statusLabel(AppLocalizations l10n, DownloadQueueItem item) {
     switch (item.status) {
+      case DownloadItemStatus.awaitingUpdateConfirmation:
+        return l10n.downloadQueueStatusAwaitingUpdate;
       case DownloadItemStatus.pending:
         return l10n.downloadQueueStatusPending;
       case DownloadItemStatus.downloading:

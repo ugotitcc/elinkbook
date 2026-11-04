@@ -275,6 +275,76 @@ void main() {
 
       expect(result.outcome, UploadOutcome.failed);
     });
+
+    group('更新版上傳維持當新書匯入（epic-67 Issue 4 Task 6）', () {
+      final candidate = BookUpdateCandidate(
+        sourceUri: '/tmp/landed.epub',
+        displayName: '更新書.epub',
+        format: BookFileFormat.epub,
+        stagedPath: '/tmp/staging/update.epub',
+        confidence: UpdateConfidence.high,
+        candidateBooks: [_bookWith(id: 'existing-1', filePath: '/tmp/existing.epub')],
+      );
+
+      test('更新版上傳當新書匯入：importCandidateAsNewBook 被呼叫、outcome imported、落地檔已被刪除', () async {
+        final fingerprintComputer = FakeFingerprintComputer();
+        final importService = FakeBookImportService()
+          ..importFilesResult = ImportResult(
+            importedBooks: const [],
+            updateCandidates: [candidate],
+          )
+          ..importCandidateResult = _bookWith(
+            id: 'new-from-candidate',
+            filePath: '/app/books/new.epub',
+          );
+        final deleteCalls = <String>[];
+        final service = WifiTransferService(
+          libraryRepository: FakeLibraryRepository(),
+          importService: importService,
+          computeFingerprint: fingerprintComputer.call,
+          materializeContentUri: (uri) async => null,
+          deleteFile: (path) async => deleteCalls.add(path),
+        );
+
+        final result = await service.handleUploadedFile(
+          landedPath: '/tmp/landed.epub',
+          originalFileName: '更新書.epub',
+          format: BookFileFormat.epub,
+        );
+
+        expect(result.outcome, UploadOutcome.imported);
+        expect(importService.importCandidateCalls, [candidate]);
+        expect(deleteCalls, ['/tmp/landed.epub']);
+      });
+
+      test('並存失敗：importCandidateResult 為 null → outcome failed、落地檔被刪', () async {
+        final fingerprintComputer = FakeFingerprintComputer();
+        final importService = FakeBookImportService()
+          ..importFilesResult = ImportResult(
+            importedBooks: const [],
+            updateCandidates: [candidate],
+          )
+          ..importCandidateResult = null;
+        final deleteCalls = <String>[];
+        final service = WifiTransferService(
+          libraryRepository: FakeLibraryRepository(),
+          importService: importService,
+          computeFingerprint: fingerprintComputer.call,
+          materializeContentUri: (uri) async => null,
+          deleteFile: (path) async => deleteCalls.add(path),
+        );
+
+        final result = await service.handleUploadedFile(
+          landedPath: '/tmp/landed.epub',
+          originalFileName: '更新書.epub',
+          format: BookFileFormat.epub,
+        );
+
+        expect(result.outcome, UploadOutcome.failed);
+        expect(importService.importCandidateCalls, [candidate]);
+        expect(deleteCalls, ['/tmp/landed.epub']);
+      });
+    });
   });
 
   group('listDownloadableBooks', () {

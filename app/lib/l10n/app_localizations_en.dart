@@ -1990,6 +1990,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadQueueStatusCancelled => 'Cancelled';
 
   @override
+  String get downloadQueueStatusAwaitingUpdate => 'Update pending';
+
+  @override
+  String get downloadQueueUpdateReviewButton => 'Review update';
+
+  @override
   String downloadQueueDuplicateConfirmMessage(String name) {
     return 'Detected that \"$name\" has the same content as an existing book on this device. Create a new copy anyway?';
   }

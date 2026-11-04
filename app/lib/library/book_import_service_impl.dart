@@ -23,6 +23,7 @@ import 'models/library_enums.dart';
 import 'md_epub_synthesizer.dart';
 import 'txt_cover_generator.dart';
 import 'txt_epub_synthesizer.dart';
+import 'update_staging.dart';
 
 /// 跨平台書籍詮釋資料解析器函式簽名（epic-66 Issue 2 Task 5）。
 ///
@@ -1305,7 +1306,7 @@ class BookImportServiceImpl implements BookImportService {
         Directory(
           p.join(
             (await getApplicationDocumentsDirectory()).path,
-            'update_staging',
+            kUpdateStagingFolderName,
           ),
         );
     if (!await dir.exists()) await dir.create(recursive: true);

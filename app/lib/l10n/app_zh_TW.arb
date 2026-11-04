@@ -2542,6 +2542,14 @@
   "@downloadQueueStatusCancelled": {
     "description": "項目狀態標籤：使用者主動取消下載"
   },
+  "downloadQueueStatusAwaitingUpdate": "待確認更新",
+  "@downloadQueueStatusAwaitingUpdate": {
+    "description": "下載佇列中偵測到更新版、等待使用者確認時的狀態標籤"
+  },
+  "downloadQueueUpdateReviewButton": "確認更新",
+  "@downloadQueueUpdateReviewButton": {
+    "description": "下載佇列中待確認更新項目的檢視對話框按鈕提示"
+  },
   "downloadQueueDuplicateConfirmMessage": "偵測到「{name}」與本機已有的一本書內容相同，仍要建立新的一份嗎？",
   "@downloadQueueDuplicateConfirmMessage": {
     "description": "下載佇列指紋比對命中重複時的確認訊息（審查意見 review-issue-6.md I-1：原為 download_queue_controller.dart 內硬編碼中文，改由 main.dart 呼叫端在地化組裝）",

@@ -91,3 +91,20 @@
     - 計畫 Task 4 Step 3 三項情境（1 取代後書名與封面即時更新且進度書籤保留、2 混合批次、3 取消後 `update_staging/` 無殘留）：通過。
     - 補充情境（原計畫未涵蓋）：一次更新 3 本（全部取代）、逐本不同處置（取代／並存／跳過）、全部跳過、5 種情況混合（含疑似更新）、一批 12 檔：全部通過。
     - 尚未涵蓋：失敗路徑（取代途中失敗）、大檔案耗時。
+
+## Issue 4 計畫與實作
+
+- **計畫文件**：[plan-issue-4.md](plans/plan-issue-4.md)
+- **實作分支**：`epic-67/issue-4-download-queue-pending-update`
+- **核心架構與決策定案**：
+  - **D1（偵測先於指紋比對）**：下載完成後先呼叫 `job.detectUpdate(tempPath)`，再進入既有 `computeFingerprint` → `hasDuplicate` → `onDuplicateConfirm` 流程。EPUB 的指紋是 OPF 識別碼，若先比指紋，識別碼相同、內容不同的修訂檔會被「已存在」對話框吞掉、到不了更新版判定。偵測結果為新書／重複／不支援／偵測失敗／暫存複製失敗（`stagedPath == null`）一律回 `null`，走既有流程（重複仍走原對話框）。
+  - **D2（新狀態「待確認更新」）**：`DownloadItemStatus.awaitingUpdateConfirmation`，項目攜帶 `updateCandidate`；進入後 `_downloadOne` 立即 return，佇列處理下一筆，不彈對話框、不阻塞；原下載暫存檔隨即刪除（候選已有服務暫存副本）。
+  - **D3（結算語意）**：`resolveUpdate(id, choice)`：取代／並存成功 → `done`；失敗 → `failed`（可重試＝重新下載）；跳過 → 項目從面板移除。同一項目以 `_resolvingIds` 集合防止重入；非待確認狀態直接回 failed、不呼叫 job。結算抽出為 `settleBookUpdate`（`library/book_update_settle.dart`），與 Issue 2 的 `applyBookUpdateChoices` 共用；控制器維持來源無關，不 import `screens/` 或匯入服務。
+  - **D4（面板對話框取消不丟棄）**：面板點「確認更新」開啟 `BookUpdateSummaryDialog` 時 `discardOnCancel: false`，取消／返回不刪暫存、項目保留可再處理；對話框新增 `applier`（由呼叫端提供套用函式）與可為 null 的 `importService`，`applier` 簽章為 `Future<BookUpdateApplyResult> Function(Map<BookUpdateCandidate, BookUpdateChoice>)`。取消與非預期關閉（`showDialog` 回 null）的保底順序：`!discardOnCancel` → 全 0；有 `applier` → `applier`（全 SkipChoice）；否則 `importService`（審查 I-1、I-2）。
+  - **D5（「移除」待確認項目＝跳過）**：`dismiss(id)` 對待確認項目先結算為 `SkipChoice`（刪暫存）再移除，回傳型別改 `Future<void>`；結算中的項目不動作。面板待確認列顯示 `Icons.update`、「待確認更新」標籤與「確認更新」（Key `sources_download_queue_update_review_<id>`）、「移除」兩個按鈕；不畫進度條。`isEinkMode` 傳入對話框以關閉過場動畫。
+  - **D6（沿用服務暫存目錄與啟動清掃）**：沿用 Issue 1 服務的 `<documents>/update_staging/`，不另建下載專屬目錄；共用常數 `kUpdateStagingFolderName`，App 啟動時（匯入服務建構之前）於 `main.dart` 呼叫 `sweepUpdateStaging()`，清掉 force-stop 或崩潰殘留；待確認清單不跨重啟持久化。
+  - **D7（保底一律「當新書匯入」，不丟棄）**：Issue 1 合併後，雲端／Calibre 的 `import()` 原本丟掉 `importFiles` 回傳值、WiFi 遇更新版會判失敗，檔案靜默遺失。三處改為：殘留的更新候選逐筆 `importCandidateAsNewBook`（帶來源參數），並刪除原落地檔（`permanentPath`／`landedPath`，並存的新書使用服務重新複製的私有檔，原檔已無人引用）。雲端／Calibre 若一本都沒並存成功則丟出例外讓項目標為 failed（可重試，避免「完成」但書庫沒有這本書）；WiFi 回 failed 並刪落地檔。
+  - **來源參數補寫**：雲端取代／並存帶 `BookSourceRefs(source, cloudFileId)` 與 `folderName`；Calibre 帶 `source: calibreOpds`、`remoteServerId`、`remoteBookId`、`remoteDownloadUrl`。Calibre 偵測／並存用的 displayName 為 `<title>.<副檔名>`。
+  - **快取失效**：`DownloadQueueController` 注入 `onCoverChanged`（`main.dart` 傳入 `evictCoverImageCache`），取代成功時對舊書與新書封面路徑各通知一次；回呼拋例外不影響結算。
+  - **程式審查修正**：保底並存全數失敗改為丟例外（項目 failed）；對話框取消保底補上 `applier` 分支；`_deleteIfExists` 吞例外；`onCoverChanged` 以 try/catch 包住；面板顯示結算結果改用事先取得的 `ScaffoldMessenger`，對話框期間該列被卸載仍可顯示提示；補齊面板與對話框缺漏的測試。
+  - **真機／模擬器手動驗證：尚未執行**，由人類另行處理（計畫 Task 7 Step 3 的五項情境：Google Drive/OneDrive 更新版下載與 cloudFileId 補寫、Calibre 書庫更新版下載與 remote 識別碼補寫、force-stop 重啟後 update_staging 清掃、整檔相同重複提示迴歸、WiFi 上傳更新版成為新書）；完成後請把結果補記於此。

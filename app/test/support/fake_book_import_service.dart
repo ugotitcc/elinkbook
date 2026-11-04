@@ -139,13 +139,21 @@ class FakeBookImportService implements BookImportService {
 
   /// epic-67 Issue 1 Task 3：更新版偵測預設回傳新書。
   BookDetectionResult detectResult = const DetectedNewBook();
+  String? lastDetectUri;
+  String? lastDetectDisplayName;
+  Object? detectThrows;
 
   @override
   Future<BookDetectionResult> detectBookUpdate(
     String uri, {
     String? displayName,
-  }) =>
-      Future.value(detectResult);
+  }) {
+    lastDetectUri = uri;
+    lastDetectDisplayName = displayName;
+    final error = detectThrows;
+    if (error != null) return Future.error(error);
+    return Future.value(detectResult);
+  }
 
   final List<BookUpdateCandidate> discardedCandidates = [];
 
@@ -168,6 +176,9 @@ class FakeBookImportService implements BookImportService {
   Object? replaceThrows;
 
   final List<(String, String)> replaceCalls = [];
+  BookSourceRefs? lastReplaceSourceRefs;
+  BookUpdateCandidate? lastReplaceCandidate;
+  String? lastReplaceDisplayName;
 
   @override
   Future<BookReplaceResult> replaceBook(
@@ -178,6 +189,9 @@ class FakeBookImportService implements BookImportService {
     BookSourceRefs? sourceRefs,
   }) {
     replaceCalls.add((bookId, newUri));
+    lastReplaceSourceRefs = sourceRefs;
+    lastReplaceCandidate = candidate;
+    lastReplaceDisplayName = displayName;
     final error = replaceThrows;
     if (error != null) return Future.error(error);
     final completer = replaceCompleter;
@@ -188,6 +202,9 @@ class FakeBookImportService implements BookImportService {
 
   Book? importCandidateResult;
   final List<BookUpdateCandidate> importCandidateCalls = [];
+  String? lastImportCandidateFolderName;
+  BookSourceRefs? lastImportCandidateSourceRefs;
+  Object? importCandidateThrows;
 
   @override
   Future<Book?> importCandidateAsNewBook(
@@ -196,6 +213,10 @@ class FakeBookImportService implements BookImportService {
     BookSourceRefs? sourceRefs,
   }) {
     importCandidateCalls.add(candidate);
+    lastImportCandidateFolderName = folderName;
+    lastImportCandidateSourceRefs = sourceRefs;
+    final error = importCandidateThrows;
+    if (error != null) return Future.error(error);
     return Future.value(importCandidateResult);
   }
 }

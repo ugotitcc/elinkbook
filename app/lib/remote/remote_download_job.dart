@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import '../downloads/download_queue_controller.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
+import '../library/book_update_models.dart';
+import '../library/book_update_settle.dart';
 import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
 import 'opds_client.dart';
@@ -84,18 +88,83 @@ class RemoteDownloadJob implements QueuedDownloadJob {
   Future<String> promote(String tempPath) => promoteToPermanent(tempPath);
 
   @override
-  Future<void> import(String permanentPath) {
-    return importService.importFiles(
+  Future<void> import(String permanentPath) async {
+    final result = await importService.importFiles(
       [permanentPath],
       source: BookSource.calibreOpds,
       remoteServerId: server.id,
       remoteBookIds: {permanentPath: entry.remoteBookId},
       remoteDownloadUrls: {permanentPath: acquisition.href},
     );
+    if (result.updateCandidates.isNotEmpty) {
+      final refs = BookSourceRefs(
+        source: BookSource.calibreOpds,
+        remoteServerId: server.id,
+        remoteBookId: entry.remoteBookId,
+        remoteDownloadUrl: acquisition.href,
+      );
+      var anyImported = false;
+      for (final candidate in result.updateCandidates) {
+        try {
+          final book = await importService.importCandidateAsNewBook(
+            candidate,
+            sourceRefs: refs,
+          );
+          if (book != null) anyImported = true;
+        } catch (_) {}
+      }
+      try {
+        final file = File(permanentPath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {}
+      // 一本都沒成功並存：不得讓項目顯示「完成」（檔案已刪、書庫裡沒有這本書）。
+      // 丟出例外使控制器標記為 failed，使用者可重試重新下載（審查 I-1）。
+      if (!anyImported) {
+        throw StateError('更新版保底並存匯入失敗');
+      }
+    }
   }
 
   /// OPDS 遠端書庫用 HTTP Basic Auth 或匿名，沒有「重新連結帳號」的概念
   /// （與雲端匯入的 OAuth 不同，見 `CONTEXT.md`「遠端書庫」）。
   @override
   bool isAuthFailure(Object error) => false;
+
+  @override
+  Future<BookUpdateCandidate?> detectUpdate(String tempPath) async {
+    try {
+      final ext = fileExtensionFor(acquisition.format!);
+      final displayName = '${entry.title}.$ext';
+      final result = await importService.detectBookUpdate(
+        tempPath,
+        displayName: displayName,
+      );
+      if (result is DetectedUpdate && result.candidate.stagedPath != null) {
+        return result.candidate;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<BookUpdateSettleResult> settleUpdate(
+    BookUpdateCandidate candidate,
+    BookUpdateChoice choice,
+  ) {
+    return settleBookUpdate(
+      importService,
+      candidate,
+      choice,
+      sourceRefs: BookSourceRefs(
+        source: BookSource.calibreOpds,
+        remoteServerId: server.id,
+        remoteBookId: entry.remoteBookId,
+        remoteDownloadUrl: acquisition.href,
+      ),
+    );
+  }
 }

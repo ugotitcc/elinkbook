@@ -3443,6 +3443,18 @@ abstract class AppLocalizations {
   /// **'已取消'**
   String get downloadQueueStatusCancelled;
 
+  /// 下載佇列中偵測到更新版、等待使用者確認時的狀態標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'待確認更新'**
+  String get downloadQueueStatusAwaitingUpdate;
+
+  /// 下載佇列中待確認更新項目的檢視對話框按鈕提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'確認更新'**
+  String get downloadQueueUpdateReviewButton;
+
   /// 下載佇列指紋比對命中重複時的確認訊息（審查意見 review-issue-6.md I-1：原為 download_queue_controller.dart 內硬編碼中文，改由 main.dart 呼叫端在地化組裝）
   ///
   /// In zh_TW, this message translates to:

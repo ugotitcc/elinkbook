@@ -3,6 +3,7 @@ import 'package:elinkbook/library/book_update_models.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/support/book_import_picker_helper.dart';
+import 'package:elinkbook/screens/support/book_update_resolver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -1018,4 +1019,53 @@ void main() {
       expect(importService.discardedCandidates, [candidate]);
     });
   });
+
+  group("showBookUpdateResultSnackBar", () {
+    Future<void> pumpSnackBarTester(
+      WidgetTester tester,
+      BookUpdateApplyResult result,
+    ) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale("zh", "TW"),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () => showBookUpdateResultSnackBar(context, result),
+              child: const Text("show"),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text("show"));
+      await tester.pump();
+    }
+
+    testWidgets("純取代：顯示已更新 N 本書", (tester) async {
+      await pumpSnackBarTester(tester, const BookUpdateApplyResult(replaced: 2));
+      expect(find.text("已更新 2 本"), findsOneWidget);
+    });
+
+    testWidgets("純並存：顯示已匯入 N 本新書", (tester) async {
+      await pumpSnackBarTester(tester, const BookUpdateApplyResult(coexisted: 3));
+      expect(find.text("已並存 3 本"), findsOneWidget);
+    });
+
+    testWidgets("混合取代與並存：顯示已更新與已匯入", (tester) async {
+      await pumpSnackBarTester(tester, const BookUpdateApplyResult(replaced: 1, coexisted: 2));
+      expect(find.text("已更新 1 本，已並存 2 本"), findsOneWidget);
+    });
+
+    testWidgets("含失敗：顯示更新失敗本數", (tester) async {
+      await pumpSnackBarTester(tester, const BookUpdateApplyResult(replaced: 1, failed: 2));
+      expect(find.text("已更新 1 本；2 本更新失敗，書籍沒有任何變動"), findsOneWidget);
+    });
+
+    testWidgets("全為跳過（計數皆為 0）：不彈出 SnackBar", (tester) async {
+      await pumpSnackBarTester(tester, const BookUpdateApplyResult(skipped: 2));
+      expect(find.byType(SnackBar), findsNothing);
+    });
+  });
 }
+

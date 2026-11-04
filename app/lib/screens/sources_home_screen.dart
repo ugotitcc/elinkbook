@@ -239,7 +239,10 @@ class SourcesHomeScreen extends StatelessWidget {
           // OneDrive／OPDS 遠端書庫下載一律改為加入這個常駐佇列，取代原本
           // `CloudBrowserScreen`／`RemoteCatalogScreen` 各自用
           // `showDialog()` 跳出的模態下載對話框——三種來源共用同一份清單。
-          DownloadQueuePanel(controller: sources.downloadQueueController),
+          DownloadQueuePanel(
+            controller: sources.downloadQueueController,
+            isEinkMode: appearance.isEinkMode,
+          ),
         ],
       ),
     );
