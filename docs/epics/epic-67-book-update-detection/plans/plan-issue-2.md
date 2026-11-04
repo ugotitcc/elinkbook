@@ -242,14 +242,14 @@ Future<void> handleImportUpdateCandidates(
 **Files:**
 - Modify: `docs/epics/epic-67-book-update-detection/epic.md`（開發記錄）、`issues.md`（Issue 2 狀態與計畫連結）
 
-- [ ] **Step 1：** `flutter analyze` 乾淨；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`。
-- [ ] **Step 2：** 完整 `flutter test --no-pub` 全綠（本計畫唯一一次全套）；之後 `git checkout pubspec.lock windows/flutter`。
-- [ ] **Step 3：真機／模擬器手動驗證**（`app/` 下 `flutter run`，由人類或執行者實測並記錄結果）：
+- [x] **Step 1：** `flutter analyze` 乾淨；`node tool/check_l10n_hardcoded_strings.js`；`node tool/check_integration_keys.js`。
+- [x] **Step 2：** 完整 `flutter test --no-pub` 全綠（本計畫唯一一次全套）；之後 `git checkout pubspec.lock windows/flutter`。
+- [x] **Step 3：真機／模擬器手動驗證**（`app/` 下 `flutter run`，由人類或執行者實測並記錄結果）：
   1. 書庫預置一本 EPUB，再「選擇檔案」匯入同識別碼、內容不同的新版 → 彈出清單，選取代 → 書架上書名、封面立即更新（驗證 F4 的圖片快取），閱讀進度與書籤仍在。
   2. 同一批含一本全新書、一本整檔重複 → 新書匯入、重複走既有 SnackBar、更新版走清單。
   3. 清單按返回鍵／取消 → 書庫不變，`<documents>/update_staging/` 內無殘留。
-- [ ] **Step 4：文件同步：** `epic.md` 新增「Issue 2 計畫與實作」段，記錄 D1～D6、F6（並存落在未分類）、F7（雲端／Calibre／WiFi 暫存殘留風險）、手動驗證結果；`issues.md` Issue 2 補計畫連結與狀態。`docs/epics.md` 備註與 PR 欄**合併後**才改。
-- [ ] **Step 5：提交** `docs(epic-67): Issue 2 實作記錄`。
+- [x] **Step 4：文件同步：** `epic.md` 新增「Issue 2 計畫與實作」段，記錄 D1～D6、F6（並存落在未分類）、F7（雲端／Calibre／WiFi 暫存殘留風險）、手動驗證結果；`issues.md` Issue 2 補計畫連結與狀態。`docs/epics.md` 備註與 PR 欄**合併後**才改。
+- [x] **Step 5：提交** `docs(epic-67): Issue 2 實作記錄`。
 
 ---
 

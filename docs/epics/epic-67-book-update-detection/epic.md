@@ -69,3 +69,19 @@
     - 50 本重複 EPUB 偵測跳過：約 57 ms（平均 1.1 ms/本）
     - 50 本更新版 EPUB 暫存與偵測：約 164 ms（平均 3.3 ms/本）
     - 注意：以上數字來自 mock channel（中繼資料讀取為記憶體假回應），僅反映服務層本身的開銷，不代表真機原生呼叫與整檔雜湊的耗時；真機大批匯入體感須另行驗證。
+
+## Issue 2 計畫與實作
+
+- **計畫文件**：[plan-issue-2.md](plans/plan-issue-2.md)
+- **實作分支**：`epic-67/issue-2-local-import-summary`
+- **核心架構與決策定案**：
+  - **D1（多候選呈現與並存對話）**：每筆候選書提供單選選項（取代特定書籍、並存、跳過），預設選取第一本取代；無須二層彈窗，結構扁平直覺。
+  - **D2（全部取代與全部跳過）**：清單提供「全部取代」「全部跳過」捷徑按鈕，點擊僅批量修改選取狀態，仍須按下「套用」才正式執行，確保使用者保有檢視與確認偏移提示的機會。
+  - **D3（不可中斷與不可重入）**：對話框 `barrierDismissible: false`，套用中以 `_applying` 旗標禁用所有按鈕與返回操作，防止重複執行與狀態競爭；以 `PopScope(canPop: false)` 攔截返回鍵並視為取消全跳過處理。
+  - **D4（偏移提示常駐）**：只要目前選取包含任何「取代」，即顯示註記可能偏移提示，全選跳過或並存時自動隱藏。
+  - **D5（舊檔無法存取提示）**：舊書若於 `unreadableCandidateBookIds` 中且被選為取代，明確提示「舊檔已無法存取，取代後會一併修復檔案連結」。
+  - **D6（E-Ink 殘影抑制）**：傳入 `isEinkMode` 時，對話框設定 `animationStyle: AnimationStyle.noAnimation`，完全抑制過場動畫避免殘影。
+  - **F6（並存落在未分類）**：`importCandidateAsNewBook` 依設計建立之新書 `groupName` 預設為未分類，此為已知限制。
+  - **F7（雲端／Calibre／WiFi 暫存殘留風險）**：在 Issue 4（下載佇列接線）完成前，背景下載的更新候選暫存檔需待 Issue 4 之啟動清理機制掃除；前台本機匯入（檔案／資料夾）在 Issue 2 已完整落實卸載、取消與套用時的即時清理。
+  - **快取失效**：取代成功後主動呼叫 `evictCoverImageCache` 淘汰舊書與新書封面快取（`PaintingBinding.instance.imageCache.evict`），使書架與畫面立即呈現新封面。
+  - **卸載防護（Review Focus 1）**：若使用者於選檔等待期間切換畫面，`SourcesHomeScreen` 在 `context.mounted == false` 時無條件呼叫 `discardUpdateCandidates` 丟棄所有候選暫存檔，保證暫存目錄不洩漏殘留。
