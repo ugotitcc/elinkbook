@@ -132,14 +132,14 @@
 - **實作分支**：`epic-67/issue-6-pdf-degrade`
 - **核心架構與決策定案**：
   - **D1（列舉與提示文案沿用）**：回呼列舉沿用 `NavigationDegradedReason`（`readingPosition` 與 `annotation`），訊息文案與 SnackBar 樣式直接沿用既有 `readerNavigationDegradedMessage`，零新增 ARB 鍵值與字串。
-  - **D2（不疊加提示）**：開書或跳頁期間若已觸發降級提示，SnackBar 遵循既有行為（非阻塞、短暫提示），不因連續回報而重複堆疊。
-  - **D3（開書主動夾頁）**：`_openDocument` 開啟 PDF 完成後，主動檢查初始頁碼 `initialPageIndex` 是否超出合法範圍（`< 0` 夾為 0，`>= pageCount` 夾為 `pageCount - 1`）。若超界，設定 `_startPageIndex` 為合法最後一頁、標記 `_initialPageDegraded = true`，並在 `onViewerReady` 回呼時發出 `onNavigationDegraded(NavigationDegradedReason.readingPosition)` 一次。若中途 unmount（`mounted == false`），不拋出例外亦不通知。
-  - **D4（跳頁夾頁取代靜默 return）**：`_jumpToPage(index)` 取代原本超界直接 `return false` 的行為，改為夾到 `pageCount - 1`（若 `< 0` 則夾為 0）、發出 `onNavigationDegraded(NavigationDegradedReason.annotation)`，回傳 `bool degraded` 表示是否發生降級。
-  - **D5（超界跳頁不發出暫態高亮）**：`jumpToPageAtRect` 呼叫 `_jumpToPage`，若發生超界降級（`degraded == true`），跳過 `_revealHighlight`，避免在最後一頁錯誤的矩形區域疊加不相干的高亮。
-  - **D6（閱讀位置持久化覆寫）**：降級落在最後一頁後，`onPageChanged` 依既有流程正常觸發，閱讀位置直接被最後一頁覆寫，原本超界的頁碼不保留。
-  - **D7 / Ruling 1（pending 重定位頁碼超界同步更新）**：`_openDocument` 偵測超界並修正 `_startPageIndex` 時，若 `_pendingReanchorPageIndex != null && _pendingReanchorPageIndex > last`，同步更新 `_pendingReanchorPageIndex = last`，避免旋轉或版面切換時被舊的超界頁碼拉回。
-  - **D8 / Ruling 2（高亮超界防禦保護）**：`_setJumpHighlight` 加入頁碼防禦 `pageIndex < 0 || pageIndex >= _controller.pageCount`，防止任何外部或內部非預期路徑以非法頁碼存取 `_pageHighlights` 導致例外。
-  - **D9 / Ruling 3（開書負數頁碼防禦）**：`_openDocument` 針對負數頁碼（`start < 0`）統一防禦歸零。
+  - **D2（只對超過最後一頁降級）**：頁碼 `>= pageCount`（且總頁數 > 0）才降級；負數頁碼與 0 頁文件維持靜默、不通知。提示 SnackBar 沿用既有行為（先收掉前一則，不排隊堆疊）。
+  - **D3（開書主動夾頁）**：`_openDocument` 開啟 PDF 後，若初始頁碼 `>= pageCount`，把 `_startPageIndex`／`_pagedAnchorPage` 設為最後一頁、標記 `_initialPageDegraded = true`，並在 `onViewerReady` 發出一次 `onNavigationDegraded(readingPosition)`；負數起始頁在 `initState` 清洗為 0（不通知）；0 頁文件起始頁歸 0（不通知）。通知一律 post-frame 並檢查 `mounted`，已卸載則不通知。
+  - **D4（跳頁夾頁取代靜默 return）**：`_jumpToPage(index)` 在 `index >= pageCount` 時夾到 `pageCount - 1`、照常跳頁並發出 `onNavigationDegraded(annotation)`，回傳 `bool` 表示是否降級；`index < 0`、未就緒、裁切編輯中、`pageCount <= 0` 維持靜默 `return false`。
+  - **D5（超界跳頁不 reveal 高亮）**：`jumpToPageAtRect` 發生降級時跳過 `_revealHighlight`，避免在最後一頁疊加屬於已不存在頁的矩形。
+  - **D6（閱讀位置持久化覆寫）**：降級落在最後一頁後，`onPageChanged` 依既有流程把最後一頁寫回，原本超界的頁碼不保留。
+  - **D7（內部重新錨定只夾制、不降級）**：`_applyPendingReanchor` 呼叫 `_jumpToPage` 前把頁碼夾到 `pageCount - 1`（`pageCount <= 0` 直接返回），降級通知只來自「開書就緒」與「外部跳頁」。
+  - **D8（暫態高亮超界防禦）**：`_setJumpHighlight` 在 `pageIndex` 非 null、controller 已就緒且超界（`< 0` 或 `>= pageCount`）時直接返回、不記錄，原有高亮不被覆蓋；`null`（清除）照常處理。
+  - **D9（負數起始頁清洗）**：`initState` 把負數 `initialPageIndex` 清洗為 0，不降級、不通知。
   - **已知限制**：
     - 夾到最後一頁只是「不壞」的安全網，書籤與劃線仍指向舊頁碼（PDF 沒有概略進度可用，與 Foliate 不同）；劃線的頁內矩形座標在新版內容中也可能對不上，屬 spec 已接受的偏移。
     - 降級後閱讀位置會被最後一頁覆寫（D6），原本的超界頁碼不保留。

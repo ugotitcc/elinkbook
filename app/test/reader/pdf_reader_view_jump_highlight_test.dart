@@ -111,6 +111,45 @@ void main() {
     expect(find.byKey(const Key('pdf_reader_jump_highlight_0')), findsNothing);
   });
 
+  testWidgets('showTemporaryHighlight 超界頁碼：不記錄、不拋例外，原有高亮不被覆蓋；有效頁碼照常顯示（epic-67 Issue 6）',
+      (tester) async {
+    var renderedCount = 0;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+        ),
+      ),
+    );
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+
+    const rect = PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2);
+    PdfReaderView.showTemporaryHighlight(key, 0, rect);
+    await tester.pump();
+    expect(find.byKey(const Key('pdf_reader_jump_highlight_0')), findsOneWidget);
+
+    // 超界頁碼與負數都不得寫入狀態：若有寫入，第 0 頁的既有高亮會被覆蓋而消失
+    PdfReaderView.showTemporaryHighlight(key, 99, rect);
+    PdfReaderView.showTemporaryHighlight(key, -1, rect);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('pdf_reader_jump_highlight_0')), findsOneWidget);
+
+    // 有效頁碼仍照常切換
+    PdfReaderView.showTemporaryHighlight(key, 1, rect);
+    await tester.pump();
+    expect(find.byKey(const Key('pdf_reader_jump_highlight_0')), findsNothing);
+  });
+
   testWidgets(
       'State 尚未掛載時，showTemporaryHighlight／clearTemporaryHighlight 皆靜默忽略',
       (tester) async {

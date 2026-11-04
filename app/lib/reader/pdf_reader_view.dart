@@ -867,18 +867,14 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         return;
       }
       final last = document.pages.length - 1;
-      if (last >= 0) {
-        if (_startPageIndex > last) {
-          _startPageIndex = last;
-          _pagedAnchorPage = last;
-          _initialPageDegraded = true;
-        } else if (_startPageIndex < 0) {
-          _startPageIndex = 0;
-          _pagedAnchorPage = 0;
-        }
-        if (_pendingReanchorPageIndex != null && _pendingReanchorPageIndex! > last) {
-          _pendingReanchorPageIndex = last;
-        }
+      if (last < 0) {
+        // 0 頁文件：無頁可夾，也不降級；起始頁歸 0，避免把超界值交給 pdfrx。
+        _startPageIndex = 0;
+        _pagedAnchorPage = 0;
+      } else if (_startPageIndex > last) {
+        _startPageIndex = last;
+        _pagedAnchorPage = last;
+        _initialPageDegraded = true;
       }
       setState(() => _document = document);
     } catch (e) {
@@ -1005,7 +1001,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     final pageIndex = _pendingReanchorPageIndex;
     _pendingReanchorPageIndex = null;
     if (pageIndex == null || !mounted || !_controller.isReady) return;
-    _jumpToPage(pageIndex); // 走既有的單/雙頁分派邏輯。
+    // 內部重新錨定不是使用者的跳頁，超界時只夾制、不發降級通知（epic-67 Issue 6 D7）。
+    final count = _controller.pageCount;
+    if (count <= 0) return;
+    _jumpToPage(pageIndex >= count ? count - 1 : pageIndex); // 走既有的單/雙頁分派邏輯。
   }
 
   /// 讓 pdfrx 重新排版（重算最小縮放），再於後續幀把縮放設為新模式的基準。

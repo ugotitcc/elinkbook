@@ -406,6 +406,100 @@ void main() {
       expect(degraded, [NavigationDegradedReason.annotation]);
     });
 
+    testWidgets('開書尚未完成時 didUpdateWidget 觸發重新錨定（超界初始頁碼）：整個開書只通知一次', (tester) async {
+      var renderedCount = 0;
+      PdfPageInfo? lastPageInfo;
+      final degraded = <NavigationDegradedReason>[];
+
+      Widget build(DualPageMode mode) => MaterialApp(
+            locale: const Locale('zh', 'TW'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: PdfReaderView(
+              filePath: 'test/fixtures/sample_multi_page.pdf',
+              initialPageIndex: 99,
+              dualPageMode: mode,
+              onPageRendered: () => renderedCount++,
+              onError: (_) {},
+              onPageChanged: (info) => lastPageInfo = info,
+              onNavigationDegraded: degraded.add,
+            ),
+          );
+
+      await tester.pumpWidget(build(DualPageMode.never));
+      // 文件尚未開完就切換雙頁，觸發 didUpdateWidget 的重新錨定
+      await tester.pumpWidget(build(DualPageMode.always));
+
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      // 回歸守護：內部重新錨定不得額外發出 annotation 降級
+      expect(degraded, [NavigationDegradedReason.readingPosition]);
+      expect(lastPageInfo?.totalPages, 5);
+    });
+
+    testWidgets('開書初始頁碼為負數：開在第 0 頁、不通知、不拋例外', (tester) async {
+      var renderedCount = 0;
+      PdfPageInfo? lastPageInfo;
+      final degraded = <NavigationDegradedReason>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: PdfReaderView(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            initialPageIndex: -3,
+            onPageRendered: () => renderedCount++,
+            onError: (_) {},
+            onPageChanged: (info) => lastPageInfo = info,
+            onNavigationDegraded: degraded.add,
+          ),
+        ),
+      );
+
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(lastPageInfo?.pageIndex, 0);
+      expect(degraded, isEmpty);
+    });
+
+    testWidgets('開書降級後再翻頁：不重複通知（只通知一次）', (tester) async {
+      var renderedCount = 0;
+      final degraded = <NavigationDegradedReason>[];
+      final key = GlobalKey<State<PdfReaderView>>();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: PdfReaderView(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            initialPageIndex: 99,
+            onPageRendered: () => renderedCount++,
+            onError: (_) {},
+            onNavigationDegraded: degraded.add,
+          ),
+        ),
+      );
+
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+      await tester.pump();
+      PdfReaderView.jumpToPage(key, 1);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(degraded, [NavigationDegradedReason.readingPosition]);
+    });
+
     testWidgets('降級通知排程後畫面被卸載：不呼叫回呼、不拋例外', (tester) async {
       var renderedCount = 0;
       final degraded = <NavigationDegradedReason>[];
