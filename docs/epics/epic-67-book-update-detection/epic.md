@@ -125,3 +125,22 @@
     - 手動更新與強制重新連結後，既有的書籤、劃線、備註與閱讀進度位置不會因內容改版自動重新對齊，可能因內容不同而偏移。
     - TXT／MD／CBZ 因無指紋比對與 SAF 重新連結需求，不支援 `relinkBook`。
   - **真機／模擬器手動驗證：尚未執行**，由人類另行處理（計畫 Task 4 Step 3 的五項情境：1 書架「用新檔案更新此書」成功與封面即時更新、2 格式不符拒絕、3 閱讀器權限撤銷後重新選檔遇內容不符出現強制重新連結對話框、4 強制重新連結確認後原地開書、5 E-Ink 模式無過場動畫）；完成後請把結果補記於此。
+
+## Issue 6 計畫與實作
+
+- **計畫文件**：[plan-issue-6.md](plans/plan-issue-6.md)
+- **實作分支**：`epic-67/issue-6-pdf-degrade`
+- **核心架構與決策定案**：
+  - **D1（列舉與提示文案沿用）**：回呼列舉沿用 `NavigationDegradedReason`（`readingPosition` 與 `annotation`），訊息文案與 SnackBar 樣式直接沿用既有 `readerNavigationDegradedMessage`，零新增 ARB 鍵值與字串。
+  - **D2（只對超過最後一頁降級）**：頁碼 `>= pageCount`（且總頁數 > 0）才降級；負數頁碼與 0 頁文件維持靜默、不通知。提示 SnackBar 沿用既有行為（先收掉前一則，不排隊堆疊）。
+  - **D3（開書主動夾頁）**：`_openDocument` 開啟 PDF 後，若初始頁碼 `>= pageCount`，把 `_startPageIndex`／`_pagedAnchorPage` 設為最後一頁、標記 `_initialPageDegraded = true`，並在 `onViewerReady` 發出一次 `onNavigationDegraded(readingPosition)`；負數起始頁在 `initState` 清洗為 0（不通知）；0 頁文件起始頁歸 0（不通知）。通知一律 post-frame 並檢查 `mounted`，已卸載則不通知。
+  - **D4（跳頁夾頁取代靜默 return）**：`_jumpToPage(index)` 在 `index >= pageCount` 時夾到 `pageCount - 1`、照常跳頁並發出 `onNavigationDegraded(annotation)`，回傳 `bool` 表示是否降級；`index < 0`、未就緒、裁切編輯中、`pageCount <= 0` 維持靜默 `return false`。
+  - **D5（超界跳頁不 reveal 高亮）**：`jumpToPageAtRect` 發生降級時跳過 `_revealHighlight`，避免在最後一頁疊加屬於已不存在頁的矩形。
+  - **D6（閱讀位置持久化覆寫）**：降級落在最後一頁後，`onPageChanged` 依既有流程把最後一頁寫回，原本超界的頁碼不保留。
+  - **D7（內部重新錨定只夾制、不降級）**：`_applyPendingReanchor` 呼叫 `_jumpToPage` 前把頁碼夾到 `pageCount - 1`（`pageCount <= 0` 直接返回），降級通知只來自「開書就緒」與「外部跳頁」。
+  - **D8（暫態高亮超界防禦）**：`_setJumpHighlight` 在 `pageIndex` 非 null、controller 已就緒且超界（`< 0` 或 `>= pageCount`）時直接返回、不記錄，原有高亮不被覆蓋；`null`（清除）照常處理。
+  - **D9（負數起始頁清洗）**：`initState` 把負數 `initialPageIndex` 清洗為 0，不降級、不通知。
+  - **已知限制**：
+    - 夾到最後一頁只是「不壞」的安全網，書籤與劃線仍指向舊頁碼（PDF 沒有概略進度可用，與 Foliate 不同）；劃線的頁內矩形座標在新版內容中也可能對不上，屬 spec 已接受的偏移。
+    - 降級後閱讀位置會被最後一頁覆寫（D6），原本的超界頁碼不保留。
+  - **真機／模擬器手動驗證：尚未執行**，由人類另行處理（計畫 Task 3 Step 3 的四項情境：1 書架 20 頁 PDF 讀到第 18 頁更新成 5 頁後開書開在第 5 頁並出提示不閃退、2 同書在書籤清單點第 18 頁書籤跳到最後一頁出提示、3 雙頁與逐頁翻頁模式落在最後一頁不空白、4 正常 PDF 開書與跳轉不出現提示迴歸）；完成後請把結果補記於此。

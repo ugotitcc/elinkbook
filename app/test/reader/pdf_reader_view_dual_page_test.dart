@@ -4,6 +4,7 @@ import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/navigation_degraded_reason.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import '../support/pump_until_pdf_ready.dart';
@@ -11,10 +12,11 @@ import '../support/pump_until_pdf_ready.dart';
 void main() {
   setUp(() => pdfrxInitialize());
 
-  testWidgets('不傳雙頁參數時，行為與 Issue 1 完全相同（零回歸基準）',
+  testWidgets('不傳雙頁參數時，超界跳頁夾到最後一頁並通知',
       (tester) async {
     var renderedCount = 0;
     PdfPageInfo? lastPageInfo;
+    final degraded = <NavigationDegradedReason>[];
     final key = GlobalKey<State<PdfReaderView>>();
 
     await tester.pumpWidget(
@@ -28,6 +30,7 @@ void main() {
           onPageRendered: () => renderedCount++,
           onError: (_) {},
           onPageChanged: (info) => lastPageInfo = info,
+          onNavigationDegraded: degraded.add,
         ),
       ),
     );
@@ -41,12 +44,47 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(lastPageInfo?.pageIndex, 4);
+    expect(degraded, isEmpty);
 
     PdfReaderView.jumpToPage(key, 999);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);
     expect(lastPageInfo?.pageIndex, 4);
+    expect(degraded, [NavigationDegradedReason.annotation]);
+  });
+
+  testWidgets('雙頁模式開書初始頁碼超界：開在最後一頁（所屬跨頁）並通知',
+      (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final degraded = <NavigationDegradedReason>[];
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          initialPageIndex: 99,
+          dualPageMode: DualPageMode.always,
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onPageChanged: (info) => lastPageInfo = info,
+          onNavigationDegraded: degraded.add,
+        ),
+      ),
+    );
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    // 5 頁雙頁下最後一個 spread [3, 4] 之錨點頁為 3
+    expect(lastPageInfo?.pageIndex, 3);
+    expect(degraded, [NavigationDegradedReason.readingPosition]);
   });
 
   testWidgets('dualPageMode: never 時，行為與不傳參數完全相同',

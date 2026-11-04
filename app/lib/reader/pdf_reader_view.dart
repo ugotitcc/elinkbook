@@ -22,6 +22,7 @@ import 'pdf_fit_mode.dart';
 import 'pdf_fit_size_delegate.dart';
 import 'pdf_crop_mode.dart';
 import 'pdf_crop_rect.dart';
+import 'navigation_degraded_reason.dart';
 import 'pdf_toc_item.dart';
 import 'pdf_selection_geometry.dart';
 import 'pdf_selection_info.dart';
@@ -119,6 +120,11 @@ class PdfReaderView extends StatefulWidget {
   /// 除錯用：顯示 9 宮格邊框與動作文字，預設 false。
   final bool showNavZoneDebugOverlay;
 
+  /// 開書或跳頁之頁碼超出總頁數時觸發的降級通知回呼（epic-67 Issue 6）。
+  /// 開書階段超界回報 [NavigationDegradedReason.readingPosition]；跳頁階段超界
+  /// 回報 [NavigationDegradedReason.annotation]。兩者由畫面層顯示與 Foliate 相同的提示。
+  final ValueChanged<NavigationDegradedReason>? onNavigationDegraded;
+
   const PdfReaderView({
     super.key,
     required this.filePath,
@@ -127,6 +133,7 @@ class PdfReaderView extends StatefulWidget {
     this.initialPageIndex,
     this.onPageChanged,
     this.onReadingActivity,
+    this.onNavigationDegraded,
     this.dualPageMode = DualPageMode.never,
     this.dualPageCoverAlone = true,
     this.dualPageDirection = DualPageDirection.rtl,
@@ -248,8 +255,10 @@ class PdfReaderView extends StatefulWidget {
   ) {
     final state = key.currentState;
     if (state is _PdfReaderViewState) {
-      state._jumpToPage(pageIndex);
-      state._revealHighlight(pageIndex, rect);
+      final degraded = state._jumpToPage(pageIndex);
+      if (!degraded) {
+        state._revealHighlight(pageIndex, rect);
+      }
     }
   }
 
@@ -315,6 +324,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   PdfDocument? _document;
   Object? _error;
   bool _renderedNotified = false;
+  late int _startPageIndex;
+  bool _initialPageDegraded = false;
   static const _resourceChannel = MethodChannel('elinkbook/reader_resources_cache');
   String? _contentUriTmpPath;
 
@@ -716,6 +727,11 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   // 補上不影響行為、多一層保險。
   void _setJumpHighlight(int? pageIndex, PercentRect? rect) {
     if (!mounted) return;
+    if (pageIndex != null && _controller.isReady) {
+      if (pageIndex < 0 || pageIndex >= _controller.pageCount) {
+        return;
+      }
+    }
     setState(() {
       _jumpHighlightPageIndex = pageIndex;
       _jumpHighlightRect = rect;
@@ -829,8 +845,16 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   void initState() {
     super.initState();
     _committedBoldStrength = widget.pdfBoldStrength;
-    _pagedAnchorPage = widget.initialPageIndex ?? 0;
+    _startPageIndex = widget.initialPageIndex ?? 0;
+    if (_startPageIndex < 0) _startPageIndex = 0;
+    _pagedAnchorPage = _startPageIndex;
     _openDocument();
+  }
+
+  void _notifyDegraded(NavigationDegradedReason reason) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onNavigationDegraded?.call(reason);
+    });
   }
 
   Future<void> _openDocument() async {
@@ -841,6 +865,16 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       if (!mounted) {
         await document.dispose();
         return;
+      }
+      final last = document.pages.length - 1;
+      if (last < 0) {
+        // 0 頁文件：無頁可夾，也不降級；起始頁歸 0，避免把超界值交給 pdfrx。
+        _startPageIndex = 0;
+        _pagedAnchorPage = 0;
+      } else if (_startPageIndex > last) {
+        _startPageIndex = last;
+        _pagedAnchorPage = last;
+        _initialPageDegraded = true;
       }
       setState(() => _document = document);
     } catch (e) {
@@ -915,7 +949,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
             ? _pagedAnchorPage
             : (_controller.isReady
                 ? (_controller.pageNumber ?? 1) - 1
-                : (widget.initialPageIndex ?? 0));
+                : _startPageIndex);
 
     if (!_dualPageEnabled) {
       _spreadLayout = null; // 停用雙頁後不得再用舊的 spread 矩形導航。
@@ -967,7 +1001,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     final pageIndex = _pendingReanchorPageIndex;
     _pendingReanchorPageIndex = null;
     if (pageIndex == null || !mounted || !_controller.isReady) return;
-    _jumpToPage(pageIndex); // 走既有的單/雙頁分派邏輯。
+    // 內部重新錨定不是使用者的跳頁，超界時只夾制、不發降級通知（epic-67 Issue 6 D7）。
+    final count = _controller.pageCount;
+    if (count <= 0) return;
+    _jumpToPage(pageIndex >= count ? count - 1 : pageIndex); // 走既有的單/雙頁分派邏輯。
   }
 
   /// 讓 pdfrx 重新排版（重算最小縮放），再於後續幀把縮放設為新模式的基準。
@@ -1043,10 +1080,16 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     } catch (_) {}
   }
 
-  void _jumpToPage(int pageIndex) {
-    if (widget.cropEditModeActive) return;
-    if (!_controller.isReady) return;
-    if (pageIndex < 0 || pageIndex >= _controller.pageCount) return;
+  bool _jumpToPage(int pageIndex) {
+    if (widget.cropEditModeActive) return false;
+    if (!_controller.isReady) return false;
+    final count = _controller.pageCount;
+    if (pageIndex < 0 || count <= 0) return false;
+    final degraded = pageIndex >= count;
+    if (degraded) {
+      pageIndex = count - 1;
+      _notifyDegraded(NavigationDegradedReason.annotation);
+    }
     if (_paginated) {
       // 以 _paginated（而非 _pagedActive）阻絕一切向連續捲動路徑的穿透：版面重算的暫態
       // （_paged 暫為 null）不得把逐頁使用者導向 goToPage／goToArea 的動畫路徑（I-2）。
@@ -1056,14 +1099,15 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       _pagedAnchorPage = pageIndex;
       final paged = _paged;
       if (paged != null) _goToPagedUnit(paged.pageToUnit[pageIndex]);
-      return;
+      return degraded;
     }
     final layout = _activeSpreadLayout;
     if (layout == null) {
       _goToSinglePage(pageIndex + 1);
-      return;
+      return degraded;
     }
     _goToSpread(layout.spreadIndexOf(pageIndex), layout);
+    return degraded;
   }
 
   void _nextPage() {
@@ -1615,7 +1659,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     final viewer = PdfViewer(
       PdfDocumentRefDirect(document, autoDispose: false),
       controller: _controller,
-      initialPageNumber: (widget.initialPageIndex ?? 0) + 1,
+      initialPageNumber: _startPageIndex + 1,
       params: PdfViewerParams(
         margin: _pdfPageMargin,
         sizeDelegateProvider: (widget.pdfFitMode == null && !_paginated)
@@ -1659,6 +1703,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
             pageIndex: (controller.pageNumber ?? 1) - 1,
             totalPages: controller.pageCount,
           ));
+          if (_initialPageDegraded) {
+            _initialPageDegraded = false;
+            _notifyDegraded(NavigationDegradedReason.readingPosition);
+          }
         },
         onPageChanged: _handlePageChanged,
         // 逐頁：視窗尺寸改變（旋轉、摺疊）後維持同一單元、依新尺寸重算基準、偏移回到

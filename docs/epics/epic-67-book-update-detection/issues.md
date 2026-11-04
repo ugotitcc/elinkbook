@@ -150,7 +150,7 @@ Status: completed（已合併 PR #383；[plan-issue-5.md](plans/plan-issue-5.md)
 
 ## Issue 6：PDF 降級
 
-Status: ready-for-agent（建議 Issue 5 之後，共用提示）
+Status: 實作完成待 PR（已實作於分支 `epic-67/issue-6-pdf-degrade`）
 
 **範圍**：PDF 註記與閱讀位置的頁碼超出總頁數時，限制在最後一頁，並讓呼叫端得知發生降級，由閱讀畫面統一顯示與 Issue 5 相同的提示。兩個防護點：
 
