@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import '../downloads/download_queue_controller.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
@@ -77,25 +79,66 @@ class CloudDownloadJob implements QueuedDownloadJob {
       promoteCloudFileToPermanent(tempPath);
 
   @override
-  Future<void> import(String permanentPath) {
-    return importService.importFiles(
+  Future<void> import(String permanentPath) async {
+    final result = await importService.importFiles(
       [permanentPath],
       folderName: folderName,
       source: source,
       cloudFileIds: {permanentPath: entry.id},
     );
+    if (result.updateCandidates.isNotEmpty) {
+      final refs = BookSourceRefs(source: source, cloudFileId: entry.id);
+      for (final candidate in result.updateCandidates) {
+        try {
+          await importService.importCandidateAsNewBook(
+            candidate,
+            folderName: folderName,
+            sourceRefs: refs,
+          );
+        } catch (_) {}
+      }
+      try {
+        final file = File(permanentPath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {}
+    }
   }
 
   @override
   bool isAuthFailure(Object error) => error is CloudAuthRequiredException;
 
   @override
-  Future<BookUpdateCandidate?> detectUpdate(String tempPath) async => null;
+  Future<BookUpdateCandidate?> detectUpdate(String tempPath) async {
+    try {
+      final result = await importService.detectBookUpdate(
+        tempPath,
+        displayName: entry.name,
+      );
+      if (result is DetectedUpdate && result.candidate.stagedPath != null) {
+        return result.candidate;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   Future<BookUpdateSettleResult> settleUpdate(
     BookUpdateCandidate candidate,
     BookUpdateChoice choice,
-  ) async =>
-      const BookUpdateSettleResult(BookUpdateSettleOutcome.skipped);
+  ) {
+    return settleBookUpdate(
+      importService,
+      candidate,
+      choice,
+      sourceRefs: BookSourceRefs(
+        source: source,
+        cloudFileId: entry.id,
+      ),
+      folderName: folderName,
+    );
+  }
 }

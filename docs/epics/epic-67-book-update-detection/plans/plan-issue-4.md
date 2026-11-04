@@ -101,15 +101,15 @@ Future<BookUpdateSettleResult> settleBookUpdate(
 
 `applyBookUpdateChoices` 保持簽章與回傳不變，內部逐筆委派 `settleBookUpdate`、依 `outcome` 累計計數、對 `changedCoverPaths` 呼叫 `onCoverChanged`。
 
-- [ ] **Step 1：寫失敗測試**（`book_update_settle_test.dart`，用 `FakeBookImportService`）：
+- [x] **Step 1：寫失敗測試**（`book_update_settle_test.dart`，用 `FakeBookImportService`）：
   - `跳過`：outcome `skipped`，`discardedCandidates` 含該候選。
   - `取代成功`：`replaceCalls` 的 bookId 正確、`replaceBook` 收到的 `sourceRefs`／`candidate` 與傳入相同（需把 fake 的 `replaceBook` 記錄 `sourceRefs`：擴充 `replaceCalls` 的紀錄型別或另加 `lastReplaceSourceRefs`）；outcome `replaced`；`changedCoverPaths` 為舊書與新書封面（相同只留一個，null 略過）。
   - `取代失敗`／`replaceThrows`：outcome `failed`、候選被丟棄、`changedCoverPaths` 為空。
   - `並存成功`：`importCandidateCalls` 含該候選，且 `folderName`、`sourceRefs` 被轉傳（fake 記錄）；`並存失敗`（回 null／拋例外）→ `failed`。
-- [ ] **Step 2：確認失敗** `flutter test --no-pub test/library/book_update_settle_test.dart`
-- [ ] **Step 3：實作** 新檔；修改 resolver 為 re-export＋委派。
-- [ ] **Step 4：確認通過**，並重跑 Issue 2 的 `test/screens/support/book_update_resolver_test.dart`、`test/screens/widgets/book_update_summary_dialog_test.dart`（護欄：行為不變）。
-- [ ] **Step 5：`flutter analyze`**；提交 `refactor(library): 抽出更新版結算邏輯 settleBookUpdate（epic-67 Issue 4 Task 1）`。
+- [x] **Step 2：確認失敗** `flutter test --no-pub test/library/book_update_settle_test.dart`
+- [x] **Step 3：實作** 新檔；修改 resolver 為 re-export＋委派。
+- [x] **Step 4：確認通過**，並重跑 Issue 2 的 `test/screens/support/book_update_resolver_test.dart`、`test/screens/widgets/book_update_summary_dialog_test.dart`（護欄：行為不變）。
+- [x] **Step 5：`flutter analyze`**；提交 `refactor(library): 抽出更新版結算邏輯 settleBookUpdate（epic-67 Issue 4 Task 1）`。
 
 ---
 
@@ -162,7 +162,7 @@ class DownloadQueueController extends ChangeNotifier {
 
 **`_downloadOne` 新流程：** `download` 成功後 → 狀態設 `checkingDuplicate` → `detectUpdate(tempPath)`（拋例外視為 null）→ 非 null：刪原暫存檔、`item.updateCandidate = candidate`、狀態 `awaitingUpdateConfirmation`、`notifyListeners()`、`return`（迴圈繼續下一筆）；null：維持既有 `computeFingerprint` → `hasDuplicate` → … 流程完全不變。`resolveUpdate` 成功後對每個 `changedCoverPaths` 以 `onCoverChanged?.call(path)` 通知（回呼為 null 時安全略過，審查 M-2）；結果為 replaced／coexisted → `done`，`progress = 1.0`、清 `updateCandidate`；`skipped` → 移除項目；`failed` → `failed`、清 `updateCandidate`。`retry(id)` 對 `awaitingUpdateConfirmation` 項目不動作。
 
-- [ ] **Step 1：補假工作與寫失敗測試**（`FakeQueuedDownloadJob` 加 `detectResult`（`BookUpdateCandidate?`）、`detectThrows`、`settleResult`、`settleCalls`（候選＋選擇）、`detectCalls` 與 `computeFingerprintCalls` 的相對順序紀錄）：
+- [x] **Step 1：補假工作與寫失敗測試**（`FakeQueuedDownloadJob` 加 `detectResult`（`BookUpdateCandidate?`）、`detectThrows`、`settleResult`、`settleCalls`（候選＋選擇）、`detectCalls` 與 `computeFingerprintCalls` 的相對順序紀錄）：
   - `更新版進入待確認且佇列繼續`（Review Focus 1）：兩筆工作，第一筆 `detectResult` 非 null → 第一筆狀態 `awaitingUpdateConfirmation`、`updateCandidate` 非 null、其 `import`／`promote` 呼叫數為 0；第二筆照常 `done`。
   - `待確認期間再 enqueue 不受影響`：待確認後 `enqueueJobs` 新工作 → 正常完成。
   - `原暫存檔被刪`：以真實暫存檔路徑驗證 `detectResult` 非 null 後原檔不存在。
@@ -175,10 +175,10 @@ class DownloadQueueController extends ChangeNotifier {
   - `未提供 onCoverChanged`（審查 M-2）：建構子不傳回呼叫時，取代成功不拋例外。
   - `dismiss 待確認項目`：`settleCalls` 含 `SkipChoice`、項目消失；`dismiss` 一般項目行為不變（既有測試保持通過）。
   - `retry 對待確認項目無動作`：`downloadCalls` 不增加。
-- [ ] **Step 2：確認失敗** `flutter test --no-pub test/downloads/download_queue_controller_test.dart`
-- [ ] **Step 3：實作** 介面、狀態、控制器流程；`download_queue_panel_test.dart` 的假工作補預設實作（`detectUpdate` 回 null、`settleUpdate` 回 `skipped`）。
-- [ ] **Step 4：確認通過**，並重跑 `test/screens/widgets/download_queue_panel_test.dart`（此時面板尚未改，須仍通過；面板內對新狀態的 `switch` 在 Task 5 補，但為了編譯通過，本 Task 先讓三個 `switch` 對新狀態回傳暫時值——狀態圖示 `Icons.update`、標籤先用既有 `downloadQueueStatusPending`，Task 5 改正式字串）。
-- [ ] **Step 5：`flutter analyze`**；提交 `feat(downloads): 下載佇列新增「待確認更新」狀態與結算（epic-67 Issue 4 Task 2）`。
+- [x] **Step 2：確認失敗** `flutter test --no-pub test/downloads/download_queue_controller_test.dart`
+- [x] **Step 3：實作** 介面、狀態、控制器流程；`download_queue_panel_test.dart` 的假工作補預設實作（`detectUpdate` 回 null、`settleUpdate` 回 `skipped`）。
+- [x] **Step 4：確認通過**，並重跑 `test/screens/widgets/download_queue_panel_test.dart`（此時面板尚未改，須仍通過；面板內對新狀態的 `switch` 在 Task 5 補，但為了編譯通過，本 Task 先讓三個 `switch` 對新狀態回傳暫時值——狀態圖示 `Icons.update`、標籤先用既有 `downloadQueueStatusPending`，Task 5 改正式字串）。
+- [x] **Step 5：`flutter analyze`**；提交 `feat(downloads): 下載佇列新增「待確認更新」狀態與結算（epic-67 Issue 4 Task 2）`。
 
 ---
 
@@ -196,14 +196,14 @@ class DownloadQueueController extends ChangeNotifier {
   - `settleUpdate(candidate, choice)`：`settleBookUpdate(importService, candidate, choice, sourceRefs: …, folderName: …)`。雲端：`BookSourceRefs(source: source, cloudFileId: entry.id)`、`folderName: folderName`；Calibre：`BookSourceRefs(source: BookSource.calibreOpds, remoteServerId: server.id, remoteBookId: entry.remoteBookId, remoteDownloadUrl: acquisition.href)`。
   - `import(permanentPath)`（保底，F4／D7）：保留現行 `importFiles` 參數；取得結果後，對 `result.updateCandidates` 每一筆呼叫 `importCandidateAsNewBook`（雲端帶 `folderName` 與同樣的 `sourceRefs`；Calibre 帶 `sourceRefs`）。只要 `result.updateCandidates` 非空（單檔批次，代表該檔沒有被匯入為書），不論並存成功與否，都要刪除 `permanentPath`：並存的新書使用的是服務從暫存檔重新複製的 `imported_books/<新 id>.<ext>`，`permanentPath` 已無人引用（審查 I-2）。刪除失敗吞掉。
 
-- [ ] **Step 1：寫失敗測試**（以 `FakeBookImportService`；`detectResult`、`importFilesResult`、`importCandidateResult`、`replaceResultsByBookId` 控制）：
+- [x] **Step 1：寫失敗測試**（以 `FakeBookImportService`；`detectResult`、`importFilesResult`、`importCandidateResult`、`replaceResultsByBookId` 控制）：
   - `detectUpdate`：`DetectedUpdate` 且有 `stagedPath` → 回候選，且 `detectBookUpdate` 收到的 `displayName`：雲端為 `entry.name`、Calibre 為 `'<title>.epub'`；`DetectedNewBook`／`DetectedDuplicate`／`DetectedUnsupported` → `null`；`DetectedUpdate` 但 `stagedPath == null` → `null`；服務拋例外 → `null`。
   - `settleUpdate 取代`（雲端）：`replaceBook` 收到 `sourceRefs.cloudFileId == entry.id` 且 `source == job.source`；（Calibre）收到 `remoteServerId`／`remoteBookId`／`remoteDownloadUrl` 與 `source == calibreOpds`。
   - `settleUpdate 並存`：`importCandidateAsNewBook` 收到同樣 `sourceRefs`；雲端另收到 `folderName`。
   - `settleUpdate 跳過`：候選被丟棄。
   - `import 保底`（Review Focus 6、8）：以真實暫存檔作為 `permanentPath`，`importFilesResult` 含 1 筆殘留候選 → `importCandidateCalls` 含該候選且帶來源參數，**`permanentPath` 檔案已被刪除**（並存失敗時同樣被刪）；`importFilesResult` 無候選 → `importCandidateCalls` 為空、`permanentPath` **不被刪**、行為與先前完全相同（既有測試保持通過）。
-- [ ] **Step 2：確認失敗 → Step 3：實作 → Step 4：確認通過**，並重跑 Task 2 的測試檔、`test/screens/cloud_browser_screen_test.dart`、`test/screens/remote_catalog_screen_test.dart`（選檔階段重複提示迴歸）。
-- [ ] **Step 5：`flutter analyze`**；提交 `feat(downloads): 雲端與 Calibre 下載工作支援更新版偵測與結算（epic-67 Issue 4 Task 3）`。
+- [x] **Step 2：確認失敗 → Step 3：實作 → Step 4：確認通過**，並重跑 Task 2 的測試檔、`test/screens/cloud_browser_screen_test.dart`、`test/screens/remote_catalog_screen_test.dart`（選檔階段重複提示迴歸）。
+- [x] **Step 5：`flutter analyze`**；提交 `feat(downloads): 雲端與 Calibre 下載工作支援更新版偵測與結算（epic-67 Issue 4 Task 3）`。
 
 ---
 

@@ -139,13 +139,21 @@ class FakeBookImportService implements BookImportService {
 
   /// epic-67 Issue 1 Task 3：更新版偵測預設回傳新書。
   BookDetectionResult detectResult = const DetectedNewBook();
+  String? lastDetectUri;
+  String? lastDetectDisplayName;
+  Object? detectThrows;
 
   @override
   Future<BookDetectionResult> detectBookUpdate(
     String uri, {
     String? displayName,
-  }) =>
-      Future.value(detectResult);
+  }) {
+    lastDetectUri = uri;
+    lastDetectDisplayName = displayName;
+    final error = detectThrows;
+    if (error != null) return Future.error(error);
+    return Future.value(detectResult);
+  }
 
   final List<BookUpdateCandidate> discardedCandidates = [];
 
