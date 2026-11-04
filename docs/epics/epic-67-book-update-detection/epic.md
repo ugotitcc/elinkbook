@@ -87,7 +87,10 @@
   - **快取失效**：取代成功後主動呼叫 `evictCoverImageCache` 淘汰舊書與新書封面快取（`PaintingBinding.instance.imageCache.evict`），使書架與畫面立即呈現新封面。
   - **卸載防護（Review Focus 1）**：若使用者於選檔等待期間切換畫面，`SourcesHomeScreen` 在 `context.mounted == false` 時無條件呼叫 `discardUpdateCandidates` 丟棄所有候選暫存檔，保證暫存目錄不洩漏殘留。
   - **程式審查修正**：補 `SourcesHomeScreen` 選檔／資料夾匯入途中卸載的 widget test；50 筆清單測試改為真的捲到最後一列並點選，窄螢幕與 E-Ink 各自獨立驗證；清單高度改為螢幕 60%（與計畫一致，`shrinkWrap` 會一次建出全部列，屬已接受的取捨）；候選書清單加非空 `assert`。
-  - **真機／模擬器手動驗證：尚未執行**，由人類另行處理（計畫 Task 4 Step 3 的三項情境：封面與書名即時更新、混合批次、取消後 `update_staging/` 無殘留）；完成後請把結果補記於此。
+  - **真機手動驗證：已通過（2026-11-04，WAVE `TCE70P24B2202374`，debug 版，`main` 提交 `4a0c6c33`）**。測試書為自製 EPUB（同識別碼、內容與封面不同的 v1／v2 多組）。
+    - 計畫 Task 4 Step 3 三項情境（1 取代後書名與封面即時更新且進度書籤保留、2 混合批次、3 取消後 `update_staging/` 無殘留）：通過。
+    - 補充情境（原計畫未涵蓋）：一次更新 3 本（全部取代）、逐本不同處置（取代／並存／跳過）、全部跳過、5 種情況混合（含疑似更新）、一批 12 檔：全部通過。
+    - 尚未涵蓋：失敗路徑（取代途中失敗）、大檔案耗時。
 
 ## Issue 4 計畫與實作
 
