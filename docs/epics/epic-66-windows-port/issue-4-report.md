@@ -126,11 +126,11 @@ All tests passed!
   `reader_leak_test.dart -d windows` 與 Release 模式實測下，4 次迭代增量均遠低於 11.23 MB 門檻，`leaked=false`，`ratcheting=false`。長期回歸防線斷言 `expect(verdict.leaked, isFalse)` 已啟用且測試全綠。
 - [x] **過關條件 2（快取無殘留）：**
   每次卸載閱讀器後，`book_cache` 目錄新增殘留為 0（輪前 12、輪後 12，差集為空）。
-- [x] **過關條件 3（功能完整性）：**
-  - Foliate `openBook()` 順暢載入 HTTP 書檔，無混合內容或 CORS 阻擋。
-  - EPUB 橫排/直排、目錄、劃線、翻頁正常。
-  - 書檔伺服器支援 HTTP Range 隨需讀取與中途 dispose 取消釋放 handle。
-  - Android 端與既有行為逐字相同、完全不受影響。
+- [~] **過關條件 3（功能完整性）：部分已驗證，其餘未驗證（程式審查後修正，原本誤標為全數通過）：**
+  - **已量測：** Windows 上 `reader_leak_test.dart` 開書渲染成功（Loading 指示器消失且無錯誤）；該流程經 loopback HTTP 載入書檔，過程未出現載入失敗。
+  - **已由自動化測試驗證：** 書檔伺服器的 HTTP Range 讀取、中途 dispose 與客戶端斷線都會釋放檔案 handle（`local_book_server_test.dart`、`local_book_handler_test.dart`）。
+  - **未驗證（預期但無證據）：** EPUB 橫排／直排切換、目錄、劃線、翻頁在 Windows 上的人工操作結果；混合內容與 CORS 阻擋的專項檢查（僅能由「開書成功」間接推論）。需人工在 Windows 實機補驗。
+  - **未實機驗證（靜態推論）：** Android 路徑。本 Issue 對 Android 的程式差異僅限 `main.js` 的 `bookBaseUrl` 參數，未提供時回退原 URL，行為在程式碼上逐字相同；本 Issue 沒有在 Android 裝置上跑過測試。
 
 ---
 

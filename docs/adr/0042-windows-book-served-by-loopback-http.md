@@ -12,7 +12,7 @@
 
 Issue 3 建立 Windows 記憶體量測體系後發現嚴重洩漏：在同一 App 程序中，每次開啟 224 MB 大檔 EPUB，`elinkbook.exe` 的私有記憶體（Private Bytes）便永久上升約 452 MB（4 輪開關累計上升 +1808 MB），即使卸載 Widget、關閉 WebView、手動觸發 GC 皆無法回落，4 次開關即因記憶體耗盡而崩潰。
 
-經 Issue 3 隔離實驗證實，根因為 WebView2 C++ 外掛層在處理 `shouldInterceptRequest` 回傳的位元組緩衝區時未能妥善釋放 COM 物件／`IStream`，洩漏量與經由該通道傳輸的資料量成正比。
+Issue 3 的隔離實驗證實：洩漏量與經由 `shouldInterceptRequest` 傳輸的資料量成正比，且改走 HTTP 後洩漏消失。至於 WebView2 C++ 外掛層未能釋放 COM 物件／`IStream` 的說法，是**依上述現象推測的成因，並未直接驗證**。
 
 ## 決策
 
@@ -25,7 +25,8 @@ Issue 3 建立 Windows 記憶體量測體系後發現嚴重洩漏：在同一 Ap
 4. **安全隔離（隨機權杖、Host 標頭、CORS 與私有網路）**：
    - 每本書註冊時由 `Random.secure()` 產生具備至少 128 位元亂數熵的 URL-safe 權杖，路徑格式為 `/book/<token>/<fileName>`。
    - 伺服器嚴格比對 HTTP `Host` 標頭，必須完全等於 `127.0.0.1:<port>`，拒絕任何非 loopback 或偽造之 Host 請求（回傳 403 Forbidden）。
-   - CORS 標頭（含預檢 `OPTIONS` 與 Private Network Access `Access-Control-Allow-Private-Network: true`）僅允許信任來源（`https://appassets.androidplatform.net`、`http://127.0.0.1:<port>`、`null`）。
+   - CORS 標頭（含預檢 `OPTIONS` 與 Private Network Access `Access-Control-Allow-Private-Network: true`）僅允許單一固定來源 `https://appassets.androidplatform.net`（即載入 `index.html` 的頁面來源）。不允許 `null` 或其他來源。
+   - 權杖以 `Map` 查表比對，非 constant-time 比較。此為刻意取捨：權杖為 128 位元亂數且伺服器只綁定 loopback，時序攻擊的實務風險極低。
    - 回應一律帶 `Cache-Control: no-store`，禁止瀏覽器磁碟與記憶體快取。
 5. **HTTP Range 串流與主動中止**：
    - 實作 `parseByteRange` 解析單一 Range 請求（`bytes=start-end`、`bytes=start-`、`bytes=-suffix`），以 `206 Partial Content` 或 `200 OK` 透過 `File.openRead()` 串流回傳，絕不將整檔讀入記憶體。
@@ -44,8 +45,10 @@ Issue 3 建立 Windows 記憶體量測體系後發現嚴重洩漏：在同一 Ap
 - **記憶體洩漏徹底根除**：
   - Debug 整合測試（`reader_leak_test.dart -d windows`）：5 輪開關 224 MB 大檔 EPUB，4 次迭代私有記憶體增量為 `[6.99, 0.53, 2.92, -0.54] MB`，快取目錄殘留為 0，正式加入 `expect(verdict.leaked, isFalse)` 回歸斷言。
   - Release 實測（`probe_main.dart`）：4 次迭代增量為 `[4.17, -1.00, 5.01, 0.03] MB`，4 輪累積增量僅 +8.21 MB（對比原先 +1808 MB），`ratcheting=false`。
+- **未改善的部分**：`foliate-js` 內部仍以 `fetch().then(r => r.blob())` 整本載入，因此 WebView2 渲染器子程序（`msedgewebview2.exe`）開大書時的瞬間記憶體尖峰沒有改善；上述數據只涵蓋 `elinkbook.exe` 本身的私有記憶體。HTTP Range 在目前流程中幾乎不會被走到，多段 Range（含逗號）則依 RFC 9110 回退為整檔 `200`。
+- **啟動失敗可恢復**：伺服器綁定失敗不會永久快取失敗結果，下次 `register` 會重新嘗試。
 - **維護平台分流**：
   - Android：維持原生 `WebViewAssetLoader`。
   - Windows：使用 `LocalBookServer` loopback HTTP 串流服務。
 - **新增依賴**：
-  - `shelf: ^1.4.2`、`shelf_io: ^1.0.5` 正式納入 `app/pubspec.yaml`。
+  - `shelf: ^1.4.2` 正式納入 `app/pubspec.yaml`（`shelf_io` 隨 `shelf` 套件提供，不是獨立依賴）。

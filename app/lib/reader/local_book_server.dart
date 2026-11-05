@@ -36,6 +36,7 @@ class LocalBookServer {
 
   final Random _random;
   final InternetAddress _bindAddress;
+  final int _bindPort;
   final String _allowedOrigin;
 
   HttpServer? _server;
@@ -46,9 +47,11 @@ class LocalBookServer {
   LocalBookServer({
     Random? random,
     InternetAddress? bindAddress,
+    int port = 0, // 0 代表由系統隨機配置；僅測試會指定固定埠
     String allowedOrigin = 'https://appassets.androidplatform.net',
   })  : _random = random ?? Random.secure(),
         _bindAddress = bindAddress ?? InternetAddress.loopbackIPv4,
+        _bindPort = port,
         _allowedOrigin = allowedOrigin;
 
   InternetAddress? get address => _server?.address;
@@ -97,8 +100,15 @@ class LocalBookServer {
 
   Future<void> _ensureStarted() async {
     if (_server != null) return;
-    _initFuture ??= _startServer();
-    await _initFuture;
+    final future = _initFuture ??= _startServer();
+    try {
+      await future;
+    } catch (_) {
+      // 啟動失敗不可永久快取失敗結果，否則之後每次 register 都重丟同一例外，
+      // 必須重啟 App 才能恢復；清空後下一次 register 會重新嘗試綁定
+      if (identical(_initFuture, future)) _initFuture = null;
+      rethrow;
+    }
   }
 
   Future<void> _startServer() async {
@@ -108,7 +118,7 @@ class LocalBookServer {
       allowedOrigin: _allowedOrigin,
     );
 
-    _server = await shelf_io.serve(handler, _bindAddress, 0);
+    _server = await shelf_io.serve(handler, _bindAddress, _bindPort);
   }
 
   String _generateToken() {

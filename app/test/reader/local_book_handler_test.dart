@@ -255,5 +255,30 @@ void main() {
       // 在 Windows 若有開啟中的 handle，delete 會拋 FileSystemException
       expect(() => largeFile.deleteSync(), returnsNormally);
     });
+
+    test('客戶端取消訂閱（斷線）時 cancel() 必須完成，且檔案 handle 釋放', () async {
+      // 審查 Important 3：onCancel 內若自我等待 controller.close()，cancel() 會永不返回
+      final largeFile = File('${tempDir.path}/cancel.epub');
+      await largeFile.writeAsBytes(Uint8List(2 * 1024 * 1024), flush: true);
+      registry['token-cancel'] = RegisteredBook(
+        filePath: largeFile.path,
+        fileName: 'current.epub',
+        contentType: 'application/epub+zip',
+        disposed: Completer<void>().future, // 永不完成：只走客戶端取消路徑
+      );
+
+      final res = await handler(makeRequest(path: '/book/token-cancel/current.epub'));
+      final gotChunk = Completer<void>();
+      late StreamSubscription<List<int>> sub;
+      sub = res.read().listen((_) {
+        if (!gotChunk.isCompleted) gotChunk.complete();
+      });
+      await gotChunk.future.timeout(const Duration(seconds: 5));
+
+      // 若 onCancel 自我等待，這裡會逾時
+      await sub.cancel().timeout(const Duration(seconds: 3));
+
+      expect(() => largeFile.deleteSync(), returnsNormally);
+    });
   });
 }

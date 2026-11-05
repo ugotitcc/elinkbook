@@ -633,6 +633,21 @@ class FoliateReaderView extends StatefulWidget {
   State<FoliateReaderView> createState() => _FoliateReaderViewState();
 }
 
+/// 刪除 [cachedPath] 所在的書籍快取目錄（含檔案本身）。
+///
+/// 供開書失敗路徑清理已複製的快取檔，避免孤兒殘留；刪除失敗（例如 Windows 檔案鎖）
+/// 不再向外拋出，只回傳是否成功。
+@visibleForTesting
+bool deleteBookCacheDirOf(String cachedPath) {
+  try {
+    final cacheDir = Directory(File(cachedPath).parent.path);
+    if (cacheDir.existsSync()) cacheDir.deleteSync(recursive: true);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 /// 為 Foliate 閱讀器建構載入 URL。
 ///
 /// 若提供 [bookBaseUri]，其查詢參數將包含 `bookBaseUrl`。
@@ -701,9 +716,12 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
   /// 供 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務。
   Future<void> _cacheBook() async {
     final copyWatch = Stopwatch()..start();
+    // 提升到 try 外，讓 catch 能清理已複製、但尚未交給 dispose 管理的快取目錄
+    String? copiedPath;
     try {
       final cacheFn = cacheBookForServing;
       final cachedPath = await cacheFn(widget.filePath, _instanceId);
+      copiedPath = cachedPath;
       if (!mounted) {
         // 217MB 檔案複製可能耗時數秒，若使用者已離開畫面，需主動清理快取
         if (cachedPath != null) {
@@ -744,6 +762,9 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
         widget.onError(AppLocalizations.of(context)!.readerFailedToLoadBookMessage);
       }
     } catch (e) {
+      // 例如 register 綁定失敗：此時 _bookCacheDir 尚未設定，dispose 不會清理，
+      // 剛複製的整本書（可能 200 MB 以上）會成為孤兒，必須在這裡刪除
+      if (copiedPath != null) deleteBookCacheDirOf(copiedPath);
       if (!mounted) return;
       OpenBookTrace.record(_instanceId, '書複製失敗',
           '${e.runtimeType}（耗時 ${copyWatch.elapsedMilliseconds} ms）');

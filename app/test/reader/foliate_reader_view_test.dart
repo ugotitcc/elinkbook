@@ -90,6 +90,28 @@ void main() {
     });
   });
 
+  group('deleteBookCacheDirOf', () {
+    test('刪除快取檔所在目錄（含檔案），回傳 true', () async {
+      final root = await Directory.systemTemp.createTemp('book_cache_test_');
+      addTearDown(() {
+        if (root.existsSync()) root.deleteSync(recursive: true);
+      });
+      final cacheDir = Directory('${root.path}/instance-1')..createSync();
+      final cached = File('${cacheDir.path}/current.epub')
+        ..writeAsBytesSync([1, 2, 3]);
+
+      expect(deleteBookCacheDirOf(cached.path), isTrue);
+      expect(cacheDir.existsSync(), isFalse);
+    });
+
+    test('目錄已不存在時不拋例外，回傳 true', () {
+      expect(
+        deleteBookCacheDirOf('${Directory.systemTemp.path}/no_such_dir_xyz/current.epub'),
+        isTrue,
+      );
+    });
+  });
+
   group('buildFoliatePreferencesMap', () {
     test('所有偏好欄位皆為 null 時回傳空 map', () {
       const view = FoliateReaderView(

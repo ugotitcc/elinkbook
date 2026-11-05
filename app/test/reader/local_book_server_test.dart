@@ -151,6 +151,78 @@ void main() {
       expect(() => largeFile.deleteSync(), returnsNormally);
     });
 
+    test('客戶端中途斷線：檔案 handle 釋放、檔案可刪除，伺服器仍可服務新請求', () async {
+      // 審查 Important 3 的重現測試：客戶端（WebView）讀一部分後強制關閉連線，
+      // 驗證 onCancel 路徑不會自我等待而懸掛
+      final largeFile = File('${tempDir.path}/client_abort.epub');
+      await largeFile.writeAsBytes(Uint8List(20 * 1024 * 1024), flush: true);
+
+      final handle = await server.register(largeFile.path);
+      addTearDown(handle.dispose);
+      final uri = handle.bookBaseUri.resolve(handle.fileName);
+
+      final abortClient = HttpClient();
+      final req = await abortClient.getUrl(uri);
+      final res = await req.close();
+      expect(res.statusCode, 200);
+
+      final gotFirstChunk = Completer<void>();
+      res.listen(
+        (_) {
+          if (!gotFirstChunk.isCompleted) gotFirstChunk.complete();
+        },
+        onError: (_) {},
+        cancelOnError: true,
+      );
+      await gotFirstChunk.future.timeout(const Duration(seconds: 5));
+
+      // 客戶端強制斷線（等同 WebView 關閉分頁或 fetch abort）
+      abortClient.close(force: true);
+
+      // 給伺服端一點時間處理斷線，再確認檔案 handle 已釋放
+      var deleted = false;
+      for (var i = 0; i < 50 && !deleted; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        try {
+          largeFile.deleteSync();
+          deleted = true;
+        } on FileSystemException {
+          // handle 尚未釋放，繼續等
+        }
+      }
+      expect(deleted, isTrue, reason: '客戶端斷線後檔案 handle 應被釋放');
+
+      // 伺服器仍可服務其他書籍的新請求
+      final h2 = await server.register(sampleFile.path);
+      addTearDown(h2.dispose);
+      final req2 = await client.getUrl(h2.bookBaseUri.resolve(h2.fileName));
+      req2.persistentConnection = false;
+      final res2 = await req2.close().timeout(const Duration(seconds: 5));
+      expect(res2.statusCode, 200);
+      final body = await res2.expand((c) => c).toList();
+      expect(body, sampleBytes);
+    });
+
+    test('啟動失敗（埠綁定例外）不永久快取失敗，修復後再次 register 可成功', () async {
+      // 審查 Important 2：先佔住一個埠，再讓伺服器綁定同一埠使其失敗
+      final blocker = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(blocker.close);
+
+      final failing = LocalBookServer(
+        bindAddress: InternetAddress.loopbackIPv4,
+        port: blocker.port,
+      );
+      addTearDown(failing.close);
+
+      await expectLater(failing.register(sampleFile.path), throwsA(anything));
+
+      // 釋放埠後重試，應可成功啟動
+      await blocker.close();
+      final handle = await failing.register(sampleFile.path);
+      addTearDown(handle.dispose);
+      expect(failing.port, blocker.port);
+    });
+
     test('同一檔案連續註冊兩次得到不同權杖與基底網址', () async {
       final h1 = await server.register(sampleFile.path);
       final h2 = await server.register(sampleFile.path);
