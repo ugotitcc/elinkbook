@@ -217,4 +217,16 @@ void main() {
       );
     });
   });
+  group('foliateBookBaseUrlParams', () {
+    test('bookBaseUri 為 null 時回傳空 Map', () {
+      expect(foliateBookBaseUrlParams(null), isEmpty);
+    });
+
+    test('bookBaseUri 非 null 時回傳包含 bookBaseUrl 的 Map', () {
+      final uri = Uri.parse('http://127.0.0.1:53211/book/sampletoken/');
+      expect(foliateBookBaseUrlParams(uri), {
+        'bookBaseUrl': 'http://127.0.0.1:53211/book/sampletoken/',
+      });
+    });
+  });
 }

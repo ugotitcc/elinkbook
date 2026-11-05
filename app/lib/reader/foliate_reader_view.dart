@@ -23,6 +23,7 @@ import 'foliate_bridge_handlers.dart';
 import 'foliate_native_bridge.dart';
 import 'navigation_degraded_reason.dart';
 import 'js_bridge_gateway.dart';
+import 'local_book_server.dart';
 import 'open_book_trace.dart';
 import 'page_turn_mode.dart';
 import 'percent_rect.dart';
@@ -31,7 +32,6 @@ import 'reader_console_log.dart';
 import 'tap_zone_detector.dart';
 import 'toc_entry.dart';
 import 'tts_segment_cfi.dart';
-import 'windows_reader_resources.dart';
 import 'writing_mode.dart';
 import 'text_conversion_mode.dart';
 import 'zone_action.dart';
@@ -633,6 +633,37 @@ class FoliateReaderView extends StatefulWidget {
   State<FoliateReaderView> createState() => _FoliateReaderViewState();
 }
 
+/// 為 Foliate 閱讀器建構載入 URL。
+///
+/// 若提供 [bookBaseUri]，其查詢參數將包含 `bookBaseUrl`。
+@visibleForTesting
+Uri buildFoliateReaderIndexUri(
+  FoliateReaderView widget, {
+  Uri? bookBaseUri,
+}) {
+  final params = <String, String>{
+    'prefs': jsonEncode(buildFoliatePreferencesMap(widget)),
+    'fontFaceCss': buildFontFaceCss(
+      installedFonts: widget.installedFonts,
+      customFonts: widget.customFonts,
+    ),
+    // epic-11-multi-format-reader Issue 3：讓 main.js 的 fetch URL 反映
+    // 真實副檔名（見 foliate_native_bridge.dart cacheFileExtension()
+    // 文件註解——CBZ 需要 view.js 的 isCBZ() 對檔名做副檔名判斷）。
+    'bookFileName': 'current.${cacheFileExtension(widget.filePath)}',
+  };
+  params.addAll(buildInitialLocationParams(
+    initialLocatorJson: widget.initialLocatorJson,
+    initialProgression: widget.initialProgression,
+  ));
+  params.addAll(foliateBookBaseUrlParams(bookBaseUri));
+  return Uri.https(
+    'appassets.androidplatform.net',
+    '/assets/foliate/index.html',
+    params,
+  );
+}
+
 class _FoliateReaderViewState extends State<FoliateReaderView> {
   InAppWebViewController? _controller;
   late final JsBridgeGateway _gateway;
@@ -655,7 +686,8 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
   /// 觸發重繪。
   bool _hasActiveSelection = false;
 
-  late final Uri _initialIndexUri = _buildIndexUri();
+  BookServeHandle? _serveHandle;
+  Uri? _initialIndexUri;
 
   @override
   void initState() {
@@ -685,9 +717,25 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       if (cachedPath != null) {
         OpenBookTrace.record(
             _instanceId, '書複製完成', '耗時 ${copyWatch.elapsedMilliseconds} ms');
+        BookServeHandle? handle;
+        if (isWindowsPlatform) {
+          handle = await LocalBookServer.instance.register(cachedPath);
+        }
+        if (!mounted) {
+          handle?.dispose();
+          final cacheDir = Directory(File(cachedPath).parent.path);
+          if (cacheDir.existsSync()) {
+            try {
+              cacheDir.deleteSync(recursive: true);
+            } catch (_) {}
+          }
+          return;
+        }
+        _serveHandle = handle;
         // cacheBookForServing 回傳的是檔案絕對路徑，InternalStoragePathHandler 要的是目錄
         setState(() {
           _bookCacheDir = File(cachedPath).parent.path;
+          _initialIndexUri = _buildIndexUri(handle?.bookBaseUri);
         });
       } else {
         OpenBookTrace.record(_instanceId, '書複製失敗',
@@ -704,28 +752,8 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     }
   }
 
-  Uri _buildIndexUri() {
-    final params = <String, String>{
-      'prefs': jsonEncode(buildFoliatePreferencesMap(widget)),
-      'fontFaceCss': buildFontFaceCss(
-        installedFonts: widget.installedFonts,
-        customFonts: widget.customFonts,
-      ),
-      // epic-11-multi-format-reader Issue 3：讓 main.js 的 fetch URL 反映
-      // 真實副檔名（見 foliate_native_bridge.dart cacheFileExtension()
-      // 文件註解——CBZ 需要 view.js 的 isCBZ() 對檔名做副檔名判斷）。
-      'bookFileName': 'current.${cacheFileExtension(widget.filePath)}',
-    };
-    params.addAll(buildInitialLocationParams(
-      initialLocatorJson: widget.initialLocatorJson,
-      initialProgression: widget.initialProgression,
-    ));
-    return Uri.https(
-      'appassets.androidplatform.net',
-      '/assets/foliate/index.html',
-      params,
-    );
-  }
+  Uri _buildIndexUri([Uri? bookBaseUri]) =>
+      buildFoliateReaderIndexUri(widget, bookBaseUri: bookBaseUri);
 
   void _evaluate(String source) {
     _controller?.evaluateJavascript(source: source);
@@ -895,16 +923,9 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
             path.endsWith('.js') ? 'text/javascript' : 'text/html';
         return WebResourceResponse(contentType: contentType, data: bytes);
       case FoliateRequestKind.book:
-        // 僅 Windows 啟用；Android 維持回 null（交給 InternalStoragePathHandler）。
-        if (!isWindowsPlatform) return null;
-        final cacheDir = _bookCacheDir;
-        if (cacheDir == null) return null;
-        final bytes = await readWindowsBookBytes(path, cacheDir);
-        if (bytes == null) return null;
-        return WebResourceResponse(
-          contentType: windowsBookContentType(path),
-          data: bytes,
-        );
+        // Android 由 InternalStoragePathHandler 服務；
+        // Windows 由 LocalBookServer loopback HTTP 服務。兩者此處皆回傳 null。
+        return null;
       case FoliateRequestKind.customFont:
         final customFontUri = resolveCustomFontUri(path, widget.customFonts);
         if (customFontUri == null) return null;
@@ -932,14 +953,14 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
 
   @override
   void dispose() {
+    _serveHandle?.dispose();
+    _serveHandle = null;
+
     // 清理本實例的快取子目錄（避免孤兒子目錄累積）
     var deletedCacheDir = false;
     if (_bookCacheDir != null) {
       final cacheDir = Directory(_bookCacheDir!);
-      if (cacheDir.existsSync()) {
-        cacheDir.deleteSync(recursive: true);
-        deletedCacheDir = true;
-      }
+      deletedCacheDir = _tryDeleteCacheDir(cacheDir);
     }
     OpenBookTrace.record(
         _instanceId, '離開畫面', '已刪快取目錄=${deletedCacheDir ? '是' : '否'}');
@@ -949,10 +970,36 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     super.dispose();
   }
 
+  static bool _tryDeleteCacheDir(Directory dir) {
+    try {
+      if (dir.existsSync()) {
+        dir.deleteSync(recursive: true);
+        return true;
+      }
+      return false;
+    } catch (_) {
+      _retryDeleteCacheDir(dir, 1);
+      return false;
+    }
+  }
+
+  static void _retryDeleteCacheDir(Directory dir, int attempt) {
+    if (attempt > 3) return;
+    Future<void>.delayed(const Duration(milliseconds: 100), () {
+      try {
+        if (dir.existsSync()) {
+          dir.deleteSync(recursive: true);
+        }
+      } catch (_) {
+        _retryDeleteCacheDir(dir, attempt + 1);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 快取未完成前不掛載 InAppWebView（外層 ReaderScreen 已負責視覺載入狀態）
-    if (_bookCacheDir == null) {
+    // 快取與基底網址未完成前不掛載 InAppWebView（外層 ReaderScreen 已負責視覺載入狀態）
+    if (_bookCacheDir == null || _initialIndexUri == null) {
       return const SizedBox.shrink();
     }
     // epic-35-design-system-tokens Issue 7：3×3 導覽熱區除錯疊層（見下方
@@ -964,7 +1011,7 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     return Stack(
       children: [
         InAppWebView(
-          initialUrlRequest: URLRequest(url: WebUri.uri(_initialIndexUri)),
+          initialUrlRequest: URLRequest(url: WebUri.uri(_initialIndexUri!)),
           initialSettings: InAppWebViewSettings(
             javaScriptEnabled: true,
             useShouldInterceptRequest: true,

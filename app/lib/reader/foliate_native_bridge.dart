@@ -145,6 +145,14 @@ String cacheFileExtension(String filePath) {
   return ext.isEmpty ? 'epub' : ext.substring(1).toLowerCase();
 }
 
+/// 將書籍伺服基底網址包裝為傳給 foliate/main.js 的查詢參數。
+///
+/// [bookBaseUri] 為 null 時回傳空 map；非 null 時回傳包含 'bookBaseUrl' 的 map。
+Map<String, String> foliateBookBaseUrlParams(Uri? bookBaseUri) {
+  if (bookBaseUri == null) return const {};
+  return {'bookBaseUrl': bookBaseUri.toString()};
+}
+
 /// 將 EPUB 檔案分塊複製到每個 widget 實例獨立的快取子目錄，
 /// 供 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務。
 /// [filePath] 依 ADR 0002 可能是真實檔案系統路徑或 `content://` URI；

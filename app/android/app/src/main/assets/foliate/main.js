@@ -1254,8 +1254,10 @@ async function detectBookWritingMode(book) {
 
 async function openBook() {
   try {
+    let bookBase = params.get('bookBaseUrl') || 'https://appassets.androidplatform.net/book/'
+    if (!bookBase.endsWith('/')) bookBase += '/'
     const book = await makeBook(
-      `https://appassets.androidplatform.net/book/${params.get('bookFileName') || 'current.epub'}`,
+      bookBase + (params.get('bookFileName') || 'current.epub'),
     )
     // epic-46：開書前預掃全書定案「偵測排版方向」，不再依賴「第一個被載入的
     // CSS」（該 CSS 會隨閱讀位置改變）。索引模式不需要排版方向，略過；

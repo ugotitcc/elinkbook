@@ -177,12 +177,12 @@
 3. 移除 `_shouldInterceptRequest` 中 Windows 的 `/book/` 分支（`FoliateRequestKind.book` 在 Windows 回 `null`，維持 Android 行為）。
 4. **死碼清理（surgical）：** `grep -rn "readWindowsBookBytes\|windowsBookContentType" app/lib app/test app/integration_test`。若僅剩單元測試與 `integration_test/windows_spike/headless_metadata_test.dart` 引用，**保留函式**，只移除閱讀器內的呼叫；若連它們都不再使用才刪除（含對應測試）。
 
-- [ ] **Step 0（共用純函式，I-4）：** 在 `app/lib/reader/foliate_native_bridge.dart`（已有 `cacheFileExtension`）新增 `Map<String, String> foliateBookBaseUrlParams(Uri? bookBaseUri)`：`null` → 空 map；非 `null` → `{'bookBaseUrl': bookBaseUri.toString()}`。閱讀器（Task 5）與索引器（Task 7）的 URL 組裝都只呼叫 `params.addAll(foliateBookBaseUrlParams(...))`；兩者其餘參數本來就不同（閱讀器有 `prefs`／`fontFaceCss`／定位，索引器只有 `mode=index`），**不強行合併成單一 URL 建構函式**。
-- [ ] **Step 1：寫失敗測試**：`foliateBookBaseUrlParams` 兩種輸入（放 `test/reader/foliate_native_bridge_test.dart`）；閱讀器 URL 組裝（把 `_buildIndexUri` 改成接受 `Uri? bookBaseUri` 的可測形式）有 `bookBaseUri` 時帶 `bookBaseUrl` 且值以 `/book/` 結尾、含權杖，無時不帶且其餘參數與現狀相同。
-- [ ] **Step 2：** `flutter test test/reader/foliate_reader_view_test.dart`，確認失敗。
-- [ ] **Step 3：** 實作 `main.js` 與 Dart 改接；`node tool/check_foliate_es_compat.js`（確認沒引入新 API）。
-- [ ] **Step 4：** 測試通過；`flutter analyze`。
-- [ ] **Step 5：** commit。
+- [x] **Step 0（共用純函式，I-4）：** 在 `app/lib/reader/foliate_native_bridge.dart`（已有 `cacheFileExtension`）新增 `Map<String, String> foliateBookBaseUrlParams(Uri? bookBaseUri)`：`null` → 空 map；非 `null` → `{'bookBaseUrl': bookBaseUri.toString()}`。閱讀器（Task 5）與索引器（Task 7）的 URL 組裝都只呼叫 `params.addAll(foliateBookBaseUrlParams(...))`；兩者其餘參數本來就不同（閱讀器有 `prefs`／`fontFaceCss`／定位，索引器只有 `mode=index`），**不強行合併成單一 URL 建構函式**。
+- [x] **Step 1：寫失敗測試**：`foliateBookBaseUrlParams` 兩種輸入（放 `test/reader/foliate_native_bridge_test.dart`）；閱讀器 URL 組裝（把 `_buildIndexUri` 改成接受 `Uri? bookBaseUri` 的可測形式）有 `bookBaseUri` 時帶 `bookBaseUrl` 且值以 `/book/` 結尾、含權杖，無時不帶且其餘參數與現狀相同。
+- [x] **Step 2：** `flutter test test/reader/foliate_reader_view_test.dart`，確認失敗。
+- [x] **Step 3：** 實作 `main.js` 與 Dart 改接；`node tool/check_foliate_es_compat.js`（確認沒引入新 API）。
+- [x] **Step 4：** 測試通過；`flutter analyze`。
+- [x] **Step 5：** commit。
 
 ---
 
