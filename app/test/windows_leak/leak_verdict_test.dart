@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'leak_verdict.dart';
+import '../support/leak_verdict.dart';
 
 void main() {
   group('evaluateLeak 記憶體洩漏判定規則', () {

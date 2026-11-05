@@ -1,6 +1,17 @@
 # Issue 3：閱讀器與索引器「整本回傳」記憶體驗證報告
 
-本報告記錄 epic-66 Issue 3 的實測結果：針對閱讀器開書（`FoliateReaderView`）與全文索引器（`FoliateContentIndexer`）兩條 `shouldInterceptRequest` 整本回傳路徑，在 Windows 實體桌面工作階段（Session ID 1）中以 224.7 MB 大檔 EPUB 重複開關與索引，量測 App 程序（`elinkbook.exe`）的私有記憶體（Private Bytes）與 WebView2 子程序變化，判定是否造成常駐記憶體洩漏，並分析根因與修法選項。
+本報告記錄 epic-66 Issue 3 的實測結果：針對閱讀器開書（`FoliateReaderView`）與全文索引器（`FoliateContentIndexer`）兩條 `shouldInterceptRequest` 整本回傳路徑，在 Windows 實體桌面工作階段（Session ID 1）中以 224.7 MB 大檔 EPUB 重複開關與索引，量測 App 程序（`elinkbook.exe`）的私有記憶體（Private Bytes）與 WebView2 子程序變化，判定是否造成常駐記憶體洩漏，並分析可能成因與修法選項。
+
+**結論先看（已量測 vs. 推論）：**
+
+| 項目 | 狀態 |
+|:---|:---|
+| 閱讀器路徑：4 次正式開關私有記憶體逐次棘輪上升、關閉後不回落、WebView2 子程序穩定 | **已量測**（debug 版、單本書、單一程序，見 §2） |
+| 閱讀器路徑：iter2～4 每次約 +452 MB，與 Issue 2 未修前 metadata 路徑數量級相近 | **已量測**（相近，非完全一致，見 §3） |
+| 閱讀器路徑：iter1 +1,131 MB | **已量測但原因未查明**（見 §3.2） |
+| 洩漏發生在原生端（而非 Dart 端保留） | **間接推論**：本 Issue 未重做排除實驗；依據 Issue 2 §4.3 的排除結果類推（見 §3.3、§7） |
+| 根因是 C++ 多重複製且未釋放 | **假設，未驗證**（見 §3.4） |
+| 索引器路徑會洩漏 | **未量測**；索引器無法跑完任何一輪（見 §4） |
 
 ---
 
@@ -8,8 +19,8 @@
 
 - **作業系統：** Windows 11 x64（互動式桌面 UI 工作階段，非 Session 0 遠端服務）
 - **WebView 引擎：** Microsoft Edge WebView2（Runtime 版本 133+，子程序維持 6 個）
-- **建置版本：** Debug 版（`build\windows\x64\runner\Debug\elinkbook.exe`）
-- **量測標的書檔：** `../tmp/AI世界的底層邏輯與生存法則.epub`
+- **建置版本：** Debug 版（`build\windows\x64\runner\Debug\elinkbook.exe`）；**沒有 Release 版量測**（見 §7）
+- **量測標的書檔：** `../tmp/AI世界的底層邏輯與生存法則.epub`（可用環境變數 `ELINK_LEAK_EPUB` 覆寫路徑）
   - 檔案大小：**224.7 MiB（235,583,038 位元組）**
   - 總章節數：72 個 spine section
 - **判定規則與門檻（依據計畫 Q6 定案）：**
@@ -56,31 +67,49 @@ flutter test integration_test/windows_leak/reader_leak_test.dart -d windows
 [leak-verdict] path=reader leaked=true ratcheting=true deltas=[1130.96, 445.77, 460.79, 451.74] exceeded=[1, 2, 3, 4] threshold_mb=11.23
 ```
 
-- **`leaked = true`**：4 次正式迭代全部遠大於門檻值（11.23 MB），第 1 次高達 +1,131 MB，後續平均每次增加 **+452.8 MB**。
-- **`ratcheting = true`**：4 次增量恆大於 0，私有記憶體由開書前 251 MB 一路棘輪爬升至 **3,222 MB**，且在關閉畫面並等待 6 秒後**完全不回落**。
-- **快取清理確認（Review Focus 2）：** 每次迭代在卸載 Widget 後皆通過斷言：`[OpenBook] 離開畫面 已刪快取目錄=是`，`book_cache` 實例子目錄確實清空，排除磁碟或檔案把持因素。
-- **程序歸屬判定：** WebView2 子程序在整段量測中始終維持 6 個，記憶體總和維持在 **138～146 MB** 之間微幅震盪，未發生洩漏；所有累積之 3 GB 記憶體**全部留在 `elinkbook.exe` 自身程序內**。
+- **`leaked = true`**：4 次正式迭代增量全部遠大於門檻值（11.23 MB）。
+- **`ratcheting = true`**：4 次增量恆大於 0，私有記憶體由開書前 251 MB 一路爬升至 **3,222 MB**，且在卸載畫面並等待 6 秒後**不回落**。
+- **快取清理確認（Review Focus 2）：** 測試於卸載 Widget 後斷言 `book_cache` 實例子目錄為空（目錄不存在視為已清理），並印出 `[leak] book_cache 目錄存在=… 剩餘項目=…` 以區分實際走了哪個分支，排除磁碟或檔案把持因素。**註：** 本次量測當時的測試版本在目錄不存在時會略過斷言、且未保留該行輸出，因此「通過」只能說明沒有失敗，無法證明目錄當時存在；上述改良後的測試需於下一次桌面量測重跑才有可附的原始輸出（見 §7 待補）。
+- **程序歸屬：** WebView2 子程序在整段量測中始終維持 6 個，記憶體總和維持在 **138～146 MB** 之間微幅震盪；增加的記憶體在 `elinkbook.exe` 自身程序（私有記憶體）內。注意 `elinkbook.exe` 內同時包含 Dart VM 堆積與原生堆積，**「在 App 程序內」不等於「在原生端」**（見 §3.3）。
 
 ---
 
 ## 3. 與 Issue 2（Metadata 解析未修前）之數據對比
 
-在 Issue 2 報告（`issue-2-report.md` §4.3）中，未修改前的 headless metadata 同樣透過 `shouldInterceptRequest` 整本回傳 224 MB 大檔，當時量得數據如下：
+### 3.1 數量級相近的部分
 
-| 比較項目 | Issue 2 Metadata 未修前（debug 版） | Issue 3 閱讀器開關（debug 版） | 相關性結論 |
+在 Issue 2 報告（`issue-2-report.md` §4.3）中，未修改前的 headless metadata 同樣透過 `shouldInterceptRequest` 整本回傳 224 MB 大檔，同一程序、debug 版、每次後等 6 秒，量得 359 → 816 → 1,268 → 1,722 → 2,173 MB（每次約 +452 MB）。
+
+| 比較項目 | Issue 2 Metadata 未修前（debug 版） | Issue 3 閱讀器開關（debug 版） | 說明 |
 |:---|:---:|:---:|:---|
-| 第 2 次增量 | +452 MB | **+445.77 MB** | 數值完全一致 |
-| 第 3 次增量 | +454 MB | **+460.79 MB** | 數值完全一致 |
-| 第 4 次增量 | +451 MB | **+451.74 MB** | 數值完全一致 |
-| 後續每次穩定增量 | **約 +452 MB** | **約 +452.8 MB** | **恰為書檔大小（224.7 MB）之 2 倍** |
-| 記憶體回落情況 | 關閉後不回落 | 關閉後不回落 | 原生記憶體永久堆積 |
+| iter 1 增量 | 約 +457 MB（359→816） | **+1,130.96 MB** | **不相近，見 §3.2** |
+| iter 2 增量 | 約 +452 MB | +445.77 MB | 相近（差約 6 MB） |
+| iter 3 增量 | 約 +454 MB | +460.79 MB | 相近（差約 7 MB） |
+| iter 4 增量 | 約 +451 MB | +451.74 MB | 相近（差約 1 MB） |
+| iter 2～4 平均 | 約 +452 MB | 約 +452.8 MB | 約為書檔大小（224.7 MB）的 2.0 倍 |
+| 關閉後是否回落 | 不回落 | 不回落 | 一致 |
 
-**結論：**
-Issue 1 當初在手動觀察時得出「離開閱讀器後 App 沒有多出兩份書的大小」為**誤判**。嚴格的自動化迴圈證明：**閱讀器開書走 `shouldInterceptRequest` 整本回傳時，與 Issue 2 存在完全相同、比例精確吻合（每次書檔大小 $\times 2$）的重大記憶體洩漏！**
+**這裡能說的：** 閱讀器開書路徑在 iter2～4 呈現與 Issue 2 未修前 metadata 路徑**數量級相同、約為書檔 2 倍**的逐次累加。**不能說的：** 兩者「完全一致」、「精確吻合」或必然同一成因——兩條路徑的程式碼、請求次數與量測 harness 都不同，本 Issue 沒有做任何能證明同源的實驗。
 
-### 根因機制分析
+Issue 1 當初手動觀察得出「離開閱讀器後 App 沒有多出兩份書的大小」；本 Issue 的自動化迴圈與其不符，Issue 1 的觀察應視為被推翻（手動觀察無法分辨逐次累加）。
 
-在 `flutter_inappwebview_windows` 的原生 C++ 原始碼 [`web_resource_response.cpp`](file:///C:/Users/fycdc/AI/elinkBook/app/windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows/types/web_resource_response.cpp#L46-L50)：
+### 3.2 iter1 +1,131 MB：原因未查明
+
+iter1 的增量是書檔大小的約 **5.0 倍**（1,130.96 / 224.7），遠大於 iter2～4 的約 2 倍，也大於 Issue 2 同階段的約 +457 MB。工作集 iter1 增量為 +677.8 MB（573.74→1,251.51），也大於 iter2～4 的約 +222 MB。
+
+參考：iter0（暖身）從 before 到 after_wait 是 +481 MB（251.36→732.40），與穩態相近；因此 iter1 才是異常點，而非暖身本身異常。
+
+可能原因（**均未驗證**）：iter1 才第二次開書，可能有只在第二輪出現的一次性快取或配置器擴張；也可能 iter1 的某次開書觸發了額外的整本請求。要釐清需要統計每次開書的攔截呼叫次數與回傳位元組量（見 §7 待補實驗）。本報告不以 iter2～4 的穩態掩蓋 iter1。
+
+### 3.3 Dart 端保留尚未在本路徑排除
+
+Issue 2 §4.3 用「每次攔截都回傳同一個 Dart `Uint8List`」的實驗排除了 Dart 端保留（工作集之後每次僅約 +225 MB）。**本 Issue 的閱讀器路徑沒有重做這個實驗。** 因此「洩漏在原生端」是依 Issue 2 結論類推，不是本路徑的直接證據。
+
+另外觀察：每次迭代私有記憶體增量（約 +452 MB）約為工作集增量（約 +222～228 MB）的 2 倍，表示約一半是已提交但未使用（未常駐）的堆積。這與「物件仍被參考」或「配置器保留未歸還」兩種解釋都相容，本報告無法區分。每次累加且 6 秒內不回落，**符合洩漏特徵**，但 6 秒等待與未主動觸發 Dart GC，不足以排除配置器延遲歸還。
+
+### 3.4 根因機制：僅為程式碼審視下的假設
+
+外掛 `flutter_inappwebview_windows` 0.6.0 的 C++ 原始碼 [`web_resource_response.cpp`](../../../app/windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows/types/web_resource_response.cpp)（行 46～50；該路徑位於 ephemeral 目錄，需先 `flutter pub get` 才存在）：
 ```cpp
 wil::com_ptr<IStream> postDataStream = nullptr;
 if (data.has_value()) {
@@ -89,73 +118,118 @@ if (data.has_value()) {
     reinterpret_cast<const BYTE*>(postData.data()), static_cast<UINT>(postData.length()));
 }
 ```
-當 Dart 端回傳 235 MB 的 `Uint8List` 時：
-1. MethodChannel IPC 反序列化至 C++ 的 `std::vector<uint8_t> data`（**第 1 份，~225 MB**）。
-2. `auto postData = std::string(...)` 複製構造出一份字串（**第 2 份，~225 MB**）。
-3. `SHCreateMemStream(...)` 在 Win32 堆積上再複製配置一份 Stream 緩衝區（**第 3 份，~225 MB**）。
-4. 雖然局部變數釋放了 `postData`，但 WebView2 內部或 Stream COM 物件的生命週期未在頁面關閉時正常析構回收，導致每次開書都在原生堆積上留下約 452 MB 的未釋放區塊。
+從程式碼可以**確認**的是：一次回傳 N 位元組，會在原生端同時存在 `std::vector`、`std::string` 與 `SHCreateMemStream` 的緩衝區（理論上 2～3 份副本的瞬間尖峰）。
+
+**無法確認**的是：為何實測每次**持續**留下約 2 倍而非 3 倍、持續留存的是哪些副本、為何 `postData` 釋放後仍不回落。「WebView2 內部或 Stream COM 物件未在頁面關閉時析構」只是推測，沒有任何實驗支持。
+
+Issue 2 §4.3 已實驗：補上外掛少的 `Release()` 後數字**完全不變**，並明確寫「更細的根因沒有查明」。本 Issue 沒有新實驗推翻或補強這點，因此**根因維持未查明**，且此處的 C++ 機制描述**不應作為選擇修法的依據**，只能作為方向線索。
 
 ---
 
-## 4. Task 3 全文索引器路徑量測與診斷分析（`FoliateContentIndexer`）
+## 4. Task 3 全文索引器路徑：未取得量測數據
 
-### 4.1 執行現象與深度診斷
+### 4.1 執行現象
 
-在嘗試對 `FoliateContentIndexer` 執行 224 MB 迴圈時，測試程序在啟動背景 `HeadlessInAppWebView` 並載入 `assets/foliate/index.html?mode=index` 約 9 秒後，無預警遭遇連線中斷（`Lost connection to device`），程序無回報例外直接終止（未觸發 WER CrashDump，非 Access Violation）。
+在嘗試對 `FoliateContentIndexer` 執行 224 MB 迴圈時，測試程序在啟動背景 `HeadlessInAppWebView` 並載入 `assets/foliate/index.html?mode=index` 約 9 秒後，無預警遭遇連線中斷（`Lost connection to device`），程序無回報例外直接終止（未觸發 WER CrashDump，非 Access Violation）。**索引器沒有完成任何一輪，因此沒有任何 `[leak]` 數據，也沒有 `[leak-verdict]`。**
 
-透過植入底層攔截探針追蹤發現：
-1. **背景隱藏視窗限制：**
-   Windows 平台的 `HeadlessInAppWebView` 實作方式是呼叫 Win32 `CreateWindowEx` 並設定 `ShowWindow(hwnd, SW_HIDE)`。Chromium 在後台隱藏視窗中為了節省資源，會**完全暫停 `requestAnimationFrame`（rAF）泵送**，且隱藏視窗之 `getBoundingClientRect()` 尺寸為 0。
-2. **`index.html` 的開書連動死鎖：**
-   `foliate-js` 的 `assets/foliate/index.html` 底部無條件呼叫 `openBook()` → `openAtInitialLocation()` → `view.init({})`，進而掛載 `<foliate-paginator>`。然而 `paginator.js` 嚴重依賴 `requestAnimationFrame` 進行版面佈局並發送 `relocate` 事件。在 `SW_HIDE` 下，`relocate` 永遠不會觸發，使得等待開書完成的 `onPageRendered` 永久卡死。
-3. **大檔串流與記憶體極限：**
-   在隱藏視窗的死鎖狀態下，Dart 攔截回呼同時向原生端泵送了 235 MB 的整檔位元組，導致 C++ 與 Dart VM 之間的 IPC 佇列與記憶體堆疊超載，引發引擎與 VM Service 斷開連線。
-4. **架構多餘性：**
-   全文索引器（`FoliateContentIndexer`）的核心職責僅是呼叫 `extractSegmentsForSection(i)`，即調用 `view.book.sections[i].createDocument()` 提取純文字與計算 CFI，**根本不需要 `paginator.js` 進行任何分頁排版與渲染**。
+### 4.2 診斷（僅為推論）
 
-### 4.2 結論
+以下為除錯時以臨時探針得到的**推論**；該探針程式**未進版控**，輸出未保存，無法重現，應視為待驗證的線索，而非結論：
 
-全文索引器路徑底層使用的書籍回傳函式與閱讀器相同（皆為 `readWindowsBookBytes` ＋ `WebResourceResponse` 整本回傳），因此必然繼承了上述每次 +452 MB 的 C++ 洩漏缺陷。此外，其在 Windows 上的 `HeadlessInAppWebView` 更存在 rAF 暫停與分頁死鎖的架構缺陷。
+1. **背景隱藏視窗：** Windows 的 `HeadlessInAppWebView` 推測以 `CreateWindowEx` + `ShowWindow(SW_HIDE)` 建立視窗（**未查證外掛視窗建立程式碼**）；Chromium 在隱藏視窗可能暫停 `requestAnimationFrame` 並使 `getBoundingClientRect()` 為 0。
+2. **`index.html` 開書連動：** `assets/foliate/index.html` 底部無條件呼叫 `openBook()`，進而掛載依賴 rAF 的 `<foliate-paginator>`；若 rAF 暫停，`relocate` 不會觸發，等待 `onPageRendered` 會卡住。
+3. **大檔傳輸與斷線的關聯：** 推測隱藏視窗卡住時整本位元組仍被泵送，造成斷線。**此項證據偏弱**：同一個程序在閱讀器路徑可連續傳輸 4 次（每次 235 MB）而不斷線，所以「235 MB 傳輸本身導致斷線」並不成立，斷線成因其實**不明**。
+4. **架構觀察：** 索引器核心只需呼叫 `extractSegmentsForSection(i)` 提取純文字與 CFI，理論上不需要 `paginator.js` 版面排版；這是設計層面的觀察，不是量測結果。
+
+### 4.3 結論
+
+索引器與閱讀器共用同一個回傳函式（`readWindowsBookBytes` + `WebResourceResponse` 整本回傳），**因此預期會有相同的逐次累加風險**，但這是由共用程式碼推得的**預期**，**不是量測結果**。索引器在 Windows 上目前**根本無法跑完**（原因不明，rAF 暫停是其中一個待驗證假設），這是獨立於洩漏的另一個問題，需另行追查。
 
 ---
 
 ## 5. 修法選項討論與取捨（供決策）
 
-由於閱讀器路徑已確鑿判定 `leaked = true`（持續棘輪洩漏），且索引器亦存在相同缺陷，依計畫範圍嚴格**停下不修改 `lib/` 正式程式**，呈報以下三種修法選項供討論決定：
+閱讀器路徑已判定 `leaked = true`（持續棘輪），依計畫範圍嚴格**停下不修改 `lib/` 正式程式**，呈報以下選項供討論。需要先說明的背景：
 
-### 選項 A：啟動 `shelf` 本機 HTTP 伺服器（推薦，根本解決）
+- `epic.md` 決策 6／15（2026-11-03）曾判斷 `shelf` 伺服器**不需要**，並接受「224 MB 書開書瞬間 App 與 WebView2 合計尖峰約 3.8 GB（release 版，持續約 3 秒後回落）」為已知代價，改善留給後續 Issue（出處：`spike-report.md` 結論 1，release 版僅量一次）。**本 Issue 帶來的新事實是：不只是瞬間尖峰，而是逐次累加不回落的洩漏（debug 版）**，這是重新檢討決策 6／15 的理由。
+- 以下各項的好處是**預期**，除選項 B 的 metadata 部分外**皆未經本專案實測**。
 
-- **架構方案：** 回頭檢視 `docs/epics/epic-66-windows-port/epic.md` 決策 15 的備案。在 App 啟動時於本機（`127.0.0.1:<random-port>`）啟動輕量 `shelf` HTTP 伺服器，直接以檔案串流服務 `/assets/foliate/` 與書籍檔案。
-- **優點：**
-  1. **徹底消滅 C++ 記憶體洩漏：** 完全繞過 `flutter_inappwebview_windows` 的 `shouldInterceptRequest` 與 `web_resource_response.cpp`，不再有 `std::string` 與 `SHCreateMemStream` 的多重複製與未釋放問題。
-  2. **原生支援 HTTP 206 Partial Content (Range Request)：** `shelf_static` 或自訂 handler 原生支援 Range 請求，`foliate-js` 只需抓需要的章節或區段，**開書瞬間尖峰從 3.8 GB 直接降至數 MB**。
-  3. **閱讀器與索引器雙贏：** 閱讀器開書流暢度大幅提升；索引器也不再因大檔整本傳輸而崩潰。
-- **代價與風險：**
-  - 需要管理本機 HTTP 伺服器的生命週期（隨 App 啟動、關閉時 release）。
-  - 需要在 Android / Windows 之間做平台分流（Android 維持 WebViewAssetLoader，Windows 走本機 shelf）。
+### 選項 B：HTTP Range 請求攔截（Issue 2 已驗證有效的路線，建議優先評估）
 
-### 選項 B：HTTP Range 請求攔截器（沿用 Issue 2 思路）
+- **架構方案：** 比照 Issue 2 的 `readFileRange`，Dart 攔截端解析 `Range: bytes=start-end`，只回傳被要求的區段；閱讀器改用類 Blob 的 ZIP loader（Issue 2 的 `readBookMetadataByRange` 已是同一類做法：256 KB 區塊快取，13 份 fixture 與整檔結果一致）。
+- **已有證據（Issue 2 §4.4，debug 版、metadata 用途）：** 4 次解析後私有記憶體 2,173 → 381 MB，每次殘餘約 +3～5 MB；224 MB 解析耗時 9,019 → 約 2,500 ms。這同時回應「頻繁小請求的 IPC 負擔」的疑慮——至少在 metadata 場景並未造成明顯延遲。
+- **未知／風險：**
+  - 閱讀器需要讀的章節內容與資源遠多於 metadata，請求次數與延遲未實測。
+  - `foliate-js` 的 `epub.js` 預設從整本 Blob 解壓 ZIP；改為 Range 版 loader 的改造範圍尚未估算（Issue 2 已有可借鏡的類 Blob 實作，複雜度可能低於先前預期，但這是推測）。
+  - 仍經過外掛的 MethodChannel／COM 路徑；Issue 2 結論是「繞開洩漏」而非「修好」，殘餘約 3～5 MB／次與傳輸量成正比。
 
-- **架構方案：** 閱讀器與索引器不送整本書，改為比照 Issue 2 的 `readFileRange`，讓 Dart 攔截端解析 `Range: bytes=start-end`，每次只回傳被要求的區段（例如 256 KB ～ 4 MB）。
-- **優點：** 不需額外啟動本機 socket / HTTP server。
-- **代價與風險：**
-  - `readest/foliate-js` 的 `epub.js` 預設是透過 Fetch 取得整本 Blob/ArrayBuffer 解壓 ZIP。若要支援 Range 請求，需要修改或封裝底層 ZIP loader（類似 `readBookMetadataByRange`），對流式閱讀器改造複雜度高。
-  - 每個小區段的攔截仍需經過 Flutter MethodChannel IPC 與 C++ JNI/COM 封裝，頻繁小請求的 IPC 負擔與延遲可能顯著。
+### 選項 A：本機 `shelf` HTTP 伺服器
 
-### 選項 C：修補 `flutter_inappwebview_windows` 插件 C++ 原始碼
+- **架構方案：** App 啟動時於 `127.0.0.1:<random-port>` 起輕量 `shelf` 伺服器，以檔案串流服務 foliate 資產與書檔（即 `epic.md` 決策 6 原預設，後因攔截可用而擱置）。
+- **預期好處（未實測）：** 繞開外掛 `shouldInterceptRequest` 的 `web_resource_response.cpp` 路徑；`shelf_static` 等支援 Range，`foliate-js` 可只抓需要的區段；閱讀器與索引器可能同時受益。
+- **代價與風險：** 需管理伺服器生命週期；需 Android／Windows 平台分流（Android 維持 `WebViewAssetLoader`，**此點未逐一核對現行程式碼**）；本機 socket 的權杖與防外部存取設計；索引器的 rAF 問題與傳輸方式無關，**本選項不能解決索引器的 Headless 卡住問題**。
+- 注意：「從 3.8 GB 降至數 MB」是**預期**，本專案沒有量過 `shelf` 方案。
 
-- **架構方案：** 在 `app/windows/flutter/ephemeral/...` 針對 `web_resource_response.cpp` 進行 patch，改用直接記憶體對映或修復 COM 參考計數。
-- **代價與風險：**
-  - 治標不治本：即使修好洩漏，開書時 224 MB $\times$ 複本造成的 3.8 GB 瞬間尖峰仍然存在。
-  - 維護成本高：插件原始碼位於 ephemeral 目錄，每次 `flutter clean` 或插件變更都需要維持 patch 機制。
+### 選項 C：修補外掛 C++ 原始碼
+
+- **架構方案：** patch `web_resource_response.cpp`（改用直接記憶體對映或修正 COM 參考計數）。
+- **代價與風險：** 根因未查明（見 §3.4），Issue 2 已證實補 `Release()` 無效，patch 方向沒有依據；即使修好洩漏，整本回傳的瞬間尖峰（spike-report 的 release 版 3.8 GB）仍在；原始碼位於 ephemeral 目錄，`flutter clean` 或外掛升級會使 patch 失效，維護成本高。
+
+### 選項 D：其他尚未評估的方案（至少需說明排除理由）
+
+- **WebView2 虛擬網域對應**（`SetVirtualHostNameToFolderMapping`）：`epic.md` 決策 6 原本要求實測，但 `spike-report.md` 的驗證只記錄請求攔截。在本機 ephemeral 外掛的 Windows 原始碼中**搜尋不到**對應呼叫，推測外掛未暴露此 API，若要用需自寫原生 C++（或 fork 外掛）。**這個方案能讓 WebView2 直接由檔案系統串流，理論上避開 Dart 端與 `WebResourceResponse` 整本複製，值得在決策前先確認可行性。**
+- **分塊串流回應：** 外掛的 `WebResourceResponse.data` 是整包 `Uint8List`，推測無法分塊，需確認。
+- **`file://` 或暫存路徑導向：** 受 WebView 同源與安全限制，可行性待確認。
+
+### 建議的決策順序
+
+1. 先補 §7 的低成本排除實驗，確立洩漏確實在原生端（避免修錯方向）。
+2. 評估選項 B（已有 Issue 2 驗證）與選項 D 的虛擬網域（確認外掛能否使用）。
+3. 選項 A 作為 B／D 不可行時的備案；選項 C 不建議。
+4. 索引器的 Headless 卡住問題需獨立追查，不論採用哪個方案都不會自動解決。
 
 ---
 
 ## 6. 計畫執行與停點狀態
 
 - [x] **Task 1：洩漏判定規則**（純 Dart TDD，commit `4fcdbb59`）
-- [x] **Task 2：量測 Helper**（`leak_meter.dart`，commit `2aa50ad0`）
-- [x] **Task 3：索引器量測與探針診斷**（確認 Windows Headless 隱藏視窗限制與大檔死鎖）
+- [x] **Task 2：量測 Helper**（`test/support/leak_meter.dart`，commit `2aa50ad0`；後續審查修正見 §8）
+- [ ] **Task 3：索引器量測：未完成。** 索引器在 Windows `HeadlessInAppWebView` 下無法跑完任何一輪，**沒有 `[leak]` 數據、沒有判定**；僅有推論性診斷（§4），被阻擋原因不明。
 - [x] **Task 4：閱讀器迴圈量測**（完成 4 次循環，判定 `leaked = true`, `ratcheting = true`）
 - [x] **Task 5 Step 1：撰寫本判定報告**
 - [x] **Task 5 Step 2：觸發停點規則**（洩漏成立，停下不改 `lib/`，交由使用者決策修法計畫）
+- [ ] **Task 5 Step 3、4（完整 `flutter test` 與最終 commit）：** 因觸發停點而未執行；修法計畫確定後於該 Issue 補做。
+
+---
+
+## 7. 限制與待補實驗（誠實揭露）
+
+**限制：**
+
+- **只有 Debug 版**、單一程序、單一本書（224.7 MB）、單次執行；沒有 Release 版量測，沒有重複執行驗證數字穩定性。
+- 取樣只有每輪 `before`／`after_run`／`after_wait` 三個點，**未量到真正的尖峰**；報告中任何「尖峰」數字都來自 `spike-report.md`（release 版僅量一次），不是本 Issue 的結果。
+- 6 秒等待與未主動觸發 Dart GC，不能排除配置器延遲歸還（雖然逐次累加仍符合洩漏特徵）。
+- 閱讀器路徑的 Dart 端保留未重新排除（§3.3）。
+- iter1 +1,131 MB 未解釋（§3.2）。
+- 索引器路徑沒有量測數據（§4）。
+- 外掛 `SW_HIDE` 與 rAF 暫停的說法未查證外掛視窗建立程式碼。
+- 本報告數字出自一次桌面執行，審查時未重現。
+
+**待補實驗（低成本，建議先於選擇修法前進行；本次尚未執行，需要 Windows 桌面互動工作階段）：**
+
+1. 閱讀器路徑每次攔截都回傳**同一個** `Uint8List`，重跑迴圈，確認私有記憶體是否仍逐次累加（確立原生端歸屬）。
+2. 以 Release 版（`flutter build windows --release`）至少重跑一次閱讀器迴圈。
+3. 在攔截回呼內統計每次開書的呼叫次數與回傳位元組量，檢查 iter1 是否出現額外整本請求。
+4. 拉長 `after_wait` 並在量測前主動觸發 Dart GC，區分配置器延遲歸還與真洩漏。
+5. 重跑改良後的 `reader_leak_test.dart`，留存 `[leak] book_cache 目錄存在=…` 原始輸出（附於 `build/leak_reader.log` 摘錄）。
+
+---
+
+## 8. 審查後的程式與文件調整
+
+依程式審查報告所做的修正（僅測試與文件，未動 `lib/`）：
+
+- `leak_verdict.dart` 與 `leak_meter.dart` 移至 `app/test/support/`，`integration_test/` 單向引用 `test/`，不再反向。
+- `leak_meter.dart`：PowerShell 輸出改用 `InvariantCulture`，解析失敗改丟例外（不再 `?? 0.0` 靜默吞掉）；大檔路徑移除個人磁碟位置，改用環境變數 `ELINK_LEAK_EPUB`。
+- `reader_leak_test.dart`：快取清理斷言不再因目錄不存在而空過，並印出目錄狀態；兩支洩漏測試加註「修法完成後須改為 `expect(verdict.leaked, isFalse)`」。
+- 報告：移除「完全一致」、「精確吻合」、「確鑿」、「必然」等過度措辭；補入限制與待補實驗；修正選項評比。

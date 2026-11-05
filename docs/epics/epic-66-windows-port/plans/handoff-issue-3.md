@@ -1,5 +1,7 @@
 # Epic 66 Issue 3 接手交接文件 (Handoff Document)
 
+> **【歷史文件】** 本文件記錄交接當下（量測前）的狀態。量測已完成，最終結果以 [`issue-3-report.md`](../issue-3-report.md) 為準：Task 4 已完成並判定洩漏；Task 3 未完成（索引器無法跑完）；Task 5 已觸發停點。檔案已於審查後移至 `app/test/support/`（見下方更新後路徑）。
+
 **建立時間：** 2026-11-05 09:52  
 **當前分支：** `feat/epic-66-issue-3-leak-verification`  
 **關聯實作計畫：** [`docs/epics/epic-66-windows-port/plans/plan-issue-3.md`](file:///C:/Users/fycdc/AI/elinkBook/docs/epics/epic-66-windows-port/plans/plan-issue-3.md)  
@@ -20,12 +22,12 @@
 | 項目 | 狀態 | 說明與 Commit |
 |---|:---:|---|
 | **分支建立** | ✅ 完成 | 工作位於 `feat/epic-66-issue-3-leak-verification`，保護 `main` 分支。 |
-| **Task 1：洩漏判定規則** | ✅ 已提交 | [`app/test/windows_leak/leak_verdict.dart`](file:///C:/Users/fycdc/AI/elinkBook/app/test/windows_leak/leak_verdict.dart) 實作完成，單元測試 [`app/test/windows_leak/leak_verdict_test.dart`](file:///C:/Users/fycdc/AI/elinkBook/app/test/windows_leak/leak_verdict_test.dart) 7/7 通過（commit `4fcdbb59`）。 |
-| **Task 2：量測 Helper** | ✅ 已提交 | [`app/integration_test/windows_leak/leak_meter.dart`](file:///C:/Users/fycdc/AI/elinkBook/app/integration_test/windows_leak/leak_meter.dart) 實作完成，單元測試 [`app/test/windows_leak/leak_meter_test.dart`](file:///C:/Users/fycdc/AI/elinkBook/app/test/windows_leak/leak_meter_test.dart) 3/3 通過（commit `2aa50ad0`）。 |
+| **Task 1：洩漏判定規則** | ✅ 已提交 | [`app/test/support/leak_verdict.dart`](file:///C:/Users/fycdc/AI/elinkBook/app/test/support/leak_verdict.dart) 實作完成，單元測試 [`app/test/windows_leak/leak_verdict_test.dart`](file:///C:/Users/fycdc/AI/elinkBook/app/test/windows_leak/leak_verdict_test.dart) 7/7 通過（commit `4fcdbb59`）。 |
+| **Task 2：量測 Helper** | ✅ 已提交 | [`app/test/support/leak_meter.dart`](file:///C:/Users/fycdc/AI/elinkBook/app/test/support/leak_meter.dart) 實作完成，單元測試 [`app/test/windows_leak/leak_meter_test.dart`](file:///C:/Users/fycdc/AI/elinkBook/app/test/windows_leak/leak_meter_test.dart) 3/3 通過（commit `2aa50ad0`）。 |
 | **原生建置環境** | ✅ 完成 | `nuget.exe` 已配置於 `C:\Users\fycdc\bin\nuget.exe` 並登錄至 User PATH；Flutter Windows 插件相依 DLL 皆已就緒。 |
-| **Task 3：索引器迴圈** | 🟡 程式碼就緒 | [`app/integration_test/windows_leak/indexer_leak_test.dart`](file:///C:/Users/fycdc/AI/elinkBook/app/integration_test/windows_leak/indexer_leak_test.dart) 撰寫完成，靜態分析 `flutter analyze` 乾淨，待桌面 UI 執行。 |
-| **Task 4：閱讀器迴圈** | 🟡 程式碼就緒 | [`app/integration_test/windows_leak/reader_leak_test.dart`](file:///C:/Users/fycdc/AI/elinkBook/app/integration_test/windows_leak/reader_leak_test.dart) 撰寫完成（含 `onError` Fail-Fast 與 `book_cache` 快取刪除斷言），`flutter analyze` 乾淨，待桌面 UI 執行。 |
-| **Task 5：報告與停點** | ⚪ 待執行 | 待 Task 3 與 Task 4 取得量測數據後撰寫報告並依停點規則決策。 |
+| **Task 3：索引器迴圈** | ❌ 未完成（交接時：🟡 程式碼就緒） | [`app/integration_test/windows_leak/indexer_leak_test.dart`](file:///C:/Users/fycdc/AI/elinkBook/app/integration_test/windows_leak/indexer_leak_test.dart) 撰寫完成，靜態分析 `flutter analyze` 乾淨，待桌面 UI 執行。 |
+| **Task 4：閱讀器迴圈** | ✅ 已完成（交接時：🟡 程式碼就緒） | [`app/integration_test/windows_leak/reader_leak_test.dart`](file:///C:/Users/fycdc/AI/elinkBook/app/integration_test/windows_leak/reader_leak_test.dart) 撰寫完成（含 `onError` Fail-Fast 與 `book_cache` 快取刪除斷言），`flutter analyze` 乾淨，待桌面 UI 執行。 |
+| **Task 5：報告與停點** | ✅ 報告完成、已觸發停點（交接時：⚪ 待執行） | 待 Task 3 與 Task 4 取得量測數據後撰寫報告並依停點規則決策。 |
 
 ---
 

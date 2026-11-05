@@ -21,8 +21,8 @@ import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/windows/windows_webview_environment.dart';
 
 import '../../test/support/pump_localized_widget.dart';
-import '../../test/windows_leak/leak_verdict.dart';
-import 'leak_meter.dart';
+import '../../test/support/leak_verdict.dart';
+import '../../test/support/leak_meter.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -77,14 +77,16 @@ void main() {
         await tester.pumpAndSettle();
 
         // 驗證 dispose 確實刪除本實例之快取子目錄
-        if (bookCacheDir.existsSync()) {
-          final entries = bookCacheDir.listSync();
-          expect(
-            entries,
-            isEmpty,
-            reason: '閱讀器卸載後 book_cache 子目錄應被完全清理',
-          );
-        }
+        // 目錄不存在視為已清理；存在則必須為空。實際走了哪個分支一律印出，避免斷言空過而不自知。
+        final cacheExists = bookCacheDir.existsSync();
+        final entries = cacheExists ? bookCacheDir.listSync() : const [];
+        // ignore: avoid_print
+        print('[leak] book_cache 目錄存在=$cacheExists 剩餘項目=${entries.length}');
+        expect(
+          entries,
+          isEmpty,
+          reason: '閱讀器卸載後 book_cache 子目錄應被完全清理',
+        );
       }
 
       // 暖身（iter = 0）：排除首次初始化雜訊，作為基線
@@ -127,6 +129,8 @@ void main() {
         thresholdRatio: 0.05,
       );
 
+      // 注意：修法完成前刻意不斷言（洩漏已知成立，斷言會讓測試恆失敗）。
+      // 修法落地後須改為 expect(verdict.leaked, isFalse) 作為長期回歸防線。
       // ignore: avoid_print
       print(
         '[leak-verdict] path=reader leaked=${verdict.leaked} ratcheting=${verdict.ratcheting} deltas=${verdict.deltas} exceeded=${verdict.exceededIterations} threshold_mb=${verdict.thresholdMb.toStringAsFixed(2)}',

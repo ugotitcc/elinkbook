@@ -17,8 +17,8 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/search/foliate_content_indexer.dart';
 import 'package:elinkbook/windows/windows_webview_environment.dart';
 
-import '../../test/windows_leak/leak_verdict.dart';
-import 'leak_meter.dart';
+import '../../test/support/leak_verdict.dart';
+import '../../test/support/leak_meter.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -89,6 +89,7 @@ void main() {
         thresholdRatio: 0.05,
       );
 
+      // 注意：修法完成前刻意不斷言；修法落地後須改為 expect(verdict.leaked, isFalse)。
       // ignore: avoid_print
       print(
         '[leak-verdict] path=indexer leaked=${verdict.leaked} ratcheting=${verdict.ratcheting} deltas=${verdict.deltas} exceeded=${verdict.exceededIterations} threshold_mb=${verdict.thresholdMb.toStringAsFixed(2)}',

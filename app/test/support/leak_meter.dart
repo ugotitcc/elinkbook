@@ -34,10 +34,12 @@ class MemSample {
 
 /// 解析量測用大檔 EPUB 路徑。
 String resolveLargeEpubPath() {
-  const candidates = [
+  // 可用環境變數 ELINK_LEAK_EPUB 指定大檔路徑（避免寫死個人磁碟位置）。
+  final fromEnv = Platform.environment['ELINK_LEAK_EPUB'];
+  final candidates = [
+    if (fromEnv != null && fromEnv.isNotEmpty) fromEnv,
     '../tmp/AI世界的底層邏輯與生存法則.epub',
     'tmp/AI世界的底層邏輯與生存法則.epub',
-    r'U:\05電子書\IT\AI世界的底層邏輯與生存法則.epub',
   ];
   for (final path in candidates) {
     if (File(path).existsSync()) {
@@ -94,7 +96,7 @@ foreach (\$p in \$procs) {
     }
 }
 \$wvPrivate = [math]::Round(\$wvPrivate, 2)
-Write-Output ("\$appPrivate \$appWs \$wvPrivate \$wvCount")
+Write-Output ([string]::Format([cultureinfo]::InvariantCulture, "{0} {1} {2} {3}", \$appPrivate, \$appWs, \$wvPrivate, \$wvCount))
 ''';
 
   final result = await Process.run('powershell', ['-NoProfile', '-Command', script]);
@@ -106,10 +108,11 @@ Write-Output ("\$appPrivate \$appWs \$wvPrivate \$wvCount")
   if (parts.length < 4) {
     throw StateError('無法解析 PowerShell 記憶體取樣輸出: "$stdoutStr"');
   }
-  final privateMb = double.tryParse(parts[0]) ?? 0.0;
-  final wsMb = double.tryParse(parts[1]) ?? 0.0;
-  final wv2PrivateMb = double.tryParse(parts[2]) ?? 0.0;
-  final wv2Count = int.tryParse(parts[3]) ?? 0;
+  // 解析失敗一律丟例外，避免靜默變成 0 而讓判定失真
+  final privateMb = double.parse(parts[0]);
+  final wsMb = double.parse(parts[1]);
+  final wv2PrivateMb = double.parse(parts[2]);
+  final wv2Count = int.parse(parts[3]);
 
   return MemSample(
     privateMb: privateMb,

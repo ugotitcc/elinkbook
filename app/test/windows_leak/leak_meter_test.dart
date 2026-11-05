@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../integration_test/windows_leak/leak_meter.dart';
+import '../support/leak_meter.dart';
 
 void main() {
   group('leak_meter 量測工具測試', () {

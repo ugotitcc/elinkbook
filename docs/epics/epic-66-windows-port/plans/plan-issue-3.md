@@ -43,9 +43,9 @@
 
 | 檔案 | 動作 | 職責 |
 |---|---|---|
-| `app/integration_test/windows_leak/leak_verdict.dart` | 建立 | 純 Dart：`evaluateLeak()` 判定規則 |
+| `app/test/support/leak_verdict.dart` | 建立 | 純 Dart：`evaluateLeak()` 判定規則 |
 | `app/test/windows_leak/leak_verdict_test.dart` | 建立 | 判定規則單元測試 |
-| `app/integration_test/windows_leak/leak_meter.dart` | 建立 | 讀 Private Bytes／工作集／WebView2 子程序，印 `[leak]` 行 |
+| `app/test/support/leak_meter.dart` | 建立 | 讀 Private Bytes／工作集／WebView2 子程序，印 `[leak]` 行 |
 | `app/integration_test/windows_leak/indexer_leak_test.dart` | 建立 | 索引器重複索引迴圈 |
 | `app/integration_test/windows_leak/reader_leak_test.dart` | 建立 | 閱讀器重複開關迴圈 |
 | `docs/epics/epic-66-windows-port/issue-3-report.md` | 建立 | 數據、判定、原因說明 |
@@ -56,7 +56,7 @@
 ### Task 1：洩漏判定規則（純 Dart，TDD）
 
 **Files：**
-- Create：`app/integration_test/windows_leak/leak_verdict.dart`
+- Create：`app/test/support/leak_verdict.dart`
 - Test：`app/test/windows_leak/leak_verdict_test.dart`
 
 **Interfaces：**
@@ -79,7 +79,7 @@
 ### Task 2：量測 helper
 
 **Files：**
-- Create：`app/integration_test/windows_leak/leak_meter.dart`
+- Create：`app/test/support/leak_meter.dart`
 
 **Interfaces：**
 - Produces：
