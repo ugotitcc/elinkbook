@@ -107,9 +107,9 @@
 5. 第 1～4 次：`before` → 完整消費 `indexBook()` → `after_run` → 等 6 秒 → `after_wait`。
 6. 以 `evaluateLeak` 計算判定；**測試本身只斷言「迴圈跑完且每次都有取得區段」**，並印出判定結果 `[leak-verdict] path=indexer leaked=<…> deltas=<…>`。**不在此 Task 讓測試因洩漏而失敗**，修法前的測試需能跑出數據；增量門檻斷言於 Task 5 之後（修法完成時）才啟用。
 
-- [ ] **Step 1：** 寫測試；`flutter test integration_test/windows_leak/indexer_leak_test.dart -d windows`。
-- [ ] **Step 2：** 確認輸出 `[leak]` 行完整（4 次 × 3 個 phase ＋基線），把原始輸出存到 `build/leak_indexer.log`（不進版控）。
-- [ ] **Step 3：** `flutter analyze`；commit。
+- [x] **Step 1：** 寫測試；`flutter test integration_test/windows_leak/indexer_leak_test.dart -d windows`。
+- [x] **Step 2：** 確認輸出 `[leak]` 行完整（4 次 × 3 個 phase ＋基線），把原始輸出存到 `build/leak_indexer.log`（不進版控）。
+- [x] **Step 3：** `flutter analyze`；commit。
 
 ---
 
@@ -124,9 +124,9 @@
 3. 暖身與判定同 Task 3；輸出 `path=reader`。
 4. 迴圈需確認 `dispose` 真的跑完：卸載後檢查快取子目錄已被刪除（用 `getTemporaryDirectory()` 下對應 `instanceId` 的目錄是否還在；若不易取得 instanceId，改為量測前後暫存目錄總檔案數不增加）。這是 Review Focus 2 的證據。
 
-- [ ] **Step 1：** 寫測試；`flutter test integration_test/windows_leak/reader_leak_test.dart -d windows`。
-- [ ] **Step 2：** 輸出存 `build/leak_reader.log`。
-- [ ] **Step 3：** `flutter analyze`；commit。
+- [x] **Step 1：** 寫測試；`flutter test integration_test/windows_leak/reader_leak_test.dart -d windows`。
+- [x] **Step 2：** 輸出存 `build/leak_reader.log`。
+- [x] **Step 3：** `flutter analyze`；commit。
 
 ---
 
@@ -136,12 +136,12 @@
 - Create：`docs/epics/epic-66-windows-port/issue-3-report.md`
 - Modify：`docs/epics/epic-66-windows-port/epic.md`（決策 15）、`issues.md`（Issue 3 狀態）
 
-- [ ] **Step 1：報告內容**
+- [x] **Step 1：報告內容**
   - 每條路徑的 4 次數據表（`private_mb`／`ws_mb`／`wv2_private_mb`）、增量、門檻、判定。
   - 與 Issue 2 headless metadata 路徑的洩漏量對照（每次約 +452 MB）。
   - **若兩條皆不洩漏：** 查明 Issue 1「離開閱讀器沒有多出兩份」的原因（比對 metadata 路徑與閱讀器路徑在攔截回應物件生命週期上的差異），說明為何穩定、不是巧合；必要時用 `ReaderScreen` 補驗一次（Q5 定案的備案）。
   - **若任一條洩漏：** 列出修法選項（區段化、回頭檢視 `epic.md` 決策 15 的 `shelf` 備案，及其他）與各自取捨。
-- [ ] **Step 2：停點。** 洩漏成立 → **到此停下**，向使用者報告數據與選項，等使用者決定；**不寫修法程式、不改 `lib/`**。
+- [x] **Step 2：停點。** 洩漏成立 → **到此停下**，向使用者報告數據與選項，等使用者決定；**不寫修法程式、不改 `lib/`**。
 - [ ] **Step 3：（僅在不洩漏、或使用者決定不修時）** `epic.md` 決策 15 補【Issue 3 結果】，`issues.md` Issue 3 改為完成。
 - [ ] **Step 4：** 完整 `flutter test`（`run_in_background`）與 `flutter analyze`；commit。
 
