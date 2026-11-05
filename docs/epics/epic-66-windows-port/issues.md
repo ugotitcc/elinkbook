@@ -6,7 +6,8 @@
 |---|---|---|---|---|
 | 1 | 技術驗證：啟用 `windows/`、啟動鏈平台防護、最小送書原型，確認 7 項過關條件，輸出驗證報告 | 無 | ✅ 已合併 | #381 |
 | 2 | Windows Metadata 背景解析：EPUB 用 foliate-js、PDF 封面用 `pdfrx`，並與 Android Readium 逐本對比 | Issue 1 | ✅ 已合併 | #384 |
-| 3 | 閱讀器開書與全文索引器的「整本回傳」記憶體：驗證是否洩漏，洩漏則修正（來源 Issue 2 審查發現） | Issue 2 | ⚪ 未開始 | — |
+| 3 | 閱讀器開書與全文索引器的「整本回傳」記憶體：驗證是否洩漏，洩漏則修正（來源 Issue 2 審查發現） | Issue 2 | 🟡 量測完成：閱讀器洩漏成立（debug／Release 皆是），修法移至 Issue 4 | — |
+| 4 | Windows 書檔改由本機 loopback HTTP 伺服器（`shelf`）服務，消除「整本回傳」洩漏（來源 Issue 3 報告） | Issue 3 | ⚪ 未開始（spec／plan 已確認） | — |
 
 ## Issue 1 範圍
 
@@ -93,6 +94,54 @@ Issue 2 的程式碼審查發現：用 `shouldInterceptRequest` 把大資料回�
 
 - Windows 整合測試（`-d windows`）：閱讀器與索引器各一支重複開關迴圈，輸出 `[leak] iter=<n> phase=<…> private_mb=<…>` 行；斷言增量門檻（過關條件 3）。
 - 若修法新增純邏輯（例如區段切片、查詢解析），須有純 Dart 單元測試，比照 `test/library/windows_epub_range_test.dart`。
+## Issue 4 範圍
+
+Issue 3 已實證：閱讀器開書以 `shouldInterceptRequest` 整本回傳 224 MB 的書，App 程序私有記憶體每次開關**永久**多約 452 MB，debug 與 Release 版皆然，且與 Dart 端是否保留位元組陣列無關（`issue-3-report.md` §7.1）。依 `issue-3-report.md` §5 與使用者決定：WebView2 虛擬網域對應（選項 D）需 vendor 並修補外掛 C++，不採用；改走**選項 A：本機 `shelf` 伺服器**。
+
+**做法（設計決定，細節見 `plans/plan-issue-4.md`）：**
+
+1. **只搬書檔。** 只有 `/book/` 改由 App 內的 loopback HTTP 伺服器串流服務（綁 `127.0.0.1`、隨機埠、每本書一個隨機權杖、支援 HTTP Range）。foliate-js 頁面與資源、字型維持現行攔截（檔小）。
+2. **頁面來源不變。** 頁面仍由攔截載入、origin 仍是 `https://appassets.androidplatform.net`；`main.js` 新增 `bookBaseUrl` 查詢參數，**未帶時維持原本寫死的網址**，所以 Android 與 metadata 解析器完全不受影響。伺服器對該 origin 回 CORS 標頭。
+3. **Windows 專屬。** Android 維持 `WebViewAssetLoader`，不起伺服器。
+4. **風險優先：** 先做拋棄式原型，用 Issue 3 的 `reader_leak_test` 量測洩漏是否真的消失，**通過才進入正式實作**；沒通過就停下重新評估。
+
+要做的事：
+
+1. 拋棄式原型 + 量測閘門（debug 與 Release）。
+2. `Range` 標頭解析（純邏輯）、書檔 HTTP 處理器、`LocalBookServer`（生命週期、權杖註冊／釋放）。
+3. `main.js` 的 `bookBaseUrl` 參數與 Dart 端 URL 組裝。
+4. `FoliateReaderView` 在 Windows 改用伺服器；移除變成死碼的 `readWindowsBookBytes`／`windowsBookContentType` 與 `/book/` 攔截分支。
+5. `FoliateContentIndexer` 同步改用（已決策納入；**端到端驗證受 Headless 卡住問題阻擋，見不在範圍**）。
+6. ADR、`epic.md` 決策 6／15 補【Issue 3／4 結果】、重跑洩漏量測並寫 `issue-4-report.md`。
+
+不在範圍：
+
+- **索引器在 Windows `HeadlessInAppWebView` 無法跑完**（隱藏視窗疑似暫停 rAF，`issue-3-report.md` §4）：另開 Issue 追查，本 Issue 不解決。
+- **開書時 WebView 端仍會把整本書讀進 WebView2 程序**（foliate-js 的 `makeBook(url)` 是 `fetch` 後轉 Blob）：改成 Range 版 loader 屬「分段服務」，另開 Issue；本 Issue 的目標是消除 `elinkbook.exe` 的洩漏，WebView2 子程序的尖峰只記錄。
+- **自訂字型走攔截的洩漏**：字型是整檔回傳，單檔可達數 MB 到十數 MB，理論上有相同的比例洩漏。本 Issue 只量測並記錄，是否一併搬到伺服器視數據另議。
+- 前兩輪的一次性額外記憶體增量（`issue-3-report.md` §3.2，成因未查明）。
+- 直接服務原檔、省略快取複製：維持現行「先複製到快取子目錄再服務」，避免改變檔案生命週期。
+
+## Issue 4 過關條件
+
+1. **洩漏消失（debug）：** Windows `reader_leak_test` 暖身 1 次 + 正式 4 次，每次私有記憶體增量 < 書檔大小 × 5%（224.7 MB 的書約 11.23 MB）；`leaked == false`。
+2. **洩漏消失（Release）：** 以 Issue 3 的 Release 迴圈（暫時進入點）重跑，同樣 4 次皆低於門檻。
+3. **功能一致：** Windows 開 EPUB 後能翻頁、選字並出現劃線工具列、目錄可用、直排與橫排正確；CBZ（固定版面）能開。
+4. **安全：** 伺服器只綁 loopback；未註冊或已釋放的權杖回 404；`Host` 標頭不是 `127.0.0.1:<port>` 回 403；CORS 只放行 `https://appassets.androidplatform.net`；不可能讀到註冊檔案以外的檔案。
+5. **生命週期：** 離開閱讀器後權杖失效、快取子目錄已刪；同一本書連開兩次互不影響；開書中途離開不留殘餘註冊。
+6. **Android 行為不變：** `main.js` 未帶 `bookBaseUrl` 時的網址與現狀逐字相同；Android 不起伺服器；既有測試全綠。
+7. **記錄（不設硬門檻）：** 224 MB 書開書時 App 與 WebView2 的尖峰記憶體，與 Issue 1 的 3.8 GB 對照；字型攔截的洩漏量。
+8. 新增 ADR；`epic.md` 決策 6／15 補【Issue 3／4 結果】。
+
+## Issue 4 單元測試要求
+
+- `parseByteRange()`（純 Dart）：`bytes=a-b`、`a-`、`-n`（尾端 n 位元組）；`b` 超過檔尾時截斷；`a` 超過檔尾 → 不可滿足（416）；`a > b`、非 `bytes` 單位、格式錯誤 → 無效；多段範圍 → 視為不支援（回整檔 200）；大小為 0 的檔案。
+- 書檔處理器（直接呼叫 shelf `Handler`，不開 socket）：無 `Range` 回 200 + `Content-Length` + `Accept-Ranges: bytes`；單一範圍回 206 + 正確 `Content-Range` 與內容；416；`HEAD` 無本文；`OPTIONS` 預檢回允許 `Range`；未知權杖 404；`Host` 不符 403；`POST` 等回 405；CORS 標頭只對指定 origin；`Content-Type` 依副檔名（`.epub`／`.cbz`）。
+- `LocalBookServer`（真實 loopback socket）：`address.isLoopback`；`register` 後以 `HttpClient` 取得的位元組（含 Range 區段）與原檔一致；`dispose` 後同網址 404；`close` 後連線被拒；同一程序多本書、多個權杖互不影響；權杖不可預測（長度與熵的下限）。
+- URL 組裝：Windows 帶 `bookBaseUrl`、Android 與其他平台不帶（`_buildIndexUri` 既有測試不變）。
+- JS：`bookBaseUrl` 未帶時 `openBook()` 使用的網址與現狀逐字相同（以現有 JS 測試台或純函式抽出後測試）。
+- Windows 整合測試（`-d windows`）：沿用 `reader_leak_test.dart`，修法後把 `[leak-verdict]` 改為斷言 `leaked == false`。
+
 ## 後續 Issue（待 Issue 1 結果決定）
 
 - ~~生產級送書伺服器~~：Issue 1 實測攔截可行（決策 15），不做。大檔整本位元組尖峰（224 MB 書約 3.8 GB）若要改善，另開「分段服務」Issue；洩漏驗證見 Issue 3。
