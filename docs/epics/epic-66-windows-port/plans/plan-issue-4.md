@@ -221,11 +221,11 @@
 - Modify：`epic.md`（決策 6、15 補【Issue 3／4 結果】）、`issues.md`（Issue 3、4 狀態）
 - Modify（若架構事實改變）：根目錄 `CLAUDE.md` 的 `FoliateReaderView` 說明，以一句話補上「Windows 書檔由 loopback HTTP 服務」
 
-- [ ] **Step 1：ADR**：背景（Issue 3 洩漏證據）、決策（只搬書檔、頁面 origin 不變、`bookBaseUrl`、權杖、Range）、被否決的選項（B Range 攔截仍與傳輸量成正比洩漏；C patch 外掛無根因；D 虛擬網域需 vendor 外掛 C++）、後果（維護一個 loopback 服務、平台分流）。
-- [ ] **Step 2：報告**：Task 1 閘門數據、Task 6 debug／Release 數據、過關條件逐項勾選、尖峰記憶體與 3.8 GB 的對照、字型攔截洩漏量測（以 `reader_leak_test` 搭配自訂字型，或明載未量測的原因）、限制與後續 Issue（索引器 Headless、分段載入、前兩輪額外增量）。
-- [ ] **Step 3：** 更新 `epic.md`、`issues.md`（及 `CLAUDE.md` 一句話）。
-- [ ] **Step 4：** 完整 `flutter test`（`run_in_background`）與 `flutter analyze`、兩支 `node tool/check_*.js`。
-- [ ] **Step 5：** commit；準備 PR。
+- [x] **Step 1：ADR**：背景（Issue 3 洩漏證據）、決策（只搬書檔、頁面 origin 不變、`bookBaseUrl`、權杖、Range）、被否決的選項（B Range 攔截仍與傳輸量成正比洩漏；C patch 外掛無根因；D 虛擬網域需 vendor 外掛 C++）、後果（維護一個 loopback 服務、平台分流）。
+- [x] **Step 2：報告**：Task 1 閘門數據、Task 6 debug／Release 數據、過關條件逐項勾選、尖峰記憶體與 3.8 GB 的對照、字型攔截洩漏量測（以 `reader_leak_test` 搭配自訂字型，或明載未量測的原因）、限制與後續 Issue（索引器 Headless、分段載入、前兩輪額外增量）。
+- [x] **Step 3：** 更新 `epic.md`、`issues.md`（及 `CLAUDE.md` 一句話）。
+- [x] **Step 4：** 完整 `flutter test`（`run_in_background`）與 `flutter analyze`、兩支 `node tool/check_*.js`。
+- [x] **Step 5：** commit；準備 PR。
 
 ---
 

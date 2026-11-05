@@ -23,7 +23,7 @@ flutter devices          # 列出可用裝置
   - **`content://` URI 存取**：走原生端 `ReaderResourceChannel.kt` 串流複製到本機暫存檔後再開啟——`pdfrx.openCustom()` 隨機存取分段讀取已證實有 FFI 非同步限制，此為已文件記錄的回退路徑，不要嘗試改回 `openCustom()`。
   - **內文搜尋**：刻意避開 `PdfTextSearcher`/`PdfViewerController.useDocument`（`testWidgets`/fake-async 環境下有死鎖風險）。
 
-- **`FoliateReaderView`**（`app/lib/reader/foliate_reader_view.dart`）→ **所有 Foliate 格式使用**（EPUB 流式與 FXL、KF8/AZW3、CBZ、TXT、MD），`readest/foliate-js`（釘定 commit、直接複製進版控，見 `app/android/app/src/main/assets/foliate/`）跑在 `flutter_inappwebview` 的 `InAppWebView` 內，**不是**傳統 `PlatformView`，透過 `foliate_native_bridge.dart` 與原生端溝通。TXT/MD 匯入時落地合成為 EPUB3 結構，之後與一般 EPUB 走完全相同的渲染/分頁/CFI 路徑（見 ADR 0023）。
+- **`FoliateReaderView`**（`app/lib/reader/foliate_reader_view.dart`）→ **所有 Foliate 格式使用**（EPUB 流式與 FXL、KF8/AZW3、CBZ、TXT、MD），`readest/foliate-js`（釘定 commit、直接複製進版控，見 `app/android/app/src/main/assets/foliate/`）跑在 `flutter_inappwebview` 的 `InAppWebView` 內，**不是**傳統 `PlatformView`，透過 `foliate_native_bridge.dart` 與原生端溝通。TXT/MD 匯入時落地合成為 EPUB3 結構，之後與一般 EPUB 走完全相同的渲染/分頁/CFI 路徑（見 ADR 0023；Windows 端書檔由本機 loopback HTTP 伺服器以串流服務，見 ADR 0042）。
   - **ES 兼容**：釘定版本會無條件使用較新 ES 內建方法（`Object.groupBy`、`Array.prototype.at`），較舊 Android System WebView 不支援時需在 `_esCompatPolyfillJs` 補 polyfill。**每次升級後**都要跑 `node app/tool/check_foliate_es_compat.js` 靜態掃描。
 
 ### Native 層
