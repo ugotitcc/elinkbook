@@ -69,11 +69,11 @@
 - 暫時修改 `main.js` 的 `openBook()`，讀 `params.get('bookBaseUrl')`，有值就用它組書檔網址。
 - 暫時在 `foliate_reader_view.dart` 的 Windows 分支起一個最簡 `dart:io` `HttpServer`（綁 loopback、埠 0、回 `Access-Control-Allow-Origin: https://appassets.androidplatform.net`、支援 `Range`、串流 `File.openRead`），把 `bookBaseUrl` 帶入 `_buildIndexUri`。權杖、Host 檢查、清理都不做。
 
-- [ ] **Step 1：** 實作上述暫時修改（先用 `git stash` 或獨立分支確保能乾淨還原）。
-- [ ] **Step 2：** 跑 `reader_leak_test.dart -d windows`（debug）。**閘門 A：** 能開書（`onPageRendered` 被呼叫）、4 次迭代每次增量 < 11.23 MB。
-- [ ] **Step 3：** 以暫時的 Release 進入點重跑（範本與建置指令見**附錄 A**；`flutter drive`／`flutter run integration_test/...` 在 Release 不可行）。**閘門 B：** 同樣低於門檻。
-- [ ] **Step 4：** 手動目視確認：開 EPUB 可翻頁、選字出現劃線工具列。
-- [ ] **Step 5：** 還原所有暫時修改（`git checkout -- <檔案>`、刪除暫時進入點），把數據摘要記在 `issue-4-report.md` 草稿（Task 8 補完）。
+- [x] **Step 1：** 實作上述暫時修改（先用 `git stash` 或獨立分支確保能乾淨還原）。
+- [x] **Step 2：** 跑 `reader_leak_test.dart -d windows`（debug）。**閘門 A：** 能開書（`onPageRendered` 被呼叫）、4 次迭代每次增量 < 11.23 MB。
+- [x] **Step 3：** 以暫時的 Release 進入點重跑（範本與建置指令見**附錄 A**；`flutter drive`／`flutter run integration_test/...` 在 Release 不可行）。**閘門 B：** 同樣低於門檻。
+- [x] **Step 4：** 手動目視確認：開 EPUB 可翻頁、選字出現劃線工具列。
+- [x] **Step 5：** 還原所有暫時修改（`git checkout -- <檔案>`、刪除暫時進入點），把數據摘要記在 `issue-4-report.md` 草稿（Task 8 補完）。
 - **停點：** 閘門 A 或 B 不過 → **停下**，向使用者報告（可能是混合內容被擋、或洩漏另有他因），不進入 Task 2。
 
 ---
@@ -87,7 +87,7 @@
 **Interfaces：**
 - Produces：`ByteRangeResult parseByteRange(String? header, int fileLength)`，其中結果為三態：`full`（無 Range 或不支援的形式 → 回整檔 200）、`partial(start, end)`（含頭尾，已截斷到檔尾）、`unsatisfiable`（416）。
 
-- [ ] **Step 1：寫失敗測試**，涵蓋：
+- [x] **Step 1：寫失敗測試**，涵蓋：
   - `null`／空字串 → `full`。
   - `bytes=0-99`、`bytes=100-`（到檔尾）、`bytes=-500`（尾端 500 位元組；大於檔案則整檔）。
   - `end` 超過檔尾 → 截斷為 `fileLength-1`。
@@ -95,10 +95,10 @@
   - `start > end`、`bytes=abc`、非 `bytes` 單位（`items=0-1`）→ `full`（忽略無效標頭，符合 RFC 9110 對無法解析者的寬容處理）。
   - 多段範圍 `bytes=0-1,5-6` → `full`。
   - `fileLength == 0` 時任何範圍 → `unsatisfiable`，無 Range → `full`。
-- [ ] **Step 2：** `flutter test test/reader/byte_range_test.dart`，確認失敗。
-- [ ] **Step 3：** 實作。
-- [ ] **Step 4：** 重跑通過；`flutter analyze`。
-- [ ] **Step 5：** commit。
+- [x] **Step 2：** `flutter test test/reader/byte_range_test.dart`，確認失敗。
+- [x] **Step 3：** 實作。
+- [x] **Step 4：** 重跑通過；`flutter analyze`。
+- [x] **Step 5：** commit。
 
 ---
 
