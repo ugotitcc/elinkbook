@@ -18,7 +18,7 @@
 - **伺服器安全底線：** 只綁 loopback；權杖用 `Random.secure()` 產生至少 128 位元；只服務已註冊的檔案，路徑由「權杖 → 註冊表」查得，不接受任何使用者提供的檔案路徑；`Host` 必須是 `127.0.0.1:<實際埠>`；CORS 只回指定 origin（不可用 `*`）；`Cache-Control: no-store`。
 - **串流：** 一律 `File.openRead(start, end)` 串流，**不得把整檔讀成 `Uint8List`**（這正是洩漏的來源）。
 - **Windows 環境：** 多數原始檔是 CRLF，Edit 的定位字串不要含換行；不要對整個既有檔案跑 `dart format`；`git add` 一律明確列檔；不要用 `python`（本機只有 Windows 商店空殼），腳本用 `node`。
-- **Windows 整合測試：** 一次只跑一個檔：`cd app && export MSYS2_ENV_CONV_EXCL=CL CL=/utf-8 && flutter test integration_test/windows_leak/<檔名> -d windows`；跑完用 `git status` 確認 `pubspec.lock`、`windows/flutter/generated_plugin*` 沒被順帶改動（有就還原）。
+- **Windows 整合測試：** 一次只跑一個檔。Bash：`cd app && export MSYS2_ENV_CONV_EXCL=CL CL=/utf-8 && flutter test integration_test/windows_leak/<檔名> -d windows`；PowerShell：`cd app; $env:MSYS2_ENV_CONV_EXCL='CL'; $env:CL='/utf-8'; flutter test integration_test/windows_leak/<檔名> -d windows`。跑完用 `git status` 確認 `pubspec.lock`、`windows/flutter/generated_plugin*` 沒被順帶改動（有就還原）。
 - **測試範圍（`CLAUDE.md`）：** 單一 Task 只跑異動觸及的測試檔；完整 `flutter test` 只在最後一個 Task 跑一次，`run_in_background`。
 - **提交前：** `flutter analyze` 必須 `No issues found!`；跑 `node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js`。
 - **Commit：** 每個 Task 一個 commit；推送前由使用者確認。
@@ -49,7 +49,8 @@
 | `app/lib/reader/local_book_server.dart` | 建立 | `LocalBookServer`：啟動／關閉、`register`／`dispose`、產生網址 |
 | `app/android/app/src/main/assets/foliate/main.js` | 修改 | `openBook()` 的書檔網址改讀 `bookBaseUrl` 參數（預設值不變） |
 | `app/lib/reader/foliate_reader_view.dart` | 修改 | Windows：註冊書檔、`_buildIndexUri` 帶 `bookBaseUrl`、dispose 釋放；移除 `/book/` 攔截分支 |
-| `app/lib/search/foliate_content_indexer.dart` | 修改（Task 7） | 同上；URL 組裝抽成純函式以便單測 |
+| `app/lib/reader/foliate_native_bridge.dart` | 修改（Task 5） | 新增共用純函式 `foliateBookBaseUrlParams`（閱讀器與索引器共用） |
+| `app/lib/search/foliate_content_indexer.dart` | 修改（Task 7） | 同上；`_buildIndexUri` 改為頂層 `buildIndexerUri` 以便單測 |
 | `app/lib/reader/windows_reader_resources.dart` | 視情況修改 | 移除確定無人使用的書檔位元組讀取函式 |
 | `app/test/reader/byte_range_test.dart` | 建立 | 範圍解析單元測試 |
 | `app/test/reader/local_book_handler_test.dart` | 建立 | 處理器單元測試（不開 socket） |
@@ -70,7 +71,7 @@
 
 - [ ] **Step 1：** 實作上述暫時修改（先用 `git stash` 或獨立分支確保能乾淨還原）。
 - [ ] **Step 2：** 跑 `reader_leak_test.dart -d windows`（debug）。**閘門 A：** 能開書（`onPageRendered` 被呼叫）、4 次迭代每次增量 < 11.23 MB。
-- [ ] **Step 3：** 以 Issue 3 的 Release 進入點（暫時的 `probe_main.dart`，不進版控）重跑。**閘門 B：** 同樣低於門檻。
+- [ ] **Step 3：** 以暫時的 Release 進入點重跑（範本與建置指令見**附錄 A**；`flutter drive`／`flutter run integration_test/...` 在 Release 不可行）。**閘門 B：** 同樣低於門檻。
 - [ ] **Step 4：** 手動目視確認：開 EPUB 可翻頁、選字出現劃線工具列。
 - [ ] **Step 5：** 還原所有暫時修改（`git checkout -- <檔案>`、刪除暫時進入點），把數據摘要記在 `issue-4-report.md` 草稿（Task 8 補完）。
 - **停點：** 閘門 A 或 B 不過 → **停下**，向使用者報告（可能是混合內容被擋、或洩漏另有他因），不進入 Task 2。
@@ -116,9 +117,11 @@
 - `Host` 標頭 ≠ `expectedHost()` → 403（防 DNS rebinding）。
 - 權杖不在 registry、或 `<fileName>` 與註冊值不符 → 404（不洩漏是哪一種）。
 - 檔案在處理當下不存在 → 404。
-- `OPTIONS`：回 204，`Access-Control-Allow-Origin: <allowedOrigin>`、`Allow-Methods: GET, HEAD, OPTIONS`、`Allow-Headers: Range`、`Max-Age`。
+- `OPTIONS`：回 204，標頭為 `Access-Control-Allow-Origin: <allowedOrigin>`、`Access-Control-Allow-Methods: GET, HEAD, OPTIONS`、`Access-Control-Allow-Headers: Range`、`Access-Control-Allow-Private-Network: true`（預檢若帶 `Access-Control-Request-Private-Network`，Chromium 的 Private Network Access 檢查需要它；無害，一律回）、`Access-Control-Max-Age: 86400`、`Vary: Origin`。**標頭名稱必須有 `Access-Control-` 前綴**（`Allow`／`Allow-Methods` 不是 CORS 標頭，缺了預檢會被瀏覽器直接拒絕）。
 - `GET`／`HEAD` 成功：`Accept-Ranges: bytes`、`Content-Type`、`Cache-Control: no-store`、`Access-Control-Allow-Origin: <allowedOrigin>`、`Access-Control-Expose-Headers: Content-Length, Content-Range, Accept-Ranges`、`Vary: Origin`；`full` → 200 + `Content-Length`；`partial` → 206 + `Content-Range: bytes s-e/len` + 對應 `Content-Length`；`unsatisfiable` → 416 + `Content-Range: bytes */len`。`HEAD` 不帶本文。
 - 本文為 `File.openRead(start, end + 1)` 的串流，不得整檔讀入記憶體。
+- **所有回應（含 403、404、405、416）都無條件附 `Access-Control-Allow-Origin: <allowedOrigin>` 與 `Vary: Origin`**；否則瀏覽器會把錯誤狀態碼包成不透明的 `TypeError: Failed to fetch`，無法診斷。
+- **權杖釋放時主動中止進行中的串流（I-2）：** `RegisteredBook` 帶一個 `Future<void> disposed`（由 `dispose()` 完成）。本文串流不直接回傳 `File.openRead(...)`，而是以 `StreamController` 轉送並監聽 `disposed`：一旦完成就 `cancel()` 底層訂閱並關閉控制器，確保檔案 handle 同步釋放（Windows 上有開啟中的 handle 會讓 `Directory.deleteSync` 失敗）。
 
 - [ ] **Step 1：寫失敗測試**（以 `Handler(Request('GET', Uri.parse('http://127.0.0.1:1234/book/<token>/current.epub'), headers: {...}))` 直接呼叫，用暫存檔當書）：涵蓋上述每一條行為；另加：位元組內容與原檔指定區段逐位元組相同（含 `0-0`、檔尾單位元組、整檔）；`Content-Length` 與實際串流長度相符；本文是串流（以 `Response.read()` 逐塊讀取驗證，不依賴一次性 `List<int>`）。
 - [ ] **Step 2：** `flutter test test/reader/local_book_handler_test.dart`，確認失敗。
@@ -138,7 +141,7 @@
 - Consumes：`createLocalBookHandler`（Task 3）。
 - Produces：
   - `class LocalBookServer { static final instance; Future<BookServeHandle> register(String filePath); Future<void> close(); }`
-  - `class BookServeHandle { final Uri bookBaseUri; /* 例如 http://127.0.0.1:53211/book/<token>/ */ final String fileName; void dispose(); }`
+  - `class BookServeHandle { final Uri bookBaseUri; /* 例如 http://127.0.0.1:53211/book/<token>/ */ final String fileName; void dispose(); }`；`dispose()` 除了移出 registry，還要完成該書的 `disposed` Future，**主動中止所有進行中的串流並釋放檔案 handle**（見 Task 3）
   - 伺服器**惰性啟動**（第一次 `register` 才 `HttpServer.bind(InternetAddress.loopbackIPv4, 0)`），之後常駐到 `close()`（App 結束）。`dispose()` 把權杖從 registry 移除，**不**關伺服器。
   - 可注入的 `Random`（測試用）與可替換的綁定位址（僅測試用）。
 
@@ -146,6 +149,8 @@
   - 啟動後 `server.address.isLoopback == true`；埠 ≠ 0。
   - `register` 後以 `HttpClient` 取整檔與 `Range` 區段，位元組與原檔一致；`Range: bytes=-N` 亦然。
   - `dispose` 後同網址回 404；其他已註冊權杖不受影響。
+  - **串流中途 `dispose`：** 以大檔開始讀取、收到第一塊後呼叫 `dispose()`，之後 `File.delete()`（Windows 上有開啟 handle 會失敗）必須成功；用戶端看到串流被中斷。
+  - 測試用 `HttpClient` 一律設 `request.persistentConnection = false`，`tearDown` 呼叫 `client.close(force: true)`，避免殘餘 socket 讓暫存檔無法刪除（M-3）。
   - 同一檔案註冊兩次得到不同權杖。
   - 權杖長度與字元集下限（至少 128 位元的 URL-safe 編碼）；連續註冊 1000 次無重複。
   - 錯誤 `Host`（以 `HttpClient` 手動覆寫 `Host` 標頭）回 403。
@@ -167,12 +172,13 @@
 - Test：`app/test/reader/foliate_reader_view_test.dart`（沿用既有，補 URL 組裝斷言）
 
 **行為：**
-1. `main.js`：`const bookBase = params.get('bookBaseUrl') || 'https://appassets.androidplatform.net/book/'`，`makeBook(bookBase + (params.get('bookFileName') || 'current.epub'))`。**未帶參數時結果必須與現狀逐字相同。**
-2. `foliate_reader_view.dart`：Windows 在 `cacheWindowsBook` 成功後 `LocalBookServer.instance.register(cachedPath)`，保存 `BookServeHandle`；`_buildIndexUri` 在 Windows 加入 `bookBaseUrl`（參數值為完整的 `…/book/<token>/`，含結尾斜線）；`dispose` 先 `handle.dispose()` 再刪快取目錄；開書中途離開（`!mounted`）也要釋放。
+1. `main.js`：`let bookBase = params.get('bookBaseUrl') || 'https://appassets.androidplatform.net/book/'`；`if (!bookBase.endsWith('/')) bookBase += '/'`（防禦性正規化，預設值本來就有結尾斜線，不影響 Android）；`makeBook(bookBase + (params.get('bookFileName') || 'current.epub'))`。**未帶參數時結果必須與現狀逐字相同。**
+2. `foliate_reader_view.dart`：Windows 在 `cacheWindowsBook` 成功後 `LocalBookServer.instance.register(cachedPath)`，保存 `BookServeHandle`。**`_initialIndexUri` 由 `late final Uri x = _buildIndexUri()` 改為 `Uri?` 欄位，在 `_cacheBook()` 完成 `register` 後於 `setState` 內與 `_bookCacheDir` 一起明確賦值**（`_buildIndexUri(_serveHandle?.bookBaseUri)`），`build()` 守衛改為 `_bookCacheDir == null || _initialIndexUri == null` 時回 `SizedBox.shrink()`。（現行唯一存取點在 `build()` 守衛之後，不會誤讀；這是消除「欄位初值被提早求值而永久快取錯誤網址」這類脆弱性的加固。）`dispose` 順序：先 `handle.dispose()`（中止串流、釋放 handle），再刪快取目錄。**現行 `cacheDir.deleteSync(recursive: true)` 沒有 try／catch**——Windows 檔案鎖定時會丟 `FileSystemException`，使 `detachReaderView()` 等後續清理被跳過，所以要包 try／catch，失敗時以 `Future.delayed(100ms)` 非同步重試（最多 3 次）。開書中途離開（`!mounted`）也要釋放。
 3. 移除 `_shouldInterceptRequest` 中 Windows 的 `/book/` 分支（`FoliateRequestKind.book` 在 Windows 回 `null`，維持 Android 行為）。
 4. **死碼清理（surgical）：** `grep -rn "readWindowsBookBytes\|windowsBookContentType" app/lib app/test app/integration_test`。若僅剩單元測試與 `integration_test/windows_spike/headless_metadata_test.dart` 引用，**保留函式**，只移除閱讀器內的呼叫；若連它們都不再使用才刪除（含對應測試）。
 
-- [ ] **Step 1：寫失敗測試**：`_buildIndexUri`（或抽出的純函式）在 Windows 帶 `bookBaseUrl` 且值以 `/book/` 結尾、含權杖；在非 Windows 不帶該參數、其餘參數與現狀相同。
+- [ ] **Step 0（共用純函式，I-4）：** 在 `app/lib/reader/foliate_native_bridge.dart`（已有 `cacheFileExtension`）新增 `Map<String, String> foliateBookBaseUrlParams(Uri? bookBaseUri)`：`null` → 空 map；非 `null` → `{'bookBaseUrl': bookBaseUri.toString()}`。閱讀器（Task 5）與索引器（Task 7）的 URL 組裝都只呼叫 `params.addAll(foliateBookBaseUrlParams(...))`；兩者其餘參數本來就不同（閱讀器有 `prefs`／`fontFaceCss`／定位，索引器只有 `mode=index`），**不強行合併成單一 URL 建構函式**。
+- [ ] **Step 1：寫失敗測試**：`foliateBookBaseUrlParams` 兩種輸入（放 `test/reader/foliate_native_bridge_test.dart`）；閱讀器 URL 組裝（把 `_buildIndexUri` 改成接受 `Uri? bookBaseUri` 的可測形式）有 `bookBaseUri` 時帶 `bookBaseUrl` 且值以 `/book/` 結尾、含權杖，無時不帶且其餘參數與現狀相同。
 - [ ] **Step 2：** `flutter test test/reader/foliate_reader_view_test.dart`，確認失敗。
 - [ ] **Step 3：** 實作 `main.js` 與 Dart 改接；`node tool/check_foliate_es_compat.js`（確認沒引入新 API）。
 - [ ] **Step 4：** 測試通過；`flutter analyze`。
@@ -185,9 +191,10 @@
 **Files：**
 - Modify：`app/integration_test/windows_leak/reader_leak_test.dart`
 
+- [ ] **Step 0：** `reader_leak_test.dart` 的快取殘留斷言改成最多輪詢 2 秒（每 100 ms 檢查一次）再判定，容許 Windows 檔案系統延遲釋放；仍未清空才失敗。
 - [ ] **Step 1：** 跑 `reader_leak_test.dart -d windows`（debug）。**期望：** 4 次增量皆 < 11.23 MB、`leaked=false`、`book_cache` 本輪新增殘留為 0。
 - [ ] **Step 2：** 把檔尾的 `[leak-verdict]` 區塊加上 `expect(verdict.leaked, isFalse, reason: …)`（移除「修法完成前刻意不斷言」註解），重跑通過。
-- [ ] **Step 3：** 以 Release 進入點（暫時，不進版控）重跑，記錄數據。
+- [ ] **Step 3：** 以附錄 A 的 Release 進入點重跑，記錄數據（量測完刪除 `probe_main.dart` 與 `probe_release_result.log`）。
 - [ ] **Step 4：** 手動功能驗收（過關條件 3）：EPUB 直排／橫排、翻頁、選字與劃線工具列、目錄跳轉、CBZ 固定版面；同書連開兩次；開書中途離開。
 - [ ] **Step 5：** 數據存 `docs/epics/epic-66-windows-port/assets/issue-4-*.log`；`flutter analyze`；commit。
 
@@ -197,9 +204,9 @@
 
 **Files：**
 - Modify：`app/lib/search/foliate_content_indexer.dart`
-- Test：`_buildIndexUri` 是私有方法，既有索引器測試都在 `integration_test/`（需裝置）；本 Task 先把 URL 組裝抽成可單測的純函式（與 Task 5 共用同一支組裝邏輯），單元測試放 `app/test/search/foliate_index_uri_test.dart`
+- Test：既有索引器測試都在 `integration_test/`（需裝置）。把索引器的 `_buildIndexUri(book)` 改為頂層函式 `buildIndexerUri(Book book, {Uri? bookBaseUri})`（標註 `@visibleForTesting`），內部只多一行 `params.addAll(foliateBookBaseUrlParams(bookBaseUri))`，共用函式已在 Task 5 完成，此處只消費；單元測試放 `app/test/search/foliate_index_uri_test.dart`
 
-- [ ] **Step 1：** 寫失敗測試：`_buildIndexUri(book)` 在 Windows 帶 `bookBaseUrl`、其他平台不帶。
+- [ ] **Step 1：** 寫失敗測試：`buildIndexerUri` 有 `bookBaseUri` 時帶 `bookBaseUrl`，無時與現狀逐字相同（`bookFileName`、`mode=index`）。
 - [ ] **Step 2：** 實作：Windows 在 `cacheBookForServing` 之後 `register`，`finally` 內 `dispose`；移除 `interceptIndexRequest` 的 Windows `/book/` 分支。
 - [ ] **Step 3：** 測試通過；`flutter analyze`。**注意：** 端到端（`indexer_leak_test`）仍因 Headless 卡住無法驗證，報告需明載。
 - [ ] **Step 4：** commit。
@@ -229,3 +236,93 @@
 - 自訂字型改走伺服器（視 Task 8 的量測數據）。
 - 直接服務原檔、省略快取複製。
 - 前兩輪的一次性額外記憶體增量成因（`issue-3-report.md` §3.2、§7.2）。
+
+---
+
+## 附錄 A：Release 迴圈進入點範本（`probe_main.dart`，不進版控）
+
+`flutter drive` 在 Release／Profile 模式連不上 VM service，**無法用測試框架跑 Release**（Issue 3 已實測，`flutter run integration_test/...` 同理不可行）。改用暫時的 App 進入點，自己跑開關迴圈並印出 `[leak]` 行。檔案放 `app/probe_main.dart`（App 根目錄，讓相對匯入 `test/support/*` 成立），量測完刪除，**不得提交**。
+
+```dart
+// TEMP-PROBE：Release 版開關迴圈（不得提交）
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+
+import 'package:elinkbook/l10n/app_localizations.dart';
+import 'package:elinkbook/reader/foliate_reader_view.dart';
+import 'package:elinkbook/windows/windows_webview_environment.dart';
+import 'test/support/leak_meter.dart';
+import 'test/support/leak_verdict.dart';
+
+final _show = ValueNotifier<int>(0); // 0 = 不顯示閱讀器；n > 0 = 第 n 次開書（當作 widget key）
+Completer<void>? _rendered;
+late IOSink _out;
+
+void _log(String s) {
+  _out.writeln(s);
+  print(s); // ignore: avoid_print
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  _out = File('probe_release_result.log').openWrite();
+  final appSupport = await getApplicationSupportDirectory();
+  await initAppWebViewEnvironment(userDataFolder: appSupport.path);
+  runApp(MaterialApp(
+    locale: const Locale('zh', 'TW'),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: ValueListenableBuilder<int>(
+      valueListenable: _show,
+      builder: (context, n, child) => n == 0
+          ? const SizedBox.shrink()
+          : FoliateReaderView(
+              key: ValueKey(n),
+              filePath: kLargeEpubPath,
+              onPageRendered: () {
+                if (!(_rendered?.isCompleted ?? true)) _rendered!.complete();
+              },
+              onError: (e) {
+                if (!(_rendered?.isCompleted ?? true)) {
+                  _rendered!.completeError(StateError(e));
+                }
+              },
+            ),
+    ),
+  ));
+  await Future<void>.delayed(const Duration(seconds: 2));
+  final list = <double>[];
+  for (var i = 0; i <= kIterations; i++) {
+    _log('[leak] path=reader-release iter=$i phase=before ${await sampleMemory()}');
+    _rendered = Completer<void>();
+    _show.value = i + 1;
+    await _rendered!.future.timeout(const Duration(seconds: 120));
+    _show.value = 0;
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    _log('[leak] path=reader-release iter=$i phase=after_run ${await sampleMemory()}');
+    await Future<void>.delayed(const Duration(seconds: kSettleSeconds));
+    final w = await sampleMemory();
+    _log('[leak] path=reader-release iter=$i phase=after_wait $w');
+    list.add(w.privateMb);
+  }
+  final v = evaluateLeak(privateMb: list, bookMb: bookSizeMb(), thresholdRatio: 0.05);
+  _log('[leak-verdict] path=reader-release leaked=${v.leaked} ratcheting=${v.ratcheting} deltas=${v.deltas}');
+  await _out.flush();
+  await _out.close();
+  exit(0);
+}
+```
+
+建置與執行（PowerShell）：
+
+```powershell
+cd app
+$env:MSYS2_ENV_CONV_EXCL = 'CL'; $env:CL = '/utf-8'
+flutter build windows --release -t probe_main.dart      # 約 6～7 分鐘
+.\build\windows\x64\runner\Release\elinkbook.exe        # 約 1 分鐘；結果寫入 probe_release_result.log
+```
+
+注意：迴圈結束的 `exit(0)` 在關閉階段可能出現 Segmentation fault，不影響已寫出的結果。第 0 輪（暖身）在 Release 版會包含首次開書的一次性額外增量（`issue-3-report.md` §7.1），判定看 iter1～4。
