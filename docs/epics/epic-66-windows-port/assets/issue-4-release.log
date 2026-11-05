@@ -1,0 +1,16 @@
+[leak] path=reader-release iter=0 phase=before private_mb=88.70 ws_mb=107.54 wv2_private_mb=98.71 wv2_count=6
+[leak] path=reader-release iter=0 phase=after_run private_mb=130.29 ws_mb=130.55 wv2_private_mb=306.65 wv2_count=7
+[leak] path=reader-release iter=0 phase=after_wait private_mb=109.95 ws_mb=126.78 wv2_private_mb=141.00 wv2_count=6
+[leak] path=reader-release iter=1 phase=before private_mb=111.21 ws_mb=126.90 wv2_private_mb=141.04 wv2_count=6
+[leak] path=reader-release iter=1 phase=after_run private_mb=139.18 ws_mb=132.54 wv2_private_mb=298.11 wv2_count=7
+[leak] path=reader-release iter=1 phase=after_wait private_mb=114.12 ws_mb=131.44 wv2_private_mb=142.30 wv2_count=6
+[leak] path=reader-release iter=2 phase=before private_mb=115.12 ws_mb=131.55 wv2_private_mb=142.34 wv2_count=6
+[leak] path=reader-release iter=2 phase=after_run private_mb=144.45 ws_mb=135.26 wv2_private_mb=304.83 wv2_count=7
+[leak] path=reader-release iter=2 phase=after_wait private_mb=113.12 ws_mb=130.45 wv2_private_mb=143.60 wv2_count=6
+[leak] path=reader-release iter=3 phase=before private_mb=114.13 ws_mb=130.46 wv2_private_mb=143.60 wv2_count=6
+[leak] path=reader-release iter=3 phase=after_run private_mb=147.04 ws_mb=138.42 wv2_private_mb=310.10 wv2_count=7
+[leak] path=reader-release iter=3 phase=after_wait private_mb=118.13 ws_mb=135.27 wv2_private_mb=138.35 wv2_count=6
+[leak] path=reader-release iter=4 phase=before private_mb=119.14 ws_mb=135.29 wv2_private_mb=138.35 wv2_count=6
+[leak] path=reader-release iter=4 phase=after_run private_mb=137.21 ws_mb=139.82 wv2_private_mb=320.77 wv2_count=7
+[leak] path=reader-release iter=4 phase=after_wait private_mb=118.16 ws_mb=136.54 wv2_private_mb=143.40 wv2_count=6
+[leak-verdict] path=reader-release leaked=false ratcheting=false deltas=[4.170000000000002, -1.0, 5.009999999999991, 0.030000000000001137] exceeded=[] threshold_mb=11.23

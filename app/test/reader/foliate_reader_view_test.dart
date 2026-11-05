@@ -64,6 +64,54 @@ void main() {
     });
   });
 
+    group('buildFoliateReaderIndexUri', () {
+    const view = FoliateReaderView(
+      filePath: '/tmp/sample.epub',
+      onPageRendered: _noop,
+      onError: _noopError,
+    );
+
+    test('bookBaseUri 為 null 時，產生的網址不含 bookBaseUrl 查詢參數', () {
+      final uri = buildFoliateReaderIndexUri(view);
+      expect(uri.queryParameters.containsKey('bookBaseUrl'), isFalse);
+      expect(uri.queryParameters['bookFileName'], 'current.epub');
+      expect(uri.scheme, 'https');
+      expect(uri.host, 'appassets.androidplatform.net');
+      expect(uri.path, '/assets/foliate/index.html');
+    });
+
+    test('bookBaseUri 非 null 時，產生的網址包含 bookBaseUrl 且含權杖與結尾斜線', () {
+      final baseUri = Uri.parse('http://127.0.0.1:54321/book/my-secret-token/');
+      final uri = buildFoliateReaderIndexUri(view, bookBaseUri: baseUri);
+      expect(uri.queryParameters['bookBaseUrl'], 'http://127.0.0.1:54321/book/my-secret-token/');
+      expect(uri.queryParameters['bookBaseUrl']!.endsWith('/'), isTrue);
+      expect(uri.queryParameters['bookBaseUrl']!.contains('my-secret-token'), isTrue);
+      expect(uri.queryParameters['bookFileName'], 'current.epub');
+    });
+  });
+
+  group('deleteBookCacheDirOf', () {
+    test('刪除快取檔所在目錄（含檔案），回傳 true', () async {
+      final root = await Directory.systemTemp.createTemp('book_cache_test_');
+      addTearDown(() {
+        if (root.existsSync()) root.deleteSync(recursive: true);
+      });
+      final cacheDir = Directory('${root.path}/instance-1')..createSync();
+      final cached = File('${cacheDir.path}/current.epub')
+        ..writeAsBytesSync([1, 2, 3]);
+
+      expect(deleteBookCacheDirOf(cached.path), isTrue);
+      expect(cacheDir.existsSync(), isFalse);
+    });
+
+    test('目錄已不存在時不拋例外，回傳 true', () {
+      expect(
+        deleteBookCacheDirOf('${Directory.systemTemp.path}/no_such_dir_xyz/current.epub'),
+        isTrue,
+      );
+    });
+  });
+
   group('buildFoliatePreferencesMap', () {
     test('所有偏好欄位皆為 null 時回傳空 map', () {
       const view = FoliateReaderView(

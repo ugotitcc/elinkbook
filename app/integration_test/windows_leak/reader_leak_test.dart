@@ -82,16 +82,25 @@ void main() {
         // 驗證 dispose 確實刪除本實例之快取子目錄
         // 比對本輪前後 book_cache 的項目：卸載後不得多出本輪新建的子目錄。
         // （目錄內若有先前當掉的測試留下的孤兒，不算本輪洩漏，故用前後差集判定。）
+        Set<String> leftover = <String>{};
+        final pollSw = Stopwatch()..start();
+        while (pollSw.elapsedMilliseconds < 2000) {
+          final current = bookCacheDir.existsSync()
+              ? bookCacheDir.listSync().map((e) => e.path).toSet()
+              : <String>{};
+          leftover = current.difference(cacheBefore);
+          if (leftover.isEmpty) break;
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
         final after = bookCacheDir.existsSync()
             ? bookCacheDir.listSync().map((e) => e.path).toSet()
             : <String>{};
-        final leftover = after.difference(cacheBefore);
         // ignore: avoid_print
         print('[leak] book_cache 輪前=${cacheBefore.length} 輪後=${after.length} 本輪新增殘留=${leftover.length}');
         expect(
           leftover,
           isEmpty,
-          reason: '閱讀器卸載後 book_cache 子目錄應被完全清理',
+          reason: '閱讀器卸載後 book_cache 子目錄應被完全清理（最多輪詢 2 秒）',
         );
       }
 
@@ -135,11 +144,15 @@ void main() {
         thresholdRatio: 0.05,
       );
 
-      // 注意：修法完成前刻意不斷言（洩漏已知成立，斷言會讓測試恆失敗）。
-      // 修法落地後須改為 expect(verdict.leaked, isFalse) 作為長期回歸防線。
+      // 長期回歸防線：斷言無記憶體洩漏
       // ignore: avoid_print
       print(
         '[leak-verdict] path=reader leaked=${verdict.leaked} ratcheting=${verdict.ratcheting} deltas=${verdict.deltas} exceeded=${verdict.exceededIterations} threshold_mb=${verdict.thresholdMb.toStringAsFixed(2)}',
+      );
+      expect(
+        verdict.leaked,
+        isFalse,
+        reason: '重複開關大檔不應發生私有記憶體持續爬升（門檻: ${verdict.thresholdMb.toStringAsFixed(2)} MB, deltas: ${verdict.deltas}）',
       );
     },
     timeout: const Timeout(Duration(minutes: 15)),

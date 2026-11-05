@@ -69,11 +69,11 @@
 - 暫時修改 `main.js` 的 `openBook()`，讀 `params.get('bookBaseUrl')`，有值就用它組書檔網址。
 - 暫時在 `foliate_reader_view.dart` 的 Windows 分支起一個最簡 `dart:io` `HttpServer`（綁 loopback、埠 0、回 `Access-Control-Allow-Origin: https://appassets.androidplatform.net`、支援 `Range`、串流 `File.openRead`），把 `bookBaseUrl` 帶入 `_buildIndexUri`。權杖、Host 檢查、清理都不做。
 
-- [ ] **Step 1：** 實作上述暫時修改（先用 `git stash` 或獨立分支確保能乾淨還原）。
-- [ ] **Step 2：** 跑 `reader_leak_test.dart -d windows`（debug）。**閘門 A：** 能開書（`onPageRendered` 被呼叫）、4 次迭代每次增量 < 11.23 MB。
-- [ ] **Step 3：** 以暫時的 Release 進入點重跑（範本與建置指令見**附錄 A**；`flutter drive`／`flutter run integration_test/...` 在 Release 不可行）。**閘門 B：** 同樣低於門檻。
-- [ ] **Step 4：** 手動目視確認：開 EPUB 可翻頁、選字出現劃線工具列。
-- [ ] **Step 5：** 還原所有暫時修改（`git checkout -- <檔案>`、刪除暫時進入點），把數據摘要記在 `issue-4-report.md` 草稿（Task 8 補完）。
+- [x] **Step 1：** 實作上述暫時修改（先用 `git stash` 或獨立分支確保能乾淨還原）。
+- [x] **Step 2：** 跑 `reader_leak_test.dart -d windows`（debug）。**閘門 A：** 能開書（`onPageRendered` 被呼叫）、4 次迭代每次增量 < 11.23 MB。
+- [x] **Step 3：** 以暫時的 Release 進入點重跑（範本與建置指令見**附錄 A**；`flutter drive`／`flutter run integration_test/...` 在 Release 不可行）。**閘門 B：** 同樣低於門檻。
+- [x] **Step 4：** 手動目視確認：開 EPUB 可翻頁、選字出現劃線工具列。
+- [x] **Step 5：** 還原所有暫時修改（`git checkout -- <檔案>`、刪除暫時進入點），把數據摘要記在 `issue-4-report.md` 草稿（Task 8 補完）。
 - **停點：** 閘門 A 或 B 不過 → **停下**，向使用者報告（可能是混合內容被擋、或洩漏另有他因），不進入 Task 2。
 
 ---
@@ -87,7 +87,7 @@
 **Interfaces：**
 - Produces：`ByteRangeResult parseByteRange(String? header, int fileLength)`，其中結果為三態：`full`（無 Range 或不支援的形式 → 回整檔 200）、`partial(start, end)`（含頭尾，已截斷到檔尾）、`unsatisfiable`（416）。
 
-- [ ] **Step 1：寫失敗測試**，涵蓋：
+- [x] **Step 1：寫失敗測試**，涵蓋：
   - `null`／空字串 → `full`。
   - `bytes=0-99`、`bytes=100-`（到檔尾）、`bytes=-500`（尾端 500 位元組；大於檔案則整檔）。
   - `end` 超過檔尾 → 截斷為 `fileLength-1`。
@@ -95,10 +95,10 @@
   - `start > end`、`bytes=abc`、非 `bytes` 單位（`items=0-1`）→ `full`（忽略無效標頭，符合 RFC 9110 對無法解析者的寬容處理）。
   - 多段範圍 `bytes=0-1,5-6` → `full`。
   - `fileLength == 0` 時任何範圍 → `unsatisfiable`，無 Range → `full`。
-- [ ] **Step 2：** `flutter test test/reader/byte_range_test.dart`，確認失敗。
-- [ ] **Step 3：** 實作。
-- [ ] **Step 4：** 重跑通過；`flutter analyze`。
-- [ ] **Step 5：** commit。
+- [x] **Step 2：** `flutter test test/reader/byte_range_test.dart`，確認失敗。
+- [x] **Step 3：** 實作。
+- [x] **Step 4：** 重跑通過；`flutter analyze`。
+- [x] **Step 5：** commit。
 
 ---
 
@@ -123,11 +123,11 @@
 - **所有回應（含 403、404、405、416）都無條件附 `Access-Control-Allow-Origin: <allowedOrigin>` 與 `Vary: Origin`**；否則瀏覽器會把錯誤狀態碼包成不透明的 `TypeError: Failed to fetch`，無法診斷。
 - **權杖釋放時主動中止進行中的串流（I-2）：** `RegisteredBook` 帶一個 `Future<void> disposed`（由 `dispose()` 完成）。本文串流不直接回傳 `File.openRead(...)`，而是以 `StreamController` 轉送並監聽 `disposed`：一旦完成就 `cancel()` 底層訂閱並關閉控制器，確保檔案 handle 同步釋放（Windows 上有開啟中的 handle 會讓 `Directory.deleteSync` 失敗）。
 
-- [ ] **Step 1：寫失敗測試**（以 `Handler(Request('GET', Uri.parse('http://127.0.0.1:1234/book/<token>/current.epub'), headers: {...}))` 直接呼叫，用暫存檔當書）：涵蓋上述每一條行為；另加：位元組內容與原檔指定區段逐位元組相同（含 `0-0`、檔尾單位元組、整檔）；`Content-Length` 與實際串流長度相符；本文是串流（以 `Response.read()` 逐塊讀取驗證，不依賴一次性 `List<int>`）。
-- [ ] **Step 2：** `flutter test test/reader/local_book_handler_test.dart`，確認失敗。
-- [ ] **Step 3：** 實作。
-- [ ] **Step 4：** 重跑通過；`flutter analyze`。
-- [ ] **Step 5：** commit。
+- [x] **Step 1：寫失敗測試**（以 `Handler(Request('GET', Uri.parse('http://127.0.0.1:1234/book/<token>/current.epub'), headers: {...}))` 直接呼叫，用暫存檔當書）：涵蓋上述每一條行為；另加：位元組內容與原檔指定區段逐位元組相同（含 `0-0`、檔尾單位元組、整檔）；`Content-Length` 與實際串流長度相符；本文是串流（以 `Response.read()` 逐塊讀取驗證，不依賴一次性 `List<int>`）。
+- [x] **Step 2：** `flutter test test/reader/local_book_handler_test.dart`，確認失敗。
+- [x] **Step 3：** 實作。
+- [x] **Step 4：** 重跑通過；`flutter analyze`。
+- [x] **Step 5：** commit。
 
 ---
 
@@ -145,7 +145,7 @@
   - 伺服器**惰性啟動**（第一次 `register` 才 `HttpServer.bind(InternetAddress.loopbackIPv4, 0)`），之後常駐到 `close()`（App 結束）。`dispose()` 把權杖從 registry 移除，**不**關伺服器。
   - 可注入的 `Random`（測試用）與可替換的綁定位址（僅測試用）。
 
-- [ ] **Step 1：寫失敗測試**：
+- [x] **Step 1：寫失敗測試**：
   - 啟動後 `server.address.isLoopback == true`；埠 ≠ 0。
   - `register` 後以 `HttpClient` 取整檔與 `Range` 區段，位元組與原檔一致；`Range: bytes=-N` 亦然。
   - `dispose` 後同網址回 404；其他已註冊權杖不受影響。
@@ -156,10 +156,10 @@
   - 錯誤 `Host`（以 `HttpClient` 手動覆寫 `Host` 標頭）回 403。
   - `close()` 後連線被拒；再次 `register` 會重新啟動（便於測試隔離）。
   - 並行 `register` 只會綁定一次埠（不可起兩個伺服器）。
-- [ ] **Step 2：** `flutter test test/reader/local_book_server_test.dart`，確認失敗。
-- [ ] **Step 3：** 實作。
-- [ ] **Step 4：** 重跑通過；`flutter analyze`。
-- [ ] **Step 5：** commit。
+- [x] **Step 2：** `flutter test test/reader/local_book_server_test.dart`，確認失敗。
+- [x] **Step 3：** 實作。
+- [x] **Step 4：** 重跑通過；`flutter analyze`。
+- [x] **Step 5：** commit。
 
 ---
 
@@ -177,12 +177,12 @@
 3. 移除 `_shouldInterceptRequest` 中 Windows 的 `/book/` 分支（`FoliateRequestKind.book` 在 Windows 回 `null`，維持 Android 行為）。
 4. **死碼清理（surgical）：** `grep -rn "readWindowsBookBytes\|windowsBookContentType" app/lib app/test app/integration_test`。若僅剩單元測試與 `integration_test/windows_spike/headless_metadata_test.dart` 引用，**保留函式**，只移除閱讀器內的呼叫；若連它們都不再使用才刪除（含對應測試）。
 
-- [ ] **Step 0（共用純函式，I-4）：** 在 `app/lib/reader/foliate_native_bridge.dart`（已有 `cacheFileExtension`）新增 `Map<String, String> foliateBookBaseUrlParams(Uri? bookBaseUri)`：`null` → 空 map；非 `null` → `{'bookBaseUrl': bookBaseUri.toString()}`。閱讀器（Task 5）與索引器（Task 7）的 URL 組裝都只呼叫 `params.addAll(foliateBookBaseUrlParams(...))`；兩者其餘參數本來就不同（閱讀器有 `prefs`／`fontFaceCss`／定位，索引器只有 `mode=index`），**不強行合併成單一 URL 建構函式**。
-- [ ] **Step 1：寫失敗測試**：`foliateBookBaseUrlParams` 兩種輸入（放 `test/reader/foliate_native_bridge_test.dart`）；閱讀器 URL 組裝（把 `_buildIndexUri` 改成接受 `Uri? bookBaseUri` 的可測形式）有 `bookBaseUri` 時帶 `bookBaseUrl` 且值以 `/book/` 結尾、含權杖，無時不帶且其餘參數與現狀相同。
-- [ ] **Step 2：** `flutter test test/reader/foliate_reader_view_test.dart`，確認失敗。
-- [ ] **Step 3：** 實作 `main.js` 與 Dart 改接；`node tool/check_foliate_es_compat.js`（確認沒引入新 API）。
-- [ ] **Step 4：** 測試通過；`flutter analyze`。
-- [ ] **Step 5：** commit。
+- [x] **Step 0（共用純函式，I-4）：** 在 `app/lib/reader/foliate_native_bridge.dart`（已有 `cacheFileExtension`）新增 `Map<String, String> foliateBookBaseUrlParams(Uri? bookBaseUri)`：`null` → 空 map；非 `null` → `{'bookBaseUrl': bookBaseUri.toString()}`。閱讀器（Task 5）與索引器（Task 7）的 URL 組裝都只呼叫 `params.addAll(foliateBookBaseUrlParams(...))`；兩者其餘參數本來就不同（閱讀器有 `prefs`／`fontFaceCss`／定位，索引器只有 `mode=index`），**不強行合併成單一 URL 建構函式**。
+- [x] **Step 1：寫失敗測試**：`foliateBookBaseUrlParams` 兩種輸入（放 `test/reader/foliate_native_bridge_test.dart`）；閱讀器 URL 組裝（把 `_buildIndexUri` 改成接受 `Uri? bookBaseUri` 的可測形式）有 `bookBaseUri` 時帶 `bookBaseUrl` 且值以 `/book/` 結尾、含權杖，無時不帶且其餘參數與現狀相同。
+- [x] **Step 2：** `flutter test test/reader/foliate_reader_view_test.dart`，確認失敗。
+- [x] **Step 3：** 實作 `main.js` 與 Dart 改接；`node tool/check_foliate_es_compat.js`（確認沒引入新 API）。
+- [x] **Step 4：** 測試通過；`flutter analyze`。
+- [x] **Step 5：** commit。
 
 ---
 
@@ -191,12 +191,12 @@
 **Files：**
 - Modify：`app/integration_test/windows_leak/reader_leak_test.dart`
 
-- [ ] **Step 0：** `reader_leak_test.dart` 的快取殘留斷言改成最多輪詢 2 秒（每 100 ms 檢查一次）再判定，容許 Windows 檔案系統延遲釋放；仍未清空才失敗。
-- [ ] **Step 1：** 跑 `reader_leak_test.dart -d windows`（debug）。**期望：** 4 次增量皆 < 11.23 MB、`leaked=false`、`book_cache` 本輪新增殘留為 0。
-- [ ] **Step 2：** 把檔尾的 `[leak-verdict]` 區塊加上 `expect(verdict.leaked, isFalse, reason: …)`（移除「修法完成前刻意不斷言」註解），重跑通過。
-- [ ] **Step 3：** 以附錄 A 的 Release 進入點重跑，記錄數據（量測完刪除 `probe_main.dart` 與 `probe_release_result.log`）。
-- [ ] **Step 4：** 手動功能驗收（過關條件 3）：EPUB 直排／橫排、翻頁、選字與劃線工具列、目錄跳轉、CBZ 固定版面；同書連開兩次；開書中途離開。
-- [ ] **Step 5：** 數據存 `docs/epics/epic-66-windows-port/assets/issue-4-*.log`；`flutter analyze`；commit。
+- [x] **Step 0：** `reader_leak_test.dart` 的快取殘留斷言改成最多輪詢 2 秒（每 100 ms 檢查一次）再判定，容許 Windows 檔案系統延遲釋放；仍未清空才失敗。
+- [x] **Step 1：** 跑 `reader_leak_test.dart -d windows`（debug）。**期望：** 4 次增量皆 < 11.23 MB、`leaked=false`、`book_cache` 本輪新增殘留為 0。
+- [x] **Step 2：** 把檔尾的 `[leak-verdict]` 區塊加上 `expect(verdict.leaked, isFalse, reason: …)`（移除「修法完成前刻意不斷言」註解），重跑通過。
+- [x] **Step 3：** 以附錄 A 的 Release 進入點重跑，記錄數據（量測完刪除 `probe_main.dart` 與 `probe_release_result.log`）。
+- [x] **Step 4：** 手動功能驗收（過關條件 3）：EPUB 直排／橫排、翻頁、選字與劃線工具列、目錄跳轉、CBZ 固定版面；同書連開兩次；開書中途離開。
+- [x] **Step 5：** 數據存 `docs/epics/epic-66-windows-port/assets/issue-4-*.log`；`flutter analyze`；commit。
 
 ---
 
@@ -206,10 +206,10 @@
 - Modify：`app/lib/search/foliate_content_indexer.dart`
 - Test：既有索引器測試都在 `integration_test/`（需裝置）。把索引器的 `_buildIndexUri(book)` 改為頂層函式 `buildIndexerUri(Book book, {Uri? bookBaseUri})`（標註 `@visibleForTesting`），內部只多一行 `params.addAll(foliateBookBaseUrlParams(bookBaseUri))`，共用函式已在 Task 5 完成，此處只消費；單元測試放 `app/test/search/foliate_index_uri_test.dart`
 
-- [ ] **Step 1：** 寫失敗測試：`buildIndexerUri` 有 `bookBaseUri` 時帶 `bookBaseUrl`，無時與現狀逐字相同（`bookFileName`、`mode=index`）。
-- [ ] **Step 2：** 實作：Windows 在 `cacheBookForServing` 之後 `register`，`finally` 內 `dispose`；移除 `interceptIndexRequest` 的 Windows `/book/` 分支。
-- [ ] **Step 3：** 測試通過；`flutter analyze`。**注意：** 端到端（`indexer_leak_test`）仍因 Headless 卡住無法驗證，報告需明載。
-- [ ] **Step 4：** commit。
+- [x] **Step 1：** 寫失敗測試：`buildIndexerUri` 有 `bookBaseUri` 時帶 `bookBaseUrl`，無時與現狀逐字相同（`bookFileName`、`mode=index`）。
+- [x] **Step 2：** 實作：Windows 在 `cacheBookForServing` 之後 `register`，`finally` 內 `dispose`；移除 `interceptIndexRequest` 的 Windows `/book/` 分支。
+- [x] **Step 3：** 測試通過；`flutter analyze`。**注意：** 端到端（`indexer_leak_test`）仍因 Headless 卡住無法驗證，報告需明載。
+- [x] **Step 4：** commit。
 
 ---
 
@@ -221,11 +221,11 @@
 - Modify：`epic.md`（決策 6、15 補【Issue 3／4 結果】）、`issues.md`（Issue 3、4 狀態）
 - Modify（若架構事實改變）：根目錄 `CLAUDE.md` 的 `FoliateReaderView` 說明，以一句話補上「Windows 書檔由 loopback HTTP 服務」
 
-- [ ] **Step 1：ADR**：背景（Issue 3 洩漏證據）、決策（只搬書檔、頁面 origin 不變、`bookBaseUrl`、權杖、Range）、被否決的選項（B Range 攔截仍與傳輸量成正比洩漏；C patch 外掛無根因；D 虛擬網域需 vendor 外掛 C++）、後果（維護一個 loopback 服務、平台分流）。
-- [ ] **Step 2：報告**：Task 1 閘門數據、Task 6 debug／Release 數據、過關條件逐項勾選、尖峰記憶體與 3.8 GB 的對照、字型攔截洩漏量測（以 `reader_leak_test` 搭配自訂字型，或明載未量測的原因）、限制與後續 Issue（索引器 Headless、分段載入、前兩輪額外增量）。
-- [ ] **Step 3：** 更新 `epic.md`、`issues.md`（及 `CLAUDE.md` 一句話）。
-- [ ] **Step 4：** 完整 `flutter test`（`run_in_background`）與 `flutter analyze`、兩支 `node tool/check_*.js`。
-- [ ] **Step 5：** commit；準備 PR。
+- [x] **Step 1：ADR**：背景（Issue 3 洩漏證據）、決策（只搬書檔、頁面 origin 不變、`bookBaseUrl`、權杖、Range）、被否決的選項（B Range 攔截仍與傳輸量成正比洩漏；C patch 外掛無根因；D 虛擬網域需 vendor 外掛 C++）、後果（維護一個 loopback 服務、平台分流）。
+- [x] **Step 2：報告**：Task 1 閘門數據、Task 6 debug／Release 數據、過關條件逐項勾選、尖峰記憶體與 3.8 GB 的對照、字型攔截洩漏量測（以 `reader_leak_test` 搭配自訂字型，或明載未量測的原因）、限制與後續 Issue（索引器 Headless、分段載入、前兩輪額外增量）。
+- [x] **Step 3：** 更新 `epic.md`、`issues.md`（及 `CLAUDE.md` 一句話）。
+- [x] **Step 4：** 完整 `flutter test`（`run_in_background`）與 `flutter analyze`、兩支 `node tool/check_*.js`。
+- [x] **Step 5：** commit；準備 PR。
 
 ---
 
