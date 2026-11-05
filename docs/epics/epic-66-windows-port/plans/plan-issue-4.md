@@ -123,11 +123,11 @@
 - **所有回應（含 403、404、405、416）都無條件附 `Access-Control-Allow-Origin: <allowedOrigin>` 與 `Vary: Origin`**；否則瀏覽器會把錯誤狀態碼包成不透明的 `TypeError: Failed to fetch`，無法診斷。
 - **權杖釋放時主動中止進行中的串流（I-2）：** `RegisteredBook` 帶一個 `Future<void> disposed`（由 `dispose()` 完成）。本文串流不直接回傳 `File.openRead(...)`，而是以 `StreamController` 轉送並監聽 `disposed`：一旦完成就 `cancel()` 底層訂閱並關閉控制器，確保檔案 handle 同步釋放（Windows 上有開啟中的 handle 會讓 `Directory.deleteSync` 失敗）。
 
-- [ ] **Step 1：寫失敗測試**（以 `Handler(Request('GET', Uri.parse('http://127.0.0.1:1234/book/<token>/current.epub'), headers: {...}))` 直接呼叫，用暫存檔當書）：涵蓋上述每一條行為；另加：位元組內容與原檔指定區段逐位元組相同（含 `0-0`、檔尾單位元組、整檔）；`Content-Length` 與實際串流長度相符；本文是串流（以 `Response.read()` 逐塊讀取驗證，不依賴一次性 `List<int>`）。
-- [ ] **Step 2：** `flutter test test/reader/local_book_handler_test.dart`，確認失敗。
-- [ ] **Step 3：** 實作。
-- [ ] **Step 4：** 重跑通過；`flutter analyze`。
-- [ ] **Step 5：** commit。
+- [x] **Step 1：寫失敗測試**（以 `Handler(Request('GET', Uri.parse('http://127.0.0.1:1234/book/<token>/current.epub'), headers: {...}))` 直接呼叫，用暫存檔當書）：涵蓋上述每一條行為；另加：位元組內容與原檔指定區段逐位元組相同（含 `0-0`、檔尾單位元組、整檔）；`Content-Length` 與實際串流長度相符；本文是串流（以 `Response.read()` 逐塊讀取驗證，不依賴一次性 `List<int>`）。
+- [x] **Step 2：** `flutter test test/reader/local_book_handler_test.dart`，確認失敗。
+- [x] **Step 3：** 實作。
+- [x] **Step 4：** 重跑通過；`flutter analyze`。
+- [x] **Step 5：** commit。
 
 ---
 
