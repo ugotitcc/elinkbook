@@ -182,6 +182,7 @@ Stream<List<int>> _createManagedStream(
       await sub?.cancel();
     } catch (_) {}
     if (!controller.isClosed) {
+      controller.addError(const SocketException('Stream aborted'));
       await controller.close();
     }
   }

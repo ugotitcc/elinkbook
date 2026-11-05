@@ -145,7 +145,7 @@
   - 伺服器**惰性啟動**（第一次 `register` 才 `HttpServer.bind(InternetAddress.loopbackIPv4, 0)`），之後常駐到 `close()`（App 結束）。`dispose()` 把權杖從 registry 移除，**不**關伺服器。
   - 可注入的 `Random`（測試用）與可替換的綁定位址（僅測試用）。
 
-- [ ] **Step 1：寫失敗測試**：
+- [x] **Step 1：寫失敗測試**：
   - 啟動後 `server.address.isLoopback == true`；埠 ≠ 0。
   - `register` 後以 `HttpClient` 取整檔與 `Range` 區段，位元組與原檔一致；`Range: bytes=-N` 亦然。
   - `dispose` 後同網址回 404；其他已註冊權杖不受影響。
@@ -156,10 +156,10 @@
   - 錯誤 `Host`（以 `HttpClient` 手動覆寫 `Host` 標頭）回 403。
   - `close()` 後連線被拒；再次 `register` 會重新啟動（便於測試隔離）。
   - 並行 `register` 只會綁定一次埠（不可起兩個伺服器）。
-- [ ] **Step 2：** `flutter test test/reader/local_book_server_test.dart`，確認失敗。
-- [ ] **Step 3：** 實作。
-- [ ] **Step 4：** 重跑通過；`flutter analyze`。
-- [ ] **Step 5：** commit。
+- [x] **Step 2：** `flutter test test/reader/local_book_server_test.dart`，確認失敗。
+- [x] **Step 3：** 實作。
+- [x] **Step 4：** 重跑通過；`flutter analyze`。
+- [x] **Step 5：** commit。
 
 ---
 

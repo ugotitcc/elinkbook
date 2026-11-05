@@ -241,7 +241,7 @@ void main() {
           }
         },
         onDone: () {
-          streamDone.complete();
+          if (!streamDone.isCompleted) streamDone.complete();
         },
         onError: (e) {
           if (!streamDone.isCompleted) streamDone.complete();
