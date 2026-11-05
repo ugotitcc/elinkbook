@@ -1,0 +1,26 @@
+[leak] path=reader iter=0 phase=before private_mb=253.94 ws_mb=298.76 wv2_private_mb=105.06 wv2_count=6
+[probe] book_intercept n=1 path=/book/current.epub bytes=235583038
+[leak] book_cache 輪前=11 輪後=11 本輪新增殘留=0
+[leak] path=reader iter=0 phase=after_run private_mb=744.41 ws_mb=565.04 wv2_private_mb=155.52 wv2_count=6
+[leak] path=reader iter=0 phase=after_wait private_mb=731.32 ws_mb=565.15 wv2_private_mb=150.25 wv2_count=6
+[leak] path=reader iter=1 phase=before private_mb=732.32 ws_mb=565.30 wv2_private_mb=150.25 wv2_count=6
+[probe] book_intercept n=2 path=/book/current.epub bytes=235583038
+[leak] book_cache 輪前=11 輪後=11 本輪新增殘留=0
+[leak] path=reader iter=1 phase=after_run private_mb=1872.31 ws_mb=1243.29 wv2_private_mb=153.58 wv2_count=6
+[leak] path=reader iter=1 phase=after_wait private_mb=1859.73 ws_mb=1243.31 wv2_private_mb=154.40 wv2_count=6
+[leak] path=reader iter=2 phase=before private_mb=1859.73 ws_mb=1243.43 wv2_private_mb=154.31 wv2_count=6
+[probe] book_intercept n=3 path=/book/current.epub bytes=235583038
+[leak] book_cache 輪前=11 輪後=11 本輪新增殘留=0
+[leak] path=reader iter=2 phase=after_run private_mb=2326.08 ws_mb=1470.13 wv2_private_mb=150.03 wv2_count=6
+[leak] path=reader iter=2 phase=after_wait private_mb=2313.04 ws_mb=1470.30 wv2_private_mb=150.03 wv2_count=6
+[leak] path=reader iter=3 phase=before private_mb=2313.04 ws_mb=1470.50 wv2_private_mb=150.03 wv2_count=6
+[probe] book_intercept n=4 path=/book/current.epub bytes=235583038
+[leak] book_cache 輪前=11 輪後=11 本輪新增殘留=0
+[leak] path=reader iter=3 phase=after_run private_mb=2775.67 ws_mb=1696.54 wv2_private_mb=149.52 wv2_count=6
+[leak] path=reader iter=3 phase=after_wait private_mb=2761.97 ws_mb=1696.52 wv2_private_mb=147.40 wv2_count=6
+[leak] path=reader iter=4 phase=before private_mb=2762.47 ws_mb=1696.63 wv2_private_mb=147.25 wv2_count=6
+[probe] book_intercept n=5 path=/book/current.epub bytes=235583038
+[leak] book_cache 輪前=11 輪後=11 本輪新增殘留=0
+[leak] path=reader iter=4 phase=after_run private_mb=3229.88 ws_mb=1926.29 wv2_private_mb=148.32 wv2_count=6
+[leak] path=reader iter=4 phase=after_wait private_mb=3219.03 ws_mb=1926.37 wv2_private_mb=148.40 wv2_count=6
+[leak-verdict] path=reader leaked=true ratcheting=true deltas=[1128.4099999999999, 453.30999999999995, 448.92999999999984, 457.0600000000004] exceeded=[1, 2, 3, 4] threshold_mb=11.23

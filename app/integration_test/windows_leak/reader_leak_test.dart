@@ -45,6 +45,9 @@ void main() {
 
       // 輔助函式：掛載閱讀器、等待渲染完成、卸載、確認快取清理
       Future<void> runReaderCycle() async {
+        final cacheBefore = bookCacheDir.existsSync()
+            ? bookCacheDir.listSync().map((e) => e.path).toSet()
+            : <String>{};
         final renderedCompleter = Completer<void>();
 
         await pumpLocalizedWidget(
@@ -77,13 +80,16 @@ void main() {
         await tester.pumpAndSettle();
 
         // 驗證 dispose 確實刪除本實例之快取子目錄
-        // 目錄不存在視為已清理；存在則必須為空。實際走了哪個分支一律印出，避免斷言空過而不自知。
-        final cacheExists = bookCacheDir.existsSync();
-        final entries = cacheExists ? bookCacheDir.listSync() : const [];
+        // 比對本輪前後 book_cache 的項目：卸載後不得多出本輪新建的子目錄。
+        // （目錄內若有先前當掉的測試留下的孤兒，不算本輪洩漏，故用前後差集判定。）
+        final after = bookCacheDir.existsSync()
+            ? bookCacheDir.listSync().map((e) => e.path).toSet()
+            : <String>{};
+        final leftover = after.difference(cacheBefore);
         // ignore: avoid_print
-        print('[leak] book_cache 目錄存在=$cacheExists 剩餘項目=${entries.length}');
+        print('[leak] book_cache 輪前=${cacheBefore.length} 輪後=${after.length} 本輪新增殘留=${leftover.length}');
         expect(
-          entries,
+          leftover,
           isEmpty,
           reason: '閱讀器卸載後 book_cache 子目錄應被完全清理',
         );
