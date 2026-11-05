@@ -191,12 +191,12 @@
 **Files：**
 - Modify：`app/integration_test/windows_leak/reader_leak_test.dart`
 
-- [ ] **Step 0：** `reader_leak_test.dart` 的快取殘留斷言改成最多輪詢 2 秒（每 100 ms 檢查一次）再判定，容許 Windows 檔案系統延遲釋放；仍未清空才失敗。
-- [ ] **Step 1：** 跑 `reader_leak_test.dart -d windows`（debug）。**期望：** 4 次增量皆 < 11.23 MB、`leaked=false`、`book_cache` 本輪新增殘留為 0。
-- [ ] **Step 2：** 把檔尾的 `[leak-verdict]` 區塊加上 `expect(verdict.leaked, isFalse, reason: …)`（移除「修法完成前刻意不斷言」註解），重跑通過。
-- [ ] **Step 3：** 以附錄 A 的 Release 進入點重跑，記錄數據（量測完刪除 `probe_main.dart` 與 `probe_release_result.log`）。
-- [ ] **Step 4：** 手動功能驗收（過關條件 3）：EPUB 直排／橫排、翻頁、選字與劃線工具列、目錄跳轉、CBZ 固定版面；同書連開兩次；開書中途離開。
-- [ ] **Step 5：** 數據存 `docs/epics/epic-66-windows-port/assets/issue-4-*.log`；`flutter analyze`；commit。
+- [x] **Step 0：** `reader_leak_test.dart` 的快取殘留斷言改成最多輪詢 2 秒（每 100 ms 檢查一次）再判定，容許 Windows 檔案系統延遲釋放；仍未清空才失敗。
+- [x] **Step 1：** 跑 `reader_leak_test.dart -d windows`（debug）。**期望：** 4 次增量皆 < 11.23 MB、`leaked=false`、`book_cache` 本輪新增殘留為 0。
+- [x] **Step 2：** 把檔尾的 `[leak-verdict]` 區塊加上 `expect(verdict.leaked, isFalse, reason: …)`（移除「修法完成前刻意不斷言」註解），重跑通過。
+- [x] **Step 3：** 以附錄 A 的 Release 進入點重跑，記錄數據（量測完刪除 `probe_main.dart` 與 `probe_release_result.log`）。
+- [x] **Step 4：** 手動功能驗收（過關條件 3）：EPUB 直排／橫排、翻頁、選字與劃線工具列、目錄跳轉、CBZ 固定版面；同書連開兩次；開書中途離開。
+- [x] **Step 5：** 數據存 `docs/epics/epic-66-windows-port/assets/issue-4-*.log`；`flutter analyze`；commit。
 
 ---
 

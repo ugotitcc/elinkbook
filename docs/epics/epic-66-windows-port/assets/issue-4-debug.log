@@ -1,0 +1,63 @@
+00:00 +0: loading W:/app/integration_test/windows_leak/reader_leak_test.dart
+Building Windows application...                                 
+Building Windows application...                                    37.0s
+✓ Built build\windows\x64\runner\Debug\elinkbook.exe
+00:00 +0: Windows FoliateReaderView 重複開關大檔記憶體驗證
+[leak] path=reader iter=0 phase=before private_mb=255.73 ws_mb=303.07 wv2_private_mb=99.77 wv2_count=6
+[OpenBook#802711870] 開書開始 epub
+[OpenBook#802711870] 書複製完成 耗時 2420 ms
+[OpenBook#802711870] WebView 建立
+[OpenBook#802711870] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#802711870] 頁面載入完成 /assets/foliate/index.html 距開書 2970 ms
+[OpenBook#802711870] 已渲染 距開書 6942 ms
+[OpenBook#802711870] 離開畫面 已刪快取目錄=是
+[leak] book_cache 輪前=12 輪後=12 本輪新增殘留=0
+[leak] path=reader iter=0 phase=after_run private_mb=303.08 ws_mb=350.86 wv2_private_mb=144.79 wv2_count=6
+[leak] path=reader iter=0 phase=after_wait private_mb=287.96 ws_mb=350.90 wv2_private_mb=134.18 wv2_count=6
+[leak] path=reader iter=1 phase=before private_mb=287.96 ws_mb=351.02 wv2_private_mb=134.18 wv2_count=6
+[OpenBook#439477781] 開書開始 epub
+[OpenBook#439477781] 書複製完成 耗時 1643 ms
+[OpenBook#439477781] WebView 建立
+[OpenBook#439477781] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#439477781] 頁面載入完成 /assets/foliate/index.html 距開書 1914 ms
+[OpenBook#439477781] 已渲染 距開書 4800 ms
+[OpenBook#439477781] 離開畫面 已刪快取目錄=是
+[leak] book_cache 輪前=12 輪後=12 本輪新增殘留=0
+[leak] path=reader iter=1 phase=after_run private_mb=310.72 ws_mb=358.86 wv2_private_mb=138.75 wv2_count=6
+[leak] path=reader iter=1 phase=after_wait private_mb=294.95 ws_mb=358.83 wv2_private_mb=139.82 wv2_count=6
+[leak] path=reader iter=2 phase=before private_mb=294.95 ws_mb=359.02 wv2_private_mb=139.61 wv2_count=6
+[OpenBook#406206303] 開書開始 epub
+[OpenBook#406206303] 書複製完成 耗時 1444 ms
+[OpenBook#406206303] WebView 建立
+[OpenBook#406206303] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#406206303] 頁面載入完成 /assets/foliate/index.html 距開書 1727 ms
+[OpenBook#406206303] 已渲染 距開書 4161 ms
+[OpenBook#406206303] 離開畫面 已刪快取目錄=是
+[leak] book_cache 輪前=12 輪後=12 本輪新增殘留=0
+[leak] path=reader iter=2 phase=after_run private_mb=312.56 ws_mb=359.86 wv2_private_mb=140.11 wv2_count=6
+[leak] path=reader iter=2 phase=after_wait private_mb=295.48 ws_mb=359.88 wv2_private_mb=139.88 wv2_count=6
+[leak] path=reader iter=3 phase=before private_mb=295.48 ws_mb=360.06 wv2_private_mb=139.87 wv2_count=6
+[OpenBook#448668442] 開書開始 epub
+[OpenBook#448668442] 書複製完成 耗時 1475 ms
+[OpenBook#448668442] WebView 建立
+[OpenBook#448668442] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#448668442] 頁面載入完成 /assets/foliate/index.html 距開書 1715 ms
+[OpenBook#448668442] 已渲染 距開書 4466 ms
+[OpenBook#448668442] 離開畫面 已刪快取目錄=是
+[leak] book_cache 輪前=12 輪後=12 本輪新增殘留=0
+[leak] path=reader iter=3 phase=after_run private_mb=315.15 ws_mb=364.25 wv2_private_mb=140.40 wv2_count=6
+[leak] path=reader iter=3 phase=after_wait private_mb=298.40 ws_mb=364.32 wv2_private_mb=140.41 wv2_count=6
+[leak] path=reader iter=4 phase=before private_mb=298.90 ws_mb=364.45 wv2_private_mb=140.40 wv2_count=6
+[OpenBook#228164381] 開書開始 epub
+[OpenBook#228164381] 書複製完成 耗時 1458 ms
+[OpenBook#228164381] WebView 建立
+[OpenBook#228164381] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#228164381] 頁面載入完成 /assets/foliate/index.html 距開書 1716 ms
+[OpenBook#228164381] 已渲染 距開書 4466 ms
+[OpenBook#228164381] 離開畫面 已刪快取目錄=是
+[leak] book_cache 輪前=12 輪後=12 本輪新增殘留=0
+[leak] path=reader iter=4 phase=after_run private_mb=312.04 ws_mb=363.03 wv2_private_mb=147.56 wv2_count=6
+[leak] path=reader iter=4 phase=after_wait private_mb=297.86 ws_mb=363.07 wv2_private_mb=131.36 wv2_count=6
+[leak-verdict] path=reader leaked=false ratcheting=false deltas=[6.990000000000009, 0.5300000000000296, 2.919999999999959, -0.5399999999999636] exceeded=[] threshold_mb=11.23
+01:10 +1: (tearDownAll)
+01:10 +1: All tests passed!
