@@ -12,10 +12,29 @@ import '../reader/foliate_bridge_codec.dart';
 import '../reader/foliate_bridge_handlers.dart';
 import '../reader/foliate_native_bridge.dart';
 import '../reader/js_bridge_gateway.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
+import '../reader/local_book_server.dart';
 import '../reader/tts_segment_cfi.dart';
-import '../reader/windows_reader_resources.dart';
 import '../windows/windows_webview_environment.dart';
 import 'content_indexer.dart';
+
+/// 為 Foliate 內容索引器建構載入 URL。
+///
+/// 若提供 [bookBaseUri]，其查詢參數將包含 `bookBaseUrl`。
+@visibleForTesting
+Uri buildIndexerUri(Book book, {Uri? bookBaseUri}) {
+  final params = <String, String>{
+    'bookFileName': 'current.${cacheFileExtension(book.filePath)}',
+    'mode': 'index',
+  };
+  params.addAll(foliateBookBaseUrlParams(bookBaseUri));
+  return Uri.https(
+    'appassets.androidplatform.net',
+    '/assets/foliate/index.html',
+    params,
+  );
+}
 
 /// Foliate 格式（EPUB／KF8／CBZ／TXT／MD，皆經 readest/foliate-js 單引擎）
 /// 的內容擷取器（epic-10-search Issue 1，見 spec.md §3.2、ADR 0027 決策 2）。
@@ -39,6 +58,7 @@ class FoliateContentIndexer implements ContentIndexer {
   }) async* {
     final instanceId = 'index-${book.id}';
     String? cacheDir;
+    BookServeHandle? serveHandle;
     HeadlessInAppWebView? headlessWebView;
     InAppWebViewController? controller;
 
@@ -48,6 +68,9 @@ class FoliateContentIndexer implements ContentIndexer {
         throw StateError('無法快取書籍檔案：${book.filePath}');
       }
       cacheDir = File(cachedPath).parent.path;
+      if (isWindowsPlatform) {
+        serveHandle = await LocalBookServer.instance.register(cachedPath);
+      }
 
       final readyCompleter = Completer<void>();
       late final JsBridgeGateway gateway;
@@ -70,16 +93,6 @@ class FoliateContentIndexer implements ContentIndexer {
               path.endsWith('.js') ? 'text/javascript' : 'text/html';
           return WebResourceResponse(contentType: contentType, data: bytes);
         }
-        if (isWindowsPlatform && path.startsWith('/book/')) {
-          final dir = cacheDir;
-          if (dir == null) return null;
-          final bytes = await readWindowsBookBytes(path, dir);
-          if (bytes == null) return null;
-          return WebResourceResponse(
-            contentType: windowsBookContentType(path),
-            data: bytes,
-          );
-        }
         return null;
       }
 
@@ -101,7 +114,7 @@ class FoliateContentIndexer implements ContentIndexer {
         // 明確指定非退化尺寸，見 plan-issue-1.md Global Constraints——
         // 套件預設值 Size(-1,-1) 對 foliate-js 的版面初始化語意不明確。
         initialSize: const Size(800, 1280),
-        initialUrlRequest: URLRequest(url: WebUri.uri(_buildIndexUri(book))),
+        initialUrlRequest: URLRequest(url: WebUri.uri(buildIndexerUri(book, bookBaseUri: serveHandle?.bookBaseUri))),
         initialSettings: InAppWebViewSettings(
           javaScriptEnabled: true,
           useShouldInterceptRequest: true,
@@ -244,25 +257,18 @@ class FoliateContentIndexer implements ContentIndexer {
         }
       }
     } finally {
+      serveHandle?.dispose();
+      serveHandle = null;
       await headlessWebView?.dispose();
       if (cacheDir != null) {
         final dir = Directory(cacheDir);
-        if (dir.existsSync()) {
-          dir.deleteSync(recursive: true);
-        }
+        try {
+          if (dir.existsSync()) {
+            dir.deleteSync(recursive: true);
+          }
+        } catch (_) {}
       }
     }
-  }
-
-  Uri _buildIndexUri(Book book) {
-    return Uri.https(
-      'appassets.androidplatform.net',
-      '/assets/foliate/index.html',
-      {
-        'bookFileName': 'current.${cacheFileExtension(book.filePath)}',
-        'mode': 'index',
-      },
-    );
   }
 
   /// 索引模式只需要能載入 `assets/foliate/` 底下的靜態檔案（`index.html`／

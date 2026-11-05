@@ -206,10 +206,10 @@
 - Modify：`app/lib/search/foliate_content_indexer.dart`
 - Test：既有索引器測試都在 `integration_test/`（需裝置）。把索引器的 `_buildIndexUri(book)` 改為頂層函式 `buildIndexerUri(Book book, {Uri? bookBaseUri})`（標註 `@visibleForTesting`），內部只多一行 `params.addAll(foliateBookBaseUrlParams(bookBaseUri))`，共用函式已在 Task 5 完成，此處只消費；單元測試放 `app/test/search/foliate_index_uri_test.dart`
 
-- [ ] **Step 1：** 寫失敗測試：`buildIndexerUri` 有 `bookBaseUri` 時帶 `bookBaseUrl`，無時與現狀逐字相同（`bookFileName`、`mode=index`）。
-- [ ] **Step 2：** 實作：Windows 在 `cacheBookForServing` 之後 `register`，`finally` 內 `dispose`；移除 `interceptIndexRequest` 的 Windows `/book/` 分支。
-- [ ] **Step 3：** 測試通過；`flutter analyze`。**注意：** 端到端（`indexer_leak_test`）仍因 Headless 卡住無法驗證，報告需明載。
-- [ ] **Step 4：** commit。
+- [x] **Step 1：** 寫失敗測試：`buildIndexerUri` 有 `bookBaseUri` 時帶 `bookBaseUrl`，無時與現狀逐字相同（`bookFileName`、`mode=index`）。
+- [x] **Step 2：** 實作：Windows 在 `cacheBookForServing` 之後 `register`，`finally` 內 `dispose`；移除 `interceptIndexRequest` 的 Windows `/book/` 分支。
+- [x] **Step 3：** 測試通過；`flutter analyze`。**注意：** 端到端（`indexer_leak_test`）仍因 Headless 卡住無法驗證，報告需明載。
+- [x] **Step 4：** commit。
 
 ---
 
