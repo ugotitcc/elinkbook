@@ -128,7 +128,7 @@ Status: completed（已合併 PR #390；[plan-issue-4.md](plans/plan-issue-4.md)
 
 ## Issue 5：Foliate 格式降級
 
-Status: completed（已合併 PR #383；[plan-issue-5.md](plans/plan-issue-5.md)）。真機整合測試 `foliate_navigation_degrade_test.dart` 由人類於真機補跑。
+Status: completed（已合併 PR #383；[plan-issue-5.md](plans/plan-issue-5.md)）。真機整合測試 `foliate_navigation_degrade_test.dart` 已通過（2026-11-04），結果見 epic.md。
 
 **範圍**：EPUB／KF8／CBZ／TXT／MD。
 
