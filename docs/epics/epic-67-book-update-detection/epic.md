@@ -107,7 +107,7 @@
   - **來源參數補寫**：雲端取代／並存帶 `BookSourceRefs(source, cloudFileId)` 與 `folderName`；Calibre 帶 `source: calibreOpds`、`remoteServerId`、`remoteBookId`、`remoteDownloadUrl`。Calibre 偵測／並存用的 displayName 為 `<title>.<副檔名>`。
   - **快取失效**：`DownloadQueueController` 注入 `onCoverChanged`（`main.dart` 傳入 `evictCoverImageCache`），取代成功時對舊書與新書封面路徑各通知一次；回呼拋例外不影響結算。
   - **程式審查修正**：保底並存全數失敗改為丟例外（項目 failed）；對話框取消保底補上 `applier` 分支；`_deleteIfExists` 吞例外；`onCoverChanged` 以 try/catch 包住；面板顯示結算結果改用事先取得的 `ScaffoldMessenger`，對話框期間該列被卸載仍可顯示提示；補齊面板與對話框缺漏的測試。
-  - **真機／模擬器手動驗證：尚未執行**，由人類另行處理（計畫 Task 7 Step 3 的五項情境：Google Drive/OneDrive 更新版下載與 cloudFileId 補寫、Calibre 書庫更新版下載與 remote 識別碼補寫、force-stop 重啟後 update_staging 清掃、整檔相同重複提示迴歸、WiFi 上傳更新版成為新書）；完成後請把結果補記於此。
+  - **真機手動驗證：已通過（2026-11-05，WAVE `TCE70P24B2202374`，debug 版，帶 `cloud_oauth.json`，`main` 提交 `de43291b`）**。計畫 Task 7 Step 3 的五項情境（Google Drive/OneDrive 更新版下載與 cloudFileId 補寫、Calibre 書庫更新版下載與 remote 識別碼補寫、force-stop 重啟後 update_staging 清掃、整檔相同重複提示迴歸、WiFi 上傳更新版成為新書）：全部通過。測試檔為自製 EPUB v1／v2（同識別碼）。
 
 ## Issue 3 計畫與實作
 
@@ -124,7 +124,7 @@
   - **已知限制**：
     - 手動更新與強制重新連結後，既有的書籤、劃線、備註與閱讀進度位置不會因內容改版自動重新對齊，可能因內容不同而偏移。
     - TXT／MD／CBZ 因無指紋比對與 SAF 重新連結需求，不支援 `relinkBook`。
-  - **真機／模擬器手動驗證：尚未執行**，由人類另行處理（計畫 Task 4 Step 3 的五項情境：1 書架「用新檔案更新此書」成功與封面即時更新、2 格式不符拒絕、3 閱讀器權限撤銷後重新選檔遇內容不符出現強制重新連結對話框、4 強制重新連結確認後原地開書、5 E-Ink 模式無過場動畫）；完成後請把結果補記於此。
+  - **真機手動驗證：已通過（2026-11-05，WAVE `TCE70P24B2202374`，debug 版，`main` 提交 `de43291b`）**。計畫 Task 4 Step 3 的五項情境（1 書架「用新檔案更新此書」成功且書名即時更新、2 格式不符拒絕、3 閱讀器權限撤銷後重新選檔遇內容不符出現強制重新連結對話框、4 強制重新連結確認後原地開書、5 E-Ink 模式無過場動畫）：全部通過。測試檔無封面，封面即時更新改以書名變化觀察。
 
 ## Issue 6 計畫與實作
 
@@ -143,4 +143,4 @@
   - **已知限制**：
     - 夾到最後一頁只是「不壞」的安全網，書籤與劃線仍指向舊頁碼（PDF 沒有概略進度可用，與 Foliate 不同）；劃線的頁內矩形座標在新版內容中也可能對不上，屬 spec 已接受的偏移。
     - 降級後閱讀位置會被最後一頁覆寫（D6），原本的超界頁碼不保留。
-  - **真機／模擬器手動驗證：尚未執行**，由人類另行處理（計畫 Task 3 Step 3 的四項情境：1 書架 20 頁 PDF 讀到第 18 頁更新成 5 頁後開書開在第 5 頁並出提示不閃退、2 同書在書籤清單點第 18 頁書籤跳到最後一頁出提示、3 雙頁與逐頁翻頁模式落在最後一頁不空白、4 正常 PDF 開書與跳轉不出現提示迴歸）；完成後請把結果補記於此。
+  - **真機手動驗證：已通過（2026-11-05，WAVE `TCE70P24B2202374`，debug 版，`main` 提交 `de43291b`）**。計畫 Task 3 Step 3 的四項情境（1 讀到第 18 頁後更新成 5 頁，開書開在第 5 頁並出提示不閃退、2 書籤清單點第 18 頁書籤跳到最後一頁出提示、3 雙頁與逐頁翻頁模式落在最後一頁不空白、4 正常 PDF 開書與跳轉不出現提示迴歸）：全部通過。測試檔為 356 頁 PDF 換成 5 頁 PDF。
