@@ -146,6 +146,6 @@ All tests passed!
 ## 7. 限制與後續建議
 
 1. **索引器（`FoliateContentIndexer`）Headless 暫停問題：**
-   雖然索引器已完成程式碼改接與單元測試（`foliate_index_uri_test.dart`），但 Windows 端 `HeadlessInAppWebView` 在無實體視窗時會因 Chromium 背景 rAF 機制節流而暫停，此問題屬於 Chromium / WebView2 限制，由獨立 Issue 追蹤。
+   雖然索引器已完成程式碼改接與單元測試（`foliate_index_uri_test.dart`），但 Windows 端 `HeadlessInAppWebView` 在無實體視窗時會因 Chromium 背景 rAF 機制節流而暫停，此問題屬於 Chromium / WebView2 限制，由獨立 Issue 追蹤。**【更正，2026-11-06 Issue 8】** 「rAF 節流」說法不成立；根因是索引器漏登錄處理器，已修正，見 `issue-8-report.md`。
 2. **Foliate 內部 Range 分段載入：**
    目前 `foliate-js` 內部仍使用 `fetch().then(r => r.blob())` 載入整本書。若未來要進一步降低 WebView2 渲染器子程序（msedgewebview2.exe）在開啟數百 MB 書籍時的瞬間記憶體峰值，可評估將其改造為 Range-based loader。

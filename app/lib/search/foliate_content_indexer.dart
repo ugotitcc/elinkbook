@@ -19,6 +19,24 @@ import '../reader/tts_segment_cfi.dart';
 import '../windows/windows_webview_environment.dart';
 import 'content_indexer.dart';
 
+/// 索引器自己處理的 4 個處理器名稱（見 `indexBook()` 內的登錄）。
+@visibleForTesting
+const Set<String> foliateIndexerHandledHandlerNames = {
+  FoliateBridgeHandlers.onSectionCountReady,
+  FoliateBridgeHandlers.onSegmentsForSectionReady,
+  FoliateBridgeHandlers.onPageRendered,
+  FoliateBridgeHandlers.onError,
+};
+
+/// 索引器必須登錄「空處理器」的名稱：main.js 在索引模式下仍會呼叫它們
+/// （例如網頁渲染後呼叫 `onLocatorChanged`），Windows 外掛遇到沒登錄的處理器
+/// 會直接結束整個 App 程序（epic-66 Issue 8 實測；Android 不會）。
+@visibleForTesting
+List<String> foliateIndexerNoopHandlerNames() => [
+      for (final name in FoliateBridgeHandlers.all)
+        if (!foliateIndexerHandledHandlerNames.contains(name)) name,
+    ];
+
 /// 為 Foliate 內容索引器建構載入 URL。
 ///
 /// 若提供 [bookBaseUri]，其查詢參數將包含 `bookBaseUrl`。
@@ -184,6 +202,11 @@ class FoliateContentIndexer implements ContentIndexer {
               return null;
             },
           );
+          // epic-66 Issue 8：其餘 main.js 會呼叫的處理器登錄成空處理器，
+          // 否則 Windows 外掛會在 JS 呼叫它們時結束整個 App 程序。
+          for (final name in foliateIndexerNoopHandlerNames()) {
+            c.addJavaScriptHandler(handlerName: name, callback: (args) => null);
+          }
           c.addJavaScriptHandler(
             handlerName: FoliateBridgeHandlers.onPageRendered,
             callback: (args) {

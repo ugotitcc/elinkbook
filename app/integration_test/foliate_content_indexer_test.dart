@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/search/foliate_content_indexer.dart';
+import 'package:elinkbook/windows/windows_webview_environment.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -19,6 +20,13 @@ Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  // epic-66 Issue 8：Windows 的隱藏 WebView 需要 WebView2 環境（真實 App 在
+  // main() 建立）；非 Windows 平台此函式什麼都不做。
+  setUpAll(() async {
+    await initAppWebViewEnvironment(
+        userDataFolder: (await getApplicationSupportDirectory()).path);
+  });
 
   testWidgets(
       'FoliateContentIndexer 對 3 章節 EPUB fixture 正確擷取每章句子與 CFI',

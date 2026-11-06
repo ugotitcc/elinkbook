@@ -138,6 +138,8 @@ Issue 2 §4.3 已實驗：補上外掛少的 `Release()` 後數字**完全不變
 
 在嘗試對 `FoliateContentIndexer` 執行 224 MB 迴圈時，測試程序在啟動背景 `HeadlessInAppWebView` 並載入 `assets/foliate/index.html?mode=index` 約 9 秒後，無預警遭遇連線中斷（`Lost connection to device`），程序無回報例外直接終止（未觸發 WER CrashDump，非 Access Violation）。**索引器沒有完成任何一輪，因此沒有任何 `[leak]` 數據，也沒有 `[leak-verdict]`。**
 
+> **更正（2026-11-06，Issue 8）：** 下列「rAF 暫停」推論不成立。實測根因是索引器沒登錄 JS 會呼叫的處理器，Windows 外掛因此結束整個 App 程序；隱藏視窗的 rAF 正常。見 `issue-8-report.md`。
+
 ### 4.2 診斷（僅為推論）
 
 以下為除錯時以臨時探針得到的**推論**；該探針程式**未進版控**，輸出未保存，無法重現，應視為待驗證的線索，而非結論：
