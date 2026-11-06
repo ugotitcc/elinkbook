@@ -101,13 +101,23 @@ class _WebView2MissingAppState extends State<WebView2MissingApp> {
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: (deviceLocales, _) =>
           resolveMaterialAppLocale(deviceLocales),
+      // 跟隨系統深／淺色；顏色一律取自 colorScheme，不寫死色票
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+      ),
+      themeMode: ThemeMode.system,
       home: Builder(
         builder: (context) {
           final l10n = AppLocalizations.of(context)!;
+          final scheme = Theme.of(context).colorScheme;
           return Scaffold(
             body: Center(
               child: SingleChildScrollView(
@@ -118,10 +128,10 @@ class _WebView2MissingAppState extends State<WebView2MissingApp> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.system_update,
                         size: 64,
-                        color: Colors.deepPurple,
+                        color: scheme.primary,
                       ),
                       const SizedBox(height: 24),
                       Text(
@@ -144,9 +154,9 @@ class _WebView2MissingAppState extends State<WebView2MissingApp> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
+                            color: scheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.shade300),
+                            border: Border.all(color: scheme.outlineVariant),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,7 +175,7 @@ class _WebView2MissingAppState extends State<WebView2MissingApp> {
                                 style: TextStyle(
                                   fontFamily: 'monospace',
                                   fontSize: 12,
-                                  color: Colors.red.shade900,
+                                  color: scheme.error,
                                 ),
                               ),
                             ],
@@ -178,7 +188,7 @@ class _WebView2MissingAppState extends State<WebView2MissingApp> {
                           l10n.webview2StillMissing,
                           key: const Key('webview2_still_missing_text'),
                           style: TextStyle(
-                            color: Colors.orange.shade900,
+                            color: scheme.tertiary,
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
@@ -210,7 +220,7 @@ class _WebView2MissingAppState extends State<WebView2MissingApp> {
                           kWebView2DownloadUrl,
                           key: const Key('webview2_url_text'),
                           style: TextStyle(
-                            color: Colors.blue.shade700,
+                            color: scheme.primary,
                             decoration: TextDecoration.underline,
                           ),
                         ),

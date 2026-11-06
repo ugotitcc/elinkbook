@@ -52,7 +52,7 @@ flutter test integration_test/windows_webview2/runtime_probe_test.dart -d window
 
 1. **純邏輯檢查模組（Task 2）**：
    - 新增 `app/lib/windows/webview2_runtime_check.dart`，定義 `WebView2CheckStatus`、`WebView2CheckResult`（支援值物件等值性比較）、`checkAndInitWebView2`。
-   - 探測結果為 `null`、空字串或純空白時判定為 `missing`；建立環境時支援逾時防護（15 秒），逾時後自動補上 `.catchError((_) {})` 避免背景例外冒泡。
+   - 探測結果為 `null`、空字串或純空白時判定為 `missing`；建立環境時支援逾時防護（60 秒；審查後由 15 秒調長，重新檢查時重用進行中的建立），逾時後自動補上 `.catchError((_) {})` 避免背景例外冒泡。
    - 單元測試：`app/test/windows/webview2_runtime_check_test.dart`（8 個測試案例全數通過）。
 2. **說明畫面與多語系（Task 3）**：
    - 新增直接依賴 `url_launcher: ^6.3.2`（僅修改 `pubspec.lock` 之 `dependency: "direct main"`，無其他相依套件異動）。

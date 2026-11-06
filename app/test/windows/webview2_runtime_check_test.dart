@@ -91,7 +91,7 @@ void main() {
       expect(result.detail, contains('boom'));
     });
 
-    test('createEnvironment 回傳永遠不完成的 Future，createTimeout 設 50ms → failed，detail 提到逾時', () async {
+    test('createEnvironment 回傳永遠不完成的 Future，createTimeout 設 50ms → failed，detail 提到 timed out', () async {
       final completer = Completer<void>();
       final result = await checkAndInitWebView2(
         probe: () async => '130.0.1',
@@ -101,7 +101,7 @@ void main() {
 
       expect(result.status, WebView2CheckStatus.failed);
       expect(result.isReady, isFalse);
-      expect(result.detail, contains('逾時'));
+      expect(result.detail, contains('timed out'));
     });
   });
 

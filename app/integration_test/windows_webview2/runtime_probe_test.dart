@@ -36,7 +36,8 @@ void main() {
     expect(version, isNotEmpty);
   });
 
-  testWidgets('空資料夾：create 的行為（記錄用）', (tester) async {
+  // 記錄用：刻意不下斷言，只把外掛真實行為印進 log，供日後比對。
+  testWidgets('空資料夾：create 的行為（記錄用，無斷言）', (tester) async {
     try {
       final env = await WebViewEnvironment.create(
         settings: WebViewEnvironmentSettings(

@@ -3,12 +3,14 @@ import 'dart:io';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:pdfrx/pdfrx.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'cloud_import/cloud_storage_client.dart';
 import 'cloud_import/google_drive_oauth_client.dart';
@@ -72,8 +74,6 @@ import 'theme/app_theme.dart';
 import 'windows/windows_webview_environment.dart';
 import 'windows/webview2_runtime_check.dart';
 import 'windows/webview2_missing_screen.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:window_manager/window_manager.dart';
 import 'windows/window_fullscreen_controller.dart';
 import 'windows/window_fullscreen_shortcuts.dart';
 import 'theme/app_theme_data.dart';
@@ -224,7 +224,9 @@ Future<void> main() async {
     pdfIndexer: const PdfContentIndexer(),
     foliateIndexer: const FoliateContentIndexer(),
   );
-  contentIndexingScheduler.start();
+  // epic-66 Issue 9：start() 延後到 startApp() 內呼叫。Windows 缺 WebView2 時，
+  // appWebViewEnvironment 為 null，索引器若先啟動會用預設環境起 WebView，
+  // 可能閃退或把使用者資料夾放到 exe 旁。
   // epic-10-search Issue 3：「啟用全文檢索」設定模型。requestProcessing
   // 以 callback 注入（而非直接持有整個 contentIndexingScheduler），見
   // plans/plan-issue-3.md Global Constraints。
@@ -462,6 +464,7 @@ Future<void> main() async {
     sources: sources,
   );
   void startApp() {
+    contentIndexingScheduler.start();
     runApp(
       ElinkBookApp(
         dependencies: appDependencies,
@@ -485,11 +488,14 @@ Future<void> main() async {
     activeWindowFullscreenController = WindowManagerFullscreenController();
 
     final appSupportDir = await getApplicationSupportDirectory();
+    // 進行中的環境建立。逾時後使用者按「重新檢查」時重用同一個 Future，
+    // 避免對同一個 user data folder 同時建立兩次。完成（成功或失敗）後清空。
+    Future<void>? pendingCreate;
     Future<WebView2CheckResult> runCheck() => checkAndInitWebView2(
       probe: () => WebViewEnvironment.getAvailableVersion(),
-      createEnvironment: () => initAppWebViewEnvironment(
+      createEnvironment: () => pendingCreate ??= initAppWebViewEnvironment(
         userDataFolder: appSupportDir.path,
-      ),
+      ).whenComplete(() => pendingCreate = null),
     );
 
     final initialResult = await runCheck();

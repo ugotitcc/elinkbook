@@ -67,12 +67,12 @@ typedef WebView2EnvironmentCreator = Future<void> Function();
 ///    - 若回傳 null、空字串或純空白，視為未安裝，回傳 [WebView2CheckResult.missing]，
 ///      且不呼叫 [createEnvironment]；
 /// 2. 若探測到有效版本，呼叫 [createEnvironment] 建立環境：
-///    - 逾時（預設 15 秒）或拋出例外時轉為 [WebView2CheckResult.failed]；
+///    - 逾時（預設 60 秒）或拋出例外時轉為 [WebView2CheckResult.failed]；
 ///    - 成功完成時回傳 [WebView2CheckResult.ready]。
 Future<WebView2CheckResult> checkAndInitWebView2({
   required WebView2VersionProbe probe,
   required WebView2EnvironmentCreator createEnvironment,
-  Duration createTimeout = const Duration(seconds: 15),
+  Duration createTimeout = const Duration(seconds: 60),
 }) async {
   final String? rawVersion;
   try {
@@ -93,8 +93,10 @@ Future<WebView2CheckResult> checkAndInitWebView2({
   } on TimeoutException {
     // Ruling 3: 避免逾時後背景的延遲非同步例外冒泡成未處理例外
     envFuture.catchError((_) {});
-    // l10n-ignore: 內部技術錯誤訊息
-    return const WebView2CheckResult.failed('建立 WebView2 環境逾時');
+    // 技術識別訊息（英文），畫面上由 l10n 標籤「錯誤詳情」包裝
+    return WebView2CheckResult.failed(
+      'WebView2 environment creation timed out after ${createTimeout.inSeconds}s',
+    );
   } catch (e) {
     return WebView2CheckResult.failed(e.toString());
   }
