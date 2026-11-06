@@ -798,5 +798,12 @@
   "bookActionUpdateBook": "用新文件更新此书",
   "bookManualUpdateConfirmMessage": "将以“{fileName}”替换“{title}”的文件内容。阅读进度、分类与排版偏好会保留。",
   "bookManualUpdateConfirmButton": "更新",
-  "bookManualUpdateFormatMismatch": "选取的文件格式与此书不同，无法更新"
+  "bookManualUpdateFormatMismatch": "选取的文件格式与此书不同，无法更新",
+  "webview2MissingTitle": "需要安装 Microsoft Edge WebView2",
+  "webview2MissingBody": "elinkBook 需要 WebView2 运行环境才能显示书籍。请下载并安装，完成后点击“重新检查”。",
+  "webview2FailedBody": "检测到 WebView2，但无法启动。请重新安装后点击“重新检查”。",
+  "webview2DownloadButton": "下载 WebView2",
+  "webview2RecheckButton": "重新检查",
+  "webview2StillMissing": "仍然检测不到可用的 WebView2。",
+  "webview2DetailLabel": "错误摘要"
 }

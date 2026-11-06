@@ -818,5 +818,33 @@
   "bookManualUpdateFormatMismatch": "選取的檔案格式與此書不同，無法更新",
   "@bookManualUpdateFormatMismatch": {
     "description": "手動更新書籍時選取了不同格式檔案的錯誤提示"
+  },
+  "webview2MissingTitle": "需要安裝 Microsoft Edge WebView2",
+  "@webview2MissingTitle": {
+    "description": "Windows 啟動時偵測到未安裝 WebView2 Runtime 時的說明畫面標題"
+  },
+  "webview2MissingBody": "elinkBook 需要 WebView2 執行階段才能顯示書籍。請下載並安裝，完成後按「重新檢查」。",
+  "@webview2MissingBody": {
+    "description": "說明畫面內文：提醒使用者安裝 WebView2 執行階段以開啟書籍"
+  },
+  "webview2FailedBody": "偵測到 WebView2，但無法啟動。請重新安裝後按「重新檢查」。",
+  "@webview2FailedBody": {
+    "description": "說明畫面內文：偵測到 WebView2 但環境建立失敗時的提示"
+  },
+  "webview2DownloadButton": "下載 WebView2",
+  "@webview2DownloadButton": {
+    "description": "說明畫面的「下載 WebView2」按鈕文字"
+  },
+  "webview2RecheckButton": "重新檢查",
+  "@webview2RecheckButton": {
+    "description": "說明畫面的「重新檢查」按鈕文字"
+  },
+  "webview2StillMissing": "仍然偵測不到可用的 WebView2。",
+  "@webview2StillMissing": {
+    "description": "使用者按下「重新檢查」後仍未偵測到 WebView2 時顯示的提示文字"
+  },
+  "webview2DetailLabel": "錯誤摘要",
+  "@webview2DetailLabel": {
+    "description": "環境建立失敗或例外時顯示的錯誤摘要標籤"
   }
 }

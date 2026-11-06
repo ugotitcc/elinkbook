@@ -2782,6 +2782,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get bookManualUpdateFormatMismatch => '選取的檔案格式與此書不同，無法更新';
+
+  @override
+  String get webview2MissingTitle => '需要安裝 Microsoft Edge WebView2';
+
+  @override
+  String get webview2MissingBody =>
+      'elinkBook 需要 WebView2 執行階段才能顯示書籍。請下載並安裝，完成後按「重新檢查」。';
+
+  @override
+  String get webview2FailedBody => '偵測到 WebView2，但無法啟動。請重新安裝後按「重新檢查」。';
+
+  @override
+  String get webview2DownloadButton => '下載 WebView2';
+
+  @override
+  String get webview2RecheckButton => '重新檢查';
+
+  @override
+  String get webview2StillMissing => '仍然偵測不到可用的 WebView2。';
+
+  @override
+  String get webview2DetailLabel => '錯誤摘要';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -5562,6 +5584,28 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get bookManualUpdateFormatMismatch => '选取的文件格式与此书不同，无法更新';
+
+  @override
+  String get webview2MissingTitle => '需要安装 Microsoft Edge WebView2';
+
+  @override
+  String get webview2MissingBody =>
+      'elinkBook 需要 WebView2 运行环境才能显示书籍。请下载并安装，完成后点击“重新检查”。';
+
+  @override
+  String get webview2FailedBody => '检测到 WebView2，但无法启动。请重新安装后点击“重新检查”。';
+
+  @override
+  String get webview2DownloadButton => '下载 WebView2';
+
+  @override
+  String get webview2RecheckButton => '重新检查';
+
+  @override
+  String get webview2StillMissing => '仍然检测不到可用的 WebView2。';
+
+  @override
+  String get webview2DetailLabel => '错误摘要';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -8342,4 +8386,26 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get bookManualUpdateFormatMismatch => '選取的檔案格式與此書不同，無法更新';
+
+  @override
+  String get webview2MissingTitle => '需要安裝 Microsoft Edge WebView2';
+
+  @override
+  String get webview2MissingBody =>
+      'elinkBook 需要 WebView2 執行階段才能顯示書籍。請下載並安裝，完成後按「重新檢查」。';
+
+  @override
+  String get webview2FailedBody => '偵測到 WebView2，但無法啟動。請重新安裝後按「重新檢查」。';
+
+  @override
+  String get webview2DownloadButton => '下載 WebView2';
+
+  @override
+  String get webview2RecheckButton => '重新檢查';
+
+  @override
+  String get webview2StillMissing => '仍然偵測不到可用的 WebView2。';
+
+  @override
+  String get webview2DetailLabel => '錯誤摘要';
 }

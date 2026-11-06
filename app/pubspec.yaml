@@ -168,6 +168,8 @@ dependencies:
   # 視窗全螢幕控制（epic-66 Issue 7）：固定 0.5.2（不使用 ^，0.6.0 要求
   # Flutter >= 3.47.7，升級見 Issue 6）。
   window_manager: 0.5.2
+  # 外部連結開啟（epic-66 Issue 9）：WebView2 缺失說明畫面開瀏覽器下載。
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
