@@ -20,4 +20,25 @@ abstract final class FoliateBridgeHandlers {
   static const onNavigationDegraded = 'onNavigationDegraded';
   // epic-66 Issue 7：Windows WebView2 鍵盤事件轉送。
   static const onDesktopKey = 'onDesktopKey';
+
+  /// main.js 會呼叫的全部處理器名稱。
+  ///
+  /// epic-66 Issue 8：Windows 外掛在 JS 呼叫 Dart 端沒登錄的處理器時，會直接
+  /// 結束整個 App 程序（Android 不會）。新增常數時必須同時加進這份清單；
+  /// `foliate_bridge_handlers_test.dart` 會對照 main.js 的實際呼叫。
+  static const List<String> all = [
+    onTableOfContentsReady,
+    onTtsSegmentsReady,
+    onTtsSegmentIndexReady,
+    onPageRendered,
+    onError,
+    onTtsHighlightOutOfSafeWindow,
+    onSelectionCleared,
+    onSectionCountReady,
+    onSegmentsForSectionReady,
+    onLocatorChanged,
+    onSelectionChanged,
+    onNavigationDegraded,
+    onDesktopKey,
+  ];
 }
