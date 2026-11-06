@@ -2008,6 +2008,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get importDropOverlayText => '放开以汇入';
+
+  @override
+  String get importDropBusyMessage => '汇入进行中，请稍后再拖入';
+
+  @override
   String get libraryImportFolderFailedMessage => '無法讀取這個資料夾，請確認已授權存取後再試一次';
 
   @override
@@ -4778,6 +4784,12 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   }
 
   @override
+  String get importDropOverlayText => '放开以汇入';
+
+  @override
+  String get importDropBusyMessage => '汇入进行中，请稍后再拖入';
+
+  @override
   String get libraryImportFolderFailedMessage => '无法读取这个文件夹，请确认已授权访问后再试一次';
 
   @override
@@ -7546,6 +7558,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
     );
     return '$_temp0';
   }
+
+  @override
+  String get importDropOverlayText => '放開以匯入';
+
+  @override
+  String get importDropBusyMessage => '匯入進行中，請稍後再拖入';
 
   @override
   String get libraryImportFolderFailedMessage => '無法讀取這個資料夾，請確認已授權存取後再試一次';

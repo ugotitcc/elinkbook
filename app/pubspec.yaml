@@ -162,6 +162,9 @@ dependencies:
   # 螢幕常亮（epic-44-wifi-book-transfer）：WiFi 傳書畫面顯示中防止螢幕
   # 休眠中斷傳輸，對應 design.md「前景執行穩健度」承諾。
   wakelock_plus: ^1.5.2
+  # 桌面拖曳匯入（epic-66 Issue 5）：固定 0.8.4（0.9.x 要求 Flutter >= 3.47.7，
+  # 升級見 Issue 6）。
+  desktop_drop: 0.8.4
 
 dev_dependencies:
   flutter_test:

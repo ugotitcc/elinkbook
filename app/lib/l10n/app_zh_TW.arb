@@ -2646,6 +2646,14 @@
       }
     }
   },
+  "importDropOverlayText": "放開以匯入",
+  "@importDropOverlayText": {
+    "description": "Windows 拖曳檔案或資料夾經過視窗時顯示的遮罩提示文字"
+  },
+  "importDropBusyMessage": "匯入進行中，請稍後再拖入",
+  "@importDropBusyMessage": {
+    "description": "匯入進行中再次拖入檔案或資料夾時的提示訊息"
+  },
   "libraryImportFolderFailedMessage": "無法讀取這個資料夾，請確認已授權存取後再試一次",
   "@libraryImportFolderFailedMessage": {
     "description": "資料夾匯入整體失敗（無法取得持久化授權，或列舉資料夾內容失敗）時的 SnackBar；兩種失敗使用者能做的事相同（重新選資料夾／重新授權），共用一則"

@@ -146,8 +146,8 @@ void showImportResultSnackBar(BuildContext context, ImportResult result) {
       ? l10n.libraryImportResultUnsupportedMessage(unsupportedCount)
       : null;
   final message = [
-    if (base != null) base,
-    if (unsupported != null) unsupported,
+    ?base,
+    ?unsupported,
   ].join('\n');
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }

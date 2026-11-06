@@ -3557,6 +3557,18 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{略過 1 個不支援的檔案} other{略過 {count} 個不支援的檔案}}'**
   String libraryImportResultUnsupportedMessage(int count);
 
+  /// Windows 拖曳檔案或資料夾經過視窗時顯示的遮罩提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'放開以匯入'**
+  String get importDropOverlayText;
+
+  /// 匯入進行中再次拖入檔案或資料夾時的提示訊息
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'匯入進行中，請稍後再拖入'**
+  String get importDropBusyMessage;
+
   /// 資料夾匯入整體失敗（無法取得持久化授權，或列舉資料夾內容失敗）時的 SnackBar；兩種失敗使用者能做的事相同（重新選資料夾／重新授權），共用一則
   ///
   /// In zh_TW, this message translates to:

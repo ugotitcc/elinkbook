@@ -174,7 +174,7 @@
 
 行為（widget 內）：非 Windows（`isWindowsPlatform` 為假）直接 `return child`；Windows 永遠 `DropTarget(enable: widget.enabled && (ModalRoute.of(context)?.isCurrent ?? true), ...)` 包 `Stack(child, 遮罩)`，結構不隨狀態改變。遮罩只在拖曳經過（`onDragEntered`→顯示、`onDragExited`／`onDragDone`→隱藏）時出現，用 `IgnorePointer` 避免擋住點擊；**`_busy` 為真時 `onDragEntered` 不顯示遮罩**（不先邀請再拒絕，審查 I-3），使用者仍放開時由 `onDragDone` 顯示忙碌提示。`onDragDone`：`files` 為空→忽略；匯入進行中（`_busy`）→顯示 `importDropBusyMessage` 的 SnackBar 並返回；否則設 `_busy = true`，呼叫 `importDroppedPaths(widget.importService, 路徑清單, confirmAutoGroup: () => context.mounted ? confirmAutoGroupByFolderName(context) : Future.value(null))`，結果為 `null` 就結束；`!mounted` 時 `discardUpdateCandidates` 後返回；否則 `showImportResultSnackBar` 再 `handleImportUpdateCandidates`，最後若 `result.importedBooks` 或 `result.updateCandidates` 非空且仍 `mounted`，呼叫 `widget.onImportCompleted?.call()`；`finally` 還原 `_busy`（先檢查 `mounted`）。
 
-- [ ] **Step 1：寫失敗測試**（`debugDefaultTargetPlatformOverride = TargetPlatform.windows`，`addTearDown` 還原；`MaterialApp` 帶 zh_TW locale 與 `AppLocalizations` delegates；`FakeBookImportService`；用 `tester.widget<DropTarget>(find.byType(DropTarget))` 取出並直接呼叫 `onDragEntered`／`onDragExited`／`onDragDone`，事件物件以必要的 `Offset.zero` 位置建構，`DropDoneDetails.files` 用 `DropItemFile(路徑)`。**型別已查證**：0.8.4 的 `DropDoneDetails.files` 是 `List<DropItem>`（`desktop_drop-0.8.4/lib/src/drop_target.dart:17`），`DropItemFile` 由套件匯出；不可改用 `XFile`，`List<XFile>` 不能指派給 `List<DropItem>`，無法編譯）：
+- [x] **Step 1：寫失敗測試**（`debugDefaultTargetPlatformOverride = TargetPlatform.windows`，`addTearDown` 還原；`MaterialApp` 帶 zh_TW locale 與 `AppLocalizations` delegates；`FakeBookImportService`；用 `tester.widget<DropTarget>(find.byType(DropTarget))` 取出並直接呼叫 `onDragEntered`／`onDragExited`／`onDragDone`，事件物件以必要的 `Offset.zero` 位置建構，`DropDoneDetails.files` 用 `DropItemFile(路徑)`。**型別已查證**：0.8.4 的 `DropDoneDetails.files` 是 `List<DropItem>`（`desktop_drop-0.8.4/lib/src/drop_target.dart:17`），`DropItemFile` 由套件匯出；不可改用 `XFile`，`List<XFile>` 不能指派給 `List<DropItem>`，無法編譯）：
   - `非 Windows 不掛載 DropTarget`：預設平台（Android）下 `find.byType(DropTarget)` 找不到、child 正常顯示。
   - `enabled 為 false 時 DropTarget.enable 為 false`。
   - `拖曳經過顯示遮罩，離開後消失`：斷言 `Key('import_drop_overlay')` 與 `importDropOverlayText`。
@@ -186,10 +186,10 @@
   - `拖入資料夾：跳出確認框，按確認後呼叫 importFolder`（點 `Key('library_import_folder_confirm')`）；`按取消：importFolder 沒被呼叫`。
   - `匯入未完成時卸載 widget：不丟例外`（Completer 完成前把 widget 樹換掉，再完成 Completer，斷言測試無未捕捉例外）。
   - `匯入結果含更新候選但已卸載：呼叫 discardUpdateCandidates`（以 `FakeBookImportService.discardedCandidates` 斷言，該欄位已存在）。
-- [ ] **Step 2：執行確認失敗**：`flutter test test/screens/support/import_drop_target_test.dart`；預期編譯失敗。
-- [ ] **Step 3：實作。** 先 `flutter pub add desktop_drop:0.8.4`（或手改 pubspec 後 `flutter pub get`），檢查 `git diff app/pubspec.lock` 並還原與 `desktop_drop` 無關的版本降級；四個 arb 補兩個新鍵、`flutter gen-l10n`；建立 `import_drop_target.dart`，行為如上。
-- [ ] **Step 4：執行確認通過**：同 Step 2 指令；`flutter analyze` 乾淨；`node tool/check_l10n_hardcoded_strings.js` PASS。
-- [ ] **Step 5：Commit**：明確列出 `app/pubspec.yaml`、`app/pubspec.lock`、四個 arb、`app/lib/l10n/app_localizations*.dart`（僅限有變更者）、`import_drop_target.dart`、其測試，訊息 `feat(import): ImportDropTarget 與 desktop_drop 0.8.4（epic-66 Issue 5 Task 6）`。
+- [x] **Step 2：執行確認失敗**：`flutter test test/screens/support/import_drop_target_test.dart`；預期編譯失敗。
+- [x] **Step 3：實作。** 先 `flutter pub add desktop_drop:0.8.4`（或手改 pubspec 後 `flutter pub get`），檢查 `git diff app/pubspec.lock` 並還原與 `desktop_drop` 無關的版本降級；四個 arb 補兩個新鍵、`flutter gen-l10n`；建立 `import_drop_target.dart`，行為如上。
+- [x] **Step 4：執行確認通過**：同 Step 2 指令；`flutter analyze` 乾淨；`node tool/check_l10n_hardcoded_strings.js` PASS。
+- [x] **Step 5：Commit**：明確列出 `app/pubspec.yaml`、`app/pubspec.lock`、四個 arb、`app/lib/l10n/app_localizations*.dart`（僅限有變更者）、`import_drop_target.dart`、其測試，訊息 `feat(import): ImportDropTarget 與 desktop_drop 0.8.4（epic-66 Issue 5 Task 6）`。
 
 ---
 
