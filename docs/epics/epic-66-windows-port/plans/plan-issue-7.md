@@ -244,11 +244,11 @@
   - Windows 時 `initState` 以 `WidgetsBinding.instance.addPostFrameCallback` 呼叫 `_searchFocusNode.requestFocus()`（開啟即聚焦，決定 10）；非 Windows 不動，維持 `autofocus: false`。
   - Windows 時 `initState` 註冊 `HardwareKeyboard.instance.addHandler(_handleSearchKeyEvent)`、`dispose` 移除：`KeyDownEvent` 的 Ctrl+F（無 shift／alt／meta）且 `ModalRoute.of(context)?.isCurrent == true` 時，`_searchFocusNode.requestFocus()`，並在 `_controller.text` 非空時把 `selection` 設為全選（`TextSelection(baseOffset: 0, extentOffset: _controller.text.length)`），回傳 `true`；其他回傳 `false`。**不要用 `CallbackShortcuts`**：搜尋畫面沒有焦點節點在其子樹時它收不到事件。
 
-- [ ] **Step 1：寫失敗測試**（沿用該畫面既有測試的建構方式）：Windows 平台 override 下：(a) 開啟後下一幀輸入框已取得焦點；(b) 焦點被移走後送出 Ctrl+F，輸入框重新取得焦點；(c) 輸入框已有文字時送出 Ctrl+F，文字被全選；(d) Ctrl+Shift+F、單獨 F 不處理；(e) 有對話框疊在搜尋畫面上時 Ctrl+F 不處理；(f) 畫面關閉後處理器已移除（再送 Ctrl+F 不丟例外）。預設平台（Android）下：開啟後輸入框**沒有**焦點，Ctrl+F 不處理。
-- [ ] **Step 2：執行確認失敗：** `flutter test test/screens/book_search_screen_test.dart`。
-- [ ] **Step 3：實作** 如上，並加中文註解說明為何用全域處理器而非 `CallbackShortcuts`。
-- [ ] **Step 4：執行確認通過：** 同 Step 2 指令。
-- [ ] **Step 5：Commit：** `git add app/lib/screens/book_search_screen.dart app/test/screens/book_search_screen_test.dart`，訊息 `feat(keyboard): 搜尋畫面開啟即聚焦與 Ctrl+F（epic-66 Issue 7 Task 7）`。
+- [x] **Step 1：寫失敗測試**（沿用該畫面既有測試的建構方式）：Windows 平台 override 下：(a) 開啟後下一幀輸入框已取得焦點；(b) 焦點被移走後送出 Ctrl+F，輸入框重新取得焦點；(c) 輸入框已有文字時送出 Ctrl+F，文字被全選；(d) Ctrl+Shift+F、單獨 F 不處理；(e) 有對話框疊在搜尋畫面上時 Ctrl+F 不處理；(f) 畫面關閉後處理器已移除（再送 Ctrl+F 不丟例外）。預設平台（Android）下：開啟後輸入框**沒有**焦點，Ctrl+F 不處理。
+- [x] **Step 2：執行確認失敗：** `flutter test test/screens/book_search_screen_test.dart`。
+- [x] **Step 3：實作** 如上，並加中文註解說明為何用全域處理器而非 `CallbackShortcuts`。
+- [x] **Step 4：執行確認通過：** 同 Step 2 指令。
+- [x] **Step 5：Commit：** `git add app/lib/screens/book_search_screen.dart app/test/screens/book_search_screen_test.dart`，訊息 `feat(keyboard): 搜尋畫面開啟即聚焦與 Ctrl+F（epic-66 Issue 7 Task 7）`。
 
 ---
 
