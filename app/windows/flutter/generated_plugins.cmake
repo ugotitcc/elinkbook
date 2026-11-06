@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
+  desktop_drop
   desktop_webview_window
   flutter_inappwebview_windows
   flutter_secure_storage_windows

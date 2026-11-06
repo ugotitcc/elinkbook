@@ -240,8 +240,8 @@
 - Modify: `docs/epics/epic-66-windows-port/issues.md`（Issue 5 狀態改為「🟡 實作完成，待 Windows 人工驗證」）
 - Create: `docs/epics/epic-66-windows-port/issue-5-report.md`（報告骨架：做了什麼、自動化測試結果、`issues.md` 過關條件 1 到 9 的**人工驗證表**，每項結果欄先留「待驗證」，**不得預先勾選**；以及已知限制）
 
-- [ ] **Step 1：** 更新上述三份文件。人工驗證表必須明確標示：條件 1 到 9 全部「尚未在 Windows 實機驗證」，驗證前不得宣稱通過。
-- [ ] **Step 2：全套測試**：`flutter test`（`run_in_background`），預期 `All tests passed!`；記錄測試總數與 commit。
-- [ ] **Step 3：靜態檢查**：`flutter analyze`（`No issues found!`）、`node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js`（皆 PASS）。
-- [ ] **Step 4：確認 `git diff origin/main -- app/pubspec.lock`** 只含 `desktop_drop` 與其傳遞相依的異動。
-- [ ] **Step 5：Commit**：`git add CONTEXT.md docs/epics/epic-66-windows-port/issues.md docs/epics/epic-66-windows-port/issue-5-report.md`，訊息 `docs(epic-66): Issue 5 收尾文件與人工驗證清單`。推送與開 PR 前先請使用者確認，並請使用者在 Windows 實機完成人工驗證表。
+- [x] **Step 1：** 更新上述三份文件。人工驗證表必須明確標示：條件 1 到 9 全部「尚未在 Windows 實機驗證」，驗證前不得宣稱通過。
+- [x] **Step 2：全套測試**：`flutter test`（`run_in_background`），預期 `All tests passed!`；記錄測試總數與 commit。
+- [x] **Step 3：靜態檢查**：`flutter analyze`（`No issues found!`）、`node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js`（皆 PASS）。
+- [x] **Step 4：確認 `git diff origin/main -- app/pubspec.lock`** 只含 `desktop_drop` 與其傳遞相依的異動。
+- [x] **Step 5：Commit**：`git add CONTEXT.md docs/epics/epic-66-windows-port/issues.md docs/epics/epic-66-windows-port/issue-5-report.md`，訊息 `docs(epic-66): Issue 5 收尾文件與人工驗證清單`。推送與開 PR 前先請使用者確認，並請使用者在 Windows 實機完成人工驗證表。
