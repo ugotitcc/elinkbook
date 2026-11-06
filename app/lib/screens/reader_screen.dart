@@ -95,6 +95,7 @@ import 'pdf_thumbnail_panel.dart';
 import 'tts_panel.dart';
 import 'reader_chrome_top_bar.dart';
 import '../windows/window_fullscreen_controller.dart';
+import '../windows/window_fullscreen_shortcuts.dart';
 
 /// 音量鍵事件頻道（epic-7-interaction Issue 7）：原生 `MainActivity.
 /// dispatchKeyEvent()` 攔截音量鍵後呼叫 `onVolumeKey`；`_handleVolumeKeyCall`
@@ -515,6 +516,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     WidgetsBinding.instance.addObserver(this);
     if (isWindowsPlatform) {
       HardwareKeyboard.instance.addHandler(_handleReaderKeyEvent);
+      WindowFullscreenShortcuts.activeEscOverrideCount++;
     }
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
@@ -670,6 +672,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _searchJumpHighlightTimer.cancel();
     _ttsSleepTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    if (isWindowsPlatform) {
+      WindowFullscreenShortcuts.activeEscOverrideCount =
+          (WindowFullscreenShortcuts.activeEscOverrideCount - 1).clamp(0, 999);
+    }
     HardwareKeyboard.instance.removeHandler(_handleReaderKeyEvent);
     _volumeKeyChannel.setMethodCallHandler(null);
     _pdfSearchStateNotifier.dispose();
@@ -3053,12 +3059,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 全域按鍵監聽器先於焦點樹執行，因此不需修改 PDF 的 `_onPagedKey`（pdfrx 內部焦點按鍵），
   /// 在此層統一處理 Windows 平台翻頁、跳頁、搜尋與 Esc。
   ///
-  /// Esc 處理原則：
+  /// Esc 處理原則（過關條件 8）：
   /// 1. 若處於 PDF 裁切模式（`_cropEditModeActive`），吞掉 Esc（回傳 true）避免退出視窗全螢幕，
   ///    且裁切模式維持。
   /// 2. 若存在文字選取（`_annotations.selection != null`），呼叫 `_handleCloseAnnotationToolbar()`
-  ///    清除選取並回傳 true。
-  /// 3. 若無選取且非裁切，回傳 false 放行，由最外層 `WindowFullscreenShortcuts` 退出視窗全螢幕。
+  ///    清除選取並回傳 true（全螢幕維持）。
+  /// 3. 若無選取且非裁切：
+  ///    - 當處於視窗全螢幕（[activeWindowFullscreenController.isFullscreenNow]），退出全螢幕並回傳 true。
+  ///    - 若非全螢幕，回傳 false（不消費，亦不退回書架）。
   /// 4. 刻意不處理 TTS 面板關閉：TTS 面板已有自身的路由或 dismiss 機制，且在有浮層時
   ///    `_isReaderKeyInputBlocked()` 會阻斷此處處理。
   bool _handleReaderKeyEvent(KeyEvent event) {
@@ -3085,6 +3093,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       }
       if (_annotations.selection != null) {
         _handleCloseAnnotationToolbar();
+        return true;
+      }
+      final controller = activeWindowFullscreenController;
+      if (controller != null && controller.isFullscreenNow) {
+        unawaited(exitWindowFullscreenIfActive(controller));
         return true;
       }
       return false;

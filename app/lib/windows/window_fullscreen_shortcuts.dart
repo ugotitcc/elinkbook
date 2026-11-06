@@ -11,7 +11,9 @@ import '../reader/desktop_key_deduper.dart';
 /// 1. **F11 全螢幕切換**：透過 [HardwareKeyboard] 監聽全域按鍵事件，
 ///    在無修飾鍵且為單次按下時觸發 [toggleWindowFullscreen]。
 /// 2. **Esc 退出全螢幕**：
-///    - 透過 [Actions.maybeFind] 檢查當前焦點節點的 context 是否有已啟用的 [DismissIntent]
+///    - 若內層畫面（如 [ReaderScreen]）已透過 [activeEscOverrideCount] 宣告接管 Esc，
+///      本元件直接放行（回傳 `false`），由內層自訂 Esc 優先序（如選取清除、PDF 裁切保護、退出全螢幕）。
+///    - 若無內層畫面接管，透過 [Actions.maybeFind] 檢查當前焦點節點的 context 是否有已啟用的 [DismissIntent]
 ///      處理器（如對話框的 `_DismissModalAction` 或抽屜的 `_DismissDrawerAction`）。
 ///    - 若有已啟用的浮層處理器（`action.isEnabled == true`），放行讓內層對話框優先關閉，
 ///      全螢幕狀態維持。
@@ -24,6 +26,10 @@ class WindowFullscreenShortcuts extends StatefulWidget {
 
   /// 子元件樹。
   final Widget child;
+
+  /// 當此計數 > 0 時，表示內層畫面（如 ReaderScreen）已接管 Esc 鍵處理，
+  /// [WindowFullscreenShortcuts] 將對 Esc 按鍵放行（回傳 `false`），由內層依自身生命週期消費。
+  static int activeEscOverrideCount = 0;
 
   const WindowFullscreenShortcuts({
     super.key,
@@ -90,6 +96,11 @@ class _WindowFullscreenShortcutsState extends State<WindowFullscreenShortcuts> {
     }
 
     if (event.logicalKey == LogicalKeyboardKey.escape) {
+      // 若內層畫面（如 ReaderScreen）已接管 Esc，放行讓內層優先處理
+      if (WindowFullscreenShortcuts.activeEscOverrideCount > 0) {
+        return false;
+      }
+
       final canonicalId = canonicalKeyId(event.logicalKey);
       if (!desktopKeyDeduper.shouldHandle(canonicalId, DesktopKeySource.flutter)) {
         return true;

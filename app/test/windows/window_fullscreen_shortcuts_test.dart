@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/windows/window_fullscreen_controller.dart';
 import 'package:elinkbook/windows/window_fullscreen_shortcuts.dart';
 
@@ -30,6 +31,9 @@ Widget buildTestApp({
   required Widget home,
 }) {
   return MaterialApp(
+    locale: const Locale('zh', 'TW'),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     builder: (context, child) => WindowFullscreenShortcuts(
       controller: controller,
       child: child ?? const SizedBox.shrink(),
@@ -39,6 +43,10 @@ Widget buildTestApp({
 }
 
 void main() {
+  tearDown(() {
+    WindowFullscreenShortcuts.activeEscOverrideCount = 0;
+  });
+
   group('WindowFullscreenShortcuts', () {
     testWidgets('F11 在任何畫面都切換視窗全螢幕（首頁與 push 後的第二頁）', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.windows;

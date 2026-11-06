@@ -22,6 +22,8 @@ import 'package:elinkbook/screens/book_search_screen.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
+import 'package:elinkbook/windows/window_fullscreen_controller.dart';
+import 'package:elinkbook/windows/window_fullscreen_shortcuts.dart';
 
 import '../support/fake_inappwebview_platform.dart';
 import '../support/fake_reader_feature_dependencies.dart';
@@ -29,6 +31,26 @@ import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_reader_surface.dart';
 import '../support/fake_search_repository.dart';
 import '../support/pump_until_pdf_ready.dart';
+
+class _FakeFullscreenController implements WindowFullscreenController {
+  bool _fullscreen;
+  final List<bool> history = [];
+
+  _FakeFullscreenController({bool initialFullscreen = false})
+      : _fullscreen = initialFullscreen;
+
+  @override
+  bool get isFullscreenNow => _fullscreen;
+
+  @override
+  Future<bool> isFullscreen() async => _fullscreen;
+
+  @override
+  Future<void> setFullscreen(bool isFullscreen) async {
+    _fullscreen = isFullscreen;
+    history.add(isFullscreen);
+  }
+}
 
 void main() {
   late Future<String?> Function(String, String) originalCacheBookForServing;
@@ -60,6 +82,8 @@ void main() {
   });
 
   tearDown(() async {
+    WindowFullscreenShortcuts.activeEscOverrideCount = 0;
+    activeWindowFullscreenController = null;
     await LocalBookServer.instance.close();
   });
 
@@ -70,6 +94,7 @@ void main() {
     bool markRendered = true,
     ReaderJumpTarget? initialJumpTarget,
     Widget? overlayWidget,
+    WindowFullscreenController? fullscreenController,
   }) async {
     final key = GlobalKey<State<ReaderScreen>>();
     final effectivePrefsManager = prefsManager ?? FakeReaderPrefsManager();
@@ -105,6 +130,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        builder: fullscreenController == null
+            ? null
+            : (context, child) => WindowFullscreenShortcuts(
+                  controller: fullscreenController,
+                  child: child ?? const SizedBox.shrink(),
+                ),
         home: home,
       ),
     );
@@ -129,6 +160,7 @@ void main() {
     FakeReaderPrefsManager? prefsManager,
     bool waitForReady = true,
     ReaderJumpTarget? initialJumpTarget,
+    WindowFullscreenController? fullscreenController,
   }) async {
     final key = GlobalKey<State<ReaderScreen>>();
     final effectivePrefsManager = prefsManager ?? FakeReaderPrefsManager();
@@ -138,6 +170,12 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        builder: fullscreenController == null
+            ? null
+            : (context, child) => WindowFullscreenShortcuts(
+                  controller: fullscreenController,
+                  child: child ?? const SizedBox.shrink(),
+                ),
         home: ReaderScreen(
           key: key,
           filePath: 'test/fixtures/sample_multi_page.pdf',
@@ -561,6 +599,101 @@ void main() {
             reason: '裁切模式下 Esc 應吞掉、裁切模式維持');
         expect(handledCrop, isTrue, reason: '裁切模式下 Esc 應被消費');
       } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets(
+        '全螢幕且掛載 WindowFullscreenShortcuts 下按 Esc：選取時清除選取 > PDF 裁切模式維持 > 退出全螢幕 (過關條件 8, Review Critical C-1 / Important I-2)',
+        (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      final fake = _FakeFullscreenController(initialFullscreen: true);
+      activeWindowFullscreenController = fake;
+      try {
+        final foliateSurface = FakeReaderSurface.foliate();
+        await pumpEpubReader(
+          tester,
+          surface: foliateSurface,
+          fullscreenController: fake,
+        );
+
+        // 1. 模擬選取文字
+        final foliateView = tester.widget<FoliateReaderView>(
+          find.byType(FoliateReaderView),
+        );
+        foliateView.onSelectionChanged?.call(
+          const EpubSelectionInfo(
+            locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+            progression: 0.1,
+            rect: PercentRect(left: 0.1, top: 0.2, right: 0.5, bottom: 0.3),
+          ),
+        );
+        await tester.pump();
+        expect(find.byType(AnnotationToolbar), findsOneWidget);
+
+        foliateSurface.calls.clear();
+        final handledWithSelection =
+            await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+
+        expect(find.byType(AnnotationToolbar), findsNothing,
+            reason: 'Esc 應關閉 AnnotationToolbar');
+        expect(foliateSurface.calls, contains('clearSelection'),
+            reason: 'Esc 應呼叫 clearSelection');
+        expect(handledWithSelection, isTrue, reason: '選取存在時 Esc 應被消費');
+        expect(fake.isFullscreenNow, isTrue, reason: '選取存在時 Esc 不應退出全螢幕');
+        expect(fake.history, isEmpty, reason: '選取存在時不應呼叫 setFullscreen');
+
+        // 2. 無選取無裁切時按 Esc -> 退出全螢幕！
+        final handledExit =
+            await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        expect(handledExit, isTrue, reason: '全螢幕時無狀態按 Esc 應被消費並退出全螢幕');
+        expect(fake.isFullscreenNow, isFalse, reason: '全螢幕應被退出');
+        expect(fake.history, [false], reason: '應呼叫 setFullscreen(false)');
+
+        // 3. 此時已是非全螢幕，再次按 Esc -> 不消費，亦不退回書架
+        final handledNonFullscreen =
+            await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        expect(handledNonFullscreen, isFalse, reason: '非全螢幕且無選取時 Esc 不應被消費');
+        expect(fake.history, [false], reason: '不應再觸發全螢幕操作');
+
+        // 4. PDF 裁切模式：全螢幕下維持裁切且全螢幕維持
+        fake.history.clear();
+        await fake.setFullscreen(true);
+        fake.history.clear();
+
+        final pdfSurface = FakeReaderSurface.pdf();
+        await pumpPdfReader(
+          tester,
+          surface: pdfSurface,
+          fullscreenController: fake,
+        );
+
+        tester
+            .widget<IconButton>(
+              find.byKey(const Key('reader_chrome_layout_button')),
+            )
+            .onPressed!();
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+        await tester.pumpAndSettle();
+        expect(find.byType(PdfCropFrameOverlay), findsOneWidget);
+
+        final handledCrop =
+            await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+
+        expect(find.byType(PdfCropFrameOverlay), findsOneWidget,
+            reason: '裁切模式下 Esc 應吞掉、裁切模式維持');
+        expect(handledCrop, isTrue, reason: '裁切模式下 Esc 應被消費');
+        expect(fake.isFullscreenNow, isTrue, reason: '裁切模式下 Esc 不應退出全螢幕');
+        expect(fake.history, isEmpty, reason: '裁切模式下不應呼叫 setFullscreen');
+      } finally {
+        activeWindowFullscreenController = null;
         debugDefaultTargetPlatformOverride = null;
       }
     });

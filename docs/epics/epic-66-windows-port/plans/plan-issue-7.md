@@ -264,3 +264,26 @@
 - [x] **Step 3：靜態檢查：** `flutter analyze`（`No issues found!`）、`node tool/check_integration_keys.js`（PASS）；若動到 `main.js`（方案 B）再跑 `node tool/check_foliate_es_compat.js`（PASS）。
 - [x] **Step 4：確認依賴衛生：** `git diff origin/main -- app/pubspec.lock` 只含 `window_manager` 與 `screen_retriever` 系列；`git status` 不含無關的 `windows/flutter` 換行異動。
 - [x] **Step 5：Commit：** `git add docs/epics/epic-66-windows-port/issue-7-report.md docs/epics/epic-66-windows-port/issues.md`（若改了 `CONTEXT.md` 一併加入），訊息 `docs(epic-66): Issue 7 收尾文件與人工驗證清單`。推送與開 PR 前先請使用者確認，並請使用者在 Windows 實機（完整重建後）完成人工驗證表。
+
+---
+
+## 實作調整與 Ruling 紀錄
+
+### Ruling 1：無焦點時 Shortcuts/Actions 靜默失效與全域鍵盤監聽
+- **背景**：原計畫構想依賴 `WidgetsApp.defaultShortcuts` 的 `SingleActivator(LogicalKeyboardKey.escape): const DismissIntent()` 傳遞至 `WindowFullscreenShortcuts` 的 `Actions`。
+- **實測發現**：當畫面只有純呈現元件（如純文字 Scaffold）時，`FocusManager.instance.primaryFocus` 為 `null`，此時 Flutter 的 Shortcuts 機制完全不派發任何 Intent，導致 Esc 退出全螢幕失效。
+- **裁定**：保留 `WindowFullscreenShortcuts` 內的 `HardwareKeyboard.instance.addHandler`，由原生按鍵層捕獲 Esc；但有對話框時透過 `primaryFocus?.context` 檢查已啟用的 `DismissIntent` 放行原生對話框關閉。
+
+### Ruling 2：全螢幕 Esc 優先序與 ReaderScreen 協作機制（Critical C-1 審查修復）
+- **背景**：`WindowFullscreenShortcuts` 掛在 `MaterialApp.builder`，其 `HardwareKeyboard` 監聽器先於 `ReaderScreen` 註冊。全螢幕下按 Esc，若無對話框，外層處理器搶先消費 Esc 並退出全螢幕，導致 `ReaderScreen` 的選取清除與 PDF 裁切保護失效，違背過關條件 8。
+- **裁定**：
+  1. 在 `WindowFullscreenShortcuts` 引入 `static int activeEscOverrideCount = 0;`。
+  2. `ReaderScreen` 在 `initState` 遞增、`dispose` 遞減此計數。
+  3. 當 `activeEscOverrideCount > 0` 時，`WindowFullscreenShortcuts` 對 Esc 無條件放行（回傳 `false`），將 Esc 優先序完全委由 `ReaderScreen._handleReaderKeyEvent` 處置：
+     - 若處於 PDF 手動裁切模式：吞掉 Esc（回傳 `true`，全螢幕維持）。
+     - 若有文字選取：關閉選取工具列並清除選取（回傳 `true`，全螢幕維持）。
+     - 若無選取無裁切且為全螢幕：退出全螢幕並回傳 `true`。
+     - 若非全螢幕：回傳 `false`（不消費，亦不退回書架）。
+  4. 閱讀器關閉或非閱讀器畫面（計數為 0）時，恢復由 `WindowFullscreenShortcuts` 處理無浮層時的 Esc 退出全螢幕。
+  5. 在 `reader_screen_keyboard_test.dart` 補齊掛載 `WindowFullscreenShortcuts` 的全螢幕真實場景整合測試（Important I-2）。
+

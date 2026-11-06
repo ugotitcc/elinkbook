@@ -57,13 +57,17 @@
    - 引入 `window_manager: 0.5.2`（固定版號），實作 `WindowFullscreenController` 介面，維護同步可讀的 `isFullscreenNow` 快取。
    - 在 `MaterialApp.builder` 掛載 `WindowFullscreenShortcuts`：
      - **F11**：透過全域 `HardwareKeyboard` 監聽，觸發 `toggleWindowFullscreen`；內建防重入旗標與去重保護。
-     - **Esc**：在 builder 層以 `Actions` 覆寫 `DismissIntent`，遵循 Flutter 焦點樹向上尋找規則——可關閉之對話框（`ModalBarrierAction`）優先關閉且全螢幕維持；無對話框且處於全螢幕時才退出視窗全螢幕。
+     - **Esc 協作機制**：提供 `WindowFullscreenShortcuts.activeEscOverrideCount` 接管計數器。當閱讀器存在時無條件放行給 `ReaderScreen` 自行處置；非閱讀器畫面下，檢查焦點樹上是否有已啟用的浮層（如對話框），對話框優先關閉且全螢幕維持，無浮層且處於全螢幕時才退出全螢幕。
 
 3. **閱讀器快捷鍵監聽（`reader_screen.dart`）**：
    - Windows 平台專屬全域 `HardwareKeyboard` 監聽器，早於焦點樹消費事件（PDF pdfrx 焦點問題解套）。
-   - 阻斷檢查：頂層路由覆蓋或文字輸入框具焦點時暫停；未載入完成或 PDF 裁切模式時忽略命令。
+   - 阻斷檢查：頂層路由覆蓋或文字輸入框具焦點時暫停；未載入完成或 PDF 裁切模式時忽略翻頁命令。
    - Home／End 比照熱區翻頁清除搜尋跳轉高亮並記錄閱讀活動。
-   - Esc 優先順序：PDF 裁切模式吞掉維持裁切；劃線選取工具列開啟時清除選取；皆無時放行給外層 `WindowFullscreenShortcuts` 退出全螢幕。
+   - **Esc 優先序完整處置（過關條件 8）**：
+     1. PDF 手動裁切模式：吞掉 Esc（維持裁切，全螢幕維持）。
+     2. 文字選取存在：關閉選取工具列並清除選取（全螢幕維持）。
+     3. 兩者皆無且處於視窗全螢幕：呼叫 `exitWindowFullscreenIfActive` 退出全螢幕。
+     4. 非全螢幕且無選取/裁切：不消費按鍵，亦不退回書架。
 
 4. **Foliate WebView 鍵盤事件轉送與雙重交付去重（`desktop_key_deduper.dart`、`main.js`、`foliate_reader_view.dart`）**：
    - Foliate 索引頁在 Windows 帶 `desktopKeys=1`，`main.js` 於捕獲階段（capture）攔截翻頁、跳頁、搜尋、F11、Esc 並透過 `onDesktopKey` handler 轉送至 Dart 端。
@@ -83,12 +87,12 @@
 | `test/reader/reader_key_command_test.dart` | 11 | ✅ 通過 | 橫排/直排翻頁映射、修飾鍵阻斷、Space/Shift+Space、Home/End、Ctrl+F |
 | `test/windows/window_fullscreen_controller_test.dart` | 6 | ✅ 通過 | 假控制器、同步快取、toggle 狀態切換、防重入、例外捕獲、exitWindowFullscreenIfActive |
 | `test/windows/window_fullscreen_shortcuts_test.dart` | 8 | ✅ 通過 | F11 切換全螢幕、Esc 關對話框優先於全螢幕、非全螢幕放行、修飾鍵阻斷、非 Windows 平台不動作 |
-| `test/screens/reader_screen_keyboard_test.dart` | 13 | ✅ 通過 | 橫排/直排翻頁、Home/End、Ctrl+F、連按 KeyRepeatEvent、輸入框焦點阻斷、裁切/未就緒阻斷、Esc 優先順序 |
+| `test/screens/reader_screen_keyboard_test.dart` | 14 | ✅ 通過 | 橫排/直排翻頁、Home/End、Ctrl+F、連按 KeyRepeatEvent、輸入框焦點阻斷、裁切/未就緒阻斷、全螢幕掛載真實整合 Esc 優先序 |
 | `test/reader/desktop_key_deduper_test.dart` | 7 | ✅ 通過 | 跨來源 50ms 去重、同來源連發放行、按鍵映射、f/F CapsLock 支援 |
 | `test/reader/foliate_reader_view_keyboard_test.dart` | 6 | ✅ 通過 | Windows 帶 desktopKeys=1、main.js 靜態驗證、onDesktopKey 回呼翻頁/F11/Esc、雙重交付 50ms 去重 |
 | `test/screens/book_search_screen_test.dart` (新增部分) | 7 | ✅ 通過 | Windows 開啟自動聚焦、Android 不自動聚焦、Ctrl+F 重新聚焦全選、修飾鍵與對話框阻斷、pop 移除處理器 |
 
-- **總測試通過數**：全套既有與新增測試共 1,300+ 項測試通過（見 Task 8 完整跑表）。
+- **總測試通過數**：全套既有與新增測試共 5,000+ 項測試通過（見 Task 8 完整跑表）。
 - **靜態分析**：`flutter analyze` 0 warning 0 error。
 - **WebView 相容性**：`node tool/check_foliate_es_compat.js` 100% 通過。
 - **依賴衛生**：`pubspec.lock` 僅異動 `window_manager: 0.5.2` 與 `screen_retriever` 系列。
