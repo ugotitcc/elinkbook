@@ -70,6 +70,9 @@ import 'sync/sync_engine.dart';
 import 'sync/sync_metadata_repository.dart';
 import 'theme/app_theme.dart';
 import 'windows/windows_webview_environment.dart';
+import 'windows/webview2_runtime_check.dart';
+import 'windows/webview2_missing_screen.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:window_manager/window_manager.dart';
 import 'windows/window_fullscreen_controller.dart';
 import 'windows/window_fullscreen_shortcuts.dart';
@@ -458,28 +461,52 @@ Future<void> main() async {
     sync: sync,
     sources: sources,
   );
-  // epic-66 Issue 1：Windows 必須在 runApp 之前建立 WebView2 環境，
+  void startApp() {
+    runApp(
+      ElinkBookApp(
+        dependencies: appDependencies,
+        navigatorKey: navigatorKey,
+        initialTheme: initialTheme,
+        initialEinkMode: initialEinkMode,
+        themePreferences: themePreferences,
+        localePreferences: localePreferences,
+        initialLocaleOverride: initialLocaleOverride,
+      ),
+    );
+  }
+
+  // epic-66 Issue 1/9：Windows 必須在 runApp 之前建立 WebView2 環境，
   // InAppWebView 才能在建構時拿到 webViewEnvironment（使用者資料夾落在
   // %APPDATA% 下的 App 資料夾，見 windows_webview_environment.dart）。
+  // 若未安裝 WebView2 或建立環境失敗，顯示說明畫面引導下載，裝好後可免重啟進入。
   // 非 Windows 平台直接略過，不增加任何呼叫（Android 路徑不變）。
   if (isWindowsPlatform) {
     await windowManager.ensureInitialized();
     activeWindowFullscreenController = WindowManagerFullscreenController();
-    await initAppWebViewEnvironment(
-      userDataFolder: (await getApplicationSupportDirectory()).path,
+
+    final appSupportDir = await getApplicationSupportDirectory();
+    Future<WebView2CheckResult> runCheck() => checkAndInitWebView2(
+      probe: () => WebViewEnvironment.getAvailableVersion(),
+      createEnvironment: () => initAppWebViewEnvironment(
+        userDataFolder: appSupportDir.path,
+      ),
     );
+
+    final initialResult = await runCheck();
+    if (!initialResult.isReady) {
+      runApp(
+        WebView2MissingApp(
+          initialResult: initialResult,
+          recheck: runCheck,
+          onReady: startApp,
+          localeOverride: initialLocaleOverride?.locale,
+        ),
+      );
+      return;
+    }
   }
-  runApp(
-    ElinkBookApp(
-      dependencies: appDependencies,
-      navigatorKey: navigatorKey,
-      initialTheme: initialTheme,
-      initialEinkMode: initialEinkMode,
-      themePreferences: themePreferences,
-      localePreferences: localePreferences,
-      initialLocaleOverride: initialLocaleOverride,
-    ),
-  );
+
+  startApp();
 }
 
 /// elinkBook App 根元件。Issue 13 起收 `AppDependencies`（三組靜態依賴的容器），

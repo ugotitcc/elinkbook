@@ -12,7 +12,7 @@
 | 6 | Flutter 升級至 ≥ 3.47.7（評估與遷移）：`onReorder` 棄用、built-in Kotlin／AGP 9、Windows 預設 Impeller、外掛相容；一併處理繁中 Windows 的 `/utf-8` 編譯問題 | Issue 11 | ⚪ 未開始（尚未規劃） | — |
 | 7 | Windows 鍵盤快捷鍵與 F11 視窗全螢幕：翻頁類按鍵、Ctrl+F、F11，Esc 依序處理浮層與全螢幕 | Issue 5 | ✅ 已合併（Windows 人工驗證 2026-11-06 使用者回報通過，F11／Esc 在 WebView2 有焦點時可用） | #399 |
 | 8 | 索引器在 Windows 讓整個 App 消失：根因是漏登錄 JS 會呼叫的處理器（Windows 外掛遇到未登錄處理器會結束程序）；已診斷並修正，報告見 [issue-8-report.md](issue-8-report.md) | Issue 4 | ✅ 已合併（大檔索引、背景排程端到端、Android 尚未實測） | #400 |
-| 9 | WebView2 未安裝時顯示說明與下載連結（決策 4，原本漏掉） | Issue 7 | ⚪ 未開始（尚未規劃） | — |
+| 9 | WebView2 未安裝時顯示說明與下載連結（決策 4，原本漏掉） | Issue 7 | ✅ 實作完成，待 PR | — |
 | 10 | 平台專屬功能隱藏：音量鍵翻頁、E-Ink 高對比與影像濾鏡、螢幕方向鎖定、「全螢幕模式」偏好項；並處理 Windows 呼叫 Android 原生全螢幕 channel 未處理例外 | Issue 7 | ⚪ 未開始（尚未規劃） | — |
 | 11 | Windows 測試穩定性：追查 `local_book_server_test.dart` 偶發失敗與 `pdf_reader_view_filters_test.dart`（`main` 上同樣失敗），為 Issue 6 建立乾淨基準 | 無 | ⚪ 未開始（尚未規劃） | — |
 | 12 | Android 也改用 foliate-js 讀 metadata、移除 Readium（`readium-shared`／`readium-streamer`、`BookMetadataChannel.kt`）：**第一步先補真實出版社書籍的 Readium 對比，通過才移除**；需 Android 實機 | Issue 6 | ⚪ 未開始（尚未規劃） | — |
@@ -266,6 +266,49 @@ Issue 3 已實證：閱讀器開書以 `shouldInterceptRequest` 整本回傳 224
 - EPUB 交付：方案 A 補「全域處理器在 EPUB 開著時也收到按鍵」的測試；方案 B 補去重器（不同來源 50 毫秒內只處理一次、同來源連續不去重）、`main.js` 轉送（僅 Windows 啟用、帶修飾鍵正確、`'f'` 與 `'F'` 都對應 Ctrl+F）、`logicalKeyForWebKey` 與 `FoliateReaderView` 對應回呼的測試。
 - `BookSearchScreen`：Windows 上開啟後輸入框已聚焦、Ctrl+F 重新聚焦並全選、帶 Shift 或有對話框疊上時不處理、關閉後處理器已移除；非 Windows 開啟後不自動聚焦、Ctrl+F 不處理。
 - 依賴：`flutter pub get` 後 `pubspec.lock` 只含 `window_manager` 與 `screen_retriever` 系列新增。
+
+## Issue 9 範圍
+
+Windows 啟動時檢查 WebView2 Runtime，缺少或建立環境失敗時顯示說明畫面與微軟官方下載連結，裝好後免重啟 App 直接進入。
+
+1. **啟動鏈防護：** `main()` 在 `runApp` 之前先呼叫 `checkAndInitWebView2()`；不是 ready 時 `runApp` 一個獨立的 `WebView2MissingApp`。
+2. **純邏輯解耦：** `checkAndInitWebView2` 注入 `probe` 與 `createEnvironment`，保持純 Dart 邏輯。
+3. **說明畫面：** 自帶 `MaterialApp` 與 `Scaffold`，包含標題、說明內文、微軟官方下載連結、可複製網址文字（`SelectableText`）與「重新檢查」按鈕。
+4. **重新檢查：** 同一時間只跑一次檢查，檢查期間按鈕停用；成功就緒後呼叫 `onReady` 進入主畫面，且保持停用防重入。
+5. **多語系支援：** 支援四語系（`zh_TW`、`zh`、`zh_CN`、`en`），`zh` 嚴格鏡像 `zh_TW` 滿足一致性守衛；支援 `localeOverride` 覆寫與系統語言解析。
+6. **相依套件：** 將 `url_launcher` 提升為直接相依（鎖定 `^6.3.2`，僅修改 `pubspec.lock` 之 `dependency: "direct main"`）。
+7. **平台隔離：** 僅在 Windows 生效（`isWindowsPlatform`），非 Windows 平台零改動。
+
+## Issue 9 過關條件
+
+1. Windows 啟動時偵測不到 WebView2、或環境建立失敗／逾時，顯示說明畫面而非壞掉的閱讀器；畫面含標題、說明、下載按鈕、網址、重新檢查。
+2. 「下載」開啟預設瀏覽器到微軟官方頁；開啟失敗時網址仍可選取複製。
+3. 「重新檢查」成功後直接進入 App，不必重開；進行中不可重入。
+4. 說明畫面語系與 App 一致（覆寫優先，否則系統）。
+5. 有 WebView2 時啟動行為與現況完全相同；Android 與其他平台零改動。
+6. 人工／模擬驗證：以指定空資料夾與自動化 widget 測試完整覆蓋上述條件；如實記錄「未在真正沒裝 Runtime 的乾淨機器上測過」。
+
+## Issue 9 單元測試要求
+
+- `checkAndInitWebView2`（假函式注入）：
+  - 探測回有效版本且建立成功 → ready，version 正確，`createEnvironment` 呼叫 1 次。
+  - 探測回 null → missing，`createEnvironment` 從未呼叫。
+  - 探測回空字串 "" 或純空白 "   " → missing。
+  - 探測丟例外 → failed，detail 含例外訊息，不向外拋出。
+  - 建立環境丟例外 → failed，detail 含例外訊息。
+  - 建立環境逾時（15 秒／短逾時）→ failed，detail 註明逾時，且背景 Future 補上 `.catchError` 防禦。
+- `WebView2CheckResult`：值物件等值性比較（`operator ==`、`hashCode` 與 `toString`）。
+- `WebView2MissingApp`（widget test）：
+  - missing 狀態顯示標題、下載、重新檢查、網址文字，不顯示錯誤摘要。
+  - failed 狀態額外顯示 `Key('webview2_detail_text')`。
+  - 點擊下載按鈕呼叫 `openUrl`，失敗或丟例外時不崩潰且網址文字留存。
+  - 重新檢查回傳 ready 觸發 `onReady` 1 次，且按鈕保持停用防止重複觸發。
+  - 重新檢查回傳 missing 顯示 `Key('webview2_still_missing_text')`。
+  - 重新檢查進行中連按兩次只發起 1 次檢查。
+  - 重新檢查丟例外顯示錯誤狀態且按鈕恢復可點擊。
+  - 多語系切換（`en`、`zh_TW`）。
+- 多語系一致性：`test/l10n/arb_consistency_test.dart` 通過（四檔鍵一致、`zh` 鏡像 `zh_TW`、`en` 無漏翻）。
+- 硬編碼中文字串檢查：`node tool/check_l10n_hardcoded_strings.js` 全數 PASS。
 
 ## 後續 Issue（待 Issue 1 結果決定）
 
