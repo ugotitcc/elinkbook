@@ -385,4 +385,32 @@ void main() {
 
     expect(service.discardedCandidates, [candidate]);
   });
+
+  _testWindowsWidgets('疊上對話框路由時 DropTarget 停用，且拖曳途中停用不觸發 build 期間 setState（審查 M-1、M-2）', (tester) async {
+    final service = FakeBookImportService();
+    await tester.pumpWidget(buildApp(importService: service));
+    final dropTarget = tester.widget<DropTarget>(find.byType(DropTarget));
+    expect(dropTarget.enable, isTrue);
+
+    dropTarget.onDragEntered?.call(
+      DropEventDetails(localPosition: Offset.zero, globalPosition: Offset.zero),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('import_drop_overlay')), findsOneWidget);
+
+    final innerContext = tester.element(find.text('內層畫面'));
+    showDialog<void>(
+      context: innerContext,
+      builder: (_) => const AlertDialog(title: Text('測試對話框')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(tester.widget<DropTarget>(find.byType(DropTarget)).enable, isFalse);
+    expect(find.byKey(const Key('import_drop_overlay')), findsNothing);
+
+    Navigator.of(innerContext).pop();
+    await tester.pumpAndSettle();
+    expect(tester.widget<DropTarget>(find.byType(DropTarget)).enable, isTrue);
+  });
 }

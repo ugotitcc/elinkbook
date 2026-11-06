@@ -30,7 +30,7 @@
 | `test/library/book_import_service_test.dart` | 既有匯入與 `content://` 資料夾匯入回歸測試 | ✅ 84/84 通過 |
 | `test/screens/support/book_import_picker_helper_test.dart` | `showImportResultSnackBar`（僅略過不支援、與匯入／重複並存、全為 0、失敗優先）與 `pickAndImportFolder` 注入 `pickFolderPath` | ✅ 40/40 通過 |
 | `test/screens/support/dropped_import_test.dart` | `classifyDroppedPaths` 與 `importDroppedPaths`（純檔案、純資料夾、混合、多資料夾只問一次、取消整批不匯入、全失敗／部分失敗合併、中文與空白路徑） | ✅ 8/8 通過 |
-| `test/screens/support/import_drop_target_test.dart` | `ImportDropTarget`（非 Windows 不掛載、`enabled: false`、疊路由停用、遮罩顯示／消失、忙碌中忽略並提示、`onImportCompleted` 觸發條件、空的 `files` 忽略、資料夾確認框、卸載防禦與 `discardUpdateCandidates`） | ✅ 11/11 通過 |
+| `test/screens/support/import_drop_target_test.dart` | `ImportDropTarget`（非 Windows 不掛載、`enabled: false`、疊路由停用、遮罩顯示／消失、忙碌中忽略並提示、`onImportCompleted` 觸發條件、空的 `files` 忽略、資料夾確認框、卸載防禦與 `discardUpdateCandidates`） | ✅ 12/12 通過 |
 | `test/screens/adaptive_shell_scaffold_test.dart` | 書架／來源／設定分頁 `DropTarget.enable` 狀態、切換分頁保留子畫面 State、書架分頁拖入新書後觸發 `_libraryRefreshSignal` 重載書單 | ✅ 17/17 通過 |
 | `test/screens/sources_home_screen_test.dart` | Windows 顯示 `sources_windows_keep_in_place_hint` 提醒文字，預設平台（Android）不顯示 | ✅ 22/22 通過 |
 | `test/l10n/arb_consistency_test.dart` | 四個 arb（`app_zh_TW`、`app_zh`、`app_zh_CN`、`app_en`）鍵集合、placeholder 與 `zh == zh_TW` 一致性檢查 | ✅ 4/4 通過 |

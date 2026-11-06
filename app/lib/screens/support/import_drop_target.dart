@@ -107,8 +107,12 @@ class _ImportDropTargetState extends State<ImportDropTarget> {
       return widget.child;
     }
     final isCurrentRoute = ModalRoute.of(context)?.isCurrent ?? true;
+    final effectiveEnabled = widget.enabled && isCurrentRoute;
+    if (!effectiveEnabled && _dragging) {
+      _dragging = false;
+    }
     return DropTarget(
-      enable: widget.enabled && isCurrentRoute,
+      enable: effectiveEnabled,
       onDragEntered: _handleDragEntered,
       onDragExited: _handleDragExited,
       onDragDone: _handleDragDone,
