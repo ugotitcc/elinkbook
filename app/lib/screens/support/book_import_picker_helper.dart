@@ -5,10 +5,18 @@ import 'package:flutter/services.dart';
 import '../../l10n/app_localizations.dart';
 import '../../library/book_import_service.dart';
 import '../../library/book_update_models.dart';
+import '../../platform/platform_support.dart';
 import '../widgets/book_update_summary_dialog.dart';
 import 'book_update_resolver.dart'; // BookUpdateApplyResult
 
 const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');
+
+/// 選取一個資料夾路徑的函式型別（epic-66 Issue 5 Task 4）。使用者取消時回傳 `null`。
+typedef FolderPathPicker = Future<String?> Function();
+
+Future<String?> _defaultPickFolderPath() => isWindowsPlatform
+    ? FilePicker.getDirectoryPath()
+    : _folderPickerChannel.invokeMethod<String>('pickFolder');
 
 /// 挑選一或多個檔案並匯入圖書庫；使用者取消選擇、或選取結果不含可用 URI
 /// 時回傳 `null`（呼叫端不需要顯示任何提示）。呼叫端負責後續 UI 回饋
@@ -17,7 +25,9 @@ const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');
 /// （見 epic-36-adaptive-shelf-navigation spec.md §功能①、審查報告
 /// review-spec.md I-5：挑選輔助函式須放在展示層，不可放進純 Dart 的
 /// `book_import_service.dart`）。
-Future<ImportResult?> pickAndImportFiles(BookImportService importService) async {
+Future<ImportResult?> pickAndImportFiles(
+  BookImportService importService,
+) async {
   try {
     final picked = await FilePicker.pickFiles(
       allowMultiple: true,
@@ -54,10 +64,10 @@ Future<ImportResult?> pickAndImportFiles(BookImportService importService) async 
 Future<ImportResult?> pickAndImportFolder(
   BookImportService importService, {
   required Future<bool?> Function() confirmAutoGroup,
+  FolderPathPicker? pickFolderPath,
 }) async {
   try {
-    final folderUri =
-        await _folderPickerChannel.invokeMethod<String>('pickFolder');
+    final folderUri = await (pickFolderPath ?? _defaultPickFolderPath)();
     if (folderUri == null) return null;
     final autoGroup = await confirmAutoGroup();
     if (autoGroup == null) return null;
@@ -120,16 +130,23 @@ void showImportResultSnackBar(BuildContext context, ImportResult result) {
   }
   final importedCount = result.importedBooks.length;
   final skippedCount = result.skippedDuplicateCount;
-  if (importedCount <= 0 && skippedCount <= 0) return;
+  final unsupportedCount = result.skippedUnsupportedCount;
+  if (importedCount <= 0 && skippedCount <= 0 && unsupportedCount <= 0) return;
   final l10n = AppLocalizations.of(context)!;
-  final message = importedCount > 0
-      ? (skippedCount > 0
-          ? l10n.libraryImportResultBothMessage(
-              importedCount,
-              skippedCount,
-            )
-          : l10n.libraryImportResultImportedOnlyMessage(importedCount))
-      : l10n.libraryImportResultSkippedOnlyMessage(skippedCount);
+  final String? base = (importedCount > 0 || skippedCount > 0)
+      ? (importedCount > 0
+            ? (skippedCount > 0
+                  ? l10n.libraryImportResultBothMessage(
+                      importedCount,
+                      skippedCount,
+                    )
+                  : l10n.libraryImportResultImportedOnlyMessage(importedCount))
+            : l10n.libraryImportResultSkippedOnlyMessage(skippedCount))
+      : null;
+  final String? unsupported = unsupportedCount > 0
+      ? l10n.libraryImportResultUnsupportedMessage(unsupportedCount)
+      : null;
+  final message = [?base, ?unsupported].join('\n');
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
 
@@ -174,7 +191,10 @@ Future<void> handleImportUpdateCandidates(
 }
 
 /// 顯示更新版結算結果之 SnackBar 提示（純取代、純並存、混合、含失敗，全為跳過時不顯示）。
-void showBookUpdateResultSnackBar(BuildContext context, BookUpdateApplyResult result) {
+void showBookUpdateResultSnackBar(
+  BuildContext context,
+  BookUpdateApplyResult result,
+) {
   showBookUpdateResultSnackBarWith(
     ScaffoldMessenger.of(context),
     AppLocalizations.of(context)!,
@@ -219,16 +239,16 @@ void showBookUpdateResultSnackBarWith(
     message = failedText!;
   }
 
-  messenger.showSnackBar(
-    SnackBar(content: Text(message)),
-  );
+  messenger.showSnackBar(SnackBar(content: Text(message)));
 }
 
 /// epic-15-storage-permission Issue 2：單檔選擇器。[allowedExtensions] 依
 /// 原書格式傳入（例如 EPUB 傳 `['epub']`）；使用者取消時回傳 `null`。包成
 /// 可注入的函式型別，讓 `ReaderScreen` 的 widget test 不必觸碰平台實作。
-typedef SingleBookFilePicker = Future<({String uri, String? displayName})?>
-    Function(List<String> allowedExtensions);
+typedef SingleBookFilePicker =
+    Future<({String uri, String? displayName})?> Function(
+      List<String> allowedExtensions,
+    );
 
 /// [SingleBookFilePicker] 的預設實作：`FilePicker` 單選。`uri` 是
 /// `PlatformFile.identifier`（Android 上為 `content://` URI），identifier

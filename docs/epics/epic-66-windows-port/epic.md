@@ -32,7 +32,7 @@
 2. **程式碼**：同一個 `app/` 加 `windows/`，平台判斷分流（ADR 0041）。
 3. **操作**：保留 3×3 熱區（滑鼠當觸控），加鍵盤快捷鍵（方向鍵、PageUp／PageDown、Ctrl+F）與 F11 全螢幕（新增 `window_manager`，只在 Windows 啟用）。桌面專用版面（側欄、面板）不在本 Epic。
 4. **最低版本**：Windows 10 1809。WebView2 沒裝時顯示說明與下載連結，不打包執行環境。
-5. **匯入**：複製書檔到 `%APPDATA%` 下的 App 資料夾，與 Android 行為一致。
+5. **匯入**：~~複製書檔到 `%APPDATA%` 下的 App 資料夾，與 Android 行為一致。~~ **【2026-11-06 修訂，Issue 5 規劃時】改為不複製、`Book.filePath` 維持來源檔案的原路徑**（與決策 22 一致，也與現有 `_persistPermissionOrLandCopy` 對非 `content://` 路徑原樣回傳的行為一致）。原寫法與程式現況矛盾：Android 並非「複製」，而是引用原檔並持久化授權，只有授權失敗才複製。代價是使用者搬動或刪除原檔後該書打不開（走既有的「重新連結」流程），因此 Windows 的「來源」畫面要常駐一行說明文字提醒。
 6. **送書給 WebView**：預設用本機 `shelf` 伺服器（`127.0.0.1`、隨機埠、一次性權杖、只服務目前開著的書）。驗證 Issue 同時實測 WebView2 有沒有請求攔截或虛擬網域對應；有就用，沒有就用伺服器。**【2026-11-03 驗證結果】WebView2 有請求攔截，已用於實際開書，不需要 `shelf` 伺服器**（見決策 15 與 `spike-report.md` 結論 1）。**【Issue 3／4 結果】** Issue 3 實測發現 `shouldInterceptRequest` 整本回傳在 Windows 上每次開關 224 MB 大檔造成約 +452 MB 的永久記憶體洩漏，4 次累積 +1808 MB 瀕臨崩潰。Issue 4 依原定伺服器架構落成本機 loopback HTTP 伺服器（`LocalBookServer`，隨機埠、動態權杖、HTTP Range 串流服務），徹底消除洩漏（4 輪累積增量僅 +8.21 MB，`leaked=false`，見 ADR 0042 與 `issue-4-report.md`）。
 7. **Metadata 解析**：目標是 Android 與 Windows 統一改用 foliate-js 的背景 WebView。前提是逐本對比 Readium 與 foliate-js 的結果（書名、作者、`identifier`、版面、封面）一致；`book_content_fingerprint.dart` 優先使用 `identifier`，不一致會讓同步把舊書當新書。不一致時 Android 保留 Readium，Windows 單獨用 foliate-js。**【2026-11-03 驗證結果】** Windows 上 `HeadlessInAppWebView` 載入 foliate-js 能讀出書名、`identifier`、封面；欄位型別見 `spike-report.md` 結論 2。**【Issue 2 結果】** 13 份 fixture（多識別碼、多語系書名、角色作者、EPUB2 封面、固定版面、無封面、無識別碼，以及三份邊界：`unique-identifier` 指向不存在的 id、identifier 帶前後空白與換行、identifier 帶 `opf:scheme`）在 BooksPad（Readium）與 Windows（foliate-js）逐欄對比，`title`、`author`、`identifier`、`isFixedLayout`、有無封面**全部一致，不一致 0 份**。**範圍限制：** 只涵蓋這 13 份人工建構的 fixture；真實出版社書籍（含 EPUB 2 套件、更多樣的 `dc:identifier` 寫法）尚未與 Readium 對比，224 MB 的真實書只有 foliate 端的結果。因此「兩端指紋不會分裂」目前是「已測案例無不一致」，不是保證。Windows 現由 foliate-js（EPUB）與 pdfrx（PDF 封面）提供 metadata，Android 保持既有 Readium 通道；是否統一兩端至 foliate-js，建議先補更多真實書籍的對比。
 8. **WebView 套件**：先用上游 `flutter_inappwebview` 6.1.5。只有驗證證明不夠用，才考慮 fork。
@@ -57,6 +57,7 @@
 22. **Windows 的 `Book.filePath`**：一律存標準本機路徑（例如 `C:\Users\...`），不存 `file:///`。`book_content_fingerprint.dart:58` 以 `contains('://')` 判斷是否走原生 channel，`file:///` 會被誤判。
 23. **WebView2 使用者資料夾**：`WebViewEnvironmentSettings.userDataFolder` 明確指定到 `%APPDATA%` 下的 App 資料夾。預設會建在執行檔旁，免安裝 zip 若解壓到唯讀位置會初始化失敗。
 24. **`window_manager` 的 `win32` 相容**：`pubspec.lock` 的 `win32` 是 5.15.0。加入 `window_manager` 前，先確認它要求的 `win32` 區間，不可造成 pub 衝突（見 ADR 0041「後果」）。版本號在實際解析時確認，這裡不預先鎖定。
+25. **Issue 5 匯入設計（2026-11-06 `/grill-with-docs`）**：Windows 支援選檔、選資料夾、拖曳三種匯入方式，都進同一條匯入管線。拖曳只在「書架」與「來源」兩個畫面有效；資料夾只匯入第一層；不支援格式略過並在結果提示說明個數（此計數放在共用服務，Android 一併生效）；拖入資料夾與選資料夾一致會先問是否依資料夾名稱分類；匯入中再拖入一律忽略。拖曳套件用 `desktop_drop` **0.8.4**（0.9.x 要求 Flutter ≥ 3.47.7，與專案固定的 3.41.9 不相容；0.8.4 不依賴 `win32`）。**Flutter 升級另開 Issue**：查證 3.47 支援 Android 24–37（Android 11 沒問題），但牽涉 `onReorder` 棄用、built-in Kotlin／AGP 9、Windows 預設 Impeller，不與匯入功能混在同一個 Issue。詞彙見 `CONTEXT.md`「拖曳匯入」。
 
 ## 範圍外
 

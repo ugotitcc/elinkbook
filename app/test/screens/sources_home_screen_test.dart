@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -864,5 +865,40 @@ void main() {
 
       expect(find.byKey(const Key('book_update_apply')), findsOneWidget);
     });
+  });
+
+  testWidgets('Windows 顯示提醒文字（Key 與 l10n 文字都存在）', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      await pumpLocalizedWidget(
+        tester,
+        SourcesHomeScreen(
+          appearance: fakeAppearanceDependencies(),
+          readerFeatures: fakeReaderFeatureDependencies(),
+          sources: fakeSourceDependencies(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(SourcesHomeScreen)))!;
+      expect(find.byKey(const Key('sources_windows_keep_in_place_hint')), findsOneWidget);
+      expect(find.text(l10n.sourcesHomeLocalFilesStayInPlaceHint), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('預設平台（Android）不顯示提醒文字', (tester) async {
+    await pumpLocalizedWidget(
+      tester,
+      SourcesHomeScreen(
+        appearance: fakeAppearanceDependencies(),
+        readerFeatures: fakeReaderFeatureDependencies(),
+        sources: fakeSourceDependencies(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('sources_windows_keep_in_place_hint')), findsNothing);
   });
 }

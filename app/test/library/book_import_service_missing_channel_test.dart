@@ -13,7 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
+import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 
@@ -67,5 +69,99 @@ void main() {
     expect(book.format, BookFileFormat.epub);
     expect(book.coverPath, isNull, reason: '沒有封面可取');
     expect(book.filePath, epubPath, reason: '本機路徑不落地複本、原樣存入');
+  });
+
+  test('ImportResult 預設 skippedUnsupportedCount 為 0', () {
+    expect(const ImportResult().skippedUnsupportedCount, 0);
+  });
+
+  test('importFiles：不可辨識格式略過並計入 skippedUnsupportedCount，不計入 skippedDuplicateCount',
+      () async {
+    final epubPath = p.join(tempDir.path, 'a.epub');
+    await File('test/fixtures/sample.epub').copy(epubPath);
+    final jpgPath = p.join(tempDir.path, 'cover.jpg');
+    await File(jpgPath).writeAsBytes([1, 2, 3]);
+    final zipPath = p.join(tempDir.path, 'notes.zip');
+    await File(zipPath).writeAsBytes([4, 5, 6]);
+
+    final result = await service.importFiles([epubPath, jpgPath, zipPath]);
+
+    expect(result.importedBooks, hasLength(1));
+    expect(result.skippedUnsupportedCount, 2);
+    expect(result.skippedDuplicateCount, 0);
+  });
+
+  test('本機資料夾：只匯入第一層，子資料夾內的書不匯入，書歸入以資料夾名命名的分類',
+      () async {
+    final folderDir = Directory(p.join(tempDir.path, '書庫'))..createSync();
+    await File('test/fixtures/sample.epub')
+        .copy(p.join(folderDir.path, '甲.epub'));
+    await File(p.join(folderDir.path, 'desktop.ini')).writeAsBytes([1, 2, 3]);
+    final subDir = Directory(p.join(folderDir.path, 'sub'))..createSync();
+    await File('test/fixtures/sample.epub')
+        .copy(p.join(subDir.path, '乙.epub'));
+
+    final result = await service.importFolder(folderDir.path);
+
+    expect(result.failure, isNull);
+    expect(result.importedBooks, hasLength(1));
+    expect(result.importedBooks.single.title, '甲');
+    expect(result.importedBooks.single.groupName, '書庫');
+    expect(result.skippedUnsupportedCount, 1);
+  });
+
+  test('本機資料夾：autoGroupByFolderName 為 false 時書歸入未分類', () async {
+    final folderDir = Directory(p.join(tempDir.path, '書庫'))..createSync();
+    await File('test/fixtures/sample.epub')
+        .copy(p.join(folderDir.path, '甲.epub'));
+
+    final result = await service.importFolder(
+      folderDir.path,
+      autoGroupByFolderName: false,
+    );
+
+    expect(result.failure, isNull);
+    expect(result.importedBooks, hasLength(1));
+    expect(result.importedBooks.single.groupName, BookGroup.uncategorized);
+  });
+
+  test('本機資料夾：依檔名字碼順序匯入，與檔案系統列舉順序無關', () async {
+    final folderDir = Directory(p.join(tempDir.path, '排序'))..createSync();
+    // NTFS 列舉時不分大小寫（a、B），但實作依檔名字碼順序（B 在 a 之前）；
+    // 用大小寫混合的檔名，才能分辨「有排序」與「直接用列舉順序」。
+    for (final name in ['a.epub', 'B.epub']) {
+      await File('test/fixtures/sample.epub')
+          .copy(p.join(folderDir.path, name));
+    }
+
+    final result = await service.importFolder(folderDir.path);
+
+    expect(result.failure, isNull);
+    expect(result.importedBooks.map((b) => b.title).toList(), ['B', 'a']);
+  });
+
+  test('本機資料夾：資料夾名稱與檔名含中文與空白，書名、分類與路徑照常', () async {
+    final folderDir = Directory(p.join(tempDir.path, '我的 書庫 2026'))
+      ..createSync();
+    final epubPath = p.join(folderDir.path, '紅樓夢 校注版.epub');
+    await File('test/fixtures/sample.epub').copy(epubPath);
+
+    final result = await service.importFolder(folderDir.path);
+
+    expect(result.failure, isNull);
+    expect(result.importedBooks, hasLength(1));
+    final book = result.importedBooks.single;
+    expect(book.title, '紅樓夢 校注版');
+    expect(book.groupName, '我的 書庫 2026');
+    expect(book.filePath, epubPath, reason: '本機路徑不複製、原樣存入');
+  });
+
+  test('本機資料夾：不存在的路徑回傳 folderListingFailed', () async {
+    final result = await service.importFolder(
+      p.join(tempDir.path, '不存在的資料夾'),
+    );
+
+    expect(result.failure, ImportFailure.folderListingFailed);
+    expect(result.importedBooks, isEmpty);
   });
 }

@@ -6,6 +6,7 @@ import 'reader_feature_dependencies.dart';
 import 'settings_scaffold.dart';
 import 'source_dependencies.dart';
 import 'sources_home_screen.dart';
+import 'support/import_drop_target.dart';
 import 'sync_dependencies.dart';
 
 class _LibraryRefreshSignal extends ChangeNotifier {
@@ -83,33 +84,39 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
         if (!didPop) _navigateTo(0);
       },
       child: Scaffold(
-        body: IndexedStack(
-          index: _currentIndex,
-          children: [
-            LibraryScreen(
-              dependencies: widget.readerFeatures,
-              sources: widget.sources,
-              appearance: widget.appearance,
-              refreshSignal: _libraryRefreshSignal,
-              onNavigateToSource: () => _navigateTo(1),
-              onNavigateToSettings: () => _navigateTo(2),
-            ),
-            SourcesHomeScreen(
-              readerFeatures: widget.readerFeatures,
-              sources: widget.sources,
-              appearance: widget.appearance,
-              onNavigateToLibrary: () => _navigateTo(0),
-              onNavigateToSettings: () => _navigateTo(2),
-            ),
-            SettingsScaffold(
-              readerFeatures: widget.readerFeatures,
-              sync: widget.sync,
-              sources: widget.sources,
-              appearance: widget.appearance,
-              onNavigateToLibrary: () => _navigateTo(0),
-              onNavigateToSource: () => _navigateTo(1),
-            ),
-          ],
+        body: ImportDropTarget(
+          importService: widget.readerFeatures.bookImportService,
+          isEinkMode: widget.appearance.isEinkMode,
+          enabled: _currentIndex != 2,
+          onImportCompleted: () => _libraryRefreshSignal.notifyListeners(),
+          child: IndexedStack(
+            index: _currentIndex,
+            children: [
+              LibraryScreen(
+                dependencies: widget.readerFeatures,
+                sources: widget.sources,
+                appearance: widget.appearance,
+                refreshSignal: _libraryRefreshSignal,
+                onNavigateToSource: () => _navigateTo(1),
+                onNavigateToSettings: () => _navigateTo(2),
+              ),
+              SourcesHomeScreen(
+                readerFeatures: widget.readerFeatures,
+                sources: widget.sources,
+                appearance: widget.appearance,
+                onNavigateToLibrary: () => _navigateTo(0),
+                onNavigateToSettings: () => _navigateTo(2),
+              ),
+              SettingsScaffold(
+                readerFeatures: widget.readerFeatures,
+                sync: widget.sync,
+                sources: widget.sources,
+                appearance: widget.appearance,
+                onNavigateToLibrary: () => _navigateTo(0),
+                onNavigateToSource: () => _navigateTo(1),
+              ),
+            ],
+          ),
         ),
       ),
     );

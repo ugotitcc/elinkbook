@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../library/models/library_enums.dart';
+import '../platform/platform_support.dart';
 import '../remote/remote_catalog_dependencies.dart';
 import 'appearance_dependencies.dart';
 import 'cloud_browser_screen.dart';
@@ -194,6 +195,15 @@ class SourcesHomeScreen extends StatelessWidget {
               onTap: () => _handlePickFolder(context),
             ),
           ),
+          if (isWindowsPlatform)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Text(
+                l10n.sourcesHomeLocalFilesStayInPlaceHint,
+                key: const Key('sources_windows_keep_in_place_hint'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
           EBFieldCard(
             padding: EdgeInsets.zero,
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
