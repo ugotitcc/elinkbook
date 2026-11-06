@@ -75,15 +75,15 @@
 - Consumes: Task 1 的 `skippedUnsupportedCount`。
 - Produces: `importFolder(String folderUri, {bool autoGroupByFolderName})` 收到**不以 `content://` 開頭**的路徑時，視為本機資料夾；簽章不變。
 
-- [ ] **Step 1：寫失敗測試**（同檔，暫存目錄 `tempDir` 下建立 `書庫/` 資料夾）：
+- [x] **Step 1：寫失敗測試**（同檔，暫存目錄 `tempDir` 下建立 `書庫/` 資料夾）：
   - `本機資料夾：只匯入第一層，子資料夾內的書不匯入，書歸入以資料夾名命名的分類`：`書庫/` 內放 `甲.epub`（複製 sample.epub）、`desktop.ini`，`書庫/sub/乙.epub`；`importFolder(書庫路徑)`；斷言 `importedBooks.length == 1`、`importedBooks.single.groupName == '書庫'`、`skippedUnsupportedCount == 1`（`desktop.ini`）、`failure == null`。
   - `本機資料夾：autoGroupByFolderName 為 false 時書歸入未分類`：斷言 `groupName == BookGroup.uncategorized`。
   - `本機資料夾：不存在的路徑回傳 folderListingFailed`：斷言 `failure == ImportFailure.folderListingFailed` 且 `importedBooks` 為空。
   - 這些測試刻意不註冊任何 channel mock：若實作誤呼叫 `persistReadAccess` 或原生 `listFolderContents`，會因 `MissingPluginException` 失敗，藉此證明本機分支不碰原生 channel。
-- [ ] **Step 2：執行確認失敗**：`flutter test test/library/book_import_service_missing_channel_test.dart`；預期新測試失敗（`MissingPluginException`，或回傳 `folderAccessDenied`）。
-- [ ] **Step 3：實作。** `importFolder` 開頭依 `folderUri.startsWith('content://')` 分流：`content://` 維持現有的 `persistReadAccess`＋原生 `listFolderContents` 流程，逐字不動；其他走本機分支，以 `Future<({String folderName, List<String> fileUris})?> _listLocalFolder(String path)` 取得列表（`Directory(path).list(followLinks: false)` 只取 `File`、不遞迴，路徑依檔名排序，`folderName` 用 `p.basename(path)`；目錄不存在或 `FileSystemException` 回 `null`）。回 `null` 時直接 `return const ImportResult(importedBooks: [], failure: ImportFailure.folderListingFailed)`。之後的分類建立、去重、逐檔匯入沿用現有迴圈（本機分支匯入單檔仍傳 `takePermission: false`）。
-- [ ] **Step 4：執行確認通過**：同 Step 2 指令；再跑 `flutter test test/library/book_import_service_test.dart`，確認既有 `content://` 資料夾測試全綠。
-- [ ] **Step 5：Commit**：`git add app/lib/library/book_import_service_impl.dart app/test/library/book_import_service_missing_channel_test.dart`，訊息 `feat(import): importFolder 支援本機資料夾路徑（epic-66 Issue 5 Task 2）`。
+- [x] **Step 2：執行確認失敗**：`flutter test test/library/book_import_service_missing_channel_test.dart`；預期新測試失敗（`MissingPluginException`，或回傳 `folderAccessDenied`）。
+- [x] **Step 3：實作。** `importFolder` 開頭依 `folderUri.startsWith('content://')` 分流：`content://` 維持現有的 `persistReadAccess`＋原生 `listFolderContents` 流程，逐字不動；其他走本機分支，以 `Future<({String folderName, List<String> fileUris})?> _listLocalFolder(String path)` 取得列表（`Directory(path).list(followLinks: false)` 只取 `File`、不遞迴，路徑依檔名排序，`folderName` 用 `p.basename(path)`；目錄不存在或 `FileSystemException` 回 `null`）。回 `null` 時直接 `return const ImportResult(importedBooks: [], failure: ImportFailure.folderListingFailed)`。之後的分類建立、去重、逐檔匯入沿用現有迴圈（本機分支匯入單檔仍傳 `takePermission: false`）。
+- [x] **Step 4：執行確認通過**：同 Step 2 指令；再跑 `flutter test test/library/book_import_service_test.dart`，確認既有 `content://` 資料夾測試全綠。
+- [x] **Step 5：Commit**：`git add app/lib/library/book_import_service_impl.dart app/test/library/book_import_service_missing_channel_test.dart`，訊息 `feat(import): importFolder 支援本機資料夾路徑（epic-66 Issue 5 Task 2）`。
 
 ---
 

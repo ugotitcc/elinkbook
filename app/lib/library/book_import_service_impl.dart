@@ -193,7 +193,10 @@ class BookImportServiceImpl implements BookImportService {
     String folderUri, {
     bool autoGroupByFolderName = true,
   }) async {
-    // 資料夾沒有持久化授權就無法列舉：整次匯入失敗，並讓畫面告知使用者原因。
+    String? folderName;
+    List<String> fileUris;
+    if (folderUri.startsWith('content://')) {
+      // 資料夾沒有持久化授權就無法列舉：整次匯入失敗，並讓畫面告知使用者原因。
     if (!await persistReadAccess(folderUri)) {
       return const ImportResult(
         importedBooks: [],
@@ -220,9 +223,20 @@ class BookImportServiceImpl implements BookImportService {
       );
     }
 
-    final folderName = contents['folderName'] as String?;
-    final fileUris =
-        (contents['fileUris'] as List?)?.cast<String>() ?? const [];
+      folderName = contents['folderName'] as String?;
+      fileUris =
+          (contents['fileUris'] as List?)?.cast<String>() ?? const [];
+    } else {
+      final localContents = await _listLocalFolder(folderUri);
+      if (localContents == null) {
+        return const ImportResult(
+          importedBooks: [],
+          failure: ImportFailure.folderListingFailed,
+        );
+      }
+      folderName = localContents.folderName;
+      fileUris = localContents.fileUris;
+    }
 
     final groupName =
         autoGroupByFolderName && folderName != null && folderName.isNotEmpty
@@ -278,6 +292,25 @@ class BookImportServiceImpl implements BookImportService {
       skippedUnsupportedCount: skippedUnsupportedCount,
       updateCandidates: updateCandidates,
     );
+  }
+
+  Future<({String folderName, List<String> fileUris})?> _listLocalFolder(
+    String path,
+  ) async {
+    try {
+      final dir = Directory(path);
+      if (!await dir.exists()) return null;
+      final filePaths = <String>[];
+      await for (final entity in dir.list(followLinks: false)) {
+        if (entity is File) {
+          filePaths.add(entity.path);
+        }
+      }
+      filePaths.sort((a, b) => p.basename(a).compareTo(p.basename(b)));
+      return (folderName: p.basename(path), fileUris: filePaths);
+    } on FileSystemException {
+      return null;
+    }
   }
 
   /// epic-15-storage-permission Issue 2：可能維持 `content://` 的格式。
