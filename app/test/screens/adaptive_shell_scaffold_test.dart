@@ -1,7 +1,12 @@
+import 'dart:io';
+
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
+import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/l10n/app_locale.dart';
@@ -21,6 +26,33 @@ import '../support/fake_tts_provider.dart';
 import '../support/fake_full_text_search_settings_repository.dart';
 import '../support/fake_reader_feature_dependencies.dart';
 import '../support/fake_sync_dependencies.dart';
+
+class _CountingLibraryRepository extends FakeLibraryRepository {
+  int listBooksCount = 0;
+
+  @override
+  Future<List<Book>> listBooks({
+    LibrarySortBy sortBy = LibrarySortBy.lastRead,
+    String? groupFilter,
+  }) {
+    listBooksCount++;
+    return super.listBooks(sortBy: sortBy, groupFilter: groupFilter);
+  }
+}
+
+void _testWindowsWidgets(
+  String description,
+  Future<void> Function(WidgetTester tester) callback,
+) {
+  testWidgets(description, (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      await callback(tester);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+}
 
 void main() {
   late ReaderPrefsManager prefsManager;
@@ -376,4 +408,132 @@ void main() {
       expect(received, AppLocale.en);
     },
   );
+
+  _testWindowsWidgets('停在書架分頁拖入新書後，書單重新載入（全程未切換分頁）', (tester) async {
+    final tempDir = Directory.systemTemp.createTempSync('adaptive_shell_drop');
+    addTearDown(() {
+      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    });
+    final file = File('${tempDir.path}/a.epub')..writeAsBytesSync([1]);
+    final repository = _CountingLibraryRepository();
+    final newBook = Book(
+      id: 'dropped_book',
+      title: '拖入新書',
+      format: BookFileFormat.epub,
+      filePath: file.path,
+      source: BookSource.local,
+      createTime: DateTime(2026, 1, 1),
+      lastReadTime: DateTime(2026, 1, 1),
+    );
+    final importService = FakeBookImportService()
+      ..importFilesResult = ImportResult(importedBooks: [newBook]);
+
+    await pumpLocalizedWidget(
+      tester,
+      AdaptiveShellScaffold(
+        appearance: fakeAppearanceDependencies(),
+        sources: fakeSourceDependencies(),
+        readerFeatures: fakeReaderFeatureDependencies(
+          libraryRepository: repository,
+          bookImportService: importService,
+          prefsManager: prefsManager,
+        ),
+        sync: fakeSyncDependencies(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final countBefore = repository.listBooksCount;
+    await repository.insertBook(newBook);
+
+    final dropTarget = tester.widget<DropTarget>(find.byType(DropTarget));
+    dropTarget.onDragDone?.call(
+      DropDoneDetails(
+        files: [DropItemFile(file.path)],
+        localPosition: Offset.zero,
+        globalPosition: Offset.zero,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<IndexedStack>(find.byType(IndexedStack)).index, 0);
+    expect(repository.listBooksCount, greaterThan(countBefore));
+    expect(find.byKey(const Key('book_item_dropped_book')), findsOneWidget);
+  });
+
+  _testWindowsWidgets('匯入沒有新書時不觸發書單重載', (tester) async {
+    final tempDir = Directory.systemTemp.createTempSync('adaptive_shell_drop_empty');
+    addTearDown(() {
+      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    });
+    final file = File('${tempDir.path}/a.epub')..writeAsBytesSync([1]);
+    final repository = _CountingLibraryRepository();
+    final importService = FakeBookImportService()
+      ..importFilesResult = const ImportResult(skippedDuplicateCount: 1);
+
+    await pumpLocalizedWidget(
+      tester,
+      AdaptiveShellScaffold(
+        appearance: fakeAppearanceDependencies(),
+        sources: fakeSourceDependencies(),
+        readerFeatures: fakeReaderFeatureDependencies(
+          libraryRepository: repository,
+          bookImportService: importService,
+          prefsManager: prefsManager,
+        ),
+        sync: fakeSyncDependencies(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final countBefore = repository.listBooksCount;
+    final dropTarget = tester.widget<DropTarget>(find.byType(DropTarget));
+    dropTarget.onDragDone?.call(
+      DropDoneDetails(
+        files: [DropItemFile(file.path)],
+        localPosition: Offset.zero,
+        globalPosition: Offset.zero,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.listBooksCount, countBefore);
+  });
+
+  _testWindowsWidgets('Windows：書架分頁與來源分頁 DropTarget 啟用，切到設定分頁停用', (tester) async {
+    await pumpLocalizedWidget(tester, buildApp());
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<DropTarget>(find.byType(DropTarget)).enable, isTrue);
+
+    await tester.tap(find.byKey(const Key('library_source_button')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<DropTarget>(find.byType(DropTarget)).enable, isTrue);
+
+    await tester.tap(find.byKey(const Key('sources_settings_button')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<DropTarget>(find.byType(DropTarget)).enable, isFalse);
+  });
+
+  _testWindowsWidgets('Windows：切換分頁後書架畫面的 State 沒有被重建', (tester) async {
+    await pumpLocalizedWidget(tester, buildApp());
+    await tester.pumpAndSettle();
+
+    final stateBefore = tester.state(find.byType(LibraryScreen));
+
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_library_button')));
+    await tester.pumpAndSettle();
+
+    final stateAfter = tester.state(find.byType(LibraryScreen));
+    expect(identical(stateBefore, stateAfter), isTrue);
+  });
+
+  testWidgets('非 Windows：find.byType(DropTarget) 找不到', (tester) async {
+    await pumpLocalizedWidget(tester, buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DropTarget), findsNothing);
+  });
 }

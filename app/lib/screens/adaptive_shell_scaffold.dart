@@ -6,6 +6,7 @@ import 'reader_feature_dependencies.dart';
 import 'settings_scaffold.dart';
 import 'source_dependencies.dart';
 import 'sources_home_screen.dart';
+import 'support/import_drop_target.dart';
 import 'sync_dependencies.dart';
 
 class _LibraryRefreshSignal extends ChangeNotifier {
@@ -83,7 +84,12 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
         if (!didPop) _navigateTo(0);
       },
       child: Scaffold(
-        body: IndexedStack(
+        body: ImportDropTarget(
+          importService: widget.readerFeatures.bookImportService,
+          isEinkMode: widget.appearance.isEinkMode,
+          enabled: _currentIndex != 2,
+          onImportCompleted: () => _libraryRefreshSignal.notifyListeners(),
+          child: IndexedStack(
           index: _currentIndex,
           children: [
             LibraryScreen(
@@ -110,6 +116,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
               onNavigateToSource: () => _navigateTo(1),
             ),
           ],
+        ),
         ),
       ),
     );

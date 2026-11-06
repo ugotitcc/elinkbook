@@ -202,16 +202,16 @@
 **Interfaces：**
 - Consumes: Task 6 的 `ImportDropTarget`（含 `onImportCompleted`）；既有 `_libraryRefreshSignal`（`LibraryScreen` 只在此訊號觸發時重載書單，目前只有 `_navigateTo(0)` 會觸發，見審查 C-1）。
 
-- [ ] **Step 1：寫失敗測試**（沿用該檔既有的建構方式；Windows 平台 override）：
+- [x] **Step 1：寫失敗測試**（沿用該檔既有的建構方式；Windows 平台 override）：
   - `停在書架分頁拖入新書後，書單重新載入`：以該檔既有的 fake `LibraryRepository` 記錄 `listBooks` 呼叫次數（若沒有此記錄則在測試內包一層），觸發 `ImportDropTarget` 的 `onDragDone` 並讓 fake 匯入服務回傳有新書的結果，斷言匯入完成後 `listBooks` 次數增加，且全程沒有切換分頁。
   - `匯入沒有新書時不觸發書單重載`。
   - `Windows：書架分頁（index 0）DropTarget 啟用`、`切到來源分頁（index 1）仍啟用`、`切到設定分頁（index 2）停用`。
   - `Windows：切換分頁後書架畫面的 State 沒有被重建`（在 `LibraryScreen` 內留一個可辨識的狀態，例如既有可操作的 Key，切到設定再切回，狀態仍在；若該檔已有同類保持狀態的測試，補一條 Windows 版）。
   - `非 Windows：find.byType(DropTarget) 找不到`。
-- [ ] **Step 2：執行確認失敗**：`flutter test test/screens/adaptive_shell_scaffold_test.dart`。
-- [ ] **Step 3：實作。** 用 `ImportDropTarget(importService: widget.readerFeatures.bookImportService, isEinkMode: widget.appearance.isEinkMode, enabled: _currentIndex != 2, onImportCompleted: () => _libraryRefreshSignal.notifyListeners(), child: IndexedStack(...))` 包住原本的 `IndexedStack`，其他不動。
-- [ ] **Step 4：執行確認通過**：同 Step 2 指令。
-- [ ] **Step 5：Commit**：`git add app/lib/screens/adaptive_shell_scaffold.dart app/test/screens/adaptive_shell_scaffold_test.dart`，訊息 `feat(import): 書架與來源分頁接受拖曳匯入（epic-66 Issue 5 Task 7）`。
+- [x] **Step 2：執行確認失敗**：`flutter test test/screens/adaptive_shell_scaffold_test.dart`。
+- [x] **Step 3：實作。** 用 `ImportDropTarget(importService: widget.readerFeatures.bookImportService, isEinkMode: widget.appearance.isEinkMode, enabled: _currentIndex != 2, onImportCompleted: () => _libraryRefreshSignal.notifyListeners(), child: IndexedStack(...))` 包住原本的 `IndexedStack`，其他不動。
+- [x] **Step 4：執行確認通過**：同 Step 2 指令。
+- [x] **Step 5：Commit**：`git add app/lib/screens/adaptive_shell_scaffold.dart app/test/screens/adaptive_shell_scaffold_test.dart`，訊息 `feat(import): 書架與來源分頁接受拖曳匯入（epic-66 Issue 5 Task 7）`。
 
 ---
 
