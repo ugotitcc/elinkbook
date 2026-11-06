@@ -144,7 +144,7 @@
   - `DroppedPaths classifyDroppedPaths(List<String> paths)`：以 `FileSystemEntity.isDirectorySync` 分出資料夾，其餘（含不存在的路徑）視為檔案；完全相同的路徑只保留第一個，保持原順序。
   - `Future<ImportResult?> importDroppedPaths(BookImportService importService, List<String> paths, {required Future<bool?> Function() confirmAutoGroup})`：沒有資料夾時不呼叫 `confirmAutoGroup`；有資料夾時整批只呼叫一次，回 `null` 代表取消、整批不匯入並回 `null`；檔案一次 `importFiles(files, displayNames: 各檔 p.basename)`；每個資料夾各呼叫一次 `importFolder(path, autoGroupByFolderName: 確認框結果)`；結果合併（`importedBooks`、`updateCandidates` 串接；`skippedDuplicateCount`、`skippedUnsupportedCount` 相加）；`failure` 規則見「我的決定」第 2 點。
 
-- [ ] **Step 1：寫失敗測試**（暫存目錄建真實檔案與資料夾；`FakeBookImportService` 設定各自的 `importFilesResult`／`importFolderResult`）：
+- [x] **Step 1：寫失敗測試**（暫存目錄建真實檔案與資料夾；`FakeBookImportService` 設定各自的 `importFilesResult`／`importFolderResult`）：
   - `classifyDroppedPaths`：混合路徑正確分成 `files`／`folders`；重複路徑只留一個；不存在的路徑歸入 `files`；順序不變。
   - `只有檔案：不呼叫 confirmAutoGroup，importFiles 收到全部檔案與對應的 basename 作為 displayNames`；含中文與空白的檔名 `我的 書.epub` 原樣傳遞。
   - `只有資料夾：呼叫 confirmAutoGroup 一次，importFolder 帶入確認框的選擇`。
@@ -153,10 +153,10 @@
   - `confirmAutoGroup 回 null：回傳 null，importFiles 與 importFolder 都沒被呼叫`。
   - `failure 規則`：沒有檔案且所有資料夾都 `failure` → 合併結果帶 `failure`；有檔案或有任一資料夾成功 → `failure` 為 `null`。
   - `paths 為空：回傳 null 且不呼叫任何匯入`。
-- [ ] **Step 2：執行確認失敗**：`flutter test test/screens/support/dropped_import_test.dart`；預期編譯失敗（檔案不存在）。
-- [ ] **Step 3：實作 `dropped_import.dart`**，簽章如上；`ImportResult` 合併用私有 `_mergeResults`。
-- [ ] **Step 4：執行確認通過**：同 Step 2 指令。
-- [ ] **Step 5：Commit**：`git add app/lib/screens/support/dropped_import.dart app/test/support/fake_book_import_service.dart app/test/screens/support/dropped_import_test.dart`，訊息 `feat(import): 拖入路徑的匯入邏輯 importDroppedPaths（epic-66 Issue 5 Task 5）`。
+- [x] **Step 2：執行確認失敗**：`flutter test test/screens/support/dropped_import_test.dart`；預期編譯失敗（檔案不存在）。
+- [x] **Step 3：實作 `dropped_import.dart`**，簽章如上；`ImportResult` 合併用私有 `_mergeResults`。
+- [x] **Step 4：執行確認通過**：同 Step 2 指令。
+- [x] **Step 5：Commit**：`git add app/lib/screens/support/dropped_import.dart app/test/support/fake_book_import_service.dart app/test/screens/support/dropped_import_test.dart`，訊息 `feat(import): 拖入路徑的匯入邏輯 importDroppedPaths（epic-66 Issue 5 Task 5）`。
 
 ---
 

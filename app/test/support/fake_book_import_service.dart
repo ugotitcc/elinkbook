@@ -68,6 +68,8 @@ class FakeBookImportService implements BookImportService {
   /// 最近一次 [importFolder] 的呼叫參數；首次呼叫前為 `null`。
   String? lastImportFolderUri;
   bool? lastAutoGroupByFolderName;
+  final List<String> importFolderCalls = [];
+  final Map<String, ImportResult> importFolderResultsByUri = {};
 
   @override
   Future<ImportResult> importFiles(
@@ -102,9 +104,10 @@ class FakeBookImportService implements BookImportService {
   }) {
     lastImportFolderUri = folderUri;
     lastAutoGroupByFolderName = autoGroupByFolderName;
+    importFolderCalls.add(folderUri);
     final completer = pendingCompleter;
     if (completer != null) return completer.future;
-    return Future.value(importFolderResult);
+    return Future.value(importFolderResultsByUri[folderUri] ?? importFolderResult);
   }
 
   /// epic-15-storage-permission Issue 2：[relinkBook] 的回傳值，預設為
