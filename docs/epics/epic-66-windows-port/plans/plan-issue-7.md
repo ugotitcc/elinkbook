@@ -62,11 +62,11 @@
 **Interfaces：**
 - Produces: 一個明確的結論「方案 A」或「方案 B」，寫在 `issue-7-report.md` 的「實測結論」一節，後續 Task 6 依此分支。
 
-- [ ] **Step 1：加暫時探針。** (a) 在 `main.dart` 的 `main()` 內於 `runApp` 之前呼叫 `HardwareKeyboard.instance.addHandler((e) { debugPrint('[keyprobe flutter] ${e.runtimeType} ${e.logicalKey.keyLabel}'); return false; })`；(b) 在 `main.js` 暫時加 `window.addEventListener('keydown', e => console.log('[keyprobe web] ' + e.key), true)`，並讓這行 log 能被看見（`InAppWebView` 的 `onConsoleMessage` 已有 `ReaderConsoleLog` 管道，若沒有輸出則暫時把訊息 `callHandler` 給 Dart 再 `debugPrint`）。
-- [ ] **Step 2：實測。** `flutter run -d windows`（完整重建），開一本 EPUB 並**點一下書頁內容讓 WebView2 取得焦點**，依序送出：←、→、↑、↓、PageUp、PageDown、Space、Home、End、Ctrl+F、F11、Esc。可請使用者實際按鍵，或用 PowerShell 的 `[System.Windows.Forms.SendKeys]::SendWait(...)` 對前景視窗送鍵（需先 `Add-Type -AssemblyName System.Windows.Forms` 並確認 App 視窗在前景）。對每個按鍵記錄 `[keyprobe flutter]` 與 `[keyprobe web]` **哪一邊出現、是否兩邊都出現**。再點一下書頁以外的 Flutter 區域（例如工具列空白處）重複一次。
-- [ ] **Step 3：判定並記錄。** 若焦點在書頁時**每一個**按鍵（尤其是 F11 與 Esc）都出現 `[keyprobe flutter]` → 方案 A。只要有任何一個按鍵只出現 `[keyprobe web]` 或兩邊都沒出現 → 方案 B。把完整的「按鍵 × 兩種焦點位置 × 哪一邊收到（含兩邊都收到）」表格、使用的送鍵方式與判定結果寫入 `issue-7-report.md`「實測結論」；**「兩邊都收到」的按鍵要特別標出**，它們決定方案 B 去重的必要性。
-- [ ] **Step 4：還原探針。** `git checkout -- app/lib/main.dart app/lib/reader/foliate_reader_view.dart app/android/app/src/main/assets/foliate/main.js`，確認 `git status` 只剩 `issue-7-report.md`。
-- [ ] **Step 5：Commit：** `git add docs/epics/epic-66-windows-port/issue-7-report.md`，訊息 `docs(epic-66): Issue 7 實測 WebView2 按鍵歸屬並決定方案（Task 1）`。
+- [x] **Step 1：加暫時探針。** (a) 在 `main.dart` 的 `main()` 內於 `runApp` 之前呼叫 `HardwareKeyboard.instance.addHandler((e) { debugPrint('[keyprobe flutter] ${e.runtimeType} ${e.logicalKey.keyLabel}'); return false; })`；(b) 在 `main.js` 暫時加 `window.addEventListener('keydown', e => console.log('[keyprobe web] ' + e.key), true)`，並讓這行 log 能被看見（`InAppWebView` 的 `onConsoleMessage` 已有 `ReaderConsoleLog` 管道，若沒有輸出則暫時把訊息 `callHandler` 給 Dart 再 `debugPrint`）。
+- [x] **Step 2：實測。** `flutter run -d windows`（完整重建），開一本 EPUB 並**點一下書頁內容讓 WebView2 取得焦點**，依序送出：←、→、↑、↓、PageUp、PageDown、Space、Home、End、Ctrl+F、F11、Esc。可請使用者實際按鍵，或用 PowerShell 的 `[System.Windows.Forms.SendKeys]::SendWait(...)` 對前景視窗送鍵（需先 `Add-Type -AssemblyName System.Windows.Forms` 並確認 App 視窗在前景）。對每個按鍵記錄 `[keyprobe flutter]` 與 `[keyprobe web]` **哪一邊出現、是否兩邊都出現**。再點一下書頁以外的 Flutter 區域（例如工具列空白處）重複一次。
+- [x] **Step 3：判定並記錄。** 若焦點在書頁時**每一個**按鍵（尤其是 F11 與 Esc）都出現 `[keyprobe flutter]` → 方案 A。只要有任何一個按鍵只出現 `[keyprobe web]` 或兩邊都沒出現 → 方案 B。把完整的「按鍵 × 兩種焦點位置 × 哪一邊收到（含兩邊都收到）」表格、使用的送鍵方式與判定結果寫入 `issue-7-report.md`「實測結論」；**「兩邊都收到」的按鍵要特別標出**，它們決定方案 B 去重的必要性。
+- [x] **Step 4：還原探針。** `git checkout -- app/lib/main.dart app/lib/reader/foliate_reader_view.dart app/android/app/src/main/assets/foliate/main.js`，確認 `git status` 只剩 `issue-7-report.md`。
+- [x] **Step 5：Commit：** `git add docs/epics/epic-66-windows-port/issue-7-report.md`，訊息 `docs(epic-66): Issue 7 實測 WebView2 按鍵歸屬並決定方案（Task 1）`。
 
 ---
 
