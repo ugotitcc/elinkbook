@@ -29,10 +29,8 @@ import 'update_staging.dart';
 ///
 /// 依給定檔案 URI／路徑與格式（如 `'epub'`、`'pdf'`）非同步取得詮釋資料 map，
 /// 格式相容於 Android `kBookMetadataChannel` 的 `extractMetadata` 契約。
-typedef BookMetadataExtractor = Future<Map<String, Object?>?> Function(
-  String uri,
-  String format,
-);
+typedef BookMetadataExtractor =
+    Future<Map<String, Object?>?> Function(String uri, String format);
 
 /// 依 URI/路徑字串最後一段（已對 percent-encoding 解碼）判斷書籍格式。
 /// 只依副檔名判斷，僅適用於本機檔案匯入（file_picker/SAF 對本機檔案提供者
@@ -90,13 +88,13 @@ class BookImportServiceImpl implements BookImportService {
     AppThemePreferences? themePreferences,
     FullTextSearchSettingsRepository? fullTextSearchSettingsRepository,
     BookMetadataExtractor? metadataExtractor,
-  })  : _repository = repository,
-        _coversDirectory = coversDirectory,
-        _importedBooksDirectory = importedBooksDirectory,
-        _updateStagingDirectory = updateStagingDirectory,
-        _themePreferences = themePreferences ?? AppThemePreferences(),
-        _fullTextSearchSettingsRepository = fullTextSearchSettingsRepository,
-        _metadataExtractor = metadataExtractor;
+  }) : _repository = repository,
+       _coversDirectory = coversDirectory,
+       _importedBooksDirectory = importedBooksDirectory,
+       _updateStagingDirectory = updateStagingDirectory,
+       _themePreferences = themePreferences ?? AppThemePreferences(),
+       _fullTextSearchSettingsRepository = fullTextSearchSettingsRepository,
+       _metadataExtractor = metadataExtractor;
 
   // 使用 kBookMetadataChannel（library_repository.dart）作為共用通道名稱。
 
@@ -197,35 +195,34 @@ class BookImportServiceImpl implements BookImportService {
     List<String> fileUris;
     if (folderUri.startsWith('content://')) {
       // 資料夾沒有持久化授權就無法列舉：整次匯入失敗，並讓畫面告知使用者原因。
-    if (!await persistReadAccess(folderUri)) {
-      return const ImportResult(
-        importedBooks: [],
-        failure: ImportFailure.folderAccessDenied,
-      );
-    }
+      if (!await persistReadAccess(folderUri)) {
+        return const ImportResult(
+          importedBooks: [],
+          failure: ImportFailure.folderAccessDenied,
+        );
+      }
 
-    Map<Object?, Object?>? contents;
-    try {
-      contents = await kBookMetadataChannel.invokeMapMethod<Object?, Object?>(
-        'listFolderContents',
-        {'uri': folderUri},
-      );
-    } on PlatformException {
-      return const ImportResult(
-        importedBooks: [],
-        failure: ImportFailure.folderListingFailed,
-      );
-    }
-    if (contents == null) {
-      return const ImportResult(
-        importedBooks: [],
-        failure: ImportFailure.folderListingFailed,
-      );
-    }
+      Map<Object?, Object?>? contents;
+      try {
+        contents = await kBookMetadataChannel.invokeMapMethod<Object?, Object?>(
+          'listFolderContents',
+          {'uri': folderUri},
+        );
+      } on PlatformException {
+        return const ImportResult(
+          importedBooks: [],
+          failure: ImportFailure.folderListingFailed,
+        );
+      }
+      if (contents == null) {
+        return const ImportResult(
+          importedBooks: [],
+          failure: ImportFailure.folderListingFailed,
+        );
+      }
 
       folderName = contents['folderName'] as String?;
-      fileUris =
-          (contents['fileUris'] as List?)?.cast<String>() ?? const [];
+      fileUris = (contents['fileUris'] as List?)?.cast<String>() ?? const [];
     } else {
       final localContents = await _listLocalFolder(folderUri);
       if (localContents == null) {
@@ -240,8 +237,8 @@ class BookImportServiceImpl implements BookImportService {
 
     final groupName =
         autoGroupByFolderName && folderName != null && folderName.isNotEmpty
-            ? folderName
-            : null;
+        ? folderName
+        : null;
 
     if (groupName != null) {
       await _repository.upsertGroup(groupName);
@@ -349,7 +346,8 @@ class BookImportServiceImpl implements BookImportService {
       final books = await _repository.listBooks();
       if (books.any((b) => b.id != book.id && b.filePath == newUri)) {
         return const BookRelinkFailure(
-            BookRelinkFailureReason.alreadyInLibrary);
+          BookRelinkFailureReason.alreadyInLibrary,
+        );
       }
 
       final originalFingerprint = book.contentFingerprint;
@@ -385,14 +383,18 @@ class BookImportServiceImpl implements BookImportService {
               : null;
           if (sha256 != originalFingerprint) {
             return const BookRelinkFailure(
-                BookRelinkFailureReason.contentMismatch);
+              BookRelinkFailureReason.contentMismatch,
+            );
           }
         }
       }
 
       // 6. 確認是同一本書後才持久化授權或落地複本（規則與第一次匯入共用）。
-      final resolvedPath =
-          await _persistPermissionOrLandCopy(newUri, book.id, format!);
+      final resolvedPath = await _persistPermissionOrLandCopy(
+        newUri,
+        book.id,
+        format!,
+      );
       if (resolvedPath == null) {
         return const BookRelinkFailure(BookRelinkFailureReason.failed);
       }
@@ -515,12 +517,17 @@ class BookImportServiceImpl implements BookImportService {
           format == BookFileFormat.azw3) {
         if (candidate?.stagedPath != null) {
           final importedDir = await _resolveImportedBooksDirectory();
-          final stagingPath =
-              p.join(importedDir.path, '$bookId.${format.name}.staging');
+          final stagingPath = p.join(
+            importedDir.path,
+            '$bookId.${format.name}.staging',
+          );
           await File(candidate!.stagedPath!).copy(stagingPath);
           stagedFiles.add(stagingPath);
           resolvedUri = stagingPath;
-          finalBookFilePath = p.join(importedDir.path, '$bookId.${format.name}');
+          finalBookFilePath = p.join(
+            importedDir.path,
+            '$bookId.${format.name}',
+          );
         } else if (source.startsWith('content://')) {
           final persisted = await _persistPermissionOrLandCopy(
             source,
@@ -530,7 +537,9 @@ class BookImportServiceImpl implements BookImportService {
           );
           if (persisted == null) {
             await _sweepStagingFiles(bookId);
-            return const BookReplaceFailure(BookReplaceFailureReason.writeFailed);
+            return const BookReplaceFailure(
+              BookReplaceFailureReason.writeFailed,
+            );
           }
           if (persisted.endsWith('.staging')) {
             stagedFiles.add(persisted);
@@ -568,14 +577,17 @@ class BookImportServiceImpl implements BookImportService {
       if (parts == null) {
         await _sweepStagingFiles(bookId);
         return const BookReplaceFailure(
-            BookReplaceFailureReason.newFileParseFailed);
+          BookReplaceFailureReason.newFileParseFailed,
+        );
       }
 
       // 5. 換名階段：File.rename 本身即原子覆蓋既有檔，不可先刪目標（否則換名失敗會遺失舊檔）
       for (final stagedPath in List.of(stagedFiles)) {
         if (!stagedPath.endsWith('.staging')) continue;
-        final targetPath =
-            stagedPath.substring(0, stagedPath.length - '.staging'.length);
+        final targetPath = stagedPath.substring(
+          0,
+          stagedPath.length - '.staging'.length,
+        );
         final stagingFile = File(stagedPath);
         if (await stagingFile.exists()) {
           await stagingFile.rename(targetPath);
@@ -634,8 +646,9 @@ class BookImportServiceImpl implements BookImportService {
         await _fullTextSearchSettingsRepository?.clearBookIndex(bookId);
       } catch (_) {}
       try {
-        await _fullTextSearchSettingsRepository
-            ?.handleBookAvailable(updatedBook);
+        await _fullTextSearchSettingsRepository?.handleBookAvailable(
+          updatedBook,
+        );
       } catch (_) {}
 
       if (candidate != null) {
@@ -646,7 +659,8 @@ class BookImportServiceImpl implements BookImportService {
     } on _NewFileParseException {
       await _sweepStagingFiles(bookId);
       return const BookReplaceFailure(
-          BookReplaceFailureReason.newFileParseFailed);
+        BookReplaceFailureReason.newFileParseFailed,
+      );
     } catch (_) {
       await _sweepStagingFiles(bookId);
       return const BookReplaceFailure(BookReplaceFailureReason.writeFailed);
@@ -717,10 +731,10 @@ class BookImportServiceImpl implements BookImportService {
           '${DateTime.now().microsecondsSinceEpoch}-${uri.hashCode}.${format.name}';
       destinationPath = p.join(stagingDir.path, filename);
       if (uri.startsWith('content://')) {
-        await kBookMetadataChannel.invokeMethod<void>(
-          'copyContentUriToFile',
-          {'uri': uri, 'destinationPath': destinationPath},
-        );
+        await kBookMetadataChannel.invokeMethod<void>('copyContentUriToFile', {
+          'uri': uri,
+          'destinationPath': destinationPath,
+        });
       } else {
         await File(uri).copy(destinationPath);
       }
@@ -751,8 +765,9 @@ class BookImportServiceImpl implements BookImportService {
     }
 
     // 2. 前置短路：若書庫內沒有同格式書籍，直接回傳 DetectedNewBook（不讀新檔）
-    final sameFormatBooks =
-        existingBooks.where((b) => b.format == format).toList();
+    final sameFormatBooks = existingBooks
+        .where((b) => b.format == format)
+        .toList();
     if (sameFormatBooks.isEmpty) {
       return const DetectedNewBook();
     }
@@ -830,8 +845,10 @@ class BookImportServiceImpl implements BookImportService {
           format == BookFileFormat.pdf ||
           format == BookFileFormat.azw3) {
         try {
-          oldHash =
-              await computeBookContentFingerprint(candidate.filePath, format);
+          oldHash = await computeBookContentFingerprint(
+            candidate.filePath,
+            format,
+          );
         } catch (_) {
           unreadableCandidateBookIds.add(candidate.id);
           continue;
@@ -866,11 +883,7 @@ class BookImportServiceImpl implements BookImportService {
 
   /// 快速讀取新檔身份（title, author, epubIdentifier），偵測階段永不拋出例外。
   Future<({String title, String? author, String? epubIdentifier})>
-      _peekIdentity(
-    String uri,
-    BookFileFormat format,
-    String? displayName,
-  ) async {
+  _peekIdentity(String uri, BookFileFormat format, String? displayName) async {
     final fallback = titleFromFileName(displayName ?? uri);
     if (format == BookFileFormat.epub) {
       try {
@@ -905,12 +918,16 @@ class BookImportServiceImpl implements BookImportService {
     } else if (format == BookFileFormat.md) {
       try {
         final bytes = uri.contains('://')
-            ? await readContentUriBytes(uri,
-                tempFilePrefix: 'md_probe', tempFileExtension: '.md')
+            ? await readContentUriBytes(
+                uri,
+                tempFilePrefix: 'md_probe',
+                tempFileExtension: '.md',
+              )
             : await File(uri).readAsBytes();
         final rawContent = utf8.decode(bytes, allowMalformed: true);
         final parsedDoc = parseMdFrontmatter(rawContent);
-        final title = (parsedDoc.frontmatter.title != null &&
+        final title =
+            (parsedDoc.frontmatter.title != null &&
                 parsedDoc.frontmatter.title!.isNotEmpty)
             ? parsedDoc.frontmatter.title!
             : fallback;
@@ -1124,13 +1141,15 @@ class BookImportServiceImpl implements BookImportService {
     String landSuffix = '',
   }) async {
     final importedDir = await _resolveImportedBooksDirectory();
-    final destinationPath =
-        p.join(importedDir.path, '$id.${format.name}$landSuffix');
+    final destinationPath = p.join(
+      importedDir.path,
+      '$id.${format.name}$landSuffix',
+    );
     try {
-      await kBookMetadataChannel.invokeMethod<void>(
-        'copyContentUriToFile',
-        {'uri': uri, 'destinationPath': destinationPath},
-      );
+      await kBookMetadataChannel.invokeMethod<void>('copyContentUriToFile', {
+        'uri': uri,
+        'destinationPath': destinationPath,
+      });
       return destinationPath;
     } on PlatformException {
       return null;
@@ -1221,12 +1240,17 @@ class BookImportServiceImpl implements BookImportService {
         return null;
       }
       isFixedLayout = false;
-      bookFilePath =
-          await _landTxtEpub(synthesis.epubBytes, id, landSuffix: landSuffix);
+      bookFilePath = await _landTxtEpub(
+        synthesis.epubBytes,
+        id,
+        landSuffix: landSuffix,
+      );
       if (landSuffix.isNotEmpty) stagedFiles.add(bookFilePath);
       final isEinkMode = await _themePreferences.loadEinkMode();
-      final coverBytes =
-          await generateTxtCover(fallbackTitle, isEinkMode: isEinkMode);
+      final coverBytes = await generateTxtCover(
+        fallbackTitle,
+        isEinkMode: isEinkMode,
+      );
       coverPath = await _landCover(coverBytes, id, landSuffix: landSuffix);
       if (landSuffix.isNotEmpty) stagedFiles.add(coverPath);
     } else if (format == BookFileFormat.azw3) {
@@ -1253,11 +1277,17 @@ class BookImportServiceImpl implements BookImportService {
       isFixedLayout = true;
       try {
         final result = await prepareCbzForImport(resolvedUri);
-        bookFilePath = await _landCbzArchive(result.rebuiltArchiveBytes, id,
-            landSuffix: landSuffix);
+        bookFilePath = await _landCbzArchive(
+          result.rebuiltArchiveBytes,
+          id,
+          landSuffix: landSuffix,
+        );
         if (landSuffix.isNotEmpty) stagedFiles.add(bookFilePath);
-        coverPath =
-            await _landCover(result.coverBytes, id, landSuffix: landSuffix);
+        coverPath = await _landCover(
+          result.coverBytes,
+          id,
+          landSuffix: landSuffix,
+        );
         if (landSuffix.isNotEmpty) stagedFiles.add(coverPath);
       } on NoComicPagesException {
         if (strict) throw _NewFileParseException();
@@ -1274,15 +1304,19 @@ class BookImportServiceImpl implements BookImportService {
         return null;
       }
       isFixedLayout = false;
-      bookFilePath =
-          await _landMdEpub(synthesis.epubBytes, id, landSuffix: landSuffix);
+      bookFilePath = await _landMdEpub(
+        synthesis.epubBytes,
+        id,
+        landSuffix: landSuffix,
+      );
       if (landSuffix.isNotEmpty) stagedFiles.add(bookFilePath);
       if (synthesis.frontmatterTitle != null &&
           synthesis.frontmatterTitle!.isNotEmpty) {
         title = synthesis.frontmatterTitle!;
       }
       author = synthesis.frontmatterAuthor;
-      final coverBytes = synthesis.frontmatterCoverBytes ??
+      final coverBytes =
+          synthesis.frontmatterCoverBytes ??
           await generateTxtCover(
             title,
             isEinkMode: await _themePreferences.loadEinkMode(),
@@ -1349,7 +1383,8 @@ class BookImportServiceImpl implements BookImportService {
   }
 
   Future<Directory> _resolveImportedBooksDirectory() async {
-    final dir = _importedBooksDirectory ??
+    final dir =
+        _importedBooksDirectory ??
         Directory(
           p.join(
             (await getApplicationDocumentsDirectory()).path,
@@ -1361,7 +1396,8 @@ class BookImportServiceImpl implements BookImportService {
   }
 
   Future<Directory> _resolveUpdateStagingDirectory() async {
-    final dir = _updateStagingDirectory ??
+    final dir =
+        _updateStagingDirectory ??
         Directory(
           p.join(
             (await getApplicationDocumentsDirectory()).path,
@@ -1396,4 +1432,3 @@ class _BookParts {
 
 /// 例外：嚴格模式下新檔無法解析（D3）。
 class _NewFileParseException implements Exception {}
-

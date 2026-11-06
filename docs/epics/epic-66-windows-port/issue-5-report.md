@@ -6,10 +6,10 @@
 
 1. **不支援格式統計與提示（Task 1、Task 3）：**
    - `ImportResult` 新增 `skippedUnsupportedCount`（預設 `0`）。
-   - `BookImportServiceImpl.importFiles` 與 `importFolder` 於去重與開檔前先以 `detectBookFormat` 檢查格式；無法辨識者直接略過並計入 `skippedUnsupportedCount`，不計入 `skippedDuplicateCount`。
+   - `BookImportServiceImpl.importFiles` 與 `importFolder` 於去重與開檔前先以 `detectImportFileFormat`（經 `_detectImportFormat`）檢查格式；無法辨識者直接略過並計入 `skippedUnsupportedCount`，不計入 `skippedDuplicateCount`。
    - `showImportResultSnackBar` 新增 `libraryImportResultUnsupportedMessage`（ICU plural），以換行與既有匯入／重複提示合併顯示（跨平台生效）。
 2. **本機資料夾匯入（Task 2、Task 4）：**
-   - `BookImportServiceImpl.importFolder` 對非 `content://` 開頭的本機資料夾路徑改由 `dart:io` 的 `Directory.listSync(recursive: false, followLinks: false)` 列舉第一層檔案（依檔名排序），不呼叫 Android 專屬的 `persistReadAccess` 與 `listFolderContents` 原生 channel；目錄不存在或讀取拋出 `FileSystemException` 時回傳 `ImportFailure.folderListingFailed`。`content://` 分支逐字不變。
+   - `BookImportServiceImpl.importFolder` 對非 `content://` 開頭的本機資料夾路徑改由 `dart:io` 的 非同步的 `Directory.list(followLinks: false)` 列舉第一層檔案（只收 `File`，依檔名字碼順序排序，大小寫混合時 `B` 在 `a` 之前），不呼叫 Android 專屬的 `persistReadAccess` 與 `listFolderContents` 原生 channel；目錄不存在或讀取拋出 `FileSystemException` 時回傳 `ImportFailure.folderListingFailed`。`content://` 分支逐字不變。
    - `pickAndImportFolder` 新增可注入的 `pickFolderPath` 參數，預設在 Windows 呼叫 `FilePicker.getDirectoryPath()`，其他平台維持既有 `elinkbook/folder_picker` method channel。
 3. **拖曳匯入純邏輯與元件（Task 5、Task 6、Task 7）：**
    - 新增 `app/lib/screens/support/dropped_import.dart`（`DroppedPaths`、`classifyDroppedPaths`、`importDroppedPaths`）：同次拖入路徑先去重並分為檔案與資料夾；含資料夾時整批只詢問一次「是否依資料夾名稱自動建立分類」，取消則整批（含同次拖入單檔）皆不匯入；結果合併為單一 `ImportResult`。

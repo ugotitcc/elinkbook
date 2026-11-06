@@ -58,9 +58,9 @@ class _ImportDropTargetState extends State<ImportDropTarget> {
     if (_busy) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.importDropBusyMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.importDropBusyMessage)));
       return;
     }
 
@@ -125,10 +125,9 @@ class _ImportDropTargetState extends State<ImportDropTarget> {
               child: IgnorePointer(
                 child: ColoredBox(
                   key: const Key('import_drop_overlay'),
-                  color: Theme.of(context)
-                      .colorScheme
-                      .scrim
-                      .withValues(alpha: 0.45),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.scrim.withValues(alpha: 0.45),
                   child: Center(
                     child: Container(
                       padding: const EdgeInsets.symmetric(

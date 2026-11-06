@@ -125,6 +125,37 @@ void main() {
     expect(result.importedBooks.single.groupName, BookGroup.uncategorized);
   });
 
+  test('本機資料夾：依檔名字碼順序匯入，與檔案系統列舉順序無關', () async {
+    final folderDir = Directory(p.join(tempDir.path, '排序'))..createSync();
+    // NTFS 列舉時不分大小寫（a、B），但實作依檔名字碼順序（B 在 a 之前）；
+    // 用大小寫混合的檔名，才能分辨「有排序」與「直接用列舉順序」。
+    for (final name in ['a.epub', 'B.epub']) {
+      await File('test/fixtures/sample.epub')
+          .copy(p.join(folderDir.path, name));
+    }
+
+    final result = await service.importFolder(folderDir.path);
+
+    expect(result.failure, isNull);
+    expect(result.importedBooks.map((b) => b.title).toList(), ['B', 'a']);
+  });
+
+  test('本機資料夾：資料夾名稱與檔名含中文與空白，書名、分類與路徑照常', () async {
+    final folderDir = Directory(p.join(tempDir.path, '我的 書庫 2026'))
+      ..createSync();
+    final epubPath = p.join(folderDir.path, '紅樓夢 校注版.epub');
+    await File('test/fixtures/sample.epub').copy(epubPath);
+
+    final result = await service.importFolder(folderDir.path);
+
+    expect(result.failure, isNull);
+    expect(result.importedBooks, hasLength(1));
+    final book = result.importedBooks.single;
+    expect(book.title, '紅樓夢 校注版');
+    expect(book.groupName, '我的 書庫 2026');
+    expect(book.filePath, epubPath, reason: '本機路徑不複製、原樣存入');
+  });
+
   test('本機資料夾：不存在的路徑回傳 folderListingFailed', () async {
     final result = await service.importFolder(
       p.join(tempDir.path, '不存在的資料夾'),

@@ -68,10 +68,7 @@ Future<ImportResult?> importDroppedPaths(
     folderResults.add(folderResult);
   }
 
-  return _mergeResults(
-    filesResult: filesResult,
-    folderResults: folderResults,
-  );
+  return _mergeResults(filesResult: filesResult, folderResults: folderResults);
 }
 
 ImportResult _mergeResults({
@@ -97,10 +94,11 @@ ImportResult _mergeResults({
     skippedUnsupportedCount += r.skippedUnsupportedCount;
   }
 
-  final allFoldersFailed = folderResults.isNotEmpty &&
-      folderResults.every((r) => r.failure != null);
-  final failure =
-      (filesResult == null && allFoldersFailed) ? folderResults.first.failure : null;
+  final allFoldersFailed =
+      folderResults.isNotEmpty && folderResults.every((r) => r.failure != null);
+  final failure = (filesResult == null && allFoldersFailed)
+      ? folderResults.first.failure
+      : null;
 
   return ImportResult(
     importedBooks: importedBooks,
