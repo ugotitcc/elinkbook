@@ -133,15 +133,20 @@ class BookImportServiceImpl implements BookImportService {
     final imported = <Book>[];
     final updateCandidates = <BookUpdateCandidate>[];
     var skippedDuplicateCount = 0;
+    var skippedUnsupportedCount = 0;
     for (var i = 0; i < uris.length; i++) {
       final uri = uris[i];
+      final displayName = (displayNames != null && i < displayNames.length)
+          ? displayNames[i]
+          : null;
+      if (_detectImportFormat(uri, displayName) == null) {
+        skippedUnsupportedCount++;
+        continue;
+      }
       if (!seenUris.add(uri)) {
         skippedDuplicateCount++;
         continue;
       }
-      final displayName = (displayNames != null && i < displayNames.length)
-          ? displayNames[i]
-          : null;
 
       final detection = await _detectBookUpdateInternal(
         uri,
@@ -178,6 +183,7 @@ class BookImportServiceImpl implements BookImportService {
     return ImportResult(
       importedBooks: imported,
       skippedDuplicateCount: skippedDuplicateCount,
+      skippedUnsupportedCount: skippedUnsupportedCount,
       updateCandidates: updateCandidates,
     );
   }
@@ -232,7 +238,12 @@ class BookImportServiceImpl implements BookImportService {
     final imported = <Book>[];
     final updateCandidates = <BookUpdateCandidate>[];
     var skippedDuplicateCount = 0;
+    var skippedUnsupportedCount = 0;
     for (final uri in fileUris) {
+      if (_detectImportFormat(uri, null) == null) {
+        skippedUnsupportedCount++;
+        continue;
+      }
       if (!seenUris.add(uri)) {
         skippedDuplicateCount++;
         continue;
@@ -264,6 +275,7 @@ class BookImportServiceImpl implements BookImportService {
     return ImportResult(
       importedBooks: imported,
       skippedDuplicateCount: skippedDuplicateCount,
+      skippedUnsupportedCount: skippedUnsupportedCount,
       updateCandidates: updateCandidates,
     );
   }

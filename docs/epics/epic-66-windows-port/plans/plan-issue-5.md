@@ -55,13 +55,13 @@
 **Interfaces：**
 - Produces: `ImportResult.skippedUnsupportedCount`（`final int`，建構子具名參數，預設 `0`）。後續 Task 3、5 讀它。
 
-- [ ] **Step 1：寫失敗測試**，加進上述測試檔的 `main()` 內：
+- [x] **Step 1：寫失敗測試**，加進上述測試檔的 `main()` 內：
   - `ImportResult 預設 skippedUnsupportedCount 為 0`：`const ImportResult().skippedUnsupportedCount == 0`。
   - `importFiles：不可辨識格式略過並計入 skippedUnsupportedCount，不計入 skippedDuplicateCount`：暫存目錄放 `a.epub`（複製 `test/fixtures/sample.epub`）、`cover.jpg`、`notes.zip`（內容隨意位元組），呼叫 `service.importFiles([...三個路徑])`；斷言 `importedBooks.length == 1`、`skippedUnsupportedCount == 2`、`skippedDuplicateCount == 0`。
-- [ ] **Step 2：執行確認失敗**：`flutter test test/library/book_import_service_missing_channel_test.dart`；預期編譯失敗（`skippedUnsupportedCount` 未定義）。
-- [ ] **Step 3：實作。** `ImportResult` 加欄位與建構子參數 `this.skippedUnsupportedCount = 0`，並在類別文件註解說明語意（格式無法辨識而略過的檔案數，與重複分開）。`importFiles` 迴圈開頭先算 `displayName`，緊接著 `if (_detectImportFormat(uri, displayName) == null) { skippedUnsupportedCount++; continue; }`，必須在 `seenUris.add(uri)` 之前；`importFolder` 迴圈開頭同樣判斷（`displayName` 傳 `null`，與原本 `_importSingleFile` 內部判斷一致）；兩處回傳的 `ImportResult` 都帶入新計數。
-- [ ] **Step 4：執行確認通過**：同 Step 2 指令，預期全綠；再跑 `flutter test test/library/book_import_service_test.dart` 確認既有測試沒壞。
-- [ ] **Step 5：Commit**：`git add app/lib/library/book_import_service.dart app/lib/library/book_import_service_impl.dart app/test/library/book_import_service_missing_channel_test.dart`，訊息 `feat(import): ImportResult 新增 skippedUnsupportedCount 並統計（epic-66 Issue 5 Task 1）`。
+- [x] **Step 2：執行確認失敗**：`flutter test test/library/book_import_service_missing_channel_test.dart`；預期編譯失敗（`skippedUnsupportedCount` 未定義）。
+- [x] **Step 3：實作。** `ImportResult` 加欄位與建構子參數 `this.skippedUnsupportedCount = 0`，並在類別文件註解說明語意（格式無法辨識而略過的檔案數，與重複分開）。`importFiles` 迴圈開頭先算 `displayName`，緊接著 `if (_detectImportFormat(uri, displayName) == null) { skippedUnsupportedCount++; continue; }`，必須在 `seenUris.add(uri)` 之前；`importFolder` 迴圈開頭同樣判斷（`displayName` 傳 `null`，與原本 `_importSingleFile` 內部判斷一致）；兩處回傳的 `ImportResult` 都帶入新計數。
+- [x] **Step 4：執行確認通過**：同 Step 2 指令，預期全綠；再跑 `flutter test test/library/book_import_service_test.dart` 確認既有測試沒壞。
+- [x] **Step 5：Commit**：`git add app/lib/library/book_import_service.dart app/lib/library/book_import_service_impl.dart app/test/library/book_import_service_missing_channel_test.dart`，訊息 `feat(import): ImportResult 新增 skippedUnsupportedCount 並統計（epic-66 Issue 5 Task 1）`。
 
 ---
 

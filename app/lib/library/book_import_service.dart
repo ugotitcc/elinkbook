@@ -23,6 +23,10 @@ class ImportResult {
   final List<Book> importedBooks;
   final int skippedDuplicateCount;
 
+  /// 因檔案格式無法辨識而被略過的檔案數量（epic-66 Issue 5），與
+  /// [skippedDuplicateCount]（重複檔案）分開統計。
+  final int skippedUnsupportedCount;
+
   /// 非 null 代表整次匯入失敗（此時 [importedBooks] 為空）。「資料夾裡本來
   /// 就沒有可匯入的書」不是失敗，維持 null。
   final ImportFailure? failure;
@@ -34,6 +38,7 @@ class ImportResult {
   const ImportResult({
     this.importedBooks = const [],
     this.skippedDuplicateCount = 0,
+    this.skippedUnsupportedCount = 0,
     this.failure,
     this.updateCandidates = const [],
   });

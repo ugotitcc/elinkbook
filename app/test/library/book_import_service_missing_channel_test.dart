@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
@@ -67,5 +68,25 @@ void main() {
     expect(book.format, BookFileFormat.epub);
     expect(book.coverPath, isNull, reason: '沒有封面可取');
     expect(book.filePath, epubPath, reason: '本機路徑不落地複本、原樣存入');
+  });
+
+  test('ImportResult 預設 skippedUnsupportedCount 為 0', () {
+    expect(const ImportResult().skippedUnsupportedCount, 0);
+  });
+
+  test('importFiles：不可辨識格式略過並計入 skippedUnsupportedCount，不計入 skippedDuplicateCount',
+      () async {
+    final epubPath = p.join(tempDir.path, 'a.epub');
+    await File('test/fixtures/sample.epub').copy(epubPath);
+    final jpgPath = p.join(tempDir.path, 'cover.jpg');
+    await File(jpgPath).writeAsBytes([1, 2, 3]);
+    final zipPath = p.join(tempDir.path, 'notes.zip');
+    await File(zipPath).writeAsBytes([4, 5, 6]);
+
+    final result = await service.importFiles([epubPath, jpgPath, zipPath]);
+
+    expect(result.importedBooks, hasLength(1));
+    expect(result.skippedUnsupportedCount, 2);
+    expect(result.skippedDuplicateCount, 0);
   });
 }
