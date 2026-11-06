@@ -288,7 +288,9 @@
 - **裁定**：`registerEscInnerConsumer(bool Function())`：`ReaderScreen` 在 Windows 的 `initState` 註冊 `_consumeEscForReader`、`dispose` 取消。消費者**自己**判斷是否在最上層（`ModalRoute.isCurrent`）：PDF 手動裁切模式只吞掉 Esc（回傳 true）、有文字選取則清除選取（回傳 true）、否則回傳 false。閱讀器的 `_handleReaderKeyEvent` 不再處理 Esc；WebView 轉送進來的 Esc 也呼叫 `handleWindowEscape`，與鍵盤路徑共用同一個決策點。
 - **行為變化**：疊在閱讀器上的頁面（搜尋畫面等）不算浮層，Esc 直接退出視窗全螢幕；不可關閉的對話框開著時 Esc 同樣退出視窗全螢幕（與文件記載的已知邊界一致，先前在閱讀器內實際上是什麼都不發生）。
 
-### Ruling 3：WebView2 有焦點時的 F11／Esc——未解決，待實機驗證（程式審查 I-1、I-4）
+### Ruling 3：WebView2 有焦點時的 F11／Esc——已由實機驗證可用（程式審查 I-1、I-4）
+
+> **結果（2026-11-06）**：使用者以真實鍵盤在 Windows 實機驗證，書頁有焦點時 F11 與 Esc 皆可用。未留下 log，無法說明按鍵是經 `main.js` 轉送還是直接進 Flutter。下方「事實」「裁定」為驗證前的記錄，保留作歷史。
 
 - **事實**：Task 1 的數據是「焦點在書頁時 F11 與 Esc 在 Flutter 與頂層 `window` 的 `keydown` 都沒收到」。但 (a) 送鍵方式是 Win32 `AttachThreadInput` 合成輸入，不是真實鍵盤；(b) 探針只掛在頂層 `window`，沒有掛在 section iframe 的文件，而實際閱讀時焦點通常在 iframe 內，實作對 `window` 與每個 section 文件都掛了轉送；(c) 探針腳本沒有保留、報告沒有原始 log 摘錄，無法重現。所以「F11／Esc 被 WebView2 攔截」是**推論，不是量測結論**。
 - **無法在本 Issue 內用程式繞過**：`flutter_inappwebview_windows` 0.6.0 沒有暴露 WebView2 的 `AreBrowserAcceleratorKeysEnabled`（原始碼 grep 無結果），要關閉瀏覽器加速鍵必須修改外掛或在原生層處理，超出本 Issue 範圍（專案不 fork 外掛）。
