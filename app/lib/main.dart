@@ -72,6 +72,7 @@ import 'theme/app_theme.dart';
 import 'windows/windows_webview_environment.dart';
 import 'package:window_manager/window_manager.dart';
 import 'windows/window_fullscreen_controller.dart';
+import 'windows/window_fullscreen_shortcuts.dart';
 import 'theme/app_theme_data.dart';
 import 'reader/reader_activity_tracker.dart';
 import 'search/content_indexing_scheduler.dart';
@@ -583,6 +584,9 @@ class _ElinkBookAppState extends State<ElinkBookApp>
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: (deviceLocales, supportedLocales) =>
           resolveMaterialAppLocale(deviceLocales),
+      builder: (context, child) => WindowFullscreenShortcuts(
+        child: child ?? const SizedBox.shrink(),
+      ),
       home: AdaptiveShellScaffold(
         readerFeatures: widget.dependencies.readerFeatures,
         sync: widget.dependencies.sync,

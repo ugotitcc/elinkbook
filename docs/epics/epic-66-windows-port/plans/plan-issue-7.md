@@ -140,7 +140,7 @@
   - 否則：`initState` 註冊 `HardwareKeyboard.instance.addHandler`、`dispose` 移除；處理器只處理**無任何修飾鍵**的 `KeyDownEvent` F11（忽略 `KeyRepeatEvent`）→ `toggleWindowFullscreen` 並回傳 `true`（消費），其他事件回傳 `false`。`build` 回傳 `Actions(key: const Key('window_fullscreen_dismiss_actions'), actions: {DismissIntent: _ExitFullscreenDismissAction}, child: child)`。
   - `_ExitFullscreenDismissAction extends Action<DismissIntent>`：`isEnabled(intent)` 回傳 `controller.isFullscreenNow`（同步）；`invoke` 呼叫 `exitWindowFullscreenIfActive(controller)`。Esc→`DismissIntent` 的轉換由 `MaterialApp` 內建的 `Shortcuts` 負責，**本 widget 不處理任何 Esc 按鍵事件**。
 
-- [ ] **Step 1：寫失敗測試**（Windows 平台 override；假控制器；`MaterialApp(builder: (c, child) => WindowFullscreenShortcuts(controller: fake, child: child!), home: ...)`；`tester.sendKeyEvent(LogicalKeyboardKey.f11)`／`escape`；dialog 用 `showDialog`）：
+- [x] **Step 1：寫失敗測試**（Windows 平台 override；假控制器；`MaterialApp(builder: (c, child) => WindowFullscreenShortcuts(controller: fake, child: child!), home: ...)`；`tester.sendKeyEvent(LogicalKeyboardKey.f11)`／`escape`；dialog 用 `showDialog`）：
   - `F11 在任何畫面都切換視窗全螢幕`（首頁與 push 之後的第二個路由各按一次）。
   - `F11 按住不放（KeyRepeatEvent）只切換一次`；`Alt+F11、Ctrl+F11 不切換`。
   - `視窗全螢幕且沒有浮層時按 Esc：退出全螢幕`。
@@ -149,10 +149,10 @@
   - `全螢幕且有 barrierDismissible: false 的對話框：Esc 退出全螢幕`（已知邊界，決定 5）。
   - `切換畫面（push／pop）本身不呼叫 setFullscreen`（全螢幕狀態不被重置）。
   - `非 Windows（預設平台）或控制器為 null 時：找不到 Key('window_fullscreen_dismiss_actions')，F11 不呼叫任何控制器`。
-- [ ] **Step 2：執行確認失敗：** `flutter test test/windows/window_fullscreen_shortcuts_test.dart`；預期編譯失敗。
-- [ ] **Step 3：實作 `window_fullscreen_shortcuts.dart`**，並在 `main.dart` 的 `MaterialApp` 加 `builder: (context, child) => WindowFullscreenShortcuts(child: child ?? const SizedBox.shrink())`（既有 `MaterialApp` 沒有 `builder`）。若測試證明 Esc 在畫面沒有任何焦點節點時到不了 `Actions`，記一筆 `Ruling` 並與使用者確認，不要退回 `Focus(onKeyEvent:)` 方案（見決定 6）。
-- [ ] **Step 4：執行確認通過：** 同 Step 2 指令；再跑 `flutter test test/elinkbook_app_wiring_test.dart` 確認 App 接線測試沒壞。
-- [ ] **Step 5：Commit：** `git add app/lib/windows/window_fullscreen_shortcuts.dart app/lib/main.dart app/test/windows/window_fullscreen_shortcuts_test.dart`，訊息 `feat(keyboard): F11 視窗全螢幕與 Esc 退出（epic-66 Issue 7 Task 4）`。
+- [x] **Step 2：執行確認失敗：** `flutter test test/windows/window_fullscreen_shortcuts_test.dart`；預期編譯失敗。
+- [x] **Step 3：實作 `window_fullscreen_shortcuts.dart`**，並在 `main.dart` 的 `MaterialApp` 加 `builder: (context, child) => WindowFullscreenShortcuts(child: child ?? const SizedBox.shrink())`（既有 `MaterialApp` 沒有 `builder`）。若測試證明 Esc 在畫面沒有任何焦點節點時到不了 `Actions`，記一筆 `Ruling` 並與使用者確認，不要退回 `Focus(onKeyEvent:)` 方案（見決定 6）。
+- [x] **Step 4：執行確認通過：** 同 Step 2 指令；再跑 `flutter test test/elinkbook_app_wiring_test.dart` 確認 App 接線測試沒壞。
+- [x] **Step 5：Commit：** `git add app/lib/windows/window_fullscreen_shortcuts.dart app/lib/main.dart app/test/windows/window_fullscreen_shortcuts_test.dart`，訊息 `feat(keyboard): F11 視窗全螢幕與 Esc 退出（epic-66 Issue 7 Task 4）`。
 
 ---
 
