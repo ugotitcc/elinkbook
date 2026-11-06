@@ -9,8 +9,15 @@
 | 3 | 閱讀器開書與全文索引器的「整本回傳」記憶體：驗證是否洩漏，洩漏則修正（來源 Issue 2 審查發現） | Issue 2 | ✅ 已合併（量測確認閱讀器洩漏，修法移至 Issue 4） | #396 |
 | 4 | Windows 書檔改由本機 loopback HTTP 伺服器（`shelf`）服務，消除「整本回傳」洩漏（來源 Issue 3 報告） | Issue 3 | ✅ 已合併 | #397 |
 | 5 | Windows 檔案與資料夾匯入：選檔、選資料夾、拖曳三種方式，書檔維持原路徑，不支援格式略過並提示 | Issue 4 | ✅ 已合併（Windows 人工驗證 2026-11-06 使用者回報通過） | #398 |
-| 6 | Flutter 升級至 ≥ 3.47.7（評估與遷移）：`onReorder` 棄用、built-in Kotlin／AGP 9、Windows 預設 Impeller、外掛相容 | Issue 5 | ⚪ 未開始（尚未規劃） | — |
+| 6 | Flutter 升級至 ≥ 3.47.7（評估與遷移）：`onReorder` 棄用、built-in Kotlin／AGP 9、Windows 預設 Impeller、外掛相容；一併處理繁中 Windows 的 `/utf-8` 編譯問題 | Issue 11 | ⚪ 未開始（尚未規劃） | — |
 | 7 | Windows 鍵盤快捷鍵與 F11 視窗全螢幕：翻頁類按鍵、Ctrl+F、F11，Esc 依序處理浮層與全螢幕 | Issue 5 | ✅ 已合併（Windows 人工驗證 2026-11-06 使用者回報通過，F11／Esc 在 WebView2 有焦點時可用） | #399 |
+| 8 | 索引器在 Windows 隱藏 WebView 跑不完：先診斷（量測再修），修到全庫全文搜尋可用 | Issue 4 | ⚪ 未開始（尚未規劃） | — |
+| 9 | WebView2 未安裝時顯示說明與下載連結（決策 4，原本漏掉） | Issue 7 | ⚪ 未開始（尚未規劃） | — |
+| 10 | 平台專屬功能隱藏：音量鍵翻頁、E-Ink 高對比與影像濾鏡、螢幕方向鎖定、「全螢幕模式」偏好項；並處理 Windows 呼叫 Android 原生全螢幕 channel 未處理例外 | Issue 7 | ⚪ 未開始（尚未規劃） | — |
+| 11 | Windows 測試穩定性：追查 `local_book_server_test.dart` 偶發失敗與 `pdf_reader_view_filters_test.dart`（`main` 上同樣失敗），為 Issue 6 建立乾淨基準 | 無 | ⚪ 未開始（尚未規劃） | — |
+| 12 | Android 也改用 foliate-js 讀 metadata、移除 Readium（`readium-shared`／`readium-streamer`、`BookMetadataChannel.kt`）：**第一步先補真實出版社書籍的 Readium 對比，通過才移除**；需 Android 實機 | Issue 6 | ⚪ 未開始（尚未規劃） | — |
+| 13 | Windows `integration_test` 冒煙測試（每種格式：開書、翻頁、劃線） | Issue 6、8、9、10 | ⚪ 未開始（尚未規劃） | — |
+| 14 | 免安裝 zip 打包 | Issue 13 | ⚪ 未開始（尚未規劃） | — |
 
 ## Issue 1 範圍
 
@@ -265,7 +272,10 @@ Issue 3 已實證：閱讀器開書以 `shouldInterceptRequest` 整本回傳 224
 - ~~生產級送書伺服器~~：Issue 1 實測攔截可行（決策 15），不做。大檔整本位元組尖峰（224 MB 書約 3.8 GB）若要改善，另開「分段服務」Issue；洩漏驗證見 Issue 3。
 - ~~檔案匯入與資料夾匯入~~（已納入 Issue 5，上方有完整設計；原註記：取 `f.identifier ?? f.path`；資料夾用 `getDirectoryPath()` 加 `dart:io`，不寫原生 channel；`Book.filePath` 存本機路徑。）
 - ~~鍵盤快捷鍵與 F11~~（已納入 Issue 7，上方有完整設計；`window_manager` 0.5.2 已確認不依賴 `win32`）。
-- 平台專屬功能的隱藏。
-- Windows 版 `integration_test` 冒煙測試。
-- 免安裝 zip 打包。
+- 平台專屬功能的隱藏（已登錄為 Issue 10）。
+- Windows 版 `integration_test` 冒煙測試（已登錄為 Issue 13）。
+- 免安裝 zip 打包（已登錄為 Issue 14）。
+- 索引器跑不完（Issue 8）、WebView2 缺少提示（Issue 9）、測試穩定性（Issue 11）、Android 統一 metadata（Issue 12）：2026-11-06 登錄，尚未規劃。
+- **預定執行順序：** 8 → 9 → 10 → 11 → 6 → 12 → 13 → 14（先補齊功能，再升級 Flutter，冒煙測試與打包放在最終版本上做）。
+- 不做：「分段服務」（大檔開書記憶體尖峰，224 MB 書約 3.8 GB），記為已知限制，遇到再議。
 - Flutter 升級（Issue 6）：先用 `flutter pub outdated` 與 `pub get --dry-run` 盤點；升級後 `desktop_drop` 可改用最新版；一併處理 `pubspec.lock` 與 Flutter 版本的落差；Windows 預設 Impeller 下重驗 WebView2 閱讀器；`onReorder` 改 `onReorderItem`；built-in Kotlin／AGP 9 的 Android 建置；先查 3.47.8 的安全公告再選修補版本；升級前須與人類確認（`CLAUDE.md`）。
