@@ -225,11 +225,11 @@
 **Interfaces：**
 - Produces: 字串 `sourcesHomeLocalFilesStayInPlaceHint`——zh_TW `書籍會保留在原本的檔案位置，不會複製。若移動或刪除原檔，該書將無法開啟。`；zh_CN 與 zh `书籍会保留在原来的文件位置，不会复制。若移动或删除原文件，该书将无法打开。`；en `Books stay where they are and are not copied. If you move or delete the original file, the book can no longer be opened.`。固定 Key：`Key('sources_windows_keep_in_place_hint')`。
 
-- [ ] **Step 1：寫失敗測試**：`Windows 顯示提醒文字（Key 與 l10n 文字都存在）`；`預設平台（Android）不顯示`。
-- [ ] **Step 2：執行確認失敗**：`flutter test test/screens/sources_home_screen_test.dart`。
-- [ ] **Step 3：實作。** 四個 arb 加鍵、`flutter gen-l10n`；畫面在 `isWindowsPlatform` 為真時，於選資料夾卡片後插入 `Padding(padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Text(l10n.sourcesHomeLocalFilesStayInPlaceHint, key: ..., style: Theme.of(context).textTheme.bodySmall))`。
-- [ ] **Step 4：執行確認通過**：同 Step 2 指令；`node tool/check_l10n_hardcoded_strings.js` PASS。
-- [ ] **Step 5：Commit**：`git add` 四個 arb、`app/lib/l10n/app_localizations*.dart`（僅限有變更者）、`sources_home_screen.dart` 與其測試，訊息 `feat(import): 來源畫面提醒書檔維持原位置（epic-66 Issue 5 Task 8）`。
+- [x] **Step 1：寫失敗測試**：`Windows 顯示提醒文字（Key 與 l10n 文字都存在）`；`預設平台（Android）不顯示`。
+- [x] **Step 2：執行確認失敗**：`flutter test test/screens/sources_home_screen_test.dart`。
+- [x] **Step 3：實作。** 四個 arb 加鍵、`flutter gen-l10n`；畫面在 `isWindowsPlatform` 為真時，於選資料夾卡片後插入 `Padding(padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Text(l10n.sourcesHomeLocalFilesStayInPlaceHint, key: ..., style: Theme.of(context).textTheme.bodySmall))`。
+- [x] **Step 4：執行確認通過**：同 Step 2 指令；`node tool/check_l10n_hardcoded_strings.js` PASS。
+- [x] **Step 5：Commit**：`git add` 四個 arb、`app/lib/l10n/app_localizations*.dart`（僅限有變更者）、`sources_home_screen.dart` 與其測試，訊息 `feat(import): 來源畫面提醒書檔維持原位置（epic-66 Issue 5 Task 8）`。
 
 ---
 

@@ -2001,17 +2001,21 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '略过 $count 个不支持的文件',
-      one: '略过 1 个不支持的文件',
+      other: '略過 $count 個不支援的檔案',
+      one: '略過 1 個不支援的檔案',
     );
     return '$_temp0';
   }
 
   @override
-  String get importDropOverlayText => '放开以汇入';
+  String get importDropOverlayText => '放開以匯入';
 
   @override
-  String get importDropBusyMessage => '汇入进行中，请稍后再拖入';
+  String get importDropBusyMessage => '匯入進行中，請稍後再拖入';
+
+  @override
+  String get sourcesHomeLocalFilesStayInPlaceHint =>
+      '書籍會保留在原本的檔案位置，不會複製。若移動或刪除原檔，該書將無法開啟。';
 
   @override
   String get libraryImportFolderFailedMessage => '無法讀取這個資料夾，請確認已授權存取後再試一次';
@@ -4790,6 +4794,10 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get importDropBusyMessage => '汇入进行中，请稍后再拖入';
 
   @override
+  String get sourcesHomeLocalFilesStayInPlaceHint =>
+      '书籍会保留在原来的文件位置，不会复制。若移动或删除原文件，该书将无法打开。';
+
+  @override
   String get libraryImportFolderFailedMessage => '无法读取这个文件夹，请确认已授权访问后再试一次';
 
   @override
@@ -7564,6 +7572,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get importDropBusyMessage => '匯入進行中，請稍後再拖入';
+
+  @override
+  String get sourcesHomeLocalFilesStayInPlaceHint =>
+      '書籍會保留在原本的檔案位置，不會複製。若移動或刪除原檔，該書將無法開啟。';
 
   @override
   String get libraryImportFolderFailedMessage => '無法讀取這個資料夾，請確認已授權存取後再試一次';

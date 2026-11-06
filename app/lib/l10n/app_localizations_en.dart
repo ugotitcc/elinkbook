@@ -2095,6 +2095,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Import in progress, please try again later';
 
   @override
+  String get sourcesHomeLocalFilesStayInPlaceHint =>
+      'Books stay where they are and are not copied. If you move or delete the original file, the book can no longer be opened.';
+
+  @override
   String get libraryImportFolderFailedMessage =>
       'Couldn\'t read this folder. Make sure access is allowed, then try again.';
 

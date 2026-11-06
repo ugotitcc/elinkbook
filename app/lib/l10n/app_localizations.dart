@@ -3569,6 +3569,12 @@ abstract class AppLocalizations {
   /// **'匯入進行中，請稍後再拖入'**
   String get importDropBusyMessage;
 
+  /// Windows 來源畫面常駐提醒：匯入書籍維持原檔案路徑不複製
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'書籍會保留在原本的檔案位置，不會複製。若移動或刪除原檔，該書將無法開啟。'**
+  String get sourcesHomeLocalFilesStayInPlaceHint;
+
   /// 資料夾匯入整體失敗（無法取得持久化授權，或列舉資料夾內容失敗）時的 SnackBar；兩種失敗使用者能做的事相同（重新選資料夾／重新授權），共用一則
   ///
   /// In zh_TW, this message translates to:

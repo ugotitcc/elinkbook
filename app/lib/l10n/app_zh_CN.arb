@@ -577,6 +577,7 @@
   "libraryImportResultUnsupportedMessage": "{count, plural, =1{略过 1 个不支持的文件} other{略过 {count} 个不支持的文件}}",
   "importDropOverlayText": "放开以汇入",
   "importDropBusyMessage": "汇入进行中，请稍后再拖入",
+  "sourcesHomeLocalFilesStayInPlaceHint": "书籍会保留在原来的文件位置，不会复制。若移动或删除原文件，该书将无法打开。",
   "libraryImportFolderFailedMessage": "无法读取这个文件夹，请确认已授权访问后再试一次",
   "layoutPresetBookPickerTitleMulti": "选择书籍（可复选）",
   "layoutPresetBookPickerTitleSingle": "选择书籍",

@@ -577,6 +577,7 @@
   "libraryImportResultUnsupportedMessage": "{count, plural, =1{1 unsupported file skipped} other{{count} unsupported files skipped}}",
   "importDropOverlayText": "Drop to import",
   "importDropBusyMessage": "Import in progress, please try again later",
+  "sourcesHomeLocalFilesStayInPlaceHint": "Books stay where they are and are not copied. If you move or delete the original file, the book can no longer be opened.",
   "libraryImportFolderFailedMessage": "Couldn't read this folder. Make sure access is allowed, then try again.",
   "layoutPresetBookPickerTitleMulti": "Select Books (multiple selection)",
   "layoutPresetBookPickerTitleSingle": "Select Book",
