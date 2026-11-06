@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../theme/reader_colors.dart';
 
+import '../platform/platform_support.dart';
 import '../reader/annotation_controller.dart';
 import '../reader/annotation_list_item.dart';
 import '../reader/annotation_toolbar_layout.dart';
@@ -55,6 +56,7 @@ import '../storage/storage_access_probe.dart'
 import '../reader/open_book_flow.dart';
 import '../reader/reader_console_log.dart';
 import '../reader/reader_jump_target.dart';
+import '../reader/reader_key_command.dart';
 import '../reader/reader_surface.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/toc_entry.dart';
@@ -509,6 +511,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       readerActivityTracker: widget.dependencies.readerActivityTracker,
     )..start();
     WidgetsBinding.instance.addObserver(this);
+    if (isWindowsPlatform) {
+      HardwareKeyboard.instance.addHandler(_handleReaderKeyEvent);
+    }
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
     _loadAvailableFonts();
@@ -663,6 +668,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _searchJumpHighlightTimer.cancel();
     _ttsSleepTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    HardwareKeyboard.instance.removeHandler(_handleReaderKeyEvent);
     _volumeKeyChannel.setMethodCallHandler(null);
     _pdfSearchStateNotifier.dispose();
     _ttsAudioFocusCoordinator?.dispose();
@@ -3041,6 +3047,119 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 為崩潰畫面（見 `reviews/bugfix-repro.md` Issue 1）。`menu` 動作不受
   /// 影響——它只切換 Dart 端 `_chromeVisible`，不呼叫任何 JS/native API，
   /// 無此風險。
+  /// 全域按鍵監聽器先於焦點樹執行，因此不需修改 PDF 的 `_onPagedKey`（pdfrx 內部焦點按鍵），
+  /// 在此層統一處理 Windows 平台翻頁、跳頁、搜尋與 Esc。
+  ///
+  /// Esc 處理原則：
+  /// 1. 若處於 PDF 裁切模式（`_cropEditModeActive`），吞掉 Esc（回傳 true）避免退出視窗全螢幕，
+  ///    且裁切模式維持。
+  /// 2. 若存在文字選取（`_annotations.selection != null`），呼叫 `_handleCloseAnnotationToolbar()`
+  ///    清除選取並回傳 true。
+  /// 3. 若無選取且非裁切，回傳 false 放行，由最外層 `WindowFullscreenShortcuts` 退出視窗全螢幕。
+  /// 4. 刻意不處理 TTS 面板關閉：TTS 面板已有自身的路由或 dismiss 機制，且在有浮層時
+  ///    `_isReaderKeyInputBlocked()` 會阻斷此處處理。
+  bool _handleReaderKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return false;
+    }
+    if (_isReaderKeyInputBlocked()) {
+      return false;
+    }
+
+    // Esc（無任何修飾鍵）
+    final isModifierPressed = HardwareKeyboard.instance.isShiftPressed ||
+        HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isAltPressed ||
+        HardwareKeyboard.instance.isMetaPressed;
+
+    if (event.logicalKey == LogicalKeyboardKey.escape && !isModifierPressed) {
+      if (_cropEditModeActive) {
+        return true;
+      }
+      if (_annotations.selection != null) {
+        _handleCloseAnnotationToolbar();
+        return true;
+      }
+      return false;
+    }
+
+    final vertical = _resolved?.writingMode == WritingMode.vertical;
+    final command = readerKeyCommandFor(
+      event.logicalKey,
+      shift: HardwareKeyboard.instance.isShiftPressed,
+      control: HardwareKeyboard.instance.isControlPressed,
+      alt: HardwareKeyboard.instance.isAltPressed,
+      meta: HardwareKeyboard.instance.isMetaPressed,
+      verticalWriting: vertical,
+    );
+
+    if (command == null) {
+      return false;
+    }
+
+    _handleReaderKeyCommand(command);
+    return true;
+  }
+
+  bool _isReaderKeyInputBlocked() {
+    if (ModalRoute.of(context)?.isCurrent != true) {
+      return true;
+    }
+    final primaryFocusContext = FocusManager.instance.primaryFocus?.context;
+    if (primaryFocusContext != null) {
+      if (primaryFocusContext.widget is EditableText ||
+          primaryFocusContext.findAncestorWidgetOfExactType<EditableText>() != null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _isReaderCommandBlocked() {
+    return _openBookFlow.state is! OpenBookRendered || _cropEditModeActive;
+  }
+
+  void _handleReaderKeyCommand(ReaderKeyCommand command) {
+    if (_isReaderCommandBlocked()) return;
+    final format = detectBookFormat(_activeFilePath);
+
+    switch (command) {
+      case ReaderKeyCommand.previousPage:
+        _handleZoneAction(ZoneAction.previousPage);
+        break;
+      case ReaderKeyCommand.nextPage:
+        _handleZoneAction(ZoneAction.nextPage);
+        break;
+      case ReaderKeyCommand.firstPage:
+        _clearSearchJumpHighlight();
+        _session.recordActivity();
+        if (isFoliateFormat(format)) {
+          _surface.jumpTo(const ReaderJumpTarget(progression: 0.0));
+        } else if (format == BookFormat.pdf) {
+          final info = _pdfPageInfo;
+          if (info != null && info.totalPages > 0) {
+            _surface.jumpTo(const ReaderJumpTarget(pdfPageIndex: 0));
+          }
+        }
+        break;
+      case ReaderKeyCommand.lastPage:
+        _clearSearchJumpHighlight();
+        _session.recordActivity();
+        if (isFoliateFormat(format)) {
+          _surface.jumpTo(const ReaderJumpTarget(progression: 1.0));
+        } else if (format == BookFormat.pdf) {
+          final info = _pdfPageInfo;
+          if (info != null && info.totalPages > 0) {
+            _surface.jumpTo(ReaderJumpTarget(pdfPageIndex: info.totalPages - 1));
+          }
+        }
+        break;
+      case ReaderKeyCommand.openSearch:
+        unawaited(_openBookSearch());
+        break;
+    }
+  }
+
   Future<void> _handleVolumeKeyCall(MethodCall call) async {
     if (call.method != 'onVolumeKey') return;
     if (_resolved?.volumeKeyEnabled == false) return;

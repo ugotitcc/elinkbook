@@ -171,7 +171,7 @@
   - `void _handleReaderKeyCommand(ReaderKeyCommand command)`：先 `if (_isReaderCommandBlocked()) return;`；`previousPage`／`nextPage` 對應 `ZoneAction.previousPage`／`nextPage` 呼叫 `_handleZoneAction`；`firstPage`／`lastPage`：先 `_clearSearchJumpHighlight(); _session.recordActivity();`，Foliate 格式 `_surface.jumpTo(const ReaderJumpTarget(progression: 0.0))`／`1.0`，PDF 在 `_pdfPageInfo` 為 `null` 或 `totalPages <= 0` 時忽略，否則 `pdfPageIndex: 0`／`totalPages - 1`；`openSearch` 呼叫 `_openBookSearch()`。
   - 註冊：`initState` 在 `isWindowsPlatform` 時 `HardwareKeyboard.instance.addHandler(_handleReaderKeyEvent)`；`dispose` 無條件 `removeHandler`（對未註冊的處理器安全）。
 
-- [ ] **Step 1：寫失敗測試**（Windows 平台 override；假 `ReaderSurface` 記錄 `previousPage`／`nextPage`／`jumpTo`／`clearSelection`；`tester.sendKeyEvent` 送鍵）：
+- [x] **Step 1：寫失敗測試**（Windows 平台 override；假 `ReaderSurface` 記錄 `previousPage`／`nextPage`／`jumpTo`／`clearSelection`；`tester.sendKeyEvent` 送鍵）：
   - `橫排：→ 呼叫 nextPage、← 呼叫 previousPage`；`直排：← 為下一頁、→ 為上一頁`。
   - `Space 為下一頁、Shift+Space 為上一頁、PageDown／PageUp／↓／↑ 照對應`。
   - `Home 呼叫 jumpTo(progression: 0.0)、End 為 1.0（EPUB）；PDF 為 pdfPageIndex 0 與最後一頁；PDF 頁數資訊尚未就緒時忽略`。
@@ -184,10 +184,10 @@
   - `Esc：有文字選取時清除選取並消費；PDF 裁切模式時被吞掉且裁切模式維持；兩者皆無時不消費（回傳 false）`（Review Focus 6）。
   - `離開閱讀器（pop）後按 →：surface 沒有被呼叫；再開一次書後按 → 只翻一頁（不是兩頁）`（Review Focus 4）。
   - `非 Windows 平台：按 →、Esc 都不處理`。
-- [ ] **Step 2：執行確認失敗：** `flutter test test/screens/reader_screen_keyboard_test.dart`；預期失敗（按鍵沒有任何動作）。
-- [ ] **Step 3：實作** 上述成員與註冊／移除，並加中文註解說明「全域處理器先於焦點樹、因此不需修改 PDF 的 `_onPagedKey`」，以及 Esc 與 TTS 面板刻意不處理的原因。若 PDF 正常開書後 `_openBookFlow.state` 不是 `OpenBookRendered`，不要放寬條件，先查清楚原因並記 `Ruling`。
-- [ ] **Step 4：執行確認通過：** 同 Step 2 指令；再跑 `flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_surface_test.dart test/screens/reader_screen_route_test.dart` 確認既有測試沒壞。
-- [ ] **Step 5：Commit：** `git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_keyboard_test.dart`，訊息 `feat(keyboard): ReaderScreen 在 Windows 處理翻頁、搜尋與 Esc（epic-66 Issue 7 Task 5）`。
+- [x] **Step 2：執行確認失敗：** `flutter test test/screens/reader_screen_keyboard_test.dart`；預期失敗（按鍵沒有任何動作）。
+- [x] **Step 3：實作** 上述成員與註冊／移除，並加中文註解說明「全域處理器先於焦點樹、因此不需修改 PDF 的 `_onPagedKey`」，以及 Esc 與 TTS 面板刻意不處理的原因。若 PDF 正常開書後 `_openBookFlow.state` 不是 `OpenBookRendered`，不要放寬條件，先查清楚原因並記 `Ruling`。
+- [x] **Step 4：執行確認通過：** 同 Step 2 指令；再跑 `flutter test test/screens/reader_screen_test.dart test/screens/reader_screen_surface_test.dart test/screens/reader_screen_route_test.dart` 確認既有測試沒壞。
+- [x] **Step 5：Commit：** `git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_keyboard_test.dart`，訊息 `feat(keyboard): ReaderScreen 在 Windows 處理翻頁、搜尋與 Esc（epic-66 Issue 7 Task 5）`。
 
 ---
 
