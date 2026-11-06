@@ -165,6 +165,9 @@ dependencies:
   # 桌面拖曳匯入（epic-66 Issue 5）：固定 0.8.4（0.9.x 要求 Flutter >= 3.47.7，
   # 升級見 Issue 6）。
   desktop_drop: 0.8.4
+  # 視窗全螢幕控制（epic-66 Issue 7）：固定 0.5.2（不使用 ^，0.6.0 要求
+  # Flutter >= 3.47.7，升級見 Issue 6）。
+  window_manager: 0.5.2
 
 dev_dependencies:
   flutter_test:

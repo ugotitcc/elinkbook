@@ -1,4 +1,5 @@
 // app/test/screens/book_search_screen_test.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -656,5 +657,255 @@ void main() {
     expect(find.text('Search in this book...'), findsOneWidget);
     expect(find.textContaining('results'), findsOneWidget);
     expect(find.text('By book order'), findsOneWidget);
+  });
+
+  group('Windows 鍵盤快捷鍵與開啟即聚焦（epic-66 Issue 7 Task 7）', () {
+    testWidgets('Windows 下載入後輸入框自動獲得焦點', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await tester.pumpWidget(_wrap(BookSearchScreen(
+          book: _testBook(),
+          dependencies: fakeReaderFeatureDependencies(
+            searchRepository: FakeSearchRepository(),
+            prefsManager: FakeReaderPrefsManager(),
+            libraryRepository: FakeLibraryRepository(),
+          ),
+        )));
+        await tester.pumpAndSettle();
+
+        final textField = tester.widget<TextField>(
+          find.byKey(const Key('book_search_screen_field')),
+        );
+        expect(textField.focusNode!.hasFocus, isTrue,
+            reason: 'Windows 下 BookSearchScreen 開啟後應自動聚焦於搜尋輸入框');
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('非 Windows 平台（Android）開啟時不自動聚焦', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        await tester.pumpWidget(_wrap(BookSearchScreen(
+          book: _testBook(),
+          dependencies: fakeReaderFeatureDependencies(
+            searchRepository: FakeSearchRepository(),
+            prefsManager: FakeReaderPrefsManager(),
+            libraryRepository: FakeLibraryRepository(),
+          ),
+        )));
+        await tester.pumpAndSettle();
+
+        final textField = tester.widget<TextField>(
+          find.byKey(const Key('book_search_screen_field')),
+        );
+        expect(textField.focusNode!.hasFocus, isFalse,
+            reason: 'Android 等非 Windows 平台不應自動聚焦避免彈出軟鍵盤');
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('Ctrl+F：輸入框重新獲得焦點，若有文字則整串全選', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await tester.pumpWidget(_wrap(BookSearchScreen(
+          book: _testBook(),
+          initialQuery: '測試文字',
+          dependencies: fakeReaderFeatureDependencies(
+            searchRepository: FakeSearchRepository(),
+            prefsManager: FakeReaderPrefsManager(),
+            libraryRepository: FakeLibraryRepository(),
+          ),
+        )));
+        await tester.pumpAndSettle();
+
+        final textField = tester.widget<TextField>(
+          find.byKey(const Key('book_search_screen_field')),
+        );
+        // 先把焦點移開
+        textField.focusNode!.unfocus();
+        await tester.pump();
+        expect(textField.focusNode!.hasFocus, isFalse);
+
+        // 按 Ctrl+F
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pump();
+
+        expect(textField.focusNode!.hasFocus, isTrue);
+        expect(textField.controller!.selection.baseOffset, 0);
+        expect(textField.controller!.selection.extentOffset, '測試文字'.length);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('帶其他修飾鍵（Ctrl+Shift+F、Ctrl+Alt+F）不動作', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await tester.pumpWidget(_wrap(BookSearchScreen(
+          book: _testBook(),
+          initialQuery: '測試文字',
+          dependencies: fakeReaderFeatureDependencies(
+            searchRepository: FakeSearchRepository(),
+            prefsManager: FakeReaderPrefsManager(),
+            libraryRepository: FakeLibraryRepository(),
+          ),
+        )));
+        await tester.pumpAndSettle();
+
+        final textField = tester.widget<TextField>(
+          find.byKey(const Key('book_search_screen_field')),
+        );
+        textField.focusNode!.unfocus();
+        await tester.pump();
+
+        // Ctrl+Shift+F
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pump();
+        expect(textField.focusNode!.hasFocus, isFalse);
+
+        // Ctrl+Alt+F
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pump();
+        expect(textField.focusNode!.hasFocus, isFalse);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('對話框彈出時（ModalRoute.isCurrent == false）按 Ctrl+F 不動作', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        late BuildContext capturedContext;
+        await tester.pumpWidget(_wrap(Builder(
+          builder: (context) {
+            capturedContext = context;
+            return BookSearchScreen(
+              book: _testBook(),
+              dependencies: fakeReaderFeatureDependencies(
+                searchRepository: FakeSearchRepository(),
+                prefsManager: FakeReaderPrefsManager(),
+                libraryRepository: FakeLibraryRepository(),
+              ),
+            );
+          },
+        )));
+        await tester.pumpAndSettle();
+
+        final textField = tester.widget<TextField>(
+          find.byKey(const Key('book_search_screen_field')),
+        );
+        textField.focusNode!.unfocus();
+        await tester.pump();
+
+        // 彈出對話框
+        showDialog<void>(
+          context: capturedContext,
+          builder: (_) => const AlertDialog(title: Text('對話框')),
+        );
+        await tester.pumpAndSettle();
+
+        // 按 Ctrl+F
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pump();
+
+        expect(textField.focusNode!.hasFocus, isFalse,
+            reason: '有對話框浮層時 Ctrl+F 不應奪取焦點');
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('退出搜尋畫面（pop）後按 Ctrl+F 不拋例外且處理器已移除', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await tester.pumpWidget(MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute(
+                    builder: (_) => BookSearchScreen(
+                      book: _testBook(),
+                      dependencies: fakeReaderFeatureDependencies(
+                        searchRepository: FakeSearchRepository(),
+                        prefsManager: FakeReaderPrefsManager(),
+                        libraryRepository: FakeLibraryRepository(),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: const Text('打開搜尋'),
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        // 開啟搜尋畫面
+        await tester.tap(find.text('打開搜尋'));
+        await tester.pumpAndSettle();
+        expect(find.byType(BookSearchScreen), findsOneWidget);
+
+        // 退出搜尋畫面
+        Navigator.of(tester.element(find.byType(BookSearchScreen))).pop();
+        await tester.pumpAndSettle();
+        expect(find.byType(BookSearchScreen), findsNothing);
+
+        // 按 Ctrl+F 不應拋出任何例外
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pump();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('非 Windows 平台下 Ctrl+F 不處理', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        await tester.pumpWidget(_wrap(BookSearchScreen(
+          book: _testBook(),
+          dependencies: fakeReaderFeatureDependencies(
+            searchRepository: FakeSearchRepository(),
+            prefsManager: FakeReaderPrefsManager(),
+            libraryRepository: FakeLibraryRepository(),
+          ),
+        )));
+        await tester.pumpAndSettle();
+
+        final textField = tester.widget<TextField>(
+          find.byKey(const Key('book_search_screen_field')),
+        );
+        expect(textField.focusNode!.hasFocus, isFalse);
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pump();
+
+        expect(textField.focusNode!.hasFocus, isFalse,
+            reason: 'Android 平台上 Ctrl+F 不動作');
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
   });
 }

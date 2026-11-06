@@ -2,9 +2,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
+import '../platform/platform_support.dart';
 import '../library/models/book.dart';
 import '../library/models/library_enums.dart';
 import '../reader/reader_jump_target.dart';
@@ -81,6 +83,14 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
   @override
   void initState() {
     super.initState();
+    if (isWindowsPlatform) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _searchFocusNode.requestFocus();
+        }
+      });
+      HardwareKeyboard.instance.addHandler(_handleSearchKeyEvent);
+    }
     unawaited(_initialize());
   }
 
@@ -106,10 +116,42 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
 
   @override
   void dispose() {
+    if (isWindowsPlatform) {
+      HardwareKeyboard.instance.removeHandler(_handleSearchKeyEvent);
+    }
     _debounce?.cancel();
     _controller.dispose();
     _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  /// Windows 搜尋全域快捷鍵處理器（epic-66 Issue 7 Task 7）。
+  ///
+  /// 當使用者按下 Ctrl+F 時重新聚焦於搜尋框並全選文字。
+  /// 刻意使用全域 [HardwareKeyboard] 處理器而非 [CallbackShortcuts]：當焦點落在
+  /// 搜尋結果列表、無焦點項目或其子樹以外時，[CallbackShortcuts] 無法接收鍵盤事件。
+  /// 僅在當前路由為最頂層路由（[ModalRoute.isCurrent] 為 true，無對話框覆蓋）時處理。
+  bool _handleSearchKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    if (ModalRoute.of(context)?.isCurrent != true) return false;
+
+    final hk = HardwareKeyboard.instance;
+    final isModifierValid = hk.isControlPressed &&
+        !hk.isShiftPressed &&
+        !hk.isAltPressed &&
+        !hk.isMetaPressed;
+
+    if (event.logicalKey == LogicalKeyboardKey.keyF && isModifierValid) {
+      _searchFocusNode.requestFocus();
+      if (_controller.text.isNotEmpty) {
+        _controller.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: _controller.text.length,
+        );
+      }
+      return true;
+    }
+    return false;
   }
 
   void _handleQueryChanged(String value) {

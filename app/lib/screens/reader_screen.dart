@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../theme/reader_colors.dart';
 
+import '../platform/platform_support.dart';
 import '../reader/annotation_controller.dart';
 import '../reader/annotation_list_item.dart';
 import '../reader/annotation_toolbar_layout.dart';
@@ -19,6 +20,7 @@ import '../reader/book_reader_prefs.dart';
 import '../reader/app_font.dart';
 import '../reader/available_fonts.dart';
 import '../reader/custom_font.dart';
+import '../reader/desktop_key_deduper.dart';
 import '../reader/epub_position_info.dart';
 import '../reader/epub_selection_info.dart';
 import '../reader/foliate_bridge_codec.dart';
@@ -55,6 +57,7 @@ import '../storage/storage_access_probe.dart'
 import '../reader/open_book_flow.dart';
 import '../reader/reader_console_log.dart';
 import '../reader/reader_jump_target.dart';
+import '../reader/reader_key_command.dart';
 import '../reader/reader_surface.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/toc_entry.dart';
@@ -91,6 +94,8 @@ import 'pdf_search_panel.dart';
 import 'pdf_thumbnail_panel.dart';
 import 'tts_panel.dart';
 import 'reader_chrome_top_bar.dart';
+import '../windows/window_fullscreen_controller.dart';
+import '../windows/window_fullscreen_shortcuts.dart';
 
 /// 音量鍵事件頻道（epic-7-interaction Issue 7）：原生 `MainActivity.
 /// dispatchKeyEvent()` 攔截音量鍵後呼叫 `onVolumeKey`；`_handleVolumeKeyCall`
@@ -355,6 +360,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // cropEditModeActive prop；只有 PDF 分支會用到，EPUB 分支永遠是 false。
   bool _cropEditModeActive = false;
 
+  /// Windows：取消註冊閱讀器的內層 Esc 消費者（見 [registerEscInnerConsumer]）。
+  VoidCallback? _unregisterEscConsumer;
+
   /// epic-63 Issue 4：字典面板開著時擋掉重複點擊，避免疊出兩層面板。
   /// 面板關閉後在 `finally` 還原，不觸發重建（旗標不影響畫面）。
   bool _lookupSheetOpen = false;
@@ -509,6 +517,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       readerActivityTracker: widget.dependencies.readerActivityTracker,
     )..start();
     WidgetsBinding.instance.addObserver(this);
+    if (isWindowsPlatform) {
+      HardwareKeyboard.instance.addHandler(_handleReaderKeyEvent);
+      _unregisterEscConsumer = registerEscInnerConsumer(_consumeEscForReader);
+    }
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
     _loadAvailableFonts();
@@ -663,6 +675,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _searchJumpHighlightTimer.cancel();
     _ttsSleepTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    _unregisterEscConsumer?.call();
+    _unregisterEscConsumer = null;
+    HardwareKeyboard.instance.removeHandler(_handleReaderKeyEvent);
     _volumeKeyChannel.setMethodCallHandler(null);
     _pdfSearchStateNotifier.dispose();
     _ttsAudioFocusCoordinator?.dispose();
@@ -2970,6 +2985,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           },
           onSelectionChanged: _handleSelectionChanged,
           onSelectionCleared: _handleSelectionCleared,
+          onDesktopKey: isWindowsPlatform ? _handleFoliateDesktopKey : null,
         );
       case BookFormat.pdf:
         // epic-24-pdf-engine-rebuild：單頁/雙頁（Issue 2）、影像濾鏡/
@@ -3041,6 +3057,180 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 為崩潰畫面（見 `reviews/bugfix-repro.md` Issue 1）。`menu` 動作不受
   /// 影響——它只切換 Dart 端 `_chromeVisible`，不呼叫任何 JS/native API，
   /// 無此風險。
+  /// 全域按鍵監聽器先於焦點樹執行，因此不需修改 PDF 的 `_onPagedKey`（pdfrx 內部焦點按鍵），
+  /// 在此層統一處理 Windows 平台翻頁、跳頁、搜尋與 Esc。
+  ///
+  /// 本處理器**不處理 Esc**：Esc 的優先序由 [handleWindowEscape] 統一決定，
+  /// 閱讀器只透過 [_consumeEscForReader]（註冊為內層消費者）參與。
+  bool _handleReaderKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return false;
+    }
+    final canonicalId = canonicalKeyId(event.logicalKey);
+    if (!desktopKeyDeduper.shouldHandle(canonicalId, DesktopKeySource.flutter)) {
+      return true;
+    }
+    if (_isReaderKeyInputBlocked()) {
+      return false;
+    }
+
+    final vertical = _resolved?.writingMode == WritingMode.vertical;
+    final command = readerKeyCommandFor(
+      event.logicalKey,
+      shift: HardwareKeyboard.instance.isShiftPressed,
+      control: HardwareKeyboard.instance.isControlPressed,
+      alt: HardwareKeyboard.instance.isAltPressed,
+      meta: HardwareKeyboard.instance.isMetaPressed,
+      verticalWriting: vertical,
+    );
+
+    if (command == null) {
+      return false;
+    }
+
+    _handleReaderKeyCommand(command);
+    return true;
+  }
+
+  void _handleFoliateDesktopKey(
+    String webKey, {
+    required bool shift,
+    required bool control,
+    required bool alt,
+    required bool meta,
+  }) {
+    final logicalKey = logicalKeyForWebKey(webKey);
+    if (logicalKey == null) return;
+
+    final canonicalId = canonicalKeyId(logicalKey);
+    if (!desktopKeyDeduper.shouldHandle(canonicalId, DesktopKeySource.web)) {
+      return;
+    }
+
+    // F11 視窗全螢幕
+    if (logicalKey == LogicalKeyboardKey.f11 &&
+        !shift &&
+        !control &&
+        !alt &&
+        !meta) {
+      final controller = activeWindowFullscreenController;
+      if (controller != null) {
+        unawaited(toggleWindowFullscreen(controller));
+      }
+      return;
+    }
+
+    // Escape（無任何修飾鍵）
+    if (logicalKey == LogicalKeyboardKey.escape &&
+        !shift &&
+        !control &&
+        !alt &&
+        !meta) {
+      // 與鍵盤處理器共用同一個決策點（內層狀態 → 退出全螢幕）
+      final controller = activeWindowFullscreenController;
+      if (controller != null) {
+        handleWindowEscape(controller);
+      }
+      return;
+    }
+
+    if (_isReaderKeyInputBlocked()) return;
+
+    final vertical = _resolved?.writingMode == WritingMode.vertical;
+    final command = readerKeyCommandFor(
+      logicalKey,
+      shift: shift,
+      control: control,
+      alt: alt,
+      meta: meta,
+      verticalWriting: vertical,
+    );
+
+    if (command != null) {
+      _handleReaderKeyCommand(command);
+    }
+  }
+
+  /// 閱讀器的內層 Esc 消費者（Windows，註冊給 [registerEscInnerConsumer]）。
+  ///
+  /// 只在閱讀器是最上層路由時才參與（被搜尋畫面等頁面蓋住時回傳 `false`，
+  /// 讓 Esc 照常往下走、退出視窗全螢幕）：
+  /// 1. PDF 手動裁切模式：只吞掉 Esc（回傳 `true`），裁切模式維持——延續既有
+  ///    「返回鍵不離開裁切模式」的決策，也不退出視窗全螢幕。
+  /// 2. 有文字選取：關閉選取工具列並清除選取（回傳 `true`）。
+  /// 3. 其他回傳 `false`。
+  ///
+  /// 刻意不處理 TTS 面板：`_cbzTtsPanelVisible`／`_ttsPanelCollapsed` 是展開收合
+  /// 狀態而非浮層，「Esc 關閉」語意不明，列為已知邊界。
+  bool _consumeEscForReader() {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return false;
+    if (_cropEditModeActive) return true;
+    if (_annotations.selection != null) {
+      _handleCloseAnnotationToolbar();
+      return true;
+    }
+    return false;
+  }
+
+  bool _isReaderKeyInputBlocked() {
+    if (ModalRoute.of(context)?.isCurrent != true) {
+      return true;
+    }
+    final primaryFocusContext = FocusManager.instance.primaryFocus?.context;
+    if (primaryFocusContext != null) {
+      if (primaryFocusContext.widget is EditableText ||
+          primaryFocusContext.findAncestorWidgetOfExactType<EditableText>() != null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _isReaderCommandBlocked() {
+    return _openBookFlow.state is! OpenBookRendered || _cropEditModeActive;
+  }
+
+  void _handleReaderKeyCommand(ReaderKeyCommand command) {
+    if (_isReaderCommandBlocked()) return;
+    final format = detectBookFormat(_activeFilePath);
+
+    switch (command) {
+      case ReaderKeyCommand.previousPage:
+        _handleZoneAction(ZoneAction.previousPage);
+        break;
+      case ReaderKeyCommand.nextPage:
+        _handleZoneAction(ZoneAction.nextPage);
+        break;
+      case ReaderKeyCommand.firstPage:
+        _clearSearchJumpHighlight();
+        _session.recordActivity();
+        if (isFoliateFormat(format)) {
+          _surface.jumpTo(const ReaderJumpTarget(progression: 0.0));
+        } else if (format == BookFormat.pdf) {
+          final info = _pdfPageInfo;
+          if (info != null && info.totalPages > 0) {
+            _surface.jumpTo(const ReaderJumpTarget(pdfPageIndex: 0));
+          }
+        }
+        break;
+      case ReaderKeyCommand.lastPage:
+        _clearSearchJumpHighlight();
+        _session.recordActivity();
+        if (isFoliateFormat(format)) {
+          _surface.jumpTo(const ReaderJumpTarget(progression: 1.0));
+        } else if (format == BookFormat.pdf) {
+          final info = _pdfPageInfo;
+          if (info != null && info.totalPages > 0) {
+            _surface.jumpTo(ReaderJumpTarget(pdfPageIndex: info.totalPages - 1));
+          }
+        }
+        break;
+      case ReaderKeyCommand.openSearch:
+        unawaited(_openBookSearch());
+        break;
+    }
+  }
+
   Future<void> _handleVolumeKeyCall(MethodCall call) async {
     if (call.method != 'onVolumeKey') return;
     if (_resolved?.volumeKeyEnabled == false) return;
