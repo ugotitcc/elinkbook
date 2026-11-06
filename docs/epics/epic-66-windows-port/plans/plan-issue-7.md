@@ -259,8 +259,8 @@
 - Modify: `docs/epics/epic-66-windows-port/issues.md`（Issue 7 狀態改為「🟡 實作完成，待 Windows 人工驗證」）
 - 視需要 Modify: `CONTEXT.md`（若實作中發現詞條描述與實況不符）
 
-- [ ] **Step 1：補報告。** 在 `issue-7-report.md` 加：做了什麼（含採用方案 A 或 B）、自動化測試結果、`issues.md` 過關條件 2 到 8 的**人工驗證表**，每項結果欄先留「待驗證」，**不得預先勾選**，明確標示「尚未在 Windows 實機驗證」；以及已知限制（不可關閉的對話框開著時 Esc 會退出全螢幕；TTS 面板不響應 Esc）。
-- [ ] **Step 2：全套測試：** `flutter test`（`run_in_background`），預期 `All tests passed!`；記錄測試總數與 commit。
-- [ ] **Step 3：靜態檢查：** `flutter analyze`（`No issues found!`）、`node tool/check_integration_keys.js`（PASS）；若動到 `main.js`（方案 B）再跑 `node tool/check_foliate_es_compat.js`（PASS）。
-- [ ] **Step 4：確認依賴衛生：** `git diff origin/main -- app/pubspec.lock` 只含 `window_manager` 與 `screen_retriever` 系列；`git status` 不含無關的 `windows/flutter` 換行異動。
-- [ ] **Step 5：Commit：** `git add docs/epics/epic-66-windows-port/issue-7-report.md docs/epics/epic-66-windows-port/issues.md`（若改了 `CONTEXT.md` 一併加入），訊息 `docs(epic-66): Issue 7 收尾文件與人工驗證清單`。推送與開 PR 前先請使用者確認，並請使用者在 Windows 實機（完整重建後）完成人工驗證表。
+- [x] **Step 1：補報告。** 在 `issue-7-report.md` 加：做了什麼（含採用方案 A 或 B）、自動化測試結果、`issues.md` 過關條件 2 到 8 的**人工驗證表**，每項結果欄先留「待驗證」，**不得預先勾選**，明確標示「尚未在 Windows 實機驗證」；以及已知限制（不可關閉的對話框開著時 Esc 會退出全螢幕；TTS 面板不響應 Esc）。
+- [x] **Step 2：全套測試：** `flutter test`（`run_in_background`），預期 `All tests passed!`；記錄測試總數與 commit。
+- [x] **Step 3：靜態檢查：** `flutter analyze`（`No issues found!`）、`node tool/check_integration_keys.js`（PASS）；若動到 `main.js`（方案 B）再跑 `node tool/check_foliate_es_compat.js`（PASS）。
+- [x] **Step 4：確認依賴衛生：** `git diff origin/main -- app/pubspec.lock` 只含 `window_manager` 與 `screen_retriever` 系列；`git status` 不含無關的 `windows/flutter` 換行異動。
+- [x] **Step 5：Commit：** `git add docs/epics/epic-66-windows-port/issue-7-report.md docs/epics/epic-66-windows-port/issues.md`（若改了 `CONTEXT.md` 一併加入），訊息 `docs(epic-66): Issue 7 收尾文件與人工驗證清單`。推送與開 PR 前先請使用者確認，並請使用者在 Windows 實機（完整重建後）完成人工驗證表。
