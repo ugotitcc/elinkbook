@@ -83,17 +83,17 @@
 
 規則：`arrowLeft` 橫排為上一頁、`verticalWriting` 時為下一頁；`arrowRight` 相反；`arrowUp`、`pageUp` 為上一頁；`arrowDown`、`pageDown` 為下一頁；`space` 為下一頁、`shift` 為上一頁；`home` 為首頁、`end` 為末頁；`control` 且僅 `control`（無 shift／alt／meta）加 `keyF` 為 `openSearch`；其他一律 `null`。**翻頁類按鍵（含 Space、Home、End）只要 `control`、`alt`、`meta` 任一為真就回傳 `null`**；`shift` 只影響 Space，其他按鍵帶 `shift` 時照常。
 
-- [ ] **Step 1：寫失敗測試**（`verticalWriting` 兩種各跑一遍）：
+- [x] **Step 1：寫失敗測試**（`verticalWriting` 兩種各跑一遍）：
   - `橫排：←／↑／PageUp／Shift+Space 為上一頁，→／↓／PageDown／Space 為下一頁`。
   - `直排：←／→ 左右鏡像，↑／↓／PageUp／PageDown／Space 不受影響`。
   - `Home 為首頁、End 為末頁（兩種書寫方向相同）`。
   - `Ctrl+F 為開啟搜尋；Ctrl+Shift+F、Ctrl+Alt+F、單獨 F 皆為 null`。
   - `Alt+←、Ctrl+→、Meta+↓、Ctrl+Space、Ctrl+Home 皆為 null`（Review Focus 2）。
   - `無關按鍵（a、Enter、Tab、F5）為 null`。
-- [ ] **Step 2：執行確認失敗：** `flutter test test/reader/reader_key_command_test.dart`；預期編譯失敗（檔案不存在）。
-- [ ] **Step 3：實作 `reader_key_command.dart`**，簽章與規則如上，附中文文件註解說明鏡像規則與修飾鍵規則。
-- [ ] **Step 4：執行確認通過：** 同 Step 2 指令。
-- [ ] **Step 5：Commit：** `git add app/lib/reader/reader_key_command.dart app/test/reader/reader_key_command_test.dart`，訊息 `feat(keyboard): 閱讀器按鍵對應純邏輯（epic-66 Issue 7 Task 2）`。
+- [x] **Step 2：執行確認失敗：** `flutter test test/reader/reader_key_command_test.dart`；預期編譯失敗（檔案不存在）。
+- [x] **Step 3：實作 `reader_key_command.dart`**，簽章與規則如上，附中文文件註解說明鏡像規則與修飾鍵規則。
+- [x] **Step 4：執行確認通過：** 同 Step 2 指令。
+- [x] **Step 5：Commit：** `git add app/lib/reader/reader_key_command.dart app/test/reader/reader_key_command_test.dart`，訊息 `feat(keyboard): 閱讀器按鍵對應純邏輯（epic-66 Issue 7 Task 2）`。
 
 ---
 
