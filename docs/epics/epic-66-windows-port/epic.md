@@ -58,6 +58,7 @@
 23. **WebView2 使用者資料夾**：`WebViewEnvironmentSettings.userDataFolder` 明確指定到 `%APPDATA%` 下的 App 資料夾。預設會建在執行檔旁，免安裝 zip 若解壓到唯讀位置會初始化失敗。
 24. **`window_manager` 的 `win32` 相容**：`pubspec.lock` 的 `win32` 是 5.15.0。加入 `window_manager` 前，先確認它要求的 `win32` 區間，不可造成 pub 衝突（見 ADR 0041「後果」）。版本號在實際解析時確認，這裡不預先鎖定。
 25. **Issue 5 匯入設計（2026-11-06 `/grill-with-docs`）**：Windows 支援選檔、選資料夾、拖曳三種匯入方式，都進同一條匯入管線。拖曳只在「書架」與「來源」兩個畫面有效；資料夾只匯入第一層；不支援格式略過並在結果提示說明個數（此計數放在共用服務，Android 一併生效）；拖入資料夾與選資料夾一致會先問是否依資料夾名稱分類；匯入中再拖入一律忽略。拖曳套件用 `desktop_drop` **0.8.4**（0.9.x 要求 Flutter ≥ 3.47.7，與專案固定的 3.41.9 不相容；0.8.4 不依賴 `win32`）。**Flutter 升級另開 Issue**：查證 3.47 支援 Android 24–37（Android 11 沒問題），但牽涉 `onReorder` 棄用、built-in Kotlin／AGP 9、Windows 預設 Impeller，不與匯入功能混在同一個 Issue。詞彙見 `CONTEXT.md`「拖曳匯入」。
+26. **Issue 7 鍵盤與 F11 設計（2026-11-06 `/grill-with-docs`）**：快捷鍵固定、不可自訂、無說明畫面，範圍只有翻頁類（←／→、↑／↓、PageUp／PageDown、Space〔Shift 反向〕、Home／End）、Ctrl+F（閱讀器內書內搜尋）、F11。鍵盤是「熱區動作」的另一種入口：直排時 ←／→ 左右鏡像、捲動模式也只對應上一頁／下一頁，不做細微捲動。F11 是新概念「視窗全螢幕」，視窗層級、不寫入偏好、不持久化、任何畫面可用，與「全螢幕模式」「沉浸模式」互不相干；Esc 先關最上層浮層，再退出視窗全螢幕，閱讀器內不會返回書架。文字輸入框有焦點或浮層疊上時翻頁鍵暫停，F11 永遠有效。**`window_manager` 固定 0.5.2**（`pub add --dry-run` 解析成功；只新增 `screen_retriever` 0.2.2 系列，不依賴 `win32`，`win32` 維持 5.15.0，決策 24 的衝突疑慮解除；0.6.0 要求 Flutter ≥ 3.47 且改用 `nativeapi`，不可用）。EPUB 的按鍵會進 Flutter 還是被 WebView2 吞掉，由 Issue 7 第一個 Task 實測決定。「全螢幕模式」偏好項在 Windows 的隱藏與 Android 原生 channel 的未處理例外，留給「平台專屬功能隱藏」Issue。詞彙見 `CONTEXT.md`「視窗全螢幕」「鍵盤快捷鍵」。
 
 ## 範圍外
 

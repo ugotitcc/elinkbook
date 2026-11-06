@@ -10,6 +10,7 @@
 | 4 | Windows 書檔改由本機 loopback HTTP 伺服器（`shelf`）服務，消除「整本回傳」洩漏（來源 Issue 3 報告） | Issue 3 | ✅ 已合併 | #397 |
 | 5 | Windows 檔案與資料夾匯入：選檔、選資料夾、拖曳三種方式，書檔維持原路徑，不支援格式略過並提示 | Issue 4 | ✅ 已合併（Windows 人工驗證待補） | #398 |
 | 6 | Flutter 升級至 ≥ 3.47.7（評估與遷移）：`onReorder` 棄用、built-in Kotlin／AGP 9、Windows 預設 Impeller、外掛相容 | Issue 5 | ⚪ 未開始（尚未規劃） | — |
+| 7 | Windows 鍵盤快捷鍵與 F11 視窗全螢幕：翻頁類按鍵、Ctrl+F、F11，Esc 依序處理浮層與全螢幕 | Issue 5 | 🟡 規劃中（spec／plan 待審查） | — |
 
 ## Issue 1 範圍
 
@@ -203,11 +204,67 @@ Issue 3 已實證：閱讀器開書以 `shouldInterceptRequest` 整本回傳 224
 - `SourcesHomeScreen`：Windows 顯示提醒文字，其他平台不顯示。
 - l10n：四個 arb（`app_zh_TW`、`app_zh`、`app_zh_CN`、`app_en`）都有新字串，`flutter gen-l10n` 成功；`check_l10n_hardcoded_strings.js` PASS。
 
+## Issue 7 範圍
+
+讓 Windows 使用者用實體鍵盤翻頁、搜尋，並用 F11 切換視窗全螢幕。設計決策來自 2026-11-06 `/grill-with-docs`，詞彙見 `CONTEXT.md`「鍵盤快捷鍵」「視窗全螢幕」，決策見 `epic.md` 決策 26，細節見 `plans/plan-issue-7.md`。**所有新增按鍵只在 Windows 生效，Android 與其他平台零改動。**
+
+**已確認的現況（查證過程見 plan）：**
+
+- 閱讀器已有一條統一的動作入口：`ReaderScreen._handleZoneAction(ZoneAction)`，熱區與音量鍵都走它；`ReaderSurface.jumpTo(ReaderJumpTarget)` 已能跳到進度比例（Foliate）或頁碼（PDF）；`_openBookSearch()` 是書內搜尋入口。鍵盤只需接到這些既有入口。
+- PDF 只在「分頁模式」才掛 `onKey: _onPagedKey`（PageUp、PageDown、Space、Home、End），沒有方向鍵，捲動模式用 `pdfrx` 預設行為；EPUB 完全沒有鍵盤處理（`main.js` 沒有 `keydown`）。
+- 搜尋是全螢幕路由 `BookSearchScreen`（輸入框 `autofocus: false`，已有 `_searchFocusNode`），不是疊在閱讀器上的面板。
+- 專案沒有 `window_manager`；`window_manager` 0.5.2 可用（不依賴 `win32`，見 `epic.md` 決策 26）。
+- **未確認的關鍵風險：** WebView2 取得焦點時，按鍵會進 Flutter 還是被網頁吞掉（連 F11 都可能收不到）。由第一個 Task 實測。
+
+**做法：**
+
+1. **Task 1 實測（不產出正式程式）：** 在 Windows 上實測 WebView2 有焦點時，方向鍵、Space、Home、End、Ctrl+F、F11、Esc 各進哪一邊，結論記入 `issue-7-report.md`，決定 EPUB 走「A：Flutter 全域按鍵處理器就夠」或「B：`main.js` 轉送按鍵給 Dart」。
+2. **純邏輯：** `readerKeyCommandFor(key, shift, control, alt, meta, verticalWriting)` 把按鍵對應成 `ReaderKeyCommand`（上一頁、下一頁、首頁、末頁、開啟搜尋）；直排時 ←／→ 鏡像；帶 Ctrl／Alt／Meta 的組合除了 Ctrl+F 一律不處理。
+3. **視窗全螢幕：** `WindowFullscreenController` 介面加 `window_manager` 0.5.2 實作；只在 Windows 初始化；`WindowFullscreenShortcuts` 掛在 `MaterialApp.builder`，處理 F11（任何畫面）與 Esc（只在視窗全螢幕且沒有浮層消費時才退出）；連按 F11 以進行中旗標避免競態。
+4. **閱讀器按鍵：** `ReaderScreen` 在 Windows 註冊全域 `HardwareKeyboard` 處理器（`dispose` 時移除）：路由不是最上層或文字輸入框有焦點時暫停；翻頁類走 `_handleZoneAction`，Home／End 走 `ReaderSurface.jumpTo`，Ctrl+F 走 `_openBookSearch`。處理器先於焦點樹消費事件，因此不需要修改 `pdfrx` 的 `_onPagedKey`。
+5. **EPUB 交付：** 依 Task 1 結論，A 則補驗證測試，B 則在 `main.js` 於 Windows 對每個 section 文件掛 `keydown` 並轉送（含 F11、Esc），Android 不啟用。
+6. **`BookSearchScreen`：** Windows 上 Ctrl+F 把焦點移到搜尋輸入框。
+7. **新增依賴 `window_manager` 0.5.2**（固定版本，不用 `^`）。
+
+不在範圍：
+
+- 目錄、書籤、字級、版面設定等其他快捷鍵；快捷鍵自訂與說明畫面。
+- 滑鼠滾輪翻頁。
+- 書架畫面的 Ctrl+F。
+- 「全螢幕模式」偏好項在 Windows 設定中的隱藏，以及 Windows 上呼叫 Android 原生全螢幕 channel 未處理例外（`reader_screen.dart` 約 742 行）：留給「平台專屬功能隱藏」Issue，該 Issue 的隱藏清單要補進「全螢幕模式」。
+- 視窗全螢幕狀態的持久化（每次啟動回到一般視窗）。
+- Flutter 升級（Issue 6）；`window_manager` 升到 0.6.x 也留給 Issue 6。
+- 真實按鍵與焦點行為的自動化測試：`flutter test` 的按鍵模擬只進 Flutter 框架，無法模擬 OS 層級送進 WebView2 的按鍵，改由人工驗證清單。
+
+## Issue 7 過關條件
+
+1. **實測結論：** `issue-7-report.md` 記錄 Task 1 的實測結果（WebView2 有焦點時各按鍵的歸屬）與採用的方案（A 或 B），並附實測方法。
+2. **翻頁（EPUB 橫排）：** ←／↑／PageUp／Shift+Space 為上一頁，→／↓／PageDown／Space 為下一頁，Home／End 跳首頁與末頁；按住不放連續翻頁。
+3. **翻頁（EPUB 直排）：** ←／→ 左右鏡像（← 為下一頁），其餘按鍵不變。
+4. **翻頁（PDF）：** 同條件 2（PDF 沒有直排概念，不鏡像），分頁與捲動兩種模式行為一致。
+5. **暫停條件：** 搜尋輸入框、備註輸入框有焦點，或對話框、面板疊在閱讀器上、或搜尋畫面開著時，按 ←／→／Space／Home／End 不翻頁。
+6. **Ctrl+F：** 在閱讀器內開啟書內搜尋；在搜尋畫面內把焦點移到輸入框；書架畫面按 Ctrl+F 沒有反應。
+7. **F11：** 在書架、來源、設定、閱讀器、EPUB 與 PDF 閱讀中都能切換視窗全螢幕（包含 WebView2 有焦點時）；切換畫面或離開閱讀器不會重置全螢幕；重新啟動 App 回到一般視窗；連按 F11 不亂。
+8. **Esc：** 有對話框或面板時先關它、視窗全螢幕維持；沒有浮層且在視窗全螢幕時退出全螢幕；沒有浮層也不在全螢幕時，閱讀器**不會**返回書架。
+9. **載入與生命週期：** 書籍載入中按翻頁鍵被忽略、不崩潰；離開閱讀器後按鍵處理器已移除（再按方向鍵不會對已關閉的閱讀器動作）；重新開書後只有一份處理器。
+10. **Android 與其他平台不變：** 所有新增處理器與 `main.js` 轉送都只在 Windows 啟用；既有測試全綠；`pubspec.lock` 只含 `window_manager` 及其傳遞相依（`screen_retriever` 系列）的異動。
+11. **人工驗證（Windows 實機，結果記入 `issue-7-report.md`）：** 條件 2 到 8 逐項實測，必須包含真實鍵盤輸入、WebView2 有焦點、直排書、PDF、有對話框時的 Esc。驗證前不得宣稱通過。
+
+## Issue 7 單元測試要求
+
+- `readerKeyCommandFor`：每個按鍵的對應（含 Space 與 Shift+Space）；直排時 ←／→ 鏡像、橫排不鏡像；↑／↓／PageUp／PageDown 不受直排影響；Ctrl+F 回傳開啟搜尋；Ctrl+Shift+F、Alt+←、Ctrl+→、Meta 組合回傳 `null`；無關按鍵回傳 `null`。
+- `toggleWindowFullscreen`（假控制器）：目前非全螢幕則設為全螢幕、反之亦然；上一次尚未完成時再呼叫會被忽略；例外不外洩。
+- `WindowFullscreenShortcuts`（widget test，假控制器、Windows 平台 override）：F11 在任何畫面都切換；Esc 在視窗全螢幕且無浮層時退出；有 dismissible 對話框時第一次 Esc 只關對話框、全螢幕維持，第二次才退出；不在全螢幕時 Esc 不呼叫控制器；非 Windows 或控制器為 `null` 時不攔截任何按鍵。
+- `ReaderScreen` 按鍵處理器：翻頁鍵走 `_handleZoneAction`（含直排鏡像）；Home／End 呼叫 `ReaderSurface.jumpTo`（Foliate 用進度 0.0／1.0，PDF 用頁碼 0／最後一頁）；Ctrl+F 呼叫書內搜尋；路由被疊上時暫停；文字輸入框有焦點時暫停；書籍載入中忽略；`KeyRepeatEvent` 也觸發；`dispose` 後處理器已移除；非 Windows 不註冊。
+- EPUB 交付：方案 A 補「全域處理器在 EPUB 開著時也收到按鍵」的測試；方案 B 補 `main.js` 轉送（僅 Windows 啟用、帶修飾鍵正確）與 `FoliateReaderView` 對應回呼的測試。
+- `BookSearchScreen`：Windows 上 Ctrl+F 讓搜尋輸入框取得焦點；非 Windows 不處理。
+- 依賴：`flutter pub get` 後 `pubspec.lock` 只含 `window_manager` 與 `screen_retriever` 系列新增。
+
 ## 後續 Issue（待 Issue 1 結果決定）
 
 - ~~生產級送書伺服器~~：Issue 1 實測攔截可行（決策 15），不做。大檔整本位元組尖峰（224 MB 書約 3.8 GB）若要改善，另開「分段服務」Issue；洩漏驗證見 Issue 3。
 - ~~檔案匯入與資料夾匯入~~（已納入 Issue 5，上方有完整設計；原註記：取 `f.identifier ?? f.path`；資料夾用 `getDirectoryPath()` 加 `dart:io`，不寫原生 channel；`Book.filePath` 存本機路徑。）
-- 鍵盤快捷鍵與 F11（先確認 `window_manager` 與 `win32` 5.15.0 相容）。
+- ~~鍵盤快捷鍵與 F11~~（已納入 Issue 7，上方有完整設計；`window_manager` 0.5.2 已確認不依賴 `win32`）。
 - 平台專屬功能的隱藏。
 - Windows 版 `integration_test` 冒煙測試。
 - 免安裝 zip 打包。
