@@ -119,14 +119,14 @@
 **Interfaces：**
 - Produces: `typedef FolderPathPicker = Future<String?> Function();`；`Future<ImportResult?> pickAndImportFolder(BookImportService importService, {required Future<bool?> Function() confirmAutoGroup, FolderPathPicker? pickFolderPath})`。`pickFolderPath` 為 `null` 時用預設：`isWindowsPlatform` 為真走 `FilePicker.getDirectoryPath()`，否則走既有的 `_folderPickerChannel.invokeMethod<String>('pickFolder')`。
 
-- [ ] **Step 1：寫失敗測試**（`FakeBookImportService` 已記錄 `lastImportFolderUri`、`lastAutoGroupByFolderName`）：
+- [x] **Step 1：寫失敗測試**（`FakeBookImportService` 已記錄 `lastImportFolderUri`、`lastAutoGroupByFolderName`）：
   - `注入的 pickFolderPath 回傳路徑時，原樣傳給 importFolder，並帶入確認框的選擇`：`pickFolderPath: () async => r'C:\書庫'`、`confirmAutoGroup` 回 `false`；斷言 `lastImportFolderUri == r'C:\書庫'`、`lastAutoGroupByFolderName == false`。
   - `pickFolderPath 回傳 null 時整體回 null，且不問確認框、不呼叫 importFolder`。
   - 既有以 `elinkbook/folder_picker` channel mock 的測試不改、仍通過（證明預設路徑在非 Windows 不變）。
-- [ ] **Step 2：執行確認失敗**：`flutter test test/screens/support/book_import_picker_helper_test.dart`；預期編譯失敗（沒有 `pickFolderPath` 參數）。
-- [ ] **Step 3：實作。** 新增 typedef 與 `pickAndImportFolder` 的選用參數；把原本直接呼叫 channel 的那一行改為 `await (pickFolderPath ?? _defaultPickFolderPath)()`，其中 `Future<String?> _defaultPickFolderPath()` 依 `isWindowsPlatform`（`../../platform/platform_support.dart`）分流。外層既有的 `catch (_) { return null; }` 維持不動。
-- [ ] **Step 4：執行確認通過**：同 Step 2 指令；再跑 `flutter test test/screens/sources_home_screen_test.dart` 確認來源畫面既有測試沒壞。
-- [ ] **Step 5：Commit**：`git add app/lib/screens/support/book_import_picker_helper.dart app/test/screens/support/book_import_picker_helper_test.dart`，訊息 `feat(import): 選資料夾動作可注入，Windows 用 getDirectoryPath（epic-66 Issue 5 Task 4）`。
+- [x] **Step 2：執行確認失敗**：`flutter test test/screens/support/book_import_picker_helper_test.dart`；預期編譯失敗（沒有 `pickFolderPath` 參數）。
+- [x] **Step 3：實作。** 新增 typedef 與 `pickAndImportFolder` 的選用參數；把原本直接呼叫 channel 的那一行改為 `await (pickFolderPath ?? _defaultPickFolderPath)()`，其中 `Future<String?> _defaultPickFolderPath()` 依 `isWindowsPlatform`（`../../platform/platform_support.dart`）分流。外層既有的 `catch (_) { return null; }` 維持不動。
+- [x] **Step 4：執行確認通過**：同 Step 2 指令；再跑 `flutter test test/screens/sources_home_screen_test.dart` 確認來源畫面既有測試沒壞。
+- [x] **Step 5：Commit**：`git add app/lib/screens/support/book_import_picker_helper.dart app/test/screens/support/book_import_picker_helper_test.dart`，訊息 `feat(import): 選資料夾動作可注入，Windows 用 getDirectoryPath（epic-66 Issue 5 Task 4）`。
 
 ---
 

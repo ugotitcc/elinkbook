@@ -289,6 +289,37 @@ void main() {
 
       expect(result, isNull);
     });
+    test('注入的 pickFolderPath 回傳路徑時，原樣傳給 importFolder，並帶入確認框的選擇', () async {
+      final importService = FakeBookImportService();
+
+      final result = await pickAndImportFolder(
+        importService,
+        confirmAutoGroup: () async => false,
+        pickFolderPath: () async => r'C:\書庫',
+      );
+
+      expect(result, isNotNull);
+      expect(importService.lastImportFolderUri, r'C:\書庫');
+      expect(importService.lastAutoGroupByFolderName, isFalse);
+    });
+
+    test('pickFolderPath 回傳 null 時整體回 null，且不問確認框、不呼叫 importFolder', () async {
+      final importService = FakeBookImportService();
+      var confirmCalled = false;
+
+      final result = await pickAndImportFolder(
+        importService,
+        confirmAutoGroup: () async {
+          confirmCalled = true;
+          return true;
+        },
+        pickFolderPath: () async => null,
+      );
+
+      expect(result, isNull);
+      expect(confirmCalled, isFalse);
+      expect(importService.lastImportFolderUri, isNull);
+    });
   });
 
   group('confirmAutoGroupByFolderName', () {

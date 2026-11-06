@@ -5,10 +5,18 @@ import 'package:flutter/services.dart';
 import '../../l10n/app_localizations.dart';
 import '../../library/book_import_service.dart';
 import '../../library/book_update_models.dart';
+import '../../platform/platform_support.dart';
 import '../widgets/book_update_summary_dialog.dart';
 import 'book_update_resolver.dart'; // BookUpdateApplyResult
 
 const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');
+
+/// 選取一個資料夾路徑的函式型別（epic-66 Issue 5 Task 4）。使用者取消時回傳 `null`。
+typedef FolderPathPicker = Future<String?> Function();
+
+Future<String?> _defaultPickFolderPath() => isWindowsPlatform
+    ? FilePicker.getDirectoryPath()
+    : _folderPickerChannel.invokeMethod<String>('pickFolder');
 
 /// 挑選一或多個檔案並匯入圖書庫；使用者取消選擇、或選取結果不含可用 URI
 /// 時回傳 `null`（呼叫端不需要顯示任何提示）。呼叫端負責後續 UI 回饋
@@ -54,10 +62,11 @@ Future<ImportResult?> pickAndImportFiles(BookImportService importService) async 
 Future<ImportResult?> pickAndImportFolder(
   BookImportService importService, {
   required Future<bool?> Function() confirmAutoGroup,
+  FolderPathPicker? pickFolderPath,
 }) async {
   try {
     final folderUri =
-        await _folderPickerChannel.invokeMethod<String>('pickFolder');
+        await (pickFolderPath ?? _defaultPickFolderPath)();
     if (folderUri == null) return null;
     final autoGroup = await confirmAutoGroup();
     if (autoGroup == null) return null;
