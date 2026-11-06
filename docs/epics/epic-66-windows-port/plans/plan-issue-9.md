@@ -41,15 +41,15 @@
 **Interfaces:**
 - Produces: 對 `WebViewEnvironment.getAvailableVersion(browserExecutableFolder: …)` 與 `WebViewEnvironment.create(settings: WebViewEnvironmentSettings(browserExecutableFolder: …))` 在「指向空資料夾」時行為的結論，供 Task 2 引用。
 
-- [ ] **Step 1: 寫測試。** 建一個空的暫存資料夾當 `browserExecutableFolder`（這是不移除本機 Runtime 就能模擬「沒裝」的方法）。三個測試，名稱與斷言如下：
+- [x] **Step 1: 寫測試。** 建一個空的暫存資料夾當 `browserExecutableFolder`（這是不移除本機 Runtime 就能模擬「沒裝」的方法）。三個測試，名稱與斷言如下：
   - `空資料夾：getAvailableVersion 回傳 null`，斷言 `expect(version, isNull)`。
   - `沒有 browserExecutableFolder：getAvailableVersion 回傳非空版本字串`（本機有裝），斷言 `isNotNull` 且 `isNotEmpty`。
   - `空資料夾：create 的行為`：用 `.timeout(const Duration(seconds: 20))` 包住，把「丟出的例外型別與訊息」或「逾時」用 `print('[probe] …')` 印出；此測試不做通過／失敗斷言（只記錄行為），測試名稱註明「記錄用」。
-- [ ] **Step 2: 在 Windows 執行。**
+- [x] **Step 2: 在 Windows 執行。**
   Run（PowerShell）：`$env:CL="/utf-8"; flutter test integration_test/windows_webview2/runtime_probe_test.dart -d windows`
   Expected: 前兩個測試通過；第三個印出 `[probe]` 行。若 App 程序在第三個測試消失（類似 Issue 8），把「create 會殺掉程序」記為結論，Task 2 改為**只靠 `getAvailableVersion` 判斷、不在偵測失敗時呼叫 `create`**。
-- [ ] **Step 3: 把量測結果（含輸出）寫進 `issue-9-report.md` 的「量測結果」一節**，並註明沒測到的部分（例如 Runtime 損壞但資料夾存在的情況）。
-- [ ] **Step 4: Commit。**
+- [x] **Step 3: 把量測結果（含輸出）寫進 `issue-9-report.md` 的「量測結果」一節**，並註明沒測到的部分（例如 Runtime 損壞但資料夾存在的情況）。
+- [x] **Step 4: Commit。**
 
 ```bash
 git add app/integration_test/windows_webview2/runtime_probe_test.dart docs/epics/epic-66-windows-port/issue-9-report.md
@@ -74,7 +74,7 @@ git commit -m "test(windows): 量測 WebView2 Runtime 缺少時的外掛行為�
   - `typedef WebView2EnvironmentCreator = Future<void> Function();`
   - `Future<WebView2CheckResult> checkAndInitWebView2({required WebView2VersionProbe probe, required WebView2EnvironmentCreator createEnvironment, Duration createTimeout = const Duration(seconds: 15)})`
 
-- [ ] **Step 1: 寫失敗測試**（`test/windows/webview2_runtime_check_test.dart`），每個案例一個 test，`probe`／`createEnvironment` 用假函式：
+- [x] **Step 1: 寫失敗測試**（`test/windows/webview2_runtime_check_test.dart`），每個案例一個 test，`probe`／`createEnvironment` 用假函式：
   - `探測回 "130.0.1" 且建立成功 → ready，version 為 "130.0.1"，createEnvironment 被呼叫 1 次`
   - `探測回 null → missing，createEnvironment 從未被呼叫`
   - `探測回空字串 "" → missing`（Review Focus 1）
@@ -82,14 +82,14 @@ git commit -m "test(windows): 量測 WebView2 Runtime 缺少時的外掛行為�
   - `探測丟例外 → failed，detail 含例外訊息，不向外丟`
   - `探測成功但 createEnvironment 丟 StateError("boom") → failed，detail 含 "boom"`（Review Focus 2）
   - `createEnvironment 回傳永遠不完成的 Future，createTimeout 設 50ms → failed，detail 提到逾時`（Review Focus 3，用真實的短 timeout，不用 fake async）
-- [ ] **Step 2: 執行確認失敗。**
+- [x] **Step 2: 執行確認失敗。**
   Run: `flutter test test/windows/webview2_runtime_check_test.dart --no-pub`
   Expected: 編譯失敗（符號未定義）。
-- [ ] **Step 3: 實作 `webview2_runtime_check.dart`。** 空字串與只有空白一律視為 `missing`；探測與建立的例外都轉成 `failed`，`detail` 用 `e.toString()`；逾時用 `Future.timeout`，`detail` 文字註明「建立 WebView2 環境逾時」。不 import `flutter_inappwebview`（保持純 Dart，可在 `flutter test` 直接跑）。
-- [ ] **Step 4: 執行確認通過。**
+- [x] **Step 3: 實作 `webview2_runtime_check.dart`。** 空字串與只有空白一律視為 `missing`；探測與建立的例外都轉成 `failed`，`detail` 用 `e.toString()`；逾時用 `Future.timeout`，`detail` 文字註明「建立 WebView2 環境逾時」。不 import `flutter_inappwebview`（保持純 Dart，可在 `flutter test` 直接跑）。
+- [x] **Step 4: 執行確認通過。**
   Run: `flutter test test/windows/webview2_runtime_check_test.dart --no-pub`
   Expected: 全部通過。
-- [ ] **Step 5: Commit。**
+- [x] **Step 5: Commit。**
 
 ```bash
 git add app/lib/windows/webview2_runtime_check.dart app/test/windows/webview2_runtime_check_test.dart
@@ -125,9 +125,9 @@ git commit -m "feat(windows): WebView2 Runtime 啟動檢查純邏輯（epic-66 I
 | `webview2StillMissing` | 仍然偵測不到可用的 WebView2。 |
 | `webview2DetailLabel` | 錯誤摘要 |
 
-- [ ] **Step 1: 手動加入直接相依。** 在 `pubspec.yaml` 的 `dependencies` 加 `url_launcher: ^6.3.2`；`pubspec.lock` 只改 `url_launcher` 條目的 `dependency` 欄位。執行 `flutter pub get --dry-run`，確認沒有新增或升級其他套件；**不要**執行會改動其他鎖定版本的 `flutter pub get` 後把結果 commit。
-- [ ] **Step 2: 加入 7 個 arb 字串（四個檔案）**，再執行 `flutter gen-l10n`，確認成功。
-- [ ] **Step 3: 寫失敗測試**（widget test，`MaterialApp` 之外由 `WebView2MissingApp` 自帶，測試用 `tester.pumpWidget(WebView2MissingApp(...))`）。案例：
+- [x] **Step 1: 手動加入直接相依。** 在 `pubspec.yaml` 的 `dependencies` 加 `url_launcher: ^6.3.2`；`pubspec.lock` 只改 `url_launcher` 條目的 `dependency` 欄位。執行 `flutter pub get --dry-run`，確認沒有新增或升級其他套件；**不要**執行會改動其他鎖定版本的 `flutter pub get` 後把結果 commit。
+- [x] **Step 2: 加入 7 個 arb 字串（四個檔案）**，再執行 `flutter gen-l10n`，確認成功。
+- [x] **Step 3: 寫失敗測試**（widget test，`MaterialApp` 之外由 `WebView2MissingApp` 自帶，測試用 `tester.pumpWidget(WebView2MissingApp(...))`）。案例：
   - `missing：顯示標題、下載按鈕、重新檢查按鈕、網址文字，不顯示錯誤摘要`
   - `failed：額外顯示 Key webview2_detail_text，內容含 detail`
   - `點下載按鈕：openUrl 以 kWebView2DownloadUrl 被呼叫 1 次`
@@ -139,14 +139,14 @@ git commit -m "feat(windows): WebView2 Runtime 啟動檢查純邏輯（epic-66 I
   - `recheck 成功並呼叫 onReady 之後，按鈕仍為停用，再按也不會呼叫第二次 onReady`（`runApp` 換根要到下一幀才完成）
   - `recheck 丟例外：顯示失敗狀態與錯誤摘要，按鈕恢復可按`（防止按鈕永久停用）
   - `localeOverride 為 en：標題為英文；為 zh_TW：標題為「需要安裝 Microsoft Edge WebView2」`
-- [ ] **Step 4: 執行確認失敗。**
+- [x] **Step 4: 執行確認失敗。**
   Run: `flutter test test/windows/webview2_missing_screen_test.dart --no-pub`
   Expected: 編譯失敗。
-- [ ] **Step 5: 實作 `webview2_missing_screen.dart`。** 自帶 `MaterialApp`（`localizationsDelegates`、`supportedLocales`、`locale: widget.localeOverride`、`localeListResolutionCallback` 與 `main.dart` 的 `MaterialApp` 相同寫法）；固定淺色主題即可（此時尚未載入使用者主題，不為此新增主題讀取）。根層用 `Scaffold(body: Center(child: SingleChildScrollView(child: Padding(...))))`，視窗縮小或高 DPI 縮放時不會 overflow。網址用 `SelectableText`。重新檢查用 `_checking` 旗標防重入，檢查期間按鈕停用；規則：結果為 ready 時呼叫 `onReady` 後**不重設** `_checking`（等 `runApp` 換根）；結果不是 ready 或 `recheck` 丟例外時才重設 `_checking = false`，並更新畫面上的結果（例外轉成 `WebView2CheckResult.failed(e.toString())`）；非同步回來後先確認 `mounted`。
-- [ ] **Step 6: 執行確認通過，並跑 l10n 檢查。**
+- [x] **Step 5: 實作 `webview2_missing_screen.dart`。** 自帶 `MaterialApp`（`localizationsDelegates`、`supportedLocales`、`locale: widget.localeOverride`、`localeListResolutionCallback` 與 `main.dart` 的 `MaterialApp` 相同寫法）；固定淺色主題即可（此時尚未載入使用者主題，不為此新增主題讀取）。根層用 `Scaffold(body: Center(child: SingleChildScrollView(child: Padding(...))))`，視窗縮小或高 DPI 縮放時不會 overflow。網址用 `SelectableText`。重新檢查用 `_checking` 旗標防重入，檢查期間按鈕停用；規則：結果為 ready 時呼叫 `onReady` 後**不重設** `_checking`（等 `runApp` 換根）；結果不是 ready 或 `recheck` 丟例外時才重設 `_checking = false`，並更新畫面上的結果（例外轉成 `WebView2CheckResult.failed(e.toString())`）；非同步回來後先確認 `mounted`。
+- [x] **Step 6: 執行確認通過，並跑 l10n 檢查。**
   Run: `flutter test test/windows/webview2_missing_screen_test.dart --no-pub` 與 `node tool/check_l10n_hardcoded_strings.js`
   Expected: 全部通過；l10n 檢查 PASS。
-- [ ] **Step 7: Commit。**
+- [x] **Step 7: Commit。**
 
 ```bash
 git add app/pubspec.yaml app/pubspec.lock app/lib/l10n app/lib/windows/webview2_missing_screen.dart app/test/windows/webview2_missing_screen_test.dart
@@ -168,12 +168,12 @@ git commit -m "feat(windows): WebView2 缺少時的說明畫面與下載連結�
 - Consumes: Task 2 的 `checkAndInitWebView2`、`WebView2CheckResult`；Task 3 的 `WebView2MissingApp`。
 - Produces: 啟動流程：Windows 上檢查未通過 → `runApp(WebView2MissingApp(...))` 並結束 `main()`；通過或非 Windows → 與現況相同。
 
-- [ ] **Step 1: 確認 `runApp` 之前沒有任何程式碼使用 WebView。** 在 `main()` 內搜尋 `HeadlessInAppWebView`、`InAppWebView`、`appWebViewEnvironment`、`extractWindowsBookMetadata` 的呼叫點，確認都在 `runApp` 之後才會執行（`extractWindowsBookMetadata` 只是被傳遞的函式）。有例外就停下來回報，不要自行搬動。
-- [ ] **Step 2: 改 `main()`。** 把 `runApp(ElinkBookApp(...))` 包成區域函式 `startApp()`；Windows 區塊在 `windowManager` 初始化之後，先取一次 `final appSupportDir = await getApplicationSupportDirectory();`（每次重新檢查不重查目錄），宣告區域函式 `Future<WebView2CheckResult> runCheck() => checkAndInitWebView2(probe: () => WebViewEnvironment.getAvailableVersion(), createEnvironment: () => initAppWebViewEnvironment(userDataFolder: appSupportDir.path));`，取代單獨呼叫 `initAppWebViewEnvironment`；`final initialResult = await runCheck();` 不是 ready 時 `runApp(WebView2MissingApp(initialResult: initialResult, recheck: runCheck, onReady: startApp, localeOverride: initialLocaleOverride?.locale))` 並 `return`。`startApp` 必須在這個區塊之前宣告。
-- [ ] **Step 3: 執行相關測試與靜態分析。**
+- [x] **Step 1: 確認 `runApp` 之前沒有任何程式碼使用 WebView。** 在 `main()` 內搜尋 `HeadlessInAppWebView`、`InAppWebView`、`appWebViewEnvironment`、`extractWindowsBookMetadata` 的呼叫點，確認都在 `runApp` 之後才會執行（`extractWindowsBookMetadata` 只是被傳遞的函式）。有例外就停下來回報，不要自行搬動。
+- [x] **Step 2: 改 `main()`。** 把 `runApp(ElinkBookApp(...))` 包成區域函式 `startApp()`；Windows 區塊在 `windowManager` 初始化之後，先取一次 `final appSupportDir = await getApplicationSupportDirectory();`（每次重新檢查不重查目錄），宣告區域函式 `Future<WebView2CheckResult> runCheck() => checkAndInitWebView2(probe: () => WebViewEnvironment.getAvailableVersion(), createEnvironment: () => initAppWebViewEnvironment(userDataFolder: appSupportDir.path));`，取代單獨呼叫 `initAppWebViewEnvironment`；`final initialResult = await runCheck();` 不是 ready 時 `runApp(WebView2MissingApp(initialResult: initialResult, recheck: runCheck, onReady: startApp, localeOverride: initialLocaleOverride?.locale))` 並 `return`。`startApp` 必須在這個區塊之前宣告。
+- [x] **Step 3: 執行相關測試與靜態分析。**
   Run: `flutter test test/windows test/l10n --no-pub` 與 `flutter analyze --no-pub`
   Expected: 通過；`No issues found!`。
-- [ ] **Step 4: 人工驗證（Windows 實機，PowerShell，`$env:CL="/utf-8"`）。** 本機有裝 Runtime，無法直接看到缺少畫面，用**不 commit** 的暫時改動模擬：把 `probe` 暫時改成 `() async => null`，`flutter run -d windows`：
+- [x] **Step 4: 人工驗證（Windows 實機，PowerShell，`$env:CL="/utf-8"`）。** 本機有裝 Runtime，無法直接看到缺少畫面，用**不 commit** 的暫時改動模擬：把 `probe` 暫時改成 `() async => null`，`flutter run -d windows`：
   1. 看到說明畫面（標題、下載按鈕、重新檢查、網址）。
   2. 按「下載 WebView2」，預設瀏覽器開啟微軟頁面。
   3. 按「重新檢查」：仍顯示「仍然偵測不到…」。
@@ -181,9 +181,9 @@ git commit -m "feat(windows): WebView2 缺少時的說明畫面與下載連結�
   5. 切換系統或 App 語言為英文，說明畫面為英文。
   6. 還原暫時改動（`git checkout -- app/lib/main.dart` 之後重做 Step 2 的正式改動，或確認 `git diff` 只剩正式內容），正常啟動確認 App 與原本一致。
   只記錄實際做過的項目，沒做的寫「未驗證」。
-- [ ] **Step 5: 補文件。** `issue-9-report.md` 寫量測結果、實作摘要、人工驗證表（只填真的測過的）、未驗證項目（包含：沒有在真正沒裝 Runtime 的機器上測過）。`issues.md` 加三節；`epic.md` 決策 4 補一句。
-- [ ] **Step 6: 全套測試。** Run（背景）：`flutter test --no-pub`（Task 3 改過 `pubspec.yaml`，不帶 `--no-pub` 會觸發 `pub get` 而弄髒 `pubspec.lock`）。記錄結果；本機已知偶發失敗見 Issue 11（`local_book_server_test.dart`、`pdf_reader_view_filters_test.dart`），如實寫進 PR。
-- [ ] **Step 7: Commit。**
+- [x] **Step 5: 補文件。** `issue-9-report.md` 寫量測結果、實作摘要、人工驗證表（只填真的測過的）、未驗證項目（包含：沒有在真正沒裝 Runtime 的機器上測過）。`issues.md` 加三節；`epic.md` 決策 4 補一句。
+- [x] **Step 6: 全套測試。** Run（背景）：`flutter test --no-pub`（Task 3 改過 `pubspec.yaml`，不帶 `--no-pub` 會觸發 `pub get` 而弄髒 `pubspec.lock`）。記錄結果；本機已知偶發失敗見 Issue 11（`local_book_server_test.dart`、`pdf_reader_view_filters_test.dart`），如實寫進 PR。
+- [x] **Step 7: Commit。**
 
 ```bash
 git add app/lib/main.dart docs/epics/epic-66-windows-port/issues.md docs/epics/epic-66-windows-port/issue-9-report.md docs/epics/epic-66-windows-port/epic.md
