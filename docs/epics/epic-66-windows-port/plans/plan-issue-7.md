@@ -35,7 +35,7 @@
 3. **PDF 不鏡像：** 直排只存在於 EPUB；PDF 的 ←／→ 固定為上一頁／下一頁，與 PDF 熱區（沒有鏡像）一致，不隨雙頁裝訂方向改變。
 4. **Home／End 在 EPUB 用整本進度 0.0／1.0**（`ReaderJumpTarget(progression:)`），在 PDF 用頁碼 0／最後一頁（`ReaderJumpTarget(pdfPageIndex:)`），並比照 `_handleZoneAction` 補 `_clearSearchJumpHighlight()` 與 `_session.recordActivity()`。
 5. **不可關閉的對話框（`barrierDismissible: false`）開著時按 Esc，會退出視窗全螢幕：** 因為它的 `DismissAction` 未啟用，會落到我們的動作。已知邊界，不另外處理。
-6. **Esc 的優先序靠 `DismissIntent` 覆寫，不靠手動攔截（計畫審查 C-1，查證屬實，取代原先的 `Focus(onKeyEvent:)` 方案）：** `WidgetsApp` 的 `Shortcuts`（`app.dart:1812`，把 Esc 轉成 `DismissIntent`）包在 `builder` 外層，`ModalRoute` 的 `_DismissModalAction.isEnabled` 只看 `barrierDismissible`；`builder` 層的 `Focus(onKeyEvent:)` 會搶在轉換之前吃掉 Esc，讓對話框關不掉。改成 builder 層的 `Actions({DismissIntent: …})`：Flutter 從焦點往上找第一個啟用中的動作，對話框先，我們後。
+6. **〔已被文末 Ruling 1 取代：builder 層 `Actions` 覆寫會被每個路由自己的 `DismissIntent` 遮蔽，實作改為 `handleWindowEscape` 單一決策點〕** Esc 的優先序靠 `DismissIntent` 覆寫，不靠手動攔截（計畫審查 C-1，查證屬實，取代原先的 `Focus(onKeyEvent:)` 方案）：** `WidgetsApp` 的 `Shortcuts`（`app.dart:1812`，把 Esc 轉成 `DismissIntent`）包在 `builder` 外層，`ModalRoute` 的 `_DismissModalAction.isEnabled` 只看 `barrierDismissible`；`builder` 層的 `Focus(onKeyEvent:)` 會搶在轉換之前吃掉 Esc，讓對話框關不掉。改成 builder 層的 `Actions({DismissIntent: …})`：Flutter 從焦點往上找第一個啟用中的動作，對話框先，我們後。
 7. **Esc 與閱讀器內層狀態（計畫審查 I-3，部分採納）：** 文字選取中按 Esc → 清除選取並消費；PDF 手動裁切模式中按 Esc → **只吞掉**，不退出裁切（延續既有「返回鍵不離開裁切模式」的決策，見 `reader_screen.dart` 的 `PopScope` 註解），也不退出全螢幕。**不處理 TTS 面板**：`_cbzTtsPanelVisible`／`_ttsPanelCollapsed` 是展開收合狀態而非浮層，「Esc 關閉」語意不明，列為已知邊界。
 8. **閱讀器命令的防護（計畫審查 I-2）：** `_openBookFlow.state is! OpenBookRendered`（載入中、探測中、失敗、重新連結）或 `_cropEditModeActive` 時，翻頁、Home／End、Ctrl+F 一律忽略。
 9. **方案 B 的去重（計畫審查 C-3）：** 同一個按鍵若在 50 毫秒內已由另一個來源（Flutter 全域處理器 vs `main.js` 轉送）處理過，後到的忽略；同一來源的連續事件（按住不放）不去重。
@@ -127,6 +127,8 @@
 ---
 
 ### Task 4：`WindowFullscreenShortcuts`——F11 與 Esc
+
+> **實作期修訂：** 本 Task 下方的 `Actions` 覆寫機制已被文末 Ruling 1、2 取代（每個路由自帶的 `DismissIntent` 動作會遮蔽它）；實際實作是 `handleWindowEscape` 單一決策點加註冊式內層消費者。
 
 **Files：**
 - Create: `app/lib/windows/window_fullscreen_shortcuts.dart`
@@ -269,21 +271,25 @@
 
 ## 實作調整與 Ruling 紀錄
 
-### Ruling 1：無焦點時 Shortcuts/Actions 靜默失效與全域鍵盤監聽
-- **背景**：原計畫構想依賴 `WidgetsApp.defaultShortcuts` 的 `SingleActivator(LogicalKeyboardKey.escape): const DismissIntent()` 傳遞至 `WindowFullscreenShortcuts` 的 `Actions`。
-- **實測發現**：當畫面只有純呈現元件（如純文字 Scaffold）時，`FocusManager.instance.primaryFocus` 為 `null`，此時 Flutter 的 Shortcuts 機制完全不派發任何 Intent，導致 Esc 退出全螢幕失效。
-- **裁定**：保留 `WindowFullscreenShortcuts` 內的 `HardwareKeyboard.instance.addHandler`，由原生按鍵層捕獲 Esc；但有對話框時透過 `primaryFocus?.context` 檢查已啟用的 `DismissIntent` 放行原生對話框關閉。
+### Ruling 1：Esc 的機制——取代計畫決定 6 與 Task 4 的 builder 層 `Actions` 覆寫（程式審查 I-2）
 
-### Ruling 2：全螢幕 Esc 優先序與 ReaderScreen 協作機制（Critical C-1 審查修復）
-- **背景**：`WindowFullscreenShortcuts` 掛在 `MaterialApp.builder`，其 `HardwareKeyboard` 監聽器先於 `ReaderScreen` 註冊。全螢幕下按 Esc，若無對話框，外層處理器搶先消費 Esc 並退出全螢幕，導致 `ReaderScreen` 的選取清除與 PDF 裁切保護失效，違背過關條件 8。
-- **裁定**：
-  1. 在 `WindowFullscreenShortcuts` 引入 `static int activeEscOverrideCount = 0;`。
-  2. `ReaderScreen` 在 `initState` 遞增、`dispose` 遞減此計數。
-  3. 當 `activeEscOverrideCount > 0` 時，`WindowFullscreenShortcuts` 對 Esc 無條件放行（回傳 `false`），將 Esc 優先序完全委由 `ReaderScreen._handleReaderKeyEvent` 處置：
-     - 若處於 PDF 手動裁切模式：吞掉 Esc（回傳 `true`，全螢幕維持）。
-     - 若有文字選取：關閉選取工具列並清除選取（回傳 `true`，全螢幕維持）。
-     - 若無選取無裁切且為全螢幕：退出全螢幕並回傳 `true`。
-     - 若非全螢幕：回傳 `false`（不消費，亦不退回書架）。
-  4. 閱讀器關閉或非閱讀器畫面（計數為 0）時，恢復由 `WindowFullscreenShortcuts` 處理無浮層時的 Esc 退出全螢幕。
-  5. 在 `reader_screen_keyboard_test.dart` 補齊掛載 `WindowFullscreenShortcuts` 的全螢幕真實場景整合測試（Important I-2）。
+- **背景**：計畫決定 6 假設「在 `MaterialApp.builder` 層用 `Actions` 覆寫 `DismissIntent`，Flutter 會從焦點往上找第一個啟用中的動作，對話框先、我們後」。
+- **查證（Flutter 3.41.9 原始碼，2026-11-06）**：
+  - `routes.dart:1199-1203`：每個 `ModalRoute`（包含一般頁面路由）都在內容外包一層 `Actions({DismissIntent: _DismissModalAction})`；頁面路由的 `barrierDismissible` 為 false，該動作的 `isEnabled` 恆為 false。
+  - `shortcuts.dart` 的 `handleKeypress` 以 `Actions.maybeFind` 取「最近一層」有 `DismissIntent` 的 `Actions`，再 `invokeActionIfEnabled`；`actions.dart` 的 `maybeInvoke` 文件也寫明「找到但 `isEnabled` 為 false 時搜尋就停止」，不會再往外層找。
+  - 結論：焦點在任何路由內時，builder 層的 `Actions` 被該路由自己的動作遮蔽，**永遠輪不到**。計畫決定 6 的機制不成立（原 Ruling 1 記錄的診斷「無焦點時 Shortcuts 不派發」也不是主因）。
+- **裁定**：Esc 改由全域 `HardwareKeyboard` 處理器統一處理，單一決策點是 `handleWindowEscape`（`window_fullscreen_shortcuts.dart`），優先序為：(1) 焦點處有可關閉的浮層 → 放行；(2) 內層消費者（見 Ruling 2）；(3) 視窗全螢幕 → 退出；(4) 否則不消費。已移除 builder 層的 `Actions`、`_ExitFullscreenDismissAction`、`window_fullscreen_dismiss_actions` Key。
+- **浮層判定（`_hasDismissibleOverlay`）**：焦點所在路由 `barrierDismissible` 為真，或最近的 `DismissIntent` 動作是 `DismissAction` 子類且啟用（抽屜、MenuAnchor）。**不能只看「最近的動作是否啟用」**：`EditableText`（只要有輸入框取得焦點）會自行註冊一個永遠啟用的 `CallbackAction<DismissIntent>` 來收起文字選取工具列，若把它當成浮層，搜尋畫面（Windows 開啟即聚焦輸入框）按 Esc 就永遠退不出全螢幕。這個問題是修復 I-3 時由紅燈測試發現的（測試：「文字輸入框有焦點的頁面：Esc 仍退出全螢幕」）。
+- **使用者確認紀錄**：原先實作者改回手動處理時沒有向使用者確認。2026-11-06 程式審查處置時，使用者指示「4 項 Important 全修，I-2 先驗證原始碼」；驗證結果證實計畫決定 6 不成立，因此採用上述手動單一決策點，並已在處置回報中向使用者說明這個結論與其後果，若使用者不同意應提出。
 
+### Ruling 2：閱讀器的 Esc 參與改為「註冊式內層消費者」，取代 `activeEscOverrideCount`（程式審查 I-3）
+
+- **背景**：先前的 `activeEscOverrideCount` 語意是「`ReaderScreen` 存在」，不是「閱讀器在最上層」。閱讀器被搜尋畫面等頁面蓋住、處於視窗全螢幕時，外層因計數大於 0 而放行，閱讀器自己又因路由不是最上層而放行，Esc 最後無人處理（紅燈測試：「全螢幕且閱讀器上方疊著搜尋畫面時按 Esc」，修正前全螢幕仍為 true）。
+- **裁定**：`registerEscInnerConsumer(bool Function())`：`ReaderScreen` 在 Windows 的 `initState` 註冊 `_consumeEscForReader`、`dispose` 取消。消費者**自己**判斷是否在最上層（`ModalRoute.isCurrent`）：PDF 手動裁切模式只吞掉 Esc（回傳 true）、有文字選取則清除選取（回傳 true）、否則回傳 false。閱讀器的 `_handleReaderKeyEvent` 不再處理 Esc；WebView 轉送進來的 Esc 也呼叫 `handleWindowEscape`，與鍵盤路徑共用同一個決策點。
+- **行為變化**：疊在閱讀器上的頁面（搜尋畫面等）不算浮層，Esc 直接退出視窗全螢幕；不可關閉的對話框開著時 Esc 同樣退出視窗全螢幕（與文件記載的已知邊界一致，先前在閱讀器內實際上是什麼都不發生）。
+
+### Ruling 3：WebView2 有焦點時的 F11／Esc——未解決，待實機驗證（程式審查 I-1、I-4）
+
+- **事實**：Task 1 的數據是「焦點在書頁時 F11 與 Esc 在 Flutter 與頂層 `window` 的 `keydown` 都沒收到」。但 (a) 送鍵方式是 Win32 `AttachThreadInput` 合成輸入，不是真實鍵盤；(b) 探針只掛在頂層 `window`，沒有掛在 section iframe 的文件，而實際閱讀時焦點通常在 iframe 內，實作對 `window` 與每個 section 文件都掛了轉送；(c) 探針腳本沒有保留、報告沒有原始 log 摘錄，無法重現。所以「F11／Esc 被 WebView2 攔截」是**推論，不是量測結論**。
+- **無法在本 Issue 內用程式繞過**：`flutter_inappwebview_windows` 0.6.0 沒有暴露 WebView2 的 `AreBrowserAcceleratorKeysEnabled`（原始碼 grep 無結果），要關閉瀏覽器加速鍵必須修改外掛或在原生層處理，超出本 Issue 範圍（專案不 fork 外掛）。
+- **裁定**：保留 `main.js` 的 F11／Esc 轉送（對 iframe 內焦點與真實鍵盤可能有效，且無害）；過關條件 7、8 改為「WebView2 有焦點時 F11／Esc 是否可用」列為**人工驗證的最優先項**，結果未出之前不宣稱此情境可用；若實機證實無效，列為已知限制並另開 Issue 評估外掛修改或原生層攔截。

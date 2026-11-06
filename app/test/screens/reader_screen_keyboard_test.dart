@@ -82,7 +82,6 @@ void main() {
   });
 
   tearDown(() async {
-    WindowFullscreenShortcuts.activeEscOverrideCount = 0;
     activeWindowFullscreenController = null;
     await LocalBookServer.instance.close();
   });
@@ -541,9 +540,15 @@ void main() {
         (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.windows;
       try {
-        // 1. 有文字選取時
+        // 1. 有文字選取時（Esc 的唯一決策點在 WindowFullscreenShortcuts，需掛載；
+        //    此處為非全螢幕，用來驗證「內層狀態被消費、否則不消費」）
+        final fake = _FakeFullscreenController(initialFullscreen: false);
         final foliateSurface = FakeReaderSurface.foliate();
-        await pumpEpubReader(tester, surface: foliateSurface);
+        await pumpEpubReader(
+          tester,
+          surface: foliateSurface,
+          fullscreenController: fake,
+        );
 
         final foliateView = tester.widget<FoliateReaderView>(
           find.byType(FoliateReaderView),
@@ -577,7 +582,11 @@ void main() {
 
         // 3. PDF 裁切模式時
         final pdfSurface = FakeReaderSurface.pdf();
-        await pumpPdfReader(tester, surface: pdfSurface);
+        await pumpPdfReader(
+          tester,
+          surface: pdfSurface,
+          fullscreenController: fake,
+        );
 
         tester
             .widget<IconButton>(
@@ -790,6 +799,41 @@ void main() {
 
         await tester.runAsync(() => LocalBookServer.instance.close());
       } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets(
+        '全螢幕且閱讀器上方疊著搜尋畫面時按 Esc：沒有浮層可關，退出視窗全螢幕（審查 I-3）',
+        (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      final fake = _FakeFullscreenController(initialFullscreen: true);
+      activeWindowFullscreenController = fake;
+      try {
+        final surface = FakeReaderSurface.foliate();
+        await pumpEpubReader(
+          tester,
+          surface: surface,
+          fullscreenController: fake,
+        );
+
+        // Ctrl+F 在閱讀器上方疊出搜尋畫面（頁面路由，不是對話框）
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pumpAndSettle();
+        expect(find.byType(BookSearchScreen), findsOneWidget);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+
+        expect(fake.isFullscreenNow, isFalse,
+            reason: '搜尋畫面是頁面不是浮層，Esc 應退出視窗全螢幕');
+        expect(fake.history, [false]);
+        expect(find.byType(BookSearchScreen), findsOneWidget,
+            reason: 'Esc 不應順便關閉搜尋畫面或返回上一頁');
+      } finally {
+        activeWindowFullscreenController = null;
         debugDefaultTargetPlatformOverride = null;
       }
     });

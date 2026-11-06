@@ -360,6 +360,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // cropEditModeActive prop；只有 PDF 分支會用到，EPUB 分支永遠是 false。
   bool _cropEditModeActive = false;
 
+  /// Windows：取消註冊閱讀器的內層 Esc 消費者（見 [registerEscInnerConsumer]）。
+  VoidCallback? _unregisterEscConsumer;
+
   /// epic-63 Issue 4：字典面板開著時擋掉重複點擊，避免疊出兩層面板。
   /// 面板關閉後在 `finally` 還原，不觸發重建（旗標不影響畫面）。
   bool _lookupSheetOpen = false;
@@ -516,7 +519,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     WidgetsBinding.instance.addObserver(this);
     if (isWindowsPlatform) {
       HardwareKeyboard.instance.addHandler(_handleReaderKeyEvent);
-      WindowFullscreenShortcuts.activeEscOverrideCount++;
+      _unregisterEscConsumer = registerEscInnerConsumer(_consumeEscForReader);
     }
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
@@ -672,10 +675,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _searchJumpHighlightTimer.cancel();
     _ttsSleepTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
-    if (isWindowsPlatform) {
-      WindowFullscreenShortcuts.activeEscOverrideCount =
-          (WindowFullscreenShortcuts.activeEscOverrideCount - 1).clamp(0, 999);
-    }
+    _unregisterEscConsumer?.call();
+    _unregisterEscConsumer = null;
     HardwareKeyboard.instance.removeHandler(_handleReaderKeyEvent);
     _volumeKeyChannel.setMethodCallHandler(null);
     _pdfSearchStateNotifier.dispose();
@@ -3059,16 +3060,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 全域按鍵監聽器先於焦點樹執行，因此不需修改 PDF 的 `_onPagedKey`（pdfrx 內部焦點按鍵），
   /// 在此層統一處理 Windows 平台翻頁、跳頁、搜尋與 Esc。
   ///
-  /// Esc 處理原則（過關條件 8）：
-  /// 1. 若處於 PDF 裁切模式（`_cropEditModeActive`），吞掉 Esc（回傳 true）避免退出視窗全螢幕，
-  ///    且裁切模式維持。
-  /// 2. 若存在文字選取（`_annotations.selection != null`），呼叫 `_handleCloseAnnotationToolbar()`
-  ///    清除選取並回傳 true（全螢幕維持）。
-  /// 3. 若無選取且非裁切：
-  ///    - 當處於視窗全螢幕（[activeWindowFullscreenController.isFullscreenNow]），退出全螢幕並回傳 true。
-  ///    - 若非全螢幕，回傳 false（不消費，亦不退回書架）。
-  /// 4. 刻意不處理 TTS 面板關閉：TTS 面板已有自身的路由或 dismiss 機制，且在有浮層時
-  ///    `_isReaderKeyInputBlocked()` 會阻斷此處處理。
+  /// 本處理器**不處理 Esc**：Esc 的優先序由 [handleWindowEscape] 統一決定，
+  /// 閱讀器只透過 [_consumeEscForReader]（註冊為內層消費者）參與。
   bool _handleReaderKeyEvent(KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return false;
@@ -3078,28 +3071,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       return true;
     }
     if (_isReaderKeyInputBlocked()) {
-      return false;
-    }
-
-    // Esc（無任何修飾鍵）
-    final isModifierPressed = HardwareKeyboard.instance.isShiftPressed ||
-        HardwareKeyboard.instance.isControlPressed ||
-        HardwareKeyboard.instance.isAltPressed ||
-        HardwareKeyboard.instance.isMetaPressed;
-
-    if (event.logicalKey == LogicalKeyboardKey.escape && !isModifierPressed) {
-      if (_cropEditModeActive) {
-        return true;
-      }
-      if (_annotations.selection != null) {
-        _handleCloseAnnotationToolbar();
-        return true;
-      }
-      final controller = activeWindowFullscreenController;
-      if (controller != null && controller.isFullscreenNow) {
-        unawaited(exitWindowFullscreenIfActive(controller));
-        return true;
-      }
       return false;
     }
 
@@ -3155,16 +3126,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         !control &&
         !alt &&
         !meta) {
-      if (_cropEditModeActive) {
-        return;
-      }
-      if (_annotations.selection != null) {
-        _handleCloseAnnotationToolbar();
-        return;
-      }
+      // 與鍵盤處理器共用同一個決策點（內層狀態 → 退出全螢幕）
       final controller = activeWindowFullscreenController;
       if (controller != null) {
-        unawaited(exitWindowFullscreenIfActive(controller));
+        handleWindowEscape(controller);
       }
       return;
     }
@@ -3184,6 +3149,27 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (command != null) {
       _handleReaderKeyCommand(command);
     }
+  }
+
+  /// 閱讀器的內層 Esc 消費者（Windows，註冊給 [registerEscInnerConsumer]）。
+  ///
+  /// 只在閱讀器是最上層路由時才參與（被搜尋畫面等頁面蓋住時回傳 `false`，
+  /// 讓 Esc 照常往下走、退出視窗全螢幕）：
+  /// 1. PDF 手動裁切模式：只吞掉 Esc（回傳 `true`），裁切模式維持——延續既有
+  ///    「返回鍵不離開裁切模式」的決策，也不退出視窗全螢幕。
+  /// 2. 有文字選取：關閉選取工具列並清除選取（回傳 `true`）。
+  /// 3. 其他回傳 `false`。
+  ///
+  /// 刻意不處理 TTS 面板：`_cbzTtsPanelVisible`／`_ttsPanelCollapsed` 是展開收合
+  /// 狀態而非浮層，「Esc 關閉」語意不明，列為已知邊界。
+  bool _consumeEscForReader() {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return false;
+    if (_cropEditModeActive) return true;
+    if (_annotations.selection != null) {
+      _handleCloseAnnotationToolbar();
+      return true;
+    }
+    return false;
   }
 
   bool _isReaderKeyInputBlocked() {

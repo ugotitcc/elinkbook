@@ -214,13 +214,13 @@ Issue 3 已實證：閱讀器開書以 `shouldInterceptRequest` 整本回傳 224
 - PDF 只在「分頁模式」才掛 `onKey: _onPagedKey`（PageUp、PageDown、Space、Home、End），沒有方向鍵，捲動模式用 `pdfrx` 預設行為；EPUB 完全沒有鍵盤處理（`main.js` 沒有 `keydown`）。
 - 搜尋是全螢幕路由 `BookSearchScreen`（輸入框 `autofocus: false`，已有 `_searchFocusNode`），不是疊在閱讀器上的面板。
 - 專案沒有 `window_manager`；`window_manager` 0.5.2 可用（不依賴 `win32`，見 `epic.md` 決策 26）。
-- **未確認的關鍵風險：** WebView2 取得焦點時，按鍵會進 Flutter 還是被網頁吞掉（連 F11 都可能收不到）。由第一個 Task 實測。
+- **關鍵風險（Task 1 實測後仍未解決）：** WebView2 取得焦點時，方向鍵、Space、Home、End、Ctrl+F 只進網頁（已改由 `main.js` 轉送），但 F11 與 Esc 在 Task 1 的量測中兩邊都沒收到。該量測是合成輸入、只掛頂層 `window`、未量 section iframe，所以這是**推論而非結論**；`flutter_inappwebview_windows` 也沒有暴露 `AreBrowserAcceleratorKeysEnabled`，無法在不改外掛下關閉瀏覽器加速鍵。列為人工驗證最優先項，見 `plan-issue-7.md` Ruling 3。
 
 **做法：**
 
 1. **Task 1 實測（不產出正式程式）：** 在 Windows 上實測 WebView2 有焦點時，方向鍵、Space、Home、End、Ctrl+F、F11、Esc 各進哪一邊，結論記入 `issue-7-report.md`，決定 EPUB 走「A：Flutter 全域按鍵處理器就夠」或「B：`main.js` 轉送按鍵給 Dart」。
 2. **純邏輯：** `readerKeyCommandFor(key, shift, control, alt, meta, verticalWriting)` 把按鍵對應成 `ReaderKeyCommand`（上一頁、下一頁、首頁、末頁、開啟搜尋）；直排時 ←／→ 鏡像；帶 Ctrl／Alt／Meta 的組合除了 Ctrl+F 一律不處理。
-3. **視窗全螢幕：** `WindowFullscreenController` 介面加 `window_manager` 0.5.2 實作；只在 Windows 初始化；`WindowFullscreenShortcuts` 掛在 `MaterialApp.builder`：F11 用全域 `HardwareKeyboard` 處理器（任何畫面、不依賴焦點）；Esc 不手動攔截，改在 builder 層以 `Actions` 覆寫 `DismissIntent`，由 Flutter 從焦點往上找第一個啟用中的動作，對話框先、「退出視窗全螢幕」後（手動攔截會搶在 `WidgetsApp` 把 Esc 轉成 `DismissIntent` 之前，讓對話框關不掉）。控制器維護同步可讀的 `isFullscreenNow` 快取（`Action.isEnabled` 必須同步回答），連按 F11 以進行中旗標避免競態。
+3. **視窗全螢幕：** `WindowFullscreenController` 介面加 `window_manager` 0.5.2 實作；只在 Windows 初始化；`WindowFullscreenShortcuts` 掛在 `MaterialApp.builder`：F11 用全域 `HardwareKeyboard` 處理器（任何畫面、不依賴焦點）；Esc 由單一決策點 `handleWindowEscape` 處理，優先序：焦點處可關閉的浮層（路由 `barrierDismissible` 或 `DismissAction` 子類）→ 註冊式內層消費者（閱讀器的文字選取與 PDF 裁切模式，且只在閱讀器是最上層時參與）→ 視窗全螢幕時退出。**不能**用 builder 層的 `Actions` 覆寫 `DismissIntent`（每個路由自帶的 `DismissIntent` 動作會遮蔽它，Flutter 原始碼已查證），也**不能**只看「最近的 `DismissIntent` 動作是否啟用」（`EditableText` 自帶永遠啟用的動作，輸入框有焦點時會被誤判成浮層）。控制器維護同步可讀的 `isFullscreenNow` 快取（`Action.isEnabled` 必須同步回答），連按 F11 以進行中旗標避免競態。
 4. **閱讀器按鍵：** `ReaderScreen` 在 Windows 註冊全域 `HardwareKeyboard` 處理器（`dispose` 時移除）：路由不是最上層或文字輸入框有焦點時暫停；翻頁類走 `_handleZoneAction`，Home／End 走 `ReaderSurface.jumpTo`，Ctrl+F 走 `_openBookSearch`；書籍不在 `OpenBookRendered`（載入中、失敗等）或 PDF 手動裁切模式時一律忽略；Home／End 比照 `_handleZoneAction` 補清除搜尋高亮與記錄閱讀活動；Esc 在有文字選取時清除選取、在 PDF 裁切模式時只吞掉（不退出裁切、不退出全螢幕）。處理器先於焦點樹消費事件，因此不需要修改 `pdfrx` 的 `_onPagedKey`。
 5. **EPUB 交付：** 依 Task 1 結論，A 則補驗證測試，B 則在 `main.js` 於 Windows 對每個 section 文件掛 `keydown` 並轉送（含 F11、Esc；`Ctrl+F` 的 `e.key` 在 CapsLock 開啟時是 `'F'`，需大小寫都接受），Android 不啟用；同一按鍵從 Flutter 與 WebView 兩邊送達時以 50 毫秒去重器只處理一次。
 6. **`BookSearchScreen`：** Windows 上開啟即聚焦搜尋輸入框（Android 維持不自動聚焦，避免軟鍵盤彈出）；Ctrl+F 重新聚焦並全選既有文字，用全域 `HardwareKeyboard` 處理器實作（`CallbackShortcuts` 在焦點節點不在其子樹時收不到事件）。
@@ -244,8 +244,8 @@ Issue 3 已實證：閱讀器開書以 `shouldInterceptRequest` 整本回傳 224
 4. **翻頁（PDF）：** 同條件 2（PDF 沒有直排概念，不鏡像），分頁與捲動兩種模式行為一致。
 5. **暫停條件：** 搜尋輸入框、備註輸入框有焦點，或對話框、面板疊在閱讀器上、或搜尋畫面開著時，按 ←／→／Space／Home／End 不翻頁。
 6. **Ctrl+F：** 在閱讀器內開啟書內搜尋，搜尋畫面開啟後游標已在輸入框、可直接打字；在搜尋畫面內再按 Ctrl+F 重新聚焦並全選既有文字；書架畫面按 Ctrl+F 沒有反應；書籍載入中、失敗或 PDF 手動裁切模式時按 Ctrl+F 不會開啟搜尋。
-7. **F11：** 在書架、來源、設定、閱讀器、EPUB 與 PDF 閱讀中都能切換視窗全螢幕（包含 WebView2 有焦點時）；切換畫面或離開閱讀器不會重置全螢幕；重新啟動 App 回到一般視窗；連按 F11 不亂。
-8. **Esc：** 有對話框或面板時先關它、視窗全螢幕維持；閱讀器內有文字選取時先清除選取、PDF 手動裁切模式中只吞掉（不退出裁切、不退出全螢幕），視窗全螢幕維持；沒有任何內層狀態且在視窗全螢幕時退出全螢幕；沒有內層狀態也不在全螢幕時，閱讀器**不會**返回書架。已知邊界：不可關閉的對話框開著時 Esc 會退出全螢幕；TTS 面板不響應 Esc。
+7. **F11：** 在書架、來源、設定、閱讀器、PDF 閱讀、以及 EPUB 閱讀（焦點在 Flutter 區域時）都能切換視窗全螢幕；切換畫面或離開閱讀器不會重置全螢幕；重新啟動 App 回到一般視窗；連按 F11 不亂。**EPUB 書頁（WebView2）有焦點時 F11 是否可用，必須用真實鍵盤實測並記錄結果**；若實測無效，不得宣稱通過，須寫入已知限制並另開 Issue（需修改外掛或原生層，本 Issue 不處理）。
+8. **Esc：** 有對話框或面板時先關它、視窗全螢幕維持；閱讀器內有文字選取時先清除選取、PDF 手動裁切模式中只吞掉（不退出裁切、不退出全螢幕），視窗全螢幕維持；沒有任何內層狀態且在視窗全螢幕時退出全螢幕；沒有內層狀態也不在全螢幕時，閱讀器**不會**返回書架。疊在閱讀器上的頁面（例如搜尋畫面）不算浮層，Esc 直接退出視窗全螢幕；輸入框有焦點的頁面也一樣。EPUB 書頁（WebView2）有焦點時 Esc 是否到得了 Dart 同樣需要實機實測（見條件 7）。已知邊界：不可關閉的對話框開著時 Esc 會退出全螢幕；TTS 面板不響應 Esc。
 9. **載入與生命週期：** 書籍載入中按翻頁鍵被忽略、不崩潰；離開閱讀器後按鍵處理器已移除（再按方向鍵不會對已關閉的閱讀器動作）；重新開書後只有一份處理器。
 10. **Android 與其他平台不變：** 所有新增處理器與 `main.js` 轉送都只在 Windows 啟用；既有測試全綠；`pubspec.lock` 只含 `window_manager` 及其傳遞相依（`screen_retriever` 系列）的異動。
 11. **人工驗證（Windows 實機，結果記入 `issue-7-report.md`）：** 條件 2 到 8 逐項實測，必須包含真實鍵盤輸入、WebView2 有焦點、直排書、PDF、有對話框時的 Esc。驗證前不得宣稱通過。
@@ -254,7 +254,7 @@ Issue 3 已實證：閱讀器開書以 `shouldInterceptRequest` 整本回傳 224
 
 - `readerKeyCommandFor`：每個按鍵的對應（含 Space 與 Shift+Space）；直排時 ←／→ 鏡像、橫排不鏡像；↑／↓／PageUp／PageDown 不受直排影響；Ctrl+F 回傳開啟搜尋；Ctrl+Shift+F、Alt+←、Ctrl+→、Meta 組合回傳 `null`；無關按鍵回傳 `null`。
 - `WindowFullscreenController` 相關函式（假控制器，同步 `isFullscreenNow` 快取隨 `setFullscreen` 更新）：`toggleWindowFullscreen` 目前非全螢幕則設為全螢幕、反之亦然；上一次尚未完成時再呼叫會被忽略；例外不外洩；`exitWindowFullscreenIfActive` 在快取為 `false` 時回傳 `false` 且不呼叫 `setFullscreen`，與 toggle 共用進行中旗標。
-- `WindowFullscreenShortcuts`（widget test，假控制器、Windows 平台 override）：F11 在任何畫面都切換、按住不放只切換一次、帶修飾鍵不切換；Esc 在視窗全螢幕且無浮層時退出；有 dismissible 對話框時第一次 Esc 只關對話框、全螢幕維持，第二次才退出（鎖定 `DismissIntent` 覆寫機制）；不可關閉的對話框時 Esc 退出全螢幕（已知邊界）；不在全螢幕時 Esc 不呼叫控制器；非 Windows 或控制器為 `null` 時不攔截任何按鍵。
+- `WindowFullscreenShortcuts`（widget test，假控制器、Windows 平台 override）：F11 在任何畫面都切換、按住不放只切換一次、帶修飾鍵不切換；Esc 在視窗全螢幕且無浮層時退出；有 dismissible 對話框時第一次 Esc 只關對話框、全螢幕維持，第二次才退出（鎖定 `DismissIntent` 覆寫機制）；不可關閉的對話框時 Esc 退出全螢幕（已知邊界）；輸入框有焦點的頁面 Esc 仍退出全螢幕（鎖定 `EditableText` 的永遠啟用動作不被當成浮層）；內層 Esc 消費者回傳 true 時不退出、回傳 false 時退出、取消註冊後不再被詢問，且有可關閉浮層時根本不詢問消費者；`handleWindowEscape` 與按鍵處理器優先序一致；不在全螢幕時 Esc 不呼叫控制器；非 Windows 或控制器為 `null` 時不攔截任何按鍵。
 - `ReaderScreen` 按鍵處理器：翻頁鍵走 `_handleZoneAction`（含直排鏡像）；Home／End 呼叫 `ReaderSurface.jumpTo`（Foliate 用進度 0.0／1.0，PDF 用頁碼 0／最後一頁，PDF 頁數未就緒時忽略）並清除搜尋高亮、記錄閱讀活動；Ctrl+F 呼叫書內搜尋；路由被疊上、文字輸入框有焦點時暫停；書籍載入中、失敗、PDF 裁切模式時忽略；Esc 有選取時清除、裁切模式時吞掉、否則不消費；`KeyRepeatEvent` 也觸發；`dispose` 後處理器已移除；非 Windows 不註冊。
 - EPUB 交付：方案 A 補「全域處理器在 EPUB 開著時也收到按鍵」的測試；方案 B 補去重器（不同來源 50 毫秒內只處理一次、同來源連續不去重）、`main.js` 轉送（僅 Windows 啟用、帶修飾鍵正確、`'f'` 與 `'F'` 都對應 Ctrl+F）、`logicalKeyForWebKey` 與 `FoliateReaderView` 對應回呼的測試。
 - `BookSearchScreen`：Windows 上開啟後輸入框已聚焦、Ctrl+F 重新聚焦並全選、帶 Shift 或有對話框疊上時不處理、關閉後處理器已移除；非 Windows 開啟後不自動聚焦、Ctrl+F 不處理。
