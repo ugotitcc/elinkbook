@@ -2077,6 +2077,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String libraryImportResultUnsupportedMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count unsupported files skipped',
+      one: '1 unsupported file skipped',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get libraryImportFolderFailedMessage =>
       'Couldn\'t read this folder. Make sure access is allowed, then try again.';
 

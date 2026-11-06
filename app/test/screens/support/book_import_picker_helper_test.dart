@@ -553,6 +553,116 @@ void main() {
 
       expect(find.text('5 本已存在，已跳過'), findsOneWidget);
     });
+
+    testWidgets('只有略過不支援時，提示只顯示不支援那一行', (tester) async {
+      late AppLocalizations l10n;
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                l10n = AppLocalizations.of(context)!;
+                return ElevatedButton(
+                  onPressed: () {
+                    showImportResultSnackBar(
+                      context,
+                      const ImportResult(
+                        skippedUnsupportedCount: 2,
+                      ),
+                    );
+                  },
+                  child: const Text('Show SnackBar'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show SnackBar'));
+      await tester.pump();
+
+      expect(find.text(l10n.libraryImportResultUnsupportedMessage(2)), findsOneWidget);
+    });
+
+    testWidgets('匯入、重複與不支援並存時，兩段訊息以換行合併在同一個 SnackBar', (tester) async {
+      late AppLocalizations l10n;
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                l10n = AppLocalizations.of(context)!;
+                return ElevatedButton(
+                  onPressed: () {
+                    showImportResultSnackBar(
+                      context,
+                      ImportResult(
+                        importedBooks: [_testBook('1')],
+                        skippedDuplicateCount: 1,
+                        skippedUnsupportedCount: 3,
+                      ),
+                    );
+                  },
+                  child: const Text('Show SnackBar'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show SnackBar'));
+      await tester.pump();
+
+      final snackBarFinder = find.byType(SnackBar);
+      expect(snackBarFinder, findsOneWidget);
+      final snackBarText = tester.widget<Text>(
+        find.descendant(of: snackBarFinder, matching: find.byType(Text)),
+      );
+      expect(
+        snackBarText.data,
+        '${l10n.libraryImportResultBothMessage(1, 1)}\n${l10n.libraryImportResultUnsupportedMessage(3)}',
+      );
+    });
+
+    testWidgets('三個計數皆為 0 時不顯示 SnackBar', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () {
+                  showImportResultSnackBar(
+                    context,
+                    const ImportResult(
+                      importedBooks: [],
+                      skippedDuplicateCount: 0,
+                      skippedUnsupportedCount: 0,
+                    ),
+                  );
+                },
+                child: const Text('Show SnackBar'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show SnackBar'));
+      await tester.pump();
+
+      expect(find.byType(SnackBar), findsNothing);
+    });
   });
 
   group('英文介面下的在地化驗證', () {

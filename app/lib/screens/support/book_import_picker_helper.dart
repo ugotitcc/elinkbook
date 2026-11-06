@@ -120,16 +120,26 @@ void showImportResultSnackBar(BuildContext context, ImportResult result) {
   }
   final importedCount = result.importedBooks.length;
   final skippedCount = result.skippedDuplicateCount;
-  if (importedCount <= 0 && skippedCount <= 0) return;
+  final unsupportedCount = result.skippedUnsupportedCount;
+  if (importedCount <= 0 && skippedCount <= 0 && unsupportedCount <= 0) return;
   final l10n = AppLocalizations.of(context)!;
-  final message = importedCount > 0
+  final String? base = (importedCount > 0 || skippedCount > 0)
+      ? (importedCount > 0
       ? (skippedCount > 0
           ? l10n.libraryImportResultBothMessage(
               importedCount,
               skippedCount,
             )
           : l10n.libraryImportResultImportedOnlyMessage(importedCount))
-      : l10n.libraryImportResultSkippedOnlyMessage(skippedCount);
+      : l10n.libraryImportResultSkippedOnlyMessage(skippedCount))
+      : null;
+  final String? unsupported = unsupportedCount > 0
+      ? l10n.libraryImportResultUnsupportedMessage(unsupportedCount)
+      : null;
+  final message = [
+    if (base != null) base,
+    if (unsupported != null) unsupported,
+  ].join('\n');
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
 

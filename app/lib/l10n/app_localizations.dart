@@ -3551,6 +3551,12 @@ abstract class AppLocalizations {
   /// **'{skippedCount, plural, =1{1 本已存在，已跳過} other{{skippedCount} 本已存在，已跳過}}'**
   String libraryImportResultSkippedOnlyMessage(int skippedCount);
 
+  /// 匯入完成時，略過不支援格式的檔案數量提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{count, plural, =1{略過 1 個不支援的檔案} other{略過 {count} 個不支援的檔案}}'**
+  String libraryImportResultUnsupportedMessage(int count);
+
   /// 資料夾匯入整體失敗（無法取得持久化授權，或列舉資料夾內容失敗）時的 SnackBar；兩種失敗使用者能做的事相同（重新選資料夾／重新授權），共用一則
   ///
   /// In zh_TW, this message translates to:

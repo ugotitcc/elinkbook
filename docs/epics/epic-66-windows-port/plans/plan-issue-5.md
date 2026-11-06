@@ -99,14 +99,14 @@
 - Consumes: Task 1 的 `skippedUnsupportedCount`。
 - Produces: `AppLocalizations.libraryImportResultUnsupportedMessage(int count)`，文字（四個 arb 一律用 ICU plural，對齊既有 `librarySelectedCount`、`libraryGroupTileCount` 的寫法）：zh_TW `{count, plural, =1{略過 1 個不支援的檔案} other{略過 {count} 個不支援的檔案}}`、zh_CN／zh `{count, plural, =1{略过 1 个不支持的文件} other{略过 {count} 个不支持的文件}}`、en `{count, plural, =1{1 unsupported file skipped} other{{count} unsupported files skipped}}`；`zh_TW` 範本需附 `@` 描述與 `count` 的 `int` placeholder，其餘三檔比照相鄰鍵的寫法。
 
-- [ ] **Step 1：寫失敗測試**（沿用該檔既有以 `Locale('zh','TW')` 與 `AppLocalizations.localizationsDelegates` 建構 `MaterialApp` 並點按鈕觸發 `showImportResultSnackBar` 的寫法）：
+- [x] **Step 1：寫失敗測試**（沿用該檔既有以 `Locale('zh','TW')` 與 `AppLocalizations.localizationsDelegates` 建構 `MaterialApp` 並點按鈕觸發 `showImportResultSnackBar` 的寫法）：
   - `只有略過不支援時，提示只顯示不支援那一行`：`ImportResult(skippedUnsupportedCount: 2)`；斷言 `find.text(l10n.libraryImportResultUnsupportedMessage(2))` 存在。
   - `匯入、重複與不支援並存時，兩段訊息以換行合併在同一個 SnackBar`：`importedBooks` 1 本、`skippedDuplicateCount: 1`、`skippedUnsupportedCount: 3`；斷言 SnackBar 的 `Text.data` 等於 `'${既有 Both 訊息}\n${不支援訊息}'`。
   - `三個計數皆為 0 時不顯示 SnackBar`（既有行為，補一條防回歸）。
-- [ ] **Step 2：執行確認失敗**：`flutter test test/screens/support/book_import_picker_helper_test.dart`；預期編譯失敗（新鍵未產生）。
-- [ ] **Step 3：實作。** 四個 arb 加鍵 `libraryImportResultUnsupportedMessage`；執行 `flutter gen-l10n`。`showImportResultSnackBar`：`failure != null` 分支不動；提早 `return` 的條件改為三個計數都 `<= 0`；組出原本的 `base` 訊息（可能為空），不支援訊息存在時以 `'\n'` 與之合併，只有一段時就只顯示該段。
-- [ ] **Step 4：執行確認通過**：同 Step 2 指令，並跑 `node tool/check_l10n_hardcoded_strings.js`，預期 PASS。
-- [ ] **Step 5：Commit**：`git add` 四個 arb、`app/lib/l10n/app_localizations*.dart`（僅限有變更者）、`book_import_picker_helper.dart` 與其測試，訊息 `feat(import): 結果提示說明略過不支援的檔案（epic-66 Issue 5 Task 3）`。
+- [x] **Step 2：執行確認失敗**：`flutter test test/screens/support/book_import_picker_helper_test.dart`；預期編譯失敗（新鍵未產生）。
+- [x] **Step 3：實作。** 四個 arb 加鍵 `libraryImportResultUnsupportedMessage`；執行 `flutter gen-l10n`。`showImportResultSnackBar`：`failure != null` 分支不動；提早 `return` 的條件改為三個計數都 `<= 0`；組出原本的 `base` 訊息（可能為空），不支援訊息存在時以 `'\n'` 與之合併，只有一段時就只顯示該段。
+- [x] **Step 4：執行確認通過**：同 Step 2 指令，並跑 `node tool/check_l10n_hardcoded_strings.js`，預期 PASS。
+- [x] **Step 5：Commit**：`git add` 四個 arb、`app/lib/l10n/app_localizations*.dart`（僅限有變更者）、`book_import_picker_helper.dart` 與其測試，訊息 `feat(import): 結果提示說明略過不支援的檔案（epic-66 Issue 5 Task 3）`。
 
 ---
 

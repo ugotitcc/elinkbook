@@ -1997,6 +1997,17 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String libraryImportResultUnsupportedMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '略过 $count 个不支持的文件',
+      one: '略过 1 个不支持的文件',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get libraryImportFolderFailedMessage => '無法讀取這個資料夾，請確認已授權存取後再試一次';
 
   @override
@@ -4756,6 +4767,17 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   }
 
   @override
+  String libraryImportResultUnsupportedMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '略过 $count 个不支持的文件',
+      one: '略过 1 个不支持的文件',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get libraryImportFolderFailedMessage => '无法读取这个文件夹，请确认已授权访问后再试一次';
 
   @override
@@ -7510,6 +7532,17 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
       locale: localeName,
       other: '$skippedCount 本已存在，已跳過',
       one: '1 本已存在，已跳過',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryImportResultUnsupportedMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '略過 $count 個不支援的檔案',
+      one: '略過 1 個不支援的檔案',
     );
     return '$_temp0';
   }
