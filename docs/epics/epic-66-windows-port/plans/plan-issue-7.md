@@ -224,11 +224,11 @@
   - `main.js`：`desktopKeys=1` 時對 `window` 與每個 section 文件（foliate 的 `load` 事件給的 `doc`）掛 `keydown`（capture），對上述鍵（`f` 以 `e.key.toLowerCase() === 'f'` 比對，且只在 `e.ctrlKey`）呼叫 `window.flutter_inappwebview.callHandler('onDesktopKey', {key, shiftKey, ctrlKey, altKey, metaKey})`，並對這些鍵 `preventDefault()`；其他鍵不處理。未帶 `desktopKeys=1`（Android）完全不掛。
   - `ReaderScreen` 收到 `onDesktopKey`：先 `desktopKeyDeduper.shouldHandle(...)`；F11 呼叫 `toggleWindowFullscreen(activeWindowFullscreenController!)`；Escape 先走 Task 5 的 Esc 邏輯（裁切模式吞掉、選取清除），都沒有消費才 `exitWindowFullscreenIfActive`；其餘以 `readerKeyCommandFor` 轉成命令並經 `_isReaderKeyInputBlocked` 檢查後呼叫 `_handleReaderKeyCommand`。
 
-- [ ] **Step B1：寫失敗測試：** (a) `DesktopKeyDeduper`（注入假時鐘）：同一鍵不同來源 50 毫秒內第二次被擋、超過 50 毫秒放行、同一來源連續（按住不放）不擋、不同鍵互不影響；(b) `buildFoliateReaderIndexUri` 在 Windows 帶 `desktopKeys=1`、非 Windows 不帶；(c) `onDesktopKey` handler 收到參數後回呼 `FoliateReaderView.onDesktopKey`；(d) `ReaderScreen` 收到 `onDesktopKey('ArrowRight', …)` 呼叫 `nextPage`、收到 F11 呼叫假控制器 `setFullscreen`、收到 Escape 且為全螢幕時退出、收到 Escape 且有文字選取時只清除選取；(e) 修飾鍵（`alt: true` 的 ArrowLeft）不翻頁；(f) 同一鍵先由 Flutter 全域處理器處理，50 毫秒內又收到 `onDesktopKey`：只翻一頁、F11 只切換一次；(g) `logicalKeyForWebKey`：`'f'`、`'F'` 都回傳 `keyF`，未知鍵回傳 `null`。
-- [ ] **Step B2：執行確認失敗：** `flutter test test/reader/foliate_reader_view_keyboard_test.dart test/reader/desktop_key_deduper_test.dart`。
-- [ ] **Step B3：實作** 上述成員。`main.js` 的改動必須是純新增、以 `desktopKeys` 閘門，不得改動既有程式路徑；改完跑 `node tool/check_foliate_es_compat.js`。
-- [ ] **Step B4：執行確認通過：** 同 Step B2 指令，再跑 `flutter test test/reader/foliate_reader_view_test.dart test/windows/window_fullscreen_shortcuts_test.dart test/screens/reader_screen_keyboard_test.dart` 確認既有與前面 Task 的測試沒壞。
-- [ ] **Step B5：Commit：** `git add` 上述檔案，訊息 `feat(keyboard): foliate-js 轉送按鍵給 Dart 並去重（方案 B，epic-66 Issue 7 Task 6）`。
+- [x] **Step B1：寫失敗測試：** (a) `DesktopKeyDeduper`（注入假時鐘）：同一鍵不同來源 50 毫秒內第二次被擋、超過 50 毫秒放行、同一來源連續（按住不放）不擋、不同鍵互不影響；(b) `buildFoliateReaderIndexUri` 在 Windows 帶 `desktopKeys=1`、非 Windows 不帶；(c) `onDesktopKey` handler 收到參數後回呼 `FoliateReaderView.onDesktopKey`；(d) `ReaderScreen` 收到 `onDesktopKey('ArrowRight', …)` 呼叫 `nextPage`、收到 F11 呼叫假控制器 `setFullscreen`、收到 Escape 且為全螢幕時退出、收到 Escape 且有文字選取時只清除選取；(e) 修飾鍵（`alt: true` 的 ArrowLeft）不翻頁；(f) 同一鍵先由 Flutter 全域處理器處理，50 毫秒內又收到 `onDesktopKey`：只翻一頁、F11 只切換一次；(g) `logicalKeyForWebKey`：`'f'`、`'F'` 都回傳 `keyF`，未知鍵回傳 `null`。
+- [x] **Step B2：執行確認失敗：** `flutter test test/reader/foliate_reader_view_keyboard_test.dart test/reader/desktop_key_deduper_test.dart`。
+- [x] **Step B3：實作** 上述成員。`main.js` 的改動必須是純新增、以 `desktopKeys` 閘門，不得改動既有程式路徑；改完跑 `node tool/check_foliate_es_compat.js`。
+- [x] **Step B4：執行確認通過：** 同 Step B2 指令，再跑 `flutter test test/reader/foliate_reader_view_test.dart test/windows/window_fullscreen_shortcuts_test.dart test/screens/reader_screen_keyboard_test.dart` 確認既有與前面 Task 的測試沒壞。
+- [x] **Step B5：Commit：** `git add` 上述檔案，訊息 `feat(keyboard): foliate-js 轉送按鍵給 Dart 並去重（方案 B，epic-66 Issue 7 Task 6）`。
 
 ---
 

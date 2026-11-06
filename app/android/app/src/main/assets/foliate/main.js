@@ -106,6 +106,42 @@ const initialProgression =
 // （headless webview 永遠不會有真實觸控事件，該段邏輯掛著純屬浪費，非
 // 錯誤來源，見 plan-issue-1.md Global Constraints）。
 const isIndexMode = params.get('mode') === 'index'
+// epic-66 Issue 7：Windows WebView2 鍵盤事件轉送旗標。
+const isDesktopKeys = params.get('desktopKeys') === '1'
+
+const forwardDesktopKey = (evt) => {
+  const key = evt.key
+  const lower = typeof key === 'string' ? key.toLowerCase() : ''
+  const isMatch = (
+    key === 'ArrowLeft' ||
+    key === 'ArrowRight' ||
+    key === 'ArrowUp' ||
+    key === 'ArrowDown' ||
+    key === 'PageUp' ||
+    key === 'PageDown' ||
+    key === ' ' ||
+    key === 'Home' ||
+    key === 'End' ||
+    key === 'F11' ||
+    key === 'Escape' ||
+    (lower === 'f' && (evt.ctrlKey || evt.metaKey))
+  )
+  if (!isMatch) return
+  evt.preventDefault()
+  if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+    window.flutter_inappwebview.callHandler('onDesktopKey', {
+      key: evt.key,
+      shiftKey: !!evt.shiftKey,
+      ctrlKey: !!evt.ctrlKey,
+      altKey: !!evt.altKey,
+      metaKey: !!evt.metaKey,
+    })
+  }
+}
+
+if (isDesktopKeys) {
+  window.addEventListener('keydown', forwardDesktopKey, { capture: true })
+}
 
 // 判斷一段 CSS 文字是否宣告了直排（epic-17 Issue 4，FR-06；epic-46 擴充）。
 // 判準：偵測結果要跟 WebView（Chromium）實際的渲染方式一致——
@@ -1450,6 +1486,9 @@ async function openBook() {
       if (isIndexMode) return
       const doc = e.detail.doc
       const index = e.detail.index
+      if (isDesktopKeys && doc) {
+        doc.addEventListener('keydown', forwardDesktopKey, { capture: true })
+      }
       // epic-42-text-conversion Issue 2：新章節載入／look-ahead 預讀章節
       // 時套用目前生效的簡繁轉換模式（issues.md Issue 2「開書當下與逐
       // section 觸發」）。currentTextConversion 此時已由上方模組層級宣告

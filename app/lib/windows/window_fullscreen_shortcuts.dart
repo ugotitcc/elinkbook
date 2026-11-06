@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'window_fullscreen_controller.dart';
+import '../reader/desktop_key_deduper.dart';
 
 /// 在 Windows 平台上提供 F11 切換全螢幕與 Esc 退出全螢幕的外層包裝元件。
 ///
@@ -80,11 +81,19 @@ class _WindowFullscreenShortcutsState extends State<WindowFullscreenShortcuts> {
     }
 
     if (event.logicalKey == LogicalKeyboardKey.f11) {
+      final canonicalId = canonicalKeyId(event.logicalKey);
+      if (!desktopKeyDeduper.shouldHandle(canonicalId, DesktopKeySource.flutter)) {
+        return true;
+      }
       toggleWindowFullscreen(controller);
       return true;
     }
 
     if (event.logicalKey == LogicalKeyboardKey.escape) {
+      final canonicalId = canonicalKeyId(event.logicalKey);
+      if (!desktopKeyDeduper.shouldHandle(canonicalId, DesktopKeySource.flutter)) {
+        return true;
+      }
       // 檢查焦點樹上是否有已啟用的 DismissIntent Action（例如 dismissible 對話框）
       final focusContext = FocusManager.instance.primaryFocus?.context;
       if (focusContext != null) {

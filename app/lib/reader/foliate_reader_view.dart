@@ -405,11 +405,21 @@ class FoliateReaderView extends StatefulWidget {
   /// 「JS 回報事實、Dart 決定政策」分工慣例。
   final ValueChanged<String>? onTtsHighlightOutOfSafeWindow;
 
+  /// Windows 平台下 WebView2 轉送的鍵盤事件（epic-66 Issue 7 方案 B）。
+  final void Function(
+    String key, {
+    required bool shift,
+    required bool control,
+    required bool alt,
+    required bool meta,
+  })? onDesktopKey;
+
   const FoliateReaderView({
     super.key,
     required this.filePath,
     required this.onPageRendered,
     required this.onError,
+    this.onDesktopKey,
     this.onLayoutResolved,
     this.writingMode,
     this.pageTurnMode,
@@ -672,6 +682,9 @@ Uri buildFoliateReaderIndexUri(
     initialProgression: widget.initialProgression,
   ));
   params.addAll(foliateBookBaseUrlParams(bookBaseUri));
+  if (isWindowsPlatform) {
+    params['desktopKeys'] = '1';
+  }
   return Uri.https(
     'appassets.androidplatform.net',
     '/assets/foliate/index.html',
@@ -919,6 +932,23 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       callback: (args) {
         _hasActiveSelection = false;
         widget.onSelectionCleared?.call();
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: FoliateBridgeHandlers.onDesktopKey,
+      callback: (args) {
+        if (args.isEmpty || args[0] is! Map) return null;
+        final map = args[0] as Map;
+        final key = map['key'] as String?;
+        if (key == null) return null;
+        widget.onDesktopKey?.call(
+          key,
+          shift: map['shiftKey'] == true,
+          control: map['ctrlKey'] == true,
+          alt: map['altKey'] == true,
+          meta: map['metaKey'] == true,
+        );
+        return null;
       },
     );
     await attachReaderView();

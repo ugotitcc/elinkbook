@@ -20,6 +20,7 @@ import '../reader/book_reader_prefs.dart';
 import '../reader/app_font.dart';
 import '../reader/available_fonts.dart';
 import '../reader/custom_font.dart';
+import '../reader/desktop_key_deduper.dart';
 import '../reader/epub_position_info.dart';
 import '../reader/epub_selection_info.dart';
 import '../reader/foliate_bridge_codec.dart';
@@ -93,6 +94,7 @@ import 'pdf_search_panel.dart';
 import 'pdf_thumbnail_panel.dart';
 import 'tts_panel.dart';
 import 'reader_chrome_top_bar.dart';
+import '../windows/window_fullscreen_controller.dart';
 
 /// 音量鍵事件頻道（epic-7-interaction Issue 7）：原生 `MainActivity.
 /// dispatchKeyEvent()` 攔截音量鍵後呼叫 `onVolumeKey`；`_handleVolumeKeyCall`
@@ -2976,6 +2978,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           },
           onSelectionChanged: _handleSelectionChanged,
           onSelectionCleared: _handleSelectionCleared,
+          onDesktopKey: isWindowsPlatform ? _handleFoliateDesktopKey : null,
         );
       case BookFormat.pdf:
         // epic-24-pdf-engine-rebuild：單頁/雙頁（Issue 2）、影像濾鏡/
@@ -3062,6 +3065,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return false;
     }
+    final canonicalId = canonicalKeyId(event.logicalKey);
+    if (!desktopKeyDeduper.shouldHandle(canonicalId, DesktopKeySource.flutter)) {
+      return true;
+    }
     if (_isReaderKeyInputBlocked()) {
       return false;
     }
@@ -3099,6 +3106,71 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
     _handleReaderKeyCommand(command);
     return true;
+  }
+
+  void _handleFoliateDesktopKey(
+    String webKey, {
+    required bool shift,
+    required bool control,
+    required bool alt,
+    required bool meta,
+  }) {
+    final logicalKey = logicalKeyForWebKey(webKey);
+    if (logicalKey == null) return;
+
+    final canonicalId = canonicalKeyId(logicalKey);
+    if (!desktopKeyDeduper.shouldHandle(canonicalId, DesktopKeySource.web)) {
+      return;
+    }
+
+    // F11 視窗全螢幕
+    if (logicalKey == LogicalKeyboardKey.f11 &&
+        !shift &&
+        !control &&
+        !alt &&
+        !meta) {
+      final controller = activeWindowFullscreenController;
+      if (controller != null) {
+        unawaited(toggleWindowFullscreen(controller));
+      }
+      return;
+    }
+
+    // Escape（無任何修飾鍵）
+    if (logicalKey == LogicalKeyboardKey.escape &&
+        !shift &&
+        !control &&
+        !alt &&
+        !meta) {
+      if (_cropEditModeActive) {
+        return;
+      }
+      if (_annotations.selection != null) {
+        _handleCloseAnnotationToolbar();
+        return;
+      }
+      final controller = activeWindowFullscreenController;
+      if (controller != null) {
+        unawaited(exitWindowFullscreenIfActive(controller));
+      }
+      return;
+    }
+
+    if (_isReaderKeyInputBlocked()) return;
+
+    final vertical = _resolved?.writingMode == WritingMode.vertical;
+    final command = readerKeyCommandFor(
+      logicalKey,
+      shift: shift,
+      control: control,
+      alt: alt,
+      meta: meta,
+      verticalWriting: vertical,
+    );
+
+    if (command != null) {
+      _handleReaderKeyCommand(command);
+    }
   }
 
   bool _isReaderKeyInputBlocked() {
