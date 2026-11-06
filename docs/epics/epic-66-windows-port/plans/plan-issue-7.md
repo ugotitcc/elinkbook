@@ -113,16 +113,16 @@
   - `Future<void> toggleWindowFullscreen(WindowFullscreenController controller)`：讀 `await controller.isFullscreen()` 後設為相反值；上一次尚未完成時直接 `return`（模組內進行中旗標）；控制器丟例外時吞掉（`debugPrint`），並確保旗標在 `finally` 還原。
   - `Future<bool> exitWindowFullscreenIfActive(WindowFullscreenController controller)`：`controller.isFullscreenNow` 為 `false` 時回傳 `false` 且不呼叫 `setFullscreen`；否則（受同一個進行中旗標保護）`setFullscreen(false)` 並回傳 `true`，例外同樣吞掉。
 
-- [ ] **Step 1：寫失敗測試**（以測試內的 `FakeWindowFullscreenController`：`setFullscreen` 會更新 `isFullscreenNow` 並記錄呼叫，可設定延遲與例外）：
+- [x] **Step 1：寫失敗測試**（以測試內的 `FakeWindowFullscreenController`：`setFullscreen` 會更新 `isFullscreenNow` 並記錄呼叫，可設定延遲與例外）：
   - `非全螢幕時 toggle 設為 true，全螢幕時 toggle 設為 false`。
   - `上一次 toggle 尚未完成時再呼叫會被忽略，只設定一次`（Review Focus 5：用 `Completer` 卡住 `isFullscreen`，連呼叫兩次）。
   - `控制器丟例外時 toggle 不外洩，之後仍可再次 toggle`（旗標已還原）。
   - `exitWindowFullscreenIfActive：isFullscreenNow 為 true 時呼叫 setFullscreen(false) 並回傳 true；為 false 時回傳 false 且不呼叫`。
   - `toggle 進行中呼叫 exitWindowFullscreenIfActive 會被忽略（共用旗標）`。
-- [ ] **Step 2：執行確認失敗：** `flutter test test/windows/window_fullscreen_controller_test.dart`；預期編譯失敗。
-- [ ] **Step 3：實作。** 先 `flutter pub add window_manager:0.5.2`（或手改 pubspec 再 `flutter pub get`），依 Global Constraints 檢查並還原 `pubspec.lock` 的無關降級；在 pubspec 該行上方加中文註解（固定原因、0.6.0 不可用、升級見 Issue 6）。建立 `window_fullscreen_controller.dart`。`main.dart` 在 Windows 才 `await windowManager.ensureInitialized();` 並 `activeWindowFullscreenController = WindowManagerFullscreenController();`（位置：既有 `if (isWindowsPlatform)` 區塊，`initAppWebViewEnvironment` 所在處附近）。`WindowManagerFullscreenController` 依賴真實的 `window_manager`，不在單元測試中直接實例化；真實行為由人工驗證覆蓋。
-- [ ] **Step 4：執行確認通過：** 同 Step 2 指令；`flutter analyze` 乾淨；`git diff app/pubspec.lock` 只含允許的異動。
-- [ ] **Step 5：Commit：** 明確列出 `app/pubspec.yaml`、`app/pubspec.lock`、`app/windows/flutter/generated_plugin_registrant.cc`、`app/windows/flutter/generated_plugin_registrant.h`、`app/windows/flutter/generated_plugins.cmake`、`app/lib/windows/window_fullscreen_controller.dart`、`app/lib/main.dart`、測試檔，訊息 `feat(keyboard): 視窗全螢幕控制器與 window_manager 0.5.2（epic-66 Issue 7 Task 3）`。
+- [x] **Step 2：執行確認失敗：** `flutter test test/windows/window_fullscreen_controller_test.dart`；預期編譯失敗。
+- [x] **Step 3：實作。** 先 `flutter pub add window_manager:0.5.2`（或手改 pubspec 再 `flutter pub get`），依 Global Constraints 檢查並還原 `pubspec.lock` 的無關降級；在 pubspec 該行上方加中文註解（固定原因、0.6.0 不可用、升級見 Issue 6）。建立 `window_fullscreen_controller.dart`。`main.dart` 在 Windows 才 `await windowManager.ensureInitialized();` 並 `activeWindowFullscreenController = WindowManagerFullscreenController();`（位置：既有 `if (isWindowsPlatform)` 區塊，`initAppWebViewEnvironment` 所在處附近）。`WindowManagerFullscreenController` 依賴真實的 `window_manager`，不在單元測試中直接實例化；真實行為由人工驗證覆蓋。
+- [x] **Step 4：執行確認通過：** 同 Step 2 指令；`flutter analyze` 乾淨；`git diff app/pubspec.lock` 只含允許的異動。
+- [x] **Step 5：Commit：** 明確列出 `app/pubspec.yaml`、`app/pubspec.lock`、`app/windows/flutter/generated_plugin_registrant.cc`、`app/windows/flutter/generated_plugin_registrant.h`、`app/windows/flutter/generated_plugins.cmake`、`app/lib/windows/window_fullscreen_controller.dart`、`app/lib/main.dart`、測試檔，訊息 `feat(keyboard): 視窗全螢幕控制器與 window_manager 0.5.2（epic-66 Issue 7 Task 3）`。
 
 ---
 

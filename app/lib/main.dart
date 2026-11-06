@@ -70,6 +70,8 @@ import 'sync/sync_engine.dart';
 import 'sync/sync_metadata_repository.dart';
 import 'theme/app_theme.dart';
 import 'windows/windows_webview_environment.dart';
+import 'package:window_manager/window_manager.dart';
+import 'windows/window_fullscreen_controller.dart';
 import 'theme/app_theme_data.dart';
 import 'reader/reader_activity_tracker.dart';
 import 'search/content_indexing_scheduler.dart';
@@ -460,6 +462,8 @@ Future<void> main() async {
   // %APPDATA% 下的 App 資料夾，見 windows_webview_environment.dart）。
   // 非 Windows 平台直接略過，不增加任何呼叫（Android 路徑不變）。
   if (isWindowsPlatform) {
+    await windowManager.ensureInitialized();
+    activeWindowFullscreenController = WindowManagerFullscreenController();
     await initAppWebViewEnvironment(
       userDataFolder: (await getApplicationSupportDirectory()).path,
     );
