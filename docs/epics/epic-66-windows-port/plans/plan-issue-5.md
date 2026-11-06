@@ -37,7 +37,7 @@
 
 ## Review Focus
 
-1. 拖入的資料夾不存在或無讀取權限：提示資料夾匯入失敗，不崩潰（Task 2；提示文字由既有 `showImportResultSnackBar` 的 `failure` 分支負責）。
+1. 資料夾存在但無法讀取：提示資料夾匯入失敗，不崩潰（Task 2；提示文字由既有 `showImportResultSnackBar` 的 `failure` 分支負責）。拖入「已不存在的路徑」則在 `classifyDroppedPaths` 被當成檔案，匯入時因副檔名無法辨識而計入略過不支援（Task 5），不會顯示資料夾失敗。
 2. 路徑含中文與空白字元：照常匯入，檔名與標題正確（Task 5）。
 3. 資料夾裡有 `desktop.ini` 之類的系統檔：計入略過數、不報錯（Task 2）。
 4. 匯入尚未完成時畫面被卸載（例如關閉視窗）：不對已卸載的 context 顯示提示，並丟棄更新候選的暫存檔（Task 6）。
@@ -97,7 +97,7 @@
 
 **Interfaces：**
 - Consumes: Task 1 的 `skippedUnsupportedCount`。
-- Produces: `AppLocalizations.libraryImportResultUnsupportedMessage(int count)`，文字：zh_TW `略過 {count} 個不支援的檔案`、zh_CN／zh `略过 {count} 个不支持的文件`、en `{count} unsupported {count, plural, =1{file} other{files}} skipped`；`zh_TW` 範本需附 `@` 描述與 `count` 的 `int` placeholder，其餘三檔比照相鄰鍵的寫法。
+- Produces: `AppLocalizations.libraryImportResultUnsupportedMessage(int count)`，文字（四個 arb 一律用 ICU plural，對齊既有 `librarySelectedCount`、`libraryGroupTileCount` 的寫法）：zh_TW `{count, plural, =1{略過 1 個不支援的檔案} other{略過 {count} 個不支援的檔案}}`、zh_CN／zh `{count, plural, =1{略过 1 个不支持的文件} other{略过 {count} 个不支持的文件}}`、en `{count, plural, =1{1 unsupported file skipped} other{{count} unsupported files skipped}}`；`zh_TW` 範本需附 `@` 描述與 `count` 的 `int` placeholder，其餘三檔比照相鄰鍵的寫法。
 
 - [ ] **Step 1：寫失敗測試**（沿用該檔既有以 `Locale('zh','TW')` 與 `AppLocalizations.localizationsDelegates` 建構 `MaterialApp` 並點按鈕觸發 `showImportResultSnackBar` 的寫法）：
   - `只有略過不支援時，提示只顯示不支援那一行`：`ImportResult(skippedUnsupportedCount: 2)`；斷言 `find.text(l10n.libraryImportResultUnsupportedMessage(2))` 存在。
@@ -170,24 +170,26 @@
 
 **Interfaces：**
 - Consumes: Task 3 的 `showImportResultSnackBar`；Task 5 的 `importDroppedPaths`；既有 `confirmAutoGroupByFolderName(BuildContext)`、`handleImportUpdateCandidates(context, importService, result, isEinkMode:)`、`discardUpdateCandidates(importService, candidates)`。
-- Produces: `class ImportDropTarget extends StatefulWidget`，建構子 `ImportDropTarget({super.key, required BookImportService importService, required bool isEinkMode, required bool enabled, required Widget child})`。新字串 `importDropOverlayText`（zh_TW `放開以匯入`）、`importDropBusyMessage`（zh_TW `匯入進行中，請稍後再拖入`），四個 arb 各補對應語系。固定 Key：`Key('import_drop_overlay')`。
+- Produces: `class ImportDropTarget extends StatefulWidget`，建構子 `ImportDropTarget({super.key, required BookImportService importService, required bool isEinkMode, required bool enabled, VoidCallback? onImportCompleted, required Widget child})`。`onImportCompleted` 在整條匯入流程（含更新候選處理）結束後呼叫，且只在「有新書匯入或有更新候選」時呼叫，供書架重新載入書單（審查 C-1：書架分頁本來就在畫面上，不會經過 `_navigateTo(0)`，不通知的話拖入的新書不會出現）。新字串 `importDropOverlayText`（zh_TW `放開以匯入`）、`importDropBusyMessage`（zh_TW `匯入進行中，請稍後再拖入`），四個 arb 各補對應語系。固定 Key：`Key('import_drop_overlay')`。
 
-行為（widget 內）：非 Windows（`isWindowsPlatform` 為假）直接 `return child`；Windows 永遠 `DropTarget(enable: widget.enabled && (ModalRoute.of(context)?.isCurrent ?? true), ...)` 包 `Stack(child, 遮罩)`，結構不隨狀態改變。遮罩只在拖曳經過（`onDragEntered`→顯示、`onDragExited`／`onDragDone`→隱藏）時出現，用 `IgnorePointer` 避免擋住點擊。`onDragDone`：`files` 為空→忽略；匯入進行中（`_busy`）→顯示 `importDropBusyMessage` 的 SnackBar 並返回；否則設 `_busy = true`，呼叫 `importDroppedPaths(widget.importService, 路徑清單, confirmAutoGroup: () => context.mounted ? confirmAutoGroupByFolderName(context) : Future.value(null))`，結果為 `null` 就結束；`!mounted` 時 `discardUpdateCandidates` 後返回；否則 `showImportResultSnackBar` 再 `handleImportUpdateCandidates`；`finally` 還原 `_busy`（先檢查 `mounted`）。
+行為（widget 內）：非 Windows（`isWindowsPlatform` 為假）直接 `return child`；Windows 永遠 `DropTarget(enable: widget.enabled && (ModalRoute.of(context)?.isCurrent ?? true), ...)` 包 `Stack(child, 遮罩)`，結構不隨狀態改變。遮罩只在拖曳經過（`onDragEntered`→顯示、`onDragExited`／`onDragDone`→隱藏）時出現，用 `IgnorePointer` 避免擋住點擊；**`_busy` 為真時 `onDragEntered` 不顯示遮罩**（不先邀請再拒絕，審查 I-3），使用者仍放開時由 `onDragDone` 顯示忙碌提示。`onDragDone`：`files` 為空→忽略；匯入進行中（`_busy`）→顯示 `importDropBusyMessage` 的 SnackBar 並返回；否則設 `_busy = true`，呼叫 `importDroppedPaths(widget.importService, 路徑清單, confirmAutoGroup: () => context.mounted ? confirmAutoGroupByFolderName(context) : Future.value(null))`，結果為 `null` 就結束；`!mounted` 時 `discardUpdateCandidates` 後返回；否則 `showImportResultSnackBar` 再 `handleImportUpdateCandidates`，最後若 `result.importedBooks` 或 `result.updateCandidates` 非空且仍 `mounted`，呼叫 `widget.onImportCompleted?.call()`；`finally` 還原 `_busy`（先檢查 `mounted`）。
 
-- [ ] **Step 1：寫失敗測試**（`debugDefaultTargetPlatformOverride = TargetPlatform.windows`，`addTearDown` 還原；`MaterialApp` 帶 zh_TW locale 與 `AppLocalizations` delegates；`FakeBookImportService`；用 `tester.widget<DropTarget>(find.byType(DropTarget))` 取出並直接呼叫 `onDragEntered`／`onDragExited`／`onDragDone`，事件物件以必要的 `Offset.zero` 位置建構，`DropDoneDetails.files` 用 `DropItemFile(路徑)`）：
+- [ ] **Step 1：寫失敗測試**（`debugDefaultTargetPlatformOverride = TargetPlatform.windows`，`addTearDown` 還原；`MaterialApp` 帶 zh_TW locale 與 `AppLocalizations` delegates；`FakeBookImportService`；用 `tester.widget<DropTarget>(find.byType(DropTarget))` 取出並直接呼叫 `onDragEntered`／`onDragExited`／`onDragDone`，事件物件以必要的 `Offset.zero` 位置建構，`DropDoneDetails.files` 用 `DropItemFile(路徑)`。**型別已查證**：0.8.4 的 `DropDoneDetails.files` 是 `List<DropItem>`（`desktop_drop-0.8.4/lib/src/drop_target.dart:17`），`DropItemFile` 由套件匯出；不可改用 `XFile`，`List<XFile>` 不能指派給 `List<DropItem>`，無法編譯）：
   - `非 Windows 不掛載 DropTarget`：預設平台（Android）下 `find.byType(DropTarget)` 找不到、child 正常顯示。
   - `enabled 為 false 時 DropTarget.enable 為 false`。
   - `拖曳經過顯示遮罩，離開後消失`：斷言 `Key('import_drop_overlay')` 與 `importDropOverlayText`。
   - `拖入書檔：呼叫 importFiles 並顯示匯入結果提示`。
   - `匯入進行中再拖入：不再呼叫 importFiles，顯示 importDropBusyMessage`：用 `FakeBookImportService.pendingCompleter` 卡住第一次匯入。
+  - `匯入進行中拖曳經過：不顯示遮罩`：`pendingCompleter` 卡住第一次匯入，再觸發 `onDragEntered`，斷言 `Key('import_drop_overlay')` 不存在；此時 `onDragDone` 仍顯示 `importDropBusyMessage`。
+  - `匯入有新書時呼叫 onImportCompleted；沒有新書與更新候選時不呼叫；匯入失敗（failure）時不呼叫`。
   - `拖入的 files 為空：不呼叫任何匯入、不顯示任何 SnackBar`。
   - `拖入資料夾：跳出確認框，按確認後呼叫 importFolder`（點 `Key('library_import_folder_confirm')`）；`按取消：importFolder 沒被呼叫`。
   - `匯入未完成時卸載 widget：不丟例外`（Completer 完成前把 widget 樹換掉，再完成 Completer，斷言測試無未捕捉例外）。
-  - `匯入結果含更新候選但已卸載：呼叫 discardUpdateCandidates`（以 `FakeBookImportService` 現有記錄方式斷言；若 fake 沒有對應記錄欄位則在 Step 3 一併補上）。
+  - `匯入結果含更新候選但已卸載：呼叫 discardUpdateCandidates`（以 `FakeBookImportService.discardedCandidates` 斷言，該欄位已存在）。
 - [ ] **Step 2：執行確認失敗**：`flutter test test/screens/support/import_drop_target_test.dart`；預期編譯失敗。
 - [ ] **Step 3：實作。** 先 `flutter pub add desktop_drop:0.8.4`（或手改 pubspec 後 `flutter pub get`），檢查 `git diff app/pubspec.lock` 並還原與 `desktop_drop` 無關的版本降級；四個 arb 補兩個新鍵、`flutter gen-l10n`；建立 `import_drop_target.dart`，行為如上。
 - [ ] **Step 4：執行確認通過**：同 Step 2 指令；`flutter analyze` 乾淨；`node tool/check_l10n_hardcoded_strings.js` PASS。
-- [ ] **Step 5：Commit**：明確列出 `app/pubspec.yaml`、`app/pubspec.lock`、四個 arb、`app/lib/l10n/app_localizations*.dart`（僅限有變更者）、`import_drop_target.dart`、其測試（以及 Step 3 若動到的 `fake_book_import_service.dart`），訊息 `feat(import): ImportDropTarget 與 desktop_drop 0.8.4（epic-66 Issue 5 Task 6）`。
+- [ ] **Step 5：Commit**：明確列出 `app/pubspec.yaml`、`app/pubspec.lock`、四個 arb、`app/lib/l10n/app_localizations*.dart`（僅限有變更者）、`import_drop_target.dart`、其測試，訊息 `feat(import): ImportDropTarget 與 desktop_drop 0.8.4（epic-66 Issue 5 Task 6）`。
 
 ---
 
@@ -198,14 +200,16 @@
 - Test: `app/test/screens/adaptive_shell_scaffold_test.dart`
 
 **Interfaces：**
-- Consumes: Task 6 的 `ImportDropTarget`。
+- Consumes: Task 6 的 `ImportDropTarget`（含 `onImportCompleted`）；既有 `_libraryRefreshSignal`（`LibraryScreen` 只在此訊號觸發時重載書單，目前只有 `_navigateTo(0)` 會觸發，見審查 C-1）。
 
 - [ ] **Step 1：寫失敗測試**（沿用該檔既有的建構方式；Windows 平台 override）：
+  - `停在書架分頁拖入新書後，書單重新載入`：以該檔既有的 fake `LibraryRepository` 記錄 `listBooks` 呼叫次數（若沒有此記錄則在測試內包一層），觸發 `ImportDropTarget` 的 `onDragDone` 並讓 fake 匯入服務回傳有新書的結果，斷言匯入完成後 `listBooks` 次數增加，且全程沒有切換分頁。
+  - `匯入沒有新書時不觸發書單重載`。
   - `Windows：書架分頁（index 0）DropTarget 啟用`、`切到來源分頁（index 1）仍啟用`、`切到設定分頁（index 2）停用`。
   - `Windows：切換分頁後書架畫面的 State 沒有被重建`（在 `LibraryScreen` 內留一個可辨識的狀態，例如既有可操作的 Key，切到設定再切回，狀態仍在；若該檔已有同類保持狀態的測試，補一條 Windows 版）。
   - `非 Windows：find.byType(DropTarget) 找不到`。
 - [ ] **Step 2：執行確認失敗**：`flutter test test/screens/adaptive_shell_scaffold_test.dart`。
-- [ ] **Step 3：實作。** 用 `ImportDropTarget(importService: widget.readerFeatures.bookImportService, isEinkMode: widget.appearance.isEinkMode, enabled: _currentIndex != 2, child: IndexedStack(...))` 包住原本的 `IndexedStack`，其他不動。
+- [ ] **Step 3：實作。** 用 `ImportDropTarget(importService: widget.readerFeatures.bookImportService, isEinkMode: widget.appearance.isEinkMode, enabled: _currentIndex != 2, onImportCompleted: () => _libraryRefreshSignal.notifyListeners(), child: IndexedStack(...))` 包住原本的 `IndexedStack`，其他不動。
 - [ ] **Step 4：執行確認通過**：同 Step 2 指令。
 - [ ] **Step 5：Commit**：`git add app/lib/screens/adaptive_shell_scaffold.dart app/test/screens/adaptive_shell_scaffold_test.dart`，訊息 `feat(import): 書架與來源分頁接受拖曳匯入（epic-66 Issue 5 Task 7）`。
 
