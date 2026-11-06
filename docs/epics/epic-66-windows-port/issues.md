@@ -8,6 +8,8 @@
 | 2 | Windows Metadata 背景解析：EPUB 用 foliate-js、PDF 封面用 `pdfrx`，並與 Android Readium 逐本對比 | Issue 1 | ✅ 已合併 | #384 |
 | 3 | 閱讀器開書與全文索引器的「整本回傳」記憶體：驗證是否洩漏，洩漏則修正（來源 Issue 2 審查發現） | Issue 2 | ✅ 已合併（量測確認閱讀器洩漏，修法移至 Issue 4） | #396 |
 | 4 | Windows 書檔改由本機 loopback HTTP 伺服器（`shelf`）服務，消除「整本回傳」洩漏（來源 Issue 3 報告） | Issue 3 | ✅ 已合併 | #397 |
+| 5 | Windows 檔案與資料夾匯入：選檔、選資料夾、拖曳三種方式，書檔維持原路徑，不支援格式略過並提示 | Issue 4 | 🟡 規劃中（spec／plan 待審查） | — |
+| 6 | Flutter 升級至 ≥ 3.47.7（評估與遷移）：`onReorder` 棄用、built-in Kotlin／AGP 9、Windows 預設 Impeller、外掛相容 | Issue 5 | ⚪ 未開始（尚未規劃） | — |
 
 ## Issue 1 範圍
 
@@ -142,11 +144,71 @@ Issue 3 已實證：閱讀器開書以 `shouldInterceptRequest` 整本回傳 224
 - JS：`bookBaseUrl` 未帶時 `openBook()` 使用的網址與現狀逐字相同（以現有 JS 測試台或純函式抽出後測試）。
 - Windows 整合測試（`-d windows`）：沿用 `reader_leak_test.dart`，修法後把 `[leak-verdict]` 改為斷言 `leaked == false`。
 
+## Issue 5 範圍
+
+讓 Windows 使用者能用**選檔、選資料夾、拖曳**三種方式把書放進書架，三者進同一條匯入管線，行為與 Android 對齊。設計決策來自 2026-11-06 `/grill-with-docs`，詞彙見 `CONTEXT.md`「拖曳匯入」，決策見 `epic.md` 決策 5（修訂）與 25。細節見 `plans/plan-issue-5.md`。
+
+**已確認的現況（查證過程見 plan）：**
+
+- 選檔：`pickAndImportFiles` 在 Issue 1 Task 8 已取 `identifier ?? path`，Windows 已可選檔，本 Issue 只補驗證。
+- 選資料夾：Windows 沒有可用路徑——`pickAndImportFolder` 走 Android 原生 `elinkbook/folder_picker`，`importFolder` 先呼叫 `persistReadAccess`（原生 channel，Windows 會拋 `MissingPluginException`，且該例外不會被轉成 `false`）再呼叫原生 `listFolderContents`。
+- 拖曳：完全沒有，專案沒有任何拖放套件。
+- 匯入入口在「來源」畫面（`sources_home_screen.dart`），書架畫面沒有匯入按鈕。三個畫面（書架、來源、設定）由 `AdaptiveShellScaffold` 的 `IndexedStack` 同時掛載。
+- 不支援的格式：`_importSingleFile` 對無法辨識的格式回傳 `null`，目前**無聲略過、沒有計數**；Android 的資料夾匯入不過濾副檔名，也是如此。
+
+**做法：**
+
+1. **`ImportResult` 新增 `skippedUnsupportedCount`**（預設 0）。`importFiles`／`importFolder` 在去重之前先判斷格式，無法辨識就計數並略過。結果提示 `showImportResultSnackBar` 另起一行說明略過幾個，與「略過重複」分開。此行為跨平台（Android 資料夾匯入也會多出提示）。
+2. **本機資料夾匯入走 `dart:io`。** `importFolder` 收到不以 `content://` 開頭的資料夾路徑時，不呼叫 `persistReadAccess` 與原生 `listFolderContents`，改用 `Directory.listSync` 只列第一層檔案（不進子資料夾、不跟隨連結），資料夾名稱取路徑最後一段。目錄不存在或不可讀回 `folderListingFailed`。`content://` 路徑逐字不變，Android 行為不受影響。
+3. **選資料夾對話框改為可注入。** `pickAndImportFolder` 新增選用參數 `pickFolderPath`，預設在 Windows 用 `FilePicker.getDirectoryPath()`、其他平台維持原生 channel。
+4. **拖曳匯入。** 新增純邏輯 `importDroppedPaths`（把拖入的路徑分成檔案與資料夾；檔案走 `importFiles`；每個資料夾走 `importFolder`；整批只問一次「依資料夾名稱自動分類」；取消確認框則整批取消；結果合併成一個 `ImportResult`）與 `ImportDropTarget` widget（包 `desktop_drop` 的 `DropTarget`，只在 Windows 啟用，拖曳經過顯示「放開以匯入」遮罩，匯入中再拖入忽略並提示，匯入後沿用既有的結果提示與「疑似更新版」流程）。
+5. **只在書架與來源畫面有效。** `ImportDropTarget` 包住 `AdaptiveShellScaffold` 的 `IndexedStack`，設定分頁、以及任何疊在上方的路由（閱讀器、對話框）都停用。
+6. **書檔不複製，維持原路徑**（`epic.md` 決策 5 修訂）。Windows「來源」畫面在匯入區塊旁常駐一行說明文字：書檔仍使用原本位置，搬動或刪除原檔後該書將無法開啟。
+7. **新增依賴 `desktop_drop` 0.8.4**（固定版本，不用 `^`）。0.9.x 要求 Flutter ≥ 3.47.7，與專案固定的 3.41.9 不相容；0.8.4 不依賴 `win32`。
+
+不在範圍：
+
+- 雲端匯入（Google Drive／OneDrive）。
+- 資料夾遞迴匯入子資料夾。
+- 閱讀器與設定畫面的拖曳。
+- 匯入進度條、可取消的匯入、匯入排隊。
+- Flutter 升級（Issue 6）。`pubspec.lock` 與本機 Flutter 3.41.9 的既有落差（單純 `pub get` 會降級 `intl`、`meta`、`pdfrx_engine` 等 6 個套件）也留給 Issue 6，本 Issue 不處理。
+- 拖曳匯入的端對端自動化測試：真實的 OS 拖放無法在 `flutter test` 或 `integration_test` 中模擬，改由人工驗證清單。
+
+## Issue 5 過關條件
+
+1. **選檔（Windows）：** 用選檔對話框選多個 `.epub`／`.pdf`／`.txt`／`.cbz`／`.azw3`／`.md`，全部出現在書架，`Book.filePath` 是標準本機路徑（不是 `file:///`），開書正常。
+2. **選資料夾（Windows）：** 選一個含書與非書檔案的資料夾，先出現「依資料夾名稱自動分類」確認框；匯入後只含該資料夾第一層的書，子資料夾內的書不匯入；勾選自動分類時書歸入以資料夾名命名的分類。選不存在或無權限的資料夾，提示資料夾匯入失敗而不是崩潰或無聲無息。
+3. **拖曳檔案：** 把多個書檔拖進「書架」與「來源」畫面都能匯入；拖進「設定」畫面、閱讀器、任何對話框之上都不響應。
+4. **拖曳資料夾：** 行為與選資料夾一致（含確認框）；同一次拖入多個資料夾只跳一次確認框，選擇套用到全部，每個資料夾各自成為一個分類；混合拖入檔案與資料夾時，單檔不歸入分類；取消確認框則整批都不匯入。
+5. **不支援的格式：** 拖入或資料夾裡的 `.jpg`、`.zip` 等一律略過，不產生書、不報錯；匯入結束提示說明略過幾個，且與「略過重複」分開顯示。Android 的資料夾匯入同樣會顯示此提示。
+6. **匯入中再拖入：** 忽略新的拖入並提示「匯入進行中，請稍後再拖入」，不重複匯入、不崩潰。
+7. **視覺回饋：** 拖曳經過視窗時顯示「放開以匯入」遮罩；離開或放開後消失。
+8. **疑似更新版與重複：** 拖入既有書的更新版或完全相同的檔案，行為與選檔匯入一致（跳更新確認或計入略過重複）。
+9. **提醒文字：** Windows 的「來源」畫面常駐說明「書檔維持原位置，搬動或刪除原檔後該書將無法開啟」；Android 看不到這行。
+10. **Android 行為不變：** `content://` 的選檔與選資料夾路徑逐字不變（除了新增的「略過不支援」提示）；`DropTarget` 在非 Windows 不掛載；既有測試全綠。
+11. **人工驗證（Windows 實機，結果記入 `issue-5-report.md`）：** 條件 1 到 9 逐項實測，特別是真實的拖放（單檔、多檔、資料夾、混合、拖到設定畫面、匯入中再拖）。
+
+## Issue 5 單元測試要求
+
+- `ImportResult`：`skippedUnsupportedCount` 預設 0，既有建構呼叫不受影響。
+- `BookImportServiceImpl.importFiles`：混入 `.jpg` 的清單，書只匯入可辨識格式、`skippedUnsupportedCount` 等於不可辨識的個數；不可辨識的檔案不計入 `skippedDuplicateCount`。
+- `BookImportServiceImpl.importFolder`（本機路徑，用暫存目錄）：只匯入第一層；子資料夾內的書不匯入；`folderName` 為資料夾名稱；`autoGroupByFolderName` 為真時建立分類；非書檔計入 `skippedUnsupportedCount`；不存在的目錄回 `folderListingFailed`；全程不呼叫 `kBookMetadataChannel`（用會失敗的 mock 證明）。
+- `importFolder`（`content://`）：既有測試不變。
+- `pickAndImportFolder`：注入 `pickFolderPath` 回傳路徑時，路徑原樣傳給 `importFolder`；回傳 `null` 時整體回 `null` 且不問確認框。
+- `showImportResultSnackBar`：只有略過不支援、與其他計數並存、全為 0 三種情況的訊息文字。
+- `importDroppedPaths`：只有檔案（不問確認框）、只有資料夾、混合、多資料夾只問一次、取消確認框整批取消且不呼叫任何匯入、結果合併（書、兩種略過計數、更新候選相加；失敗只在「無檔案且所有資料夾皆失敗」時才設）。
+- `ImportDropTarget`（widget test，`debugDefaultTargetPlatformOverride = windows`）：非 Windows 不掛載 `DropTarget`；`enabled: false` 時不響應；拖曳經過顯示遮罩、離開消失；匯入中再拖入不呼叫匯入並顯示提示；匯入完成顯示結果提示。
+- `AdaptiveShellScaffold`：停留在書架與來源分頁時拖曳啟用，切到設定分頁時停用。
+- `SourcesHomeScreen`：Windows 顯示提醒文字，其他平台不顯示。
+- l10n：四個 arb（`app_zh_TW`、`app_zh`、`app_zh_CN`、`app_en`）都有新字串，`flutter gen-l10n` 成功；`check_l10n_hardcoded_strings.js` PASS。
+
 ## 後續 Issue（待 Issue 1 結果決定）
 
 - ~~生產級送書伺服器~~：Issue 1 實測攔截可行（決策 15），不做。大檔整本位元組尖峰（224 MB 書約 3.8 GB）若要改善，另開「分段服務」Issue；洩漏驗證見 Issue 3。
-- 檔案匯入與資料夾匯入：取 `f.identifier ?? f.path`；資料夾用 `getDirectoryPath()` 加 `dart:io`，不寫原生 channel；`Book.filePath` 存本機路徑。
+- ~~檔案匯入與資料夾匯入~~（已納入 Issue 5，上方有完整設計；原註記：取 `f.identifier ?? f.path`；資料夾用 `getDirectoryPath()` 加 `dart:io`，不寫原生 channel；`Book.filePath` 存本機路徑。）
 - 鍵盤快捷鍵與 F11（先確認 `window_manager` 與 `win32` 5.15.0 相容）。
 - 平台專屬功能的隱藏。
 - Windows 版 `integration_test` 冒煙測試。
 - 免安裝 zip 打包。
+- Flutter 升級（Issue 6）：先用 `flutter pub outdated` 與 `pub get --dry-run` 盤點；升級後 `desktop_drop` 可改用最新版；一併處理 `pubspec.lock` 與 Flutter 版本的落差；Windows 預設 Impeller 下重驗 WebView2 閱讀器；`onReorder` 改 `onReorderItem`；built-in Kotlin／AGP 9 的 Android 建置；先查 3.47.8 的安全公告再選修補版本；升級前須與人類確認（`CLAUDE.md`）。
