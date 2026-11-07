@@ -14,7 +14,7 @@
 | 8 | 索引器在 Windows 讓整個 App 消失：根因是漏登錄 JS 會呼叫的處理器（Windows 外掛遇到未登錄處理器會結束程序）；已診斷並修正，報告見 [issue-8-report.md](issue-8-report.md) | Issue 4 | ✅ 已合併（大檔索引、背景排程端到端、Android 尚未實測） | #400 |
 | 9 | WebView2 未安裝時顯示說明與下載連結（決策 4，原本漏掉） | Issue 7 | ✅ 已合併（Windows 實機以空 Runtime 資料夾模擬驗證通過；乾淨機器、重新檢查成功後進入 App 尚未實測） | #401 |
 | 10 | 平台專屬功能隱藏：音量鍵翻頁、E-Ink 高對比與影像濾鏡、螢幕方向鎖定、「全螢幕模式」偏好項；並處理 Windows 呼叫 Android 原生全螢幕 channel 未處理例外 | Issue 7 | ✅ 已合併（Windows 實機確認尚未做，見 [issue-10-report.md](issue-10-report.md)） | #402 |
-| 11 | Windows 測試穩定性：追查 `local_book_server_test.dart` 偶發失敗與 `pdf_reader_view_filters_test.dart`（`main` 上同樣失敗），為 Issue 6 建立乾淨基準 | 無 | ⚪ 未開始（尚未規劃） | — |
+| 11 | Windows 測試穩定性：追查 `local_book_server_test.dart` 偶發失敗與 `pdf_reader_view_filters_test.dart`（`main` 上同樣失敗），為 Issue 6 建立乾淨基準；已查出根因是這台機器的 `127.0.0.1` 連線被重設，並新增開書逾時驗證 | 無 | 🟡 已規劃，待實作（見 [plan-issue-11.md](plans/plan-issue-11.md)） | — |
 | 12 | Android 也改用 foliate-js 讀 metadata、移除 Readium（`readium-shared`／`readium-streamer`、`BookMetadataChannel.kt`）：**第一步先補真實出版社書籍的 Readium 對比，通過才移除**；需 Android 實機 | Issue 6 | ⚪ 未開始（尚未規劃） | — |
 | 13 | Windows `integration_test` 冒煙測試（每種格式：開書、翻頁、劃線） | Issue 6、8、9、10 | ⚪ 未開始（尚未規劃） | — |
 | 14 | 免安裝 zip 打包 | Issue 13 | ⚪ 未開始（尚未規劃） | — |
@@ -341,6 +341,34 @@ Windows 版隱藏只有手機有意義的控制項，並停止呼叫 Windows 上
 - `SettingsScaffold`：Windows 無 `settings_eink_mode_switch`；Android 有。
 - `ElinkBookApp`：Windows 傳入 `initialEinkMode: true` 仍套用一般主題；Android 套用 E-Ink 主題。
 - `ReaderScreen`：Windows 開啟再關閉後，兩個 channel 的假處理器收到 0 次呼叫；Android 仍收到。
+
+## Issue 11 範圍
+
+2026-11-07 診斷發現：`local_book_server_test.dart` 的隨機失敗（`Connection closed before full header was received`）不是程式錯誤。這台開發機的 `127.0.0.1` TCP 連線約 20～30% 被重設；純 Node 對純 Node 也一樣，改連 `127.0.0.2`、`::1`、區網 IP 則 0 失敗。肇因（Tailscale、Hyper-V 虛擬網卡、Defender 等）尚未查明。生產程式 `LocalBookServer` 預設綁 `127.0.0.1`，WebView2 取書走同一條路，可能與未解的「開書逾時」有關（尚未驗證）。
+
+1. **診斷工具：** `app/tool/check_loopback_reliability.js`，對 `127.0.0.1`、`127.0.0.2`、`::1`、區網 IP 各打 N 次本機 HTTP 請求，列出成功與被重設的次數。
+2. **實驗開關：** `LocalBookServer.instance` 的綁定位址可用 `--dart-define=LOCAL_BOOK_SERVER_BIND=<IP>` 指定，預設仍是 `127.0.0.1`；無效值退回預設。
+3. **測試穩定：** `local_book_server_test.dart` 在 Windows 改綁 `127.0.0.2`（其他平台維持 `127.0.0.1`），讓全套測試在這台機器穩定。
+4. **`pdf_reader_view_filters_test.dart`：** 嘗試重現；重現不了就記為「無法重現」，不盲目修改。
+5. **乾淨基準：** 修完後跑一次全套 `flutter test`，記錄剩餘失敗，作為 Issue 6 的比對基準。
+6. **開書逾時實驗（需人在電腦前）：** 預設與 `127.0.0.2` 各冷啟動 5 次、開同一本書，記錄成功與逾時次數，寫入 `issue-11-report.md`。
+7. **不處理：** 正式程式的預設綁定位址要不要改、要不要加連線重試——等實驗結果出來，另開決定。
+
+## Issue 11 過關條件
+
+1. `node tool/check_loopback_reliability.js` 在這台機器上，`127.0.0.1` 列有被重設的次數，其餘三列為 0。
+2. 不帶 `LOCAL_BOOK_SERVER_BIND` 時，`LocalBookServer.instance` 綁 `127.0.0.1`，行為與現況完全相同。
+3. Windows 上連跑 `local_book_server_test.dart` 5 次，全部通過。
+4. 其他平台的 `local_book_server_test.dart` 仍綁 `127.0.0.1`。
+5. `pdf_reader_view_filters_test.dart` 有明確結論：已修，或「無法重現」並記錄嘗試次數。
+6. 全套 `flutter test` 結果與剩餘失敗項目寫入報告。
+7. 開書逾時實驗的次數與結果如實記錄；資料不足時寫「不能確定」。
+
+## Issue 11 單元測試要求
+
+- `LocalBookServer.bindAddressFromDefine(String)`：`'127.0.0.2'` 回傳該位址；空字串回傳 `127.0.0.1`；非 IP 字串（例如 `'abc'`）回傳 `127.0.0.1`，不拋例外。
+- `local_book_server_test.dart` 既有 11 個測試改用「測試綁定位址」後全數通過；`bookBaseUri.host` 的斷言改比對實際位址。
+- 診斷腳本不另寫單元測試，以實際執行輸出驗證。
 
 ## 後續 Issue（待 Issue 1 結果決定）
 
