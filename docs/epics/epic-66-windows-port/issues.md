@@ -13,7 +13,7 @@
 | 7 | Windows 鍵盤快捷鍵與 F11 視窗全螢幕：翻頁類按鍵、Ctrl+F、F11，Esc 依序處理浮層與全螢幕 | Issue 5 | ✅ 已合併（Windows 人工驗證 2026-11-06 使用者回報通過，F11／Esc 在 WebView2 有焦點時可用） | #399 |
 | 8 | 索引器在 Windows 讓整個 App 消失：根因是漏登錄 JS 會呼叫的處理器（Windows 外掛遇到未登錄處理器會結束程序）；已診斷並修正，報告見 [issue-8-report.md](issue-8-report.md) | Issue 4 | ✅ 已合併（大檔索引、背景排程端到端、Android 尚未實測） | #400 |
 | 9 | WebView2 未安裝時顯示說明與下載連結（決策 4，原本漏掉） | Issue 7 | ✅ 已合併（Windows 實機以空 Runtime 資料夾模擬驗證通過；乾淨機器、重新檢查成功後進入 App 尚未實測） | #401 |
-| 10 | 平台專屬功能隱藏：音量鍵翻頁、E-Ink 高對比與影像濾鏡、螢幕方向鎖定、「全螢幕模式」偏好項；並處理 Windows 呼叫 Android 原生全螢幕 channel 未處理例外 | Issue 7 | ⚪ 未開始（尚未規劃） | — |
+| 10 | 平台專屬功能隱藏：音量鍵翻頁、E-Ink 高對比與影像濾鏡、螢幕方向鎖定、「全螢幕模式」偏好項；並處理 Windows 呼叫 Android 原生全螢幕 channel 未處理例外 | Issue 7 | 🟡 已規劃，待實作（見 [plan-issue-10.md](plans/plan-issue-10.md)） | — |
 | 11 | Windows 測試穩定性：追查 `local_book_server_test.dart` 偶發失敗與 `pdf_reader_view_filters_test.dart`（`main` 上同樣失敗），為 Issue 6 建立乾淨基準 | 無 | ⚪ 未開始（尚未規劃） | — |
 | 12 | Android 也改用 foliate-js 讀 metadata、移除 Readium（`readium-shared`／`readium-streamer`、`BookMetadataChannel.kt`）：**第一步先補真實出版社書籍的 Readium 對比，通過才移除**；需 Android 實機 | Issue 6 | ⚪ 未開始（尚未規劃） | — |
 | 13 | Windows `integration_test` 冒煙測試（每種格式：開書、翻頁、劃線） | Issue 6、8、9、10 | ⚪ 未開始（尚未規劃） | — |
@@ -309,6 +309,38 @@ Windows 啟動時檢查 WebView2 Runtime，缺少或建立環境失敗時顯示�
   - 多語系切換（`en`、`zh_TW`）。
 - 多語系一致性：`test/l10n/arb_consistency_test.dart` 通過（四檔鍵一致、`zh` 鏡像 `zh_TW`、`en` 無漏翻）。
 - 硬編碼中文字串檢查：`node tool/check_l10n_hardcoded_strings.js` 全數 PASS。
+
+## Issue 10 範圍
+
+Windows 版隱藏只有手機有意義的控制項，並停止呼叫 Windows 上不存在的 Android 原生 channel。
+
+1. **統一判斷：** 新增 `supportsMobileReaderControls`（`lib/platform/platform_support.dart`），Windows 為 `false`，其他平台為 `true`。
+2. **閱讀預設值畫面：** Windows 隱藏「音量鍵翻頁」開關、「螢幕方向」區塊、「全螢幕模式」開關。
+3. **版面設定面板：** Windows 隱藏「螢幕方向」列與「全螢幕模式」開關（流式 `ReaderSettingsSheet`、固定版面 `FxlSettingsSheet`、`PdfSettingsSheet` 各自的全螢幕開關）。
+4. **PDF 設定面板：** Windows 隱藏整個「濾鏡」分頁（對比度、亮度、加粗），分頁數由 3 變 2。
+5. **E-Ink：** Windows 隱藏設定畫面的「E-Ink 高對比模式」開關；`ElinkBookApp` 啟動時一律視為關閉，即使本機殘留已開啟的值。
+6. **原生 channel：** Windows 的 `ReaderScreen` 不呼叫 `elinkbook/volume_key`（`setMethodCallHandler`、`notifyLeavingReader`）、`elinkbook/fullscreen`（`setEnabled`），也不呼叫 `SystemChrome.setPreferredOrientations`。
+7. **不處理：** 已存進資料庫的單書 `fullscreen`、`screenOrientationOverride`、`pdfContrast` 等值不清除，也不遷移；Windows 新安裝沒有這些值。F11 視窗全螢幕（Issue 7）不變。
+8. **不新增字串：** 只隱藏既有控制項，不動 ARB。
+
+## Issue 10 過關條件
+
+1. Windows 上，閱讀預設值畫面看不到音量鍵、螢幕方向、全螢幕三項；其餘項目（翻頁模式、文字轉換、開啟上次書籍、頁首、頁尾）仍可操作。
+2. Windows 上，三種版面設定面板看不到全螢幕開關；流式面板看不到螢幕方向列；PDF 面板只剩「顯示」與「裁切」兩個分頁。
+3. Windows 上，設定畫面看不到 E-Ink 開關；啟動後主題永遠不是 E-Ink。
+4. Windows 上進出閱讀器，不呼叫任何 `elinkbook/volume_key`、`elinkbook/fullscreen` channel，主控台沒有 `MissingPluginException`。
+5. Android 與其他平台所有控制項與行為完全不變（既有測試不改一行）。
+6. Windows 實機人工確認以上畫面，記錄在 `issue-10-report.md`。
+
+## Issue 10 單元測試要求
+
+- `supportsMobileReaderControls`：Windows 為 `false`，Android、iOS 為 `true`（`test/platform/platform_support_test.dart`）。
+- `ReadingDefaultsScreen`：Windows 三個 Key 不存在、其餘 Key 存在；Android 全部存在。
+- `ReaderSettingsSheet`、`FxlSettingsSheet`、`PdfSettingsSheet`：Windows 全螢幕開關不存在；流式面板的螢幕方向列不存在；Android 都存在。
+- `PdfSettingsSheet`：Windows 只有 2 個分頁，切到「裁切」分頁不拋例外；Android 3 個分頁。
+- `SettingsScaffold`：Windows 無 `settings_eink_mode_switch`；Android 有。
+- `ElinkBookApp`：Windows 傳入 `initialEinkMode: true` 仍套用一般主題；Android 套用 E-Ink 主題。
+- `ReaderScreen`：Windows 開啟再關閉後，兩個 channel 的假處理器收到 0 次呼叫；Android 仍收到。
 
 ## 後續 Issue（待 Issue 1 結果決定）
 
