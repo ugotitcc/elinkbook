@@ -24,7 +24,7 @@ node run-all.mjs
 
 - 步驟 1 不能省：`run-all.mjs` 會用 PATH 裡的 `node` 起子程序。
 - 不要用 `pnpm exec`：測試台用 `package-lock.json`，pnpm 的依賴檢查會失敗。改用 `npx` 或 `node`。
-- 在 Git Bash 裡 PATH 不同，請用 PowerShell。
+- 在 Git Bash 裡 PATH 不同；目前這台機器的 Git Bash 內 `node` 也可直接使用（v26.13），診斷類腳本在哪個殼層跑都可以，需要 pnpm 內建 Node 的步驟（測試台、`run-all.mjs`）仍請用 PowerShell。
 
 ## `check_integration_keys.js`
 
@@ -163,6 +163,42 @@ ARB 本身的一致性（四份鍵集合與 `{placeholder}` 名稱一致、`app_
 
 這類遺漏仍需靠 code review 與人工盤點；本腳本只保證「最常見的 Widget 字串參數
 位置」不會再漏。
+
+## `check_loopback_reliability.js`
+
+量測本機 loopback 連線可靠度。某些 Windows 機器的 `127.0.0.1` 上，帶 `Connection: close` 的 TCP 連線會被隨機重設
+（`ECONNRESET` 或空回應），導致 `test/reader/local_book_server_test.dart` 隨機失敗（epic-66 Issue 11）。
+
+### 何時該執行
+
+`local_book_server_test.dart` 隨機出現 `Connection closed before full header was received`，或懷疑本機網路軟體干擾本機連線時。
+
+### 執行方式
+
+```bash
+cd app
+node tool/check_loopback_reliability.js              # 每列 100 次請求
+node tool/check_loopback_reliability.js --count 50   # 指定次數
+```
+
+對 `127.0.0.1`、`127.0.0.2`、`::1`、第一個非內部的 IPv4 位址各啟動一個本機 HTTP 伺服器，每個位址跑兩種模式、每次新連線：
+`close`（請求帶 `Connection: close`，由伺服器主動關閉）與 `keepalive`（請求帶 `Connection: keep-alive`，由客戶端關閉）。
+
+結束碼：0 `127.0.0.1` 兩種模式都沒有失敗；1 `127.0.0.1` 有失敗。
+
+### 怎麼看輸出
+
+```text
+127.0.0.1        close      ok=36  reset:ECONNRESET=14
+127.0.0.1        keepalive  ok=50
+127.0.0.2        close      ok=50
+...
+```
+
+- 只有 `127.0.0.1` 的 `close` 列有失敗、其他列正常：本機有軟體干擾 `127.0.0.1` 上由伺服器主動關閉的連線。
+  使用 keep-alive 的客戶端（例如瀏覽器）不一定受影響，是否影響 Windows 版開書要另外驗證。
+- 每一列都有失敗：整個網路堆疊都不穩，先查網卡驅動與防火牆。
+- 無法綁定（例如沒有 IPv6）只是該列略過，不算失敗。
 
 ## `bump_version.js`
 
