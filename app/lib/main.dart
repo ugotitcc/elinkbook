@@ -555,7 +555,9 @@ class _ElinkBookAppState extends State<ElinkBookApp>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _theme = widget.initialTheme;
-    _isEinkMode = widget.initialEinkMode;
+    // epic-66 Issue 10：Windows 沒有 E-Ink 入口，本機殘留的「已開啟」值一律忽略，
+    // 否則使用者會卡在無法關閉的高對比主題。
+    _isEinkMode = widget.initialEinkMode && supportsMobileReaderControls;
     _localeOverride = widget.initialLocaleOverride;
   }
 

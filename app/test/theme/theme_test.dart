@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -129,6 +130,48 @@ void main() {
     // brightness 為 light（高對比黑白用 light scheme）
     expect(materialApp.theme?.brightness, Brightness.light);
   });
+
+  testWidgets(
+    'Windows 即使本機殘留 E-Ink 模式為開啟，ElinkBookApp 仍套用一般主題（epic-66 Issue 10）',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'app_theme': 'dark',
+        'app_eink_mode': true,
+      });
+      final prefs = AppThemePreferences();
+      final theme = await prefs.loadTheme();
+      final eink = await prefs.loadEinkMode();
+      expect(eink, isTrue); // 前置條件：殘留值確實為 true
+
+      // 平台覆寫須在測試本體內還原（Flutter 於 tearDown 之前檢查 foundation 變數）
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await tester.pumpWidget(
+          ElinkBookApp(
+            dependencies: fakeAppDependencies(
+              sources: fakeSourceDependencies(),
+              readerFeatures: fakeReaderFeatureDependencies(
+                libraryRepository: FakeLibraryRepository(),
+                bookImportService: FakeBookImportService(),
+                prefsManager: prefsManager,
+              ),
+              sync: fakeSyncDependencies(),
+            ),
+            initialTheme: theme,
+            initialEinkMode: eink,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final materialApp =
+            tester.widget<MaterialApp>(find.byType(MaterialApp));
+        // 一般 dark 主題，而不是 E-Ink 的 light 純白
+        expect(materialApp.theme?.brightness, Brightness.dark);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
 
   testWidgets(
     'SettingsScreen「佈景」主題切換按鈕點擊更新 preferences（原位於 LibraryScreen AppBar，'
