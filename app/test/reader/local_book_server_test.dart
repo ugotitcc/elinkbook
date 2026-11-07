@@ -309,4 +309,20 @@ void main() {
       }
     });
   });
+
+  // epic-66 Issue 11：`--dart-define=LOCAL_BOOK_SERVER_BIND` 的解析。
+  // 只接受 IPv4 loopback，其餘一律退回 127.0.0.1，避免把書檔服務暴露到區網。
+  group('bindAddressFromDefine', () {
+    test("'127.0.0.2' 回傳該位址", () {
+      final address = LocalBookServer.bindAddressFromDefine('127.0.0.2');
+      expect(address.address, '127.0.0.2');
+    });
+
+    for (final value in ['', 'abc', '0.0.0.0', '192.168.1.5', '::1']) {
+      test("'$value' 退回 127.0.0.1 且不拋例外", () {
+        final address = LocalBookServer.bindAddressFromDefine(value);
+        expect(address, InternetAddress.loopbackIPv4);
+      });
+    }
+  });
 }
