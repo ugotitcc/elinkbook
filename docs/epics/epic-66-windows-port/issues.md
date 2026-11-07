@@ -344,29 +344,29 @@ Windows 版隱藏只有手機有意義的控制項，並停止呼叫 Windows 上
 
 ## Issue 11 範圍
 
-2026-11-07 診斷發現：`local_book_server_test.dart` 的隨機失敗（`Connection closed before full header was received`）不是程式錯誤。這台開發機的 `127.0.0.1` TCP 連線約 20～30% 被重設；純 Node 對純 Node 也一樣，改連 `127.0.0.2`、`::1`、區網 IP 則 0 失敗。肇因（Tailscale、Hyper-V 虛擬網卡、Defender 等）尚未查明。生產程式 `LocalBookServer` 預設綁 `127.0.0.1`，WebView2 取書走同一條路，可能與未解的「開書逾時」有關（尚未驗證）。
+2026-11-07 診斷發現：`local_book_server_test.dart` 的隨機失敗（`Connection closed before full header was received`）不是程式錯誤。這台開發機的 `127.0.0.1` TCP 連線約 20～30% 被重設；純 Node 對純 Node 也一樣，改連 `127.0.0.2`、`::1`、區網 IP 則 0 失敗。審查補做的對照顯示：只有請求帶 `Connection: close` 時才會被重設，keep-alive 是 0 失敗。肇因（Tailscale、Hyper-V 虛擬網卡、Defender 等）尚未查明。生產程式 `LocalBookServer` 預設綁 `127.0.0.1`，WebView2（Chromium）用 keep-alive，所以是否影響 Windows 版開書尚未證實；這台機器的 Windows 版預設本來就會「開書逾時」（2026-11-07 兩次實機觀察），是否相關要用對照實驗確認。記憶中的「二次開書逾時」是 Android 症狀，與本問題無直接關係。
 
-1. **診斷工具：** `app/tool/check_loopback_reliability.js`，對 `127.0.0.1`、`127.0.0.2`、`::1`、區網 IP 各打 N 次本機 HTTP 請求，列出成功與被重設的次數。
-2. **實驗開關：** `LocalBookServer.instance` 的綁定位址可用 `--dart-define=LOCAL_BOOK_SERVER_BIND=<IP>` 指定，預設仍是 `127.0.0.1`；無效值退回預設。
+1. **診斷工具：** `app/tool/check_loopback_reliability.js`，對 `127.0.0.1`、`127.0.0.2`、`::1`、區網 IP 各打 N 次本機 HTTP 請求（分 `Connection: close` 與 keep-alive 兩種模式），列出成功與被重設的次數。
+2. **實驗開關：** `LocalBookServer.instance` 的綁定位址可用 `--dart-define=LOCAL_BOOK_SERVER_BIND=<IP>` 指定，預設仍是 `127.0.0.1`；只接受 IPv4 loopback，無效值、非 loopback（例如 `0.0.0.0`、區網 IP）與 IPv6 一律退回預設。
 3. **測試穩定：** `local_book_server_test.dart` 在 Windows 改綁 `127.0.0.2`（其他平台維持 `127.0.0.1`），讓全套測試在這台機器穩定。
 4. **`pdf_reader_view_filters_test.dart`：** 嘗試重現；重現不了就記為「無法重現」，不盲目修改。
 5. **乾淨基準：** 修完後跑一次全套 `flutter test`，記錄剩餘失敗，作為 Issue 6 的比對基準。
-6. **開書逾時實驗（需人在電腦前）：** 預設與 `127.0.0.2` 各冷啟動 5 次、開同一本書，記錄成功與逾時次數，寫入 `issue-11-report.md`。
+6. **開書逾時對照實驗（需人在電腦前）：** 先冒煙確認 `127.0.0.2` 版能渲染；再以交錯順序（A、B、A、B…）各冷啟動 5 次、開同一本書，另各做一輪同一次啟動連開 3 次，記錄成功與逾時、各階段耗時，寫入 `issue-11-report.md`。
 7. **不處理：** 正式程式的預設綁定位址要不要改、要不要加連線重試——等實驗結果出來，另開決定。
 
 ## Issue 11 過關條件
 
-1. `node tool/check_loopback_reliability.js` 在這台機器上，`127.0.0.1` 列有被重設的次數，其餘三列為 0。
+1. `node tool/check_loopback_reliability.js` 在這台機器上，`127.0.0.1` 的 `close` 列有被重設的次數，`127.0.0.1` 的 `keepalive` 列與其餘位址各列為 0。
 2. 不帶 `LOCAL_BOOK_SERVER_BIND` 時，`LocalBookServer.instance` 綁 `127.0.0.1`，行為與現況完全相同。
 3. Windows 上連跑 `local_book_server_test.dart` 5 次，全部通過。
 4. 其他平台的 `local_book_server_test.dart` 仍綁 `127.0.0.1`。
 5. `pdf_reader_view_filters_test.dart` 有明確結論：已修，或「無法重現」並記錄嘗試次數。
 6. 全套 `flutter test` 結果與剩餘失敗項目寫入報告。
-7. 開書逾時實驗的次數與結果如實記錄；資料不足時寫「不能確定」。
+7. 開書逾時實驗的次數與結果如實記錄；沒有明顯的對照差異或樣本不足時寫「不能確定」，不寫「已解決」。
 
 ## Issue 11 單元測試要求
 
-- `LocalBookServer.bindAddressFromDefine(String)`：`'127.0.0.2'` 回傳該位址；空字串回傳 `127.0.0.1`；非 IP 字串（例如 `'abc'`）回傳 `127.0.0.1`，不拋例外。
+- `LocalBookServer.bindAddressFromDefine(String)`：`'127.0.0.2'` 回傳該位址；空字串回傳 `127.0.0.1`；非 IP 字串（`'abc'`）、非 loopback（`'0.0.0.0'`、`'192.168.1.5'`）與 IPv6（`'::1'`）都回傳 `127.0.0.1`，不拋例外。
 - `local_book_server_test.dart` 既有 11 個測試改用「測試綁定位址」後全數通過；`bookBaseUri.host` 的斷言改比對實際位址。
 - 診斷腳本不另寫單元測試，以實際執行輸出驗證。
 
