@@ -375,32 +375,32 @@ Windows 版隱藏只有手機有意義的控制項，並停止呼叫 Windows 上
 
 2026-11-07 盤點發現：這台機器的共用 SDK `C:\tools\flutter` 從 2026-10-23 起就是 Flutter 3.47.4，近期工作與全套測試（5118 個，0 失敗）都在 3.47.4 上通過；`CLAUDE.md` 寫的 3.41.9 已過時。所以本 Issue 的實質工作是：把共用 SDK 升到含安全公告修補的 3.47.9，把剩下的棄用與建置問題收乾淨，並讓政策文件對齊現況。使用者決定（2026-11-07）直接升級共用的 `C:\tools\flutter`。
 
-1. **升級共用 SDK 到 3.47.9。** 3.47.8 含安全公告 GHSA-frr6-h895-5pxp（Dart 執行環境的 BoringSSL 封鎖被入侵的 eMudhra 中繼 CA 憑證；Android、Windows、Linux 應用升級後重新建置）；3.47.6 修正 Windows 正式版 App 卡死。回退點是 `9584c6713b`（3.47.4）；`C:\src\flutter-3.41.9` 保留不刪。
+1. **升級共用 SDK 到 3.47.9**（用 `flutter upgrade --force`；`C:\tools\flutter` 有 119 筆 untracked，不加 `--force` 會被拒；不要用 `git checkout` 到標籤，會讓 HEAD detached）。3.47.8 含安全公告 GHSA-frr6-h895-5pxp（Dart 執行環境的 BoringSSL 封鎖被入侵的 eMudhra 中繼 CA 憑證；Android、Windows、Linux 應用升級後重新建置）；3.47.6 修正 Windows 正式版 App 卡死。回退點是 `9584c6713b`（3.47.4），回退用 `git reset --hard`（留在 `stable` 分支），需要網路重新下載引擎；`C:\src\flutter-3.41.9` 保留不刪。
 2. **回歸基準：** 只換 SDK、不改程式，先跑 `flutter pub get`、`flutter analyze`、全套 `flutter test`，與 3.47.4 基準（5118 個、0 失敗、2 個 info）比對。
-3. **`onReorder` → `onReorderItem`：** 只有 `dictionary_settings_screen.dart` 一處；行為不變，既有 3 個重排測試不改斷言，另補一個「往前拖」的測試。
+3. **`onReorder` → `onReorderItem`：** 只有 `dictionary_settings_screen.dart` 一處；行為不變，既有 3 個重排測試（全是往前拖）不改斷言，另補 3 個「往後拖」測試（拖到最後一格、往後一格、原地放開）。
 4. **Windows 建置不再需要手動設 `CL=/utf-8`：** 在 `windows/CMakeLists.txt` 為 MSVC 加 `/utf-8`；先重現失敗，再驗證修好；若在 3.47.9 已不需要，則記錄後略過。
-5. **`desktop_drop` 0.8.4 → 0.9.2**（0.9.x 要求 Flutter ≥ 3.47.7），維持固定版本。
+5. **`desktop_drop` 0.8.4 → 0.9.2**（使用者審查後仍決定升級），維持固定版本。0.9.x 是 API 破壞性改寫（要求 Dart ≥ 3.13.5、依賴 `cross_file ^0.4.0`；`onDragDone` → 必要的非同步 `onDrop`、`files` → `items`、`enable` → `enabled`、`onDragEntered/Exited` → `onEnter/onLeave`；provider 與暫存檔只在 `onDrop` 期間有效），所以要改寫 `import_drop_target.dart` 與 2 個測試檔，匯入必須整段在 `onDrop` 的 Future 內完成。**關卡：** SDK 升級後 `pub get` 若解析失敗（`cross_file` 與 `file_picker` 衝突），退回 0.8.4、列為後續，其餘 Task 照常完成。
 6. **建置驗證：** `flutter build apk --debug`（沒有 Android 裝置，只到建置成功；AGP 8.11.1、Kotlin 2.3.20、Gradle 8.14 的警告逐條記錄）與 `flutter build windows --debug`。
-7. **Windows 開書冒煙：** 3.47.9 的 Windows debug 版冷啟動 5 次、自動還原上次的書，記錄成功與耗時。
+7. **Windows 實機確認（需人在電腦前）：** 3.47.9 的 Windows debug 版冷啟動 5 次、自動還原上次的書，記錄成功與耗時；另請使用者實機拖曳匯入（單檔、多檔、資料夾、不支援格式、zip 內虛擬檔案、文字、匯入中再拖）。
 8. **政策文件：** 更新 `CLAUDE.md` 的 Flutter 版本段落、`epic.md` 新增決策 28、撰寫 `issue-6-report.md`。
-9. **不處理：** `pdfrx` 2.4.7→2.12.0、`file_picker` 11→13、`window_manager` 0.5.2→0.6.0（大跳版）；`sqflite`、`url_launcher`（只差 patch）；AGP 9／built-in Kotlin 遷移；Android 真機驗證。
+9. **不處理：** `pdfrx` 2.4.7→2.12.0、`file_picker` 11→13、`window_manager` 0.5.2→0.6.0（大跳版）；`sqflite`、`url_launcher`（只差 patch）；AGP 9／built-in Kotlin 遷移；Android 真機驗證；Windows 虛擬檔案（zip 內拖出）的匯入支援（只要求不崩潰）。
 
 ## Issue 6 過關條件
 
 1. `flutter --version` 顯示 3.47.9，`flutter doctor` 的 Android、Windows、Visual Studio 仍為 ✓；回退指令寫在報告。
 2. 只換 SDK 時，`pub get` 無鎖檔變動、`flutter analyze` 只有 2 個 info、全套 `flutter test` 5118 個 0 失敗；有差異就逐項記錄。
 3. 全專案 `flutter analyze` 只剩 `use_null_aware_elements` 這 1 個 info（`onReorder` 棄用消失）。
-4. 詞典拖曳排序的結果與現況完全相同（既有 3 個測試加新增 1 個，共 4 個通過）。
+4. 詞典拖曳排序的結果與現況完全相同（既有 3 個測試不改斷言，加新增 3 個，共 6 個通過）。
 5. 沒有 `CL` 環境變數時 `flutter build windows --debug` 成功；設了 `CL=/utf-8` 時也成功。（或報告記載該問題已不存在。）
-6. `desktop_drop` 為 0.9.2，`import_drop_target_test.dart` 全過，`pubspec.lock` 只有 `desktop_drop` 相關變動。
+6. `desktop_drop` 為 0.9.2（或因關卡退回而維持 0.8.4 並有記錄），`import_drop_target_test.dart` 與 `adaptive_shell_scaffold_test.dart` 全過；`pubspec.lock` 只有 `desktop_drop`、`cross_file` 系列與 `sdks:` 下限的變動；Windows 實機拖曳（單檔、多檔、資料夾、不支援格式、忙碌提示）使用者回報通過，zip 虛擬檔案與文字拖入不崩潰。
 7. `flutter build apk --debug` 成功，警告清單寫進報告；報告不得寫「Android 已驗證」，只能寫「建置成功」。
-8. Windows 開書冒煙 5 次的結果如實記錄；全套 `flutter test` 5119 個（基準 5118 加 1）0 失敗。
+8. Windows 開書冒煙 5 次的結果如實記錄（用語限定為「冷啟動開書 5／5」，不外推）；全套 `flutter test` 5124 個（基準 5118 加 Task 3 的 3 個、Task 5 的 3 個）0 失敗。
 9. `CLAUDE.md` 的 Flutter 版本為 3.47.9，且不再有「`onReorderItem` 在 3.41.9 不存在」的警告。
 
 ## Issue 6 單元測試要求
 
-- `dictionary_settings_screen_test.dart`：既有 3 個拖曳排序測試不改斷言並全過；新增 `往前拖曳（排後面的詞典拖到最前面）後 reorder 傳入新的 id 順序`。
-- `import_drop_target_test.dart`：升級 `desktop_drop` 後既有測試全過。
+- `dictionary_settings_screen_test.dart`：既有 3 個拖曳排序測試不改斷言並全過；新增 `往後拖曳（第一個拖到最後一格）後 reorder 傳入 [b, c, a]`、`往後拖曳一格後 reorder 傳入 [b, a, c]`、`原地放開（位移很小）不呼叫 reorder`，且三者在 `onReorder` 版本上必須先通過。
+- `import_drop_target_test.dart`、`adaptive_shell_scaffold_test.dart`：機械改寫到 `desktop_drop` 0.9.2 的 API（斷言與測試名稱不改）後全過；`import_drop_target_test.dart` 新增 `onDrop 回傳的 Future 在匯入完成前不會完成`、`沒有本機路徑的項目（localPath 為 null）被略過，不呼叫 importFiles`、`只有文字項目不呼叫 importFiles`。
 - 建置與冒煙驗證（`CL`、Android、Windows 開書）以實際執行輸出驗證，不另寫單元測試。
 
 ## 後續 Issue（待 Issue 1 結果決定）
