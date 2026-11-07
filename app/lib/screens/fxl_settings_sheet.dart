@@ -8,6 +8,7 @@ import '../reader/text_conversion_mode.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_option_chip_group.dart';
 import 'widgets/text_conversion_icon.dart';
+import '../platform/platform_support.dart';
 
 /// EPUB 固定版面（FXL 漫畫）專屬的精簡版設定 Bottom Sheet（見
 /// docs/epics/epic-16-dual-page/spec.md「模組」段落）：提供「雙頁模式」
@@ -257,19 +258,21 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               ),
               const SizedBox(height: 16),
             ],
-            EBFieldCard(
-              padding: EdgeInsets.zero,
-              child: SwitchListTile(
-                key: const Key('fxl_settings_fullscreen'),
-                title: Text(l10n.readerFullscreenModeLabel,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                value: _fullscreen,
-                onChanged: (v) => setState(() {
-                  _fullscreen = v;
-                  _notifyChanged();
-                }),
+            // epic-66 Issue 10：Windows 沒有 Android 沉浸模式，隱藏全螢幕偏好
+            if (supportsMobileReaderControls)
+              EBFieldCard(
+                padding: EdgeInsets.zero,
+                child: SwitchListTile(
+                  key: const Key('fxl_settings_fullscreen'),
+                  title: Text(l10n.readerFullscreenModeLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  value: _fullscreen,
+                  onChanged: (v) => setState(() {
+                    _fullscreen = v;
+                    _notifyChanged();
+                  }),
+                ),
               ),
-            ),
             EBFieldCard(
               padding: EdgeInsets.zero,
               child: SwitchListTile(

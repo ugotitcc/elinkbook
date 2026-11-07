@@ -19,6 +19,7 @@ import 'widgets/eb_field_card.dart';
 import 'widgets/eb_option_chip_group.dart';
 import 'widgets/eb_stepper.dart';
 import 'widgets/text_conversion_icon.dart';
+import '../platform/platform_support.dart';
 
 /// 版面設定 Bottom Sheet（FR-09／FR-10 字型、數值型控制項與三個持久化覆寫
 /// 選擇器），比照 prototype/index.html 第 1379-1520 行設計。
@@ -654,19 +655,22 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       shrinkWrap: true,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
-        EBFieldCard(
-          padding: EdgeInsets.zero,
-          child: SwitchListTile(
-            key: const Key('reader_settings_fullscreen'),
-            title: Text(l10n.readerFullscreenModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
-            value: _fullscreen,
-            onChanged: (v) => setState(() {
-              _fullscreen = v;
-              _notifyChanged();
-            }),
+        // epic-66 Issue 10：Windows 沒有 Android 沉浸模式，隱藏全螢幕偏好（F11 另有處理）
+        if (supportsMobileReaderControls) ...[
+          EBFieldCard(
+            padding: EdgeInsets.zero,
+            child: SwitchListTile(
+              key: const Key('reader_settings_fullscreen'),
+              title: Text(l10n.readerFullscreenModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
+              value: _fullscreen,
+              onChanged: (v) => setState(() {
+                _fullscreen = v;
+                _notifyChanged();
+              }),
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
+        ],
         _buildColumnModeRow(),
         const SizedBox(height: 8),
         _buildTextAlignRow(),
@@ -705,8 +709,11 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         const SizedBox(height: 8),
         _buildWritingModeOverrideRow(),
         const SizedBox(height: 8),
-        _buildScreenOrientationOverrideRow(),
-        const SizedBox(height: 8),
+        // epic-66 Issue 10：Windows 不鎖定螢幕方向
+        if (supportsMobileReaderControls) ...[
+          _buildScreenOrientationOverrideRow(),
+          const SizedBox(height: 8),
+        ],
         _buildPageTurnModeOverrideRow(),
         const SizedBox(height: 8),
         _buildTextConversionOverrideRow(),

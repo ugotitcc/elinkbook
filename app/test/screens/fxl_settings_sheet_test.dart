@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
@@ -667,6 +668,26 @@ void _fxlFullFieldGuardTests() {
       expect(changed!.textConversionOverride, isNull);
       expectPrefsPreserved(changed, fullBookReaderPrefsSeed,
           except: {'text_conversion_override'});
+    });
+  });
+
+  group('Windows 隱藏全螢幕開關（epic-66 Issue 10）', () {
+    testWidgets('預設平台（Android）：顯示全螢幕開關', (tester) async {
+      await _pumpModalSheet(tester, BookReaderPrefs.empty, (_) {});
+      expect(find.byKey(const Key('fxl_settings_fullscreen')), findsOneWidget);
+    });
+
+    testWidgets('Windows：沒有全螢幕開關，其他開關仍在', (tester) async {
+      // 平台覆寫須在測試本體內還原（Flutter 於 tearDown 之前檢查 foundation 變數）
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await _pumpModalSheet(tester, BookReaderPrefs.empty, (_) {});
+        expect(find.byKey(const Key('fxl_settings_fullscreen')), findsNothing);
+        expect(find.byKey(const Key('fxl_settings_show_footer')),
+            findsOneWidget);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
   });
 }
