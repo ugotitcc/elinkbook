@@ -320,7 +320,7 @@ Windows 版隱藏只有手機有意義的控制項，並停止呼叫 Windows 上
 4. **PDF 設定面板：** Windows 隱藏整個「濾鏡」分頁（對比度、亮度、加粗），分頁數由 3 變 2。
 5. **E-Ink：** Windows 隱藏設定畫面的「E-Ink 高對比模式」開關；`ElinkBookApp` 啟動時一律視為關閉，即使本機殘留已開啟的值。
 6. **原生 channel：** Windows 的 `ReaderScreen` 不呼叫 `elinkbook/volume_key`（`setMethodCallHandler`、`notifyLeavingReader`）、`elinkbook/fullscreen`（`setEnabled`），也不呼叫 `SystemChrome.setPreferredOrientations`。
-7. **不處理：** 已存進資料庫的單書 `fullscreen`、`screenOrientationOverride`、`pdfContrast` 等值不清除，也不遷移；Windows 新安裝沒有這些值。F11 視窗全螢幕（Issue 7）不變。
+7. **不處理：** 已存進資料庫的單書 `fullscreen`、`screenOrientationOverride`、`pdfContrast` 等值不清除，也不遷移；Windows 新安裝沒有這些值。F11 視窗全螢幕（Issue 7）不變。「關於」頁的 `elinkbook/app_info`（建置時間、WebView 版本）在 Windows 顯示錯誤文字，以及 TXT 封面直接讀 E-Ink 殘留值，都是已知限制，本 Issue 不處理。
 8. **不新增字串：** 只隱藏既有控制項，不動 ARB。
 
 ## Issue 10 過關條件
