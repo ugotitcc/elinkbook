@@ -19,6 +19,7 @@
 | 13 | Windows `integration_test` 冒煙測試（每種格式：開書、翻頁、劃線） | Issue 6、8、9、10 | ⚪ 未開始（尚未規劃） | — |
 | 14 | 免安裝 zip 打包 | Issue 13 | ⚪ 未開始（尚未規劃） | — |
 | 15 | `pdf_reader_view_filters_test.dart` 加粗覆蓋圖偶發失敗查根因：整批跑 `test/reader` 約 1／3 機率失敗（等背景 Isolate 結果 120 輪仍無 `RawImage`），等待上限已放寬兩次仍偶發，疑 `PdfReaderView` 加粗佇列有競態（來源 Issue 11） | 無 | ⚪ 未開始（尚未規劃） | — |
+| 16 | `desktop_drop` 0.9 與 `cross_file` 0.4 遷移：`desktop_drop` 0.9.x 要求 `cross_file ^0.4.0`（破壞性更新），與 `file_picker`、`share_plus`、`share_plus_platform_interface`（含最新版）要求的 `cross_file ^0.3.x` 衝突，需 vendor 修補三個套件並改寫拖曳匯入（來源 Issue 6） | Issue 6 | ⚪ 未開始（尚未規劃，不排程） | — |
 
 ## Issue 1 範圍
 
@@ -411,6 +412,12 @@ Windows 版隱藏只有手機有意義的控制項，並停止呼叫 Windows 上
 - 平台專屬功能的隱藏（已登錄為 Issue 10）。
 - Windows 版 `integration_test` 冒煙測試（已登錄為 Issue 13）。
 - 免安裝 zip 打包（已登錄為 Issue 14）。
+- **`desktop_drop` 0.9 與 `cross_file` 0.4 遷移（已登錄為 Issue 16，2026-11-07，不排程）。**
+  - 阻礙：`cross_file` 0.4.0 是破壞性更新（移除 `XFile(String path)`、`XFile.path`、`XFile.mimeType`、`XFile.fromData`，`XFile.name` 變非同步）。`desktop_drop` 0.9.x、`file_picker`、`share_plus`、`share_plus_platform_interface` 目前都依賴 `cross_file ^0.3.x`；`file_picker` 最新 13.3.2、`share_plus` 最新 13.3.1 也還沒支援 0.4，所以升版解決不了，`pub get` 解析失敗（Issue 6 審查時以 `pub get --dry-run` 確認）。
+  - 已知做法：vendor 修補三個套件，用 `dependency_overrides` 指向 `patches/`（先例：`patches/flutter_inappwebview_android`、`third_party/dict_reader`）。`file_picker` 11.0.3 的 `platform_file.dart` 之 `xFile` 取值（約 5 行，專案沒用到 `xFile`／`xFiles`）；`share_plus_platform_interface` 6.1.0 的 `method_channel_share.dart`（`.path`、`.mimeType`、`.name`、`XFile(path)`，約 15～20 行）；`share_plus` 11.1.0 只有 web 版檔案用到舊 API，只需改 pubspec 約束。專案內 `notes_bottom_sheet.dart:194` 的 `XFile(path, mimeType: 'text/markdown')` 改為 `XFile.fileSystem(path:)`（0.4 沒有 `mimeType`，Markdown 的 mimeType 要由修補後的套件依副檔名推斷或明確傳入）。
+  - `import_drop_target.dart` 改寫成 0.9 的 API：`onDragDone(DropDoneDetails)` → 必要的非同步 `onDrop(DropDetails)`、`files` → `items`（`DropFileItem`／`DropDirectoryItem`／`DropStringItem`，`localPath` 可為 null）、`enable` → `enabled`、`onDragEntered/Exited` → `onEnter/onLeave`。**provider 與暫存檔只在 `onDrop` 期間有效，整段匯入必須在 `onDrop` 回傳的 Future 內完成。** 測試需先呼叫 `CrossFileIO.registerWith()`，`DropDirectoryItem` 需帶 `XDirectory.fileSystem(path:)`；`import_drop_target_test.dart` 約 6 個有對話框或擱置匯入的測試，不能直接 `await onDrop(...)`，要先取 Future、`pump`、再等。
+  - 風險：Android 分享的 mimeType 行為會變、沒有 Android 裝置可驗證、長期維護修補；`cross_file` 0.4 會多拉進 `cross_file_android` 等外掛。
+  - 出路與影響：官方 `file_picker`、`share_plus` 支援 `cross_file` 0.4 後，可用一般方式升級，不需要修補。**不做 Issue 16 也不會壞任何東西**：`desktop_drop` 0.8.4 沒有缺我們需要的功能（0.9 新增的是 iOS／Android 拖曳與虛擬檔案支援）。唯一的小風險是 0.9.1 修過一個只在部分 Flutter 引擎出現的 Windows 啟動崩潰，Issue 6 的 Windows 冷啟動冒煙會偵測 3.47.9 引擎是否受影響。
 - 索引器跑不完（Issue 8，已合併 #400）、WebView2 缺少提示（Issue 9，已合併 #401）、測試穩定性（Issue 11）、Android 統一 metadata（Issue 12）：2026-11-06 登錄，尚未規劃。
 - **預定執行順序：** ~~8~~ → ~~9~~ → ~~10~~ → ~~11~~ → 6 → 12 → 13 → 14（先補齊功能，再升級 Flutter，冒煙測試與打包放在最終版本上做）。
 - 不做：「分段服務」（大檔開書記憶體尖峰，224 MB 書約 3.8 GB），記為已知限制，遇到再議。

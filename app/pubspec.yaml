@@ -162,11 +162,14 @@ dependencies:
   # 螢幕常亮（epic-44-wifi-book-transfer）：WiFi 傳書畫面顯示中防止螢幕
   # 休眠中斷傳輸，對應 design.md「前景執行穩健度」承諾。
   wakelock_plus: ^1.5.2
-  # 桌面拖曳匯入（epic-66 Issue 5）：固定 0.8.4（0.9.x 要求 Flutter >= 3.47.7，
-  # 升級見 Issue 6）。
+  # 桌面拖曳匯入（epic-66 Issue 5）：固定 0.8.4，不使用 ^。0.9.x 要求
+  # cross_file ^0.4.0（破壞性更新），與 file_picker、share_plus 等套件要求的
+  # cross_file ^0.3.x 衝突，pub get 無法解析；升級需要 vendor 修補那幾個套件，
+  # 另立 Issue 16（見 docs/epics/epic-66-windows-port/issues.md）。
   desktop_drop: 0.8.4
-  # 視窗全螢幕控制（epic-66 Issue 7）：固定 0.5.2（不使用 ^，0.6.0 要求
-  # Flutter >= 3.47.7，升級見 Issue 6）。
+  # 視窗全螢幕控制（epic-66 Issue 7）：固定 0.5.2（不使用 ^）。0.6.0 要求
+  # Flutter >= 3.47.7（Issue 6 已把 SDK 升到 3.47.9，滿足），但它是大跳版，
+  # Issue 6 刻意不升，升級另議。
   window_manager: 0.5.2
   # 外部連結開啟（epic-66 Issue 9）：WebView2 缺失說明畫面開瀏覽器下載。
   url_launcher: ^6.3.2
