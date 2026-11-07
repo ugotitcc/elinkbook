@@ -53,11 +53,11 @@
 **Interfaces:**
 - Produces: `bool get supportsMobileReaderControls`（Windows 為 `false`，其他平台為 `true`），後續所有 Task 使用。
 
-- [ ] **Step 1: 寫失敗測試。** 在既有 `platform_support_test.dart` 新增 `supportsMobileReaderControls 在 Windows 為 false，Android 與 iOS 為 true`：用 `debugDefaultTargetPlatformOverride` 依序設為 `windows`、`android`、`iOS`，各自 `expect`；`tearDown` 沿用該檔既有的還原寫法。
-- [ ] **Step 2: 執行確認失敗。** `flutter test test/platform/platform_support_test.dart`，預期編譯失敗（getter 不存在）。
-- [ ] **Step 3: 實作。** 在 `platform_support.dart` 加 `bool get supportsMobileReaderControls => !isWindowsPlatform;`，附一段中文 doc 註解，列出五項功能（音量鍵、螢幕方向鎖定、全螢幕模式偏好、PDF 濾鏡、E-Ink）。
-- [ ] **Step 4: 執行確認通過。** 同 Step 2 指令，預期全過。
-- [ ] **Step 5: Commit。**
+- [x] **Step 1: 寫失敗測試。** 在既有 `platform_support_test.dart` 新增 `supportsMobileReaderControls 在 Windows 為 false，Android 與 iOS 為 true`：用 `debugDefaultTargetPlatformOverride` 依序設為 `windows`、`android`、`iOS`，各自 `expect`；`tearDown` 沿用該檔既有的還原寫法。
+- [x] **Step 2: 執行確認失敗。** `flutter test test/platform/platform_support_test.dart`，預期編譯失敗（getter 不存在）。
+- [x] **Step 3: 實作。** 在 `platform_support.dart` 加 `bool get supportsMobileReaderControls => !isWindowsPlatform;`，附一段中文 doc 註解，列出五項功能（音量鍵、螢幕方向鎖定、全螢幕模式偏好、PDF 濾鏡、E-Ink）。
+- [x] **Step 4: 執行確認通過。** 同 Step 2 指令，預期全過。
+- [x] **Step 5: Commit。**
 
 ```bash
 git add app/lib/platform/platform_support.dart app/test/platform/platform_support_test.dart
@@ -76,14 +76,14 @@ git commit -m "feat(platform): 新增 supportsMobileReaderControls（epic-66 Iss
 - Consumes: Task 1 的 `supportsMobileReaderControls`。
 - Produces: 無新公開介面。Key 不變：`reading_defaults_volume_key_switch`、`reading_defaults_screen_orientation_*`、`reading_defaults_fullscreen_switch`。
 
-- [ ] **Step 1: 寫失敗測試。** 在既有檔案新增兩個測試，沿用該檔既有的 `MaterialApp` 與 `FakeReaderPrefsManager` 建構寫法：
+- [x] **Step 1: 寫失敗測試。** 在既有檔案新增兩個測試，沿用該檔既有的 `MaterialApp` 與 `FakeReaderPrefsManager` 建構寫法：
   - `Windows 隱藏音量鍵、螢幕方向、全螢幕，其餘開關仍在`：設 `TargetPlatform.windows`（`try/finally` 還原為 `null`），`find.byKey` 斷言 `reading_defaults_volume_key_switch`、`reading_defaults_screen_orientation_lock90`、`reading_defaults_fullscreen_switch` 為 `findsNothing`；`reading_defaults_open_last_book_switch`、`reading_defaults_show_header_switch`、`reading_defaults_show_footer_switch`、`reading_defaults_page_turn_mode_scroll`、`reading_defaults_text_conversion_original` 為 `findsOneWidget`。
   - `Windows 改動其他開關不覆寫被隱藏的值`：`FakeReaderPrefsManager` 以 `volumeKeyEnabled: false`、`screenOrientation: lock90`、`fullscreen: true` 起始；Windows 下點 `reading_defaults_show_header_switch`；斷言假管理器最後儲存的 `reading` 三個值仍是 `false`、`lock90`、`true`。
   - Android 對照由既有測試負責，不重寫。
-- [ ] **Step 2: 執行確認。** `flutter test test/screens/reading_defaults_screen_test.dart`。第一個測試必須失敗（紅）。第二個是防回歸護欄：既有 `_update` 只用 `copyWith` 改單一欄位，所以它在實作前就會通過，這是預期的，不是測試寫錯。
-- [ ] **Step 3: 實作。** 在 `reading_defaults_screen.dart` 用 `if (supportsMobileReaderControls) ...[ … ]` 包住：音量鍵 `SwitchListTile`（約第 70 行）、螢幕方向的 section header 與 `RadioGroup`（約第 107～151 行）、全螢幕 `SwitchListTile`（約第 182 行）。其餘不動；已寫回的 `copyWith` 本來就只改自己的欄位。每個 collection-if 連同其前後相鄰的 `Divider` 一起包。
-- [ ] **Step 4: 執行確認通過。** 同 Step 2 指令，新舊測試全過。
-- [ ] **Step 5: Commit。**
+- [x] **Step 2: 執行確認。** `flutter test test/screens/reading_defaults_screen_test.dart`。第一個測試必須失敗（紅）。第二個是防回歸護欄：既有 `_update` 只用 `copyWith` 改單一欄位，所以它在實作前就會通過，這是預期的，不是測試寫錯。
+- [x] **Step 3: 實作。** 在 `reading_defaults_screen.dart` 用 `if (supportsMobileReaderControls) ...[ … ]` 包住：音量鍵 `SwitchListTile`（約第 70 行）、螢幕方向的 section header 與 `RadioGroup`（約第 107～151 行）、全螢幕 `SwitchListTile`（約第 182 行）。其餘不動；已寫回的 `copyWith` 本來就只改自己的欄位。每個 collection-if 連同其前後相鄰的 `Divider` 一起包。
+- [x] **Step 4: 執行確認通過。** 同 Step 2 指令，新舊測試全過。
+- [x] **Step 5: Commit。**
 
 ```bash
 git add app/lib/screens/reading_defaults_screen.dart app/test/screens/reading_defaults_screen_test.dart
@@ -103,15 +103,15 @@ git commit -m "feat(windows): 閱讀預設值畫面隱藏音量鍵、螢幕方�
 - Consumes: Task 1 的 `supportsMobileReaderControls`。
 - Produces: 無新公開介面。Key 不變：`reader_settings_fullscreen`、`fxl_settings_fullscreen`。
 
-- [ ] **Step 1: 寫失敗測試。**
+- [x] **Step 1: 寫失敗測試。**
   - `reader_settings_sheet_test.dart` 新增 `Windows 隱藏全螢幕開關與螢幕方向列`：用該檔既有的 `_pumpSheet` 輔助；**先 `await switchToTab(tester, '呈現')`**（兩者都在第 3 個分頁「呈現」，分頁內容是 `IndexedStack`，沒切過去 `find` 一律找不到，測試會假綠），必要時再用該檔既有寫法捲動；然後斷言 `reader_settings_fullscreen` 為 `findsNothing`，且 `find.text(l10n.readerSettingsScreenOrientationLabel)` 為 `findsNothing`。
   - `reader_settings_sheet_test.dart` 新增對照 `預設平台顯示全螢幕開關與螢幕方向列`：同樣先切到「呈現」，兩者各 `findsOneWidget`。
   - `fxl_settings_sheet_test.dart` 新增 `Windows 隱藏全螢幕開關` 與對照 `預設平台顯示全螢幕開關`，用該檔既有的 `_pumpModalSheet`。
   - 每個 Windows 測試都 `try/finally` 還原 `debugDefaultTargetPlatformOverride = null`。
-- [ ] **Step 2: 執行確認失敗。** `flutter test test/screens/reader_settings_sheet_test.dart test/screens/fxl_settings_sheet_test.dart`，預期兩個 Windows 測試失敗，對照測試通過。若流式面板的 Windows 測試在實作前就是綠的，代表沒切到「呈現」分頁，先修測試再往下。
-- [ ] **Step 3: 實作。** 兩個檔案都用 collection-if `if (supportsMobileReaderControls) …` 包住上述三處，連同相鄰的 `SizedBox`（`reader_settings_sheet.dart` 全螢幕卡片後的 `SizedBox(height: 8)`、螢幕方向列前後的 `SizedBox`）一起包。`_buildScreenOrientationOverrideRow()` 方法本身保留不動，只是不呼叫。
-- [ ] **Step 4: 執行確認通過。** 同 Step 2 指令；另跑兩個檔案全部既有測試，預期全過。
-- [ ] **Step 5: Commit。**
+- [x] **Step 2: 執行確認失敗。** `flutter test test/screens/reader_settings_sheet_test.dart test/screens/fxl_settings_sheet_test.dart`，預期兩個 Windows 測試失敗，對照測試通過。若流式面板的 Windows 測試在實作前就是綠的，代表沒切到「呈現」分頁，先修測試再往下。
+- [x] **Step 3: 實作。** 兩個檔案都用 collection-if `if (supportsMobileReaderControls) …` 包住上述三處，連同相鄰的 `SizedBox`（`reader_settings_sheet.dart` 全螢幕卡片後的 `SizedBox(height: 8)`、螢幕方向列前後的 `SizedBox`）一起包。`_buildScreenOrientationOverrideRow()` 方法本身保留不動，只是不呼叫。
+- [x] **Step 4: 執行確認通過。** 同 Step 2 指令；另跑兩個檔案全部既有測試，預期全過。
+- [x] **Step 5: Commit。**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/lib/screens/fxl_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart app/test/screens/fxl_settings_sheet_test.dart
@@ -130,16 +130,16 @@ git commit -m "feat(windows): 版面設定面板隱藏螢幕方向與全螢幕�
 - Consumes: Task 1 的 `supportsMobileReaderControls`。
 - Produces: 無新公開介面。Key 不變：`pdf_settings_tab_display`、`pdf_settings_tab_filters`、`pdf_settings_tab_crop`、`pdf_settings_fullscreen`。
 
-- [ ] **Step 1: 寫失敗測試。** 沿用該檔既有的 `_pumpSheet`：
+- [x] **Step 1: 寫失敗測試。** 沿用該檔既有的 `_pumpSheet`：
   - `Windows 只有顯示與裁切兩個分頁，切換不拋例外`：斷言 `pdf_settings_tab_filters` 為 `findsNothing`、另外兩個為 `findsOneWidget`；點 `pdf_settings_tab_crop` 後 `pumpAndSettle`，斷言 `tester.takeException()` 為 `null`，且裁切分頁內容出現（用該檔既有裁切分頁的 Key，例如 `pdf_settings_crop_*` 其中之一；先 `grep` 確認實際 Key）。
   - `Windows 水平滑動分頁不拋例外`：在 `TabBarView` 上 `fling` 往左再往右，斷言 `tester.takeException()` 為 `null`。
   - `Windows 隱藏全螢幕開關`：`pdf_settings_fullscreen` 為 `findsNothing`。
   - 對照 `預設平台三個分頁與全螢幕開關都在`。
   - 每個 Windows 測試都 `try/finally` 還原平台覆寫。
-- [ ] **Step 2: 執行確認失敗。** `flutter test test/screens/pdf_settings_sheet_test.dart`，預期 Windows 測試失敗。
-- [ ] **Step 3: 實作。** 在 `initState` 以 `final tabCount = supportsMobileReaderControls ? 3 : 2;` 建 `TabController(length: tabCount, vsync: this)`；`TabBar.tabs` 與 `TabBarView.children` 都對「濾鏡」那一項加 `if (supportsMobileReaderControls)`，順序為顯示、（濾鏡）、裁切。`_buildFiltersTab()` 與 `_contrast`、`_brightness`、`_boldStrength` 保留不動（`_notifyChanged` 仍會把它們原值送回，不會被改成 0）。全螢幕 `SwitchListTile` 同樣包 collection-if，連同相鄰的 `Divider`／`SizedBox`（若有）一起包。
-- [ ] **Step 4: 執行確認通過。** 同 Step 2 指令；另跑該檔全部既有測試，預期全過。
-- [ ] **Step 5: Commit。**
+- [x] **Step 2: 執行確認失敗。** `flutter test test/screens/pdf_settings_sheet_test.dart`，預期 Windows 測試失敗。
+- [x] **Step 3: 實作。** 在 `initState` 以 `final tabCount = supportsMobileReaderControls ? 3 : 2;` 建 `TabController(length: tabCount, vsync: this)`；`TabBar.tabs` 與 `TabBarView.children` 都對「濾鏡」那一項加 `if (supportsMobileReaderControls)`，順序為顯示、（濾鏡）、裁切。`_buildFiltersTab()` 與 `_contrast`、`_brightness`、`_boldStrength` 保留不動（`_notifyChanged` 仍會把它們原值送回，不會被改成 0）。全螢幕 `SwitchListTile` 同樣包 collection-if，連同相鄰的 `Divider`／`SizedBox`（若有）一起包。
+- [x] **Step 4: 執行確認通過。** 同 Step 2 指令；另跑該檔全部既有測試，預期全過。
+- [x] **Step 5: Commit。**
 
 ```bash
 git add app/lib/screens/pdf_settings_sheet.dart app/test/screens/pdf_settings_sheet_test.dart
@@ -159,14 +159,14 @@ git commit -m "feat(windows): PDF 設定面板隱藏濾鏡分頁與全螢幕（e
 - Consumes: Task 1 的 `supportsMobileReaderControls`。
 - Produces: 無新公開介面。
 
-- [ ] **Step 1: 寫失敗測試。**
+- [x] **Step 1: 寫失敗測試。**
   - `settings_scaffold_test.dart`：`Windows 設定畫面沒有 E-Ink 開關`（`settings_eink_mode_switch` 為 `findsNothing`）；對照 `預設平台有 E-Ink 開關`。
   - `ElinkBookApp` 測試（放 `theme_test.dart`）：`Windows 傳入 initialEinkMode: true 仍套用一般主題`——讀 `MaterialApp` 的 `theme` 或 `ThemeData`，斷言它等於 `resolveThemeData(theme: AppTheme.light, isEinkMode: false)` 的結果（沿用該檔取得主題的方式）；對照 `預設平台傳入 initialEinkMode: true 套用 E-Ink 主題`。
   - 平台覆寫一律 `try/finally` 還原。
-- [ ] **Step 2: 執行確認失敗。** `flutter test test/screens/settings_scaffold_test.dart test/theme/theme_test.dart`。
-- [ ] **Step 3: 實作。** `settings_scaffold.dart`：E-Ink 那張 `_SettingsCard` 加 collection-if。`main.dart`：`_isEinkMode = widget.initialEinkMode && supportsMobileReaderControls;`，附中文註解說明「Windows 沒有 E-Ink 入口，殘留的 true 一律忽略」。`main.dart` 其餘（`loadEinkMode()`、`saveEinkMode`）不動。
-- [ ] **Step 4: 執行確認通過。** 同 Step 2 指令；另跑 `flutter test test/theme`，預期全過。
-- [ ] **Step 5: Commit。**
+- [x] **Step 2: 執行確認失敗。** `flutter test test/screens/settings_scaffold_test.dart test/theme/theme_test.dart`。
+- [x] **Step 3: 實作。** `settings_scaffold.dart`：E-Ink 那張 `_SettingsCard` 加 collection-if。`main.dart`：`_isEinkMode = widget.initialEinkMode && supportsMobileReaderControls;`，附中文註解說明「Windows 沒有 E-Ink 入口，殘留的 true 一律忽略」。`main.dart` 其餘（`loadEinkMode()`、`saveEinkMode`）不動。
+- [x] **Step 4: 執行確認通過。** 同 Step 2 指令；另跑 `flutter test test/theme`，預期全過。
+- [x] **Step 5: Commit。**
 
 ```bash
 git add app/lib/screens/settings_scaffold.dart app/lib/main.dart app/test/screens/settings_scaffold_test.dart app/test/theme/theme_test.dart
@@ -189,14 +189,14 @@ git commit -m "feat(windows): 隱藏 E-Ink 開關並強制關閉（epic-66 Issue
 - Consumes: Task 1 的 `supportsMobileReaderControls`。
 - Produces: 無新公開介面。
 
-- [ ] **Step 1: 寫失敗測試。** 在 `reader_screen_keyboard_test.dart`（已是 Windows 導向，`setUp` 已 mock 兩個 channel）新增：
+- [x] **Step 1: 寫失敗測試。** 在 `reader_screen_keyboard_test.dart`（已是 Windows 導向，`setUp` 已 mock 兩個 channel）新增：
   - `Windows 進出閱讀器不呼叫 volume_key 與 fullscreen channel`：測試內**在 `pumpEpubReader` 之前**重新對 `elinkbook/fullscreen` 與 `elinkbook/volume_key` 設 mock handler（蓋掉 `setUp` 那組），把每次 `call.method` 記進 `List<String>`；設 `TargetPlatform.windows`；`pumpEpubReader`（沿用既有 `FakeReaderSurface` 與 `FakeReaderPrefsManager`），`pumpAndSettle`；再 `pumpWidget(const SizedBox())` 卸載（觸發 `dispose`），**接著再 `await tester.pump()`**，避免卸載後才記錄的呼叫晚於斷言造成假綠；斷言記錄清單為空，且 `tester.takeException()` 為 `null`。
   - 對照 `預設平台進出閱讀器仍呼叫 fullscreen setEnabled 與 volume_key`：同樣記錄，不設平台覆寫；斷言記錄包含 `setEnabled`（卸載時）。
   - 平台覆寫 `try/finally` 還原。
-- [ ] **Step 2: 執行確認失敗。** `flutter test test/screens/reader_screen_keyboard_test.dart --plain-name "進出閱讀器"`，預期 Windows 測試失敗（記錄非空）。
-- [ ] **Step 3: 實作。** 七個呼叫點都加 `supportsMobileReaderControls` 判斷：`initState` 與 `dispose` 的 `setMethodCallHandler` 用 `if`；`dispose` 的 `SystemChrome` 與 `setEnabled` 用同一個 `if` 包起來；兩個 `_apply*` 方法開頭加 `if (!supportsMobileReaderControls) return;`；`onPopInvokedWithResult` 內 `if (didPop && supportsMobileReaderControls)`。`dispose` 內的 `HardwareKeyboard.instance.removeHandler` 與 `_unregisterEscConsumer` 對應的是 `isWindowsPlatform`，語意相反，**不要**包進新判斷。不改任何其他邏輯與註解。
-- [ ] **Step 4: 執行確認通過。** 跑整個 `test/screens/reader_screen_keyboard_test.dart`、`test/screens/reader_screen_test.dart`，預期全過（`reader_screen_test.dart` 為既有大檔，過程中的 `LocalBookServer` 失敗屬 Issue 11 範圍，需與 `main` 比對再下結論）。
-- [ ] **Step 5: Commit。**
+- [x] **Step 2: 執行確認失敗。** `flutter test test/screens/reader_screen_keyboard_test.dart --plain-name "進出閱讀器"`，預期 Windows 測試失敗（記錄非空）。
+- [x] **Step 3: 實作。** 七個呼叫點都加 `supportsMobileReaderControls` 判斷：`initState` 與 `dispose` 的 `setMethodCallHandler` 用 `if`；`dispose` 的 `SystemChrome` 與 `setEnabled` 用同一個 `if` 包起來；兩個 `_apply*` 方法開頭加 `if (!supportsMobileReaderControls) return;`；`onPopInvokedWithResult` 內 `if (didPop && supportsMobileReaderControls)`。`dispose` 內的 `HardwareKeyboard.instance.removeHandler` 與 `_unregisterEscConsumer` 對應的是 `isWindowsPlatform`，語意相反，**不要**包進新判斷。不改任何其他邏輯與註解。
+- [x] **Step 4: 執行確認通過。** 跑整個 `test/screens/reader_screen_keyboard_test.dart`、`test/screens/reader_screen_test.dart`，預期全過（`reader_screen_test.dart` 為既有大檔，過程中的 `LocalBookServer` 失敗屬 Issue 11 範圍，需與 `main` 比對再下結論）。
+- [x] **Step 5: Commit。**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_keyboard_test.dart
@@ -211,11 +211,11 @@ git commit -m "fix(windows): ReaderScreen 不再呼叫 Android 原生 channel（
 - Create: `docs/epics/epic-66-windows-port/issue-10-report.md`
 - Modify: `docs/epics/epic-66-windows-port/issues.md`（Issue 10 狀態列）、`docs/epics/epic-66-windows-port/plans/plan-issue-10.md`（勾選步驟）
 
-- [ ] **Step 1: 靜態與全套驗證。** 在 `app/` 依序執行：`flutter analyze`（預期 `No issues found!`）、`node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js`（預期都 PASS），最後 `flutter test` 全套一次。全套失敗項目與 `main` 逐項比對；`LocalBookServer` 的失敗屬 Issue 11，其餘有新增失敗就停下來處理。
+- [x] **Step 1: 靜態與全套驗證。** 在 `app/` 依序執行：`flutter analyze`（預期 `No issues found!`）、`node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js`（預期都 PASS），最後 `flutter test` 全套一次。全套失敗項目與 `main` 逐項比對；`LocalBookServer` 的失敗屬 Issue 11，其餘有新增失敗就停下來處理。
 - [ ] **Step 2: Windows 實機人工確認。** PowerShell 設 `$env:CL='/utf-8'`，`flutter run -d windows`（或 `flutter build windows --debug` 後執行 exe）。逐項確認並截圖（同時目視檢查被隱藏處沒有連續兩條分隔線或多餘空洞）：閱讀預設值畫面、開 EPUB 後的版面設定面板（流式）、開 PDF 後的設定面板（只剩顯示與裁切，來回切換）、設定畫面（無 E-Ink 開關）、進出閱讀器的主控台無 `MissingPluginException`。固定版面（FXL／CBZ）若手邊沒有樣本，在報告註明「未實測」。「關於」頁若顯示錯誤文字，屬「已知限制」，不算本 Issue 漏項，在報告中記下即可。
-- [ ] **Step 3: 寫 `issue-10-report.md`。** 內容：變更清單、Review Focus 五條各自對應的測試名稱、全套測試結果與 `main` 比對、實機確認結果與未實測項目。
-- [ ] **Step 4: 同步文件並勾選。** `issues.md` Issue 10 狀態改為「✅ 實作完成，待 PR」；本檔所有已完成步驟 `- [ ]` 改為 `- [x]`。
-- [ ] **Step 5: Commit。**
+- [x] **Step 3: 寫 `issue-10-report.md`。** 內容：變更清單、Review Focus 五條各自對應的測試名稱、全套測試結果與 `main` 比對、實機確認結果與未實測項目。
+- [x] **Step 4: 同步文件並勾選。** `issues.md` Issue 10 狀態改為「✅ 實作完成，待 PR」；本檔所有已完成步驟 `- [ ]` 改為 `- [x]`。
+- [x] **Step 5: Commit。**
 
 ```bash
 git add docs/epics/epic-66-windows-port/issue-10-report.md docs/epics/epic-66-windows-port/issues.md docs/epics/epic-66-windows-port/plans/plan-issue-10.md

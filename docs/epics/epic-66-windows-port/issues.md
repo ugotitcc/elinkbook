@@ -13,7 +13,7 @@
 | 7 | Windows 鍵盤快捷鍵與 F11 視窗全螢幕：翻頁類按鍵、Ctrl+F、F11，Esc 依序處理浮層與全螢幕 | Issue 5 | ✅ 已合併（Windows 人工驗證 2026-11-06 使用者回報通過，F11／Esc 在 WebView2 有焦點時可用） | #399 |
 | 8 | 索引器在 Windows 讓整個 App 消失：根因是漏登錄 JS 會呼叫的處理器（Windows 外掛遇到未登錄處理器會結束程序）；已診斷並修正，報告見 [issue-8-report.md](issue-8-report.md) | Issue 4 | ✅ 已合併（大檔索引、背景排程端到端、Android 尚未實測） | #400 |
 | 9 | WebView2 未安裝時顯示說明與下載連結（決策 4，原本漏掉） | Issue 7 | ✅ 已合併（Windows 實機以空 Runtime 資料夾模擬驗證通過；乾淨機器、重新檢查成功後進入 App 尚未實測） | #401 |
-| 10 | 平台專屬功能隱藏：音量鍵翻頁、E-Ink 高對比與影像濾鏡、螢幕方向鎖定、「全螢幕模式」偏好項；並處理 Windows 呼叫 Android 原生全螢幕 channel 未處理例外 | Issue 7 | 🟡 已規劃，待實作（見 [plan-issue-10.md](plans/plan-issue-10.md)） | — |
+| 10 | 平台專屬功能隱藏：音量鍵翻頁、E-Ink 高對比與影像濾鏡、螢幕方向鎖定、「全螢幕模式」偏好項；並處理 Windows 呼叫 Android 原生全螢幕 channel 未處理例外 | Issue 7 | ✅ 實作完成，待 PR（Windows 實機確認尚未做，見 [issue-10-report.md](issue-10-report.md)） | — |
 | 11 | Windows 測試穩定性：追查 `local_book_server_test.dart` 偶發失敗與 `pdf_reader_view_filters_test.dart`（`main` 上同樣失敗），為 Issue 6 建立乾淨基準 | 無 | ⚪ 未開始（尚未規劃） | — |
 | 12 | Android 也改用 foliate-js 讀 metadata、移除 Readium（`readium-shared`／`readium-streamer`、`BookMetadataChannel.kt`）：**第一步先補真實出版社書籍的 Readium 對比，通過才移除**；需 Android 實機 | Issue 6 | ⚪ 未開始（尚未規劃） | — |
 | 13 | Windows `integration_test` 冒煙測試（每種格式：開書、翻頁、劃線） | Issue 6、8、9、10 | ⚪ 未開始（尚未規劃） | — |
