@@ -65,10 +65,10 @@
 **Interfaces:**
 - Produces: `flutter --version` 顯示 `Flutter 3.47.9`（Dart 3.13.7）、channel 仍是 `stable`；回退指令 `git -C C:\tools\flutter reset --hard 9584c6713b`（留在 `stable` 分支）加 `flutter --version`、`flutter doctor`。
 
-- [ ] **Step 1: 升級前紀錄與確認目標版本。** 確認沒有 `flutter`／`dart`／`flutter_tester` 程序在跑（`Get-Process`）、epic-54 真機驗證沒有進行中；記下 `flutter --version`、`git -C C:\tools\flutter rev-parse HEAD`（預期 `9584c6713b…`）、`git -C C:\tools\flutter branch --show-current`（預期 `stable`）、`git -C C:\tools\flutter status -s | Where-Object { $_ -notmatch '^\?\?' }`（預期空，代表沒有 tracked 修改）與 `flutter doctor` 輸出（存 scratchpad）。再執行 `git ls-remote https://github.com/flutter/flutter.git refs/heads/stable refs/tags/3.47.9`，**預期兩者 hash 相同（`c197ca5199e9…`）**；若 `stable` 已指向比 3.47.9 更新的版本，停下來回報，由使用者決定是否仍要升（`flutter upgrade` 會升到 `stable` 當下的最新版，不是固定 3.47.9）。若有 tracked 修改，也停下來回報，不要 `--force`。
-- [ ] **Step 2: 升級。** 先 `Set-Location C:\Users\huthief`（**不要在專案目錄**），再執行 `flutter upgrade --force`（只做 `git reset --hard <rev>`，untracked 檔案不受影響）。若失敗，備案是留在 `stable` 分支：`git -C C:\tools\flutter merge --ff-only 3.47.9`，再 `flutter --version` 讓工具下載對應引擎。**不要用 `git checkout` 到標籤**（會讓 HEAD 變 detached，之後 `flutter upgrade` 與 channel 顯示都會壞）。
-- [ ] **Step 3: 驗證。** `flutter --version` 預期 `Flutter 3.47.9`、`Dart 3.13.7`、channel `stable`；若升到的不是 3.47.9，停下來回報。`flutter doctor` 與 Step 1 逐項比對，預期 Android、Windows、Visual Studio 仍是 ✓。再確認本 worktree 的鎖檔沒被動到：`git status --short app/pubspec.lock` 預期空；若有輸出，`git checkout -- app/pubspec.lock` 還原並在帳本記 ruling。
-- [ ] **Step 4: 記錄回退（只寫不做）。** 報告寫：回退指令 `git -C C:\tools\flutter reset --hard 9584c6713b`，之後 `flutter --version`、`flutter doctor`；兩版引擎不同，**回退會重新下載引擎與 Dart SDK，需要網路**，舊引擎快取不保留。
+- [x] **Step 1: 升級前紀錄與確認目標版本。** 確認沒有 `flutter`／`dart`／`flutter_tester` 程序在跑（`Get-Process`）、epic-54 真機驗證沒有進行中；記下 `flutter --version`、`git -C C:\tools\flutter rev-parse HEAD`（預期 `9584c6713b…`）、`git -C C:\tools\flutter branch --show-current`（預期 `stable`）、`git -C C:\tools\flutter status -s | Where-Object { $_ -notmatch '^\?\?' }`（預期空，代表沒有 tracked 修改）與 `flutter doctor` 輸出（存 scratchpad）。再執行 `git ls-remote https://github.com/flutter/flutter.git refs/heads/stable refs/tags/3.47.9`，**預期兩者 hash 相同（`c197ca5199e9…`）**；若 `stable` 已指向比 3.47.9 更新的版本，停下來回報，由使用者決定是否仍要升（`flutter upgrade` 會升到 `stable` 當下的最新版，不是固定 3.47.9）。若有 tracked 修改，也停下來回報，不要 `--force`。
+- [x] **Step 2: 升級。** 先 `Set-Location C:\Users\huthief`（**不要在專案目錄**），再執行 `flutter upgrade --force`（只做 `git reset --hard <rev>`，untracked 檔案不受影響）。若失敗，備案是留在 `stable` 分支：`git -C C:\tools\flutter merge --ff-only 3.47.9`，再 `flutter --version` 讓工具下載對應引擎。**不要用 `git checkout` 到標籤**（會讓 HEAD 變 detached，之後 `flutter upgrade` 與 channel 顯示都會壞）。
+- [x] **Step 3: 驗證。** `flutter --version` 預期 `Flutter 3.47.9`、`Dart 3.13.7`、channel `stable`；若升到的不是 3.47.9，停下來回報。`flutter doctor` 與 Step 1 逐項比對，預期 Android、Windows、Visual Studio 仍是 ✓。再確認本 worktree 的鎖檔沒被動到：`git status --short app/pubspec.lock` 預期空；若有輸出，`git checkout -- app/pubspec.lock` 還原並在帳本記 ruling。
+- [x] **Step 4: 記錄回退（只寫不做）。** 報告寫：回退指令 `git -C C:\tools\flutter reset --hard 9584c6713b`，之後 `flutter --version`、`flutter doctor`；兩版引擎不同，**回退會重新下載引擎與 Dart SDK，需要網路**，舊引擎快取不保留。
 
 ---
 
@@ -77,9 +77,9 @@
 **Files:**
 - 無異動；結果寫入報告。
 
-- [ ] **Step 1: 相依解析。** 在 `app/` 執行 `flutter pub get`，再 `git diff --stat -- pubspec.lock`，預期沒有變動；若有變動，逐行檢查，只保留與 Flutter 版本直接相關的（例如 `sdks:` 區塊），其餘 `git checkout -- app/pubspec.lock` 還原並在帳本記 ruling。
-- [ ] **Step 2: 靜態分析。** `flutter analyze`，預期與 3.47.4 基準相同：只有 2 個 info。出現第 3 個以上就是 SDK 升級帶來的新警告，逐一記錄。
-- [ ] **Step 3: 全套測試。** 在 `app/` 用 JSON reporter 跑 `flutter test`（比照 Issue 11：輸出存 scratchpad、列出失敗名稱），預期 5118 個、0 失敗。有失敗就單獨重跑；單獨也失敗的是回歸，停下來用 `superpowers:systematic-debugging` 查；只有全套才失敗的記為偶發並與 `pdf_reader_view_filters_test`（Issue 15）比對。特別留意 `import_drop_target_test.dart`、`adaptive_shell_scaffold_test.dart`（用到 `desktop_drop` 0.8.4）是否在 3.47.9 上仍通過。
+- [x] **Step 1: 相依解析。** 在 `app/` 執行 `flutter pub get`，再 `git diff --stat -- pubspec.lock`，預期沒有變動；若有變動，逐行檢查，只保留與 Flutter 版本直接相關的（例如 `sdks:` 區塊），其餘 `git checkout -- app/pubspec.lock` 還原並在帳本記 ruling。
+- [x] **Step 2: 靜態分析。** `flutter analyze`，預期與 3.47.4 基準相同：只有 2 個 info。出現第 3 個以上就是 SDK 升級帶來的新警告，逐一記錄。
+- [x] **Step 3: 全套測試。** 在 `app/` 用 JSON reporter 跑 `flutter test`（比照 Issue 11：輸出存 scratchpad、列出失敗名稱），預期 5118 個、0 失敗。有失敗就單獨重跑；單獨也失敗的是回歸，停下來用 `superpowers:systematic-debugging` 查；只有全套才失敗的記為偶發並與 `pdf_reader_view_filters_test`（Issue 15）比對。特別留意 `import_drop_target_test.dart`、`adaptive_shell_scaffold_test.dart`（用到 `desktop_drop` 0.8.4）是否在 3.47.9 上仍通過。
 
 ---
 
@@ -92,11 +92,11 @@
 **Interfaces:**
 - Produces: `Future<void> _onReorder(int oldIndex, int newIndex)` 簽章不變，但 `newIndex` 語意改為「已扣除移除項目位移」。
 
-- [ ] **Step 1: 跑既有重排測試確認基準。** `flutter test test/screens/dictionary_settings_screen_test.dart`，預期全過（含 5 個拖曳測試，皆為把 `c` 往上拖）。
-- [ ] **Step 2: 補三個「往後拖／原地」的測試（先在 `onReorder` 版本上跑綠）。** 沿用該檔既有的 `_pump`、`FakeDictionaryManager`、`_item('a', priority: 0)`／`b`／`c` 清單與 `_visibleOrder(tester, ['a', 'b', 'c'])`，把手 Key 為 `dictionary_drag_handle_a`，列 Key 為 `dictionary_item_a`。（1）`往後拖曳（第一個拖到最後一格）後 reorder 傳入 [b, c, a]`：`tester.drag(find.byKey(const Key('dictionary_drag_handle_a')), const Offset(0, 400))`，`pumpAndSettle`，斷言 `manager.reorderCalls == [['b','c','a']]` 且 `_visibleOrder` 為 `['b','c','a']`；（2）`往後拖曳一格後 reorder 傳入 [b, a, c]`：先取 `final rowHeight = tester.getRect(find.byKey(const Key('dictionary_item_a'))).height`，拖 `Offset(0, rowHeight * 1.2)`（超過 b 的中線、未到 c 的中線），斷言 `[['b','a','c']]`；這個能分辨少減或多減 1；（3）`原地放開（位移很小）不呼叫 reorder`：拖 `Offset(0, 5)`，斷言 `manager.reorderCalls` 為空。三個測試在目前的 `onReorder` 實作上必須先通過，確保測試本身正確；若 `rowHeight * 1.2` 的測試不穩，改用分段 `startGesture` 與 `moveBy`（比照既有 `拖曳進行中…` 測試）。
-- [ ] **Step 3: 實作。** `onReorder: _onReorder` 改為 `onReorderItem: _onReorder`；`_onReorder` 內刪除 `if (newIndex > oldIndex) newIndex -= 1;` 與其註解，改一行中文註解說明 `onReorderItem` 的 `newIndex` 已扣除位移。其餘邏輯不動。
-- [ ] **Step 4: 執行確認。** 同 Step 1 指令，預期全過（既有 5 個拖曳測試不改斷言，加新增 3 個）；若往後拖的測試失敗，代表位移處理錯了，修實作不要改測試。`flutter analyze lib/screens/dictionary_settings_screen.dart` 預期 `No issues found!`。
-- [ ] **Step 5: Commit。**
+- [x] **Step 1: 跑既有重排測試確認基準。** `flutter test test/screens/dictionary_settings_screen_test.dart`，預期全過（含 5 個拖曳測試，皆為把 `c` 往上拖）。
+- [x] **Step 2: 補三個「往後拖／原地」的測試（先在 `onReorder` 版本上跑綠）。** 沿用該檔既有的 `_pump`、`FakeDictionaryManager`、`_item('a', priority: 0)`／`b`／`c` 清單與 `_visibleOrder(tester, ['a', 'b', 'c'])`，把手 Key 為 `dictionary_drag_handle_a`，列 Key 為 `dictionary_item_a`。（1）`往後拖曳（第一個拖到最後一格）後 reorder 傳入 [b, c, a]`：`tester.drag(find.byKey(const Key('dictionary_drag_handle_a')), const Offset(0, 400))`，`pumpAndSettle`，斷言 `manager.reorderCalls == [['b','c','a']]` 且 `_visibleOrder` 為 `['b','c','a']`；（2）`往後拖曳一格後 reorder 傳入 [b, a, c]`：先取 `final rowHeight = tester.getRect(find.byKey(const Key('dictionary_item_a'))).height`，拖 `Offset(0, rowHeight * 1.2)`（超過 b 的中線、未到 c 的中線），斷言 `[['b','a','c']]`；這個能分辨少減或多減 1；（3）`原地放開（位移很小）不呼叫 reorder`：拖 `Offset(0, 5)`，斷言 `manager.reorderCalls` 為空。三個測試在目前的 `onReorder` 實作上必須先通過，確保測試本身正確；若 `rowHeight * 1.2` 的測試不穩，改用分段 `startGesture` 與 `moveBy`（比照既有 `拖曳進行中…` 測試）。
+- [x] **Step 3: 實作。** `onReorder: _onReorder` 改為 `onReorderItem: _onReorder`；`_onReorder` 內刪除 `if (newIndex > oldIndex) newIndex -= 1;` 與其註解，改一行中文註解說明 `onReorderItem` 的 `newIndex` 已扣除位移。其餘邏輯不動。
+- [x] **Step 4: 執行確認。** 同 Step 1 指令，預期全過（既有 5 個拖曳測試不改斷言，加新增 3 個）；若往後拖的測試失敗，代表位移處理錯了，修實作不要改測試。`flutter analyze lib/screens/dictionary_settings_screen.dart` 預期 `No issues found!`。
+- [x] **Step 5: Commit。**
 
 ```bash
 git add app/lib/screens/dictionary_settings_screen.dart app/test/screens/dictionary_settings_screen_test.dart
@@ -113,10 +113,10 @@ git commit -m "refactor: 詞典排序改用 onReorderItem（epic-66 Issue 6 Task
 **Interfaces:**
 - Produces: 沒有 `CL` 環境變數時 `flutter build windows --debug` 成功。
 
-- [ ] **Step 1: 重現失敗（紅）。** PowerShell 確認 `$env:CL` 為空，刪該 worktree 的 `app\build\windows`，執行 `flutter build windows --debug`。預期失敗，錯誤為 `connectivity_plus_plugin.cpp` 的 C4819（字碼頁 950 無法表示 UTF-8 的 em dash），被 `/WX` 升為錯誤；把前 20 行錯誤存 scratchpad。若**成功**，代表問題已不存在：停止本 Task，報告記「`/utf-8` 問題在 3.47.9 已不需處理」。
-- [ ] **Step 2: 實作。** 在 `windows/CMakeLists.txt` 的 `add_subdirectory(${FLUTTER_MANAGED_DIR})` 之前加 `if(MSVC) add_compile_options(/utf-8) endif()`，附中文註解：放在頂層目錄層級才會讓之後引入的 flutter、runner 與全部 plugin 都繼承；繁中 Windows 字碼頁 950 會讓含 UTF-8 的 plugin 原始碼被 `/WX` 擋下（見 epic.md 決策 27）。不要碰 `generated_plugins.cmake`。
-- [ ] **Step 3: 驗證（綠）。** `$env:CL` 仍為空、**重刪 `build\windows`** 後重建，預期 `Built build\windows\x64\runner\Debug\elinkbook.exe`。再設 `$env:CL='/utf-8'`、**再次重刪 `build\windows`** 重建一次，預期仍成功（不衝突）；不刪的話不會重新編譯，驗證無意義。
-- [ ] **Step 4: Commit。**
+- [x] **Step 1: 重現失敗（紅）。** PowerShell 確認 `$env:CL` 為空，刪該 worktree 的 `app\build\windows`，執行 `flutter build windows --debug`。預期失敗，錯誤為 `connectivity_plus_plugin.cpp` 的 C4819（字碼頁 950 無法表示 UTF-8 的 em dash），被 `/WX` 升為錯誤；把前 20 行錯誤存 scratchpad。若**成功**，代表問題已不存在：停止本 Task，報告記「`/utf-8` 問題在 3.47.9 已不需處理」。
+- [x] **Step 2: 實作。** 在 `windows/CMakeLists.txt` 的 `add_subdirectory(${FLUTTER_MANAGED_DIR})` 之前加 `if(MSVC) add_compile_options(/utf-8) endif()`，附中文註解：放在頂層目錄層級才會讓之後引入的 flutter、runner 與全部 plugin 都繼承；繁中 Windows 字碼頁 950 會讓含 UTF-8 的 plugin 原始碼被 `/WX` 擋下（見 epic.md 決策 27）。不要碰 `generated_plugins.cmake`。
+- [x] **Step 3: 驗證（綠）。** `$env:CL` 仍為空、**重刪 `build\windows`** 後重建，預期 `Built build\windows\x64\runner\Debug\elinkbook.exe`。再設 `$env:CL='/utf-8'`、**再次重刪 `build\windows`** 重建一次，預期仍成功（不衝突）；不刪的話不會重新編譯，驗證無意義。
+- [x] **Step 4: Commit。**
 
 ```bash
 git add app/windows/CMakeLists.txt
@@ -134,10 +134,10 @@ git commit -m "build(windows): CMake 加 /utf-8，免手動設 CL 環境變數�
 **Interfaces:**
 - Produces: `issues.md` 的 Issue 16（⚪ 未開始，尚未規劃），內容足以讓之後的人不重做這次的調查。
 
-- [ ] **Step 1: 加註解。** 在 `pubspec.yaml` 的 `desktop_drop: 0.8.4` 上方加中文註解：固定 0.8.4，0.9.x 要求 `cross_file ^0.4.0`，與 `file_picker`、`share_plus` 等套件的 `cross_file ^0.3.x` 衝突，見 `docs/epics/epic-66-windows-port/issues.md` Issue 16。版本號與其他行不動。
-- [ ] **Step 2: 確認鎖檔不變。** `flutter pub get`，`git diff --stat -- pubspec.lock` 預期空；`flutter analyze` 預期與 Task 2 相同。
-- [ ] **Step 3: 登記 Issue 16。** 在 `issues.md` 表格新增第 16 列（`desktop_drop` 0.9 與 `cross_file` 0.4 遷移，⚪ 未開始、尚未規劃），並在「後續 Issue」清單加一段簡述：（a）阻礙：`cross_file` 0.4 破壞性更新，`desktop_drop`、`file_picker`、`share_plus`、`share_plus_platform_interface` 目前都依賴 `^0.3.x`，最新版也未支援；（b）已知做法：vendor 修補 `file_picker`（`platform_file.dart` 的 `xFile` 取值，約 5 行）、`share_plus_platform_interface`（`method_channel_share.dart` 的 `.path`、`.mimeType`、`.name`、`XFile(path)`，約 15～20 行）、`share_plus`（只改 pubspec 約束），用 `dependency_overrides` 指向 `patches/`；專案內 `notes_bottom_sheet.dart:194` 的 `XFile(path, mimeType: 'text/markdown')` 改為 `XFile.fileSystem(path:)`（0.4 沒有 `mimeType`，Markdown 的 mimeType 要由修補後的 `share_plus_platform_interface` 依副檔名推斷或明確傳入）；`import_drop_target.dart` 改寫成 0.9 的 `onDrop`／`items`／`enabled`／`onEnter`／`onLeave`，匯入須整段在 `onDrop` 的 Future 內完成，測試需先呼叫 `CrossFileIO.registerWith()`、有對話框或擱置匯入的約 6 個測試要改成先取 Future 再 `pump`；（c）風險：Android 分享 mimeType 行為、無 Android 裝置驗證、長期維護修補；（d）出路：等官方支援 `cross_file` 0.4 就可以用一般方式升級，不需要修補；（e）不做 Issue 16 也不會壞任何東西。
-- [ ] **Step 4: Commit。**
+- [x] **Step 1: 加註解。** 在 `pubspec.yaml` 的 `desktop_drop: 0.8.4` 上方加中文註解：固定 0.8.4，0.9.x 要求 `cross_file ^0.4.0`，與 `file_picker`、`share_plus` 等套件的 `cross_file ^0.3.x` 衝突，見 `docs/epics/epic-66-windows-port/issues.md` Issue 16。版本號與其他行不動。
+- [x] **Step 2: 確認鎖檔不變。** `flutter pub get`，`git diff --stat -- pubspec.lock` 預期空；`flutter analyze` 預期與 Task 2 相同。
+- [x] **Step 3: 登記 Issue 16。** 在 `issues.md` 表格新增第 16 列（`desktop_drop` 0.9 與 `cross_file` 0.4 遷移，⚪ 未開始、尚未規劃），並在「後續 Issue」清單加一段簡述：（a）阻礙：`cross_file` 0.4 破壞性更新，`desktop_drop`、`file_picker`、`share_plus`、`share_plus_platform_interface` 目前都依賴 `^0.3.x`，最新版也未支援；（b）已知做法：vendor 修補 `file_picker`（`platform_file.dart` 的 `xFile` 取值，約 5 行）、`share_plus_platform_interface`（`method_channel_share.dart` 的 `.path`、`.mimeType`、`.name`、`XFile(path)`，約 15～20 行）、`share_plus`（只改 pubspec 約束），用 `dependency_overrides` 指向 `patches/`；專案內 `notes_bottom_sheet.dart:194` 的 `XFile(path, mimeType: 'text/markdown')` 改為 `XFile.fileSystem(path:)`（0.4 沒有 `mimeType`，Markdown 的 mimeType 要由修補後的 `share_plus_platform_interface` 依副檔名推斷或明確傳入）；`import_drop_target.dart` 改寫成 0.9 的 `onDrop`／`items`／`enabled`／`onEnter`／`onLeave`，匯入須整段在 `onDrop` 的 Future 內完成，測試需先呼叫 `CrossFileIO.registerWith()`、有對話框或擱置匯入的約 6 個測試要改成先取 Future 再 `pump`；（c）風險：Android 分享 mimeType 行為、無 Android 裝置驗證、長期維護修補；（d）出路：等官方支援 `cross_file` 0.4 就可以用一般方式升級，不需要修補；（e）不做 Issue 16 也不會壞任何東西。
+- [x] **Step 4: Commit。**
 
 ```bash
 git add app/pubspec.yaml docs/epics/epic-66-windows-port/issues.md
@@ -151,9 +151,9 @@ git commit -m "docs: desktop_drop 維持 0.8.4 並登記 Issue 16（epic-66 Issu
 **Files:**
 - 無異動；結果寫入報告。
 
-- [ ] **Step 1: Android debug 建置。** 在 `app/` 執行 `flutter build apk --debug`，輸出存 scratchpad；預期 `✓ Built build\app\outputs\flutter-apk\app-debug.apk`。這是 Android 第一次在 3.47.x 上建置：把所有 warning（AGP、Kotlin、Gradle、`flutter_inappwebview_android` 本機修補）逐條記進報告，分「僅警告」與「失敗」。失敗就停下來回報，不要靠改 AGP／Kotlin 版本硬解，那屬另一個決定。
-- [ ] **Step 2: Windows debug 建置。** 依 Global Constraints 的建置說明，`flutter build windows --debug`（Task 4 完成後不必設 `CL`），預期成功。
-- [ ] **Step 3: 全專案分析與全套測試。** `flutter analyze` 預期只剩 `use_null_aware_elements` 這 1 個 info；全套 `flutter test` 預期 5121 個（基準 5118 加 Task 3 的 3 個）、0 失敗。
+- [x] **Step 1: Android debug 建置。** 在 `app/` 執行 `flutter build apk --debug`，輸出存 scratchpad；預期 `✓ Built build\app\outputs\flutter-apk\app-debug.apk`。這是 Android 第一次在 3.47.x 上建置：把所有 warning（AGP、Kotlin、Gradle、`flutter_inappwebview_android` 本機修補）逐條記進報告，分「僅警告」與「失敗」。失敗就停下來回報，不要靠改 AGP／Kotlin 版本硬解，那屬另一個決定。
+- [x] **Step 2: Windows debug 建置。** 依 Global Constraints 的建置說明，`flutter build windows --debug`（Task 4 完成後不必設 `CL`），預期成功。
+- [x] **Step 3: 全專案分析與全套測試。** `flutter analyze` 預期只剩 `use_null_aware_elements` 這 1 個 info；全套 `flutter test` 預期 5121 個（基準 5118 加 Task 3 的 3 個）、0 失敗。
 
 ---
 
@@ -163,13 +163,13 @@ git commit -m "docs: desktop_drop 維持 0.8.4 並登記 Issue 16（epic-66 Issu
 - Modify: `CLAUDE.md`（「常用指令」的 Flutter 版本段落）、`docs/epics/epic-66-windows-port/epic.md`（新增決策 28）、`docs/epics/epic-66-windows-port/issues.md`（Issue 6 狀態列）、本檔（勾選步驟）
 - Create: `docs/epics/epic-66-windows-port/issue-6-report.md`
 
-- [ ] **Step 1: Windows 開書冒煙。** 以 Task 6 建的 Windows debug 版，用 Issue 11 的實驗腳本（scratchpad 的 `run_open_book_experiment.ps1`，只留一個版本資料夾，`-Rounds 5`）冷啟動 5 次、每次自動還原上次的書，記錄 `已渲染`／`開書逾時` 與耗時。預期 5／5 成功；與 Issue 11 的 3.47.4 結果（約 14～18 秒）比較。這同時驗證 `desktop_drop` 0.8.4 在 3.47.9 引擎上沒有啟動崩潰。報告用語限定為「冷啟動開書 5／5」，不得外推到 Impeller 長時間使用。實驗期間請使用者不要操作電腦。
-- [ ] **Step 2: Windows 實機拖曳回歸確認（過關條件）。** 請使用者用同一個 Windows debug 版，在書架分頁依序拖入並回報結果：（a）1 個支援格式的書檔（例如 `.epub`）；（b）同時 2 個書檔；（c）1 個含書檔的資料夾；（d）1 個不支援格式的檔案（預期略過並提示）；（e）匯入進行中再拖一次（要用較大的檔案才能重現，預期顯示忙碌提示）。每項記「通過／異常」與看到的畫面。目的是確認 SDK 與引擎換版後 `desktop_drop` 0.8.4 的拖曳匯入沒有回歸。
-- [ ] **Step 3: 更新 `CLAUDE.md`。** 把「採用 Flutter 3.41.9」段落改為 3.47.9，整句刪除「例如 `ReorderableListView.onReorderItem` 在 3.41.9 不存在……曾因此讓 `main` 編譯失敗」的舉例，保留「不要使用此版本沒有的較新 API」的通則與「升級 Flutter 版本前需先與人類確認」。只改這一段。
-- [ ] **Step 4: 新增 `epic.md` 決策 28。** 記錄：升級到 3.47.9 的理由（3.47.8 安全公告 GHSA-frr6-h895-5pxp、3.47.6 Windows 卡死修正）、使用者選擇直接升級共用 SDK、`C:\src\flutter-3.41.9` 保留、`desktop_drop` 維持 0.8.4 與原因（`cross_file` 0.4 衝突，另立 Issue 16，不做也不會壞）、`pdfrx`／`file_picker`／`window_manager` 大跳版不在本 Issue、回退點 `9584c6713b` 與回退指令。
-- [ ] **Step 5: 寫 `issue-6-report.md`。** 內容：診斷與決策表、各 Task 結果、Task 6 的 Android 警告清單、Task 7 的冒煙與拖曳紀錄、回退指令（含需要網路）、未驗證項目（Android 真機、Impeller 下 WebView2 長時間使用）、已知限制（`desktop_drop` 0.8.4，Issue 16）。
-- [ ] **Step 6: 同步文件並勾選。** `issues.md` Issue 6 狀態改為「✅ 實作完成，待 PR」；本檔已完成步驟 `- [ ]` 改 `- [x]`。
-- [ ] **Step 7: Commit。**
+- [x] **Step 1: Windows 開書冒煙。** 以 Task 6 建的 Windows debug 版，用 Issue 11 的實驗腳本（scratchpad 的 `run_open_book_experiment.ps1`，只留一個版本資料夾，`-Rounds 5`）冷啟動 5 次、每次自動還原上次的書，記錄 `已渲染`／`開書逾時` 與耗時。預期 5／5 成功；與 Issue 11 的 3.47.4 結果（約 14～18 秒）比較。這同時驗證 `desktop_drop` 0.8.4 在 3.47.9 引擎上沒有啟動崩潰。報告用語限定為「冷啟動開書 5／5」，不得外推到 Impeller 長時間使用。實驗期間請使用者不要操作電腦。
+- [x] **Step 2: Windows 實機拖曳回歸確認（過關條件）。** 請使用者用同一個 Windows debug 版，在書架分頁依序拖入並回報結果：（a）1 個支援格式的書檔（例如 `.epub`）；（b）同時 2 個書檔；（c）1 個含書檔的資料夾；（d）1 個不支援格式的檔案（預期略過並提示）；（e）匯入進行中再拖一次（要用較大的檔案才能重現，預期顯示忙碌提示）。每項記「通過／異常」與看到的畫面。目的是確認 SDK 與引擎換版後 `desktop_drop` 0.8.4 的拖曳匯入沒有回歸。
+- [x] **Step 3: 更新 `CLAUDE.md`。** 把「採用 Flutter 3.41.9」段落改為 3.47.9，整句刪除「例如 `ReorderableListView.onReorderItem` 在 3.41.9 不存在……曾因此讓 `main` 編譯失敗」的舉例，保留「不要使用此版本沒有的較新 API」的通則與「升級 Flutter 版本前需先與人類確認」。只改這一段。
+- [x] **Step 4: 新增 `epic.md` 決策 28。** 記錄：升級到 3.47.9 的理由（3.47.8 安全公告 GHSA-frr6-h895-5pxp、3.47.6 Windows 卡死修正）、使用者選擇直接升級共用 SDK、`C:\src\flutter-3.41.9` 保留、`desktop_drop` 維持 0.8.4 與原因（`cross_file` 0.4 衝突，另立 Issue 16，不做也不會壞）、`pdfrx`／`file_picker`／`window_manager` 大跳版不在本 Issue、回退點 `9584c6713b` 與回退指令。
+- [x] **Step 5: 寫 `issue-6-report.md`。** 內容：診斷與決策表、各 Task 結果、Task 6 的 Android 警告清單、Task 7 的冒煙與拖曳紀錄、回退指令（含需要網路）、未驗證項目（Android 真機、Impeller 下 WebView2 長時間使用）、已知限制（`desktop_drop` 0.8.4，Issue 16）。
+- [x] **Step 6: 同步文件並勾選。** `issues.md` Issue 6 狀態改為「✅ 實作完成，待 PR」；本檔已完成步驟 `- [ ]` 改 `- [x]`。
+- [x] **Step 7: Commit。**
 
 ```bash
 git add CLAUDE.md docs/epics/epic-66-windows-port/epic.md docs/epics/epic-66-windows-port/issues.md docs/epics/epic-66-windows-port/issue-6-report.md docs/epics/epic-66-windows-port/plans/plan-issue-6.md

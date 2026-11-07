@@ -9,7 +9,7 @@
 | 3 | 閱讀器開書與全文索引器的「整本回傳」記憶體：驗證是否洩漏，洩漏則修正（來源 Issue 2 審查發現） | Issue 2 | ✅ 已合併（量測確認閱讀器洩漏，修法移至 Issue 4） | #396 |
 | 4 | Windows 書檔改由本機 loopback HTTP 伺服器（`shelf`）服務，消除「整本回傳」洩漏（來源 Issue 3 報告） | Issue 3 | ✅ 已合併 | #397 |
 | 5 | Windows 檔案與資料夾匯入：選檔、選資料夾、拖曳三種方式，書檔維持原路徑，不支援格式略過並提示 | Issue 4 | ✅ 已合併（Windows 人工驗證 2026-11-06 使用者回報通過） | #398 |
-| 6 | Flutter 升級至 ≥ 3.47.7（評估與遷移）：`onReorder` 棄用、built-in Kotlin／AGP 9、Windows 預設 Impeller、外掛相容；一併處理繁中 Windows 的 `/utf-8` 編譯問題 | Issue 11 | 🟡 已規劃，待實作（見 [plan-issue-6.md](plans/plan-issue-6.md)） | — |
+| 6 | Flutter 升級至 ≥ 3.47.7（評估與遷移）：`onReorder` 棄用、built-in Kotlin／AGP 9、Windows 預設 Impeller、外掛相容；一併處理繁中 Windows 的 `/utf-8` 編譯問題 | Issue 11 | ✅ 實作完成，待 PR（共用 SDK 升到 3.47.9；`desktop_drop` 維持 0.8.4，登記 Issue 16；Android 只到建置成功，見 [issue-6-report.md](issue-6-report.md)） | — |
 | 7 | Windows 鍵盤快捷鍵與 F11 視窗全螢幕：翻頁類按鍵、Ctrl+F、F11，Esc 依序處理浮層與全螢幕 | Issue 5 | ✅ 已合併（Windows 人工驗證 2026-11-06 使用者回報通過，F11／Esc 在 WebView2 有焦點時可用） | #399 |
 | 8 | 索引器在 Windows 讓整個 App 消失：根因是漏登錄 JS 會呼叫的處理器（Windows 外掛遇到未登錄處理器會結束程序）；已診斷並修正，報告見 [issue-8-report.md](issue-8-report.md) | Issue 4 | ✅ 已合併（大檔索引、背景排程端到端、Android 尚未實測） | #400 |
 | 9 | WebView2 未安裝時顯示說明與下載連結（決策 4，原本漏掉） | Issue 7 | ✅ 已合併（Windows 實機以空 Runtime 資料夾模擬驗證通過；乾淨機器、重新檢查成功後進入 App 尚未實測） | #401 |
@@ -20,6 +20,7 @@
 | 14 | 免安裝 zip 打包 | Issue 13 | ⚪ 未開始（尚未規劃） | — |
 | 15 | `pdf_reader_view_filters_test.dart` 加粗覆蓋圖偶發失敗查根因：整批跑 `test/reader` 約 1／3 機率失敗（等背景 Isolate 結果 120 輪仍無 `RawImage`），等待上限已放寬兩次仍偶發，疑 `PdfReaderView` 加粗佇列有競態（來源 Issue 11） | 無 | ⚪ 未開始（尚未規劃） | — |
 | 16 | `desktop_drop` 0.9 與 `cross_file` 0.4 遷移：`desktop_drop` 0.9.x 要求 `cross_file ^0.4.0`（破壞性更新），與 `file_picker`、`share_plus`、`share_plus_platform_interface`（含最新版）要求的 `cross_file ^0.3.x` 衝突，需 vendor 修補三個套件並改寫拖曳匯入（來源 Issue 6） | Issue 6 | ⚪ 未開始（尚未規劃，不排程） | — |
+| 17 | Android 建置工具升級：Flutter 3.47.9 警告對 Gradle 8.14.0（需 ≥ 9.1.0）與 AGP 8.11.1（需 ≥ 9.0.1）的支援「即將移除」，目前仍可建置；一併評估 built-in Kotlin 遷移（來源 Issue 6） | Issue 6 | ⚪ 未開始（尚未規劃，不排程） | — |
 
 ## Issue 1 範圍
 
@@ -418,6 +419,10 @@ Windows 版隱藏只有手機有意義的控制項，並停止呼叫 Windows 上
   - `import_drop_target.dart` 改寫成 0.9 的 API：`onDragDone(DropDoneDetails)` → 必要的非同步 `onDrop(DropDetails)`、`files` → `items`（`DropFileItem`／`DropDirectoryItem`／`DropStringItem`，`localPath` 可為 null）、`enable` → `enabled`、`onDragEntered/Exited` → `onEnter/onLeave`。**provider 與暫存檔只在 `onDrop` 期間有效，整段匯入必須在 `onDrop` 回傳的 Future 內完成。** 測試需先呼叫 `CrossFileIO.registerWith()`，`DropDirectoryItem` 需帶 `XDirectory.fileSystem(path:)`；`import_drop_target_test.dart` 約 6 個有對話框或擱置匯入的測試，不能直接 `await onDrop(...)`，要先取 Future、`pump`、再等。
   - 風險：Android 分享的 mimeType 行為會變、沒有 Android 裝置可驗證、長期維護修補；`cross_file` 0.4 會多拉進 `cross_file_android` 等外掛。
   - 出路與影響：官方 `file_picker`、`share_plus` 支援 `cross_file` 0.4 後，可用一般方式升級，不需要修補。**不做 Issue 16 也不會壞任何東西**：`desktop_drop` 0.8.4 沒有缺我們需要的功能（0.9 新增的是 iOS／Android 拖曳與虛擬檔案支援）。唯一的小風險是 0.9.1 修過一個只在部分 Flutter 引擎出現的 Windows 啟動崩潰，Issue 6 的 Windows 冷啟動冒煙會偵測 3.47.9 引擎是否受影響。
+- **Android 建置工具升級（已登錄為 Issue 17，2026-11-08，不排程）。**
+  - 現況：`flutter build apk --debug` 在 3.47.9 上成功，但印出兩條警告：Flutter 對專案 Gradle 版本 8.14.0 的支援「即將移除」，要求 ≥ 9.1.0；對 AGP 8.11.1 的支援「即將移除」，要求 ≥ 9.0.1。可用 `--android-skip-build-dependency-validation` 略過。專案目前：AGP 8.11.1、Kotlin 2.3.20、Gradle 8.14（`android/settings.gradle.kts`、`android/gradle/wrapper/gradle-wrapper.properties`），`gradle.properties` 有 `android.builtInKotlin=false`、`android.newDsl=false`。
+  - 注意：Issue 6 審查時曾判斷這些版本「在支援範圍內」，那只是「目前還能建置」；Flutter 已明確預告會移除支援。
+  - 風險：沒有 Android 裝置驗證；`patches/flutter_inappwebview_android` 本機修補、各外掛的 Kotlin 套用邏輯（built-in Kotlin）都可能受影響；這是 Android 第一次在 3.47.x 上建置，升到 AGP 9 後要重新驗證。
 - 索引器跑不完（Issue 8，已合併 #400）、WebView2 缺少提示（Issue 9，已合併 #401）、測試穩定性（Issue 11）、Android 統一 metadata（Issue 12）：2026-11-06 登錄，尚未規劃。
 - **預定執行順序：** ~~8~~ → ~~9~~ → ~~10~~ → ~~11~~ → 6 → 12 → 13 → 14（先補齊功能，再升級 Flutter，冒煙測試與打包放在最終版本上做）。
 - 不做：「分段服務」（大檔開書記憶體尖峰，224 MB 書約 3.8 GB），記為已知限制，遇到再議。
