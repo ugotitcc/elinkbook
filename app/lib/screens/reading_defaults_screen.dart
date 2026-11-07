@@ -6,6 +6,7 @@ import '../reader/page_turn_mode.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/text_conversion_mode.dart';
+import '../platform/platform_support.dart';
 
 /// 閱讀預設值畫面（FR-36/37/38/42）：音量鍵翻頁開關、翻頁模式、螢幕方向、
 /// 全螢幕模式四個獨立控制項，皆讀寫 [GlobalReaderPrefs]。**即時生效、無
@@ -67,17 +68,19 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
             )
           : ListView(
               children: [
-                SwitchListTile(
-                  key: const Key('reading_defaults_volume_key_switch'),
-                  title: Text(l10n.readingDefaultsVolumeKeyLabel),
-                  value: _prefs.reading.volumeKeyEnabled,
-                  onChanged: (value) => _update(
-                    _prefs.copyWith(
-                      reading: _prefs.reading.copyWith(volumeKeyEnabled: value),
+                if (supportsMobileReaderControls) ...[
+                  SwitchListTile(
+                    key: const Key('reading_defaults_volume_key_switch'),
+                    title: Text(l10n.readingDefaultsVolumeKeyLabel),
+                    value: _prefs.reading.volumeKeyEnabled,
+                    onChanged: (value) => _update(
+                      _prefs.copyWith(
+                        reading: _prefs.reading.copyWith(volumeKeyEnabled: value),
+                      ),
                     ),
                   ),
-                ),
-                const Divider(height: 1),
+                  const Divider(height: 1),
+                ],
                 _buildSectionHeader(context, l10n.readingDefaultsPageTurnModeSectionTitle),
                 RadioGroup<PageTurnMode>(
                   groupValue: _prefs.reading.pageTurnMode,
@@ -104,52 +107,54 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                   ),
                 ),
                 const Divider(height: 1),
-                _buildSectionHeader(context, l10n.readingDefaultsScreenOrientationSectionTitle),
-                RadioGroup<ScreenOrientationSetting>(
-                  groupValue: _prefs.reading.screenOrientation,
-                  onChanged: (setting) => _update(
-                    _prefs.copyWith(
-                      reading: _prefs.reading.copyWith(
-                        screenOrientation: setting,
+                if (supportsMobileReaderControls) ...[
+                  _buildSectionHeader(context, l10n.readingDefaultsScreenOrientationSectionTitle),
+                  RadioGroup<ScreenOrientationSetting>(
+                    groupValue: _prefs.reading.screenOrientation,
+                    onChanged: (setting) => _update(
+                      _prefs.copyWith(
+                        reading: _prefs.reading.copyWith(
+                          screenOrientation: setting,
+                        ),
                       ),
                     ),
+                    child: Column(
+                      children: [
+                        RadioListTile<ScreenOrientationSetting>(
+                          key: const Key(
+                              'reading_defaults_screen_orientation_auto'),
+                          title: Text(l10n.readingDefaultsOrientationAutoLabel),
+                          value: ScreenOrientationSetting.auto,
+                        ),
+                        RadioListTile<ScreenOrientationSetting>(
+                          key: const Key(
+                              'reading_defaults_screen_orientation_lock0'),
+                          title: Text(l10n.readingDefaultsOrientationLock0Label),
+                          value: ScreenOrientationSetting.lock0,
+                        ),
+                        RadioListTile<ScreenOrientationSetting>(
+                          key: const Key(
+                              'reading_defaults_screen_orientation_lock90'),
+                          title: Text(l10n.readingDefaultsOrientationLock90Label),
+                          value: ScreenOrientationSetting.lock90,
+                        ),
+                        RadioListTile<ScreenOrientationSetting>(
+                          key: const Key(
+                              'reading_defaults_screen_orientation_lock180'),
+                          title: Text(l10n.readingDefaultsOrientationLock180Label),
+                          value: ScreenOrientationSetting.lock180,
+                        ),
+                        RadioListTile<ScreenOrientationSetting>(
+                          key: const Key(
+                              'reading_defaults_screen_orientation_lock270'),
+                          title: Text(l10n.readingDefaultsOrientationLock270Label),
+                          value: ScreenOrientationSetting.lock270,
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      RadioListTile<ScreenOrientationSetting>(
-                        key: const Key(
-                            'reading_defaults_screen_orientation_auto'),
-                        title: Text(l10n.readingDefaultsOrientationAutoLabel),
-                        value: ScreenOrientationSetting.auto,
-                      ),
-                      RadioListTile<ScreenOrientationSetting>(
-                        key: const Key(
-                            'reading_defaults_screen_orientation_lock0'),
-                        title: Text(l10n.readingDefaultsOrientationLock0Label),
-                        value: ScreenOrientationSetting.lock0,
-                      ),
-                      RadioListTile<ScreenOrientationSetting>(
-                        key: const Key(
-                            'reading_defaults_screen_orientation_lock90'),
-                        title: Text(l10n.readingDefaultsOrientationLock90Label),
-                        value: ScreenOrientationSetting.lock90,
-                      ),
-                      RadioListTile<ScreenOrientationSetting>(
-                        key: const Key(
-                            'reading_defaults_screen_orientation_lock180'),
-                        title: Text(l10n.readingDefaultsOrientationLock180Label),
-                        value: ScreenOrientationSetting.lock180,
-                      ),
-                      RadioListTile<ScreenOrientationSetting>(
-                        key: const Key(
-                            'reading_defaults_screen_orientation_lock270'),
-                        title: Text(l10n.readingDefaultsOrientationLock270Label),
-                        value: ScreenOrientationSetting.lock270,
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
+                  const Divider(height: 1),
+                ],
                 _buildSectionHeader(context, l10n.readingDefaultsTextConversionSectionTitle),
                 RadioGroup<TextConversionMode>(
                   groupValue: _prefs.reading.textConversion,
@@ -179,17 +184,19 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                   ),
                 ),
                 const Divider(height: 1),
-                SwitchListTile(
-                  key: const Key('reading_defaults_fullscreen_switch'),
-                  title: Text(l10n.readingDefaultsFullscreenLabel),
-                  value: _prefs.reading.fullscreen,
-                  onChanged: (value) => _update(
-                    _prefs.copyWith(
-                      reading: _prefs.reading.copyWith(fullscreen: value),
+                if (supportsMobileReaderControls) ...[
+                  SwitchListTile(
+                    key: const Key('reading_defaults_fullscreen_switch'),
+                    title: Text(l10n.readingDefaultsFullscreenLabel),
+                    value: _prefs.reading.fullscreen,
+                    onChanged: (value) => _update(
+                      _prefs.copyWith(
+                        reading: _prefs.reading.copyWith(fullscreen: value),
+                      ),
                     ),
                   ),
-                ),
-                const Divider(height: 1),
+                  const Divider(height: 1),
+                ],
                 SwitchListTile(
                   key: const Key('reading_defaults_open_last_book_switch'),
                   title: Text(l10n.readingDefaultsOpenLastBookLabel),

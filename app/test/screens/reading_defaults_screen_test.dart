@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
@@ -379,5 +380,87 @@ void main() {
     expect(find.text('Open the last read book on launch'), findsOneWidget);
     expect(find.text('Show header'), findsOneWidget);
     expect(find.text('Show footer'), findsOneWidget);
+  });
+
+  testWidgets('Windows 隱藏音量鍵、螢幕方向、全螢幕，其餘開關仍在（epic-66 Issue 10）',
+      (tester) async {
+    // 平台覆寫須在測試本體內還原（Flutter 於 tearDown 之前檢查 foundation 變數）
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ReadingDefaultsScreen(prefsManager: FakeReaderPrefsManager()),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('reading_defaults_volume_key_switch')),
+          findsNothing);
+      expect(
+          find.byKey(const Key('reading_defaults_screen_orientation_lock90')),
+          findsNothing);
+      expect(find.byKey(const Key('reading_defaults_fullscreen_switch')),
+          findsNothing);
+
+      for (final key in const [
+        'reading_defaults_page_turn_mode_scroll',
+        'reading_defaults_text_conversion_original',
+        'reading_defaults_open_last_book_switch',
+        'reading_defaults_show_header_switch',
+        'reading_defaults_show_footer_switch',
+      ]) {
+        expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+      }
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('Windows 改動其他開關不覆寫被隱藏的值（防回歸護欄）', (tester) async {
+    // 平台覆寫須在測試本體內還原（Flutter 於 tearDown 之前檢查 foundation 變數）
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final fakeManager = FakeReaderPrefsManager(
+        globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+          reading: const ReadingDefaults(
+            volumeKeyEnabled: false,
+            screenOrientation: ScreenOrientationSetting.lock90,
+            fullscreen: true,
+          ),
+        ),
+      );
+      await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ReadingDefaultsScreen(prefsManager: fakeManager),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('reading_defaults_show_header_switch')));
+      await tester.pumpAndSettle();
+
+      final saved = fakeManager.savedGlobalPrefsCalls.last.reading;
+      expect(saved.volumeKeyEnabled, isFalse);
+      expect(saved.screenOrientation, ScreenOrientationSetting.lock90);
+      expect(saved.fullscreen, isTrue);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 }

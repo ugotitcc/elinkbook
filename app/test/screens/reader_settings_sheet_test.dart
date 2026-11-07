@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
@@ -3027,6 +3028,33 @@ void main() {
       await tester.pumpWidget(const SizedBox());
       await tester.pump();
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Windows 隱藏手機專屬控制項（epic-66 Issue 10）', () {
+    testWidgets('預設平台（Android）：呈現分頁有全螢幕開關與螢幕方向列', (tester) async {
+      await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+      await switchToTab(tester, '呈現');
+      expect(
+          find.byKey(const Key('reader_settings_fullscreen')), findsOneWidget);
+      expect(find.text('螢幕方向鎖定覆寫'), findsOneWidget);
+    });
+
+    testWidgets('Windows：呈現分頁沒有全螢幕開關與螢幕方向列', (tester) async {
+      // 平台覆寫須在測試本體內還原（Flutter 於 tearDown 之前檢查 foundation 變數）
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+        // 兩者都在「呈現」分頁；沒切過去 find 一律找不到，測試會假綠
+        await switchToTab(tester, '呈現');
+        expect(find.byKey(const Key('reader_settings_first_line_indent_switch')),
+            findsOneWidget);
+        expect(
+            find.byKey(const Key('reader_settings_fullscreen')), findsNothing);
+        expect(find.text('螢幕方向鎖定覆寫'), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
   });
 }

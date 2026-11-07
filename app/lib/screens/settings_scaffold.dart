@@ -24,6 +24,7 @@ import 'tts_defaults_screen.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_section_header.dart';
 import 'widgets/eb_sheet_shell.dart';
+import '../platform/platform_support.dart';
 
 /// 設定畫面：四分區（外觀／閱讀／同步與帳號／關於，`DESIGN.md` §17，
 /// epic-36-adaptive-shelf-navigation spec.md §功能⑤）。「佈景」（主題圓點，
@@ -215,15 +216,17 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
               onTap: () => _openLanguagePicker(context, l10n),
             ),
           ),
-          _SettingsCard(
-            child: SwitchListTile(
-              key: const Key('settings_eink_mode_switch'),
-              title: Text(l10n.settingsEinkModeLabel),
-              subtitle: Text(l10n.settingsEinkModeSubtitle),
-              value: widget.appearance.isEinkMode,
-              onChanged: widget.appearance.onEinkModeChanged,
+          // epic-66 Issue 10：Windows 沒有 E-Ink 螢幕，隱藏高對比模式開關
+          if (supportsMobileReaderControls)
+            _SettingsCard(
+              child: SwitchListTile(
+                key: const Key('settings_eink_mode_switch'),
+                title: Text(l10n.settingsEinkModeLabel),
+                subtitle: Text(l10n.settingsEinkModeSubtitle),
+                value: widget.appearance.isEinkMode,
+                onChanged: widget.appearance.onEinkModeChanged,
+              ),
             ),
-          ),
           _SettingsCard(
             child: ListTile(
               key: const Key('settings_font_management_button'),

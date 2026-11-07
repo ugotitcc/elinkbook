@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -578,6 +579,32 @@ void main() {
 
     expect(receivedEink, isTrue);
   });
+  testWidgets('Windows 設定畫面沒有 E-Ink 模式開關（epic-66 Issue 10）', (tester) async {
+    // 平台覆寫須在測試本體內還原（Flutter 於 tearDown 之前檢查 foundation 變數）
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      await pumpLocalizedWidget(
+        tester,
+        SettingsScaffold(
+          sources: fakeSourceDependencies(),
+          appearance: fakeAppearanceDependencies(
+            currentTheme: AppTheme.light,
+            isEinkMode: false,
+          ),
+          readerFeatures: fakeReaderFeatureDependencies(
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+          sync: fakeSyncDependencies(),
+        ),
+      );
+
+      expect(find.byKey(const Key('settings_eink_mode_switch')), findsNothing);
+      expect(find.text('E-Ink 高對比模式'), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('SettingsScreen 主題預覽圓點改讀 resolveThemeData() 的實際色值（不再維持寫死近似值）', (
     tester,
   ) async {

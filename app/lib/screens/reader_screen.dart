@@ -521,7 +521,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       HardwareKeyboard.instance.addHandler(_handleReaderKeyEvent);
       _unregisterEscConsumer = registerEscInnerConsumer(_consumeEscForReader);
     }
-    _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
+    // epic-66 Issue 10：Windows 沒有音量鍵 channel 的原生端
+    if (supportsMobileReaderControls) {
+      _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
+    }
     _resolveEpubEngineDispatch();
     _loadAvailableFonts();
     _presetFlow.load();
@@ -678,7 +681,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _unregisterEscConsumer?.call();
     _unregisterEscConsumer = null;
     HardwareKeyboard.instance.removeHandler(_handleReaderKeyEvent);
-    _volumeKeyChannel.setMethodCallHandler(null);
+    if (supportsMobileReaderControls) {
+      _volumeKeyChannel.setMethodCallHandler(null);
+    }
     _pdfSearchStateNotifier.dispose();
     _ttsAudioFocusCoordinator?.dispose();
     // epic-61 Issue 2：只在 handler 目前綁定的 controller 就是本畫面的
@@ -698,10 +703,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 還原系統預設（允許自由旋轉），不論進入閱讀器時鎖定了哪個角度，比照
     // 音量鍵離開閱讀介面後恢復正常系統音量控制的既有處理原則，避免鎖定
     // 狀態外溢到書架等其他畫面。
-    SystemChrome.setPreferredOrientations(const []);
-    // 全螢幕模式離開閱讀畫面時無條件還原，不判斷 _lastAppliedFullscreen
-    // （比照上一行既有的螢幕方向無條件還原寫法），避免外溢到書架等其他畫面。
-    _fullscreenChannel.invokeMethod('setEnabled', false);
+    // epic-66 Issue 10：Windows 不鎖定方向、也沒有全螢幕偏好 channel，整段跳過
+    if (supportsMobileReaderControls) {
+      SystemChrome.setPreferredOrientations(const []);
+      // 全螢幕模式離開閱讀畫面時無條件還原，不判斷 _lastAppliedFullscreen
+      // （比照上一行既有的螢幕方向無條件還原寫法），避免外溢到書架等其他畫面。
+      _fullscreenChannel.invokeMethod('setEnabled', false);
+    }
     // 預設集 module：dispose 之後不再通知、不再呼叫 _handlePrefsChanged。
     _presetFlow.dispose();
     super.dispose();
@@ -737,6 +745,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 僅在 screenOrientation 與 [_lastAppliedOrientation] 不同時
   /// 才實際呼叫 SystemChrome。
   void _applyScreenOrientation() {
+    if (!supportsMobileReaderControls) return;
     final resolved = _resolved;
     if (resolved == null) return;
     if (resolved.screenOrientation == _lastAppliedOrientation) return;
@@ -750,6 +759,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// _applyScreenOrientation() 的節流寫法，避免偏好設定頻繁變動時重複
   /// 呼叫 platform channel。
   void _applySystemUiMode() {
+    if (!supportsMobileReaderControls) return;
     final resolved = _resolved;
     if (resolved == null) return;
     if (resolved.fullscreen == _lastAppliedFullscreen) return;
@@ -1876,7 +1886,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // false，此時閱讀器仍在使用中，不應釋放攔截，故只在 didPop 為 true
       // 時才呼叫。
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) {
+        if (didPop && supportsMobileReaderControls) {
           _volumeKeyChannel.invokeMethod('notifyLeavingReader');
         }
       },

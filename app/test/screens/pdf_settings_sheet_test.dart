@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
@@ -1256,6 +1257,69 @@ void main() {
       expect(notified!.dualPageCoverAlone, isTrue);
       expectPrefsPreserved(notified, fullBookReaderPrefsSeed,
           except: {'dual_page_cover_alone'});
+    });
+  });
+
+  group('Windows 隱藏濾鏡分頁與全螢幕（epic-66 Issue 10）', () {
+    testWidgets('預設平台（Android）：三個分頁與全螢幕開關都在', (tester) async {
+      await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+      expect(find.byKey(const Key('pdf_settings_tab_display')), findsOneWidget);
+      expect(find.byKey(const Key('pdf_settings_tab_filters')), findsOneWidget);
+      expect(find.byKey(const Key('pdf_settings_tab_crop')), findsOneWidget);
+      expect(find.byKey(const Key('pdf_settings_fullscreen')), findsOneWidget);
+    });
+
+    testWidgets('Windows：只有顯示與裁切兩個分頁，切換不拋例外', (tester) async {
+      // 平台覆寫須在測試本體內還原（Flutter 於 tearDown 之前檢查 foundation 變數）
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+        expect(
+            find.byKey(const Key('pdf_settings_tab_display')), findsOneWidget);
+        expect(find.byKey(const Key('pdf_settings_tab_filters')), findsNothing);
+        expect(find.byKey(const Key('pdf_settings_tab_crop')), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('pdf_settings_crop_mode_auto')),
+            findsOneWidget);
+        expect(tester.takeException(), isNull);
+
+        await tester.tap(find.byKey(const Key('pdf_settings_tab_display')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('pdf_settings_fit_mode_page_fit')),
+            findsOneWidget);
+        expect(tester.takeException(), isNull);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('Windows：左右滑動分頁不拋例外', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+        await tester.fling(find.byType(TabBarView), const Offset(-600, 0), 1000);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await tester.fling(find.byType(TabBarView), const Offset(600, 0), 1000);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('Windows：沒有全螢幕開關', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+        expect(find.byKey(const Key('pdf_settings_fullscreen')), findsNothing);
+        expect(find.byKey(const Key('pdf_settings_show_footer')),
+            findsOneWidget);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
   });
 }

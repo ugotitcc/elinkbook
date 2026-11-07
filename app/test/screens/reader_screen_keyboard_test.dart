@@ -857,4 +857,51 @@ void main() {
       }
     });
   });
+
+  group('ReaderScreen Android 原生 channel（epic-66 Issue 10）', () {
+    // 記錄 elinkbook/fullscreen 與 elinkbook/volume_key 兩個 channel 的所有呼叫。
+    // 須在 pumpEpubReader 之前呼叫，蓋掉 setUp 設的空處理器。
+    List<String> recordChannelCalls() {
+      final calls = <String>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      for (final name in const ['elinkbook/fullscreen', 'elinkbook/volume_key']) {
+        messenger.setMockMethodCallHandler(MethodChannel(name), (call) async {
+          calls.add('$name:${call.method}');
+          return null;
+        });
+      }
+      return calls;
+    }
+
+    testWidgets('預設平台（Android）進出閱讀器：離開時仍呼叫 fullscreen setEnabled',
+        (tester) async {
+      final calls = recordChannelCalls();
+      await pumpEpubReader(tester, surface: FakeReaderSurface.foliate());
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+
+      expect(calls, contains('elinkbook/fullscreen:setEnabled'));
+    });
+
+    testWidgets('Windows 進出閱讀器：不呼叫 volume_key 與 fullscreen channel',
+        (tester) async {
+      // 平台覆寫須在測試本體內還原（Flutter 於 tearDown 之前檢查 foundation 變數）
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        final calls = recordChannelCalls();
+        await pumpEpubReader(tester, surface: FakeReaderSurface.foliate());
+
+        // 卸載會觸發 dispose；之後再 pump 一次，避免晚到的呼叫逃過斷言
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+
+        expect(calls, isEmpty);
+        expect(tester.takeException(), isNull);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+  });
 }

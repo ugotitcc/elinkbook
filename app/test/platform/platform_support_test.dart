@@ -19,4 +19,13 @@ void main() {
     expect(isWindowsPlatform, isTrue);
     expect(isAndroidPlatform, isFalse);
   });
+
+  test('supportsMobileReaderControls 在 Windows 為 false，Android 與 iOS 為 true', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    expect(supportsMobileReaderControls, isFalse);
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    expect(supportsMobileReaderControls, isTrue);
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    expect(supportsMobileReaderControls, isTrue);
+  });
 }
