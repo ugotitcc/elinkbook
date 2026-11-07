@@ -11,6 +11,7 @@ import '../reader/pdf_page_turn_mode.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_option_chip_group.dart';
 import 'widgets/eb_stepper.dart';
+import '../platform/platform_support.dart';
 
 /// PDF 專屬版面設定 Bottom Sheet（FR-11），三分頁結構：顯示／濾鏡／裁切，
 /// 見 docs/epics/epic-4-pdf-enhance/design.md 決策 #10（不與 EPUB 用的
@@ -63,7 +64,11 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    // epic-66 Issue 10：Windows 隱藏「濾鏡」分頁（E-Ink 影像濾鏡），分頁數 3 → 2
+    _tabController = TabController(
+      length: supportsMobileReaderControls ? 3 : 2,
+      vsync: this,
+    );
     _fitMode = widget.prefs.pdfFitMode ?? PdfFitMode.pageFit;
     _contrast = widget.prefs.pdfContrast ?? 0;
     _brightness = widget.prefs.pdfBrightness ?? 0;
@@ -143,7 +148,8 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               controller: _tabController,
               tabs: [
                 Tab(key: const Key('pdf_settings_tab_display'), text: l10n.readerPdfSettingsTabDisplay),
-                Tab(key: const Key('pdf_settings_tab_filters'), text: l10n.readerPdfSettingsTabFilters),
+                if (supportsMobileReaderControls)
+                  Tab(key: const Key('pdf_settings_tab_filters'), text: l10n.readerPdfSettingsTabFilters),
                 Tab(key: const Key('pdf_settings_tab_crop'), text: l10n.readerPdfSettingsTabCrop),
               ],
             ),
@@ -152,7 +158,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                 controller: _tabController,
                 children: [
                   _buildDisplayTab(context),
-                  _buildFiltersTab(),
+                  if (supportsMobileReaderControls) _buildFiltersTab(),
                   _buildCropTab(context),
                 ],
               ),
@@ -338,18 +344,20 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                 }),
               ),
             ),
-            EBFieldCard(
-              padding: EdgeInsets.zero,
-              child: SwitchListTile(
-                key: const Key('pdf_settings_fullscreen'),
-                title: Text(l10n.readerFullscreenModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
-                value: _fullscreen,
-                onChanged: (v) => setState(() {
-                  _fullscreen = v;
-                  _notifyChanged();
-                }),
+            // epic-66 Issue 10：Windows 沒有 Android 沉浸模式，隱藏全螢幕偏好
+            if (supportsMobileReaderControls)
+              EBFieldCard(
+                padding: EdgeInsets.zero,
+                child: SwitchListTile(
+                  key: const Key('pdf_settings_fullscreen'),
+                  title: Text(l10n.readerFullscreenModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
+                  value: _fullscreen,
+                  onChanged: (v) => setState(() {
+                    _fullscreen = v;
+                    _notifyChanged();
+                  }),
+                ),
               ),
-            ),
             const SizedBox(height: 16),
             Text(l10n.readerPdfPageOrientationLabel, style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
