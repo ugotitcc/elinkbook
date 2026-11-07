@@ -5,6 +5,15 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/local_book_server.dart';
 
+/// 測試用的綁定位址。
+///
+/// 某些 Windows 機器的 127.0.0.1 上，帶 `Connection: close` 的連線會被隨機重設，
+/// 讓這個檔案的測試隨機失敗（epic-66 Issue 11，診斷見該 Issue 報告與
+/// `tool/check_loopback_reliability.js`）；Windows 改綁 127.0.0.2 避開。
+/// macOS／Linux 預設不能綁 127.0.0.2，維持 127.0.0.1。
+InternetAddress _testBindAddress() =>
+    Platform.isWindows ? InternetAddress('127.0.0.2') : InternetAddress.loopbackIPv4;
+
 void main() {
   group('LocalBookServer', () {
     late Directory tempDir;
@@ -20,7 +29,7 @@ void main() {
       sampleFile = File('${tempDir.path}/sample.epub');
       await sampleFile.writeAsBytes(sampleBytes, flush: true);
 
-      server = LocalBookServer();
+      server = LocalBookServer(bindAddress: _testBindAddress());
       client = HttpClient();
     });
 
@@ -45,7 +54,7 @@ void main() {
       expect(server.address!.isLoopback, isTrue);
       expect(server.port, isNotNull);
       expect(server.port, greaterThan(0));
-      expect(handle.bookBaseUri.host, '127.0.0.1');
+      expect(handle.bookBaseUri.host, _testBindAddress().address);
       expect(handle.bookBaseUri.port, server.port);
       expect(handle.bookBaseUri.path, endsWith('/'));
     });
@@ -205,11 +214,12 @@ void main() {
 
     test('啟動失敗（埠綁定例外）不永久快取失敗，修復後再次 register 可成功', () async {
       // 審查 Important 2：先佔住一個埠，再讓伺服器綁定同一埠使其失敗
-      final blocker = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      // blocker 與 failing 必須綁同一個位址；佔 127.0.0.1:P 時 127.0.0.2:P 仍綁得上
+      final blocker = await ServerSocket.bind(_testBindAddress(), 0);
       addTearDown(blocker.close);
 
       final failing = LocalBookServer(
-        bindAddress: InternetAddress.loopbackIPv4,
+        bindAddress: _testBindAddress(),
         port: blocker.port,
       );
       addTearDown(failing.close);
@@ -308,5 +318,21 @@ void main() {
         expect(h.bookBaseUri.port, server.port);
       }
     });
+  });
+
+  // epic-66 Issue 11：`--dart-define=LOCAL_BOOK_SERVER_BIND` 的解析。
+  // 只接受 IPv4 loopback，其餘一律退回 127.0.0.1，避免把書檔服務暴露到區網。
+  group('bindAddressFromDefine', () {
+    test("'127.0.0.2' 回傳該位址", () {
+      final address = LocalBookServer.bindAddressFromDefine('127.0.0.2');
+      expect(address.address, '127.0.0.2');
+    });
+
+    for (final value in ['', 'abc', '0.0.0.0', '192.168.1.5', '::1']) {
+      test("'$value' 退回 127.0.0.1 且不拋例外", () {
+        final address = LocalBookServer.bindAddressFromDefine(value);
+        expect(address, InternetAddress.loopbackIPv4);
+      });
+    }
   });
 }

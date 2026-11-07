@@ -32,7 +32,30 @@ class BookServeHandle {
 
 /// Windows 專用本機 loopback 書檔 HTTP 伺服器。
 class LocalBookServer {
-  static final instance = LocalBookServer();
+  /// 全域實例。綁定位址預設 `127.0.0.1`；實驗與診斷時可用
+  /// `--dart-define=LOCAL_BOOK_SERVER_BIND=127.0.0.2` 改綁其他 IPv4 loopback 位址
+  /// （epic-66 Issue 11：某些機器的 127.0.0.1 會隨機重設連線，見該 Issue 報告）。
+  /// 一般建置不要帶這個開關。
+  static final instance = LocalBookServer(
+    bindAddress: bindAddressFromDefine(
+      const String.fromEnvironment('LOCAL_BOOK_SERVER_BIND'),
+    ),
+  );
+
+  /// 解析 `LOCAL_BOOK_SERVER_BIND` 的值。
+  ///
+  /// 只接受 IPv4 且為 loopback 的位址；空字串、無法解析、非 loopback
+  /// （例如 `0.0.0.0`、區網 IP，會把書檔服務暴露到區網）或 IPv6（`::1` 會讓
+  /// `http://::1:port` 無法被 `Uri.parse`）一律退回 `127.0.0.1`，不拋例外。
+  static InternetAddress bindAddressFromDefine(String value) {
+    final address = InternetAddress.tryParse(value);
+    if (address != null &&
+        address.type == InternetAddressType.IPv4 &&
+        address.isLoopback) {
+      return address;
+    }
+    return InternetAddress.loopbackIPv4;
+  }
 
   final Random _random;
   final InternetAddress _bindAddress;
