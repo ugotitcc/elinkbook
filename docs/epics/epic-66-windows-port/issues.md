@@ -9,7 +9,7 @@
 | 3 | 閱讀器開書與全文索引器的「整本回傳」記憶體：驗證是否洩漏，洩漏則修正（來源 Issue 2 審查發現） | Issue 2 | ✅ 已合併（量測確認閱讀器洩漏，修法移至 Issue 4） | #396 |
 | 4 | Windows 書檔改由本機 loopback HTTP 伺服器（`shelf`）服務，消除「整本回傳」洩漏（來源 Issue 3 報告） | Issue 3 | ✅ 已合併 | #397 |
 | 5 | Windows 檔案與資料夾匯入：選檔、選資料夾、拖曳三種方式，書檔維持原路徑，不支援格式略過並提示 | Issue 4 | ✅ 已合併（Windows 人工驗證 2026-11-06 使用者回報通過） | #398 |
-| 6 | Flutter 升級至 ≥ 3.47.7（評估與遷移）：`onReorder` 棄用、built-in Kotlin／AGP 9、Windows 預設 Impeller、外掛相容；一併處理繁中 Windows 的 `/utf-8` 編譯問題 | Issue 11 | ⚪ 未開始（尚未規劃） | — |
+| 6 | Flutter 升級至 ≥ 3.47.7（評估與遷移）：`onReorder` 棄用、built-in Kotlin／AGP 9、Windows 預設 Impeller、外掛相容；一併處理繁中 Windows 的 `/utf-8` 編譯問題 | Issue 11 | 🟡 已規劃，待實作（見 [plan-issue-6.md](plans/plan-issue-6.md)） | — |
 | 7 | Windows 鍵盤快捷鍵與 F11 視窗全螢幕：翻頁類按鍵、Ctrl+F、F11，Esc 依序處理浮層與全螢幕 | Issue 5 | ✅ 已合併（Windows 人工驗證 2026-11-06 使用者回報通過，F11／Esc 在 WebView2 有焦點時可用） | #399 |
 | 8 | 索引器在 Windows 讓整個 App 消失：根因是漏登錄 JS 會呼叫的處理器（Windows 外掛遇到未登錄處理器會結束程序）；已診斷並修正，報告見 [issue-8-report.md](issue-8-report.md) | Issue 4 | ✅ 已合併（大檔索引、背景排程端到端、Android 尚未實測） | #400 |
 | 9 | WebView2 未安裝時顯示說明與下載連結（決策 4，原本漏掉） | Issue 7 | ✅ 已合併（Windows 實機以空 Runtime 資料夾模擬驗證通過；乾淨機器、重新檢查成功後進入 App 尚未實測） | #401 |
@@ -370,6 +370,38 @@ Windows 版隱藏只有手機有意義的控制項，並停止呼叫 Windows 上
 - `LocalBookServer.bindAddressFromDefine(String)`：`'127.0.0.2'` 回傳該位址；空字串回傳 `127.0.0.1`；非 IP 字串（`'abc'`）、非 loopback（`'0.0.0.0'`、`'192.168.1.5'`）與 IPv6（`'::1'`）都回傳 `127.0.0.1`，不拋例外。
 - `local_book_server_test.dart` 既有 11 個測試改用「測試綁定位址」後全數通過；`bookBaseUri.host` 的斷言改比對實際位址。
 - 診斷腳本不另寫單元測試，以實際執行輸出驗證。
+
+## Issue 6 範圍
+
+2026-11-07 盤點發現：這台機器的共用 SDK `C:\tools\flutter` 從 2026-10-23 起就是 Flutter 3.47.4，近期工作與全套測試（5118 個，0 失敗）都在 3.47.4 上通過；`CLAUDE.md` 寫的 3.41.9 已過時。所以本 Issue 的實質工作是：把共用 SDK 升到含安全公告修補的 3.47.9，把剩下的棄用與建置問題收乾淨，並讓政策文件對齊現況。使用者決定（2026-11-07）直接升級共用的 `C:\tools\flutter`。
+
+1. **升級共用 SDK 到 3.47.9。** 3.47.8 含安全公告 GHSA-frr6-h895-5pxp（Dart 執行環境的 BoringSSL 封鎖被入侵的 eMudhra 中繼 CA 憑證；Android、Windows、Linux 應用升級後重新建置）；3.47.6 修正 Windows 正式版 App 卡死。回退點是 `9584c6713b`（3.47.4）；`C:\src\flutter-3.41.9` 保留不刪。
+2. **回歸基準：** 只換 SDK、不改程式，先跑 `flutter pub get`、`flutter analyze`、全套 `flutter test`，與 3.47.4 基準（5118 個、0 失敗、2 個 info）比對。
+3. **`onReorder` → `onReorderItem`：** 只有 `dictionary_settings_screen.dart` 一處；行為不變，既有 3 個重排測試不改斷言，另補一個「往前拖」的測試。
+4. **Windows 建置不再需要手動設 `CL=/utf-8`：** 在 `windows/CMakeLists.txt` 為 MSVC 加 `/utf-8`；先重現失敗，再驗證修好；若在 3.47.9 已不需要，則記錄後略過。
+5. **`desktop_drop` 0.8.4 → 0.9.2**（0.9.x 要求 Flutter ≥ 3.47.7），維持固定版本。
+6. **建置驗證：** `flutter build apk --debug`（沒有 Android 裝置，只到建置成功；AGP 8.11.1、Kotlin 2.3.20、Gradle 8.14 的警告逐條記錄）與 `flutter build windows --debug`。
+7. **Windows 開書冒煙：** 3.47.9 的 Windows debug 版冷啟動 5 次、自動還原上次的書，記錄成功與耗時。
+8. **政策文件：** 更新 `CLAUDE.md` 的 Flutter 版本段落、`epic.md` 新增決策 28、撰寫 `issue-6-report.md`。
+9. **不處理：** `pdfrx` 2.4.7→2.12.0、`file_picker` 11→13、`window_manager` 0.5.2→0.6.0（大跳版）；`sqflite`、`url_launcher`（只差 patch）；AGP 9／built-in Kotlin 遷移；Android 真機驗證。
+
+## Issue 6 過關條件
+
+1. `flutter --version` 顯示 3.47.9，`flutter doctor` 的 Android、Windows、Visual Studio 仍為 ✓；回退指令寫在報告。
+2. 只換 SDK 時，`pub get` 無鎖檔變動、`flutter analyze` 只有 2 個 info、全套 `flutter test` 5118 個 0 失敗；有差異就逐項記錄。
+3. 全專案 `flutter analyze` 只剩 `use_null_aware_elements` 這 1 個 info（`onReorder` 棄用消失）。
+4. 詞典拖曳排序的結果與現況完全相同（既有 3 個測試加新增 1 個，共 4 個通過）。
+5. 沒有 `CL` 環境變數時 `flutter build windows --debug` 成功；設了 `CL=/utf-8` 時也成功。（或報告記載該問題已不存在。）
+6. `desktop_drop` 為 0.9.2，`import_drop_target_test.dart` 全過，`pubspec.lock` 只有 `desktop_drop` 相關變動。
+7. `flutter build apk --debug` 成功，警告清單寫進報告；報告不得寫「Android 已驗證」，只能寫「建置成功」。
+8. Windows 開書冒煙 5 次的結果如實記錄；全套 `flutter test` 5119 個（基準 5118 加 1）0 失敗。
+9. `CLAUDE.md` 的 Flutter 版本為 3.47.9，且不再有「`onReorderItem` 在 3.41.9 不存在」的警告。
+
+## Issue 6 單元測試要求
+
+- `dictionary_settings_screen_test.dart`：既有 3 個拖曳排序測試不改斷言並全過；新增 `往前拖曳（排後面的詞典拖到最前面）後 reorder 傳入新的 id 順序`。
+- `import_drop_target_test.dart`：升級 `desktop_drop` 後既有測試全過。
+- 建置與冒煙驗證（`CL`、Android、Windows 開書）以實際執行輸出驗證，不另寫單元測試。
 
 ## 後續 Issue（待 Issue 1 結果決定）
 
