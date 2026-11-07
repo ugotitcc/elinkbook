@@ -4807,6 +4807,48 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'選取的檔案格式與此書不同，無法更新'**
   String get bookManualUpdateFormatMismatch;
+
+  /// Windows 啟動時偵測到未安裝 WebView2 Runtime 時的說明畫面標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'需要安裝 Microsoft Edge WebView2'**
+  String get webview2MissingTitle;
+
+  /// 說明畫面內文：提醒使用者安裝 WebView2 執行階段以開啟書籍
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'elinkBook 需要 WebView2 執行階段才能顯示書籍。請下載並安裝，完成後按「重新檢查」。'**
+  String get webview2MissingBody;
+
+  /// 說明畫面內文：偵測到 WebView2 但環境建立失敗時的提示
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'偵測到 WebView2，但無法啟動。請重新安裝後按「重新檢查」。'**
+  String get webview2FailedBody;
+
+  /// 說明畫面的「下載 WebView2」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'下載 WebView2'**
+  String get webview2DownloadButton;
+
+  /// 說明畫面的「重新檢查」按鈕文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'重新檢查'**
+  String get webview2RecheckButton;
+
+  /// 使用者按下「重新檢查」後仍未偵測到 WebView2 時顯示的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'仍然偵測不到可用的 WebView2。'**
+  String get webview2StillMissing;
+
+  /// 環境建立失敗或例外時顯示的錯誤摘要標籤
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'錯誤摘要'**
+  String get webview2DetailLabel;
 }
 
 class _AppLocalizationsDelegate

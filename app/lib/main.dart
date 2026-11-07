@@ -3,12 +3,14 @@ import 'dart:io';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:pdfrx/pdfrx.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'cloud_import/cloud_storage_client.dart';
 import 'cloud_import/google_drive_oauth_client.dart';
@@ -70,7 +72,8 @@ import 'sync/sync_engine.dart';
 import 'sync/sync_metadata_repository.dart';
 import 'theme/app_theme.dart';
 import 'windows/windows_webview_environment.dart';
-import 'package:window_manager/window_manager.dart';
+import 'windows/webview2_runtime_check.dart';
+import 'windows/webview2_missing_screen.dart';
 import 'windows/window_fullscreen_controller.dart';
 import 'windows/window_fullscreen_shortcuts.dart';
 import 'theme/app_theme_data.dart';
@@ -221,7 +224,9 @@ Future<void> main() async {
     pdfIndexer: const PdfContentIndexer(),
     foliateIndexer: const FoliateContentIndexer(),
   );
-  contentIndexingScheduler.start();
+  // epic-66 Issue 9：start() 延後到 startApp() 內呼叫。Windows 缺 WebView2 時，
+  // appWebViewEnvironment 為 null，索引器若先啟動會用預設環境起 WebView，
+  // 可能閃退或把使用者資料夾放到 exe 旁。
   // epic-10-search Issue 3：「啟用全文檢索」設定模型。requestProcessing
   // 以 callback 注入（而非直接持有整個 contentIndexingScheduler），見
   // plans/plan-issue-3.md Global Constraints。
@@ -458,28 +463,56 @@ Future<void> main() async {
     sync: sync,
     sources: sources,
   );
-  // epic-66 Issue 1：Windows 必須在 runApp 之前建立 WebView2 環境，
+  void startApp() {
+    contentIndexingScheduler.start();
+    runApp(
+      ElinkBookApp(
+        dependencies: appDependencies,
+        navigatorKey: navigatorKey,
+        initialTheme: initialTheme,
+        initialEinkMode: initialEinkMode,
+        themePreferences: themePreferences,
+        localePreferences: localePreferences,
+        initialLocaleOverride: initialLocaleOverride,
+      ),
+    );
+  }
+
+  // epic-66 Issue 1/9：Windows 必須在 runApp 之前建立 WebView2 環境，
   // InAppWebView 才能在建構時拿到 webViewEnvironment（使用者資料夾落在
   // %APPDATA% 下的 App 資料夾，見 windows_webview_environment.dart）。
+  // 若未安裝 WebView2 或建立環境失敗，顯示說明畫面引導下載，裝好後可免重啟進入。
   // 非 Windows 平台直接略過，不增加任何呼叫（Android 路徑不變）。
   if (isWindowsPlatform) {
     await windowManager.ensureInitialized();
     activeWindowFullscreenController = WindowManagerFullscreenController();
-    await initAppWebViewEnvironment(
-      userDataFolder: (await getApplicationSupportDirectory()).path,
+
+    final appSupportDir = await getApplicationSupportDirectory();
+    // 進行中的環境建立。逾時後使用者按「重新檢查」時重用同一個 Future，
+    // 避免對同一個 user data folder 同時建立兩次。完成（成功或失敗）後清空。
+    Future<void>? pendingCreate;
+    Future<WebView2CheckResult> runCheck() => checkAndInitWebView2(
+      probe: () => WebViewEnvironment.getAvailableVersion(),
+      createEnvironment: () => pendingCreate ??= initAppWebViewEnvironment(
+        userDataFolder: appSupportDir.path,
+      ).whenComplete(() => pendingCreate = null),
     );
+
+    final initialResult = await runCheck();
+    if (!initialResult.isReady) {
+      runApp(
+        WebView2MissingApp(
+          initialResult: initialResult,
+          recheck: runCheck,
+          onReady: startApp,
+          localeOverride: initialLocaleOverride?.locale,
+        ),
+      );
+      return;
+    }
   }
-  runApp(
-    ElinkBookApp(
-      dependencies: appDependencies,
-      navigatorKey: navigatorKey,
-      initialTheme: initialTheme,
-      initialEinkMode: initialEinkMode,
-      themePreferences: themePreferences,
-      localePreferences: localePreferences,
-      initialLocaleOverride: initialLocaleOverride,
-    ),
-  );
+
+  startApp();
 }
 
 /// elinkBook App 根元件。Issue 13 起收 `AppDependencies`（三組靜態依賴的容器），

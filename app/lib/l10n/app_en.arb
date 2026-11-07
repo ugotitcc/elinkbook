@@ -798,5 +798,12 @@
   "bookActionUpdateBook": "Update with new file",
   "bookManualUpdateConfirmMessage": "The contents of \"{title}\" will be replaced with \"{fileName}\". Reading progress, category, and layout preferences will be preserved.",
   "bookManualUpdateConfirmButton": "Update",
-  "bookManualUpdateFormatMismatch": "Selected file format does not match this book and cannot be updated"
+  "bookManualUpdateFormatMismatch": "Selected file format does not match this book and cannot be updated",
+  "webview2MissingTitle": "Microsoft Edge WebView2 Required",
+  "webview2MissingBody": "elinkBook requires the WebView2 Runtime to display books. Please download and install it, then click \"Recheck\".",
+  "webview2FailedBody": "WebView2 was detected, but failed to start. Please reinstall it and click \"Recheck\".",
+  "webview2DownloadButton": "Download WebView2",
+  "webview2RecheckButton": "Recheck",
+  "webview2StillMissing": "A usable WebView2 installation was still not detected.",
+  "webview2DetailLabel": "Error Details"
 }

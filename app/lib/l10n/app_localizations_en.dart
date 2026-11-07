@@ -2892,4 +2892,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get bookManualUpdateFormatMismatch =>
       'Selected file format does not match this book and cannot be updated';
+
+  @override
+  String get webview2MissingTitle => 'Microsoft Edge WebView2 Required';
+
+  @override
+  String get webview2MissingBody =>
+      'elinkBook requires the WebView2 Runtime to display books. Please download and install it, then click \"Recheck\".';
+
+  @override
+  String get webview2FailedBody =>
+      'WebView2 was detected, but failed to start. Please reinstall it and click \"Recheck\".';
+
+  @override
+  String get webview2DownloadButton => 'Download WebView2';
+
+  @override
+  String get webview2RecheckButton => 'Recheck';
+
+  @override
+  String get webview2StillMissing =>
+      'A usable WebView2 installation was still not detected.';
+
+  @override
+  String get webview2DetailLabel => 'Error Details';
 }
