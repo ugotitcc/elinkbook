@@ -45,6 +45,16 @@ function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
 endfunction()
 
+# 原始碼一律以 UTF-8 編譯（epic-66 Issue 6）。
+# 繁中 Windows 的預設字碼頁是 950，plugin 原始碼（例如 connectivity_plus、
+# flutter_inappwebview_windows）含 UTF-8 字元時會觸發 C4819，再被
+# APPLY_STANDARD_SETTINGS 的 /WX 升為錯誤，讓建置失敗，過去要手動設 `CL=/utf-8`。
+# add_compile_options 是目錄屬性：放在這裡（任何 add_subdirectory 之前），
+# 之後引入的 flutter、runner 與全部 plugin 都會繼承。
+if(MSVC)
+  add_compile_options(/utf-8)
+endif()
+
 # Flutter library and tool build rules.
 set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
 add_subdirectory(${FLUTTER_MANAGED_DIR})
