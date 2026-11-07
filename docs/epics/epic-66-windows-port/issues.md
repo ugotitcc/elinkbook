@@ -9,7 +9,7 @@
 | 3 | 閱讀器開書與全文索引器的「整本回傳」記憶體：驗證是否洩漏，洩漏則修正（來源 Issue 2 審查發現） | Issue 2 | ✅ 已合併（量測確認閱讀器洩漏，修法移至 Issue 4） | #396 |
 | 4 | Windows 書檔改由本機 loopback HTTP 伺服器（`shelf`）服務，消除「整本回傳」洩漏（來源 Issue 3 報告） | Issue 3 | ✅ 已合併 | #397 |
 | 5 | Windows 檔案與資料夾匯入：選檔、選資料夾、拖曳三種方式，書檔維持原路徑，不支援格式略過並提示 | Issue 4 | ✅ 已合併（Windows 人工驗證 2026-11-06 使用者回報通過） | #398 |
-| 6 | Flutter 升級至 ≥ 3.47.7（評估與遷移）：`onReorder` 棄用、built-in Kotlin／AGP 9、Windows 預設 Impeller、外掛相容；一併處理繁中 Windows 的 `/utf-8` 編譯問題 | Issue 11 | ✅ 實作完成，待 PR（共用 SDK 升到 3.47.9；`desktop_drop` 維持 0.8.4，登記 Issue 16；Android 只到建置成功，見 [issue-6-report.md](issue-6-report.md)） | — |
+| 6 | Flutter 升級至 ≥ 3.47.7（評估與遷移）：`onReorder` 棄用、built-in Kotlin／AGP 9、Windows 預設 Impeller、外掛相容；一併處理繁中 Windows 的 `/utf-8` 編譯問題 | Issue 11 | ✅ 實作完成，待 PR（共用 SDK 升到 3.47.9；`desktop_drop` 維持 0.8.4，登記 Issue 16；Android 已在 WAVE 真機安裝並實測啟動與重複開書，未跑 integration_test；過關條件 8 的全套測試有 1 個偶發失敗，以 ruling 判為偶發，見 [issue-6-report.md](issue-6-report.md)） | — |
 | 7 | Windows 鍵盤快捷鍵與 F11 視窗全螢幕：翻頁類按鍵、Ctrl+F、F11，Esc 依序處理浮層與全螢幕 | Issue 5 | ✅ 已合併（Windows 人工驗證 2026-11-06 使用者回報通過，F11／Esc 在 WebView2 有焦點時可用） | #399 |
 | 8 | 索引器在 Windows 讓整個 App 消失：根因是漏登錄 JS 會呼叫的處理器（Windows 外掛遇到未登錄處理器會結束程序）；已診斷並修正，報告見 [issue-8-report.md](issue-8-report.md) | Issue 4 | ✅ 已合併（大檔索引、背景排程端到端、Android 尚未實測） | #400 |
 | 9 | WebView2 未安裝時顯示說明與下載連結（決策 4，原本漏掉） | Issue 7 | ✅ 已合併（Windows 實機以空 Runtime 資料夾模擬驗證通過；乾淨機器、重新檢查成功後進入 App 尚未實測） | #401 |
