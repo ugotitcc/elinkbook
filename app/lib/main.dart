@@ -32,6 +32,7 @@ import 'dictionary/storage/dictionary_store.dart';
 import 'dictionary/storage/dictionary_store_provider.dart';
 import 'dictionary/storage/mdx_reader_pool.dart';
 import 'library/book_content_fingerprint.dart';
+import 'library/android_book_metadata.dart';
 import 'library/book_import_service_impl.dart';
 import 'library/update_staging.dart';
 import 'screens/support/book_update_resolver.dart' show evictCoverImageCache;
@@ -249,9 +250,11 @@ Future<void> main() async {
   // fullTextSearchSettingsRepository（見 plans/plan-issue-2.md），因此
   // importService 的建構挪到這裡（在它之後），不再是 repository 開啟後
   // 立刻建構。
-  // epic-66 Issue 2：Windows 使用 foliate-js / pdfrx 解析 metadata，
-  // Android 為 null 走既有 kBookMetadataChannel。
-  final metadataExtractor = isWindowsPlatform ? extractWindowsBookMetadata : null;
+  // epic-66 Issue 2 & Issue 12：Windows 使用 foliate-js / pdfrx 解析 metadata，
+  // Android 使用 extractAndroidBookMetadata（由 kAndroidMetadataFoliateFirst 控制優先順序）。
+  final metadataExtractor = isWindowsPlatform
+      ? extractWindowsBookMetadata
+      : (isAndroidPlatform ? extractAndroidBookMetadata : null);
   // epic-67 Issue 4：啟動時清空更新暫存目錄（update_staging），避免前次未結算暫存殘留。
   try {
     await sweepUpdateStaging(await getApplicationDocumentsDirectory());

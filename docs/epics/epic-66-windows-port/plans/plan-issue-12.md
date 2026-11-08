@@ -116,11 +116,11 @@ git commit -m "feat(android): foliate-js 背景探針讀 EPUB metadata（epic-66
 - Consumes（另）: `runSerialized`（`windows_book_metadata.dart` 的同一個佇列，只 import、不修改）。
 - Produces: `const bool kAndroidMetadataFoliateFirst = false;`；`Future<Map<String, Object?>?> extractAndroidBookMetadata(String uri, String format, {bool foliateFirst = kAndroidMetadataFoliateFirst, Future<Map<String, Object?>> Function(String uri)? foliateReader, Future<Map<String, Object?>?> Function(String uri, String format)? readiumReader})`。
 
-- [ ] **Step 1: 寫失敗測試（假讀取函式注入）。** `foliateFirst: false`：只呼叫 Readium，foliate 從未呼叫；`foliateFirst: true` 且格式為 `epub`、foliate 成功：回傳 foliate 結果，Readium 從未呼叫；`foliateFirst: true`、foliate 丟例外：改呼叫 Readium 並回傳其結果（並確認有輸出退回原因的日誌，用 `debugPrint` 攔截）；`foliateFirst: true` 但格式為 `pdf`：只呼叫 Readium 通道（PDF 一律走原生）；兩邊都失敗：把 Readium 的例外往外拋（不吞掉）；兩次同時呼叫 foliate 路徑時**依序執行**（第二次在第一次完成後才開始，用 `Completer` 擋住第一次來驗證）；Readium 退路呼叫通道時，用 mock 通道斷言引數鍵為 `uri` 與 `format`（不是 `path`）。
-- [ ] **Step 2: 執行確認失敗。** `flutter test test/library/android_book_metadata_test.dart`（預期編譯失敗）。
-- [ ] **Step 3: 實作與接線。** `android_book_metadata.dart` 預設的 `readiumReader` 呼叫 `kBookMetadataChannel.invokeMapMethod('extractMetadata', {'uri': uri, 'format': format})`（Kotlin 的 `onMethodCall` 讀的是 `uri`，`book_import_service_impl.dart` 約第 894、955、1332 行現行呼叫也都是 `'uri'`；寫成 `path` 會讓退路 100% 回 `invalid_arguments`）；foliate 路徑一律包在 `runSerialized` 內，確保同一時間只有一個背景探針 WebView（EPUB 一口氣匯入 50 本時不會同時開數十個 WebView）；Readium 退路不排隊，維持現行行為；`main.dart` 改為 `isWindowsPlatform ? extractWindowsBookMetadata : (isAndroidPlatform ? extractAndroidBookMetadata : null)`。旗標維持 `false`。
-- [ ] **Step 4: 執行確認通過。** 同 Step 2 指令全過；跑 `flutter test test/library test/screens/library_screen_test.dart` 確認既有匯入相關測試不受影響；`flutter analyze` 乾淨。
-- [ ] **Step 5: Commit。**
+- [x] **Step 1: 寫失敗測試（假讀取函式注入）。** `foliateFirst: false`：只呼叫 Readium，foliate 從未呼叫；`foliateFirst: true` 且格式為 `epub`、foliate 成功：回傳 foliate 結果，Readium 從未呼叫；`foliateFirst: true`、foliate 丟例外：改呼叫 Readium 並回傳其結果（並確認有輸出退回原因的日誌，用 `debugPrint` 攔截）；`foliateFirst: true` 但格式為 `pdf`：只呼叫 Readium 通道（PDF 一律走原生）；兩邊都失敗：把 Readium 的例外往外拋（不吞掉）；兩次同時呼叫 foliate 路徑時**依序執行**（第二次在第一次完成後才開始，用 `Completer` 擋住第一次來驗證）；Readium 退路呼叫通道時，用 mock 通道斷言引數鍵為 `uri` 與 `format`（不是 `path`）。
+- [x] **Step 2: 執行確認失敗。** `flutter test test/library/android_book_metadata_test.dart`（預期編譯失敗）。
+- [x] **Step 3: 實作與接線。** `android_book_metadata.dart` 預設的 `readiumReader` 呼叫 `kBookMetadataChannel.invokeMapMethod('extractMetadata', {'uri': uri, 'format': format})`（Kotlin 的 `onMethodCall` 讀的是 `uri`，`book_import_service_impl.dart` 約第 894、955、1332 行現行呼叫也都是 `'uri'`；寫成 `path` 會讓退路 100% 回 `invalid_arguments`）；foliate 路徑一律包在 `runSerialized` 內，確保同一時間只有一個背景探針 WebView（EPUB 一口氣匯入 50 本時不會同時開數十個 WebView）；Readium 退路不排隊，維持現行行為；`main.dart` 改為 `isWindowsPlatform ? extractWindowsBookMetadata : (isAndroidPlatform ? extractAndroidBookMetadata : null)`。旗標維持 `false`。
+- [x] **Step 4: 執行確認通過。** 同 Step 2 指令全過；跑 `flutter test test/library test/screens/library_screen_test.dart` 確認既有匯入相關測試不受影響；`flutter analyze` 乾淨。
+- [x] **Step 5: Commit。**
 
 ```bash
 git add app/lib/library/android_book_metadata.dart app/lib/main.dart app/test/library/android_book_metadata_test.dart
