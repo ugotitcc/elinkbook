@@ -409,10 +409,10 @@ Windows 版隱藏只有手機有意義的控制項，並停止呼叫 Windows 上
 
 Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，改成預設用 foliate-js（與 Windows 同一支 `metadata-probe.js`），Readium 留作「foliate-js 失敗時的退路」。使用者決定（2026-11-08）：對比用 **App 書庫內的書**；**分兩階段**，本 Issue 是階段一，**不移除 Readium**，移除另立 Issue 18。
 
-1. **Android 讀書檔區段（含 `content://`）：** `ReaderResourceChannel.kt` 新增 `contentUriLength`、`readContentUriRange`（上限 4 MB，不整本讀入）；純函式 `clampByteRange` 有 JVM 單元測試；Dart 端 `book_range_reader.dart` 統一本機路徑與 `content://`。
-2. **Android 版探針：** `android_epub_metadata.dart` 的 `readEpubMetadataOnAndroid`，沿用索引器的 Android 背景 WebView 寫法（`loadAndroidAsset`、`esCompatPolyfillJs`、`globalErrorCaptureJs`），逾時 30 秒；不改 `windows_epub_metadata.dart`。
-3. **派送函式與旗標：** `extractAndroidBookMetadata`；`kAndroidMetadataFoliateFirst` 預設 `false`（行為與現況完全相同）；foliate-js 失敗時 `debugPrint` 原因並退回 Readium；PDF 等非 EPUB 一律走原生通道；`main.dart` 在 Android 傳入此函式。
-4. **書庫對比測試（唯讀）：** 純函式 `diffBookMetadata` 加 `integration_test/library_metadata_comparison_test.dart`：在手機上用 `openReadOnlyDatabase` 讀 `library.db` 的 EPUB，對每本直接呼叫 Readium 通道與 foliate-js 探針（不經派送函式），印出每本的差異與耗時，並斷言測試前後 `library.db` 大小與修改時間不變。
+1. **Android 讀書檔區段（含 `content://`）：** `ReaderResourceChannel.kt` 新增 `contentUriLength`（`statSize` 小於 0 時補查 `OpenableColumns.SIZE`）、`readContentUriRange`（上限 4 MB，不整本讀入，每次呼叫以 `pfd.use` 關閉檔案描述元）；純函式 `clampByteRange` 有 JVM 單元測試；Dart 端 `book_range_reader.dart` 以 `startsWith('content://')` 分流，`file://` 轉本機路徑。
+2. **Android 版探針：** `android_epub_metadata.dart` 的 `readEpubMetadataOnAndroid`，沿用索引器的 Android 背景 WebView 寫法（`loadAndroidAsset`、`esCompatPolyfillJs`、`globalErrorCaptureJs`），逾時 30 秒；註冊 `onError` handler 讓載入階段的 JS 錯誤立刻失敗；書檔區段讀取失敗一律回明確的 404（不拋例外、不回 `null`）；不改 `windows_epub_metadata.dart`。
+3. **派送函式與旗標：** `extractAndroidBookMetadata`；`kAndroidMetadataFoliateFirst` 預設 `false`（行為與現況完全相同）；foliate-js 失敗時 `debugPrint` 原因並退回 Readium；PDF 等非 EPUB 一律走原生通道；foliate 路徑包在 `runSerialized` 內，同一時間只有一個背景探針 WebView；Readium 退路的通道引數為 `uri` 與 `format`；`main.dart` 在 Android 傳入此函式。
+4. **書庫對比測試（唯讀）：** 純函式 `diffBookMetadata` 加 `integration_test/library_metadata_comparison_test.dart`：在手機上用 `openReadOnlyDatabase` 讀 `library.db` 的 EPUB，對每本直接呼叫 Readium 通道與 foliate-js 探針（不經派送函式），印出每本的差異與耗時，並斷言書庫至少有 1 本 EPUB（避免假綠）、測試前後 `library.db` 大小與修改時間不變。
 5. **在 WAVE 上執行對比；BooksPad 由使用者視連線狀況執行。** 手機操作一律先備份資料庫、`adb install -r`、不解除安裝、測完還原正常版本。
 6. **關卡：** 對比結果給使用者看，**使用者同意**才把旗標改為 `true`；否則維持 `false` 並記錄原因。
 7. **報告與文件：** `issue-12-report.md`、`epic.md` 決策 29、登記 Issue 18（階段二）。
@@ -430,11 +430,11 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
 
 ## Issue 12 單元測試要求
 
-- `ByteRangeTest`（Kotlin JVM）：正常區段、`end` 超過長度被夾回、`start` 為負回傳 `null`、`start >= length` 回傳 `null`、`end <= start` 回傳 `null`、超過上限回傳 `null`。
-- `book_range_reader_test.dart`：本機路徑讀區段與內容一致、`end` 夾回、`start` 越界回傳 `null`；`content://` 走通道帶對參數、通道回傳 `null` 時回傳 `null`、通道例外往外拋；`bookLength` 本機與 `content://` 各一。
-- `android_epub_metadata_test.dart`：`mapProbeResult` 有封面、沒封面、壞 base64、缺 `isFixedLayout`（預設 `false`）、缺 `title`／`author`／`identifier`；`androidProbeHtml` 含大小、兩個 handler 名稱與探針腳本路徑。
-- `android_book_metadata_test.dart`：旗標關閉只走 Readium；旗標開啟 foliate 成功不呼叫 Readium；foliate 失敗退回 Readium 並有日誌；PDF 一律走原生；兩邊都失敗時把 Readium 的例外往外拋；（切換後）預設旗標為 `true`。
-- `metadata_comparison_test.dart`：相同、`title`／`identifier`／`isFixedLayout` 不同各回傳對應欄位、前後空白與 `null`／空字串視為相同、封面有無不同回傳 `cover`、封面位元組不同但都有視為相同。
+- `ByteRangeTest`（Kotlin JVM）：正常區段、`end` 超過長度被夾回、`start` 為負回傳 `null`、`start >= length` 回傳 `null`、`end <= start` 回傳 `null`、超過上限回傳 `null`、`start=0, end=5 MB, length=1 MB, maxBytes=4 MB` 回傳 `null`（先檢查原始區段大小）、`start=0, end=3 MB, length=1 MB` 回傳 `0 until 1 MB`。
+- `book_range_reader_test.dart`：本機路徑讀區段與內容一致、`end` 夾回、`start` 越界回傳 `null`；`content://` 走通道帶對參數、通道回傳 `null` 時回傳 `null`、通道例外往外拋；`bookLength` 本機與 `content://` 各一；`file://` 網址轉本機路徑讀取、不走通道。
+- `android_epub_metadata_test.dart`：`mapProbeResult` 有封面、沒封面、壞 base64、缺 `isFixedLayout`（預設 `false`）、缺 `title`／`author`／`identifier`；`androidProbeHtml` 含大小、兩個 handler 名稱與探針腳本路徑；`interceptBookRange` 讀取成功回傳資料，`readRange` 回 `null`、丟例外、缺 `start`／`end` 都回 404（且不往外拋）。
+- `android_book_metadata_test.dart`：旗標關閉只走 Readium；旗標開啟 foliate 成功不呼叫 Readium；foliate 失敗退回 Readium 並有日誌；PDF 一律走原生；兩邊都失敗時把 Readium 的例外往外拋；兩次同時呼叫 foliate 路徑時依序執行；Readium 退路的通道引數鍵為 `uri` 與 `format`；（切換後）預設旗標為 `true`。
+- `metadata_comparison_test.dart`：相同、`title`／`identifier`／`isFixedLayout` 不同各回傳對應欄位、前後空白與 `null`／空字串視為相同、封面有無不同回傳 `cover`、封面位元組不同但都有視為相同、空位元組陣列視為沒有封面。
 - 手機上的書庫對比與切換後的匯入冒煙，以實際執行輸出驗證，不另寫單元測試。
 
 ## 後續 Issue（待 Issue 1 結果決定）
