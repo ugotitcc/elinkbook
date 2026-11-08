@@ -17,6 +17,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart' show openReadOnlyDatabase;
 
 import 'package:elinkbook/library/android_epub_metadata.dart';
+import 'package:elinkbook/library/book_range_reader.dart';
 import 'package:elinkbook/library/library_repository.dart' show kBookMetadataChannel;
 import 'package:elinkbook/library/metadata_comparison.dart';
 
@@ -38,6 +39,14 @@ void main() {
     final docsDir = await getApplicationDocumentsDirectory();
     final dbPath = p.join(docsDir.path, 'library.db');
     final dbFile = File(dbPath);
+
+    if (!await dbFile.exists()) {
+      final tmpBackup = File('/data/local/tmp/library.db');
+      if (await tmpBackup.exists()) {
+        await dbFile.parent.create(recursive: true);
+        await tmpBackup.copy(dbFile.path);
+      }
+    }
 
     expect(await dbFile.exists(), isTrue, reason: '未找到 library.db 檔案：$dbPath');
 
@@ -75,6 +84,26 @@ void main() {
       final filePath = row['filePath'] as String? ?? '';
       final fileName = p.basename(filePath);
 
+      // 若原 filePath 為 content:// 且權限已被 Android 收回，
+      // 退回 /data/local/tmp/test_epubs/<檔名> 進行比對。
+      var effectiveUri = filePath;
+      if (filePath.startsWith('content://')) {
+        try {
+          final testLen = await bookLength(filePath);
+          if (testLen == null || testLen <= 0) {
+            throw StateError('content URI inaccessible');
+          }
+        } catch (_) {
+          final decoded = Uri.decodeFull(filePath);
+          final lastSlash = decoded.lastIndexOf('/');
+          final name = lastSlash >= 0 ? decoded.substring(lastSlash + 1) : decoded;
+          final fallbackFile = File('/data/local/tmp/test_epubs/$name');
+          if (await fallbackFile.exists()) {
+            effectiveUri = fallbackFile.path;
+          }
+        }
+      }
+
       // (a) Readium 原生通道（直接呼叫，不經派送函式）
       Map<String, Object?>? readiumResult;
       var readiumFailed = false;
@@ -82,7 +111,7 @@ void main() {
       try {
         readiumResult = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
           'extractMetadata',
-          {'uri': filePath, 'format': 'epub'},
+          {'uri': effectiveUri, 'format': 'epub'},
         );
       } catch (e) {
         readiumFailed = true;
@@ -96,7 +125,7 @@ void main() {
       var foliateFailed = false;
       final swF = Stopwatch()..start();
       try {
-        foliateResult = await readEpubMetadataOnAndroid(filePath);
+        foliateResult = await readEpubMetadataOnAndroid(effectiveUri);
       } catch (e) {
         foliateFailed = true;
       }

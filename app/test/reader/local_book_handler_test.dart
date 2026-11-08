@@ -62,7 +62,7 @@ void main() {
         Uri.parse('http://$host$path'),
         headers: {
           'host': host,
-          if (headers != null) ...headers,
+          ...?headers,
         },
       );
     }

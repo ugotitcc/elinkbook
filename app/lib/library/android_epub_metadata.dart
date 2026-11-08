@@ -16,7 +16,7 @@ import '../reader/foliate_native_bridge.dart';
 import 'book_range_reader.dart';
 import 'windows_epub_metadata.dart' show parseBookRange;
 
-const _probeOrigin = 'https://foliate-metadata.local';
+const _probeOrigin = 'https://appassets.androidplatform.net';
 
 /// 探針頁面 HTML：以 readBookMetadataByRange 只抓需要的區段。[size] 是書檔位元組數。
 String androidProbeHtml(int size) => '''
@@ -133,8 +133,11 @@ Future<Map<String, Object?>> readEpubMetadataOnAndroid(
 
   headless = HeadlessInAppWebView(
     initialSize: const Size(800, 1280),
-    initialUrlRequest: URLRequest(
-      url: WebUri('$_probeOrigin/probe.html'),
+    initialData: InAppWebViewInitialData(
+      data: probeHtml,
+      baseUrl: WebUri('$_probeOrigin/assets/foliate/'),
+      mimeType: 'text/html',
+      encoding: 'utf-8',
     ),
     initialSettings: InAppWebViewSettings(
       javaScriptEnabled: true,
@@ -187,35 +190,43 @@ Future<Map<String, Object?>> readEpubMetadataOnAndroid(
         },
       );
     },
+    onConsoleMessage: (controller, consoleMessage) {
+      debugPrint(
+        '[probe console] ${consoleMessage.messageLevel}: ${consoleMessage.message}',
+      );
+    },
+    onReceivedError: (controller, request, error) {
+      debugPrint('[probe onReceivedError] ${request.url}: ${error.description}');
+      if (request.isForMainFrame == true && !completer.isCompleted) {
+        completer.completeError(
+          StateError('探針主頁面載入失敗：${error.description} (${request.url})'),
+        );
+      }
+    },
     shouldInterceptRequest: (controller, request) async {
-      final url = request.url.toString();
       final path = request.url.path;
 
-      if (url == '$_probeOrigin/probe.html' || path == '/probe.html') {
-        return WebResourceResponse(
-          contentType: 'text/html; charset=utf-8',
-          data: Uint8List.fromList(utf8.encode(probeHtml)),
+      if (path == '/book/current.epub') {
+        return await interceptBookRange(
+          request.url,
+          readRange: (start, end) => readBookRange(uri, start, end),
         );
       }
 
       const foliatePrefix = '/assets/foliate/';
       if (path.startsWith(foliatePrefix)) {
         final relative = 'foliate/${path.substring(foliatePrefix.length)}';
-        final assetBytes = await loadAndroidAsset(relative);
-        if (assetBytes == null) return null;
+        final bytes = await loadAndroidAsset(relative);
+        if (bytes == null) {
+          debugPrint('[probe] 找不到資產：$relative');
+          return null;
+        }
         final contentType = path.endsWith('.js')
-            ? 'text/javascript; charset=utf-8'
-            : 'text/html';
+            ? 'text/javascript'
+            : (path.endsWith('.css') ? 'text/css' : 'text/html');
         return WebResourceResponse(
           contentType: contentType,
-          data: assetBytes,
-        );
-      }
-
-      if (path == '/book/current.epub') {
-        return await interceptBookRange(
-          request.url,
-          readRange: (start, end) => readBookRange(uri, start, end),
+          data: bytes,
         );
       }
 

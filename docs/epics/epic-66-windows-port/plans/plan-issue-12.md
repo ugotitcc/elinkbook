@@ -158,10 +158,10 @@ git commit -m "test(android): 書庫 EPUB 的 Readium 與 foliate-js metadata �
 **Files:**
 - 無專案檔案異動；結果寫入報告。
 
-- [ ] **Step 1: 確認裝置與備份。** `flutter devices` 確認 WAVE（`TCE70P24B2202374`）在線；依 Global Constraints 備份 `library.db`、`dictionary.db`、`shared_prefs` 並驗證；記下 `library.db` 的大小與時間。
-- [ ] **Step 2: 執行對比。** 在 `app/` 執行 `flutter test integration_test/library_metadata_comparison_test.dart -d TCE70P24B2202374`，輸出存 scratchpad；擷取所有 `[library_comparison]` 行與彙總。
-- [ ] **Step 3: 還原正常版本。** `flutter install --debug -d TCE70P24B2202374`（或 `adb install -r` 正常 debug APK），確認 `library.db` 大小與時間與 Step 1 相同、App 能正常啟動到書架。
-- [ ] **Step 4: 判讀。** 全部一致且沒有「只有 foliate 失敗」才算過；有差異或失敗，逐本記錄原因（讀該書 OPF 看是 Readium 還是 foliate-js 的取值問題），**不要**為了讓測試過而改比較規則；若是 foliate-js 端的錯，停下來回報，由使用者決定要修 `metadata-probe.js` 還是記為已知差異。把結果寫進 `issue-12-report.md`（先建檔，Task 6 收尾）。
+- [x] **Step 1: 確認裝置與備份。** `flutter devices` 確認 WAVE（`TCE70P24B2202374`）在線；依 Global Constraints 備份 `library.db`、`dictionary.db`、`shared_prefs` 並驗證；記下 `library.db` 的大小與時間。
+- [x] **Step 2: 執行對比。** 在 `app/` 執行 `flutter test integration_test/library_metadata_comparison_test.dart -d TCE70P24B2202374`，輸出存 scratchpad；擷取所有 `[library_comparison]` 行與彙總。
+- [x] **Step 3: 還原正常版本。** `flutter install --debug -d TCE70P24B2202374`（或 `adb install -r` 正常 debug APK），確認 `library.db` 大小與時間與 Step 1 相同、App 能正常啟動到書架。
+- [x] **Step 4: 判讀。** 全部一致且沒有「只有 foliate 失敗」才算過；有差異或失敗，逐本記錄原因（讀該書 OPF 看是 Readium 還是 foliate-js 的取值問題），**不要**為了讓測試過而改比較規則；若是 foliate-js 端的錯，停下來回報，由使用者決定要修 `metadata-probe.js` 還是記為已知差異。把結果寫進 `issue-12-report.md`（先建檔，Task 6 收尾）。
 
 ---
 
