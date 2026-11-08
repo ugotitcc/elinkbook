@@ -12,7 +12,7 @@
 
 所有指令皆在 `app/` 目錄下執行。
 
-**採用 Flutter 3.41.9**：程式碼須能在此版本編譯、`flutter analyze` 乾淨。不要使用此版本沒有的較新 API（例如 `ReorderableListView.onReorderItem` 在 3.41.9 不存在，須用 `onReorder`；曾因此讓 `main` 編譯失敗）。升級 Flutter 版本前需先與人類確認。
+**採用 Flutter 3.47.9**（Dart 3.13.7）：程式碼須能在此版本編譯、`flutter analyze` 乾淨。不要使用此版本沒有的較新 API。升級 Flutter 版本前需先與人類確認。
 
 ```bash
 flutter pub get

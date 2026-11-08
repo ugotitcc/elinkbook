@@ -213,8 +213,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
   Future<void> _onReorder(int oldIndex, int newIndex) async {
     final current = _items;
     if (current == null) return;
-    // ReorderableListView 的 newIndex 是「移除前」的位置，往後移時要減 1。
-    if (newIndex > oldIndex) newIndex -= 1;
+    // onReorderItem 傳入的 newIndex 已扣除被移除項目造成的位移，可直接使用。
     if (newIndex == oldIndex) return;
     final reordered = List<DictionaryListItem>.of(current);
     reordered.insert(newIndex, reordered.removeAt(oldIndex));
@@ -818,7 +817,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
             key: const Key('dictionary_settings_list'),
             buildDefaultDragHandles: false,
             itemCount: items.length,
-            onReorder: _onReorder,
+            onReorderItem: _onReorder,
             // E-Ink 不用拖曳時的陰影與動畫；但拖曳中的列會被提到 Overlay，
             // 脫離 Scaffold 的 Material，Switch 等元件需要 Material 祖先，
             // 所以仍要包一層透明 Material（無 elevation、無陰影）。

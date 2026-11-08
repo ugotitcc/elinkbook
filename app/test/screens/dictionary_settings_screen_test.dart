@@ -153,6 +153,82 @@ void main() {
     expect(_visibleOrder(tester, ['a', 'b', 'c']), ['c', 'a', 'b']);
   });
 
+  // epic-66 Issue 6：onReorder 改 onReorderItem 前補上「往後拖」的測試。
+  // 既有的拖曳測試全是把 c 往前拖；往後拖時 newIndex 會多一格位移，
+  // 少減或多減 1 都只有這幾個測試抓得到。
+  testWidgets('往後拖曳（第一個拖到最後一格）後 reorder 傳入 [b, c, a]', (tester) async {
+    final manager = FakeDictionaryManager(
+      items: [
+        _item('a', priority: 0),
+        _item('b', priority: 1),
+        _item('c', priority: 2),
+      ],
+    );
+    await _pump(tester, manager);
+
+    await tester.drag(
+      find.byKey(const Key('dictionary_drag_handle_a')),
+      const Offset(0, 400),
+    );
+    await tester.pumpAndSettle();
+
+    expect(manager.reorderCalls, [
+      ['b', 'c', 'a'],
+    ]);
+    expect(_visibleOrder(tester, ['a', 'b', 'c']), ['b', 'c', 'a']);
+  });
+
+  testWidgets('往後拖曳一格後 reorder 傳入 [b, a, c]', (tester) async {
+    final manager = FakeDictionaryManager(
+      items: [
+        _item('a', priority: 0),
+        _item('b', priority: 1),
+        _item('c', priority: 2),
+      ],
+    );
+    await _pump(tester, manager);
+
+    // 位移取列高的 1.2 倍：超過 b 的中線、未到 c 的中線，剛好往後一格。
+    // 一次 drag 到位時拖曳列表來不及更新插入位置，所以分段移動並 pump
+    // （比照下方既有的拖曳測試）。
+    final rowHeight =
+        tester.getRect(find.byKey(const Key('dictionary_item_a'))).height;
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const Key('dictionary_drag_handle_a'))),
+    );
+    for (var i = 0; i < 8; i++) {
+      await gesture.moveBy(Offset(0, rowHeight * 1.2 / 8));
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(manager.reorderCalls, [
+      ['b', 'a', 'c'],
+    ]);
+    expect(_visibleOrder(tester, ['a', 'b', 'c']), ['b', 'a', 'c']);
+  });
+
+  testWidgets('原地放開（位移很小）不呼叫 reorder', (tester) async {
+    final manager = FakeDictionaryManager(
+      items: [
+        _item('a', priority: 0),
+        _item('b', priority: 1),
+        _item('c', priority: 2),
+      ],
+    );
+    await _pump(tester, manager);
+
+    await tester.drag(
+      find.byKey(const Key('dictionary_drag_handle_a')),
+      const Offset(0, 5),
+    );
+    await tester.pumpAndSettle();
+
+    expect(manager.reorderCalls, isEmpty);
+    expect(_visibleOrder(tester, ['a', 'b', 'c']), ['a', 'b', 'c']);
+  });
+
   for (final eink in [true, false]) {
     testWidgets('拖曳進行中（isEinkMode: $eink）拖曳代理列不丟例外，放開後仍會排序', (
       tester,
