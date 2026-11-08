@@ -91,7 +91,7 @@
 | PDF 之後再開同一本 EPUB（第 5 次） | 已渲染 | 7730 ms |
 
 - 全程程序存活、沒有崩潰；沒有任何「開書逾時」。
-- **與記憶中的「二次開書逾時」相關：** 這支手機（WebView 91）正是該症狀的裝置。本次同一次啟動內連續重開同一本 4 次、PDF 之後再開，**都沒有重現逾時**。這只代表「在這個 debug 版、這批操作下沒發生」，不證明該問題已解決（原問題的觸發條件仍未查明）。
+- **與記憶中的「二次開書逾時」相關（2026-11-08 更正）：** 該症狀記錄在 **BooksPad（序號 `B78CW2508006423`）**，**不是**這支 WAVE（`TCE70P24B2202374`）；兩者都是 Android 12、WebView 91.0.4472.114。本次在 WAVE 上同一次啟動內連續重開同一本 4 次、PDF 之後再開，都沒有重現逾時，只代表「同 WebView 版本的另一支裝置、debug 版、這批操作下沒發生」，**不能代表 BooksPad 上的問題已解決**，原問題的觸發條件仍未查明。（本報告初稿曾誤寫成「這支手機正是該症狀的裝置」，已更正。）
 - 日誌的 `載入錯誤 HOST_LOOKUP net::ERR_INTERNET_DISCONNECTED` 是手機沒網路時某個外部資源載入失敗，出現在「已渲染」**之前**，不是終點事件，不影響開書。
 - 日誌有 `Failed to read WebView version: TimeoutException after 3s`（讀 WebView 版本逾時），App 使用偏好中快取的 `webview_major_version=91`；啟動時另有 `Using the Impeller rendering backend (Vulkan)` 接著 `(OpenGLES)`（Vulkan 失敗後退回 OpenGLES）。這些是否為 3.47.9 新增沒有基準可比（安裝前沒有保留舊日誌）。
 
