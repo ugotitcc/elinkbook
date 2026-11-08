@@ -66,13 +66,13 @@
 - Produces（Kotlin 通道，`elinkbook/reader_resources_cache`）：`contentUriLength(uri)` → `Long?`（先看 `statSize`，小於 0 時補查 `OpenableColumns.SIZE`，仍取不到才回傳 `null`）；`readContentUriRange(uri, start, end)` → `ByteArray?`（越界或超過上限回傳 `null`）。上限 4 MB（與 Windows 的 `kMaxBookRangeBytes` 一致）。兩個方法都用 `pfd.use { … }` 關閉 `ParcelFileDescriptor`，不得跨呼叫持有。
 - Produces（Dart）：`Future<int?> bookLength(String uri)`、`Future<Uint8List?> readBookRange(String uri, int start, int end)`：以 `uri.startsWith('content://')` 分流（與 repo 內其他地方一致）：`content://` 走上述通道；`file://` 以 `Uri.parse(uri).toFilePath()` 轉成本機路徑；其餘當本機路徑，本機路徑一律沿用 `windows_epub_metadata.dart` 的 `readFileRange`。兩者都接受可注入的通道，方便測試。`readBookRange`／`bookLength` 遇到通道例外直接往外拋，由呼叫端決定怎麼處理（見 Task 2）。
 
-- [ ] **Step 1: 寫失敗測試。**
+- [x] **Step 1: 寫失敗測試。**
   - Kotlin `ByteRangeTest`：`clampByteRange` 正常區段、`end` 超過長度被夾回、`start` 為負回傳 `null`、`start >= length` 回傳 `null`、`end <= start` 回傳 `null`、區段超過 `maxBytes` 回傳 `null`、`start=0, end=5 MB, length=1 MB, maxBytes=4 MB` 回傳 `null`（先檢查原始區段大小，與 Windows 同序）、`start=0, end=3 MB, length=1 MB` 回傳 `0 until 1 MB`。
   - Dart `book_range_reader_test.dart`：本機路徑讀 `[start, end)` 與檔案內容一致；`end` 超過長度被夾回；`start` 不小於長度回傳 `null`；`content://` 走通道並帶入正確參數、通道回傳 `null` 時回傳 `null`；通道丟 `PlatformException` 時 `readBookRange` 把例外往外拋；`bookLength` 本機路徑與 `content://` 各一；`file:///…` 網址轉成本機路徑讀取、不走通道。
-- [ ] **Step 2: 執行確認失敗。** `flutter test test/library/book_range_reader_test.dart`（預期編譯失敗）；`cd app/android && .\gradlew.bat testDebugUnitTest --tests "cc.ugotit.elinkbook.ByteRangeTest"`（預期編譯失敗）。
-- [ ] **Step 3: 實作。** Kotlin：`ByteRange.kt` 的純函式；`ReaderResourceChannel.kt` 兩個方法用 `contentResolver.openFileDescriptor(uri, "r")`，長度先用 `statSize`，小於 0 時改查 `OpenableColumns.SIZE`，都取不到才為 `null`，每個方法都用 `pfd.use { … }` 關閉 `ParcelFileDescriptor`；讀取用 `FileInputStream.channel.position(start)` 加固定大小緩衝，**不整本讀入**，在背景佇列執行（比照既有 `readContentUriAll` 的做法）；讀取例外轉成 `result.error`。Dart：`book_range_reader.dart`。程式註解用中文。
-- [ ] **Step 4: 執行確認通過。** 同 Step 2 兩個指令，預期全過；`flutter analyze lib/library/book_range_reader.dart test/library/book_range_reader_test.dart` 乾淨。
-- [ ] **Step 5: Commit。**
+- [x] **Step 2: 執行確認失敗。** `flutter test test/library/book_range_reader_test.dart`（預期編譯失敗）；`cd app/android && .\gradlew.bat testDebugUnitTest --tests "cc.ugotit.elinkbook.ByteRangeTest"`（預期編譯失敗）。
+- [x] **Step 3: 實作。** Kotlin：`ByteRange.kt` 的純函式；`ReaderResourceChannel.kt` 兩個方法用 `contentResolver.openFileDescriptor(uri, "r")`，長度先用 `statSize`，小於 0 時改查 `OpenableColumns.SIZE`，都取不到才為 `null`，每個方法都用 `pfd.use { … }` 關閉 `ParcelFileDescriptor`；讀取用 `FileInputStream.channel.position(start)` 加固定大小緩衝，**不整本讀入**，在背景佇列執行（比照既有 `readContentUriAll` 的做法）；讀取例外轉成 `result.error`。Dart：`book_range_reader.dart`。程式註解用中文。
+- [x] **Step 4: 執行確認通過。** 同 Step 2 兩個指令，預期全過；`flutter analyze lib/library/book_range_reader.dart test/library/book_range_reader_test.dart` 乾淨。
+- [x] **Step 5: Commit。**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/ByteRange.kt app/android/app/src/test/kotlin/cc/ugotit/elinkbook/ByteRangeTest.kt app/android/app/src/main/kotlin/cc/ugotit/elinkbook/ReaderResourceChannel.kt app/lib/library/book_range_reader.dart app/test/library/book_range_reader_test.dart

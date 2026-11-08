@@ -3,15 +3,18 @@ package cc.ugotit.elinkbook
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
+import android.provider.OpenableColumns
 import android.util.Log
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.StandardMethodCodec
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.nio.ByteBuffer
 
 /**
  * 供 Dart 端 `InAppWebView.shouldInterceptRequest`（`foliate_native_bridge.dart`）
@@ -60,6 +63,9 @@ class ReaderResourceChannel(
         // "cacheBookForServing" 的 extension 引數白名單（epic-11 Issue 3
         // 程式碼審查 Minor #2），見該處呼叫點註解。
         private val EXTENSION_PATTERN = Regex("^[a-z0-9]{1,10}$")
+
+        // 單次區段請求的位元組上限（4 MB，與 Windows 端 kMaxBookRangeBytes 一致，epic-66 Issue 12 Task 1）
+        private const val MAX_BOOK_RANGE_BYTES = 4L * 1024 * 1024
     }
 
     private val channel = MethodChannel(messenger, "elinkbook/reader_resources")
@@ -241,6 +247,77 @@ class ReaderResourceChannel(
                 }
                 result.success(code)
             }
+            // epic-66 Issue 12 Task 1：取得 content:// URI 的檔案位元組長度。
+            // 優先讀取 ParcelFileDescriptor.statSize，小於 0 時補查 OpenableColumns.SIZE。
+            // 兩者皆由 pfd.use 關閉 FileDescriptor，不跨呼叫持有。
+            "contentUriLength" -> {
+                val uriString = call.argument<String>("uri")
+                if (uriString == null) {
+                    result.error("invalid_arguments", "缺少 uri 參數", null)
+                    return
+                }
+                try {
+                    val uri = Uri.parse(uriString)
+                    val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+                    val length = pfd?.use { descriptor ->
+                        val statSize = descriptor.statSize
+                        if (statSize >= 0) statSize else queryContentUriSize(uri)
+                    } ?: queryContentUriSize(uri)
+                    result.success(length)
+                } catch (e: Exception) {
+                    Log.w("ReaderResourceChannel", "contentUriLength 失敗: $uriString", e)
+                    result.error("read_failed", e.message, null)
+                }
+            }
+            // epic-66 Issue 12 Task 1：讀取 content:// URI 的 [start, end) 位元組區段。
+            // 使用 ParcelFileDescriptor 加 FileInputStream.channel.position(start) 隨機存取，
+            // 絕不整本載入。以 clampByteRange 夾取區段並限制單次最多 4 MB。
+            "readContentUriRange" -> {
+                val uriString = call.argument<String>("uri")
+                val start = call.argument<Number>("start")?.toLong()
+                val end = call.argument<Number>("end")?.toLong()
+                if (uriString == null || start == null || end == null) {
+                    result.error("invalid_arguments", "缺少 uri, start 或 end 參數", null)
+                    return
+                }
+                try {
+                    val uri = Uri.parse(uriString)
+                    val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+                    if (pfd == null) {
+                        result.success(null)
+                        return
+                    }
+                    val bytes = pfd.use { descriptor ->
+                        val statSize = descriptor.statSize
+                        val length = if (statSize >= 0) statSize else queryContentUriSize(uri)
+                        if (length == null) return@use null
+
+                        val range = clampByteRange(start, end, length, MAX_BOOK_RANGE_BYTES) ?: return@use null
+                        val byteCount = (range.last - range.first + 1).toInt()
+                        val buffer = ByteArray(byteCount)
+                        FileInputStream(descriptor.fileDescriptor).use { stream ->
+                            val channel = stream.channel
+                            channel.position(range.first)
+                            val byteBuffer = ByteBuffer.wrap(buffer)
+                            var bytesRead = 0
+                            while (bytesRead < byteCount) {
+                                val read = channel.read(byteBuffer)
+                                if (read == -1) break
+                                bytesRead += read
+                            }
+                            if (bytesRead == byteCount) {
+                                buffer
+                            } else {
+                                buffer.copyOf(bytesRead)
+                            }
+                        }
+                    }
+                    result.success(bytes)
+                } catch (e: Exception) {
+                    Log.w("ReaderResourceChannel", "readContentUriRange 失敗: $uriString", e)
+                    result.error("read_failed", e.message, null)
+                }
+            }
             else -> result.notImplemented()
         }
     }
@@ -272,6 +349,25 @@ class ReaderResourceChannel(
         } catch (e: Exception) {
             Log.w("ReaderResourceChannel", "probeTreeRootAccess: unknown error for uri: $uri", e)
             "unknownError"
+        }
+    }
+
+    /**
+     * 從 ContentResolver 查詢 [OpenableColumns.SIZE]（epic-66 Issue 12 Task 1）。
+     * 當 ParcelFileDescriptor.statSize 回傳 -1 時作為備用長度查詢。
+     */
+    private fun queryContentUriSize(uri: Uri): Long? {
+        return try {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                if (sizeIndex != -1 && cursor.moveToFirst() && !cursor.isNull(sizeIndex)) {
+                    cursor.getLong(sizeIndex)
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 
