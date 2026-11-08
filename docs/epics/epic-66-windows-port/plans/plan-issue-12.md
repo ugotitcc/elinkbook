@@ -139,12 +139,12 @@ git commit -m "feat(android): metadata 派送函式（旗標預設關閉，Readi
 **Interfaces:**
 - Produces: `List<String> diffBookMetadata(Map<String, Object?> readium, Map<String, Object?> foliate)`——回傳不一致的欄位名稱。規則：`title`、`author`、`identifier` 比較前各自 `trim()`，兩邊都是 `null` 或空字串視為相同；`isFixedLayout` 嚴格相等；封面只比「有沒有」（兩邊位元組不同是預期的，Readium 重新編成 PNG）；「有封面」＝位元組非 `null` 且長度大於 0。
 
-- [ ] **Step 1: 寫失敗測試。** `metadata_comparison_test.dart`：完全相同 → 空清單；`title` 不同 → `['title']`；`title` 只差前後空白 → 空清單；`author` 一邊 `null` 一邊空字串 → 空清單；`identifier` 不同 → `['identifier']`；`isFixedLayout` 不同 → `['isFixedLayout']`；一邊有封面一邊沒有 → `['cover']`；兩邊封面位元組不同但都有 → 空清單；一邊空位元組陣列、一邊 `null` → 空清單；一邊空位元組陣列、一邊有封面 → `['cover']`。
-- [ ] **Step 2: 執行確認失敗。** `flutter test test/library/metadata_comparison_test.dart`（預期編譯失敗）。
-- [ ] **Step 3: 實作純函式。** `metadata_comparison.dart`。
-- [ ] **Step 4: 執行確認通過。** 同 Step 2 指令全過。
-- [ ] **Step 5: 寫書庫對比整合測試。** `library_metadata_comparison_test.dart`（在手機上執行）：用 `openReadOnlyDatabase` 開 `getApplicationDocumentsDirectory()` 底下的 `library.db`，只查 EPUB 書籍（路徑、書名），查完書單後立刻 `await db.close()`，並**斷言 EPUB 本數大於 0**（書庫沒有 EPUB 時測試失敗，避免假綠）；記下 `library.db` 的大小與修改時間；對每本書各跑一次 Readium 通道的 `extractMetadata` 與 `readEpubMetadataOnAndroid`（**直接呼叫，不經派送函式**），量各自耗時；用 `diffBookMetadata` 比；每本印一行 `[library_comparison] {json}`（書名、路徑末段、兩邊耗時、差異欄位、兩邊是否失敗）；最後印彙總：總數、兩邊都成功且一致、有差異（依欄位）、只有 foliate 失敗、只有 Readium 失敗、兩邊都失敗（例如權限已收回，不算不一致）、兩邊耗時總和與中位數。結束時再讀一次 `library.db` 的大小與修改時間，**斷言與開始時相同**。測試通過條件：沒有差異且沒有「只有 foliate 失敗」；否則測試失敗並在訊息列出是哪幾本、哪些欄位。
-- [ ] **Step 6: 靜態檢查與 Commit。** `flutter analyze` 乾淨；`node tool/check_integration_keys.js`、`node tool/check_l10n_hardcoded_strings.js` 通過。
+- [x] **Step 1: 寫失敗測試。** `metadata_comparison_test.dart`：完全相同 → 空清單；`title` 不同 → `['title']`；`title` 只差前後空白 → 空清單；`author` 一邊 `null` 一邊空字串 → 空清單；`identifier` 不同 → `['identifier']`；`isFixedLayout` 不同 → `['isFixedLayout']`；一邊有封面一邊沒有 → `['cover']`；兩邊封面位元組不同但都有 → 空清單；一邊空位元組陣列、一邊 `null` → 空清單；一邊空位元組陣列、一邊有封面 → `['cover']`。
+- [x] **Step 2: 執行確認失敗。** `flutter test test/library/metadata_comparison_test.dart`（預期編譯失敗）。
+- [x] **Step 3: 實作純函式。** `metadata_comparison.dart`。
+- [x] **Step 4: 執行確認通過。** 同 Step 2 指令全過。
+- [x] **Step 5: 寫書庫對比整合測試。** `library_metadata_comparison_test.dart`（在手機上執行）：用 `openReadOnlyDatabase` 開 `getApplicationDocumentsDirectory()` 底下的 `library.db`，只查 EPUB 書籍（路徑、書名），查完書單後立刻 `await db.close()`，並**斷言 EPUB 本數大於 0**（書庫沒有 EPUB 時測試失敗，避免假綠）；記下 `library.db` 的大小與修改時間；對每本書各跑一次 Readium 通道的 `extractMetadata` 與 `readEpubMetadataOnAndroid`（**直接呼叫，不經派送函式**），量各自耗時；用 `diffBookMetadata` 比；每本印一行 `[library_comparison] {json}`（書名、路徑末段、兩邊耗時、差異欄位、兩邊是否失敗）；最後印彙總：總數、兩邊都成功且一致、有差異（依欄位）、只有 foliate 失敗、只有 Readium 失敗、兩邊都失敗（例如權限已收回，不算不一致）、兩邊耗時總和與中位數。結束時再讀一次 `library.db` 的大小與修改時間，**斷言與開始時相同**。測試通過條件：沒有差異且沒有「只有 foliate 失敗」；否則測試失敗並在訊息列出是哪幾本、哪些欄位。
+- [x] **Step 6: 靜態檢查與 Commit。** `flutter analyze` 乾淨；`node tool/check_integration_keys.js`、`node tool/check_l10n_hardcoded_strings.js` 通過。
 
 ```bash
 git add app/lib/library/metadata_comparison.dart app/test/library/metadata_comparison_test.dart app/integration_test/library_metadata_comparison_test.dart
