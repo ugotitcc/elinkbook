@@ -16,7 +16,7 @@
 | 10 | 平台專屬功能隱藏：音量鍵翻頁、E-Ink 高對比與影像濾鏡、螢幕方向鎖定、「全螢幕模式」偏好項；並處理 Windows 呼叫 Android 原生全螢幕 channel 未處理例外 | Issue 7 | ✅ 已合併（Windows 實機確認 2026-11-09 使用者回報 a～e 全數通過，見 [issue-10-report.md](issue-10-report.md)） | #402 |
 | 11 | Windows 測試穩定性：追查 `local_book_server_test.dart` 偶發失敗與 `pdf_reader_view_filters_test.dart`（`main` 上同樣失敗），為 Issue 6 建立乾淨基準；已查出根因是這台機器的 `127.0.0.1` 連線被重設，並新增開書逾時驗證 | 無 | ✅ 已合併（過關條件 5 以 ruling 延後：`pdf_reader_view_filters_test` 偶發失敗已重現但未修，登記為 Issue 15；開書逾時對照實驗結論為不能確定，見 [issue-11-report.md](issue-11-report.md)） | #403 |
 | 12 | Android 也改用 foliate-js 讀 metadata、移除 Readium（`readium-shared`／`readium-streamer`、`BookMetadataChannel.kt`）：**第一步先補真實出版社書籍的 Readium 對比，通過才移除**；需 Android 實機 | Issue 6 | 🟢 階段一已完成並合併（PR #405；預設改 foliate-js、Readium 留作退路；見 [plan-issue-12.md](plans/plan-issue-12.md)、[issue-12-report.md](issue-12-report.md)；階段二見 Issue 18） | — |
-| 13 | Windows `integration_test` 冒煙測試（每種格式：開書、翻頁、劃線） | Issue 6、8、9、10 | ⚪ 未開始（尚未規劃） | — |
+| 13 | Windows `integration_test` 冒煙測試（每種格式：開書、翻頁、劃線） | Issue 6、8、9、10 | 🟡 已規劃，待實作（見 [plan-issue-13.md](plans/plan-issue-13.md)） | — |
 | 14 | 免安裝 zip 打包 | Issue 13 | ⚪ 未開始（尚未規劃） | — |
 | 15 | `pdf_reader_view_filters_test.dart` 加粗覆蓋圖偶發失敗查根因：整批跑 `test/reader` 約 1／3 機率失敗（等背景 Isolate 結果 120 輪仍無 `RawImage`），等待上限已放寬兩次仍偶發，疑 `PdfReaderView` 加粗佇列有競態（來源 Issue 11） | 無 | ⚪ 未開始（尚未規劃） | — |
 | 16 | `desktop_drop` 0.9 與 `cross_file` 0.4 遷移：`desktop_drop` 0.9.x 要求 `cross_file ^0.4.0`（破壞性更新），與 `file_picker`、`share_plus`、`share_plus_platform_interface`（含最新版）要求的 `cross_file ^0.3.x` 衝突，需 vendor 修補三個套件並改寫拖曳匯入（來源 Issue 6） | Issue 6 | ⚪ 未開始（尚未規劃，不排程） | — |
@@ -438,6 +438,35 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
 - `android_book_metadata_test.dart`：旗標關閉只走 Readium；旗標開啟 foliate 成功不呼叫 Readium；foliate 失敗退回 Readium 並有日誌；PDF 一律走原生；兩邊都失敗時把 Readium 的例外往外拋；兩次同時呼叫 foliate 路徑時依序執行；Readium 退路的通道引數鍵為 `uri` 與 `format`；（切換後）預設旗標為 `true`。
 - `metadata_comparison_test.dart`：相同、`title`／`identifier`／`isFixedLayout` 不同各回傳對應欄位、前後空白與 `null`／空字串視為相同、封面有無不同回傳 `cover`、封面位元組不同但都有視為相同、空位元組陣列視為沒有封面。
 - 手機上的書庫對比與切換後的匯入冒煙，以實際執行輸出驗證，不另寫單元測試。
+
+## Issue 13 範圍
+
+**狀態：** 🟡 已規劃，待實作
+
+在 Windows 上用 `flutter test integration_test/… -d windows` 跑出一組可重複、依序執行的冒煙測試，涵蓋每種格式（EPUB 流式、EPUB 固定版面、PDF、TXT、MD、CBZ、AZW3）的「開書、翻頁、劃線」。不建 CI。2026-11-09 基準線：27 支現有整合測試單獨依序在 Windows 跑過，20 支通過、8 支失敗（詳見計畫）；因此多半是沿用與診斷，不是從零寫。
+
+1. **跑測腳本與套件清單：** `app/tool/run_windows_smoke.ps1` 與 `app/integration_test/windows_smoke_suite.txt`；一次只准一份、逐支依序、跑前確認沒有殘留行程且記憶體足夠。
+2. **診斷「無法載入書籍」：** FXL 翻頁、目錄頁尾、PDF 各一；分「測試假設 Android／Windows 產品問題／時序」三類，產品問題在改程式前先告知使用者。
+3. **診斷畫面找不到 widget：** 目錄、劃線備註、`reader_screen_test`；不要求全數修好，未修好的列為已知缺口。
+4. **Android 專屬測試的平台守門：** 只在 `Platform.isWindows` 時略過並寫明原因，不刪測試。
+5. **補矩陣空格：** TXT、MD、AZW3 的翻頁與（預先寫入的）劃線顯示。
+6. **完整依序執行、報告與文件。**
+7. **不處理：** 建 CI；Windows release 版與乾淨機器；使用者在畫面上實際選字劃線（WebView 內手勢無法由 Flutter 驅動，只驗證預先寫入的標記能顯示）；未修好的 `reader_screen_test` 項目（另立 Issue）。
+
+## Issue 13 過關條件
+
+1. `windows_smoke_suite.txt` 內每一支測試，在乾淨環境下由 `run_windows_smoke.ps1` 依序執行一次全數通過，輸出附在報告。
+2. 格式 × 動作矩陣每一格都有對應的 Windows 通過測試，或明寫「不適用／已知缺口」與原因（CBZ 劃線不適用）。
+3. 8 個失敗檔案每一個都有診斷結論（A／B／C 類）與處理結果；沒修好的不在清單內，並登記後續 Issue。
+4. 跑測腳本證明會拒絕並行與殘留行程（三個實際執行輸出）。
+5. Android 專屬測試在 Windows 顯示略過且附原因；Android 上的行為沒有改變（程式審查確認）。
+6. 報告不得外推：只有這台機器、debug 版、本機 WebView2；沒有乾淨機器、沒有 release。
+
+## Issue 13 單元測試要求
+
+- 跑測腳本與整合測試本身沒有單元測試框架；以實際執行輸出為證。
+- `test/`（不需裝置）：檢查 `integration_test/` 內所有 `skip:` 都帶有非空原因字串。
+- 新增的整合測試須先做一次變異驗證（暫時讓翻頁或劃線失效，確認測試變紅，再還原）。
 
 ## 後續 Issue（待 Issue 1 結果決定）
 
