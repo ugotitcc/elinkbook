@@ -152,12 +152,12 @@ git commit -m "test(windows): 整合測試跑測腳本（單份依序、防殘�
 - Create/Modify: `docs/epics/epic-66-windows-port/issue-13-report.md`
 - Modify: `docs/epics/epic-66-windows-port/issues.md`（Issue 13 狀態）、`docs/epics/epic-66-windows-port/epic.md`（若有新決策）、本檔（勾選步驟）、`docs/epics.md`（備註）
 
-- [ ] **Step 1: 全數執行。** 確認無殘留行程後，以 `tool/run_windows_smoke.ps1` 對整份套件清單跑**一次**，保存輸出。
-- [ ] **Step 2: 判讀。** 清單內必須全數通過；有失敗就回到對應 Task，不得從清單移除來湊過關。重跑一次確認不是偶發（同一支連續失敗才算真失敗，偶發要註明並記錄頻率）。
-- [ ] **Step 3: 全套 `flutter test` 與 `flutter analyze`。**（本 Issue 若只動了 `integration_test/` 與腳本，仍須確認 `flutter analyze` 乾淨；全套 `flutter test` 在發 PR 前跑一次，既有偶發失敗照實記錄。）
-- [ ] **Step 4: 寫 `issue-13-report.md`。** 內容：基準線表、每個失敗的診斷與處理、最終矩陣（每格對應的測試檔）、套件清單與最終執行結果、已知缺口與後續 Issue、跑測規則與 2026-11-09 並行事故。
-- [ ] **Step 5: 更新文件並勾選本檔步驟。**
-- [ ] **Step 6: Commit。**
+- [x] **Step 1: 全數執行。** 確認無殘留行程後，以 `tool/run_windows_smoke.ps1` 對整份套件清單跑**一次**，保存輸出。
+- [x] **Step 2: 判讀。** 清單內必須全數通過；有失敗就回到對應 Task，不得從清單移除來湊過關。重跑一次確認不是偶發（同一支連續失敗才算真失敗，偶發要註明並記錄頻率）。
+- [x] **Step 3: 全套 `flutter test` 與 `flutter analyze`。**（本 Issue 若只動了 `integration_test/` 與腳本，仍須確認 `flutter analyze` 乾淨；全套 `flutter test` 在發 PR 前跑一次，既有偶發失敗照實記錄。）
+- [x] **Step 4: 寫 `issue-13-report.md`。** 內容：基準線表、每個失敗的診斷與處理、最終矩陣（每格對應的測試檔）、套件清單與最終執行結果、已知缺口與後續 Issue、跑測規則與 2026-11-09 並行事故。
+- [x] **Step 5: 更新文件並勾選本檔步驟。**
+- [x] **Step 6: Commit。**
 
 ---
 
