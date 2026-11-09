@@ -16,11 +16,13 @@
 | 10 | 平台專屬功能隱藏：音量鍵翻頁、E-Ink 高對比與影像濾鏡、螢幕方向鎖定、「全螢幕模式」偏好項；並處理 Windows 呼叫 Android 原生全螢幕 channel 未處理例外 | Issue 7 | ✅ 已合併（Windows 實機確認 2026-11-09 使用者回報 a～e 全數通過，見 [issue-10-report.md](issue-10-report.md)） | #402 |
 | 11 | Windows 測試穩定性：追查 `local_book_server_test.dart` 偶發失敗與 `pdf_reader_view_filters_test.dart`（`main` 上同樣失敗），為 Issue 6 建立乾淨基準；已查出根因是這台機器的 `127.0.0.1` 連線被重設，並新增開書逾時驗證 | 無 | ✅ 已合併（過關條件 5 以 ruling 延後：`pdf_reader_view_filters_test` 偶發失敗已重現但未修，登記為 Issue 15；開書逾時對照實驗結論為不能確定，見 [issue-11-report.md](issue-11-report.md)） | #403 |
 | 12 | Android 也改用 foliate-js 讀 metadata、移除 Readium（`readium-shared`／`readium-streamer`、`BookMetadataChannel.kt`）：**第一步先補真實出版社書籍的 Readium 對比，通過才移除**；需 Android 實機 | Issue 6 | 🟢 階段一已完成並合併（PR #405；預設改 foliate-js、Readium 留作退路；見 [plan-issue-12.md](plans/plan-issue-12.md)、[issue-12-report.md](issue-12-report.md)；階段二見 Issue 18） | — |
-| 13 | Windows `integration_test` 冒煙測試（每種格式：開書、翻頁、劃線） | Issue 6、8、9、10 | 🟢 已完成，待審查（全套 27 支測試 100% 通過；見 [plan-issue-13.md](plans/plan-issue-13.md)、[issue-13-report.md](issue-13-report.md)） | — |
+| 13 | Windows `integration_test` 冒煙測試（每種格式：開書、翻頁、劃線） | Issue 6、8、9、10 | 🟢 已完成，待審查（套件清單 27 支檔案在本機 debug 版依序全數通過，其中 `library_screen_test` 3 項在 Windows 全部略過、`pdf_reader_view_test` 1 項略過；`reader_screen_test` 不在清單內，已登記 Issue 19；見 [plan-issue-13.md](plans/plan-issue-13.md)、[issue-13-report.md](issue-13-report.md)） | — |
 | 14 | 免安裝 zip 打包 | Issue 13 | ⚪ 未開始（尚未規劃） | — |
 | 15 | `pdf_reader_view_filters_test.dart` 加粗覆蓋圖偶發失敗查根因：整批跑 `test/reader` 約 1／3 機率失敗（等背景 Isolate 結果 120 輪仍無 `RawImage`），等待上限已放寬兩次仍偶發，疑 `PdfReaderView` 加粗佇列有競態（來源 Issue 11） | 無 | ⚪ 未開始（尚未規劃） | — |
 | 16 | `desktop_drop` 0.9 與 `cross_file` 0.4 遷移：`desktop_drop` 0.9.x 要求 `cross_file ^0.4.0`（破壞性更新），與 `file_picker`、`share_plus`、`share_plus_platform_interface`（含最新版）要求的 `cross_file ^0.3.x` 衝突，需 vendor 修補三個套件並改寫拖曳匯入（來源 Issue 6） | Issue 6 | ⚪ 未開始（尚未規劃，不排程） | — |
 | 17 | Android 建置工具升級：Flutter 3.47.9 警告對 Gradle 8.14.0（需 ≥ 9.1.0）與 AGP 8.11.1（需 ≥ 9.0.1）的支援「即將移除」，目前仍可建置；一併評估 built-in Kotlin 遷移（來源 Issue 6） | Issue 6 | ⚪ 未開始（尚未規劃，不排程） | — |
+| 19 | `reader_screen_test` 在 Windows 整份中斷診斷：未修改的 `HEAD` 在這台機器上也會在第一支測試結束後整個結束（App 結束、exit 79、後續 18 支 `did not complete`），單獨跑第 1、2 支皆通過；原因未明（來源 Issue 13） | 無 | ⚪ 未開始（尚未規劃，不排程） | — |
+| 20 | 桌面寬度（> 720px）雙欄排版下 EPUB 目錄「目前章節」判定落在前一章：Foliate 在雙欄補齊前一節內容並回報前一節，目錄因此沒收折；Issue 13 為了讓測試通過把視窗縮成 400x800，未判定是否為產品缺陷，且冒煙套件沒有任何一支在桌面寬度驗證（來源 Issue 13） | 無 | ⚪ 未開始（尚未規劃，不排程） | — |
 
 ## Issue 1 範圍
 
@@ -441,7 +443,7 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
 
 ## Issue 13 範圍
 
-**狀態：** 🟢 已完成，待審查（見 [issue-13-report.md](issue-13-report.md)）
+**狀態：** 🟢 已完成，待審查（見 [issue-13-report.md](issue-13-report.md)；僅本機、debug 版、本機 WebView2）
 
 在 Windows 上用 `flutter test integration_test/… -d windows` 跑出一組可重複、依序執行的冒煙測試，涵蓋每種格式（EPUB 流式、EPUB 固定版面、PDF、TXT、MD、CBZ、AZW3）的「開書、翻頁、劃線」。不建 CI。2026-11-09 基準線：27 支現有整合測試單獨依序在 Windows 跑過，20 支通過、8 支失敗（詳見計畫）；因此多半是沿用與診斷，不是從零寫。
 
@@ -496,6 +498,10 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
     5. 將既有書籍回填 `detectEpubLayout` 改由 foliate-js 探針抽取。
     6. 清理 `third_party_licenses`、更新專案文件與架構說明。
   - 狀態：已登錄，不排程。
+- **`reader_screen_test` 在 Windows 整份中斷（已登錄為 Issue 19，2026-11-10，不排程）。**
+  - 現象：未修改的 `HEAD` 在這台機器上，第一支測試結束後 App 結束（exit 79），其餘 18 支 `did not complete`；單獨跑第 1、2 支皆通過。Issue 13 初版報告所稱「9／19 通過」在這台機器上無法重現，原因未查明，因此此檔不在套件清單內。
+  - 已排除：儲存閱讀位置時資料庫已關閉（診斷輸出沒有該例外）、測試端重複關庫。
+- **桌面寬度 TOC 目前章節判定（已登錄為 Issue 20，2026-11-10，不排程）。** 見上方 Issue 表。
 - 索引器跑不完（Issue 8，已合併 #400）、WebView2 缺少提示（Issue 9，已合併 #401）、測試穩定性（Issue 11，已合併 #403）、Android 統一 metadata（Issue 12，已完成）：2026-11-06 登錄。
 - **預定執行順序：** ~~8~~ → ~~9~~ → ~~10~~ → ~~11~~ → ~~6~~ → ~~12~~ → 13 → 14（先補齊功能，再升級 Flutter，冒煙測試與打包放在最終版本上做）。
 - 不做：「分段服務」（大檔開書記憶體尖峰，224 MB 書約 3.8 GB），記為已知限制，遇到再議。

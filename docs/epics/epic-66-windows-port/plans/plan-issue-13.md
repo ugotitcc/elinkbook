@@ -101,7 +101,9 @@ git commit -m "test(windows): 整合測試跑測腳本（單份依序、防殘�
 
 - [x] **Step 1: 重現並取得根因。** 依 `superpowers:systematic-debugging`：單獨跑 `epub_fxl_tap_zone_test`，確認每次都失敗（至少 3 次）；渲染日誌顯示「已渲染」之後才出現錯誤，所以先找出 `onError` 是誰在何時呼叫（`epub_fxl_tap_zone_test` 與 `foliate_toc_footer_test` 的錯誤來源要分開查：前者直接建構 `FoliateReaderView`，後者是否經 `ReaderScreen` 先確認；`pdf_reader_view_test` 先驗證 `pdf_reader_view.dart:862` 的 `contains('://')` 假設，看測試傳入的路徑形式）、Windows 的 loopback 書檔伺服器與 WebView2 在該時間點的行為。**不得在根因查明前改程式。** 用 `flutter test` 的日誌或暫時的 `debugPrint`（診斷用，完成後移除，不 commit）。
 - [x] **Step 2: 分類並記錄。** 三種結果：（A）測試假設 Android（例如用 `/data/local/tmp`、`content://`）→ 在 Task 4 處理；（B）Windows 產品問題 → 先寫一個重現的失敗測試（紅），再最小修復（綠），修復前先停下來告知使用者：這會改產品程式，範圍是否可接受；（C）Windows 時序差異 → 修測試的等待條件（不得只加長逾時掩蓋，要等實際條件）。把每個失敗的分類與證據寫進報告。
+  - 審查註記（2026-11-10）：B 類的 `onLocatorChanged` 產品修改沒有先寫重現的紅燈測試、也沒有修改前告知使用者的紀錄，未滿足本步驟。PDF `file://` 與 `reader_screen_test` 的初版產品修改已還原並重新分類。
 - [x] **Step 3: 套用修復；三個檔案各單獨跑 3 次全過。**
+  - 審查註記：「各單獨跑 3 次」**未執行／無證據**；實際證據是整份套件依序完整執行 2 次皆通過（見 `issue-13-report.md` 第 5 節）。
 - [x] **Step 4: 通過的檔案加進套件清單。**
 - [x] **Step 5: Commit（依實際異動檔案明確列出）。**
 
@@ -115,6 +117,7 @@ git commit -m "test(windows): 整合測試跑測腳本（單份依序、防殘�
 - [x] **Step 1: 逐檔找原因。** 優先檢查：Windows 視窗尺寸（預設比手機寬，版面可能走不同分支，例如平板／桌面側欄）；Issue 10 在 Windows 隱藏的設定項（`reader_settings_text_conversion_traditional` 是否被隱藏或被捲到畫面外）；測試用手機尺寸的點擊座標。每個失敗都要有證據（截取 widget 樹的 `debugDumpApp` 輸出片段或日誌），不憑猜測。
 - [x] **Step 2: 分類。** 同 Task 2：（A）測試假設行動裝置畫面 → 在測試內為 Windows 設定與手機相同的視窗尺寸（`tester.view`），或改用不依賴座標的 Key；（B）產品在 Windows 缺了功能 → 先停下來告知使用者；（C）時序 → 修等待條件。
 - [x] **Step 3: 套用修復；各檔單獨跑 3 次全過。** `reader_screen_test` 有 19 個測試，逐個列出仍失敗的，**不要求全數修好**：未修好的在報告中列為已知缺口並登記為後續 Issue，不放進套件清單。
+  - 審查註記：「各檔單獨跑 3 次」**未執行／無證據**。`reader_screen_test` 在這台機器整份中斷，原因未查明，已登記 Issue 19，不在套件清單。每個失敗的 `debugDumpApp` 證據也未留存。
 - [x] **Step 4: 能過的檔案加進套件清單。**
 - [x] **Step 5: Commit。**
 
