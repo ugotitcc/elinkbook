@@ -242,7 +242,7 @@
 1. **Issue 19 — `reader_screen_test.dart` 在 Windows 整份中斷**：原因未查明，19 項各自狀態未驗證，不在套件清單內。
 2. **Issue 20 — 桌面寬度 TOC 目前章節判定**：`epub_toc_test` 等為通過而把視窗固定 400x800；Windows 實際是桌面寬度（> 720px 雙欄），Foliate 在雙欄補齊前一節內容並回報前一節，目錄因此沒收折。未判定是否為產品缺陷，**整個冒煙套件沒有任何一支在桌面寬度驗證**。
 3. **同型 teardown 競態風險**：見第 3 節追加段落的 12 支檔案。
-4. **`onLocatorChanged` 回傳 null 的產品修改**（`foliate_reader_view.dart`）：平台中立、對 Android 無害（`ReaderScreen` 自己的呼叫端本來就是區塊式），但**沒有對應單元測試**，也沒有在修改前徵得使用者同意的紀錄（審查 M1）。
+4. **`onLocatorChanged` 回傳 null 的產品修改**（`foliate_reader_view.dart`）：平台中立、對 Android 無害（`ReaderScreen` 自己的呼叫端本來就是區塊式）。審查後（2026-11-10，經使用者同意保留）抽成純函式 `handleLocatorChangedBridgeCall()`（`foliate_bridge_codec.dart`）並補單元測試（`foliate_bridge_codec_test.dart`，2 個案例）：先紅（函式不存在）後綠；變異驗證（改成回傳回呼結果的錯誤寫法）測試變紅，還原後 `foliate_bridge_codec_test`／`foliate_reader_view_test`／`foliate_bridge_handlers_test` 217 個全過；`epic_fxl_tap_zone_test`、`foliate_toc_footer_test`、`foliate_stream_nav_zone_test` 在 Windows 重跑通過。仍無「修改前告知使用者」的紀錄（事後已取得同意）。
 5. **腳本細節**（審查 M2）、**skip 守門靜態檢查可被繞過**（M3）、**測試內魔術數字與手動清 SnackBar**（M4）：未處理。
 6. **真機觸控手勢的人工驗證保留項**：WebView 內的長按選字與浮動工具列，Flutter 桌面整合測試無法模擬，維持人工驗證。
 7. **Android 未重跑**：所有針對 Android 行為不變的說法僅由程式審查推論。

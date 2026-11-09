@@ -258,6 +258,30 @@ void main() {
     });
   });
 
+  group('handleLocatorChangedBridgeCall', () {
+    // Windows／WebView2 回歸：呼叫端若寫 (info) => pos = info（箭頭函式賦值），
+    // 賦值結果會成為 closure 的實際回傳值；橋接 handler 若把它傳回 inappwebview，
+    // jsonEncode 會失敗並在 JS 端變成 Unhandled Promise Rejection → onError。
+    test('呼叫端是賦值式箭頭函式（會回傳 EpubPositionInfo）：handler 仍回傳 null，且位置已送達', () {
+      EpubPositionInfo? captured;
+      final result = handleLocatorChangedBridgeCall(
+        const [
+          '{"cfi":"epubcfi(/6/4)"}',
+          '{"fraction":0.25,"locationIndex":3,"locationTotal":12}',
+        ],
+        (info) => captured = info,
+      );
+      expect(result, isNull, reason: '回傳非 null 會被 inappwebview 嘗試 jsonEncode');
+      expect(captured, isNotNull);
+      expect(captured!.progression, 0.25);
+      expect(captured!.locationIndex, 3);
+    });
+
+    test('沒有 onLocatorChanged 回呼：回傳 null，不拋例外', () {
+      expect(handleLocatorChangedBridgeCall(const [], null), isNull);
+    });
+  });
+
   group('parseLocatorChanged', () {
     test('position 帶 tocItemId：解析為整數，locatorJson 原樣不變（不含 tocItemId）', () {
       const locator = '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}';
