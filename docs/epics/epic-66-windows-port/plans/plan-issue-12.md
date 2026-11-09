@@ -34,7 +34,7 @@
 - 不得 commit：`app/windows/flutter/generated_plugin_registrant.cc`、`generated_plugin_registrant.h`、`generated_plugins.cmake`、`pubspec.lock` 的任何變動（本 Issue 不新增相依）；`git add` 一律明確列檔。
 - **手機操作的保護規則：** 絕不解除安裝 App；動手前先備份 `app_flutter/library.db`、`dictionary.db`、`shared_prefs`（`adb exec-out run-as cc.ugotit.elinkbook tar cf - …`，**只列實際存在的檔**，否則錯誤訊息會混進輸出讓 tar 損毀；備份後解開驗證 SQLite 檔頭）；安裝一律 `adb install -r`；用 `uiautomator dump` 讀畫面上的書名定位，不用固定座標；備份放 scratchpad，用完刪除。
 - 書庫對比測試是**唯讀**的：用 `openReadOnlyDatabase` 開 `library.db`，不得經 `LibraryRepository`；測試前後 `library.db` 的大小與修改時間必須相同。
-- `flutter test integration_test/… -d <裝置> --no-uninstall` 會在手機上裝入「測試殼層」版本的 App（同套件、資料保留），結束後必須用 `adb install -r app/build/app/outputs/flutter-apk/app-debug.apk` 裝回正常版本。**嚴禁 `flutter install`**：它會先解除安裝再安裝，App 資料會被清除（2026-11-09 實際發生，見 issue-12-report 第 9.5 節）。
+- `flutter test integration_test/… -d <裝置> --no-uninstall` 會在手機上裝入「測試殼層」版本的 App（同套件、資料保留），結束後必須先 `flutter build apk --debug --target-platform android-arm` 重新建置，再用 `adb install -r app/build/app/outputs/flutter-apk/app-debug.apk` 裝回正常版本（既有的 APK 很可能是測試殼層，直接裝會全黑）。**嚴禁 `flutter install`**：它會先解除安裝再安裝，App 資料會被清除（2026-11-09 實際發生，見 issue-12-report 第 9.5 節）。
 - 實驗腳本與暫存輸出放 scratchpad，不放進專案。
 - Windows 建置（若需要）：PowerShell，`$env:Path += ';C:\Users\huthief\bin'`（放尾端）。
 

@@ -200,3 +200,10 @@
 - 處理：我留有測試前從手機取出的 `library.db`（180,224 bytes，檔頭驗證為 SQLite），已寫回並以 `cmp` 確認逐位元相同，App 已啟動。
 - **已遺失、無法還原：** 封面圖片複本、`shared_prefs`（偏好設定）、`dictionary.db`（字典）、App 私有的匯入複本（書庫中的 1 本 TXT、1 本 CBZ）。書庫中的 EPUB／PDF 是 `content://`，原檔仍在手機儲存空間，但 `content://` 授權在重新安裝後需要重新授予。
 - 這是第二次全新安裝：授權失效在事故前就已存在（見 9.1），不是這次造成。
+
+### 9.6 第二個事故：裝上去的是測試殼層，啟動全黑（我的疏失，已修）
+
+- `flutter install` 裝的是 `build/app/outputs/flutter-apk/app-debug.apk` 這個**既有檔案**，它是上一次 `flutter test integration_test/…` 產生的測試殼層，不是正常 App，所以啟動只有黑畫面（日誌無崩潰，Dart 端無輸出，行程閒置）。
+- 判斷方式：改裝 2026-11-05 的舊 APK 能正常開，排除手機與資料庫的問題。
+- 修正：`flutter build apk --debug --target-platform android-arm` 重新建置正常版本，`adb install -r` 安裝，再把備份的 `library.db` 寫回（`cmp` 相同）。App 已能啟動到書架，並自動開最後閱讀的書，該書因 `content://` 授權失效顯示「重新選取檔案」。
+- 規則：整合測試之後，**必須先重新 `flutter build apk --debug` 再 `adb install -r`**，不可直接裝既有 APK。
