@@ -465,7 +465,7 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
 ## Issue 13 單元測試要求
 
 - 跑測腳本與整合測試本身沒有單元測試框架；以實際執行輸出為證。
-- `test/`（不需裝置）：檢查 `integration_test/` 內所有 `skip:` 都帶有非空原因字串。
+- `test/`（不需裝置）：檢查 `integration_test/` 內所有 `skipOnWindows(` 呼叫都帶有非空原因字串，且沒有裸的 `skip: Platform.isWindows`（`testWidgets` 的 `skip` 只收 `bool?`，原因字串改由 `skipOnWindows` helper 強制必填）。
 - 新增的整合測試須先做一次變異驗證（暫時讓翻頁或劃線失效，確認測試變紅，再還原）。
 
 ## 後續 Issue（待 Issue 1 結果決定）

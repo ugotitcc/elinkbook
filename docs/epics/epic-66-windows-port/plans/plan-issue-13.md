@@ -18,9 +18,9 @@
 
 | 檔案 | 結果 | 失敗訊息 |
 |---|---|---|
-| `epub_fxl_tap_zone_test` | 0/1 | 渲染完成後 `reader_error_text` 出現「無法載入書籍」 |
+| `epub_fxl_tap_zone_test` | 0/1 | 渲染完成後 `FoliateReaderView.onError` 回報「無法載入書籍」（此測試直接建構 `FoliateReaderView`，不經 `ReaderScreen`，樹上沒有 `reader_error_text`） |
 | `foliate_toc_footer_test` | 1/4 | 同上，3 次「無法載入書籍」 |
-| `pdf_reader_view_test` | 3/4 | 1 次「無法載入書籍」（`onPageRendered` 未觸發） |
+| `pdf_reader_view_test` | 3/4 | 1 次「無法載入書籍」（`onPageRendered` 未觸發）。**線索（未驗證的假設，Task 2 要先證實）：** `pdf_reader_view.dart:862` 用 `filePath.contains('://')` 判斷 `content://`，若測試傳入 `file:///C:/...` 會被誤導向 Android 專屬的 `_openContentUriDocument()`。同樣寫法也在 `foliate_native_bridge.dart:179`，一併檢視。 |
 | `epub_toc_test` | 0/2 | 預期不存在的文字「第一節」卻找到 |
 | `epub_highlights_notes_test` | 0/1 | `tap()` 找不到目標 widget |
 | `foliate_highlights_notes_test` | 1/2 | 找不到 `reader_settings_text_conversion_traditional` |
@@ -34,7 +34,7 @@
 | 格式 | 開書 | 翻頁 | 劃線 |
 |---|---|---|---|
 | EPUB 流式 | ✓ `foliate_epub_reader_view_test` | ✓ `foliate_stream_nav_zone_test` | ✓ `foliate_highlights_notes_test`（第 1 個） |
-| EPUB 固定版面（FXL） | ✓ `fxl_bookmarks_test` | ✗ `epub_fxl_tap_zone_test` | —（只有書籤；FXL 是否有劃線待確認） |
+| EPUB 固定版面（FXL） | ✓ `fxl_bookmarks_test` | ✗ `epub_fxl_tap_zone_test` | 不適用（FXL 規格不支援劃線，維持空狀態；見 `fxl_bookmarks_test.dart:130`，已有斷言） |
 | PDF | ✓ `pdf_highlights_notes_test` | ✓ `pdf_nav_zone_test` | ✓ `pdf_highlights_notes_test` |
 | TXT | ✓ `foliate_txt_test` | — | — |
 | MD | ✓ `foliate_md_test` | — | — |
@@ -45,7 +45,7 @@
 
 - Flutter 3.47.9；`flutter analyze` 乾淨；不新增相依（`pubspec.lock` 不得變動）。
 - **跑測規則（硬性）：** Windows 整合測試**一次只准一份**；不得用 `&`、`nohup` 掛背景；跑前確認沒有殘留的 `elinkbook.exe`、`flutter_tester.exe`、`MSBuild.exe`、測試用 `dart`／`dartvm`（保留 VS Code 的 `language-server`）；可用記憶體低於 4 GB 就停止並回報。2026-11-09 因同時跑了 8 份而耗盡記憶體，被系統中止（這是本 Issue 的起因之一）。
-- 建置：`$env:Path += ';C:\Users\huthief\bin'`（放尾端）；`CL=/utf-8`；在 Git Bash 設 `CL` 要加 `MSYS_NO_PATHCONV=1`，否則會被轉成路徑而建置失敗。建置失敗後先刪 `app\build\windows` 再重試。
+- 建置：若 `nuget.exe` 不在 PATH，把它所在目錄加到 PATH **尾端**（例如 `$env:Path += ";$env:USERPROFILE\bin"`，該目錄內有個叫 `flutter` 的檔案，不可放前面）；`CL=/utf-8`；在 Git Bash 設 `CL` 要加 `MSYS_NO_PATHCONV=1`，否則會被轉成路徑而建置失敗。建置失敗後先刪 `app\build\windows` 再重試。
 - 不得 commit：`app/windows/flutter/generated_plugin_registrant.cc`、`generated_plugin_registrant.h`、`generated_plugins.cmake`、`pubspec.lock` 的任何變動；`git add` 一律明確列檔。
 - 不得為了讓測試過而放寬斷言或刪測試。Android 專屬的測試用平台守門「略過並寫明原因」，不是刪除。
 - 不新增、不修改任何 ARB 字串；產品程式只在「診斷出 Windows 產品問題」時才改，且須先有重現的失敗測試。
@@ -73,8 +73,14 @@
 **Interfaces:**
 - Produces: `powershell -File tool/run_windows_smoke.ps1 [-Suite integration_test/windows_smoke_suite.txt] [-TimeoutSec 420] [-MinFreeMB 4096]`；結束碼 0＝全數通過；輸出每支一行 `名稱 通過/失敗/逾時 ::（最後一行進度）`，並在 scratchpad 或 `build/windows_smoke/` 留下每支的完整輸出。
 
-- [ ] **Step 1: 寫腳本。** 行為：（a）以鎖檔 `build/windows_smoke/.lock` 防止同時兩份，鎖檔內存 PID，PID 已不存在則視為殘留並覆蓋；（b）開跑前列出殘留行程（`elinkbook`、`flutter_tester`、`MSBuild`、命令列含 `flutter_tools` 的 `dart`／`dartvm`，排除 `language-server`），有就中止並列出，**不自行終止**；（c）可用記憶體低於 `-MinFreeMB` 就中止；（d）逐支 `flutter test <檔> -d windows`，逾時用 `-TimeoutSec`，逾時後終止該次測試行程樹；（e）每支結束後等 `elinkbook.exe` 消失再繼續；（f）一支失敗不中止後續，最後彙總並以非 0 結束。
-- [ ] **Step 2: 驗證腳本本身。** 用只含 `smoke_test.dart` 的臨時清單跑一次，預期通過、結束碼 0；開第二個終端機同時再跑一次，預期立刻拒絕並說明；人為留一個殘留 `flutter_tester` 時預期中止。（腳本沒有單元測試框架，以這三個實際執行輸出為證，記入報告。）
+- [ ] **Step 1: 寫腳本。** 行為：
+  - （a）**路徑與鎖檔：** 一律以 `$PSScriptRoot` 為基準（無論在倉庫根或 `app/` 執行都指向 `app/build/windows_smoke/`）；建鎖檔前先 `New-Item -ItemType Directory -Force`；鎖檔用獨佔檔案流（`[System.IO.File]::Open($lockPath,'OpenOrCreate','ReadWrite','None')`）持有 handle 到腳本結束，作業系統在行程結束時自動釋放，**不用 PID 判斷**（避免 Windows PID 重用誤判）；開檔失敗＝已有另一份在跑，立刻拒絕並說明。
+  - （b）開跑前列出殘留行程（`elinkbook`、`flutter_tester`、`MSBuild`、命令列含 `flutter_tools` 的 `dart`／`dartvm`，排除 `language-server`），有就中止並列出，**不自行終止**。
+  - （c）可用記憶體低於 `-MinFreeMB`：先等 10 秒重量一次（前一支剛結束時 WebView2 還在回收），仍不足才中止並回報。
+  - （d）逐支 `flutter test <檔> -d windows`；逾時（`-TimeoutSec`）後用 `taskkill.exe /PID <測試行程PID> /T /F` 終止**整棵行程樹**（只殺頂層行程會留下孤兒 `elinkbook.exe`／`dart.exe`）。
+  - （e）每支結束後輪詢等 `elinkbook.exe` 消失，上限 15 秒；超過就記錄警示並對**本腳本自己啟動的**殘留執行 `taskkill /IM elinkbook.exe /F`（開跑前 (b) 已確認原本沒有其他實例），不得無限等待。
+  - （f）一支失敗不中止後續，最後彙總並以非 0 結束。
+- [ ] **Step 2: 驗證腳本本身。** 用只含 `smoke_test.dart` 的臨時清單跑一次，預期通過、結束碼 0；開第二個終端機同時再跑一次，預期立刻拒絕並說明；人為留一個殘留 `flutter_tester` 時預期中止；`-TimeoutSec 5` 強制逾時一次，預期跑完後沒有任何 `elinkbook.exe`／`dart` 測試行程殘留（證明行程樹有被殺乾淨）；在 `build/` 不存在的乾淨工作區跑一次，預期不因目錄不存在而失敗。（腳本沒有單元測試框架，以這三個實際執行輸出為證，記入報告。）
 - [ ] **Step 3: 建立套件清單。** 先放基準線已通過的 20 個檔案，失敗的 8 個先不放，改在清單尾端以註解列出並註明所屬 Task。
 - [ ] **Step 4: `app/tool/README.md` 補說明；`flutter analyze` 不涉及（無 Dart 變動）。**
 - [ ] **Step 5: Commit。**
@@ -93,7 +99,7 @@ git commit -m "test(windows): 整合測試跑測腳本（單份依序、防殘�
 
 **Interfaces:** 無新介面。產出是「每個失敗屬於哪一類」的結論與修復。
 
-- [ ] **Step 1: 重現並取得根因。** 依 `superpowers:systematic-debugging`：單獨跑 `epub_fxl_tap_zone_test`，確認每次都失敗（至少 3 次）；渲染日誌顯示「已渲染」之後才出現錯誤，所以先找出 `onError` 是誰在何時呼叫（`ReaderScreen` 的錯誤來源）、Windows 的 loopback 書檔伺服器與 WebView2 在該時間點的行為。**不得在根因查明前改程式。** 用 `flutter test` 的日誌或暫時的 `debugPrint`（診斷用，完成後移除，不 commit）。
+- [ ] **Step 1: 重現並取得根因。** 依 `superpowers:systematic-debugging`：單獨跑 `epub_fxl_tap_zone_test`，確認每次都失敗（至少 3 次）；渲染日誌顯示「已渲染」之後才出現錯誤，所以先找出 `onError` 是誰在何時呼叫（`epub_fxl_tap_zone_test` 與 `foliate_toc_footer_test` 的錯誤來源要分開查：前者直接建構 `FoliateReaderView`，後者是否經 `ReaderScreen` 先確認；`pdf_reader_view_test` 先驗證 `pdf_reader_view.dart:862` 的 `contains('://')` 假設，看測試傳入的路徑形式）、Windows 的 loopback 書檔伺服器與 WebView2 在該時間點的行為。**不得在根因查明前改程式。** 用 `flutter test` 的日誌或暫時的 `debugPrint`（診斷用，完成後移除，不 commit）。
 - [ ] **Step 2: 分類並記錄。** 三種結果：（A）測試假設 Android（例如用 `/data/local/tmp`、`content://`）→ 在 Task 4 處理；（B）Windows 產品問題 → 先寫一個重現的失敗測試（紅），再最小修復（綠），修復前先停下來告知使用者：這會改產品程式，範圍是否可接受；（C）Windows 時序差異 → 修測試的等待條件（不得只加長逾時掩蓋，要等實際條件）。把每個失敗的分類與證據寫進報告。
 - [ ] **Step 3: 套用修復；三個檔案各單獨跑 3 次全過。**
 - [ ] **Step 4: 通過的檔案加進套件清單。**
@@ -117,10 +123,11 @@ git commit -m "test(windows): 整合測試跑測腳本（單份依序、防殘�
 ### Task 4：Android 專屬測試的平台守門
 
 **Files:**
+- Create: `app/integration_test/windows_skip.dart`（`skipOnWindows(String reason)` helper）；`app/test/` 內新增一支掃描守門寫法的小測試。
 - Modify: `app/integration_test/library_screen_test.dart`，以及 Task 2、3 分類為 A 類且確定是 Android 專屬的檔案。
 
-- [ ] **Step 1: 確認守門寫法。** 搜尋 `integration_test/` 內既有的 `Platform.isAndroid`／`skip:` 慣例，沿用；若沒有，用 `testWidgets(..., skip: Platform.isWindows ? '原因' : false)`，原因寫明「`createTestContentUri` 只存在於 Android 原生」。
-- [ ] **Step 2: 套用。** 只加守門，不改測試本體；在 Windows 上確認顯示「略過」而非失敗；寫一個小的、不需要裝置的檢查（例如在 `test/` 內掃描 `integration_test/` 的 `skip:` 都帶有非空原因字串）避免之後出現沒寫原因的略過。
+- [ ] **Step 1: 確認守門寫法。** 已查證：`integration_test/` 內沒有既有的 `Platform.isAndroid`／`skip:` 慣例；且 Flutter 的 `testWidgets` 的 `skip` 型別是 `bool?`（`widget_tester.dart:151`），**不能傳字串**（`Platform.isWindows ? '原因' : false` 會讓 `flutter analyze` 失敗）。改用 helper：新增 `app/integration_test/windows_skip.dart`（檔名不以 `_test.dart` 結尾，不會被當成測試跑）：`bool skipOnWindows(String reason)`，`assert(reason.trim().isNotEmpty)` 後回傳 `Platform.isWindows`。測試寫成 `testWidgets('名稱', skip: skipOnWindows('createTestContentUri 只存在於 Android 原生'), ...)`。
+- [ ] **Step 2: 套用。** 只加守門，不改測試本體；在 Windows 上確認顯示「略過」而非失敗；寫一個小的、不需要裝置的檢查（`test/` 內掃描 `integration_test/`：每個 `skipOnWindows(` 呼叫的引數必須是非空字串字面值；且不得出現裸的 `skip: Platform.isWindows`）避免之後出現沒寫原因的略過。
 - [ ] **Step 3: Android 側確認。** 本 Task 不能在沒有手機時驗證 Android 行為，所以守門只可用 `Platform.isWindows` 為條件；程式審查時以此為檢查項，報告註明「Android 未重跑」。
 - [ ] **Step 4: Commit。**
 
@@ -129,9 +136,9 @@ git commit -m "test(windows): 整合測試跑測腳本（單份依序、防殘�
 ### Task 5：補格式 × 動作矩陣的空格
 
 **Files:**
-- Create: `app/integration_test/windows_smoke_formats_test.dart`（TXT、MD、AZW3 各一組：開書後翻頁；寫入預先準備的 CFI 劃線後在筆記面板看得到）；若 FXL 翻頁仍失敗，補在 Task 2。
+- Create: `app/integration_test/windows_smoke_formats_test.dart`（TXT、MD、AZW3 各一組：開書後翻頁；寫入預先準備的 CFI 劃線後在筆記面板看得到）；若 FXL 翻頁仍失敗，補在 Task 2。FXL 劃線不適用，不補。
 
-- [ ] **Step 1: 先確認每格該驗什麼。** 翻頁：以 `ReaderScreen` 的導覽（比照 `foliate_stream_nav_zone_test` 的做法）換頁並確認位置改變、沒有 `reader_error_text`。劃線：WebView 內無法用 Flutter 手勢選字（既有測試註解已說明），所以比照 `foliate_highlights_notes_test` 以倉庫預先寫入 CFI 劃線，再開 `NotesBottomSheet` 確認顯示。每個格子在計畫階段先確認「測試要斷言的具體值」，寫在測試註解裡。
+- [ ] **Step 1: 先確認每格該驗什麼。** 前置：TXT／MD 不能直接開原始檔，須比照 `foliate_txt_test`／`foliate_md_test` 先用 `BookImportServiceImpl.importFiles()` 匯入合成 EPUB3，再把產出的 `book.filePath` 交給閱讀器（ADR 0023）；AZW3 沿用 `foliate_kf8_test` 的樣本與開法。翻頁：以 `ReaderScreen` 渲染，`tester.tap(find.byKey(const Key('nav_zone_2')))` 觸發下一頁，斷言 `reader_footer_progress_text` 的文字改變（可比照 `epub_toc_test.dart:65` 的 `_pumpUntilProgressChanged`，該函式目前是該檔私有，需複製或抽出到共用 helper），且沒有 `reader_error_text`。劃線：WebView 內無法用 Flutter 手勢選字（既有測試註解已說明），所以比照 `foliate_highlights_notes_test` 以倉庫預先寫入 CFI 劃線，再開 `NotesBottomSheet` 確認顯示。每個格子在計畫階段先確認「測試要斷言的具體值」，寫在測試註解裡。
 - [ ] **Step 2: 寫失敗測試。** 先寫斷言，並做一次變異驗證：暫時讓翻頁函式不動作或劃線不寫入，確認測試會失敗（紅），再還原。
 - [ ] **Step 3: 實作。** 只有測試與必要的 fixture（TXT／MD／AZW3 樣本沿用 `foliate_txt_test`、`foliate_md_test`、`foliate_kf8_test` 已用的檔案）。
 - [ ] **Step 4: 單獨跑 3 次全過；加進套件清單。**
