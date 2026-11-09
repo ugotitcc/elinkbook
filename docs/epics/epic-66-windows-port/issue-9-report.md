@@ -98,3 +98,9 @@ flutter test integration_test/windows_webview2/runtime_probe_test.dart -d window
   - `flutter analyze lib/main.dart lib/windows test/windows --no-pub`：0 issues。
   - `node tool/check_l10n_hardcoded_strings.js`：全數 PASS。
 
+---
+
+## 六、補充（2026-11-09）
+
+- 使用者在 Windows（有 WebView2）確認 App 正常啟動。
+- 「乾淨機器」與「重新檢查成功後進入 App」仍**未實測**：這台沒有 Windows Sandbox，也不該為測試移除系統的 WebView2。使用者決定記為未實測，之後有乾淨機器再補。

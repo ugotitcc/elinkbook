@@ -39,7 +39,7 @@
 
 ## Windows 實機確認
 
-**尚未完成。** 建置成功（`flutter build windows --debug`，需 `CL=/utf-8` 並讓 `nuget.exe` 在 PATH），但啟動後螢幕是 Windows 鎖定畫面，無法操作 App。請在電腦前依下列清單確認，並目視檢查被隱藏處沒有連續兩條分隔線或多餘空洞：
+**已完成（2026-11-09）。** 使用者在 Windows 上依下列清單逐項操作，回報 a～e 全數通過（無逐項紀錄；第 5 項主控台是否有 `MissingPluginException` 無法由本端確認，以使用者回報為準；第 6 項固定版面未回報）。用的是 `main`（HEAD `16862440`）建置的 debug 版（建置需 `CL=/utf-8`、nuget 在 PATH，且 CL 值在 Git Bash 要加 `MSYS_NO_PATHCONV=1`，否則會被轉成路徑而建置失敗）。清單：
 
 1. 設定 → 閱讀預設值：沒有「音量鍵翻頁」、「螢幕方向」區塊、「全螢幕模式」；其餘項目可操作。
 2. 設定：沒有「E-Ink 高對比模式」。
