@@ -146,6 +146,21 @@ EpubPositionInfo parseLocatorChanged(List<dynamic> args) {
   );
 }
 
+/// `onLocatorChanged` JS handler 的 Dart 端處理：解析參數、通知呼叫端，並**固定回傳 `null`**。
+///
+/// 必須回傳 null：handler 的傳回值會被 `flutter_inappwebview` 以 `jsonEncode`
+/// 序列化後回給 JS。若直接把 [onLocatorChanged] 的結果當傳回值（例如呼叫端寫
+/// `(info) => pos = info`，賦值結果就是 `EpubPositionInfo`），在 Windows／WebView2
+/// 會序列化失敗，JS 端出現 Unhandled Promise Rejection 並觸發 `onError`
+/// （假性「無法載入書籍」）。抽成純函式讓這條契約可脫離 WebView 單元測試。
+Object? handleLocatorChangedBridgeCall(
+  List<dynamic> args,
+  void Function(EpubPositionInfo info)? onLocatorChanged,
+) {
+  onLocatorChanged?.call(parseLocatorChanged(args));
+  return null;
+}
+
 /// 把 `main.js` `onPageRendered` handler 送出的 JS→Dart 橋接參數解析為
 /// [EpubLayoutInfo]（epic-54 Issue 18，取代原本寫死
 /// `EpubLayoutInfo(isFixedLayout: false, …)` 的匿名 closure 內聯邏輯）。

@@ -51,7 +51,13 @@ void main() {
       databaseFactory = databaseFactoryFfi;
       final libraryRepository =
           await SqliteLibraryRepository.open(inMemoryDatabasePath);
-      addTearDown(() => libraryRepository.close());
+      addTearDown(() async {
+        // 先卸載畫面，讓 ReaderScreen.dispose() 的位置寫入在資料庫關閉前完成。
+        await tester.pumpWidget(const SizedBox());
+        // 等 dispose 觸發的非同步寫入完成（真實時間）後才關庫。
+        await tester.pump(const Duration(milliseconds: 500));
+        await libraryRepository.close();
+      });
       final prefsManager = ReaderPrefsManagerImpl(
         BookReaderPrefsRepository(libraryRepository.database),
         ReadingPositionRepository(libraryRepository.database),
@@ -124,7 +130,13 @@ void main() {
       databaseFactory = databaseFactoryFfi;
       final libraryRepository =
           await SqliteLibraryRepository.open(inMemoryDatabasePath);
-      addTearDown(() => libraryRepository.close());
+      addTearDown(() async {
+        // 先卸載畫面，讓 ReaderScreen.dispose() 的位置寫入在資料庫關閉前完成。
+        await tester.pumpWidget(const SizedBox());
+        // 等 dispose 觸發的非同步寫入完成（真實時間）後才關庫。
+        await tester.pump(const Duration(milliseconds: 500));
+        await libraryRepository.close();
+      });
       final prefsManager = ReaderPrefsManagerImpl(
         BookReaderPrefsRepository(libraryRepository.database),
         ReadingPositionRepository(libraryRepository.database),
@@ -211,7 +223,13 @@ void main() {
       databaseFactory = databaseFactoryFfi;
       final libraryRepository =
           await SqliteLibraryRepository.open(inMemoryDatabasePath);
-      addTearDown(() => libraryRepository.close());
+      addTearDown(() async {
+        // 先卸載畫面，讓 ReaderScreen.dispose() 的位置寫入在資料庫關閉前完成。
+        await tester.pumpWidget(const SizedBox());
+        // 等 dispose 觸發的非同步寫入完成（真實時間）後才關庫。
+        await tester.pump(const Duration(milliseconds: 500));
+        await libraryRepository.close();
+      });
       final prefsManager = ReaderPrefsManagerImpl(
         BookReaderPrefsRepository(libraryRepository.database),
         ReadingPositionRepository(libraryRepository.database),

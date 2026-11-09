@@ -879,8 +879,10 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       // foliate_bridge_codec.dart 的 parseLocatorChanged() 純函式（比照
       // extractCfi()/parseTableOfContents() 既有慣例），可脫離 WebView
       // 直接單元測試，不再是這個 widget 內無法獨立驗證的匿名 closure。
+      // 【Windows / WebView2 修正】handler 必須回傳 null，見
+      // handleLocatorChangedBridgeCall() 的說明與其單元測試。
       callback: (args) =>
-          widget.onLocatorChanged?.call(parseLocatorChanged(args)),
+          handleLocatorChangedBridgeCall(args, widget.onLocatorChanged),
     );
     controller.addJavaScriptHandler(
       handlerName: FoliateBridgeHandlers.onNavigationDegraded,

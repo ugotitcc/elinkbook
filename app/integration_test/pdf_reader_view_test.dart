@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
+import 'windows_skip.dart';
 import '../test/support/pump_localized_widget.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。
@@ -86,7 +87,9 @@ void main() {
   // 對 file:// 與 content:// 走的是完全相同的程式碼路徑）。真正 content://
   // URI 的 SAF 權限情境（takePersistableUriPermission）留待 Issue 4 匯入
   // 服務的手動驗收步驟做端到端驗證，本測試不涵蓋。
-  testWidgets('開啟以 file:// URI 表示的有效 PDF 檔案觸發 onPageRendered',
+  testWidgets(
+      '開啟以 file:// URI 表示的有效 PDF 檔案觸發 onPageRendered',
+      skip: skipOnWindows('file:// 分支用於驗證 Android 原生端 URI 解析（ReaderResourceChannel），Windows 無此原生通道'),
       (tester) async {
     final samplePath =
         await _stageAssetAsFile('test/fixtures/sample.pdf', 'sample_uri.pdf');

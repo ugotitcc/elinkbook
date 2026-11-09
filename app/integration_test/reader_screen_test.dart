@@ -96,6 +96,8 @@ void main() {
   // （持久化驗證見既有的 Bottom Sheet 互動測試）。
   late SqliteLibraryRepository libraryRepository;
   late ReaderPrefsManager prefsManager;
+  // 是否已由 pumpReader 的 addTearDown 關閉資料庫（避免重複關閉）。
+  var databaseClosed = false;
 
   setUpAll(() {
     sqfliteFfiInit();
@@ -103,6 +105,7 @@ void main() {
   });
 
   setUp(() async {
+    databaseClosed = false;
     libraryRepository =
         await SqliteLibraryRepository.open(inMemoryDatabasePath);
     prefsManager = ReaderPrefsManagerImpl(
@@ -112,8 +115,30 @@ void main() {
   });
 
   tearDown(() async {
-    await libraryRepository.close();
+    if (!databaseClosed) await libraryRepository.close();
   });
+
+  // 包裝 pumpLocalizedWidget：測試結束時先卸載畫面、再關閉資料庫。
+  // ReaderScreen.dispose() 會以 fire-and-forget 方式寫入閱讀位置；若資料庫
+  // 先被 tearDown 關閉，這筆寫入會變成未捕捉的非同步例外。順序問題由測試端
+  // 處理（比照 epub_toc_test 等檔），不在產品程式碼吞錯。
+  // addTearDown 的回呼先於 tearDown 執行，且此處明確關閉，不依賴順序假設。
+  Future<void> pumpReader(
+    WidgetTester tester,
+    Widget home, {
+    MediaQueryData? mediaQueryData,
+  }) async {
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      // 等 dispose 觸發的閱讀位置寫入完成後才關庫（真實時間，非 fake async）。
+      await tester.pump(const Duration(milliseconds: 500));
+      if (!databaseClosed) {
+        databaseClosed = true;
+        await libraryRepository.close();
+      }
+    });
+    await pumpLocalizedWidget(tester, home, mediaQueryData: mediaQueryData);
+  }
 
   testWidgets('ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容', (tester) async {
     final samplePath =
@@ -123,7 +148,7 @@ void main() {
       if (await file.exists()) await file.delete();
     });
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -153,7 +178,7 @@ void main() {
       if (await file.exists()) await file.delete();
     });
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -187,7 +212,7 @@ void main() {
       if (await file.exists()) await file.delete();
     });
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -229,7 +254,7 @@ void main() {
     });
     await libraryRepository.insertBook(_book('b_settings_1'));
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -267,7 +292,7 @@ void main() {
     const bookId = 'b_settings_persist';
     await libraryRepository.insertBook(_book(bookId));
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -294,14 +319,14 @@ void main() {
 
     // 關閉目前畫面，模擬使用者離開閱讀器（觸發 EpubReaderView.dispose()
     // 釋放原生資源），再重新開啟同一本書。
-    await pumpLocalizedWidget(tester, const SizedBox.shrink());
+    await pumpReader(tester, const SizedBox.shrink());
     await tester.pumpAndSettle();
 
     final reloadedPrefs = (await prefsManager.load(bookId)).bookPrefs;
     expect(reloadedPrefs.fontSize, 1.0625,
         reason: '初始值為 null（顯示原型預設 16），點擊一次 + 按鈕後應存成倍率 1.0625 (17/16)');
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -331,7 +356,7 @@ void main() {
     });
     await libraryRepository.insertBook(_book('b_writing_mode_override'));
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -379,7 +404,7 @@ void main() {
     });
     await libraryRepository.insertBook(_book('b_page_turn_mode_override'));
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -438,7 +463,7 @@ void main() {
       if (await file.exists()) await file.delete();
     });
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -492,7 +517,7 @@ void main() {
       if (await file.exists()) await file.delete();
     });
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -543,7 +568,7 @@ void main() {
       if (await file.exists()) await file.delete();
     });
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -562,7 +587,7 @@ void main() {
 
     // 離開畫面（觸發 ReaderScreen.dispose()），比照既有「關閉重開該書」
     // 測試模擬使用者離開閱讀器的既有手法。
-    await pumpLocalizedWidget(tester, const SizedBox.shrink());
+    await pumpReader(tester, const SizedBox.shrink());
     await tester.pumpAndSettle();
 
     expect(
@@ -586,7 +611,7 @@ void main() {
     const bookId = 'b_pdf_settings_open';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -618,7 +643,7 @@ void main() {
     const bookId = 'b_pdf_fit_mode';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -656,7 +681,7 @@ void main() {
     const bookId = 'b_pdf_filters';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -698,7 +723,7 @@ void main() {
     const bookId = 'b_pdf_bold';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -738,7 +763,7 @@ void main() {
     const bookId = 'b_pdf_crop';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -777,7 +802,7 @@ void main() {
     const bookId = 'b_pdf_crop_persist';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -804,10 +829,10 @@ void main() {
 
     // 關閉重開，確認 initialPreferences 帶入已持久化的 cropRect，原生端
     // 不會因為是全新 PlatformView 實例就重新偵測一次。
-    await pumpLocalizedWidget(tester, const SizedBox.shrink());
+    await pumpReader(tester, const SizedBox.shrink());
     await tester.pump();
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -838,7 +863,7 @@ void main() {
     const bookId = 'b_pdf_crop_manual_pause';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -887,7 +912,7 @@ void main() {
     const bookId = 'b_pdf_crop_manual_confirm';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,
@@ -966,7 +991,7 @@ void main() {
     const bookId = 'b_pdf_crop_manual_readjust';
     await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await pumpLocalizedWidget(
+    await pumpReader(
       tester,
       ReaderScreen(
         filePath: samplePath,

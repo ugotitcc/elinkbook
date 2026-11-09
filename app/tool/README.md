@@ -455,3 +455,29 @@ powershell -ExecutionPolicy Bypass -File app/tool/filter_antigravity_log.ps1 -Fo
 | `CORTEX_MEMORY_TRIGGER_UNSPECIFIED` / `empty component` | 僅 `--aggressive` | 保留 |
 
 保留所有真 `E`/`W`（如 `token source`、`quota` 等需關注錯誤）。
+
+## `run_windows_smoke.ps1`
+
+Windows 整合測試冒煙套件跑測腳本（`epic-66-windows-port` Issue 13）。
+
+### 背景與設計
+Windows 整合測試會啟動真實的 Windows 視窗與 WebView2 執行階段。為防止 2026-11-09 因多個測試並行導致記憶體耗盡遭系統終止的事故，本腳本實作四項硬性防護：
+1. **單份互斥鎖**：透過 .NET 檔案獨佔鎖（`build/windows_smoke/.lock`），拒絕多個實例同時並行。
+2. **開跑前殘留防護**：檢查系統中是否有殘留的 `elinkbook.exe`、`flutter_tester.exe`、`MSBuild.exe` 或 `dart`，若有則中止並列出，不擅自終止。
+3. **記憶體熔斷**：執行每支測試前檢查可用實體記憶體，若低於門檻（預設 4096 MB）則等待 10 秒緩衝，仍不足即中止後續測試。
+4. **行程樹逾時強制終止**：測試逾時（預設 420 秒）時調用 `taskkill /PID <PID> /T /F` 徹底清除子進程樹，並在每支測試結束後確認 `elinkbook.exe` 徹底退出。
+
+### 執行方式
+
+```powershell
+cd app
+
+# 依預設套件清單 (integration_test/windows_smoke_suite.txt) 依序跑測
+powershell -ExecutionPolicy Bypass -File tool/run_windows_smoke.ps1
+
+# 自訂參數
+powershell -ExecutionPolicy Bypass -File tool/run_windows_smoke.ps1 -Suite integration_test/windows_smoke_suite.txt -TimeoutSec 300 -MinFreeMB 4096
+```
+
+結束碼：0 全數通過；非 0 代表有失敗、逾時或中斷。詳細日誌保存在 `build/windows_smoke/<測試名稱>.log`。
+

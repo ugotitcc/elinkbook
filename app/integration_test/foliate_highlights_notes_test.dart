@@ -75,10 +75,19 @@ void main() {
 
   testWidgets('Foliate 流式 EPUB：預先寫入 CFI 劃線＋備註，NotesBottomSheet 正確顯示並可互動',
       (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     final libraryRepository = await SqliteLibraryRepository.open(inMemoryDatabasePath);
-    addTearDown(() => libraryRepository.close());
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      await libraryRepository.close();
+    });
     final prefsManager = ReaderPrefsManagerImpl(
       BookReaderPrefsRepository(libraryRepository.database),
       ReadingPositionRepository(libraryRepository.database),
@@ -194,10 +203,19 @@ void main() {
   testWidgets(
       'Foliate 流式 EPUB：簡繁轉換模式切換後，既有標記不拋出例外（回歸保護網，epic-42-text-conversion Issue 2）',
       (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     final libraryRepository = await SqliteLibraryRepository.open(inMemoryDatabasePath);
-    addTearDown(() => libraryRepository.close());
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      await libraryRepository.close();
+    });
     final prefsManager = ReaderPrefsManagerImpl(
       BookReaderPrefsRepository(libraryRepository.database),
       ReadingPositionRepository(libraryRepository.database),
@@ -254,11 +272,18 @@ void main() {
     // 既有交付，見 plan-issue-1.md Task 7）。
     await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(Tab, '呈現'));
+    await tester.tap(find.byKey(const Key('reader_settings_tab_presentation')));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const Key('reader_settings_text_conversion_traditional')),
+    final traditionalButton =
+        find.byKey(const Key('reader_settings_text_conversion_traditional'));
+    final sheetScrollable = find.descendant(
+      of: find.byKey(const Key('reader_settings_tab_presentation_list')),
+      matching: find.byType(Scrollable),
     );
+    await tester.scrollUntilVisible(traditionalButton, 50.0, scrollable: sheetScrollable);
+    await tester.drag(sheetScrollable, const Offset(0, -100));
+    await tester.pumpAndSettle();
+    await tester.tap(traditionalButton);
     await tester.pumpAndSettle();
 
     // 切換後 WebView 沒有拋出例外，既有劃線仍可透過 NotesBottomSheet
