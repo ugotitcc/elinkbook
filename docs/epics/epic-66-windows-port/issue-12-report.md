@@ -213,3 +213,10 @@
 - 判斷方式：改裝 2026-11-05 的舊 APK 能正常開，排除手機與資料庫的問題。
 - 修正：`flutter build apk --debug --target-platform android-arm` 重新建置正常版本，`adb install -r` 安裝，再把備份的 `library.db` 寫回（`cmp` 相同）。App 已能啟動到書架，並自動開最後閱讀的書，該書因 `content://` 授權失效顯示「重新選取檔案」。
 - 規則：整合測試之後，**必須先重新 `flutter build apk --debug` 再 `adb install -r`**，不可直接裝既有 APK。
+
+## 10. 全套 `flutter test`（2026-11-09，分支 HEAD `c7e1a4b4`）
+
+- 結果：5157 通過、4 失敗（約 21.6 分鐘）。
+- 4 個失敗：
+  - `pdf_reader_view_filters_test` 的 2 個 PdfReaderView bold overlay 測試：已知偶發失敗（Issue 15），本次未重跑、未修。
+  - `pdf_reader_view_test` 的「content:// URI 開書透過平台通道一次性讀取全部位元組」與 `download_queue_controller_test` 的「偵測到重複且 onDuplicateConfirm 回傳 false…」：單獨重跑兩個檔案 51 個全過，判斷為整套負載下的偶發失敗；本 Issue 沒有碰這兩個檔案涵蓋的程式。**這是判斷，不是根因查明。**
