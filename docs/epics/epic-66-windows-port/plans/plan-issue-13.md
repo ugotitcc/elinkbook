@@ -138,11 +138,11 @@ git commit -m "test(windows): 整合測試跑測腳本（單份依序、防殘�
 **Files:**
 - Create: `app/integration_test/windows_smoke_formats_test.dart`（TXT、MD、AZW3 各一組：開書後翻頁；寫入預先準備的 CFI 劃線後在筆記面板看得到）；若 FXL 翻頁仍失敗，補在 Task 2。FXL 劃線不適用，不補。
 
-- [ ] **Step 1: 先確認每格該驗什麼。** 前置：TXT／MD 不能直接開原始檔，須比照 `foliate_txt_test`／`foliate_md_test` 先用 `BookImportServiceImpl.importFiles()` 匯入合成 EPUB3，再把產出的 `book.filePath` 交給閱讀器（ADR 0023）；AZW3 沿用 `foliate_kf8_test` 的樣本與開法。翻頁：以 `ReaderScreen` 渲染，`tester.tap(find.byKey(const Key('nav_zone_2')))` 觸發下一頁，斷言 `reader_footer_progress_text` 的文字改變（可比照 `epub_toc_test.dart:65` 的 `_pumpUntilProgressChanged`，該函式目前是該檔私有，需複製或抽出到共用 helper），且沒有 `reader_error_text`。劃線：WebView 內無法用 Flutter 手勢選字（既有測試註解已說明），所以比照 `foliate_highlights_notes_test` 以倉庫預先寫入 CFI 劃線，再開 `NotesBottomSheet` 確認顯示。每個格子在計畫階段先確認「測試要斷言的具體值」，寫在測試註解裡。
-- [ ] **Step 2: 寫失敗測試。** 先寫斷言，並做一次變異驗證：暫時讓翻頁函式不動作或劃線不寫入，確認測試會失敗（紅），再還原。
-- [ ] **Step 3: 實作。** 只有測試與必要的 fixture（TXT／MD／AZW3 樣本沿用 `foliate_txt_test`、`foliate_md_test`、`foliate_kf8_test` 已用的檔案）。
-- [ ] **Step 4: 單獨跑 3 次全過；加進套件清單。**
-- [ ] **Step 5: Commit。**
+- [x] **Step 1: 先確認每格該驗什麼。** 前置：TXT／MD 不能直接開原始檔，須比照 `foliate_txt_test`／`foliate_md_test` 先用 `BookImportServiceImpl.importFiles()` 匯入合成 EPUB3，再把產出的 `book.filePath` 交給閱讀器（ADR 0023）；AZW3 沿用 `foliate_kf8_test` 的樣本與開法。翻頁：以 `ReaderScreen` 渲染，`tester.tap(find.byKey(const Key('nav_zone_2')))` 觸發下一頁，斷言 `reader_footer_progress_text` 的文字改變（可比照 `epub_toc_test.dart:65` 的 `_pumpUntilProgressChanged`，該函式目前是該檔私有，需複製或抽出到共用 helper），且沒有 `reader_error_text`。劃線：WebView 內無法用 Flutter 手勢選字（既有測試註解已說明），所以比照 `foliate_highlights_notes_test` 以倉庫預先寫入 CFI 劃線，再開 `NotesBottomSheet` 確認顯示。每個格子在計畫階段先確認「測試要斷言的具體值」，寫在測試註解裡。
+- [x] **Step 2: 寫失敗測試。** 先寫斷言，並做一次變異驗證：暫時讓翻頁函式不動作或劃線不寫入，確認測試會失敗（紅），再還原。
+- [x] **Step 3: 實作。** 只有測試與必要的 fixture（TXT／MD／AZW3 樣本沿用 `foliate_txt_test`、`foliate_md_test`、`foliate_kf8_test` 已用的檔案）。
+- [x] **Step 4: 單獨跑 3 次全過；加進套件清單。**
+- [x] **Step 5: Commit。**
 
 ---
 
