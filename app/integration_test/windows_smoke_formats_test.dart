@@ -53,35 +53,40 @@ Future<void> _pumpUntilNotesButtonEnabled(WidgetTester tester) async {
   }
 }
 
-Future<String> _pumpUntilProgressTextReady(WidgetTester tester) async {
+/// 解析頁尾進度文字 `當前頁/總頁數`；格式不符回傳 null。
+({int current, int total})? _parseProgress(String? text) {
+  final m = RegExp(r'^(\d+)/(\d+)$').firstMatch(text ?? '');
+  if (m == null) return null;
+  return (current: int.parse(m.group(1)!), total: int.parse(m.group(2)!));
+}
+
+/// 等到頁尾顯示「總頁數 > 0」的有效進度（排除初始 `0/0`），回傳當前頁碼。
+Future<int> _pumpUntilProgressReady(WidgetTester tester) async {
   final deadline = DateTime.now().add(const Duration(seconds: 15));
   while (true) {
     final finder = find.byKey(const Key('reader_footer_progress_text'));
     if (finder.evaluate().isNotEmpty) {
-      final text = tester.widget<Text>(finder).data;
-      if (text != null && text.isNotEmpty) {
-        return text;
-      }
+      final p = _parseProgress(tester.widget<Text>(finder).data);
+      if (p != null && p.total > 0) return p.current;
     }
     if (DateTime.now().isAfter(deadline)) {
-      fail('等待逾時：未找到 reader_footer_progress_text');
+      fail('等待逾時：頁尾進度未出現總頁數 > 0 的有效值');
     }
     await tester.pump(const Duration(milliseconds: 100));
   }
 }
 
-Future<void> _pumpUntilProgressChanged(WidgetTester tester, String oldText) async {
+/// 等到當前頁碼嚴格大於 [oldPage]（證明下一頁熱區確實讓閱讀位置前進）。
+Future<void> _pumpUntilPageAdvanced(WidgetTester tester, int oldPage) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
   while (true) {
     final finder = find.byKey(const Key('reader_footer_progress_text'));
     if (finder.evaluate().isNotEmpty) {
-      final currentText = tester.widget<Text>(finder).data ?? '';
-      if (currentText != oldText) {
-        return;
-      }
+      final p = _parseProgress(tester.widget<Text>(finder).data);
+      if (p != null && p.current > oldPage) return;
     }
     if (DateTime.now().isAfter(deadline)) {
-      fail('等待逾時：頁尾進度文字未改變，仍為 $oldText');
+      fail('等待逾時：頁碼未超過 $oldPage（點擊下一頁熱區沒有讓位置前進）');
     }
     await tester.pump(const Duration(milliseconds: 100));
   }
@@ -169,9 +174,9 @@ void main() {
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
     // 驗證翻頁
-    final initialProgress = await _pumpUntilProgressTextReady(tester);
+    final initialPage = await _pumpUntilProgressReady(tester);
     await tester.tap(find.byKey(const Key('nav_zone_2')));
-    await _pumpUntilProgressChanged(tester, initialProgress);
+    await _pumpUntilPageAdvanced(tester, initialPage);
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
     // 驗證劃線與筆記面板
@@ -264,9 +269,9 @@ void main() {
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
     // 驗證翻頁
-    final initialProgress = await _pumpUntilProgressTextReady(tester);
+    final initialPage = await _pumpUntilProgressReady(tester);
     await tester.tap(find.byKey(const Key('nav_zone_2')));
-    await _pumpUntilProgressChanged(tester, initialProgress);
+    await _pumpUntilPageAdvanced(tester, initialPage);
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
     // 驗證劃線與筆記面板
@@ -359,9 +364,9 @@ void main() {
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
     // 驗證翻頁
-    final initialProgress = await _pumpUntilProgressTextReady(tester);
+    final initialPage = await _pumpUntilProgressReady(tester);
     await tester.tap(find.byKey(const Key('nav_zone_2')));
-    await _pumpUntilProgressChanged(tester, initialProgress);
+    await _pumpUntilPageAdvanced(tester, initialPage);
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
     // 驗證劃線與筆記面板

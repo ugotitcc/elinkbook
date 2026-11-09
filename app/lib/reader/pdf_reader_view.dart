@@ -859,14 +859,9 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 
   Future<void> _openDocument() async {
     try {
-      final localFilePath = widget.filePath.startsWith('file://')
-          ? Uri.parse(widget.filePath).toFilePath()
-          : null;
-      final document = localFilePath != null
-          ? await PdfDocument.openFile(localFilePath)
-          : widget.filePath.contains('://')
-              ? await _openContentUriDocument()
-              : await PdfDocument.openFile(widget.filePath);
+      final document = widget.filePath.contains('://')
+          ? await _openContentUriDocument()
+          : await PdfDocument.openFile(widget.filePath);
       if (!mounted) {
         await document.dispose();
         return;
