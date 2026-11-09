@@ -188,7 +188,10 @@
 - `readContentUriRange` 的 `[0,100)`、`[50,400)` 與本機位元組相同；`end` 超過長度時夾回檔尾；起點不小於長度、起點為負、超過 4 MB 上限皆回 `null`；
 - 經 `content://` 時 foliate-js 與 Readium 的 metadata 一致（`diffBookMetadata` 為空；`title` 為 `elinkBook 範例 EPUB`，有封面）。
 
-限制：這是 FileProvider 的 URI。真實檔案選擇器（`ExternalStorageProvider`）的 URI 在本次未取得有效授權，**未驗證**。
+補充（真實選檔器，2026-11-09，WAVE）：使用者用 App 內的檔案選擇器匯入 2 本 EPUB 後，書庫存的是 `content://com.android.externalstorage.documents/document/…`（`ExternalStorageProvider`），授權有效。再跑一次書庫對比（來源 `library`，共 9 本）：這 2 本 `contentUriFellBack=false`（沒有退回本機檔案），Readium 與 foliate-js 都成功、0 差異；全部 9/9 一致、0 失敗。Readium 中位數 557 ms、foliate 中位數 1699 ms。
+- 其餘 7 本的舊授權仍失效，仍退回本機檔案（`contentUriFellBack` 7/9）。
+- 因此真實選檔器網址的區段讀取已有實機證據，但**只有 2 本、同一型號手機、debug 版**；Google Drive 等其他 provider 的網址未驗證。
+- 事後已重建正常 debug 版、`adb install -r`，`library.db` 與測試前逐位元相同。
 
 ### 9.4 切換後匯入冒煙（審查 I3）
 
