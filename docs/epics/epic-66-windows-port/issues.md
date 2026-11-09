@@ -15,7 +15,7 @@
 | 9 | WebView2 未安裝時顯示說明與下載連結（決策 4，原本漏掉） | Issue 7 | ✅ 已合併（Windows 實機以空 Runtime 資料夾模擬驗證通過；乾淨機器、重新檢查成功後進入 App 尚未實測） | #401 |
 | 10 | 平台專屬功能隱藏：音量鍵翻頁、E-Ink 高對比與影像濾鏡、螢幕方向鎖定、「全螢幕模式」偏好項；並處理 Windows 呼叫 Android 原生全螢幕 channel 未處理例外 | Issue 7 | ✅ 已合併（Windows 實機確認尚未做，見 [issue-10-report.md](issue-10-report.md)） | #402 |
 | 11 | Windows 測試穩定性：追查 `local_book_server_test.dart` 偶發失敗與 `pdf_reader_view_filters_test.dart`（`main` 上同樣失敗），為 Issue 6 建立乾淨基準；已查出根因是這台機器的 `127.0.0.1` 連線被重設，並新增開書逾時驗證 | 無 | ✅ 已合併（過關條件 5 以 ruling 延後：`pdf_reader_view_filters_test` 偶發失敗已重現但未修，登記為 Issue 15；開書逾時對照實驗結論為不能確定，見 [issue-11-report.md](issue-11-report.md)） | #403 |
-| 12 | Android 也改用 foliate-js 讀 metadata、移除 Readium（`readium-shared`／`readium-streamer`、`BookMetadataChannel.kt`）：**第一步先補真實出版社書籍的 Readium 對比，通過才移除**；需 Android 實機 | Issue 6 | ⚪ 未開始（尚未規劃） | — |
+| 12 | Android 也改用 foliate-js 讀 metadata、移除 Readium（`readium-shared`／`readium-streamer`、`BookMetadataChannel.kt`）：**第一步先補真實出版社書籍的 Readium 對比，通過才移除**；需 Android 實機 | Issue 6 | 🟡 已規劃，待實作（階段一：預設改 foliate-js、Readium 留作退路；見 [plan-issue-12.md](plans/plan-issue-12.md)） | — |
 | 13 | Windows `integration_test` 冒煙測試（每種格式：開書、翻頁、劃線） | Issue 6、8、9、10 | ⚪ 未開始（尚未規劃） | — |
 | 14 | 免安裝 zip 打包 | Issue 13 | ⚪ 未開始（尚未規劃） | — |
 | 15 | `pdf_reader_view_filters_test.dart` 加粗覆蓋圖偶發失敗查根因：整批跑 `test/reader` 約 1／3 機率失敗（等背景 Isolate 結果 120 輪仍無 `RawImage`），等待上限已放寬兩次仍偶發，疑 `PdfReaderView` 加粗佇列有競態（來源 Issue 11） | 無 | ⚪ 未開始（尚未規劃） | — |
@@ -405,6 +405,40 @@ Windows 版隱藏只有手機有意義的控制項，並停止呼叫 Windows 上
 - `import_drop_target_test.dart`、`adaptive_shell_scaffold_test.dart`：不改程式與測試，在 3.47.9 上必須全過（`desktop_drop` 維持 0.8.4）。
 - 建置與冒煙驗證（`CL`、Android、Windows 開書）以實際執行輸出驗證，不另寫單元測試。
 
+## Issue 12 範圍（階段一）
+
+**狀態：** 🟢 已完成 (2026-11-09)
+
+Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，改成預設用 foliate-js（與 Windows 同一支 `metadata-probe.js`），Readium 留作「foliate-js 失敗時的退路」。使用者決定（2026-11-08）：對比用 **App 書庫內的書**；**分兩階段**，本 Issue 是階段一，**不移除 Readium**，移除另立 Issue 18。
+
+1. **Android 讀書檔區段（含 `content://`）：** `ReaderResourceChannel.kt` 新增 `contentUriLength`（`statSize` 小於 0 時補查 `OpenableColumns.SIZE`）、`readContentUriRange`（上限 4 MB，不整本讀入，每次呼叫以 `pfd.use` 關閉檔案描述元）；純函式 `clampByteRange` 有 JVM 單元測試；Dart 端 `book_range_reader.dart` 以 `startsWith('content://')` 分流，`file://` 轉本機路徑。
+2. **Android 版探針：** `android_epub_metadata.dart` 的 `readEpubMetadataOnAndroid`，沿用索引器的 Android 背景 WebView 寫法（`loadAndroidAsset`、`esCompatPolyfillJs`、`globalErrorCaptureJs`），逾時 30 秒；註冊 `onError` handler 讓載入階段的 JS 錯誤立刻失敗；書檔區段讀取失敗一律回明確的 404（不拋例外、不回 `null`）；不改 `windows_epub_metadata.dart`。
+3. **派送函式與旗標：** `extractAndroidBookMetadata`；`kAndroidMetadataFoliateFirst`（實作時先為 `false`，經使用者同意後於 Task 6 改為 `true`）；foliate-js 失敗時 `debugPrint` 原因並退回 Readium；PDF 等非 EPUB 一律走原生通道；foliate 路徑包在 `runSerialized` 內，同一時間只有一個背景探針 WebView；Readium 退路的通道引數為 `uri` 與 `format`；`main.dart` 在 Android 傳入此函式。
+4. **書庫對比測試（唯讀）：** 純函式 `diffBookMetadata` 加 `integration_test/library_metadata_comparison_test.dart`：在手機上用 `openReadOnlyDatabase` 讀 `library.db` 的 EPUB，對每本直接呼叫 Readium 通道與 foliate-js 探針（不經派送函式），印出每本的差異與耗時，並斷言書庫至少有 1 本 EPUB（避免假綠）、測試前後 `library.db` 大小與修改時間不變。
+5. **在 WAVE 上執行對比；BooksPad 由使用者視連線狀況執行。** 手機操作一律先備份資料庫、`adb install -r`、不解除安裝、測完還原正常版本。
+6. **關卡：** 對比結果給使用者看，**使用者同意**才把旗標改為 `true`；否則維持 `false` 並記錄原因。
+7. **報告與文件：** `issue-12-report.md`、`epic.md` 決策 29、登記 Issue 18（階段二）。
+8. **不處理：** 移除 Readium 相依、`extractEpubMetadata`；`detectEpubLayout`（既有書籍回填，仍走 Readium）；Android release 版驗證；封面位元組是否逐位元相同（只比「有沒有」）。
+
+## Issue 12 過關條件
+
+1. 旗標為 `false` 時（切換前與日後退回時），Android 匯入、重新選取、回填的行為與現況完全相同（foliate-js 探針不啟動）。
+2. WAVE 上的書庫對比：EPUB 逐本比對 `title`、`author`、`identifier`、`isFixedLayout`、封面有無；**`identifier` 有任何不一致就視為不通過**；沒有「只有 foliate-js 失敗」；結果與每本耗時寫入報告。兩邊都失敗的書（例如權限已收回）單獨列出，不算不一致。
+3. 對比測試前後 `library.db` 的大小與修改時間相同；測試後 App 已還原為正常 debug 版並能啟動到書架。
+4. 切換預設需**使用者明確同意**；若 BooksPad 未能連線，報告明講「只有 WAVE 的結果」，由使用者決定是否切換。
+5. 切換後（若同意）：使用者在 WAVE 匯入 1～2 本 EPUB（含有封面與版面特殊的各一），書名、作者、封面正確；日誌顯示走的是 foliate-js 而非退回 Readium。
+6. Readium 相依與 `extractEpubMetadata`、`detectEpubLayout` 仍在；Issue 18 已登記。
+7. 報告不得外推：只有 WAVE（與可能的 BooksPad）上的結果，debug 版，非 release。
+
+## Issue 12 單元測試要求
+
+- `ByteRangeTest`（Kotlin JVM）：正常區段、`end` 超過長度被夾回、`start` 為負回傳 `null`、`start >= length` 回傳 `null`、`end <= start` 回傳 `null`、超過上限回傳 `null`、`start=0, end=5 MB, length=1 MB, maxBytes=4 MB` 回傳 `null`（先檢查原始區段大小）、`start=0, end=3 MB, length=1 MB` 回傳 `0 until 1 MB`。
+- `book_range_reader_test.dart`：本機路徑讀區段與內容一致、`end` 夾回、`start` 越界回傳 `null`；`content://` 走通道帶對參數、通道回傳 `null` 時回傳 `null`、通道例外往外拋；`bookLength` 本機與 `content://` 各一；`file://` 網址轉本機路徑讀取、不走通道。
+- `android_epub_metadata_test.dart`：`mapProbeResult` 有封面、沒封面、壞 base64、缺 `isFixedLayout`（預設 `false`）、缺 `title`／`author`／`identifier`；`androidProbeHtml` 含大小、兩個 handler 名稱與探針腳本路徑；`interceptBookRange` 讀取成功回傳資料，`readRange` 回 `null`、丟例外、缺 `start`／`end` 都回 404（且不往外拋）。
+- `android_book_metadata_test.dart`：旗標關閉只走 Readium；旗標開啟 foliate 成功不呼叫 Readium；foliate 失敗退回 Readium 並有日誌；PDF 一律走原生；兩邊都失敗時把 Readium 的例外往外拋；兩次同時呼叫 foliate 路徑時依序執行；Readium 退路的通道引數鍵為 `uri` 與 `format`；（切換後）預設旗標為 `true`。
+- `metadata_comparison_test.dart`：相同、`title`／`identifier`／`isFixedLayout` 不同各回傳對應欄位、前後空白與 `null`／空字串視為相同、封面有無不同回傳 `cover`、封面位元組不同但都有視為相同、空位元組陣列視為沒有封面。
+- 手機上的書庫對比與切換後的匯入冒煙，以實際執行輸出驗證，不另寫單元測試。
+
 ## 後續 Issue（待 Issue 1 結果決定）
 
 - ~~生產級送書伺服器~~：Issue 1 實測攔截可行（決策 15），不做。大檔整本位元組尖峰（224 MB 書約 3.8 GB）若要改善，另開「分段服務」Issue；洩漏驗證見 Issue 3。
@@ -423,7 +457,17 @@ Windows 版隱藏只有手機有意義的控制項，並停止呼叫 Windows 上
   - 現況：`flutter build apk --debug` 在 3.47.9 上成功，但印出兩條警告：Flutter 對專案 Gradle 版本 8.14.0 的支援「即將移除」，要求 ≥ 9.1.0；對 AGP 8.11.1 的支援「即將移除」，要求 ≥ 9.0.1。可用 `--android-skip-build-dependency-validation` 略過。專案目前：AGP 8.11.1、Kotlin 2.3.20、Gradle 8.14（`android/settings.gradle.kts`、`android/gradle/wrapper/gradle-wrapper.properties`），`gradle.properties` 有 `android.builtInKotlin=false`、`android.newDsl=false`。
   - 注意：Issue 6 審查時曾判斷這些版本「在支援範圍內」，那只是「目前還能建置」；Flutter 已明確預告會移除支援。
   - 風險：沒有 Android 裝置驗證；`patches/flutter_inappwebview_android` 本機修補、各外掛的 Kotlin 套用邏輯（built-in Kotlin）都可能受影響；這是 Android 第一次在 3.47.x 上建置，升到 AGP 9 後要重新驗證。
-- 索引器跑不完（Issue 8，已合併 #400）、WebView2 缺少提示（Issue 9，已合併 #401）、測試穩定性（Issue 11）、Android 統一 metadata（Issue 12）：2026-11-06 登錄，尚未規劃。
-- **預定執行順序：** ~~8~~ → ~~9~~ → ~~10~~ → ~~11~~ → ~~6~~ → 12 → 13 → 14（先補齊功能，再升級 Flutter，冒煙測試與打包放在最終版本上做）。
+- **Android 移除 Readium 相依與清理（已登錄為 Issue 18，2026-11-09，階段二）。**
+  - 背景：Issue 12 在 WAVE（7 本）與 BooksPad（103 本商業實體書）共 110 本真實 EPUB 逐欄對比，foliate-js 與 Readium 達到 100% 一致無任何差異，且耗時中位數無實質差異（1.70s vs 1.58s）。計畫原訂「先觀察一個版本再移除」；2026-11-09 使用者決議改為階段二直接拔除、不保留退路（決議後仍保留 Issue 12 階段一的退路直到階段二上線）。注意：WAVE 上 foliate-js 比 Readium 慢約 5 倍，拔除前應重新評估。
+  - 範圍：
+    1. 移除 `app/android/app/build.gradle.kts` 中的 `readium-shared` 與 `readium-streamer` 原生依賴。
+    2. 移除 `BookMetadataChannel.kt` 或簡化為僅保留非 EPUB/必要之通道。
+    3. 移除 `extractAndroidBookMetadata` 中的 Readium 退路邏輯，Android 與 Windows EPUB 詮釋資料抽取完全統一走 `readEpubMetadataOnAndroid` / foliate-js 探針。
+    4. 移除 `extractEpubMetadata` 原生方法與相關宣告。
+    5. 將既有書籍回填 `detectEpubLayout` 改由 foliate-js 探針抽取。
+    6. 清理 `third_party_licenses`、更新專案文件與架構說明。
+  - 狀態：已登錄，不排程。
+- 索引器跑不完（Issue 8，已合併 #400）、WebView2 缺少提示（Issue 9，已合併 #401）、測試穩定性（Issue 11，已合併 #403）、Android 統一 metadata（Issue 12，已完成）：2026-11-06 登錄。
+- **預定執行順序：** ~~8~~ → ~~9~~ → ~~10~~ → ~~11~~ → ~~6~~ → ~~12~~ → 13 → 14（先補齊功能，再升級 Flutter，冒煙測試與打包放在最終版本上做）。
 - 不做：「分段服務」（大檔開書記憶體尖峰，224 MB 書約 3.8 GB），記為已知限制，遇到再議。
 - Flutter 升級（Issue 6）：先用 `flutter pub outdated` 與 `pub get --dry-run` 盤點；升級後 `desktop_drop` 可改用最新版；一併處理 `pubspec.lock` 與 Flutter 版本的落差；Windows 預設 Impeller 下重驗 WebView2 閱讀器；`onReorder` 改 `onReorderItem`；built-in Kotlin／AGP 9 的 Android 建置；先查 3.47.8 的安全公告再選修補版本；升級前須與人類確認（`CLAUDE.md`）。
