@@ -173,13 +173,13 @@ git commit -m "test(android): 書庫 EPUB 的 Readium 與 foliate-js metadata �
 - Create: `docs/epics/epic-66-windows-port/issue-12-report.md`
 - Modify: `docs/epics/epic-66-windows-port/issues.md`（Issue 12 狀態；新增 Issue 18）、`docs/epics/epic-66-windows-port/epic.md`（新增決策 29）、本檔（勾選步驟）
 
-- [ ] **Step 1: 請使用者在 BooksPad 跑同一支對比（可選，視裝置是否連線）。** 提供指令與保護規則（備份、`-r`、跑完還原正常版本）；`adb` 若很慢，先用 `adb devices` 與一個簡單指令量延遲，延遲過高就回報、由使用者決定是否仍要跑。BooksPad 的結果同樣寫進報告。
-- [ ] **Step 2: 關卡（停下來問使用者）。** 把 WAVE（與 BooksPad，如有）的對比結果給使用者看：總數、一致數、差異欄位、foliate 失敗數、耗時比較。**使用者明確同意**才進 Step 3；否則旗標維持 `false`，報告記「對比未過／未切換」與原因，Task 6 的其餘文件照做。
-- [ ] **Step 3: 切換預設（只在同意後）。** 旗標改為 `true`；測試改為斷言預設值，並補一個 `foliateFirst` 預設為 `true` 時 EPUB 先走 foliate-js 的測試；跑 `flutter test test/library`、`flutter analyze`。
-- [ ] **Step 4: 切換後的手機冒煙（需要使用者）。** 在 WAVE 裝入新版，請使用者匯入 1～2 本 EPUB（含 1 本有封面、1 本版面特殊的），回報書架上書名、作者、封面是否正確；我用日誌確認走的是 foliate-js 而非退回 Readium。
-- [ ] **Step 5: 寫 `issue-12-report.md`、新增決策 29、登記 Issue 18。** 報告：診斷與決策表、各 Task 結果、對比結果（每台裝置的總數與差異、耗時）、旗標狀態、保護規則執行紀錄（備份、`-r`、還原）、未驗證與已知限制。`epic.md` 決策 29：階段一做法、使用者選擇、旗標、退路。`issues.md`：Issue 12 狀態；新增 **Issue 18**（階段二：移除 Readium 相依與 `extractEpubMetadata`、把 `detectEpubLayout` 回填改走 foliate-js、清理 `third_party_licenses`，需先觀察一個版本；不排程）。
-- [ ] **Step 6: 同步文件並勾選。** 本檔已完成步驟 `- [ ]` 改 `- [x]`。
-- [ ] **Step 7: Commit。**
+- [x] **Step 1: 請使用者在 BooksPad 跑同一支對比（可選，視裝置是否連線）。** 提供指令與保護規則（備份、`-r`、跑完還原正常版本）；`adb` 若很慢，先用 `adb devices` 與一個簡單指令量延遲，延遲過高就回報、由使用者決定是否仍要跑。BooksPad 的結果同樣寫進報告。
+- [x] **Step 2: 關卡（停下來問使用者）。** 把 WAVE（與 BooksPad，如有）的對比結果給使用者看：總數、一致數、差異欄位、foliate 失敗數、耗時比較。**使用者明確同意**才進 Step 3；否則旗標維持 `false`，報告記「對比未過／未切換」與原因，Task 6 的其餘文件照做。
+- [x] **Step 3: 切換預設（只在同意後）。** 旗標改為 `true`；測試改為斷言預設值，並補一個 `foliateFirst` 預設為 `true` 時 EPUB 先走 foliate-js 的測試；跑 `flutter test test/library`、`flutter analyze`。
+- [x] **Step 4: 切換後的手機冒煙（需要使用者）。** 在 WAVE 裝入新版，請使用者匯入 1～2 本 EPUB（含 1 本有封面、1 本版面特殊的），回報書架上書名、作者、封面是否正確；我用日誌確認走的是 foliate-js 而非退回 Readium。
+- [x] **Step 5: 寫 `issue-12-report.md`、新增決策 29、登記 Issue 18。** 報告：診斷與決策表、各 Task 結果、對比結果（每台裝置的總數與差異、耗時）、旗標狀態、保護規則執行紀錄（備份、`-r`、還原）、未驗證與已知限制。`epic.md` 決策 29：階段一做法、使用者選擇、旗標、退路。`issues.md`：Issue 12 狀態；新增 **Issue 18**（階段二：移除 Readium 相依與 `extractEpubMetadata`、把 `detectEpubLayout` 回填改走 foliate-js、清理 `third_party_licenses`，需先觀察一個版本；不排程）。
+- [x] **Step 6: 同步文件並勾選。** 本檔已完成步驟 `- [ ]` 改 `- [x]`。
+- [x] **Step 7: Commit。**
 
 ```bash
 git add app/lib/library/android_book_metadata.dart app/test/library/android_book_metadata_test.dart docs/epics/epic-66-windows-port/issue-12-report.md docs/epics/epic-66-windows-port/issues.md docs/epics/epic-66-windows-port/epic.md docs/epics/epic-66-windows-port/plans/plan-issue-12.md

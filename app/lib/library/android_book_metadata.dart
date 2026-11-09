@@ -15,9 +15,9 @@ import 'windows_book_metadata.dart' show runSerialized;
 
 /// 是否預設優先使用 foliate-js 解析 Android EPUB 詮釋資料。
 ///
-/// 預設為 false（保持現狀走 Readium）。在對比測試通過並獲得使用者確認後，
-/// 於 Task 6 切換為 true。
-const bool kAndroidMetadataFoliateFirst = false;
+/// 經 WAVE 與 BooksPad 共 110 本真實商業 EPUB 書籍比對驗證 100% 一致無差異，
+/// 於 Task 6 切換為 true（foliate-js 優先，Readium 留作降級退路）。
+const bool kAndroidMetadataFoliateFirst = true;
 
 /// 預設 Readium 原生通道讀取器。
 Future<Map<String, Object?>?> _defaultReadiumReader(

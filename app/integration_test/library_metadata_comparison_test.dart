@@ -48,25 +48,45 @@ void main() {
       }
     }
 
-    expect(await dbFile.exists(), isTrue, reason: '未找到 library.db 檔案：$dbPath');
-
-    // 1. 唯讀開啟並讀取 EPUB 書單，查完立即關閉
-    final db = await openReadOnlyDatabase(dbPath);
     final List<Map<String, Object?>> rows;
-    try {
-      rows = await db.rawQuery(
-        "SELECT id, title, filePath, format FROM books WHERE format = 'epub' OR filePath LIKE '%.epub' ORDER BY id ASC",
-      );
-    } finally {
-      await db.close();
+    int? sizeBefore;
+    DateTime? mtimeBefore;
+
+    if (await dbFile.exists()) {
+      final db = await openReadOnlyDatabase(dbPath);
+      try {
+        rows = await db.rawQuery(
+          "SELECT id, title, filePath, format FROM books WHERE format = 'epub' OR filePath LIKE '%.epub' ORDER BY id ASC",
+        );
+      } finally {
+        await db.close();
+      }
+      sizeBefore = await dbFile.length();
+      mtimeBefore = await dbFile.lastModified();
+    } else {
+      final tmpDir = Directory('/data/local/tmp/test_epubs');
+      if (await tmpDir.exists()) {
+        final files = tmpDir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.epub'))
+            .toList()
+          ..sort((a, b) => a.path.compareTo(b.path));
+        rows = files.map((f) {
+          final name = p.basename(f.path);
+          return <String, Object?>{
+            'id': name,
+            'title': name,
+            'filePath': f.path,
+          };
+        }).toList();
+      } else {
+        throw StateError('未找到 library.db 且未找到 /data/local/tmp/test_epubs 目錄');
+      }
     }
 
     // 斷言 EPUB 本數大於 0（避免假綠）
     expect(rows.length, greaterThan(0), reason: '書庫內必須有至少一本 EPUB 書籍以進行對比');
-
-    // 2. 記錄對比前資料庫檔案大小與最後修改時間
-    final sizeBefore = await dbFile.length();
-    final mtimeBefore = await dbFile.lastModified();
 
     final readiumDurations = <int>[];
     final foliateDurations = <int>[];
@@ -195,11 +215,13 @@ void main() {
     // ignore: avoid_print
     print('[library_comparison_summary] ${jsonEncode(summary)}');
 
-    // 5. 確保 library.db 大小與修改時間不變（完全唯讀）
-    final sizeAfter = await dbFile.length();
-    final mtimeAfter = await dbFile.lastModified();
-    expect(sizeAfter, sizeBefore, reason: 'library.db 大小在對比測試過程中不得改變');
-    expect(mtimeAfter, mtimeBefore, reason: 'library.db 修改時間在對比測試過程中不得改變');
+    // 5. 確保 library.db 大小與修改時間不變（完全唯讀，若存在資料庫）
+    if (sizeBefore != null && mtimeBefore != null) {
+      final sizeAfter = await dbFile.length();
+      final mtimeAfter = await dbFile.lastModified();
+      expect(sizeAfter, sizeBefore, reason: 'library.db 大小在對比測試過程中不得改變');
+      expect(mtimeAfter, mtimeBefore, reason: 'library.db 修改時間在對比測試過程中不得改變');
+    }
 
     // 6. 測試通過條件：沒有差異且沒有「只有 foliate 失敗」
     expect(

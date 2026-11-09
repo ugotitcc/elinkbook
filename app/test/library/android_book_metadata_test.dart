@@ -12,6 +12,32 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('extractAndroidBookMetadata 派送與退路', () {
+    test('kAndroidMetadataFoliateFirst 預設值為 true', () {
+      expect(kAndroidMetadataFoliateFirst, isTrue);
+    });
+
+    test('未帶 foliateFirst 參數時預設走 foliateReader，Readium 從未呼叫', () async {
+      var foliateCalled = false;
+      var readiumCalled = false;
+
+      final result = await extractAndroidBookMetadata(
+        'content://book/default',
+        'epub',
+        foliateReader: (uri) async {
+          foliateCalled = true;
+          return {'title': '預設 Foliate 書名'};
+        },
+        readiumReader: (uri, format) async {
+          readiumCalled = true;
+          return {'title': 'Readium 書名'};
+        },
+      );
+
+      expect(foliateCalled, isTrue);
+      expect(readiumCalled, isFalse);
+      expect(result?['title'], '預設 Foliate 書名');
+    });
+
     test('foliateFirst 為 false 時只呼叫 Readium，foliate 從未呼叫', () async {
       var foliateCalled = false;
       var readiumCalled = false;

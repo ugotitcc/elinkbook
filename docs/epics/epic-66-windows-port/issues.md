@@ -407,6 +407,8 @@ Windows 版隱藏只有手機有意義的控制項，並停止呼叫 Windows 上
 
 ## Issue 12 範圍（階段一）
 
+**狀態：** 🟢 已完成 (2026-11-09)
+
 Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，改成預設用 foliate-js（與 Windows 同一支 `metadata-probe.js`），Readium 留作「foliate-js 失敗時的退路」。使用者決定（2026-11-08）：對比用 **App 書庫內的書**；**分兩階段**，本 Issue 是階段一，**不移除 Readium**，移除另立 Issue 18。
 
 1. **Android 讀書檔區段（含 `content://`）：** `ReaderResourceChannel.kt` 新增 `contentUriLength`（`statSize` 小於 0 時補查 `OpenableColumns.SIZE`）、`readContentUriRange`（上限 4 MB，不整本讀入，每次呼叫以 `pfd.use` 關閉檔案描述元）；純函式 `clampByteRange` 有 JVM 單元測試；Dart 端 `book_range_reader.dart` 以 `startsWith('content://')` 分流，`file://` 轉本機路徑。
@@ -455,7 +457,17 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
   - 現況：`flutter build apk --debug` 在 3.47.9 上成功，但印出兩條警告：Flutter 對專案 Gradle 版本 8.14.0 的支援「即將移除」，要求 ≥ 9.1.0；對 AGP 8.11.1 的支援「即將移除」，要求 ≥ 9.0.1。可用 `--android-skip-build-dependency-validation` 略過。專案目前：AGP 8.11.1、Kotlin 2.3.20、Gradle 8.14（`android/settings.gradle.kts`、`android/gradle/wrapper/gradle-wrapper.properties`），`gradle.properties` 有 `android.builtInKotlin=false`、`android.newDsl=false`。
   - 注意：Issue 6 審查時曾判斷這些版本「在支援範圍內」，那只是「目前還能建置」；Flutter 已明確預告會移除支援。
   - 風險：沒有 Android 裝置驗證；`patches/flutter_inappwebview_android` 本機修補、各外掛的 Kotlin 套用邏輯（built-in Kotlin）都可能受影響；這是 Android 第一次在 3.47.x 上建置，升到 AGP 9 後要重新驗證。
-- 索引器跑不完（Issue 8，已合併 #400）、WebView2 缺少提示（Issue 9，已合併 #401）、測試穩定性（Issue 11）、Android 統一 metadata（Issue 12）：2026-11-06 登錄，尚未規劃。
-- **預定執行順序：** ~~8~~ → ~~9~~ → ~~10~~ → ~~11~~ → ~~6~~ → 12 → 13 → 14（先補齊功能，再升級 Flutter，冒煙測試與打包放在最終版本上做）。
+- **Android 移除 Readium 相依與清理（已登錄為 Issue 18，2026-11-09，階段二）。**
+  - 背景：Issue 12 在 WAVE（7 本）與 BooksPad（103 本商業實體書）共 110 本真實 EPUB 逐欄對比，foliate-js 與 Readium 達到 100% 一致無任何差異，且耗時中位數無實質差異（1.70s vs 1.58s）。依據使用者決議（2026-11-09），不保留 Readium 退路，直接拔除。
+  - 範圍：
+    1. 移除 `app/android/app/build.gradle.kts` 中的 `readium-shared` 與 `readium-streamer` 原生依賴。
+    2. 移除 `BookMetadataChannel.kt` 或簡化為僅保留非 EPUB/必要之通道。
+    3. 移除 `extractAndroidBookMetadata` 中的 Readium 退路邏輯，Android 與 Windows EPUB 詮釋資料抽取完全統一走 `readEpubMetadataOnAndroid` / foliate-js 探針。
+    4. 移除 `extractEpubMetadata` 原生方法與相關宣告。
+    5. 將既有書籍回填 `detectEpubLayout` 改由 foliate-js 探針抽取。
+    6. 清理 `third_party_licenses`、更新專案文件與架構說明。
+  - 狀態：已登錄，不排程。
+- 索引器跑不完（Issue 8，已合併 #400）、WebView2 缺少提示（Issue 9，已合併 #401）、測試穩定性（Issue 11，已合併 #402）、Android 統一 metadata（Issue 12，已完成）：2026-11-06 登錄。
+- **預定執行順序：** ~~8~~ → ~~9~~ → ~~10~~ → ~~11~~ → ~~6~~ → ~~12~~ → 13 → 14（先補齊功能，再升級 Flutter，冒煙測試與打包放在最終版本上做）。
 - 不做：「分段服務」（大檔開書記憶體尖峰，224 MB 書約 3.8 GB），記為已知限制，遇到再議。
 - Flutter 升級（Issue 6）：先用 `flutter pub outdated` 與 `pub get --dry-run` 盤點；升級後 `desktop_drop` 可改用最新版；一併處理 `pubspec.lock` 與 Flutter 版本的落差；Windows 預設 Impeller 下重驗 WebView2 閱讀器；`onReorder` 改 `onReorderItem`；built-in Kotlin／AGP 9 的 Android 建置；先查 3.47.8 的安全公告再選修補版本；升級前須與人類確認（`CLAUDE.md`）。
