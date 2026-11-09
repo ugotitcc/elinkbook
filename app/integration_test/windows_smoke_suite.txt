@@ -1,0 +1,39 @@
+# Windows integration_test 冒煙測試套件清單 (epic-66 Issue 13)
+# 每一行一個檔案路徑（相對於 app/ 或 integration_test/）
+# 以 '#' 開頭為註解，空行會被忽略
+
+# 基準線已通過檔案 (19 支)
+integration_test/smoke_test.dart
+integration_test/foliate_epub_reader_view_test.dart
+integration_test/pdf_highlights_notes_test.dart
+integration_test/foliate_txt_test.dart
+integration_test/foliate_md_test.dart
+integration_test/foliate_cbz_test.dart
+integration_test/foliate_kf8_test.dart
+integration_test/epub_pagination_test.dart
+integration_test/epub_dual_page_test.dart
+integration_test/fxl_bookmarks_test.dart
+integration_test/notes_bookmark_test.dart
+integration_test/pdf_nav_zone_test.dart
+integration_test/reader_footer_test.dart
+integration_test/reading_position_test.dart
+integration_test/foliate_navigation_degrade_test.dart
+integration_test/foliate_single_column_test.dart
+integration_test/foliate_stream_nav_zone_test.dart
+integration_test/foliate_margin_test.dart
+integration_test/markdown_export_test.dart
+
+# 基準線待診斷修復檔案 (8 支，待各 Task 完成後解開註解移入上方)
+# Task 2: 診斷「無法載入書籍」
+# integration_test/epub_fxl_tap_zone_test.dart
+# integration_test/foliate_toc_footer_test.dart
+# integration_test/pdf_reader_view_test.dart
+
+# Task 3: 診斷畫面找不到 widget 的失敗
+# integration_test/epub_toc_test.dart
+# integration_test/epub_highlights_notes_test.dart
+# integration_test/foliate_highlights_notes_test.dart
+# integration_test/reader_screen_test.dart
+
+# Task 4: Android 專屬測試的平台守門
+# integration_test/library_screen_test.dart
