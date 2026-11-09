@@ -15,7 +15,7 @@
 | 9 | WebView2 未安裝時顯示說明與下載連結（決策 4，原本漏掉） | Issue 7 | ✅ 已合併（Windows 實機以空 Runtime 資料夾模擬驗證通過；乾淨機器、重新檢查成功後進入 App 尚未實測） | #401 |
 | 10 | 平台專屬功能隱藏：音量鍵翻頁、E-Ink 高對比與影像濾鏡、螢幕方向鎖定、「全螢幕模式」偏好項；並處理 Windows 呼叫 Android 原生全螢幕 channel 未處理例外 | Issue 7 | ✅ 已合併（Windows 實機確認尚未做，見 [issue-10-report.md](issue-10-report.md)） | #402 |
 | 11 | Windows 測試穩定性：追查 `local_book_server_test.dart` 偶發失敗與 `pdf_reader_view_filters_test.dart`（`main` 上同樣失敗），為 Issue 6 建立乾淨基準；已查出根因是這台機器的 `127.0.0.1` 連線被重設，並新增開書逾時驗證 | 無 | ✅ 已合併（過關條件 5 以 ruling 延後：`pdf_reader_view_filters_test` 偶發失敗已重現但未修，登記為 Issue 15；開書逾時對照實驗結論為不能確定，見 [issue-11-report.md](issue-11-report.md)） | #403 |
-| 12 | Android 也改用 foliate-js 讀 metadata、移除 Readium（`readium-shared`／`readium-streamer`、`BookMetadataChannel.kt`）：**第一步先補真實出版社書籍的 Readium 對比，通過才移除**；需 Android 實機 | Issue 6 | 🟡 已規劃，待實作（階段一：預設改 foliate-js、Readium 留作退路；見 [plan-issue-12.md](plans/plan-issue-12.md)） | — |
+| 12 | Android 也改用 foliate-js 讀 metadata、移除 Readium（`readium-shared`／`readium-streamer`、`BookMetadataChannel.kt`）：**第一步先補真實出版社書籍的 Readium 對比，通過才移除**；需 Android 實機 | Issue 6 | 🟢 階段一已完成並合併（PR #405；預設改 foliate-js、Readium 留作退路；見 [plan-issue-12.md](plans/plan-issue-12.md)、[issue-12-report.md](issue-12-report.md)；階段二見 Issue 18） | — |
 | 13 | Windows `integration_test` 冒煙測試（每種格式：開書、翻頁、劃線） | Issue 6、8、9、10 | ⚪ 未開始（尚未規劃） | — |
 | 14 | 免安裝 zip 打包 | Issue 13 | ⚪ 未開始（尚未規劃） | — |
 | 15 | `pdf_reader_view_filters_test.dart` 加粗覆蓋圖偶發失敗查根因：整批跑 `test/reader` 約 1／3 機率失敗（等背景 Isolate 結果 120 輪仍無 `RawImage`），等待上限已放寬兩次仍偶發，疑 `PdfReaderView` 加粗佇列有競態（來源 Issue 11） | 無 | ⚪ 未開始（尚未規劃） | — |
@@ -407,7 +407,7 @@ Windows 版隱藏只有手機有意義的控制項，並停止呼叫 Windows 上
 
 ## Issue 12 範圍（階段一）
 
-**狀態：** 🟢 已完成 (2026-11-09)
+**狀態：** 🟢 已完成並合併（2026-11-09，PR #405）
 
 Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，改成預設用 foliate-js（與 Windows 同一支 `metadata-probe.js`），Readium 留作「foliate-js 失敗時的退路」。使用者決定（2026-11-08）：對比用 **App 書庫內的書**；**分兩階段**，本 Issue 是階段一，**不移除 Readium**，移除另立 Issue 18。
 
