@@ -79,10 +79,19 @@ void main() {
 
   testWidgets('EPUB：預先寫入劃線＋依附備註，NotesBottomSheet 正確顯示合併清單並可跳轉/刪除',
       (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     final libraryRepository = await SqliteLibraryRepository.open(inMemoryDatabasePath);
-    addTearDown(() => libraryRepository.close());
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      await libraryRepository.close();
+    });
     final prefsManager = ReaderPrefsManagerImpl(
       BookReaderPrefsRepository(libraryRepository.database),
       ReadingPositionRepository(libraryRepository.database),
@@ -166,10 +175,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(NotesBottomSheet), findsNothing);
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
+    ScaffoldMessenger.of(tester.element(find.byType(ReaderScreen))).clearSnackBars();
+    await tester.pumpAndSettle();
 
     // 重新開啟，驗證編輯純備註（另一筆，非上面已跳轉刪除的合併項目）文字
     // 持久化生效：Dialog 儲存後清單即時反映新文字，且直接重新查詢
     // repository 確認資料庫確實已更新（不只是 widget tree 上的暫存狀態）。
+    await _pumpUntilNotesButtonEnabled(tester);
     await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
@@ -189,6 +201,7 @@ void main() {
     // 關閉 Bottom Sheet，重新開啟驗證單筆刪除（劃線+備註一併消失）持久化生效。
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
+    await _pumpUntilNotesButtonEnabled(tester);
     await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));

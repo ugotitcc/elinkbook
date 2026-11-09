@@ -84,11 +84,23 @@ void main() {
 
   testWidgets('EPUB 目錄樹狀清單正確渲染巢狀結構，點選項目後畫面確實跳轉至正確章節',
       (tester) async {
+    // Windows 桌面預設視窗寬度（>720px）會使 Foliate 自動啟用雙欄／跨章節填滿（paginator.js
+    // 在第三章內容短於一跨頁時會載入前一章節第二節補齊前導欄位），導致目前章節判定落在第二節；
+    // 依既有測試慣例固定為手機直向視窗（400×800）確保單欄排版。
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     final libraryRepository =
         await SqliteLibraryRepository.open(inMemoryDatabasePath);
-    addTearDown(() => libraryRepository.close());
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      await libraryRepository.close();
+    });
     final prefsManager = ReaderPrefsManagerImpl(
       BookReaderPrefsRepository(libraryRepository.database),
       ReadingPositionRepository(libraryRepository.database),
@@ -208,7 +220,10 @@ void main() {
     databaseFactory = databaseFactoryFfi;
     final libraryRepository =
         await SqliteLibraryRepository.open(inMemoryDatabasePath);
-    addTearDown(() => libraryRepository.close());
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      await libraryRepository.close();
+    });
     final prefsManager = ReaderPrefsManagerImpl(
       BookReaderPrefsRepository(libraryRepository.database),
       ReadingPositionRepository(libraryRepository.database),
