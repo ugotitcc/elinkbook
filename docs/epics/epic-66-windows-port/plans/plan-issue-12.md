@@ -34,7 +34,7 @@
 - 不得 commit：`app/windows/flutter/generated_plugin_registrant.cc`、`generated_plugin_registrant.h`、`generated_plugins.cmake`、`pubspec.lock` 的任何變動（本 Issue 不新增相依）；`git add` 一律明確列檔。
 - **手機操作的保護規則：** 絕不解除安裝 App；動手前先備份 `app_flutter/library.db`、`dictionary.db`、`shared_prefs`（`adb exec-out run-as cc.ugotit.elinkbook tar cf - …`，**只列實際存在的檔**，否則錯誤訊息會混進輸出讓 tar 損毀；備份後解開驗證 SQLite 檔頭）；安裝一律 `adb install -r`；用 `uiautomator dump` 讀畫面上的書名定位，不用固定座標；備份放 scratchpad，用完刪除。
 - 書庫對比測試是**唯讀**的：用 `openReadOnlyDatabase` 開 `library.db`，不得經 `LibraryRepository`；測試前後 `library.db` 的大小與修改時間必須相同。
-- `flutter test integration_test/… -d <裝置>` 會在手機上裝入「測試殼層」版本的 App（同套件、資料保留），結束後必須用 `flutter install --debug`（或 `adb install -r` 正常 debug APK）裝回正常版本。
+- `flutter test integration_test/… -d <裝置> --no-uninstall` 會在手機上裝入「測試殼層」版本的 App（同套件、資料保留），結束後必須用 `adb install -r app/build/app/outputs/flutter-apk/app-debug.apk` 裝回正常版本。**嚴禁 `flutter install`**：它會先解除安裝再安裝，App 資料會被清除（2026-11-09 實際發生，見 issue-12-report 第 9.5 節）。
 - 實驗腳本與暫存輸出放 scratchpad，不放進專案。
 - Windows 建置（若需要）：PowerShell，`$env:Path += ';C:\Users\huthief\bin'`（放尾端）。
 
@@ -160,7 +160,7 @@ git commit -m "test(android): 書庫 EPUB 的 Readium 與 foliate-js metadata �
 
 - [x] **Step 1: 確認裝置與備份。** `flutter devices` 確認 WAVE（`TCE70P24B2202374`）在線；依 Global Constraints 備份 `library.db`、`dictionary.db`、`shared_prefs` 並驗證；記下 `library.db` 的大小與時間。
 - [x] **Step 2: 執行對比。** 在 `app/` 執行 `flutter test integration_test/library_metadata_comparison_test.dart -d TCE70P24B2202374`，輸出存 scratchpad；擷取所有 `[library_comparison]` 行與彙總。
-- [x] **Step 3: 還原正常版本。** `flutter install --debug -d TCE70P24B2202374`（或 `adb install -r` 正常 debug APK），確認 `library.db` 大小與時間與 Step 1 相同、App 能正常啟動到書架。
+- [x] **Step 3: 還原正常版本。** `adb install -r` 正常 debug APK（**不可用 `flutter install`**，會解除安裝），確認 `library.db` 大小與時間與 Step 1 相同、App 能正常啟動到書架。
 - [x] **Step 4: 判讀。** 全部一致且沒有「只有 foliate 失敗」才算過；有差異或失敗，逐本記錄原因（讀該書 OPF 看是 Readium 還是 foliate-js 的取值問題），**不要**為了讓測試過而改比較規則；若是 foliate-js 端的錯，停下來回報，由使用者決定要修 `metadata-probe.js` 還是記為已知差異。把結果寫進 `issue-12-report.md`（先建檔，Task 6 收尾）。
 
 ---
@@ -176,7 +176,7 @@ git commit -m "test(android): 書庫 EPUB 的 Readium 與 foliate-js metadata �
 - [x] **Step 1: 請使用者在 BooksPad 跑同一支對比（可選，視裝置是否連線）。** 提供指令與保護規則（備份、`-r`、跑完還原正常版本）；`adb` 若很慢，先用 `adb devices` 與一個簡單指令量延遲，延遲過高就回報、由使用者決定是否仍要跑。BooksPad 的結果同樣寫進報告。
 - [x] **Step 2: 關卡（停下來問使用者）。** 把 WAVE（與 BooksPad，如有）的對比結果給使用者看：總數、一致數、差異欄位、foliate 失敗數、耗時比較。**使用者明確同意**才進 Step 3；否則旗標維持 `false`，報告記「對比未過／未切換」與原因，Task 6 的其餘文件照做。
 - [x] **Step 3: 切換預設（只在同意後）。** 旗標改為 `true`；測試改為斷言預設值，並補一個 `foliateFirst` 預設為 `true` 時 EPUB 先走 foliate-js 的測試；跑 `flutter test test/library`、`flutter analyze`。
-- [x] **Step 4: 切換後的手機冒煙（需要使用者）。** 在 WAVE 裝入新版，請使用者匯入 1～2 本 EPUB（含 1 本有封面、1 本版面特殊的），回報書架上書名、作者、封面是否正確；我用日誌確認走的是 foliate-js 而非退回 Readium。
+- [ ] **Step 4: 切換後的手機冒煙（需要使用者；審查後改回未完成，尚未做）。** 在 WAVE 裝入新版，請使用者匯入 1～2 本 EPUB（含 1 本有封面、1 本版面特殊的），回報書架上書名、作者、封面是否正確；我用日誌確認走的是 foliate-js 而非退回 Readium。
 - [x] **Step 5: 寫 `issue-12-report.md`、新增決策 29、登記 Issue 18。** 報告：診斷與決策表、各 Task 結果、對比結果（每台裝置的總數與差異、耗時）、旗標狀態、保護規則執行紀錄（備份、`-r`、還原）、未驗證與已知限制。`epic.md` 決策 29：階段一做法、使用者選擇、旗標、退路。`issues.md`：Issue 12 狀態；新增 **Issue 18**（階段二：移除 Readium 相依與 `extractEpubMetadata`、把 `detectEpubLayout` 回填改走 foliate-js、清理 `third_party_licenses`，需先觀察一個版本；不排程）。
 - [x] **Step 6: 同步文件並勾選。** 本檔已完成步驟 `- [ ]` 改 `- [x]`。
 - [x] **Step 7: Commit。**

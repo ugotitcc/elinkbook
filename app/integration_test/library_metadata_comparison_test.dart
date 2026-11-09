@@ -40,15 +40,9 @@ void main() {
     final dbPath = p.join(docsDir.path, 'library.db');
     final dbFile = File(dbPath);
 
-    if (!await dbFile.exists()) {
-      final tmpBackup = File('/data/local/tmp/library.db');
-      if (await tmpBackup.exists()) {
-        await dbFile.parent.create(recursive: true);
-        await tmpBackup.copy(dbFile.path);
-      }
-    }
-
     final List<Map<String, Object?>> rows;
+    // 資料來源：library（App 書庫，唯讀）或 tmp_dir（/data/local/tmp/test_epubs 檔案，非書庫）
+    final String source;
     int? sizeBefore;
     DateTime? mtimeBefore;
 
@@ -61,6 +55,7 @@ void main() {
       } finally {
         await db.close();
       }
+      source = 'library';
       sizeBefore = await dbFile.length();
       mtimeBefore = await dbFile.lastModified();
     } else {
@@ -72,6 +67,7 @@ void main() {
             .where((f) => f.path.endsWith('.epub'))
             .toList()
           ..sort((a, b) => a.path.compareTo(b.path));
+        source = 'tmp_dir';
         rows = files.map((f) {
           final name = p.basename(f.path);
           return <String, Object?>{
@@ -86,6 +82,8 @@ void main() {
     }
 
     // 斷言 EPUB 本數大於 0（避免假綠）
+    // ignore: avoid_print
+    print('[library_comparison_source] $source total=${rows.length}');
     expect(rows.length, greaterThan(0), reason: '書庫內必須有至少一本 EPUB 書籍以進行對比');
 
     final readiumDurations = <int>[];
@@ -96,6 +94,8 @@ void main() {
     final onlyReadiumFailed = <Map<String, Object?>>[];
     final bothFailed = <Map<String, Object?>>[];
     var bothSuccessAndIdentical = 0;
+    var contentUriTotal = 0;
+    var contentUriFellBackTotal = 0;
 
     // 3. 逐一比對每本 EPUB 書籍
     for (final row in rows) {
@@ -107,26 +107,36 @@ void main() {
       // 若原 filePath 為 content:// 且權限已被 Android 收回，
       // 退回 /data/local/tmp/test_epubs/<檔名> 進行比對。
       var effectiveUri = filePath;
+      var contentUriChecked = false;
+      var contentUriFellBack = false;
+      String? contentUriError;
       if (filePath.startsWith('content://')) {
+        contentUriChecked = true;
         try {
           final testLen = await bookLength(filePath);
           if (testLen == null || testLen <= 0) {
-            throw StateError('content URI inaccessible');
+            throw StateError('content URI inaccessible（長度=$testLen）');
           }
-        } catch (_) {
+        } catch (e) {
+          contentUriError = '$e';
           final decoded = Uri.decodeFull(filePath);
           final lastSlash = decoded.lastIndexOf('/');
           final name = lastSlash >= 0 ? decoded.substring(lastSlash + 1) : decoded;
           final fallbackFile = File('/data/local/tmp/test_epubs/$name');
+          contentUriFellBack = true;
           if (await fallbackFile.exists()) {
             effectiveUri = fallbackFile.path;
           }
         }
       }
 
+      if (contentUriChecked) contentUriTotal++;
+      if (contentUriFellBack) contentUriFellBackTotal++;
+
       // (a) Readium 原生通道（直接呼叫，不經派送函式）
       Map<String, Object?>? readiumResult;
       var readiumFailed = false;
+      String? readiumError;
       final swR = Stopwatch()..start();
       try {
         readiumResult = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
@@ -135,6 +145,7 @@ void main() {
         );
       } catch (e) {
         readiumFailed = true;
+        readiumError = '$e';
       }
       swR.stop();
       final rMs = swR.elapsedMilliseconds;
@@ -143,11 +154,13 @@ void main() {
       // (b) foliate-js 探針（直接呼叫，不經派送函式）
       Map<String, Object?>? foliateResult;
       var foliateFailed = false;
+      String? foliateError;
       final swF = Stopwatch()..start();
       try {
         foliateResult = await readEpubMetadataOnAndroid(effectiveUri);
       } catch (e) {
         foliateFailed = true;
+        foliateError = '$e';
       }
       swF.stop();
       final fMs = swF.elapsedMilliseconds;
@@ -191,6 +204,11 @@ void main() {
         'diffs': diffs,
         'readiumFailed': readiumFailed,
         'foliateFailed': foliateFailed,
+        'readiumError': readiumError,
+        'foliateError': foliateError,
+        'contentUri': contentUriChecked,
+        'contentUriFellBack': contentUriFellBack,
+        'contentUriError': contentUriError,
       });
       // ignore: avoid_print
       print('[library_comparison] $bookLog');
@@ -200,7 +218,10 @@ void main() {
     final rTotalMs = readiumDurations.fold<int>(0, (a, b) => a + b);
     final fTotalMs = foliateDurations.fold<int>(0, (a, b) => a + b);
     final summary = {
+      'source': source,
       'total': rows.length,
+      'contentUriTotal': contentUriTotal,
+      'contentUriFellBack': contentUriFellBackTotal,
       'identical': bothSuccessAndIdentical,
       'different': differences.length,
       'diffFields': diffFieldCounts,

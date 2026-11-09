@@ -129,6 +129,8 @@ Future<Map<String, Object?>> readEpubMetadataOnAndroid(
 
   final probeHtml = androidProbeHtml(length);
   final completer = Completer<String>();
+  // 先掛一個空監聽，避免在 headless.run() 期間就失敗時變成未處理的非同步錯誤
+  completer.future.ignore();
   late final HeadlessInAppWebView headless;
 
   headless = HeadlessInAppWebView(
@@ -219,7 +221,12 @@ Future<Map<String, Object?>> readEpubMetadataOnAndroid(
         final bytes = await loadAndroidAsset(relative);
         if (bytes == null) {
           debugPrint('[probe] 找不到資產：$relative');
-          return null;
+          return WebResourceResponse(
+            statusCode: 404,
+            reasonPhrase: 'Not Found',
+            headers: const {},
+            data: Uint8List(0),
+          );
         }
         final contentType = path.endsWith('.js')
             ? 'text/javascript'
