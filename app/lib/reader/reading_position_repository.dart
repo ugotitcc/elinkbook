@@ -52,22 +52,17 @@ class ReadingPositionRepository {
   /// 依據其實是「最後匯入時間」，剛匯入、從未打開過的書會被誤判為「最後
   /// 閱讀」蓋過真正最近在讀的書。
   Future<void> save(String bookId, ReadingPosition position) async {
-    if (!_db.isOpen) return;
-    try {
-      await _db.update(
-        'books',
-        {
-          'epubLocator': position.epubLocatorJson,
-          'pdfPageIndex': position.pdfPageIndex,
-          'progress': position.progress,
-          'position_updated_at': DateTime.now().millisecondsSinceEpoch,
-          'lastReadTime': DateTime.now().millisecondsSinceEpoch,
-        },
-        where: 'id = ?',
-        whereArgs: [bookId],
-      );
-    } catch (_) {
-      // 畫面銷毀時若資料庫正在關閉，忽略已關閉錯誤，避免未捕捉非同步例外造成崩潰
-    }
+    await _db.update(
+      'books',
+      {
+        'epubLocator': position.epubLocatorJson,
+        'pdfPageIndex': position.pdfPageIndex,
+        'progress': position.progress,
+        'position_updated_at': DateTime.now().millisecondsSinceEpoch,
+        'lastReadTime': DateTime.now().millisecondsSinceEpoch,
+      },
+      where: 'id = ?',
+      whereArgs: [bookId],
+    );
   }
 }
