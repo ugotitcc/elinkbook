@@ -73,7 +73,7 @@ try {
     }
 
     # 5. 開跑前殘留進程檢查（有就中止並列出，不自行終止）
-    $initialResiduals = Get-ResidualProcesses
+    $initialResiduals = @(Get-ResidualProcesses)  # 以 @() 包成陣列：函式 return 單一元素時會被攤平成物件,.Count 會失準
     if ($initialResiduals.Count -gt 0) {
         Write-Host "[錯誤] 偵測到下列殘留測試或建置行程，為避免記憶體耗盡或測試衝突，已中止執行：" -ForegroundColor Red
         foreach ($r in $initialResiduals) {
