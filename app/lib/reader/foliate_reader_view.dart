@@ -879,8 +879,14 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       // foliate_bridge_codec.dart 的 parseLocatorChanged() 純函式（比照
       // extractCfi()/parseTableOfContents() 既有慣例），可脫離 WebView
       // 直接單元測試，不再是這個 widget 內無法獨立驗證的匿名 closure。
-      callback: (args) =>
-          widget.onLocatorChanged?.call(parseLocatorChanged(args)),
+      // 【Windows / WebView2 修正】必須回傳 null（不可用 arrow function 洩漏
+      // onLocatorChanged closure 的賦值傳回值），否則若呼叫端寫 (info) => pos = info，
+      // Dart 會將 EpubPositionInfo 物件當作 handler 傳回值交給 inappwebview，
+      // 引發 jsonEncode 失敗並在 JS 端觸發 Unhandled Promise Rejection -> onError。
+      callback: (args) {
+        widget.onLocatorChanged?.call(parseLocatorChanged(args));
+        return null;
+      },
     );
     controller.addJavaScriptHandler(
       handlerName: FoliateBridgeHandlers.onNavigationDegraded,
