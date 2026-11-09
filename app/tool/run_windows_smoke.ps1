@@ -214,10 +214,10 @@ try {
 
     # 8. 最終結果彙總
     Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-    $passCount = ($results | Where-Object { $_.Status -eq "PASS" }).Count
-    $failCount = ($results | Where-Object { $_.Status -eq "FAIL" }).Count
-    $timeoutCount = ($results | Where-Object { $_.Status -eq "TIMEOUT" }).Count
-    $abortCount = ($results | Where-Object { $_.Status -eq "MEMORY_ABORT" }).Count
+    $passCount = @($results | Where-Object { $_.Status -eq "PASS" }).Count
+    $failCount = @($results | Where-Object { $_.Status -eq "FAIL" }).Count
+    $timeoutCount = @($results | Where-Object { $_.Status -eq "TIMEOUT" }).Count
+    $abortCount = @($results | Where-Object { $_.Status -eq "MEMORY_ABORT" }).Count
 
     Write-Host ("測試結果彙總: 通過 {0} / 失敗 {1} / 逾時 {2} / 中止 {3} (總計 {4})" -f `
         $passCount, $failCount, $timeoutCount, $abortCount, $results.Count) -ForegroundColor `

@@ -13,6 +13,7 @@ import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
+import 'windows_skip.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
 import '../test/support/fake_appearance_dependencies.dart';
 import '../test/support/fake_source_dependencies.dart';
@@ -54,6 +55,7 @@ void main() {
 
   testWidgets(
     '從書架點擊一本透過 BookImportService 匯入的真實書籍項目，導航至 ReaderScreen 且內容成功渲染',
+    skip: skipOnWindows('createTestContentUri 只存在於 Android 原生 (BookMetadataChannel.kt)'),
     (tester) async {
       final tempDir = await getTemporaryDirectory();
       final uniqueSuffix = DateTime.now().microsecondsSinceEpoch;
@@ -164,7 +166,10 @@ void main() {
     },
   );
 
-  testWidgets('真實匯入一本流式 EPUB 後點開，由 FoliateReaderView 成功渲染出內容', (tester) async {
+  testWidgets(
+    '真實匯入一本流式 EPUB 後點開，由 FoliateReaderView 成功渲染出內容',
+    skip: skipOnWindows('createTestContentUri 只存在於 Android 原生 (BookMetadataChannel.kt)'),
+    (tester) async {
     final tempDir = await getTemporaryDirectory();
     final uniqueSuffix = DateTime.now().microsecondsSinceEpoch;
     final dbPath = p.join(
@@ -266,6 +271,7 @@ void main() {
   testWidgets(
     '真實匯入一本 FXL（固定版面）EPUB 後點開，同樣由 FoliateReaderView 成功渲染出內容'
     '（Epic 20 Issue 2 起 FXL 與流式皆統一走 FoliateReaderView，不再分派到已刪除的 EpubReaderView）',
+    skip: skipOnWindows('createTestContentUri 只存在於 Android 原生 (BookMetadataChannel.kt)'),
     (tester) async {
       final tempDir = await getTemporaryDirectory();
       final uniqueSuffix = DateTime.now().microsecondsSinceEpoch;

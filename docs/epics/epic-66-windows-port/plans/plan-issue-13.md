@@ -99,11 +99,11 @@ git commit -m "test(windows): 整合測試跑測腳本（單份依序、防殘�
 
 **Interfaces:** 無新介面。產出是「每個失敗屬於哪一類」的結論與修復。
 
-- [ ] **Step 1: 重現並取得根因。** 依 `superpowers:systematic-debugging`：單獨跑 `epub_fxl_tap_zone_test`，確認每次都失敗（至少 3 次）；渲染日誌顯示「已渲染」之後才出現錯誤，所以先找出 `onError` 是誰在何時呼叫（`epub_fxl_tap_zone_test` 與 `foliate_toc_footer_test` 的錯誤來源要分開查：前者直接建構 `FoliateReaderView`，後者是否經 `ReaderScreen` 先確認；`pdf_reader_view_test` 先驗證 `pdf_reader_view.dart:862` 的 `contains('://')` 假設，看測試傳入的路徑形式）、Windows 的 loopback 書檔伺服器與 WebView2 在該時間點的行為。**不得在根因查明前改程式。** 用 `flutter test` 的日誌或暫時的 `debugPrint`（診斷用，完成後移除，不 commit）。
-- [ ] **Step 2: 分類並記錄。** 三種結果：（A）測試假設 Android（例如用 `/data/local/tmp`、`content://`）→ 在 Task 4 處理；（B）Windows 產品問題 → 先寫一個重現的失敗測試（紅），再最小修復（綠），修復前先停下來告知使用者：這會改產品程式，範圍是否可接受；（C）Windows 時序差異 → 修測試的等待條件（不得只加長逾時掩蓋，要等實際條件）。把每個失敗的分類與證據寫進報告。
-- [ ] **Step 3: 套用修復；三個檔案各單獨跑 3 次全過。**
-- [ ] **Step 4: 通過的檔案加進套件清單。**
-- [ ] **Step 5: Commit（依實際異動檔案明確列出）。**
+- [x] **Step 1: 重現並取得根因。** 依 `superpowers:systematic-debugging`：單獨跑 `epub_fxl_tap_zone_test`，確認每次都失敗（至少 3 次）；渲染日誌顯示「已渲染」之後才出現錯誤，所以先找出 `onError` 是誰在何時呼叫（`epub_fxl_tap_zone_test` 與 `foliate_toc_footer_test` 的錯誤來源要分開查：前者直接建構 `FoliateReaderView`，後者是否經 `ReaderScreen` 先確認；`pdf_reader_view_test` 先驗證 `pdf_reader_view.dart:862` 的 `contains('://')` 假設，看測試傳入的路徑形式）、Windows 的 loopback 書檔伺服器與 WebView2 在該時間點的行為。**不得在根因查明前改程式。** 用 `flutter test` 的日誌或暫時的 `debugPrint`（診斷用，完成後移除，不 commit）。
+- [x] **Step 2: 分類並記錄。** 三種結果：（A）測試假設 Android（例如用 `/data/local/tmp`、`content://`）→ 在 Task 4 處理；（B）Windows 產品問題 → 先寫一個重現的失敗測試（紅），再最小修復（綠），修復前先停下來告知使用者：這會改產品程式，範圍是否可接受；（C）Windows 時序差異 → 修測試的等待條件（不得只加長逾時掩蓋，要等實際條件）。把每個失敗的分類與證據寫進報告。
+- [x] **Step 3: 套用修復；三個檔案各單獨跑 3 次全過。**
+- [x] **Step 4: 通過的檔案加進套件清單。**
+- [x] **Step 5: Commit（依實際異動檔案明確列出）。**
 
 ---
 
@@ -112,11 +112,11 @@ git commit -m "test(windows): 整合測試跑測腳本（單份依序、防殘�
 **Files:**
 - 依診斷結果而定：`app/integration_test/epub_toc_test.dart`、`epub_highlights_notes_test.dart`、`foliate_highlights_notes_test.dart`、`reader_screen_test.dart`。
 
-- [ ] **Step 1: 逐檔找原因。** 優先檢查：Windows 視窗尺寸（預設比手機寬，版面可能走不同分支，例如平板／桌面側欄）；Issue 10 在 Windows 隱藏的設定項（`reader_settings_text_conversion_traditional` 是否被隱藏或被捲到畫面外）；測試用手機尺寸的點擊座標。每個失敗都要有證據（截取 widget 樹的 `debugDumpApp` 輸出片段或日誌），不憑猜測。
-- [ ] **Step 2: 分類。** 同 Task 2：（A）測試假設行動裝置畫面 → 在測試內為 Windows 設定與手機相同的視窗尺寸（`tester.view`），或改用不依賴座標的 Key；（B）產品在 Windows 缺了功能 → 先停下來告知使用者；（C）時序 → 修等待條件。
-- [ ] **Step 3: 套用修復；各檔單獨跑 3 次全過。** `reader_screen_test` 有 19 個測試，逐個列出仍失敗的，**不要求全數修好**：未修好的在報告中列為已知缺口並登記為後續 Issue，不放進套件清單。
-- [ ] **Step 4: 能過的檔案加進套件清單。**
-- [ ] **Step 5: Commit。**
+- [x] **Step 1: 逐檔找原因。** 優先檢查：Windows 視窗尺寸（預設比手機寬，版面可能走不同分支，例如平板／桌面側欄）；Issue 10 在 Windows 隱藏的設定項（`reader_settings_text_conversion_traditional` 是否被隱藏或被捲到畫面外）；測試用手機尺寸的點擊座標。每個失敗都要有證據（截取 widget 樹的 `debugDumpApp` 輸出片段或日誌），不憑猜測。
+- [x] **Step 2: 分類。** 同 Task 2：（A）測試假設行動裝置畫面 → 在測試內為 Windows 設定與手機相同的視窗尺寸（`tester.view`），或改用不依賴座標的 Key；（B）產品在 Windows 缺了功能 → 先停下來告知使用者；（C）時序 → 修等待條件。
+- [x] **Step 3: 套用修復；各檔單獨跑 3 次全過。** `reader_screen_test` 有 19 個測試，逐個列出仍失敗的，**不要求全數修好**：未修好的在報告中列為已知缺口並登記為後續 Issue，不放進套件清單。
+- [x] **Step 4: 能過的檔案加進套件清單。**
+- [x] **Step 5: Commit。**
 
 ---
 
@@ -126,10 +126,10 @@ git commit -m "test(windows): 整合測試跑測腳本（單份依序、防殘�
 - Create: `app/integration_test/windows_skip.dart`（`skipOnWindows(String reason)` helper）；`app/test/` 內新增一支掃描守門寫法的小測試。
 - Modify: `app/integration_test/library_screen_test.dart`，以及 Task 2、3 分類為 A 類且確定是 Android 專屬的檔案。
 
-- [ ] **Step 1: 確認守門寫法。** 已查證：`integration_test/` 內沒有既有的 `Platform.isAndroid`／`skip:` 慣例；且 Flutter 的 `testWidgets` 的 `skip` 型別是 `bool?`（`widget_tester.dart:151`），**不能傳字串**（`Platform.isWindows ? '原因' : false` 會讓 `flutter analyze` 失敗）。改用 helper：新增 `app/integration_test/windows_skip.dart`（檔名不以 `_test.dart` 結尾，不會被當成測試跑）：`bool skipOnWindows(String reason)`，`assert(reason.trim().isNotEmpty)` 後回傳 `Platform.isWindows`。測試寫成 `testWidgets('名稱', skip: skipOnWindows('createTestContentUri 只存在於 Android 原生'), ...)`。
-- [ ] **Step 2: 套用。** 只加守門，不改測試本體；在 Windows 上確認顯示「略過」而非失敗；寫一個小的、不需要裝置的檢查（`test/` 內掃描 `integration_test/`：每個 `skipOnWindows(` 呼叫的引數必須是非空字串字面值；且不得出現裸的 `skip: Platform.isWindows`）避免之後出現沒寫原因的略過。
-- [ ] **Step 3: Android 側確認。** 本 Task 不能在沒有手機時驗證 Android 行為，所以守門只可用 `Platform.isWindows` 為條件；程式審查時以此為檢查項，報告註明「Android 未重跑」。
-- [ ] **Step 4: Commit。**
+- [x] **Step 1: 確認守門寫法。** 已查證：`integration_test/` 內沒有既有的 `Platform.isAndroid`／`skip:` 慣例；且 Flutter 的 `testWidgets` 的 `skip` 型別是 `bool?`（`widget_tester.dart:151`），**不能傳字串**（`Platform.isWindows ? '原因' : false` 會讓 `flutter analyze` 失敗）。改用 helper：新增 `app/integration_test/windows_skip.dart`（檔名不以 `_test.dart` 結尾，不會被當成測試跑）：`bool skipOnWindows(String reason)`，`assert(reason.trim().isNotEmpty)` 後回傳 `Platform.isWindows`。測試寫成 `testWidgets('名稱', skip: skipOnWindows('createTestContentUri 只存在於 Android 原生'), ...)`。
+- [x] **Step 2: 套用。** 只加守門，不改測試本體；在 Windows 上確認顯示「略過」而非失敗；寫一個小的、不需要裝置的檢查（`test/` 內掃描 `integration_test/`：每個 `skipOnWindows(` 呼叫的引數必須是非空字串字面值；且不得出現裸的 `skip: Platform.isWindows`）避免之後出現沒寫原因的略過。
+- [x] **Step 3: Android 側確認。** 本 Task 不能在沒有手機時驗證 Android 行為，所以守門只可用 `Platform.isWindows` 為條件；程式審查時以此為檢查項，報告註明「Android 未重跑」。
+- [x] **Step 4: Commit。**
 
 ---
 
