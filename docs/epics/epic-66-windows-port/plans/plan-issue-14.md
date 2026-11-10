@@ -132,7 +132,7 @@ git commit -m "test(windows): 免安裝 zip 本機驗證腳本（含空格中文
 - Create: `docs/epics/epic-66-windows-port/issue-14-report.md`
 - Modify: `docs/epics/epic-66-windows-port/issues.md`（Issue 14 狀態）、`docs/epics/epic-66-windows-port/epic.md`（決策 30）、`docs/epics.md`（備註）、本檔（勾選步驟）
 
-- [x] **Step 1: 人工開書（使用者）。** 腳本通過後，請使用者把 zip 解壓到含空格與中文的路徑、雙擊 `elinkbook.exe`、匯入並開一本 EPUB；**執行期間不得同時跑任何 Windows 整合測試或建置**。使用者回報的結果原文記入報告；使用者沒做就在報告寫「未驗證」，過關條件 5 不算達成。
+- [x] **Step 1: 人工開書（使用者）。（2026-11-10 使用者回報「開書測試通過」，無逐項紀錄，原文記入報告第 5 節）** 腳本通過後，請使用者把 zip 解壓到含空格與中文的路徑、雙擊 `elinkbook.exe`、匯入並開一本 EPUB；**執行期間不得同時跑任何 Windows 整合測試或建置**。使用者回報的結果原文記入報告；使用者沒做就在報告寫「未驗證」，過關條件 5 不算達成。
 - [x] **Step 2: 全套 `flutter test` 與 `flutter analyze`。** 本 Issue 不動 Dart 檔，`flutter analyze` 仍須乾淨；全套 `flutter test` 在發 PR 前跑一次，既有偶發失敗照實記錄。
 - [x] **Step 3: 寫 `issue-14-report.md`。** 內容：已查證事實與來源、腳本四項實際輸出（Task 1）、依賴檢查變異驗證四項輸出（Task 2）、本機驗證結果與負向驗證說明（Task 4）、使用者開書結果（Step 1）、zip 大小與檔案清單摘要、**未驗證清單**（乾淨機器缺 VC 執行階段、Windows 10 1809、SmartScreen 實際行為、他人電腦、WebView2 缺失時的行為）、已知限制、後續項目。
 - [x] **Step 4: 更新文件並勾選本檔步驟。** `epic.md` 決策 30 寫：VC DLL 隨附（app-local）的決定與理由、乾淨機器未驗證的範圍限制。

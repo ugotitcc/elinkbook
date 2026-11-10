@@ -17,7 +17,7 @@
 | 11 | Windows 測試穩定性：追查 `local_book_server_test.dart` 偶發失敗與 `pdf_reader_view_filters_test.dart`（`main` 上同樣失敗），為 Issue 6 建立乾淨基準；已查出根因是這台機器的 `127.0.0.1` 連線被重設，並新增開書逾時驗證 | 無 | ✅ 已合併（過關條件 5 以 ruling 延後：`pdf_reader_view_filters_test` 偶發失敗已重現但未修，登記為 Issue 15；開書逾時對照實驗結論為不能確定，見 [issue-11-report.md](issue-11-report.md)） | #403 |
 | 12 | Android 也改用 foliate-js 讀 metadata、移除 Readium（`readium-shared`／`readium-streamer`、`BookMetadataChannel.kt`）：**第一步先補真實出版社書籍的 Readium 對比，通過才移除**；需 Android 實機 | Issue 6 | 🟢 階段一已完成並合併（PR #405；預設改 foliate-js、Readium 留作退路；見 [plan-issue-12.md](plans/plan-issue-12.md)、[issue-12-report.md](issue-12-report.md)；階段二見 Issue 18） | — |
 | 13 | Windows `integration_test` 冒煙測試（每種格式：開書、翻頁、劃線） | Issue 6、8、9、10 | 🟢 已合併（PR #406、#407；套件清單 27 支檔案在本機 debug 版依序全數通過，其中 `library_screen_test` 3 項在 Windows 全部略過、`pdf_reader_view_test` 1 項略過；`reader_screen_test` 不在清單內，已登記 Issue 19；Android 只在一台 BooksPad 跑過 11 支，其中 3 支仍有失敗，已登記 Issue 21；見 [plan-issue-13.md](plans/plan-issue-13.md)、[issue-13-report.md](issue-13-report.md)） | — |
-| 14 | 免安裝 zip 打包（含 VC++ 執行階段 DLL、README、SHA256；不簽章、不上傳） | Issue 13 | 🟢 已完成實作與自動化驗證（見 [plan-issue-14.md](plans/plan-issue-14.md)、[issue-14-report.md](issue-14-report.md)；乾淨機器未驗證，待使用者開書確認） | — |
+| 14 | 免安裝 zip 打包（含 VC++ 執行階段 DLL、README、SHA256；不簽章、不上傳） | Issue 13 | 🟢 實作、自動化驗證與使用者開書皆完成（2026-11-10，使用者回報「開書測試通過」，無逐項紀錄；見 [plan-issue-14.md](plans/plan-issue-14.md)、[issue-14-report.md](issue-14-report.md)、[review-code-issue-14.md](reviews/review-code-issue-14.md)；乾淨機器未驗證） | — |
 | 15 | `pdf_reader_view_filters_test.dart` 加粗覆蓋圖偶發失敗查根因：整批跑 `test/reader` 約 1／3 機率失敗（等背景 Isolate 結果 120 輪仍無 `RawImage`），等待上限已放寬兩次仍偶發，疑 `PdfReaderView` 加粗佇列有競態（來源 Issue 11） | 無 | ⚪ 未開始（尚未規劃） | — |
 | 16 | `desktop_drop` 0.9 與 `cross_file` 0.4 遷移：`desktop_drop` 0.9.x 要求 `cross_file ^0.4.0`（破壞性更新），與 `file_picker`、`share_plus`、`share_plus_platform_interface`（含最新版）要求的 `cross_file ^0.3.x` 衝突，需 vendor 修補三個套件並改寫拖曳匯入（來源 Issue 6） | Issue 6 | ⚪ 未開始（尚未規劃，不排程） | — |
 | 17 | Android 建置工具升級：Flutter 3.47.9 警告對 Gradle 8.14.0（需 ≥ 9.1.0）與 AGP 8.11.1（需 ≥ 9.0.1）的支援「即將移除」，目前仍可建置；一併評估 built-in Kotlin 遷移（來源 Issue 6） | Issue 6 | ⚪ 未開始（尚未規劃，不排程） | — |
@@ -473,7 +473,7 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
 
 ## Issue 14 範圍
 
-**狀態：** 🟢 已完成實作與自動化驗證（2026-11-10；見 [issue-14-report.md](issue-14-report.md)；僅代表本機開發環境與 Release 建置，乾淨機器與 Windows 10 1809 嚴格標記為未驗證；使用者手動開書待確認）
+**狀態：** 🟢 實作、自動化驗證與使用者開書皆完成（2026-11-10；使用者回報「開書測試通過」，無逐項紀錄；見 [issue-14-report.md](issue-14-report.md)；僅代表本機開發環境與 Release 建置，乾淨機器與 Windows 10 1809 嚴格標記為未驗證）
 
 用一支腳本把 Windows release 版打成**免安裝 zip**：解壓到任何位置（含空格、中文、唯讀資料夾）雙擊 `elinkbook.exe` 就能用。決策 10：先自用；MSIX、程式碼簽章、自動更新不在本 Epic。
 
@@ -485,7 +485,7 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
 
 1. **打包腳本：** `app/tool/package_windows_zip.ps1`——重新 `flutter build windows --release`、在暫存目錄組裝、複製三個 VC DLL（用 `vswhere` 找 Redist）、放入 README、壓成 zip、產生 SHA256。輸出到 `app/build/windows_zip/`（不進版控）。
 2. **依賴靜態檢查：** 對暫存目錄每個 `.exe`／`.dll` 用 `dumpbin /dependents`，非系統 DLL 的依賴必須在目錄內，且三個 VC DLL 必須在目錄內；缺任何一個則失敗。
-3. **內容規範：** 不含 `.pdb`／`.lib`／`.exp`／`.ilk`；必含 `data\foliate\`、`data\flutter_assets\`、README；zip 內路徑分隔符一律 `/`。
+3. **內容規範：** 不含 `.pdb`／`.lib`／`.exp`／`.ilk`，並排除 `dartjni.dll`（計畫外的偏離，理由與限制見 epic.md 決策 30）；必含 `data\foliate\`、`data\flutter_assets\`、README；zip 內路徑分隔符一律 `/`。
 4. **README（正體中文）：** 需求（Windows 10 1809 以上、WebView2 Runtime）、可解壓到任何位置、資料存放位置、未簽章時 SmartScreen 的提示與解除封鎖方法、移除方式。
 5. **本機驗證腳本：** `app/tool/verify_windows_zip.ps1`——解壓到「含空格與中文」且「唯讀」的資料夾、啟動、確認行程存活與主視窗出現、資料寫在使用者資料夾而非解壓資料夾。
 6. **人工開書確認：** 在解壓出來的 release 版開一本 EPUB（使用者回報結果）。

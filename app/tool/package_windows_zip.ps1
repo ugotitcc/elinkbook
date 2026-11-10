@@ -228,6 +228,12 @@ if (-not (Test-Path $OutDir)) {
     New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
 }
 
+# 建置前先清掉上一次的正式 zip 與 .sha256，避免本次失敗時殘留看似成功的舊產物
+foreach ($stale in @("$zipBaseName.zip", "$zipBaseName.zip.sha256", "$zipBaseName.tmp.zip")) {
+    $stalePath = Join-Path $OutDir $stale
+    if (Test-Path $stalePath) { Remove-Item $stalePath -Force }
+}
+
 # 執行 flutter build windows --release
 if (-not $SkipBuild) {
     Write-Host "執行 flutter build windows --release..." -ForegroundColor Cyan

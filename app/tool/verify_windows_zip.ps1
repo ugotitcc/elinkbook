@@ -85,6 +85,7 @@ if (-not (Test-Path $tarExe)) { $tarExe = "tar.exe" }
 
 $proc = $null
 $denyAclApplied = $false
+$ownsExtractTarget = $false   # 只有本腳本自己建立的解壓目錄才允許在 finally 清理
 $checksPassed = $true
 
 function Record-Check([bool]$pass, [string]$name, [string]$detail) {
@@ -101,13 +102,16 @@ function Get-DirectorySnapshot([string]$baseDir) {
     if (Test-Path $baseDir) {
         $cleanBase = [System.IO.Path]::GetFullPath($baseDir).TrimEnd('\', '/') + '\'
         Get-ChildItem -Path $baseDir -Recurse -Force | ForEach-Object {
-            if (-not $_.PSIsContainer) {
-                $fullPath = [System.IO.Path]::GetFullPath($_.FullName)
-                $relPath = if ($fullPath.StartsWith($cleanBase, [System.StringComparison]::OrdinalIgnoreCase)) {
-                    $fullPath.Substring($cleanBase.Length)
-                } else {
-                    $_.Name
-                }
+            $fullPath = [System.IO.Path]::GetFullPath($_.FullName)
+            $relPath = if ($fullPath.StartsWith($cleanBase, [System.StringComparison]::OrdinalIgnoreCase)) {
+                $fullPath.Substring($cleanBase.Length)
+            } else {
+                $_.Name
+            }
+            if ($_.PSIsContainer) {
+                # 資料夾只記錄存在（時間會因子項異動而變，不比對），用來偵測空資料夾的新增或刪除
+                $snapshot[$relPath + '\'] = 'dir'
+            } else {
                 $snapshot[$relPath] = "$($_.Length)|$($_.LastWriteTimeUtc.Ticks)"
             }
         }
@@ -116,12 +120,20 @@ function Get-DirectorySnapshot([string]$baseDir) {
 }
 
 try {
-    # 清理舊的解壓目錄
+    # 清理舊的解壓目錄：只刪「本腳本自己建立過」的內容（內容僅有 elinkbook 子資料夾），
+    # 其他情況（例如自訂 -WorkDir 剛好有同名資料夾與使用者檔案）一律拒絕，避免誤刪
     if (Test-Path $extractTarget) {
+        $foreign = @(Get-ChildItem -LiteralPath $extractTarget -Force | Where-Object { $_.Name -ne 'elinkbook' })
+        if ($foreign.Count -gt 0) {
+            Record-Check $false "解壓目錄檢查" "既有資料夾含非本腳本產生的內容，拒絕刪除，請改用其他 -WorkDir 或手動清理: $extractTarget"
+            exit 1
+        }
+        Write-Host "[清理說明] 刪除上次殘留的解壓目錄: $extractTarget" -ForegroundColor Gray
         & icacls.exe $extractTarget /remove:d "*$userSid" 2>$null | Out-Null
         Remove-Item -Path $extractTarget -Recurse -Force -ErrorAction SilentlyContinue
     }
     New-Item -ItemType Directory -Path $extractTarget -Force | Out-Null
+    $ownsExtractTarget = $true
 
     # (b) 解壓 zip
     Write-Host "解壓 zip 至: $extractTarget..." -ForegroundColor Cyan
@@ -137,12 +149,13 @@ try {
 
     # (d) 施加實質唯讀 deny ACL
     Write-Host "套用 deny ACL (拒絕寫入檔案、建立子資料夾、刪除子項)..." -ForegroundColor Cyan
+    # 先標記為「可能已套用」：即使 icacls 只套用一部分就失敗，finally 也會嘗試移除
+    $denyAclApplied = $true
     $aclOut = & icacls.exe $extractTarget /deny "*${userSid}:(OI)(CI)(WD,AD,DC)" /q 2>&1
     if ($LASTEXITCODE -ne 0) {
         Record-Check $false "ACL 唯讀防護設定" "icacls 設定失敗: $aclOut"
         exit 1
     }
-    $denyAclApplied = $true
     Record-Check $true "ACL 唯讀防護設定" "已成功套用 deny (WD,AD,DC) 權限至解壓目錄"
 
     # (e) 啟動程式（明確指定 -WorkingDirectory）
@@ -217,12 +230,28 @@ try {
         if ($proc.HasExited) { break }
         Start-Sleep -Milliseconds 500
     }
-    Record-Check $proc.HasExited "行程樹終止" "已徹底終止應用程式與所有子程序"
+    Record-Check $proc.HasExited "行程樹終止" "elinkbook.exe 已終止"
+
+    # WebView2 子行程（msedgewebview2.exe）：以使用者資料夾路徑辨識本次啟動產生的，最多等 10 秒
+    $swWv = [System.Diagnostics.Stopwatch]::StartNew()
+    $wvLeft = @()
+    do {
+        $wvLeft = @(Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.CommandLine -match [regex]::Escape('cc.ugotit\elinkbook') })
+        if ($wvLeft.Count -eq 0) { break }
+        Start-Sleep -Milliseconds 500
+    } while ($swWv.Elapsed.TotalSeconds -lt 10)
+    Record-Check ($wvLeft.Count -eq 0) "WebView2 子行程終止" "使用本程式資料夾的 msedgewebview2.exe 殘留數: $($wvLeft.Count)"
 
     # (h) 移除 deny ACL
     Write-Host "移除解壓目錄 deny ACL..." -ForegroundColor Cyan
     & icacls.exe $extractTarget /remove:d "*$userSid" /q 2>$null | Out-Null
-    $denyAclApplied = $false
+    if ($LASTEXITCODE -eq 0) {
+        $denyAclApplied = $false
+    } else {
+        # 保留旗標，讓 finally 再試一次
+        Record-Check $false "移除 deny ACL" "icacls /remove:d 回傳 $LASTEXITCODE，將於 finally 重試"
+    }
 
     # (i) 執行前後快照比對
     $postSnapshot = Get-DirectorySnapshot $extractTarget
@@ -249,7 +278,7 @@ try {
 
 } finally {
     # 確保 deny ACL 被移除（否則後續清理會失敗）
-    if ($denyAclApplied) {
+    if ($denyAclApplied -and $ownsExtractTarget) {
         & icacls.exe $extractTarget /remove:d "*$userSid" 2>$null | Out-Null
     }
 
@@ -258,8 +287,8 @@ try {
         taskkill.exe /PID $proc.Id /T /F 2>$null | Out-Null
     }
 
-    # (j) 清理目錄
-    if (Test-Path $extractTarget) {
+    # (j) 清理目錄（拒絕刪除外來內容時 $ownsExtractTarget 為 false，不得動該資料夾）
+    if ($ownsExtractTarget -and (Test-Path $extractTarget)) {
         Remove-Item -Path $extractTarget -Recurse -Force -ErrorAction SilentlyContinue
     }
 
