@@ -76,20 +76,30 @@ Future<int> _pumpUntilProgressReady(WidgetTester tester) async {
   }
 }
 
-/// 等到當前頁碼嚴格大於 [oldPage]（證明下一頁熱區確實讓閱讀位置前進）。
-Future<void> _pumpUntilPageAdvanced(WidgetTester tester, int oldPage) async {
-  final deadline = DateTime.now().add(const Duration(seconds: 10));
-  while (true) {
-    final finder = find.byKey(const Key('reader_footer_progress_text'));
-    if (finder.evaluate().isNotEmpty) {
-      final p = _parseProgress(tester.widget<Text>(finder).data);
+/// 連續點擊「下一頁」熱區（`nav_zone_2`），最多 [maxTaps] 次，直到頁碼嚴格大於 [oldPage]。
+///
+/// 頁尾的 `當前/總數` 是以內容位置為單位，不是視覺頁數：內容很短的書（例如 MD 樣本在
+/// Android 上約 5 個畫面）要翻過數頁頁碼才會變動，所以不能假設「點一次就增加」。
+/// 沒有任何一次點擊讓位置前進（例如熱區失效）仍會失敗。
+Future<void> _tapNextUntilAdvanced(
+  WidgetTester tester,
+  int oldPage, {
+  int maxTaps = 10,
+}) async {
+  final finder = find.byKey(const Key('reader_footer_progress_text'));
+  String? lastText;
+  for (var tap = 1; tap <= maxTaps; tap++) {
+    await tester.tap(find.byKey(const Key('nav_zone_2')));
+    final deadline = DateTime.now().add(const Duration(seconds: 2));
+    while (DateTime.now().isBefore(deadline)) {
+      await tester.pump(const Duration(milliseconds: 100));
+      if (finder.evaluate().isEmpty) continue;
+      lastText = tester.widget<Text>(finder).data;
+      final p = _parseProgress(lastText);
       if (p != null && p.current > oldPage) return;
     }
-    if (DateTime.now().isAfter(deadline)) {
-      fail('等待逾時：頁碼未超過 $oldPage（點擊下一頁熱區沒有讓位置前進）');
-    }
-    await tester.pump(const Duration(milliseconds: 100));
   }
+  fail('連續點擊下一頁熱區 $maxTaps 次，頁碼仍未超過 $oldPage（最後進度：$lastText）');
 }
 
 void main() {
@@ -175,8 +185,7 @@ void main() {
 
     // 驗證翻頁
     final initialPage = await _pumpUntilProgressReady(tester);
-    await tester.tap(find.byKey(const Key('nav_zone_2')));
-    await _pumpUntilPageAdvanced(tester, initialPage);
+    await _tapNextUntilAdvanced(tester, initialPage);
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
     // 驗證劃線與筆記面板
@@ -270,8 +279,7 @@ void main() {
 
     // 驗證翻頁
     final initialPage = await _pumpUntilProgressReady(tester);
-    await tester.tap(find.byKey(const Key('nav_zone_2')));
-    await _pumpUntilPageAdvanced(tester, initialPage);
+    await _tapNextUntilAdvanced(tester, initialPage);
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
     // 驗證劃線與筆記面板
@@ -365,8 +373,7 @@ void main() {
 
     // 驗證翻頁
     final initialPage = await _pumpUntilProgressReady(tester);
-    await tester.tap(find.byKey(const Key('nav_zone_2')));
-    await _pumpUntilPageAdvanced(tester, initialPage);
+    await _tapNextUntilAdvanced(tester, initialPage);
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
     // 驗證劃線與筆記面板

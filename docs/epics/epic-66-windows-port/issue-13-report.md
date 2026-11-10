@@ -2,7 +2,7 @@
 
 - **執行日期**：2026-11-09（初版）、2026-11-10（依 `reviews/review-code-issue-13.md` 修訂與重跑）
 - **測試環境**：Windows 11，Flutter 3.47.9，Dart 3.13.7，WebView2 (本機版本)，Debug 建置
-- **限制說明**：本報告結果僅代表本機開發環境（單一台 Windows 11）、debug 版與本機 WebView2，未外推至乾淨機器或 release 版；**Android 未重跑**（沒有手機），Android 行為不變僅由程式審查推論。劃線只驗證「預先寫入的紀錄能顯示」，不是使用者在畫面上選字劃線。
+- **限制說明**：Windows 結果僅代表本機開發環境（單一台 Windows 11）、debug 版與本機 WebView2，未外推至乾淨機器或 release 版。Android 只在**一台 BooksPad（Android 12）**跑過第 8 節列出的檔案，其餘 Android 行為仍由程式審查推論。劃線只驗證「預先寫入的紀錄能顯示」，不是使用者在畫面上選字劃線。
 
 ---
 
@@ -152,7 +152,7 @@
   - **TXT 格式**：使用 `BookImportServiceImpl.importFiles` 匯入 `sample_utf8_chapters.txt` 合成為 EPUB3；預先寫入 CFI 劃線與備註；經 `ReaderScreen` 開啟，點擊 `nav_zone_2` 觸發換頁並驗證 `reader_footer_progress_text` 數值變更；開啟 `NotesBottomSheet` 驗證劃線備註清單正確呈現。
   - **MD 格式**：使用 `BookImportServiceImpl.importFiles` 匯入 `sample.md` 合成為 EPUB3；預先寫入劃線與備註；驗證換頁與筆記面板。
   - **AZW3 格式**：使用 `BookImportServiceImpl.importFiles` 匯入真實 `sample.azw3`；驗證原生 KF8 在 Foliate 上的換頁與筆記面板呈現。
-- **斷言（審查後加強）**：初版只比較「進度文字有沒有變」，初始 `0/0` 變成 `1/N` 就會通過。現改為：先等 `reader_footer_progress_text` 解析出**總頁數 > 0**，點擊 `nav_zone_2` 後等**頁碼嚴格大於點擊前**。
+- **斷言（審查後加強，Android 實機後再修）**：初版只比較「進度文字有沒有變」，初始 `0/0` 變成 `1/N` 就會通過。第一次加強為：先等 `reader_footer_progress_text` 解析出**總頁數 > 0**，點擊 `nav_zone_2` 後等**頁碼嚴格大於點擊前**。Android 實機發現頁尾 `當前/總數` 是以內容位置為單位、不是視覺頁數，短內容（MD 樣本）要連點約 5 次才變動，所以最終改為 `_tapNextUntilAdvanced()`：**最多連點 10 次**，任一次讓頁碼大於起始值即通過；全部沒前進仍失敗（見第 8 節）。
 - **變異驗證（只做 TXT 那組）**：
   - 拿掉 `tester.tap(nav_zone_2)` → 失敗：`等待逾時：頁碼未超過 1（點擊下一頁熱區沒有讓位置前進）`。
   - 讓 `notesRepository.insert` 不執行 → 失敗：`Expected: exactly one matching candidate`。
@@ -245,4 +245,41 @@
 4. **`onLocatorChanged` 回傳 null 的產品修改**（`foliate_reader_view.dart`）：平台中立、對 Android 無害（`ReaderScreen` 自己的呼叫端本來就是區塊式）。審查後（2026-11-10，經使用者同意保留）抽成純函式 `handleLocatorChangedBridgeCall()`（`foliate_bridge_codec.dart`）並補單元測試（`foliate_bridge_codec_test.dart`，2 個案例）：先紅（函式不存在）後綠；變異驗證（改成回傳回呼結果的錯誤寫法）測試變紅，還原後 `foliate_bridge_codec_test`／`foliate_reader_view_test`／`foliate_bridge_handlers_test` 217 個全過；`epic_fxl_tap_zone_test`、`foliate_toc_footer_test`、`foliate_stream_nav_zone_test` 在 Windows 重跑通過。仍無「修改前告知使用者」的紀錄（事後已取得同意）。
 5. **腳本細節**（審查 M2）、**skip 守門靜態檢查可被繞過**（M3）、**測試內魔術數字與手動清 SnackBar**（M4）：未處理。
 6. **真機觸控手勢的人工驗證保留項**：WebView 內的長按選字與浮動工具列，Flutter 桌面整合測試無法模擬，維持人工驗證。
-7. **Android 未重跑**：所有針對 Android 行為不變的說法僅由程式審查推論。
+7. **Android 僅部分驗證**：只在一台 BooksPad 跑過第 8 節的 11 支；其中 3 支仍有失敗，已登記 **Issue 21**。Android 行為不變的其餘說法仍由程式審查推論。
+
+---
+
+## 8. Android 實機驗證（BooksPad，Android 12，2026-11-10）
+
+**環境與前置事實：**
+- 一台 BooksPad（`B78CW2508006423`），debug 版；跑前已備份 App 資料（實際只有 Flutter 除錯資產，無書庫資料庫）。
+- `app/android/gradle.properties:5` 把 `org.gradle.java.home` 寫死為舊電腦的 `C:\Program Files\Microsoft\jdk-17.0.21.21-hotspot`；這台沒有該 JDK，第一次 11 支全部在建置階段失敗（**不是測試失敗**）。安裝同版本 JDK 17 後解決。專案檔未動；此寫死路徑本身是換電腦就壞的問題，未處理。
+- **手機螢幕必須保持亮著**：螢幕熄滅時 WebView 不繪製，開書會逾時卡住（`開書逾時`）。第一輪結果因此不可靠、已作廢；以下為螢幕常亮（暫設 `stay_on_while_plugged_in`，測完還原）後的結果。**我先前把 PR 前版本的卡住歸因於「未解決的開書逾時問題」是錯的。**
+- 整合測試跑完後手機上的 App 是「測試殼層」，已用 `flutter build apk --debug --target-platform android-arm` 加 `adb install -r`（非 `flutter install`）恢復。
+- 我自己的 Gradle／Kotlin daemon 約占 2.7 GB，曾使系統記憶體不足而中止背景指令、並讓 Windows 腳本的記憶體熔斷擋下一次執行；之後每支測試間停掉 daemon。
+
+**結果：**
+
+| 測試 | 本分支 | PR 前（`0f4b0ccc`，同一台手機） |
+|---|---|---|
+| `pdf_reader_view_test` | 4/4（含 `file://` 案例，Android 上未被略過） | 不需對照 |
+| `library_screen_test` | 3/3（Android 上確實執行） | 不需對照 |
+| `foliate_cbz_test`、`epub_fxl_tap_zone_test`、`foliate_toc_footer_test`、`foliate_stream_nav_zone_test` | 全過 | 不需對照 |
+| `windows_smoke_formats_test` | 3/3（連跑 3 次） | 不存在 |
+| `foliate_highlights_notes_test` | 2/2 | 0/2（`載入指示器未消失`） |
+| `epub_toc_test` | 1/2 | 0/2（同上） |
+| `epub_highlights_notes_test` | 0/1 | 0/1（同上） |
+| `reader_screen_test` | 14/19 | 0/19（同上） |
+
+**判讀（只寫查證過的）：**
+- 本分支在 Android 上沒有比 PR 前差；PR 前的 4 支 ReaderScreen 類測試連書都載入不了，本分支載得了。PR 前後的 `app/lib` 差異只有 `onLocatorChanged` handler（`foliate_bridge_codec.dart`、`foliate_reader_view.dart`），所以它很可能是原因，但每個只跑一次、**沒有證明因果**。
+- 暫時拿掉 `epub_toc_test`、`epub_highlights_notes_test` 的 400x800 視窗覆寫後在 Android 上更差（`epub_toc_test` 0/2），所以剩下的失敗**不是**視窗覆寫造成的；真正原因**未查明**，已登記 **Issue 21**。
+- 失敗摘要：`epub_toc_test` 第 2 支找不到 `TocBottomSheet`；`epub_highlights_notes_test` 找不到文字「已編輯的純備註」；`reader_screen_test` 5 項失敗（逐項未診斷）。
+
+**MD 翻頁（本次實機發現，已修）：**
+- `windows_smoke_formats_test` 的 MD 組在 Android 穩定失敗：點 `nav_zone_2` 後頁尾仍是 `1/8`。已排除：樣本太短、視窗尺寸、開書後重新排版的時序（等版面穩定後仍失敗）。
+- 連點 20 次診斷：前 4 次頁尾都是 `1/8`，第 5 次跳到 `6/6`。結論：翻頁正常，頁尾以內容位置為單位；是測試假設「點一次就增加」不成立，**不是產品問題**。
+- 修正為最多連點 10 次；Windows 3/3、Android 3/3 通過；拿掉點擊的變異驗證會失敗（`連續點擊下一頁熱區 10 次，頁碼仍未超過 1（最後進度：1/3）`）。
+- 診斷時嘗試用 `adb screencap` 觀察畫面：整合測試在實體螢幕上只顯示「Test starting...」，截圖無法反映 App 畫面，此法無效。
+
+**未驗證：** 其他 Android 裝置；Android 的完整 27 支套件（只跑了上表 11 支）；`reader_screen_test` 逐項；`onLocatorChanged` 修改對 Android 載入的因果。
