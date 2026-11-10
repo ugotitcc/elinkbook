@@ -481,3 +481,65 @@ powershell -ExecutionPolicy Bypass -File tool/run_windows_smoke.ps1 -Suite integ
 
 結束碼：0 全數通過；非 0 代表有失敗、逾時或中斷。詳細日誌保存在 `build/windows_smoke/<測試名稱>.log`。
 
+## `package_windows_zip.ps1`
+
+Windows 免安裝 zip 打包腳本（`epic-66-windows-port` Issue 14）。
+
+### 背景與設計
+將 Windows Release 版打成免安裝 zip，解壓到任何位置雙擊 `elinkbook.exe` 即可使用：
+1. **重新建置**：在 `app/` 執行 `flutter build windows --release`（支援 `-SkipBuild` 沿用現有 Release 輸出）。
+2. **暫存組裝**：將 `build/windows/x64/runner/Release` 組裝至 `build/windows_zip/stage/elinkbook/`，排除 `.pdb`、`.lib`、`.exp`、`.ilk` 等除錯與建置暫存檔。
+3. **隨附 VC 執行階段**：自動以 `vswhere` 定位 Visual Studio 安裝路徑，由 `Microsoft.VCRedistVersion.default.txt` 取得版本，複製 `msvcp140.dll`、`vcruntime140.dll`、`vcruntime140_1.dll` 到程式根目錄（app-local 部署）。
+4. **README 範本**：自動隨附 `app/windows/packaging/README.txt`。
+5. **bsdtar 壓縮與路徑防護**：使用 Windows 內建 `tar.exe` 壓縮，確保 zip 內部路徑分隔符皆為正斜線 `/`（避開 PowerShell 5.1 `Compress-Archive` 反斜線缺陷）。
+6. **清單驗證與安全寫入**：先壓至 `.tmp.zip`，驗證清單必備檔案存在、不含反斜線且不含 `.pdb`，全部通過後才更名為正式 zip，並以純檔名基底寫出同名 `.sha256`。
+
+### 執行方式
+
+```powershell
+cd app
+
+# 完整流程：重新建置並打包
+powershell -ExecutionPolicy Bypass -File tool/package_windows_zip.ps1
+
+# 沿用現有 Release 建置（跳過建置步驟）
+powershell -ExecutionPolicy Bypass -File tool/package_windows_zip.ps1 -SkipBuild
+
+# 自訂輸出目錄
+powershell -ExecutionPolicy Bypass -File tool/package_windows_zip.ps1 -SkipBuild -OutDir C:\path\to\output
+```
+
+結束碼：0 成功；非 0 代表建置失敗、缺少檔案或清單驗證不符。
+
+補充：
+- 每次執行開頭會先刪除輸出目錄中同名的舊正式 zip、`.sha256` 與暫存 zip，所以任何一步失敗都不會留下看似成功的舊產物。
+- 暫存組裝時排除 `dartjni.dll`（`jni` 為 `path_provider_android` 的遞移相依，`lib/` 沒有任何引用，且該 DLL 依賴不存在的 `jvm.dll`）；理由與限制見 `docs/epics/epic-66-windows-port/epic.md` 決策 30。
+
+### 單獨做依賴靜態檢查：`-CheckOnly`
+
+```powershell
+# 檢查任一目錄（例如暫存目錄 build/windows_zip/stage/elinkbook）
+powershell -ExecutionPolicy Bypass -File tool/package_windows_zip.ps1 -CheckOnly build/windows_zip/stage/elinkbook
+```
+
+以 `dumpbin /dependents` 檢查目錄內每個 `.exe`／`.dll`：`msvcp140.dll`、`vcruntime140.dll`、`vcruntime140_1.dll` 必須實體存在於目錄根（即使 System32 有也不算）；其他非系統依賴必須在目錄內。結束碼 0 通過、1 失敗並列出「檔案 → 缺少的依賴」。這只證明「檔案依賴齊全」，不證明乾淨機器能開。
+
+## `verify_windows_zip.ps1`
+
+Windows 免安裝 zip 的本機驗證腳本（`epic-66-windows-port` Issue 14）。
+
+```powershell
+cd app
+powershell -ExecutionPolicy Bypass -File tool/verify_windows_zip.ps1 -Zip build/windows_zip/elinkbook-<版本>-windows-x64.zip
+
+# 可選：-WorkDir 指定解壓位置（預設 $env:TEMP）、-KeepAppData 保留測試產生的使用者資料夾
+```
+
+流程：解壓到 `<WorkDir>\含 空格 與 中文\`、以 `icacls` 對目前使用者 SID 拒絕寫入／建立子資料夾／刪除子項、用 `Start-Process -WorkingDirectory` 啟動、輪詢等主視窗、再確認行程存活 20 秒、確認使用者資料夾 `%APPDATA%\cc.ugotit\elinkbook` 有當次啟動的寫入、結束行程樹並確認 `msedgewebview2.exe` 子行程消失、移除 deny ACL、比對解壓資料夾執行前後的檔案與資料夾清單必須完全相同。每項輸出一行 `[通過]／[失敗] 名稱 :: 說明`，結束碼 0 全數通過。
+
+注意：
+- 會實際啟動 `elinkbook.exe`；開跑前會檢查殘留行程與可用記憶體（只檢查不終止）。執行期間不要同時跑 Windows 整合測試或建置。
+- `-WorkDir\含 空格 與 中文` 若已存在且含非本腳本產生的內容，腳本拒絕刪除並以非 0 結束。
+- 本機驗證**抓不到缺 VC 執行階段 DLL 的問題**（這台機器的 System32 有這些 DLL），那一關由 `package_windows_zip.ps1 -CheckOnly` 負責；兩者都不證明乾淨機器、Windows 10 1809 能開。
+
+
