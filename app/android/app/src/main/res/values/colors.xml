@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 啟動畫面底色：取自 assets/appicon_v2.jpg 的紙張色（由 tool/generate_android_splash.ps1 建議） -->
+    <color name="splash_background">#F9F9F4</color>
+</resources>
