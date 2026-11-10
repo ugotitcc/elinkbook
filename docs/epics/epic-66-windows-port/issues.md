@@ -17,7 +17,7 @@
 | 11 | Windows 測試穩定性：追查 `local_book_server_test.dart` 偶發失敗與 `pdf_reader_view_filters_test.dart`（`main` 上同樣失敗），為 Issue 6 建立乾淨基準；已查出根因是這台機器的 `127.0.0.1` 連線被重設，並新增開書逾時驗證 | 無 | ✅ 已合併（過關條件 5 以 ruling 延後：`pdf_reader_view_filters_test` 偶發失敗已重現但未修，登記為 Issue 15；開書逾時對照實驗結論為不能確定，見 [issue-11-report.md](issue-11-report.md)） | #403 |
 | 12 | Android 也改用 foliate-js 讀 metadata、移除 Readium（`readium-shared`／`readium-streamer`、`BookMetadataChannel.kt`）：**第一步先補真實出版社書籍的 Readium 對比，通過才移除**；需 Android 實機 | Issue 6 | 🟢 階段一已完成並合併（PR #405；預設改 foliate-js、Readium 留作退路；見 [plan-issue-12.md](plans/plan-issue-12.md)、[issue-12-report.md](issue-12-report.md)；階段二見 Issue 18） | — |
 | 13 | Windows `integration_test` 冒煙測試（每種格式：開書、翻頁、劃線） | Issue 6、8、9、10 | 🟢 已合併（PR #406、#407；套件清單 27 支檔案在本機 debug 版依序全數通過，其中 `library_screen_test` 3 項在 Windows 全部略過、`pdf_reader_view_test` 1 項略過；`reader_screen_test` 不在清單內，已登記 Issue 19；Android 只在一台 BooksPad 跑過 11 支，其中 3 支仍有失敗，已登記 Issue 21；見 [plan-issue-13.md](plans/plan-issue-13.md)、[issue-13-report.md](issue-13-report.md)） | — |
-| 14 | 免安裝 zip 打包 | Issue 13 | ⚪ 未開始（尚未規劃） | — |
+| 14 | 免安裝 zip 打包（含 VC++ 執行階段 DLL、README、SHA256；不簽章、不上傳） | Issue 13 | 🟡 規劃中（計畫已寫，待審查；見 [plan-issue-14.md](plans/plan-issue-14.md)） | — |
 | 15 | `pdf_reader_view_filters_test.dart` 加粗覆蓋圖偶發失敗查根因：整批跑 `test/reader` 約 1／3 機率失敗（等背景 Isolate 結果 120 輪仍無 `RawImage`），等待上限已放寬兩次仍偶發，疑 `PdfReaderView` 加粗佇列有競態（來源 Issue 11） | 無 | ⚪ 未開始（尚未規劃） | — |
 | 16 | `desktop_drop` 0.9 與 `cross_file` 0.4 遷移：`desktop_drop` 0.9.x 要求 `cross_file ^0.4.0`（破壞性更新），與 `file_picker`、`share_plus`、`share_plus_platform_interface`（含最新版）要求的 `cross_file ^0.3.x` 衝突，需 vendor 修補三個套件並改寫拖曳匯入（來源 Issue 6） | Issue 6 | ⚪ 未開始（尚未規劃，不排程） | — |
 | 17 | Android 建置工具升級：Flutter 3.47.9 警告對 Gradle 8.14.0（需 ≥ 9.1.0）與 AGP 8.11.1（需 ≥ 9.0.1）的支援「即將移除」，目前仍可建置；一併評估 built-in Kotlin 遷移（來源 Issue 6） | Issue 6 | ⚪ 未開始（尚未規劃，不排程） | — |
@@ -470,6 +470,40 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
 - 跑測腳本與整合測試本身沒有單元測試框架；以實際執行輸出為證。
 - `test/`（不需裝置）：檢查 `integration_test/` 內所有 `skipOnWindows(` 呼叫都帶有非空原因字串，且沒有裸的 `skip: Platform.isWindows`（`testWidgets` 的 `skip` 只收 `bool?`，原因字串改由 `skipOnWindows` helper 強制必填）。
 - 新增的整合測試須先做一次變異驗證（暫時讓翻頁或劃線失效，確認測試變紅，再還原）。
+
+## Issue 14 範圍
+
+用一支腳本把 Windows release 版打成**免安裝 zip**：解壓到任何位置（含空格、中文、唯讀資料夾）雙擊 `elinkbook.exe` 就能用。決策 10：先自用；MSIX、程式碼簽章、自動更新不在本 Epic。
+
+已查證的事實（2026-11-10，計畫階段）：
+- `elinkbook.exe` 與外掛 DLL 動態依賴 `MSVCP140.dll`、`VCRUNTIME140.dll`、`VCRUNTIME140_1.dll`（`dumpbin /dependents`）。沒裝「Visual C++ 可轉散發套件」的乾淨 Windows 會直接跳「缺少 DLL」。使用者決定（2026-11-10）：**打包進 zip**（app-local 部署），來源是 Visual Studio Build Tools 的 `VC\Redist\MSVC\<版本>\x64\Microsoft.VC143.CRT`。
+- 現有 Release 輸出（2026-11-05 舊版）含 `elinkbook.exe`、`flutter_windows.dll`、`pdfium.dll`、`sqlite3.dll`、`Webview2Loader.dll`、各外掛 DLL 與 `data\`（內含 `foliate\`、約 95 MB）；打包時一律重新建置。
+- WebView2 使用者資料夾已指定到 `getApplicationSupportDirectory()`（`main.dart:500`，決策 23）；解壓到唯讀位置是否真的不寫入，由本 Issue 驗證。
+- 乾淨機器驗證：使用者**沒有**另一台電腦或虛擬機（2026-11-10），所以只在本機驗證，乾淨機器、Windows 10 1809 一律「未驗證」，不外推。
+
+1. **打包腳本：** `app/tool/package_windows_zip.ps1`——重新 `flutter build windows --release`、在暫存目錄組裝、複製三個 VC DLL（用 `vswhere` 找 Redist）、放入 README、壓成 zip、產生 SHA256。輸出到 `app/build/windows_zip/`（不進版控）。
+2. **依賴靜態檢查：** 對暫存目錄每個 `.exe`／`.dll` 用 `dumpbin /dependents`，非系統 DLL 的依賴必須在目錄內，且三個 VC DLL 必須在目錄內；缺任何一個則失敗。
+3. **內容規範：** 不含 `.pdb`／`.lib`／`.exp`／`.ilk`；必含 `data\foliate\`、`data\flutter_assets\`、README；zip 內路徑分隔符一律 `/`。
+4. **README（正體中文）：** 需求（Windows 10 1809 以上、WebView2 Runtime）、可解壓到任何位置、資料存放位置、未簽章時 SmartScreen 的提示與解除封鎖方法、移除方式。
+5. **本機驗證腳本：** `app/tool/verify_windows_zip.ps1`——解壓到「含空格與中文」且「唯讀」的資料夾、啟動、確認行程存活與主視窗出現、資料寫在使用者資料夾而非解壓資料夾。
+6. **人工開書確認：** 在解壓出來的 release 版開一本 EPUB（使用者回報結果）。
+7. **不處理：** MSIX、簽章、自動更新、上傳 GitHub Release、乾淨機器與 Windows 10 1809 驗證、安裝程式（Inno Setup 等）、zip 之外的格式。
+
+## Issue 14 過關條件
+
+1. 腳本可重複產生 `elinkbook-<版本>-windows-x64.zip` 與同名 `.sha256`；同一提交連續打兩次，zip 內**檔案清單**一致（不要求位元組相同）。
+2. 依賴靜態檢查通過；**變異驗證**：從暫存目錄移除任一 VC DLL 時檢查必須失敗。
+3. zip 內沒有除錯檔、有 `data\foliate\main.js`、有 README；路徑分隔符皆為 `/`。
+4. 解壓到含空格與中文的路徑且資料夾唯讀：啟動後行程存活至少 20 秒、有主視窗；使用者資料夾建立於使用者資料目錄；解壓資料夾在執行前後檔案清單相同（沒有新增檔）。
+5. 使用者在解壓版 release 開一本 EPUB 成功並回報。
+6. 報告不得外推：只有這台機器、release 版、本機 WebView2；乾淨機器（缺 VC 執行階段）、Windows 10 1809、SmartScreen 實際行為、他人電腦皆明寫「未驗證」。
+7. 工作樹乾淨：`pubspec.lock`、`app/windows/flutter/generated_plugin_registrant.*`、`generated_plugins.cmake` 不得 commit；`git add` 明確列檔。
+
+## Issue 14 單元測試要求
+
+- 腳本類沒有單元測試框架；以實際執行輸出為證，記入報告。
+- 依賴檢查須做一次變異驗證（移除一個 VC DLL，確認失敗，再還原）。
+- 沒有 Dart 變動時 `flutter analyze` 須維持乾淨；發 PR 前跑一次完整 `flutter test`。
 
 ## 後續 Issue（待 Issue 1 結果決定）
 
