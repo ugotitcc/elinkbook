@@ -24,7 +24,7 @@
 | 19 | `reader_screen_test` 在 Windows 整份中斷診斷：未修改的 `HEAD` 在這台機器上也會在第一支測試結束後整個結束（App 結束、exit 79、後續 18 支 `did not complete`），單獨跑第 1、2 支皆通過；原因未明（來源 Issue 13） | 無 | ⚪ 未開始（尚未規劃，不排程） | — |
 | 20 | 桌面寬度（> 720px）雙欄排版下 EPUB 目錄「目前章節」判定落在前一章：Foliate 在雙欄補齊前一節內容並回報前一節，目錄因此沒收折；Issue 13 為了讓測試通過把視窗縮成 400x800，未判定是否為產品缺陷，且冒煙套件沒有任何一支在桌面寬度驗證（來源 Issue 13） | 無 | ⚪ 未開始（尚未規劃，不排程） | — |
 | 21 | Android 上 `epub_toc_test`（1/2）、`epub_highlights_notes_test`（0/1）、`reader_screen_test`（14/19）仍有失敗：BooksPad（Android 12）螢幕常亮下實測，原因未查明；已排除 400x800 視窗覆寫與螢幕熄滅；PR 前版本在同機上這些測試連書都載入不了（來源 Issue 13） | 無 | ⚪ 未開始（尚未規劃，不排程） | — |
-| 22 | Windows 版圖示與啟動小視窗：依 `assets/appicon_v2.jpg` 產生 `app_icon.ico`（取代 Flutter 預設藍色圖示）與 `splash.bmp`，原生啟動小視窗在 Flutter 第一個畫面前顯示 logo，並明確指定視窗類別小圖示（來源：打包後使用者回報圖示仍為 Flutter 預設） | Issue 14 | 🟡 本機驗證完成，待合併（圖示、啟動小視窗、標題列小圖示以檢查腳本驗證；乾淨機器與其他 DPI 未驗證） | — |
+| 22 | Windows 版圖示與啟動小視窗：依 `assets/appicon_v2.jpg` 產生 `app_icon.ico`（取代 Flutter 預設藍色圖示）與 `splash.bmp`，原生啟動小視窗在 Flutter 第一個畫面前顯示 logo，並明確指定視窗類別小圖示（來源：打包後使用者回報圖示仍為 Flutter 預設） | Issue 14 | 🟢 已合併（PR #409；圖示、啟動小視窗、標題列小圖示以檢查腳本驗證，只在這台機器 125% 縮放、release 版測過；乾淨機器與其他 DPI 未驗證，標題列三角形根因未完全查明） | #409 |
 
 ## Issue 1 範圍
 
