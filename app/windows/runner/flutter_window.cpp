@@ -3,6 +3,7 @@
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "splash_window.h"
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -29,6 +30,8 @@ bool FlutterWindow::OnCreate() {
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
+    // 第一個畫面已出現，關閉啟動小視窗
+    SplashWindow::Close();
   });
 
   // Flutter can complete the first frame before the "show window" callback is

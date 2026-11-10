@@ -88,7 +88,8 @@ WindowClassRegistrar* WindowClassRegistrar::instance_ = nullptr;
 
 const wchar_t* WindowClassRegistrar::GetWindowClass() {
   if (!class_registered_) {
-    WNDCLASS window_class{};
+    WNDCLASSEX window_class{};
+    window_class.cbSize = sizeof(window_class);
     window_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
     window_class.lpszClassName = kWindowClassName;
     window_class.style = CS_HREDRAW | CS_VREDRAW;
@@ -97,10 +98,17 @@ const wchar_t* WindowClassRegistrar::GetWindowClass() {
     window_class.hInstance = GetModuleHandle(nullptr);
     window_class.hIcon =
         LoadIcon(window_class.hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
+    // 明確指定標題列用的小圖示（依系統 DPI 取尺寸）。不指定時由系統自動衍生，
+    // 實測標題列會變成警告三角形（epic-66 圖示工作）。
+    const UINT dpi = GetDpiForSystem();
+    window_class.hIconSm = static_cast<HICON>(LoadImage(
+        window_class.hInstance, MAKEINTRESOURCE(IDI_APP_ICON), IMAGE_ICON,
+        GetSystemMetricsForDpi(SM_CXSMICON, dpi),
+        GetSystemMetricsForDpi(SM_CYSMICON, dpi), LR_DEFAULTCOLOR));
     window_class.hbrBackground = 0;
     window_class.lpszMenuName = nullptr;
     window_class.lpfnWndProc = Win32Window::WndProc;
-    RegisterClass(&window_class);
+    RegisterClassEx(&window_class);
     class_registered_ = true;
   }
   return kWindowClassName;
