@@ -542,4 +542,19 @@ powershell -ExecutionPolicy Bypass -File tool/verify_windows_zip.ps1 -Zip build/
 - `-WorkDir\含 空格 與 中文` 若已存在且含非本腳本產生的內容，腳本拒絕刪除並以非 0 結束。
 - 本機驗證**抓不到缺 VC 執行階段 DLL 的問題**（這台機器的 System32 有這些 DLL），那一關由 `package_windows_zip.ps1 -CheckOnly` 負責；兩者都不證明乾淨機器、Windows 10 1809 能開。
 
+## `generate_windows_icons.ps1`
 
+由 `assets/appicon_v2.jpg` 產生 Windows 版圖示與啟動小視窗圖（`epic-66-windows-port`），只用 .NET `System.Drawing`，不需安裝其他工具。
+
+```powershell
+cd app
+powershell -ExecutionPolicy Bypass -File tool/generate_windows_icons.ps1
+```
+
+輸出（直接覆寫，需一併提交）：
+- `windows/runner/resources/app_icon.ico`：16／24／32／48／64／128 為 DIB 項、256 為 PNG 項；由 `Runner.rc` 內嵌，用於 exe、檔案總管、工作列、視窗標題列。
+- `windows/runner/resources/splash.bmp`：400x400 的 24 位元 BMP；由 `Runner.rc` 以 `IDB_SPLASH` 內嵌，供 `windows/runner/splash_window.cpp` 的啟動小視窗使用。
+
+換圖後要重新建置（`flutter build windows --release`）；本次實測增量建置會重新連結新圖示，若日後發現 exe 沒更新，再改為刪除 `build/windows/x64/runner` 後重建。
+
+**啟動小視窗（`splash_window.cpp`）**：`wWinMain` 一開始就顯示（類別 `ELINKBOOK_SPLASH`、約 80～200 ms 內出現），Flutter 第一個畫面出現時（`FlutterWindow` 的 `SetNextFrameCallback`）關閉；另有 30 秒保險計時器。`verify_windows_zip.ps1` 以視窗類別區分小視窗（`ELINKBOOK_SPLASH`）與主視窗（`FLUTTER_RUNNER_WIN32_WINDOW`），不再使用 `MainWindowHandle`（它會先回傳小視窗，讓「主視窗偵測」失去意義）。

@@ -88,6 +88,22 @@ $denyAclApplied = $false
 $ownsExtractTarget = $false   # 只有本腳本自己建立的解壓目錄才允許在 finally 清理
 $checksPassed = $true
 
+# 列舉指定行程的可見視窗（類別名稱|寬x高），用來區分啟動小視窗與主視窗
+Add-Type @"
+using System; using System.Collections.Generic; using System.Runtime.InteropServices; using System.Text;
+public class VerifyWin { delegate bool CB(IntPtr h, IntPtr l);
+ [DllImport("user32.dll")] static extern bool EnumWindows(CB cb, IntPtr l);
+ [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int n);
+ [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+ [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
+ [StructLayout(LayoutKind.Sequential)] struct RECT { public int L, T, R, B; }
+ public static List<string> Visible(uint pid) { var l = new List<string>();
+  EnumWindows((h, x) => { uint o; GetWindowThreadProcessId(h, out o);
+   if (o == pid && IsWindowVisible(h)) { var sb = new StringBuilder(100); GetClassName(h, sb, 100); RECT r; GetWindowRect(h, out r); l.Add(sb + "|" + (r.R - r.L) + "x" + (r.B - r.T)); }
+   return true; }, IntPtr.Zero); return l; } }
+"@
+
 function Record-Check([bool]$pass, [string]$name, [string]$detail) {
     if ($pass) {
         Write-Host "[通過] $name :: $detail" -ForegroundColor Green
@@ -162,31 +178,41 @@ try {
     Write-Host "啟動應用程式: $exePath (工作目錄: $programDir)..." -ForegroundColor Cyan
     $proc = Start-Process -FilePath $exePath -WorkingDirectory $programDir -PassThru
 
-    # (f1) 輪詢等候主視窗出現（最長 40 秒）
+    # (f1) 輪詢等候主視窗出現（最長 40 秒）。
+    # 不能用 $proc.MainWindowHandle：它會回傳該行程第一個可見視窗，現在是啟動小視窗，
+    # 會讓「主視窗偵測」在啟動 0.1 秒就誤判通過。改為列舉該行程的可見視窗，
+    # 小視窗類別 ELINKBOOK_SPLASH、主視窗類別 FLUTTER_RUNNER_WIN32_WINDOW（見 windows/runner）
     $hasWindow = $false
-    $detectedHandle = [System.IntPtr]::Zero
+    $splashSeen = $false
+    $splashGone = $false
+    $splashSize = ''
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     while ($sw.Elapsed.TotalSeconds -lt 40) {
         if ($proc.HasExited) { break }
-        $proc.Refresh()
-        $handle = $proc.MainWindowHandle
-        if ($handle -eq [System.IntPtr]::Zero -or $handle -eq 0) {
-            $gp = Get-Process -Id $proc.Id -ErrorAction SilentlyContinue
-            if ($gp) { $handle = $gp.MainWindowHandle }
-        }
-        if ($handle -ne [System.IntPtr]::Zero -and $handle -ne 0) {
+        $visible = [VerifyWin]::Visible([uint32]$proc.Id)
+        $splashNow = $visible | Where-Object { $_ -like 'ELINKBOOK_SPLASH|*' } | Select-Object -First 1
+        if ($splashNow) { $splashSeen = $true; $splashSize = ($splashNow -split '\|')[1] }
+        elseif ($splashSeen) { $splashGone = $true }
+        if ($visible | Where-Object { $_ -like 'FLUTTER_RUNNER_WIN32_WINDOW|*' }) {
             $hasWindow = $true
-            $detectedHandle = $handle
             break
         }
-        Start-Sleep -Milliseconds 500
+        Start-Sleep -Milliseconds 100
     }
 
     if ($hasWindow -and (-not $proc.HasExited)) {
-        Record-Check $true "主視窗偵測" "主視窗於 $([math]::Round($sw.Elapsed.TotalSeconds, 1)) 秒內成功建立 (Handle: $detectedHandle)"
+        Record-Check $true "主視窗偵測" "主視窗（FLUTTER_RUNNER_WIN32_WINDOW）於 $([math]::Round($sw.Elapsed.TotalSeconds, 1)) 秒內可見"
     } else {
         Record-Check $false "主視窗偵測" "40 秒內未偵測到主視窗或行程提前終止 (HasExited: $($proc.HasExited))"
     }
+
+    # 啟動小視窗：主視窗可見前應已出現過；主視窗可見後等一下確認已關閉
+    $closeWait = [System.Diagnostics.Stopwatch]::StartNew()
+    while (-not $splashGone -and $closeWait.Elapsed.TotalSeconds -lt 5 -and -not $proc.HasExited) {
+        $stillThere = [VerifyWin]::Visible([uint32]$proc.Id) | Where-Object { $_ -like 'ELINKBOOK_SPLASH|*' }
+        if (-not $stillThere) { $splashGone = $true } else { Start-Sleep -Milliseconds 100 }
+    }
+    Record-Check ($splashSeen -and $splashGone) "啟動小視窗" "出現過: $splashSeen（尺寸 $splashSize）、主視窗可見後已關閉: $splashGone"
 
     # (f2) 視窗出現後再等候 20 秒確認行程存活（滿足過關條件 4 啟動後存活至少 20 秒）
     Write-Host "等待 20 秒以驗證視窗與執行階段穩定度..." -ForegroundColor Cyan

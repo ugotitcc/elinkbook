@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include "flutter_window.h"
+#include "splash_window.h"
 #include "utils.h"
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
@@ -16,6 +17,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // Initialize COM, so that it is available for use in the library and/or
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+
+  // 啟動小視窗：Flutter 引擎初始化與第一個畫面前先給使用者看 logo，
+  // 於 FlutterWindow 的第一個畫面回呼中關閉
+  SplashWindow::Show();
 
   flutter::DartProject project(L"data");
 
