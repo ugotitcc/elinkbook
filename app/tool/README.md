@@ -481,3 +481,34 @@ powershell -ExecutionPolicy Bypass -File tool/run_windows_smoke.ps1 -Suite integ
 
 結束碼：0 全數通過；非 0 代表有失敗、逾時或中斷。詳細日誌保存在 `build/windows_smoke/<測試名稱>.log`。
 
+## `package_windows_zip.ps1`
+
+Windows 免安裝 zip 打包腳本（`epic-66-windows-port` Issue 14）。
+
+### 背景與設計
+將 Windows Release 版打成免安裝 zip，解壓到任何位置雙擊 `elinkbook.exe` 即可使用：
+1. **重新建置**：在 `app/` 執行 `flutter build windows --release`（支援 `-SkipBuild` 沿用現有 Release 輸出）。
+2. **暫存組裝**：將 `build/windows/x64/runner/Release` 組裝至 `build/windows_zip/stage/elinkbook/`，排除 `.pdb`、`.lib`、`.exp`、`.ilk` 等除錯與建置暫存檔。
+3. **隨附 VC 執行階段**：自動以 `vswhere` 定位 Visual Studio 安裝路徑，由 `Microsoft.VCRedistVersion.default.txt` 取得版本，複製 `msvcp140.dll`、`vcruntime140.dll`、`vcruntime140_1.dll` 到程式根目錄（app-local 部署）。
+4. **README 範本**：自動隨附 `app/windows/packaging/README.txt`。
+5. **bsdtar 壓縮與路徑防護**：使用 Windows 內建 `tar.exe` 壓縮，確保 zip 內部路徑分隔符皆為正斜線 `/`（避開 PowerShell 5.1 `Compress-Archive` 反斜線缺陷）。
+6. **清單驗證與安全寫入**：先壓至 `.tmp.zip`，驗證清單必備檔案存在、不含反斜線且不含 `.pdb`，全部通過後才更名為正式 zip，並以純檔名基底寫出同名 `.sha256`。
+
+### 執行方式
+
+```powershell
+cd app
+
+# 完整流程：重新建置並打包
+powershell -ExecutionPolicy Bypass -File tool/package_windows_zip.ps1
+
+# 沿用現有 Release 建置（跳過建置步驟）
+powershell -ExecutionPolicy Bypass -File tool/package_windows_zip.ps1 -SkipBuild
+
+# 自訂輸出目錄
+powershell -ExecutionPolicy Bypass -File tool/package_windows_zip.ps1 -SkipBuild -OutDir C:\path\to\output
+```
+
+結束碼：0 成功；非 0 代表建置失敗、缺少檔案或清單驗證不符。
+
+
