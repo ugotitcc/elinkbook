@@ -58,10 +58,10 @@
 **Interfaces:**
 - Produces: `powershell -File tool/package_windows_zip.ps1 [-SkipBuild] [-OutDir build/windows_zip]`；結束碼 0＝成功。成功時輸出 `build/windows_zip/elinkbook-<版本>-windows-x64.zip` 與同名 `.sha256`，並在結尾印出檔案清單筆數與 zip 大小。
 
-- [ ] **Step 1: 寫腳本（暫存名到正式名）。** 行為：（a）路徑一律以 `$PSScriptRoot` 為基準（在倉庫根或 `app/` 執行都指向 `app/`）；（b）讀 `pubspec.yaml` 的 `version:`（例如 `1.1.0+3`），檔名版本把 `+` 換成 `-b`（`1.1.0-b3`），避免 `+` 在 URL、部分工具的問題；（c）開跑前檢查殘留行程與可用記憶體（同 `run_windows_smoke.ps1` 的規則，**只檢查不終止**）；（d）除非 `-SkipBuild`，否則在 `app/` 執行 `flutter build windows --release`，非 0 即中止；（e）清空並建立暫存目錄 `build/windows_zip/stage/elinkbook/`，複製 `build\windows\x64\runner\Release\*` 全部內容，排除 `*.pdb`、`*.lib`、`*.exp`、`*.ilk`；（f）用 `vswhere -latest -products * -property installationPath` 找 VS，讀 `VC\Auxiliary\Build\Microsoft.VCRedistVersion.default.txt` 取得 Redist 版本，從 `VC\Redist\MSVC\<版本>\x64\Microsoft.VC143.CRT\` 複製 `msvcp140.dll`、`vcruntime140.dll`、`vcruntime140_1.dll` 到暫存目錄根（與 `elinkbook.exe` 同層）；找不到任何一個就中止；（g）複製 `windows/packaging/README.txt` 到暫存目錄根；（h）用 `tar -a -c -f <暫存名>.zip -C build/windows_zip/stage elinkbook`（Windows 內建 bsdtar；**不用 `Compress-Archive`**，其在 Windows PowerShell 5.1 會寫出反斜線路徑）；（i）驗證 zip 清單：用 `tar -tf` 列出，必須含 `elinkbook/elinkbook.exe`、三個 VC DLL、`elinkbook/data/foliate/main.js`、`elinkbook/README.txt`，且**不含**反斜線與 `.pdb`；（j）全部通過才把暫存名改為正式檔名、用 `Get-FileHash -Algorithm SHA256` 寫 `.sha256`（格式 `<雜湊>  <檔名>`，**`<檔名>` 一律是純檔名（`[System.IO.Path]::GetFileName`），不得含絕對路徑**，否則把 zip 與 `.sha256` 搬到別處用 `sha256sum -c` 會驗不過）；任何一步失敗以非 0 結束，並刪除暫存 zip。
-- [ ] **Step 2: 驗證腳本本身。** 實際執行：（1）正常打包一次，預期結束碼 0、產出 zip 與 `.sha256`、清單驗證通過；（2）暫時把 `-OutDir` 指到不存在的深層目錄，預期自動建立；（3）人為讓 Redist 找不到（例如暫時改腳本讀取的版本檔名為不存在的檔，驗證完還原），預期以非 0 結束且 `build/windows_zip/` 沒有正式檔名的 zip；（4）同一提交連續打包兩次，比較兩份 `tar -tf` 清單，預期一致。以這四個實際輸出為證，記入報告。
-- [ ] **Step 3: `app/tool/README.md` 補說明；`flutter analyze` 不涉及（無 Dart 變動）。**
-- [ ] **Step 4: Commit。**
+- [x] **Step 1: 寫腳本（暫存名到正式名）。** 行為：（a）路徑一律以 `$PSScriptRoot` 為基準（在倉庫根或 `app/` 執行都指向 `app/`）；（b）讀 `pubspec.yaml` 的 `version:`（例如 `1.1.0+3`），檔名版本把 `+` 換成 `-b`（`1.1.0-b3`），避免 `+` 在 URL、部分工具的問題；（c）開跑前檢查殘留行程與可用記憶體（同 `run_windows_smoke.ps1` 的規則，**只檢查不終止**）；（d）除非 `-SkipBuild`，否則在 `app/` 執行 `flutter build windows --release`，非 0 即中止；（e）清空並建立暫存目錄 `build/windows_zip/stage/elinkbook/`，複製 `build\windows\x64\runner\Release\*` 全部內容，排除 `*.pdb`、`*.lib`、`*.exp`、`*.ilk`；（f）用 `vswhere -latest -products * -property installationPath` 找 VS，讀 `VC\Auxiliary\Build\Microsoft.VCRedistVersion.default.txt` 取得 Redist 版本，從 `VC\Redist\MSVC\<版本>\x64\Microsoft.VC143.CRT\` 複製 `msvcp140.dll`、`vcruntime140.dll`、`vcruntime140_1.dll` 到暫存目錄根（與 `elinkbook.exe` 同層）；找不到任何一個就中止；（g）複製 `windows/packaging/README.txt` 到暫存目錄根；（h）用 `tar -a -c -f <暫存名>.zip -C build/windows_zip/stage elinkbook`（Windows 內建 bsdtar；**不用 `Compress-Archive`**，其在 Windows PowerShell 5.1 會寫出反斜線路徑）；（i）驗證 zip 清單：用 `tar -tf` 列出，必須含 `elinkbook/elinkbook.exe`、三個 VC DLL、`elinkbook/data/foliate/main.js`、`elinkbook/README.txt`，且**不含**反斜線與 `.pdb`；（j）全部通過才把暫存名改為正式檔名、用 `Get-FileHash -Algorithm SHA256` 寫 `.sha256`（格式 `<雜湊>  <檔名>`，**`<檔名>` 一律是純檔名（`[System.IO.Path]::GetFileName`），不得含絕對路徑**，否則把 zip 與 `.sha256` 搬到別處用 `sha256sum -c` 會驗不過）；任何一步失敗以非 0 結束，並刪除暫存 zip。
+- [x] **Step 2: 驗證腳本本身。** 實際執行：（1）正常打包一次，預期結束碼 0、產出 zip 與 `.sha256`、清單驗證通過；（2）暫時把 `-OutDir` 指到不存在的深層目錄，預期自動建立；（3）人為讓 Redist 找不到（例如暫時改腳本讀取的版本檔名為不存在的檔，驗證完還原），預期以非 0 結束且 `build/windows_zip/` 沒有正式檔名的 zip；（4）同一提交連續打包兩次，比較兩份 `tar -tf` 清單，預期一致。以這四個實際輸出為證，記入報告。
+- [x] **Step 3: `app/tool/README.md` 補說明；`flutter analyze` 不涉及（無 Dart 變動）。**
+- [x] **Step 4: Commit。**
 
 ```bash
 git add app/tool/package_windows_zip.ps1 app/windows/packaging/README.txt app/tool/README.md
@@ -78,10 +78,10 @@ git commit -m "build(windows): 免安裝 zip 打包腳本（建置、VC 執行�
 **Interfaces:**
 - Produces: `powershell -File tool/package_windows_zip.ps1 -CheckOnly <目錄>`；結束碼 0＝通過；失敗時列出「檔案 → 缺少的依賴」。
 
-- [ ] **Step 1: 寫檢查。** 對目錄內每個 `.exe`／`.dll` 執行 `dumpbin /dependents`（以 `vswhere` 找到的 VS 路徑下 `VC\Tools\MSVC\<編譯器版本>\bin\Hostx64\x64\dumpbin.exe`。**`<編譯器版本>` 讀 `VC\Auxiliary\Build\Microsoft.VCToolsVersion.default.txt`（本機 `14.44.35207`），不得沿用 Task 1 的 Redist 版本號（`14.44.35112`）**——已實測 `Tools\MSVC\14.44.35112\...\dumpbin.exe` 不存在；找不到該版本檔時，退而取 `VC\Tools\MSVC\*` 中版本最新的目錄；仍找不到即失敗。在 Git Bash 呼叫需設 `MSYS_NO_PATHCONV=1`，在 PowerShell 不受影響），解析依賴名稱（不分大小寫）。**函式開頭先做防禦性斷言：`msvcp140.dll`、`vcruntime140.dll`、`vcruntime140_1.dll` 三個檔案必須實體存在於目錄根，缺一即失敗**（不依賴 dumpbin 是否列出，避免日後編譯參數或延遲載入讓依賴表漏列）。再逐檔判定：（a）依賴名稱以 `api-ms-win-` 開頭，視為 Windows 內建；（b）依賴在同一目錄內，通過；（c）依賴存在於 `%SystemRoot%\System32`，視為系統 DLL；（d）**例外：`msvcp140*.dll`、`vcruntime140*.dll`、`concrt140.dll`、`vccorlib140.dll` 即使在 System32 也必須在目錄內**（這台機器 System32 有它們，不加這條永遠通過）；（e）其他找不到的依賴一律失敗。`dumpbin` 本身失敗要視為檢查失敗，不得當作「沒有依賴」。
-- [ ] **Step 2: 變異驗證（必做）。** 在暫存目錄副本上：（1）原樣檢查，預期通過；（2）刪除 `vcruntime140_1.dll`，預期失敗並列出 `elinkbook.exe → VCRUNTIME140_1.dll`；（3）刪除 `msvcp140.dll`，預期失敗；（4）還原後預期通過。附上四個實際輸出。
-- [ ] **Step 3: 把「依賴檢查通過」限制寫進報告**：它只證明「檔案依賴在目錄內」，**不證明乾淨機器能開**（還有 WebView2、顯示驅動、Windows 版本等因素）。
-- [ ] **Step 4: Commit。**
+- [x] **Step 1: 寫檢查。** 對目錄內每個 `.exe`／`.dll` 執行 `dumpbin /dependents`（以 `vswhere` 找到的 VS 路徑下 `VC\Tools\MSVC\<編譯器版本>\bin\Hostx64\x64\dumpbin.exe`。**`<編譯器版本>` 讀 `VC\Auxiliary\Build\Microsoft.VCToolsVersion.default.txt`（本機 `14.44.35207`），不得沿用 Task 1 的 Redist 版本號（`14.44.35112`）**——已實測 `Tools\MSVC\14.44.35112\...\dumpbin.exe` 不存在；找不到該版本檔時，退而取 `VC\Tools\MSVC\*` 中版本最新的目錄；仍找不到即失敗。在 Git Bash 呼叫需設 `MSYS_NO_PATHCONV=1`，在 PowerShell 不受影響），解析依賴名稱（不分大小寫）。**函式開頭先做防禦性斷言：`msvcp140.dll`、`vcruntime140.dll`、`vcruntime140_1.dll` 三個檔案必須實體存在於目錄根，缺一即失敗**（不依賴 dumpbin 是否列出，避免日後編譯參數或延遲載入讓依賴表漏列）。再逐檔判定：（a）依賴名稱以 `api-ms-win-` 開頭，視為 Windows 內建；（b）依賴在同一目錄內，通過；（c）依賴存在於 `%SystemRoot%\System32`，視為系統 DLL；（d）**例外：`msvcp140*.dll`、`vcruntime140*.dll`、`concrt140.dll`、`vccorlib140.dll` 即使在 System32 也必須在目錄內**（這台機器 System32 有它們，不加這條永遠通過）；（e）其他找不到的依賴一律失敗。`dumpbin` 本身失敗要視為檢查失敗，不得當作「沒有依賴」。
+- [x] **Step 2: 變異驗證（必做）。** 在暫存目錄副本上：（1）原樣檢查，預期通過；（2）刪除 `vcruntime140_1.dll`，預期失敗並列出 `elinkbook.exe → VCRUNTIME140_1.dll`；（3）刪除 `msvcp140.dll`，預期失敗；（4）還原後預期通過。附上四個實際輸出。
+- [x] **Step 3: 把「依賴檢查通過」限制寫進報告**：它只證明「檔案依賴在目錄內」，**不證明乾淨機器能開**（還有 WebView2、顯示驅動、Windows 版本等因素）。
+- [x] **Step 4: Commit。**
 
 ```bash
 git add app/tool/package_windows_zip.ps1
@@ -95,9 +95,9 @@ git commit -m "build(windows): 打包前依賴靜態檢查（VC 執行階段必�
 **Files:**
 - Modify: `app/windows/packaging/README.txt`
 
-- [ ] **Step 1: 先確認要寫的事實。** 資料存放位置：在本機啟動一次 release 版，查 `%APPDATA%` 下實際建立的資料夾名稱（預期 `cc.ugotit\elinkbook`，以實測為準，不照抄預期）；WebView2 的資料夾位置同理。
-- [ ] **Step 2: 寫 README。** 內容只寫已查證或決策已定的事：（a）系統需求：Windows 10 1809 以上、WebView2 Runtime（未安裝時 App 會顯示說明與下載連結，epic 決策 4；「Windows 10 1809 實測」寫「未驗證」）；（b）使用方式：解壓到任何資料夾，雙擊 `elinkbook.exe`，不需要安裝、不需要系統管理員權限；（c）資料存放位置（Step 1 實測值）、刪除資料夾不會刪書籍檔案與資料、要完整移除請另外刪資料資料夾；（d）未簽章：Windows SmartScreen 可能出現「已保護您的電腦」，點「其他資訊 → 仍要執行」；若從網路下載，建議先對 zip 按右鍵 → 內容 → 勾選「解除封鎖」再解壓；（e）已知限制：雲端匯入（Google Drive／OneDrive）、音量鍵翻頁、E-Ink 模式、螢幕方向鎖定在 Windows 版不提供（epic 決策 1）；（f）版本與 SHA256 的查驗方式（`Get-FileHash`）。
-- [ ] **Step 3: Commit。**
+- [x] **Step 1: 先確認要寫的事實。** 資料存放位置：在本機啟動一次 release 版，查 `%APPDATA%` 下實際建立的資料夾名稱（預期 `cc.ugotit\elinkbook`，以實測為準，不照抄預期）；WebView2 的資料夾位置同理。
+- [x] **Step 2: 寫 README。** 內容只寫已查證或決策已定的事：（a）系統需求：Windows 10 1809 以上、WebView2 Runtime（未安裝時 App 會顯示說明與下載連結，epic 決策 4；「Windows 10 1809 實測」寫「未驗證」）；（b）使用方式：解壓到任何資料夾，雙擊 `elinkbook.exe`，不需要安裝、不需要系統管理員權限；（c）資料存放位置（Step 1 實測值）、刪除資料夾不會刪書籍檔案與資料、要完整移除請另外刪資料資料夾；（d）未簽章：Windows SmartScreen 可能出現「已保護您的電腦」，點「其他資訊 → 仍要執行」；若從網路下載，建議先對 zip 按右鍵 → 內容 → 勾選「解除封鎖」再解壓；（e）已知限制：雲端匯入（Google Drive／OneDrive）、音量鍵翻頁、E-Ink 模式、螢幕方向鎖定在 Windows 版不提供（epic 決策 1）；（f）版本與 SHA256 的查驗方式（`Get-FileHash`）。
+- [x] **Step 3: Commit。**
 
 ```bash
 git add app/windows/packaging/README.txt
@@ -114,10 +114,10 @@ git commit -m "docs(windows): 免安裝 zip README（epic-66 Issue 14 Task 3）"
 **Interfaces:**
 - Produces: `powershell -File tool/verify_windows_zip.ps1 -Zip <zip 路徑> [-WorkDir <目錄>]`；結束碼 0＝全部通過；輸出每項檢查一行 `[通過]／[失敗] 名稱 :: 說明`。
 
-- [ ] **Step 1: 寫腳本。** 行為：（a）開跑前殘留行程與記憶體檢查（只檢查不終止）；（b）解壓到 `<WorkDir>\含 空格 與 中文\`（預設 `$env:TEMP` 下），用 `tar -xf`。zip 內有根目錄 `elinkbook/`，所以執行檔實際路徑是 `<WorkDir>\含 空格 與 中文\elinkbook\elinkbook.exe`；以下「解壓資料夾」指 `<WorkDir>\含 空格 與 中文\`，「程式資料夾」指其下的 `elinkbook\`。同時記錄 `$appDataExistedPrior`（使用者資料夾在執行前是否已存在）與啟動時間 `$launchTime`。**已實測這台機器上 `%APPDATA%\cc.ugotit\elinkbook` 早已存在（334 個檔案、最新寫入 2026-11-06），所以只檢查「資料夾存在」在開跑前就為真，不具驗證意義**；（c）記錄解壓資料夾的**檔案清單（相對路徑＋大小＋最後寫入時間）**作為「執行前快照」；（d）用 `icacls <解壓資料夾> /deny "*<目前使用者 SID>:(OI)(CI)(WD,AD,DC)"` 拒絕寫入檔案、建立子資料夾、刪除子項（SID 取自 `[Security.Principal.WindowsIdentity]::GetCurrent().User.Value`，避免帳號名稱解析問題；**不是設唯讀屬性**——資料夾的唯讀屬性不會阻擋寫入）；（e）啟動：`Start-Process -FilePath <程式資料夾>\elinkbook.exe -WorkingDirectory <程式資料夾> -PassThru`。**必須明確給 `-WorkingDirectory`**：已實測不給時新行程繼承呼叫端目前目錄（本倉庫根目錄），相對路徑寫入會落在可寫的專案目錄，唯讀驗證會假通過；也與使用者在檔案總管雙擊（工作目錄＝執行檔所在資料夾）的情境不一致；（f）檢查：（f1）**輪詢等主視窗**，最長 30 秒，每 500 ms 呼叫 `$proc.Refresh()` 後讀 `MainWindowHandle`（.NET 的 `Process` 屬性會快取，第一次讀到 0 之後不 `Refresh()` 就一直是 0），行程提早結束即失敗；（f2）視窗出現後再等 10 秒，行程仍須存活；（f3）使用者資料夾：若 `$appDataExistedPrior` 為真，則必須存在 `LastWriteTime -ge $launchTime` 的檔案（證明這次啟動確實寫入）；若為假，則資料夾須已建立且有檔案；（g）結束行程樹（`taskkill /PID <pid> /T /F`，含 `msedgewebview2.exe` 子行程），等 `elinkbook.exe` 消失；（h）移除 deny ACL：`icacls <解壓資料夾> /remove:d "*<目前使用者 SID>"`（**必須帶使用者／SID**，已實測不帶會回 `Invalid parameter "/remove:d"`）；（i）取「執行後快照」與執行前比對，**必須完全相同**（沒有新增、刪除、改動任何檔）；（j）清理解壓資料夾與（可選 `-KeepAppData` 不給時）測試用的 `%APPDATA%` 資料夾——**清理前先列出將刪除的路徑；依 `$appDataExistedPrior` 決定：執行前已存在則不刪，只報告**。整段用 `try … finally`：任何失敗（含中途例外）都**先**執行（h）移除 deny ACL，再執行（g）（j），不得留下 deny ACL（否則無法刪除解壓資料夾）或殘留行程。
-- [ ] **Step 2: 驗證腳本本身。** 用 Task 1 產出的 zip 實際跑一次，預期全部通過、結束碼 0。**負向驗證：** 把 `-Zip` 換成一個刻意缺少 `vcruntime140_1.dll` 的 zip，**這台機器預期仍可啟動**（System32 有該 DLL），這正好證明「本機驗證抓不到缺 VC DLL 的問題」，要原文寫進報告，**不得**據此宣稱缺 DLL 時也能開。
-- [ ] **Step 3: 驗證「寫入偵測」本身有效。** 暫時在驗證腳本的啟動後步驟中人為在解壓資料夾新增一個檔（先移除 deny ACL，驗證完還原腳本），預期（i）失敗；證明比對真的會抓到。
-- [ ] **Step 4: Commit。**
+- [x] **Step 1: 寫腳本。** 行為：（a）開跑前殘留行程與記憶體檢查（只檢查不終止）；（b）解壓到 `<WorkDir>\含 空格 與 中文\`（預設 `$env:TEMP` 下），用 `tar -xf`。zip 內有根目錄 `elinkbook/`，所以執行檔實際路徑是 `<WorkDir>\含 空格 與 中文\elinkbook\elinkbook.exe`；以下「解壓資料夾」指 `<WorkDir>\含 空格 與 中文\`，「程式資料夾」指其下的 `elinkbook\`。同時記錄 `$appDataExistedPrior`（使用者資料夾在執行前是否已存在）與啟動時間 `$launchTime`。**已實測這台機器上 `%APPDATA%\cc.ugotit\elinkbook` 早已存在（334 個檔案、最新寫入 2026-11-06），所以只檢查「資料夾存在」在開跑前就為真，不具驗證意義**；（c）記錄解壓資料夾的**檔案清單（相對路徑＋大小＋最後寫入時間）**作為「執行前快照」；（d）用 `icacls <解壓資料夾> /deny "*<目前使用者 SID>:(OI)(CI)(WD,AD,DC)"` 拒絕寫入檔案、建立子資料夾、刪除子項（SID 取自 `[Security.Principal.WindowsIdentity]::GetCurrent().User.Value`，避免帳號名稱解析問題；**不是設唯讀屬性**——資料夾的唯讀屬性不會阻擋寫入）；（e）啟動：`Start-Process -FilePath <程式資料夾>\elinkbook.exe -WorkingDirectory <程式資料夾> -PassThru`。**必須明確給 `-WorkingDirectory`**：已實測不給時新行程繼承呼叫端目前目錄（本倉庫根目錄），相對路徑寫入會落在可寫的專案目錄，唯讀驗證會假通過；也與使用者在檔案總管雙擊（工作目錄＝執行檔所在資料夾）的情境不一致；（f）檢查：（f1）**輪詢等主視窗**，最長 30 秒，每 500 ms 呼叫 `$proc.Refresh()` 後讀 `MainWindowHandle`（.NET 的 `Process` 屬性會快取，第一次讀到 0 之後不 `Refresh()` 就一直是 0），行程提早結束即失敗；（f2）視窗出現後再等 10 秒，行程仍須存活；（f3）使用者資料夾：若 `$appDataExistedPrior` 為真，則必須存在 `LastWriteTime -ge $launchTime` 的檔案（證明這次啟動確實寫入）；若為假，則資料夾須已建立且有檔案；（g）結束行程樹（`taskkill /PID <pid> /T /F`，含 `msedgewebview2.exe` 子行程），等 `elinkbook.exe` 消失；（h）移除 deny ACL：`icacls <解壓資料夾> /remove:d "*<目前使用者 SID>"`（**必須帶使用者／SID**，已實測不帶會回 `Invalid parameter "/remove:d"`）；（i）取「執行後快照」與執行前比對，**必須完全相同**（沒有新增、刪除、改動任何檔）；（j）清理解壓資料夾與（可選 `-KeepAppData` 不給時）測試用的 `%APPDATA%` 資料夾——**清理前先列出將刪除的路徑；依 `$appDataExistedPrior` 決定：執行前已存在則不刪，只報告**。整段用 `try … finally`：任何失敗（含中途例外）都**先**執行（h）移除 deny ACL，再執行（g）（j），不得留下 deny ACL（否則無法刪除解壓資料夾）或殘留行程。
+- [x] **Step 2: 驗證腳本本身。** 用 Task 1 產出的 zip 實際跑一次，預期全部通過、結束碼 0。**負向驗證：** 把 `-Zip` 換成一個刻意缺少 `vcruntime140_1.dll` 的 zip，**這台機器預期仍可啟動**（System32 有該 DLL），這正好證明「本機驗證抓不到缺 VC DLL 的問題」，要原文寫進報告，**不得**據此宣稱缺 DLL 時也能開。
+- [x] **Step 3: 驗證「寫入偵測」本身有效。** 暫時在驗證腳本的啟動後步驟中人為在解壓資料夾新增一個檔（先移除 deny ACL，驗證完還原腳本），預期（i）失敗；證明比對真的會抓到。
+- [x] **Step 4: Commit。**
 
 ```bash
 git add app/tool/verify_windows_zip.ps1
@@ -132,11 +132,11 @@ git commit -m "test(windows): 免安裝 zip 本機驗證腳本（含空格中文
 - Create: `docs/epics/epic-66-windows-port/issue-14-report.md`
 - Modify: `docs/epics/epic-66-windows-port/issues.md`（Issue 14 狀態）、`docs/epics/epic-66-windows-port/epic.md`（決策 30）、`docs/epics.md`（備註）、本檔（勾選步驟）
 
-- [ ] **Step 1: 人工開書（使用者）。** 腳本通過後，請使用者把 zip 解壓到含空格與中文的路徑、雙擊 `elinkbook.exe`、匯入並開一本 EPUB；**執行期間不得同時跑任何 Windows 整合測試或建置**。使用者回報的結果原文記入報告；使用者沒做就在報告寫「未驗證」，過關條件 5 不算達成。
-- [ ] **Step 2: 全套 `flutter test` 與 `flutter analyze`。** 本 Issue 不動 Dart 檔，`flutter analyze` 仍須乾淨；全套 `flutter test` 在發 PR 前跑一次，既有偶發失敗照實記錄。
-- [ ] **Step 3: 寫 `issue-14-report.md`。** 內容：已查證事實與來源、腳本四項實際輸出（Task 1）、依賴檢查變異驗證四項輸出（Task 2）、本機驗證結果與負向驗證說明（Task 4）、使用者開書結果（Step 1）、zip 大小與檔案清單摘要、**未驗證清單**（乾淨機器缺 VC 執行階段、Windows 10 1809、SmartScreen 實際行為、他人電腦、WebView2 缺失時的行為）、已知限制、後續項目。
-- [ ] **Step 4: 更新文件並勾選本檔步驟。** `epic.md` 決策 30 寫：VC DLL 隨附（app-local）的決定與理由、乾淨機器未驗證的範圍限制。
-- [ ] **Step 5: Commit。**
+- [x] **Step 1: 人工開書（使用者）。** 腳本通過後，請使用者把 zip 解壓到含空格與中文的路徑、雙擊 `elinkbook.exe`、匯入並開一本 EPUB；**執行期間不得同時跑任何 Windows 整合測試或建置**。使用者回報的結果原文記入報告；使用者沒做就在報告寫「未驗證」，過關條件 5 不算達成。
+- [x] **Step 2: 全套 `flutter test` 與 `flutter analyze`。** 本 Issue 不動 Dart 檔，`flutter analyze` 仍須乾淨；全套 `flutter test` 在發 PR 前跑一次，既有偶發失敗照實記錄。
+- [x] **Step 3: 寫 `issue-14-report.md`。** 內容：已查證事實與來源、腳本四項實際輸出（Task 1）、依賴檢查變異驗證四項輸出（Task 2）、本機驗證結果與負向驗證說明（Task 4）、使用者開書結果（Step 1）、zip 大小與檔案清單摘要、**未驗證清單**（乾淨機器缺 VC 執行階段、Windows 10 1809、SmartScreen 實際行為、他人電腦、WebView2 缺失時的行為）、已知限制、後續項目。
+- [x] **Step 4: 更新文件並勾選本檔步驟。** `epic.md` 決策 30 寫：VC DLL 隨附（app-local）的決定與理由、乾淨機器未驗證的範圍限制。
+- [x] **Step 5: Commit。**
 
 ```bash
 git add docs/epics/epic-66-windows-port/issue-14-report.md docs/epics/epic-66-windows-port/issues.md docs/epics/epic-66-windows-port/epic.md docs/epics.md docs/epics/epic-66-windows-port/plans/plan-issue-14.md

@@ -473,6 +473,8 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
 
 ## Issue 14 範圍
 
+**狀態：** 🟢 已完成實作與自動化驗證（2026-11-10；見 [issue-14-report.md](issue-14-report.md)；僅代表本機開發環境與 Release 建置，乾淨機器與 Windows 10 1809 嚴格標記為未驗證；使用者手動開書待確認）
+
 用一支腳本把 Windows release 版打成**免安裝 zip**：解壓到任何位置（含空格、中文、唯讀資料夾）雙擊 `elinkbook.exe` 就能用。決策 10：先自用；MSIX、程式碼簽章、自動更新不在本 Epic。
 
 已查證的事實（2026-11-10，計畫階段）：
@@ -512,7 +514,7 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
 - ~~鍵盤快捷鍵與 F11~~（已納入 Issue 7，上方有完整設計；`window_manager` 0.5.2 已確認不依賴 `win32`）。
 - 平台專屬功能的隱藏（已登錄為 Issue 10）。
 - Windows 版 `integration_test` 冒煙測試（已登錄為 Issue 13）。
-- 免安裝 zip 打包（已登錄為 Issue 14）。
+- ~~免安裝 zip 打包~~（已納入 Issue 14，見 [issue-14-report.md](issue-14-report.md)）。
 - **`desktop_drop` 0.9 與 `cross_file` 0.4 遷移（已登錄為 Issue 16，2026-11-07，不排程）。**
   - 阻礙：`cross_file` 0.4.0 是破壞性更新（移除 `XFile(String path)`、`XFile.path`、`XFile.mimeType`、`XFile.fromData`，`XFile.name` 變非同步）。`desktop_drop` 0.9.x、`file_picker`、`share_plus`、`share_plus_platform_interface` 目前都依賴 `cross_file ^0.3.x`；`file_picker` 最新 13.3.2、`share_plus` 最新 13.3.1 也還沒支援 0.4，所以升版解決不了，`pub get` 解析失敗（Issue 6 審查時以 `pub get --dry-run` 確認）。
   - 已知做法：vendor 修補三個套件，用 `dependency_overrides` 指向 `patches/`（先例：`patches/flutter_inappwebview_android`、`third_party/dict_reader`）。`file_picker` 11.0.3 的 `platform_file.dart` 之 `xFile` 取值（約 5 行，專案沒用到 `xFile`／`xFiles`）；`share_plus_platform_interface` 6.1.0 的 `method_channel_share.dart`（`.path`、`.mimeType`、`.name`、`XFile(path)`，約 15～20 行）；`share_plus` 11.1.0 只有 web 版檔案用到舊 API，只需改 pubspec 約束。專案內 `notes_bottom_sheet.dart:194` 的 `XFile(path, mimeType: 'text/markdown')` 改為 `XFile.fileSystem(path:)`（0.4 沒有 `mimeType`，Markdown 的 mimeType 要由修補後的套件依副檔名推斷或明確傳入）。
@@ -542,6 +544,6 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
   - 已排除：400x800 視窗覆寫（拿掉後更差）、手機螢幕熄滅（螢幕常亮重跑）。
   - 注意：跑 Android 整合測試前，手機螢幕必須保持亮著（否則 WebView 不繪製、開書逾時）；`app/android/gradle.properties:5` 寫死舊電腦的 JDK 路徑，換電腦需裝同版本 JDK 17。
 - 索引器跑不完（Issue 8，已合併 #400）、WebView2 缺少提示（Issue 9，已合併 #401）、測試穩定性（Issue 11，已合併 #403）、Android 統一 metadata（Issue 12，已完成）：2026-11-06 登錄。
-- **預定執行順序：** ~~8~~ → ~~9~~ → ~~10~~ → ~~11~~ → ~~6~~ → ~~12~~ → ~~13~~ → 14（先補齊功能，再升級 Flutter，冒煙測試與打包放在最終版本上做）。
+- **預定執行順序：** ~~8~~ → ~~9~~ → ~~10~~ → ~~11~~ → ~~6~~ → ~~12~~ → ~~13~~ → ~~14~~（先補齊功能，再升級 Flutter，冒煙測試與打包放在最終版本上做）。全部 Issue 皆已完成或實作完畢。
 - 不做：「分段服務」（大檔開書記憶體尖峰，224 MB 書約 3.8 GB），記為已知限制，遇到再議。
 - Flutter 升級（Issue 6）：先用 `flutter pub outdated` 與 `pub get --dry-run` 盤點；升級後 `desktop_drop` 可改用最新版；一併處理 `pubspec.lock` 與 Flutter 版本的落差；Windows 預設 Impeller 下重驗 WebView2 閱讀器；`onReorder` 改 `onReorderItem`；built-in Kotlin／AGP 9 的 Android 建置；先查 3.47.8 的安全公告再選修補版本；升級前須與人類確認（`CLAUDE.md`）。
