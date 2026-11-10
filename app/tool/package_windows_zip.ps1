@@ -1,4 +1,4 @@
-# Windows 免安裝 zip 打包腳本 (epic-66 Issue 14)
+﻿# Windows 免安裝 zip 打包腳本 (epic-66 Issue 14)
 # 功能：建置 Release、組裝暫存、複製 VC DLL、依賴檢查、打包 zip、產生 SHA256
 
 [CmdletBinding()]
@@ -161,6 +161,12 @@ if (-not (Test-Path $readmeSrc)) {
 Copy-Item $readmeSrc -Destination (Join-Path $stageAppDir "README.txt") -Force
 
 # 壓縮為 zip（使用暫存檔名，全部驗證通過才轉為正式檔名）
+# 明確調用 Windows 內建 bsdtar，避免 PATH 中 Cygwin/MSYS GNU tar 把 C: 當成遠端主機
+$tarExe = Join-Path $env:SystemRoot "System32\tar.exe"
+if (-not (Test-Path $tarExe)) {
+    $tarExe = "tar.exe"
+}
+
 $tempZipPath = Join-Path $OutDir "$zipBaseName.tmp.zip"
 $finalZipPath = Join-Path $OutDir "$zipBaseName.zip"
 $finalShaPath = Join-Path $OutDir "$zipBaseName.zip.sha256"
@@ -170,7 +176,7 @@ if (Test-Path $finalZipPath) { Remove-Item $finalZipPath -Force }
 if (Test-Path $finalShaPath) { Remove-Item $finalShaPath -Force }
 
 Write-Host "壓縮暫存 zip: $tempZipPath..." -ForegroundColor Cyan
-& tar.exe -a -c -f $tempZipPath -C $stageRootDir elinkbook
+& $tarExe -a -c -f $tempZipPath -C $stageRootDir elinkbook
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[錯誤] tar 壓縮失敗 (結束碼: $LASTEXITCODE)" -ForegroundColor Red
     if (Test-Path $tempZipPath) { Remove-Item $tempZipPath -Force }
@@ -179,7 +185,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # 驗證 zip 清單
 Write-Host "驗證 zip 內容清單..." -ForegroundColor Cyan
-$zipEntries = & tar.exe -tf $tempZipPath
+$zipEntries = & $tarExe -tf $tempZipPath
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[錯誤] tar -tf 讀取失敗" -ForegroundColor Red
     if (Test-Path $tempZipPath) { Remove-Item $tempZipPath -Force }
@@ -221,9 +227,24 @@ if ($pdbEntries) {
 # 驗證通過，轉為正式檔名並計算 SHA256
 Move-Item -Path $tempZipPath -Destination $finalZipPath -Force
 
-$hashObj = Get-FileHash -Path $finalZipPath -Algorithm SHA256
+function Get-Sha256Hex([string]$filePath) {
+    if (Get-Command Get-FileHash -ErrorAction SilentlyContinue) {
+        return (Get-FileHash -Path $filePath -Algorithm SHA256).Hash
+    }
+    $hasher = [System.Security.Cryptography.SHA256]::Create()
+    $fileStream = [System.IO.File]::OpenRead($filePath)
+    try {
+        $hashBytes = $hasher.ComputeHash($fileStream)
+        return (-join ($hashBytes | ForEach-Object { $_.ToString("X2") }))
+    } finally {
+        $fileStream.Close()
+        $hasher.Dispose()
+    }
+}
+
+$hashHex = Get-Sha256Hex $finalZipPath
 $leafName = [System.IO.Path]::GetFileName($finalZipPath)
-$shaContent = "$($hashObj.Hash)  $leafName`n"
+$shaContent = "$hashHex  $leafName`n"
 [System.IO.File]::WriteAllText($finalShaPath, $shaContent, [System.Text.Encoding]::UTF8)
 
 $finalZipItem = Get-Item $finalZipPath
@@ -233,7 +254,7 @@ Write-Host " 打包成功！" -ForegroundColor Green
 Write-Host " 輸出檔案: $finalZipPath" -ForegroundColor Green
 Write-Host " 檔案大小: $([math]::Round($finalZipItem.Length / 1MB, 2)) MB" -ForegroundColor Green
 Write-Host " 內容筆數: $fileCount 檔 ($($zipEntries.Count) 項目)" -ForegroundColor Green
-Write-Host " SHA256:   $($hashObj.Hash)" -ForegroundColor Green
+Write-Host " SHA256:   $hashHex" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
 
 exit 0
