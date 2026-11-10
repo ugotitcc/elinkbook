@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ 系統 SplashScreen：指定專用圖示與底色。
+         未指定時系統只會拿舊式 ic_launcher 縮進圓形範圍，圖示很小。
+         splash_icon 是 288dp 畫布，插畫已縮放到剛好放進系統顯示的 192dp 圓（見 tool/generate_android_splash.ps1）。 -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+    </style>
+</resources>

@@ -25,6 +25,7 @@
 | 20 | 桌面寬度（> 720px）雙欄排版下 EPUB 目錄「目前章節」判定落在前一章：Foliate 在雙欄補齊前一節內容並回報前一節，目錄因此沒收折；Issue 13 為了讓測試通過把視窗縮成 400x800，未判定是否為產品缺陷，且冒煙套件沒有任何一支在桌面寬度驗證（來源 Issue 13） | 無 | ⚪ 未開始（尚未規劃，不排程） | — |
 | 21 | Android 上 `epub_toc_test`（1/2）、`epub_highlights_notes_test`（0/1）、`reader_screen_test`（14/19）仍有失敗：BooksPad（Android 12）螢幕常亮下實測，原因未查明；已排除 400x800 視窗覆寫與螢幕熄滅；PR 前版本在同機上這些測試連書都載入不了（來源 Issue 13） | 無 | ⚪ 未開始（尚未規劃，不排程） | — |
 | 22 | Windows 版圖示與啟動小視窗：依 `assets/appicon_v2.jpg` 產生 `app_icon.ico`（取代 Flutter 預設藍色圖示）與 `splash.bmp`，原生啟動小視窗在 Flutter 第一個畫面前顯示 logo，並明確指定視窗類別小圖示（來源：打包後使用者回報圖示仍為 Flutter 預設） | Issue 14 | 🟢 已合併（PR #409；圖示、啟動小視窗、標題列小圖示以檢查腳本驗證，只在這台機器 125% 縮放、release 版測過；乾淨機器與其他 DPI 未驗證，標題列三角形根因未完全查明） | #409 |
+| 23 | Android 啟動畫面圖示過小：Android 12+ 系統 SplashScreen 沒指定專用圖示，只拿舊式 `ic_launcher` 縮進圓形範圍；改指定由 `appicon_v2.jpg` 產生的 `splash_icon` 與紙張底色（深色模式淺色狀態列）（來源：使用者回報「APK 的啟動畫面很小」；BooksPad 效能低、ROM 不顯示系統啟動畫面，只在較高效能機器上看得到） | 無 | 🟡 Android 14 模擬器驗證完成，待合併（圖示寬度佔螢幕 19% → 45%，淺色／深色皆驗證；Android 11 以下 `launch_background`、BooksPad、真實高效能機器未驗證） | — |
 
 ## Issue 1 範圍
 

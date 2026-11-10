@@ -558,3 +558,17 @@ powershell -ExecutionPolicy Bypass -File tool/generate_windows_icons.ps1
 換圖後要重新建置（`flutter build windows --release`）；本次實測增量建置會重新連結新圖示，若日後發現 exe 沒更新，再改為刪除 `build/windows/x64/runner` 後重建。
 
 **啟動小視窗（`splash_window.cpp`）**：`wWinMain` 一開始就顯示（類別 `ELINKBOOK_SPLASH`、約 80～200 ms 內出現），Flutter 第一個畫面出現時（`FlutterWindow` 的 `SetNextFrameCallback`）關閉；另有 30 秒保險計時器。`verify_windows_zip.ps1` 以視窗類別區分小視窗（`ELINKBOOK_SPLASH`）與主視窗（`FLUTTER_RUNNER_WIN32_WINDOW`），不再使用 `MainWindowHandle`（它會先回傳小視窗，讓「主視窗偵測」失去意義）。
+
+## `generate_android_splash.ps1`
+
+由 `assets/appicon_v2.jpg` 產生 Android 啟動畫面圖 `android/app/src/main/res/drawable-xxxhdpi/splash_icon.png`（1152x1152，即 288dp @ 4x），並印出建議底色（目前 `#F9F9F4`，寫在 `res/values/colors.xml`）。只用 .NET `System.Drawing`。
+
+```powershell
+cd app
+powershell -ExecutionPolicy Bypass -File tool/generate_android_splash.ps1
+```
+
+背景：Android 12+ 的系統 SplashScreen 若沒指定專用圖示，只會拿舊式 `ic_launcher` 縮進圓形範圍，圖示很小（模擬器量測約佔螢幕寬度 19%）。現在 `values-v31`／`values-night-v31` 的 `LaunchTheme` 指定 `windowSplashScreenAnimatedIcon`／`windowSplashScreenBackground`；系統對沒有 icon background 的圖示只顯示 288dp 畫布中央直徑 192dp 的圓，所以腳本把插畫縮放到剛好放進這個圓（約 45%，已接近上限 47%）。`values-night-v31` 另設淺色狀態列／導覽列，否則深色模式白字疊在紙張底色上看不見。Android 11 以下改由 `drawable/launch_background.xml` 置中顯示同一張圖（未實測）。
+
+換圖或調整版面後要重新建置並在 Android 12+ 裝置或模擬器實測；這台 BooksPad（Android 12）的 ROM 不顯示系統啟動畫面，不能用來驗證。
+
