@@ -399,7 +399,8 @@ function Get-Sha256Hex([string]$filePath) {
 $hashHex = Get-Sha256Hex $finalZipPath
 $leafName = [System.IO.Path]::GetFileName($finalZipPath)
 $shaContent = "$hashHex  $leafName`n"
-[System.IO.File]::WriteAllText($finalShaPath, $shaContent, [System.Text.Encoding]::UTF8)
+$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+[System.IO.File]::WriteAllText($finalShaPath, $shaContent, $utf8NoBom)
 
 $finalZipItem = Get-Item $finalZipPath
 $fileCount = ($zipEntries | Where-Object { -not $_.EndsWith('/') }).Count

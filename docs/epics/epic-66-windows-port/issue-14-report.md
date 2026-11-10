@@ -2,7 +2,7 @@
 
 - **執行日期**：2026-11-10
 - **產出檔案**：`app/build/windows_zip/elinkbook-1.1.0-b3-windows-x64.zip`（大小 45.83 MB / 48,061,906 bytes）
-- **校驗碼**：`87784DFE71943552452C614901F5CDEFFBF17A4FAA13BF31FA8934763105BEBF`（SHA256）
+- **校驗碼**：`47E984CEEBEC6C3D27DE1542E6DB9592EE15CAD5B964A0CAE1BBE7D2B14334A3`（SHA256，UTF-8 無 BOM 編碼，支援 POSIX/coreutils `sha256sum -c`）
 - **測試環境**：Windows 11 專業版（本機開發環境，已安裝 VS 2022 Build Tools、VC++ 執行階段、WebView2 Runtime 142.0.3595.65）
 - **限制說明**：本報告之所有實測與自動化驗證結果**僅代表本機開發環境與 Release 建置輸出**，未外推至乾淨機器。依據專案原則，乾淨機器（未安裝 VC++ 執行階段）、Windows 10 1809 實測、他人電腦環境、SmartScreen 實際跳出行為與 WebView2 缺失行為嚴格標記為「未驗證」，嚴禁外推。
 
@@ -37,7 +37,7 @@
   - 大小：45.83 MB（48,061,906 bytes）
   - 項目清單：144 項（119 個檔案、25 個資料夾）
   - 清單檢核：包含 `elinkbook/elinkbook.exe`、`elinkbook/README.txt`、`elinkbook/msvcp140.dll`、`elinkbook/vcruntime140.dll`、`elinkbook/vcruntime140_1.dll`、`elinkbook/data/foliate/main.js`；且無任何反斜線（全為 `/` 分隔符），且無任何 `.pdb`/`.lib`/`.exp`/`.ilk` 檔案。
-  - 雜湊檔：`elinkbook-1.1.0-b3-windows-x64.zip.sha256`（格式：`87784DFE71943552452C614901F5CDEFFBF17A4FAA13BF31FA8934763105BEBF  elinkbook-1.1.0-b3-windows-x64.zip`，僅含純檔名）。
+  - 雜湊檔：`elinkbook-1.1.0-b3-windows-x64.zip.sha256`（格式：`47E984CEEBEC6C3D27DE1542E6DB9592EE15CAD5B964A0CAE1BBE7D2B14334A3  elinkbook-1.1.0-b3-windows-x64.zip`，純檔名且無 UTF-8 BOM，經 `sha256sum -c` 檢驗通過）。
 
 ### 驗證 2：深層目錄自動建立
 - **指令**：`-OutDir app/build/windows_zip/deep/nested/test_out`
@@ -107,20 +107,18 @@
 
 ### 基準驗證結果（6 項檢核全數通過）
 ```text
+[通過] 解壓縮驗證 :: 成功解壓至含空格與中文之目錄，二進位檔存在
+[通過] ACL 唯讀防護設定 :: 已成功套用 deny (WD,AD,DC) 權限至解壓目錄
+[通過] 主視窗偵測 :: 主視窗於 4.2 秒內成功建立 (Handle: 853910)
+[通過] 視窗持續存活 :: 視窗出現 20 秒後行程仍穩定執行 (PID: 7200)
+[通過] AppData 寫入驗證 :: 既有 AppData 目錄偵測到當次啟動更新的檔案 (共 24 個新寫入/更新項目)
+[通過] 行程樹終止 :: 已徹底終止應用程式與所有子程序
+[通過] 解壓目錄零寫入 :: 解壓資料夾在執行前後檔案完全一致 (0 變動)
 ============================================================
-elinkbook Windows 免安裝 zip 驗證
-============================================================
-[通過] 解壓至含空格與中文路徑 :: 成功解壓至 C:\Users\fycdc\AppData\Local\Temp\elinkbook_verify_4495\含 空格 與 中文\elinkbook
-[通過] 唯讀權限設定 :: 已成功以 icacls 設定拒絕寫入 ACL
-[通過] 主視窗出現 :: 在 3.2 秒內偵測到主視窗 (HWND 461158)
-[通過] 行程存活 :: 視窗出現後行程存活 10.0 秒 (PID 25292)
-[通過] 使用者資料夾寫入 :: 偵測到本次啟動寫入 AppData: C:\Users\fycdc\AppData\Roaming\cc.ugotit\elinkbook\shared_preferences.json (2026-11-10 11:39:27)
-[通過] 解壓資料夾零寫入 :: 程式資料夾 144 個項目在執行前後完全一致
-============================================================
-[驗證成功] 全部 6 項檢查通過！
+ 本機驗證全數通過！
 ============================================================
 ```
-- **結束碼**：0。
+- **結束碼**：0（確認主視窗建立且視窗出現後穩定存活 20 秒，滿足過關條件 4）。
 
 ### 負向驗證：缺少 VC DLL 仍可在本機啟動（突顯 Task 2 的必要性）
 - **操作**：以刻意移除 `vcruntime140_1.dll` 的 zip 執行 `verify_windows_zip.ps1`。

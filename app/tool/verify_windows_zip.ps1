@@ -1,4 +1,4 @@
-# Windows 免安裝 zip 本機驗證腳本 (epic-66 Issue 14 Task 4)
+﻿# Windows 免安裝 zip 本機驗證腳本 (epic-66 Issue 14 Task 4)
 # 功能：解壓至含空格與中文的唯讀資料夾、啟動、驗證主視窗與行程存活、驗證解壓目錄零寫入與 AppData 寫入
 
 [CmdletBinding()]
@@ -175,14 +175,14 @@ try {
         Record-Check $false "主視窗偵測" "40 秒內未偵測到主視窗或行程提前終止 (HasExited: $($proc.HasExited))"
     }
 
-    # (f2) 視窗出現後再等候 10 秒確認行程存活
-    Write-Host "等待 10 秒以驗證視窗與執行階段穩定度..." -ForegroundColor Cyan
-    Start-Sleep -Seconds 10
+    # (f2) 視窗出現後再等候 20 秒確認行程存活（滿足過關條件 4 啟動後存活至少 20 秒）
+    Write-Host "等待 20 秒以驗證視窗與執行階段穩定度..." -ForegroundColor Cyan
+    Start-Sleep -Seconds 20
     $proc.Refresh()
     if (-not $proc.HasExited) {
-        Record-Check $true "視窗持續存活" "視窗出現 10 秒後行程仍穩定執行 (PID: $($proc.Id))"
+        Record-Check $true "視窗持續存活" "視窗出現 20 秒後行程仍穩定執行 (PID: $($proc.Id))"
     } else {
-        Record-Check $false "視窗持續存活" "視窗出現 10 秒內行程異常終止 (結束碼: $($proc.ExitCode))"
+        Record-Check $false "視窗持續存活" "視窗出現 20 秒內行程異常終止 (結束碼: $($proc.ExitCode))"
     }
 
     # (f3) 使用者資料目錄寫入驗證
