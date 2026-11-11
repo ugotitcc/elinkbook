@@ -57,12 +57,12 @@ Future<void> _pumpUntil(
 bool _loadingIndicatorGone() =>
     find.byKey(const Key('reader_loading_indicator')).evaluate().isEmpty;
 
-/// 判斷「⚙️版面」按鈕是否已就緒（存在且可點擊）。`onLayoutResolved` 觸發前
-/// `_autoDetectedWritingMode` 為 null，此時按鈕的 `onPressed` 亦為 null
-/// （見 reader_screen.dart 的 `_buildAppBarActions`），因此以此作為「自動
-/// 偵測已完成」的觀察點——取代 Issue 4 移除的 `reader_writing_mode_toggle`
-/// 讀取信號。
+/// 判斷「⚙️版面」按鈕是否已就緒（書籍已載入完成且按鈕可點擊）。
+/// 在書籍載入完成（`_autoDetectedWritingMode` 解析完畢）前，點擊按鈕僅會觸發
+/// `_showLayoutLoadingHint`（SnackBar 提示）而非開啟設定面板；
+/// 故必須同時確認 `_loadingIndicatorGone()` 且按鈕存在並可點擊。
 bool _layoutSettingsButtonReady(WidgetTester tester) {
+  if (!_loadingIndicatorGone()) return false;
   final finder = find.byKey(const Key('reader_chrome_layout_button'));
   if (finder.evaluate().isEmpty) return false;
   return tester.widget<IconButton>(finder).onPressed != null;
@@ -273,6 +273,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
+    expect(find.byType(ReaderSettingsSheet), findsOneWidget);
 
     await tester
         .tap(find.byKey(const Key('reader_settings_font_size_increment')));
@@ -311,6 +312,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
+    expect(find.byType(ReaderSettingsSheet), findsOneWidget);
     await tester
         .tap(find.byKey(const Key('reader_settings_font_size_increment')));
     await tester.pump();
@@ -377,6 +379,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
+    expect(find.byType(ReaderSettingsSheet), findsOneWidget);
 
     // 排版方向覆寫列在「呈現」分頁（IndexedStack 非 TabBarView，切分頁無動畫）。
     await tester.tap(find.byKey(const Key('reader_settings_tab_presentation')));
@@ -425,6 +428,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
+    expect(find.byType(ReaderSettingsSheet), findsOneWidget);
 
     // 翻頁模式覆寫列在「呈現」分頁。
     await tester.tap(find.byKey(const Key('reader_settings_tab_presentation')));
