@@ -27,12 +27,12 @@
 - 所有診斷與連跑一律加 `--reporter=expanded`，避免失敗清單被截斷。
 
 ## Tasks
-- [ ] **Task 1：穩定性（環境隔離）。** 指令：`flutter test integration_test/reader_screen_test.dart -d windows --reporter=expanded`，**連跑 5 次**。每次之前：確認沒有殘留的 `elinkbook.exe`（沿用 `app/tool/run_windows_smoke.ps1` 的 `taskkill.exe /IM elinkbook.exe /F` 做法）、刪除暫存目錄中本檔產生的 `sample_*.epub`／`sample_*.pdf`。每次記錄：通過／失敗數、失敗項名稱、是否中途結束（exit code）、耗時。原始輸出存 `docs/epics/epic-66-windows-port/assets/issue-19-run-N.log`。目的：確認「整份中斷」現在會不會發生、9 項失敗是否穩定。
-- [ ] **Task 2：類別 A 實證。** 在失敗點暫時印出當時是否有 SnackBar（「版面載入中」提示）、`_layoutSettingsButtonReady` 回傳值與 `reader_loading_indicator` 狀態（拋棄式、不進 commit）。證實後，把就緒條件改成「按鈕存在、且書籍已載入完成（`reader_loading_indicator` 消失；或按鈕點擊後確認 `ReaderSettingsSheet` 真的出現再往下）」，同步更正該函式過時的註解。
-- [ ] **Task 3：類別 B 處理。** 對 8、9、10、13、14 加 `skip: skipOnWindows('…')`，原因分別指向 `supportsMobileReaderControls` 守衛（方向鎖定、E-Ink 濾鏡僅行動裝置）。確認 Windows 沒有對應的替代行為（Task 1 的日誌與讀碼）；若 Windows 其實有替代行為卻沒測，另立 Issue，不在此處補。
-- [ ] **Task 4：第 17 項。** 不改座標。可選：對該 `drag()` 傳 `warnIfMissed: false` 並加註解說明「此處刻意驗證手勢被阻斷」，只為消除警告；執行前確認這是人類要的（見待確認）。
-- [ ] **Task 5：回報。** 寫 `issue-19-report.md`：19 項逐項狀態表（通過／skip＋原因／另立 Issue）、成因證據、與 Issue 13 結論的差異及判斷依據；更正 Issue 13 報告中過時的描述。
-- [ ] **Task 6：驗證與歸屬。** 該檔連跑 5 次結果一致；量測加入後的總耗時；依人類決定放進 `windows_smoke_suite.txt` 或另立套件；`flutter analyze`；整份完成才跑全套 `flutter test`；更新 `issues.md` 第 19 列。
+- [x] **Task 1：穩定性（環境隔離）。** 指令：`flutter test integration_test/reader_screen_test.dart -d windows --reporter=expanded`，**連跑 5 次**。每次之前：確認沒有殘留的 `elinkbook.exe`（沿用 `app/tool/run_windows_smoke.ps1` 的 `taskkill.exe /IM elinkbook.exe /F` 做法）、刪除暫存目錄中本檔產生的 `sample_*.epub`／`sample_*.pdf`。每次記錄：通過／失敗數、失敗項名稱、是否中途結束（exit code）、耗時。原始輸出存 `docs/epics/epic-66-windows-port/assets/issue-19-run-N.log`。目的：確認「整份中斷」現在會不會發生、9 項失敗是否穩定。
+- [x] **Task 2：類別 A 實證。** 在失敗點暫時印出當時是否有 SnackBar（「版面載入中」提示）、`_layoutSettingsButtonReady` 回傳值與 `reader_loading_indicator` 狀態（拋棄式、不進 commit）。證實後，把就緒條件改成「按鈕存在、且書籍已載入完成（`reader_loading_indicator` 消失；或按鈕點擊後確認 `ReaderSettingsSheet` 真的出現再往下）」，同步更正該函式過時的註解。
+- [x] **Task 3：類別 B 處理。** 對 8、9、10、13、14 加 `skip: skipOnWindows('…')`，原因分別指向 `supportsMobileReaderControls` 守衛（方向鎖定、E-Ink 濾鏡僅行動裝置）。確認 Windows 沒有對應的替代行為（Task 1 的日誌與讀碼）；若 Windows 其實有替代行為卻沒測，另立 Issue，不在此處補。
+- [x] **Task 4：第 17 項。** 不改座標。可選：對該 `drag()` 傳 `warnIfMissed: false` 並加註解說明「此處刻意驗證手勢被阻斷」，只為消除警告；執行前確認這是人類要的（見待確認）。
+- [x] **Task 5：回報。** 寫 `issue-19-report.md`：19 項逐項狀態表（通過／skip＋原因／另立 Issue）、成因證據、與 Issue 13 結論的差異及判斷依據；更正 Issue 13 報告中過時的描述。
+- [x] **Task 6：驗證與歸屬。** 該檔連跑 5 次結果一致；量測加入後的總耗時；依人類決定放進 `windows_smoke_suite.txt` 或另立套件；`flutter analyze`；整份完成才跑全套 `flutter test`；更新 `issues.md` 第 19 列。
 
 ## 過關條件
 1. 19 項各有明確狀態：通過、`skipOnWindows`（附原因）、或另立 Issue（附編號）；沒有「原因未明」。
