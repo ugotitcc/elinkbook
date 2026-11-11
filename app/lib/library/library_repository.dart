@@ -25,8 +25,10 @@ abstract class LibraryRepository {
   Future<void> deleteGroup(String name);
 
   /// 供既有書籍（`isFixedLayout == null`）一次性補判斷 EPUB 是否為固定版面
-  /// （FXL），呼叫原生端 `detectEpubLayout` method channel 後寫回 [bookId]
-  /// 對應資料列的 `is_fixed_layout` 欄位，回傳判斷結果（見
+  /// （FXL），透過 `SqliteLibraryRepository.open` 注入的 `epubLayoutDetector`
+  /// （Android 接 foliate-js 探針；未注入時回傳 `false` 且不寫入資料庫）取得結果後
+  /// 寫回 [bookId] 對應資料列的 `is_fixed_layout` 欄位，回傳判斷結果；偵測器丟出的
+  /// 例外會原樣往外拋，由呼叫端處理（見
   /// docs/epics/epic-17-epub-render-migration/spec.md「既有書籍回填流程」）。
   /// `ReaderScreen`（Issue 3）建構閱讀器 widget 之前呼叫。
   Future<bool> detectAndCacheEpubLayout(String bookId, String filePath);

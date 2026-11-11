@@ -1711,7 +1711,8 @@ void main() {
       await tester.pump();
 
       expect(repository.detectAndCacheEpubLayoutCalls, ['b1']);
-      expect(repository.layoutWriteCount, 0);
+      // 降級路徑只 setState，不得經由 repository 寫回任何書籍資料列。
+      expect(repository.bookWriteCount, 0);
       final stored = (await repository.listBooks()).single;
       expect(stored.isFixedLayout, isNull);
 
@@ -13834,7 +13835,14 @@ Future<void> switchToTab(WidgetTester tester, String tabLabel) async {
 class _ThrowingDetectLibraryRepository extends FakeLibraryRepository {
   _ThrowingDetectLibraryRepository({super.initialBooks});
 
-  int layoutWriteCount = 0;
+  /// 記錄 [updateBook] 被呼叫的次數：偵測失敗的降級路徑不得寫入書籍資料列。
+  int bookWriteCount = 0;
+
+  @override
+  Future<void> updateBook(Book book) async {
+    bookWriteCount++;
+    await super.updateBook(book);
+  }
 
   @override
   Future<bool> detectAndCacheEpubLayout(String bookId, String filePath) async {

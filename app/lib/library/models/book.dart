@@ -36,8 +36,8 @@ class Book {
   /// 本書是否為固定版面（FXL）EPUB，`null` 代表尚未判斷過（涵蓋 Phase 1
   /// 上線前已匯入的既有書籍）或本書非 EPUB 格式（PDF/TXT 恆為 `null`，
   /// 語意上不適用，見 epic-17-epub-render-migration/spec.md「資料模型」）。
-  /// 判斷結果由 `BookMetadataChannel.kt` 的 `extractEpubMetadata()`（匯入時）
-  /// 或 `detectEpubLayout()`（既有書籍補判斷）提供，寫入後供 `ReaderScreen`
+  /// 判斷結果由匯入時的 EPUB 詮釋資料抽取（foliate-js 探針）
+  /// 或 `detectAndCacheEpubLayout()`（既有書籍補判斷）提供，寫入後供 `ReaderScreen`
   /// 決定建構 `EpubReaderView`（Readium）或 `FoliateEpubReaderView`
   /// （`foliate-js`），**與 `reader/writing_mode.dart` 的
   /// `EpubLayoutInfo.isFixedLayout`（Readium 開書後才回報的執行期狀態）

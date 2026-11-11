@@ -12,11 +12,11 @@
    - 移除 `extractEpubMetadata`、`detectEpubLayout`、`findFallbackCoverBitmap`、`resolveAbsoluteUrl` 與所有 Readium 相關 import。
    - Method Channel `extractMetadata` 在傳入 `format == "epub"` 時回傳 `PlatformException(code: "unsupported_format")`；`detectEpubLayout` 直接回退至 `result.notImplemented()`。
 3. **版面回填與 Dart 端清理**：
-   - `LibraryScreen` 的舊書版面回填改以可注入的 `detectEpubLayout` 函式（預設走 `detectAndroidEpubLayout`）執行，透過 `foliate-js` 探針取得 `isFixedLayout`。
+   - 舊書版面回填改由 `SqliteLibraryRepository.open(epubLayoutDetector:)` 注入的偵測器執行（`main.dart` 只在 Android 注入 `detectAndroidEpubLayout`，沒有預設值；未注入時回傳 `false` 且不寫入資料庫；`LibraryScreen` 未更動），透過 `foliate-js` 探針取得 `isFixedLayout`。
    - `ReaderScreen._resolveEpubEngineDispatch` 增加例外攔截防護（`.catchError`），在探針回填失敗或逾時時記錄除錯日誌並安全降級為流式書籍（`_dispatchedIsFixedLayout = false`），不寫入資料庫、不卡住載入指示器。
    - 移除 Dart 端 Readium 退路旗標（`kAndroidMetadataFoliateFirst`、`readiumReader`、`foliateFirst`）。
    - `mapProbeResult` 嚴格拒收非 `image/*` 之封面 MIME 型別（若非 `image/*` 則回傳 `coverBytes: null`），同時保留 `coverType` 供呼叫端稽核。
-   - `readEpubMetadataOnAndroid` 與 `detectAndroidEpubLayout` 在探針丟出例外時統一封裝為 `PlatformException(code: 'extraction_failed' / 'detection_failed')`。
+   - `extractAndroidBookMetadata` 與 `detectAndroidEpubLayout` 在探針丟出例外時統一封裝為 `PlatformException(code: 'extraction_failed' / 'detection_failed')`（`readEpubMetadataOnAndroid` 本身仍丟 `StateError`／`TimeoutException`，包裝發生在上述兩個函式）。
 4. **清理對比測試與授權條款**：
    - 刪除 `app/lib/library/metadata_comparison.dart`、`app/test/library/metadata_comparison_test.dart`、`app/integration_test/metadata_comparison_test.dart`、`app/integration_test/library_metadata_comparison_test.dart`。
    - 刪除 `app/assets/licenses/readium-kotlin-toolkit.txt`，並自 `app/lib/licenses/third_party_licenses.dart` 與其測試中移除 `Readium kotlin-toolkit` 條款。
@@ -77,8 +77,9 @@
 - 實機量測結果：
   - `FoliateReaderView` 於開書後 **8,490 ms** 完成首次頁面渲染。
   - 整合測試中 `pumpUntilLoaded` 等待載入指示器消失與資料庫回填寫入完成（`is_fixed_layout` 更新為 `0`）之總牆上時間為 **17,542 ms**。
-- **效能分析與觀察**：
-  BooksPad 採用較低階之 32 位元 ARM 處理器，在開書同時由 `ReaderScreen` 啟動背景 headless WebView 探針執行回填，兩者競爭 CPU 與 WebView 資源，導致整合測試中的總等待時間超過 10 秒（達到 17.5 秒）。此現象觸及計畫「待人類確認」第 1 點，但使用者在 8.5 秒時閱讀畫面已成功渲染，後續亦正確寫入 DB。
+- **效能分析與觀察（2026-11-11 依審查更正）**：
+  `ReaderScreen` 在偵測 Future 回來之前不會建構 `FoliateReaderView`（`_dispatchedIsFixedLayout` 為 null 時顯示載入指示器），所以背景探針與開書是**先後執行、不是並行競爭**。原先「兩者競爭 CPU 與 WebView 資源」的歸因與程式流程不符，予以撤回；總等待時間 17,542 ms 應理解為「探針回填耗時＋其後的開書耗時」，各階段的拆分**未量測**。8,490 ms 的起迄點也沒有留存定義（原稿未註明是自哪個時間點算起），不可當作「載入指示器消失」的時間。BooksPad 是 32 位元低階裝置、已超過計畫的 10 秒門檻，推論 WAVE 只會更慢，但**未實測**。
+- **人類決定（2026-11-11）：接受 17.5 秒。** 每本舊書只發生一次（結果寫回資料庫），不改用輕量偵測。
 - 驗證後已使用一般 debug APK 還原 BooksPad 環境，並刪除暫存測試檔。
 
 ---
@@ -98,13 +99,14 @@
     - PASS：掃描 58 個 integration 測試檔，所有 MaterialApp 皆帶 locale。
 - **純 Dart 單元與組件測試**：
   - `flutter test`：全套測試共 5,167 項，5,162 項首次通過；5 項因全套測試長時間運行（14 分 47 秒）背景排程競爭之短暫 flake，於單獨複測 `test/downloads/download_queue_controller_test.dart`（28/28 passed）與 `test/search/content_indexing_scheduler_test.dart`（9/9 passed）時 100% 全部通過（0 失敗）。
+  - **2026-11-11 審查後重跑（修正 Minor 之後，Windows 開發機）**：全套 `flutter test` 5,167 項通過、2 項略過、0 項失敗（約 6.5 分鐘，exit 0）。原稿那 5 項首次失敗的名稱沒有留存，所以**無法證明**它們與這次重跑是同一批；只能說這次沒有重現。
   - 既有核心單元測試全部綠燈（包含 `test/licenses/third_party_licenses_test.dart` 19/19、`test/screens/reader_screen_test.dart` 317/317、`test/library/book_import_service_test.dart` 53/53 等）。
 
 ---
 
 ## 5. 未驗證項目與後續維護項目（依實測邊界，絕不外推）
 
-1. **WAVE 實機未連接**：
+1. **WAVE 實機未連接（人類 2026-11-11 同意以 BooksPad 替代 WAVE 驗證）**：
    - 本機測試期間僅連接 BooksPad（`B78CW2508006423`），WAVE（`TCE70P24B2202374`）未連接。
    - 所有實機驗證（包含 103 本掃描、匯入與回填計時）均在 BooksPad 上完成。WAVE 實機的手動操作與開書回填秒數標記為「未驗證（本機僅連接 BooksPad，未連接 WAVE）」。
 2. **Release APK 實機安裝執行未驗證**：
@@ -113,3 +115,9 @@
    - 本次改動僅針對 Android 端 `mapProbeResult` 拒收非 `image/*` 之封面型別。Windows 端維持現狀未動，列入後續工單評估是否對齊。
 4. **`coreLibraryDesugaring` 依賴性保留**：
    - 雖然 Readium 已移除，但其他套件是否仍依賴 Desugaring 未行深層剝離，維持現有設定保留不更動。
+
+5. **Task 6 的實機原始輸出未留存（審查 I3）**：
+   - 第 2、3.2、3.3、3.4 節的 103 本掃描、損毀 EPUB 匯入與計時，都由已刪除的暫時性整合測試產生，報告內沒有日誌片段或輸出檔；匯入用的 `meta_basic.epub`、`corrupt_broken_book.epub` 也不在 `app/test/fixtures/`；APK「移除前」基準來自 Task 0 存於 scratchpad 的數字，未附原始檔。
+   - 因此這些實機數字**沒有經過獨立審查者驗證**，只是實作者自述；日後若有爭議需要重做。
+6. **全套測試 5 項首次失敗未列名（審查 M4）**：
+   - 原稿只記錄「5 項」且重跑兩個檔案通過，沒有留下 5 項的名稱與所屬檔案，無法確認是否全落在那兩個檔案。2026-11-11 審查後的重跑結果見下一節。
