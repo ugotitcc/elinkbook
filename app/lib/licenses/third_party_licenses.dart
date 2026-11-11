@@ -37,11 +37,6 @@ const List<ThirdPartyLicense> kThirdPartyLicenses = [
     packageName: 'OpenCC',
     assetPath: 'assets/licenses/opencc.txt',
   ),
-  // Readium kotlin-toolkit：readium-shared／readium-streamer 兩個 Android 相依
-  ThirdPartyLicense(
-    packageName: 'Readium kotlin-toolkit',
-    assetPath: 'assets/licenses/readium-kotlin-toolkit.txt',
-  ),
   // epic-63：MDX 解析器 dict_reader 1.6.1（MIT）與其遞移相依。
   // collection 與 typed_data 的 LICENSE 全文相同（BSD-3-Clause，Dart 專案作者），
   // 因此共用一份 asset，名稱合併顯示。

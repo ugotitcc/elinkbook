@@ -144,10 +144,10 @@
 - Delete: `app/assets/licenses/readium-kotlin-toolkit.txt`
 - Modify: `AGENTS.md`（第 33 行「`BookMetadataChannel.kt`（EPUB metadata 讀取，仍依賴 readium…）」改為 PDF metadata、SHA-256、content URI 複製；第 76、148 行 minSdk 24 的由來改為只剩 `integration_test` 外掛）、`CLAUDE.md`（minSdk 24 由來那句同樣只剩 `integration_test`；「`readium-shared`／`readium-streamer` 保留供 `BookMetadataChannel.kt` 使用，其餘 Readium 依賴已移除」那句）、`docs/epics/epic-66-windows-port/epic.md`（決策 29 狀態）、`issues.md`（第 18 列、後續項目段落）
 
-- [ ] **Step 1: 改測試。** `third_party_licenses_test.dart` 移除 `'Readium kotlin-toolkit'` 的清單項與全文斷言。跑 `flutter test test/licenses/third_party_licenses_test.dart`，預期：先失敗（授權項仍在）。
-- [ ] **Step 2: 移除** 授權項與 asset 檔；確認 `pubspec.yaml` 的 `assets/licenses/` 目錄宣告不需改。測試轉為通過。
-- [ ] **Step 3: 文件。** `AGENTS.md`、`CLAUDE.md` 依 Files 所列更新（`AGENTS.md` 第 143 行 `fontWeight` 的「Readium 倍率語意」是歷史命名、不是依賴，不動）；`CLAUDE.md` 改為「Android 已完全移除 Readium 依賴」；`epic.md` 決策 29 註明階段二完成；`issues.md` 第 18 列待實測後補完。
-- [ ] **Step 4: Commit** `docs: 移除 Readium 授權項並同步架構說明（epic-66 Issue 18）`。
+- [x] **Step 1: 改測試。** `third_party_licenses_test.dart` 移除 `'Readium kotlin-toolkit'` 的清單項與全文斷言。跑 `flutter test test/licenses/third_party_licenses_test.dart`，預期：先失敗（授權項仍在）。
+- [x] **Step 2: 移除** 授權項與 asset 檔；確認 `pubspec.yaml` 的 `assets/licenses/` 目錄宣告不需改。測試轉為通過。
+- [x] **Step 3: 文件。** `AGENTS.md`、`CLAUDE.md` 依 Files 所列更新（`AGENTS.md` 第 143 行 `fontWeight` 的「Readium 倍率語意」是歷史命名、不是依賴，不動）；`CLAUDE.md` 改為「Android 已完全移除 Readium 依賴」；`epic.md` 決策 29 註明階段二完成；`issues.md` 第 18 列待實測後補完。
+- [x] **Step 4: Commit** `docs: 移除 Readium 授權項並同步架構說明（epic-66 Issue 18）`。
 
 ### Task 6：Android 實機驗證與報告（需人類配合裝置）
 

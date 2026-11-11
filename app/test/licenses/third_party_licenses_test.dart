@@ -55,13 +55,12 @@ void main() {
   });
 
   group('kThirdPartyLicenses 清單', () {
-    test('21 項：12 項程式元件、2 筆資料來源加 7 款字型，順序與名稱符合 spec', () {
+    test('20 項：11 項程式元件、2 筆資料來源加 7 款字型，順序與名稱符合 spec', () {
       expect(kThirdPartyLicenses.map((l) => l.packageName).toList(), [
         'foliate-js',
         'zip.js',
         'fflate',
         'OpenCC',
-        'Readium kotlin-toolkit',
         // dict_reader 1.6.1 與其遞移相依（MIT／BSD-3-Clause／Apache-2.0）。
         // collection 與 typed_data 共用一份 BSD-3-Clause 全文，合併成一筆。
         _dictReaderName,
@@ -104,7 +103,7 @@ void main() {
   });
 
   group('registerThirdPartyLicenses', () {
-    test('以真實 rootBundle 登錄：21 筆、packages 與清單一致、全文含上游版權關鍵字', () async {
+    test('以真實 rootBundle 登錄：20 筆、packages 與清單一致、全文含上游版權關鍵字', () async {
       registerThirdPartyLicenses();
 
       final entries = await _readAllLicenses();
@@ -122,7 +121,6 @@ void main() {
       expect(textByPackage['zip.js'], contains('Gildas Lormeau'));
       expect(textByPackage['fflate'], contains('Arjun Barrett'));
       expect(textByPackage['OpenCC'], contains('Apache License'));
-      expect(textByPackage['Readium kotlin-toolkit'], contains('Readium'));
       // epic-63：MDX 解析器與遞移相依的授權
       expect(textByPackage[_dictReaderName], contains('Mumulhl'));
       expect(textByPackage['blockchain_utils'], contains('Mohsen'));

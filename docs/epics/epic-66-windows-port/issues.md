@@ -538,7 +538,7 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
     4. 移除 `extractEpubMetadata` 原生方法與相關宣告。
     5. 將既有書籍回填 `detectEpubLayout` 改由 foliate-js 探針抽取。
     6. 清理 `third_party_licenses`、更新專案文件與架構說明。
-  - 狀態：已登錄，不排程。
+  - 狀態：實作中（見 [plan-issue-18.md](plans/plan-issue-18.md)）。
 - **`reader_screen_test` 在 Windows 整份中斷（已登錄為 Issue 19，2026-11-10，不排程）。**
   - 現象：未修改的 `HEAD` 在這台機器上，第一支測試結束後 App 結束（exit 79），其餘 18 支 `did not complete`；單獨跑第 1、2 支皆通過。Issue 13 初版報告所稱「9／19 通過」在這台機器上無法重現，原因未查明，因此此檔不在套件清單內。
   - 已排除：儲存閱讀位置時資料庫已關閉（診斷輸出沒有該例外）、測試端重複關庫。
