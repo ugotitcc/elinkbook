@@ -164,6 +164,8 @@ void main() {
       _loadingIndicatorGone,
       timeout: const Duration(seconds: 10),
     );
+    // 等待 WebView2 完成初始畫面渲染與 IPC 回呼，避免剛載入即卸載觸發 Windows 原生端競爭中斷
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing,
         reason: '應觸發 onPageRendered（載入指示器消失且無錯誤訊息），'
@@ -340,6 +342,8 @@ void main() {
       _loadingIndicatorGone,
       timeout: const Duration(seconds: 10),
     );
+    // 等待 WebView2 完成初始畫面渲染與 IPC 回呼，避免剛載入即卸載觸發 Windows 原生端競爭中斷
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing,
         reason: '帶著已持久化的 fontSize=17 重新開書，應正常渲染、不觸發 onError'
