@@ -95,12 +95,12 @@
 - Produces（行為）: `mapProbeResult(String json)` 讀取探針回傳的 `coverType`：**非空且不以 `image/` 開頭**時 `coverBytes` 為 `null`；`coverType` 缺漏或空字串時維持原行為（保留既有測試與舊探針相容）。回傳的 Map 另外保留 `'coverType'`（`raw['coverType'] as String?`，供 Task 6 的封面型別掃描使用，既有消費端只讀既有鍵、不受影響）。只改 Android 的 `mapProbeResult`；Windows 的 `windows_epub_metadata.dart` 有同樣的對應程式碼，**本 Issue 不改**，在報告記為後續項目。
 - Produces（簽章變更）: `Future<Map<String, Object?>?> extractAndroidBookMetadata(String uri, String format, {Future<Map<String, Object?>> Function(String uri)? foliateReader, Future<Map<String, Object?>?> Function(String uri, String format)? nativeReader})`。`format == 'epub'`（不分大小寫）→ `runSerialized` 內呼叫 foliate 探針，**例外一律包成 `PlatformException(code: 'extraction_failed', message: e.toString())`（已是 `PlatformException` 則原樣往外拋；`StateError`、`TimeoutException` 等都要包）**——這是呼叫端 `_peekIdentity`、`_prepareBookParts`、`_readEpubIdentifier` 的降級合約（見 Review Focus 1）；其他格式 → 原生通道（`nativeReader` 取代原 `readiumReader`，預設呼叫 `kBookMetadataChannel` 的 `extractMetadata`，引數 `uri`、`format`）。刪除 `kAndroidMetadataFoliateFirst` 與 `foliateFirst` 參數。
 
-- [ ] **Step 1a: 封面型別測試（`android_epub_metadata_test.dart`）。** 新增：`coverType 為 application/xhtml+xml 時 coverBytes 為 null`、`coverType 為 image/jpeg 時照常解碼`、`coverType 缺漏時照常解碼（相容既有案例）`。
-- [ ] **Step 1: 改寫測試。** 刪除「foliateFirst 為 false」「foliate 丟例外時退回 Readium」兩個案例與其日誌斷言；保留／改寫：`epub 走 foliate 且原生從未呼叫`、`pdf 走原生通道`、`epub 探針丟 StateError 時包成 PlatformException（code 為 extraction_failed，不退回、不吞掉）`、`探針丟 TimeoutException 同樣被包裝`、`探針丟 PlatformException 時原樣往外拋`、`epub 經過 runSerialized`、`預設原生呼叫引數為 uri 與 format`。
-- [ ] **Step 2: 跑測試確認失敗**（舊簽章的測試編譯失敗或斷言失敗）。`flutter test test/library/android_book_metadata_test.dart`。
-- [ ] **Step 3: 實作** 簽章變更與封面型別檢查；`grep -rn "kAndroidMetadataFoliateFirst\|foliateFirst\|readiumReader" app/lib app/test app/integration_test` 預期無殘留（`integration_test` 的殘留於 Task 4 處理；**`metadata_comparison.dart` 此 Task 不刪**，因為 `integration_test/` 仍 import 它，`analysis_options.yaml` 沒有排除該目錄，提早刪除會讓 Step 4 的 `flutter analyze` 失敗）。
-- [ ] **Step 4: 跑測試確認通過**，`flutter analyze` 乾淨。
-- [ ] **Step 5: Commit** `refactor(library): 移除 Android EPUB 詮釋資料的 Readium 退路與旗標（epic-66 Issue 18）`。
+- [x] **Step 1a: 封面型別測試（`android_epub_metadata_test.dart`）。** 新增：`coverType 為 application/xhtml+xml 時 coverBytes 為 null`、`coverType 為 image/jpeg 時照常解碼`、`coverType 缺漏時照常解碼（相容既有案例）`。
+- [x] **Step 1: 改寫測試。** 刪除「foliateFirst 為 false」「foliate 丟例外時退回 Readium」兩個案例與其日誌斷言；保留／改寫：`epub 走 foliate 且原生從未呼叫`、`pdf 走原生通道`、`epub 探針丟 StateError 時包成 PlatformException（code 為 extraction_failed，不退回、不吞掉）`、`探針丟 TimeoutException 同樣被包裝`、`探針丟 PlatformException 時原樣往外拋`、`epub 經過 runSerialized`、`預設原生呼叫引數為 uri 與 format`。
+- [x] **Step 2: 跑測試確認失敗**（舊簽章的測試編譯失敗或斷言失敗）。`flutter test test/library/android_book_metadata_test.dart`。
+- [x] **Step 3: 實作** 簽章變更與封面型別檢查；`grep -rn "kAndroidMetadataFoliateFirst\|foliateFirst\|readiumReader" app/lib app/test app/integration_test` 預期無殘留（`integration_test` 的殘留於 Task 4 處理；**`metadata_comparison.dart` 此 Task 不刪**，因為 `integration_test/` 仍 import 它，`analysis_options.yaml` 沒有排除該目錄，提早刪除會讓 Step 4 的 `flutter analyze` 失敗）。
+- [x] **Step 4: 跑測試確認通過**，`flutter analyze` 乾淨。
+- [x] **Step 5: Commit** `refactor(library): 移除 Android EPUB 詮釋資料的 Readium 退路與旗標（epic-66 Issue 18）`。
 
 ### Task 3：版面回填失敗時閱讀畫面不卡載入
 

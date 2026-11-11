@@ -2,7 +2,6 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/library/android_book_metadata.dart';
@@ -11,154 +10,110 @@ import 'package:elinkbook/library/library_repository.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('extractAndroidBookMetadata 派送與退路', () {
-    test('kAndroidMetadataFoliateFirst 預設值為 true', () {
-      expect(kAndroidMetadataFoliateFirst, isTrue);
-    });
-
-    test('未帶 foliateFirst 參數時預設走 foliateReader，Readium 從未呼叫', () async {
+  group('extractAndroidBookMetadata 派送與例外處理', () {
+    test('epub 走 foliate 且原生從未呼叫（不分大小寫）', () async {
       var foliateCalled = false;
-      var readiumCalled = false;
-
-      final result = await extractAndroidBookMetadata(
-        'content://book/default',
-        'epub',
-        foliateReader: (uri) async {
-          foliateCalled = true;
-          return {'title': '預設 Foliate 書名'};
-        },
-        readiumReader: (uri, format) async {
-          readiumCalled = true;
-          return {'title': 'Readium 書名'};
-        },
-      );
-
-      expect(foliateCalled, isTrue);
-      expect(readiumCalled, isFalse);
-      expect(result?['title'], '預設 Foliate 書名');
-    });
-
-    test('foliateFirst 為 false 時只呼叫 Readium，foliate 從未呼叫', () async {
-      var foliateCalled = false;
-      var readiumCalled = false;
-
-      final result = await extractAndroidBookMetadata(
-        'content://book/1',
-        'epub',
-        foliateFirst: false,
-        foliateReader: (uri) async {
-          foliateCalled = true;
-          return {'title': 'Foliate 書名'};
-        },
-        readiumReader: (uri, format) async {
-          readiumCalled = true;
-          return {'title': 'Readium 書名'};
-        },
-      );
-
-      expect(foliateCalled, isFalse);
-      expect(readiumCalled, isTrue);
-      expect(result?['title'], 'Readium 書名');
-    });
-
-    test('foliateFirst 為 true 且為 epub、foliate 成功時回傳其結果，Readium 從未呼叫', () async {
-      var foliateCalled = false;
-      var readiumCalled = false;
+      var nativeCalled = false;
 
       final result = await extractAndroidBookMetadata(
         'content://book/2',
-        'epub',
-        foliateFirst: true,
+        'EPUB',
         foliateReader: (uri) async {
           foliateCalled = true;
+          expect(uri, 'content://book/2');
           return {'title': 'Foliate 書名', 'author': '作者 A'};
         },
-        readiumReader: (uri, format) async {
-          readiumCalled = true;
-          return {'title': 'Readium 書名'};
+        nativeReader: (uri, format) async {
+          nativeCalled = true;
+          return {'title': '原生書名'};
         },
       );
 
       expect(foliateCalled, isTrue);
-      expect(readiumCalled, isFalse);
+      expect(nativeCalled, isFalse);
       expect(result?['title'], 'Foliate 書名');
       expect(result?['author'], '作者 A');
     });
 
-    test('foliateFirst 為 true 但 foliate 丟例外時退回 Readium 並記錄日誌', () async {
+    test('pdf 走原生通道，foliate 從未呼叫', () async {
       var foliateCalled = false;
-      var readiumCalled = false;
-      final logs = <String>[];
-
-      final originalDebugPrint = debugPrint;
-      debugPrint = (String? message, {int? wrapWidth}) {
-        if (message != null) logs.add(message);
-      };
-
-      try {
-        final result = await extractAndroidBookMetadata(
-          'content://book/3',
-          'epub',
-          foliateFirst: true,
-          foliateReader: (uri) async {
-            foliateCalled = true;
-            throw StateError('探針解析崩潰');
-          },
-          readiumReader: (uri, format) async {
-            readiumCalled = true;
-            return {'title': 'Readium 備用書名'};
-          },
-        );
-
-        expect(foliateCalled, isTrue);
-        expect(readiumCalled, isTrue);
-        expect(result?['title'], 'Readium 備用書名');
-        expect(logs.any((l) => l.contains('foliate-js metadata 提取失敗，退回 Readium')), isTrue);
-      } finally {
-        debugPrint = originalDebugPrint;
-      }
-    });
-
-    test('foliateFirst 為 true 但格式為 pdf 時只呼叫 Readium', () async {
-      var foliateCalled = false;
-      var readiumCalled = false;
+      var nativeCalled = false;
 
       final result = await extractAndroidBookMetadata(
         'content://book/4',
         'pdf',
-        foliateFirst: true,
         foliateReader: (uri) async {
           foliateCalled = true;
           return {'title': 'Foliate 書名'};
         },
-        readiumReader: (uri, format) async {
-          readiumCalled = true;
+        nativeReader: (uri, format) async {
+          nativeCalled = true;
           return {'title': 'PDF 封面'};
         },
       );
 
       expect(foliateCalled, isFalse);
-      expect(readiumCalled, isTrue);
+      expect(nativeCalled, isTrue);
       expect(result?['title'], 'PDF 封面');
     });
 
-    test('兩邊都失敗時把 Readium 的例外往外拋而不吞掉', () async {
-      expect(
+    test('epub 探針丟 StateError 時包成 PlatformException（code 為 extraction_failed，不退回、不吞掉）', () async {
+      var nativeCalled = false;
+
+      await expectLater(
         () => extractAndroidBookMetadata(
           'content://book/5',
           'epub',
-          foliateFirst: true,
           foliateReader: (uri) async => throw StateError('foliate 失敗'),
-          readiumReader: (uri, format) async => throw PlatformException(
-            code: 'readium_failed',
-            message: 'Readium 解析也失敗',
-          ),
+          nativeReader: (uri, format) async {
+            nativeCalled = true;
+            return {'title': '原生書名'};
+          },
         ),
-        throwsA(isA<PlatformException>()),
+        throwsA(
+          isA<PlatformException>()
+              .having((e) => e.code, 'code', 'extraction_failed')
+              .having((e) => e.message, 'message', contains('foliate 失敗')),
+        ),
+      );
+      expect(nativeCalled, isFalse);
+    });
+
+    test('探針丟 TimeoutException 同樣被包裝為 extraction_failed', () async {
+      await expectLater(
+        () => extractAndroidBookMetadata(
+          'content://book/timeout',
+          'epub',
+          foliateReader: (uri) async =>
+              throw TimeoutException('probe timeout'),
+        ),
+        throwsA(
+          isA<PlatformException>()
+              .having((e) => e.code, 'code', 'extraction_failed')
+              .having((e) => e.message, 'message', contains('probe timeout')),
+        ),
       );
     });
 
-    test('兩次並行呼叫 foliate 路徑時依序執行', () async {
+    test('探針丟 PlatformException 時原樣往外拋', () async {
+      await expectLater(
+        () => extractAndroidBookMetadata(
+          'content://book/platform',
+          'epub',
+          foliateReader: (uri) async => throw PlatformException(
+            code: 'custom_code',
+            message: '自訂錯誤',
+          ),
+        ),
+        throwsA(
+          isA<PlatformException>()
+              .having((e) => e.code, 'code', 'custom_code')
+              .having((e) => e.message, 'message', '自訂錯誤'),
+        ),
+      );
+    });
+
+    test('epub 經過 runSerialized', () async {
       final firstStarted = Completer<void>();
       final firstBlocker = Completer<void>();
       var firstRunning = false;
@@ -167,7 +122,6 @@ void main() {
       final future1 = extractAndroidBookMetadata(
         'book1.epub',
         'epub',
-        foliateFirst: true,
         foliateReader: (uri) async {
           firstRunning = true;
           firstStarted.complete();
@@ -182,7 +136,6 @@ void main() {
       final future2 = extractAndroidBookMetadata(
         'book2.epub',
         'epub',
-        foliateFirst: true,
         foliateReader: (uri) async {
           if (firstRunning) {
             secondStartedWhileFirstRunning = true;
@@ -202,7 +155,7 @@ void main() {
       expect(secondStartedWhileFirstRunning, isFalse);
     });
 
-    test('預設 Readium 呼叫原生通道時引數為 uri 與 format', () async {
+    test('預設原生呼叫引數為 uri 與 format', () async {
       MethodCall? interceptedCall;
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -219,16 +172,15 @@ void main() {
 
       try {
         final result = await extractAndroidBookMetadata(
-          'content://sample/book.epub',
-          'epub',
-          foliateFirst: false, // 走預設 readiumReader
+          'content://sample/book.pdf',
+          'pdf',
         );
 
         expect(interceptedCall, isNotNull);
         expect(interceptedCall!.method, 'extractMetadata');
         final args = interceptedCall!.arguments as Map<dynamic, dynamic>;
-        expect(args['uri'], 'content://sample/book.epub');
-        expect(args['format'], 'epub');
+        expect(args['uri'], 'content://sample/book.pdf');
+        expect(args['format'], 'pdf');
         expect(args.containsKey('path'), isFalse);
         expect(result?['title'], '通道回傳書名');
       } finally {

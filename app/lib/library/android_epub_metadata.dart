@@ -47,12 +47,19 @@ try {
 ''';
 
 /// 解析探針回傳的 JSON 字串，轉換為詮釋資料 Map。
+///
+/// 當 `coverType` 非空且不以 `image/` 開頭時（例如 foliate `getCover()` 退回 XHTML 頁），
+/// 拒收封面（`coverBytes` 為 `null`）；`coverType` 缺漏或空字串時維持相容解碼。
 Map<String, Object?> mapProbeResult(String json) {
   final raw = jsonDecode(json) as Map<String, dynamic>;
 
+  final coverType = raw['coverType'] as String?;
+  final isRejectedCoverType =
+      coverType != null && coverType.isNotEmpty && !coverType.startsWith('image/');
+
   Uint8List? coverBytes;
   final coverBase64 = raw['coverBase64'] as String?;
-  if (coverBase64 != null && coverBase64.isNotEmpty) {
+  if (!isRejectedCoverType && coverBase64 != null && coverBase64.isNotEmpty) {
     try {
       coverBytes = base64Decode(coverBase64);
     } catch (_) {
@@ -66,6 +73,7 @@ Map<String, Object?> mapProbeResult(String json) {
     'identifier': raw['identifier'] as String?,
     'isFixedLayout': raw['isFixedLayout'] as bool? ?? false,
     'coverBytes': coverBytes,
+    'coverType': coverType,
   };
 }
 
