@@ -18,23 +18,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.readium.r2.shared.publication.Layout
-import org.readium.r2.shared.publication.services.cover
-import org.readium.r2.shared.util.AbsoluteUrl
-import org.readium.r2.shared.util.getOrElse
-import org.readium.r2.shared.util.http.DefaultHttpClient
-import org.readium.r2.shared.util.asset.AssetRetriever
-import org.readium.r2.shared.util.toAbsoluteUrl
-import org.readium.r2.shared.util.toUrl
-import org.readium.r2.streamer.PublicationOpener
-import org.readium.r2.streamer.parser.DefaultPublicationParser
 
 /**
  * 一次性呼叫的原生 MethodChannel，供圖書庫匯入流程（Issue 4）提取詮釋資料
- * （標題/作者/封面），與 EpubReaderView/PdfReaderView 的 PlatformView 渲染
- * 契約分開（見 docs/epics/epic-1-library/spec.md）。`uri` 參數可能是真實
- * 檔案系統路徑，也可能是 content:// 或 file:// URI 字串（見 ADR 0002）；
- * 判斷規則與 EpubReaderView/PdfReaderView（Issue 3）一致但各自獨立實作。
+ * （PDF 封面）、計算 SHA-256 及處理 SAF URI 權限／資料夾列舉。`uri` 參數可能是真實
+ * 檔案系統路徑，也可能是 content:// 或 file:// URI 字串（見 ADR 0002）。
  */
 class BookMetadataChannel(
     private val context: Context,
@@ -45,24 +33,6 @@ class BookMetadataChannel(
 
     init {
         channel.setMethodCallHandler(this)
-    }
-
-    /**
-     * [path] 可能是真實檔案系統路徑，也可能是 content:// 或 file:// URI
-     * 字串。含 "://" 者一律視為 URI，交給 Readium 的 Uri 解析；否則視為
-     * 檔案系統路徑。
-     */
-    private fun resolveAbsoluteUrl(path: String): AbsoluteUrl {
-        return if (path.contains("://")) {
-            // Uri.toAbsoluteUrl() 實際簽章回傳 AbsoluteUrl?（uri 不是絕對路徑時為
-            // null），與工單原始程式碼假設的非空簽章不符；轉為 IllegalArgumentException
-            // 讓外層 try/catch 統一轉成 result.error("extraction_failed", ...)。
-            Uri.parse(path).toAbsoluteUrl()
-                ?: throw IllegalArgumentException("無法解析為合法的絕對 URI：$path")
-        } else {
-            // File.toUrl() 實際簽章需要 isDirectory 參數；此處一律處理檔案（非目錄）。
-            File(path).toUrl(isDirectory = false)
-        }
     }
 
     /**
@@ -87,18 +57,9 @@ class BookMetadataChannel(
                     return
                 }
                 when (format) {
-                    "epub" -> extractEpubMetadata(path, result)
                     "pdf" -> extractPdfMetadata(path, result)
                     else -> result.error("unsupported_format", "不支援的格式：$format", null)
                 }
-            }
-            "detectEpubLayout" -> {
-                val path = call.argument<String>("uri")
-                if (path == null) {
-                    result.error("invalid_arguments", "缺少 uri 參數", null)
-                    return
-                }
-                detectEpubLayout(path, result)
             }
             "computeSha256" -> {
                 val path = call.argument<String>("uri")
@@ -229,116 +190,6 @@ class BookMetadataChannel(
         }
     }
 
-    private fun extractEpubMetadata(path: String, result: MethodChannel.Result) {
-        scope.launch {
-            try {
-                val httpClient = DefaultHttpClient()
-                val assetRetriever = AssetRetriever(context.contentResolver, httpClient)
-                val asset = assetRetriever.retrieve(resolveAbsoluteUrl(path)).getOrElse {
-                    result.error("extraction_failed", "找不到檔案或檔案已損毀：$path", null)
-                    return@launch
-                }
-                val publicationParser = DefaultPublicationParser(
-                    context,
-                    httpClient,
-                    assetRetriever,
-                    pdfFactory = null,
-                )
-                val publicationOpener = PublicationOpener(publicationParser)
-                val publication =
-                    publicationOpener.open(asset, allowUserInteraction = false).getOrElse {
-                        // open() 失敗時 asset 不會被 publicationOpener 接手管理，
-                        // 需自行關閉避免資源洩漏（例如 Issue 4 匯入流程對損毀檔案重試）。
-                        asset.close()
-                        result.error("extraction_failed", "無法解析 EPUB 檔案：${it.message}", null)
-                        return@launch
-                    }
-                try {
-                    val title = publication.metadata.title
-                    val author = publication.metadata.authors.firstOrNull()?.name
-                    // epic-17-epub-render-migration Issue 2：免費多讀一個既有欄位——
-                    // publication 本來就已經在這裡被建構，不需要新的解析路徑
-                    // （見 docs/epics/epic-17-epub-render-migration/spec.md「模組」）。
-                    val isFixedLayout = publication.metadata.layout == Layout.FIXED
-                    // epic-8-sync Issue 3：同樣是免費多讀一個既有欄位，供
-                    // computeBookContentFingerprint() 優先採用（見
-                    // docs/epics/epic-8-sync/spec.md「書籍內容指紋計算」）。
-                    // Readium Metadata.identifier 型別為 String?，缺漏時本來
-                    // 就是 null，不需要額外處理。
-                    val identifier = publication.metadata.identifier
-                    // PNG 壓縮與封面退路的 I/O／解碼皆為耗時工作，移到背景執行緒避免
-                    // 阻塞主執行緒；withContext 返回後會自動切回 scope 的 Main
-                    // dispatcher。
-                    val coverBytes = withContext(Dispatchers.IO) {
-                        val bitmap = publication.cover() ?: findFallbackCoverBitmap(publication)
-                        bitmap?.let { bitmapToPngBytes(it) }
-                    }
-                    result.success(
-                        mapOf(
-                            "title" to title,
-                            "author" to author,
-                            "coverBytes" to coverBytes,
-                            "isFixedLayout" to isFixedLayout,
-                            "identifier" to identifier,
-                        ),
-                    )
-                } finally {
-                    publication.close()
-                }
-            } catch (e: Exception) {
-                result.error(
-                    "extraction_failed",
-                    "提取 EPUB 詮釋資料時發生未預期的錯誤：${e.message}",
-                    null,
-                )
-            }
-        }
-    }
-
-    /**
-     * 供既有書籍（`is_fixed_layout` 為 `null`）補判斷使用（見
-     * docs/epics/epic-17-epub-render-migration/spec.md「既有書籍回填流程」）。
-     * 與 [extractEpubMetadata] 共用同一套開檔模式，但跳過封面點陣圖解碼
-     * （最耗時的部分），只讀 `publication.metadata.layout`。
-     */
-    private fun detectEpubLayout(path: String, result: MethodChannel.Result) {
-        scope.launch {
-            try {
-                val httpClient = DefaultHttpClient()
-                val assetRetriever = AssetRetriever(context.contentResolver, httpClient)
-                val asset = assetRetriever.retrieve(resolveAbsoluteUrl(path)).getOrElse {
-                    result.error("detection_failed", "找不到檔案或檔案已損毀：$path", null)
-                    return@launch
-                }
-                val publicationParser = DefaultPublicationParser(
-                    context,
-                    httpClient,
-                    assetRetriever,
-                    pdfFactory = null,
-                )
-                val publicationOpener = PublicationOpener(publicationParser)
-                val publication =
-                    publicationOpener.open(asset, allowUserInteraction = false).getOrElse {
-                        asset.close()
-                        result.error("detection_failed", "無法解析 EPUB 檔案：${it.message}", null)
-                        return@launch
-                    }
-                try {
-                    val isFixedLayout = publication.metadata.layout == Layout.FIXED
-                    result.success(mapOf("isFixedLayout" to isFixedLayout))
-                } finally {
-                    publication.close()
-                }
-            } catch (e: Exception) {
-                result.error(
-                    "detection_failed",
-                    "判斷 EPUB 版面格式時發生未預期的錯誤：${e.message}",
-                    null,
-                )
-            }
-        }
-    }
-
     private fun extractPdfMetadata(path: String, result: MethodChannel.Result) {
         scope.launch {
             // PdfRenderer 開檔/渲染與 PNG 壓縮皆為阻塞/CPU 密集工作，對 PRD 要求
@@ -445,36 +296,5 @@ class BookMetadataChannel(
         val stream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
         return stream.toByteArray()
-    }
-
-    /**
-     * [org.readium.r2.shared.publication.services.cover] 的預設
-     * `ResourceCoverService` 只在 `manifest.resources`／`readingOrder` 頂層
-     * 搜尋 `rel=cover` 的連結，不會往下查詢每個連結各自的 `alternates`。部分
-     * 固定版面漫畫（例如遵循 EBPAJ／日系電子漫畫規範的 EPUB）封面圖僅透過
-     * spine 首頁（SVG 包裹頁面）的 `fallback`／`alternates` 才能找到——manifest
-     * 內雖然有 `properties="cover-image"` 的宣告，但該連結本身不在 spine
-     * 上，只被首頁的 alternates 引用，導致 `publication.cover()` 回傳 null
-     * （真機用真實檔案驗證確認：`readingOrder` 首項的 `alternates` 內確實有一個
-     * `rels=[cover]` 的連結，但頂層 `resources`／`readingOrder` 皆無）。
-     * 這裡額外遍歷 `readingOrder`／`resources` 各自的 `alternates`，找出
-     * `rel=cover` 的連結後自行讀取＋解碼，作為 Readium 內建邏輯的退路。
-     */
-    private suspend fun findFallbackCoverBitmap(
-        publication: org.readium.r2.shared.publication.Publication,
-    ): Bitmap? {
-        val coverLink =
-            (publication.manifest.readingOrder + publication.manifest.resources)
-                .asSequence()
-                .flatMap { it.alternates.asSequence() }
-                .firstOrNull { it.rels.contains("cover") }
-                ?: return null
-        val resource = publication.get(coverLink) ?: return null
-        return try {
-            val bytes = resource.read().getOrElse { null } ?: return null
-            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        } finally {
-            resource.close()
-        }
     }
 }

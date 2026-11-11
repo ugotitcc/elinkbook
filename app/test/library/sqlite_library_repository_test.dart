@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -3139,66 +3138,95 @@ void main() {
   });
 
   group('detectAndCacheEpubLayout', () {
-    const channel = MethodChannel('elinkbook/book_metadata');
+    test('呼叫注入的 detector 後，正確寫回資料庫（true）並回傳結果', () async {
+      String? capturedPath;
+      final repo = await SqliteLibraryRepository.open(
+        inMemoryDatabasePath,
+        singleInstance: false,
+        epubLayoutDetector: (filePath) async {
+          capturedPath = filePath;
+          return true;
+        },
+      );
+      addTearDown(() => repo.close());
 
-    tearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, null);
-    });
+      await repo.insertBook(_book('b_detect'));
 
-    test('呼叫 detectEpubLayout method channel 後，正確寫回資料庫並回傳結果',
-        () async {
-      await repository.insertBook(_book('b_detect'));
+      final result = await repo.detectAndCacheEpubLayout(
+        'b_detect',
+        'content://example/b_detect',
+      );
 
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (call) async {
-        expect(call.method, 'detectEpubLayout');
-        expect((call.arguments as Map)['uri'], 'content://example/b_detect');
-        return {'isFixedLayout': true};
-      });
-
-      final result = await repository.detectAndCacheEpubLayout(
-          'b_detect', 'content://example/b_detect');
-
+      expect(capturedPath, 'content://example/b_detect');
       expect(result, isTrue);
-      final books = await repository.listBooks();
+      final books = await repo.listBooks();
       expect(books.single.isFixedLayout, isTrue);
     });
 
     test('判斷結果為流式（false）時，正確寫回資料庫', () async {
-      await repository.insertBook(_book('b_detect_reflowable'));
+      final repo = await SqliteLibraryRepository.open(
+        inMemoryDatabasePath,
+        singleInstance: false,
+        epubLayoutDetector: (filePath) async => false,
+      );
+      addTearDown(() => repo.close());
 
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (call) async {
-        return {'isFixedLayout': false};
-      });
+      await repo.insertBook(_book('b_detect_reflowable'));
 
-      final result = await repository.detectAndCacheEpubLayout(
-          'b_detect_reflowable', 'content://example/b_detect_reflowable');
+      final result = await repo.detectAndCacheEpubLayout(
+        'b_detect_reflowable',
+        'content://example/b_detect_reflowable',
+      );
 
       expect(result, isFalse);
-      final books = await repository.listBooks();
+      final books = await repo.listBooks();
       expect(
         books.firstWhere((b) => b.id == 'b_detect_reflowable').isFixedLayout,
         isFalse,
       );
     });
 
-    // epic-66 Issue 1 Task 9a：Windows 沒有 elinkbook/book_metadata 頻道，invoke 必丟
-    // MissingPluginException。原本沒接，ReaderScreen 的 .then() 永遠等不到結果，
-    // 畫面卡在載入圖示直到 30 秒開書逾時。降級為流式（false），且不寫入資料庫——
-    // 偵測沒有真的發生，不能把猜測值當成偵測結果存起來。
-    test('頻道不存在（MissingPluginException）時回傳 false，且不寫入資料庫', () async {
-      await repository.insertBook(_book('b_detect_no_channel'));
-      // 刻意不設定 mock handler：flutter_test 預設對未實作的頻道丟 MissingPluginException。
+    test('detector 為 null 時回傳 false 且資料列 is_fixed_layout 維持 null', () async {
+      await repository.insertBook(_book('b_detect_no_detector'));
 
       final result = await repository.detectAndCacheEpubLayout(
-          'b_detect_no_channel', 'content://example/b_detect_no_channel');
+        'b_detect_no_detector',
+        'content://example/b_detect_no_detector',
+      );
 
       expect(result, isFalse);
       final books = await repository.listBooks();
-      expect(books.firstWhere((b) => b.id == 'b_detect_no_channel').isFixedLayout,
-          isNull);
+      expect(
+        books.firstWhere((b) => b.id == 'b_detect_no_detector').isFixedLayout,
+        isNull,
+      );
+    });
+
+    test('detector 丟例外時例外往外拋、資料列不變', () async {
+      final repo = await SqliteLibraryRepository.open(
+        inMemoryDatabasePath,
+        singleInstance: false,
+        epubLayoutDetector: (filePath) async {
+          throw StateError('probe failed');
+        },
+      );
+      addTearDown(() => repo.close());
+
+      await repo.insertBook(_book('b_detect_error'));
+
+      await expectLater(
+        () => repo.detectAndCacheEpubLayout(
+          'b_detect_error',
+          'content://example/b_detect_error',
+        ),
+        throwsA(isA<StateError>()),
+      );
+
+      final books = await repo.listBooks();
+      expect(
+        books.firstWhere((b) => b.id == 'b_detect_error').isFixedLayout,
+        isNull,
+      );
     });
   });
 

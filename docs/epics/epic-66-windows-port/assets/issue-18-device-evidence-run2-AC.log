@@ -1,0 +1,321 @@
+00:00 +0: loading C:/Users/fycdc/AI/elinkBook/app/integration_test/zz_issue18_evidence_test.dart
+Running Gradle task 'assembleDebug'...                          
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/C:/Users/fycdc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14/lib/native-platform-0.22-milestone-28.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+Running Gradle task 'assembleDebug'...                             66.5s
+✓ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...           9.6s
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:00 +0: A. 書庫 EPUB 封面型別掃描
+[I18_SCAN_SOURCE] tmp:/data/local/tmp/i18_books total=103 dbSizeBefore=null
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=1 | coverType=image/jpeg | coverBytes=495709 | nonImageRejected=false | ms=5234 | title=1小時做完1天工作，亞馬遜怎麼辦到的？：亞馬遜創始主管公開內部超效解決問題、效率翻倍的速度加乘工作法.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=2 | coverType=image/jpeg | coverBytes=143406 | nonImageRejected=false | ms=2075 | title=Airbnb創業生存法則.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=3 | coverType=image/jpeg | coverBytes=383240 | nonImageRejected=false | ms=3919 | title=OKR：做最重要的事.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=4 | coverType=image/jpeg | coverBytes=524216 | nonImageRejected=false | ms=3278 | title=【不懂帶人系列套書】（二冊）：《不懂帶人，你就自己做到死！》、《不懂帶團隊，那就大家一起死！》.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=5 | coverType=image/jpeg | coverBytes=49112 | nonImageRejected=false | ms=1624 | title=一人公司  為什麼小而美是未來企業發展的趨勢.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=6 | coverType=image/jpeg | coverBytes=1184668 | nonImageRejected=false | ms=3826 | title=不懂帶團隊，那就大家一起死！.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=7 | coverType=image/png | coverBytes=2328157 | nonImageRejected=false | ms=5023 | title=不懂財報，也能輕鬆選出賺錢績優股：五大關鍵數字力（隨書附贈32家真實公司財報卡）.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=8 | coverType=image/jpeg | coverBytes=358256 | nonImageRejected=false | ms=2381 | title=不施壓的領導力.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=9 | coverType=image/jpeg | coverBytes=359427 | nonImageRejected=false | ms=2282 | title=什麼才是經營最難的事：矽谷創投天王告訴你真實的管理智慧.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=10 | coverType=image/jpeg | coverBytes=1118798 | nonImageRejected=false | ms=3421 | title=佛畏系統.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=11 | coverType=image/jpeg | coverBytes=366971 | nonImageRejected=false | ms=2183 | title=刷新未來：重新想像AI+HI智能革命下的商業與變革.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=12 | coverType=image/jpeg | coverBytes=230249 | nonImageRejected=false | ms=2757 | title=創意競擇：從賈伯斯黃金年代的軟體設計機密流程，窺見蘋果的創意方法、本質與卓越關鍵.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=13 | coverType=image/jpeg | coverBytes=1620819 | nonImageRejected=false | ms=4082 | title=創新的兩難【20週年暢銷經典版】：當代最具影響力的商管奠基之作，影響賈伯斯、比爾．蓋茲到貝佐斯一生的創新聖經.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=14 | coverType=image/jpeg | coverBytes=782661 | nonImageRejected=false | ms=3367 | title=向不容出錯、最會管理風險的NASA學決策.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=15 | coverType=image/jpeg | coverBytes=875928 | nonImageRejected=false | ms=3041 | title=哈佛法學院的情緒談判課：５大核心情緒策略，創造共贏成果.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=16 | coverType=image/jpeg | coverBytes=344439 | nonImageRejected=false | ms=2360 | title=好設計，4個法則就夠了：頂尖設計師教你學平面設計，一次精通字型、色彩、版面編排的超實用原則〔全新中文範例暢銷升級版〕.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=17 | coverType=image/jpeg | coverBytes=216382 | nonImageRejected=false | ms=2767 | title=孫正義解決問題的數值化思考法.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=18 | coverType=image/jpeg | coverBytes=833076 | nonImageRejected=false | ms=3397 | title=對手偷不走的優勢.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=19 | coverType=image/jpeg | coverBytes=150258 | nonImageRejected=false | ms=2322 | title=小島經濟學.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=20 | coverType=image/jpeg | coverBytes=960726 | nonImageRejected=false | ms=3295 | title=建立當責文化：從思考、行動到成果，激發員工主動改變的領導流程.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=21 | coverType=image/jpeg | coverBytes=428466 | nonImageRejected=false | ms=2538 | title=我們辦公室沒有人！管理大解放，自由工作團隊如何創造更高績效.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=22 | coverType=image/jpeg | coverBytes=768611 | nonImageRejected=false | ms=3322 | title=數位轉型全攻略：虛實整合的WHAT、WHY與HOW.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=23 | coverType=image/jpeg | coverBytes=315759 | nonImageRejected=false | ms=2091 | title=數學就是這樣用：找出生活問題的最佳解.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=24 | coverType=image/jpeg | coverBytes=185200 | nonImageRejected=false | ms=2062 | title=最後吃，才是真領導（增訂版）.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=25 | coverType=image/jpeg | coverBytes=256948 | nonImageRejected=false | ms=1890 | title=業務之神的筆記：寫下來、問對問題，讓「99%的成交」靠你更近！.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=26 | coverType=image/jpeg | coverBytes=371996 | nonImageRejected=false | ms=2642 | title=樊登講論語（套書）：越是亂世，越是競爭，我們越需要《論語》的正道力量；寫給當代菁英的正能量大師課.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=27 | coverType=image/jpeg | coverBytes=384445 | nonImageRejected=false | ms=3022 | title=用生活常識就能看懂財務報表.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=28 | coverType=image/png | coverBytes=1862263 | nonImageRejected=false | ms=4059 | title=當責，從停止抱怨開始：克服被害者心態，才能交出成果、達成目標！.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=29 | coverType=image/jpeg | coverBytes=170242 | nonImageRejected=false | ms=2025 | title=精實服務：將精實原則延伸到消費端，全面消除浪費，創造獲利（經典紀念版）.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=30 | coverType=image/jpeg | coverBytes=558535 | nonImageRejected=false | ms=2970 | title=系統思考實作篇：一眼看清規律背後的結構和邏輯，解決現實世界中的複雜問題 (1).epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=31 | coverType=image/jpeg | coverBytes=558535 | nonImageRejected=false | ms=2983 | title=系統思考實作篇：一眼看清規律背後的結構和邏輯，解決現實世界中的複雜問題.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=32 | coverType=image/jpeg | coverBytes=640177 | nonImageRejected=false | ms=2566 | title=給力.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=33 | coverType=image/jpeg | coverBytes=749475 | nonImageRejected=false | ms=2673 | title=聯準會到底在做什麼？.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=34 | coverType=image/jpeg | coverBytes=171892 | nonImageRejected=false | ms=2030 | title=請問巴菲特與蒙格：波克夏股東會的投資與經營智慧.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=35 | coverType=image/jpeg | coverBytes=340836 | nonImageRejected=false | ms=2418 | title=遊戲化實戰全書.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=36 | coverType=image/jpeg | coverBytes=116926 | nonImageRejected=false | ms=1982 | title=鳳凰專案：看IT部門如何讓公司從谷底翻身的傳奇故事.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=37 | coverType=image/jpeg | coverBytes=218858 | nonImageRejected=false | ms=2256 | title=論語365─冬之卷.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=38 | coverType=image/jpeg | coverBytes=198988 | nonImageRejected=false | ms=2571 | title=論語365─夏之卷.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=39 | coverType=image/jpeg | coverBytes=229390 | nonImageRejected=false | ms=2088 | title=論語365─春之卷.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=40 | coverType=image/jpeg | coverBytes=212765 | nonImageRejected=false | ms=2429 | title=論語365─秋之卷.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=41 | coverType=image/jpeg | coverBytes=402974 | nonImageRejected=false | ms=2171 | title=AI科學家李飛飛的視界之旅.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=42 | coverType=image/jpeg | coverBytes=1286898 | nonImageRejected=false | ms=3779 | title=柳林風聲.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=43 | coverType=image/jpeg | coverBytes=230816 | nonImageRejected=false | ms=2100 | title=蘇東坡新傳（上下合併冊）.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=44 | coverType=image/jpeg | coverBytes=617322 | nonImageRejected=false | ms=2349 | title=3分鐘說18萬個故事，打造引響力.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=45 | coverType=image/jpeg | coverBytes=62670 | nonImageRejected=false | ms=1455 | title=99%有效的故事行銷 ，創造品牌力.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=46 | coverType=image/jpeg | coverBytes=1005926 | nonImageRejected=false | ms=3601 | title=AI世代的創意教養.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=47 | coverType=image/jpeg | coverBytes=1447234 | nonImageRejected=false | ms=3732 | title=【關係結束後的重建之路套書】(二冊)：《心理韌性（二版）》、《關係結束後，成為更好的自己【薩提爾專文推薦暢銷經典版】》.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=48 | coverType=image/jpeg | coverBytes=174646 | nonImageRejected=false | ms=1912 | title=一筆入魂.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=49 | coverType=image/jpeg | coverBytes=743410 | nonImageRejected=false | ms=2804 | title=不焦慮的心理課：心理學博士教你活用科學方法，消解生活中的不安與混亂，不再窮忙！.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=50 | coverType=image/jpeg | coverBytes=154558 | nonImageRejected=false | ms=1793 | title=你都沒在聽.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=51 | coverType=image/jpeg | coverBytes=394275 | nonImageRejected=false | ms=2412 | title=其實工作不必這麼累_nodrm.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=52 | coverType=image/jpeg | coverBytes=167196 | nonImageRejected=false | ms=2166 | title=別惹老婆生氣！如何避開吵架地雷區？老公最重要的人生課題.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=53 | coverType=image/png | coverBytes=5223700 | nonImageRejected=false | ms=6055 | title=千萬講師的50堂說話課千萬講師的50堂說話課.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=54 | coverType=image/jpeg | coverBytes=396310 | nonImageRejected=false | ms=2034 | title=啓示路.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=55 | coverType=image/jpeg | coverBytes=250171 | nonImageRejected=false | ms=2026 | title=啟動你的韌性開關：十二道練習給情緒正能量，讓內在更強大.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=56 | coverType=image/jpeg | coverBytes=731916 | nonImageRejected=false | ms=3010 | title=善意溝通.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=57 | coverType=image/jpeg | coverBytes=673197 | nonImageRejected=false | ms=2851 | title=四十我就廢.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=58 | coverType=image/jpeg | coverBytes=546194 | nonImageRejected=false | ms=3465 | title=圖解易經：讀懂《易經》的第一本書，全譯插圖暢銷版.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=59 | coverType=image/jpeg | coverBytes=905940 | nonImageRejected=false | ms=2575 | title=失落的百年致富聖經.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=60 | coverType=image/jpeg | coverBytes=435211 | nonImageRejected=false | ms=2633 | title=好人≠耗人：從內耗中抽身的東大情緒整理.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=61 | coverType=image/jpeg | coverBytes=628211 | nonImageRejected=false | ms=2770 | title=好問題，建立好關係.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=62 | coverType=image/jpeg | coverBytes=808129 | nonImageRejected=false | ms=3186 | title=好好休息.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=63 | coverType=image/jpeg | coverBytes=334851 | nonImageRejected=false | ms=2463 | title=如何讓人喜歡我.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=64 | coverType=image/jpeg | coverBytes=349972 | nonImageRejected=false | ms=2384 | title=子彈溝通.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=65 | coverType=image/jpeg | coverBytes=429272 | nonImageRejected=false | ms=2730 | title=學習如何學習.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=66 | coverType=image/jpeg | coverBytes=690166 | nonImageRejected=false | ms=3032 | title=學霸作文：建中臺大高材生，教你學測國寫拿A_.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=67 | coverType=image/jpeg | coverBytes=751709 | nonImageRejected=false | ms=2827 | title=安靜是種超能力.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=68 | coverType=image/jpeg | coverBytes=812829 | nonImageRejected=false | ms=3184 | title=家有中學生的解憂之書.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=69 | coverType=image/jpeg | coverBytes=441130 | nonImageRejected=false | ms=2366 | title=巴比倫理財聖經.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=70 | coverType=image/jpeg | coverBytes=561153 | nonImageRejected=false | ms=2345 | title=心理摩擦力.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=71 | coverType=image/jpeg | coverBytes=686650 | nonImageRejected=false | ms=2736 | title=思維的良率：台積電教我的高效工作法，像經營者一樣思考、解題.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=72 | coverType=image/jpeg | coverBytes=710842 | nonImageRejected=false | ms=3135 | title=思維的製程.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=73 | coverType=image/jpeg | coverBytes=701297 | nonImageRejected=false | ms=2828 | title=思考致富：全球銷售七千萬冊，洛克菲勒、福特、卡內基的財富締造機密.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=74 | coverType=image/jpeg | coverBytes=358705 | nonImageRejected=false | ms=1917 | title=我想跟你好好說話：賴佩霞的六堂「非暴力溝通」入門課.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=75 | coverType=image/jpeg | coverBytes=1078522 | nonImageRejected=false | ms=3588 | title=控醣：真正改善疾病的飲食法，血糖不失控，還能瘦8公斤！.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=76 | coverType=image/jpeg | coverBytes=97513 | nonImageRejected=false | ms=1691 | title=教出好幫手（全新封面）：想當好主管，先學會教人.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=77 | coverType=image/jpeg | coverBytes=725221 | nonImageRejected=false | ms=2917 | title=教學的技術.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=78 | coverType=image/jpeg | coverBytes=1354549 | nonImageRejected=false | ms=4017 | title=斷食全書.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=79 | coverType=image/jpeg | coverBytes=88182 | nonImageRejected=false | ms=1615 | title=早安，我心中的怪物：一個心理師與五顆破碎心靈的相互啟蒙，看他們從情感失能到學會感受、走出童年創傷的重生之路.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=80 | coverType=image/jpeg | coverBytes=239831 | nonImageRejected=false | ms=1940 | title=有錢人想的和你不一樣.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=81 | coverType=image/jpeg | coverBytes=1948470 | nonImageRejected=false | ms=3782 | title=極限返航.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=82 | coverType=image/jpeg | coverBytes=279776 | nonImageRejected=false | ms=1820 | title=正念練習：75則日常禪定訓練，幫助你活在當下每一刻.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=83 | coverType=image/jpeg | coverBytes=503730 | nonImageRejected=false | ms=2568 | title=歷史的草稿：那些差點成真的劃時代演說.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=84 | coverType=image/jpeg | coverBytes=299835 | nonImageRejected=false | ms=2112 | title=深刻認識一個人.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=85 | coverType=image/jpeg | coverBytes=1358815 | nonImageRejected=false | ms=4108 | title=熟睡迎接每一天！.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=86 | coverType=image/jpeg | coverBytes=593487 | nonImageRejected=false | ms=2762 | title=猶太人每天鍛鍊的WHY思考法.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=87 | coverType=image/jpeg | coverBytes=330559 | nonImageRejected=false | ms=2705 | title=生時間：高績效時間管理術.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=88 | coverType=image/jpeg | coverBytes=309979 | nonImageRejected=false | ms=2518 | title=當時拒絕就對了.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=89 | coverType=image/jpeg | coverBytes=531212 | nonImageRejected=false | ms=2447 | title=知識複利筆記術：卡片盒筆記法的數位應用實戰指南.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=90 | coverType=image/jpeg | coverBytes=250230 | nonImageRejected=false | ms=2923 | title=統計，讓數字說話！.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=91 | coverType=image/jpeg | coverBytes=681467 | nonImageRejected=false | ms=2941 | title=編劇，我想當個好人.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=92 | coverType=image/jpeg | coverBytes=608719 | nonImageRejected=false | ms=2877 | title=聰明簡潔的溝通.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=93 | coverType=image/jpeg | coverBytes=649794 | nonImageRejected=false | ms=2503 | title=薩提爾縱深對話.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=94 | coverType=image/jpeg | coverBytes=444782 | nonImageRejected=false | ms=2208 | title=虎之霸KOBO.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=95 | coverType=image/jpeg | coverBytes=936624 | nonImageRejected=false | ms=3140 | title=詭畫.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=96 | coverType=image/jpeg | coverBytes=1310894 | nonImageRejected=false | ms=3316 | title=談判力就是你的超能力：從工作到生活，結合理論與實務，精闢解析談判五大元素，一次學會20個談判致勝關鍵，現學現賣，即學即用.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=97 | coverType=image/jpeg | coverBytes=390850 | nonImageRejected=false | ms=2225 | title=身體：給擁有者的說明書KOBO.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=98 | coverType=image/jpeg | coverBytes=268298 | nonImageRejected=false | ms=1873 | title=間歇高效率的番茄工作法：25 分鐘，打造成功的最小單位，幫你杜絕分心、提升拚勁_直排.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=99 | coverType=image/jpeg | coverBytes=523014 | nonImageRejected=false | ms=2533 | title=防彈筆記法.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=100 | coverType=image/jpeg | coverBytes=393250 | nonImageRejected=false | ms=2640 | title=除身體的濕.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=101 | coverType=image/jpeg | coverBytes=360080 | nonImageRejected=false | ms=2501 | title=離職說明書.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=102 | coverType=image/jpeg | coverBytes=262574 | nonImageRejected=false | ms=2198 | title=馬斯克寶典.epub
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_SCAN] id=103 | coverType=image/jpeg | coverBytes=193946 | nonImageRejected=false | ms=1825 | title=魅力學.epub
+[I18_SCAN_SUMMARY] total=103 withCover=103 noCover=0 rejectedNonImage=0 failed=0 typeCounts={image/jpeg: 100, image/png: 3} medianMs=2575
+04:45 +1: B. 批次匯入含損毀 EPUB 不中斷
+[I18_IMPORT_FIXTURES] good=8974,1878 truncatedBytes=883 garbageBytes=4096 sampleEpubBytes=1767
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following PathNotFoundException was thrown running a test:
+Cannot open file, path =
+'/data/user/0/cc.ugotit.elinkbook/cache/i18_covers_1794385190956931/1794385197486829-330201506.png'
+(OS Error: No such file or directory, errno = 2)
+
+When the exception was thrown, this was the stack:
+#0      _checkForErrorResponse (dart:io/common.dart:58:9)
+#1      _File.open.<anonymous closure> (dart:io/file_impl.dart:438:7)
+<asynchronous suspension>
+#7      _File.writeAsBytes.<anonymous closure> (dart:io/file_impl.dart:728:34)
+<asynchronous suspension>
+#8      BookImportServiceImpl._landCover (package:elinkbook/library/book_import_service_impl.dart:1166:5)
+<asynchronous suspension>
+#9      BookImportServiceImpl._prepareBookParts (package:elinkbook/library/book_import_service_impl.dart:1343:23)
+<asynchronous suspension>
+#10     BookImportServiceImpl._importSingleFile (package:elinkbook/library/book_import_service_impl.dart:1012:15)
+<asynchronous suspension>
+#11     BookImportServiceImpl.importFiles (package:elinkbook/library/book_import_service_impl.dart:166:20)
+<asynchronous suspension>
+#12     main.<anonymous closure> (file:///C:/Users/fycdc/AI/elinkBook/app/integration_test/zz_issue18_evidence_test.dart:180:20)
+<asynchronous suspension>
+#13     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#14     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 6 frames from dart:async and package:stack_trace)
+
+The test description was:
+  B. 批次匯入含損毀 EPUB 不中斷
+════════════════════════════════════════════════════════════════════════════════════════════════════
+04:53 +1 -1: B. 批次匯入含損毀 EPUB 不中斷 [E]
+  Test failed. See exception logs above.
+  The test description was: B. 批次匯入含損毀 EPUB 不中斷
+  
+04:53 +1 -1: C. 舊書（is_fixed_layout 為 NULL）開書計時
+[I18_TIMING_PRE] run=1 isFixedLayout=null
+05:01 +1 -1: A. 書庫 EPUB 封面型別掃描
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[OpenBook#850589173] 開書開始 epub
+[OpenBook#850589173] 書複製完成 耗時 215 ms
+[OpenBook#850589173] WebView 建立
+[OpenBook#850589173] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#850589173] 頁面載入完成 /assets/foliate/index.html 距開書 4309 ms
+[OpenBook#850589173] 載入錯誤 HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED
+[OpenBook#850589173] 已渲染 距開書 9046 ms
+05:12 +1 -1: C. 舊書（is_fixed_layout 為 NULL）開書計時
+[I18_TIMING] run=1 detectorStartMs=2810 detectorEndMs=8400 detectorDurationMs=5590 loadingIndicatorGoneMs=18401 sawLoading=true isFixedLayoutAfter=false
+05:12 +1 -1: A. 書庫 EPUB 封面型別掃描
+[OpenBook#850589173] 離開畫面 已刪快取目錄=是
+05:13 +1 -1: C. 舊書（is_fixed_layout 為 NULL）開書計時
+[I18_TIMING_PRE] run=2 isFixedLayout=null
+05:16 +1 -1: A. 書庫 EPUB 封面型別掃描
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[OpenBook#282064595] 開書開始 epub
+[OpenBook#282064595] 書複製完成 耗時 317 ms
+[OpenBook#282064595] WebView 建立
+[OpenBook#282064595] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#282064595] 頁面載入完成 /assets/foliate/index.html 距開書 4102 ms
+[OpenBook#282064595] 載入錯誤 HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED
+[OpenBook#282064595] 已渲染 距開書 7167 ms
+05:25 +1 -1: C. 舊書（is_fixed_layout 為 NULL）開書計時
+[I18_TIMING] run=2 detectorStartMs=155 detectorEndMs=3011 detectorDurationMs=2856 loadingIndicatorGoneMs=11139 sawLoading=true isFixedLayoutAfter=false
+05:25 +1 -1: A. 書庫 EPUB 封面型別掃描
+[OpenBook#282064595] 離開畫面 已刪快取目錄=是
+05:26 +1 -1: C. 舊書（is_fixed_layout 為 NULL）開書計時
+[I18_TIMING_PRE] run=3 isFixedLayout=null
+05:28 +1 -1: A. 書庫 EPUB 封面型別掃描
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[OpenBook#351391677] 開書開始 epub
+[OpenBook#351391677] 書複製完成 耗時 182 ms
+[OpenBook#351391677] WebView 建立
+[OpenBook#351391677] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#351391677] 頁面載入完成 /assets/foliate/index.html 距開書 3303 ms
+[OpenBook#351391677] 載入錯誤 HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED
+[OpenBook#351391677] 已渲染 距開書 7834 ms
+05:38 +1 -1: C. 舊書（is_fixed_layout 為 NULL）開書計時
+[I18_TIMING] run=3 detectorStartMs=194 detectorEndMs=3363 detectorDurationMs=3169 loadingIndicatorGoneMs=12068 sawLoading=true isFixedLayoutAfter=false
+05:38 +1 -1: A. 書庫 EPUB 封面型別掃描
+[OpenBook#351391677] 離開畫面 已刪快取目錄=是
+05:38 +2 -1: (tearDownAll)
+05:40 +2 -1: Some tests failed.
+
+Failing tests:
+  C:/Users/fycdc/AI/elinkBook/app/integration_test/zz_issue18_evidence_test.dart: B. 批次匯入含損毀 EPUB 不中斷
+exit=1

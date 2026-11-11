@@ -615,6 +615,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             .then((result) {
           if (!mounted) return;
           setState(() => _dispatchedIsFixedLayout = result);
+        }).catchError((Object error, StackTrace stackTrace) {
+          debugPrint('EPUB 版面偵測失敗，降級為流式：$error\n$stackTrace');
+          if (!mounted) return;
+          setState(() => _dispatchedIsFixedLayout = false);
         });
     }
   }

@@ -1,0 +1,120 @@
+00:00 +0: loading C:/Users/fycdc/AI/elinkBook/app/integration_test/zz_issue18_evidence_test.dart
+Running Gradle task 'assembleDebug'...                          
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/C:/Users/fycdc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14/lib/native-platform-0.22-milestone-28.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+Running Gradle task 'assembleDebug'...                             75.6s
+✓ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...           9.8s
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:00 +0: A. 書庫 EPUB 封面型別掃描
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following PathAccessException was thrown running a test:
+Directory listing failed, path =
+'/storage/emulated/0/Android/data/cc.ugotit.elinkbook/files/i18_books/' (OS Error: Permission
+denied, errno = 13)
+
+When the exception was thrown, this was the stack:
+#0      _Directory._fillWithDirectoryListing (dart:io-patch/directory_patch.dart:49:4)
+#1      _Directory.listSync (dart:io/directory_impl.dart:259:5)
+#2      main.<anonymous closure> (file:///C:/Users/fycdc/AI/elinkBook/app/integration_test/zz_issue18_evidence_test.dart:70:14)
+<asynchronous suspension>
+#3      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#4      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  A. 書庫 EPUB 封面型別掃描
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +0 -1: A. 書庫 EPUB 封面型別掃描 [E]
+  Test failed. See exception logs above.
+  The test description was: A. 書庫 EPUB 封面型別掃描
+  
+00:02 +0 -1: B. 批次匯入含損毀 EPUB 不中斷
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following RangeError was thrown running a test:
+RangeError (end): Invalid value: Not in inclusive range 0..1767: 3000
+
+When the exception was thrown, this was the stack:
+#0      RangeError.checkValidRange (dart:core/errors.dart:392:9)
+#1      _TypedIntListMixin.sublist (dart:typed_data-patch/typed_data_patch.dart:561:31)
+#2      main.<anonymous closure> (file:///C:/Users/fycdc/AI/elinkBook/app/integration_test/zz_issue18_evidence_test.dart:149:46)
+<asynchronous suspension>
+#3      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#4      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  B. 批次匯入含損毀 EPUB 不中斷
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:03 +0 -2: B. 批次匯入含損毀 EPUB 不中斷 [E]
+  Test failed. See exception logs above.
+  The test description was: B. 批次匯入含損毀 EPUB 不中斷
+  
+00:03 +0 -2: C. 舊書（is_fixed_layout 為 NULL）開書計時
+[I18_TIMING_PRE] run=1 isFixedLayout=null
+00:15 +0 -2: A. 書庫 EPUB 封面型別掃描
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[OpenBook#798728529] 開書開始 epub
+[OpenBook#798728529] 書複製完成 耗時 211 ms
+[OpenBook#798728529] WebView 建立
+[OpenBook#798728529] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#798728529] 頁面載入完成 /assets/foliate/index.html 距開書 3913 ms
+[OpenBook#798728529] 載入錯誤 HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED
+[OpenBook#798728529] 已渲染 距開書 8930 ms
+00:26 +0 -2: C. 舊書（is_fixed_layout 為 NULL）開書計時
+[I18_TIMING] run=1 detectorStartMs=2865 detectorEndMs=10967 detectorDurationMs=8102 loadingIndicatorGoneMs=21079 sawLoading=true isFixedLayoutAfter=false
+00:26 +0 -2: A. 書庫 EPUB 封面型別掃描
+[OpenBook#798728529] 離開畫面 已刪快取目錄=是
+00:27 +0 -2: C. 舊書（is_fixed_layout 為 NULL）開書計時
+[I18_TIMING_PRE] run=2 isFixedLayout=null
+00:30 +0 -2: A. 書庫 EPUB 封面型別掃描
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[OpenBook#287166348] 開書開始 epub
+[OpenBook#287166348] 書複製完成 耗時 281 ms
+[OpenBook#287166348] WebView 建立
+[OpenBook#287166348] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#287166348] 頁面載入完成 /assets/foliate/index.html 距開書 3700 ms
+[OpenBook#287166348] 載入錯誤 HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED
+[OpenBook#287166348] 已渲染 距開書 6762 ms
+00:39 +0 -2: C. 舊書（is_fixed_layout 為 NULL）開書計時
+[I18_TIMING] run=2 detectorStartMs=261 detectorEndMs=3936 detectorDurationMs=3675 loadingIndicatorGoneMs=11491 sawLoading=true isFixedLayoutAfter=false
+00:39 +0 -2: A. 書庫 EPUB 封面型別掃描
+[OpenBook#287166348] 離開畫面 已刪快取目錄=是
+00:40 +0 -2: C. 舊書（is_fixed_layout 為 NULL）開書計時
+[I18_TIMING_PRE] run=3 isFixedLayout=null
+00:42 +0 -2: A. 書庫 EPUB 封面型別掃描
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[OpenBook#474064364] 開書開始 epub
+[OpenBook#474064364] 書複製完成 耗時 218 ms
+[OpenBook#474064364] WebView 建立
+[OpenBook#474064364] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#474064364] 頁面載入完成 /assets/foliate/index.html 距開書 3377 ms
+[OpenBook#474064364] 載入錯誤 HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED
+[OpenBook#474064364] 已渲染 距開書 6277 ms
+00:50 +0 -2: C. 舊書（is_fixed_layout 為 NULL）開書計時
+[I18_TIMING] run=3 detectorStartMs=206 detectorEndMs=2905 detectorDurationMs=2699 loadingIndicatorGoneMs=9733 sawLoading=true isFixedLayoutAfter=false
+00:50 +0 -2: A. 書庫 EPUB 封面型別掃描
+[OpenBook#474064364] 離開畫面 已刪快取目錄=是
+00:50 +1 -2: (tearDownAll)
+00:52 +1 -2: Some tests failed.
+
+Failing tests:
+  C:/Users/fycdc/AI/elinkBook/app/integration_test/zz_issue18_evidence_test.dart: A. 書庫 EPUB 封面型別掃描
+  C:/Users/fycdc/AI/elinkBook/app/integration_test/zz_issue18_evidence_test.dart: B. 批次匯入含損毀 EPUB 不中斷
+exit=1

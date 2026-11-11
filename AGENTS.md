@@ -30,7 +30,7 @@ flutter devices          # 列出可用裝置
 
 Kotlin 原始碼位於 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/`：
 - `MainActivity.kt`（`FlutterFragmentActivity`，**不要嘗試改回 `FlutterActivity`**——資料夾匯入的 `registerForActivityResult` 依賴 `FragmentActivity`）
-- `BookMetadataChannel.kt`（EPUB metadata 讀取，仍依賴 `readium-shared`/`readium-streamer`）
+- `BookMetadataChannel.kt`（PDF metadata 讀取、SHA-256 計算、`content://` URI 複製與資料夾列舉）
 - `ReaderResourceChannel.kt`（`content://` URI 串流讀取）
 - `ReaderViewAttachmentTracker.kt`（共用元件，音量鍵攔截狀態追蹤）
 
@@ -73,7 +73,7 @@ Kotlin 原始碼位於 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/`：
 - **App 外殼**：Flutter，跨平台共用，手機優先，Android 先於 iOS。
 - **EPUB/KF8/CBZ/TXT/MD**：單引擎 `readest/foliate-js`（見 ADR 0011、ADR 0017、ADR 0023），跑在 `flutter_inappwebview` 的 `InAppWebView` 內。
 - **PDF**：`pdfrx`（PDFium 透過 `dart:ffi` 直接呼叫，見 ADR 0022）。
-- **Android minSdk**：24（由 Readium + integration_test 外掛下限決定）。
+- **Android minSdk**：24（由 integration_test 外掛下限決定）。
 - **同步後端**：PocketBase。
 
 ## Testing
@@ -145,5 +145,5 @@ flutter build apk --release --dart-define-from-file=config/cloud_oauth.json
 - `foliate-js` 釘定版本會使用較新 ES 內建方法，較舊 Android System WebView 不支援時需補 polyfill
 - `content://` URI 存取必須走原生端 `ReaderResourceChannel.kt` 串流複製到本機暫存檔，不可直接讀取
 - `MainActivity` 必須是 `FlutterFragmentActivity`（非 `FlutterActivity`）
-- Android `minSdk` 是 24（非 30），由 Readium + integration_test 外掛下限決定
+- Android `minSdk` 是 24（非 30），由 integration_test 外掛下限決定
 - `tapMaxDurationMs` PDF 端與 EPUB 端數值目前剛好相同（700ms）但校準狀態不同，PDF 端用 `clock.now()` 而非裸 `DateTime.now()`

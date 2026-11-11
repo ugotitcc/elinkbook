@@ -1,0 +1,279 @@
+// Issue 18 實機證據測試（拋棄式，不進 commit；原始碼另存於 docs/.../assets 供重現）。
+//
+// 目的：補上審查 I3——Android（BooksPad）上的封面型別掃描、損毀 EPUB 匯入、舊書版面回填計時，
+// 並把「原始輸出」留存下來。所有證據行都以 [I18_...] 前綴印出。
+//
+// 執行：cd app && flutter test integration_test/zz_issue18_evidence_test.dart -d <device-id>
+
+// ignore_for_file: avoid_print
+
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart' show openReadOnlyDatabase;
+import 'package:elinkbook/library/android_book_metadata.dart';
+import 'package:elinkbook/library/book_import_service_impl.dart';
+import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
+import 'package:elinkbook/reader/reading_position_repository.dart';
+import 'package:elinkbook/screens/reader_screen.dart';
+import '../test/support/fake_reader_feature_dependencies.dart';
+import '../test/support/pump_localized_widget.dart';
+
+Future<String> _stageAsset(String assetPath, String fileName) async {
+  final bytes = await rootBundle.load(assetPath);
+  final tempDir = await getTemporaryDirectory();
+  final file = File(p.join(tempDir.path, fileName));
+  await file.writeAsBytes(bytes.buffer.asUint8List(), flush: true);
+  return file.path;
+}
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  // ───────────────────────── A. 書庫 EPUB 封面型別掃描（唯讀） ─────────────────────────
+  testWidgets('A. 書庫 EPUB 封面型別掃描', (tester) async {
+    final docsDir = await getApplicationDocumentsDirectory();
+    final dbFile = File(p.join(docsDir.path, 'library.db'));
+    final rows = <Map<String, Object?>>[];
+    int? sizeBefore;
+    DateTime? mtimeBefore;
+    String source;
+    if (await dbFile.exists()) {
+      source = 'library.db';
+      sizeBefore = await dbFile.length();
+      mtimeBefore = await dbFile.lastModified();
+      final db = await openReadOnlyDatabase(dbFile.path);
+      try {
+        rows.addAll(await db.rawQuery(
+          "SELECT id, title, filePath FROM books WHERE format = 'epub' OR filePath LIKE '%.epub' ORDER BY id ASC",
+        ));
+      } finally {
+        await db.close();
+      }
+    } else {
+      // 這台裝置的 App 沒有 library.db（flutter test 結束會解除安裝 App，資料不會留存），
+      // 也沒有儲存權限。改掃 adb 預先放在 /data/local/tmp/i18_books 的 103 本實體書
+      // （由 /sdcard/Books 複製而來，檔名改為流水號，原路徑記錄在 index.txt）。
+      final dir = Directory('/data/local/tmp/i18_books');
+      source = 'tmp:${dir.path}';
+      final names = <String, String>{};
+      final index = File('${dir.path}/index.txt');
+      if (await index.exists()) {
+        for (final line in await index.readAsLines()) {
+          final i = line.indexOf('|');
+          if (i > 0) names[line.substring(0, i)] = p.basename(line.substring(i + 1));
+        }
+      }
+      if (await dir.exists()) {
+        final files = dir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.epub'))
+            .toList()
+          ..sort((a, b) => int.parse(p.basenameWithoutExtension(a.path))
+              .compareTo(int.parse(p.basenameWithoutExtension(b.path))));
+        for (final f in files) {
+          final n = p.basenameWithoutExtension(f.path);
+          rows.add({'id': n, 'title': names[n] ?? n, 'filePath': f.path});
+        }
+      }
+    }
+    print('[I18_SCAN_SOURCE] $source total=${rows.length} dbSizeBefore=$sizeBefore');
+    expect(rows, isNotEmpty, reason: '書庫內需有 EPUB 才能掃描（避免假綠）');
+
+    var withCover = 0;
+    var noCover = 0;
+    var rejectedNonImage = 0;
+    var failed = 0;
+    final typeCounts = <String, int>{};
+    final durations = <int>[];
+    for (final row in rows) {
+      final id = '${row['id']}';
+      final title = '${row['title']}';
+      final uri = '${row['filePath']}';
+      final sw = Stopwatch()..start();
+      try {
+        final meta = await extractAndroidBookMetadata(uri, 'epub');
+        sw.stop();
+        durations.add(sw.elapsedMilliseconds);
+        final coverType = meta?['coverType'] as String?;
+        final bytes = meta?['coverBytes'] as Uint8List?;
+        final hasBytes = bytes != null && bytes.isNotEmpty;
+        final nonImage =
+            coverType != null && coverType.isNotEmpty && !coverType.startsWith('image/');
+        if (hasBytes) {
+          withCover++;
+        } else {
+          noCover++;
+        }
+        if (nonImage) rejectedNonImage++;
+        typeCounts[coverType ?? 'null'] = (typeCounts[coverType ?? 'null'] ?? 0) + 1;
+        print('[I18_SCAN] id=$id | coverType=${coverType ?? "null"} | coverBytes=${bytes?.length ?? 0} | nonImageRejected=$nonImage | ms=${sw.elapsedMilliseconds} | title=$title');
+      } catch (e) {
+        sw.stop();
+        failed++;
+        print('[I18_SCAN_FAIL] id=$id | ${e.runtimeType} | $e | title=$title');
+      }
+    }
+    durations.sort();
+    final median = durations.isEmpty ? 0 : durations[durations.length ~/ 2];
+    print('[I18_SCAN_SUMMARY] total=${rows.length} withCover=$withCover noCover=$noCover '
+        'rejectedNonImage=$rejectedNonImage failed=$failed typeCounts=$typeCounts medianMs=$median');
+
+    if (sizeBefore != null) {
+      final sizeAfter = await dbFile.length();
+      final mtimeAfter = await dbFile.lastModified();
+      print('[I18_SCAN_DB_GUARD] sizeBefore=$sizeBefore sizeAfter=$sizeAfter '
+          'mtimeBefore=$mtimeBefore mtimeAfter=$mtimeAfter');
+      expect(sizeAfter, sizeBefore);
+      expect(mtimeAfter, mtimeBefore);
+    }
+  });
+
+  // ───────────────────────── B. 匯入批次容錯（含損毀 EPUB） ─────────────────────────
+  testWidgets('B. 批次匯入含損毀 EPUB 不中斷', (tester) async {
+    final tempDir = await getTemporaryDirectory();
+    final suffix = DateTime.now().microsecondsSinceEpoch;
+    final dbPath = p.join(tempDir.path, 'i18_import_$suffix.db');
+    final coversDir = Directory(p.join(tempDir.path, 'i18_covers_$suffix'));
+    final importedDir = Directory(p.join(tempDir.path, 'i18_imported_$suffix'));
+
+    final good1 = await _stageAsset('test/fixtures/sample_multi_chapter.epub', 'i18_good_multi.epub');
+    final good2 = await _stageAsset('test/fixtures/sample_fxl_svg_cover.epub', 'i18_good_fxl.epub');
+    final sampleBytes = (await rootBundle.load('test/fixtures/sample.epub')).buffer.asUint8List();
+    // 損毀 1：把正常 EPUB 截斷成前半段（壓縮檔中央目錄遺失）
+    final truncated = File(p.join(tempDir.path, 'i18_corrupt_truncated.epub'));
+    await truncated.writeAsBytes(sampleBytes.sublist(0, sampleBytes.length ~/ 2), flush: true);
+    // 損毀 2：完全不是 ZIP 的內容
+    final garbage = File(p.join(tempDir.path, 'i18_corrupt_garbage.epub'));
+    await garbage.writeAsBytes(List<int>.generate(4096, (i) => (i * 31 + 7) & 0xff), flush: true);
+    print('[I18_IMPORT_FIXTURES] good=${await File(good1).length()},${await File(good2).length()} '
+        'truncatedBytes=${await truncated.length()} garbageBytes=${await garbage.length()} '
+        'sampleEpubBytes=${sampleBytes.length}');
+
+    await coversDir.create(recursive: true);
+    await importedDir.create(recursive: true);
+    final repository = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() async {
+      await repository.close();
+      for (final f in [File(dbPath), truncated, garbage, File(good1), File(good2)]) {
+        if (await f.exists()) await f.delete();
+      }
+      if (await coversDir.exists()) await coversDir.delete(recursive: true);
+      if (await importedDir.exists()) await importedDir.delete(recursive: true);
+    });
+    final service = BookImportServiceImpl(
+      repository: repository,
+      coversDirectory: coversDir,
+      importedBooksDirectory: importedDir,
+      metadataExtractor: extractAndroidBookMetadata, // 與 main.dart 在 Android 的接線相同
+    );
+
+    final paths = [good1, truncated.path, good2, garbage.path];
+    final result = await service.importFiles(paths, displayNames: [
+      'i18_good_multi.epub',
+      'i18_corrupt_truncated.epub',
+      'i18_good_fxl.epub',
+      'i18_corrupt_garbage.epub',
+    ]);
+    print('[I18_IMPORT_RESULT] imported=${result.importedBooks.length} '
+        'skippedDuplicate=${result.skippedDuplicateCount} skippedUnsupported=${result.skippedUnsupportedCount} '
+        'failure=${result.failure}');
+    for (final b in result.importedBooks) {
+      print('[I18_IMPORT_BOOK] title=${b.title} | author=${b.author} | isFixedLayout=${b.isFixedLayout} '
+          '| coverPath=${b.coverPath == null ? "null" : "set"} | file=${p.basename(b.filePath)}');
+    }
+    expect(result.failure, isNull, reason: '含損毀 EPUB 的批次匯入不得整體失敗');
+    expect(result.importedBooks.length, 4, reason: '四個檔案都應匯入（損毀者以檔名為書名）');
+    final titles = result.importedBooks.map((b) => b.title).toList();
+    expect(titles.any((t) => t.contains('i18_corrupt_truncated')), isTrue);
+    expect(titles.any((t) => t.contains('i18_corrupt_garbage')), isTrue);
+  });
+
+  // ───────────────────────── C. 舊書版面回填計時 ─────────────────────────
+  testWidgets('C. 舊書（is_fixed_layout 為 NULL）開書計時', (tester) async {
+    final tempDir = await getTemporaryDirectory();
+    for (var run = 1; run <= 3; run++) {
+      final suffix = DateTime.now().microsecondsSinceEpoch;
+      final dbPath = p.join(tempDir.path, 'i18_timing_$suffix.db');
+      var detectorStartMs = -1;
+      var detectorEndMs = -1;
+      final total = Stopwatch();
+      final repository = await SqliteLibraryRepository.open(
+        dbPath,
+        epubLayoutDetector: (path) async {
+          detectorStartMs = total.elapsedMilliseconds;
+          try {
+            return await detectAndroidEpubLayout(path);
+          } finally {
+            detectorEndMs = total.elapsedMilliseconds;
+          }
+        },
+      );
+      final prefsManager = ReaderPrefsManagerImpl(
+        BookReaderPrefsRepository(repository.database),
+        ReadingPositionRepository(repository.database),
+      );
+      final path = await _stageAsset('test/fixtures/sample_multi_chapter.epub', 'i18_timing_$run.epub');
+      await repository.insertBook(Book(
+        id: 'b_i18_$run',
+        title: 'I18 timing $run',
+        format: BookFileFormat.epub,
+        filePath: path,
+        source: BookSource.local,
+        createTime: DateTime.now(),
+        lastReadTime: DateTime.now(),
+      ));
+      final before = (await repository.findBookById('b_i18_$run'))!;
+      print('[I18_TIMING_PRE] run=$run isFixedLayout=${before.isFixedLayout}');
+
+      total.start();
+      await pumpLocalizedWidget(
+        tester,
+        ReaderScreen(
+          filePath: path,
+          bookId: 'b_i18_$run',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
+        ),
+      );
+      var sawLoading = false;
+      var loadingGoneMs = -1;
+      final deadline = DateTime.now().add(const Duration(seconds: 90));
+      while (DateTime.now().isBefore(deadline)) {
+        await tester.pump(const Duration(milliseconds: 50));
+        final loading = find.byKey(const Key('reader_loading_indicator')).evaluate().isNotEmpty;
+        if (loading) sawLoading = true;
+        if (sawLoading && !loading && detectorEndMs >= 0) {
+          loadingGoneMs = total.elapsedMilliseconds;
+          break;
+        }
+      }
+      total.stop();
+      final after = (await repository.findBookById('b_i18_$run'))!;
+      print('[I18_TIMING] run=$run detectorStartMs=$detectorStartMs detectorEndMs=$detectorEndMs '
+          'detectorDurationMs=${detectorEndMs - detectorStartMs} loadingIndicatorGoneMs=$loadingGoneMs '
+          'sawLoading=$sawLoading isFixedLayoutAfter=${after.isFixedLayout}');
+      expect(loadingGoneMs, greaterThanOrEqualTo(0), reason: '載入指示器應在 90 秒內消失');
+      expect(after.isFixedLayout, isNotNull, reason: '回填結果應寫回資料庫');
+
+      await tester.pumpWidget(const SizedBox());
+      await repository.close();
+      final f = File(path);
+      if (await f.exists()) await f.delete();
+      final d = File(dbPath);
+      if (await d.exists()) await d.delete();
+    }
+  });
+}

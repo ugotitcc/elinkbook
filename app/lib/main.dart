@@ -130,7 +130,10 @@ Future<void> main() async {
   final initialLocaleOverride = await localePreferences.loadLocaleOverride();
 
   final dbPath = await defaultLibraryDatabasePath();
-  final repository = await SqliteLibraryRepository.open(dbPath);
+  final repository = await SqliteLibraryRepository.open(
+    dbPath,
+    epubLayoutDetector: isAndroidPlatform ? detectAndroidEpubLayout : null,
+  );
   // BookReaderPrefsRepository 必須與 repository 共用同一個 Database 連線
   // （book_reader_prefs 的外鍵約束要求，見 epic-3-fonts-layout Issue 1 spec.md）。
   // 在這裡（repository 尚未收窄為 LibraryRepository 介面前）取用
@@ -250,8 +253,8 @@ Future<void> main() async {
   // fullTextSearchSettingsRepository（見 plans/plan-issue-2.md），因此
   // importService 的建構挪到這裡（在它之後），不再是 repository 開啟後
   // 立刻建構。
-  // epic-66 Issue 2 & Issue 12：Windows 使用 foliate-js / pdfrx 解析 metadata，
-  // Android 使用 extractAndroidBookMetadata（由 kAndroidMetadataFoliateFirst 控制優先順序）。
+  // epic-66 Issue 2 & Issue 12 & Issue 18：Windows 使用 foliate-js / pdfrx 解析 metadata，
+  // Android 使用 extractAndroidBookMetadata（EPUB 走 foliate-js 探針、PDF 走原生通道）。
   final metadataExtractor = isWindowsPlatform
       ? extractWindowsBookMetadata
       : (isAndroidPlatform ? extractAndroidBookMetadata : null);

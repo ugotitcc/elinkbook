@@ -68,6 +68,53 @@ void main() {
       expect(result['identifier'], isNull);
       expect(result['isFixedLayout'], isFalse);
       expect(result['coverBytes'], isNull);
+      expect(result['coverType'], isNull);
+    });
+
+    test('coverType 為 application/xhtml+xml 時 coverBytes 為 null 且保留 coverType', () {
+      final cover = Uint8List.fromList([10, 20, 30]);
+      final json = jsonEncode({
+        'title': 'XHTML 封面書',
+        'coverBase64': base64Encode(cover),
+        'coverType': 'application/xhtml+xml',
+      });
+
+      final result = mapProbeResult(json);
+      expect(result['coverBytes'], isNull);
+      expect(result['coverType'], 'application/xhtml+xml');
+    });
+
+    test('coverType 為 image/jpeg 時照常解碼並保留 coverType', () {
+      final cover = Uint8List.fromList([0xff, 0xd8, 0xff]);
+      final json = jsonEncode({
+        'title': 'JPEG 封面書',
+        'coverBase64': base64Encode(cover),
+        'coverType': 'image/jpeg',
+      });
+
+      final result = mapProbeResult(json);
+      expect(result['coverBytes'], cover);
+      expect(result['coverType'], 'image/jpeg');
+    });
+
+    test('coverType 缺漏或空字串時照常解碼（相容既有案例）', () {
+      final cover = Uint8List.fromList([1, 2, 3]);
+      final jsonMissing = jsonEncode({
+        'title': '缺 coverType',
+        'coverBase64': base64Encode(cover),
+      });
+      final resMissing = mapProbeResult(jsonMissing);
+      expect(resMissing['coverBytes'], cover);
+      expect(resMissing['coverType'], isNull);
+
+      final jsonEmpty = jsonEncode({
+        'title': '空 coverType',
+        'coverBase64': base64Encode(cover),
+        'coverType': '',
+      });
+      final resEmpty = mapProbeResult(jsonEmpty);
+      expect(resEmpty['coverBytes'], cover);
+      expect(resEmpty['coverType'], '');
     });
   });
 
