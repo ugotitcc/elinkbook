@@ -96,7 +96,8 @@ Future<Uint8List?> readFileRange(String path, int start, int end) async {
 /// 在 HeadlessInAppWebView 內以 foliate-js 解析 [epubPath] 之詮釋資料。
 ///
 /// 逾時拋出 [TimeoutException]，JavaScript 或檔案錯誤拋出 [StateError]。
-/// 回傳 Map 鍵包含：`title`, `author`, `identifier`, `isFixedLayout`, `coverBytes`。
+/// 回傳 Map 鍵包含：`title`, `author`, `identifier`, `isFixedLayout`, `coverBytes`,
+/// `coverType`（探針回報的封面 MIME 型別，可為 null）。
 Future<Map<String, Object?>> readEpubMetadataInWebView(
   String epubPath, {
   Duration timeout = const Duration(seconds: 60),

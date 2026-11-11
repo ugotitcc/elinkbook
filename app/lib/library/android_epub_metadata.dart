@@ -97,7 +97,8 @@ Future<WebResourceResponse?> interceptBookRange(
 /// 在 Android HeadlessInAppWebView 內以 foliate-js 解析 [uri] 之 EPUB 詮釋資料。
 ///
 /// 逾時拋出 [TimeoutException]，JavaScript 或檔案錯誤拋出 [StateError]。
-/// 回傳 Map 鍵包含：`title`, `author`, `identifier`, `isFixedLayout`, `coverBytes`。
+/// 回傳 Map 鍵包含：`title`, `author`, `identifier`, `isFixedLayout`, `coverBytes`,
+/// `coverType`（探針回報的封面 MIME 型別，可為 null）。
 Future<Map<String, Object?>> readEpubMetadataOnAndroid(
   String uri, {
   Duration timeout = const Duration(seconds: 30),
