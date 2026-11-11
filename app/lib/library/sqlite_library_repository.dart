@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart' show MissingPluginException;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -20,6 +19,7 @@ Future<String> defaultLibraryDatabasePath() async {
 
 class SqliteLibraryRepository implements LibraryRepository {
   final Database _db;
+  final Future<bool> Function(String filePath)? _epubLayoutDetector;
 
   /// 本機這份資料庫在 [open] 當下，底層 SQLite build 是否有 FTS5 模組
   /// 可用（epic-10-search Issue 6）。部分裝置（例如客製化韌體的 Android
@@ -34,7 +34,8 @@ class SqliteLibraryRepository implements LibraryRepository {
   SqliteLibraryRepository._(
     this._db, {
     required this.isFullTextSearchAvailable,
-  });
+    Future<bool> Function(String filePath)? epubLayoutDetector,
+  }) : _epubLayoutDetector = epubLayoutDetector;
 
   /// 開啟（或建立）圖書庫資料庫。
   ///
@@ -50,6 +51,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(
     String path, {
     bool singleInstance = true,
+    Future<bool> Function(String filePath)? epubLayoutDetector,
   }) async {
     final db = await openDatabase(
       path,
@@ -480,6 +482,7 @@ class SqliteLibraryRepository implements LibraryRepository {
     return SqliteLibraryRepository._(
       db,
       isFullTextSearchAvailable: ftsTableRows.isNotEmpty,
+      epubLayoutDetector: epubLayoutDetector,
     );
   }
 
@@ -1259,19 +1262,13 @@ class SqliteLibraryRepository implements LibraryRepository {
 
   @override
   Future<bool> detectAndCacheEpubLayout(String bookId, String filePath) async {
-    final Map<String, Object?>? response;
-    try {
-      response = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
-        'detectEpubLayout',
-        {'uri': filePath},
-      );
-    } on MissingPluginException {
-      // epic-66 Issue 1 Task 9a：Windows 沒有 elinkbook/book_metadata 頻道。降級為
-      // 流式（false）並直接回傳、不寫入資料庫——偵測沒有真的發生，不能把猜測值
-      // 存成結果。Android 一定有這個頻道，此分支不會被走到。
+    final detector = _epubLayoutDetector;
+    if (detector == null) {
+      // epic-66 Issue 18 Task 1：未注入偵測器時（如 Windows 平台或純記憶體測試）
+      // 降級為流式（false）並直接回傳、不寫入資料庫——偵測沒有真的發生，不能把猜測值存成結果。
       return false;
     }
-    final isFixedLayout = response?['isFixedLayout'] as bool? ?? false;
+    final isFixedLayout = await detector(filePath);
     await _db.update(
       'books',
       {'is_fixed_layout': isFixedLayout ? 1 : 0},

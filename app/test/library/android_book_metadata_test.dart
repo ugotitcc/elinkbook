@@ -237,4 +237,78 @@ void main() {
       }
     });
   });
+
+  group('detectAndroidEpubLayout', () {
+    test('detectAndroidEpubLayout 回傳探針的 isFixedLayout（true 與缺欄位預設 false）', () async {
+      final fixed = await detectAndroidEpubLayout(
+        'content://book/fxl.epub',
+        foliateReader: (uri) async {
+          expect(uri, 'content://book/fxl.epub');
+          return {'isFixedLayout': true};
+        },
+      );
+      expect(fixed, isTrue);
+
+      final reflowable = await detectAndroidEpubLayout(
+        'content://book/reflowable.epub',
+        foliateReader: (uri) async => {'title': '無版面欄位'},
+      );
+      expect(reflowable, isFalse);
+    });
+
+    test('探針丟 StateError 時包成 PlatformException（code 為 detection_failed）', () async {
+      await expectLater(
+        () => detectAndroidEpubLayout(
+          'content://book/broken.epub',
+          foliateReader: (uri) async => throw StateError('探針損毀'),
+        ),
+        throwsA(
+          isA<PlatformException>().having(
+            (e) => e.code,
+            'code',
+            'detection_failed',
+          ),
+        ),
+      );
+    });
+
+    test('經過 runSerialized', () async {
+      final firstStarted = Completer<void>();
+      final firstBlocker = Completer<void>();
+      var firstRunning = false;
+      var secondStartedWhileFirstRunning = false;
+
+      final future1 = detectAndroidEpubLayout(
+        'book1.epub',
+        foliateReader: (uri) async {
+          firstRunning = true;
+          firstStarted.complete();
+          await firstBlocker.future;
+          firstRunning = false;
+          return {'isFixedLayout': true};
+        },
+      );
+
+      await firstStarted.future;
+
+      final future2 = detectAndroidEpubLayout(
+        'book2.epub',
+        foliateReader: (uri) async {
+          if (firstRunning) {
+            secondStartedWhileFirstRunning = true;
+          }
+          return {'isFixedLayout': false};
+        },
+      );
+
+      firstBlocker.complete();
+
+      final res1 = await future1;
+      final res2 = await future2;
+
+      expect(res1, isTrue);
+      expect(res2, isFalse);
+      expect(secondStartedWhileFirstRunning, isFalse);
+    });
+  });
 }

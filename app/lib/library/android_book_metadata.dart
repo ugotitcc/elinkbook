@@ -8,6 +8,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import 'android_epub_metadata.dart';
 import 'library_repository.dart' show kBookMetadataChannel;
@@ -57,4 +58,27 @@ Future<Map<String, Object?>?> extractAndroidBookMetadata(
 
   final fallback = readiumReader ?? _defaultReadiumReader;
   return await fallback(uri, format);
+}
+
+/// Android 既有書籍（`is_fixed_layout == null`）版面回填偵測器（epic-66 Issue 18 Task 1）。
+///
+/// 經 [runSerialized] 呼叫 foliate-js 探針，回傳是否為固定版面（預設 `false`）；
+/// 探針拋出例外時統一包成 `PlatformException(code: 'detection_failed')`。
+Future<bool> detectAndroidEpubLayout(
+  String uri, {
+  Future<Map<String, Object?>> Function(String uri)? foliateReader,
+}) async {
+  return runSerialized(() async {
+    try {
+      final reader = foliateReader ?? readEpubMetadataOnAndroid;
+      final map = await reader(uri);
+      return map['isFixedLayout'] as bool? ?? false;
+    } catch (e) {
+      if (e is PlatformException) rethrow;
+      throw PlatformException(
+        code: 'detection_failed',
+        message: e.toString(),
+      );
+    }
+  });
 }

@@ -77,13 +77,13 @@
 - Produces: `Future<bool> detectAndroidEpubLayout(String uri, {Future<Map<String, Object?>> Function(String uri)? foliateReader})`——經 `runSerialized` 呼叫探針（預設 `readEpubMetadataOnAndroid`），回傳 `map['isFixedLayout'] as bool? ?? false`；探針例外一律包成 `PlatformException(code: 'detection_failed')`（沿用原生通道舊的錯誤碼；已是 `PlatformException` 則原樣往外拋）。
 - Produces: `SqliteLibraryRepository.open(String path, {bool singleInstance = true, Future<bool> Function(String filePath)? epubLayoutDetector})`；`detectAndCacheEpubLayout` 在 detector 為 `null` 時回傳 `false` 且**不寫入資料庫**（取代現行 `MissingPluginException` 分支，行為與 Windows 現況一致）。
 
-- [ ] **Step 1: 寫失敗測試。**
+- [x] **Step 1: 寫失敗測試。**
   - `android_book_metadata_test.dart`：`detectAndroidEpubLayout 回傳探針的 isFixedLayout`（探針回 `{'isFixedLayout': true}` → `true`；缺欄位 → `false`）；`探針丟 StateError 時包成 PlatformException（code 為 detection_failed）`；`經過 runSerialized`（同時發出兩個呼叫，斷言第二個在第一個完成後才開始）。
   - `sqlite_library_repository_test.dart`：把原本「呼叫 detectEpubLayout method channel」的測試改為「呼叫注入的 detector，結果寫回 `is_fixed_layout`」；新增「detector 為 null 時回傳 false 且資料列 `is_fixed_layout` 維持 null」；「detector 丟例外時例外往外拋、資料列不變」。注意：`setUp` 已用預設的 `open(inMemoryDatabasePath)` 開過資料庫，注入 detector 的案例必須另開並傳入 `singleInstance: false`，否則會命中 sqflite 快取而拿到沒有 detector 的舊實例（該檔第 3479 行附近已有同樣用法可參照）。
-- [ ] **Step 2: 跑測試確認失敗。** `flutter test test/library/android_book_metadata_test.dart test/library/sqlite_library_repository_test.dart`，預期：新測試因函式／參數不存在而失敗。
-- [ ] **Step 3: 實作** 上述 Interfaces；`main.dart` 在 `isAndroidPlatform` 時傳入 `detectAndroidEpubLayout`，Windows 與其他平台傳 `null`。
-- [ ] **Step 4: 跑測試確認通過**（同 Step 2 指令），再 `flutter analyze`。
-- [ ] **Step 5: Commit** `refactor(library): 版面回填改用可注入的偵測器，Android 接上 foliate 探針（epic-66 Issue 18）`。
+- [x] **Step 2: 跑測試確認失敗。** `flutter test test/library/android_book_metadata_test.dart test/library/sqlite_library_repository_test.dart`，預期：新測試因函式／參數不存在而失敗。
+- [x] **Step 3: 實作** 上述 Interfaces；`main.dart` 在 `isAndroidPlatform` 時傳入 `detectAndroidEpubLayout`，Windows 與其他平台傳 `null`。
+- [x] **Step 4: 跑測試確認通過**（同 Step 2 指令），再 `flutter analyze`。
+- [x] **Step 5: Commit** `refactor(library): 版面回填改用可注入的偵測器，Android 接上 foliate 探針（epic-66 Issue 18）`。
 
 ### Task 2：移除 Dart 端 Readium 退路與旗標
 
