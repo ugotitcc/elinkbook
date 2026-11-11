@@ -214,6 +214,86 @@ void main() {
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
   });
 
+  testWidgets(
+      '桌面寬度（雙欄）：從目錄跳轉後，目前章節就是點選的那一章（epic-66 Issue 20）',
+      (tester) async {
+    // 1280x800 橫向視窗 → dualPageMode auto 啟用雙欄。雙欄的 relocate range 涵蓋兩欄，
+    // foliate 取「range 內最後一個目錄項」，短章節又會被補入前一節內容，
+    // 過去跳轉後目錄會標成前一章／章內最後一節。
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    final libraryRepository =
+        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      await libraryRepository.close();
+    });
+    final prefsManager = ReaderPrefsManagerImpl(
+      BookReaderPrefsRepository(libraryRepository.database),
+      ReadingPositionRepository(libraryRepository.database),
+    );
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_multi_chapter.epub', 'epub_toc_desktop.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    await libraryRepository.insertBook(Book(
+      id: 'b_epub_toc_desktop',
+      title: 'EPUB 目錄桌面寬度測試書',
+      format: BookFileFormat.epub,
+      filePath: samplePath,
+      source: BookSource.local,
+      createTime: DateTime.now(),
+      lastReadTime: DateTime.now(),
+    ));
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        filePath: samplePath,
+        bookId: 'b_epub_toc_desktop',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+      ),
+    );
+    await _pumpUntilLoaded(tester);
+    await _pumpUntilFooterVisible(tester);
+
+    // 依序跳第三章、第二章：兩者在雙欄下過去都會標錯。
+    for (final target in ['第三章：結局', '第二章：發展']) {
+      await _pumpUntilTocButtonEnabled(tester);
+      await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(target));
+      await tester.pumpAndSettle();
+      // 等 relocate 回報穩定（雙欄補欄後可能不只回報一次）。
+      await tester.pump(const Duration(seconds: 2));
+
+      await _pumpUntilTocButtonEnabled(tester);
+      await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
+      await tester.pumpAndSettle();
+      final tile = tester.widget<ListTile>(find.widgetWithText(ListTile, target));
+      expect(tile.selected, isTrue, reason: '桌面寬度跳到「$target」後，目錄應標示該章為目前章節');
+      if (target == '第三章：結局') {
+        expect(find.text('第一節'), findsNothing,
+            reason: '跳到第三章後不應展開第二章的子節（代表目前章節沒有落在第二章內）');
+        expect(find.text('第二節'), findsNothing);
+      } else {
+        // 目前章節是第二章本身：子節會展開，但不得把最後一節標成目前位置。
+        final sub2 = tester.widget<ListTile>(find.widgetWithText(ListTile, '第二節'));
+        expect(sub2.selected, isFalse, reason: '跳到第二章後，目前章節不應是它的最後一節');
+      }
+      await tester.tap(find.byKey(const Key('toc_bottom_sheet_close_button')));
+      await tester.pumpAndSettle();
+    }
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+  });
+
   testWidgets('單一 spine 內多個目錄錨點：開書與跳轉後「目前章節」皆由 DOM 判定，精確到小節（epic-54 Issue 20）',
       (tester) async {
     sqfliteFfiInit();
