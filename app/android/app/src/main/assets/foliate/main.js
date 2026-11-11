@@ -205,6 +205,43 @@ let decorationIdByCfi = new Map()
 let lastDecorations = []
 
 /**
+ * /diagnose（2026-11-11，馬斯克寶典字級調到 80 仍與 24 幾乎一樣小）：App 只覆蓋
+ * `html { font-size: N% }`，書本若把 body 釘成絕對值（`body { font-size: 16px }`），
+ * body 不會跟著 html 放大，滑桿就失效。本函式量測 body 是否「跟隨 html」：
+ * 暫時把 html 設為 16px／32px（inline !important 蓋過樣式表）各讀一次 body 的
+ * computed 字級，兩次相同表示 body 是絕對值，改以 inline 樣式把它乘上字級倍率
+ * （保留書本原本的相對大小）；會跟隨 html 的書則清除 inline，維持原行為。
+ * 倍率為 1 或未設定時一律清除，等同不介入。
+ */
+function applyBodyFontScale(doc, prefs) {
+  const body = doc?.body
+  const win = doc?.defaultView
+  if (!body || !win || typeof win.getComputedStyle !== 'function') return
+  body.style.removeProperty('font-size')
+  const scale = prefs?.fontSize
+  if (typeof scale !== 'number' || scale === 1 || !(scale > 0)) return
+  const root = doc.documentElement
+  const oldInline = root.style.getPropertyValue('font-size')
+  const oldPriority = root.style.getPropertyPriority('font-size')
+  let followsRoot = true
+  let basePx = 0
+  try {
+    root.style.setProperty('font-size', '16px', 'important')
+    const atSmall = parseFloat(win.getComputedStyle(body).fontSize)
+    root.style.setProperty('font-size', '32px', 'important')
+    const atLarge = parseFloat(win.getComputedStyle(body).fontSize)
+    followsRoot = Math.abs(atSmall - atLarge) > 0.01
+    basePx = atSmall
+  } finally {
+    if (oldInline) root.style.setProperty('font-size', oldInline, oldPriority)
+    else root.style.removeProperty('font-size')
+  }
+  if (!followsRoot && basePx > 0) {
+    body.style.setProperty('font-size', `${basePx * scale}px`)
+  }
+}
+
+/**
  * 標記不該縮排的段落（epic-65 Issue 3）：實際顯示為置中的 p，以及沒有文字的 p
  * （空白、只有 <br>、只有圖片）。縮排 CSS 以 :not([data-elink-no-indent]) 跳過它們。
  *
@@ -570,6 +607,7 @@ window.applyPreferences = function (prefs) {
   // FXL 已在上面提早 return，不會走到這裡；load 事件上的 FXL firstLineIndent
   // 恆為 null，只會走 markNoIndentParagraphs() 的清理分支。
   for (const { doc } of view.renderer.getContents()) {
+    applyBodyFontScale(doc, prefs)
     markNoIndentParagraphs(doc, prefs)
   }
 
@@ -1500,6 +1538,7 @@ async function openBook() {
       // paginator.js 的 afterLoad 派發，派發前已先 setStyles()，此處讀到的
       // computed text-align 已是套用覆蓋後的結果。lastAppliedPrefs 以
       // initialPrefs 初始化，load 觸發時一定有值。
+      applyBodyFontScale(doc, lastAppliedPrefs)
       markNoIndentParagraphs(doc, lastAppliedPrefs)
       attachColumnPitchCompensation(doc)
       const classifier = new TouchIntentClassifier()
