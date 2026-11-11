@@ -60,10 +60,10 @@
 
 **Files:** `docs/epics/epic-66-windows-port/issues.md`（補第 18 列：目前表格缺這一列，只在「後續項目」段落有描述）
 
-- [ ] **Step 1: 開分支** `fix/epic-66-issue-18-remove-readium`（同分支放計畫、實作、報告）。
-- [ ] **Step 2: 在 `issues.md` 表格補上第 18 列**，狀態「🟡 進行中」，連結本計畫。
-- [ ] **Step 3: 記錄基準。** 在 `app/` 跑 `flutter build apk --release --split-per-abi`（無 `key.properties` 時以 debug 金鑰簽章，可接受），記下各 ABI APK 位元組數，存到 scratchpad，供 Task 6 比對。預期：建置成功；數字記入報告「基準」欄。
-- [ ] **Step 4: 記錄 Readium 使用面。** `grep -rn "org.readium" app/android/app/src` 預期只出現在 `BookMetadataChannel.kt`（已查證，import 在第 21–30 行、型別使用在 464 行）。
+- [x] **Step 1: 開分支** `fix/epic-66-issue-18-remove-readium`（同分支放計畫、實作、報告）。
+- [x] **Step 2: 在 `issues.md` 表格補上第 18 列**，狀態「🟡 進行中」，連結本計畫。
+- [x] **Step 3: 記錄基準。** 在 `app/` 跑 `flutter build apk --release --split-per-abi`（無 `key.properties` 時以 debug 金鑰簽章，可接受），記下各 ABI APK 位元組數，存到 scratchpad，供 Task 6 比對。預期：建置成功；數字記入報告「基準」欄。
+- [x] **Step 4: 記錄 Readium 使用面。** `grep -rn "org.readium" app/android/app/src` 預期只出現在 `BookMetadataChannel.kt`（已查證，import 在第 21–30 行、型別使用在 464 行）。
 
 ### Task 1：版面回填改用可注入的偵測器
 
