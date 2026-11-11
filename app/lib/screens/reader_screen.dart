@@ -61,6 +61,7 @@ import '../reader/reader_key_command.dart';
 import '../reader/reader_surface.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/toc_entry.dart';
+import '../reader/toc_jump_override.dart';
 import '../reader/toc_navigator.dart';
 import '../reader/resolve_text_conversion.dart';
 import '../reader/text_conversion.dart';
@@ -373,6 +374,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // Issue 2）。寫入本機資料庫時讀取此欄位的最新值，比照 _pdfPageInfo
   // 對 PDF 的既有作法。
   EpubPositionInfo? _epubPositionInfo;
+
+  /// 目錄跳轉後的「目前章節」覆寫（epic-66 Issue 20，見 [TocJumpOverride]）。
+  final _tocJumpOverride = TocJumpOverride();
   TtsController? _ttsController;
   TtsAudioFocusCoordinator? _ttsAudioFocusCoordinator;
   // epic-61 Issue 2：監聽中的 holder（晚到注入）。initState 加入 listener、
@@ -1154,7 +1158,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         _tocEntries,
         _epubPositionInfo?.progression,
         currentSpineIndex: extractChapterIndex(_epubPositionInfo?.locatorJson),
-        currentTocItemId: _epubPositionInfo?.tocItemId,
+        // 目錄跳轉後優先採用點選的那一項（雙欄下 foliate 回報會偏，見 [TocJumpOverride]）。
+        currentTocItemId: _tocJumpOverride.tocId ?? _epubPositionInfo?.tocItemId,
       );
 
   void _openToc() {
@@ -1167,7 +1172,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         currentEntry: currentPath.isEmpty ? null : currentPath.last,
         onEntrySelected: (entry) {
           Navigator.of(context).pop();
-          _jumpToEpubLocator((entry as TocEntry).locatorJson);
+          _tocJumpOverride.begin(
+            tocId: (entry as TocEntry).tocId,
+            currentKey: _epubPositionInfo?.positionKey,
+          );
+          _jumpToEpubLocator(entry.locatorJson);
         },
         textConversion: _textConversionMode,
       ),
@@ -2959,6 +2968,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             if (!mounted) return;
             // 位置儲存與閱讀活動判定都由閱讀會話處理（見 ReadingSession）。
             _session.onEpubLocated(info);
+            _tocJumpOverride.onPosition(info.positionKey);
             setState(() => _epubPositionInfo = info);
             // 手動導覽自動暫停並清除舊高亮（epic-34-tts-readalong
             // Issue 4）：直接用既有的 nullable _ttsController 欄位（不用

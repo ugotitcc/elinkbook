@@ -12,10 +12,10 @@
 - 只在這台 Windows 驗證；Android 橫向平板不在本 Issue 驗證。
 
 ## Tasks
-- [ ] **Task 1：診斷。** 1280x800 視窗，逐章從目錄跳轉，記錄 `relocate` 的 `tocItem`／spine index 與目錄高亮、收折狀態；判斷是否只有短章節才發生。
-- [ ] **Task 2：回報。** 還原診斷，寫 `issue-20-report.md`（根因、修法選項與取捨），停下等人類選修法。
-- [ ] **Task 3：修復（人類選定後）。** 先寫桌面寬度回歸測試並確認失敗，再實作。
-- [ ] **Task 4：驗證。** 涉及測試檔跑單檔；`flutter analyze`、`node tool/check_integration_keys.js`；整份 plan 完成才跑全套。
+- [x] **Task 1：診斷。** 1280x800 視窗，逐章從目錄跳轉，記錄 `relocate` 的 `tocItem`／spine index 與目錄高亮、收折狀態；判斷是否只有短章節才發生。
+- [x] **Task 2：回報。** 還原診斷，寫 `issue-20-report.md`（根因、修法選項與取捨），停下等人類選修法。
+- [x] **Task 3：修復（人類選定後）。** 先寫桌面寬度回歸測試並確認失敗，再實作。
+- [x] **Task 4：驗證。** 涉及測試檔跑單檔；`flutter analyze`、`node tool/check_integration_keys.js`；整份 plan 完成才跑全套。
 
 ## 過關條件
 1. 根因有證據支持，或明確記錄「無法確定」。
