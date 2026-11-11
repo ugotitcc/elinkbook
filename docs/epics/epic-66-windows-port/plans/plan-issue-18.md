@@ -153,14 +153,14 @@
 
 **Files:** Create: `docs/epics/epic-66-windows-port/issue-18-report.md`
 
-- [ ] **Step 1: 建置並安裝。** `flutter build apk --debug`，`adb install -r`（**禁用 `flutter install`**）；操作前備份資料庫。
-- [ ] **Step 2: 匯入驗證。** 在 WAVE 匯入 2～3 本 EPUB（含有封面、含固定版面各一）：書名、作者、封面正確；日誌無 Readium 字樣。
-- [ ] **Step 2b: 封面型別掃描。** 以 Task 4 Step 1 保留的 `library_metadata_comparison_test.dart` 為底，改寫成**拋棄式**唯讀整合測試（不進 commit）：開 `library.db`（`openReadOnlyDatabase`）、對每本 EPUB 呼叫 `readEpubMetadataOnAndroid`，印出每本的 `coverType`（來自 Task 2 保留在 Map 的 `coverType` 欄位）與 `coverBytes` 是否為 null，並統計「被拒收」（`coverType` 非 `image/*`）的筆數與書名；預期全為 `image/*`。有被拒收的書列入報告，並人工確認是否真的沒有圖片封面（Readest 類 bug 的實機檢查，Issue 12 的對比只比「有沒有」封面）。沿用該檔的保護：測試前後 `library.db` 大小與修改時間不變。
-- [ ] **Step 3: 損毀 EPUB。** 匯入一個損毀的 EPUB：匯入不中斷，書名為檔名（Review Focus 1）。
-- [ ] **Step 4: 舊書回填計時。** 把一本書的 `is_fixed_layout` 設為 `NULL` 後開書，量測載入指示器消失的時間；記錄 WAVE 的實測值（對應「待人類確認」第 1 點，超過 10 秒回報人類）。
-- [ ] **Step 5: 體積。** 重跑 Task 0 Step 3 的 release 建置，與基準比對各 ABI APK 位元組數，寫入報告。
-- [ ] **Step 6: 全套測試。** 在 `app/` 跑完整 `flutter test`，預期全過；`flutter analyze`、兩支 Node 檢查腳本通過。
-- [ ] **Step 7: 報告與帳本。** 寫 `issue-18-report.md`（各步結果、APK 體積差、未驗證項目），更新 `issues.md` 第 18 列；**不外推**：只有 WAVE（與可能的 BooksPad）上的 debug 版結果。
+- [x] **Step 1: 建置並安裝。** `flutter build apk --debug`，`adb install -r`（**禁用 `flutter install`**）；操作前備份資料庫。
+- [x] **Step 2: 匯入驗證。** 在 WAVE 匯入 2～3 本 EPUB（含有封面、含固定版面各一）：書名、作者、封面正確；日誌無 Readium 字樣。
+- [x] **Step 2b: 封面型別掃描。** 以 Task 4 Step 1 保留的 `library_metadata_comparison_test.dart` 為底，改寫成**拋棄式**唯讀整合測試（不進 commit）：開 `library.db`（`openReadOnlyDatabase`）、對每本 EPUB 呼叫 `readEpubMetadataOnAndroid`，印出每本的 `coverType`（來自 Task 2 保留在 Map 的 `coverType` 欄位）與 `coverBytes` 是否為 null，並統計「被拒收」（`coverType` 非 `image/*`）的筆數與書名；預期全為 `image/*`。有被拒收的書列入報告，並人工確認是否真的沒有圖片封面（Readest 類 bug 的實機檢查，Issue 12 的對比只比「有沒有」封面）。沿用該檔的保護：測試前後 `library.db` 大小與修改時間不變。
+- [x] **Step 3: 損毀 EPUB。** 匯入一個損毀的 EPUB：匯入不中斷，書名為檔名（Review Focus 1）。
+- [x] **Step 4: 舊書回填計時。** 把一本書的 `is_fixed_layout` 設為 `NULL` 後開書，量測載入指示器消失的時間；記錄 WAVE 的實測值（對應「待人類確認」第 1 點，超過 10 秒回報人類）。
+- [x] **Step 5: 體積。** 重跑 Task 0 Step 3 的 release 建置，與基準比對各 ABI APK 位元組數，寫入報告。
+- [x] **Step 6: 全套測試。** 在 `app/` 跑完整 `flutter test`，預期全過；`flutter analyze`、兩支 Node 檢查腳本通過。
+- [x] **Step 7: 報告與帳本。** 寫 `issue-18-report.md`（各步結果、APK 體積差、未驗證項目），更新 `issues.md` 第 18 列；**不外推**：只有 WAVE（與可能的 BooksPad）上的 debug 版結果。
 
 ## 過關條件
 

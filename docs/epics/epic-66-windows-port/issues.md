@@ -21,7 +21,7 @@
 | 15 | `pdf_reader_view_filters_test.dart` 加粗覆蓋圖偶發失敗查根因：整批跑 `test/reader` 約 1／3 機率失敗（等背景 Isolate 結果 120 輪仍無 `RawImage`），等待上限已放寬兩次仍偶發，疑 `PdfReaderView` 加粗佇列有競態（來源 Issue 11） | 無 | 🟢 已結案：無法重現，根因未確定（整批 test/reader 20 輪含 CPU 負載、全套 3 輪，共 23 次 0 失敗；未改程式；見 [plan-issue-15.md](plans/plan-issue-15.md)、[issue-15-report.md](issue-15-report.md)） | #411 |
 | 16 | `desktop_drop` 0.9 與 `cross_file` 0.4 遷移：`desktop_drop` 0.9.x 要求 `cross_file ^0.4.0`（破壞性更新），與 `file_picker`、`share_plus`、`share_plus_platform_interface`（含最新版）要求的 `cross_file ^0.3.x` 衝突，需 vendor 修補三個套件並改寫拖曳匯入（來源 Issue 6） | Issue 6 | ⚪ 未開始（尚未規劃，不排程） | — |
 | 17 | Android 建置工具升級：Flutter 3.47.9 警告對 Gradle 8.14.0（需 ≥ 9.1.0）與 AGP 8.11.1（需 ≥ 9.0.1）的支援「即將移除」，目前仍可建置；一併評估 built-in Kotlin 遷移（來源 Issue 6） | Issue 6 | ⚪ 未開始（尚未規劃，不排程） | — |
-| 18 | Android 移除 Readium 相依與清理（階段二）：EPUB 詮釋資料與既有書籍版面回填全面改走 foliate-js 探針，拔除 `readium-shared`／`readium-streamer`、原生 EPUB 方法、Readium 退路、對比程式碼與授權項 | Issue 12 | 🟡 進行中（見 [plan-issue-18.md](plans/plan-issue-18.md)） | — |
+| 18 | Android 移除 Readium 相依與清理（階段二）：EPUB 詮釋資料與既有書籍版面回填全面改走 foliate-js 探針，拔除 `readium-shared`／`readium-streamer`、原生 EPUB 方法、Readium 退路、對比程式碼與授權項 | Issue 12 | 🟢 已完成（見 [plan-issue-18.md](plans/plan-issue-18.md)、[issue-18-report.md](issue-18-report.md)；BooksPad 實機驗證通過，WAVE 未連接未驗證） | — |
 | 19 | `reader_screen_test` 在 Windows 整份中斷診斷：未修改的 `HEAD` 在這台機器上也會在第一支測試結束後整個結束（App 結束、exit 79、後續 18 支 `did not complete`），單獨跑第 1、2 支皆通過；原因未明（來源 Issue 13） | 無 | ⚪ 未開始（尚未規劃，不排程） | — |
 | 20 | 桌面寬度（> 720px）雙欄排版下 EPUB 目錄「目前章節」判定落在前一章：Foliate 在雙欄補齊前一節內容並回報前一節，目錄因此沒收折；Issue 13 為了讓測試通過把視窗縮成 400x800，未判定是否為產品缺陷，且冒煙套件沒有任何一支在桌面寬度驗證（來源 Issue 13） | 無 | 🟢 已合併（PR #412；Windows 1280x800 實測，只在這台機器驗證）（選項 A：目錄跳轉後以點選項為目前章節；一般翻頁的雙欄判定未改，建議另登記；見 [plan-issue-20.md](plans/plan-issue-20.md)、[issue-20-report.md](issue-20-report.md)） | #412 |
 | 21 | Android 上 `epub_toc_test`（1/2）、`epub_highlights_notes_test`（0/1）、`reader_screen_test`（14/19）仍有失敗：BooksPad（Android 12）螢幕常亮下實測，原因未查明；已排除 400x800 視窗覆寫與螢幕熄滅；PR 前版本在同機上這些測試連書都載入不了（來源 Issue 13） | 無 | ⚪ 未開始（尚未規劃，不排程） | — |
@@ -538,7 +538,7 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
     4. 移除 `extractEpubMetadata` 原生方法與相關宣告。
     5. 將既有書籍回填 `detectEpubLayout` 改由 foliate-js 探針抽取。
     6. 清理 `third_party_licenses`、更新專案文件與架構說明。
-  - 狀態：實作中（見 [plan-issue-18.md](plans/plan-issue-18.md)）。
+  - 狀態：已完成（見 [plan-issue-18.md](plans/plan-issue-18.md)、[issue-18-report.md](issue-18-report.md)；BooksPad 實機驗證通過，WAVE 未連接未驗證）。
 - **`reader_screen_test` 在 Windows 整份中斷（已登錄為 Issue 19，2026-11-10，不排程）。**
   - 現象：未修改的 `HEAD` 在這台機器上，第一支測試結束後 App 結束（exit 79），其餘 18 支 `did not complete`；單獨跑第 1、2 支皆通過。Issue 13 初版報告所稱「9／19 通過」在這台機器上無法重現，原因未查明，因此此檔不在套件清單內。
   - 已排除：儲存閱讀位置時資料庫已關閉（診斷輸出沒有該例外）、測試端重複關庫。
