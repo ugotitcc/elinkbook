@@ -1,0 +1,51 @@
+00:00 +0: loading C:/Users/fycdc/AI/elinkBook/app/integration_test/book_metadata_channel_test.dart
+Running Gradle task 'assembleDebug'...                          
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/C:/Users/fycdc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14/lib/native-platform-0.22-milestone-28.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+Running Gradle task 'assembleDebug'...                            148.1s
+✓ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...          10.3s
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:00 +0: C:/Users/fycdc/AI/elinkBook/app/integration_test/book_metadata_channel_test.dart: extractMetadata 收到 epub 格式回 unsupported_format
+00:03 +1: C:/Users/fycdc/AI/elinkBook/app/integration_test/book_metadata_channel_test.dart: PDF 詮釋資料提取回傳非空的 coverBytes
+00:03 +2: C:/Users/fycdc/AI/elinkBook/app/integration_test/book_metadata_channel_test.dart: 不存在的檔案路徑呼叫 extractMetadata 拋出 PlatformException
+00:03 +3: C:/Users/fycdc/AI/elinkBook/app/integration_test/book_metadata_channel_test.dart: 以 file:// URI 表示路徑呼叫 extractMetadata（PDF）同樣回傳非空結果
+00:04 +4: C:/Users/fycdc/AI/elinkBook/app/integration_test/book_metadata_channel_test.dart: PDF 呼叫 extractMetadata 時，回應 map 沒有 identifier 鍵
+00:04 +5: C:/Users/fycdc/AI/elinkBook/app/integration_test/book_metadata_channel_test.dart: computeSha256 對本機檔案路徑計算結果與獨立計算的參考雜湊值一致
+00:05 +6: C:/Users/fycdc/AI/elinkBook/app/integration_test/book_metadata_channel_test.dart: computeSha256 對真正的 content:// URI 計算結果與本機路徑計算結果一致
+00:05 +7: C:/Users/fycdc/AI/elinkBook/app/integration_test/book_metadata_channel_test.dart: computeSha256 對不存在的檔案路徑拋出 PlatformException
+00:05 +8: C:/Users/fycdc/AI/elinkBook/app/integration_test/book_metadata_channel_test.dart: (tearDownAll)
+00:07 +8: loading C:/Users/fycdc/AI/elinkBook/app/integration_test/content_uri_range_metadata_test.dart
+Running Gradle task 'assembleDebug'...                          
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/C:/Users/fycdc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14/lib/native-platform-0.22-milestone-28.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+Running Gradle task 'assembleDebug'...                             56.5s
+✓ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...           9.5s
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+01:31 +8: C:/Users/fycdc/AI/elinkBook/app/integration_test/content_uri_range_metadata_test.dart: content:// 區段讀取與 foliate-js metadata 一致
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[content_uri_probe] title=elinkBook 範例 EPUB author=null identifier=urn:uuid:00000000-0000-0000-0000-000000000001 cover=73
+01:37 +9: C:/Users/fycdc/AI/elinkBook/app/integration_test/content_uri_range_metadata_test.dart: (tearDownAll)
+01:38 +9: All tests passed!
+exit=0

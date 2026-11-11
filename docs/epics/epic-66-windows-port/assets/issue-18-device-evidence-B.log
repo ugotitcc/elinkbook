@@ -1,0 +1,35 @@
+00:00 +0: loading C:/Users/fycdc/AI/elinkBook/app/integration_test/zz_issue18_evidence_test.dart
+Running Gradle task 'assembleDebug'...                          
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/C:/Users/fycdc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14/lib/native-platform-0.22-milestone-28.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+Running Gradle task 'assembleDebug'...                             64.0s
+✓ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...           9.8s
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:00 +0: B. 批次匯入含損毀 EPUB 不中斷
+[I18_IMPORT_FIXTURES] good=8974,1878 truncatedBytes=883 garbageBytes=4096 sampleEpubBytes=1767
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[probe onReceivedError] https://appassets.androidplatform.net/favicon.ico: net::ERR_NAME_NOT_RESOLVED
+[I18_IMPORT_RESULT] imported=4 skippedDuplicate=0 skippedUnsupported=0 failure=null
+[I18_IMPORT_BOOK] title=elinkBook 多章節目錄範例 EPUB | author=null | isFixedLayout=false | coverPath=null | file=i18_good_multi.epub
+[I18_IMPORT_BOOK] title=i18_corrupt_truncated | author=null | isFixedLayout=null | coverPath=null | file=i18_corrupt_truncated.epub
+[I18_IMPORT_BOOK] title=elinkBook FXL 範例（封面僅透過 alternates 可達） | author=null | isFixedLayout=true | coverPath=set | file=i18_good_fxl.epub
+[I18_IMPORT_BOOK] title=i18_corrupt_garbage | author=null | isFixedLayout=null | coverPath=null | file=i18_corrupt_garbage.epub
+00:17 +1: (tearDownAll)
+00:19 +1: All tests passed!
+exit=0

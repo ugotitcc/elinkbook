@@ -24,63 +24,67 @@
 
 ---
 
-## 2. Release APK 體積前後對照表
+## 2. Release APK 體積前後對照表（2026-11-11 重跑，可重現）
 
-使用 `flutter build apk --release --split-per-abi` 產生的各架構 Release APK 體積變化：
+指令：`flutter build apk --release --split-per-abi`（無 `key.properties`，以 debug 金鑰簽章）。「移除前」用 `38854a2e`（計畫修訂 commit，Readium 仍在）另開 git worktree 建置，「移除後」用 `5cb95c2f`（本分支 HEAD）。原始輸出：`assets/issue-18-apk-size.log`。
 
-| 架構（ABI） | 移除前（位元組） | 移除後（位元組） | 減少量（位元組） | 減少量（約略） |
-|---|---|---|---|---|
-| `app-arm64-v8a-release.apk` | 64,574,458 | 63,770,836 | -803,622 | -803.6 KB (-0.77 MB) |
-| `app-armeabi-v7a-release.apk` | 60,820,182 | 60,016,560 | -803,622 | -803.6 KB (-0.77 MB) |
-| `app-x86_64-release.apk` | 66,419,336 | 65,615,714 | -803,622 | -803.6 KB (-0.77 MB) |
+| 架構（ABI） | 移除前（位元組） | 移除後（位元組） | 減少量（位元組） |
+|---|---|---|---|
+| `app-arm64-v8a-release.apk` | 64,574,394 | 63,770,836 | 803,558（約 0.77 MB） |
+| `app-armeabi-v7a-release.apk` | 60,820,122 | 60,016,560 | 803,562（約 0.77 MB） |
+| `app-x86_64-release.apk` | 66,419,276 | 65,615,714 | 803,562（約 0.77 MB） |
 
-> 註：三個 ABI 的 release APK 體積縮減量皆為精確的 **803,622 位元組**（因 Readium 為純 Kotlin/JVM 程式庫，未包含原生 `.so` 動態函式庫，因此對 DEX 與資源之精簡量在各架構完全一致）。
+> 與原稿的差異：原稿寫「三個 ABI 都剛好減少 803,622 位元組」，「移除前」數字比這次的實測值各多 64 位元組（64,574,458／60,820,182／66,419,336）；「移除後」數字與這次完全相同。原稿「移除前」的來源是 Task 0 存在 scratchpad 的數字、沒有附原始檔，差異原因未查明（可能是不同 commit 的建置時間戳等內嵌值），**以這次可重現的數字為準**。減少量三個 ABI 並非完全相同（相差 4 位元組），原稿「精確一致」的說法不成立。
 
 ---
 
 ## 3. BooksPad 實機驗證結果
 
 實機測試環境：
-- 裝置：BooksPad（序號 `B78CW2508006423`，Android 12，32-bit `armeabi-v7a`，WebView 版本 `91.0.4472.114`）
-- 建置模式：Debug APK（`flutter build apk --debug --target-platform android-arm`）
+- 裝置：BooksPad（序號 `B78CW2508006423`，Android 12，32-bit `armeabi-v7a`，WebView 版本 `91.0.4472.114`，皆沿用原稿記載）
+- 建置模式：Debug APK（`flutter test … -d B78CW2508006423`，螢幕保持亮著）
 
-### 3.1 原生與區段讀取整合測試
-執行 `flutter test integration_test/book_metadata_channel_test.dart integration_test/content_uri_range_metadata_test.dart -d B78CW2508006423`：
-- `book_metadata_channel_test.dart`（8 項）：
-  - 呼叫原生 `extractMetadata(epub)` 正確回傳 `PlatformException(code: "unsupported_format")` 通過。
-  - 呼叫原生 `extractMetadata(pdf)` 對不存在檔案正確回傳 `PlatformException(code: "extraction_failed")` 通過。
-  - PDF 頁數、加密偵測、作者、標題、SHA-256 原生計算等 6 項測試全部通過。
-- `content_uri_range_metadata_test.dart`（1 項）：
-  - 驗證 Foliate 探針透過 content URI 區段讀取 EPUB 元資料，書名 `elinkBook 範例 EPUB`、UUID `urn:uuid:00000000-0000-0000-0000-000000000001`、`isFixedLayout == false` 正確通過。
-- **測試結果：9/9 全部通過**。
+**2026-11-11 審查後，以下 3.1 至 3.4 全部重跑並留存原始輸出**（原稿的實機數字當時沒有留存輸出，審查 I3）。重跑所用的證據測試是拋棄式的、未進 commit，原始碼存為 `assets/issue-18-device-evidence-test.dart.txt`。重跑方式與原稿不同之處見各節。
 
-### 3.2 實機 103 本商業 EPUB 封面型別掃描（Step 2b）
-透過暫時性整合測試掃描 BooksPad 內部 `/sdcard/Books/` 的 103 本真實商業 EPUB：
-- **掃描結果統計**：
-  - 總書籍數：103 本
-  - 擷取到封面：103 本（100%）
-  - 未擷取到封面：0 本
-  - 封面 MIME 型別分布：`image/jpeg`: 100 本，`image/png`: 3 本
-  - 非 `image/*` 遭拒收數量：0 本
-  - 解析失敗數量：0 本
-- **資料庫完整性驗證**：掃描前後 BooksPad 上之 `library.db` 檔案大小（172,032 位元組）與修改時間維持完全不變。
+### 3.1 原生通道與區段讀取整合測試
+`flutter test integration_test/book_metadata_channel_test.dart integration_test/content_uri_range_metadata_test.dart -d B78CW2508006423`，**9/9 通過**（`+9: All tests passed!`，exit 0）。原始輸出：`assets/issue-18-device-channel-tests.log`。
+- `book_metadata_channel_test.dart`（8 項）：`extractMetadata` 收到 `epub` 回 `unsupported_format`；PDF 提取、不存在檔案、`file://` PDF、PDF 無 `identifier` 鍵、三項 `computeSha256`。
+- `content_uri_range_metadata_test.dart`（1 項）：foliate 探針經 `content://` 區段讀取 EPUB 的詮釋資料。
+
+### 3.2 103 本商業 EPUB 封面型別掃描（Step 2b）
+- 資料來源：BooksPad 的 `/sdcard/Books` 內 103 本 EPUB（與原稿同一批；這台裝置上的 App 目前沒有 `library.db`，所以不是掃 App 書庫）。因 App 沒有儲存權限，掃描前以 adb 複製到 `/data/local/tmp/i18_books`（檔名改為流水號、原路徑記在 `index.txt`），掃描後已刪除。
+- 方法：對每本呼叫 `extractAndroidBookMetadata(path, 'epub')`（與匯入實際走的同一條路徑），印出 `coverType`、封面位元組數、耗時。原始輸出：`assets/issue-18-device-evidence-run2-AC.log`（每本一行 `[I18_SCAN]`）。
+- 結果：總數 103、有封面 103、無封面 0、**非 `image/*` 而被拒收 0**、解析失敗 0；MIME 分布 `image/jpeg` 100 本、`image/png` 3 本；單本耗時中位數 2,575 ms。**與原稿的統計完全一致。**
+- 與原稿不同：原稿聲稱掃描前後 `library.db` 大小不變（172,032 位元組）；這次沒有 `library.db` 可比對，**該項無法重現**，不宣稱。
 
 ### 3.3 匯入與損毀 EPUB 批次容錯驗證（Step 2 & Step 3）
-在實機上執行 `BookImportServiceImpl` 批次匯入包含多種類型的書檔：
-1. `meta_basic.epub`：標題 `基本書名`、作者 `王小明`、`isFixedLayout == false`、成功產生封面複本。
-2. `sample_fxl_svg_cover.epub`：標題 `elinkBook FXL 範例（封面僅透過 alternates 可達）`、`isFixedLayout == true`、成功產生封面複本。
-3. `Airbnb創業生存法則.epub`（真實商業書）：標題 `Airbnb創業生存法則`、作者 `莉．蓋勒格`、`isFixedLayout == false`、成功產生封面複本。
-4. `corrupt_broken_book.epub`（損毀 EPUB）：在同一批次中匯入未造成當機或中斷，標題降級為檔案名稱 `corrupt_broken_book`，作者為 `null`，封面為 `null`，`isFixedLayout` 為 `null`。
+- 方法：以 `BookImportServiceImpl`（`metadataExtractor: extractAndroidBookMetadata`，與 `main.dart` 在 Android 的接線相同）一次匯入 4 個檔案。原始輸出：`assets/issue-18-device-evidence-B.log`。
+- 檔案（與原稿不同，因原稿用的 `meta_basic.epub`、`corrupt_broken_book.epub` 不在版控內）：`sample_multi_chapter.epub`、`sample_fxl_svg_cover.epub`（版控內 fixture）、損毀 1＝`sample.epub` 截斷成前半段（883 位元組）、損毀 2＝4096 位元組非 ZIP 內容。
+- 結果：`imported=4 skippedDuplicate=0 skippedUnsupported=0 failure=null`。
+  - `sample_multi_chapter.epub`：書名「elinkBook 多章節目錄範例 EPUB」、`isFixedLayout=false`、無封面（fixture 本身沒有封面）。
+  - `sample_fxl_svg_cover.epub`：書名「elinkBook FXL 範例（封面僅透過 alternates 可達）」、`isFixedLayout=true`、封面已落地。
+  - 兩個損毀檔：**匯入未中斷**，書名為檔名（`i18_corrupt_truncated`、`i18_corrupt_garbage`），作者、封面、`isFixedLayout` 皆為 null。這驗證了 Review Focus 1（探針失敗不讓匯入中斷）。
+- 限制：作者欄位在這兩個 fixture 本身沒有作者，所以沒有驗證「作者正確」；原稿提到的 `Airbnb創業生存法則.epub` 作者「莉．蓋勒格」這次沒有逐本驗證（掃描只驗封面型別）。
 
-### 3.4 舊書版面回填計時與實機表現（Step 4）
-- 驗證情境：資料庫中 `is_fixed_layout = NULL` 的 EPUB 首次由 `ReaderScreen` 開啟。
-- 實機量測結果：
-  - `FoliateReaderView` 於開書後 **8,490 ms** 完成首次頁面渲染。
-  - 整合測試中 `pumpUntilLoaded` 等待載入指示器消失與資料庫回填寫入完成（`is_fixed_layout` 更新為 `0`）之總牆上時間為 **17,542 ms**。
-- **效能分析與觀察（2026-11-11 依審查更正）**：
-  `ReaderScreen` 在偵測 Future 回來之前不會建構 `FoliateReaderView`（`_dispatchedIsFixedLayout` 為 null 時顯示載入指示器），所以背景探針與開書是**先後執行、不是並行競爭**。原先「兩者競爭 CPU 與 WebView 資源」的歸因與程式流程不符，予以撤回；總等待時間 17,542 ms 應理解為「探針回填耗時＋其後的開書耗時」，各階段的拆分**未量測**。8,490 ms 的起迄點也沒有留存定義（原稿未註明是自哪個時間點算起），不可當作「載入指示器消失」的時間。BooksPad 是 32 位元低階裝置、已超過計畫的 10 秒門檻，推論 WAVE 只會更慢，但**未實測**。
-- **人類決定（2026-11-11）：接受 17.5 秒。** 每本舊書只發生一次（結果寫回資料庫），不改用輕量偵測。
-- 驗證後已使用一般 debug APK 還原 BooksPad 環境，並刪除暫存測試檔。
+### 3.4 舊書版面回填計時（Step 4）
+- 方法：真實 `SqliteLibraryRepository`（注入 `detectAndroidEpubLayout`）建一本 `is_fixed_layout` 為 NULL 的 EPUB，以 `ReaderScreen` 開啟；以 Stopwatch 記錄偵測器開始／結束、以及載入指示器消失的時間。用 `sample_multi_chapter.epub`（小檔）。兩次完整執行，每次 3 回合；原始輸出：`assets/issue-18-device-evidence-run1.log`、`assets/issue-18-device-evidence-run2-AC.log`。
+
+| 執行／回合 | 偵測器耗時 | 載入指示器消失（自 pump 起算） | 回填結果 |
+|---|---|---|---|
+| 第 1 次執行／回合 1（冷） | 8,102 ms | 21,079 ms | `is_fixed_layout` 寫回 `false` |
+| 第 1 次執行／回合 2 | 3,675 ms | 11,491 ms | 同上 |
+| 第 1 次執行／回合 3 | 2,699 ms | 9,733 ms | 同上 |
+| 第 2 次執行／回合 1（冷） | 5,590 ms | 18,401 ms | 同上 |
+| 第 2 次執行／回合 2 | 2,856 ms | 11,139 ms | 同上 |
+| 第 2 次執行／回合 3 | 3,169 ms | 12,068 ms | 同上 |
+
+- 冷啟動 18 至 21 秒、暖啟動約 10 至 12 秒。**原稿的 17.5 秒落在冷啟動範圍內，與這次一致。**
+- 偵測器耗時只占一部分（暖啟動約 3 秒）；偵測結束到載入指示器消失之間還有約 8 至 13 秒，包含 WebView 建立與開書。這段時間花在哪裡**沒有量測**，不下歸因。
+- 所有回合 `ReaderScreen` 都先出現載入指示器（`sawLoading=true`），回填結果都寫回資料庫。
+- **更正（審查 I1）：** `ReaderScreen` 在偵測 Future 回來之前不會建構 `FoliateReaderView`，所以背景探針與開書是**先後執行、不是並行競爭**；原稿「兩者競爭 CPU 與 WebView 資源」的歸因與程式流程不符，予以撤回。原稿的「8,490 ms 首次渲染」起迄點沒有定義、也不是「載入指示器消失」的時間，不再引用。
+- **人類決定（2026-11-11）：接受這個耗時。** 每本舊書只發生一次（結果寫回資料庫），不改用輕量偵測。
+- 只量了「成功路徑」；回填失敗的實機行為只有 widget 測試。
+- 驗證後已用一般 debug APK 還原 BooksPad（`adb install -r`），刪除裝置上的暫存複本，並把 `stay_on_while_plugged_in` 設回 0（開跑前是 2，採用你記錄的原值 0）。
 
 ---
 
@@ -116,8 +120,6 @@
 4. **`coreLibraryDesugaring` 依賴性保留**：
    - 雖然 Readium 已移除，但其他套件是否仍依賴 Desugaring 未行深層剝離，維持現有設定保留不更動。
 
-5. **Task 6 的實機原始輸出未留存（審查 I3）**：
-   - 第 2、3.2、3.3、3.4 節的 103 本掃描、損毀 EPUB 匯入與計時，都由已刪除的暫時性整合測試產生，報告內沒有日誌片段或輸出檔；匯入用的 `meta_basic.epub`、`corrupt_broken_book.epub` 也不在 `app/test/fixtures/`；APK「移除前」基準來自 Task 0 存於 scratchpad 的數字，未附原始檔。
-   - 因此這些實機數字**沒有經過獨立審查者驗證**，只是實作者自述；日後若有爭議需要重做。
+5. **Task 6 的實機原始輸出原本未留存（審查 I3）→ 2026-11-11 已重跑補上**：第 2、3 節的數字已以可重現的方式重跑並存於 `assets/issue-18-*.log`。仍然沒有的是：原稿當時的原始輸出（已不可得）、`library.db` 前後不變的驗證（這台裝置的 App 沒有書庫）、以及 WAVE 的任何結果。
 6. **全套測試 5 項首次失敗未列名（審查 M4）**：
    - 原稿只記錄「5 項」且重跑兩個檔案通過，沒有留下 5 項的名稱與所屬檔案，無法確認是否全落在那兩個檔案。2026-11-11 審查後的重跑結果見下一節。
