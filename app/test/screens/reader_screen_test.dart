@@ -1674,6 +1674,60 @@ void main() {
     },
   );
 
+  testWidgets(
+    'isFixedLayout 為 null 的 EPUB，版面偵測丟例外時降級為流式並開書，不停在載入中',
+    (tester) async {
+      final repository = _ThrowingDetectLibraryRepository(
+        initialBooks: [
+          Book(
+            id: 'b1',
+            title: '測試書',
+            filePath: 'test/fixtures/sample.epub',
+            format: BookFileFormat.epub,
+            source: BookSource.local,
+            createTime: DateTime(2026, 1, 1),
+            lastReadTime: DateTime(2026, 1, 1),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefsManager,
+              libraryRepository: repository,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      expect(repository.detectAndCacheEpubLayoutCalls, ['b1']);
+      expect(repository.layoutWriteCount, 0);
+      final stored = (await repository.listBooks()).single;
+      expect(stored.isFixedLayout, isNull);
+
+      expect(find.byType(FoliateReaderView), findsOneWidget);
+      final view = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      expect(view.isFixedLayoutHint, isFalse);
+      view.onPageRendered();
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_loading_indicator')), findsNothing);
+      expect(find.byKey(const Key('reader_error_text')), findsNothing);
+    },
+  );
+
   testWidgets('AZW3 書籍 isFixedLayout: null 時，防禦性視為 false 並建構 FoliateReaderView，'
       '不呼叫 EPUB 專屬的 detectAndCacheEpubLayout（epic-11 Issue 2 程式碼審查 C2 迴歸測試）', (
     tester,
@@ -13775,4 +13829,16 @@ void main() {
 Future<void> switchToTab(WidgetTester tester, String tabLabel) async {
   await tester.tap(find.widgetWithText(Tab, tabLabel));
   await tester.pumpAndSettle();
+}
+
+class _ThrowingDetectLibraryRepository extends FakeLibraryRepository {
+  _ThrowingDetectLibraryRepository({super.initialBooks});
+
+  int layoutWriteCount = 0;
+
+  @override
+  Future<bool> detectAndCacheEpubLayout(String bookId, String filePath) async {
+    detectAndCacheEpubLayoutCalls.add(bookId);
+    throw Exception('probe failed');
+  }
 }

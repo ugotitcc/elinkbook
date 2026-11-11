@@ -111,11 +111,11 @@
 **Interfaces:**
 - Consumes: `LibraryRepository.detectAndCacheEpubLayout(String bookId, String filePath) -> Future<bool>`（Task 1，簽章不變）。
 
-- [ ] **Step 1: 寫失敗測試。** 名稱：`isFixedLayout 為 null 的 EPUB，版面偵測丟例外時降級為流式並開書，不停在載入中`。斷言：fake repository 的 `detectAndCacheEpubLayout` 丟 `Exception('probe failed')` 後，`Key('reader_loading_indicator')` 消失、無 `Key('reader_error_text')`、且 fake 的資料庫寫入次數為 0。
-- [ ] **Step 2: 跑測試確認失敗**（目前會有未處理的 Future 錯誤且載入指示器不消失）。`flutter test test/screens/reader_screen_test.dart --plain-name "版面偵測丟例外"`。
-- [ ] **Step 3: 實作。** 在 `.then(...)` 後加 `.catchError`：以 `debugPrint` 記錄原因，若 `mounted` 則 `setState(() => _dispatchedIsFixedLayout = false)`；不寫資料庫。
-- [ ] **Step 4: 跑測試確認通過**，再跑該檔全部測試確認無回歸，`flutter analyze`。
-- [ ] **Step 5: Commit** `fix(reader): 版面回填失敗時降級為流式，不停在載入中（epic-66 Issue 18）`。
+- [x] **Step 1: 寫失敗測試。** 名稱：`isFixedLayout 為 null 的 EPUB，版面偵測丟例外時降級為流式並開書，不停在載入中`。斷言：fake repository 的 `detectAndCacheEpubLayout` 丟 `Exception('probe failed')` 後，`Key('reader_loading_indicator')` 消失、無 `Key('reader_error_text')`、且 fake 的資料庫寫入次數為 0。
+- [x] **Step 2: 跑測試確認失敗**（目前會有未處理的 Future 錯誤且載入指示器不消失）。`flutter test test/screens/reader_screen_test.dart --plain-name "版面偵測丟例外"`。
+- [x] **Step 3: 實作。** 在 `.then(...)` 後加 `.catchError`：以 `debugPrint` 記錄原因，若 `mounted` 則 `setState(() => _dispatchedIsFixedLayout = false)`；不寫資料庫。
+- [x] **Step 4: 跑測試確認通過**，再跑該檔全部測試確認無回歸，`flutter analyze`。
+- [x] **Step 5: Commit** `fix(reader): 版面回填失敗時降級為流式，不停在載入中（epic-66 Issue 18）`。
 
 ### Task 4：移除原生端 Readium 與過時的對比測試
 
