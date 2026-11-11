@@ -22,6 +22,7 @@ import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
+import 'windows_skip.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
 import '../test/support/pump_localized_widget.dart';
 
@@ -451,162 +452,171 @@ void main() {
   });
 
   testWidgets(
-      '未覆寫螢幕方向時，進入 ReaderScreen 後依全域預設值呼叫 '
-      'SystemChrome.setPreferredOrientations（auto→空列表）', (tester) async {
-    final calls = <MethodCall>[];
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      calls.add(call);
-      return null;
-    });
-    addTearDown(() {
+    '未覆寫螢幕方向時，進入 ReaderScreen 後依全域預設值呼叫 '
+    'SystemChrome.setPreferredOrientations（auto→空列表）',
+    (tester) async {
+      final calls = <MethodCall>[];
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, null);
-    });
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
 
-    final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample.epub', 'sample_orientation_default.epub');
-    addTearDown(() async {
-      final file = File(samplePath);
-      if (await file.exists()) await file.delete();
-    });
+      final samplePath = await _stageAssetAsFile(
+          'test/fixtures/sample.epub', 'sample_orientation_default.epub');
+      addTearDown(() async {
+        final file = File(samplePath);
+        if (await file.exists()) await file.delete();
+      });
 
-    await pumpReader(
-      tester,
-      ReaderScreen(
-        filePath: samplePath,
-        bookId: 'b_orientation_default',
-        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-      ),
-    );
+      await pumpReader(
+        tester,
+        ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_orientation_default',
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
+      );
 
-    await _pumpUntil(
-      tester,
-      () =>
-          calls.any((c) => c.method == 'SystemChrome.setPreferredOrientations'),
-      timeout: const Duration(seconds: 10),
-    );
+      await _pumpUntil(
+        tester,
+        () =>
+            calls.any((c) => c.method == 'SystemChrome.setPreferredOrientations'),
+        timeout: const Duration(seconds: 10),
+      );
 
-    final call = calls.firstWhere(
-      (c) => c.method == 'SystemChrome.setPreferredOrientations',
-    );
-    expect(call.arguments, isEmpty,
-        reason: 'ScreenOrientationSetting.auto（未覆寫時的全域預設值）'
-            '應對應空列表（允許全部方向）');
-  });
+      final call = calls.firstWhere(
+        (c) => c.method == 'SystemChrome.setPreferredOrientations',
+      );
+      expect(call.arguments, isEmpty,
+          reason: 'ScreenOrientationSetting.auto（未覆寫時的全域預設值）'
+              '應對應空列表（允許全部方向）');
+    },
+    skip: skipOnWindows('Windows 不支援螢幕方向鎖定（supportsMobileReaderControls == false，見 epic-66 Issue 10）'),
+  );
 
   testWidgets(
-      'screenOrientationOverride=lock90 時，SystemChrome.setPreferredOrientations '
-      '帶入 landscapeLeft', (tester) async {
-    final calls = <MethodCall>[];
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      calls.add(call);
-      return null;
-    });
-    addTearDown(() {
+    'screenOrientationOverride=lock90 時，SystemChrome.setPreferredOrientations '
+    '帶入 landscapeLeft',
+    (tester) async {
+      final calls = <MethodCall>[];
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, null);
-    });
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
 
-    const bookId = 'b_orientation_lock90';
-    await libraryRepository.insertBook(_book(bookId));
-    await prefsManager.saveBookPrefs(
-      bookId,
-      const BookReaderPrefs(
-        screenOrientationOverride: ScreenOrientationSetting.lock90,
-      ),
-    );
+      const bookId = 'b_orientation_lock90';
+      await libraryRepository.insertBook(_book(bookId));
+      await prefsManager.saveBookPrefs(
+        bookId,
+        const BookReaderPrefs(
+          screenOrientationOverride: ScreenOrientationSetting.lock90,
+        ),
+      );
 
-    final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample.epub', 'sample_orientation_lock90.epub');
-    addTearDown(() async {
-      final file = File(samplePath);
-      if (await file.exists()) await file.delete();
-    });
+      final samplePath = await _stageAssetAsFile(
+          'test/fixtures/sample.epub', 'sample_orientation_lock90.epub');
+      addTearDown(() async {
+        final file = File(samplePath);
+        if (await file.exists()) await file.delete();
+      });
 
-    await pumpReader(
-      tester,
-      ReaderScreen(
-        filePath: samplePath,
-        bookId: bookId,
-        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-      ),
-    );
+      await pumpReader(
+        tester,
+        ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
+      );
 
-    await _pumpUntil(
-      tester,
-      () =>
-          calls.any((c) => c.method == 'SystemChrome.setPreferredOrientations'),
-      timeout: const Duration(seconds: 10),
-    );
+      await _pumpUntil(
+        tester,
+        () =>
+            calls.any((c) => c.method == 'SystemChrome.setPreferredOrientations'),
+        timeout: const Duration(seconds: 10),
+      );
 
-    final call = calls.firstWhere(
-      (c) => c.method == 'SystemChrome.setPreferredOrientations',
-    );
-    expect(call.arguments, ['DeviceOrientation.landscapeLeft']);
-  });
+      final call = calls.firstWhere(
+        (c) => c.method == 'SystemChrome.setPreferredOrientations',
+      );
+      expect(call.arguments, ['DeviceOrientation.landscapeLeft']);
+    },
+    skip: skipOnWindows('Windows 不支援螢幕方向鎖定（supportsMobileReaderControls == false，見 epic-66 Issue 10）'),
+  );
 
-  testWidgets('離開 ReaderScreen 後，SystemChrome.setPreferredOrientations([]) 被呼叫還原',
-      (tester) async {
-    final calls = <MethodCall>[];
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      calls.add(call);
-      return null;
-    });
-    addTearDown(() {
+  testWidgets(
+    '離開 ReaderScreen 後，SystemChrome.setPreferredOrientations([]) 被呼叫還原',
+    (tester) async {
+      final calls = <MethodCall>[];
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, null);
-    });
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
 
-    const bookId = 'b_orientation_dispose';
-    await libraryRepository.insertBook(_book(bookId));
-    await prefsManager.saveBookPrefs(
-      bookId,
-      const BookReaderPrefs(
-        screenOrientationOverride: ScreenOrientationSetting.lock0,
-      ),
-    );
+      const bookId = 'b_orientation_dispose';
+      await libraryRepository.insertBook(_book(bookId));
+      await prefsManager.saveBookPrefs(
+        bookId,
+        const BookReaderPrefs(
+          screenOrientationOverride: ScreenOrientationSetting.lock0,
+        ),
+      );
 
-    final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample.epub', 'sample_orientation_dispose.epub');
-    addTearDown(() async {
-      final file = File(samplePath);
-      if (await file.exists()) await file.delete();
-    });
+      final samplePath = await _stageAssetAsFile(
+          'test/fixtures/sample.epub', 'sample_orientation_dispose.epub');
+      addTearDown(() async {
+        final file = File(samplePath);
+        if (await file.exists()) await file.delete();
+      });
 
-    await pumpReader(
-      tester,
-      ReaderScreen(
-        filePath: samplePath,
-        bookId: bookId,
-        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-      ),
-    );
+      await pumpReader(
+        tester,
+        ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
+      );
 
-    await _pumpUntil(
-      tester,
-      () =>
-          calls.any((c) => c.method == 'SystemChrome.setPreferredOrientations'),
-      timeout: const Duration(seconds: 10),
-    );
-    calls.clear();
+      await _pumpUntil(
+        tester,
+        () =>
+            calls.any((c) => c.method == 'SystemChrome.setPreferredOrientations'),
+        timeout: const Duration(seconds: 10),
+      );
+      calls.clear();
 
-    // 離開畫面（觸發 ReaderScreen.dispose()），比照既有「關閉重開該書」
-    // 測試模擬使用者離開閱讀器的既有手法。
-    await pumpReader(tester, const SizedBox.shrink());
-    await tester.pumpAndSettle();
+      // 離開畫面（觸發 ReaderScreen.dispose()），比照既有「關閉重開該書」
+      // 測試模擬使用者離開閱讀器的既有手法。
+      await pumpReader(tester, const SizedBox.shrink());
+      await tester.pumpAndSettle();
 
-    expect(
-      calls.any((c) =>
-          c.method == 'SystemChrome.setPreferredOrientations' &&
-          (c.arguments as List).isEmpty),
-      isTrue,
-      reason: 'dispose() 應呼叫 SystemChrome.setPreferredOrientations([]) '
-          '還原系統預設，不論進入時鎖定了哪個角度',
-    );
-  });
+      expect(
+        calls.any((c) =>
+            c.method == 'SystemChrome.setPreferredOrientations' &&
+            (c.arguments as List).isEmpty),
+        isTrue,
+        reason: 'dispose() 應呼叫 SystemChrome.setPreferredOrientations([]) '
+            '還原系統預設，不論進入時鎖定了哪個角度',
+      );
+    },
+    skip: skipOnWindows('Windows 不支援螢幕方向鎖定（supportsMobileReaderControls == false，見 epic-66 Issue 10）'),
+  );
 
   testWidgets('PDF 點擊「⚙️版面」按鈕開啟 PdfSettingsSheet（非 ReaderSettingsSheet）',
       (tester) async {
@@ -679,87 +689,95 @@ void main() {
     }
   });
 
-  testWidgets('PDF 調整對比度／亮度後畫面持續渲染成功、無 onError', (tester) async {
-    final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample.pdf', 'sample_pdf_filters.pdf');
-    addTearDown(() async {
-      final file = File(samplePath);
-      if (await file.exists()) await file.delete();
-    });
-    const bookId = 'b_pdf_filters';
-    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+  testWidgets(
+    'PDF 調整對比度／亮度後畫面持續渲染成功、無 onError',
+    (tester) async {
+      final samplePath = await _stageAssetAsFile(
+          'test/fixtures/sample.pdf', 'sample_pdf_filters.pdf');
+      addTearDown(() async {
+        final file = File(samplePath);
+        if (await file.exists()) await file.delete();
+      });
+      const bookId = 'b_pdf_filters';
+      await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
 
-    await pumpReader(
-      tester,
-      ReaderScreen(
-        filePath: samplePath,
-        bookId: bookId,
-        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-      ),
-    );
+      await pumpReader(
+        tester,
+        ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
+      );
 
-    await _pumpUntil(
-      tester,
-      () => _pdfSettingsButtonReady(tester),
-      timeout: const Duration(seconds: 10),
-    );
+      await _pumpUntil(
+        tester,
+        () => _pdfSettingsButtonReady(tester),
+        timeout: const Duration(seconds: 10),
+      );
 
-    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+      await tester.pumpAndSettle();
 
-    for (final keySuffix in ['contrast_increment', 'brightness_decrement']) {
-      for (var i = 0; i < 3; i++) {
-        await tester.tap(find.byKey(Key('pdf_settings_$keySuffix')));
-        await tester.pump();
+      for (final keySuffix in ['contrast_increment', 'brightness_decrement']) {
+        for (var i = 0; i < 3; i++) {
+          await tester.tap(find.byKey(Key('pdf_settings_$keySuffix')));
+          await tester.pump();
+        }
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.byKey(const Key('reader_error_text')), findsNothing,
+            reason: '調整 $keySuffix 後畫面應持續渲染成功，不應觸發 onError');
       }
-      await tester.pump(const Duration(milliseconds: 300));
+    },
+    skip: skipOnWindows('PDF 濾鏡分頁（對比/亮度/加粗）僅在行動裝置啟用（supportsMobileReaderControls == true，見 pdf_settings_sheet.dart）'),
+  );
+
+  testWidgets(
+    'PDF 調整加粗強度後畫面持續渲染成功、無 onError',
+    (tester) async {
+      final samplePath = await _stageAssetAsFile(
+          'test/fixtures/sample.pdf', 'sample_pdf_bold.pdf');
+      addTearDown(() async {
+        final file = File(samplePath);
+        if (await file.exists()) await file.delete();
+      });
+      const bookId = 'b_pdf_bold';
+      await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+      await pumpReader(
+        tester,
+        ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+        ),
+      );
+
+      await _pumpUntil(
+        tester,
+        () => _pdfSettingsButtonReady(tester),
+        timeout: const Duration(seconds: 10),
+      );
+
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+      await tester.pumpAndSettle();
+
+      await tester
+          .tap(find.byKey(const Key('pdf_settings_bold_strength_increment')));
+      // boldStrength 變動觸發完整重新渲染，比 contrast/brightness 更重，給予
+      // 較長的 settle 時間。
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.byKey(const Key('reader_error_text')), findsNothing,
-          reason: '調整 $keySuffix 後畫面應持續渲染成功，不應觸發 onError');
-    }
-  });
-
-  testWidgets('PDF 調整加粗強度後畫面持續渲染成功、無 onError', (tester) async {
-    final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample.pdf', 'sample_pdf_bold.pdf');
-    addTearDown(() async {
-      final file = File(samplePath);
-      if (await file.exists()) await file.delete();
-    });
-    const bookId = 'b_pdf_bold';
-    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
-
-    await pumpReader(
-      tester,
-      ReaderScreen(
-        filePath: samplePath,
-        bookId: bookId,
-        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
-      ),
-    );
-
-    await _pumpUntil(
-      tester,
-      () => _pdfSettingsButtonReady(tester),
-      timeout: const Duration(seconds: 10),
-    );
-
-    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
-    await tester.pumpAndSettle();
-
-    await tester
-        .tap(find.byKey(const Key('pdf_settings_bold_strength_increment')));
-    // boldStrength 變動觸發完整重新渲染，比 contrast/brightness 更重，給予
-    // 較長的 settle 時間。
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(find.byKey(const Key('reader_error_text')), findsNothing,
-        reason: '調整加粗強度後畫面應持續渲染成功，不應觸發 onError');
-  });
+          reason: '調整加粗強度後畫面應持續渲染成功，不應觸發 onError');
+    },
+    skip: skipOnWindows('PDF 濾鏡分頁（對比/亮度/加粗）僅在行動裝置啟用（supportsMobileReaderControls == true，見 pdf_settings_sheet.dart）'),
+  );
 
   testWidgets('PDF 切換至智慧自動裁切，畫面持續渲染成功、無 onError', (tester) async {
     final samplePath = await _stageAssetAsFile(
@@ -901,7 +919,13 @@ void main() {
     // PdfSettingsSheet（那只在確認框選、onCropRectSelected 觸發後才會
     // 發生）——用來間接驗證翻頁手勢在裁切互動模式下確實被暫停，沒有讓
     // 原生端 nextPage()/previousPage() 觸發非預期的重新渲染或狀態改變。
-    await tester.drag(find.byType(PdfReaderView), const Offset(-200, 0));
+    // 此處由 PdfCropFrameOverlay 攔截手勢，命中點未穿透至 PdfReaderView 屬預期，
+    // 傳入 warnIfMissed: false 消除 hit-test 警告。
+    await tester.drag(
+      find.byType(PdfReaderView),
+      const Offset(-200, 0),
+      warnIfMissed: false,
+    );
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
