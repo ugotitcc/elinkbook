@@ -190,9 +190,6 @@ if (keystoreProperties == null) {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
-    implementation("org.readium.kotlin-toolkit:readium-shared:3.3.0")
-    implementation("org.readium.kotlin-toolkit:readium-streamer:3.3.0")
-
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("androidx.fragment:fragment-ktx:1.8.9")
     implementation("androidx.core:core-ktx:1.15.0")

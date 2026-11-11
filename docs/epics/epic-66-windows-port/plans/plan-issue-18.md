@@ -128,14 +128,14 @@
 **Interfaces:**
 - Produces: 通道 `extractMetadata` 收到 `format == "epub"` 時 `result.error("unsupported_format", ...)`（與現行 `else` 分支同一個錯誤碼）；`detectEpubLayout` 方法整個移除（落入 `notImplemented`）。
 
-- [ ] **Step 1: 改寫整合測試（先於實作）。**
+- [x] **Step 1: 改寫整合測試（先於實作）。**
   - `book_metadata_channel_test.dart`：**共 6 個 EPUB 案例**要處理——第 23、43、107、149、166 行的 5 個（提取成功、含 identifier、空字串 identifier、`file://` 路徑等）刪除，由單一新案例 `extractMetadata 收到 epub 格式回 unsupported_format`（斷言 `PlatformException.code == 'unsupported_format'`）取代；第 89 行「不存在的檔案路徑」案例雖然改後仍會因 `unsupported_format` 而過，但是因為錯的原因而過，須把它的 `format` 改成 `'pdf'` 才有意義。PDF 案例（第 71、127、184 行）與 `computeSha256` 案例保留。
   - `content_uri_range_metadata_test.dart`：移除對 Readium 的呼叫與 `diffBookMetadata`，改為斷言經 `content://` 讀取後 foliate 探針回傳的 `title`、`identifier`、`isFixedLayout` 等於已知 fixture 的預期值（寫死在測試內）。
   - 刪除兩個對比測試檔，以及 `lib/library/metadata_comparison.dart`、`test/library/metadata_comparison_test.dart`；`grep -rn "metadata_comparison" app/lib app/test app/integration_test` 預期無殘留，`flutter analyze` 乾淨。**刪除前先保留一份** `library_metadata_comparison_test.dart` 到 scratchpad（`git show HEAD:app/integration_test/library_metadata_comparison_test.dart`），Task 6 Step 2b 要改寫它來掃描封面型別。
-- [ ] **Step 2: 原生端實作。** 刪除 `extractEpubMetadata`、`detectEpubLayout`、`"detectEpubLayout"` 分支、`findFallbackCoverBitmap`、`resolveAbsoluteUrl`（若 `copyContentUriToFile` 等仍使用則保留，以編譯與 `grep` 為準）、第 21–30 行的 Readium import；`extractMetadata` 的 `"epub"` 分支改為 `unsupported_format`。`bitmapToPngBytes` 仍被 PDF 使用，保留。移除 `build.gradle.kts` 兩行相依。
-- [ ] **Step 3: 編譯與 JVM 單元測試。** 這台 Windows 機器 `java` 不在 PATH、`JAVA_HOME` 為空，`gradlew.bat` 會先檢查環境變數而直接報 `JAVA_HOME is not set`，所以在 PowerShell 執行：`$env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-17.0.21.21-hotspot"; cd app/android; ./gradlew.bat :app:compileDebugKotlin :app:testDebugUnitTest`（路徑與 `gradle.properties` 的 `org.gradle.java.home` 相同，已確認存在）。預期成功；`grep -rn "org.readium" app/android/app/src app/android/app/build.gradle.kts` 預期無輸出。
-- [ ] **Step 4: 整合測試（需 Android 實機，螢幕亮著）。** `flutter test integration_test/book_metadata_channel_test.dart integration_test/content_uri_range_metadata_test.dart -d <device-id>`，預期通過。**無實機時此步不得宣稱通過**，在報告標「未驗證」。
-- [ ] **Step 5: Commit** `refactor(android): 移除 Readium 相依與 EPUB 原生詮釋資料通道（epic-66 Issue 18）`。
+- [x] **Step 2: 原生端實作。** 刪除 `extractEpubMetadata`、`detectEpubLayout`、`"detectEpubLayout"` 分支、`findFallbackCoverBitmap`、`resolveAbsoluteUrl`（若 `copyContentUriToFile` 等仍使用則保留，以編譯與 `grep` 為準）、第 21–30 行的 Readium import；`extractMetadata` 的 `"epub"` 分支改為 `unsupported_format`。`bitmapToPngBytes` 仍被 PDF 使用，保留。移除 `build.gradle.kts` 兩行相依。
+- [x] **Step 3: 編譯與 JVM 單元測試。** 這台 Windows 機器 `java` 不在 PATH、`JAVA_HOME` 為空，`gradlew.bat` 會先檢查環境變數而直接報 `JAVA_HOME is not set`，所以在 PowerShell 執行：`$env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-17.0.21.21-hotspot"; cd app/android; ./gradlew.bat :app:compileDebugKotlin :app:testDebugUnitTest`（路徑與 `gradle.properties` 的 `org.gradle.java.home` 相同，已確認存在）。預期成功；`grep -rn "org.readium" app/android/app/src app/android/app/build.gradle.kts` 預期無輸出。
+- [x] **Step 4: 整合測試（需 Android 實機，螢幕亮著）。** `flutter test integration_test/book_metadata_channel_test.dart integration_test/content_uri_range_metadata_test.dart -d <device-id>`，預期通過。**無實機時此步不得宣稱通過**，在報告標「未驗證」。
+- [x] **Step 5: Commit** `refactor(android): 移除 Readium 相依與 EPUB 原生詮釋資料通道（epic-66 Issue 18）`。
 
 ### Task 5：授權檔與文件
 

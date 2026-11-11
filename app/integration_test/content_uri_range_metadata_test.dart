@@ -2,7 +2,7 @@
 //
 // 用 createTestContentUri（FileProvider）取得真正的 content:// URI，驗證：
 // 1. contentUriLength／readContentUriRange 與本機檔案的位元組一致（含 end 超過長度夾回、起點越界回 null）；
-// 2. 經 content:// 時，foliate-js 探針與 Readium 的 metadata 一致。
+// 2. 經 content:// 時，foliate-js 探針回傳的 metadata 與已知 fixture 預期值一致。
 //
 // 執行：cd app && flutter test integration_test/content_uri_range_metadata_test.dart -d <device-id>
 
@@ -12,7 +12,6 @@ import 'package:elinkbook/library/android_epub_metadata.dart';
 import 'package:elinkbook/library/book_range_reader.dart';
 import 'package:elinkbook/library/library_repository.dart'
     show kBookMetadataChannel;
-import 'package:elinkbook/library/metadata_comparison.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -29,7 +28,7 @@ Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('content:// 區段讀取與 foliate-js／Readium metadata 一致', (tester) async {
+  testWidgets('content:// 區段讀取與 foliate-js metadata 一致', (tester) async {
     final path =
         await _stageAssetAsFile('test/fixtures/sample.epub', 'range_probe.epub');
     addTearDown(() async {
@@ -61,17 +60,17 @@ void main() {
     expect(await readBookRange(uri, -1, 10), isNull);
     expect(await readBookRange(uri, 0, 5 * 1024 * 1024), isNull);
 
-    // metadata：經 content:// 兩邊一致
-    final readium = await kBookMetadataChannel
-        .invokeMapMethod<String, Object?>(
-            'extractMetadata', {'uri': uri, 'format': 'epub'});
+    // metadata：經 content:// 讀取與 sample.epub 預期值一致
     final foliate = await readEpubMetadataOnAndroid(uri);
-    expect(readium, isNotNull);
     // ignore: avoid_print
     print('[content_uri_probe] title=${foliate['title']} '
         'author=${foliate['author']} identifier=${foliate['identifier']} '
         'cover=${(foliate['coverBytes'] as Uint8List?)?.length}');
-    expect(diffBookMetadata(readium!, foliate), isEmpty);
-    expect(foliate['title'], isNotNull);
+    expect(foliate['title'], 'elinkBook 範例 EPUB');
+    expect(
+      foliate['identifier'],
+      'urn:uuid:00000000-0000-0000-0000-000000000001',
+    );
+    expect(foliate['isFixedLayout'], isFalse);
   });
 }
