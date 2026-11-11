@@ -174,6 +174,28 @@ const _testCases = [
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  // epic-66 Issue 25：封面 manifest 項目是 XHTML 頁（foliate getCover() 會回傳
+  // type=application/xhtml+xml 的 Blob）時，不得被當成封面圖片存下。
+  testWidgets('封面為 XHTML 頁時拒收封面（coverBytes 為 null）', (tester) async {
+    final appSupport = await getApplicationSupportDirectory();
+    await initAppWebViewEnvironment(userDataFolder: appSupport.path);
+
+    final staged = await _stageAssetAsFile(
+      'test/fixtures/metadata/meta_cover_xhtml.epub',
+      'test_meta_cover_xhtml.epub',
+    );
+    addTearDown(() async {
+      final f = File(staged);
+      if (await f.exists()) await f.delete();
+    });
+
+    final metadata = await extractWindowsBookMetadata(staged, 'epub');
+    expect(metadata, isNotNull);
+    expect(metadata!['title'], '封面為 XHTML 頁');
+    expect(metadata['coverBytes'], isNull, reason: 'XHTML 封面應被拒收');
+    expect(metadata['coverType'], 'application/xhtml+xml');
+  });
+
   testWidgets('Windows HeadlessInAppWebView 解析 13 份 EPUB metadata', (
     tester,
   ) async {

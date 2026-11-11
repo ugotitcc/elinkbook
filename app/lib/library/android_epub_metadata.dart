@@ -5,7 +5,6 @@
 
 import 'dart:async';
 import 'dart:collection';
-import 'dart:convert';
 import 'dart:ui' show Size;
 
 import 'package:flutter/foundation.dart';
@@ -14,7 +13,11 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../reader/foliate_bridge_handlers.dart';
 import '../reader/foliate_native_bridge.dart';
 import 'book_range_reader.dart';
+import 'epub_probe_result.dart' show mapProbeResult;
 import 'windows_epub_metadata.dart' show parseBookRange;
+
+// 既有的 import／測試沿用 android_epub_metadata.dart 取得 mapProbeResult。
+export 'epub_probe_result.dart' show mapProbeResult;
 
 const _probeOrigin = 'https://appassets.androidplatform.net';
 
@@ -45,37 +48,6 @@ try {
 </body>
 </html>
 ''';
-
-/// 解析探針回傳的 JSON 字串，轉換為詮釋資料 Map。
-///
-/// 當 `coverType` 非空且不以 `image/` 開頭時（例如 foliate `getCover()` 退回 XHTML 頁），
-/// 拒收封面（`coverBytes` 為 `null`）；`coverType` 缺漏或空字串時維持相容解碼。
-Map<String, Object?> mapProbeResult(String json) {
-  final raw = jsonDecode(json) as Map<String, dynamic>;
-
-  final coverType = raw['coverType'] as String?;
-  final isRejectedCoverType =
-      coverType != null && coverType.isNotEmpty && !coverType.startsWith('image/');
-
-  Uint8List? coverBytes;
-  final coverBase64 = raw['coverBase64'] as String?;
-  if (!isRejectedCoverType && coverBase64 != null && coverBase64.isNotEmpty) {
-    try {
-      coverBytes = base64Decode(coverBase64);
-    } catch (_) {
-      coverBytes = null;
-    }
-  }
-
-  return <String, Object?>{
-    'title': raw['title'] as String?,
-    'author': raw['author'] as String?,
-    'identifier': raw['identifier'] as String?,
-    'isFixedLayout': raw['isFixedLayout'] as bool? ?? false,
-    'coverBytes': coverBytes,
-    'coverType': coverType,
-  };
-}
 
 /// 攔截 `/book/current.epub` 區段請求。
 ///
@@ -125,7 +97,8 @@ Future<WebResourceResponse?> interceptBookRange(
 /// 在 Android HeadlessInAppWebView 內以 foliate-js 解析 [uri] 之 EPUB 詮釋資料。
 ///
 /// 逾時拋出 [TimeoutException]，JavaScript 或檔案錯誤拋出 [StateError]。
-/// 回傳 Map 鍵包含：`title`, `author`, `identifier`, `isFixedLayout`, `coverBytes`。
+/// 回傳 Map 鍵包含：`title`, `author`, `identifier`, `isFixedLayout`, `coverBytes`,
+/// `coverType`（探針回報的封面 MIME 型別，可為 null）。
 Future<Map<String, Object?>> readEpubMetadataOnAndroid(
   String uri, {
   Duration timeout = const Duration(seconds: 30),

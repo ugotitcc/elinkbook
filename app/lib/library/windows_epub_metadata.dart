@@ -19,6 +19,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../reader/foliate_native_bridge.dart';
 import '../reader/windows_reader_resources.dart';
 import '../windows/windows_webview_environment.dart';
+import 'epub_probe_result.dart' show mapProbeResult;
 
 const _probeOrigin = 'https://foliate-metadata.local';
 
@@ -95,7 +96,8 @@ Future<Uint8List?> readFileRange(String path, int start, int end) async {
 /// 在 HeadlessInAppWebView 內以 foliate-js 解析 [epubPath] 之詮釋資料。
 ///
 /// 逾時拋出 [TimeoutException]，JavaScript 或檔案錯誤拋出 [StateError]。
-/// 回傳 Map 鍵包含：`title`, `author`, `identifier`, `isFixedLayout`, `coverBytes`。
+/// 回傳 Map 鍵包含：`title`, `author`, `identifier`, `isFixedLayout`, `coverBytes`,
+/// `coverType`（探針回報的封面 MIME 型別，可為 null）。
 Future<Map<String, Object?>> readEpubMetadataInWebView(
   String epubPath, {
   Duration timeout = const Duration(seconds: 60),
@@ -188,25 +190,8 @@ Future<Map<String, Object?>> readEpubMetadataInWebView(
   try {
     await headless.run();
     final resultJson = await completer.future.timeout(timeout);
-    final raw = jsonDecode(resultJson) as Map<String, dynamic>;
-
-    Uint8List? coverBytes;
-    final coverBase64 = raw['coverBase64'] as String?;
-    if (coverBase64 != null && coverBase64.isNotEmpty) {
-      try {
-        coverBytes = base64Decode(coverBase64);
-      } catch (_) {
-        coverBytes = null;
-      }
-    }
-
-    return <String, Object?>{
-      'title': raw['title'] as String?,
-      'author': raw['author'] as String?,
-      'identifier': raw['identifier'] as String?,
-      'isFixedLayout': raw['isFixedLayout'] as bool? ?? false,
-      'coverBytes': coverBytes,
-    };
+    // 解析與封面型別檢查與 Android 共用（epic-66 Issue 25）。
+    return mapProbeResult(resultJson);
   } finally {
     try {
       // 等待 JavaScript callHandler 回應之 C++ evaluateJavascript 完成，
