@@ -53,6 +53,8 @@ await tester.pump(const Duration(seconds: 1));
 
 ---
 
+> **後續註記（2026-11-12，Issue 21）：** 上節的中斷機制是推測。之後在 Windows 冒煙套件內，**未改動的 `foliate_kf8_test`** 也出現同簽章中斷（第 1 項結束後整份 `did not complete`、日誌有 `flutter_tools` 暫存目錄的 `PathNotFoundException`；重跑 3 次中 1 次發生），`reader_screen_test` 在套件內也曾失敗 1 次（其後單檔與重跑 3/3 通過）。所以該中斷並非本檔獨有，也可能不只是測試端卸載時序；「補 1 秒後 10/10 不再中斷」仍是事實，但機制更不確定。詳見 `issue-21-report.md` 第 5、6 節。
+
 ## 3. 19 項測試逐項診斷與狀態矩陣
 
 修復時序與加上平台守門後，19 項測試逐項狀態如下：

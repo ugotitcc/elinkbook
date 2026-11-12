@@ -1,0 +1,256 @@
+Resolving dependencies...
+Downloading packages...
+  archive 4.0.9 (4.6.0 available)
+  blockchain_utils 6.0.0 (7.1.0 available)
+  clock 1.1.2 (1.1.3 available)
+  code_assets 1.2.1 (2.2.0 available)
+  connectivity_plus 7.3.1 (7.3.2 available)
+  cross_file 0.3.5+4 (0.4.0 available)
+  crypto 3.0.7 (3.0.8 available)
+  cupertino_icons 1.0.9 (2.0.0 available)
+  dbus 0.7.14 (0.8.0 available)
+  desktop_drop 0.8.4 (0.9.2 available)
+  desktop_webview_window 0.3.0 (0.4.2 available)
+  file_picker 11.0.3 (13.3.2 available)
+  flutter_cache_manager 3.4.2 (3.5.0 available)
+! flutter_inappwebview_android 1.1.3 from path patches\flutter_inappwebview_android (overridden)
+  flutter_secure_storage 10.3.1 (11.2.0 available)
+  flutter_secure_storage_darwin 0.3.2 (0.4.3 available)
+  flutter_secure_storage_linux 3.0.1 (3.0.3 available)
+  flutter_secure_storage_platform_interface 2.0.2 (2.1.1 available)
+  flutter_secure_storage_windows 4.1.0 (4.2.2 available)
+  glob 2.1.3 (2.2.0 available)
+  hooks 2.0.2 (2.2.0 available)
+  html 0.15.6 (0.15.7 available)
+  image 4.8.0 (4.12.0 available)
+  jni 1.0.3 (1.1.2 available)
+  jni_flutter 1.0.2 (1.0.4+1 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  mime 2.0.0 (2.1.0 available)
+  native_toolchain_c 0.19.2 (0.19.6 available)
+  nm 0.5.0 (0.6.0 available)
+  objective_c 9.5.0 (9.6.3 available)
+  package_info_plus 9.0.1 (10.2.2 available)
+  package_info_plus_platform_interface 3.2.1 (4.1.0 available)
+  pdfium_dart 0.2.5 (0.4.1 available)
+  pdfium_flutter 0.2.3 (0.4.1 available)
+  pdfrx 2.4.7 (2.12.0 available)
+  pdfrx_engine 0.4.7 (0.9.1 available)
+  petitparser 7.0.2 (7.1.0 available)
+  platform 3.1.6 (3.2.0 available)
+  pocketbase 0.24.0+1 (0.25.3 available)
+  posix 6.5.2 (6.5.4 available)
+  process 5.0.5 (5.0.6 available)
+  pub_semver 2.2.0 (2.2.1 available)
+  qr 3.0.2 (4.0.1 available)
+  record_use 0.6.0 (1.1.1 available)
+  screen_retriever 0.2.2 (0.3.1 available)
+  share_plus 11.1.0 (13.3.1 available)
+  share_plus_platform_interface 6.1.0 (7.2.0 available)
+  shared_preferences 2.5.5 (2.5.6 available)
+  shared_preferences_android 2.4.23 (2.5.5 available)
+  shared_preferences_foundation 2.5.6 (2.6.1 available)
+  shelf 1.4.2 (1.4.3 available)
+  shelf_multipart 2.0.1 (2.0.2 available)
+  sqflite 2.4.2+1 (2.4.5 available)
+  sqflite_android 2.4.2+3 (2.4.5 available)
+  sqflite_common 2.5.8 (2.5.15 available)
+  sqflite_common_ffi 2.4.0+3 (2.4.5 available)
+  sqflite_darwin 2.4.2 (2.4.5 available)
+  sqflite_platform_interface 2.4.0 (2.4.3 available)
+  sqlite3 3.5.0 (3.9.1 available)
+  stack_trace 1.12.1 (1.12.2 available)
+  synchronized 3.4.0+1 (3.6.1 available)
+  test_api 0.7.12 (0.7.15 available)
+  url_launcher 6.3.2 (6.3.3 available)
+  url_launcher_android 6.3.30 (6.3.33 available)
+  url_launcher_ios 6.4.1 (6.4.2 available)
+  url_launcher_linux 3.2.2 (3.2.3 available)
+  url_launcher_macos 3.2.5 (3.2.6 available)
+  url_launcher_windows 3.1.5 (3.1.6 available)
+  vector_math 2.4.3 (2.4.4 available)
+  vm_service 15.2.0 (15.4.0 available)
+  wakelock_plus 1.5.2 (1.8.2 available)
+  wakelock_plus_platform_interface 1.6.0 (1.7.0 available)
+  web 1.1.1 (1.1.2 available)
+  webdriver 3.1.0 (3.2.0 available)
+  win32 5.15.0 (6.4.0 available)
+  window_manager 0.5.2 (0.6.0 available)
+  window_to_front 0.0.4 (1.0.0 available)
+  xml 6.6.1 (7.1.0 available)
+  yaml 3.1.3 (3.1.4 available)
+Got dependencies!
+78 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading C:/Users/fycdc/AI/elinkBook/app/integration_test/reader_screen_test.dart
+Running Gradle task 'assembleDebug'...                          
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/C:/Users/fycdc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14/lib/native-platform-0.22-milestone-28.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+Running Gradle task 'assembleDebug'...                            133.2s
+✓ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...          10.2s
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:00 +0: (setUpAll)
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:00 +0: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+[OpenBook#296283131] 開書開始 epub
+[OpenBook#296283131] 書複製完成 耗時 617 ms
+[OpenBook#296283131] WebView 建立
+[OpenBook#296283131] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#296283131] 頁面載入完成 /assets/foliate/index.html 距開書 6933 ms
+[OpenBook#296283131] 載入錯誤 HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED
+[OpenBook#296283131] 已渲染 距開書 11962 ms
+[OpenBook#296283131] 離開畫面 已刪快取目錄=是
+00:24 +1: ReaderScreen 開啟範例 PDF 檔案，渲染出非空白內容
+00:27 +1: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+PdfDocument initial load: PdfDocumentRefKey(file%/data/user/0/cc.ugotit.elinkbook/cache/sample.pdf) (39 ms)
+00:29 +2: 開啟定樣式範例 EPUB，⚙️版面按鈕存在且點開後是 FxlSettingsSheet（非 ReaderSettingsSheet）
+00:30 +2: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+[OpenBook#890953162] 開書開始 epub
+[OpenBook#890953162] 書複製完成 耗時 177 ms
+[OpenBook#890953162] WebView 建立
+[OpenBook#890953162] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#890953162] 頁面載入完成 /assets/foliate/index.html 距開書 3189 ms
+[OpenBook#890953162] 載入錯誤 HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED
+[OpenBook#890953162] 已渲染 距開書 6054 ms
+00:40 +2: 開啟定樣式範例 EPUB，⚙️版面按鈕存在且點開後是 FxlSettingsSheet（非 ReaderSettingsSheet）
+[OpenBook#890953162] 離開畫面 已刪快取目錄=是
+00:41 +3: 開啟版面設定 Bottom Sheet，調整字型大小後畫面持續渲染成功、無 onError
+00:42 +3: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+[OpenBook#530249689] 開書開始 epub
+[OpenBook#530249689] 書複製完成 耗時 170 ms
+[OpenBook#530249689] WebView 建立
+[OpenBook#530249689] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#530249689] 頁面載入完成 /assets/foliate/index.html 距開書 3809 ms
+[OpenBook#530249689] 載入錯誤 HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED
+[OpenBook#530249689] 已渲染 距開書 7460 ms
+00:59 +3: 開啟版面設定 Bottom Sheet，調整字型大小後畫面持續渲染成功、無 onError
+[OpenBook#530249689] 離開畫面 已刪快取目錄=是
+01:00 +4: 調整版面設定後關閉重開該書，設定被正確記住（驗證 initialPreferences 生效）
+01:01 +4: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+[OpenBook#603738910] 開書開始 epub
+[OpenBook#603738910] 書複製完成 耗時 259 ms
+[OpenBook#603738910] WebView 建立
+[OpenBook#603738910] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#603738910] 頁面載入完成 /assets/foliate/index.html 距開書 3718 ms
+[OpenBook#603738910] 載入錯誤 HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED
+[OpenBook#603738910] 已渲染 距開書 7019 ms
+[OpenBook#603738910] 離開畫面 已刪快取目錄=是
+[OpenBook#705863005] 開書開始 epub
+[OpenBook#705863005] 書複製完成 耗時 152 ms
+[OpenBook#705863005] WebView 建立
+[OpenBook#705863005] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#705863005] 頁面載入完成 /assets/foliate/index.html 距開書 3271 ms
+[OpenBook#705863005] 載入錯誤 HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED
+[OpenBook#705863005] 已渲染 距開書 6194 ms
+01:28 +4: 調整版面設定後關閉重開該書，設定被正確記住（驗證 initialPreferences 生效）
+[OpenBook#705863005] 離開畫面 已刪快取目錄=是
+01:30 +5: 點擊排版方向覆寫圖示「強制直排」後，畫面持續渲染成功、無 onError
+01:31 +5: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+[OpenBook#644054130] 開書開始 epub
+[OpenBook#644054130] 書複製完成 耗時 114 ms
+[OpenBook#644054130] WebView 建立
+[OpenBook#644054130] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#644054130] 頁面載入完成 /assets/foliate/index.html 距開書 2950 ms
+[OpenBook#644054130] 載入錯誤 HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED
+[OpenBook#644054130] 已渲染 距開書 5446 ms
+01:45 +5: 點擊排版方向覆寫圖示「強制直排」後，畫面持續渲染成功、無 onError
+[OpenBook#644054130] 離開畫面 已刪快取目錄=是
+01:46 +6: 點擊翻頁模式覆寫圖示「滾動翻頁」後，畫面持續渲染成功、無 onError
+01:47 +6: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+[OpenBook#1042410257] 開書開始 epub
+[OpenBook#1042410257] 書複製完成 耗時 127 ms
+[OpenBook#1042410257] WebView 建立
+[OpenBook#1042410257] 頁面載入開始 /assets/foliate/index.html
+[OpenBook#1042410257] 頁面載入完成 /assets/foliate/index.html 距開書 3974 ms
+[OpenBook#1042410257] 載入錯誤 HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED
+[OpenBook#1042410257] 已渲染 距開書 6955 ms
+02:01 +6: 點擊翻頁模式覆寫圖示「滾動翻頁」後，畫面持續渲染成功、無 onError
+[OpenBook#1042410257] 離開畫面 已刪快取目錄=是
+02:02 +7: 未覆寫螢幕方向時，進入 ReaderScreen 後依全域預設值呼叫 SystemChrome.setPreferredOrientations（auto→空列表）
+02:03 +7: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+[OpenBook#655505669] 開書開始 epub
+[OpenBook#655505669] 書複製完成 耗時 93 ms
+02:03 +7: 未覆寫螢幕方向時，進入 ReaderScreen 後依全域預設值呼叫 SystemChrome.setPreferredOrientations（auto→空列表）
+[OpenBook#655505669] 離開畫面 已刪快取目錄=是
+02:04 +8: screenOrientationOverride=lock90 時，SystemChrome.setPreferredOrientations 帶入 landscapeLeft
+02:05 +8: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+[OpenBook#979441743] 開書開始 epub
+[OpenBook#979441743] 書複製完成 耗時 97 ms
+02:05 +8: screenOrientationOverride=lock90 時，SystemChrome.setPreferredOrientations 帶入 landscapeLeft
+[OpenBook#979441743] 離開畫面 已刪快取目錄=是
+02:06 +9: 離開 ReaderScreen 後，SystemChrome.setPreferredOrientations([]) 被呼叫還原
+02:06 +9: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+[OpenBook#1038155382] 開書開始 epub
+[OpenBook#1038155382] 書複製完成 耗時 168 ms
+[OpenBook#1038155382] 離開畫面 已刪快取目錄=是
+02:09 +10: PDF 點擊「⚙️版面」按鈕開啟 PdfSettingsSheet（非 ReaderSettingsSheet）
+02:09 +10: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+PdfDocument initial load: PdfDocumentRefKey(file%/data/user/0/cc.ugotit.elinkbook/cache/sample_pdf_settings_open.pdf) (11 ms)
+02:12 +11: PDF 切換三種 Fit 模式，畫面持續渲染成功、無 onError
+02:13 +11: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+PdfDocument initial load: PdfDocumentRefKey(file%/data/user/0/cc.ugotit.elinkbook/cache/sample_pdf_fit_mode.pdf) (28 ms)
+02:19 +12: PDF 調整對比度／亮度後畫面持續渲染成功、無 onError
+02:20 +12: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+PdfDocument initial load: PdfDocumentRefKey(file%/data/user/0/cc.ugotit.elinkbook/cache/sample_pdf_filters.pdf) (4 ms)
+PdfDocument initial load: PdfDocumentRefKey(file%/data/user/0/cc.ugotit.elinkbook/cache/sample_pdf_filters.pdf) (2 ms)
+02:27 +13: PDF 調整加粗強度後畫面持續渲染成功、無 onError
+02:28 +13: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+PdfDocument initial load: PdfDocumentRefKey(file%/data/user/0/cc.ugotit.elinkbook/cache/sample_pdf_bold.pdf) (2 ms)
+02:31 +13: PDF 調整加粗強度後畫面持續渲染成功、無 onError
+
+Warning: A call to tap() with finder "Found 1 widget with key [<'pdf_settings_bold_strength_increment'>]: [
+  IconButton-[<'pdf_settings_bold_strength_increment'>](disabled, disabled, dependencies: [InheritedCupertinoTheme, _InheritedTheme, _LocalizationsScope-[GlobalKey#a751e]]),
+]" derived an Offset (Offset(642.4, 982.4)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+The finder corresponds to this RenderBox: RenderSemanticsAnnotations#20599 relayoutBoundary=up11
+The hit test result at that offset is: HitTestResult(RenderPointerListener#982aa@Offset(588.0, 276.0), RenderSemanticsGestureHandler#3f97f@Offset(588.0, 276.0), RenderPointerListener#0dd14@Offset(588.0, 276.0), _RenderScrollSemantics#f2fec@Offset(588.0, 276.0), RenderCustomPaint#d26b0@Offset(588.0, 276.0), _ImageFilterRenderObject#07155@Offset(588.0, 276.0), RenderClipRect#98768@Offset(588.0, 276.0), RenderFlex#de2c7@Offset(588.0, 384.0), RenderConstrainedBox#9ed11@Offset(588.0, 384.0), RenderPadding#ba89f@Offset(588.0, 384.0), _RenderInkFeatures#6c1ad@Offset(588.0, 384.0), RenderCustomPaint#0567e@Offset(588.0, 384.0), RenderPhysicalShape#cfe9c@Offset(588.0, 384.0), RenderConstrainedBox#b6ae3@Offset(588.0, 384.0), RenderPositionedBox#601d6@Offset(642.4, 384.0), _RenderBottomSheetLayoutWithSizeListener#d954e@Offset(642.4, 982.4), RenderClipRect#65a47@Offset(642.4, 982.4), RenderSemanticsAnnotations#86d57@Offset(642.4, 982.4), RenderPadding#fe8d9@Offset(642.4, 982.4), RenderSemanticsAnnotations#66074@Offset(642.4, 982.4), RenderRepaintBoundary#e9d2b@Offset(642.4, 982.4), RenderIgnorePointer#d08dd@Offset(642.4, 982.4), RenderRepaintBoundary#df3fe@Offset(642.4, 982.4), RenderSemanticsAnnotations#5c051@Offset(642.4, 982.4), RenderOffstage#891a2@Offset(642.4, 982.4), RenderSemanticsAnnotations#c290f@Offset(642.4, 982.4), _RenderTheater#60eb7@Offset(642.4, 982.4), RenderAbsorbPointer#37b8a@Offset(642.4, 982.4), RenderPointerListener#694f9@Offset(642.4, 982.4), RenderSemanticsAnnotations#ffde0@Offset(642.4, 982.4), RenderCustomPaint#914a5@Offset(642.4, 982.4), RenderSemanticsAnnotations#e5f37@Offset(642.4, 982.4), RenderSemanticsAnnotations#8b7be@Offset(642.4, 982.4), RenderSemanticsAnnotations#77d73@Offset(642.4, 982.4), RenderTapRegionSurface#30745@Offset(642.4, 982.4), RenderSemanticsAnnotations#bfd09@Offset(642.4, 982.4), RenderSemanticsAnnotations#79f6f@Offset(642.4, 982.4), HitTestEntry<HitTestTarget>#de566(_ReusableRenderView#0138d), HitTestEntry<HitTestTarget>#616e5(<IntegrationTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.<anonymous closure> (file:///C:/Users/fycdc/AI/elinkBook/app/integration_test/reader_screen_test.dart:777:12)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+#6      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "tap()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+02:33 +14: PDF 切換至智慧自動裁切，畫面持續渲染成功、無 onError
+02:34 +14: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+PdfDocument initial load: PdfDocumentRefKey(file%/data/user/0/cc.ugotit.elinkbook/cache/sample_pdf_crop.pdf) (3 ms)
+02:38 +15: 智慧自動裁切計算後關閉重開該書，pdf_crop_rect 不重新計算（值一致）
+02:39 +15: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+PdfDocument initial load: PdfDocumentRefKey(file%/data/user/0/cc.ugotit.elinkbook/cache/sample_pdf_crop_persist.pdf) (7 ms)
+PdfDocument initial load: PdfDocumentRefKey(file%/data/user/0/cc.ugotit.elinkbook/cache/sample_pdf_crop_persist.pdf) (5 ms)
+02:47 +16: PDF 進入手動裁切互動模式後，翻頁手勢暫停回應（不觸發頁面錯誤或意外離開裁切模式）
+02:48 +16: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+PdfDocument initial load: PdfDocumentRefKey(file%/data/user/0/cc.ugotit.elinkbook/cache/sample_pdf_crop_manual_pause.pdf) (4 ms)
+02:53 +17: PDF 手動裁切拖拉四角控制點確認後，pdf_crop_mode/pdf_crop_rect 正確寫入且畫面套用新裁切結果
+02:54 +17: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+PdfDocument initial load: PdfDocumentRefKey(file%/data/user/0/cc.ugotit.elinkbook/cache/sample_pdf_crop_manual_confirm.pdf) (7 ms)
+03:01 +18: PDF 手動裁切重新進入互動模式並再次確認（manual→manual），第二次確認寫入新的矩形值且持續正確持久化
+03:02 +18: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+PdfDocument initial load: PdfDocumentRefKey(file%/data/user/0/cc.ugotit.elinkbook/cache/sample_pdf_crop_manual_readjust.pdf) (2 ms)
+03:16 +19: (tearDownAll)
+03:18 +19: All tests passed!

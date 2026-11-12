@@ -1,0 +1,14 @@
+start=14:09:31 head=e030d02a
+run1 start=14:09:33 hostFreeMB=6637 deviceAvail=MemAvailable: 2636140 kB
+run1 exit=0 end=14:15:39 hostFreeMB=5112
+run2 start=14:15:43 hostFreeMB=7310 deviceAvail=MemAvailable: 2598364 kB
+run2 exit=0 end=14:21:50 hostFreeMB=5512
+run3 start=14:21:55 hostFreeMB=7694 deviceAvail=MemAvailable: 2572184 kB
+run3 exit=0 end=14:27:57 hostFreeMB=5330
+run4 start=14:28:01 hostFreeMB=7572 deviceAvail=MemAvailable: 2578624 kB
+run4 exit=0 end=14:34:09 hostFreeMB=5924
+run5 start=14:34:13 hostFreeMB=7423 deviceAvail=MemAvailable: 2568364 kB
+run5 exit=0 end=14:40:18 hostFreeMB=5696
+Performing Streamed Install
+Success
+DONE

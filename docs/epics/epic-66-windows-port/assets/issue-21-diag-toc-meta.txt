@@ -1,0 +1,7 @@
+run1 exit=1
+run2 exit=1
+run3 exit=1
+run4 exit=1
+Performing Streamed Install
+Success
+DONE

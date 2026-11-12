@@ -160,10 +160,13 @@ void main() {
 
     expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
 
+    // 本檔第一次開書是 WebView 冷啟動：BooksPad（32 位元、WebView 91）實測距開書
+    // 15,561 ms、14,247 ms（epic-66 Issue 21 基準，2026-11-12），超過其餘測試用的 10 秒；
+    // 之後暖機開書只要 6～9 秒。只有這一次放寬到 30 秒，其餘維持 10 秒。
     await _pumpUntil(
       tester,
       _loadingIndicatorGone,
-      timeout: const Duration(seconds: 10),
+      timeout: const Duration(seconds: 30),
     );
     // 經驗值：固定等 1 秒再卸載。基準（未加這行）5/5 在本測試結束後 App 即結束，
     // 加上後 10/10 不再發生；機制推測為 WebView2 首影格交付與卸載競爭，無原生端證據
