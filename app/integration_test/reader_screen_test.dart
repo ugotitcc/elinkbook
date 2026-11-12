@@ -165,7 +165,9 @@ void main() {
       _loadingIndicatorGone,
       timeout: const Duration(seconds: 10),
     );
-    // 等待 WebView2 完成初始畫面渲染與 IPC 回呼，避免剛載入即卸載觸發 Windows 原生端競爭中斷
+    // 經驗值：固定等 1 秒再卸載。基準（未加這行）5/5 在本測試結束後 App 即結束，
+    // 加上後 10/10 不再發生；機制推測為 WebView2 首影格交付與卸載競爭，無原生端證據
+    // （見 issue-19-report.md 第 2 節）。
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing,
@@ -345,7 +347,8 @@ void main() {
       _loadingIndicatorGone,
       timeout: const Duration(seconds: 10),
     );
-    // 等待 WebView2 完成初始畫面渲染與 IPC 回呼，避免剛載入即卸載觸發 Windows 原生端競爭中斷
+    // 預防性比照測試 1，沒有基準證據（基準跑到測試 1 就中斷，從未跑到這裡）。
+    // 同為經驗值：等 1 秒再卸載。
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing,

@@ -121,6 +121,7 @@
   - 診斷時在 `save()` 暫時加入輸出例外內容的程式（已移除），整份重跑**沒有**出現任何儲存位置的例外，所以「儲存時資料庫已關閉」並非這次中斷的已證實原因。
   - 已在測試檔加入測試端的 teardown（`pumpReader`：先卸載畫面、等待、再關庫一次），`flutter analyze` 乾淨；**但此改動無法在這台機器上驗證效果**，因為該檔本身就會中斷。
 - **處理**：`reader_screen_test.dart` 不放入套件清單；登記為 **Issue 19**（`issues.md`）。19 項測試中各自通過與否**未驗證**。
+  - **更正（2026-11-12，Issue 19）：** 本段「無法驗證／各項未驗證」已過時。Issue 19 於 2026-11-12 逐項處理：19 項為 14 通過、5 略過（`skipOnWindows`，行動裝置專屬行為）、0 失敗，修復後連跑 5 次一致，且已加入 `windows_smoke_suite.txt`。「第一支結束後整份中斷」在基準 5/5 重現，補 1 秒 `pump` 後 10/10 不再發生（機制為推測，見 `issue-19-report.md` 第 2 節）。
 
 ---
 
@@ -186,7 +187,7 @@
 - **執行歷程（皆在同一台機器、單份依序）**：
   1. 還原 `save()` 吞錯後第一次：通過 26 / 失敗 1（`foliate_cbz_test`，見第 3 節追加段落）。
   2. 修正 `foliate_cbz_test`、`pdf_reader_view_test`、加強 Task 5 斷言、修正腳本殘留偵測後第二次（下表）：**通過 27 / 失敗 0 / 逾時 0 / 中止 0**。
-- **判讀要點**：「27 支全過」是**清單內檔案的 exit code**。其中 `library_screen_test` 3 項在 Windows 全部略過（`All tests skipped`，腳本以 exit code 判定仍記為通過）、`pdf_reader_view_test` 有 1 項略過。`reader_screen_test` 不在清單內（Issue 19）。
+- **判讀要點**：「27 支全過」是**清單內檔案的 exit code**。其中 `library_screen_test` 3 項在 Windows 全部略過（`All tests skipped`，腳本以 exit code 判定仍記為通過）、`pdf_reader_view_test` 有 1 項略過。`reader_screen_test` 當時不在清單內（Issue 19；**2026-11-12 更正：已修復並加入清單**）。
 - **重複執行**：完整套件只跑了 2 次（上述兩次），不是逐檔 3 次；初版 Task 2、3 要求的「各檔單獨跑 3 次」**沒有留下證據，未驗證**。
 - **其他驗證**：`flutter analyze` 乾淨；全套 `flutter test` **5162 通過、2 略過、0 失敗**（2026-11-10）。
 
@@ -239,7 +240,7 @@
 
 ## 7. 已知缺口與後續追蹤 Issue
 
-1. **Issue 19 — `reader_screen_test.dart` 在 Windows 整份中斷**：原因未查明，19 項各自狀態未驗證，不在套件清單內。
+1. **Issue 19 — `reader_screen_test.dart` 在 Windows 整份中斷**：（2026-11-12 更正：已於 Issue 19 處理，14 通過／5 略過／0 失敗，已加入套件清單，見 `issue-19-report.md`。以下為當時的記載）原因未查明，19 項各自狀態未驗證，不在套件清單內。
 2. **Issue 20 — 桌面寬度 TOC 目前章節判定**：`epub_toc_test` 等為通過而把視窗固定 400x800；Windows 實際是桌面寬度（> 720px 雙欄），Foliate 在雙欄補齊前一節內容並回報前一節，目錄因此沒收折。未判定是否為產品缺陷，**整個冒煙套件沒有任何一支在桌面寬度驗證**。
 3. **同型 teardown 競態風險**：見第 3 節追加段落的 12 支檔案。
 4. **`onLocatorChanged` 回傳 null 的產品修改**（`foliate_reader_view.dart`）：平台中立、對 Android 無害（`ReaderScreen` 自己的呼叫端本來就是區塊式）。審查後（2026-11-10，經使用者同意保留）抽成純函式 `handleLocatorChangedBridgeCall()`（`foliate_bridge_codec.dart`）並補單元測試（`foliate_bridge_codec_test.dart`，2 個案例）：先紅（函式不存在）後綠；變異驗證（改成回傳回呼結果的錯誤寫法）測試變紅，還原後 `foliate_bridge_codec_test`／`foliate_reader_view_test`／`foliate_bridge_handlers_test` 217 個全過；`epic_fxl_tap_zone_test`、`foliate_toc_footer_test`、`foliate_stream_nav_zone_test` 在 Windows 重跑通過。仍無「修改前告知使用者」的紀錄（事後已取得同意）。

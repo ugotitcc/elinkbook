@@ -1,0 +1,35 @@
+============================================================
+ Windows 整合測試冒煙套件 (總計 28 支測試)
+ 清單: C:\Users\fycdc\AI\elinkBook\app\integration_test\windows_smoke_suite.txt
+ 逾時: 420 秒 | 記憶體門檻: 4096 MB
+============================================================
+[1/28] integration_test/smoke_test.dart       [通過] :: 00:01 +1: All tests passed!
+[2/28] integration_test/foliate_epub_reader_view_test.dart [通過] :: 00:15 +10: All tests passed!
+[3/28] integration_test/pdf_highlights_notes_test.dart [通過] :: 00:06 +1: All tests passed!
+[4/28] integration_test/foliate_txt_test.dart [通過] :: 00:28 +3: All tests passed!
+[5/28] integration_test/foliate_md_test.dart  [通過] :: 00:05 +1: All tests passed!
+[6/28] integration_test/foliate_cbz_test.dart [通過] :: 00:18 +3: All tests passed!
+[7/28] integration_test/foliate_kf8_test.dart [通過] :: 00:06 +2: All tests passed!
+[8/28] integration_test/epub_pagination_test.dart [通過] :: 00:09 +2: All tests passed!
+[9/28] integration_test/epub_dual_page_test.dart [通過] :: 00:03 +2: All tests passed!
+[10/28] integration_test/fxl_bookmarks_test.dart [通過] :: 00:08 +1: All tests passed!
+[11/28] integration_test/notes_bookmark_test.dart [通過] :: 00:11 +2: All tests passed!
+[12/28] integration_test/pdf_nav_zone_test.dart [通過] :: 00:07 +2: All tests passed!
+[13/28] integration_test/reader_footer_test.dart [通過] :: 00:04 +1: All tests passed!
+[14/28] integration_test/reading_position_test.dart [通過] :: 00:15 +2: All tests passed!
+[15/28] integration_test/foliate_navigation_degrade_test.dart [通過] :: 00:02 +2: All tests passed!
+[16/28] integration_test/foliate_single_column_test.dart [通過] :: 00:24 +2: All tests passed!
+[17/28] integration_test/foliate_stream_nav_zone_test.dart [通過] :: 00:06 +1: All tests passed!
+[18/28] integration_test/foliate_margin_test.dart [通過] :: 00:03 +3: All tests passed!
+[19/28] integration_test/markdown_export_test.dart [通過] :: 00:04 +1: All tests passed!
+[20/28] integration_test/epub_fxl_tap_zone_test.dart [通過] :: 00:06 +1: All tests passed!
+[21/28] integration_test/foliate_toc_footer_test.dart [通過] :: 00:07 +4: All tests passed!
+[22/28] integration_test/pdf_reader_view_test.dart [通過] :: 00:01 +3 ~1: All tests passed!
+[23/28] integration_test/epub_toc_test.dart    [通過] :: 00:20 +3: All tests passed!
+[24/28] integration_test/epub_highlights_notes_test.dart [通過] :: 00:09 +1: All tests passed!
+[25/28] integration_test/foliate_highlights_notes_test.dart [通過] :: 00:13 +2: All tests passed!
+[26/28] integration_test/library_screen_test.dart [通過] :: 00:00 +0 ~3: All tests skipped.
+[27/28] integration_test/windows_smoke_formats_test.dart [通過] :: 00:13 +3: All tests passed!
+[28/28] integration_test/reader_screen_test.dart [通過] :: 00:59 +14 ~5: All tests passed!
+------------------------------------------------------------
+測試結果彙總: 通過 28 / 失敗 0 / 逾時 0 / 中止 0 (總計 28)
