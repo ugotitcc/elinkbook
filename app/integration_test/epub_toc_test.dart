@@ -42,11 +42,13 @@ Future<void> _pumpUntilFooterVisible(WidgetTester tester) async {
   }
 }
 
-/// 審查修正：目錄按鈕的啟用條件除了書本開啟外，另需背景目錄抓取
-/// （`EpubReaderView.loadTableOfContents`）完成（見 `_tocLoaded`），與頁尾
-/// 出現與否（字元數背景計算完成）是兩條獨立的非同步路徑，不保證何者先
-/// 完成——不能假設頁尾出現時目錄一定也已抓取完畢，需明確等待按鈕本身轉為
-/// 可點擊，而非緊接著 `_pumpUntilFooterVisible` 就直接點擊。
+/// 等目錄按鈕存在且 `onPressed` 非 null。
+///
+/// 注意：這**不代表目錄已載入**。`reader_screen.dart` 的 `_onTocTapFor` 在目錄
+/// 尚未載入（`_tocLoaded` 為 false）時，會把按鈕指向 `_showTocLoadingHint`
+/// （非 null，點了只顯示「目錄載入中」提示），所以按鈕「可點擊」早於「點了會
+/// 開面板」。要真的開面板請用 [_openToc]，它會偵測載入提示並重試。
+/// （epic-66 Issue 21：BooksPad 上實證 4/4 在此誤判，點到提示、面板未開。）
 Future<void> _pumpUntilTocButtonEnabled(WidgetTester tester) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
   while (true) {
@@ -60,6 +62,33 @@ Future<void> _pumpUntilTocButtonEnabled(WidgetTester tester) async {
     }
     await tester.pump(const Duration(milliseconds: 100));
   }
+}
+
+/// 開啟目錄面板：點目錄按鈕，若目錄尚未載入會彈出「載入中」提示而不是面板，
+/// 就稍等後再點，直到 [TocBottomSheet] 出現；超過 10 秒仍未出現則明確失敗
+/// （不無限等、不吞錯，目錄真的載不出來時要讓測試紅燈）。
+///
+/// 重試用小步長（300 ms）推進，不依賴 `pumpAndSettle()` 等提示消失（實測
+/// `pumpAndSettle()` 結束時提示仍在）。
+Future<void> _openToc(WidgetTester tester) async {
+  await _pumpUntilTocButtonEnabled(tester);
+  final deadline = DateTime.now().add(const Duration(seconds: 10));
+  while (true) {
+    await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
+    await tester.pump(const Duration(milliseconds: 300));
+    if (find.byType(TocBottomSheet).evaluate().isNotEmpty) break;
+    final hinted = find
+        .byKey(const Key('reader_toc_loading_snackbar'))
+        .evaluate()
+        .isNotEmpty;
+    if (DateTime.now().isAfter(deadline)) {
+      fail('等待逾時：目錄面板未開啟'
+          '（${hinted ? "仍顯示「目錄載入中」提示，目錄一直沒載完" : "也沒有載入提示，原因不明"}）');
+    }
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+  await tester.pumpAndSettle();
+  expect(find.byType(TocBottomSheet), findsOneWidget);
 }
 
 Future<void> _pumpUntilProgressChanged(WidgetTester tester, String oldProgressText) async {
@@ -143,11 +172,7 @@ void main() {
     // epic-54 Issue 19 修復後：目前章節改以 spine index 判定，開書在第一章時
     // 第二章必須預設收合（保護「開書預設收合」，本測試曾於 Issue 18 為繞過
     // 已知缺陷而放寬，現已改回）。
-    await _pumpUntilTocButtonEnabled(tester);
-    await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(TocBottomSheet), findsOneWidget);
+    await _openToc(tester);
     expect(find.text('第一章：起始'), findsOneWidget);
     expect(find.text('第二章：發展'), findsOneWidget);
     expect(find.text('第三章：結局'), findsOneWidget);
@@ -196,10 +221,7 @@ void main() {
         reason: '跳轉到第三章後頁尾進度應與開書時的起始位置不同');
     // 跳到第三章後再開目錄：目前章節應為第三章，第二章子節不得展開
     // （驗證判定不只在開書當下正確，epic-54 Issue 19）。
-    await _pumpUntilTocButtonEnabled(tester);
-    await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
-    await tester.pumpAndSettle();
-    expect(find.byType(TocBottomSheet), findsOneWidget);
+    await _openToc(tester);
     expect(find.text('第一節'), findsNothing, reason: '跳到第三章後第二章應維持收合');
     expect(find.text('第二節'), findsNothing);
     // 第三章應被標示為目前章節（TocBottomSheet 以 ListTile.selected 表示）。
@@ -266,17 +288,13 @@ void main() {
 
     // 依序跳第三章、第二章：兩者在雙欄下過去都會標錯。
     for (final target in ['第三章：結局', '第二章：發展']) {
-      await _pumpUntilTocButtonEnabled(tester);
-      await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
-      await tester.pumpAndSettle();
+      await _openToc(tester);
       await tester.tap(find.text(target));
       await tester.pumpAndSettle();
       // 等 relocate 回報穩定（雙欄補欄後可能不只回報一次）。
       await tester.pump(const Duration(seconds: 2));
 
-      await _pumpUntilTocButtonEnabled(tester);
-      await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
-      await tester.pumpAndSettle();
+      await _openToc(tester);
       final tile = tester.widget<ListTile>(find.widgetWithText(ListTile, target));
       expect(tile.selected, isTrue, reason: '桌面寬度跳到「$target」後，目錄應標示該章為目前章節');
       if (target == '第三章：結局') {
@@ -338,13 +356,6 @@ void main() {
     await _pumpUntilLoaded(tester);
     await _pumpUntilFooterVisible(tester);
 
-    Future<void> openToc() async {
-      await _pumpUntilTocButtonEnabled(tester);
-      await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
-      await tester.pumpAndSettle();
-      expect(find.byType(TocBottomSheet), findsOneWidget);
-    }
-
     bool selected(String title) =>
         tester.widget<ListTile>(find.widgetWithText(ListTile, title)).selected;
 
@@ -361,7 +372,7 @@ void main() {
 
     // 1) 開書位於第一節（頁面含 h1 與 s1 錨點，s2/s3 在後面）：
     //    不得因全書 progression 偏高而選到第二、三節。
-    await openToc();
+    await _openToc(tester);
     expect(selected('第一節'), isTrue, reason: '開書位於第一節');
     expect(selected('第二節'), isFalse);
     expect(selected('第三節'), isFalse);
@@ -371,7 +382,7 @@ void main() {
     await tester.tap(find.widgetWithText(ListTile, '第三節'));
     await tester.pumpAndSettle();
     await _pumpUntilProgressChanged(tester, progressAtOpen);
-    await openToc();
+    await _openToc(tester);
     expect(selected('第三節'), isTrue, reason: '跳到第三節後應標示第三節');
     expect(selected('第一節'), isFalse);
     expect(selected('第二節'), isFalse);
@@ -381,7 +392,7 @@ void main() {
     await tester.tap(find.widgetWithText(ListTile, '第二節'));
     await tester.pumpAndSettle();
     await _pumpUntilProgressChanged(tester, progressAtS3);
-    await openToc();
+    await _openToc(tester);
     expect(selected('第二節'), isTrue, reason: '往回跳到第二節後應標示第二節');
     expect(selected('第一節'), isFalse);
     expect(selected('第三節'), isFalse);

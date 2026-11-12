@@ -1,0 +1,15 @@
+start=13:43:03 head=e030d02a
+MemTotal:        4034632 kB
+MemFree:         1606600 kB
+MemAvailable:    2639384 kB
+cur exit=0 13:49:09
+MemTotal:        4034632 kB
+MemFree:         1530492 kB
+MemAvailable:    2597024 kB
+ctrl exit=1 13:55:16
+MemTotal:        4034632 kB
+MemFree:         1536396 kB
+MemAvailable:    2577044 kB
+Performing Streamed Install
+Success
+DONE

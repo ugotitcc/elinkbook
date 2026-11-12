@@ -1,0 +1,3 @@
+epub_toc_test exit=0
+reader_screen_test exit=0
+smoke exit=1 seconds=2074

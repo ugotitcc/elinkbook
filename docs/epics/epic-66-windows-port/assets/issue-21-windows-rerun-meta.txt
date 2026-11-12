@@ -1,0 +1,2 @@
+free MB before: 7082
+exit=1

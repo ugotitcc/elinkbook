@@ -1,0 +1,13 @@
+============================================================
+ Windows 整合測試冒煙套件 (總計 6 支測試)
+ 清單: C:\Users\fycdc\AppData\Local\Temp\claude\1b8a1974ed315139\37428b0d-1b69-409b-9582-b056b6c9ceff\scratchpad\i21_two_suite.txt
+ 逾時: 420 秒 | 記憶體門檻: 4096 MB
+============================================================
+[1/6] integration_test/foliate_kf8_test.dart [通過] :: 00:06 +2: All tests passed!
+[2/6] integration_test/reader_screen_test.dart [通過] :: 01:06 +14 ~5: All tests passed!
+[3/6] integration_test/foliate_kf8_test.dart [失敗] :: <asynchronous suspension>
+[4/6] integration_test/reader_screen_test.dart [通過] :: 01:06 +14 ~5: All tests passed!
+[5/6] integration_test/foliate_kf8_test.dart [通過] :: 00:06 +2: All tests passed!
+[6/6] integration_test/reader_screen_test.dart [通過] :: 01:04 +14 ~5: All tests passed!
+------------------------------------------------------------
+測試結果彙總: 通過 5 / 失敗 1 / 逾時 0 / 中止 0 (總計 6)

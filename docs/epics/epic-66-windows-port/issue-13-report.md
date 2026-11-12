@@ -272,6 +272,8 @@
 | `epub_highlights_notes_test` | 0/1 | 0/1（同上） |
 | `reader_screen_test` | 14/19 | 0/19（同上） |
 
+> **更正（2026-11-12，Issue 21）：** 上表為 2026-11-10 的結果。2026-11-12 在同一台 BooksPad 重測並處理：`epub_highlights_notes_test` 3/3 通過（不再重現）；`epub_toc_test` 的失敗是測試端誤點「目錄載入中」提示，已修，連跑 5/5 全過；`reader_screen_test` 的失敗是第一次冷啟動開書超過 10 秒，已放寬，連跑 5/5 全過（另有一批 5 次不明中斷，見 `issue-21-report.md`）。本節「原因未查明」「逐項未診斷」的說法已過時。
+
 **判讀（只寫查證過的）：**
 - 本分支在 Android 上沒有比 PR 前差；PR 前的 4 支 ReaderScreen 類測試連書都載入不了，本分支載得了。PR 前後的 `app/lib` 差異只有 `onLocatorChanged` handler（`foliate_bridge_codec.dart`、`foliate_reader_view.dart`），所以它很可能是原因，但每個只跑一次、**沒有證明因果**。
 - 暫時拿掉 `epub_toc_test`、`epub_highlights_notes_test` 的 400x800 視窗覆寫後在 Android 上更差（`epub_toc_test` 0/2），所以剩下的失敗**不是**視窗覆寫造成的；真正原因**未查明**，已登記 **Issue 21**。
