@@ -7,7 +7,7 @@
 - **產出（最終版，含審查修正與改名）**：
   - `app/build/windows_installer/elinkbook-1.1.0-b3-windows-x64-setup.exe`（18,616,319 bytes），SHA256 `6129F56299F9D4ED17391A52A2AE634C0E190D233E4DA6DA0ED8E173B7D02CFF`
   - `app/build/windows_zip/elinkbook-1.1.0-b3-windows-x64.zip`（23,080,748 bytes），SHA256 `FFEB778FC808AFC42EE786BDD60970224B8C00C180FF6EFA04FE7A4F8B61590B`
-- **結論**：程式與自動化驗證已完成並通過；**這份最終版 setup 尚未做過另一台電腦的人工驗證**（見第六節）。資料夾曾在審查後改名（`elinkbook` → `elinkbook-data`），先前的人工驗證是對改名前的版本做的。
+- **結論**：程式與自動化驗證已完成並通過；最終版 setup 已由使用者在另一台電腦驗證，回報「測試OK」（無逐項紀錄，見第六節）。資料夾曾在審查後改名（`elinkbook` → `elinkbook-data`），改名前那一輪的人工驗證不能套用到最終版，所以最終版另外驗證過一次。
 
 ---
 
@@ -83,7 +83,8 @@
 ## 六、人工 GUI 驗證（另一台電腦，使用者操作）
 
 - **改名前的版本（實作者階段）**：使用者以當時打包的 setup（SHA256 `F804E33BB07A515DE656F93878E969EA964F4F88D479FC8E5950CAB46D7E7B49`，資料夾叫 `elinkbook`）在另一台電腦驗證：安裝、匯入一本書、重啟書還在、檔案落在 `文件\elinkbook` 底下、解除安裝選「是」刪除兩個資料夾且不動其他檔案。使用者回報原文：「`1,2,3 都正確無誤`」。另一台電腦的環境沒有查證。
-- **這個結果只適用於改名前的版本，不能套用到最終版。** 最終版的資料夾是 `elinkbook-data`，需要請使用者用新的 setup（SHA256 `6129F562…02CFF`）在另一台電腦再驗證一次：安裝、匯入一本書、關閉再開書還在、檔案落在 `文件\elinkbook-data`、解除安裝選「是」。**尚未做。**
+- **這個結果只適用於改名前的版本，不能套用到最終版。**
+- **最終版（資料夾 `elinkbook-data`，SHA256 `6129F562…02CFF`）**：請使用者在另一台電腦再驗證一次（安裝、匯入一本書、關閉再開書還在、檔案落在 `文件\elinkbook-data`、解除安裝選「是」）。使用者回報：「測試OK」。**這只是一句回報，沒有逐項紀錄**，無法確認每一項都被涵蓋；另一台電腦的環境也沒有查證。
 
 ---
 
@@ -95,7 +96,7 @@
   - `library.db`（172,032 bytes，2026-11-06）
   - `covers\`（116 檔）
   - `imported_books\`（96 檔）
-- **孤兒資料夾 `文件\elinkbook\`（33 個檔案：`library.db`、`covers\`、`imported_books\`）**：是審查前（資料夾還叫 `elinkbook` 時）的版本啟動時建立的，改名後已不再使用。**我沒有刪它，由你決定。** 注意：若你日後把免安裝 zip 解壓到「文件」，解壓出來的程式資料夾也叫 `elinkbook`，兩者不要混淆。
+- **孤兒資料夾 `文件\elinkbook\`（33 個檔案：`library.db`、`covers\`、`imported_books\`，不含任何 exe）**：是審查前（資料夾還叫 `elinkbook` 時）的版本啟動時建立的，改名後已不再使用。**使用者確認後已刪除（2026-11-13）**；刪除前確認內容只有那三項。其餘上述舊項目（`library.db`、`covers\`、`imported_books\`）使用者沒有指示刪除，仍保留。注意：若日後把免安裝 zip 解壓到「文件」，解壓出來的程式資料夾也叫 `elinkbook`，與資料資料夾 `elinkbook-data` 是不同的資料夾。
 - 其他機器若曾用過舊版，還可能有：`dictionary.db` 與各資料庫的 `-wal`／`-shm`／`-journal`、`cloud_import_books\`、`remote_books\`、`wifi_transfer_uploads\`、`update_staging\`。
 
 **現行的資料位置**（請保留）：`文件\elinkbook-data\` 與 `%APPDATA%\cc.ugotit\elinkbook\`。
@@ -104,7 +105,7 @@
 
 ## 八、未驗證與未解決
 
-1. **最終版 setup 的另一台電腦人工驗證**：見第六節，尚未做。
+1. **最終版 setup 的人工驗證只有一句回報**「測試OK」（無逐項紀錄），見第六節。
 2. **真實路徑下選「是」的實際刪除**：自動驗證用假資料夾（`DocsRootOverride`／`AppDataRootOverride`），出貨版與測試版只差這兩個編譯參數，這個差異本身沒有被驗證。
 3. **冒煙套件上一輪失敗的原因**：未查明（第四節）。
 4. **開發機 GUI**：受 Issue 30 影響（本機 release 版畫面空白），只驗證檔案落點。
