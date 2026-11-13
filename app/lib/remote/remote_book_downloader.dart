@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../library/models/library_enums.dart';
+import '../platform/app_paths.dart';
 import 'opds_client.dart';
 import 'opds_types.dart';
 import 'remote_server_profile.dart';
@@ -64,7 +65,7 @@ Future<String> downloadToTempFile({
 ///   （複製本身失敗）時才清 `permanentPath`。
 Future<String> promoteToPermanent(String tempPath) async {
   final fileName = p.basename(tempPath);
-  final docsDir = await getApplicationDocumentsDirectory();
+  final docsDir = await appDocumentsDirectory();
   final permanentDir = Directory(p.join(docsDir.path, 'remote_books'));
   if (!await permanentDir.exists()) await permanentDir.create(recursive: true);
   final permanentPath = p.join(permanentDir.path, fileName);

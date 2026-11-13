@@ -14,7 +14,7 @@ Windows 版原本只有免安裝 zip（Issue 14）。對外發佈需要一般使
 2. **不簽章**。安裝程式與 zip 一樣會跳 SmartScreen「仍要執行」，沿用 `app/windows/packaging/README.txt` 的說明。有使用者回報被擋時，再另開 Issue 評估憑證。
 3. **依目前使用者安裝**：預設 `%LOCALAPPDATA%\Programs\elinkBook`，不需系統管理員權限。
 4. **固定 `AppId`（GUID）**：新版直接覆蓋安裝舊版，安裝時 App 正在執行會被關閉。**這個 GUID 一經發佈就不可更改**——改了之後，Windows 會把新舊版視為兩個不同的 App，舊版使用者無法覆蓋升級，只會並存兩份。
-5. **解除安裝預設保留使用者資料**，但跳出詢問「是否同時刪除 elinkBook 的所有資料（包含書庫）」，預設「否」；選「是」刪除兩處：`%APPDATA%\cc.ugotit\elinkbook`，以及「文件」資料夾內 elinkBook 以固定名稱建立的項目（`library.db`、`dictionary.db` 連同 `-wal`／`-shm`／`-journal`、`covers`、`imported_books`、`cloud_import_books`、`remote_books`、`wifi_transfer_uploads`、`update_staging`）。**只刪這些精確名稱**，不動「文件」內其他檔案，也不刪匯入時留在原位置的書檔。靜默解除安裝（`/SILENT`、`/VERYSILENT`）一律不詢問、不刪。（2026-11-13：原本只刪 `%APPDATA%` 卻寫成「刪書庫」，獨立審查發現後，使用者決定改為真的連書庫一併刪除。）
+5. **解除安裝預設保留使用者資料**，但跳出詢問「是否同時刪除 elinkBook 的所有資料（包含書庫）」，預設「否」；選「是」刪除兩個資料夾：`%APPDATA%\cc.ugotit\elinkbook`，以及「文件」資料夾下的 `elinkbook`（見 [ADR 0044](0044-windows-data-under-documents-elinkbook.md)）；靜默解除安裝（`/SILENT`、`/VERYSILENT`）一律不詢問、不刪。（歷程：原本只刪 `%APPDATA%` 卻寫成「刪書庫」；2026-11-13 獨立審查發現後，使用者決定連書庫一併刪除，先以「文件」根目錄的固定名稱清單實作；同日 Issue 29 把資料收進 `文件\elinkbook-data`，改為只刪這兩個資料夾，不再有通用名稱清單。）
 6. **App 執行中拒絕解除安裝**：解除安裝程式不會像安裝程式那樣關閉執行中的 App，檔案被鎖住刪不掉卻會移除登錄項，所以以視窗類別加標題偵測，執行中就中止。
 
 ## 替代方案與取捨
@@ -28,5 +28,5 @@ Windows 版原本只有免安裝 zip（Issue 14）。對外發佈需要一般使
 
 - 未簽章意味著 SmartScreen 警示不會因為安裝程式而消失，這是已知且接受的代價。
 - zip 版與安裝版可並存，兩者共用同一份資料，**不可同時開兩份**，說明文件須提醒。
-- **「文件」資料夾內的刪除是以固定名稱清單實作的**（2026-11-13 使用者決定選「是」要連書庫一併刪除）：`covers`、`imported_books` 是通用名稱，使用者若自己建了同名資料夾也會被刪；清單必須與 App 實際建立的項目同步（來源是 `lib/` 內各處 `getApplicationDocumentsDirectory()` 的使用點）。把 Windows 的資料收進單一上層目錄 `elinkbook`（epic-66 Issue 29）後，解除安裝只需刪那一個目錄，風險與清單維護成本都會消失，所以仍列為優先。
+- **解除安裝刪除範圍是兩個明確屬於本 App 的資料夾**（Issue 29 之後）：不再對「文件」根目錄的通用名稱（`covers`、`imported_books` 等）逐項刪除，沒有誤刪使用者同名資料夾的風險，也沒有名單需與 App 同步的維護成本。代價：Issue 29 之前的版本留在「文件」根目錄的舊項目不會被清掉，需手動刪除。
 - 乾淨機器、Windows 10 1809 與 SmartScreen 實際行為仍未驗證；另一台電腦只有使用者回報的結果，沒有查證其環境。

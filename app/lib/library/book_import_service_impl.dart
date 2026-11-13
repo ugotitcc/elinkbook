@@ -4,8 +4,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
+import '../platform/app_paths.dart';
 import '../search/full_text_search_settings_repository.dart';
 import '../storage/storage_permission.dart';
 import '../theme/app_theme_preferences.dart';
@@ -1376,7 +1376,7 @@ class BookImportServiceImpl implements BookImportService {
 
   Future<Directory> _resolveCoversDirectory() async {
     if (_coversDirectory != null) return _coversDirectory;
-    final docsDir = await getApplicationDocumentsDirectory();
+    final docsDir = await appDocumentsDirectory();
     final dir = Directory(p.join(docsDir.path, 'covers'));
     if (!await dir.exists()) await dir.create(recursive: true);
     return dir;
@@ -1387,7 +1387,7 @@ class BookImportServiceImpl implements BookImportService {
         _importedBooksDirectory ??
         Directory(
           p.join(
-            (await getApplicationDocumentsDirectory()).path,
+            (await appDocumentsDirectory()).path,
             'imported_books',
           ),
         );
@@ -1400,7 +1400,7 @@ class BookImportServiceImpl implements BookImportService {
         _updateStagingDirectory ??
         Directory(
           p.join(
-            (await getApplicationDocumentsDirectory()).path,
+            (await appDocumentsDirectory()).path,
             kUpdateStagingFolderName,
           ),
         );

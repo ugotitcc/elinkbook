@@ -1,8 +1,8 @@
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+import '../platform/app_paths.dart';
 import 'library_repository.dart';
 import 'models/book.dart';
 import 'models/book_group.dart';
@@ -13,7 +13,7 @@ import 'models/library_enums.dart';
 /// `sqflite_common_ffi` 的 `inMemoryDatabasePath`，不會呼叫到這個函式
 /// （`path_provider` 需要平台 channel，無法在純 Dart 測試環境執行）。
 Future<String> defaultLibraryDatabasePath() async {
-  final dir = await getApplicationDocumentsDirectory();
+  final dir = await appDocumentsDirectory();
   return p.join(dir.path, 'library.db');
 }
 
