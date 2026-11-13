@@ -222,7 +222,7 @@
 - 修改：`app/android/app/src/main/assets/foliate/main.js`
 - 修改：`app/tool/foliate_touch_harness/README.md`
 
-- [ ] **Step 0（環境與基準，PowerShell）：**
+- [x] **Step 0（環境與基準，PowerShell）：**
   ```powershell
   $env:PATH = "$env:PNPM_HOME;$env:PATH"
   node --version   # 應為 v24.x
@@ -232,7 +232,7 @@
   node run-all.mjs         # 基準：既有場景應「全部 PASS」，確認環境可用且與本張無關的失敗先記下來
   ```
   若基準就有場景失敗，先記錄於 `epic.md` 進度，不要把既有失敗誤判成本張回歸。
-- [ ] **Step 1（寫場景，先不改 `main.js`）：** 新增 `scenario-heading-font.mjs`，風格比照 `scenario-first-line-indent-exclusions.mjs`（檔頭中文註解說明目的與情境、`import { launchHarnessPage, buildStoredZip, report } from './lib/harness.mjs'`、記憶體 EPUB、`applyPrefs` 輔助、`main().catch(...)`）。內容：
+- [x] **Step 1（寫場景，先不改 `main.js`）：** 新增 `scenario-heading-font.mjs`，風格比照 `scenario-first-line-indent-exclusions.mjs`（檔頭中文註解說明目的與情境、`import { launchHarnessPage, buildStoredZip, report } from './lib/harness.mjs'`、記憶體 EPUB、`applyPrefs` 輔助、`main().catch(...)`）。內容：
   - **Fixture（單章，內文需 > 20 字元，harness 要等內文載入）**：`style.css` 為 `h1 span { font-family: 'BookSpan'; } h2 a { font-family: 'BookLink'; }`（書本自己在標題後代指定字型，證明被覆蓋）。`chapter1.xhtml` 每個目標元素給 `id`：
     ```
     <h1 id="t-h1">純標題</h1>
@@ -254,13 +254,13 @@
     - `C 標題字型取消（不帶 headingFontFamily）：8 個標題元素全部退回 BodyFont，不留殘餘規則`；接著 `C2` 再次帶上 → 又全為 HeadFont（來回切換）。
     - `D 沒有主字型、只有標題字型（主字型為使用書本字型）`：`applyPrefs(page, { ...BASE_PREFS, headingFontFamily: 'HeadFont' })` → 8 個標題元素為 HeadFont；`b-p` 既不是 BodyFont 也不是 HeadFont（沿用書本／瀏覽器字型）。
   - `applyPrefs` 同既有場景：`window.applyPreferences(p)` 後等 600ms。
-- [ ] **Step 2（確認紅）：**
+- [x] **Step 2（確認紅）：**
   ```powershell
   cd C:\Users\fycdc\AI\elinkBook\app\tool\foliate_touch_harness
   node scenario-heading-font.mjs
   ```
   預期：`A2`、`B`、`C2`、`D` 為 `[FAIL]`（標題仍是 BodyFont 或書本字型），`A1`、`A3`、`C` 為 `[PASS]`，exit code 非 0。**把這段輸出（FAIL 的項目名稱）貼進 `epic.md` 開發記錄或提交說明**，證明場景在沒有 `main.js` 修改時確實失敗。
-- [ ] **Step 3（綠）：** 修改 `foliate/main.js` `buildOverrideCss`，在主字型規則（以字串定位：`if (prefs.fontFamily) {` 那個區塊）**之後**、`if (typeof prefs.fontSize === 'number') {` 之前新增：
+- [x] **Step 3（綠）：** 修改 `foliate/main.js` `buildOverrideCss`，在主字型規則（以字串定位：`if (prefs.fontFamily) {` 那個區塊）**之後**、`if (typeof prefs.fontSize === 'number') {` 之前新增：
   ```js
   // epic-68 Issue 2：標題字型。selector 含後代（h1 *）——上面主字型規則直接指定在
   // span／a 等元素上，只寫 h1–h6 會被標題內層的 <span>／<a> 蓋回主字型。
@@ -275,18 +275,18 @@
   }
   ```
   同步修改 `buildOverrideCss` 函式上方的說明註解？**不需要**（只動新增區塊，不順手改既有註解）。
-- [ ] **Step 4（確認綠）：**
+- [x] **Step 4（確認綠）：**
   ```powershell
   node scenario-heading-font.mjs
   node run-all.mjs
   ```
   預期：本場景全 `[PASS]`；`run-all.mjs` 為「全部 PASS」（既有場景不回歸，特別是 `scenario-disable-publisher-styles.mjs`、`scenario-first-line-indent-exclusions.mjs`、`scenario-publisher-body-font-size.mjs`）。
-- [ ] **Step 5（反向驗證，暫時修改、驗完還原，不 commit）：**
+- [x] **Step 5（反向驗證，暫時修改、驗完還原，不 commit）：**
   1. 把新增的 `if (prefs.headingFontFamily) {…}` 區塊整段**剪下貼到主字型規則 `if (prefs.fontFamily) {` 之前** → `A2` 必須 FAIL（且 FAIL 的是後代 id：`t-h1-span`、`t-h1-a`、`t-h2-a-span`）。
   2. 把 selector 改成只有 `headingTags.join(', ')`（拿掉 `, ${h} *`）→ `A2` 必須 FAIL（同上三個後代 id）。
   還原後重跑 `node scenario-heading-font.mjs` 確認全 PASS。任一項沒變紅，改寫場景斷言直到能抓到。
-- [ ] **Step 6（README）：** `app/tool/foliate_touch_harness/README.md`「場景清單」末尾新增一條 `scenario-heading-font.mjs`：標題字型（epic-68 Issue 2）。以記憶體 EPUB（書本自帶 `h1 span`／`h2 a` 字型）斷言 `h1`–`h6` 含後代（`h1>span`、`h1>a`、`h2>a>span`）套用標題字型、非標題維持主字型、停用書本 CSS 時仍勝出、取消標題字型後規則消失、無主字型時僅標題生效；規則排在主字型規則之前或拿掉後代 selector 時 A2 會 FAIL。
-- [ ] **Step 7：commit：**
+- [x] **Step 6（README）：** `app/tool/foliate_touch_harness/README.md`「場景清單」末尾新增一條 `scenario-heading-font.mjs`：標題字型（epic-68 Issue 2）。以記憶體 EPUB（書本自帶 `h1 span`／`h2 a` 字型）斷言 `h1`–`h6` 含後代（`h1>span`、`h1>a`、`h2>a>span`）套用標題字型、非標題維持主字型、停用書本 CSS 時仍勝出、取消標題字型後規則消失、無主字型時僅標題生效；規則排在主字型規則之前或拿掉後代 selector 時 A2 會 FAIL。
+- [x] **Step 7：commit：**
   ```bash
   git add app/android/app/src/main/assets/foliate/main.js app/tool/foliate_touch_harness/scenario-heading-font.mjs app/tool/foliate_touch_harness/README.md
   git commit -m "feat(epic-68): main.js 對標題及其後代套用標題字型，新增 harness 回歸場景"
