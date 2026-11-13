@@ -255,7 +255,7 @@
 
 **Files：** `app/test/reader/layout_preset_repository_test.dart`、`app/test/reader/layout_preset_test.dart`、`app/test/reader/layout_preset_flow_test.dart`（**只改測試**；實作已由 Task 2 的 `toMap/fromMap/reflowableEpubFields` 帶出）
 
-- [ ] **Step 1（寫測試，預期直接綠；以 Step 2 反向驗證確認有效）：**
+- [x] **Step 1（寫測試，預期直接綠；以 Step 2 反向驗證確認有效）：**
   - `layout_preset_repository_test.dart`，仿 145–173 行：
     - `prefs_json 往返保留 headingFontFamily（epic-68 Issue 1）`：`BookReaderPrefs(fontFamily: 'SourceHanSerifTC', headingFontFamily: 'TaiwanPearl')` 經 `repository.insert` → `listAll`，`restored.headingFontFamily == 'TaiwanPearl'` 且 `restored == prefs`。
     - `舊預設集 JSON 沒有 heading_font_family 鍵時讀成 null，不拋出例外`：以 `libraryRepository.database.insert('layout_preset', {…, 'prefs_json': '{"font_family":"SourceHanSerifTC","font_size":18.0}'})` 模擬 epic-68 之前寫入的 JSON，`restored.headingFontFamily` 為 null、`fontFamily == 'SourceHanSerifTC'`。
@@ -264,19 +264,19 @@
     - `saveAsPreset`（假 repository 版 group）：緊接「寫入前以 reflowableEpubFields() 過濾」（以測試名稱字串定位）新增 `另存為預設集：標題字型進入快照`，`flow.saveAsPreset(const BookReaderPrefs(fontSize: 18, headingFontFamily: 'TaiwanPearl', pdfContrast: 30))` 後 `flow.presets.single.prefs.headingFontFamily == 'TaiwanPearl'` 且 `pdfContrast` 為 null。
     - `applyFromBook`（假 repository 版 group）：緊接成功案例新增 `從其他書複製：標題字型一併帶上`，來源書存含 `headingFontFamily: 'TaiwanPearl'` 與 `pdfContrast: 40`，複製後目標 `headingFontFamily == 'TaiwanPearl'`、`pdfContrast` 為 null。
     - `applyPreset`（審查 I2：**放在「LayoutPresetFlow（真實 sqlite）」group，不放假 repository group**）：`applyPreset` 直接寫 `preset.prefs`、不經 `reflowableEpubFields()` 白名單，所以在假 repository 版即使白名單被破壞也不會紅；改放真實 sqlite group（`BookReaderPrefsRepository` → `toMap` → `book_reader_prefs.heading_font_family` → `fromMap`）才會因序列化漏欄位而紅。新增 `套用預設集：標題字型寫入目標書籍（真實 sqlite 往返）`：建構預設集的方式仿該 group 既有的套用測試（先 `grep -n "applyPreset" test/reader/layout_preset_flow_test.dart` 取其寫法），預設集含 `headingFontFamily: 'TaiwanPearl'`，`flow.applyPreset(preset, targetBookIds: ['b1'])` 後 `(await prefsRepo.load('b1')).headingFontFamily == 'TaiwanPearl'`。
-- [ ] **Step 2（反向驗證：每個測試都必須能紅；暫時破壞、驗完還原、不 commit）：**
+- [x] **Step 2（反向驗證：每個測試都必須能紅；暫時破壞、驗完還原、不 commit）：**
   1. 註解掉 `book_reader_prefs.dart` `reflowableEpubFields()` 內 `headingFontFamily: headingFontFamily,`，跑 `flutter test test/reader/layout_preset_flow_test.dart`。預期**紅**：`另存為預設集：標題字型進入快照`、`從其他書複製：標題字型一併帶上`。**預期仍綠**：`套用預設集…（真實 sqlite 往返）`（它不依賴白名單，不要求在此步紅）。還原後再跑預期全綠。
   2. 註解掉 `fromMap` 內的 `headingFontFamily: map['heading_font_family'] as String?,`，跑 `flutter test test/reader/layout_preset_flow_test.dart test/reader/layout_preset_repository_test.dart`。預期**紅**：`套用預設集…（真實 sqlite 往返）`、`prefs_json 往返保留 headingFontFamily`。還原。
   3. 若任一預期會紅的測試沒紅，代表測試沒有守住該行為，**必須改寫**（例如補斷言、改用更貼近的 group）到反向驗證會紅為止，才可進入 Step 3。
   4. `layout_preset_test.dart` 的新測試是純物件 `LayoutPreset` 持有 `prefs` 的結構守衛，不經序列化，註解模型欄位則編譯即失敗；視為文件性測試，不要求反向驗證變紅，其餘往返責任由 `layout_preset_repository_test` 承擔。舊 JSON 缺 key 的測試守的是 `fromMap` 對缺 key 不拋例外的既有行為，若把 `as String?` 改成 `as String` 才會紅，可選擇性驗證。
-- [ ] **Step 3（綠）：**
+- [x] **Step 3（綠）：**
   ```bash
   flutter test test/reader/layout_preset_repository_test.dart
   flutter test test/reader/layout_preset_test.dart
   flutter test test/reader/layout_preset_flow_test.dart
   ```
   預期：全綠。
-- [ ] **Step 4：** `flutter analyze`；明確列檔 commit：
+- [x] **Step 4：** `flutter analyze`；明確列檔 commit：
   ```bash
   git add app/test/reader/layout_preset_repository_test.dart app/test/reader/layout_preset_test.dart app/test/reader/layout_preset_flow_test.dart
   git commit -m "test(epic-68): 版面預設集往返與套用涵蓋標題字型"

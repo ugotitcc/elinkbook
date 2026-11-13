@@ -154,6 +154,20 @@ void main() {
         expect(saved.pdfContrast, isNull);
       });
 
+      test('另存為預設集：標題字型進入快照', () async {
+        await flow.saveAsPreset(
+          const BookReaderPrefs(
+            fontSize: 18,
+            headingFontFamily: 'TaiwanPearl',
+            pdfContrast: 30,
+          ),
+        );
+
+        final saved = flow.presets.single.prefs;
+        expect(saved.headingFontFamily, 'TaiwanPearl');
+        expect(saved.pdfContrast, isNull);
+      });
+
       test('取名取消 → cancelled，不寫入，仍通知一次', () async {
         prompts.onAskName = () async => null;
 
@@ -360,6 +374,20 @@ void main() {
         expect(events, ['applied', 'notify']);
       });
 
+      test('從其他書複製：標題字型一併帶上', () async {
+        await prefsRepo.save(
+          'src',
+          const BookReaderPrefs(headingFontFamily: 'TaiwanPearl', pdfContrast: 40),
+        );
+
+        final outcome = await flow.applyFromBook('src', targetBookIds: ['b1']);
+
+        expect(outcome, LayoutPresetOutcome.done);
+        final target = await prefsRepo.load('b1');
+        expect(target.headingFontFamily, 'TaiwanPearl');
+        expect(target.pdfContrast, isNull);
+      });
+
       test('讀取來源書籍丟例外 → failed 且只回報一次，不往下寫', () async {
         prefsRepo.failOn.add('load');
 
@@ -560,6 +588,15 @@ void main() {
       await flow.applyPreset(preset, targetBookIds: ['b1', 'b2', 'b3']);
       expect((await prefsRepo.load('b2')).fontSize, 22);
       expect((await prefsRepo.load('b3')).fontSize, 22);
+    });
+
+    test('套用預設集：標題字型寫入目標書籍（真實 sqlite 往返）', () async {
+      final preset =
+          _preset('P', const BookReaderPrefs(headingFontFamily: 'TaiwanPearl'));
+
+      await flow.applyPreset(preset, targetBookIds: ['b1']);
+
+      expect((await prefsRepo.load('b1')).headingFontFamily, 'TaiwanPearl');
     });
 
     test('空清單不執行寫入且安全返回', () async {

@@ -34,6 +34,18 @@ void main() {
     expect(preset.prefs.firstLineIndent, 2.0);
   });
 
+  test('LayoutPreset 的 prefs 保留 headingFontFamily（epic-68 Issue 1）', () {
+    final preset = LayoutPreset(
+      id: null,
+      name: '標題字型',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      prefs: const BookReaderPrefs(headingFontFamily: 'TaiwanPearl'),
+    );
+
+    expect(preset.prefs.headingFontFamily, 'TaiwanPearl');
+  });
+
   test('LayoutPreset 的 id 可為 null（尚未存入資料庫的暫存物件）', () {
     final preset = LayoutPreset(
       id: null,
