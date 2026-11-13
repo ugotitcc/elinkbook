@@ -46,6 +46,25 @@ void main() {
     expect(prefs, BookReaderPrefs.empty);
   });
 
+  test('save 寫入標題字型後，load 讀回相同的值', () async {
+    const prefs = BookReaderPrefs(
+      fontFamily: 'SourceHanSerifTC',
+      headingFontFamily: 'TaiwanPearl',
+    );
+
+    await repository.save('b1', prefs);
+
+    final loaded = await repository.load('b1');
+    expect(loaded, prefs);
+    expect(loaded.headingFontFamily, 'TaiwanPearl');
+  });
+
+  test('未寫入標題字型的列，load 讀回 headingFontFamily 為 null', () async {
+    await repository.save('b1', const BookReaderPrefs(fontSize: 20));
+
+    expect((await repository.load('b1')).headingFontFamily, isNull);
+  });
+
   test('save 寫入後，load 讀回相同的值', () async {
     const prefs = BookReaderPrefs(
       fontFamily: 'SourceHanSerifTC',

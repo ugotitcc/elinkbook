@@ -5442,7 +5442,7 @@ void main() {
   });
 
   testWidgets(
-    '版面覆寫：種子 34 欄位全填，儲存後除 writingModeOverride／pageTurnModeOverride 外'
+    '版面覆寫：種子 35 欄位全填，儲存後除 writingModeOverride／pageTurnModeOverride 外'
     '全數原樣相等（Issue 10 全欄位保留守衛）',
     (tester) async {
       final book = _testBook(id: '1', title: '書A');
@@ -5486,6 +5486,40 @@ void main() {
         fullBookReaderPrefsSeed,
         except: {'writing_mode_override', 'page_turn_mode_override'},
       );
+    },
+  );
+
+  testWidgets(
+    '版面覆寫儲存：既有書籍的標題字型不被清空（epic-68 Issue 1）',
+    (tester) async {
+      final book = _testBook(id: '1', title: '書A');
+      final repository = FakeLibraryRepository(initialBooks: [book]);
+      final bookReaderPrefsRepository = FakeBookReaderPrefsRepository();
+      await bookReaderPrefsRepository.save('1', fullBookReaderPrefsSeed);
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
+          sources: fakeSourceDependencies(),
+          dependencies: fakeReaderFeatureDependencies(
+            libraryRepository: repository,
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+            bookReaderPrefsRepository: bookReaderPrefsRepository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('book_action_menu_1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('book_action_layout_override')));
+      await tester.pumpAndSettle();
+      // 不改動任何控制項，直接儲存
+      await tester.tap(find.byKey(const Key('layout_override_save_button')));
+      await tester.pumpAndSettle();
+
+      final saved = await bookReaderPrefsRepository.load('1');
+      expect(saved.headingFontFamily, 'TaiwanPearl');
     },
   );
 

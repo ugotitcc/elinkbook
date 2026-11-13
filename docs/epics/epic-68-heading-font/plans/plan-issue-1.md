@@ -152,19 +152,19 @@
 >
 > **真實 SQLite 受 `toMap` 影響的測試（grep 實查）：** `BookReaderPrefsRepository` 以 `prefs.toMap(bookId)` 寫入 `book_reader_prefs`，下列測試走真實 `SqliteLibraryRepository`（in-memory）＋ `BookReaderPrefsRepository`，Task 1 的 schema 已先備妥，本 Task 結束須全綠：`test/reader/book_reader_prefs_repository_test.dart`、`test/reader/reader_prefs_manager_test.dart`（約 349 行起的真實庫 group）、`test/reader/layout_preset_flow_test.dart`（約 474 行起「真實 sqlite」group）、`test/screens/library_screen_test.dart`（約 3376 行）、`test/screens/reader_screen_test.dart`（約 10397 行起 group）。`LayoutPresetRepository` 是把 `toMap` 轉成 `prefs_json` 文字存入 `layout_preset`（不是 `book_reader_prefs` 欄位），不會因缺欄位而拋錯，但仍一併跑以確認 JSON 往返。
 
-- [ ] **Step 1（紅，模型）：** 在 `test/reader/book_reader_prefs_test.dart`，仿 `group('firstLineIndent（epic-65 Issue 1：首行縮排）'`（約 580–639 行）新增 `group('headingFontFamily（epic-68 Issue 1：標題字型）'`，測試名稱與斷言重點：
+- [x] **Step 1（紅，模型）：** 在 `test/reader/book_reader_prefs_test.dart`，仿 `group('firstLineIndent（epic-65 Issue 1：首行縮排）'`（約 580–639 行）新增 `group('headingFontFamily（epic-68 Issue 1：標題字型）'`，測試名稱與斷言重點：
   - `toMap／fromMap 往返保留字串`：`BookReaderPrefs(headingFontFamily: 'TaiwanPearl')` → `map['heading_font_family'] == 'TaiwanPearl'`，`fromMap(map).headingFontFamily == 'TaiwanPearl'`。
   - `null（跟隨主字型）往返後仍為 null`：`BookReaderPrefs.empty.toMap('b')['heading_font_family']` 為 null 且 `fromMap` 讀回 null。
   - `fromMap 缺少 heading_font_family 鍵（舊資料列／舊預設集 JSON）讀成 null`：`toMap('b')..remove('heading_font_family')` 後 `fromMap` 不拋例外、值為 null。
   - `== 與 hashCode 納入 headingFontFamily`：相同值相等且 hashCode 相等；與不同值、與缺值皆不相等。
   - `copyWith 更新 headingFontFamily 時，其餘欄位保留原值`：`copyWith(headingFontFamily: 'X')` 後 `fontFamily` 不變；另加一條 `copyWith()` 不傳參數時保留原 `headingFontFamily`（鎖定「無 sentinel」語意，spec §1.2）。
   - `reflowableEpubFields() 保留 headingFontFamily`：`BookReaderPrefs(headingFontFamily: 'X').reflowableEpubFields().headingFontFamily == 'X'`。
-- [ ] **Step 2（紅，既有斷言同步）：** 同檔更新既有斷言（編譯通過後這些才會因欄位數變動而紅，先改好期望值）：
+- [x] **Step 2（紅，既有斷言同步）：** 同檔更新既有斷言（編譯通過後這些才會因欄位數變動而紅，先改好期望值）：
   - 約 687 行測試名稱「共 12 個欄位，其餘 22 個流式 EPUB 欄位保留」→「其餘 23 個」；該測試 `const prefs = BookReaderPrefs(...)`（約 689 行）補 `headingFontFamily: 'TaiwanPearl'`，保留區補 `expect(filtered.headingFontFamily, 'TaiwanPearl');`，註解「// 21 個保留欄位」改為實際計數（原註解已與 22 不符，順手改成 `23 個保留欄位`，12 個清空欄位區塊不變）。
   - 約 774 行 `toMap 的 34 個欄位值全部非 null` → `35 個`；約 786 行 `expect(map.length, 35, reason: '34 個欄位 ＋ book_id')` → `36`、`'35 個欄位 ＋ book_id'`；約 795 行 `copyWith() 不傳參數時與種子相等（34 個欄位皆被帶回）` → `35 個`。
   - 先用 `grep -n "34\|35" test/reader/book_reader_prefs_test.dart` 確認沒有其他欄位數字漏改。
   - `test/reader/book_reader_prefs_repository_test.dart`（此測試需要模型欄位，因此放在本 Task，不放 Task 1），仿 `save 寫入後，load 讀回相同的值` 新增 `save 寫入標題字型後，load 讀回相同的值`（`BookReaderPrefs(fontFamily: 'SourceHanSerifTC', headingFontFamily: 'TaiwanPearl')`，`load` 結果 `==` 原值）與 `未寫入標題字型的列，load 讀回 headingFontFamily 為 null`（`BookReaderPrefs(fontSize: 20)` 存讀後 `headingFontFamily` 為 null）。
-- [ ] **Step 3（紅，種子與三個明確守衛）：**
+- [x] **Step 3（紅，種子與三個明確守衛）：**
   - `test/support/full_book_reader_prefs.dart`：在 `fontFamily: 'SourceHanSerifTC',` 下一行補 `headingFontFamily: 'TaiwanPearl',`；檔頭註解 `/// 34 個欄位全部填滿` 改 `35`（現況 34 個欄位、`toMap` 35 個 key 含 `book_id`；補上後 35 個欄位、36 個 key）。
   - **過時數字／名稱同步（審查 M2，以字串定位，不靠行號）：** 四個測試檔的 group 名稱與註解仍寫「種子 34 欄位」等，種子變 35 後會與事實不符（不影響通過，但要一併更新）：
     - `test/screens/fxl_settings_sheet_test.dart`：group `全欄位保留守衛（Issue 10）：種子 34 欄位，…` → `35 欄位`。
@@ -175,12 +175,12 @@
   - `test/screens/library_screen_test.dart`：緊接「版面覆寫：種子 34 欄位全填…」（約 5444–5490 行）之後新增 `testWidgets('版面覆寫儲存：既有書籍的標題字型不被清空（epic-68 Issue 1）')`，流程完全複製該測試（種子存進 `FakeBookReaderPrefsRepository`、開 `book_action_menu_1` → `book_action_layout_override` → 點 `layout_override_save_button`，不改動任何控制項），斷言 `saved.headingFontFamily == 'TaiwanPearl'`。
   - `test/screens/fxl_settings_sheet_test.dart`：在 `_fxlFullFieldGuardTests()`（約 644 行）的 group 內新增 `testWidgets('切換全螢幕後標題字型不被清空（epic-68 Issue 1）')`：`final changed = await _tapAndCapture(tester, 'fxl_settings_fullscreen');` 斷言 `changed!.headingFontFamily == 'TaiwanPearl'`。
   - `test/screens/reader_settings_sheet_test.dart`：在「全欄位保留守衛（Issue 10）」group（約 2702–2747 行）內新增 `testWidgets('切換全螢幕後標題字型不被清空（epic-68 Issue 1）')`：`_pumpSheet(tester, fullBookReaderPrefsSeed, (p) => notified = p)` → `switchToTab(tester, '呈現')` → 點 `reader_settings_fullscreen` → 斷言 `notified!.headingFontFamily == 'TaiwanPearl'`。另加 `testWidgets('「重設為本書原樣式」不清空標題字型（epic-68 Issue 1）')`（審查 I3：**不要用全欄位種子**，種子全填時重設按鈕狀態未經驗證）：緊接既有測試「任一受影響欄位被覆寫時，固定列改顯示套用按鈕，點擊後 onChanged 帶出 5 個欄位皆為 null」（約 1292–1322 行，字串定位）之後，**沿用其完全相同的 prefs**（`fontSize: 18 / 16, fontWeight: 1.5, lineHeight: 2.0, paragraphSpacing: 1.5, letterSpacing: 0.05`）**外加** `headingFontFamily: 'TaiwanPearl'`，流程同其寫法（`switchToTab(tester, '預設集')` → `ensureVisible` → 點 `reader_settings_preset_reset_apply` → `pump`），斷言 `notified!.fontSize` 為 null（確認重設確實生效，非空轉）且 `notified!.headingFontFamily == 'TaiwanPearl'`（鎖定 `_resetToBookDefault` 只清 6 個數值欄位、不碰字型的既有行為）。此測試預期**直接綠**（`_currentDraft` 帶入 `_headingFontFamily` 之後），屬回歸守衛；反向驗證見 Step 7。
-- [ ] **Step 4（確認紅）：** 先確認紅燈原因正確。`dart analyze` 此時會報 `headingFontFamily` 未定義（編譯失敗即紅）：
+- [x] **Step 4（確認紅）：** 先確認紅燈原因正確。`dart analyze` 此時會報 `headingFontFamily` 未定義（編譯失敗即紅）：
   ```bash
   flutter test test/reader/book_reader_prefs_test.dart
   ```
   預期：編譯失敗，訊息含 `The named parameter 'headingFontFamily' isn't defined`。
-- [ ] **Step 5（綠，模型）：** `lib/reader/book_reader_prefs.dart` 在 `fontFamily` 之後新增，並同步 7 個點（行號為現況，Edit 時以字串定位）：
+- [x] **Step 5（綠，模型）：** `lib/reader/book_reader_prefs.dart` 在 `fontFamily` 之後新增，並同步 7 個點（行號為現況，Edit 時以字串定位）：
   - 欄位 `final String? headingFontFamily;`，附中文 doc 註解（`null`＝跟隨主字型；語意同 `fontFamily`；只套用 Foliate 流式格式，無全域預設；epic-68 Issue 1）。
   - 建構子（約 104）`this.headingFontFamily,` 緊接 `this.fontFamily,`。
   - `toMap`（約 146）`'heading_font_family': headingFontFamily,` 緊接 `'font_family'`。
@@ -189,11 +189,11 @@
   - `hashCode`（約 291）清單加 `headingFontFamily,`。
   - `copyWith`（約 332）加參數 `String? headingFontFamily,` 與 `headingFontFamily: headingFontFamily ?? this.headingFontFamily,`。
   - `reflowableEpubFields()`加 `headingFontFamily: headingFontFamily,`，並把該方法 doc 註解中「22 個欄位」改「23 個」、「其餘 12 個欄位」維持。
-- [ ] **Step 6（綠，三個重建點）：**
+- [x] **Step 6（綠，三個重建點）：**
   - `lib/screens/library_screen.dart` `_save()`（約 1944）：`fontFamily: existing.fontFamily,` 下補 `headingFontFamily: existing.headingFontFamily,`。
   - `lib/screens/fxl_settings_sheet.dart` `_notifyChanged()`（約 67）：`fontFamily: widget.prefs.fontFamily,` 下補 `headingFontFamily: widget.prefs.headingFontFamily,`。
   - `lib/screens/reader_settings_sheet.dart`：第 99 行 `late String? _fontFamily;` 下新增 `late String? _headingFontFamily;`（附註解：本張僅帶入草稿，下拉 UI 在 Issue 3）；`initState`（144）`_headingFontFamily = widget.prefs.headingFontFamily;`；`didUpdateWidget` 的 `setState` 內（185）同上；`_currentDraft`（293）`headingFontFamily: _headingFontFamily,` 緊接 `fontFamily: _fontFamily,`。
-- [ ] **Step 7（確認綠，含真實 SQLite 測試）：** 只跑觸及的測試檔（`reader_settings_sheet_test`、`library_screen_test`、`reader_screen_test` 檔案大，分次跑）：
+- [x] **Step 7（確認綠，含真實 SQLite 測試）：** 只跑觸及的測試檔（`reader_settings_sheet_test`、`library_screen_test`、`reader_screen_test` 檔案大，分次跑）：
   ```bash
   flutter test test/reader/book_reader_prefs_test.dart
   flutter test test/reader/book_reader_prefs_repository_test.dart
@@ -211,7 +211,7 @@
   1. 註解 `library_screen.dart` `_save()` 的 `headingFontFamily: existing.headingFontFamily,` → 新的書架守衛測試與既有「版面覆寫：種子 35 欄位全填…」全欄位守衛紅。
   2. 註解 `fxl_settings_sheet.dart` `_notifyChanged()` 那一行 → `fxl_settings_sheet_test` 新測試與全欄位守衛紅。
   3. 註解 `reader_settings_sheet.dart` `_currentDraft` 的 `headingFontFamily: _headingFontFamily,` → 「切換全螢幕後標題字型不被清空」與「重設為本書原樣式不清空標題字型」皆紅。
-- [ ] **Step 8：** `flutter analyze` 必須 `No issues found!`；明確列檔 commit：
+- [x] **Step 8：** `flutter analyze` 必須 `No issues found!`；明確列檔 commit：
   ```bash
   git add app/lib/reader/book_reader_prefs.dart app/lib/screens/library_screen.dart app/lib/screens/fxl_settings_sheet.dart app/lib/screens/reader_settings_sheet.dart app/test/support/full_book_reader_prefs.dart app/test/reader/book_reader_prefs_test.dart app/test/reader/book_reader_prefs_repository_test.dart app/test/screens/library_screen_test.dart app/test/screens/fxl_settings_sheet_test.dart app/test/screens/pdf_settings_sheet_test.dart app/test/screens/reader_settings_sheet_test.dart
   git commit -m "feat(epic-68): BookReaderPrefs 新增標題字型欄位並補齊整列重建守衛"

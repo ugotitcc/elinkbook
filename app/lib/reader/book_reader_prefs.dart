@@ -36,6 +36,10 @@ T? enumByNameOrNull<T extends Enum>(List<T> values, String? name) {
 /// epic-4 design.md 決策 #2／#8）。
 class BookReaderPrefs {
   final String? fontFamily;
+
+  /// 標題字型家族名稱（epic-68 Issue 1）。`null`＝跟隨主字型；語意同
+  /// [fontFamily]。只套用在 Foliate 流式格式，無全域預設。
+  final String? headingFontFamily;
   final double? fontSize;
   final double? fontWeight; // Readium 倍率語意（1.0 = normal），非 CSS 300-900 原始值
   final double? lineHeight;
@@ -102,6 +106,7 @@ class BookReaderPrefs {
 
   const BookReaderPrefs({
     this.fontFamily,
+    this.headingFontFamily,
     this.fontSize,
     this.fontWeight,
     this.lineHeight,
@@ -144,6 +149,7 @@ class BookReaderPrefs {
     return {
       'book_id': bookId,
       'font_family': fontFamily,
+      'heading_font_family': headingFontFamily,
       'font_size': fontSize,
       'font_weight': fontWeight,
       'line_height': lineHeight,
@@ -185,6 +191,7 @@ class BookReaderPrefs {
   factory BookReaderPrefs.fromMap(Map<String, Object?> map) {
     return BookReaderPrefs(
       fontFamily: map['font_family'] as String?,
+      headingFontFamily: map['heading_font_family'] as String?,
       // SQLite 對無小數部分的 REAL 欄位可能讀回 int（見
       // Book.fromMap 的 progress 欄位既有處理方式），故用 num? 轉換，
       // 不可直接 `as double?`（會拋出 type cast 例外）。
@@ -251,6 +258,7 @@ class BookReaderPrefs {
   bool operator ==(Object other) =>
       other is BookReaderPrefs &&
       other.fontFamily == fontFamily &&
+      other.headingFontFamily == headingFontFamily &&
       other.fontSize == fontSize &&
       other.fontWeight == fontWeight &&
       other.lineHeight == lineHeight &&
@@ -289,6 +297,7 @@ class BookReaderPrefs {
   int get hashCode => Object.hashAll([
         pdfPageTurnMode,
         fontFamily,
+        headingFontFamily,
         fontSize,
         fontWeight,
         lineHeight,
@@ -330,6 +339,7 @@ class BookReaderPrefs {
   /// Constraints「copyWith 語意」的說明。
   BookReaderPrefs copyWith({
     String? fontFamily,
+    String? headingFontFamily,
     double? fontSize,
     double? fontWeight,
     double? lineHeight,
@@ -366,6 +376,7 @@ class BookReaderPrefs {
   }) {
     return BookReaderPrefs(
       fontFamily: fontFamily ?? this.fontFamily,
+      headingFontFamily: headingFontFamily ?? this.headingFontFamily,
       fontSize: fontSize ?? this.fontSize,
       fontWeight: fontWeight ?? this.fontWeight,
       lineHeight: lineHeight ?? this.lineHeight,
@@ -404,7 +415,7 @@ class BookReaderPrefs {
     );
   }
 
-  /// 只保留 [ReaderSettingsSheet]（流式 EPUB 版面設定）實際呈現的 22 個
+  /// 只保留 [ReaderSettingsSheet]（流式 EPUB 版面設定）實際呈現的 23 個
   /// 欄位，其餘 12 個欄位（`pageMargins`、8 個 `pdf*`、3 個 `dualPage*`）
   /// 一律強制設為 `null`，**不論來源物件實際內容為何**——epic-28-reader-
   /// settings-enhancements Issue 3「欄位污染防護」，見 spec.md「資料
@@ -417,6 +428,7 @@ class BookReaderPrefs {
   BookReaderPrefs reflowableEpubFields() {
     return BookReaderPrefs(
       fontFamily: fontFamily,
+      headingFontFamily: headingFontFamily,
       fontSize: fontSize,
       fontWeight: fontWeight,
       lineHeight: lineHeight,

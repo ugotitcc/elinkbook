@@ -97,6 +97,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   static const _defaultMarginRight = 24.0;
 
   late String? _fontFamily;
+  // epic-68 Issue 1：標題字型僅帶入草稿（避免整列重建時被清空），下拉 UI 在 Issue 3。
+  late String? _headingFontFamily;
   late double _fontSize;
   late bool _fontSizeOverridden;
   late double _fontWeightMultiplier;
@@ -142,6 +144,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _bgHexController = TextEditingController();
     _textHexController = TextEditingController();
     _fontFamily = widget.prefs.fontFamily;
+    _headingFontFamily = widget.prefs.headingFontFamily;
     _fontSize = widget.prefs.fontSize != null
         ? (widget.prefs.fontSize! * 16.0).roundToDouble()
         : _defaultFontSize;
@@ -183,6 +186,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     if (widget.prefs != oldWidget.prefs) {
       setState(() {
         _fontFamily = widget.prefs.fontFamily;
+        _headingFontFamily = widget.prefs.headingFontFamily;
         _fontSize = widget.prefs.fontSize != null
             ? (widget.prefs.fontSize! * 16.0).roundToDouble()
             : _defaultFontSize;
@@ -292,6 +296,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// 但屬於容易被誤判為回歸的跨 Issue 行為，記錄於此供日後排查參考。
   BookReaderPrefs get _currentDraft => BookReaderPrefs(
     fontFamily: _fontFamily,
+    headingFontFamily: _headingFontFamily,
     fontSize: _fontSizeOverridden ? _toMultiplier(_fontSize, 16.0) : null,
     fontWeight: _fontWeightOverridden ? _fontWeightMultiplier : null,
     lineHeight: _lineHeightOverridden ? _lineHeight : null,

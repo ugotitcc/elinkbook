@@ -1289,6 +1289,34 @@ void main() {
           findsNothing);
     });
 
+    testWidgets('「重設為本書原樣式」不清空標題字型（epic-68 Issue 1）', (tester) async {
+      BookReaderPrefs? notified;
+      await _pumpSheet(
+        tester,
+        const BookReaderPrefs(
+          fontSize: 18 / 16,
+          fontWeight: 1.5,
+          lineHeight: 2.0,
+          paragraphSpacing: 1.5,
+          letterSpacing: 0.05,
+          headingFontFamily: 'TaiwanPearl',
+        ),
+        (prefs) => notified = prefs,
+      );
+      await switchToTab(tester, '預設集');
+      await tester.ensureVisible(
+          find.byKey(const Key('reader_settings_preset_reset_apply')));
+      await tester
+          .tap(find.byKey(const Key('reader_settings_preset_reset_apply')));
+      await tester.pump();
+
+      expect(notified, isNotNull);
+      // 確認重設確實生效（非空轉）
+      expect(notified!.fontSize, isNull);
+      // 重設只清 6 個數值欄位，不碰字型
+      expect(notified!.headingFontFamily, 'TaiwanPearl');
+    });
+
     testWidgets('任一受影響欄位被覆寫時，固定列改顯示套用按鈕，點擊後 onChanged 帶出 5 個欄位皆為 null',
         (tester) async {
       BookReaderPrefs? notified;
@@ -2699,7 +2727,7 @@ void main() {
     });
   });
 
-  group('全欄位保留守衛（Issue 10）：種子 34 欄位，操作一個控制項後，22 個流式欄位只有該欄位改變、'
+  group('全欄位保留守衛（Issue 10）：種子 35 欄位，操作一個控制項後，23 個流式欄位只有該欄位改變、'
       '其餘 12 個欄位依設計清成 null', () {
     testWidgets('切換全螢幕 → 只有 fullscreen 改變', (tester) async {
       BookReaderPrefs? notified;
@@ -2714,12 +2742,27 @@ void main() {
 
       expect(notified, isNotNull);
       expect(notified!.fullscreen, isFalse);
-      // 預期基準 ＝ 種子過濾成流式 EPUB 的 21 個欄位（另 12 個為 null，是設計）。
+      // 預期基準 ＝ 種子過濾成流式 EPUB 的 23 個欄位（另 12 個為 null，是設計）。
       expectPrefsPreserved(
         notified!,
         fullBookReaderPrefsSeed.reflowableEpubFields(),
         except: {'fullscreen'},
       );
+    });
+
+    testWidgets('切換全螢幕後標題字型不被清空（epic-68 Issue 1）', (tester) async {
+      BookReaderPrefs? notified;
+      await _pumpSheet(
+        tester,
+        fullBookReaderPrefsSeed,
+        (prefs) => notified = prefs,
+      );
+      await switchToTab(tester, '呈現');
+      await tester.tap(find.byKey(const Key('reader_settings_fullscreen')));
+      await tester.pump();
+
+      expect(notified, isNotNull);
+      expect(notified!.headingFontFamily, 'TaiwanPearl');
     });
 
     testWidgets('切換頁尾顯示 → 只有 show_footer 改變', (tester) async {

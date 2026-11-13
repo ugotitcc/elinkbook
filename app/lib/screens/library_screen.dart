@@ -1943,6 +1943,7 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
     // 否則新欄位會在「版面覆寫」儲存時被靜默清空成預設值。
     final updated = BookReaderPrefs(
       fontFamily: existing.fontFamily,
+      headingFontFamily: existing.headingFontFamily,
       fontSize: existing.fontSize,
       fontWeight: existing.fontWeight,
       lineHeight: existing.lineHeight,

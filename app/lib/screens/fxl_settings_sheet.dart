@@ -66,6 +66,7 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
     widget.onChanged(
       BookReaderPrefs(
         fontFamily: widget.prefs.fontFamily,
+        headingFontFamily: widget.prefs.headingFontFamily,
         fontSize: widget.prefs.fontSize,
         fontWeight: widget.prefs.fontWeight,
         lineHeight: widget.prefs.lineHeight,
