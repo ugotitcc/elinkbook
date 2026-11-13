@@ -64,8 +64,8 @@
 
 **Files：** `docs/epics/epic-68-heading-font/plans/plan-issue-1.md`
 
-- [ ] **Step 1：** 確認在 `feat/epic-68-heading-font`：`git branch --show-current`。
-- [ ] **Step 2：** 只提交本計畫（純文件，不夾帶 `.claude/settings.json`）：
+- [x] **Step 1：** 確認在 `feat/epic-68-heading-font`：`git branch --show-current`。
+- [x] **Step 2：** 只提交本計畫（純文件，不夾帶 `.claude/settings.json`）：
   ```bash
   git add docs/epics/epic-68-heading-font/plans/plan-issue-1.md
   git commit -m "docs(epic-68): Issue 1 資料層實作計畫"
@@ -96,21 +96,21 @@
 | `docs/adr/0038-…md:23` | 引用「版本仍為 28」 | 歷史紀錄，**不改** |
 | `docs/archive/**`、其他 Epic 計畫 | 歷史文件 | 不改 |
 
-- [ ] **Step 1（紅，新測試）：**
+- [x] **Step 1（紅，新測試）：**
   - `sqlite_library_repository_test.dart`，緊接「全新安裝的 book_reader_prefs 表包含 first_line_indent 欄位」（約 2567 行）新增 `全新安裝的 book_reader_prefs 表包含 heading_font_family 欄位（version 30 起 onCreate 已含括）`：`insertBook` 後 `database.insert('book_reader_prefs', {'book_id':…, 'heading_font_family': 'TaiwanPearl'})`，讀回 `row['heading_font_family'] == 'TaiwanPearl'`。另一條 `全新安裝時未寫入標題字型的列讀回 NULL`：只插 `book_id`，`row['heading_font_family']` 為 null。
   - 同檔，緊接 v28→29 測試（約 2767 行）之後，仿其寫法新增三個遷移測試（各自 `Directory.systemTemp.createTemp`、`addTearDown` 清理，以 `databaseFactory.openDatabase(version: N)` 建舊庫、關閉後 `SqliteLibraryRepository.open(dbPath)` 升級）：
     1. `既有 version 29 裝置升級到 version 30，book_reader_prefs 新增 heading_font_family 欄位，既有列保留且新欄位為 null`：舊庫 `book_reader_prefs` 欄位含 `font_family TEXT, first_line_indent REAL`，插入一列 `font_family: 'SourceHanSerifTC', first_line_indent: 2.0`；升級後 `getVersion() == 30`、舊欄位值保留、`heading_font_family` 為 null、可 `update` 寫入 `'TaiwanPearl'` 並讀回。
     2. `既有 version 28 裝置跳級升級到 version 30，兩個新欄位都補上且既有列保留`：舊庫欄位含 `font_family TEXT, pdf_page_turn_mode TEXT`；升級後 `first_line_indent`、`heading_font_family` 都存在且為 null、`pdf_page_turn_mode` 保留。
     3. `既有 version 1 裝置（無 book_reader_prefs 表）跳級升級到 version 30，建表含 heading_font_family 且不拋 duplicate column name`：比照 2768 行現有 v1 測試的舊庫建法；升級後插入 `{'book_id':'b1','heading_font_family':'TaiwanPearl'}`，讀回相同（`oldVersion == 1` 走 `_createBookReaderPrefsTable` 一步到位，若新增呼叫誤放在 else 分支外會在此紅）。
-- [ ] **Step 2（紅，既有斷言同步）：** 依上表把 `sqlite_library_repository_test.dart` 的 `getVersion(), 29` 斷言與「onCreate 直接建到 version 29」測試名稱（以字串定位，約 2748、4899、4902 行）、`daily_reading_stats_schema_test.dart`（約 30、36、108、109 行）、`dictionary_database_test.dart`（約 98、105 行）改為 30。
-- [ ] **Step 3（確認紅，涵蓋所有會紅的測試檔，審查 I1）：**
+- [x] **Step 2（紅，既有斷言同步）：** 依上表把 `sqlite_library_repository_test.dart` 的 `getVersion(), 29` 斷言與「onCreate 直接建到 version 29」測試名稱（以字串定位，約 2748、4899、4902 行）、`daily_reading_stats_schema_test.dart`（約 30、36、108、109 行）、`dictionary_database_test.dart`（約 98、105 行）改為 30。
+- [x] **Step 3（確認紅，涵蓋所有會紅的測試檔，審查 I1）：**
   ```bash
   flutter test test/library/sqlite_library_repository_test.dart
   flutter test test/stats/daily_reading_stats_schema_test.dart
   flutter test test/dictionary/dictionary_database_test.dart
   ```
   預期：三個檔案都紅——`sqlite_library_repository_test` 的新 heading 測試與改成 30 的斷言（`no such column: heading_font_family`／`Expected: <30> Actual: <29>`）；`daily_reading_stats_schema_test`、`dictionary_database_test` 只因版本斷言改 30 而紅（`Expected: <30> Actual: <29>`）。
-- [ ] **Step 4（綠，實作）：** `lib/library/sqlite_library_repository.dart`：
+- [x] **Step 4（綠，實作）：** `lib/library/sqlite_library_repository.dart`：
   - 第 58 行 `version: 29,` → `30`。
   - `onUpgrade` 的 `oldVersion >= 2` else 分支內、`if (oldVersion < 29) {…}`（約 261–268）之後新增：
     ```dart
@@ -125,7 +125,7 @@
     ```
   - `_createBookReaderPrefsTable`（約 530 行）：`first_line_indent REAL` 後補逗號並新增 `heading_font_family TEXT`（欄位為最後一個，無尾逗號）。
   - 緊接 `_addFirstLineIndentColumn`（約 809–819）之後新增 `_addHeadingFontFamilyColumn(Database db)`，內容比照之：查 `sqlite_master` 確認 `book_reader_prefs` 存在才 `ALTER TABLE book_reader_prefs ADD COLUMN heading_font_family TEXT`，附中文註解。
-- [ ] **Step 5（確認綠）：**
+- [x] **Step 5（確認綠）：**
   ```bash
   flutter test test/library/sqlite_library_repository_test.dart
   flutter test test/stats/daily_reading_stats_schema_test.dart
@@ -134,7 +134,7 @@
   flutter test test/reader/reader_prefs_manager_test.dart
   ```
   預期：全綠。後兩個是「模型尚未動、僅 schema 多一欄」的對照，確認新增欄位不影響既有真實 SQLite 的 `BookReaderPrefsRepository` 存讀（`insert` 未帶新欄位時為 NULL）。
-- [ ] **Step 6：** `flutter analyze`（`No issues found!`）；明確列檔 commit：
+- [x] **Step 6：** `flutter analyze`（`No issues found!`）；明確列檔 commit：
   ```bash
   git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart app/test/stats/daily_reading_stats_schema_test.dart app/test/dictionary/dictionary_database_test.dart
   git commit -m "feat(epic-68): 主庫升級至 version 30，新增 heading_font_family 欄位"

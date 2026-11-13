@@ -2566,6 +2566,29 @@ void main() {
     expect(row['first_line_indent'], 2.0);
   });
 
+  test('全新安裝的 book_reader_prefs 表包含 heading_font_family 欄位（version 30 起 onCreate 已含括）',
+      () async {
+    await repository.insertBook(_book('b_heading_font'));
+    await repository.database.insert('book_reader_prefs', {
+      'book_id': 'b_heading_font',
+      'heading_font_family': 'TaiwanPearl',
+    });
+    final row = (await repository.database.query('book_reader_prefs',
+            where: 'book_id = ?', whereArgs: ['b_heading_font']))
+        .single;
+    expect(row['heading_font_family'], 'TaiwanPearl');
+  });
+  test('全新安裝時未寫入標題字型的列讀回 NULL', () async {
+    await repository.insertBook(_book('b_heading_font_null'));
+    await repository.database.insert('book_reader_prefs', {
+      'book_id': 'b_heading_font_null',
+    });
+    final row = (await repository.database.query('book_reader_prefs',
+            where: 'book_id = ?', whereArgs: ['b_heading_font_null']))
+        .single;
+    expect(row['heading_font_family'], isNull);
+  });
+
   test('既有 version 27 裝置升級到 version 28，book_reader_prefs 新增 pdf_page_turn_mode 欄位，既有 PDF 偏好完整保留',
       () async {
     final tempDir = await Directory.systemTemp
@@ -2745,7 +2768,8 @@ void main() {
     final upgraded = await SqliteLibraryRepository.open(dbPath);
     addTearDown(() => upgraded.close());
 
-    expect(await upgraded.database.getVersion(), 29);
+    // 升級一路走到目前最新版本（30），不是只升到 29
+    expect(await upgraded.database.getVersion(), 30);
     final row = (await upgraded.database
             .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
         .single;
@@ -2817,6 +2841,202 @@ void main() {
         .single;
     expect(row['pdf_page_turn_mode'], 'paginated');
     expect(row['first_line_indent'], 2.0);
+  });
+  test(
+      '既有 version 29 裝置升級到 version 30，book_reader_prefs 新增 heading_font_family 欄位，既有列保留且新欄位為 null',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v29_to_v30_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 29,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_family TEXT,
+              first_line_indent REAL
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書',
+      'format': 'epic',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.insert('book_reader_prefs', {
+      'book_id': 'b1',
+      'font_family': 'SourceHanSerifTC',
+      'first_line_indent': 2.0,
+    });
+    await oldDb.close();
+
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    expect(await upgraded.database.getVersion(), 30);
+    final row = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(row['font_family'], 'SourceHanSerifTC');
+    expect(row['first_line_indent'], 2.0);
+    expect(row['heading_font_family'], isNull);
+
+    await upgraded.database.update(
+      'book_reader_prefs',
+      {'heading_font_family': 'TaiwanPearl'},
+      where: 'book_id = ?',
+      whereArgs: ['b1'],
+    );
+    final updated = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(updated['heading_font_family'], 'TaiwanPearl');
+  });
+  test(
+      '既有 version 28 裝置跳級升級到 version 30，兩個新欄位都補上且既有列保留',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v28_to_v30_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 28,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_family TEXT,
+              pdf_page_turn_mode TEXT
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.insert('book_reader_prefs', {
+      'book_id': 'b1',
+      'font_family': 'SourceHanSerifTC',
+      'pdf_page_turn_mode': 'scroll',
+    });
+    await oldDb.close();
+
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    expect(await upgraded.database.getVersion(), 30);
+    final row = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(row['font_family'], 'SourceHanSerifTC');
+    expect(row['pdf_page_turn_mode'], 'scroll');
+    expect(row['first_line_indent'], isNull);
+    expect(row['heading_font_family'], isNull);
+  });
+  test(
+      '既有 version 1 裝置（無 book_reader_prefs 表）跳級升級到 version 30，建表含 heading_font_family 且不拋 duplicate column name',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v1_to_v30_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 1,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書',
+      'format': 'pdf',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.close();
+
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    await upgraded.database.insert('book_reader_prefs', {
+      'book_id': 'b1',
+      'heading_font_family': 'TaiwanPearl',
+    });
+    final row = (await upgraded.database.query('book_reader_prefs',
+            where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(row['heading_font_family'], 'TaiwanPearl');
   });
   test('全新安裝的 custom_fonts 表可用（version 16 起 onCreate 已含括）', () async {
     await repository.database.insert('custom_fonts', {
@@ -4896,10 +5116,10 @@ void main() {
               'isFullTextSearchAvailable 仍須為 true');
     });
 
-    test('全新安裝（onCreate 直接建到 version 29）：isFullTextSearchAvailable 為 true，'
+    test('全新安裝（onCreate 直接建到 version 30）：isFullTextSearchAvailable 為 true，'
         '行為與現行版本一致（零回歸）', () async {
       expect(repository.isFullTextSearchAvailable, isTrue);
-      expect(await repository.database.getVersion(), 29);
+      expect(await repository.database.getVersion(), 30);
     });
   });
 }
