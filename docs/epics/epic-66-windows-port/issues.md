@@ -30,8 +30,10 @@
 | 24 | 雙欄（桌面寬度、橫向平板）一般翻頁的「目前章節」判定：foliate 的 `TOCProgress.getProgress` 取「兩欄範圍內最後一個目錄項」，不是左欄；翻到章節交界時目錄可能標成右欄的章節。Issue 20 只修了「目錄跳轉」，未改翻頁。需先決定翻頁規則（左欄為準？），可能要動釘定 vendor `progress.js` 或在 Dart 端改判，且會改變 Android 橫向平板行為；書籤／劃線／搜尋跳轉在雙欄下是否同樣偏也未驗證（來源 Issue 20） | 無 | 🟢 已完成（規則 B：雙欄時把第一欄當成單欄的那一頁，取第一欄範圍內最後一個目錄項；`main.js` 實作、不改 vendor 與 Dart；harness 20 項（獨立座標標準答案）、Windows 整份冒煙套件 28/28、BooksPad `epub_toc_test`／`foliate_toc_footer_test` 各 3/3；規則 A 曾造成 2 個回歸後捨棄；`tap-boundary` 偶發失敗（Issue 26）今天沒有本修改時就多數失敗，不歸咎也不排除；見 [plan-issue-24.md](plans/plan-issue-24.md)、[issue-24-report.md](issue-24-report.md)） | #418 |
 | 25 | Windows 封面型別檢查：`windows_epub_metadata.dart`（約第 193 行）把探針回傳的 `coverBase64` 一律解碼成封面位元組，沒有檢查 `coverType` 是否為 `image/*`。foliate-js 的 `getCover()` 備援（例如 `guide` 的封面頁）可能回傳 XHTML Blob，會被存成壞封面（Readest 曾因此出過 bug，見 readest/foliate-js PR #123、readest PR #6635）。Issue 18 只在 Android 的 `mapProbeResult` 加了檢查（`coverType` 非空且不以 `image/` 開頭視為沒有封面，並保留 `coverType`），Windows 未動。要做：比照 Android 加檢查與單元測試，並掃描 Windows 書庫確認有沒有書實際中招（來源 Issue 18） | 無 | 🟢 已完成（見 [plan-issue-25.md](plans/plan-issue-25.md)、[issue-25-report.md](issue-25-report.md)；這台書庫只有 1 本，掃描樣本不足） | #415 |
 | 26 | harness 場景 `scenario-cross-mechanism-tap-boundary.mjs` 在 Windows 失敗：「選取收尾保護期內快速點擊別處，選取維持存在」，5 次重試都 `after.isCollapsed=true`（2026-11-11 PR #414 全套連續 2 次失敗，與該 PR 無關）。**2026-11-13 診斷更正：不是負載偶發，是系統性的**——注入選取後立刻送觸控，CDP `touchStart` 往返被拖慢約 100 ms（原因未查明），選取到 `mousedown` 的間隔 150～195 ms 超出 150 ms 保護期；舊場景單獨跑 8/11 失敗（還原 `main.js` 同樣失敗，與 Issue 24 無關）。修法只改測試：把 iframe 的 `performance.now` 換成「原值 ± 10 秒」做決定性場景（A 保護期內選取維持、B 保護期已過選取折疊，B 同時守護時鐘混用 bug），不動 `main.js`（來源 PR #414 的全套驗證） | 無 | 🟢 已完成（單獨 30/30、拖慢 3/3、`run-all` 3 次 148 PASS、變異驗證 4 項皆抓到；見 [plan-issue-26.md](plans/plan-issue-26.md)、[issue-26-report.md](issue-26-report.md)） | #419 |
-| 27 | Windows 安裝程式（Inno Setup）：依使用者安裝（不需管理員）、固定 AppId 覆蓋升級、開始功能表與可選桌面捷徑（預設勾選）、解除安裝可選擇是否一併刪除 App 資料；不簽章、不上傳、不建 CI | Issue 14 | 🟡 已完成，待合併（見 [plan-issue-27.md](plans/plan-issue-27.md)、[issue-27-report.md](issue-27-report.md)；本機自動驗證 27 項全過；使用者在另一台電腦安裝、解除安裝選否選是、開書皆回報正常，無逐項紀錄；乾淨機器、Windows 10 1809、SmartScreen 實際行為未驗證；VC 可轉散發授權對 Build Tools 是否適用未查證）| — |
+| 27 | Windows 安裝程式（Inno Setup）：依使用者安裝（不需管理員）、固定 AppId 覆蓋升級、開始功能表與可選桌面捷徑（預設勾選）、解除安裝可選擇是否一併刪除 App 資料；不簽章、不上傳、不建 CI | Issue 14 | 🟡 已完成，待合併（見 [plan-issue-27.md](plans/plan-issue-27.md)、[issue-27-report.md](issue-27-report.md)；本機自動驗證 29 項全過，經獨立審查後補強；使用者在另一台電腦安裝、解除安裝選否選是、開書皆回報正常，無逐項紀錄；**解除安裝選「是」實際只刪 %APPDATA%\cc.ugotit\elinkbook（WebView2、已下載字型、字典來源），不刪「文件」資料夾內的書庫，已如實改文案並登記 Issue 29**；這台開發機上 release 版畫面空白根因未查明，已登記 Issue 30；乾淨機器、Windows 10 1809、SmartScreen 實際行為未驗證；VC 可轉散發授權對 Build Tools 是否適用未查證）| — |
 | 28 | Android APK 夾帶整合測試用 fixtures：pubspec.yaml 把 test/fixtures/ 宣告成 asset；Issue 27 已確認 Windows 打包會帶進 data/flutter_assets/test（42 檔、36 MB，其中 sample.ttf 35 MB），Android APK 很可能同樣夾帶（未實際檢查）。須先量測 APK 再決定改法（例如依建置模式排除、或改由測試自己載入資源）；改 pubspec 會牽動 86 個引用 fixtures 的整合測試 | Issue 27 | ⚪ 待規劃 | — |
+| 29 | Windows 資料位置整理（**優先**）：現在 Windows 版的資料分散在兩處且沒有上層目錄——「文件」資料夾下直接放 `library.db`、`covers`、`imported_books`（另有字典資料庫、WiFi 傳書與雲端下載的複本、更新暫存等，皆走 `getApplicationDocumentsDirectory()`），`%APPDATA%\cc.ugotit\elinkbook` 下放 WebView2、`downloaded-fonts`、`dictionaries`。要在「文件」資料夾下建一個上層目錄 `elinkbook`，讓使用者一看就知道這些資料夾屬於本 App；需遷移既有使用者的資料（把舊位置搬進來，不可遺失）；完成後 Issue 27 的解除安裝詢問框才能把書庫一併清乾淨（目前選「是」不刪書庫）。路徑與遷移細節待 Discovery | Issue 27 | ⚪ 待規劃 | — |
+| 30 | 開發機上 release 版畫面空白（待查）：2026-11-13 在作者的開發機（Windows 11 家用版）上，安裝版與暫存目錄版（同一份內容）都開出空白畫面——主視窗已顯示、啟動小視窗已消失、行程閒置、App 的 WebView2 行程存在、無崩潰事件、UI 自動化讀不到語意節點；同一份內容在使用者的另一台電腦開書正常。根因未查明（可能與這台機器的資料或環境有關，也可能是目前 `main` 的 release 內容），尚未取得 Dart 端日誌；建議先以 debug 模式執行看啟動日誌 | 無 | ⚪ 待規劃 | — |
 
 ## Issue 1 範圍
 
@@ -517,14 +519,15 @@ Android 讀 EPUB 的書名、作者、識別碼、是否固定版面、封面，
 
 ## Issue 27 範圍
 
-**狀態：** 🟡 已完成，待合併（2026-11-13 `/grill-with-docs` 定案；實作結果見 [issue-27-report.md](issue-27-report.md)；2026-11-13 `/grill-with-docs` 定案，決策見 `epic.md` 決策 32 與 [ADR 0043](../../adr/0043-windows-installer-inno-setup-unsigned-per-user.md)）。
+**狀態：** 🟡 已完成，待合併（實作結果見 [issue-27-report.md](issue-27-report.md)；2026-11-13 `/grill-with-docs` 定案，決策見 `epic.md` 決策 32 與 [ADR 0043](../../adr/0043-windows-installer-inno-setup-unsigned-per-user.md)）。
 
 Windows 版改為對外發佈（取代決策 10 的「先自用」），在免安裝 zip 之外新增 Inno Setup 安裝程式。已查證的事實（2026-11-13）：這台機器沒有 Inno Setup，有 `winget`；App 資料在 `%APPDATA%\cc.ugotit\elinkbook`，與程式資料夾分開；zip 版檔名用 `pubspec.yaml` 版本並把 `+` 換成 `-b`（例如 `1.1.0-b3`）。
 
 1. **打包腳本：** 新增 `app/tool/package_windows_installer.ps1`，重用 `package_windows_zip.ps1` 已組好並通過依賴檢查（含三個 VC DLL）的內容，交給 Inno Setup（`iscc`）編譯；輸出 `elinkbook-<版本>-windows-x64-setup.exe` 與同名 `.sha256` 到 `app/build/`（不進版控）。zip 腳本結束後是否保留暫存目錄**尚未查證**，plan 階段須確認；不保留時以最小改動處理，不重寫 zip 腳本。
 2. **安裝程式腳本（`.iss`）：** 依使用者安裝到 `%LOCALAPPDATA%\Programs\elinkBook`、不需系統管理員；固定 `AppId`（發佈後不可更改，見 ADR 0043）；版本號取自 `pubspec.yaml`；執行中的 App 提示關閉後再覆蓋。
 3. **捷徑：** 開始功能表項目一律建立；桌面捷徑為安裝時可選、**預設勾選**。
-4. **解除安裝：** 跳出詢問「是否同時刪除書庫與閱讀紀錄」（`%APPDATA%\cc.ugotit\elinkbook`），**預設「否」**；`/SILENT`、`/VERYSILENT` 一律不刪。
+4. **解除安裝：** 跳出詢問「是否同時刪除設定與下載資料」（`%APPDATA%\cc.ugotit\elinkbook`：WebView2、已下載字型、字典來源），**預設「否」**；選「是」**不會**刪「文件」資料夾內的書庫與匯入的書（見 Issue 29），詢問框與 README 都明講；`/SILENT`、`/VERYSILENT` 一律不刪；App 執行中時拒絕解除安裝。
+（2026-11-13 更正：原本寫成「書庫與閱讀紀錄」，審查發現書庫其實在「文件」資料夾，不在 `%APPDATA%`。）
 5. **說明文件：** 擴充 `app/windows/packaging/README.txt`，新增「安裝版」章節（SmartScreen 提示、資料位置、解除安裝時的刪除資料選項、與 zip 版不要同時開）。
 6. **工具安裝：** `winget install JRSoftware.InnoSetup`（改動這台機器，執行前再向使用者確認）。
 7. **不處理：** 程式碼簽章、MSIX、CI 建置、自動更新、上傳 GitHub Release（要發版時由使用者另行指示，zip、setup.exe 與合併的 `SHA256SUMS.txt` 一起上傳）、乾淨機器與 Windows 10 1809 驗證。
@@ -536,8 +539,8 @@ Windows 版改為對外發佈（取代決策 10 的「先自用」），在免�
 3. 安裝後 `elinkbook.exe` 能啟動、行程存活至少 20 秒、有主視窗；使用者在安裝版開一本 EPUB 成功並回報。
 4. 開始功能表有項目；桌面捷徑選項預設勾選，取消勾選時不建立；「設定 → 應用程式」有移除入口。
 5. **覆蓋升級：** 先裝一個版本，再裝較新版本，不會變成兩份並存、App 資料不受影響；App 執行中時會提示關閉。
-6. **解除安裝（兩種選項都測）：** 選「否」→ 程式檔移除、`%APPDATA%\cc.ugotit\elinkbook` 完整保留；選「是」→ 該資料夾被刪除；`/VERYSILENT` 解除安裝時資料夾保留。
-7. **資料保護：** 測「刪除資料」之前，先把這台機器的 `%APPDATA%\cc.ugotit\elinkbook` 備份到別處，測完還原並確認書庫完整；報告須記錄備份與還原。
+6. **解除安裝（兩種選項都測）：** 選「否」→ 程式檔移除、`%APPDATA%\cc.ugotit\elinkbook` 完整保留；選「是」→ 該資料夾被刪除（書庫在「文件」資料夾，不會被刪）；`/VERYSILENT` 解除安裝時資料夾保留；App 執行中解除安裝被拒絕。
+7. **資料保護：** 測「刪除資料」之前，先把這台機器的 `%APPDATA%\cc.ugotit\elinkbook` 備份到別處，測完還原並確認資料完整；報告須記錄備份與還原。（書庫在「文件」資料夾，不在這個資料夾，備份範圍不含書庫，因為安裝程式不會動它。）
 8. 報告不得外推：只有這台機器、release 版、本機 WebView2；乾淨機器（缺 VC 執行階段與 WebView2）、Windows 10 1809、SmartScreen 實際行為、他人電腦皆明寫「未驗證」。
 9. 工作樹乾淨：`pubspec.lock`、`app/windows/flutter/generated_plugin_registrant.*`、`generated_plugins.cmake` 不得 commit；`git add` 明確列檔。
 

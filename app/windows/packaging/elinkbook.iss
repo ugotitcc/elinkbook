@@ -65,7 +65,26 @@ Name: "{autoprograms}\elinkBook"; Filename: "{app}\elinkbook.exe"
 Name: "{autodesktop}\elinkBook"; Filename: "{app}\elinkbook.exe"; Tasks: desktopicon
 
 [Code]
-// 解除安裝時詢問是否同時刪除 App 資料（書庫與閱讀紀錄）。
+// 尋找視窗，用來判斷 elinkBook 是否正在執行（不能改 windows/runner 加互斥鎖，所以以視窗類別加標題辨識；
+// 只比類別會誤擋其他用預設範本建置的 Flutter App）。
+function FindWindowW(lpClassName: String; lpWindowName: String): LongInt;
+  external 'FindWindowW@user32.dll stdcall';
+
+// 解除安裝程式不會像安裝程式那樣關閉執行中的 App；App 開著時檔案被鎖住刪不掉，
+// 卻會把登錄項移除，留下沒有移除入口的殘骸。所以偵測到執行中就中止解除安裝。
+function InitializeUninstall(): Boolean;
+begin
+  Result := True;
+  if FindWindowW('FLUTTER_RUNNER_WIN32_WINDOW', 'elinkbook') <> 0 then
+  begin
+    if not UninstallSilent then
+      MsgBox('elinkBook 正在執行，請先關閉後再解除安裝。', mbError, MB_OK);
+    Result := False;
+  end;
+end;
+
+// 解除安裝時詢問是否同時刪除 %APPDATA%\cc.ugotit\elinkbook（App 設定與下載資料）。
+// 注意：書庫（library.db）、封面與匯入的書放在使用者的「文件」資料夾，不在這裡，也不會被刪除。
 // 預設按鈕為「否」；靜默解除安裝（/SILENT、/VERYSILENT）一律不詢問、不刪除。
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
@@ -80,9 +99,10 @@ begin
   if not DirExists(DataDir) then
     Exit;
 
-  if MsgBox('是否同時刪除 elinkBook 的書庫與閱讀紀錄？' + #13#10 + #13#10 +
+  if MsgBox('是否同時刪除 elinkBook 的設定與下載資料？' + #13#10 + #13#10 +
             '資料夾位置：' + DataDir + #13#10 +
-            '刪除後無法復原。選「否」會保留資料，之後重新安裝仍可沿用。',
+            '內容：已下載的字型、字典來源、WebView 瀏覽資料。刪除後無法復原。' + #13#10 + #13#10 +
+            '注意：書庫（library.db）、封面與匯入的書放在「文件」資料夾，不會被刪除；如要一併清除請自行刪除。',
             mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
     DelTree(DataDir, True, True, True);
 end;

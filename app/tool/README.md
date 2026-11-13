@@ -584,16 +584,19 @@ powershell -ExecutionPolicy Bypass -File tool/verify_windows_installer.ps1 `
 
 **會實際啟動 `elinkbook.exe`，寫入這台機器上真實的 `%APPDATA%\cc.ugotit\elinkbook`。執行前先備份該資料夾**（`robocopy <來源> <備份> /MIR`，結束碼 0～7 皆為成功）。腳本任何一步都不會刪除該資料夾。需用一般權限（非系統管理員）的終端機執行，否則無法驗證「不需要管理員」。
 
-流程與檢查項（每項輸出一行 `[通過]／[失敗] 名稱 :: 說明`，結束碼 0＝全部通過）：
-1. 靜默安裝到 `<WorkDir>\含 空格 與 中文 installer-verify\app`：不需管理員、HKCU 有 `{GUID}_is1` 登錄項（單花括號，驗證 `.iss` 的花括號跳脫）、HKLM 沒有。
-2. 安裝內容：必備檔齊全（含三個 VC DLL、`data\foliate\main.js`）、沒有 `.pdb`／`.lib`／`.exp`／`.ilk`。
+流程與檢查項（每項輸出一行 `[通過]／[失敗] 名稱 :: 說明`，結束碼 0＝全部通過，目前共 29 項）：
+1. 靜默安裝到 `<WorkDir>\含 空格 與 中文 installer-verify\app`：不需管理員、HKCU 有 `{GUID}_is1` 登錄項（單花括號，驗證 `.iss` 的花括號跳脫）、HKLM 沒有。預期 AppId 在腳本內獨立釘住，`.iss` 被改動時腳本開頭就失敗。
+2. 安裝內容：必備檔齊全（含三個 VC DLL、`data\foliate\main.js`）、沒有 `.pdb`／`.lib`／`.exp`／`.ilk`、沒有打包字型與 `data\flutter_assets\test`，且與暫存目錄逐檔（路徑加 SHA256）一致，只允許多出解除安裝程式自己的檔案。
 3. 開始功能表項目、桌面捷徑（預設存在）指向安裝的 `elinkbook.exe`。
 4. 啟動出現主視窗、行程存活 20 秒。
-5. 覆蓋升級：先裝舊版並保持執行，再靜默安裝新版——舊行程被關閉、只有一個解除安裝項且版本更新、`elinkbook.exe` 與 `README.txt` 已被新版取代。
-6. 資料保護：升級前後、兩次靜默解除安裝前後，`%APPDATA%\cc.ugotit\elinkbook` 內「原本存在的檔案」不得消失（WebView2 的 `lockfile` 只在 App 執行期間存在，不納入比對）。
-7. 靜默解除安裝：Inno 的解除安裝程式會複製自己到 `%TEMP%` 再啟動並讓原行程結束，所以腳本以輪詢（每 0.5 秒、最長 30 秒）等程式檔與登錄項消失，不能只等行程結束。
+5. 覆蓋升級：先裝舊版並保持執行，再靜默安裝新版——舊行程被關閉、全機只有一個 elinkBook 解除安裝項與一個 `unins*.exe`、版本更新、`elinkbook.exe` 與 `README.txt` 已被新版取代。
+6. 資料保護：升級前後、兩次靜默解除安裝前後，`%APPDATA%\cc.ugotit\elinkbook` 內「原本存在的檔案」不得消失（WebView2 的 `lockfile` 只在 App 執行期間存在，不納入比對）。書庫在「文件」資料夾，安裝程式不會動它，不在比對範圍。
+7. 靜默解除安裝：Inno 的解除安裝程式會複製自己到 `%TEMP%` 再啟動並讓原行程結束，所以腳本以輪詢（每 0.5 秒、最長 30 秒）等程式檔、登錄項與解除安裝行程本身都結束，不能只等行程結束；刻意不帶 `/SUPPRESSMSGBOXES`，讓 `.iss` 的 `UninstallSilent` 判斷成為唯一擋住詢問框的防線，防線失效時詢問框卡住、輪詢逾時就會失敗。
 8. `/TASKS="!desktopicon"`：桌面捷徑不存在、開始功能表存在。
 9. 結束時沒有殘留行程與安裝。
+10. App 執行中解除安裝必須被拒絕（程式檔與登錄項仍在）。
+
+開跑前會拒絕：這台機器已有任何 elinkBook 解除安裝項、或已存在同名的開始功能表／桌面捷徑（驗證會覆寫並刪除它們）。
 
 **產生「較舊版本」setup.exe 的做法**：複製暫存目錄、改掉 `README.txt` 內容並在 `elinkbook.exe` 尾端加一個 0x00 位元組（讓新舊內容有差別，才能證明被取代），再用 `package_windows_installer.ps1 -StageDir <複本> -Version 1.0.9+1 -OutDir <輸出目錄>` 編譯。
 

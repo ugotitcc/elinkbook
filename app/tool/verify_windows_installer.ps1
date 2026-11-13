@@ -35,7 +35,14 @@ $issText = Get-Content (Join-Path $AppDir "windows\packaging\elinkbook.iss") -Ra
 if ($issText -notmatch '#define AppIdValue "\{(\{[0-9A-Fa-f-]+\})"') {
     Write-Host "[失敗] 引數檢查 :: 無法從 elinkbook.iss 解析 AppId" -ForegroundColor Red; exit 1
 }
-$expectedKeyName = "$($Matches[1])_is1"
+$issAppId = $Matches[1]
+# 寫死預期的 AppId（發佈後不可更改，見 ADR 0043）。若只從 .iss 取值，.iss 被改動時期望值會跟著變，
+# 檢查就抓不到；所以這裡獨立釘住，.iss 的值與它不同就直接失敗。
+$pinnedAppId = "{C4E48E89-6F1B-4B77-94B9-23BCE3FCC757}"
+if ($issAppId -ne $pinnedAppId) {
+    Write-Host "[失敗] 引數檢查 :: elinkbook.iss 的 AppId ($issAppId) 與固定值 ($pinnedAppId) 不同；AppId 發佈後不可更改，會讓舊版使用者無法覆蓋升級" -ForegroundColor Red; exit 1
+}
+$expectedKeyName = "${pinnedAppId}_is1"
 $uninstallRoot = "Software\Microsoft\Windows\CurrentVersion\Uninstall"
 $hkcuKey = "HKCU:\$uninstallRoot\$expectedKeyName"
 $hklmKey = "HKLM:\$uninstallRoot\$expectedKeyName"
@@ -79,9 +86,17 @@ if ((Get-FreeMemoryMB) -lt 2048) {
     Write-Host "[失敗] 開跑前環境檢查 :: 可用記憶體不足 2 GB" -ForegroundColor Red
     exit 1
 }
-if (Test-Path $hkcuKey) {
-    Write-Host "[失敗] 開跑前環境檢查 :: 這台機器已安裝同 AppId 的 elinkBook（$hkcuKey），請先解除安裝再驗證" -ForegroundColor Red
+$existingEntries = @(Get-ChildItem "HKCU:\$uninstallRoot" | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like 'elinkBook*' })
+if ($existingEntries.Count -gt 0) {
+    Write-Host "[失敗] 開跑前環境檢查 :: 這台機器已安裝 elinkBook（$(($existingEntries | ForEach-Object PSChildName) -join ', ')），請先解除安裝再驗證" -ForegroundColor Red
     exit 1
+}
+# 驗證會建立並移除同名捷徑；已存在（例如手動替免安裝版建的）就拒絕，避免刪掉使用者自己的東西
+foreach ($lnk in @((Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\elinkBook.lnk"), (Join-Path ([Environment]::GetFolderPath("Desktop")) "elinkBook.lnk"))) {
+    if (Test-Path $lnk) {
+        Write-Host "[失敗] 開跑前環境檢查 :: 已存在同名捷徑，驗證會覆寫並刪除它，請先自行移走: $lnk" -ForegroundColor Red
+        exit 1
+    }
 }
 if (-not (Test-Path $DataDir)) { New-Item -ItemType Directory -Path $DataDir -Force | Out-Null }
 
@@ -131,19 +146,42 @@ function Get-UninstallExe {
     return $s
 }
 
+# Inno 解除安裝程式的行程：原行程（unins000.exe）與複製到 %TEMP% 的暫存副本（_iu*.tmp、_unins.tmp）
+function Get-UninstallerProcesses {
+    return @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '^(_iu[0-9A-Za-z]*\.tmp|_unins\.tmp|unins\d{3}\.exe)$' })
+}
+
 # 靜默解除安裝。Inno 的解除安裝程式會複製自己到 %TEMP% 再啟動並讓原行程立刻結束，
-# 所以 -Wait 返回時檔案還沒刪完，必須輪詢（每 0.5 秒、最長 30 秒）等安裝目錄的 exe 與登錄項都消失。
-function Uninstall-Silent([string]$installDir) {
+# 所以 -Wait 返回時檔案還沒刪完，必須輪詢（每 0.5 秒）等程式檔、登錄項「與解除安裝行程本身」都結束；
+# 刪資料的詢問發生在最後的 usPostUninstall，行程還在就不能判定「沒刪資料」。
+# 刻意不帶 /SUPPRESSMSGBOXES：這樣 .iss 的 UninstallSilent 判斷是唯一擋住詢問框的防線，
+# 防線失效時詢問框會卡住，輪詢逾時就會失敗。
+function Uninstall-Silent([string]$installDir, [int]$timeoutSec = 30) {
     $unins = Get-UninstallExe
     if (-not $unins -or -not (Test-Path $unins)) { return @{ Exit = -1; Seconds = 0; Gone = $false } }
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    $p = Start-Process -FilePath $unins -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART") -Wait -PassThru
+    $p = Start-Process -FilePath $unins -ArgumentList @("/VERYSILENT", "/NORESTART") -Wait -PassThru
     $gone = $false
-    while ($sw.Elapsed.TotalSeconds -lt 30) {
-        if ((-not (Test-Path (Join-Path $installDir "elinkbook.exe"))) -and (-not (Test-Path $hkcuKey))) { $gone = $true; break }
+    while ($sw.Elapsed.TotalSeconds -lt $timeoutSec) {
+        if ((-not (Test-Path (Join-Path $installDir "elinkbook.exe"))) -and (-not (Test-Path $hkcuKey)) -and ((Get-UninstallerProcesses).Count -eq 0)) { $gone = $true; break }
         Start-Sleep -Milliseconds 500
     }
     return @{ Exit = $p.ExitCode; Seconds = [math]::Round($sw.Elapsed.TotalSeconds, 1); Gone = $gone }
+}
+
+# 目前這台機器上所有 elinkBook 的解除安裝項（不論 AppId）
+function Get-ElinkEntries {
+    return @(Get-ChildItem "HKCU:\$uninstallRoot" | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like 'elinkBook*' })
+}
+# 目錄內每個檔案的相對路徑（小寫）→ SHA256
+function Get-FileHashMap([string]$dir) {
+    $map = @{}
+    $base = (Resolve-Path $dir).Path.TrimEnd('\')
+    foreach ($f in (Get-ChildItem $dir -Recurse -File -Force)) {
+        $map[$f.FullName.Substring($base.Length + 1).ToLowerInvariant()] = Get-Sha256 $f.FullName
+    }
+    return $map
 }
 
 function Start-AppWithWindow([string]$installDir) {
@@ -204,6 +242,14 @@ try {
     $fontDir = Join-Path $target "data\flutter_assets\assets"
     $fonts = @(Get-ChildItem $fontDir -Recurse -File -Include *.ttf, *.otf, *.ttc, *.woff, *.woff2 -ErrorAction SilentlyContinue)
     Record-Check ($fonts.Count -eq 0) "2c 無打包字型" "assets 下發現 $($fonts.Count) 個字型檔（內建字型應改走可下載字型）"
+    # 2e：安裝內容與新版暫存目錄逐檔（路徑加 SHA256）一致，只允許多出解除安裝程式自己的檔案
+    $stageMap = Get-FileHashMap $ExpectedStageDir
+    $instMap = Get-FileHashMap $target
+    $missingInInstall = @($stageMap.Keys | Where-Object { -not $instMap.ContainsKey($_) })
+    $differs = @($stageMap.Keys | Where-Object { $instMap.ContainsKey($_) -and $instMap[$_] -ne $stageMap[$_] })
+    $extra = @($instMap.Keys | Where-Object { -not $stageMap.ContainsKey($_) -and $_ -notmatch '^unins\d{3}\.(exe|dat|msg)$' })
+    $diffNames = @($missingInInstall + $differs + $extra | Select-Object -First 5) -join '、'
+    Record-Check (($missingInInstall.Count + $differs.Count + $extra.Count) -eq 0) "2e 內容與暫存目錄逐檔一致" "暫存目錄 $($stageMap.Count) 檔；安裝缺少 $($missingInInstall.Count)、內容不同 $($differs.Count)、多出 $($extra.Count)（不含 unins*）$(if ($diffNames) { '：' + $diffNames })"
     $testAssets = Join-Path $target "data\flutter_assets\test"
     Record-Check (-not (Test-Path $testAssets)) "2d 無測試用資源" "data\flutter_assets\test 存在: $(Test-Path $testAssets)（整合測試 fixtures 不應出貨）"
 
@@ -243,9 +289,11 @@ try {
     $proc.Refresh()
     Record-Check $proc.HasExited "5d 舊行程被關閉" "HasExited: $($proc.HasExited)"
     Stop-AppTree $proc; $proc = $null
-    $entries = @(Get-ChildItem "HKCU:\$uninstallRoot" | Where-Object { $_.PSChildName -eq $expectedKeyName })
+    # 數「所有」elinkBook 的解除安裝項（不論機碼名稱）：AppId 若不同，新舊會並存成兩個項目、兩個 unins*.exe
+    $entries = @(Get-ElinkEntries)
+    $uninsFiles = @(Get-ChildItem $target -Filter 'unins*.exe' -ErrorAction SilentlyContinue)
     $newVersion = if (Test-Path $hkcuKey) { (Get-ItemProperty $hkcuKey).DisplayVersion } else { $null }
-    Record-Check ($entries.Count -eq 1 -and $newVersion -ne $oldVersion) "5e 單一解除安裝項且版本更新" "項目數 $($entries.Count)；DisplayVersion $oldVersion → $newVersion"
+    Record-Check ($entries.Count -eq 1 -and $entries[0].PSChildName -eq $expectedKeyName -and $uninsFiles.Count -eq 1 -and $newVersion -ne $oldVersion) "5e 單一解除安裝項且版本更新" "elinkBook 解除安裝項數 $($entries.Count)（機碼 $(($entries | ForEach-Object PSChildName) -join ', ')）；unins*.exe 數 $($uninsFiles.Count)；DisplayVersion $oldVersion → $newVersion"
     $exeSame = (Get-Sha256 $exePath) -eq (Get-Sha256 (Join-Path $ExpectedStageDir "elinkbook.exe"))
     $readmeSame = (Get-Sha256 (Join-Path $target "README.txt")) -eq (Get-Sha256 (Join-Path $ExpectedStageDir "README.txt"))
     Record-Check ($exeSame -and $readmeSame) "5f 檔案已被新版取代" "elinkbook.exe 與新版相同: $exeSame；README.txt 與新版相同: $readmeSame"
@@ -263,6 +311,13 @@ try {
     $ec = Install-Silent $Setup $target @('/TASKS="!desktopicon"') $log
     Record-Check ($ec -eq 0) "8a 安裝（取消桌面捷徑）" "exit $ec"
     Record-Check ((-not (Test-Path $desktopLnk)) -and ((Get-LnkTarget $startMenuLnk) -eq $exePath)) "8b 桌面捷徑不存在、開始功能表存在" "桌面捷徑存在: $(Test-Path $desktopLnk)"
+    # 10：App 執行中解除安裝必須被拒絕（檔案被鎖住刪不掉卻移除登錄項，會留下沒有移除入口的殘骸）
+    $r = Start-AppWithWindow $target
+    $proc = $r.Proc
+    $uRefuse = Uninstall-Silent $target 10
+    Record-Check ((-not $uRefuse.Gone) -and (Test-Path $hkcuKey) -and (Test-Path $exePath)) "10a App 執行中拒絕解除安裝" "主視窗 $($r.Window)；解除安裝結束碼 $($uRefuse.Exit)；程式檔與登錄項仍在: $((Test-Path $exePath) -and (Test-Path $hkcuKey))"
+    Stop-AppTree $proc; $proc = $null
+    Start-Sleep -Seconds 2
     $u = Uninstall-Silent $target
     Record-Check ($u.Exit -eq 0 -and $u.Gone) "8c 收尾解除安裝" "exit $($u.Exit)；輪詢 $($u.Seconds) 秒"
 }
