@@ -33,7 +33,8 @@ node run-all.mjs
 - `scenario-issue10-selection-release-guard.mjs`：選取收尾保護。
 - `scenario-issue11-hittest-existing-highlight.mjs`：`hitTest` 命中判斷。
 - `scenario-cross-mechanism-tap-boundary.mjs`：選取保護與快速點擊分類
-  的跨機制邊界情境。
+  的跨機制邊界情境。把 iframe 的 `performance.now` 換成「原值 ± 10 秒」，決定性地驗證保護期內選取維持、
+  保護期已過選取折疊（不驗證 150 ms 門檻在實際時間上是否夠用，見 [issue-26-report.md](../../../docs/epics/epic-66-windows-port/issue-26-report.md)）。
 - `scenario-disable-publisher-styles.mjs`：「停用書本 CSS」開關對書本自帶版面 CSS 的清除。
 - `scenario-preload-stale-layout.mjs`：預讀章節套用過時排版（時序競爭）。直排單欄下，翻到下一章偶爾變成
   上下兩半的雙欄（真機 AiPaper Reader C 回報）的回歸場景：以記憶體組出的 5 章 EPUB，精準延遲「下一個建立的
