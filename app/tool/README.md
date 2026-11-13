@@ -542,6 +542,32 @@ powershell -ExecutionPolicy Bypass -File tool/verify_windows_zip.ps1 -Zip build/
 - `-WorkDir\含 空格 與 中文` 若已存在且含非本腳本產生的內容，腳本拒絕刪除並以非 0 結束。
 - 本機驗證**抓不到缺 VC 執行階段 DLL 的問題**（這台機器的 System32 有這些 DLL），那一關由 `package_windows_zip.ps1 -CheckOnly` 負責；兩者都不證明乾淨機器、Windows 10 1809 能開。
 
+## `package_windows_installer.ps1`
+
+Windows 安裝程式（Inno Setup）打包腳本（`epic-66-windows-port` Issue 27，決策見 [ADR 0043](../../docs/adr/0043-windows-installer-inno-setup-unsigned-per-user.md)）。
+
+需要先安裝 Inno Setup 6：`winget install --id JRSoftware.InnoSetup -e`（腳本會找 `%LOCALAPPDATA%\Programs\Inno Setup 6`、`Program Files` 與 `PATH`）。
+
+```powershell
+cd app
+# 完整流程：呼叫 package_windows_zip.ps1 重新建置並組裝暫存目錄，再編譯安裝程式
+powershell -ExecutionPolicy Bypass -File tool/package_windows_installer.ps1
+
+# 沿用現有 Release 建置
+powershell -ExecutionPolicy Bypass -File tool/package_windows_installer.ps1 -SkipBuild
+
+# 直接指定暫存目錄（不呼叫 zip 腳本；供變異驗證與除錯）、指定版本（格式同 pubspec 的 version:）
+powershell -ExecutionPolicy Bypass -File tool/package_windows_installer.ps1 -StageDir <目錄> -Version 1.0.9+1 -OutDir <輸出目錄>
+```
+
+輸出 `build/windows_installer/elinkbook-<版本把 + 換成 -b>-windows-x64-setup.exe` 與 `<同檔名>.sha256`（格式同 zip 的 `.sha256`）。結束碼 0 成功；找不到 Inno Setup、依賴複檢失敗、編譯失敗都以非 0 結束，且開頭會先清掉同名舊產物，不會留下看似成功的舊檔。
+
+設計重點：
+- 安裝程式腳本是 `windows/packaging/elinkbook.iss`；介面語言用同目錄的 `ChineseTraditional.isl`（取自 Inno Setup 官方儲存庫 main，Inno Setup 6.7.3 的安裝目錄沒有附，內容未修改，授權為 Inno Setup License）。
+- 內容與 zip 版同源：直接使用 zip 腳本組好的暫存目錄 `build/windows_zip/stage/elinkbook`，並永遠先對它跑 `package_windows_zip.ps1 -CheckOnly`（三個 VC DLL 必須實體存在），腳本會印出所用暫存目錄與 `elinkbook.exe` 的檔案版本，避免誤用過期的暫存目錄。
+- 固定 `AppId`（見 `.iss` 註解）發佈後不可更改；`AppIdOverride` 只給變異驗證用。
+- 不簽章、不上傳、不建 CI。
+
 ## `generate_windows_icons.ps1`
 
 由 `assets/appicon_v2.jpg` 產生 Windows 版圖示與啟動小視窗圖（`epic-66-windows-port`），只用 .NET `System.Drawing`，不需安裝其他工具。
