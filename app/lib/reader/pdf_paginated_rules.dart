@@ -5,7 +5,7 @@ import 'dual_page_direction.dart';
 import 'pdf_fit_mode.dart';
 
 // PDF 逐頁導覽規則（純 Dart，不依賴 Widget；見
-// docs/epics/epic-56-pdf-paginated-reading/spec.md「逐頁導覽規則模組」）。
+// docs/archive/2026-11-13-epic-56-pdf-paginated-reading/spec.md「逐頁導覽規則模組」）。
 // 本檔目前只有規則 1（縮放基準與對齊）、規則 2（頁內捲動範圍）；後續 Issue
 // 會在此擴充步進、跳轉、滑動判定等規則。
 
