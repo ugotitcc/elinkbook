@@ -61,6 +61,17 @@ function Test-StagedDependencies([string]$TargetDir) {
         }
     }
 
+    # 內建字型一律不打包（改走可下載字型，ADR 0035）。常見成因：build\flutter_assets 殘留舊建置的檔案
+    # （Flutter 不會刪掉已從 pubspec 移除的資源，CMake 安裝步驟卻整個目錄複製），刪除該目錄後重建即可。
+    $assetsDir = Join-Path $TargetDir "data\flutter_assets\assets"
+    if (Test-Path $assetsDir) {
+        $bundledFonts = @(Get-ChildItem $assetsDir -Recurse -File -Include *.ttf, *.otf, *.ttc, *.woff, *.woff2)
+        foreach ($font in $bundledFonts) {
+            $rel = $font.FullName.Substring($TargetDir.TrimEnd('\').Length + 1)
+            $errors.Add("[不該打包的字型] $rel（內建字型一律改走可下載字型；請刪除 app\build\flutter_assets 後重新建置）")
+        }
+    }
+
     $dumpbin = $null
     try {
         $dumpbin = Get-DumpbinPath
@@ -236,6 +247,13 @@ foreach ($stale in @("$zipBaseName.zip", "$zipBaseName.zip.sha256", "$zipBaseNam
 
 # 執行 flutter build windows --release
 if (-not $SkipBuild) {
+    # 先清掉資源組裝目錄：Flutter 不會刪除已從 pubspec 移除的資源（例如舊的內建字型），
+    # 但 CMake 安裝步驟會把整個目錄複製進輸出；清掉後由 flutter 依目前的 pubspec 重新產生。
+    $assembledAssets = Join-Path $AppDir "build\flutter_assets"
+    if (Test-Path $assembledAssets) {
+        Write-Host "清除殘留的資源組裝目錄: $assembledAssets" -ForegroundColor Cyan
+        Remove-Item $assembledAssets -Recurse -Force
+    }
     Write-Host "執行 flutter build windows --release..." -ForegroundColor Cyan
     Push-Location $AppDir
     try {

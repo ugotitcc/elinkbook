@@ -201,6 +201,9 @@ try {
     Record-Check ($missing.Count -eq 0) "2a 安裝內容必備檔" "缺少: $(if ($missing.Count) { $missing -join ', ' } else { '無' })"
     $debug = @(Get-ChildItem $target -Recurse -File -Include *.pdb, *.lib, *.exp, *.ilk -ErrorAction SilentlyContinue)
     Record-Check ($debug.Count -eq 0) "2b 無除錯檔" "發現 $($debug.Count) 個 .pdb/.lib/.exp/.ilk"
+    $fontDir = Join-Path $target "data\flutter_assets\assets"
+    $fonts = @(Get-ChildItem $fontDir -Recurse -File -Include *.ttf, *.otf, *.ttc, *.woff, *.woff2 -ErrorAction SilentlyContinue)
+    Record-Check ($fonts.Count -eq 0) "2c 無打包字型" "assets 下發現 $($fonts.Count) 個字型檔（內建字型應改走可下載字型）"
 
     $exePath = Join-Path $target "elinkbook.exe"
     Record-Check ((Get-LnkTarget $startMenuLnk) -eq $exePath) "3a 開始功能表項目" "$startMenuLnk → $(Get-LnkTarget $startMenuLnk)"
