@@ -98,7 +98,7 @@
 審查結論原為「不建議合併」。處理如下（細節與裁決見 ledger，已不進版控）：
 
 **Critical（已處理，需使用者決定的部分已決定）**
-- **C-1 解除安裝選「是」刪不到書庫**：書庫 `library.db`、`covers`、`imported_books` 放在「文件」資料夾（`getApplicationDocumentsDirectory()`；這台機器的 `%USERPROFILE%\Documents` 下確有這三項），不在 `%APPDATA%\cc.ugotit\elinkbook`（只有 WebView2 資料、`downloaded-fonts`、`dictionaries`）。我原本把詢問框與文件寫成「刪書庫與閱讀紀錄」是錯的。**使用者決定：如實改文案，另立 Issue 搬資料位置，且應先在「文件」資料夾下有一個上層目錄 `elinkbook`，讓使用者知道這些資料夾屬於本 App**（Issue 29）。已改 `.iss` 詢問框、`README.txt`（第三節與第七節）、ADR 0043、`issues.md`、`epic.md`。第 6 節使用者回報的「選是正常」只代表 `%APPDATA%` 那個資料夾被刪掉，**不代表書庫被刪**（也不會被刪）。
+- **C-1 解除安裝選「是」刪不到書庫**：書庫 `library.db`、`covers`、`imported_books` 放在「文件」資料夾（`getApplicationDocumentsDirectory()`；這台機器的 `%USERPROFILE%\Documents` 下確有這三項），不在 `%APPDATA%\cc.ugotit\elinkbook`（只有 WebView2 資料、`downloaded-fonts`、`dictionaries`）。我原本把詢問框與文件寫成「刪書庫與閱讀紀錄」是錯的。**使用者決定：如實改文案，另立 Issue 搬資料位置，且應先在「文件」資料夾下有一個上層目錄 `elinkbook-data`，讓使用者知道這些資料夾屬於本 App**（Issue 29）。已改 `.iss` 詢問框、`README.txt`（第三節與第七節）、ADR 0043、`issues.md`、`epic.md`。第 6 節使用者回報的「選是正常」只代表 `%APPDATA%` 那個資料夾被刪掉，**不代表書庫被刪**（也不會被刪）。
 
 **Important（已修）**
 - **I-1** 檢查 5e 恆真：改為數「所有」elinkBook 解除安裝項與 `unins*.exe`，並在驗證腳本內獨立釘住預期 AppId。變異：把 `.iss` 的 GUID 改一個字元，腳本在開頭即失敗。
@@ -118,7 +118,7 @@
 **實作**（`app/windows/packaging/elinkbook.iss`）：
 - 選「是」刪除兩處：`%APPDATA%\cc.ugotit\elinkbook`，以及「文件」資料夾內 elinkBook 以**固定名稱**建立的項目——資料庫 `library.db`、`dictionary.db`（連同 `-wal`、`-shm`、`-journal` 附屬檔），資料夾 `covers`、`imported_books`、`cloud_import_books`、`remote_books`、`wifi_transfer_uploads`、`update_staging`。名單來自 `lib/` 內所有 `getApplicationDocumentsDirectory()` 的使用點。
 - 只刪這些精確名稱，不動「文件」根目錄與其他檔案；匯入時留在原位置的書檔（Windows 版書檔維持原路徑）也不會被刪。詢問框逐項列出會被刪的內容，預設按鈕仍是「否」，靜默解除安裝仍一律不刪。
-- 已知風險：`covers`、`imported_books` 是通用名稱，使用者若在「文件」資料夾自己建了同名資料夾，也會被刪（我曾建議不要這樣做，使用者已決定接受）。名單需與 App 實際建立的項目同步。**根本解法是 Issue 29**（把資料收進單一上層目錄 `elinkbook`），做完後解除安裝只需刪那一個目錄。
+- 已知風險：`covers`、`imported_books` 是通用名稱，使用者若在「文件」資料夾自己建了同名資料夾，也會被刪（我曾建議不要這樣做，使用者已決定接受）。名單需與 App 實際建立的項目同步。**根本解法是 Issue 29**（把資料收進單一上層目錄 `elinkbook-data`），做完後解除安裝只需刪那一個目錄。
 
 **驗證**（新增 `app/tool/verify_windows_uninstall_data.ps1`，詳見 `app/tool/README.md`）：
 - 用兩個只給驗證用的 `/D` 定義（`AppDataRootOverride`、`DocsRootOverride`）把資料根目錄指到 `%TEMP%` 下的假資料夾，**完全不碰真實的 `%APPDATA%` 與「文件」資料夾**（事後確認真實 `library.db` 的修改時間仍是 11/6、`covers`、`imported_books` 仍在）。

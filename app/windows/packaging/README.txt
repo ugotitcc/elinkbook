@@ -25,14 +25,15 @@ elinkBook Windows 使用說明（免安裝版與安裝版）
    - downloaded-fonts：已下載的字型
    - dictionaries：字典來源（有匯入字典才會有）
    - webview_data：WebView2 閱讀引擎資料
-2. 書庫與匯入的書：使用者的「文件」資料夾下的 elinkbook 目錄（例如 C:\Users\<使用者>\Documents\elinkbook）
+2. 書庫與匯入的書：使用者的「文件」資料夾下的 elinkbook-data 目錄（例如 C:\Users\<使用者>\Documents\elinkbook-data）
    - 包含書庫資料庫（library.db）、字典資料庫（dictionary.db）、封面、匯入的書的複本，以及雲端匯入、遠端下載、WiFi 傳書與更新暫存等資料。
    - 匯入時留在原位置的書檔不在這裡。
-   - 若曾使用過舊版（收進 elinkbook 目錄之前），舊版留在「文件」根目錄的資料（如 library.db、covers、imported_books 等）不會被讀取、修改或自動刪除，可視需要自行手動刪除。
+   - 注意：免安裝版解壓出來的程式資料夾叫 elinkbook，與這個資料資料夾 elinkbook-data 是不同的資料夾，兩者不要混為一談。
+   - 若曾使用過舊版（收進 elinkbook-data 目錄之前），舊版留在「文件」根目錄的資料（如 library.db、covers、imported_books 等）不會被讀取、修改或自動刪除，可視需要自行手動刪除。
 
 【移除方式】
 - 直接刪除解壓後的程式資料夾即可移除應用程式。刪除程式資料夾不會刪除上述兩個資料夾。
-- 若欲完全清除，請另外手動刪除上述兩個資料夾（%APPDATA%\cc.ugotit\elinkbook 與「文件」資料夾內的 elinkbook 目錄），請勿誤刪整個「文件」資料夾。
+- 若欲完全清除，請另外手動刪除上述兩個資料夾（%APPDATA%\cc.ugotit\elinkbook 與「文件」資料夾內的 elinkbook-data 目錄），請勿誤刪整個「文件」資料夾。
 - 使用安裝版時，解除安裝可以選擇一併刪除這兩個資料夾（見第七節）。
 
 四、未簽章提示與 SmartScreen 解除
@@ -66,7 +67,7 @@ elinkBook Windows 使用說明（免安裝版與安裝版）
 3. 升級：直接執行新版安裝程式即可覆蓋舊版；若 elinkBook 正在執行，安裝程式會提示關閉。
 4. 解除安裝：從「設定 → 應用程式」解除安裝。請先關閉 elinkBook，開著時解除安裝程式會拒絕執行。
    解除安裝完成時會詢問「是否同時刪除 elinkBook 的所有資料（包含書庫）」，預設為「否」（保留所有資料）；
-   選「是」會刪除第三節列出的兩個資料夾（%APPDATA%\cc.ugotit\elinkbook 與「文件」資料夾內的 elinkbook 目錄），**刪除後無法復原**。
+   選「是」會刪除第三節列出的兩個資料夾（%APPDATA%\cc.ugotit\elinkbook 與「文件」資料夾內的 elinkbook-data 目錄），**刪除後無法復原**。
    不會動「文件」資料夾內的其他檔案，也不會刪除匯入時留在原位置的書檔。
    以靜默模式（/SILENT、/VERYSILENT）解除安裝時一律不詢問、不刪除任何資料。
 5. 安裝版同樣未簽章，SmartScreen 提示與解除封鎖方法見上方第四節。

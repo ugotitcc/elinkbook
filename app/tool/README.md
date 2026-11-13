@@ -617,10 +617,10 @@ powershell -ExecutionPolicy Bypass -File tool/verify_windows_uninstall_data.ps1
 **不會碰真實的 `%APPDATA%` 與「文件」資料夾。** 腳本用 `elinkbook.iss` 的 `AppDataRootOverride`、`DocsRootOverride` 兩個 `/D` 定義編一個測試用安裝程式，把兩個資料根目錄指到 `<WorkDir>\含 空格 與 中文 uninstall-data-verify\` 下的假資料夾；出貨版不帶這兩個定義，使用真實路徑。
 
 流程（共 10 項檢查，每項輸出一行 `[通過]／[失敗] 名稱 :: 說明`，結束碼 0＝全部通過）：
-1. 安裝測試用安裝程式，在假資料夾的 `fake-docs\elinkbook\` 下放入 App 會建立的項目（`library.db`、`dictionary.db` 各含 `-wal`／`-shm`／`-journal`、`covers`、`imported_books`、`cloud_import_books`、`remote_books`、`wifi_transfer_uploads`、`update_staging`）及假的 `%APPDATA%\cc.ugotit\elinkbook` 資料夾；並在假「文件」**根目錄**放入模擬舊版遺留與使用者同名資料的「誘餌」（`covers\a.bin`、`imported_books\b.bin`、`library.db`、`dictionary.db`、`六祖壇經\x.txt`、`desktop.ini`、`my-library.db`、`library.db.bak`、`covers-backup\a.jpg`、`notes.txt`、`Zoom\z.txt`，以及 `cc.ugotit\other\keep.txt`）。
+1. 安裝測試用安裝程式，在假資料夾的 `fake-docs\elinkbook-data\` 下放入 App 會建立的項目（`library.db`、`dictionary.db` 各含 `-wal`／`-shm`／`-journal`、`covers`、`imported_books`、`cloud_import_books`、`remote_books`、`wifi_transfer_uploads`、`update_staging`）及假的 `%APPDATA%\cc.ugotit\elinkbook` 資料夾；並在假「文件」**根目錄**放入模擬舊版遺留與使用者同名資料的「誘餌」（`covers\a.bin`、`imported_books\b.bin`、`library.db`、`dictionary.db`、`六祖壇經\x.txt`、`desktop.ini`、`my-library.db`、`library.db.bak`、`covers-backup\a.jpg`、`notes.txt`、`Zoom\z.txt`，以及 `cc.ugotit\other\keep.txt`）。
 2. 以 UI Automation 對解除安裝程式的訊息框逐一回應（「確定要移除」按「是」、我們的資料詢問框按指定的答案、結尾訊息按「確定」）。
 3. **情境一（選「否」）**：確認詢問框出現、「否」鈕取得鍵盤焦點（預設按鈕為「否」）、程式已移除，且所有資料與誘餌原封不動。
-4. **情境二（選「是」）**：`fake-docs\elinkbook` 與假 `%APPDATA%\cc.ugotit\elinkbook` 兩個資料夾全數消失，根目錄的舊項目誘餌與其他檔案原封不動。
+4. **情境二（選「是」）**：`fake-docs\elinkbook-data` 與假 `%APPDATA%\cc.ugotit\elinkbook` 兩個資料夾全數消失，根目錄的舊項目誘餌與其他檔案原封不動。
 
 這只驗證「解除安裝刪除範圍與預設按鈕」；出貨版的真實路徑（`{userdocs}`、`{userappdata}`）沒有實跑。
 
