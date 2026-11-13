@@ -6,12 +6,18 @@ import 'package:elinkbook/reader/custom_fonts_repository.dart';
 /// 測試用 Fake，比照 [FakeBookmarksRepository] 模式。不共用真實
 /// `book_reader_prefs` 表資料，[countBooksUsing] 改由 [usageCounts] 手動
 /// 設定回傳值（widget test 不需要真的建一個資料庫連線）。
+///
+/// 計數口徑與真實 repository 相同——涵蓋主字型或標題字型使用該字型的書
+/// （每本只算一次，epic-68）。Fake 不模擬資料，由測試自行把 [usageCounts]
+/// 設為預期的書數；SQL 層的口徑由 `test/reader/custom_fonts_repository_test.dart`
+/// 以真實 SQLite 驗證。
 class FakeCustomFontsRepository implements CustomFontsRepository {
   final List<CustomFont> _storage = [];
   int _nextId = 1;
 
   /// 測試預先設定「這個 family name 目前有幾本書使用中」，供
-  /// [countBooksUsing] 回傳；未設定的 family name 預設回傳 0。
+  /// [countBooksUsing] 回傳；未設定的 family name 預設回傳 0。數值語意為
+  /// 「主字型或標題字型使用該字型的書數」（epic-68）。
   final Map<String, int> usageCounts = {};
 
   /// 測試用：若非 null，[listAll] 會先等待這個 Completer 完成才回傳，

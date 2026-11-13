@@ -16,6 +16,15 @@ import 'package:elinkbook/theme/app_theme_data.dart';
 import '../support/full_book_reader_prefs.dart';
 
 void main() {
+  testWidgets('PdfSettingsSheet 不顯示字型與標題字型下拉（epic-68 Issue 3）', (tester) async {
+    await _pumpSheet(
+        tester, const BookReaderPrefs(headingFontFamily: 'TaiwanPearl'), (_) {});
+
+    expect(find.byKey(const Key('reader_settings_heading_font_family')),
+        findsNothing);
+    expect(find.byKey(const Key('reader_settings_font_family')), findsNothing);
+  });
+
   testWidgets('三個分頁標籤皆存在', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
 
@@ -1217,7 +1226,7 @@ void main() {
     expect(find.text('Crop'), findsOneWidget);
   });
 
-  group('全欄位保留守衛（Issue 10）：種子 34 欄位，操作一個控制項後只有該欄位改變', () {
+  group('全欄位保留守衛（Issue 10）：種子 35 欄位，操作一個控制項後只有該欄位改變', () {
     Future<BookReaderPrefs?> tapAndCapture(
       WidgetTester tester,
       String keyName,

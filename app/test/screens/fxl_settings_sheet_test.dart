@@ -642,13 +642,24 @@ Future<BookReaderPrefs?> _tapAndCapture(
 }
 
 void _fxlFullFieldGuardTests() {
-  group('全欄位保留守衛（Issue 10）：種子 34 欄位，操作一個控制項後只有該欄位改變', () {
+  group('全欄位保留守衛（Issue 10）：種子 35 欄位，操作一個控制項後只有該欄位改變', () {
     testWidgets('切換全螢幕 → 只有 fullscreen 改變', (tester) async {
       final changed = await _tapAndCapture(tester, 'fxl_settings_fullscreen');
       expect(changed, isNotNull);
       expect(changed!.fullscreen, isFalse);
       expectPrefsPreserved(changed, fullBookReaderPrefsSeed,
           except: {'fullscreen'});
+    });
+
+    testWidgets('切換全螢幕後標題字型不被清空，且面板不顯示字型與標題字型下拉（epic-68 Issue 1／3）',
+        (tester) async {
+      final changed = await _tapAndCapture(tester, 'fxl_settings_fullscreen');
+      expect(changed, isNotNull);
+      expect(changed!.headingFontFamily, 'TaiwanPearl');
+      // epic-68 Issue 3：FXL 面板沒有任何字型下拉。
+      expect(find.byKey(const Key('reader_settings_heading_font_family')),
+          findsNothing);
+      expect(find.byKey(const Key('reader_settings_font_family')), findsNothing);
     });
 
     testWidgets('切換雙頁模式為「永遠單頁」→ 只有 dual_page_mode 改變', (tester) async {

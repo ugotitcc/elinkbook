@@ -7982,6 +7982,72 @@ void main() {
     expect(find.text('測試自訂字型'), findsWidgets);
   });
 
+  testWidgets('在版面設定選擇標題字型後，偏好被儲存且 FoliateReaderView 收到標題字型（epic-68 Issue 3）',
+      (tester) async {
+    final customFontsRepository = FakeCustomFontsRepository();
+    await customFontsRepository.insert(
+      const CustomFont(
+        displayName: '測試自訂字型',
+        familyName: 'TestCustomFamily',
+        fontUri: 'content://example/test',
+      ),
+    );
+    await prefsManager.saveBookPrefs('b1', const BookReaderPrefs());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            customFontsRepository: customFontsRepository,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    tester
+        .widget<FoliateReaderView>(find.byType(FoliateReaderView))
+        .onLayoutResolved
+        ?.call(const EpubLayoutInfo(
+            isFixedLayout: false, writingMode: WritingMode.horizontal));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final headingDropdown = find.byKey(const Key('reader_settings_heading_font_family'));
+    expect(headingDropdown, findsOneWidget);
+
+    tester.widget<DropdownButton<String?>>(headingDropdown).onChanged!('TestCustomFamily');
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(prefsManager.bookPrefsByBookId['b1']!.headingFontFamily, 'TestCustomFamily');
+    expect(tester.widget<FoliateReaderView>(find.byType(FoliateReaderView)).headingFontFamily,
+        'TestCustomFamily');
+
+    // 改回「跟隨主字型」：偏好與傳給閱讀器的值皆為 null。
+    tester.widget<DropdownButton<String?>>(headingDropdown).onChanged!(null);
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(prefsManager.bookPrefsByBookId['b1']!.headingFontFamily, isNull);
+    expect(tester.widget<FoliateReaderView>(find.byType(FoliateReaderView)).headingFontFamily,
+        isNull);
+  });
+
   testWidgets(
     '提供 customFontsRepository 時，自訂字型清單載入完成前 FoliateReaderView 不建構，載入完成後才建構',
     (tester) async {
@@ -8328,6 +8394,146 @@ void main() {
       expect(prefsManager.bookPrefsByBookId['b1']!.fontFamily, 'SourceHanSerifTC');
     });
 
+  });
+
+  // epic-68 Issue 2：標題字型只套用流式 Foliate 格式；FXL 與 CBZ（含舊資料宣告 null）
+  // 一律傳 null；標題字型未下載時傳 null 且偏好不改寫。
+  group('標題字型傳遞（epic-68 Issue 2）', () {
+    Future<FoliateReaderView> pumpHeading(
+      WidgetTester tester, {
+      required String filePath,
+      bool? isFixedLayout,
+      FakeDownloadableFontStore? store,
+      FakeLibraryRepository? libraryRepository,
+    }) async {
+      await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: filePath,
+          bookId: 'b1',
+          isFixedLayout: isFixedLayout,
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            downloadableFontStore: store,
+            libraryRepository: libraryRepository,
+          ),
+        ),
+      ));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      return tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+    }
+
+    const bothPrefs = BookReaderPrefs(
+        fontFamily: 'SourceHanSerifTC', headingFontFamily: 'TaiwanPearl');
+    FakeDownloadableFontStore bothInstalled() => FakeDownloadableFontStore()
+      ..installed.addAll([AppFont.sourceHanSerif, AppFont.taiwanPearl]);
+
+    testWidgets('流式 EPUB（isFixedLayout: false）：標題字型已下載，照原值傳遞',
+        (tester) async {
+      await prefsManager.saveBookPrefs('b1', bothPrefs);
+
+      final view = await pumpHeading(tester,
+          filePath: 'test/fixtures/sample.epub',
+          isFixedLayout: false,
+          store: bothInstalled());
+
+      expect(view.headingFontFamily, 'TaiwanPearl');
+      expect(view.fontFamily, 'SourceHanSerifTC');
+    });
+
+    testWidgets('流式 EPUB：標題字型未下載時傳 null，偏好本身不改寫', (tester) async {
+      await prefsManager.saveBookPrefs('b1', bothPrefs);
+      final store = FakeDownloadableFontStore()..installed.add(AppFont.sourceHanSerif);
+
+      final view = await pumpHeading(tester,
+          filePath: 'test/fixtures/sample.epub',
+          isFixedLayout: false,
+          store: store);
+
+      expect(view.headingFontFamily, isNull);
+      expect(
+          prefsManager.bookPrefsByBookId['b1']!.headingFontFamily, 'TaiwanPearl');
+    });
+
+    testWidgets('標題字型為 null（跟隨主字型）時傳 null', (tester) async {
+      await prefsManager.saveBookPrefs(
+          'b1', const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'));
+
+      final view = await pumpHeading(tester,
+          filePath: 'test/fixtures/sample.epub',
+          isFixedLayout: false,
+          store: bothInstalled());
+
+      expect(view.headingFontFamily, isNull);
+    });
+
+    testWidgets('FXL EPUB（isFixedLayout: true）：不傳標題字型', (tester) async {
+      await prefsManager.saveBookPrefs('b1', bothPrefs);
+
+      final view = await pumpHeading(tester,
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          isFixedLayout: true,
+          store: bothInstalled());
+
+      expect(view.headingFontFamily, isNull);
+    });
+
+    testWidgets('CBZ 宣告值為 null 的舊資料：不傳標題字型', (tester) async {
+      await prefsManager.saveBookPrefs('b1', bothPrefs);
+
+      final view = await pumpHeading(tester,
+          filePath: 'test/fixtures/sample.cbz',
+          isFixedLayout: null,
+          store: bothInstalled());
+
+      // 確認這確實是 CBZ 被防禦性視為固定版面的情境。
+      expect(view.isFixedLayoutHint, isTrue);
+      expect(view.headingFontFamily, isNull);
+    });
+
+    testWidgets('CBZ 明確宣告 isFixedLayout=false 時仍傳 null（epic-68，審查 M1）',
+        (tester) async {
+      await prefsManager.saveBookPrefs('b1', bothPrefs);
+
+      final view = await pumpHeading(tester,
+          filePath: 'test/fixtures/sample.cbz',
+          isFixedLayout: false,
+          store: bothInstalled());
+
+      expect(view.headingFontFamily, isNull);
+    });
+
+    testWidgets('EPUB 宣告值為 null、偵測為 FXL：不傳標題字型', (tester) async {
+      await prefsManager.saveBookPrefs('b1', bothPrefs);
+
+      final view = await pumpHeading(tester,
+          filePath: 'test/fixtures/sample.epub',
+          isFixedLayout: null,
+          store: bothInstalled(),
+          libraryRepository: FakeLibraryRepository(detectedIsFixedLayout: true));
+
+      expect(view.headingFontFamily, isNull);
+    });
+
+    testWidgets('TXT／AZW3 宣告值為 null：視同流式，照原值傳遞', (tester) async {
+      for (final path in [
+        'test/fixtures/sample_synth.txt',
+        'test/fixtures/sample.azw3',
+      ]) {
+        await prefsManager.saveBookPrefs('b1', bothPrefs);
+
+        final view = await pumpHeading(tester,
+            filePath: path, isFixedLayout: null, store: bothInstalled());
+
+        expect(view.headingFontFamily, 'TaiwanPearl', reason: path);
+        await tester.pumpWidget(const SizedBox());
+      }
+    });
   });
 
   testWidgets(

@@ -1288,9 +1288,17 @@
   "@readerSettingsUseBookFontLabel": {
     "description": "字型下拉選單「使用書本內建字型」選項（不指定自訂字型）"
   },
-  "readerSettingsFontFamilyLabel": "字型",
+  "readerSettingsFontFamilyLabel": "主字型",
   "@readerSettingsFontFamilyLabel": {
-    "description": "版面設定「文字」分頁中字型下拉選單左側的標籤"
+    "description": "版面設定「文字」分頁中主字型下拉選單左側的標籤（epic-68 起與「標題字型」區分）"
+  },
+  "readerSettingsHeadingFontFamilyLabel": "標題字型",
+  "@readerSettingsHeadingFontFamilyLabel": {
+    "description": "版面設定「文字」分頁中標題字型下拉選單左側的標籤（epic-68）"
+  },
+  "readerSettingsFollowBodyFontLabel": "跟隨主字型",
+  "@readerSettingsFollowBodyFontLabel": {
+    "description": "標題字型下拉選單第一項：標題沿用主字型，不另指定字型（epic-68）"
   },
   "readerSettingsDownloadMoreFontsHint": "到「字型管理」下載更多字型",
   "@readerSettingsDownloadMoreFontsHint": {

@@ -445,6 +445,17 @@ function buildOverrideCss(prefs) {
   if (prefs.fontFamily) {
     rules.push(`${selector} { font-family: '${prefs.fontFamily}' !important; }`)
   }
+  // epic-68 Issue 2：標題字型。selector 含後代（h1 *）——上面主字型規則直接指定在
+  // span／a 等元素上，只寫 h1–h6 會被標題內層的 <span>／<a> 蓋回主字型。
+  // 順序不可調動：h1 *（0,0,1）與主字型 selector 的 span／a（0,0,1）特異度相同且都是
+  // !important，由後出現者勝，所以必須排在主字型規則之後。停用書本 CSS 時主規則為
+  // *（0），h1（0,0,1）自然勝出。字重不另處理，沿用 fontWeight 規則（設計 D9）。
+  // 呼叫端只在標題字型「可用」時才傳值；沒傳就不輸出，標題沿用主字型規則。
+  if (prefs.headingFontFamily) {
+    const headingTags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']
+    const headingSelector = headingTags.map((h) => `${h}, ${h} *`).join(', ')
+    rules.push(`${headingSelector} { font-family: '${prefs.headingFontFamily}' !important; }`)
+  }
   if (typeof prefs.fontSize === 'number') {
     rules.push(`html { font-size: ${prefs.fontSize * 100}% !important; }`)
   }

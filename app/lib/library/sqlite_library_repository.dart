@@ -55,7 +55,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   }) async {
     final db = await openDatabase(
       path,
-      version: 29,
+      version: 30,
       singleInstance: singleInstance,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
@@ -265,6 +265,14 @@ class SqliteLibraryRepository implements LibraryRepository {
             // first_line_indent，若在 else 分支外無條件執行 ALTER TABLE，
             // oldVersion == 1 的裝置會重複 ALTER TABLE 拋出崩潰。
             await _addFirstLineIndentColumn(db);
+          }
+          if (oldVersion < 30) {
+            // epic-68-heading-font Issue 1：標題字型欄位。必須放在 else 分支內
+            // （oldVersion >= 2）——理由同 _addFirstLineIndentColumn：oldVersion < 2
+            // 時 _createBookReaderPrefsTable 已一步到位建表含 heading_font_family，
+            // 若在 else 分支外無條件執行 ALTER TABLE，oldVersion == 1 的裝置會
+            // 重複 ALTER TABLE 拋出崩潰。
+            await _addHeadingFontFamilyColumn(db);
           }
         }
         if (oldVersion < 5) {
@@ -527,7 +535,8 @@ class SqliteLibraryRepository implements LibraryRepository {
         pdf_page_turn_animation TEXT,
         text_conversion_override TEXT,
         pdf_page_turn_mode TEXT,
-        first_line_indent REAL
+        first_line_indent REAL,
+        heading_font_family TEXT
       )
     ''');
   }
@@ -815,6 +824,18 @@ class SqliteLibraryRepository implements LibraryRepository {
     if (tables.isNotEmpty) {
       await db.execute(
           'ALTER TABLE book_reader_prefs ADD COLUMN first_line_indent REAL');
+    }
+  }
+
+  static Future<void> _addHeadingFontFamilyColumn(Database db) async {
+    // epic-68-heading-font Issue 1：標題字型欄位（字型家族名稱，null=跟隨主字型），
+    // 補追加到既有（version 2 起已存在）的 book_reader_prefs 表。比照
+    // _addFirstLineIndentColumn 既有慣例，僅在表已存在時才執行 ALTER TABLE。
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='book_reader_prefs'");
+    if (tables.isNotEmpty) {
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN heading_font_family TEXT');
     }
   }
 

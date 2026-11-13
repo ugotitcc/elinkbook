@@ -1205,6 +1205,226 @@ void main() {
     expect(find.text('我的自訂字型'), findsWidgets);
   });
 
+  group('標題字型下拉（epic-68 Issue 3）', () {
+    Finder headingKey() =>
+        find.byKey(const Key('reader_settings_heading_font_family'));
+    Finder bodyKey() => find.byKey(const Key('reader_settings_font_family'));
+    DropdownButton<String?> dd(WidgetTester t, Finder f) =>
+        t.widget<DropdownButton<String?>>(f);
+    const customFont = CustomFont(
+      id: 1,
+      displayName: '我的自訂字型',
+      familyName: 'MyCustomFamily',
+      fontUri: 'content://example/font1',
+    );
+
+    testWidgets('預設顯示標題字型下拉與標籤，目前值為 null（跟隨主字型）', (tester) async {
+      await _pumpSheet(tester, const BookReaderPrefs(), (_) {});
+
+      expect(headingKey(), findsOneWidget);
+      expect(find.text('標題字型'), findsOneWidget);
+      expect(dd(tester, headingKey()).value, isNull);
+      expect(dd(tester, headingKey()).isExpanded, isTrue);
+    });
+
+    testWidgets('主字型標籤為「主字型」，且不再有單獨的「字型」標籤', (tester) async {
+      await _pumpSheet(tester, const BookReaderPrefs(), (_) {});
+
+      expect(find.text('主字型'), findsOneWidget);
+      expect(find.text('字型'), findsNothing);
+    });
+
+    testWidgets('標題字型選項清單與主字型一致，僅第一項文字不同', (tester) async {
+      await _pumpSheet(tester, const BookReaderPrefs(), (_) {},
+          customFonts: const [customFont]);
+
+      // 不用 find.text 比對選項：DropdownButton 內部 IndexedStack 會讓關閉狀態的選項也在 tree 中。
+      final h = dd(tester, headingKey()).items!;
+      final b = dd(tester, bodyKey()).items!;
+      expect(h.map((e) => e.value).toList(), b.map((e) => e.value).toList());
+      expect(h.first.value, isNull);
+      expect(b.first.value, isNull);
+      expect((h.first.child as Text).data, '跟隨主字型');
+      expect((b.first.child as Text).data, '使用書本內建字型');
+      expect(h.map((e) => e.value), contains('MyCustomFamily'));
+    });
+
+    testWidgets('選擇標題字型後 onChanged 帶出新值，主字型與其他欄位不變', (tester) async {
+      BookReaderPrefs? result;
+      await _pumpSheet(
+        tester,
+        const BookReaderPrefs(fontFamily: 'SourceHanSerifTC', fontSize: 1.25),
+        (p) => result = p,
+      );
+
+      dd(tester, headingKey()).onChanged!('TaiwanPearl');
+      await tester.pump();
+
+      expect(result!.headingFontFamily, 'TaiwanPearl');
+      expect(result!.fontFamily, 'SourceHanSerifTC');
+      expect(result!.fontSize, 1.25);
+    });
+
+    testWidgets('選「跟隨主字型」回傳 headingFontFamily=null，主字型保留', (tester) async {
+      BookReaderPrefs? result;
+      await _pumpSheet(
+        tester,
+        const BookReaderPrefs(
+            fontFamily: 'SourceHanSerifTC', headingFontFamily: 'TaiwanPearl'),
+        (p) => result = p,
+      );
+
+      dd(tester, headingKey()).onChanged!(null);
+      await tester.pump();
+
+      expect(result, isNotNull);
+      expect(result!.headingFontFamily, isNull);
+      expect(result!.fontFamily, 'SourceHanSerifTC');
+    });
+
+    testWidgets('實際點選標題字型選單與選項可寫入偏好（含自訂字型）', (tester) async {
+      BookReaderPrefs? result;
+      await _pumpSheet(tester, const BookReaderPrefs(), (p) => result = p,
+          customFonts: const [customFont]);
+
+      await tester.tap(headingKey());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('我的自訂字型').last);
+      await tester.pumpAndSettle();
+      expect(result!.headingFontFamily, 'MyCustomFamily');
+
+      await tester.tap(headingKey());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('跟隨主字型').last);
+      await tester.pumpAndSettle();
+      expect(result!.headingFontFamily, isNull);
+    });
+
+    testWidgets('標題字型不可用時顯示「跟隨主字型」，且不改寫偏好（ADR 0035）', (tester) async {
+      BookReaderPrefs? result;
+      await _pumpSheet(
+        tester,
+        BookReaderPrefs(
+            fontFamily: AppFont.sourceHanSans.familyName,
+            headingFontFamily: 'TaiwanPearl'),
+        (p) => result = p,
+        installedFonts: {AppFont.sourceHanSans}, // 台灣圓體未下載
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(dd(tester, headingKey()).value, isNull);
+
+      // 主斷言：使用者改其他欄位（主字型）觸發通知時，草稿仍保留原標題字型，
+      // 沒有被「顯示用的 null」覆蓋。
+      dd(tester, bodyKey()).onChanged!(null);
+      await tester.pump();
+      expect(result!.headingFontFamily, 'TaiwanPearl');
+    });
+
+    testWidgets('標題字型為不認得的名稱時面板正常開啟且顯示「跟隨主字型」', (tester) async {
+      await _pumpSheet(
+          tester, const BookReaderPrefs(headingFontFamily: 'NoSuchFont'), (_) {});
+
+      expect(tester.takeException(), isNull);
+      expect(dd(tester, headingKey()).value, isNull);
+    });
+
+    testWidgets('字型之後變成可用，標題字型自然恢復顯示（不需重設）', (tester) async {
+      const prefs = BookReaderPrefs(headingFontFamily: 'TaiwanPearl');
+      await _pumpSheet(tester, prefs, (_) {},
+          installedFonts: {AppFont.sourceHanSans});
+      expect(dd(tester, headingKey()).value, isNull);
+
+      // 依賴「同型別重 pump 以保留 State」：第二次 pumpWidget 沿用同一個 Element，
+      // 走 didUpdateWidget 而非重建 State；若 State 被重建，此測試改以 GlobalKey 驅動。
+      await _pumpSheet(tester, prefs, (_) {},
+          installedFonts: AppFont.values.toSet());
+      expect(dd(tester, headingKey()).value, 'TaiwanPearl');
+    });
+
+    testWidgets('prefs 外部變動時（例如套用預設集）標題字型下拉同步更新', (tester) async {
+      await _pumpSheet(tester, const BookReaderPrefs(), (_) {});
+      expect(dd(tester, headingKey()).value, isNull);
+
+      // 依賴「同型別重 pump 以保留 State」，驗證 didUpdateWidget 路徑被下拉實際使用。
+      await _pumpSheet(
+          tester, const BookReaderPrefs(headingFontFamily: 'TaiwanPearl'), (_) {});
+      expect(dd(tester, headingKey()).value, 'TaiwanPearl');
+    });
+
+    testWidgets('下載提示只出現一次且位於標題字型下拉之後，文案不變', (tester) async {
+      await _pumpSheet(tester, const BookReaderPrefs(), (_) {},
+          installedFonts: const {});
+
+      final hint = find.byKey(const Key('reader_settings_download_fonts_hint'));
+      expect(hint, findsOneWidget);
+      expect(tester.widget<Text>(hint).data, '到「字型管理」下載更多字型');
+      expect(tester.getTopLeft(hint).dy,
+          greaterThan(tester.getTopLeft(headingKey()).dy));
+    });
+
+    testWidgets('簡體與英文介面：標題字型標籤與「跟隨」選項正確', (tester) async {
+      await _pumpSheet(tester, const BookReaderPrefs(), (_) {},
+          locale: const Locale('zh', 'CN'));
+      expect(find.text('标题字体'), findsOneWidget);
+      expect((dd(tester, headingKey()).items!.first.child as Text).data,
+          '跟随主字体');
+
+      await _pumpSheet(tester, const BookReaderPrefs(), (_) {},
+          locale: const Locale('en'));
+      expect(find.text('Heading font'), findsOneWidget);
+      expect((dd(tester, headingKey()).items!.first.child as Text).data,
+          'Same as body font');
+    });
+
+    testWidgets('窄螢幕（412 寬）與過長自訂字型名稱時，標題字型下拉不 overflow；E-Ink 模式同樣可顯示',
+        (tester) async {
+      tester.view.physicalSize = const Size(412, 1800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: ReaderSettingsSheet(
+            prefs: const BookReaderPrefs(headingFontFamily: 'CustomLongFontName'),
+            onChanged: _noopOnChanged,
+            bookId: 'b1',
+            availableFonts: const AvailableFonts(
+              customFonts: [
+                CustomFont(
+                  id: 1,
+                  displayName: '這是一個非常非常非常長的自訂字型顯示名稱範例測試用',
+                  familyName: 'CustomLongFontName',
+                  fontUri: 'content://example/font1',
+                ),
+              ],
+            ),
+            layoutPresets: const [],
+            isEinkMode: false,
+            onSaveAsPreset: _noopSaveAsPreset,
+            onApplyPreset: _noopApplyPreset,
+            onApplyFromBook: _noopApplyFromBook,
+            onRequestBookPicker: _noopRequestBookPicker,
+            onDeletePreset: _noopDeletePreset,
+          ),
+        ),
+      ));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(headingKey(), findsOneWidget);
+
+      await _pumpSheet(tester, const BookReaderPrefs(), (_) {}, isEinkMode: true);
+      expect(headingKey(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   testWidgets('選擇自訂字型後，onChanged 帶入其 familyName', (tester) async {
     BookReaderPrefs? result;
     await _pumpSheet(
@@ -1287,6 +1507,34 @@ void main() {
           findsOneWidget);
       expect(find.byKey(const Key('reader_settings_preset_reset_apply')),
           findsNothing);
+    });
+
+    testWidgets('「重設為本書原樣式」不清空標題字型（epic-68 Issue 1）', (tester) async {
+      BookReaderPrefs? notified;
+      await _pumpSheet(
+        tester,
+        const BookReaderPrefs(
+          fontSize: 18 / 16,
+          fontWeight: 1.5,
+          lineHeight: 2.0,
+          paragraphSpacing: 1.5,
+          letterSpacing: 0.05,
+          headingFontFamily: 'TaiwanPearl',
+        ),
+        (prefs) => notified = prefs,
+      );
+      await switchToTab(tester, '預設集');
+      await tester.ensureVisible(
+          find.byKey(const Key('reader_settings_preset_reset_apply')));
+      await tester
+          .tap(find.byKey(const Key('reader_settings_preset_reset_apply')));
+      await tester.pump();
+
+      expect(notified, isNotNull);
+      // 確認重設確實生效（非空轉）
+      expect(notified!.fontSize, isNull);
+      // 重設只清 6 個數值欄位，不碰字型
+      expect(notified!.headingFontFamily, 'TaiwanPearl');
     });
 
     testWidgets('任一受影響欄位被覆寫時，固定列改顯示套用按鈕，點擊後 onChanged 帶出 5 個欄位皆為 null',
@@ -2346,10 +2594,10 @@ void main() {
     expect(find.text('Presets'), findsOneWidget);
   });
 
-  testWidgets('正體中文介面下字型標籤與欄數「單欄」選項正確渲染', (tester) async {
+  testWidgets('正體中文介面下主字型標籤與欄數「單欄」選項正確渲染', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
 
-    expect(find.text('字型'), findsOneWidget);
+    expect(find.text('主字型'), findsOneWidget);
 
     await switchToTab(tester, '呈現');
     expect(
@@ -2361,7 +2609,7 @@ void main() {
     );
   });
 
-  testWidgets('簡體中文介面下字型標籤與欄數「单栏」選項正確以簡體渲染', (tester) async {
+  testWidgets('簡體中文介面下主字型標籤與欄數「单栏」選項正確以簡體渲染', (tester) async {
     await _pumpSheet(
       tester,
       BookReaderPrefs.empty,
@@ -2369,7 +2617,7 @@ void main() {
       locale: const Locale('zh', 'CN'),
     );
 
-    expect(find.text('字体'), findsOneWidget);
+    expect(find.text('主字体'), findsOneWidget);
     expect(find.text('字型'), findsNothing);
 
     await switchToTab(tester, '呈现');
@@ -2383,7 +2631,7 @@ void main() {
     expect(find.text('單欄'), findsNothing);
   });
 
-  testWidgets('英文介面下字型標籤與欄數「Single」選項正確以英文渲染', (tester) async {
+  testWidgets('英文介面下主字型標籤與欄數「Single」選項正確以英文渲染', (tester) async {
     await _pumpSheet(
       tester,
       BookReaderPrefs.empty,
@@ -2391,7 +2639,7 @@ void main() {
       locale: const Locale('en'),
     );
 
-    expect(find.text('Font'), findsOneWidget);
+    expect(find.text('Body font'), findsOneWidget);
     expect(find.text('字型'), findsNothing);
 
     await switchToTab(tester, 'Display');
@@ -2699,7 +2947,7 @@ void main() {
     });
   });
 
-  group('全欄位保留守衛（Issue 10）：種子 34 欄位，操作一個控制項後，22 個流式欄位只有該欄位改變、'
+  group('全欄位保留守衛（Issue 10）：種子 35 欄位，操作一個控制項後，23 個流式欄位只有該欄位改變、'
       '其餘 12 個欄位依設計清成 null', () {
     testWidgets('切換全螢幕 → 只有 fullscreen 改變', (tester) async {
       BookReaderPrefs? notified;
@@ -2714,12 +2962,27 @@ void main() {
 
       expect(notified, isNotNull);
       expect(notified!.fullscreen, isFalse);
-      // 預期基準 ＝ 種子過濾成流式 EPUB 的 21 個欄位（另 12 個為 null，是設計）。
+      // 預期基準 ＝ 種子過濾成流式 EPUB 的 23 個欄位（另 12 個為 null，是設計）。
       expectPrefsPreserved(
         notified!,
         fullBookReaderPrefsSeed.reflowableEpubFields(),
         except: {'fullscreen'},
       );
+    });
+
+    testWidgets('切換全螢幕後標題字型不被清空（epic-68 Issue 1）', (tester) async {
+      BookReaderPrefs? notified;
+      await _pumpSheet(
+        tester,
+        fullBookReaderPrefsSeed,
+        (prefs) => notified = prefs,
+      );
+      await switchToTab(tester, '呈現');
+      await tester.tap(find.byKey(const Key('reader_settings_fullscreen')));
+      await tester.pump();
+
+      expect(notified, isNotNull);
+      expect(notified!.headingFontFamily, 'TaiwanPearl');
     });
 
     testWidgets('切換頁尾顯示 → 只有 show_footer 改變', (tester) async {

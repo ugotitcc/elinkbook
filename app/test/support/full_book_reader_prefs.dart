@@ -14,7 +14,7 @@ import 'package:elinkbook/reader/text_conversion_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// 34 個欄位全部填滿的 [BookReaderPrefs]（Issue 10「整列重建全欄位保留守衛」）。
+/// 35 個欄位全部填滿的 [BookReaderPrefs]（Issue 10「整列重建全欄位保留守衛」）。
 ///
 /// 每個值都刻意取「與各面板預設值不同」的選項（例如 publisherStyles 預設
 /// true 這裡是 false、columnMode 預設 auto 這裡是 double），這樣「漏帶後被
@@ -27,6 +27,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// 的「種子自檢」會失敗。
 const fullBookReaderPrefsSeed = BookReaderPrefs(
   fontFamily: 'SourceHanSerifTC',
+  headingFontFamily: 'TaiwanPearl',
   fontSize: 1.5,
   fontWeight: 1.25,
   lineHeight: 1.8,

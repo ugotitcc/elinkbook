@@ -83,7 +83,7 @@ flutter build apk --release --dart-define-from-file=config/cloud_oauth.json
 
 `app/lib/dictionary/` 是獨立的字典子系統，資料與書庫分離（見 ADR 0038、0039）。
 - `DictionaryService`（`app/lib/dictionary/dictionary_service.dart`）：協調本機與線上分段。線上分段永不丟例外（失敗化為 `failed` 狀態）；本機分段在開啟字典資料庫失敗時 `lookup` 會丟出例外，由呼叫端顯示錯誤。
-- `dictionary.db` 與 `DictionaryStore`（`app/lib/dictionary/storage/`）：獨立的 SQLite 檔（`DictionaryDatabase.version`），不進主庫 `version: 29`、不登錄同步表；刪除來源連動刪除詞條與私有複本。
+- `dictionary.db` 與 `DictionaryStore`（`app/lib/dictionary/storage/`）：獨立的 SQLite 檔（`DictionaryDatabase.version`），不進主庫 `version: 30`、不登錄同步表；刪除來源連動刪除詞條與私有複本。
 - `MdxReader` ＋ vendor 修補的 `dict_reader`（`app/third_party/dict_reader/PATCH.md`）：MDX 保留原檔，鍵索引依區塊延遲載入；升級套件後須重套修補並重新量測記憶體。
 - MDX 詞條的 WebView 安全邊界：`javaScriptEnabled: false`、封鎖網路載入，`shouldInterceptRequest` 對所有請求回明確回應（外部一律 404），永不連網。
 - 線上查詞預設關閉；未同意時零請求。`LookupRequest` 只有 `word`，不帶書名、前後文、位置或裝置識別。
@@ -104,7 +104,7 @@ elinkBook（易閱書）是一款跨平台電子書閱讀器，核心差異化�
 
 ### 版面與排版
 - ePub3/TXT 支援橫排與直排(vertical-RL) 一鍵切換。
-- 內建字型：思源黑體、思源宋體、原俠正楷、台灣圓體、源流明體、白鷺楷、獅尾B2加糖宋體，7 款皆為 SIL OFL 1.1 開源字型（授權檔見 `fonts-cdn/fonts/licenses/`）。字型檔**不打包進 APK**，屬「可下載字型」：由使用者在字型管理主動下載後離線渲染（本地 `@font-face`），未下載時使用書本或系統字型（見 `epic-48`／`epic-49`）。刪除目前使用中的自訂字型時須自動退回預設字型。
+- 內建字型：思源黑體、思源宋體、原俠正楷、台灣圓體、源流明體、白鷺楷、獅尾B2加糖宋體，7 款皆為 SIL OFL 1.1 開源字型（授權檔見 `fonts-cdn/fonts/licenses/`）。字型檔**不打包進 APK**，屬「可下載字型」：由使用者在字型管理主動下載後離線渲染（本地 `@font-face`），未下載時使用書本或系統字型（見 `epic-48`／`epic-49`）。刪除目前使用中的自訂字型時須自動退回預設字型。書籍可另選「標題字型」（預設跟隨主字型，與主字型各自獨立）；刪除自訂字型時，主字型與標題字型各自命中才各自退回預設。
 - 版面控制項：行距、段落間距、獨立的上/下/左/右邊距滑桿、換頁模式（捲動 vs. 無）、文字對齊、螢幕方向鎖定（0/90/180/270°）、「停用書本 CSS」開關。每個數值型控制項（字體大小、字重、行距/段落間距、邊距）除滑桿外都需要 +/- 微調按鈕。當螢幕方向未鎖定時，裝置旋轉須為新的可視範圍重新計算分頁。
 - 直排(vertical-RL) 模式不得讓圖片或標題被切斷至跨頁。
 - 標點符號在直排中文排版中必須正確轉向/置中，換行須遵守避頭尾規則（禁止特定字元出現於行首/行尾），符合 CNS 11643 或同等標準（FR-32）。

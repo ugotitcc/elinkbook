@@ -67,6 +67,7 @@ void main() {
       expect(resolved.volumeKeyEnabled, isTrue);
       expect(resolved.consoleLogEnabled, isFalse);
       expect(resolved.firstLineIndent, isNull);
+      expect(resolved.headingFontFamily, isNull);
     });
 
     test('首行縮排：單書覆寫值帶進 ResolvedPreferences，未覆寫時維持 null', () {
@@ -87,6 +88,27 @@ void main() {
         globalPrefs: const GlobalReaderPrefs.initial(),
       ));
       expect(zero.firstLineIndent, 0.0);
+    });
+
+    test('標題字型：直接取單書值，無全域預設；未覆寫時為 null（epic-68 Issue 1）', () {
+      final absent = manager.resolve(LoadedPrefs(
+        bookPrefs: BookReaderPrefs.empty,
+        globalPrefs: const GlobalReaderPrefs.initial(),
+      ));
+      expect(absent.headingFontFamily, isNull);
+
+      final overridden = manager.resolve(LoadedPrefs(
+        bookPrefs: const BookReaderPrefs(headingFontFamily: 'TaiwanPearl'),
+        globalPrefs: const GlobalReaderPrefs.initial(),
+      ));
+      expect(overridden.headingFontFamily, 'TaiwanPearl');
+
+      // 只有主字型時，標題字型仍為 null（不從 fontFamily 推導）
+      final onlyMain = manager.resolve(LoadedPrefs(
+        bookPrefs: const BookReaderPrefs(fontFamily: 'SourceHanSerifTC'),
+        globalPrefs: const GlobalReaderPrefs.initial(),
+      ));
+      expect(onlyMain.headingFontFamily, isNull);
     });
 
     test('翻頁模式：未覆寫時為逐頁；單書覆寫為連續捲動時採用單書值', () {

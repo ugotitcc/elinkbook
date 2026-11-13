@@ -157,6 +157,38 @@ void main() {
     expect(restored, prefs);
   });
 
+  test('prefs_json 往返保留 headingFontFamily（epic-68 Issue 1）', () async {
+    const prefs = BookReaderPrefs(
+      fontFamily: 'SourceHanSerifTC',
+      headingFontFamily: 'TaiwanPearl',
+    );
+    await repository.insert(LayoutPreset(
+      id: null,
+      name: '標題字型預設集',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      prefs: prefs,
+    ));
+
+    final restored = (await repository.listAll()).single.prefs;
+    expect(restored.headingFontFamily, 'TaiwanPearl');
+    expect(restored, prefs);
+  });
+
+  test('舊預設集 JSON 沒有 heading_font_family 鍵時讀成 null，不拋出例外', () async {
+    // 模擬 epic-68 之前寫入的 prefs_json：沒有 heading_font_family。
+    await libraryRepository.database.insert('layout_preset', {
+      'name': '舊預設集',
+      'created_at': 1000,
+      'updated_at': 1000,
+      'prefs_json': '{"font_family":"SourceHanSerifTC","font_size":18.0}',
+    });
+
+    final restored = (await repository.listAll()).single.prefs;
+    expect(restored.headingFontFamily, isNull);
+    expect(restored.fontFamily, 'SourceHanSerifTC');
+  });
+
   test('舊預設集 JSON 沒有 first_line_indent 鍵時讀成 null，不拋出例外', () async {
     // 模擬 epic-65 之前寫入的 prefs_json：只有舊欄位，沒有 first_line_indent。
     await libraryRepository.database.insert('layout_preset', {

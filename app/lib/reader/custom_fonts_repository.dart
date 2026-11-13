@@ -53,19 +53,23 @@ class CustomFontsRepository {
     );
   }
 
-  /// 統計 `book_reader_prefs` 中目前使用中 [familyName] 的書籍數量，供刪除
-  /// 前的確認對話框文案使用。
+  /// 統計 `book_reader_prefs` 中「主字型或標題字型」使用 [familyName] 的書籍
+  /// 數量（每本書只算一次，兩欄都用也只算一本；epic-68 起涵蓋標題字型），
+  /// 供刪除前的確認對話框文案使用。
   Future<int> countBooksUsing(String familyName) async {
     final result = await _db.rawQuery(
-      'SELECT COUNT(*) AS c FROM book_reader_prefs WHERE font_family = ?',
-      [familyName],
+      'SELECT COUNT(*) AS c FROM book_reader_prefs '
+      'WHERE font_family = ? OR heading_font_family = ?',
+      [familyName, familyName],
     );
     return (result.first['c'] as int?) ?? 0;
   }
 
-  /// 刪除字型並把所有使用中書籍的 `font_family` 重置為 `NULL`（FR-09 規則：
-  /// 刪除使用中字型時自動退回預設字型），於同一交易內完成避免中途失敗留下
-  /// 不一致狀態。
+  /// 刪除字型並把所有使用中書籍的 `font_family`（主字型）與
+  /// `heading_font_family`（標題字型）中命中該字型的欄位各自重置為 `NULL`
+  /// （FR-09 規則：刪除使用中字型時自動退回預設字型；標題字型 `NULL` 即跟隨
+  /// 主字型），於同一交易內完成避免中途失敗留下不一致狀態。兩欄各自條件式
+  /// 更新，只清命中的欄位。
   Future<void> deleteAndResetUsage(int id, String familyName) async {
     await _db.transaction((txn) async {
       await txn.delete('custom_fonts', where: 'id = ?', whereArgs: [id]);
@@ -73,6 +77,15 @@ class CustomFontsRepository {
         'book_reader_prefs',
         {'font_family': null},
         where: 'font_family = ?',
+        whereArgs: [familyName],
+      );
+      // epic-68：標題字型同樣在該字型被刪除時重置為 NULL（跟隨主字型）。
+      // 與上一條刻意分開、各自只比對自己的欄位：兩條合併成一條「同時清兩欄」會把
+      // 「主字型用另一款字型」的書的主字型一併清掉（spec §5、D16）。
+      await txn.update(
+        'book_reader_prefs',
+        {'heading_font_family': null},
+        where: 'heading_font_family = ?',
         whereArgs: [familyName],
       );
     });
