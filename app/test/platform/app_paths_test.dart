@@ -31,14 +31,14 @@ void main() {
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
   }
 
-  test('Windows：回傳「文件」下的 elinkbook 並建立該資料夾', () async {
+  test('Windows：回傳「文件」下的 elinkbook-data 並建立該資料夾', () async {
     final base = createTempDocsDir();
     setupFakePathProvider(base.path);
     overridePlatform(TargetPlatform.windows);
 
     final dir = await appDocumentsDirectory();
 
-    final expectedPath = p.join(base.path, 'elinkbook');
+    final expectedPath = p.join(base.path, 'elinkbook-data');
     expect(dir.path, equals(expectedPath));
     expect(Directory(expectedPath).existsSync(), isTrue);
   });
@@ -48,7 +48,7 @@ void main() {
     setupFakePathProvider(base.path);
     overridePlatform(TargetPlatform.windows);
 
-    final existing = Directory(p.join(base.path, 'elinkbook'))..createSync();
+    final existing = Directory(p.join(base.path, 'elinkbook-data'))..createSync();
     final keepFile = File(p.join(existing.path, 'keep.txt'))
       ..writeAsStringSync('preserve');
 
@@ -78,7 +78,42 @@ void main() {
     expect(oldCover.readAsBytesSync(), equals([9, 8, 7]));
   });
 
-  test('Android 與 iOS：原樣回傳 getApplicationDocumentsDirectory() 的路徑，且不建立 elinkbook', () async {
+  test('Windows：多處同時呼叫不報錯、路徑相同（create 不怕競態）', () async {
+    final base = createTempDocsDir();
+    setupFakePathProvider(base.path);
+    overridePlatform(TargetPlatform.windows);
+
+    final results = await Future.wait([
+      for (var i = 0; i < 8; i++) appDocumentsDirectory(),
+    ]);
+
+    final expectedPath = p.join(base.path, 'elinkbook-data');
+    expect(results.map((d) => d.path).toSet(), equals({expectedPath}));
+    expect(Directory(expectedPath).existsSync(), isTrue);
+  });
+
+  test('Windows：該路徑被同名「檔案」佔用時丟出 FileSystemException，不無聲退回根目錄', () async {
+    final base = createTempDocsDir();
+    setupFakePathProvider(base.path);
+    overridePlatform(TargetPlatform.windows);
+    File(p.join(base.path, 'elinkbook-data')).writeAsStringSync('我是檔案');
+
+    await expectLater(
+      appDocumentsDirectory(),
+      throwsA(isA<FileSystemException>()),
+    );
+    // 也不能因此在「文件」根目錄建出任何資料夾
+    expect(Directory(p.join(base.path, 'elinkbook-data')).existsSync(), isFalse);
+  });
+
+  test('資料夾名稱不得與免安裝 zip 解壓出的程式資料夾 elinkbook 相同（Windows 不分大小寫）', () {
+    // zip 的頂層資料夾叫 elinkbook；同名會讓程式與資料變成同一個資料夾（審查 I-1）。
+    expect(kWindowsAppFolderName.toLowerCase(), isNot(equals('elinkbook')));
+    // 發佈後不可更改：寫死預期值，任何改名都必須同時改這裡與 elinkbook.iss。
+    expect(kWindowsAppFolderName, equals('elinkbook-data'));
+  });
+
+  test('Android 與 iOS：原樣回傳 getApplicationDocumentsDirectory() 的路徑，且不建立 elinkbook-data', () async {
     for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
       final base = createTempDocsDir();
       setupFakePathProvider(base.path);
@@ -89,7 +124,7 @@ void main() {
 
       expect(dir.path, equals(expected));
       expect(dir.path, equals(base.path));
-      expect(Directory(p.join(base.path, 'elinkbook')).existsSync(), isFalse);
+      expect(Directory(p.join(base.path, 'elinkbook-data')).existsSync(), isFalse);
     }
   });
 }

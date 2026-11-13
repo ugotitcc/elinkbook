@@ -31,7 +31,7 @@ void main() {
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
   }
 
-  test('Windows：資料庫路徑在 elinkbook 底下', () async {
+  test('Windows：資料庫路徑在 elinkbook-data 底下', () async {
     final base = createTempDocsDir();
     setupFakePathProvider(base.path);
     overridePlatform(TargetPlatform.windows);
@@ -39,8 +39,8 @@ void main() {
     final libPath = await defaultLibraryDatabasePath();
     final dictPath = await defaultDictionaryDatabasePath();
 
-    expect(libPath, equals(p.join(base.path, 'elinkbook', 'library.db')));
-    expect(dictPath, equals(p.join(base.path, 'elinkbook', 'dictionary.db')));
+    expect(libPath, equals(p.join(base.path, 'elinkbook-data', 'library.db')));
+    expect(dictPath, equals(p.join(base.path, 'elinkbook-data', 'dictionary.db')));
   });
 
   test('Android：資料庫路徑維持在文件根目錄', () async {
