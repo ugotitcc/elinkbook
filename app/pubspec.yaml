@@ -244,6 +244,7 @@ flutter:
     - test/fixtures/sample_fxl_svg_cover.epub
     - test/fixtures/sample_multi_chapter.epub
     - test/fixtures/sample_single_spine_multi_anchor.epub
+    - test/fixtures/sample_single_spine_flat_toc.epub
     - test/fixtures/issue9_vertical_pagejump.epub
     - test/fixtures/sample_declares_vertical.epub
     - test/fixtures/sample_long_chinese_vertical.epub

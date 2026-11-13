@@ -9,9 +9,11 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
+import 'package:elinkbook/reader/zone_action.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
@@ -308,6 +310,124 @@ void main() {
       }
       await tester.tap(find.byKey(const Key('toc_bottom_sheet_close_button')));
       await tester.pumpAndSettle();
+    }
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+  });
+
+  testWidgets(
+      '桌面寬度（雙欄）一般翻頁：頁首章名與目錄的目前章節以第一欄為準（epic-66 Issue 24）',
+      (tester) async {
+    // 1280x800 橫向視窗 → 雙欄。雙欄的 relocate range 涵蓋兩欄，過去 foliate 取「range 內
+    // 最後一個目錄項」，右欄才出現的下一章標題會讓頁首章名與目錄領先使用者先讀到的那一欄。
+    // 規則（人類 2026-11-13，規則 B）：雙欄時把第一欄當成單欄的那一頁，取第一欄範圍內最後一個目錄項。
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    final libraryRepository =
+        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      await libraryRepository.close();
+    });
+    final prefsManager = ReaderPrefsManagerImpl(
+      BookReaderPrefsRepository(libraryRepository.database),
+      ReadingPositionRepository(libraryRepository.database),
+    );
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_single_spine_flat_toc.epub',
+        'epub_toc_dual_page_turn.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    await libraryRepository.insertBook(Book(
+      id: 'b_epub_toc_dual_page_turn',
+      title: 'EPUB 雙欄翻頁目前章節測試書',
+      format: BookFileFormat.epub,
+      filePath: samplePath,
+      source: BookSource.local,
+      createTime: DateTime.now(),
+      lastReadTime: DateTime.now(),
+    ));
+    // 頁首章名只在 showHeader 為真且工具列收合時顯示。
+    await prefsManager.saveBookPrefs(
+      'b_epub_toc_dual_page_turn',
+      const BookReaderPrefs(showHeader: true),
+    );
+    final readerKey = GlobalKey<State<ReaderScreen>>();
+    await pumpLocalizedWidget(
+      tester,
+      ReaderScreen(
+        key: readerKey,
+        filePath: samplePath,
+        bookId: 'b_epub_toc_dual_page_turn',
+        dependencies: fakeReaderFeatureDependencies(prefsManager: prefsManager),
+      ),
+    );
+    await _pumpUntilLoaded(tester);
+    await _pumpUntilFooterVisible(tester);
+
+    // 收合工具列，頁首章名才會顯示（不要點螢幕中央熱區）。
+    ReaderScreen.triggerZoneAction(readerKey, ZoneAction.menu);
+    await tester.pump();
+
+    String headerText() => tester
+        .widget<Text>(find.descendant(
+          of: find.byKey(const Key('reader_foliate_header_text')),
+          matching: find.byType(Text),
+        ))
+        .data!;
+
+    // 逐頁翻，記錄每頁的頁首章名。雙欄補欄會連續回報兩次，每次翻頁後等位置穩定。
+    final headers = <String>[];
+    Future<void> turnNext() async {
+      ReaderScreen.triggerZoneAction(readerKey, ZoneAction.nextPage);
+      await tester.pump(const Duration(seconds: 2));
+      headers.add(headerText());
+    }
+
+    await turnNext();
+    await turnNext();
+
+    // 同一時刻目錄面板的目前章節必須與頁首章名一致（兩者共用同一個判定來源）。
+    // 目錄按鈕要工具列顯示才存在，先叫出工具列，驗完再收合。
+    ReaderScreen.triggerZoneAction(readerKey, ZoneAction.menu);
+    await tester.pump();
+    await _openToc(tester);
+    expect(
+      tester.widget<ListTile>(find.widgetWithText(ListTile, headers.last)).selected,
+      isTrue,
+      reason: '目錄的目前章節應與頁首章名「${headers.last}」一致',
+    );
+    await tester.tap(find.byKey(const Key('toc_bottom_sheet_close_button')));
+    await tester.pumpAndSettle();
+    ReaderScreen.triggerZoneAction(readerKey, ZoneAction.menu);
+    await tester.pump();
+
+    await turnNext();
+    await turnNext();
+
+    // 與版面無關的檢查（所有平台）：頁首章名只會往後走，不會倒退。
+    const order = ['第一章', '第二章', '第三章'];
+    final indexes = headers.map(order.indexOf).toList();
+    expect(indexes.every((i) => i >= 0), isTrue, reason: '頁首章名應是目錄中的章：$headers');
+    for (var i = 1; i < indexes.length; i++) {
+      expect(indexes[i], greaterThanOrEqualTo(indexes[i - 1]),
+          reason: '翻頁後頁首章名不應倒退，實際序列＝$headers');
+    }
+    // 只有 Windows 1280x800 的分頁位置是固定的，才釘住整串序列：第 2 頁的第一欄仍在第一章、
+    // 第二章標題在第二欄，規則 B 應標第一章（舊規則會標成第二章）。其他平台（例如 BooksPad
+    // 的實際視窗大小不同、分頁位置不同）的規則驗證由 foliate_touch_harness 的
+    // scenario-dual-column-toc-item.mjs（以獨立 DOM 座標當標準答案）負責。
+    // 若 Windows 日後字型或版面使分頁位置改變，失敗訊息會列出實際序列，請重新確認後更新。
+    if (Platform.isWindows) {
+      expect(headers, ['第一章', '第一章', '第二章', '第二章'],
+          reason: '雙欄一般翻頁的頁首章名應取第一欄範圍內最後一個目錄項，實際序列＝$headers');
     }
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
   });

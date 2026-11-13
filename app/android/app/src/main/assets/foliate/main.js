@@ -205,6 +205,121 @@ let decorationIdByCfi = new Map()
 let lastDecorations = []
 
 /**
+ * epic-66 Issue 24：找出 range 內「第一欄」的結尾位置，回傳只涵蓋第一欄的 Range。
+ *
+ * 雙欄時 relocate 的 range 涵蓋兩欄。第一欄（先被讀到的那一欄：橫排為左欄，直排為上欄——
+ * 直排雙欄是沿 y 軸上下兩欄，每欄內的行再由右向左）的文字座標落在
+ * `[renderer.start, renderer.start + renderer.size / columnCount)`，之後是第二欄。
+ * 逐一檢查文字節點，找出最後一個「字的起點座標仍小於第二欄起點」的字，把它當作結尾。
+ *
+ * 回傳 null 代表「不需要或無法切」（range 沒有跨到第二欄、找不到文字、水平 RTL 書、任何例外），
+ * 呼叫端退回完整 range（現行行為）。
+ */
+function firstColumnRange(view, range, columnCount) {
+  try {
+    const renderer = view.renderer
+    const start = renderer?.start
+    const size = renderer?.size
+    if (typeof start !== 'number' || !(size > 0) || !(columnCount > 1)) return null
+    const doc = range.startContainer.ownerDocument ?? range.startContainer
+    const win = doc.defaultView
+    if (!win) return null
+    const rootStyle = win.getComputedStyle(doc.documentElement)
+    const vertical = (rootStyle.writingMode || '').startsWith('vertical')
+    // 水平 RTL（阿拉伯文等）第一欄在右側，座標判斷相反，不處理，退回完整 range。
+    if (!vertical && rootStyle.direction === 'rtl') return null
+    const pos = (r) => (vertical ? r.top : r.left)
+    const boundary = start + size / columnCount
+
+    // range 沒有任何行落在第二欄 → 不必切（單欄頁、章節尾頁等）。
+    let reachesSecond = false
+    for (const r of range.getClientRects()) {
+      if (pos(r) >= boundary) { reachesSecond = true; break }
+    }
+    if (!reachesSecond) return null
+
+    const charPos = (node, i) => {
+      const r = doc.createRange()
+      r.setStart(node, i)
+      r.setEnd(node, i + 1)
+      const rects = r.getClientRects()
+      return rects.length ? pos(rects[0]) : NaN
+    }
+
+    // 從 range 起點所在的文字節點開始走（不要從 body 開頭走，章節可能很大）。
+    const walker = doc.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT)
+    let node = range.startContainer
+    if (node.nodeType !== 3) {
+      node = node.childNodes[range.startOffset] ?? node
+      walker.currentNode = node
+      if (node.nodeType !== 3) node = walker.nextNode()
+    } else {
+      walker.currentNode = node
+    }
+    let lastNode = null
+    let lastOffset = 0
+    for (; node; node = walker.nextNode()) {
+      if (range.comparePoint(node, 0) > 0) break // 已超過 range 結尾
+      const len = node.nodeValue.length
+      const from = node === range.startContainer ? range.startOffset : 0
+      const to = node === range.endContainer ? range.endOffset : len
+      if (to <= from) continue
+      const lastPos = charPos(node, to - 1)
+      if (lastPos < boundary) { lastNode = node; lastOffset = to; continue } // 整段在第一欄
+      if (Number.isNaN(lastPos)) continue // 沒有版面（例如純空白）
+      // 此節點跨過邊界或整個在第二欄：二分找第一個座標 >= boundary 的字。
+      let lo = from
+      let hi = to - 1
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1
+        if (charPos(node, mid) >= boundary) hi = mid
+        else lo = mid + 1
+      }
+      if (lo > from) { lastNode = node; lastOffset = lo }
+      break
+    }
+    if (!lastNode) return null
+    const result = range.cloneRange()
+    result.setEnd(lastNode, lastOffset)
+    return result
+  } catch (_) {
+    return null
+  }
+}
+
+/**
+ * epic-66 Issue 24：流式 EPUB 的「目前章節」（relocate 回報的 tocItemId）。
+ *
+ * foliate 的 `TOCProgress.getProgress(index, range)` 取「range 內最後一個目錄項」。
+ * 單欄時 range 是一頁，剛好；**雙欄**時 range 涵蓋兩欄，等於取第二欄才出現的標題，比使用者
+ * 先讀到的那一欄多一節。規則（人類 2026-11-13，規則 B）：雙欄時把「第一欄」當成單欄的那一頁——
+ * 取**第一欄範圍內最後一個目錄項**（與單欄規則一致；開書第一頁、錨點跳轉後標題在第一欄內，
+ * 都會正確標到該標題）。單欄維持原行為。
+ *
+ * 目錄跳轉後的補欄偏差（paginator 把前一節補進第一欄）由 Dart 端 `TocJumpOverride` 處理，
+ * 不在這裡。
+ *
+ * 任何例外或空值一律回退 `detail.tocItem`（現行判定），且**絕不拋出**：這個函式在
+ * relocate 監聽器內執行，拋出會讓後面的 `onLocatorChanged` 回報中斷、進度追蹤整個凍結。
+ * `section.current` 不是數字、range 為空、切不出第一欄時同樣回退。
+ */
+function resolveFlowableTocItemId(view, detail) {
+  const fallback = detail?.tocItem?.id ?? null
+  try {
+    const sectionIndex = detail?.section?.current
+    const columnCount = view?.renderer?.columnCount
+    if (typeof sectionIndex !== 'number' || !detail.range) return fallback
+    if (!(columnCount > 1)) return fallback
+    const firstColumn = firstColumnRange(view, detail.range, columnCount)
+    if (!firstColumn) return fallback
+    const item = view.getProgressOf(sectionIndex, firstColumn)?.tocItem
+    return item?.id ?? fallback
+  } catch (_) {
+    return fallback
+  }
+}
+
+/**
  * /diagnose（2026-11-11，馬斯克寶典字級調到 80 仍與 24 幾乎一樣小）：App 只覆蓋
  * `html { font-size: N% }`，書本若把 body 釘成絕對值（`body { font-size: 16px }`），
  * body 不會跟著 html 放大，滑桿就失效。本函式量測 body 是否「跟隨 html」：
@@ -1417,7 +1532,8 @@ async function openBook() {
       // 的零行為改變（見 review-issue-10.md Important #2、issues.md
       // Issue 10 驗收標準）。
       // epic-54 Issue 20：tocItemId 取自 foliate 以 live DOM Range.comparePoint
-      // 算出的目前目錄項（e.detail.tocItem）。放在第 2 參數 position，
+      // 算出的目前目錄項（e.detail.tocItem）；流式雙欄時改以第一欄判定
+      // （epic-66 Issue 24，見 resolveFlowableTocItemId）。放在第 2 參數 position，
       // 不放第 1 參數 locatorJson（凍結，會持久化並跨裝置同步）。
       const position = view.isFixedLayout && view.renderer
         // FXL/CBZ：view.renderer.page/.pages（fixed-layout.js）是全書
@@ -1438,7 +1554,9 @@ async function openBook() {
             locationTotal: location?.total ?? 0,
             visualPageIndex: null,
             visualTotalPages: null,
-            tocItemId: e.detail.tocItem?.id ?? null,
+            // epic-66 Issue 24：雙欄時以第一欄範圍內最後一個目錄項判定（單欄與回退
+            // 維持 e.detail.tocItem），見 resolveFlowableTocItemId()。
+            tocItemId: resolveFlowableTocItemId(view, e.detail),
           }
       window.flutter_inappwebview.callHandler(
         'onLocatorChanged',

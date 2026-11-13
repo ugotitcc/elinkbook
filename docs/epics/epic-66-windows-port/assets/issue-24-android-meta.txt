@@ -1,0 +1,16 @@
+start=07:40:21 head=2f3b26d1 dirty=
+epub_toc_test run1 start=07:40:24 hostFreeMB=8618
+epub_toc_test run1 exit=1 end=07:44:16
+epub_toc_test run2 start=07:44:17 hostFreeMB=8560
+epub_toc_test run2 exit=1 end=07:47:39
+epub_toc_test run3 start=07:47:40 hostFreeMB=8543
+epub_toc_test run3 exit=1 end=07:51:01
+foliate_toc_footer_test run1 start=07:51:02 hostFreeMB=8534
+foliate_toc_footer_test run1 exit=0 end=07:53:43
+foliate_toc_footer_test run2 start=07:53:44 hostFreeMB=8514
+foliate_toc_footer_test run2 exit=0 end=07:56:24
+foliate_toc_footer_test run3 start=07:56:25 hostFreeMB=8522
+foliate_toc_footer_test run3 exit=0 end=07:59:07
+Performing Streamed Install
+Success
+DONE

@@ -1,0 +1,18 @@
+============================================================
+ Windows 整合測試冒煙套件 (總計 11 支測試)
+ 清單: C:\Users\fycdc\AppData\Local\Temp\claude\1b8a1974ed315139\37428b0d-1b69-409b-9582-b056b6c9ceff\scratchpad\i24_suite.txt
+ 逾時: 420 秒 | 記憶體門檻: 4096 MB
+============================================================
+[1/11] integration_test/epub_toc_test.dart    [通過] :: 00:30 +4: All tests passed!
+[2/11] integration_test/epub_toc_test.dart    [通過] :: 00:30 +4: All tests passed!
+[3/11] integration_test/epub_toc_test.dart    [通過] :: 00:30 +4: All tests passed!
+[4/11] integration_test/foliate_toc_footer_test.dart [通過] :: 00:07 +4: All tests passed!
+[5/11] integration_test/epub_pagination_test.dart [通過] :: 00:08 +2: All tests passed!
+[6/11] integration_test/epub_dual_page_test.dart [通過] :: 00:02 +2: All tests passed!
+[7/11] integration_test/reading_position_test.dart [通過] :: 00:13 +2: All tests passed!
+[8/11] integration_test/foliate_epub_reader_view_test.dart [通過] :: 00:12 +10: All tests passed!
+[9/11] integration_test/reader_footer_test.dart [通過] :: 00:03 +1: All tests passed!
+[10/11] integration_test/foliate_single_column_test.dart [通過] :: 00:24 +2: All tests passed!
+[11/11] integration_test/reader_header_footer_toggle_test.dart [通過] :: 00:14 +4: All tests passed!
+------------------------------------------------------------
+測試結果彙總: 通過 11 / 失敗 0 / 逾時 0 / 中止 0 (總計 11)

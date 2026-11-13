@@ -1,0 +1,190 @@
+
+=== scenario-column-pitch-compensation.mjs ===
+[PASS] 前提：未模擬誤差時欄間隔與頁高相差 < 1.5 且 max-height 為 none — {"pitch":999,"size":999,"diff":0,"maxHeight":"none","rectCount":20}
+[PASS] 模擬舊引擎：注入 column-gap 誤差後欄間隔收斂回頁高且 max-height 小於頁高 — {"pitch":999,"size":999,"diff":0,"maxHeight":"927px","rectCount":20}
+[PASS] 重排後可再次補償：applyPreferences 重排後與再次注入誤差後欄間隔皆等於頁高 — 重排後={"pitch":999,"size":999,"diff":0,"maxHeight":"none","rectCount":32} 再次補償後={"pitch":999,"size":999,"diff":0,"maxHeight":"927px","rectCount":32}
+[PASS] 無窮迴圈防護：補償完成後 1500 ms 內根元素 style 變動次數小於 10 — 變動次數=0
+[PASS] 無未捕捉例外：pageErrors 為空 — []
+
+=== scenario-cross-mechanism-tap-boundary.mjs ===
+[FAIL] 選取收尾保護期內快速點擊別處，選取維持存在 — attempt=5, after.isCollapsed=true
+[PASS] 選取收尾保護期已過後快速點擊別處，選取正常被折疊 — before.isCollapsed=false, after.isCollapsed=true
+
+=== scenario-disable-publisher-styles.mjs ===
+[PASS] 頁面載入無 pageerror — []
+[PASS] 基準情境：書本自帶的 .content margin-top 為 3em(=48px) — 實際值＝48px
+[PASS] 基準情境：書本自帶 CSS 把 ul 縮排歸零（padding-left: 0px） — 實際值＝0px
+[PASS] 停用書本 CSS 後，.content margin-top 應被清為 0px — 實際值＝0px
+[PASS] 停用書本 CSS 後，ul 縮排應復原為瀏覽器慣例值（40px），不應維持書本歸零的 0px — 實際值＝40px
+
+=== scenario-dual-column-toc-item.mjs ===
+[PASS] 雙欄橫排 1280x800：頁面載入無 pageerror — []
+[PASS] 雙欄橫排 1280x800：欄數為 2（雙欄偵測前提） — 實際欄數＝2
+[PASS] 雙欄橫排 1280x800：逐頁 7 頁的 tocItemId 都等於第一欄的標準答案
+[PASS] 雙欄橫排 1280x800：測試涵蓋的標準答案包含 1、2、3（避免空轉） — 涵蓋＝1,2,3
+[PASS] 雙欄橫排 1280x800：跳到第三節後 tocItemId 等於第一欄的標準答案 — 標準答案＝2（start=3670）實際＝2
+[PASS] 雙欄直排 1280x800：頁面載入無 pageerror — []
+[PASS] 雙欄直排 1280x800：欄數為 2（雙欄偵測前提） — 實際欄數＝2
+[PASS] 雙欄直排 1280x800：逐頁 6 頁的 tocItemId 都等於第一欄的標準答案
+[PASS] 雙欄直排 1280x800：測試涵蓋的標準答案包含 1、2、3（避免空轉） — 涵蓋＝1,2,3
+[PASS] 雙欄直排 1280x800：跳到第三節後 tocItemId 等於第一欄的標準答案 — 標準答案＝2（start=1600）實際＝2
+[PASS] 單欄橫排 400x800：頁面載入無 pageerror — []
+[PASS] 單欄橫排 400x800：欄數為 1（雙欄偵測前提） — 實際欄數＝1
+[PASS] 單欄橫排 400x800：逐頁 13 頁的 tocItemId 都等於第一欄的標準答案
+[PASS] 單欄橫排 400x800：測試涵蓋的標準答案包含 1、2、3（避免空轉） — 涵蓋＝1,2,3
+[PASS] 單欄橫排 400x800：跳到第三節後 tocItemId 等於第一欄的標準答案 — 標準答案＝3（start=2800）實際＝3
+[PASS] 強制單欄橫排 1280x800：頁面載入無 pageerror — []
+[PASS] 強制單欄橫排 1280x800：欄數為 1（雙欄偵測前提） — 實際欄數＝1
+[PASS] 強制單欄橫排 1280x800：逐頁 9 頁的 tocItemId 都等於第一欄的標準答案
+[PASS] 強制單欄橫排 1280x800：測試涵蓋的標準答案包含 1、2、3（避免空轉） — 涵蓋＝1,2,3
+[PASS] 強制單欄橫排 1280x800：跳到第三節後 tocItemId 等於第一欄的標準答案 — 標準答案＝3（start=6400）實際＝3
+
+=== scenario-epic25-issue4-fast-tap.mjs ===
+[PASS] 短按 80ms 直接點在畫線上，click 被攔截
+[PASS] 長按 900ms 直接點在畫線上，click 正常觸發
+[PASS] 短按 80ms 點在超連結上，連結點擊不受影響
+
+=== scenario-epic67-jump-degrade.mjs ===
+[PASS] A 有效 CFI：落在第 2 章 — {"cfi":"epubcfi(/6/6!/4,/2,/8/1:229)","index":2,"fraction":0.7272727272727273}
+[PASS] A 有效 CFI：不回報降級
+[PASS] B 索引超界：改跳進度比例（約 0.8） — {"cfi":"epubcfi(/6/6!/4,/12/1:565,/16/1:901)","index":2,"fraction":0.8484848484848484}
+[PASS] B 索引超界：回報一次 annotation 降級 — ["annotation"]
+[PASS] C 格式損壞：改跳進度比例（約 0.8） — {"cfi":"epubcfi(/6/6!/4,/12/1:565,/16/1:901)","index":2,"fraction":0.8484848484848484}
+[PASS] C 格式損壞：回報一次 annotation 降級
+[PASS] D 無進度比例：仍回報一次 annotation 降級
+[PASS] D 無進度比例：位置不移動（沒有新的 onLocatorChanged） — null
+[PASS] E1 比例 NaN：視為沒有比例，仍回報且不移動
+[PASS] E2 比例 1.7：夾限後落在書尾（第 2 章） — {"cfi":"epubcfi(/6/6!/4,/24/1:63,/26/1:1322)","index":2,"fraction":1.0303030303030305}
+[PASS] H 舊格式 JSON：改跳進度比例（約 0.8） — {"cfi":"epubcfi(/6/6!/4,/12/1:565,/16/1:901)","index":2,"fraction":0.8484848484848484}
+[PASS] H 舊格式 JSON：回報一次 annotation 降級
+[PASS] F 元素不存在：落在第 2 章 — {"cfi":"epubcfi(/6/6!/4,/2,/8/1:229)","index":2,"fraction":0.7272727272727273}
+[PASS] F 元素不存在：不回報降級
+
+=== scenario-epic67-open-position-degrade.mjs ===
+[PASS] A 有效 CFI：開書成功
+[PASS] A 有效 CFI：落在第 1 章 — {"cfi":"epubcfi(/6/4!/4,/2,/8/1:229)","index":1,"fraction":0.3939393939393939}
+[PASS] A 有效 CFI：不回報降級
+[PASS] B 索引超界：開書不卡死
+[PASS] B 索引超界：改用進度比例定位（約 0.8） — {"cfi":"epubcfi(/6/6!/4,/12/1:565,/16/1:901)","index":2,"fraction":0.8484848484848484}
+[PASS] B 索引超界：回報一次 readingPosition 降級 — ["readingPosition"]
+[PASS] C 格式損壞：改用進度比例定位（約 0.8） — {"cfi":"epubcfi(/6/6!/4,/12/1:565,/16/1:901)","index":2,"fraction":0.8484848484848484}
+[PASS] C 格式損壞：回報一次 readingPosition 降級
+[PASS] D 無進度比例：開書不卡死
+[PASS] D 無進度比例：開在書頭（第 0 章） — {"cfi":"epubcfi(/6/2!/4,/2,/8/1:229)","index":0,"fraction":0.06060606060606061}
+[PASS] D 無進度比例：回報一次 readingPosition 降級
+[PASS] E 比例 1.7：夾限後落在書尾（第 2 章） — {"cfi":"epubcfi(/6/6!/4,/24/1:63,/26/1:1322)","index":2,"fraction":1.0303030303030305}
+[PASS] F 元素不存在：落在第 1 章 — {"cfi":"epubcfi(/6/4!/4,/2,/8/1:229)","index":1,"fraction":0.3939393939393939}
+[PASS] F 元素不存在：不回報降級
+[PASS] H 舊格式 JSON：改用進度比例定位（約 0.8） — {"cfi":"epubcfi(/6/6!/4,/12/1:565,/16/1:901)","index":2,"fraction":0.8484848484848484}
+[PASS] H 舊格式 JSON：回報一次 readingPosition 降級
+[PASS] G 一般開書：開在書頭 — {"cfi":"epubcfi(/6/2!/4,/2,/8/1:229)","index":0,"fraction":0.06060606060606061}
+[PASS] G 一般開書：不回報降級
+
+=== scenario-first-line-indent-exclusions.mjs ===
+[PASS] 頁面載入無 pageerror — []
+[PASS] 至少載入一個章節 — 已載入章節數=2
+[PASS] 1a 一般與靠右段落縮排 2em 且未標記
+[PASS] 1b 三種置中段落為 0 且已標記
+[PASS] 1c 空／只有 br／只有圖片的段落為 0 且已標記
+[PASS] 2a 選了文字對齊：置中段落改為縮排 2em 且未標記
+[PASS] 2b 選了文字對齊：無文字段落仍排除
+[PASS] 3 取消文字對齊：置中段落再次排除（0 且已標記）
+[PASS] 4 縮排 0：所有段落 computed 為 0（清掉書本的 2em）
+[PASS] 5a 縮排關閉：沒有任何標記殘留 — [0,0]
+[PASS] 5b 縮排關閉：所有段落退回書本的 2em
+[PASS] 6 再次開啟：置中與無文字段落重新標記為 0
+[PASS] 6 再次開啟：一般段落縮排 2em
+
+=== scenario-issue10-selection-release-guard.mjs ===
+[PASS] 選取剛確立、保護期內在選取本身位置短按，選取維持存在 — before.isCollapsed=false, after.isCollapsed=false
+[PASS] 選取收尾保護期已過後點擊別處，選取正常被折疊 — before.isCollapsed=false, after.isCollapsed=true
+
+=== scenario-issue11-hittest-existing-highlight.mjs ===
+[PASS] 選取命中既有畫線，existingAnnotationId 正確回報 — 實際值="existing-highlight"
+[PASS] 畫線已刪除後，同段選取不再命中任何畫線 — 實際值=null
+
+=== scenario-late-shim-overwrite.mjs ===
+[PASS] 案例 1（shim 正常先到）：單欄設定套用到 renderer — {"maxInline":"99999px","maxCol":"1","columnCount":1}
+[PASS] 案例 2（shim 晚到）：單欄設定仍套用到 renderer — {"maxInline":"99999px","maxCol":"1","columnCount":1}
+[PASS] 頁面沒有未捕捉的例外
+
+=== scenario-metadata-probe-range.mjs ===
+[PASS] 區段讀取 meta_basic.epub
+[PASS] 區段讀取 meta_multi_identifier.epub
+[PASS] 區段讀取 meta_lang_titles_two_creators.epub
+[PASS] 區段讀取 meta_creator_role.epub
+[PASS] 區段讀取 meta_epub2_cover.epub
+[PASS] 區段讀取 meta_no_cover.epub
+[PASS] 區段讀取 meta_fixed_layout.epub
+[PASS] 區段讀取 meta_no_identifier.epub
+[PASS] 區段讀取 meta_unique_id_dangling.epub
+[PASS] 區段讀取 meta_identifier_whitespace.epub
+[PASS] 區段讀取 meta_identifier_opf_scheme.epub
+[PASS] 區段讀取 sample.epub
+[PASS] 區段讀取 sample_fxl_svg_cover.epub
+[PASS] 填充書 metadata 正確
+[PASS] 填充書只傳少量位元組（< 2 MB） — 檔案 8390636 位元組，實際傳輸 264172 位元組（2 次請求）
+[PASS] 填充書請求次數有上限（<= 40） — 2 次請求
+[PASS] fetchRange 失敗時 reject
+[PASS] 區段讀取：隨機 1 KB 損毀檔案 reject
+
+=== scenario-metadata-probe.mjs ===
+[PASS] meta_basic.epub
+[PASS] meta_multi_identifier.epub
+[PASS] meta_lang_titles_two_creators.epub
+[PASS] meta_creator_role.epub
+[PASS] meta_epub2_cover.epub
+[PASS] meta_no_cover.epub
+[PASS] meta_fixed_layout.epub
+[PASS] meta_no_identifier.epub
+[PASS] meta_unique_id_dangling.epub
+[PASS] meta_identifier_whitespace.epub
+[PASS] meta_identifier_opf_scheme.epub
+[PASS] sample.epub
+[PASS] sample_fxl_svg_cover.epub
+[PASS] 隨機 1 KB 損毀檔案 reject
+
+=== scenario-preload-stale-layout.mjs ===
+[PASS] 翻頁後出現新的預讀 iframe（確認落在競爭視窗內，避免空轉通過） — 基準=3
+[PASS] 預讀章節確實被載入（至少 2 個章節文件，避免空轉通過） — 章節=[{"index":0,"columnWidth":376},{"index":1,"columnWidth":376},{"index":2,"columnWidth":376},{"index":3,"columnWidth":376}]
+[PASS] 所有章節文件的 column-width 一致（預讀章節未停留在過時排版） — column-width 種類=[376]
+[PASS] 頁面沒有未捕捉的例外
+
+=== scenario-publisher-body-font-size.mjs ===
+[PASS] 頁面載入無 pageerror — []
+[fontSize=1.0] {"html":"16px","body":"16px","p":"16px"}
+[fontSize=3.0] {"html":"48px","body":"48px","p":"48px"}
+[PASS] 字級 1.0→3.0 後，段落 computed font-size 應約為 3 倍（書本 body 宣告 16px 不應讓滑桿失效） — 小=16px 大=48px
+[PASS] 字級調回 1.0 後復原為 16px — 實際值＝16px
+
+=== scenario-resize-observer-false-error.mjs ===
+[PASS] 前提：開書期間確實觸發了 ResizeObserver loop（避免空轉通過） — fired=true
+[PASS] 前提：觸發當下尚未收到 onPageRendered（確實在開書完成前） — renderedAtTrigger=false
+[PASS] A 開書期間的 ResizeObserver 警告不應回報 onError — onError=[]
+[PASS] 前提：開書後確實觸發了 ResizeObserver loop — fired=true
+[PASS] B 開書後的 ResizeObserver 警告不應回報 onError — onError=[]
+[PASS] C 真正的未捕捉例外仍須回報 onError — onError=["JS Error: Uncaught Error: epic47-real-error (:1)"]
+[PASS] D 未處理的 Promise rejection 仍須回報 onError — onError=["Unhandled Promise Rejection: epic47-real-rejection"]
+[PASS] E 訊息含「ResizeObserver loop」的真正例外仍須回報 onError — onError=["JS Error: Uncaught Error: ResizeObserver loop epic47-real-error (:1)"]
+
+=== scenario-vertical-paragraph-spacing.mjs ===
+[PASS] 頁面載入無 pageerror — []
+[PASS] 讀得到可視頁內文字範圍
+[PASS] 直排下段距不得縮短行長：最長一行應用滿頁面高度（差距 < 1 字） — hostHeight=715 最低文字 y=704 差距=11px 字級=16px
+[PASS] 直排下 p 的 margin-bottom（行結尾端）必須為 0px — margin-bottom=0px margin-left=46.4px
+
+=== scenario-writing-mode-autodetect.mjs ===
+[PASS] A 第二個CSS＋-webkit-＋內層元素 應為 vertical — 實際=vertical 預期=vertical
+[PASS] B 直排CSS只被後面章節引用 應為 vertical — 實際=vertical 預期=vertical
+[PASS] C XHTML內嵌<style> 應為 vertical — 實際=vertical 預期=vertical
+[PASS] C-2 XHTML style="" 含單引號 應為 vertical — 實際=vertical 預期=vertical
+[PASS] D OPF name=primary-writing-mode 應為 vertical — 實際=vertical 預期=vertical
+[PASS] D-2 OPF property=primary-writing-mode 應為 vertical — 實際=vertical 預期=vertical
+[PASS] E 反例：註解與橫排 應為 horizontal — 實際=horizontal 預期=horizontal
+[PASS] F manifest缺檔CSS排在直排CSS之前 應為 vertical — 實際=vertical 預期=vertical
+[PASS] G 反例：正文文字 style = "…" 應為 horizontal — 實際=horizontal 預期=horizontal
+[PASS] H 反例：非法值 tb-lr 應為 horizontal — 實際=horizontal 預期=horizontal
+
+[DIAG] 案例 A 診斷數值：html=vertical-rl body=vertical-rl .main=vertical-rl columnWidth=528px
+
+整體結果：FAIL
