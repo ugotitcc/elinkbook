@@ -1,7 +1,7 @@
 # `epic-68-heading-font` 標題字型：書籍可分別選定主字型（內文）與標題字型
 
-**狀態：** 🟡 開發中 (Active)
-**存放路徑：** `docs/epics/epic-68-heading-font/`
+**狀態：** 🟢 已歸檔 (Archived)
+**存放路徑：** `docs/archive/2026-11-14-epic-68-heading-font/`
 **關聯 PRD 章節：** 版面與排版（內建字型／自訂字型、版面控制項）；關聯 `epic-3-fonts-layout`、`epic-49-downloadable-fonts`（可下載字型）、`epic-28-reader-settings-enhancements`（版面設定預設集）
 
 ## 背景
