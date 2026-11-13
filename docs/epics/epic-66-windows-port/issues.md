@@ -32,7 +32,7 @@
 | 26 | harness 場景 `scenario-cross-mechanism-tap-boundary.mjs` 在 Windows 失敗：「選取收尾保護期內快速點擊別處，選取維持存在」，5 次重試都 `after.isCollapsed=true`（2026-11-11 PR #414 全套連續 2 次失敗，與該 PR 無關）。**2026-11-13 診斷更正：不是負載偶發，是系統性的**——注入選取後立刻送觸控，CDP `touchStart` 往返被拖慢約 100 ms（原因未查明），選取到 `mousedown` 的間隔 150～195 ms 超出 150 ms 保護期；舊場景單獨跑 8/11 失敗（還原 `main.js` 同樣失敗，與 Issue 24 無關）。修法只改測試：把 iframe 的 `performance.now` 換成「原值 ± 10 秒」做決定性場景（A 保護期內選取維持、B 保護期已過選取折疊，B 同時守護時鐘混用 bug），不動 `main.js`（來源 PR #414 的全套驗證） | 無 | 🟢 已完成（單獨 30/30、拖慢 3/3、`run-all` 3 次 148 PASS、變異驗證 4 項皆抓到；見 [plan-issue-26.md](plans/plan-issue-26.md)、[issue-26-report.md](issue-26-report.md)） | #419 |
 | 27 | Windows 安裝程式（Inno Setup）：依使用者安裝（不需管理員）、固定 AppId 覆蓋升級、開始功能表與可選桌面捷徑（預設勾選）、解除安裝可選擇是否一併刪除 App 資料；不簽章、不上傳、不建 CI | Issue 14 | 🟡 已完成，待合併（見 [plan-issue-27.md](plans/plan-issue-27.md)、[issue-27-report.md](issue-27-report.md)；本機自動驗證 29 項全過，經獨立審查後補強；使用者在另一台電腦安裝、解除安裝選否選是、開書皆回報正常，無逐項紀錄；**解除安裝選「是」曾被發現只刪 %APPDATA%\cc.ugotit\elinkbook 而不刪書庫（審查 C-1），使用者決定改為連「文件」資料夾內的書庫一併刪除，已實作並以 UI Automation 在假資料夾實測選否、選是（真實路徑下的實際刪除未實跑）**；這台開發機上 release 版畫面空白根因未查明，已登記 Issue 30；乾淨機器、Windows 10 1809、SmartScreen 實際行為未驗證；VC 可轉散發授權對 Build Tools 是否適用未查證）| — |
 | 28 | Android APK 夾帶整合測試用 fixtures：pubspec.yaml 把 test/fixtures/ 宣告成 asset；Issue 27 已確認 Windows 打包會帶進 data/flutter_assets/test（42 檔、36 MB，其中 sample.ttf 35 MB），Android APK 很可能同樣夾帶（未實際檢查）。須先量測 APK 再決定改法（例如依建置模式排除、或改由測試自己載入資源）；改 pubspec 會牽動 86 個引用 fixtures 的整合測試 | Issue 27 | ⚪ 待規劃 | — |
-| 29 | Windows 資料位置整理（**優先**）：現在 Windows 版的資料分散在兩處且沒有上層目錄——「文件」資料夾下直接放 `library.db`、`covers`、`imported_books`（另有字典資料庫、WiFi 傳書與雲端下載的複本、更新暫存等，皆走 `getApplicationDocumentsDirectory()`），`%APPDATA%\cc.ugotit\elinkbook` 下放 WebView2、`downloaded-fonts`、`dictionaries`。要在「文件」資料夾下建一個上層目錄 `elinkbook`，讓使用者一看就知道這些資料夾屬於本 App；需遷移既有使用者的資料（把舊位置搬進來，不可遺失）；完成後解除安裝只需刪那一個目錄，可取代 Issue 27 目前以固定名稱清單刪除「文件」資料夾內項目的做法（`covers`、`imported_books` 是通用名稱，有誤刪使用者同名資料夾的風險）。路徑與遷移細節待 Discovery | Issue 27 | ⚪ 待規劃 | — |
+| 29 | Windows 資料位置整理（**優先**）：把直接放在「文件」資料夾根目錄的 App 資料（`library.db`、`dictionary.db`、`covers`、`imported_books`、`cloud_import_books`、`remote_books`、`wifi_transfer_uploads`、`update_staging`）收進上層目錄 `文件\elinkbook`，用集中函式 `appDocumentsDirectory()`，只改 Windows；`%APPDATA%` 那三項不動；**不遷移舊資料**；解除安裝選「是」改為只刪 `文件\elinkbook` 與 `%APPDATA%\cc.ugotit\elinkbook`，取代 Issue 27 的固定名稱清單（決策見 ADR 0044） | Issue 27 | ⚪ 待規劃 | — |
 | 30 | 開發機上 release 版畫面空白（待查）：2026-11-13 在作者的開發機（Windows 11 家用版）上，安裝版與暫存目錄版（同一份內容）都開出空白畫面——主視窗已顯示、啟動小視窗已消失、行程閒置、App 的 WebView2 行程存在、無崩潰事件、UI 自動化讀不到語意節點；同一份內容在使用者的另一台電腦開書正常。根因未查明（可能與這台機器的資料或環境有關，也可能是目前 `main` 的 release 內容），尚未取得 Dart 端日誌；建議先以 debug 模式執行看啟動日誌 | 無 | ⚪ 待規劃 | — |
 
 ## Issue 1 範圍
@@ -549,6 +549,43 @@ Windows 版改為對外發佈（取代決策 10 的「先自用」），在免�
 - 腳本類沒有單元測試框架；以實際執行輸出為證，記入報告。
 - 做兩次變異驗證：（a）從安裝來源移除一個 VC DLL，腳本必須失敗；（b）把 `AppId` 改成別的值再裝，確認會變成並存（證明固定 `AppId` 才是覆蓋升級的條件），驗完還原。
 - 沒有 Dart 變動時 `flutter analyze` 須維持乾淨；發 PR 前跑一次完整 `flutter test`。
+
+## Issue 29 範圍
+
+**狀態：** ⚪ 待規劃（2026-11-13 `/grill-with-docs` 定案，決策見 [ADR 0044](../../adr/0044-windows-data-under-documents-elinkbook.md) 與 `epic.md` 決策 33）。
+
+Windows 版把直接放在使用者「文件」資料夾根目錄的 App 資料，收進上層目錄 `文件\elinkbook`，讓使用者一看就知道這些資料夾屬於本 App，也讓 Issue 27 的解除安裝不必再用通用名稱清單刪除。
+
+已查證的事實（2026-11-13）：
+- 8 個項目直接放在「文件」根目錄：`library.db`、`dictionary.db`（各可能有 `-wal`／`-shm`／`-journal`）、`covers`、`imported_books`、`cloud_import_books`、`remote_books`、`wifi_transfer_uploads`、`update_staging`。使用點是 `cloud_book_downloader.dart`、`dictionary_database.dart`、`book_import_service_impl.dart`（3 處）、`sqlite_library_repository.dart`、`main.dart`（`sweepUpdateStaging`）、`remote_book_downloader.dart`、`wifi_transfer_http_server.dart`。
+- `foliate_native_bridge.dart` 也呼叫 `getApplicationDocumentsDirectory()`，但那段（取「文件資料夾的上一層」當允許根目錄）只在 Android 路徑執行，Windows 在它之前就返回，**不動**。
+- `Book.filePath`（匯入的複本）與 `Book.coverPath` 在資料庫裡是絕對路徑，所以舊資料不能只靠搬檔案救回來。
+- `%APPDATA%\cc.ugotit\elinkbook` 放 `webview_data`、`downloaded-fonts`、`dictionaries`，快取走 `%LOCALAPPDATA%`、暫存走 `getTemporaryDirectory()`，皆不在「文件」，不動。
+
+1. **集中函式：** 新增 `appDocumentsDirectory()`（建議放 `lib/platform/` 下）。Windows 回傳 `<文件>\elinkbook`，不存在就建立；其他平台原樣回傳 `getApplicationDocumentsDirectory()`。上述 8 個使用點全部改呼叫它，不留直接呼叫 `getApplicationDocumentsDirectory()` 的地方（`foliate_native_bridge.dart` 的 Android 專用那處除外）。
+2. **只改 Windows：** Android 與其他平台行為完全不變。
+3. **不遷移舊資料：** 不寫自動遷移、App 內不偵測也不提示舊位置的項目；舊位置的檔案不讀、不改、不刪。報告列出舊項目的手動清除清單（兩台機器的「文件」根目錄下那 8 項）。
+4. **解除安裝：** `elinkbook.iss` 選「是」只刪 `{userdocs}\elinkbook` 與 `{userappdata}\cc.ugotit\elinkbook`；移除 `DocsFolderNames`／`DocsDbNames` 固定名稱清單與對應刪除；詢問框文字、預設「否」、靜默一律不刪、App 執行中拒絕解除安裝皆不變。
+5. **驗證腳本：** `verify_windows_uninstall_data.ps1` 改為假資料夾放 `fake-docs\elinkbook\…`；並在假文件根目錄放 `covers`、`imported_books`、`library.db` 當誘餌（模擬舊版留下的項目與使用者自己的同名資料夾），選「是」必須原封不動。
+6. **文件：** `README.txt`（第三節、第七節）、ADR 0043（決策 5、後果）、`app/tool/README.md`、`issues.md`／`epic.md`／`docs/epics.md`、報告。
+7. **不處理：** 自動遷移、Android、把 `%APPDATA%` 那三項搬走、Issue 30（開發機畫面空白）、自動清除舊項目、資料庫改存相對路徑。
+
+## Issue 29 過關條件
+
+1. Windows 上 8 個使用點都落在 `<文件>\elinkbook\…`，目錄不存在時自動建立、已存在時不報錯；非 Windows 平台的回傳值與原本完全相同。
+2. 全新啟動會在新位置建立 `library.db`，**完全不讀、不改、不刪**「文件」根目錄的舊項目（舊的 `library.db`、`covers` 等原封不動）。
+3. 這台機器實際啟動：書架為空；匯入一本書、重啟後仍在；`library.db`、`covers`、`imported_books` 都落在 `文件\elinkbook` 底下，「文件」根目錄沒有新增任何 App 項目。
+4. `elinkbook.iss`：選「是」只刪兩個資料夾；固定名稱清單移除；選「否」、靜默解除安裝、App 執行中拒絕解除安裝的行為不變。
+5. `verify_windows_uninstall_data.ps1`：選「否」→ 所有資料與誘餌原封不動；選「是」→ `fake-docs\elinkbook` 與假 `%APPDATA%` 資料夾消失，誘餌（含假文件根目錄的 `covers`、`imported_books`、`library.db`）與「文件」根目錄原封不動；做一次變異驗證（例如讓安裝程式多刪一個誘餌，檢查必須失敗）。
+6. 本機自動驗證 `verify_windows_installer.ps1`（29 項）仍全過；`flutter analyze` 乾淨；全套 `flutter test` 通過；Windows 冒煙套件（`tool/run_windows_smoke.ps1`）跑一次，失敗照實記錄。
+7. 報告列出舊項目的手動清除清單與「舊資料不遷移」的說明；不得外推：未在其他機器、乾淨機器驗證的一律寫「未驗證」。
+8. 工作樹乾淨：`pubspec.lock`、`app/windows/flutter/generated_plugin_registrant.*`、`generated_plugins.cmake` 不得 commit；`git add` 明確列檔。
+
+## Issue 29 單元測試要求
+
+- `appDocumentsDirectory()`：Windows → 回傳 `<文件>\elinkbook` 且會建立、目錄已存在時不報錯、重複呼叫回傳相同路徑；非 Windows → 原樣回傳 `getApplicationDocumentsDirectory()` 的結果且不建立子目錄。用既有的 `path_provider_platform_interface` 替身與平台覆寫驗證。
+- 8 個使用點既有的測試維持通過；若有測試直接依賴「文件」根目錄（而不是注入自己的目錄），在計畫階段逐一查出並調整。
+- 腳本類（`.iss`、驗證腳本）沒有單元測試框架，以實際執行輸出為證，並做上述變異驗證。
 
 ## 後續 Issue（待 Issue 1 結果決定）
 
