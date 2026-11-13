@@ -37,7 +37,7 @@
 7. **Metadata 解析**：目標是 Android 與 Windows 統一改用 foliate-js 的背景 WebView。前提是逐本對比 Readium 與 foliate-js 的結果（書名、作者、`identifier`、版面、封面）一致；`book_content_fingerprint.dart` 優先使用 `identifier`，不一致會讓同步把舊書當新書。不一致時 Android 保留 Readium，Windows 單獨用 foliate-js。**【2026-11-03 驗證結果】** Windows 上 `HeadlessInAppWebView` 載入 foliate-js 能讀出書名、`identifier`、封面；欄位型別見 `spike-report.md` 結論 2。**【Issue 2 結果】** 13 份 fixture（多識別碼、多語系書名、角色作者、EPUB2 封面、固定版面、無封面、無識別碼，以及三份邊界：`unique-identifier` 指向不存在的 id、identifier 帶前後空白與換行、identifier 帶 `opf:scheme`）在 BooksPad（Readium）與 Windows（foliate-js）逐欄對比，`title`、`author`、`identifier`、`isFixedLayout`、有無封面**全部一致，不一致 0 份**。**範圍限制：** 只涵蓋這 13 份人工建構的 fixture；真實出版社書籍（含 EPUB 2 套件、更多樣的 `dc:identifier` 寫法）尚未與 Readium 對比，224 MB 的真實書只有 foliate 端的結果。因此「兩端指紋不會分裂」目前是「已測案例無不一致」，不是保證。Windows 現由 foliate-js（EPUB）與 pdfrx（PDF 封面）提供 metadata，Android 保持既有 Readium 通道；是否統一兩端至 foliate-js，建議先補更多真實書籍的對比。
 8. **WebView 套件**：先用上游 `flutter_inappwebview` 6.1.5。只有驗證證明不夠用，才考慮 fork。
 9. **測試**：`flutter test` 照舊；`integration_test` 加 `-d windows` 目標，每種格式一支冒煙測試（開書、翻頁、劃線）。不建 CI。
-10. **發佈**：先自用，打包成免安裝 zip。MSIX 與程式碼簽章等有對外發佈需求再議。
+10. **發佈**：先自用，打包成免安裝 zip。MSIX 與程式碼簽章等有對外發佈需求再議。**（2026-11-13 更新：已改為對外發佈，安裝程式見決策 32。）**
 11. **詞彙**：`CONTEXT.md` 新增「平台專屬功能」「本機內容伺服器」「背景解析」。
 12. **ADR**：現在只寫 ADR 0041。送書方式與 metadata 統一等驗證完成後再各寫一份。
 13. **PRD**：新增 NFR-7 與 §3.2 的 Windows 例外項（已完成）。
@@ -65,10 +65,11 @@
 29. **Android EPUB 詮釋資料抽取預設改用 foliate-js，Readium 階段一留作退路（2026-11-09，Issue 12）**：在 WAVE（7 本）與 BooksPad（103 本商業實體書）共 110 本真實 EPUB 上以逐欄比較驗證：`title`、`author`、`identifier`、`isFixedLayout`、封面「有沒有」達成 **110 / 110 本 100% 完全相符、0 差異、0 失敗**（兩台的書來自本機檔案，不是 `content://`；封面是否同一張圖未驗證；`content://` 另以 FileProvider URI 在 WAVE 驗證通過，見 issue-12-report 第 9 節）。BooksPad 上兩端中位數耗時為 Readium 1.58s vs Foliate-js 1.70s（相當）；WAVE 上為 0.24s vs 1.24s（foliate-js 約慢 5 倍）。依據實機比對實證與使用者決議（2026-11-09），`kAndroidMetadataFoliateFirst` 預設值切換為 `true`。階段一維持 Readium 作為降級退路，並登錄 Issue 18 由階段二徹底移除 Readium 相依與相關清理。**【Issue 18 結果（階段二完成）】** Android EPUB 詮釋資料與既有書籍版面回填（`detectAndCacheEpubLayout`）已全面改走 foliate-js 探針，拔除 `readium-shared`／`readium-streamer`、原生 `extractEpubMetadata`／`detectEpubLayout`、Readium 退路、對比程式碼與 `readium-kotlin-toolkit.txt` 授權項（見 `issue-18-report.md`）。
 30. **Windows 免安裝 zip 打包與 VC++ 執行階段隨附（2026-11-10，Issue 14）**：`elinkbook.exe` 與外掛 DLL 動態依賴 `MSVCP140.dll`、`VCRUNTIME140.dll`、`VCRUNTIME140_1.dll`。未安裝 Visual C++ 可轉散發套件的 Windows 環境會出現缺少 DLL 錯誤。經使用者決定（2026-11-10），採 app-local 部署方式隨附三個 VC DLL（由 VS Build Tools 的 Redist 目錄複製到執行檔同層），並在打包腳本（`app/tool/package_windows_zip.ps1`）透過 `dumpbin /dependents` 做靜態依賴檢查與防禦性斷言，排除非 Windows 內建且非目錄內之缺失依賴。打包時另排除 `dartjni.dll`（**計畫外的偏離**）：`jni` 是 `path_provider_android` 的遞移相依，`lib/` 沒有任何 `jni` 引用，該 DLL 依賴本機沒有的 `jvm.dll`；「Windows 版執行期不載入它」是推論，未以行程監看實證，僅有排除後的 zip 能啟動並存活 20 秒作為佐證。因使用者僅有一台開發機器，乾淨機器（未安裝 VC++ 執行階段）、Windows 10 1809、SmartScreen 行為等範圍明確記錄為「未驗證」，嚴禁外推；自用階段不作程式碼簽章、MSIX 或安裝程式（見 [issue-14-report.md](issue-14-report.md)）。
 31. **Windows 圖示與啟動小視窗（2026-11-10，Issue 22）**：圖示由 `app/tool/generate_windows_icons.ps1` 依 `assets/appicon_v2.jpg` 產生（取中央插畫、含少量紙張留白）。Flutter Windows 沒有內建 splash，雙擊後到第一個畫面前（本機約 3 秒）視窗空白，所以在 runner 加原生啟動小視窗（`splash_window.cpp`，Win32 GDI 畫內嵌 BMP，Flutter 第一個畫面回呼時關閉，30 秒保險計時器）。過程中的兩個發現：（1）標題列小圖示曾是警告三角形，原因不是 ICO 格式（PNG 與 DIB 結果相同），獨立程式重現不出來，改在 `win32_window.cpp` 用 `RegisterClassEx` 明確指定 `hIconSm` 後消失（根因未完全查明，只確認此修法有效）；（2）`MainWindowHandle` 會先回傳小視窗，驗證腳本改以視窗類別區分。只在這台機器、125% 縮放、release 版驗證，其他 DPI、乾淨機器未驗證。
+32. **Windows 安裝程式（2026-11-13 `/grill-with-docs`，Issue 27）**：Windows 版改為對外發佈，與 Android APK 並列於 GitHub Release。在免安裝 zip 之外新增 Inno Setup 安裝程式（不選 MSIX：沒有受信任簽章就無法雙擊安裝）；不簽章，沿用 SmartScreen「仍要執行」說明；依目前使用者安裝到 `%LOCALAPPDATA%\Programs\elinkBook`，不需管理員；固定 `AppId` 覆蓋升級（GUID 發佈後不可更改）；開始功能表一律建立，桌面捷徑可選且預設勾選；解除安裝跳出詢問是否一併刪除 `%APPDATA%\cc.ugotit\elinkbook`，預設「否」，靜默模式一律不刪。維持本機打包、不建 CI（Windows 建置依賴 Visual Studio Build Tools 與 WebView2，且 `cloud_oauth.release.json` 不進版控）；上傳 Release 由使用者另行指示。已參考文章 steachs.com/archives/85207，其內容只提到「GitHub Actions 雲端編譯＋Releases 下載」，沒有 Flutter 或安裝程式的打包細節，所以只取「CI 建置」這個做法並判斷暫不採用。決策見 [ADR 0043](../../adr/0043-windows-installer-inno-setup-unsigned-per-user.md)。
 
 ## 範圍外
 
 - 雲端匯入（Google Drive／OneDrive）。
-- MSIX 打包、程式碼簽章、自動更新。
+- MSIX 打包、程式碼簽章、自動更新（Inno Setup 安裝程式已另列為 Issue 27，見決策 32）。
 - 桌面專用版面。
 - macOS、Linux。
