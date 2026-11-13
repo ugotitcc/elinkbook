@@ -39,6 +39,7 @@ import 'screens/support/book_update_resolver.dart' show evictCoverImageCache;
 import 'library/sqlite_library_repository.dart';
 import 'library/windows_book_metadata.dart';
 import 'licenses/third_party_licenses.dart';
+import 'platform/app_paths.dart';
 import 'platform/platform_support.dart';
 import 'reader/book_reader_prefs_repository.dart';
 import 'reader/bookmarks_repository.dart';
@@ -260,7 +261,7 @@ Future<void> main() async {
       : (isAndroidPlatform ? extractAndroidBookMetadata : null);
   // epic-67 Issue 4：啟動時清空更新暫存目錄（update_staging），避免前次未結算暫存殘留。
   try {
-    await sweepUpdateStaging(await getApplicationDocumentsDirectory());
+    await sweepUpdateStaging(await appDocumentsDirectory());
   } catch (_) {}
   final importService = BookImportServiceImpl(
     repository: repository,

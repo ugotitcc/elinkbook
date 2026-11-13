@@ -5,12 +5,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_multipart/shelf_multipart.dart';
 
 import '../library/models/library_enums.dart';
+import '../platform/app_paths.dart';
 import '../remote/opds_client.dart' show fileExtensionFor;
 import 'wifi_transfer_page.dart';
 import 'wifi_transfer_service.dart';
@@ -368,7 +368,7 @@ class WifiTransferHttpServer {
     Stream<List<int>> partStream,
     String originalFileName,
   ) async {
-    final docsDir = await getApplicationDocumentsDirectory();
+    final docsDir = await appDocumentsDirectory();
     final uploadsDir = Directory(p.join(docsDir.path, 'wifi_transfer_uploads'));
     if (!await uploadsDir.exists()) await uploadsDir.create(recursive: true);
     // 【`/receiving-code-review` 審查修正，review-plan-issue-3.md I-3】

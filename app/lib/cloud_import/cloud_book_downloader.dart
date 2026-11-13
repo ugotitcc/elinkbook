@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../platform/app_paths.dart';
 import '../remote/opds_client.dart' show fileExtensionFor;
 import 'cloud_storage_client.dart';
 
@@ -46,7 +47,7 @@ Future<String> downloadCloudFileToTempFile({
 /// 窗口，避免誤刪已下載成功的檔案）。
 Future<String> promoteCloudFileToPermanent(String tempPath) async {
   final fileName = p.basename(tempPath);
-  final docsDir = await getApplicationDocumentsDirectory();
+  final docsDir = await appDocumentsDirectory();
   final permanentDir = Directory(p.join(docsDir.path, 'cloud_import_books'));
   if (!await permanentDir.exists()) await permanentDir.create(recursive: true);
   final permanentPath = p.join(permanentDir.path, fileName);
