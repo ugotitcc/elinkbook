@@ -288,14 +288,14 @@
 
 **Files：** `CLAUDE.md`、`AGENTS.md`、`docs/epics/epic-68-heading-font/issues.md`、`docs/epics/epic-68-heading-font/epic.md`
 
-- [ ] **Step 1：版本描述同步。** `CLAUDE.md:86` 與 `AGENTS.md:59` 的「不進主庫 `version: 29`」各改為 `version: 30`；以 `git grep -n "version: 29"` 確認沒有遺漏（`docs/epics/epic-66-windows-port/plans/plan-issue-18.md:22` 是歷史計畫文字，不改）。`epic.md` 背景段「主庫 `version` 目前為 29」是 Discovery 時的描述，不改。
-- [ ] **Step 2：文件狀態。** `issues.md` 表格 Issue 1 狀態改「完成（待 PR）」；`epic.md`「進度」補一行：Issue 1 完成——欄位、遷移 29→30、`ResolvedPreferences`、整列重建守衛；列出被同步更新的既有斷言（`book_reader_prefs_test` 欄位數 36／流式 23、三個 `getVersion` 測試檔 30）。**不動** `docs/epics.md`（Epic 層看板，Epic 結案時才更新）。
-- [ ] **Step 3：驗收 grep。**
+- [x] **Step 1：版本描述同步。** `CLAUDE.md:86` 與 `AGENTS.md:59` 的「不進主庫 `version: 29`」各改為 `version: 30`；以 `git grep -n "version: 29"` 確認沒有遺漏（`docs/epics/epic-66-windows-port/plans/plan-issue-18.md:22` 是歷史計畫文字，不改）。`epic.md` 背景段「主庫 `version` 目前為 29」是 Discovery 時的描述，不改。
+- [x] **Step 2：文件狀態。** `issues.md` 表格 Issue 1 狀態改「完成（待 PR）」；`epic.md`「進度」補一行：Issue 1 完成——欄位、遷移 29→30、`ResolvedPreferences`、整列重建守衛；列出被同步更新的既有斷言（`book_reader_prefs_test` 欄位數 36／流式 23、三個 `getVersion` 測試檔 30）。**不動** `docs/epics.md`（Epic 層看板，Epic 結案時才更新）。
+- [x] **Step 3：驗收 grep。**
   ```bash
   grep -rn "headingFontFamily\|heading_font_family" app/lib
   ```
   預期涵蓋：`book_reader_prefs.dart`（建構子／欄位／`toMap`／`fromMap`／`==`／`hashCode`／`copyWith`／`reflowableEpubFields`）、`sqlite_library_repository.dart`（建表、遷移、遷移呼叫）、`resolved_preferences.dart`、`reader_prefs_manager_impl.dart`、`library_screen.dart`、`fxl_settings_sheet.dart`、`reader_settings_sheet.dart`（欄位／`initState`／`didUpdateWidget`／`_currentDraft`）。`git diff main --stat -- app/lib` 不得出現上述以外的檔案（特別是不得出現 `foliate_reader_view.dart`、`reader_screen.dart`、`main.js`、`*.arb`——那是 Issue 2、3）。
-- [ ] **Step 4：靜態檢查。**
+- [x] **Step 4：靜態檢查。**
   ```bash
   flutter analyze
   ```
@@ -306,7 +306,7 @@
   node tool/check_l10n_hardcoded_strings.js
   ```
   預期兩者 PASS（exit 0）。不得再把它們記成「未執行」，但本張無觸及理由時可不跑，在 `epic.md` 進度中一句話說明「本張未觸及 Key／字串」即可。
-- [ ] **Step 5：本張觸及測試檔最終彙整再跑一輪**（不是完整 `flutter test`；Epic 最後一張 Issue 4 才跑完整一次）：
+- [x] **Step 5：本張觸及測試檔最終彙整再跑一輪**（不是完整 `flutter test`；Epic 最後一張 Issue 4 才跑完整一次）：
   ```bash
   flutter test test/reader/book_reader_prefs_test.dart test/reader/book_reader_prefs_repository_test.dart test/reader/resolved_preferences_test.dart test/reader/reader_prefs_manager_test.dart test/reader/layout_preset_repository_test.dart test/reader/layout_preset_test.dart test/reader/layout_preset_flow_test.dart test/library/sqlite_library_repository_test.dart test/stats/daily_reading_stats_schema_test.dart test/dictionary/dictionary_database_test.dart test/screens/fxl_settings_sheet_test.dart test/screens/pdf_settings_sheet_test.dart
   flutter test test/screens/reader_settings_sheet_test.dart
@@ -314,7 +314,7 @@
   flutter test test/screens/reader_screen_test.dart
   ```
   預期：全綠（`reader_screen_test` 含真實 SQLite＋`BookReaderPrefsRepository` 的 group，本張雖未改它，仍須確認 `toMap` 新 key 不造成回歸）。
-- [ ] **Step 6：commit（明確列檔，不含 `.claude/settings.json`）：**
+- [x] **Step 6：commit（明確列檔，不含 `.claude/settings.json`）：**
   ```bash
   git add CLAUDE.md AGENTS.md docs/epics/epic-68-heading-font/issues.md docs/epics/epic-68-heading-font/epic.md
   git commit -m "docs(epic-68): Issue 1 收尾，主庫版本描述同步為 30"

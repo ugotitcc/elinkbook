@@ -22,3 +22,4 @@ Discovery 決策見同目錄 `design.md`。
 
 - Discovery 已定案（2026-11-14），`design.md` 已寫。
 - 尚未拆 Issue（下一步：Scrum Master 階段寫 `issues.md`）。
+- Issue 1 完成（待 PR）：`heading_font_family` 欄位、主庫遷移 29→30、`BookReaderPrefs.headingFontFamily`、`ResolvedPreferences` 直取單書值、書架版面覆寫／`FxlSettingsSheet`／`ReaderSettingsSheet` 整列重建守衛、版面預設集往返。同步更新的既有斷言：`book_reader_prefs_test` 欄位數（`toMap` 36、流式保留 23）、三個 `getVersion` 測試檔（`sqlite_library_repository_test`、`daily_reading_stats_schema_test`、`dictionary_database_test`）改 30。本張未觸及 Key／字串，未跑 `check_integration_keys`／`check_l10n_hardcoded_strings`。
