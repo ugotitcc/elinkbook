@@ -53,12 +53,14 @@ class CustomFontsRepository {
     );
   }
 
-  /// 統計 `book_reader_prefs` 中目前使用中 [familyName] 的書籍數量，供刪除
-  /// 前的確認對話框文案使用。
+  /// 統計 `book_reader_prefs` 中「主字型或標題字型」使用 [familyName] 的書籍
+  /// 數量（每本書只算一次，兩欄都用也只算一本；epic-68 起涵蓋標題字型），
+  /// 供刪除前的確認對話框文案使用。
   Future<int> countBooksUsing(String familyName) async {
     final result = await _db.rawQuery(
-      'SELECT COUNT(*) AS c FROM book_reader_prefs WHERE font_family = ?',
-      [familyName],
+      'SELECT COUNT(*) AS c FROM book_reader_prefs '
+      'WHERE font_family = ? OR heading_font_family = ?',
+      [familyName, familyName],
     );
     return (result.first['c'] as int?) ?? 0;
   }

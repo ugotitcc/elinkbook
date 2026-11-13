@@ -66,8 +66,8 @@
 
 **Files：** `docs/epics/epic-68-heading-font/plans/plan-issue-4.md`
 
-- [ ] **Step 1：** `git branch --show-current` 應為 `feat/epic-68-heading-font`。
-- [ ] **Step 2：** 只提交本計畫：
+- [x] **Step 1：** `git branch --show-current` 應為 `feat/epic-68-heading-font`。
+- [x] **Step 2：** 只提交本計畫：
   ```bash
   git add docs/epics/epic-68-heading-font/plans/plan-issue-4.md
   git commit -m "docs(epic-68): Issue 4 刪除自訂字型連動實作計畫"
@@ -81,26 +81,26 @@
 - 修改：`app/test/reader/custom_fonts_repository_test.dart`
 - 修改：`app/lib/reader/custom_fonts_repository.dart`
 
-- [ ] **Step 1（紅，先寫測試）：** 在檔尾 `group('CustomFontsRepository')` 內、既有 `deleteAndResetUsage…` 測試之後新增（以字串定位；helper 沿用 `_book`）：
+- [x] **Step 1（紅，先寫測試）：** 在檔尾 `group('CustomFontsRepository')` 內、既有 `deleteAndResetUsage…` 測試之後新增（以字串定位；helper 沿用 `_book`）：
   1. `countBooksUsing 只有標題字型使用該字型的書也會計入（epic-68 Issue 4）`：b1 `{'font_family': 'OtherFamily', 'heading_font_family': 'TargetFamily'}`；b2 `{'font_family': null, 'heading_font_family': 'TargetFamily'}`；`expect(await repository.countBooksUsing('TargetFamily'), 2)`；`expect(await repository.countBooksUsing('OtherFamily'), 1)`（主字型端仍可正確計數）。
   2. `countBooksUsing 同一本書主字型與標題字型都用該字型只算一次（epic-68 Issue 4）`：b1 兩欄皆 `TargetFamily`；b2 只有主字型 `TargetFamily`；b3 只有標題字型 `TargetFamily`；b4 兩欄皆 `OtherFamily`、b5 兩欄皆 null（無關）；`expect(await repository.countBooksUsing('TargetFamily'), 3)`（不是 4）。
   3. `countBooksUsing 沒有任何書使用時回傳 0，且標題字型為 NULL 的列不被誤算（epic-68 Issue 4）`：b1 兩欄 null；`expect(await repository.countBooksUsing('TargetFamily'), 0)`。
-- [ ] **Step 2（確認紅）：**
+- [x] **Step 2（確認紅）：**
   ```bash
   flutter test test/reader/custom_fonts_repository_test.dart --plain-name "countBooksUsing"
   ```
   預期：測試 1 失敗（得 0／1 而非 2）、測試 2 失敗（得 2 而非 3）；測試 3 與既有 `countBooksUsing 正確統計…` 為綠。
-- [ ] **Step 3（綠，實作）：** 修改 `custom_fonts_repository.dart` `countBooksUsing`（`old_string` 不含換行）：
+- [x] **Step 3（綠，實作）：** 修改 `custom_fonts_repository.dart` `countBooksUsing`（`old_string` 不含換行）：
   - SQL `'SELECT COUNT(*) AS c FROM book_reader_prefs WHERE font_family = ?'` → `'SELECT COUNT(*) AS c FROM book_reader_prefs WHERE font_family = ? OR heading_font_family = ?'`；`[familyName]` → `[familyName, familyName]`。
   - doc comment 改為：「統計 `book_reader_prefs` 中「主字型或標題字型」使用 [familyName] 的書籍數量（每本書只算一次，兩欄都用也只算一本；epic-68 起涵蓋標題字型），供刪除前的確認對話框文案使用。」
-- [ ] **Step 4（確認綠）：**
+- [x] **Step 4（確認綠）：**
   ```bash
   flutter test test/reader/custom_fonts_repository_test.dart
   flutter analyze
   ```
   預期：整檔全綠（含既有兩個案例不動）；`No issues found!`。
-- [ ] **Step 5（反向驗證，不 commit）：** (a) 暫時把 SQL 改回只有 `WHERE font_family = ?`（`whereArgs` 同步改回單一）→ 測試 1、2 必紅；還原。(b) 暫時改寫為兩個 COUNT 相加（`(SELECT COUNT(*) … font_family = ?) + (SELECT COUNT(*) … heading_font_family = ?)`）→ 測試 2 必紅（得 4）；還原。`git diff -- app/lib` 確認只剩 Step 3 的改動。
-- [ ] **Step 6：** commit：
+- [x] **Step 5（反向驗證，不 commit）：** (a) 暫時把 SQL 改回只有 `WHERE font_family = ?`（`whereArgs` 同步改回單一）→ 測試 1、2 必紅；還原。(b) 暫時改寫為兩個 COUNT 相加（`(SELECT COUNT(*) … font_family = ?) + (SELECT COUNT(*) … heading_font_family = ?)`）→ 測試 2 必紅（得 4）；還原。`git diff -- app/lib` 確認只剩 Step 3 的改動。
+- [x] **Step 6：** commit：
   ```bash
   git add app/lib/reader/custom_fonts_repository.dart app/test/reader/custom_fonts_repository_test.dart
   git commit -m "feat(epic-68): 自訂字型使用中書籍計數涵蓋標題字型，每本只算一次"

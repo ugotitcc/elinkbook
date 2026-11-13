@@ -186,5 +186,67 @@ void main() {
           .single;
       expect(row2['font_family'], 'KeepFamily'); // 不相關的書籍不受影響
     });
+
+    test('countBooksUsing 只有標題字型使用該字型的書也會計入（epic-68 Issue 4）',
+        () async {
+      await libraryRepository.insertBook(_book('b1'));
+      await libraryRepository.insertBook(_book('b2'));
+      final db = libraryRepository.database;
+      await db.insert('book_reader_prefs', {
+        'book_id': 'b1',
+        'font_family': 'OtherFamily',
+        'heading_font_family': 'TargetFamily',
+      });
+      await db.insert('book_reader_prefs', {
+        'book_id': 'b2',
+        'font_family': null,
+        'heading_font_family': 'TargetFamily',
+      });
+
+      expect(await repository.countBooksUsing('TargetFamily'), 2);
+      // 主字型端仍可正確計數
+      expect(await repository.countBooksUsing('OtherFamily'), 1);
+    });
+
+    test('countBooksUsing 同一本書主字型與標題字型都用該字型只算一次（epic-68 Issue 4）',
+        () async {
+      for (final id in ['b1', 'b2', 'b3', 'b4', 'b5']) {
+        await libraryRepository.insertBook(_book(id));
+      }
+      final db = libraryRepository.database;
+      // b1：兩欄皆用；b2：只主字型；b3：只標題字型（共 3 本）
+      await db.insert('book_reader_prefs', {
+        'book_id': 'b1',
+        'font_family': 'TargetFamily',
+        'heading_font_family': 'TargetFamily',
+      });
+      await db.insert('book_reader_prefs',
+          {'book_id': 'b2', 'font_family': 'TargetFamily'});
+      await db.insert('book_reader_prefs',
+          {'book_id': 'b3', 'heading_font_family': 'TargetFamily'});
+      // b4、b5：無關
+      await db.insert('book_reader_prefs', {
+        'book_id': 'b4',
+        'font_family': 'OtherFamily',
+        'heading_font_family': 'OtherFamily',
+      });
+      await db.insert('book_reader_prefs', {'book_id': 'b5'});
+
+      // 以列為單位計數：是 3 而不是 4
+      expect(await repository.countBooksUsing('TargetFamily'), 3);
+    });
+
+    test('countBooksUsing 沒有任何書使用時回傳 0，且標題字型為 NULL 的列不被誤算（epic-68 Issue 4）',
+        () async {
+      await libraryRepository.insertBook(_book('b1'));
+      final db = libraryRepository.database;
+      await db.insert('book_reader_prefs', {
+        'book_id': 'b1',
+        'font_family': null,
+        'heading_font_family': null,
+      });
+
+      expect(await repository.countBooksUsing('TargetFamily'), 0);
+    });
   });
 }
