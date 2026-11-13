@@ -325,8 +325,8 @@
 
 ### Task 6：文件狀態
 
-- [ ] **Step 1：** `issues.md` 表格 Issue 3 狀態改「完成（待 PR）」；`epic.md`「進度」補一行：Issue 3 完成——`ReaderSettingsSheet` 標題字型下拉（`reader_settings_heading_font_family`，選項與主字型共用、第一項「跟隨主字型」＝null、不可用時顯示跟隨且不改寫偏好）、主字型標籤改「主字型」、四份 arb 與產生檔、FXL／PDF 負向測試、端到端測試、目視確認報告 `reports/issue-3-report.md`；註記：書架「版面覆寫」面板與版面預設集畫面無字型控制項，不需標題字型下拉。**不動** `docs/epics.md`、`CLAUDE.md`、`AGENTS.md`（本張不改變其描述的架構事實；主庫 `version` 已在 Issue 1 更新）。
-- [ ] **Step 2：commit（明確列檔，不含 `.claude/settings.json`）：**
+- [x] **Step 1：** `issues.md` 表格 Issue 3 狀態改「完成（待 PR）」；`epic.md`「進度」補一行：Issue 3 完成——`ReaderSettingsSheet` 標題字型下拉（`reader_settings_heading_font_family`，選項與主字型共用、第一項「跟隨主字型」＝null、不可用時顯示跟隨且不改寫偏好）、主字型標籤改「主字型」、四份 arb 與產生檔、FXL／PDF 負向測試、端到端測試、目視確認報告 `reports/issue-3-report.md`；註記：書架「版面覆寫」面板與版面預設集畫面無字型控制項，不需標題字型下拉。**不動** `docs/epics.md`、`CLAUDE.md`、`AGENTS.md`（本張不改變其描述的架構事實；主庫 `version` 已在 Issue 1 更新）。
+- [x] **Step 2：commit（明確列檔，不含 `.claude/settings.json`）：**
   ```bash
   git add docs/epics/epic-68-heading-font/issues.md docs/epics/epic-68-heading-font/epic.md
   git commit -m "docs(epic-68): Issue 3 收尾，更新狀態與進度"
