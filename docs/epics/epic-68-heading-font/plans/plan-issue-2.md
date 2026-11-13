@@ -348,18 +348,18 @@
 
 **Files：** `docs/epics/epic-68-heading-font/issues.md`、`docs/epics/epic-68-heading-font/epic.md`
 
-- [ ] **Step 1：驗收 grep：**
+- [x] **Step 1：驗收 grep：**
   ```bash
   grep -rn "headingFontFamily" app/lib/reader/foliate_reader_view.dart app/lib/screens/reader_screen.dart app/android/app/src/main/assets/foliate/main.js app/android/app/src/main/assets/foliate/legacy/main.js
   git diff 3d8bafee..HEAD --stat -- app/lib
   ```
   預期：`foliate_reader_view.dart`（欄位／建構子／map／changed 共 4 處）、`reader_screen.dart`（`headingFontFamily:` 一處）、`main.js` 與 `legacy/main.js` 各有；`app/lib` 的 diff 在本張只新增這兩個檔（Issue 1 的檔案不在此計）；不得出現 `*.arb`、`reader_settings_sheet.dart`、資料庫檔的**本張**變更。
-- [ ] **Step 2：靜態檢查：**
+- [x] **Step 2：靜態檢查：**
   ```bash
   flutter analyze
   ```
   預期 `No issues found!`。本張未新增／修改 `Key`、未新增使用者可見字串，`check_l10n_hardcoded_strings.js`／`check_integration_keys.js` 非必要；測試中新增的 `MaterialApp` 皆帶 `locale`。若要順手跑（PowerShell 前置 pnpm Node）：`node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js`，預期 PASS。
-- [ ] **Step 3：本張觸及測試檔最終彙整再跑一輪**（不是完整 `flutter test`）：
+- [x] **Step 3：本張觸及測試檔最終彙整再跑一輪**（不是完整 `flutter test`）：
   ```bash
   flutter test test/reader/foliate_reader_view_test.dart test/reader/foliate_legacy_assets_test.dart
   flutter test test/screens/reader_screen_test.dart
@@ -372,8 +372,8 @@
   node tool/check_foliate_es_compat.js
   ```
   預期：全綠、`整體結果：全部 PASS`、掃描 exit 0。
-- [ ] **Step 4：文件狀態。** `issues.md` 表格 Issue 2 狀態改「完成（待 PR）」；`epic.md`「進度」補一行：Issue 2 完成——`FoliateReaderView.headingFontFamily`、map／changed、`ReaderScreen` 傳遞（排除 FXL、CBZ 含舊資料、宣告 null 偵測為 FXL）、`main.js` 標題規則（含後代、排在主字型規則之後）、`legacy/` 重建與內容守衛、harness 場景 `scenario-heading-font.mjs`（無 `main.js` 修改時 A2／B／C2／D 失敗已驗證）。註記：本張無 UI，真實 EPUB 目視確認在 Issue 3；既有 `firstLineIndent` 傳遞條件有同樣的舊資料 CBZ 缺口，未於本張處理（另案評估）。**不動** `docs/epics.md`、`CLAUDE.md`、`AGENTS.md`（本張不改變其描述的架構事實）。
-- [ ] **Step 5：commit（明確列檔，不含 `.claude/settings.json`）：**
+- [x] **Step 4：文件狀態。** `issues.md` 表格 Issue 2 狀態改「完成（待 PR）」；`epic.md`「進度」補一行：Issue 2 完成——`FoliateReaderView.headingFontFamily`、map／changed、`ReaderScreen` 傳遞（排除 FXL、CBZ 含舊資料、宣告 null 偵測為 FXL）、`main.js` 標題規則（含後代、排在主字型規則之後）、`legacy/` 重建與內容守衛、harness 場景 `scenario-heading-font.mjs`（無 `main.js` 修改時 A2／B／C2／D 失敗已驗證）。註記：本張無 UI，真實 EPUB 目視確認在 Issue 3；既有 `firstLineIndent` 傳遞條件有同樣的舊資料 CBZ 缺口，未於本張處理（另案評估）。**不動** `docs/epics.md`、`CLAUDE.md`、`AGENTS.md`（本張不改變其描述的架構事實）。
+- [x] **Step 5：commit（明確列檔，不含 `.claude/settings.json`）：**
   ```bash
   git add docs/epics/epic-68-heading-font/issues.md docs/epics/epic-68-heading-font/epic.md
   git commit -m "docs(epic-68): Issue 2 收尾，更新狀態與進度"
