@@ -1,14 +1,15 @@
 // app/lib/dictionary/storage/dictionary_database.dart
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+
+import '../../platform/app_paths.dart';
 
 /// 字典資料庫在真實裝置上的預設路徑（App 文件目錄下的 `dictionary.db`）。
 /// 僅供正式執行時使用；單元測試改用 `sqflite_common_ffi` 的
 /// `inMemoryDatabasePath` 或暫存目錄，不會呼叫到這個函式
 /// （`path_provider` 需要平台 channel，無法在純 Dart 測試環境執行）。
 Future<String> defaultDictionaryDatabasePath() async {
-  final dir = await getApplicationDocumentsDirectory();
+  final dir = await appDocumentsDirectory();
   return p.join(dir.path, 'dictionary.db');
 }
 
