@@ -166,7 +166,7 @@ git commit -m "docs(epic-66): Issue 27 安裝程式報告與文件（Task 4）"
 
 - AppId：`{C4E48E89-6F1B-4B77-94B9-23BCE3FCC757}`（發佈後不可更改）。
 - 介面語言：Inno Setup 6.7.3 沒附繁體中文，經使用者決定自帶官方儲存庫 main 的 `ChineseTraditional.isl`（原封複製）。
-- 開始功能表改用 `{autoprograms}elinkBook` 加 `DisableProgramGroupPage=yes`，不設 `DefaultGroupName`，避免多一層同名資料夾。
+- 開始功能表改用 `{autoprograms}\elinkBook` 加 `DisableProgramGroupPage=yes`，不設 `DefaultGroupName`，避免多一層同名資料夾。
 - 驗證檢查 6 排除 WebView2 的 `lockfile`（只在 App 執行期間存在）。
 - 計畫外新增：`package_windows_zip.ps1` 建置前清 `build/flutter_assets`、依賴檢查擋 assets 下字型與 `data/flutter_assets/test`（使用者在另一台電腦發現字型與測試 fixtures 被打包）。
 - 其餘決定與數據見 `issue-27-report.md`。
