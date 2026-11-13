@@ -5,9 +5,9 @@
 | 1 | 資料層：欄位、遷移、整列重建守衛 | — | 完成（待 PR） | — |
 | 2 | 渲染層：標題字型套用（含 legacy） | 1 | 完成（待 PR） | — |
 | 3 | 設定面板下拉與 l10n | 1、2 | 完成（待 PR；目視確認未完成） | — |
-| 4 | 刪除自訂字型連動 | 1 | 未開始 | — |
+| 4 | 刪除自訂字型連動 | 1 | 完成（待 PR） | — |
 
-三張並非嚴格垂直切片：Issue 1、2 對使用者不可見，Issue 3 起才可操作；各自單獨合併後 App 皆可編譯、既有行為不變。Issue 4 只依賴 Issue 1，可與 2、3 並行，但本 Epic 依序執行。每張 Issue 一個 commit 系列，同分支 `feat/epic-68-heading-font`、最後同一個 PR；計畫存 `plans/plan-issue-N.md`。標籤：`ready-for-agent`。
+四張並非嚴格垂直切片：Issue 1、2 對使用者不可見，Issue 3 起才可操作；各自單獨合併後 App 皆可編譯、既有行為不變。Issue 4 只依賴 Issue 1，可與 2、3 並行，但本 Epic 依序執行。每張 Issue 一個 commit 系列，同分支 `feat/epic-68-heading-font`、最後同一個 PR；計畫存 `plans/plan-issue-N.md`。標籤：`ready-for-agent`。四張皆完成，Epic 全數完成，待歸檔（Issue 3 目視確認未完成，PR 前須人工補）。
 
 ## Issue 1：資料層——`heading_font_family` 欄位與整列重建守衛
 
