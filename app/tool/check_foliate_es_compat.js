@@ -49,6 +49,15 @@ const POLYFILL_SOURCE_FILE = path.join(
  */
 const RISKY_APIS = [
   {
+    // paginator.js 渲染頁首／頁尾時使用；iReader Ocean 4 Plus（Chromium 83）
+    // 沒有，會讓開書失敗。
+    name: 'ParentNode.replaceChildren',
+    usagePattern: /\.replaceChildren\(/g,
+    polyfillMarkers: ['proto.replaceChildren'],
+    minChromium: 86,
+    specYear: 'DOM',
+  },
+  {
     // `.at(N)` 純文字掃描分辨不出呼叫對象是 Array 還是 String（兩者都有
     // 同名的 .at() 方法，語意相同），故用 OR 語意：只要 polyfill 裡對
     // Array.prototype.at 或 String.prototype.at 任一個補上防護，就視為
@@ -184,6 +193,8 @@ function listJsFilesRecursive(dir) {
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
+      // legacy/ 是 tool/foliate_legacy 產生的降級副本，內容與原始檔案重複，不掃描
+      if (entry.name === 'legacy') continue;
       files.push(...listJsFilesRecursive(fullPath));
     } else if (entry.isFile() && entry.name.endsWith('.js')) {
       files.push(fullPath);

@@ -28,7 +28,6 @@ String androidProbeHtml(int size) => '''
 <head><meta charset="utf-8"><title>metadata-probe</title></head>
 <body>
 <script type="module">
-import { readBookMetadataByRange } from '/assets/foliate/metadata-probe.js';
 const send = (name, payload) => {
   try { window.flutter_inappwebview.callHandler(name, payload); }
   catch (e) { console.error('callHandler failed: ' + e); }
@@ -38,12 +37,21 @@ const fetchRange = async (start, end) => {
   if (!res.ok) throw new Error('range fetch ' + res.status);
   return await res.arrayBuffer();
 };
-try {
-  const data = await readBookMetadataByRange($size, fetchRange, 'book.epub');
-  send('metadataResult', JSON.stringify(data));
-} catch (e) {
-  send('metadataError', String((e && e.stack) || e));
-}
+// Chrome 84 以前的 WebView 看不懂私有方法語法，改載入 legacy/ 降級副本；
+// 也不能用頂層 await（Chrome 89 才支援），所以包成 async 函式。
+const chromeMajor = parseInt((/Chrome\\/(\\d+)/.exec(navigator.userAgent) || [])[1], 10);
+const probePath = chromeMajor < 84
+  ? '/assets/foliate/legacy/metadata-probe.js'
+  : '/assets/foliate/metadata-probe.js';
+(async () => {
+  try {
+    const { readBookMetadataByRange } = await import(probePath);
+    const data = await readBookMetadataByRange($size, fetchRange, 'book.epub');
+    send('metadataResult', JSON.stringify(data));
+  } catch (e) {
+    send('metadataError', String((e && e.stack) || e));
+  }
+})();
 </script>
 </body>
 </html>

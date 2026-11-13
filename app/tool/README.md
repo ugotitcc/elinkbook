@@ -311,6 +311,49 @@ node app/tool/check_foliate_es_compat.js
 風險，故不追求零誤判；`RISKY_APIS` 清單本身也需要在發現新的較新 ES 內建
 方法時手動擴充維護。
 
+## `foliate_legacy/`（舊版 WebView 降級工具）
+
+把 `app/android/app/src/main/assets/foliate/` 的 JS 降級成 Chrome 83 看得懂的
+語法，輸出到同目錄下的 `legacy/`。原始釘定檔案不動。
+
+**背景**：iReader Ocean 4 Plus 的系統 WebView 是 Chrome 83，且廠商鎖死無法
+升級。釘定的 foliate-js 使用私有方法（`#foo()`，Chrome 84 才支援），整份 JS
+載入就失敗：開不了書、匯入沒有封面（封面與版面偵測用的探針是同一份 JS）。
+`esCompatPolyfillJs` 只能補 API，補不了語法，所以另外產生降級副本。
+
+**執行期怎麼選**：`foliate/index.html` 與 `android_epub_metadata.dart` 的
+探針頁都看 `navigator.userAgent` 的 Chrome 主版號，低於 84 才載入
+`legacy/`，其他裝置載入原始檔案，行為不變。
+
+### 何時該執行
+
+- **每次升級 `foliate/` 的釘定版本之後**，一定要重新產生。
+- 修改 `foliate/` 下任何 `.js` 之後。
+- 產生的 `legacy/` 要一併 commit（App 建置不需要 Node）。
+
+### 執行方式
+
+```powershell
+$env:PATH = "$env:PNPM_HOME;$env:PATH"   # 見檔案開頭的 Node 說明
+cd app\tool\foliate_legacy
+pnpm install
+pnpm build
+```
+
+- 用 esbuild，目標 `chrome83`。遇到無法降級的語法（例如頂層 `await`）會直接
+  報錯，不會默默放過。
+- `pnpm install` 可能提示 `Ignored build scripts: esbuild`，可忽略，不影響
+  降級結果。
+- 另外把 CSS 的 `:is(#header, #footer)`（Chrome 88+）改寫成等價選擇器。
+
+### 已知限制
+
+- 只處理語法，不處理執行期 API。缺少的 API 要補在 `esCompatPolyfillJs`，並
+  用 `check_foliate_es_compat.js` 掃描（已納入 `replaceChildren`）。
+- `paginator.js` 的 `@container` 與 CSS 巢狀寫法 Chrome 83 不支援，規則會被
+  略過；目前實測直排與換字型正常，若之後發現欄數異常再回頭處理。
+- 目前只在 Ocean 4 Plus（Chrome 83.0.4103.120）實測過。
+
 ## `test_section_progress_density.mjs`
 
 驗證 `progress.js` 的 `SectionProgress`（epic-26-architecture-hardening
