@@ -1,7 +1,7 @@
-elinkBook Windows 免安裝版使用說明
-====================================
+elinkBook Windows 使用說明（免安裝版與安裝版）
+==============================================
 
-感謝使用 elinkBook 電子書閱讀器 Windows 免安裝版。
+感謝使用 elinkBook 電子書閱讀器 Windows 版（免安裝 zip 與安裝程式皆適用，安裝程式見第七節）。
 
 一、系統需求
 ------------
@@ -20,17 +20,25 @@ elinkBook Windows 免安裝版使用說明
 
 三、資料存放位置與完整移除
 --------------------------
-為支援唯讀目錄執行與遵守 Windows 應用規範，應用程式資料存放在使用者設定目錄：
-- 書籍資料庫與偏好設定：%APPDATA%\cc.ugotit\elinkbook
-- WebView2 閱讀引擎資料：%APPDATA%\cc.ugotit\elinkbook\webview_data
+應用程式的資料分放在兩個地方：
+1. 設定與下載資料：%APPDATA%\cc.ugotit\elinkbook
+   - downloaded-fonts：已下載的字型
+   - dictionaries：字典來源（有匯入字典才會有）
+   - webview_data：WebView2 閱讀引擎資料
+2. 書庫與匯入的書：使用者的「文件」資料夾（例如 C:\Users\<使用者>\Documents）下，由 elinkBook 以固定名稱建立的項目
+   - library.db：書庫、閱讀進度、劃線與書籤等；dictionary.db：字典資料庫（兩者都可能有 -wal、-shm、-journal 附屬檔）
+   - covers：封面；imported_books：匯入的書的複本
+   - cloud_import_books、remote_books、wifi_transfer_uploads、update_staging：雲端匯入、遠端下載、WiFi 傳書與更新暫存
+   - 匯入時留在原位置的書檔不在這裡。
 
 【移除方式】
-- 直接刪除解壓後的程式資料夾即可移除應用程式。刪除程式資料夾不會刪除您的書籍與閱讀紀錄。
-- 若欲完全移除所有閱讀進度與資料庫，請手動刪除上述「%APPDATA%\cc.ugotit\elinkbook」資料夾。
+- 直接刪除解壓後的程式資料夾即可移除應用程式。刪除程式資料夾不會刪除上述兩處資料。
+- 若欲完全清除，請另外手動刪除上述兩處的資料。「文件」資料夾內只需刪除上列項目，請勿刪除整個文件資料夾。
+- 使用安裝版時，解除安裝可以選擇一併刪除這些資料（見第七節）。
 
 四、未簽章提示與 SmartScreen 解除
 ---------------------------------
-本版本為開源／自用免安裝發佈，未包含微軟商業程式碼數位簽章（Code Signing）：
+本版本未包含微軟商業程式碼數位簽章（Code Signing）：
 1. 啟動時 Windows Defender SmartScreen 可能跳出「Windows 已保護您的電腦」警示視窗。
    請點擊「其他資訊」→ 點擊「仍要執行」即可啟動。
 2. 若自網路下載本 zip 檔，Windows 可能自動附加網路安全標籤。解壓前建議：
@@ -50,3 +58,18 @@ elinkBook Windows 免安裝版使用說明
   Get-FileHash -Algorithm SHA256 elinkbook-*-windows-x64.zip
 
 比對輸出結果是否與發佈同名之「.sha256」文字檔案內容一致。
+
+七、安裝版（setup.exe）
+-----------------------
+除了免安裝 zip，也提供安裝程式「elinkbook-<版本>-windows-x64-setup.exe」：
+1. 安裝位置：預設為目前使用者的 %LOCALAPPDATA%\Programs\elinkBook，不需要系統管理員權限（不會跳出 UAC）。
+2. 捷徑：一定會建立開始功能表項目；桌面捷徑為安裝時的可選項目，預設勾選。
+3. 升級：直接執行新版安裝程式即可覆蓋舊版；若 elinkBook 正在執行，安裝程式會提示關閉。
+4. 解除安裝：從「設定 → 應用程式」解除安裝。請先關閉 elinkBook，開著時解除安裝程式會拒絕執行。
+   解除安裝完成時會詢問「是否同時刪除 elinkBook 的所有資料（包含書庫）」，預設為「否」（保留所有資料）；
+   選「是」會刪除第三節列出的兩處資料（書庫、字典庫、封面、匯入的書的複本、已下載字型等），**刪除後無法復原**。
+   只會刪 elinkBook 以固定名稱建立的項目，不會動「文件」資料夾內的其他檔案，也不會刪除匯入時留在原位置的書檔。
+   以靜默模式（/SILENT、/VERYSILENT）解除安裝時一律不詢問、不刪除任何資料。
+5. 安裝版同樣未簽章，SmartScreen 提示與解除封鎖方法見上方第四節。
+6. 免安裝版與安裝版共用同一份資料（第三節的兩處），請不要同時開啟兩份。
+   原本使用免安裝版的人不需要先刪除，直接安裝即可沿用原有的書庫與閱讀紀錄。

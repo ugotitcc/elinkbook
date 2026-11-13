@@ -61,6 +61,24 @@ function Test-StagedDependencies([string]$TargetDir) {
         }
     }
 
+    # 內建字型一律不打包（改走可下載字型，ADR 0035）。常見成因：build\flutter_assets 殘留舊建置的檔案
+    # （Flutter 不會刪掉已從 pubspec 移除的資源，CMake 安裝步驟卻整個目錄複製），刪除該目錄後重建即可。
+    $assetsDir = Join-Path $TargetDir "data\flutter_assets\assets"
+    if (Test-Path $assetsDir) {
+        $bundledFonts = @(Get-ChildItem $assetsDir -Recurse -File -Include *.ttf, *.otf, *.ttc, *.woff, *.woff2)
+        foreach ($font in $bundledFonts) {
+            $rel = $font.FullName.Substring($TargetDir.TrimEnd('\').Length + 1)
+            $errors.Add("[不該打包的字型] $rel（內建字型一律改走可下載字型；請刪除 app\build\flutter_assets 後重新建置）")
+        }
+    }
+
+    # 測試用資源不得出貨：pubspec.yaml 為了整合測試把 test/fixtures/ 宣告成 asset，
+    # 會被整個帶進 data\flutter_assets\test（約 36 MB）；lib/ 沒有任何地方在執行期讀它，打包時組裝階段會移除。
+    $testAssetsDir = Join-Path $TargetDir "data\flutter_assets\test"
+    if (Test-Path $testAssetsDir) {
+        $errors.Add("[不該打包的測試資源] data\flutter_assets\test（整合測試用的 fixtures，不應隨安裝包出貨）")
+    }
+
     $dumpbin = $null
     try {
         $dumpbin = Get-DumpbinPath
@@ -236,6 +254,13 @@ foreach ($stale in @("$zipBaseName.zip", "$zipBaseName.zip.sha256", "$zipBaseNam
 
 # 執行 flutter build windows --release
 if (-not $SkipBuild) {
+    # 先清掉資源組裝目錄：Flutter 不會刪除已從 pubspec 移除的資源（例如舊的內建字型），
+    # 但 CMake 安裝步驟會把整個目錄複製進輸出；清掉後由 flutter 依目前的 pubspec 重新產生。
+    $assembledAssets = Join-Path $AppDir "build\flutter_assets"
+    if (Test-Path $assembledAssets) {
+        Write-Host "清除殘留的資源組裝目錄: $assembledAssets" -ForegroundColor Cyan
+        Remove-Item $assembledAssets -Recurse -Force
+    }
     Write-Host "執行 flutter build windows --release..." -ForegroundColor Cyan
     Push-Location $AppDir
     try {
@@ -269,6 +294,12 @@ Copy-Item -Path (Join-Path $releaseDir "*") -Destination $stageAppDir -Recurse -
 # 防禦性清理：若仍存在 dartjni.dll 則刪除（jni 為 path_provider_android 遞移相依，Windows 端不使用且依賴不存在之 jvm.dll）
 if (Test-Path "$stageAppDir\dartjni.dll") {
     Remove-Item "$stageAppDir\dartjni.dll" -Force
+}
+# 移除整合測試用的 fixtures（pubspec.yaml 把 test/fixtures/ 宣告成 asset，會被帶進輸出；執行期沒有任何程式讀它）
+$stageTestAssets = Join-Path $stageAppDir "data\flutter_assets\test"
+if (Test-Path $stageTestAssets) {
+    Write-Host "移除測試用資源: data\flutter_assets\test" -ForegroundColor Cyan
+    Remove-Item $stageTestAssets -Recurse -Force
 }
 
 # 尋找 Visual Studio 與複製 VC DLL

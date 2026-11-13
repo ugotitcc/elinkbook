@@ -513,6 +513,8 @@ powershell -ExecutionPolicy Bypass -File tool/package_windows_zip.ps1 -SkipBuild
 
 補充：
 - 每次執行開頭會先刪除輸出目錄中同名的舊正式 zip、`.sha256` 與暫存 zip，所以任何一步失敗都不會留下看似成功的舊產物。
+- 暫存目錄不得含內建字型：依賴檢查（含 `-CheckOnly`）會在 `data\flutter_assets\assets\` 下發現字型檔就失敗。成因是 `build\flutter_assets` 會殘留已從 `pubspec.yaml` 移除的舊資源（Flutter 不會刪，CMake 安裝步驟卻整個目錄複製）；完整建置前腳本會先清掉該目錄，由 Flutter 依目前的 `pubspec.yaml` 重新產生。使用 `-SkipBuild` 沿用舊輸出而被擋下來時，手動刪除 `app\build\flutter_assets` 後重新建置。
+- 暫存目錄不得含測試用資源：`pubspec.yaml` 為了整合測試把 `test/fixtures/` 宣告成 asset，會被整個帶進 `data\flutter_assets\test`（約 36 MB，其中 `sample.ttf` 就占 35 MB）；`lib/` 沒有任何地方在執行期讀它。組裝暫存目錄時腳本會移除該資料夾，依賴檢查（含 `-CheckOnly`）發現它存在就失敗。
 - 暫存組裝時排除 `dartjni.dll`（`jni` 為 `path_provider_android` 的遞移相依，`lib/` 沒有任何引用，且該 DLL 依賴不存在的 `jvm.dll`）；理由與限制見 `docs/epics/epic-66-windows-port/epic.md` 決策 30。
 
 ### 單獨做依賴靜態檢查：`-CheckOnly`
@@ -541,6 +543,86 @@ powershell -ExecutionPolicy Bypass -File tool/verify_windows_zip.ps1 -Zip build/
 - 會實際啟動 `elinkbook.exe`；開跑前會檢查殘留行程與可用記憶體（只檢查不終止）。執行期間不要同時跑 Windows 整合測試或建置。
 - `-WorkDir\含 空格 與 中文` 若已存在且含非本腳本產生的內容，腳本拒絕刪除並以非 0 結束。
 - 本機驗證**抓不到缺 VC 執行階段 DLL 的問題**（這台機器的 System32 有這些 DLL），那一關由 `package_windows_zip.ps1 -CheckOnly` 負責；兩者都不證明乾淨機器、Windows 10 1809 能開。
+
+## `package_windows_installer.ps1`
+
+Windows 安裝程式（Inno Setup）打包腳本（`epic-66-windows-port` Issue 27，決策見 [ADR 0043](../../docs/adr/0043-windows-installer-inno-setup-unsigned-per-user.md)）。
+
+需要先安裝 Inno Setup 6：`winget install --id JRSoftware.InnoSetup -e`（腳本會找 `%LOCALAPPDATA%\Programs\Inno Setup 6`、`Program Files` 與 `PATH`）。
+
+```powershell
+cd app
+# 完整流程：呼叫 package_windows_zip.ps1 重新建置並組裝暫存目錄，再編譯安裝程式
+powershell -ExecutionPolicy Bypass -File tool/package_windows_installer.ps1
+
+# 沿用現有 Release 建置
+powershell -ExecutionPolicy Bypass -File tool/package_windows_installer.ps1 -SkipBuild
+
+# 直接指定暫存目錄（不呼叫 zip 腳本；供變異驗證與除錯）、指定版本（格式同 pubspec 的 version:）
+powershell -ExecutionPolicy Bypass -File tool/package_windows_installer.ps1 -StageDir <目錄> -Version 1.0.9+1 -OutDir <輸出目錄>
+```
+
+輸出 `build/windows_installer/elinkbook-<版本把 + 換成 -b>-windows-x64-setup.exe` 與 `<同檔名>.sha256`（格式同 zip 的 `.sha256`）。結束碼 0 成功；找不到 Inno Setup、依賴複檢失敗、編譯失敗都以非 0 結束，且開頭會先清掉同名舊產物，不會留下看似成功的舊檔。
+
+設計重點：
+- 安裝程式腳本是 `windows/packaging/elinkbook.iss`；介面語言用同目錄的 `ChineseTraditional.isl`（取自 Inno Setup 官方儲存庫 main，Inno Setup 6.7.3 的安裝目錄沒有附，內容未修改，授權為 Inno Setup License）。
+- 內容與 zip 版同源：直接使用 zip 腳本組好的暫存目錄 `build/windows_zip/stage/elinkbook`，並永遠先對它跑 `package_windows_zip.ps1 -CheckOnly`（三個 VC DLL 必須實體存在），腳本會印出所用暫存目錄與 `elinkbook.exe` 的檔案版本，避免誤用過期的暫存目錄。
+- 固定 `AppId`（見 `.iss` 註解）發佈後不可更改；`AppIdOverride` 只給變異驗證用。
+- 不簽章、不上傳、不建 CI。
+
+## `verify_windows_installer.ps1`
+
+Windows 安裝程式的本機驗證腳本（`epic-66-windows-port` Issue 27）。
+
+```powershell
+cd app
+powershell -ExecutionPolicy Bypass -File tool/verify_windows_installer.ps1 `
+  -Setup build/windows_installer/elinkbook-<版本>-windows-x64-setup.exe `
+  -OlderSetup <較舊版本的 setup.exe>
+# 可選：-WorkDir（預設 $env:TEMP）、-ExpectedStageDir（預設 build/windows_zip/stage/elinkbook）
+```
+
+**會實際啟動 `elinkbook.exe`，寫入這台機器上真實的 `%APPDATA%\cc.ugotit\elinkbook`。執行前先備份該資料夾**（`robocopy <來源> <備份> /MIR`，結束碼 0～7 皆為成功）。腳本任何一步都不會刪除該資料夾。需用一般權限（非系統管理員）的終端機執行，否則無法驗證「不需要管理員」。
+
+流程與檢查項（每項輸出一行 `[通過]／[失敗] 名稱 :: 說明`，結束碼 0＝全部通過，目前共 29 項）：
+1. 靜默安裝到 `<WorkDir>\含 空格 與 中文 installer-verify\app`：不需管理員、HKCU 有 `{GUID}_is1` 登錄項（單花括號，驗證 `.iss` 的花括號跳脫）、HKLM 沒有。預期 AppId 在腳本內獨立釘住，`.iss` 被改動時腳本開頭就失敗。
+2. 安裝內容：必備檔齊全（含三個 VC DLL、`data\foliate\main.js`）、沒有 `.pdb`／`.lib`／`.exp`／`.ilk`、沒有打包字型與 `data\flutter_assets\test`，且與暫存目錄逐檔（路徑加 SHA256）一致，只允許多出解除安裝程式自己的檔案。
+3. 開始功能表項目、桌面捷徑（預設存在）指向安裝的 `elinkbook.exe`。
+4. 啟動出現主視窗、行程存活 20 秒。
+5. 覆蓋升級：先裝舊版並保持執行，再靜默安裝新版——舊行程被關閉、全機只有一個 elinkBook 解除安裝項與一個 `unins*.exe`、版本更新、`elinkbook.exe` 與 `README.txt` 已被新版取代。
+6. 資料保護：升級前後、兩次靜默解除安裝前後，`%APPDATA%\cc.ugotit\elinkbook` 內「原本存在的檔案」不得消失（WebView2 的 `lockfile` 只在 App 執行期間存在，不納入比對）。書庫在「文件」資料夾，安裝程式不會動它，不在比對範圍。
+7. 靜默解除安裝：Inno 的解除安裝程式會複製自己到 `%TEMP%` 再啟動並讓原行程結束，所以腳本以輪詢（每 0.5 秒、最長 30 秒）等程式檔、登錄項與解除安裝行程本身都結束，不能只等行程結束；刻意不帶 `/SUPPRESSMSGBOXES`，讓 `.iss` 的 `UninstallSilent` 判斷成為唯一擋住詢問框的防線，防線失效時詢問框卡住、輪詢逾時就會失敗。
+8. `/TASKS="!desktopicon"`：桌面捷徑不存在、開始功能表存在。
+9. 結束時沒有殘留行程與安裝。
+10. App 執行中解除安裝必須被拒絕（程式檔與登錄項仍在）。
+
+開跑前會拒絕：這台機器已有任何 elinkBook 解除安裝項、或已存在同名的開始功能表／桌面捷徑（驗證會覆寫並刪除它們）。
+
+**產生「較舊版本」setup.exe 的做法**：複製暫存目錄、改掉 `README.txt` 內容並在 `elinkbook.exe` 尾端加一個 0x00 位元組（讓新舊內容有差別，才能證明被取代），再用 `package_windows_installer.ps1 -StageDir <複本> -Version 1.0.9+1 -OutDir <輸出目錄>` 編譯。
+
+**驗證檢查本身有效（負向驗證）**：`-DataDir <假資料夾> -SimulateDataLoss` 會在比對前人為刪掉假資料夾內一個檔案，預期 6a 失敗、其餘通過。這兩個參數只給這種用途，不要對真實資料夾使用 `-SimulateDataLoss`（會刪檔）。
+
+這只證明「這台機器上安裝、升級、解除安裝的行為」；乾淨機器（缺 VC 執行階段與 WebView2）、Windows 10 1809、SmartScreen 實際行為皆**未驗證**。
+
+## `verify_windows_uninstall_data.ps1`
+
+驗證安裝程式「解除安裝是否刪除資料」的本機腳本（`epic-66-windows-port` Issue 27）。
+
+```powershell
+cd app
+powershell -ExecutionPolicy Bypass -File tool/verify_windows_uninstall_data.ps1
+# 可選：-StageDir（預設 build/windows_zip/stage/elinkbook）、-WorkDir（預設 $env:TEMP）
+```
+
+**不會碰真實的 `%APPDATA%` 與「文件」資料夾。** 腳本用 `elinkbook.iss` 的 `AppDataRootOverride`、`DocsRootOverride` 兩個 `/D` 定義編一個測試用安裝程式，把兩個資料根目錄指到 `<WorkDir>\含 空格 與 中文 uninstall-data-verify\` 下的假資料夾；出貨版不帶這兩個定義，使用真實路徑。
+
+流程（共 10 項檢查，每項輸出一行 `[通過]／[失敗] 名稱 :: 說明`，結束碼 0＝全部通過）：
+1. 安裝測試用安裝程式，在假資料夾放入 App 會建立的項目（`library.db`、`dictionary.db` 各含 `-wal`／`-shm`／`-journal`、`covers`、`imported_books`、`cloud_import_books`、`remote_books`、`wifi_transfer_uploads`、`update_staging`、假的 `%APPDATA%` 資料夾），以及不屬於 App 的「誘餌」（`六祖壇經\x.txt`、`desktop.ini`、`my-library.db`、`library.db.bak`、`covers-backup\a.jpg`、`notes.txt`、`Zoom\z.txt`，與 `cc.ugotit\other\keep.txt`）。
+2. 以 UI Automation 對解除安裝程式的訊息框逐一回應（「確定要移除」按「是」、我們的資料詢問框按指定的答案、結尾訊息按「確定」）。
+3. **情境一（選「否」）**：確認詢問框出現、「否」鈕取得鍵盤焦點（預設按鈕為「否」）、程式已移除，且所有資料與誘餌原封不動。
+4. **情境二（選「是」）**：App 的資料全數消失（含附屬檔），誘餌與「文件」根目錄原封不動。
+
+這只驗證「解除安裝刪除範圍與預設按鈕」；出貨版的真實路徑（`{userdocs}`、`{userappdata}`）沒有實跑。
 
 ## `generate_windows_icons.ps1`
 
