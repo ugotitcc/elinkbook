@@ -63,10 +63,10 @@ store/google-play/**/*.mp4
 
 # epic-9-stats 審查報告不進版控
 docs/epics/epic-9-stats/reviews/
-docs/epics/epic-53-sync-checkpoint-result/reviews/
+docs/archive/2026-11-13-epic-53-sync-checkpoint-result/reviews/
 docs/epics/epic-54-architecture-optimization/reviews/
-docs/epics/epic-55-third-party-licenses/reviews/
-docs/epics/epic-56-pdf-paginated-reading/reviews/
+docs/archive/2026-11-13-epic-55-third-party-licenses/reviews/
+docs/archive/2026-11-13-epic-56-pdf-paginated-reading/reviews/
 
 # 本機環境變數（樣板見 docker/.env.example）
 docker/.env
@@ -77,10 +77,10 @@ docs/archive/2026-10-04-epic-58-pdf-crop-drag-select/reviews/
 docs/archive/2026-10-05-epic-59-pdf-overlay-recompute-storm/reviews/
 docs/archive/2026-10-05-epic-60-crop-mode-lost-after-cancel/reviews/
 docs/epics/epic-58-pdf-crop-drag-select/reviews/
-docs/epics/epic-63-dictionary-lookup/reviews/
-docs/epics/epic-65-reader-indent-and-colors/reviews/
+docs/archive/2026-11-13-epic-63-dictionary-lookup/reviews/
+docs/archive/2026-11-13-epic-65-reader-indent-and-colors/reviews/
 docs/epics/epic-66-windows-port/reviews/
-docs/epics/epic-67-book-update-detection/reviews/
+docs/archive/2026-11-13-epic-67-book-update-detection/reviews/
 .scratch/
 app/test_driver/
 app/config/cloud_oauth.test.json
