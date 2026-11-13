@@ -1,0 +1,12 @@
+{
+  "name": "foliate-legacy-build",
+  "private": true,
+  "type": "module",
+  "description": "把釘定的 foliate-js 降級成舊版 WebView（Chrome 83）看得懂的語法，輸出到 assets/foliate/legacy/",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

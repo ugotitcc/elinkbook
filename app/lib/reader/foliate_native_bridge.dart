@@ -324,6 +324,31 @@ if (typeof WeakRef === 'undefined') {
     return this._target;
   };
 }
+// ParentNode.replaceChildren（Chromium 86+）：paginator.js 渲染頁首／頁尾時使用，
+// Chrome 83 沒有，會拋 TypeError 讓整個開書失敗（iReader Ocean 4 Plus 實測）。
+// 只用 ES5 語法，原因見上方警語。
+(function () {
+  function replaceChildrenPolyfill() {
+    while (this.firstChild) this.removeChild(this.firstChild);
+    for (var i = 0; i < arguments.length; i++) {
+      var node = arguments[i];
+      this.appendChild(
+        typeof node === 'string' ? document.createTextNode(node) : node
+      );
+    }
+  }
+  var targets = [window.Element, window.Document, window.DocumentFragment];
+  for (var t = 0; t < targets.length; t++) {
+    var proto = targets[t] && targets[t].prototype;
+    if (proto && !proto.replaceChildren) {
+      Object.defineProperty(proto, 'replaceChildren', {
+        value: replaceChildrenPolyfill,
+        writable: true,
+        configurable: true,
+      });
+    }
+  }
+})();
 ''';
 
 /// 全局 JS 錯誤捕捉（epic-18-reader-device-qa Issue 33，真機使用回報：

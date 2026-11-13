@@ -11,6 +11,18 @@
 </head>
 <body>
 <foliate-view id="view"></foliate-view>
-<script type="module" src="./main.js" crossorigin="anonymous"></script>
+<script>
+// Chrome 84 以前的 WebView 看不懂私有方法（#foo()）語法，改載入降級副本 ./legacy/
+// （由 app/tool/foliate_legacy 產生）。新版 WebView 仍載入原始檔案，行為不變。
+(function () {
+  var m = /Chrome\/(\d+)/.exec(navigator.userAgent);
+  var legacy = m && parseInt(m[1], 10) < 84;
+  var s = document.createElement('script');
+  s.type = 'module';
+  s.crossOrigin = 'anonymous';
+  s.src = (legacy ? './legacy/' : './') + 'main.js';
+  document.body.appendChild(s);
+})();
+</script>
 </body>
 </html>
