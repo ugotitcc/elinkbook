@@ -84,9 +84,9 @@ begin
   end;
 end;
 
-// App 資料分放兩處（見 ADR 0043）：
+// App 資料分放兩處（見 ADR 0043、ADR 0044）：
 //   1. %APPDATA%\cc.ugotit\elinkbook（WebView2、已下載字型、字典來源）
-//   2. 使用者的「文件」資料夾下，App 以固定名稱建立的檔案與資料夾（書庫、字典庫、封面、匯入的書等）
+//   2. 使用者的「文件」資料夾下的 elinkbook 目錄（書庫、字典庫、封面、匯入的書等）
 // AppDataRootOverride、DocsRootOverride 只給驗證腳本把「根目錄」指到假資料夾用（出貨版不帶），
 // 讓「選是」的刪除行為可以在不碰真實資料的情況下實測。
 function AppDataRoot(): String;
@@ -109,71 +109,32 @@ end;
 
 function AppDataDir(): String;
 begin
-  Result := AddBackslash(AppDataRoot()) + 'cc.ugotit\elinkbook';
+  if AppDataRoot() <> '' then
+    Result := AddBackslash(AppDataRoot()) + 'cc.ugotit\elinkbook'
+  else
+    Result := '';
 end;
 
-// 「文件」資料夾下 App 建立的資料夾（精確名稱，只刪這些，絕不刪「文件」根目錄或其他資料夾）
-function DocsFolderNames(): TArrayOfString;
+function DocsAppDir(): String;
 begin
-  SetArrayLength(Result, 6);
-  Result[0] := 'covers';
-  Result[1] := 'imported_books';
-  Result[2] := 'cloud_import_books';
-  Result[3] := 'remote_books';
-  Result[4] := 'wifi_transfer_uploads';
-  Result[5] := 'update_staging';
-end;
-
-// 「文件」資料夾下 App 建立的 SQLite 資料庫（連同 -wal、-shm、-journal 附屬檔）
-function DocsDbNames(): TArrayOfString;
-begin
-  SetArrayLength(Result, 2);
-  Result[0] := 'library.db';
-  Result[1] := 'dictionary.db';
+  if DocsRoot() <> '' then
+    Result := AddBackslash(DocsRoot()) + 'elinkbook'
+  else
+    Result := '';
 end;
 
 function AnyAppDataExists(): Boolean;
-var
-  Names: TArrayOfString;
-  I: Integer;
 begin
-  Result := DirExists(AppDataDir());
-  Names := DocsFolderNames();
-  for I := 0 to GetArrayLength(Names) - 1 do
-    if DirExists(AddBackslash(DocsRoot()) + Names[I]) then
-      Result := True;
-  Names := DocsDbNames();
-  for I := 0 to GetArrayLength(Names) - 1 do
-    if FileExists(AddBackslash(DocsRoot()) + Names[I]) then
-      Result := True;
+  Result := ((AppDataDir() <> '') and DirExists(AppDataDir())) or
+            ((DocsAppDir() <> '') and DirExists(DocsAppDir()));
 end;
 
 procedure DeleteAppData();
-var
-  Names: TArrayOfString;
-  Path: String;
-  I: Integer;
 begin
-  if DirExists(AppDataDir()) then
+  if (AppDataDir() <> '') and DirExists(AppDataDir()) then
     DelTree(AppDataDir(), True, True, True);
-
-  Names := DocsFolderNames();
-  for I := 0 to GetArrayLength(Names) - 1 do
-  begin
-    Path := AddBackslash(DocsRoot()) + Names[I];
-    if DirExists(Path) then
-      DelTree(Path, True, True, True);
-  end;
-
-  Names := DocsDbNames();
-  for I := 0 to GetArrayLength(Names) - 1 do
-  begin
-    Path := AddBackslash(DocsRoot()) + Names[I];
-    DeleteFile(Path);
-    DeleteFile(Path + '-wal');
-    DeleteFile(Path + '-shm');
-    DeleteFile(Path + '-journal');
-  end;
+  if (DocsAppDir() <> '') and DirExists(DocsAppDir()) then
+    DelTree(DocsAppDir(), True, True, True);
 end;
 
 // 解除安裝時詢問是否同時刪除 App 的所有資料（含書庫）。
@@ -188,13 +149,11 @@ begin
     Exit;
 
   if MsgBox('是否同時刪除 elinkBook 的所有資料（包含書庫）？' + #13#10 + #13#10 +
-            '將刪除：' + #13#10 +
+            '將刪除以下兩個資料夾：' + #13#10 +
             '1. ' + AppDataDir() + #13#10 +
             '   （已下載的字型、字典來源、WebView 瀏覽資料）' + #13#10 +
-            '2. 「文件」資料夾（' + DocsRoot() + '）內由 elinkBook 建立的：' + #13#10 +
-            '   library.db（書庫、閱讀進度、劃線、書籤）、dictionary.db、' + #13#10 +
-            '   covers、imported_books、cloud_import_books、remote_books、' + #13#10 +
-            '   wifi_transfer_uploads、update_staging' + #13#10 + #13#10 +
+            '2. ' + DocsAppDir() + #13#10 +
+            '   （書庫、字典庫、封面、匯入的書的複本等）' + #13#10 + #13#10 +
             '不會動「文件」資料夾內的其他檔案；匯入時留在原位置的書檔也不會被刪除。' + #13#10 +
             '刪除後無法復原。選「否」會保留所有資料，之後重新安裝仍可沿用。',
             mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then

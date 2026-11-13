@@ -49,11 +49,14 @@ $target = Join-Path $root "app"
 $outDir = Join-Path $root "out"
 $log = Join-Path $root "install.log"
 
-# 「文件」資料夾下 App 會建立的項目（與 elinkbook.iss 的 DocsFolderNames／DocsDbNames 對應）
+# 「文件」資料夾下的 elinkbook 目錄會包含的項目（epic-66 Issue 29：已收進 elinkbook 子資料夾）
 $docsFolders = @("covers", "imported_books", "cloud_import_books", "remote_books", "wifi_transfer_uploads", "update_staging")
 $docsDbs = @("library.db", "dictionary.db")
-# 不屬於 App 的東西：選「是」也必須原封不動
-$docsDecoys = @("六祖壇經\x.txt", "desktop.ini", "my-library.db", "library.db.bak", "covers-backup\a.jpg", "notes.txt", "Zoom\z.txt")
+# 不屬於新版的項目（含文件根目錄模擬舊版留下的同名檔案/資料夾與使用者其他檔案）：選「是」也必須原封不動
+$docsDecoys = @(
+    "covers\a.bin", "imported_books\b.bin", "library.db", "dictionary.db",
+    "六祖壇經\x.txt", "desktop.ini", "my-library.db", "library.db.bak", "covers-backup\a.jpg", "notes.txt", "Zoom\z.txt"
+)
 $appDataDecoys = @("cc.ugotit\other\keep.txt")
 
 function New-File([string]$path) {
@@ -61,8 +64,8 @@ function New-File([string]$path) {
     Set-Content -LiteralPath $path -Value "x" -Encoding ASCII
 }
 function Seed-Data {
-    foreach ($d in $docsFolders) { New-File (Join-Path $fakeDocs "$d\sub\a.bin") }
-    foreach ($db in $docsDbs) { foreach ($suf in @("", "-wal", "-shm", "-journal")) { New-File (Join-Path $fakeDocs "$db$suf") } }
+    foreach ($d in $docsFolders) { New-File (Join-Path $fakeDocs "elinkbook\$d\sub\a.bin") }
+    foreach ($db in $docsDbs) { foreach ($suf in @("", "-wal", "-shm", "-journal")) { New-File (Join-Path $fakeDocs "elinkbook\$db$suf") } }
     foreach ($x in $docsDecoys) { New-File (Join-Path $fakeDocs $x) }
     New-File (Join-Path $fakeAppData "cc.ugotit\elinkbook\downloaded-fonts\f.ttf")
     New-File (Join-Path $fakeAppData "cc.ugotit\elinkbook\webview_data\EBWebView\x")
@@ -75,7 +78,7 @@ function Get-Missing([string[]]$relPaths, [string]$base) {
 function Get-Present([string[]]$relPaths, [string]$base) {
     return ,@($relPaths | Where-Object { Test-Path -LiteralPath (Join-Path $base $_) })
 }
-$docsTargets = @($docsFolders + ($docsDbs | ForEach-Object { $db = $_; @("", "-wal", "-shm", "-journal") | ForEach-Object { "$db$_" } }))
+$docsTargets = @("elinkbook")
 $appDataTargets = @("cc.ugotit\elinkbook")
 
 function Get-UninstallerProcessIds {
@@ -165,9 +168,9 @@ try {
     $r = Start-InteractiveUninstall "Yes"
     Record-Check ($r -and $r.PromptSeen -and $r.Finished) "2b 解除安裝並選「是」" "詢問框已出現並按「是」；解除安裝行程結束: $($r -and $r.Finished)"
     $still = @((Get-Present $docsTargets $fakeDocs) + (Get-Present $appDataTargets $fakeAppData))
-    Record-Check ($still.Count -eq 0) "2c 選「是」：App 的資料已刪除" "仍存在 $($still.Count) 項$(if ($still.Count) { '：' + ($still -join '、') })（書庫、字典庫、封面、匯入的書、WebView 資料等，含 -wal／-shm／-journal）"
+    Record-Check ($still.Count -eq 0) "2c 選「是」：elinkbook 兩個資料夾已刪除" "仍存在 $($still.Count) 項$(if ($still.Count) { '：' + ($still -join '、') })（fake-docs\elinkbook 與 cc.ugotit\elinkbook）"
     $lostDecoys = @((Get-Missing $docsDecoys $fakeDocs) + (Get-Missing $appDataDecoys $fakeAppData))
-    Record-Check ($lostDecoys.Count -eq 0 -and (Test-Path -LiteralPath $fakeDocs)) "2d 選「是」：不屬於 App 的檔案與「文件」根目錄原封不動" "消失 $($lostDecoys.Count) 項$(if ($lostDecoys.Count) { '：' + ($lostDecoys -join '、') })；文件根目錄存在: $(Test-Path -LiteralPath $fakeDocs)"
+    Record-Check ($lostDecoys.Count -eq 0 -and (Test-Path -LiteralPath $fakeDocs)) "2d 選「是」：根目錄的舊項目與其他檔案原封不動" "消失 $($lostDecoys.Count) 項$(if ($lostDecoys.Count) { '：' + ($lostDecoys -join '、') })；文件根目錄存在: $(Test-Path -LiteralPath $fakeDocs)"
 }
 finally {
     foreach ($id in (Get-UninstallerProcessIds)) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }
