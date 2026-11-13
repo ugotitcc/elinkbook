@@ -248,5 +248,131 @@ void main() {
 
       expect(await repository.countBooksUsing('TargetFamily'), 0);
     });
+
+    // 取得單一書籍的偏好列（epic-68 Issue 4 刪除連動測試共用）
+    Future<Map<String, Object?>> prefsRow(String bookId) async {
+      return (await libraryRepository.database.query('book_reader_prefs',
+              where: 'book_id = ?', whereArgs: [bookId]))
+          .single;
+    }
+
+    Future<int> insertTargetFont() {
+      return repository.insert(const CustomFont(
+        displayName: '目標字型',
+        familyName: 'TargetFamily',
+        fontUri: 'content://example/target',
+      ));
+    }
+
+    test('刪除字型時，標題字型用該字型而主字型用另一字型 → 只清標題字型，主字型保留（epic-68 Issue 4）',
+        () async {
+      await libraryRepository.insertBook(_book('b1'));
+      await libraryRepository.database.insert('book_reader_prefs', {
+        'book_id': 'b1',
+        'font_family': 'OtherFamily',
+        'heading_font_family': 'TargetFamily',
+      });
+      final id = await insertTargetFont();
+
+      await repository.deleteAndResetUsage(id, 'TargetFamily');
+
+      final row = await prefsRow('b1');
+      expect(row['font_family'], 'OtherFamily');
+      expect(row['heading_font_family'], isNull);
+    });
+
+    test('刪除字型時，主字型用該字型而標題字型用另一字型 → 只清主字型，標題字型保留（epic-68 Issue 4）',
+        () async {
+      await libraryRepository.insertBook(_book('b1'));
+      await libraryRepository.database.insert('book_reader_prefs', {
+        'book_id': 'b1',
+        'font_family': 'TargetFamily',
+        'heading_font_family': 'OtherFamily',
+      });
+      final id = await insertTargetFont();
+
+      await repository.deleteAndResetUsage(id, 'TargetFamily');
+
+      final row = await prefsRow('b1');
+      expect(row['font_family'], isNull);
+      expect(row['heading_font_family'], 'OtherFamily');
+    });
+
+    test('刪除字型時，主字型與標題字型都用該字型 → 兩欄同時清為 NULL（epic-68 Issue 4）',
+        () async {
+      await libraryRepository.insertBook(_book('b1'));
+      await libraryRepository.database.insert('book_reader_prefs', {
+        'book_id': 'b1',
+        'font_family': 'TargetFamily',
+        'heading_font_family': 'TargetFamily',
+      });
+      final id = await insertTargetFont();
+
+      await repository.deleteAndResetUsage(id, 'TargetFamily');
+
+      final row = await prefsRow('b1');
+      expect(row['font_family'], isNull);
+      expect(row['heading_font_family'], isNull);
+    });
+
+    test('刪除字型連動：多本書混合情境，無關書與其他欄位不受影響（epic-68 Issue 4）',
+        () async {
+      for (final id in ['b1', 'b2', 'b3', 'b4']) {
+        await libraryRepository.insertBook(_book(id));
+      }
+      final db = libraryRepository.database;
+      await db.insert('book_reader_prefs',
+          {'book_id': 'b1', 'heading_font_family': 'TargetFamily'});
+      await db.insert('book_reader_prefs',
+          {'book_id': 'b2', 'font_family': 'TargetFamily'});
+      await db.insert('book_reader_prefs', {
+        'book_id': 'b3',
+        'font_family': 'KeepFamily',
+        'heading_font_family': 'KeepFamily',
+      });
+      await db.insert('book_reader_prefs', {
+        'book_id': 'b4',
+        'font_family': 'OtherFamily',
+        'heading_font_family': 'TargetFamily',
+        'font_size': 1.25,
+      });
+      final id = await insertTargetFont();
+
+      await repository.deleteAndResetUsage(id, 'TargetFamily');
+
+      expect((await prefsRow('b1'))['heading_font_family'], isNull);
+      expect((await prefsRow('b2'))['font_family'], isNull);
+      final b3 = await prefsRow('b3');
+      expect(b3['font_family'], 'KeepFamily');
+      expect(b3['heading_font_family'], 'KeepFamily');
+      final b4 = await prefsRow('b4');
+      expect(b4['heading_font_family'], isNull);
+      expect(b4['font_family'], 'OtherFamily');
+      expect(b4['font_size'], 1.25); // 其他欄位不變
+      expect(await repository.listAll(), isEmpty); // 字型已刪
+    });
+
+    test('刪除字型後 countBooksUsing 回傳 0（計數與重置口徑一致，epic-68 Issue 4）',
+        () async {
+      for (final id in ['b1', 'b2', 'b3']) {
+        await libraryRepository.insertBook(_book(id));
+      }
+      final db = libraryRepository.database;
+      await db.insert('book_reader_prefs',
+          {'book_id': 'b1', 'heading_font_family': 'TargetFamily'});
+      await db.insert('book_reader_prefs',
+          {'book_id': 'b2', 'font_family': 'TargetFamily'});
+      await db.insert('book_reader_prefs', {
+        'book_id': 'b3',
+        'font_family': 'TargetFamily',
+        'heading_font_family': 'TargetFamily',
+      });
+      final id = await insertTargetFont();
+      expect(await repository.countBooksUsing('TargetFamily'), 3);
+
+      await repository.deleteAndResetUsage(id, 'TargetFamily');
+
+      expect(await repository.countBooksUsing('TargetFamily'), 0);
+    });
   });
 }

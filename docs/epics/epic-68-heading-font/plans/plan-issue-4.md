@@ -114,19 +114,19 @@
 - 修改：`app/test/reader/custom_fonts_repository_test.dart`
 - 修改：`app/lib/reader/custom_fonts_repository.dart`
 
-- [ ] **Step 1（紅，先寫測試）：** 同一 group 內新增（每個測試先 `repository.insert` 一款 `TargetFamily` 字型取得 id，再插入 prefs 列；讀回用 `db.query('book_reader_prefs', where: 'book_id = ?', whereArgs: [...]).single`；可在 group 內加一個小 helper `Future<Map<String, Object?>> row(Database db, String bookId)`）：
+- [x] **Step 1（紅，先寫測試）：** 同一 group 內新增（每個測試先 `repository.insert` 一款 `TargetFamily` 字型取得 id，再插入 prefs 列；讀回用 `db.query('book_reader_prefs', where: 'book_id = ?', whereArgs: [...]).single`；可在 group 內加一個小 helper `Future<Map<String, Object?>> row(Database db, String bookId)`）：
   a. `刪除字型時，標題字型用該字型而主字型用另一字型 → 只清標題字型，主字型保留（epic-68 Issue 4）`：b1 `{'font_family': 'OtherFamily', 'heading_font_family': 'TargetFamily'}`；刪除後 `font_family == 'OtherFamily'`、`heading_font_family` isNull。
   b. `刪除字型時，主字型用該字型而標題字型用另一字型 → 只清主字型，標題字型保留（epic-68 Issue 4）`：b1 `{'font_family': 'TargetFamily', 'heading_font_family': 'OtherFamily'}`；刪除後 `font_family` isNull、`heading_font_family == 'OtherFamily'`。
   c. `刪除字型時，主字型與標題字型都用該字型 → 兩欄同時清為 NULL（epic-68 Issue 4）`：b1 兩欄皆 `TargetFamily`；刪除後兩欄皆 null。
   d. `刪除字型連動：多本書混合情境，無關書與其他欄位不受影響（epic-68 Issue 4）`：b1 只標題用 Target；b2 只主字型用 Target；b3 兩欄皆 `KeepFamily`；b4 `{'font_family': 'OtherFamily', 'heading_font_family': 'TargetFamily', 'font_size': 1.25}`（`font_size` 欄位名與型別以 `book_reader_prefs` 實際欄位為準，執行時先 `grep -n "font_size" lib/library/sqlite_library_repository.dart` 確認）；刪除後：b1 標題 null；b2 主字型 null；b3 兩欄仍 `KeepFamily`；b4 標題 null、主字型 `OtherFamily`、`font_size` 不變；`await repository.listAll()` isEmpty（字型已刪）。
   e. `刪除字型後 countBooksUsing 回傳 0（計數與重置口徑一致，epic-68 Issue 4）`：b1 只標題用、b2 只主字型用、b3 兩欄皆用；刪除前計數 3；刪除後 `countBooksUsing('TargetFamily')` 為 0。
-- [ ] **Step 2（確認紅）：**
+- [x] **Step 2（確認紅）：**
   ```bash
   flutter test test/reader/custom_fonts_repository_test.dart --plain-name "deleteAndResetUsage"
   flutter test test/reader/custom_fonts_repository_test.dart --plain-name "刪除字型"
   ```
   預期：a、c、d、e 失敗（標題字型仍是 `TargetFamily`）；b 與既有 `deleteAndResetUsage 於同一交易內…` 為綠（主字型端本來就會清）。
-- [ ] **Step 3（綠，實作）：** 修改 `deleteAndResetUsage`：在既有主字型 `txn.update` 之後、交易結束前新增第二條（不要動既有那條）：
+- [x] **Step 3（綠，實作）：** 修改 `deleteAndResetUsage`：在既有主字型 `txn.update` 之後、交易結束前新增第二條（不要動既有那條）：
   ```dart
   // epic-68：標題字型同樣在該字型被刪除時重置為 NULL（跟隨主字型）。
   // 與上一條刻意分開、各自只比對自己的欄位：兩條合併成一條「同時清兩欄」會把
@@ -139,14 +139,14 @@
   );
   ```
   並把方法 doc comment 改為：「刪除字型並把所有使用中書籍的 `font_family`（主字型）與 `heading_font_family`（標題字型）中命中該字型的欄位各自重置為 `NULL`（FR-09 規則：刪除使用中字型時自動退回預設字型；標題字型 `NULL` 即跟隨主字型），於同一交易內完成避免中途失敗留下不一致狀態。兩欄各自條件式更新，只清命中的欄位。」
-- [ ] **Step 4（確認綠）：**
+- [x] **Step 4（確認綠）：**
   ```bash
   flutter test test/reader/custom_fonts_repository_test.dart
   flutter analyze
   ```
   預期：整檔全綠；`No issues found!`。
-- [ ] **Step 5（反向驗證，不 commit）：** (a) 暫時把兩條 UPDATE 改成一條 `{'font_family': null, 'heading_font_family': null}` 搭配 `where: 'font_family = ? OR heading_font_family = ?'`、`whereArgs: [familyName, familyName]` → 測試 a、b、d 必紅（無關欄位被一併清掉）；還原。(b) 暫時刪掉第二條 UPDATE → 測試 a、c、d、e 必紅；還原。(c) 暫時把第二條 UPDATE 移到交易外（直接用 `_db.update`）不需驗證。`git diff -- app/lib` 確認只剩 Step 3 的改動。
-- [ ] **Step 6：** commit：
+- [x] **Step 5（反向驗證，不 commit）：** (a) 暫時把兩條 UPDATE 改成一條 `{'font_family': null, 'heading_font_family': null}` 搭配 `where: 'font_family = ? OR heading_font_family = ?'`、`whereArgs: [familyName, familyName]` → 測試 a、b、d 必紅（無關欄位被一併清掉）；還原。(b) 暫時刪掉第二條 UPDATE → 測試 a、c、d、e 必紅；還原。(c) 暫時把第二條 UPDATE 移到交易外（直接用 `_db.update`）不需驗證。`git diff -- app/lib` 確認只剩 Step 3 的改動。
+- [x] **Step 6：** commit：
   ```bash
   git add app/lib/reader/custom_fonts_repository.dart app/test/reader/custom_fonts_repository_test.dart
   git commit -m "feat(epic-68): 刪除自訂字型時以兩條條件式更新分別重置主字型與標題字型"
