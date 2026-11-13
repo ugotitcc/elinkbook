@@ -302,15 +302,15 @@
 - 修改：`app/test/reader/foliate_legacy_assets_test.dart`
 - 重新產生：`app/android/app/src/main/assets/foliate/legacy/main.js`（預期只有這一檔有 diff）
 
-- [ ] **Step 1（紅，先寫守衛）：** 在 `foliate_legacy_assets_test.dart` 的 `group('foliate legacy 降級副本', …)` 內，緊接 `降級副本沒有 Chrome 88 才支援的 CSS :is()` 之後新增：
+- [x] **Step 1（紅，先寫守衛）：** 在 `foliate_legacy_assets_test.dart` 的 `group('foliate legacy 降級副本', …)` 內，緊接 `降級副本沒有 Chrome 88 才支援的 CSS :is()` 之後新增：
   - `降級副本的 main.js 含標題字型規則，且排在主字型規則之後（epic-68 Issue 2；忘了重新產生會失敗）`：讀 `legacy/main.js` 與原始 `main.js`，兩者皆 `expect(text, contains('prefs.headingFontFamily'))`，並 `expect(text.indexOf('prefs.headingFontFamily'), greaterThan(text.indexOf('prefs.fontFamily')))`，另斷言含標題後代 selector 的實際字串（`${h} *` 展開後，例如 `h1 *`；實際輸出以 grep 確認）（順序守衛；原始檔先查證確實滿足，避免守衛本身誤報）。`reason` 寫明「請在 app/tool/foliate_legacy 執行 pnpm build」。
-- [ ] **Step 2（確認紅）：**
+- [x] **Step 2（確認紅）：**
   ```bash
   flutter test test/reader/foliate_legacy_assets_test.dart
   ```
   預期：新測試紅（`legacy/main.js` 尚無 `prefs.headingFontFamily`），其餘綠。
-- [ ] **Step 3（基準）：** 重建前先確認 `git status --short app/android/app/src/main/assets/foliate/legacy` 為空（工作樹乾淨）。重建（Step 4）後檢查 diff 範圍：若除 `legacy/main.js` 以外還有任何 `legacy/*` 檔出現 diff，代表基準本來就不同步（esbuild 版本或釘定檔案漂移）：**停止，不 commit 這些額外檔案**，以 `git checkout -- <額外檔案>` 還原它們，並於回報中說明，讓人決定是否另案處理。
-- [ ] **Step 4（重建，PowerShell）：**
+- [x] **Step 3（基準）：** 重建前先確認 `git status --short app/android/app/src/main/assets/foliate/legacy` 為空（工作樹乾淨）。重建（Step 4）後檢查 diff 範圍：若除 `legacy/main.js` 以外還有任何 `legacy/*` 檔出現 diff，代表基準本來就不同步（esbuild 版本或釘定檔案漂移）：**停止，不 commit 這些額外檔案**，以 `git checkout -- <額外檔案>` 還原它們，並於回報中說明，讓人決定是否另案處理。
+- [x] **Step 4（重建，PowerShell）：**
   ```powershell
   $env:PATH = "$env:PNPM_HOME;$env:PATH"
   cd C:\Users\fycdc\AI\elinkBook\app\tool\foliate_legacy
@@ -319,13 +319,13 @@
   ```
   預期輸出每個檔案成功、結尾顯示處理數量、無 `✗`、無 `仍含 :is()` 警告。
   確認 `pnpm install` 沒有改動 `pnpm-lock.yaml`：`git status --short app/tool/foliate_legacy` 應為空（`node_modules` 已被 `.gitignore` 忽略；若未被忽略，**不得**加入 commit，先回報）。
-- [ ] **Step 5（驗證降級輸出）：**
+- [x] **Step 5（驗證降級輸出）：**
   ```bash
   git status --short app/android/app/src/main/assets/foliate/legacy
   git diff app/android/app/src/main/assets/foliate/legacy/main.js
   ```
   預期：只有 `legacy/main.js` 變更，diff 只有新增標題規則那一段（含 `prefs.headingFontFamily`、`headingTags`／`headingSelector` 與 `.map(`、`.join(`），主字型規則仍在其前。用 Grep 於 `legacy/main.js` 確認不含 `?.`／`??` 以外的非降級語法問題由 esbuild 保證，不需手查。
-- [ ] **Step 6（確認綠）：**
+- [x] **Step 6（確認綠）：**
   ```bash
   flutter test test/reader/foliate_legacy_assets_test.dart
   ```
@@ -335,8 +335,8 @@
   node tool/check_foliate_es_compat.js
   ```
   預期：測試全綠；掃描 exit 0（本次新增只用 `Array.prototype.map`／`join`，無較新 API）。若掃描失敗，不要自行加 polyfill，回報。
-- [ ] **Step 7（反向驗證，暫時修改、驗完還原，不 commit）：** 暫時把 `legacy/main.js` 內的 `prefs.headingFontFamily` 改名（例如 `prefs.headingFontFamilyX`）→ 守衛必須紅；之後**重跑 `pnpm build`** 還原（不要用 `git stash`／`git checkout`：前者會連帶 `.claude/settings.json`、後者會丟掉重建結果），再跑一次測試確認綠。
-- [ ] **Step 8：commit：**
+- [x] **Step 7（反向驗證，暫時修改、驗完還原，不 commit）：** 暫時把 `legacy/main.js` 內的 `prefs.headingFontFamily` 改名（例如 `prefs.headingFontFamilyX`）→ 守衛必須紅；之後**重跑 `pnpm build`** 還原（不要用 `git stash`／`git checkout`：前者會連帶 `.claude/settings.json`、後者會丟掉重建結果），再跑一次測試確認綠。
+- [x] **Step 8：commit：**
   ```bash
   git add app/android/app/src/main/assets/foliate/legacy/main.js app/test/reader/foliate_legacy_assets_test.dart
   git commit -m "chore(epic-68): 重新產生 legacy 降級副本並補標題字型內容守衛"

@@ -230,6 +230,11 @@ function buildOverrideCss(prefs) {
   if (prefs.fontFamily) {
     rules.push(`${selector} { font-family: '${prefs.fontFamily}' !important; }`);
   }
+  if (prefs.headingFontFamily) {
+    const headingTags = ["h1", "h2", "h3", "h4", "h5", "h6"];
+    const headingSelector = headingTags.map((h) => `${h}, ${h} *`).join(", ");
+    rules.push(`${headingSelector} { font-family: '${prefs.headingFontFamily}' !important; }`);
+  }
   if (typeof prefs.fontSize === "number") {
     rules.push(`html { font-size: ${prefs.fontSize * 100}% !important; }`);
   }

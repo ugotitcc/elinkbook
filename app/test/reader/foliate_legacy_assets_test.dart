@@ -53,6 +53,31 @@ void main() {
           File('${legacyDir.path}/paginator.js').readAsStringSync();
       expect(paginator, isNot(contains(':is(#header, #footer)')));
     });
+
+    test('降級副本的 main.js 含標題字型規則，且排在主字型規則之後（epic-68 Issue 2；忘了重新產生會失敗）',
+        () {
+      const reason = '請在 app/tool/foliate_legacy 執行 pnpm build';
+      for (final path in [
+        '${foliateDir.path}/main.js',
+        '${legacyDir.path}/main.js',
+      ]) {
+        final text = File(path).readAsStringSync();
+        expect(text, contains('prefs.headingFontFamily'), reason: '$path：$reason');
+        // 順序守衛：標題規則必須在主字型規則之後（同特異度由後者勝）。
+        expect(text.indexOf('prefs.headingFontFamily'),
+            greaterThan(text.indexOf('prefs.fontFamily')),
+            reason: '$path：$reason');
+        // selector 必須含後代寫法（h1 * ...）：否則標題內層 span／a 會被主字型蓋回去。
+        // 原始碼以 `${h} *` 於執行期展開成 `h1 *`…`h6 *`，故檢查模板字串本身與標籤清單。
+        expect(text, contains(r'${h}, ${h} *'), reason: '$path：$reason');
+        // 引號：原始檔為單引號、esbuild 輸出為雙引號，故不限定。
+        expect(
+            RegExp(r'''\[(["'])h1\1, \1h2\1, \1h3\1, \1h4\1, \1h5\1, \1h6\1\]''')
+                .hasMatch(text),
+            isTrue,
+            reason: '$path：$reason');
+      }
+    });
   });
 
   group('載入分流', () {
