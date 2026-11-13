@@ -7982,6 +7982,72 @@ void main() {
     expect(find.text('測試自訂字型'), findsWidgets);
   });
 
+  testWidgets('在版面設定選擇標題字型後，偏好被儲存且 FoliateReaderView 收到標題字型（epic-68 Issue 3）',
+      (tester) async {
+    final customFontsRepository = FakeCustomFontsRepository();
+    await customFontsRepository.insert(
+      const CustomFont(
+        displayName: '測試自訂字型',
+        familyName: 'TestCustomFamily',
+        fontUri: 'content://example/test',
+      ),
+    );
+    await prefsManager.saveBookPrefs('b1', const BookReaderPrefs());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          dependencies: fakeReaderFeatureDependencies(
+            prefsManager: prefsManager,
+            customFontsRepository: customFontsRepository,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    tester
+        .widget<FoliateReaderView>(find.byType(FoliateReaderView))
+        .onLayoutResolved
+        ?.call(const EpubLayoutInfo(
+            isFixedLayout: false, writingMode: WritingMode.horizontal));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final headingDropdown = find.byKey(const Key('reader_settings_heading_font_family'));
+    expect(headingDropdown, findsOneWidget);
+
+    tester.widget<DropdownButton<String?>>(headingDropdown).onChanged!('TestCustomFamily');
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(prefsManager.bookPrefsByBookId['b1']!.headingFontFamily, 'TestCustomFamily');
+    expect(tester.widget<FoliateReaderView>(find.byType(FoliateReaderView)).headingFontFamily,
+        'TestCustomFamily');
+
+    // 改回「跟隨主字型」：偏好與傳給閱讀器的值皆為 null。
+    tester.widget<DropdownButton<String?>>(headingDropdown).onChanged!(null);
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(prefsManager.bookPrefsByBookId['b1']!.headingFontFamily, isNull);
+    expect(tester.widget<FoliateReaderView>(find.byType(FoliateReaderView)).headingFontFamily,
+        isNull);
+  });
+
   testWidgets(
     '提供 customFontsRepository 時，自訂字型清單載入完成前 FoliateReaderView 不建構，載入完成後才建構',
     (tester) async {
@@ -8427,6 +8493,18 @@ void main() {
 
       // 確認這確實是 CBZ 被防禦性視為固定版面的情境。
       expect(view.isFixedLayoutHint, isTrue);
+      expect(view.headingFontFamily, isNull);
+    });
+
+    testWidgets('CBZ 明確宣告 isFixedLayout=false 時仍傳 null（epic-68，審查 M1）',
+        (tester) async {
+      await prefsManager.saveBookPrefs('b1', bothPrefs);
+
+      final view = await pumpHeading(tester,
+          filePath: 'test/fixtures/sample.cbz',
+          isFixedLayout: false,
+          store: bothInstalled());
+
       expect(view.headingFontFamily, isNull);
     });
 

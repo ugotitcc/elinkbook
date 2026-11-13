@@ -224,13 +224,13 @@
 **Files：**
 - 修改：`app/test/screens/fxl_settings_sheet_test.dart`、`app/test/screens/pdf_settings_sheet_test.dart`、`app/test/screens/reader_screen_test.dart`
 
-- [ ] **Step 1：FXL／PDF 負向測試。**
+- [x] **Step 1：FXL／PDF 負向測試。**
   - `fxl_settings_sheet_test.dart`（先 `grep -n "^Future<void> _pump" test/screens/fxl_settings_sheet_test.dart` 確認其 helper 簽章，沿用）：新增 `FxlSettingsSheet 不顯示字型與標題字型下拉，且既有標題字型不被清空（epic-68 Issue 3）`：prefs `BookReaderPrefs(fontFamily: 'SourceHanSerifTC', headingFontFamily: 'TaiwanPearl')`；`find.byKey(const Key('reader_settings_heading_font_family'))` 與 `find.byKey(const Key('reader_settings_font_family'))` 皆 `findsNothing`；觸發一個既有可操作控制項（例如「永遠雙頁」，比照該檔既有 `點擊「永遠雙頁」觸發 onChanged` 測試的點法）後，`result!.headingFontFamily == 'TaiwanPearl'`（審查 M4：Issue 1 已有保留測試，只在既有「切換全螢幕後標題字型不被清空」測試所在 group 補兩個 Key 的 `findsNothing`，不另寫完整觸發測試）。
   - `pdf_settings_sheet_test.dart`：新增 `PdfSettingsSheet 不顯示標題字型下拉（epic-68 Issue 3）`：`_pumpSheet(tester, const BookReaderPrefs(headingFontFamily: 'TaiwanPearl'), (_) {})` 後兩個 Key 皆 `findsNothing`。
-- [ ] **Step 2：端到端測試（`reader_screen_test.dart`）。** 以既有測試 `提供 customFontsRepository 時，開啟版面設定顯示自訂字型選項`（約 7925）為範本，新增 `在版面設定選擇標題字型後，偏好被儲存且 FoliateReaderView 收到標題字型（epic-68 Issue 3）`：`FakeCustomFontsRepository` 插入 `測試自訂字型`／`TestCustomFamily`，沿用檔內 group 級 `prefsManager`（`prefsManager.saveBookPrefs('b1', const BookReaderPrefs())`，不新建 Fake；審查 M5），開 `sample.epub`、`onLayoutResolved` 回報流式後點 `reader_chrome_layout_button` 開面板；`tester.widget<DropdownButton<String?>>(find.byKey(const Key('reader_settings_heading_font_family'))).onChanged!('TestCustomFamily'); await tester.pump();` 後斷言 `prefsManager.bookPrefsByBookId['b1']!.headingFontFamily == 'TestCustomFamily'`（取值方式比照該 group 既有 `bookPrefsByBookId` 斷言）、`tester.widget<FoliateReaderView>(find.byType(FoliateReaderView)).headingFontFamily == 'TestCustomFamily'`；再 `onChanged!(null)` 後兩者皆為 null。此測試把 Issue 2（傳遞）與 Issue 3（UI）接起來。
-- [ ] **Step 3：補 Issue 2 審查 M1。** 在 `reader_screen_test.dart` Issue 2 的傳遞 group（以字串 `epic-68` 搜尋定位）新增：`CBZ 明確宣告 isFixedLayout=false 時仍傳 null（epic-68，審查 M1）`：`filePath: 'test/fixtures/sample.cbz'`、`isFixedLayout: false`、種子 `headingFontFamily: 'TaiwanPearl'` 並使其可用，`readerView(tester).headingFontFamily` `isNull`（比照同 group CBZ 既有測試的 pump 寫法）。此為既有行為的測試鎖定。
-- [ ] **Step 4（反向驗證，不 commit）：** 暫時在 `fxl_settings_sheet.dart` 的 `build` 內插入一個帶 `Key('reader_settings_heading_font_family')` 的 `SizedBox`，確認 FXL 負向測試轉紅後還原（`git diff -- app/lib` 應為空）。
-- [ ] **Step 5：** 跑觸及檔並 commit：
+- [x] **Step 2：端到端測試（`reader_screen_test.dart`）。** 以既有測試 `提供 customFontsRepository 時，開啟版面設定顯示自訂字型選項`（約 7925）為範本，新增 `在版面設定選擇標題字型後，偏好被儲存且 FoliateReaderView 收到標題字型（epic-68 Issue 3）`：`FakeCustomFontsRepository` 插入 `測試自訂字型`／`TestCustomFamily`，沿用檔內 group 級 `prefsManager`（`prefsManager.saveBookPrefs('b1', const BookReaderPrefs())`，不新建 Fake；審查 M5），開 `sample.epub`、`onLayoutResolved` 回報流式後點 `reader_chrome_layout_button` 開面板；`tester.widget<DropdownButton<String?>>(find.byKey(const Key('reader_settings_heading_font_family'))).onChanged!('TestCustomFamily'); await tester.pump();` 後斷言 `prefsManager.bookPrefsByBookId['b1']!.headingFontFamily == 'TestCustomFamily'`（取值方式比照該 group 既有 `bookPrefsByBookId` 斷言）、`tester.widget<FoliateReaderView>(find.byType(FoliateReaderView)).headingFontFamily == 'TestCustomFamily'`；再 `onChanged!(null)` 後兩者皆為 null。此測試把 Issue 2（傳遞）與 Issue 3（UI）接起來。
+- [x] **Step 3：補 Issue 2 審查 M1。** 在 `reader_screen_test.dart` Issue 2 的傳遞 group（以字串 `epic-68` 搜尋定位）新增：`CBZ 明確宣告 isFixedLayout=false 時仍傳 null（epic-68，審查 M1）`：`filePath: 'test/fixtures/sample.cbz'`、`isFixedLayout: false`、種子 `headingFontFamily: 'TaiwanPearl'` 並使其可用，`readerView(tester).headingFontFamily` `isNull`（比照同 group CBZ 既有測試的 pump 寫法）。此為既有行為的測試鎖定。
+- [x] **Step 4（反向驗證，不 commit）：** 暫時在 `fxl_settings_sheet.dart` 的 `build` 內插入一個帶 `Key('reader_settings_heading_font_family')` 的 `SizedBox`，確認 FXL 負向測試轉紅後還原（`git diff -- app/lib` 應為空）。
+- [x] **Step 5：** 跑觸及檔並 commit：
   ```bash
   flutter test test/screens/fxl_settings_sheet_test.dart test/screens/pdf_settings_sheet_test.dart
   flutter test test/screens/reader_screen_test.dart
@@ -371,6 +371,7 @@
 - Task 1：紅燈＝三個標籤測試失敗（-3）；改 arb＋`flutter gen-l10n` 後 `reader_settings_sheet_test.dart`＋`arb_consistency_test.dart` 129 通過；`git diff --stat -- lib/l10n` 7 檔 61 增 11 刪，無整檔 diff。
 - Task 2：紅燈＝新 group 13 測試中 12 紅（測試 2 因 Task 1 已綠）。實作後整檔 138 通過。反向驗證：`value` 不經 `effectiveFamily` → 測試 7、8、9 紅；拿掉 `_notifyChanged()` → 測試 4、5、6 紅；皆已還原。
 - 面板高度（審查 M6）：「版面設定面板高度…」測試實測 `textTabHeight`（面板高度）新增下拉前後皆為 988.0（門檻 <1000，餘裕僅 12，但未變動）；「文字」分頁內容在 viewport 738 內 `maxScrollExtent=0`，代表文字分頁不是最高分頁，面板高度由其他分頁決定，故新增一列不影響。註：計畫與測試註解寫的「最高分頁約 700 多」實為面板整體 988。
+- Task 3：FXL 負向併入既有測試（兩個 Key findsNothing）、PDF 新增負向測試、端到端與 CBZ 宣告 false 測試一加入即綠。反向驗證：FXL 面板插入同 Key 的 SizedBox → FXL 測試紅，已還原（`git diff -- app/lib` 空）。結果：fxl＋pdf 97 通過；reader_screen_test 326 通過。
 
 ### 程式審查後處理
 
