@@ -193,6 +193,7 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
     return ResolvedPreferences(
       writingMode: book.writingModeOverride ?? autoDetectedWritingMode,
       fontFamily: book.fontFamily,
+      headingFontFamily: book.headingFontFamily,
       fontSize: book.fontSize,
       fontWeight: book.fontWeight,
       lineHeight: book.lineHeight,

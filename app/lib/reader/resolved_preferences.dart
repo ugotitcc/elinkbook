@@ -28,6 +28,11 @@ import 'zone_action.dart';
 class ResolvedPreferences {
   final WritingMode? writingMode;
   final String? fontFamily;
+
+  /// 標題字型家族名稱，直接取 `book.headingFontFamily`、無全域預設
+  /// （epic-68 D6）；`null`＝跟隨主字型。
+  final String? headingFontFamily;
+
   final double? fontSize;
   final double? fontWeight;
   final double? lineHeight;
@@ -102,6 +107,7 @@ class ResolvedPreferences {
   const ResolvedPreferences({
     this.writingMode,
     this.fontFamily,
+    this.headingFontFamily,
     this.fontSize,
     this.fontWeight,
     this.lineHeight,

@@ -92,6 +92,45 @@ void main() {
     expect(present.firstLineIndent, 0.0);
   });
 
+  test('headingFontFamily 未傳入時為 null，傳入值原樣保留（epic-68 Issue 1）', () {
+    const absent = ResolvedPreferences(
+      pageTurnMode: PageTurnMode.paginated,
+      screenOrientation: ScreenOrientationSetting.auto,
+      pdfFitMode: PdfFitMode.pageFit,
+      pdfContrast: 0,
+      pdfBrightness: 0,
+      pdfBoldStrength: 0,
+      pdfCropMode: PdfCropMode.none,
+      dualPageMode: DualPageMode.auto,
+      dualPageCoverAlone: true,
+      dualPageDirection: DualPageDirection.ltr,
+      showHeader: true,
+      showFooter: true,
+      navZoneActions: rightFlipZoneTemplate,
+      showNavZoneDebugOverlay: false,
+    );
+    expect(absent.headingFontFamily, isNull);
+
+    const present = ResolvedPreferences(
+      headingFontFamily: 'TaiwanPearl',
+      pageTurnMode: PageTurnMode.paginated,
+      screenOrientation: ScreenOrientationSetting.auto,
+      pdfFitMode: PdfFitMode.pageFit,
+      pdfContrast: 0,
+      pdfBrightness: 0,
+      pdfBoldStrength: 0,
+      pdfCropMode: PdfCropMode.none,
+      dualPageMode: DualPageMode.auto,
+      dualPageCoverAlone: true,
+      dualPageDirection: DualPageDirection.ltr,
+      showHeader: true,
+      showFooter: true,
+      navZoneActions: rightFlipZoneTemplate,
+      showNavZoneDebugOverlay: false,
+    );
+    expect(present.headingFontFamily, 'TaiwanPearl');
+  });
+
   test('volumeKeyEnabled 未傳入時預設 true', () {
     const resolved = ResolvedPreferences(
       pageTurnMode: PageTurnMode.paginated,

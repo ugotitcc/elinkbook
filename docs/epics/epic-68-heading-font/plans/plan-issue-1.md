@@ -225,23 +225,23 @@
 - 修改：`app/lib/reader/resolved_preferences.dart`、`app/lib/reader/reader_prefs_manager_impl.dart`
 - 修改：`app/test/reader/resolved_preferences_test.dart`、`app/test/reader/reader_prefs_manager_test.dart`
 
-- [ ] **Step 1（紅）：**
+- [x] **Step 1（紅）：**
   - `resolved_preferences_test.dart`：仿 56–93 行新增 `headingFontFamily 未傳入時為 null，傳入值原樣保留（epic-68 Issue 1）`：兩個 `const ResolvedPreferences(...)`（必填欄位照該檔現有寫法），`absent.headingFontFamily` 為 null、`present`（`headingFontFamily: 'TaiwanPearl'`）讀回 `'TaiwanPearl'`。
   - `reader_prefs_manager_test.dart`：在 `resolve()` group 內、緊接「首行縮排：單書覆寫值帶進 ResolvedPreferences…」（約 72 行）新增 `標題字型：直接取單書值，無全域預設；未覆寫時為 null（epic-68 Issue 1）`：`BookReaderPrefs.empty` → `headingFontFamily` 為 null；`BookReaderPrefs(headingFontFamily: 'TaiwanPearl')` → `'TaiwanPearl'`；`BookReaderPrefs(fontFamily: 'SourceHanSerifTC')`（只有主字型）→ `headingFontFamily` 仍為 null（鎖定「不從 `fontFamily` 推導」）。另在 41 行「全部欄位皆未覆寫」測試末尾（約 69 行 `firstLineIndent` 斷言後）補 `expect(resolved.headingFontFamily, isNull);`。
-- [ ] **Step 2（確認紅）：**
+- [x] **Step 2（確認紅）：**
   ```bash
   flutter test test/reader/resolved_preferences_test.dart
   flutter test test/reader/reader_prefs_manager_test.dart
   ```
   預期：編譯失敗（`headingFontFamily` 未定義）。
-- [ ] **Step 3（綠）：**
+- [x] **Step 3（綠）：**
   - `resolved_preferences.dart`：`final String? fontFamily;`（30 行）下新增 `final String? headingFontFamily;`（doc 註解：直接取 `book.headingFontFamily`，無全域預設，epic-68 D6；`null`＝跟隨主字型），建構子 `this.fontFamily,`（約 104 行）下補 `this.headingFontFamily,`。
   - `reader_prefs_manager_impl.dart` `resolve()`（195 行）`fontFamily: book.fontFamily,` 下補 `headingFontFamily: book.headingFontFamily,`。
-- [ ] **Step 4（確認綠）：** 同 Step 2 兩個指令，預期全綠。接著跑受 `ResolvedPreferences` 建構影響的最小集合確認未壞：
+- [x] **Step 4（確認綠）：** 同 Step 2 兩個指令，預期全綠。接著跑受 `ResolvedPreferences` 建構影響的最小集合確認未壞：
   ```bash
   flutter test test/reader/resolve_text_conversion_test.dart
   ```
-- [ ] **Step 5：** `flutter analyze`；明確列檔 commit：
+- [x] **Step 5：** `flutter analyze`；明確列檔 commit：
   ```bash
   git add app/lib/reader/resolved_preferences.dart app/lib/reader/reader_prefs_manager_impl.dart app/test/reader/resolved_preferences_test.dart app/test/reader/reader_prefs_manager_test.dart
   git commit -m "feat(epic-68): ResolvedPreferences 新增標題字型並由單書偏好直取"
