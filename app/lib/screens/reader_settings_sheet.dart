@@ -97,7 +97,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   static const _defaultMarginRight = 24.0;
 
   late String? _fontFamily;
-  // epic-68 Issue 1：標題字型僅帶入草稿（避免整列重建時被清空），下拉 UI 在 Issue 3。
+  // 標題字型（epic-68）：null＝跟隨主字型；下拉在字型卡片，_currentDraft／didUpdateWidget 同步。
   late String? _headingFontFamily;
   late double _fontSize;
   late bool _fontSizeOverridden;
@@ -1121,6 +1121,31 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     );
   }
 
+  /// 主字型與標題字型共用的下拉選項：第一項（value: null）文字由呼叫端決定，
+  /// 其後為已下載的內建字型與自訂字型。
+  List<DropdownMenuItem<String?>> _fontMenuItems(
+      AppLocalizations l10n, String firstItemLabel) {
+    final fonts = widget.availableFonts;
+    return [
+      DropdownMenuItem<String?>(
+        value: null,
+        child: Text(firstItemLabel, overflow: TextOverflow.ellipsis),
+      ),
+      ...fonts.builtInFonts.map(
+        (font) => DropdownMenuItem<String?>(
+          value: font.familyName,
+          child: Text(font.displayName(l10n), overflow: TextOverflow.ellipsis),
+        ),
+      ),
+      ...fonts.customFonts.map(
+        (font) => DropdownMenuItem<String?>(
+          value: font.familyName,
+          child: Text(font.displayName, overflow: TextOverflow.ellipsis),
+        ),
+      ),
+    ];
+  }
+
   Widget _buildFontFamilyDropdown() {
     final l10n = AppLocalizations.of(context)!;
     final fonts = widget.availableFonts;
@@ -1146,28 +1171,30 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   // 書本字型」。與閱讀器渲染端共用 effectiveFamily，兩邊一致；只影響
                   // 顯示，不改寫偏好設定，字型下載後舊設定自然生效。
                   value: fonts.effectiveFamily(_fontFamily),
-                  items: [
-                    DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text(l10n.readerSettingsUseBookFontLabel, overflow: TextOverflow.ellipsis),
-                    ),
-                    ...builtInFonts.map(
-                      (font) => DropdownMenuItem<String?>(
-                        value: font.familyName,
-                        child: Text(font.displayName(l10n),
-                            overflow: TextOverflow.ellipsis),
-                      ),
-                    ),
-                    ...fonts.customFonts.map(
-                      (font) => DropdownMenuItem<String?>(
-                        value: font.familyName,
-                        child: Text(font.displayName,
-                            overflow: TextOverflow.ellipsis),
-                      ),
-                    ),
-                  ],
+                  items: _fontMenuItems(l10n, l10n.readerSettingsUseBookFontLabel),
                   onChanged: (value) => setState(() {
                     _fontFamily = value;
+                    _notifyChanged();
+                  }),
+                ),
+              ),
+            ],
+          ),
+          // epic-68 Issue 3：標題字型下拉。選項與主字型相同，第一項為「跟隨主字型」（null）。
+          // 目前值走 effectiveFamily：標題字型不可用時只影響顯示，不改寫偏好（ADR 0035）。
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(l10n.readerSettingsHeadingFontFamilyLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButton<String?>(
+                  key: const Key('reader_settings_heading_font_family'),
+                  isExpanded: true,
+                  value: fonts.effectiveFamily(_headingFontFamily),
+                  items: _fontMenuItems(l10n, l10n.readerSettingsFollowBodyFontLabel),
+                  onChanged: (value) => setState(() {
+                    _headingFontFamily = value;
                     _notifyChanged();
                   }),
                 ),

@@ -103,16 +103,16 @@
 - 修改：`app/lib/l10n/app_zh_TW.arb`、`app_zh.arb`、`app_zh_CN.arb`、`app_en.arb`
 - 重新產生：`app/lib/l10n/app_localizations.dart`、`app_localizations_en.dart`、`app_localizations_zh.dart`
 
-- [ ] **Step 1（紅，先改測試）：** 在 `reader_settings_sheet_test.dart` 以字串定位修改三個測試：
+- [x] **Step 1（紅，先改測試）：** 在 `reader_settings_sheet_test.dart` 以字串定位修改三個測試：
   - `'正體中文介面下字型標籤與欄數「單欄」選項正確渲染'`：`expect(find.text('字型'), findsOneWidget);` → `expect(find.text('主字型'), findsOneWidget);`（測試名稱維持，可在名稱中的「字型標籤」改為「主字型標籤」）。
   - `'簡體中文介面下字型標籤與欄數「单栏」選項正確以簡體渲染'`：`find.text('字体')` → `find.text('主字体')`；其下 `find.text('字型'), findsNothing` 保留。
   - `'英文介面下字型標籤與欄數「Single」選項正確以英文渲染'`：`find.text('Font')` → `find.text('Body font')`；其下 `find.text('字型'), findsNothing` 保留。
-- [ ] **Step 2（確認紅）：**
+- [x] **Step 2（確認紅）：**
   ```bash
   flutter test test/screens/reader_settings_sheet_test.dart --plain-name "字型標籤與欄數"
   ```
   預期：三個測試失敗（找不到「主字型」「主字体」「Body font」）。
-- [ ] **Step 3（綠，改 arb）：** 以 Edit（字串定位，`old_string` 不含換行）：
+- [x] **Step 3（綠，改 arb）：** 以 Edit（字串定位，`old_string` 不含換行）：
   - `app_zh_TW.arb`：`"readerSettingsFontFamilyLabel": "字型",` → `"readerSettingsFontFamilyLabel": "主字型",`；其 `@readerSettingsFontFamilyLabel` description 改為「版面設定「文字」分頁中主字型下拉選單左側的標籤（epic-68 起與「標題字型」區分）」。在 `@readerSettingsFontFamilyLabel` 區塊之後新增：
     ```json
     "readerSettingsHeadingFontFamilyLabel": "標題字型",
@@ -127,19 +127,19 @@
   - `app_zh.arb`：改 `"readerSettingsFontFamilyLabel": "主字型",`，並在其後新增 `"readerSettingsHeadingFontFamilyLabel": "標題字型",`、`"readerSettingsFollowBodyFontLabel": "跟隨主字型",`（與 zh_TW 字串逐字相同；key 順序與 zh_TW 一致）。
   - `app_zh_CN.arb`：`"主字体"`、`"标题字体"`、`"跟随主字体"`。
   - `app_en.arb`：`"Body font"`、`"Heading font"`、`"Same as body font"`。
-- [ ] **Step 4：重新產生並檢查：**
+- [x] **Step 4：重新產生並檢查：**
   ```bash
   flutter gen-l10n
   git diff --stat -- lib/l10n
   ```
   預期：三個 `app_localizations*.dart` 與四份 arb 有變動；`app_localizations.dart` 新增兩個 abstract getter（含 description 文件註解）、`_en.dart` 與 `_zh.dart` 各增相應 override（zh 檔含 zh、zh_CN、zh_TW 三個子類別）。索引為 LF、`core.autocrlf=true`，產生檔不會造成整檔 diff；以 `git diff --stat` 確認 diff 合理即可，不需 `--renormalize`（審查 M1）。
-- [ ] **Step 5（確認綠）：**
+- [x] **Step 5（確認綠）：**
   ```bash
   flutter test test/screens/reader_settings_sheet_test.dart test/l10n/arb_consistency_test.dart
   flutter analyze
   ```
   預期：全綠（既有字型相關測試不受影響，主字型下拉行為尚未改動）；`No issues found!`。
-- [ ] **Step 6：** 檢查範圍並 commit（明確列檔）：
+- [x] **Step 6：** 檢查範圍並 commit（明確列檔）：
   ```bash
   git status --short
   git add app/lib/l10n/app_zh_TW.arb app/lib/l10n/app_zh.arb app/lib/l10n/app_zh_CN.arb app/lib/l10n/app_en.arb app/lib/l10n/app_localizations.dart app/lib/l10n/app_localizations_en.dart app/lib/l10n/app_localizations_zh.dart app/test/screens/reader_settings_sheet_test.dart
@@ -154,7 +154,7 @@
 - 修改：`app/lib/screens/reader_settings_sheet.dart`
 - 修改：`app/test/screens/reader_settings_sheet_test.dart`
 
-- [ ] **Step 1（紅，先寫測試）：** 在 `reader_settings_sheet_test.dart` 新增 `group('標題字型下拉（epic-68 Issue 3）', () { ... })`，放在既有「字型選單合併顯示內建 2 款與傳入的自訂字型清單」測試之後（以字串定位）。group 內定義小 helper `Finder headingKey() => find.byKey(const Key('reader_settings_heading_font_family'));` 與 `DropdownButton<String?> dd(WidgetTester t, Finder f) => t.widget<DropdownButton<String?>>(f);`。測試（皆用 `_pumpSheet`，自訂字型用上列統一字串）：
+- [x] **Step 1（紅，先寫測試）：** 在 `reader_settings_sheet_test.dart` 新增 `group('標題字型下拉（epic-68 Issue 3）', () { ... })`，放在既有「字型選單合併顯示內建 2 款與傳入的自訂字型清單」測試之後（以字串定位）。group 內定義小 helper `Finder headingKey() => find.byKey(const Key('reader_settings_heading_font_family'));` 與 `DropdownButton<String?> dd(WidgetTester t, Finder f) => t.widget<DropdownButton<String?>>(f);`。測試（皆用 `_pumpSheet`，自訂字型用上列統一字串）：
   1. `預設顯示標題字型下拉與標籤，目前值為 null（跟隨主字型）`：`BookReaderPrefs()`；`headingKey()` `findsOneWidget`；`find.text('標題字型')` `findsOneWidget`；`dd(headingKey()).value` `isNull`；`dd(...).isExpanded` `isTrue`。
   2. `主字型標籤為「主字型」，且不再有單獨的「字型」標籤`：`find.text('主字型')` `findsOneWidget`；`find.text('字型')` `findsNothing`。
   3. `標題字型選項清單與主字型一致，僅第一項文字不同`：傳 `customFonts: [我的自訂字型]`；`final h = dd(headingKey()).items!; final b = dd(find.byKey(const Key('reader_settings_font_family'))).items!;`，`expect(h.map((e) => e.value).toList(), b.map((e) => e.value).toList())`；`h.first.value` `isNull` 且 `b.first.value` `isNull`；`(h.first.child as Text).data` 為 `'跟隨主字型'`、`(b.first.child as Text).data` 為 `'使用書本內建字型'`；`h.map((e) => e.value)` 含 `'MyCustomFamily'`。（不用 `find.text` 比對選項，因 `DropdownButton` 內部 `IndexedStack` 會讓關閉狀態的選項也在 tree 中。）
@@ -168,12 +168,12 @@
   11. `下載提示只出現一次且位於標題字型下拉之後，文案不變`：`installedFonts: const {}`；`find.byKey(const Key('reader_settings_download_fonts_hint'))` `findsOneWidget`、文字 `'到「字型管理」下載更多字型'`；`tester.getTopLeft(hint).dy > tester.getTopLeft(headingKey()).dy`。有已下載字型時 `findsNothing`（既有測試保留，不重複）。
   12. `簡體與英文介面：標題字型標籤與「跟隨」選項正確`：`locale: const Locale('zh','CN')` → `find.text('标题字体')` `findsOneWidget`、`(dd(headingKey()).items!.first.child as Text).data == '跟随主字体'`；`locale: const Locale('en')` → `find.text('Heading font')` `findsOneWidget`、第一項 `'Same as body font'`。
   13. `窄螢幕（412 寬）與過長自訂字型名稱時，標題字型下拉不 overflow；E-Ink 模式同樣可顯示`：仿照既有「自訂字型清單中存在過長顯示名稱時…不應造成 RenderFlex overflow」測試的 `pumpWidget` 寫法（`physicalSize 412×1800`、過長 `displayName`），prefs 設 `headingFontFamily: 'CustomLongFontName'`，`takeException` null；另用 `_pumpSheet(..., isEinkMode: true)` 確認 `headingKey()` `findsOneWidget` 且無例外。
-- [ ] **Step 2（確認紅）：**
+- [x] **Step 2（確認紅）：**
   ```bash
   flutter test test/screens/reader_settings_sheet_test.dart --plain-name "標題字型下拉"
   ```
   預期：除「測試 2」可能已綠（Task 1 已改標籤）外，其餘因找不到 `reader_settings_heading_font_family`（`findsOneWidget` 失敗／`widget` 找不到）而紅。
-- [ ] **Step 3（綠，實作）：** 修改 `reader_settings_sheet.dart`（以字串定位）：
+- [x] **Step 3（綠，實作）：** 修改 `reader_settings_sheet.dart`（以字串定位）：
   1. 抽出私有方法 `List<DropdownMenuItem<String?>> _fontMenuItems(AppLocalizations l10n, String firstItemLabel)`：回傳 `[DropdownMenuItem(value: null, child: Text(firstItemLabel, overflow: TextOverflow.ellipsis)), ...widget.availableFonts.builtInFonts.map(...), ...widget.availableFonts.customFonts.map(...)]`，內容逐字取自既有主字型下拉的 `items:`；主字型改為 `items: _fontMenuItems(l10n, l10n.readerSettingsUseBookFontLabel)`。**行為與既有完全相同。**
   2. 在 `_buildFontFamilyDropdown()` 的 `Row`（主字型）之後、`if (builtInFonts.isEmpty)` 提示之前，新增標題字型列：
      ```dart
@@ -202,14 +202,14 @@
      （標籤與主字型標籤寬度不同導致兩個下拉左緣不齊，屬可接受的視覺細節；若目視確認覺得突兀，另案處理，不在本張擴大。）
   3. 更新 `_headingFontFamily` 欄位上方註解：由「Issue 1 僅帶入草稿，下拉 UI 在 Issue 3」改為「標題字型（epic-68）：null＝跟隨主字型；下拉在字型卡片，`_currentDraft`／`didUpdateWidget` 同步」。
   4. 提示文字 `readerSettingsDownloadMoreFontsHint` 保持在卡片最後，不動。
-- [ ] **Step 4（確認綠）：**
+- [x] **Step 4（確認綠）：**
   ```bash
   flutter test test/screens/reader_settings_sheet_test.dart
   flutter analyze
   ```
   預期：整個檔案全綠（含既有「面板高度跟最高分頁一樣…」< 1000 與各分頁等高、字型相關舊測試、Issue 1 的「不清空」測試）；`No issues found!`。並把實測「文字」分頁高度（`textTabHeight`）與是否為最高分頁記進執行紀錄（審查 M6）。若「面板高度…」失敗，代表文字分頁增高後超出預期，須回報而非調高門檻（先確認 < 1000 的數值餘裕）。
-- [ ] **Step 5（反向驗證，不 commit）：** 暫時把標題下拉的 `value:` 改成 `_headingFontFamily`（不經 `effectiveFamily`）、`installedFonts` 不含該字型的測試 7、8 必須因 `DropdownButton` assert／值不符而紅；還原。再暫時把 `onChanged` 內的 `_notifyChanged()` 拿掉，測試 4、5、6 必紅；還原。`git diff` 確認已還原。
-- [ ] **Step 6：** commit：
+- [x] **Step 5（反向驗證，不 commit）：** 暫時把標題下拉的 `value:` 改成 `_headingFontFamily`（不經 `effectiveFamily`）、`installedFonts` 不含該字型的測試 7、8 必須因 `DropdownButton` assert／值不符而紅；還原。再暫時把 `onChanged` 內的 `_notifyChanged()` 拿掉，測試 4、5、6 必紅；還原。`git diff` 確認已還原。
+- [x] **Step 6：** commit：
   ```bash
   git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart
   git commit -m "feat(epic-68): 版面設定新增標題字型下拉，選項與主字型共用"
@@ -368,7 +368,9 @@
 
 ## 執行紀錄
 
-（執行時填寫。）
+- Task 1：紅燈＝三個標籤測試失敗（-3）；改 arb＋`flutter gen-l10n` 後 `reader_settings_sheet_test.dart`＋`arb_consistency_test.dart` 129 通過；`git diff --stat -- lib/l10n` 7 檔 61 增 11 刪，無整檔 diff。
+- Task 2：紅燈＝新 group 13 測試中 12 紅（測試 2 因 Task 1 已綠）。實作後整檔 138 通過。反向驗證：`value` 不經 `effectiveFamily` → 測試 7、8、9 紅；拿掉 `_notifyChanged()` → 測試 4、5、6 紅；皆已還原。
+- 面板高度（審查 M6）：「版面設定面板高度…」測試實測 `textTabHeight`（面板高度）新增下拉前後皆為 988.0（門檻 <1000，餘裕僅 12，但未變動）；「文字」分頁內容在 viewport 738 內 `maxScrollExtent=0`，代表文字分頁不是最高分頁，面板高度由其他分頁決定，故新增一列不影響。註：計畫與測試註解寫的「最高分頁約 700 多」實為面板整體 988。
 
 ### 程式審查後處理
 
