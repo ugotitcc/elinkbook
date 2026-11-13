@@ -2903,6 +2903,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // resolve_text_conversion.dart 呼叫端查證）。
     final textConversionMode =
         resolveTextConversion(_prefs, _loaded!.globalPrefs.reading);
+    // epic-68 Issue 2：標題字型只套用流式 Foliate 格式（D4）。不能只看 _isFixedLayout——
+    // 它只在「宣告值為 true」或原生回報 FXL 後才為 true；舊資料 CBZ（宣告 null，被防禦性
+    // 視為固定版面）與「宣告 null、偵測為 FXL」的 EPUB 只會讓 _dispatchedIsFixedLayout
+    // 為 true，_isFixedLayout 仍為 false。
+    final isFixedLayoutEngine = _isFixedLayout ||
+        _dispatchedIsFixedLayout == true ||
+        format == BookFormat.cbz;
     switch (format) {
       case BookFormat.epub:
       case BookFormat.azw3:
@@ -2923,6 +2930,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           writingMode: resolved.writingMode,
           pageTurnMode: resolved.pageTurnMode,
           fontFamily: fonts.effectiveFamily(resolved.fontFamily),
+          headingFontFamily: isFixedLayoutEngine
+              ? null
+              : fonts.effectiveFamily(resolved.headingFontFamily),
           fontSize: resolved.fontSize,
           fontWeight: resolved.fontWeight,
           lineHeight: resolved.lineHeight,

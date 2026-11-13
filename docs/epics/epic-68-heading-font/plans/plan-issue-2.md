@@ -135,7 +135,7 @@
 - 修改：`app/lib/screens/reader_screen.dart`
 - 修改：`app/test/screens/reader_screen_test.dart`
 
-- [ ] **Step 1（紅，先寫測試）：** 在 `reader_screen_test.dart` 緊接 `group('未下載字型改用書本字型（epic-49 Issue 6）'…)` 結束之後（以字串定位，避免插入既有 group 內）新增 `group('標題字型傳遞（epic-68 Issue 2）', () { … })`。group 內自備 helper（比照 epic-49 group 與 `pumpWithIndentPrefs`，`prefsManager` 為檔案既有 `setUp` 變數）：
+- [x] **Step 1（紅，先寫測試）：** 在 `reader_screen_test.dart` 緊接 `group('未下載字型改用書本字型（epic-49 Issue 6）'…)` 結束之後（以字串定位，避免插入既有 group 內）新增 `group('標題字型傳遞（epic-68 Issue 2）', () { … })`。group 內自備 helper（比照 epic-49 group 與 `pumpWithIndentPrefs`，`prefsManager` 為檔案既有 `setUp` 變數）：
   ```dart
   Future<FoliateReaderView> pumpHeading(
     WidgetTester tester, {
@@ -174,12 +174,12 @@
   5. `CBZ 宣告值為 null 的舊資料：不傳標題字型`：`filePath: 'test/fixtures/sample.cbz'`、`isFixedLayout: null`（明確寫出），`view.headingFontFamily` isNull；同時 `expect(view.isFixedLayoutHint, isTrue)` 確認這確實是 CBZ 被防禦性視為固定版面的情境（非測試自己走偏）。
   6. `EPUB 宣告值為 null、偵測為 FXL：不傳標題字型`：`filePath: 'test/fixtures/sample.epub'`、`isFixedLayout: null`（明確寫出）、`libraryRepository: FakeLibraryRepository(detectedIsFixedLayout: true)`，`view.headingFontFamily` isNull。
   7. `TXT／AZW3 宣告值為 null：視同流式，照原值傳遞`：`sample_synth.txt` 與 `sample.azw3` 各一，`view.headingFontFamily == 'TaiwanPearl'`（TXT／MD 合成後章名為 `h*`，D3）。
-- [ ] **Step 2（確認紅）：**
+- [x] **Step 2（確認紅）：**
   ```bash
   flutter test test/screens/reader_screen_test.dart --plain-name "標題字型傳遞（epic-68 Issue 2）"
   ```
   預期：此時 `reader_screen.dart` 尚未傳值，`FoliateReaderView.headingFontFamily` 恆 null → 測試 1、7 紅（預期 `'TaiwanPearl'` 得 null），測試 2–6 此時直接綠（它們預期 null，屬回歸守衛，由 Step 5 反向驗證保證有效）。若編譯失敗，檢查 Task 1 已完成。
-- [ ] **Step 3（綠）：** 修改 `reader_screen.dart` `_buildNativeView`：
+- [x] **Step 3（綠）：** 修改 `reader_screen.dart` `_buildNativeView`：
   - 在 `final textConversionMode = …` 之後（`switch (format)` 之前，以字串定位）新增：
     ```dart
     // epic-68 Issue 2：標題字型只套用流式 Foliate 格式（D4）。不能只看 _isFixedLayout——
@@ -197,15 +197,15 @@
         : fonts.effectiveFamily(resolved.headingFontFamily),
     ```
   - **不要**改 `firstLineIndent` 那一行。
-- [ ] **Step 4（確認綠）：**
+- [x] **Step 4（確認綠）：**
   ```bash
   flutter test test/screens/reader_screen_test.dart --plain-name "標題字型傳遞（epic-68 Issue 2）"
   flutter test test/screens/reader_screen_test.dart
   flutter analyze
   ```
   預期全綠（第二行整檔，確認未回歸；整檔較久，可接受）。
-- [ ] **Step 5（反向驗證，暫時修改、驗完還原，不 commit）：** 把條件暫時改成只有 `_isFixedLayout` → 測試 5、6 必須變紅（測試 4 仍綠，因宣告 true 時 `_isFixedLayout` 為 true）；改成「無條件傳」→ 測試 4、5、6 必須變紅；把 `fonts.effectiveFamily(` 暫時換成直接傳 `resolved.headingFontFamily` → 測試 2 必須變紅。還原後再跑一次確認綠。任一項沒變紅就改寫該測試。
-- [ ] **Step 6：commit：**
+- [x] **Step 5（反向驗證，暫時修改、驗完還原，不 commit）：** 把條件暫時改成只有 `_isFixedLayout` → 測試 5、6 必須變紅（測試 4 仍綠，因宣告 true 時 `_isFixedLayout` 為 true）；改成「無條件傳」→ 測試 4、5、6 必須變紅；把 `fonts.effectiveFamily(` 暫時換成直接傳 `resolved.headingFontFamily` → 測試 2 必須變紅。還原後再跑一次確認綠。任一項沒變紅就改寫該測試。
+- [x] **Step 6：commit：**
   ```bash
   git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
   git commit -m "feat(epic-68): ReaderScreen 傳遞標題字型，FXL 與 CBZ（含舊資料）一律不套用"
