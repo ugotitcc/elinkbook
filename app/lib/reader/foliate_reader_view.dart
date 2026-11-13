@@ -160,6 +160,10 @@ Map<String, Object?> buildFoliatePreferencesMap(FoliateReaderView view) {
         view.pageTurnMode == PageTurnMode.scroll ? 'scroll' : 'paginated';
   }
   if (view.fontFamily != null) map['fontFamily'] = view.fontFamily!;
+  // epic-68 Issue 2：null＝跟隨主字型，不輸出 key，main.js 就不產生標題規則。
+  if (view.headingFontFamily != null) {
+    map['headingFontFamily'] = view.headingFontFamily!;
+  }
   if (view.fontSize != null) map['fontSize'] = view.fontSize;
   if (view.fontWeight != null) map['fontWeight'] = view.fontWeight;
   if (view.lineHeight != null) map['lineHeight'] = view.lineHeight;
@@ -211,6 +215,7 @@ bool foliatePreferencesChanged(
   return oldView.writingMode != newView.writingMode ||
       oldView.pageTurnMode != newView.pageTurnMode ||
       oldView.fontFamily != newView.fontFamily ||
+      oldView.headingFontFamily != newView.headingFontFamily ||
       oldView.fontSize != newView.fontSize ||
       oldView.fontWeight != newView.fontWeight ||
       oldView.lineHeight != newView.lineHeight ||
@@ -316,6 +321,10 @@ class FoliateReaderView extends StatefulWidget {
   final WritingMode? writingMode;
   final PageTurnMode? pageTurnMode;
   final String? fontFamily;
+
+  /// 標題（h1–h6 含後代）字型家族名稱（epic-68 Issue 2）。null＝跟隨主字型。
+  /// 由呼叫端先過濾可用性（未下載者傳 null）；固定版面與 CBZ 恆為 null。
+  final String? headingFontFamily;
   final double? fontSize;
   final double? fontWeight;
   final double? lineHeight;
@@ -424,6 +433,7 @@ class FoliateReaderView extends StatefulWidget {
     this.writingMode,
     this.pageTurnMode,
     this.fontFamily,
+    this.headingFontFamily,
     this.fontSize,
     this.fontWeight,
     this.lineHeight,

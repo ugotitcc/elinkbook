@@ -295,6 +295,46 @@ void main() {
           isFalse);
     });
 
+    test('headingFontFamily 非 null 時 map 含 headingFontFamily，且與 fontFamily 各自獨立（epic-68 Issue 2）', () {
+      const view = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        fontFamily: 'SourceHanSerifTC',
+        headingFontFamily: 'TaiwanPearl',
+      );
+      expect(buildFoliatePreferencesMap(view), {
+        'fontFamily': 'SourceHanSerifTC',
+        'headingFontFamily': 'TaiwanPearl',
+        'isLandscape': false, 'isComicBookHint': false,
+      });
+    });
+
+    test('headingFontFamily 為 null 時 map 不含該 key（跟隨主字型，epic-68 Issue 2）', () {
+      const view = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        fontFamily: 'SourceHanSerifTC',
+      );
+      expect(
+          buildFoliatePreferencesMap(view).containsKey('headingFontFamily'),
+          isFalse);
+    });
+
+    test('只有標題字型、沒有主字型時 map 只含 headingFontFamily（epic-68 Issue 2）', () {
+      const view = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        headingFontFamily: 'TaiwanPearl',
+      );
+      expect(buildFoliatePreferencesMap(view), {
+        'headingFontFamily': 'TaiwanPearl',
+        'isLandscape': false, 'isComicBookHint': false,
+      });
+    });
+
     test('writingMode: horizontal 時 map 含 writingMode: horizontal', () {
       const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
@@ -484,6 +524,66 @@ void main() {
         onError: _noopError,
       );
       expect(foliatePreferencesChanged(oldView, turnedOff), isTrue);
+    });
+
+    test('只有 headingFontFamily 變動回傳 true（epic-68 Issue 2：改標題字型要重送偏好）', () {
+      const base = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        fontFamily: 'SourceHanSerifTC',
+      );
+      const withHeading = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        fontFamily: 'SourceHanSerifTC',
+        headingFontFamily: 'TaiwanPearl',
+      );
+      const otherHeading = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        fontFamily: 'SourceHanSerifTC',
+        headingFontFamily: 'SomeOther',
+      );
+      expect(foliatePreferencesChanged(base, withHeading), isTrue);
+      expect(foliatePreferencesChanged(withHeading, otherHeading), isTrue);
+    });
+
+    test('headingFontFamily 相同回傳 false（epic-68 Issue 2）', () {
+      const a = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        headingFontFamily: 'TaiwanPearl',
+      );
+      const b = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        headingFontFamily: 'TaiwanPearl',
+      );
+      expect(foliatePreferencesChanged(a, b), isFalse);
+    });
+
+    test('headingFontFamily 由有值變成 null：回傳 true，且新偏好不含 headingFontFamily 鍵（epic-68 Issue 2）',
+        () {
+      // main.js 每次整包取代覆蓋 CSS，不帶 key 標題規則就會消失。
+      const oldView = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        headingFontFamily: 'TaiwanPearl',
+      );
+      const newView = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isTrue);
+      expect(buildFoliatePreferencesMap(newView).containsKey('headingFontFamily'),
+          isFalse);
     });
 
     test('writingMode 變動回傳 true', () {

@@ -89,7 +89,7 @@
 - 修改：`app/lib/reader/foliate_reader_view.dart`
 - 修改：`app/test/reader/foliate_reader_view_test.dart`
 
-- [ ] **Step 1（紅，先寫測試）：** 在 `foliate_reader_view_test.dart`：
+- [x] **Step 1（紅，先寫測試）：** 在 `foliate_reader_view_test.dart`：
   - `group('buildFoliatePreferencesMap')` 內，緊接 `firstLineIndent 非 null 時 map 含 firstLineIndent…`（以字串定位）之後新增：
     1. `headingFontFamily 非 null 時 map 含 headingFontFamily，且與 fontFamily 各自獨立（epic-68 Issue 2）`：建構 `FoliateReaderView(filePath: '/tmp/sample.epub', onPageRendered: _noop, onError: _noopError, fontFamily: 'SourceHanSerifTC', headingFontFamily: 'TaiwanPearl')`，`expect(buildFoliatePreferencesMap(view), {'fontFamily': 'SourceHanSerifTC', 'headingFontFamily': 'TaiwanPearl', 'isLandscape': false, 'isComicBookHint': false})`。
     2. `headingFontFamily 為 null 時 map 不含該 key（跟隨主字型，epic-68 Issue 2）`：只給 `fontFamily`，`expect(buildFoliatePreferencesMap(view).containsKey('headingFontFamily'), isFalse)`。
@@ -98,12 +98,12 @@
     1. `只有 headingFontFamily 變動回傳 true（epic-68 Issue 2：改標題字型要重送偏好）`：兩個 view 其他欄位全同（皆 `fontFamily: 'SourceHanSerifTC'`），一個 `headingFontFamily: 'TaiwanPearl'`、另一個 null → `isTrue`；兩個不同非 null 值 → `isTrue`。
     2. `headingFontFamily 相同回傳 false`（兩者皆 `'TaiwanPearl'`）→ `isFalse`。
     3. `headingFontFamily 由有值變成 null：回傳 true，且新偏好不含 headingFontFamily 鍵`（比照既有「fontFamily 由有值變成 null」測試；main.js 每次整包取代覆蓋 CSS，不帶 key 規則就會消失）。
-- [ ] **Step 2（確認紅）：**
+- [x] **Step 2（確認紅）：**
   ```bash
   flutter test test/reader/foliate_reader_view_test.dart
   ```
   預期：**編譯失敗**（`headingFontFamily` 不是 `FoliateReaderView` 的參數）。
-- [ ] **Step 3（綠）：** 修改 `foliate_reader_view.dart`（以字串定位）：
+- [x] **Step 3（綠）：** 修改 `foliate_reader_view.dart`（以字串定位）：
   - 欄位：緊接 `final String? fontFamily;` 之後新增（含正體中文 doc 註解，說明 null＝跟隨主字型、由呼叫端已過濾可用性、FXL／CBZ 恆為 null）：`final String? headingFontFamily;`
   - 建構子：緊接 `this.fontFamily,` 之後 `this.headingFontFamily,`。
   - `buildFoliatePreferencesMap`：緊接 `if (view.fontFamily != null) map['fontFamily'] = view.fontFamily!;` 之後：
@@ -114,14 +114,14 @@
     }
     ```
   - `foliatePreferencesChanged`：緊接 `oldView.fontFamily != newView.fontFamily ||` 之後新增 `oldView.headingFontFamily != newView.headingFontFamily ||`。
-- [ ] **Step 4（確認綠）：**
+- [x] **Step 4（確認綠）：**
   ```bash
   flutter test test/reader/foliate_reader_view_test.dart
   flutter analyze
   ```
   預期：全綠、`No issues found!`。
-- [ ] **Step 5（反向驗證，暫時修改、驗完還原，不 commit）：** 把 `foliatePreferencesChanged` 新增的那一行暫時註解 → Step 1 的 changed 測試 1 與 3 必須變紅（測試 2 仍綠）；還原後再跑一次確認綠。把 `buildFoliatePreferencesMap` 新增的 `if` 暫時註解 → map 測試 1、3 必須變紅。若任一項沒變紅，改寫該測試直到能抓到。
-- [ ] **Step 6：commit：**
+- [x] **Step 5（反向驗證，暫時修改、驗完還原，不 commit）：** 把 `foliatePreferencesChanged` 新增的那一行暫時註解 → Step 1 的 changed 測試 1 與 3 必須變紅（測試 2 仍綠）；還原後再跑一次確認綠。把 `buildFoliatePreferencesMap` 新增的 `if` 暫時註解 → map 測試 1、3 必須變紅。若任一項沒變紅，改寫該測試直到能抓到。
+- [x] **Step 6：commit：**
   ```bash
   git add app/lib/reader/foliate_reader_view.dart app/test/reader/foliate_reader_view_test.dart
   git commit -m "feat(epic-68): FoliateReaderView 新增標題字型參數並納入偏好 map 與變更偵測"
