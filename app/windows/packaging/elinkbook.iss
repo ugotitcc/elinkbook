@@ -86,7 +86,9 @@ end;
 
 // App 資料分放兩處（見 ADR 0043、ADR 0044）：
 //   1. %APPDATA%\cc.ugotit\elinkbook（WebView2、已下載字型、字典來源）
-//   2. 使用者的「文件」資料夾下的 elinkbook 目錄（書庫、字典庫、封面、匯入的書等）
+//   2. 使用者的「文件」資料夾下的 elinkbook-data 目錄（書庫、字典庫、封面、匯入的書等）
+//      名稱必須與 lib/platform/app_paths.dart 的 kWindowsAppFolderName 一致、發佈後不可更改；
+//      刻意不叫 elinkbook：免安裝 zip 解壓出的程式資料夾叫 elinkbook，同名會讓程式與資料變成同一個資料夾。
 // AppDataRootOverride、DocsRootOverride 只給驗證腳本把「根目錄」指到假資料夾用（出貨版不帶），
 // 讓「選是」的刪除行為可以在不碰真實資料的情況下實測。
 function AppDataRoot(): String;
@@ -118,7 +120,7 @@ end;
 function DocsAppDir(): String;
 begin
   if DocsRoot() <> '' then
-    Result := AddBackslash(DocsRoot()) + 'elinkbook'
+    Result := AddBackslash(DocsRoot()) + 'elinkbook-data'
   else
     Result := '';
 end;
@@ -137,6 +139,27 @@ begin
     DelTree(DocsAppDir(), True, True, True);
 end;
 
+// 詢問框要列出的資料夾：只列「實際存在、會被刪」的，文字才與行為一致。
+function BuildDeleteList(): String;
+var
+  N: Integer;
+begin
+  Result := '';
+  N := 0;
+  if (AppDataDir() <> '') and DirExists(AppDataDir()) then
+  begin
+    N := N + 1;
+    Result := Result + IntToStr(N) + '. ' + AppDataDir() + #13#10 +
+              '   （已下載的字型、字典來源、WebView 瀏覽資料）' + #13#10;
+  end;
+  if (DocsAppDir() <> '') and DirExists(DocsAppDir()) then
+  begin
+    N := N + 1;
+    Result := Result + IntToStr(N) + '. ' + DocsAppDir() + #13#10 +
+              '   （書庫、字典庫、封面、匯入的書的複本等）' + #13#10;
+  end;
+end;
+
 // 解除安裝時詢問是否同時刪除 App 的所有資料（含書庫）。
 // 預設按鈕為「否」；靜默解除安裝（/SILENT、/VERYSILENT）一律不詢問、不刪除。
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
@@ -149,11 +172,8 @@ begin
     Exit;
 
   if MsgBox('是否同時刪除 elinkBook 的所有資料（包含書庫）？' + #13#10 + #13#10 +
-            '將刪除以下兩個資料夾：' + #13#10 +
-            '1. ' + AppDataDir() + #13#10 +
-            '   （已下載的字型、字典來源、WebView 瀏覽資料）' + #13#10 +
-            '2. ' + DocsAppDir() + #13#10 +
-            '   （書庫、字典庫、封面、匯入的書的複本等）' + #13#10 + #13#10 +
+            '將刪除以下資料夾：' + #13#10 +
+            BuildDeleteList() + #13#10 +
             '不會動「文件」資料夾內的其他檔案；匯入時留在原位置的書檔也不會被刪除。' + #13#10 +
             '刪除後無法復原。選「否」會保留所有資料，之後重新安裝仍可沿用。',
             mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
