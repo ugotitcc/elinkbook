@@ -1,7 +1,7 @@
-elinkBook Windows 免安裝版使用說明
-====================================
+elinkBook Windows 使用說明（免安裝版與安裝版）
+==============================================
 
-感謝使用 elinkBook 電子書閱讀器 Windows 免安裝版。
+感謝使用 elinkBook 電子書閱讀器 Windows 版（免安裝 zip 與安裝程式皆適用，安裝程式見第七節）。
 
 一、系統需求
 ------------
@@ -30,7 +30,7 @@ elinkBook Windows 免安裝版使用說明
 
 四、未簽章提示與 SmartScreen 解除
 ---------------------------------
-本版本為開源／自用免安裝發佈，未包含微軟商業程式碼數位簽章（Code Signing）：
+本版本未包含微軟商業程式碼數位簽章（Code Signing）：
 1. 啟動時 Windows Defender SmartScreen 可能跳出「Windows 已保護您的電腦」警示視窗。
    請點擊「其他資訊」→ 點擊「仍要執行」即可啟動。
 2. 若自網路下載本 zip 檔，Windows 可能自動附加網路安全標籤。解壓前建議：
@@ -50,3 +50,15 @@ elinkBook Windows 免安裝版使用說明
   Get-FileHash -Algorithm SHA256 elinkbook-*-windows-x64.zip
 
 比對輸出結果是否與發佈同名之「.sha256」文字檔案內容一致。
+
+七、安裝版（setup.exe）
+-----------------------
+除了免安裝 zip，也提供安裝程式「elinkbook-<版本>-windows-x64-setup.exe」：
+1. 安裝位置：預設為目前使用者的 %LOCALAPPDATA%\Programs\elinkBook，不需要系統管理員權限（不會跳出 UAC）。
+2. 捷徑：一定會建立開始功能表項目；桌面捷徑為安裝時的可選項目，預設勾選。
+3. 升級：直接執行新版安裝程式即可覆蓋舊版；若 elinkBook 正在執行，安裝程式會提示關閉。
+4. 解除安裝：從「設定 → 應用程式」解除安裝。解除安裝完成時會詢問「是否同時刪除書庫與閱讀紀錄」，預設為「否」（保留資料）；
+   選「是」會刪除上述「%APPDATA%\cc.ugotit\elinkbook」。以靜默模式（/SILENT、/VERYSILENT）解除安裝時一律不刪除資料。
+5. 安裝版同樣未簽章，SmartScreen 提示與解除封鎖方法見上方第四節。
+6. 免安裝版與安裝版共用同一份資料（%APPDATA%\cc.ugotit\elinkbook），請不要同時開啟兩份。
+   原本使用免安裝版的人不需要先刪除，直接安裝即可沿用原有的書庫與閱讀紀錄。

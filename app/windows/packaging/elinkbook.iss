@@ -63,3 +63,26 @@ Source: "{#StageDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs c
 [Icons]
 Name: "{autoprograms}\elinkBook"; Filename: "{app}\elinkbook.exe"
 Name: "{autodesktop}\elinkBook"; Filename: "{app}\elinkbook.exe"; Tasks: desktopicon
+
+[Code]
+// 解除安裝時詢問是否同時刪除 App 資料（書庫與閱讀紀錄）。
+// 預設按鈕為「否」；靜默解除安裝（/SILENT、/VERYSILENT）一律不詢問、不刪除。
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  DataDir: String;
+begin
+  if CurUninstallStep <> usPostUninstall then
+    Exit;
+  if UninstallSilent then
+    Exit;
+
+  DataDir := ExpandConstant('{userappdata}\cc.ugotit\elinkbook');
+  if not DirExists(DataDir) then
+    Exit;
+
+  if MsgBox('是否同時刪除 elinkBook 的書庫與閱讀紀錄？' + #13#10 + #13#10 +
+            '資料夾位置：' + DataDir + #13#10 +
+            '刪除後無法復原。選「否」會保留資料，之後重新安裝仍可沿用。',
+            mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+    DelTree(DataDir, True, True, True);
+end;
