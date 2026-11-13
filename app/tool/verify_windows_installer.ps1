@@ -204,6 +204,8 @@ try {
     $fontDir = Join-Path $target "data\flutter_assets\assets"
     $fonts = @(Get-ChildItem $fontDir -Recurse -File -Include *.ttf, *.otf, *.ttc, *.woff, *.woff2 -ErrorAction SilentlyContinue)
     Record-Check ($fonts.Count -eq 0) "2c 無打包字型" "assets 下發現 $($fonts.Count) 個字型檔（內建字型應改走可下載字型）"
+    $testAssets = Join-Path $target "data\flutter_assets\test"
+    Record-Check (-not (Test-Path $testAssets)) "2d 無測試用資源" "data\flutter_assets\test 存在: $(Test-Path $testAssets)（整合測試 fixtures 不應出貨）"
 
     $exePath = Join-Path $target "elinkbook.exe"
     Record-Check ((Get-LnkTarget $startMenuLnk) -eq $exePath) "3a 開始功能表項目" "$startMenuLnk → $(Get-LnkTarget $startMenuLnk)"

@@ -72,6 +72,13 @@ function Test-StagedDependencies([string]$TargetDir) {
         }
     }
 
+    # 測試用資源不得出貨：pubspec.yaml 為了整合測試把 test/fixtures/ 宣告成 asset，
+    # 會被整個帶進 data\flutter_assets\test（約 36 MB）；lib/ 沒有任何地方在執行期讀它，打包時組裝階段會移除。
+    $testAssetsDir = Join-Path $TargetDir "data\flutter_assets\test"
+    if (Test-Path $testAssetsDir) {
+        $errors.Add("[不該打包的測試資源] data\flutter_assets\test（整合測試用的 fixtures，不應隨安裝包出貨）")
+    }
+
     $dumpbin = $null
     try {
         $dumpbin = Get-DumpbinPath
@@ -287,6 +294,12 @@ Copy-Item -Path (Join-Path $releaseDir "*") -Destination $stageAppDir -Recurse -
 # 防禦性清理：若仍存在 dartjni.dll 則刪除（jni 為 path_provider_android 遞移相依，Windows 端不使用且依賴不存在之 jvm.dll）
 if (Test-Path "$stageAppDir\dartjni.dll") {
     Remove-Item "$stageAppDir\dartjni.dll" -Force
+}
+# 移除整合測試用的 fixtures（pubspec.yaml 把 test/fixtures/ 宣告成 asset，會被帶進輸出；執行期沒有任何程式讀它）
+$stageTestAssets = Join-Path $stageAppDir "data\flutter_assets\test"
+if (Test-Path $stageTestAssets) {
+    Write-Host "移除測試用資源: data\flutter_assets\test" -ForegroundColor Cyan
+    Remove-Item $stageTestAssets -Recurse -Force
 }
 
 # 尋找 Visual Studio 與複製 VC DLL

@@ -514,6 +514,7 @@ powershell -ExecutionPolicy Bypass -File tool/package_windows_zip.ps1 -SkipBuild
 補充：
 - 每次執行開頭會先刪除輸出目錄中同名的舊正式 zip、`.sha256` 與暫存 zip，所以任何一步失敗都不會留下看似成功的舊產物。
 - 暫存目錄不得含內建字型：依賴檢查（含 `-CheckOnly`）會在 `data\flutter_assets\assets\` 下發現字型檔就失敗。成因是 `build\flutter_assets` 會殘留已從 `pubspec.yaml` 移除的舊資源（Flutter 不會刪，CMake 安裝步驟卻整個目錄複製）；完整建置前腳本會先清掉該目錄，由 Flutter 依目前的 `pubspec.yaml` 重新產生。使用 `-SkipBuild` 沿用舊輸出而被擋下來時，手動刪除 `app\build\flutter_assets` 後重新建置。
+- 暫存目錄不得含測試用資源：`pubspec.yaml` 為了整合測試把 `test/fixtures/` 宣告成 asset，會被整個帶進 `data\flutter_assets\test`（約 36 MB，其中 `sample.ttf` 就占 35 MB）；`lib/` 沒有任何地方在執行期讀它。組裝暫存目錄時腳本會移除該資料夾，依賴檢查（含 `-CheckOnly`）發現它存在就失敗。
 - 暫存組裝時排除 `dartjni.dll`（`jni` 為 `path_provider_android` 的遞移相依，`lib/` 沒有任何引用，且該 DLL 依賴不存在的 `jvm.dll`）；理由與限制見 `docs/epics/epic-66-windows-port/epic.md` 決策 30。
 
 ### 單獨做依賴靜態檢查：`-CheckOnly`
