@@ -187,13 +187,13 @@
 
 ### Task 4：靜態檢查與 harness（只跑觸及檔，不跑完整 flutter test）
 
-- [ ] **Step 1：範圍檢查。**
+- [x] **Step 1：範圍檢查。**
   ```bash
   git log --oneline -12
   git diff 6b93d023..HEAD --stat -- app/lib
   ```
   預期 `app/lib` 只有 `reader/custom_fonts_repository.dart`；不得出現 `font_management_screen.dart`、arb、`app_localizations*`、資料庫檔。
-- [ ] **Step 2：靜態與慣例檢查（PowerShell）：**
+- [x] **Step 2：靜態與慣例檢查（PowerShell）：**
   ```powershell
   cd C:\Users\fycdc\AI\elinkBook\app
   flutter analyze
@@ -201,18 +201,18 @@
   node tool/check_integration_keys.js
   ```
   預期：`No issues found!`；兩個腳本 PASS／exit 0。若 `check_l10n_hardcoded_strings.js` 抱怨新測試的 `MaterialApp` 缺 locale，補 `locale: const Locale('zh', 'TW')`（新 group 的 `MaterialApp` 已帶 locale，理論上不會出現）。
-- [ ] **Step 3：harness 全場景（Epic 結尾回歸；本張未動 `main.js`，確認 Issue 2 的場景仍綠）：**
+- [x] **Step 3：harness 全場景（Epic 結尾回歸；本張未動 `main.js`，確認 Issue 2 的場景仍綠）：**
   ```powershell
   cd C:\Users\fycdc\AI\elinkBook\app\tool\foliate_touch_harness
   node run-all.mjs
   ```
   預期：全部 `[PASS]`，含 `scenario-heading-font.mjs` 的 A1、A2、A3、B、C、C2、D、D2。若環境缺 Chromium 或 puppeteer 導致場景無法啟動，記錄原因，不宣稱通過（與 Issue 2、3 的處理一致）。
-- [ ] **Step 4：觸及測試檔彙整：**
+- [x] **Step 4：觸及測試檔彙整：**
   ```bash
   flutter test test/reader/custom_fonts_repository_test.dart test/screens/font_management_screen_test.dart
   ```
   預期全綠；記錄通過數。
-- [ ] **Step 5：** 若 Step 2 因補 locale 而改檔，以明確列檔 commit：`fix(epic-68): 補測試 locale 以通過硬編碼字串檢查`；否則本 Task 無 commit。
+- [x] **Step 5：** 若 Step 2 因補 locale 而改檔，以明確列檔 commit：`fix(epic-68): 補測試 locale 以通過硬編碼字串檢查`；否則本 Task 無 commit。
 
 ---
 
