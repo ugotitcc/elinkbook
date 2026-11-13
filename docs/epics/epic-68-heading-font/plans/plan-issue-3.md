@@ -243,12 +243,12 @@
 
 ### Task 4：靜態檢查與本張觸及測試彙整
 
-- [ ] **Step 1：範圍檢查。**
+- [x] **Step 1：範圍檢查。**
   ```bash
   git diff <Issue 2 收尾 commit baa23975>..HEAD --stat -- app/lib
   ```
   預期只有 `app/lib/screens/reader_settings_sheet.dart`、四份 arb、三個 `app_localizations*.dart`。不得出現 `foliate/`、`foliate_reader_view.dart`、`reader_screen.dart`、`custom_fonts_repository.dart`、資料庫檔。
-- [ ] **Step 2：靜態與慣例檢查（PowerShell；`node` 可執行即可）：**
+- [x] **Step 2：靜態與慣例檢查（PowerShell；`node` 可執行即可）：**
   ```powershell
   cd C:\Users\fycdc\AI\elinkBook\app
   flutter analyze
@@ -256,13 +256,13 @@
   node tool/check_integration_keys.js
   ```
   預期：`No issues found!`；兩個腳本 PASS／exit 0。若 `check_l10n_hardcoded_strings.js` 抱怨新測試的 `MaterialApp` 缺 locale，補 `locale: const Locale('zh','TW')`。
-- [ ] **Step 3：觸及測試檔最終彙整（不是完整 `flutter test`）：**
+- [x] **Step 3：觸及測試檔最終彙整（不是完整 `flutter test`）：**
   ```bash
   flutter test test/screens/reader_settings_sheet_test.dart test/screens/fxl_settings_sheet_test.dart test/screens/pdf_settings_sheet_test.dart test/l10n/arb_consistency_test.dart
   flutter test test/screens/reader_screen_test.dart
   ```
   預期全綠。記錄通過數供審查報告引用。
-- [ ] **Step 4：** 本 Task 無檔案變更，不 commit；若 Step 2 因補 locale 而改檔，以明確列檔 commit：`fix(epic-68): 補測試 locale 以通過硬編碼字串檢查`。
+- [x] **Step 4：** 本 Task 無檔案變更，不 commit；若 Step 2 因補 locale 而改檔，以明確列檔 commit：`fix(epic-68): 補測試 locale 以通過硬編碼字串檢查`。
 
 ---
 
@@ -272,7 +272,7 @@
 
 **Files：** 新增 `docs/epics/epic-68-heading-font/reports/issue-3-report.md`
 
-- [ ] **Step 1：先建立報告範本並單獨 commit（待填）。** 建立目錄與檔案，內容：
+- [x] **Step 1：先建立報告範本並單獨 commit（待填）。** 建立目錄與檔案，內容：
   ```markdown
   # Issue 3 目視確認報告：標題字型 UI
 
@@ -312,10 +312,10 @@
   git add docs/epics/epic-68-heading-font/reports/issue-3-report.md
   git commit -m "docs(epic-68): Issue 3 目視確認報告範本"
   ```
-- [ ] **Step 2：準備真實 EPUB。** 使用者環境中的真實 EPUB（優先選章名為 `h1`／`h2` 者）；若沒有，可用 `app/test/fixtures/sample_multi_chapter.epub` 或 `sample_horizontal.epub` 先確認其章節檔含 `<h1>`（`unzip -p <epub> OEBPS/chapter1.xhtml | grep -i "<h"`），不含則改用 `app/tool/foliate_touch_harness/scenario-heading-font.mjs` 內的最小 EPUB 建構方式另存一本。需有兩款**外觀明顯不同**且已下載的字型（到字型管理下載，或匯入自訂字型）。
-- [ ] **Step 3：執行與記錄。** 於 `app/` 以 `flutter run -d windows` 啟動，依報告表格逐項操作並填寫結果；有截圖者存於 scratchpad 並在報告寫檔名（不把截圖放進 repo，除非體積極小且使用者同意）。
-- [ ] **Step 4：若無法互動操作** 桌面 App：報告「環境」欄明載原因，並提供替代證據：(a) 重跑 `node app/tool/foliate_touch_harness/scenario-heading-font.mjs`（PATH 上有可用 `node`）全 PASS（證明規則含後代、順序、停用書本 CSS 正確）；(b) Task 2、3 的 widget／端到端測試通過（證明 UI→偏好→`FoliateReaderView` 鏈路）；(c) 明確標示「字形是否真的變化」「PDF／FXL 面板實機外觀」兩項為**未驗證**，留待使用者或之後的真機確認。不得把未驗證項目標為通過。若 Node 與互動操作皆不可用，兩項替代證據皆缺，報告結論須標「Issue 3 目視確認未完成」（審查 M7）；解壓 EPUB 以 `tar -xf` 或 `Expand-Archive`，Windows 不一定有 `unzip`。
-- [ ] **Step 5：填寫完成後 commit 報告：**
+- [x] **Step 2：準備真實 EPUB。** 使用者環境中的真實 EPUB（優先選章名為 `h1`／`h2` 者）；若沒有，可用 `app/test/fixtures/sample_multi_chapter.epub` 或 `sample_horizontal.epub` 先確認其章節檔含 `<h1>`（`unzip -p <epub> OEBPS/chapter1.xhtml | grep -i "<h"`），不含則改用 `app/tool/foliate_touch_harness/scenario-heading-font.mjs` 內的最小 EPUB 建構方式另存一本。需有兩款**外觀明顯不同**且已下載的字型（到字型管理下載，或匯入自訂字型）。
+- [x] **Step 3：執行與記錄。** 於 `app/` 以 `flutter run -d windows` 啟動，依報告表格逐項操作並填寫結果；有截圖者存於 scratchpad 並在報告寫檔名（不把截圖放進 repo，除非體積極小且使用者同意）。
+- [x] **Step 4：若無法互動操作** 桌面 App：報告「環境」欄明載原因，並提供替代證據：(a) 重跑 `node app/tool/foliate_touch_harness/scenario-heading-font.mjs`（PATH 上有可用 `node`）全 PASS（證明規則含後代、順序、停用書本 CSS 正確）；(b) Task 2、3 的 widget／端到端測試通過（證明 UI→偏好→`FoliateReaderView` 鏈路）；(c) 明確標示「字形是否真的變化」「PDF／FXL 面板實機外觀」兩項為**未驗證**，留待使用者或之後的真機確認。不得把未驗證項目標為通過。若 Node 與互動操作皆不可用，兩項替代證據皆缺，報告結論須標「Issue 3 目視確認未完成」（審查 M7）；解壓 EPUB 以 `tar -xf` 或 `Expand-Archive`，Windows 不一定有 `unzip`。
+- [x] **Step 5：填寫完成後 commit 報告：**
   ```bash
   git add docs/epics/epic-68-heading-font/reports/issue-3-report.md
   git commit -m "docs(epic-68): Issue 3 目視確認結果"
@@ -372,6 +372,8 @@
 - Task 2：紅燈＝新 group 13 測試中 12 紅（測試 2 因 Task 1 已綠）。實作後整檔 138 通過。反向驗證：`value` 不經 `effectiveFamily` → 測試 7、8、9 紅；拿掉 `_notifyChanged()` → 測試 4、5、6 紅；皆已還原。
 - 面板高度（審查 M6）：「版面設定面板高度…」測試實測 `textTabHeight`（面板高度）新增下拉前後皆為 988.0（門檻 <1000，餘裕僅 12，但未變動）；「文字」分頁內容在 viewport 738 內 `maxScrollExtent=0`，代表文字分頁不是最高分頁，面板高度由其他分頁決定，故新增一列不影響。註：計畫與測試註解寫的「最高分頁約 700 多」實為面板整體 988。
 - Task 3：FXL 負向併入既有測試（兩個 Key findsNothing）、PDF 新增負向測試、端到端與 CBZ 宣告 false 測試一加入即綠。反向驗證：FXL 面板插入同 Key 的 SizedBox → FXL 測試紅，已還原（`git diff -- app/lib` 空）。結果：fxl＋pdf 97 通過；reader_screen_test 326 通過。
+- Task 4：範圍檢查 `git diff baa23975..HEAD --stat -- app/lib` 僅 8 檔（reader_settings_sheet.dart、四份 arb、三個 app_localizations*）；`flutter analyze` 乾淨；`check_l10n_hardcoded_strings.js`、`check_integration_keys.js` PASS；觸及測試 reader_settings＋fxl＋pdf＋arb_consistency 239 通過、reader_screen 326 通過。
+- Task 5：無法互動操作桌面 App；`node scenario-heading-font.mjs` 全 PASS；報告結論標「Issue 3 目視確認未完成」。
 
 ### 程式審查後處理
 
