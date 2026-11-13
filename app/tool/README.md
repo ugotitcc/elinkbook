@@ -568,6 +568,37 @@ powershell -ExecutionPolicy Bypass -File tool/package_windows_installer.ps1 -Sta
 - 固定 `AppId`（見 `.iss` 註解）發佈後不可更改；`AppIdOverride` 只給變異驗證用。
 - 不簽章、不上傳、不建 CI。
 
+## `verify_windows_installer.ps1`
+
+Windows 安裝程式的本機驗證腳本（`epic-66-windows-port` Issue 27）。
+
+```powershell
+cd app
+powershell -ExecutionPolicy Bypass -File tool/verify_windows_installer.ps1 `
+  -Setup build/windows_installer/elinkbook-<版本>-windows-x64-setup.exe `
+  -OlderSetup <較舊版本的 setup.exe>
+# 可選：-WorkDir（預設 $env:TEMP）、-ExpectedStageDir（預設 build/windows_zip/stage/elinkbook）
+```
+
+**會實際啟動 `elinkbook.exe`，寫入這台機器上真實的 `%APPDATA%\cc.ugotit\elinkbook`。執行前先備份該資料夾**（`robocopy <來源> <備份> /MIR`，結束碼 0～7 皆為成功）。腳本任何一步都不會刪除該資料夾。需用一般權限（非系統管理員）的終端機執行，否則無法驗證「不需要管理員」。
+
+流程與檢查項（每項輸出一行 `[通過]／[失敗] 名稱 :: 說明`，結束碼 0＝全部通過）：
+1. 靜默安裝到 `<WorkDir>\含 空格 與 中文 installer-verify\app`：不需管理員、HKCU 有 `{GUID}_is1` 登錄項（單花括號，驗證 `.iss` 的花括號跳脫）、HKLM 沒有。
+2. 安裝內容：必備檔齊全（含三個 VC DLL、`data\foliate\main.js`）、沒有 `.pdb`／`.lib`／`.exp`／`.ilk`。
+3. 開始功能表項目、桌面捷徑（預設存在）指向安裝的 `elinkbook.exe`。
+4. 啟動出現主視窗、行程存活 20 秒。
+5. 覆蓋升級：先裝舊版並保持執行，再靜默安裝新版——舊行程被關閉、只有一個解除安裝項且版本更新、`elinkbook.exe` 與 `README.txt` 已被新版取代。
+6. 資料保護：升級前後、兩次靜默解除安裝前後，`%APPDATA%\cc.ugotit\elinkbook` 內「原本存在的檔案」不得消失（WebView2 的 `lockfile` 只在 App 執行期間存在，不納入比對）。
+7. 靜默解除安裝：Inno 的解除安裝程式會複製自己到 `%TEMP%` 再啟動並讓原行程結束，所以腳本以輪詢（每 0.5 秒、最長 30 秒）等程式檔與登錄項消失，不能只等行程結束。
+8. `/TASKS="!desktopicon"`：桌面捷徑不存在、開始功能表存在。
+9. 結束時沒有殘留行程與安裝。
+
+**產生「較舊版本」setup.exe 的做法**：複製暫存目錄、改掉 `README.txt` 內容並在 `elinkbook.exe` 尾端加一個 0x00 位元組（讓新舊內容有差別，才能證明被取代），再用 `package_windows_installer.ps1 -StageDir <複本> -Version 1.0.9+1 -OutDir <輸出目錄>` 編譯。
+
+**驗證檢查本身有效（負向驗證）**：`-DataDir <假資料夾> -SimulateDataLoss` 會在比對前人為刪掉假資料夾內一個檔案，預期 6a 失敗、其餘通過。這兩個參數只給這種用途，不要對真實資料夾使用 `-SimulateDataLoss`（會刪檔）。
+
+這只證明「這台機器上安裝、升級、解除安裝的行為」；乾淨機器（缺 VC 執行階段與 WebView2）、Windows 10 1809、SmartScreen 實際行為皆**未驗證**。
+
 ## `generate_windows_icons.ps1`
 
 由 `assets/appicon_v2.jpg` 產生 Windows 版圖示與啟動小視窗圖（`epic-66-windows-port`），只用 .NET `System.Drawing`，不需安裝其他工具。
