@@ -162,22 +162,22 @@
 - 修改：`app/test/support/fake_custom_fonts_repository.dart`
 - 修改：`app/test/screens/font_management_screen_test.dart`
 
-- [ ] **Step 1：Fake doc comment。** 把類別 doc 的「[countBooksUsing] 改由 [usageCounts] 手動設定回傳值」補一句：「計數口徑與真實 repository 相同——涵蓋主字型或標題字型使用該字型的書（每本只算一次，epic-68），Fake 不模擬資料，由測試自行把 `usageCounts` 設為預期的書數；SQL 層的口徑由 `test/reader/custom_fonts_repository_test.dart` 以真實 SQLite 驗證。」`usageCounts` 欄位 doc 同步一句即可。不動任何程式邏輯。（註：issues.md 驗收「fake 同語意」在此解讀為「Fake 的註解口徑同語意」，因 Fake 不碰資料庫、無欄位語意可同步；這是對驗收字面的調整解讀，已於審查處理紀錄與回報明寫，待人類確認。）
-- [ ] **Step 2（先寫測試）：** 在 `font_management_screen_test.dart` 新增 `group('刪除自訂字型連動標題字型（epic-68 Issue 4，真實 repository）')`：
+- [x] **Step 1：Fake doc comment。** 把類別 doc 的「[countBooksUsing] 改由 [usageCounts] 手動設定回傳值」補一句：「計數口徑與真實 repository 相同——涵蓋主字型或標題字型使用該字型的書（每本只算一次，epic-68），Fake 不模擬資料，由測試自行把 `usageCounts` 設為預期的書數；SQL 層的口徑由 `test/reader/custom_fonts_repository_test.dart` 以真實 SQLite 驗證。」`usageCounts` 欄位 doc 同步一句即可。不動任何程式邏輯。（註：issues.md 驗收「fake 同語意」在此解讀為「Fake 的註解口徑同語意」，因 Fake 不碰資料庫、無欄位語意可同步；這是對驗收字面的調整解讀，已於審查處理紀錄與回報明寫，待人類確認。）
+- [x] **Step 2（先寫測試）：** 在 `font_management_screen_test.dart` 新增 `group('刪除自訂字型連動標題字型（epic-68 Issue 4，真實 repository）')`：
   - 檔頭補 import：`package:sqflite_common_ffi/sqflite_ffi.dart`、`package:elinkbook/library/sqlite_library_repository.dart`、`package:elinkbook/reader/custom_fonts_repository.dart`、`package:elinkbook/library/models/book.dart`、`package:elinkbook/library/models/library_enums.dart`（只補實際用到者；`flutter analyze` 會抓多餘 import）。group 的 `setUpAll` 呼叫 `sqfliteFfiInit(); databaseFactory = databaseFactoryFfi;`（比照 `library_screen_test.dart` 的寫法，先 `grep -n "sqfliteFfiInit" test/screens/library_screen_test.dart` 看其初始化位置與 `runAsync` 用法並沿用）。
   - 結構（審查 I-1 修訂，比照 `library_screen_test.dart` 第 72–109 行）：group 內以 `setUp`／`tearDown` 在 `testWidgets` 之外開關 `SqliteLibraryRepository.open(inMemoryDatabasePath)`，並於 `setUp` 預先 insert 字型、兩本書與 prefs 列（`runAsync` 內或 `setUp` 本身為真實非同步皆可，沿用該檔做法）。
   - 測試 `刪除對話框的書數涵蓋只把該字型設為標題字型的書，確認後兩欄命中皆被清除`：預先 `insert` 一款 `CustomFont(displayName: '標題用字型', familyName: 'HeadingOnlyFamily', fontUri: 'content://example/h')`；兩本書（`Book` 欄位比照 `custom_fonts_repository_test.dart` 的 `_book`，複製為檔內 helper）與其 prefs 列：b1 `{'font_family': 'SomeOtherFamily', 'heading_font_family': 'HeadingOnlyFamily'}`、b2 `{'font_family': 'HeadingOnlyFamily', 'heading_font_family': 'HeadingOnlyFamily'}`（共 2 本，其中一本主字型無關）。`pumpWidget` 建構 `FontManagementScreen(repository: realRepo)`（沿用該檔 `pumpScreen` 的 `MaterialApp` 設定，locale zh_TW）。
   - **等待一律用輪詢輔助函式，不用固定 delay**：`Future<void> pumpUntilFound(WidgetTester tester, Finder finder)`，迴圈（上限約 5 秒）`await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20))); await tester.pump();` 直到 `finder` 找到；逾時則 `fail`。`pumpWidget` 之後也要輪詢等 `_loadFonts` 完成（等「標題用字型」文字或 `font_management_delete_button_<id>` 出現），再點刪除鈕；點擊後輪詢等對話框文字 `目前有 2 本書使用此字型，刪除後將自動改用預設字型` 出現並斷言；點 `font_management_delete_confirm` 後輪詢等 `標題用字型` 消失；再以 `tester.runAsync` 讀回 b1、b2 的 prefs 列：b1 `font_family == 'SomeOtherFamily'`（主字型保留）且 `heading_font_family` null；b2 兩欄皆 null。
   - **不得放棄此測試**（審查 I-1）：若真實 SQLite 在 widget test 內確實無法穩定，停下並回報人類原因、取得同意後才可調整；驗收項不得由實作者自行刪除，也不得用 Fake 偽造結果。
-- [ ] **Step 3（確認）：**
+- [x] **Step 3（確認）：**
   ```bash
   flutter test test/screens/font_management_screen_test.dart
   flutter test test/reader/custom_fonts_repository_test.dart
   flutter analyze
   ```
   預期：全綠（新測試一加入即應為綠，因 Task 1、2 已完成實作）；`No issues found!`。連跑新 group 3 次確認穩定：`flutter test test/screens/font_management_screen_test.dart --plain-name "標題字型" `重複三次皆過。
-- [ ] **Step 4（反向驗證，不 commit）：** 暫時把 `countBooksUsing` 的 SQL 改回只比對 `font_family`（Task 1 的反向驗證 (a) 作法）→ 新 widget 測試必紅（對話框書數變 1，找不到「目前有 2 本書…」）；再暫時刪掉 `deleteAndResetUsage` 的第二條 UPDATE → 新測試必紅（b1／b2 標題字型未被清）；還原。`git diff -- app/lib` 為空。
-- [ ] **Step 5：** commit：
+- [x] **Step 4（反向驗證，不 commit）：** 暫時把 `countBooksUsing` 的 SQL 改回只比對 `font_family`（Task 1 的反向驗證 (a) 作法）→ 新 widget 測試必紅（對話框書數變 1，找不到「目前有 2 本書…」）；再暫時刪掉 `deleteAndResetUsage` 的第二條 UPDATE → 新測試必紅（b1／b2 標題字型未被清）；還原。`git diff -- app/lib` 為空。
+- [x] **Step 5：** commit：
   ```bash
   git add app/test/support/fake_custom_fonts_repository.dart app/test/screens/font_management_screen_test.dart
   git commit -m "test(epic-68): 補刪除自訂字型對話框書數涵蓋標題字型的端到端測試"

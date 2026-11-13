@@ -4,12 +4,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/l10n/app_localizations_en.dart';
 import 'package:elinkbook/l10n/app_localizations_zh.dart';
 import 'package:elinkbook/library/library_repository.dart' show kBookMetadataChannel;
+import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/custom_font.dart';
+import 'package:elinkbook/reader/custom_fonts_repository.dart';
 import 'package:elinkbook/reader/downloadable_font_store.dart';
 import 'package:elinkbook/storage/storage_access_probe.dart'
     show ProbeStorageAccess, StorageAccessProbeResult, probeStorageAccess;
@@ -874,6 +879,112 @@ void main() {
       expect(badge(id), findsOneWidget);
       expect(find.text('File unreadable'), findsOneWidget);
       expect(find.text('Relink font file'), findsOneWidget);
+    });
+  });
+
+  // epic-68 Issue 4：真實 CustomFontsRepository＋記憶體 SQLite 驗證整條鏈。
+  // Fake 的書數由測試手動設定，證明不了「對話框書數涵蓋標題字型使用者」。
+  group('刪除自訂字型連動標題字型（epic-68 Issue 4，真實 repository）', () {
+    late SqliteLibraryRepository libraryRepository;
+    late CustomFontsRepository realRepository;
+
+    Book book(String id) => Book(
+          id: id,
+          title: '書名 $id',
+          format: BookFileFormat.epub,
+          filePath: 'content://example/$id',
+          source: BookSource.local,
+          progress: 0,
+          groupName: '未分類',
+          createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+          lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        );
+
+    setUpAll(() {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    });
+
+    // 比照 library_screen_test：在 testWidgets 之外開關記憶體 SQLite
+    setUp(() async {
+      libraryRepository =
+          await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      realRepository = CustomFontsRepository(libraryRepository.database);
+    });
+
+    tearDown(() async {
+      await libraryRepository.close();
+    });
+
+    /// 真實 IO 不受 FakeAsync 控制：輪詢（每次讓出真實時間再 pump）直到
+    /// [finder] 出現（[present] 為 false 則等它消失），上限約 5 秒。
+    Future<void> pumpUntil(WidgetTester tester, Finder finder,
+        {bool present = true}) async {
+      for (var i = 0; i < 250; i++) {
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pump();
+        if (finder.evaluate().isNotEmpty == present) return;
+      }
+      fail('等待逾時：${present ? "出現" : "消失"} $finder');
+    }
+
+    testWidgets('刪除對話框的書數涵蓋只把該字型設為標題字型的書，確認後兩欄命中皆被清除',
+        (tester) async {
+      final db = libraryRepository.database;
+      late int fontId;
+      await tester.runAsync(() async {
+        fontId = await realRepository.insert(const CustomFont(
+          displayName: '標題用字型',
+          familyName: 'HeadingOnlyFamily',
+          fontUri: 'content://example/h',
+        ));
+        await libraryRepository.insertBook(book('b1'));
+        await libraryRepository.insertBook(book('b2'));
+        // b1：主字型是另一款、只有標題字型用該字型
+        await db.insert('book_reader_prefs', {
+          'book_id': 'b1',
+          'font_family': 'SomeOtherFamily',
+          'heading_font_family': 'HeadingOnlyFamily',
+        });
+        // b2：主字型與標題字型都用該字型
+        await db.insert('book_reader_prefs', {
+          'book_id': 'b2',
+          'font_family': 'HeadingOnlyFamily',
+          'heading_font_family': 'HeadingOnlyFamily',
+        });
+      });
+
+      await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: FontManagementScreen(repository: realRepository),
+      ));
+      // 等 initState 的 _loadFonts（真實 IO）完成
+      final deleteButton =
+          find.byKey(Key('font_management_delete_button_$fontId'));
+      await pumpUntil(tester, deleteButton);
+
+      await tester.tap(deleteButton);
+      final message =
+          find.text('目前有 2 本書使用此字型，刪除後將自動改用預設字型');
+      await pumpUntil(tester, message);
+      expect(message, findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('font_management_delete_confirm')));
+      await pumpUntil(tester, find.text('標題用字型'), present: false);
+
+      final rows = await tester.runAsync(() async => {
+            for (final id in ['b1', 'b2'])
+              id: (await db.query('book_reader_prefs',
+                      where: 'book_id = ?', whereArgs: [id]))
+                  .single,
+          });
+      expect(rows!['b1']!['font_family'], 'SomeOtherFamily'); // 主字型保留
+      expect(rows['b1']!['heading_font_family'], isNull);
+      expect(rows['b2']!['font_family'], isNull);
+      expect(rows['b2']!['heading_font_family'], isNull);
     });
   });
 }
