@@ -958,7 +958,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get readerSettingsUseBookFontLabel => '使用書本內建字型';
 
   @override
-  String get readerSettingsFontFamilyLabel => '字型';
+  String get readerSettingsFontFamilyLabel => '主字型';
+
+  @override
+  String get readerSettingsHeadingFontFamilyLabel => '標題字型';
+
+  @override
+  String get readerSettingsFollowBodyFontLabel => '跟隨主字型';
 
   @override
   String get readerSettingsDownloadMoreFontsHint => '到「字型管理」下載更多字型';
@@ -3760,7 +3766,13 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get readerSettingsUseBookFontLabel => '使用书本内建字体';
 
   @override
-  String get readerSettingsFontFamilyLabel => '字体';
+  String get readerSettingsFontFamilyLabel => '主字体';
+
+  @override
+  String get readerSettingsHeadingFontFamilyLabel => '标题字体';
+
+  @override
+  String get readerSettingsFollowBodyFontLabel => '跟随主字体';
 
   @override
   String get readerSettingsDownloadMoreFontsHint => '到「字体管理」下载更多字体';
@@ -6562,7 +6574,13 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get readerSettingsUseBookFontLabel => '使用書本內建字型';
 
   @override
-  String get readerSettingsFontFamilyLabel => '字型';
+  String get readerSettingsFontFamilyLabel => '主字型';
+
+  @override
+  String get readerSettingsHeadingFontFamilyLabel => '標題字型';
+
+  @override
+  String get readerSettingsFollowBodyFontLabel => '跟隨主字型';
 
   @override
   String get readerSettingsDownloadMoreFontsHint => '到「字型管理」下載更多字型';

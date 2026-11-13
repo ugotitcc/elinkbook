@@ -1762,11 +1762,23 @@ abstract class AppLocalizations {
   /// **'使用書本內建字型'**
   String get readerSettingsUseBookFontLabel;
 
-  /// 版面設定「文字」分頁中字型下拉選單左側的標籤
+  /// 版面設定「文字」分頁中主字型下拉選單左側的標籤（epic-68 起與「標題字型」區分）
   ///
   /// In zh_TW, this message translates to:
-  /// **'字型'**
+  /// **'主字型'**
   String get readerSettingsFontFamilyLabel;
+
+  /// 版面設定「文字」分頁中標題字型下拉選單左側的標籤（epic-68）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'標題字型'**
+  String get readerSettingsHeadingFontFamilyLabel;
+
+  /// 標題字型下拉選單第一項：標題沿用主字型，不另指定字型（epic-68）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'跟隨主字型'**
+  String get readerSettingsFollowBodyFontLabel;
 
   /// 閱讀設定字型下拉選單下方的提示：一款內建字型都還沒下載時顯示（epic-49）
   ///

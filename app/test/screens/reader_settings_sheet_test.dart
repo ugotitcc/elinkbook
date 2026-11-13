@@ -2374,10 +2374,10 @@ void main() {
     expect(find.text('Presets'), findsOneWidget);
   });
 
-  testWidgets('正體中文介面下字型標籤與欄數「單欄」選項正確渲染', (tester) async {
+  testWidgets('正體中文介面下主字型標籤與欄數「單欄」選項正確渲染', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
 
-    expect(find.text('字型'), findsOneWidget);
+    expect(find.text('主字型'), findsOneWidget);
 
     await switchToTab(tester, '呈現');
     expect(
@@ -2389,7 +2389,7 @@ void main() {
     );
   });
 
-  testWidgets('簡體中文介面下字型標籤與欄數「单栏」選項正確以簡體渲染', (tester) async {
+  testWidgets('簡體中文介面下主字型標籤與欄數「单栏」選項正確以簡體渲染', (tester) async {
     await _pumpSheet(
       tester,
       BookReaderPrefs.empty,
@@ -2397,7 +2397,7 @@ void main() {
       locale: const Locale('zh', 'CN'),
     );
 
-    expect(find.text('字体'), findsOneWidget);
+    expect(find.text('主字体'), findsOneWidget);
     expect(find.text('字型'), findsNothing);
 
     await switchToTab(tester, '呈现');
@@ -2411,7 +2411,7 @@ void main() {
     expect(find.text('單欄'), findsNothing);
   });
 
-  testWidgets('英文介面下字型標籤與欄數「Single」選項正確以英文渲染', (tester) async {
+  testWidgets('英文介面下主字型標籤與欄數「Single」選項正確以英文渲染', (tester) async {
     await _pumpSheet(
       tester,
       BookReaderPrefs.empty,
@@ -2419,7 +2419,7 @@ void main() {
       locale: const Locale('en'),
     );
 
-    expect(find.text('Font'), findsOneWidget);
+    expect(find.text('Body font'), findsOneWidget);
     expect(find.text('字型'), findsNothing);
 
     await switchToTab(tester, 'Display');
