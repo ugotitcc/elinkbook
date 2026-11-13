@@ -21,7 +21,7 @@ elinkBook Windows 使用說明（免安裝版與安裝版）
 三、資料存放位置與完整移除
 --------------------------
 應用程式的資料分放在兩個資料夾：
-1. 設定與瀏覽資料：%APPDATA%\cc.ugotit\elinkbook
+1. 設定與下載資料：%APPDATA%\cc.ugotit\elinkbook
    - downloaded-fonts：已下載的字型
    - dictionaries：字典來源（有匯入字典才會有）
    - webview_data：WebView2 閱讀引擎資料

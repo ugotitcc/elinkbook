@@ -152,3 +152,9 @@ git commit -m "docs(epic-66): Issue 29 報告與文件（Task 4）"
 - **這台機器 GUI 不可用**（Issue 30）：只能驗證檔案落點；匯入與重啟的行為靠使用者在另一台電腦驗證。
 - **「文件」路徑被 OneDrive 重新導向或含中文**：`appDocumentsDirectory()` 只在 `getApplicationDocumentsDirectory()` 回傳的路徑後面接一層，與 Inno 的 `{userdocs}` 取同一個系統資料夾，理論上一致，但未在真機驗證。
 - **Windows 冒煙套件耗時且吃資源**：同時間不要開其他建置或測試；結果有偶發失敗時，與本變更無關的要附證據。
+
+## 實作記錄（2026-11-13，審查後補）
+
+- **資料夾改名**：審查發現 `elinkbook` 與免安裝 zip 的程式資料夾同名，使用者決定改為 `elinkbook-data`；本計畫內文仍寫 `文件\elinkbook`，以實際實作與 ADR 0044 為準。
+- **計畫的一個錯誤假設**：Task 3 Step 6(a) 以 `elinkbook.exe` 的 `LastWriteTime` 確認新建置是錯的，Dart 程式編譯在 `data\app.so`，exe 不會因 Dart 改動而重連結；實際改查 `app.so`（見報告第五節）。
+- 其餘結果、證據與審查處理見 `issue-29-report.md`。
