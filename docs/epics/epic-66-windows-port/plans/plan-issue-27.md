@@ -171,3 +171,4 @@ git commit -m "docs(epic-66): Issue 27 安裝程式報告與文件（Task 4）"
 - 計畫外新增：`package_windows_zip.ps1` 建置前清 `build/flutter_assets`、依賴檢查擋 assets 下字型與 `data/flutter_assets/test`（使用者在另一台電腦發現字型與測試 fixtures 被打包）。
 - 其餘決定與數據見 `issue-27-report.md`。
 - 更正（獨立審查後，2026-11-13）：上方 Task 2、Task 4 與過關條件把詢問框寫成「刪書庫與閱讀紀錄」是錯的——書庫 `library.db`、`covers`、`imported_books` 在使用者的「文件」資料夾，`%APPDATA%\cc.ugotit\elinkbook` 只有 WebView2、已下載字型、字典來源。實作已改為如實告知（選「是」只刪設定與下載資料），並登記 Issue 29 把資料收進上層目錄 `elinkbook`。審查補強的驗證見 `issue-27-report.md` 第 8 節；新增 `InitializeUninstall`（App 執行中拒絕解除安裝）。
+- 再更正（2026-11-13）：使用者改變決定——解除安裝選「是」要連書庫一併刪除。已實作（`elinkbook.iss` 以固定名稱清單刪除「文件」資料夾內的書庫、字典庫、封面、匯入的書複本等），並以新腳本 `verify_windows_uninstall_data.ps1` 在假資料夾驗證；見 `issue-27-report.md` 第 9 節。

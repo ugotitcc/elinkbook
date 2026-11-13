@@ -604,6 +604,26 @@ powershell -ExecutionPolicy Bypass -File tool/verify_windows_installer.ps1 `
 
 這只證明「這台機器上安裝、升級、解除安裝的行為」；乾淨機器（缺 VC 執行階段與 WebView2）、Windows 10 1809、SmartScreen 實際行為皆**未驗證**。
 
+## `verify_windows_uninstall_data.ps1`
+
+驗證安裝程式「解除安裝是否刪除資料」的本機腳本（`epic-66-windows-port` Issue 27）。
+
+```powershell
+cd app
+powershell -ExecutionPolicy Bypass -File tool/verify_windows_uninstall_data.ps1
+# 可選：-StageDir（預設 build/windows_zip/stage/elinkbook）、-WorkDir（預設 $env:TEMP）
+```
+
+**不會碰真實的 `%APPDATA%` 與「文件」資料夾。** 腳本用 `elinkbook.iss` 的 `AppDataRootOverride`、`DocsRootOverride` 兩個 `/D` 定義編一個測試用安裝程式，把兩個資料根目錄指到 `<WorkDir>\含 空格 與 中文 uninstall-data-verify\` 下的假資料夾；出貨版不帶這兩個定義，使用真實路徑。
+
+流程（共 10 項檢查，每項輸出一行 `[通過]／[失敗] 名稱 :: 說明`，結束碼 0＝全部通過）：
+1. 安裝測試用安裝程式，在假資料夾放入 App 會建立的項目（`library.db`、`dictionary.db` 各含 `-wal`／`-shm`／`-journal`、`covers`、`imported_books`、`cloud_import_books`、`remote_books`、`wifi_transfer_uploads`、`update_staging`、假的 `%APPDATA%` 資料夾），以及不屬於 App 的「誘餌」（`六祖壇經\x.txt`、`desktop.ini`、`my-library.db`、`library.db.bak`、`covers-backup\a.jpg`、`notes.txt`、`Zoom\z.txt`，與 `cc.ugotit\other\keep.txt`）。
+2. 以 UI Automation 對解除安裝程式的訊息框逐一回應（「確定要移除」按「是」、我們的資料詢問框按指定的答案、結尾訊息按「確定」）。
+3. **情境一（選「否」）**：確認詢問框出現、「否」鈕取得鍵盤焦點（預設按鈕為「否」）、程式已移除，且所有資料與誘餌原封不動。
+4. **情境二（選「是」）**：App 的資料全數消失（含附屬檔），誘餌與「文件」根目錄原封不動。
+
+這只驗證「解除安裝刪除範圍與預設按鈕」；出貨版的真實路徑（`{userdocs}`、`{userappdata}`）沒有實跑。
+
 ## `generate_windows_icons.ps1`
 
 由 `assets/appicon_v2.jpg` 產生 Windows 版圖示與啟動小視窗圖（`epic-66-windows-port`），只用 .NET `System.Drawing`，不需安裝其他工具。
