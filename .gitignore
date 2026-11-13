@@ -62,7 +62,7 @@ package-lock.json
 store/google-play/**/*.mp4
 
 # epic-9-stats 審查報告不進版控
-docs/epics/epic-9-stats/reviews/
+docs/archive/2026-11-13-epic-9-stats/reviews/
 docs/archive/2026-11-13-epic-53-sync-checkpoint-result/reviews/
 docs/epics/epic-54-architecture-optimization/reviews/
 docs/archive/2026-11-13-epic-55-third-party-licenses/reviews/
