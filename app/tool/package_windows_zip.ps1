@@ -261,10 +261,20 @@ if (-not $SkipBuild) {
         Write-Host "清除殘留的資源組裝目錄: $assembledAssets" -ForegroundColor Cyan
         Remove-Item $assembledAssets -Recurse -Force
     }
-    Write-Host "執行 flutter build windows --release..." -ForegroundColor Cyan
+    # 雲端匯入（Google Drive／OneDrive）的 Windows 用戶端 ID（epic-66 Issue 31）。
+    # 設定檔不進版控；缺檔時警告並照常建置（登入會用樣板 placeholder 而失敗，其他功能不受影響）。
+    $oauthFile = Join-Path $AppDir "config\cloud_oauth.windows.json"
+    $buildArgs = @("build", "windows", "--release")
+    if (Test-Path $oauthFile) {
+        $buildArgs += "--dart-define-from-file=config/cloud_oauth.windows.json"
+        Write-Host "帶入雲端 OAuth 設定: config/cloud_oauth.windows.json" -ForegroundColor Cyan
+    } else {
+        Write-Host "[警告] 找不到 config/cloud_oauth.windows.json，雲端匯入登入將無法使用（樣板見 config/cloud_oauth.example.json）" -ForegroundColor Yellow
+    }
+    Write-Host "執行 flutter $($buildArgs -join ' ')..." -ForegroundColor Cyan
     Push-Location $AppDir
     try {
-        & flutter build windows --release
+        & flutter @buildArgs
         if ($LASTEXITCODE -ne 0) {
             Write-Host "[錯誤] flutter build windows --release 失敗 (結束碼: $LASTEXITCODE)" -ForegroundColor Red
             exit $LASTEXITCODE

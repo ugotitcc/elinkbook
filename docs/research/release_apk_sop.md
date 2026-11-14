@@ -4,7 +4,7 @@
 
 Google Play 上架（`.aab`）見 `docs/research/google_play_release_sop.md`。兩份 SOP 互相獨立。
 
-最後修訂：2026-10-01
+最後修訂：2026-11-14（補 legacy 檢查、測試版、Windows 版）
 
 ---
 
@@ -125,9 +125,29 @@ debug 金鑰
 ## 2. 每次建置 APK
 
 ```
-bump_version → 換成發佈金鑰 → analyze/test → build apk
+legacy 檢查 → bump_version → 換成發佈金鑰 → analyze/test → build apk
    → 換回上傳金鑰 → 確認簽章 → 改檔名、算 SHA-256 → 記錄
 ```
+
+### 2.0 打包前：確認 legacy 降級副本是最新的
+
+舊版 WebView（Chrome 83 以下，例如 iReader Ocean 4 Plus）載入的是 `app/android/app/src/main/assets/foliate/legacy/`，不是原始檔案（見 ADR 0043）。這份副本進版控，**APK 建置本身不會重新產生它**。所以只要 `foliate/` 下的 `.js` 有改，或升級過釘定版本，打包前一定要重產：
+
+```powershell
+$env:PATH = "$env:PNPM_HOME;$env:PATH"   # 這台機器的 Node 在 pnpm 裡，見 app/tool/README.md
+cd app\tool\foliate_legacy
+pnpm install
+pnpm build
+cd ..\..\..
+git status --short app/android/app/src/main/assets/foliate/legacy
+```
+
+- [ ] 沒有差異：副本已是最新，繼續。
+- [ ] 有差異：先看 `git diff`，確認只是預期的內容變動，commit 後再繼續。
+- [ ] 只有「LF will be replaced by CRLF」的行尾警告、內容沒變：不要 commit 這種純行尾變動。
+- [ ] 每次升級釘定版本後另跑 `node tool/check_foliate_es_compat.js`（在 `app/`）。
+
+**Windows 版不用做這一步**：Windows 用 WebView2（新版 Chromium），載入原始檔案，不走 `legacy/`。
 
 ### 2.1 更新版本號
 
@@ -358,7 +378,115 @@ gh release create "v1.0.1+2" --repo ugotitcc/elinkbook --title "elinkBook 1.0.1"
 
 ---
 
-## 6. 疑難排解
+## 6. 測試版（給自己或少數人試用，不正式發佈）
+
+測試版 = 不動版本號、不打 tag、不寫 `release-log.md`、不上傳 GitHub Release。要正式給使用者的才走第 2、3 節。
+
+### 6.1 Android 測試版（debug APK）
+
+```bash
+cd app
+node tool/build_release.js --target debug
+```
+
+- 腳本會自動換成 `cloud_oauth.debug.json`，建完還原。產物：`app/build/app/outputs/flutter-apk/app-debug.apk`。
+- 用 `cloud_oauth.debug.json` 是因為 debug 簽章與發佈簽章不同，OAuth 的 Client ID 也分開。
+- 安裝到真機：`adb install -r app-debug.apk`。**禁止** `flutter install`（會先解除安裝、清掉書架資料）。
+- debug 簽章與正式版不同，裝了正式版的手機要先解除安裝才能裝，反過來也一樣。要保留資料時，改用「發佈金鑰簽的 release APK」當測試版：
+
+  ```bash
+  node tool/build_release.js --target apk
+  adb install -r build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+  ```
+
+  這種測試版只能覆蓋安裝同樣用發佈金鑰簽的版本。
+- 測試版同樣要先做 2.0（legacy 檢查）。要在舊版 WebView 機器上驗證，務必用這一步之後的建置。
+- **不要**把 debug APK 放到 GitHub Release 或官網。要給別人試用，請用 6.3。
+
+### 6.2 Windows 測試版
+
+在 `app/` 下：
+
+```powershell
+$env:PATH = "$env:PNPM_HOME;$env:PATH"
+powershell -ExecutionPolicy Bypass -File tool/package_windows_zip.ps1
+```
+
+- 產物 `app/build/windows_zip/elinkbook-<版本>-windows-x64.zip` 與 `.zip.sha256`。免安裝，解壓雙擊 `elinkbook.exe`。
+- 只想快速重打包、不重新編譯：加 `-SkipBuild`（確認暫存目錄不是過期的）。
+- 本機自我檢查：`tool/verify_windows_zip.ps1 -Zip <zip 路徑>`；要跑整合測試冒煙套件用 `tool/run_windows_smoke.ps1`（單份執行、記憶體熔斷，不要平行跑多個）。
+- 開跑前確認沒有殘留的 `elinkbook.exe`、`flutter_tester.exe`、`MSBuild.exe`，腳本偵測到會直接中止。
+
+### 6.3 GitHub pre-release（給外部測試者試用）
+
+要讓別人從 GitHub 下載測試版時，用 pre-release。它不會成為 `releases/latest`，所以官網按鈕與一般使用者不會被導到測試版。
+
+1. **版本號**：`versionCode` 必須比上一個正式版大（Android 靠它判斷能否覆蓋安裝），`versionName` 可沿用或升版。走 2.1 第 3 步的 `bump_version.js`，並把 `release-log.md` 該列的軌道改成「APK（測試）」。
+2. **建置**：Android 照第 2 節（發佈金鑰簽章，才能讓測試者之後直接升級到正式版）；Windows 照 7.1。兩邊都先做 2.0。
+3. **tag**：`v<versionName>+<versionCode>-beta.<N>`，例如 `v1.2.0+4-beta.1`。不要與正式版 tag 重複；之後轉正式版時另打不帶 `-beta` 的 tag，並重新建置、重算 SHA-256（不要直接把測試檔改名當正式版）。
+
+   ```bash
+   git tag v1.2.0+4-beta.1
+   git push github v1.2.0+4-beta.1   # 只推 tag；remote 名稱以 git remote -v 為準，GitHub 那個才對
+   ```
+
+4. **建立 Release**：網頁 `https://github.com/ugotitcc/elinkbook/releases/new`，選該 tag，**勾選「Set as a pre-release」**，**不要**勾「Set as the latest release」。（若有 `gh`：加 `--prerelease`。）
+5. 上傳檔案同第 3 節與 7.3（APK、SHA256SUMS.txt、Windows zip／setup 與 `.sha256`）。說明欄開頭寫：「測試版，可能有問題；已安裝商店版者需先解除安裝」。
+6. 確認 `https://github.com/ugotitcc/elinkbook/releases/latest` 仍指向上一個正式版。
+7. 官網（`site/index.html`）**不改**。測試版連結直接給測試者。
+
+---
+
+## 7. Windows 版正式發佈
+
+Windows 與 Android 共用 `app/pubspec.yaml` 的版本號，通常同一版一起發，共用同一個 tag（`v<versionName>+<versionCode>`）。
+
+```
+（2.1 版本號已更新）→ package_windows_zip → package_windows_installer
+   → verify → 算/核對 SHA-256 → 上傳到同一個 Release
+```
+
+### 7.1 建置
+
+在 `app/` 下（先 `$env:PATH = "$env:PNPM_HOME;$env:PATH"`）：
+
+```powershell
+# 免安裝 zip（含 VC 執行階段 DLL 依賴檢查）
+powershell -ExecutionPolicy Bypass -File tool/package_windows_zip.ps1
+
+# 安裝程式（Inno Setup，未簽章、安裝到使用者目錄；沒有 ISCC 時先 winget install --id JRSoftware.InnoSetup -e）
+powershell -ExecutionPolicy Bypass -File tool/package_windows_installer.ps1
+```
+
+- 版本號直接讀 `pubspec.yaml`。安裝程式檔名把 `+` 換成 `-b`，例如 `elinkbook-1.1.0-b3-windows-x64-setup.exe`。
+- 腳本一開頭會清掉同名舊產物，失敗不會留下看似成功的舊檔。
+- Windows 版支援 Google Drive／OneDrive 雲端匯入（epic-66 Issue 31），登入走「系統瀏覽器＋`http://localhost:{埠}`」。打包前要有 `app/config/cloud_oauth.windows.json`（不進版控，格式同 `cloud_oauth.example.json`，但填的是 Google「電腦應用程式」型與 Azure「行動與桌面」用戶端 ID；Google 電腦型要填 `GOOGLE_OAUTH_CLIENT_SECRET`）。`package_windows_zip.ps1` 會自動帶入；缺檔時只警告，打包出來的版本雲端登入會失敗。沒有簽章金鑰要換，不需要 `build_release.js`，不要拿 Android 的步驟套用。
+- 不要加 `-SkipBuild` 發正式版，避免用到過期的暫存目錄。
+
+### 7.2 驗證
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tool/verify_windows_zip.ps1 -Zip build/windows_zip/elinkbook-<版本>-windows-x64.zip
+powershell -ExecutionPolicy Bypass -File tool/verify_windows_installer.ps1 -Setup build/windows_installer/elinkbook-<版本>-windows-x64-setup.exe
+```
+
+- [ ] 兩支腳本都 exit 0。
+- [ ] 本機雙擊 `elinkbook.exe`，能開書架、匯入 EPUB、直排橫排正常。
+- 這些檢查**抓不到**乾淨機器缺 WebView2 或 VC 執行階段的問題，也沒驗證過 Windows 10 1809 與真實 SmartScreen 行為；README 的系統需求已註明。
+
+### 7.3 上傳
+
+1. 產物與校驗檔：
+   - `elinkbook-<版本>-windows-x64.zip` 與 `.zip.sha256`
+   - `elinkbook-<版本>-windows-x64-setup.exe` 與 `.exe.sha256`
+2. 上傳到第 3 節同一個 Release（網頁編輯該 Release 加檔案，或 `gh release upload "v1.1.0+3" <檔案> --repo ugotitcc/elinkbook`）。
+3. Release 說明加一行：Windows 版未簽章，SmartScreen 可能提示，選「其他資訊 → 仍要執行」。
+4. 下載後重算 SHA-256，與 `.sha256` 比對。
+5. 在 `store/google-play/release-log.md` 的說明欄補「含 Windows」（Windows 版沒有獨立軌道）。
+
+---
+
+## 8. 疑難排解
 
 | 狀況 | 原因 | 怎麼處理 |
 |---|---|---|

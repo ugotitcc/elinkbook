@@ -26,7 +26,7 @@
 
 1. **範圍**：功能對等，但下列例外。
    - 隱藏：音量鍵翻頁、E-Ink 高對比與影像濾鏡、螢幕方向鎖定。
-   - 延後：Google Drive／OneDrive 雲端匯入（Windows 的 OAuth 要走本機回呼，且需另外註冊桌面用戶端 ID）。
+   - 延後：Google Drive／OneDrive 雲端匯入（Windows 的 OAuth 要走本機回呼，且需另外註冊桌面用戶端 ID）。**2026-11-14 更新：使用者要求 Windows 也要支援，已登錄為 Issue 31（待規劃）。**
    - 簡化：TTS 只用 `flutter_tts`，不用 `audio_service`。
    - 保留：WiFi 傳書。
 2. **程式碼**：同一個 `app/` 加 `windows/`，平台判斷分流（ADR 0041）。
@@ -70,7 +70,7 @@
 
 ## 範圍外
 
-- 雲端匯入（Google Drive／OneDrive）。
+- ~~雲端匯入（Google Drive／OneDrive）~~：2026-11-14 改為納入，登錄為 Issue 31（待規劃）。
 - MSIX 打包、程式碼簽章、自動更新（Inno Setup 安裝程式已另列為 Issue 27，見決策 32）。
 - 桌面專用版面。
 - macOS、Linux。

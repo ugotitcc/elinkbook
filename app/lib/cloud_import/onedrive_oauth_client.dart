@@ -9,6 +9,7 @@ import 'cloud_account_repository.dart';
 import 'cloud_auth_classifier.dart';
 import 'cloud_oauth_config.dart';
 import 'cloud_provider.dart';
+import 'oauth_redirect.dart';
 
 const _authorizationEndpoint =
     'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
@@ -41,10 +42,15 @@ class OneDriveOAuthClient {
     final verifier = _generateRandomUrlSafeString(64);
     final challenge = _codeChallengeFor(verifier);
     final state = _generateRandomUrlSafeString(16);
+    // Windows 走本機 loopback、其他平台沿用自訂 scheme（epic-66 Issue 31）。
+    final redirect = await resolveOAuthRedirect(
+      mobileRedirectUri: CloudOAuthConfig.oneDriveRedirectUri,
+      mobileScheme: CloudOAuthConfig.oneDriveRedirectScheme,
+    );
 
     final authUrl = Uri.parse(_authorizationEndpoint).replace(queryParameters: {
       'client_id': CloudOAuthConfig.oneDriveClientId,
-      'redirect_uri': CloudOAuthConfig.oneDriveRedirectUri,
+      'redirect_uri': redirect.redirectUri,
       'response_type': 'code',
       'scope': _filesReadScope,
       'code_challenge': challenge,
@@ -56,7 +62,8 @@ class OneDriveOAuthClient {
     try {
       resultUrl = await FlutterWebAuth2.authenticate(
         url: authUrl.toString(),
-        callbackUrlScheme: CloudOAuthConfig.oneDriveRedirectScheme,
+        callbackUrlScheme: redirect.callbackUrlScheme,
+        options: redirect.options,
       );
     } catch (_) {
       return false;
@@ -74,7 +81,7 @@ class OneDriveOAuthClient {
         'client_id': CloudOAuthConfig.oneDriveClientId,
         'code_verifier': verifier,
         'grant_type': 'authorization_code',
-        'redirect_uri': CloudOAuthConfig.oneDriveRedirectUri,
+        'redirect_uri': redirect.redirectUri,
         'scope': _filesReadScope,
       });
     } catch (_) {

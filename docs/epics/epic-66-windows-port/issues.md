@@ -34,6 +34,7 @@
 | 28 | Android APK 夾帶整合測試用 fixtures：pubspec.yaml 把 test/fixtures/ 宣告成 asset；Issue 27 已確認 Windows 打包會帶進 data/flutter_assets/test（42 檔、36 MB，其中 sample.ttf 35 MB），Android APK 很可能同樣夾帶（未實際檢查）。須先量測 APK 再決定改法（例如依建置模式排除、或改由測試自己載入資源）；改 pubspec 會牽動 86 個引用 fixtures 的整合測試 | Issue 27 | ⚪ 待規劃 | — |
 | 29 | Windows 資料位置整理（**優先**）：把直接放在「文件」資料夾根目錄的 App 資料（`library.db`、`dictionary.db`、`covers`、`imported_books`、`cloud_import_books`、`remote_books`、`wifi_transfer_uploads`、`update_staging`）收進上層目錄 `文件\elinkbook-data`，用集中函式 `appDocumentsDirectory()`，只改 Windows；`%APPDATA%` 那三項不動；**不遷移舊資料**；解除安裝選「是」改為只刪 `文件\elinkbook-data` 與 `%APPDATA%\cc.ugotit\elinkbook`，取代 Issue 27 的固定名稱清單（決策見 ADR 0044） | Issue 27 | 🟡 已實作並依審查修正，待合併（資料夾審查後改名為 `elinkbook-data`；本機自動驗證、全套測試與冒煙 28/28 通過；最終版 setup 已由使用者在另一台電腦驗證，回報「測試OK」（無逐項紀錄）；冒煙上一輪 2 支失敗原因未查明） | [issue-29-report.md](issue-29-report.md) |
 | 30 | 開發機上 release 版畫面空白（待查）：2026-11-13 在作者的開發機（Windows 11 家用版）上，安裝版與暫存目錄版（同一份內容）都開出空白畫面——主視窗已顯示、啟動小視窗已消失、行程閒置、App 的 WebView2 行程存在、無崩潰事件、UI 自動化讀不到語意節點；同一份內容在使用者的另一台電腦開書正常。根因未查明（可能與這台機器的資料或環境有關，也可能是目前 `main` 的 release 內容），尚未取得 Dart 端日誌；建議先以 debug 模式執行看啟動日誌 | 無 | ⚪ 待規劃 | — |
+| 31 | Windows 支援 Google Drive／OneDrive 雲端匯入（待規劃，2026-11-14 使用者要求）：把原定延後的雲端匯入補上。需先查證並決定 Windows 的 OAuth 做法（`flutter_web_auth_2` 在 Windows 要走本機 loopback 回呼）、Google「電腦應用程式」與 Microsoft「行動與桌面」用戶端 ID 的註冊、客戶端密鑰存放，以及 token 在 Windows 的安全儲存；完成後同步更新 `release_apk_sop.md` 第 7.1 節（Windows 建置改帶 `--dart-define-from-file`）。 | ⚪ 待規劃 |
 
 ## Issue 1 範圍
 
@@ -586,6 +587,27 @@ Windows 版把直接放在使用者「文件」資料夾根目錄的 App 資料�
 - `appDocumentsDirectory()`：Windows → 回傳 `<文件>\elinkbook-data` 且會建立、目錄已存在時不報錯、重複呼叫回傳相同路徑；非 Windows → 原樣回傳 `getApplicationDocumentsDirectory()` 的結果且不建立子目錄。用既有的 `path_provider_platform_interface` 替身與平台覆寫驗證。
 - 這 7 個檔案既有的測試維持通過；若有測試直接依賴「文件」根目錄（而不是注入自己的目錄），在計畫階段逐一查出並調整。
 - 腳本類（`.iss`、驗證腳本）沒有單元測試框架，以實際執行輸出為證，並做上述變異驗證。
+
+## Issue 31 範圍（待規劃）
+
+**狀態：** 🟡 程式已實作（2026-11-14），**真實登入尚未驗證**：使用者還沒註冊 Windows 用戶端 ID。這取代 `epic.md`「範圍外」第一項與決策中「雲端匯入延後」的說法。
+
+**已決定（2026-11-14，使用者回答）：** ① 登入走系統瀏覽器＋本機 loopback（`useWebview:false`，`http://localhost:{空閒埠}`，不用內嵌 WebView，因 Google 政策禁止）；② 用戶端 ID 晚點補，先做程式；③ Google 客戶端密鑰沿用編譯期 `dart-define`，Windows 設定檔為 `app/config/cloud_oauth.windows.json`（不進版控）。
+
+**實作：** 新增 `lib/cloud_import/oauth_redirect.dart`（`resolveOAuthRedirect`：非 Windows 沿用原自訂 scheme，Windows 挑空閒埠並關閉內嵌 WebView）；`GoogleDriveOAuthClient`／`OneDriveOAuthClient` 的授權請求與換 token 請求改用同一個 `redirect_uri`；`package_windows_zip.ps1` 有設定檔時帶 `--dart-define-from-file`，缺檔只警告；`.gitignore` 加 `cloud_oauth.windows.json`。
+
+**未驗證：** 真實 Google／Microsoft 登入（無用戶端 ID）；`http://localhost` 與 flutter_web_auth_2 只綁 `127.0.0.1` 的相容性（瀏覽器若優先解析成 IPv6 `::1` 可能失敗）；Windows 上 `flutter_secure_storage` 存取 token；防火牆對本機監聽的提示；Google 電腦應用程式型在測試模式下 refresh token 7 天到期的限制。
+
+已知事實（2026-11-14 查證，尚未設計）：
+- 雲端匯入程式在 `app/lib/cloud_import/`；OAuth 設定在 `cloud_oauth_config.dart`，重新導向 URI 目前是 Android 慣例（Google 反向用戶端 ID scheme、OneDrive `msal<id>://auth`），且需與 `AndroidManifest.xml` 佔位符一致。
+- 登入使用 `flutter_web_auth_2`；Windows 版需確認其回呼機制（loopback 位址）能否沿用。
+- Google 用戶端類型：Android 型不帶密鑰；電腦應用程式型需帶 `client_secret`（`CloudOAuthConfig.googleClientSecret` 已支援）。OneDrive 為公開客戶端、無密鑰。
+- Windows 打包腳本目前不帶 `--dart-define-from-file`，Windows 上雲端設定回退為樣板 placeholder。
+- `cloud_oauth.release.json` 不進版控；Windows 沒有 CI，沿用本機打包。
+
+待 Discovery 決定：OAuth 重新導向做法、兩家用戶端 ID 的註冊與測試使用者白名單、客戶端密鑰與 token 的 Windows 儲存方式、打包腳本如何配對 OAuth 設定檔（可比照 `build_release.js`）、Windows 版介面（雲端匯入入口在 Issue 10 是否被隱藏）。
+
+過關條件與單元測試要求待 Discovery 後補寫。
 
 ## 後續 Issue（待 Issue 1 結果決定）
 
