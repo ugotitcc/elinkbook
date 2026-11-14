@@ -460,7 +460,7 @@ powershell -ExecutionPolicy Bypass -File tool/package_windows_installer.ps1
 
 - 版本號直接讀 `pubspec.yaml`。安裝程式檔名把 `+` 換成 `-b`，例如 `elinkbook-1.1.0-b3-windows-x64-setup.exe`。
 - 腳本一開頭會清掉同名舊產物，失敗不會留下看似成功的舊檔。
-- Windows 版支援 Google Drive／OneDrive 雲端匯入（epic-66 Issue 31），登入走「系統瀏覽器＋`http://localhost:{埠}`」。打包前要有 `app/config/cloud_oauth.windows.json`（不進版控，格式同 `cloud_oauth.example.json`，但填的是 Google「電腦應用程式」型與 Azure「行動與桌面」用戶端 ID；Google 電腦型要填 `GOOGLE_OAUTH_CLIENT_SECRET`）。`package_windows_zip.ps1` 會自動帶入；缺檔時只警告，打包出來的版本雲端登入會失敗。沒有簽章金鑰要換，不需要 `build_release.js`，不要拿 Android 的步驟套用。
+- Windows 版支援 Google Drive／OneDrive 雲端匯入（epic-66 Issue 31），登入走「系統瀏覽器＋`http://localhost:{埠}`」。打包前要有 `app/config/cloud_oauth.windows.json`（不進版控，格式同 `cloud_oauth.example.json`，但填的是 Google「電腦應用程式」型與 Azure「行動與桌面」用戶端 ID；Google 電腦型要填 `GOOGLE_OAUTH_CLIENT_SECRET`；取得方式見 `docs/research/cloud_storage_oauth_setup_guide.md` 第 7 節）。`package_windows_zip.ps1` 會自動帶入；缺檔時只警告，打包出來的版本雲端登入會失敗。沒有簽章金鑰要換，不需要 `build_release.js`，不要拿 Android 的步驟套用。
 - 不要加 `-SkipBuild` 發正式版，避免用到過期的暫存目錄。
 
 ### 7.2 驗證

@@ -458,3 +458,93 @@ flowchart TD
      - （可能需要）通過 CASA (Cloud Application Security Assessment) 第一級/第二級安全評估。
 3. **Microsoft 應用程式發布**：
    - Azure 應用程式註冊支援多租戶與個人帳戶時無需複雜驗證，但建議於「商標 (Branding & properties)」中填妥官方網址、隱私權條款網址與服務條款，以提供使用者清晰的信任資訊。
+
+
+---
+
+## 7. Windows 專用的 Client ID 與設定（epic-66 Issue 31）
+
+Windows 版登入走「系統瀏覽器＋本機 loopback」：App 臨時在 `127.0.0.1:{空閒埠}` 監聽，授權後瀏覽器導回 `http://localhost:{埠}`，不使用內嵌 WebView（Google 政策禁止）。所以 **Windows 不能共用 Android 的 Client ID**，要另外取得，並放在獨立的設定檔 `app/config/cloud_oauth.windows.json`（不進版控；`package_windows_zip.ps1` 會自動帶入）。
+
+| 項目 | Android | Windows |
+| :--- | :--- | :--- |
+| Google 用戶端類型 | Android（公開，無密鑰） | **電腦版應用程式（Desktop app）**，要帶 Client Secret |
+| Google Redirect | `com.googleusercontent.apps.<id>:/oauth2redirect` | `http://localhost:{埠}`（Desktop 型自動允許，不用登錄） |
+| OneDrive Client ID | 既有 App 註冊 | **可共用同一個 App 註冊與 Client ID** |
+| OneDrive Redirect | `msal<id>://auth` | 另外登錄 `http://localhost` |
+| 設定檔 | `cloud_oauth.json`／`.release.json` | `cloud_oauth.windows.json` |
+
+### 7.1 Google：建立「電腦版應用程式」用戶端
+
+1. 開啟 Google Cloud Console，選**與 Android 相同的專案**（Drive API、People API、OAuth 同意畫面已在 2.2、2.3 設好，不用重做）。
+2. 「API 和服務」→「憑證」→「+ 建立憑證」→「OAuth 用戶端 ID」。
+3. 應用程式類型選「**電腦版應用程式（Desktop app）**」，名稱填 `elinkBook Windows`，按「建立」。
+4. 對話框會顯示 **用戶端 ID** 與 **用戶端密鑰**，兩個都複製。之後也可在憑證頁點該用戶端重新查看。
+5. 到「OAuth 同意畫面」→「目標對象（測試使用者）」，確認你要登入的 Google 帳號在白名單內。
+
+**注意：**
+- Desktop 型不需要、也沒有「已授權的重新導向 URI」欄位；它預設允許任何埠的 `http://localhost` 與 `http://127.0.0.1`。
+- Desktop 型的密鑰不是真正的機密（打包進 exe 就等於公開），這是 Google 對桌面 App 的既有設計。仍不要貼到公開場合，也不要進 git。
+- 同意畫面還在「測試中」時，**refresh token 7 天後失效**，要重新登入。長期使用要發布到「正式環境」（見第 6 節，`drive.readonly` 是敏感範圍，可能需要驗證）。
+
+### 7.2 Microsoft：在既有 App 註冊加上 localhost 重新導向
+
+OneDrive 可以沿用 3.2、3.3 建好的 App 註冊與 Client ID，只要多登錄一個 Redirect URI。
+
+1. 開啟 Azure Portal → Microsoft Entra ID → 應用程式註冊 → 選 elinkBook 那個註冊。
+2. 左側「管理」→「驗證（Authentication）」。
+3. 在「重新導向 URI 設定」，找到平台「**行動應用程式與桌面應用程式**」，點「新增 URI」（或勾選清單中已預設列出的 `http://localhost`）。
+4. 填入 `http://localhost`（**不要寫埠號**；Microsoft 對 localhost 會忽略埠號比對），儲存。
+5. 確認「設定」頁籤的「允許公用用戶端流程」仍是「是」（3.4 已設定，Windows 同樣需要，否則會出現 `AADSTS7000218`）。
+6. Client ID 不變，直接複製 3.3 記下的值。
+
+### 7.3 建立 Windows 設定檔
+
+```bash
+cp app/config/cloud_oauth.example.json app/config/cloud_oauth.windows.json
+```
+
+填入（Google 用 7.1 的新 ID 與密鑰，OneDrive 用原本的 ID）：
+
+```json
+{
+  "GOOGLE_OAUTH_CLIENT_ID": "<7.1 的用戶端 ID>.apps.googleusercontent.com",
+  "GOOGLE_OAUTH_CLIENT_SECRET": "<7.1 的用戶端密鑰>",
+  "ONEDRIVE_OAUTH_CLIENT_ID": "<3.3 的 Application (client) ID>"
+}
+```
+
+確認不會進版控：
+
+```bash
+git check-ignore -v app/config/cloud_oauth.windows.json
+```
+
+應有一行輸出。沒有的話先修 `.gitignore`，不要繼續。
+
+### 7.4 建置並驗證
+
+1. 在 `app/` 下（先 `$env:PATH = "$env:PNPM_HOME;$env:PATH"`）：
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File tool/package_windows_zip.ps1
+   ```
+
+   輸出應有「帶入雲端 OAuth 設定: config/cloud_oauth.windows.json」。若出現黃字警告，代表找不到設定檔。
+2. 解壓 zip，執行 `elinkbook.exe`，進入來源頁，點 **Google Drive**，登入。
+3. 預期：預設瀏覽器開啟 Google 登入頁 → 選帳號、同意 → 瀏覽器顯示登入完成頁 → 回到 App，能列出雲端檔案。OneDrive 同樣測一次。
+4. 關閉 App 再開，雲端帳號仍是已連結（驗證 token 有存進 Windows 的安全儲存）。
+5. 結果（含失敗）記錄到 `docs/epics/epic-66-windows-port/issues.md` 的 Issue 31，通過才可把狀態改成完成。
+
+### 7.5 Windows 常見問題
+
+| 狀況 | 可能原因 | 處理 |
+| :--- | :--- | :--- |
+| Google：`invalid_client` | 用到 Android 型的 ID，或密鑰沒填 | 確認是 7.1 建的 Desktop 型 ID，且 `GOOGLE_OAUTH_CLIENT_SECRET` 有值 |
+| Google：`access_denied`／未驗證應用程式 | 帳號不在測試使用者白名單 | 回 7.1 第 5 步加入帳號 |
+| 使用 7 天後要重新登入 | 同意畫面仍是「測試中」 | 發布到正式環境（第 6 節） |
+| Microsoft：`AADSTS50011` redirect URI 不符 | 沒登錄 `http://localhost`，或登錄在錯的平台類型 | 回 7.2，確認在「行動應用程式與桌面應用程式」平台 |
+| Microsoft：`AADSTS7000218` | 沒開「允許公用用戶端流程」 | 回 7.2 第 5 步 |
+| 瀏覽器顯示「無法連線到 localhost」 | 瀏覽器把 `localhost` 解析成 IPv6 `::1`，但 App 只監聽 `127.0.0.1` | 這是已知風險（Issue 31 未驗證項）。回報給開發者，需改成使用 `127.0.0.1` 並重新登錄 Redirect URI |
+| 登入頁沒有跳出 | 預設瀏覽器未設定或被安全軟體擋下 | 先在系統設定指定預設瀏覽器 |
+| 打包時黃字警告找不到設定檔 | 沒建 `cloud_oauth.windows.json` | 做 7.3 |
