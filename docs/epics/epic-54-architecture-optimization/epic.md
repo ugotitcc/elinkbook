@@ -1016,6 +1016,12 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - Issue 36 I-1：資源供應 adapter 讓每個 200 回應都改走 Android 外掛的六參數建構子（`statusCode` 與 `reasonPhrase` 皆非 null 時），且 `headers` 為 null；已還原為 200 不設、只有 404 三者齊備，並補測試。
 - Issue 37 I-1：`CLAUDE.md` 仍描述已移除的 `detectBookFormat()`／`reader/book_format.dart`，已更新；另補 `CONTEXT.md` 詞條對齊與 OPDS 解析器層級測試。
 - 兩者其餘為 Minor，已在報告記錄處理方式。
-- Issue 37 獨立審查（另一個代理人唯讀審查）：沒有 Critical、沒有 Important，2 個 Minor。其一（M-I1）是「副檔名優先」的取捨：連結 path 最後一段剛好以 `.pdf`／`.txt`／`.md` 結尾但 MIME 標示另一種格式（例如自訂 Calibre library 名稱 `Foo.txt`、連結 `/get/EPUB/123/Foo.txt`、`type=application/epub+zip`）時，舊版判 epub、新版判 txt。**未處理，待使用者決定**：若要處理，可改為兩者都能判斷且不一致時以 MIME 為準、只有 `text/plain` 才讓副檔名優先。
+- Issue 37 獨立審查（另一個代理人唯讀審查）：沒有 Critical、沒有 Important，2 個 Minor。其一（M-I1）是「副檔名優先」的取捨：連結 path 最後一段剛好以 `.pdf`／`.txt`／`.md` 結尾但 MIME 標示另一種格式（例如自訂 Calibre library 名稱 `Foo.txt`、連結 `/get/EPUB/123/Foo.txt`、`type=application/epub+zip`）時，舊版判 epub、新版判 txt。**使用者 2026-11-15 決定維持副檔名優先，不改程式**；若日後要處理，可改為兩者都能判斷且不一致時以 MIME 為準、只有 `text/plain` 才讓副檔名優先。
 - Issue 37 驗證：最終提交 `1b249eb4` 的完整 `flutter test` 5263 通過、2 略過、0 失敗；Windows 真實 WebView2 整合測試子集 11 支通過 11／失敗 0（含 `windows_smoke_formats_test`、`reader_screen_test`、全文索引器、各 Foliate 格式）。Android 真機與真實 Drive／OneDrive／OPDS 伺服器**未驗證**。
+
+**2026-11-15 Android 真機驗證**（BooksPad `B78CW2508006423`，Android 12，`com.android.webview` 91.0.4472.114＝Chrome 91；在 Issue 37 分支上執行，已含 Issue 36 全部變更；使用者授權於其裝置執行）：
+- 通過：`foliate_epub_reader_view_test`（10 項，含 30MB 大檔與 FXL）、`foliate_content_indexer_test`（2）、`content_uri_range_metadata_test`（1，Android 探針經資源供應）、`foliate_txt_test`（3）、`foliate_cbz_test`（3）、`foliate_kf8_test`（2）、`reader_screen_test`（19）。開書與渲染正常，沒有觀察到本次變更造成的回歸（200 不設 `statusCode`、`.css` 改回 `text/css` 在 Chrome 91 上開書皆正常；未另外針對 CSS 做視覺比對）。
+- 失敗但**與本次變更無關**（在 `main` 上以同樣方式重跑，結果相同）：① `foliate_md_test`：`JsBridgeGateway` 的 `onTableOfContentsReady` 請求重疊（測試自己呼叫 `loadTableOfContents` 時閱讀器內部剛好也在請求目錄），本裝置 MD 開書約 11 秒，`main` 上 2／2 失敗、37 分支 4／5 失敗（偶有一次通過）；② `library_screen_test` 兩項（匯入後 `isFixedLayout` 為 `null`，`main` 上同樣失敗；測試建構 `BookImportServiceImpl` 時沒帶 `metadataExtractor`，Android 預設走的原生詮釋資料路徑已不回傳 `isFixedLayout`，測試疑似過時）。兩者列為後續項目，不屬於本 Epic 目前的 Issue。
+- 日誌中的 `HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED` 是既有、無害的 `favicon.ico` 子資源（ADR 0043 已記錄）。
+- 裝置處理：App 資料夾只有約 11 KB 快取；測試一律 `--no-uninstall`、單份依序、之間停掉 Gradle daemon；結束後 `stay_on_while_plugged_in` 設回 0，並以 `main` 建置的 debug 版 `adb install -r` 還原（未用 `flutter install`）。
 
