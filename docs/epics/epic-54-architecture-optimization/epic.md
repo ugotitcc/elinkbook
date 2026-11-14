@@ -997,3 +997,9 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - **未驗證**：MIME 統一（`.css` 改 `text/css`）在 Chrome 83 以下 WebView（iReader Ocean 4 Plus）與 Windows 探針 `.js` 不再內嵌 `charset=utf-8` 的實際行為，單元測試無法證明，須真機／Windows 實機確認；Android 探針的 `.html` 等行為未改。
 - 後續項目：Windows 探針缺 polyfill 與 `onError`（見設計決策第 8 點）；`foliate_native_bridge.dart` 其餘內容整理。
 
+**2026-11-14 Issue 36 審查與驗證**（報告 `reviews/review-issue-36.md`，不進版控）：
+- 自審 I-1：資源供應 adapter 讓每個 200 回應都改走 Android 外掛的六參數建構子（`statusCode` 與 `reasonPhrase` 皆非 null 時，且 `headers` 為 null）；已還原為 200 不設、只有 404 三者齊備，並補測試（`7d4dc605`）。
+- 獨立審查（另一個代理人唯讀審查，審查前未讀自審報告）：沒有 Critical、沒有 Important，1 個 Minor（Windows 探針 `.js` 不再帶 `charset=utf-8`）。
+- 驗證：最終提交的完整 `flutter test` 通過；Windows 真實 WebView2 整合測試子集 11 支（閱讀器、txt／md／cbz／kf8、全文索引器、EPUB 探針含 `windows_spike`、`windows_smoke_formats`、`reader_screen`）通過 11／失敗 0／逾時 0，`library_screen_test` 為 Android 專用整支略過。上述 Minor 在 Windows 探針實測無影響。
+- **仍未驗證**：Android 真機（BooksPad 在線，但那是使用者的私人裝置，過去整合測試曾清掉裝置資料，未獲授權前不在上面執行）；舊 WebView（Chrome 83 以下）上 `.css` 改回 `text/css` 的行為。
+
