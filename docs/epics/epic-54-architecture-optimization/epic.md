@@ -1003,3 +1003,9 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 驗證：最終提交的完整 `flutter test` 通過；Windows 真實 WebView2 整合測試子集 11 支（閱讀器、txt／md／cbz／kf8、全文索引器、EPUB 探針含 `windows_spike`、`windows_smoke_formats`、`reader_screen`）通過 11／失敗 0／逾時 0，`library_screen_test` 為 Android 專用整支略過。上述 Minor 在 Windows 探針實測無影響。
 - **仍未驗證**：Android 真機（BooksPad 在線，但那是使用者的私人裝置，過去整合測試曾清掉裝置資料，未獲授權前不在上面執行）；舊 WebView（Chrome 83 以下）上 `.css` 改回 `text/css` 的行為。
 
+**2026-11-15 Android 真機驗證**（BooksPad `B78CW2508006423`，Android 12，`com.android.webview` 91.0.4472.114＝Chrome 91；在 Issue 37 分支上執行，已含 Issue 36 全部變更；使用者授權於其裝置執行）：
+- 通過：`foliate_epub_reader_view_test`（10 項，含 30MB 大檔與 FXL）、`foliate_content_indexer_test`（2）、`content_uri_range_metadata_test`（1，Android 探針經資源供應）、`foliate_txt_test`（3）、`foliate_cbz_test`（3）、`foliate_kf8_test`（2）、`reader_screen_test`（19）。開書與渲染正常，沒有觀察到本次變更造成的回歸（200 不設 `statusCode`、`.css` 改回 `text/css` 在 Chrome 91 上開書皆正常；未另外針對 CSS 做視覺比對）。
+- 失敗但**與本次變更無關**（在 `main` 上以同樣方式重跑，結果相同）：① `foliate_md_test`：`JsBridgeGateway` 的 `onTableOfContentsReady` 請求重疊（測試自己呼叫 `loadTableOfContents` 時閱讀器內部剛好也在請求目錄），本裝置 MD 開書約 11 秒，`main` 上 2／2 失敗、37 分支 4／5 失敗（偶有一次通過）；② `library_screen_test` 兩項（匯入後 `isFixedLayout` 為 `null`，`main` 上同樣失敗；測試建構 `BookImportServiceImpl` 時沒帶 `metadataExtractor`，Android 預設走的原生詮釋資料路徑已不回傳 `isFixedLayout`，測試疑似過時）。兩者列為後續項目，不屬於本 Epic 目前的 Issue。
+- 日誌中的 `HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED` 是既有、無害的 `favicon.ico` 子資源（ADR 0043 已記錄）。
+- 裝置處理：App 資料夾只有約 11 KB 快取；測試一律 `--no-uninstall`、單份依序、之間停掉 Gradle daemon；結束後 `stay_on_while_plugged_in` 設回 0，並以 `main` 建置的 debug 版 `adb install -r` 還原（未用 `flutter install`）。
+
