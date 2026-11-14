@@ -1006,3 +1006,8 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - **未驗證**：未在真機／雲端帳號實測 Drive 與 OPDS 的列表（僅以 `MockClient` 單元測試驗證查詢字串與過濾結果）。
 - 後續項目：`sync_table_specs.dart` 與 SQL 內 `'pdf'`／`'cbz'` 字串；`_prepareBookParts` 分支梯（候選 4）；`app_zh_TW.arb` 一則描述仍提到 `BookFormat.unknown`。
 
+**2026-11-14 Issue 36／37 程式審查**（報告 `reviews/review-issue-36.md`、`review-issue-37.md`，不進版控）：
+- Issue 36 I-1：資源供應 adapter 讓每個 200 回應都改走 Android 外掛的六參數建構子（`statusCode` 與 `reasonPhrase` 皆非 null 時），且 `headers` 為 null；已還原為 200 不設、只有 404 三者齊備，並補測試。
+- Issue 37 I-1：`CLAUDE.md` 仍描述已移除的 `detectBookFormat()`／`reader/book_format.dart`，已更新；另補 `CONTEXT.md` 詞條對齊與 OPDS 解析器層級測試。
+- 兩者其餘為 Minor，已在報告記錄處理方式。
+

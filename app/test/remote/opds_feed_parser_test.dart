@@ -135,6 +135,29 @@ void main() {
         'http://192.168.1.100:8080/opds/download/4.epub?token=abc123');
   });
 
+  test('副檔名優先於 MIME（epic-54 Issue 37）：text/plain 搭配 .md 連結判為 md，不是 txt', () {
+    const xml = '''<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>副檔名優先測試</title>
+  <entry>
+    <id>urn:calibre:book-md</id>
+    <title>筆記</title>
+    <link rel="http://opds-spec.org/acquisition" type="text/plain"
+          href="download/notes.md?token=abc"/>
+  </entry>
+  <entry>
+    <id>urn:calibre:book-txt</id>
+    <title>無副檔名的純文字</title>
+    <link rel="http://opds-spec.org/acquisition" type="text/plain"
+          href="get/TXT/7/Library"/>
+  </entry>
+</feed>''';
+    final feed = parser.parse(xml, feedUri, fallbackTitles: _zhFallback);
+    expect(feed.entries[0].acquisitions.single.format, BookFileFormat.md);
+    expect(feed.entries[1].acquisitions.single.format, BookFileFormat.txt,
+        reason: '副檔名認不出時才看 MIME');
+  });
+
   test('〔審查 Finding 2〕MIME type 與副檔名皆無法辨識時 format 仍為 null', () {
     const xml = '''<?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
