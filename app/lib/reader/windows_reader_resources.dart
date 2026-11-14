@@ -6,7 +6,8 @@
 //   `data/foliate/`（Task 5），經 [loadWindowsFoliateAsset] 讀取。
 // - 書檔：先用 [cacheWindowsBook] 複製到「每個 widget 實例獨立」的快取
 //   子目錄（比照 Android `cacheBookForServing` 的 instanceId 語意），再由
-//   攔截回呼以 [readWindowsBookBytes] 服務 `/book/` 請求。
+//   `LocalBookServer` loopback 伺服器服務 `/book/` 請求（ADR 0042，見
+//   `book_serving.dart`）。
 // - 自訂字型：[loadWindowsFileBytes] 直接讀本機檔案（ADR 0021 不落地快取
 //   的語意在 Windows 上即「原本就在本機」）。
 //
@@ -73,43 +74,5 @@ Future<Uint8List?> loadWindowsFileBytes(String path) async {
     return await file.readAsBytes();
   } on FileSystemException {
     return null;
-  }
-}
-
-/// 服務攔截到的 `/book/` 請求：[requestPath] 必須以 `/book/` 開頭，
-/// 其餘部分視為檔名，讀 `bookDir/<檔名>`。
-///
-/// 任一情況回 `null`（讓 WebView 走預設行為，不丟例外，Review Focus 4）：
-/// - 不以 `/book/` 開頭；
-/// - 檔名含 `..` 或路徑分隔符號（`/`、`\`），禁止跳出 bookDir；
-/// - 檔案不存在。
-/// 閱讀器與索引器共用（Task 7）。
-Future<Uint8List?> readWindowsBookBytes(
-  String requestPath,
-  String bookDir,
-) async {
-  const prefix = '/book/';
-  if (!requestPath.startsWith(prefix)) return null;
-  final fileName = requestPath.substring(prefix.length);
-  if (fileName.isEmpty ||
-      fileName.contains('..') ||
-      fileName.contains('/') ||
-      fileName.contains(r'\')) {
-    return null;
-  }
-  return loadWindowsFileBytes(p.join(bookDir, fileName));
-}
-
-/// `/book/` 回應的 Content-Type：`.epub` 回 `application/epub+zip`、
-/// `.cbz` 回 `application/vnd.comicbook+zip`，其餘回
-/// `application/octet-stream`（副檔名大小寫不敏感）。
-String windowsBookContentType(String fileName) {
-  switch (p.extension(fileName).toLowerCase()) {
-    case '.epub':
-      return 'application/epub+zip';
-    case '.cbz':
-      return 'application/vnd.comicbook+zip';
-    default:
-      return 'application/octet-stream';
   }
 }

@@ -16,8 +16,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
-import '../reader/foliate_native_bridge.dart';
-import '../reader/windows_reader_resources.dart';
+import '../reader/foliate_asset_serving.dart';
 import '../windows/windows_webview_environment.dart';
 import 'epub_probe_result.dart' show mapProbeResult;
 
@@ -154,22 +153,8 @@ Future<Map<String, Object?>> readEpubMetadataInWebView(
         );
       }
 
-      const foliatePrefix = '/assets/foliate/';
-      if (path.startsWith(foliatePrefix)) {
-        final relative = 'foliate/${path.substring(foliatePrefix.length)}';
-        final assetBytes = await loadWindowsFoliateAsset(
-          relative,
-          assetRoot: windowsFoliateAssetRoot,
-        );
-        if (assetBytes == null) return null;
-        final contentType = path.endsWith('.js')
-            ? 'text/javascript; charset=utf-8'
-            : 'text/html';
-        return WebResourceResponse(
-          contentType: contentType,
-          data: assetBytes,
-        );
-      }
+      final asset = await serveFoliateAsset(path);
+      if (asset != null) return asset.toWebResourceResponse();
 
       if (path == '/book/current.epub') {
         // 只回應被要求的區段；沒有 start／end 就不回應，絕不整本回傳。

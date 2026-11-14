@@ -84,6 +84,16 @@ _Avoid_: 頁碼（過於籠統）
 決定一本書籍該用什麼 UI 版面語意（固定版面 → 單頁/雙頁模式；流式 → 連續捲動）的**開書前**判斷，結果快取於 `Book.isFixedLayout`（`app/lib/library/models/book.dart:50`，nullable bool，`null` 代表既有書籍尚未判斷過，或格式本身不適用如 PDF）。原僅涵蓋 EPUB，判斷來源為 `extractMetadata`（匯入時）或 `detectAndCacheEpubLayout`/`detectEpubLayout`（既有書籍首次開書時補判斷）這兩個原生 channel（讀取 EPUB OPF `rendition:layout` 屬性）；`epic-11-multi-format-reader` 起同一欄位廣義套用至 KF8(AZW3)（比照 EPUB 判斷 metadata）、CBZ（恆為 `true`，判斷本身是常數而非偵測）——TXT／MD 因匯入時已合成為流式的 EPUB 相容結構，寫入時即為已知結果（`false`），不需要獨立判斷（見 ADR 0023）。自 ADR 0017 起，EPUB 一律建構 `FoliateEpubReaderView`，不再依此判斷分流到不同 widget——此判斷僅影響 UI 版面參數（單頁/雙頁），不決定引擎選擇。與 `EpubLayoutInfo.isFixedLayout`（開書後才回報的執行期狀態，僅適用於 EPUB）是兩個不同概念、互不影響——見 `book.dart:44-49` 既有註解。少數漫畫 EPUB 因來源檔案 metadata 不完整/不規範，此判斷可能誤判為流式，見「人工版面覆蓋」。**開書前解析規則**：宣告值（`Book.isFixedLayout`）非 `null` 時直接採用；為 `null` 時依格式——EPUB 需補判斷（補判斷期間畫面維持載入）、AZW3／TXT／MD 視為流式、CBZ 視為固定版面、PDF 等其他格式不適用。**畫面持有兩個不同的值**：「開書前結果」（本詞條，驅動 View 的固定版面提示與載入等待）與「FXL 外觀開關」（驅動懸浮控制項、AppBar 等外觀，開書後以 `EpubLayoutInfo.isFixedLayout` 的回報改寫；但宣告為固定版面——含「人工版面覆蓋」的「強制 FXL」——時忽略回報）。兩者可以不一致，例如宣告為流式、開書後回報為固定版面，是預期行為，不合併成一個值。
 _Avoid_: FXL 偵測、版面偵測（皆容易與 `EpubLayoutInfo` 執行期狀態混淆）
 
+**Foliate 資源供應（Foliate Asset Serving）**：
+把 `/assets/foliate/**` 的請求變成明確回應（狀態碼、MIME、位元組；找不到一律 404，不交給 WebView 預設行為連網）。閱讀器、全文索引器、Android／Windows EPUB 探針四個 WebView 使用者共用同一份行為，各自只保留把回應轉成自家 `WebResourceResponse` 的薄 adapter。閱讀器專屬的字型路由與 `/book/` 路由不屬於它。
+
+**書檔供應（Book Serving）**：
+把一本書備妥成 WebView 可載入的位址（快取本機複本；Windows 另向 loopback 伺服器註冊，見 ADR 0042），並保證一次 `dispose()` 同時清掉快取目錄與註冊（`BookServeHandle`）。只有閱讀器與全文索引器使用；EPUB 探針以自訂範圍讀取直接讀原檔，不經書檔供應。
+
+**書籍格式能力（Book Format Capabilities）**：
+某個書籍格式（`BookFileFormat`）的「靜態事實」：走哪種引擎（PDF 或 Foliate）、定位座標型別（CFI 或頁碼）、能否落地複本、能否 relink、匯入時是否合成 EPUB 結構、對應的副檔名與 MIME。呼叫端詢問能力，不比對 enum 成員。偵測不出支援格式時回傳 `null`（`unknown` 不屬於持久化的 `BookFileFormat`）。與「引擎分派判斷」不同：後者是個別一本書的開書前執行期判斷（例如某本 EPUB 是否為固定版面），本詞條不含任何執行期偵測。
+_Avoid_: 格式判斷（容易與「引擎分派判斷」混淆）
+
 **人工版面覆蓋（Manual Engine Override）**：
 使用者在 `LibraryScreen` 多選模式下，對選取的 EPUB 書籍手動覆寫「引擎分派判斷」結果的操作，二擇一：「強制 FXL」（直接寫入 `Book.isFixedLayout = true`）／「恢復自動判斷」（重新呼叫 `detectAndCacheEpubLayout()`，回到系統原始判斷結果，非固定寫入 `false`）。用途是對「引擎分派判斷」誤判（例如漫畫 EPUB 被誤判為流式）提供救濟手段，不修改判斷邏輯本身。批次選取中的非 EPUB 書籍（PDF/TXT）自動跳過。生效時機為使用者下次從書架開啟該書時。自 ADR 0017 起，EPUB 一律使用 `foliate-js` 渲染，「引擎分派判斷」僅驅動 UI 版面語意（單頁/雙頁 vs. 連續捲動），不涉及引擎替換。
 _Avoid_: 強制版面、版面覆蓋（皆過於籠統，未點出「覆蓋的是引擎分派判斷，而非單書版面設定」這個關鍵區別，容易與「單書版面偏好設定」混淆）

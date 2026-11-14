@@ -406,6 +406,62 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 
 **文件**：本段；`issues.md` Issue 34 已定案；`docs/epics.md` 同步；`CONTEXT.md` 新增「頁高」「欄間隔」。
 
+## Issue 36 設計決策（`/grilling` 定案，2026-11-14）
+
+來源：2026-11-14 第四次架構檢視（`/improve-codebase-architecture`，熱點 `reader_screen.dart`、`book_import_service_impl.dart`）候選 1。子代理逐行比對後修正原判斷：四處攔截邏輯**不等價**，且書檔供應只有閱讀器與索引器使用（探針以自訂 `?start=&end=` 範圍讀原檔）。
+
+**事實盤點**：
+- 四處 `shouldInterceptRequest`：`.css` 在三處回 `text/html`、只有 Android 探針回 `text/css`；Windows 探針 `.js` 多帶 `charset=utf-8`；資源找不到時三處回 `null`、Android 探針回 404。
+- 書檔供應：閱讀器靠 `mounted` 雙重檢查分散在 `_cacheBook` 與 `dispose()`；`register` 成功到賦值 `_serveHandle` 之間若拋例外會洩漏 handle；索引器 finally 內 WebView `dispose()` 若拋例外會跳過快取目錄刪除。
+- 只有閱讀器與索引器走 loopback（完整 HTTP Range）；探針用自訂查詢參數，不走。
+- 測試：沒有任何測試真正觸發兩個攔截回呼；現有只有純函式 `classifyFoliateRequestPath`。
+- `windows_reader_resources.dart` 的 `readWindowsBookBytes`、`windowsBookContentType` 在 `lib/` 無呼叫者，只有測試用到。
+
+**決策**：
+1. **拆兩個 module，各自有明確使用者集合**：Foliate 資源供應（四處共用）；書檔供應（閱讀器、索引器）。探針的範圍讀取不併入、不改走 loopback。
+2. **範圍含全部四個 WebView 使用者**，實作前先確認探針樣板（`Size(800,1280)`、50ms dispose 延遲）能否真的共用。
+3. **`foliate_native_bridge.dart` 的 polyfill、錯誤捕捉 JS、字型 CSS 原地不動**；抽完若檔名名不副實，另列後續項目。
+4. **Foliate 資源供應 interface**：輸入請求路徑，輸出純值（狀態碼、MIME、位元組）；四處各留一個薄 adapter 轉成自家 `WebResourceResponse`。Android 與 Windows 資產讀取的差異藏在 module 內。閱讀器專屬的字型路由與 `/book/` 路由不進 module。Legacy 副本只是 `/assets/foliate/legacy/` 底下的另一組路徑，module 不特別處理。
+5. **MIME 統一為依副檔名正確回傳**（`.css` → `text/css`、`.js` → `text/javascript; charset=utf-8`）。行為變更；須在舊 WebView 真機（iReader Ocean 4 Plus）驗證一次。
+6. **`/assets/foliate/` 找不到一律回明確 404**（與字典 WebView「永不連網」原則一致）；閱讀器 `/book/` 的 `null` 不動。
+7. **書檔供應 interface**：`open(書路徑, instanceId)` 回傳含 `bookBaseUri` 的物件與 `dispose()`；`dispose()` 冪等，`open()` 完成前被呼叫也能收乾淨，閱讀器的 `mounted` 雙重檢查隨之移除。Android（`InternalStoragePathHandler`）與 Windows（loopback 註冊）是兩個 adapter。快取函式維持可注入。
+8. **不補** Windows 探針缺的 polyfill／`onError`（行為新增，且 WebView2 可能根本不需要），記為後續項目。
+9. **刪除** `readWindowsBookBytes`、`windowsBookContentType` 及其測試（使用者明確同意，屬既有死碼例外）。
+10. **測試**：replace，不 layer。新 module 的純值 interface 直接測；`classifyFoliateRequestPath` 與各處重複的攔截測試在新測試涵蓋後刪除。不做 design-it-twice（事實已把形狀壓窄）。
+11. **詞彙**：「Foliate 資源供應」「書檔供應」已寫入 `CONTEXT.md`。
+12. **不寫 ADR**：不推翻既有 ADR（0013、0042），容易回退。
+
+**範圍外**：Windows 探針 polyfill 與 `onError`；`foliate_native_bridge.dart` 其餘內容整理；探針改走 loopback。
+
+**文件**：本段；`issues.md` Issue 36；`CONTEXT.md` 新增「Foliate 資源供應」「書檔供應」。
+
+## Issue 37 設計決策（`/grilling` 定案，2026-11-14）
+
+來源：同上，候選 2。子代理盤點顯示格式知識實際回答約 12 種不同問題，不只是偵測。
+
+**事實盤點**：
+- 偵測：`detectBookFormat`、`detectBookFileFormat`、`detectCloudFileFormat`、OPDS `_detectFormat`、Drive 查詢字串等約 6 份獨立實作；`BookFileFormat` 經 `values.byName` 寫進資料庫與同步，成員名稱不可改。
+- 引擎分派 `isFoliateFormat` 約 18 處、PDF 專屬分支約 8 處；座標型別約 12 處；落地複本的 epub／pdf／azw3 組合寫 4 次。
+- 實際風險：雲端與 OPDS 把 `text/plain` 一律判為 txt，`notes.md` 會被誤判；Drive 的 `.txt` 只靠 MIME 篩選，`application/octet-stream` 的 `.txt` 在伺服器端被濾掉；沒有一致性測試。
+- cbz 內容 MIME 在 `local_book_server.dart` 與 `windows_reader_resources.dart` 不一致，後者隨 Issue 36 刪除而消失。
+
+**決策**：
+1. **與 Issue 36 分開**：seam 位置不同，各自獨立；先做 Issue 36。
+2. **interface**：以持久化的 `BookFileFormat` 為主體（成員名稱不變），提供能力查詢（窮舉 `switch`，新增格式編譯器逼你補齊）：引擎種類（PDF／Foliate）、座標型別（CFI／頁碼）、能否落地複本、能否 relink、是否合成 EPUB、副檔名清單、MIME 清單。真正做格式專屬工作的地方（封面產生、合成 EPUB）保留各自分支。
+3. **`unknown` 不進 `BookFileFormat`**：偵測回傳 `BookFileFormat?`，`null` 即不支援（修正原先「保留 `unknown`」的建議，因會讓非法值流進資料庫與同步）。`reader_screen.dart:1478` 的 `_toBookFileFormat` 橋接刪除。
+4. **雲端與 OPDS 納入**，並改為「副檔名優先、MIME 為輔」；Drive 伺服器端篩選不再依賴 MIME 才列 `.txt`。行為變更，補「MIME 與副檔名衝突」測試。
+5. **第一階段範圍**：偵測、引擎分派、座標型別（`reading_position_saver`）、落地複本與 relink、雲端／OPDS／選檔器。**排除** `sync_table_specs.dart`、SQL 內 `'pdf'`／`'cbz'` 字串（碰同步與資料庫，風險高，後續項目）與固定版面執行期判定（屬候選 3）。
+6. **能力只放第一階段消費者實際用到的**，不預先放全文索引分類與固定版面預設。
+7. **位置**：`app/lib/library/book_file_format.dart`，取代 1 行 re-export 的空殼；遷移完成後刪 `reader/book_format.dart`。
+8. **一致性測試**：窮舉 `switch` 讓編譯器把關，另加測試遍歷 `BookFileFormat.values`，驗證副檔名來回一致、各格式在選檔器、雲端清單、清掃白名單都出現。舊的分散偵測測試在新測試涵蓋後刪除（replace，不 layer）。
+9. **施工順序**：同一個 Issue 內依消費者族群分 task、各自 TDD 分開 commit：偵測與雲端／OPDS → 引擎分派與座標型別 → 落地複本與 relink（連同候選 4 的白名單重複）。計畫與實作同分支同 PR。
+10. **詞彙**：「書籍格式能力」已寫入 `CONTEXT.md`。
+11. **不寫 ADR**：容易回退，不推翻既有 ADR（0023 僅要求新格式走 Foliate）。
+
+**範圍外**：`sync_table_specs.dart` 與 SQL 字串；固定版面執行期判定（候選 3）；`_prepareBookParts` 梯（候選 4）。
+
+**文件**：本段；`issues.md` Issue 37；`CONTEXT.md` 新增「書籍格式能力」。
+
 ## 開發記錄
 
 **2026-09-30 登錄 Epic**，分支 `epic-54/issue-1-available-fonts`。實作計畫見 `plans/plan-issue-1.md`。
@@ -931,3 +987,25 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - **驗證**：同樣負載下重跑，10 組完整跑完的全部通過、0 失敗；`flutter analyze` 乾淨。另有 8 組是 flutter 工具並行啟動時搶複製 `pdfium.dll` 的衝突，與測試無關。PR 前仍須依慣例跑一次完整 `flutter test`。
 
 **2026-11-04 Issue 35 已合併**（PR #385，合併提交 `2aaf0272`）。測試等待上限放寬，`lib/` 零差異，完整 `flutter test` 4676 個全過。
+
+**2026-11-14 Issue 36 實作**（Foliate 資源供應與書檔供應；計畫 `plans/plan-issue-36.md`，Task 1～6 全部完成）：
+- 新增 `app/lib/reader/foliate_asset_serving.dart`（`serveFoliateAsset` 回純值 `FoliateAssetResponse`；`.css` → `text/css`、找不到或讀取拋例外 → 明確 404）與 `app/lib/reader/book_serving.dart`（`BookServing.open`／冪等 `dispose()`；`register` 失敗先刪剛複製的快取再重拋）。
+- 閱讀器、全文索引器、Android／Windows EPUB 探針四處的 `/assets/foliate/` 攔截改用 `serveFoliateAsset`；閱讀器與索引器改用 `BookServing`，閱讀器的 `mounted` 雙重檢查簡化為一次，索引器 finally 改為 WebView 釋放失敗也會清快取。`FoliateRequestKind.foliateAsset` 已移除。
+- 刪除 `readWindowsBookBytes`、`windowsBookContentType` 與其測試；`integration_test/windows_spike/headless_metadata_test.dart`（唯一另一個使用者，epic-66 技術驗證探針）改為直接讀快取複本。
+- 與計畫的差異：`dispose()` 在 `open()` 完成前被呼叫的情境，改成「呼叫端 `await` 之後發現不需要就呼叫一次 `dispose()`」（`open` 本身不可取消）；`dispose()` 回傳值保持原追蹤記錄語意（目錄確實存在且已刪掉才為 true）。
+- 驗證：`flutter analyze` 乾淨；兩個 check 腳本 PASS；完整 `flutter test` 5263 通過、2 略過、0 失敗。
+- **未驗證**：MIME 統一（`.css` 改 `text/css`）在 Chrome 83 以下 WebView（iReader Ocean 4 Plus）與 Windows 探針 `.js` 不再內嵌 `charset=utf-8` 的實際行為，單元測試無法證明，須真機／Windows 實機確認；Android 探針的 `.html` 等行為未改。
+- 後續項目：Windows 探針缺 polyfill 與 `onError`（見設計決策第 8 點）；`foliate_native_bridge.dart` 其餘內容整理。
+
+**2026-11-14 Issue 36 審查與驗證**（報告 `reviews/review-issue-36.md`，不進版控）：
+- 自審 I-1：資源供應 adapter 讓每個 200 回應都改走 Android 外掛的六參數建構子（`statusCode` 與 `reasonPhrase` 皆非 null 時，且 `headers` 為 null）；已還原為 200 不設、只有 404 三者齊備，並補測試（`7d4dc605`）。
+- 獨立審查（另一個代理人唯讀審查，審查前未讀自審報告）：沒有 Critical、沒有 Important，1 個 Minor（Windows 探針 `.js` 不再帶 `charset=utf-8`）。
+- 驗證：最終提交的完整 `flutter test` 通過；Windows 真實 WebView2 整合測試子集 11 支（閱讀器、txt／md／cbz／kf8、全文索引器、EPUB 探針含 `windows_spike`、`windows_smoke_formats`、`reader_screen`）通過 11／失敗 0／逾時 0，`library_screen_test` 為 Android 專用整支略過。上述 Minor 在 Windows 探針實測無影響。
+- **仍未驗證**：Android 真機（BooksPad 在線，但那是使用者的私人裝置，過去整合測試曾清掉裝置資料，未獲授權前不在上面執行）；舊 WebView（Chrome 83 以下）上 `.css` 改回 `text/css` 的行為。
+
+**2026-11-15 Android 真機驗證**（BooksPad `B78CW2508006423`，Android 12，`com.android.webview` 91.0.4472.114＝Chrome 91；在 Issue 37 分支上執行，已含 Issue 36 全部變更；使用者授權於其裝置執行）：
+- 通過：`foliate_epub_reader_view_test`（10 項，含 30MB 大檔與 FXL）、`foliate_content_indexer_test`（2）、`content_uri_range_metadata_test`（1，Android 探針經資源供應）、`foliate_txt_test`（3）、`foliate_cbz_test`（3）、`foliate_kf8_test`（2）、`reader_screen_test`（19）。開書與渲染正常，沒有觀察到本次變更造成的回歸（200 不設 `statusCode`、`.css` 改回 `text/css` 在 Chrome 91 上開書皆正常；未另外針對 CSS 做視覺比對）。
+- 失敗但**與本次變更無關**（在 `main` 上以同樣方式重跑，結果相同）：① `foliate_md_test`：`JsBridgeGateway` 的 `onTableOfContentsReady` 請求重疊（測試自己呼叫 `loadTableOfContents` 時閱讀器內部剛好也在請求目錄），本裝置 MD 開書約 11 秒，`main` 上 2／2 失敗、37 分支 4／5 失敗（偶有一次通過）；② `library_screen_test` 兩項（匯入後 `isFixedLayout` 為 `null`，`main` 上同樣失敗；測試建構 `BookImportServiceImpl` 時沒帶 `metadataExtractor`，Android 預設走的原生詮釋資料路徑已不回傳 `isFixedLayout`，測試疑似過時）。兩者列為後續項目，不屬於本 Epic 目前的 Issue。
+- 日誌中的 `HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED` 是既有、無害的 `favicon.ico` 子資源（ADR 0043 已記錄）。
+- 裝置處理：App 資料夾只有約 11 KB 快取；測試一律 `--no-uninstall`、單份依序、之間停掉 Gradle daemon；結束後 `stay_on_while_plugged_in` 設回 0，並以 `main` 建置的 debug 版 `adb install -r` 還原（未用 `flutter install`）。
+

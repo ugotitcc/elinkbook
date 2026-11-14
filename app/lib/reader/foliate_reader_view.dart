@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -10,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import '../platform/platform_support.dart';
 import '../windows/windows_webview_environment.dart';
 import 'app_font.dart';
+import 'book_serving.dart';
 import 'column_mode.dart';
 import 'custom_font.dart';
 import 'dual_page_mode.dart';
@@ -20,10 +20,10 @@ import 'epub_selection_info.dart';
 import 'epub_text_align.dart';
 import 'foliate_bridge_codec.dart';
 import 'foliate_bridge_handlers.dart';
+import 'foliate_asset_serving.dart';
 import 'foliate_native_bridge.dart';
 import 'navigation_degraded_reason.dart';
 import 'js_bridge_gateway.dart';
-import 'local_book_server.dart';
 import 'open_book_trace.dart';
 import 'page_turn_mode.dart';
 import 'percent_rect.dart';
@@ -277,10 +277,10 @@ String? resolveCustomFontUri(String path, List<CustomFont> customFonts) {
 /// 把 [_FoliateReaderViewState._shouldInterceptRequest] 裡的路徑判斷抽成
 /// 可測的純函式——原因同 [resolveCustomFontUri]：私有回呼在 widget test
 /// 環境下觸發不到（見 `foliate_reader_view.dart:233-245` 註解）。
+///
+/// `/assets/foliate/` 靜態資源不在此分類：改由 `serveFoliateAsset`
+/// （Foliate 資源供應，四個 WebView 使用者共用）處理。
 enum FoliateRequestKind {
-  /// `/assets/foliate/`：foliate-js 靜態資源。
-  foliateAsset,
-
   /// `/book/`：書檔（Android 由 `InternalStoragePathHandler` 服務，
   /// Windows 由 Dart 攔截回呼讀本機快取）。
   book,
@@ -297,7 +297,6 @@ enum FoliateRequestKind {
 
 /// 路徑 → [FoliateRequestKind] 的純分類（見該列舉文件）。
 FoliateRequestKind classifyFoliateRequestPath(String path) {
-  if (path.startsWith('/assets/foliate/')) return FoliateRequestKind.foliateAsset;
   if (path.startsWith('/book/')) return FoliateRequestKind.book;
   if (path.startsWith('/assets/custom-fonts/')) return FoliateRequestKind.customFont;
   if (path.startsWith(kDownloadedFontsPathPrefix)) {
@@ -653,21 +652,6 @@ class FoliateReaderView extends StatefulWidget {
   State<FoliateReaderView> createState() => _FoliateReaderViewState();
 }
 
-/// 刪除 [cachedPath] 所在的書籍快取目錄（含檔案本身）。
-///
-/// 供開書失敗路徑清理已複製的快取檔，避免孤兒殘留；刪除失敗（例如 Windows 檔案鎖）
-/// 不再向外拋出，只回傳是否成功。
-@visibleForTesting
-bool deleteBookCacheDirOf(String cachedPath) {
-  try {
-    final cacheDir = Directory(File(cachedPath).parent.path);
-    if (cacheDir.existsSync()) cacheDir.deleteSync(recursive: true);
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
 /// 為 Foliate 閱讀器建構載入 URL。
 ///
 /// 若提供 [bookBaseUri]，其查詢參數將包含 `bookBaseUrl`。
@@ -706,9 +690,9 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
   InAppWebViewController? _controller;
   late final JsBridgeGateway _gateway;
 
-  /// 每個 widget 實例獨立的快取子目錄路徑，供 `InternalStoragePathHandler` 使用。
+  /// 本實例的書檔供應（快取目錄＋Windows loopback 註冊，見 [BookServing]）。
   /// null 表示快取尚未完成或失敗。
-  String? _bookCacheDir;
+  BookServing? _serving;
 
   /// 本實例的唯一 ID，用於區隔快取子目錄（避免螢幕轉場期間的競態）。
   late final String _instanceId = identityHashCode(this).toString();
@@ -724,7 +708,6 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
   /// 觸發重繪。
   bool _hasActiveSelection = false;
 
-  BookServeHandle? _serveHandle;
   Uri? _initialIndexUri;
 
   @override
@@ -735,48 +718,22 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     _cacheBook();
   }
 
-  /// 非同步前置快取步驟：將 EPUB 檔案複製到原生端快取目錄，
-  /// 供 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務。
+  /// 非同步前置步驟：把書備妥成 WebView 可載入的位址（見 [BookServing]）。
   Future<void> _cacheBook() async {
     final copyWatch = Stopwatch()..start();
-    // 提升到 try 外，讓 catch 能清理已複製、但尚未交給 dispose 管理的快取目錄
-    String? copiedPath;
     try {
-      final cacheFn = cacheBookForServing;
-      final cachedPath = await cacheFn(widget.filePath, _instanceId);
-      copiedPath = cachedPath;
+      final serving = await BookServing.open(widget.filePath, _instanceId);
       if (!mounted) {
-        // 217MB 檔案複製可能耗時數秒，若使用者已離開畫面，需主動清理快取
-        if (cachedPath != null) {
-          final cacheDir = Directory(File(cachedPath).parent.path);
-          if (cacheDir.existsSync()) {
-            cacheDir.deleteSync(recursive: true);
-          }
-        }
+        // 217MB 檔案複製可能耗時數秒，若使用者已離開畫面，一次 dispose 清乾淨
+        serving?.dispose();
         return;
       }
-      if (cachedPath != null) {
+      if (serving != null) {
         OpenBookTrace.record(
             _instanceId, '書複製完成', '耗時 ${copyWatch.elapsedMilliseconds} ms');
-        BookServeHandle? handle;
-        if (isWindowsPlatform) {
-          handle = await LocalBookServer.instance.register(cachedPath);
-        }
-        if (!mounted) {
-          handle?.dispose();
-          final cacheDir = Directory(File(cachedPath).parent.path);
-          if (cacheDir.existsSync()) {
-            try {
-              cacheDir.deleteSync(recursive: true);
-            } catch (_) {}
-          }
-          return;
-        }
-        _serveHandle = handle;
-        // cacheBookForServing 回傳的是檔案絕對路徑，InternalStoragePathHandler 要的是目錄
+        _serving = serving;
         setState(() {
-          _bookCacheDir = File(cachedPath).parent.path;
-          _initialIndexUri = _buildIndexUri(handle?.bookBaseUri);
+          _initialIndexUri = _buildIndexUri(serving.bookBaseUri);
         });
       } else {
         OpenBookTrace.record(_instanceId, '書複製失敗',
@@ -785,9 +742,7 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
         widget.onError(AppLocalizations.of(context)!.readerFailedToLoadBookMessage);
       }
     } catch (e) {
-      // 例如 register 綁定失敗：此時 _bookCacheDir 尚未設定，dispose 不會清理，
-      // 剛複製的整本書（可能 200 MB 以上）會成為孤兒，必須在這裡刪除
-      if (copiedPath != null) deleteBookCacheDirOf(copiedPath);
+      // 例如 loopback 註冊失敗：BookServing.open 已先刪掉剛複製的快取再重拋
       if (!mounted) return;
       OpenBookTrace.record(_instanceId, '書複製失敗',
           '${e.runtimeType}（耗時 ${copyWatch.elapsedMilliseconds} ms）');
@@ -976,15 +931,10 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     // Task 3）；Windows 沒有該 Handler（`webViewAssetLoader` 只在 Android
     // 設定），改由本回呼讀本機快取（epic-66 Issue 1 Task 7）。
     // 路徑判斷抽成 [classifyFoliateRequestPath] 純函式，見其文件註解。
+    // `/assets/foliate/**` 一律交給 Foliate 資源供應（找不到回明確 404）。
+    final asset = await serveFoliateAsset(path);
+    if (asset != null) return asset.toWebResourceResponse();
     switch (classifyFoliateRequestPath(path)) {
-      case FoliateRequestKind.foliateAsset:
-        const foliateAssetsPrefix = '/assets/foliate/';
-        final relative = 'foliate/${path.substring(foliateAssetsPrefix.length)}';
-        final bytes = await loadAndroidAsset(relative);
-        if (bytes == null) return null;
-        final contentType =
-            path.endsWith('.js') ? 'text/javascript' : 'text/html';
-        return WebResourceResponse(contentType: contentType, data: bytes);
       case FoliateRequestKind.book:
         // Android 由 InternalStoragePathHandler 服務；
         // Windows 由 LocalBookServer loopback HTTP 服務。兩者此處皆回傳 null。
@@ -1016,15 +966,9 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
 
   @override
   void dispose() {
-    _serveHandle?.dispose();
-    _serveHandle = null;
-
-    // 清理本實例的快取子目錄（避免孤兒子目錄累積）
-    var deletedCacheDir = false;
-    if (_bookCacheDir != null) {
-      final cacheDir = Directory(_bookCacheDir!);
-      deletedCacheDir = _tryDeleteCacheDir(cacheDir);
-    }
+    // 一次釋放 loopback 註冊並刪快取子目錄（避免孤兒子目錄累積）
+    final deletedCacheDir = _serving?.dispose() ?? false;
+    _serving = null;
     OpenBookTrace.record(
         _instanceId, '離開畫面', '已刪快取目錄=${deletedCacheDir ? '是' : '否'}');
     detachReaderView();
@@ -1033,36 +977,10 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     super.dispose();
   }
 
-  static bool _tryDeleteCacheDir(Directory dir) {
-    try {
-      if (dir.existsSync()) {
-        dir.deleteSync(recursive: true);
-        return true;
-      }
-      return false;
-    } catch (_) {
-      _retryDeleteCacheDir(dir, 1);
-      return false;
-    }
-  }
-
-  static void _retryDeleteCacheDir(Directory dir, int attempt) {
-    if (attempt > 3) return;
-    Future<void>.delayed(const Duration(milliseconds: 100), () {
-      try {
-        if (dir.existsSync()) {
-          dir.deleteSync(recursive: true);
-        }
-      } catch (_) {
-        _retryDeleteCacheDir(dir, attempt + 1);
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     // 快取與基底網址未完成前不掛載 InAppWebView（外層 ReaderScreen 已負責視覺載入狀態）
-    if (_bookCacheDir == null || _initialIndexUri == null) {
+    if (_serving == null || _initialIndexUri == null) {
       return const SizedBox.shrink();
     }
     // epic-35-design-system-tokens Issue 7：3×3 導覽熱區除錯疊層（見下方
@@ -1093,7 +1011,7 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
                 ? WebViewAssetLoader(
                     pathHandlers: [
                       InternalStoragePathHandler(
-                          path: '/book/', directory: _bookCacheDir!),
+                          path: '/book/', directory: _serving!.cacheDir),
                       if (widget.downloadedFontsDirectory != null)
                         InternalStoragePathHandler(
                             path: kDownloadedFontsPathPrefix,

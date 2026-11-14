@@ -10,6 +10,7 @@ import 'dart:ui' show Size;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
+import '../reader/foliate_asset_serving.dart';
 import '../reader/foliate_bridge_handlers.dart';
 import '../reader/foliate_native_bridge.dart';
 import 'book_range_reader.dart';
@@ -204,29 +205,11 @@ Future<Map<String, Object?>> readEpubMetadataOnAndroid(
         );
       }
 
-      const foliatePrefix = '/assets/foliate/';
-      if (path.startsWith(foliatePrefix)) {
-        final relative = 'foliate/${path.substring(foliatePrefix.length)}';
-        final bytes = await loadAndroidAsset(relative);
-        if (bytes == null) {
-          debugPrint('[probe] 找不到資產：$relative');
-          return WebResourceResponse(
-            statusCode: 404,
-            reasonPhrase: 'Not Found',
-            headers: const {},
-            data: Uint8List(0),
-          );
-        }
-        final contentType = path.endsWith('.js')
-            ? 'text/javascript'
-            : (path.endsWith('.css') ? 'text/css' : 'text/html');
-        return WebResourceResponse(
-          contentType: contentType,
-          data: bytes,
-        );
+      final asset = await serveFoliateAsset(path);
+      if (asset != null && asset.statusCode == 404) {
+        debugPrint('[probe] 找不到資產：$path');
       }
-
-      return null;
+      return asset?.toWebResourceResponse();
     },
   );
 
