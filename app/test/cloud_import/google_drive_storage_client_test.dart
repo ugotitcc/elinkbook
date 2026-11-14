@@ -40,6 +40,35 @@ void main() {
     expect(() => client.listFolder(), throwsA(isA<CloudAuthRequiredException>()));
   });
 
+  test('伺服器端篩選涵蓋全部支援副檔名，MIME 為 octet-stream 的 .txt 與 notes.md 都列得出來', () async {
+    late String capturedQuery;
+    final mockClient = MockClient((request) async {
+      capturedQuery = request.url.queryParameters['q']!;
+      return http.Response.bytes(
+        utf8.encode(jsonEncode({
+          'files': [
+            {'id': 'f1', 'name': 'novel.txt', 'mimeType': 'application/octet-stream'},
+            {'id': 'f2', 'name': 'notes.md', 'mimeType': 'text/plain'},
+            {'id': 'f3', 'name': 'notes.mdx', 'mimeType': 'application/octet-stream'},
+          ],
+        })),
+        200,
+      );
+    });
+    final client =
+        GoogleDriveStorageClient(oauthClient: oauthClient, httpClient: mockClient);
+
+    final result = await client.listFolder();
+
+    for (final ext in ['epub', 'pdf', 'txt', 'cbz', 'azw3', 'md']) {
+      expect(capturedQuery, contains("name contains '.$ext'"), reason: ext);
+    }
+    final byName = {for (final e in result.entries) e.name: e.format};
+    expect(byName['novel.txt'], BookFileFormat.txt);
+    expect(byName['notes.md'], BookFileFormat.md, reason: '副檔名優先於 text/plain');
+    expect(byName.containsKey('notes.mdx'), isFalse, reason: '.mdx 不是支援格式');
+  });
+
   test('listFolder 正確解析回傳的資料夾與檔案，過濾掉不支援格式', () async {
     final mockClient = MockClient((request) async {
       expect(request.headers['Authorization'], 'Bearer valid-token');

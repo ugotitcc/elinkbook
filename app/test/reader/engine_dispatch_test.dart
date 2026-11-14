@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:elinkbook/reader/book_format.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/engine_dispatch.dart';
 
 /// 不帶 default 的 switch 運算式：sealed 型別少處理一態就會編譯失敗。
@@ -11,9 +11,9 @@ String describe(EngineDispatch d) => switch (d) {
 
 void main() {
   group('resolveEngineDispatch：宣告值非 null 時任何格式都直接採用', () {
-    for (final format in BookFormat.values) {
+    for (final format in <BookFileFormat?>[...BookFileFormat.values, null]) {
       for (final declared in [true, false]) {
-        test('${format.name} 宣告 $declared → Known($declared)', () {
+        test('${format?.name ?? 'unsupported'} 宣告 $declared → Known($declared)', () {
           expect(
             resolveEngineDispatch(format: format, declared: declared),
             equals(EngineDispatchKnown(declared)),
@@ -26,43 +26,43 @@ void main() {
   group('resolveEngineDispatch：宣告值為 null 時依格式', () {
     test('epub → 需補判斷', () {
       expect(
-        resolveEngineDispatch(format: BookFormat.epub, declared: null),
+        resolveEngineDispatch(format: BookFileFormat.epub, declared: null),
         equals(const EngineDispatchNeedsDetection()),
       );
     });
     test('azw3 → Known(false)（防禦預設，避免永遠停在載入）', () {
       expect(
-        resolveEngineDispatch(format: BookFormat.azw3, declared: null),
+        resolveEngineDispatch(format: BookFileFormat.azw3, declared: null),
         equals(const EngineDispatchKnown(false)),
       );
     });
     test('cbz → Known(true)（恆為固定版面）', () {
       expect(
-        resolveEngineDispatch(format: BookFormat.cbz, declared: null),
+        resolveEngineDispatch(format: BookFileFormat.cbz, declared: null),
         equals(const EngineDispatchKnown(true)),
       );
     });
     test('txt → Known(false)', () {
       expect(
-        resolveEngineDispatch(format: BookFormat.txt, declared: null),
+        resolveEngineDispatch(format: BookFileFormat.txt, declared: null),
         equals(const EngineDispatchKnown(false)),
       );
     });
     test('md → Known(false)', () {
       expect(
-        resolveEngineDispatch(format: BookFormat.md, declared: null),
+        resolveEngineDispatch(format: BookFileFormat.md, declared: null),
         equals(const EngineDispatchKnown(false)),
       );
     });
     test('pdf → 不適用', () {
       expect(
-        resolveEngineDispatch(format: BookFormat.pdf, declared: null),
+        resolveEngineDispatch(format: BookFileFormat.pdf, declared: null),
         equals(const EngineDispatchNotApplicable()),
       );
     });
     test('unknown → 不適用', () {
       expect(
-        resolveEngineDispatch(format: BookFormat.unknown, declared: null),
+        resolveEngineDispatch(format: null, declared: null),
         equals(const EngineDispatchNotApplicable()),
       );
     });
@@ -71,17 +71,17 @@ void main() {
   group('resolveEngineDispatch：每個格式在 null 宣告下都有明確結果', () {
     test('只有 epub 需補判斷，其餘格式非 Known 即不適用', () {
       final described = {
-        for (final f in BookFormat.values)
+        for (final f in <BookFileFormat?>[...BookFileFormat.values, null])
           f: describe(resolveEngineDispatch(format: f, declared: null)),
       };
       expect(described, {
-        BookFormat.epub: 'needsDetection',
-        BookFormat.pdf: 'notApplicable',
-        BookFormat.azw3: 'known:false',
-        BookFormat.cbz: 'known:true',
-        BookFormat.txt: 'known:false',
-        BookFormat.md: 'known:false',
-        BookFormat.unknown: 'notApplicable',
+        BookFileFormat.epub: 'needsDetection',
+        BookFileFormat.pdf: 'notApplicable',
+        BookFileFormat.azw3: 'known:false',
+        BookFileFormat.cbz: 'known:true',
+        BookFileFormat.txt: 'known:false',
+        BookFileFormat.md: 'known:false',
+        null: 'notApplicable',
       });
     });
   });

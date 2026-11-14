@@ -98,7 +98,7 @@ abstract class PdfFacet {
   Future<ui.Image?> renderThumbnail(int pageIndex, {required double maxWidth});
 }
 
-/// `BookFormat.unknown` 專用：畫面只顯示不支援訊息、不建構任何 View，所有
+/// 格式為 `null`（不支援）專用：畫面只顯示不支援訊息、不建構任何 View，所有
 /// 指令本來就是空操作（現況對沒有掛載的 key 呼叫 static 方法的結果相同）。
 /// 兩個 facet 皆為 `null`。
 class NoopReaderSurface implements ReaderSurface {

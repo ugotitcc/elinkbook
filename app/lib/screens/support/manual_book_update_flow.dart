@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../../library/book_file_format_detection.dart';
+import '../../library/book_file_format.dart';
 import '../../library/book_import_service.dart';
 import '../../library/book_update_models.dart';
 import '../../library/models/book.dart';

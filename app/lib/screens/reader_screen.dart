@@ -11,7 +11,8 @@ import '../platform/platform_support.dart';
 import '../reader/annotation_controller.dart';
 import '../reader/annotation_list_item.dart';
 import '../reader/annotation_toolbar_layout.dart';
-import '../reader/book_format.dart';
+import '../library/book_file_format.dart';
+import '../library/models/library_enums.dart';
 import '../reader/engine_dispatch.dart';
 import '../reader/open_book_trace.dart';
 import '../reader/bookmark_controller.dart';
@@ -36,7 +37,6 @@ import '../reader/transient_highlight_timer.dart';
 import '../reader/tts_segment_cfi.dart';
 import '../library/models/book.dart';
 import '../library/models/book_group.dart';
-import '../library/models/library_enums.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../reader/highlight_style.dart';
@@ -438,7 +438,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 由 adapter 擁有（`surface.foliate!.viewKey`／`surface.pdf!.viewKey`），
   // 本類別只用它們建構 View，不再直接持有或呼叫。
   late final ReaderSurface _surface = widget.dependencies.readerSurfaceFactory(
-    detectBookFormat(_activeFilePath),
+    detectBookFileFormat(_activeFilePath),
   );
   // 記錄上一次實際套用給系統的螢幕方向，避免在偏好設定頻繁變動時（例如
   // 拖曳滑桿）重複呼叫 SystemChrome.setPreferredOrientations。
@@ -592,7 +592,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 「引擎分派判斷」。
   void _resolveEpubEngineDispatch() {
     final dispatch = resolveEngineDispatch(
-      format: detectBookFormat(_activeFilePath),
+      format: detectBookFileFormat(_activeFilePath),
       declared: widget.isFixedLayout,
     );
     switch (dispatch) {
@@ -679,7 +679,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 離開閱讀畫面：標記關閉、結算統計、取消 Checkpoint Timer、儲存位置、觸發
     // 一次 Checkpoint（順序與理由見 ReadingSession.close）。放在最前面，
     // 讓 _activeFilePath 在 _openBookFlow 被 dispose 之前取值。
-    _session.close(detectBookFormat(_activeFilePath));
+    _session.close(detectBookFileFormat(_activeFilePath));
     _openBookFlow
       ..removeListener(_onOpenBookFlowChanged)
       ..dispose();
@@ -731,7 +731,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      _session.onAppPaused(detectBookFormat(_activeFilePath));
+      _session.onAppPaused(detectBookFileFormat(_activeFilePath));
     } else if (state == AppLifecycleState.resumed) {
       _session.onAppResumed();
       // App 從背景恢復時，Android 系統列可能已被 OS 自動重新顯示，
@@ -1021,7 +1021,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         onChanged: _handlePrefsChanged,
         isEinkMode: widget.isEinkMode,
         showTextConversion:
-            detectBookFormat(_activeFilePath) != BookFormat.cbz,
+            detectBookFileFormat(_activeFilePath) != BookFileFormat.cbz,
       ),
     );
   }
@@ -1170,7 +1170,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final currentPath = _currentEpubTocPath();
     _showThemedModalBottomSheet<void>(
       builder: (_) => TocBottomSheet(
-        format: BookFormat.epub,
+        format: BookFileFormat.epub,
         entries: _tocEntries,
         initiallyExpandedEntries: currentPath.toSet(),
         currentEntry: currentPath.isEmpty ? null : currentPath.last,
@@ -1195,7 +1195,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   ///
   /// 背景載入尚未完成（[_pdfTocLoaded] 仍為 false）時直接忽略，比照 EPUB
   /// 「reader_toc_button」`onPressed: null` 的既有防呆語意（見
-  /// _buildAppBarActions case BookFormat.epub 對 _tocLoaded 的既有判斷）。
+  /// _buildAppBarActions case BookFileFormat.epub 對 _tocLoaded 的既有判斷）。
   void _openPdfToc() {
     if (!_pdfTocLoaded) return;
     final currentPath =
@@ -1204,7 +1204,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         _pdfThumbnailMaxWidth * MediaQuery.of(context).devicePixelRatio.clamp(1.0, 3.0);
     _showThemedModalBottomSheet<void>(
       builder: (_) => TocBottomSheet(
-        format: BookFormat.pdf,
+        format: BookFileFormat.pdf,
         entries: _pdfTocEntries,
         initiallyExpandedEntries: currentPath.toSet(),
         currentEntry: currentPath.isEmpty ? null : currentPath.last,
@@ -1294,18 +1294,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 選單列「✎ 劃線筆記」按鈕（Step 3a／3b）傳入 `1`，預設停在「✏️劃線與
   /// 備註」分頁（epic-38-reader-chrome-tts-redesign Issue 1，接上 Task 1
   /// 建立的 `NotesBottomSheet.initialTabIndex`）。
-  void _openNotesSheet(BookFormat format, {int initialTabIndex = 0}) {
+  void _openNotesSheet(BookFileFormat? format, {int initialTabIndex = 0}) {
     final repository = widget.dependencies.bookmarksRepository;
     final currentPath = _currentEpubTocPath();
     final positionContext = BookmarkPositionContext(
       epubLocatorJson:
-          isFoliateFormat(format) ? _epubPositionInfo?.locatorJson : null,
+          format.usesFoliate ? _epubPositionInfo?.locatorJson : null,
       progression:
-          isFoliateFormat(format) ? _epubPositionInfo?.progression : null,
-      pdfPageIndex: format == BookFormat.pdf ? _pdfPageInfo?.pageIndex : null,
+          format.usesFoliate ? _epubPositionInfo?.progression : null,
+      pdfPageIndex: format.isPdf ? _pdfPageInfo?.pageIndex : null,
       chapterTitle: currentPath.isEmpty ? null : currentPath.last.title,
     );
-    final latestProgress = isFoliateFormat(format)
+    final latestProgress = format.usesFoliate
         ? (_epubPositionInfo?.progression ?? widget.bookProgress)
         : (_pdfPageInfo != null && _pdfPageInfo!.totalPages > 0
             ? (_pdfPageInfo!.pageIndex + 1) / _pdfPageInfo!.totalPages
@@ -1323,12 +1323,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // FXL EPUB 傳入 null（見 _handleSelectionChanged 註解——FXL 頁面
         // 是純點陣圖，無文字節點可選取，劃線/備註排除 FXL 是結構性必然，
         // 非可調整的產品決策，epic-20 Issue 4 審查回應已查證確認）。
-        highlightsRepository: (isFoliateFormat(format) && !_isFixedLayout) ||
-                format == BookFormat.pdf
+        highlightsRepository: (format.usesFoliate && !_isFixedLayout) ||
+                format.isPdf
             ? widget.dependencies.highlightsRepository
             : null,
-        notesRepository: (isFoliateFormat(format) && !_isFixedLayout) ||
-                format == BookFormat.pdf
+        notesRepository: (format.usesFoliate && !_isFixedLayout) ||
+                format.isPdf
             ? widget.dependencies.notesRepository
             : null,
         onAnnotationSelected: (item) {
@@ -1382,7 +1382,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // Task 10 Step 7）刻意不同——PDF 沒有對應的版面解析回呼，本方法
     // （onPageRendered）是 PDF 開書成功的既有訊號，兩種格式共用同一個
     // _annotationsLoaded 旗標（單一書籍只會是其中一種格式，不會重複觸發）。
-    if (detectBookFormat(_activeFilePath) == BookFormat.pdf &&
+    if (detectBookFileFormat(_activeFilePath).isPdf &&
         !_annotationsLoaded) {
       _annotationsLoaded = true;
       _reloadAnnotations();
@@ -1392,7 +1392,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 短時間內重複觸發）。與 EPUB 的 _tocLoaded 觸發點
     // （_handleFoliateLayoutResolved）刻意不同——PDF 同樣沒有版面解析
     // 回呼，onPageRendered 是 PDF 開書成功的唯一既有訊號。
-    if (detectBookFormat(_activeFilePath) == BookFormat.pdf && !_pdfTocLoaded) {
+    if (detectBookFileFormat(_activeFilePath).isPdf && !_pdfTocLoaded) {
       _pdfTocLoaded = true;
       _surface.pdf!.loadTableOfContents().then((items) {
         if (!mounted) return;
@@ -1469,31 +1469,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
   }
 
-  /// [BookFormat]（`reader/book_format.dart`，依副檔名判斷）→
-  /// [BookFileFormat]（`library/models/library_enums.dart`，`Book.format`
-  /// 型別）的純轉換（epic-10-search Issue 8）——兩者列舉成員名稱刻意
-  /// 一一對應，僅 [BookFormat.unknown] 沒有對應值，回傳 `null`，呼叫端
-  /// 據此停用搜尋入口。目前 codebase 中沒有其他現成的轉換函式（規劃階段
-  /// 查證，見 `plans/plan-issue-8.md`），這裡是唯一一處。
-  BookFileFormat? _toBookFileFormat(BookFormat format) {
-    switch (format) {
-      case BookFormat.epub:
-        return BookFileFormat.epub;
-      case BookFormat.pdf:
-        return BookFileFormat.pdf;
-      case BookFormat.azw3:
-        return BookFileFormat.azw3;
-      case BookFormat.cbz:
-        return BookFileFormat.cbz;
-      case BookFormat.txt:
-        return BookFileFormat.txt;
-      case BookFormat.md:
-        return BookFileFormat.md;
-      case BookFormat.unknown:
-        return null;
-    }
-  }
-
   /// 供搜尋接線使用的 [Book] 物件（epic-10-search Issue 8）：`ReaderScreen`
   /// 本身不持有完整 [Book] 記錄，只有零散的個別欄位，這裡就地合成一份——
   /// [BookSearchScreen] 實際只讀取 `id`／`title`／`author`／`format`／
@@ -1503,11 +1478,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 影響任何實際行為。`isFixedLayout` 讀取 State 內部已解析的
   /// [_isFixedLayout]（而非可能為 `null`、可能過期的 `widget.isFixedLayout`
   /// ——`review-plan-issue-8.md` M-2），對「使用者當下正在讀哪一種版面」
-  /// 是更即時準確的來源。格式無法辨識（[BookFormat.unknown]）時回傳
+  /// 是更即時準確的來源。格式無法辨識（`null`）時回傳
   /// `null`，呼叫端據此停用搜尋入口，語意對齊既有「不支援的檔案格式」
   /// 畫面分支。
   Book? _buildSearchableBook() {
-    final fileFormat = _toBookFileFormat(detectBookFormat(_activeFilePath));
+    final fileFormat = detectBookFileFormat(_activeFilePath);
     if (fileFormat == null) return null;
     return Book(
       id: widget.bookId,
@@ -1590,7 +1565,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // 否則 _buildBody 的 gating 條件會讓閱讀視圖永遠停在等待。偏好設定、
         // 閱讀位置、字型以 bookId 載入，重新連結不改 bookId，不需要重跑。
         if (_dispatchedIsFixedLayout == null &&
-            detectBookFormat(newPath) == BookFormat.epub) {
+            detectBookFileFormat(newPath) == BookFileFormat.epub) {
           _resolveEpubEngineDispatch();
         }
       case OpenBookRelinkFailed(:final reason):
@@ -1616,8 +1591,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 使用者取消時回傳 null。
   Future<OpenBookPickedFile?> _pickBookFileForRelink() {
     final picker = widget.pickSingleBookFile ?? pickSingleBookFileViaFilePicker;
-    // 只有 EPUB／PDF／AZW3 會走到這裡，BookFormat 名稱即副檔名。
-    return picker([detectBookFormat(_activeFilePath).name]);
+    // 只有 EPUB／PDF／AZW3 會走到這裡，限定為原書格式的副檔名；萬一認不出
+    // （理論上不會發生）就放寬成全部支援格式，不傳入不存在的副檔名。
+    final format = detectBookFileFormat(_activeFilePath);
+    return picker(format == null ? kSupportedBookExtensions : [format.fileExtension]);
   }
 
   /// `FoliateReaderView` 專屬的 onLayoutResolved 處理。
@@ -1869,7 +1846,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
-    final format = detectBookFormat(_activeFilePath);
+    final format = detectBookFileFormat(_activeFilePath);
     // 方向偵測（spec.md「方向偵測契約」）：在 build() 中統一偵測，格式無關
     // 共用，不寫死在 PDF 專屬程式碼路徑裡——EPUB 分支（Issue 6）之後會消費
     // 同一個 isLandscape 值。
@@ -1941,8 +1918,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 顯示，見上方 `_buildChromeTopBar()` 呼叫端），暫時保留這個方法本身
   /// 供後續決定要放什麼內容時使用，故目前無呼叫端。
   // ignore: unused_element
-  String _currentChapterTitle(BookFormat format) {
-    if (format == BookFormat.pdf) {
+  String _currentChapterTitle(BookFileFormat? format) {
+    if (format.isPdf) {
       final currentPath =
           PdfTocNavigator.findCurrentPath(_pdfTocEntries, _pdfPageInfo?.pageIndex);
       return currentPath.isEmpty
@@ -1960,8 +1937,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// spec.md §功能①②）。位置資訊尚未載入完成（`_epubPositionInfo`／
   /// `_pdfPageInfo` 為 `null`，或總頁數 <= 0）時回傳空字串，呼叫端直接
   /// 顯示空白，不額外處理 loading 狀態文字。
-  String _pageProgressText(BookFormat format) {
-    if (format == BookFormat.pdf) {
+  String _pageProgressText(BookFileFormat? format) {
+    if (format.isPdf) {
       final info = _pdfPageInfo;
       if (info == null || info.totalPages <= 0) return '';
       final current = info.pageIndex + 1;
@@ -2024,7 +2001,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 又已改為恆為 `null`，導致使用者在這兩種狀態下沒有返回鍵、無法離開
   /// 閱讀器（此早退分支下 `_chromeVisible` 恆為初始值 `true`，工具列仍會
   /// 顯示，返回鍵可用）。目錄按鈕已移除，改移至 `ReaderChromeBottomBar`。
-  Positioned _buildChromeTopBar(BookFormat format) {
+  Positioned _buildChromeTopBar(BookFileFormat? format) {
     return Positioned(
       top: 0,
       left: 0,
@@ -2061,11 +2038,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// `_autoDetectedWritingMode`／`_tocLoaded`；未就緒時回傳
   /// [_showTocLoadingHint]（按鈕仍可點，點了顯示載入中提示），非支援格式才回傳
   /// `null`（停用）。
-  VoidCallback? _onTocTapFor(BookFormat format) {
-    if (format == BookFormat.pdf) {
+  VoidCallback? _onTocTapFor(BookFileFormat? format) {
+    if (format.isPdf) {
       return _pdfTocLoaded ? _openPdfToc : _showTocLoadingHint;
     }
-    if (!isFoliateFormat(format)) return null;
+    if (!format.usesFoliate) return null;
     final ready = _autoDetectedWritingMode != null && _tocLoaded;
     return ready ? _openToc : _showTocLoadingHint;
   }
@@ -2103,7 +2080,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 相同，只有 [onTtsTap] 不同——抽成獨立方法避免三份重複（epic-38-
   /// reader-chrome-tts-redesign Issue 2）。
   ReaderChromeBottomBar _buildFoliateChromeBottomBar(
-    BookFormat format, {
+    BookFileFormat? format, {
     required VoidCallback? onTtsTap,
   }) {
     return ReaderChromeBottomBar(
@@ -2150,8 +2127,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// `TtsPanel` 是否展開——沿用 Issue 1 之前 `TtsMiniPlayer` 對 CBZ 的既有
   /// 處理方式，不受一般格式「衍生而非手動旗標」設計原則影響（CBZ 根本
   /// 沒有可衍生的真實狀態）。
-  Widget _buildBottomChrome(BookFormat format) {
-    if (format == BookFormat.cbz) {
+  Widget _buildBottomChrome(BookFileFormat? format) {
+    if (format == BookFileFormat.cbz) {
       if (!_cbzTtsPanelVisible) {
         return _buildFoliateChromeBottomBar(
           format,
@@ -2362,9 +2339,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
-  Widget _buildBody(BookFormat format, bool isLandscape) {
+  Widget _buildBody(BookFileFormat? format, bool isLandscape) {
     final l10n = AppLocalizations.of(context)!;
-    if (format == BookFormat.unknown) {
+    if (format == null) {
       // 審查修正（epic-38-reader-chrome-tts-redesign Issue 1）：早退分支
       // 也要疊上 ReaderChromeTopBar，否則 Scaffold.appBar 已恆為 null 後，
       // 使用者在不支援格式畫面完全沒有返回鍵、無法離開閱讀器。
@@ -2456,7 +2433,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           key: const Key('reader_body_stack'),
           children: [
             if (_resolved != null &&
-                (!isFoliateFormat(format) ||
+                (!format.usesFoliate ||
                     (_dispatchedIsFixedLayout != null &&
                         _availableFonts != null)))
               _buildNativeView(format, isLandscape),
@@ -2506,7 +2483,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // 與 TtsPanel 依 TtsController.status 衍生切換，取代 Issue 1
             // 過渡期的 !_ttsMiniPlayerVisible 手動旗標與 TtsMiniPlayer（見
             // _buildBottomChrome 文件註解）。
-            if (isFoliateFormat(format) && _chromeVisible)
+            if (format.usesFoliate && _chromeVisible)
               Positioned(
                 left: 0,
                 right: 0,
@@ -2519,7 +2496,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // 按鈕 2026-09-10 起改移到本列最左側（見 onTocTap）。版面設定／
             // 書籤／筆記／進度合併為 ReaderChromeBottomBar（epic-38-reader-
             // chrome-tts-redesign Issue 1，Step 3b）。
-            if (format == BookFormat.pdf && _chromeVisible && !_cropEditModeActive)
+            if (format.isPdf && _chromeVisible && !_cropEditModeActive)
               Positioned(
                 left: 0,
                 right: 0,
@@ -2544,7 +2521,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       _pdfPageInfo == null ? null : _togglePdfBookmark,
                   onAnnotationsTap: !_openBookFlow.isRendered
                       ? null
-                      : () => _openNotesSheet(BookFormat.pdf, initialTabIndex: 1),
+                      : () => _openNotesSheet(BookFileFormat.pdf, initialTabIndex: 1),
                   onLayoutTap:
                       _openBookFlow.isRendered ? _openPdfSettings : null,
                   onTtsTap: null, // PDF 目前結構性沒有 TTS 底層能力
@@ -2553,7 +2530,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   isEinkMode: widget.isEinkMode,
                 ),
               ),
-            if (isFoliateFormat(format) &&
+            if (format.usesFoliate &&
                 (_resolved?.showHeader ?? false) &&
                 !_chromeVisible)
               (_resolved?.writingMode == WritingMode.vertical)
@@ -2572,7 +2549,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       right: 72,
                       child: Center(child: _buildFoliateHeaderText()),
                     ),
-            if (isFoliateFormat(format) &&
+            if (format.usesFoliate &&
                 (_resolved?.showFooter ?? false) &&
                 (_epubPositionInfo?.displayTotalPages ?? 0) > 0)
               (_resolved?.writingMode == WritingMode.vertical)
@@ -2753,8 +2730,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 模式時，才以使用者替目前佈景設定的顏色取代佈景原色；沒設定的那個顏色
   /// 仍退回佈景原色。
   Color? get _themedTextColor {
-    final format = detectBookFormat(_activeFilePath);
-    if (!isFoliateFormat(format) || _isFixedLayout) return null;
+    final format = detectBookFileFormat(_activeFilePath);
+    if (!format.usesFoliate || _isFixedLayout) return null;
     if (widget.isEinkMode) return Theme.of(context).colorScheme.onSurface;
     return _readerColors.text ?? Theme.of(context).colorScheme.onSurface;
   }
@@ -2762,8 +2739,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 背景色規則同 [_themedTextColor]；另供 `Scaffold.backgroundColor` 與載入
   /// 遮罩使用。
   Color? get _themedBackgroundColor {
-    final format = detectBookFormat(_activeFilePath);
-    if (!isFoliateFormat(format) || _isFixedLayout) return null;
+    final format = detectBookFileFormat(_activeFilePath);
+    if (!format.usesFoliate || _isFixedLayout) return null;
     if (widget.isEinkMode) return Theme.of(context).scaffoldBackgroundColor;
     return _readerColors.background ?? Theme.of(context).scaffoldBackgroundColor;
   }
@@ -2895,7 +2872,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     return _ttsSpeedPresets[(index + 1) % _ttsSpeedPresets.length];
   }
 
-  Widget _buildNativeView(BookFormat format, bool isLandscape) {
+  Widget _buildNativeView(BookFileFormat? format, bool isLandscape) {
     final resolved = _resolved!;
     final fonts = _availableFonts ?? AvailableFonts.empty;
     // epic-42-text-conversion Issue 2：_resolved 非 null 時 _loaded 恆非
@@ -2909,13 +2886,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 為 true，_isFixedLayout 仍為 false。
     final isFixedLayoutEngine = _isFixedLayout ||
         _dispatchedIsFixedLayout == true ||
-        format == BookFormat.cbz;
+        format == BookFileFormat.cbz;
     switch (format) {
-      case BookFormat.epub:
-      case BookFormat.azw3:
-      case BookFormat.cbz:
-      case BookFormat.txt:
-      case BookFormat.md:
+      case BookFileFormat.epub:
+      case BookFileFormat.azw3:
+      case BookFileFormat.cbz:
+      case BookFileFormat.txt:
+      case BookFileFormat.md:
         // Epic 11 Issue 4：TXT 與 EPUB/AZW3/CBZ 共用同一個
         // FoliateReaderView，建構參數完全相同——TXT 合成後是一份真正的
         // EPUB，isComicBookHint 恆為 false（非 cbz 格式），dualPageDirection
@@ -2976,7 +2953,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               ? widget.initialJumpTarget?.progression
               : _initialPosition?.progress,
           onNavigationDegraded: _handleNavigationDegraded,
-          isComicBookHint: format == BookFormat.cbz,
+          isComicBookHint: format == BookFileFormat.cbz,
           dualPageDirection: resolved.dualPageDirection,
           onLocatorChanged: (info) {
             if (!mounted) return;
@@ -3021,7 +2998,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           onSelectionCleared: _handleSelectionCleared,
           onDesktopKey: isWindowsPlatform ? _handleFoliateDesktopKey : null,
         );
-      case BookFormat.pdf:
+      case BookFileFormat.pdf:
         // epic-24-pdf-engine-rebuild：單頁/雙頁（Issue 2）、影像濾鏡/
         // 裁切（Issue 3）、劃線選取回呼（Issue 4）、導航熱區（Issue 8）
         // 皆已補回。
@@ -3064,7 +3041,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             setState(() => _pdfPageInfo = info);
           },
         );
-      case BookFormat.unknown:
+      case null:
         return const SizedBox.shrink();
     }
   }
@@ -3226,7 +3203,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   void _handleReaderKeyCommand(ReaderKeyCommand command) {
     if (_isReaderCommandBlocked()) return;
-    final format = detectBookFormat(_activeFilePath);
+    final format = detectBookFileFormat(_activeFilePath);
 
     switch (command) {
       case ReaderKeyCommand.previousPage:
@@ -3238,9 +3215,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       case ReaderKeyCommand.firstPage:
         _clearSearchJumpHighlight();
         _session.recordActivity();
-        if (isFoliateFormat(format)) {
+        if (format.usesFoliate) {
           _surface.jumpTo(const ReaderJumpTarget(progression: 0.0));
-        } else if (format == BookFormat.pdf) {
+        } else if (format.isPdf) {
           final info = _pdfPageInfo;
           if (info != null && info.totalPages > 0) {
             _surface.jumpTo(const ReaderJumpTarget(pdfPageIndex: 0));
@@ -3250,9 +3227,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       case ReaderKeyCommand.lastPage:
         _clearSearchJumpHighlight();
         _session.recordActivity();
-        if (isFoliateFormat(format)) {
+        if (format.usesFoliate) {
           _surface.jumpTo(const ReaderJumpTarget(progression: 1.0));
-        } else if (format == BookFormat.pdf) {
+        } else if (format.isPdf) {
           final info = _pdfPageInfo;
           if (info != null && info.totalPages > 0) {
             _surface.jumpTo(ReaderJumpTarget(pdfPageIndex: info.totalPages - 1));
@@ -3286,12 +3263,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 清除兩者較早發生者。無條件呼叫——_clearSearchJumpHighlight()
     // 內部已對「目前根本沒有顯示中的高亮」做早退保護，重複呼叫安全。
     _clearSearchJumpHighlight();
-    final format = detectBookFormat(_activeFilePath);
+    final format = detectBookFileFormat(_activeFilePath);
     switch (action) {
       case ZoneAction.previousPage:
         if (_openBookFlow.isLoading) return;
         _session.recordActivity();
-        if (format == BookFormat.pdf) {
+        if (format.isPdf) {
           _surface.previousPage();
           // Epic 24 Issue 10：PDF 框選狀態是純 Dart 端矩形選取，沒有
           // EPUB 那種 WebView 切頁自動清空 window.getSelection() 的
@@ -3304,7 +3281,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           // 放開手指後仍會用換頁前的舊頁面座標重新彈出 Toolbar，一併
           // 中止它，見 PdfReaderView.cancelActiveSelectionDrag 文件。
           _surface.pdf!.cancelActiveSelectionDrag();
-        } else if (isFoliateFormat(format)) {
+        } else if (format.usesFoliate) {
           // Epic 11 Issue 2：KF8 (AZW3) 與 EPUB 共用 FoliateReaderView。
           _surface.previousPage();
         }
@@ -3312,13 +3289,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       case ZoneAction.nextPage:
         if (_openBookFlow.isLoading) return;
         _session.recordActivity();
-        if (format == BookFormat.pdf) {
+        if (format.isPdf) {
           _surface.nextPage();
           // Epic 24 Issue 10：理由同上方 previousPage 分支。
           if (_annotations.selection != null) _handleSelectionCleared();
           // 審查修正：理由同上方 previousPage 分支。
           _surface.pdf!.cancelActiveSelectionDrag();
-        } else if (isFoliateFormat(format)) {
+        } else if (format.usesFoliate) {
           // Epic 11 Issue 2：KF8 (AZW3) 與 EPUB 共用 FoliateReaderView。
           _surface.nextPage();
         }

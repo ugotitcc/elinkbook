@@ -997,3 +997,12 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - **未驗證**：MIME 統一（`.css` 改 `text/css`）在 Chrome 83 以下 WebView（iReader Ocean 4 Plus）與 Windows 探針 `.js` 不再內嵌 `charset=utf-8` 的實際行為，單元測試無法證明，須真機／Windows 實機確認；Android 探針的 `.html` 等行為未改。
 - 後續項目：Windows 探針缺 polyfill 與 `onError`（見設計決策第 8 點）；`foliate_native_bridge.dart` 其餘內容整理。
 
+**2026-11-14 Issue 37 實作**（書籍格式能力；計畫 `plans/plan-issue-37.md`，Task 1～5 全部完成）：
+- 新增 `app/lib/library/book_file_format.dart`：`detectBookFileFormat`、`detectBookFileFormatByNameAndMime`（副檔名優先、MIME 為輔）、`detectImportFileFormat`、`kSupportedBookExtensions`，以及 `BookFileFormat` 的能力（`engine`、`locatorKind`、`keepsOriginalSource`、`synthesizesEpub`、`fileExtension`，窮舉 `switch`）與 nullable 版 `usesFoliate`／`isPdf`。`BookFormat` enum 與 `reader/book_format.dart` 已移除，`unknown` 改以 `null` 表示；`reader_screen.dart` 的 `_toBookFileFormat` 橋接刪除。
+- 消費者收斂：匯入服務（偵測、落地複本三處、relink、暫存掃除）、雲端（`detectCloudFileFormat` 移除）、OPDS 解析、WiFi 傳書、選檔器、`fileExtensionFor`（移除）全部改用同一個 module；Drive 查詢加上全部支援副檔名的 `name contains`。
+- 修掉的實際風險：雲端與 OPDS 的 `notes.md`（MIME `text/plain`）不再被誤判為 txt；Drive 上 MIME 為 `application/octet-stream` 的 `.txt` 不再被伺服器端篩選漏掉。
+- 與計畫的差異見 `plans/plan-issue-37.md`「實作時與原計畫的差異」（`landsLocalCopy`／`isRelinkable` 合併為 `keepsOriginalSource` 等）。
+- 驗證：`flutter analyze` 乾淨；兩個 check 腳本 PASS；完整 `flutter test` 5261 通過、2 略過、0 失敗（Issue 36 時 5263，差異來自刪掉的重複偵測測試與新增的格式能力、Drive 查詢測試）。
+- **未驗證**：未在真機／雲端帳號實測 Drive 與 OPDS 的列表（僅以 `MockClient` 單元測試驗證查詢字串與過濾結果）。
+- 後續項目：`sync_table_specs.dart` 與 SQL 內 `'pdf'`／`'cbz'` 字串；`_prepareBookParts` 分支梯（候選 4）；`app_zh_TW.arb` 一則描述仍提到 `BookFormat.unknown`。
+

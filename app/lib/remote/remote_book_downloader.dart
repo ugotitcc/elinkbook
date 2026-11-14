@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../library/book_file_format.dart';
 import '../library/models/library_enums.dart';
 import '../platform/app_paths.dart';
 import 'opds_client.dart';
@@ -30,7 +31,7 @@ Future<String> downloadToTempFile({
   final tempDir = await getTemporaryDirectory();
   final downloadDir = Directory(p.join(tempDir.path, 'remote_download_temp'));
   if (!await downloadDir.exists()) await downloadDir.create(recursive: true);
-  final fileName = '${const Uuid().v4()}.${fileExtensionFor(format)}';
+  final fileName = '${const Uuid().v4()}.${format.fileExtension}';
   final tempPath = p.join(downloadDir.path, fileName);
 
   await client.downloadBook(

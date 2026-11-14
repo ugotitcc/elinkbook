@@ -1,4 +1,4 @@
-import 'package:elinkbook/reader/book_format.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_toc_item.dart';
@@ -240,7 +240,7 @@ void main() {
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: TocBottomSheet(
-          format: BookFormat.pdf,
+          format: BookFileFormat.pdf,
           entries: const [],
           initiallyExpandedEntries: const {},
           currentEntry: null,

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
-import 'package:elinkbook/reader/book_format.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
 import 'package:elinkbook/reader/reader_jump_target.dart';
@@ -43,7 +43,7 @@ void main() {
     ReaderJumpTarget? initialJumpTarget,
   }) async {
     final key = GlobalKey<State<ReaderScreen>>();
-    BookFormat? requestedFormat;
+    BookFileFormat? requestedFormat;
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('zh', 'TW'),
@@ -73,7 +73,7 @@ void main() {
       condition: () =>
           find.byKey(const Key('reader_loading_indicator')).evaluate().isEmpty,
     );
-    expect(requestedFormat, BookFormat.pdf, reason: '工廠應收到依副檔名偵測出的格式');
+    expect(requestedFormat, BookFileFormat.pdf, reason: '工廠應收到依副檔名偵測出的格式');
     return key;
   }
 

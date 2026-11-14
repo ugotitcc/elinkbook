@@ -221,7 +221,7 @@ void main() {
   });
 
   group('applyTo：不支援的格式', () {
-    test('NoopReaderSurface（BookFormat.unknown）不論 shouldNavigate 為何皆回傳 false', () {
+    test('NoopReaderSurface（null）不論 shouldNavigate 為何皆回傳 false', () {
       const target = ReaderJumpTarget(
         cfi: 'epubcfi(/6/4!/4/2)',
         pdfPageIndex: 3,

@@ -1,4 +1,4 @@
-import 'package:elinkbook/reader/book_format.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/reading_position.dart';
@@ -25,17 +25,17 @@ void main() {
 
   group('尚未收到任何回報', () {
     test('PDF 不儲存', () {
-      buildSaver().save(BookFormat.pdf);
+      buildSaver().save(BookFileFormat.pdf);
       expect(prefs.savedReadingPositionCalls, isEmpty);
     });
 
     test('Foliate 格式不儲存（逐一涵蓋五種格式）', () {
       for (final format in [
-        BookFormat.epub,
-        BookFormat.azw3,
-        BookFormat.cbz,
-        BookFormat.txt,
-        BookFormat.md,
+        BookFileFormat.epub,
+        BookFileFormat.azw3,
+        BookFileFormat.cbz,
+        BookFileFormat.txt,
+        BookFileFormat.md,
       ]) {
         buildSaver().save(format);
       }
@@ -46,7 +46,7 @@ void main() {
       final saver = buildSaver();
       saver.onPdfPageChanged(const PdfPageInfo(pageIndex: 1, totalPages: 4));
       saver.onEpubLocated(const EpubPositionInfo(locatorJson: '{}', progression: 0.5));
-      saver.save(BookFormat.unknown);
+      saver.save(null);
       expect(prefs.savedReadingPositionCalls, isEmpty);
     });
   });
@@ -55,7 +55,7 @@ void main() {
     test('儲存頁碼，進度為 (頁碼+1)/總頁數', () {
       final saver = buildSaver();
       saver.onPdfPageChanged(const PdfPageInfo(pageIndex: 3, totalPages: 10));
-      saver.save(BookFormat.pdf);
+      saver.save(BookFileFormat.pdf);
       expect(prefs.savedReadingPositionCalls, hasLength(1));
       expect(prefs.savedReadingPositionCalls.single.key, 'b1');
       expect(
@@ -67,7 +67,7 @@ void main() {
     test('總頁數為 0 時進度為 0，不拋例外', () {
       final saver = buildSaver();
       saver.onPdfPageChanged(const PdfPageInfo(pageIndex: 0, totalPages: 0));
-      saver.save(BookFormat.pdf);
+      saver.save(BookFileFormat.pdf);
       expect(
         prefs.savedReadingPositionCalls.single.value,
         const ReadingPosition(pdfPageIndex: 0, progress: 0),
@@ -78,7 +78,7 @@ void main() {
       final saver = buildSaver();
       saver.onPdfPageChanged(const PdfPageInfo(pageIndex: 1, totalPages: 10));
       saver.onPdfPageChanged(const PdfPageInfo(pageIndex: 5, totalPages: 10));
-      saver.save(BookFormat.pdf);
+      saver.save(BookFileFormat.pdf);
       expect(prefs.savedReadingPositionCalls.single.value.pdfPageIndex, 5);
     });
   });
@@ -87,7 +87,7 @@ void main() {
     test('有 progression 時儲存定位點與該進度', () {
       final saver = buildSaver(initialProgress: 0.1);
       saver.onEpubLocated(const EpubPositionInfo(locatorJson: '{"cfi":"a"}', progression: 0.7));
-      saver.save(BookFormat.epub);
+      saver.save(BookFileFormat.epub);
       expect(
         prefs.savedReadingPositionCalls.single.value,
         const ReadingPosition(epubLocatorJson: '{"cfi":"a"}', progress: 0.7),
@@ -97,7 +97,7 @@ void main() {
     test('progression 為 null 時沿用開書時的進度，不倒退成 0', () {
       final saver = buildSaver(initialProgress: 0.8);
       saver.onEpubLocated(const EpubPositionInfo(locatorJson: '{"cfi":"b"}'));
-      saver.save(BookFormat.cbz);
+      saver.save(BookFileFormat.cbz);
       expect(
         prefs.savedReadingPositionCalls.single.value,
         const ReadingPosition(epubLocatorJson: '{"cfi":"b"}', progress: 0.8),
@@ -107,7 +107,7 @@ void main() {
     test('progression 為 null 且開書時也沒有進度，不儲存', () {
       final saver = buildSaver();
       saver.onEpubLocated(const EpubPositionInfo(locatorJson: '{"cfi":"c"}'));
-      saver.save(BookFormat.epub);
+      saver.save(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls, isEmpty);
     });
   });
@@ -116,7 +116,7 @@ void main() {
     test('PDF：只有開書後第一次回報就離開，不儲存，保留既有位置', () {
       final saver = buildSaver(hasJumpTarget: true);
       saver.onPdfPageChanged(const PdfPageInfo(pageIndex: 2, totalPages: 5));
-      saver.save(BookFormat.pdf);
+      saver.save(BookFileFormat.pdf);
       expect(prefs.savedReadingPositionCalls, isEmpty);
     });
 
@@ -124,14 +124,14 @@ void main() {
       final saver = buildSaver(hasJumpTarget: true);
       saver.onPdfPageChanged(const PdfPageInfo(pageIndex: 2, totalPages: 5));
       saver.onPdfPageChanged(const PdfPageInfo(pageIndex: 3, totalPages: 5));
-      saver.save(BookFormat.pdf);
+      saver.save(BookFileFormat.pdf);
       expect(prefs.savedReadingPositionCalls.single.value.pdfPageIndex, 3);
     });
 
     test('Foliate：只有第一次回報就離開，不儲存', () {
       final saver = buildSaver(hasJumpTarget: true);
       saver.onEpubLocated(const EpubPositionInfo(locatorJson: '{"cfi":"j"}', progression: 0.2));
-      saver.save(BookFormat.epub);
+      saver.save(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls, isEmpty);
     });
 
@@ -139,7 +139,7 @@ void main() {
       final saver = buildSaver(hasJumpTarget: true);
       saver.onEpubLocated(const EpubPositionInfo(locatorJson: '{"cfi":"j"}', progression: 0.2));
       saver.onEpubLocated(const EpubPositionInfo(locatorJson: '{"cfi":"k"}', progression: 0.3));
-      saver.save(BookFormat.epub);
+      saver.save(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls.single.value.epubLocatorJson, '{"cfi":"k"}');
     });
 
@@ -148,7 +148,7 @@ void main() {
       saver.onPdfPageChanged(const PdfPageInfo(pageIndex: 1, totalPages: 5));
       saver.onPdfPageChanged(const PdfPageInfo(pageIndex: 2, totalPages: 5));
       saver.onEpubLocated(const EpubPositionInfo(locatorJson: '{}', progression: 0.1));
-      saver.save(BookFormat.epub);
+      saver.save(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls, isEmpty);
     });
   });
@@ -162,7 +162,7 @@ void main() {
           locatorJson: '{"cfi":"j","index":1,"fraction":0.21}', progression: 0.21));
       saver.onEpubLocated(const EpubPositionInfo(
           locatorJson: '{"cfi":"j","index":1,"fraction":0.20}', progression: 0.2));
-      saver.save(BookFormat.epub);
+      saver.save(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls, isEmpty);
     });
 
@@ -171,7 +171,7 @@ void main() {
       const info = EpubPositionInfo(locatorJson: 'opaque', progression: 0.2);
       saver.onEpubLocated(info);
       saver.onEpubLocated(info);
-      saver.save(BookFormat.epub);
+      saver.save(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls, isEmpty);
     });
 
@@ -181,7 +181,7 @@ void main() {
           locatorJson: '{"cfi":"j","index":1}', progression: 0.2));
       saver.onEpubLocated(const EpubPositionInfo(
           locatorJson: '{"cfi":"j","index":2}', progression: 0.3));
-      saver.save(BookFormat.epub);
+      saver.save(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls, hasLength(1));
     });
 
@@ -193,7 +193,7 @@ void main() {
           locatorJson: '{"cfi":"k","index":1,"fraction":0.30}', progression: 0.3));
       saver.onEpubLocated(const EpubPositionInfo(
           locatorJson: '{"cfi":"k","index":1,"fraction":0.31}', progression: 0.31));
-      saver.save(BookFormat.epub);
+      saver.save(BookFileFormat.epub);
       expect(
         prefs.savedReadingPositionCalls.single.value,
         const ReadingPosition(
@@ -211,7 +211,7 @@ void main() {
           locatorJson: '{"cfi":"b","index":0}', progression: 0.2));
       saver.onEpubLocated(const EpubPositionInfo(
           locatorJson: '{"cfi":"a","index":0}', progression: 0.1));
-      saver.save(BookFormat.epub);
+      saver.save(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls, hasLength(1));
     });
 
@@ -219,11 +219,11 @@ void main() {
       final saver = buildSaver(hasJumpTarget: true);
       saver.onEpubLocated(const EpubPositionInfo(locatorJson: 'p1', progression: 0.1));
       saver.onEpubLocated(const EpubPositionInfo(locatorJson: 'p1', progression: 0.1));
-      saver.save(BookFormat.epub);
+      saver.save(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls, isEmpty);
 
       saver.onEpubLocated(const EpubPositionInfo(locatorJson: 'p2', progression: 0.2));
-      saver.save(BookFormat.epub);
+      saver.save(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls, hasLength(1));
     });
   });
@@ -233,14 +233,14 @@ void main() {
       final saver = buildSaver();
       saver.onEpubLocated(const EpubPositionInfo(
           locatorJson: '{"cfi":"a","index":0}', progression: 0.4));
-      saver.save(BookFormat.epub);
+      saver.save(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls, hasLength(1));
     });
 
     test('第一次回報就可以儲存', () {
       final saver = buildSaver();
       saver.onPdfPageChanged(const PdfPageInfo(pageIndex: 0, totalPages: 5));
-      saver.save(BookFormat.pdf);
+      saver.save(BookFileFormat.pdf);
       expect(prefs.savedReadingPositionCalls, hasLength(1));
     });
   });
@@ -248,8 +248,8 @@ void main() {
   test('每次呼叫 save 都各自儲存一次', () {
     final saver = buildSaver();
     saver.onPdfPageChanged(const PdfPageInfo(pageIndex: 1, totalPages: 5));
-    saver.save(BookFormat.pdf);
-    saver.save(BookFormat.pdf);
+    saver.save(BookFileFormat.pdf);
+    saver.save(BookFileFormat.pdf);
     expect(prefs.savedReadingPositionCalls, hasLength(2));
   });
 }

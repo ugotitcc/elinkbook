@@ -1,6 +1,7 @@
-/// 圖書庫書籍的檔案格式。獨立於 `reader/book_format.dart` 的 `BookFormat`——
-/// 後者只服務 `ReaderScreen` 的原生渲染分派；圖書庫資料層需要完整表達
-/// FR-01 的支援格式（CBZ 由 epic-11 Issue 3 補上）。
+/// 書籍的檔案格式（FR-01 支援格式，CBZ 由 epic-11 Issue 3 補上）。經
+/// `values.byName` 寫進資料庫與同步，**成員名稱不可改**。「不支援／尚未偵測」
+/// 以 `null` 表示，不放進這個 enum。偵測與各格式的靜態事實（引擎、座標型別、
+/// 副檔名…）見 `library/book_file_format.dart`（epic-54 Issue 37）。
 enum BookFileFormat { epub, pdf, txt, azw3, cbz, md }
 
 /// 書籍的匯入來源。本 epic（epic-1-library）僅會產生 [local]；

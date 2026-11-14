@@ -4,6 +4,7 @@ import '../downloads/download_queue_controller.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/book_update_models.dart';
+import '../library/book_file_format.dart';
 import '../library/book_update_settle.dart';
 import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
@@ -135,7 +136,7 @@ class RemoteDownloadJob implements QueuedDownloadJob {
   @override
   Future<BookUpdateCandidate?> detectUpdate(String tempPath) async {
     try {
-      final ext = fileExtensionFor(acquisition.format!);
+      final ext = acquisition.format!.fileExtension;
       final displayName = '${entry.title}.$ext';
       final result = await importService.detectBookUpdate(
         tempPath,

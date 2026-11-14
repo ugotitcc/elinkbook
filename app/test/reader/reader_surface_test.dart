@@ -95,7 +95,7 @@ void main() {
     });
   });
 
-  group('NoopReaderSurface（BookFormat.unknown）', () {
+  group('NoopReaderSurface（null）', () {
     test('兩個 facet 皆為 null', () {
       const surface = NoopReaderSurface();
 

@@ -1,5 +1,6 @@
 import 'package:xml/xml.dart';
 
+import '../library/book_file_format.dart';
 import '../library/models/library_enums.dart';
 import 'opds_types.dart';
 
@@ -175,45 +176,15 @@ class OpdsFeedParser {
   /// `Uri.resolve()`，避免產生非預期的 URL 編碼或解析例外。
   String _resolve(Uri base, String href) => base.resolve(href.trim()).toString();
 
-  /// **〔`review-plan-issue-1.md` Finding 2 採納〕** 依 `spec.md:138`
-  /// 「格式過濾」規範：先比對 MIME type，比對不到已知 MIME type 時退回
-  /// 看 `href` 副檔名；皆無法判斷才回傳 `null`（MOBI 等真正不支援的
-  /// 格式落在這裡）。[href] 傳入時已經過 [_resolve] 正規化為絕對 URL，
-  /// 用 `Uri.tryParse(href)?.path` 只取路徑部分再判斷副檔名——不能直接
-  /// 對整個 URL 字串做 `endsWith()`，OPDS 下載連結常帶簽章/權杖查詢
+  /// 依 `spec.md:138`「格式過濾」規範判斷格式。epic-54 Issue 37 起改為
+  /// **副檔名優先、MIME 為輔**（由 [detectBookFileFormatByNameAndMime] 統一），
+  /// 避免 `text/plain` 把 `.md` 誤判為 txt；皆無法判斷才回傳 `null`
+  /// （MOBI 等真正不支援的格式落在這裡）。[href] 傳入時已經過 [_resolve]
+  /// 正規化為絕對 URL，用 `Uri.tryParse(href)?.path` 只取路徑部分再判斷
+  /// 副檔名——不能直接對整個 URL 字串比對，OPDS 下載連結常帶簽章／權杖查詢
   /// 字串（例如 `download/1.epub?token=abc`），直接比對整串會誤判。
   BookFileFormat? _detectFormat(String? mimeType, String href) {
-    final fromMime = _formatFromMimeType(mimeType);
-    if (fromMime != null) return fromMime;
     final path = Uri.tryParse(href)?.path ?? href;
-    final lowerPath = path.toLowerCase();
-    if (lowerPath.endsWith('.epub')) return BookFileFormat.epub;
-    if (lowerPath.endsWith('.pdf')) return BookFileFormat.pdf;
-    if (lowerPath.endsWith('.txt')) return BookFileFormat.txt;
-    if (lowerPath.endsWith('.azw3')) return BookFileFormat.azw3;
-    if (lowerPath.endsWith('.cbz')) return BookFileFormat.cbz;
-    if (lowerPath.endsWith('.md')) return BookFileFormat.md;
-    return null;
-  }
-
-  BookFileFormat? _formatFromMimeType(String? mimeType) {
-    switch (mimeType) {
-      case 'application/epub+zip':
-        return BookFileFormat.epub;
-      case 'application/pdf':
-        return BookFileFormat.pdf;
-      case 'text/plain':
-        return BookFileFormat.txt;
-      case 'application/x-mobipocket-ebook':
-      case 'application/vnd.amazon.ebook':
-        return BookFileFormat.azw3;
-      case 'application/vnd.comicbook+zip':
-      case 'application/x-cbz':
-        return BookFileFormat.cbz;
-      case 'text/markdown':
-        return BookFileFormat.md;
-      default:
-        return null;
-    }
+    return detectBookFileFormatByNameAndMime(path, mimeType);
   }
 }

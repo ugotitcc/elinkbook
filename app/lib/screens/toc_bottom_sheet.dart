@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
-import '../reader/book_format.dart';
+import '../library/book_file_format.dart';
+import '../library/models/library_enums.dart';
 import '../reader/book_toc_item.dart';
 import '../reader/pdf_toc_item.dart';
 import '../reader/text_conversion.dart';
@@ -33,7 +34,7 @@ import '../reader/toc_entry.dart';
 /// 顯示頁碼標籤——EPUB／TXT／MD（[TocEntry]）不顯示頁碼標籤
 /// （epic-26-architecture-hardening Issue 5，見 plan-issue-5.md）。
 class TocBottomSheet extends StatefulWidget {
-  final BookFormat? format;
+  final BookFileFormat? format;
   final List<BookTocItem> entries;
 
   /// 開啟當下的預設展開集合（通常是 `TocNavigator.findCurrentPath`／
@@ -202,7 +203,7 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isPdf = widget.format == BookFormat.pdf;
+    final isPdf = widget.format.isPdf;
     // 高度上限 85%：不蓋滿整個螢幕，頂端保留可點擊關閉的空白。
     final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
     return SafeArea(

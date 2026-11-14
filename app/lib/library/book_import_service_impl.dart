@@ -10,6 +10,7 @@ import '../search/full_text_search_settings_repository.dart';
 import '../storage/storage_permission.dart';
 import '../theme/app_theme_preferences.dart';
 import 'book_content_fingerprint.dart';
+import 'book_file_format.dart';
 import 'book_import_service.dart';
 import 'book_update_models.dart';
 import 'cbz_import.dart';
@@ -32,51 +33,12 @@ import 'update_staging.dart';
 typedef BookMetadataExtractor =
     Future<Map<String, Object?>?> Function(String uri, String format);
 
-/// 依 URI/路徑字串最後一段（已對 percent-encoding 解碼）判斷書籍格式。
-/// 只依副檔名判斷，僅適用於本機檔案匯入（file_picker/SAF 對本機檔案提供者
-/// 通常會在 URI 中保留可辨識的原始檔名+副檔名）；不適用於雲端服務自訂的
-/// 不透明文件 ID（雲端匯入本身不在本 epic 範圍內）。
-BookFileFormat? detectBookFileFormat(String uriOrPath) {
-  final name = _lastPathComponent(uriOrPath).toLowerCase();
-  if (name.endsWith('.epub')) return BookFileFormat.epub;
-  if (name.endsWith('.pdf')) return BookFileFormat.pdf;
-  if (name.endsWith('.txt')) return BookFileFormat.txt;
-  if (name.endsWith('.azw3')) return BookFileFormat.azw3;
-  if (name.endsWith('.cbz')) return BookFileFormat.cbz;
-  if (name.endsWith('.md')) return BookFileFormat.md;
-  return null;
-}
-
-/// 依檔案 URI 與顯示名稱判定書籍格式（displayName 優先、無法辨識時退回 URI）。
-/// epic-67 Issue 3 抽出為頂層公開函式供手動更新流程與服務內部共用。
-BookFileFormat? detectImportFileFormat(String uri, String? displayName) =>
-    (displayName != null && displayName.isNotEmpty
-        ? detectBookFileFormat(displayName)
-        : null) ??
-    detectBookFileFormat(uri);
-
 /// 從 URI/路徑字串取出檔名（去除副檔名），供詮釋資料提取失敗時的降級標題、
 /// 以及 TXT 格式的封面文字使用。
 String titleFromFileName(String uriOrPath) {
-  final name = _lastPathComponent(uriOrPath);
+  final name = lastPathComponentOfUri(uriOrPath);
   final dotIndex = name.lastIndexOf('.');
   return dotIndex > 0 ? name.substring(0, dotIndex) : name;
-}
-
-String _lastPathComponent(String uriOrPath) {
-  // displayName 可能是未經 percent-encoding 的原始檔名（例如 file_picker 的
-  // PlatformFile.name，見呼叫端註解），Uri.decodeFull 對這類不含合法
-  // percent-encoding 序列的字串會拋出 FormatException（即使字串本身完全
-  // 沒有 '%' 字元）；此時視為不需解碼，直接使用原字串。
-  String decoded;
-  try {
-    decoded = Uri.decodeFull(uriOrPath);
-  } on ArgumentError {
-    decoded = uriOrPath;
-  }
-  final normalized = decoded.replaceAll('\\', '/');
-  final segments = normalized.split('/');
-  return segments.isNotEmpty ? segments.last : normalized;
 }
 
 class BookImportServiceImpl implements BookImportService {
@@ -310,16 +272,6 @@ class BookImportServiceImpl implements BookImportService {
     }
   }
 
-  /// epic-15-storage-permission Issue 2：可能維持 `content://` 的格式。
-  /// TXT／MD 匯入時已合成 EPUB 並落地、CBZ 匯入時已重建並落地，
-  /// `filePath` 指向落地檔；若換成原始檔 URI，閱讀器會把原始檔當合成結果
-  /// 開啟，整本書壞掉（spec.md「受影響範圍」）。
-  static const _relinkableFormats = {
-    BookFileFormat.epub,
-    BookFileFormat.pdf,
-    BookFileFormat.azw3,
-  };
-
   @override
   Future<BookRelinkResult> relinkBook(
     String bookId,
@@ -331,7 +283,9 @@ class BookImportServiceImpl implements BookImportService {
       // 1. 讀取最新記錄：由服務自行讀取而非由呼叫端傳入 Book 快照，避免
       //    updateBook 整列覆寫時把閱讀位置等欄位蓋回舊值。
       final book = await _repository.findBookById(bookId);
-      if (book == null || !_relinkableFormats.contains(book.format)) {
+      // 只有原始檔本身就是閱讀用檔案的格式才能重新連結（見
+      // [BookFileFormatCapabilities.keepsOriginalSource]；epic-15 Issue 2）
+      if (book == null || !book.format.keepsOriginalSource) {
         return const BookRelinkFailure(BookRelinkFailureReason.failed);
       }
 
@@ -512,9 +466,7 @@ class BookImportServiceImpl implements BookImportService {
     String resolvedUri;
 
     try {
-      if (format == BookFileFormat.epub ||
-          format == BookFileFormat.pdf ||
-          format == BookFileFormat.azw3) {
+      if (format.keepsOriginalSource) {
         if (candidate?.stagedPath != null) {
           final importedDir = await _resolveImportedBooksDirectory();
           final stagingPath = p.join(
@@ -701,7 +653,7 @@ class BookImportServiceImpl implements BookImportService {
     final paths = <String>[];
     try {
       final importedDir = await _resolveImportedBooksDirectory();
-      for (final ext in const ['epub', 'pdf', 'azw3', 'cbz', 'txt', 'md']) {
+      for (final ext in kSupportedBookExtensions) {
         paths.add(p.join(importedDir.path, '$bookId.$ext.staging'));
       }
       final coversDir = await _resolveCoversDirectory();
@@ -841,9 +793,7 @@ class BookImportServiceImpl implements BookImportService {
 
     for (final candidate in candidateBooks) {
       String? oldHash;
-      if (format == BookFileFormat.epub ||
-          format == BookFileFormat.pdf ||
-          format == BookFileFormat.azw3) {
+      if (format.keepsOriginalSource) {
         try {
           oldHash = await computeBookContentFingerprint(
             candidate.filePath,
@@ -989,9 +939,7 @@ class BookImportServiceImpl implements BookImportService {
     var resolvedUri = uri;
     String? landedCopy; // 並存時落地的私有複本；失敗時須清掉
     if (landLocalCopy &&
-        (format == BookFileFormat.epub ||
-            format == BookFileFormat.pdf ||
-            format == BookFileFormat.azw3) &&
+        format.keepsOriginalSource &&
         !uri.startsWith('content://')) {
       final importedDir = await _resolveImportedBooksDirectory();
       final destinationPath = p.join(importedDir.path, '$id.${format.name}');
@@ -1109,7 +1057,7 @@ class BookImportServiceImpl implements BookImportService {
   ///
   /// 即使權限持久化成功，若來源 URI 本身不含可辨識副檔名（例如媒體庫文件
   /// 提供者的不透明數字 ID），ReaderScreen 開啟時仍是依 filePath 的副檔名
-  /// 判斷格式（detectBookFormat，與匯入時的格式判斷各自獨立運作）——
+  /// 判斷格式（detectBookFileFormat，與匯入時的格式判斷各自獨立運作）——
   /// filePath 若維持原始 URI，開啟時會判定為不支援的格式。因此只要 URI
   /// 本身沒有可辨識副檔名，就一律複製一份到本機、以正確副檔名命名，讓
   /// 匯入與開啟兩處的格式判斷全程一致。
@@ -1168,7 +1116,7 @@ class BookImportServiceImpl implements BookImportService {
   }
 
   /// 將重建後的 CBZ 壓縮檔位元組寫入 `imported_books/` 目錄，回傳完整路徑。
-  /// 檔名帶 `.cbz` 副檔名，確保 `detectBookFormat` 偵測正確。
+  /// 檔名帶 `.cbz` 副檔名，確保 `detectBookFileFormat` 偵測正確。
   Future<String> _landCbzArchive(
     Uint8List bytes,
     String bookId, {
@@ -1183,7 +1131,7 @@ class BookImportServiceImpl implements BookImportService {
   /// 落地 TXT 合成的 EPUB 壓縮檔位元組（epic-11-multi-format-reader
   /// Issue 4），比照 [_landCover]／[_landCbzArchive] 既有的「以 book id
   /// 為鍵、獨立子目錄」慣例，重用既有 `imported_books/` 目錄。**檔名副
-  /// 檔名須維持 `.txt`**（Global Constraints 已查證事實 #1：`BookFormat.txt`
+  /// 檔名須維持 `.txt`**（Global Constraints 已查證事實 #1：`BookFileFormat.txt`
   /// 的分派依 `Book.filePath` 副檔名判斷，不可改為 `.epub`）。
   Future<String> _landTxtEpub(
     Uint8List bytes,

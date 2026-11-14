@@ -98,28 +98,3 @@ class CloudDownloadCancellationToken {
 /// 呼叫端（`GoogleDriveBrowserScreen`）應提示使用者重新連結帳號，與其餘
 /// 泛用網路/解析失敗（顯示通用「載入失敗」訊息）區分開來。
 class CloudAuthRequiredException implements Exception {}
-
-/// 依副檔名／MIME type 判斷雲端硬碟項目對應的 [BookFileFormat]，回傳
-/// `null` 代表不支援的格式。EPUB/PDF/TXT 三種格式有廣泛認可的標準 MIME
-/// type（跨 provider 通用，非 Google 專屬），AZW3/CBZ/MD 沒有普遍認可的
-/// 標準 MIME type，一律退回副檔名判斷（spec.md「格式過濾」）。供
-/// `GoogleDriveStorageClient` 與未來 Issue 4 的 `OneDriveStorageClient`
-/// 共用，避免各自重寫一份判斷邏輯。
-BookFileFormat? detectCloudFileFormat(String name, String? mimeType) {
-  switch (mimeType) {
-    case 'application/epub+zip':
-      return BookFileFormat.epub;
-    case 'application/pdf':
-      return BookFileFormat.pdf;
-    case 'text/plain':
-      return BookFileFormat.txt;
-  }
-  final lower = name.toLowerCase();
-  if (lower.endsWith('.epub')) return BookFileFormat.epub;
-  if (lower.endsWith('.pdf')) return BookFileFormat.pdf;
-  if (lower.endsWith('.txt')) return BookFileFormat.txt;
-  if (lower.endsWith('.azw3')) return BookFileFormat.azw3;
-  if (lower.endsWith('.cbz')) return BookFileFormat.cbz;
-  if (lower.endsWith('.md')) return BookFileFormat.md;
-  return null;
-}

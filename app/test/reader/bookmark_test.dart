@@ -64,8 +64,8 @@ void main() {
       'defaultName：FXL（固定版面漫畫）沒有 pdfPageIndex 可用，回退為進度百分比'
       '（審查修正 1.1，見 tmp/epic-6/reviews/plan_issue_1_review.md）——'
       'FXL 副檔名是 .epub，ReaderScreen._openNotesSheet 只在'
-      'format == BookFormat.pdf 時才填入 pdfPageIndex，FXL 永遠落在'
-      'BookFormat.epub 分支、pdfPageIndex 恆為 null，且 FXL 通常無章節'
+      'format == BookFileFormat.pdf 時才填入 pdfPageIndex，FXL 永遠落在'
+      'BookFileFormat.epub 分支、pdfPageIndex 恆為 null，且 FXL 通常無章節'
       '結構（_tocEntries 對固定版面永遠不預取），故實際只會走 progression'
       '這條路徑', () {
     const context = BookmarkPositionContext(progression: 0.42);

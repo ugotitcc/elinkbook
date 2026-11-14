@@ -1,4 +1,5 @@
-import 'book_format.dart';
+import '../library/book_file_format.dart';
+import '../library/models/library_enums.dart';
 import 'foliate_reader_surface.dart';
 import 'pdf_reader_surface.dart';
 import 'reader_surface.dart';
@@ -7,13 +8,13 @@ import 'reader_surface.dart';
 ///
 /// 經 `ReaderFeatureDependencies.readerSurfaceFactory` 注入 `ReaderScreen`：
 /// 正式環境用 [defaultReaderSurfaceFactory]，測試可換成 `FakeReaderSurface`。
-typedef ReaderSurfaceFactory = ReaderSurface Function(BookFormat format);
+typedef ReaderSurfaceFactory = ReaderSurface Function(BookFileFormat? format);
 
 /// 正式工廠：PDF → [PdfReaderSurface]；Foliate 各格式（EPUB／KF8／CBZ／TXT／MD）
-/// → [FoliateReaderSurface]；`BookFormat.unknown` → [NoopReaderSurface]。
+/// → [FoliateReaderSurface]；`null`（不支援）→ [NoopReaderSurface]。
 /// 每次呼叫建立新的 surface（一本書一個，各自擁有自己的 `GlobalKey`）。
-ReaderSurface defaultReaderSurfaceFactory(BookFormat format) {
-  if (format == BookFormat.pdf) return PdfReaderSurface();
-  if (isFoliateFormat(format)) return FoliateReaderSurface();
+ReaderSurface defaultReaderSurfaceFactory(BookFileFormat? format) {
+  if (format.isPdf) return PdfReaderSurface();
+  if (format.usesFoliate) return FoliateReaderSurface();
   return const NoopReaderSurface();
 }
