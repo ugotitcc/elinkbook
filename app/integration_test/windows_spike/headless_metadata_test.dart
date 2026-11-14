@@ -3,7 +3,7 @@
 // 驗證 Windows 桌面能在 `HeadlessInAppWebView` 背景解析 EPUB 詮釋資料：
 // 探針頁由攔截回呼從 Dart 字串提供，`<script type="module">` 從
 // `/assets/foliate/view.js` 取 `makeBook`，開 `/book/current.epub`（由
-// Task 6 的 `cacheWindowsBook` 複製 fixture、`readWindowsBookBytes` 服務），
+// Task 6 的 `cacheWindowsBook` 複製 fixture、攔截回呼直接讀快取複本服務），
 // 把 title／第一位作者／identifier／rendition.layout／封面 Blob 的 type
 // 與 size 以 `callHandler` 傳回。四個欄位印成 JSON 供 Task 11 對比表使用。
 //
@@ -70,7 +70,7 @@ void main() {
     );
 
     // 用 Task 6 的 cacheWindowsBook 把 fixture 複製到暫存子目錄，
-    // 攔截回呼再用 readWindowsBookBytes 服務 /book/current.epub。
+    // 攔截回呼再直接讀快取複本服務 /book/current.epub。
     final bytes = await rootBundle.load('test/fixtures/sample.epub');
     final tempDir = await getTemporaryDirectory();
     final staged = File(p.join(tempDir.path, 'spike_metadata_sample.epub'));
@@ -155,10 +155,12 @@ void main() {
           );
         }
         if (path == '/book/current.epub') {
-          final bookBytes = await readWindowsBookBytes(path, bookDir);
+          // 書檔直接讀 bookDir 內的快取複本（正式程式改走 loopback 伺服器，
+          // 見 ADR 0042；`readWindowsBookBytes` 已隨 Issue 36 移除）。
+          final bookBytes = await loadWindowsFileBytes(p.join(bookDir, 'current.epub'));
           if (bookBytes == null) return null;
           return WebResourceResponse(
-            contentType: windowsBookContentType(path),
+            contentType: 'application/epub+zip',
             data: bookBytes,
           );
         }

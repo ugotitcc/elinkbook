@@ -1,7 +1,6 @@
 // Windows 讀者資源實作的單元測試（epic-66 Issue 1 Task 6）。
 
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:elinkbook/reader/windows_reader_resources.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -106,50 +105,6 @@ void main() {
       );
 
       expect(cachedPath, isNull);
-    });
-  });
-
-  group('readWindowsBookBytes', () {
-    test('readWindowsBookBytes：讀得到 /book/current.epub', () async {
-      final bookDir = Directory(p.join(tempRoot.path, 'book'));
-      await bookDir.create(recursive: true);
-      await File(p.join(bookDir.path, 'current.epub')).writeAsBytes([7, 7]);
-
-      final bytes = await readWindowsBookBytes('/book/current.epub', bookDir.path);
-
-      expect(bytes, equals(Uint8List.fromList([7, 7])));
-    });
-
-    test('readWindowsBookBytes：/assets/foliate/main.js 回 null', () async {
-      final bookDir = Directory(p.join(tempRoot.path, 'book'));
-      await bookDir.create(recursive: true);
-
-      final bytes = await readWindowsBookBytes(
-        '/assets/foliate/main.js',
-        bookDir.path,
-      );
-
-      expect(bytes, isNull);
-    });
-
-    test('readWindowsBookBytes：/book/../secret.txt 回 null', () async {
-      final bookDir = Directory(p.join(tempRoot.path, 'book'));
-      await bookDir.create(recursive: true);
-      final secret = File(p.join(tempRoot.path, 'secret.txt'));
-      await secret.writeAsString('secret');
-
-      final bytes =
-          await readWindowsBookBytes('/book/../secret.txt', bookDir.path);
-
-      expect(bytes, isNull);
-    });
-  });
-
-  group('windowsBookContentType', () {
-    test('windowsBookContentType：.epub 與 .cbz 與未知副檔名各一個斷言', () {
-      expect(windowsBookContentType('a.epub'), 'application/epub+zip');
-      expect(windowsBookContentType('b.cbz'), 'application/vnd.comicbook+zip');
-      expect(windowsBookContentType('c.xyz'), 'application/octet-stream');
     });
   });
 }

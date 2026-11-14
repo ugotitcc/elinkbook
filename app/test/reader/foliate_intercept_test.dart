@@ -10,14 +10,6 @@ import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test("classifyFoliateRequestPath('/assets/foliate/main.js') == foliateAsset",
-      () {
-    expect(
-      classifyFoliateRequestPath('/assets/foliate/main.js'),
-      FoliateRequestKind.foliateAsset,
-    );
-  });
-
   test("classifyFoliateRequestPath('/book/current.epub') == book", () {
     expect(
       classifyFoliateRequestPath('/book/current.epub'),

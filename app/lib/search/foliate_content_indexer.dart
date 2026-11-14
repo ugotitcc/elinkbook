@@ -1,7 +1,6 @@
 // app/lib/search/foliate_content_indexer.dart
 import 'dart:async';
 import 'dart:collection';
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -9,12 +8,13 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../library/models/book.dart';
 import '../platform/platform_support.dart';
 import '../reader/foliate_bridge_codec.dart';
+import '../reader/book_serving.dart';
+import '../reader/foliate_asset_serving.dart';
 import '../reader/foliate_bridge_handlers.dart';
 import '../reader/foliate_native_bridge.dart';
 import '../reader/js_bridge_gateway.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
-import '../reader/local_book_server.dart';
 import '../reader/tts_segment_cfi.dart';
 import '../windows/windows_webview_environment.dart';
 import 'content_indexer.dart';
@@ -75,19 +75,14 @@ class FoliateContentIndexer implements ContentIndexer {
     int? resumeFromChapter,
   }) async* {
     final instanceId = 'index-${book.id}';
-    String? cacheDir;
-    BookServeHandle? serveHandle;
+    BookServing? serving;
     HeadlessInAppWebView? headlessWebView;
     InAppWebViewController? controller;
 
     try {
-      final cachedPath = await cacheBookForServing(book.filePath, instanceId);
-      if (cachedPath == null) {
+      serving = await BookServing.open(book.filePath, instanceId);
+      if (serving == null) {
         throw StateError('無法快取書籍檔案：${book.filePath}');
-      }
-      cacheDir = File(cachedPath).parent.path;
-      if (isWindowsPlatform) {
-        serveHandle = await LocalBookServer.instance.register(cachedPath);
       }
 
       final readyCompleter = Completer<void>();
@@ -101,17 +96,8 @@ class FoliateContentIndexer implements ContentIndexer {
         InAppWebViewController controller,
         WebResourceRequest request,
       ) async {
-        final path = request.url.path;
-        const foliateAssetsPrefix = '/assets/foliate/';
-        if (path.startsWith(foliateAssetsPrefix)) {
-          final relative = 'foliate/${path.substring(foliateAssetsPrefix.length)}';
-          final bytes = await loadAndroidAsset(relative);
-          if (bytes == null) return null;
-          final contentType =
-              path.endsWith('.js') ? 'text/javascript' : 'text/html';
-          return WebResourceResponse(contentType: contentType, data: bytes);
-        }
-        return null;
+        final asset = await serveFoliateAsset(request.url.path);
+        return asset?.toWebResourceResponse();
       }
 
       // 【review-plan-issue-1.md I-2】章節擷取專用的獨立完成狀態——刻意不
@@ -132,7 +118,7 @@ class FoliateContentIndexer implements ContentIndexer {
         // 明確指定非退化尺寸，見 plan-issue-1.md Global Constraints——
         // 套件預設值 Size(-1,-1) 對 foliate-js 的版面初始化語意不明確。
         initialSize: const Size(800, 1280),
-        initialUrlRequest: URLRequest(url: WebUri.uri(buildIndexerUri(book, bookBaseUri: serveHandle?.bookBaseUri))),
+        initialUrlRequest: URLRequest(url: WebUri.uri(buildIndexerUri(book, bookBaseUri: serving.bookBaseUri))),
         initialSettings: InAppWebViewSettings(
           javaScriptEnabled: true,
           useShouldInterceptRequest: true,
@@ -142,7 +128,7 @@ class FoliateContentIndexer implements ContentIndexer {
               ? WebViewAssetLoader(
                   pathHandlers: [
                     InternalStoragePathHandler(
-                        path: '/book/', directory: cacheDir),
+                        path: '/book/', directory: serving.cacheDir),
                   ],
                 )
               : null,
@@ -280,16 +266,12 @@ class FoliateContentIndexer implements ContentIndexer {
         }
       }
     } finally {
-      serveHandle?.dispose();
-      serveHandle = null;
-      await headlessWebView?.dispose();
-      if (cacheDir != null) {
-        final dir = Directory(cacheDir);
-        try {
-          if (dir.existsSync()) {
-            dir.deleteSync(recursive: true);
-          }
-        } catch (_) {}
+      // WebView 釋放若拋例外，也要確保書檔供應（快取目錄＋註冊）被清掉
+      try {
+        await headlessWebView?.dispose();
+      } finally {
+        serving?.dispose();
+        serving = null;
       }
     }
   }
