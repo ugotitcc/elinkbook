@@ -50,7 +50,7 @@ flutter build apk --release --dart-define-from-file=config/cloud_oauth.json
 
 ### `ReaderScreen`：唯一的閱讀器 seam
 
-`app/lib/screens/reader_screen.dart` 是格式無關的統一入口，依 `detectBookFormat()`（`app/lib/reader/book_format.dart`，依副檔名判斷 `epub`/`pdf`/`azw3`/`cbz`/`txt`/`md`/`unknown`）與 `Book.isFixedLayout`（是否為固定版面 FXL；語意已由「EPUB 專屬」廣義化為跨格式通用旗標，見 ADR 0023）分派到兩條完全獨立的渲染路徑之一：
+`app/lib/screens/reader_screen.dart` 是格式無關的統一入口，依 `detectBookFileFormat()`（`app/lib/library/book_file_format.dart`，依副檔名判斷 `epub`/`pdf`/`azw3`/`cbz`/`txt`/`md`，不支援回傳 `null`；引擎種類、座標型別等靜態事實同在此 module 以能力查詢提供，詞條「書籍格式能力」）與 `Book.isFixedLayout`（是否為固定版面 FXL；語意已由「EPUB 專屬」廣義化為跨格式通用旗標，見 ADR 0023）分派到兩條完全獨立的渲染路徑之一：
 
 - `PdfReaderView`（`app/lib/reader/pdf_reader_view.dart`）——純 Dart widget，底層為 `pdfrx`（PDFium 透過 `dart:ffi` 直接呼叫，非 `PlatformView`，見 ADR 0022）。目前功能：單頁／三態雙頁並列顯示（底層由 `pdfrx` 的 `layoutPages`/`calculateCurrentPageNumber` 客製化排版 API 實作）、頁碼與跳頁、`content://` URI 存取、E-Ink 影像濾鏡（對比度/亮度用 `ColorFiltered` 即時渲染、加粗/裁切透過 `page.render()`＋背景 Isolate＋`pageOverlaysBuilder` 疊加覆蓋圖）、智慧/手動裁切、劃線/備註/書籤（長按拖曳框選矩形＋`AnnotationToolbar`，`pageOverlaysBuilder` 逐頁疊加手勢層使雙頁模式下座標歸屬單一頁面有構造性保證）、目錄（TOC，格式無關的 `BookTocItem` 抽象介面，見下方）、內文搜尋（`page.loadStructuredText()`/`PdfPageText.allMatches()`）、頁碼縮圖（`PdfThumbnailCache<T>` 純 Dart LRU 快取＋`page.render()`）、6 顆浮動 FAB 工具列＋3×3 導覽熱區（共用 `TapZoneDetector`，見下方「不可逆的技術決策」）。
   - **已知限制**：Page Label（PDF 邏輯頁碼標籤，例如封面羅馬數字）尚未支援——`pdfrx` 未暴露對應 API，目前僅純數字頁碼。手寫/自由繪圖標註明確排除於範圍外。

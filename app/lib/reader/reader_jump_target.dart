@@ -96,7 +96,7 @@ class ReaderJumpTarget {
   /// [shouldNavigate] 為 `true` 仍會先跳頁，只是不顯示暫態高亮、回傳
   /// `false`——跳頁與顯示高亮是兩個獨立判斷，不能因為沒有精確座標就連
   /// 頁面都不跳（`review-plan-issue-8.md` C-1 既有教訓）。閱讀面為
-  /// `NoopReaderSurface`（`BookFormat.unknown`）時兩個指令皆為空操作，回傳
+  /// `NoopReaderSurface`（格式為 `null`，不支援）時兩個指令皆為空操作，回傳
   /// `false`。
   bool applyTo({
     required ReaderSurface surface,

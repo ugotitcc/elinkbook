@@ -63,7 +63,7 @@ class CloudDownloadJob implements QueuedDownloadJob {
   @override
   Future<String> computeFingerprint(String tempPath) {
     // entry.format 在此保證非 null：能被使用者勾選、進而進入下載佇列的
-    // 檔案，其 format 必然已通過 detectCloudFileFormat() 驗證（見
+    // 檔案，其 format 必然已通過 detectBookFileFormatByNameAndMime() 驗證（見
     // CloudBrowserScreen 既有註解）。
     return computeFingerprintFn(tempPath, entry.format!);
   }

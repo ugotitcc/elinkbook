@@ -2002,25 +2002,6 @@ void main() {
         expect((result as BookRelinkSuccess).updatedBook.filePath, newPdfUri);
       });
     });
-
-    group('detectImportFileFormat（epic-67 Issue 3）', () {
-      test('displayName 優先、URI 退路、兩者皆無法辨識回 null', () {
-        // displayName 優先
-        expect(detectImportFileFormat('content://opaque/12345', 'mybook.epub'), BookFileFormat.epub);
-        expect(detectImportFileFormat('content://opaque/book.pdf', 'override.azw3'), BookFileFormat.azw3);
-
-        // URI 退路
-        expect(detectImportFileFormat('content://storage/doc.pdf', null), BookFileFormat.pdf);
-        expect(detectImportFileFormat('/storage/emulated/0/novel.txt', null), BookFileFormat.txt);
-        expect(detectImportFileFormat('file:///path/to/comic.cbz', ''), BookFileFormat.cbz);
-        expect(detectImportFileFormat('/notes/readme.md', null), BookFileFormat.md);
-
-        // 兩者皆無法辨識
-        expect(detectImportFileFormat('content://opaque/12345', null), isNull);
-        expect(detectImportFileFormat('content://opaque/12345', 'no_extension'), isNull);
-        expect(detectImportFileFormat('content://opaque/unknown.xyz', 'test.unknown'), isNull);
-      });
-    });
   });
 }
 

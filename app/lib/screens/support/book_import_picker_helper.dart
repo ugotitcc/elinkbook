@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../library/book_file_format.dart';
 import '../../library/book_import_service.dart';
 import '../../library/book_update_models.dart';
 import '../../platform/platform_support.dart';
@@ -32,7 +33,7 @@ Future<ImportResult?> pickAndImportFiles(
     final picked = await FilePicker.pickFiles(
       allowMultiple: true,
       type: FileType.custom,
-      allowedExtensions: ['epub', 'pdf', 'txt', 'cbz', 'azw3', 'md'],
+      allowedExtensions: kSupportedBookExtensions,
     );
     if (picked == null || picked.files.isEmpty) return null;
     // uris／displayNames 必須用同一次過濾建立，保持逐一對應——分開各自 map

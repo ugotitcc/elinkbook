@@ -4,8 +4,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../library/book_file_format.dart';
 import '../platform/app_paths.dart';
-import '../remote/opds_client.dart' show fileExtensionFor;
 import 'cloud_storage_client.dart';
 
 /// 把一筆雲端硬碟項目下載到 App 暫存目錄（epic-29-cloud-import Issue 3，
@@ -24,7 +24,7 @@ Future<String> downloadCloudFileToTempFile({
   final downloadDir =
       Directory(p.join(tempDir.path, 'cloud_import_download_temp'));
   if (!await downloadDir.exists()) await downloadDir.create(recursive: true);
-  final fileName = '${const Uuid().v4()}.${fileExtensionFor(entry.format!)}';
+  final fileName = '${const Uuid().v4()}.${entry.format!.fileExtension}';
   final tempPath = p.join(downloadDir.path, fileName);
 
   await client.downloadFile(

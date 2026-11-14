@@ -5,6 +5,7 @@ import 'dart:typed_data';
 // ignore_for_file: use_null_aware_elements  // 此 lint 對 map literal 的 if-in 運算式產生誤判，null-aware `?` 不支援 map literal
 import 'package:http/http.dart' as http;
 
+import '../library/book_file_format.dart';
 import 'cloud_storage_client.dart';
 import 'cloud_auth_classifier.dart';
 import 'google_drive_oauth_client.dart';
@@ -35,21 +36,22 @@ class GoogleDriveStorageClient implements CloudStorageClient {
     if (token == null) throw CloudAuthRequiredException();
 
     final parent = folderId ?? 'root';
-    // 伺服器端粗篩：資料夾恆納入（供逐層導覽）；EPUB/PDF/TXT 有廣泛認可
-    // 的標準 MIME type，直接比對；AZW3/CBZ/MD 沒有標準 MIME type，用
-    // name contains 先做粗略篩選縮小結果集（Drive API 的 `contains` 是
-    // 子字串比對、非嚴格副檔名比對，可能有極少數誤判，例如
-    // `notes.mdx`），精確判斷交給 detectCloudFileFormat() 做最終過濾
-    // （spec.md「格式過濾」：伺服器端 MIME type 過濾 EPUB/PDF/TXT ＋
-    // 用戶端副檔名過濾 AZW3/CBZ/MD）。
+    // 伺服器端粗篩：資料夾恆納入（供逐層導覽）；EPUB/PDF/TXT 另有廣泛認可
+    // 的標準 MIME type 直接比對；所有支援格式再加上 `name contains '.<副檔名>'`
+    // ——Drive 的 `contains` 是子字串比對、非嚴格副檔名比對，可能有極少數誤判
+    // （例如 `notes.mdx`），精確判斷交給 detectBookFileFormatByNameAndMime()
+    // 做最終過濾。副檔名清單來自格式能力 module，因此 MIME 為
+    // `application/octet-stream` 的 `.txt` 也不會在伺服器端被濾掉
+    // （epic-54 Issue 37）。
+    final nameFilters = kSupportedBookExtensions
+        .map((ext) => "name contains '.$ext'")
+        .join(' or ');
     final query = "'$parent' in parents and trashed = false and ("
         "mimeType = 'application/vnd.google-apps.folder' or "
         "mimeType = 'application/epub+zip' or "
         "mimeType = 'application/pdf' or "
         "mimeType = 'text/plain' or "
-        "name contains '.azw3' or "
-        "name contains '.cbz' or "
-        "name contains '.md')";
+        "$nameFilters)";
 
     final entries = <CloudFileEntry>[];
     String? pageToken;
@@ -73,7 +75,7 @@ class GoogleDriveStorageClient implements CloudStorageClient {
         final mimeType = file['mimeType'] as String?;
         final name = file['name'] as String? ?? '';
         final isFolder = mimeType == 'application/vnd.google-apps.folder';
-        final format = isFolder ? null : detectCloudFileFormat(name, mimeType);
+        final format = isFolder ? null : detectBookFileFormatByNameAndMime(name, mimeType);
         // 非資料夾且格式判斷不通過：伺服器端粗篩的誤判，精確過濾掉、不
         // 回傳給呼叫端（見上方 query 註解）。
         if (!isFolder && format == null) continue;

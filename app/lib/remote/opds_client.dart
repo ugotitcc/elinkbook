@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 
-import '../library/models/library_enums.dart';
 import 'opds_types.dart';
 import 'remote_server_profile.dart';
 
@@ -24,27 +23,6 @@ Map<String, String> buildOpdsAuthHeaders(RemoteServerProfile server, String? pas
   if (username == null || username.isEmpty) return {};
   final credentials = base64Encode(utf8.encode('$username:${password ?? ''}'));
   return {'Authorization': 'Basic $credentials'};
-}
-
-/// [BookFileFormat] 對應的檔案副檔名（不含句點），供下載暫存檔命名使用
-/// （epic-30-calibre-remote-library Issue 2 的 `RemoteCatalogScreen`
-/// 下載佇列，以及 Issue 4 的「重新下載」流程共用同一份對應表，避免各自
-/// 重寫一次 switch）。
-String fileExtensionFor(BookFileFormat format) {
-  switch (format) {
-    case BookFileFormat.epub:
-      return 'epub';
-    case BookFileFormat.pdf:
-      return 'pdf';
-    case BookFileFormat.txt:
-      return 'txt';
-    case BookFileFormat.azw3:
-      return 'azw3';
-    case BookFileFormat.cbz:
-      return 'cbz';
-    case BookFileFormat.md:
-      return 'md';
-  }
 }
 
 /// 依 [server.allowInsecure] 決定是否放行憑證錯誤的共用 [http.Client]

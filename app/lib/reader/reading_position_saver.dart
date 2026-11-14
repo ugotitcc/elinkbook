@@ -1,4 +1,4 @@
-import 'book_format.dart';
+import '../library/models/library_enums.dart';
 import 'epub_position_info.dart';
 import 'pdf_page_info.dart';
 import 'reader_prefs_manager.dart';
@@ -63,9 +63,9 @@ class ReadingPositionSaver {
   }
 
   /// 依 [format] 決定要不要儲存、存什麼；規則見類別文件與 `CONTEXT.md`。
-  void save(BookFormat format) {
+  void save(BookFileFormat? format) {
     switch (format) {
-      case BookFormat.pdf:
+      case BookFileFormat.pdf:
         // 跳轉後尚未重新定位：保留資料庫既有位置，避免使用者只是看一下搜尋
         // 結果就離開，卻把原本讀到一半的進度覆蓋成跳轉目標本身。
         if (hasJumpTarget && !_hasRelocatedPdf) return;
@@ -80,11 +80,11 @@ class ReadingPositionSaver {
                 : 0,
           ),
         );
-      case BookFormat.epub:
-      case BookFormat.azw3:
-      case BookFormat.cbz:
-      case BookFormat.txt:
-      case BookFormat.md:
+      case BookFileFormat.epub:
+      case BookFileFormat.azw3:
+      case BookFileFormat.cbz:
+      case BookFileFormat.txt:
+      case BookFileFormat.md:
         if (hasJumpTarget && !_hasRelocatedEpub) return;
         final info = _epubInfo;
         if (info == null) return;
@@ -94,7 +94,7 @@ class ReadingPositionSaver {
           bookId,
           ReadingPosition(epubLocatorJson: info.locatorJson, progress: progress),
         );
-      case BookFormat.unknown:
+      case null:
         return;
     }
   }

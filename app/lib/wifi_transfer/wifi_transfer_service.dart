@@ -1,11 +1,11 @@
 import 'dart:io';
 
 import '../library/book_content_fingerprint.dart';
+import '../library/book_file_format.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../library/models/library_enums.dart';
-import '../remote/opds_client.dart' show fileExtensionFor;
 
 /// 一次上傳單一檔案的處理結果（epic-44-wifi-book-transfer spec.md
 /// 「`wifi_transfer_service.dart`」，Issue 3 填入 [WifiTransferService.handleUploadedFile]
@@ -249,6 +249,6 @@ class WifiTransferService {
         (book.format == BookFileFormat.txt || book.format == BookFileFormat.md)
             ? BookFileFormat.epub
             : book.format;
-    return '${book.title}.${fileExtensionFor(honestFormat)}';
+    return '${book.title}.${honestFormat.fileExtension}';
   }
 }

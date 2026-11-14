@@ -11,7 +11,7 @@ import 'package:shelf_multipart/shelf_multipart.dart';
 
 import '../library/models/library_enums.dart';
 import '../platform/app_paths.dart';
-import '../remote/opds_client.dart' show fileExtensionFor;
+import '../library/book_file_format.dart';
 import 'wifi_transfer_page.dart';
 import 'wifi_transfer_service.dart';
 
@@ -497,16 +497,9 @@ String _asciiFallbackFilename(String filename) {
   return result.isEmpty ? '_' : result;
 }
 
-/// 依檔名副檔名反查對應的 [BookFileFormat]（epic-44-wifi-book-transfer
-/// spec.md「HTTP 路由表」上傳白名單判斷）：反查既有 [fileExtensionFor] 的
-/// 對應表，不重新維護第二份白名單常數。副檔名比對不分大小寫；無副檔名或
-/// 不在白名單內一律回傳 `null`（呼叫端視為 [UploadOutcome.unsupportedFormat]）。
-BookFileFormat? bookFileFormatForFileName(String fileName) {
-  final extension = p.extension(fileName);
-  if (extension.isEmpty) return null;
-  final normalized = extension.substring(1).toLowerCase();
-  for (final format in BookFileFormat.values) {
-    if (fileExtensionFor(format) == normalized) return format;
-  }
-  return null;
-}
+/// 依檔名副檔名判斷對應的 [BookFileFormat]（epic-44-wifi-book-transfer
+/// spec.md「HTTP 路由表」上傳白名單判斷）：直接用格式能力 module 的偵測，
+/// 不另外維護白名單。副檔名比對不分大小寫；無副檔名或不在白名單內一律回傳
+/// `null`（呼叫端視為 [UploadOutcome.unsupportedFormat]）。
+BookFileFormat? bookFileFormatForFileName(String fileName) =>
+    detectBookFileFormat(fileName);

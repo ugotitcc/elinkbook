@@ -1,4 +1,4 @@
-import 'book_format.dart';
+import '../library/models/library_enums.dart';
 
 /// 開書前解析的結果（CONTEXT「引擎分派判斷」的「開書前解析規則」）。
 sealed class EngineDispatch {
@@ -52,13 +52,13 @@ final class EngineDispatchNotApplicable extends EngineDispatch {
 
 /// 依「格式＋宣告值」解析開書前的固定版面結果。
 EngineDispatch resolveEngineDispatch({
-  required BookFormat format,
+  required BookFileFormat? format,
   required bool? declared,
 }) {
   // 宣告值非 null：任何格式都直接採用（含 PDF／unknown）。
   if (declared != null) return EngineDispatchKnown(declared);
   switch (format) {
-    case BookFormat.epub:
+    case BookFileFormat.epub:
       return const EngineDispatchNeedsDetection();
     // 以下格式沒有執行期重新偵測手段，宣告值為 null 時（多為匯入階段
     // metadata 擷取失敗的既有書籍）一律防禦性給預設值，而非讓
@@ -66,14 +66,14 @@ EngineDispatch resolveEngineDispatch({
     // gating 條件永遠等不到非 null 值，FoliateReaderView 永遠無法建構，
     // 書籍完全無法開啟（epic-11 Issue 2 程式碼審查 C2；Issue 3 Important
     // #1、Issue 4 沿用同一教訓）。
-    case BookFormat.azw3: // KF8 容器格式不同，不能沿用 EPUB 的 OPF/CSS 偵測；絕大多數為流式
-    case BookFormat.txt: // 合成後恆為流式（spec.md「TXT／Markdown 合成書籍結構」）
-    case BookFormat.md: // 同 TXT
+    case BookFileFormat.azw3: // KF8 容器格式不同，不能沿用 EPUB 的 OPF/CSS 偵測；絕大多數為流式
+    case BookFileFormat.txt: // 合成後恆為流式（spec.md「TXT／Markdown 合成書籍結構」）
+    case BookFileFormat.md: // 同 TXT
       return const EngineDispatchKnown(false);
-    case BookFormat.cbz: // 恆為固定版面，沒有流式變體（spec.md「CBZ 支援」）
+    case BookFileFormat.cbz: // 恆為固定版面，沒有流式變體（spec.md「CBZ 支援」）
       return const EngineDispatchKnown(true);
-    case BookFormat.pdf:
-    case BookFormat.unknown:
+    case BookFileFormat.pdf:
+    case null:
       return const EngineDispatchNotApplicable();
   }
 }

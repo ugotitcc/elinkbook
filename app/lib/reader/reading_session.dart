@@ -3,7 +3,7 @@ import 'dart:async';
 import '../stats/reading_stats_repository.dart';
 import '../stats/reading_stats_tracker.dart';
 import '../sync/sync_checkpoint_trigger.dart';
-import 'book_format.dart';
+import '../library/models/library_enums.dart';
 import 'epub_position_info.dart';
 import 'pdf_page_info.dart';
 import 'reader_activity_tracker.dart';
@@ -110,7 +110,7 @@ class ReadingSession {
 
   /// App 進入背景（`AppLifecycleState.paused`，不含 `inactive`）：先通知統計，
   /// 再儲存閱讀位置。**不觸發 Checkpoint。**
-  void onAppPaused(BookFormat format) {
+  void onAppPaused(BookFileFormat? format) {
     _stats?.onEnteredBackground();
     _positionSaver?.save(format);
   }
@@ -123,7 +123,7 @@ class ReadingSession {
   /// 較高機率被這次 Checkpoint 判定為待推送；但兩者皆不 await，並不保證
   /// SQLite 寫入已落地，沒趕上的會延到下一次 Checkpoint 才推送，不會遺失。
   /// 未登入或已有 Checkpoint 執行中時 `trigger()` 內部會直接放棄，不拋例外。
-  void close(BookFormat format) {
+  void close(BookFileFormat? format) {
     readerActivityTracker?.markReaderClosed();
     final stats = _stats;
     if (stats != null) unawaited(stats.flushAndClose());

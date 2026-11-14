@@ -1,5 +1,5 @@
 import 'package:fake_async/fake_async.dart';
-import 'package:elinkbook/reader/book_format.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/reader_activity_tracker.dart';
@@ -101,7 +101,7 @@ void main() {
       session.onPdfPageChanged(const PdfPageInfo(pageIndex: 3, totalPages: 10));
       log.clear(); // 只看 close 之後的事件，並排除 start 的 'opened'
 
-      session.close(BookFormat.pdf);
+      session.close(BookFileFormat.pdf);
 
       expect(log, ['closed', 'flush', 'save', 'trigger']);
     });
@@ -109,7 +109,7 @@ void main() {
     test('偏好尚未載入完成就離開：不儲存、不拋例外，仍結算統計並觸發 Checkpoint', () {
       final session = build()..start();
       log.clear();
-      session.close(BookFormat.pdf);
+      session.close(BookFileFormat.pdf);
       expect(log, ['flush', 'trigger']);
     });
 
@@ -117,7 +117,7 @@ void main() {
       final session = build(withStats: false, withTrigger: false)..start();
       session.onPrefsLoaded(initialProgress: 0);
       session.onPdfPageChanged(const PdfPageInfo(pageIndex: 0, totalPages: 5));
-      session.close(BookFormat.pdf);
+      session.close(BookFileFormat.pdf);
       expect(log, ['save']);
     });
 
@@ -127,7 +127,7 @@ void main() {
       expect(activity.isReaderOpen, isFalse);
       session.start();
       expect(activity.isReaderOpen, isTrue);
-      session.close(BookFormat.pdf);
+      session.close(BookFileFormat.pdf);
       expect(activity.isReaderOpen, isFalse);
     });
   });
@@ -139,7 +139,7 @@ void main() {
       session.onPdfPageChanged(const PdfPageInfo(pageIndex: 1, totalPages: 5));
       log.clear();
 
-      session.onAppPaused(BookFormat.pdf);
+      session.onAppPaused(BookFileFormat.pdf);
 
       expect(log, ['background', 'save']);
     });
@@ -147,7 +147,7 @@ void main() {
     test('paused 時偏好尚未載入：只通知統計，不儲存、不拋例外', () {
       final session = build()..start();
       log.clear();
-      session.onAppPaused(BookFormat.pdf);
+      session.onAppPaused(BookFileFormat.pdf);
       expect(log, ['background']);
     });
 
@@ -168,7 +168,7 @@ void main() {
         async.elapse(const Duration(minutes: 5));
         expect(log.where((e) => e == 'trigger'), hasLength(2));
 
-        session.close(BookFormat.pdf); // close 本身會再觸發一次
+        session.close(BookFileFormat.pdf); // close 本身會再觸發一次
         final afterClose = log.where((e) => e == 'trigger').length;
         async.elapse(const Duration(minutes: 30));
         expect(log.where((e) => e == 'trigger').length, afterClose);
@@ -180,7 +180,7 @@ void main() {
         final session = build(withTrigger: false)..start();
         async.elapse(const Duration(minutes: 30));
         expect(log, isNot(contains('trigger')));
-        session.close(BookFormat.pdf);
+        session.close(BookFileFormat.pdf);
       });
     });
   });
@@ -253,7 +253,7 @@ void main() {
       final session = build()..start();
       session.onPrefsLoaded(initialProgress: 0);
       session.onEpubLocated(_loc('a', fraction: 0.4));
-      session.onAppPaused(BookFormat.epub);
+      session.onAppPaused(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls.single.value.epubLocatorJson,
           contains('"cfi":"a"'));
     });
@@ -262,7 +262,7 @@ void main() {
       final session = build(hasJumpTarget: true)..start();
       session.onPrefsLoaded(initialProgress: 0.5);
       session.onPdfPageChanged(const PdfPageInfo(pageIndex: 2, totalPages: 5));
-      session.close(BookFormat.pdf);
+      session.close(BookFileFormat.pdf);
       expect(prefs.savedReadingPositionCalls, isEmpty);
     });
 
@@ -272,7 +272,7 @@ void main() {
       session.onEpubLocated(_loc('j', fraction: 0.20));
       session.onEpubLocated(_loc('j', fraction: 0.21));
       session.onEpubLocated(_loc('j', fraction: 0.20));
-      session.close(BookFormat.epub);
+      session.close(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls, isEmpty);
     });
 
@@ -281,7 +281,7 @@ void main() {
       session.onPrefsLoaded(initialProgress: 0.5);
       session.onEpubLocated(_loc('j', fraction: 0.20));
       session.onEpubLocated(_loc('k', fraction: 0.30));
-      session.close(BookFormat.epub);
+      session.close(BookFileFormat.epub);
       expect(prefs.savedReadingPositionCalls.single.value.epubLocatorJson,
           contains('"cfi":"k"'));
     });
@@ -290,7 +290,7 @@ void main() {
       final session = build()..start();
       session.onPdfPageChanged(const PdfPageInfo(pageIndex: 4, totalPages: 5));
       session.onPrefsLoaded(initialProgress: 0);
-      session.close(BookFormat.pdf);
+      session.close(BookFileFormat.pdf);
       expect(prefs.savedReadingPositionCalls, isEmpty);
     });
   });
@@ -312,7 +312,7 @@ void main() {
         async.elapse(const Duration(seconds: 10));
         session.recordActivity();
         async.elapse(const Duration(seconds: 20));
-        session.close(BookFormat.pdf);
+        session.close(BookFileFormat.pdf);
         async.flushMicrotasks();
 
         expect(_resolve(async, repository.getTotalReadingSeconds()), 30);
@@ -339,7 +339,7 @@ void main() {
         async.elapse(const Duration(seconds: 10));
         session.recordActivity();
         async.elapse(const Duration(seconds: 20));
-        session.close(BookFormat.pdf);
+        session.close(BookFileFormat.pdf);
         async.flushMicrotasks();
 
         final date = _resolve(
@@ -365,7 +365,7 @@ void main() {
         async.elapse(const Duration(seconds: 10));
         session.recordActivity();
         async.elapse(const Duration(seconds: 20));
-        session.close(BookFormat.pdf);
+        session.close(BookFileFormat.pdf);
         async.flushMicrotasks();
 
         // 注入的 tracker 收到全部事件（若 session 另外建了 repository 版 tracker
@@ -390,7 +390,7 @@ void main() {
       final session = build(withStats: false)..start();
       session.recordActivity();
       session.onTtsPlayingChanged(true);
-      session.onAppPaused(BookFormat.pdf);
+      session.onAppPaused(BookFileFormat.pdf);
       session.onAppResumed();
       session.onEpubLocated(_loc('a'));
       session.onEpubLocated(_loc('b'));

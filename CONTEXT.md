@@ -91,7 +91,7 @@ _Avoid_: FXL 偵測、版面偵測（皆容易與 `EpubLayoutInfo` 執行期狀�
 把一本書備妥成 WebView 可載入的位址（快取本機複本；Windows 另向 loopback 伺服器註冊，見 ADR 0042），並保證一次 `dispose()` 同時清掉快取目錄與註冊（`BookServeHandle`）。只有閱讀器與全文索引器使用；EPUB 探針以自訂範圍讀取直接讀原檔，不經書檔供應。
 
 **書籍格式能力（Book Format Capabilities）**：
-某個書籍格式（`BookFileFormat`）的「靜態事實」：走哪種引擎（PDF 或 Foliate）、定位座標型別（CFI 或頁碼）、能否落地複本、能否 relink、匯入時是否合成 EPUB 結構、對應的副檔名與 MIME。呼叫端詢問能力，不比對 enum 成員。偵測不出支援格式時回傳 `null`（`unknown` 不屬於持久化的 `BookFileFormat`）。與「引擎分派判斷」不同：後者是個別一本書的開書前執行期判斷（例如某本 EPUB 是否為固定版面），本詞條不含任何執行期偵測。
+某個書籍格式（`BookFileFormat`）的「靜態事實」：走哪種引擎（PDF 或 Foliate）、定位座標型別（CFI 或頁碼）、原始檔本身是否就是閱讀用檔案（`keepsOriginalSource`：可維持 `content://` 位址、可重新連結、並存時可落地複本；TXT／MD／CBZ 匯入時已合成或重建落地檔，為否）、匯入時是否合成 EPUB 結構、副檔名；雲端與 OPDS 另以副檔名優先、MIME 為輔判斷格式。呼叫端詢問能力，不比對 enum 成員。偵測不出支援格式時回傳 `null`（`unknown` 不屬於持久化的 `BookFileFormat`）。與「引擎分派判斷」不同：後者是個別一本書的開書前執行期判斷（例如某本 EPUB 是否為固定版面），本詞條不含任何執行期偵測。
 _Avoid_: 格式判斷（容易與「引擎分派判斷」混淆）
 
 **人工版面覆蓋（Manual Engine Override）**：

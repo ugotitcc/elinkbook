@@ -28,7 +28,7 @@ class EmptyMdException implements Exception {
 class MdSynthesisResult {
   /// 合成後的 EPUB 壓縮檔完整位元組內容，供呼叫端落地為 `Book.filePath`
   /// 指向的衍生檔案（**檔名副檔名須維持 `.md`**，比照 Issue 4 TXT 的既有
-  /// 限制理由：`BookFormat.md` 的分派依 `Book.filePath` 副檔名判斷）。
+  /// 限制理由：`BookFileFormat.md` 的偵測依 `Book.filePath` 副檔名判斷）。
   final Uint8List epubBytes;
 
   /// Frontmatter 解析結果，供呼叫端決定書名/作者/封面（`null` 代表該欄位

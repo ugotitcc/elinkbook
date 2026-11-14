@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import '../library/book_file_format.dart';
 import 'cloud_storage_client.dart';
 import 'cloud_auth_classifier.dart';
 import 'onedrive_oauth_client.dart';
@@ -20,7 +21,7 @@ import 'onedrive_oauth_client.dart';
 /// 理論上支援，但無法在實作當下存取真實 Graph API 驗證複合 filter
 /// 表達式實際可用，為避免在未經驗證的 API 語法上下注，改採與
 /// `GoogleDriveStorageClient` 相同的保守策略：取回資料夾內全部項目，
-/// 100% 交給用戶端的 `detectCloudFileFormat()` 過濾。
+/// 100% 交給用戶端的 `detectBookFileFormatByNameAndMime()` 過濾。
 class OneDriveStorageClient implements CloudStorageClient {
   OneDriveStorageClient({
     required OneDriveOAuthClient oauthClient,
@@ -65,7 +66,7 @@ class OneDriveStorageClient implements CloudStorageClient {
         final name = item['name'] as String? ?? '';
         final isFolder = item['folder'] != null;
         final mimeType = (item['file'] as Map<String, dynamic>?)?['mimeType'] as String?;
-        final format = isFolder ? null : detectCloudFileFormat(name, mimeType);
+        final format = isFolder ? null : detectBookFileFormatByNameAndMime(name, mimeType);
         // 非資料夾且格式判斷不通過：不回傳給呼叫端（比照 Google Drive
         // 既有行為，見上方類別文件說明）。
         if (!isFolder && format == null) continue;
