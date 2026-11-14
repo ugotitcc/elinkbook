@@ -94,14 +94,30 @@ void main() {
     });
   });
 
-  test('toWebResourceResponse 保留狀態碼、MIME 與內容', () {
-    final res = FoliateAssetResponse(
-      statusCode: 200,
-      contentType: 'text/css',
-      data: Uint8List.fromList([1, 2, 3]),
-    ).toWebResourceResponse();
-    expect(res.statusCode, 200);
-    expect(res.contentType, 'text/css');
-    expect(res.data, Uint8List.fromList([1, 2, 3]));
+  group('toWebResourceResponse', () {
+    test('200：保留 MIME 與內容，且不設 statusCode／reasonPhrase／headers（與變更前一致，Android 走三參數建構子）', () {
+      final res = FoliateAssetResponse(
+        statusCode: 200,
+        contentType: 'text/css',
+        data: Uint8List.fromList([1, 2, 3]),
+      ).toWebResourceResponse();
+      expect(res.contentType, 'text/css');
+      expect(res.data, Uint8List.fromList([1, 2, 3]));
+      expect(res.statusCode, isNull);
+      expect(res.reasonPhrase, isNull);
+      expect(res.headers, isNull);
+    });
+
+    test('404：statusCode、reasonPhrase、headers 三者齊備（外掛要求一起設）', () {
+      final res = FoliateAssetResponse(
+        statusCode: 404,
+        contentType: 'text/plain',
+        data: Uint8List(0),
+      ).toWebResourceResponse();
+      expect(res.statusCode, 404);
+      expect(res.reasonPhrase, 'Not Found');
+      expect(res.headers, isNotNull);
+      expect(res.data, isEmpty);
+    });
   });
 }

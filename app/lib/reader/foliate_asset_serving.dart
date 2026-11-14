@@ -73,10 +73,19 @@ Future<FoliateAssetResponse?> serveFoliateAsset(
 
 /// 四個 WebView 使用者共用的薄 adapter。
 extension FoliateAssetResponseX on FoliateAssetResponse {
+  /// 200 不設 `statusCode`／`reasonPhrase`／`headers`，與 epic-54 Issue 36 之前
+  /// 四處的寫法逐字相同：Android 外掛在 `statusCode` 與 `reasonPhrase` 皆非 null
+  /// 時改走六參數建構子（連同 `headers`），開書熱路徑上每個資源都會受影響，
+  /// 且舊 WebView（Chrome 83／91）對 null headers 的行為未驗證。只有非 200 才
+  /// 三者一起設（外掛文件要求同時設定，原 Android 探針的 404 也是這樣寫）。
   WebResourceResponse toWebResourceResponse() {
+    if (statusCode == 200) {
+      return WebResourceResponse(contentType: contentType, data: data);
+    }
     return WebResourceResponse(
       statusCode: statusCode,
-      reasonPhrase: statusCode == 200 ? 'OK' : 'Not Found',
+      reasonPhrase: 'Not Found',
+      headers: const {},
       contentType: contentType,
       data: data,
     );
