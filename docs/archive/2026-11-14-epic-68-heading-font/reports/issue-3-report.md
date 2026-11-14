@@ -1,36 +1,46 @@
 # Issue 3 目視確認報告：標題字型 UI
 
-- 日期：2026-11-14
-- 環境：Windows 11；分支 `feat/epic-68-heading-font`；測試基準 commit 58ae5123（Task 3 完成時）；Flutter 3.47.9；Node v26.13.0
-- 實作者是否能互動操作桌面 App：**否**。本次由無圖形介面的代理人在終端機執行，無法啟動 `flutter run -d windows` 後操作視窗、點選下拉、觀看字形或截圖。以下以 harness 與 widget／端到端測試作為替代證據，「字形是否真的變化」與「PDF／FXL 面板實機外觀」皆**未驗證**。
+- 初版日期：2026-11-14（以 harness 與 widget 測試為替代證據，當時無法操作桌面 App）
+- 補驗日期：2026-11-14（在 Windows 11 桌面版實機渲染下補做目視確認，見下）
 
-## 測試書籍
-| 書籍 | 來源 | 含 h1–h6 | 備註 |
-|---|---|---|---|
-| 未開啟真實書籍 | — | — | 無法互動操作桌面 App |
-| 未開啟 PDF | — | — | 同上 |
-| 未開啟 FXL EPUB | — | — | 同上（widget 測試以 `FxlSettingsSheet` 單獨驗證） |
+## 環境（補驗）
+- Windows 11 Home 10.0.26300；Flutter 3.47.9；WebView2 Runtime 157.0.4341.46
+- 基準：main（含 epic-68 全部程式）；專案路徑未映射 W:\（路徑長度未造成建置問題，直接建置成功）
+- 自訂字型（以本機檔案路徑註冊，Windows 端 `loadWindowsFileBytes` 載入）：
+  - 標楷體：`C:\Windows\Fonts\kaiu.ttf`（家族名 `VisKai`）
+  - 黑體：`C:\Windows\Fonts\NotoSansTC-VF.ttf`（家族名 `VisSans`）
+- 方法：暫時性整合測試（真實 SQLite 記憶體庫、真實 `ReaderScreen`、真實 `ReaderSettingsSheet` 操作兩個下拉，已刪除、未進版控），命令
+  `flutter test integration_test/<暫時測試>.dart -d windows`；另一支 PowerShell 腳本（放 scratchpad）在每個步驟由測試寫標記檔後，以 `PrintWindow`（flag 2）對 elinkbook 視窗截圖（1280x720，Windows 視窗實際大小）。以 Read 工具實際檢視截圖。
+- 測試書：自製最小 EPUB3（含 `h1`、`h1>span`、`h1>a`、`h2>a>span` 與三段內文，無書本 CSS）；另用 `sample_multi_page.pdf`、`sample_fixed_layout.epub`。
+- 截圖（檔名前綴 `issue3-`）僅保存於執行者本機，**未納入版控**；下表「證據」欄的檔名僅供對照，倉庫內查無對應檔案。
 
 ## 檢查項目
-| # | 項目 | 預期 | 結果 | 證據 |
-|---|---|---|---|---|
-| 1 | 流式 EPUB 版面設定「文字」分頁顯示「主字型」與「標題字型」兩個下拉 | 兩個下拉，標籤正確，下載提示仍只一個 | 未驗證（目視）；widget 測試通過 | `reader_settings_sheet_test.dart` group「標題字型下拉（epic-68 Issue 3）」13 個測試（標籤、Key、下載提示只一個且位於下拉之後、三語系文案） |
-| 2 | 主字型 A、標題字型 B，章名字形為 B | 章名為 B，內文為 A | 未驗證（目視）；渲染規則由 harness 證明 | `node app/tool/foliate_touch_harness/scenario-heading-font.mjs` A2、A3 PASS（只比對 computed `font-family`，不載入真實字型）；端到端測試證明 UI→偏好→`FoliateReaderView.headingFontFamily` |
-| 3 | 章名內含 `span`／`a` | 內層同為標題字型 | 未驗證（目視）；harness PASS | harness A2：`h1>span`、`h1>a`、`h2>a>span` 全為標題字型 |
-| 4 | 改回「跟隨主字型」 | 章名恢復為主字型，不需重開書 | 未驗證（目視）；測試通過 | harness C、C2 PASS；端到端測試 `onChanged(null)` 後偏好與 `FoliateReaderView.headingFontFamily` 皆為 null |
-| 5 | 主字型「使用書本內建字型」＋標題字型 B | 章名 B，內文為書本字型 | 未驗證（目視）；harness PASS | harness D、D2 PASS |
-| 6 | 「停用書本 CSS」 | 標題字型仍勝出 | 未驗證（目視）；harness PASS | harness B PASS |
-| 7 | 關書再開 | 標題字型保留 | 未驗證 | 偏好持久化屬 Issue 1（資料層測試），本張未做實機確認 |
-| 8 | 刪除標題字型使用的自訂字型 | 記錄現況 | 未驗證 | 屬 Issue 4；widget 測試證明不可用字型時下拉顯示「跟隨主字型」且不改寫偏好 |
-| 9 | PDF 版面設定沒有字型下拉 | 無下拉 | 未驗證（實機外觀）；widget 測試通過 | `pdf_settings_sheet_test.dart` 負向測試 |
-| 10 | FXL 版面設定沒有字型下拉 | 無下拉 | 未驗證（實機外觀）；widget 測試通過 | `fxl_settings_sheet_test.dart` 既有測試補兩個 Key `findsNothing` |
-| 11 | 窄視窗／E-Ink 版面 | 無溢位、可操作 | 未驗證（目視）；widget 測試通過 | 412 寬＋過長自訂字型名稱無 overflow；E-Ink 模式可顯示 |
+| # | 項目 | 結果 | 證據 |
+|---|---|---|---|
+| 1 | 流式 EPUB「文字」分頁有「主字型」與「標題字型」兩個下拉，下載提示只一個 | **通過（目視）**；另發現左緣未對齊（見發現） | `issue3-01_sheet_two_dropdowns.png`：兩個下拉標籤正確，提示「到『字型管理』下載更多字型」只出現一次、位於下拉之後 |
+| 2 | 主字型 A、標題字型 B，章名為 B、內文為 A | **通過（目視）**：章名為楷體、內文為非楷體黑體 | `issue3-03b_heading_kai.png`（主字型選黑體、標題選楷體）；對照 `issue3-02b_main_sans_heading_follow.png`（標題跟隨時與內文同為黑體）。限制：Windows 上「主字型選 NotoSansTC」與未設定時的 WebView 預設中文字型像素完全相同（00 與 02b 截圖位元組一致），故「主字型 A 確實套用」無法由像素獨立證明，僅證明標題與內文字形不同 |
+| 3 | 章名內含 `span`／`a` | **通過（目視）**：純標題、`h1>span`、`h1>a`（有底線）、`h2>a>span` 四行皆為楷體 | `issue3-03b_heading_kai.png` |
+| 4 | 改回「跟隨主字型」恢復為主字型、不需重開書 | **通過（目視）**：標題立即恢復為與內文相同的黑體，未重開書 | `issue3-04_heading_follow_again.png`（與 `issue3-02b` 同字形；捲動位置不同） |
+| 5 | 主字型「使用書本內建字型」＋標題字型 B | **通過（目視）**：章名楷體、內文為預設字型 | `issue3-05_main_book_heading_kai.png` |
+| 6 | 「停用書本 CSS」標題字型仍勝出 | **部分**：開啟該開關後章名仍為楷體（目視），但測試書本身無任何書本 CSS 字型規則，無法在實機證明「勝過書本 CSS」；該規則仍由 harness B（`scenario-heading-font.mjs`）證明 | `issue3-06_disable_book_css_heading_kai.png` |
+| 7 | 關書再開，標題字型保留 | **通過（目視）**：卸載 `ReaderScreen` 後重建，章名仍為楷體，重開後面板亦顯示偏好（`07_reopened` 與 `05` 位元組一致）。注意是同一進程內重建而非重啟 App，偏好經真實 SQLite 讀回 | `issue3-07_reopened.png` |
+| 8 | 刪除標題字型使用的自訂字型 | **通過（現況記錄）**：以 `deleteAndResetUsage` 刪除後重開，偏好 `headingFontFamily=null`、`fontFamily=null`，面板顯示「使用書本內建字型／跟隨主字型」，章名為跟隨狀態，無錯誤 | `issue3-08b_after_delete_sheet.png`；偏好以測試內查詢確認 |
+| 9 | PDF 版面設定沒有字型下拉 | **部分**：PDF 面板（顯示／裁切分頁）可見部分無字型下拉，且整棵 Widget 樹查詢兩個下拉 Key 皆 0；但 720 高視窗下面板被截斷，未看到完整面板 | `issue3-p09_pdf_sheet.png` |
+| 10 | FXL 版面設定沒有字型下拉 | **部分**：同上（漫畫版面設定，可見部分為雙頁／翻頁方向／簡繁轉換，樹查詢 0） | `issue3-p10_fxl_sheet.png` |
+| 11 | 窄視窗／E-Ink 版面無溢位 | **未驗證**：見下 | 無有效截圖 |
 
 ## 發現與限制
-- 無法互動操作桌面 App，故 1–11 皆無目視證據；上表「通過」僅指替代證據通過，不等於目視確認。
-- 兩個下拉左緣因標籤寬度不同（「主字型」與「標題字型」）可能不齊，未目視評估是否可接受，留待人工確認。
-- 面板高度：「版面設定面板高度…」測試實測面板高度新增下拉前後皆為 988.0（門檻 < 1000，餘裕僅 12）；「文字」分頁內容在 738 的 viewport 內無需捲動，非最高分頁，故新增一列不影響面板高度。
-- 審查 M8（僅記錄）：宣告 `isFixedLayout=false` 的 CBZ 理論上可開啟流式面板並看到無效果的標題字型下拉；渲染端已保證 CBZ 不套用標題字型（Issue 2，有測試），此為 Issue 2 既有邊角，不在本張處理。
+- **兩個下拉左緣未對齊**（目視確認）：「主字型」下拉左緣約在 x=503，「標題字型」約在 x=521（標籤寬度不同、Row 以固定 12px 間距接 Expanded），差約 18px。是否可接受請人工決定；未修改程式。
+- 項目 11 未驗證：嘗試把真實視窗縮成 440x860，Flutter 內容未跟著重排（內容右側被視窗裁掉），再搭配 `tester.view.physicalSize` 覆寫後畫面變成上一本 PDF 的殘影，兩種做法截圖皆無效，不採用。窄版／E-Ink 溢位仍只有初版的 widget 測試證據（412 寬＋過長名稱無 overflow）。過長名稱在 1280 寬視窗的呈現也未單獨截圖。
+- 項目 9、10 只看到面板上半部（視窗高 720）。
+- 主字型是否確實套用無法由像素獨立證明（見項目 2）。
+- 以上為 Windows 11／WebView2 桌面版結果；Android 真機（B78CW2508006423 未授權）與 E-Ink 實機未測。
+- 面板高度：「版面設定面板高度…」測試實測面板高度新增下拉前後皆為 988.0（門檻 < 1000，餘裕僅 12）。
+- 審查 M8（僅記錄）：宣告 `isFixedLayout=false` 的 CBZ 理論上可開啟流式面板並看到無效果的標題字型下拉；渲染端已保證 CBZ 不套用標題字型（Issue 2，有測試）。
+
+## 初版替代證據（保留）
+- `reader_settings_sheet_test.dart` group「標題字型下拉（epic-68 Issue 3）」13 個測試；`pdf_settings_sheet_test.dart`、`fxl_settings_sheet_test.dart` 負向測試。
+- `node app/tool/foliate_touch_harness/scenario-heading-font.mjs` A、A2、A3、B、C、C2、D、D2 PASS（只比對 computed `font-family`）。
 
 ## 結論
-**Issue 3 目視確認未完成。** UI 邏輯、偏好寫入、渲染規則由 widget／端到端／harness 測試證明；字形實際變化與 PDF／FXL 面板實機外觀須由使用者或後續真機／桌面操作確認。
+**部分完成。** 在 Windows 桌面實機渲染下，項目 1–5、7、8 已目視通過；6、9、10 部分驗證（見上）；11（窄視窗／E-Ink）仍未驗證；Android 真機與 E-Ink 實機未測。另發現兩下拉左緣約差 18px 未對齊，待人工決定。
