@@ -1033,3 +1033,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 **2026-11-15 後續項目 ① 的同類寫法處理**（分支 `fix/foliate-toc-request-overlap`）：
 - `foliate_txt_test`：同樣改為點目錄按鈕、從 `TocBottomSheet` 斷言，BooksPad 真機（`--no-uninstall`）3 項測試連跑通過。
 - `foliate_toc_footer_test`：**不需修改**。它直接建構 `FoliateReaderView`、沒有 `ReaderScreen`，背景不會另外請求目錄，不會重疊；且需要斷言原始 `tocId`（面板看不到）。
+
+**2026-11-15 後續項目 ① 同類寫法處理已合併**（PR #432，合併提交 `61ff13cb`）：`foliate_txt_test` 已修，`foliate_toc_footer_test` 不需修改。後續項目 ① 全數完成。
