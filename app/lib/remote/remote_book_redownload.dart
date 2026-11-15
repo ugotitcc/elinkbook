@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../search/full_text_search_settings_repository.dart';
@@ -20,7 +22,8 @@ enum RedownloadOutcome {
   /// `remoteServerId` 指向的站點已不存在。
   serverNotFound,
 
-  /// 下載、升格或寫書庫任一步失敗；書庫中的這本書維持原狀。
+  /// 下載、升格或寫書庫任一步失敗；書庫中的這本書維持原狀，
+  /// 已升格的永久檔也會一併清掉，不留孤兒。
   failed,
 }
 
@@ -71,7 +74,16 @@ Future<RedownloadOutcome> redownloadBook({
     final permanentPath = await promoteToPermanent(tempPath);
 
     final updatedBook = book.copyWith(filePath: permanentPath, isDownloaded: true);
-    await libraryRepository.updateBook(updatedBook);
+    try {
+      await libraryRepository.updateBook(updatedBook);
+    } catch (_) {
+      // 書庫沒指向這個剛升格的永久檔，留著就是孤兒；清掉後再讓外層回 failed。
+      try {
+        final orphan = File(permanentPath);
+        if (await orphan.exists()) await orphan.delete();
+      } catch (_) {}
+      rethrow;
+    }
 
     try {
       await fullTextSearchSettingsRepository.handleBookAvailable(updatedBook);

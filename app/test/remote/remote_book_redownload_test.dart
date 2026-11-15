@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/platform/app_paths.dart';
 import 'package:elinkbook/remote/remote_book_redownload.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 
@@ -136,6 +137,50 @@ void main() {
     final book = (await library.listBooks()).single;
     expect(book.isDownloaded, isFalse);
     expect(book.filePath, '/no/longer/exists.epub');
+  });
+
+  test('updateBook 失敗：回傳 failed，書不變，且刪除剛升格的永久檔（不留孤兒）', () async {
+    final library = FakeLibraryRepository(
+      initialBooks: [pendingBook()],
+      updateBookError: Exception('db boom'),
+    );
+
+    final outcome = await redownloadBook(
+      book: pendingBook(),
+      remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+      libraryRepository: library,
+      fullTextSearchSettingsRepository: FakeFullTextSearchSettingsRepository(),
+      createOpdsClient: () => FakeOpdsClient(),
+    );
+
+    expect(outcome, RedownloadOutcome.failed);
+    final book = (await library.listBooks()).single;
+    expect(book.isDownloaded, isFalse);
+    expect(book.filePath, '/no/longer/exists.epub');
+    final permanentDir = Directory(p.join((await appDocumentsDirectory()).path, 'remote_books'));
+    expect(permanentDir.existsSync() ? permanentDir.listSync() : <FileSystemEntity>[], isEmpty);
+  });
+
+  test('升格（promoteToPermanent）失敗：回傳 failed，書不變', () async {
+    // 讓 remote_books 這個路徑被同名「檔案」佔用，promoteToPermanent 建立資料夾時必然失敗。
+    final docsDir = await appDocumentsDirectory();
+    File(p.join(docsDir.path, 'remote_books')).writeAsStringSync('blocker');
+    final library = FakeLibraryRepository(initialBooks: [pendingBook()]);
+    final fts = FakeFullTextSearchSettingsRepository();
+
+    final outcome = await redownloadBook(
+      book: pendingBook(),
+      remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+      libraryRepository: library,
+      fullTextSearchSettingsRepository: fts,
+      createOpdsClient: () => FakeOpdsClient(),
+    );
+
+    expect(outcome, RedownloadOutcome.failed);
+    final book = (await library.listBooks()).single;
+    expect(book.isDownloaded, isFalse);
+    expect(book.filePath, '/no/longer/exists.epub');
+    expect(fts.handleBookAvailableCalls, isEmpty);
   });
 
   test('缺 remoteDownloadUrl：回傳 notRemoteBook，且不呼叫 createOpdsClient', () async {

@@ -4053,6 +4053,41 @@ void main() {
       expect(books.single.filePath, '/no/longer/exists.epub');
     });
 
+    testWidgets('書的遠端站點已不存在時顯示找不到站點訊息，書籍狀態不變', (tester) async {
+      final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
+          sources: fakeSourceDependencies(
+            // 站點清單是空的：pendingBook() 的 remoteServerId 'srv1' 找不到。
+            remoteServerRepository: FakeRemoteServerRepository(),
+            createOpdsClient: () => FakeOpdsClient(),
+            isMobileDataConnection: () async => false,
+          ),
+          dependencies: fakeReaderFeatureDependencies(
+            libraryRepository: repository,
+            bookImportService: FakeBookImportService(),
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_item_b1')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('library_redownload_confirm_button')),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.text('找不到對應的遠端書庫站點'), findsOneWidget);
+      final books = await repository.listBooks();
+      expect(books.single.isDownloaded, isFalse);
+      expect(books.single.filePath, '/no/longer/exists.epub');
+    });
+
     testWidgets('書本缺 remoteDownloadUrl 時點重新下載，仍顯示提示且不呼叫 createOpdsClient', (
       tester,
     ) async {

@@ -1063,3 +1063,9 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - **已修**：Minor 1——重複點擊守衛原本在確認之後才加入，`isMobileDataConnection()` 尚未回來時連點會疊出兩個確認對話框；改為第一個 `await` 之前就加入、`finally` 移除。新增 widget 測試「同一本書在行動數據檢查尚未回來時連點兩次，只跳出一個確認對話框」，修前 RED（找到 2 個對話框）、修後 GREEN。Minor 5——「缺網址」widget 測試補上明確的「對話框不存在」斷言（原 `review-plan-issue-38.md` M-1 引用的此斷言實際不存在）。
 - **延後（皆為既有行為或測試缺口，未修）**：`updateBook` 失敗時 `remote_books/` 下永久檔成孤兒；`failed` 的升格／`updateBook` 失敗分支無測試（`FakeLibraryRepository` 無 `updateBook` 錯誤注入）；`serverNotFound` 對應提示文字無 widget 測試。
 - 驗證：`flutter analyze` 乾淨；`library_screen_test.dart`＋`remote_book_redownload_test.dart` 150 項通過；`check_l10n_hardcoded_strings.js` PASS。
+
+**2026-11-15 Issue 38 延後 Minor 3 項已修**（同一分支，PR #434 追加提交）：
+- **永久檔孤兒**：`redownloadBook` 在 `updateBook` 失敗時刪除剛升格的 `remote_books/` 永久檔再回 `failed`。測試「updateBook 失敗：回傳 failed，書不變，且刪除剛升格的永久檔」修前 RED（目錄非空）、修後 GREEN。`FakeLibraryRepository` 新增 `updateBookError`。
+- **`failed` 分支測試**：新增「升格（promoteToPermanent）失敗：回傳 failed，書不變」（以同名檔案佔用 `remote_books` 路徑製造失敗，路徑用 `appDocumentsDirectory()` 以相容 Windows）；補測試缺口，加入即通過。
+- **`serverNotFound` 提示測試**：新增 widget 測試「書的遠端站點已不存在時顯示找不到站點訊息」；加入即通過，已以突變（暫時把對應改成 `libraryRedownloadFailedMessage`）確認會失敗後還原。
+- 驗證：`flutter analyze` 乾淨；`remote_book_redownload_test.dart`＋`library_screen_test.dart` 153 項通過；`check_l10n_hardcoded_strings.js` PASS。至此第五次檢視 Issue 38 的審查 Minor 全數處理完畢。
