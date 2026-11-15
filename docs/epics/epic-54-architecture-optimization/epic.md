@@ -1050,3 +1050,11 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 8. **文件與分支**：不寫 ADR（模組抽取，未改架構決定）；不新增 `CONTEXT.md` 詞條（沒有新概念）；計畫 `plans/plan-issue-38.md` 與實作同一分支 `epic-54-issue-38-redownload-module`、同一個 PR。
 
 **範圍外**：Issue 39（版面設定草稿）、Issue 40（書架操作殼）；`RemoteDownloadJob` 不動。
+
+**2026-11-15 Issue 38 實作**（重新下載書籍收成一個 module；計畫 `plans/plan-issue-38.md`，Task 1～3 完成）：
+- 新增 `app/lib/remote/remote_book_redownload.dart`：`RedownloadOutcome { succeeded, notRemoteBook, serverNotFound, failed }`、`isRedownloadable(Book)`、`redownloadBook({book, remoteServerRepository, libraryRepository, fullTextSearchSettingsRepository, createOpdsClient})`。純 Dart，不接收 `BuildContext`、不含 l10n 文字。
+- `LibraryScreen._handleRedownload` 只剩：缺遠端資訊提示（在確認對話框之前）、重複點擊防護、行動數據與確認對話框、依 `RedownloadOutcome` 對應三則既有 SnackBar、成功後重載書單。刪除 `catch` 內死碼暫存檔清理；索引標記失敗維持靜默（註解寫明）。
+- 測試：新增 `test/remote/remote_book_redownload_test.dart` 9 項；`FakeFullTextSearchSettingsRepository` 加 `handleBookAvailableError`。`library_screen_test.dart` 刪除「成功更新」「索引標記」兩個 widget 測試（由 module 測試接手），保留 4 個。
+- **與設計決策的差異**：① 新增 `isRedownloadable`（module 內單一份條件，畫面在對話框前用它判斷，否則缺資訊會變成「先問再說不行」）；② 設計決策 7 原要連「缺網址」widget 測試一併刪除，改為保留——它是 `notRemoteBook` 對應到提示的唯一測試，並釘住「對話框之前」的順序，module 單元測試無法取代（`reviews/review-plan-issue-38.md` M-1 批准）。計畫審查另兩項：Step 4 補前置短路（I-1）、測試 7 改為「缺 `remoteServerId`」以免漏掉前置檢查時誤回 `serverNotFound`（I-2；未斷言 `listServers` 未被呼叫，假物件無計數，改用結果差異抓同一缺陷）；原測試 6（與測試 1 重複）刪除（M-2）。
+- 驗證：`flutter analyze` 乾淨；兩個 check 腳本 PASS；完整 `flutter test` 5271 通過、1 略過、0 失敗。
+- **未驗證**：未在真機對真實 OPDS 伺服器實測重新下載（只用假物件）。

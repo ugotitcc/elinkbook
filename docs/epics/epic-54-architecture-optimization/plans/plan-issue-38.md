@@ -65,8 +65,8 @@ Future<RedownloadOutcome> redownloadBook({
 - Produces：上方「目標 interface」。
 - Consumes：`downloadToTempFile`、`promoteToPermanent`（`remote_book_downloader.dart`）、`OpdsAcquisition(href:, format:)`。
 
-- [ ] **Step 1：假物件加錯誤注入。** 在 `FakeFullTextSearchSettingsRepository` 加 `Object? handleBookAvailableError;`（建構子具名參數，預設 `null`）；`handleBookAvailable` 先記錄呼叫，再於 `handleBookAvailableError != null` 時 `throw`。
-- [ ] **Step 2：寫失敗測試。** 測試檔比照 `remote_book_downloader_test.dart` 的 `setUp`（`FakePathProviderPlatform` 指向暫存目錄）。伺服器 `srv1`、待下載書 `pendingBook()` 比照 `library_screen_test.dart` 同名輔助。測試名稱與斷言：
+- [x] **Step 1：假物件加錯誤注入。** 在 `FakeFullTextSearchSettingsRepository` 加 `Object? handleBookAvailableError;`（建構子具名參數，預設 `null`）；`handleBookAvailable` 先記錄呼叫，再於 `handleBookAvailableError != null` 時 `throw`。
+- [x] **Step 2：寫失敗測試。** 測試檔比照 `remote_book_downloader_test.dart` 的 `setUp`（`FakePathProviderPlatform` 指向暫存目錄）。伺服器 `srv1`、待下載書 `pendingBook()` 比照 `library_screen_test.dart` 同名輔助。測試名稱與斷言：
   1. `成功：回傳 succeeded，更新 filePath 為 remote_books 下的檔案且 isDownloaded 為 true，書庫仍只有 1 本`
   2. `成功：把伺服器密碼傳給 client.downloadBook`（`downloadBookPasswords` 等於 `['secret']`；以 `addServer(server, password: 'secret')` 建立）
   3. `成功：呼叫 handleBookAvailable，參數是更新後的書`（`handleBookAvailableCalls.single.isDownloaded` 為 true）
@@ -76,10 +76,10 @@ Future<RedownloadOutcome> redownloadBook({
   7. `缺 remoteServerId、但有 remoteDownloadUrl：回傳 notRemoteBook（不是 serverNotFound），且不呼叫 createOpdsClient`（伺服器清單放入 `srv1`；若實作漏掉前置檢查，會誤回 `serverNotFound`，此測試即失敗）
   8. `remoteServerId 指向不存在的站點：回傳 serverNotFound`
   9. `isRedownloadable：remoteServerId 或 remoteDownloadUrl 任一為 null 時為 false，皆非 null 時為 true`
-- [ ] **Step 3：執行確認失敗。** `cd app && flutter test test/remote/remote_book_redownload_test.dart`；預期：編譯失敗（找不到 `redownloadBook`）。
-- [ ] **Step 4：實作 `redownloadBook` 與 `isRedownloadable`。** 流程依序為：`if (!isRedownloadable(book)) return RedownloadOutcome.notRemoteBook`（最前面，須在任何 I/O 之前短路）→ 其後照 `_handleRedownload` 現有順序（`listServers` 迴圈找 id → `loadPassword` → `createOpdsClient()` → `downloadToTempFile` → `promoteToPermanent` → `book.copyWith(filePath:, isDownloaded: true)` → `libraryRepository.updateBook` → `try { handleBookAvailable } catch (_) {}`）。外層 `try/catch (_)` 回 `failed`。**不**保留 `tempPath` 清理（死碼，見設計決策 5）。`handleBookAvailable` 的 `catch` 上方註解寫明「刻意靜默：索引為衍生資料，可由重建索引補」。
-- [ ] **Step 5：執行確認通過。** 同 Step 3 指令；預期：9 個測試全過。
-- [ ] **Step 6：`cd app && flutter analyze` 乾淨後提交。** `git add app/lib/remote/remote_book_redownload.dart app/test/remote/remote_book_redownload_test.dart app/test/support/fake_full_text_search_settings_repository.dart`；訊息 `feat(remote): 重新下載書籍收成 redownloadBook module（epic-54 Issue 38 Task 1）`。
+- [x] **Step 3：執行確認失敗。** `cd app && flutter test test/remote/remote_book_redownload_test.dart`；預期：編譯失敗（找不到 `redownloadBook`）。
+- [x] **Step 4：實作 `redownloadBook` 與 `isRedownloadable`。** 流程依序為：`if (!isRedownloadable(book)) return RedownloadOutcome.notRemoteBook`（最前面，須在任何 I/O 之前短路）→ 其後照 `_handleRedownload` 現有順序（`listServers` 迴圈找 id → `loadPassword` → `createOpdsClient()` → `downloadToTempFile` → `promoteToPermanent` → `book.copyWith(filePath:, isDownloaded: true)` → `libraryRepository.updateBook` → `try { handleBookAvailable } catch (_) {}`）。外層 `try/catch (_)` 回 `failed`。**不**保留 `tempPath` 清理（死碼，見設計決策 5）。`handleBookAvailable` 的 `catch` 上方註解寫明「刻意靜默：索引為衍生資料，可由重建索引補」。
+- [x] **Step 5：執行確認通過。** 同 Step 3 指令；預期：9 個測試全過。
+- [x] **Step 6：`cd app && flutter analyze` 乾淨後提交。** `git add app/lib/remote/remote_book_redownload.dart app/test/remote/remote_book_redownload_test.dart app/test/support/fake_full_text_search_settings_repository.dart`；訊息 `feat(remote): 重新下載書籍收成 redownloadBook module（epic-54 Issue 38 Task 1）`。
 
 ## Task 2：畫面改用 module，更新 widget 測試
 
@@ -91,12 +91,12 @@ Future<RedownloadOutcome> redownloadBook({
 - Consumes：Task 1 的 `isRedownloadable`、`redownloadBook`、`RedownloadOutcome`。
 - Produces：無新公開介面；`LibraryScreen` 對外行為不變。
 
-- [ ] **Step 1：確認現況測試全過。** `cd app && flutter test test/screens/library_screen_test.dart --plain-name "Issue 4"`；預期：6 個全過（改動前基線）。
-- [ ] **Step 2：改寫 `_handleRedownload`。** 順序維持：`!isRedownloadable(book)` → SnackBar `libraryRemoteDisabledMessage` 後 return（**在對話框之前**）→ `_redownloadingBookIds` 守衛 → `isMobileDataConnection` → `mounted` → `_confirmRedownload` → `_redownloadingBookIds.add` → `try { outcome = await redownloadBook(...) } finally { remove }` → `if (!mounted) return` → 依 `outcome` 對應：`succeeded` → `await _bookListController.loadBooks()`；`serverNotFound` → `libraryRemoteServerNotFoundMessage`；`failed` → `libraryRedownloadFailedMessage`；`notRemoteBook` → `libraryRemoteDisabledMessage`。依賴取自 `widget.sources.remoteServerRepository`、`widget.sources.createOpdsClient`、`widget.dependencies.libraryRepository`、`widget.dependencies.fullTextSearchSettingsRepository`。
-- [ ] **Step 3：刪除無用 import。** 以 `flutter analyze` 的 `unused_import` 為準（`dart:io` 因 `_calculateFileSize`〔約 1808 行〕仍用 `File(book.filePath)`，**須保留**；預期無用的是 `remote_book_downloader.dart`、`opds_types.dart`、`remote_server_profile.dart`，其餘仍在用的不動）。
-- [ ] **Step 4：刪除被 module 測試接手的 widget 測試。** 刪「確認後成功重新下載…」與「重新下載完成後呼叫 handleBookAvailable」兩個；**保留**「取消」「行動數據提示」「下載失敗時顯示錯誤訊息」，以及「書本缺 remoteDownloadUrl…」（它是 `notRemoteBook` 到 SnackBar 的唯一對應測試，且釘住「對話框之前」的順序，見 Review Focus 2；與設計決策 7 的差異，**已於 `reviews/review-plan-issue-38.md` M-1 審查批准保留**：module 單元測試只證明回傳 `notRemoteBook`，保護不了日後有人把確認對話框移到前置判斷之前）。
-- [ ] **Step 5：執行確認通過。** `cd app && flutter test test/screens/library_screen_test.dart test/remote/remote_book_redownload_test.dart`；預期：全過。
-- [ ] **Step 6：`flutter analyze` 乾淨後提交。** 訊息 `refactor(library): 重新下載改用 redownloadBook，刪除死碼暫存檔清理（epic-54 Issue 38 Task 2）`。
+- [x] **Step 1：確認現況測試全過。** `cd app && flutter test test/screens/library_screen_test.dart --plain-name "Issue 4"`；預期：6 個全過（改動前基線）。
+- [x] **Step 2：改寫 `_handleRedownload`。** 順序維持：`!isRedownloadable(book)` → SnackBar `libraryRemoteDisabledMessage` 後 return（**在對話框之前**）→ `_redownloadingBookIds` 守衛 → `isMobileDataConnection` → `mounted` → `_confirmRedownload` → `_redownloadingBookIds.add` → `try { outcome = await redownloadBook(...) } finally { remove }` → `if (!mounted) return` → 依 `outcome` 對應：`succeeded` → `await _bookListController.loadBooks()`；`serverNotFound` → `libraryRemoteServerNotFoundMessage`；`failed` → `libraryRedownloadFailedMessage`；`notRemoteBook` → `libraryRemoteDisabledMessage`。依賴取自 `widget.sources.remoteServerRepository`、`widget.sources.createOpdsClient`、`widget.dependencies.libraryRepository`、`widget.dependencies.fullTextSearchSettingsRepository`。
+- [x] **Step 3：刪除無用 import。** 以 `flutter analyze` 的 `unused_import` 為準（`dart:io` 因 `_calculateFileSize`〔約 1808 行〕仍用 `File(book.filePath)`，**須保留**；預期無用的是 `remote_book_downloader.dart`、`opds_types.dart`、`remote_server_profile.dart`，其餘仍在用的不動）。
+- [x] **Step 4：刪除被 module 測試接手的 widget 測試。** 刪「確認後成功重新下載…」與「重新下載完成後呼叫 handleBookAvailable」兩個；**保留**「取消」「行動數據提示」「下載失敗時顯示錯誤訊息」，以及「書本缺 remoteDownloadUrl…」（它是 `notRemoteBook` 到 SnackBar 的唯一對應測試，且釘住「對話框之前」的順序，見 Review Focus 2；與設計決策 7 的差異，**已於 `reviews/review-plan-issue-38.md` M-1 審查批准保留**：module 單元測試只證明回傳 `notRemoteBook`，保護不了日後有人把確認對話框移到前置判斷之前）。
+- [x] **Step 5：執行確認通過。** `cd app && flutter test test/screens/library_screen_test.dart test/remote/remote_book_redownload_test.dart`；預期：全過。
+- [x] **Step 6：`flutter analyze` 乾淨後提交。** 訊息 `refactor(library): 重新下載改用 redownloadBook，刪除死碼暫存檔清理（epic-54 Issue 38 Task 2）`。
 
 ## Task 3：整體驗證與文件
 
@@ -104,7 +104,7 @@ Future<RedownloadOutcome> redownloadBook({
 - Modify: `docs/epics/epic-54-architecture-optimization/epic.md`（追加 Issue 38 實作與驗證紀錄）
 - Modify: `docs/epics/epic-54-architecture-optimization/issues.md`（Issue 38 狀態）
 
-- [ ] **Step 1：兩個靜態守衛。** `cd app && node tool/check_l10n_hardcoded_strings.js` 與 `node tool/check_integration_keys.js`（Windows 用 pnpm 內建 Node，見記憶）；預期：兩者 PASS。
-- [ ] **Step 2：完整測試。** `cd app && flutter test`；預期：0 失敗（基線 5263 通過、2 略過，數量因刪 2 個 widget 測試、加 9 個單元測試而變動）。
-- [ ] **Step 3：寫入 `epic.md`。** 記實作內容、與設計決策的差異（新增 `isRedownloadable`；保留「缺網址」widget 測試，理由取自 `review-plan-issue-38.md` M-1：它是 UI 順序守衛，module 測試無法取代）、驗證結果，以及**未驗證**：未在真機對真實 OPDS 伺服器實測重新下載。
-- [ ] **Step 4：`issues.md` 的 Issue 38 狀態改為「已完成待合併」。** 提交並 push，開 PR。
+- [x] **Step 1：兩個靜態守衛。** `cd app && node tool/check_l10n_hardcoded_strings.js` 與 `node tool/check_integration_keys.js`（Windows 用 pnpm 內建 Node，見記憶）；預期：兩者 PASS。
+- [x] **Step 2：完整測試。** `cd app && flutter test`；預期：0 失敗（基線 5263 通過、2 略過，數量因刪 2 個 widget 測試、加 9 個單元測試而變動）。
+- [x] **Step 3：寫入 `epic.md`。** 記實作內容、與設計決策的差異（新增 `isRedownloadable`；保留「缺網址」widget 測試，理由取自 `review-plan-issue-38.md` M-1：它是 UI 順序守衛，module 測試無法取代）、驗證結果，以及**未驗證**：未在真機對真實 OPDS 伺服器實測重新下載。
+- [x] **Step 4：`issues.md` 的 Issue 38 狀態改為「已完成待合併」。** 提交並 push，開 PR。
