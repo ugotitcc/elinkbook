@@ -1107,3 +1107,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
   - `flutter test test/screens/reader_screen_test.dart`：326／326 通過
   - 完整 `flutter test`：5286 通過、1 略過、0 失敗
 - **未驗證**：未在真機操作版面設定面板的實際手感；Issue 41 疑似缺陷仍待重現。
+
+**2026-11-16 Issue 39 已合併**（PR #435，合併提交 `2fc01d2a`）。程式審查（報告在本機 `reviews/review-code-issue-39.md`，該目錄被 `.gitignore` 忽略）無 Critical／Important，3 個 Minor 已處理（`2814634d`）。Issue 41 仍待重現，Issue 40 待 `/grilling`。
