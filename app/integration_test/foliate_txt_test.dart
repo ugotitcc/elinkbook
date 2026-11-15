@@ -9,10 +9,10 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
-import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 import '../test/support/fake_reader_feature_dependencies.dart';
 import '../test/support/pump_localized_widget.dart';
 
@@ -55,6 +55,20 @@ Future<
     prefsManager: prefsManager,
     importService: BookImportServiceImpl(repository: repository),
   );
+}
+
+/// 開啟目錄面板：點目錄按鈕；目錄尚未載入時只會跳「載入中」提示，就稍等後再點，
+/// 直到 [TocBottomSheet] 出現。超過 10 秒仍未出現就明確失敗（同 foliate_md_test.dart）。
+Future<void> _openToc(WidgetTester tester) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 10));
+  while (true) {
+    await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
+    await tester.pump(const Duration(milliseconds: 300));
+    if (find.byType(TocBottomSheet).evaluate().isNotEmpty) break;
+    if (DateTime.now().isAfter(deadline)) fail('等待逾時：目錄面板未開啟');
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -138,10 +152,12 @@ void main() {
 
       expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
-      final readerView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
-      final toc = await FoliateReaderView.loadTableOfContents(
-          readerView.key! as GlobalKey<State<FoliateReaderView>>);
-      expect(toc.map((e) => e.title), ['第一章 起源', '第二章 冒險', '第三章 結局']);
+      // 不直接呼叫 FoliateReaderView.loadTableOfContents()：ReaderScreen 開書後
+      // 已在背景要一次目錄，同一個 handler 不能重疊請求（見 foliate_md_test.dart）。
+      await _openToc(tester);
+      expect(find.text('第一章 起源'), findsOneWidget);
+      expect(find.text('第二章 冒險'), findsOneWidget);
+      expect(find.text('第三章 結局'), findsOneWidget);
     },
   );
 
