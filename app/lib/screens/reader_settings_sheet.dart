@@ -9,6 +9,7 @@ import '../reader/column_mode.dart';
 import '../reader/epub_text_align.dart';
 import '../reader/layout_preset.dart';
 import '../reader/page_turn_mode.dart';
+import '../reader/reader_settings_draft.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/text_conversion_mode.dart';
 import '../l10n/app_localizations.dart';
@@ -82,54 +83,12 @@ class ReaderSettingsSheet extends StatefulWidget {
 }
 
 class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
-  // 尚未有持久化覆寫（對應欄位為 null）時，滑桿顯示的初始位置，與
-  // prototype/index.html 的示範數值一致；互動前不會被送出/持久化，只影響
-  // 滑桿位置。
-  static const _defaultFontSize = 16.0;
-  static const _defaultFontWeightMultiplier = 1.0; // 倍率，UI 顯示 400（1.0 × 400）
-  static const _defaultLineHeight = 1.0;
-  static const _defaultParagraphSpacing = 10.0;
-  static const _defaultFirstLineIndent = 2.0;
-  static const _defaultLetterSpacing = 0.0;
-  static const _defaultMarginTop = 32.0;
-  static const _defaultMarginBottom = 16.0;
-  static const _defaultMarginLeft = 24.0;
-  static const _defaultMarginRight = 24.0;
-
-  late String? _fontFamily;
-  // 標題字型（epic-68）：null＝跟隨主字型；下拉在字型卡片，_currentDraft／didUpdateWidget 同步。
-  late String? _headingFontFamily;
-  late double _fontSize;
-  late bool _fontSizeOverridden;
-  late double _fontWeightMultiplier;
-  late bool _fontWeightOverridden;
-  late double _lineHeight;
-  late bool _lineHeightOverridden;
-  late double _paragraphSpacing;
-  late bool _paragraphSpacingOverridden;
-
-  /// 首行縮排（epic-65 Issue 1）：開關狀態與上次的數值分開存。開關關閉時
-  /// `_currentDraft` 送出 `null`（不產生任何 CSS），但保留數值，讓使用者
-  /// 重新打開時回到原本的字數。
-  late double _firstLineIndent;
-  late bool _firstLineIndentOn;
-  late double _letterSpacing;
-  late bool _letterSpacingOverridden;
-  late double _marginTop;
-  late double _marginBottom;
-  late double _marginLeft;
-  late double _marginRight;
-  late EpubTextAlign? _textAlign;
-  late bool _publisherStyles;
-  late WritingMode? _writingModeOverride;
-  late PageTurnMode? _pageTurnModeOverride;
-  late ScreenOrientationSetting? _screenOrientationOverride;
-  late TextConversionMode? _textConversionOverride;
-  late bool _showHeader;
-  late bool _showFooter;
-  late bool _fullscreen;
-  late ColumnMode _columnMode;
-  late double _columnSize;
+  // 標題字型（epic-68）：null＝跟隨主字型；下拉在字型卡片，由 _draft 透過
+  // ReaderSettingsDraft.fromPrefs／toPrefs 與 didUpdateWidget 同步。
+  // 首行縮排（epic-65 Issue 1）：開關狀態與上次的數值分開存於 _draft。
+  // 開關關閉時 _draft.toPrefs() 送出 null（不產生任何 CSS），但保留數值，
+  // 讓使用者重新打開時回到原本的字數。
+  late ReaderSettingsDraft _draft;
 
   late ReaderColors _readerColors;
   late final TextEditingController _bgHexController;
@@ -143,41 +102,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _readerColors = widget.readerColors;
     _bgHexController = TextEditingController();
     _textHexController = TextEditingController();
-    _fontFamily = widget.prefs.fontFamily;
-    _headingFontFamily = widget.prefs.headingFontFamily;
-    _fontSize = widget.prefs.fontSize != null
-        ? (widget.prefs.fontSize! * 16.0).roundToDouble()
-        : _defaultFontSize;
-    _fontSizeOverridden = widget.prefs.fontSize != null;
-    _fontWeightMultiplier =
-        widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
-    _fontWeightOverridden = widget.prefs.fontWeight != null;
-    _lineHeight = widget.prefs.lineHeight ?? _defaultLineHeight;
-    _lineHeightOverridden = widget.prefs.lineHeight != null;
-    _paragraphSpacing = widget.prefs.paragraphSpacing != null
-        ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
-        : _defaultParagraphSpacing;
-    _paragraphSpacingOverridden = widget.prefs.paragraphSpacing != null;
-    _firstLineIndent =
-        widget.prefs.firstLineIndent ?? _defaultFirstLineIndent;
-    _firstLineIndentOn = widget.prefs.firstLineIndent != null;
-    _letterSpacing = widget.prefs.letterSpacing ?? _defaultLetterSpacing;
-    _letterSpacingOverridden = widget.prefs.letterSpacing != null;
-    _marginTop = widget.prefs.marginTop ?? _defaultMarginTop;
-    _marginBottom = widget.prefs.marginBottom ?? _defaultMarginBottom;
-    _marginLeft = widget.prefs.marginLeft ?? _defaultMarginLeft;
-    _marginRight = widget.prefs.marginRight ?? _defaultMarginRight;
-    _textAlign = widget.prefs.textAlign;
-    _publisherStyles = widget.prefs.publisherStyles ?? true;
-    _writingModeOverride = widget.prefs.writingModeOverride;
-    _pageTurnModeOverride = widget.prefs.pageTurnModeOverride;
-    _screenOrientationOverride = widget.prefs.screenOrientationOverride;
-    _textConversionOverride = widget.prefs.textConversionOverride;
-    _showHeader = widget.prefs.showHeader ?? false;
-    _showFooter = widget.prefs.showFooter ?? false;
-    _fullscreen = widget.prefs.fullscreen ?? false;
-    _columnMode = widget.prefs.columnMode ?? ColumnMode.auto;
-    _columnSize = widget.prefs.columnSize ?? 720.0;
+    _draft = ReaderSettingsDraft.fromPrefs(widget.prefs);
   }
 
   @override
@@ -185,41 +110,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     super.didUpdateWidget(oldWidget);
     if (widget.prefs != oldWidget.prefs) {
       setState(() {
-        _fontFamily = widget.prefs.fontFamily;
-        _headingFontFamily = widget.prefs.headingFontFamily;
-        _fontSize = widget.prefs.fontSize != null
-            ? (widget.prefs.fontSize! * 16.0).roundToDouble()
-            : _defaultFontSize;
-        _fontSizeOverridden = widget.prefs.fontSize != null;
-        _fontWeightMultiplier =
-            widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
-        _fontWeightOverridden = widget.prefs.fontWeight != null;
-        _lineHeight = widget.prefs.lineHeight ?? _defaultLineHeight;
-        _lineHeightOverridden = widget.prefs.lineHeight != null;
-        _paragraphSpacing = widget.prefs.paragraphSpacing != null
-            ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
-            : _defaultParagraphSpacing;
-        _paragraphSpacingOverridden = widget.prefs.paragraphSpacing != null;
-        _firstLineIndent =
-            widget.prefs.firstLineIndent ?? _defaultFirstLineIndent;
-        _firstLineIndentOn = widget.prefs.firstLineIndent != null;
-        _letterSpacing = widget.prefs.letterSpacing ?? _defaultLetterSpacing;
-        _letterSpacingOverridden = widget.prefs.letterSpacing != null;
-        _marginTop = widget.prefs.marginTop ?? _defaultMarginTop;
-        _marginBottom = widget.prefs.marginBottom ?? _defaultMarginBottom;
-        _marginLeft = widget.prefs.marginLeft ?? _defaultMarginLeft;
-        _marginRight = widget.prefs.marginRight ?? _defaultMarginRight;
-        _textAlign = widget.prefs.textAlign;
-        _publisherStyles = widget.prefs.publisherStyles ?? true;
-        _writingModeOverride = widget.prefs.writingModeOverride;
-        _pageTurnModeOverride = widget.prefs.pageTurnModeOverride;
-        _screenOrientationOverride = widget.prefs.screenOrientationOverride;
-        _textConversionOverride = widget.prefs.textConversionOverride;
-        _showHeader = widget.prefs.showHeader ?? false;
-        _showFooter = widget.prefs.showFooter ?? false;
-        _fullscreen = widget.prefs.fullscreen ?? false;
-        _columnMode = widget.prefs.columnMode ?? ColumnMode.auto;
-        _columnSize = widget.prefs.columnSize ?? 720.0;
+        _draft = ReaderSettingsDraft.fromPrefs(widget.prefs);
       });
     }
     if (widget.readerColors != oldWidget.readerColors) {
@@ -269,10 +160,6 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     }
   }
 
-  double _toMultiplier(double value, double base) {
-    return ((value / base) * 10000).round() / 10000;
-  }
-
   /// 首行縮排數值顯示（0.5 步進）：整數不帶小數（`2` 而非 `2.0`），
   /// 半字保留一位（`0.5`）。l10n 的 `count` 佔位符是字串型別，小數值
   /// 若用 int 會在編譯期失敗、用 double 會顯示成 `2.0`。
@@ -282,48 +169,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         : value.toStringAsFixed(1);
   }
 
-  /// **epic-28-reader-settings-enhancements Issue 4 審查回應**：這裡回傳的
-  /// `null`（未覆寫）不只影響本書畫面即時渲染，也會被 [_buildLayoutPresetSection]
-  /// 的「另存為新預設集」／「複製到其他書籍」原封不動存進 [LayoutPreset]／
-  /// 寫進目標書籍——`BookReaderPrefsRepository.save()`／`saveMultiple()`
-  /// 是「整列覆寫」語意（`INSERT OR REPLACE`，見該檔案 class doc），並非
-  /// 逐欄位合併。因此：使用者若存一個只調整過部分欄位的預設集，套用到
-  /// 另一本已有自訂覆寫值的書籍時，本欄位若仍是未覆寫狀態，會把目標書籍
-  /// 對應欄位一併清空回該書自己的原生樣式，不是只套用預設集裡「有值」的
-  /// 那幾項。這是「整列覆寫」既有設計（Epic 28 Issue 3 上線時就如此）與
-  /// 本次修復（未觸碰欄位正確維持 `null`）疊加後的預期結果，不是缺陷——
-  /// 比修復前「未觸碰欄位一律凍結成當時滑桿顯示的預設數字」更符合直覺，
-  /// 但屬於容易被誤判為回歸的跨 Issue 行為，記錄於此供日後排查參考。
-  BookReaderPrefs get _currentDraft => BookReaderPrefs(
-    fontFamily: _fontFamily,
-    headingFontFamily: _headingFontFamily,
-    fontSize: _fontSizeOverridden ? _toMultiplier(_fontSize, 16.0) : null,
-    fontWeight: _fontWeightOverridden ? _fontWeightMultiplier : null,
-    lineHeight: _lineHeightOverridden ? _lineHeight : null,
-    paragraphSpacing: _paragraphSpacingOverridden
-        ? _toMultiplier(_paragraphSpacing, 10.0)
-        : null,
-    firstLineIndent: _firstLineIndentOn ? _firstLineIndent : null,
-    letterSpacing: _letterSpacingOverridden ? _letterSpacing : null,
-    marginTop: _marginTop,
-    marginBottom: _marginBottom,
-    marginLeft: _marginLeft,
-    marginRight: _marginRight,
-    textAlign: _textAlign,
-    publisherStyles: _publisherStyles,
-    writingModeOverride: _writingModeOverride,
-    pageTurnModeOverride: _pageTurnModeOverride,
-    screenOrientationOverride: _screenOrientationOverride,
-    textConversionOverride: _textConversionOverride,
-    showHeader: _showHeader,
-    showFooter: _showFooter,
-    fullscreen: _fullscreen,
-    columnMode: _columnMode,
-    columnSize: _columnSize,
-  );
-
   void _notifyChanged() {
-    widget.onChanged(_currentDraft);
+    widget.onChanged(_draft.toPrefs());
   }
 
   @override
@@ -436,12 +283,12 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   /// 【不可逆的技術決策】以下 5 個 `_buildXxxTab()` 方法（文字／邊界／
   /// 呈現／佈景／預設集）僅是本 State 的 `build()` 展示分支，一律不得抽成獨立
-  /// `StatefulWidget`。Issue 4 新增的 5 個「是否已覆寫」旗標（`_fontSizeOverridden`
-  /// 等）與其餘全部草稿狀態皆留在 `_ReaderSettingsSheetState` 根層級，這些方法
-  /// 只是直接讀寫同一組欄位——若日後為了重用或拆檔而把某個頁籤抽成獨立
-  /// StatefulWidget，該旗標會變成兩份不同 State 各自管理，Tab 切換時容易被
-  /// 意外重建/遺失（epic-28-reader-settings-enhancements Issue 5 審查，詳見
-  /// design.md「2026-08-15 追加」審查回應 Important #3）。
+  /// `StatefulWidget`。Issue 4 新增的 5 個「是否已覆寫」旗標（`fontSize.overridden`
+  /// 等）與其餘全部草稿狀態皆留在 `_ReaderSettingsSheetState` 根層級（由 `_draft`
+  /// 統一持有），這些方法只是直接讀寫同一份草稿——若日後為了重用或拆檔而把某個
+  /// 頁籤抽成獨立 StatefulWidget，該旗標會變成兩份不同 State 各自管理，Tab 切換
+  /// 時容易被意外重建/遺失（epic-28-reader-settings-enhancements Issue 5 審查，
+  /// 詳見 design.md「2026-08-15 追加」審查回應 Important #3）。
   Widget _buildTextContentTab() {
     final l10n = AppLocalizations.of(context)!;
     return ListView(
@@ -453,100 +300,90 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _buildSliderRow(
           keyPrefix: 'reader_settings_font_size',
           label: l10n.readerSettingsFontSizeLabel,
-          value: _fontSize,
+          value: _draft.fontSize.value,
           min: 12,
           max: 80,
           step: 1,
-          displayValue: _fontSize.round().toString(),
-          isOverridden: _fontSizeOverridden,
+          displayValue: _draft.fontSize.value.round().toString(),
+          isOverridden: _draft.fontSize.overridden,
           onReset: () => setState(() {
-            _fontSizeOverridden = false;
-            _fontSize = _defaultFontSize;
+            _draft.fontSize.reset();
             _notifyChanged();
           }),
           onChanged: (v) => setState(() {
-            _fontSize = v;
-            _fontSizeOverridden = true;
+            _draft.fontSize.set(v);
             _notifyChanged();
           }),
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_font_weight',
           label: l10n.readerSettingsFontWeightLabel,
-          value: _fontWeightMultiplier * 400,
+          value: _draft.fontWeight.value * 400,
           min: 300,
           max: 900,
           step: 100,
-          displayValue: (_fontWeightMultiplier * 400).round().toString(),
-          isOverridden: _fontWeightOverridden,
+          displayValue: (_draft.fontWeight.value * 400).round().toString(),
+          isOverridden: _draft.fontWeight.overridden,
           onReset: () => setState(() {
-            _fontWeightOverridden = false;
-            _fontWeightMultiplier = _defaultFontWeightMultiplier;
+            _draft.fontWeight.reset();
             _notifyChanged();
           }),
           onChanged: (v) => setState(() {
-            _fontWeightMultiplier = v / 400;
-            _fontWeightOverridden = true;
+            _draft.fontWeight.set(v / 400);
             _notifyChanged();
           }),
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_line_height',
           label: l10n.readerSettingsLineHeightLabel,
-          value: _lineHeight,
+          value: _draft.lineHeight.value,
           min: 0,
           max: 3,
           step: 0.1,
-          displayValue: _lineHeight.toStringAsFixed(1),
-          isOverridden: _lineHeightOverridden,
+          displayValue: _draft.lineHeight.value.toStringAsFixed(1),
+          isOverridden: _draft.lineHeight.overridden,
           onReset: () => setState(() {
-            _lineHeightOverridden = false;
-            _lineHeight = _defaultLineHeight;
+            _draft.lineHeight.reset();
             _notifyChanged();
           }),
           onChanged: (v) => setState(() {
-            _lineHeight = double.parse(v.toStringAsFixed(1));
-            _lineHeightOverridden = true;
+            _draft.lineHeight.set(double.parse(v.toStringAsFixed(1)));
             _notifyChanged();
           }),
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_paragraph_spacing',
           label: l10n.readerSettingsParagraphSpacingLabel,
-          value: _paragraphSpacing,
+          value: _draft.paragraphSpacing.value,
           min: 0,
           max: 40,
           step: 1,
-          displayValue: _paragraphSpacing.round().toString(),
-          isOverridden: _paragraphSpacingOverridden,
+          displayValue: _draft.paragraphSpacing.value.round().toString(),
+          isOverridden: _draft.paragraphSpacing.overridden,
           onReset: () => setState(() {
-            _paragraphSpacingOverridden = false;
-            _paragraphSpacing = _defaultParagraphSpacing;
+            _draft.paragraphSpacing.reset();
             _notifyChanged();
           }),
           onChanged: (v) => setState(() {
-            _paragraphSpacing = v;
-            _paragraphSpacingOverridden = true;
+            _draft.paragraphSpacing.set(v);
             _notifyChanged();
           }),
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_letter_spacing',
           label: l10n.readerSettingsLetterSpacingLabel,
-          value: _letterSpacing,
+          value: _draft.letterSpacing.value,
           min: -0.05,
           max: 1,
           step: 0.01,
-          displayValue: '${_letterSpacing.toStringAsFixed(2)}em',
-          isOverridden: _letterSpacingOverridden,
+          displayValue: '${_draft.letterSpacing.value.toStringAsFixed(2)}em',
+          isOverridden: _draft.letterSpacing.overridden,
           onReset: () => setState(() {
-            _letterSpacingOverridden = false;
-            _letterSpacing = _defaultLetterSpacing;
+            _draft.letterSpacing.reset();
             _notifyChanged();
           }),
           onChanged: (v) => setState(() {
-            _letterSpacing = double.parse(v.toStringAsFixed(2));
-            _letterSpacingOverridden = true;
+            _draft.letterSpacing.set(double.parse(v.toStringAsFixed(2)));
             _notifyChanged();
           }),
         ),
@@ -555,9 +392,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           child: SwitchListTile(
             key: const Key('reader_settings_disable_book_css'),
             title: Text(l10n.readerSettingsDisableBookCssLabel, style: TextStyle(fontWeight: FontWeight.bold)),
-            value: !_publisherStyles,
+            value: !_draft.publisherStyles,
             onChanged: (v) => setState(() {
-              _publisherStyles = !v;
+              _draft.publisherStyles = !v;
               _notifyChanged();
             }),
           ),
@@ -576,52 +413,52 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _buildSliderRow(
           keyPrefix: 'reader_settings_margin_top',
           label: l10n.readerSettingsMarginTopLabel,
-          value: _marginTop,
+          value: _draft.marginTop,
           min: 0,
           max: 120,
           step: 2,
-          displayValue: _marginTop.round().toString(),
+          displayValue: _draft.marginTop.round().toString(),
           onChanged: (v) => setState(() {
-            _marginTop = v;
+            _draft.marginTop = v;
             _notifyChanged();
           }),
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_margin_bottom',
           label: l10n.readerSettingsMarginBottomLabel,
-          value: _marginBottom,
+          value: _draft.marginBottom,
           min: 0,
           max: 120,
           step: 2,
-          displayValue: _marginBottom.round().toString(),
+          displayValue: _draft.marginBottom.round().toString(),
           onChanged: (v) => setState(() {
-            _marginBottom = v;
+            _draft.marginBottom = v;
             _notifyChanged();
           }),
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_margin_left',
           label: l10n.readerSettingsMarginLeftLabel,
-          value: _marginLeft,
+          value: _draft.marginLeft,
           min: 0,
           max: 120,
           step: 2,
-          displayValue: _marginLeft.round().toString(),
+          displayValue: _draft.marginLeft.round().toString(),
           onChanged: (v) => setState(() {
-            _marginLeft = v;
+            _draft.marginLeft = v;
             _notifyChanged();
           }),
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_margin_right',
           label: l10n.readerSettingsMarginRightLabel,
-          value: _marginRight,
+          value: _draft.marginRight,
           min: 0,
           max: 120,
           step: 2,
-          displayValue: _marginRight.round().toString(),
+          displayValue: _draft.marginRight.round().toString(),
           onChanged: (v) => setState(() {
-            _marginRight = v;
+            _draft.marginRight = v;
             _notifyChanged();
           }),
         ),
@@ -630,9 +467,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           child: SwitchListTile(
             key: const Key('reader_settings_show_header'),
             title: Text(l10n.readerShowHeaderLabel, style: TextStyle(fontWeight: FontWeight.bold)),
-            value: _showHeader,
+            value: _draft.showHeader,
             onChanged: (v) => setState(() {
-              _showHeader = v;
+              _draft.showHeader = v;
               _notifyChanged();
             }),
           ),
@@ -642,9 +479,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           child: SwitchListTile(
             key: const Key('reader_settings_show_footer'),
             title: Text(l10n.readerShowFooterLabel, style: TextStyle(fontWeight: FontWeight.bold)),
-            value: _showFooter,
+            value: _draft.showFooter,
             onChanged: (v) => setState(() {
-              _showFooter = v;
+              _draft.showFooter = v;
               _notifyChanged();
             }),
           ),
@@ -667,9 +504,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             child: SwitchListTile(
               key: const Key('reader_settings_fullscreen'),
               title: Text(l10n.readerFullscreenModeLabel, style: TextStyle(fontWeight: FontWeight.bold)),
-              value: _fullscreen,
+              value: _draft.fullscreen,
               onChanged: (v) => setState(() {
-                _fullscreen = v;
+                _draft.fullscreen = v;
                 _notifyChanged();
               }),
             ),
@@ -686,9 +523,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             key: const Key('reader_settings_first_line_indent_switch'),
             title: Text(l10n.readerSettingsFirstLineIndentLabel,
                 style: TextStyle(fontWeight: FontWeight.bold)),
-            value: _firstLineIndentOn,
+            value: _draft.firstLineIndentOn,
             onChanged: (v) => setState(() {
-              _firstLineIndentOn = v;
+              _draft.firstLineIndentOn = v;
               _notifyChanged();
             }),
           ),
@@ -697,17 +534,17 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _buildSliderRow(
           keyPrefix: 'reader_settings_first_line_indent',
           label: l10n.readerSettingsFirstLineIndentLabel,
-          value: _firstLineIndent,
+          value: _draft.firstLineIndent,
           min: 0,
           max: 4,
           step: 0.5,
           displayValue: l10n.readerSettingsFirstLineIndentValue(
-            _formatFirstLineIndent(_firstLineIndent),
+            _formatFirstLineIndent(_draft.firstLineIndent),
           ),
-          enabled: _firstLineIndentOn,
+          enabled: _draft.firstLineIndentOn,
           onChanged: (v) => setState(() {
-            _firstLineIndent = v;
-            _firstLineIndentOn = true;
+            _draft.firstLineIndent = v;
+            _draft.firstLineIndentOn = true;
             _notifyChanged();
           }),
         ),
@@ -1059,14 +896,14 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                     tooltip: tooltip,
                   );
                 }).toList(),
-            groupValue: _columnMode,
+            groupValue: _draft.columnMode,
             visualDensity: VisualDensity.compact,
             onSelected: (v) => setState(() {
-              _columnMode = v;
+              _draft.columnMode = v;
               _notifyChanged();
             }),
           ),
-          if (_columnMode == ColumnMode.auto) ...[
+          if (_draft.columnMode == ColumnMode.auto) ...[
             const SizedBox(height: 8),
             // 視覺還原：Reference 截圖只有「欄位大小」這一列有邊框卡片，
             // 「欄數」本身的三顆選項按鈕不用額外的外框包裹（各按鈕自身
@@ -1082,19 +919,19 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   Text(
                     widget.isEinkMode
                         ? l10n.readerSettingsColumnSizeLabel
-                         : l10n.readerSettingsColumnSizeWithValueLabel(_columnSize.round()),
+                        : l10n.readerSettingsColumnSizeWithValueLabel(_draft.columnSize.round()),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   widget.isEinkMode
                       ? EBStepper(
                           keyPrefix: 'reader_settings_column_size',
-                          value: _columnSize,
+                          value: _draft.columnSize,
                           min: 360.0,
                           max: 1440.0,
                           step: 60.0,
-                          displayValue: '${_columnSize.round()}px',
+                          displayValue: '${_draft.columnSize.round()}px',
                           onChanged: (v) => setState(() {
-                            _columnSize = v;
+                            _draft.columnSize = v;
                             _notifyChanged();
                           }),
                           mainAxisSize: MainAxisSize.max,
@@ -1102,13 +939,13 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                         )
                       : Slider(
                           key: const Key('reader_settings_column_size_slider'),
-                          value: _columnSize,
+                          value: _draft.columnSize,
                           min: 360.0,
                           max: 1440.0,
                           divisions: 18, // (1440 - 360) / 60 = 18
-                          label: '${_columnSize.round()}px',
+                          label: '${_draft.columnSize.round()}px',
                           onChanged: (v) => setState(() {
-                            _columnSize = v;
+                            _draft.columnSize = v;
                             _notifyChanged();
                           }),
                         ),
@@ -1170,10 +1007,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   // 該值不在選項中時 DropdownButton 會 assert 失敗，改顯示為「使用
                   // 書本字型」。與閱讀器渲染端共用 effectiveFamily，兩邊一致；只影響
                   // 顯示，不改寫偏好設定，字型下載後舊設定自然生效。
-                  value: fonts.effectiveFamily(_fontFamily),
+                  value: fonts.effectiveFamily(_draft.fontFamily),
                   items: _fontMenuItems(l10n, l10n.readerSettingsUseBookFontLabel),
                   onChanged: (value) => setState(() {
-                    _fontFamily = value;
+                    _draft.fontFamily = value;
                     _notifyChanged();
                   }),
                 ),
@@ -1191,10 +1028,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                 child: DropdownButton<String?>(
                   key: const Key('reader_settings_heading_font_family'),
                   isExpanded: true,
-                  value: fonts.effectiveFamily(_headingFontFamily),
+                  value: fonts.effectiveFamily(_draft.headingFontFamily),
                   items: _fontMenuItems(l10n, l10n.readerSettingsFollowBodyFontLabel),
                   onChanged: (value) => setState(() {
-                    _headingFontFamily = value;
+                    _draft.headingFontFamily = value;
                     _notifyChanged();
                   }),
                 ),
@@ -1389,10 +1226,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               tooltip: tooltip,
             );
           }).toList(),
-          groupValue: _textAlign ?? EpubTextAlign.justify,
+          groupValue: _draft.textAlign ?? EpubTextAlign.justify,
           visualDensity: VisualDensity.compact,
           onSelected: (v) => setState(() {
-            _textAlign = v;
+            _draft.textAlign = v;
             _notifyChanged();
           }),
         ),
@@ -1433,7 +1270,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             // Important #1】原本用「某個真實 enum 值當 sentinel 代表 null」
             // （例如 WritingMode.horizontal），但 options 清單裡剛好也有一個
             // 真實選項是 WritingMode.horizontal，兩者的 effectiveValue 會
-            // 撞在一起，導致 _writingModeOverride == null 時「採用書籍排版」
+            // 撞在一起，導致 _draft.writingModeOverride == null 時「採用書籍排版」
             // 與「強制橫排」兩顆 tile 同時判定為選中。改用
             // EBOptionChipItem<WritingMode?>，value 直接傳原始 nullable 值，
             // 不需要 fallback，null 只會跟 null 相等。
@@ -1445,10 +1282,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               tooltip: tooltip,
             );
           }).toList(),
-          groupValue: _writingModeOverride,
+          groupValue: _draft.writingModeOverride,
           visualDensity: VisualDensity.compact,
           onSelected: (v) => setState(() {
-            _writingModeOverride = v;
+            _draft.writingModeOverride = v;
             _notifyChanged();
           }),
         ),
@@ -1484,10 +1321,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               tooltip: tooltip,
             );
           }).toList(),
-          groupValue: _pageTurnModeOverride,
+          groupValue: _draft.pageTurnModeOverride,
           visualDensity: VisualDensity.compact,
           onSelected: (v) => setState(() {
-            _pageTurnModeOverride = v;
+            _draft.pageTurnModeOverride = v;
             _notifyChanged();
           }),
         ),
@@ -1535,10 +1372,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         Text(l10n.readerTextConversionOverrideLabel, style: TextStyle(fontWeight: FontWeight.bold)),
         EBOptionChipGroup<TextConversionMode?>(
           items: items,
-          groupValue: _textConversionOverride,
+          groupValue: _draft.textConversionOverride,
           visualDensity: VisualDensity.compact,
           onSelected: (v) => setState(() {
-            _textConversionOverride = v;
+            _draft.textConversionOverride = v;
             _notifyChanged();
           }),
         ),
@@ -1615,10 +1452,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               tooltip: tooltip,
             );
           }).toList(),
-          groupValue: _screenOrientationOverride,
+          groupValue: _draft.screenOrientationOverride,
           visualDensity: VisualDensity.compact,
           onSelected: (v) => setState(() {
-            _screenOrientationOverride = v;
+            _draft.screenOrientationOverride = v;
             _notifyChanged();
           }),
         ),
@@ -1650,7 +1487,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           width: double.infinity,
           child: FilledButton.icon(
             key: const Key('reader_settings_save_as_preset'),
-            onPressed: () => widget.onSaveAsPreset(_currentDraft),
+            onPressed: () => widget.onSaveAsPreset(_draft.toPrefs()),
             icon: const Icon(Icons.add),
             label: Text(l10n.readerSettingsSaveAsPresetButton),
           ),
@@ -1780,12 +1617,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// 欄位，見 `global_reader_prefs.dart`），顯示假數字會誤導使用者。
   Widget _buildResetToBookDefaultRow() {
     final l10n = AppLocalizations.of(context)!;
-    final isActive = !_fontSizeOverridden &&
-        !_fontWeightOverridden &&
-        !_lineHeightOverridden &&
-        !_paragraphSpacingOverridden &&
-        !_firstLineIndentOn &&
-        !_letterSpacingOverridden;
+    final isActive = _draft.isBookDefaultTextStyle;
     final colorScheme = Theme.of(context).colorScheme;
     final foregroundColor = isActive ? colorScheme.onPrimary : null;
     return _buildPresetRow(
@@ -1810,18 +1642,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   void _resetToBookDefault() {
     setState(() {
-      _fontSizeOverridden = false;
-      _fontSize = _defaultFontSize;
-      _fontWeightOverridden = false;
-      _fontWeightMultiplier = _defaultFontWeightMultiplier;
-      _lineHeightOverridden = false;
-      _lineHeight = _defaultLineHeight;
-      _paragraphSpacingOverridden = false;
-      _paragraphSpacing = _defaultParagraphSpacing;
-      _firstLineIndentOn = false;
-      _firstLineIndent = _defaultFirstLineIndent;
-      _letterSpacingOverridden = false;
-      _letterSpacing = _defaultLetterSpacing;
+      _draft.resetToBookDefault();
       _notifyChanged();
     });
   }
@@ -1855,7 +1676,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     }
     final preset = widget.layoutPresets[index];
     final colorScheme = Theme.of(context).colorScheme;
-    final isActive = preset.prefs == _currentDraft;
+    final isActive = preset.prefs == _draft.toPrefs();
     final foregroundColor = isActive ? colorScheme.onPrimary : null;
     return _buildPresetRow(
       rowKey: Key('reader_settings_preset_slot_${index}_row'),
