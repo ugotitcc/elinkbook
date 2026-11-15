@@ -1025,3 +1025,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 日誌中的 `HOST_LOOKUP net::ERR_NAME_NOT_RESOLVED` 是既有、無害的 `favicon.ico` 子資源（ADR 0043 已記錄）。
 - 裝置處理：App 資料夾只有約 11 KB 快取；測試一律 `--no-uninstall`、單份依序、之間停掉 Gradle daemon；結束後 `stay_on_while_plugged_in` 設回 0，並以 `main` 建置的 debug 版 `adb install -r` 還原（未用 `flutter install`）。
 
+
+**2026-11-15 後續項目 ① 已修**（分支 `fix/foliate-md-test`）：`foliate_md_test` 在 BooksPad 真機於 `main` 上重現（首次全新安裝通過，其後 3／3 失敗，錯誤為 `JsBridgeGateway` 的 `onTableOfContentsReady` 請求重疊）。根因是 `ReaderScreen` 開書後已在背景請求目錄（`reader_screen.dart` `_handleFoliateLayoutResolved`），測試又自己呼叫 `FoliateReaderView.loadTableOfContents`，閘道規定同一 handler 不可重疊。修法只動測試：改為點目錄按鈕、等 `TocBottomSheet` 出現後從畫面斷言（比照 `epub_toc_test.dart`），`lib/` 零差異。驗證：`flutter analyze` 乾淨；真機 3／3 通過。**同樣寫法仍在** `foliate_txt_test.dart:142`、`foliate_toc_footer_test.dart:66,129`（前者先前同一輪真機通過，屬時序偶發，尚未改）。
