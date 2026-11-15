@@ -346,6 +346,8 @@ class _LibraryScreenState extends State<LibraryScreen>
           LibraryMoveToGroupDialog(groups: _bookListController.groups),
     );
     if (destination == null) return;
+    // 對話框 await 期間畫面可能已被移除，後續 setState 前先確認（epic-54 Issue 40）。
+    if (!mounted) return;
     // 立即退出選取模式，而非等到逐筆寫入資料庫的迴圈結束後才退出：這個迴圈
     // 期間「移動到分類」按鈕仍會顯示在選取模式的 App Bar 上，若不提早退出，
     // 使用者理論上可以在寫入尚未完成時再次點擊，重複觸發本方法。
@@ -420,8 +422,7 @@ class _LibraryScreenState extends State<LibraryScreen>
     if (confirmed != true) return;
     // 比照既有 _openManageGroupsDialog() 的既有慣例：await 跳出 dialog 的
     // 操作之後、觸碰 state 之前先確認 widget 是否仍在畫面上（同檔案內
-    // 多數 await-dialog 後的路徑皆有此檢查，_moveSelectedBooksToGroup()
-    // 缺這道檢查屬既有缺口，不在本工單範圍內一併修正）。
+    // await-dialog 後的路徑皆有此檢查）。
     if (!mounted) return;
     // 比照既有 _moveSelectedBooksToGroup()：先退出選取模式，避免刪除迴圈
     // 執行期間使用者重複點擊觸發本方法。

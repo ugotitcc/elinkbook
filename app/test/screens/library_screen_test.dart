@@ -1587,6 +1587,56 @@ void main() {
     expect(find.text('書架'), findsOneWidget);
   });
 
+  testWidgets('「移動到分類」對話框開著時畫面被移除，之後選分類不拋例外也不寫入（epic-54 Issue 40 mounted 缺口）', (
+    tester,
+  ) async {
+    final book = _testBook(
+      id: '1',
+      title: 'A書',
+      groupName: BookGroup.uncategorized,
+    );
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+    await repository.upsertGroup('奇幻');
+    // 以 notifier 控制 host 是否還掛著 LibraryScreen；對話框在 root Navigator 上，
+    // 畫面被換掉後對話框仍存在，可模擬「await 期間 State 已 dispose」。
+    final showScreen = ValueNotifier<bool>(true);
+
+    await pumpLocalizedWidget(
+      tester,
+      ValueListenableBuilder<bool>(
+        valueListenable: showScreen,
+        builder: (_, visible, _) => visible
+            ? LibraryScreen(
+                appearance: fakeAppearanceDependencies(),
+                sources: fakeSourceDependencies(),
+                dependencies: fakeReaderFeatureDependencies(
+                  libraryRepository: repository,
+                  bookImportService: FakeBookImportService(),
+                  prefsManager: prefsManager,
+                ),
+              )
+            : const SizedBox.shrink(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_move_to_group_button')));
+    await tester.pumpAndSettle();
+
+    // 對話框開著時移除畫面
+    showScreen.value = false;
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('library_move_to_group_option_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    final books = await repository.listBooks();
+    expect(books.single.groupName, BookGroup.uncategorized);
+  });
+
   testWidgets('選取多本書後點擊「移動到分類」，選擇目的分類後所有已勾選書籍的分類皆更新', (tester) async {
     final bookA = _testBook(
       id: '1',
