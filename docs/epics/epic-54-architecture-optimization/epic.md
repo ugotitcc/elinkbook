@@ -1069,3 +1069,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - **`failed` 分支測試**：新增「升格（promoteToPermanent）失敗：回傳 failed，書不變」（以同名檔案佔用 `remote_books` 路徑製造失敗，路徑用 `appDocumentsDirectory()` 以相容 Windows）；補測試缺口，加入即通過。
 - **`serverNotFound` 提示測試**：新增 widget 測試「書的遠端站點已不存在時顯示找不到站點訊息」；加入即通過，已以突變（暫時把對應改成 `libraryRedownloadFailedMessage`）確認會失敗後還原。
 - 驗證：`flutter analyze` 乾淨；`remote_book_redownload_test.dart`＋`library_screen_test.dart` 153 項通過；`check_l10n_hardcoded_strings.js` PASS。至此第五次檢視 Issue 38 的審查 Minor 全數處理完畢。
+
+**2026-11-15 Issue 38 已合併**（PR #434，合併提交 `2056936a`）。完整 `flutter test`（最終提交 `8ec92a9b`）5274 通過、1 略過、1 失敗：`pdf_reader_view_filters_test` 的「bold overlay 同時有多頁需要加粗運算時，各頁互不取消」；該檔單獨重跑 3／3 通過、本分支未動 `app/lib/reader`，判定為整套並行時的偶發失敗（同 Issue 35），未查根因。審查的 Minor 已全數處理。**未驗證**：真機對真實 OPDS 伺服器的重新下載。Issue 39（版面設定草稿）、Issue 40（書架單本／批次操作殼）仍待 `/grilling`。
