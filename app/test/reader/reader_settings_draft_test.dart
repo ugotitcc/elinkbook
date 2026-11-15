@@ -193,5 +193,27 @@ void main() {
       draft.resetToBookDefault();
       expect(draft.isBookDefaultTextStyle, isTrue);
     });
+
+    test('四邊邊距用不同值往返：上下左右不會對調', () {
+      final draft = ReaderSettingsDraft.fromPrefs(
+        const BookReaderPrefs(
+          marginTop: 11,
+          marginBottom: 22,
+          marginLeft: 33,
+          marginRight: 44,
+        ),
+      );
+
+      expect(draft.marginTop, 11);
+      expect(draft.marginBottom, 22);
+      expect(draft.marginLeft, 33);
+      expect(draft.marginRight, 44);
+
+      final out = draft.toPrefs();
+      expect(out.marginTop, 11);
+      expect(out.marginBottom, 22);
+      expect(out.marginLeft, 33);
+      expect(out.marginRight, 44);
+    });
   });
 }

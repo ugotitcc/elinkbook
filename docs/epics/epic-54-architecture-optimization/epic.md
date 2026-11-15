@@ -1099,7 +1099,7 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
   - 新增 `app/lib/reader/reader_settings_draft.dart`（`OverridableValue` 與 `ReaderSettingsDraft`），收攏 23 個流式欄位狀態、預設值具現化、倍率與 UI 刻度雙向換算、`resetToBookDefault()`（6 欄位）與 `isBookDefaultTextStyle`。
   - 新增 `app/test/reader/reader_settings_draft_test.dart`（11 項單元測試，覆蓋空 prefs 具現化、種子往返與 12 欄清 null、倍率換算與取整、首行縮排 `0` vs `null` 邊界、6 欄位重置與 `isBookDefaultTextStyle` 逐欄檢查）。
   - 修改 `app/lib/screens/reader_settings_sheet.dart`：State 改持單一 `_draft`，移除約 30 個手寫欄位與 `_toMultiplier`／`_currentDraft`；保留 UI 暫態（`_readerColors`、Hex 控制器與錯誤訊息）以及滑桿既有 UI 端換算（`fontWeight` `× 400`／`÷ 400`、`lineHeight` `toStringAsFixed(1)`、`letterSpacing` `toStringAsFixed(2)`）。
-- **與設計決策差異**：無行為差異。註：`CONTEXT.md` 詞條「設定草稿（Settings Draft）」待後續補登或隨相關文件更新（本輪依計畫範圍僅更新 `epic.md`、`issues.md`、`docs/epics.md`）。
+- **與設計決策差異**：無行為差異。註：`CONTEXT.md` 詞條「設定草稿（Settings Draft）」已於設計決策定案時（`9efe5355`）加入，本輪未再改動。
 - **驗證結果**：
   - `flutter analyze`：`No issues found!`
   - `node tool/check_l10n_hardcoded_strings.js` 與 `node tool/check_integration_keys.js`：皆 PASS

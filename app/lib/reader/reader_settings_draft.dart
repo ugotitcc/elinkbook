@@ -8,7 +8,9 @@ import 'package:elinkbook/reader/writing_mode.dart';
 
 /// 「值＋是否已覆寫」成對欄位的值物件。
 ///
-/// [value] 代表 UI 顯示與互動用的刻度（非資料庫儲存的倍率）；
+/// [value] 的意義依欄位而異：字級、段距是 UI 刻度（草稿內與儲存倍率換算，
+/// 16／10 的倍數）；字重（倍率，UI 的 ×400 在面板）、行距、字距的 [value]
+/// 就是儲存值，草稿不換算。
 /// 未覆寫時以 [defaultValue] 作為滑桿初始位置，且輸出 [BookReaderPrefs]
 /// 時對應欄位會維持 `null`。
 class OverridableValue {
@@ -129,29 +131,76 @@ class ReaderSettingsDraft {
   /// 尚未設定雙欄切換寬度閾值時的預設值。
   static const double defaultColumnSize = 720.0;
 
+  /// 內文字型；`null` 表示跟隨書本。
   String? fontFamily;
+
+  /// 標題字型；`null` 表示跟隨主字型。
   String? headingFontFamily;
+
+  /// 字級（UI 刻度，儲存倍率 ×16）。
   final OverridableValue fontSize;
+
+  /// 字重倍率（預設 1.0；UI 的 ×400 在面板，不在草稿）。
   final OverridableValue fontWeight;
+
+  /// 行距（儲存值，不換算）。
   final OverridableValue lineHeight;
+
+  /// 段距（UI 刻度，儲存倍率 ×10）。
   final OverridableValue paragraphSpacing;
+
+  /// 首行縮排字數；關閉時仍保留數字，重新開啟可沿用。
   double firstLineIndent;
+
+  /// 首行縮排是否開啟（`0` 也算開啟）。
   bool firstLineIndentOn;
+
+  /// 字距（儲存值，不換算）。
   final OverridableValue letterSpacing;
+
+  /// 上邊距。
   double marginTop;
+
+  /// 下邊距。
   double marginBottom;
+
+  /// 左邊距。
   double marginLeft;
+
+  /// 右邊距。
   double marginRight;
+
+  /// 文字對齊；`null` 表示跟隨書本。
   EpubTextAlign? textAlign;
+
+  /// 是否套用出版社樣式（書本 CSS）。
   bool publisherStyles;
+
+  /// 書寫方向覆寫；`null` 表示自動偵測。
   WritingMode? writingModeOverride;
+
+  /// 翻頁模式覆寫；`null` 表示跟隨全域設定。
   PageTurnMode? pageTurnModeOverride;
+
+  /// 螢幕方向覆寫；`null` 表示跟隨全域設定。
   ScreenOrientationSetting? screenOrientationOverride;
+
+  /// 繁簡轉換覆寫；`null` 表示跟隨全域設定。
   TextConversionMode? textConversionOverride;
+
+  /// 是否顯示頁首。
   bool showHeader;
+
+  /// 是否顯示頁尾。
   bool showFooter;
+
+  /// 是否全螢幕。
   bool fullscreen;
+
+  /// 分欄模式。
   ColumnMode columnMode;
+
+  /// 自動分欄的寬度閾值。
   double columnSize;
 
   static double _toMultiplier(double value, double base) {
