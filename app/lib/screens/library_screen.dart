@@ -10,9 +10,7 @@ import '../reader/page_turn_mode.dart';
 import '../reader/text_conversion.dart';
 import '../reader/text_conversion_mode.dart';
 import '../reader/writing_mode.dart';
-import '../remote/opds_types.dart';
-import '../remote/remote_book_downloader.dart';
-import '../remote/remote_server_profile.dart';
+import '../remote/remote_book_redownload.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import 'appearance_dependencies.dart';
@@ -502,21 +500,15 @@ class _LibraryScreenState extends State<LibraryScreen>
   /// spec.md「下載與快取生命週期」「重新下載」）：直接重用該書
   /// [Book.remoteDownloadUrl]（上次下載成功時已存的絕對 URL），不重新
   /// `fetchFeed()` 反查目錄——OPDS 協議不保證支援依 ID 反查單一條目。
-  /// 下載暫存/永久落地兩段式流程比照 Issue 2 `RemoteCatalogScreen`
-  /// `_DownloadQueueDialogState._downloadOne()` 既有模式（暫存目錄→複製
-  /// 到永久 `remote_books/` 目錄→刪除暫存），避免把永久 `filePath` 指向
-  /// OS 可回收的暫存路徑。
+  ///
+  /// 下載、升格、寫書庫、標索引整段流程已收進 [redownloadBook]
+  /// （epic-54 Issue 38）；本方法只負責確認對話框、重複點擊防護、提示文字
+  /// 與重載書單。`await` 回來後先檢查 `mounted`：離開畫面時下載與寫庫仍已
+  /// 完成，只是不再顯示提示、不再重載。
   Future<void> _handleRedownload(Book book) async {
-    final remoteServerRepository = widget.sources.remoteServerRepository;
-    final createOpdsClient = widget.sources.createOpdsClient;
-    final remoteServerId = book.remoteServerId;
-    final remoteDownloadUrl = book.remoteDownloadUrl;
-    if (remoteServerId == null || remoteDownloadUrl == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.libraryRemoteDisabledMessage),
-        ),
-      );
+    // 缺遠端資訊：在確認對話框「之前」就提示，不讓使用者先按確認才被拒絕。
+    if (!isRedownloadable(book)) {
+      _showRedownloadMessage(AppLocalizations.of(context)!.libraryRemoteDisabledMessage);
       return;
     }
     if (_redownloadingBookIds.contains(book.id)) return;
@@ -527,88 +519,36 @@ class _LibraryScreenState extends State<LibraryScreen>
     if (confirmed != true) return;
 
     _redownloadingBookIds.add(book.id);
-    // 〔審查 review-plan-issue-4.md Minor 採納〕宣告在 try 外，讓 catch
-    // 區塊也能存取，用於下方「copy 到永久目錄中途失敗」時的暫存檔清理
-    // ——比照 Issue 2 `_DownloadQueueDialogState._downloadOne()` 既有的
-    // 同一防禦手法（`review-plan-issue-2.md` Finding 3）。
-    String? tempPath;
+    final RedownloadOutcome outcome;
     try {
-      final servers = await remoteServerRepository.listServers();
-      RemoteServerProfile? server;
-      for (final s in servers) {
-        if (s.id == remoteServerId) {
-          server = s;
-          break;
-        }
-      }
-      if (server == null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)!.libraryRemoteServerNotFoundMessage,
-            ),
-          ),
-        );
-        return;
-      }
-      final password = await remoteServerRepository.loadPassword(
-        remoteServerId,
-      );
-      final client = createOpdsClient();
-
-      tempPath = await downloadToTempFile(
-        client: client,
-        server: server,
-        acquisition: OpdsAcquisition(
-          href: remoteDownloadUrl,
-          format: book.format,
-        ),
-        format: book.format,
-        password: password,
-      );
-
-      final permanentPath = await promoteToPermanent(tempPath);
-
-      final updatedBook = book.copyWith(
-        filePath: permanentPath,
-        isDownloaded: true,
-      );
-      await widget.dependencies.libraryRepository.updateBook(updatedBook);
-      // epic-10-search Issue 2（spec.md §7）：重新下載完成＝既有
-      // content_index_status 列已因先前的「移除本機快取」被清空（見本
-      // 計畫 Task 4），此處補上對應的 unsupported/pending 標記，讓這本
-      // 書重新回到正確的索引狀態。search-index 只是衍生資料，寫入失敗
-      // 不應讓使用者眼中「檔案已下載成功」被誤判為失敗
-      // （review-plan-issue-2.md M-1）。
-      try {
-        await widget.dependencies.fullTextSearchSettingsRepository
-            .handleBookAvailable(updatedBook);
-      } catch (_) {
-        // 靜默略過——檔案下載與資料庫標記更新才是核心操作，索引狀態可
-        // 日後透過「重建索引」補上。
-      }
-      if (!mounted) return;
-      await _bookListController.loadBooks();
-    } catch (_) {
-      // 〔審查 review-plan-issue-4.md Minor 採納〕downloadBook() 本身
-      // 失敗/取消時已經自行清過暫存檔（見 OpdsHttpClient 文件），但
-      // copy() 到永久目錄這一步若中途失敗（例如磁碟空間不足），暫存檔
-      // 仍會殘留在 remote_download_temp/ 底下——防禦性再清一次，確保
-      // 任何例外路徑都不留孤兒檔案。
-      if (tempPath != null) {
-        final leftover = File(tempPath);
-        if (await leftover.exists()) await leftover.delete();
-      }
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.libraryRedownloadFailedMessage),
-        ),
+      outcome = await redownloadBook(
+        book: book,
+        remoteServerRepository: widget.sources.remoteServerRepository,
+        libraryRepository: widget.dependencies.libraryRepository,
+        fullTextSearchSettingsRepository:
+            widget.dependencies.fullTextSearchSettingsRepository,
+        createOpdsClient: widget.sources.createOpdsClient,
       );
     } finally {
       _redownloadingBookIds.remove(book.id);
     }
+    if (!mounted) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    switch (outcome) {
+      case RedownloadOutcome.succeeded:
+        await _bookListController.loadBooks();
+      case RedownloadOutcome.notRemoteBook:
+        _showRedownloadMessage(l10n.libraryRemoteDisabledMessage);
+      case RedownloadOutcome.serverNotFound:
+        _showRedownloadMessage(l10n.libraryRemoteServerNotFoundMessage);
+      case RedownloadOutcome.failed:
+        _showRedownloadMessage(l10n.libraryRedownloadFailedMessage);
+    }
+  }
+
+  void _showRedownloadMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openManageGroupsDialog() async {
