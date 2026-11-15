@@ -1035,3 +1035,18 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - `foliate_toc_footer_test`：**不需修改**。它直接建構 `FoliateReaderView`、沒有 `ReaderScreen`，背景不會另外請求目錄，不會重疊；且需要斷言原始 `tocId`（面板看不到）。
 
 **2026-11-15 後續項目 ① 同類寫法處理已合併**（PR #432，合併提交 `61ff13cb`）：`foliate_txt_test` 已修，`foliate_toc_footer_test` 不需修改。後續項目 ① 全數完成。
+
+## Issue 38 設計決策（`/grilling` 定案，2026-11-15）
+
+來源：2026-11-15 第五次架構檢視（`/improve-codebase-architecture`）候選 1。**事實更正**：原判斷「重新下載與下載佇列各有一份同樣順序」不成立。`downloadToTempFile`／`promoteToPermanent` 早已是共用 module（`remote_book_downloader.dart`，epic-30 Issue 6）；`RemoteDownloadJob` 做的是新書匯入（指紋、去重、匯入），`LibraryScreen._handleRedownload` 做的是既有書更新。強度由 Strong 降為 Worth exploring：只有 1 個呼叫端，好處是畫面少約 70 行、規則脫離 widget 測試。
+
+1. **範圍**：把 `_handleRedownload` 的「查伺服器、讀密碼、建 OPDS client、下載、升格、`updateBook`、標索引」收成一個 module。**不**追求與下載佇列共用。
+2. **形式與位置**：頂層函式 `redownloadBook({book, remoteServerRepository, libraryRepository, fullTextSearchSettingsRepository, createOpdsClient})`，放 `app/lib/remote/remote_book_redownload.dart`，比照兄弟檔 `remote_book_downloader.dart`；依賴由參數傳入，不用 class（沒有跨次呼叫的狀態）。
+3. **回傳值**：列舉 `RedownloadOutcome { succeeded, notRemoteBook, serverNotFound, failed }`；例外不穿過 interface；module 不含 l10n 文字，畫面把列舉對應到三則 SnackBar（`libraryRemoteDisabledMessage`、`libraryRemoteServerNotFoundMessage`、`libraryRedownloadFailedMessage`）。
+4. **留在畫面**：確認對話框與行動數據提示、`isMobileDataConnection`、`_redownloadingBookIds`（重複點擊防護，屬按鈕狀態）、`mounted` 檢查、SnackBar、`loadBooks()`。
+5. **刪死碼**：`catch` 內「清 `tempPath`」刪除（`downloadBook` 與 `promoteToPermanent` 失敗時各自已清）。「索引標記失敗要吞掉」保留，放進 module，註解寫明刻意靜默、不加 `debugPrint`（索引為衍生資料，可由「重建索引」補）。
+6. **離開畫面**：維持現狀。module 不知道畫面存不存在，下載照常完成並寫書庫；畫面在 `await` 後自己檢查 `mounted`。
+7. **測試（換掉，不疊加）**：新增 `test/remote/remote_book_redownload_test.dart`，用 `FakeRemoteServerRepository`、`FakeOpdsClient`、`FakeLibraryRepository`、`FakePathProviderPlatform` 測四種結果、成功時更新 `filePath`／`isDownloaded` 且不新增書、`handleBookAvailable` 被呼叫、索引失敗被吞掉。`library_screen_test.dart` 的 6 個重新下載測試中，邏輯性的三個（成功更新、索引標記、缺網址）改由 module 測試接手並從 widget 測試刪除；留下取消、行動數據提示、失敗訊息對應。
+8. **文件與分支**：不寫 ADR（模組抽取，未改架構決定）；不新增 `CONTEXT.md` 詞條（沒有新概念）；計畫 `plans/plan-issue-38.md` 與實作同一分支 `epic-54-issue-38-redownload-module`、同一個 PR。
+
+**範圍外**：Issue 39（版面設定草稿）、Issue 40（書架操作殼）；`RemoteDownloadJob` 不動。
