@@ -13,6 +13,7 @@ class FakeLibraryRepository implements LibraryRepository {
     List<Book> initialBooks = const [],
     this.throwOnListBooks = false,
     this.detectedIsFixedLayout = false,
+    this.updateBookError,
   })  : _books = List.of(initialBooks),
         _groups = {
           BookGroup.uncategorized,
@@ -20,6 +21,9 @@ class FakeLibraryRepository implements LibraryRepository {
         };
 
   final bool throwOnListBooks;
+
+  /// 非 `null` 時 [updateBook] 拋出這個例外，模擬寫庫失敗（epic-54 Issue 38）。
+  final Object? updateBookError;
 
   /// 供測試模擬 [findByRemoteBookId] 拋出例外（例如暫時性 SQLite 錯誤），
   /// 驗證呼叫端的錯誤處理（epic-30-calibre-remote-library Issue 3，
@@ -54,6 +58,7 @@ class FakeLibraryRepository implements LibraryRepository {
 
   @override
   Future<void> updateBook(Book book) async {
+    if (updateBookError != null) throw updateBookError!;
     final index = _books.indexWhere((b) => b.id == book.id);
     if (index != -1) _books[index] = book;
   }

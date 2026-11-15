@@ -9,7 +9,12 @@ class FakeFullTextSearchSettingsRepository
     implements FullTextSearchSettingsRepository {
   FakeFullTextSearchSettingsRepository({
     Map<ContentIndexCategory, bool> initialEnabled = const {},
+    this.handleBookAvailableError,
   }) : _enabled = Map.of(initialEnabled);
+
+  /// 非 `null` 時 [handleBookAvailable] 記錄呼叫後拋出這個例外，供測試驗證
+  /// 呼叫端「索引標記失敗不影響主流程」（epic-54 Issue 38）。
+  final Object? handleBookAvailableError;
 
   final Map<ContentIndexCategory, bool> _enabled;
 
@@ -49,6 +54,7 @@ class FakeFullTextSearchSettingsRepository
   @override
   Future<void> handleBookAvailable(Book book) async {
     handleBookAvailableCalls.add(book);
+    if (handleBookAvailableError != null) throw handleBookAvailableError!;
   }
 
   @override

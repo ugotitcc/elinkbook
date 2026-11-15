@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' show sqrt;
@@ -20,7 +21,6 @@ import 'package:elinkbook/screens/library_paging.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/screens/library_search_screen.dart';
 
-import '../support/fake_full_text_search_settings_repository.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
@@ -3972,11 +3972,10 @@ void main() {
       expect(find.textContaining('行動數據'), findsOneWidget);
     });
 
-    testWidgets('確認後成功重新下載，更新 filePath/isDownloaded，不建立新的 Book 記錄', (
-      tester,
-    ) async {
+
+    testWidgets('同一本書在行動數據檢查尚未回來時連點兩次，只跳出一個確認對話框', (tester) async {
+      final gate = Completer<bool>();
       final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
-      final opdsClient = FakeOpdsClient();
       await pumpLocalizedWidget(
         tester,
         LibraryScreen(
@@ -3985,8 +3984,8 @@ void main() {
             remoteServerRepository: FakeRemoteServerRepository(
               initialServers: [server],
             ),
-            createOpdsClient: () => opdsClient,
-            isMobileDataConnection: () async => false,
+            createOpdsClient: () => FakeOpdsClient(),
+            isMobileDataConnection: () => gate.future,
           ),
           dependencies: fakeReaderFeatureDependencies(
             libraryRepository: repository,
@@ -3997,84 +3996,19 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // 行動數據檢查還沒回來就連點第二次：第二次必須被重複點擊防護擋下。
       await tester.tap(find.byKey(const Key('book_item_b1')));
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.byKey(const Key('library_redownload_confirm_button')),
-      );
       await tester.pump();
-
-      for (var i = 0; i < 30; i++) {
-        await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 50)),
-        );
-        await tester.pump();
-      }
-      await tester.pumpAndSettle();
-
-      final books = await repository.listBooks();
-      expect(books, hasLength(1));
-      expect(books.single.id, 'b1');
-      expect(books.single.isDownloaded, isTrue);
-      expect(books.single.filePath, isNot('/no/longer/exists.epub'));
-      expect(File(books.single.filePath).existsSync(), isTrue);
-      expect(opdsClient.downloadBookCalls, [
-        'http://192.168.1.100:8080/opds/download/1.epub',
-      ]);
-    });
-
-    testWidgets('重新下載完成後呼叫 fullTextSearchSettingsRepository.handleBookAvailable'
-        '（epic-10-search Issue 2）', (tester) async {
-      final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
-      final opdsClient = FakeOpdsClient();
-      final fullTextSearchSettingsRepository =
-          FakeFullTextSearchSettingsRepository();
-      await pumpLocalizedWidget(
-        tester,
-        LibraryScreen(
-          appearance: fakeAppearanceDependencies(),
-          sources: fakeSourceDependencies(
-            remoteServerRepository: FakeRemoteServerRepository(
-              initialServers: [server],
-            ),
-            createOpdsClient: () => opdsClient,
-            isMobileDataConnection: () async => false,
-          ),
-          dependencies: fakeReaderFeatureDependencies(
-            libraryRepository: repository,
-            bookImportService: FakeBookImportService(),
-            prefsManager: FakeReaderPrefsManager(),
-            fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
       await tester.tap(find.byKey(const Key('book_item_b1')));
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.byKey(const Key('library_redownload_confirm_button')),
-      );
       await tester.pump();
-
-      for (var i = 0; i < 30; i++) {
-        await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 50)),
-        );
-        await tester.pump();
-      }
+      gate.complete(false);
       await tester.pumpAndSettle();
 
       expect(
-        fullTextSearchSettingsRepository.handleBookAvailableCalls,
-        hasLength(1),
+        find.byKey(const Key('library_redownload_dialog')),
+        findsOneWidget,
       );
-      final calledWith =
-          fullTextSearchSettingsRepository.handleBookAvailableCalls.single;
-      expect(calledWith.id, 'b1');
-      expect(calledWith.isDownloaded, isTrue);
     });
-
     testWidgets('下載失敗時顯示錯誤訊息，書籍狀態不變', (tester) async {
       final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
       final opdsClient = FakeOpdsClient(downloadError: StateError('模擬下載失敗'));
@@ -4114,6 +4048,41 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('重新下載失敗，請稍後再試'), findsOneWidget);
+      final books = await repository.listBooks();
+      expect(books.single.isDownloaded, isFalse);
+      expect(books.single.filePath, '/no/longer/exists.epub');
+    });
+
+    testWidgets('書的遠端站點已不存在時顯示找不到站點訊息，書籍狀態不變', (tester) async {
+      final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
+          sources: fakeSourceDependencies(
+            // 站點清單是空的：pendingBook() 的 remoteServerId 'srv1' 找不到。
+            remoteServerRepository: FakeRemoteServerRepository(),
+            createOpdsClient: () => FakeOpdsClient(),
+            isMobileDataConnection: () async => false,
+          ),
+          dependencies: fakeReaderFeatureDependencies(
+            libraryRepository: repository,
+            bookImportService: FakeBookImportService(),
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_item_b1')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('library_redownload_confirm_button')),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.text('找不到對應的遠端書庫站點'), findsOneWidget);
       final books = await repository.listBooks();
       expect(books.single.isDownloaded, isFalse);
       expect(books.single.filePath, '/no/longer/exists.epub');
@@ -4162,6 +4131,10 @@ void main() {
       await tester.tap(find.byKey(const Key('book_item_b1')));
       await tester.pumpAndSettle();
 
+      expect(
+        find.byKey(const Key('library_redownload_dialog')),
+        findsNothing,
+      );
       expect(find.text('遠端書庫功能未啟用，無法重新下載'), findsOneWidget);
       expect(createCalls, 0);
     });

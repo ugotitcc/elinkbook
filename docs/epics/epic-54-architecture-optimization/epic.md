@@ -1035,3 +1035,37 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - `foliate_toc_footer_test`：**不需修改**。它直接建構 `FoliateReaderView`、沒有 `ReaderScreen`，背景不會另外請求目錄，不會重疊；且需要斷言原始 `tocId`（面板看不到）。
 
 **2026-11-15 後續項目 ① 同類寫法處理已合併**（PR #432，合併提交 `61ff13cb`）：`foliate_txt_test` 已修，`foliate_toc_footer_test` 不需修改。後續項目 ① 全數完成。
+
+## Issue 38 設計決策（`/grilling` 定案，2026-11-15）
+
+來源：2026-11-15 第五次架構檢視（`/improve-codebase-architecture`）候選 1。**事實更正**：原判斷「重新下載與下載佇列各有一份同樣順序」不成立。`downloadToTempFile`／`promoteToPermanent` 早已是共用 module（`remote_book_downloader.dart`，epic-30 Issue 6）；`RemoteDownloadJob` 做的是新書匯入（指紋、去重、匯入），`LibraryScreen._handleRedownload` 做的是既有書更新。強度由 Strong 降為 Worth exploring：只有 1 個呼叫端，好處是畫面少約 70 行、規則脫離 widget 測試。
+
+1. **範圍**：把 `_handleRedownload` 的「查伺服器、讀密碼、建 OPDS client、下載、升格、`updateBook`、標索引」收成一個 module。**不**追求與下載佇列共用。
+2. **形式與位置**：頂層函式 `redownloadBook({book, remoteServerRepository, libraryRepository, fullTextSearchSettingsRepository, createOpdsClient})`，放 `app/lib/remote/remote_book_redownload.dart`，比照兄弟檔 `remote_book_downloader.dart`；依賴由參數傳入，不用 class（沒有跨次呼叫的狀態）。
+3. **回傳值**：列舉 `RedownloadOutcome { succeeded, notRemoteBook, serverNotFound, failed }`；例外不穿過 interface；module 不含 l10n 文字，畫面把列舉對應到三則 SnackBar（`libraryRemoteDisabledMessage`、`libraryRemoteServerNotFoundMessage`、`libraryRedownloadFailedMessage`）。
+4. **留在畫面**：確認對話框與行動數據提示、`isMobileDataConnection`、`_redownloadingBookIds`（重複點擊防護，屬按鈕狀態）、`mounted` 檢查、SnackBar、`loadBooks()`。
+5. **刪死碼**：`catch` 內「清 `tempPath`」刪除（`downloadBook` 與 `promoteToPermanent` 失敗時各自已清）。「索引標記失敗要吞掉」保留，放進 module，註解寫明刻意靜默、不加 `debugPrint`（索引為衍生資料，可由「重建索引」補）。
+6. **離開畫面**：維持現狀。module 不知道畫面存不存在，下載照常完成並寫書庫；畫面在 `await` 後自己檢查 `mounted`。
+7. **測試（換掉，不疊加）**：新增 `test/remote/remote_book_redownload_test.dart`，用 `FakeRemoteServerRepository`、`FakeOpdsClient`、`FakeLibraryRepository`、`FakePathProviderPlatform` 測四種結果、成功時更新 `filePath`／`isDownloaded` 且不新增書、`handleBookAvailable` 被呼叫、索引失敗被吞掉。`library_screen_test.dart` 的 6 個重新下載測試中，邏輯性的三個（成功更新、索引標記、缺網址）改由 module 測試接手並從 widget 測試刪除；留下取消、行動數據提示、失敗訊息對應。
+8. **文件與分支**：不寫 ADR（模組抽取，未改架構決定）；不新增 `CONTEXT.md` 詞條（沒有新概念）；計畫 `plans/plan-issue-38.md` 與實作同一分支 `epic-54-issue-38-redownload-module`、同一個 PR。
+
+**範圍外**：Issue 39（版面設定草稿）、Issue 40（書架操作殼）；`RemoteDownloadJob` 不動。
+
+**2026-11-15 Issue 38 實作**（重新下載書籍收成一個 module；計畫 `plans/plan-issue-38.md`，Task 1～3 完成）：
+- 新增 `app/lib/remote/remote_book_redownload.dart`：`RedownloadOutcome { succeeded, notRemoteBook, serverNotFound, failed }`、`isRedownloadable(Book)`、`redownloadBook({book, remoteServerRepository, libraryRepository, fullTextSearchSettingsRepository, createOpdsClient})`。純 Dart，不接收 `BuildContext`、不含 l10n 文字。
+- `LibraryScreen._handleRedownload` 只剩：缺遠端資訊提示（在確認對話框之前）、重複點擊防護、行動數據與確認對話框、依 `RedownloadOutcome` 對應三則既有 SnackBar、成功後重載書單。刪除 `catch` 內死碼暫存檔清理；索引標記失敗維持靜默（註解寫明）。
+- 測試：新增 `test/remote/remote_book_redownload_test.dart` 9 項；`FakeFullTextSearchSettingsRepository` 加 `handleBookAvailableError`。`library_screen_test.dart` 刪除「成功更新」「索引標記」兩個 widget 測試（由 module 測試接手），保留 4 個。
+- **與設計決策的差異**：① 新增 `isRedownloadable`（module 內單一份條件，畫面在對話框前用它判斷，否則缺資訊會變成「先問再說不行」）；② 設計決策 7 原要連「缺網址」widget 測試一併刪除，改為保留——它是 `notRemoteBook` 對應到提示的唯一測試，並釘住「對話框之前」的順序，module 單元測試無法取代（`reviews/review-plan-issue-38.md` M-1 批准）。計畫審查另兩項：Step 4 補前置短路（I-1）、測試 7 改為「缺 `remoteServerId`」以免漏掉前置檢查時誤回 `serverNotFound`（I-2；未斷言 `listServers` 未被呼叫，假物件無計數，改用結果差異抓同一缺陷）；原測試 6（與測試 1 重複）刪除（M-2）。
+- 驗證：`flutter analyze` 乾淨；兩個 check 腳本 PASS；完整 `flutter test` 5271 通過、1 略過、0 失敗。
+- **未驗證**：未在真機對真實 OPDS 伺服器實測重新下載（只用假物件）。
+
+**2026-11-15 Issue 38 程式審查**（全新審查者，Critical 0／Important 0／Minor 5；另一份審查 `reviews/review-code-issue-38.md` 為 0／0／0，同意合併）：
+- **已修**：Minor 1——重複點擊守衛原本在確認之後才加入，`isMobileDataConnection()` 尚未回來時連點會疊出兩個確認對話框；改為第一個 `await` 之前就加入、`finally` 移除。新增 widget 測試「同一本書在行動數據檢查尚未回來時連點兩次，只跳出一個確認對話框」，修前 RED（找到 2 個對話框）、修後 GREEN。Minor 5——「缺網址」widget 測試補上明確的「對話框不存在」斷言（原 `review-plan-issue-38.md` M-1 引用的此斷言實際不存在）。
+- **延後（皆為既有行為或測試缺口，未修）**：`updateBook` 失敗時 `remote_books/` 下永久檔成孤兒；`failed` 的升格／`updateBook` 失敗分支無測試（`FakeLibraryRepository` 無 `updateBook` 錯誤注入）；`serverNotFound` 對應提示文字無 widget 測試。
+- 驗證：`flutter analyze` 乾淨；`library_screen_test.dart`＋`remote_book_redownload_test.dart` 150 項通過；`check_l10n_hardcoded_strings.js` PASS。
+
+**2026-11-15 Issue 38 延後 Minor 3 項已修**（同一分支，PR #434 追加提交）：
+- **永久檔孤兒**：`redownloadBook` 在 `updateBook` 失敗時刪除剛升格的 `remote_books/` 永久檔再回 `failed`。測試「updateBook 失敗：回傳 failed，書不變，且刪除剛升格的永久檔」修前 RED（目錄非空）、修後 GREEN。`FakeLibraryRepository` 新增 `updateBookError`。
+- **`failed` 分支測試**：新增「升格（promoteToPermanent）失敗：回傳 failed，書不變」（以同名檔案佔用 `remote_books` 路徑製造失敗，路徑用 `appDocumentsDirectory()` 以相容 Windows）；補測試缺口，加入即通過。
+- **`serverNotFound` 提示測試**：新增 widget 測試「書的遠端站點已不存在時顯示找不到站點訊息」；加入即通過，已以突變（暫時把對應改成 `libraryRedownloadFailedMessage`）確認會失敗後還原。
+- 驗證：`flutter analyze` 乾淨；`remote_book_redownload_test.dart`＋`library_screen_test.dart` 153 項通過；`check_l10n_hardcoded_strings.js` PASS。至此第五次檢視 Issue 38 的審查 Minor 全數處理完畢。
