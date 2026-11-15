@@ -1071,3 +1071,39 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - 驗證：`flutter analyze` 乾淨；`remote_book_redownload_test.dart`＋`library_screen_test.dart` 153 項通過；`check_l10n_hardcoded_strings.js` PASS。至此第五次檢視 Issue 38 的審查 Minor 全數處理完畢。
 
 **2026-11-15 Issue 38 已合併**（PR #434，合併提交 `2056936a`）。完整 `flutter test`（最終提交 `8ec92a9b`）5274 通過、1 略過、1 失敗：`pdf_reader_view_filters_test` 的「bold overlay 同時有多頁需要加粗運算時，各頁互不取消」；該檔單獨重跑 3／3 通過、本分支未動 `app/lib/reader`，判定為整套並行時的偶發失敗（同 Issue 35），未查根因。審查的 Minor 已全數處理。**未驗證**：真機對真實 OPDS 伺服器的重新下載。Issue 39（版面設定草稿）、Issue 40（書架單本／批次操作殼）仍待 `/grilling`。
+
+## Issue 39 設計決策（`/grilling` 定案，2026-11-15）
+
+來源：2026-11-15 第五次架構檢視候選 2；Issue 26 決策 10 明確把「設定面板草稿具現化原則涵蓋的面板本地狀態」留給本張。事實盤點（已核對 `reader_settings_sheet.dart`、`reader_screen.dart`、`reader_prefs_manager_impl.dart`、既有測試）：
+
+- `initState` 與 `didUpdateWidget` 各有約 30 行**逐行相同**的 prefs→欄位對應；`_currentDraft`（:297）反向對應；`_resetToBookDefault`（:1811）與「系統預設」列 `isActive`（:1783）各手寫同一份 6 欄位清單。`_notifyChanged()` 32 處呼叫。
+- `_currentDraft` 只重建 `BookReaderPrefs` 35 欄位中的 23 個，其餘 12 個（PDF、雙頁等）依設計清成 null（`全欄位保留守衛（Issue 10）` 釘住，測試輔助 `reflowableEpubFields()` 即那 23 欄）。`ReaderScreen._handlePrefsChanged` 把草稿整個換掉並整列寫入資料庫。
+- 6 個覆寫旗標欄位（字級、字重、行距、段距、字距、首行縮排）的「改值＝標為已覆寫、重置＝回預設並取消覆寫」規則散在約 10 個內嵌函式。
+- 面板有 138 個 widget 測試（3480 行），多數是「點 UI→看 `onChanged` 收到的 prefs」。`PdfSettingsSheet` 用 `copyWith`；`FxlSettingsSheet` 另有整列建構（只讀了開頭）。
+
+1. **範圍**：只重構，**完全保留現行行為**（包含 `?? false` 具現化與 12 欄清 null），以特徵測試鎖住。疑似缺陷（`showHeader`／`showFooter`／`fullscreen` 有全域預設卻用 `?? false`）另登 **Issue 41**，Issue 39 完成後再做，不混在重構裡。
+2. **module**：純 Dart 的 `ReaderSettingsDraft`，放 `app/lib/reader/reader_settings_draft.dart`。介面：`ReaderSettingsDraft.fromPrefs(BookReaderPrefs)`、`toPrefs()`、`resetToBookDefault()`、getter `isBookDefaultTextStyle`。**可變**物件（做成不可變要 23 參數 `copyWith`，會變成淺 module）。單位換算（字級 ×16、段距 ×10、四捨五入）與預設值常數收進草稿。
+3. **`OverridableValue`**：字級、字重、行距、段距、字距 5 個「值＋是否已覆寫」成對欄位包成小型值物件（`value`、`overridden`、`defaultValue`；`set(v)` 設值並標為已覆寫、`reset()` 回預設並取消覆寫）。首行縮排的「開關」語意不同（關閉時保留數字），維持獨立。`_buildSliderRow` 的 `onChanged`／`onReset` 直接呼叫這兩個方法。
+4. **重置規則**：`resetToBookDefault()` 與 `isBookDefaultTextStyle` 共用同一份 6 欄位清單（5 個 `OverridableValue` 加首行縮排），行為與現在完全相同，只動這 6 個。
+5. **State 只留 UI 暫態**：`_bgHexController`、`_textHexController`、色碼錯誤文字、`_readerColors`（走 `onReaderColorsChanged`，不屬於 `BookReaderPrefs`）、分頁位置。`BookReaderPrefs` 相關欄位全搬進草稿；`initState` 與 `didUpdateWidget` 都改為 `_draft = ReaderSettingsDraft.fromPrefs(widget.prefs)`（`didUpdateWidget` 在 prefs 變動時整個換掉草稿，與現行為一致）；`onSaveAsPreset` 與 `isActive` 比對改用 `_draft.toPrefs()`。
+6. **範圍外**：`PdfSettingsSheet`、`FxlSettingsSheet` 不動，不追求三面板共用草稿（Issue 26 與 `CONTEXT.md` 已定案 PDF 與 EPUB 的 nullable 語意不可合併）。
+7. **詞彙**：`CONTEXT.md` 新增詞條「設定草稿（Settings Draft）」，連結既有「設定面板草稿具現化原則」。
+8. **測試（換掉不疊加的反例）**：新增 `test/reader/reader_settings_draft_test.dart`（`fromPrefs` 換算與預設、`toPrefs` 反向、往返相等、`OverridableValue` 的 `set`／`reset`、`resetToBookDefault` 只動 6 欄位、12 個非流式欄位清成 null）。**138 個 widget 測試一個都不刪**：它們測的是畫面接線（與單元測試不同 seam），是重構的安全網；每個 Task 的每一步都跑 `reader_settings_sheet_test.dart` 維持全綠。
+9. **文件與分支**：不寫 ADR（模組抽取）；分支 `epic-54-issue-39-settings-draft`，計畫與實作同一分支同一個 PR。
+
+**範圍外**：Issue 41 的缺陷修法；`FxlSettingsSheet`／`PdfSettingsSheet`；`_buildSliderRow` 兩份收斂（Issue 26 已決定不收斂）。
+
+### Issue 39 實作紀錄（2026-11-16）
+
+- **實作內容**：
+  - 新增 `app/lib/reader/reader_settings_draft.dart`（`OverridableValue` 與 `ReaderSettingsDraft`），收攏 23 個流式欄位狀態、預設值具現化、倍率與 UI 刻度雙向換算、`resetToBookDefault()`（6 欄位）與 `isBookDefaultTextStyle`。
+  - 新增 `app/test/reader/reader_settings_draft_test.dart`（11 項單元測試，覆蓋空 prefs 具現化、種子往返與 12 欄清 null、倍率換算與取整、首行縮排 `0` vs `null` 邊界、6 欄位重置與 `isBookDefaultTextStyle` 逐欄檢查）。
+  - 修改 `app/lib/screens/reader_settings_sheet.dart`：State 改持單一 `_draft`，移除約 30 個手寫欄位與 `_toMultiplier`／`_currentDraft`；保留 UI 暫態（`_readerColors`、Hex 控制器與錯誤訊息）以及滑桿既有 UI 端換算（`fontWeight` `× 400`／`÷ 400`、`lineHeight` `toStringAsFixed(1)`、`letterSpacing` `toStringAsFixed(2)`）。
+- **與設計決策差異**：無行為差異。註：`CONTEXT.md` 詞條「設定草稿（Settings Draft）」已於設計決策定案時（`9efe5355`）加入，本輪未再改動。
+- **驗證結果**：
+  - `flutter analyze`：`No issues found!`
+  - `node tool/check_l10n_hardcoded_strings.js` 與 `node tool/check_integration_keys.js`：皆 PASS
+  - `flutter test test/screens/reader_settings_sheet_test.dart test/reader/reader_settings_draft_test.dart test/reader/layout_preset_flow_test.dart`：188／188 通過（含既有 138 個 widget 測試一個未刪）
+  - `flutter test test/screens/reader_screen_test.dart`：326／326 通過
+  - 完整 `flutter test`：5286 通過、1 略過、0 失敗
+- **未驗證**：未在真機操作版面設定面板的實際手感；Issue 41 疑似缺陷仍待重現。
