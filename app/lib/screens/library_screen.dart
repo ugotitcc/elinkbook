@@ -511,16 +511,17 @@ class _LibraryScreenState extends State<LibraryScreen>
       _showRedownloadMessage(AppLocalizations.of(context)!.libraryRemoteDisabledMessage);
       return;
     }
+    // 守衛在第一個 await 之前就加入：行動數據檢查與確認對話框期間再點同一本書
+    // 也會被擋下，避免疊出兩個對話框、重複下載。所有離開路徑都在 finally 移除。
     if (_redownloadingBookIds.contains(book.id)) return;
-
-    final isMobileData = await widget.sources.isMobileDataConnection();
-    if (!mounted) return;
-    final confirmed = await _confirmRedownload(book, isMobileData);
-    if (confirmed != true) return;
-
     _redownloadingBookIds.add(book.id);
     final RedownloadOutcome outcome;
     try {
+      final isMobileData = await widget.sources.isMobileDataConnection();
+      if (!mounted) return;
+      final confirmed = await _confirmRedownload(book, isMobileData);
+      if (confirmed != true) return;
+
       outcome = await redownloadBook(
         book: book,
         remoteServerRepository: widget.sources.remoteServerRepository,

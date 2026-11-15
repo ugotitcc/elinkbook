@@ -1058,3 +1058,8 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - **與設計決策的差異**：① 新增 `isRedownloadable`（module 內單一份條件，畫面在對話框前用它判斷，否則缺資訊會變成「先問再說不行」）；② 設計決策 7 原要連「缺網址」widget 測試一併刪除，改為保留——它是 `notRemoteBook` 對應到提示的唯一測試，並釘住「對話框之前」的順序，module 單元測試無法取代（`reviews/review-plan-issue-38.md` M-1 批准）。計畫審查另兩項：Step 4 補前置短路（I-1）、測試 7 改為「缺 `remoteServerId`」以免漏掉前置檢查時誤回 `serverNotFound`（I-2；未斷言 `listServers` 未被呼叫，假物件無計數，改用結果差異抓同一缺陷）；原測試 6（與測試 1 重複）刪除（M-2）。
 - 驗證：`flutter analyze` 乾淨；兩個 check 腳本 PASS；完整 `flutter test` 5271 通過、1 略過、0 失敗。
 - **未驗證**：未在真機對真實 OPDS 伺服器實測重新下載（只用假物件）。
+
+**2026-11-15 Issue 38 程式審查**（全新審查者，Critical 0／Important 0／Minor 5；另一份審查 `reviews/review-code-issue-38.md` 為 0／0／0，同意合併）：
+- **已修**：Minor 1——重複點擊守衛原本在確認之後才加入，`isMobileDataConnection()` 尚未回來時連點會疊出兩個確認對話框；改為第一個 `await` 之前就加入、`finally` 移除。新增 widget 測試「同一本書在行動數據檢查尚未回來時連點兩次，只跳出一個確認對話框」，修前 RED（找到 2 個對話框）、修後 GREEN。Minor 5——「缺網址」widget 測試補上明確的「對話框不存在」斷言（原 `review-plan-issue-38.md` M-1 引用的此斷言實際不存在）。
+- **延後（皆為既有行為或測試缺口，未修）**：`updateBook` 失敗時 `remote_books/` 下永久檔成孤兒；`failed` 的升格／`updateBook` 失敗分支無測試（`FakeLibraryRepository` 無 `updateBook` 錯誤注入）；`serverNotFound` 對應提示文字無 widget 測試。
+- 驗證：`flutter analyze` 乾淨；`library_screen_test.dart`＋`remote_book_redownload_test.dart` 150 項通過；`check_l10n_hardcoded_strings.js` PASS。
