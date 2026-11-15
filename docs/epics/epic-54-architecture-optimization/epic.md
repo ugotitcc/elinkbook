@@ -1109,3 +1109,8 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - **未驗證**：未在真機操作版面設定面板的實際手感；Issue 41 疑似缺陷仍待重現。
 
 **2026-11-16 Issue 39 已合併**（PR #435，合併提交 `2fc01d2a`）。程式審查（報告在本機 `reviews/review-code-issue-39.md`，該目錄被 `.gitignore` 忽略）無 Critical／Important，3 個 Minor 已處理（`2814634d`）。Issue 41 仍待重現，Issue 40 待 `/grilling`。
+
+### Issue 40 決議（2026-11-16 `/grilling`）
+
+評估後**不抽書架操作殼 module**：`LibraryBatchActions` 已是純邏輯並有測試，剩餘的殼每個方法約 5 行，抽出會變淺 module。只修真缺口：`_moveSelectedBooksToGroup` 在對話框 `await` 後缺 `mounted` 檢查，畫面此時被移除會在 `_exitSelectionMode` 的 `setState` 拋例外。已補檢查並以回歸測試守住（先確認紅燈再轉綠）。其餘 7 個方法不動；詳見 `plans/plan-issue-40.md`。
+**驗證**：`library_screen_test.dart`＋`library_batch_actions_test.dart` 149 通過、`flutter analyze` 乾淨；完整 `flutter test` 5286 通過、2 略過、1 失敗：`download_queue_controller_test` 的「刪除原暫存檔失敗不影響進入待確認」；該檔單獨重跑 28/28 通過、本分支未動 downloads，判定為整套並行時的偶發失敗，未查根因。
