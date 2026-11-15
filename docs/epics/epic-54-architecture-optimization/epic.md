@@ -1092,3 +1092,18 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 9. **文件與分支**：不寫 ADR（模組抽取）；分支 `epic-54-issue-39-settings-draft`，計畫與實作同一分支同一個 PR。
 
 **範圍外**：Issue 41 的缺陷修法；`FxlSettingsSheet`／`PdfSettingsSheet`；`_buildSliderRow` 兩份收斂（Issue 26 已決定不收斂）。
+
+### Issue 39 實作紀錄（2026-11-16）
+
+- **實作內容**：
+  - 新增 `app/lib/reader/reader_settings_draft.dart`（`OverridableValue` 與 `ReaderSettingsDraft`），收攏 23 個流式欄位狀態、預設值具現化、倍率與 UI 刻度雙向換算、`resetToBookDefault()`（6 欄位）與 `isBookDefaultTextStyle`。
+  - 新增 `app/test/reader/reader_settings_draft_test.dart`（11 項單元測試，覆蓋空 prefs 具現化、種子往返與 12 欄清 null、倍率換算與取整、首行縮排 `0` vs `null` 邊界、6 欄位重置與 `isBookDefaultTextStyle` 逐欄檢查）。
+  - 修改 `app/lib/screens/reader_settings_sheet.dart`：State 改持單一 `_draft`，移除約 30 個手寫欄位與 `_toMultiplier`／`_currentDraft`；保留 UI 暫態（`_readerColors`、Hex 控制器與錯誤訊息）以及滑桿既有 UI 端換算（`fontWeight` `× 400`／`÷ 400`、`lineHeight` `toStringAsFixed(1)`、`letterSpacing` `toStringAsFixed(2)`）。
+- **與設計決策差異**：無行為差異。註：`CONTEXT.md` 詞條「設定草稿（Settings Draft）」待後續補登或隨相關文件更新（本輪依計畫範圍僅更新 `epic.md`、`issues.md`、`docs/epics.md`）。
+- **驗證結果**：
+  - `flutter analyze`：`No issues found!`
+  - `node tool/check_l10n_hardcoded_strings.js` 與 `node tool/check_integration_keys.js`：皆 PASS
+  - `flutter test test/screens/reader_settings_sheet_test.dart test/reader/reader_settings_draft_test.dart test/reader/layout_preset_flow_test.dart`：188／188 通過（含既有 138 個 widget 測試一個未刪）
+  - `flutter test test/screens/reader_screen_test.dart`：326／326 通過
+  - 完整 `flutter test`：5286 通過、1 略過、0 失敗
+- **未驗證**：未在真機操作版面設定面板的實際手感；Issue 41 疑似缺陷仍待重現。
