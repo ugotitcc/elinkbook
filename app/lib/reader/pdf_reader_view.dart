@@ -1493,7 +1493,14 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         );
       } else {
         final image = _touchOverlayCache(page.pageNumber);
-        if (image != null) widgets.add(RawImage(image: image, fit: BoxFit.fill));
+        // 必須撐滿頁面矩形：pdfrx 以 Stack 包覆疊加層，RawImage 在寬鬆約束下會取
+        // 點陣圖原尺寸（僅 2～3 倍解析度）；頁面放大倍率更高時（例如裁切後放大）
+        // 只會佔左上一角，露出底層被壓扁的整頁而看似頁面重疊。
+        if (image != null) {
+          widgets.add(Positioned.fill(
+            child: RawImage(image: image, fit: BoxFit.fill),
+          ));
+        }
       }
     }
 
