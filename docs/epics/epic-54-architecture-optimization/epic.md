@@ -1148,3 +1148,18 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - **Minor 2（`shell: true` 棄用警告）不處理**：同檔既有的 `flutter` 呼叫本來就會觸發同一則警告（每個程序只印一次），改新增的兩處不會減少警告；且新增處的參數已自行加引號。
 
 **2026-11-16 Issue 42 已合併**（PR #438，合併提交 `27db8df7`）。程式審查 Important 1（keytool 語系）已修。待辦仍在：登錄發佈／上傳金鑰指紋、真機看「關於」頁、實跑 `--target apk`／`aab`、確認 debug／release OAuth Client ID 相同是否預期。Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
+
+## Issue 43 實作紀錄（2026-11-16～17 `/diagnosing-bugs`）：開書時並行檢查雲端閱讀位置
+
+**2026-11-17 Issue 43 已合併**（PR #441，合併提交 `80017efe`）。
+
+- **症狀**：新機器同步過一次後開已同步過的書，進書不會問「用本機還是雲端」，離開書回書架才問。PRD FR-19 要求開書時就問。
+- **根因**：衝突詢問只在 `SyncEngine._syncReadingPositions()` 推送階段，且只處理本機 dirty 的書；checkpoint 只在背景化／離開閱讀畫面／每 5 分鐘觸發，開書當下從不觸發。
+- **修法（方案 A、並行）**：`SyncEngine.checkReadingPositionOnOpen(bookId)` 只查單書（網路逾時 2 秒）→ `SyncCheckpointTrigger.checkOnOpen` → `ReadingSession.start()` 並行呼叫；選保留雲端後 `ReaderScreen` 重讀位置並透過 `ReaderSurface.jumpTo` 跳轉，閱讀器未渲染完成前暫存、`_handlePageRendered` 補跳。選保留本機會標成待推送；兩邊位置相同不彈窗。
+- **審查修正**：計畫審查 C-1（未渲染前跳轉被靜默丟棄）、I-1～I-3；程式審查 I-1（開書檢查不經 `_isSyncing` 鎖，與 checkpoint 同時續期會互相誤判，改用已存 token 唯讀查詢，先以並行測試重現）、M-1／M-2／M-4／M-5。M-3（`onPrefsLoaded` 重建儲存器）、M-6（引擎註解與實作落差）維持現狀。
+- **驗證**：完整 `flutter test` 5340 通過；`flutter analyze`、l10n 檢查乾淨。
+- **未驗證／待辦**：Task 11 雙裝置真機（連續切書、尚未渲染就選保留雲端〔EPUB／PDF〕、離線開書不卡）；設計決定「帶 `initialJumpTarget` 開書不檢查」尚未經使用者明確確認。
+- **已知風險**：對話框未回答就離開閱讀畫面，離開時的 checkpoint 推送階段可能對同一本書再問一次。
+- **後續項目（未處理）**：`_downloadReadingPositions()` 對尚未匯入的書略過卻仍推進 cursor，之後才匯入的書收不到雲端位置。
+
+Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
