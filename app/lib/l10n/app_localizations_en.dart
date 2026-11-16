@@ -1740,6 +1740,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutScreenBuildTimeLabel => 'Build Time';
 
   @override
+  String get aboutScreenBuildInfoLabel => 'Build Info';
+
+  @override
+  String aboutScreenBuildInfoValue(String mode, String signing) {
+    return '$mode | Signed by: $signing';
+  }
+
+  @override
+  String get aboutScreenOAuthLabel => 'OAuth Config';
+
+  @override
+  String aboutScreenOAuthValue(String prefix) {
+    return 'Google client $prefix…';
+  }
+
+  @override
+  String get aboutSigningDebug => 'debug key';
+
+  @override
+  String get aboutSigningRelease => 'release key';
+
+  @override
+  String get aboutSigningUpload => 'upload key';
+
+  @override
+  String get aboutSigningPlay => 'Google Play signing key';
+
+  @override
+  String get aboutSigningUnknown => 'unknown key';
+
+  @override
   String get aboutScreenWebViewVersionLabel => 'System WebView Version';
 
   @override

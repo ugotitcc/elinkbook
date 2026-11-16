@@ -1123,3 +1123,26 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 2. **雲端檔案選擇加入封面／列表切換**（功能）：`CloudBrowserScreen` 原本只有封面格狀。AppBar 新增切換按鈕（`cloud_browser_view_toggle`），列表模式顯示小縮圖（無縮圖用圖示）、檔名、檔案大小，勾選與下鑽行為與封面一致；模式由 `LibraryPreferences` 新增的 `cloud_browser_view_mode` 記住，與書架檢視模式各自獨立。新增 l10n 兩鍵（四語系）。驗證：`cloud_browser_screen_test.dart`（含 5 項新測試，先確認紅燈）與 `test/library` 全過、`flutter analyze` 乾淨、`check_l10n_hardcoded_strings` PASS；列表模式已於真機確認（2026-11-16）。
 
 **2026-11-16 後續項目 ①② 已合併**（PR #437，合併提交 `f67ad074`）：兩項皆已於真機確認。Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
+
+## Issue 42 實作紀錄（2026-11-16 `/grill-with-docs`）：建置組合可辨識
+
+**問題**：打包有「建置模式（debug／release）× 簽章金鑰」多種組合，測試平台多，看不出手上裝的是哪一種。查證後實際可出現的只有三種：debug＋debug 金鑰、release＋debug 金鑰（沒有 `key.properties` 時靜默退回）、release＋發佈／上傳金鑰；「debug＋release 金鑰」做不出來（`buildTypes.debug` 沒指定簽章）。
+
+**決議與實作**：
+1. **Gradle**：release 沒有 `key.properties` 時建置直接失敗；明確設 `ORG_GRADLE_PROJECT_allowDebugSigning=true` 才放行（仍印警告）。`BuildConfig.GOOGLE_CLIENT_ID_PREFIX` 帶入 OAuth Client ID 前 6 碼。
+2. **「關於」頁**新增「建置資訊」（`模式｜簽章：身分`，release 用 debug 金鑰或身分不明時加 ⚠）與「OAuth 設定」。簽章身分由原生 `getBuildSigningInfo` 讀 **APK 實際的簽章憑證**（非建置時宣告）：憑證 DN 含 `CN=Android Debug` 為 debug 金鑰（各開發機的 debug 金鑰不同，不登錄指紋），其餘比對 `app/config/signing_fingerprints.json` 的公開指紋（release／upload／playSigning）。Windows 只顯示模式。
+3. **`tool/build_release.js`** 建完後驗簽（`apksigner`／AAB 用 `keytool`，`apksigner` 從 `sdk.dir` 自動挑最新版）並印「打包資訊」：版本、簽章身分、OAuth、產物大小與 SHA-256、下一步指令；簽章與目標不符以結束碼 2 結束，指紋未登錄只警告，找不到工具標「未驗證」。純函式在 `tool/build_summary.js`。Windows 兩支打包腳本摘要補「建置模式」「版本」。
+4. **詞彙**：`CONTEXT.md` 新增「簽章身分」「建置組合」。SOP 2.4 改成以腳本輸出為準（原寫死的 `build-tools/36.1.0` 在本機不存在）。不寫 ADR（可隨時改回、不符合「難以回復」）。
+5. 產物檔名**不改**（檔名只反映建置意圖，實際簽章以「關於」頁與摘要為準）。
+
+**驗證**：先寫測試確認紅燈再實作。`test_build_summary.mjs` 15 項、`build_signing_test.dart`、`about_screen_test.dart` 新增 5 項皆過；`flutter analyze` 乾淨；`check_l10n_hardcoded_strings` PASS。實機流程：`node tool/build_release.js --target debug` 實跑成功，摘要正確顯示 `debug 金鑰 ✔`；`flutter build apk --release` 在沒有 `key.properties` 時如預期失敗。完整 `flutter test`：5306 通過、2 略過、1 失敗（`download_queue_controller_test`「刪除原暫存檔失敗…」，與先前 Issue 40 記錄相同的整套並行偶發失敗，單獨跑通過，非本次變更）。
+
+**未驗證／待辦**：
+- **指紋尚未登錄**：本機沒有 `key.properties.release`／`.upload`，`signing_fingerprints.json` 三欄留空。在登錄前，release／AAB 打包的摘要會顯示「指紋未登錄，無法驗證」、裝置上「關於」頁顯示「未知金鑰 ⚠」。第一次用發佈金鑰與上傳金鑰各打包一次，把摘要印出的 SHA-256 填進去即可。Play 簽署金鑰要等 Play Console 建立應用程式後才拿得到。
+- 未在真機看「關於」頁的實際顯示，未實跑 `--target apk`／`aab`（本機沒有金鑰檔）。
+- **發現**：`cloud_oauth.debug.json` 與 `cloud_oauth.release.json` 的 Google／OneDrive Client ID **目前完全相同**，所以「OAuth 設定」那一行（只顯示 Client ID 前綴）無法區分 debug／release 設定，只能確認有打包進去哪個 Client ID。SOP 6.1 說「Client ID 也分開」與現況不符，待確認是否預期。
+
+**Issue 42 程式審查處理**（報告在本機 `reviews/review-code-issue-42.md`，該目錄被 `.gitignore` 忽略）：
+- **Important 1（keytool 語系）已修**：本機 `keytool` 預設輸出中文（「金鑰與憑證管理工具」），而 `parseKeytoolOutput` 只認英文標籤，AAB 驗簽會靜默降級成「未驗證」。新增 `keytoolArgs()` 帶 `-J-Duser.language=en -J-Duser.country=US`，先寫失敗測試再實作；並以本機 `keytool` 對真實 JAR 簽章檔確認英文輸出可被解析。
+- **Minor 1（OAuth 前綴為空）不處理**：前綴來自 Gradle 讀的 `cloud_oauth.json`（非 `--dart-define`），讀不到時退回 `YOUR_GOOGLE_OAUTH_CLIENT_ID…` 佔位值，前綴為 `YOUR_G`，不會是空字串；審查所述情境不成立。
+- **Minor 2（`shell: true` 棄用警告）不處理**：同檔既有的 `flutter` 呼叫本來就會觸發同一則警告（每個程序只印一次），改新增的兩處不會減少警告；且新增處的參數已自行加引號。

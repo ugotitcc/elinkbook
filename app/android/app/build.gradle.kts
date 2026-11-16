@@ -153,6 +153,14 @@ android {
         // Issue 6 追加需求）。
         buildConfigField("String", "BUILD_TIME", "\"$buildTimeString\"")
 
+        // 「關於」頁的建置資訊：目前打包進去的 Google OAuth Client ID 前 6 碼，
+        // 方便確認這個版本用的是哪一份 cloud_oauth 設定。
+        buildConfigField(
+            "String",
+            "GOOGLE_CLIENT_ID_PREFIX",
+            "\"${rawGoogleOAuthClientId.take(6)}\""
+        )
+
         // epic-29-cloud-import Issue 7：自動將 app/config/cloud_oauth.json
         // 推導出的 OAuth redirect scheme 注入 AndroidManifest.xml 的
         // ${googleOAuthScheme}／${oneDriveOAuthScheme} 佔位符。
@@ -172,16 +180,33 @@ android {
 }
 
 // 沒有 key.properties 時，只有這次真的要建置 release（例如 bundleRelease、
-// assembleRelease）才印出警告；debug 建置不印，避免警告變成每次都出現的雜訊。
+// assembleRelease）才處理；debug 建置不受影響。
+//
+// 「release 模式＋debug 金鑰」是最容易誤裝、誤測的組合（產物不能上 Google Play，
+// 也無法覆蓋已安裝的正式版），所以預設直接讓建置失敗；真的要用（例如
+// `flutter run --release` 量效能）時，明確設定 Gradle 屬性 allowDebugSigning=true
+// （環境變數 ORG_GRADLE_PROJECT_allowDebugSigning=true，或 ~/.gradle/gradle.properties），
+// 此時仍會印出警告。
 // 用 quiet 層級：flutter build 在非 verbose 模式會帶 -q 呼叫 Gradle，
 // warn 層級的訊息會被隱藏，quiet 層級才看得到。
 if (keystoreProperties == null) {
     gradle.taskGraph.whenReady {
         if (allTasks.any { it.project == project && it.name.contains("Release") }) {
+            val allowDebugSigning =
+                project.findProperty("allowDebugSigning")?.toString() == "true"
+            if (!allowDebugSigning) {
+                throw GradleException(
+                    "找不到 ${keystorePropertiesFile.absolutePath}，release 建置會退回 debug 金鑰簽章，" +
+                        "產物不能上傳到 Google Play，也無法覆蓋已安裝的正式版。" +
+                        "要正式打包請改用 `node tool/build_release.js --target apk|aab`，" +
+                        "或依 docs/research/google_play_release_sop.md 第 1.3 節建立 key.properties。" +
+                        "只想自己量 release 效能、確定要用 debug 金鑰時，設定環境變數 " +
+                        "ORG_GRADLE_PROJECT_allowDebugSigning=true 後再建置。"
+                )
+            }
             project.logger.quiet(
-                "警告：找不到 ${keystorePropertiesFile.absolutePath}，release 建置改用 debug 金鑰簽章。" +
-                    "這個版本不能上傳到 Google Play。" +
-                    "要正式發布時，請依 docs/research/google_play_release_sop.md 第 1.3 節建立 key.properties。"
+                "警告：找不到 ${keystorePropertiesFile.absolutePath}，release 建置改用 debug 金鑰簽章" +
+                    "（allowDebugSigning=true）。這個版本不能上傳到 Google Play。"
             )
         }
     }

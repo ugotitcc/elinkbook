@@ -1678,6 +1678,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aboutScreenBuildTimeLabel => '編譯時間';
 
   @override
+  String get aboutScreenBuildInfoLabel => '建置資訊';
+
+  @override
+  String aboutScreenBuildInfoValue(String mode, String signing) {
+    return '$mode｜簽章：$signing';
+  }
+
+  @override
+  String get aboutScreenOAuthLabel => 'OAuth 設定';
+
+  @override
+  String aboutScreenOAuthValue(String prefix) {
+    return 'Google client $prefix…';
+  }
+
+  @override
+  String get aboutSigningDebug => 'debug 金鑰';
+
+  @override
+  String get aboutSigningRelease => '發佈金鑰';
+
+  @override
+  String get aboutSigningUpload => '上傳金鑰';
+
+  @override
+  String get aboutSigningPlay => 'Google Play 簽署金鑰';
+
+  @override
+  String get aboutSigningUnknown => '未知金鑰';
+
+  @override
   String get aboutScreenWebViewVersionLabel => '系統 WebView 版本';
 
   @override
@@ -4492,6 +4523,37 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get aboutScreenBuildTimeLabel => '编译时间';
 
   @override
+  String get aboutScreenBuildInfoLabel => '构建信息';
+
+  @override
+  String aboutScreenBuildInfoValue(String mode, String signing) {
+    return '$mode｜签名：$signing';
+  }
+
+  @override
+  String get aboutScreenOAuthLabel => 'OAuth 设置';
+
+  @override
+  String aboutScreenOAuthValue(String prefix) {
+    return 'Google client $prefix…';
+  }
+
+  @override
+  String get aboutSigningDebug => 'debug 密钥';
+
+  @override
+  String get aboutSigningRelease => '发布密钥';
+
+  @override
+  String get aboutSigningUpload => '上传密钥';
+
+  @override
+  String get aboutSigningPlay => 'Google Play 签名密钥';
+
+  @override
+  String get aboutSigningUnknown => '未知密钥';
+
+  @override
   String get aboutScreenWebViewVersionLabel => '系统 WebView 版本';
 
   @override
@@ -7304,6 +7366,37 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get aboutScreenBuildTimeLabel => '編譯時間';
+
+  @override
+  String get aboutScreenBuildInfoLabel => '建置資訊';
+
+  @override
+  String aboutScreenBuildInfoValue(String mode, String signing) {
+    return '$mode｜簽章：$signing';
+  }
+
+  @override
+  String get aboutScreenOAuthLabel => 'OAuth 設定';
+
+  @override
+  String aboutScreenOAuthValue(String prefix) {
+    return 'Google client $prefix…';
+  }
+
+  @override
+  String get aboutSigningDebug => 'debug 金鑰';
+
+  @override
+  String get aboutSigningRelease => '發佈金鑰';
+
+  @override
+  String get aboutSigningUpload => '上傳金鑰';
+
+  @override
+  String get aboutSigningPlay => 'Google Play 簽署金鑰';
+
+  @override
+  String get aboutSigningUnknown => '未知金鑰';
 
   @override
   String get aboutScreenWebViewVersionLabel => '系統 WebView 版本';

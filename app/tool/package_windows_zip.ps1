@@ -453,6 +453,8 @@ $finalZipItem = Get-Item $finalZipPath
 $fileCount = ($zipEntries | Where-Object { -not $_.EndsWith('/') }).Count
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host " 打包成功！" -ForegroundColor Green
+Write-Host " 建置模式: release" -ForegroundColor Green
+Write-Host " 版本:     $rawVersion" -ForegroundColor Green
 Write-Host " 輸出檔案: $finalZipPath" -ForegroundColor Green
 Write-Host " 檔案大小: $([math]::Round($finalZipItem.Length / 1MB, 2)) MB" -ForegroundColor Green
 Write-Host " 內容筆數: $fileCount 檔 ($($zipEntries.Count) 項目)" -ForegroundColor Green

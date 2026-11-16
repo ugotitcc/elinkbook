@@ -218,18 +218,21 @@ cp app/android/key.properties.release app/android/key.properties
 
 ### 2.4 確認簽章
 
-對每一個 APK 執行：
+`node tool/build_release.js` 建完後會自動驗簽並印出「打包資訊」（版本、簽章身分、OAuth、產物大小與 SHA-256、下一步指令），不需要手動執行 `apksigner`。確認兩件事：
+
+- [ ] 「簽章」那一行是 `發佈金鑰 ✔`（AAB 為 `上傳金鑰 ✔`），沒有 `✘`、也沒有「不要發佈」。簽章不符時腳本會以結束碼 2 結束。
+- [ ] 若顯示「預期金鑰的指紋未登錄」：把該行的 SHA-256 填進 `app/config/signing_fingerprints.json` 對應欄位（`release`／`upload`），並與 1.3 記下的指紋比對無誤，之後就能自動驗證。
+
+如果簽章是上傳金鑰（要發佈金鑰時）、或出現 `debug 金鑰`，代表換金鑰沒成功。回到 2.2 重做，**不要發佈**。
+
+找不到 `apksigner`／`keytool` 時，摘要會標「簽章：未驗證」（打包本身仍已完成），此時請手動驗證：
 
 ```bash
-"$LOCALAPPDATA/Android/Sdk/build-tools/36.1.0/apksigner.bat" verify --print-certs build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+# build-tools 版本依本機而異，不要照抄舊版號；從 local.properties 的 sdk.dir 找最新的
+"<sdk.dir>/build-tools/<最新版>/apksigner.bat" verify --print-certs build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 ```
 
-確認兩件事：
-
-- [ ] 有 `Verifies` 字樣，沒有錯誤。
-- [ ] `certificate SHA-256 digest` 與 1.3 記下的發佈金鑰指紋**完全相同**。
-
-如果指紋是上傳金鑰的，或出現 `CN=Android Debug`，代表換金鑰沒成功。回到 2.2 重做，**不要發佈**。
+App 裝到手機後，也可以在「設定 → 關於」看「建置資訊」：`debug｜簽章：debug 金鑰`、`release｜簽章：發佈金鑰` 等；`⚠` 代表 release 模式卻用 debug 金鑰，或簽章身分不明。
 
 ### 2.5 改檔名並算 SHA-256
 
@@ -492,7 +495,7 @@ powershell -ExecutionPolicy Bypass -File tool/verify_windows_installer.ps1 -Setu
 |---|---|---|
 | `apksigner` 顯示指紋是上傳金鑰 | 2.2 沒換成功，或建置前被換回 | 重做 2.2，確認 `key.properties` 的 `keyAlias` 是 `release` |
 | 建置失敗：`release 簽章設定不完整` | `key.properties` 缺欄位 | 對照 1.2 補齊 4 個欄位 |
-| 建置時警告用 debug 金鑰 | `key.properties` 不存在 | 重做 2.2 |
+| 建置失敗：找不到 `key.properties`，release 會退回 debug 金鑰 | `key.properties` 不存在（刻意擋下，避免誤打出 release＋debug 金鑰的組合） | 重做 2.2；只想自己量效能才設 `ORG_GRADLE_PROJECT_allowDebugSigning=true` |
 | 使用者回報「與已安裝的套件衝突」 | 手機裝的是商店版或 debug 版 | 請使用者解除安裝後再裝 |
 | 使用者回報無法更新 | 上一版用了不同金鑰簽章 | 確認每一版都用發佈金鑰。已用錯的版本只能請使用者解除安裝 |
 | 手機不讓安裝 | 沒開「允許安裝未知來源應用程式」 | 在系統設定允許瀏覽器或檔案管理員安裝 |
