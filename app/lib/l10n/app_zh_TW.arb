@@ -2257,7 +2257,7 @@
   "@aboutScreenOAuthLabel": {
     "description": "「OAuth 設定」項目標題"
   },
-  "aboutScreenOAuthValue": "Google client {prefix}…",
+  "aboutScreenOAuthValue": "Google Client ID（僅顯示前 6 碼）：{prefix}",
   "@aboutScreenOAuthValue": {
     "description": "打包進去的 Google OAuth Client ID 前 6 碼",
     "placeholders": {

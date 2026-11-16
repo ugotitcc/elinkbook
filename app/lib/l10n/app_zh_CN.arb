@@ -492,7 +492,7 @@
   "aboutScreenBuildInfoLabel": "构建信息",
   "aboutScreenBuildInfoValue": "{mode}｜签名：{signing}",
   "aboutScreenOAuthLabel": "OAuth 设置",
-  "aboutScreenOAuthValue": "Google client {prefix}…",
+  "aboutScreenOAuthValue": "Google Client ID（仅显示前 6 位）：{prefix}",
   "aboutSigningDebug": "debug 密钥",
   "aboutSigningRelease": "发布密钥",
   "aboutSigningUpload": "上传密钥",

@@ -70,6 +70,69 @@ function keytoolArgs(file) {
   return ['-J-Duser.language=en', '-J-Duser.country=US', '-printcert', '-jarfile', file];
 }
 
+// key.properties 文字 → { storeFile, keyAlias, storePassword }；缺欄位的值為空字串。
+function parseKeyProperties(text) {
+  const read = (k) => {
+    const m = new RegExp(`^${k}=(.*)$`, 'm').exec(text);
+    return m ? m[1].trim() : '';
+  };
+  return {
+    storeFile: read('storeFile'),
+    keyAlias: read('keyAlias'),
+    storePassword: read('storePassword'),
+  };
+}
+
+// keytool 直接讀金鑰庫指紋的參數（打包前確認用）。密碼不放進參數，由呼叫端放進環境變數
+// 並用 -storepass:env 讀取，避免出現在處理程序清單。-J 選項理由同 keytoolArgs。
+function keystoreListArgs(storeFile, alias, passwordEnvName) {
+  return [
+    '-J-Duser.language=en',
+    '-J-Duser.country=US',
+    '-list',
+    '-v',
+    '-keystore',
+    storeFile,
+    '-alias',
+    alias,
+    `-storepass:env`,
+    passwordEnvName,
+  ];
+}
+
+// 打包前確認清單。keyCheck 為 null 代表此目標不換金鑰（debug）。
+// keyCheck.status：ok / mismatch / unregistered / unreadable。
+function formatPreflight(info) {
+  const lines = [];
+  lines.push('============== 打包前確認 ==============');
+  lines.push(` 目標    ：${info.label}（${info.mode} 模式）`);
+  lines.push(` 版本    ：${info.version || '（讀不到）'}`);
+  const k = info.keyCheck;
+  if (!k) {
+    lines.push(' 簽章金鑰：不換金鑰（debug 建置使用 Android 預設 debug 金鑰）');
+  } else {
+    lines.push(` 簽章金鑰：${k.alias}（${k.storeName}）`);
+    if (k.status === 'ok') {
+      lines.push(`   指紋 ${k.sha256}`);
+      lines.push(`   ✔ 這是「${IDENTITY_LABEL[k.identity]}」，與此目標相符`);
+    } else if (k.status === 'mismatch') {
+      lines.push(`   指紋 ${k.sha256}`);
+      lines.push(
+        `   ✘ 這是「${IDENTITY_LABEL[k.identity]}」，但此目標需要「${IDENTITY_LABEL[k.expected]}」`
+      );
+    } else if (k.status === 'unregistered') {
+      lines.push(`   指紋 ${k.sha256}`);
+      lines.push('   ⚠ 指紋未登錄在 config/signing_fingerprints.json，無法確認是哪一把金鑰');
+    } else {
+      lines.push('   ⚠ 讀不到金鑰庫指紋（找不到 keytool、檔案不存在或密碼不對）');
+    }
+  }
+  lines.push(` OAuth   ：${info.oauthFile}（Google Client ID 前 6 碼 ${info.oauthPrefix || '（空）'}）`);
+  lines.push(` 建置指令：${info.commands.join('；')}`);
+  lines.push('=========================================');
+  return lines.join('\n');
+}
+
 function readPubspecVersion(pubspecText) {
   const m = /^version:\s*(\S+)/m.exec(pubspecText);
   return m ? m[1] : null;
@@ -125,7 +188,7 @@ function formatSummary(info) {
     lines.push(' 簽章    ：未驗證（找不到 apksigner／keytool，產物本身仍已建置完成）');
   }
 
-  lines.push(` OAuth   ：Google client ${info.oauthPrefix}…`);
+  lines.push(` OAuth   ：Google Client ID（僅顯示前 6 碼）：${info.oauthPrefix}`);
   if (info.artifacts.length > 0) {
     lines.push(' 產物    ：');
     for (const a of info.artifacts) {
@@ -151,5 +214,8 @@ module.exports = {
   readPubspecVersion,
   findApksigner,
   keytoolArgs,
+  parseKeyProperties,
+  keystoreListArgs,
+  formatPreflight,
   formatSummary,
 };

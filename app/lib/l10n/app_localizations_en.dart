@@ -1752,7 +1752,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String aboutScreenOAuthValue(String prefix) {
-    return 'Google client $prefix…';
+    return 'Google Client ID (first 6 characters only): $prefix';
   }
 
   @override

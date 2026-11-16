@@ -249,9 +249,13 @@ node app/tool/test_bump_version.mjs
 
 ```bash
 cd app
-node tool/build_release.js                 # 互動式選擇
-node tool/build_release.js --target apk    # 直接指定
+node tool/build_release.js                 # 問答式：選目標 → 看確認清單 → 輸入 y 才打包
+node tool/build_release.js --target apk    # 直接指定目標（仍會顯示確認清單）
+node tool/build_release.js --target apk --yes  # 略過 y/N（給自動化用）
 ```
+
+- **打包前確認清單**：打包前先直接讀金鑰庫（`.jks`）的憑證指紋，列出目標、版本、金鑰別名與指紋、OAuth 設定檔與 Client ID 前 6 碼、要執行的建置指令。金鑰庫身分與目標不符（例如 `apk` 目標拿到上傳金鑰）直接中止，`--yes` 也擋不掉；指紋未登錄或讀不到時標 ⚠，由使用者決定。
+- **不要直接跑 `flutter build apk --release`**：`android/key.properties` 平時放的是發佈金鑰（內容同 `key.properties.release`），所以直接建 `apk` 也會簽成發佈金鑰；但建 `aab` 需要上傳金鑰，直接建會簽錯。一律走這支腳本。
 
 - 建置前先備份目前的 `key.properties` 與 `cloud_oauth.json`，結束後（成功、失敗、Ctrl+C）一律還原。
 - 來源檔缺少時，在動任何檔案之前就中止。

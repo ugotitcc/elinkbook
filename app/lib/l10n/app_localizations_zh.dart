@@ -1690,7 +1690,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String aboutScreenOAuthValue(String prefix) {
-    return 'Google client $prefix…';
+    return 'Google Client ID（僅顯示前 6 碼）：$prefix';
   }
 
   @override
@@ -4535,7 +4535,7 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String aboutScreenOAuthValue(String prefix) {
-    return 'Google client $prefix…';
+    return 'Google Client ID（仅显示前 6 位）：$prefix';
   }
 
   @override
@@ -7380,7 +7380,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String aboutScreenOAuthValue(String prefix) {
-    return 'Google client $prefix…';
+    return 'Google Client ID（僅顯示前 6 碼）：$prefix';
   }
 
   @override

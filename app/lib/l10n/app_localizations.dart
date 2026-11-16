@@ -3062,7 +3062,7 @@ abstract class AppLocalizations {
   /// 打包進去的 Google OAuth Client ID 前 6 碼
   ///
   /// In zh_TW, this message translates to:
-  /// **'Google client {prefix}…'**
+  /// **'Google Client ID（僅顯示前 6 碼）：{prefix}'**
   String aboutScreenOAuthValue(String prefix);
 
   /// 簽章身分：debug 金鑰

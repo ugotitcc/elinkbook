@@ -21,6 +21,9 @@ const {
   findApksigner,
   formatSummary,
   keytoolArgs,
+  parseKeyProperties,
+  keystoreListArgs,
+  formatPreflight,
 } = require('./build_summary.js')
 
 const REL = 'a'.repeat(64)
@@ -154,4 +157,48 @@ test('keytoolArgs 鎖定英文輸出並帶上 -printcert -jarfile', () => {
   assert.deepEqual(args.slice(-3), ['-printcert', '-jarfile', '"x.aab"'])
   // -J 選項必須在子命令之前
   assert.ok(args.indexOf('-J-Duser.language=en') < args.indexOf('-printcert'))
+})
+
+test('parseKeyProperties 取出金鑰庫路徑、別名與密碼', () => {
+  const text = ['storePassword=pw1', 'keyPassword=pw2', 'keyAlias=release', 'storeFile=C:/k/a.jks'].join('\n')
+  const r = parseKeyProperties(text)
+  assert.deepEqual(r, { storeFile: 'C:/k/a.jks', keyAlias: 'release', storePassword: 'pw1' })
+  assert.deepEqual(parseKeyProperties(''), { storeFile: '', keyAlias: '', storePassword: '' })
+})
+
+test('keystoreListArgs 鎖定英文、密碼走環境變數而不是明文', () => {
+  const args = keystoreListArgs('"a.jks"', '"release"', 'PWVAR')
+  assert.ok(args.indexOf('-J-Duser.language=en') < args.indexOf('-list'))
+  assert.deepEqual(args.slice(-2), ['-storepass:env', 'PWVAR'])
+})
+
+const PREFLIGHT_BASE = {
+  label: 'GitHub APK', mode: 'release', version: '1.1.0+3',
+  oauthFile: 'config/cloud_oauth.release.json', oauthPrefix: '606617',
+  commands: ['flutter build apk --release'],
+}
+
+test('formatPreflight：金鑰相符 → 顯示 ✔ 與完整指紋、OAuth 前 6 碼', () => {
+  const text = formatPreflight({
+    ...PREFLIGHT_BASE,
+    keyCheck: { alias: 'release', storeName: 'r.jks', expected: 'release', sha256: REL, identity: 'release', status: 'ok' },
+  })
+  assert.match(text, /✔ 這是「發佈金鑰」/)
+  assert.match(text, /a{64}/)
+  assert.match(text, /前 6 碼 606617/)
+})
+
+test('formatPreflight：金鑰是上傳金鑰但目標要發佈金鑰 → 顯示 ✘ 與兩邊名稱', () => {
+  const text = formatPreflight({
+    ...PREFLIGHT_BASE,
+    keyCheck: { alias: 'upload', storeName: 'u.jks', expected: 'release', sha256: UPL, identity: 'upload', status: 'mismatch' },
+  })
+  assert.match(text, /✘ 這是「上傳金鑰」，但此目標需要「發佈金鑰」/)
+})
+
+test('formatPreflight：未登錄與讀不到都有 ⚠；debug 不換金鑰', () => {
+  const base = { alias: 'a', storeName: 'x.jks', expected: 'release', sha256: 'c'.repeat(64), identity: 'unknown' }
+  assert.match(formatPreflight({ ...PREFLIGHT_BASE, keyCheck: { ...base, status: 'unregistered' } }), /⚠ 指紋未登錄/)
+  assert.match(formatPreflight({ ...PREFLIGHT_BASE, keyCheck: { ...base, sha256: null, status: 'unreadable' } }), /⚠ 讀不到金鑰庫指紋/)
+  assert.match(formatPreflight({ ...PREFLIGHT_BASE, keyCheck: null }), /不換金鑰/)
 })

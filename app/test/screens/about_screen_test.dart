@@ -218,7 +218,7 @@ void main() {
       expect(textOf(tester, 'about_screen_build_info_text'),
           'debug｜簽章：debug 金鑰');
       expect(textOf(tester, 'about_screen_oauth_text'),
-          'Google client 606617…');
+          'Google Client ID（僅顯示前 6 碼）：606617');
     });
 
     testWidgets('指紋對得上登錄的發佈金鑰：顯示發佈金鑰', (tester) async {
