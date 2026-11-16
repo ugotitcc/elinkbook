@@ -424,6 +424,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 不變——僅用於 _buildNativeView() 建構 EpubReaderView/PdfReaderView
   // 時傳入 initialLocatorJson/initialPageIndex 這兩個一次性開書起始值。
   ReadingPosition? _initialPosition;
+  ReaderJumpTarget? _pendingCloudJumpTarget;
   // 用於呼叫 PdfReaderView.jumpToPage(key, pageIndex) 這個強型別 static
   // helper（審查修正，見 Task 2 Step 4——不使用 as dynamic 跨 State 私有
   // 邊界呼叫，避免 release 混淆／tree-shaking 風險）。
@@ -519,6 +520,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       statsRepository: widget.dependencies.readingStatsRepository,
       syncCheckpointTrigger: widget.dependencies.syncCheckpointTrigger,
       readerActivityTracker: widget.dependencies.readerActivityTracker,
+      onCloudPositionAccepted: _handleCloudPositionAccepted,
     )..start();
     WidgetsBinding.instance.addObserver(this);
     if (isWindowsPlatform) {
@@ -554,6 +556,29 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _applyScreenOrientation();
       _applySystemUiMode();
     });
+  }
+
+  /// 開書時雲端位置檢查結果為「保留雲端」：重讀資料庫最新位置並透過 [_surface]
+  /// 跳轉；若閱讀引擎尚未渲染就緒則先暫存於 [_pendingCloudJumpTarget]，待
+  /// [_handlePageRendered] 補跳（Issue 43 C-1）。
+  Future<void> _handleCloudPositionAccepted() async {
+    final loaded = await widget.dependencies.prefsManager.load(widget.bookId);
+    if (!mounted) return;
+    final pos = loaded.readingPosition;
+    _session.onPrefsLoaded(initialProgress: pos.progress);
+    final target = ReaderJumpTarget(
+      cfi: pos.epubLocatorJson,
+      progression: pos.progress,
+      pdfPageIndex: pos.pdfPageIndex,
+    );
+    if (_openBookFlow.isRendered) {
+      _surface.jumpTo(target);
+    } else {
+      setState(() {
+        _initialPosition = pos;
+        _pendingCloudJumpTarget = target;
+      });
+    }
   }
 
   @override
@@ -1404,6 +1429,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // （initialLocatorJson/initialPageIndex 已在建構時套用，見 Task 1），
     // 此時觸發暫態高亮。
     _maybeShowSearchJumpHighlight();
+    final pendingCloudJump = _pendingCloudJumpTarget;
+    if (pendingCloudJump != null) {
+      _pendingCloudJumpTarget = null;
+      _surface.jumpTo(pendingCloudJump);
+    }
   }
 
   /// 抵達 `initialJumpTarget` 目標位置後觸發暫態高亮（epic-10-search

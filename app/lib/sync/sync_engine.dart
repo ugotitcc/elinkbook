@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:sqflite/sqflite.dart';
@@ -55,6 +57,10 @@ class SyncEngine {
   final ReadingPositionConflictResolver? _onReadingPositionConflict;
   final BookMetadataExtractor? _metadataExtractor;
 
+  /// 開書時位置檢查（[checkReadingPositionOnOpen]）的網路逾時，只涵蓋網路請求，
+  /// 不含使用者看對話框做決定的時間。TODO(Issue 43)：尚未套用。
+  final Duration networkTimeout;
+
   SyncEngine({
     required Database db,
     required SyncAccountRepository accountRepository,
@@ -62,6 +68,7 @@ class SyncEngine {
     PocketBaseClientFactory? clientFactory,
     ReadingPositionConflictResolver? onReadingPositionConflict,
     BookMetadataExtractor? metadataExtractor,
+    this.networkTimeout = const Duration(seconds: 2),
   })  : _db = db,
         _accountRepository = accountRepository,
         _metadataRepository = metadataRepository,
@@ -387,6 +394,142 @@ class SyncEngine {
           }
         }
       }
+    }
+  }
+
+  /// 開書時的閱讀位置檢查（PRD FR-19「開啟書籍時…須彈窗詢問」，方案 A）。
+  ///
+  /// 只查這一本書的雲端位置，不跑完整 checkpoint；雲端自上次同步後被其他裝置
+  /// 更新過（`updated` 與本機快取的 `position_synced_server_updated_at` 不同，
+  /// 含新機器快取為 null）就呼叫 [_onReadingPositionConflict] 詢問使用者。
+  ///
+  /// 為何需要：衝突詢問原本只存在於推送階段（[_syncReadingPositions]），且只處理
+  /// 本機 dirty 的書；checkpoint 又只在背景化／離開閱讀畫面／每 5 分鐘觸發，
+  /// 結果使用者要到離開書才被問到，違反 FR-19「開啟書籍時…須彈窗詢問」。
+  ///
+  /// 回傳使用者的選擇；沒有回呼、未登入、書籍無指紋、雲端無紀錄、位置沒有差異、
+  /// 使用者未決定，或任何網路／伺服器錯誤時回傳 `null`——**絕不拋例外**，
+  /// 不可阻擋開書（雲端問題留給下次 checkpoint 重試）。不補算指紋：補算要讀整個
+  /// 檔案，會拖慢開書，無指紋的書本來就不參與跨裝置比對。
+  Future<ReadingPositionChoice?> checkReadingPositionOnOpen(String bookId) async {
+    final resolver = _onReadingPositionConflict;
+    if (resolver == null) return null;
+    try {
+      final storedAuthToken = await _accountRepository.loadAuthToken();
+      if (storedAuthToken == null) return null;
+      final baseUrl = await _accountRepository.loadBaseUrl();
+      if (baseUrl.isEmpty) return null;
+
+      final rows = await _db.query(
+        'books',
+        columns: [
+          'title',
+          'format',
+          'content_fingerprint',
+          'epubLocator',
+          'pdfPageIndex',
+          'progress',
+          'position_synced_server_updated_at',
+        ],
+        where: 'id = ?',
+        whereArgs: [bookId],
+      );
+      if (rows.isEmpty) return null;
+      final row = rows.single;
+      final fingerprint = row['content_fingerprint'] as String?;
+      if (fingerprint == null) return null;
+
+      final pb = _clientFactory(baseUrl);
+      // 整個網路階段（續期 + 查詢）共用單一 networkTimeout 上限，不含後續
+      // resolver 詢問使用者的等待時間。
+      final result = await (() async {
+        // 401 等續期失敗一律視為「這次不檢查」，不在這裡清除登入狀態，
+        // 交給 checkpoint 既有的過期處理與提示（避免重複提示）。
+        final authToken = await _refreshAuthToken(pb, storedAuthToken);
+        if (authToken == null) return null;
+
+        return pb.collection('sync_reading_positions').getList(
+              filter: pb.filter('book_fingerprint = {:fp}', {'fp': fingerprint}),
+              perPage: 1,
+              sort: 'created',
+              headers: {'Authorization': authToken},
+            );
+      })().timeout(networkTimeout);
+      if (result == null || result.items.isEmpty) return null;
+      final existing = result.items.first;
+      final remoteServerUpdated = existing.data['updated'] as String?;
+      if (remoteServerUpdated == null) return null;
+      final syncedServerUpdatedAt = row['position_synced_server_updated_at'] as String?;
+      if (remoteServerUpdated == syncedServerUpdatedAt) return null;
+
+      final local = ReadingPositionSnapshot(
+        epubLocatorJson: row['epubLocator'] as String?,
+        pdfPageIndex: row['pdfPageIndex'] as int?,
+        progress: (row['progress'] as num).toDouble(),
+      );
+      final remote = ReadingPositionSnapshot(
+        epubLocatorJson: existing.data['epub_locator'] as String?,
+        pdfPageIndex: (existing.data['pdf_page_index'] as num?)?.toInt(),
+        progress: (existing.data['progress'] as num).toDouble(),
+      );
+
+      // 兩邊位置其實相同：不必打擾使用者，只記下已確認過的伺服器時間戳記，
+      // 避免之後離開書時推送階段又把它判成衝突。
+      final samePosition = local.epubLocatorJson == remote.epubLocatorJson &&
+          local.pdfPageIndex == remote.pdfPageIndex &&
+          local.progress == remote.progress;
+      if (samePosition) {
+        await _db.update(
+          'books',
+          {'position_synced_server_updated_at': remoteServerUpdated},
+          where: 'id = ?',
+          whereArgs: [bookId],
+        );
+        return null;
+      }
+
+      final choice = await resolver(ReadingPositionConflict(
+        bookId: bookId,
+        bookTitle: row['title'] as String,
+        format: BookFileFormat.values.byName(row['format'] as String),
+        local: local,
+        remote: remote,
+      ));
+      if (choice == ReadingPositionChoice.keepCloud) {
+        // 與 [_syncReadingPositions] 的 keepCloud 一致：position_updated_at 設為
+        // 不大於 lastPushCompletedAt，避免被誤判成待推送的本機異動。
+        final lastPushCompletedAt = await _metadataRepository.loadLastPushCompletedAt();
+        await _db.update(
+          'books',
+          {
+            'epubLocator': remote.epubLocatorJson,
+            'pdfPageIndex': remote.pdfPageIndex,
+            'progress': remote.progress,
+            'position_updated_at': lastPushCompletedAt ?? 0,
+            'position_synced_server_updated_at': remoteServerUpdated,
+          },
+          where: 'id = ?',
+          whereArgs: [bookId],
+        );
+      } else if (choice == ReadingPositionChoice.keepLocal) {
+        // 使用者已確認過這個雲端版本並選擇保留本機：記下伺服器時間戳記，並把本機
+        // 位置標成待推送。否則本機若不 dirty，下載階段會用雲端值靜默覆寫，
+        // 違反「不得靜默覆蓋」。
+        await _db.update(
+          'books',
+          {
+            'position_synced_server_updated_at': remoteServerUpdated,
+            'position_updated_at': DateTime.now().millisecondsSinceEpoch,
+          },
+          where: 'id = ?',
+          whereArgs: [bookId],
+        );
+      }
+      return choice;
+    } on ClientException {
+      return null;
+    } on TimeoutException {
+      return null;
     }
   }
 
