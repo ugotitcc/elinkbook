@@ -1121,3 +1121,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 
 1. **Windows 下載型內建字型不生效**（缺陷）：Windows 沒有 `InternalStoragePathHandler`，`/downloaded-fonts/` 的 `@font-face` 請求在 `_shouldInterceptRequest` 被回 `null`，字型載入失敗而退回預設字型（主字型與標題字型皆受影響，所有下載型內建字型同樣受影響，不只獅尾 B2 加糖宋體）。修法：新增純函式 `resolveDownloadedFontFile`（只接受 `fontDownloadSpecOf` 的已知發布路徑，擋路徑穿越），Windows 攔截分支改讀本機字型檔回傳 `font/ttf`；Android 行為不變。先寫失敗測試（`foliate_intercept_test.dart`）再實作。**已於 Windows 真機確認**：獅尾 B2 加糖宋體設為主字型與標題字型皆生效（2026-11-16）。注意：字型檔整個讀進記憶體（思源宋體約 60MB），與自訂字型做法一致。
 2. **雲端檔案選擇加入封面／列表切換**（功能）：`CloudBrowserScreen` 原本只有封面格狀。AppBar 新增切換按鈕（`cloud_browser_view_toggle`），列表模式顯示小縮圖（無縮圖用圖示）、檔名、檔案大小，勾選與下鑽行為與封面一致；模式由 `LibraryPreferences` 新增的 `cloud_browser_view_mode` 記住，與書架檢視模式各自獨立。新增 l10n 兩鍵（四語系）。驗證：`cloud_browser_screen_test.dart`（含 5 項新測試，先確認紅燈）與 `test/library` 全過、`flutter analyze` 乾淨、`check_l10n_hardcoded_strings` PASS；列表模式已於真機確認（2026-11-16）。
+
+**2026-11-16 後續項目 ①② 已合併**（PR #437，合併提交 `f67ad074`）：兩項皆已於真機確認。Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
