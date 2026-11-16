@@ -28,6 +28,8 @@
   "cloudBrowserMobileDataDialogMessage": "目前使用移动数据连接，勾选的文件中有超过 20MB 的项目，下载可能产生流量费用，确定要继续吗？",
   "cloudBrowserMobileDataDialogConfirm": "继续下载",
   "cloudBrowserDownloadSelectedTooltip": "下载已选取",
+  "cloudBrowserSwitchToListTooltip": "切换为列表视图",
+  "cloudBrowserSwitchToGridTooltip": "切换为封面视图",
   "cloudBrowserReauthMessage": "登录已过期，请至「设置」重新连接 {provider} 账户",
   "cloudBrowserGenericProviderLabel": "云端",
   "cloudBrowserImportCategoryLabel": "导入分类：",

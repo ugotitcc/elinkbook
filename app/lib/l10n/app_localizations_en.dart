@@ -114,6 +114,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudBrowserDownloadSelectedTooltip => 'Download Selected';
 
   @override
+  String get cloudBrowserSwitchToListTooltip => 'Switch to list view';
+
+  @override
+  String get cloudBrowserSwitchToGridTooltip => 'Switch to cover view';
+
+  @override
   String cloudBrowserReauthMessage(String provider) {
     return 'Login expired. Please reconnect your $provider account in Settings.';
   }

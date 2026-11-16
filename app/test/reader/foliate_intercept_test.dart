@@ -28,6 +28,37 @@ void main() {
     );
   });
 
+  // 回歸：Windows 沒有 InternalStoragePathHandler，已下載字型的
+  // `/downloaded-fonts/` 請求必須由攔截回呼讀本機檔案，路徑解析要有獨立可測的 seam。
+  group('resolveDownloadedFontFile', () {
+    test('已知發布路徑 → 存放目錄下的實際檔案路徑', () {
+      final file = resolveDownloadedFontFile(
+        '${kDownloadedFontsPathPrefix}v1/SweiB2SugarCJKtc-Medium.ttf',
+        r'C:\data\downloaded-fonts',
+      );
+      expect(file, isNotNull);
+      expect(file!.replaceAll('\\', '/'),
+          'C:/data/downloaded-fonts/v1/SweiB2SugarCJKtc-Medium.ttf');
+    });
+
+    test('不在字型目錄清單內的路徑（含路徑穿越）→ null', () {
+      expect(
+        resolveDownloadedFontFile(
+            '$kDownloadedFontsPathPrefix../secret.db', '/d'),
+        isNull,
+      );
+      expect(
+        resolveDownloadedFontFile(
+            '${kDownloadedFontsPathPrefix}v1/unknown.ttf', '/d'),
+        isNull,
+      );
+    });
+
+    test('前綴不符 → null', () {
+      expect(resolveDownloadedFontFile('/book/current.epub', '/d'), isNull);
+    });
+  });
+
   test("classifyFoliateRequestPath('/downloaded-fonts/v1/a.ttf') == downloadedFont",
       () {
     expect(

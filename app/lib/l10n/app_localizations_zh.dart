@@ -112,6 +112,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudBrowserDownloadSelectedTooltip => '下載已選取';
 
   @override
+  String get cloudBrowserSwitchToListTooltip => '切換為列表檢視';
+
+  @override
+  String get cloudBrowserSwitchToGridTooltip => '切換為封面檢視';
+
+  @override
   String cloudBrowserReauthMessage(String provider) {
     return '登入已過期，請至「設定」重新連結 $provider 帳號';
   }
@@ -2920,6 +2926,12 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get cloudBrowserDownloadSelectedTooltip => '下载已选取';
 
   @override
+  String get cloudBrowserSwitchToListTooltip => '切换为列表视图';
+
+  @override
+  String get cloudBrowserSwitchToGridTooltip => '切换为封面视图';
+
+  @override
   String cloudBrowserReauthMessage(String provider) {
     return '登录已过期，请至「设置」重新连接 $provider 账户';
   }
@@ -5726,6 +5738,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get cloudBrowserDownloadSelectedTooltip => '下載已選取';
+
+  @override
+  String get cloudBrowserSwitchToListTooltip => '切換為列表檢視';
+
+  @override
+  String get cloudBrowserSwitchToGridTooltip => '切換為封面檢視';
 
   @override
   String cloudBrowserReauthMessage(String provider) {

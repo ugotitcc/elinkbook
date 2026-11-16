@@ -268,6 +268,18 @@ abstract class AppLocalizations {
   /// **'下載已選取'**
   String get cloudBrowserDownloadSelectedTooltip;
 
+  /// 雲端檔案選擇畫面 AppBar 切換按鈕（目前為封面模式）的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'切換為列表檢視'**
+  String get cloudBrowserSwitchToListTooltip;
+
+  /// 雲端檔案選擇畫面 AppBar 切換按鈕（目前為列表模式）的提示文字
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'切換為封面檢視'**
+  String get cloudBrowserSwitchToGridTooltip;
+
   /// 雲端帳號授權過期時的提示訊息，{provider} 為服務商品牌名（如 Google Drive／OneDrive，不翻譯）或找不到品牌名時的通用「雲端」標籤
   ///
   /// In zh_TW, this message translates to:

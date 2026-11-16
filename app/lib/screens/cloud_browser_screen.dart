@@ -8,6 +8,7 @@ import '../downloads/download_queue_controller.dart';
 import '../l10n/app_localizations.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
+import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
@@ -75,6 +76,9 @@ class CloudBrowserScreen extends StatefulWidget {
   /// 時應明確傳入 `title: 'OneDrive'` 覆蓋這個預設值）。
   final String? title;
 
+  /// 封面／列表檢視模式的偏好儲存；`null` 時使用預設的 [LibraryPreferences]。
+  final LibraryPreferences? preferences;
+
   const CloudBrowserScreen({
     super.key,
     required this.client,
@@ -86,6 +90,7 @@ class CloudBrowserScreen extends StatefulWidget {
     this.isMobileDataConnection,
     this.folderId,
     this.title,
+    this.preferences,
   });
 
   @override
@@ -121,10 +126,34 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
   /// 重複提示——查詢期間先記錄該 entry id，重入的點擊直接忽略。
   final Set<String> _pendingDuplicateChecks = {};
 
+  /// 封面（格狀）／列表檢視模式，並記住使用者上次的選擇。
+  LibraryViewMode _viewMode = LibraryViewMode.grid;
+  late final LibraryPreferences _preferences =
+      widget.preferences ?? LibraryPreferences();
+
   @override
   void initState() {
     super.initState();
+    _loadViewMode();
     _load();
+  }
+
+  Future<void> _loadViewMode() async {
+    try {
+      final mode = await _preferences.loadCloudBrowserViewMode();
+      if (!mounted) return;
+      setState(() => _viewMode = mode);
+    } catch (_) {
+      // 偏好讀不到時維持預設封面模式即可
+    }
+  }
+
+  void _toggleViewMode() {
+    final newMode = _viewMode == LibraryViewMode.grid
+        ? LibraryViewMode.list
+        : LibraryViewMode.grid;
+    setState(() => _viewMode = newMode);
+    _preferences.saveCloudBrowserViewMode(newMode).catchError((_) {});
   }
 
   Future<void> _load() async {
@@ -172,6 +201,7 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
           isMobileDataConnection: widget.isMobileDataConnection,
           folderId: entry.id,
           title: entry.name,
+          preferences: widget.preferences,
         ),
       ),
     );
@@ -296,6 +326,18 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
         title: Text(widget.title ?? 'Google Drive'),
         actions: [
           IconButton(
+            key: const Key('cloud_browser_view_toggle'),
+            icon: Icon(
+              _viewMode == LibraryViewMode.grid
+                  ? Icons.view_list
+                  : Icons.grid_view,
+            ),
+            tooltip: _viewMode == LibraryViewMode.grid
+                ? l10n.cloudBrowserSwitchToListTooltip
+                : l10n.cloudBrowserSwitchToGridTooltip,
+            onPressed: _toggleViewMode,
+          ),
+          IconButton(
             key: const Key('google_drive_browser_download_button'),
             icon: const Icon(Icons.download),
             tooltip: l10n.cloudBrowserDownloadSelectedTooltip,
@@ -376,17 +418,80 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
             ),
           ),
         Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.all(8),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 0.6,
-            ),
-            itemCount: _entries.length,
-            itemBuilder: (context, index) => _buildEntryTile(_entries[index]),
-          ),
+          child: _viewMode == LibraryViewMode.grid
+              ? GridView.builder(
+                  padding: const EdgeInsets.all(8),
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    childAspectRatio: 0.6,
+                  ),
+                  itemCount: _entries.length,
+                  itemBuilder: (context, index) =>
+                      _buildEntryTile(_entries[index]),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(8),
+                  itemCount: _entries.length,
+                  itemBuilder: (context, index) =>
+                      _buildEntryRow(_entries[index]),
+                ),
         ),
       ],
+    );
+  }
+
+  /// 列表模式的單列：小縮圖（資料夾為圖示）＋檔名＋檔案大小。
+  /// 點擊與勾選行為與封面模式相同（資料夾下鑽、檔案切換勾選）。
+  Widget _buildEntryRow(CloudFileEntry entry) {
+    final selected = _selectedIds.contains(entry.id);
+    final sizeBytes = entry.sizeBytes;
+    return InkWell(
+      key: Key('google_drive_browser_entry_${entry.id}'),
+      onTap: entry.isFolder
+          ? () => _openSubfolder(entry)
+          : () => _toggleSelection(entry),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 40,
+              height: 56,
+              // 沒有縮圖網址時用簡單圖示，避免 40px 寬的佔位封面把書名再印一次
+              child: entry.isFolder
+                  ? const Icon(Icons.folder, size: 32)
+                  : entry.thumbnailUrl == null
+                      ? const Icon(Icons.book, size: 32)
+                      : _buildThumbnail(entry),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (!entry.isFolder && sizeBytes != null)
+                    Text(
+                      '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                ],
+              ),
+            ),
+            if (selected)
+              Icon(
+                Icons.check_circle,
+                key: Key('google_drive_browser_checkbox_checked_${entry.id}'),
+                color: Theme.of(context).colorScheme.primary,
+              ),
+          ],
+        ),
+      ),
     );
   }
 

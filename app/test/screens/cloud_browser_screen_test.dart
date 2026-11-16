@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:elinkbook/downloads/download_queue_controller.dart';
 import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
@@ -21,6 +22,9 @@ import '../support/fake_path_provider_platform.dart';
 import '../support/pump_localized_widget.dart';
 
 void main() {
+  // 檢視模式偏好存在 SharedPreferences，每個測試從空白開始
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   const folderEntry = CloudFileEntry(
     id: 'folder-1',
     name: '小說',
@@ -893,6 +897,74 @@ void main() {
 
     expect(find.text('Added to download queue (2 files), check progress '
         'in the Sources screen'), findsOneWidget);
+  });
+
+  group('封面／列表檢視切換', () {
+    FakeCloudStorageClient client() => FakeCloudStorageClient(
+          folderContents: {
+            null: const CloudFolderListing(
+              entries: [folderEntry, fileEntryNoThumbnail, smallFileEntry],
+            ),
+          },
+        );
+
+    testWidgets('預設為封面（格狀）模式，且有切換到列表的按鈕', (tester) async {
+      await pumpScreen(tester, client: client());
+
+      expect(find.byType(GridView), findsOneWidget);
+      expect(find.byType(ListView), findsNothing);
+      expect(find.byKey(const Key('cloud_browser_view_toggle')), findsOneWidget);
+    });
+
+    testWidgets('按切換後改為列表模式，保留資料夾與檔案並可勾選', (tester) async {
+      await pumpScreen(tester, client: client());
+
+      await tester.tap(find.byKey(const Key('cloud_browser_view_toggle')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GridView), findsNothing);
+      expect(find.byType(ListView), findsOneWidget);
+      expect(find.text('小說'), findsOneWidget);
+      expect(find.text('紅樓夢.epub'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('google_drive_browser_checkbox_checked_file-1')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('再按一次切回封面模式', (tester) async {
+      await pumpScreen(tester, client: client());
+
+      await tester.tap(find.byKey(const Key('cloud_browser_view_toggle')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('cloud_browser_view_toggle')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GridView), findsOneWidget);
+    });
+
+    testWidgets('記住上次選擇：重新開啟畫面直接是列表模式', (tester) async {
+      await pumpScreen(tester, client: client());
+      await tester.tap(find.byKey(const Key('cloud_browser_view_toggle')));
+      await tester.pumpAndSettle();
+
+      await tester.pumpWidget(const SizedBox());
+      await pumpScreen(tester, client: client());
+
+      expect(find.byType(ListView), findsOneWidget);
+      expect(find.byType(GridView), findsNothing);
+    });
+
+    testWidgets('列表模式顯示檔案大小', (tester) async {
+      await pumpScreen(tester, client: client());
+      await tester.tap(find.byKey(const Key('cloud_browser_view_toggle')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1.0 MB'), findsOneWidget);
+    });
   });
 }
 

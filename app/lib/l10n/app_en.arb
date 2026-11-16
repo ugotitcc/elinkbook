@@ -28,6 +28,8 @@
   "cloudBrowserMobileDataDialogMessage": "You're currently on a mobile data connection, and some selected files are over 20MB. Downloading may incur data charges. Continue anyway?",
   "cloudBrowserMobileDataDialogConfirm": "Continue Download",
   "cloudBrowserDownloadSelectedTooltip": "Download Selected",
+  "cloudBrowserSwitchToListTooltip": "Switch to list view",
+  "cloudBrowserSwitchToGridTooltip": "Switch to cover view",
   "cloudBrowserReauthMessage": "Login expired. Please reconnect your {provider} account in Settings.",
   "cloudBrowserGenericProviderLabel": "cloud",
   "cloudBrowserImportCategoryLabel": "Import to category:",
