@@ -364,6 +364,7 @@ Future<void> main() async {
   );
   final syncCheckpointTrigger = SyncCheckpointTrigger(
     runCheckpoint: syncEngine.runCheckpoint,
+    checkReadingPositionOnOpen: syncEngine.checkReadingPositionOnOpen,
     // epic-50-sync-token-refresh：自動同步時登入過期，比照上方衝突對話框
     // 透過 navigatorKey 取得目前畫面的 context，顯示一次性 Toast。
     onSessionExpired: () {

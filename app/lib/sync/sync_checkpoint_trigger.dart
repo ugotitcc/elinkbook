@@ -1,4 +1,5 @@
 import 'sync_checkpoint_result.dart';
+import 'sync_reading_position.dart';
 
 /// Checkpoint 觸發器（epic-8-sync Issue 6，spec.md「同步引擎」／
 /// issues.md Issue 6）：包裝一次 `SyncEngine.runCheckpoint()` 呼叫，並把
@@ -25,12 +26,29 @@ import 'sync_checkpoint_result.dart';
 class SyncCheckpointTrigger {
   final Future<SyncCheckpointResult> Function() _runCheckpoint;
   final void Function()? _onSessionExpired;
+  final Future<ReadingPositionChoice?> Function(String bookId)?
+      _checkReadingPositionOnOpen;
 
   SyncCheckpointTrigger({
     required Future<SyncCheckpointResult> Function() runCheckpoint,
     void Function()? onSessionExpired,
+    Future<ReadingPositionChoice?> Function(String bookId)?
+        checkReadingPositionOnOpen,
   })  : _runCheckpoint = runCheckpoint,
-        _onSessionExpired = onSessionExpired;
+        _onSessionExpired = onSessionExpired,
+        _checkReadingPositionOnOpen = checkReadingPositionOnOpen;
+
+  /// 開書時檢查雲端閱讀位置（PRD FR-19）。未注入檢查函式時回傳 null；檢查函式
+  /// 拋出任何例外也吞掉回傳 null——絕不影響開書。
+  Future<ReadingPositionChoice?> checkOnOpen(String bookId) async {
+    final check = _checkReadingPositionOnOpen;
+    if (check == null) return null;
+    try {
+      return await check(bookId);
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> trigger() async {
     final result = await _runCheckpoint();

@@ -3,6 +3,7 @@ import 'dart:async';
 import '../stats/reading_stats_repository.dart';
 import '../stats/reading_stats_tracker.dart';
 import '../sync/sync_checkpoint_trigger.dart';
+import '../sync/sync_reading_position.dart';
 import '../library/models/library_enums.dart';
 import 'epub_position_info.dart';
 import 'pdf_page_info.dart';
@@ -29,6 +30,7 @@ class ReadingSession {
     ReadingStatsRepository? statsRepository,
     this.syncCheckpointTrigger,
     this.readerActivityTracker,
+    this.onCloudPositionAccepted,
     this.checkpointInterval = const Duration(minutes: 5),
   }) : _stats = statsTracker ??
             _statsTrackerFor(bookId, bookTitle ?? bookId, statsRepository);
@@ -44,6 +46,10 @@ class ReadingSession {
 
   final SyncCheckpointTrigger? syncCheckpointTrigger;
   final ReaderActivityTracker? readerActivityTracker;
+
+  /// 開書時檢查發現雲端位置較新、且使用者選「保留雲端」後呼叫（此時資料庫已是
+  /// 雲端位置），讓閱讀畫面跳到該位置。
+  final void Function()? onCloudPositionAccepted;
   final Duration checkpointInterval;
 
   /// 兩個統計來源皆未提供時為 null（完全不計時，所有統計呼叫為無動作）。
@@ -53,6 +59,7 @@ class ReadingSession {
   ReadingPositionSaver? _positionSaver;
 
   Timer? _checkpointTimer;
+  bool _closed = false;
 
   /// 上一次 Foliate／PDF 位置回報，只用來判斷「這次算不算閱讀活動」。
   EpubPositionInfo? _lastEpubInfo;
@@ -67,6 +74,13 @@ class ReadingSession {
     if (trigger != null) {
       _checkpointTimer =
           Timer.periodic(checkpointInterval, (_) => trigger.trigger());
+      if (!hasJumpTarget) {
+        unawaited(trigger.checkOnOpen(bookId).then((choice) {
+          if (!_closed && choice == ReadingPositionChoice.keepCloud) {
+            onCloudPositionAccepted?.call();
+          }
+        }));
+      }
     }
   }
 
@@ -124,6 +138,7 @@ class ReadingSession {
   /// SQLite 寫入已落地，沒趕上的會延到下一次 Checkpoint 才推送，不會遺失。
   /// 未登入或已有 Checkpoint 執行中時 `trigger()` 內部會直接放棄，不拋例外。
   void close(BookFileFormat? format) {
+    _closed = true;
     readerActivityTracker?.markReaderClosed();
     final stats = _stats;
     if (stats != null) unawaited(stats.flushAndClose());

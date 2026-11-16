@@ -442,6 +442,7 @@ Book _wiringBook() => Book(
 Future<AppDependencies> _pumpWiringApp(
   WidgetTester tester, {
   FakeSearchRepository? searchRepository,
+  SyncCheckpointTrigger? syncCheckpointTrigger,
   bool isEinkMode = true,
 }) async {
   // Issue 29 的啟動自動開書預設為 true，會在 pump 後自動推入 ReaderScreen、
@@ -451,6 +452,7 @@ Future<AppDependencies> _pumpWiringApp(
     readerFeatures: fakeReaderFeatureDependencies(
       libraryRepository: FakeLibraryRepository(initialBooks: [_wiringBook()]),
       searchRepository: searchRepository,
+      syncCheckpointTrigger: syncCheckpointTrigger,
       prefsManager: FakeReaderPrefsManager(
         globalPrefs: const GlobalReaderPrefs.initial().copyWith(
           reading: ReadingDefaults(openLastBookOnLaunch: false),
@@ -684,6 +686,27 @@ void _openBookWiringTests() {
         same(deps.sync.syncCheckpointTrigger),
       );
       expect(bookSearch.isEinkMode, isTrue);
+      await _disposeWiringApp(tester);
+    });
+
+    testWidgets('Issue 43：經 ElinkBookApp 從書架開書，同一個 trigger 實例貫穿且會呼叫 checkOnOpen', (
+      tester,
+    ) async {
+      final checked = <String>[];
+      final trigger = SyncCheckpointTrigger(
+        runCheckpoint: () async => SyncCheckpointResult.notLoggedIn,
+        checkReadingPositionOnOpen: (bookId) async {
+          checked.add(bookId);
+          return null;
+        },
+      );
+      final deps = await _pumpWiringApp(tester, syncCheckpointTrigger: trigger);
+
+      await tester.tap(find.byKey(Key('book_item_$_kWiringBookId')));
+      await tester.pumpAndSettle();
+
+      _expectReaderWired(tester, deps, isEinkMode: true);
+      expect(checked, [_kWiringBookId]);
       await _disposeWiringApp(tester);
     });
   });
