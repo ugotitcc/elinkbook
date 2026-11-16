@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/test/test_flutter_secure_storage_platform.dart';
@@ -11,6 +12,7 @@ import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
+import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_engine.dart';
 import 'package:elinkbook/sync/sync_metadata_repository.dart';
 import 'package:elinkbook/sync/sync_reading_position.dart';
@@ -283,6 +285,132 @@ void main() {
 
       expect(result, isNull);
       expect(conflicts, isEmpty);
+    });
+
+    // ── 審查 I-1：開書檢查繞過 _isSyncing 鎖，與進行中的 checkpoint 競爭 token 續期 ──
+    // 連續切書（離開 A 書的 checkpoint 還在跑、馬上開 B 書）時，兩邊以同一個舊 token
+    // 同時 authRefresh；先完成者把新 token 存回，後完成者發現「儲存的 token 已不是我
+    // 送出時的那個」而回傳 null，被誤判成登出。
+    group('與進行中的 checkpoint 並行（審查 I-1）', () {
+      /// 兩次 authRefresh 都卡住，等測試放行；回傳 gates 供測試依序放行。
+      http.Client concurrentServer(List<Completer<void>> gates, String fingerprint) {
+        return mockPocketBase(
+          (request) async {
+            if (request.url.path == '/api/collections/sync_reading_positions/records') {
+              final perPage = int.tryParse(request.url.queryParameters['perPage'] ?? '') ?? 1;
+              return http.Response(
+                jsonEncode({
+                  'items': [
+                    _remote(
+                        fingerprint: fingerprint,
+                        updated: '2026-11-10 00:00:00.000Z',
+                        progress: 0.9),
+                  ],
+                  'page': 1,
+                  'perPage': perPage,
+                  'totalItems': 1,
+                }),
+                200,
+                headers: {'content-type': 'application/json'},
+              );
+            }
+            if (request.url.path == '/api/batch') {
+              // 每個子請求回一筆成功結果（保留本機後位置會被推送）
+              final count =
+                  ((jsonDecode(request.body) as Map)['requests'] as List).length;
+              return http.Response(
+                jsonEncode([
+                  for (var i = 0; i < count; i++)
+                    {
+                      'status': 200,
+                      'body': {'id': 'pb-$i', 'updated': '2026-11-11 00:00:00.000Z'},
+                    },
+                ]),
+                200,
+                headers: {'content-type': 'application/json'},
+              );
+            }
+            return http.Response(
+              jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          },
+          onAuthRefresh: () {
+            final gate = Completer<void>();
+            gates.add(gate);
+            return gate.future;
+          },
+        );
+      }
+
+      /// 讓事件迴圈跑一會兒，使已發出的請求都抵達假伺服器。
+      Future<void> settle() => Future<void>.delayed(const Duration(milliseconds: 30));
+
+      /// 依抵達順序放行所有卡住的續期請求。
+      Future<void> releaseAll(List<Completer<void>> gates) async {
+        for (final gate in gates) {
+          gate.complete();
+          await settle();
+        }
+      }
+
+      test('checkpoint 先續期、開書檢查後完成：開書檢查仍要詢問使用者，不可被誤判成登出而略過', () async {
+        await libraryRepository.insertBook(_book(
+          'b10',
+          fingerprint: 'fp-10',
+          syncedServerUpdatedAt: '2026-11-01 00:00:00.000Z',
+          progress: 0.3,
+        ));
+        final gates = <Completer<void>>[];
+        final conflicts = <ReadingPositionConflict>[];
+        final engine = buildEngine(
+          concurrentServer(gates, 'fp-10'),
+          conflicts,
+          choice: ReadingPositionChoice.keepLocal,
+        );
+
+        final checkpoint = engine.runCheckpoint();
+        await settle(); // checkpoint 的續期請求先抵達
+        final openCheck = engine.checkReadingPositionOnOpen('b10');
+        await settle();
+        await releaseAll(gates);
+
+        final choice = await openCheck;
+        await checkpoint;
+
+        expect(conflicts.where((c) => c.bookId == 'b10'), isNotEmpty,
+            reason: '開書檢查必須詢問；不可因 checkpoint 剛換過 token 就靜默略過');
+        expect(choice, ReadingPositionChoice.keepLocal);
+      });
+
+      test('開書檢查先續期、checkpoint 後完成：checkpoint 不可被誤判成未登入', () async {
+        await libraryRepository.insertBook(_book(
+          'b11',
+          fingerprint: 'fp-11',
+          syncedServerUpdatedAt: '2026-11-01 00:00:00.000Z',
+          progress: 0.3,
+        ));
+        final gates = <Completer<void>>[];
+        final conflicts = <ReadingPositionConflict>[];
+        final engine = buildEngine(
+          concurrentServer(gates, 'fp-11'),
+          conflicts,
+          choice: ReadingPositionChoice.keepLocal,
+        );
+
+        final openCheck = engine.checkReadingPositionOnOpen('b11');
+        await settle(); // 開書檢查的續期請求先抵達
+        final checkpoint = engine.runCheckpoint();
+        await settle();
+        await releaseAll(gates);
+
+        await openCheck;
+        final result = await checkpoint;
+
+        expect(result, SyncCheckpointResult.synced,
+            reason: 'checkpoint 不可因開書檢查剛換過 token 而被誤判成 notLoggedIn');
+      });
     });
 
     test('網路逾時（伺服器遲遲不回應）：到時間就放棄，回傳 null、不詢問，不阻擋開書', () async {

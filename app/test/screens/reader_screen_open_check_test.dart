@@ -1,7 +1,10 @@
 import 'dart:async';
 
 import 'package:elinkbook/l10n/app_localizations.dart';
+import 'package:elinkbook/reader/foliate_reader_view.dart';
+import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
+import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/reader/reader_jump_target.dart';
 import 'package:elinkbook/reader/reading_position.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
@@ -20,6 +23,17 @@ import '../support/fake_inappwebview_platform.dart';
 import '../support/fake_reader_feature_dependencies.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_reader_surface.dart';
+
+/// 可在開書後讓 `load` 失敗，模擬重讀雲端位置時資料庫讀取出錯。
+class _FlakyPrefs extends FakeReaderPrefsManager {
+  bool failLoad = false;
+
+  @override
+  Future<LoadedPrefs> load(String bookId) {
+    if (failLoad) throw StateError('load failed');
+    return super.load(bookId);
+  }
+}
 
 /// Issue 43：ReaderScreen 開書時並行檢查雲端閱讀位置（PRD FR-19）。
 ///
@@ -173,5 +187,108 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(surface.jumpTargets, isEmpty);
+  });
+
+  testWidgets('M-2：選保留雲端但重讀位置失敗：不拋未處理例外、不跳轉，閱讀器仍可用', (tester) async {
+    final flaky = _FlakyPrefs();
+    prefs = flaky;
+    await openReader(tester);
+    await finishRendering(tester);
+
+    flaky.failLoad = true;
+    pending.complete(ReadingPositionChoice.keepCloud);
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(surface.jumpTargets, isEmpty);
+    expect(find.byType(PdfReaderView), findsOneWidget);
+  });
+
+  testWidgets('M-4：未渲染前選保留雲端，補跳只發生一次（不因更新初始位置而重複導覽）', (tester) async {
+    await openReader(tester);
+
+    await answer(tester, ReadingPositionChoice.keepCloud, cloudPosition: cloud);
+    await finishRendering(tester);
+    // 之後再次回報渲染完成（極端情況下可能重複呼叫），也不可再補跳
+    await finishRendering(tester);
+
+    expect(surface.jumpTargets, hasLength(1));
+  });
+
+  group('M-5：EPUB（Foliate）路徑', () {
+    late Future<String?> Function(String, String) originalCache;
+
+    setUpAll(() {
+      originalCache = cacheBookForServing;
+      cacheBookForServing = (filePath, instanceId) async => '/fake/cache/dir/current.epub';
+    });
+
+    tearDownAll(() => cacheBookForServing = originalCache);
+
+    Future<void> openEpub(WidgetTester tester) async {
+      surface = FakeReaderSurface.foliate();
+      final trigger = SyncCheckpointTrigger(
+        runCheckpoint: () async => SyncCheckpointResult.synced,
+        checkReadingPositionOnOpen: (id) {
+          checked.add(id);
+          return pending.future;
+        },
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: prefs,
+              syncCheckpointTrigger: trigger,
+              readerSurfaceFactory: (format) => surface,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+    }
+
+    Future<void> renderEpub(WidgetTester tester) async {
+      tester.widget<FoliateReaderView>(find.byType(FoliateReaderView)).onPageRendered();
+      await tester.pump();
+    }
+
+    const cloudEpub = ReadingPosition(
+      epubLocatorJson: '{"cfi":"epubcfi(/6/8!/4/2)","index":3,"fraction":0.42}',
+      progress: 0.42,
+    );
+
+    testWidgets('已渲染後選保留雲端：以雲端的 CFI 與進度組成跳轉目標', (tester) async {
+      await openEpub(tester);
+      await renderEpub(tester);
+
+      await answer(tester, ReadingPositionChoice.keepCloud, cloudPosition: cloudEpub);
+
+      expect(surface.jumpTargets, hasLength(1));
+      expect(surface.jumpTargets.single.cfi, cloudEpub.epubLocatorJson);
+      expect(surface.jumpTargets.single.progression, 0.42);
+      expect(surface.jumpTargets.single.pdfPageIndex, isNull);
+    });
+
+    testWidgets('未渲染前選保留雲端：渲染完成後才補跳，且只補一次', (tester) async {
+      await openEpub(tester);
+
+      await answer(tester, ReadingPositionChoice.keepCloud, cloudPosition: cloudEpub);
+      expect(surface.jumpTargets, isEmpty);
+
+      await renderEpub(tester);
+      await renderEpub(tester);
+      expect(surface.jumpTargets, hasLength(1));
+      expect(surface.jumpTargets.single.cfi, cloudEpub.epubLocatorJson);
+    });
   });
 }

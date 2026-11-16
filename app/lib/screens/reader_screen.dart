@@ -562,7 +562,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 跳轉；若閱讀引擎尚未渲染就緒則先暫存於 [_pendingCloudJumpTarget]，待
   /// [_handlePageRendered] 補跳（Issue 43 C-1）。
   Future<void> _handleCloudPositionAccepted() async {
-    final loaded = await widget.dependencies.prefsManager.load(widget.bookId);
+    // 呼叫端（ReadingSession）不 await 這個方法，這裡必須自己接住例外：重讀失敗
+    // 只代表這次沒跳轉，使用者仍停在目前位置，不應變成未處理的非同步錯誤。
+    final LoadedPrefs loaded;
+    try {
+      loaded = await widget.dependencies.prefsManager.load(widget.bookId);
+    } catch (e) {
+      debugPrint('重讀雲端閱讀位置失敗：$e');
+      return;
+    }
     if (!mounted) return;
     final pos = loaded.readingPosition;
     _session.onPrefsLoaded(initialProgress: pos.progress);
@@ -574,10 +582,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_openBookFlow.isRendered) {
       _surface.jumpTo(target);
     } else {
-      setState(() {
-        _initialPosition = pos;
-        _pendingCloudJumpTarget = target;
-      });
+      // 只暫存、不更新 [_initialPosition]：PDF 的 initialPageIndex 只在 View 的
+      // initState 讀一次，Foliate 也只在開書當下組參數，事後更新無效；View 若尚未
+      // 建構則會多一次導覽。統一由 [_handlePageRendered] 補跳，行為單一且可測。
+      _pendingCloudJumpTarget = target;
     }
   }
 

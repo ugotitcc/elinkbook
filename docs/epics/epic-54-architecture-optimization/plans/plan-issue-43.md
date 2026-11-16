@@ -37,6 +37,15 @@ PRD FR-19：「開啟書籍時若偵測到雲端進度與本機當前位置不�
 - [x] **Task 10**：跑異動檔案測試、`flutter analyze`、`node tool/check_l10n_hardcoded_strings.js`；最後一個 Task 完成後跑一次完整 `flutter test`。
 - [ ] **Task 11（真機）**：兩台裝置，A 讀到 X 並同步，B（或新機器）開同一本書：進書後出現對話框；選雲端跳到 X；選本機維持；離線開書不卡。
 
+## 程式審查修正紀錄（2026-11-17，`reviews/review-code-issue-43.md`）
+
+- **I-1**（並行續期競爭）：先寫 `與進行中的 checkpoint 並行` 兩個測試並確認修正前紅燈（開書檢查被略過／checkpoint 被誤判 `notLoggedIn`），再把 `checkReadingPositionOnOpen` 改為直接用已存 token 做唯讀查詢，不呼叫 `_refreshAuthToken`。token 過期時 401 由 `ClientException` 吞掉，過期提示仍交 checkpoint。
+- **M-1**：刪除 `networkTimeout` 過時 TODO。
+- **M-2**：`_handleCloudPositionAccepted` 對 `prefsManager.load` 加 `try/catch`＋`debugPrint`（先有紅燈測試）。
+- **M-4**：確認 PDF `initialPageIndex` 只在 View `initState` 讀一次、Foliate 只在開書當下組參數，未渲染路徑更新 `_initialPosition` 無效且可能重複導覽，已移除，只留暫存補跳；加測「補跳只發生一次」。
+- **M-5**：補 EPUB（Foliate）層級測試：已渲染／未渲染兩種時序，驗證 `cfi`、`progression` 組成。
+- **未處理**：M-3（`onPrefsLoaded` 重建儲存器，影響小，維持現狀）、M-6（引擎註解「絕不拋例外」靠 `checkOnOpen` 兜底，維持現狀）。
+
 ## 測試限制
 
 `reader_screen_open_check_test.dart` 以 `FakeReaderSurface` 驗證「ReaderScreen 下了正確的跳轉指令、時機正確」，但看不到底層 View 是否真的捲動，實際跳轉須 Task 11 真機確認；Task 11 須刻意測「剛開大檔書、尚未渲染完成就點保留雲端」（EPUB 與 PDF 兩端）。

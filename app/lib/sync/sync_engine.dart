@@ -58,7 +58,7 @@ class SyncEngine {
   final BookMetadataExtractor? _metadataExtractor;
 
   /// 開書時位置檢查（[checkReadingPositionOnOpen]）的網路逾時，只涵蓋網路請求，
-  /// 不含使用者看對話框做決定的時間。TODO(Issue 43)：尚未套用。
+  /// 不含使用者看對話框做決定的時間。
   final Duration networkTimeout;
 
   SyncEngine({
@@ -440,22 +440,20 @@ class SyncEngine {
       if (fingerprint == null) return null;
 
       final pb = _clientFactory(baseUrl);
-      // 整個網路階段（續期 + 查詢）共用單一 networkTimeout 上限，不含後續
-      // resolver 詢問使用者的等待時間。
-      final result = await (() async {
-        // 401 等續期失敗一律視為「這次不檢查」，不在這裡清除登入狀態，
-        // 交給 checkpoint 既有的過期處理與提示（避免重複提示）。
-        final authToken = await _refreshAuthToken(pb, storedAuthToken);
-        if (authToken == null) return null;
-
-        return pb.collection('sync_reading_positions').getList(
-              filter: pb.filter('book_fingerprint = {:fp}', {'fp': fingerprint}),
-              perPage: 1,
-              sort: 'created',
-              headers: {'Authorization': authToken},
-            );
-      })().timeout(networkTimeout);
-      if (result == null || result.items.isEmpty) return null;
+      // 只做唯讀查詢，直接用已儲存的 token，**不呼叫 [_refreshAuthToken]**（審查
+      // I-1）：開書檢查不經過 [_isSyncing] 鎖，若與進行中的 checkpoint 同時續期，
+      // 先完成者換掉儲存的 token，後完成者的「token 已被換掉」判斷會把自己誤判成
+      // 登出（開書檢查被略過，或 checkpoint 被誤報 notLoggedIn）。token 過期時
+      // PocketBase 回 401，在下方被 ClientException 吞掉；過期提示與續期交給
+      // checkpoint 既有流程。查詢本身受 networkTimeout 限制，不含後續 resolver
+      // 詢問使用者的等待時間。
+      final result = await pb.collection('sync_reading_positions').getList(
+            filter: pb.filter('book_fingerprint = {:fp}', {'fp': fingerprint}),
+            perPage: 1,
+            sort: 'created',
+            headers: {'Authorization': storedAuthToken},
+          ).timeout(networkTimeout);
+      if (result.items.isEmpty) return null;
       final existing = result.items.first;
       final remoteServerUpdated = existing.data['updated'] as String?;
       if (remoteServerUpdated == null) return null;
