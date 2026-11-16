@@ -115,6 +115,8 @@ $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 $item = Get-Item $setupPath
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host " 安裝程式打包成功！" -ForegroundColor Green
+Write-Host " 建置模式: release" -ForegroundColor Green
+Write-Host " 版本:     $rawVersion" -ForegroundColor Green
 Write-Host " 輸出檔案: $setupPath" -ForegroundColor Green
 Write-Host " 檔案大小: $([math]::Round($item.Length / 1MB, 2)) MB" -ForegroundColor Green
 Write-Host " SHA256:   $hashHex" -ForegroundColor Green

@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:elinkbook/l10n/app_localizations.dart';
+import 'package:elinkbook/platform/build_signing.dart';
 import 'package:elinkbook/screens/about_screen.dart';
 
 const _appInfoChannel = MethodChannel('elinkbook/app_info');
@@ -172,5 +174,103 @@ void main() {
       find.byKey(const Key('about_screen_build_time_text')),
     );
     expect(buildTimeText.data, 'Unavailable');
+  });
+
+  group('建置資訊（建置模式＋實際簽章身分）', () {
+    const releaseFp = SigningFingerprints(release: 'aa');
+
+    void mockSigning(Map<String, Object?>? info, {bool throws = false}) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_appInfoChannel, (call) async {
+        if (call.method == 'getBuildSigningInfo') {
+          if (throws) throw PlatformException(code: 'x');
+          return info;
+        }
+        return null;
+      });
+    }
+
+    Future<void> pumpAbout(WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AboutScreen(loadFingerprints: () async => releaseFp),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    String textOf(WidgetTester tester, String key) =>
+        tester.widget<Text>(find.byKey(Key(key))).data!;
+
+    testWidgets('debug 模式＋debug 金鑰：顯示組合，沒有警示，並顯示 OAuth 前綴',
+        (tester) async {
+      mockSigning({
+        'signingSha256': 'ff',
+        'isDebugCert': true,
+        'googleClientIdPrefix': '606617',
+      });
+      await pumpAbout(tester);
+
+      // flutter test 一律是 debug 模式
+      expect(textOf(tester, 'about_screen_build_info_text'),
+          'debug｜簽章：debug 金鑰');
+      expect(textOf(tester, 'about_screen_oauth_text'),
+          'Google client 606617…');
+    });
+
+    testWidgets('指紋對得上登錄的發佈金鑰：顯示發佈金鑰', (tester) async {
+      mockSigning({
+        'signingSha256': 'AA',
+        'isDebugCert': false,
+        'googleClientIdPrefix': '606617',
+      });
+      await pumpAbout(tester);
+
+      expect(textOf(tester, 'about_screen_build_info_text'),
+          'debug｜簽章：發佈金鑰');
+    });
+
+    testWidgets('未知金鑰：加警示符號', (tester) async {
+      mockSigning({
+        'signingSha256': 'zz',
+        'isDebugCert': false,
+        'googleClientIdPrefix': '606617',
+      });
+      await pumpAbout(tester);
+
+      expect(textOf(tester, 'about_screen_build_info_text'),
+          'debug｜簽章：未知金鑰 ⚠');
+    });
+
+    testWidgets('原生呼叫失敗：降級顯示「無法取得」', (tester) async {
+      mockSigning(null, throws: true);
+      await pumpAbout(tester);
+
+      expect(textOf(tester, 'about_screen_build_info_text'), '無法取得');
+      expect(textOf(tester, 'about_screen_oauth_text'), '無法取得');
+    });
+
+    testWidgets('Windows：只顯示建置模式，不顯示 OAuth 列也不呼叫簽章通道', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      var called = false;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_appInfoChannel, (call) async {
+        if (call.method == 'getBuildSigningInfo') called = true;
+        return null;
+      });
+      try {
+        await pumpAbout(tester);
+
+        expect(textOf(tester, 'about_screen_build_info_text'), 'debug');
+        expect(find.byKey(const Key('about_screen_oauth_text')), findsNothing);
+        expect(called, isFalse);
+      } finally {
+        // 必須在測試結束前還原，否則 Flutter 的不變量檢查會判失敗
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
   });
 }

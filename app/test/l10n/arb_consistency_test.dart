@@ -11,6 +11,7 @@ const Map<String, String> _enAllowlist = {
   'settingsLanguageZhTW': '語言選單中各語言的自稱，刻意不翻譯（zh_TW 與 en 皆為「正體中文」）',
   'settingsLanguageZhCN': '語言選單中各語言的自稱，刻意不翻譯（zh_TW 與 en 皆為「简体中文」）',
   'settingsLanguageEn': '語言選單中各語言的自稱，刻意不翻譯（zh_TW 與 en 皆為「English」）',
+  'aboutScreenOAuthValue': '只含專有名詞（Google client）與 Client ID 前綴，各語系寫法相同，無需翻譯',
 };
 
 void main() {

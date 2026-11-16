@@ -3041,6 +3041,60 @@ abstract class AppLocalizations {
   /// **'編譯時間'**
   String get aboutScreenBuildTimeLabel;
 
+  /// 「建置資訊」項目標題（建置模式＋實際簽章身分）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'建置資訊'**
+  String get aboutScreenBuildInfoLabel;
+
+  /// 建置資訊內容，{mode} 為 debug／profile／release（不翻譯），{signing} 為簽章身分名稱
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'{mode}｜簽章：{signing}'**
+  String aboutScreenBuildInfoValue(String mode, String signing);
+
+  /// 「OAuth 設定」項目標題
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'OAuth 設定'**
+  String get aboutScreenOAuthLabel;
+
+  /// 打包進去的 Google OAuth Client ID 前 6 碼
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'Google client {prefix}…'**
+  String aboutScreenOAuthValue(String prefix);
+
+  /// 簽章身分：debug 金鑰
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'debug 金鑰'**
+  String get aboutSigningDebug;
+
+  /// 簽章身分：發佈金鑰（GitHub 公開 APK）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'發佈金鑰'**
+  String get aboutSigningRelease;
+
+  /// 簽章身分：上傳金鑰（Google Play AAB）
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'上傳金鑰'**
+  String get aboutSigningUpload;
+
+  /// 簽章身分：Google Play 重新簽署的金鑰
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'Google Play 簽署金鑰'**
+  String get aboutSigningPlay;
+
+  /// 簽章身分：指紋未登錄或對不上任何已知金鑰
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'未知金鑰'**
+  String get aboutSigningUnknown;
+
   /// 「系統 WebView 版本」項目標題
   ///
   /// In zh_TW, this message translates to:

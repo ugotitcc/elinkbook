@@ -1,11 +1,16 @@
 package cc.ugotit.elinkbook
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.view.KeyEvent
 import android.webkit.WebView
 import androidx.activity.result.contract.ActivityResultContracts
+import java.io.ByteArrayInputStream
 import java.io.File
+import java.security.MessageDigest
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -97,6 +102,47 @@ class MainActivity : AudioServiceFragmentActivity() {
         return super.dispatchKeyEvent(event)
     }
 
+    /**
+     * 讀取目前安裝的 APK「實際」簽章憑證，回傳給 Dart 的「關於」頁判定簽章身分：
+     * - signingSha256：憑證 SHA-256（小寫十六進位、無冒號），讀不到為 null。
+     * - isDebugCert：憑證 DN 含 CN=Android Debug（各開發機的 debug 金鑰都是這個 DN）。
+     * - googleClientIdPrefix：打包進去的 Google OAuth Client ID 前 6 碼。
+     * 讀取簽章失敗不拋例外（資訊性功能，不能讓「關於」頁崩潰）。
+     */
+    private fun readBuildSigningInfo(): Map<String, Any?> {
+        var sha256: String? = null
+        var isDebugCert = false
+        try {
+            val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val info = packageManager.getPackageInfo(
+                    packageName,
+                    PackageManager.GET_SIGNING_CERTIFICATES
+                )
+                info.signingInfo?.apkContentsSigners
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
+                    .signatures
+            }
+            val first = signatures?.firstOrNull()
+            if (first != null) {
+                val bytes = first.toByteArray()
+                sha256 = MessageDigest.getInstance("SHA-256").digest(bytes)
+                    .joinToString("") { "%02x".format(it) }
+                val cert = CertificateFactory.getInstance("X.509")
+                    .generateCertificate(ByteArrayInputStream(bytes)) as X509Certificate
+                isDebugCert = cert.subjectX500Principal.name.contains("CN=Android Debug")
+            }
+        } catch (_: Exception) {
+            // 保持 null／false，Dart 端顯示「未知金鑰」
+        }
+        return mapOf(
+            "signingSha256" to sha256,
+            "isDebugCert" to isDebugCert,
+            "googleClientIdPrefix" to BuildConfig.GOOGLE_CLIENT_ID_PREFIX
+        )
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         bookMetadataChannel =
@@ -141,6 +187,9 @@ class MainActivity : AudioServiceFragmentActivity() {
                         result.success(versionName)
                     }
                     "getBuildTime" -> result.success(BuildConfig.BUILD_TIME)
+                    // 「關於」頁的建置資訊：APK 實際的簽章憑證（不是建置時的宣告）
+                    // 與打包進去的 OAuth Client ID 前綴。
+                    "getBuildSigningInfo" -> result.success(readBuildSigningInfo())
                     else -> result.notImplemented()
                 }
             }

@@ -2241,6 +2241,39 @@
   "@aboutScreenBuildTimeLabel": {
     "description": "「編譯時間」項目標題"
   },
+  "aboutScreenBuildInfoLabel": "建置資訊",
+  "@aboutScreenBuildInfoLabel": {
+    "description": "「建置資訊」項目標題（建置模式＋實際簽章身分）"
+  },
+  "aboutScreenBuildInfoValue": "{mode}｜簽章：{signing}",
+  "@aboutScreenBuildInfoValue": {
+    "description": "建置資訊內容，{mode} 為 debug／profile／release（不翻譯），{signing} 為簽章身分名稱",
+    "placeholders": {
+      "mode": { "type": "String" },
+      "signing": { "type": "String" }
+    }
+  },
+  "aboutScreenOAuthLabel": "OAuth 設定",
+  "@aboutScreenOAuthLabel": {
+    "description": "「OAuth 設定」項目標題"
+  },
+  "aboutScreenOAuthValue": "Google client {prefix}…",
+  "@aboutScreenOAuthValue": {
+    "description": "打包進去的 Google OAuth Client ID 前 6 碼",
+    "placeholders": {
+      "prefix": { "type": "String" }
+    }
+  },
+  "aboutSigningDebug": "debug 金鑰",
+  "@aboutSigningDebug": { "description": "簽章身分：debug 金鑰" },
+  "aboutSigningRelease": "發佈金鑰",
+  "@aboutSigningRelease": { "description": "簽章身分：發佈金鑰（GitHub 公開 APK）" },
+  "aboutSigningUpload": "上傳金鑰",
+  "@aboutSigningUpload": { "description": "簽章身分：上傳金鑰（Google Play AAB）" },
+  "aboutSigningPlay": "Google Play 簽署金鑰",
+  "@aboutSigningPlay": { "description": "簽章身分：Google Play 重新簽署的金鑰" },
+  "aboutSigningUnknown": "未知金鑰",
+  "@aboutSigningUnknown": { "description": "簽章身分：指紋未登錄或對不上任何已知金鑰" },
   "aboutScreenWebViewVersionLabel": "系統 WebView 版本",
   "@aboutScreenWebViewVersionLabel": {
     "description": "「系統 WebView 版本」項目標題"

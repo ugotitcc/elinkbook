@@ -18,11 +18,15 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const crypto = require('crypto');
 const { spawnSync } = require('child_process');
+const summary = require('./build_summary');
 
 const APP_DIR = path.join(__dirname, '..');
 const KEY_PROPS = path.join(APP_DIR, 'android', 'key.properties');
 const OAUTH = path.join(APP_DIR, 'config', 'cloud_oauth.json');
+// 公開的簽章指紋對照表（不含機密），收尾驗簽時用來判定實際簽章身分。
+const FINGERPRINTS = path.join(APP_DIR, 'config', 'signing_fingerprints.json');
 
 // 打包目標。keySource 為 null 代表不換金鑰（debug 建置不讀 key.properties）。
 const TARGETS = {
@@ -34,6 +38,13 @@ const TARGETS = {
     // 另外多建一次不拆 ABI 的共用版（app-release.apk），發版要 5 個檔含它。
     extraBuildArgs: [['build', 'apk', '--release']],
     output: 'build/app/outputs/flutter-apk/',
+    mode: 'release',
+    kind: 'apk',
+    artifactMatch: (f) => f.endsWith('-release.apk'),
+    nextSteps: [
+      'adb install -r build/app/outputs/flutter-apk/app-arm64-v8a-release.apk（禁用 flutter install，會清掉書架資料）',
+      '發版：依 docs/research/release_apk_sop.md 第 2.5 節改檔名並產生 SHA256SUMS',
+    ],
   },
   aab: {
     label: 'Google Play AAB（上傳金鑰）',
@@ -41,6 +52,10 @@ const TARGETS = {
     oauthSource: path.join(APP_DIR, 'config', 'cloud_oauth.release.json'),
     buildArgs: ['build', 'appbundle', '--release'],
     output: 'build/app/outputs/bundle/release/',
+    mode: 'release',
+    kind: 'aab',
+    artifactMatch: (f) => f.endsWith('.aab'),
+    nextSteps: ['上傳到 Google Play Console（依 docs/research/google_play_release_sop.md）'],
   },
   debug: {
     label: 'debug APK（不換金鑰）',
@@ -48,6 +63,13 @@ const TARGETS = {
     oauthSource: path.join(APP_DIR, 'config', 'cloud_oauth.debug.json'),
     buildArgs: ['build', 'apk', '--debug'],
     output: 'build/app/outputs/flutter-apk/',
+    mode: 'debug',
+    kind: 'apk',
+    artifactMatch: (f) => f === 'app-debug.apk',
+    nextSteps: [
+      'adb install -r build/app/outputs/flutter-apk/app-debug.apk（禁用 flutter install，會清掉書架資料）',
+      '不要把 debug APK 放到 GitHub Release 或官網',
+    ],
   },
 };
 
@@ -76,6 +98,92 @@ async function pickTarget() {
     process.exit(1);
   }
   return t;
+}
+
+// ---- 收尾摘要（epic-54 後續項目）----
+
+function sha256OfFile(file) {
+  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+function readJsonOrEmpty(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (_) {
+    return {};
+  }
+}
+
+// 從 android/local.properties 的 sdk.dir 取得 Android SDK 路徑。
+function androidSdkDir() {
+  try {
+    const text = fs.readFileSync(path.join(APP_DIR, 'android', 'local.properties'), 'utf8');
+    const m = /^sdk\.dir=(.+)$/m.exec(text);
+    // .properties 會把路徑裡的反斜線寫成 \\、冒號寫成 \:，還原成一般路徑。
+    return m ? m[1].trim().split('\\\\').join('\\').split('\\:').join(':') : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// 對產物做驗簽，回傳 { cert|null }：APK 用 apksigner，AAB 用 keytool。
+// 找不到工具或執行失敗回 null（呼叫端標「未驗證」，不讓打包失敗）。
+function verifyArtifact(kind, file) {
+  if (kind === 'apk') {
+    const sdk = androidSdkDir();
+    const apksigner = sdk && summary.findApksigner(sdk);
+    if (!apksigner) return null;
+    // .bat 在 Windows 要走 shell；路徑可能含空白，所以自己加引號。
+    const r = spawnSync(`"${apksigner}"`, ['verify', '--print-certs', `"${file}"`], {
+      encoding: 'utf8',
+      shell: true,
+    });
+    if (r.status !== 0) return null;
+    return summary.parseApksignerOutput(r.stdout);
+  }
+  const r = spawnSync('keytool', summary.keytoolArgs(`"${file}"`), {
+    encoding: 'utf8',
+    shell: true,
+  });
+  if (r.status !== 0) return null;
+  return summary.parseKeytoolOutput(r.stdout);
+}
+
+// 建完後驗簽並印摘要；簽章與目標不符回傳 false（呼叫端以結束碼 2 結束）。
+function printBuildSummary(name, t) {
+  const outDir = path.join(APP_DIR, t.output);
+  const files = fs.existsSync(outDir) ? fs.readdirSync(outDir).filter(t.artifactMatch).sort() : [];
+  const artifacts = files.map((name) => {
+    const full = path.join(outDir, name);
+    return { name, sizeBytes: fs.statSync(full).size, sha256: sha256OfFile(full) };
+  });
+
+  const fingerprints = readJsonOrEmpty(FINGERPRINTS);
+  const cert = files.length > 0 ? verifyArtifact(t.kind, path.join(outDir, files[0])) : null;
+  const expected = summary.expectedIdentityOf(name);
+  let identity = null;
+  let status = 'unverified';
+  if (cert) {
+    identity = summary.classifyIdentity(cert, fingerprints);
+    status = summary.evaluateSigning(identity, expected, fingerprints);
+  }
+
+  const oauthId = readJsonOrEmpty(t.oauthSource).GOOGLE_OAUTH_CLIENT_ID || '';
+  const pubspec = fs.readFileSync(path.join(APP_DIR, 'pubspec.yaml'), 'utf8');
+  console.log(
+    summary.formatSummary({
+      label: t.label,
+      mode: t.mode,
+      version: summary.readPubspecVersion(pubspec),
+      identity,
+      sha256: cert ? cert.sha256 : null,
+      status,
+      oauthPrefix: oauthId.slice(0, 6),
+      artifacts,
+      nextSteps: t.nextSteps,
+    })
+  );
+  return status !== 'mismatch';
 }
 
 async function main() {
@@ -128,6 +236,10 @@ async function main() {
     }
   }
   console.log(`[完成] 產物在 app/${t.output}`);
+  if (!printBuildSummary(name, t)) {
+    console.error('[失敗] 簽章與此打包目標應有的身分不符，產物不可發佈。檔案會自動還原。');
+    process.exit(2);
+  }
 }
 
 main();

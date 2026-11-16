@@ -256,7 +256,11 @@ node tool/build_release.js --target apk    # 直接指定
 - 建置前先備份目前的 `key.properties` 與 `cloud_oauth.json`，結束後（成功、失敗、Ctrl+C）一律還原。
 - 來源檔缺少時，在動任何檔案之前就中止。
 - 結束碼 `0`：成功。`1`：取消。`2`：設定錯誤或建置失敗（檔案已還原）。
-- 它不做版本號、簽章驗證、改檔名與 SHA-256；這些仍照 `docs/research/release_apk_sop.md`。
+- 建完後印「打包資訊」：版本、**實際**簽章身分（`apksigner`／AAB 用 `keytool` 讀憑證，與該目標應有的身分比對）、OAuth Client ID 前綴、每個產物的大小與 SHA-256、下一步指令。簽章不符（例如 `apk` 目標卻簽成 debug 金鑰）以結束碼 `2` 結束，摘要仍會印出供檢查。
+- 簽章身分判定邏輯在 `build_summary.js`（單元測試：`node tool/test_build_summary.mjs`）：憑證 DN 含 `CN=Android Debug` 為 debug 金鑰，其餘比對 `config/signing_fingerprints.json` 登錄的公開指紋；指紋留空時只警告「未登錄，無法驗證」，不當成失敗。
+- `apksigner` 從 `android/local.properties` 的 `sdk.dir` 自動挑最新的 `build-tools`；找不到工具時標「簽章：未驗證」，不讓打包失敗。
+- 它不做版本號、改檔名與 `SHA256SUMS.txt`；這些仍照 `docs/research/release_apk_sop.md`。
+- 不經過這支腳本、直接 `flutter build apk --release` 且沒有 `key.properties` 時，Gradle 會直接失敗（避免打出 release＋debug 金鑰的組合）；只想自己量效能時設環境變數 `ORG_GRADLE_PROJECT_allowDebugSigning=true`。
 
 ## `check_foliate_es_compat.js`
 
