@@ -492,7 +492,7 @@
   "aboutScreenBuildInfoLabel": "Build Info",
   "aboutScreenBuildInfoValue": "{mode} | Signed by: {signing}",
   "aboutScreenOAuthLabel": "OAuth Config",
-  "aboutScreenOAuthValue": "Google client {prefix}…",
+  "aboutScreenOAuthValue": "Google Client ID (first 6 characters only): {prefix}",
   "aboutSigningDebug": "debug key",
   "aboutSigningRelease": "release key",
   "aboutSigningUpload": "upload key",

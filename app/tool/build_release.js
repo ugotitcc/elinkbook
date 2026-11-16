@@ -8,10 +8,11 @@
 // 慣例比照 bump_version.js（純 Node 內建模組、免 npm install）。
 //
 // 用法（在 app/ 目錄下）：
-//   node tool/build_release.js                  # 互動式選擇
+//   node tool/build_release.js                  # 問答式：選目標 → 看確認清單 → 輸入 y 才打包
 //   node tool/build_release.js --target apk     # GitHub APK
 //   node tool/build_release.js --target aab     # Google Play AAB
 //   node tool/build_release.js --target debug   # debug APK
+//   加上 --yes 可略過最後的 y/N 確認（給自動化用）；金鑰不符一律擋下，不受 --yes 影響。
 //
 // 結束碼 0：成功；1：使用者取消；2：設定錯誤或建置失敗（檔案已還原）。
 
@@ -78,6 +79,18 @@ function fail(msg) {
   process.exit(2);
 }
 
+// 問一個問題，回傳去掉前後空白的答案。
+async function ask(question) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  // 輸入被關閉（EOF）時當成空答案，呼叫端會視為取消。
+  const answer = await new Promise((resolve) => {
+    rl.once('close', () => resolve(''));
+    rl.question(question, resolve);
+  });
+  rl.close();
+  return answer.trim();
+}
+
 // 從 --target 取得目標；沒帶就互動詢問。
 async function pickTarget() {
   const i = process.argv.indexOf('--target');
@@ -89,15 +102,65 @@ async function pickTarget() {
   const keys = Object.keys(TARGETS);
   console.log('要打包哪一種？');
   keys.forEach((k, n) => console.log(`  ${n + 1}. ${k}：${TARGETS[k].label}`));
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const answer = await new Promise((resolve) => rl.question('輸入編號：', resolve));
-  rl.close();
-  const t = keys[Number(answer.trim()) - 1];
+  const answer = await ask('輸入編號：');
+  const t = keys[Number(answer) - 1];
   if (!t) {
     console.error('沒有選擇有效的編號，已取消。');
     process.exit(1);
   }
   return t;
+}
+
+// ---- 打包前確認 ----
+
+// 直接讀金鑰庫（.jks）的憑證指紋；讀不到（沒有 keytool、檔案不在、密碼錯）回 null。
+// 密碼只放環境變數，不進指令列、不印出。
+function keystoreCert(props) {
+  if (!props.storeFile || !props.keyAlias) return null;
+  const r = spawnSync(
+    'keytool',
+    summary.keystoreListArgs(`"${props.storeFile}"`, `"${props.keyAlias}"`, 'ELINK_STOREPASS'),
+    { encoding: 'utf8', shell: true, env: { ...process.env, ELINK_STOREPASS: props.storePassword } }
+  );
+  if (r.status !== 0) return null;
+  return summary.parseKeytoolOutput(r.stdout);
+}
+
+// 印出「這次到底會打成什麼」的確認清單，回傳 keyCheck 狀態（debug 回 null）。
+function printPreflight(name, t) {
+  const fingerprints = readJsonOrEmpty(FINGERPRINTS);
+  const expected = summary.expectedIdentityOf(name);
+  let keyCheck = null;
+  if (t.keySource) {
+    const props = summary.parseKeyProperties(fs.readFileSync(t.keySource, 'utf8'));
+    const cert = keystoreCert(props);
+    keyCheck = {
+      alias: props.keyAlias,
+      storeName: path.basename(props.storeFile),
+      expected,
+      sha256: cert ? cert.sha256 : null,
+      identity: null,
+      status: 'unreadable',
+    };
+    if (cert) {
+      keyCheck.identity = summary.classifyIdentity(cert, fingerprints);
+      keyCheck.status = summary.evaluateSigning(keyCheck.identity, expected, fingerprints);
+    }
+  }
+  const oauthId = readJsonOrEmpty(t.oauthSource).GOOGLE_OAUTH_CLIENT_ID || '';
+  const pubspec = fs.readFileSync(path.join(APP_DIR, 'pubspec.yaml'), 'utf8');
+  console.log(
+    summary.formatPreflight({
+      label: t.label,
+      mode: t.mode,
+      version: summary.readPubspecVersion(pubspec),
+      keyCheck,
+      oauthFile: path.relative(APP_DIR, t.oauthSource).split(path.sep).join('/'),
+      oauthPrefix: oauthId.slice(0, 6),
+      commands: [t.buildArgs, ...(t.extraBuildArgs || [])].map((a) => 'flutter ' + a.join(' ')),
+    })
+  );
+  return keyCheck;
 }
 
 // ---- 收尾摘要（epic-54 後續項目）----
@@ -198,6 +261,20 @@ async function main() {
       `找不到配對檔：\n  ${missing.join('\n  ')}\n` +
         '這些檔案不進版控，要自己建立。樣板見 key.properties.example、cloud_oauth.example.json。'
     );
+  }
+
+  // 打包前確認：金鑰不符直接擋下；其餘讓使用者看過清單再決定。
+  const keyCheck = printPreflight(name, t);
+  if (keyCheck && keyCheck.status === 'mismatch') {
+    fail('金鑰庫的實際身分與此目標不符，不能打包。請改選正確的目標，或修正 key.properties 配對檔。');
+  }
+  if (!process.argv.includes('--yes')) {
+    const warn = keyCheck && keyCheck.status !== 'ok' ? '（上面有 ⚠，請確認）' : '';
+    const answer = await ask(`以上內容正確，開始打包？${warn}(y/N)：`);
+    if (!/^y(es)?$/i.test(answer)) {
+      console.error('已取消，沒有打包。');
+      process.exit(1);
+    }
   }
 
   // 備份目前的檔案（不存在則記為 null，還原時刪除）。

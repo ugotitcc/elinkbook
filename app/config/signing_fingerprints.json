@@ -1,6 +1,6 @@
 {
   "_說明": "各簽章金鑰憑證的 SHA-256 指紋（小寫十六進位、不含冒號）。指紋是公開資訊，不是密碼。留空代表尚未登錄：「關於」頁會顯示未知金鑰，build_release.js 收尾會提示把實測指紋填進來。debug 金鑰不用登錄（以憑證 CN=Android Debug 判定）。",
-  "release": "",
-  "upload": "",
+  "release": "6f377463739de4e813993a1dd8b244a9c6989d9511f91abe8515eacd24d60590",
+  "upload": "51e24dad7ce585bb73a0ac2676bb00c9b968f04cb2fccd63401f3703dc3b5dd5",
   "playSigning": ""
 }
