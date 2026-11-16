@@ -198,10 +198,14 @@ dev_dependencies:
 
 # flutter_inappwebview_android 1.1.3 有 toMap() 無限遞迴 bug（line 198 呼叫
 # ...toMap() 而非手動組裝 map），造成 InternalStoragePathHandler 使用時
-# StackOverflow。本地 patch 修正此 bug，待上游修復後移除此 override。
+# StackOverflow；另 AGP 9 需改用 proguard-android-optimize.txt。
+# file_picker 11.0.3 在 AGP 9 會跳過 KGP，本專案 builtInKotlin=false 須固定
+# isAgp9OrAbove=false 才可編譯（epic-66 Issue 17）。待上游修復／外掛遷移後移除。
 dependency_overrides:
   flutter_inappwebview_android:
     path: patches/flutter_inappwebview_android
+  file_picker:
+    path: patches/file_picker
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
