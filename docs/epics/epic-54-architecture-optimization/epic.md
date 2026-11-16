@@ -1169,4 +1169,4 @@ Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
 - **症狀**：PDF 手動裁切後，畫面看起來兩頁疊在一起（放大的裁切文字蓋在被壓扁的整頁上，露出頁框與頁碼「一九」）。E-Ink 裝置截圖見 `tmp/排版異常/PDF手動裁切重疊.jpg`。
 - **根因**：`_buildProcessedOverlay` 的處理後覆蓋圖 `RawImage` 放在 pdfrx 的 `Stack` 內未撐滿頁面矩形，寬鬆約束下取點陣圖原尺寸（`pageRenderScale` 僅 2～3 倍解析度）；裁切後頁面放大倍率更高時只佔左上一角（截圖約 76%），其餘露出底層被壓扁的整頁。加粗覆蓋圖同一路徑，放大超過 2 倍同樣受影響。
 - **修法**：覆蓋圖以 `Positioned.fill` 包覆。回歸測試 `pdf_reader_view_crop_overlay_size_test.dart`：修正前覆蓋圖寬 612、頁面矩形寬 1163（紅燈），修正後通過。
-- **驗證**：上述測試、`pdf_reader_view_filters_test`、`pdf_reader_view_paginated_test` 通過，`flutter analyze` 乾淨。**待辦**：真機（E-Ink）尚未確認。
+- **驗證**：上述測試、`pdf_reader_view_filters_test`、`pdf_reader_view_paginated_test` 通過，`flutter analyze` 乾淨；完整 `flutter test` 5341 通過、2 跳過、0 失敗（第一輪曾見 2 個失敗但未保留名稱，同程式碼重跑全過，判定為偶發，原因未證實）。**待辦**：真機（E-Ink）尚未確認。
