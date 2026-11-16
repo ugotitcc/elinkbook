@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:path/path.dart' as p;
 
 import '../l10n/app_localizations.dart';
 import '../platform/platform_support.dart';
@@ -22,6 +23,8 @@ import 'foliate_bridge_codec.dart';
 import 'foliate_bridge_handlers.dart';
 import 'foliate_asset_serving.dart';
 import 'foliate_native_bridge.dart';
+import 'font_download_catalog.dart';
+import 'windows_reader_resources.dart';
 import 'navigation_degraded_reason.dart';
 import 'js_bridge_gateway.dart';
 import 'open_book_trace.dart';
@@ -270,6 +273,23 @@ String? resolveCustomFontUri(String path, List<CustomFont> customFonts) {
   } on ArgumentError {
     return null;
   }
+}
+
+/// 把 `/downloaded-fonts/<發布路徑>` 請求對應到存放目錄 [directory] 底下的
+/// 實際檔案路徑；不合法時回傳 `null`。
+///
+/// Android 由 `InternalStoragePathHandler` 直接串流；Windows 沒有該 Handler，
+/// 改由 `_shouldInterceptRequest` 讀本機檔案（否則 `@font-face` 請求會落到
+/// 不存在的 appassets 網域而失敗，字型設定看起來「沒有作用」）。
+/// 只接受字型目錄（[fontDownloadSpecOf]）內已知的發布路徑，因此天然擋掉
+/// `..` 路徑穿越與任意檔案讀取。
+String? resolveDownloadedFontFile(String path, String directory) {
+  if (!path.startsWith(kDownloadedFontsPathPrefix)) return null;
+  final publishPath = path.substring(kDownloadedFontsPathPrefix.length);
+  final known = AppFont.values
+      .any((font) => fontDownloadSpecOf(font).publishPath == publishPath);
+  if (!known) return null;
+  return p.join(directory, publishPath);
 }
 
 /// `shouldInterceptRequest` 攔截到的請求路徑分類（epic-66 Issue 1 Task 7）。
@@ -946,8 +966,16 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
         if (bytes == null) return null;
         return WebResourceResponse(contentType: 'font/ttf', data: bytes);
       case FoliateRequestKind.downloadedFont:
+        // Android 由 InternalStoragePathHandler 服務；Windows 沒有該 Handler，
+        // 改讀本機已下載的字型檔。
+        final fontsDirectory = widget.downloadedFontsDirectory;
+        if (!isWindowsPlatform || fontsDirectory == null) return null;
+        final fontFile = resolveDownloadedFontFile(path, fontsDirectory);
+        if (fontFile == null) return null;
+        final fontBytes = await loadWindowsFileBytes(fontFile);
+        if (fontBytes == null) return null;
+        return WebResourceResponse(contentType: 'font/ttf', data: fontBytes);
       case FoliateRequestKind.unknown:
-        // 已下載字型在 Android 由 InternalStoragePathHandler 服務；
         // 其餘未知路徑一律回 null，讓 WebView 走預設行為、不丟例外
         // （Review Focus 4）。
         return null;

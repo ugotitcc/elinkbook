@@ -9,6 +9,7 @@ import 'models/library_enums.dart';
 class LibraryPreferences {
   static const _sortByKey = 'library_sort_by';
   static const _viewModeKey = 'library_view_mode';
+  static const _cloudBrowserViewModeKey = 'cloud_browser_view_mode';
 
   Future<LibrarySortBy> loadSortBy() async {
     final prefs = await SharedPreferences.getInstance();
@@ -43,5 +44,22 @@ class LibraryPreferences {
   Future<void> saveViewMode(LibraryViewMode viewMode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_viewModeKey, viewMode.name);
+  }
+
+  /// 雲端檔案選擇畫面的封面／列表模式，與書架的檢視模式各自獨立記憶。
+  Future<LibraryViewMode> loadCloudBrowserViewMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_cloudBrowserViewModeKey);
+    if (raw == null) return LibraryViewMode.grid;
+    try {
+      return LibraryViewMode.values.byName(raw);
+    } catch (_) {
+      return LibraryViewMode.grid;
+    }
+  }
+
+  Future<void> saveCloudBrowserViewMode(LibraryViewMode viewMode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cloudBrowserViewModeKey, viewMode.name);
   }
 }

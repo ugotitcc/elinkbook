@@ -145,6 +145,14 @@
   "@cloudBrowserDownloadSelectedTooltip": {
     "description": "AppBar 下載按鈕的無障礙提示文字（tooltip）"
   },
+  "cloudBrowserSwitchToListTooltip": "切換為列表檢視",
+  "@cloudBrowserSwitchToListTooltip": {
+    "description": "雲端檔案選擇畫面 AppBar 切換按鈕（目前為封面模式）的提示文字"
+  },
+  "cloudBrowserSwitchToGridTooltip": "切換為封面檢視",
+  "@cloudBrowserSwitchToGridTooltip": {
+    "description": "雲端檔案選擇畫面 AppBar 切換按鈕（目前為列表模式）的提示文字"
+  },
   "cloudBrowserReauthMessage": "登入已過期，請至「設定」重新連結 {provider} 帳號",
   "@cloudBrowserReauthMessage": {
     "description": "雲端帳號授權過期時的提示訊息，{provider} 為服務商品牌名（如 Google Drive／OneDrive，不翻譯）或找不到品牌名時的通用「雲端」標籤",
