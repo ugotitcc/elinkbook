@@ -20,7 +20,7 @@
 - **`file_picker` 11.0.3 本地修補**：複製至 `app/patches/file_picker/`（排除 `example/`、`test/`、`tool/`、`CONTRIBUTING.md`），`android/build.gradle` 固定 `isAgp9OrAbove = false`，`pubspec.lock` 確認轉為 `source: path`、`version: "11.0.3"`。
 - **`flutter_inappwebview_android` 1.1.3**：`android/build.gradle` 兩處 `proguard-android.txt` 改為 `proguard-android-optimize.txt`，並更新 `PATCH.md`。
 - **`flutter analyze`**：`No issues found!`
-- **`flutter build windows --debug`**：成功（`build\windows\x64\runner\Debug\elinkbook.exe`）。
+- **`flutter build windows --debug`**：成功（`build\windows\x64\runner\Debug\elinkbook.exe`）。 **只在升級前（Gradle 8.14）驗過，Task 3 升級後未重跑**；Gradle／AGP 只影響 Android，風險低，但 `file_picker` 已改為本地路徑副本，合併前建議在任一台 Windows 機再跑一次 `flutter build windows --debug`。
 - **`flutter build apk --debug`（Gradle 8.14／AGP 8.11.1）**：成功（`build\app\outputs\flutter-apk\app-debug.apk`），修補向下相容。
 
 ## 3. 升級後建置與體積比對（Task 3）
@@ -53,7 +53,7 @@
 
 ### 完整單元／Widget 測試紀錄（Task 5 Step 2）
 
-- `flutter test`：5,304 通過、2 略過、3 失敗（皆位於 `test/downloads/download_queue_controller_test.dart`，單獨重跑亦相同；本 Issue 未修改任何 `app/lib/` 或 `app/test/` 程式碼，屬既有與本案無關之非同步時序測試失敗）。
+- `flutter test`：5,304 通過、2 略過、3 失敗（皆位於 `test/downloads/download_queue_controller_test.dart`）。**該檔單獨重跑 3 次皆 28/28 全過**（2026-11-16 審查後補驗），只有整批執行才偶發，與 Issue 12、14、18 報告記載的同一現象一致（Issue 14 報告同樣是整批 +5161 ~2 -3、失敗全在此檔）。本 Issue 未修改任何 `app/lib/` 或 `app/test/` 程式碼；但未在升級前的 commit 上整批對照，因此「與本案無關」是依前例與「單獨全過」推論，不是實測對照。
 
 ### 已知殘留與後續觀察項目
 
