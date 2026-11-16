@@ -1146,3 +1146,5 @@ CONTEXT.md 已新增「閱讀會話」「位置儲存規則」兩詞條。無需
 - **Important 1（keytool 語系）已修**：本機 `keytool` 預設輸出中文（「金鑰與憑證管理工具」），而 `parseKeytoolOutput` 只認英文標籤，AAB 驗簽會靜默降級成「未驗證」。新增 `keytoolArgs()` 帶 `-J-Duser.language=en -J-Duser.country=US`，先寫失敗測試再實作；並以本機 `keytool` 對真實 JAR 簽章檔確認英文輸出可被解析。
 - **Minor 1（OAuth 前綴為空）不處理**：前綴來自 Gradle 讀的 `cloud_oauth.json`（非 `--dart-define`），讀不到時退回 `YOUR_GOOGLE_OAUTH_CLIENT_ID…` 佔位值，前綴為 `YOUR_G`，不會是空字串；審查所述情境不成立。
 - **Minor 2（`shell: true` 棄用警告）不處理**：同檔既有的 `flutter` 呼叫本來就會觸發同一則警告（每個程序只印一次），改新增的兩處不會減少警告；且新增處的參數已自行加引號。
+
+**2026-11-16 Issue 42 已合併**（PR #438，合併提交 `27db8df7`）。程式審查 Important 1（keytool 語系）已修。待辦仍在：登錄發佈／上傳金鑰指紋、真機看「關於」頁、實跑 `--target apk`／`aab`、確認 debug／release OAuth Client ID 相同是否預期。Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
