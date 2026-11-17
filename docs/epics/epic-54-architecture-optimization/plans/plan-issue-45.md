@@ -48,18 +48,19 @@
 ### Task 1：`PdfReaderView` 編輯期間顯示完整頁面
 
 **Files：**
-- Modify: `app/lib/reader/pdf_reader_view.dart`（`_cropEnabled` 約 610 行；`didUpdateWidget` 變更偵測約 946 行；疊圖與註記使用 `widget.pdfCropRect` 處：約 442、1519、1549、1571、1586、1719、2102 行）
+- Modify: `app/lib/reader/pdf_reader_view.dart`（`_cropEnabled` 約 610 行；`didUpdateWidget` 變更偵測約 946 行；**必改**的疊圖快取鍵三處：1519 `_buildProcessedOverlay`、1610 `_isOverlayJobStillWanted`、1647 `_recomputeOverlay`，三處都直接用 `widget.pdfCropRect`，漏改任一處會使疊圖被丟棄）
 - Test: `app/test/reader/pdf_reader_view_crop_edit_test.dart`（新增，沿用 `pdf_reader_view_visible_page_rects_test.dart` 的測試 PDF 與 pump 方式）
 
 **Interfaces：**
 - Produces：`PdfReaderView.cropEditModeActive == true` 時，版面、疊圖、註記座標換算都當作「未裁切」；`pdfCropMode`／`pdfCropRect` 屬性值不變，`_maybeDetectCropRect` 行為不變。
 
 - [ ] **Step 1: 寫失敗測試**（三個）
-  - `'已有手動裁切，cropEditModeActive 為 true 時，可見頁面寬度等於未裁切的頁面'`：同一份 PDF 先以 `pdfCropMode: manual, pdfCropRect: (0.1,0.1,0.9,0.9), cropEditModeActive: false` 取 `visiblePageRects` 的第一頁寬 `wCropped`；再改 `cropEditModeActive: true` pump 後取寬 `wFull`；斷言 `wFull < wCropped`（完整頁面縮放後較小或比例不同），並與 `pdfCropMode: none` 的寬度相等。
+  - `'已有手動裁切，cropEditModeActive 為 true 時，可見頁面長寬比等於未裁切的頁面'`：用**非等比**裁切 `pdfCropRect: (0.0, 0.2, 1.0, 0.8)`（等比裁切在 pageFit 下寬度不變，量不出差異）。先以 `pdfCropMode: none` 取 `visiblePageRects` 第一頁 `rectInViewer` 的長寬比 `aspectFull`；再以 `manual`＋該矩形、`cropEditModeActive: false` 取 `aspectCropped`，斷言兩者不等（`isNot(closeTo(aspectFull, 1e-3))`）；最後改 `cropEditModeActive: true` pump，斷言長寬比 `closeTo(aspectFull, 1e-3)`。
   - `'cropEditModeActive 切回 false 後，恢復為裁切後的頁面寬度'`。
   - `'autoDetect 且矩形已快取，cropEditModeActive 為 true 時不呼叫 onCropRectComputed'`。
+  - `'已有裁切且加粗強度大於 0，切換 cropEditModeActive 後疊圖仍會產生，不被丟棄'`（覆蓋 1519／1610／1647 三處；觀察方式比照 `pdf_reader_view_filters_test.dart` 既有 bold overlay 測試）。
 - [ ] **Step 2: 跑測試確認失敗** — `flutter test test/reader/pdf_reader_view_crop_edit_test.dart`，預期前兩個 FAIL。
-- [ ] **Step 3: 實作** — 新增私有 getter `PdfCropRect? get _activeCropRect => _cropEnabled ? widget.pdfCropRect : null;`，`_cropEnabled` 改為 `!widget.cropEditModeActive && widget.pdfCropMode != PdfCropMode.none && widget.pdfCropRect != null`；上列依賴裁切矩形的使用處（疊圖快取鍵 `crop:`、註記／搜尋／跳轉高亮座標換算、`cropRelativeToOriginalPercent` 的 `cropRect:`）一律改讀 `_activeCropRect`。`_dualPageEnabled` 與 `_maybeDetectCropRect` **不動**。`didUpdateWidget` 的 `changed` 加上 `oldWidget.cropEditModeActive != widget.cropEditModeActive`，沿用既有 reanchor 保持頁碼。
+- [ ] **Step 3: 實作** — 新增私有 getter `PdfCropRect? get _activeCropRect => _cropEnabled ? widget.pdfCropRect : null;`，`_cropEnabled` 改為 `!widget.cropEditModeActive && widget.pdfCropMode != PdfCropMode.none && widget.pdfCropRect != null`；1519、1610、1647 三處疊圖快取鍵 `crop:` 改讀 `_activeCropRect`。其餘使用處（442、1264、1549、1571、1586、2102）已被 `_cropEnabled ?` 保護、`_layoutCroppedPages`（1672）只在 `_cropEnabled` 為 true 時被呼叫，不需改。`_dualPageEnabled` 與 `_maybeDetectCropRect` **不動**。`didUpdateWidget` 的 `changed` 加上 `oldWidget.cropEditModeActive != widget.cropEditModeActive`，沿用既有 reanchor 保持頁碼。
 - [ ] **Step 4: 跑測試確認通過**，並跑 `test/reader/pdf_reader_view_visible_page_rects_test.dart`、`pdf_reader_view_filters_test.dart`、`pdf_reader_view_paginated_test.dart` 確認無回歸。
 - [ ] **Step 5: Commit** — `feat(reader): PDF 裁切編輯期間暫時顯示完整頁面（epic-54 Issue 45）`
 
@@ -93,7 +94,7 @@
 
 **Interfaces：**
 - Consumes：Task 1（`cropEditModeActive` 讓畫面顯示完整頁面）、Task 2（`onRestore`）。
-- Produces：`bool get _hasActiveCrop => _resolved!.pdfCropMode != PdfCropMode.none && _resolved!.pdfCropRect != null;`（與 `PdfReaderView._cropEnabled` 同條件）；`viewportRectToPageCropRect({required PdfCropRect viewportRect, required Size viewportSize, required Rect pageRectInViewport, double minFraction = 0.05})`。
+- Produces：`bool get _hasActiveCrop`（先取 `final resolved = _resolved;`，`resolved != null && resolved.pdfCropMode != PdfCropMode.none && resolved.pdfCropRect != null`，不使用 `!`）（與 `PdfReaderView._cropEnabled` 同條件）；`viewportRectToPageCropRect({required PdfCropRect viewportRect, required Size viewportSize, required Rect pageRectInViewport, double minFraction = 0.05})`。
 
 - [ ] **Step 1: 調整與新增測試**
   - `pdf_crop_mapping_test.dart`：刪除所有帶 `activeCrop` 的案例，其餘不變。
@@ -134,4 +135,5 @@
 
 - **決議覆蓋**：Q1（X 放棄）→ Task 3；Q2／Q3（還原鈕僅已有裁切時出現、原樣保留 mode）→ Task 2／3；Q4（不寫 prefs）→ Task 1 旗標＋Task 3 測試；Q5（返回鍵不變）→ Global Constraints，未改相關程式；Q6（移除合成）→ Task 3；Q7（保持頁碼）→ Task 1 沿用 reanchor；Q8／Q9（按鈕順序、tooltip）→ Task 2；Q10（記入 epic-54）→ Task 4。
 - **已知取捨**：編輯期間 `_dualPageEnabled` 不改（仍依 `pdfCropMode`），即已裁切書編輯時維持單頁；原本未裁切的雙頁書行為與現況相同。
+- **2026-11-18 審查修訂**（`reviews/review-plan-issue-45.md`）：C-1 部分採納（只有三處快取鍵必改，其餘已被保護）；C-2 採納（改用非等比裁切與長寬比斷言）；M-1、M-2 採納。
 - **風險**：Task 1 在 pdfrx 的版面快取（`_cachedLayoutKey`）是否納入旗標需在測試中確認；若兩次 `visiblePageRects` 寬度相同，代表快取鍵漏了旗標，須修正鍵而非繞過。
