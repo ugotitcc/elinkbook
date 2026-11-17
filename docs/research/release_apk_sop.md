@@ -4,7 +4,7 @@
 
 Google Play 上架（`.aab`）見 `docs/research/google_play_release_sop.md`。兩份 SOP 互相獨立。
 
-最後修訂：2026-11-14（補 legacy 檢查、測試版、Windows 版）
+最後修訂：2026-11-17（補換新機器的前置作業 1.6）
 
 ---
 
@@ -119,6 +119,49 @@ debug 金鑰
 1. 在 GitHub 建立 repo `ugotitcc/elinkbook`（已建立）。
 2. 設為公開（Public）。私有 repo 的 Release 無法讓未登入的人下載。
 3. 只放 README，不放原始碼。
+
+### 1.6 換新機器時要準備什麼（跑 `node tool/build_release.js` 之前）
+
+這一節把「新機器第一次打包」要做的事集中在一起。腳本自己會換金鑰與 OAuth 設定、建置後還原（見 2.2），所以**新機器不用手動複製 `key.properties`**，只要下面的前置條件齊全。
+
+#### 1.6.1 工具與環境
+
+| 項目 | 說明 |
+|---|---|
+| Node | 腳本只用 Node 內建模組，不需要 `npm install`。這台 Windows 的 Node 在 pnpm 裡，見 `app/tool/README.md`。 |
+| Flutter 3.47.9 | 專案要求此版本，要在 PATH 上。升級前須先與人類確認。 |
+| JDK 17 | `app/android/gradle.properties` 的 `org.gradle.java.home` 寫死 `C:\Program Files\Microsoft\jdk-17.0.21.21-hotspot`。新機器要裝**同一路徑**的 JDK 17，或改這一行（不要把改動帶進 commit，除非所有機器都同意新路徑）。 |
+| `keytool` | 要在 PATH 上（隨 JDK 附帶）。腳本用它讀金鑰庫指紋、驗 AAB 簽章。 |
+| Android SDK | 需有 `build-tools`，腳本用裡面的 `apksigner` 驗 APK 簽章。找不到時只會略過驗簽，不會擋建置，但 2.4 的簽章確認就要手動做。 |
+| `app/android/local.properties` | 內含 `flutter.sdk` 與 `sdk.dir`，不進版控。新機器若沒有，跑 `flutter pub get` 或第一次 `flutter build` 會產生，產生後確認路徑正確。 |
+
+#### 1.6.2 不進版控、要自己帶過去的檔案
+
+缺任何一個，腳本會直接印「找不到配對檔」並以結束碼 2 結束，**不會動到其他檔案**。
+
+| 檔案 | 用途 | 哪些目標需要 |
+|---|---|---|
+| `app/android/key.properties.release` | 發佈金鑰設定（只簽 APK） | `apk` |
+| `app/android/key.properties.upload` | 上傳金鑰設定（只簽 AAB） | `aab` |
+| `app/config/cloud_oauth.release.json` | 正式版 OAuth 設定 | `apk`、`aab` |
+| `app/config/cloud_oauth.debug.json` | debug 版 OAuth 設定 | `debug` |
+| 兩把 `.jks` 金鑰庫 | 實際簽章用 | `apk`、`aab` |
+
+注意：
+
+- `.jks` 要用安全的方式搬移，並保留離線備份。發佈金鑰遺失無法補救（見 0 的「三把金鑰」）。
+- 兩個 `key.properties.*` 內的 `storeFile` 是**絕對路徑**，要改成新機器上 `.jks` 的實際位置，一律用正斜線 `/`。範例路徑 `C:/Users/huthief/...` 只是樣板，新機器上的使用者名稱多半不同。
+- 密碼含反斜線 `\` 時，要寫成兩個反斜線 `\\`，檔案用 UTF-8 存檔。樣板見 `app/android/key.properties.example`、`app/config/cloud_oauth.example.json`。
+- 搬完後執行 1.2 第 3 點的 `git check-ignore -v`，確認這些檔案都被忽略，不會被誤 commit。
+- `app/config/signing_fingerprints.json`（公開指紋對照表）有進版控，不用另外搬。
+
+#### 1.6.3 第一次執行的順序
+
+1. `cd app`，執行 `flutter pub get`。
+2. 先跑 `node tool/build_release.js --target debug`，確認 Flutter、JDK、SDK 都正常。這個目標不需要簽章金鑰，只需要 `cloud_oauth.debug.json`。
+3. 放好 `.jks`、`key.properties.*`、`cloud_oauth.release.json` 後，再跑 `--target apk` 或 `--target aab`。
+4. 看收尾的簽章驗證：結束碼應為 0，且指紋要與 1.3 記下的相符。金鑰庫身分與所選目標不符時，腳本會擋下，連 `--yes` 都不能略過。
+5. 真機安裝一律用 `adb install -r`，**禁用** `flutter install`（會解除安裝並清掉書架資料）。
 
 ---
 
@@ -494,6 +537,8 @@ powershell -ExecutionPolicy Bypass -File tool/verify_windows_installer.ps1 -Setu
 | 狀況 | 原因 | 怎麼處理 |
 |---|---|---|
 | `apksigner` 顯示指紋是上傳金鑰 | 2.2 沒換成功，或建置前被換回 | 重做 2.2，確認 `key.properties` 的 `keyAlias` 是 `release` |
+| 腳本印「找不到配對檔」，結束碼 2 | 新機器缺 `key.properties.*` 或 `cloud_oauth.*.json`（都不進版控） | 照 1.6.2 補齊。檔案尚未被動過，不需還原 |
+| 建置失敗：Gradle 找不到 Java／JDK 路徑不存在 | `gradle.properties` 的 `org.gradle.java.home` 寫死舊機器的路徑 | 裝同路徑的 JDK 17，或改成本機實際路徑（見 1.6.1） |
 | 建置失敗：`release 簽章設定不完整` | `key.properties` 缺欄位 | 對照 1.2 補齊 4 個欄位 |
 | 建置失敗：找不到 `key.properties`，release 會退回 debug 金鑰 | `key.properties` 不存在（刻意擋下，避免誤打出 release＋debug 金鑰的組合） | 重做 2.2；只想自己量效能才設 `ORG_GRADLE_PROJECT_allowDebugSigning=true` |
 | 使用者回報「與已安裝的套件衝突」 | 手機裝的是商店版或 debug 版 | 請使用者解除安裝後再裝 |
