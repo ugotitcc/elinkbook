@@ -78,6 +78,9 @@ import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/sync/sync_checkpoint_result.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/reader/pdf_crop_frame_overlay.dart';
+import '../support/fake_reader_surface.dart';
+import 'package:elinkbook/reader/pdf_crop_rect.dart';
+import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/bookmark.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
@@ -9371,6 +9374,165 @@ void main() {
       findsOneWidget,
       reason: '書籍內容應維持顯示，使用者仍可繼續閱讀',
     );
+  });
+
+  // epic-54 Issue 44：裁切框的比例相對「整個畫面」，確認時要換算成相對「頁面」
+  // （並在已有生效中裁切時合成回原始整頁座標）。頁面矩形由 FakePdfFacet 注入。
+  group('PdfCropFrameOverlay 座標換算（Issue 44）', () {
+    // 測試畫面 800x600；頁面左右各留 100px、上下各留 30px 灰邊
+    const pageRect = Rect.fromLTRB(100, 30, 700, 570);
+
+    // 版面設定 → 裁切 → 手動，進入手動裁切模式
+    Future<void> enterManualCropFromSettings(WidgetTester tester) async {
+      tester
+          .widget<IconButton>(
+            find.byKey(const Key('reader_chrome_layout_button')),
+          )
+          .onPressed!();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+      await tester.pumpAndSettle();
+      expect(find.byType(PdfCropFrameOverlay), findsOneWidget);
+    }
+
+    Future<(FakeReaderSurface, Rect)> openManualCrop(
+      WidgetTester tester, {
+      BookReaderPrefs? initialPrefs,
+    }) async {
+      final binaryMessenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      const fullscreenChannel = MethodChannel('elinkbook/fullscreen');
+      binaryMessenger.setMockMethodCallHandler(
+        fullscreenChannel,
+        (call) async => null,
+      );
+      addTearDown(
+        () => binaryMessenger.setMockMethodCallHandler(fullscreenChannel, null),
+      );
+      final manager = FakeReaderPrefsManager(
+        bookPrefsByBookId: {
+          'b_crop44': ?initialPrefs,
+        },
+      );
+      prefsManager = manager;
+      final surface = FakeReaderSurface.pdf();
+      surface.pdf!.pageRects = [(pageIndex: 0, rectInViewer: pageRect)];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh', 'TW'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_crop44',
+            dependencies: fakeReaderFeatureDependencies(
+              prefsManager: manager,
+              readerSurfaceFactory: (_) => surface,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+      await enterManualCropFromSettings(tester);
+      return (surface, tester.getRect(find.byType(PdfCropFrameOverlay)));
+    }
+
+    // 以畫面（overlay）座標拖出 [from]→[to]，等寬限期後按確認
+    Future<void> dragAndConfirm(
+      WidgetTester tester,
+      Rect overlay,
+      Offset from,
+      Offset to,
+    ) async {
+      await tester.dragFrom(overlay.topLeft + from, to - from);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.byKey(const Key('pdf_crop_frame_confirm')));
+      await tester.pumpAndSettle();
+    }
+
+    void expectSavedCrop(PdfCropRect expected) {
+      final saved = prefsManager.bookPrefsByBookId['b_crop44'];
+      expect(saved, isNotNull);
+      expect(saved!.pdfCropMode, PdfCropMode.manual);
+      final r = saved.pdfCropRect!;
+      expect(r.left, closeTo(expected.left, 1e-3));
+      expect(r.top, closeTo(expected.top, 1e-3));
+      expect(r.right, closeTo(expected.right, 1e-3));
+      expect(r.bottom, closeTo(expected.bottom, 1e-3));
+    }
+
+    testWidgets('拖滿整頁白紙：寫回 (0,0,1,1)，不是畫面比例', (tester) async {
+      final (_, overlay) = await openManualCrop(tester);
+      await dragAndConfirm(
+          tester, overlay, pageRect.topLeft, pageRect.bottomRight);
+
+      expect(find.byType(PdfCropFrameOverlay), findsNothing);
+      expectSavedCrop(const PdfCropRect(left: 0, top: 0, right: 1, bottom: 1));
+    });
+
+    testWidgets('已有生效中的手動裁切：框左半，合成回原始整頁座標', (tester) async {
+      final (surface, overlay) = await openManualCrop(tester);
+      // 先以 UI 套用第一次裁切：頁面 (0.1, 0.1, 0.9, 0.9)（頁面 600x540，
+      // 內縮 60x54）
+      await dragAndConfirm(tester, overlay,
+          pageRect.topLeft + const Offset(60, 54),
+          pageRect.bottomRight - const Offset(60, 54));
+      expectSavedCrop(
+          const PdfCropRect(left: 0.1, top: 0.1, right: 0.9, bottom: 0.9));
+
+      // 再次進入手動裁切：已裁切時顯示的是裁切後的頁面，這裡讓它填滿畫面；
+      // 框左半 → 右邊界 0.1 + 0.5 × 0.8 = 0.5（審查 I-1）
+      await enterManualCropFromSettings(tester);
+      surface.pdf!.pageRects = [(pageIndex: 0, rectInViewer: Offset.zero & overlay.size)];
+      await dragAndConfirm(
+          tester, overlay, Offset.zero, Offset(overlay.width / 2, overlay.height));
+
+      expectSavedCrop(
+          const PdfCropRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.9));
+    });
+
+    testWidgets('模式 none 但殘留舊矩形：不合成', (tester) async {
+      final (_, overlay) = await openManualCrop(
+        tester,
+        initialPrefs: const BookReaderPrefs(
+          showHeader: true,
+          showFooter: true,
+          pdfCropMode: PdfCropMode.none,
+          pdfCropRect:
+              PdfCropRect(left: 0.14, top: 0.11, right: 0.87, bottom: 0.89),
+        ),
+      );
+      await dragAndConfirm(tester, overlay, pageRect.topLeft,
+          Offset(pageRect.center.dx, pageRect.bottom));
+
+      expectSavedCrop(const PdfCropRect(left: 0, top: 0, right: 0.5, bottom: 1));
+    });
+
+    testWidgets('框完全落在頁面外：不寫入，仍留在裁切編輯模式', (tester) async {
+      final (_, overlay) = await openManualCrop(tester);
+      await dragAndConfirm(
+          tester, overlay, const Offset(0, 100), const Offset(60, 500));
+
+      expect(find.byType(PdfCropFrameOverlay), findsOneWidget);
+      expect(prefsManager.bookPrefsByBookId['b_crop44']?.pdfCropRect, isNull);
+    });
+
+    testWidgets('頁面矩形尚未就緒（空清單）：不寫入，仍留在裁切編輯模式', (tester) async {
+      final (surface, overlay) = await openManualCrop(tester);
+      surface.pdf!.pageRects = const [];
+      await dragAndConfirm(
+          tester, overlay, pageRect.topLeft, pageRect.bottomRight);
+
+      expect(find.byType(PdfCropFrameOverlay), findsOneWidget);
+      expect(prefsManager.bookPrefsByBookId['b_crop44']?.pdfCropRect, isNull);
+    });
   });
 
   group('PdfCropFrameOverlay', () {

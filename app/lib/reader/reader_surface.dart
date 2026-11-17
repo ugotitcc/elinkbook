@@ -96,6 +96,10 @@ abstract class PdfFacet {
   void jumpToPageAtRect(int pageIndex, PercentRect rect);
 
   Future<ui.Image?> renderThumbnail(int pageIndex, {required double maxWidth});
+
+  /// 目前可見頁面在閱讀區內的矩形（邏輯像素），手動裁切把「相對畫面」的框
+  /// 換算成「相對頁面」時使用（epic-54 Issue 44）。未就緒回傳空清單。
+  List<({int pageIndex, Rect rectInViewer})> visiblePageRects();
 }
 
 /// 格式為 `null`（不支援）專用：畫面只顯示不支援訊息、不建構任何 View，所有

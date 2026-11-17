@@ -148,6 +148,15 @@ class FakePdfFacet implements PdfFacet {
   List<PdfTocItem> toc = const [];
   List<PdfSearchMatch> matches = const [];
 
+  /// 測試注入：手動裁切確認時回報的可見頁面矩形（預設空，等同未就緒）
+  List<({int pageIndex, Rect rectInViewer})> pageRects = const [];
+
+  @override
+  List<({int pageIndex, Rect rectInViewer})> visiblePageRects() {
+    _calls.add('pdf.visiblePageRects');
+    return pageRects;
+  }
+
   @override
   Future<List<PdfTocItem>> loadTableOfContents() async {
     _calls.add('pdf.loadTableOfContents');

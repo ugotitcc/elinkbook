@@ -1,0 +1,182 @@
+1794913266104 DOWN id=8 pos=Offset(109.9, 158.9) leader=null active=[] cur=null
+1794913266123 MOVE id=8 pos=Offset(108.8, 158.9) -> 更新框角落 [領頭]
+1794913266134 MOVE id=8 pos=Offset(107.2, 158.9) -> 更新框角落 [領頭]
+1794913266180 MOVE id=8 pos=Offset(82.7, 158.9) -> 更新框角落 [領頭]
+1794913266186 DOWN id=9 pos=Offset(220.3, 159.5) leader=8 active=[8] cur=Offset(82.7, 158.9)
+1794913266189 MOVE id=8 pos=Offset(89.1, 158.9) -> 忽略(非領頭,領頭=9 閒置1ms)
+1794913266191 MOVE id=9 pos=Offset(289.6, 159.5) -> 更新框角落 [領頭]
+1794913266198 MOVE id=8 pos=Offset(94.4, 158.9) -> 忽略(非領頭,領頭=9 閒置6ms)
+1794913266200 MOVE id=8 pos=Offset(96.5, 158.9) -> 忽略(非領頭,領頭=9 閒置9ms)
+1794913266243 MOVE id=8 pos=Offset(98.1, 158.9) -> 忽略(非領頭,領頭=9 閒置52ms)
+1794913266247 UP id=9 promoted=true leader=9 remaining=[8]
+1794913266252 MOVE id=8 pos=Offset(100.8, 158.9) -> 更新框角落 [領頭]
+1794913266259 MOVE id=8 pos=Offset(102.4, 158.9) -> 更新框角落 [領頭]
+1794913266269 MOVE id=8 pos=Offset(103.5, 158.9) -> 更新框角落 [領頭]
+1794913266273 MOVE id=8 pos=Offset(104.5, 158.9) -> 更新框角落 [領頭]
+1794913266287 UP id=8 promoted=true leader=8 remaining=[]
+1794913266296 DOWN id=10 pos=Offset(102.9, 158.4) leader=null active=[] cur=Offset(104.5, 158.9)
+1794913266329 MOVE id=10 pos=Offset(104.0, 158.4) -> 更新框角落 [領頭]
+1794913266352 MOVE id=10 pos=Offset(105.1, 158.4) -> 更新框角落 [領頭]
+1794913266370 MOVE id=10 pos=Offset(104.0, 158.9) -> 更新框角落 [領頭]
+1794913266430 MOVE id=10 pos=Offset(105.6, 158.9) -> 更新框角落 [領頭]
+1794913266439 MOVE id=10 pos=Offset(103.5, 158.9) -> 更新框角落 [領頭]
+1794913266494 MOVE id=10 pos=Offset(101.9, 159.5) -> 更新框角落 [領頭]
+1794913266504 MOVE id=10 pos=Offset(104.0, 159.5) -> 更新框角落 [領頭]
+1794913266574 MOVE id=10 pos=Offset(106.1, 160.5) -> 更新框角落 [領頭]
+1794913266587 MOVE id=10 pos=Offset(107.7, 160.5) -> 更新框角落 [領頭]
+1794913266650 MOVE id=10 pos=Offset(108.8, 160.5) -> 更新框角落 [領頭]
+1794913266670 MOVE id=10 pos=Offset(107.7, 160.5) -> 更新框角落 [領頭]
+1794913266676 MOVE id=10 pos=Offset(105.6, 161.1) -> 更新框角落 [領頭]
+1794913266724 MOVE id=10 pos=Offset(106.1, 161.1) -> 更新框角落 [領頭]
+1794913266787 MOVE id=10 pos=Offset(106.1, 164.3) -> 更新框角落 [領頭]
+1794913266801 MOVE id=10 pos=Offset(107.7, 164.8) -> 更新框角落 [領頭]
+1794913266853 MOVE id=10 pos=Offset(108.8, 165.9) -> 更新框角落 [領頭]
+1794913266878 MOVE id=10 pos=Offset(113.6, 168.5) -> 更新框角落 [領頭]
+1794913266880 MOVE id=10 pos=Offset(114.7, 169.6) -> 更新框角落 [領頭]
+1794913266969 UP id=10 promoted=true leader=10 remaining=[]
+1794913266974 DOWN id=11 pos=Offset(113.6, 171.7) leader=null active=[] cur=Offset(114.7, 169.6)
+1794913266982 MOVE id=11 pos=Offset(111.5, 171.7) -> 更新框角落 [領頭]
+1794913267000 MOVE id=11 pos=Offset(112.5, 172.3) -> 更新框角落 [領頭]
+1794913267068 DOWN id=12 pos=Offset(116.8, 174.4) leader=11 active=[11] cur=Offset(112.5, 172.3)
+1794913267071 UP id=11 promoted=true leader=12 remaining=[12]
+1794913267074 UP id=12 promoted=true leader=12 remaining=[]
+1794913267121 DOWN id=13 pos=Offset(123.7, 182.9) leader=null active=[] cur=Offset(112.5, 172.3)
+1794913267133 MOVE id=13 pos=Offset(122.7, 184.0) -> 更新框角落 [領頭]
+1794913267140 MOVE id=13 pos=Offset(122.7, 186.1) -> 更新框角落 [領頭]
+1794913267201 MOVE id=13 pos=Offset(123.2, 187.2) -> 更新框角落 [領頭]
+1794913267211 MOVE id=13 pos=Offset(131.2, 195.2) -> 更新框角落 [領頭]
+1794913267255 MOVE id=13 pos=Offset(115.7, 200.0) -> 更新框角落 [領頭]
+1794913267266 MOVE id=13 pos=Offset(121.6, 201.6) -> 更新框角落 [領頭]
+1794913267319 MOVE id=13 pos=Offset(136.0, 209.1) -> 更新框角落 [領頭]
+1794913267330 MOVE id=13 pos=Offset(139.7, 211.2) -> 更新框角落 [領頭]
+1794913267336 MOVE id=13 pos=Offset(141.9, 212.8) -> 更新框角落 [領頭]
+1794913267404 MOVE id=13 pos=Offset(146.7, 220.3) -> 更新框角落 [領頭]
+1794913267409 MOVE id=13 pos=Offset(149.3, 221.3) -> 更新框角落 [領頭]
+1794913267420 MOVE id=13 pos=Offset(153.6, 224.0) -> 更新框角落 [領頭]
+1794913267427 MOVE id=13 pos=Offset(155.2, 225.1) -> 更新框角落 [領頭]
+1794913267443 MOVE id=13 pos=Offset(155.2, 226.7) -> 更新框角落 [領頭]
+1794913267447 MOVE id=13 pos=Offset(155.2, 227.7) -> 更新框角落 [領頭]
+1794913267458 MOVE id=13 pos=Offset(158.4, 229.3) -> 更新框角落 [領頭]
+1794913267490 MOVE id=13 pos=Offset(159.5, 232.0) -> 更新框角落 [領頭]
+1794913267511 MOVE id=13 pos=Offset(162.1, 234.7) -> 更新框角落 [領頭]
+1794913267517 MOVE id=13 pos=Offset(163.7, 235.7) -> 更新框角落 [領頭]
+1794913267570 MOVE id=13 pos=Offset(155.7, 243.2) -> 更新框角落 [領頭]
+1794913267624 MOVE id=13 pos=Offset(169.1, 250.1) -> 更新框角落 [領頭]
+1794913267635 MOVE id=13 pos=Offset(171.7, 251.7) -> 更新框角落 [領頭]
+1794913267694 MOVE id=13 pos=Offset(176.5, 259.7) -> 更新框角落 [領頭]
+1794913267764 UP id=13 promoted=true leader=13 remaining=[]
+1794913267791 DOWN id=14 pos=Offset(186.1, 275.7) leader=null active=[] cur=Offset(176.5, 259.7)
+1794913267804 MOVE id=14 pos=Offset(186.1, 276.8) -> 更新框角落 [領頭]
+1794913267814 MOVE id=14 pos=Offset(187.2, 277.9) -> 更新框角落 [領頭]
+1794913267821 MOVE id=14 pos=Offset(187.2, 278.9) -> 更新框角落 [領頭]
+1794913267877 MOVE id=14 pos=Offset(186.7, 284.8) -> 更新框角落 [領頭]
+1794913267893 UP id=14 promoted=true leader=14 remaining=[]
+1794913267992 DOWN id=15 pos=Offset(197.3, 306.1) leader=null active=[] cur=Offset(186.7, 284.8)
+1794913268001 DOWN id=16 pos=Offset(201.6, 310.4) leader=15 active=[15] cur=Offset(186.7, 284.8)
+1794913268004 MOVE id=15 pos=Offset(197.9, 307.2) -> 忽略(非領頭,領頭=16 閒置2ms)
+1794913268015 MOVE id=15 pos=Offset(217.1, 310.9) -> 忽略(非領頭,領頭=16 閒置13ms)
+1794913268016 MOVE id=16 pos=Offset(149.3, 313.6) -> 更新框角落 [領頭]
+1794913268019 MOVE id=15 pos=Offset(217.1, 310.9) -> 忽略(非領頭,領頭=16 閒置2ms)
+1794913268021 MOVE id=16 pos=Offset(162.1, 315.2) -> 更新框角落 [領頭]
+1794913268062 MOVE id=15 pos=Offset(261.9, 315.7) -> 忽略(非領頭,領頭=16 閒置41ms)
+1794913268068 MOVE id=16 pos=Offset(174.9, 316.8) -> 更新框角落 [領頭]
+1794913268080 MOVE id=15 pos=Offset(368.0, 323.2) -> 忽略(非領頭,領頭=16 閒置12ms)
+1794913268085 MOVE id=16 pos=Offset(198.9, 325.9) -> 更新框角落 [領頭]
+1794913268094 MOVE id=15 pos=Offset(365.9, 329.1) -> 忽略(非領頭,領頭=16 閒置9ms)
+1794913268097 MOVE id=16 pos=Offset(206.4, 331.2) -> 更新框角落 [領頭]
+1794913268143 MOVE id=15 pos=Offset(358.4, 342.9) -> 忽略(非領頭,領頭=16 閒置46ms)
+1794913268147 MOVE id=16 pos=Offset(188.3, 342.4) -> 更新框角落 [領頭]
+1794913268211 MOVE id=15 pos=Offset(581.3, 363.2) -> 忽略(非領頭,領頭=16 閒置64ms)
+1794913268215 MOVE id=16 pos=Offset(219.7, 364.3) -> 更新框角落 [領頭]
+1794913268221 MOVE id=15 pos=Offset(413.3, 372.3) -> 忽略(非領頭,領頭=16 閒置5ms)
+1794913268223 MOVE id=16 pos=Offset(196.3, 369.1) -> 更新框角落 [領頭]
+1794913268246 MOVE id=15 pos=Offset(395.2, 376.5) -> 忽略(非領頭,領頭=16 閒置23ms)
+1794913268250 MOVE id=16 pos=Offset(217.6, 377.1) -> 更新框角落 [領頭]
+1794913268254 MOVE id=15 pos=Offset(395.2, 376.5) -> 忽略(非領頭,領頭=16 閒置4ms)
+1794913268258 MOVE id=16 pos=Offset(222.4, 380.8) -> 更新框角落 [領頭]
+1794913268296 MOVE id=15 pos=Offset(314.1, 400.5) -> 忽略(非領頭,領頭=16 閒置38ms)
+1794913268318 MOVE id=16 pos=Offset(241.1, 393.6) -> 更新框角落 [領頭]
+1794913268324 MOVE id=15 pos=Offset(324.3, 405.3) -> 忽略(非領頭,領頭=16 閒置25ms)
+1794913268332 MOVE id=16 pos=Offset(243.7, 399.5) -> 更新框角落 [領頭]
+1794913268345 UP id=15 promoted=true leader=16 remaining=[16]
+1794913268358 UP id=16 promoted=true leader=16 remaining=[]
+1794913268426 DOWN id=17 pos=Offset(544.0, 437.3) leader=null active=[] cur=Offset(243.7, 399.5)
+1794913268452 COMMIT start=Offset(0.1, 0.2) cur=Offset(0.3, 0.4)
+1794913268479 DOWN id=18 pos=Offset(258.1, 430.9) leader=17 active=[17] cur=Offset(544.0, 437.3)
+1794913268482 MOVE id=17 pos=Offset(738.7, 448.5) -> 更新框角落 [領頭]
+1794913268490 MOVE id=18 pos=Offset(186.7, 450.1) -> 更新框角落 [升格並領頭]
+1794913268504 MOVE id=17 pos=Offset(718.4, 453.3) -> 忽略(非領頭,領頭=18 閒置14ms)
+1794913268513 DOWN id=19 pos=Offset(267.2, 467.2) leader=18 active=[17, 18] cur=Offset(186.7, 450.1)
+1794913268516 MOVE id=17 pos=Offset(718.4, 453.3) -> 忽略(非領頭,領頭=19 閒置1ms)
+1794913268517 MOVE id=18 pos=Offset(206.9, 454.9) -> 忽略(非領頭,領頭=19 閒置3ms)
+1794913268518 MOVE id=19 pos=Offset(277.3, 472.0) -> 更新框角落 [領頭]
+1794913268523 MOVE id=18 pos=Offset(206.9, 454.9) -> 忽略(非領頭,領頭=19 閒置4ms)
+1794913268526 UP id=17 promoted=true leader=19 remaining=[18, 19]
+1794913268530 MOVE id=18 pos=Offset(172.3, 463.5) -> 忽略(非領頭,領頭=19 閒置11ms)
+1794913268531 MOVE id=19 pos=Offset(277.3, 474.1) -> 更新框角落 [領頭]
+1794913268535 DOWN id=20 pos=Offset(377.1, 483.2) leader=19 active=[18, 19] cur=Offset(277.3, 474.1)
+1794913268537 MOVE id=20 pos=Offset(509.3, 486.9) -> 更新框角落 [領頭]
+1794913268538 MOVE id=18 pos=Offset(154.1, 473.6) -> 忽略(非領頭,領頭=20 閒置1ms)
+1794913268539 MOVE id=19 pos=Offset(277.9, 480.0) -> 忽略(非領頭,領頭=20 閒置2ms)
+1794913268591 MOVE id=20 pos=Offset(548.3, 492.3) -> 更新框角落 [領頭]
+1794913268593 MOVE id=18 pos=Offset(172.8, 487.5) -> 忽略(非領頭,領頭=20 閒置2ms)
+1794913268594 MOVE id=19 pos=Offset(283.7, 496.5) -> 忽略(非領頭,領頭=20 閒置3ms)
+1794913268597 MOVE id=18 pos=Offset(161.6, 492.8) -> 忽略(非領頭,領頭=20 閒置6ms)
+1794913268599 MOVE id=19 pos=Offset(285.3, 500.3) -> 忽略(非領頭,領頭=20 閒置8ms)
+1794913268601 UP id=20 promoted=true leader=20 remaining=[18, 19]
+1794913268604 MOVE id=18 pos=Offset(161.6, 492.8) -> 忽略(非領頭,領頭=19 閒置2ms)
+1794913268607 MOVE id=18 pos=Offset(220.3, 502.9) -> 忽略(非領頭,領頭=19 閒置5ms)
+1794913268621 MOVE id=18 pos=Offset(235.7, 506.1) -> 忽略(非領頭,領頭=19 閒置19ms)
+1794913268627 MOVE id=18 pos=Offset(246.4, 509.9) -> 忽略(非領頭,領頭=19 閒置25ms)
+1794913268630 UP id=19 promoted=true leader=19 remaining=[18]
+1794913268632 MOVE id=18 pos=Offset(257.6, 513.1) -> 更新框角落 [領頭]
+1794913268679 MOVE id=18 pos=Offset(272.0, 519.5) -> 更新框角落 [領頭]
+1794913268703 MOVE id=18 pos=Offset(276.3, 532.8) -> 更新框角落 [領頭]
+1794913268707 MOVE id=18 pos=Offset(283.2, 536.5) -> 更新框角落 [領頭]
+1794913268787 MOVE id=18 pos=Offset(288.0, 539.2) -> 更新框角落 [領頭]
+1794913268802 DOWN id=21 pos=Offset(581.3, 549.9) leader=18 active=[18] cur=Offset(288.0, 539.2)
+1794913268810 MOVE id=21 pos=Offset(577.1, 554.7) -> 忽略(候選未達升格距離)
+1794913268812 MOVE id=18 pos=Offset(302.9, 554.7) -> 更新框角落 [領頭]
+1794913268823 MOVE id=21 pos=Offset(373.9, 563.2) -> 更新框角落 [升格並領頭]
+1794913268828 MOVE id=18 pos=Offset(302.9, 554.7) -> 忽略(非領頭,領頭=21 閒置5ms)
+1794913268831 MOVE id=21 pos=Offset(356.8, 564.8) -> 更新框角落 [領頭]
+1794913268833 UP id=18 promoted=true leader=21 remaining=[21]
+1794913268837 MOVE id=21 pos=Offset(345.1, 566.4) -> 更新框角落 [領頭]
+1794913268891 MOVE id=21 pos=Offset(318.4, 578.7) -> 更新框角落 [領頭]
+1794913268899 MOVE id=21 pos=Offset(317.3, 581.3) -> 更新框角落 [領頭]
+1794913268904 MOVE id=21 pos=Offset(317.3, 584.0) -> 更新框角落 [領頭]
+1794913268917 MOVE id=21 pos=Offset(314.7, 586.7) -> 更新框角落 [領頭]
+1794913268930 MOVE id=21 pos=Offset(314.7, 589.3) -> 更新框角落 [領頭]
+1794913268938 MOVE id=21 pos=Offset(314.1, 592.0) -> 更新框角落 [領頭]
+1794913268977 MOVE id=21 pos=Offset(314.1, 596.8) -> 更新框角落 [領頭]
+1794913268993 DOWN id=22 pos=Offset(314.1, 609.1) leader=21 active=[21] cur=Offset(314.1, 596.8)
+1794913268999 UP id=21 promoted=true leader=22 remaining=[22]
+1794913269009 MOVE id=22 pos=Offset(314.1, 610.1) -> 更新框角落 [領頭]
+1794913269053 MOVE id=22 pos=Offset(315.2, 615.5) -> 更新框角落 [領頭]
+1794913269057 MOVE id=22 pos=Offset(316.8, 617.6) -> 更新框角落 [領頭]
+1794913269063 MOVE id=22 pos=Offset(269.9, 620.3) -> 更新框角落 [領頭]
+1794913269125 MOVE id=22 pos=Offset(280.5, 622.9) -> 更新框角落 [領頭]
+1794913269136 DOWN id=23 pos=Offset(475.2, 628.8) leader=22 active=[22] cur=Offset(280.5, 622.9)
+1794913269138 MOVE id=23 pos=Offset(396.3, 631.5) -> 更新框角落 [升格並領頭]
+1794913269139 MOVE id=22 pos=Offset(289.1, 625.1) -> 忽略(非領頭,領頭=23 閒置1ms)
+1794913269151 MOVE id=22 pos=Offset(322.7, 637.3) -> 忽略(非領頭,領頭=23 閒置13ms)
+1794913269153 UP id=23 promoted=true leader=23 remaining=[22]
+1794913269160 UP id=22 promoted=true leader=22 remaining=[]
+1794913269265 DOWN id=24 pos=Offset(321.1, 660.8) leader=null active=[] cur=Offset(396.3, 631.5)
+1794913269276 MOVE id=24 pos=Offset(321.6, 662.9) -> 更新框角落 [領頭]
+1794913269284 MOVE id=24 pos=Offset(322.1, 664.5) -> 更新框角落 [領頭]
+1794913269296 MOVE id=24 pos=Offset(322.1, 666.7) -> 更新框角落 [領頭]
+1794913269306 MOVE id=24 pos=Offset(320.5, 668.3) -> 更新框角落 [領頭]
+1794913269316 MOVE id=24 pos=Offset(320.5, 669.3) -> 更新框角落 [領頭]
+1794913269346 MOVE id=24 pos=Offset(322.1, 670.9) -> 更新框角落 [領頭]
+1794913269354 MOVE id=24 pos=Offset(322.1, 672.0) -> 更新框角落 [領頭]
+1794913269373 MOVE id=24 pos=Offset(322.1, 673.6) -> 更新框角落 [領頭]
+1794913269432 MOVE id=24 pos=Offset(390.9, 676.3) -> 更新框角落 [領頭]
+1794913269443 DOWN id=25 pos=Offset(316.8, 676.3) leader=24 active=[24] cur=Offset(390.9, 676.3)
+1794913269448 MOVE id=24 pos=Offset(361.1, 676.3) -> 忽略(非領頭,領頭=25 閒置4ms)
+1794913269451 MOVE id=25 pos=Offset(301.3, 676.3) -> 更新框角落 [領頭]
+1794913269459 MOVE id=24 pos=Offset(361.1, 676.3) -> 忽略(非領頭,領頭=25 閒置8ms)
+1794913269462 MOVE id=25 pos=Offset(311.5, 676.3) -> 更新框角落 [領頭]
+1794913269509 UP id=24 promoted=true leader=25 remaining=[25]
+1794913269512 UP id=25 promoted=true leader=25 remaining=[]
+1794913269765 COMMIT start=Offset(0.7, 0.5) cur=Offset(0.4, 0.7)
