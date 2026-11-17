@@ -35,6 +35,7 @@
 | 29 | Windows 資料位置整理（**優先**）：把直接放在「文件」資料夾根目錄的 App 資料（`library.db`、`dictionary.db`、`covers`、`imported_books`、`cloud_import_books`、`remote_books`、`wifi_transfer_uploads`、`update_staging`）收進上層目錄 `文件\elinkbook-data`，用集中函式 `appDocumentsDirectory()`，只改 Windows；`%APPDATA%` 那三項不動；**不遷移舊資料**；解除安裝選「是」改為只刪 `文件\elinkbook-data` 與 `%APPDATA%\cc.ugotit\elinkbook`，取代 Issue 27 的固定名稱清單（決策見 ADR 0044） | Issue 27 | 🟡 已實作並依審查修正，待合併（資料夾審查後改名為 `elinkbook-data`；本機自動驗證、全套測試與冒煙 28/28 通過；最終版 setup 已由使用者在另一台電腦驗證，回報「測試OK」（無逐項紀錄）；冒煙上一輪 2 支失敗原因未查明） | [issue-29-report.md](issue-29-report.md) |
 | 30 | 開發機上 release 版畫面空白（待查）：2026-11-13 在作者的開發機（Windows 11 家用版）上，安裝版與暫存目錄版（同一份內容）都開出空白畫面——主視窗已顯示、啟動小視窗已消失、行程閒置、App 的 WebView2 行程存在、無崩潰事件、UI 自動化讀不到語意節點；同一份內容在使用者的另一台電腦開書正常。根因未查明（可能與這台機器的資料或環境有關，也可能是目前 `main` 的 release 內容），尚未取得 Dart 端日誌；建議先以 debug 模式執行看啟動日誌 | 無 | ⚪ 待規劃 | — |
 | 31 | Windows 支援 Google Drive／OneDrive 雲端匯入（待規劃，2026-11-14 使用者要求）：把原定延後的雲端匯入補上。需先查證並決定 Windows 的 OAuth 做法（`flutter_web_auth_2` 在 Windows 要走本機 loopback 回呼）、Google「電腦應用程式」與 Microsoft「行動與桌面」用戶端 ID 的註冊、客戶端密鑰存放，以及 token 在 Windows 的安全儲存；完成後同步更新 `release_apk_sop.md` 第 7.1 節（Windows 建置改帶 `--dart-define-from-file`）。 | ⚪ 待規劃 |
+| 32 | Android 外掛遷移 built-in Kotlin（階段一）：升級 `shared_preferences_android` 2.4.23→2.4.28（2.4.24+ 已遷移 built-in Kotlin；2.5.5 需拉動 `jni` 1.1.2 故不取）、`url_launcher_android` 6.3.30→6.3.33（兩者新版已不套用 KGP），KGP 外掛由 9 個降到 7 個；其餘外掛等上游或相依鏈，保留 `android.builtInKotlin=false`（來源 Issue 17 已知殘留，2026-11-17 分析） | Issue 17 | 🟢 已完成（Android debug／release 與 Windows debug 建置成功，KGP 警告 9→7 個，全套測試 5341 通過；無連接裝置故真機抽測未驗證；見 [plan-issue-32.md](plans/plan-issue-32.md)、[issue-32-report.md](issue-32-report.md)） | — |
 
 ## Issue 1 範圍
 
@@ -662,3 +663,42 @@ Windows 版把直接放在使用者「文件」資料夾根目錄的 App 資料�
 - **預定執行順序：** ~~8~~ → ~~9~~ → ~~10~~ → ~~11~~ → ~~6~~ → ~~12~~ → ~~13~~ → ~~14~~（先補齊功能，再升級 Flutter，冒煙測試與打包放在最終版本上做）。全部 Issue 皆已完成或實作完畢。
 - 不做：「分段服務」（大檔開書記憶體尖峰，224 MB 書約 3.8 GB），記為已知限制，遇到再議。
 - Flutter 升級（Issue 6）：先用 `flutter pub outdated` 與 `pub get --dry-run` 盤點；升級後 `desktop_drop` 可改用最新版；一併處理 `pubspec.lock` 與 Flutter 版本的落差；Windows 預設 Impeller 下重驗 WebView2 閱讀器；`onReorder` 改 `onReorderItem`；built-in Kotlin／AGP 9 的 Android 建置；先查 3.47.8 的安全公告再選修補版本；升級前須與人類確認（`CLAUDE.md`）。
+
+
+## Issue 32 範圍（2026-11-17 `/grill-with-docs` 定案）
+
+背景：打包時 Flutter 警告「app 與 9 個外掛套用 Kotlin Gradle Plugin（KGP），未來版本 Flutter 將建置失敗」。這是 Issue 17 已知殘留；目前建置正常，Flutter 何時開始擋建置**未查證**，不編造日期。
+
+逐外掛盤點（2026-11-17 下載各外掛最新版檢查 `android/build.gradle`）：
+
+| 外掛 | 目前 | 最新 | 狀況 |
+|---|---|---|---|
+| shared_preferences_android | 2.4.23 | 2.5.5 | 2.4.24 起已不套用 KGP；2.5.5 需 `jni ^1.1.1` 會連動升級 `jni`，**改取 2.4.28**（不動 `jni`，間接相依，不需改 `pubspec.yaml`）→ **本 Issue 處理** |
+| url_launcher_android | 6.3.30 | 6.3.33 | 新版已不套用 KGP；`pub upgrade` 即可 → **本 Issue 處理** |
+| wakelock_plus | 1.5.2 | 1.8.2 | 新版 AGP≥9 不套用 KGP，但 1.6.0 起要求 `win32` ≥ 6，專案 `win32` 鎖 5.15（被 `file_picker` 11、`package_info_plus` 9、`share_plus` 11 拉住）→ **不能單獨升**，併入 win32 相依鏈另案 |
+| package_info_plus | 9.0.1 | 10.2.2 | 新版支援，但大版本跳號且在 win32 鏈上 → 另案 |
+| share_plus | 11.1.0 | 13.3.1 | 同上；另受 Issue 16（`cross_file` 0.4）限制 → 另案 |
+| desktop_drop | 0.8.4 | 0.9.2 | 新版依開關判斷；歸 Issue 16 |
+| file_picker | 11.0.3（本機修補） | 13.4.0 | 最新版套件結構改變（無 `android/`），未評估；修補移除條件綁在其餘外掛 → 另案 |
+| flutter_tts | 4.2.5 | 4.2.5 | **上游尚未遷移**，仍 `apply plugin: 'kotlin-android'` |
+| flutter_web_auth_2 | 5.1.0 | 5.1.0 | **上游尚未遷移**，同上 |
+
+決定：
+- 分階段；本 Issue 只做階段一（兩個外掛）。完成後警告應由 9 個降為 7 個（desktop_drop、file_picker、flutter_tts、flutter_web_auth_2、package_info_plus、share_plus、wakelock_plus）。
+- `android.builtInKotlin=false`、`android.newDsl=false`、`patches/file_picker` 全部維持不動。
+- `flutter_tts`、`flutter_web_auth_2`：向上游各回報一個 issue（官方指引要求）；**送出前須使用者點頭**。不自行改其原始碼；若 Flutter 開始擋建置再比照 `file_picker` 本機修補。
+- 不建 ADR（開關可輕易改回，不符「難以回復」）、不改 GLOSSARY。
+- 全部切到 `builtInKotlin=true` 的條件：7 個外掛皆支援 → 另案（需 Issue 16、win32 鏈、上游兩個外掛都有進展）。
+
+## Issue 32 過關條件
+
+1. `flutter pub get` 後 `pubspec.lock` 僅 `shared_preferences_android`、`url_launcher_android`（及其必然連動的平台介面）變動，`pubspec.yaml` 無變動。
+2. `flutter analyze` 乾淨。
+3. 全套 `flutter test` 通過（若有失敗，須與升級前基準比對，區分既有偶發失敗）。
+4. `flutter build apk --debug` 與 `--release` 成功，警告清單由 9 個降為 7 個。
+5. `flutter build windows --debug` 成功（兩個外掛在 Windows 也有實作）。
+6. Android 真機抽測（偏好設定讀寫、開外部連結）；沒有裝置則在報告標「未驗證」，不宣稱通過。
+
+## Issue 32 單元測試要求
+
+不新增程式，沿用既有測試；偏好設定與外部連結相關既有測試須全數通過。

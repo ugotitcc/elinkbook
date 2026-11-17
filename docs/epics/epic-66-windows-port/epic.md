@@ -68,6 +68,32 @@
 32. **Windows 安裝程式（2026-11-13 `/grill-with-docs`，Issue 27）**：Windows 版改為對外發佈，與 Android APK 並列於 GitHub Release。在免安裝 zip 之外新增 Inno Setup 安裝程式（不選 MSIX：沒有受信任簽章就無法雙擊安裝）；不簽章，沿用 SmartScreen「仍要執行」說明；依目前使用者安裝到 `%LOCALAPPDATA%\Programs\elinkBook`，不需管理員；固定 `AppId` 覆蓋升級（GUID 發佈後不可更改）；開始功能表一律建立，桌面捷徑可選且預設勾選；解除安裝跳出詢問是否一併刪除 `%APPDATA%\cc.ugotit\elinkbook`，以及「文件」資料夾內 elinkBook 以固定名稱建立的書庫、字典庫、封面、匯入的書複本等項目（2026-11-13 使用者決定連書庫一併刪除；不動其他檔案，詳見 ADR 0043），預設「否」，靜默模式一律不刪。維持本機打包、不建 CI（Windows 建置依賴 Visual Studio Build Tools 與 WebView2，且 `cloud_oauth.release.json` 不進版控）；上傳 Release 由使用者另行指示。已參考文章 steachs.com/archives/85207，其內容只提到「GitHub Actions 雲端編譯＋Releases 下載」，沒有 Flutter 或安裝程式的打包細節，所以只取「CI 建置」這個做法並判斷暫不採用。決策見 [ADR 0043](../../adr/0043-windows-installer-inno-setup-unsigned-per-user.md)。**實作結果（2026-11-13，Issue 27，見 [issue-27-report.md](issue-27-report.md)）**：介面語言原本打算用 Inno 內建的繁體中文，實測 6.7.3 沒附，經使用者決定改用官方儲存庫 main 的 `ChineseTraditional.isl` 原封複製進專案；打包內容實測發現兩個不該出貨的東西並已修（共用的 `package_windows_zip.ps1`）：build/flutter_assets 殘留的舊字型（14.7 MB）與 pubspec 宣告的整合測試 fixtures（36 MB），不改 pubspec，Android 端是否同樣夾帶另立 Issue 28；使用者回報在另一台電腦安裝、解除安裝（選否、選是）與開書正常（無逐項紀錄，環境未查證）。經獨立審查發現原本只刪 `%APPDATA%` 卻寫成「刪書庫」，使用者決定改為真的連「文件」資料夾內的書庫一併刪除（已實作並以 UI Automation 在假資料夾實測選否、選是，真實路徑下未實跑），並登記 Issue 29（把資料收進單一上層目錄 `elinkbook-data`，取代固定名稱清單）；審查另補強驗證腳本（AppId 獨立釘住、靜默防線、App 執行中拒絕解除安裝、安裝內容逐檔比對）。這台開發機上 release 版畫面空白根因未查明，登記 Issue 30。VC 可轉散發授權對 Build Tools 是否適用未查證，對外發佈前須使用者判斷。
 33. **Windows 資料收進 `文件\elinkbook-data`（2026-11-13 `/grill-with-docs`，Issue 29，決策見 [ADR 0044](../../adr/0044-windows-data-under-documents-elinkbook.md)）**：Issue 27 審查發現書庫等資料直接散在使用者「文件」根目錄，沒有上層目錄，使用者看不出屬於哪個 App，解除安裝也只能用通用名稱清單刪除（有誤刪使用者同名資料夾的風險）。決定：只改 Windows，新增集中函式 `appDocumentsDirectory()`（Windows 回傳 `<文件>\elinkbook-data` 並自動建立，其他平台原樣回傳 `getApplicationDocumentsDirectory()`），7 個檔案共 9 處使用點全部改呼叫它；`%APPDATA%\cc.ugotit\elinkbook`（WebView2、已下載字型、字典來源）維持原位；**不遷移舊資料**（Windows 版目前只有作者的兩台電腦有資料，而資料庫存絕對路徑，光搬檔案救不回既有的書；升級後書架為空，需要的書重新匯入，舊項目手動刪除）；解除安裝選「是」改為只刪 `文件\elinkbook-data` 與 `%APPDATA%\cc.ugotit\elinkbook`，移除對「文件」根目錄通用名稱的逐項刪除。**【實作結果（2026-11-13，見 [issue-29-report.md](issue-29-report.md)）】**：已完成實作並加上防散落掃描測試（`documents_directory_usage_test.dart`）；開發機確認新位置建立 `文件\elinkbook-data\library.db` 且根目錄舊項目（11/6 `library.db`、`covers`、`imported_books`）完全未動；`verify_windows_installer.ps1` 29/29 與 `verify_windows_uninstall_data.ps1` 10/10（含多刪 `covers` 變異驗證）通過；改名前的版本曾由使用者在另一台電腦驗證（「1,2,3 都正確無誤」，不能套用到最終版）；最終版（資料夾 `elinkbook-data`）經審查改名後，使用者另外在另一台電腦驗證，回報「測試OK」（無逐項紀錄）。
 
+## 各 Issue 處理紀錄
+
+（自 `docs/epics.md` 備註欄搬入；`docs/epics.md` 只保留最後處理的 Issue。各 Issue 表格狀態見 [issues.md](issues.md)。）
+
+- Discovery 已定案（2026-11-03）
+- Issue 1（技術驗證）已合併（PR #381）
+- Issue 2（Metadata 背景解析）已合併（PR #384）
+- Issue 3（整本回傳記憶體洩漏驗證）已合併（PR #396）
+- Issue 4（Windows 書檔改由 loopback HTTP 伺服器服務，消除洩漏）已合併（PR #397）
+- Issue 5（Windows 檔案與資料夾匯入：選檔、選資料夾、拖曳）已合併（PR #398）
+- Issue 7（Windows 鍵盤快捷鍵與 F11 視窗全螢幕）已合併（PR #399）
+- Issue 6（Flutter 升級至 3.47.9）已合併（PR #404，`desktop_drop` 維持 0.8.4；Android 已在 WAVE 真機實測啟動與重複開書，未跑 integration_test）
+- Windows 人工操作驗證（Issue 5 拖曳匯入、Issue 7 鍵盤與 F11）已於 2026-11-06 由使用者回報通過（無逐項紀錄），Android 實機尚未補驗
+- Issue 8（索引器漏登錄橋接處理器造成 Windows App 消失）已合併（PR #400，大檔索引、背景排程端到端、Android 尚未實測）
+- Issue 9（WebView2 缺少時的說明畫面）已合併（PR #401，Windows 實機以空 Runtime 資料夾模擬驗證通過，有 WebView2 時正常啟動已由使用者確認，乾淨機器與重新檢查成功後進入 App 未實測；啟動還原書籍逾時為 `main` 既有問題）
+- Issue 10（Windows 隱藏手機專屬功能）已合併（PR #402，Windows 實機確認 a～e 已由使用者於 2026-11-09 回報通過）
+- Issue 11（loopback 連線可靠度與測試穩定性）已合併（PR #403，根因是本機 `127.0.0.1` 連線被重設，與程式無關；全套測試 5118 個 0 失敗；開書逾時對照實驗結論為不能確定；`pdf_reader_view_filters_test` 偶發失敗未修，登記為 Issue 15）
+- Issue 12（Android 統一 foliate-js metadata）已合併（PR #405，WAVE 書庫 9 本與 BooksPad 資料夾 103 本逐欄一致、封面只比有無，預設切換為 foliate-js，Readium 留作退路；WAVE 上 foliate 慢約 5 倍、只驗 `ExternalStorageProvider` 的 `content://`，全為 debug 版）
+- Issue 14（免安裝 zip 打包）已合併（PR #408，本機依賴靜態檢查與唯讀含空格中文路徑驗證通過，使用者開書回報通過但無逐項紀錄，乾淨機器未驗證；見 issue-14-report.md）
+- Issue 23（Android 12+ 啟動畫面圖示過小）已合併（PR #410，Android 14 模擬器驗證圖示寬度 19% → 45%，BooksPad、Android 11 以下、真實高效能機器未驗證）
+- Issue 22（Windows 版圖示與原生啟動小視窗）已合併（PR #409，只在這台機器 125% 縮放、release 版驗證，其他 DPI 與乾淨機器未驗證）
+- 後續已登錄 Issue 15～21（PDF 加粗覆蓋圖偶發失敗查根因、`desktop_drop` 0.9 與 `cross_file` 0.4 遷移、Android Gradle／AGP 升級（Issue 17：Gradle 9.3.1／AGP 9.1.0 升級與本地修補已合併（PR #440），release 真機抽測／驗簽／U: 機建置待補驗）、Android 移除 Readium 相依階段二、`reader_screen_test` 在 Windows 整份中斷診斷、桌面寬度 TOC 目前章節判定、Android 數支整合測試失敗查原因；Android 僅一台 BooksPad 部分驗證）
+- 決策見 ADR 0041、0042
+- Issue 27（Windows 安裝程式，Inno Setup）已完成待合併，Issue 28（Android APK 夾帶測試 fixtures）、Issue 30（開發機 release 畫面空白待查）已登錄待規劃，Issue 29（Windows 資料收進 `文件\elinkbook-data`）已實作並依審查修正、待合併，最終版已由使用者在另一台電腦驗證（回報「測試OK」），決策見 ADR 0043、ADR 0044
+- Issue 32（Android 外掛遷移 built-in Kotlin 階段一）已完成（`shared_preferences_android`、`url_launcher_android` 升級，KGP 外掛 9→7；Android／Windows debug 與 release 建置、全套測試通過；真機抽測未驗證；見 [issue-32-report.md](issue-32-report.md)）
+
 ## 範圍外
 
 - ~~雲端匯入（Google Drive／OneDrive）~~：2026-11-14 改為納入，登錄為 Issue 31（待規劃）。
