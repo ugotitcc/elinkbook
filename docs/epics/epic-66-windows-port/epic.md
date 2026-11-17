@@ -92,7 +92,7 @@
 - 後續已登錄 Issue 15～21（PDF 加粗覆蓋圖偶發失敗查根因、`desktop_drop` 0.9 與 `cross_file` 0.4 遷移、Android Gradle／AGP 升級（Issue 17：Gradle 9.3.1／AGP 9.1.0 升級與本地修補已合併（PR #440），release 真機抽測／驗簽／U: 機建置待補驗）、Android 移除 Readium 相依階段二、`reader_screen_test` 在 Windows 整份中斷診斷、桌面寬度 TOC 目前章節判定、Android 數支整合測試失敗查原因；Android 僅一台 BooksPad 部分驗證）
 - 決策見 ADR 0041、0042
 - Issue 27（Windows 安裝程式，Inno Setup）已完成待合併，Issue 28（Android APK 夾帶測試 fixtures）、Issue 30（開發機 release 畫面空白待查）已登錄待規劃，Issue 29（Windows 資料收進 `文件\elinkbook-data`）已實作並依審查修正、待合併，最終版已由使用者在另一台電腦驗證（回報「測試OK」），決策見 ADR 0043、ADR 0044
-- Issue 32（Android 外掛遷移 built-in Kotlin 階段一）已完成（`shared_preferences_android`、`url_launcher_android` 升級，KGP 外掛 9→7；Android／Windows debug 與 release 建置、全套測試通過；真機抽測未驗證；見 [issue-32-report.md](issue-32-report.md)）
+- Issue 32（Android 外掛遷移 built-in Kotlin 階段一）已合併（PR #443；`shared_preferences_android`、`url_launcher_android` 升級，KGP 外掛 9→7；Android／Windows debug 與 release 建置、全套測試通過；真機抽測未驗證；見 [issue-32-report.md](issue-32-report.md)）
 
 ## 範圍外
 
