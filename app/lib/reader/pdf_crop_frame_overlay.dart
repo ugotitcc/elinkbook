@@ -71,10 +71,14 @@ class PdfCropFrameOverlay extends StatefulWidget {
     super.key,
     required this.onConfirm,
     required this.onCancel,
+    this.onRestore,
   });
 
   final ValueChanged<PdfCropRect> onConfirm;
   final VoidCallback onCancel;
+
+  /// 非 null 時於底部顯示「還原」鈕（僅進入裁切編輯模式前已有生效裁切時提供）。
+  final VoidCallback? onRestore;
 
   @override
   State<PdfCropFrameOverlay> createState() => _PdfCropFrameOverlayState();
@@ -346,46 +350,39 @@ class _PdfCropFrameOverlayState extends State<PdfCropFrameOverlay> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Material(
-                    elevation: 6,
-                    shape: const CircleBorder(
-                        side: BorderSide(color: Colors.white, width: 1.5)),
+                  _buildCircleActionButton(
+                    buttonKey: const Key('pdf_crop_frame_cancel'),
+                    icon: Icons.close,
                     color: const Color(0xFF2A2A2E),
-                    child: InkWell(
-                      key: const Key('pdf_crop_frame_cancel'),
-                      customBorder: const CircleBorder(),
-                      onTap: widget.onCancel,
-                      child: const Padding(
-                        padding: EdgeInsets.all(14),
-                        child: Icon(Icons.close, color: Colors.white, size: 28),
-                      ),
-                    ),
+                    tooltip: l10n.readerPdfCropAbandonTooltip,
+                    onTap: widget.onCancel,
                   ),
+                  if (widget.onRestore != null) ...[
+                    const SizedBox(width: 48),
+                    _buildCircleActionButton(
+                      buttonKey: const Key('pdf_crop_frame_restore'),
+                      icon: Icons.undo,
+                      color: const Color(0xFF2A2A2E),
+                      tooltip: l10n.readerPdfCropRestoreTooltip,
+                      onTap: widget.onRestore,
+                    ),
+                  ],
                   const SizedBox(width: 48),
-                  Material(
-                    elevation: 6,
-                    shape: const CircleBorder(
-                        side: BorderSide(color: Colors.white, width: 1.5)),
+                  _buildCircleActionButton(
+                    buttonKey: const Key('pdf_crop_frame_confirm'),
+                    icon: Icons.check,
                     // 尚未畫框時確認鈕停用（灰底、不可點）
                     color: confirmEnabled
                         ? const Color(0xFF16A34A)
                         : const Color(0xFF6B6B70),
-                    child: InkWell(
-                      key: const Key('pdf_crop_frame_confirm'),
-                      customBorder: const CircleBorder(),
-                      // 等待定案期間也可按：先定案再回傳
-                      onTap: confirmEnabled || _finalizeTimer?.isActive == true
-                          ? () {
-                              _commitPending();
-                              final r = _rect;
-                              if (r != null) widget.onConfirm(r);
-                            }
-                          : null,
-                      child: const Padding(
-                        padding: EdgeInsets.all(14),
-                        child: Icon(Icons.check, color: Colors.white, size: 28),
-                      ),
-                    ),
+                    // 等待定案期間也可按：先定案再回傳
+                    onTap: confirmEnabled || _finalizeTimer?.isActive == true
+                        ? () {
+                            _commitPending();
+                            final r = _rect;
+                            if (r != null) widget.onConfirm(r);
+                          }
+                        : null,
                   ),
                 ],
               ),
@@ -394,6 +391,33 @@ class _PdfCropFrameOverlayState extends State<PdfCropFrameOverlay> {
         );
       },
     );
+  }
+
+  Widget _buildCircleActionButton({
+    required Key buttonKey,
+    required IconData icon,
+    required Color color,
+    String? tooltip,
+    VoidCallback? onTap,
+  }) {
+    final button = Material(
+      elevation: 6,
+      shape: const CircleBorder(
+        side: BorderSide(color: Colors.white, width: 1.5),
+      ),
+      color: color,
+      child: InkWell(
+        key: buttonKey,
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Icon(icon, color: Colors.white, size: 28),
+        ),
+      ),
+    );
+    if (tooltip == null) return button;
+    return Tooltip(message: tooltip, child: button);
   }
 }
 

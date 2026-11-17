@@ -818,5 +818,7 @@
   "webview2DownloadButton": "Download WebView2",
   "webview2RecheckButton": "Recheck",
   "webview2StillMissing": "A usable WebView2 installation was still not detected.",
-  "webview2DetailLabel": "Error Details"
+  "webview2DetailLabel": "Error Details",
+  "readerPdfCropAbandonTooltip": "Discard crop",
+  "readerPdfCropRestoreTooltip": "Restore previous crop"
 }

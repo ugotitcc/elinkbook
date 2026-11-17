@@ -818,5 +818,7 @@
   "webview2DownloadButton": "下载 WebView2",
   "webview2RecheckButton": "重新检查",
   "webview2StillMissing": "仍然检测不到可用的 WebView2。",
-  "webview2DetailLabel": "错误摘要"
+  "webview2DetailLabel": "错误摘要",
+  "readerPdfCropAbandonTooltip": "放弃裁切",
+  "readerPdfCropRestoreTooltip": "还原先前裁切"
 }

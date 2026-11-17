@@ -75,15 +75,15 @@
 - Produces：`PdfCropFrameOverlay({..., VoidCallback? onRestore})`；`onRestore != null` 才顯示 `Key('pdf_crop_frame_restore')` 的 `Icons.undo` 圓鈕，順序 X、還原、✓（間距同現有 48）。
 - 新字串：`readerPdfCropAbandonTooltip`（zh_TW「放棄裁切」／zh_CN「放弃裁切」／en「Discard crop」）、`readerPdfCropRestoreTooltip`（「還原先前裁切」／「还原先前裁切」／「Restore previous crop」）。X 套 `Tooltip(message: abandon)`、還原套 `Tooltip(message: restore)`。
 
-- [ ] **Step 1: 寫失敗測試**：
+- [x] **Step 1: 寫失敗測試**：
   - `'onRestore 為 null 時不顯示還原鈕'`
   - `'onRestore 非 null 時顯示還原鈕，點擊呼叫 onRestore 且不呼叫 onCancel／onConfirm'`
   - `'三顆鈕由左至右為 cancel、restore、confirm'`（比對 `tester.getCenter(...).dx` 遞增）
   - `'X 鈕與還原鈕各有 tooltip 文字'`（`find.byTooltip`）
-- [ ] **Step 2: 跑測試確認失敗**
-- [ ] **Step 3: 實作** 上述建構子參數、按鈕、tooltip 與 4 份 arb；跑 `flutter gen-l10n`。
-- [ ] **Step 4: 跑測試通過**，並跑 `node tool/check_l10n_hardcoded_strings.js`。
-- [ ] **Step 5: Commit** — `feat(reader): 裁切編輯畫面新增還原鈕與 tooltip（epic-54 Issue 45）`
+- [x] **Step 2: 跑測試確認失敗**
+- [x] **Step 3: 實作** 上述建構子參數、按鈕、tooltip 與 4 份 arb；跑 `flutter gen-l10n`。
+- [x] **Step 4: 跑測試通過**，並跑 `node tool/check_l10n_hardcoded_strings.js`。
+- [x] **Step 5: Commit** — `feat(reader): 裁切編輯畫面新增還原鈕與 tooltip（epic-54 Issue 45）`
 
 ### Task 3：`ReaderScreen` 串接，並移除合成分支
 

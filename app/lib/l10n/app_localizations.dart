@@ -4927,6 +4927,18 @@ abstract class AppLocalizations {
   /// In zh_TW, this message translates to:
   /// **'錯誤摘要'**
   String get webview2DetailLabel;
+
+  /// 手動裁切編輯模式 X（放棄裁切）按鈕 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'放棄裁切'**
+  String get readerPdfCropAbandonTooltip;
+
+  /// 手動裁切編輯模式還原按鈕 tooltip
+  ///
+  /// In zh_TW, this message translates to:
+  /// **'還原先前裁切'**
+  String get readerPdfCropRestoreTooltip;
 }
 
 class _AppLocalizationsDelegate

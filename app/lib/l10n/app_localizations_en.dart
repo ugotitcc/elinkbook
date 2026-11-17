@@ -2959,4 +2959,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get webview2DetailLabel => 'Error Details';
+
+  @override
+  String get readerPdfCropAbandonTooltip => 'Discard crop';
+
+  @override
+  String get readerPdfCropRestoreTooltip => 'Restore previous crop';
 }
