@@ -96,7 +96,7 @@
 - Consumes：Task 1（`cropEditModeActive` 讓畫面顯示完整頁面）、Task 2（`onRestore`）。
 - Produces：`bool get _hasActiveCrop`（先取 `final resolved = _resolved;`，`resolved != null && resolved.pdfCropMode != PdfCropMode.none && resolved.pdfCropRect != null`，不使用 `!`）（與 `PdfReaderView._cropEnabled` 同條件）；`viewportRectToPageCropRect({required PdfCropRect viewportRect, required Size viewportSize, required Rect pageRectInViewport, double minFraction = 0.05})`。
 
-- [ ] **Step 1: 調整與新增測試**
+- [x] **Step 1: 調整與新增測試**
   - `pdf_crop_mapping_test.dart`：刪除所有帶 `activeCrop` 的案例，其餘不變。
   - `reader_screen_test.dart`：
     - 改寫 `'已有生效中的手動裁切：框左半，合成回原始整頁座標'` 為 `'已有生效中的手動裁切：再次進入時框座標相對完整頁面，不合成'`（完整頁面填滿畫面、框左半 → 存 `(0,0,0.5,1)`）。
@@ -106,13 +106,13 @@
     - 新增 `'原本未裁切：不顯示還原鈕；按 X 不寫 prefs'`（既有取消測試保留，補斷言找不到 `pdf_crop_frame_restore`）。
     - 新增 `'mode 為 none 但殘留舊矩形：不顯示還原鈕'`。
     - 新增 `'編輯期間 prefs 未被寫入'`（進入後、按鈕前檢查 `prefsManager.bookPrefsByBookId` 與進入前相同）。
-- [ ] **Step 2: 跑測試確認失敗**（新增與改寫者 FAIL）
-- [ ] **Step 3: 實作**
+- [x] **Step 2: 跑測試確認失敗**（新增與改寫者 FAIL）
+- [x] **Step 3: 實作**
   - `_resolveManualCropRect`：刪除 `mode`／`activeCrop` 計算，呼叫 `viewportRectToPageCropRect` 時不再傳 `activeCrop`，並更新方法註解（編輯期間顯示完整頁面，座標恆相對完整頁面）。
   - 覆蓋層：`onRestore: _hasActiveCrop ? () => setState(() => _cropEditModeActive = false) : null`；`onCancel`：`final had = _hasActiveCrop; setState(() => _cropEditModeActive = false); if (had) _handlePrefsChanged(_prefs.copyWith(pdfCropMode: PdfCropMode.none));`（須在 `setState` 之前先取 `had`，因為兩者之間 `_resolved` 不會變，但順序固定較不易出錯）。
   - 更新 `pdf_crop_mapping.dart` 檔頭註解，刪除「生效時合成」的描述。
-- [ ] **Step 4: 跑測試通過** — `flutter test test/reader/pdf_crop_mapping_test.dart test/reader/pdf_crop_frame_overlay_test.dart test/screens/reader_screen_test.dart`；`flutter analyze` 乾淨。
-- [ ] **Step 5: Commit** — `feat(reader): 手動裁切再進入顯示完整頁面，X 放棄裁切、新增還原（epic-54 Issue 45）`
+- [x] **Step 4: 跑測試通過** — `flutter test test/reader/pdf_crop_mapping_test.dart test/reader/pdf_crop_frame_overlay_test.dart test/screens/reader_screen_test.dart`；`flutter analyze` 乾淨。
+- [x] **Step 5: Commit** — `feat(reader): 手動裁切再進入顯示完整頁面，X 放棄裁切、新增還原（epic-54 Issue 45）`
 
 ### Task 4：收尾與真機驗證
 
