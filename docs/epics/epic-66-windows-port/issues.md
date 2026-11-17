@@ -673,8 +673,8 @@ Windows 版把直接放在使用者「文件」資料夾根目錄的 App 資料�
 
 | 外掛 | 目前 | 最新 | 狀況 |
 |---|---|---|---|
-| shared_preferences_android | 2.4.23 | 2.5.5 | 新版已不套用 KGP；`pub upgrade` 即可（間接相依，不需改 `pubspec.yaml`）→ **本 Issue 處理** |
-| url_launcher_android | 6.3.30 | 6.3.33 | 同上 → **本 Issue 處理** |
+| shared_preferences_android | 2.4.23 | 2.5.5 | 2.4.24 起已不套用 KGP；2.5.5 需 `jni ^1.1.1` 會連動升級 `jni`，**改取 2.4.28**（不動 `jni`，間接相依，不需改 `pubspec.yaml`）→ **本 Issue 處理** |
+| url_launcher_android | 6.3.30 | 6.3.33 | 新版已不套用 KGP；`pub upgrade` 即可 → **本 Issue 處理** |
 | wakelock_plus | 1.5.2 | 1.8.2 | 新版 AGP≥9 不套用 KGP，但 1.6.0 起要求 `win32` ≥ 6，專案 `win32` 鎖 5.15（被 `file_picker` 11、`package_info_plus` 9、`share_plus` 11 拉住）→ **不能單獨升**，併入 win32 相依鏈另案 |
 | package_info_plus | 9.0.1 | 10.2.2 | 新版支援，但大版本跳號且在 win32 鏈上 → 另案 |
 | share_plus | 11.1.0 | 13.3.1 | 同上；另受 Issue 16（`cross_file` 0.4）限制 → 另案 |

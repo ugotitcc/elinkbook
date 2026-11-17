@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 升級 `shared_preferences_android`（2.4.23→2.5.5）與 `url_launcher_android`（6.3.30→6.3.33）這兩個新版已不套用 KGP 的間接相依，使打包警告的 KGP 外掛由 9 個降為 7 個，行為不變。
+**Goal:** 升級 `shared_preferences_android`（2.4.23→2.4.28；原擬 2.5.5，但它要求 `jni ^1.1.1` 會連動升級 `jni`，故改取 2.4.24 起已遷移的 2.4.28，見報告第 2 節）與 `url_launcher_android`（6.3.30→6.3.33）這兩個新版已不套用 KGP 的間接相依，使打包警告的 KGP 外掛由 9 個降為 7 個，行為不變。
 
 **Architecture:** 純相依升級，不改 Dart／Kotlin 業務程式、不改 `pubspec.yaml`。兩者皆為 `shared_preferences`／`url_launcher` 的 Android 平台實作（間接相依），`flutter pub upgrade <套件>` 即可。保留 `android.builtInKotlin=false`、`android.newDsl=false`、`patches/file_picker`。
 
@@ -86,7 +86,7 @@ Expected：只出現這兩個（可能含平台介面的必然連動）；**不�
 - [x] **Step 2：實際升級並逐行核對**
 
 Run：`cd app && flutter pub upgrade shared_preferences_android url_launcher_android; cd ..`，再 `git diff app/pubspec.lock`。
-Expected：只有 `pubspec.lock` 變動；diff 中版本為 `2.5.5` 與 `6.3.33`；**沒有**上述禁止清單內的套件或 `win32` 出現。`git diff --stat` 僅作輔助，不能取代逐行核對。
+Expected：只有 `pubspec.lock` 變動；diff 中版本為 `2.4.28`（原計畫 `2.5.5`，因會連動 `jni` 改取此版，見報告）與 `6.3.33`；`pubspec.lock` 底部 `sdks` 下限會隨兩外掛（皆要求 `flutter >=3.44.0`）抬高，屬預期；**沒有**上述禁止清單內的套件或 `win32` 出現。`git diff --stat` 僅作輔助，不能取代逐行核對。
 
 - [x] **Step 3：同步 `gradle.properties` 註解並做靜態檢查**
 
@@ -121,7 +121,7 @@ Expected：建置成功；`git status --short` 沒有 `app/windows/flutter/gener
 Run：`cd app && flutter test; cd ..`
 Expected：全數通過。若有失敗，單獨重跑該檔並與 `issue-17-report.md` 記載的已知偶發（`test/downloads/download_queue_controller_test.dart`，單獨重跑可過）比對，不憑印象判定。
 
-- [x] **Step 5：真機抽測（有裝置才做）**
+- [x] **Step 5：真機抽測（有裝置才做）**（已確認無連接裝置，**未執行**；報告標「未驗證」）
 
 用 `adb install -r` 安裝後：開啟 App、切換偏好設定（如書庫檢視模式）後重啟仍保留、點擊外部連結（如關於頁）能開啟。
 Expected：通過；沒有裝置則在報告明寫「未驗證」。

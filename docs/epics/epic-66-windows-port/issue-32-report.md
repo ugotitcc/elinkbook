@@ -23,9 +23,12 @@
 
 ## 2. 外掛升級與靜態檢查（Task 2）
 
+- **dry-run 說明**：Task 2 Step 1 的 `--dry-run` 原始輸出當時未留存。2.5.5 會連動 `jni` 這點於 2026-11-17 審查後複驗：`shared_preferences_android` 2.5.5 的 `pubspec.yaml` 寫 `jni: ^1.1.1`，而專案 lock 內 `jni` 為較舊版（見下方 `jni` 1.0.3→1.1.2 說明），因此改取 2.4.28。
+
 - **`flutter pub upgrade shared_preferences_android url_launcher_android` 結果**：
   - `shared_preferences_android`：`2.4.23` → `2.4.28`（註：`2.5.5` 需將間接相依 `jni` 由 `1.0.3` 升至 `1.1.2`；`shared_preferences_android` 自 `2.4.24` 起即已完成 Built-in Kotlin 遷移，升級至 `2.4.28` 不牽動 `jni` 與任何其他套件）。
   - `url_launcher_android`：`6.3.30` → `6.3.33`。
+  - `sdks` 下限抬高的成因（2026-11-17 查證）：`shared_preferences_android` 2.4.28 與 `url_launcher_android` 6.3.33 的 `pubspec.yaml` 皆要求 `sdk: ^3.12.0`、`flutter: ">=3.44.0"`（舊版分別為 `^3.9.0／>=3.35.0` 與 `^3.10.0／>=3.38.0`），pub 因而把 lock 的 `sdks` 抬高；專案固定 Flutter 3.47.9，無實際影響。
   - `git diff app/pubspec.lock` 逐行核對：僅 `shared_preferences_android`、`url_launcher_android` 與底部 `sdks`（`dart: ">=3.12.0 <4.0.0"`、`flutter: ">=3.44.0"`）變動；`pubspec.yaml` 零變動，且未觸及 `wakelock_plus`、`package_info_plus`、`share_plus`、`desktop_drop`、`file_picker`、`win32`。
 - **`app/android/gradle.properties`**：僅第 6 行註解由「仍有 9 個外掛套用 KGP」更新為「仍有 7 個外掛套用 KGP」，`android.builtInKotlin=false`、`android.newDsl=false` 與 `org.gradle.java.home` 皆維持不動。
 - **靜態檢查**：
@@ -41,6 +44,7 @@
     WARNING: Your app uses the following plugins that apply Kotlin Gradle Plugin (KGP): desktop_drop, file_picker, flutter_tts, flutter_web_auth_2, package_info_plus, share_plus, wakelock_plus
     Future versions of Flutter will fail to build if your app uses plugins that apply KGP.
     ```
+  - 證據說明：升級前後的 `before.log`／`after.log` 原先放在 `app/build/issue32/`，審查（r2）時發現已不存在。2026-11-17 於升級後狀態重跑 `flutter build apk --debug`（成功，99.9s），重新擷取 `app/build/issue32/after.log`，警告清單與上列原文一致（7 個）；`before.log`（升級前）**無法重現，不補**，升級前 9 個清單以本報告第 1 節複製的原文為準。
   - 核對結果：由 **9 個降為 7 個**（`shared_preferences_android` 與 `url_launcher_android` 已不再出現於警告清單）。
 - **Android release 建置（`flutter build apk --release`）**：
   - 結果：✅ 成功（暫時於 `%USERPROFILE%\.gradle\gradle.properties` 寫入 `allowDebugSigning=true` 放行 debug 簽章，建置完成後已立即刪除並確認檔案不存在）。
@@ -54,7 +58,7 @@
   - `git status --short` 確認：無 `app/windows/flutter/generated_plugin_registrant.*` 等無關異動。
 - **完整單元／Widget 測試（`flutter test`）**：
   - 結果：✅ 全數通過（`+5341 ~2: All tests passed!`，0 失敗）。
-- **Android 真機抽測（`adb install -r`）**：
+- **Android 真機抽測（`adb install -r`）**（計畫 Task 3 Step 5 已註記為「未執行」，非已完成）：
   - 結果：⏸️ **未驗證**（執行環境 `adb devices` 無連接裝置，未驗證偏好設定重啟保留與外部連結開啟）。
 
 ## 4. 後續項目（Task 4，不在本 Issue 實作，待使用者決定再動）

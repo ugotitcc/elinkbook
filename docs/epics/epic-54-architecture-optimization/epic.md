@@ -1172,3 +1172,52 @@ Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
 - **驗證**：上述測試、`pdf_reader_view_filters_test`、`pdf_reader_view_paginated_test` 通過，`flutter analyze` 乾淨；完整 `flutter test` 5341 通過、2 跳過、0 失敗（第一輪曾見 2 個失敗但未保留名稱，同程式碼重跑全過，判定為偶發，原因未證實）。**待辦**：真機（E-Ink）尚未確認。
 
 **2026-11-17 PDF 手動裁切頁面重疊修正已合併**（PR #442，合併提交 `5e5caf1b`），待 E-Ink 真機確認。Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
+
+## 各 Issue 處理紀錄
+
+（自 `docs/epics.md` 備註欄搬入；`docs/epics.md` 只保留最後處理的項目與剩餘待辦。各 Issue 設計細節見上方各章節與 [issues.md](issues.md)。）
+
+- Issue 1 已合併（PR #302）
+- Issue 5 已合併（PR #303）
+- Issue 3 已合併（PR #304）
+- Issue 4 已合併（PR #305）
+- Issue 2 已合併（PR #306）
+- Issue 6 已合併（PR #307）
+- Issue 7 已合併（PR #310）
+- Issue 8 已合併（PR #311）
+- Issue 1～8 全數完成
+- Issue 9 已合併（PR #312）
+- Issue 1～9 全數完成
+- Issue 10（全欄位保留守衛，來源 epic-57 審查）待規劃
+- Issue 11（閱讀器功能依賴組）已合併（PR #327）
+- Issue 15（integration 測試補 localizationsDelegates，缺陷）已合併（PR #328；真機驗證只完成 5/32 檔，詳見 epic.md）
+- Issue 16（integration 測試真機載入轉圈與其餘真機驗證，Issue 15 後續）已合併（PR #330）
+- Issue 17（integration 測試遷移到 Epic 38 後介面，Issue 16 後續）已合併（PR #331；5 檔仍失敗，見 Issue 18）
+- Issue 18（Issue 17 遺留的 5 個失敗檔判定與校準）已合併（PR #333；5 檔全數通過；另登記 Issue 19 追目錄判定強健性）
+- Issue 19（EPUB 目錄目前章節判定改以 spine index）已合併（PR #334）
+- Issue 12 已合併（PR #335）
+- Issue 13 已合併（PR #336）
+- Issue 14 已合併（PR #337），Issue 11～14 依賴傳遞收斂全數完成
+- Issue 21（多頁加粗測試過期，epic-59 後續）已合併（PR #338）
+- Issue 10 已合併（PR #339）
+- Issue 20 已合併（PR #340），全數完成，Epic 暫不歸檔
+- 2026-10-23 第三次架構檢視登錄 Issue 23～28（待規劃）
+- Issue 23（閱讀面 module）已合併（PR #361）
+- Issue 24（標註 module）已合併（PR #363）
+- Issue 25（本書書籤 module）已合併（PR #364）
+- Issue 26（版面預設集流程）已合併（PR #365）
+- Issue 27（是否固定版面）已合併（PR #366）
+- Issue 29（開書逾時缺陷）階段一診斷已合併（PR #367），階段二待證據
+- Issue 30（書籤載入亂序覆寫）已合併（PR #368）
+- Issue 32（劃線／備註重載亂序覆寫）已合併（PR #369）
+- Issue 28（暫態高亮計時器 module）已合併（PR #370）
+- Issue 31（單書偏好寫入失敗提示）已合併（PR #371）
+- Issue 33（版面設定按鈕載入中提示，缺陷）提示修法已合併（PR #376），畫面更新延遲經 release 版實測判定為 debug 版現象
+- Issue 34（直排欄間隔與頁高不一致，缺陷）根因已查明（舊 WebView），設計已定案，上游同步已合併（PR #377），補償實作與 WAVE 真機驗證完成，已合併（PR #378）
+- 2026-11-15 後續：`foliate_md_test` 目錄請求重疊已修並合併（PR #431），`foliate_txt_test` 同類寫法已修並合併（PR #432）（`foliate_toc_footer_test` 不受影響）
+- 2026-11-15 第五次架構檢視登錄 Issue 38～40，Issue 38（重新下載書籍 module）已合併（PR #434），Issue 39（版面設定草稿）已合併（PR #435），Issue 40 已合併（PR #436）
+- 2026-11-16 後續項目：Windows 下載型字型不生效已修、雲端選檔加入封面／列表切換，皆已真機確認並合併（PR #437）
+- Issue 42（建置組合可辨識，使用者需求）已合併（PR #438）
+- Issue 43（缺陷：開書時並行檢查雲端閱讀位置）已合併（PR #441），待雙裝置真機驗證
+- 2026-11-17 後續項目：PDF 手動裁切頁面重疊（覆蓋圖未撐滿頁面矩形）已修並合併（PR #442），待 E-Ink 真機確認
+- 剩 Issue 41（疑似缺陷，待重現）
