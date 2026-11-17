@@ -675,11 +675,11 @@ Windows 版把直接放在使用者「文件」資料夾根目錄的 App 資料�
 |---|---|---|---|
 | shared_preferences_android | 2.4.23 | 2.5.5 | 2.4.24 起已不套用 KGP；2.5.5 需 `jni ^1.1.1` 會連動升級 `jni`，**改取 2.4.28**（不動 `jni`，間接相依，不需改 `pubspec.yaml`）→ **本 Issue 處理** |
 | url_launcher_android | 6.3.30 | 6.3.33 | 新版已不套用 KGP；`pub upgrade` 即可 → **本 Issue 處理** |
-| wakelock_plus | 1.5.2 | 1.8.2 | 新版 AGP≥9 不套用 KGP，但 1.6.0 起要求 `win32` ≥ 6，專案 `win32` 鎖 5.15（被 `file_picker` 11、`package_info_plus` 9、`share_plus` 11 拉住）→ **不能單獨升**，併入 win32 相依鏈另案 |
+| wakelock_plus | 1.5.2 | 1.8.2 | 新版 AGP≥9 不套用 KGP，但 1.6.0 起要求 `win32` ≥ 6，專案 `win32` 鎖 5.15（被 `file_picker` 11、`package_info_plus` 9、`share_plus` 11 拉住）→ **不能單獨升**，併入 win32 相依鏈另案；整組試解時只能升到 1.7.0（見下方後續項目） |
 | package_info_plus | 9.0.1 | 10.2.2 | 新版支援，但大版本跳號且在 win32 鏈上 → 另案 |
 | share_plus | 11.1.0 | 13.3.1 | 同上；另受 Issue 16（`cross_file` 0.4）限制 → 另案 |
 | desktop_drop | 0.8.4 | 0.9.2 | 新版依開關判斷；歸 Issue 16 |
-| file_picker | 11.0.3（本機修補） | 13.4.0 | 最新版套件結構改變（無 `android/`），未評估；修補移除條件綁在其餘外掛 → 另案 |
+| file_picker | 11.0.3（本機修補） | 13.4.0 | 13.x 已拆成平台套件（`android_file_picker`、`windows_file_picker` 等），非壞掉；`android_file_picker` 內建 built-in Kotlin 判斷，升級後本機修補可移除；但 `pickFiles()` API 為破壞性更新 → 見下方「win32 相依鏈整組升級」後續項目 |
 | flutter_tts | 4.2.5 | 4.2.5 | **上游尚未遷移**，仍 `apply plugin: 'kotlin-android'` |
 | flutter_web_auth_2 | 5.1.0 | 5.1.0 | **上游尚未遷移**，同上 |
 
@@ -702,3 +702,19 @@ Windows 版把直接放在使用者「文件」資料夾根目錄的 App 資料�
 ## Issue 32 單元測試要求
 
 不新增程式，沿用既有測試；偏好設定與外部連結相關既有測試須全數通過。
+
+## Issue 32 後續項目：win32 相依鏈整組升級（2026-11-17 `/grill-with-docs`，未排程，不開 Issue 編號）
+
+決定：**先登記，不現在做**。觸發條件任一成立再開 Issue：(a) 上游 `flutter_tts` 與 `flutter_web_auth_2` 有進展；(b) Flutter 開始擋建置；(c) 手邊有 Android 真機可驗證選檔匯入。
+
+事實（2026-11-17 在暫存副本以 `flutter pub get --dry-run` 試解，未動專案檔案）：
+
+- `win32` 5.15 被五個套件同時鎖住，必須一起升，不能拆開：`package_info_plus` 9→10.2.2、`share_plus` 11→13.3.1、`wakelock_plus` 1.5.2→1.7.0、`file_picker` 11.0.3→13.4.0、`flutter_secure_storage_windows` 4.1.0→4.2.2（間接，隨主套件解析）。整組試解成功，`win32` 變 6.4.0。`pubspec.yaml` 內「`file_picker` 要到 12.x beta 才支援 win32 6」的舊註解已過時（13.x 為穩定版）。
+- `wakelock_plus` 只能到 **1.7.0**：1.8.1 起要求 `dbus ^0.8`，與 `desktop_drop` 0.8.4 的 `dbus ^0.7` 衝突。
+- `share_plus_platform_interface` 須同步升 **^7.2.0**（`notes_bottom_sheet.dart` 直接使用）；7.2.0 仍有 `SharePlatform.instance.share(ShareParams)`，該處不用改。
+- `file_picker` 12 以上為破壞性更新，約 4 個檔案、6 個呼叫點要改（`dictionary_settings_screen.dart`、`font_management_screen.dart`、`book_import_picker_helper.dart` 等）及相關測試：`pickFiles()` 回傳 `List<PlatformFile>`，取消時為空清單（不再是 `FilePickerResult?`）；`allowMultiple` 參數移除；`getDirectoryPath()` 在 13.4.0 標為棄用，新的 `pickDirectory()` 回傳 `Uri`（Android 為 `content://` tree URI，行為不同，另議，本項目不含）。`PlatformFile.length()` 改回 `Future<int?>`。
+- 升完 `cross_file` 仍是 0.3.x，與 `desktop_drop` 0.8.4 無衝突。
+- **升完仍不能把 `android.builtInKotlin` 切成 `true`**：`package_info_plus`、`share_plus`、`desktop_drop` 新版依該開關決定是否套 KGP，開關為 `false` 時警告仍會列出它們；`wakelock_plus` 新版在 AGP 9 本來就不套 KGP。真正擋住切換的是 `flutter_tts`、`flutter_web_auth_2`（上游未遷移）與 `desktop_drop` 0.8.4（升 0.9 受 Issue 16 的 `cross_file` 0.4 限制）。所以這組升級的實質好處是移除 `patches/file_picker` 與不再落後版本，**不是減少警告數**。
+- 風險：動到核心選檔匯入路徑；Android 目前沒有真機驗證手段。
+
+開 Issue 時的驗證底線（提案，屆時再定）：`flutter analyze`、全套測試、Android／Windows 建置、Windows 實機匯入（選檔、資料夾、拖曳）、Android 真機選檔匯入；沒有 Android 真機則該項標「未驗證」，不宣稱通過。
