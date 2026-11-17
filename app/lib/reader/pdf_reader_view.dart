@@ -1020,10 +1020,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     final pageIndex = _pendingReanchorPageIndex;
     _pendingReanchorPageIndex = null;
     if (pageIndex == null || !mounted || !_controller.isReady) return;
-    // 內部重新錨定不是使用者的跳頁，超界時只夾制、不發降級通知（epic-67 Issue 6 D7）。
+    // 內部重新錨定不是使用者的跳頁，超界時只夾制、不發降級通知（epic-67 Issue 6 D7）；
+    // 且須繞過外部跳頁的 cropEditModeActive 封鎖，才能在進入裁切編輯模式重排後
+    // 把目前頁帶回完整畫面與基準縮放（epic-54 Issue 45）。
     final count = _controller.pageCount;
     if (count <= 0) return;
-    _jumpToPage(pageIndex >= count ? count - 1 : pageIndex); // 走既有的單/雙頁分派邏輯。
+    _navigateToPage(pageIndex >= count ? count - 1 : pageIndex); // 走既有的單/雙頁分派邏輯。
   }
 
   /// 讓 pdfrx 重新排版（重算最小縮放），再於後續幀把縮放設為新模式的基準。
@@ -1126,6 +1128,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 
   bool _jumpToPage(int pageIndex) {
     if (widget.cropEditModeActive) return false;
+    return _navigateToPage(pageIndex);
+  }
+
+  bool _navigateToPage(int pageIndex) {
     if (!_controller.isReady) return false;
     final count = _controller.pageCount;
     if (pageIndex < 0 || count <= 0) return false;

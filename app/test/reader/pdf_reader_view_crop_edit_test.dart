@@ -2,6 +2,7 @@ import 'package:elinkbook/l10n/app_localizations.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
+import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +28,8 @@ void main() {
     PdfCropMode pdfCropMode = PdfCropMode.none,
     PdfCropRect? pdfCropRect,
     PdfFitMode? pdfFitMode,
+    PdfPageTurnMode pdfPageTurnMode = PdfPageTurnMode.scroll,
+    int? initialPageIndex,
     bool cropEditModeActive = false,
     double pdfBoldStrength = 0.0,
     ValueChanged<PdfCropRect>? onCropRectComputed,
@@ -43,9 +46,11 @@ void main() {
         home: PdfReaderView(
           key: viewKey,
           filePath: 'test/fixtures/sample_multi_page.pdf',
+          initialPageIndex: initialPageIndex,
           pdfCropMode: pdfCropMode,
           pdfCropRect: pdfCropRect,
           pdfFitMode: pdfFitMode,
+          pdfPageTurnMode: pdfPageTurnMode,
           cropEditModeActive: cropEditModeActive,
           pdfBoldStrength: pdfBoldStrength,
           onCropRectComputed: onCropRectComputed,
@@ -275,6 +280,165 @@ void main() {
         fullOverlay.width / fullOverlay.height,
         closeTo(firstPageAspectRatio(key), 0.05),
       );
+    },
+  );
+
+  testWidgets(
+    '逐頁模式（paginated）第 3 頁有生效裁切，進入編輯與還原後維持第 3 頁且完整顯示於視窗內',
+    (tester) async {
+      setupLandscapeViewport(tester);
+      final key = GlobalKey<State<PdfReaderView>>();
+
+      // 先取未裁切完整頁面的長寬比
+      await pumpPdf(
+        tester,
+        key: key,
+        pdfPageTurnMode: PdfPageTurnMode.paginated,
+        pdfFitMode: PdfFitMode.pageFit,
+        pdfCropMode: PdfCropMode.none,
+      );
+      final aspectFull = firstPageAspectRatio(key);
+
+      // 重新掛載到第 3 頁（index 2）且有手動裁切
+      final croppedKey = GlobalKey<State<PdfReaderView>>();
+      await pumpPdf(
+        tester,
+        key: croppedKey,
+        initialPageIndex: 2,
+        pdfPageTurnMode: PdfPageTurnMode.paginated,
+        pdfFitMode: PdfFitMode.pageFit,
+        pdfCropMode: PdfCropMode.manual,
+        pdfCropRect: nonUniformCrop,
+        cropEditModeActive: false,
+      );
+      // 逐頁 + initialPageIndex 會在 onLayoutInitialized 排 microtask 跳頁
+      await pumpUntilPdfReady(
+        tester,
+        condition: () {
+          final rects = PdfReaderView.visiblePageRects(croppedKey);
+          return rects.length == 1 && rects.first.pageIndex == 2;
+        },
+      );
+      final croppedRect =
+          PdfReaderView.visiblePageRects(croppedKey).first.rectInViewer;
+      final aspectCropped = croppedRect.width / croppedRect.height;
+      expect(aspectCropped, isNot(closeTo(aspectFull, 1e-3)));
+
+      // 進入裁切編輯模式：須維持第 3 頁、切換為完整頁面比例，且完整落於視窗內
+      await pumpPdf(
+        tester,
+        key: croppedKey,
+        initialPageIndex: 2,
+        pdfPageTurnMode: PdfPageTurnMode.paginated,
+        pdfFitMode: PdfFitMode.pageFit,
+        pdfCropMode: PdfCropMode.manual,
+        pdfCropRect: nonUniformCrop,
+        cropEditModeActive: true,
+        waitUntilReady: false,
+      );
+      await pumpUntilPdfReady(
+        tester,
+        condition: () {
+          final rects = PdfReaderView.visiblePageRects(croppedKey);
+          if (rects.length != 1 || rects.first.pageIndex != 2) return false;
+          final r = rects.first.rectInViewer;
+          return (r.width / r.height - aspectFull).abs() < 1e-3;
+        },
+      );
+      final editRect =
+          PdfReaderView.visiblePageRects(croppedKey).first.rectInViewer;
+      expect(editRect.width / editRect.height, closeTo(aspectFull, 1e-3));
+      expect(editRect.left, greaterThanOrEqualTo(-1.0));
+      expect(editRect.top, greaterThanOrEqualTo(-1.0));
+      expect(editRect.right, lessThanOrEqualTo(1225.0));
+      expect(editRect.bottom, lessThanOrEqualTo(901.0));
+
+      // 按還原切回 false：維持第 3 頁並回到裁切後比例
+      await pumpPdf(
+        tester,
+        key: croppedKey,
+        initialPageIndex: 2,
+        pdfPageTurnMode: PdfPageTurnMode.paginated,
+        pdfFitMode: PdfFitMode.pageFit,
+        pdfCropMode: PdfCropMode.manual,
+        pdfCropRect: nonUniformCrop,
+        cropEditModeActive: false,
+        waitUntilReady: false,
+      );
+      await pumpUntilPdfReady(
+        tester,
+        condition: () {
+          final rects = PdfReaderView.visiblePageRects(croppedKey);
+          if (rects.length != 1 || rects.first.pageIndex != 2) return false;
+          final r = rects.first.rectInViewer;
+          return (r.width / r.height - aspectCropped).abs() < 1e-3;
+        },
+      );
+      final restoredRect =
+          PdfReaderView.visiblePageRects(croppedKey).first.rectInViewer;
+      expect(restoredRect.width / restoredRect.height,
+          closeTo(aspectCropped, 1e-3));
+    },
+  );
+
+  testWidgets(
+    '連續捲動（fitWidth）第 3 頁有水平裁切，進入編輯後頁面寬度不超出視窗且維持第 3 頁',
+    (tester) async {
+      setupLandscapeViewport(tester);
+      const horizontalCrop = PdfCropRect(
+        left: 0.25,
+        top: 0.0,
+        right: 0.75,
+        bottom: 1.0,
+      );
+      final key = GlobalKey<State<PdfReaderView>>();
+
+      await pumpPdf(
+        tester,
+        key: key,
+        initialPageIndex: 2,
+        pdfPageTurnMode: PdfPageTurnMode.scroll,
+        pdfFitMode: PdfFitMode.fitWidth,
+        pdfCropMode: PdfCropMode.manual,
+        pdfCropRect: horizontalCrop,
+        cropEditModeActive: false,
+      );
+      await pumpUntilPdfReady(
+        tester,
+        condition: () => PdfReaderView.visiblePageRects(key)
+            .any((e) => e.pageIndex == 2),
+      );
+      final croppedEntry = PdfReaderView.visiblePageRects(key)
+          .firstWhere((e) => e.pageIndex == 2);
+      final aspectCropped =
+          croppedEntry.rectInViewer.width / croppedEntry.rectInViewer.height;
+
+      await pumpPdf(
+        tester,
+        key: key,
+        initialPageIndex: 2,
+        pdfPageTurnMode: PdfPageTurnMode.scroll,
+        pdfFitMode: PdfFitMode.fitWidth,
+        pdfCropMode: PdfCropMode.manual,
+        pdfCropRect: horizontalCrop,
+        cropEditModeActive: true,
+        waitUntilReady: false,
+      );
+      await pumpUntilPdfReady(
+        tester,
+        condition: () {
+          final matches = PdfReaderView.visiblePageRects(key)
+              .where((e) => e.pageIndex == 2);
+          if (matches.isEmpty) return false;
+          final r = matches.first.rectInViewer;
+          return (r.width / r.height - aspectCropped).abs() > 0.1 &&
+              r.width <= 1225.0;
+        },
+      );
+      final editEntry = PdfReaderView.visiblePageRects(key)
+          .firstWhere((e) => e.pageIndex == 2);
+      expect(editEntry.rectInViewer.width, lessThanOrEqualTo(1225.0));
+      expect(editEntry.rectInViewer.left, greaterThanOrEqualTo(-1.0));
     },
   );
 }

@@ -9615,7 +9615,7 @@ void main() {
       expect(prefsManager.bookPrefsByBookId.containsKey('b_crop44'), isFalse);
     });
 
-    testWidgets('mode 為 none 但殘留舊矩形：不顯示還原鈕', (tester) async {
+    testWidgets('mode 為 none 但殘留舊矩形：不顯示還原鈕，按 X 不寫 prefs', (tester) async {
       const staleRect =
           PdfCropRect(left: 0.14, top: 0.11, right: 0.87, bottom: 0.89);
       await openManualCrop(
@@ -9627,6 +9627,15 @@ void main() {
       );
 
       expect(find.byKey(const Key('pdf_crop_frame_restore')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('pdf_crop_frame_cancel')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PdfCropFrameOverlay), findsNothing);
+      expect(prefsManager.savedBookPrefsCalls, isEmpty);
+      expect(prefsManager.bookPrefsByBookId['b_crop44']?.pdfCropMode,
+          PdfCropMode.none);
+      expect(prefsManager.bookPrefsByBookId['b_crop44']?.pdfCropRect, staleRect);
     });
 
     testWidgets('編輯期間 prefs 未被寫入', (tester) async {
@@ -9636,6 +9645,7 @@ void main() {
       );
       await openManualCrop(tester, initialPrefs: initialPrefs);
 
+      expect(prefsManager.savedBookPrefsCalls, isEmpty);
       expect(prefsManager.bookPrefsByBookId['b_crop44'], initialPrefs);
     });
   });

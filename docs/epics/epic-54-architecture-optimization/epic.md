@@ -1232,7 +1232,7 @@ Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
   - 按 X 離開且原本有生效裁切時寫入 `pdfCropMode = none`（放棄裁切）；原本未裁切時按 X 不寫 prefs；按還原只關編輯模式、原樣保留原本裁切（含 `autoDetect`）（Q1／Q2／Q3）。
   - 移除 Issue 44 `pdf_crop_mapping.dart` 的 `activeCrop` 與 `_resolveManualCropRect` 合成回原始座標分支，框座標恆相對完整頁面（Q6）；返回鍵與 Esc 維持不離開裁切編輯模式（Q5）；進入／離開沿用 `didUpdateWidget` reanchor 保持頁碼（Q7）；詞彙「裁切編輯模式」已納入 `CONTEXT.md`（Q10）。
 - **測試與靜態檢查結果（2026-11-18）**：
-  - `flutter test`（全套）：5379 通過、2 略過、1 失敗（`test/downloads/download_queue_controller_test.dart`「偵測到重複且 onDuplicateConfirm 回傳 false 時，標記為略過且不呼叫 import」）；單獨重跑 `download_queue_controller_test.dart` 28/28 全數通過（既有負載敏感測試，未修改 `lib/downloads`、`test/downloads`）。
+  - `flutter test`（全套）：5381 通過、2 略過、1 失敗（`test/downloads/download_queue_controller_test.dart`「偵測到重複且 onDuplicateConfirm 回傳 false 時，標記為略過且不呼叫 import」）；單獨重跑 `download_queue_controller_test.dart` 28/28 全數通過（既有負載敏感測試，未修改 `lib/downloads`、`test/downloads`）。
   - `flutter analyze`：`No issues found!`。
   - `node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js`：全數通過。
 - **WAVE 真機驗證**：⚪ **未在真機執行**（執行當下本機無連接任何 Android／WAVE 裝置，待於 WAVE `TCE70P24B2202374` 以 `adb install -r` 覆驗 6 項互動場景後再行合併）。
