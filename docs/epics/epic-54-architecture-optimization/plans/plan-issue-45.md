@@ -118,16 +118,16 @@
 
 **Files：** `docs/epics/epic-54-architecture-optimization/{epic.md,issues.md}`、`docs/epics.md`（epic-54 那列備註）
 
-- [ ] **Step 1: 完整測試** — `flutter test`（無參數）、`flutter analyze`、`node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js`。已知偶發失敗（`download_queue_controller_test`、`pdf_reader_view_filters_test`）單獨重跑通過即記錄，不視為本 Issue 回歸。
-- [ ] **Step 2: WAVE 真機驗證**（`adb install -r`）：
+- [x] **Step 1: 完整測試** — `flutter test`（無參數）、`flutter analyze`、`node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js`。已知偶發失敗（`download_queue_controller_test`、`pdf_reader_view_filters_test`）單獨重跑通過即記錄，不視為本 Issue 回歸。
+- [ ] **Step 2: WAVE 真機驗證**（`adb install -r`，本機目前無連接裝置，未執行，已於 `epic.md`／`issues.md` 如實標註）：
   1. 已手動裁切的 PDF → 版面設定選手動 → 看到完整頁面、底部三顆鈕；按還原 → 回原裁切、頁碼不變。
   2. 再進入 → 重框 → ✓ → 新裁切生效，且框選範圍＝套用範圍。
   3. 再進入 → 按 X → 變為不裁切。
   4. 原本未裁切 → 進入只有 X 與 ✓。
   5. 智慧裁切 → 進入 → 還原 → 仍是智慧裁切。
   6. 編輯中按返回鍵，不離開編輯。
-- [ ] **Step 3: 文件** — `epic.md` 補「Issue 45 決議（2026-11-18 `/grill-with-docs`）」摘要與驗證結果；`issues.md` Issue 45 狀態更新；`docs/epics.md` epic-54 備註補一句。未驗證項目如實標註。
-- [ ] **Step 4: Commit** — `docs(epic-54): Issue 45 收尾紀錄`
+- [x] **Step 3: 文件** — `epic.md` 補「Issue 45 決議（2026-11-18 `/grill-with-docs`）」摘要與驗證結果；`issues.md` Issue 45 狀態更新；`docs/epics.md` epic-54 備註補一句。未驗證項目如實標註。
+- [x] **Step 4: Commit** — `docs(epic-54): Issue 45 收尾紀錄`
 
 ---
 
