@@ -54,15 +54,15 @@
 **Interfaces：**
 - Produces：`PdfReaderView.cropEditModeActive == true` 時，版面、疊圖、註記座標換算都當作「未裁切」；`pdfCropMode`／`pdfCropRect` 屬性值不變，`_maybeDetectCropRect` 行為不變。
 
-- [ ] **Step 1: 寫失敗測試**（三個）
+- [x] **Step 1: 寫失敗測試**（三個）
   - `'已有手動裁切，cropEditModeActive 為 true 時，可見頁面長寬比等於未裁切的頁面'`：用**非等比**裁切 `pdfCropRect: (0.0, 0.2, 1.0, 0.8)`（等比裁切在 pageFit 下寬度不變，量不出差異）。先以 `pdfCropMode: none` 取 `visiblePageRects` 第一頁 `rectInViewer` 的長寬比 `aspectFull`；再以 `manual`＋該矩形、`cropEditModeActive: false` 取 `aspectCropped`，斷言兩者不等（`isNot(closeTo(aspectFull, 1e-3))`）；最後改 `cropEditModeActive: true` pump，斷言長寬比 `closeTo(aspectFull, 1e-3)`。
   - `'cropEditModeActive 切回 false 後，恢復為裁切後的頁面寬度'`。
   - `'autoDetect 且矩形已快取，cropEditModeActive 為 true 時不呼叫 onCropRectComputed'`。
   - `'已有裁切且加粗強度大於 0，切換 cropEditModeActive 後疊圖仍會產生，不被丟棄'`（覆蓋 1519／1610／1647 三處；觀察方式比照 `pdf_reader_view_filters_test.dart` 既有 bold overlay 測試）。
-- [ ] **Step 2: 跑測試確認失敗** — `flutter test test/reader/pdf_reader_view_crop_edit_test.dart`，預期前兩個 FAIL。
-- [ ] **Step 3: 實作** — 新增私有 getter `PdfCropRect? get _activeCropRect => _cropEnabled ? widget.pdfCropRect : null;`，`_cropEnabled` 改為 `!widget.cropEditModeActive && widget.pdfCropMode != PdfCropMode.none && widget.pdfCropRect != null`；1519、1610、1647 三處疊圖快取鍵 `crop:` 改讀 `_activeCropRect`。其餘使用處（442、1264、1549、1571、1586、2102）已被 `_cropEnabled ?` 保護、`_layoutCroppedPages`（1672）只在 `_cropEnabled` 為 true 時被呼叫，不需改。`_dualPageEnabled` 與 `_maybeDetectCropRect` **不動**。`didUpdateWidget` 的 `changed` 加上 `oldWidget.cropEditModeActive != widget.cropEditModeActive`，沿用既有 reanchor 保持頁碼。
-- [ ] **Step 4: 跑測試確認通過**，並跑 `test/reader/pdf_reader_view_visible_page_rects_test.dart`、`pdf_reader_view_filters_test.dart`、`pdf_reader_view_paginated_test.dart` 確認無回歸。
-- [ ] **Step 5: Commit** — `feat(reader): PDF 裁切編輯期間暫時顯示完整頁面（epic-54 Issue 45）`
+- [x] **Step 2: 跑測試確認失敗** — `flutter test test/reader/pdf_reader_view_crop_edit_test.dart`，預期前兩個 FAIL。
+- [x] **Step 3: 實作** — 新增私有 getter `PdfCropRect? get _activeCropRect => _cropEnabled ? widget.pdfCropRect : null;`，`_cropEnabled` 改為 `!widget.cropEditModeActive && widget.pdfCropMode != PdfCropMode.none && widget.pdfCropRect != null`；1519、1610、1647 三處疊圖快取鍵 `crop:` 改讀 `_activeCropRect`。其餘使用處（442、1264、1549、1571、1586、2102）已被 `_cropEnabled ?` 保護、`_layoutCroppedPages`（1672）只在 `_cropEnabled` 為 true 時被呼叫，不需改。`_dualPageEnabled` 與 `_maybeDetectCropRect` **不動**。`didUpdateWidget` 的 `changed` 加上 `oldWidget.cropEditModeActive != widget.cropEditModeActive`，沿用既有 reanchor 保持頁碼。
+- [x] **Step 4: 跑測試確認通過**，並跑 `test/reader/pdf_reader_view_visible_page_rects_test.dart`、`pdf_reader_view_filters_test.dart`、`pdf_reader_view_paginated_test.dart` 確認無回歸。
+- [x] **Step 5: Commit** — `feat(reader): PDF 裁切編輯期間暫時顯示完整頁面（epic-54 Issue 45）`
 
 ### Task 2：`PdfCropFrameOverlay` 還原鈕與 tooltip
 
