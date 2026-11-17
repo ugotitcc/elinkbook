@@ -62,7 +62,7 @@
 | 52 | `epic-50-sync-token-refresh` （缺陷）同步 token 過期後無法同步，須登出再登入才恢復 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 53 | `epic-52-play-release` 上架 Google Play 的前置工作（release 簽章、隱私權政策補同步服務、版本號腳本） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 54 | `epic-53-sync-checkpoint-result` （重構＋缺陷）同步 checkpoint 直接回報結果（含登入過期），消除呼叫端反推儲存狀態，並修正中途登出時顯示空白 email | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
-| 55 | `epic-54-architecture-optimization` 架構優化（集中所有架構深化候選，每個候選一張 Issue） | 🟡 開發中 (Active) | 2026-11-17 後續項目：PDF 手動裁切頁面重疊已修並合併（PR #442）；剩 Issue 41（疑似缺陷，待重現） |
+| 55 | `epic-54-architecture-optimization` 架構優化（集中所有架構深化候選，每個候選一張 Issue） | 🟡 開發中 (Active) | 2026-11-17 後續項目：PDF 手動裁切頁面重疊已修並合併（PR #442）；剩 Issue 41（疑似缺陷，待重現）；Issue 44（PDF 手動裁切框選範圍與套用範圍不符、起點跳動）已實作，待 PR |
 | 56 | `epic-55-third-party-licenses` App 授權頁登錄第三方授權（5 項程式元件＋7 款可下載字型的開源授權） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 57 | `epic-56-pdf-paginated-reading` PDF 逐頁閱讀（新增「翻頁模式」逐頁／連續捲動，一次只顯示整頁、瞬間換頁；並接上三種 Fit 模式） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 58 | `epic-57-layout-override-save-drops-fields` （缺陷）書架「版面覆寫」儲存時整列重建漏帶 `textConversionOverride`，會清掉該書的簡繁轉換覆寫 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |

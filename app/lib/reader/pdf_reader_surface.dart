@@ -135,4 +135,8 @@ class PdfReaderSurface implements ReaderSurface, PdfFacet {
   @override
   Future<ui.Image?> renderThumbnail(int pageIndex, {required double maxWidth}) =>
       PdfReaderView.renderThumbnail(viewKey, pageIndex, maxWidth: maxWidth);
+
+  @override
+  List<({int pageIndex, Rect rectInViewer})> visiblePageRects() =>
+      PdfReaderView.visiblePageRects(viewKey);
 }

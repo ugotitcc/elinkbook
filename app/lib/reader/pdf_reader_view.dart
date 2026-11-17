@@ -203,6 +203,18 @@ class PdfReaderView extends StatefulWidget {
     }
   }
 
+  /// 目前可見頁面在本 widget 內的矩形（邏輯像素，相對本 widget 左上角）。
+  /// 手動裁切用：裁切框的比例是相對整個畫面，必須知道頁面實際在畫面的哪裡
+  /// 才能換算成相對頁面的比例（Issue 44）。只回傳與畫面有交集的頁面；
+  /// [key] 對應的 State 尚未掛載或文件尚未就緒時回傳空清單。
+  static List<({int pageIndex, Rect rectInViewer})> visiblePageRects(
+    GlobalKey<State<PdfReaderView>> key,
+  ) {
+    final state = key.currentState;
+    if (state is! _PdfReaderViewState) return const [];
+    return state._visiblePageRects();
+  }
+
   /// 一次性送出目前應顯示的完整標記清單（非增量 diff，比照 EPUB
   /// `EpubDecoration`／`setDecorations` 整組送出慣例）——epic-24 Issue 4
   /// 落地，取代 Issue 1 暫時性 no-op。[key] 對應的 State 若尚未掛載，
@@ -1078,6 +1090,31 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         await tmpFile.parent.delete();
       } catch (_) {}
     } catch (_) {}
+  }
+
+  List<({int pageIndex, Rect rectInViewer})> _visiblePageRects() {
+    // layout getter 在版面尚未建立時會擲 null-check（見 _spreadLayout 註解），
+    // 未就緒一律回傳空清單
+    if (!_controller.isReady) return const [];
+    final visible = _controller.visibleRect;
+    final zoom = _controller.currentZoom;
+    final viewport = Rect.fromLTWH(0, 0, visible.width * zoom, visible.height * zoom);
+    final pageLayouts = _controller.layout.pageLayouts;
+    final result = <({int pageIndex, Rect rectInViewer})>[];
+    for (var i = 0; i < pageLayouts.length; i++) {
+      // 文件座標 → 本 widget 座標：(座標 − 可視區左上角) × 縮放
+      final doc = pageLayouts[i];
+      final rect = Rect.fromLTWH(
+        (doc.left - visible.left) * zoom,
+        (doc.top - visible.top) * zoom,
+        doc.width * zoom,
+        doc.height * zoom,
+      );
+      if (rect.overlaps(viewport)) {
+        result.add((pageIndex: i, rectInViewer: rect));
+      }
+    }
+    return result;
   }
 
   bool _jumpToPage(int pageIndex) {

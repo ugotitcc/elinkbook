@@ -1,0 +1,2037 @@
+1794901830734 initState
+1794901834598 DOWN id=6 kind=PointerDeviceKind.touch pos=Offset(120.5, 119.5) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794901834688 MOVE id=6 pos=Offset(121.6, 119.5) tracking=6 match=true
+1794901834769 MOVE id=6 pos=Offset(120.5, 119.5) tracking=6 match=true
+1794901834839 MOVE id=6 pos=Offset(119.5, 119.5) tracking=6 match=true
+1794901834912 MOVE id=6 pos=Offset(120.5, 119.5) tracking=6 match=true
+1794901834969 DOWN id=7 kind=PointerDeviceKind.touch pos=Offset(119.5, 120.0) tracking=6 start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901834976 MOVE id=6 pos=Offset(93.9, 118.9) tracking=7 match=false
+1794901834984 MOVE id=7 pos=Offset(196.3, 120.0) tracking=7 match=true
+1794901834990 MOVE id=6 pos=Offset(98.7, 118.9) tracking=7 match=false
+1794901834993 MOVE id=7 pos=Offset(196.3, 120.0) tracking=7 match=true
+1794901834999 MOVE id=6 pos=Offset(110.4, 118.9) tracking=7 match=false
+1794901835000 MOVE id=7 pos=Offset(402.1, 120.0) tracking=7 match=true
+1794901835040 MOVE id=6 pos=Offset(117.9, 119.5) tracking=7 match=false
+1794901835043 MOVE id=7 pos=Offset(335.5, 120.0) tracking=7 match=true
+1794901835116 MOVE id=6 pos=Offset(120.0, 119.5) tracking=7 match=false
+1794901835118 MOVE id=7 pos=Offset(335.5, 120.0) tracking=7 match=true
+1794901835121 MOVE id=6 pos=Offset(120.0, 119.5) tracking=7 match=false
+1794901835123 RAWUP id=7 tracking=7
+1794901835126 UP start=Offset(0.2, 0.1) cur=Offset(0.4, 0.1)
+1794901835137 MOVE id=6 pos=Offset(121.6, 119.5) tracking=null match=false
+1794901835140 MOVE id=6 pos=Offset(122.7, 120.0) tracking=null match=false
+1794901835246 MOVE id=6 pos=Offset(122.7, 120.0) tracking=null match=false
+1794901835456 RAWUP id=6 tracking=null
+1794901835502 DOWN id=8 kind=PointerDeviceKind.touch pos=Offset(122.7, 120.5) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794901835509 MOVE id=8 pos=Offset(123.7, 120.5) tracking=8 match=true
+1794901835532 MOVE id=8 pos=Offset(121.6, 121.1) tracking=8 match=true
+1794901835587 MOVE id=8 pos=Offset(90.7, 121.1) tracking=8 match=true
+1794901835600 MOVE id=8 pos=Offset(-0.5, 121.1) tracking=8 match=true
+1794901835639 MOVE id=8 pos=Offset(58.1, 120.5) tracking=8 match=true
+1794901835674 MOVE id=8 pos=Offset(85.3, 120.5) tracking=8 match=true
+1794901835677 MOVE id=8 pos=Offset(93.9, 120.5) tracking=8 match=true
+1794901835681 MOVE id=8 pos=Offset(99.2, 120.5) tracking=8 match=true
+1794901835747 MOVE id=8 pos=Offset(102.9, 121.1) tracking=8 match=true
+1794901835755 DOWN id=9 kind=PointerDeviceKind.touch pos=Offset(121.6, 121.6) tracking=8 start=Offset(0.2, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901835766 MOVE id=9 pos=Offset(121.6, 121.6) tracking=9 match=true
+1794901835769 RAWUP id=8 tracking=9
+1794901835776 MOVE id=9 pos=Offset(123.2, 121.6) tracking=9 match=true
+1794901835849 MOVE id=9 pos=Offset(122.7, 121.6) tracking=9 match=true
+1794901835893 MOVE id=9 pos=Offset(124.8, 121.6) tracking=9 match=true
+1794901835916 MOVE id=9 pos=Offset(123.7, 121.6) tracking=9 match=true
+1794901836003 RAWUP id=9 tracking=9
+1794901836005 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901836034 DOWN id=10 kind=PointerDeviceKind.touch pos=Offset(123.2, 122.1) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901836097 MOVE id=10 pos=Offset(121.6, 122.1) tracking=10 match=true
+1794901836118 MOVE id=10 pos=Offset(122.7, 122.1) tracking=10 match=true
+1794901836163 MOVE id=10 pos=Offset(120.0, 122.1) tracking=10 match=true
+1794901836213 MOVE id=10 pos=Offset(121.6, 122.1) tracking=10 match=true
+1794901836246 MOVE id=10 pos=Offset(81.6, 122.1) tracking=10 match=true
+1794901836249 RAWUP id=10 tracking=10
+1794901836250 UP start=Offset(0.2, 0.1) cur=Offset(0.1, 0.1)
+1794901836255 DOWN id=11 kind=PointerDeviceKind.touch pos=Offset(123.2, 122.7) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901836273 DOWN id=12 kind=PointerDeviceKind.touch pos=Offset(252.8, 124.3) tracking=11 start=Offset(0.2, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901836304 MOVE id=11 pos=Offset(123.2, 122.7) tracking=11 match=true
+1794901836307 RAWUP id=12 tracking=11
+1794901836438 MOVE id=11 pos=Offset(122.1, 122.7) tracking=11 match=true
+1794901836470 MOVE id=11 pos=Offset(124.3, 122.7) tracking=11 match=true
+1794901836545 MOVE id=11 pos=Offset(123.2, 122.7) tracking=11 match=true
+1794901836565 MOVE id=11 pos=Offset(124.3, 122.7) tracking=11 match=true
+1794901836612 MOVE id=11 pos=Offset(123.2, 122.7) tracking=11 match=true
+1794901836775 MOVE id=11 pos=Offset(121.6, 123.2) tracking=11 match=true
+1794901836819 MOVE id=11 pos=Offset(76.8, 123.2) tracking=11 match=true
+1794901836825 DOWN id=13 kind=PointerDeviceKind.touch pos=Offset(128.0, 124.3) tracking=11 start=Offset(0.2, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901836835 MOVE id=11 pos=Offset(87.5, 123.2) tracking=13 match=false
+1794901836836 MOVE id=13 pos=Offset(145.6, 124.3) tracking=13 match=true
+1794901836865 MOVE id=11 pos=Offset(101.9, 123.2) tracking=13 match=false
+1794901836868 MOVE id=13 pos=Offset(145.6, 124.3) tracking=13 match=true
+1794901836893 MOVE id=11 pos=Offset(106.7, 123.2) tracking=13 match=false
+1794901836894 MOVE id=13 pos=Offset(167.5, 124.3) tracking=13 match=true
+1794901836898 MOVE id=11 pos=Offset(110.9, 123.2) tracking=13 match=false
+1794901836905 MOVE id=13 pos=Offset(167.5, 124.3) tracking=13 match=true
+1794901836918 MOVE id=11 pos=Offset(113.6, 123.2) tracking=13 match=false
+1794901836919 MOVE id=13 pos=Offset(167.5, 124.3) tracking=13 match=true
+1794901836922 MOVE id=11 pos=Offset(116.3, 123.2) tracking=13 match=false
+1794901836923 RAWUP id=13 tracking=13
+1794901836924 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901836926 MOVE id=11 pos=Offset(116.3, 123.2) tracking=null match=false
+1794901836966 MOVE id=11 pos=Offset(123.2, 124.8) tracking=null match=false
+1794901837013 MOVE id=11 pos=Offset(128.0, 126.4) tracking=null match=false
+1794901837019 MOVE id=11 pos=Offset(129.1, 126.9) tracking=null match=false
+1794901837025 MOVE id=11 pos=Offset(129.1, 128.0) tracking=null match=false
+1794901837065 RAWUP id=11 tracking=null
+1794901837162 DOWN id=14 kind=PointerDeviceKind.touch pos=Offset(131.2, 132.3) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901837184 MOVE id=14 pos=Offset(128.0, 132.8) tracking=14 match=true
+1794901837231 MOVE id=14 pos=Offset(129.6, 132.8) tracking=14 match=true
+1794901837249 RAWUP id=14 tracking=14
+1794901837249 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901837314 DOWN id=15 kind=PointerDeviceKind.touch pos=Offset(135.5, 132.8) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901837356 MOVE id=15 pos=Offset(134.4, 132.8) tracking=15 match=true
+1794901837390 RAWUP id=15 tracking=15
+1794901837391 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901837451 DOWN id=16 kind=PointerDeviceKind.touch pos=Offset(135.5, 132.8) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901837455 MOVE id=16 pos=Offset(134.4, 132.8) tracking=16 match=true
+1794901837466 MOVE id=16 pos=Offset(133.3, 132.8) tracking=16 match=true
+1794901837570 RAWUP id=16 tracking=16
+1794901837571 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901837577 DOWN id=17 kind=PointerDeviceKind.touch pos=Offset(136.5, 133.3) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901837590 MOVE id=17 pos=Offset(135.5, 133.3) tracking=17 match=true
+1794901837598 MOVE id=17 pos=Offset(134.4, 133.3) tracking=17 match=true
+1794901837646 MOVE id=17 pos=Offset(135.5, 133.3) tracking=17 match=true
+1794901837651 RAWUP id=17 tracking=17
+1794901837652 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901837658 DOWN id=18 kind=PointerDeviceKind.touch pos=Offset(133.3, 134.9) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901837662 MOVE id=18 pos=Offset(132.3, 134.4) tracking=18 match=true
+1794901837683 RAWUP id=18 tracking=18
+1794901837684 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901837743 DOWN id=19 kind=PointerDeviceKind.touch pos=Offset(131.7, 133.3) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901837793 MOVE id=19 pos=Offset(130.7, 133.3) tracking=19 match=true
+1794901837856 DOWN id=20 kind=PointerDeviceKind.touch pos=Offset(218.1, 133.9) tracking=19 start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901837860 MOVE id=19 pos=Offset(70.9, 132.3) tracking=20 match=false
+1794901837862 MOVE id=20 pos=Offset(177.6, 133.9) tracking=20 match=true
+1794901837867 MOVE id=19 pos=Offset(70.9, 132.3) tracking=20 match=false
+1794901837868 MOVE id=20 pos=Offset(164.8, 133.9) tracking=20 match=true
+1794901837877 MOVE id=20 pos=Offset(156.3, 133.3) tracking=20 match=true
+1794901837879 RAWUP id=19 tracking=20
+1794901837881 MOVE id=20 pos=Offset(149.3, 133.3) tracking=20 match=true
+1794901837936 MOVE id=20 pos=Offset(136.0, 133.3) tracking=20 match=true
+1794901837939 RAWUP id=20 tracking=20
+1794901837940 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901838025 DOWN id=21 kind=PointerDeviceKind.touch pos=Offset(130.1, 132.3) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901838029 MOVE id=21 pos=Offset(131.2, 132.3) tracking=21 match=true
+1794901838087 MOVE id=21 pos=Offset(129.6, 132.3) tracking=21 match=true
+1794901838095 RAWUP id=21 tracking=21
+1794901838096 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901838113 DOWN id=22 kind=PointerDeviceKind.touch pos=Offset(132.3, 131.7) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901838158 MOVE id=22 pos=Offset(128.0, 131.7) tracking=22 match=true
+1794901838167 MOVE id=22 pos=Offset(129.6, 131.7) tracking=22 match=true
+1794901838262 MOVE id=22 pos=Offset(130.7, 131.7) tracking=22 match=true
+1794901838270 MOVE id=22 pos=Offset(129.1, 131.7) tracking=22 match=true
+1794901838278 MOVE id=22 pos=Offset(130.1, 131.7) tracking=22 match=true
+1794901838291 MOVE id=22 pos=Offset(129.1, 131.7) tracking=22 match=true
+1794901838330 MOVE id=22 pos=Offset(133.3, 131.7) tracking=22 match=true
+1794901838347 MOVE id=22 pos=Offset(134.9, 131.7) tracking=22 match=true
+1794901838422 MOVE id=22 pos=Offset(133.3, 131.7) tracking=22 match=true
+1794901838475 MOVE id=22 pos=Offset(132.3, 131.7) tracking=22 match=true
+1794901838498 MOVE id=22 pos=Offset(130.1, 131.7) tracking=22 match=true
+1794901838540 MOVE id=22 pos=Offset(126.9, 131.7) tracking=22 match=true
+1794901838622 MOVE id=22 pos=Offset(128.5, 131.7) tracking=22 match=true
+1794901838632 RAWUP id=22 tracking=22
+1794901838632 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901838692 DOWN id=23 kind=PointerDeviceKind.touch pos=Offset(130.7, 131.7) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901838702 MOVE id=23 pos=Offset(133.9, 132.3) tracking=23 match=true
+1794901838754 RAWUP id=23 tracking=23
+1794901838755 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901838764 DOWN id=24 kind=PointerDeviceKind.touch pos=Offset(130.7, 132.3) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901838856 MOVE id=24 pos=Offset(129.1, 132.3) tracking=24 match=true
+1794901838864 RAWUP id=24 tracking=24
+1794901838865 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901838931 DOWN id=25 kind=PointerDeviceKind.touch pos=Offset(130.7, 132.3) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901838963 MOVE id=25 pos=Offset(127.5, 132.3) tracking=25 match=true
+1794901839017 MOVE id=25 pos=Offset(126.9, 132.3) tracking=25 match=true
+1794901839037 MOVE id=25 pos=Offset(128.0, 132.8) tracking=25 match=true
+1794901839083 MOVE id=25 pos=Offset(136.0, 137.6) tracking=25 match=true
+1794901839089 MOVE id=25 pos=Offset(138.1, 138.7) tracking=25 match=true
+1794901839141 MOVE id=25 pos=Offset(143.5, 144.5) tracking=25 match=true
+1794901839147 MOVE id=25 pos=Offset(144.5, 145.6) tracking=25 match=true
+1794901839160 MOVE id=25 pos=Offset(146.1, 146.7) tracking=25 match=true
+1794901839213 MOVE id=25 pos=Offset(152.0, 149.9) tracking=25 match=true
+1794901839306 MOVE id=25 pos=Offset(149.9, 151.5) tracking=25 match=true
+1794901839318 MOVE id=25 pos=Offset(150.9, 151.5) tracking=25 match=true
+1794901839343 MOVE id=25 pos=Offset(149.9, 151.5) tracking=25 match=true
+1794901839384 MOVE id=25 pos=Offset(150.9, 151.5) tracking=25 match=true
+1794901839399 MOVE id=25 pos=Offset(153.6, 151.5) tracking=25 match=true
+1794901839447 MOVE id=25 pos=Offset(155.2, 151.5) tracking=25 match=true
+1794901839467 MOVE id=25 pos=Offset(124.3, 150.9) tracking=25 match=true
+1794901839470 MOVE id=25 pos=Offset(94.4, 149.9) tracking=25 match=true
+1794901839531 DOWN id=26 kind=PointerDeviceKind.touch pos=Offset(148.3, 152.0) tracking=25 start=Offset(0.2, 0.1) cur=Offset(0.1, 0.2) size=Size(748.8, 948.3)
+1794901839538 MOVE id=25 pos=Offset(118.9, 149.9) tracking=26 match=false
+1794901839539 MOVE id=26 pos=Offset(147.2, 152.0) tracking=26 match=true
+1794901839548 MOVE id=26 pos=Offset(147.2, 152.0) tracking=26 match=true
+1794901839550 RAWUP id=25 tracking=26
+1794901839556 MOVE id=26 pos=Offset(149.3, 152.0) tracking=26 match=true
+1794901839615 MOVE id=26 pos=Offset(149.3, 152.0) tracking=26 match=true
+1794901839699 MOVE id=26 pos=Offset(130.1, 151.5) tracking=26 match=true
+1794901839707 DOWN id=27 kind=PointerDeviceKind.touch pos=Offset(150.4, 154.1) tracking=26 start=Offset(0.2, 0.1) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794901839725 MOVE id=27 pos=Offset(152.5, 155.2) tracking=27 match=true
+1794901839727 RAWUP id=26 tracking=27
+1794901839731 MOVE id=27 pos=Offset(152.5, 155.2) tracking=27 match=true
+1794901839736 MOVE id=27 pos=Offset(153.1, 156.3) tracking=27 match=true
+1794901839769 MOVE id=27 pos=Offset(153.6, 157.3) tracking=27 match=true
+1794901839782 MOVE id=27 pos=Offset(157.9, 161.1) tracking=27 match=true
+1794901839787 MOVE id=27 pos=Offset(160.0, 162.1) tracking=27 match=true
+1794901839793 MOVE id=27 pos=Offset(160.0, 163.7) tracking=27 match=true
+1794901839836 MOVE id=27 pos=Offset(164.3, 168.0) tracking=27 match=true
+1794901839862 MOVE id=27 pos=Offset(166.9, 171.2) tracking=27 match=true
+1794901839911 MOVE id=27 pos=Offset(169.1, 172.3) tracking=27 match=true
+1794901839931 MOVE id=27 pos=Offset(173.3, 179.2) tracking=27 match=true
+1794901839935 MOVE id=27 pos=Offset(173.9, 180.8) tracking=27 match=true
+1794901839991 MOVE id=27 pos=Offset(179.7, 189.3) tracking=27 match=true
+1794901840006 MOVE id=27 pos=Offset(181.3, 190.9) tracking=27 match=true
+1794901840012 MOVE id=27 pos=Offset(181.3, 192.5) tracking=27 match=true
+1794901840072 DOWN id=28 kind=PointerDeviceKind.touch pos=Offset(191.5, 201.6) tracking=27 start=Offset(0.2, 0.1) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794901840079 MOVE id=28 pos=Offset(191.5, 201.6) tracking=28 match=true
+1794901840080 RAWUP id=27 tracking=28
+1794901840083 MOVE id=28 pos=Offset(192.5, 202.1) tracking=28 match=true
+1794901840085 MOVE id=28 pos=Offset(193.1, 203.7) tracking=28 match=true
+1794901840089 MOVE id=28 pos=Offset(196.8, 207.5) tracking=28 match=true
+1794901840152 MOVE id=28 pos=Offset(204.3, 216.5) tracking=28 match=true
+1794901840157 MOVE id=28 pos=Offset(205.9, 219.2) tracking=28 match=true
+1794901840162 MOVE id=28 pos=Offset(205.9, 222.4) tracking=28 match=true
+1794901840169 MOVE id=28 pos=Offset(208.0, 225.6) tracking=28 match=true
+1794901840172 MOVE id=28 pos=Offset(212.8, 229.9) tracking=28 match=true
+1794901840184 MOVE id=28 pos=Offset(216.5, 233.6) tracking=28 match=true
+1794901840192 MOVE id=28 pos=Offset(220.8, 238.4) tracking=28 match=true
+1794901840229 MOVE id=28 pos=Offset(233.1, 254.9) tracking=28 match=true
+1794901840252 MOVE id=28 pos=Offset(242.7, 266.7) tracking=28 match=true
+1794901840259 MOVE id=28 pos=Offset(247.5, 273.1) tracking=28 match=true
+1794901840293 MOVE id=28 pos=Offset(252.3, 280.0) tracking=28 match=true
+1794901840317 MOVE id=28 pos=Offset(257.6, 286.4) tracking=28 match=true
+1794901840320 MOVE id=28 pos=Offset(269.3, 300.8) tracking=28 match=true
+1794901840322 MOVE id=28 pos=Offset(274.7, 307.7) tracking=28 match=true
+1794901840330 MOVE id=28 pos=Offset(280.5, 315.2) tracking=28 match=true
+1794901840375 MOVE id=28 pos=Offset(304.0, 344.0) tracking=28 match=true
+1794901840381 MOVE id=28 pos=Offset(386.1, 359.5) tracking=28 match=true
+1794901840396 MOVE id=28 pos=Offset(401.6, 364.8) tracking=28 match=true
+1794901840401 DOWN id=29 kind=PointerDeviceKind.touch pos=Offset(337.1, 387.2) tracking=28 start=Offset(0.2, 0.1) cur=Offset(0.5, 0.4) size=Size(748.8, 948.3)
+1794901840407 MOVE id=29 pos=Offset(337.1, 388.8) tracking=29 match=true
+1794901840410 MOVE id=28 pos=Offset(401.6, 364.8) tracking=29 match=false
+1794901840421 MOVE id=29 pos=Offset(315.7, 392.0) tracking=29 match=true
+1794901840423 MOVE id=28 pos=Offset(386.1, 373.9) tracking=29 match=false
+1794901840469 MOVE id=29 pos=Offset(315.7, 392.0) tracking=29 match=true
+1794901840472 MOVE id=28 pos=Offset(371.7, 391.5) tracking=29 match=false
+1794901840477 MOVE id=28 pos=Offset(369.1, 400.5) tracking=29 match=false
+1794901840480 RAWUP id=29 tracking=29
+1794901840482 UP start=Offset(0.2, 0.1) cur=Offset(0.4, 0.4)
+1794901840485 MOVE id=28 pos=Offset(368.5, 409.1) tracking=null match=false
+1794901840490 MOVE id=28 pos=Offset(371.7, 427.7) tracking=null match=false
+1794901840495 MOVE id=28 pos=Offset(373.9, 436.8) tracking=null match=false
+1794901840508 MOVE id=28 pos=Offset(377.1, 445.9) tracking=null match=false
+1794901840564 MOVE id=28 pos=Offset(357.9, 459.7) tracking=null match=false
+1794901840571 DOWN id=30 kind=PointerDeviceKind.touch pos=Offset(397.9, 502.9) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.4, 0.4) size=Size(748.8, 948.3)
+1794901840575 MOVE id=30 pos=Offset(398.9, 505.1) tracking=30 match=true
+1794901840588 MOVE id=28 pos=Offset(357.9, 459.7) tracking=30 match=false
+1794901840598 MOVE id=30 pos=Offset(401.6, 509.3) tracking=30 match=true
+1794901840599 MOVE id=28 pos=Offset(357.9, 459.7) tracking=30 match=false
+1794901840602 MOVE id=30 pos=Offset(401.6, 514.7) tracking=30 match=true
+1794901840603 RAWUP id=28 tracking=30
+1794901840605 MOVE id=30 pos=Offset(412.8, 529.1) tracking=30 match=true
+1794901840636 MOVE id=30 pos=Offset(430.4, 554.1) tracking=30 match=true
+1794901840648 MOVE id=30 pos=Offset(436.8, 563.2) tracking=30 match=true
+1794901840675 MOVE id=30 pos=Offset(442.7, 571.7) tracking=30 match=true
+1794901840689 MOVE id=30 pos=Offset(462.4, 598.4) tracking=30 match=true
+1794901840698 MOVE id=30 pos=Offset(468.3, 606.9) tracking=30 match=true
+1794901840706 MOVE id=30 pos=Offset(474.1, 615.5) tracking=30 match=true
+1794901840753 MOVE id=30 pos=Offset(489.6, 639.5) tracking=30 match=true
+1794901840769 MOVE id=30 pos=Offset(500.3, 654.4) tracking=30 match=true
+1794901840864 MOVE id=30 pos=Offset(536.5, 707.7) tracking=30 match=true
+1794901840881 MOVE id=30 pos=Offset(539.2, 712.5) tracking=30 match=true
+1794901840884 MOVE id=30 pos=Offset(541.3, 716.8) tracking=30 match=true
+1794901840887 MOVE id=30 pos=Offset(542.9, 722.1) tracking=30 match=true
+1794901840900 MOVE id=30 pos=Offset(545.6, 725.9) tracking=30 match=true
+1794901840931 MOVE id=30 pos=Offset(550.9, 738.7) tracking=30 match=true
+1794901841006 RAWUP id=30 tracking=30
+1794901841009 UP start=Offset(0.2, 0.1) cur=Offset(0.7, 0.8)
+1794901841019 DOWN id=31 kind=PointerDeviceKind.touch pos=Offset(568.5, 765.3) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.7, 0.8) size=Size(748.8, 948.3)
+1794901841025 MOVE id=31 pos=Offset(569.1, 768.0) tracking=31 match=true
+1794901841038 MOVE id=31 pos=Offset(572.8, 773.3) tracking=31 match=true
+1794901841043 MOVE id=31 pos=Offset(574.9, 776.5) tracking=31 match=true
+1794901841120 MOVE id=31 pos=Offset(607.5, 793.6) tracking=31 match=true
+1794901841125 MOVE id=31 pos=Offset(604.3, 798.4) tracking=31 match=true
+1794901841131 MOVE id=31 pos=Offset(604.3, 802.1) tracking=31 match=true
+1794901841172 MOVE id=31 pos=Offset(604.3, 803.2) tracking=31 match=true
+1794901841194 MOVE id=31 pos=Offset(603.7, 808.5) tracking=31 match=true
+1794901841259 MOVE id=31 pos=Offset(607.5, 812.3) tracking=31 match=true
+1794901841279 MOVE id=31 pos=Offset(607.5, 813.9) tracking=31 match=true
+1794901841281 MOVE id=31 pos=Offset(608.5, 815.5) tracking=31 match=true
+1794901841317 MOVE id=31 pos=Offset(610.7, 822.9) tracking=31 match=true
+1794901841324 MOVE id=31 pos=Offset(612.8, 825.6) tracking=31 match=true
+1794901841337 MOVE id=31 pos=Offset(614.4, 827.7) tracking=31 match=true
+1794901841382 MOVE id=31 pos=Offset(614.4, 830.4) tracking=31 match=true
+1794901841396 MOVE id=31 pos=Offset(618.1, 837.3) tracking=31 match=true
+1794901841405 MOVE id=31 pos=Offset(619.2, 842.1) tracking=31 match=true
+1794901841454 MOVE id=31 pos=Offset(622.4, 851.2) tracking=31 match=true
+1794901841514 MOVE id=31 pos=Offset(621.9, 853.9) tracking=31 match=true
+1794901841559 MOVE id=31 pos=Offset(623.5, 854.9) tracking=31 match=true
+1794901841632 MOVE id=31 pos=Offset(622.4, 856.0) tracking=31 match=true
+1794901841754 MOVE id=31 pos=Offset(624.0, 856.0) tracking=31 match=true
+1794901841814 MOVE id=31 pos=Offset(624.0, 856.5) tracking=31 match=true
+1794901841825 MOVE id=31 pos=Offset(624.0, 857.6) tracking=31 match=true
+1794901841882 MOVE id=31 pos=Offset(624.5, 858.7) tracking=31 match=true
+1794901841889 MOVE id=31 pos=Offset(622.4, 859.2) tracking=31 match=true
+1794901841950 MOVE id=31 pos=Offset(623.5, 860.3) tracking=31 match=true
+1794901841965 RAWUP id=31 tracking=31
+1794901841968 UP start=Offset(0.2, 0.1) cur=Offset(0.8, 0.9)
+1794901842040 DOWN id=32 kind=PointerDeviceKind.touch pos=Offset(625.1, 860.3) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794901842070 MOVE id=32 pos=Offset(624.0, 860.3) tracking=32 match=true
+1794901842074 RAWUP id=32 tracking=32
+1794901842075 UP start=Offset(0.2, 0.1) cur=Offset(0.8, 0.9)
+1794901842082 DOWN id=33 kind=PointerDeviceKind.touch pos=Offset(453.9, 859.2) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794901842094 DOWN id=34 kind=PointerDeviceKind.touch pos=Offset(624.5, 859.7) tracking=33 start=Offset(0.6, 0.9) cur=Offset(0.6, 0.9) size=Size(748.8, 948.3)
+1794901842131 MOVE id=34 pos=Offset(624.5, 859.7) tracking=33 match=false
+1794901842132 RAWUP id=33 tracking=33
+1794901842133 UP start=Offset(0.6, 0.9) cur=Offset(0.6, 0.9)
+1794901842196 MOVE id=34 pos=Offset(627.2, 859.7) tracking=null match=false
+1794901842222 RAWUP id=34 tracking=null
+1794901842289 DOWN id=35 kind=PointerDeviceKind.touch pos=Offset(624.0, 859.7) tracking=null start=Offset(0.6, 0.9) cur=Offset(0.6, 0.9) size=Size(748.8, 948.3)
+1794901842512 MOVE id=35 pos=Offset(625.1, 859.7) tracking=35 match=true
+1794901842516 MOVE id=35 pos=Offset(624.0, 859.7) tracking=35 match=true
+1794901842546 MOVE id=35 pos=Offset(626.1, 859.7) tracking=35 match=true
+1794901842589 MOVE id=35 pos=Offset(625.1, 859.7) tracking=35 match=true
+1794901842648 MOVE id=35 pos=Offset(626.7, 859.7) tracking=35 match=true
+1794901842662 MOVE id=35 pos=Offset(625.1, 859.7) tracking=35 match=true
+1794901842676 MOVE id=35 pos=Offset(624.0, 859.7) tracking=35 match=true
+1794901842740 MOVE id=35 pos=Offset(620.8, 859.7) tracking=35 match=true
+1794901842807 RAWUP id=35 tracking=35
+1794901842808 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794901845080 dispose
+1794901877680 initState
+1794901879534 DOWN id=58 kind=PointerDeviceKind.touch pos=Offset(103.5, 101.3) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794901879556 MOVE id=58 pos=Offset(105.1, 101.3) tracking=58 match=true
+1794901879604 MOVE id=58 pos=Offset(106.1, 101.3) tracking=58 match=true
+1794901879610 MOVE id=58 pos=Offset(107.2, 101.3) tracking=58 match=true
+1794901879642 MOVE id=58 pos=Offset(106.1, 101.9) tracking=58 match=true
+1794901879666 MOVE id=58 pos=Offset(105.1, 102.4) tracking=58 match=true
+1794901879696 RAWUP id=58 tracking=58
+1794901879696 UP start=Offset(0.1, 0.1) cur=Offset(0.1, 0.1)
+1794901879755 DOWN id=59 kind=PointerDeviceKind.touch pos=Offset(106.1, 102.9) tracking=null start=Offset(0.1, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901879863 MOVE id=59 pos=Offset(107.2, 102.9) tracking=59 match=true
+1794901879891 MOVE id=59 pos=Offset(106.1, 102.9) tracking=59 match=true
+1794901879902 MOVE id=59 pos=Offset(105.1, 102.9) tracking=59 match=true
+1794901879913 MOVE id=59 pos=Offset(104.0, 102.9) tracking=59 match=true
+1794901879946 MOVE id=59 pos=Offset(102.9, 102.9) tracking=59 match=true
+1794901880007 MOVE id=59 pos=Offset(104.0, 102.9) tracking=59 match=true
+1794901880029 MOVE id=59 pos=Offset(105.6, 102.9) tracking=59 match=true
+1794901880036 MOVE id=59 pos=Offset(104.5, 102.9) tracking=59 match=true
+1794901880164 MOVE id=59 pos=Offset(103.5, 102.9) tracking=59 match=true
+1794901880198 MOVE id=59 pos=Offset(104.5, 102.4) tracking=59 match=true
+1794901880264 MOVE id=59 pos=Offset(105.6, 101.9) tracking=59 match=true
+1794901880287 MOVE id=59 pos=Offset(106.7, 101.9) tracking=59 match=true
+1794901880326 MOVE id=59 pos=Offset(109.3, 101.9) tracking=59 match=true
+1794901880406 MOVE id=59 pos=Offset(107.2, 101.9) tracking=59 match=true
+1794901880461 RAWUP id=59 tracking=59
+1794901880462 UP start=Offset(0.1, 0.1) cur=Offset(0.1, 0.1)
+1794901880549 DOWN id=60 kind=PointerDeviceKind.touch pos=Offset(106.7, 101.9) tracking=null start=Offset(0.1, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901880574 MOVE id=60 pos=Offset(107.7, 101.9) tracking=60 match=true
+1794901880593 MOVE id=60 pos=Offset(104.0, 101.9) tracking=60 match=true
+1794901880662 MOVE id=60 pos=Offset(105.6, 101.9) tracking=60 match=true
+1794901880730 MOVE id=60 pos=Offset(103.5, 101.9) tracking=60 match=true
+1794901880755 DOWN id=61 kind=PointerDeviceKind.touch pos=Offset(108.3, 101.9) tracking=60 start=Offset(0.1, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901880807 MOVE id=60 pos=Offset(103.5, 101.9) tracking=61 match=false
+1794901880812 MOVE id=61 pos=Offset(168.5, 101.9) tracking=61 match=true
+1794901880819 MOVE id=60 pos=Offset(104.5, 101.9) tracking=61 match=false
+1794901880820 MOVE id=61 pos=Offset(194.1, 102.9) tracking=61 match=true
+1794901880826 MOVE id=60 pos=Offset(104.5, 101.9) tracking=61 match=false
+1794901880827 MOVE id=61 pos=Offset(189.3, 102.9) tracking=61 match=true
+1794901880838 MOVE id=60 pos=Offset(102.9, 101.9) tracking=61 match=false
+1794901880839 MOVE id=61 pos=Offset(189.3, 102.9) tracking=61 match=true
+1794901880893 MOVE id=60 pos=Offset(104.0, 101.9) tracking=61 match=false
+1794901880895 RAWUP id=61 tracking=61
+1794901880897 UP start=Offset(0.1, 0.1) cur=Offset(0.3, 0.1)
+1794901880902 MOVE id=60 pos=Offset(105.1, 101.9) tracking=null match=false
+1794901880957 MOVE id=60 pos=Offset(102.4, 101.9) tracking=null match=false
+1794901881018 MOVE id=60 pos=Offset(103.5, 101.9) tracking=null match=false
+1794901881022 MOVE id=60 pos=Offset(104.5, 101.9) tracking=null match=false
+1794901881056 MOVE id=60 pos=Offset(105.6, 101.9) tracking=null match=false
+1794901881088 MOVE id=60 pos=Offset(104.0, 102.4) tracking=null match=false
+1794901881165 RAWUP id=60 tracking=null
+1794901881219 DOWN id=62 kind=PointerDeviceKind.touch pos=Offset(104.5, 102.4) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794901881257 MOVE id=62 pos=Offset(106.1, 102.4) tracking=62 match=true
+1794901881277 RAWUP id=62 tracking=62
+1794901881277 UP start=Offset(0.1, 0.1) cur=Offset(0.1, 0.1)
+1794901881356 DOWN id=63 kind=PointerDeviceKind.touch pos=Offset(121.1, 102.9) tracking=null start=Offset(0.1, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901881360 MOVE id=63 pos=Offset(116.3, 102.9) tracking=63 match=true
+1794901881362 MOVE id=63 pos=Offset(114.1, 102.9) tracking=63 match=true
+1794901881366 MOVE id=63 pos=Offset(112.5, 102.9) tracking=63 match=true
+1794901881370 MOVE id=63 pos=Offset(-0.5, 103.5) tracking=63 match=true
+1794901881417 MOVE id=63 pos=Offset(40.5, 103.5) tracking=63 match=true
+1794901881461 MOVE id=63 pos=Offset(87.5, 103.5) tracking=63 match=true
+1794901881468 MOVE id=63 pos=Offset(92.8, 103.5) tracking=63 match=true
+1794901881510 MOVE id=63 pos=Offset(96.5, 103.5) tracking=63 match=true
+1794901881515 MOVE id=63 pos=Offset(102.9, 103.5) tracking=63 match=true
+1794901881523 MOVE id=63 pos=Offset(104.5, 103.5) tracking=63 match=true
+1794901881593 MOVE id=63 pos=Offset(106.1, 103.5) tracking=63 match=true
+1794901881605 RAWUP id=63 tracking=63
+1794901881606 UP start=Offset(0.1, 0.1) cur=Offset(0.1, 0.1)
+1794901881710 DOWN id=64 kind=PointerDeviceKind.touch pos=Offset(107.2, 103.5) tracking=null start=Offset(0.1, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901881733 MOVE id=64 pos=Offset(108.3, 103.5) tracking=64 match=true
+1794901881755 MOVE id=64 pos=Offset(110.9, 103.5) tracking=64 match=true
+1794901881808 MOVE id=64 pos=Offset(112.0, 103.5) tracking=64 match=true
+1794901881812 DOWN id=65 kind=PointerDeviceKind.touch pos=Offset(75.7, 101.3) tracking=64 start=Offset(0.1, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901881814 MOVE id=64 pos=Offset(105.1, 102.9) tracking=65 match=false
+1794901881815 RAWUP id=65 tracking=65
+1794901881815 UP start=Offset(0.1, 0.1) cur=Offset(0.1, 0.1)
+1794901881818 MOVE id=64 pos=Offset(105.1, 102.9) tracking=null match=false
+1794901881821 DOWN id=66 kind=PointerDeviceKind.touch pos=Offset(299.7, 105.1) tracking=null start=Offset(0.1, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901881824 MOVE id=64 pos=Offset(107.7, 102.9) tracking=66 match=false
+1794901881826 MOVE id=66 pos=Offset(299.7, 105.1) tracking=66 match=true
+1794901881862 MOVE id=64 pos=Offset(109.9, 102.9) tracking=66 match=false
+1794901881865 RAWUP id=66 tracking=66
+1794901881866 UP start=Offset(0.4, 0.1) cur=Offset(0.4, 0.1)
+1794901881871 MOVE id=64 pos=Offset(109.9, 102.9) tracking=null match=false
+1794901881930 MOVE id=64 pos=Offset(110.9, 103.5) tracking=null match=false
+1794901881950 MOVE id=64 pos=Offset(107.7, 103.5) tracking=null match=false
+1794901881974 RAWUP id=64 tracking=null
+1794901881983 DOWN id=67 kind=PointerDeviceKind.touch pos=Offset(113.6, 105.6) tracking=null start=Offset(0.4, 0.1) cur=Offset(0.4, 0.1) size=Size(748.8, 948.3)
+1794901882014 MOVE id=67 pos=Offset(113.6, 106.7) tracking=67 match=true
+1794901882047 MOVE id=67 pos=Offset(114.1, 107.7) tracking=67 match=true
+1794901882071 MOVE id=67 pos=Offset(118.4, 113.6) tracking=67 match=true
+1794901882110 DOWN id=68 kind=PointerDeviceKind.touch pos=Offset(134.9, 122.1) tracking=67 start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901882113 MOVE id=68 pos=Offset(134.9, 122.1) tracking=68 match=true
+1794901882114 RAWUP id=67 tracking=68
+1794901882138 MOVE id=68 pos=Offset(137.1, 123.2) tracking=68 match=true
+1794901882141 MOVE id=68 pos=Offset(137.6, 125.9) tracking=68 match=true
+1794901882195 MOVE id=68 pos=Offset(136.0, 129.6) tracking=68 match=true
+1794901882197 MOVE id=68 pos=Offset(136.5, 131.2) tracking=68 match=true
+1794901882220 MOVE id=68 pos=Offset(137.1, 132.8) tracking=68 match=true
+1794901882227 DOWN id=69 kind=PointerDeviceKind.touch pos=Offset(243.7, 131.2) tracking=68 start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901882259 MOVE id=69 pos=Offset(334.4, 130.7) tracking=69 match=true
+1794901882261 MOVE id=68 pos=Offset(139.7, 134.9) tracking=69 match=false
+1794901882282 MOVE id=68 pos=Offset(139.7, 134.9) tracking=69 match=false
+1794901882283 RAWUP id=69 tracking=69
+1794901882284 UP start=Offset(0.2, 0.1) cur=Offset(0.4, 0.1)
+1794901882287 RAWUP id=68 tracking=null
+1794901882353 DOWN id=70 kind=PointerDeviceKind.touch pos=Offset(144.5, 139.7) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.4, 0.1) size=Size(748.8, 948.3)
+1794901882361 RAWUP id=70 tracking=70
+1794901882364 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901882482 DOWN id=71 kind=PointerDeviceKind.touch pos=Offset(157.9, 157.9) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901882488 MOVE id=71 pos=Offset(159.5, 159.5) tracking=71 match=true
+1794901882522 MOVE id=71 pos=Offset(159.5, 161.6) tracking=71 match=true
+1794901882530 RAWUP id=71 tracking=71
+1794901882531 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.2)
+1794901882599 DOWN id=72 kind=PointerDeviceKind.touch pos=Offset(168.5, 173.9) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794901882602 MOVE id=72 pos=Offset(169.6, 176.0) tracking=72 match=true
+1794901882612 MOVE id=72 pos=Offset(171.2, 180.8) tracking=72 match=true
+1794901882681 MOVE id=72 pos=Offset(183.5, 193.1) tracking=72 match=true
+1794901882683 MOVE id=72 pos=Offset(186.1, 195.7) tracking=72 match=true
+1794901882723 MOVE id=72 pos=Offset(190.9, 205.3) tracking=72 match=true
+1794901882739 MOVE id=72 pos=Offset(196.8, 211.7) tracking=72 match=true
+1794901882784 MOVE id=72 pos=Offset(205.9, 226.7) tracking=72 match=true
+1794901882797 MOVE id=72 pos=Offset(209.6, 231.5) tracking=72 match=true
+1794901882802 MOVE id=72 pos=Offset(215.5, 235.7) tracking=72 match=true
+1794901882839 MOVE id=72 pos=Offset(222.4, 247.5) tracking=72 match=true
+1794901882902 RAWUP id=72 tracking=72
+1794901882903 UP start=Offset(0.2, 0.1) cur=Offset(0.3, 0.3)
+1794901882934 DOWN id=73 kind=PointerDeviceKind.touch pos=Offset(281.1, 330.1) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.3, 0.3) size=Size(748.8, 948.3)
+1794901882939 MOVE id=73 pos=Offset(281.1, 331.2) tracking=73 match=true
+1794901882994 MOVE id=73 pos=Offset(281.1, 334.9) tracking=73 match=true
+1794901883005 MOVE id=73 pos=Offset(288.5, 360.0) tracking=73 match=true
+1794901883020 RAWUP id=73 tracking=73
+1794901883020 UP start=Offset(0.2, 0.1) cur=Offset(0.4, 0.4)
+1794901883077 DOWN id=74 kind=PointerDeviceKind.touch pos=Offset(309.3, 417.6) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.4, 0.4) size=Size(748.8, 948.3)
+1794901883109 RAWUP id=74 tracking=74
+1794901883110 UP start=Offset(0.2, 0.1) cur=Offset(0.4, 0.4)
+1794901883195 DOWN id=75 kind=PointerDeviceKind.touch pos=Offset(334.9, 473.6) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.4, 0.4) size=Size(748.8, 948.3)
+1794901883199 MOVE id=75 pos=Offset(344.5, 489.1) tracking=75 match=true
+1794901883202 MOVE id=75 pos=Offset(349.9, 496.0) tracking=75 match=true
+1794901883205 MOVE id=75 pos=Offset(354.1, 503.5) tracking=75 match=true
+1794901883209 MOVE id=75 pos=Offset(358.9, 510.4) tracking=75 match=true
+1794901883214 MOVE id=75 pos=Offset(362.1, 517.3) tracking=75 match=true
+1794901883218 MOVE id=75 pos=Offset(364.8, 524.3) tracking=75 match=true
+1794901883248 MOVE id=75 pos=Offset(374.9, 537.6) tracking=75 match=true
+1794901883258 MOVE id=75 pos=Offset(380.3, 544.5) tracking=75 match=true
+1794901883293 MOVE id=75 pos=Offset(395.7, 564.3) tracking=75 match=true
+1794901883298 MOVE id=75 pos=Offset(400.5, 571.2) tracking=75 match=true
+1794901883306 MOVE id=75 pos=Offset(404.8, 577.6) tracking=75 match=true
+1794901883316 MOVE id=75 pos=Offset(409.6, 584.0) tracking=75 match=true
+1794901883326 MOVE id=75 pos=Offset(413.9, 590.4) tracking=75 match=true
+1794901883359 MOVE id=75 pos=Offset(421.3, 603.2) tracking=75 match=true
+1794901883380 MOVE id=75 pos=Offset(429.9, 616.0) tracking=75 match=true
+1794901883383 MOVE id=75 pos=Offset(433.6, 622.4) tracking=75 match=true
+1794901883423 MOVE id=75 pos=Offset(449.6, 643.2) tracking=75 match=true
+1794901883430 MOVE id=75 pos=Offset(453.3, 650.1) tracking=75 match=true
+1794901883438 MOVE id=75 pos=Offset(457.1, 657.1) tracking=75 match=true
+1794901883446 MOVE id=75 pos=Offset(460.8, 663.5) tracking=75 match=true
+1794901883490 MOVE id=75 pos=Offset(478.9, 686.4) tracking=75 match=true
+1794901883509 MOVE id=75 pos=Offset(483.2, 691.2) tracking=75 match=true
+1794901883514 MOVE id=75 pos=Offset(488.0, 696.0) tracking=75 match=true
+1794901883557 MOVE id=75 pos=Offset(502.4, 714.7) tracking=75 match=true
+1794901883620 MOVE id=75 pos=Offset(521.1, 734.9) tracking=75 match=true
+1794901883627 MOVE id=75 pos=Offset(525.3, 738.1) tracking=75 match=true
+1794901883686 MOVE id=75 pos=Offset(530.1, 741.3) tracking=75 match=true
+1794901883705 MOVE id=75 pos=Offset(550.4, 755.7) tracking=75 match=true
+1794901883706 MOVE id=75 pos=Offset(552.5, 757.3) tracking=75 match=true
+1794901883788 MOVE id=75 pos=Offset(574.4, 771.2) tracking=75 match=true
+1794901883793 MOVE id=75 pos=Offset(575.5, 772.8) tracking=75 match=true
+1794901883806 MOVE id=75 pos=Offset(575.5, 774.4) tracking=75 match=true
+1794901883815 MOVE id=75 pos=Offset(578.7, 776.0) tracking=75 match=true
+1794901883825 MOVE id=75 pos=Offset(580.3, 777.6) tracking=75 match=true
+1794901883839 MOVE id=75 pos=Offset(581.3, 778.7) tracking=75 match=true
+1794901883865 MOVE id=75 pos=Offset(586.1, 780.8) tracking=75 match=true
+1794901883875 MOVE id=75 pos=Offset(588.3, 782.4) tracking=75 match=true
+1794901883909 MOVE id=75 pos=Offset(596.3, 787.7) tracking=75 match=true
+1794901883919 MOVE id=75 pos=Offset(599.5, 789.3) tracking=75 match=true
+1794901883925 MOVE id=75 pos=Offset(601.1, 790.9) tracking=75 match=true
+1794901883967 MOVE id=75 pos=Offset(608.0, 796.3) tracking=75 match=true
+1794901883976 MOVE id=75 pos=Offset(609.1, 798.4) tracking=75 match=true
+1794901883986 MOVE id=75 pos=Offset(612.3, 800.5) tracking=75 match=true
+1794901883991 MOVE id=75 pos=Offset(612.8, 802.7) tracking=75 match=true
+1794901884034 MOVE id=75 pos=Offset(617.6, 808.5) tracking=75 match=true
+1794901884057 MOVE id=75 pos=Offset(623.5, 814.4) tracking=75 match=true
+1794901884098 MOVE id=75 pos=Offset(627.7, 818.1) tracking=75 match=true
+1794901884108 MOVE id=75 pos=Offset(628.3, 819.2) tracking=75 match=true
+1794901884162 MOVE id=75 pos=Offset(630.4, 821.9) tracking=75 match=true
+1794901884227 MOVE id=75 pos=Offset(629.3, 822.4) tracking=75 match=true
+1794901884252 MOVE id=75 pos=Offset(627.2, 822.4) tracking=75 match=true
+1794901884320 MOVE id=75 pos=Offset(629.9, 822.9) tracking=75 match=true
+1794901884340 MOVE id=75 pos=Offset(630.9, 822.9) tracking=75 match=true
+1794901884386 MOVE id=75 pos=Offset(646.9, 822.9) tracking=75 match=true
+1794901884414 MOVE id=75 pos=Offset(640.0, 822.9) tracking=75 match=true
+1794901884424 MOVE id=75 pos=Offset(638.4, 822.9) tracking=75 match=true
+1794901884467 MOVE id=75 pos=Offset(634.1, 822.9) tracking=75 match=true
+1794901884474 MOVE id=75 pos=Offset(633.1, 822.9) tracking=75 match=true
+1794901884489 MOVE id=75 pos=Offset(631.5, 822.9) tracking=75 match=true
+1794901884526 MOVE id=75 pos=Offset(630.4, 822.9) tracking=75 match=true
+1794901884621 RAWUP id=75 tracking=75
+1794901884622 UP start=Offset(0.2, 0.1) cur=Offset(0.8, 0.9)
+1794901886384 dispose
+1794901933897 initState
+1794901937071 DOWN id=116 kind=PointerDeviceKind.touch pos=Offset(134.9, 109.9) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794901937103 MOVE id=116 pos=Offset(136.5, 109.9) tracking=116 match=true
+1794901937182 MOVE id=116 pos=Offset(137.6, 110.9) tracking=116 match=true
+1794901937200 MOVE id=116 pos=Offset(136.0, 110.9) tracking=116 match=true
+1794901937210 MOVE id=116 pos=Offset(134.9, 110.9) tracking=116 match=true
+1794901937331 MOVE id=116 pos=Offset(136.0, 110.9) tracking=116 match=true
+1794901937395 MOVE id=116 pos=Offset(137.1, 110.9) tracking=116 match=true
+1794901937516 MOVE id=116 pos=Offset(138.1, 110.9) tracking=116 match=true
+1794901937549 MOVE id=116 pos=Offset(136.5, 110.4) tracking=116 match=true
+1794901937745 MOVE id=116 pos=Offset(138.1, 110.4) tracking=116 match=true
+1794901937758 MOVE id=116 pos=Offset(71.5, 109.9) tracking=116 match=true
+1794901937768 MOVE id=116 pos=Offset(86.9, 109.9) tracking=116 match=true
+1794901937776 MOVE id=116 pos=Offset(99.7, 109.9) tracking=116 match=true
+1794901937786 MOVE id=116 pos=Offset(107.7, 109.9) tracking=116 match=true
+1794901937798 MOVE id=116 pos=Offset(115.2, 109.9) tracking=116 match=true
+1794901937817 MOVE id=116 pos=Offset(120.5, 109.9) tracking=116 match=true
+1794901937835 MOVE id=116 pos=Offset(126.9, 109.9) tracking=116 match=true
+1794901937841 MOVE id=116 pos=Offset(129.1, 109.9) tracking=116 match=true
+1794901937852 MOVE id=116 pos=Offset(130.1, 109.9) tracking=116 match=true
+1794901937885 MOVE id=116 pos=Offset(132.3, 109.9) tracking=116 match=true
+1794901937890 MOVE id=116 pos=Offset(133.9, 109.9) tracking=116 match=true
+1794901937927 MOVE id=116 pos=Offset(134.9, 109.9) tracking=116 match=true
+1794901937934 MOVE id=116 pos=Offset(137.6, 109.9) tracking=116 match=true
+1794901938004 MOVE id=116 pos=Offset(138.7, 109.9) tracking=116 match=true
+1794901938013 MOVE id=116 pos=Offset(138.7, 110.9) tracking=116 match=true
+1794901938059 MOVE id=116 pos=Offset(136.5, 111.5) tracking=116 match=true
+1794901938084 MOVE id=116 pos=Offset(137.6, 111.5) tracking=116 match=true
+1794901938201 MOVE id=116 pos=Offset(139.7, 111.5) tracking=116 match=true
+1794901938322 MOVE id=116 pos=Offset(136.5, 112.0) tracking=116 match=true
+1794901938341 MOVE id=116 pos=Offset(134.9, 111.5) tracking=116 match=true
+1794901938363 MOVE id=116 pos=Offset(133.9, 111.5) tracking=116 match=true
+1794901938400 MOVE id=116 pos=Offset(137.1, 111.5) tracking=116 match=true
+1794901938429 MOVE id=116 pos=Offset(140.3, 111.5) tracking=116 match=true
+1794901938482 MOVE id=116 pos=Offset(139.2, 111.5) tracking=116 match=true
+1794901938555 MOVE id=116 pos=Offset(140.8, 112.0) tracking=116 match=true
+1794901938589 MOVE id=116 pos=Offset(140.8, 113.1) tracking=116 match=true
+1794901938621 MOVE id=116 pos=Offset(146.7, 118.9) tracking=116 match=true
+1794901938660 MOVE id=116 pos=Offset(157.3, 128.0) tracking=116 match=true
+1794901938673 MOVE id=116 pos=Offset(158.4, 130.7) tracking=116 match=true
+1794901938691 MOVE id=116 pos=Offset(161.1, 132.8) tracking=116 match=true
+1794901938693 MOVE id=116 pos=Offset(163.7, 135.5) tracking=116 match=true
+1794901938751 MOVE id=116 pos=Offset(168.0, 141.3) tracking=116 match=true
+1794901938810 MOVE id=116 pos=Offset(176.5, 149.9) tracking=116 match=true
+1794901938819 RAWUP id=116 tracking=116
+1794901938826 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.2)
+1794901938892 DOWN id=117 kind=PointerDeviceKind.touch pos=Offset(198.4, 176.0) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794901938895 MOVE id=117 pos=Offset(210.1, 188.3) tracking=117 match=true
+1794901938902 MOVE id=117 pos=Offset(213.3, 193.1) tracking=117 match=true
+1794901938912 MOVE id=117 pos=Offset(217.1, 197.3) tracking=117 match=true
+1794901938977 MOVE id=117 pos=Offset(243.7, 228.8) tracking=117 match=true
+1794901939020 MOVE id=117 pos=Offset(264.0, 251.7) tracking=117 match=true
+1794901939031 MOVE id=117 pos=Offset(268.8, 257.1) tracking=117 match=true
+1794901939040 MOVE id=117 pos=Offset(275.2, 262.9) tracking=117 match=true
+1794901939088 MOVE id=117 pos=Offset(280.5, 268.3) tracking=117 match=true
+1794901939096 RAWUP id=117 tracking=117
+1794901939098 UP start=Offset(0.2, 0.1) cur=Offset(0.4, 0.3)
+1794901939162 DOWN id=118 kind=PointerDeviceKind.touch pos=Offset(326.4, 310.4) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.4, 0.3) size=Size(748.8, 948.3)
+1794901939168 MOVE id=118 pos=Offset(330.1, 321.6) tracking=118 match=true
+1794901939179 MOVE id=118 pos=Offset(337.6, 333.3) tracking=118 match=true
+1794901939219 MOVE id=118 pos=Offset(355.2, 355.2) tracking=118 match=true
+1794901939231 MOVE id=118 pos=Offset(361.6, 362.1) tracking=118 match=true
+1794901939278 MOVE id=118 pos=Offset(392.0, 395.2) tracking=118 match=true
+1794901939308 MOVE id=118 pos=Offset(395.2, 401.6) tracking=118 match=true
+1794901939309 MOVE id=118 pos=Offset(398.9, 408.0) tracking=118 match=true
+1794901939353 MOVE id=118 pos=Offset(414.9, 433.6) tracking=118 match=true
+1794901939382 MOVE id=118 pos=Offset(421.9, 446.4) tracking=118 match=true
+1794901939384 MOVE id=118 pos=Offset(425.1, 452.8) tracking=118 match=true
+1794901939387 MOVE id=118 pos=Offset(427.7, 459.2) tracking=118 match=true
+1794901939400 MOVE id=118 pos=Offset(433.6, 465.6) tracking=118 match=true
+1794901939415 MOVE id=118 pos=Offset(437.3, 472.5) tracking=118 match=true
+1794901939443 MOVE id=118 pos=Offset(452.8, 491.7) tracking=118 match=true
+1794901939454 MOVE id=118 pos=Offset(457.6, 498.7) tracking=118 match=true
+1794901939467 MOVE id=118 pos=Offset(461.9, 505.6) tracking=118 match=true
+1794901939473 MOVE id=118 pos=Offset(467.2, 512.5) tracking=118 match=true
+1794901939485 MOVE id=118 pos=Offset(470.9, 518.9) tracking=118 match=true
+1794901939531 MOVE id=118 pos=Offset(488.5, 539.7) tracking=118 match=true
+1794901939552 MOVE id=118 pos=Offset(497.6, 553.1) tracking=118 match=true
+1794901939557 MOVE id=118 pos=Offset(501.9, 560.0) tracking=118 match=true
+1794901939598 MOVE id=118 pos=Offset(518.9, 586.7) tracking=118 match=true
+1794901939606 MOVE id=118 pos=Offset(523.7, 593.6) tracking=118 match=true
+1794901939622 MOVE id=118 pos=Offset(554.7, 602.7) tracking=118 match=true
+1794901939673 DOWN id=119 kind=PointerDeviceKind.touch pos=Offset(551.5, 633.1) tracking=118 start=Offset(0.2, 0.1) cur=Offset(0.7, 0.6) size=Size(748.8, 948.3)
+1794901939682 MOVE id=118 pos=Offset(579.2, 629.9) tracking=119 match=false
+1794901939686 MOVE id=119 pos=Offset(538.1, 636.8) tracking=119 match=true
+1794901939732 MOVE id=118 pos=Offset(577.1, 636.8) tracking=119 match=false
+1794901939733 MOVE id=119 pos=Offset(538.1, 636.8) tracking=119 match=true
+1794901939735 MOVE id=118 pos=Offset(577.1, 643.7) tracking=119 match=false
+1794901939735 RAWUP id=119 tracking=119
+1794901939735 UP start=Offset(0.2, 0.1) cur=Offset(0.7, 0.7)
+1794901939737 MOVE id=118 pos=Offset(577.1, 643.7) tracking=null match=false
+1794901939751 MOVE id=118 pos=Offset(584.0, 670.4) tracking=null match=false
+1794901939754 MOVE id=118 pos=Offset(637.9, 682.7) tracking=null match=false
+1794901939813 MOVE id=118 pos=Offset(652.3, 689.1) tracking=null match=false
+1794901939817 DOWN id=120 kind=PointerDeviceKind.touch pos=Offset(602.1, 709.3) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.7, 0.7) size=Size(748.8, 948.3)
+1794901939823 MOVE id=118 pos=Offset(678.4, 705.6) tracking=120 match=false
+1794901939826 MOVE id=120 pos=Offset(570.1, 718.9) tracking=120 match=true
+1794901939830 MOVE id=118 pos=Offset(658.1, 720.5) tracking=120 match=false
+1794901939831 MOVE id=120 pos=Offset(558.9, 723.2) tracking=120 match=true
+1794901939879 MOVE id=118 pos=Offset(652.8, 728.0) tracking=120 match=false
+1794901939879 MOVE id=120 pos=Offset(558.9, 723.2) tracking=120 match=true
+1794901939883 MOVE id=118 pos=Offset(648.5, 734.9) tracking=120 match=false
+1794901939885 RAWUP id=120 tracking=120
+1794901939885 UP start=Offset(0.2, 0.1) cur=Offset(0.7, 0.8)
+1794901939887 MOVE id=118 pos=Offset(644.8, 748.3) tracking=null match=false
+1794901939888 RAWUP id=118 tracking=null
+1794901939910 DOWN id=121 kind=PointerDeviceKind.touch pos=Offset(656.0, 780.8) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.7, 0.8) size=Size(748.8, 948.3)
+1794901939914 MOVE id=121 pos=Offset(656.0, 783.5) tracking=121 match=true
+1794901939918 MOVE id=121 pos=Offset(656.0, 786.1) tracking=121 match=true
+1794901939929 MOVE id=121 pos=Offset(657.6, 789.3) tracking=121 match=true
+1794901939961 MOVE id=121 pos=Offset(661.3, 796.8) tracking=121 match=true
+1794901939982 MOVE id=121 pos=Offset(662.9, 800.5) tracking=121 match=true
+1794901939985 MOVE id=121 pos=Offset(663.5, 804.3) tracking=121 match=true
+1794901939988 MOVE id=121 pos=Offset(666.1, 807.5) tracking=121 match=true
+1794901939994 MOVE id=121 pos=Offset(667.7, 811.2) tracking=121 match=true
+1794901940006 MOVE id=121 pos=Offset(669.3, 814.9) tracking=121 match=true
+1794901940023 MOVE id=121 pos=Offset(672.0, 818.7) tracking=121 match=true
+1794901940047 MOVE id=121 pos=Offset(676.8, 825.6) tracking=121 match=true
+1794901940065 MOVE id=121 pos=Offset(677.3, 830.9) tracking=121 match=true
+1794901940070 MOVE id=121 pos=Offset(677.9, 833.1) tracking=121 match=true
+1794901940114 MOVE id=121 pos=Offset(681.1, 838.9) tracking=121 match=true
+1794901940127 MOVE id=121 pos=Offset(681.1, 840.0) tracking=121 match=true
+1794901940136 MOVE id=121 pos=Offset(681.6, 841.6) tracking=121 match=true
+1794901940140 MOVE id=121 pos=Offset(681.6, 843.2) tracking=121 match=true
+1794901940183 MOVE id=121 pos=Offset(684.3, 850.1) tracking=121 match=true
+1794901940195 MOVE id=121 pos=Offset(684.3, 851.7) tracking=121 match=true
+1794901940205 MOVE id=121 pos=Offset(685.9, 852.8) tracking=121 match=true
+1794901940251 MOVE id=121 pos=Offset(687.5, 858.7) tracking=121 match=true
+1794901940260 MOVE id=121 pos=Offset(687.5, 859.7) tracking=121 match=true
+1794901940308 MOVE id=121 pos=Offset(687.5, 860.8) tracking=121 match=true
+1794901940315 MOVE id=121 pos=Offset(691.2, 863.5) tracking=121 match=true
+1794901940333 MOVE id=121 pos=Offset(691.2, 865.1) tracking=121 match=true
+1794901940392 MOVE id=121 pos=Offset(692.8, 866.7) tracking=121 match=true
+1794901940402 MOVE id=121 pos=Offset(693.9, 866.7) tracking=121 match=true
+1794901940467 MOVE id=121 pos=Offset(694.4, 867.7) tracking=121 match=true
+1794901940473 MOVE id=121 pos=Offset(695.5, 868.3) tracking=121 match=true
+1794901940526 MOVE id=121 pos=Offset(697.6, 870.4) tracking=121 match=true
+1794901940543 MOVE id=121 pos=Offset(698.7, 873.6) tracking=121 match=true
+1794901940588 MOVE id=121 pos=Offset(704.0, 878.4) tracking=121 match=true
+1794901940602 MOVE id=121 pos=Offset(705.1, 879.5) tracking=121 match=true
+1794901940612 MOVE id=121 pos=Offset(705.1, 880.5) tracking=121 match=true
+1794901940661 MOVE id=121 pos=Offset(708.3, 883.2) tracking=121 match=true
+1794901940711 MOVE id=121 pos=Offset(708.3, 884.3) tracking=121 match=true
+1794901940766 MOVE id=121 pos=Offset(707.2, 884.3) tracking=121 match=true
+1794901940799 MOVE id=121 pos=Offset(708.8, 884.8) tracking=121 match=true
+1794901940855 MOVE id=121 pos=Offset(709.9, 884.8) tracking=121 match=true
+1794901940860 RAWUP id=121 tracking=121
+1794901940861 UP start=Offset(0.2, 0.1) cur=Offset(0.9, 0.9)
+1794901940923 DOWN id=122 kind=PointerDeviceKind.touch pos=Offset(710.4, 890.7) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.9, 0.9) size=Size(748.8, 948.3)
+1794901940930 MOVE id=122 pos=Offset(710.4, 891.7) tracking=122 match=true
+1794901940975 MOVE id=122 pos=Offset(709.9, 893.3) tracking=122 match=true
+1794901940980 MOVE id=122 pos=Offset(707.2, 898.1) tracking=122 match=true
+1794901940989 MOVE id=122 pos=Offset(707.2, 899.7) tracking=122 match=true
+1794901940994 MOVE id=122 pos=Offset(707.7, 900.8) tracking=122 match=true
+1794901941041 MOVE id=122 pos=Offset(707.2, 904.0) tracking=122 match=true
+1794901941092 MOVE id=122 pos=Offset(707.7, 905.1) tracking=122 match=true
+1794901941159 MOVE id=122 pos=Offset(706.7, 905.1) tracking=122 match=true
+1794901941266 MOVE id=122 pos=Offset(707.7, 905.6) tracking=122 match=true
+1794901941360 MOVE id=122 pos=Offset(706.7, 905.6) tracking=122 match=true
+1794901941374 MOVE id=122 pos=Offset(704.5, 905.6) tracking=122 match=true
+1794901941446 MOVE id=122 pos=Offset(705.6, 905.6) tracking=122 match=true
+1794901941451 MOVE id=122 pos=Offset(704.5, 905.6) tracking=122 match=true
+1794901941562 MOVE id=122 pos=Offset(706.1, 905.6) tracking=122 match=true
+1794901941642 MOVE id=122 pos=Offset(704.5, 905.6) tracking=122 match=true
+1794901941678 MOVE id=122 pos=Offset(705.6, 905.6) tracking=122 match=true
+1794901941756 MOVE id=122 pos=Offset(703.5, 905.6) tracking=122 match=true
+1794901941826 RAWUP id=122 tracking=122
+1794901941827 UP start=Offset(0.2, 0.1) cur=Offset(0.9, 1.0)
+1794901944881 dispose
+1794901966671 initState
+1794901968735 DOWN id=164 kind=PointerDeviceKind.touch pos=Offset(188.3, 124.8) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794901968777 MOVE id=164 pos=Offset(190.9, 124.8) tracking=164 match=true
+1794901968905 MOVE id=164 pos=Offset(190.4, 125.9) tracking=164 match=true
+1794901968958 RAWUP id=164 tracking=164
+1794901968959 UP start=Offset(0.3, 0.1) cur=Offset(0.3, 0.1)
+1794901969038 DOWN id=165 kind=PointerDeviceKind.touch pos=Offset(185.6, 124.3) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.3, 0.1) size=Size(748.8, 948.3)
+1794901969102 MOVE id=165 pos=Offset(187.7, 124.3) tracking=165 match=true
+1794901969145 MOVE id=165 pos=Offset(189.3, 124.3) tracking=165 match=true
+1794901969205 RAWUP id=165 tracking=165
+1794901969206 UP start=Offset(0.3, 0.1) cur=Offset(0.3, 0.1)
+1794901969269 DOWN id=166 kind=PointerDeviceKind.touch pos=Offset(191.5, 124.8) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.3, 0.1) size=Size(748.8, 948.3)
+1794901969295 RAWUP id=166 tracking=166
+1794901969295 UP start=Offset(0.3, 0.1) cur=Offset(0.3, 0.1)
+1794901969353 DOWN id=167 kind=PointerDeviceKind.touch pos=Offset(191.5, 125.3) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.3, 0.1) size=Size(748.8, 948.3)
+1794901969382 MOVE id=167 pos=Offset(189.9, 125.9) tracking=167 match=true
+1794901969419 DOWN id=168 kind=PointerDeviceKind.touch pos=Offset(194.1, 126.9) tracking=167 start=Offset(0.3, 0.1) cur=Offset(0.3, 0.1) size=Size(748.8, 948.3)
+1794901969425 MOVE id=167 pos=Offset(189.9, 125.9) tracking=168 match=false
+1794901969426 MOVE id=168 pos=Offset(260.8, 126.9) tracking=168 match=true
+1794901969439 MOVE id=167 pos=Offset(187.7, 125.9) tracking=168 match=false
+1794901969440 MOVE id=168 pos=Offset(260.8, 126.9) tracking=168 match=true
+1794901969466 MOVE id=167 pos=Offset(188.8, 125.9) tracking=168 match=false
+1794901969468 MOVE id=168 pos=Offset(260.8, 126.9) tracking=168 match=true
+1794901969472 MOVE id=167 pos=Offset(190.9, 126.4) tracking=168 match=false
+1794901969473 RAWUP id=168 tracking=168
+1794901969474 UP start=Offset(0.3, 0.1) cur=Offset(0.3, 0.1)
+1794901969478 MOVE id=167 pos=Offset(190.9, 126.4) tracking=null match=false
+1794901969482 MOVE id=167 pos=Offset(192.0, 126.4) tracking=null match=false
+1794901969545 MOVE id=167 pos=Offset(190.9, 126.4) tracking=null match=false
+1794901969591 MOVE id=167 pos=Offset(192.0, 126.9) tracking=null match=false
+1794901969601 MOVE id=167 pos=Offset(190.4, 126.9) tracking=null match=false
+1794901969630 RAWUP id=167 tracking=null
+1794901969676 DOWN id=169 kind=PointerDeviceKind.touch pos=Offset(188.3, 126.9) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.3, 0.1) size=Size(748.8, 948.3)
+1794901969711 MOVE id=169 pos=Offset(190.9, 126.9) tracking=169 match=true
+1794901969714 DOWN id=170 kind=PointerDeviceKind.touch pos=Offset(598.4, 126.9) tracking=169 start=Offset(0.3, 0.1) cur=Offset(0.3, 0.1) size=Size(748.8, 948.3)
+1794901969719 MOVE id=169 pos=Offset(125.9, 127.5) tracking=169 match=true
+1794901969719 MOVE id=170 pos=Offset(598.4, 126.9) tracking=169 match=false
+1794901969741 MOVE id=169 pos=Offset(125.9, 127.5) tracking=169 match=true
+1794901969741 RAWUP id=170 tracking=169
+1794901969744 DOWN id=171 kind=PointerDeviceKind.touch pos=Offset(190.9, 126.9) tracking=169 start=Offset(0.3, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901969751 MOVE id=169 pos=Offset(117.3, 127.5) tracking=171 match=false
+1794901969752 MOVE id=171 pos=Offset(190.9, 126.9) tracking=171 match=true
+1794901969763 MOVE id=171 pos=Offset(190.9, 126.9) tracking=171 match=true
+1794901969764 RAWUP id=169 tracking=171
+1794901969766 RAWUP id=171 tracking=171
+1794901969766 UP start=Offset(0.3, 0.1) cur=Offset(0.3, 0.1)
+1794901969784 DOWN id=172 kind=PointerDeviceKind.touch pos=Offset(191.5, 127.5) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.3, 0.1) size=Size(748.8, 948.3)
+1794901969859 MOVE id=172 pos=Offset(190.4, 127.5) tracking=172 match=true
+1794901969941 MOVE id=172 pos=Offset(192.0, 127.5) tracking=172 match=true
+1794901969996 MOVE id=172 pos=Offset(193.1, 127.5) tracking=172 match=true
+1794901970040 MOVE id=172 pos=Offset(187.7, 127.5) tracking=172 match=true
+1794901970045 DOWN id=173 kind=PointerDeviceKind.touch pos=Offset(192.0, 127.5) tracking=172 start=Offset(0.3, 0.1) cur=Offset(0.3, 0.1) size=Size(748.8, 948.3)
+1794901970049 MOVE id=173 pos=Offset(192.0, 127.5) tracking=173 match=true
+1794901970056 RAWUP id=172 tracking=173
+1794901970103 MOVE id=173 pos=Offset(190.4, 128.0) tracking=173 match=true
+1794901970120 MOVE id=173 pos=Offset(191.5, 129.1) tracking=173 match=true
+1794901970144 MOVE id=173 pos=Offset(193.1, 130.1) tracking=173 match=true
+1794901970180 MOVE id=173 pos=Offset(196.3, 133.3) tracking=173 match=true
+1794901970197 MOVE id=173 pos=Offset(199.5, 135.5) tracking=173 match=true
+1794901970241 MOVE id=173 pos=Offset(206.4, 140.8) tracking=173 match=true
+1794901970258 MOVE id=173 pos=Offset(207.5, 141.9) tracking=173 match=true
+1794901970266 MOVE id=173 pos=Offset(209.1, 143.5) tracking=173 match=true
+1794901970330 MOVE id=173 pos=Offset(210.7, 147.2) tracking=173 match=true
+1794901970332 MOVE id=173 pos=Offset(211.7, 148.8) tracking=173 match=true
+1794901970339 MOVE id=173 pos=Offset(213.3, 150.4) tracking=173 match=true
+1794901970354 MOVE id=173 pos=Offset(145.6, 150.9) tracking=173 match=true
+1794901970359 MOVE id=173 pos=Offset(163.7, 152.0) tracking=173 match=true
+1794901970406 MOVE id=173 pos=Offset(201.1, 154.7) tracking=173 match=true
+1794901970413 MOVE id=173 pos=Offset(206.4, 155.2) tracking=173 match=true
+1794901970462 MOVE id=173 pos=Offset(212.3, 156.8) tracking=173 match=true
+1794901970466 RAWUP id=173 tracking=173
+1794901970466 UP start=Offset(0.3, 0.1) cur=Offset(0.3, 0.2)
+1794901970513 DOWN id=174 kind=PointerDeviceKind.touch pos=Offset(233.1, 166.4) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.3, 0.2) size=Size(748.8, 948.3)
+1794901970565 MOVE id=174 pos=Offset(232.5, 166.9) tracking=174 match=true
+1794901970570 RAWUP id=174 tracking=174
+1794901970570 UP start=Offset(0.3, 0.1) cur=Offset(0.3, 0.2)
+1794901970644 DOWN id=175 kind=PointerDeviceKind.touch pos=Offset(236.8, 173.9) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.3, 0.2) size=Size(748.8, 948.3)
+1794901970652 MOVE id=175 pos=Offset(236.8, 177.1) tracking=175 match=true
+1794901970692 RAWUP id=175 tracking=175
+1794901970693 UP start=Offset(0.3, 0.1) cur=Offset(0.3, 0.2)
+1794901970709 DOWN id=176 kind=PointerDeviceKind.touch pos=Offset(242.7, 183.5) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.3, 0.2) size=Size(748.8, 948.3)
+1794901970714 MOVE id=176 pos=Offset(245.3, 184.0) tracking=176 match=true
+1794901970751 MOVE id=176 pos=Offset(247.5, 185.1) tracking=176 match=true
+1794901970756 MOVE id=176 pos=Offset(250.1, 188.3) tracking=176 match=true
+1794901970778 MOVE id=176 pos=Offset(181.9, 190.4) tracking=176 match=true
+1794901970786 DOWN id=177 kind=PointerDeviceKind.touch pos=Offset(265.1, 196.8) tracking=176 start=Offset(0.3, 0.1) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794901970835 MOVE id=177 pos=Offset(261.9, 196.8) tracking=177 match=true
+1794901970842 RAWUP id=176 tracking=177
+1794901970850 MOVE id=177 pos=Offset(259.2, 198.9) tracking=177 match=true
+1794901970890 MOVE id=177 pos=Offset(259.2, 200.5) tracking=177 match=true
+1794901970894 MOVE id=177 pos=Offset(259.2, 202.1) tracking=177 match=true
+1794901970897 RAWUP id=177 tracking=177
+1794901970897 UP start=Offset(0.3, 0.1) cur=Offset(0.3, 0.2)
+1794901970973 DOWN id=178 kind=PointerDeviceKind.touch pos=Offset(274.1, 218.7) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.3, 0.2) size=Size(748.8, 948.3)
+1794901970975 MOVE id=178 pos=Offset(276.3, 222.4) tracking=178 match=true
+1794901970978 DOWN id=179 kind=PointerDeviceKind.touch pos=Offset(295.5, 241.1) tracking=178 start=Offset(0.3, 0.1) cur=Offset(0.4, 0.2) size=Size(748.8, 948.3)
+1794901970979 MOVE id=179 pos=Offset(294.4, 241.6) tracking=179 match=true
+1794901970980 RAWUP id=178 tracking=179
+1794901970983 MOVE id=179 pos=Offset(294.4, 241.6) tracking=179 match=true
+1794901971026 MOVE id=179 pos=Offset(224.5, 255.5) tracking=179 match=true
+1794901971037 DOWN id=180 kind=PointerDeviceKind.touch pos=Offset(319.5, 267.7) tracking=179 start=Offset(0.3, 0.1) cur=Offset(0.3, 0.3) size=Size(748.8, 948.3)
+1794901971043 MOVE id=180 pos=Offset(320.0, 268.3) tracking=180 match=true
+1794901971046 MOVE id=179 pos=Offset(224.5, 255.5) tracking=180 match=false
+1794901971049 MOVE id=180 pos=Offset(322.1, 270.4) tracking=180 match=true
+1794901971050 RAWUP id=179 tracking=180
+1794901971054 MOVE id=180 pos=Offset(322.1, 270.4) tracking=180 match=true
+1794901971064 MOVE id=180 pos=Offset(324.3, 272.5) tracking=180 match=true
+1794901971068 MOVE id=180 pos=Offset(326.9, 275.7) tracking=180 match=true
+1794901971080 MOVE id=180 pos=Offset(329.1, 279.5) tracking=180 match=true
+1794901971114 MOVE id=180 pos=Offset(340.8, 292.8) tracking=180 match=true
+1794901971123 MOVE id=180 pos=Offset(344.0, 297.6) tracking=180 match=true
+1794901971135 MOVE id=180 pos=Offset(347.7, 302.9) tracking=180 match=true
+1794901971175 MOVE id=180 pos=Offset(359.5, 321.1) tracking=180 match=true
+1794901971192 MOVE id=180 pos=Offset(366.9, 334.9) tracking=180 match=true
+1794901971201 MOVE id=180 pos=Offset(370.1, 342.9) tracking=180 match=true
+1794901971240 MOVE id=180 pos=Offset(376.0, 350.9) tracking=180 match=true
+1794901971242 RAWUP id=180 tracking=180
+1794901971242 UP start=Offset(0.3, 0.1) cur=Offset(0.5, 0.4)
+1794901971334 DOWN id=181 kind=PointerDeviceKind.touch pos=Offset(406.4, 411.2) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.5, 0.4) size=Size(748.8, 948.3)
+1794901971344 MOVE id=181 pos=Offset(425.6, 440.0) tracking=181 match=true
+1794901971351 MOVE id=181 pos=Offset(445.9, 469.3) tracking=181 match=true
+1794901971415 MOVE id=181 pos=Offset(465.6, 510.4) tracking=181 match=true
+1794901971418 MOVE id=181 pos=Offset(469.9, 521.1) tracking=181 match=true
+1794901971460 MOVE id=181 pos=Offset(488.0, 572.8) tracking=181 match=true
+1794901971473 MOVE id=181 pos=Offset(491.2, 582.4) tracking=181 match=true
+1794901971556 MOVE id=181 pos=Offset(494.9, 591.5) tracking=181 match=true
+1794901971559 RAWUP id=181 tracking=181
+1794901971560 UP start=Offset(0.3, 0.1) cur=Offset(0.7, 0.6)
+1794901971579 DOWN id=182 kind=PointerDeviceKind.touch pos=Offset(518.4, 645.9) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.7, 0.6) size=Size(748.8, 948.3)
+1794901971581 MOVE id=182 pos=Offset(524.3, 654.9) tracking=182 match=true
+1794901971585 MOVE id=182 pos=Offset(529.1, 664.0) tracking=182 match=true
+1794901971591 MOVE id=182 pos=Offset(538.1, 675.2) tracking=182 match=true
+1794901971600 MOVE id=182 pos=Offset(541.3, 680.5) tracking=182 match=true
+1794901971638 MOVE id=182 pos=Offset(545.1, 685.9) tracking=182 match=true
+1794901971666 MOVE id=182 pos=Offset(553.1, 696.0) tracking=182 match=true
+1794901971668 MOVE id=182 pos=Offset(556.3, 700.8) tracking=182 match=true
+1794901971678 MOVE id=182 pos=Offset(563.2, 710.4) tracking=182 match=true
+1794901971681 MOVE id=182 pos=Offset(566.9, 715.2) tracking=182 match=true
+1794901971731 MOVE id=182 pos=Offset(578.7, 731.7) tracking=182 match=true
+1794901971741 MOVE id=182 pos=Offset(581.3, 735.5) tracking=182 match=true
+1794901971749 MOVE id=182 pos=Offset(584.5, 739.2) tracking=182 match=true
+1794901971755 MOVE id=182 pos=Offset(588.3, 742.4) tracking=182 match=true
+1794901971769 MOVE id=182 pos=Offset(589.3, 745.6) tracking=182 match=true
+1794901971773 MOVE id=182 pos=Offset(592.0, 748.3) tracking=182 match=true
+1794901971786 MOVE id=182 pos=Offset(593.6, 750.9) tracking=182 match=true
+1794901971849 MOVE id=182 pos=Offset(596.8, 759.5) tracking=182 match=true
+1794901971857 MOVE id=182 pos=Offset(599.5, 763.7) tracking=182 match=true
+1794901971893 MOVE id=182 pos=Offset(602.7, 770.7) tracking=182 match=true
+1794901971902 MOVE id=182 pos=Offset(603.2, 773.9) tracking=182 match=true
+1794901971912 MOVE id=182 pos=Offset(603.7, 777.6) tracking=182 match=true
+1794901971925 MOVE id=182 pos=Offset(603.7, 781.9) tracking=182 match=true
+1794901971928 MOVE id=182 pos=Offset(604.8, 786.1) tracking=182 match=true
+1794901971985 MOVE id=182 pos=Offset(614.9, 812.8) tracking=182 match=true
+1794901971996 MOVE id=182 pos=Offset(616.0, 818.7) tracking=182 match=true
+1794901972031 MOVE id=182 pos=Offset(624.0, 833.6) tracking=182 match=true
+1794901972053 MOVE id=182 pos=Offset(626.1, 842.1) tracking=182 match=true
+1794901972057 MOVE id=182 pos=Offset(626.7, 845.3) tracking=182 match=true
+1794901972097 MOVE id=182 pos=Offset(629.3, 852.8) tracking=182 match=true
+1794901972109 MOVE id=182 pos=Offset(629.3, 853.9) tracking=182 match=true
+1794901972117 MOVE id=182 pos=Offset(676.8, 856.0) tracking=182 match=true
+1794901972124 DOWN id=183 kind=PointerDeviceKind.touch pos=Offset(632.5, 857.6) tracking=182 start=Offset(0.3, 0.1) cur=Offset(0.9, 0.9) size=Size(748.8, 948.3)
+1794901972176 MOVE id=183 pos=Offset(632.5, 857.6) tracking=183 match=true
+1794901972179 MOVE id=182 pos=Offset(685.3, 857.1) tracking=183 match=false
+1794901972182 MOVE id=183 pos=Offset(620.3, 857.6) tracking=183 match=true
+1794901972185 MOVE id=182 pos=Offset(690.7, 857.6) tracking=183 match=false
+1794901972235 MOVE id=183 pos=Offset(623.5, 857.6) tracking=183 match=true
+1794901972238 MOVE id=182 pos=Offset(690.7, 857.6) tracking=183 match=false
+1794901972240 MOVE id=183 pos=Offset(625.6, 857.6) tracking=183 match=true
+1794901972242 RAWUP id=182 tracking=183
+1794901972245 MOVE id=183 pos=Offset(629.9, 857.6) tracking=183 match=true
+1794901972249 MOVE id=183 pos=Offset(631.5, 857.6) tracking=183 match=true
+1794901972284 MOVE id=183 pos=Offset(632.5, 857.6) tracking=183 match=true
+1794901972328 MOVE id=183 pos=Offset(633.6, 857.6) tracking=183 match=true
+1794901972355 MOVE id=183 pos=Offset(635.7, 858.1) tracking=183 match=true
+1794901972370 MOVE id=183 pos=Offset(633.6, 858.1) tracking=183 match=true
+1794901972383 MOVE id=183 pos=Offset(635.7, 858.1) tracking=183 match=true
+1794901972425 MOVE id=183 pos=Offset(636.8, 858.1) tracking=183 match=true
+1794901972530 MOVE id=183 pos=Offset(636.8, 859.2) tracking=183 match=true
+1794901972550 MOVE id=183 pos=Offset(638.4, 860.3) tracking=183 match=true
+1794901972557 MOVE id=183 pos=Offset(640.0, 860.8) tracking=183 match=true
+1794901972602 MOVE id=183 pos=Offset(641.1, 862.4) tracking=183 match=true
+1794901972624 MOVE id=183 pos=Offset(642.7, 862.9) tracking=183 match=true
+1794901972646 RAWUP id=183 tracking=183
+1794901972647 UP start=Offset(0.3, 0.1) cur=Offset(0.9, 0.9)
+1794901972738 DOWN id=184 kind=PointerDeviceKind.touch pos=Offset(641.1, 864.0) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.9, 0.9) size=Size(748.8, 948.3)
+1794901972757 MOVE id=184 pos=Offset(640.0, 864.0) tracking=184 match=true
+1794901972818 RAWUP id=184 tracking=184
+1794901972819 UP start=Offset(0.3, 0.1) cur=Offset(0.9, 0.9)
+1794901972842 DOWN id=185 kind=PointerDeviceKind.touch pos=Offset(643.2, 864.0) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.9, 0.9) size=Size(748.8, 948.3)
+1794901972885 MOVE id=185 pos=Offset(642.1, 864.0) tracking=185 match=true
+1794901972905 MOVE id=185 pos=Offset(640.0, 864.0) tracking=185 match=true
+1794901972944 MOVE id=185 pos=Offset(641.6, 864.0) tracking=185 match=true
+1794901973006 MOVE id=185 pos=Offset(643.2, 864.0) tracking=185 match=true
+1794901973031 MOVE id=185 pos=Offset(645.3, 864.5) tracking=185 match=true
+1794901973068 MOVE id=185 pos=Offset(644.3, 864.5) tracking=185 match=true
+1794901973079 RAWUP id=185 tracking=185
+1794901973080 UP start=Offset(0.3, 0.1) cur=Offset(0.9, 0.9)
+1794901973159 DOWN id=186 kind=PointerDeviceKind.touch pos=Offset(640.5, 864.5) tracking=null start=Offset(0.3, 0.1) cur=Offset(0.9, 0.9) size=Size(748.8, 948.3)
+1794901973163 MOVE id=186 pos=Offset(642.7, 864.5) tracking=186 match=true
+1794901973222 MOVE id=186 pos=Offset(641.1, 864.5) tracking=186 match=true
+1794901973227 MOVE id=186 pos=Offset(638.4, 865.1) tracking=186 match=true
+1794901973280 RAWUP id=186 tracking=186
+1794901973281 UP start=Offset(0.3, 0.1) cur=Offset(0.9, 0.9)
+1794901974153 dispose
+1794901982849 initState
+1794901985013 DOWN id=194 kind=PointerDeviceKind.touch pos=Offset(118.4, 137.1) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794901985085 MOVE id=194 pos=Offset(116.8, 137.1) tracking=194 match=true
+1794901985187 MOVE id=194 pos=Offset(115.2, 137.6) tracking=194 match=true
+1794901985226 DOWN id=195 kind=PointerDeviceKind.touch pos=Offset(120.5, 138.7) tracking=194 start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901985295 MOVE id=194 pos=Offset(115.2, 137.6) tracking=195 match=false
+1794901985298 RAWUP id=195 tracking=195
+1794901985299 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901985315 MOVE id=194 pos=Offset(116.8, 138.1) tracking=null match=false
+1794901985445 MOVE id=194 pos=Offset(115.7, 138.1) tracking=null match=false
+1794901985466 MOVE id=194 pos=Offset(117.9, 138.1) tracking=null match=false
+1794901985534 MOVE id=194 pos=Offset(116.3, 138.7) tracking=null match=false
+1794901985643 MOVE id=194 pos=Offset(117.3, 138.7) tracking=null match=false
+1794901985730 RAWUP id=194 tracking=null
+1794901985797 DOWN id=196 kind=PointerDeviceKind.touch pos=Offset(116.3, 139.2) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794901985805 MOVE id=196 pos=Offset(115.2, 139.2) tracking=196 match=true
+1794901985839 MOVE id=196 pos=Offset(117.9, 139.2) tracking=196 match=true
+1794901985858 MOVE id=196 pos=Offset(119.5, 139.2) tracking=196 match=true
+1794901985915 MOVE id=196 pos=Offset(118.4, 139.2) tracking=196 match=true
+1794901985917 MOVE id=196 pos=Offset(117.3, 139.2) tracking=196 match=true
+1794901985992 MOVE id=196 pos=Offset(115.2, 139.2) tracking=196 match=true
+1794901986013 MOVE id=196 pos=Offset(117.3, 139.2) tracking=196 match=true
+1794901986054 MOVE id=196 pos=Offset(115.7, 139.2) tracking=196 match=true
+1794901986087 MOVE id=196 pos=Offset(116.3, 138.1) tracking=196 match=true
+1794901986123 MOVE id=196 pos=Offset(117.3, 138.1) tracking=196 match=true
+1794901986161 MOVE id=196 pos=Offset(118.4, 138.1) tracking=196 match=true
+1794901986175 RAWUP id=196 tracking=196
+1794901986175 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794901986261 DOWN id=197 kind=PointerDeviceKind.touch pos=Offset(115.7, 138.7) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794901986265 MOVE id=197 pos=Offset(114.7, 138.7) tracking=197 match=true
+1794901986270 MOVE id=197 pos=Offset(115.7, 138.7) tracking=197 match=true
+1794901986330 MOVE id=197 pos=Offset(117.9, 138.7) tracking=197 match=true
+1794901986342 MOVE id=197 pos=Offset(94.4, 138.7) tracking=197 match=true
+1794901986397 MOVE id=197 pos=Offset(99.2, 138.7) tracking=197 match=true
+1794901986439 MOVE id=197 pos=Offset(112.0, 138.7) tracking=197 match=true
+1794901986442 RAWUP id=197 tracking=197
+1794901986443 UP start=Offset(0.2, 0.1) cur=Offset(0.1, 0.1)
+1794901986494 DOWN id=198 kind=PointerDeviceKind.touch pos=Offset(116.3, 139.2) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901986512 MOVE id=198 pos=Offset(117.3, 139.2) tracking=198 match=true
+1794901986676 MOVE id=198 pos=Offset(118.4, 139.7) tracking=198 match=true
+1794901986707 MOVE id=198 pos=Offset(116.8, 139.7) tracking=198 match=true
+1794901986838 MOVE id=198 pos=Offset(95.5, 139.2) tracking=198 match=true
+1794901986839 MOVE id=198 pos=Offset(99.2, 138.7) tracking=198 match=true
+1794901986849 MOVE id=198 pos=Offset(104.5, 138.7) tracking=198 match=true
+1794901986862 MOVE id=198 pos=Offset(107.2, 138.1) tracking=198 match=true
+1794901986878 MOVE id=198 pos=Offset(109.3, 138.1) tracking=198 match=true
+1794901986886 MOVE id=198 pos=Offset(111.5, 138.1) tracking=198 match=true
+1794901986894 MOVE id=198 pos=Offset(113.1, 138.7) tracking=198 match=true
+1794901986903 MOVE id=198 pos=Offset(115.7, 138.7) tracking=198 match=true
+1794901986953 MOVE id=198 pos=Offset(116.8, 138.7) tracking=198 match=true
+1794901987016 MOVE id=198 pos=Offset(118.9, 138.7) tracking=198 match=true
+1794901987069 MOVE id=198 pos=Offset(117.9, 138.7) tracking=198 match=true
+1794901987111 MOVE id=198 pos=Offset(-0.5, 138.7) tracking=198 match=true
+1794901987150 MOVE id=198 pos=Offset(64.0, 138.7) tracking=198 match=true
+1794901987171 RAWUP id=198 tracking=198
+1794901987173 UP start=Offset(0.2, 0.1) cur=Offset(0.1, 0.1)
+1794901987237 DOWN id=199 kind=PointerDeviceKind.touch pos=Offset(106.1, 138.7) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901987260 MOVE id=199 pos=Offset(108.8, 138.7) tracking=199 match=true
+1794901987269 MOVE id=199 pos=Offset(114.7, 139.7) tracking=199 match=true
+1794901987276 MOVE id=199 pos=Offset(116.3, 140.3) tracking=199 match=true
+1794901987284 MOVE id=199 pos=Offset(117.9, 140.8) tracking=199 match=true
+1794901987296 MOVE id=199 pos=Offset(120.0, 142.4) tracking=199 match=true
+1794901987351 MOVE id=199 pos=Offset(123.7, 146.7) tracking=199 match=true
+1794901987354 MOVE id=199 pos=Offset(125.9, 148.8) tracking=199 match=true
+1794901987357 MOVE id=199 pos=Offset(128.5, 150.9) tracking=199 match=true
+1794901987361 MOVE id=199 pos=Offset(130.7, 152.5) tracking=199 match=true
+1794901987371 MOVE id=199 pos=Offset(133.3, 154.7) tracking=199 match=true
+1794901987399 MOVE id=199 pos=Offset(137.1, 158.4) tracking=199 match=true
+1794901987422 MOVE id=199 pos=Offset(-0.5, 161.6) tracking=199 match=true
+1794901987427 DOWN id=200 kind=PointerDeviceKind.touch pos=Offset(147.7, 167.5) tracking=199 start=Offset(0.2, 0.1) cur=Offset(0.0, 0.2) size=Size(748.8, 948.3)
+1794901987470 MOVE id=200 pos=Offset(147.7, 167.5) tracking=200 match=true
+1794901987476 RAWUP id=199 tracking=200
+1794901987483 MOVE id=200 pos=Offset(149.9, 168.5) tracking=200 match=true
+1794901987492 MOVE id=200 pos=Offset(152.0, 169.6) tracking=200 match=true
+1794901987532 MOVE id=200 pos=Offset(153.6, 171.2) tracking=200 match=true
+1794901987539 MOVE id=200 pos=Offset(155.7, 172.3) tracking=200 match=true
+1794901987550 MOVE id=200 pos=Offset(153.6, 172.8) tracking=200 match=true
+1794901987598 MOVE id=200 pos=Offset(157.9, 175.5) tracking=200 match=true
+1794901987618 MOVE id=200 pos=Offset(158.9, 178.1) tracking=200 match=true
+1794901987621 MOVE id=200 pos=Offset(160.5, 179.7) tracking=200 match=true
+1794901987625 MOVE id=200 pos=Offset(162.1, 181.3) tracking=200 match=true
+1794901987670 RAWUP id=200 tracking=200
+1794901987670 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.2)
+1794901987692 DOWN id=201 kind=PointerDeviceKind.touch pos=Offset(172.3, 199.5) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794901987694 MOVE id=201 pos=Offset(176.5, 200.0) tracking=201 match=true
+1794901987722 MOVE id=201 pos=Offset(180.8, 205.3) tracking=201 match=true
+1794901987744 MOVE id=201 pos=Offset(185.1, 209.6) tracking=201 match=true
+1794901987775 MOVE id=201 pos=Offset(189.9, 214.4) tracking=201 match=true
+1794901987779 MOVE id=201 pos=Offset(190.9, 216.5) tracking=201 match=true
+1794901987792 MOVE id=201 pos=Offset(192.5, 219.2) tracking=201 match=true
+1794901987799 MOVE id=201 pos=Offset(195.2, 221.3) tracking=201 match=true
+1794901987827 MOVE id=201 pos=Offset(197.9, 227.2) tracking=201 match=true
+1794901987834 MOVE id=201 pos=Offset(199.5, 230.4) tracking=201 match=true
+1794901987853 MOVE id=201 pos=Offset(205.3, 236.8) tracking=201 match=true
+1794901987871 MOVE id=201 pos=Offset(209.1, 240.0) tracking=201 match=true
+1794901987876 MOVE id=201 pos=Offset(212.3, 243.2) tracking=201 match=true
+1794901987924 MOVE id=201 pos=Offset(227.2, 260.8) tracking=201 match=true
+1794901987932 MOVE id=201 pos=Offset(229.9, 266.1) tracking=201 match=true
+1794901987944 MOVE id=201 pos=Offset(233.6, 271.5) tracking=201 match=true
+1794901987950 MOVE id=201 pos=Offset(237.9, 276.8) tracking=201 match=true
+1794901987990 MOVE id=201 pos=Offset(245.9, 288.5) tracking=201 match=true
+1794901988007 MOVE id=201 pos=Offset(252.3, 300.3) tracking=201 match=true
+1794901988008 MOVE id=201 pos=Offset(254.9, 306.7) tracking=201 match=true
+1794901988049 MOVE id=201 pos=Offset(258.1, 312.5) tracking=201 match=true
+1794901988070 MOVE id=201 pos=Offset(270.4, 331.2) tracking=201 match=true
+1794901988074 MOVE id=201 pos=Offset(277.3, 343.5) tracking=201 match=true
+1794901988079 MOVE id=201 pos=Offset(281.6, 349.9) tracking=201 match=true
+1794901988110 MOVE id=201 pos=Offset(291.2, 362.7) tracking=201 match=true
+1794901988117 MOVE id=201 pos=Offset(294.4, 368.5) tracking=201 match=true
+1794901988126 MOVE id=201 pos=Offset(297.1, 374.9) tracking=201 match=true
+1794901988138 MOVE id=201 pos=Offset(300.8, 380.8) tracking=201 match=true
+1794901988204 MOVE id=201 pos=Offset(321.1, 414.9) tracking=201 match=true
+1794901988230 MOVE id=201 pos=Offset(326.4, 420.8) tracking=201 match=true
+1794901988233 MOVE id=201 pos=Offset(333.3, 432.0) tracking=201 match=true
+1794901988244 MOVE id=201 pos=Offset(337.6, 437.9) tracking=201 match=true
+1794901988258 MOVE id=201 pos=Offset(341.3, 443.2) tracking=201 match=true
+1794901988290 MOVE id=201 pos=Offset(354.1, 459.7) tracking=201 match=true
+1794901988298 MOVE id=201 pos=Offset(356.8, 465.1) tracking=201 match=true
+1794901988317 MOVE id=201 pos=Offset(359.5, 469.9) tracking=201 match=true
+1794901988322 MOVE id=201 pos=Offset(360.0, 475.7) tracking=201 match=true
+1794901988335 MOVE id=201 pos=Offset(363.7, 481.1) tracking=201 match=true
+1794901988368 MOVE id=201 pos=Offset(367.5, 486.9) tracking=201 match=true
+1794901988387 MOVE id=201 pos=Offset(380.8, 504.5) tracking=201 match=true
+1794901988394 MOVE id=201 pos=Offset(386.1, 510.9) tracking=201 match=true
+1794901988398 MOVE id=201 pos=Offset(390.9, 517.3) tracking=201 match=true
+1794901988456 MOVE id=201 pos=Offset(410.1, 543.5) tracking=201 match=true
+1794901988458 MOVE id=201 pos=Offset(392.0, 549.9) tracking=201 match=true
+1794901988507 MOVE id=201 pos=Offset(234.7, 565.3) tracking=201 match=true
+1794901988515 DOWN id=202 kind=PointerDeviceKind.touch pos=Offset(442.7, 584.5) tracking=201 start=Offset(0.2, 0.1) cur=Offset(0.3, 0.6) size=Size(748.8, 948.3)
+1794901988525 MOVE id=201 pos=Offset(234.7, 565.3) tracking=201 match=true
+1794901988527 MOVE id=202 pos=Offset(446.4, 589.3) tracking=201 match=false
+1794901988529 MOVE id=201 pos=Offset(235.7, 574.4) tracking=201 match=true
+1794901988530 MOVE id=202 pos=Offset(449.6, 593.1) tracking=201 match=false
+1794901988533 MOVE id=201 pos=Offset(235.7, 574.4) tracking=201 match=true
+1794901988534 MOVE id=202 pos=Offset(452.3, 597.9) tracking=201 match=false
+1794901988572 MOVE id=201 pos=Offset(235.7, 574.4) tracking=201 match=true
+1794901988573 MOVE id=202 pos=Offset(456.5, 602.7) tracking=201 match=false
+1794901988574 MOVE id=202 pos=Offset(461.9, 608.5) tracking=201 match=false
+1794901988578 RAWUP id=201 tracking=201
+1794901988581 UP start=Offset(0.2, 0.1) cur=Offset(0.3, 0.6)
+1794901988589 MOVE id=202 pos=Offset(509.3, 623.5) tracking=null match=false
+1794901988638 DOWN id=203 kind=PointerDeviceKind.touch pos=Offset(496.0, 649.6) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.3, 0.6) size=Size(748.8, 948.3)
+1794901988648 MOVE id=203 pos=Offset(502.4, 657.1) tracking=203 match=true
+1794901988650 MOVE id=202 pos=Offset(579.2, 639.5) tracking=203 match=false
+1794901988657 MOVE id=203 pos=Offset(505.6, 661.3) tracking=203 match=true
+1794901988662 RAWUP id=202 tracking=203
+1794901988665 MOVE id=203 pos=Offset(514.1, 670.4) tracking=203 match=true
+1794901988668 MOVE id=203 pos=Offset(525.3, 680.5) tracking=203 match=true
+1794901988709 MOVE id=203 pos=Offset(535.5, 690.7) tracking=203 match=true
+1794901988726 MOVE id=203 pos=Offset(468.3, 703.5) tracking=203 match=true
+1794901988759 DOWN id=204 kind=PointerDeviceKind.touch pos=Offset(557.9, 717.9) tracking=203 start=Offset(0.7, 0.7) cur=Offset(0.6, 0.7) size=Size(748.8, 948.3)
+1794901988764 MOVE id=203 pos=Offset(468.3, 703.5) tracking=204 match=false
+1794901988766 MOVE id=204 pos=Offset(559.5, 718.4) tracking=204 match=true
+1794901988787 MOVE id=203 pos=Offset(475.7, 708.3) tracking=204 match=false
+1794901988789 MOVE id=204 pos=Offset(569.1, 723.7) tracking=204 match=true
+1794901988798 MOVE id=204 pos=Offset(572.8, 725.9) tracking=204 match=true
+1794901988801 RAWUP id=203 tracking=204
+1794901988804 MOVE id=204 pos=Offset(576.0, 729.1) tracking=204 match=true
+1794901988851 MOVE id=204 pos=Offset(578.7, 732.3) tracking=204 match=true
+1794901988856 MOVE id=204 pos=Offset(583.5, 734.9) tracking=204 match=true
+1794901988864 MOVE id=204 pos=Offset(598.9, 750.9) tracking=204 match=true
+1794901988909 MOVE id=204 pos=Offset(607.5, 763.2) tracking=204 match=true
+1794901988931 MOVE id=204 pos=Offset(610.1, 766.4) tracking=204 match=true
+1794901988976 MOVE id=204 pos=Offset(618.1, 781.3) tracking=204 match=true
+1794901988995 MOVE id=204 pos=Offset(620.3, 784.0) tracking=204 match=true
+1794901989029 MOVE id=204 pos=Offset(620.8, 786.1) tracking=204 match=true
+1794901989043 MOVE id=204 pos=Offset(640.0, 792.5) tracking=204 match=true
+1794901989051 MOVE id=204 pos=Offset(635.7, 793.1) tracking=204 match=true
+1794901989092 MOVE id=204 pos=Offset(628.8, 795.2) tracking=204 match=true
+1794901989117 MOVE id=204 pos=Offset(625.6, 795.2) tracking=204 match=true
+1794901989157 MOVE id=204 pos=Offset(624.5, 795.7) tracking=204 match=true
+1794901989172 DOWN id=205 kind=PointerDeviceKind.touch pos=Offset(556.3, 797.9) tracking=204 start=Offset(0.7, 0.7) cur=Offset(0.8, 0.8) size=Size(748.8, 948.3)
+1794901989191 MOVE id=205 pos=Offset(526.9, 797.9) tracking=205 match=true
+1794901989192 MOVE id=204 pos=Offset(624.5, 795.7) tracking=205 match=false
+1794901989229 MOVE id=205 pos=Offset(383.5, 797.9) tracking=205 match=true
+1794901989230 MOVE id=204 pos=Offset(625.1, 796.8) tracking=205 match=false
+1794901989287 MOVE id=205 pos=Offset(383.5, 797.9) tracking=205 match=true
+1794901989288 MOVE id=204 pos=Offset(624.5, 799.5) tracking=205 match=false
+1794901989308 MOVE id=204 pos=Offset(624.5, 800.5) tracking=205 match=false
+1794901989309 RAWUP id=205 tracking=205
+1794901989310 UP start=Offset(0.7, 0.7) cur=Offset(0.5, 0.8)
+1794901989313 MOVE id=204 pos=Offset(624.5, 802.1) tracking=null match=false
+1794901989315 RAWUP id=204 tracking=null
+1794901989355 DOWN id=206 kind=PointerDeviceKind.touch pos=Offset(621.3, 811.7) tracking=null start=Offset(0.7, 0.7) cur=Offset(0.5, 0.8) size=Size(748.8, 948.3)
+1794901989364 MOVE id=206 pos=Offset(621.9, 814.4) tracking=206 match=true
+1794901989374 MOVE id=206 pos=Offset(621.9, 815.5) tracking=206 match=true
+1794901989412 MOVE id=206 pos=Offset(624.0, 818.1) tracking=206 match=true
+1794901989443 MOVE id=206 pos=Offset(622.9, 818.7) tracking=206 match=true
+1794901989450 MOVE id=206 pos=Offset(621.3, 819.2) tracking=206 match=true
+1794901989488 MOVE id=206 pos=Offset(620.3, 819.2) tracking=206 match=true
+1794901989551 MOVE id=206 pos=Offset(618.7, 819.2) tracking=206 match=true
+1794901989566 MOVE id=206 pos=Offset(619.7, 819.2) tracking=206 match=true
+1794901989592 MOVE id=206 pos=Offset(618.7, 819.2) tracking=206 match=true
+1794901989632 MOVE id=206 pos=Offset(621.9, 819.2) tracking=206 match=true
+1794901989691 MOVE id=206 pos=Offset(620.8, 819.2) tracking=206 match=true
+1794901989723 MOVE id=206 pos=Offset(621.9, 819.2) tracking=206 match=true
+1794901989769 MOVE id=206 pos=Offset(620.8, 819.2) tracking=206 match=true
+1794901989899 RAWUP id=206 tracking=206
+1794901989900 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794901992007 DOWN id=207 kind=PointerDeviceKind.touch pos=Offset(585.6, 836.3) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794901992033 MOVE id=207 pos=Offset(587.7, 836.3) tracking=207 match=true
+1794901992090 MOVE id=207 pos=Offset(588.8, 836.8) tracking=207 match=true
+1794901992101 MOVE id=207 pos=Offset(589.9, 836.8) tracking=207 match=true
+1794901992119 MOVE id=207 pos=Offset(588.8, 836.8) tracking=207 match=true
+1794901992141 MOVE id=207 pos=Offset(662.9, 838.4) tracking=207 match=true
+1794901992153 MOVE id=207 pos=Offset(645.3, 838.4) tracking=207 match=true
+1794901992181 MOVE id=207 pos=Offset(620.8, 838.4) tracking=207 match=true
+1794901992189 MOVE id=207 pos=Offset(612.3, 838.4) tracking=207 match=true
+1794901992222 MOVE id=207 pos=Offset(601.1, 837.9) tracking=207 match=true
+1794901992228 MOVE id=207 pos=Offset(597.3, 837.9) tracking=207 match=true
+1794901992232 MOVE id=207 pos=Offset(595.7, 837.9) tracking=207 match=true
+1794901992245 MOVE id=207 pos=Offset(593.1, 837.9) tracking=207 match=true
+1794901992291 MOVE id=207 pos=Offset(590.4, 837.9) tracking=207 match=true
+1794901992414 MOVE id=207 pos=Offset(588.8, 838.4) tracking=207 match=true
+1794901992426 MOVE id=207 pos=Offset(587.7, 838.4) tracking=207 match=true
+1794901992509 MOVE id=207 pos=Offset(588.8, 838.4) tracking=207 match=true
+1794901992636 MOVE id=207 pos=Offset(605.9, 837.9) tracking=207 match=true
+1794901992675 RAWUP id=207 tracking=207
+1794901992675 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794901992713 DOWN id=208 kind=PointerDeviceKind.touch pos=Offset(580.8, 827.2) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794901992716 MOVE id=208 pos=Offset(578.7, 827.2) tracking=208 match=true
+1794901992721 MOVE id=208 pos=Offset(577.1, 826.1) tracking=208 match=true
+1794901992730 MOVE id=208 pos=Offset(576.0, 824.5) tracking=208 match=true
+1794901992741 MOVE id=208 pos=Offset(573.9, 822.9) tracking=208 match=true
+1794901992752 MOVE id=208 pos=Offset(571.2, 820.8) tracking=208 match=true
+1794901992782 MOVE id=208 pos=Offset(566.9, 816.0) tracking=208 match=true
+1794901992793 MOVE id=208 pos=Offset(591.5, 812.8) tracking=208 match=true
+1794901992843 MOVE id=208 pos=Offset(612.3, 809.6) tracking=208 match=true
+1794901992849 DOWN id=209 kind=PointerDeviceKind.touch pos=Offset(555.2, 795.2) tracking=208 start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794901992853 MOVE id=208 pos=Offset(592.5, 797.9) tracking=209 match=false
+1794901992854 MOVE id=209 pos=Offset(524.3, 793.6) tracking=209 match=true
+1794901992867 MOVE id=208 pos=Offset(592.5, 790.4) tracking=209 match=false
+1794901992868 MOVE id=209 pos=Offset(531.2, 788.3) tracking=209 match=true
+1794901992901 MOVE id=208 pos=Offset(592.5, 790.4) tracking=209 match=false
+1794901992902 MOVE id=209 pos=Offset(531.2, 781.9) tracking=209 match=true
+1794901992907 MOVE id=209 pos=Offset(530.7, 779.2) tracking=209 match=true
+1794901992913 RAWUP id=208 tracking=209
+1794901992916 MOVE id=209 pos=Offset(530.7, 779.2) tracking=209 match=true
+1794901992921 MOVE id=209 pos=Offset(527.5, 773.3) tracking=209 match=true
+1794901992970 MOVE id=209 pos=Offset(518.9, 760.5) tracking=209 match=true
+1794901992981 MOVE id=209 pos=Offset(516.3, 757.9) tracking=209 match=true
+1794901992999 MOVE id=209 pos=Offset(513.1, 755.7) tracking=209 match=true
+1794901993002 MOVE id=209 pos=Offset(512.0, 753.1) tracking=209 match=true
+1794901993062 MOVE id=209 pos=Offset(509.3, 750.9) tracking=209 match=true
+1794901993074 MOVE id=209 pos=Offset(474.1, 746.7) tracking=209 match=true
+1794901993082 DOWN id=210 kind=PointerDeviceKind.touch pos=Offset(488.5, 731.2) tracking=209 start=Offset(0.8, 0.9) cur=Offset(0.6, 0.8) size=Size(748.8, 948.3)
+1794901993092 MOVE id=210 pos=Offset(488.0, 730.7) tracking=210 match=true
+1794901993094 RAWUP id=209 tracking=210
+1794901993099 MOVE id=210 pos=Offset(483.2, 726.4) tracking=210 match=true
+1794901993101 MOVE id=210 pos=Offset(480.5, 723.7) tracking=210 match=true
+1794901993128 MOVE id=210 pos=Offset(473.6, 716.8) tracking=210 match=true
+1794901993135 MOVE id=210 pos=Offset(470.9, 713.1) tracking=210 match=true
+1794901993172 MOVE id=210 pos=Offset(465.6, 708.8) tracking=210 match=true
+1794901993178 RAWUP id=210 tracking=210
+1794901993180 UP start=Offset(0.8, 0.9) cur=Offset(0.6, 0.7)
+1794901993238 DOWN id=211 kind=PointerDeviceKind.touch pos=Offset(400.0, 673.1) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.6, 0.7) size=Size(748.8, 948.3)
+1794901993249 DOWN id=212 kind=PointerDeviceKind.touch pos=Offset(413.9, 648.0) tracking=211 start=Offset(0.8, 0.9) cur=Offset(0.6, 0.7) size=Size(748.8, 948.3)
+1794901993255 MOVE id=212 pos=Offset(413.9, 648.0) tracking=212 match=true
+1794901993257 RAWUP id=211 tracking=212
+1794901993269 MOVE id=212 pos=Offset(410.1, 644.8) tracking=212 match=true
+1794901993274 MOVE id=212 pos=Offset(410.1, 642.1) tracking=212 match=true
+1794901993287 MOVE id=212 pos=Offset(408.0, 638.4) tracking=212 match=true
+1794901993346 RAWUP id=212 tracking=212
+1794901993347 UP start=Offset(0.8, 0.9) cur=Offset(0.5, 0.7)
+1794901993356 DOWN id=213 kind=PointerDeviceKind.touch pos=Offset(385.6, 611.2) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.5, 0.7) size=Size(748.8, 948.3)
+1794901993358 MOVE id=213 pos=Offset(385.6, 607.5) tracking=213 match=true
+1794901993361 MOVE id=213 pos=Offset(384.0, 600.0) tracking=213 match=true
+1794901993371 MOVE id=213 pos=Offset(381.3, 595.2) tracking=213 match=true
+1794901993405 MOVE id=213 pos=Offset(373.3, 585.6) tracking=213 match=true
+1794901993413 MOVE id=213 pos=Offset(370.7, 580.8) tracking=213 match=true
+1794901993422 MOVE id=213 pos=Offset(367.5, 575.5) tracking=213 match=true
+1794901993469 MOVE id=213 pos=Offset(353.1, 554.1) tracking=213 match=true
+1794901993491 MOVE id=213 pos=Offset(342.4, 542.4) tracking=213 match=true
+1794901993497 MOVE id=213 pos=Offset(338.1, 536.5) tracking=213 match=true
+1794901993530 MOVE id=213 pos=Offset(325.3, 516.8) tracking=213 match=true
+1794901993540 MOVE id=213 pos=Offset(322.1, 509.9) tracking=213 match=true
+1794901993559 MOVE id=213 pos=Offset(314.7, 503.5) tracking=213 match=true
+1794901993563 MOVE id=213 pos=Offset(311.5, 496.5) tracking=213 match=true
+1794901993594 RAWUP id=213 tracking=213
+1794901993594 UP start=Offset(0.8, 0.9) cur=Offset(0.4, 0.5)
+1794901993666 DOWN id=214 kind=PointerDeviceKind.touch pos=Offset(286.4, 452.3) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.4, 0.5) size=Size(748.8, 948.3)
+1794901993670 MOVE id=214 pos=Offset(276.8, 437.9) tracking=214 match=true
+1794901993674 MOVE id=214 pos=Offset(272.5, 431.5) tracking=214 match=true
+1794901993718 MOVE id=214 pos=Offset(338.7, 414.9) tracking=214 match=true
+1794901993726 DOWN id=215 kind=PointerDeviceKind.touch pos=Offset(253.9, 393.6) tracking=214 start=Offset(0.8, 0.9) cur=Offset(0.5, 0.4) size=Size(748.8, 948.3)
+1794901993732 MOVE id=214 pos=Offset(378.1, 402.7) tracking=215 match=false
+1794901993733 MOVE id=215 pos=Offset(250.7, 389.9) tracking=215 match=true
+1794901993738 MOVE id=214 pos=Offset(378.1, 402.7) tracking=215 match=false
+1794901993742 MOVE id=215 pos=Offset(249.6, 386.7) tracking=215 match=true
+1794901993755 MOVE id=214 pos=Offset(378.1, 402.7) tracking=215 match=false
+1794901993757 MOVE id=215 pos=Offset(247.5, 382.9) tracking=215 match=true
+1794901993759 MOVE id=215 pos=Offset(245.3, 378.1) tracking=215 match=true
+1794901993760 RAWUP id=214 tracking=215
+1794901993766 MOVE id=215 pos=Offset(245.3, 378.1) tracking=215 match=true
+1794901993771 MOVE id=215 pos=Offset(242.7, 373.3) tracking=215 match=true
+1794901993790 MOVE id=215 pos=Offset(236.3, 363.2) tracking=215 match=true
+1794901993803 MOVE id=215 pos=Offset(235.2, 357.3) tracking=215 match=true
+1794901993809 MOVE id=215 pos=Offset(232.0, 352.0) tracking=215 match=true
+1794901993832 DOWN id=216 kind=PointerDeviceKind.touch pos=Offset(210.7, 322.7) tracking=215 start=Offset(0.8, 0.9) cur=Offset(0.3, 0.4) size=Size(748.8, 948.3)
+1794901993862 MOVE id=216 pos=Offset(210.7, 321.6) tracking=216 match=true
+1794901993864 RAWUP id=215 tracking=216
+1794901993868 MOVE id=216 pos=Offset(210.7, 321.6) tracking=216 match=true
+1794901993877 MOVE id=216 pos=Offset(204.8, 310.9) tracking=216 match=true
+1794901993886 MOVE id=216 pos=Offset(202.7, 306.1) tracking=216 match=true
+1794901993894 MOVE id=216 pos=Offset(200.5, 300.3) tracking=216 match=true
+1794901993926 MOVE id=216 pos=Offset(195.7, 288.5) tracking=216 match=true
+1794901993928 MOVE id=216 pos=Offset(194.1, 282.7) tracking=216 match=true
+1794901993937 MOVE id=216 pos=Offset(189.9, 276.3) tracking=216 match=true
+1794901993952 MOVE id=216 pos=Offset(184.5, 270.4) tracking=216 match=true
+1794901993961 MOVE id=216 pos=Offset(180.8, 263.5) tracking=216 match=true
+1794901993996 MOVE id=216 pos=Offset(171.7, 244.3) tracking=216 match=true
+1794901994009 MOVE id=216 pos=Offset(165.9, 237.3) tracking=216 match=true
+1794901994014 MOVE id=216 pos=Offset(161.6, 231.5) tracking=216 match=true
+1794901994059 MOVE id=216 pos=Offset(148.3, 210.1) tracking=216 match=true
+1794901994069 MOVE id=216 pos=Offset(145.6, 204.8) tracking=216 match=true
+1794901994085 MOVE id=216 pos=Offset(143.5, 200.0) tracking=216 match=true
+1794901994092 MOVE id=216 pos=Offset(141.9, 196.3) tracking=216 match=true
+1794901994135 MOVE id=216 pos=Offset(129.6, 182.4) tracking=216 match=true
+1794901994153 MOVE id=216 pos=Offset(128.0, 179.7) tracking=216 match=true
+1794901994190 RAWUP id=216 tracking=216
+1794901994191 UP start=Offset(0.8, 0.9) cur=Offset(0.2, 0.2)
+1794901994251 DOWN id=217 kind=PointerDeviceKind.touch pos=Offset(122.1, 166.9) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794901994255 MOVE id=217 pos=Offset(120.0, 163.2) tracking=217 match=true
+1794901994264 MOVE id=217 pos=Offset(118.9, 161.6) tracking=217 match=true
+1794901994275 MOVE id=217 pos=Offset(116.8, 160.0) tracking=217 match=true
+1794901994316 MOVE id=217 pos=Offset(116.3, 157.9) tracking=217 match=true
+1794901994322 MOVE id=217 pos=Offset(114.7, 148.8) tracking=217 match=true
+1794901994331 MOVE id=217 pos=Offset(114.1, 145.6) tracking=217 match=true
+1794901994346 MOVE id=217 pos=Offset(114.1, 142.4) tracking=217 match=true
+1794901994351 MOVE id=217 pos=Offset(113.6, 138.7) tracking=217 match=true
+1794901994380 MOVE id=217 pos=Offset(111.5, 131.7) tracking=217 match=true
+1794901994400 MOVE id=217 pos=Offset(110.9, 128.5) tracking=217 match=true
+1794901994403 MOVE id=217 pos=Offset(109.3, 125.3) tracking=217 match=true
+1794901994407 MOVE id=217 pos=Offset(108.3, 122.1) tracking=217 match=true
+1794901994415 MOVE id=217 pos=Offset(107.2, 118.9) tracking=217 match=true
+1794901994451 MOVE id=217 pos=Offset(102.4, 110.4) tracking=217 match=true
+1794901994466 MOVE id=217 pos=Offset(102.4, 107.7) tracking=217 match=true
+1794901994472 MOVE id=217 pos=Offset(104.0, 105.6) tracking=217 match=true
+1794901994517 MOVE id=217 pos=Offset(100.3, 99.7) tracking=217 match=true
+1794901994527 MOVE id=217 pos=Offset(100.3, 98.1) tracking=217 match=true
+1794901994535 MOVE id=217 pos=Offset(100.3, 97.1) tracking=217 match=true
+1794901994542 MOVE id=217 pos=Offset(100.3, 96.0) tracking=217 match=true
+1794901994578 RAWUP id=217 tracking=217
+1794901994579 UP start=Offset(0.8, 0.9) cur=Offset(0.1, 0.1)
+1794901994613 DOWN id=218 kind=PointerDeviceKind.touch pos=Offset(97.1, 89.1) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794901994690 MOVE id=218 pos=Offset(99.7, 89.1) tracking=218 match=true
+1794901994710 MOVE id=218 pos=Offset(98.1, 89.1) tracking=218 match=true
+1794901994719 MOVE id=218 pos=Offset(96.5, 89.1) tracking=218 match=true
+1794901994873 MOVE id=218 pos=Offset(96.5, 87.5) tracking=218 match=true
+1794901994885 MOVE id=218 pos=Offset(96.5, 86.4) tracking=218 match=true
+1794901994895 MOVE id=218 pos=Offset(95.5, 84.8) tracking=218 match=true
+1794901994905 MOVE id=218 pos=Offset(94.9, 82.7) tracking=218 match=true
+1794901994916 MOVE id=218 pos=Offset(93.3, 80.5) tracking=218 match=true
+1794901994928 MOVE id=218 pos=Offset(91.7, 77.9) tracking=218 match=true
+1794901994945 MOVE id=218 pos=Offset(90.7, 75.7) tracking=218 match=true
+1794901994951 MOVE id=218 pos=Offset(86.9, 73.6) tracking=218 match=true
+1794901994961 MOVE id=218 pos=Offset(86.4, 71.5) tracking=218 match=true
+1794901994971 MOVE id=218 pos=Offset(83.2, 69.3) tracking=218 match=true
+1794901995004 MOVE id=218 pos=Offset(78.9, 66.1) tracking=218 match=true
+1794901995012 MOVE id=218 pos=Offset(77.3, 64.5) tracking=218 match=true
+1794901995022 MOVE id=218 pos=Offset(75.7, 64.0) tracking=218 match=true
+1794901995029 MOVE id=218 pos=Offset(75.2, 62.9) tracking=218 match=true
+1794901995071 MOVE id=218 pos=Offset(74.7, 61.9) tracking=218 match=true
+1794901995087 MOVE id=218 pos=Offset(75.7, 61.3) tracking=218 match=true
+1794901995098 MOVE id=218 pos=Offset(74.7, 60.8) tracking=218 match=true
+1794901995175 MOVE id=218 pos=Offset(73.6, 60.8) tracking=218 match=true
+1794901995221 MOVE id=218 pos=Offset(69.3, 60.8) tracking=218 match=true
+1794901995227 MOVE id=218 pos=Offset(70.4, 60.8) tracking=218 match=true
+1794901995233 MOVE id=218 pos=Offset(71.5, 60.8) tracking=218 match=true
+1794901995242 MOVE id=218 pos=Offset(73.1, 60.8) tracking=218 match=true
+1794901995278 MOVE id=218 pos=Offset(74.7, 60.8) tracking=218 match=true
+1794901995300 MOVE id=218 pos=Offset(73.6, 60.3) tracking=218 match=true
+1794901995308 MOVE id=218 pos=Offset(74.7, 60.3) tracking=218 match=true
+1794901995373 RAWUP id=218 tracking=218
+1794901995374 UP start=Offset(0.8, 0.9) cur=Offset(0.1, 0.1)
+1794901997998 dispose
+1794902006798 initState
+1794902008872 DOWN id=226 kind=PointerDeviceKind.touch pos=Offset(113.1, 133.3) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794902008901 MOVE id=226 pos=Offset(114.1, 133.3) tracking=226 match=true
+1794902009001 MOVE id=226 pos=Offset(113.1, 133.9) tracking=226 match=true
+1794902009030 RAWUP id=226 tracking=226
+1794902009030 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794902009088 DOWN id=227 kind=PointerDeviceKind.touch pos=Offset(112.0, 133.9) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794902009131 MOVE id=227 pos=Offset(113.6, 133.9) tracking=227 match=true
+1794902009271 MOVE id=227 pos=Offset(111.5, 133.9) tracking=227 match=true
+1794902009338 MOVE id=227 pos=Offset(114.7, 133.9) tracking=227 match=true
+1794902009389 MOVE id=227 pos=Offset(112.5, 133.9) tracking=227 match=true
+1794902009407 DOWN id=228 kind=PointerDeviceKind.touch pos=Offset(117.9, 134.9) tracking=227 start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794902009412 MOVE id=228 pos=Offset(117.9, 134.9) tracking=228 match=true
+1794902009413 RAWUP id=227 tracking=228
+1794902009488 MOVE id=228 pos=Offset(115.7, 134.9) tracking=228 match=true
+1794902009586 MOVE id=228 pos=Offset(114.7, 134.9) tracking=228 match=true
+1794902009618 MOVE id=228 pos=Offset(113.1, 134.9) tracking=228 match=true
+1794902009664 MOVE id=228 pos=Offset(114.7, 134.9) tracking=228 match=true
+1794902009732 MOVE id=228 pos=Offset(115.7, 134.9) tracking=228 match=true
+1794902009776 MOVE id=228 pos=Offset(114.1, 134.9) tracking=228 match=true
+1794902009814 RAWUP id=228 tracking=228
+1794902009814 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794902009885 DOWN id=229 kind=PointerDeviceKind.touch pos=Offset(107.7, 134.4) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794902009890 MOVE id=229 pos=Offset(108.8, 134.4) tracking=229 match=true
+1794902009901 MOVE id=229 pos=Offset(109.9, 134.4) tracking=229 match=true
+1794902009945 MOVE id=229 pos=Offset(112.5, 134.4) tracking=229 match=true
+1794902010075 MOVE id=229 pos=Offset(113.6, 134.4) tracking=229 match=true
+1794902010153 DOWN id=230 kind=PointerDeviceKind.touch pos=Offset(115.7, 134.9) tracking=229 start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794902010162 MOVE id=230 pos=Offset(116.8, 134.9) tracking=230 match=true
+1794902010163 RAWUP id=229 tracking=230
+1794902010164 MOVE id=230 pos=Offset(116.8, 134.9) tracking=230 match=true
+1794902010264 MOVE id=230 pos=Offset(114.7, 134.9) tracking=230 match=true
+1794902010316 MOVE id=230 pos=Offset(88.5, 134.9) tracking=230 match=true
+1794902010329 MOVE id=230 pos=Offset(94.9, 134.9) tracking=230 match=true
+1794902010336 MOVE id=230 pos=Offset(99.2, 134.9) tracking=230 match=true
+1794902010350 MOVE id=230 pos=Offset(102.9, 134.9) tracking=230 match=true
+1794902010371 MOVE id=230 pos=Offset(106.1, 134.9) tracking=230 match=true
+1794902010384 MOVE id=230 pos=Offset(107.7, 134.9) tracking=230 match=true
+1794902010394 MOVE id=230 pos=Offset(110.9, 134.9) tracking=230 match=true
+1794902010415 RAWUP id=230 tracking=230
+1794902010416 UP start=Offset(0.2, 0.1) cur=Offset(0.1, 0.1)
+1794902010458 DOWN id=231 kind=PointerDeviceKind.touch pos=Offset(113.1, 134.4) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794902010459 MOVE id=231 pos=Offset(114.1, 134.4) tracking=231 match=true
+1794902010467 MOVE id=231 pos=Offset(115.7, 134.4) tracking=231 match=true
+1794902010506 RAWUP id=231 tracking=231
+1794902010506 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794902010565 DOWN id=232 kind=PointerDeviceKind.touch pos=Offset(117.3, 135.5) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794902010576 MOVE id=232 pos=Offset(116.3, 135.5) tracking=232 match=true
+1794902010763 MOVE id=232 pos=Offset(117.3, 136.0) tracking=232 match=true
+1794902010803 MOVE id=232 pos=Offset(116.3, 136.0) tracking=232 match=true
+1794902010849 MOVE id=232 pos=Offset(117.9, 136.5) tracking=232 match=true
+1794902010947 MOVE id=232 pos=Offset(116.8, 136.5) tracking=232 match=true
+1794902011039 RAWUP id=232 tracking=232
+1794902011042 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794902011098 DOWN id=233 kind=PointerDeviceKind.touch pos=Offset(104.0, 136.5) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794902011101 MOVE id=233 pos=Offset(107.2, 136.5) tracking=233 match=true
+1794902011124 MOVE id=233 pos=Offset(110.9, 136.5) tracking=233 match=true
+1794902011144 MOVE id=233 pos=Offset(113.1, 136.5) tracking=233 match=true
+1794902011166 RAWUP id=233 tracking=233
+1794902011167 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794902011174 DOWN id=234 kind=PointerDeviceKind.touch pos=Offset(117.3, 135.5) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794902011222 MOVE id=234 pos=Offset(118.4, 135.5) tracking=234 match=true
+1794902011276 MOVE id=234 pos=Offset(117.3, 136.0) tracking=234 match=true
+1794902011285 MOVE id=234 pos=Offset(116.3, 136.5) tracking=234 match=true
+1794902011304 MOVE id=234 pos=Offset(82.1, 136.5) tracking=234 match=true
+1794902011343 DOWN id=235 kind=PointerDeviceKind.touch pos=Offset(118.4, 137.6) tracking=234 start=Offset(0.2, 0.1) cur=Offset(0.1, 0.1) size=Size(748.8, 948.3)
+1794902011348 MOVE id=234 pos=Offset(89.6, 136.5) tracking=235 match=false
+1794902011349 MOVE id=235 pos=Offset(118.4, 137.6) tracking=235 match=true
+1794902011370 MOVE id=234 pos=Offset(89.6, 136.5) tracking=235 match=false
+1794902011371 RAWUP id=235 tracking=235
+1794902011371 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794902011375 DOWN id=236 kind=PointerDeviceKind.touch pos=Offset(116.3, 137.6) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794902011377 MOVE id=236 pos=Offset(116.3, 137.6) tracking=236 match=true
+1794902011378 RAWUP id=234 tracking=236
+1794902011408 MOVE id=236 pos=Offset(117.3, 137.6) tracking=236 match=true
+1794902011418 MOVE id=236 pos=Offset(118.9, 137.6) tracking=236 match=true
+1794902011428 MOVE id=236 pos=Offset(117.9, 137.6) tracking=236 match=true
+1794902011469 MOVE id=236 pos=Offset(116.8, 137.6) tracking=236 match=true
+1794902011537 RAWUP id=236 tracking=236
+1794902011537 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794902011627 DOWN id=237 kind=PointerDeviceKind.touch pos=Offset(116.8, 137.1) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794902011664 RAWUP id=237 tracking=237
+1794902011665 UP start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1)
+1794902011738 DOWN id=238 kind=PointerDeviceKind.touch pos=Offset(117.3, 136.5) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.2, 0.1) size=Size(748.8, 948.3)
+1794902011761 MOVE id=238 pos=Offset(115.2, 136.5) tracking=238 match=true
+1794902011847 MOVE id=238 pos=Offset(117.3, 136.5) tracking=238 match=true
+1794902011918 MOVE id=238 pos=Offset(116.3, 136.5) tracking=238 match=true
+1794902011937 MOVE id=238 pos=Offset(116.8, 137.6) tracking=238 match=true
+1794902011946 MOVE id=238 pos=Offset(117.3, 139.7) tracking=238 match=true
+1794902011957 MOVE id=238 pos=Offset(119.5, 141.9) tracking=238 match=true
+1794902011984 MOVE id=238 pos=Offset(122.1, 146.1) tracking=238 match=true
+1794902012009 MOVE id=238 pos=Offset(124.3, 150.9) tracking=238 match=true
+1794902012018 MOVE id=238 pos=Offset(125.9, 153.6) tracking=238 match=true
+1794902012053 MOVE id=238 pos=Offset(128.5, 156.3) tracking=238 match=true
+1794902012057 MOVE id=238 pos=Offset(133.3, 161.1) tracking=238 match=true
+1794902012072 MOVE id=238 pos=Offset(135.5, 162.7) tracking=238 match=true
+1794902012077 MOVE id=238 pos=Offset(138.1, 166.9) tracking=238 match=true
+1794902012089 MOVE id=238 pos=Offset(139.2, 168.5) tracking=238 match=true
+1794902012124 MOVE id=238 pos=Offset(140.3, 171.2) tracking=238 match=true
+1794902012134 MOVE id=238 pos=Offset(142.4, 173.3) tracking=238 match=true
+1794902012147 MOVE id=238 pos=Offset(143.5, 174.4) tracking=238 match=true
+1794902012182 MOVE id=238 pos=Offset(146.7, 177.1) tracking=238 match=true
+1794902012196 MOVE id=238 pos=Offset(147.7, 178.1) tracking=238 match=true
+1794902012212 MOVE id=238 pos=Offset(147.7, 179.2) tracking=238 match=true
+1794902012247 MOVE id=238 pos=Offset(149.3, 181.9) tracking=238 match=true
+1794902012263 MOVE id=238 pos=Offset(150.9, 184.5) tracking=238 match=true
+1794902012321 MOVE id=238 pos=Offset(153.1, 187.2) tracking=238 match=true
+1794902012330 MOVE id=238 pos=Offset(159.5, 192.0) tracking=238 match=true
+1794902012370 MOVE id=238 pos=Offset(164.3, 197.3) tracking=238 match=true
+1794902012376 MOVE id=238 pos=Offset(166.4, 198.9) tracking=238 match=true
+1794902012403 MOVE id=238 pos=Offset(172.3, 204.3) tracking=238 match=true
+1794902012439 MOVE id=238 pos=Offset(175.5, 207.5) tracking=238 match=true
+1794902012457 MOVE id=238 pos=Offset(180.3, 210.7) tracking=238 match=true
+1794902012465 MOVE id=238 pos=Offset(181.9, 212.8) tracking=238 match=true
+1794902012505 MOVE id=238 pos=Offset(161.1, 221.9) tracking=238 match=true
+1794902012514 MOVE id=238 pos=Offset(171.2, 224.0) tracking=238 match=true
+1794902012529 MOVE id=238 pos=Offset(177.1, 226.7) tracking=238 match=true
+1794902012534 MOVE id=238 pos=Offset(185.6, 229.3) tracking=238 match=true
+1794902012582 MOVE id=238 pos=Offset(200.0, 238.9) tracking=238 match=true
+1794902012595 MOVE id=238 pos=Offset(208.0, 246.4) tracking=238 match=true
+1794902012599 MOVE id=238 pos=Offset(254.9, 254.4) tracking=238 match=true
+1794902012638 MOVE id=238 pos=Offset(250.7, 258.1) tracking=238 match=true
+1794902012641 DOWN id=239 kind=PointerDeviceKind.touch pos=Offset(173.3, 268.8) tracking=238 start=Offset(0.2, 0.1) cur=Offset(0.3, 0.3) size=Size(748.8, 948.3)
+1794902012644 MOVE id=238 pos=Offset(250.7, 258.1) tracking=239 match=false
+1794902012649 MOVE id=239 pos=Offset(187.2, 270.4) tracking=239 match=true
+1794902012663 MOVE id=238 pos=Offset(250.7, 258.1) tracking=239 match=false
+1794902012665 MOVE id=239 pos=Offset(201.1, 272.5) tracking=239 match=true
+1794902012666 MOVE id=239 pos=Offset(211.2, 275.7) tracking=239 match=true
+1794902012667 RAWUP id=238 tracking=239
+1794902012669 MOVE id=239 pos=Offset(211.2, 275.7) tracking=239 match=true
+1794902012705 MOVE id=239 pos=Offset(219.2, 278.9) tracking=239 match=true
+1794902012725 MOVE id=239 pos=Offset(246.9, 299.7) tracking=239 match=true
+1794902012733 MOVE id=239 pos=Offset(251.2, 305.1) tracking=239 match=true
+1794902012786 MOVE id=239 pos=Offset(266.1, 321.6) tracking=239 match=true
+1794902012797 MOVE id=239 pos=Offset(275.2, 334.4) tracking=239 match=true
+1794902012799 MOVE id=239 pos=Offset(278.4, 340.8) tracking=239 match=true
+1794902012839 MOVE id=239 pos=Offset(293.3, 363.7) tracking=239 match=true
+1794902012850 MOVE id=239 pos=Offset(299.2, 371.7) tracking=239 match=true
+1794902012865 MOVE id=239 pos=Offset(305.6, 379.7) tracking=239 match=true
+1794902012867 MOVE id=239 pos=Offset(311.5, 388.3) tracking=239 match=true
+1794902012905 MOVE id=239 pos=Offset(330.1, 413.9) tracking=239 match=true
+1794902012922 MOVE id=239 pos=Offset(342.9, 431.5) tracking=239 match=true
+1794902012957 MOVE id=239 pos=Offset(355.2, 449.6) tracking=239 match=true
+1794902012971 MOVE id=239 pos=Offset(362.1, 458.7) tracking=239 match=true
+1794902012989 MOVE id=239 pos=Offset(373.3, 476.8) tracking=239 match=true
+1794902012991 MOVE id=239 pos=Offset(382.4, 485.9) tracking=239 match=true
+1794902012994 MOVE id=239 pos=Offset(387.7, 494.9) tracking=239 match=true
+1794902013000 MOVE id=239 pos=Offset(396.3, 504.0) tracking=239 match=true
+1794902013047 MOVE id=239 pos=Offset(441.6, 520.0) tracking=239 match=true
+1794902013050 DOWN id=240 kind=PointerDeviceKind.touch pos=Offset(436.3, 555.7) tracking=239 start=Offset(0.2, 0.1) cur=Offset(0.6, 0.5) size=Size(748.8, 948.3)
+1794902013055 MOVE id=240 pos=Offset(436.3, 555.7) tracking=240 match=true
+1794902013057 MOVE id=239 pos=Offset(443.7, 530.7) tracking=240 match=false
+1794902013064 MOVE id=240 pos=Offset(436.3, 555.7) tracking=240 match=true
+1794902013067 MOVE id=239 pos=Offset(446.9, 541.3) tracking=240 match=false
+1794902013105 MOVE id=239 pos=Offset(450.1, 550.9) tracking=240 match=false
+1794902013105 RAWUP id=240 tracking=240
+1794902013106 UP start=Offset(0.2, 0.1) cur=Offset(0.6, 0.6)
+1794902013108 MOVE id=239 pos=Offset(464.0, 577.1) tracking=null match=false
+1794902013130 MOVE id=239 pos=Offset(474.7, 593.6) tracking=null match=false
+1794902013135 MOVE id=239 pos=Offset(480.5, 601.1) tracking=null match=false
+1794902013177 MOVE id=239 pos=Offset(498.7, 624.0) tracking=null match=false
+1794902013187 MOVE id=239 pos=Offset(507.2, 638.4) tracking=null match=false
+1794902013200 MOVE id=239 pos=Offset(512.5, 645.3) tracking=null match=false
+1794902013239 MOVE id=239 pos=Offset(524.8, 658.7) tracking=null match=false
+1794902013242 MOVE id=239 pos=Offset(529.1, 664.5) tracking=null match=false
+1794902013259 RAWUP id=239 tracking=null
+1794902013306 DOWN id=241 kind=PointerDeviceKind.touch pos=Offset(556.8, 698.7) tracking=null start=Offset(0.2, 0.1) cur=Offset(0.6, 0.6) size=Size(748.8, 948.3)
+1794902013316 MOVE id=241 pos=Offset(560.5, 702.9) tracking=241 match=true
+1794902013327 MOVE id=241 pos=Offset(564.8, 707.2) tracking=241 match=true
+1794902013342 MOVE id=241 pos=Offset(568.5, 712.0) tracking=241 match=true
+1794902013350 MOVE id=241 pos=Offset(571.7, 716.3) tracking=241 match=true
+1794902013360 MOVE id=241 pos=Offset(575.5, 720.0) tracking=241 match=true
+1794902013370 MOVE id=241 pos=Offset(577.1, 724.3) tracking=241 match=true
+1794902013383 MOVE id=241 pos=Offset(579.7, 728.0) tracking=241 match=true
+1794902013405 MOVE id=241 pos=Offset(586.7, 735.5) tracking=241 match=true
+1794902013469 MOVE id=241 pos=Offset(595.2, 747.2) tracking=241 match=true
+1794902013476 MOVE id=241 pos=Offset(596.8, 749.3) tracking=241 match=true
+1794902013481 MOVE id=241 pos=Offset(601.1, 753.6) tracking=241 match=true
+1794902013518 MOVE id=241 pos=Offset(664.0, 760.0) tracking=241 match=true
+1794902013542 MOVE id=241 pos=Offset(651.2, 760.5) tracking=241 match=true
+1794902013585 DOWN id=242 kind=PointerDeviceKind.touch pos=Offset(514.7, 763.2) tracking=241 start=Offset(0.7, 0.7) cur=Offset(0.9, 0.8) size=Size(748.8, 948.3)
+1794902013594 MOVE id=241 pos=Offset(639.5, 763.2) tracking=242 match=false
+1794902013595 MOVE id=242 pos=Offset(414.4, 763.2) tracking=242 match=true
+1794902013605 MOVE id=241 pos=Offset(639.5, 763.2) tracking=242 match=false
+1794902013606 RAWUP id=242 tracking=242
+1794902013607 UP start=Offset(0.7, 0.7) cur=Offset(0.6, 0.8)
+1794902013652 RAWUP id=241 tracking=null
+1794902013655 DOWN id=243 kind=PointerDeviceKind.touch pos=Offset(609.6, 766.9) tracking=null start=Offset(0.7, 0.7) cur=Offset(0.6, 0.8) size=Size(748.8, 948.3)
+1794902013658 MOVE id=243 pos=Offset(610.7, 766.9) tracking=243 match=true
+1794902013659 RAWUP id=243 tracking=243
+1794902013660 UP start=Offset(0.8, 0.8) cur=Offset(0.8, 0.8)
+1794902013744 DOWN id=244 kind=PointerDeviceKind.touch pos=Offset(614.4, 774.4) tracking=null start=Offset(0.8, 0.8) cur=Offset(0.8, 0.8) size=Size(748.8, 948.3)
+1794902013746 MOVE id=244 pos=Offset(612.8, 775.5) tracking=244 match=true
+1794902013752 DOWN id=245 kind=PointerDeviceKind.touch pos=Offset(357.3, 777.6) tracking=244 start=Offset(0.8, 0.8) cur=Offset(0.8, 0.8) size=Size(748.8, 948.3)
+1794902013759 MOVE id=244 pos=Offset(614.9, 776.5) tracking=244 match=true
+1794902013762 MOVE id=245 pos=Offset(357.3, 777.6) tracking=244 match=false
+1794902013766 MOVE id=244 pos=Offset(616.0, 777.6) tracking=244 match=true
+1794902013766 RAWUP id=245 tracking=244
+1794902013767 MOVE id=244 pos=Offset(616.0, 779.2) tracking=244 match=true
+1794902013786 MOVE id=244 pos=Offset(615.5, 780.3) tracking=244 match=true
+1794902013828 MOVE id=244 pos=Offset(617.1, 785.1) tracking=244 match=true
+1794902013851 MOVE id=244 pos=Offset(617.1, 787.2) tracking=244 match=true
+1794902013884 MOVE id=244 pos=Offset(620.3, 788.8) tracking=244 match=true
+1794902013909 MOVE id=244 pos=Offset(619.2, 789.9) tracking=244 match=true
+1794902013914 MOVE id=244 pos=Offset(618.1, 789.9) tracking=244 match=true
+1794902013999 MOVE id=244 pos=Offset(614.4, 790.4) tracking=244 match=true
+1794902014023 MOVE id=244 pos=Offset(616.5, 790.4) tracking=244 match=true
+1794902014028 MOVE id=244 pos=Offset(620.3, 790.4) tracking=244 match=true
+1794902014049 MOVE id=244 pos=Offset(622.4, 790.9) tracking=244 match=true
+1794902014077 MOVE id=244 pos=Offset(620.8, 790.9) tracking=244 match=true
+1794902014090 MOVE id=244 pos=Offset(619.7, 790.9) tracking=244 match=true
+1794902014143 RAWUP id=244 tracking=244
+1794902014144 UP start=Offset(0.8, 0.8) cur=Offset(0.8, 0.8)
+1794902014207 DOWN id=246 kind=PointerDeviceKind.touch pos=Offset(619.2, 790.9) tracking=null start=Offset(0.8, 0.8) cur=Offset(0.8, 0.8) size=Size(748.8, 948.3)
+1794902014230 MOVE id=246 pos=Offset(620.3, 790.9) tracking=246 match=true
+1794902014299 MOVE id=246 pos=Offset(621.9, 790.4) tracking=246 match=true
+1794902014343 RAWUP id=246 tracking=246
+1794902014345 UP start=Offset(0.8, 0.8) cur=Offset(0.8, 0.8)
+1794902015864 DOWN id=247 kind=PointerDeviceKind.touch pos=Offset(598.9, 843.7) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794902015926 MOVE id=247 pos=Offset(600.0, 843.7) tracking=247 match=true
+1794902015937 MOVE id=247 pos=Offset(602.7, 843.7) tracking=247 match=true
+1794902015981 RAWUP id=247 tracking=247
+1794902015981 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902017858 DOWN id=248 kind=PointerDeviceKind.touch pos=Offset(141.9, 153.6) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794902017937 MOVE id=248 pos=Offset(75.7, 154.7) tracking=248 match=true
+1794902017963 MOVE id=248 pos=Offset(91.7, 154.7) tracking=248 match=true
+1794902017979 MOVE id=248 pos=Offset(104.5, 154.7) tracking=248 match=true
+1794902017980 MOVE id=248 pos=Offset(113.6, 154.7) tracking=248 match=true
+1794902017989 MOVE id=248 pos=Offset(119.5, 154.7) tracking=248 match=true
+1794902018001 MOVE id=248 pos=Offset(124.3, 154.7) tracking=248 match=true
+1794902018012 MOVE id=248 pos=Offset(128.5, 154.7) tracking=248 match=true
+1794902018029 MOVE id=248 pos=Offset(131.7, 154.7) tracking=248 match=true
+1794902018040 MOVE id=248 pos=Offset(133.9, 154.7) tracking=248 match=true
+1794902018046 MOVE id=248 pos=Offset(136.5, 154.7) tracking=248 match=true
+1794902018055 MOVE id=248 pos=Offset(137.6, 154.1) tracking=248 match=true
+1794902018067 MOVE id=248 pos=Offset(138.7, 154.1) tracking=248 match=true
+1794902018104 RAWUP id=248 tracking=248
+1794902018106 UP start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2)
+1794902018113 DOWN id=249 kind=PointerDeviceKind.touch pos=Offset(141.9, 153.6) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902018121 MOVE id=249 pos=Offset(140.8, 153.6) tracking=249 match=true
+1794902018168 MOVE id=249 pos=Offset(141.9, 153.6) tracking=249 match=true
+1794902018257 DOWN id=250 kind=PointerDeviceKind.touch pos=Offset(288.5, 152.5) tracking=249 start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902018277 MOVE id=249 pos=Offset(141.9, 153.6) tracking=250 match=false
+1794902018278 MOVE id=250 pos=Offset(392.5, 152.5) tracking=250 match=true
+1794902018286 MOVE id=249 pos=Offset(141.9, 153.6) tracking=250 match=false
+1794902018288 MOVE id=250 pos=Offset(433.1, 152.5) tracking=250 match=true
+1794902018316 MOVE id=249 pos=Offset(141.9, 153.6) tracking=250 match=false
+1794902018317 RAWUP id=250 tracking=250
+1794902018317 UP start=Offset(0.2, 0.2) cur=Offset(0.6, 0.2)
+1794902018352 RAWUP id=249 tracking=null
+1794902018408 DOWN id=251 kind=PointerDeviceKind.touch pos=Offset(141.9, 154.1) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.6, 0.2) size=Size(748.8, 948.3)
+1794902018435 MOVE id=251 pos=Offset(141.3, 154.7) tracking=251 match=true
+1794902018471 MOVE id=251 pos=Offset(142.4, 154.7) tracking=251 match=true
+1794902018501 MOVE id=251 pos=Offset(141.3, 155.2) tracking=251 match=true
+1794902018514 MOVE id=251 pos=Offset(139.2, 155.2) tracking=251 match=true
+1794902018558 MOVE id=251 pos=Offset(140.3, 155.2) tracking=251 match=true
+1794902018607 RAWUP id=251 tracking=251
+1794902018607 UP start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2)
+1794902018675 DOWN id=252 kind=PointerDeviceKind.touch pos=Offset(141.3, 155.2) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902018698 MOVE id=252 pos=Offset(140.3, 155.2) tracking=252 match=true
+1794902018732 MOVE id=252 pos=Offset(141.9, 155.2) tracking=252 match=true
+1794902018764 MOVE id=252 pos=Offset(144.0, 155.2) tracking=252 match=true
+1794902018820 MOVE id=252 pos=Offset(142.9, 155.2) tracking=252 match=true
+1794902018856 RAWUP id=252 tracking=252
+1794902018857 UP start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2)
+1794902018870 DOWN id=253 kind=PointerDeviceKind.touch pos=Offset(145.1, 154.7) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902018878 DOWN id=254 kind=PointerDeviceKind.touch pos=Offset(617.1, 155.7) tracking=253 start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902018883 MOVE id=253 pos=Offset(145.1, 154.7) tracking=253 match=true
+1794902018884 RAWUP id=254 tracking=253
+1794902018912 MOVE id=253 pos=Offset(144.5, 154.7) tracking=253 match=true
+1794902018943 MOVE id=253 pos=Offset(77.9, 155.2) tracking=253 match=true
+1794902018961 MOVE id=253 pos=Offset(92.8, 155.2) tracking=253 match=true
+1794902018993 MOVE id=253 pos=Offset(115.7, 155.2) tracking=253 match=true
+1794902018996 MOVE id=253 pos=Offset(123.2, 155.2) tracking=253 match=true
+1794902019003 MOVE id=253 pos=Offset(129.1, 155.2) tracking=253 match=true
+1794902019013 MOVE id=253 pos=Offset(134.9, 155.2) tracking=253 match=true
+1794902019029 MOVE id=253 pos=Offset(136.5, 155.2) tracking=253 match=true
+1794902019080 MOVE id=253 pos=Offset(140.8, 155.2) tracking=253 match=true
+1794902019094 MOVE id=253 pos=Offset(96.0, 155.2) tracking=253 match=true
+1794902019134 DOWN id=255 kind=PointerDeviceKind.touch pos=Offset(140.3, 154.7) tracking=253 start=Offset(0.2, 0.2) cur=Offset(0.1, 0.2) size=Size(748.8, 948.3)
+1794902019137 MOVE id=253 pos=Offset(107.2, 155.2) tracking=255 match=false
+1794902019139 MOVE id=255 pos=Offset(140.3, 154.7) tracking=255 match=true
+1794902019158 MOVE id=253 pos=Offset(115.2, 155.2) tracking=255 match=false
+1794902019160 MOVE id=255 pos=Offset(140.3, 154.7) tracking=255 match=true
+1794902019166 MOVE id=253 pos=Offset(121.1, 155.2) tracking=255 match=false
+1794902019167 MOVE id=255 pos=Offset(212.3, 154.7) tracking=255 match=true
+1794902019208 MOVE id=253 pos=Offset(131.2, 155.2) tracking=255 match=false
+1794902019210 MOVE id=255 pos=Offset(221.9, 154.7) tracking=255 match=true
+1794902019229 MOVE id=253 pos=Offset(135.5, 155.2) tracking=255 match=false
+1794902019235 MOVE id=255 pos=Offset(237.3, 154.7) tracking=255 match=true
+1794902019246 MOVE id=253 pos=Offset(68.8, 155.2) tracking=255 match=false
+1794902019248 MOVE id=255 pos=Offset(208.5, 154.7) tracking=255 match=true
+1794902019250 MOVE id=253 pos=Offset(68.8, 155.2) tracking=255 match=false
+1794902019251 MOVE id=255 pos=Offset(192.0, 154.7) tracking=255 match=true
+1794902019282 MOVE id=253 pos=Offset(68.8, 155.2) tracking=255 match=false
+1794902019283 RAWUP id=255 tracking=255
+1794902019284 UP start=Offset(0.2, 0.2) cur=Offset(0.3, 0.2)
+1794902019287 RAWUP id=253 tracking=null
+1794902019293 DOWN id=256 kind=PointerDeviceKind.touch pos=Offset(146.1, 155.7) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.3, 0.2) size=Size(748.8, 948.3)
+1794902019296 MOVE id=256 pos=Offset(144.5, 155.7) tracking=256 match=true
+1794902019348 MOVE id=256 pos=Offset(139.7, 155.7) tracking=256 match=true
+1794902019396 MOVE id=256 pos=Offset(140.8, 156.3) tracking=256 match=true
+1794902019415 MOVE id=256 pos=Offset(142.9, 156.3) tracking=256 match=true
+1794902019476 RAWUP id=256 tracking=256
+1794902019476 UP start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2)
+1794902019537 DOWN id=257 kind=PointerDeviceKind.touch pos=Offset(142.4, 156.8) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902019579 MOVE id=257 pos=Offset(141.3, 156.8) tracking=257 match=true
+1794902019609 MOVE id=257 pos=Offset(140.3, 156.8) tracking=257 match=true
+1794902019629 MOVE id=257 pos=Offset(141.3, 157.3) tracking=257 match=true
+1794902019633 MOVE id=257 pos=Offset(142.4, 157.3) tracking=257 match=true
+1794902019727 MOVE id=257 pos=Offset(144.0, 157.9) tracking=257 match=true
+1794902019800 RAWUP id=257 tracking=257
+1794902019801 UP start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2)
+1794902019900 DOWN id=258 kind=PointerDeviceKind.touch pos=Offset(139.7, 157.3) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902019917 RAWUP id=258 tracking=258
+1794902019918 UP start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2)
+1794902020005 DOWN id=259 kind=PointerDeviceKind.touch pos=Offset(81.1, 156.3) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902020018 MOVE id=259 pos=Offset(94.9, 156.3) tracking=259 match=true
+1794902020039 MOVE id=259 pos=Offset(107.2, 156.3) tracking=259 match=true
+1794902020041 MOVE id=259 pos=Offset(115.7, 156.3) tracking=259 match=true
+1794902020063 MOVE id=259 pos=Offset(126.4, 156.3) tracking=259 match=true
+1794902020070 MOVE id=259 pos=Offset(129.6, 156.3) tracking=259 match=true
+1794902020079 MOVE id=259 pos=Offset(132.8, 156.8) tracking=259 match=true
+1794902020090 MOVE id=259 pos=Offset(135.5, 156.8) tracking=259 match=true
+1794902020103 MOVE id=259 pos=Offset(137.1, 157.3) tracking=259 match=true
+1794902020131 MOVE id=259 pos=Offset(70.4, 157.3) tracking=259 match=true
+1794902020142 MOVE id=259 pos=Offset(88.5, 157.3) tracking=259 match=true
+1794902020147 DOWN id=260 kind=PointerDeviceKind.touch pos=Offset(244.3, 160.0) tracking=259 start=Offset(0.2, 0.2) cur=Offset(0.1, 0.2) size=Size(748.8, 948.3)
+1794902020162 MOVE id=259 pos=Offset(111.5, 158.4) tracking=259 match=true
+1794902020163 MOVE id=260 pos=Offset(244.3, 160.0) tracking=259 match=false
+1794902020168 MOVE id=259 pos=Offset(120.5, 158.4) tracking=259 match=true
+1794902020169 MOVE id=260 pos=Offset(255.5, 160.0) tracking=259 match=false
+1794902020201 MOVE id=259 pos=Offset(126.4, 158.9) tracking=259 match=true
+1794902020204 MOVE id=260 pos=Offset(255.5, 160.0) tracking=259 match=false
+1794902020207 MOVE id=259 pos=Offset(149.3, 161.1) tracking=259 match=true
+1794902020209 RAWUP id=260 tracking=259
+1794902020218 MOVE id=259 pos=Offset(148.3, 161.1) tracking=259 match=true
+1794902020225 DOWN id=261 kind=PointerDeviceKind.touch pos=Offset(587.2, 162.7) tracking=259 start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902020228 MOVE id=259 pos=Offset(145.1, 161.6) tracking=259 match=true
+1794902020229 MOVE id=261 pos=Offset(587.2, 162.7) tracking=259 match=false
+1794902020269 MOVE id=259 pos=Offset(145.1, 161.6) tracking=259 match=true
+1794902020273 RAWUP id=261 tracking=259
+1794902020278 MOVE id=259 pos=Offset(148.3, 163.7) tracking=259 match=true
+1794902020362 MOVE id=259 pos=Offset(147.2, 163.2) tracking=259 match=true
+1794902020413 MOVE id=259 pos=Offset(145.1, 163.2) tracking=259 match=true
+1794902020428 MOVE id=259 pos=Offset(146.1, 163.7) tracking=259 match=true
+1794902020478 MOVE id=259 pos=Offset(144.0, 163.7) tracking=259 match=true
+1794902020517 MOVE id=259 pos=Offset(146.1, 163.7) tracking=259 match=true
+1794902020583 RAWUP id=259 tracking=259
+1794902020584 UP start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2)
+1794902020605 DOWN id=262 kind=PointerDeviceKind.touch pos=Offset(147.7, 161.6) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902020612 MOVE id=262 pos=Offset(146.7, 161.6) tracking=262 match=true
+1794902020646 MOVE id=262 pos=Offset(144.5, 161.6) tracking=262 match=true
+1794902020677 MOVE id=262 pos=Offset(144.5, 162.7) tracking=262 match=true
+1794902020707 MOVE id=262 pos=Offset(143.5, 162.7) tracking=262 match=true
+1794902020723 MOVE id=262 pos=Offset(144.5, 162.7) tracking=262 match=true
+1794902020862 MOVE id=262 pos=Offset(143.5, 162.7) tracking=262 match=true
+1794902020899 DOWN id=263 kind=PointerDeviceKind.touch pos=Offset(146.7, 164.8) tracking=262 start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902020918 MOVE id=262 pos=Offset(144.5, 162.1) tracking=263 match=false
+1794902020919 MOVE id=263 pos=Offset(146.7, 164.8) tracking=263 match=true
+1794902020932 MOVE id=262 pos=Offset(144.5, 162.1) tracking=263 match=false
+1794902020934 RAWUP id=263 tracking=263
+1794902020935 UP start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2)
+1794902020955 MOVE id=262 pos=Offset(146.1, 162.1) tracking=null match=false
+1794902020994 MOVE id=262 pos=Offset(145.1, 162.1) tracking=null match=false
+1794902021017 MOVE id=262 pos=Offset(75.7, 161.6) tracking=null match=false
+1794902021030 MOVE id=262 pos=Offset(92.3, 161.6) tracking=null match=false
+1794902021036 MOVE id=262 pos=Offset(104.5, 161.6) tracking=null match=false
+1794902021079 RAWUP id=262 tracking=null
+1794902021093 DOWN id=264 kind=PointerDeviceKind.touch pos=Offset(147.7, 162.1) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902021123 MOVE id=264 pos=Offset(145.6, 162.1) tracking=264 match=true
+1794902021286 MOVE id=264 pos=Offset(144.0, 162.7) tracking=264 match=true
+1794902021309 MOVE id=264 pos=Offset(146.1, 162.7) tracking=264 match=true
+1794902021324 MOVE id=264 pos=Offset(147.7, 162.7) tracking=264 match=true
+1794902021351 MOVE id=264 pos=Offset(146.7, 163.7) tracking=264 match=true
+1794902021389 MOVE id=264 pos=Offset(147.2, 164.8) tracking=264 match=true
+1794902021404 MOVE id=264 pos=Offset(147.7, 166.4) tracking=264 match=true
+1794902021417 RAWUP id=264 tracking=264
+1794902021417 UP start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2)
+1794902021485 DOWN id=265 kind=PointerDeviceKind.touch pos=Offset(156.8, 172.3) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902021493 MOVE id=265 pos=Offset(157.3, 173.3) tracking=265 match=true
+1794902021507 MOVE id=265 pos=Offset(158.9, 173.9) tracking=265 match=true
+1794902021551 MOVE id=265 pos=Offset(160.0, 174.9) tracking=265 match=true
+1794902021608 MOVE id=265 pos=Offset(157.9, 174.9) tracking=265 match=true
+1794902021689 MOVE id=265 pos=Offset(156.3, 175.5) tracking=265 match=true
+1794902021713 MOVE id=265 pos=Offset(157.3, 175.5) tracking=265 match=true
+1794902021776 MOVE id=265 pos=Offset(156.3, 175.5) tracking=265 match=true
+1794902021790 MOVE id=265 pos=Offset(157.9, 175.5) tracking=265 match=true
+1794902021838 MOVE id=265 pos=Offset(160.5, 175.5) tracking=265 match=true
+1794902021890 MOVE id=265 pos=Offset(158.4, 175.5) tracking=265 match=true
+1794902021914 MOVE id=265 pos=Offset(177.1, 175.5) tracking=265 match=true
+1794902021919 DOWN id=266 kind=PointerDeviceKind.touch pos=Offset(160.0, 176.0) tracking=265 start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902021921 MOVE id=265 pos=Offset(268.3, 175.5) tracking=266 match=false
+1794902021922 MOVE id=266 pos=Offset(157.9, 176.0) tracking=266 match=true
+1794902021923 MOVE id=265 pos=Offset(232.5, 175.5) tracking=266 match=false
+1794902021924 MOVE id=266 pos=Offset(141.9, 176.0) tracking=266 match=true
+1794902021929 MOVE id=265 pos=Offset(213.3, 175.5) tracking=266 match=false
+1794902021930 MOVE id=266 pos=Offset(141.9, 176.0) tracking=266 match=true
+1794902021967 MOVE id=265 pos=Offset(213.3, 175.5) tracking=266 match=false
+1794902021968 MOVE id=266 pos=Offset(145.1, 176.0) tracking=266 match=true
+1794902021984 MOVE id=265 pos=Offset(213.3, 175.5) tracking=266 match=false
+1794902021987 MOVE id=266 pos=Offset(147.7, 176.0) tracking=266 match=true
+1794902021989 MOVE id=266 pos=Offset(148.8, 176.0) tracking=266 match=true
+1794902021990 RAWUP id=265 tracking=266
+1794902021992 MOVE id=266 pos=Offset(153.6, 176.0) tracking=266 match=true
+1794902021996 MOVE id=266 pos=Offset(155.2, 176.0) tracking=266 match=true
+1794902022059 MOVE id=266 pos=Offset(160.0, 176.0) tracking=266 match=true
+1794902022115 MOVE id=266 pos=Offset(161.6, 179.2) tracking=266 match=true
+1794902022124 MOVE id=266 pos=Offset(161.1, 180.8) tracking=266 match=true
+1794902022131 MOVE id=266 pos=Offset(161.1, 181.9) tracking=266 match=true
+1794902022194 MOVE id=266 pos=Offset(162.7, 186.1) tracking=266 match=true
+1794902022205 MOVE id=266 pos=Offset(163.2, 188.3) tracking=266 match=true
+1794902022260 MOVE id=266 pos=Offset(167.5, 192.5) tracking=266 match=true
+1794902022269 MOVE id=266 pos=Offset(171.2, 194.7) tracking=266 match=true
+1794902022272 MOVE id=266 pos=Offset(171.2, 195.7) tracking=266 match=true
+1794902022280 MOVE id=266 pos=Offset(172.3, 196.3) tracking=266 match=true
+1794902022313 MOVE id=266 pos=Offset(172.3, 198.4) tracking=266 match=true
+1794902022342 MOVE id=266 pos=Offset(173.3, 199.5) tracking=266 match=true
+1794902022343 MOVE id=266 pos=Offset(172.8, 201.1) tracking=266 match=true
+1794902022379 RAWUP id=266 tracking=266
+1794902022379 UP start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2)
+1794902022443 DOWN id=267 kind=PointerDeviceKind.touch pos=Offset(178.7, 210.1) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.2, 0.2) size=Size(748.8, 948.3)
+1794902022449 MOVE id=267 pos=Offset(178.7, 211.7) tracking=267 match=true
+1794902022457 MOVE id=267 pos=Offset(179.2, 212.8) tracking=267 match=true
+1794902022465 MOVE id=267 pos=Offset(179.7, 213.9) tracking=267 match=true
+1794902022472 MOVE id=267 pos=Offset(182.4, 216.0) tracking=267 match=true
+1794902022506 MOVE id=267 pos=Offset(187.7, 221.3) tracking=267 match=true
+1794902022521 MOVE id=267 pos=Offset(188.8, 223.5) tracking=267 match=true
+1794902022529 MOVE id=267 pos=Offset(190.4, 225.1) tracking=267 match=true
+1794902022561 MOVE id=267 pos=Offset(191.5, 227.7) tracking=267 match=true
+1794902022575 MOVE id=267 pos=Offset(193.1, 230.9) tracking=267 match=true
+1794902022592 RAWUP id=267 tracking=267
+1794902022593 UP start=Offset(0.2, 0.2) cur=Offset(0.3, 0.2)
+1794902022650 DOWN id=268 kind=PointerDeviceKind.touch pos=Offset(202.1, 246.4) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.3, 0.2) size=Size(748.8, 948.3)
+1794902022656 MOVE id=268 pos=Offset(203.7, 248.5) tracking=268 match=true
+1794902022675 MOVE id=268 pos=Offset(205.9, 250.7) tracking=268 match=true
+1794902022683 MOVE id=268 pos=Offset(207.5, 253.3) tracking=268 match=true
+1794902022698 MOVE id=268 pos=Offset(209.6, 256.0) tracking=268 match=true
+1794902022722 MOVE id=268 pos=Offset(213.9, 262.4) tracking=268 match=true
+1794902022726 MOVE id=268 pos=Offset(213.9, 266.1) tracking=268 match=true
+1794902022759 MOVE id=268 pos=Offset(218.1, 278.4) tracking=268 match=true
+1794902022780 MOVE id=268 pos=Offset(222.4, 283.7) tracking=268 match=true
+1794902022789 MOVE id=268 pos=Offset(225.1, 289.1) tracking=268 match=true
+1794902022829 MOVE id=268 pos=Offset(234.1, 300.3) tracking=268 match=true
+1794902022839 MOVE id=268 pos=Offset(237.3, 305.6) tracking=268 match=true
+1794902022860 RAWUP id=268 tracking=268
+1794902022861 UP start=Offset(0.2, 0.2) cur=Offset(0.3, 0.3)
+1794902022868 DOWN id=269 kind=PointerDeviceKind.touch pos=Offset(262.4, 341.3) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.3, 0.3) size=Size(748.8, 948.3)
+1794902022901 MOVE id=269 pos=Offset(262.4, 342.4) tracking=269 match=true
+1794902022903 MOVE id=269 pos=Offset(265.1, 345.6) tracking=269 match=true
+1794902022913 MOVE id=269 pos=Offset(267.2, 349.3) tracking=269 match=true
+1794902022927 MOVE id=269 pos=Offset(279.5, 364.8) tracking=269 match=true
+1794902022963 MOVE id=269 pos=Offset(284.3, 371.2) tracking=269 match=true
+1794902022965 MOVE id=269 pos=Offset(300.8, 391.5) tracking=269 match=true
+1794902022986 MOVE id=269 pos=Offset(308.3, 398.9) tracking=269 match=true
+1794902022994 MOVE id=269 pos=Offset(315.2, 406.9) tracking=269 match=true
+1794902023022 MOVE id=269 pos=Offset(322.7, 414.9) tracking=269 match=true
+1794902023047 MOVE id=269 pos=Offset(345.6, 438.9) tracking=269 match=true
+1794902023073 MOVE id=269 pos=Offset(357.9, 453.9) tracking=269 match=true
+1794902023086 RAWUP id=269 tracking=269
+1794902023087 UP start=Offset(0.2, 0.2) cur=Offset(0.5, 0.5)
+1794902023095 DOWN id=270 kind=PointerDeviceKind.touch pos=Offset(396.8, 503.5) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.5, 0.5) size=Size(748.8, 948.3)
+1794902023108 MOVE id=270 pos=Offset(397.3, 505.6) tracking=270 match=true
+1794902023114 MOVE id=270 pos=Offset(401.6, 509.3) tracking=270 match=true
+1794902023117 MOVE id=270 pos=Offset(486.4, 520.5) tracking=270 match=true
+1794902023125 MOVE id=270 pos=Offset(526.9, 529.1) tracking=270 match=true
+1794902023168 MOVE id=270 pos=Offset(532.8, 534.4) tracking=270 match=true
+1794902023173 DOWN id=271 kind=PointerDeviceKind.touch pos=Offset(421.3, 550.4) tracking=270 start=Offset(0.2, 0.2) cur=Offset(0.7, 0.6) size=Size(748.8, 948.3)
+1794902023176 MOVE id=270 pos=Offset(548.8, 543.5) tracking=271 match=false
+1794902023177 MOVE id=271 pos=Offset(425.1, 556.3) tracking=271 match=true
+1794902023181 MOVE id=270 pos=Offset(747.7, 562.7) tracking=271 match=false
+1794902023181 MOVE id=271 pos=Offset(427.2, 562.1) tracking=271 match=true
+1794902023228 MOVE id=271 pos=Offset(427.2, 562.1) tracking=271 match=true
+1794902023231 RAWUP id=270 tracking=271
+1794902023235 RAWUP id=271 tracking=271
+1794902023237 UP start=Offset(0.2, 0.2) cur=Offset(0.6, 0.6)
+1794902023248 DOWN id=272 kind=PointerDeviceKind.touch pos=Offset(449.6, 607.5) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.6, 0.6) size=Size(748.8, 948.3)
+1794902023250 MOVE id=272 pos=Offset(454.9, 612.8) tracking=272 match=true
+1794902023252 MOVE id=272 pos=Offset(459.2, 621.9) tracking=272 match=true
+1794902023255 MOVE id=272 pos=Offset(462.9, 627.2) tracking=272 match=true
+1794902023292 RAWUP id=272 tracking=272
+1794902023292 UP start=Offset(0.2, 0.2) cur=Offset(0.6, 0.7)
+1794902023370 DOWN id=273 kind=PointerDeviceKind.touch pos=Offset(485.9, 654.9) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.6, 0.7) size=Size(748.8, 948.3)
+1794902023374 MOVE id=273 pos=Offset(491.2, 660.3) tracking=273 match=true
+1794902023390 MOVE id=273 pos=Offset(497.1, 665.6) tracking=273 match=true
+1794902023435 RAWUP id=273 tracking=273
+1794902023436 UP start=Offset(0.2, 0.2) cur=Offset(0.7, 0.7)
+1794902023444 DOWN id=274 kind=PointerDeviceKind.touch pos=Offset(515.2, 678.9) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.7, 0.7) size=Size(748.8, 948.3)
+1794902023455 MOVE id=274 pos=Offset(517.9, 681.1) tracking=274 match=true
+1794902023457 MOVE id=274 pos=Offset(520.5, 682.7) tracking=274 match=true
+1794902023484 MOVE id=274 pos=Offset(528.0, 690.1) tracking=274 match=true
+1794902023495 MOVE id=274 pos=Offset(530.1, 693.3) tracking=274 match=true
+1794902023509 MOVE id=274 pos=Offset(533.9, 696.5) tracking=274 match=true
+1794902023516 MOVE id=274 pos=Offset(536.0, 699.7) tracking=274 match=true
+1794902023534 MOVE id=274 pos=Offset(538.7, 702.4) tracking=274 match=true
+1794902023574 MOVE id=274 pos=Offset(548.8, 715.2) tracking=274 match=true
+1794902023617 RAWUP id=274 tracking=274
+1794902023618 UP start=Offset(0.2, 0.2) cur=Offset(0.7, 0.8)
+1794902023625 DOWN id=275 kind=PointerDeviceKind.touch pos=Offset(565.9, 731.7) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.7, 0.8) size=Size(748.8, 948.3)
+1794902023631 MOVE id=275 pos=Offset(564.3, 733.9) tracking=275 match=true
+1794902023637 MOVE id=275 pos=Offset(564.3, 735.5) tracking=275 match=true
+1794902023664 MOVE id=275 pos=Offset(564.3, 738.7) tracking=275 match=true
+1794902023678 MOVE id=275 pos=Offset(566.4, 740.3) tracking=275 match=true
+1794902023683 MOVE id=275 pos=Offset(566.9, 741.3) tracking=275 match=true
+1794902023691 MOVE id=275 pos=Offset(566.9, 742.9) tracking=275 match=true
+1794902023701 MOVE id=275 pos=Offset(566.9, 744.5) tracking=275 match=true
+1794902023737 MOVE id=275 pos=Offset(566.9, 747.2) tracking=275 match=true
+1794902023746 MOVE id=275 pos=Offset(566.9, 748.8) tracking=275 match=true
+1794902023759 MOVE id=275 pos=Offset(568.0, 749.9) tracking=275 match=true
+1794902023769 MOVE id=275 pos=Offset(569.1, 750.4) tracking=275 match=true
+1794902023804 MOVE id=275 pos=Offset(570.1, 750.9) tracking=275 match=true
+1794902023868 RAWUP id=275 tracking=275
+1794902023869 UP start=Offset(0.2, 0.2) cur=Offset(0.8, 0.8)
+1794902023873 DOWN id=276 kind=PointerDeviceKind.touch pos=Offset(573.3, 752.5) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.8, 0.8) size=Size(748.8, 948.3)
+1794902023921 MOVE id=276 pos=Offset(573.9, 752.0) tracking=276 match=true
+1794902023942 MOVE id=276 pos=Offset(574.4, 753.1) tracking=276 match=true
+1794902023985 MOVE id=276 pos=Offset(574.9, 754.7) tracking=276 match=true
+1794902023994 MOVE id=276 pos=Offset(576.5, 757.3) tracking=276 match=true
+1794902024000 MOVE id=276 pos=Offset(577.6, 758.9) tracking=276 match=true
+1794902024006 MOVE id=276 pos=Offset(579.2, 760.0) tracking=276 match=true
+1794902024020 MOVE id=276 pos=Offset(581.3, 762.1) tracking=276 match=true
+1794902024053 MOVE id=276 pos=Offset(583.5, 764.8) tracking=276 match=true
+1794902024080 MOVE id=276 pos=Offset(586.7, 766.4) tracking=276 match=true
+1794902024085 MOVE id=276 pos=Offset(588.3, 768.5) tracking=276 match=true
+1794902024098 MOVE id=276 pos=Offset(589.3, 769.6) tracking=276 match=true
+1794902024111 MOVE id=276 pos=Offset(589.3, 770.7) tracking=276 match=true
+1794902024138 MOVE id=276 pos=Offset(593.1, 772.8) tracking=276 match=true
+1794902024152 MOVE id=276 pos=Offset(594.1, 773.3) tracking=276 match=true
+1794902024176 MOVE id=276 pos=Offset(595.2, 773.9) tracking=276 match=true
+1794902024236 MOVE id=276 pos=Offset(596.8, 773.9) tracking=276 match=true
+1794902024289 MOVE id=276 pos=Offset(597.9, 774.4) tracking=276 match=true
+1794902024356 RAWUP id=276 tracking=276
+1794902024356 UP start=Offset(0.2, 0.2) cur=Offset(0.8, 0.8)
+1794902024469 DOWN id=277 kind=PointerDeviceKind.touch pos=Offset(592.0, 777.6) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.8, 0.8) size=Size(748.8, 948.3)
+1794902024473 MOVE id=277 pos=Offset(594.1, 778.7) tracking=277 match=true
+1794902024474 MOVE id=277 pos=Offset(595.7, 779.7) tracking=277 match=true
+1794902024501 MOVE id=277 pos=Offset(598.4, 780.8) tracking=277 match=true
+1794902024509 MOVE id=277 pos=Offset(601.6, 782.4) tracking=277 match=true
+1794902024511 MOVE id=277 pos=Offset(601.6, 783.5) tracking=277 match=true
+1794902024518 MOVE id=277 pos=Offset(604.3, 784.5) tracking=277 match=true
+1794902024528 MOVE id=277 pos=Offset(604.3, 786.1) tracking=277 match=true
+1794902024538 MOVE id=277 pos=Offset(605.3, 787.2) tracking=277 match=true
+1794902024564 MOVE id=277 pos=Offset(605.9, 788.3) tracking=277 match=true
+1794902024586 MOVE id=277 pos=Offset(606.9, 789.9) tracking=277 match=true
+1794902024589 DOWN id=278 kind=PointerDeviceKind.touch pos=Offset(713.1, 795.7) tracking=277 start=Offset(0.2, 0.2) cur=Offset(0.8, 0.8) size=Size(748.8, 948.3)
+1794902024594 MOVE id=277 pos=Offset(606.9, 790.9) tracking=278 match=false
+1794902024594 MOVE id=278 pos=Offset(720.5, 795.7) tracking=278 match=true
+1794902024605 MOVE id=277 pos=Offset(606.9, 792.0) tracking=278 match=false
+1794902024607 MOVE id=278 pos=Offset(720.5, 795.7) tracking=278 match=true
+1794902024640 MOVE id=277 pos=Offset(609.1, 793.1) tracking=278 match=false
+1794902024642 MOVE id=278 pos=Offset(710.9, 795.7) tracking=278 match=true
+1794902024647 MOVE id=277 pos=Offset(609.1, 796.3) tracking=278 match=false
+1794902024650 RAWUP id=278 tracking=278
+1794902024652 UP start=Offset(0.2, 0.2) cur=Offset(0.9, 0.8)
+1794902024660 MOVE id=277 pos=Offset(609.1, 796.3) tracking=null match=false
+1794902024664 MOVE id=277 pos=Offset(539.2, 796.8) tracking=null match=false
+1794902024667 DOWN id=279 kind=PointerDeviceKind.touch pos=Offset(618.7, 797.9) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.9, 0.8) size=Size(748.8, 948.3)
+1794902024670 DOWN id=280 kind=PointerDeviceKind.touch pos=Offset(230.4, 798.9) tracking=279 start=Offset(0.2, 0.2) cur=Offset(0.9, 0.8) size=Size(748.8, 948.3)
+1794902024671 MOVE id=277 pos=Offset(539.2, 796.8) tracking=279 match=false
+1794902024672 MOVE id=279 pos=Offset(617.1, 797.9) tracking=279 match=true
+1794902024673 MOVE id=280 pos=Offset(222.9, 798.9) tracking=279 match=false
+1794902024681 MOVE id=277 pos=Offset(539.2, 796.8) tracking=279 match=false
+1794902024683 MOVE id=279 pos=Offset(614.9, 797.9) tracking=279 match=true
+1794902024685 MOVE id=280 pos=Offset(222.9, 798.9) tracking=279 match=false
+1794902024688 MOVE id=279 pos=Offset(614.9, 797.9) tracking=279 match=true
+1794902024690 MOVE id=280 pos=Offset(222.9, 798.9) tracking=279 match=false
+1794902024691 RAWUP id=277 tracking=279
+1794902024696 MOVE id=279 pos=Offset(614.9, 797.9) tracking=279 match=true
+1794902024697 MOVE id=280 pos=Offset(236.8, 798.9) tracking=279 match=false
+1794902024722 MOVE id=279 pos=Offset(614.9, 797.9) tracking=279 match=true
+1794902024724 MOVE id=280 pos=Offset(305.1, 798.4) tracking=279 match=false
+1794902024745 MOVE id=279 pos=Offset(612.8, 797.9) tracking=279 match=true
+1794902024746 MOVE id=280 pos=Offset(305.1, 798.4) tracking=279 match=false
+1794902024750 MOVE id=279 pos=Offset(612.8, 797.9) tracking=279 match=true
+1794902024752 RAWUP id=280 tracking=279
+1794902024783 MOVE id=279 pos=Offset(613.9, 797.3) tracking=279 match=true
+1794902024868 MOVE id=279 pos=Offset(612.8, 797.3) tracking=279 match=true
+1794902024933 RAWUP id=279 tracking=279
+1794902024934 UP start=Offset(0.2, 0.2) cur=Offset(0.8, 0.8)
+1794902025003 DOWN id=281 kind=PointerDeviceKind.touch pos=Offset(429.9, 796.8) tracking=null start=Offset(0.2, 0.2) cur=Offset(0.8, 0.8) size=Size(748.8, 948.3)
+1794902025008 DOWN id=282 kind=PointerDeviceKind.touch pos=Offset(606.4, 797.9) tracking=281 start=Offset(0.6, 0.8) cur=Offset(0.6, 0.8) size=Size(748.8, 948.3)
+1794902025012 MOVE id=281 pos=Offset(441.6, 796.8) tracking=281 match=true
+1794902025013 MOVE id=282 pos=Offset(607.5, 797.9) tracking=281 match=false
+1794902025014 MOVE id=281 pos=Offset(441.6, 796.8) tracking=281 match=true
+1794902025016 MOVE id=282 pos=Offset(609.6, 797.9) tracking=281 match=false
+1794902025055 MOVE id=281 pos=Offset(450.7, 796.8) tracking=281 match=true
+1794902025057 MOVE id=282 pos=Offset(612.8, 797.9) tracking=281 match=false
+1794902025067 MOVE id=282 pos=Offset(612.8, 797.9) tracking=281 match=false
+1794902025067 RAWUP id=281 tracking=281
+1794902025068 UP start=Offset(0.6, 0.8) cur=Offset(0.6, 0.8)
+1794902025107 MOVE id=282 pos=Offset(613.9, 797.9) tracking=null match=false
+1794902025116 MOVE id=282 pos=Offset(614.4, 798.9) tracking=null match=false
+1794902025125 MOVE id=282 pos=Offset(614.4, 800.0) tracking=null match=false
+1794902025140 MOVE id=282 pos=Offset(616.5, 801.6) tracking=null match=false
+1794902025154 MOVE id=282 pos=Offset(617.6, 802.7) tracking=null match=false
+1794902025163 MOVE id=282 pos=Offset(617.6, 804.3) tracking=null match=false
+1794902025181 MOVE id=282 pos=Offset(620.3, 805.9) tracking=null match=false
+1794902025187 MOVE id=282 pos=Offset(621.3, 806.4) tracking=null match=false
+1794902025191 MOVE id=282 pos=Offset(622.9, 807.5) tracking=null match=false
+1794902025203 MOVE id=282 pos=Offset(624.0, 808.0) tracking=null match=false
+1794902025213 MOVE id=282 pos=Offset(625.1, 808.5) tracking=null match=false
+1794902025225 MOVE id=282 pos=Offset(626.1, 809.1) tracking=null match=false
+1794902025234 MOVE id=282 pos=Offset(627.2, 809.6) tracking=null match=false
+1794902025256 MOVE id=282 pos=Offset(627.2, 810.7) tracking=null match=false
+1794902025267 MOVE id=282 pos=Offset(628.3, 810.7) tracking=null match=false
+1794902025278 MOVE id=282 pos=Offset(629.9, 811.2) tracking=null match=false
+1794902025311 MOVE id=282 pos=Offset(627.7, 811.2) tracking=null match=false
+1794902025356 DOWN id=283 kind=PointerDeviceKind.touch pos=Offset(114.7, 810.7) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794902025378 MOVE id=283 pos=Offset(204.8, 810.7) tracking=283 match=true
+1794902025380 MOVE id=282 pos=Offset(627.7, 811.2) tracking=283 match=false
+1794902025388 MOVE id=283 pos=Offset(307.7, 810.7) tracking=283 match=true
+1794902025389 MOVE id=282 pos=Offset(627.7, 811.2) tracking=283 match=false
+1794902025413 MOVE id=283 pos=Offset(307.7, 810.7) tracking=283 match=true
+1794902025416 MOVE id=282 pos=Offset(628.8, 811.7) tracking=283 match=false
+1794902025423 MOVE id=283 pos=Offset(392.0, 811.7) tracking=283 match=true
+1794902025424 MOVE id=282 pos=Offset(628.8, 811.7) tracking=283 match=false
+1794902025436 MOVE id=282 pos=Offset(625.6, 810.7) tracking=283 match=false
+1794902025437 RAWUP id=283 tracking=283
+1794902025438 UP start=Offset(0.2, 0.9) cur=Offset(0.5, 0.9)
+1794902025440 MOVE id=282 pos=Offset(625.6, 810.7) tracking=null match=false
+1794902025499 MOVE id=282 pos=Offset(626.7, 810.7) tracking=null match=false
+1794902025507 MOVE id=282 pos=Offset(627.7, 810.7) tracking=null match=false
+1794902025519 MOVE id=282 pos=Offset(628.8, 810.7) tracking=null match=false
+1794902025561 MOVE id=282 pos=Offset(608.5, 810.7) tracking=null match=false
+1794902025575 DOWN id=284 kind=PointerDeviceKind.touch pos=Offset(628.8, 811.7) tracking=null start=Offset(0.2, 0.9) cur=Offset(0.5, 0.9) size=Size(748.8, 948.3)
+1794902025594 MOVE id=284 pos=Offset(628.8, 811.7) tracking=284 match=true
+1794902025595 RAWUP id=282 tracking=284
+1794902025650 MOVE id=284 pos=Offset(629.3, 812.3) tracking=284 match=true
+1794902025688 MOVE id=284 pos=Offset(630.4, 812.3) tracking=284 match=true
+1794902025709 MOVE id=284 pos=Offset(628.8, 812.3) tracking=284 match=true
+1794902025748 MOVE id=284 pos=Offset(667.7, 812.8) tracking=284 match=true
+1794902025763 MOVE id=284 pos=Offset(658.1, 812.8) tracking=284 match=true
+1794902025812 MOVE id=284 pos=Offset(638.4, 812.8) tracking=284 match=true
+1794902025818 MOVE id=284 pos=Offset(635.7, 812.8) tracking=284 match=true
+1794902025826 MOVE id=284 pos=Offset(633.6, 812.3) tracking=284 match=true
+1794902025865 MOVE id=284 pos=Offset(630.4, 812.8) tracking=284 match=true
+1794902025893 RAWUP id=284 tracking=284
+1794902025894 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902025947 DOWN id=285 kind=PointerDeviceKind.touch pos=Offset(629.3, 813.3) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794902025957 MOVE id=285 pos=Offset(630.4, 813.3) tracking=285 match=true
+1794902025982 RAWUP id=285 tracking=285
+1794902025983 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902026016 DOWN id=286 kind=PointerDeviceKind.touch pos=Offset(629.3, 813.3) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794902026083 MOVE id=286 pos=Offset(676.8, 812.3) tracking=286 match=true
+1794902026108 DOWN id=287 kind=PointerDeviceKind.touch pos=Offset(626.7, 812.3) tracking=286 start=Offset(0.8, 0.9) cur=Offset(0.9, 0.9) size=Size(748.8, 948.3)
+1794902026129 MOVE id=287 pos=Offset(627.7, 812.3) tracking=287 match=true
+1794902026131 RAWUP id=286 tracking=287
+1794902026134 MOVE id=287 pos=Offset(627.7, 812.3) tracking=287 match=true
+1794902026157 MOVE id=287 pos=Offset(628.8, 812.3) tracking=287 match=true
+1794902026212 MOVE id=287 pos=Offset(627.7, 813.3) tracking=287 match=true
+1794902026284 MOVE id=287 pos=Offset(629.3, 813.3) tracking=287 match=true
+1794902026345 MOVE id=287 pos=Offset(628.3, 813.3) tracking=287 match=true
+1794902026487 MOVE id=287 pos=Offset(624.5, 812.8) tracking=287 match=true
+1794902026509 MOVE id=287 pos=Offset(626.1, 812.8) tracking=287 match=true
+1794902026518 RAWUP id=287 tracking=287
+1794902026519 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902026530 DOWN id=288 kind=PointerDeviceKind.touch pos=Offset(628.8, 812.8) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794902026583 MOVE id=288 pos=Offset(628.8, 813.9) tracking=288 match=true
+1794902026608 RAWUP id=288 tracking=288
+1794902026609 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902026665 DOWN id=289 kind=PointerDeviceKind.touch pos=Offset(633.1, 816.5) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794902026747 RAWUP id=289 tracking=289
+1794902026748 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902026802 DOWN id=290 kind=PointerDeviceKind.touch pos=Offset(632.0, 816.5) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794902026823 RAWUP id=290 tracking=290
+1794902026824 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902026906 DOWN id=291 kind=PointerDeviceKind.touch pos=Offset(631.5, 816.5) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794902026913 MOVE id=291 pos=Offset(634.1, 816.5) tracking=291 match=true
+1794902026964 MOVE id=291 pos=Offset(632.5, 816.5) tracking=291 match=true
+1794902026975 MOVE id=291 pos=Offset(630.9, 816.5) tracking=291 match=true
+1794902027010 MOVE id=291 pos=Offset(634.1, 817.1) tracking=291 match=true
+1794902027043 MOVE id=291 pos=Offset(634.1, 817.1) tracking=291 match=true
+1794902027088 RAWUP id=291 tracking=291
+1794902027089 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902027091 DOWN id=292 kind=PointerDeviceKind.touch pos=Offset(626.1, 817.1) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794902027093 MOVE id=292 pos=Offset(629.3, 817.1) tracking=292 match=true
+1794902027137 MOVE id=292 pos=Offset(630.9, 817.1) tracking=292 match=true
+1794902027162 MOVE id=292 pos=Offset(633.6, 817.1) tracking=292 match=true
+1794902027222 MOVE id=292 pos=Offset(634.7, 817.1) tracking=292 match=true
+1794902027279 MOVE id=292 pos=Offset(630.9, 817.1) tracking=292 match=true
+1794902027303 MOVE id=292 pos=Offset(632.0, 817.1) tracking=292 match=true
+1794902027346 RAWUP id=292 tracking=292
+1794902027346 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902027424 DOWN id=293 kind=PointerDeviceKind.touch pos=Offset(633.6, 817.1) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794902027448 MOVE id=293 pos=Offset(634.1, 817.6) tracking=293 match=true
+1794902027475 MOVE id=293 pos=Offset(633.1, 817.6) tracking=293 match=true
+1794902027519 MOVE id=293 pos=Offset(631.5, 817.6) tracking=293 match=true
+1794902027523 MOVE id=293 pos=Offset(630.4, 817.6) tracking=293 match=true
+1794902027551 MOVE id=293 pos=Offset(632.5, 817.6) tracking=293 match=true
+1794902027580 MOVE id=293 pos=Offset(633.6, 817.6) tracking=293 match=true
+1794902027597 MOVE id=293 pos=Offset(631.5, 817.6) tracking=293 match=true
+1794902027662 MOVE id=293 pos=Offset(630.4, 817.6) tracking=293 match=true
+1794902027683 MOVE id=293 pos=Offset(631.5, 817.6) tracking=293 match=true
+1794902027742 MOVE id=293 pos=Offset(627.7, 817.6) tracking=293 match=true
+1794902027758 MOVE id=293 pos=Offset(629.3, 817.6) tracking=293 match=true
+1794902027830 MOVE id=293 pos=Offset(630.4, 817.6) tracking=293 match=true
+1794902027834 RAWUP id=293 tracking=293
+1794902027835 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902027841 DOWN id=294 kind=PointerDeviceKind.touch pos=Offset(635.2, 818.7) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794902027866 MOVE id=294 pos=Offset(633.1, 818.7) tracking=294 match=true
+1794902027943 MOVE id=294 pos=Offset(632.0, 818.7) tracking=294 match=true
+1794902027997 MOVE id=294 pos=Offset(630.9, 818.7) tracking=294 match=true
+1794902028008 MOVE id=294 pos=Offset(632.0, 818.7) tracking=294 match=true
+1794902028051 MOVE id=294 pos=Offset(633.6, 818.1) tracking=294 match=true
+1794902028119 RAWUP id=294 tracking=294
+1794902028119 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902028235 DOWN id=295 kind=PointerDeviceKind.touch pos=Offset(632.5, 817.6) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794902028270 MOVE id=295 pos=Offset(631.5, 817.6) tracking=295 match=true
+1794902028367 RAWUP id=295 tracking=295
+1794902028367 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902028445 DOWN id=296 kind=PointerDeviceKind.touch pos=Offset(629.3, 817.1) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794902028454 MOVE id=296 pos=Offset(630.4, 817.1) tracking=296 match=true
+1794902028574 MOVE id=296 pos=Offset(632.5, 817.6) tracking=296 match=true
+1794902028584 MOVE id=296 pos=Offset(633.6, 817.6) tracking=296 match=true
+1794902028619 MOVE id=296 pos=Offset(632.0, 817.6) tracking=296 match=true
+1794902028627 MOVE id=296 pos=Offset(629.9, 817.6) tracking=296 match=true
+1794902028676 MOVE id=296 pos=Offset(633.6, 817.6) tracking=296 match=true
+1794902028734 MOVE id=296 pos=Offset(632.5, 817.6) tracking=296 match=true
+1794902028762 MOVE id=296 pos=Offset(631.5, 817.6) tracking=296 match=true
+1794902028808 MOVE id=296 pos=Offset(650.7, 817.6) tracking=296 match=true
+1794902028824 MOVE id=296 pos=Offset(646.9, 817.6) tracking=296 match=true
+1794902028830 DOWN id=297 kind=PointerDeviceKind.touch pos=Offset(512.5, 817.1) tracking=296 start=Offset(0.8, 0.9) cur=Offset(0.9, 0.9) size=Size(748.8, 948.3)
+1794902028836 MOVE id=296 pos=Offset(643.7, 817.6) tracking=297 match=false
+1794902028837 MOVE id=297 pos=Offset(512.5, 817.1) tracking=297 match=true
+1794902028868 MOVE id=296 pos=Offset(640.5, 817.6) tracking=297 match=false
+1794902028869 MOVE id=297 pos=Offset(512.5, 817.1) tracking=297 match=true
+1794902028900 MOVE id=296 pos=Offset(638.9, 817.6) tracking=297 match=false
+1794902028901 RAWUP id=297 tracking=297
+1794902028902 UP start=Offset(0.8, 0.9) cur=Offset(0.7, 0.9)
+1794902028903 MOVE id=296 pos=Offset(633.1, 817.6) tracking=null match=false
+1794902028914 MOVE id=296 pos=Offset(632.0, 817.6) tracking=null match=false
+1794902028968 MOVE id=296 pos=Offset(630.9, 818.1) tracking=null match=false
+1794902028978 MOVE id=296 pos=Offset(629.9, 818.1) tracking=null match=false
+1794902029034 MOVE id=296 pos=Offset(630.9, 818.1) tracking=null match=false
+1794902029063 RAWUP id=296 tracking=null
+1794902029142 DOWN id=298 kind=PointerDeviceKind.touch pos=Offset(630.4, 818.7) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.7, 0.9) size=Size(748.8, 948.3)
+1794902029162 MOVE id=298 pos=Offset(627.7, 818.7) tracking=298 match=true
+1794902029194 MOVE id=298 pos=Offset(629.9, 818.7) tracking=298 match=true
+1794902029248 MOVE id=298 pos=Offset(631.5, 818.7) tracking=298 match=true
+1794902029303 MOVE id=298 pos=Offset(630.4, 818.7) tracking=298 match=true
+1794902029356 MOVE id=298 pos=Offset(629.3, 818.7) tracking=298 match=true
+1794902029392 MOVE id=298 pos=Offset(630.4, 818.7) tracking=298 match=true
+1794902029461 RAWUP id=298 tracking=298
+1794902029461 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902029527 DOWN id=299 kind=PointerDeviceKind.touch pos=Offset(629.9, 818.7) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794902029554 RAWUP id=299 tracking=299
+1794902029554 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902029612 DOWN id=300 kind=PointerDeviceKind.touch pos=Offset(631.5, 818.7) tracking=null start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9) size=Size(748.8, 948.3)
+1794902029639 MOVE id=300 pos=Offset(626.1, 818.7) tracking=300 match=true
+1794902029675 MOVE id=300 pos=Offset(629.9, 817.6) tracking=300 match=true
+1794902029723 RAWUP id=300 tracking=300
+1794902029723 UP start=Offset(0.8, 0.9) cur=Offset(0.8, 0.9)
+1794902032429 DOWN id=301 kind=PointerDeviceKind.touch pos=Offset(90.1, 453.9) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794902032482 MOVE id=301 pos=Offset(91.2, 453.9) tracking=301 match=true
+1794902032491 MOVE id=301 pos=Offset(90.1, 453.9) tracking=301 match=true
+1794902032514 MOVE id=301 pos=Offset(89.1, 453.9) tracking=301 match=true
+1794902032547 MOVE id=301 pos=Offset(88.0, 453.9) tracking=301 match=true
+1794902032593 RAWUP id=301 tracking=301
+1794902032594 UP start=Offset(0.1, 0.5) cur=Offset(0.1, 0.5)
+1794902038841 DOWN id=302 kind=PointerDeviceKind.touch pos=Offset(608.5, 106.7) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794902038849 MOVE id=302 pos=Offset(611.2, 106.7) tracking=302 match=true
+1794902038858 MOVE id=302 pos=Offset(614.4, 106.7) tracking=302 match=true
+1794902038871 MOVE id=302 pos=Offset(616.0, 106.7) tracking=302 match=true
+1794902038886 MOVE id=302 pos=Offset(620.8, 106.7) tracking=302 match=true
+1794902038895 MOVE id=302 pos=Offset(747.7, 106.7) tracking=302 match=true
+1794902038903 DOWN id=303 kind=PointerDeviceKind.touch pos=Offset(622.4, 106.7) tracking=302 start=Offset(0.8, 0.1) cur=Offset(1.0, 0.1) size=Size(748.8, 948.3)
+1794902038913 MOVE id=302 pos=Offset(693.9, 106.7) tracking=303 match=false
+1794902038914 MOVE id=303 pos=Offset(622.4, 106.7) tracking=303 match=true
+1794902038957 MOVE id=303 pos=Offset(622.4, 106.7) tracking=303 match=true
+1794902038961 RAWUP id=302 tracking=303
+1794902038968 RAWUP id=303 tracking=303
+1794902038969 UP start=Offset(0.8, 0.1) cur=Offset(0.8, 0.1)
+1794902041078 DOWN id=304 kind=PointerDeviceKind.touch pos=Offset(646.4, 850.7) tracking=null start=null cur=null size=Size(748.8, 948.3)
+1794902041108 MOVE id=304 pos=Offset(645.3, 850.7) tracking=304 match=true
+1794902041115 MOVE id=304 pos=Offset(646.4, 850.7) tracking=304 match=true
+1794902041149 MOVE id=304 pos=Offset(645.3, 850.7) tracking=304 match=true
+1794902041170 MOVE id=304 pos=Offset(646.4, 850.7) tracking=304 match=true
+1794902041182 MOVE id=304 pos=Offset(646.4, 851.7) tracking=304 match=true
+1794902041225 RAWUP id=304 tracking=304
+1794902041225 UP start=Offset(0.9, 0.9) cur=Offset(0.9, 0.9)
+1794902046359 dispose

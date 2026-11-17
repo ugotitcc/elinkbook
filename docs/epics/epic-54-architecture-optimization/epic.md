@@ -1173,6 +1173,57 @@ Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
 
 **2026-11-17 PDF 手動裁切頁面重疊修正已合併**（PR #442，合併提交 `5e5caf1b`），待 E-Ink 真機確認。Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
 
+## 後續項目（2026-11-17，使用者回報）：PDF 裁切起點跳動（Issue 44，`/diagnosing-bugs`）
+
+- **症狀**：WAVE 真機，PDF 手動裁切拖拉框選時，起點會變成拖拉過程中的某一點，整個選取範圍縮小。使用者原話含「畫線」，劃線（長按拖曳）是否同症狀尚未確認。
+- **相關程式**：`app/lib/reader/pdf_crop_frame_overlay.dart`（`Listener`，`_beginDrag` 只在 `_pointer == null` 時記起點；`_endDrag` 放開即定案；`_cancelDrag` 放棄）。劃線走 `bounce_tolerant_long_press_detector.dart`，已有彈跳防禦。
+- **第一次嘗試（失敗）**：假設「拖拉途中硬體回報放開→近處重按」，改成放開後等 350ms 才定案。單元測試轉綠，但 WAVE 實測**更糟**。patch 留存於 `repro/issue-44-attempt1-debounce-failed.patch`，程式已還原。教訓：測試用的「放開→50ms 後 4px 內重按」是我編的，沒有真機資料支持。
+- **階段一：取證（尚未做）**。在裁切層加帶 `[DEBUG-crop44]` 前綴的指標事件記錄（`onPointerDown／Move／Up／Cancel` 的 pointer id、時間、座標、`_pointer`、`_dragStart`），用 `adb logcat` 在 WAVE 抓一次完整拖拉。真機禁用 `flutter install`，一律 `adb install -r`。
+- **待證實的假設（由高到低，每條都要能被取證資料推翻）**：
+  1. 起點被重設：overlay 的 State 在拖拉中被重建（父層重繪換了 Key／重新掛載），`_dragStart` 歸零，下一個事件當成新起點。預測：記錄中 `initState` 在拖拉中再次出現。
+  2. 放開→重按的位置差大於 18px：WAVE 事件取樣率低，重按點離最後位置遠。預測：記錄中 up 與下一個 down 距離超過 `kTapZoneSlop`。
+  3. 換了 pointer id：同一根手指中途 up／down 換 id，被 `e.pointer != _pointer` 忽略後再被當新拖拉。預測：記錄中 id 變化。
+  4. `PointerCancel`：系統中斷後 `_cancelDrag` 清空，接著的 move 沒人處理，下一次 down 才有起點。預測：記錄中出現 cancel。
+  5. 底下 `PdfViewer` 或父層手勢搶走事件，造成中途漏事件。預測：move 序列有斷層。
+- **階段一取證結果（2026-11-17，WAVE 真機拖兩次，原始記錄 `repro/issue-44-wave-pointer-log.txt`，596 行）**：
+  - 假設 1（State 重建）**推翻**：每次操作只有一次 `initState`，拖拉中沒有重建。
+  - 假設 4（cancel）**推翻**：全程沒有 `PointerCancel`。
+  - 假設 5（事件斷層）**推翻**：`MOVE` 連續，間隔約 37～89ms。
+  - 假設 2（放開後重按距離過大）**證實**：一次拖拉被拆成多個 pointer（id 25→26→27→28→29），每個 `down` 都落在手指當下的位置。`up`→下一個 `down` 只隔 36～61ms，但距離 72～123px，遠超 `kTapZoneSlop`（18px）。所以第一版修法擋不住。
+  - 假設 3（pointer id 交接）**證實，且是起點跳動的直接原因**：新 `down` 會在舊 pointer 的 `up` 之前抵達（重疊）。現行 `_beginDrag` 在 `_pointer != null` 時直接 `return`，把新 pointer 丟掉；舊 pointer 一放開就 `_endDrag` 定案；下一個 `down` 又被當成新起點。實例：id=27 追蹤中，id=28 在 (624,776) 重疊抵達被忽略，id=27 放開後定案出 (0.5,0.5)→(0.9,0.8) 的正確框，緊接著 id=29 在 (634,785) 按下成為新起點，最後框被覆蓋成 (0.8,0.8)→(0.9,0.9) 的小框。
+  - 另有**幽靈第二指**：追蹤中同時出現相距數百像素的第二個 pointer（id=17 離 125px、id=21 離 416px、id=69 離 558px），多半不是真手指，不能一律接手。
+- **根因**：WAVE 觸控驅動把一次連續拖拉拆成「接力」的多個 pointer，現行程式以單一 pointer id 當一次拖拉的邊界。
+- **第一版失敗原因（推論）**：只加了放開後的寬限，距離門檻沿用 18px，擋不住 72～123px 的接力，且沒處理重疊交接與幽靈第二指。
+- **同類風險（未證實）**：`bounce_tolerant_long_press_detector.dart` 在 `_activePointers.length > 1` 時會 `_rejectForMultiTouch` 取消長按，重疊交接會被當成多指而取消劃線。須以同樣記錄在劃線路徑取證後才能下結論。
+- **第二版修法（接力追蹤，半徑 150px、寬限 250ms）真機結果（2026-11-17）**：使用者回報「好很多，偶爾還跳」。記錄 `repro/issue-44-wave-pointer-log-after-relay-fix.txt`（2037 行）。單元測試 20 個全過。
+  - 剩餘跳動的實例：id=281 追蹤中（停在 (441,796)），真手指其實是 id=282（從 (606,797) 持續移動 31 次），距追蹤點 166px，超過半徑被當幽靈忽略；281 放開後定案，框停在半路（約 (450,796)，應到 (620,820)）。
+  - 統計：未被追蹤卻持續 MOVE ≥5 次的 pointer 有 17 個，其中位移 ≥100px 的有 6 個（id=28、118、202、239 等）。**同時存在兩條座標流，一條落後（卡住）、一條領先，領先者才是真手指**；現行規則「只追最後被接手的那一個」會追到落後者。
+  - 半徑 150px 無法區分「快速移動的真手指」與「遠處的幽靈」：真手指落後追蹤點 166px，幽靈有 125px、129px、416px、558px。純位置規則不夠。
+  - 可用的區分線索：幽靈第二指多半只有 DOWN／UP、不移動；真手指會持續 MOVE。
+  - 假設（待驗證）：改成「所有被接受的 pointer 都收 MOVE，取最近有位移者」，遠處的 pointer 要連續移動 3 次以上才升格，只 DOWN／UP 的幽靈不升格。
+- **第三版修法（多指並行，看誰在動）真機結果（2026-11-17）**：拖拉本身已正常，單次拖拉的 `[DEBUG-crop44]` 記錄全部穩定（起點不動、終點到位）。使用者回報兩個**新症狀**：(1) 第一次拖拉不跳，但裁切結果不對；(2) 按 ✕ 取消後，下一次裁切拖拉整個畫面亂跳、自己放大。這兩個不在拖拉邏輯內。
+- **症狀 1 根因（已證實）**：裁切層 `Positioned.fill` 蓋滿整個閱讀區，框的比例是**相對整個畫面（含灰邊）**；`PdfCropRect` 語意卻是**相對頁面**（`pdf_crop_rect.dart`）。頁面在畫面中並未填滿（左右各約 9.8% 灰邊，上下也有），兩者沒有換算。
+  - 實驗：使用者從頁面白紙左上角拖到右下角（本意＝整頁、不裁），`CONFIRM rect=(left 0.098, top 0.031, right 0.901, bottom 0.980)`，正好是頁面邊界在畫面中的比例；套用後左側整欄文字被切一半（`repro/issue-44-crop-result-left-clipped.png`，對照 `repro/issue-44-crop-hint-screen.png`）。
+  - 與 epic-58 的差別：epic-58 驗證只量「框畫在手指位置」（差 3～4px），沒有驗證「套用後的裁切範圍等於框選範圍」。
+- **症狀 2**：尚未重現。進入記錄顯示 `mode=none` 但 `existingRect` 仍殘留舊值；`didUpdateWidget` 的變更偵測不含 `cropEditModeActive`，取消時不會重排。原因待單獨重現（加記錄後走「取消 → 再進入 → 拖拉」）。
+- **症狀 2 結果（2026-11-17）**：症狀 1 修好後，「取消 → 再進入 → 拖拉」畫面不再亂跳、不再自己放大，判定為隨症狀 1 一併解決（二次裁切時舊矩形與畫面比例混用）。
+- **症狀 3（新）：拖拉時框的角落跳動。** 逐版真機結果與根因：
+  - **v3（多指並行）**：兩條座標流輪流更新角落，離線重播「來回跳」15～26 次。
+  - **v4（領頭＝最新升格，閒置 150ms 讓位）**：使用者回報「更慘，框瞬間變大變小」。記錄（`repro/issue-44-wave-pointer-log-v4.txt`）顯示根因是**起點被重設**：手指快速拖拉時，放開後 68ms 內新 pointer 出現在 300px 外（id=16→id=17），超過接力半徑 150px，被當成新一框，起點從 (0.1,0.2) 跳到 (0.7,0.5)。
+  - **v6（寬限期內任何距離都接力；靠近按下的新 pointer 等第一次移動才領頭）**：使用者回報「比較可控，第 2、4 次拉仍會跳」。離線重播：新記錄的起點重設 2→1（1 為正常的第一次按下），來回跳 26→3。
+  - **殘餘跳動根因（硬體雜訊，已用記錄證實）**：同一根 pointer 的座標出現**鋸齒**（`repro/issue-44-wave-pointer-log-v6.txt` +11986～+12406）：id=41 x 由 432 於 6ms 內跳到 511（+79px）、升到 527，再慢慢退回 469；之後又跳到 549 再退回。每次尖峰同時冒出一根新 pointer（id=42、43）落在真實位置（約 420～454）。推測為觸控晶片把兩個接觸點合併成中心點後再分開。尖峰持續約 190ms 且衰減緩慢，單點離群值過濾或中位數濾波都擋不住。
+  - **v4 假設「最新的 pointer 才是真手指」只有一半對**：49/50、281/282 成立；41/42/43 時新的是落後的，舊的活得更久。因此不能單靠 pointer 新舊判斷。
+  - **離線重播器**：`repro/issue-44-replay-sim.py`，可對任何 `[DEBUG-crop44]` 記錄重播各版規則並量「起點重設／來回跳／單次跳>100px」。
+
+- **症狀 1 修法與真機驗證（2026-11-17，WAVE）**：`PdfCropFrameOverlay` 維持輸出相對畫面的比例；`ReaderScreen` 在確認時經 `PdfFacet.visiblePageRects()` 取得頁面矩形，用 `viewportRectToPageCropRect`（新增，`lib/reader/pdf_crop_mapping.dart`）換算成相對頁面的比例；已有生效中的裁切時合成回原始整頁座標。
+  - A（從頁面白紙左上角拖到右下角）：左側整欄文字完整（`repro/issue-44-crop-result-after-fix-A.png`）。
+  - B／C（沿文字外緣裁切、二次裁切）：從裝置讀出存下的 `pdf_crop_rect`，畫回未裁切整頁截圖，使用者確認與自己畫的框一致。
+  - 已知限制：已有生效中的裁切時，只能在目前顯示的範圍內再縮小；要放寬須先選「不裁」。
+- **收尾（2026-11-17，使用者選「收尾，雜訊另記為後續項目」）**：Issue 44 的三個實際缺陷（裁切結果錯位、取消後亂跳放大、起點被重設）已修並經真機確認。診斷記錄已移除。
+- **後續項目（未處理）：觸控晶片座標鋸齒雜訊。** 單根 pointer 的座標會突然跳 80px 再慢慢退回（見上方「殘餘跳動根因」），框的角落吃到尖峰就會短暫跳動，使用者回報第 2、4 次拖拉仍會跳但「比較可控」。單點離群值過濾與中位數濾波擋不住（尖峰持續約 190ms）。可能方向：限制角落每次移動的速度（slew rate limit），代價是框跟手稍有延遲；須在 WAVE 驗證，且可用 `repro/issue-44-replay-sim.py` 先離線比較。
+- **完整 `flutter test` 結果（2026-11-17，Issue 44 最終）**：共三次。第 1 次 5366 通過、4 失敗（`download_queue_controller_test` 3、`pdf_reader_view_filters_test` 1）；第 2 次因 `remote_catalog_screen_test`（單獨跑要 2 分半）一個測試卡住而整批中斷，234 個「did not complete」，非個別失敗；第 3 次 5369 通過、1 失敗（`download_queue_controller_test`「偵測到重複且 onDuplicateConfirm 回傳 false」，預期 `duplicateSkipped` 實際 `checkingDuplicate`）。上述失敗檔單獨重跑全部通過（filters 3 次、下載佇列 2 次、remote_catalog 2 次），失敗時都同時在跑字典匯入 10 萬筆；`lib/downloads`、`test/downloads` 本 Issue 未改動。判定為既有的負載敏感測試，**根因未證實，未處理**。
+- **已知測試偶發失敗（既有，未處理）**：`flutter test test/screens/reader_screen_test.dart --plain-name 裁切` 篩選時，緊接在「PopScope.canPop 為 false」案例之後的第一個 PDF 案例有約 50% 機率在開書階段出現「開書逾時」（既有的「確認後寫回 prefs」案例也一樣，3/6 失敗；完整 `flutter test` 的順序不同）。失敗在 `onPressed` 為 null，早於本 Issue 的程式。放寬等待上限反而讓 App 的開書逾時先觸發，已改回簡單等待。
+
 ## 各 Issue 處理紀錄
 
 （自 `docs/epics.md` 備註欄搬入；`docs/epics.md` 只保留最後處理的項目與剩餘待辦。各 Issue 設計細節見上方各章節與 [issues.md](issues.md)。）
@@ -1221,3 +1272,5 @@ Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
 - Issue 43（缺陷：開書時並行檢查雲端閱讀位置）已合併（PR #441），待雙裝置真機驗證
 - 2026-11-17 後續項目：PDF 手動裁切頁面重疊（覆蓋圖未撐滿頁面矩形）已修並合併（PR #442），待 E-Ink 真機確認
 - 剩 Issue 41（疑似缺陷，待重現）
+- Issue 44（缺陷：PDF 裁切拖拉起點跳動）首次修法實測更糟已還原，階段一取證待做
+- Issue 44（缺陷：PDF 手動裁切——框選範圍與套用範圍不符、起點跳動）已實作，待完整測試與 PR；殘餘觸控雜訊另記為後續項目

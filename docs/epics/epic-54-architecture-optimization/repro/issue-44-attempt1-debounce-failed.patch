@@ -1,0 +1,162 @@
+diff --git a/app/lib/reader/pdf_crop_frame_overlay.dart b/app/lib/reader/pdf_crop_frame_overlay.dart
+index 7193dfe9..ec049456 100644
+--- a/app/lib/reader/pdf_crop_frame_overlay.dart
++++ b/app/lib/reader/pdf_crop_frame_overlay.dart
+@@ -1,7 +1,10 @@
++import 'dart:async';
++
+ import 'package:flutter/material.dart';
+ 
+ import '../l10n/app_localizations.dart';
+ import 'pdf_crop_rect.dart';
++import 'tap_zone_detector.dart' show kTapZoneSlop, kTapZoneDebounceMs;
+ 
+ /// 四矩形色帶遮罩繪製器：以四個不重疊矩形（上/下/左/右）繪製外部半透明
+ /// 暗色遮罩，並繪製雙層高對比邊框（外黑 3px ＋ 內白 1.5px）。
+@@ -90,6 +93,19 @@ class _PdfCropFrameOverlayState extends State<PdfCropFrameOverlay> {
+   /// 目前追蹤的那根手指；其餘手指一律忽略
+   int? _pointer;
+ 
++  /// 放開後等待定案的計時器（WAVE 真機觸控彈跳防禦）：拖拉途中硬體可能回報
++  /// 「放開→極短時間內在附近重按」，若放開就立刻定案，重按會被當成新起點，
++  /// 選取範圍縮小。改成放開後等 [kTapZoneDebounceMs] 才定案，期間在
++  /// [kTapZoneSlop] 內的重按視為同一次拖拉的延續（沿用 TapZoneDetector 的
++  /// 真機校準值，見 `bounce_tolerant_long_press_detector.dart`）。
++  Timer? _finalizeTimer;
++
++  @override
++  void dispose() {
++    _finalizeTimer?.cancel();
++    super.dispose();
++  }
++
+   /// 手指按下後是否真的移動過；輕點（沒移動）不繪製任何東西，
+   /// 避免 0x0 的框讓上下遮罩蓋滿整個畫面造成閃爍（E-Ink 會殘影）
+   bool get _moved => _dragStart != null && _dragCurrent != _dragStart;
+@@ -110,21 +126,42 @@ class _PdfCropFrameOverlayState extends State<PdfCropFrameOverlay> {
+ 
+   void _beginDrag(PointerDownEvent e, Size size) {
+     if (_pointer != null) return;
++    final pending = _finalizeTimer?.isActive ?? false;
++    final current = _dragCurrent;
++    if (pending &&
++        current != null &&
++        (_toRatio(e.localPosition, size) - current).distance * size.shortestSide <=
++            kTapZoneSlop) {
++      // 彈跳延續：保留原本的起點，只換成新的手指
++      _finalizeTimer?.cancel();
++      _pointer = e.pointer;
++      return;
++    }
++    _commitPending(); // 不相關的新按壓：先把上一次拖拉定案
+     _pointer = e.pointer;
+     _dragStart = _dragCurrent = _toRatio(e.localPosition, size);
+   }
+ 
++  /// 手指放開：不立刻定案，等彈跳寬限期結束再 [_commitPending]
+   void _endDrag() {
+     _pointer = null;
++    _finalizeTimer?.cancel();
++    _finalizeTimer = Timer(
++        const Duration(milliseconds: kTapZoneDebounceMs), _commitPending);
++    setState(() {}); // 重畫，讓確認鈕在等待定案期間仍可點
++  }
++
++  /// 把進行中的拖拉定案；任一邊太小（含輕點）視為無效，保留上一個框
++  void _commitPending() {
++    _finalizeTimer?.cancel();
+     final start = _dragStart;
+     final current = _dragCurrent;
++    if (start == null || current == null) return;
++    if (!mounted) return;
+     setState(() {
+-      if (start != null && current != null) {
+-        final r = _rectFrom(start, current);
+-        // 任一邊太小（含輕點）視為無效，保留上一個框
+-        if (r.right - r.left >= _minSize && r.bottom - r.top >= _minSize) {
+-          _rect = r;
+-        }
++      final r = _rectFrom(start, current);
++      if (r.right - r.left >= _minSize && r.bottom - r.top >= _minSize) {
++        _rect = r;
+       }
+       _dragStart = null;
+       _dragCurrent = null;
+@@ -134,6 +171,7 @@ class _PdfCropFrameOverlayState extends State<PdfCropFrameOverlay> {
+   /// 拖拉被系統中斷（邊緣手勢、防誤觸等）：放棄這次選取，保留上一個框
+   void _cancelDrag() {
+     _pointer = null;
++    _finalizeTimer?.cancel();
+     if (_dragStart == null) return;
+     setState(() {
+       _dragStart = null;
+@@ -247,8 +285,12 @@ class _PdfCropFrameOverlayState extends State<PdfCropFrameOverlay> {
+                     child: InkWell(
+                       key: const Key('pdf_crop_frame_confirm'),
+                       customBorder: const CircleBorder(),
+-                      onTap: confirmEnabled
+-                          ? () => widget.onConfirm(_rect!)
++                      onTap: confirmEnabled || _finalizeTimer?.isActive == true
++                          ? () {
++                              _commitPending();
++                              final r = _rect;
++                              if (r != null) widget.onConfirm(r);
++                            }
+                           : null,
+                       child: const Padding(
+                         padding: EdgeInsets.all(14),
+diff --git a/app/test/reader/pdf_crop_frame_overlay_test.dart b/app/test/reader/pdf_crop_frame_overlay_test.dart
+index 36d27b05..eb17ab9e 100644
+--- a/app/test/reader/pdf_crop_frame_overlay_test.dart
++++ b/app/test/reader/pdf_crop_frame_overlay_test.dart
+@@ -32,7 +32,8 @@ void main() {
+   // 以手指從 [from] 拖到 [to]，模擬使用者直接拖拉框選
+   Future<void> dragSelect(WidgetTester tester, Offset from, Offset to) async {
+     await tester.dragFrom(from, to - from);
+-    await tester.pump();
++    // 放開後要等彈跳寬限期（350ms）才定案
++    await tester.pump(const Duration(milliseconds: 400));
+   }
+ 
+   final confirmFinder = find.byKey(const Key('pdf_crop_frame_confirm'));
+@@ -105,7 +106,7 @@ void main() {
+     await pumpOverlay(tester, onConfirm: confirmed.add);
+ 
+     await tester.dragFrom(const Offset(400, 800), const Offset(1000, 2000));
+-    await tester.pump();
++    await tester.pump(const Duration(milliseconds: 400));
+ 
+     final rect = await confirmAndGet(tester, confirmed);
+     expect(rect!.left, closeTo(0.5, 1e-6));
+@@ -233,6 +234,31 @@ void main() {
+     expect(rect.bottom, closeTo(0.8, 1e-6));
+   });
+ 
++  // WAVE 真機：拖拉途中觸控硬體回報「放開再按下」的彈跳，新的按下點不得
++  // 取代原本的起點，否則選取範圍會縮小成從中途某點開始。
++  testWidgets('拖拉途中觸控彈跳（放開後極短時間在附近重按），起點不變', (tester) async {
++    final confirmed = <PdfCropRect>[];
++    await pumpOverlay(tester, onConfirm: confirmed.add);
++
++    final g1 = await tester.startGesture(const Offset(80, 160));
++    await g1.moveTo(const Offset(400, 800));
++    await tester.pump(const Duration(milliseconds: 16));
++    await g1.up();
++    // 50ms 後在幾乎同一點重新按下（彈跳），接著繼續拖到終點
++    await tester.pump(const Duration(milliseconds: 50));
++    final g2 = await tester.startGesture(const Offset(404, 804));
++    await g2.moveTo(const Offset(720, 1440));
++    await tester.pump(const Duration(milliseconds: 16));
++    await g2.up();
++    await tester.pump();
++
++    final rect = await confirmAndGet(tester, confirmed);
++    expect(rect!.left, closeTo(0.1, 1e-6));
++    expect(rect.top, closeTo(0.1, 1e-6));
++    expect(rect.right, closeTo(0.9, 1e-6));
++    expect(rect.bottom, closeTo(0.9, 1e-6));
++  });
++
+   testWidgets('點擊取消時觸發 onCancel、不觸發 onConfirm', (tester) async {
+     var cancelled = false;
+     final confirmed = <PdfCropRect>[];

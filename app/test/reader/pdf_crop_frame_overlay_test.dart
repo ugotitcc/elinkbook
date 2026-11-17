@@ -32,7 +32,8 @@ void main() {
   // 以手指從 [from] 拖到 [to]，模擬使用者直接拖拉框選
   Future<void> dragSelect(WidgetTester tester, Offset from, Offset to) async {
     await tester.dragFrom(from, to - from);
-    await tester.pump();
+    // 放開後要等接力寬限期（250ms）才定案
+    await tester.pump(const Duration(milliseconds: 300));
   }
 
   final confirmFinder = find.byKey(const Key('pdf_crop_frame_confirm'));
@@ -105,7 +106,7 @@ void main() {
     await pumpOverlay(tester, onConfirm: confirmed.add);
 
     await tester.dragFrom(const Offset(400, 800), const Offset(1000, 2000));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     final rect = await confirmAndGet(tester, confirmed);
     expect(rect!.left, closeTo(0.5, 1e-6));
@@ -231,6 +232,233 @@ void main() {
     expect(rect.top, closeTo(0.2, 1e-6));
     expect(rect.right, closeTo(0.8, 1e-6));
     expect(rect.bottom, closeTo(0.8, 1e-6));
+  });
+
+  // ── Issue 44：WAVE 觸控驅動把一次連續拖拉拆成「接力」的多個 pointer ──
+  // 真機記錄見 docs/epics/epic-54-architecture-optimization/repro/
+  // issue-44-wave-pointer-log.txt：新 pointer 的 down 落在手指當下位置，
+  // 距離上一個 pointer 最後位置 72～123px，間隔 36～61ms，有時比舊 pointer
+  // 的 up 更早抵達（重疊）；另有數百 px 外的幽靈第二指。
+  Future<void> expectRect(
+      WidgetTester tester, List<PdfCropRect> confirmed, Rect px) async {
+    final rect = await confirmAndGet(tester, confirmed);
+    expect(rect, isNotNull);
+    expect(rect!.left, closeTo(px.left / 800, 1e-6));
+    expect(rect.top, closeTo(px.top / 1600, 1e-6));
+    expect(rect.right, closeTo(px.right / 800, 1e-6));
+    expect(rect.bottom, closeTo(px.bottom / 1600, 1e-6));
+  }
+
+  testWidgets('接力（先放開、60ms 後在 100px 外接續）：起點不變', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    final g1 = await tester.startGesture(const Offset(80, 160));
+    await g1.moveTo(const Offset(400, 800));
+    await tester.pump(const Duration(milliseconds: 16));
+    await g1.up();
+    await tester.pump(const Duration(milliseconds: 60));
+    final g2 = await tester.startGesture(const Offset(470, 870)); // 約 99px 外
+    await g2.moveTo(const Offset(720, 1440));
+    await tester.pump(const Duration(milliseconds: 16));
+    await g2.up();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await expectRect(tester, confirmed, const Rect.fromLTRB(80, 160, 720, 1440));
+  });
+
+  testWidgets('重疊交接（新 pointer 在舊 pointer 放開前抵達）：起點不變、框不被覆蓋',
+      (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    final g1 = await tester.startGesture(const Offset(80, 160));
+    await g1.moveTo(const Offset(400, 800));
+    await tester.pump(const Duration(milliseconds: 16));
+    // 新 pointer 在舊 pointer 放開「之前」抵達（真機 id=27 與 id=28）
+    final g2 = await tester.startGesture(const Offset(430, 830));
+    await tester.pump(const Duration(milliseconds: 16));
+    await g1.up();
+    await tester.pump(const Duration(milliseconds: 20));
+    // 舊 pointer 放開後，第三個 pointer 在附近按下（真機 id=29）
+    final g3 = await tester.startGesture(const Offset(440, 840));
+    await g2.moveTo(const Offset(720, 1440));
+    await g2.up();
+    await g3.moveTo(const Offset(720, 1440));
+    await tester.pump(const Duration(milliseconds: 16));
+    await g3.up();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await expectRect(tester, confirmed, const Rect.fromLTRB(80, 160, 720, 1440));
+  });
+
+  testWidgets('幽靈第二指（追蹤中在 500px 外按下）：忽略，不影響框', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    final g1 = await tester.startGesture(const Offset(80, 160));
+    await g1.moveTo(const Offset(400, 800));
+    await tester.pump(const Duration(milliseconds: 16));
+    final ghost = await tester.startGesture(const Offset(100, 1500));
+    await tester.pump(const Duration(milliseconds: 16));
+    await ghost.up();
+    await g1.moveTo(const Offset(720, 1440));
+    await tester.pump(const Duration(milliseconds: 16));
+    await g1.up();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await expectRect(tester, confirmed, const Rect.fromLTRB(80, 160, 720, 1440));
+  });
+
+  testWidgets('雙流（落後者卡住、領先者是真手指，距離超過 150px）：以持續移動者為準',
+      (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    // 真機 id=281／id=282：追蹤者停在原地，真手指在 180px 外持續移動
+    final g1 = await tester.startGesture(const Offset(80, 160));
+    await g1.moveTo(const Offset(400, 800));
+    await tester.pump(const Duration(milliseconds: 16));
+    final g2 = await tester.startGesture(const Offset(580, 800));
+    for (var i = 0; i < 4; i++) {
+      await g2.moveBy(const Offset(4, 4)); // 前幾步位移小，尚未升格
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await g1.up();
+    await tester.pump(const Duration(milliseconds: 16));
+    await g2.moveTo(const Offset(720, 1440));
+    await tester.pump(const Duration(milliseconds: 16));
+    await g2.up();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await expectRect(tester, confirmed, const Rect.fromLTRB(80, 160, 720, 1440));
+  });
+
+  testWidgets('遠處幽靈只在原地抖動（位移不足 8px）：不升格、不影響框', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    final g1 = await tester.startGesture(const Offset(80, 160));
+    await g1.moveTo(const Offset(400, 800));
+    await tester.pump(const Duration(milliseconds: 16));
+    final ghost = await tester.startGesture(const Offset(100, 1500));
+    for (var i = 0; i < 4; i++) {
+      await ghost.moveBy(const Offset(1, 0)); // 共 4px
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await ghost.up();
+    await g1.moveTo(const Offset(720, 1440));
+    await tester.pump(const Duration(milliseconds: 16));
+    await g1.up();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await expectRect(tester, confirmed, const Rect.fromLTRB(80, 160, 720, 1440));
+  });
+
+  // ── 框拖拉時跳動：兩條座標流輪流更新（真機 id=49／id=50）──
+  // 新的那根（領頭）才是真手指；舊的那根快放開，位置會倒退。若誰動誰更新，
+  // 框的角落會在兩條流之間來回跳。
+  testWidgets('雙流輪流更新：只跟最新接手的領頭，舊流的倒退位置不影響框', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    final old = await tester.startGesture(const Offset(80, 160));
+    await old.moveTo(const Offset(400, 800));
+    await tester.pump(const Duration(milliseconds: 16));
+    final lead = await tester.startGesture(const Offset(430, 830)); // 最新接手
+    await lead.moveTo(const Offset(620, 1000));
+    await tester.pump(const Duration(milliseconds: 10));
+    await old.moveTo(const Offset(480, 900)); // 舊流倒退，不得更新框
+    await tester.pump(const Duration(milliseconds: 10));
+    await lead.moveTo(const Offset(700, 1400));
+    await tester.pump(const Duration(milliseconds: 10));
+    await old.moveTo(const Offset(477, 905)); // 舊流最後一次更新
+    await tester.pump(const Duration(milliseconds: 10));
+    await old.up();
+    await lead.up();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await expectRect(tester, confirmed, const Rect.fromLTRB(80, 160, 700, 1400));
+  });
+
+  testWidgets('領頭是不動的幽靈（靠近按下就升格）：閒置超過 150ms 後真手指接手',
+      (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    final real = await tester.startGesture(const Offset(80, 160));
+    await real.moveTo(const Offset(400, 800));
+    await tester.pump(const Duration(milliseconds: 16));
+    final ghost = await tester.startGesture(const Offset(420, 820)); // 近處、不動
+    await tester.pump(const Duration(milliseconds: 200)); // 領頭閒置
+    await real.moveTo(const Offset(720, 1440));
+    await tester.pump(const Duration(milliseconds: 16));
+    await ghost.up();
+    await real.up();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await expectRect(tester, confirmed, const Rect.fromLTRB(80, 160, 720, 1440));
+  });
+
+  // ── 快速拖拉：放開後 68ms 內，新 pointer 落在 300px 外（真機 id=16→id=17）──
+  testWidgets('寬限期內的新按下不論距離都是接力：不得重設起點', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    final g1 = await tester.startGesture(const Offset(80, 160));
+    await g1.moveTo(const Offset(243, 399));
+    await tester.pump(const Duration(milliseconds: 16));
+    await g1.up();
+    await tester.pump(const Duration(milliseconds: 68)); // 仍在 250ms 寬限期內
+    final g2 = await tester.startGesture(const Offset(544, 437)); // 300px 外
+    await g2.moveTo(const Offset(700, 1000));
+    await tester.pump(const Duration(milliseconds: 16));
+    await g2.up();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await expectRect(tester, confirmed, const Rect.fromLTRB(80, 160, 700, 1000));
+  });
+
+  testWidgets('靠近按下但不動的新 pointer 不搶領頭：舊的那根繼續更新框', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    final old = await tester.startGesture(const Offset(80, 160));
+    await old.moveTo(const Offset(400, 800));
+    await tester.pump(const Duration(milliseconds: 16));
+    final still = await tester.startGesture(const Offset(420, 820)); // 近處、不動
+    await tester.pump(const Duration(milliseconds: 10));
+    await old.moveTo(const Offset(500, 900)); // 才 10ms，領頭規則會擋掉它
+    await tester.pump(const Duration(milliseconds: 10));
+    await old.moveTo(const Offset(600, 1000));
+    await tester.pump(const Duration(milliseconds: 10));
+    await still.up();
+    await old.up();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await expectRect(tester, confirmed, const Rect.fromLTRB(80, 160, 600, 1000));
+  });
+
+  testWidgets('放開超過寬限期後再按下：視為新一次框選，取代舊框', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    await dragSelect(tester, const Offset(80, 160), const Offset(720, 1440));
+    await dragSelect(tester, const Offset(200, 400), const Offset(600, 1200));
+
+    await expectRect(tester, confirmed, const Rect.fromLTRB(200, 400, 600, 1200));
+  });
+
+  testWidgets('放開後立刻按確認：先定案再回傳（不必等寬限期）', (tester) async {
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(tester, onConfirm: confirmed.add);
+
+    final g = await tester.startGesture(const Offset(80, 160));
+    await g.moveTo(const Offset(720, 1440));
+    await g.up();
+    await tester.pump(const Duration(milliseconds: 20));
+
+    await expectRect(tester, confirmed, const Rect.fromLTRB(80, 160, 720, 1440));
   });
 
   testWidgets('點擊取消時觸發 onCancel、不觸發 onConfirm', (tester) async {

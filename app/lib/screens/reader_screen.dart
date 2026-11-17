@@ -45,6 +45,8 @@ import '../reader/pdf_search_state.dart';
 
 import '../reader/pdf_page_info.dart';
 import '../reader/pdf_crop_frame_overlay.dart';
+import '../reader/pdf_crop_mapping.dart';
+import '../reader/pdf_crop_rect.dart';
 import '../reader/pdf_crop_mode.dart';
 import '../reader/pdf_reader_view.dart';
 import '../reader/pdf_toc_item.dart';
@@ -935,6 +937,58 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void _handleRequestManualCrop() {
     Navigator.of(context).pop();
     setState(() => _cropEditModeActive = true);
+  }
+
+  /// 手動裁切確認：把裁切層回報的框（相對整個畫面）換算成相對原始整頁的
+  /// [PdfCropRect]（epic-54 Issue 44）。
+  ///
+  /// - 雙頁並列等多頁同時可見時，以「框中心點所在的那一頁」為準；中心點不在
+  ///   任何頁面內則取與框交集面積最大的頁。裁切套用後會停用雙頁，每頁共用
+  ///   同一個比例。
+  /// - 目前已有生效中的裁切（模式不是 none 且矩形非 null，與
+  ///   `PdfReaderView._cropEnabled` 同條件）時，畫面顯示的是裁切後的頁面，
+  ///   換算結果要合成回原始整頁座標；模式為 none 但殘留舊矩形時不可合成。
+  /// - 換算不出來（頁面矩形尚未就緒、框在頁面外或太小）回傳 null。
+  PdfCropRect? _resolveManualCropRect(PdfCropRect frame, Size viewportSize) {
+    final pages = _surface.pdf?.visiblePageRects() ?? const [];
+    if (pages.isEmpty) return null;
+    final framePx = Rect.fromLTRB(
+      frame.left * viewportSize.width,
+      frame.top * viewportSize.height,
+      frame.right * viewportSize.width,
+      frame.bottom * viewportSize.height,
+    );
+    Rect? chosen;
+    for (final page in pages) {
+      if (page.rectInViewer.contains(framePx.center)) {
+        chosen = page.rectInViewer;
+        break;
+      }
+    }
+    if (chosen == null) {
+      var bestArea = 0.0;
+      for (final page in pages) {
+        final inter = framePx.intersect(page.rectInViewer);
+        final area = (inter.width > 0 && inter.height > 0)
+            ? inter.width * inter.height
+            : 0.0;
+        if (area > bestArea) {
+          bestArea = area;
+          chosen = page.rectInViewer;
+        }
+      }
+    }
+    if (chosen == null) return null;
+    final mode = _prefs.pdfCropMode;
+    final activeCrop = (mode != null && mode != PdfCropMode.none)
+        ? _prefs.pdfCropRect
+        : null;
+    return viewportRectToPageCropRect(
+      viewportRect: frame,
+      viewportSize: viewportSize,
+      pageRectInViewport: chosen,
+      activeCrop: activeCrop,
+    );
   }
 
   /// 統一包裝 showModalBottomSheet：深色主題下遮罩改為完全透明。
@@ -2641,9 +2695,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               Positioned.fill(
                 child: PdfCropFrameOverlay(
                   onConfirm: (rect) {
+                    // 裁切框的比例相對整個畫面，要換算成相對頁面才是 PdfCropRect
+                    // 的語意（epic-54 Issue 44）。換算不出來（頁面尚未就緒、框在
+                    // 頁面外或太小）就維持編輯模式，不寫入。
+                    final pageRect = _resolveManualCropRect(rect, size);
+                    if (pageRect == null) return;
                     setState(() => _cropEditModeActive = false);
                     _handlePrefsChanged(
-                      _prefs.copyWith(pdfCropMode: PdfCropMode.manual, pdfCropRect: rect),
+                      _prefs.copyWith(pdfCropMode: PdfCropMode.manual, pdfCropRect: pageRect),
                     );
                   },
                   onCancel: () => setState(() => _cropEditModeActive = false),
