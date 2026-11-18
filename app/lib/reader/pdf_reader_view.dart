@@ -608,7 +608,13 @@ class _PdfReaderViewState extends State<PdfReaderView> {
           : const Duration(milliseconds: 200);
 
   bool get _cropEnabled =>
-      widget.pdfCropMode != PdfCropMode.none && widget.pdfCropRect != null;
+      !widget.cropEditModeActive &&
+      widget.pdfCropMode != PdfCropMode.none &&
+      widget.pdfCropRect != null;
+
+  /// 編輯期間（`cropEditModeActive == true`）暫時不套用裁切矩形，維持
+  /// `widget.pdfCropMode`／`widget.pdfCropRect` 原值不變（epic-54 Issue 45）。
+  PdfCropRect? get _activeCropRect => _cropEnabled ? widget.pdfCropRect : null;
 
   // ── Issue 3: 濾鏡/裁切狀態 ──
   static const _maxCachedOverlayImages = 6;
@@ -949,6 +955,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         oldWidget.isLandscape != widget.isLandscape ||
         oldWidget.pdfCropMode != widget.pdfCropMode ||
         oldWidget.pdfCropRect != widget.pdfCropRect ||
+        oldWidget.cropEditModeActive != widget.cropEditModeActive ||
         oldWidget.pdfPageTurnMode != widget.pdfPageTurnMode;
     if (!changed) return;
 
@@ -1013,10 +1020,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     final pageIndex = _pendingReanchorPageIndex;
     _pendingReanchorPageIndex = null;
     if (pageIndex == null || !mounted || !_controller.isReady) return;
-    // 內部重新錨定不是使用者的跳頁，超界時只夾制、不發降級通知（epic-67 Issue 6 D7）。
+    // 內部重新錨定不是使用者的跳頁，超界時只夾制、不發降級通知（epic-67 Issue 6 D7）；
+    // 且須繞過外部跳頁的 cropEditModeActive 封鎖，才能在進入裁切編輯模式重排後
+    // 把目前頁帶回完整畫面與基準縮放（epic-54 Issue 45）。
     final count = _controller.pageCount;
     if (count <= 0) return;
-    _jumpToPage(pageIndex >= count ? count - 1 : pageIndex); // 走既有的單/雙頁分派邏輯。
+    _navigateToPage(pageIndex >= count ? count - 1 : pageIndex); // 走既有的單/雙頁分派邏輯。
   }
 
   /// 讓 pdfrx 重新排版（重算最小縮放），再於後續幀把縮放設為新模式的基準。
@@ -1119,6 +1128,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 
   bool _jumpToPage(int pageIndex) {
     if (widget.cropEditModeActive) return false;
+    return _navigateToPage(pageIndex);
+  }
+
+  bool _navigateToPage(int pageIndex) {
     if (!_controller.isReady) return false;
     final count = _controller.pageCount;
     if (pageIndex < 0 || count <= 0) return false;
@@ -1516,7 +1529,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     final widgets = <Widget>[];
 
     if (_cropEnabled || _committedBoldStrength > 0) {
-      final cacheKey = (crop: widget.pdfCropRect, bold: _committedBoldStrength);
+      final cacheKey = (crop: _activeCropRect, bold: _committedBoldStrength);
       if (_overlayCacheKey[page.pageNumber] != cacheKey) {
         // 只登記，不直接計算：同頁同設定重複登記會被佇列去重（epic-59）。
         _overlayJobQueue.enqueue(
@@ -1607,7 +1620,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     ({PdfCropRect? crop, double bold}) cacheKey,
   ) {
     if (!mounted) return false;
-    if ((crop: widget.pdfCropRect, bold: _committedBoldStrength) != cacheKey) {
+    if ((crop: _activeCropRect, bold: _committedBoldStrength) != cacheKey) {
       return false;
     }
     if (!_controller.isReady) return true;
@@ -1644,7 +1657,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         boldStrength: cacheKey.bold,
       );
       final currentDesiredKey =
-          (crop: widget.pdfCropRect, bold: _committedBoldStrength);
+          (crop: _activeCropRect, bold: _committedBoldStrength);
       if (!mounted || currentDesiredKey != cacheKey) return;
       final processedImage = PdfImage.createFromBgraData(
         processed.pixels,

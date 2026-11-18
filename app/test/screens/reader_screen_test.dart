@@ -9376,8 +9376,8 @@ void main() {
     );
   });
 
-  // epic-54 Issue 44：裁切框的比例相對「整個畫面」，確認時要換算成相對「頁面」
-  // （並在已有生效中裁切時合成回原始整頁座標）。頁面矩形由 FakePdfFacet 注入。
+  // epic-54 Issue 44/45：裁切框的比例相對「整個畫面」，確認時要換算成相對「頁面」
+  // （編輯期間顯示完整頁面，座標恆相對完整頁面，不合成）。頁面矩形由 FakePdfFacet 注入。
   group('PdfCropFrameOverlay 座標換算（Issue 44）', () {
     // 測試畫面 800x600；頁面左右各留 100px、上下各留 30px 灰邊
     const pageRect = Rect.fromLTRB(100, 30, 700, 570);
@@ -9477,7 +9477,7 @@ void main() {
       expectSavedCrop(const PdfCropRect(left: 0, top: 0, right: 1, bottom: 1));
     });
 
-    testWidgets('已有生效中的手動裁切：框左半，合成回原始整頁座標', (tester) async {
+    testWidgets('已有生效中的手動裁切：再次進入時框座標相對完整頁面，不合成', (tester) async {
       final (surface, overlay) = await openManualCrop(tester);
       // 先以 UI 套用第一次裁切：頁面 (0.1, 0.1, 0.9, 0.9)（頁面 600x540，
       // 內縮 60x54）
@@ -9487,15 +9487,14 @@ void main() {
       expectSavedCrop(
           const PdfCropRect(left: 0.1, top: 0.1, right: 0.9, bottom: 0.9));
 
-      // 再次進入手動裁切：已裁切時顯示的是裁切後的頁面，這裡讓它填滿畫面；
-      // 框左半 → 右邊界 0.1 + 0.5 × 0.8 = 0.5（審查 I-1）
+      // 再次進入手動裁切：編輯期間顯示完整頁面，讓完整頁面填滿畫面、框左半 → 存 (0,0,0.5,1)
       await enterManualCropFromSettings(tester);
       surface.pdf!.pageRects = [(pageIndex: 0, rectInViewer: Offset.zero & overlay.size)];
       await dragAndConfirm(
           tester, overlay, Offset.zero, Offset(overlay.width / 2, overlay.height));
 
       expectSavedCrop(
-          const PdfCropRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.9));
+          const PdfCropRect(left: 0, top: 0, right: 0.5, bottom: 1));
     });
 
     testWidgets('模式 none 但殘留舊矩形：不合成', (tester) async {
@@ -9532,6 +9531,122 @@ void main() {
 
       expect(find.byType(PdfCropFrameOverlay), findsOneWidget);
       expect(prefsManager.bookPrefsByBookId['b_crop44']?.pdfCropRect, isNull);
+    });
+
+    testWidgets(
+      '已有生效裁切：進入編輯後顯示還原鈕；按還原離開且 prefs 不變（mode 與矩形皆同進入前）',
+      (tester) async {
+        const initialRect =
+            PdfCropRect(left: 0.1, top: 0.15, right: 0.9, bottom: 0.85);
+        await openManualCrop(
+          tester,
+          initialPrefs: const BookReaderPrefs(
+            pdfCropMode: PdfCropMode.manual,
+            pdfCropRect: initialRect,
+          ),
+        );
+
+        final restoreFinder = find.byKey(const Key('pdf_crop_frame_restore'));
+        expect(restoreFinder, findsOneWidget);
+
+        await tester.tap(restoreFinder);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(PdfCropFrameOverlay), findsNothing);
+        final saved = prefsManager.bookPrefsByBookId['b_crop44'];
+        expect(saved?.pdfCropMode, PdfCropMode.manual);
+        expect(saved?.pdfCropRect, initialRect);
+      },
+    );
+
+    testWidgets(
+      '已有智慧裁切（autoDetect）：按還原後 mode 仍為 autoDetect、矩形不變',
+      (tester) async {
+        const initialRect =
+            PdfCropRect(left: 0.12, top: 0.14, right: 0.88, bottom: 0.86);
+        await openManualCrop(
+          tester,
+          initialPrefs: const BookReaderPrefs(
+            pdfCropMode: PdfCropMode.autoDetect,
+            pdfCropRect: initialRect,
+          ),
+        );
+
+        final restoreFinder = find.byKey(const Key('pdf_crop_frame_restore'));
+        expect(restoreFinder, findsOneWidget);
+
+        await tester.tap(restoreFinder);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(PdfCropFrameOverlay), findsNothing);
+        final saved = prefsManager.bookPrefsByBookId['b_crop44'];
+        expect(saved?.pdfCropMode, PdfCropMode.autoDetect);
+        expect(saved?.pdfCropRect, initialRect);
+      },
+    );
+
+    testWidgets('已有生效裁切：按 X 離開後 pdfCropMode 變為 none', (tester) async {
+      const initialRect =
+          PdfCropRect(left: 0.1, top: 0.1, right: 0.9, bottom: 0.9);
+      await openManualCrop(
+        tester,
+        initialPrefs: const BookReaderPrefs(
+          pdfCropMode: PdfCropMode.manual,
+          pdfCropRect: initialRect,
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('pdf_crop_frame_cancel')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PdfCropFrameOverlay), findsNothing);
+      final saved = prefsManager.bookPrefsByBookId['b_crop44'];
+      expect(saved?.pdfCropMode, PdfCropMode.none);
+    });
+
+    testWidgets('原本未裁切：不顯示還原鈕；按 X 不寫 prefs', (tester) async {
+      await openManualCrop(tester);
+
+      expect(find.byKey(const Key('pdf_crop_frame_restore')), findsNothing);
+      await tester.tap(find.byKey(const Key('pdf_crop_frame_cancel')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PdfCropFrameOverlay), findsNothing);
+      expect(prefsManager.bookPrefsByBookId.containsKey('b_crop44'), isFalse);
+    });
+
+    testWidgets('mode 為 none 但殘留舊矩形：不顯示還原鈕，按 X 不寫 prefs', (tester) async {
+      const staleRect =
+          PdfCropRect(left: 0.14, top: 0.11, right: 0.87, bottom: 0.89);
+      await openManualCrop(
+        tester,
+        initialPrefs: const BookReaderPrefs(
+          pdfCropMode: PdfCropMode.none,
+          pdfCropRect: staleRect,
+        ),
+      );
+
+      expect(find.byKey(const Key('pdf_crop_frame_restore')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('pdf_crop_frame_cancel')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PdfCropFrameOverlay), findsNothing);
+      expect(prefsManager.savedBookPrefsCalls, isEmpty);
+      expect(prefsManager.bookPrefsByBookId['b_crop44']?.pdfCropMode,
+          PdfCropMode.none);
+      expect(prefsManager.bookPrefsByBookId['b_crop44']?.pdfCropRect, staleRect);
+    });
+
+    testWidgets('編輯期間 prefs 未被寫入', (tester) async {
+      const initialPrefs = BookReaderPrefs(
+        pdfCropMode: PdfCropMode.manual,
+        pdfCropRect: PdfCropRect(left: 0.1, top: 0.2, right: 0.9, bottom: 0.8),
+      );
+      await openManualCrop(tester, initialPrefs: initialPrefs);
+
+      expect(prefsManager.savedBookPrefsCalls, isEmpty);
+      expect(prefsManager.bookPrefsByBookId['b_crop44'], initialPrefs);
     });
   });
 
@@ -9645,6 +9760,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(PdfCropFrameOverlay), findsOneWidget);
+      expect(find.byKey(const Key('pdf_crop_frame_restore')), findsNothing);
 
       await tester.tap(find.byKey(const Key('pdf_crop_frame_cancel')));
       await tester.pumpAndSettle();
@@ -9654,6 +9770,7 @@ void main() {
         findsNothing,
         reason: '取消後應退出裁切編輯模式',
       );
+      expect(prefsManager.bookPrefsByBookId.containsKey('b2'), isFalse);
     });
   });
 

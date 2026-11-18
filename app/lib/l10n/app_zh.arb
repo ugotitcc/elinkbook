@@ -859,5 +859,13 @@
   "webview2DetailLabel": "錯誤摘要",
   "@webview2DetailLabel": {
     "description": "環境建立失敗或例外時顯示的錯誤摘要標籤"
+  },
+  "readerPdfCropAbandonTooltip": "放棄裁切",
+  "@readerPdfCropAbandonTooltip": {
+    "description": "手動裁切編輯模式 X（放棄裁切）按鈕 tooltip"
+  },
+  "readerPdfCropRestoreTooltip": "還原先前裁切",
+  "@readerPdfCropRestoreTooltip": {
+    "description": "手動裁切編輯模式還原按鈕 tooltip"
   }
 }

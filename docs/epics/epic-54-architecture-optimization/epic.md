@@ -1224,6 +1224,27 @@ Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
 - **完整 `flutter test` 結果（2026-11-17，Issue 44 最終）**：共三次。第 1 次 5366 通過、4 失敗（`download_queue_controller_test` 3、`pdf_reader_view_filters_test` 1）；第 2 次因 `remote_catalog_screen_test`（單獨跑要 2 分半）一個測試卡住而整批中斷，234 個「did not complete」，非個別失敗；第 3 次 5369 通過、1 失敗（`download_queue_controller_test`「偵測到重複且 onDuplicateConfirm 回傳 false」，預期 `duplicateSkipped` 實際 `checkingDuplicate`）。上述失敗檔單獨重跑全部通過（filters 3 次、下載佇列 2 次、remote_catalog 2 次），失敗時都同時在跑字典匯入 10 萬筆；`lib/downloads`、`test/downloads` 本 Issue 未改動。判定為既有的負載敏感測試，**根因未證實，未處理**。
 - **已知測試偶發失敗（既有，未處理）**：`flutter test test/screens/reader_screen_test.dart --plain-name 裁切` 篩選時，緊接在「PopScope.canPop 為 false」案例之後的第一個 PDF 案例有約 50% 機率在開書階段出現「開書逾時」（既有的「確認後寫回 prefs」案例也一樣，3/6 失敗；完整 `flutter test` 的順序不同）。失敗在 `onPressed` 為 null，早於本 Issue 的程式。放寬等待上限反而讓 App 的開書逾時先觸發，已改回簡單等待。
 
+## Issue 45 決議（2026-11-18 `/grill-with-docs`）與實作紀錄
+
+- **產品決議（Q1～Q10）**：
+  - 進入裁切編輯模式一律顯示**未裁切的完整頁面**；編輯期間僅以 `PdfReaderView.cropEditModeActive` 暫態旗標停用裁切版面／疊圖／座標換算，不改動 `book_reader_prefs`（Q4）。
+  - 底部按鈕順序為 **X、還原（`Icons.undo`）、✓**，不加確認對話框；僅進入前已有生效裁切（`pdfCropMode != none && pdfCropRect != null`）時顯示還原鈕，X 與還原分別加 tooltip「放棄裁切」／「還原先前裁切」（Q2／Q3／Q8／Q9）。
+  - 按 X 離開且原本有生效裁切時寫入 `pdfCropMode = none`（放棄裁切）；原本未裁切時按 X 不寫 prefs；按還原只關編輯模式、原樣保留原本裁切（含 `autoDetect`）（Q1／Q2／Q3）。
+  - 移除 Issue 44 `pdf_crop_mapping.dart` 的 `activeCrop` 與 `_resolveManualCropRect` 合成回原始座標分支，框座標恆相對完整頁面（Q6）；返回鍵與 Esc 維持不離開裁切編輯模式（Q5）；進入／離開沿用 `didUpdateWidget` reanchor 保持頁碼（Q7）；詞彙「裁切編輯模式」已納入 `CONTEXT.md`（Q10）。
+- **測試與靜態檢查結果（2026-11-18）**：
+  - `flutter test`（全套）：5381 通過、2 略過、1 失敗（`test/downloads/download_queue_controller_test.dart`「偵測到重複且 onDuplicateConfirm 回傳 false 時，標記為略過且不呼叫 import」）；單獨重跑 `download_queue_controller_test.dart` 28/28 全數通過（既有負載敏感測試，未修改 `lib/downloads`、`test/downloads`）。
+  - `flutter analyze`：`No issues found!`。
+  - `node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js`：全數通過。
+- **WAVE 真機驗證**：✅ **6 項全數通過**（2026-11-18，WAVE `TCE70P24B2202374`，debug APK 以 `adb install -r` 安裝；測試書為 190 頁 PDF，全程停在第 48 頁）：
+  1. 已手動裁切再進入：顯示完整頁面（含書眉與頁碼），底部依序為 X、還原、✓；按還原回到原裁切，頁碼不變。
+  2. 再進入並重新框選、按 ✓：新裁切生效，框選範圍＝套用範圍。
+  3. 再進入、按 X：裁切模式變為「不裁」。
+  4. 原本未裁切再進入：只有 X 與 ✓，無還原鈕。
+  5. 智慧裁切再進入、按還原：模式仍為「智慧」。
+  6. 編輯中按返回鍵：不離開編輯畫面。
+  - 附帶觀察（非本 Issue 造成，未追查）：整頁（fit）模式下，裁切後的頁面底部最後一列字被切到視窗外；未裁切時亦有類似現象。
+  - 測試時覆蓋了該書原有的手動裁切框，現為智慧裁切。
+
 ## 各 Issue 處理紀錄
 
 （自 `docs/epics.md` 備註欄搬入；`docs/epics.md` 只保留最後處理的項目與剩餘待辦。各 Issue 設計細節見上方各章節與 [issues.md](issues.md)。）
@@ -1274,3 +1295,4 @@ Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
 - 剩 Issue 41（疑似缺陷，待重現）
 - Issue 44（缺陷：PDF 裁切拖拉起點跳動）首次修法實測更糟已還原，階段一取證待做
 - Issue 44（缺陷：PDF 手動裁切——框選範圍與套用範圍不符、起點跳動）已合併（PR #444）；殘餘觸控雜訊另記為後續項目（未處理）
+- Issue 45（UX：PDF 手動裁切再進入改顯示完整頁面、新增還原鈕與 X 放棄裁切）已實作完成，通過全套單元／Widget 測試，並於 2026-11-18 WAVE 真機驗證 6 項全數通過，待發 PR 合併

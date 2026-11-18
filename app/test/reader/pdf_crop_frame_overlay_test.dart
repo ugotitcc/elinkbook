@@ -22,10 +22,12 @@ void main() {
     WidgetTester tester, {
     ValueChanged<PdfCropRect>? onConfirm,
     VoidCallback? onCancel,
+    VoidCallback? onRestore,
   }) async {
     await tester.pumpWidget(wrap(PdfCropFrameOverlay(
       onConfirm: onConfirm ?? (_) {},
       onCancel: onCancel ?? () {},
+      onRestore: onRestore,
     )));
   }
 
@@ -494,5 +496,51 @@ void main() {
         .map((e) => e.widget as Material)
         .toList();
     expect(materials.any((m) => m.elevation == 6), isTrue);
+  });
+
+  testWidgets('onRestore 為 null 時不顯示還原鈕', (tester) async {
+    await pumpOverlay(tester);
+    expect(find.byKey(const Key('pdf_crop_frame_restore')), findsNothing);
+  });
+
+  testWidgets(
+      'onRestore 非 null 時顯示還原鈕，點擊呼叫 onRestore 且不呼叫 onCancel／onConfirm',
+      (tester) async {
+    var restored = false;
+    var cancelled = false;
+    final confirmed = <PdfCropRect>[];
+    await pumpOverlay(
+      tester,
+      onConfirm: confirmed.add,
+      onCancel: () => cancelled = true,
+      onRestore: () => restored = true,
+    );
+    await dragSelect(tester, const Offset(80, 160), const Offset(720, 1440));
+
+    final restoreFinder = find.byKey(const Key('pdf_crop_frame_restore'));
+    expect(restoreFinder, findsOneWidget);
+    await tester.tap(restoreFinder);
+    await tester.pump();
+
+    expect(restored, isTrue);
+    expect(cancelled, isFalse);
+    expect(confirmed, isEmpty);
+  });
+
+  testWidgets('三顆鈕由左至右為 cancel、restore、confirm', (tester) async {
+    await pumpOverlay(tester, onRestore: () {});
+    final cancelDx =
+        tester.getCenter(find.byKey(const Key('pdf_crop_frame_cancel'))).dx;
+    final restoreDx =
+        tester.getCenter(find.byKey(const Key('pdf_crop_frame_restore'))).dx;
+    final confirmDx = tester.getCenter(confirmFinder).dx;
+    expect(cancelDx, lessThan(restoreDx));
+    expect(restoreDx, lessThan(confirmDx));
+  });
+
+  testWidgets('X 鈕與還原鈕各有 tooltip 文字', (tester) async {
+    await pumpOverlay(tester, onRestore: () {});
+    expect(find.byTooltip('放棄裁切'), findsOneWidget);
+    expect(find.byTooltip('還原先前裁切'), findsOneWidget);
   });
 }

@@ -2847,6 +2847,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get webview2DetailLabel => '錯誤摘要';
+
+  @override
+  String get readerPdfCropAbandonTooltip => '放棄裁切';
+
+  @override
+  String get readerPdfCropRestoreTooltip => '還原先前裁切';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -5692,6 +5698,12 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get webview2DetailLabel => '错误摘要';
+
+  @override
+  String get readerPdfCropAbandonTooltip => '放弃裁切';
+
+  @override
+  String get readerPdfCropRestoreTooltip => '还原先前裁切';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -8537,4 +8549,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get webview2DetailLabel => '錯誤摘要';
+
+  @override
+  String get readerPdfCropAbandonTooltip => '放棄裁切';
+
+  @override
+  String get readerPdfCropRestoreTooltip => '還原先前裁切';
 }

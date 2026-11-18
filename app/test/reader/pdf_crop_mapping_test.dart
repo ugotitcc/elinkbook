@@ -82,39 +82,4 @@ void main() {
     );
     expect(result, isNull);
   });
-
-  // 審查 I-1：已有生效中的裁切時，畫面顯示的是裁切後的頁面，換算結果是
-  // 「相對已裁切頁面」，要合成回原始整頁座標。
-  test('已有生效中裁切：框滿目前顯示的頁面，輸出等於原裁切', () {
-    const viewport = Size(1000, 1000);
-    final result = viewportRectToPageCropRect(
-      viewportRect: ratio(0, 0, 1, 1),
-      viewportSize: viewport,
-      pageRectInViewport: Offset.zero & viewport,
-      activeCrop: ratio(0.1, 0.1, 0.9, 0.9),
-    );
-    expectRect(result, ratio(0.1, 0.1, 0.9, 0.9));
-  });
-
-  test('已有生效中裁切：框左半，右邊界落在 0.1 + 0.5 × 0.8 = 0.5', () {
-    const viewport = Size(1000, 1000);
-    final result = viewportRectToPageCropRect(
-      viewportRect: ratio(0, 0, 0.5, 1),
-      viewportSize: viewport,
-      pageRectInViewport: Offset.zero & viewport,
-      activeCrop: ratio(0.1, 0.1, 0.9, 0.9),
-    );
-    expectRect(result, ratio(0.1, 0.1, 0.5, 0.9));
-  });
-
-  test('activeCrop 為 null（模式 none 但外部殘留舊矩形）：不合成，與無裁切相同', () {
-    const viewport = Size(1000, 1000);
-    final result = viewportRectToPageCropRect(
-      viewportRect: ratio(0, 0, 0.5, 1),
-      viewportSize: viewport,
-      pageRectInViewport: Offset.zero & viewport,
-      activeCrop: null,
-    );
-    expectRect(result, ratio(0, 0, 0.5, 1));
-  });
 }

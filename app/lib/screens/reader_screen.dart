@@ -363,6 +363,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // cropEditModeActive prop；只有 PDF 分支會用到，EPUB 分支永遠是 false。
   bool _cropEditModeActive = false;
 
+  /// 目前是否已有生效中的 PDF 裁切（與 `PdfReaderView._cropEnabled` 同條件；
+  /// mode 為 none 但殘留舊矩形時視為未裁切）。
+  bool get _hasActiveCrop {
+    final resolved = _resolved;
+    return resolved != null &&
+        resolved.pdfCropMode != PdfCropMode.none &&
+        resolved.pdfCropRect != null;
+  }
+
   /// Windows：取消註冊閱讀器的內層 Esc 消費者（見 [registerEscInnerConsumer]）。
   VoidCallback? _unregisterEscConsumer;
 
@@ -940,14 +949,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   /// 手動裁切確認：把裁切層回報的框（相對整個畫面）換算成相對原始整頁的
-  /// [PdfCropRect]（epic-54 Issue 44）。
+  /// [PdfCropRect]（epic-54 Issue 44／Issue 45）。
   ///
   /// - 雙頁並列等多頁同時可見時，以「框中心點所在的那一頁」為準；中心點不在
   ///   任何頁面內則取與框交集面積最大的頁。裁切套用後會停用雙頁，每頁共用
   ///   同一個比例。
-  /// - 目前已有生效中的裁切（模式不是 none 且矩形非 null，與
-  ///   `PdfReaderView._cropEnabled` 同條件）時，畫面顯示的是裁切後的頁面，
-  ///   換算結果要合成回原始整頁座標；模式為 none 但殘留舊矩形時不可合成。
+  /// - 編輯期間顯示未裁切的完整頁面，因此座標恆相對完整頁面，不做二次合成。
   /// - 換算不出來（頁面矩形尚未就緒、框在頁面外或太小）回傳 null。
   PdfCropRect? _resolveManualCropRect(PdfCropRect frame, Size viewportSize) {
     final pages = _surface.pdf?.visiblePageRects() ?? const [];
@@ -979,15 +986,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       }
     }
     if (chosen == null) return null;
-    final mode = _prefs.pdfCropMode;
-    final activeCrop = (mode != null && mode != PdfCropMode.none)
-        ? _prefs.pdfCropRect
-        : null;
     return viewportRectToPageCropRect(
       viewportRect: frame,
       viewportSize: viewportSize,
       pageRectInViewport: chosen,
-      activeCrop: activeCrop,
     );
   }
 
@@ -2705,7 +2707,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       _prefs.copyWith(pdfCropMode: PdfCropMode.manual, pdfCropRect: pageRect),
                     );
                   },
-                  onCancel: () => setState(() => _cropEditModeActive = false),
+                  onCancel: () {
+                    final had = _hasActiveCrop;
+                    setState(() => _cropEditModeActive = false);
+                    if (had) {
+                      _handlePrefsChanged(
+                        _prefs.copyWith(pdfCropMode: PdfCropMode.none),
+                      );
+                    }
+                  },
+                  onRestore: _hasActiveCrop
+                      ? () => setState(() => _cropEditModeActive = false)
+                      : null,
                 ),
               ),
             if (_openBookFlow.isLoading)
