@@ -256,4 +256,80 @@ void main() {
       expect(m.minScale, lessThanOrEqualTo(m.maxScale));
     });
   });
+
+  // fix/pdf-page-turn-flicker：小開本 PDF 在 Fit 下需要的倍率高於預設預覽倍率
+  // （200/72），pdfrx 會先畫較糊的預覽圖、再補一張清楚的局部圖，E-Ink 因而
+  // 換頁後「再閃一下」。預覽倍率要至少達到 Fit 顯示所需。
+  group('pdfPreviewRenderingScale', () {
+    const estimated = 200 / 72;
+
+    test('小開本：Fit 所需倍率高於預設時，回傳 Fit 所需倍率', () {
+      // WAVE 實測：289x439 pt、Fit 縮放 2.084、螢幕密度 1.875 → 約 3.91 px/pt。
+      final scale = pdfPreviewRenderingScale(
+        estimatedScale: estimated,
+        pageSize: const Size(289, 439),
+        pageLayoutRect: const Rect.fromLTWH(8, 8, 289, 439),
+        fitZoom: 2.084,
+        devicePixelRatio: 1.875,
+      );
+      expect(scale, closeTo(2.084 * 1.875, 1e-9));
+    });
+
+    test('大頁面：Fit 所需倍率低於預設時，維持預設倍率', () {
+      final scale = pdfPreviewRenderingScale(
+        estimatedScale: estimated,
+        pageSize: const Size(595, 842),
+        pageLayoutRect: const Rect.fromLTWH(8, 8, 595, 842),
+        fitZoom: 0.9,
+        devicePixelRatio: 1.875,
+      );
+      expect(scale, estimated);
+    });
+
+    test('裁切後版面矩形比原頁大：倍率依版面與原頁的比例放大', () {
+      // 裁切讓版面矩形變成原頁的 2 倍寬高（pdfrx 以 rect/page 比例換算）。
+      final scale = pdfPreviewRenderingScale(
+        estimatedScale: estimated,
+        pageSize: const Size(300, 400),
+        pageLayoutRect: const Rect.fromLTWH(8, 8, 600, 800),
+        fitZoom: 1.0,
+        devicePixelRatio: 2.0,
+      );
+      expect(scale, closeTo(4.0, 1e-9));
+    });
+
+    test('預覽圖最長邊不超過 4096 像素', () {
+      final scale = pdfPreviewRenderingScale(
+        estimatedScale: estimated,
+        pageSize: const Size(289, 439),
+        pageLayoutRect: const Rect.fromLTWH(8, 8, 289, 439),
+        fitZoom: 8.0,
+        devicePixelRatio: 3.0,
+      );
+      expect(scale, closeTo(4096 / 439, 1e-9));
+    });
+
+    test('算不出 Fit 縮放或版面時，沿用 pdfrx 預設（含 2000 像素門檻）', () {
+      expect(
+        pdfPreviewRenderingScale(
+          estimatedScale: estimated,
+          pageSize: const Size(289, 439),
+          pageLayoutRect: null,
+          fitZoom: 2.0,
+          devicePixelRatio: 2.0,
+        ),
+        estimated,
+      );
+      expect(
+        pdfPreviewRenderingScale(
+          estimatedScale: estimated,
+          pageSize: const Size(4000, 3000),
+          pageLayoutRect: const Rect.fromLTWH(8, 8, 4000, 3000),
+          fitZoom: null,
+          devicePixelRatio: 2.0,
+        ),
+        closeTo(2000 / 4000, 1e-9),
+      );
+    });
+  });
 }

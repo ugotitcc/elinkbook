@@ -517,6 +517,37 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         maxZoom: kPdfFitMaxZoom,
       );
 
+  /// pdfrx 的 `getPageRenderingScale`：預覽圖倍率至少達到 Fit 顯示所需，避免小開本
+  /// PDF 換頁後先畫糊圖、再補清楚圖，E-Ink 因而再閃一下（見
+  /// [pdfPreviewRenderingScale]）。以 State 方法 tear-off 傳入，== 語意穩定。
+  double _pageRenderingScale(
+    BuildContext context,
+    PdfPage page,
+    PdfViewerController controller,
+    double estimatedScale,
+  ) {
+    final layout = controller.layout;
+    final n = page.pageNumber;
+    final inRange = n >= 1 && n <= layout.pageLayouts.length;
+    final viewSize = _viewSize;
+    final fitZoom = inRange && viewSize.width > 0 && viewSize.height > 0
+        ? fitZoomForUnit(
+            mode: _effectiveFitMode,
+            unitRect: _unitRectFor(layout, n),
+            pageMargin: _pdfPageMargin,
+            viewSize: viewSize,
+            maxZoom: kPdfFitMaxZoom,
+          )
+        : null;
+    return pdfPreviewRenderingScale(
+      estimatedScale: estimatedScale,
+      pageSize: Size(page.width, page.height),
+      pageLayoutRect: inRange ? layout.pageLayouts[n - 1] : null,
+      fitZoom: fitZoom,
+      devicePixelRatio: MediaQuery.of(context).devicePixelRatio,
+    );
+  }
+
   /// pdfrx 的 `normalizeMatrix`：逐頁下把縮放夾在單元基準之上、把平移鎖在目前單元
   /// 內（含置中與溢出規則）。矩陣由候選的縮放與可視左上角重新組出（見計畫「查證
   /// 過的 pdfrx 事實」）。尚無版面、版面頁數與 pdfrx 不一致（切換的暫態）、或
@@ -1727,6 +1758,9 @@ class _PdfReaderViewState extends State<PdfReaderView> {
                 pageMargin: _pdfPageMargin,
                 strictMinScale: _paginated,
               ),
+        getPageRenderingScale: (widget.pdfFitMode == null && !_paginated)
+            ? null
+            : _pageRenderingScale,
         layoutPages: _paginated
             ? _layoutPaginatedPages
             : (_cropEnabled

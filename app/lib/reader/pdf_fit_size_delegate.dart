@@ -10,6 +10,48 @@ import 'pdf_paginated_rules.dart';
 /// pdfrx 預設的最大縮放（`PdfViewerSizeDelegateProviderLegacy` 的預設值）。
 const double kPdfFitMaxZoom = 8.0;
 
+/// pdfrx 預設的單次渲染尺寸門檻（`PdfViewerParams.onePassRenderingSizeThreshold`）。
+const double _kPdfrxOnePassSizeThreshold = 2000;
+
+/// 預覽圖最長邊的像素上限，避免極端縮放時單張圖吃掉過多記憶體。
+const double _kPreviewMaxPixels = 4096;
+
+/// 給 `PdfViewerParams.getPageRenderingScale` 用的預覽圖渲染倍率（像素/pt）。
+///
+/// pdfrx 預設以 [estimatedScale]（專案設為 200/72）渲染預覽圖；若畫面顯示所需的
+/// 倍率更高（小開本 PDF 在 Fit 下常見），pdfrx 會先畫拉大後較糊的預覽圖，0.5～1
+/// 秒後再補一張清楚的局部圖。內容換了一次，E-Ink 就會在換頁後「再閃一下」
+/// （fix/pdf-page-turn-flicker，WAVE 實測）。
+///
+/// 這裡讓預覽倍率至少達到 Fit 顯示所需：[fitZoom]（Fit 基準縮放）×
+/// [devicePixelRatio]×版面矩形與原頁的比例（與 pdfrx 判斷是否需要局部圖的算法
+/// 一致）。用 Fit 基準而不是目前縮放，使用者雙指放大時預覽圖不會跟著一直重算，
+/// 放大後仍交給 pdfrx 的局部圖處理。最長邊夾在 [_kPreviewMaxPixels] 以內。
+/// [fitZoom] 或 [pageLayoutRect] 為 null（算不出來）時，回傳 pdfrx 原本的預設值。
+double pdfPreviewRenderingScale({
+  required double estimatedScale,
+  required Size pageSize,
+  required Rect? pageLayoutRect,
+  required double? fitZoom,
+  required double devicePixelRatio,
+}) {
+  // 與 pdfrx 預設的 getPageRenderingScale 相同：頁面超過門檻時縮小。
+  final longest = math.max(pageSize.width, pageSize.height);
+  final defaultScale = longest > _kPdfrxOnePassSizeThreshold
+      ? _kPdfrxOnePassSizeThreshold / longest
+      : estimatedScale;
+  if (fitZoom == null || pageLayoutRect == null || longest <= 0) {
+    return defaultScale;
+  }
+  final layoutRatio = math.max(
+    pageLayoutRect.width / pageSize.width,
+    pageLayoutRect.height / pageSize.height,
+  );
+  final needed = fitZoom * devicePixelRatio * layoutRatio;
+  final capped = math.min(needed, _kPreviewMaxPixels / longest);
+  return math.max(defaultScale, capped);
+}
+
 /// 由 pdfrx 版面與頁碼取得「單元」矩形（一頁，或雙頁模式下一個 spread 的
 /// 合併矩形）。矩形為 pdfrx 版面座標，不含頁邊距。
 typedef PdfFitUnitRect = Rect Function(PdfPageLayout layout, int pageNumber);
