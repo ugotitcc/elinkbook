@@ -119,7 +119,7 @@
 **Files：** `docs/epics/epic-54-architecture-optimization/{epic.md,issues.md}`、`docs/epics.md`（epic-54 那列備註）
 
 - [x] **Step 1: 完整測試** — `flutter test`（無參數）、`flutter analyze`、`node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js`。已知偶發失敗（`download_queue_controller_test`、`pdf_reader_view_filters_test`）單獨重跑通過即記錄，不視為本 Issue 回歸。
-- [ ] **Step 2: WAVE 真機驗證**（`adb install -r`，本機目前無連接裝置，未執行，已於 `epic.md`／`issues.md` 如實標註）：
+- [x] **Step 2: WAVE 真機驗證**（2026-11-18 完成，`adb install -r` debug APK，6 項全數通過，結果見 `epic.md`）：
   1. 已手動裁切的 PDF → 版面設定選手動 → 看到完整頁面、底部三顆鈕；按還原 → 回原裁切、頁碼不變。
   2. 再進入 → 重框 → ✓ → 新裁切生效，且框選範圍＝套用範圍。
   3. 再進入 → 按 X → 變為不裁切。

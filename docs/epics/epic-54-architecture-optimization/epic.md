@@ -1235,7 +1235,15 @@ Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
   - `flutter test`（全套）：5381 通過、2 略過、1 失敗（`test/downloads/download_queue_controller_test.dart`「偵測到重複且 onDuplicateConfirm 回傳 false 時，標記為略過且不呼叫 import」）；單獨重跑 `download_queue_controller_test.dart` 28/28 全數通過（既有負載敏感測試，未修改 `lib/downloads`、`test/downloads`）。
   - `flutter analyze`：`No issues found!`。
   - `node tool/check_l10n_hardcoded_strings.js`、`node tool/check_integration_keys.js`：全數通過。
-- **WAVE 真機驗證**：⚪ **未在真機執行**（執行當下本機無連接任何 Android／WAVE 裝置，待於 WAVE `TCE70P24B2202374` 以 `adb install -r` 覆驗 6 項互動場景後再行合併）。
+- **WAVE 真機驗證**：✅ **6 項全數通過**（2026-11-18，WAVE `TCE70P24B2202374`，debug APK 以 `adb install -r` 安裝；測試書為 190 頁 PDF，全程停在第 48 頁）：
+  1. 已手動裁切再進入：顯示完整頁面（含書眉與頁碼），底部依序為 X、還原、✓；按還原回到原裁切，頁碼不變。
+  2. 再進入並重新框選、按 ✓：新裁切生效，框選範圍＝套用範圍。
+  3. 再進入、按 X：裁切模式變為「不裁」。
+  4. 原本未裁切再進入：只有 X 與 ✓，無還原鈕。
+  5. 智慧裁切再進入、按還原：模式仍為「智慧」。
+  6. 編輯中按返回鍵：不離開編輯畫面。
+  - 附帶觀察（非本 Issue 造成，未追查）：整頁（fit）模式下，裁切後的頁面底部最後一列字被切到視窗外；未裁切時亦有類似現象。
+  - 測試時覆蓋了該書原有的手動裁切框，現為智慧裁切。
 
 ## 各 Issue 處理紀錄
 
@@ -1287,4 +1295,4 @@ Epic 54 剩 Issue 41（疑似缺陷，仍待重現）。
 - 剩 Issue 41（疑似缺陷，待重現）
 - Issue 44（缺陷：PDF 裁切拖拉起點跳動）首次修法實測更糟已還原，階段一取證待做
 - Issue 44（缺陷：PDF 手動裁切——框選範圍與套用範圍不符、起點跳動）已合併（PR #444）；殘餘觸控雜訊另記為後續項目（未處理）
-- Issue 45（UX：PDF 手動裁切再進入改顯示完整頁面、新增還原鈕與 X 放棄裁切）已實作完成並通過全套單元／Widget 測試，待 WAVE 真機驗證後合併
+- Issue 45（UX：PDF 手動裁切再進入改顯示完整頁面、新增還原鈕與 X 放棄裁切）已實作完成，通過全套單元／Widget 測試，並於 2026-11-18 WAVE 真機驗證 6 項全數通過，待發 PR 合併
