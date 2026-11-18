@@ -68,6 +68,8 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
     _tabController = TabController(
       length: supportsMobileReaderControls ? 3 : 2,
       vsync: this,
+      // 切換分頁時不要滑動動畫（E-Ink 友善，避免殘影）；點 Tab 直接切換
+      animationDuration: Duration.zero,
     );
     _fitMode = widget.prefs.pdfFitMode ?? PdfFitMode.pageFit;
     _contrast = widget.prefs.pdfContrast ?? 0;
