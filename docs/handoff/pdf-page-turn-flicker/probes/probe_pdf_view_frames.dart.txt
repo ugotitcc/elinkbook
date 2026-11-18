@@ -1,0 +1,103 @@
+// 暫時探針（診斷後刪除）：逐頁模式換頁後逐幀擷取畫面，找「顯示完成後又變動」。
+import 'dart:ui' as ui;
+
+import 'package:elinkbook/l10n/app_localizations.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/pdf_crop_mode.dart';
+import 'package:elinkbook/reader/pdf_crop_rect.dart';
+import 'package:elinkbook/reader/pdf_fit_mode.dart';
+import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
+import 'package:elinkbook/reader/pdf_page_turn_mode.dart';
+import 'package:elinkbook/reader/pdf_reader_view.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:pdfrx/pdfrx.dart';
+
+import '../support/pump_until_pdf_ready.dart';
+
+/// 擷取目前畫面縮圖的雜湊（32 位元 FNV），縮小以降低成本。
+Future<int> _frameHash(WidgetTester tester) async {
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byType(RepaintBoundary).first,
+  );
+  final image = await boundary.toImage(pixelRatio: 0.3);
+  final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+  image.dispose();
+  var h = 0x811c9dc5;
+  for (final b in data!.buffer.asUint8List()) {
+    h = ((h ^ b) * 0x01000193) & 0xffffffff;
+  }
+  return h;
+}
+
+void main() {
+  setUp(() => pdfrxInitialize());
+
+  final configs = <String, Widget Function(GlobalKey<State<PdfReaderView>>, VoidCallback)>{
+    '逐頁 加粗0.5': (k, r) => _view(k, r, bold: 0.5),
+  };
+  configs.forEach((name, build) {
+    testWidgets('探針：$name', (tester) async {
+      tester.view.devicePixelRatio = 2.0;
+      tester.view.physicalSize = const Size(720, 1440);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final key = GlobalKey<State<PdfReaderView>>();
+      var rendered = 0;
+      await tester.pumpWidget(MaterialApp(
+        locale: const Locale('zh', 'TW'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: build(key, () => rendered++),
+      ));
+      await pumpUntilPdfReady(tester, condition: () => rendered != 0);
+      await pumpUntilPdfReady(tester, maxIterations: 15);
+      final before = await tester.runAsync(() => _frameHash(tester));
+      for (var turn = 1; turn <= 4; turn++) {
+        turn <= 2 ? PdfReaderView.nextPage(key) : PdfReaderView.previousPage(key);
+        final seq = <String>[];
+        var last = turn == 1 ? before! : -1;
+        await tester.runAsync(() async {
+          for (var i = 0; i < 40; i++) {
+            await tester.pump(const Duration(milliseconds: 16));
+            await Future<void>.delayed(const Duration(milliseconds: 25));
+            final h = await _frameHash(tester);
+            if (h != last) {
+              seq.add('t${i * 41}ms:${h.toRadixString(16).padLeft(8, '0')}');
+              last = h;
+            }
+          }
+        });
+        // ignore: avoid_print
+        print('[PROBE] $name 第$turn次(${turn <= 2 ? '下一頁' : '上一頁，回到已算過的頁'}) 變化${seq.length}次：${seq.join(' → ')}');
+      }
+    });
+  });
+}
+
+Widget _view(
+  GlobalKey<State<PdfReaderView>> key,
+  VoidCallback onRendered, {
+  bool paginated = true,
+  PdfFitMode? fit = PdfFitMode.pageFit,
+  PdfPageTurnAnimation anim = PdfPageTurnAnimation.slide,
+  double bold = 0,
+  bool crop = false,
+  bool dual = false,
+}) =>
+    PdfReaderView(
+      key: key,
+      filePath: 'test/fixtures/sample_multi_page.pdf',
+      onPageRendered: onRendered,
+      onError: (_) {},
+      pdfPageTurnMode:
+          paginated ? PdfPageTurnMode.paginated : PdfPageTurnMode.scroll,
+      pdfFitMode: fit,
+      pdfPageTurnAnimation: anim,
+      pdfBoldStrength: bold,
+      pdfCropMode: crop ? PdfCropMode.manual : PdfCropMode.none,
+      pdfCropRect:
+          crop ? const PdfCropRect(left: 0.1, top: 0.1, right: 0.9, bottom: 0.9) : null,
+      dualPageMode: dual ? DualPageMode.always : DualPageMode.never,
+    );
