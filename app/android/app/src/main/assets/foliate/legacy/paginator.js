@@ -889,7 +889,7 @@ class View {
       const columnSize = __privateGet(this, _size) / __privateGet(this, _columnCount);
       const pageCount = Math.ceil(contentSize / columnSize);
       __privateSet(this, _contentPages, pageCount);
-      const expandedSize = pageCount * columnSize;
+      const expandedSize = Math.ceil(pageCount / __privateGet(this, _columnCount)) * __privateGet(this, _columnCount) * columnSize;
       __privateGet(this, _element).style.padding = "0";
       __privateGet(this, _iframe).style[side] = `${expandedSize}px`;
       __privateGet(this, _element).style[side] = `${expandedSize}px`;

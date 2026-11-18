@@ -1236,7 +1236,11 @@ class View {
             const columnSize = this.#size / this.#columnCount
             const pageCount = Math.ceil(contentSize / columnSize)
             this.#contentPages = pageCount
-            const expandedSize = pageCount * columnSize
+            // elink 本地補丁（ADR 0045）：章節補滿整頁（跨頁），每章都從新的一頁開始。
+            // 上游讓相鄰章節共用跨頁，分頁邊界會隨「前一章佔幾欄」而偏移半頁，
+            // 同一個 CFI 連續翻頁與重新開書看到的分頁不同，無法精確還原閱讀位置。
+            // #contentPages 維持真實欄數，只有版面尺寸補齊；單欄時等同上游行為。
+            const expandedSize = Math.ceil(pageCount / this.#columnCount) * this.#columnCount * columnSize
             this.#element.style.padding = '0'
             this.#iframe.style[side] = `${expandedSize}px`
             this.#element.style[side] = `${expandedSize}px`
