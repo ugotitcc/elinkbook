@@ -172,6 +172,13 @@ let detectedBookWritingMode = null
 // { once: true } relocate 監聽器內、以及每次 window.applyPreferences()
 // 呼叫時更新。
 let currentWritingMode = 'horizontal'
+// 開書時要還原的閱讀位置（CFI），一次性。
+// 直排開書的流程是：先在「尚未套用直排」的版面 goTo 到儲存位置 → 第一次
+// relocate 才套用偏好（切成直排並重排）。重排時 view.lastLocation 還是
+// 開書當下尚未排好版的範圍，用它導覽會落在該章第一頁，所以 applyPreferences()
+// 切換方向時改以這個值導覽。用於導覽後、或使用者已翻頁／跳轉即清空，之後的
+// 方向切換仍用 lastLocation（保留使用者當下位置）。
+let pendingInitialCfi = ''
 // Issue 9：裝置旋轉/視窗尺寸變化時重新呼叫 applyPreferences() 需要知道
 // 「最後一次完整套用過的偏好物件」是什麼，見下方 window.applyPreferences()
 // 開頭賦值處與 openBook() 內的 ResizeObserver 註冊。初始值設為 initialPrefs，
@@ -764,7 +771,11 @@ window.applyPreferences = function (prefs) {
   // （而非 section index）導覽是必要的——若只給 index，#goTo() 的
   // resolvedAnchor 會退回該 section 開頭而非保留原本閱讀位置。
   if (prefs.writingMode && prefs.writingMode !== previousWritingMode) {
-    const cfi = view.lastLocation?.cfi
+    // 只在真的用來導覽時才清掉：開書時可能連續呼叫兩次 applyPreferences()（相隔數毫秒），
+    // 第一次若沒進到這個分支就清掉，第二次會退回開書前尚未排版的 lastLocation，落在章首。
+    // 使用者尚未翻頁／跳轉前，開書位置就等於目前位置，所以保留不會誤跳。
+    const cfi = pendingInitialCfi || view.lastLocation?.cfi
+    pendingInitialCfi = ''
     if (cfi) view.goTo(cfi)
   }
 }
@@ -796,14 +807,17 @@ if (window.__pendingApplyPreferences) {
  * 任何換頁邏輯，純粹是可供 evaluateJavascript 呼叫的橋接層。
  */
 window.nextPage = function () {
+  pendingInitialCfi = '' // 使用者已翻頁，不再還原開書位置
   view.next()
 }
 
 window.previousPage = function () {
+  pendingInitialCfi = ''
   view.prev()
 }
 
 window.jumpToFraction = function (fraction) {
+  pendingInitialCfi = ''
   view.goToFraction(fraction)
 }
 
@@ -857,11 +871,14 @@ async function openAtInitialLocation() {
   }
   const resolved = resolveValidatedCfi(initialCfi)
   if (resolved) {
+    // 必須在 goTo 之前設定：第一次 relocate（觸發 applyPreferences）在 goTo 途中就會發生。
+    pendingInitialCfi = initialCfi
     try {
       await view.renderer.goTo(resolved)
       view.history.pushState(initialCfi)
       return
     } catch (_) {
+      pendingInitialCfi = ''
       // 落到下方降級流程
     }
   }
@@ -880,6 +897,7 @@ async function openAtInitialLocation() {
  * 格式。epic-67 Issue 5：第二參數為降級用的概略進度比例，可為 null。
  */
 window.jumpToLocator = async function (cfi, fallbackProgression) {
+  pendingInitialCfi = ''
   const resolved = resolveValidatedCfi(cfi)
   if (resolved) {
     // view.goTo 內部吞掉例外，失敗時回傳 undefined；成功時回傳已解析的目標物件。

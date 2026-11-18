@@ -70,6 +70,7 @@ function declaresVerticalWritingMode(cssText) {
 }
 let detectedBookWritingMode = null;
 let currentWritingMode = "horizontal";
+let pendingInitialCfi = "";
 let lastAppliedPrefs = initialPrefs;
 let currentTextConversion = initialPrefs.textConversion || "original";
 let decorationIdByCfi = /* @__PURE__ */ new Map();
@@ -342,7 +343,8 @@ window.applyPreferences = function(prefs) {
     markNoIndentParagraphs(doc, prefs);
   }
   if (prefs.writingMode && prefs.writingMode !== previousWritingMode) {
-    const cfi = (_b = view.lastLocation) == null ? void 0 : _b.cfi;
+    const cfi = pendingInitialCfi || ((_b = view.lastLocation) == null ? void 0 : _b.cfi);
+    pendingInitialCfi = "";
     if (cfi) view.goTo(cfi);
   }
 };
@@ -353,12 +355,15 @@ if (window.__pendingApplyPreferences) {
   window.applyPreferences(pendingPrefs);
 }
 window.nextPage = function() {
+  pendingInitialCfi = "";
   view.next();
 };
 window.previousPage = function() {
+  pendingInitialCfi = "";
   view.prev();
 };
 window.jumpToFraction = function(fraction) {
+  pendingInitialCfi = "";
   view.goToFraction(fraction);
 };
 function resolveValidatedCfi(cfi) {
@@ -393,11 +398,13 @@ async function openAtInitialLocation() {
   }
   const resolved = resolveValidatedCfi(initialCfi);
   if (resolved) {
+    pendingInitialCfi = initialCfi;
     try {
       await view.renderer.goTo(resolved);
       view.history.pushState(initialCfi);
       return;
     } catch (_) {
+      pendingInitialCfi = "";
     }
   }
   if (!await goToFractionSafely(initialProgression)) {
@@ -406,6 +413,7 @@ async function openAtInitialLocation() {
   reportNavigationDegraded("readingPosition");
 }
 window.jumpToLocator = async function(cfi, fallbackProgression) {
+  pendingInitialCfi = "";
   const resolved = resolveValidatedCfi(cfi);
   if (resolved) {
     const result = await view.goTo(cfi);
