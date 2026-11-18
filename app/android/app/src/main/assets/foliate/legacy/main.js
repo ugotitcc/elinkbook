@@ -739,7 +739,9 @@ html, body { --overlayer-highlight-opacity: 1; }
     });
     view.addEventListener("relocate", () => {
       const resolvedWritingMode = initialPrefs.writingMode ?? detectedBookWritingMode ?? "horizontal";
+      const writingModeBefore = currentWritingMode;
       window.applyPreferences({ ...initialPrefs, writingMode: resolvedWritingMode });
+      if (resolvedWritingMode === writingModeBefore) pendingInitialCfi = "";
       window.flutter_inappwebview.callHandler(
         "onPageRendered",
         resolvedWritingMode,

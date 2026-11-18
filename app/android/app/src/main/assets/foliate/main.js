@@ -1529,7 +1529,14 @@ async function openBook() {
     view.addEventListener('relocate', () => {
       const resolvedWritingMode =
         initialPrefs.writingMode ?? detectedBookWritingMode ?? 'horizontal'
+      const writingModeBefore = currentWritingMode
       window.applyPreferences({ ...initialPrefs, writingMode: resolvedWritingMode })
+      // 方向沒有改變就不會進 applyPreferences() 的 goTo 分支，待還原的開書位置用不到。
+      // 不清掉的話，使用者之後用捲動或書內連結離開開書位置、再手動切直排，
+      // 會倒跳回開書位置（pendingInitialCfi 只有翻頁／跳轉函式會清）。
+      // 必須在這裡依「方向有沒有變」判斷，而不是在 applyPreferences() 一進來就清：
+      // 開書時它可能連續被呼叫兩次，第一次就清掉會讓第二次退回章首。
+      if (resolvedWritingMode === writingModeBefore) pendingInitialCfi = ''
       // epic-54 Issue 18：同時回報 view.isFixedLayout，供 Dart 端
       // parseFoliateLayoutResolved() 填入 EpubLayoutInfo.isFixedLayout
       //（此前 Dart 端寫死 false 的契約前提已隨 epic-20 失效）。
