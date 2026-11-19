@@ -217,8 +217,9 @@ void main() {
     expect(delegate.crossAxisCount, 3);
   });
 
-  testWidgets('橫放（寬 > 高）時，書架封面格數為 4 欄', (tester) async {
+  testWidgets('橫放（寬 > 高）時，書架欄數依寬度計算：1200dp 寬為 6 欄', (tester) async {
     // 1200×800：寬 > 高，MediaQuery.orientation 判定為 landscape。
+    // 2026-11-19 起橫放欄數依寬度算（每格約 180dp），不再固定 4 欄。
     tester.view.physicalSize = const Size(1200, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -246,7 +247,7 @@ void main() {
                 .widget<GridView>(find.byKey(const Key('library_grid_view')))
                 .gridDelegate
             as SliverGridDelegateWithFixedCrossAxisCount;
-    expect(delegate.crossAxisCount, 4);
+    expect(delegate.crossAxisCount, 6);
   });
 
   group('書架搜尋（2026-09-08 /grill-with-docs 使用者需求，比照 '
@@ -539,7 +540,7 @@ void main() {
     },
   );
 
-  testWidgets('裝置旋轉（MediaQuery 從直立變橫放）後，書架封面欄數即時從 3 變為 4，不需要重新導航或重建整個畫面', (
+  testWidgets('裝置旋轉（MediaQuery 從直立變橫放）後，書架封面欄數即時從 3 變為 6，不需要重新導航或重建整個畫面', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(800, 1200);
@@ -578,7 +579,7 @@ void main() {
     tester.view.physicalSize = const Size(1200, 800);
     await tester.pumpAndSettle();
 
-    expect(currentDelegate().crossAxisCount, 4);
+    expect(currentDelegate().crossAxisCount, 6);
   });
 
   testWidgets('書架封面格狀檢視含欄格間距，避免封面互相緊貼', (tester) async {
@@ -605,6 +606,93 @@ void main() {
     expect(delegate.crossAxisSpacing, 8);
     // 2026-09-28：列間距 12 → 4（讓 Mobiscribe Wave 排得下兩列封面）。
     expect(delegate.mainAxisSpacing, 4);
+  });
+
+  testWidgets('ViWoods AiPaper Reader C（412x824dp）直放書架縮小格子多排一列：3 欄 x 3 列', (
+    tester,
+  ) async {
+    // 2026-11-19 使用者回報：這台原本只排 2 列，下方空一大塊。差距只有
+    // 每格約 3%，等比縮小後應能排 3 列。
+    tester.view.physicalSize = const Size(824, 1648);
+    tester.view.devicePixelRatio = 2.0;
+    // 真機截圖量得：狀態列約 50dp、系統字級約 1.3 倍。
+    tester.view.padding = const FakeViewPadding(top: 100);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    final books = List.generate(12, (i) => _testBook(id: '$i', title: '書$i'));
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
+        sources: fakeSourceDependencies(),
+        dependencies: fakeReaderFeatureDependencies(
+          libraryRepository: FakeLibraryRepository(initialBooks: books),
+          bookImportService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final grid = tester.widget<GridView>(
+      find.byKey(const Key('library_grid_view')),
+    );
+    final delegate =
+        grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+    expect(delegate.crossAxisCount, 3);
+    expect(
+      (grid.childrenDelegate as SliverChildBuilderDelegate).childCount,
+      9,
+      reason: '3 欄 x 3 列 = 一頁 9 本',
+    );
+    // 縮小後最後一列不能被裁切：第 9 本的底邊要在分頁列上方。
+    final lastBottom = tester
+        .getBottomLeft(find.byKey(const Key('book_item_8')))
+        .dy;
+    final gridBottom = tester
+        .getBottomLeft(find.byKey(const Key('library_grid_view')))
+        .dy;
+    expect(lastBottom, lessThanOrEqualTo(gridBottom));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ViWoods 轉橫（824x412dp）書架 4 欄、一列完整顯示不被裁切', (tester) async {
+    tester.view.physicalSize = const Size(1648, 824);
+    tester.view.devicePixelRatio = 2.0;
+    tester.view.padding = const FakeViewPadding(top: 50);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    final books = List.generate(8, (i) => _testBook(id: '$i', title: '書$i'));
+    await pumpLocalizedWidget(
+      tester,
+      LibraryScreen(
+        appearance: fakeAppearanceDependencies(),
+        sources: fakeSourceDependencies(),
+        dependencies: fakeReaderFeatureDependencies(
+          libraryRepository: FakeLibraryRepository(initialBooks: books),
+          bookImportService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final gridFinder = find.byKey(const Key('library_grid_view'));
+    final grid = tester.widget<GridView>(gridFinder);
+    expect(
+      (grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount)
+          .crossAxisCount,
+      4,
+    );
+    final firstBottom = tester
+        .getBottomLeft(find.byKey(const Key('book_item_0')))
+        .dy;
+    expect(firstBottom, lessThanOrEqualTo(tester.getBottomLeft(gridFinder).dy));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('從閱讀器返回書架時，重新載入書籍清單，避免後續操作以過期資料覆寫最新進度', (tester) async {

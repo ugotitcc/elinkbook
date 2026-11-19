@@ -1078,7 +1078,6 @@ class _LibraryScreenState extends State<LibraryScreen>
     final itemCount = groupTiles.length + visibleBooks.length;
 
     final orientation = MediaQuery.orientationOf(context);
-    final crossAxisCount = libraryPageSizeForOrientation(orientation);
 
     Widget itemBuilder(
       BuildContext context,
@@ -1150,6 +1149,13 @@ class _LibraryScreenState extends State<LibraryScreen>
               const gridSpacing = 8.0;
               // 2026-09-28：12 → 4，縮小書架每列之間的空白。
               const rowSpacing = 4.0;
+              // 橫放欄數依可用寬度算（2026-11-19），所以放在 LayoutBuilder 內。
+              final crossAxisCount = libraryGridColumns(
+                orientation: orientation,
+                width: constraints.maxWidth,
+                gridPadding: gridPadding,
+                gridSpacing: gridSpacing,
+              );
               final cellWidth =
                   (constraints.maxWidth -
                       2 * gridPadding -
@@ -1175,11 +1181,18 @@ class _LibraryScreenState extends State<LibraryScreen>
               // 裝置下 List 這一頁可能因 NeverScrollableScrollPhysics 而
               // 裁切掉部分項目——看得到頁碼卻看不到/點不到書籍）。List 是
               // 單欄，pageSize 即為列數本身，不需要再乘欄數。
-              final gridRows = libraryRowsForHeight(
+              // 空白太多時等比縮小格子、多排一列（2026-11-19 ViWoods）。
+              final gridFit = libraryGridFit(
                 availableHeight: availableGridHeight,
                 rowContentHeight: rowContentHeight,
                 rowSpacing: rowSpacing,
               );
+              final gridRows = gridFit.rows;
+              // 縮小後格子變窄，算出整塊書架的寬度，讓它在畫面上置中。
+              final gridWidth =
+                  2 * gridPadding +
+                  crossAxisCount * cellWidth * gridFit.scale +
+                  (crossAxisCount - 1) * gridSpacing;
               final listRowHeight = libraryListRowHeight(
                 MediaQuery.textScalerOf(context),
               );
@@ -1203,20 +1216,23 @@ class _LibraryScreenState extends State<LibraryScreen>
 
               final Widget gridOrList;
               if (_viewMode == LibraryViewMode.grid) {
-                gridOrList = GridView.builder(
-                  key: const Key('library_grid_view'),
-                  padding: const EdgeInsets.all(gridPadding),
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    childAspectRatio: _kCellAspectRatio,
-                    crossAxisSpacing: gridSpacing,
-                    mainAxisSpacing: rowSpacing,
+                gridOrList = SizedBox(
+                  width: gridWidth,
+                  child: GridView.builder(
+                    key: const Key('library_grid_view'),
+                    padding: const EdgeInsets.all(gridPadding),
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      childAspectRatio: _kCellAspectRatio,
+                      crossAxisSpacing: gridSpacing,
+                      mainAxisSpacing: rowSpacing,
+                    ),
+                    itemCount: pageItemCount,
+                    itemBuilder: (context, index) =>
+                        itemBuilder(context, pageStart + index, isGrid: true),
                   ),
-                  itemCount: pageItemCount,
-                  itemBuilder: (context, index) =>
-                      itemBuilder(context, pageStart + index, isGrid: true),
                 );
               } else {
                 gridOrList = ListView.builder(

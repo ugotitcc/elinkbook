@@ -4,16 +4,32 @@ import 'package:flutter/widgets.dart';
 /// spec.md §功能③）：不依賴 widget 樹、不依賴 `LibraryScreen` 任何狀態，
 /// 獨立可單元測試。
 
-/// 取得特定方向下的預設欄數（crossAxisCount：直排 3、橫排 4）。**Issue 7
-/// 起不再等於每頁筆數（pageSize）**——Issue 3／6 時每頁只有 1 行，欄數剛好
-/// 等於 pageSize；Issue 7 起 `pageSize = crossAxisCount * rows`，rows 依可
-/// 用高度動態計算（見 `libraryRowsForHeight()`），函式名稱沿用舊名只是為
-/// 了不做無謂的改名（呼叫端／測試都已改用新語意呼叫），語意以本段
-/// doc comment 為準（`review-plan-issue-7.md` I-3）。格狀／清單兩種檢視
-/// 一視同仁，不因檢視模式而異（見 plans/plan-issue-3.md「計劃範圍澄清」
-/// 第 3 點）。
-int libraryPageSizeForOrientation(Orientation orientation) =>
-    orientation == Orientation.landscape ? 4 : 3;
+/// 橫放時每格書架格子的目標寬度（dp）。
+const kLibraryLandscapeTargetCellWidth = 180.0;
+
+/// 書架格狀檢視的欄數（crossAxisCount）。`pageSize = 欄數 * 列數`，列數
+/// 依可用高度另外算（見 [libraryGridFit]）。
+///
+/// - 直放：固定 3 欄（電子書閱讀器的主要用法）。
+/// - 橫放：依可用寬度算，每格約 [kLibraryLandscapeTargetCellWidth]，最少
+///   4 欄。2026-11-19 起取代原本「橫放固定 4 欄」——Windows 視窗很寬時，
+///   固定 4 欄會讓每格變成約 374dp、一頁只剩 4 本，封面大到難操作。
+///
+/// [gridPadding]／[gridSpacing] 要跟 `GridView` 實際用的值一致。
+int libraryGridColumns({
+  required Orientation orientation,
+  required double width,
+  required double gridPadding,
+  required double gridSpacing,
+}) {
+  if (orientation == Orientation.portrait) return 3;
+  // n 欄總寬 = 2*padding + n*cell + (n-1)*spacing <= width。
+  final cols =
+      ((width - 2 * gridPadding + gridSpacing) /
+              (kLibraryLandscapeTargetCellWidth + gridSpacing))
+          .floor();
+  return cols < 4 ? 4 : cols;
+}
 
 /// [itemCount] 為 0 時仍回傳 1（避免 0 頁或除以零），呼叫端據此顯示
 /// 「1 / 1」而非崩潰或顯示「0 / 0」。
@@ -68,6 +84,44 @@ int libraryRowsForHeight({
       ((availableHeight + rowSpacing + 1e-5) / (rowContentHeight + rowSpacing))
           .floor();
   return rows < 1 ? 1 : rows;
+}
+
+/// 書架格子最多等比縮小到原本的幾倍（0.8 = 縮小 20%）。
+const kLibraryGridMinScale = 0.8;
+
+/// 依可用高度決定書架列數，並在「下方空白太多」時把格子等比縮小、多排
+/// 一列（2026-11-19 ViWoods AiPaper Reader C 回報：原本只差每格約 3% 就
+/// 排得下第 3 列，結果下方空一大塊）。
+///
+/// 先用 [libraryRowsForHeight] 算出原尺寸能放幾列；如果把每列縮小到不低於
+/// [kLibraryGridMinScale] 倍就能多放一列，回傳多一列與對應的縮小比例
+/// （`scale < 1`），否則回傳原列數與 `scale = 1.0`。連一列都放不下時，
+/// 回傳 1 列並縮到剛好放得下（不受 [kLibraryGridMinScale] 限制）。列間距
+/// 不縮放。
+({int rows, double scale}) libraryGridFit({
+  required double availableHeight,
+  required double rowContentHeight,
+  required double rowSpacing,
+}) {
+  final rows = libraryRowsForHeight(
+    availableHeight: availableHeight,
+    rowContentHeight: rowContentHeight,
+    rowSpacing: rowSpacing,
+  );
+  if (rowContentHeight <= 0) return (rows: rows, scale: 1.0);
+  // 連一列都放不下（例如手機轉橫）：縮到剛好放得下一列，避免被裁切。
+  if (availableHeight > 0 && availableHeight < rowContentHeight) {
+    return (rows: 1, scale: availableHeight / rowContentHeight);
+  }
+  final moreRows = rows + 1;
+  // 多一列時每列能分到的高度。
+  final shrunkRowHeight =
+      (availableHeight - (moreRows - 1) * rowSpacing) / moreRows;
+  final scale = shrunkRowHeight / rowContentHeight;
+  if (scale >= kLibraryGridMinScale && scale < 1.0) {
+    return (rows: moreRows, scale: scale);
+  }
+  return (rows: rows, scale: 1.0);
 }
 
 /// List View 模式下單一 `ListTile` 書籍列在系統字級 1.0 倍時的估計高度

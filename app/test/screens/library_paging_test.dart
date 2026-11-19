@@ -5,9 +5,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/screens/library_paging.dart';
 
 void main() {
-  test('libraryPageSizeForOrientation：portrait 回傳 3，landscape 回傳 4', () {
-    expect(libraryPageSizeForOrientation(Orientation.portrait), 3);
-    expect(libraryPageSizeForOrientation(Orientation.landscape), 4);
+  group('libraryGridColumns', () {
+    // 欄數 = floor((寬 - 2*8 + 8) / (180 + 8))，橫放最少 4 欄。
+    int cols(Orientation o, double w) => libraryGridColumns(
+      orientation: o,
+      width: w,
+      gridPadding: 8,
+      gridSpacing: 8,
+    );
+
+    test('直放一律 3 欄，不管多寬', () {
+      expect(cols(Orientation.portrait, 412), 3);
+      expect(cols(Orientation.portrait, 1200), 3);
+    });
+
+    test('橫放依寬度算欄數，每格約 180dp', () {
+      // Windows 1920x1080、縮放 125%：約 1536dp 寬。
+      expect(cols(Orientation.landscape, 1536), 8);
+      expect(cols(Orientation.landscape, 1200), 6);
+      // ViWoods 轉橫：824dp 寬。
+      expect(cols(Orientation.landscape, 824), 4);
+    });
+
+    test('橫放很窄時最少 4 欄', () {
+      expect(cols(Orientation.landscape, 600), 4);
+    });
   });
 
   test('libraryPageCount：itemCount 為 0 時回傳 1（避免空頁面／除以零）', () {
@@ -124,6 +146,64 @@ void main() {
         ),
         1,
       );
+    });
+  });
+
+  group('libraryGridFit', () {
+    test('縮小不到 20% 就能多一列時，多排一列並回傳縮小比例', () {
+      // 原本：(350+10)/(150+10)=2.25 → 2 列，下方空 40。
+      // 3 列需要每列 (350-2*10)/3=110 → 110/150≈0.733，超過 20%，不縮。
+      // 改用 300 高：(300+10)/(110+10)=2.58 → 2 列；
+      // 3 列需要 (300-20)/3≈93.3 → 93.3/110≈0.848，縮 15%，可以。
+      final fit = libraryGridFit(
+        availableHeight: 300,
+        rowContentHeight: 110,
+        rowSpacing: 10,
+      );
+      expect(fit.rows, 3);
+      expect(fit.scale, closeTo(280 / 3 / 110, 1e-9));
+      // 縮小後 3 列剛好放得下。
+      expect(3 * 110 * fit.scale + 2 * 10, lessThanOrEqualTo(300 + 1e-6));
+    });
+
+    test('要縮超過 20% 才能多一列時，維持原列數、不縮小', () {
+      final fit = libraryGridFit(
+        availableHeight: 350,
+        rowContentHeight: 150,
+        rowSpacing: 10,
+      );
+      expect(fit.rows, 2);
+      expect(fit.scale, 1.0);
+    });
+
+    test('剛好排滿沒有剩餘時，不縮小', () {
+      final fit = libraryGridFit(
+        availableHeight: 210,
+        rowContentHeight: 100,
+        rowSpacing: 10,
+      );
+      expect(fit.rows, 2);
+      expect(fit.scale, 1.0);
+    });
+
+    test('連一列都放不下時，縮到剛好放得下一列（不受 20% 下限限制）', () {
+      final fit = libraryGridFit(
+        availableHeight: 200,
+        rowContentHeight: 300,
+        rowSpacing: 4,
+      );
+      expect(fit.rows, 1);
+      expect(fit.scale, closeTo(200 / 300, 1e-9));
+    });
+
+    test('rowContentHeight <= 0（異常輸入防禦）回傳 1 列、不縮小', () {
+      final fit = libraryGridFit(
+        availableHeight: 500,
+        rowContentHeight: 0,
+        rowSpacing: 10,
+      );
+      expect(fit.rows, 1);
+      expect(fit.scale, 1.0);
     });
   });
 
