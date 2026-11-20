@@ -13,12 +13,12 @@
 
 每個版本提供 4 個 APK，內容相同，差別在支援的 CPU 類型：
 
-| 檔案 | 大小 | 適用 |
-|---|---|---|
-| `elinkbook-<版本>-arm64-v8a.apk` | 約 61 MB | 多數近年的 Android 手機。不確定時選這個 |
-| `elinkbook-<版本>-armeabi-v7a.apk` | 約 57 MB | 較舊的 32 位元 Android 裝置 |
-| `elinkbook-<版本>-x86_64.apk` | 約 63 MB | x86 模擬器或少數 x86 裝置 |
-| `elinkbook-<版本>.apk`（共用檔） | 約 124 MB | 所有裝置。不想挑檔案時選這個，但檔案較大 |
+| 檔案 | 適用 |
+|---|---|
+| `elinkbook-<版本>-arm64-v8a.apk` | 多數近年的 Android 手機。不確定時選這個 |
+| `elinkbook-<版本>-armeabi-v7a.apk` | 較舊的 32 位元 Android 裝置 |
+| `elinkbook-<版本>-x86_64.apk` | x86 模擬器或少數 x86 裝置 |
+| `elinkbook-<版本>.apk`（共用檔） | 所有裝置。不想挑檔案時選這個，但檔案較大 |
 
 如果裝置顯示「與目前已安裝的版本不相容」，請改選另一個檔案，或先解除安裝舊版。
 
