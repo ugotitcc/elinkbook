@@ -658,6 +658,78 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  group('書架中間 1/3 左右滑動換頁', () {
+    // 跟上面 ViWoods 測試同一組尺寸：一頁 9 本，12 本共 2 頁。
+    // 回傳滑動起點的 y：第一列中間（在書本上滑也要能換頁）。
+    Future<double> pumpTwoPages(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(824, 1648);
+      tester.view.devicePixelRatio = 2.0;
+      tester.view.padding = const FakeViewPadding(top: 100);
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      final books = List.generate(
+        12,
+        (i) => _testBook(id: '$i', title: '書$i'),
+      );
+      await pumpLocalizedWidget(
+        tester,
+        LibraryScreen(
+          appearance: fakeAppearanceDependencies(),
+          sources: fakeSourceDependencies(),
+          dependencies: fakeReaderFeatureDependencies(
+            libraryRepository: FakeLibraryRepository(initialBooks: books),
+            bookImportService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('book_item_0')), findsOneWidget);
+      expect(find.byKey(const Key('book_item_9')), findsNothing);
+      return tester.getCenter(find.byKey(const Key('book_item_0'))).dy;
+    }
+
+    testWidgets('從中間 1/3 往左滑換到下一頁，再往右滑回上一頁', (tester) async {
+      final y = await pumpTwoPages(tester);
+
+      await tester.dragFrom(Offset(206, y), const Offset(-150, 0));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('book_item_9')), findsOneWidget);
+      expect(find.byKey(const Key('book_item_0')), findsNothing);
+
+      await tester.dragFrom(Offset(206, y), const Offset(150, 0));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('book_item_0')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('從左邊 1/3 起滑不換頁', (tester) async {
+      final y = await pumpTwoPages(tester);
+
+      await tester.dragFrom(Offset(60, y), const Offset(-150, 0));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('book_item_0')), findsOneWidget);
+      expect(find.byKey(const Key('book_item_9')), findsNothing);
+    });
+
+    testWidgets('第一頁往右滑、最後一頁往左滑都不動', (tester) async {
+      final y = await pumpTwoPages(tester);
+
+      await tester.dragFrom(Offset(206, y), const Offset(150, 0));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('book_item_0')), findsOneWidget);
+
+      await tester.dragFrom(Offset(206, y), const Offset(-150, 0));
+      await tester.pumpAndSettle();
+      await tester.dragFrom(Offset(206, y), const Offset(-150, 0));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('book_item_9')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   testWidgets('ViWoods 轉橫（824x412dp）書架 4 欄、一列完整顯示不被裁切', (tester) async {
     tester.view.physicalSize = const Size(1648, 824);
     tester.view.devicePixelRatio = 2.0;

@@ -149,6 +149,28 @@ double libraryListRowHeight(TextScaler textScaler) {
       .ceilToDouble();
 }
 
+/// 書架左右滑動換頁的最小水平距離（邏輯像素）。沿用 PDF 滑動翻頁的初始值
+/// `kPagedSwipeMinDistance`（56），未經真機校準。
+const kLibrarySwipeMinDistance = 56.0;
+
+/// 一次書架滑動的結果：不換頁、下一頁、上一頁。
+enum LibrarySwipe { none, next, previous }
+
+/// 書架左右滑動換頁（2026-11-20）。只有起點落在書架區寬度「中間 1/3」
+/// （含邊界）才算數，左右兩邊 1/3 起滑一律不換頁。往左滑（[dx] 為負）是
+/// 下一頁，往右滑是上一頁；水平距離不到 [kLibrarySwipeMinDistance] 不換頁。
+///
+/// 不管是不是第一頁或最後一頁，呼叫端自己判斷能不能換。
+LibrarySwipe librarySwipeIntent({
+  required double startX,
+  required double width,
+  required double dx,
+}) {
+  if (startX < width / 3 || startX > width * 2 / 3) return LibrarySwipe.none;
+  if (dx.abs() < kLibrarySwipeMinDistance) return LibrarySwipe.none;
+  return dx < 0 ? LibrarySwipe.next : LibrarySwipe.previous;
+}
+
 /// 書架分頁狀態的唯一負責者（epic-36 Issue 6，架構回顧衍生；Issue 7 進一
 /// 步簡化）：取代原本散落在 `LibraryScreen` 的 `build()`／
 /// `didChangeMetrics()`／排序/分類切換/換頁按鈕共 7 處各自寫入的

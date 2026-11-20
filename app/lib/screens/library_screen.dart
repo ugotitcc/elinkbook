@@ -122,6 +122,10 @@ class _LibraryScreenState extends State<LibraryScreen>
   /// （`review-plan-issue-6.md` M-3）。
   final LibraryPagingCursor _paging = LibraryPagingCursor();
 
+  /// 書架左右滑動換頁：這次滑動的起點 x 與累計水平位移（見 [librarySwipeIntent]）。
+  double _swipeStartX = 0;
+  double _swipeDx = 0;
+
   /// `didChangeMetrics()` 用來比對「是否真的尺寸改變」的暫存值——鍵盤彈出
   /// /收起改變的是 `viewInsets`，不是 `physicalSize`，比對後可以繼續攔截
   /// 這類無關 metrics 變化，延續 Issue 6（`review-plan-issue-6.md` I-1）
@@ -1245,22 +1249,52 @@ class _LibraryScreenState extends State<LibraryScreen>
                 );
               }
 
+              final canGoPrevious = safePage > 0;
+              final canGoNext = safePage < pageCount - 1;
+
               return Column(
                 children: [
                   Expanded(
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: gridOrList,
+                    // 書架區左右滑動換頁（2026-11-20）：只有從寬度中間 1/3
+                    // 起滑才算，判斷規則見 `librarySwipeIntent()`。opaque 讓
+                    // 書本下方的空白處也收得到手勢。點書、長按書本不受影響：
+                    // 手指沒有橫向移動時，水平拖曳不會搶走手勢。
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onHorizontalDragStart: (details) {
+                        _swipeStartX = details.localPosition.dx;
+                        _swipeDx = 0;
+                      },
+                      onHorizontalDragUpdate: (details) {
+                        _swipeDx += details.delta.dx;
+                      },
+                      onHorizontalDragEnd: (_) {
+                        final swipe = librarySwipeIntent(
+                          startX: _swipeStartX,
+                          width: constraints.maxWidth,
+                          dx: _swipeDx,
+                        );
+                        if (swipe == LibrarySwipe.next && canGoNext) {
+                          setState(() => _paging.goToNextPage());
+                        } else if (swipe == LibrarySwipe.previous &&
+                            canGoPrevious) {
+                          setState(() => _paging.goToPreviousPage());
+                        }
+                      },
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: gridOrList,
+                      ),
                     ),
                   ),
                   PagingBar(
                     key: const Key('library_paging_bar'),
                     currentPage: safePage,
                     pageCount: pageCount,
-                    onPrevious: safePage > 0
+                    onPrevious: canGoPrevious
                         ? () => setState(() => _paging.goToPreviousPage())
                         : null,
-                    onNext: safePage < pageCount - 1
+                    onNext: canGoNext
                         ? () => setState(() => _paging.goToNextPage())
                         : null,
                     isEinkMode: widget.appearance.isEinkMode,
