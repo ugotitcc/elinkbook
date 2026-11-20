@@ -48,7 +48,6 @@ APK 內含以下開源元件，版權與授權如下：
 | [zip.js](https://github.com/gildas-lormeau/zip.js) | BSD-3-Clause | Copyright (c) 2023, Gildas Lormeau |
 | [fflate](https://github.com/101arrowz/fflate) | MIT | Copyright (c) 2026 Arjun Barrett |
 | [OpenCC](https://github.com/BYVoid/OpenCC)（簡繁字元對照表） | Apache-2.0 | BYVoid/OpenCC 專案貢獻者 |
-| [Readium kotlin-toolkit](https://github.com/readium/kotlin-toolkit) | BSD-3-Clause | Copyright (c) 2017, Readium |
 
 其餘 Flutter 與 Dart 套件的授權，請見 App 內「關於」頁的開源授權清單。
 
