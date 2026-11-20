@@ -203,8 +203,10 @@ void main() {
         tester,
         condition: () => find.byType(RawImage).evaluate().length >= 2,
         // epic-59 起覆蓋圖計算走 PdfOverlayJobQueue（maxConcurrent = 1，一次算一頁），
-        // 第 2 頁要排在第 1 頁之後：40 輪不夠（實測約需 46～48 輪），放寬到 120 輪留餘裕。
-        maxIterations: 120,
+        // 第 2 頁要排在第 1 頁之後：40 輪不夠（實測約需 46～48 輪）。全套 flutter test
+        // 一起跑時加粗運算實測慢約 13 倍，120 輪會偶發等不完（2026-11-20），放寬到
+        // 1200 輪。條件成立就提早結束，不會拖慢平常的執行。
+        maxIterations: 1200,
         delayBetweenPumps: const Duration(milliseconds: 50),
       );
       await tester.pump();

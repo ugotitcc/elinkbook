@@ -238,7 +238,10 @@ void main() {
       await pumpUntilPdfReady(
         tester,
         condition: () => find.byType(RawImage).evaluate().isNotEmpty,
-        maxIterations: 120,
+        // 全套 flutter test 一起跑時，加粗運算實測慢約 13 倍（單獨 0.57 秒、
+        // 全套 7.3 秒），120 輪會等不完而偶發失敗（2026-11-20）。條件成立
+        // 就提早結束，放寬上限不會拖慢平常的執行。
+        maxIterations: 1200,
         delayBetweenPumps: const Duration(milliseconds: 50),
       );
       await tester.pump();
@@ -266,7 +269,8 @@ void main() {
           final aspect = img.width / img.height;
           return (aspect - croppedOverlayAspect).abs() > 0.1;
         },
-        maxIterations: 120,
+        // 同上。切換後還要先等前一頁的舊運算跑完，才輪到這頁（佇列一次算一頁）。
+        maxIterations: 1200,
         delayBetweenPumps: const Duration(milliseconds: 50),
       );
       await tester.pump();
