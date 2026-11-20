@@ -361,6 +361,35 @@ void main() {
       },
     );
   });
+
+  group('librarySwipeIntent', () {
+    // 書架區寬 300：中間 1/3 是 x 從 100 到 200。
+    LibrarySwipe swipe(double startX, double dx) =>
+        librarySwipeIntent(startX: startX, width: 300, dx: dx);
+
+    test('從中間 1/3 往左滑是下一頁，往右滑是上一頁', () {
+      expect(swipe(150, -80), LibrarySwipe.next);
+      expect(swipe(150, 80), LibrarySwipe.previous);
+    });
+
+    test('從左右兩邊 1/3 起滑不換頁', () {
+      expect(swipe(50, -80), LibrarySwipe.none);
+      expect(swipe(250, 80), LibrarySwipe.none);
+    });
+
+    test('中間 1/3 的邊界算在範圍內', () {
+      expect(swipe(100, -80), LibrarySwipe.next);
+      expect(swipe(200, -80), LibrarySwipe.next);
+    });
+
+    test('滑動距離不到門檻不換頁', () {
+      expect(
+        swipe(150, -(kLibrarySwipeMinDistance - 1)),
+        LibrarySwipe.none,
+      );
+      expect(swipe(150, -kLibrarySwipeMinDistance), LibrarySwipe.next);
+    });
+  });
 }
 
 /// 刻意「非線性」的測試用 TextScaler，比照
